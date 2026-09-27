@@ -154,6 +154,7 @@
           "holidayHoursQuestion": "Question about your opening hours before public holidays",
           "stayRequestReceived": "Booking requests for my stays (required)",
           "stayRequestAnswered": "Replies to my booking requests (required)",
+          "firstContactReceived": "New interest in my listings or my office",
           "tourAccessRequested": "Viewing requests for my 360° tours",
           "tourAccessAnswered": "Answers to my tour viewing requests",
           "tourLinkOpened": "Openings of the personal tour links I send"

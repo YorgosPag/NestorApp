@@ -78,5 +78,23 @@
       "measured": "Measured — produced from the drawing",
       "inferred": "Estimated — inferred by a model"
     }
+  },
+  "media": {
+    "tabs": {
+      "label": "Listing views",
+      "photos": "Photos",
+      "floorplan": "Floor plan",
+      "tour": "3D tour"
+    },
+    "backToListing": "Back to the listing",
+    "photosPage": {
+      "heading": "Photos",
+      "openLabel": "Open photo {index} of {total}",
+      "imageTitle": "Photo {index} of {total}",
+      "closeLabel": "Close"
+    },
+    "floorplanPage": {
+      "heading": "{count, plural, one {Floor plan} other {Floor plans}}"
+    }
   }
 }

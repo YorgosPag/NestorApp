@@ -43,7 +43,7 @@ export interface ViewerStop {
   readonly stop: TourManifestStop;
   readonly node: TourNode;
   readonly levelId: string;
-  /** 1, 2, 3… μέσα στον όροφο — το όνομα του σημείου μέχρι να φέρει η Φ4 ονόματα χώρων από το BIM. */
+  /** 1, 2, 3… μέσα στον όροφο — το «Σημείο N» όταν ο χώρος δεν δηλώθηκε (`TourNode.room`, Φ2στ · `useStopNames`). */
   readonly number: number;
 }
 

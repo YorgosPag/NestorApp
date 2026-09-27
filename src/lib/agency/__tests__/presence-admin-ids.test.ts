@@ -22,6 +22,7 @@ import { join } from 'node:path';
 
 import { lineageIdsOf } from '@/hooks/useAdministrativeHierarchy';
 import { ADMIN_FOOTPRINTS_SOURCE } from '@/lib/geo/admin-footprints';
+import { hierarchyIdOf, realHierarchyRows } from '@/lib/places/__fixtures__/real-hierarchy';
 import { showcaseFixture } from '../__fixtures__/showcase-fixture';
 import type { CoverageResolvers, LineageResolver } from '../coverage-match';
 import {
@@ -32,16 +33,8 @@ import {
 import { applyShowcaseFilters } from '../showcase-filter';
 
 const FOOTPRINTS_PATH = join(process.cwd(), 'public', 'data', 'admin-footprints.json');
-const HIERARCHY_PATH = join(process.cwd(), 'public', 'data', 'administrative-hierarchy.json');
 
-interface HierarchyRow {
-  readonly id: string;
-  readonly n: string;
-  readonly p: string | null;
-}
-
-const hierarchy = JSON.parse(readFileSync(HIERARCHY_PATH, 'utf8')) as { data: HierarchyRow[] };
-const parents = new Map(hierarchy.data.map((row) => [row.id, row.p] as const));
+const parents = new Map(realHierarchyRows.map((row) => [row.id, row.p] as const));
 
 /**
  * ⚠️ **Ο γενεαλόγος στήνεται ΕΔΩ και δεν δανείζεται το `lineageIdsOf`**, γιατί εκείνο
@@ -61,12 +54,8 @@ const lineageOf: LineageResolver = (entityId) => {
   return lineage;
 };
 
-/** Το `id` από το **όνομα** — τα ονόματα είναι σταθερά, τα ids όχι. */
-function idOf(name: string): string {
-  const row = hierarchy.data.find((entry) => entry.n === name);
-  if (row === undefined) throw new Error(`Δεν βρέθηκε στην ιεραρχία: ${name}`);
-  return row.id;
-}
+/** Το `id` από το **όνομα**, κατά ταυτότητα και όχι κατά γραφή (ADR-893). */
+const idOf = hierarchyIdOf;
 
 // Πραγματικές αγγελίες (§8.8.17, ground truth με `isPointInGeoRings`).
 const DIAM_95 = { lat: 40.6306898, lng: 22.9468742 } as const; // εντός Δήμου Θεσσαλονίκης

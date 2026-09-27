@@ -122,7 +122,7 @@ it('Κ1 · ακριβές όνομα + Τ.Κ. ⇒ Η ΑΚΡΙΒΗΣ οντότη
   expect(filled).not.toBeNull();
   expect(filled!.settlementName).toBe('Καλλιθέα');
   expect(filled!.settlementId).toBe('settlement:0104020204');
-  expect(filled!.municipalityName).toContain('ΜΑΡΩΝΕΙΑΣ');
+  expect(filled!.municipalityName).toBe('Δήμος Μαρωνείας - Σαπών');
 });
 
 // =============================================================================
@@ -189,7 +189,7 @@ it('Κ4 · γενική πτώση ΜΕΣΑ σε αποδεδειγμένο δή
   expect(filled).not.toBeNull();
   expect(filled!.settlementId).toBe('settlement:0708020101');
   expect(filled!.settlementName).toBe('Ελευθέριο Κορδελιό');
-  expect(filled!.municipalityName).toContain('ΚΟΡΔΕΛΙΟΥ');
+  expect(filled!.municipalityName).toBe('Δήμος Κορδελιού - Ευόσμου');
 });
 
 it('🔒 Κ4β · η ΙΔΙΑ γενική ΧΩΡΙΣ εμβέλεια ⇒ καμία ταυτότητα (ποτέ μαντεψιά σε όλη τη χώρα)', () => {

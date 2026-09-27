@@ -816,6 +816,11 @@
   "tourAccessRequested": {
     "title": "Tour viewing request for “{title}” from {who}"
   },
+  "firstContactReceived": {
+    "listingTitle": "New interest in “{title}”",
+    "officeTitle": "New interest in your office “{office}”",
+    "body": "Someone interested has left you their contact details. You will find them in your contacts inbox — once you open it, they will know you have seen them."
+  },
   "tourAccessAnswered": {
     "approvedTitle": "You can view the tour of “{title}” until {until}",
     "declinedTitle": "Your viewing request for “{title}” was not approved"

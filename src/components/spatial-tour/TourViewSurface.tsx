@@ -50,6 +50,8 @@ export interface TourViewSurfaceProps {
    * κάνω»). Χωρίς αυτήν (προσωπικός σύνδεσμος): το ονομασμένο μήνυμα της άρνησης.
    */
   readonly renderRefusal?: (reason: TourRefusalName) => ReactNode;
+  /** Πρώτο στοιχείο της επικεφαλίδας — η σελίδα αγγελίας βάζει εδώ το «Πίσω στην αγγελία» (Φ2στ, μία γραμμή όπως η Zillow). */
+  readonly lead?: ReactNode;
 }
 
 function useTourViewSession(subject: TourSubject, shareId: string | null): SurfaceState {
@@ -72,29 +74,41 @@ function useTourViewSession(subject: TourSubject, shareId: string | null): Surfa
   return state;
 }
 
-export function TourViewSurface({ subject, shareId, renderRefusal }: TourViewSurfaceProps) {
+function SurfaceMessage({ lead, children }: { readonly lead?: ReactNode; readonly children: ReactNode }) {
+  return <section className="space-y-3 p-4">{lead}{children}</section>;
+}
+
+/**
+ * 🏆 **Διάταξη Zillow 3D Home** (Φ2στ · §4.12): **μία** γραμμή επικεφαλίδας (πίσω · τίτλος · βάση), και ο θεατής παίρνει
+ * **όλο** το υπόλοιπο ύψος (`flex-1 min-h-0`) — όσο του δίνει ο γονέας: πλήρες παράθυρο στη σελίδα αγγελίας, ροή εγγράφου
+ * στον προσωπικό σύνδεσμο (εκεί κρατά ελάχιστο ύψος ο ίδιος ο θεατής).
+ */
+export function TourViewSurface({ subject, shareId, renderRefusal, lead }: TourViewSurfaceProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const state = useTourViewSession(subject, shareId);
-  if (state.kind === 'loading') return <p className="text-sm text-muted-foreground" aria-busy>{t(VIEWER_KEYS.title)}</p>;
-  if (state.kind === 'refused' && renderRefusal) return <>{renderRefusal(state.reason)}</>;
+  if (state.kind === 'loading') return <SurfaceMessage lead={lead}><p className="text-sm text-muted-foreground" aria-busy>{t(VIEWER_KEYS.title)}</p></SurfaceMessage>;
+  if (state.kind === 'refused' && renderRefusal) return <SurfaceMessage lead={lead}>{renderRefusal(state.reason)}</SurfaceMessage>;
   if (state.kind !== 'granted') {
     return (
-      <p className="text-sm text-destructive" role="alert">
-        {state.kind === 'refused' ? t(TOUR_REFUSAL_KEY[state.reason]) : t(VIEWER_KEYS.unavailable)}
-      </p>
+      <SurfaceMessage lead={lead}>
+        <p className="text-sm text-destructive" role="alert">
+          {state.kind === 'refused' ? t(TOUR_REFUSAL_KEY[state.reason]) : t(VIEWER_KEYS.unavailable)}
+        </p>
+      </SurfaceMessage>
     );
   }
   const { basis, manifest } = state.view;
   return (
-    <section aria-labelledby="tour-view-heading" className="space-y-3">
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 id="tour-view-heading" className="text-xl font-semibold">{manifest.label ?? t(VIEWER_KEYS.title)}</h1>
+    <section aria-labelledby="tour-view-heading" className="flex min-h-0 flex-1 flex-col">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2">
+        {lead}
+        <h1 id="tour-view-heading" className="m-0 text-base font-semibold">{manifest.label ?? t(VIEWER_KEYS.title)}</h1>
         <Badge variant="secondary">{t(VIEW_BASIS_KEY[basis])}</Badge>
         {manifest.ready && <span className="text-sm text-muted-foreground">{t(VIEWER_KEYS.stops, { count: manifest.stops.length })}</span>}
       </header>
       {manifest.ready
         ? <TourViewerLoader subject={subject} manifest={manifest} />
-        : <p className="text-sm text-muted-foreground" role="status">{t(VIEWER_KEYS.preparing)}</p>}
+        : <p className="p-4 text-sm text-muted-foreground" role="status">{t(VIEWER_KEYS.preparing)}</p>}
     </section>
   );
 }

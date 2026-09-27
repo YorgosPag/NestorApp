@@ -1,35 +1,39 @@
 'use client';
 
 /**
- * @fileoverview **Ο ΘΕΑΤΗΣ ΤΗΣ ΠΕΡΙΗΓΗΣΗΣ** — πανόραμα + κάτοψη με κώνο + όροφοι + επόμενα σημεία, πάνω στο μανιφέστο
- * (ADR-884 Φ1 · §4.8 · Α2).
+ * @fileoverview **Ο ΘΕΑΤΗΣ ΤΗΣ ΠΕΡΙΗΓΗΣΗΣ** — πανόραμα σε όλη την επιφάνεια + όνομα χώρου + στήλη ορόφων/σημείων, πάνω
+ * στο μανιφέστο (ADR-884 Φ1 · §4.8 · Α2 · Φ2στ · §4.12).
  * @related `TourViewerLoader.tsx` (η σύνδεση με τις σελίδες μέσω `TourViewSurface`, Φ2γ) ·
  *   `lib/spatial-tour/viewer/*` (όλη η λογική, καθαρή) · `demo/*` (εικονικά δεδομένα, `/test-harness/tour-viewer`)
  * @module components/spatial-tour/viewer/TourViewer
  *
  * 🔑 **Ο όροφος ΠΑΡΑΓΕΤΑΙ από τον κόμβο** — καμία δεύτερη κατάσταση «τρέχων όροφος» που θα μπορούσε να διαφωνήσει.
  * 🔑 **Χωρίς WebGL** ⇒ εξήγηση + λίστα σημείων ανά όροφο, ποτέ μαύρο κουτί (`lib/browser/webgl-support.ts`).
+ * 🏆 **Διάταξη Zillow 3D Home** (Φ2στ): η σκηνή γεμίζει ό,τι της δώσει ο γονέας· στην κορυφή το **όνομα του χώρου**·
+ *   δεξιά **μόνιμη στήλη** (≥ lg) με όλους τους ορόφους — στο κινητό η ίδια στήλη σε `Sheet` πίσω από κουμπί.
  * ⚠️ Φορτώνεται **μόνο** πίσω από `next/dynamic({ ssr: false })` — σέρνει το `three`.
  */
 
 import { useCallback, useMemo, useReducer, useState } from 'react';
+import { MapIcon } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isWebGLAvailable } from '@/lib/browser/webgl-support';
-import {
-  buildViewerGraph, firstNodeOfLevel, initialNode, neighboursOf, type TourViewerGraph,
-} from '@/lib/spatial-tour/viewer/tour-viewer-graph';
+import { buildViewerGraph, initialNode, neighboursOf, type TourViewerGraph } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { initialViewerState, tourViewerReducer } from '@/lib/spatial-tour/viewer/tour-viewer-state';
 import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { VIEWER_KEYS } from '../tour-access-labels';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
-import { createTourCameraStore } from './tour-camera-store';
+import { createTourCameraStore, type TourCameraStore } from './tour-camera-store';
 import type { TourPanoramaSource } from './tour-panorama-source';
 import { TourPanoramaStage } from './TourPanoramaStage';
-import { TourPlanMap } from './TourPlanMap';
-import { TourFloorSwitcher, TourNearbyList, useLevelLabel } from './TourViewerNavigation';
+import { TourSidePanel } from './TourSidePanel';
+import { TourStopList, useLevelLabel } from './TourViewerNavigation';
+import { useStopNames } from './useStopNames';
 
 export interface TourViewerProps {
   readonly manifest: Pick<TourManifest, 'nodes' | 'stops' | 'levels'>;
@@ -40,14 +44,12 @@ function TourViewerWithoutWebGL({ graph }: { readonly graph: TourViewerGraph }) 
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const labelOf = useLevelLabel();
   return (
-    <section className="space-y-2" aria-label={t(VIEWER_KEYS.title)}>
+    <section className="space-y-2 p-4" aria-label={t(VIEWER_KEYS.title)}>
       <p role="status" className="text-sm text-muted-foreground">{t(TOUR_VIEWER_KEYS.noWebgl)}</p>
       {graph.levels.map((level) => (
         <section key={level.id} aria-label={labelOf(level)}>
           <h2 className="text-sm font-medium">{labelOf(level)}</h2>
-          <ul className="m-0 list-disc pl-5 text-sm">
-            {level.nodeIds.map((id) => <li key={id}>{t(TOUR_VIEWER_KEYS.point, { number: graph.stops.get(id)?.number ?? 0 })}</li>)}
-          </ul>
+          <TourStopList graph={graph} level={level} currentNodeId={null} />
         </section>
       ))}
     </section>
@@ -61,36 +63,56 @@ export function TourViewer({ manifest, source }: TourViewerProps) {
   return <TourViewerLive graph={graph} source={source} />;
 }
 
+interface PanelProps {
+  readonly graph: TourViewerGraph;
+  readonly currentNodeId: string | null;
+  readonly camera: TourCameraStore;
+  readonly onGo: (nodeId: string) => void;
+}
+
+/** Η στήλη στο κινητό — ίδιο περιεχόμενο με τη μόνιμη στήλη· κλείνει μόλις ο επισκέπτης διαλέξει σημείο. */
+function MobilePanel({ graph, currentNodeId, camera, onGo }: PanelProps) {
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const [open, setOpen] = useState(false);
+  const goAndClose = useCallback((nodeId: string) => { setOpen(false); onGo(nodeId); }, [onGo]);
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button type="button" size="sm" variant="secondary" className="absolute bottom-3 right-3 gap-1 shadow lg:hidden">
+          <MapIcon aria-hidden className="h-4 w-4" />{t(TOUR_VIEWER_KEYS.openPanel)}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="max-h-[75svh] overflow-y-auto" aria-describedby={undefined}>
+        <SheetTitle className="mb-2 text-base">{t(TOUR_VIEWER_KEYS.panelTitle)}</SheetTitle>
+        <TourSidePanel graph={graph} currentNodeId={currentNodeId} camera={camera} onGo={goAndClose} />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function TourViewerLive({ graph, source }: { readonly graph: TourViewerGraph; readonly source: TourPanoramaSource }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const [state, dispatch] = useReducer(tourViewerReducer, graph, (g) => initialViewerState(initialNode(g)));
   const [camera] = useState(createTourCameraStore);
-  const current = state.nodeId === null ? undefined : graph.stops.get(state.nodeId);
-  const level = graph.levels.find((l) => l.id === current?.levelId);
+  const nameOf = useStopNames(graph);
   const neighbours = useMemo(() => (state.nodeId === null ? [] : neighboursOf(graph, state.nodeId)), [graph, state.nodeId]);
   const go = useCallback((nodeId: string) => dispatch({ kind: 'go', nodeId }), []);
-  const selectLevel = useCallback((levelId: string) => {
-    const nodeId = firstNodeOfLevel(graph, levelId);
-    if (nodeId !== null) dispatch({ kind: 'go', nodeId });
-  }, [graph]);
 
   return (
-    <section className="space-y-3" aria-label={t(VIEWER_KEYS.title)}>
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <TourFloorSwitcher levels={graph.levels} currentLevelId={level?.id ?? null} onSelect={selectLevel} />
-        {current !== undefined && (
-          <p className="m-0 text-sm text-muted-foreground" aria-live="polite">{t(TOUR_VIEWER_KEYS.youAreHere, { number: current.number })}</p>
+    <section className="flex min-h-[28rem] flex-1 flex-col lg:flex-row" aria-label={t(VIEWER_KEYS.title)}>
+      <section className="relative min-h-0 flex-1">
+        <TourPanoramaStage graph={graph} state={state} dispatch={dispatch} camera={camera} source={source} neighbours={neighbours} fill />
+        {state.nodeId !== null && (
+          <h2 aria-live="polite"
+            className="pointer-events-none absolute inset-x-0 top-3 m-0 mx-auto w-fit max-w-[70%] truncate rounded-md bg-background/75 px-3 py-1 text-base font-semibold text-foreground shadow">
+            {nameOf(state.nodeId)}
+          </h2>
         )}
-      </header>
-      <section className="relative">
-        <TourPanoramaStage graph={graph} state={state} dispatch={dispatch} camera={camera} source={source} neighbours={neighbours} />
-        {level?.hasPlan && (
-          <aside aria-label={t(TOUR_VIEWER_KEYS.plan)} className="absolute bottom-3 left-3 h-32 w-40 rounded-md border border-border bg-card/90 p-1 shadow sm:h-40 sm:w-52">
-            <TourPlanMap graph={graph} level={level} currentNodeId={state.nodeId} camera={camera} onGo={go} />
-          </aside>
-        )}
+        <MobilePanel graph={graph} currentNodeId={state.nodeId} camera={camera} onGo={go} />
       </section>
-      <TourNearbyList neighbours={neighbours} levels={graph.levels} currentLevelId={level?.id ?? null} onGo={go} />
+      <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border bg-background p-3 lg:block">
+        <TourSidePanel graph={graph} currentNodeId={state.nodeId} camera={camera} onGo={go} />
+      </aside>
     </section>
   );
 }

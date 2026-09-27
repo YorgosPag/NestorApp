@@ -140,6 +140,8 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   'node-absent': 404,
   /** Όροφος BIM που η περιήγηση δεν γνωρίζει — δεν επινοείται. */
   'level-absent': 422,
+  /** Άγνωστος τύπος χώρου · κανένας · πάνω από 3 · όνομα πολύ μακρύ (Φ2στ, `normalizeTourRoom`). */
+  'room-invalid': 422,
   'graph-full': 409,
 };
 

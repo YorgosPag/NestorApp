@@ -55,6 +55,7 @@ export const TOUR_REFUSAL_KEY: Readonly<Record<TourRefusalName, string>> = {
   'capture-not-ready': 'spatial-tour:refusal.captureNotReady',
   'node-absent': 'spatial-tour:refusal.nodeAbsent',
   'level-absent': 'spatial-tour:refusal.levelAbsent',
+  'room-invalid': 'spatial-tour:refusal.roomInvalid',
   'graph-full': 'spatial-tour:refusal.graphFull',
 };
 

@@ -29,6 +29,7 @@ import type { TourPanoramaSource } from '../viewer/tour-panorama-source';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 import { TourEditorRail, type TourEditorSelection } from './TourEditorRail';
 import { TourPointRemoval } from './TourPointRemoval';
+import { TourRoomForm } from './TourRoomForm';
 import { TourPointWorkspace, TourPreviewWorkspace } from './TourEditorWorkspaces';
 import { useTourEditorActions, type TourEditorActions } from './useTourEditorActions';
 import { useTourEditorData, type TourEditorData } from './useTourEditorData';
@@ -75,9 +76,13 @@ function LoadedEditor({ data, actions, source }: { readonly data: TourEditorData
     pendingFocus.current = captureId;
     if (!(await actions.place(captureId, target))) pendingFocus.current = null;
   };
+  const { name } = actions;
   const footer = useCallback((nodeId: string) => (
-    <TourPointRemoval model={model} nodeId={nodeId} busy={actions.busy} onUnplace={actions.unplace} />
-  ), [model, actions.busy, actions.unplace]);
+    <>
+      <TourRoomForm key={nodeId} graph={model.graph} nodeId={nodeId} onSave={(room) => name(nodeId, room)} />
+      <TourPointRemoval model={model} nodeId={nodeId} busy={actions.busy} onUnplace={actions.unplace} />
+    </>
+  ), [model, actions.busy, actions.unplace, name]);
   const entry = selection?.kind === 'capture' ? model.inbox.find((e) => e.capture.id === selection.captureId) : undefined;
   const preview = entry === undefined ? null : previewGraphOf(entry.capture);
   return (

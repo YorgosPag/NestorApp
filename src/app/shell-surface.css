@@ -432,9 +432,14 @@
    δηλαδή ό,τι χρησιμοποιεί αυτό ακριβώς το αρχείο), η απόσταση θα διπλασιαζόταν
    — σωστό κατά WCAG αλλά οπτικά λάθος, και ο επόμενος θα το «διόρθωνε» κόβοντας
    τον αριθμό κάτω από το πρότυπο. */
-[data-shell-measure] p + p,
-[data-shell-measure] p + h2,
-[data-shell-measure] p + h3,
+/* 🔴 ΚΑΙ ΟΙ ΠΑΡΑΓΡΑΦΟΙ ΑΚΟΛΟΥΘΟΥΝ ΤΟΝ ΙΔΙΟ ΟΡΙΣΜΟ (2026-09-27, ADR-893 §5 · ADR-797).
+   Μετρημένο στη `/area` («Πώς υπολογίζονται οι αριθμοί»): `flex flex-col gap-2` με
+   `m-0` στις `<p>` έβγαζε **8px + 2,25em** ανάμεσα σε παραγράφους — το `m-0` χάνει από
+   αυτόν τον επιλογέα κατά ειδικότητα. Ίδια κλάση με τα 36px των λιστών παραπάνω: ο
+   γονέας που δηλώνει `flex`/`grid` **έχει ήδη** πει το κενό του με `gap`. Τα κείμενα
+   πρόζας (`terms` · `privacy-policy` · `data-deletion`) γράφουν παραγράφους σε ροή —
+   μένουν ακέραια. */
+:is([data-shell-measure], [data-shell-measure] *):not([class*='flex'], [class*='grid']) > p + :is(p, h2, h3),
 [data-shell-measure] :is(ul, ol):not([class*='flex'], [class*='grid']) > li + li {
   margin-block-start: var(--shell-prose-paragraph-spacing);
 }

@@ -29,6 +29,12 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
+// ADR-884 Φ2στ · §4.12 Μέρος Δ — ο σύνδεσμος «άνοιγμα κάτοψης» περνά από `@/lib/workspace/navigation`,
+// που ρωτά την τρέχουσα διαδρομή (ίδιο ιδίωμα με `ListingDetailContent.test.tsx`).
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/listing/prop_a0000001',
+}));
+
 const AT = '2026-08-20T10:00:00.000Z';
 
 function declaredPlan(url = 'https://shelf/plan.webp', authorship: ListingAuthorship = 'owner-declared'): ListingFloorplan {

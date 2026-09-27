@@ -6,7 +6,7 @@
  * - **Ο** — ό,τι δεν αντιστρέφεται πιστά (αφαίρεση λήψης) **δεν** προσφέρει αναίρεση.
  */
 
-import { linkNodes, unlinkNodes, type TourGraphCommand } from '../tour-graph-edit';
+import { linkNodes, nameNode, unlinkNodes, type TourGraphCommand } from '../tour-graph-edit';
 import { inverseOf } from '../tour-graph-inverse';
 import type { SpatialTour, TourNode } from '@/types/spatial-tour';
 
@@ -22,8 +22,9 @@ const LINKED: Graph = {
 /** Ο γραφέας σε μικρογραφία — οι ίδιες καθαρές συναρτήσεις που τρέχει ο διακομιστής. */
 function apply(graph: Graph, command: TourGraphCommand): Graph {
   const result = command.op === 'link' ? linkNodes(graph, command.fromNodeId, command.toNodeId, command.bearingRad)
-    : command.op === 'unlink' ? unlinkNodes(graph, command.fromNodeId, command.toNodeId) : null;
-  if (result === null) throw new Error('μόνο link/unlink εδώ');
+    : command.op === 'unlink' ? unlinkNodes(graph, command.fromNodeId, command.toNodeId)
+    : command.op === 'name' ? nameNode(graph, command.nodeId, command.room) : null;
+  if (result === null) throw new Error('μόνο link/unlink/name εδώ');
   return result.kind === 'edited' ? result.graph : graph;
 }
 
@@ -62,5 +63,19 @@ describe('Ο — αναίρεση μόνο όπου είναι πιστή', () =
 
   it('αφαίρεση λήψης ⇒ καμία αναίρεση (το σημείο και τα βελάκια του χάνονται — η οθόνη ρωτά ΠΡΙΝ)', () => {
     expect(inverseOf({ op: 'unplace', captureId: 'tcap_1' }, LINKED)).toBeNull();
+  });
+});
+
+describe('Χ — αναίρεση ονόματος χώρου (Φ2στ · §4.12)', () => {
+  const room = { types: ['office'] as const, label: 'Γραφείο', source: 'manual' as const };
+  const NAMED: Graph = { ...LINKED, nodes: LINKED.nodes.map((n) => (n.id === 'a' ? { ...n, room } : n)) };
+
+  it.each<[string, Graph, TourGraphCommand]>([
+    ['όνομα σε σημείο χωρίς όνομα', LINKED, { op: 'name', nodeId: 'a', room: { types: ['hallway'], label: null } }],
+    ['αλλαγή ονόματος', NAMED, { op: 'name', nodeId: 'a', room: { types: ['hallway'], label: 'Διάδρομος' } }],
+    ['σβήσιμο ονόματος', NAMED, { op: 'name', nodeId: 'a', room: null }],
+  ])('%s ⇒ ίδιος χώρος μετά την αναίρεση', (_label, before, command) => {
+    const after = roundTrip(before, command);
+    expect(after.nodes.find((n) => n.id === 'a')?.room ?? null).toEqual(before.nodes.find((n) => n.id === 'a')?.room ?? null);
   });
 });

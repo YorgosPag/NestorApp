@@ -204,6 +204,11 @@ export interface PropertiesNotificationSettings {
   /** 🎯 ADR-835 §23.6 — «**η κράτησή σου επιβεβαιώθηκε / δεν έγινε δεκτή / δεν απαντήθηκε**». Υποχρεωτική. */
   stayRequestAnswered: boolean;
   /**
+   * 🎯 ADR-843 §10.20 — «**νέο ενδιαφέρον για την αγγελία / το γραφείο σας**». ⚠️ Προεπιλογή `true`: αλλιώς ο
+   * προσφέρων μαθαίνει μόνο αν ανοίξει μόνος του τα εισερχόμενα, ενώ ο ζητών κρατά μία από τις δέκα θέσεις του.
+   */
+  firstContactReceived: boolean;
+  /**
    * 🎯 ADR-884 Κ3β — «**ο Χ ζήτησε να δει την περιήγηση 360°**». ⚠️ Προεπιλογή `true`: ο υπεύθυνος δεν έχει άλλο
    * τρόπο να μάθει ότι κάποιος περιμένει έγκριση.
    */
@@ -450,6 +455,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   holidayHoursQuestion: true,
   stayRequestReceived: true,
   stayRequestAnswered: true,
+  firstContactReceived: true,
   tourAccessRequested: true,
   tourAccessAnswered: true,
   tourLinkOpened: true,

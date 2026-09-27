@@ -42,6 +42,7 @@ jest.mock('../tour-panorama-engine', () => ({ createTourPanoramaEngine: () => en
 
 import { DEMO_TOUR_MANIFEST } from '../demo/demo-tour';
 import { TourViewer } from '../TourViewer';
+import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
 
 const FACES = {} as TourCubeFaceImages;
 const TILE = { width: 512, height: 512 } as TourFaceImage;
@@ -64,61 +65,81 @@ beforeEach(() => {
 });
 
 /** Η πρώτη εικόνα φορτώνει ασύγχρονα — η απόδοση περιμένει να κατακάτσει (καμία ενημέρωση εκτός `act`). */
-const renderViewer = async () => {
-  await act(async () => { render(<TourViewer manifest={DEMO_TOUR_MANIFEST} source={source} />); });
+const renderViewer = async (manifest: TourManifest = DEMO_TOUR_MANIFEST) => {
+  await act(async () => { render(<TourViewer manifest={manifest} source={source} />); });
 };
-const nearby = () => within(screen.getByRole('navigation', { name: 'spatial-tour:viewer.nearby' }));
+/** «Σημείο N» — το όνομα ενός σημείου χωρίς δηλωμένο χώρο (η ψεύτικη `t` κολλά τις τιμές μετά το κλειδί). */
+const P = (n: number) => `spatial-tour:viewer.point:${n}`;
+const panel = () => within(screen.getByRole('navigation', { name: 'spatial-tour:viewer.panelTitle' }));
+const floorSection = (ordinal: number) => within(panel().getByRole('region', { name: `spatial-tour:viewer.floorNumbered:${ordinal}` }));
+/** Κουμπί μετάβασης της στήλης — ανά όροφο, γιατί η αρίθμηση «Σημείο N» είναι ανά όροφο. */
+const floorList = (ordinal: number) => within(floorSection(ordinal).getByRole('list'));
+const goButton = (n: number, ordinal = 0) => floorList(ordinal).getByRole('button', { name: `spatial-tour:viewer.goTo:${P(n)}` });
+/** Η επικεφαλίδα πάνω στη σκηνή — το όνομα του χώρου όπου βρίσκεται ο επισκέπτης. */
+const hereHeading = (name: string) => screen.getByRole('heading', { level: 2, name });
+/** Τα βελάκια πάνω στη σκηνή (όχι η μεγέθυνση). */
+const stageArrows = () => within(screen.getByRole('application').closest('figure') as HTMLElement).getAllByRole('button', { hidden: true })
+  .filter((b) => (b.getAttribute('aria-label') ?? '').startsWith('spatial-tour:viewer.goTo'));
+/** Ο επισκέπτης στρέφει τη ματιά (πληκτρολόγιο) — νέα θέαση ⇒ ο streamer ξαναϋπολογίζει. */
+const turnCamera = () => fireEvent.keyDown(screen.getByRole('application'), { key: 'ArrowRight' });
+const tileRequestsFor = (nodeId: string) =>
+  (source.tiles?.tile as jest.Mock).mock.calls.filter(([stop]: [{ nodeId: string }]) => stop.nodeId === nodeId).length;
 
 describe('TourViewer — πρώτη εικόνα και προσφορές', () => {
-  it('ξεκινά στο χαμηλότερο όροφο, πρώτο σημείο, με την κατεύθυνση ΑΥΤΗΣ της λήψης', async () => {
+  it('ξεκινά στο χαμηλότερο όροφο, πρώτο σημείο, με την κατεύθυνση ΑΥΤΗΣ της λήψης· το όνομα του χώρου στην κορυφή', async () => {
     await renderViewer();
     await waitFor(() => expect(engine.showNow).toHaveBeenCalledWith(FACES, 0, expect.any(String)));
-    expect(screen.getByText('spatial-tour:viewer.youAreHere:1')).toBeInTheDocument();
+    expect(hereHeading(P(1))).toBeInTheDocument();
   });
 
-  it('επόμενα σημεία = οι γείτονες ΜΕ στάση (ποτέ ο κόμβος χωρίς λήψη)', async () => {
+  it('βελάκια στη σκηνή = οι γείτονες ΜΕ στάση και κατεύθυνση (ποτέ ο κόμβος χωρίς λήψη)', async () => {
     await renderViewer();
-    const names = nearby().getAllByRole('button').map((b) => b.textContent);
-    expect(names).toEqual(['spatial-tour:viewer.point:2', 'spatial-tour:viewer.point:4']);
-  });
-
-  it('επιλογέας ορόφων από πάνω προς τα κάτω, ο τρέχων πατημένος', async () => {
-    await renderViewer();
-    const floors = within(screen.getByRole('navigation', { name: 'spatial-tour:viewer.floors' })).getAllByRole('button');
-    expect(floors.map((b) => [b.textContent, b.getAttribute('aria-pressed')])).toEqual([
-      ['spatial-tour:viewer.floorNumbered:1', 'false'],
-      ['spatial-tour:viewer.floorNumbered:0', 'true'],
+    expect(stageArrows().map((b) => b.getAttribute('aria-label'))).toEqual([
+      `spatial-tour:viewer.goTo:${P(2)}`, `spatial-tour:viewer.goTo:${P(4)}`,
     ]);
   });
 
-  it('κάτοψη μόνο στον όροφο που έχει· «είστε εδώ» στον τρέχοντα κόμβο', async () => {
+  it('στήλη Zillow: ΟΛΟΙ οι όροφοι μαζί, ο πάνω πρώτος· κάθε σημείο στη λίστα, το τρέχον σημειωμένο', async () => {
     await renderViewer();
-    const plan = screen.getByRole('group', { name: 'spatial-tour:viewer.plan' });
-    const here = within(plan).getByRole('button', { name: 'spatial-tour:viewer.youAreHere:1' });
-    expect(here).toHaveAttribute('aria-current', 'location');
+    expect(panel().getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual([
+      'spatial-tour:viewer.floorNumbered:1', 'spatial-tour:viewer.floorNumbered:0',
+    ]);
+    expect(floorList(0).getAllByRole('button')).toHaveLength(4);
+    expect(floorList(0).getByRole('button', { name: `spatial-tour:viewer.youAreHere:${P(1)}` })).toHaveAttribute('aria-current', 'location');
+  });
+
+  it('κάτοψη μόνο στον όροφο που έχει θέσεις· «είστε εδώ» στον τρέχοντα κόμβο', async () => {
+    await renderViewer();
+    expect(panel().getAllByRole('group', { name: 'spatial-tour:viewer.plan' })).toHaveLength(1);
+    const plan = floorSection(0).getByRole('group', { name: 'spatial-tour:viewer.plan' });
+    expect(within(plan).getByRole('button', { name: `spatial-tour:viewer.youAreHere:${P(1)}` })).toHaveAttribute('aria-current', 'location');
+  });
+
+  it('Φ2στ — δηλωμένος χώρος: το βελάκι και η επικεφαλίδα λένε τον χώρο, όχι «Σημείο N»', async () => {
+    const kitchen = { types: ['kitchen'] as const, label: null, source: 'manual' as const };
+    await renderViewer({ ...DEMO_TOUR_MANIFEST, nodes: DEMO_TOUR_MANIFEST.nodes.map((n) => (n.id === 'g2' ? { ...n, room: kitchen } : n)) });
+    const arrow = stageArrows().find((b) => b.getAttribute('aria-label') === 'spatial-tour:viewer.goTo:spatial-tour:rooms.types.kitchen');
+    expect(arrow).toHaveTextContent('spatial-tour:rooms.types.kitchen');
+    await act(async () => { fireEvent.click(arrow!); });
+    await waitFor(() => expect(hereHeading('spatial-tour:rooms.types.kitchen')).toBeInTheDocument());
   });
 });
 
 describe('TourViewer — πλοήγηση', () => {
-  it('αλλαγή ορόφου ⇒ πρώτο σημείο του ορόφου, χωρίς κάτοψη εκεί, σκάλα με ετικέτα ορόφου', async () => {
+  it('σημείο άλλου ορόφου από τη στήλη ⇒ μετάβαση εκεί, με την κατεύθυνση της λήψης του', async () => {
     await renderViewer();
     await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:viewer.floorNumbered:1' })); });
-    await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:1')).toBeInTheDocument());
+    await act(async () => { fireEvent.click(goButton(1, 1)); });
+    await waitFor(() => expect(floorList(1).getByRole('button', { name: `spatial-tour:viewer.youAreHere:${P(1)}` })).toHaveAttribute('aria-current', 'location'));
     await waitFor(() => expect(engine.showNow).toHaveBeenLastCalledWith(FACES, expect.closeTo(Math.PI / 4, 6), expect.any(String)));
-    expect(screen.queryByRole('complementary', { name: 'spatial-tour:viewer.plan' })).toBeNull();
-    expect(nearby().getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'spatial-tour:viewer.pointOnFloor:2|spatial-tour:viewer.floorNumbered:0',
-      'spatial-tour:viewer.point:2',
-    ]);
   });
 
   it('κλικ σε κόμβο της κάτοψης ⇒ μετάβαση εκεί', async () => {
     await renderViewer();
     await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
-    const plan = screen.getByRole('group', { name: 'spatial-tour:viewer.plan' });
-    await act(async () => { fireEvent.click(within(plan).getByRole('button', { name: 'spatial-tour:viewer.goTo:2' })); });
-    await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:2')).toBeInTheDocument());
+    const plan = floorSection(0).getByRole('group', { name: 'spatial-tour:viewer.plan' });
+    await act(async () => { fireEvent.click(within(plan).getByRole('button', { name: `spatial-tour:viewer.goTo:${P(2)}` })); });
+    await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
   });
 
   it('αργή ΠΡΩΤΗ εικόνα που φτάνει μετά τη μετάβαση ⇒ ΔΕΝ ζωγραφίζεται πάνω στο νέο σημείο (ζωντανά, ADR-884 Φ2δ)', async () => {
@@ -132,8 +153,8 @@ describe('TourViewer — πλοήγηση', () => {
     });
     try {
       await renderViewer();
-      await act(async () => { fireEvent.click(nearby().getByRole('button', { name: 'spatial-tour:viewer.goTo:2' })); });
-      await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:2')).toBeInTheDocument());
+      await act(async () => { fireEvent.click(goButton(2)); });
+      await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
       await act(async () => { releaseFirst(); await new Promise((r) => setTimeout(r, 0)); });
       expect(engine.showNow).not.toHaveBeenCalledWith(LATE, expect.anything(), expect.anything());
     } finally {
@@ -154,8 +175,8 @@ describe('TourViewer — πλοήγηση', () => {
       await renderViewer();
       await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
       engine.putTile.mockClear();
-      await act(async () => { fireEvent.click(nearby().getByRole('button', { name: 'spatial-tour:viewer.goTo:2' })); });
-      await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:2')).toBeInTheDocument());
+      await act(async () => { fireEvent.click(goButton(2)); });
+      await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
       const arrivedKey = engine.showNow.mock.calls.at(-1)?.[2];
       expect(engine.putTile.mock.calls.filter((c) => c[0] === arrivedKey)).toHaveLength(0);
       await act(async () => { releaseTiles(); await new Promise((r) => setTimeout(r, 0)); });
@@ -165,13 +186,45 @@ describe('TourViewer — πλοήγηση', () => {
     }
   });
 
-  it('το πανόραμα δεν φορτώθηκε ⇒ μένει στο σημείο του, με μήνυμα (ποτέ μαύρο)', async () => {
+  it('το πανόραμα δεν φορτώθηκε ⇒ μένει στο σημείο του, με μήνυμα (ποτέ μαύρο) — και τα πλακίδια του ΞΑΝΑΡΕΟΥΝ (M15β)', async () => {
     failing = new Set(['g2']);
     await renderViewer();
     await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
-    await act(async () => { fireEvent.click(nearby().getByRole('button', { name: 'spatial-tour:viewer.goTo:2' })); });
+    await act(async () => { fireEvent.click(goButton(2)); });
     expect(await screen.findByRole('alert')).toHaveTextContent('spatial-tour:viewer.loadFailed');
-    expect(screen.getByText('spatial-tour:viewer.youAreHere:1')).toBeInTheDocument();
+    expect(hereHeading(P(1))).toBeInTheDocument();
+    (source.tiles?.tile as jest.Mock).mockClear();
+    await act(async () => { turnCamera(); await new Promise((r) => setTimeout(r, 0)); });
+    expect(tileRequestsFor('g1')).toBeGreaterThan(0);
+  });
+
+  it('M16 καλωδίωση — άφιξη προς τα πού περπάτησε: g1(0,0) → g2(4,0), heading g2 = 90° ⇒ yaw 0 (όχι 180°, πίσω)', async () => {
+    await renderViewer();
+    await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+    await act(async () => { fireEvent.click(goButton(2)); });
+    await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
+    expect(Math.cos(engine.setView.mock.calls.at(-1)?.[0].yaw ?? NaN)).toBeCloseTo(1, 9);
+  });
+
+  it('στη μετάβαση ΚΑΝΕΝΑ πλακίδιο της αφετηρίας — η ουρά ανήκει στον προορισμό (ζωντανά 2026-09-27, M15)', async () => {
+    const original = (source.base as jest.Mock).getMockImplementation();
+    let releaseTarget: () => void = () => undefined;
+    (source.base as jest.Mock).mockImplementation(async (stop: { nodeId: string }) => {
+      if (stop.nodeId === 'g2') await new Promise<void>((resolve) => { releaseTarget = resolve; });
+      return FACES;
+    });
+    try {
+      await renderViewer();
+      await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+      await act(async () => { fireEvent.click(goButton(2)); });
+      (source.tiles?.tile as jest.Mock).mockClear();
+      await act(async () => { turnCamera(); await new Promise((r) => setTimeout(r, 0)); });
+      expect(tileRequestsFor('g1')).toBe(0);
+      await act(async () => { releaseTarget(); await new Promise((r) => setTimeout(r, 0)); });
+      await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
+    } finally {
+      (source.base as jest.Mock).mockImplementation(original);
+    }
   });
 });
 

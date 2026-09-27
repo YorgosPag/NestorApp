@@ -155,6 +155,35 @@ export function isFloorPlanUpgrade(current: FloorPlanSource, candidate: FloorPla
 }
 
 // =============================================================================
+// 3β. ΟΙ ΧΩΡΟΙ — τι δωμάτιο είναι ένα σημείο (ADR-884 Φ2στ · §4.12)
+// =============================================================================
+
+/**
+ * **Τύπος χώρου** ενός σημείου — κλειστό, μεταφράσιμο λεξιλόγιο (ο ξένος αγοραστής διαβάζει «Kitchen», όχι «Κουζίνα»).
+ * Βάση: τα 21 `classifications` της Matterport (Model API «Room Names») + ό,τι ζητά η ελληνική αγγελία (`wc` · `storage` ·
+ * `laundry` · `terrace`). Το ελεύθερο **όνομα** (`TourRoom.label`) υπερισχύει στην προβολή — ίδια προτεραιότητα με τη
+ * Matterport (`label` πάνω από `classifications`). **Η σειρά είναι η σειρά του επιλογέα** (συχνότερα πρώτα).
+ */
+export const TOUR_ROOM_TYPES = [
+  'living-room', 'kitchen', 'dining-room', 'bedroom', 'bathroom', 'wc', 'entrance', 'hallway', 'office', 'closet',
+  'storage', 'laundry', 'utility-room', 'balcony', 'terrace', 'patio', 'garage', 'basement', 'loft', 'staircase',
+  'pantry', 'family-room', 'game-room', 'exercise-room', 'other',
+] as const;
+export type TourRoomType = (typeof TOUR_ROOM_TYPES)[number];
+
+/** Ενιαίος χώρος = έως τόσοι τύποι (Matterport: «Kitchen, Living Room, Dining Room»). */
+export const TOUR_ROOM_MAX_TYPES = 3;
+/** Μήκος ελεύθερου ονόματος — χωρά σε βελάκι και επικεφαλίδα κινητού. */
+export const TOUR_ROOM_LABEL_MAX = 60;
+
+/**
+ * Από πού ήρθε το όνομα — `manual` σήμερα· στη Φ4 το `IfcSpace` του BIM (`bim`) **αναβαθμίζει** το χειροκίνητο, ποτέ
+ * σιωπηλά (ίδιο σχήμα με την κάτοψη, §12 Δ5).
+ */
+export const TOUR_ROOM_SOURCES = ['manual'] as const;
+export type TourRoomSource = (typeof TOUR_ROOM_SOURCES)[number];
+
+// =============================================================================
 // 4. GUARDS
 // =============================================================================
 
@@ -171,4 +200,6 @@ export const isTourAccessRequestState = (v: unknown): v is TourAccessRequestStat
   includes(TOUR_ACCESS_REQUEST_STATES, v);
 export const isTourViewBasis = (v: unknown): v is TourViewBasis => includes(TOUR_VIEW_BASES, v);
 export const isFloorPlanSource =(v: unknown): v is FloorPlanSource => includes(FLOOR_PLAN_SOURCES, v);
-export const isFloorPlanRecordState = (v: unknown): v is FloorPlanRecordState => includes(FLOOR_PLAN_RECORD_STATES, v);
+export const isTourRoomType = (v: unknown): v is TourRoomType => includes(TOUR_ROOM_TYPES, v);
+export const isTourRoomSource = (v: unknown): v is TourRoomSource => includes(TOUR_ROOM_SOURCES, v);
+export const isFloorPlanRecordState =(v: unknown): v is FloorPlanRecordState => includes(FLOOR_PLAN_RECORD_STATES, v);

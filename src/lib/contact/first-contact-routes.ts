@@ -37,3 +37,11 @@ export const MY_FIRST_CONTACTS_ROUTE = '/first-contacts' as const;
  * (`ownListingIds`, CHECK 3.56), όχι από τη διεύθυνση.
  */
 export const FIRST_CONTACTS_INBOX_ROUTE = '/first-contacts/inbox' as const;
+
+/**
+ * **Ο σύνδεσμος της ειδοποίησης «νέο ενδιαφέρον»** (ADR-843 §10.20) — βοηθός `…Href`, όπως απαιτεί η Κ2 της
+ * `notification-destination-custody`: ο προορισμός ζητείται **από εδώ**, ποτέ ως χειρόγραφη συμβολοσειρά.
+ */
+export function firstContactsInboxHref(): string {
+  return FIRST_CONTACTS_INBOX_ROUTE;
+}

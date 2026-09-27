@@ -18,6 +18,9 @@
  *   αγνοεί πλακίδιο στάσης που δεν δείχνει (`putTile`, M11).
  * 🔴 **Η άφιξη ΔΕΝ περιμένει τα καθαρά πλακίδια** (ίδια ζωντανή επαλήθευση, M12): αλλιώς «Βρίσκεστε στο…» και τα βελάκια
  *   έμεναν του **παλιού** σημείου ενώ φαινόταν το νέο.
+ * 🔴 **Στη μετάβαση ο streamer δεν ακολουθεί ΚΑΝΕΝΑ σημείο** (`focus(null)`, ζωντανά 2026-09-27, M15): αλλιώς η στροφή
+ *   ζητά πλακίδια της αφετηρίας που σβήνει, **μπροστά** από την προφόρτωση του προορισμού. Εγκατάλειψη ⇒ ξανά η αφετηρία.
+ * 🧭 **Άφιξη = συνέχεια του περπατήματος** (M16): αντίθετα από τη διόπτευση επιστροφής (`linkBearing(to, from)`).
  */
 
 import { type Dispatch, type MutableRefObject, useEffect, useRef, useState } from 'react';
@@ -45,6 +48,7 @@ function transitionPlanOf(camera: TourCameraStore, from: ViewerStop, to: ViewerS
     fromHeading: from.stop.headingRad,
     toHeading: to.stop.headingRad,
     linkBearing: linkBearing(from, to),
+    returnBearing: linkBearing(to, from),
     reducedMotion: prefersReducedMotion(),
   });
 }
@@ -67,6 +71,9 @@ async function runTransition(
 ): Promise<void> {
   const { engine, camera, source, streamer } = ctx;
   const plan = transitionPlanOf(camera, from, to);
+  // Η αφετηρία σβήνει σε < 1 s: τα πλακίδια της στροφής της θα έπαιρναν τις θέσεις της ουράς ΜΠΡΟΣΤΑ από την
+  // προφόρτωση του προορισμού (ζωντανά 2026-09-27: 2+6 αιτήματα αφετηρίας στη στροφή, τα 6 × 503).
+  streamer.focus(null);
   const base = source.base(to.stop, signals.load);
   streamer.prefetch(to.stop, arrivalFrameOf(camera, from, to));
   const { rotate } = plan;
@@ -144,7 +151,12 @@ export function useTourNavigation(
         setStatus('ready');
         dispatch({ kind: 'arrived' });
       },
-      () => { if (!motion.signal.aborted && !load.signal.aborted) { setStatus('failed'); dispatch({ kind: 'abandoned' }); } },
+      () => {
+        if (motion.signal.aborted || load.signal.aborted) return;
+        ctx.streamer.focus(from.stop); // ο επισκέπτης ΜΕΝΕΙ — τα πλακίδια του σημείου του ξαναρέουν
+        setStatus('failed');
+        dispatch({ kind: 'abandoned' });
+      },
     );
     return () => motion.abort();
   }, [ctx, graph, state.nodeId, state.targetNodeId, dispatch]);

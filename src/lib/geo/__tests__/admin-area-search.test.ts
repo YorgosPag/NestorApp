@@ -8,6 +8,8 @@ import { join } from 'node:path';
 
 import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex } from '../admin-area-index-file';
 import { adminAreaLineage, buildAdminAreaIndex, resolveTypedAdminArea, searchAdminAreas } from '../admin-area-search';
+// ADR-893: τα ονόματα συγκρίνονται κατά ΤΑΥΤΟΤΗΤΑ, όπως στην εφαρμογή — όχι κατά γραφή.
+import { foldPlaceIdentity } from '@/utils/address/place-name';
 
 const index = buildAdminAreaIndex(
   readAdminAreaIndex(JSON.parse(readFileSync(join(process.cwd(), 'public', ADMIN_AREA_INDEX_FILE), 'utf8'))),
@@ -26,7 +28,7 @@ describe('searchAdminAreas', () => {
 
   it('και προτείνει ΚΑΙ τη δημοτική ενότητα Ελευθερίου-Κορδελιού (η γενεαλογία καλύπτει το «Ευόσμου»)', () => {
     const names = searchAdminAreas(index, 'Δήμος Ελευθερίου Κορδελιού Ευόσμου').map((area) => area.name);
-    expect(names).toContain('ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΕΛΕΥΘΕΡΙΟΥ-ΚΟΡΔΕΛΙΟΥ');
+    expect(names.map(foldPlaceIdentity)).toContain(foldPlaceIdentity('ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΕΛΕΥΘΕΡΙΟΥ-ΚΟΡΔΕΛΙΟΥ'));
   });
 
   it.each([
@@ -44,11 +46,11 @@ describe('searchAdminAreas', () => {
 
   it('χωρίς δηλωμένη βαθμίδα, το «Θεσσαλονίκη» δίνει πρώτα ΔΗΜΟ (πρότυπο: πόλη πρώτα)', () => {
     const first = searchAdminAreas(index, 'Θεσσαλονίκη', 1)[0];
-    expect(first.name).toBe('ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ');
+    expect(foldPlaceIdentity(first.name)).toBe(foldPlaceIdentity('ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ'));
   });
 
   it('greeklish με άλλη γραφή ήχου: «Pireas» βρίσκει τον Πειραιά', () => {
-    expect(searchAdminAreas(index, 'Pireas', 3).map((area) => area.name)).toContain('ΔΗΜΟΣ ΠΕΙΡΑΙΩΣ');
+    expect(searchAdminAreas(index, 'Pireas', 3).map((area) => foldPlaceIdentity(area.name))).toContain(foldPlaceIdentity('ΔΗΜΟΣ ΠΕΙΡΑΙΩΣ'));
   });
 
   it('σκέτη λέξη βαθμίδας («Δήμος») ⇒ τίποτα — δεν είναι τόπος', () => {
@@ -80,7 +82,7 @@ describe('resolveTypedAdminArea — «Θεσσαλονίκη» + Enter (ADR-883 
     ['Δήμος Θεσσαλονίκης', 'ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ'],
   ])('«%s» ⇒ %s (ίδιος τόπος σε πολλές βαθμίδες ⇒ ο δήμος)', (query, name) => {
     const outcome = resolve(query);
-    expect(outcome.kind === 'area' && outcome.area.name).toBe(name);
+    expect(outcome.kind === 'area' && foldPlaceIdentity(outcome.area.name)).toBe(foldPlaceIdentity(name));
   });
 
   it('η δηλωμένη βαθμίδα φιλτράρει: «Περιφερειακή Ενότητα Θεσσαλονίκης» ⇒ η Π.Ε.', () => {

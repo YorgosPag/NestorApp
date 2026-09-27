@@ -151,3 +151,22 @@ describe('Ο — όριο κόμβων', () => {
     expect((await readCapture('tcap_1')).nodeId).toBeNull();
   });
 });
+
+describe('Χ — ο χώρος ενός σημείου μέσα από τον ΕΝΑ γραφέα (Φ2στ · §4.12)', () => {
+  it('όνομα ⇒ revision + 1 ⇒ διαβάζεται πίσω ίδιο· ίδιο ξανά ⇒ unchanged', async () => {
+    await write(placeNew('tcap_1'));
+    const nodeId = (await readTour()).nodes[0].id;
+    const name: TourGraphCommand = { op: 'name', nodeId, room: { types: ['office'], label: ' Γραφείο ' } };
+    expect(await write(name)).toEqual({ kind: 'written', revision: 5 });
+    expect((await readTour()).nodes[0].room).toEqual({ types: ['office'], label: 'Γραφείο', source: 'manual' });
+    expect(await write(name)).toEqual({ kind: 'unchanged', revision: 5 });
+  });
+
+  it('άκυρος χώρος ⇒ room-invalid, καμία εγγραφή', async () => {
+    await write(placeNew('tcap_1'));
+    const nodeId = (await readTour()).nodes[0].id;
+    expect(await write({ op: 'name', nodeId, room: { types: ['throne-room'], label: null } }))
+      .toEqual({ kind: 'refused', reason: 'room-invalid' });
+    expect((await readTour()).revision).toBe(4);
+  });
+});

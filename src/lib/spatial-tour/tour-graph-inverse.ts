@@ -47,5 +47,10 @@ export function inverseOf(command: TourGraphCommand, before: Graph): readonly To
     case 'unplace': return null;
     case 'link':
     case 'unlink': return restorePair(before, command.fromNodeId, command.toNodeId);
+    case 'name': {
+      // Επαναφορά του προηγούμενου χώρου — πιστή: ο χώρος είναι ΕΝΑ πεδίο του σημείου.
+      const room = before.nodes.find((node) => node.id === command.nodeId)?.room ?? null;
+      return [{ op: 'name', nodeId: command.nodeId, room: room === null ? null : { types: room.types, label: room.label } }];
+    }
   }
 }

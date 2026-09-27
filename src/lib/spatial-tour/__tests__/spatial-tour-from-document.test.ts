@@ -46,6 +46,16 @@ describe('spatialTourFromDocument', () => {
     expect(spatialTourFromDocument({ ...TOUR_DOC, nodes: absent }, 'stour_1')?.nodes[0].position).toBeNull();
   });
 
+  it('✅ χώρος σημείου διαβάζεται κανονικοποιημένος· απών ⇒ κανένα πεδίο· 🔴 υπάρχει αλλά δεν διαβάζεται ⇒ null (Φ2στ)', () => {
+    const withRoom = (room: unknown) => [{ ...TOUR_DOC.nodes[0], links: [], room }];
+    const read = (room: unknown) => spatialTourFromDocument({ ...TOUR_DOC, nodes: withRoom(room) }, 'stour_1');
+    expect(read({ types: ['office'], label: 'Γραφείο', source: 'manual' })?.nodes[0].room)
+      .toEqual({ types: ['office'], label: 'Γραφείο', source: 'manual' });
+    expect('room' in (read(undefined)?.nodes[0] ?? {})).toBe(false);
+    expect(read({ types: ['throne-room'], label: null, source: 'manual' })).toBeNull();
+    expect(read({ types: ['office'], label: null, source: 'bim' })).toBeNull();
+  });
+
   it.each([
     ['χωρίς κάτοχο', { companyId: undefined }],
     ['δύο κάτοχοι', { userId: 'usr_1' }],

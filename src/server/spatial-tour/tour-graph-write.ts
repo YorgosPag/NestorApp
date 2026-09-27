@@ -21,6 +21,7 @@ import { checkTourGraph } from '@/lib/spatial-tour/spatial-tour-graph';
 import { spatialTourFromDocument, tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import {
   linkNodes,
+  nameNode,
   placeCapture,
   unlinkNodes,
   unplaceCapture,
@@ -64,6 +65,7 @@ async function planCommand(
 ): Promise<{ readonly result: TourGraphEditResult; readonly captureRef: DocumentReference | null } | TourAccessRefused> {
   if (command.op === 'link') return { result: linkNodes(ctx.tour, command.fromNodeId, command.toNodeId, command.bearingRad), captureRef: null };
   if (command.op === 'unlink') return { result: unlinkNodes(ctx.tour, command.fromNodeId, command.toNodeId), captureRef: null };
+  if (command.op === 'name') return { result: nameNode(ctx.tour, command.nodeId, command.room), captureRef: null };
   const found = await readCapture(ctx, command.captureId);
   if (found === null) return refuseTourAccess('capture-absent');
   if (command.op === 'place') {

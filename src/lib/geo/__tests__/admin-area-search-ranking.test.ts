@@ -9,6 +9,8 @@ import { join } from 'node:path';
 import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex } from '../admin-area-index-file';
 import { buildAdminAreaIndex, rankAdminAreas, resolveTypedAdminArea } from '../admin-area-search';
 import { greekWords } from '../admin-area-words';
+// ADR-893: τα ονόματα συγκρίνονται κατά ΤΑΥΤΟΤΗΤΑ, όπως στην εφαρμογή — όχι κατά γραφή.
+import { foldPlaceIdentity } from '@/utils/address/place-name';
 
 const index = buildAdminAreaIndex(
   readAdminAreaIndex(JSON.parse(readFileSync(join(process.cwd(), 'public', ADMIN_AREA_INDEX_FILE), 'utf8'))),
@@ -27,7 +29,7 @@ describe('πρόθεμα: μισή λέξη ταιριάζει ΜΟΝΟ ως π�
   });
 
   it('«Ξυλοκ» ⇒ ο Δήμος Ξυλοκάστρου πρώτος', () => {
-    expect(names('Ξυλοκ')[0]).toBe('ΔΗΜΟΣ ΞΥΛΟΚΑΣΤΡΟΥ - ΕΥΡΩΣΤΙΝΗΣ');
+    expect(foldPlaceIdentity(names('Ξυλοκ')[0])).toBe(foldPlaceIdentity('ΔΗΜΟΣ ΞΥΛΟΚΑΣΤΡΟΥ - ΕΥΡΩΣΤΙΝΗΣ'));
   });
 
   it.each([
@@ -38,7 +40,7 @@ describe('πρόθεμα: μισή λέξη ταιριάζει ΜΟΝΟ ως π�
     ['Ιωάννινα', 'ΔΗΜΟΣ ΙΩΑΝΝΙΤΩΝ', 'όνομα κατοίκων: Ιωάννινα/Ιωαννιτών'],
     ['Pireas', 'ΔΗΜΟΣ ΠΕΙΡΑΙΩΣ', 'greeklish: Πειραιάς/Πειραιώς'],
   ])('«%s» ⇒ %s (%s)', (query, first) => {
-    expect(names(query)[0]).toBe(first);
+    expect(foldPlaceIdentity(names(query)[0])).toBe(foldPlaceIdentity(first));
     expect(rankAdminAreas(index, query).corrected).toBe(false);
   });
 
@@ -60,7 +62,7 @@ describe('ανοχή ορθογραφίας — ΜΟΝΟ όταν το ακρι�
     ['Θεσσαλονκη', 'ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ'],
     ['Καλαμτα', 'ΔΗΜΟΣ ΚΑΛΑΜΑΤΑΣ'],
   ])('«%s» ⇒ πρώτο %s (διόρθωση ολόκληρης λέξης πάνω από διόρθωση προθέματος)', (query, first) => {
-    expect(names(query)[0]).toBe(first);
+    expect(foldPlaceIdentity(names(query)[0])).toBe(foldPlaceIdentity(first));
   });
 
   it('«Σταυροπολη» ⇒ η Σταυρούπολη (παλιά: μόνο Σταυροπόδιον)', () => {

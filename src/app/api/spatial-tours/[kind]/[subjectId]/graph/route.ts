@@ -49,6 +49,12 @@ const commandSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('unplace'), captureId: id }),
   z.object({ op: z.literal('link'), fromNodeId: id, toNodeId: id, bearingRad: bearing }),
   z.object({ op: z.literal('unlink'), fromNodeId: id, toNodeId: id }),
+  // Εδώ μόνο φράχτης μεγέθους· το «έγκυρο χώρο» το κρίνει ΜΙΑ αρχή, το `normalizeTourRoom` (ίδια και στην ανάγνωση).
+  z.object({
+    op: z.literal('name'),
+    nodeId: id,
+    room: z.object({ types: z.array(z.string().max(32)).max(8), label: z.string().max(200).nullable() }).nullable(),
+  }),
 ]);
 
 type GraphResponse = TourGraphEditResponse | TourBadSubjectBody | TourRefusedBody;

@@ -132,6 +132,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    * ADR-884 Κ3β (Φ0.13) — **προς τον υπεύθυνο**: «ο Χ ζήτησε να δει την περιήγηση 360°». Ταυτότητα = αίτημα + υποβολή.
    */
   PROPERTIES_TOUR_ACCESS_REQUESTED: 'properties.tourAccessRequested',
+  /**
+   * ADR-843 §10.20 — **προς τον προσφέροντα**: «κάποιος σας πλησίασε για την αγγελία / το γραφείο σας». Ταυτότητα = η
+   * πράξη. 🔴 Το μήνυμα **δεν** κουβαλά στοιχεία του ζητούντος — δες `first-contact-notifier.service.ts`.
+   */
+  PROPERTIES_FIRST_CONTACT_RECEIVED: 'properties.firstContactReceived',
   /** ADR-884 Κ3β — **προς τον αιτούντα**: «εγκρίθηκε έως …» · «δεν εγκρίθηκε». Δύο ακροατήρια ⇒ δύο διακόπτες. */
   PROPERTIES_TOUR_ACCESS_ANSWERED: 'properties.tourAccessAnswered',
   /**
@@ -330,6 +335,14 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_REQUESTED]: {
     category: 'properties',
     settingKey: 'tourAccessRequested',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-843 §10.20 — ΟΧΙ υποχρεωτικό (η επαφή δεν λήγει σιωπηλά όπως μια κράτηση)· προεπιλογή `true`: χωρίς αυτό ο
+  //    προσφέρων μαθαίνει μόνο αν ανοίξει μόνος του τα εισερχόμενα — το κενό που το γέννησε.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_FIRST_CONTACT_RECEIVED]: {
+    category: 'properties',
+    settingKey: 'firstContactReceived',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

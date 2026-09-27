@@ -59,6 +59,7 @@ import type { ListingActor, ListingCustody } from '@/lib/owner-property/listing-
 import { createModuleLogger } from '@/lib/telemetry';
 import { admitFirstContact } from '@/services/contact/first-contact-admission';
 import { resolveMatchReason } from '@/services/contact/first-contact-guards';
+import { announceFirstContactReceived } from '@/services/contact/first-contact-notifier.service';
 import { contactFromDocument } from '@/services/contact/first-contact-projection';
 import {
   refuseFirstContact as refuse,
@@ -135,6 +136,11 @@ export async function openFirstContact(
  * **ξαναπροσπαθήσει**, γράφει το **ίδιο** έγγραφο στην **ίδια** διεύθυνση. Γεννήτορας
  * μέσα στη συναλλαγή θα παρήγαγε **νέα** ταυτότητα σε κάθε επανάληψη — δηλαδή
  * ταυτότητες που δεν γράφτηκαν ποτέ, και μια επανάληψη που «πετυχαίνει» δύο φορές.
+ *
+ * 🔑 **ADR-843 §10.20 — ο προσφέρων μαθαίνει ΜΟΝΟ για πράξη που γεννήθηκε τώρα**: το `unchanged` (δεύτερο πάτημα)
+ * δεν ξαναειδοποιεί. **ΜΕΤΑ** τη συναλλαγή, ποτέ μέσα της — μια επανάληψη της συναλλαγής θα έστελνε μήνυμα για
+ * γραφή που δεν έγινε. `await` και όχι fire-and-forget: σε serverless η απάντηση κόβει ό,τι μένει στον αέρα· ο
+ * αγωγός **δεν πετά**, άρα η πράξη δεν κινδυνεύει.
  */
 async function writeContact(
   adminDb: AdminFirestore,
@@ -165,7 +171,9 @@ async function writeContact(
   if (violations.length > 0) return { kind: 'invalid', violations };
 
   try {
-    return await adminDb.runTransaction((tx) => commitIfStillRoom(adminDb, tx, contact));
+    const outcome = await adminDb.runTransaction((tx) => commitIfStillRoom(adminDb, tx, contact));
+    if (outcome.kind === 'created') await announceFirstContactReceived(adminDb, contact);
+    return outcome;
   } catch (error) {
     logger.error('[FIRST-CONTACT] Η γραφή απέτυχε', {
       contactId: contact.id,

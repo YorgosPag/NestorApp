@@ -18,8 +18,8 @@ import type { TourEditorModel, TourInboxEntry } from '@/lib/spatial-tour/tour-ed
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { PANEL_KEYS } from '../spatial-tour-labels';
-import { TOUR_VIEWER_KEYS } from '../viewer/tour-viewer-labels';
 import { useLevelLabel } from '../viewer/TourViewerNavigation';
+import { useStopNames } from '../viewer/useStopNames';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 
 export type TourEditorSelection =
@@ -53,6 +53,7 @@ function InboxRow({ entry, selected, onSelect }: { readonly entry: TourInboxEntr
 function PointsSection({ model, selection, onSelect }: TourEditorRailProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const labelOf = useLevelLabel();
+  const nameOf = useStopNames(model.graph);
   if (model.graph.levels.length === 0) return <p className="text-sm text-muted-foreground">{t(TOUR_EDITOR_KEYS.noPoints)}</p>;
   return (
     <>
@@ -67,7 +68,7 @@ function PointsSection({ model, selection, onSelect }: TourEditorRailProps) {
                 <li key={nodeId} className="flex items-center gap-2">
                   <Button type="button" variant={isSelected(selection, target) ? 'secondary' : 'ghost'} size="sm" className="flex-1 justify-start"
                     aria-current={isSelected(selection, target) ? 'true' : undefined} onClick={() => onSelect(target)}>
-                    {t(TOUR_VIEWER_KEYS.point, { number: model.graph.stops.get(nodeId)?.number ?? 0 })}
+                    {nameOf(nodeId)}
                   </Button>
                   {missing > 0 && <Badge variant="outline">{t(TOUR_EDITOR_KEYS.missingArrows, { count: missing })}</Badge>}
                 </li>

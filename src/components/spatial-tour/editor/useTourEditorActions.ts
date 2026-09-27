@@ -17,7 +17,8 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { linkNodes, unlinkNodes, type TourGraphCommand, type TourPlacementTarget } from '@/lib/spatial-tour/tour-graph-edit';
+import { linkNodes, nameNode, unlinkNodes, type TourGraphCommand, type TourPlacementTarget } from '@/lib/spatial-tour/tour-graph-edit';
+import type { TourRoomInput } from '@/lib/spatial-tour/tour-room';
 import { inverseOf } from '@/lib/spatial-tour/tour-graph-inverse';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { editTourGraphFromScreen } from '@/services/spatial-tour/spatial-tour-graph.client';
@@ -35,13 +36,16 @@ export interface TourEditorActions {
   readonly unplace: (captureId: string) => Promise<boolean>;
   readonly placeArrow: (fromNodeId: string, toNodeId: string, bearingRad: number) => void;
   readonly unlink: (a: string, b: string) => void;
+  /** Ο χώρος ενός σημείου (Φ2στ · §4.12) — αισιόδοξα, με «Αναίρεση»· `null` ⇒ ξανά «Σημείο N». */
+  readonly name: (nodeId: string, room: TourRoomInput | null) => void;
 }
 
 /** Η αισιόδοξη εικόνα μιας εντολής — `null` για ό,τι δεν εφαρμόζεται αισιόδοξα. */
 function optimisticNodes(command: TourGraphCommand, nodes: readonly TourNode[]): readonly TourNode[] | null {
   const graph = { levels: [], nodes };
   const result = command.op === 'link' ? linkNodes(graph, command.fromNodeId, command.toNodeId, command.bearingRad)
-    : command.op === 'unlink' ? unlinkNodes(graph, command.fromNodeId, command.toNodeId) : null;
+    : command.op === 'unlink' ? unlinkNodes(graph, command.fromNodeId, command.toNodeId)
+    : command.op === 'name' ? nameNode(graph, command.nodeId, command.room) : null;
   return result?.kind === 'edited' ? result.graph.nodes : null;
 }
 
@@ -50,6 +54,7 @@ const SUCCESS_KEY: Record<TourGraphCommand['op'], string> = {
   unplace: TOUR_EDITOR_KEYS.removed,
   link: TOUR_EDITOR_KEYS.arrowSaved,
   unlink: TOUR_EDITOR_KEYS.unlinked,
+  name: TOUR_EDITOR_KEYS.roomSaved,
 };
 
 export function useTourEditorActions(subject: TourSubject, data: TourEditorDataHandle): TourEditorActions {
@@ -101,5 +106,6 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
     unplace: (captureId) => locked({ op: 'unplace', captureId }),
     placeArrow: (fromNodeId, toNodeId, bearingRad) => void send({ op: 'link', fromNodeId, toNodeId, bearingRad }),
     unlink: (a, b) => void send({ op: 'unlink', fromNodeId: a, toNodeId: b }),
+    name: (nodeId, room) => void send({ op: 'name', nodeId, room }),
   };
 }

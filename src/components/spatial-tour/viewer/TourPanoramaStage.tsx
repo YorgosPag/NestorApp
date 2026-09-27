@@ -22,8 +22,8 @@ import { Minus, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { degToRad } from '@/lib/geometry/angle';
 import { viewBearing, yawForBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
+import { FLOOR_ARROW_AHEAD_PITCH, FLOOR_ARROW_PITCH, floorArrowTurnDeg } from '@/lib/spatial-tour/viewer/tour-floor-arrow';
 import type { TourViewerGraph, ViewerNeighbour } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import type { TourViewerAction, TourViewerState } from '@/lib/spatial-tour/viewer/tour-viewer-state';
 import { viewAfterZoomStep } from '@/lib/spatial-tour/viewer/tour-viewer-view';
@@ -39,9 +39,6 @@ import { useArrivalPrefetch, usePrefetchNeighbourBases, useTourTileStreamer } fr
 import { useTourPanoramaEngine } from './useTourPanoramaEngine';
 import { useTourPanoramaInput } from './useTourPanoramaInput';
 import { useNeighbourLabels } from './TourViewerNavigation';
-
-/** Τα κουμπιά συνδέσμων κάθονται λίγο κάτω από τον ορίζοντα — «στο πάτωμα», όπως οι κύκλοι της Matterport. */
-const LINK_PITCH = degToRad(-18);
 
 /** «Ποια διόπτευση κόσμου είναι εκεί;» — ό,τι χρειάζονται τα εργαλεία βελακιών, χωρίς να δουν τη μηχανή. */
 export interface TourStageAim {
@@ -65,6 +62,8 @@ export interface TourPanoramaStageProps {
   readonly neighbours: readonly ViewerNeighbour[];
   /** Παρόν μόνο στην οθόνη τοποθέτησης του υπευθύνου. */
   readonly editing?: TourStageEditing;
+  /** Η σκηνή γεμίζει τον γονέα της (θεατής σε πλήρες παράθυρο, Φ2στ) — αλλιώς κουτί 16:9 (επεξεργαστής). */
+  readonly fill?: boolean;
 }
 
 function usePlaceLinkButtons(
@@ -80,9 +79,13 @@ function usePlaceLinkButtons(
         const el = buttons.get(n.nodeId);
         // Το βελάκι που σέρνεται ακολουθεί τον δείκτη — το καρέ δεν το ξαναβάζει πίσω.
         if (el === undefined || n.bearing === null || el.dataset.dragging === 'true') continue;
-        const at = engine.project(yawForBearing(headingRad, n.bearing), LINK_PITCH);
+        const yaw = yawForBearing(headingRad, n.bearing);
+        const at = engine.project(yaw, FLOOR_ARROW_PITCH);
         el.hidden = at === null;
-        if (at !== null) el.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -50%)`;
+        if (at === null) continue;
+        el.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -50%)`;
+        // Το σεβρόν δείχνει τον δρόμο όπως τον βλέπει το μάτι (Φ2στ): δύο προβολές της ίδιας διόπτευσης στο πάτωμα.
+        el.style.setProperty('--tour-arrow-turn', `${floorArrowTurnDeg(at, engine.project(yaw, FLOOR_ARROW_AHEAD_PITCH))}deg`);
       }
     };
     place();
@@ -113,8 +116,8 @@ function StageStatus({ status }: { readonly status: TourPanoramaStatus }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   if (status === 'ready') return null;
   return status === 'loading'
-    ? <p role="status" className="absolute inset-x-0 top-3 mx-auto w-fit rounded-md bg-background/80 px-3 py-1 text-sm text-foreground">{t(TOUR_VIEWER_KEYS.loading)}</p>
-    : <p role="alert" className="absolute inset-x-0 top-3 mx-auto w-fit rounded-md bg-background/90 px-3 py-1 text-sm text-destructive">{t(TOUR_VIEWER_KEYS.loadFailed)}</p>;
+    ? <p role="status" className="absolute inset-x-0 top-14 mx-auto w-fit rounded-md bg-background/80 px-3 py-1 text-sm text-foreground">{t(TOUR_VIEWER_KEYS.loading)}</p>
+    : <p role="alert" className="absolute inset-x-0 top-14 mx-auto w-fit rounded-md bg-background/90 px-3 py-1 text-sm text-destructive">{t(TOUR_VIEWER_KEYS.loadFailed)}</p>;
 }
 
 function EditingReticle() {
@@ -132,7 +135,7 @@ function ZoomMenu({ camera }: { readonly camera: TourCameraStore }) {
   );
 }
 
-export function TourPanoramaStage({ graph, state, dispatch, camera, source, neighbours, editing }: TourPanoramaStageProps) {
+export function TourPanoramaStage({ graph, state, dispatch, camera, source, neighbours, editing, fill = false }: TourPanoramaStageProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const buttons = useRef(new Map<string, HTMLButtonElement>()).current;
@@ -146,7 +149,7 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
   const headingRad = current?.stop.headingRad ?? 0;
   usePlaceLinkButtons(engine, buttons, neighbours, headingRad);
   const aim = useStageAim(engine, canvasRef, camera, headingRad);
-  const labelsOf = useNeighbourLabels(graph.levels, current?.levelId ?? null);
+  const labelsOf = useNeighbourLabels(graph, current?.levelId ?? null);
   const register = useCallback((nodeId: string) => (el: HTMLButtonElement | null) => {
     if (el === null) buttons.delete(nodeId); else buttons.set(nodeId, el);
   }, [buttons]);
@@ -157,7 +160,7 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
 
   return (
     <>
-      <figure className="relative m-0 aspect-video w-full overflow-hidden rounded-lg bg-muted">
+      <figure className={fill ? 'absolute inset-0 m-0 overflow-hidden bg-muted' : 'relative m-0 aspect-video w-full overflow-hidden rounded-lg bg-muted'}>
         <canvas ref={canvasRef} tabIndex={0} role="application" aria-label={t(TOUR_VIEWER_KEYS.panorama)}
           className="absolute inset-0 h-full w-full cursor-grab touch-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing" />
         {neighbours.filter((n) => n.bearing !== null).map((n) => (

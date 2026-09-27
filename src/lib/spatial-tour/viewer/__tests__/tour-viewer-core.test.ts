@@ -140,7 +140,7 @@ describe('θέαση — όρια και «αρπάζω τον κόσμο»', ()
 });
 
 describe('μετάβαση — στροφή προς τον σύνδεσμο, σβήσιμο, ίδια διόπτευση στην άφιξη', () => {
-  const base = { yaw: 0, fromHeading: 0, toHeading: degToRad(90), linkBearing: degToRad(90), reducedMotion: false };
+  const base = { yaw: 0, fromHeading: 0, toHeading: degToRad(90), linkBearing: degToRad(90), returnBearing: null, reducedMotion: false };
 
   it('στρέφεται προς τον σύνδεσμο με τη σύντομη φορά, μετά σβήνει', () => {
     const plan = planTransition({ ...base, yaw: degToRad(170), linkBearing: degToRad(-170) });
@@ -156,6 +156,24 @@ describe('μετάβαση — στροφή προς τον σύνδεσμο, σ
     const plan = planTransition({ ...base, yaw: degToRad(30), linkBearing: null });
     expect(plan.rotate).toBeNull();
     expect(deg(plan.arrivalYaw)).toBe(-60);
+  });
+
+  it('M16 — λήψεις ΧΩΡΙΣ πυξίδα: άφιξη ΑΝΤΙΘΕΤΑ από το βελάκι επιστροφής, όχι «ίδια διόπτευση» (ζωντανά 2026-09-27)', () => {
+    // Γραφείο → διάδρομος από την ίδια πόρτα· και οι δύο με heading 0. Στον διάδρομο η πόρτα (βελάκι επιστροφής) είναι
+    // στις 0°. Με «ίδια διόπτευση» (90°→90°) ο επισκέπτης θα έβλεπε τυχαίο τοίχο — ζωντανά: την πόρτα από όπου ήρθε.
+    const plan = planTransition({ ...base, toHeading: 0, linkBearing: degToRad(90), returnBearing: 0 });
+    expect(deg(plan.arrivalYaw)).toBe(180);
+  });
+
+  it('M16 — με θέσεις κάτοψης η επιστροφή είναι η ακριβώς αντίθετη ⇒ ΙΔΙΑ άφιξη με τη διόπτευση ταξιδιού', () => {
+    const withReturn = planTransition({ ...base, returnBearing: degToRad(270) });
+    expect(deg(withReturn.arrivalYaw)).toBeCloseTo(deg(planTransition(base).arrivalYaw), 9);
+  });
+
+  it('M16 — άφιξη από τη λίστα (χωρίς στροφή) με βελάκι επιστροφής: πάλι αντίθετα από αυτό', () => {
+    const plan = planTransition({ ...base, yaw: degToRad(30), linkBearing: null, returnBearing: degToRad(135) });
+    expect(plan.rotate).toBeNull();
+    expect(deg(plan.arrivalYaw)).toBeCloseTo(-135, 9);
   });
 
   it('♿ λιγότερη κίνηση ⇒ ούτε στροφή ούτε σβήσιμο, ίδια άφιξη', () => {

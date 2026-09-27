@@ -30,6 +30,13 @@ export interface TourTransitionInput {
   readonly toHeading: number;
   /** Διόπτευση προς τον προορισμό — `null` χωρίς κάτοψη ή από τη λίστα σημείων (τότε καμία στροφή). */
   readonly linkBearing: number | null;
+  /**
+   * Διόπτευση από τον προορισμό **ΠΙΣΩ** προς την αφετηρία — οι θέσεις κάτοψης ή το βελάκι επιστροφής που **έβαλε ο
+   * άνθρωπος** (`linkBearing(to, from)`)· `null` όταν λείπει. Είναι η ΜΟΝΗ πηγή κατεύθυνσης άφιξης που δεν εξαρτάται από
+   * πυξίδα: χωρίς `headingRad` τα πλαίσια των δύο λήψεων δεν σχετίζονται και η «ίδια διόπτευση» προσγειώνεται σε
+   * τυχαίο τοίχο (ζωντανά 2026-09-27: και οι δύο αφίξεις κοίταζαν **πίσω**, την πόρτα από όπου ήρθε ο επισκέπτης).
+   */
+  readonly returnBearing: number | null;
   readonly reducedMotion: boolean;
 }
 
@@ -38,14 +45,26 @@ export interface TourTransitionPlan {
   readonly rotate: { readonly fromYaw: number; readonly toYaw: number; readonly durationMs: number } | null;
   /** `0` ⇒ ακαριαία αλλαγή. */
   readonly fadeMs: number;
-  /** Το yaw στο νέο πανόραμα: ίδια **διόπτευση** με αυτή που κοίταζε ο επισκέπτης φεύγοντας (ή προς τα πού περπάτησε). */
+  /**
+   * Το yaw στο νέο πανόραμα: **συνεχίζει το περπάτημα** — αντίθετα από τη διόπτευση επιστροφής (Kuula walkthrough: η
+   * κατεύθυνση υπολογίζεται από τις θέσεις των hotspots, όχι από το heading)· χωρίς αυτήν, ίδια **διόπτευση** με αυτή που
+   * κοίταζε ο επισκέπτης φεύγοντας (Pannellum `sameAzimuth` — σωστό μόνο με πυξίδα).
+   */
   readonly arrivalYaw: number;
+}
+
+/**
+ * Η διόπτευση άφιξης: με διόπτευση επιστροφής, η **αντίθετή** της· αλλιώς η διόπτευση ταξιδιού. Με θέσεις κάτοψης οι δύο
+ * συμπίπτουν ακριβώς (`bearingBetween(to, from) + π = bearingBetween(from, to)`) — η αλλαγή αγγίζει μόνο τις λήψεις χωρίς.
+ */
+function arrivalBearingOf(input: TourTransitionInput, travelYaw: number): number {
+  return input.returnBearing === null ? viewBearing(input.fromHeading, travelYaw) : input.returnBearing + Math.PI;
 }
 
 /** Το σχέδιο της μετάβασης — ντετερμινιστικό, χωρίς ρολόι. */
 export function planTransition(input: TourTransitionInput): TourTransitionPlan {
   const travelYaw = input.linkBearing === null ? input.yaw : yawForBearing(input.fromHeading, input.linkBearing);
-  const arrivalYaw = yawForBearing(input.toHeading, viewBearing(input.fromHeading, travelYaw));
+  const arrivalYaw = yawForBearing(input.toHeading, arrivalBearingOf(input, travelYaw));
   if (input.reducedMotion) return { rotate: null, fadeMs: 0, arrivalYaw };
   const delta = normalizeAngleDiff(travelYaw - input.yaw);
   const rotate =

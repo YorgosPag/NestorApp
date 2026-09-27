@@ -71,6 +71,10 @@ jest.mock('@/components/search-results/ResultsMap', () => ({
 
 // ADR-777 §8.72 — ο φάρος προβολής στέλνει `POST …/view` και έχει δική του άγκυρα· εδώ θα έβγαινε στο δίκτυο
 // (το `jest.setup` το αρνείται ⇒ κόκκινο που το `useRouter` παραπάνω έκρυβε, μετρημένο 2026-09-24).
+// Η κάρτα περιήγησης έχει δικά της tests (`TourAccessCard`)· εδώ θα ζητούσε `AuthProvider` (useAuth, Κ3β `27e38298`)
+// και έριχνε 22 tests της ΣΕΛΙΔΑΣ που δεν αφορούν την περιήγηση (μετρημένο 2026-09-27, ADR-884 Φ2στ).
+jest.mock('@/components/listing-detail/ListingTour', () => ({ ListingTour: () => null }));
+
 jest.mock('@/hooks/listings/useListingViewBeacon', () => ({
   useListingViewBeacon: () => undefined,
 }));

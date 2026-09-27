@@ -24,6 +24,7 @@ import { LabeledSelect, type SelectOption } from '../LabeledSelect';
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_VIEWER_KEYS } from '../viewer/tour-viewer-labels';
 import { useLevelLabel } from '../viewer/TourViewerNavigation';
+import { useStopNames } from '../viewer/useStopNames';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 
 type PlacementMode = 'new' | 'next-to' | 'same-as';
@@ -56,12 +57,13 @@ function useFloorChoices(levels: readonly TourViewerLevel[]) {
 function usePointChoices(graph: TourViewerGraph, levelId: string, mode: PlacementMode): SelectOption<string>[] {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const labelOf = useLevelLabel();
+  const nameOf = useStopNames(graph);
   return useMemo(() => graph.levels
     .filter((level) => mode === 'same-as' || level.id === levelId)
     .flatMap((level) => level.nodeIds.map((nodeId) => ({
       value: nodeId,
-      label: t(TOUR_VIEWER_KEYS.pointOnFloor, { number: graph.stops.get(nodeId)?.number ?? 0, floor: labelOf(level) }),
-    }))), [graph, levelId, mode, t, labelOf]);
+      label: t(TOUR_VIEWER_KEYS.placeOnFloor, { name: nameOf(nodeId), floor: labelOf(level) }),
+    }))), [graph, levelId, mode, t, labelOf, nameOf]);
 }
 
 export function TourPlacementForm({ captureId, levels, graph, busy, onPlace }: TourPlacementFormProps) {

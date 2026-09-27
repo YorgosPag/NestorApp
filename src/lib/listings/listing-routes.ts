@@ -82,6 +82,26 @@ export function listingDetailHref(id: string, query?: string | null) {
   return typedHref(path);
 }
 
+/**
+ * ADR-884 Φ2στ · §4.12 Μέρος Δ — **οι δύο αδελφές του `tourViewHref`**: τρεις πλήρεις όψεις των
+ * ίδιων μέσων («Φωτογραφίες · Κάτοψη · 3D», πρότυπο Zillow), ίδιο τμήμα `/listing/[id]`
+ * με τον `TOUR_VIEW_SEGMENT` του `lib/spatial-tour/tour-routes`.
+ */
+export const LISTING_PHOTOS_SEGMENT = 'photos' as const;
+export const LISTING_FLOORPLAN_SEGMENT = 'floorplan' as const;
+
+/** Η πλήρης-παραθύρου όψη «όλες οι φωτογραφίες» μιας αγγελίας. */
+export function listingPhotosHref(id: string) {
+  const path = `${LISTING_DETAIL_ROUTE_BASE}/${encodeURIComponent(id)}/${LISTING_PHOTOS_SEGMENT}` as const;
+  return typedHref(path);
+}
+
+/** Η πλήρης-παραθύρου όψη «κάτοψη» μιας αγγελίας. */
+export function listingFloorplanHref(id: string) {
+  const path = `${LISTING_DETAIL_ROUTE_BASE}/${encodeURIComponent(id)}/${LISTING_FLOORPLAN_SEGMENT}` as const;
+  return typedHref(path);
+}
+
 /** Επιστροφή στα αποτελέσματα, **με τα ίδια φίλτρα**. */
 export function searchResultsHref(query?: string | null) {
   if (query && query.length > 0) return typedHref(`${SEARCH_RESULTS_ROUTE}?${query}`);

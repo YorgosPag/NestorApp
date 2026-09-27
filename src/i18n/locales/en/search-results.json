@@ -155,7 +155,9 @@
       "floorplanNote": {
         "ownerDeclared": "The floor plan is the owner’s own material, selected by them.",
         "agency": "The floor plan is the agency’s own material, selected by them."
-      }
+      },
+      "allPhotos": "All photos",
+      "openFloorplan": "Open floor plan"
     },
     "offers": {
       "heading": "What is on offer"

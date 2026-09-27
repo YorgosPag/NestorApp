@@ -29,9 +29,12 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { LISTING_FLOORPLAN_PROVENANCE_KEYS } from '@/lib/listings/listing-material';
-import { listingImageSrcSet } from '@/lib/listings/listing-images';
+import { listingFloorplanHref } from '@/lib/listings/listing-routes';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
-import type { ListingFloorplan, PublicListing } from '@/types/public-listing';
+import { Link } from '@/lib/workspace/navigation';
+import type { PublicListing } from '@/types/public-listing';
+
+import { ListingFloorplanImage } from './ListingFloorplanImage';
 
 /** Τα `sizes` μιας κάτοψης — δύο σε σειρά σε οθόνη, μία σε κινητό. */
 const FLOORPLAN_SIZES = '(min-width: 1024px) 31vw, 100vw';
@@ -60,7 +63,7 @@ export function ListingFloorplans({ listing }: { readonly listing: PublicListing
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((floorplan) => (
           <li key={floorplan.value.url} className="flex flex-col gap-1">
-            <FloorplanImage floorplan={floorplan} />
+            <ListingFloorplanImage floorplan={floorplan} sizes={FLOORPLAN_SIZES} />
             {/*
               🏆 **Η ΓΡΑΜΜΗ ΠΟΥ Η ZILLOW ΔΕΝ ΕΧΕΙ** *(Α17.3)*: εκείνη δείχνει κάτοψη χωρίς
               να λέει αν τη σχεδίασε άνθρωπος ή τη μέτρησε μηχανή. ⚠️ Το κλειδί έρχεται
@@ -83,42 +86,13 @@ export function ListingFloorplans({ listing }: { readonly listing: PublicListing
       <p className="text-xs text-muted-foreground">
         {t(LISTING_MATERIAL_KEYS[listing.authorship].floorplanNote)}
       </p>
+
+      {/* ADR-884 Φ2στ · §4.12 Μέρος Δ — η πλήρης-παραθύρου όψη «Κάτοψη» (πρότυπο Zillow). */}
+      <nav>
+        <Link href={listingFloorplanHref(listing.id)} className="text-sm underline underline-offset-2">
+          {t('search-results:detail.media.openFloorplan')}
+        </Link>
+      </nav>
     </section>
-  );
-}
-
-/**
- * Μία κάτοψη.
- *
- * ⚠️ **ΠΟΤΕ `priority`**: το στοιχείο **LCP** αυτής της σελίδας είναι η κορυφαία
- * φωτογραφία *(Α2.4)*, και **μόνο μία** εικόνα επιτρέπεται να πάρει
- * `fetchpriority="high"` — πολλές «υψηλής» ακυρώνουν η μία την άλλη. Μια κάτοψη που θα
- * το διεκδικούσε θα **χειροτέρευε** μετρήσιμα τη σελίδα για να εμφανιστεί νωρίτερα κάτι
- * που ο επισκέπτης κοιτάζει **δεύτερο**.
- *
- * ⚠️ **`object-contain` και όχι `object-cover`**: μια φωτογραφία αντέχει κόψιμο, ένα
- * **σχέδιο όχι** — κομμένη κάτοψη χάνει δωμάτια, δηλαδή λέει ψέματα για το ακίνητο.
- */
-function FloorplanImage({ floorplan }: { readonly floorplan: ListingFloorplan }) {
-  const { t } = useTranslation(['search-results']);
-  const image = floorplan.value;
-
-  return (
-    /*
-      eslint-disable-next-line @next/next/no-img-element -- η πηγή είναι το δημόσιο
-      ράφι (content-addressed, εκτός optimizer)· βλ. ADR-777 §8.11 και ADR-841 Α12.
-    */
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={image.url}
-      srcSet={listingImageSrcSet(image)}
-      sizes={FLOORPLAN_SIZES}
-      width={image.width}
-      height={image.height}
-      alt={t(image.altKey)}
-      loading="lazy"
-      decoding="async"
-      className="w-full rounded-lg border border-border bg-card object-contain"
-    />
   );
 }

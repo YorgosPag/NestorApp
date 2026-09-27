@@ -40,6 +40,8 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { listingGalleryImages, listingImageSrcSet } from '@/lib/listings/listing-images';
+import { listingPhotosHref } from '@/lib/listings/listing-routes';
+import { Link } from '@/lib/workspace/navigation';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
 /** Τα `sizes` της **κορυφαίας** εικόνας — μία στήλη σε κινητό, ~2/3 της διάταξης σε οθόνη. */
@@ -110,6 +112,13 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
       <p className="text-xs text-muted-foreground">
         {t(LISTING_MATERIAL_KEYS[listing.authorship].sourceNote)}
       </p>
+
+      {/* ADR-884 Φ2στ · §4.12 Μέρος Δ — η πλήρης-παραθύρου όψη «Φωτογραφίες» (πρότυπο Zillow). */}
+      <nav>
+        <Link href={listingPhotosHref(listing.id)} className="text-sm underline underline-offset-2">
+          {t('search-results:detail.media.allPhotos')}
+        </Link>
+      </nav>
     </section>
   );
 }

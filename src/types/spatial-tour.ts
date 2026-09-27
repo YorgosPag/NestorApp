@@ -29,6 +29,8 @@ import type {
   TourGrantScope,
   TourLinkVia,
   TourMilestone,
+  TourRoomSource,
+  TourRoomType,
   TourTilesetState,
 } from '@/constants/spatial-tour-vocabulary';
 import type { ScopedGrant } from '@/lib/auth/scoped-grant';
@@ -88,6 +90,18 @@ export interface TourLink {
   readonly bearingRad: number | null;
 }
 
+/**
+ * **Τι χώρος είναι ένα σημείο** (ADR-884 Φ2στ · §4.12) — πρότυπο Matterport: τύπος (μεταφράσιμος) + προαιρετικό όνομα που
+ * υπερισχύει· Revit/ArchiCAD: όνομα χώρου → `IfcSpace`. Η εμφάνιση παράγεται ΜΟΝΟ από `tour-room-label.ts`.
+ */
+export interface TourRoom {
+  /** 1–`TOUR_ROOM_MAX_TYPES`, μοναδικοί· >1 = ενιαίος χώρος («Κουζίνα / Καθιστικό»). */
+  readonly types: readonly TourRoomType[];
+  /** Ελεύθερο όνομα («Γραφείο μηχανικού») — `null` ⇒ ο τύπος (με αρίθμηση όταν επαναλαμβάνεται στον όροφο). */
+  readonly label: string | null;
+  readonly source: TourRoomSource;
+}
+
 /** Σημείο στον χώρο — σταθερό στον χρόνο. */
 export interface TourNode {
   readonly id: string;
@@ -95,6 +109,8 @@ export interface TourNode {
   /** `null` όταν ο όροφος δεν έχει κάτοψη (`none`) — περιήγηση με βελάκια, χωρίς χάρτη. */
   readonly position: TourPoint | null;
   readonly links: readonly TourLink[];
+  /** Ο χώρος του σημείου — απών/`null` ⇒ «Σημείο N» (παλιά έγγραφα διαβάζονται αμετάβλητα). */
+  readonly room?: TourRoom | null;
 }
 
 export interface SpatialTour {

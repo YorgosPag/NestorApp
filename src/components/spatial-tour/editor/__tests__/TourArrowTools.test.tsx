@@ -63,7 +63,7 @@ function renderTools() {
   return { onPlaceArrow, onUnlink };
 }
 
-const chip = (number: number) => screen.getByRole('button', { name: `spatial-tour:editor.dragArrow:${number}` });
+const chip = (number: number) => screen.getByRole('button', { name: `spatial-tour:editor.dragArrow:spatial-tour:viewer.point:${number}` });
 
 function drag(el: HTMLElement, to: { x: number; y: number }) {
   el.setPointerCapture = jest.fn();
@@ -76,7 +76,7 @@ function drag(el: HTMLElement, to: { x: number; y: number }) {
 describe('TourArrowTools', () => {
   it('♿ «Βελάκι εδώ» ⇒ βελάκι με τη διόπτευση του στόχαστρου, με ένα κλικ', () => {
     const { onPlaceArrow } = renderTools();
-    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.arrowHereFor:2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.arrowHereFor:spatial-tour:viewer.point:2' }));
     expect(onPlaceArrow).toHaveBeenCalledWith('b', CENTER);
   });
 
@@ -98,10 +98,10 @@ describe('TourArrowTools', () => {
   it('Λ συνδεδεμένο χωρίς βελάκι το λέει και αποσυνδέεται· ασύνδετο παίρνει βελάκι (σύνδεση + βελάκι μαζί)', () => {
     const { onPlaceArrow, onUnlink } = renderTools();
     expect(screen.getByText('spatial-tour:editor.arrowMissing')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.unlink:2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.unlink:spatial-tour:viewer.point:2' }));
     expect(onUnlink).toHaveBeenCalledWith('b');
-    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.arrowHereFor:3' }));
+    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.arrowHereFor:spatial-tour:viewer.point:3' }));
     expect(onPlaceArrow).toHaveBeenCalledWith('c', CENTER);
-    expect(screen.queryByRole('button', { name: 'spatial-tour:editor.unlink:3' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'spatial-tour:editor.unlink:spatial-tour:viewer.point:3' })).toBeNull();
   });
 });

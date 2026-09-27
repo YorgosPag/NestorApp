@@ -32,6 +32,7 @@ import {
   isTourGrantScope,
   isTourLinkVia,
   isTourMilestone,
+  isTourRoomSource,
   isTourTilesetState,
 } from '@/constants/spatial-tour-vocabulary';
 import { text } from '@/lib/agency/showcase-read-primitives';
@@ -40,6 +41,7 @@ import { readSignatory } from '@/lib/listings/model-declaration-metadata';
 import { readMediaRights } from '@/lib/media-rights/media-rights-read';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
 import { isRecord } from '@/lib/type-guards';
+import { normalizeTourRoom } from '@/lib/spatial-tour/tour-room';
 import { custodyOnly, custodyScopeFromData } from '@/lib/workspace/custody-scope';
 import { isInvitationState } from '@/types/invitation-core';
 import type {
@@ -56,6 +58,7 @@ import type {
   TourLink,
   TourNode,
   TourPoint,
+  TourRoom,
   TourSubject,
 } from '@/types/spatial-tour';
 
@@ -115,6 +118,13 @@ function readLink(raw: unknown): TourLink | null {
   return toNodeId === null ? null : { toNodeId, via: raw.via, bearingRad };
 }
 
+/** Ο χώρος του σημείου — απών ⇒ `null`· `undefined` ⇒ υπάρχει αλλά δεν διαβάζεται (ίδια σύμβαση με τη θέση). */
+function readRoom(raw: unknown): TourRoom | null | undefined {
+  if (raw === undefined || raw === null) return null;
+  if (!isRecord(raw) || !Array.isArray(raw.types) || !isTourRoomSource(raw.source)) return undefined;
+  return normalizeTourRoom({ types: raw.types, label: raw.label ?? null }) ?? undefined;
+}
+
 function readNode(raw: unknown): TourNode | null {
   if (!isRecord(raw)) return null;
   const id = text(raw.id);
@@ -122,8 +132,9 @@ function readNode(raw: unknown): TourNode | null {
   // `undefined` ⇒ υπάρχει θέση αλλά δεν διαβάζεται· `null` ⇒ δηλωμένα χωρίς θέση (όροφος χωρίς κάτοψη).
   const position = readPoint(raw.position ?? null);
   const links = readAll(raw.links ?? [], readLink);
-  if (id === null || levelKey === null || position === undefined || links === null) return null;
-  return { id, levelKey, position, links };
+  const room = readRoom(raw.room);
+  if (id === null || levelKey === null || position === undefined || links === null || room === undefined) return null;
+  return room === null ? { id, levelKey, position, links } : { id, levelKey, position, links, room };
 }
 
 /** **Διαβάζει ένα αποθηκευμένο έγγραφο ως περιήγηση.** `null` ⇒ «αυτό δεν είναι περιήγηση που σερβίρεται». */

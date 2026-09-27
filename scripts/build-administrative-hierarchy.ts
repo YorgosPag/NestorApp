@@ -58,10 +58,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { applyDisplayNames, type DisplayNameRecord } from './lib/admin-names/apply-display-names';
+
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HIERARCHY_PATH = join(REPO_ROOT, 'public', 'data', 'administrative-hierarchy.json');
 const REGISTRY_PATH = join(REPO_ROOT, 'scripts', 'data', 'ypes-municipality-registry.json');
 const REFORM_PATH = join(REPO_ROOT, 'scripts', 'data', 'kleisthenis-2019.json');
+/** ADR-893 — «ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ» → «Δήμος Αθηναίων», με πηγή· γράφεται από το `build:admin-display-names`. */
+const DISPLAY_NAMES_PATH = join(REPO_ROOT, 'scripts', 'data', 'admin-display-names.json');
 
 const MUNICIPALITY = 5;
 const MUNICIPAL_UNIT = 6;
@@ -104,6 +108,7 @@ const registry = JSON.parse(readFileSync(REGISTRY_PATH, 'utf8')) as {
   data: readonly { code: string; name: string }[];
 };
 const reform = JSON.parse(readFileSync(REFORM_PATH, 'utf8')) as Reform;
+const displayNames = JSON.parse(readFileSync(DISPLAY_NAMES_PATH, 'utf8')) as { entries: readonly DisplayNameRecord[] };
 
 const registryByCode = new Map(registry.data.map((entry) => [entry.code, entry.name]));
 
@@ -387,8 +392,11 @@ function main(): void {
 
   const moved = reparentMunicipalUnits(rows);
   const attached = reattachOrphans(rows);
+  // ⚠️ ΤΕΛΕΥΤΑΙΟ: οι δήμοι ξαναχτίζονται από το μητρώο ΥΠΕΣ (κεφαλαία) σε κάθε εκτέλεση — η γραφή
+  //    μπαίνει από πάνω, και ένας μπαγιάτικος πίνακας μπλοκάρει όπως κάθε άλλο πρόβλημα.
+  const display = applyDisplayNames(rows, displayNames.entries);
 
-  const problems = verify(rows);
+  const problems = [...display.problems, ...verify(rows)];
   if (problems.length > 0) {
     console.error(`\n❌ ΔΕΝ ΓΡΑΦΤΗΚΕ ΤΙΠΟΤΑ — ${problems.length} προβλήματα:\n`);
     for (const problem of problems.slice(0, 25)) console.error(`   • ${problem}`);
@@ -409,6 +417,7 @@ function main(): void {
       authorities: {
         tree: 'ΕΛΣΤΑΤ / Καλλικράτης (ν. 3852/2010) — κωδικός `c`, κλειδί γεωμετρίας',
         municipalities: 'ΥΠΕΣ «Κωδικοί Δήμων — Κλεισθένης» — κωδικός `y`, ύπαρξη & όνομα',
+        display: 'ADR-893 — γραφή ονομάτων βαθμίδων 1–6 (`scripts/data/admin-display-names.json`: ν. 3852/2010 · Wikidata · επιμέλεια)',
       },
       adr: 'ADR-846 Φάση 4',
     },
@@ -419,6 +428,7 @@ function main(): void {
   console.log(`✅ ${rows.length} γραμμές · δήμοι ${counts.municipalities}`);
   console.log(`   δημοτικές ενότητες που μετακινήθηκαν: ${moved}`);
   console.log(`   αποκομμένες γραμμές που ξαναδέθηκαν: ${attached}`);
+  console.log(`   ονόματα με γραφή εμφάνισης (ADR-893): ${display.applied}`);
 }
 
 const COUNT_KEY: Readonly<Record<string, string>> = {

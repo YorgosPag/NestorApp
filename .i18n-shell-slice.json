@@ -242,12 +242,17 @@
       "reason": "ADR-846 Φ2 (2026-09-08) — η ΜΟΝΗ δυναμική κλήση είναι `t(COVERAGE_RELATION_KEYS[relation])` (γρ. 246). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, όχι πρόζα: ο πίνακας (γρ. 197) είναι σταθερός στο ΙΔΙΟ module και τυπωμένος `Record<CoverageRelation, string>` — ΟΧΙ Partial — με ΤΕΣΣΕΡΙΣ τιμές που δείχνουν σε ΤΡΙΑ κυριολεκτικά κλειδιά του `DIRECTORY_KEYS` (`coverageWithin` · `coverageIntersects` · `coverageUnknown`· το `disjoint` δείχνει στο ίδιο κλειδί με το `within` και ΔΕΝ αποδίδεται ποτέ — ο καλών επιστρέφει `null` πριν φτάσει εκεί, και δηλώνεται μόνο για να μένει ο πίνακας ΟΛΙΚΟΣ). Επειδή ο τύπος είναι πλήρες Record πάνω σε union, νέα σχέση κάλυψης ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά, ίδιο επιχείρημα με τα `CoverageStatement.tsx` και `SearchResultItem.tsx` παραπάνω. 🔴 ΚΑΙ Ο ΠΙΝΑΚΑΣ ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΔΥΑΔΙΚΟ ΤΕΛΕΣΤΗ, ΓΙ' ΑΥΤΟ ΥΠΑΡΧΕΙ: το προηγούμενο `relation === 'within' ? … : …` θα εμφάνιζε το `'unknown'` της Φάσης 2 ΣΙΩΠΗΛΑ ως «καλύπτει μέρος» — ισχυρισμό που κανείς δεν έκανε, τη στιγμή που το αρχείο αποτυπωμάτων ΔΕΝ έχει παραχθεί ακόμη. ⚠️ ΤΑ ΠΡΟΘΕΜΑΤΑ ΕΙΝΑΙ ΑΚΡΙΒΗ ΚΛΕΙΔΙΑ, ΟΧΙ ΥΠΟΔΕΝΤΡΟ: ένα σκέτο `mandate.directory` θα έσερνε ΟΛΟΝ τον κατάλογο (30+ κλειδιά) στο slice κάθε διαδρομής που ζωγραφίζει την κάρτα.",
       "$note": "Το `coverageDeclaredNationwide`/`coverageDeclared`/`coverageDeclaredRadius` ΔΕΝ χρειάζονται δήλωση εδώ — είναι κυριολεκτικά `t(DIRECTORY_KEYS.x)` και ο τεμαχιστής τα επιλύει μόνος του."
     },
-    "src/components/listing-detail/ListingFloorplans.tsx": {
+    "src/components/listing-detail/ListingFloorplanImage.tsx": {
       "prefixes": [
         "search-results:detail.media"
       ],
-      "reason": "ADR-841 Α17 (2026-09-03) — ΤΡΕΙΣ δυναμικές κλήσεις, ΟΛΕΣ κάτω από ΑΥΤΟ το πρόθεμα, και ΚΑΜΙΑ τους δεν είναι νέο ιδίωμα: είναι το ΙΔΙΟ με του ListingGallery.tsx, με τρίτο φύλλο. (α) `t(image.altKey)` πάνω σε `ListingFloorplan['value']['altKey']`. ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, μετρημένος με grep σε ΟΛΟ το src/: υπάρχει ΕΝΑΣ παραγωγός — `public-listing-projection.ts` → `withPublishedGallery`, που γράφει `altKey: LISTING_MATERIAL_KEYS[listing.authorship].floorplanAlt`. ⇒ παρονομαστής ΔΥΟ κλειδιά: `search-results:detail.media.floorplanAlt.ownerDeclared|.agency`, σε el+en. ⚠️ ΧΩΡΙΣ παραμέτρους, σε αντίθεση με τη συλλογή: μια κάτοψη ΔΕΝ αριθμείται — «Φωτογραφία 3 από 8» είναι ψέμα για σχέδιο, και το `{index}`/`{total}` δεν έχει καν νόημα. (β) `t(LISTING_MATERIAL_KEYS[listing.authorship].sourceNote)` = η ΟΡΑΤΗ σημείωση προέλευσης, ΤΟ ΙΔΙΟ Record και τα ΙΔΙΑ δύο φύλλα με του ListingGallery.tsx — καμία δεύτερη χαρτογράφηση. (γ) `t(LISTING_FLOORPLAN_PROVENANCE_KEYS[floorplan.provenance])` = «δηλωμένη ή μετρημένη;». Παρονομαστής ΤΡΙΑ κλειδιά κάτω από `search-results:detail.media.floorplanProvenance.` (`declared|measured|inferred`), και το Record είναι `Record<AttributeProvenance, string>` — ΚΛΕΙΣΤΟ πάνω στο `ATTRIBUTE_PROVENANCE_RANK` του `lib/property/attribute-provenance`: νέα προέλευση ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ και δεν μπορεί να φτάσει ωμή στην οθόνη. Σήμερα ΜΟΝΟ το `declared` παράγεται (ο παραγωγός `measured` της Φ4 δεν υπάρχει ακόμη), αλλά και τα τρία δηλώνονται ΕΠΙΤΗΔΕΣ — ένα ελλιπές Record είναι ακριβώς το σχήμα που γέννησε το Ο-18. 🔑 ΚΑΙ Η ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΤΗΣ ΕΓΓΡΑΦΗΣ ΤΟΥ ListingGallery.tsx ΤΗΡΗΘΗΚΕ, ΔΕΝ ΠΑΡΑΚΑΜΦΘΗΚΕ: εκείνη λέει «αν κάποτε το altKey γίνει ανά-ΕΙΚΟΝΑ, ΑΥΤΟ ΤΟ ΠΡΟΘΕΜΑ ΠΑΥΕΙ ΝΑ ΕΙΝΑΙ ΑΣΦΑΛΕΣ». Ο εναλλακτικός δρόμος για την κάτοψη ΗΤΑΝ ακριβώς αυτό (`kind` ανά εικόνα μέσα στο `gallery`) και ΑΠΟΡΡΙΦΘΗΚΕ γι' αυτόν ακριβώς τον λόγο — δες ADR-841 §7 Α17.2. Το `altKey` παραμένει ιδιότητα ΤΗΣ ΑΓΓΕΛΙΑΣ κατά προέλευση· η κάτοψη πήρε ΤΡΙΤΟ ΦΥΛΛΟ στο ΙΔΙΟ Record, όχι δεύτερη σημασιολογία στον ίδιο πίνακα.",
-      "$note": "Άγκυρες που ΕΚΤΕΛΟΥΝ τον παρονομαστή: `lib/listings/__tests__/listing-floorplan-separation.test.ts` (Κ1: το altKey της κάτοψης ΕΙΝΑΙ το κλειδί της authorship και ΔΕΝ είναι το galleryAlt· Κ2: κάθε προέλευση έχει κλειδί) και `components/listing-detail/__tests__/ListingFloorplans.test.tsx` (Φ1: το alt ζητιέται ΧΩΡΙΣ αρίθμηση). Σταθερή χαρτογράφηση ⇒ κόκκινο."
+      "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ (2026-09-27) — Η ΜΟΝΗ δυναμική κλήση είναι `t(image.altKey)` πάνω σε `ListingFloorplan['value']['altKey']`, ΧΩΡΙΣ παραμέτρους (μια κάτοψη δεν αριθμείται). ΕΞΗΧΘΗ από το `ListingFloorplans.tsx` (η κάρτα) όταν το `ListingFloorplanPageContent.tsx` (η νέα πλήρης-παραθύρου σελίδα) χρειάστηκε το ΙΔΙΟ `<img>` — το jscpd (CHECK 3.28 `--diff`) έπιασε τον κλώνο στο ίδιο commit. ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, ίδιος με πριν: ο ΜΟΝΟΣ παραγωγός είναι `public-listing-projection.ts` → `withPublishedGallery` → `LISTING_MATERIAL_KEYS[listing.authorship].floorplanAlt` ⇒ παρονομαστής ΔΥΟ κλειδιά `search-results:detail.media.floorplanAlt.ownerDeclared|.agency`, σε el+en — το ΙΔΙΟ που δήλωνε πριν το `ListingFloorplans.tsx`."
+    },
+    "src/components/listing-detail/media/ListingPhotosPageContent.tsx": {
+      "prefixes": [
+        "search-results:detail.media"
+      ],
+      "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ — ΔΥΟ δυναμικές κλήσεις, ΙΔΙΟ ιδίωμα με το `ListingGallery.tsx` (γρ. 125 πλέγμα, γρ. 163 lightbox): `t(image.altKey, {index, total})` πάνω στο ΙΔΙΟ πεδίο `ListingImage['altKey']`, πάνω στα ΙΔΙΑ αποτελέσματα του `listingGalleryImages()`. ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: ο ΜΟΝΟΣ παραγωγός παραμένει `public-listing-projection.ts` → `LISTING_MATERIAL_KEYS[listing.authorship].galleryAlt` ⇒ παρονομαστής `search-results:detail.media.galleryAlt.ownerDeclared|.agency`, ήδη δηλωμένος για το `ListingGallery.tsx`."
     },
     "src/components/listing-detail/ListingModels.tsx": {
       "prefixes": [
@@ -1297,6 +1302,32 @@
         }
       ],
       "reason": "ADR-884 Κ3β. Η ΣΕΛΙΔΑ ΘΕΑΣΗΣ — ίδια διεύθυνση για επισκέπτη, εγκεκριμένο αιτούντα και υπεύθυνο (η πύλη θέασης του διακομιστή λέει τι βλέπει ο καθένας), και εδώ φτάνει η ειδοποίηση «εγκρίθηκε». Στο `(light)` όπως η αγγελία: συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."
+    },
+    "src/app/(light)/listing/[id]/photos/page.tsx": {
+      "sealed": 417,
+      "sealedAt": "2026-09-27",
+      "history": [
+        {
+          "from": 0,
+          "to": 417,
+          "at": "2026-09-27",
+          "why": "ADR-884 Φ2στ · §4.12 Μέρος Δ — ΝΕΑ ΣΕΛΙΔΑ: όλες οι φωτογραφίες της αγγελίας, πλήρες παράθυρο (πρότυπο Zillow «Φωτογραφίες · Κάτοψη · 3D»). ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-09-27): 417 bytes, 1 ns [listing-detail] — μόνο τα κλειδιά `media.*` (καρτέλες, επιστροφή, πλέγμα, lightbox) που το κέλυφος δεν απαντά ήδη."
+        }
+      ],
+      "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ. Η ΣΕΛΙΔΑ ΦΩΤΟΓΡΑΦΙΩΝ — ίδια οικογένεια με το `/listing/[id]/tour` (Κ3β): δημόσια, στο `(light)`, συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."
+    },
+    "src/app/(light)/listing/[id]/floorplan/page.tsx": {
+      "sealed": 889,
+      "sealedAt": "2026-09-27",
+      "history": [
+        {
+          "from": 0,
+          "to": 889,
+          "at": "2026-09-27",
+          "why": "ADR-884 Φ2στ · §4.12 Μέρος Δ — ΝΕΑ ΣΕΛΙΔΑ: η κάτοψη της αγγελίας, πλήρες παράθυρο (πρότυπο Zillow «Φωτογραφίες · Κάτοψη · 3D»). ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-09-27): 889 bytes, 1 ns [listing-detail] — τα κλειδιά `media.*` συν την πληθική μορφή του `floorplanPage.heading`."
+        }
+      ],
+      "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ. Η ΣΕΛΙΔΑ ΚΑΤΟΨΗΣ — ίδια οικογένεια με το `/listing/[id]/tour` (Κ3β): δημόσια, στο `(light)`, συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."
     }
   }
 }

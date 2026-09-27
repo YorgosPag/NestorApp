@@ -87,25 +87,33 @@ export function foldPlaceIdentity(name: string): string {
  * ποτέ ως «Δήμος» + υπόλοιπο, και το «Περιφερειακή Ενότητα» ποτέ ως «Περιφέρεια».
  * ⚠️ Το **επίπεδο 1** *(«ΒΟΡΕΙΑ ΕΛΛΑΔΑ», 5 εγγραφές)* και το **8** *(οικισμός)* είναι
  * **αδήλωτα** — δεν φέρουν πρόθεμα, και το δηλώνουμε με την απουσία γραμμής.
+ *
+ * 🔑 **Η ΓΡΑΠΤΗ ΜΟΡΦΗ ΕΙΝΑΙ Η ΠΗΓΗ, Η ΔΙΠΛΩΜΕΝΗ ΠΑΡΑΓΕΤΑΙ** *(ADR-893)*: ο γεννήτορας των
+ * ονομάτων εμφάνισης γράφει «Δήμος Αθηναίων» από το «ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ» ρωτώντας **αυτόν** τον
+ * πίνακα — ένα δεύτερο λεξιλόγιο προθεμάτων θα διαφωνούσε κάποτε με τον κριτή της βαθμίδας.
  * ═════════════════════════════════════════════════════════════════════════════
  */
-const ADMIN_LEVEL_PREFIXES: readonly { readonly words: readonly string[]; readonly level: number }[] = [
-  { words: ['αποκεντρωμενη', 'διοικηση'], level: 2 },
-  { words: ['περιφερειακη', 'ενοτητα'], level: 4 },
-  { words: ['μητροπολιτικη', 'ενοτητα'], level: 4 },
-  { words: ['δημοτικη', 'ενοτητα'], level: 6 },
-  { words: ['δημοτικη', 'κοινοτητα'], level: 7 },
-  { words: ['τοπικη', 'κοινοτητα'], level: 7 },
-  { words: ['περιφερεια'], level: 3 },
-  { words: ['δημος'], level: 5 },
+const ADMIN_LEVEL_PREFIXES: readonly { readonly written: string; readonly level: number }[] = [
+  { written: 'Αποκεντρωμένη Διοίκηση', level: 2 },
+  { written: 'Περιφερειακή Ενότητα', level: 4 },
+  { written: 'Μητροπολιτική Ενότητα', level: 4 },
+  { written: 'Δημοτική Ενότητα', level: 6 },
+  { written: 'Δημοτική Κοινότητα', level: 7 },
+  { written: 'Τοπική Κοινότητα', level: 7 },
+  { written: 'Περιφέρεια', level: 3 },
+  { written: 'Δήμος', level: 5 },
 ] as const;
+
+/** Τα προθέματα ως καθαρές λέξεις (`normalizeGreekText`) — η **μία** πηγή για αφαίρεση και βαθμίδα. */
+const ADMIN_PREFIX_WORDS: readonly { readonly written: string; readonly words: readonly string[]; readonly level: number }[] =
+  ADMIN_LEVEL_PREFIXES.map(({ written, level }) => ({ written, words: normalizeGreekText(written).split(' '), level }));
 
 /**
  * Ο ίδιος πίνακας, **διπλωμένος μία φορά** — βλ. την προειδοποίηση του
  * {@link foldPlaceIdentity} για το τι κοστίζει η παράλειψη.
  */
 const ADMIN_PREFIXES_FOLDED: readonly { readonly words: readonly string[]; readonly level: number }[] =
-  ADMIN_LEVEL_PREFIXES.map(({ words, level }) => ({ words: words.map(foldPlaceIdentity), level }));
+  ADMIN_PREFIX_WORDS.map(({ words, level }) => ({ words: words.map(foldPlaceIdentity), level }));
 
 /**
  * **Ποια βαθμίδα δηλώνει αυτή η ετικέτα;** — `null` όταν δεν δηλώνει καμία.
@@ -125,24 +133,35 @@ export function declaredAdminLevel(label: string): number | null {
   return null;
 }
 
-/** Τα προθέματα ως καθαρές λέξεις — η **μία** πηγή και για την αφαίρεση και για τη βαθμίδα. */
-const ADMIN_PREFIXES: readonly (readonly string[])[] = ADMIN_LEVEL_PREFIXES.map((row) => row.words);
+/** Ένα όνομα χωρισμένο στο πρόθεμα της βαθμίδας του και στο υπόλοιπο. */
+export interface AdminPrefixSplit {
+  /** Το πρόθεμα **όπως γράφεται** («Δήμος»), από τον πίνακα — όχι όπως ήρθε («ΔΗΜΟΣ»). */
+  readonly written: string;
+  readonly level: number;
+  /** Το υπόλοιπο **αυτούσιο**, με τη δική του στίξη («ΜΑΚΕΔΟΝΙΑΣ - ΘΡΑΚΗΣ»). */
+  readonly rest: string;
+}
 
 /**
- * Αφαιρεί το διοικητικό πρόθεμα: «Δήμος Λαγκαδά» / «ΔΗΜΟΣ ΛΑΓΚΑΔΑ» → «Λαγκαδά» / «ΛΑΓΚΑΔΑ».
+ * **Ποιο πρόθεμα βαθμίδας έχει αυτό το όνομα, και τι μένει;** — `null` χωρίς πρόθεμα.
  *
  * ⚠️ **Μόνο στην αρχή και μόνο ολόκληρες λέξεις**: το «Δημοσθένους 5» δεν χάνει τίποτα.
- * ⚠️ Όνομα που είναι **μόνο** πρόθεμα («Δήμος») μένει αυτούσιο — ένα κενό όνομα θα ήταν χειρότερο.
+ * ⚠️ Όνομα που είναι **μόνο** πρόθεμα («Δήμος») δεν χωρίζεται — ένα κενό όνομα θα ήταν χειρότερο.
  */
-export function stripGreekAdminPrefix(name: string): string {
+export function splitAdminPrefix(name: string): AdminPrefixSplit | null {
   const words = name.trim().split(/\s+/);
   const folded = words.map((word) => normalizeGreekText(word));
-  for (const prefix of ADMIN_PREFIXES) {
+  for (const { written, words: prefix, level } of ADMIN_PREFIX_WORDS) {
     if (words.length > prefix.length && prefix.every((part, i) => folded[i] === part)) {
-      return words.slice(prefix.length).join(' ');
+      return { written, level, rest: words.slice(prefix.length).join(' ') };
     }
   }
-  return name.trim();
+  return null;
+}
+
+/** Αφαιρεί το διοικητικό πρόθεμα: «Δήμος Λαγκαδά» / «ΔΗΜΟΣ ΛΑΓΚΑΔΑ» → «Λαγκαδά» / «ΛΑΓΚΑΔΑ». */
+export function stripGreekAdminPrefix(name: string): string {
+  return splitAdminPrefix(name)?.rest ?? name.trim();
 }
 
 /**

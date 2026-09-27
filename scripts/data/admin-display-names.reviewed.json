@@ -1,0 +1,407 @@
+{
+ "$doc": "ADR-893 — επιμελημένα ονόματα εμφάνισης. Κάθε γραμμή: βαθμίδα (l), κωδικός (c), το όνομα ΧΩΡΙΣ πρόθεμα βαθμίδας όπως γράφεται (name), και η απόδειξη (evidence). Κερδίζει νόμο και Wikidata, αλλά περνά τον ίδιο έλεγχο: ίδιες λέξεις με το επίσημο όνομα + μονοτονικό.",
+ "entries": [
+  {
+   "l": 1,
+   "c": "3",
+   "name": "Αττική",
+   "evidence": "https://el.wikipedia.org/wiki/NUTS_(Ελλάδα) — «Αττική» is the standard NUTS-1/ELSTAT name for this major geographic unit; uncontested, single possible accentuation (paroxytone, stress on -τι-)."
+  },
+  {
+   "l": 1,
+   "c": "4",
+   "name": "Νησιά",
+   "evidence": "https://el.wikipedia.org/wiki/NUTS_(Ελλάδα) — ELSTAT/NUTS-1 nomenclature names the island group major unit «Νησιά Αιγαίου, Κρήτη» / short form «Νησιά»; single possible accentuation (oxytone, stress on -ά)."
+  },
+  {
+   "l": 1,
+   "c": "9",
+   "name": "Άγιο Όρος (Αυτοδιοίκητο)",
+   "evidence": "https://el.wikipedia.org/wiki/Άγιο_Όρος — standard spelling of the autonomous monastic state's name, confirmed also by ELSTAT 2011 census documents (e.g. statistics.gr FEK_Nomimos_rev.pdf) listing «Άγιο Όρος» with 2,072 inhabitants."
+  },
+  {
+   "l": 2,
+   "c": "99",
+   "name": "Άγιο Όρος (Αυτοδιοίκητο)",
+   "evidence": "https://el.wikipedia.org/wiki/Άγιο_Όρος — same entity as level 1/3/5, decentralized-administration level."
+  },
+  {
+   "l": 3,
+   "c": "461",
+   "name": "Βορείου Αιγαίου",
+   "evidence": "https://www.pvaigaiou.gov.gr/ — official region website, page title \"ΠΕΡΙΦΕΡΕΙΑ ΒΟΡΕΙΟΥ ΑΙΓΑΙΟΥ\" / \"Περιφέρεια Βορείου Αιγαίου\" (genitive -ου ending, not -ου/-ιου \"Βόρειου\")."
+  },
+  {
+   "l": 3,
+   "c": "462",
+   "name": "Νοτίου Αιγαίου",
+   "evidence": "https://www.pnai.gov.gr/ — official region website, self-titled \"Περιφέρεια Νοτίου Αιγαίου\"."
+  },
+  {
+   "l": 3,
+   "c": "991",
+   "name": "Άγιο Όρος (Αυτοδιοίκητο)",
+   "evidence": "https://el.wikipedia.org/wiki/Άγιο_Όρος — same entity, region (level 3) designation; input itself already gives this accented form."
+  },
+  {
+   "l": 5,
+   "c": "3802",
+   "name": "Ακτίου - Βόνιτσας",
+   "evidence": "https://aktiovonitsa.gov.gr/ — municipality's own official website self-titled \"Δήμος Ακτίου - Βόνιτσας\"; also https://el.wikipedia.org/wiki/Δήμος_Ακτίου_-_Βόνιτσας uses the same accentuation (stress on -τί-)."
+  },
+  {
+   "l": 5,
+   "c": "4907",
+   "name": "Μαρκοπούλου Μεσογαίας",
+   "evidence": "https://www.markopoulo.gr/ — official municipal website self-titled \"Δήμος Μαρκοπούλου Μεσογαίας\" (stress on -πού-)."
+  },
+  {
+   "l": 5,
+   "c": "5207",
+   "name": "Σπετσών",
+   "evidence": "https://spetses.gov.gr/ — official municipal website self-titled \"Δήμος Σπετσών\"."
+  },
+  {
+   "l": 5,
+   "c": "7203",
+   "name": "Οροπεδίου Λασιθίου",
+   "evidence": "https://lasithi.gov.gr/ — official municipal website; https://el.wikipedia.org/wiki/Δήμος_Οροπεδίου_Λασιθίου — Wikipedia article title, stress on -δί- (Ο-ρο-πε-ΔΙ-ου)."
+  },
+  {
+   "l": 5,
+   "c": "9326",
+   "name": "Βόρειας Κέρκυρας",
+   "evidence": "https://www.mncnorthcorfu.gr/ (official site) and https://el.wikipedia.org/wiki/Δήμος_Βόρειας_Κέρκυρας — both consistently spell \"Δήμος Βόρειας Κέρκυρας\"."
+  },
+  {
+   "l": 5,
+   "c": "9327",
+   "name": "Νότιας Κέρκυρας",
+   "evidence": "https://southcorfu.gov.gr/ — official municipal website self-titled \"Δήμος Νότιας Κέρκυρας\", established by ν. 4600/2019."
+  },
+  {
+   "l": 5,
+   "c": "9328",
+   "name": "Ληξουρίου",
+   "evidence": "https://lixouricity.gr/ — official municipal website self-titled \"Δήμος Ληξουρίου\"; https://el.wikipedia.org/wiki/Δήμος_Ληξουρίου."
+  },
+  {
+   "l": 5,
+   "c": "9329",
+   "name": "Σάμης",
+   "evidence": "https://www.sami.gov.gr/ — official municipal website self-titled \"Δήμος Σάμης\" (Kefalonia)."
+  },
+  {
+   "l": 5,
+   "c": "9330",
+   "name": "Βελβεντού",
+   "evidence": "https://velventos.gr/ — official municipal website; https://el.wikipedia.org/wiki/Δήμος_Βελβεντού."
+  },
+  {
+   "l": 5,
+   "c": "9331",
+   "name": "Δυτικής Λέσβου",
+   "evidence": "https://www.mwlesvos.gr/ — official municipal website; https://el.wikipedia.org/wiki/Δήμος_Δυτικής_Λέσβου."
+  },
+  {
+   "l": 5,
+   "c": "9332",
+   "name": "Δυτικής Σάμου",
+   "evidence": "https://mwsamos.gr/ — official municipal website; https://el.wikipedia.org/wiki/Δήμος_Δυτικής_Σάμου."
+  },
+  {
+   "l": 5,
+   "c": "9901",
+   "name": "Άγιο Όρος (Αυτοδιοίκητο)",
+   "evidence": "https://el.wikipedia.org/wiki/Άγιο_Όρος — same entity as level 1/2/3; input already gives this exact form (mixed case, normalized here)."
+  },
+  {
+   "l": 6,
+   "c": "070304",
+   "name": "Αρέθουσας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2107/ — «Αρέθουσας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "070905",
+   "name": "Κορωνείας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2123/ — «Κορωνείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "080303",
+   "name": "Ειρηνούπολης",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1808/ — «Ειρηνούπολης» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "150111",
+   "name": "Σαμαρίνας",
+   "evidence": "https://www.11888.gr/dhmosies-uphresies/60290168/ titled \"Δημοτική Ενότητα Σαμαρίνας\" (Δήμος Γρεβενών)."
+  },
+  {
+   "l": 6,
+   "c": "160204",
+   "name": "Γράμου",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2507/ — «Γράμου» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "160301",
+   "name": "Άργους Ορεστικού",
+   "evidence": "https://el.wikipedia.org/wiki/Δήμος_Άργους_Ορεστικού — Wikipedia article title, exact match."
+  },
+  {
+   "l": 6,
+   "c": "160302",
+   "name": "Ίωνος Δραγούμη",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2508/ — «Ίωνος Δραγούμη» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "180201",
+   "name": "Πραμάντων",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2235/ — «Πραμάντων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "180505",
+   "name": "Μολοσσών",
+   "evidence": "https://www.zitsa.gov.gr/municipality/d-e-molosson-4 — official municipal website (Δήμος Ζίτσας) page \"Δ.Ε. Μολοσσών\"."
+  },
+  {
+   "l": 6,
+   "c": "190103",
+   "name": "Βλαχερνών",
+   "evidence": "https://ekloges.ypes.gr/current/d/home/districts/606/ — official Ministry of Interior elections site: \"Δημοτική Ενότητα Βλαχερνών\" (Δήμος Αρταίων); also https://www.kallikratis.org/dimotiki-enotita-blachernon-proin-blachernas/."
+  },
+  {
+   "l": 6,
+   "c": "220203",
+   "name": "Λακέρειας",
+   "evidence": "https://old.dimosagias.gr/o-dimos/dioikitiki-diarthrosi.html — official municipal website (Δήμος Αγιάς) navigation text: \"Δ. Ε. Λακέρειας\", accent on the ε before ρ."
+  },
+  {
+   "l": 6,
+   "c": "220303",
+   "name": "Βερδικούσσης",
+   "evidence": "https://dimoselassonas.gr/index.php/dimotikes-enotites/d-e-verdikoyssis/1488-dimotiki-enotita-verdikoyssis — official municipal website (Δήμος Ελασσόνας) titled \"Δημοτική Ενότητα Βερδικούσσης\"."
+  },
+  {
+   "l": 6,
+   "c": "260302",
+   "name": "Αιθήκων",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/4801/ — «Αιθήκων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "260402",
+   "name": "Οιχαλίας (Νεοχωρίου)",
+   "evidence": "https://farkadona.gr/dimotiki-enotita-oichalias/ (official municipal site, Δήμος Φαρκαδόνας) and https://el.wikipedia.org/wiki/Οιχαλία_Τρικάλων (former name Νεοχώρι)."
+  },
+  {
+   "l": 6,
+   "c": "280302",
+   "name": "Αντικύρας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/803/ — «Αντικύρας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "320113",
+   "name": "Παλαιοκαστριτών",
+   "evidence": "https://corfu.gr/perioxi/dhmotikh-enothta-palaiokastritwn/ — official municipal website (Δήμος Κεντρικής Κέρκυρας και Διαποντίων Νήσων), page titled \"Δημοτική Ενότητα Παλαιοκαστριτών\"."
+  },
+  {
+   "l": 6,
+   "c": "370302",
+   "name": "Λαρίσου",
+   "evidence": "https://ddachaias.gr/o-dimos/domi-tou-dimou/dimotiki-enotita-larisou/ — «Δημοτική Ενότητα Λαρίσου» (επίσημο site Δήμου Δυτικής Αχαΐας· μετονομασία 2008)"
+  },
+  {
+   "l": 6,
+   "c": "370304",
+   "name": "Ωλενίας",
+   "evidence": "https://ddachaias.gr/o-dimos/domi-tou-dimou/dimotiki-enotita-proin-kapodistriakos-dimos-olenias/ — «Ωλενίας» (επίσημο site του δήμου)"
+  },
+  {
+   "l": 6,
+   "c": "380305",
+   "name": "Μακρυνείας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/215/ — «Μακρυνείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "380603",
+   "name": "Αποδοτίας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/208/ — «Αποδοτίας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "390103",
+   "name": "Ιαρδάνου",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1711/ — «Ιαρδάνου» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "390201",
+   "name": "Αμαλιάδος",
+   "evidence": "https://www.eetaa.gr/eetaa/metaboles/dkmet_details.php?id=2173 — ΕΕΤΑΑ (state-affiliated Local-Government-history database) entry titled \"Δ. Αμαλιάδος (Αχαΐας και Ήλιδος)\"."
+  },
+  {
+   "l": 6,
+   "c": "410203",
+   "name": "Αχλαδόκαμπου",
+   "evidence": "https://argos.gov.gr/dimos/dimotikes-enotites/achladokabos/ — «Αχλαδόκαμπου» (επίσημο site του δήμου)"
+  },
+  {
+   "l": 6,
+   "c": "420401",
+   "name": "Νεμέας",
+   "evidence": "https://www.kallikratis.org/dimotiki-enotita-nemeas/ — official Kallikratis registry, \"ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΝΕΜΕΑΣ\", unambiguous single accent."
+  },
+  {
+   "l": 6,
+   "c": "440302",
+   "name": "Αιπείας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/3803/ — «Αιπείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "440605",
+   "name": "Τριπύλης",
+   "evidence": "https://old.dimostrifylias.gr/www.dimostrifylias.gr/dimos/dimotikes-enotites/koinotita-tripylis.html — official municipal website (Δήμος Τριφυλίας), \"Κοινότητα Τριπύλης\"."
+  },
+  {
+   "l": 6,
+   "c": "450801",
+   "name": "Νέας Φιλαδέλφειας",
+   "evidence": "https://dimosfx.gr/genika/ — «Νέας Φιλαδέλφειας» (επίσημο site του Δήμου Νέας Φιλαδέλφειας - Νέας Χαλκηδόνας)"
+  },
+  {
+   "l": 6,
+   "c": "490301",
+   "name": "Αγίου Στεφάνου",
+   "evidence": "https://www.dionysos.gr/ — official municipal website (Δήμος Διονύσου) lists its 7 units including \"του Αγίου Στεφάνου\"."
+  },
+  {
+   "l": 6,
+   "c": "490302",
+   "name": "Ανοίξεως",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/305/ — «Ανοίξεως» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "490303",
+   "name": "Διονύσου",
+   "evidence": "https://www.dionysos.gr/ — official municipal website, unambiguous."
+  },
+  {
+   "l": 6,
+   "c": "490304",
+   "name": "Δροσιάς",
+   "evidence": "https://www.dionysos.gr/ — official municipal website lists \"της Δροσιάς\" among its units."
+  },
+  {
+   "l": 6,
+   "c": "490305",
+   "name": "Κρυονερίου",
+   "evidence": "https://www.dionysos.gr/ — official municipal website lists \"του Κρυονερίου\" among its units."
+  },
+  {
+   "l": 6,
+   "c": "490306",
+   "name": "Ροδοπόλεως",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/340/ — «Ροδοπόλεως» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "490902",
+   "name": "Ανθούσας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/304/ — «Ανθούσας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "500501",
+   "name": "Άνω Λιοσίων",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1101/ — «Άνω Λιοσίων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "500503",
+   "name": "Φυλής",
+   "evidence": "https://fyli.gr/ — official municipal website (Δήμος Φυλής), unambiguous."
+  },
+  {
+   "l": 6,
+   "c": "510101",
+   "name": "Πειραιώς",
+   "evidence": "https://el.wikipedia.org/wiki/Δήμος_Πειραιά and https://www.kallikratis.org/dimos-peiraios-peiraia/ — standard katharevousa genitive of Πειραιάς, unambiguous single accent."
+  },
+  {
+   "l": 6,
+   "c": "510401",
+   "name": "Νικαίας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/4011/ — «Νικαίας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "530106",
+   "name": "Ευεργέτουλα",
+   "evidence": "https://www.mytilene.gr/dimotiki-enotita-euergetoula/ — official municipal website (Δήμος Μυτιλήνης), page titled \"Δημοτική Ενότητα Ευεργέτουλα\"."
+  },
+  {
+   "l": 6,
+   "c": "570101",
+   "name": "Χίου",
+   "evidence": "https://www.chios.gov.gr/ — official municipal website (Δήμος Χίου), unambiguous."
+  },
+  {
+   "l": 6,
+   "c": "570102",
+   "name": "Αγίου Μηνά",
+   "evidence": "https://www.chios.gov.gr/dimotikes-enotites/ — official municipal website lists \"Δ.Ε. Αγ. Μηνά\" among Δήμος Χίου's units."
+  },
+  {
+   "l": 6,
+   "c": "570104",
+   "name": "Ιωνίας",
+   "evidence": "https://www.chios.gov.gr/dimotikes-enotites/ — official municipal website lists \"Δ.Ε. Ιωνίας\"."
+  },
+  {
+   "l": 6,
+   "c": "570105",
+   "name": "Καμποχώρων",
+   "evidence": "https://www.chios.gov.gr/dimotikes-enotites/ — official municipal website lists \"Δ.Ε. Καμποχώρων\"."
+  },
+  {
+   "l": 6,
+   "c": "570106",
+   "name": "Καρδαμύλων",
+   "evidence": "https://www.chios.gov.gr/dimotikes-enotites/ — official municipal website lists \"Δ.Ε. Καρδαμύλων\" (from nominative village name Κάρδαμυλα, standard neuter plural genitive shift to -μύλων)."
+  },
+  {
+   "l": 6,
+   "c": "670204",
+   "name": "Ηρακλείας",
+   "evidence": "https://penaxou.gov.gr/?page_id=259 — «Δημοτική Κοινότητα Ηρακλείας» υπό «ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΗΡΑΚΛΕΙΑΣ» (επίσημο site Π.Ε. Νάξου· συμφωνεί με ΕΛΣΤΑΤ· ο νόμος σε OCR «Ηράκλειας», το Wikidata «Ηρακλειάς»)"
+  },
+  {
+   "l": 6,
+   "c": "720403",
+   "name": "Λευκής",
+   "evidence": "https://www.kallikratis.org/dimotiki-enotita-leykis/ — official Kallikratis registry, \"ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΛΕΥΚΗΣ\", part of Δήμος Σητείας (Λασίθι, Crete)."
+  },
+  {
+   "l": 6,
+   "c": "740201",
+   "name": "Κρυονερίδας",
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/5316/ — «Κρυονερίδας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+  },
+  {
+   "l": 6,
+   "c": "740403",
+   "name": "Καντάνου (Κανδάνου)",
+   "evidence": "https://el.wikipedia.org/wiki/Δήμος_Καντάνου and https://el.wikipedia.org/wiki/Κοινότητα_Κανδάνου — both forms attested (Δήμος Καντάνου-Σελίνου, Χανιά, Crete)."
+  }
+ ]
+}

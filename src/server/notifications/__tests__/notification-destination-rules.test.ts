@@ -159,6 +159,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.demandListingMatch',
       // ADR-777 §8.69 — η μείωση οδηγεί στην ίδια δημόσια αγγελία, με τον ίδιο κανόνα.
       'properties.demandPriceDrop',
+      // ADR-843 §10.20 — «νέο ενδιαφέρον»: τα εισερχόμενα επαφών, στον ιδιωτικό χώρο του παραλήπτη.
+      'properties.firstContactReceived',
       // ADR-841 §7 Α21.21 Φάση Β — η ερώτηση αργιών οδηγεί στην κάρτα του γραφείου.
       'properties.holidayHoursQuestion',
       'properties.mandateDecided',

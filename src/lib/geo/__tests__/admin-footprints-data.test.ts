@@ -21,24 +21,12 @@ import { footprintRelation } from '../geo-shape-relation';
 import { circleFootprint } from '../geo-footprint';
 import { distanceMeters } from '../geo-distance';
 import { lineageIdsOf } from '@/hooks/useAdministrativeHierarchy';
+import { hierarchyIdOf, realHierarchyRows } from '@/lib/places/__fixtures__/real-hierarchy';
 
 const FOOTPRINTS_PATH = join(process.cwd(), 'public', 'data', 'admin-footprints.json');
-const HIERARCHY_PATH = join(process.cwd(), 'public', 'data', 'administrative-hierarchy.json');
 
-interface HierarchyRow {
-  readonly id: string;
-  readonly n: string;
-  readonly l: number;
-}
-
-const hierarchy = JSON.parse(readFileSync(HIERARCHY_PATH, 'utf8')) as { data: HierarchyRow[] };
-
-/** Το `id` μιας οντότητας από το **όνομά** της — τα ονόματα είναι σταθερά, τα ids όχι. */
-function idOf(name: string): string {
-  const row = hierarchy.data.find((entry) => entry.n === name);
-  if (row === undefined) throw new Error(`Δεν βρέθηκε στην ιεραρχία: ${name}`);
-  return row.id;
-}
+/** Το `id` μιας οντότητας από το **όνομά** της, κατά ταυτότητα και όχι κατά γραφή (ADR-893). */
+const idOf = hierarchyIdOf;
 
 const RESOLVERS = { lineageOf: lineageIdsOf, footprintOf };
 
@@ -125,7 +113,7 @@ describe('το παραγόμενο αρχείο αποτυπωμάτων', () =
    * επειδή **δεν υπήρχε**.
    */
   it('ΚΑΘΕ δήμος της ιεραρχίας έχει αποτύπωμα', () => {
-    const without = hierarchy.data
+    const without = realHierarchyRows
       .filter((row) => row.l === 5)
       .filter((row) => footprintOf(row.id) === null)
       .map((row) => `${row.id} «${row.n}»`);

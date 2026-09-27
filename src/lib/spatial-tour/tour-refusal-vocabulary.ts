@@ -26,6 +26,8 @@ export const TOUR_REFUSALS = [
   'ticket-invalid', 'ticket-foreign', 'upload-missing', 'upload-incomplete', 'declaration-invalid',
   // ── Ο γράφος: τοποθέτηση, βελάκια (Φ2β) ──
   'capture-absent', 'capture-placed', 'capture-unplaced', 'capture-not-ready', 'node-absent', 'level-absent', 'graph-full',
+  // ── Ο χώρος ενός σημείου (Φ2στ) ──
+  'room-invalid',
 ] as const;
 
 export type TourRefusalName = (typeof TOUR_REFUSALS)[number];

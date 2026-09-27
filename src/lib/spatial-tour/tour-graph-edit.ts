@@ -16,6 +16,7 @@ import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourN
 
 import { levelKeyId, removeTourNode } from './spatial-tour-graph';
 import { isCaptureViewable } from './tour-manifest-stop';
+import { normalizeTourRoom, sameTourRoom, type TourRoomInput } from './tour-room';
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
 
@@ -36,7 +37,9 @@ export type TourGraphCommand =
   | { readonly op: 'place'; readonly captureId: string; readonly target: TourPlacementTarget }
   | { readonly op: 'unplace'; readonly captureId: string }
   | { readonly op: 'link'; readonly fromNodeId: string; readonly toNodeId: string; readonly bearingRad: number | null }
-  | { readonly op: 'unlink'; readonly fromNodeId: string; readonly toNodeId: string };
+  | { readonly op: 'unlink'; readonly fromNodeId: string; readonly toNodeId: string }
+  /** Ο χώρος ενός σημείου (Φ2στ · §4.12) — `null` ⇒ ξανά «Σημείο N». */
+  | { readonly op: 'name'; readonly nodeId: string; readonly room: TourRoomInput | null };
 
 /** Η απάντηση του `POST …/graph` — `revision` ≠ τοπική + 1 ⇒ κάποιος άλλος άλλαξε τον γράφο στο μεταξύ. */
 export interface TourGraphEditResponse {
@@ -44,7 +47,8 @@ export interface TourGraphEditResponse {
   readonly revision: number;
 }
 
-type TourGraphEditRefusal = 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready';
+type TourGraphEditRefusal =
+  | 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'room-invalid';
 
 export type TourGraphEditResult =
   | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null }
@@ -130,6 +134,24 @@ export function unlinkNodes(graph: Graph, a: string, b: string): TourGraphEditRe
   const nodes = graph.nodes.map((node) => {
     const other = node.id === a ? b : node.id === b ? a : null;
     return other === null ? node : { ...node, links: node.links.filter((l) => l.toNodeId !== other) };
+  });
+  return { kind: 'edited', graph: { levels: graph.levels, nodes } };
+}
+
+/**
+ * **Όνομασε** ένα σημείο — ή σβήσε το όνομα (`null`). Ίδιος χώρος ⇒ `unchanged` (ιδεμποτία). Άκυρος χώρος (άγνωστος
+ * τύπος · κανένας · πάνω από 3 · όνομα > 60) ⇒ `room-invalid`: η ίδια κανονικοποίηση με την ανάγνωση (`normalizeTourRoom`).
+ */
+export function nameNode(graph: Graph, nodeId: string, input: TourRoomInput | null): TourGraphEditResult {
+  const node = graph.nodes.find((n) => n.id === nodeId);
+  if (node === undefined) return refused('node-absent');
+  const room = input === null ? null : normalizeTourRoom(input);
+  if (input !== null && room === null) return refused('room-invalid');
+  if (sameTourRoom(node.room, room)) return { kind: 'unchanged' };
+  const nodes = graph.nodes.map((n) => {
+    if (n.id !== nodeId) return n;
+    const { room: _previous, ...rest } = n;
+    return room === null ? rest : { ...rest, room };
   });
   return { kind: 'edited', graph: { levels: graph.levels, nodes } };
 }

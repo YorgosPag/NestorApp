@@ -10,7 +10,7 @@
  */
 
 import { checkTourGraph } from '../spatial-tour-graph';
-import { linkNodes, placeCapture, unlinkNodes, unplaceCapture } from '../tour-graph-edit';
+import { linkNodes, nameNode, placeCapture, unlinkNodes, unplaceCapture } from '../tour-graph-edit';
 import type { SpatialTour, TourNode } from '@/types/spatial-tour';
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
@@ -132,5 +132,34 @@ describe('Ε — μόνο λήψη με πλακίδια τοποθετείτα�
   it('ήδη τοποθετημένη στο ίδιο σημείο μένει «τίποτα» (επανάληψη) πριν ρωτηθεί η ετοιμότητα', () => {
     expect(placeCapture(GRAPH, { nodeId: 'a', tileset: { state: 'pending', contentHash: null, faceSize: null } }, { kind: 'node', nodeId: 'a' }, 'n1'))
       .toEqual({ kind: 'unchanged' });
+  });
+});
+
+describe('Χ — ο χώρος ενός σημείου (Φ2στ · §4.12)', () => {
+  it('όνομα ⇒ μόνο αυτό το σημείο αλλάζει, κανονικοποιημένο· σύνδεσμοι ανέγγιχτοι', () => {
+    const result = edited(nameNode(GRAPH, 'a', { types: ['office', 'office'], label: ' Γραφείο ' }));
+    expect(result.graph.nodes[0]).toEqual({ ...GRAPH.nodes[0], room: { types: ['office'], label: 'Γραφείο', source: 'manual' } });
+    expect(result.graph.nodes[1]).toBe(GRAPH.nodes[1]);
+  });
+
+  it('μετονομασία με ΙΔΙΟ τύπο ⇒ αλλαγή (όχι «unchanged» — αλλιώς το νέο όνομα χάνεται σιωπηλά)', () => {
+    const named = edited(nameNode(GRAPH, 'a', { types: ['office'], label: 'Γραφείο' })).graph;
+    expect(edited(nameNode(named, 'a', { types: ['office'], label: 'Γραφείο μηχανικού' })).graph.nodes[0].room?.label).toBe('Γραφείο μηχανικού');
+  });
+
+  it('ίδιος χώρος ξανά ⇒ unchanged (ιδεμποτία)', () => {
+    const named = edited(nameNode(GRAPH, 'a', { types: ['hallway'], label: null })).graph;
+    expect(nameNode(named, 'a', { types: ['hallway'], label: '' })).toEqual({ kind: 'unchanged' });
+  });
+
+  it('null ⇒ το πεδίο φεύγει (ξανά «Σημείο N»)· χωρίς όνομα ⇒ unchanged', () => {
+    const named = edited(nameNode(GRAPH, 'a', { types: ['hallway'], label: null })).graph;
+    expect('room' in edited(nameNode(named, 'a', null)).graph.nodes[0]).toBe(false);
+    expect(nameNode(GRAPH, 'a', null)).toEqual({ kind: 'unchanged' });
+  });
+
+  it('άκυρος χώρος ⇒ room-invalid · άγνωστο σημείο ⇒ node-absent', () => {
+    expect(nameNode(GRAPH, 'a', { types: ['throne-room'], label: null })).toEqual({ kind: 'refused', reason: 'room-invalid' });
+    expect(nameNode(GRAPH, 'zz', { types: ['office'], label: null })).toEqual({ kind: 'refused', reason: 'node-absent' });
   });
 });

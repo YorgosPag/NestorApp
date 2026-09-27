@@ -25,6 +25,7 @@ import type { TourPoint } from '@/types/spatial-tour';
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 import type { TourCameraStore } from './tour-camera-store';
+import { useStopNames } from './useStopNames';
 
 /** Μεγέθη σε μέτρα κάτοψης — το SVG κλιμακώνεται, οι αναλογίες μένουν. */
 const NODE_RADIUS_M = 0.28;
@@ -80,6 +81,7 @@ function PlanLinks({ graph, stops }: { readonly graph: TourViewerGraph; readonly
 
 export function TourPlanMap({ graph, level, currentNodeId, camera, onGo }: TourPlanMapProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const nameOf = useStopNames(graph);
   const stops = positioned(graph, level);
   const frame = planFrame(stops.map((s) => s.point));
   if (frame === null) return null;
@@ -99,7 +101,7 @@ export function TourPlanMap({ graph, level, currentNodeId, camera, onGo }: TourP
         const here = s.node.id === currentNodeId;
         return (
           <circle key={s.node.id} cx={x} cy={y} r={NODE_RADIUS_M} role="button" tabIndex={0}
-            aria-label={t(here ? TOUR_VIEWER_KEYS.youAreHere : TOUR_VIEWER_KEYS.goTo, { number: s.number })}
+            aria-label={t(here ? TOUR_VIEWER_KEYS.youAreHere : TOUR_VIEWER_KEYS.goTo, { name: nameOf(s.node.id) })}
             aria-current={here ? 'location' : undefined}
             onClick={() => onGo(s.node.id)} onKeyDown={(e) => activate(e, s.node.id)}
             className={here ? 'cursor-pointer fill-chart-1 stroke-background' : 'cursor-pointer fill-card stroke-foreground focus-visible:outline-none focus-visible:stroke-ring'}

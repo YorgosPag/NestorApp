@@ -78,5 +78,23 @@
       "measured": "Μετρημένο — παράχθηκε από το σχέδιο",
       "inferred": "Εκτιμώμενο — συμπέρασμα μοντέλου"
     }
+  },
+  "media": {
+    "tabs": {
+      "label": "Προβολές της αγγελίας",
+      "photos": "Φωτογραφίες",
+      "floorplan": "Κάτοψη",
+      "tour": "3D περιήγηση"
+    },
+    "backToListing": "Πίσω στην αγγελία",
+    "photosPage": {
+      "heading": "Φωτογραφίες",
+      "openLabel": "Άνοιγμα φωτογραφίας {index} από {total}",
+      "imageTitle": "Φωτογραφία {index} από {total}",
+      "closeLabel": "Κλείσιμο"
+    },
+    "floorplanPage": {
+      "heading": "{count, plural, one {Κάτοψη} other {Κατόψεις}}"
+    }
   }
 }

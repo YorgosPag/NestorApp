@@ -33,6 +33,12 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
+// ADR-884 Φ2στ · §4.12 Μέρος Δ — ο σύνδεσμος «όλες οι φωτογραφίες» περνά από `@/lib/workspace/navigation`,
+// που ρωτά την τρέχουσα διαδρομή (ίδιο ιδίωμα με `ListingDetailContent.test.tsx`).
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/listing/prop_a0000001',
+}));
+
 function listingWith(authorship: ListingAuthorship, images = 2): PublicListing {
   return {
     authorship,

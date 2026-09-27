@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 840 ADRs | Last Updated: 2026-09-27
+**📊 Stats**: 841 ADRs | Last Updated: 2026-09-27
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 588 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 589 | [View](#uncategorized) |
 
 ---
 
@@ -875,6 +875,7 @@
 | **ADR-890** | Ανάλυση Περιοχής: δημόσια σελίδα αγοράς ανά δήμο / δημοτική ενότητα | ✅ IN PROGRESS — **Φ0 IMPLEMENTED** 2026-09-26 (§9) · **Φ1 IMPLEMENTED** 2026-09-26 (§10) · Φ2–Φ6 PROPOSED | 2026-09-26 | Uncategorized | [📄](./adrs/ADR-890-area-market-analysis.md) |
 | **ADR-891** | Αυτοφιλοξενούμενος χάρτης φόντου (PMTiles): μηδέν συνδρομές, μηδέν όρια τρίτων | ✅ **Φ1 IMPLEMENTED** — 2026-09-27 (§6) · **Φ2 IMPLEMENTED** — 2026-09-27 (§7) · **Φ3 IMPLEMENTED (κώδικας)** — 2026-09-27 (§9)· ✅ διακομιστής ζωντανός (§9.3) · ⏳ ζωντανός έλεγχος εφαρμογής · Φ4–Φ5 PROPOSED | 2026-09-26 | Uncategorized | [📄](./adrs/ADR-891-self-hosted-basemap.md) |
 | **ADR-892** | Αφαίρεση μέλους από γραφείο: η ιδιότητα μέλους τελειώνει, ο λογαριασμός ΜΕΝΕΙ | ✅ **IN PROGRESS** — 2026-09-27 · Φ0 ✅ (§8) · Φ1 πυρήνας ✅ (§9) · Φ2 αφαίρεση ✅ (§11) · Φ2β παύση/επαναφορά ✅ (§12) · **Φ3 αποχώρηση ✅** (§13) · επόμενο: Φ1β (CRM/έργα) · Φ4 · Φ5 | 2026-09-27 | Uncategorized | [📄](./adrs/ADR-892-workspace-member-removal.md) |
+| **ADR-893** | Ονόματα εμφάνισης της διοικητικής ιεραρχίας: «ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ» → «Δήμος Αθηναίων», με απόδειξη | ✅ **IMPLEMENTED** — 2026-09-27 · **1.381 / 1.384** ονόματα με απόδειξη · τα 3 που μένουν είναι ορθογραφικά λάθη της ίδιας της ΕΛΣΤΑΤ (§5.1) | 2026-09-27 | Uncategorized | [📄](./adrs/ADR-893-admin-display-names.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1702,6 +1703,7 @@
 | **ADR-890** | Ανάλυση Περιοχής: δημόσια σελίδα αγοράς ανά δήμο / δημοτική ενότητα | ✅ IN PROGRESS — **Φ0 IMPLEMENTED** 2026-09-26 (§9) · **Φ1 IMPLEMENTED** 2026-09-26 (§10) · Φ2–Φ6 PROPOSED | [View](./adrs/ADR-890-area-market-analysis.md) |
 | **ADR-891** | Αυτοφιλοξενούμενος χάρτης φόντου (PMTiles): μηδέν συνδρομές, μηδέν όρια τρίτων | ✅ **Φ1 IMPLEMENTED** — 2026-09-27 (§6) · **Φ2 IMPLEMENTED** — 2026-09-27 (§7) · **Φ3 IMPLEMENTED (κώδικας)** — 2026-09-27 (§9)· ✅ διακομιστής ζωντανός (§9.3) · ⏳ ζωντανός έλεγχος εφαρμογής · Φ4–Φ5 PROPOSED | [View](./adrs/ADR-891-self-hosted-basemap.md) |
 | **ADR-892** | Αφαίρεση μέλους από γραφείο: η ιδιότητα μέλους τελειώνει, ο λογαριασμός ΜΕΝΕΙ | ✅ **IN PROGRESS** — 2026-09-27 · Φ0 ✅ (§8) · Φ1 πυρήνας ✅ (§9) · Φ2 αφαίρεση ✅ (§11) · Φ2β παύση/επαναφορά ✅ (§12) · **Φ3 αποχώρηση ✅** (§13) · επόμενο: Φ1β (CRM/έργα) · Φ4 · Φ5 | [View](./adrs/ADR-892-workspace-member-removal.md) |
+| **ADR-893** | Ονόματα εμφάνισης της διοικητικής ιεραρχίας: «ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ» → «Δήμος Αθηναίων», με απόδειξη | ✅ **IMPLEMENTED** — 2026-09-27 · **1.381 / 1.384** ονόματα με απόδειξη · τα 3 που μένουν είναι ορθογραφικά λάθη της ίδιας της ΕΛΣΤΑΤ (§5.1) | [View](./adrs/ADR-893-admin-display-names.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

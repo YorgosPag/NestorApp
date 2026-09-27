@@ -208,7 +208,7 @@ describe('Γ 🏆 — το σκαλοπάτι που Zillow και Idealista δ�
       nameOf: (adminId) => names.get(adminId) ?? null,
     });
 
-    expect(spoken).toEqual({ kind: 'outside', areaName: 'ΔΗΜΟΣ ΚΟΡΔΕΛΙΟΥ - ΕΥΟΣΜΟΥ' });
+    expect(spoken).toEqual({ kind: 'outside', areaName: 'Δήμος Κορδελιού - Ευόσμου' });
   });
 
   it('Γ2 — ανοιχτή θάλασσα: εκτός δήλωσης, ΚΑΝΕΝΑ κελί ⇒ μιλά ΧΩΡΙΣ όνομα', () => {

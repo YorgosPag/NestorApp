@@ -1,0 +1,18 @@
+{
+  "listing-detail": {
+    "media": {
+      "backToListing": "Πίσω στην αγγελία",
+      "photosPage": {
+        "heading": "Φωτογραφίες",
+        "imageTitle": "Φωτογραφία {index} από {total}",
+        "openLabel": "Άνοιγμα φωτογραφίας {index} από {total}"
+      },
+      "tabs": {
+        "floorplan": "Κάτοψη",
+        "label": "Προβολές της αγγελίας",
+        "photos": "Φωτογραφίες",
+        "tour": "3D περιήγηση"
+      }
+    }
+  }
+}

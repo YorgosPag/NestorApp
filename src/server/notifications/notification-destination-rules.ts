@@ -15,6 +15,7 @@
  * | `properties.mandateDecided` | `custodyOf` + `mandateDecisionDestination` | `announceMandateDecision` |
  * | `properties.stayRequestReceived` | `custodyOf` + `stayRequestReceivedDestination` | `announceStayBookingNotice` |
  * | `properties.stayRequestAnswered` | `stayRequestAnsweredDestination` | `announceStayBookingNotice` |
+ * | `properties.firstContactReceived` | `firstContactReceivedDestination` | `announceFirstContactReceived` |
  * | `properties.tourAccessRequested` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourAccessRequested` |
  * | `properties.tourAccessAnswered` | `tourAccessAnsweredDestination` | `announceTourAccessAnswered` |
  * | `properties.tourLinkOpened` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourLinkOpened` |
@@ -48,6 +49,7 @@ import type { NotificationDestination } from '@/lib/notifications/notification-d
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { placeDestination } from '@/lib/places/place-detail-route';
+import { firstContactReceivedDestination } from '@/services/contact/first-contact-notifier.service';
 import { listingMatchDestination } from '@/services/demand/listing-match-notifier.service';
 import { locatePlace } from '@/services/demand/place-interest.service';
 import { mandateDecisionDestination } from '@/services/mandate/mandate-decision-notifier.service';
@@ -164,6 +166,10 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_RECEIVED]: stayRequestReceivedRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(stayRequestAnsweredDestination(entityId, notification.userId)),
+  // ADR-843 §10.20 — τα εισερχόμενα επαφών, στον ιδιωτικό χώρο του παραλήπτη (καμία ανάγνωση: η διαδρομή δεν
+  //    εξαρτάται από την πράξη — ούτε από το αν αποσύρθηκε· αποσυρμένη πράξη απλώς δεν εμφανίζεται εκεί, ΠΕ6).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_FIRST_CONTACT_RECEIVED]: async (_db, notification) =>
+    expected(firstContactReceivedDestination(notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_REQUESTED]: tourAccessRequestedRule,
   // ADR-884 §9.1 Α3′ — το άνοιγμα συνδέσμου οδηγεί στο ΙΔΙΟ πάνελ (εκεί ζουν οι σύνδεσμοι), με τον ΙΔΙΟ κανόνα.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_LINK_OPENED]: tourAccessRequestedRule,

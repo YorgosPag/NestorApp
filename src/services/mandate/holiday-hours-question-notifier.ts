@@ -5,7 +5,7 @@
  * @module services/mandate/holiday-hours-question-notifier
  *
  * 🔑 **ΑΠΟΦΑΣΗ GIORGIO (2026-09-15): ΔΙΑΧΕΙΡΙΣΤΕΣ ΧΩΡΟΥ** — όπως η Google στέλνει στους κατόχους/διαχειριστές του προφίλ, όχι
- * στο δημόσιο email επικοινωνίας. Ενεργά μέλη με ρόλο διοίκησης (`ADMINISTRATIVE_ROLES` — η **μία** λίστα του έργου).
+ * στο δημόσιο email επικοινωνίας. Ενεργά μέλη με ρόλο διοίκησης — `activeWorkspaceAdministrators` (`lib/workspace/workspace-administrators.ts`).
  *
  * 🔑 **Μέσα από τον αγωγό ειδοποιήσεων, ποτέ απευθείας στον πάροχο**: έτσι ο διακόπτης ανά τύπο, οι ώρες σιωπής, η γλώσσα
  * του παραλήπτη, το List-Unsubscribe (RFC 8058) και η αποδιπλοποίηση (`eventId`) ισχύουν **χωρίς** δεύτερη υλοποίηση.
@@ -18,13 +18,13 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { getCurrentEnvironment, NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES } from '@/config/notification-events';
 import { showcaseCardDestination } from '@/lib/agency/showcase-card-destination';
-import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
 import type { HolidayQuestionStage } from '@/lib/calendar/holiday-question';
 import type { NotificationDestination } from '@/lib/notifications/notification-destination';
 import { createModuleLogger } from '@/lib/telemetry';
+// N.0.2 — «ποιοι είναι οι διαχειριστές;» ζει σε ΕΝΑ σημείο (το ρωτά και η πρώτη επαφή προς γραφείο, ADR-843 §10.20).
+import { activeWorkspaceAdministrators } from '@/lib/workspace/workspace-administrators';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import { loadUserNotificationSettingsMany } from '@/server/notifications/user-notification-settings-store';
 import type { HolidayHoursQuestion } from '@/types/holiday-hours-question';
@@ -32,8 +32,6 @@ import type { HolidayHoursQuestion } from '@/types/holiday-hours-question';
 import { holidayQuestionBody, holidayQuestionWording } from './holiday-question-email-texts';
 
 const logger = createModuleLogger('holiday-hours-question-notifier');
-
-const ADMIN_ROLES: readonly string[] = ADMINISTRATIVE_ROLES;
 
 export interface HolidayQuestionAnnouncement {
   readonly delivered: number;
@@ -45,16 +43,15 @@ export function holidayHoursQuestionDestination(companyId: string): Notification
   return showcaseCardDestination(companyId);
 }
 
-/** **Οι διαχειριστές του χώρου** — ενεργά μέλη με ρόλο διοίκησης. Υποσυλλογή του γραφείου: η εμβέλεια είναι η διαδρομή. */
-async function adminRecipients(adminDb: AdminFirestore, companyId: string): Promise<string[]> {
-  const members = await adminDb
-    .collection(`${COLLECTIONS.COMPANIES}/${companyId}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}`)
-    .get();
-  return members.docs.flatMap((doc) => {
-    const { status, globalRole } = doc.data() as { status?: unknown; globalRole?: unknown };
-    return status === 'active' && typeof globalRole === 'string' && ADMIN_ROLES.includes(globalRole) ? [doc.id] : [];
-  });
-}
+/**
+ * **Κλειδί τίτλου ανά στάδιο** — `Record` πάνω στο κλειστό σύνολο, ώστε (α) τρίτο στάδιο χωρίς κείμενο να μη
+ * μεταγλωττίζεται και (β) η άγκυρα `notification-title-key-reach` (Κ0β) να **βλέπει** τα κλειδιά: ο τριαδικός
+ * τελεστής μέσα στην κλήση ήταν αόρατος σε αυτήν, δηλαδή τα δύο κλειδιά δεν τα έκρινε κανείς.
+ */
+const HOLIDAY_TITLE_KEYS: Record<HolidayQuestionStage, string> = {
+  ask: 'holidayHoursQuestion.title',
+  reminder: 'holidayHoursQuestion.reminderTitle',
+};
 
 async function askOne(
   question: HolidayHoursQuestion,
@@ -70,7 +67,7 @@ async function askOne(
     tenantId: question.companyId,
     title: stage === 'ask' ? wording.subject(agencyName) : wording.reminderSubject(agencyName),
     body: holidayQuestionBody(language, agencyName, question.items),
-    titleKey: stage === 'ask' ? 'holidayHoursQuestion.title' : 'holidayHoursQuestion.reminderTitle',
+    titleKey: HOLIDAY_TITLE_KEYS[stage],
     eventId: `holiday-hours:${question.id}:${stage}`,
     entityId: question.companyId,
     ...holidayHoursQuestionDestination(question.companyId),
@@ -90,7 +87,7 @@ export async function announceHolidayQuestion(
   stage: HolidayQuestionStage,
   agencyName: string,
 ): Promise<HolidayQuestionAnnouncement> {
-  const recipients = await adminRecipients(adminDb, question.companyId);
+  const recipients = await activeWorkspaceAdministrators(adminDb, question.companyId);
   const settings = await loadUserNotificationSettingsMany(recipients);
   let delivered = 0;
   let failed = 0;
