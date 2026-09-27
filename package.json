@@ -200,6 +200,7 @@
     "generate:i18n-types": "node scripts/generate-i18n-types.js",
     "i18n-types:check": "node scripts/check-i18n-types-freshness.js",
     "generate:i18n-shell-slice": "node scripts/generate-i18n-shell-slice.js",
+    "generate:i18n-shell-slice:index": "node scripts/generate-i18n-shell-slice-on-index.js",
     "generate:confusable-skeleton": "node scripts/generate-confusable-skeleton.js",
     "test:workspace-alias": "jest src/lib/unicode src/lib/workspace --silent",
     "workspace-scope:check": "node scripts/check-workspace-scope.js --all",

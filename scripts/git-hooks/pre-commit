@@ -314,7 +314,7 @@ if [[ -z "${SKIP_I18N_SHELL_SLICE:-}" ]] && [[ -f "scripts/check-i18n-shell-slic
         if [[ $? -ne 0 ]]; then
             echo ""
             echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.34 i18n shell slice (ADR-744)${NC}"
-            echo -e "${YELLOW}  Θεραπεία: npm run generate:i18n-shell-slice  (και σταδιοποίησε τα artifacts)${NC}"
+            echo -e "${YELLOW}  Θεραπεία: npm run generate:i18n-shell-slice:index  (γεννά από το index — και σταδιοποίησε τα artifacts)${NC}"
             echo -e "${YELLOW}  ⚠️  ΜΗΝ ανεβάσεις τη σφράγιση για να γίνει πράσινο — η θεραπεία είναι σχεδόν πάντα να ΚΟΠΕΙ η εισαγωγή.${NC}"
             echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_I18N_SHELL_SLICE=1 git commit ...${NC}"
             exit 1
