@@ -256,7 +256,6 @@
       "address-not-found": "We could not locate that address."
     },
     "failed": "The place was not recorded. Try again.",
-    "attribution": "Map data © OpenStreetMap contributors",
     "summary": {
       "loading": "Reading the place…",
       "absent": "This place does not exist. Pick again.",
