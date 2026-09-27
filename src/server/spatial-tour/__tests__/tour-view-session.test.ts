@@ -58,7 +58,7 @@ function capture(overrides: Record<string, unknown> = {}) {
     tourId: TOUR_ID, nodeId: 'tnod_1', capturedAt: '2026-09-20T10:00:00.000Z', headingRad: 0, source: 'camera-360',
     provenance: 'as-built', baseCaptureId: null, signatory: null, audience: 'public-listing', milestone: null,
     originalFileId: 'file_1', uploadedBy: 'boris', createdAt: '2026-09-20T10:05:00.000Z',
-    tileset: { state: 'ready', contentHash: 'h1' },
+    tileset: { state: 'ready', contentHash: 'h1', faceSize: 2048 },
     rights: { creator: { name: 'Χ', userId: null, url: null }, licensors: [], copyrightNotice: '© Χ', webStatementOfRights: null,
       license: { purpose: 'listing-marketing', term: { kind: 'perpetual' } } },
     ...overrides,
@@ -169,11 +169,11 @@ describe('Μ — το μανιφέστο', () => {
   it('Μ1 — μόνο κοινό αγγελίας, τοποθετημένη, πιο πρόσφατη ανά κόμβο, με έτοιμο tileset', async () => {
     seed(tourDoc({ visibility: 'public' }));
     kit.seedCollection(CAPTURES, {
-      tcap_old: capture({ capturedAt: '2026-09-01T10:00:00.000Z', tileset: { state: 'ready', contentHash: 'old' } }),
-      tcap_new: capture({ capturedAt: '2026-09-22T10:00:00.000Z', tileset: { state: 'ready', contentHash: 'new' } }),
+      tcap_old: capture({ capturedAt: '2026-09-01T10:00:00.000Z', tileset: { state: 'ready', contentHash: 'old', faceSize: 2048 } }),
+      tcap_new: capture({ capturedAt: '2026-09-22T10:00:00.000Z', tileset: { state: 'ready', contentHash: 'new', faceSize: 2048 } }),
       tcap_team: capture({ nodeId: 'tnod_2', audience: 'project-team' }),
       tcap_unplaced: capture({ nodeId: null }),
-      tcap_pending: capture({ nodeId: 'tnod_3', tileset: { state: 'pending', contentHash: null } }),
+      tcap_pending: capture({ nodeId: 'tnod_3', tileset: { state: 'pending', contentHash: null, faceSize: null } }),
     });
     const outcome = await open();
     if (outcome.kind !== 'granted') throw new Error('expected granted');
@@ -183,7 +183,7 @@ describe('Μ — το μανιφέστο', () => {
 
   it('Μ2 — χωρίς έτοιμο tileset ⇒ ready: false (η οθόνη λέει «ετοιμάζεται»)', async () => {
     seed(tourDoc({ visibility: 'public' }));
-    kit.seedCollection(CAPTURES, { tcap_1: capture({ tileset: { state: 'pending', contentHash: null } }) });
+    kit.seedCollection(CAPTURES, { tcap_1: capture({ tileset: { state: 'pending', contentHash: null, faceSize: null } }) });
     const outcome = await open();
     expect(outcome.kind === 'granted' && outcome.manifest.ready).toBe(false);
   });

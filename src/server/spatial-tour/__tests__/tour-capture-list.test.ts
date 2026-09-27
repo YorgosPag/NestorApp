@@ -38,7 +38,7 @@ const capture = (uploadedBy: string) => ({
   tourId: TOUR_ID, nodeId: null, capturedAt: '2026-09-20T10:00:00.000Z', headingRad: 0, source: 'camera-360',
   provenance: 'as-built', baseCaptureId: null, signatory: null, audience: 'public-listing', milestone: null,
   originalFileId: `file_${uploadedBy}`, uploadedBy, createdAt: '2026-09-20T10:05:00.000Z',
-  tileset: { state: 'pending', contentHash: 'h' },
+  tileset: { state: 'pending', contentHash: 'h', faceSize: null },
   rights: { creator: { name: 'Χ', userId: null, url: null }, licensors: [], copyrightNotice: '© Χ', webStatementOfRights: null,
     license: { purpose: 'listing-marketing', term: { kind: 'perpetual' } } },
 });

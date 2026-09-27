@@ -107,7 +107,7 @@ describe('Ρ — οι ρυθμίσεις', () => {
   // 🔴 Ρ7 (ζωντανά 2026-09-26, §4.7 Α8) — η πύλη δημοσίευσης ρωτούσε ΔΙΚΟ της κριτή («υπάρχει λήψη για το κοινό;»):
   //    λήψη για το κοινό χωρίς έτοιμο tileset ή χωρίς κόμβο ΔΗΜΟΣΙΕΥΟΤΑΝ, και ο θεατής έδειχνε «ετοιμάζεται».
   it.each([
-    ['χωρίς έτοιμο tileset', capture({ tileset: { state: 'pending', contentHash: null } })],
+    ['χωρίς έτοιμο tileset', capture({ tileset: { state: 'pending', contentHash: null, faceSize: null } })],
     ['ατοποθέτητη', capture({ nodeId: null })],
   ])('Ρ7 — λήψη για το κοινό %s ⇒ publish-needs-capture, καμία εγγραφή (ο κριτής του θεατή)', async (_name, doc) => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
@@ -143,7 +143,7 @@ describe('Π — η παρουσία στην αγγελία', () => {
     ['δημοσιευμένη on-request με έτοιμο tileset', tourDoc({ lifecycle: 'published', visibility: 'on-request' }), capture(), 'on-request'],
     ['link-only (αόρατη στην αγγελία)', tourDoc({ lifecycle: 'published', visibility: 'link-only' }), capture(), null],
     ['πρόχειρη', tourDoc(), capture(), null],
-    ['χωρίς έτοιμο tileset', tourDoc({ lifecycle: 'published' }), capture({ tileset: { state: 'pending', contentHash: null } }), null],
+    ['χωρίς έτοιμο tileset', tourDoc({ lifecycle: 'published' }), capture({ tileset: { state: 'pending', contentHash: null, faceSize: null } }), null],
     ['λήψη μόνο για την ομάδα', tourDoc({ lifecycle: 'published' }), capture({ audience: 'project-team' }), null],
   ])('%s', async (_name, tour, captureDoc, visibility) => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tour });
@@ -162,7 +162,7 @@ describe('Π — η παρουσία στην αγγελία', () => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ lifecycle: 'published' }) });
     kit.seedCollection(CAPTURES, {
       tcap_old: capture(),
-      tcap_new: capture({ capturedAt: '2026-09-20T09:00:00.000Z', tileset: { state: 'pending', contentHash: 'n' } }),
+      tcap_new: capture({ capturedAt: '2026-09-20T09:00:00.000Z', tileset: { state: 'pending', contentHash: 'n', faceSize: null } }),
     });
     expect(await readTourPresence(db, 'prop_1')).toBeNull();
   });

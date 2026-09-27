@@ -75,7 +75,7 @@ describe('spatial_tour — ο υπεύθυνος δίνει σύνδεσμο', (
   //    «ετοιμάζεται». Ο ΕΝΑΣ κριτής του θεατή ⇒ 422 με λόγο (ο υπεύθυνος ΕΧΕΙ δικαίωμα — δεν είναι 403).
   it.each([
     ['λήψη μόνο για την ομάδα', { audience: 'project-team' }],
-    ['λήψη χωρίς έτοιμο tileset', { tileset: { state: 'pending', contentHash: null } }],
+    ['λήψη χωρίς έτοιμο tileset', { tileset: { state: 'pending', contentHash: null, faceSize: null } }],
     ['ατοποθέτητη λήψη', { nodeId: null }],
   ])('%s ⇒ invalid nothing-to-share, καμία εγγραφή', async (_name, overrides) => {
     kit.seedCollection(CAPTURES, { tcap_1: { ...CAPTURE_DOC, tourId: TOUR_ID, ...overrides } });

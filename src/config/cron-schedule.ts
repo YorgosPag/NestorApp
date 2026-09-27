@@ -63,6 +63,7 @@ import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
+import { runTourTilesetBake } from '@/lib/cron/jobs/tour-tileset-bake.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
 
 /**
@@ -469,6 +470,22 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runAreaMarketRollup,
+  },
+  {
+    slug: 'tour-tileset-bake',
+    path: '/api/cron/tour-tileset-bake',
+    description: 'Δίχτυ ψήστη πλακιδίων περιήγησης: λήψεις 360° που έμειναν «σε αναμονή» ⇒ πλακίδια (ADR-884 Φ2α)',
+    enabled: true,
+    // 🔑 **Κάθε 15′, γιατί είναι ΔΙΧΤΥ, όχι ο κύριος δρόμος.** Το ψήσιμο γίνεται αμέσως μετά το ανέβασμα (`after`)·
+    // εδώ έρχεται ό,τι κόπηκε από επανεκκίνηση ή προσωρινό σφάλμα αποθήκευσης. Ο φωτογράφος περιμένει το πολύ ~25′.
+    //
+    // ⚠️ **:08/:23/:38/:53**: λεπτά που δεν κατέχει κανείς (*/5 από :02 · */10 από :04 · */10 · :15 · :35).
+    schedule: '8-59/15 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 12,
+    run: runTourTilesetBake,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────
