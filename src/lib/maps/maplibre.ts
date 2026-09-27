@@ -73,9 +73,26 @@
  */
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+import { addProtocol } from 'maplibre-gl';
 import { createElement, forwardRef } from 'react';
-import { Map as ReactMapLibreMap, type MapProps, type MapRef } from 'react-map-gl/maplibre';
+import {
+  Map as ReactMapLibreMap,
+  type MapEvent,
+  type MapProps,
+  type MapRef,
+  type MapSourceDataEvent,
+  type MapStyleDataEvent,
+} from 'react-map-gl/maplibre';
 import { withMapRequestSentinel } from './basemap-request-sentinel';
+import { MapAttributionText, useMapAttribution } from './map-attribution-view';
+import { ensurePmtilesProtocol } from './pmtiles-protocol';
+
+/**
+ * 🔑 **ΤΟ ΠΡΩΤΟΚΟΛΛΟ `pmtiles://` ΚΑΤΑΧΩΡΙΖΕΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ** (ADR-891 §9). Το `addProtocol` είναι καθολικό·
+ * αφού **κάθε** χάρτης περνά από αυτό το module (CHECK 3.75), ο χάρτης φόντου PMTiles δουλεύει παντού χωρίς ο
+ * καταναλωτής να θυμηθεί τίποτα — όπως ο φύλακας και η απόδοση πιο κάτω. Στον server δεν υπάρχει χάρτης.
+ */
+if (typeof window !== 'undefined') ensurePmtilesProtocol(addProtocol);
 
 /**
  * Η **δηλωτική** επιφάνεια (React): `Map`, `Source`, `Layer`, `Marker`, `Popup`,
@@ -100,16 +117,44 @@ export * from 'react-map-gl/maplibre';
  * sprite) από τον `basemap-request-sentinel`. Επειδή κάθε χάρτης της εφαρμογής ζητά το `Map` **από εδώ**
  * (CHECK 3.75), ο φύλακας δεν είναι κάτι που ο καταναλωτής πρέπει να θυμηθεί.
  *
+ * 🔑 **ΚΑΙ ΖΩΓΡΑΦΙΖΕΙ ΤΗΝ ΑΠΟΔΟΣΗ — ΠΑΝΤΑ** (ADR-891 §8). Ο κανόνας ήταν «κάθε καταναλωτής κλείνει το
+ * `attributionControl` και γράφει τη γραμμή μόνος του»· μετρημένο 2026-09-27: **πέντε** χάρτες την ξέχασαν,
+ * ανάμεσά τους η **δημόσια** σελίδα `/area`. Πλέον η απόδοση διαβάζεται από τις **πηγές του φορτωμένου στυλ**
+ * (`mapAttribution`), ζωγραφίζεται θεματικά και πάντα ορατή (`MapAttributionText`), και το `attributionControl`
+ * του καταναλωτή **αγνοείται**. Ένα νέο υπόβαθρο (π.χ. PMTiles, Φ3) φέρνει τη δική του απόδοση χωρίς καμία αλλαγή εδώ.
+ *
  * ⚠️ Η ρητή εξαγωγή **σκιάζει** το `Map` του `export *` πιο πάνω (κανόνας ES modules: η τοπική εξαγωγή
  * προηγείται της αστερίσκου). Ό,τι άλλο εξάγει η βιβλιοθήκη μένει ανέγγιχτο. `createElement` αντί για JSX
  * ώστε το σύνορο να μείνει `.ts` — είναι το αρχείο που δηλώνει το CHECK 3.75.
  */
-export const Map = forwardRef<MapRef, MapProps>(function SentinelMap(props, ref) {
-  return createElement(ReactMapLibreMap, {
-    ...props,
-    ref,
-    transformRequest: withMapRequestSentinel(props.transformRequest),
-  });
+export const Map = forwardRef<MapRef, MapProps>(function BoundaryMap(props, ref) {
+  const [attribution, observeAttribution] = useMapAttribution();
+  const { onLoad, onStyleData, onSourceData } = props;
+  return createElement(
+    ReactMapLibreMap,
+    {
+      ...props,
+      ref,
+      transformRequest: withMapRequestSentinel(props.transformRequest),
+      // 🔑 Η απόδοση ΔΕΝ είναι επιλογή του καταναλωτή (ADR-891 §8): ζωγραφίζεται ΠΑΝΤΑ, από τις πηγές του στυλ.
+      attributionControl: false,
+      onLoad: (event: MapEvent) => {
+        observeAttribution(event.target);
+        onLoad?.(event);
+      },
+      onStyleData: (event: MapStyleDataEvent) => {
+        observeAttribution(event.target);
+        onStyleData?.(event);
+      },
+      onSourceData: (event: MapSourceDataEvent) => {
+        // Μόνο όταν έρχονται μεταδεδομένα (TileJSON ⇒ `attribution`), όχι σε κάθε πλακίδιο.
+        if (event.sourceDataType === 'metadata') observeAttribution(event.target);
+        onSourceData?.(event);
+      },
+    },
+    props.children,
+    createElement(MapAttributionText, { key: 'map-attribution', segments: attribution, as: 'small' }),
+  );
 });
 
 /**

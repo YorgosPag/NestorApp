@@ -86,3 +86,23 @@ export function mergeAttributions(htmlPerSource: readonly string[]): MapAttribut
     return i === 0 ? segments : [{ text: ' ' }, ...segments];
   });
 }
+
+/** Ό,τι χρειάζεται η ανάγνωση από έναν φορτωμένο χάρτη — τίποτα περισσότερο (ώστε τα tests να μη στήνουν WebGL). */
+export interface AttributedMap {
+  getStyle(): { readonly sources: Readonly<Record<string, unknown>> };
+  getSource(id: string): { readonly attribution?: string } | undefined;
+}
+
+/**
+ * **Η απόδοση όπως τη δηλώνουν οι πηγές του φορτωμένου στυλ** (TileJSON / `attribution`) — η ΜΙΑ ανάγνωση,
+ * για το στιγμιότυπο (`capture-map-snapshot.ts`) **και** για τον ζωντανό χάρτη (`maplibre.ts`, ADR-891 §8).
+ */
+export function mapAttribution(map: AttributedMap): MapAttributionSegment[] {
+  const ids = Object.keys(map.getStyle().sources);
+  return mergeAttributions(ids.map((id) => map.getSource(id)?.attribution ?? ''));
+}
+
+/** Ίδια απόδοση; — ώστε ο ζωντανός χάρτης να μην ξαναζωγραφίζει σε κάθε φόρτωση πλακιδίου. */
+export function sameAttribution(a: readonly MapAttributionSegment[], b: readonly MapAttributionSegment[]): boolean {
+  return a.length === b.length && a.every((segment, i) => segment.text === b[i].text && segment.href === b[i].href);
+}

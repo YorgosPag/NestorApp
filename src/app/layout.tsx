@@ -13,7 +13,7 @@ import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { AppUpdateBanner } from '@/components/app-update/AppUpdateBanner';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { PRODUCT_NAME } from '@/constants/product-identity';
-import { THEME_STORAGE_KEY } from '@/lib/appearance/theme-storage-key';
+import { APP_DEFAULT_THEME, THEME_STORAGE_KEY } from '@/lib/appearance/theme-storage-key';
 
 /**
  * =============================================================================
@@ -124,7 +124,7 @@ export default function RootLayout({
         {/* 🏢 ENTERPRISE: Minimal provider stack - essential providers only */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme={APP_DEFAULT_THEME}
           enableSystem
           disableTransitionOnChange
           storageKey={THEME_STORAGE_KEY}
