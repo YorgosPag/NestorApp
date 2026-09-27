@@ -79,6 +79,13 @@ export interface TourPoint {
 export interface TourLink {
   readonly toNodeId: string;
   readonly via: TourLinkVia;
+  /**
+   * Προς τα πού βρίσκεται ο στόχος **από αυτόν τον κόμβο**, ως διόπτευση κόσμου (0 = βορράς, δεξιόστροφα — ίδια σύμβαση
+   * με τον θεατή: διόπτευση = heading + yaw). Το βάζει ο άνθρωπος σέρνοντας το βελάκι μέσα στη φωτογραφία (ADR-884 Φ2β,
+   * απόφαση Giorgio 2026-09-27, πρότυπο Kuula). `null` ⇒ ο στόχος εμφανίζεται μόνο στη λίστα — εκτός αν οι δύο κόμβοι
+   * έχουν θέση στην κάτοψη, οπότε η διόπτευση **παράγεται** από τις θέσεις. Σε κόσμο, όχι σε pixel: επιβιώνει νέα λήψη.
+   */
+  readonly bearingRad: number | null;
 }
 
 /** Σημείο στον χώρο — σταθερό στον χρόνο. */
@@ -121,6 +128,11 @@ export interface TourCaptureSignatory {
 export interface TourCaptureTileset {
   readonly state: TourTilesetState;
   readonly contentHash: string | null;
+  /**
+   * Πλευρά όψης του ψημένου κύβου (ADR-884 Φ2α) — `null` ως να ψηθεί. Τα επίπεδα **παράγονται** από αυτήν
+   * (`tilesetLevels`, `lib/spatial-tour/tileset/tour-tileset-layout.ts`) — δεν αποθηκεύονται δεύτερη φορά.
+   */
+  readonly faceSize: number | null;
 }
 
 /** Μία λήψη ενός σημείου, σε μία ημερομηνία (υποσυλλογή `tour_captures`). */

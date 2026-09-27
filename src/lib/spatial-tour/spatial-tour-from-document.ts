@@ -111,7 +111,8 @@ function readPoint(raw: unknown): TourPoint | null | undefined {
 function readLink(raw: unknown): TourLink | null {
   if (!isRecord(raw) || !isTourLinkVia(raw.via)) return null;
   const toNodeId = text(raw.toNodeId);
-  return toNodeId === null ? null : { toNodeId, via: raw.via };
+  const bearingRad = isFiniteNumber(raw.bearingRad) ? raw.bearingRad : null;
+  return toNodeId === null ? null : { toNodeId, via: raw.via, bearingRad };
 }
 
 function readNode(raw: unknown): TourNode | null {
@@ -162,7 +163,8 @@ function readCaptureSignatory(raw: unknown): TourCaptureSignatory | null | undef
 
 function readTileset(raw: unknown): TourCaptureTileset | null {
   if (!isRecord(raw) || !isTourTilesetState(raw.state)) return null;
-  return { state: raw.state, contentHash: text(raw.contentHash) };
+  const faceSize = isFiniteNumber(raw.faceSize) && raw.faceSize > 0 ? raw.faceSize : null;
+  return { state: raw.state, contentHash: text(raw.contentHash), faceSize };
 }
 
 /** Τα πεδία λεξιλογίου μιας λήψης — όλα ή τίποτα. */
