@@ -57,11 +57,11 @@ const path = require('node:path');
 const K1 = require('./lib/i18n-ssr/readiness-ast');
 const K2 = require('./lib/i18n-ssr/answerability');
 const { loadConfig } = require('./lib/i18n-shell-slice/config');
+const { materializeIndex, readIndexText } = require('./lib/git-index-snapshot');
 
 const CHECK = 'CHECK 3.51 (ADR-781)';
 const BS = String.fromCharCode(92);
 const PROJECT_ROOT = path.join(__dirname, '..');
-const POSIX_ROOT = PROJECT_ROOT.split(BS).join('/');
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
@@ -69,23 +69,22 @@ const YELLOW = '\x1b[1;33m';
 const DIM = '\x1b[2m';
 const NC = '\x1b[0m';
 
-const GENERATED_DIR = path.join(PROJECT_ROOT, 'src', 'i18n', 'generated');
 
 // ---------------------------------------------------------------------------
 
-function readGenerated(name) {
-  const file = path.join(GENERATED_DIR, name);
+function readGenerated(name, root = PROJECT_ROOT) {
+  const file = path.join(root, 'src', 'i18n', 'generated', name);
   if (!fs.existsSync(file)) throw new Error(`λείπει το ${name} — τρέξε: npm run generate:i18n-shell-slice`);
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-function collectSourceFiles(dir, acc = []) {
+function collectSourceFiles(dir, acc = [], root = PROJECT_ROOT) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== 'node_modules' && entry.name !== '.next') collectSourceFiles(full, acc);
+      if (entry.name !== 'node_modules' && entry.name !== '.next') collectSourceFiles(full, acc, root);
     } else if (/\.tsx?$/.test(entry.name) && !/\.d\.ts$/.test(entry.name)) {
-      acc.push(path.relative(PROJECT_ROOT, full).split(BS).join('/'));
+      acc.push(path.relative(root, full).split(BS).join('/'));
     }
   }
   return acc;
@@ -95,50 +94,78 @@ function collectSourceFiles(dir, acc = []) {
 // Η μέτρηση
 // ---------------------------------------------------------------------------
 
-function measureK1(files) {
+function measureK1(files, root = PROJECT_ROOT) {
   return files.map((relFile) => {
-    const abs = path.join(PROJECT_ROOT, relFile);
+    const abs = path.join(root, relFile);
     if (!fs.existsSync(abs)) return { file: relFile, state: K1.K1_STATES.NOT_A_SURFACE, findings: [] };
     return K1.classifyFile(relFile, fs.readFileSync(abs, 'utf8'));
   });
 }
 
-function measureK2({ full }) {
-  const config = loadConfig(POSIX_ROOT);
-  const slice = readGenerated('shell-slice.el.json');
+function measureK2({ full }, root = PROJECT_ROOT) {
+  const posixRoot = root.split(BS).join('/');
+  const config = loadConfig(posixRoot);
+  const slice = readGenerated('shell-slice.el.json', root);
 
   if (!full) {
-    const manifest = readGenerated('shell-slice.manifest.json');
+    const manifest = readGenerated('shell-slice.manifest.json', root);
     const closureFiles = Object.keys(manifest.shellFiles || {});
     if (closureFiles.length === 0) {
       throw new Error('το manifest δεν έχει shellFiles — τρέξε: npm run generate:i18n-shell-slice');
     }
-    return K2.measureAnswerability({ projectRoot: POSIX_ROOT, config, slice, closureFiles });
+    return K2.measureAnswerability({ projectRoot: posixRoot, config, slice, closureFiles });
   }
 
   // Layer 2 — η κλειστότητα ξαναχτίζεται από τον γράφο, γιατί ένα ΝΕΟ layout
   // αλλάζει «ό,τι ζωγραφίζει πάντα» και το manifest το μαθαίνει μόνο μετά.
   const P = require('./lib/i18n-shell-slice/plan');
-  const graph = P.buildModuleGraph(POSIX_ROOT);
-  return K2.measureAnswerability({ projectRoot: POSIX_ROOT, config, slice, graph });
+  const graph = P.buildModuleGraph(posixRoot);
+  return K2.measureAnswerability({ projectRoot: posixRoot, config, slice, graph });
 }
 
-function measure(args) {
+function measure(args, root = PROJECT_ROOT) {
   const full = args.includes('--all') || args.includes('--full');
   const staged = args.filter((arg) => !arg.startsWith('--')).map((arg) => arg.split(BS).join('/'));
 
   const k1Files = full || staged.length === 0
-    ? collectSourceFiles(path.join(PROJECT_ROOT, 'src'))
+    ? collectSourceFiles(path.join(root, 'src'), [], root)
     : staged.filter((file) => /^src\/.*\.tsx?$/.test(file) && !/\.d\.ts$/.test(file));
 
-  const k1 = measureK1(k1Files);
-  const k2 = measureK2({ full });
+  const k1 = measureK1(k1Files, root);
+  const k2 = measureK2({ full }, root);
 
   return {
     full,
     k1: { results: k1, census: K1.assertClosedK1(k1), scanned: k1.length },
     k2: { records: k2.records, census: K2.assertClosedK2(k2.records), files: k2.files, callSites: k2.callSites },
   };
+}
+
+/**
+ * 🔴 **Κρίνε το COMMIT, όχι τον δίσκο** (2026-09-27, ίδια αιτία με CHECK 3.33/3.34 `--index`): σε δέντρο με
+ * παράλληλους πράκτορες, ένα ξένο αστάδιοποίητο shell module με νέο κλειδί έκανε κόκκινο commit που δεν το
+ * περιείχε. Υλοποιείται ΜΟΝΟ ό,τι διαβάζει το Layer 1: η κλειστότητα του manifest **του ευρετηρίου** ·
+ * `src/i18n` · config · key constants · τα σταδιοποιημένα. Το `--full` μένει στον δίσκο (CI).
+ */
+function measureOnIndex(args) {
+  const config = loadConfig(PROJECT_ROOT);
+  const manifestText = readIndexText({
+    repoRoot: PROJECT_ROOT, relPath: `${config.outputDir}/shell-slice.manifest.json`,
+  });
+  const closureFiles = manifestText === null ? [] : Object.keys(JSON.parse(manifestText).shellFiles || {});
+  const staged = args.filter((arg) => !arg.startsWith('--')).map((arg) => arg.split(BS).join('/'));
+  const snapshot = materializeIndex({
+    repoRoot: PROJECT_ROOT,
+    pathspecs: [
+      '.i18n-shell-slice.json', 'tsconfig.base.json', path.posix.dirname(config.localesDir), config.outputDir,
+      ...config.keyConstants.map((entry) => entry.file), ...closureFiles, ...staged,
+    ],
+  });
+  try {
+    return measure(args.filter((arg) => arg !== '--index'), snapshot.root);
+  } finally {
+    snapshot.dispose();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +262,7 @@ function main() {
 
   let measured;
   try {
-    measured = measure(args);
+    measured = args.includes('--index') ? measureOnIndex(args) : measure(args);
   } catch (error) {
     // fail-closed: ποτέ «καθαρό» χωρίς μέτρηση.
     console.error(`${RED}❌ ${CHECK} — αδύνατη η μέτρηση: ${error.message}${NC}`);

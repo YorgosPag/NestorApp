@@ -143,7 +143,7 @@ if (localeFiles.length > 0)
 // regeneration, or an edit to the generated file itself. Pure in-memory Node
 // (no spawn), so it belongs here in Phase 1 rather than a sequential 0.x phase.
 if (!skipI18nTypes && (localeFiles.length > 0 || allFiles.includes('src/types/i18n.ts')))
-  addThread('3.33', 'i18n types freshness', 'scripts/check-i18n-types-freshness.js');
+  addThread('3.33', 'i18n types freshness', 'scripts/check-i18n-types-freshness.js', ['--index']);
 
 // CHECK 3.34 (ADR-744) — the synchronous i18n bootstrap is generated from the
 // shell's import closure. Three things can invalidate it, so all three are
@@ -450,7 +450,7 @@ const ssrRawKeysTriggers = allFiles.filter(
     || f.startsWith('scripts/lib/i18n/')
 );
 if (!process.env.SKIP_I18N_SSR_RAW_KEYS && ssrRawKeysTriggers.length > 0)
-  addThread('3.51', 'i18n SSR raw keys', 'scripts/check-i18n-ssr-raw-keys.js', ssrRawKeysTriggers);
+  addThread('3.51', 'i18n SSR raw keys', 'scripts/check-i18n-ssr-raw-keys.js', ['--index', ...ssrRawKeysTriggers]);
 
 // CHECK 3.52 (ADR-777 §8.12) — «φοράει αυτή η σελίδα το κέλυφος ΕΠΕΙΔΗ ΤΟ ΛΕΕΙ Ο ΦΑΚΕΛΟΣ
 // ΤΗΣ, ή επειδή κανείς δεν ρώτησε;». Ο `ConditionalAppShell` έκρινε «γυμνή σελίδα;» από
