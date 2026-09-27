@@ -319,6 +319,11 @@
 
 ## 8. Changelog
 
+- **2026-09-27** — **ADR-891 Φ2 (N.0.2)**: το `loadLayer` (`scripts/lib/admin-boundaries/admin-boundary-source.ts`) περνά
+  από τη **μία** λήψη πηγής των γεννητόρων `scripts/lib/cached-download.ts` — ίδια cache, αλλά πλέον με `.meta.json`
+  (sha256 + `Last-Modified`) δίπλα σε κάθε layer και ατομική εγγραφή. ⚠️ Τα layers που ήδη υπάρχουν στην cache **χωρίς**
+  `.meta.json` ξανακατεβαίνουν **μία** φορά στο επόμενο `build:admin-boundaries` / `build:admin-footprints` (χωρίς
+  προέλευση δεν ξέρουμε ποια έκδοση είναι). Τα ίδια όρια ορίζουν πλέον και την **επικράτεια** του χάρτη φόντου (ADR-891 §7).
 - **2026-09-26** — **ADR-890 Φ1** (σελίδα `/area/[id]`): η μορφή ταυτότητας περιοχής έγινε `isAdminAreaId`
   (`lib/geo/admin-area-index-file.ts`) και τη ρωτούν πλέον **και** το `?area=` (`listing-search-area.ts`, όπου ζούσε ως
   ιδιωτικό regex) **και** η σελίδα. Νέο `adminAreaAncestors` (γενεαλογία πάνω στον σκέτο χάρτη του ευρετηρίου, για τον

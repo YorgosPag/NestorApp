@@ -19,9 +19,11 @@
  * `build-admin-footprints.ts` και το `types/geo/admin-footprint.ts` για τον πλήρη πίνακα.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { loadCachedSource } from '../cached-download';
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
@@ -89,21 +91,13 @@ function wfsUrl(layer: string): string {
   return `${WFS_BASE}?${params.toString()}`;
 }
 
-/** Κατεβάζει το layer **μία φορά** και το κρατά στην cache εκτός παρακολούθησης. */
+/**
+ * Κατεβάζει το layer **μία φορά** και το κρατά στην cache εκτός παρακολούθησης — μέσα από τη ΜΙΑ
+ * λήψη πηγής των γεννητόρων (`cached-download.ts`, ADR-891 Φ2), με sha256 + `Last-Modified` δίπλα.
+ */
 export async function loadLayer(layer: string): Promise<GeoJSON.FeatureCollection> {
-  mkdirSync(CACHE_DIR, { recursive: true });
-  const cached = join(CACHE_DIR, `${layer}.geojson`);
-
-  if (!existsSync(cached)) {
-    process.stdout.write(`  ↓ ${layer} … `);
-    const response = await fetch(wfsUrl(layer));
-    if (!response.ok) throw new Error(`WFS ${layer}: HTTP ${response.status}`);
-    const body = await response.text();
-    writeFileSync(cached, body);
-    process.stdout.write(`${(body.length / 1e6).toFixed(1)} MB\n`);
-  }
-
-  return JSON.parse(readFileSync(cached, 'utf8')) as GeoJSON.FeatureCollection;
+  const source = await loadCachedSource({ url: wfsUrl(layer), path: join(CACHE_DIR, `${layer}.geojson`), label: layer });
+  return JSON.parse(readFileSync(source.path, 'utf8')) as GeoJSON.FeatureCollection;
 }
 
 /**

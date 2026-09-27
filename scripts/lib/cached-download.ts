@@ -1,0 +1,116 @@
+/**
+ * @fileoverview **Η ΜΙΑ ΛΗΨΗ ΠΗΓΗΣ ΤΩΝ ΓΕΝΝΗΤΟΡΩΝ** — μία φορά, σε cache εκτός git, με την προέλευση δίπλα.
+ * @related ADR-891 Φ2 · ADR-889 (`market-transactions/mama-download.ts`) · ADR-883 (`admin-boundaries/admin-boundary-source.ts`)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ ΕΞΗΧΘΗ (N.0.2 — ADR-891 Φ2)
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο γεννήτορας των ορίων (ADR-883) και ο γεννήτορας των τιμών (ADR-889) έγραφαν ο καθένας το ίδιο
+ * ιδίωμα: «κατέβασε **μία** φορά, κράτα στο `node_modules/.cache`, ξανακατέβασε μόνο αν ζητηθεί».
+ * Ο τρίτος (ο χάρτης φόντου, ADR-891) θα ήταν τρίτο αντίγραφο — και ο πρώτος που **εκτελεί** αυτό
+ * που κατεβάζει. Ζει λοιπόν **εδώ**, μία φορά, με τρεις εγγυήσεις που τα αντίγραφα δεν είχαν όλες:
+ *
+ * 1. **Η προέλευση ταξιδεύει με το αρχείο** — `<αρχείο>.meta.json` με `Last-Modified` + sha256.
+ *    Αρχείο χωρίς μεταδεδομένα **ξανακατεβαίνει**: χωρίς προέλευση δεν ξέρουμε **ποια** έκδοση είναι.
+ * 2. **Καρφωμένο αποτύπωμα** (`expectedSha256`) — για ό,τι θα **εκτελεστεί**. Ασυμφωνία ⇒ σφάλμα
+ *    και **κανένα** αρχείο στον δίσκο. Αλλαγή του καρφώματος ⇒ η παλιά cache δεν γίνεται δεκτή.
+ * 3. **Ατομική εγγραφή** — ροή προς `<αρχείο>.part`, hash εν κινήσει, μετονομασία **μετά** τον έλεγχο.
+ *    Μια διακοπή στη μέση δεν αφήνει ποτέ μισό αρχείο που μοιάζει ολόκληρο.
+ */
+
+import { createHash } from 'node:crypto';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
+
+const USER_AGENT = 'Mozilla/5.0 (NestorApp data generator)';
+
+export interface CachedSourceMeta {
+  readonly url: string;
+  /** Ο διακομιστής το δίνει· `null` αν δεν το έδωσε. */
+  readonly lastModified: string | null;
+  readonly bytes: number;
+  readonly sha256: string;
+}
+
+export interface CachedSource {
+  readonly path: string;
+  readonly meta: CachedSourceMeta;
+}
+
+export interface CachedSourceRequest {
+  readonly url: string;
+  /** Πού ζει το αρχείο — **πάντα** κάτω από `node_modules/.cache` (εκτός git). */
+  readonly path: string;
+  /** Όνομα στην κονσόλα (`↓ <label> … 12.3 MB`). */
+  readonly label: string;
+  /** Αγνόησε την cache και κατέβασε ξανά. */
+  readonly refresh?: boolean;
+  /** Καρφωμένο αποτύπωμα — **υποχρεωτικό** για ό,τι εκτελείται. */
+  readonly expectedSha256?: string;
+}
+
+function metaPathOf(path: string): string {
+  return `${path}.meta.json`;
+}
+
+/** Η cache γίνεται δεκτή μόνο με μεταδεδομένα — και, αν υπάρχει κάρφωμα, μόνο αν συμφωνεί. */
+function readUsableCache(request: CachedSourceRequest): CachedSourceMeta | null {
+  const metaPath = metaPathOf(request.path);
+  if (request.refresh || !existsSync(request.path) || !existsSync(metaPath)) return null;
+  const meta = JSON.parse(readFileSync(metaPath, 'utf8')) as CachedSourceMeta;
+  if (request.expectedSha256 !== undefined && meta.sha256 !== request.expectedSha256) return null;
+  return meta;
+}
+
+async function download(request: CachedSourceRequest): Promise<CachedSourceMeta> {
+  process.stdout.write(`  ↓ ${request.label} … `);
+  const response = await fetch(request.url, { headers: { 'User-Agent': USER_AGENT } });
+  if (!response.ok || response.body === null) {
+    throw new Error(`${request.label}: HTTP ${response.status} από ${request.url}`);
+  }
+
+  const hash = createHash('sha256');
+  let bytes = 0;
+  const meter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      hash.update(chunk);
+      bytes += chunk.length;
+      callback(null, chunk);
+    },
+  });
+
+  const partPath = `${request.path}.part`;
+  // Το `fetch` δίνει ReadableStream του DOM· το Node το δέχεται αυτούσιο, μόνο ο τύπος διαφέρει.
+  const body = response.body as NodeWebReadableStream<Uint8Array>;
+  await pipeline(Readable.fromWeb(body), meter, createWriteStream(partPath));
+
+  const sha256 = hash.digest('hex');
+  if (request.expectedSha256 !== undefined && sha256 !== request.expectedSha256) {
+    rmSync(partPath, { force: true });
+    throw new Error(`${request.label}: sha256 ${sha256} ≠ καρφωμένο ${request.expectedSha256} — ΔΕΝ γίνεται δεκτό`);
+  }
+
+  renameSync(partPath, request.path);
+  const meta: CachedSourceMeta = { url: request.url, lastModified: response.headers.get('last-modified'), bytes, sha256 };
+  writeFileSync(metaPathOf(request.path), `${JSON.stringify(meta, null, 2)}\n`);
+  process.stdout.write(`${(bytes / 1e6).toFixed(1)} MB\n`);
+  return meta;
+}
+
+/** sha256 αρχείου **με ροή** — για εξόδους εκατοντάδων MB, που δεν χωρούν ολόκληρες στη μνήμη. */
+export async function fileSha256(path: string): Promise<string> {
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);
+  return hash.digest('hex');
+}
+
+/** Το αρχείο από την cache, αλλιώς (ή με `refresh`, ή με άλλο κάρφωμα) από την πηγή. */
+export async function loadCachedSource(request: CachedSourceRequest): Promise<CachedSource> {
+  mkdirSync(dirname(request.path), { recursive: true });
+  const cached = readUsableCache(request);
+  return { path: request.path, meta: cached ?? (await download(request)) };
+}
