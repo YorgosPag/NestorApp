@@ -118,12 +118,15 @@ function optionalContentOf(doc: Fields, meta: Fields): Partial<DispatchContent> 
   const entityType = oneOf(meta.entityType, Object.values(NOTIFICATION_ENTITY_TYPES));
   const titleKey = textOf(doc.titleKey);
   const titleParams = stringRecordOf(doc.titleParams);
+  const bodyKey = textOf(doc.bodyKey);
+  const bodyParams = stringRecordOf(doc.bodyParams);
   return {
     ...(body ? { body } : {}),
     ...(severity ? { severity } : {}),
     ...(entityId ? { entityId } : {}),
     ...(entityType ? { entityType } : {}),
     ...(titleKey ? { titleKey, ...(titleParams ? { titleParams } : {}) } : {}),
+    ...(bodyKey ? { bodyKey, ...(bodyParams ? { bodyParams } : {}) } : {}),
   };
 }
 

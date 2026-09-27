@@ -42,6 +42,7 @@ const toNotification = (raw: DocumentData & { id: string }): Notification => ({
   actions: raw.actions as Notification['actions'],
   meta: raw.meta as Notification['meta'],
   ...(raw.titleKey ? { titleKey: raw.titleKey as string, titleParams: raw.titleParams as Record<string, string> } : {}),
+  ...(raw.bodyKey ? { bodyKey: raw.bodyKey as string, bodyParams: raw.bodyParams as Record<string, string> } : {}),
 } as Notification);
 
 export interface NotificationQuery {

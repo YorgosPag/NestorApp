@@ -19,7 +19,6 @@ import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MEDIA_LICENSE_PURPOSES, type MediaLicensePurpose } from '@/constants/media-rights-vocabulary';
 import {
   TOUR_CAPTURE_AUDIENCES,
@@ -41,6 +40,7 @@ import {
   UPLOAD_KEYS,
   UPLOAD_SOURCE_KEY,
 } from './spatial-tour-labels';
+import { LabeledSelect } from './LabeledSelect';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
 import { useTourCaptureUpload, type TourUploadPhase } from './useTourCaptureUpload';
 
@@ -151,30 +151,6 @@ function DeclarationFields({ draft, patch }: { readonly draft: DeclarationDraft;
             placeholder={t(UPLOAD_KEYS.licenseUntil)} disabledDates={{ before: new Date() }} />
         </section>
       )}
-    </section>
-  );
-}
-
-interface SelectOption<T extends string> { readonly value: T; readonly label: string }
-
-/** 🔑 Γενικό στο `T`: η τιμή που επιστρέφει είναι **μία από τις δοσμένες** — ποτέ ανεπαλήθευτο string (κανένα `as`). */
-function LabeledSelect<T extends string>(props: {
-  readonly id: string; readonly label: string; readonly value: T;
-  readonly options: readonly SelectOption<T>[]; readonly onChange: (value: T) => void;
-}) {
-  const choose = (raw: string) => {
-    const option = props.options.find((candidate) => candidate.value === raw);
-    if (option) props.onChange(option.value);
-  };
-  return (
-    <section className="space-y-1">
-      <Label htmlFor={props.id}>{props.label}</Label>
-      <Select value={props.value} onValueChange={choose}>
-        <SelectTrigger id={props.id}><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {props.options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
     </section>
   );
 }

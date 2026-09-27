@@ -16,6 +16,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from '@/lib/workspace/navigation';
 
 // 🏢 ENTERPRISE: Centralized auth (NO direct Firebase imports!)
@@ -55,6 +56,10 @@ import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('UserMenu');
 
+// ADR-892 Φ3 — φορτώνεται **μόνο** όταν ζητηθεί: ο γεννήτορας του shell slice κόβει στο `next/dynamic`
+// (CHECK 3.34), άρα τα κείμενα του διαλόγου δεν βαραίνουν κάθε σελίδα που φορά αυτό το μενού.
+const LeaveWorkspaceDialog = dynamic(() => import('@/components/workspace-membership/LeaveWorkspaceDialog'), { ssr: false });
+
 /**
  * @param signedOut Τι μπαίνει στη θέση του μενού όταν **δεν** υπάρχει ταυτότητα
  *   — η πόρτα «Σύνδεση» του δημόσιου ιστότοπου, ή τίποτα.
@@ -83,6 +88,9 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
   // 🏢 ENTERPRISE: Centralized auth hook
   const { user, signOut } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  // ADR-892 Φ3 — ο διάλογος αποχώρησης ζει ΕΔΩ, δίπλα στο μενού και όχι μέσα του: το περιεχόμενο του
+  // μενού ξεκρεμιέται όταν κλείνει, και μαζί του θα χανόταν μια πράξη που τρέχει.
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   // No user = no menu (after logout or before login) — και στη θέση του ό,τι
   // δήλωσε ο κόσμος. Χωρίς δήλωση, `undefined` ⇒ ταυτόσημο με το παλιό `null`:
@@ -119,6 +127,7 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
   };
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {/* 🏢 ENTERPRISE: suppressHydrationWarning for i18n SSR/CSR mismatch
@@ -200,7 +209,7 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
             «πού είμαι», και τέλος τι μπορώ να **κάνω** (λογαριασμός · αποσύνδεση).
             ⚠️ ΚΑΜΙΑ κρίση ταυτότητας εδώ: την κάνει το ίδιο το τμήμα, μία φορά —
             ίδιο δόγμα με το `UserMenu` μέσα στο `ShellUtilities`. */}
-        <MySpacesSection />
+        <MySpacesSection onLeaveWorkspace={() => setLeaveOpen(true)} />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           {/* ADR-871 Ε5 — «ΤΑ ΔΙΚΑ ΜΟΥ», ΑΠΟ ΤΟΝ ΕΝΑ ΚΑΤΑΛΟΓΟ.
@@ -244,5 +253,7 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    {leaveOpen && <LeaveWorkspaceDialog open onClose={() => setLeaveOpen(false)} />}
+    </>
   );
 }

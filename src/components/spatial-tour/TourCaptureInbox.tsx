@@ -7,15 +7,20 @@
  *
  * 🔑 **Ίδιο συστατικό για υπεύθυνο και φωτογράφο** — τι βλέπει ο καθένας το κρίνει ο **διακομιστής** (`listTourCaptures`:
  * υπεύθυνος ⇒ όλες, φωτογράφος ⇒ οι δικές του). Η οθόνη δεν φιλτράρει τίποτα μόνη της.
- * 🔑 Ταξινόμηση **στη μνήμη** (νεότερη λήψη πρώτη) — ο διακομιστής δεν ζητά σύνθετο δείκτη για λίστα ≤ 200.
+ * 🔑 Ταξινόμηση **στη μνήμη** (νεότερη λήψη πρώτη, `newestCaptureFirst` — η ΜΙΑ σειρά) — ο διακομιστής δεν ζητά σύνθετο
+ *   δείκτη για λίστα ≤ 200.
+ * 🔑 **«Τοποθέτηση στην περιήγηση»** μόνο όταν ο διακομιστής λέει `asManager` (ADR-884 Φ2δ) — ο φωτογράφος ανεβάζει, ο
+ *   υπεύθυνος οργανώνει (πρότυπο Matterport).
  */
 
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
+import { newestCaptureFirst } from '@/lib/spatial-tour/tour-editor-model';
 import { listTourCapturesFromScreen } from '@/services/spatial-tour/spatial-tour.client';
 import type { TourCapture, TourSubject } from '@/types/spatial-tour';
 
@@ -23,20 +28,23 @@ import { MILESTONE_KEY, PANEL_KEYS, UPLOAD_SOURCE_KEY } from './spatial-tour-lab
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
 import { TourCaptureUploadForm } from './TourCaptureUploadForm';
 
+/** Μόνο για τον υπεύθυνο — πίσω από όριο, ώστε η σελίδα του φωτογράφου να μην κουβαλά τις λέξεις του (ADR-744 §15). */
+const TourEditorDialog = dynamic(() => import('./editor/TourEditorDialog').then((m) => m.TourEditorDialog), { ssr: false });
+
 type CapturesLoad =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'loaded'; readonly captures: readonly TourCapture[] }
+  | { readonly kind: 'loaded'; readonly captures: readonly TourCapture[]; readonly asManager: boolean }
   | { readonly kind: 'failed' };
-
-const newestFirst = (a: TourCapture, b: TourCapture) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt);
 
 function useTourCaptures(subject: TourSubject) {
   const [load, setLoad] = useState<CapturesLoad>({ kind: 'loading' });
   const refresh = useCallback(async () => {
     const result = await listTourCapturesFromScreen(subject);
-    if (result.kind === 'ok') return setLoad({ kind: 'loaded', captures: [...result.value.captures].sort(newestFirst) });
+    if (result.kind === 'ok') {
+      return setLoad({ kind: 'loaded', captures: [...result.value.captures].sort(newestCaptureFirst), asManager: result.value.asManager });
+    }
     // Η περιήγηση δεν υπάρχει ακόμη ⇒ κενά εισερχόμενα, όχι σφάλμα (τη γεννά το πρώτο ανέβασμα).
-    setLoad(result.kind === 'refused' && result.reason === 'tour-absent' ? { kind: 'loaded', captures: [] } : { kind: 'failed' });
+    setLoad(result.kind === 'refused' && result.reason === 'tour-absent' ? { kind: 'loaded', captures: [], asManager: false } : { kind: 'failed' });
   }, [subject]);
   useEffect(() => { void refresh(); }, [refresh]);
   return { load, refresh };
@@ -47,7 +55,12 @@ export function TourCaptureInbox({ subject }: { readonly subject: TourSubject })
   const { load, refresh } = useTourCaptures(subject);
   return (
     <section className="space-y-3" aria-labelledby="tour-inbox-heading">
-      <h3 id="tour-inbox-heading" className="text-base font-semibold">{t(PANEL_KEYS.captures)}</h3>
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="tour-inbox-heading" className="text-base font-semibold">{t(PANEL_KEYS.captures)}</h3>
+        {load.kind === 'loaded' && load.asManager && load.captures.length > 0 && (
+          <TourEditorDialog subject={subject} onClosed={() => void refresh()} />
+        )}
+      </header>
       <TourCaptureUploadForm subject={subject} onUploaded={() => void refresh()} />
       {load.kind === 'failed' && (
         <p className="text-sm text-destructive" role="alert">

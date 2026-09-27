@@ -72,13 +72,17 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { isRoleBypass } from './roles';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
+  isTenureEnded,
   isWorkspaceMemberEnrollment,
+  isWorkspaceMembershipStatus,
   workspaceRefKey,
   type MembershipDecision,
   type MembershipVerdict,
   type WorkspaceMembership,
   type WorkspaceMembershipStatus,
   type WorkspaceRef,
+  type WorkspaceAccessPause,
+  type WorkspaceTenureEnd,
 } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('workspace-membership');
@@ -237,10 +241,7 @@ export function normalizeMembership(
 ): WorkspaceMembership {
   const data = raw ?? {};
   const rawStatus = data.status;
-  const status: WorkspaceMembershipStatus =
-    rawStatus === 'active' || rawStatus === 'suspended' || rawStatus === 'pending'
-      ? rawStatus
-      : 'suspended';
+  const status: WorkspaceMembershipStatus = isWorkspaceMembershipStatus(rawStatus) ? rawStatus : 'suspended';
 
   return {
     uid,
@@ -253,7 +254,37 @@ export function normalizeMembership(
     addedBy: typeof data.addedBy === 'string' ? data.addedBy : null,
     // ADR-867 Ε1 — πληροφορία, όχι εξουσιοδότηση ⇒ ανεκτικά: άγνωστο ή απόν ⇒ `null`.
     enrollment: isWorkspaceMemberEnrollment(data.enrollment) ? data.enrollment : null,
+    tenureEnd: isTenureEnded(status) ? tenureEndOf(data.tenureEnd) : null,
+    // ADR-892 Φ2β — μόνο σε παύση· ένα ξεχασμένο πεδίο σε ενεργό μέλος δεν «παύει» τίποτα.
+    accessPause: status === 'suspended' ? accessPauseOf(data.accessPause) : null,
     updatedAt: data.updatedAt,
+  };
+}
+
+/**
+ * ADR-892 — **πληροφορία, όχι εξουσιοδότηση** ⇒ ανεκτικά: η άρνηση πρόσβασης κρίνεται από το `status`.
+ * Χαλασμένο πεδίο σε ληγμένη θητεία ⇒ «άγνωστος δρων» (`''`), ποτέ εφεύρεση.
+ */
+function tenureEndOf(raw: unknown): WorkspaceTenureEnd {
+  const data = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  return {
+    endedByUid: typeof data.endedByUid === 'string' ? data.endedByUid : '',
+    reason: typeof data.reason === 'string' && data.reason !== '' ? data.reason : null,
+    endedAt: data.endedAt,
+  };
+}
+
+/**
+ * ADR-892 Φ2β — ίδιο δόγμα με το `tenureEndOf`: πληροφορία, όχι εξουσιοδότηση. Παύση **χωρίς** ίχνος
+ * (π.χ. παλιά αναστολή λογαριασμού πριν από τον διαχωρισμό) ⇒ `null`: άγνωστος δρων, ποτέ εφεύρεση.
+ */
+function accessPauseOf(raw: unknown): WorkspaceAccessPause | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const data = raw as Record<string, unknown>;
+  return {
+    pausedByUid: typeof data.pausedByUid === 'string' ? data.pausedByUid : '',
+    reason: typeof data.reason === 'string' && data.reason !== '' ? data.reason : null,
+    pausedAt: data.pausedAt,
   };
 }
 

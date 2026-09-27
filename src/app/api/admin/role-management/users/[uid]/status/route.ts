@@ -5,7 +5,7 @@
  *
  * Suspends or reactivates a user by:
  * 1. Firebase Auth: updateUser({ disabled }) — blocks/unblocks sign-in
- * 2. Firestore: companies/{companyId}/members/{uid} — updates status field
+ * ⚠️ ADR-892 Φ2β: ΔΕΝ γράφει πια το έγγραφο μέλους — η «Παύση πρόσβασης» του γραφείου είναι άλλη πράξη
  *
  * Security:
  * - super_admin only
@@ -27,7 +27,6 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { FieldValue } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
 import { extractUidFromPath } from '@/lib/api/route-helpers';
@@ -89,12 +88,16 @@ export const PATCH = withSensitiveRateLimit(
         // (SSoT: lib/api/role-management-helpers).
         const prepared = await prepareMemberMutation(ctx, targetUid, 'Cannot change your own account status');
         if (!prepared.ok) return prepared.response;
-        const { auth, member } = prepared.value;
+        // Το `member` επιβεβαιώνει μόνο το tenant isolation (υπάρχει εδώ) — δεν γράφεται πια.
+        const { auth } = prepared.value;
 
         const isSuspend = body.action === 'suspend';
         const newStatus = isSuspend ? 'suspended' : 'active';
-        const memberData = member.data;
-        const currentStatus = (memberData?.status as string) ?? 'active';
+        // 🔴 ADR-892 Φ2β (§12) — Η ΚΑΤΑΣΤΑΣΗ ΤΟΥ ΛΟΓΑΡΙΑΣΜΟΥ ΕΙΝΑΙ ΤΟ `disabled`, ΟΧΙ ΤΟ ΕΓΓΡΑΦΟ ΜΕΛΟΥΣ.
+        //    Μέχρι 2026-09-27 αυτή η πράξη έγραφε ΚΑΙ `workspace_members.status` — ίδια τιμή με την «Παύση
+        //    πρόσβασης» του γραφείου: δύο πράξεις αδιάκριτες, και η «Ενεργοποίηση» εδώ θα ήρε σιωπηλά μια
+        //    απόφαση του γραφείου. Atlassian: deactivate account ≠ suspend access — δύο καταστάσεις.
+        const currentStatus = (await auth.getUser(targetUid)).disabled ? 'suspended' : 'active';
 
         // Prevent no-op
         if (currentStatus === newStatus) {
@@ -104,15 +107,8 @@ export const PATCH = withSensitiveRateLimit(
           );
         }
 
-        // 1. Update Firebase Auth: disable/enable sign-in
+        // Firebase Auth: disable/enable sign-in — ο κριτής ανάκλησης κόβει ό,τι ήδη τρέχει (ADR-892 §9.2).
         await auth.updateUser(targetUid, { disabled: isSuspend });
-
-        // 2. Update Firestore member document
-        await member.ref.update({
-          status: newStatus,
-          updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: ctx.uid,
-        });
 
         // 3. 🏆 ADR-867 §4.3 / ADR-834 §5 Β (ε) — **ΚΑΝΕΝΑ ΟΡΦΑΝΟ ΝΗΜΑ, ΠΟΤΕ.**
         //
@@ -162,6 +158,8 @@ export const PATCH = withSensitiveRateLimit(
         await logAuditEvent(ctx, auditAction, targetUid, 'user', {
           previousValue: { type: 'status', value: currentStatus },
           newValue: { type: 'status', value: newStatus },
+          // ⚠️ ADR-892 §12.5: το `audit-core` πετά σιωπηλά ό,τι δεν είναι στο κλειστό `AuditMetadata` — οι δύο
+          //    μετρήσεις φτάνουν στον δρώντα μόνο από την απάντηση (γνωστό όριο, Φ4 όταν μετακομίσει η πράξη).
           metadata: { reason: body.reason, transferredActTeams: transferredTeams, orphanedActTeams: orphanedTeams },
         });
 

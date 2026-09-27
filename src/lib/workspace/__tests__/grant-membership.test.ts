@@ -77,10 +77,23 @@ describe('Θ — μία θητεία, μία προέλευση', () => {
     for (const provenance of ['enrollment', 'addedBy', 'joinedAt', 'status']) expect(data).not.toHaveProperty(provenance);
   });
 
-  it('Θ3 — ΑΝΑΣΤΑΛΜΕΝΗ θέση ⇒ νέα θητεία (πλήρες έγγραφο) — η επανένταξη είναι νέα πράξη', async () => {
-    stored = { status: 'suspended', enrollment: 'founder' };
+  // 🔴 ADR-892 Φ2β — ΑΝΤΙΣΤΡΑΦΗΚΕ ΣΚΟΠΙΜΑ. Μέχρι 2026-09-27 το Θ3 κλείδωνε «`suspended` ⇒ νέα θητεία»:
+  //    δηλαδή μια έγκριση/αλλαγή ρόλου **ήρε σιωπηλά** την παύση του γραφείου και έσβηνε την προέλευση.
+  it('🔴 Θ3 — θέση σε ΠΑΥΣΗ ⇒ αλλάζει ΜΟΝΟ ο ρόλος· η παύση ΜΕΝΕΙ (αίρεται μόνο με «Επαναφορά πρόσβασης»)', async () => {
+    stored = { status: 'suspended', enrollment: 'founder', addedBy: 'uid_x' };
     await grantWorkspaceMembership(INPUT);
-    expect(writes[0].data).toEqual(expect.objectContaining({ status: 'active', enrollment: 'approval', addedBy: 'uid_admin' }));
+
+    const [{ data }] = writes;
+    expect(data).toEqual({ uid: 'uid_x', globalRole: 'company_admin', updatedAt: '<ts>' });
+    for (const touched of ['status', 'enrollment', 'addedBy', 'joinedAt', 'accessPause']) expect(data).not.toHaveProperty(touched);
+  });
+
+  it('Θ3β — ΛΗΓΜΕΝΗ θητεία (`removed`) ⇒ νέα θητεία, που καθαρίζει ΚΑΙ `tenureEnd` ΚΑΙ `accessPause`', async () => {
+    stored = { status: 'removed', enrollment: 'founder' };
+    await grantWorkspaceMembership(INPUT);
+    expect(writes[0].data).toEqual(expect.objectContaining({
+      status: 'active', enrollment: 'approval', addedBy: 'uid_admin', tenureEnd: null, accessPause: null,
+    }));
   });
 
   it('Θ4 — αποτυχία γραφής ⇒ `false`, ποτέ εξαίρεση (ο καλών ΣΤΑΜΑΤΑ πριν τα claims)', async () => {

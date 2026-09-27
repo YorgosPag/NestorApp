@@ -12,7 +12,7 @@ import { previewSegments, tileSegments } from '@/lib/spatial-tour/tileset/tour-t
 import { TOUR_CUBE_FACES } from '@/lib/spatial-tour/viewer/tour-cube-faces';
 import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
 
-import { createTilePanoramaSource, type TileSourceRuntime } from '../tile-panorama-source';
+import { createTilePanoramaSource, fetchTileBlob, TILE_FETCH_ATTEMPTS, type TileSourceRuntime } from '../tile-panorama-source';
 
 const SUBJECT = { kind: 'company-property', id: 'prop_1' } as const;
 const HASH = 'f'.repeat(64);
@@ -133,5 +133,45 @@ describe('Σ — σειρά και ακύρωση', () => {
     const controller = new AbortController();
     await load(rec, 1024, 4096, undefined, controller.signal);
     expect(rec.signals.every((s) => s === controller.signal)).toBe(true);
+  });
+});
+
+describe('Ε — επανάληψη πλακιδίου (ζωντανά, Φ2δ: `socket hang up` ⇒ 503 σε ΕΝΑ πλακίδιο έριχνε ΟΛΗ την καθαρή εικόνα)', () => {
+  const BLOB = { tile: true } as unknown as Blob;
+  const ok = { ok: true, status: 200, blob: async () => BLOB } as unknown as Response;
+  const status = (code: number) => ({ ok: false, status: code, blob: async () => BLOB }) as unknown as Response;
+  const run = (responses: ReadonlyArray<Response | Error>) => {
+    const calls: number[] = [];
+    const fetchImpl = jest.fn(async () => {
+      const next = responses[calls.length];
+      calls.push(calls.length);
+      if (next instanceof Error) throw next;
+      return next;
+    });
+    const promise = fetchTileBlob('/tile', new AbortController().signal, { fetch: fetchImpl as unknown as typeof fetch, backoffMs: () => 0 });
+    return { promise, fetchImpl };
+  };
+
+  it('503 και μετά 200 ⇒ το πλακίδιο έρχεται', async () => {
+    const { promise, fetchImpl } = run([status(503), ok]);
+    await expect(promise).resolves.toBe(BLOB);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('δικτυακή αστοχία και μετά 200 ⇒ το πλακίδιο έρχεται', async () => {
+    const { promise } = run([new TypeError('socket hang up'), ok]);
+    await expect(promise).resolves.toBe(BLOB);
+  });
+
+  it('401/404 = κρίση ⇒ ΚΑΜΙΑ επανάληψη', async () => {
+    const { promise, fetchImpl } = run([status(401), ok]);
+    await expect(promise).rejects.toThrow('tile 401');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('επίμονο 5xx ⇒ σταματά μετά από TILE_FETCH_ATTEMPTS', async () => {
+    const { promise, fetchImpl } = run([status(503), status(503), status(503), ok]);
+    await expect(promise).rejects.toThrow('tile 503');
+    expect(fetchImpl).toHaveBeenCalledTimes(TILE_FETCH_ATTEMPTS);
   });
 });

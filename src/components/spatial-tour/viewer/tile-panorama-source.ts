@@ -15,6 +15,7 @@
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
+import { calculateBackoff } from '@/lib/api/api-client-transport';
 import {
   TOUR_PREVIEW_FACE_SIZE,
   TOUR_TILE_SIZE,
@@ -38,10 +39,45 @@ export interface TileSourceRuntime {
   readonly createFace: (size: number) => { readonly canvas: HTMLCanvasElement; readonly draw: (image: ImageBitmap, x: number, y: number) => void };
 }
 
-async function fetchBlob(url: string, signal: AbortSignal): Promise<Blob> {
-  const response = await fetch(url, { signal, credentials: 'same-origin' });
-  if (!response.ok) throw new Error(`tile ${response.status}`);
-  return response.blob();
+/** Πόσες φορές ζητείται ένα πλακίδιο: 1 + 2 επαναλήψεις (οι PSV/Marzipano ξαναζητούν το πλακίδιο που χάθηκε). */
+export const TILE_FETCH_ATTEMPTS = 3;
+
+export interface TileFetchDeps {
+  readonly fetch: typeof fetch;
+  /** Η ΙΔΙΑ καθυστέρηση με τον πελάτη του API (`calculateBackoff`) — καμία δεύτερη πολιτική. */
+  readonly backoffMs: (attempt: number) => number;
+}
+
+function waitOrAbort(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve(); }, ms);
+    function onAbort() { clearTimeout(timer); reject(signal.reason); }
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/** `window.fetch` θέλει `this = window` — καλείται μέσα από συνάρτηση, ποτέ ως μέθοδος άλλου αντικειμένου. */
+const BROWSER_TILE_FETCH: TileFetchDeps = { fetch: (input, init) => fetch(input, init), backoffMs: calculateBackoff };
+
+/**
+ * **Ένα πλακίδιο, με επανάληψη στο παροδικό** (ζωντανή επαλήθευση ADR-884 Φ2δ: `socket hang up` του Storage ⇒ 503 σε ΕΝΑ
+ * από 54 πλακίδια ⇒ χανόταν ΟΛΗ η καθαρή εικόνα). Ίδιος κανόνας με `shouldRetry` του πελάτη: δίκτυο/`5xx` ξανά, `4xx`
+ * ποτέ (κρίση — π.χ. έληξε το κουπόνι).
+ */
+export async function fetchTileBlob(url: string, signal: AbortSignal, deps: TileFetchDeps = BROWSER_TILE_FETCH): Promise<Blob> {
+  for (let attempt = 1; ; attempt++) {
+    let status: number | null = null;
+    try {
+      const response = await deps.fetch(url, { signal, credentials: 'same-origin' });
+      if (response.ok) return await response.blob();
+      status = response.status;
+    } catch (error: unknown) {
+      if (signal.aborted) throw error;
+    }
+    const transient = status === null || status >= 500;
+    if (!transient || attempt >= TILE_FETCH_ATTEMPTS) throw new Error(`tile ${status ?? 'network'}`);
+    await waitOrAbort(deps.backoffMs(attempt), signal);
+  }
 }
 
 function createFace(size: number) {
@@ -54,7 +90,7 @@ function createFace(size: number) {
 }
 
 const BROWSER_RUNTIME: TileSourceRuntime = {
-  fetchBlob,
+  fetchBlob: (url, signal) => fetchTileBlob(url, signal),
   decode: (blob, crop) => (crop === undefined ? createImageBitmap(blob) : createImageBitmap(blob, crop.x, crop.y, crop.size, crop.size)),
   createFace,
 };

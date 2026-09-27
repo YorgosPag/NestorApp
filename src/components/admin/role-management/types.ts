@@ -7,6 +7,7 @@
 import type { GlobalRole, AuditAction, AuditTargetType, AuditChangeValue, AuditMetadata } from '@/lib/auth/types';
 // 🎫 ADR-853 Φ6 — η πρόσκληση είναι **αδελφή** οντότητα του χρήστη, ποτέ γραμμή του.
 import type { WorkspaceInvitationState, WorkspaceInvitationView } from '@/types/workspace-invitation';
+import type { WorkspaceAccessPauseView } from '@/types/workspace-membership';
 
 // =============================================================================
 // USER TYPES
@@ -18,7 +19,12 @@ export interface CompanyUser {
   displayName: string | null;
   photoURL: string | null;
   globalRole: GlobalRole;
+  /** Κατάσταση **μέλους** — `suspended` = «Παύση πρόσβασης» του γραφείου (ADR-892 Φ2β). */
   status: 'active' | 'suspended' | 'pending';
+  /** Κατάσταση **λογαριασμού** (πλατφόρμας) — ΑΛΛΗ πράξη, άλλος κάτοχος (ADR-892 §12). */
+  disabled: boolean;
+  /** Ποιος/πότε/γιατί — μόνο σε παύση. */
+  accessPause: WorkspaceAccessPauseView | null;
   mfaEnrolled: boolean;
   lastSignIn: string | null;
   projectCount: number;
@@ -149,7 +155,9 @@ export const INVITATION_STATE_BADGE_VARIANT: Readonly<Record<WorkspaceInvitation
 // DIALOG MODES
 // =============================================================================
 
-export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | 'approve' | 'deny' | 'invite' | null;
+/** `remove` = ADR-892 αφαίρεση από το γραφείο (≠ `suspend`, που είναι αναστολή λογαριασμού πλατφόρμας). */
+export type DialogMode =
+  | 'role' | 'permissions' | 'detail' | 'suspend' | 'remove' | 'pause' | 'restore' | 'approve' | 'deny' | 'invite' | null;
 
 // =============================================================================
 // TAB TYPES
@@ -268,6 +276,10 @@ export const AUDIT_ACTION_DISPLAY: Record<string, AuditActionConfig> = {
   member_added: { label: 'Member Added', color: 'success', icon: '➕' },
   member_removed: { label: 'Member Removed', color: 'destructive', icon: '➖' },
   member_updated: { label: 'Member Updated', color: 'warning', icon: '✏️' },
+  workspace_member_removed: { label: 'Removed From Workspace', color: 'destructive', icon: '🚪' },
+  workspace_member_left: { label: 'Left Workspace', color: 'secondary', icon: '🚪' },
+  workspace_member_paused: { label: 'Access Paused', color: 'warning', icon: '⏸️' },
+  workspace_member_restored: { label: 'Access Restored', color: 'success', icon: '▶️' },
   claims_updated: { label: 'Claims Updated', color: 'secondary', icon: '🔑' },
   system_bootstrap: { label: 'System Bootstrap', color: 'secondary', icon: '⚙️' },
 };

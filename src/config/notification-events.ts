@@ -149,6 +149,11 @@ export const NOTIFICATION_EVENT_TYPES = {
   SECURITY_PASSWORD_CHANGE: 'security.passwordChange',
   SECURITY_TWO_FACTOR_CHANGE: 'security.twoFactorChange',
   SECURITY_SUSPICIOUS_ACTIVITY: 'security.suspiciousActivity',
+  /**
+   * ADR-892 §3.6 #3 — **προς τον άνθρωπο** που βγήκε από γραφείο (αφαίρεση ή αποχώρηση): με λόγια, όχι με ξαφνικό 403 —
+   * «ο προσωπικός σας χώρος και τα άλλα γραφεία σας δεν επηρεάζονται».
+   */
+  SECURITY_WORKSPACE_MEMBERSHIP_ENDED: 'security.workspaceMembershipEnded',
   // Procurement Events (ADR-267 Phase B)
   PROCUREMENT_APPROVAL_NEEDED: 'procurement.approvalNeeded',
   PROCUREMENT_PO_APPROVED: 'procurement.poApproved',
@@ -404,6 +409,14 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'suspiciousActivity',
     isMandatory: true,
     defaultSeverity: NOTIFICATION_SEVERITIES.ERROR,
+  },
+  // ADR-892 — ΥΠΟΧΡΕΩΤΙΚΟ: αλλαγή πρόσβασης στον λογαριασμό (όπως η αλλαγή κωδικού) — κανείς δεν πρέπει να μαθαίνει
+  //    ότι έχασε ένα γραφείο από μια άδεια οθόνη (GitHub/Slack στέλνουν email αφαίρεσης, χωρίς διακόπτη).
+  [NOTIFICATION_EVENT_TYPES.SECURITY_WORKSPACE_MEMBERSHIP_ENDED]: {
+    category: 'security',
+    settingKey: 'workspaceMembershipEnded',
+    isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
   // Buildings
   [NOTIFICATION_EVENT_TYPES.BUILDING_CREATED]: {

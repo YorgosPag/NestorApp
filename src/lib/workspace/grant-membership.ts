@@ -132,14 +132,17 @@ export function grantWorkspaceMembershipInBatch(batch: WriteBatch, input: GrantM
  * μέλος αλλάζει μόνο ο ρόλος. Χωρίς αυτό, διαχειριστής που αλλάζει ρόλο στον ιδρυτή θα έσβηνε
  * το `founder`, το `joinedAt` και το `addedBy` — το ίχνος ενός ελέγχου πρόσβασης (ISO 27001
  * A.5.18) θα έλεγε «μπήκε σήμερα, με έγκριση» για τον άνθρωπο που **έφτιαξε** τον χώρο.
- * Ανενεργό ή απόν ⇒ **νέα** θητεία ⇒ πλήρες έγγραφο.
+ * Απόν, εκκρεμές ή ληγμένο ⇒ **νέα** θητεία ⇒ πλήρες έγγραφο. Σε **παύση** ⇒ μόνο ο ρόλος (ADR-892 Φ2β).
  */
 export async function grantWorkspaceMembership(input: GrantMembershipInput): Promise<boolean> {
   const ref = memberRef(input.companyId, input.uid);
   try {
     await getAdminFirestore().runTransaction(async (tx) => {
       const current = await tx.get(ref);
-      const tenureOpen = current.exists && current.get('status') === 'active';
+      // 🔴 ADR-892 Φ2β — η **παύση** (`suspended`) είναι ΖΩΝΤΑΝΗ θητεία: μόνο ο ρόλος αλλάζει, η παύση
+      //    **μένει**. Αλλιώς μια έγκριση/αλλαγή ρόλου θα έγραφε νέα θητεία `active` — σιωπηλή άρση
+      //    της απόφασης του γραφείου και απώλεια προέλευσης. Αίρεται **μόνο** με «Επαναφορά πρόσβασης».
+      const tenureOpen = current.exists && isLiveSeatStatus(current.get('status'));
       tx.set(ref, tenureOpen ? roleUpdate(input) : membershipDocument(input), { merge: true });
     });
     logger.info('Γράφτηκε ιδιότητα μέλους', { uid: input.uid, companyId: input.companyId });
@@ -206,8 +209,17 @@ function membershipDocument(input: GrantMembershipInput) {
     joinedAt: AdminFieldValue.serverTimestamp(),
     addedBy: input.grantedByUid,
     enrollment: input.enrollment,
+    // ADR-892 — νέα θητεία ⇒ το ίχνος του προηγούμενου τέλους **καθαρίζει** (αλλιώς το `merge: true`
+    // θα κρατούσε «αφαιρέθηκε από Χ» πάνω σε ενεργό μέλος). Το ιστορικό ζει στο ίχνος ελέγχου.
+    tenureEnd: null,
+    accessPause: null,
     updatedAt: AdminFieldValue.serverTimestamp(),
   };
+}
+
+/** Ζωντανή θέση (ενεργή **ή** σε παύση) — ό,τι δεν είναι απόν, εκκρεμές ή ληγμένο. */
+function isLiveSeatStatus(status: unknown): boolean {
+  return status === 'active' || status === 'suspended';
 }
 
 /** Ενεργή θητεία: **μόνο** ο ρόλος — η προέλευση ανήκει στην πράξη που την άνοιξε. */

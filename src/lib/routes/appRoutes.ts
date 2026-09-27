@@ -21,6 +21,11 @@ export const APP_ROUTES = {
    * γραμμένο με το χέρι σε δύο σημεία (N.0.2). Χωρίς πρόθεμα χώρου: το βάζει ο `Link` του συνόρου (CHECK 3.61).
    */
   accountingSetup: '/accounting/setup',
+  /**
+   * **Διαχείριση ρόλων και μελών του γραφείου** (ADR-244 · ADR-892). Εκεί στέλνει και η άρνηση «είστε ο
+   * τελευταίος διαχειριστής» της αποχώρησης (ADR-892 §13) — ορίστε πρώτα άλλον, μετά φεύγετε.
+   */
+  roleManagement: '/admin/role-management',
 } as const;
 
 export type AppRouteKey = keyof typeof APP_ROUTES;

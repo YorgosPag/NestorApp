@@ -57,10 +57,10 @@ jest.mock('@/lib/workspace/navigation', () => ({
   ),
 }));
 
-// ⚠️ Ίδιος λόγος με το `first-contact-proven-channel.test.tsx`: το `citizen-session`
+// ⚠️ Ίδιος λόγος με το `first-contact-proven-channel.test.tsx`: το `issued-session`
 //    σέρνει `@/lib/firebase`, που τρέχει `initializeApp` **στο import**.
-jest.mock('@/auth/citizen-session', () => ({
-  adoptCitizenSession: jest.fn().mockResolvedValue({ kind: 'signed-in', uid: 'u' }),
+jest.mock('@/auth/issued-session', () => ({
+  adoptIssuedSession: jest.fn().mockResolvedValue({ kind: 'signed-in', uid: 'u' }),
 }));
 
 import { FirstContactDialog } from '../FirstContactDialog';

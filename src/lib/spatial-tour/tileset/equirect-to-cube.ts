@@ -5,13 +5,13 @@
  * @module lib/spatial-tour/tileset/equirect-to-cube
  *
  * 🧭 **Ο ίδιος χώρος με τον θεατή**: yaw 0 = `-Z` = **κέντρο** της εικόνας (`yawPitchToDirection`)· yaw θετικό = δεξιά =
- * προς τα δεξιά της εικόνας. Άρα `yaw = atan2(x, -z)`, `pitch = atan2(y, √(x²+z²))`. Η στήλη `i`/γραμμή `j` της όψης
+ * προς τα δεξιά της εικόνας — `directionToYawPitch` (το ΕΝΑ αντίστροφο, κοινό με το σύρσιμο βελακιού, §4.10). Η στήλη `i`/γραμμή `j` της όψης
  * είναι το **κέντρο** του εικονοστοιχείου, και η γραμμή 0 είναι η **πάνω** άκρη (`v = 1`).
  *
  * 🔍 **Διγραμμική δειγματοληψία** με αναδίπλωση στο μήκος (η ραφή 180° δεν αφήνει γραμμή) και σύσφιξη στο πλάτος (πόλοι).
  */
 
-import { cubeFaceUvToDirection, type TourCubeFace } from '../viewer/tour-cube-faces';
+import { cubeFaceUvToDirection, directionToYawPitch, type TourCubeFace } from '../viewer/tour-cube-faces';
 
 /** Ωμή εικόνα: `channels` byte ανά εικονοστοιχείο, γραμμή-γραμμή από πάνω. */
 export interface RawImage {
@@ -51,9 +51,7 @@ export function renderCubeFace(src: RawImage, face: TourCubeFace, size: number):
   for (let j = 0; j < size; j++) {
     const v = 1 - (j + 0.5) / size;
     for (let i = 0; i < size; i++) {
-      const d = cubeFaceUvToDirection(face, (i + 0.5) / size, v);
-      const yaw = Math.atan2(d.x, -d.z);
-      const pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+      const { yaw, pitch } = directionToYawPitch(cubeFaceUvToDirection(face, (i + 0.5) / size, v));
       const p = equirectPixelOf(yaw, pitch, src.width, src.height);
       sampleBilinear(src, p.x, p.y, out, (j * size + i) * 3);
     }

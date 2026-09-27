@@ -17,8 +17,6 @@ import { createStaleCache } from '@/lib/stale-cache';
 import { compareByLocale } from '@/lib/intl-formatting';
 
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -26,14 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 
 import { UserTable } from './UserTable';
 import { RoleChangeDialog } from './RoleChangeDialog';
@@ -41,6 +31,9 @@ import { PermissionSetManager } from './PermissionSetManager';
 import { UserDetailPanel } from './UserDetailPanel';
 import { ApproveUserDialog } from './ApproveUserDialog';
 import { DenyAccessRequestDialog } from './DenyAccessRequestDialog';
+import { MemberExitDialog } from './MemberExitDialog';
+import { RestoreAccessDialog } from './RestoreAccessDialog';
+import { AccountSuspendDialog } from './AccountSuspendDialog';
 // 🎫 ADR-853 Φ6 — οι προσκλήσεις είναι **αδελφός** πίνακας, όχι γραμμές των χρηστών.
 import { InvitationTable } from './InvitationTable';
 
@@ -83,7 +76,7 @@ interface UsersTabProps {
 
 export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
   const { user } = useAuth();
-  const { success, error: notifyError } = useNotifications();
+  const { error: notifyError } = useNotifications();
   const { t } = useTranslation('admin');
 
   // ---------------------------------------------------------------------------
@@ -95,7 +88,8 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [isLoading, setIsLoading] = useState(!companyUsersCache.hasLoaded());
-  const [suspendReason, setSuspendReason] = useState('');
+  // ADR-892 §7 — η αποτυχία ανάγνωσης είναι **κατάσταση**, όχι άδεια λίστα.
+  const [loadFailed, setLoadFailed] = useState(false);
   // 🎫 ADR-853 Φ6 — **δεν μπαίνουν στη μνήμη των χρηστών**: εκείνη είναι
   //    `createStaleCache<CompanyUser[]>`, και μια πρόσκληση **δεν είναι** χρήστης (δεν έχει
   //    `uid`). Ζουν στην κατάσταση της καρτέλας και ξαναέρχονται με κάθε ανάγνωση.
@@ -116,6 +110,7 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
       // ADR-300: Write to module-level cache so next remount skips spinner
       companyUsersCache.set(loaded);
       setUsers(loaded);
+      setLoadFailed(false);
       // 🎫 ADR-853 Φ6 — **αδελφό πεδίο της ΙΔΙΑΣ απάντησης**, ποτέ δεύτερη κλήση: ένα
       //    ερώτημα («ποιοι είναι στον χώρο μου;») δεν επιτρέπεται να έχει δύο στιγμές,
       //    αλλιώς η οθόνη δείχνει μέλος που μόλις δέχτηκε **και** την πρόσκλησή του ως
@@ -123,6 +118,7 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
       setInvitations(Array.isArray(data?.invitations) ? data.invitations : []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load users';
+      setLoadFailed(true);
       notifyError(message);
     } finally {
       setIsLoading(false);
@@ -206,44 +202,17 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
   const handleOpenDialog = useCallback((mode: DialogMode, targetUser: CompanyUser) => {
     setSelectedUser(targetUser);
     setDialogMode(mode);
-    setSuspendReason('');
   }, []);
 
   const handleCloseDialog = useCallback(() => {
     setDialogMode(null);
     setSelectedUser(null);
-    setSuspendReason('');
   }, []);
 
   const handleDialogSuccess = useCallback(() => {
     handleCloseDialog();
     fetchUsers();
   }, [handleCloseDialog, fetchUsers]);
-
-  // ---------------------------------------------------------------------------
-  // Suspend / Activate handler
-  // ---------------------------------------------------------------------------
-  const handleSuspendConfirm = useCallback(async () => {
-    if (!selectedUser || suspendReason.trim().length < 10) return;
-
-    const action = selectedUser.status === 'active' ? 'suspend' : 'reactivate';
-
-    try {
-      await apiClient.patch<Record<string, unknown>>(
-        API_ROUTES.ADMIN.ROLE_MANAGEMENT.USER_STATUS(selectedUser.uid),
-        { action, reason: suspendReason }
-      );
-      success(
-        action === 'suspend'
-          ? t('roleManagement.status.suspendSuccess')
-          : t('roleManagement.status.reactivateSuccess')
-      );
-      handleDialogSuccess();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update status';
-      notifyError(message);
-    }
-  }, [selectedUser, suspendReason, success, notifyError, t, handleDialogSuccess]);
 
   // ---------------------------------------------------------------------------
   // Filter update helpers
@@ -307,7 +276,10 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
         users={filteredUsers}
         currentUserId={user?.uid ?? ''}
         canEdit={canEdit}
+        canRemove={invite.canInvite && !invite.pending}
         isLoading={isLoading}
+        loadFailed={loadFailed}
+        onRetry={fetchUsers}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onSort={(column) => {
@@ -321,6 +293,9 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
         onChangeRole={(u) => handleOpenDialog('role', u)}
         onManagePermissions={(u) => handleOpenDialog('permissions', u)}
         onSuspend={(u) => handleOpenDialog('suspend', u)}
+        onRemove={(u) => handleOpenDialog('remove', u)}
+        onPauseAccess={(u) => handleOpenDialog('pause', u)}
+        onRestoreAccess={(u) => handleOpenDialog('restore', u)}
         onViewDetails={(u) => handleOpenDialog('detail', u)}
         onApprove={(u) => handleOpenDialog('approve', u)}
         onDeny={(u) => handleOpenDialog('deny', u)}
@@ -329,13 +304,14 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
       {/* ADR-853 Φ6 — οι εκκρεμείς προσκλήσεις, ξεχωριστά από τα μέλη.
           ⚠️ Όσο εκκρεμεί η ταυτότητα **δεν** δείχνουμε πράξεις: η κατεύθυνση είναι
           «κλειστό → ανοιχτό», ποτέ κουμπί που εμφανίζεται και μετά εξαφανίζεται. */}
-      <InvitationTable
+      {/* ADR-892 §7 — ούτε η αποτυχία ούτε η ΦΟΡΤΩΣΗ είναι «καμία πρόσκληση» (μετρημένο ζωντανά 2026-09-27). */}
+      {!loadFailed && !isLoading && <InvitationTable
         invitations={invitations}
         canManage={invite.canInvite && !invite.pending}
         busyId={invitationActions.busyId}
         onRevoke={invitationActions.revoke}
         onResend={invitationActions.resend}
-      />
+      />}
 
       {/* Role change dialog */}
       {dialogMode === 'role' && selectedUser && (
@@ -368,6 +344,29 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
         />
       )}
 
+      {/* ADR-892 Φ2/Φ2β — αφαίρεση (η θητεία τελειώνει) · παύση (μένει μέλος): ο ΙΔΙΟΣ διάλογος προεπισκόπησης */}
+      {(dialogMode === 'remove' || dialogMode === 'pause') && selectedUser && (
+        <MemberExitDialog
+          mode={dialogMode === 'remove' ? 'removal' : 'pause'}
+          user={selectedUser}
+          members={users}
+          open
+          onClose={handleCloseDialog}
+          onSuccess={handleDialogSuccess}
+        />
+      )}
+
+      {/* ADR-892 Φ2β — επαναφορά πρόσβασης (ίδια θητεία, ίδιος ρόλος) */}
+      {dialogMode === 'restore' && selectedUser && (
+        <RestoreAccessDialog
+          user={selectedUser}
+          members={users}
+          open
+          onClose={handleCloseDialog}
+          onSuccess={handleDialogSuccess}
+        />
+      )}
+
       {/* Permission set manager */}
       {dialogMode === 'permissions' && selectedUser && (
         <PermissionSetManager
@@ -387,58 +386,9 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
         />
       )}
 
-      {/* Suspend / Activate confirm dialog */}
+      {/* Αναστολή ΛΟΓΑΡΙΑΣΜΟΥ (πλατφόρμας) — κρίνει από το `disabled`, όχι από την κατάσταση μέλους (ADR-892 §12) */}
       {dialogMode === 'suspend' && selectedUser && (
-        <Dialog open onOpenChange={handleCloseDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedUser.status === 'active'
-                  ? t('roleManagement.status.suspendTitle')
-                  : t('roleManagement.status.reactivateTitle')}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedUser.status === 'active'
-                  ? t('roleManagement.status.suspendConfirm')
-                  : t('roleManagement.status.reactivateConfirm')}
-              </DialogDescription>
-            </DialogHeader>
-
-            <section className="space-y-3">
-              <p className="text-sm">
-                <strong>{selectedUser.displayName ?? selectedUser.email}</strong>
-                {' '}({selectedUser.email})
-              </p>
-              <label className="block">
-                <span className="text-sm font-medium">
-                  {t('roleManagement.status.reason')} ({t('roleManagement.permissionSets.minChars')})
-                </span>
-                <Textarea
-                  className="mt-1"
-                  rows={3}
-                  value={suspendReason}
-                  onChange={(e) => setSuspendReason(e.target.value)}
-                  placeholder={t('roleManagement.status.reasonPlaceholder')}
-                />
-              </label>
-            </section>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCloseDialog}>
-                {t('roleManagement.permissionSets.cancel')}
-              </Button>
-              <Button
-                variant={selectedUser.status === 'active' ? 'destructive' : 'default'}
-                disabled={suspendReason.trim().length < 10}
-                onClick={handleSuspendConfirm}
-              >
-                {selectedUser.status === 'active'
-                  ? t('roleManagement.actions.suspend')
-                  : t('roleManagement.actions.activate')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <AccountSuspendDialog user={selectedUser} onClose={handleCloseDialog} onSuccess={handleDialogSuccess} />
       )}
     </section>
   );

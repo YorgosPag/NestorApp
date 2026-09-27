@@ -17,7 +17,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import { EmailTypePreferences } from '@/components/notifications/EmailTypePreferences';
 import { NOTIFICATION_PREFERENCE_GROUPS } from '@/config/notification-preference-rows';
-import { preferenceRowOf } from '@/services/user-notification-settings/notification-preference-table';
+import { PREFERENCE_TABLE, preferenceRowOf } from '@/services/user-notification-settings/notification-preference-table';
 import authEl from '@/i18n/locales/el/auth.json';
 import authEn from '@/i18n/locales/en/auth.json';
 import commonAccountEl from '@/i18n/locales/el/common-account.json';
@@ -102,7 +102,12 @@ describe('Δ — οι διακόπτες', () => {
   it('Δ3 🔴 — υποχρεωτικοί τύποι: «Πάντα», ΚΑΝΕΝΑΣ διακόπτης', () => {
     renderPrefs();
     expect(document.getElementById('all-security.newDeviceLogin')).toBeNull();
-    expect(screen.getAllByText(`${PREFS}.always`)).toHaveLength(4);
+    // 🔑 Ο παρονομαστής **παράγεται** από το μητρώο γραμμών — ήταν καρφωμένο `4`, και πάλιωσε σιωπηλά όταν
+    //    μπήκαν νέοι υποχρεωτικοί τύποι (π.χ. ADR-892 `workspaceMembershipEnded`). Η ερώτηση της άγκυρας είναι
+    //    «κάθε υποχρεωτική γραμμή δείχνει "Πάντα"», όχι «είναι τέσσερις».
+    const mandatoryRows = PREFERENCE_TABLE.flatMap(({ rows }) => rows).filter((row) => row.mandatory);
+    expect(mandatoryRows.length).toBeGreaterThan(0);
+    expect(screen.getAllByText(`${PREFS}.always`)).toHaveLength(mandatoryRows.length);
   });
 
   it('Δ4 — email καθολικά κλειστά: διακόπτες απενεργοποιημένοι, τιμές ορατές, εξήγηση', () => {

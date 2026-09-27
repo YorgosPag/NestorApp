@@ -66,6 +66,16 @@ export const SESSION_POLICY = {
    * Set to 0 to require MFA on every session.
    */
   MFA_SESSION_HOURS: 8,
+
+  /**
+   * ADR-892 §8.1 — πόσο κρατιέται στη μνήμη η «σφραγίδα ανάκλησης» ενός λογαριασμού
+   * (`tokensValidAfterTime` + `disabled`) πριν ξαναρωτηθεί το Firebase Auth.
+   *
+   * Είναι το **ανώτατο** διάστημα που ένα ανακληθέν διαπιστευτήριο μένει δεκτό σε **άλλη** διεργασία
+   * από αυτήν που έκανε την ανάκληση (η ίδια διεργασία ξεχνά αμέσως — `forgetRevocationState`).
+   * Χωρίς αυτό, το cookie 24 ωρών θα έμενε δεκτό 24 ώρες (Firebase: τα ID tokens είναι stateless).
+   */
+  REVOCATION_CHECK_TTL_SECONDS: 30,
 } as const;
 
 // =============================================================================

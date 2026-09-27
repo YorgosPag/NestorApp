@@ -88,7 +88,8 @@
             "passwordChange": "Αλλαγή κωδικού",
             "suspiciousActivity": "Ύποπτη δραστηριότητα",
             "title": "Ασφάλεια",
-            "twoFactorChange": "Αλλαγή 2FA"
+            "twoFactorChange": "Αλλαγή 2FA",
+            "workspaceMembershipEnded": "Πρόσβαση σε γραφεία"
           },
           "tasks": {
             "assigned": "Ανάθεση εργασίας",

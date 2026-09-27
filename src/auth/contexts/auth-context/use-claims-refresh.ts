@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FirebaseAuthUser } from '@/auth/types/auth.types';
 import { buildAuthUser, syncServerSession } from './auth-context-session';
+import { isSessionHandoverActive } from './session-handover';
 
 const logger = createModuleLogger('UseClaimsRefresh');
 
@@ -62,6 +63,9 @@ export function useClaimsRefresh({
 
         if (mirroredAt === 0) return;
         if (mirroredAt <= lastHandledRef.current) return;
+        // ADR-892 §13 — ο διακομιστής αντικαθιστά τη συνεδρία: μια ανανέωση τώρα είτε θα έστηνε το παλιό
+        // `auth_time` είτε (μετά την ανάκληση) θα αποσύνδεε. Το νέο token φέρνει ήδη τα νέα claims.
+        if (isSessionHandoverActive()) return;
 
         const firebaseUser: FirebaseUser | null = auth.currentUser;
         if (!firebaseUser || firebaseUser.uid !== uid) return;

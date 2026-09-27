@@ -1,0 +1,54 @@
+{
+  "removeMember": {
+    "button": "Remove from workspace",
+    "title": "Remove from workspace",
+    "description": "The member's access to this workspace ends. Their account stays: their personal space and other workspaces are not affected.",
+    "loadingPreview": "Calculating the consequences...",
+    "previewFailed": "The consequences could not be calculated. Removal is only possible after you have seen them.",
+    "retry": "Try again",
+    "consequencesHeading": "What will happen",
+    "heir": "Their work is handed over to: {name}.",
+    "noHeir": "No member was found to take over their work.",
+    "actTeams": "{count, plural, =0 {They are not responsible for any action team.} one {Responsibility for # action team is handed over.} other {Responsibility for # action teams is handed over.}}",
+    "signsOut": "This workspace is their home workspace: they will be signed out of all their devices.",
+    "staysSignedIn": "They stay signed in — they only lose access to this workspace.",
+    "notified": "They will be notified of the removal.",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "Recorded in the audit log and in the notification.",
+    "confirm": "Remove",
+    "success": "The member was removed from the workspace.",
+    "error": "The removal did not complete. Try again — retrying is safe.",
+    "refused": {
+      "notAMember": "They are no longer a member of this workspace.",
+      "selfRemoval": "You cannot remove yourself from the workspace.",
+      "notSelfDeparture": "Leaving can only be done by the user themselves.",
+      "outranksActor": "They hold a higher role than yours — you cannot change their access.",
+      "lastManager": "They are the last administrator of this workspace. Assign another administrator first.",
+      "selfPause": "You cannot pause your own access.",
+      "selfRestore": "You cannot restore your own access."
+    }
+  },
+  "pauseAccess": {
+    "button": "Pause access",
+    "title": "Pause access to the workspace",
+    "description": "The member stays in the workspace with their role, but cannot open it until you restore access. Their personal space and other workspaces are not affected.",
+    "staysMember": "They remain a member — role, teams and history stay as they are.",
+    "actTeamsKept": "{count, plural, =0 {They are not responsible for any action team.} one {They are responsible for # action team — it will have no available owner while the pause lasts.} other {They are responsible for # action teams — they will have no available owner while the pause lasts.}}",
+    "transferLabel": "Hand over responsibility to {name}",
+    "notified": "They will be notified of the pause.",
+    "confirm": "Pause access",
+    "success": "The member's access was paused.",
+    "error": "The pause did not complete. Try again — retrying is safe."
+  },
+  "restoreAccess": {
+    "button": "Restore access",
+    "title": "Restore access to the workspace",
+    "description": "The member can open the workspace again immediately, with the same role — no new invitation, and they are not signed out anywhere.",
+    "pausedBy": "Paused by: {name} {date}",
+    "pausedReason": "Reason: {reason}",
+    "notified": "They will be notified that access was restored.",
+    "confirm": "Restore access",
+    "success": "Access was restored.",
+    "error": "The restore did not complete. Try again — retrying is safe."
+  }
+}

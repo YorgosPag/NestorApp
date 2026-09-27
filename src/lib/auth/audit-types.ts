@@ -54,6 +54,12 @@ export const AUDIT_ACTIONS = {
   member_added: true,
   member_removed: true,
   member_updated: true,
+  // Workspace membership end (ADR-892) — διακριτό από το μέλος ΕΡΓΟΥ (`member_removed`)
+  workspace_member_removed: true,
+  workspace_member_left: true,
+  // Παύση / επαναφορά πρόσβασης (ADR-892 Φ2β) — ο άνθρωπος ΜΕΝΕΙ μέλος
+  workspace_member_paused: true,
+  workspace_member_restored: true,
   // Financial (ADR-255 SPEC-255E)
   financial_transition: true,
   // Procurement (ADR-267)

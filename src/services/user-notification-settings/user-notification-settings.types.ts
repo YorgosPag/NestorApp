@@ -291,6 +291,8 @@ export interface SecurityNotificationSettings {
   twoFactorChange: boolean;
   /** Notify on suspicious activity */
   suspiciousActivity: boolean;
+  /** ADR-892 — removed from / left a workspace (mandatory) */
+  workspaceMembershipEnded: boolean;
 }
 
 /**
@@ -492,6 +494,7 @@ export const DEFAULT_SECURITY_SETTINGS: SecurityNotificationSettings = {
   passwordChange: true,
   twoFactorChange: true,
   suspiciousActivity: true,
+  workspaceMembershipEnded: true,
 };
 
 /**

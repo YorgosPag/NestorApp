@@ -115,15 +115,7 @@ export function notificationDisplayTitle(
 ): string {
   const { title, titleKey, titleParams } = notification;
 
-  if (titleKey) {
-    const params = withSender(t, { ...titleParams }, title);
-    const rendered = t(titleKey, params);
-
-    // 🔴 Ο έλεγχος ζει στο SSoT (ADR-798 §13) — ποτέ `rendered !== titleKey`: όταν
-    //    αστοχεί κλειδί **με πρόθεμα** (`quotes:…`), το i18next γυρίζει το κλειδί
-    //    **χωρίς** το πρόθεμα, και η αφελής σύγκριση το κρίνει επιτυχία.
-    return isUnresolvedTranslation(rendered, titleKey) ? title ?? '' : rendered;
-  }
+  if (titleKey) return renderKeyed(t, titleKey, withSender(t, { ...titleParams }, title), title);
 
   if (title) {
     const emailFromMatch = title.match(/^New (?:Email|message) from (.+)$/i);
@@ -134,4 +126,36 @@ export function notificationDisplayTitle(
   }
 
   return title ?? '';
+}
+
+/**
+ * **Η ΜΙΑ σειρά για κάθε κείμενο με κλειδί**: ο αποδότης **πρώτος, χωρίς `defaultValue`** (δες την κεφαλίδα
+ * — αλλιώς κλείνει το δίχτυ των namespaces), η αποθηκευμένη εφεδρεία **μόνο** όταν το κλειδί αστοχεί.
+ * 🔴 Ο έλεγχος ζει στο SSoT (ADR-798 §13) — ποτέ `rendered !== key`: όταν αστοχεί κλειδί **με πρόθεμα**
+ * (`quotes:…`), το i18next γυρίζει το κλειδί **χωρίς** το πρόθεμα, και η αφελής σύγκριση το κρίνει επιτυχία.
+ */
+function renderKeyed(
+  t: TranslateForTitle,
+  key: string,
+  params: Record<string, string>,
+  fallback: string | undefined,
+): string {
+  const rendered = t(key, params);
+  return isUnresolvedTranslation(rendered, key) ? fallback ?? '' : rendered;
+}
+
+/** Ό,τι χρειάζεται το σώμα — ίδιο ιδίωμα `Pick` με τον τίτλο. */
+export interface DisplayBodySource {
+  readonly body?: string;
+  readonly bodyKey?: string;
+  readonly bodyParams?: Record<string, string>;
+}
+
+/**
+ * **Το σώμα που ζωγραφίζεται στην κάρτα** (ADR-892 §13) — η **ίδια** σειρά με τον τίτλο: κλειδί πρώτα,
+ * αποθηκευμένο κείμενο μετά (ειδοποιήσεις παλαιότερες του `bodyKey` · παραγωγοί χωρίς κλειδί).
+ */
+export function notificationDisplayBody(t: TranslateForTitle, notification: DisplayBodySource): string {
+  const { body, bodyKey, bodyParams } = notification;
+  return bodyKey ? renderKeyed(t, bodyKey, { ...bodyParams }, body) : body ?? '';
 }

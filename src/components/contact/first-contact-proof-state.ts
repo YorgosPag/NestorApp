@@ -36,7 +36,7 @@
 import React from 'react';
 
 import { useInterval } from '@/hooks/useInterval';
-import { adoptCitizenSession } from '@/auth/citizen-session';
+import { adoptIssuedSession } from '@/auth/issued-session';
 import {
   confirmGuestContact,
   type GuestConfirmResult,
@@ -220,7 +220,7 @@ export function useResendCooldown(): { readonly secondsLeft: number; readonly re
  * *«Δείτε τις επαφές σας»* και να πατήσει **πριν** στηθεί το cookie — δηλαδή θα τον
  * έστελνε σε **401** αμέσως μετά από επιτυχία.
  *
- * ⚠️ **Και η αποτυχία της ΔΕΝ αλλάζει τίποτα**: το `adoptCitizenSession` δεν πετά ποτέ,
+ * ⚠️ **Και η αποτυχία της ΔΕΝ αλλάζει τίποτα**: το `adoptIssuedSession` δεν πετά ποτέ,
  * και η πράξη είναι ήδη γραμμένη. Ο άνθρωπος βλέπει «Στάλθηκε» — που είναι **αληθές**.
  */
 async function settle(outcome: GuestConfirmResult): Promise<OpenContactResult | null> {
@@ -229,7 +229,7 @@ async function settle(outcome: GuestConfirmResult): Promise<OpenContactResult | 
       // 🔐 `null` = ο λογαριασμός έχει **δεύτερο παράγοντα** (ADR-844 §13): η πράξη
       //    έγινε, αλλά η απόδειξη email **δεν** δίνει συνεδρία. Ο άνθρωπος συνδέεται από
       //    την κανονική πόρτα, που θα του ζητήσει τον κωδικό 2FA.
-      if (outcome.customToken !== null) await adoptCitizenSession(outcome.customToken);
+      if (outcome.customToken !== null) await adoptIssuedSession(outcome.customToken);
       return { kind: 'opened', contact: outcome.contact, created: outcome.created };
     case 'refused':
       return { kind: 'refused', reason: outcome.reason };

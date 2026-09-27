@@ -820,6 +820,16 @@
     "approvedTitle": "You can view the tour of “{title}” until {until}",
     "declinedTitle": "Your viewing request for “{title}” was not approved"
   },
+  "workspaceMembershipEnded": {
+    "removedTitle": "The workspace “{office}” removed you from its members",
+    "removedBody": "Your account, your personal space and your other workspaces are not affected. To return you need a new invitation from the workspace.",
+    "leftTitle": "You left the workspace “{office}”",
+    "leftBody": "Your account, your personal space and your other workspaces are not affected. To return you need a new invitation. If you did not leave, change your password now.",
+    "pausedTitle": "The workspace “{office}” paused your access",
+    "pausedBody": "You remain a member — your role and teams are kept. To have it restored, contact the workspace administrator. Your personal space and other workspaces are not affected.",
+    "restoredTitle": "The workspace “{office}” restored your access",
+    "restoredBody": "You can open it again from the “My spaces” menu. Your role and teams are as before."
+  },
   "tourLinkOpened": {
     "firstTitle": "{who} opened the tour of “{title}”",
     "newDeviceTitle": "{who} opened the tour of “{title}” on a new device"

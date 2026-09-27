@@ -68,10 +68,10 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-// ⚠️ Ίδιος λόγος με το `first-contact-dead-end.test.tsx`: το `citizen-session` σέρνει
+// ⚠️ Ίδιος λόγος με το `first-contact-dead-end.test.tsx`: το `issued-session` σέρνει
 //    `@/lib/firebase`, που τρέχει `initializeApp` **στο import**.
-jest.mock('@/auth/citizen-session', () => ({
-  adoptCitizenSession: jest.fn().mockResolvedValue({ kind: 'signed-in', uid: 'u' }),
+jest.mock('@/auth/issued-session', () => ({
+  adoptIssuedSession: jest.fn().mockResolvedValue({ kind: 'signed-in', uid: 'u' }),
 }));
 
 import React from 'react';

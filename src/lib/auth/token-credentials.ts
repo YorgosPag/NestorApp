@@ -29,6 +29,7 @@ import type { NextRequest } from 'next/server';
 
 import { getAdminAuth, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+import { isCredentialStillValid } from '@/lib/auth/revocation-watermark';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('auth-context');
@@ -91,7 +92,7 @@ export async function verifyIdToken(token: string): Promise<DecodedIdToken | nul
     }
 
     const auth = getAdminAuth();
-    return await auth.verifyIdToken(token);
+    return await unlessRevoked(await auth.verifyIdToken(token));
   } catch (error) {
     logger.info('[AUTH_CONTEXT] Token verification failed:', { message: (error as Error).message });
     return null;
@@ -119,11 +120,26 @@ export async function verifySessionCookie(
     }
 
     const auth = getAdminAuth();
-    return await auth.verifySessionCookie(sessionCookie, options.checkRevoked === true);
+    const checkRevoked = options.checkRevoked === true;
+    const decoded = await auth.verifySessionCookie(sessionCookie, checkRevoked);
+    // `checkRevoked` ρώτησε ήδη το Auth απευθείας — δεύτερη ερώτηση θα ήταν κόστος χωρίς βεβαιότητα.
+    return checkRevoked ? decoded : await unlessRevoked(decoded);
   } catch (error) {
     logger.info('[AUTH_CONTEXT] Session cookie verification failed:', { message: (error as Error).message });
     return null;
   }
+}
+
+/**
+ * ADR-892 §8.1 — **υπογεγραμμένο δεν σημαίνει ισχύον.** Διαπιστευτήριο με σύνδεση **πριν** από την
+ * τελευταία ανάκληση (αφαίρεση από οικείο χώρο · αναστολή λογαριασμού) απορρίπτεται — με φραγμένη
+ * μνήμη αντί για `getUser` ανά αίτημα (`revocation-watermark`). Αποτυχία ερώτησης ⇒ ρίχνει ⇒ `null`
+ * στον καλούντα (άρνηση), όπως το `checkRevoked`.
+ */
+async function unlessRevoked(decoded: DecodedIdToken): Promise<DecodedIdToken | null> {
+  if (await isCredentialStillValid(decoded)) return decoded;
+  logger.info('[AUTH_CONTEXT] Credential revoked after sign-in', { uid: decoded.uid });
+  return null;
 }
 
 /**

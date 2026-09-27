@@ -31,8 +31,7 @@
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-import { DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 
 interface DialogConfirmFooterProps {
   /** Η έξοδος χωρίς πράξη. Κλειδωμένη όσο τρέχει η πράξη — ποτέ μισοτελειωμένη. */
@@ -67,16 +66,18 @@ export function DialogConfirmFooter({
   confirmVariant = 'default',
 }: DialogConfirmFooterProps) {
   const { t } = useTranslation('admin');
-  const mayConfirm = canSubmit ?? !isSubmitting;
-
+  // Η συμπεριφορά ζει στο ουδέτερο `DialogActionFooter` (ADR-892 Φ3 — το μοιράζεται η αποχώρηση του ίδιου,
+  // που μιλά από άλλο namespace)· εδώ μένουν μόνο οι λέξεις του `admin`.
   return (
-    <DialogFooter>
-      <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
-        {t('common.cancel')}
-      </Button>
-      <Button variant={confirmVariant} onClick={onConfirm} disabled={!mayConfirm}>
-        {isSubmitting ? t('common.saving') : t(confirmKey)}
-      </Button>
-    </DialogFooter>
+    <DialogActionFooter
+      cancelLabel={t('common.cancel')}
+      confirmLabel={t(confirmKey)}
+      busyLabel={t('common.saving')}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      isSubmitting={isSubmitting}
+      canSubmit={canSubmit}
+      confirmVariant={confirmVariant}
+    />
   );
 }

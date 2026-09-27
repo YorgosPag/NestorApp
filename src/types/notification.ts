@@ -56,6 +56,10 @@ export type Notification = {
   titleKey?: string;
   /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
   titleParams?: Record<string, string>;
+  /** i18n key του **σώματος** — κατοπτρικό του `titleKey` (ADR-892 §13): χωρίς αυτό, το σώμα φτάνει ως
+   *  παγωμένο κείμενο στη γλώσσα του παραγωγού. Εφεδρεία: το `body`. */
+  bodyKey?: string;
+  bodyParams?: Record<string, string>;
 };
 
 export type Cursor = string & { readonly brand: unique symbol };

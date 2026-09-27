@@ -178,7 +178,79 @@ export function workspaceRefKey(ref: WorkspaceRef): string {
  * ανακληθείς **ξέρει** ότι ο χώρος υπάρχει, άρα του χρωστάμε **άλλη** απάντηση
  * (ADR-787 Ε-2 §5 — *η ανάκληση είναι άμεση **και ειπωμένη***).
  */
-export type WorkspaceMembershipStatus = 'active' | 'suspended' | 'pending';
+export type WorkspaceMembershipStatus = 'active' | 'suspended' | 'pending' | EndedMembershipStatus;
+
+/**
+ * **Η θητεία ΤΕΛΕΙΩΣΕ** — ADR-892 §3.2. Το έγγραφο **δεν σβήνεται** (επαναφορά 90 ημερών, §3.5 ·
+ * GitHub «membership information is retained for three months»).
+ *
+ * - `removed` — τον αφαίρεσε διαχειριστής **του γραφείου**.
+ * - `left`    — αποχώρησε ο **ίδιος**.
+ *
+ * ⚠️ **ΔΕΝ είναι το `suspended`**: η παύση αφήνει τον άνθρωπο **μέλος** (αναιρέσιμη από το γραφείο)· το
+ * τέλος θητείας τον βγάζει από κάθε κατάλογο και ξαναμπαίνει **μόνο** με νέα ένταξη. Για τον κριτή
+ * πρόσβασης και τα δύο είναι «όχι ενεργό» ⇒ `suspended` ετυμηγορία (ειπωμένη άρνηση, ADR-787 Ε-2 §5).
+ */
+export type EndedMembershipStatus = 'removed' | 'left';
+
+/** Ο **ΕΝΑΣ** κατάλογος — κάθε φίλτρο καταλόγου και κάθε φρουρός διαβάζουν από εδώ. */
+export const ENDED_MEMBERSHIP_STATUSES: readonly EndedMembershipStatus[] = ['removed', 'left'] as const;
+
+/** Όλες οι γνωστές καταστάσεις — η μετάφραση (`normalizeMembership`) δέχεται **μόνο** αυτές. */
+export const WORKSPACE_MEMBERSHIP_STATUSES: readonly WorkspaceMembershipStatus[] = [
+  'active',
+  'suspended',
+  'pending',
+  ...ENDED_MEMBERSHIP_STATUSES,
+] as const;
+
+/** Έληξε η θητεία; — ο άνθρωπος **δεν** ανήκει πια σε κανέναν κατάλογο του γραφείου. */
+export function isTenureEnded(status: WorkspaceMembershipStatus): status is EndedMembershipStatus {
+  return (ENDED_MEMBERSHIP_STATUSES as readonly string[]).includes(status);
+}
+
+/** Κατάσταση **ζωντανής** θητείας — ό,τι δείχνει ένας κατάλογος μελών. */
+export type LiveMembershipStatus = Exclude<WorkspaceMembershipStatus, EndedMembershipStatus>;
+
+/** Στενεύει `unknown → WorkspaceMembershipStatus` για ό,τι έρχεται από τη βάση. */
+export function isWorkspaceMembershipStatus(value: unknown): value is WorkspaceMembershipStatus {
+  return typeof value === 'string' && (WORKSPACE_MEMBERSHIP_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * **Πώς τελείωσε η θητεία** — ποιος, πότε, γιατί (ADR-892 §3.2 βήμα 2 · ISO 27001 A.5.18).
+ * `null` σε ενεργή θητεία· ξαναγράφεται σε κάθε νέο τέλος, **καθαρίζεται** σε νέα ένταξη.
+ */
+export interface WorkspaceTenureEnd {
+  readonly endedByUid: string;
+  /** Ελεύθερο κείμενο του δρώντος — προαιρετικό (η αποχώρηση δεν χρωστά εξήγηση). */
+  readonly reason: string | null;
+  /** ISO ή Firestore `Timestamp` κατά την ανάγνωση. */
+  readonly endedAt?: unknown;
+}
+
+/**
+ * **Η ΠΑΥΣΗ ΠΡΟΣΒΑΣΗΣ** — ADR-892 Φ2β (§12). Ο άνθρωπος **μένει μέλος** (ρόλος, `joinedAt`, `enrollment`,
+ * `addedBy` ανέγγιχτα) αλλά ο κριτής τον κόβει (`suspended` ετυμηγορία). Αναιρείται **μόνο** με
+ * «Επαναφορά πρόσβασης» — ποτέ με νέα ένταξη (Atlassian: «they'll regain their roles and group memberships»).
+ *
+ * ⚠️ **ΔΕΝ είναι η αναστολή λογαριασμού** (`auth.disabled`, πλατφόρμας): εκείνη δεν γράφει πια το έγγραφο
+ * μέλους — δύο πράξεις, δύο καταστάσεις, δύο κάτοχοι (Atlassian: deactivate account ≠ suspend access).
+ */
+export interface WorkspaceAccessPause {
+  readonly pausedByUid: string;
+  /** Ελεύθερο κείμενο του διαχειριστή — `null` όταν δεν δόθηκε. */
+  readonly reason: string | null;
+  /** ISO ή Firestore `Timestamp` κατά την ανάγνωση. */
+  readonly pausedAt?: unknown;
+}
+
+/** Η παύση **όπως ταξιδεύει στο σύρμα** (κονσόλα μελών) — χρόνος σε ISO, ποτέ `Timestamp`. */
+export interface WorkspaceAccessPauseView {
+  readonly pausedByUid: string;
+  readonly reason: string | null;
+  readonly pausedAt: string | null;
+}
 
 /**
  * Η **μία** εγγραφή που απαντά *«είναι ο Χ μέλος του χώρου Ω;»*.
@@ -236,8 +308,24 @@ export interface WorkspaceMembership {
   /** **Γιατί** είναι μέλος — η πράξη που άνοιξε την τρέχουσα θητεία. `null` = έγγραφο προ-ADR-867 Ε1. */
   readonly enrollment: WorkspaceMemberEnrollment | null;
 
+  /** **Πώς τελείωσε** η θητεία — μόνο όταν `isTenureEnded(status)` (ADR-892). */
+  readonly tenureEnd: WorkspaceTenureEnd | null;
+
+  /** **Ποιος έβαλε σε παύση την πρόσβαση** — μόνο όταν `status === 'suspended'` (ADR-892 Φ2β). */
+  readonly accessPause?: WorkspaceAccessPause | null;
+
   /** Τελευταία μεταβολή. */
   readonly updatedAt?: unknown;
+}
+
+/**
+ * **Ζωντανή θητεία;** — φίλτρο καταλόγου με στένευση τύπου (ADR-892): ο αφαιρεθείς/αποχωρήσας
+ * **δεν** εμφανίζεται στη λίστα μελών (GitHub/Slack: «removed» ≠ «suspended» γραμμή).
+ */
+export function isLiveMembership(
+  membership: WorkspaceMembership,
+): membership is WorkspaceMembership & { readonly status: LiveMembershipStatus } {
+  return !isTenureEnded(membership.status);
 }
 
 // ============================================================================

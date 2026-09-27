@@ -36,7 +36,7 @@ import i18next from 'i18next';
 import ICU from 'i18next-icu';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 
-import { notificationDisplayTitle } from '@/components/notifications/notification-display-title';
+import { notificationDisplayBody, notificationDisplayTitle } from '@/components/notifications/notification-display-title';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -191,6 +191,25 @@ describe('Θ2 ✅ Η ΑΠΟΦΑΣΗ, ΠΑΝΩ ΣΤΟΝ ΠΡΑΓΜΑΤΙΚΟ HOOK
   });
 });
 
+describe('Θ4 — ADR-892 §13: ΤΟ ΣΩΜΑ, ΜΕ ΤΗΝ ΙΔΙΑ ΣΕΙΡΑ ΜΕ ΤΟΝ ΤΙΤΛΟ', () => {
+  const BODY_KEY = 'workspaceMembershipEnded.leftBody';
+
+  it('Θ4α 🔴 — το σώμα βγαίνει από το ΚΛΕΙΔΙ (γλώσσα του θεατή), όχι από το αποθηκευμένο κείμενο', () => {
+    const out = notificationDisplayBody(drawerT(), { body: 'ΠΑΓΩΜΕΝΟ', bodyKey: BODY_KEY, bodyParams: { office: 'Χ' } });
+    expect(out).toBe(commonSharedEl.workspaceMembershipEnded.leftBody);
+  });
+
+  it('Θ4β — κλειδί που λείπει ⇒ η εφεδρεία, ΠΟΤΕ ωμό κλειδί', () => {
+    const out = notificationDisplayBody(drawerT(), { body: 'ΕΦΕΔΡΕΙΑ', bodyKey: 'workspaceMembershipEnded.nope' });
+    expect(out).toBe('ΕΦΕΔΡΕΙΑ');
+  });
+
+  it('Θ4γ — χωρίς `bodyKey`: το αποθηκευμένο σώμα (παλαιότερες ειδοποιήσεις), ή κενό', () => {
+    expect(notificationDisplayBody(drawerT(), { body: 'παλιό' })).toBe('παλιό');
+    expect(notificationDisplayBody(drawerT(), {})).toBe('');
+  });
+});
+
 describe('Θ3 🔴 Η ΠΑΛΙΝΔΡΟΜΗΣΗ ΠΟΥ ΘΑ ΗΤΑΝ ΑΟΡΑΤΗ', () => {
   /**
    * 🔴 Ένα `defaultValue` ξαναγραμμένο εδώ **δεν σπάει τίποτα ορατό**: η οθόνη
@@ -205,6 +224,16 @@ describe('Θ3 🔴 Η ΠΑΛΙΝΔΡΟΜΗΣΗ ΠΟΥ ΘΑ ΗΤΑΝ ΑΟΡΑΤΗ
     const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
     expect(code).not.toContain('defaultValue');
+  });
+
+  it('Θ3γ — ADR-892 §13: ο drawer αποδίδει το ΣΩΜΑ από το SSoT, όχι το ωμό `n.body`', () => {
+    const drawer = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/NotificationDrawer.enterprise.tsx'),
+      'utf8',
+    );
+
+    expect(drawer).toContain('notificationDisplayBody(t, n)');
+    expect(drawer).not.toMatch(/\{n\.body\}/);
   });
 
   it('Θ3β — ο drawer ΔΕΝ κρατά δεύτερη, δική του απόδοση τίτλου', () => {

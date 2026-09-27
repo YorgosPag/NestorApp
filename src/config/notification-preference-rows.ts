@@ -131,6 +131,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'passwordChange', labelKey: 'common-account:account.notificationSettings.categories.security.passwordChange' },
       { key: 'twoFactorChange', labelKey: 'common-account:account.notificationSettings.categories.security.twoFactorChange' },
       { key: 'suspiciousActivity', labelKey: 'common-account:account.notificationSettings.categories.security.suspiciousActivity' },
+      // ADR-892 — έξοδος από γραφείο (υποχρεωτική: η γραμμή φαίνεται, ο διακόπτης κλειδωμένος όπως στα υπόλοιπα της ασφάλειας).
+      { key: 'workspaceMembershipEnded', labelKey: 'common-account:account.notificationSettings.categories.security.workspaceMembershipEnded' },
     ],
   },
 ];

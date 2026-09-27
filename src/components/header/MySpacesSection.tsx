@@ -82,7 +82,7 @@
  */
 
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check, DoorOpen } from 'lucide-react';
 
 // 🔴 **`@/auth` ΚΑΙ ΟΧΙ `@/auth/hooks/useAuth` — ΤΟ ΒΡΗΚΕ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ, ΟΧΙ Η ΚΡΙΣΗ.**
 //    Η πρώτη γραφή εισήγαγε **βαθιά**, και **έσπασε υπάρχουσα άγκυρα**: το
@@ -130,7 +130,13 @@ function currentSpaceId(pathname: string): SpaceId {
   return isInsideWorkspace(pathname) ? 'organization' : 'personal';
 }
 
-export function MySpacesSection(): React.ReactElement {
+/**
+ * @param onLeaveWorkspace ADR-892 Φ3 — «Αποχώρηση από το γραφείο». Η γραμμή εμφανίζεται **μόνο** όταν ο
+ *   τρέχων χώρος είναι γραφείο: η αποχώρηση αφορά **αυτό** το γραφείο (ο διακομιστής το κρίνει από τη
+ *   διεύθυνση, CHECK 3.58), και στον προσωπικό χώρο δεν υπάρχει τίποτα να αφήσεις. Ο διάλογος ζει στον
+ *   καλούντα, **έξω** από το μενού — αλλιώς θα ξεκρεμιόταν μαζί του όταν κλείσει.
+ */
+export function MySpacesSection({ onLeaveWorkspace }: Readonly<{ onLeaveWorkspace?: () => void }> = {}): React.ReactElement {
   const { t } = useTranslation(['common-account']);
   const { user } = useAuth();
   const pathname = usePathname();
@@ -175,6 +181,16 @@ export function MySpacesSection(): React.ReactElement {
           </DropdownMenuItem>
         );
       })}
+
+      {current === 'organization' && onLeaveWorkspace && (
+        <DropdownMenuItem
+          onSelect={onLeaveWorkspace}
+          className={`text-destructive ${layout.cursorPointer} focus:text-destructive focus:bg-destructive/10`}
+        >
+          <DoorOpen className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
+          <span>{t(`${K}.leave`)}</span>
+        </DropdownMenuItem>
+      )}
     </DropdownMenuGroup>
   );
 }

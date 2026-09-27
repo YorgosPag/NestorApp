@@ -11,6 +11,9 @@
  * αντίγραφα, και στο jsdom το `window.location` **δεν επαναορίζεται** — η συμπεριφορά ήταν
  * αδοκίμαστη. Ένα σημείο = ένα mock (`jest.mock('@/lib/browser/document-navigation')`).
  */
-export function navigateDocument(url: string): void {
-  window.location.assign(url);
+export function navigateDocument(url: string, options: { readonly replace?: boolean } = {}): void {
+  // `replace` ⇒ η τρέχουσα σελίδα φεύγει από το ιστορικό: μετά την αποχώρηση από γραφείο (ADR-892 §13) το
+  // «Πίσω» δεν πρέπει να ξαναζητά σελίδα του χώρου που μόλις αφήσατε.
+  if (options.replace === true) window.location.replace(url);
+  else window.location.assign(url);
 }

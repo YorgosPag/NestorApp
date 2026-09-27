@@ -40,6 +40,7 @@
 import { useMemo } from 'react';
 
 import { useCapability } from '@/auth/hooks/useCapability';
+import { MEMBER_MANAGEMENT_PERMISSION } from '@/lib/workspace/member-exit-policy';
 import type { PermissionId } from '@/lib/auth/types';
 import { isGranted, type CapabilityVerdict } from '@/types/capability-authority';
 
@@ -50,7 +51,10 @@ import { isGranted, type CapabilityVerdict } from '@/types/capability-authority'
  * δηλώνουν κι οι δύο `{ permissions: 'users:users:manage' }` στο `withAuth`. Δύο
  * καταναλωτές που τη γράφουν ο καθένας μόνος του είναι δύο ευκαιρίες να αποκλίνουν (N.0.2).
  */
-export const WORKSPACE_INVITE_PERMISSION: PermissionId = 'users:users:manage';
+//
+// 🔑 ADR-892 Φ2: **είναι η ίδια ικανότητα με την αφαίρεση μέλους** (όποιος βάζει, βγάζει) — άρα
+//    **δεν** ξαναγράφεται εδώ ως συμβολοσειρά, δείχνει στη σταθερά του κριτή εξόδου.
+export const WORKSPACE_INVITE_PERMISSION: PermissionId = MEMBER_MANAGEMENT_PERMISSION;
 
 export interface InviteCapability {
   /**

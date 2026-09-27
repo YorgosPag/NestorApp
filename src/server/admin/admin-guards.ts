@@ -25,9 +25,10 @@ import {
   getCurrentRuntimeEnvironment,
 } from '@/config/environment-security-config';
 import {
-  getAdminAuth,
-} from '@/lib/firebaseAdmin';
-import { extractBearerToken } from '@/lib/auth/token-credentials';
+  extractBearerToken,
+  verifyIdToken,
+  verifySessionCookie,
+} from '@/lib/auth/token-credentials';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AdminGuards');
@@ -76,34 +77,15 @@ export { getAdminFirestore } from '@/lib/firebaseAdmin';
 // ============================================================================
 
 /**
- * Verify Firebase ID token and extract claims
- * ADR-077: Uses canonical getAdminAuth() from firebaseAdmin.ts
- */
-async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
-  try {
-    const auth = getAdminAuth();
-    const decodedToken = await auth.verifyIdToken(token);
-    return decodedToken;
-  } catch (error) {
-    logger.info('[ADMIN_GUARDS] Token verification failed:', (error as Error).message);
-    return null;
-  }
-}
-
-/**
  * Verify Firebase session cookie and extract claims.
  * Used for Server Component auth via __session cookie.
- * Exported for use by admin-guards-page-auth.ts
+ *
+ * 🔗 ADR-892 §8.1 (N.0.2): εδώ ζούσαν **δεύτερα αντίγραφα** του `verifyIdToken` / `verifySessionCookie`
+ * — η δεύτερη διαδρομή προς την ίδια εμπιστοσύνη που η κεφαλίδα του `token-credentials` απαγορεύει. Όσο
+ * ζούσαν, ο έλεγχος ανάκλησης θα έκλεινε το API και θα άφηνε ανοιχτές τις σελίδες. Τώρα **ένας** δρόμος.
  */
 export async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedIdToken | null> {
-  try {
-    const auth = getAdminAuth();
-    const decodedToken = await auth.verifySessionCookie(sessionCookie, false);
-    return decodedToken;
-  } catch (error) {
-    logger.info('[ADMIN_GUARDS] Session cookie verification failed:', (error as Error).message);
-    return null;
-  }
+  return verifySessionCookie(sessionCookie);
 }
 
 /**

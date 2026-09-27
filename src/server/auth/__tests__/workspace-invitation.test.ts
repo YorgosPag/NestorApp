@@ -383,6 +383,26 @@ describe('Μ — μέλος', () => {
     expect(grantInTx).not.toHaveBeenCalled();
   });
 
+  it('🔴 Μ1π — ADR-892 Φ2β: μέλος σε ΠΑΥΣΗ ⇒ `already-member` (η πρόσκληση ΔΕΝ παρακάμπτει την παύση)', async () => {
+    decideMembershipMock.mockResolvedValue({ verdict: 'suspended', membership: { status: 'suspended' } });
+    const { token } = await issue();
+
+    const outcome = await acceptWorkspaceInvitation({ token, identity: identity(), nowISOValue: LATER });
+
+    expect(outcome).toEqual({ kind: 'refused', reason: 'already-member' });
+    expect(grantInTx).not.toHaveBeenCalled();
+  });
+
+  it('Μ1λ — ADR-892: ΛΗΓΜΕΝΗ θητεία (`removed`, ετυμηγορία `suspended`) ΞΑΝΑΜΠΑΙΝΕΙ με πρόσκληση', async () => {
+    decideMembershipMock.mockResolvedValue({ verdict: 'suspended', membership: { status: 'removed' } });
+    const { token } = await issue();
+
+    const outcome = await acceptWorkspaceInvitation({ token, identity: identity(), nowISOValue: LATER });
+
+    expect(outcome.kind).toBe('accepted');
+    expect(grantInTx).toHaveBeenCalled();
+  });
+
   it('🔑 Μ1δ — ADR-853 §14: ο προσκεκλημένος ΧΩΡΙΣ ρόλο αποδέχεται — είναι ο πληθυσμός της πρόσκλησης', async () => {
     // 🔴 Μέχρι 2026-09-13 αυτή η περίπτωση **δεν δοκιμαζόταν πουθενά**: το `identity()` είχε
     //    πάντα `external_user`. Μετρημένο ζωντανά, ο πραγματικός προσκεκλημένος δεν είχε ρόλο.

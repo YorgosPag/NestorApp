@@ -54,11 +54,11 @@ jest.mock('@/lib/workspace/navigation', () => ({
 }));
 
 // ⚠️ **ΑΝΑΓΚΑΙΟ, ΟΧΙ ΕΥΚΟΛΙΑ**: ο διάλογος εισάγει στατικά τον `FirstContactAwaitingProof`,
-//    που εισάγει το `@/auth/citizen-session` → `@/lib/firebase`. Εκείνο τρέχει
+//    που εισάγει το `@/auth/issued-session` → `@/lib/firebase`. Εκείνο τρέχει
 //    `initializeApp` **στο import** και στήνει IndexedDB/emulator probes. Η άγκυρα ρωτά
 //    *«ποιον δρόμο διαλέγει ο ταξινομητής;»*, όχι *«σηκώνεται το Firebase;»*.
-jest.mock('@/auth/citizen-session', () => ({
-  adoptCitizenSession: jest.fn().mockResolvedValue({ kind: 'signed-in', uid: 'u' }),
+jest.mock('@/auth/issued-session', () => ({
+  adoptIssuedSession: jest.fn().mockResolvedValue({ kind: 'signed-in', uid: 'u' }),
 }));
 
 import { FirstContactDialog } from '../FirstContactDialog';

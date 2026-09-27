@@ -16,6 +16,8 @@
 
 const mockVerifyIdToken = jest.fn();
 
+// ADR-892 §8.1 — η ανάκληση έχει τη δική της άγκυρα (`revocation-watermark.test.ts`)· εδώ κρίνεται η ταυτότητα.
+jest.mock('@/lib/auth/revocation-watermark', () => ({ isCredentialStillValid: async () => true }));
 jest.mock('@/lib/firebaseAdmin', () => ({
   isFirebaseAdminAvailable: () => true,
   getAdminAuth: () => ({ verifyIdToken: mockVerifyIdToken }),

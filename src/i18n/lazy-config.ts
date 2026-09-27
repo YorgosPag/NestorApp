@@ -59,6 +59,7 @@ export const SUPPORTED_NAMESPACES = [
   'listing-detail',   // ADR-842 F3 — dimosia othoni 3, MONO ta stoixeia tou akinitou
   'model-freshness',  // ADR-845 O-25 — «isxyei akoma to dimosievmeno 3D;» (mono o katoxos)
   'short-stay',       // ADR-835 F3 — o xronos stin anazitisi (vraxyxronia diamoni)
+  'admin-member-exit', // ADR-892 — oi dialogoi afairesis/pafsis/epanaforas melous; DIKO tous, gia na min fouskwnei to 'admin' (eggyimeno, CHECK 3.34)
   'landing-heroes-admin', // ADR-881 — to ergaleio eikonwn irwa tou parochou; DIKO tou, gia na min fortwnetai sto shell (to 'admin' einai eggyimeno)
   'stay-landing',     // ADR-777 8.82 — i aktina /stay (iroas); DIKO tis, gia na min fortwnei to /search/results
   'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)

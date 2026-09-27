@@ -49,6 +49,13 @@ export const TOUR_REFUSAL_KEY: Readonly<Record<TourRefusalName, string>> = {
   'upload-missing': 'spatial-tour:refusal.uploadMissing',
   'upload-incomplete': 'spatial-tour:refusal.uploadIncomplete',
   'declaration-invalid': 'spatial-tour:refusal.declarationInvalid',
+  'capture-absent': 'spatial-tour:refusal.captureAbsent',
+  'capture-placed': 'spatial-tour:refusal.capturePlaced',
+  'capture-unplaced': 'spatial-tour:refusal.captureUnplaced',
+  'capture-not-ready': 'spatial-tour:refusal.captureNotReady',
+  'node-absent': 'spatial-tour:refusal.nodeAbsent',
+  'level-absent': 'spatial-tour:refusal.levelAbsent',
+  'graph-full': 'spatial-tour:refusal.graphFull',
 };
 
 /**

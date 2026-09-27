@@ -47,6 +47,7 @@ function seat(overrides: Partial<WorkspaceMembership> = {}): WorkspaceMembership
     permissionSetIds: [],
     addedBy: UID,
     enrollment: 'backfill',
+    tenureEnd: null,
     ...overrides,
   };
 }

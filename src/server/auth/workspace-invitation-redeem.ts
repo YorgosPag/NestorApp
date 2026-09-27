@@ -160,7 +160,11 @@ async function refuseIfAlreadyMember(
   });
 
   if (decision.verdict === 'unknown') return { kind: 'unavailable', reason: 'membership-unknown' };
-  return decision.verdict === 'home' || decision.verdict === 'member'
+  // 🔴 ADR-892 Φ2β — μέλος σε **παύση** ΕΙΝΑΙ μέλος: νέα πρόσκληση θα έγραφε νέα θητεία `active` και θα
+  //    **παρέκαμπτε** την απόφαση του γραφείου. Η ετυμηγορία `suspended` καλύπτει και τις ληγμένες θητείες
+  //    (αυτές **ξαναμπαίνουν** με πρόσκληση) — γι' αυτό κρίνει η θέση, όχι η ετυμηγορία.
+  const pausedHere = decision.membership?.status === 'suspended';
+  return decision.verdict === 'home' || decision.verdict === 'member' || pausedHere
     ? { kind: 'refused', reason: 'already-member' }
     : null;
 }

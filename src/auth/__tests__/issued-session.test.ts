@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Η ΥΙΟΘΕΤΗΣΗ ΣΥΝΕΔΡΙΑΣ ΤΡΕΧΕΙ** — και η αποτυχία της ΔΕΝ πετά ποτέ.
- * @related auth/citizen-session.ts · ADR-844 Β4
+ * @related auth/issued-session.ts · ADR-844 Β4
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ΤΟ ΣΚΕΛΟΣ ΤΗΣ ΑΠΟΤΥΧΙΑΣ ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ ΓΡΑΦΤΗΚΕ ΤΟ ΑΡΧΕΙΟ
@@ -26,7 +26,7 @@ jest.mock('firebase/auth', () => ({
 //    Η άγκυρα ρωτά *«τι κάνει η συνάρτησή μας;»*, όχι *«σηκώνεται το Firebase;»*.
 jest.mock('@/lib/firebase', () => ({ auth: { __brand: 'fake-auth' } }));
 
-import { adoptCitizenSession } from '@/auth/citizen-session';
+import { adoptIssuedSession } from '@/auth/issued-session';
 
 describe('Κ — ο πολίτης παίρνει συνεδρία', () => {
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe('Κ — ο πολίτης παίρνει συνεδρία', () => {
   it('🔑 Κ1 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: επιτυχία ⇒ `signed-in` με το uid', async () => {
     signInWithCustomToken.mockResolvedValue({ user: { uid: 'uid_maria' } });
 
-    await expect(adoptCitizenSession('token_abc')).resolves.toEqual({
+    await expect(adoptIssuedSession('token_abc')).resolves.toEqual({
       kind: 'signed-in',
       uid: 'uid_maria',
     });
@@ -47,7 +47,7 @@ describe('Κ — ο πολίτης παίρνει συνεδρία', () => {
     //    περνούσε κάθε άλλο σκέλος — και θα έσπαγε **μόνο** στην παραγωγή.
     signInWithCustomToken.mockResolvedValue({ user: { uid: 'uid_maria' } });
 
-    await adoptCitizenSession('  token_abc  ');
+    await adoptIssuedSession('  token_abc  ');
 
     expect(signInWithCustomToken).toHaveBeenCalledWith(
       { __brand: 'fake-auth' },
@@ -60,7 +60,7 @@ describe('Κ — ο πολίτης παίρνει συνεδρία', () => {
     //    `useEffect` και θα έριχνε ΛΕΥΚΗ ΣΕΛΙΔΑ πάνω σε πράξη που **πέτυχε**.
     signInWithCustomToken.mockRejectedValue(new Error('auth/invalid-custom-token'));
 
-    await expect(adoptCitizenSession('token_dead')).resolves.toEqual({ kind: 'not-signed-in' });
+    await expect(adoptIssuedSession('token_dead')).resolves.toEqual({ kind: 'not-signed-in' });
   });
 
   it('🔴 Κ4 — ούτε όταν το SDK πετά κάτι που ΔΕΝ είναι Error', async () => {
@@ -68,6 +68,6 @@ describe('Κ — ο πολίτης παίρνει συνεδρία', () => {
     //    φρουρό θα έσκαγε **μέσα στο catch** — δηλαδή στο ίδιο το δίχτυ ασφαλείας.
     signInWithCustomToken.mockRejectedValue('storage is blocked');
 
-    await expect(adoptCitizenSession('token_dead')).resolves.toEqual({ kind: 'not-signed-in' });
+    await expect(adoptIssuedSession('token_dead')).resolves.toEqual({ kind: 'not-signed-in' });
   });
 });

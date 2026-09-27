@@ -15,7 +15,7 @@ import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
 import type { Notification, Severity } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
-import { notificationDisplayTitle } from '@/components/notifications/notification-display-title';
+import { notificationDisplayBody, notificationDisplayTitle } from '@/components/notifications/notification-display-title';
 import { drawerDestination, type DrawerDestination } from '@/components/notifications/drawer-destination';
 import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -318,6 +318,8 @@ export function NotificationDrawer() {
                 //    δίχτυ διασταυρούμενων namespaces του `useTranslation` (ADR-716 Φ5) δεν έτρεχε
                 //    **ποτέ** — και ο άνθρωπος έβλεπε το **παγωμένο** κείμενο της παραγωγής.
                 const displayTitle = notificationDisplayTitle(t, n);
+                // ADR-892 §13 — το σώμα με την ίδια σειρά (κλειδί πρώτα, αποθηκευμένο κείμενο μετά).
+                const displayBody = notificationDisplayBody(t, n);
 
                 // 🔑 ADR-849 Β1 — ο δρόμος του «Προβολή» (μόνιμος σύνδεσμος · εξωτερικός · ιστορικός).
                 const destination = drawerDestination(n);
@@ -348,9 +350,9 @@ export function NotificationDrawer() {
                         <span className={`text-sm leading-tight block truncate ${isUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
                           {displayTitle}
                         </span>
-                        {n.body && (
+                        {displayBody && (
                           <p className={cn("text-sm break-words mt-1 line-clamp-3", colors.text.muted)}>
-                            {n.body}
+                            {displayBody}
                           </p>
                         )}
                         <time className={cn("text-xs mt-1.5 block", colors.text.muted)}>

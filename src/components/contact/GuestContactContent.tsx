@@ -44,7 +44,7 @@ import React from 'react';
 import routeSlice from '@/i18n/generated/routes/contact__token.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
-import { adoptCitizenSession } from '@/auth/citizen-session';
+import { adoptIssuedSession } from '@/auth/issued-session';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { Link } from '@/lib/workspace/navigation';
@@ -91,7 +91,7 @@ export function GuestContactContent({
     if (customToken === null) return;
 
     let ignore = false;
-    void adoptCitizenSession(customToken).then((outcome) => {
+    void adoptIssuedSession(customToken).then((outcome) => {
       if (!ignore) setPhase(outcome.kind === 'signed-in' ? 'signed-in' : 'not-signed-in');
     });
 

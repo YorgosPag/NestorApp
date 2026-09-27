@@ -40,6 +40,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideCapability } from '@/lib/auth/authority';
 import { listActiveWorkspaceMembers, listMemberWorkspaces } from '@/lib/auth/workspace-membership';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { isGranted } from '@/types/capability-authority';
 import type { NetworkActTeam } from '@/types/network-thread';
 
@@ -80,17 +81,9 @@ export function pickOfficeHeir(candidates: readonly HeirCandidate[], departingUi
   return sorted[0]?.uid ?? null;
 }
 
-/** `joinedAt` σε χιλιοστά — Timestamp, ISO ή τίποτα (το τελευταίο ⇒ `Infinity`). */
+/** `joinedAt` σε χιλιοστά — μέσω του ΕΝΟΣ μετατροπέα (`date-local`)· άγνωστο ⇒ `Infinity` (πάει τελευταίος). */
 function millisOf(value: unknown): number {
-  if (typeof value === 'string') {
-    const parsed = Date.parse(value);
-    return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
-  }
-  if (typeof value === 'object' && value !== null && 'toMillis' in value) {
-    const toMillis = (value as { readonly toMillis: unknown }).toMillis;
-    if (typeof toMillis === 'function') return Number(toMillis.call(value));
-  }
-  return Number.POSITIVE_INFINITY;
+  return normalizeToMillisOrNull(value) ?? Number.POSITIVE_INFINITY;
 }
 
 /**
@@ -235,13 +228,7 @@ export async function transferActTeamsOnDeparture(
   adminDb: AdminFirestore,
   transfer: DepartureTransfer,
 ): Promise<{ readonly transferred: number; readonly orphaned: number }> {
-  // tenant-scope-exempt: το φίλτρο **ΕΙΝΑΙ** ο άξονας μισθωτή αυτής της συλλογής
-  //   (`hostCompanyId`, tenant-config) — δηλωμένο ρητά επειδή το όνομα δεν είναι `companyId`.
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.NETWORK_ACT_TEAMS)
-    .where('hostCompanyId', '==', transfer.companyId)
-    .where('responsibleUid', '==', transfer.departingUid)
-    .get();
+  const snapshot = await teamsHeldByQuery(adminDb, transfer.companyId, transfer.departingUid).get();
 
   let transferred = 0;
   let orphaned = 0;
@@ -260,6 +247,26 @@ export async function transferActTeamsOnDeparture(
     });
   }
   return { transferred, orphaned };
+}
+
+/**
+ * **Πόσες πράξεις κρατά** ο άνθρωπος σε αυτό το γραφείο — για την προεπισκόπηση πριν από την έξοδο
+ * (ADR-892 §3.6). **Το ίδιο** ερώτημα με τη μεταβίβαση, ώστε ο αριθμός που βλέπει ο διαχειριστής να
+ * είναι αυτός που θα μεταβιβαστεί.
+ */
+export async function countActTeamsHeldBy(adminDb: AdminFirestore, companyId: string, uid: string): Promise<number> {
+  const aggregate = await teamsHeldByQuery(adminDb, companyId, uid).count().get();
+  return aggregate.data().count;
+}
+
+/** Οι ομάδες όπου ο άνθρωπος είναι **υπεύθυνος**, σε ένα γραφείο — ένα ερώτημα, δύο καταναλωτές. */
+function teamsHeldByQuery(adminDb: AdminFirestore, companyId: string, uid: string) {
+  // tenant-scope-exempt: το φίλτρο **ΕΙΝΑΙ** ο άξονας μισθωτή αυτής της συλλογής
+  //   (`hostCompanyId`, tenant-config) — δηλωμένο ρητά επειδή το όνομα δεν είναι `companyId`.
+  return adminDb
+    .collection(COLLECTIONS.NETWORK_ACT_TEAMS)
+    .where('hostCompanyId', '==', companyId)
+    .where('responsibleUid', '==', uid);
 }
 
 /** Η μεταβίβαση **μιας** ομάδας, σε δική της συναλλαγή. */

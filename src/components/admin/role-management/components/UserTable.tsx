@@ -26,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 import type { CompanyUser, UserListFilters } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
+import { UserRowActions, type UserRowHandlers } from './UserRowActions';
 import { formatRelativeTime } from '@/lib/intl-formatting';
 import { getInitials } from '@/types/contacts/helpers';
 
@@ -35,21 +36,22 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // TYPES
 // =============================================================================
 
-interface UserTableProps {
+interface UserTableProps extends UserRowHandlers {
   users: CompanyUser[];
   currentUserId: string;
   canEdit: boolean;
+  /**
+   * ADR-892 Φ2 — *«να δείξω το «Αφαίρεση από το γραφείο»;»*. ⛔ ΟΧΙ το `canEdit` (`super_admin`-only):
+   * η ικανότητα είναι `users:users:manage`, την έχει ο `company_admin` (όποιος βάζει, βγάζει).
+   */
+  canRemove: boolean;
   isLoading: boolean;
+  /** `true` όταν η λίστα **απέτυχε** — ποτέ «Δεν βρέθηκαν χρήστες» για αποτυχία (ADR-892 §7). */
+  loadFailed: boolean;
+  onRetry: () => void;
   sortBy: UserListFilters['sortBy'];
   sortOrder: UserListFilters['sortOrder'];
   onSort: (column: UserListFilters['sortBy']) => void;
-  onChangeRole: (user: CompanyUser) => void;
-  onManagePermissions: (user: CompanyUser) => void;
-  onSuspend: (user: CompanyUser) => void;
-  onViewDetails: (user: CompanyUser) => void;
-  onApprove: (user: CompanyUser) => void;
-  /** ADR-660 §6 — απόρριψη του αιτήματος ένταξης (η άλλη μισή απάντηση στην έγκριση). */
-  onDeny: (user: CompanyUser) => void;
 }
 
 // =============================================================================
@@ -108,16 +110,14 @@ export function UserTable({
   users,
   currentUserId,
   canEdit,
+  canRemove,
   isLoading,
+  loadFailed,
+  onRetry,
   sortBy,
   sortOrder,
   onSort,
-  onChangeRole,
-  onManagePermissions,
-  onSuspend,
-  onViewDetails,
-  onApprove,
-  onDeny,
+  ...handlers
 }: UserTableProps) {
   const { t } = useTranslation('admin');
   const colors = useSemanticColors();
@@ -148,6 +148,20 @@ export function UserTable({
         <p className={cn("animate-pulse", colors.text.muted)}>
           {t('roleManagement.usersTab.loadingUsers')}
         </p>
+      </section>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Failure state — ADR-892 §7: η αποτυχία ΔΕΝ παρουσιάζεται ως «άδειο»
+  // ---------------------------------------------------------------------------
+  if (loadFailed && users.length === 0) {
+    return (
+      <section role="alert" className="flex flex-col items-center justify-center gap-3 py-16 rounded-lg border">
+        <p className="text-destructive">{t('roleManagement.usersTab.loadFailed')}</p>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          {t('roleManagement.usersTab.retry')}
+        </Button>
       </section>
     );
   }
@@ -189,8 +203,6 @@ export function UserTable({
         <TableBody>
           {users.map((companyUser) => {
             const isSelf = companyUser.uid === currentUserId;
-            // ADR-660: χρήστης χωρίς tenant = αυτο-εγγραφή που εκκρεμεί έγκριση.
-            const needsApproval = companyUser.companyId === null;
             const initials = initialsForUser(companyUser.displayName, companyUser.email);
             const avatarColor = getAvatarColor(companyUser.uid);
 
@@ -236,10 +248,16 @@ export function UserTable({
                 </TableCell>
 
                 {/* Status */}
+                {/* ADR-892 Φ2β — ΔΥΟ καταστάσεις, ΔΥΟ ενδείξεις: μέλος (παύση γραφείου) · λογαριασμός (πλατφόρμας) */}
                 <TableCell>
-                  <Badge variant={STATUS_BADGE_VARIANT[companyUser.status]}>
-                    {t(`roleManagement.statusLabels.${companyUser.status}`)}
-                  </Badge>
+                  <span className="flex flex-wrap items-center gap-1">
+                    <Badge variant={STATUS_BADGE_VARIANT[companyUser.status]}>
+                      {t(`roleManagement.statusLabels.${companyUser.status}`)}
+                    </Badge>
+                    {companyUser.disabled && (
+                      <Badge variant="destructive">{t('roleManagement.statusLabels.accountDisabled')}</Badge>
+                    )}
+                  </span>
                 </TableCell>
 
                 {/* MFA */}
@@ -274,69 +292,15 @@ export function UserTable({
                   {companyUser.lastSignIn ? formatRelativeTime(companyUser.lastSignIn) : t('users.activity.never')}
                 </TableCell>
 
-                {/* Actions */}
+                {/* Actions — ADR-892 Φ2β: τρεις κάτοχοι, ένα αρχείο (`UserRowActions`) */}
                 <TableCell>
-                  <nav className="flex items-center justify-end gap-1" aria-label="User actions">
-                    {canEdit && needsApproval && (
-                      // ADR-660: unassigned/pending → Έγκριση (set-user-claims).
-                      // Οι υπόλοιπες ενέργειες (role/perms/suspend) απαιτούν member
-                      // doc που ακόμη δεν υπάρχει, οπότε εδώ δείχνουμε μόνο Έγκριση.
-                      <>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => onApprove(companyUser)}
-                        >
-                          {t('roleManagement.actions.approve')}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeny(companyUser)}
-                        >
-                          {t('roleManagement.actions.deny')}
-                        </Button>
-                      </>
-                    )}
-                    {canEdit && !needsApproval && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onChangeRole(companyUser)}
-                          disabled={isSelf}
-                          title={isSelf ? t('roleManagement.roleChange.selfProtection') : ''}
-                        >
-                          {t('roleManagement.actions.changeRole')}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onManagePermissions(companyUser)}
-                        >
-                          {t('roleManagement.actions.permissions')}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onSuspend(companyUser)}
-                          disabled={isSelf}
-                          title={isSelf ? t('roleManagement.cannotSuspendSelf') : ''}
-                        >
-                          {companyUser.status === 'active'
-                            ? t('roleManagement.actions.suspend')
-                            : t('roleManagement.actions.activate')}
-                        </Button>
-                      </>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewDetails(companyUser)}
-                    >
-                      {t('roleManagement.actions.details')}
-                    </Button>
-                  </nav>
+                  <UserRowActions
+                    user={companyUser}
+                    isSelf={isSelf}
+                    canEdit={canEdit}
+                    canRemove={canRemove}
+                    {...handlers}
+                  />
                 </TableCell>
               </TableRow>
             );

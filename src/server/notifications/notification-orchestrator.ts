@@ -70,6 +70,9 @@ export interface DispatchContent {
   titleKey?: string;
   /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
   titleParams?: Record<string, string>;
+  /** i18n key του **σώματος** — κατοπτρικό του `titleKey` (ADR-892 §13). Το `body` μένει η εφεδρεία (και το email). */
+  bodyKey?: string;
+  bodyParams?: Record<string, string>;
   /**
    * ADR-841 §7 Α21.21 Φάση Β — **γεγονότα** για κουμπιά ενέργειας στο email (π.χ. απάντηση ερώτησης αργιών). Ταξιδεύουν
    * στην ουρά· οι σύνδεσμοι υπογράφονται τη στιγμή της αποστολής, ποτέ εδώ.
@@ -259,6 +262,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     ...(actions && actions.length > 0 ? { actions } : {}),
     // i18n: store translation key + params for client-side rendering
     ...(request.titleKey ? { titleKey: request.titleKey, titleParams: request.titleParams ?? {} } : {}),
+    ...(request.bodyKey ? { bodyKey: request.bodyKey, bodyParams: request.bodyParams ?? {} } : {}),
     meta: {
       dedupeKey,
       eventType,

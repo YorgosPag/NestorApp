@@ -414,7 +414,9 @@
       "allRoles": "All Roles",
       "allStatuses": "All Statuses",
       "noUsers": "No users found",
-      "loadingUsers": "Loading users..."
+      "loadingUsers": "Loading users...",
+      "loadFailed": "The user list could not be loaded. The workspace members are not gone — the read failed.",
+      "retry": "Try again"
     },
     "roleChange": {
       "title": "Change Role",
@@ -432,9 +434,9 @@
       "sameRole": "User already has this role"
     },
     "status": {
-      "suspendTitle": "Suspend User",
-      "suspendConfirm": "Are you sure you want to suspend this user? They will be unable to sign in.",
-      "reactivateTitle": "Reactivate User",
+      "suspendTitle": "Suspend account",
+      "suspendConfirm": "The account is locked across the whole platform — they will not be able to sign in anywhere. To block only this workspace, use “Pause access”.",
+      "reactivateTitle": "Reactivate account",
       "reactivateConfirm": "This will re-enable the user's account.",
       "reason": "Reason",
       "reasonPlaceholder": "Explain why (min 10 chars)...",
@@ -683,9 +685,10 @@
     },
     "statusLabels": {
       "active": "Active",
-      "suspended": "Suspended",
+      "suspended": "Paused",
       "inactive": "Inactive",
-      "pending": "Pending approval"
+      "pending": "Pending approval",
+      "accountDisabled": "Account suspended"
     },
     "approve": {
       "title": "Approve user",
@@ -771,7 +774,9 @@
       "activate": "Activate",
       "details": "Details",
       "approve": "Approve",
-      "deny": "Deny"
+      "deny": "Deny",
+      "suspendAccount": "Suspend account",
+      "reactivateAccount": "Reactivate account"
     },
     "table": {
       "user": "User",
@@ -795,6 +800,10 @@
       "member_added": "Member Added",
       "member_removed": "Member Removed",
       "member_updated": "Member Updated",
+      "workspace_member_removed": "Removed from workspace",
+      "workspace_member_left": "Left workspace",
+      "workspace_member_paused": "Workspace access paused",
+      "workspace_member_restored": "Workspace access restored",
       "claims_updated": "Claims Updated",
       "system_bootstrap": "System Bootstrap"
     },

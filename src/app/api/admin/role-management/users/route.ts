@@ -26,7 +26,13 @@ import { normalizeMembership } from '@/lib/auth/workspace-membership';
 import { listPendingAccessRequests } from '@/server/auth/workspace-access-request';
 // 🎫 ADR-853 Φ4 — οι προσκλήσεις είναι **τέταρτη πηγή** αυτής της μίας απάντησης.
 import { listPendingWorkspaceInvitations } from '@/server/auth/workspace-invitation';
-import type { WorkspaceMembership } from '@/types/workspace-membership';
+import {
+  isLiveMembership,
+  type LiveMembershipStatus,
+  type WorkspaceAccessPauseView,
+  type WorkspaceMembership,
+} from '@/types/workspace-membership';
+import { normalizeToISO } from '@/lib/date-local';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
@@ -63,13 +69,15 @@ interface CompanyUser {
   displayName: string | null;
   photoURL: string | null;
   globalRole: GlobalRole;
-  status: 'active' | 'suspended' | 'pending';
+  status: LiveMembershipStatus;
   joinedAt: string | null;
   permissionSetIds: string[];
   lastSignIn: string | null;
   disabled: boolean;
   mfaEnrolled: boolean;
   companyId: string | null; // null for unassigned users
+  /** ADR-892 Φ2β — ποιος/πότε/γιατί, **μόνο** σε παύση (η επαναφορά το δείχνει πριν από το πάτημα). */
+  accessPause: WorkspaceAccessPauseView | null;
 }
 
 /**
@@ -109,9 +117,12 @@ export const GET = withSensitiveRateLimit(
         const membersPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}`;
         const membersSnap = await db.collection(membersPath).get();
 
-        const memberDocs: WorkspaceMembership[] = membersSnap.empty
+        const memberDocs: (WorkspaceMembership & { readonly status: LiveMembershipStatus })[] = membersSnap.empty
           ? []
-          : membersSnap.docs.map((doc) => normalizeMembership(doc.id, doc.data()));
+          : membersSnap.docs
+              .map((doc) => normalizeMembership(doc.id, doc.data()))
+              // ADR-892 — ληγμένη θητεία (αφαίρεση/αποχώρηση) ⇒ εκτός καταλόγου· το έγγραφο μένει για επαναφορά.
+              .filter(isLiveMembership);
 
         const uids = memberDocs.map((m) => m.uid);
 
@@ -167,14 +178,15 @@ export const GET = withSensitiveRateLimit(
             //    έλεγχο. Ένα `as GlobalRole` θα ήταν ισχυρισμός, όχι απόδειξη.
             globalRole: isValidGlobalRole(member.globalRole) ? member.globalRole : 'internal_user',
             status: member.status,
-            joinedAt: member.joinedAt
-              ? (member.joinedAt as FirebaseFirestore.Timestamp).toDate?.()?.toISOString() ?? null
-              : null,
+            joinedAt: normalizeToISO(member.joinedAt),
             permissionSetIds: [...member.permissionSetIds],
             lastSignIn: authInfo?.lastSignIn ?? null,
             disabled: authInfo?.disabled ?? false,
             mfaEnrolled: authInfo?.mfaEnrolled ?? false,
             companyId: ctx.companyId,
+            accessPause: member.accessPause
+              ? { ...member.accessPause, pausedAt: normalizeToISO(member.accessPause.pausedAt) }
+              : null,
           };
         });
 
@@ -208,6 +220,7 @@ export const GET = withSensitiveRateLimit(
               disabled: record?.disabled ?? false,
               mfaEnrolled: (record?.multiFactor?.enrolledFactors?.length ?? 0) > 0,
               companyId: null,
+              accessPause: null,
             });
           }
         }

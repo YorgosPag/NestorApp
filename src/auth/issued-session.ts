@@ -1,9 +1,14 @@
 'use client';
 
 /**
- * @fileoverview **Ο ΠΟΛΙΤΗΣ ΠΑΙΡΝΕΙ ΣΥΝΕΔΡΙΑ** — το εφήμερο κλειδί γίνεται ταυτότητα.
- * @related server/auth/citizen-identity.ts (ποιος το εξέδωσε) · ADR-844 Β4
- * @module auth/citizen-session
+ * @fileoverview **ΣΥΝΕΔΡΙΑ ΑΠΟ ΚΛΕΙΔΙ ΠΟΥ ΕΞΕΔΩΣΕ Ο ΔΙΑΚΟΜΙΣΤΗΣ** — το εφήμερο κλειδί γίνεται ταυτότητα.
+ * @related server/auth/citizen-identity.ts (ο πολίτης, ADR-844 Β4) · server/workspace/member-exit-session.ts
+ *   (η συνέχεια μετά την αποχώρηση από τον οικείο χώρο, ADR-892 §13)
+ * @module auth/issued-session
+ *
+ * ℹ️ Λεγόταν `citizen-session` / `adoptCitizenSession`: όταν ήρθε ο **τρίτος** καλών (ADR-892 Φ3 — μέλος
+ * γραφείου, όχι πολίτης) το όνομα θα έλεγε ψέματα. Μετονομάστηκε αντί να γραφτεί δεύτερη κλήση — ακριβώς
+ * αυτό που ζητά η παρακάτω παράγραφος.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 Η ΜΟΝΗ ΚΛΗΣΗ `signInWithCustomToken` ΣΕ ΟΛΟ ΤΟ ΔΕΝΤΡΟ — ΚΑΙ ΟΦΕΙΛΕΙ ΝΑ ΜΕΙΝΕΙ ΜΙΑ
@@ -55,7 +60,7 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 
-const logger = createModuleLogger('citizen-session');
+const logger = createModuleLogger('issued-session');
 
 /**
  * Τι απέγινε η **υιοθέτηση** της συνεδρίας.
@@ -64,15 +69,15 @@ const logger = createModuleLogger('citizen-session');
  * μόνος του ότι *«η αποτυχία εδώ δεν είναι αποτυχία της πράξης»* — και κάποιος δεν θα
  * το θυμόταν.
  */
-export type CitizenSessionOutcome =
+export type IssuedSessionOutcome =
   | { readonly kind: 'signed-in'; readonly uid: string }
   /** Δεν συνδεθήκαμε. **Η πράξη στέκει** — δες την κεφαλίδα. */
   | { readonly kind: 'not-signed-in' };
 
 /**
- * **Υιοθέτησε τη συνεδρία του πολίτη.**
+ * **Υιοθέτησε τη συνεδρία** που εξέδωσε ο διακομιστής (πολίτης · συνέχεια μετά την αποχώρηση).
  *
- * @param customToken Το εφήμερο κλειδί που εξέδωσε ο `ensureCitizenIdentity`. Ζει
+ * @param customToken Το εφήμερο κλειδί (`ensureCitizenIdentity` · `continueSessionAfterExit`). Ζει
  *   **λίγο** (Firebase: 1 ώρα) και είναι **μιας χρήσης στην πράξη** — δεν αποθηκεύεται
  *   πουθενά και δεν ξαναζητιέται.
  *
@@ -80,9 +85,9 @@ export type CitizenSessionOutcome =
  * εξαίρεση εδώ θα την έριχνε **μετά** το γεγονός, και ο άνθρωπος θα έβλεπε λευκή
  * σελίδα για κάτι που **πέτυχε**.
  */
-export async function adoptCitizenSession(
+export async function adoptIssuedSession(
   customToken: string,
-): Promise<CitizenSessionOutcome> {
+): Promise<IssuedSessionOutcome> {
   try {
     const credential = await signInWithCustomToken(auth, customToken);
     return { kind: 'signed-in', uid: credential.user.uid };
@@ -90,7 +95,7 @@ export async function adoptCitizenSession(
     // ⚠️ `warn`, όχι `error`: **αναμενόμενο** σε ενσωματωμένους φυλλομετρητές email και
     //    σε παράθυρα με κλειδωμένο storage. Ένα `error` ανά τέτοια επίσκεψη θα έπνιγε
     //    το ημερολόγιο για συμβάν που η οθόνη **χειρίζεται σωστά**.
-    logger.warn('Ο πολίτης δεν συνδέθηκε — η πράξη όμως έχει ήδη γραφτεί', {
+    logger.warn('Η συνεδρία δεν υιοθετήθηκε — η πράξη όμως έχει ήδη γραφτεί', {
       error: cause instanceof Error ? cause.message : String(cause),
     });
     return { kind: 'not-signed-in' };

@@ -172,7 +172,8 @@
           "newDeviceLogin": "New device login",
           "passwordChange": "Password change",
           "twoFactorChange": "2FA change",
-          "suspiciousActivity": "Suspicious activity"
+          "suspiciousActivity": "Suspicious activity",
+          "workspaceMembershipEnded": "Workspace access"
         },
         "network": {
           "title": "Partner messages",
@@ -325,12 +326,13 @@
       "personal": "My personal space",
       "organization": "My office space",
       "current": "you are here",
-        "hint": {
-          "personal": "Properties, requests and saved listings",
-          "organization": "Your office's listings, clients and team",
-          "createWorkspace": "Listings, clients and team in one space",
-          "messages": "Conversations with individuals and professionals"
-        }
+      "hint": {
+        "personal": "Properties, requests and saved listings",
+        "organization": "Your office's listings, clients and team",
+        "createWorkspace": "Listings, clients and team in one space",
+        "messages": "Conversations with individuals and professionals"
+      },
+      "leave": "Leave workspace"
     },
     "profile": "Profile",
     "settings": "Settings",
@@ -343,6 +345,36 @@
       "settings": "⌘S",
       "shortcuts": "⌘K",
       "logout": "⇧⌘Q"
+    }
+  },
+  "workspaceLeave": {
+    "officeQuoted": "“{name}”",
+    "officeUnnamed": "this workspace",
+    "title": "Leave {office}",
+    "description": "You leave only this workspace. Your account stays.",
+    "loading": "Working out what will change…",
+    "previewFailed": "We could not work out what will change. Nothing was changed.",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "consequencesHeading": "What will happen",
+    "losesAccess": "You immediately lose access to the workspace’s listings, clients, projects and messages.",
+    "contributionsStay": "Everything you created stays in the workspace.",
+    "noActTeams": "You are not responsible for any deal team.",
+    "actTeamsTo": "{count, plural, one {Responsibility for # deal team passes to: {heir}.} other {Responsibility for # deal teams passes to: {heir}.}}",
+    "actTeamsOrphaned": "{count, plural, one {# deal team will have no one responsible until the workspace assigns someone.} other {# deal teams will have no one responsible until the workspace assigns someone.}}",
+    "homeContinues": "This workspace is your main space: this device continues in your personal space and your other devices are signed out.",
+    "staysSignedIn": "You stay signed in — you only lose access to this workspace.",
+    "unaffected": "Your personal space and your other workspaces are not affected.",
+    "rejoin": "To return you will need a new invitation.",
+    "confirm": "Leave {office}",
+    "leaving": "Leaving…",
+    "manageRoles": "Manage roles",
+    "failed": "Leaving did not complete. It is safe to try again.",
+    "left": "You left {office}.",
+    "signInAgain": "You left {office}. Sign in again to continue.",
+    "refused": {
+      "notAMember": "You are not a member of this workspace — there is nothing to leave.",
+      "lastManager": "You are the last administrator of this workspace. Appoint another administrator first, so the workspace is not left without management."
     }
   }
 }

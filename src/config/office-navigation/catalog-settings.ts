@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { AGENCY_SHOWCASE_ROUTE } from '@/lib/mandate/mandate-routes';
+import { APP_ROUTES } from '@/lib/routes/appRoutes';
 import { ADMIN_ONLY, type CatalogEntry } from './catalog-types';
 
 export const SETTINGS_CATALOG = [
@@ -38,7 +39,7 @@ export const SETTINGS_CATALOG = [
         policy: { permissions: ['admin_access'], environments: ['development'] },
       },
       { kind: 'link', navLabelKey: 'admin.setup', icon: Shield, href: '/admin/setup', policy: ADMIN_ONLY },
-      { kind: 'link', navLabelKey: 'admin.roleManagement', icon: Users, href: '/admin/role-management', policy: ADMIN_ONLY },
+      { kind: 'link', navLabelKey: 'admin.roleManagement', icon: Users, href: APP_ROUTES.roleManagement, policy: ADMIN_ONLY },
       { kind: 'link', navLabelKey: 'admin.auditLog', icon: History, href: '/admin/audit-log', policy: ADMIN_ONLY },
       { kind: 'link', navLabelKey: 'admin.backup', icon: DatabaseBackup, href: '/admin/backup', policy: ADMIN_ONLY },
       // 🏆 ADR-841 §7 Α21.11 — η βιτρίνα **ΧΩΡΙΣ** `admin_access`, και είναι απόφαση: είναι το
