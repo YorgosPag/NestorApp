@@ -151,7 +151,6 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
             mapStyle={OSM_MAP_STYLE}
             onClick={handleMapClick}
             cursor="crosshair"
-            attributionControl={false}
           >
             <Source id={GEOFENCE_SOURCE_ID} type="geojson" data={circleGeoJSON}>
               <Layer {...CIRCLE_FILL} />

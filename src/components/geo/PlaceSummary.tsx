@@ -227,7 +227,6 @@ function PlaceOutlineFigure({
   return (
     <div className="space-y-1">
       <PlaceMap center={center} outline={outline.kind === 'outline' ? outline.outline : null} heightClass="h-56" />
-      <p className="text-xs text-muted-foreground">{t(`${NS}:place.attribution`)}</p>
       <OutlineNotice state={outline} />
     </div>
   );

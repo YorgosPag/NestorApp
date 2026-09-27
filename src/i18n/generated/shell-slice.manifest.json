@@ -102,7 +102,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d669e19ebde5d70c0a0b56f7585239f6f9c7be97fe2f652f93653486726224f8",
+  "inputsSha256": "8dc7c27f9a921fdb835795d8011e21807d0a8dce1aed69a90318e0bd45562abe",
   "languages": [
     "el"
   ],
@@ -251,9 +251,9 @@
     "src/components/demand/MyDemandsContent.tsx": "fb73ba7a033bfdd54410c9fe941106fa4dd184e640ac6dfcc7c6cb0f77c1403f",
     "src/components/demand/PlaceInterestPanel.tsx": "d04bd1e5d2896cd2cd5c87f813e2f93f5f85fa1299592f0562505ceb96ad1f2a",
     "src/components/demand/demand-form-labels.ts": "12e017248a07abe13048fa682e7089a885d4fe8f319d20b4fc22d499de9ad592",
-    "src/components/demand/form/DemandAreaOutline.tsx": "dcf5dca8cc006f1659d12b4837b59ddc5d3e94a03b423b492ef70d242dbee931",
+    "src/components/demand/form/DemandAreaOutline.tsx": "930407cb588d6e8dc93858b919f1e719ccdfbd41be7ffe7a07bac6514b57df6d",
     "src/components/demand/form/DemandAxisFields.tsx": "ea790f6e61103e86c1f7a91e9866e084aed5f63b8588213a89b6d2a7282d81ea",
-    "src/components/demand/form/DemandFrontageField.tsx": "6f0ef45f48016a09ad62d0650487cd6fb531d74d619891ec43f0509462fcec88",
+    "src/components/demand/form/DemandFrontageField.tsx": "cf0d8c36cb6c2a619e9ef0541919f9fa822937561ebb15b06a29957474db2d19",
     "src/components/demand/form/DemandLifeContextField.tsx": "b9f82dd9286c7f5546f77a2225f4e925032215504a1e56a23382713bbac60308",
     "src/components/demand/form/DemandPlaceResolver.tsx": "4b5edd0ffbe3c1dbc07b8f7f5f280800a354fa94df5d338672d9216b4c55777f",
     "src/components/demand/form/DemandProximityField.tsx": "4315709f7b5632b7a8c59ada912d672447e36b86640cdb13355f10271a71e53d",
@@ -262,11 +262,11 @@
     "src/components/generic/UniversalTabsRenderer.tsx": "642c6f838b7371f45eb4c0cb21d50ecea437bd5640dcaa2bf3951a2bcbf3ea78",
     "src/components/generic/mappings/propertyDossierMappings.ts": "9d4366f31abd6e097cca3828d0eb1b120df9e8b9bedce45677294a2837587821",
     "src/components/generic/utils/IconMapping.ts": "44c88586d596b88bffe0e07aca5e4a2dc90a83cfe1123ee22a59e0073b05e4b0",
-    "src/components/geo/PlaceChooser.tsx": "a573de9156dc792f54fb5bcbfe85808feebb0b4590b8d1a2065f81e680057988",
+    "src/components/geo/PlaceChooser.tsx": "ee774dd2f54819e8df3c00301287b35a9bc2ed6ae2461c27c4fb8febfb347627",
     "src/components/geo/PlaceChooserStatus.tsx": "3ac066c41b6c156c93cda7f4fa7c143fe851fff29ad6603b11ef3937a8908fb1",
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
     "src/components/geo/PlaceMap.tsx": "f80f446b6123b22ecbf1f604d9457a4b8990e61b71c7b87c8bcdcdab3f56ffcd",
-    "src/components/geo/PlaceSummary.tsx": "ef3e533db3d9f8176b536c853eb77cd2cab121381a9d708bda870bd40bd9419b",
+    "src/components/geo/PlaceSummary.tsx": "aa56dd24e0b0a56689c3077bfe62a9deeb0415c3e43330c622f686e080724bb4",
     "src/components/geo/ResolvedPlaceConfirmation.tsx": "05bb80545972f34c99e8bd175b48e5ba148768c26e9c1f222851bf630bf3cd92",
     "src/components/geo/outline-draft.tsx": "522cf963ac96817fb386c275e724d2e3d2a6a12800749249759b7aa114bfc33e",
     "src/components/geo/use-camera-frame.ts": "7e2c35905eb52783b433a050129f35fc3c8de92441b10a9896916a06a7394995",
@@ -2180,7 +2180,6 @@
         },
         "search-results": {
           "keys": [
-            "place.attribution",
             "place.change",
             "place.chosen",
             "place.confirm",
@@ -4444,7 +4443,6 @@
         },
         "search-results": {
           "keys": [
-            "place.attribution",
             "place.change",
             "place.chosen",
             "place.confirm",
@@ -4835,7 +4833,6 @@
         },
         "search-results": {
           "keys": [
-            "place.attribution",
             "place.change",
             "place.chosen",
             "place.confirm",
@@ -5063,7 +5060,6 @@
         },
         "search-results": {
           "keys": [
-            "place.attribution",
             "place.change",
             "place.chosen",
             "place.confirm",
@@ -5706,7 +5702,6 @@
         },
         "search-results": {
           "keys": [
-            "place.attribution",
             "place.change",
             "place.chosen",
             "place.confirm",
@@ -6168,7 +6163,6 @@
         },
         "search-results": {
           "keys": [
-            "place.attribution",
             "place.change",
             "place.chosen",
             "place.confirm",

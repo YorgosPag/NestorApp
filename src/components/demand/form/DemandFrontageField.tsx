@@ -53,7 +53,7 @@ import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 import { DemandFieldset, DemandNumberField, DemandOptionsField } from './demand-field-primitives';
 
 const NS = 'property-market';
-/** Ο ίδιος χάρτης-επιφάνεια με το {@link DemandAreaOutline}, ίδια απόδοση OSM. */
+/** Ο ίδιος χάρτης-επιφάνεια με το {@link DemandAreaOutline} (την απόδοση OSM τη ζωγραφίζει το σύνορο του χάρτη, ADR-891 §8). */
 const MAP_NS = 'search-results';
 const K = `${NS}:demand.form.frontage`;
 
@@ -147,7 +147,6 @@ export function DemandFrontageField(): React.ReactElement {
       </p>
 
       <PlaceMap center={center} onPick={handlePick} trace={axis} outline={previewOutline} />
-      <p className="text-xs text-muted-foreground">{t(`${MAP_NS}:place.attribution`)}</p>
 
       {phase === 'axis' ? (
         <FrontageAxisControls

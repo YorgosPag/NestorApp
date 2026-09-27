@@ -362,7 +362,6 @@ export function PlaceMap({
         onLoad={() => setReady(true)}
         onClick={handleClick}
         cursor={interactive ? 'crosshair' : 'default'}
-        attributionControl={false}
       >
         <PlaceMapLayers halo={halo} outline={outline} shapes={shapes} trace={trace} pin={pin} focus={focus} />
       </Map>

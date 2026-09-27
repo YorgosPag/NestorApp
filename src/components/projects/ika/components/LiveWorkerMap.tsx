@@ -154,7 +154,6 @@ export function LiveWorkerMap({
             }}
             style={{ width: '100%', height: 380 }}
             mapStyle={OSM_MAP_STYLE}
-            attributionControl={false}
           >
             {/* Geofence circle overlay (read-only) */}
             {circleGeoJSON && (

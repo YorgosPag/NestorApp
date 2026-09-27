@@ -84,7 +84,6 @@ export function DemandAreaOutline({ shapes, onShapesChange }: DemandAreaOutlineP
         trace={draft.vertices}
         outline={draft.outline}
       />
-      <p className="text-xs text-muted-foreground">{t(`${NS}:place.attribution`)}</p>
       <OutlineDraftControls draft={draft} />
       <footer className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">{t(`${DRAW_NS}:draw.shapes`, { count: area.count })}</span>

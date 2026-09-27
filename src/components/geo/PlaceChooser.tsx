@@ -226,7 +226,6 @@ export function PlaceChooser({
         pin={gesture === 'pin' ? pin : null}
         disabled={state.kind === 'working'}
       />
-      <p className="text-xs text-muted-foreground">{t('place.attribution')}</p>
 
       {gesture === 'draw' && <OutlineDraftControls draft={draft} />}
 
