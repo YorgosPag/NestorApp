@@ -52,7 +52,12 @@ export type TourAccessRefusal =
    * `link-only` σε περιήγηση **ιδιώτη** — οι σύνδεσμοι ανά παραλήπτη (ADR-315) είναι εμβέλειας μισθωτή, άρα θα ήταν
    * ορατότητα που **κανείς** δεν μπορεί να χρησιμοποιήσει. Ο ιδιώτης έχει το `on-request` (ανά άνθρωπο, Κ3β).
    */
-  | 'visibility-unsupported';
+  | 'visibility-unsupported'
+  /** Ο γράφος (Φ2β, `tour-graph-write.ts`) — κάθε μία λέει στον υπεύθυνο **τι** να κάνει. */
+  | TourGraphRefusal;
+
+/** Αρνήσεις του γραφέα του γράφου — `TourGraphEditRefusal` + ό,τι κρίνει μόνο ο διακομιστής. */
+type TourGraphRefusal = 'capture-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'node-absent' | 'level-absent' | 'graph-full';
 
 export type TourAccessRefused = { readonly kind: 'refused'; readonly reason: TourAccessRefusal };
 

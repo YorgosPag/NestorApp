@@ -14,8 +14,8 @@ import 'server-only';
  * και ο **προσωπικός σύνδεσμος** δεν ρωτούσε τίποτα — προσφερόταν και για αγέννητη περιήγηση ⇒ 403/404. Πλέον τον
  * ΙΔΙΟ κριτή ρωτούν: μανιφέστο · κάρτα · δημοσίευση · δημιουργία συνδέσμου · οθόνη του υπευθύνου (`viewerStopCount`).
  *
- * ⏳ Διαβάζεται την ώρα της ερώτησης επειδή οι γραφείς της ετοιμότητας (ψήστης tileset · τοποθέτηση στον γράφο)
- * είναι Φ2. Όταν υπάρξουν, η απάντηση υλοποιείται **πάνω** στην περιήγηση από αυτούς — με αυτόν τον κριτή.
+ * ⏳ Διαβάζεται την ώρα της ερώτησης. Γραφείς της ετοιμότητας (Φ2): ο ψήστης (`tour-tileset-baker.ts`, `ready` +
+ * `faceSize`) και η τοποθέτηση στον γράφο (`nodeId`).
  */
 
 import type { DocumentReference, Query, QuerySnapshot, Transaction } from 'firebase-admin/firestore';
@@ -23,33 +23,22 @@ import type { DocumentReference, Query, QuerySnapshot, Transaction } from 'fireb
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { selectViewerCaptures } from '@/lib/spatial-tour/tour-capture-invariants';
+import { stopOfCapture, type TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
 import type { TourCapture } from '@/types/spatial-tour';
 
 /** Όσες λήψεις διαβάζονται — ≥ `MAX_TOUR_NODES` ώστε να χωρά η πιο πρόσφατη κάθε κόμβου. */
 const CAPTURE_READ_LIMIT = 500;
 
-/** Μία στάση του θεατή — ό,τι χρειάζεται ο θεατής της Φ1 για να ζητήσει πλακίδια. */
-export interface TourManifestStop {
-  readonly captureId: string;
-  readonly nodeId: string;
-  readonly capturedAt: string;
-  readonly headingRad: number;
-  /** Το περιεχόμενο του tileset — μέρος της διεύθυνσης μέσων, ώστε νέα έκδοση = νέο URL (αμετάβλητη cache). */
-  readonly tilesetHash: string;
-}
-
 /**
  * **Ο κριτής** — καθαρός: λήψεις για το κοινό της αγγελίας, η πιο πρόσφατη ανά **τοποθετημένο** κόμβο, με **έτοιμο**
- * tileset. Κενό ⇒ τίποτα να δειχτεί (η αγγελία δεν δείχνει κάρτα, η θέαση λέει «ετοιμάζεται»).
+ * tileset (`stopOfCapture` — ο ΕΝΑΣ ορισμός του «έτοιμη», §4.10). Κενό ⇒ τίποτα να δειχτεί (η αγγελία δεν δείχνει
+ * κάρτα, η θέαση λέει «ετοιμάζεται»).
  */
 export function viewerStops(captures: readonly TourCapture[]): TourManifestStop[] {
-  return selectViewerCaptures(captures).flatMap((capture): TourManifestStop[] =>
-    capture.tileset.state === 'ready' && capture.tileset.contentHash !== null && capture.nodeId !== null
-      ? [{
-          captureId: capture.id, nodeId: capture.nodeId, capturedAt: capture.capturedAt,
-          headingRad: capture.headingRad, tilesetHash: capture.tileset.contentHash,
-        }]
-      : []);
+  return selectViewerCaptures(captures).flatMap((capture): TourManifestStop[] => {
+    const stop = capture.nodeId === null ? null : stopOfCapture(capture, capture.nodeId);
+    return stop === null ? [] : [stop];
+  });
 }
 
 /** Το ερώτημα των υποψήφιων στάσεων — ΕΝΑ, για ανάγνωση **και** για συναλλαγή. */

@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "tour_captures",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "tileset.state", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "stay_bookings",
       "queryScope": "COLLECTION",
       "fields": [

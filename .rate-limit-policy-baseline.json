@@ -148,6 +148,7 @@
     "createScanCronRoute::/api/cron/purge-deleted-entities",
     "createScanCronRoute::/api/cron/stay-channel-import",
     "createScanCronRoute::/api/cron/stay-hold-expiry",
+    "createScanCronRoute::/api/cron/tour-tileset-bake",
     "createShowcaseEmailRoute::/api/buildings/[buildingId]/showcase/email",
     "createShowcaseEmailRoute::/api/parking/[id]/showcase/email",
     "createShowcaseEmailRoute::/api/projects/[projectId]/showcase/email",

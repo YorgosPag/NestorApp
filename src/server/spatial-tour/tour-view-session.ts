@@ -24,6 +24,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, tourAccessStanding, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import { judgeTourView } from '@/lib/spatial-tour/tour-view-policy';
+import { viewerLevelsOf, type TourViewerLevel } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
 import { normalizeUnifiedShare } from '@/server/sharing/share-token-lookup';
 import type { SpatialTour, TourNode, TourSubject } from '@/types/spatial-tour';
@@ -32,7 +33,8 @@ import { refuseTourAccess, tourAccessRequestRef, type TourAccessRefused } from '
 import { locateSpatialTour } from './tour-locate';
 import { issueTourViewGrant, type TourViewGrant } from './tour-view-grant';
 import { recordTourRequestVisit } from './tour-view-trace';
-import { readViewerStops, type TourManifestStop } from './tour-viewer-stops';
+import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
+import { readViewerStops } from './tour-viewer-stops';
 
 export interface TourViewSessionInput {
   readonly subject: TourSubject;
@@ -49,6 +51,8 @@ export interface TourManifest {
   readonly tourId: string;
   readonly label: string | null;
   readonly nodes: readonly TourNode[];
+  /** Οι όροφοι (ADR-884 Φ2γ) — ως τη Φ1 τους έδινε ο καλών του θεατή. */
+  readonly levels: readonly TourViewerLevel[];
   readonly stops: readonly TourManifestStop[];
   /** Υπάρχει τουλάχιστον μία στάση με έτοιμα πλακίδια; */
   readonly ready: boolean;
@@ -87,7 +91,7 @@ async function requestStandingOf(tourRef: DocumentReference, uid: string | null,
 
 async function manifestOf(tour: SpatialTour, tourRef: DocumentReference, label: string | null): Promise<TourManifest> {
   const stops = await readViewerStops(tourRef);
-  return { tourId: tour.id, label, nodes: tour.nodes, stops, ready: stops.length > 0 };
+  return { tourId: tour.id, label, nodes: tour.nodes, levels: viewerLevelsOf(tour.levels), stops, ready: stops.length > 0 };
 }
 
 /** **Άνοιξε μια επίσκεψη** — κρίση, κουπόνι, ίχνος (μία φορά ανά επίσκεψη), μανιφέστο. */
