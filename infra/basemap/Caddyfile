@@ -1,0 +1,44 @@
+# ADR-891 §9 — ο στατικός διακομιστής του χάρτη φόντου (maps.nestorconstruct.gr)
+#
+# Σερβίρει ΑΥΤΟΥΣΙΟ τον φάκελο του `npm run build:basemap` (node_modules/.cache/basemap/out/bundle):
+#   /greece-YYYYMMDD.pmtiles          ένα αρχείο, διαβάζεται με HTTP Range (206)
+#   /assets/<rev>/fonts/…/*.pbf       γραμματοσειρές χάρτη (OFL-1.1, το κείμενο στο fonts/OFL.txt)
+#   /assets/<rev>/sprites/v4/…        εικονίδια (MIT, το κείμενο στο sprites/LICENSE.md)
+#
+# TLS/HTTPS: τα αναλαμβάνει ο Traefik του Coolify μπροστά από εδώ, οπότε ο Caddy ακούει απλό HTTP στη :80.
+#
+# ⚠️ ΚΑΜΙΑ ΣΥΜΠΙΕΣΗ (κανένα `encode`): τα πλακίδια μέσα στο PMTiles είναι ΗΔΗ gzip, και μια απάντηση 206
+#    συμπιεσμένη ξανά θα έδινε λάθος bytes στο εύρος που ζήτησε ο πελάτης.
+# 🔑 Τα ονόματα φέρουν έκδοση ⇒ `immutable` για ένα χρόνο. Νέο build = νέο όνομα, ποτέ αντικατάσταση.
+# 🔑 CORS `*` μόνο για GET/HEAD: δημόσια δεδομένα, και το στιγμιότυπο αγγελίας διαβάζει τον καμβά (`toDataURL`),
+#    που «μολύνεται» αν ένα sprite έρθει χωρίς CORS.
+
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	root * /srv/basemap
+
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+		Access-Control-Allow-Headers "Range, If-Match, If-None-Match, If-Range"
+		Access-Control-Expose-Headers "ETag, Content-Range, Content-Length, Accept-Ranges"
+		Cache-Control "public, max-age=31536000, immutable"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+
+	@preflight method OPTIONS
+	respond @preflight 204
+
+	respond /healthz 200
+
+	@pbf path *.pbf
+	header @pbf Content-Type application/x-protobuf
+
+	# Go http.ServeContent: Range/206, If-Range, ETag, 304 — χωρίς καμία άλλη ρύθμιση. Καμία λίστα φακέλων.
+	file_server
+}

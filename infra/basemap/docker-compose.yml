@@ -1,0 +1,54 @@
+# ADR-891 §9 — ο διακομιστής του χάρτη φόντου, ως πόρος «Docker Compose» του Coolify.
+#
+# Στο Coolify: New Resource → Docker Compose (Empty) → επικόλληση αυτού του αρχείου.
+#   Domain της υπηρεσίας `basemap`: https://maps.nestorconstruct.gr  (θύρα 80 του κοντέινερ)
+#   ⚠️ Gzip compression: ΚΛΕΙΣΤΟ (τα πλακίδια είναι ήδη gzip — βλ. Caddyfile).
+#
+# Τα αρχεία ΔΕΝ ζουν στην εικόνα: ανεβαίνουν με `scp` στο /srv/basemap του διακομιστή (ADR-891 §9, οδηγίες).
+# Ο φάκελος προσαρτάται μόνο για ανάγνωση.
+
+services:
+  basemap:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1/healthz']
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - type: bind
+        source: /srv/basemap
+        target: /srv/basemap
+        read_only: true
+      # ⚠️ ΠΡΟΒΟΛΗ του infra/basemap/Caddyfile, με την επέκταση `content:` του Coolify (τη μόνη τεκμηριωμένη:
+      # coolify.io/docs/knowledge-base/docker/compose — το top-level `configs.content` του Compose ΔΕΝ αναφέρεται).
+      # Το Coolify δεν διαβάζει αρχεία δίπλα σε compose που επικολλάται. Η πηγή είναι το Caddyfile· η άγκυρα
+      # `scripts/lib/basemap/__tests__/basemap-bundle.test.ts` (ομάδα Γ) κοκκινίζει αν οι οδηγίες αποκλίνουν.
+      # ΜΕΝΕΙ ΤΕΛΕΥΤΑΙΟ στο αρχείο: η άγκυρα διαβάζει ό,τι ακολουθεί το κλειδί του περιεχομένου ως το τέλος.
+      - type: bind
+        source: ./Caddyfile
+        target: /etc/caddy/Caddyfile
+        content: |
+          {
+          	admin off
+          	auto_https off
+          }
+          :80 {
+          	root * /srv/basemap
+          	header {
+          		Access-Control-Allow-Origin *
+          		Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+          		Access-Control-Allow-Headers "Range, If-Match, If-None-Match, If-Range"
+          		Access-Control-Expose-Headers "ETag, Content-Range, Content-Length, Accept-Ranges"
+          		Cache-Control "public, max-age=31536000, immutable"
+          		X-Content-Type-Options nosniff
+          		-Server
+          	}
+          	@preflight method OPTIONS
+          	respond @preflight 204
+          	respond /healthz 200
+          	@pbf path *.pbf
+          	header @pbf Content-Type application/x-protobuf
+          	file_server
+          }

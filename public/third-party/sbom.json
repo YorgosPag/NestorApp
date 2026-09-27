@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-09-18T16:07:35.522Z",
+    "timestamp": "2026-09-27T07:34:58.161Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:080ade301b766546f65800598792d4bc0cb7b26c166465353f422dc7efb38794"
+        "value": "sha256:f6a6de154a5980f4febfca9d96e53cd8fc07eb13aeadb150fbbdbeea4a1f460f"
       }
     ]
   },
@@ -4867,6 +4867,31 @@
       "name": "@protobufjs/utf8",
       "version": "1.1.2",
       "purl": "pkg:npm/@protobufjs/utf8@1.1.2",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@protomaps/basemaps@5.7.2",
+      "name": "@protomaps/basemaps",
+      "version": "5.7.2",
+      "purl": "pkg:npm/@protomaps/basemaps@5.7.2",
       "scope": "optional",
       "licenses": [
         {
@@ -21172,6 +21197,31 @@
         {
           "license": {
             "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/pmtiles@4.5.0",
+      "name": "pmtiles",
+      "version": "4.5.0",
+      "purl": "pkg:npm/pmtiles@4.5.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
           }
         }
       ],
