@@ -117,17 +117,8 @@ export function drawCircle(
   radius: number,
   options: DrawOptions = {}
 ): void {
-  if (radius <= 0) return;
-
-  ctx.save();
-  applyOptions(ctx, options);
-
-  ctx.beginPath();
-  // Use ellipse() instead of arc() for consistent rendering
-  ctx.ellipse(center.x, center.y, radius, radius, 0, 0, Math.PI * 2);
-
-  finishPath(ctx, options);
-  ctx.restore();
+  // Κύκλος = τόξος 0 → 2π — ΜΙΑ διαδρομή σχεδίασης (ήταν δίδυμο του drawArc, CHECK 3.28).
+  drawArc(ctx, center, radius, 0, Math.PI * 2, false, options);
 }
 
 /**
@@ -218,9 +209,10 @@ export function addArcPath(
 // =============================================================================
 
 /**
- * TAU constant (2 * PI) for full circle
+ * TAU constant (2 * PI) for full circle — ADR-077.
+ * Η ΜΙΑ δήλωση ζει στο `@/lib/geometry/angle` (ADR-884 §4.8)· εδώ επανεξαγωγή για τους εισαγωγείς του subapp.
  */
-export const TAU = Math.PI * 2;
+export { TAU } from '@/lib/geometry/angle';
 
 // 🏢 ADR-067: Angle conversion functions REMOVED - use canonical from:
 // import { degToRad, radToDeg } from '../entities/shared/geometry-utils';

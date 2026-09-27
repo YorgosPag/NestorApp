@@ -67,24 +67,22 @@ export function angleFromHorizontal(start: Point2D, end: Point2D): number {
   return angle;
 }
 
-// ===== ANGLE CONVERSION CONSTANTS & FUNCTIONS =====
-// 🏢 ADR-067: Centralized Radians/Degrees Conversion (2026-01-31)
-
-/**
- * Conversion constant: degrees to radians
- * Usage: angleRadians = angleDegrees * DEGREES_TO_RADIANS
- */
-export const DEGREES_TO_RADIANS = Math.PI / 180;
-
-/**
- * Conversion constant: radians to degrees
- * Usage: angleDegrees = angleRadians * RADIANS_TO_DEGREES
- */
-export const RADIANS_TO_DEGREES = 180 / Math.PI;
+// ===== ANGLE CONVERSION + NORMALIZATION =====
+// 🏢 ADR-067 · ADR-068 · ADR-134 — η ΜΙΑ δήλωση ζει στο `@/lib/geometry/angle` (καθαρή, χωρίς
+// εισαγωγές — ADR-884 §4.8: τη χρειάζεται ο δημόσιος θεατής περιήγησης χωρίς τον κόσμο της απόδοσης).
+// Εδώ ΜΟΝΟ επανεξαγωγή, ώστε κανένας εισαγωγέας του subapp να μη χρειαστεί αλλαγή.
+export {
+  DEGREES_TO_RADIANS,
+  RADIANS_TO_DEGREES,
+  degToRad,
+  radToDeg,
+  normalizeAngleDiff,
+  normalizeAngleRad,
+  normalizeAngleDeg,
+} from '@/lib/geometry/angle';
 
 // ===== ANGULAR CONSTANTS =====
 // 🏢 ADR-103: Centralized Angular Constants (2026-01-31)
-
 /**
  * Right angle constant: 90° in radians (π/2)
  * Usage: Text rotation flip checks, vertical text rotation
@@ -98,89 +96,6 @@ export const RIGHT_ANGLE = Math.PI / 2;  // ≈ 1.5708 rad (90°)
  * @see ghost-entity-renderer.ts
  */
 export const ARROW_ANGLE = Math.PI / 6;  // ≈ 0.5236 rad (30°)
-
-/**
- * Convert degrees to radians
- * 🏢 ADR-067: Canonical source for deg→rad conversion
- */
-export function degToRad(degrees: number): number {
-  return degrees * DEGREES_TO_RADIANS;
-}
-
-/**
- * Convert radians to degrees
- * 🏢 ADR-067: Canonical source for rad→deg conversion
- */
-export function radToDeg(radians: number): number {
-  return radians * RADIANS_TO_DEGREES;
-}
-
-// ===== ANGLE NORMALIZATION =====
-// 🏢 ADR-068: Centralized Angle Normalization (2026-01-31)
-// 🏢 ADR-077: TAU imported from canvasPaths.ts (see imports at top)
-// 🏢 ADR-134: Centralized Angle Difference Normalization (2026-02-01)
-
-/**
- * 🏢 ADR-134: Normalize angle difference to (-π, π] range
- * Finds the "short" angular direction between two angles
- *
- * Mathematical range: (-π, π]
- * - Result > 0: counterclockwise direction
- * - Result < 0: clockwise direction
- *
- * Used by: arc direction detection, angle measurement, arc drawing tools
- *
- * @param angleDiff - Raw angle difference in radians (angle2 - angle1)
- * @returns Normalized angle in range (-π, π]
- *
- * @example
- * normalizeAngleDiff(3 * Math.PI)   // → π (wraps around)
- * normalizeAngleDiff(-3 * Math.PI)  // → -π (wraps around)
- * normalizeAngleDiff(Math.PI / 2)   // → π/2 (unchanged, already in range)
- * normalizeAngleDiff(-Math.PI)      // → π (boundary case: -π maps to π)
- */
-export function normalizeAngleDiff(angleDiff: number): number {
-  let diff = angleDiff;
-  while (diff > Math.PI) diff -= TAU;
-  while (diff <= -Math.PI) diff += TAU;
-  return diff;
-}
-
-/**
- * Normalize angle in RADIANS to [0, 2π) range
- * Handles any input value (including multiple wraps and extreme values)
- *
- * @param radians - Angle in radians (any value)
- * @returns Normalized angle in [0, 2π) range
- *
- * @example
- * normalizeAngleRad(-Math.PI / 2)  // → 3π/2 (≈4.712)
- * normalizeAngleRad(3 * Math.PI)   // → π (≈3.142)
- * normalizeAngleRad(0)             // → 0
- */
-export function normalizeAngleRad(radians: number): number {
-  let normalized = radians % TAU;
-  if (normalized < 0) normalized += TAU;
-  return normalized;
-}
-
-/**
- * Normalize angle in DEGREES to [0, 360) range
- * Handles any input value (including multiple wraps and extreme values)
- *
- * @param degrees - Angle in degrees (any value)
- * @returns Normalized angle in [0, 360) range
- *
- * @example
- * normalizeAngleDeg(-90)   // → 270
- * normalizeAngleDeg(450)   // → 90
- * normalizeAngleDeg(360)   // → 0
- */
-export function normalizeAngleDeg(degrees: number): number {
-  let normalized = degrees % 360;
-  if (normalized < 0) normalized += 360;
-  return normalized;
-}
 
 // ===== TEXT ROTATION UTILITIES =====
 // 🏢 ADR-112: Centralized Text Rotation Pattern (2026-02-01)

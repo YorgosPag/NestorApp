@@ -162,14 +162,14 @@
       "tier": 3
     },
     "normalize-angle-deg": {
-      "ssotFile": "src/subapps/dxf-viewer/rendering/entities/shared/geometry-angle-utils.ts",
-      "description": "TIER A duplicate-audit (2026-07-08) — normalizing a degree value into [0,360) lives ONCE as normalizeAngleDeg() in rendering/entities/shared/geometry-angle-utils.ts (branch form: `let n = deg % 360; if (n < 0) n += 360;`). It had been re-implemented as the double-modulo idiom `((x % 360) + 360) % 360` inline + local re-declarations across ~18 sites (io/tek, formatting, dimensions, array path-sampler, polygon-azimuth-utils, dxf-symbol-detector, thermal, snapping intersection-calculators, clip-geometry, useCalibration, …). Re-introducing either the double-modulo inline or a local `function normalizeAngleDeg` forks the wrap logic — import normalizeAngleDeg instead. Both patterns are zero-collision repo-wide. Allowlist: geometry-angle-utils.ts (the SSoT), and radial-ring-logic.ts for the single legitimate self-use of the double-modulo inside pieSectorPath() (a pure SVG-arc large-arc-flag test, not an entity-angle normalization).",
+      "ssotFile": "src/lib/geometry/angle.ts",
+      "description": "TIER A duplicate-audit (2026-07-08) — normalizing a degree value into [0,360) lives ONCE as normalizeAngleDeg() in src/lib/geometry/angle.ts (moved 2026-09-27, ADR-884 §4.8: import-free so the public tour viewer can use it without the DXF rendering chain; rendering/entities/shared/geometry-angle-utils.ts only RE-EXPORTS it, so subapp importers are unchanged) (branch form: `let n = deg % 360; if (n < 0) n += 360;`). It had been re-implemented as the double-modulo idiom `((x % 360) + 360) % 360` inline + local re-declarations across ~18 sites (io/tek, formatting, dimensions, array path-sampler, polygon-azimuth-utils, dxf-symbol-detector, thermal, snapping intersection-calculators, clip-geometry, useCalibration, …). Re-introducing either the double-modulo inline or a local `function normalizeAngleDeg` forks the wrap logic — import normalizeAngleDeg instead. Both patterns are zero-collision repo-wide. Allowlist: geometry-angle-utils.ts (the SSoT), and radial-ring-logic.ts for the single legitimate self-use of the double-modulo inside pieSectorPath() (a pure SVG-arc large-arc-flag test, not an entity-angle normalization).",
       "forbiddenPatterns": [
         "\\(\\(.*% 360\\) \\+ 360\\) % 360",
         "function normalizeAngleDeg"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/rendering/entities/shared/geometry-angle-utils.ts",
+        "src/lib/geometry/angle.ts",
         "src/subapps/dxf-viewer/systems/dynamic-input/radial-ring-logic.ts"
       ],
       "tier": 3
