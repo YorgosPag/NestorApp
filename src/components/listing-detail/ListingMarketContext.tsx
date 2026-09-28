@@ -4,7 +4,8 @@
  * **Τιμές συμβολαίων στην περιοχή** — στη σελίδα αγγελίας, κάτω από την τιμή (ADR-889 Φ2 · ADR-890 Φ2).
  *
  * Τι λέει, με αυτή τη σειρά: η διάμεση **τιμή συμβολαίου** του ίδιου τμήματος στην περιοχή (12 μήνες) · η **τιμή
- * ζώνης** · **πού πέφτει η ζητούμενη τιμή** της αγγελίας ανάμεσα στα συμβόλαια · οι **παρόμοιες πωλήσεις** ·
+ * ζώνης** · **πού πέφτει η ζητούμενη τιμή** της αγγελίας ανάμεσα στα συμβόλαια · η **εποχή του κτιρίου** (ζητούν ↔
+ * συμβόλαια του ίδιου κάδου έτους, ADR-890 §13.Α) · οι **παρόμοιες πωλήσεις** ·
  * σύνδεσμος στη σελίδα της περιοχής · η αναφορά της πηγής κατά CC-BY · η **ζώνη αντικειμενικής αξίας** της θέσης
  * (ADR-889 Φ5, `ListingValueZone`).
  *
@@ -27,6 +28,7 @@ import { Link } from '@/lib/workspace/navigation';
 
 import { ListingComparableSales } from './ListingComparableSales';
 import { ListingValueZone } from './ListingValueZone';
+import { ListingYearBuiltFigures } from './ListingYearBuiltFigures';
 
 const NS = 'market-contracts';
 const HEADING_ID = 'listing-market-context';
@@ -68,6 +70,7 @@ function Contracts({ context }: { readonly context: Context }) {
   return (
     <>
       <AreaFigures context={context} />
+      <ListingYearBuiltFigures context={context} />
       <ListingComparableSales context={context} />
       <Link href={areaMarketHref(context.area.id)} className="text-sm font-medium text-foreground underline underline-offset-4">
         {t(`${NS}:listing.seeArea`, { area: context.area.name })}
