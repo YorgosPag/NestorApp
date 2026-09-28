@@ -109,6 +109,21 @@
     "median": "We show the median, not the average, so a single extreme listing does not change the picture. The “middle 50%” is the range from the 25th to the 75th percentile.",
     "threshold": "A number is shown only when there are at least {min} listings, the same minimum the UK Office for National Statistics (ONS) uses for a reliable median. Below that we show the count only.",
     "exclusions": "Listings without a price or a size, or with a price outside plausible bounds, are left out of the numbers. We still count them and show them, so you know how many listings each number comes from.",
-    "cadence": "The price summary is recomputed every night. The list and count of listings refresh every 15 minutes."
+    "cadence": "The price summary is recomputed every night. The list and count of listings refresh every 15 minutes.",
+    "trend": "The trend is monthly: each month counts every listing that was published on at least one of its days, at its latest asking price. 3-, 6- and 12-month changes are shown only when both months have a number."
+  },
+  "trend": {
+    "title": "Median asking price by month",
+    "gaps": "Months with fewer than {min} listings stay empty and are not joined by the line.",
+    "changes": "Change in median",
+    "change": "{months} months: {pct}",
+    "pending": "Tracking started in {since}. The trend line appears once {months} months each have at least {min} listings."
+  },
+  "yield": {
+    "title": "Rental yield (gross)",
+    "asking": "{pct} using asking sale prices",
+    "contract": "{pct} using contract prices (12 months)",
+    "suppressed": "At least {min} sale and {min} rental listings are needed; here there are {sale} and {rent}.",
+    "note": "Gross yield = 12 × median monthly rent per m² ÷ median price per m². It does not deduct service charges, taxes, insurance or vacant months, and it is not the yield of any specific property."
   }
 }

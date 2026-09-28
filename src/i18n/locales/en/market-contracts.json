@@ -53,7 +53,12 @@
     "noArea": "This listing has no location in an area, so it is not compared with contracts.",
     "noSegment": "There are no comparable contracts for this kind of property.",
     "unavailable": "Contract prices are not available right now.",
-    "seeArea": "All prices for {area}"
+    "seeArea": "All prices for {area}",
+    "yearBuiltTitle": "Buildings from {bucket} in {area}",
+    "yearBuiltAsking": "Asking {price}",
+    "yearBuiltContract": "Contracts {price}",
+    "yearBuiltSuppressed": "fewer than {min} prices",
+    "yearBuiltGap": "Asking prices are {pct} relative to contracts for buildings of the same era."
   },
   "comparables": {
     "title": "Similar sales",
