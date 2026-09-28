@@ -33,6 +33,8 @@
     "columnBucket": "Year built",
     "columnCount": "Contracts",
     "belowThreshold": "fewer than {min}",
+    "askGapColumn": "Asking",
+    "askGapNote": "“Asking”: how far above or below the contract median the median asking sale price is for buildings of the same period; shown only where both have at least {min}.",
     "bucket": {
       "lt1960": "Before 1960",
       "1960-1984": "1960–1984",
@@ -68,16 +70,46 @@
   "source": {
     "transferValues": {
       "owner": "Greek Ministry of National Economy and Finance",
-      "dataset": "Register of Real Estate Transfer Values"
+      "dataset": "Register of Real Estate Transfer Values",
+      "changes": "The data have been processed: medians of comparable contracts only (whole property, full ownership, no special conditions), matched to Kallikratis areas."
     },
     "line": "Source: {owner}, {dataset}",
     "license": "Licence CC BY 4.0",
-    "changes": "The data have been processed: medians of comparable contracts only (whole property, full ownership, no special conditions), matched to Kallikratis areas."
+    "valueZones": {
+      "owner": "Greek Ministry of National Economy and Finance",
+      "dataset": "Zones of the objective property valuation system",
+      "changes": "The data have been processed: converted from GGRS87 to WGS84, boundaries simplified within 2 m, split by municipal unit."
+    }
   },
   "method": {
     "contract": "Contract prices are what was declared in transfer contracts, from the public Register of Real Estate Transfer Values. They are not a valuation or market value, and the declared price may differ from the actual one.",
     "comparable": "We count only contracts for a whole property in full ownership, with no special conditions (unfinished, listed, expropriation). Shares, bare ownership and usufruct are left out.",
     "zone": "The zone price is the basis of the objective value per m², before the floor, age and frontage coefficients. The ratio of price to zone price shows how far above or below the tax basis contracts are signed.",
-    "cadence": "The register is updated about once a month; contract data run to the date shown in each section."
+    "cadence": "The register is updated about once a month; contract data run to the date shown in each section.",
+    "valueZone": "Zones and their prices are those currently in force, published by the Ministry of National Economy and Finance. A street-frontage zone price applies only to properties with frontage on that street; with several frontages the highest applies. The zone price is not the objective value, which also depends on floor, age, frontage and other coefficients."
+  },
+  "valueZone": {
+    "title": "Objective value zone",
+    "price": "Zone price at the property's location: {price}",
+    "zone": "Zone {name} · in force since {date}",
+    "nearEdge": "The location is close to a zone boundary; the exact address confirms the zone.",
+    "askingVsZone": "The asking price is {asking}% of the zone price; contracts in the area are signed at {contracts}% (median).",
+    "frontsIntro": "If the property has frontage (entrance, window or shop window) on a nearby street with its own, higher zone price, the higher price applies:",
+    "front": "{street}: {price}",
+    "outside": "The location is not in an objective value zone (e.g. outside the town plan).",
+    "imprecise": "The listing's location is not precise enough to find its objective value zone.",
+    "unavailable": "Objective value zones are not available right now.",
+    "map": {
+      "toggle": "Objective value zones",
+      "legend": "Zone price",
+      "class": "{low} – {high}",
+      "fronts": "Street frontage with its own price",
+      "hint": "Tap a zone to see its price.",
+      "selectedZone": "Zone {name}: {price}",
+      "selectedFront": "{street}: {price} — only for properties with frontage on this street",
+      "loading": "Loading zones…",
+      "none": "There are no objective value zones in this area.",
+      "unavailable": "Zones are not available right now."
+    }
   }
 }

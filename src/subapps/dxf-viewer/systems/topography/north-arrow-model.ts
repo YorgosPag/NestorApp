@@ -14,7 +14,7 @@
  */
 
 import type { GeoReference } from '../geo-referencing/geo-transform';
-import { meridianConvergenceDeg } from '../geo-referencing/egsa87-projection';
+import { meridianConvergenceDeg } from '@/lib/geo/egsa87-projection';
 import { lengthMmToM } from '../../utils/scene-units';
 import type { TopoPoint } from './topo-types';
 import type { NorthMode } from './north-arrow-config';

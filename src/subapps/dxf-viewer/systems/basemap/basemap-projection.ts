@@ -6,8 +6,8 @@
  * | # | Μετάβαση | Σπίτι |
  * |---|---|---|
  * | 1 | πλακίδιο `z/x/y` ↔ WGS84 | {@link ./web-mercator} |
- * | 2 | WGS84 ↔ ΕΓΣΑ'87 γεωγραφικές (**μετάθεση datum**) | {@link ../geo-referencing/ggrs87-datum} |
- * | 3 | ΕΓΣΑ'87 γεωγραφικές ↔ κάνναβος (E,N) | {@link ../geo-referencing/egsa87-projection} |
+ * | 2 | WGS84 ↔ ΕΓΣΑ'87 γεωγραφικές (**μετάθεση datum**) | {@link @/lib/geo/ggrs87-datum} |
+ * | 3 | ΕΓΣΑ'87 γεωγραφικές ↔ κάνναβος (E,N) | {@link @/lib/geo/egsa87-projection} |
  * | 4 | κόσμος (ΕΓΣΑ mm) ↔ χαρτί (τοπικά mm) | {@link ../topography/topo-display-frame} |
  *
  * Το σκαλί 4 είναι το κρίσιμο και **δεν γράφεται εδώ**. Ο κανόνας του ADR-650 §M10f λέει ρητά:
@@ -31,8 +31,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { ggrs87ToWgs84, wgs84ToGgrs87 } from '../geo-referencing/ggrs87-datum';
-import { geographicToGrid, gridToGeographic } from '../geo-referencing/egsa87-projection';
+import { wgs84ToGgrs87 } from '@/lib/geo/ggrs87-datum';
+import { geographicToGrid } from '@/lib/geo/egsa87-projection';
+import { greekGridToGeoPoint } from '@/lib/geo/greek-grid';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { projectWorldPoint } from '../topography/topo-display-frame';
 
@@ -65,8 +66,9 @@ export function geographicToWorldMm(lat: number, lon: number): Point2D {
  * επικεφαλίδα για το γιατί δεν χρησιμοποιείται ποτέ στη ζωγραφική.
  */
 export function worldMmToGeographic(x: number, y: number): { lat: number; lon: number } {
-  const local = gridToGeographic(mmToMetres(x), mmToMetres(y));
-  return ggrs87ToWgs84(local.lat, local.lon);
+  // Σκαλιά 3 → 2 μέσω της ΜΙΑΣ σύνθεσης (`greek-grid.ts`) — την ίδια που μετατρέπει τις ζώνες ΑΠΑΑ (ADR-889 Φ5).
+  const point = greekGridToGeoPoint(mmToMetres(x), mmToMetres(y));
+  return { lat: point.lat, lon: point.lng };
 }
 
 /**

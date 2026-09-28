@@ -11,6 +11,8 @@
  *   επιλογέας που κρύβει τους άλλους), ο πάνω όροφος πρώτος, ο τρέχων τονισμένος.
  * 🔑 **Χάρτης μόνο όταν υπάρχει κάτι αληθινό** (`hasPlan`): εικόνα κάτοψης (Φ2στ-β), ή θέσεις σε όλα τα σημεία. Χωρίς αυτά
  *   δεν επινοείται χάρτης — μένει η λίστα (§12 Δ5 `none`).
+ * 🔍 **Κάθε κάτοψη είναι `TourPlanCard`** (Φ2στ-γ Γ2 · §4.14): μετρά το **πραγματικό** πλάτος της (η στήλη πλέον σέρνεται)
+ *   και φέρει τη δική της μεγέθυνση «− ●—— +  ↗». Η θέαση όλων ζει σε **ένα** store, που κατέχει ο θεατής.
  */
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -19,12 +21,10 @@ import type { TourViewerGraph } from '@/lib/spatial-tour/viewer/tour-viewer-grap
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import type { TourCameraStore } from './tour-camera-store';
 import type { TourPanoramaSource } from './tour-panorama-source';
+import type { TourPlanZoomStore } from './tour-plan-zoom-store';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
-import { TourPlanMap } from './TourPlanMap';
+import { TourPlanCard } from './TourPlanCard';
 import { TourStopList, useLevelLabel } from './TourViewerNavigation';
-
-/** Το πλάτος της στήλης σε css px — από αυτό διαλέγει η πηγή το παράγωγο της κάτοψης. */
-const PANEL_PLAN_CSS_WIDTH = 400;
 
 export interface TourSidePanelProps {
   readonly graph: TourViewerGraph;
@@ -32,9 +32,10 @@ export interface TourSidePanelProps {
   readonly camera: TourCameraStore;
   readonly onGo: (nodeId: string) => void;
   readonly source: TourPanoramaSource;
+  readonly zoomStore: TourPlanZoomStore;
 }
 
-export function TourSidePanel({ graph, currentNodeId, camera, onGo, source }: TourSidePanelProps) {
+export function TourSidePanel({ graph, currentNodeId, camera, onGo, source, zoomStore }: TourSidePanelProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const labelOf = useLevelLabel();
   const currentLevelId = currentNodeId === null ? null : graph.stops.get(currentNodeId)?.levelId ?? null;
@@ -42,15 +43,16 @@ export function TourSidePanel({ graph, currentNodeId, camera, onGo, source }: To
     <nav aria-label={t(TOUR_VIEWER_KEYS.panelTitle)} className="flex flex-col gap-4">
       <p className="m-0 text-sm text-muted-foreground">{t(TOUR_VIEWER_KEYS.panelHint)}</p>
       {[...graph.levels].reverse().map((level) => {
-        const planImageUrl = level.plan === null ? null : source.planImageUrl(level.plan, PANEL_PLAN_CSS_WIDTH);
+        const label = labelOf(level);
         return (
-          <section key={level.id} aria-label={labelOf(level)}
+          <section key={level.id} aria-label={label}
             className={level.id === currentLevelId ? 'rounded-lg border border-ring bg-card p-3' : 'rounded-lg border border-border bg-card p-3'}>
-            <h2 className="mb-2 mt-0 text-sm font-semibold text-foreground">{labelOf(level)}</h2>
+            <h2 className="mb-2 mt-0 text-sm font-semibold text-foreground">{label}</h2>
             {level.hasPlan && (
-              <figure className="m-0 mb-2 aspect-[4/3] w-full rounded-md bg-muted p-1">
-                <TourPlanMap graph={graph} level={level} currentNodeId={currentNodeId} camera={camera} onGo={onGo} planImageUrl={planImageUrl} />
-              </figure>
+              <section className="mb-2">
+                <TourPlanCard graph={graph} level={level} label={label} currentNodeId={currentNodeId} camera={camera} onGo={onGo}
+                  source={source} zoomStore={zoomStore} />
+              </section>
             )}
             <TourStopList graph={graph} level={level} currentNodeId={currentNodeId} onGo={onGo} />
           </section>

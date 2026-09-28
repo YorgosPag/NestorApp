@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { FLOOR_PLAN_DECLARABLE_SOURCES, type FloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TourFloorPlanPick, TourPlanCandidate } from '@/lib/spatial-tour/tour-graph-edit';
@@ -63,14 +64,14 @@ export interface TourPlanPickerProps {
 function PlanOption({ plan, selected, onSelect }: { readonly plan: TourPlanCandidate; readonly selected: boolean; readonly onSelect: () => void }) {
   return (
     <li>
-      <Button type="button" variant={selected ? 'secondary' : 'outline'} aria-pressed={selected} onClick={onSelect}
+      <ToggleButton type="button" pressed={selected} variant="outline" onClick={onSelect}
         className="flex h-auto w-full flex-col items-stretch gap-1 p-2 text-left">
         {plan.previewUrl !== null && (
           // eslint-disable-next-line @next/next/no-img-element -- ιδιωτικό αρχείο πίσω από το proxy αρχείων, εκτός optimizer
           <img src={plan.previewUrl} alt="" loading="lazy" className="aspect-[4/3] w-full rounded bg-muted object-contain" />
         )}
         <span className="truncate text-xs">{plan.name}</span>
-      </Button>
+      </ToggleButton>
     </li>
   );
 }

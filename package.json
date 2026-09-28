@@ -19,6 +19,7 @@
     "build:admin-display-names": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-admin-display-names.ts",
     "build:admin-boundaries": "node --max-old-space-size=6144 mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-admin-boundaries.ts",
     "build:market-transactions": "node --max-old-space-size=6144 mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-market-transactions.ts",
+    "build:value-zones": "node --max-old-space-size=6144 mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-value-zones.ts",
     "build:basemap": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-basemap.ts",
     "basemap:serve": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/serve-basemap.ts",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev --turbopack --port 3000",

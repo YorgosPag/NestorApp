@@ -20,8 +20,8 @@
  *
  * Καθαρό module — μηδέν React/DOM/δίκτυο/store, μοίρες παντού.
  *
- * @see ../geo-referencing/ggrs87-datum.ts — το επόμενο σκαλί (WGS84 ↔ ΕΓΣΑ'87)
- * @see ../geo-referencing/egsa87-projection.ts — και το τελευταίο (ελλειψοειδές ↔ κάνναβος)
+ * @see @/lib/geo/ggrs87-datum.ts — το επόμενο σκαλί (WGS84 ↔ ΕΓΣΑ'87)
+ * @see @/lib/geo/egsa87-projection.ts — και το τελευταίο (ελλειψοειδές ↔ κάνναβος)
  */
 
 /** Θέση μέσα στο πλέγμα πλακιδίων ενός επιπέδου — **συνεχής**, όχι ακέραια. */

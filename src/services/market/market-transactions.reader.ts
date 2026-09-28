@@ -15,7 +15,7 @@ import 'server-only';
  * περιοχές, άρα λίγα «ζεστά» αρχεία αρκούν.
  */
 
-import { createKeyedServerJsonFiles, createServerJsonFile } from '@/lib/data/server-json-file';
+import { createKeyedServerJsonFiles, createServerJsonFile, strictJsonShape, warnOnJsonFailure } from '@/lib/data/server-json-file';
 import {
   MARKET_TRANSACTIONS_INDEX_PUBLIC_PATH,
   marketTransactionsPublicPath,
@@ -35,36 +35,22 @@ const MAX_CACHED_SUMMARIES = 512;
 /** Γραμμές: ως 2,2 MB — λίγα, τα «ζεστά». */
 const MAX_CACHED_ROWS = 48;
 
-function failure(message: string, extra: Record<string, string> = {}) {
-  return (error: unknown): void => {
-    logger.warn(message, { ...extra, error: error instanceof Error ? error.message : String(error) });
-  };
-}
-
-function strict<T>(read: (payload: unknown) => T | null, what: string): (payload: unknown) => T {
-  return (payload) => {
-    const value = read(payload);
-    if (value === null) throw new TypeError(`${what}: μη αναμενόμενο σχήμα`);
-    return value;
-  };
-}
-
 const INDEX = createServerJsonFile<MarketTransactionsIndex>({
   publicPath: MARKET_TRANSACTIONS_INDEX_PUBLIC_PATH,
-  build: strict(readMarketTransactionsIndex, 'market-transactions/index.json'),
-  onFailure: failure('Δεν διαβάστηκε το ευρετήριο τιμών συμβολαίων'),
+  build: strictJsonShape(readMarketTransactionsIndex, 'market-transactions/index.json'),
+  onFailure: warnOnJsonFailure(logger, 'Δεν διαβάστηκε το ευρετήριο τιμών συμβολαίων'),
 });
 
 const SUMMARIES = createKeyedServerJsonFiles<AreaSummaryFile>(MAX_CACHED_SUMMARIES, (areaId) => ({
   publicPath: marketTransactionsPublicPath('summary', areaId),
-  build: strict((payload) => readAreaSummaryFile(payload, areaId), areaId),
-  onFailure: failure('Δεν διαβάστηκαν στατιστικά συμβολαίων', { areaId }),
+  build: strictJsonShape((payload) => readAreaSummaryFile(payload, areaId), areaId),
+  onFailure: warnOnJsonFailure(logger, 'Δεν διαβάστηκαν στατιστικά συμβολαίων', { areaId }),
 }));
 
 const ROWS = createKeyedServerJsonFiles<AreaRowsFile>(MAX_CACHED_ROWS, (areaId) => ({
   publicPath: marketTransactionsPublicPath('rows', areaId),
-  build: strict((payload) => readAreaRowsFile(payload, areaId), areaId),
-  onFailure: failure('Δεν διαβάστηκαν γραμμές συμβολαίων', { areaId }),
+  build: strictJsonShape((payload) => readAreaRowsFile(payload, areaId), areaId),
+  onFailure: warnOnJsonFailure(logger, 'Δεν διαβάστηκαν γραμμές συμβολαίων', { areaId }),
 }));
 
 /** `none` = η περιοχή **δεν** έχει συμβόλαια στο παράθυρο (γεγονός). `null` = δεν μπόρεσα να ρωτήσω. */

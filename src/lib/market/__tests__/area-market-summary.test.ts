@@ -12,7 +12,10 @@ import {
   summarizeArea,
   summarizeOffer,
 } from '@/lib/market/area-market-summary';
+import { SEGMENT_BREAKDOWN_AXES } from '@/lib/market/market-breakdowns';
+import { MARKET_SEGMENTS, SEGMENT_METRIC } from '@/lib/market/market-segments';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
+import type { PublicListing } from '@/types/public-listing';
 
 const THESSALONIKI: AdminAreaAssignment = {
   regionId: 'region:112',
@@ -104,9 +107,35 @@ describe('summarizeOffer — κατώφλι, λογιστική, κάδοι', ()
     expect(breakdowns?.bedrooms).toEqual({ buckets: { 1: { n: 2 } }, undeclared: 3 });
   });
 
-  it('το οικόπεδο δεν αναλύεται σε υπνοδωμάτια ή όροφο', () => {
+  it('το οικόπεδο δεν αναλύεται σε υπνοδωμάτια, όροφο ή έτος κατασκευής', () => {
     const plot = listing({ type: 'plot', areaSqm: 700 });
     expect(Object.keys(summarizeOffer([plot], 'sale').segments.land?.breakdowns ?? {})).toEqual(['size']);
+  });
+
+  it('ADR-890 §12 — έτος κατασκευής: μετρά η δημόσια τιμή (δήλωση Ή δημόσια εγγραφή), χωρίς έτος ⇒ «δεν δήλωσαν»', () => {
+    const AT = '2026-09-26T00:00:00.000Z';
+    const built = (id: string, value: number | null, source: 'declared' | 'osm' = 'declared') => {
+      const constructionYear: PublicListing['constructionYear'] = value === null
+        ? null
+        : source === 'declared'
+          ? { provenance: 'declared', value, at: AT }
+          : { provenance: 'public-record', value, at: AT, registry: 'osm', sourceRef: 'pbld_0000001' };
+      return listing({ id, constructionYear });
+    };
+    const yearBuilt = summarizeOffer(
+      [built('a', 1975), built('b', 1984, 'osm'), built('c', 1985), built('d', 2024), built('e', null)],
+      'sale',
+    ).segments.apartment?.breakdowns.yearBuilt;
+    expect(yearBuilt).toEqual({
+      buckets: { '1960-1984': { n: 2 }, '1985-1999': { n: 1 }, gte2020: { n: 1 } },
+      undeclared: 1,
+    });
+  });
+
+  it('ο άξονας έτους ⇔ τμήμα με κτίσμα — το ΙΔΙΟ κριτήριο με τα συμβόλαια του ΜΑΜΑ (αλλιώς η σύγκριση ανά κάδο σπάει)', () => {
+    for (const segment of MARKET_SEGMENTS) {
+      expect(SEGMENT_BREAKDOWN_AXES[segment].includes('yearBuilt')).toBe(SEGMENT_METRIC[segment] === 'perSqmBuilding');
+    }
   });
 });
 

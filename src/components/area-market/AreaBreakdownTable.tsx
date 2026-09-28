@@ -10,6 +10,9 @@
  *
  * 🔑 **Καθαρά παρουσιαστικό** (ADR-890 Φ2): τα κείμενα έρχονται έτοιμα από τον καλούντα, ώστε η ΙΔΙΑ απόδοση να
  * εξυπηρετεί δύο πηγές (αγγελίες · συμβόλαια) με διαφορετικές λέξεις, χωρίς δίδυμο πίνακα.
+ *
+ * 🔑 **Προαιρετική στήλη σύγκρισης** (ADR-890 §12): δίπλα στη διάμεσο, π.χ. «ζητούν +12%» ανά κάδο. Ο καλών αποφασίζει
+ * αν υπάρχει (`comparisonHeader`)· ο πίνακας δεν ξέρει τι συγκρίνεται.
  */
 
 import React from 'react';
@@ -24,6 +27,8 @@ export interface BreakdownTableRow {
   readonly key: string;
   readonly label: string;
   readonly cell: StatCell;
+  /** Το κείμενο της στήλης σύγκρισης, ή `null` («—»). Αγνοείται χωρίς `comparisonHeader`. */
+  readonly comparison?: string | null;
 }
 
 export interface AreaBreakdownTableProps {
@@ -37,14 +42,19 @@ export interface AreaBreakdownTableProps {
   readonly belowThreshold: string;
   /** Υποσημείωση (π.χ. «3 αγγελίες δεν δήλωσαν όροφο»), ή `null`. */
   readonly footnote: string | null;
+  /** Η κεφαλίδα της στήλης σύγκρισης· `null`/απούσα = καμία στήλη. */
+  readonly comparisonHeader?: string | null;
 }
 
-function StatRow({ row, formatPrice, belowThreshold }: { readonly row: BreakdownTableRow } & Pick<AreaBreakdownTableProps, 'formatPrice' | 'belowThreshold'>) {
+type StatRowProps = { readonly row: BreakdownTableRow; readonly compared: boolean } & Pick<AreaBreakdownTableProps, 'formatPrice' | 'belowThreshold'>;
+
+function StatRow({ row, compared, formatPrice, belowThreshold }: StatRowProps) {
   const reported = isReportedStatCell(row.cell) ? row.cell : null;
   return (
     <TableRow>
       <TableHead scope="row" className="font-normal">{row.label}</TableHead>
       <TableCell className="tabular-nums">{reported === null ? '—' : formatPrice(reported.median)}</TableCell>
+      {compared && <TableCell className="tabular-nums">{row.comparison ?? '—'}</TableCell>}
       <TableCell className="tabular-nums text-muted-foreground">
         {reported === null ? belowThreshold : `${formatPrice(reported.p25)} – ${formatPrice(reported.p75)}`}
       </TableCell>
@@ -53,8 +63,9 @@ function StatRow({ row, formatPrice, belowThreshold }: { readonly row: Breakdown
   );
 }
 
-export function AreaBreakdownTable({ caption, bucketHeader, countHeader, rows, formatPrice, belowThreshold, footnote }: AreaBreakdownTableProps) {
+export function AreaBreakdownTable({ caption, bucketHeader, countHeader, rows, formatPrice, belowThreshold, footnote, comparisonHeader = null }: AreaBreakdownTableProps) {
   const { t } = useTranslation([NS]);
+  const compared = comparisonHeader !== null;
   return (
     <figure className="m-0 flex flex-col gap-1">
       <Table>
@@ -63,13 +74,14 @@ export function AreaBreakdownTable({ caption, bucketHeader, countHeader, rows, f
           <TableRow>
             <TableHead scope="col">{bucketHeader}</TableHead>
             <TableHead scope="col">{t(`${NS}:breakdown.columnMedian`)}</TableHead>
+            {compared && <TableHead scope="col">{comparisonHeader}</TableHead>}
             <TableHead scope="col">{t(`${NS}:breakdown.columnRange`)}</TableHead>
             <TableHead scope="col" className="text-right">{countHeader}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
-            <StatRow key={row.key} row={row} formatPrice={formatPrice} belowThreshold={belowThreshold} />
+            <StatRow key={row.key} row={row} compared={compared} formatPrice={formatPrice} belowThreshold={belowThreshold} />
           ))}
         </TableBody>
       </Table>

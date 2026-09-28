@@ -8,8 +8,8 @@
  * σε ανεξάρτητα γνωστές τιμές, **και** ρητή μέτρηση του μεγέθους της μετάθεσης.
  */
 
-import { ggrs87ToWgs84, wgs84ToGgrs87 } from '../../geo-referencing/ggrs87-datum';
-import { geographicToGrid, gridToGeographic } from '../../geo-referencing/egsa87-projection';
+import { ggrs87ToWgs84, wgs84ToGgrs87 } from '@/lib/geo/ggrs87-datum';
+import { geographicToGrid, gridToGeographic } from '@/lib/geo/egsa87-projection';
 import { geographicToWorldMm, worldMmToGeographic } from '../basemap-projection';
 import {
   geographicToTileFraction,

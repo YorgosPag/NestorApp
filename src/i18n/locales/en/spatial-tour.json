@@ -269,7 +269,14 @@
     "placeOnFloor": "{name} · {floor}",
     "panelTitle": "Tour points",
     "panelHint": "Tap a point on the plan or in the list to go there.",
-    "openPanel": "Points & plan"
+    "openPanel": "Points & plan",
+    "planZoom": "Floor plan zoom level",
+    "planZoomIn": "Zoom in on floor plan",
+    "planZoomOut": "Zoom out of floor plan",
+    "planExpand": "Expand floor plan to full screen",
+    "planColumnHide": "Hide floor plan column",
+    "planColumnShow": "Show floor plan column",
+    "resizeColumn": "Resize floor plan column"
   },
   "editor": {
     "description": "Put each panorama on a floor and a point, and use arrows to show where the next room is.",

@@ -5,7 +5,8 @@
  *
  * Τι λέει, με αυτή τη σειρά: η διάμεση **τιμή συμβολαίου** του ίδιου τμήματος στην περιοχή (12 μήνες) · η **τιμή
  * ζώνης** · **πού πέφτει η ζητούμενη τιμή** της αγγελίας ανάμεσα στα συμβόλαια · οι **παρόμοιες πωλήσεις** ·
- * σύνδεσμος στη σελίδα της περιοχής · η αναφορά της πηγής κατά CC-BY.
+ * σύνδεσμος στη σελίδα της περιοχής · η αναφορά της πηγής κατά CC-BY · η **ζώνη αντικειμενικής αξίας** της θέσης
+ * (ADR-889 Φ5, `ListingValueZone`).
  *
  * 🔑 **Ποτέ «αγοραία αξία», ποτέ «εκτίμηση»** (ADR-890 §3): κάθε αριθμός λέει ποια τιμή είναι.
  */
@@ -25,6 +26,7 @@ import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-
 import { Link } from '@/lib/workspace/navigation';
 
 import { ListingComparableSales } from './ListingComparableSales';
+import { ListingValueZone } from './ListingValueZone';
 
 const NS = 'market-contracts';
 const HEADING_ID = 'listing-market-context';
@@ -59,7 +61,7 @@ function AreaFigures({ context }: { readonly context: ReadyContext }) {
   );
 }
 
-function Body({ context }: { readonly context: Context }) {
+function Contracts({ context }: { readonly context: Context }) {
   const { t } = useTranslation([NS]);
   if (context.kind === 'no-area') return <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:listing.noArea`)}</p>;
   if (context.kind === 'no-segment') return <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:listing.noSegment`)}</p>;
@@ -71,6 +73,16 @@ function Body({ context }: { readonly context: Context }) {
         {t(`${NS}:listing.seeArea`, { area: context.area.name })}
       </Link>
       <OpenDataAttribution source="transferValues" />
+    </>
+  );
+}
+
+/** Συμβόλαια της περιοχής, και μετά η ζώνη της θέσης (ADR-889 Φ5) — η ζώνη σε **κάθε** κατάσταση των συμβολαίων. */
+function Body({ context }: { readonly context: Context }) {
+  return (
+    <>
+      <Contracts context={context} />
+      <ListingValueZone context={context} />
     </>
   );
 }

@@ -16,9 +16,10 @@ import 'server-only';
 
 import { observeAsking } from '@/lib/market/area-market-summary';
 import { findComparableSales, type ComparableSalesResult, type ComparableTarget } from '@/lib/market/comparable-sales';
-import type { ListingMarketContext } from '@/lib/market/listing-market-context';
+import type { ListingContractsContext, ListingMarketContext } from '@/lib/market/listing-market-context';
 import { SEGMENT_METRIC, marketSegmentOfType, type MarketSegment } from '@/lib/market/market-segments';
 import { readAreaRows, readAreaSummary } from '@/services/market/market-transactions.reader';
+import { readValueZoneAt } from '@/services/market/value-zones.reader';
 import { readAdminAreaDirectory } from '@/services/places/admin-boundaries.reader';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -61,8 +62,8 @@ async function pickArea(areaIds: readonly string[], target: ComparableTarget, as
   return fallback;
 }
 
-/** **Οι τιμές συμβολαίων μιας αγγελίας.** */
-export async function loadListingMarketContext(listing: PublicListing): Promise<ListingMarketContext | null> {
+/** Τα συμβόλαια της περιοχής για την αγγελία. `null` = σφάλμα ανάγνωσης. */
+async function loadContracts(listing: PublicListing): Promise<ListingContractsContext | null> {
   const areaIds = candidateAreas(listing);
   if (areaIds.length === 0) return { kind: 'no-area' };
   const segment = marketSegmentOfType(listing.type);
@@ -84,8 +85,20 @@ export async function loadListingMarketContext(listing: PublicListing): Promise<
     window: summary.index.window,
     last12: figures?.last12 ?? { n: 0 },
     zone: figures?.zone ?? null,
+    priceToZonePct: figures?.priceToZonePct ?? null,
     askingUnitPrice,
     target: { size: target.size, yearBuilt: target.yearBuilt, floor: target.floor },
     comparables: pick.comparables,
   };
+}
+
+/**
+ * **Οι τιμές συμβολαίων μιας αγγελίας, και η ζώνη αντικειμενικής αξίας της θέσης της** (ADR-889 Φ2 + Φ5).
+ *
+ * 🔑 Η ζώνη **δεν** ρίχνει τα συμβόλαια: αποτυχία ανάγνωσης ζωνών ⇒ `valueZone: unavailable`, τα συμβόλαια μένουν. Το
+ * αντίστροφο ισχύει ήδη (`null` ⇒ 503): χωρίς συμβόλαια η ενότητα δεν έχει κορμό.
+ */
+export async function loadListingMarketContext(listing: PublicListing): Promise<ListingMarketContext | null> {
+  const [contracts, valueZone] = await Promise.all([loadContracts(listing), readValueZoneAt(listing.position)]);
+  return contracts === null ? null : { ...contracts, valueZone };
 }

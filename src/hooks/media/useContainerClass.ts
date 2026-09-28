@@ -27,8 +27,9 @@
  * 🔑 **`useLayoutEffect`, όχι `useEffect`**: η πρώτη μέτρηση γίνεται **πριν** το πρώτο βάψιμο,
  * άρα η λάθος διάταξη δεν φαίνεται ποτέ — μηδέν CLS.
  */
-import { useLayoutEffect, useState, type RefObject } from 'react';
+import { useCallback, useState, type RefObject } from 'react';
 
+import { useSizeObserver } from '@/hooks/media/useElementSize';
 import type { ViewportClass } from '@/hooks/media/useViewportClass';
 
 /** Το root font size σε px — το κατώφλι ακολουθεί την προτίμηση γραμματοσειράς του χρήστη. */
@@ -44,21 +45,10 @@ function rootFontPx(): number {
  */
 export function useContainerClass(ref: RefObject<HTMLElement | null>, minRem: number): ViewportClass {
   const [value, setValue] = useState<ViewportClass>('measuring');
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element || typeof ResizeObserver === 'undefined') return;
-
-    const sync = (width: number): void => setValue(width >= minRem * rootFontPx() ? 'wide' : 'narrow');
-    sync(element.getBoundingClientRect().width);
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[entries.length - 1];
-      if (entry) sync(entry.contentRect.width);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref, minRem]);
-
+  const sync = useCallback(
+    (width: number): void => setValue(width >= minRem * rootFontPx() ? 'wide' : 'narrow'),
+    [minRem],
+  );
+  useSizeObserver(ref, sync);
   return value;
 }

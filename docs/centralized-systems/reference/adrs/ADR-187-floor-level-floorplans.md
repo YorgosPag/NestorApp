@@ -80,6 +80,11 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
 
 ## Changelog
 
+- **2026-09-28**: `useZoomPan` math extracted to `src/lib/geometry/zoom-pan-math.ts` (ADR-884 Φ2στ-γ Γ2 · §4.14)
+  - `clampZoom` · `stepZoom` (multiplicative `zoomFactor` / additive `zoomStep`) · `wheelZoom` · `scaleAbout` (the ONE "point under the cursor stays put" formula, previously hand-written inside the wheel handler) · `pointDistance` (pinch)
+  - Second consumer: the 360° tour floor-plan card (`viewBox` zoom — same formula with the inverse ratio)
+  - Behaviour unchanged for `FloorplanGallery` — first-ever anchor `src/hooks/__tests__/useZoomPan.test.tsx` (buttons, factor, wheel anchor, pan reset ≤ 1, pinch); mutation "wheel ratio inverted" red
+  - Known, deliberate difference: the tour shares ONE zoom state between card and fullscreen; `FloorplanGallery` keeps two independent `useZoomPan` instances (unchanged here)
 - **2026-04-19**: UX discoverability fix — floorplan upload now has explicit action button
   - MODIFIED: `FloorsTabContent.tsx` — added dedicated Map icon Button in actions column (tooltip: `uploadFloorplan` / `collapseFloor`) that toggles `FloorFloorplanInline` expansion
   - MODIFIED: floor name cell is now a `<button>` — clicking the name (next to the Map icon) also toggles expansion

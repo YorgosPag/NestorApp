@@ -113,6 +113,9 @@ function axisValue(axis: AreaBreakdownAxis, observation: Observation): number | 
       return observation.listing.bedrooms;
     case 'floor':
       return observation.listing.floor;
+    case 'yearBuilt':
+      // Η ΙΔΙΑ τιμή που δείχνει η σελίδα αγγελίας (δήλωση κτιρίου > δημόσια εγγραφή, ADR-890 §9.2).
+      return observation.listing.constructionYear?.value ?? null;
   }
 }
 

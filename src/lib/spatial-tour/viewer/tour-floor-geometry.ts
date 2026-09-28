@@ -150,13 +150,21 @@ export function floorArrowWidthPx(viewport: FloorViewport): number {
   return clamp(viewport.heightPx * ARROW_WIDTH_FRACTION, FLOOR_ARROW_WIDTH_PX.min, FLOOR_ARROW_WIDTH_PX.max);
 }
 
-/** Η κλίση της ζώνης των βελακιών — `null` όταν το πάτωμα δεν φαίνεται (βλέμμα ψηλά). */
-function arrowBandPitch(view: TourView, eye: number): number | null {
-  const bottom = view.pitch - view.fov / 2;
-  const nearest = -Math.atan2(eye, FLOOR_ARROW_NEAR_M);
-  const farthest = -Math.atan2(eye, FLOOR_ARROW_FAR_M);
-  const pitch = clamp(bottom + view.fov * ARROW_LIFT, nearest, farthest);
-  return pitch < bottom || pitch > view.pitch + view.fov / 2 ? null : pitch;
+/**
+ * **Η απόσταση της ζώνης** για βελάκι σε σχετικό yaw `delta`: το κέντρο του δίσκου πέφτει στο **ίδιο ύψος οθόνης** (`ARROW_LIFT`
+ * πάνω από τη βάση) σε κάθε στήλη. ⚠️ Όχι σταθερή κλίση: σε ορθογραμμική προβολή τα σημεία ίδιας κλίσης **κατεβαίνουν** προς τις
+ * πλαϊνές άκρες (ζωντανά 2026-09-28, παράθυρο 2400×865, οριζόντιο πεδίο ~120°: το βελάκι της άκρης κοβόταν από τη βάση).
+ * Κλειστή μορφή: `tan(κλίση) = cos(delta) · tan(p₀ + θ)`, με `tan θ` = ύψος της ζώνης στο επίπεδο της εικόνας. `null` ⇒ το
+ * πάτωμα δεν φαίνεται (βλέμμα ψηλά).
+ */
+function arrowBandDistance(view: TourView, delta: number, eye: number): number | null {
+  const theta = Math.atan(-(1 - 2 * ARROW_LIFT) * Math.tan(view.fov / 2));
+  const centre = Math.max(view.pitch + theta, -Math.PI / 2 + 1e-3);
+  const tanPitch = Math.cos(delta) * Math.tan(centre);
+  if (!(tanPitch < 0)) return null;
+  const distance = clamp(eye / -tanPitch, FLOOR_ARROW_NEAR_M, FLOOR_ARROW_FAR_M);
+  // Ζώνη στο μακρινό όριο (βλέμμα λίγο ψηλά): φαίνεται ακόμη το πάτωμα εκεί;
+  return -Math.atan2(eye, distance) < view.pitch - view.fov / 2 ? null : distance;
 }
 
 /** Ως πού (yaw από το κέντρο) μπορεί να καθίσει βελάκι χωρίς να βγει από τις πλαϊνές άκρες. */
@@ -192,18 +200,23 @@ export interface FloorArrowTarget {
  */
 export function placeFloorArrows(targets: readonly FloorArrowTarget[], viewport: FloorViewport, eye: number = TOUR_EYE_HEIGHT_M): Map<string, FloorArrowPlacement> {
   const placements = new Map<string, FloorArrowPlacement>();
-  const pitch = arrowBandPitch(viewport.view, eye);
-  if (pitch === null || targets.length === 0) return placements;
-  const distance = eye / Math.tan(-pitch);
-  const radiusM = floorRadiusForWidth({ yaw: viewport.view.yaw, distance }, floorArrowWidthPx(viewport), viewport, eye);
+  const { view } = viewport;
+  const centreDistance = arrowBandDistance(view, 0, eye);
+  if (centreDistance === null || targets.length === 0) return placements;
+  const widthPx = floorArrowWidthPx(viewport);
+  const centreRadius = floorRadiusForWidth({ yaw: view.yaw, distance: centreDistance }, widthPx, viewport, eye);
   const limit = arrowYawLimit(viewport);
   const sorted = targets
-    .map((target) => ({ target, delta: clamp(normalizeAngleDiff(target.yaw - viewport.view.yaw), -limit, limit) }))
+    .map((target) => ({ target, delta: clamp(normalizeAngleDiff(target.yaw - view.yaw), -limit, limit) }))
     .sort((a, b) => a.delta - b.delta);
-  const spread = spreadAngles(sorted.map((s) => s.delta), arrowSeparation(distance, radiusM), limit);
+  const spread = spreadAngles(sorted.map((s) => s.delta), arrowSeparation(centreDistance, centreRadius), limit);
   sorted.forEach(({ target }, i) => {
-    const yaw = viewport.view.yaw + (spread[i] as number);
-    placements.set(target.id, { spot: { yaw, distance }, turn: normalizeAngleDiff(target.yaw - yaw), radiusM });
+    const delta = spread[i] as number;
+    const distance = arrowBandDistance(view, delta, eye);
+    if (distance === null) return;
+    const spot = { yaw: view.yaw + delta, distance };
+    const radiusM = floorRadiusForWidth(spot, widthPx, viewport, eye);
+    placements.set(target.id, { spot, turn: normalizeAngleDiff(target.yaw - spot.yaw), radiusM });
   });
   return placements;
 }

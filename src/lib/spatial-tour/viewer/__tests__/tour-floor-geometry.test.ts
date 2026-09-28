@@ -19,8 +19,8 @@ const H = 900;
 const FOV = degToRad(65);
 
 /** Κάμερα με οπή, στο κέντρο, όπως η μηχανή: yaw δεξιόστροφα, κλίση πάνω θετική, οθόνη y προς τα κάτω. */
-function pinhole(view: TourView): FloorProjector {
-  const f = H / 2 / Math.tan(view.fov / 2);
+function pinhole(view: TourView, w: number = W, h: number = H): FloorProjector {
+  const f = h / 2 / Math.tan(view.fov / 2);
   return (yaw, pitch) => {
     const d = yawPitchToDirection(yaw - view.yaw, pitch);
     // Κλίση της κάμερας γύρω από τον άξονα X (πάνω = +pitch).
@@ -29,7 +29,7 @@ function pinhole(view: TourView): FloorProjector {
     const y = d.y * cy - d.z * sy;
     const z = d.y * sy + d.z * cy;
     if (z >= 0) return null;
-    return { x: W / 2 + (f * d.x) / -z, y: H / 2 - (f * y) / -z };
+    return { x: w / 2 + (f * d.x) / -z, y: h / 2 - (f * y) / -z };
   };
 }
 
@@ -113,6 +113,19 @@ describe('placeFloorArrows — όπως η Zillow: στη βάση, στη σω�
     expect(placed?.spot.yaw ?? 0).toBeLessThan(0);
     expect(Math.abs(placed?.spot.yaw ?? 0)).toBeLessThan(degToRad(60));
     expect(placed?.turn ?? 0).toBeLessThan(degToRad(-90));
+  });
+
+  it('ΠΛΑΤΥ παράθυρο (2400×865, ζωντανά 2026-09-28): βελάκι της άκρης στο ΙΔΙΟ ύψος οθόνης με του κέντρου — όχι κομμένο από τη βάση', () => {
+    const [w, h] = [2400, 865];
+    const vp: FloorViewport = { view: { yaw: 0, pitch: 0, fov: FOV }, aspect: w / h, heightPx: h };
+    const placed = placeFloorArrows([{ id: 'centre', yaw: 0 }, { id: 'edge', yaw: degToRad(-170) }], vp);
+    const screenY = (id: string) => {
+      const p = placed.get(id);
+      const a = floorSpotAngles(p?.spot ?? { yaw: 0, distance: 1 });
+      return pinhole(vp.view, w, h)(a.yaw, a.pitch)?.y ?? NaN;
+    };
+    expect(screenY('edge')).toBeCloseTo(screenY('centre'), 6);
+    expect(screenY('edge')).toBeLessThan(h * 0.9);
   });
 
   it('βλέμμα ψηλά (το πάτωμα δεν φαίνεται) ⇒ κανένα βελάκι', () => {

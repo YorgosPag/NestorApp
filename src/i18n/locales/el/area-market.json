@@ -48,6 +48,7 @@
     "size": "Ανά εμβαδόν",
     "bedrooms": "Ανά υπνοδωμάτια",
     "floor": "Ανά όροφο",
+    "yearBuilt": "Ανά έτος κατασκευής",
     "columnBucket": "Κατηγορία",
     "columnMedian": "Διάμεσος ανά τ.μ.",
     "columnRange": "Μεσαίο 50%",

@@ -117,6 +117,17 @@ export function deepestAdminLevelFor(position: PlacePosition): AdminBoundaryLeve
   return position.provenance === 'geocoded' ? DEPTH_BY_ACCURACY[position.accuracy] : 7;
 }
 
+/**
+ * **Είναι το σημείο η ΙΔΙΑ η διεύθυνση;** — πινέζα ανθρώπου, όργανο, ή geocoder `exact`/`interpolated`.
+ *
+ * 🔑 Η ίδια απάντηση με το βάθος «ως την κοινότητα» του πίνακα πιο πάνω — **μία** κρίση ακρίβειας, όχι δεύτερος
+ * πίνακας. Τη ζητά όποιος κρίνει σε κλίμακα **οικοδομικού τετραγώνου** (ζώνη αντικειμενικών αξιών, ADR-889 Φ5): ένα
+ * `approximate` σημείο μπορεί να πέσει στο διπλανό τετράγωνο, δηλαδή σε άλλη ζώνη.
+ */
+export function isAddressPrecisePosition(position: PlacePosition): boolean {
+  return deepestAdminLevelFor(position) === 7;
+}
+
 // ============================================================================
 // ΤΟ ΣΥΜΒΟΛΑΙΟ ΜΕ ΤΙΣ ΠΗΓΕΣ
 // ============================================================================

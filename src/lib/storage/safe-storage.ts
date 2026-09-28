@@ -72,6 +72,11 @@ export const STORAGE_KEYS = {
   // έκδοση X». Ανά καρτέλα επίτηδες — μια άλλη καρτέλα που αποτυγχάνει έχει δικό της δικαίωμα
   // σε ΜΙΑ ανανέωση. Η τιμή είναι το deploymentId του server ⇒ βρόχος δομικά αδύνατος.
   CHUNK_RECOVERY_RELOADED_FOR: 'nestor_chunk_recovery_reloaded_for',
+
+  // ADR-884 Φ2στ-γ Γ2 — το πλάτος (px) και η απόκρυψη της στήλης κατόψεων της περιήγησης 360°.
+  // Ανά **συσκευή**, όχι ανά αγγελία: είναι ιδιότητα της οθόνης του επισκέπτη (ADR-724 §5.3 — τα CAD
+  // θυμούνται px). Σχήμα με έκδοση στο όνομα — `components/spatial-tour/viewer/tour-viewer-layout-store.ts`.
+  TOUR_PLAN_COLUMN: 'nestor:tour-plan-column:v1',
 } as const;
 
 export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

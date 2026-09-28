@@ -11,6 +11,8 @@
 
 import type { TourPoint } from '@/types/spatial-tour';
 
+import type { TourViewerGraph, ViewerLevelEntry, ViewerStop } from './tour-viewer-graph';
+
 /** Ακτίνα του κώνου θέασης (μέτρα κάτοψης). */
 export const PLAN_CONE_RADIUS_M = 1.4;
 /**
@@ -61,4 +63,29 @@ export function conePath(halfAngleRad: number, radius: number): string {
   const dx = Math.sin(halfAngleRad) * radius;
   const dy = -Math.cos(halfAngleRad) * radius;
   return `M 0 0 L ${-dx} ${dy} A ${radius} ${radius} 0 0 1 ${dx} ${dy} Z`;
+}
+
+/** Μια στάση του ορόφου **με θέση** στην κάτοψη. */
+export interface PlacedStop {
+  readonly entry: ViewerStop;
+  readonly point: TourPoint;
+}
+
+/** Οι στάσεις του ορόφου που έχουν θέση — με τη σειρά του ορόφου. */
+export function placedStops(graph: TourViewerGraph, level: ViewerLevelEntry): PlacedStop[] {
+  return level.nodeIds.flatMap((id) => {
+    const entry = graph.stops.get(id);
+    const point = entry?.node.position ?? null;
+    return entry !== undefined && point !== null ? [{ entry, point }] : [];
+  });
+}
+
+/**
+ * **Το κάδρο ενός ορόφου** — η εικόνα της κάτοψης όταν δείχνεται, αλλιώς όσο χρειάζεται για τις τελείες. Ένα σημείο
+ * απόφασης για τον χάρτη **και** για τη μεγέθυνσή του (ADR-884 Φ2στ-γ Γ2): το ζουμ υπολογίζεται πάνω στο ίδιο κάδρο που
+ * ζωγραφίζεται.
+ */
+export function levelPlanFrame(level: ViewerLevelEntry, stops: readonly PlacedStop[], showsImage: boolean): PlanFrame | null {
+  if (level.plan !== null && showsImage) return imagePlanFrame(level.plan.image, level.plan.metresPerPixel);
+  return planFrame(stops.map((s) => s.point));
 }

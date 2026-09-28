@@ -41,6 +41,23 @@ describe('area-contracts-view', () => {
     expect(trend.at(-1)).toMatchObject({ quarter: '2026-Q3', cell: REPORTED });
   });
 
+  it('ADR-890 §12 — απόσταση ζητούμενης ↔ συμβολαίου ΑΝΑ ΚΑΔΟ έτους· παλιό στιγμιότυπο (χωρίς άξονα) ⇒ null, ποτέ 0%', () => {
+    const contracts = file('municipality:0701', segment({ yearBuilt: { '1960-1984': REPORTED, '2000-2009': REPORTED } }));
+    const withAxis = {
+      offers: { sale: { segments: { apartment: {
+        unitPrice: REPORTED,
+        breakdowns: { yearBuilt: { buckets: { '1960-1984': { n: 6, median: 2300, p25: 2000, p75: 2600 }, '2000-2009': { n: 2 } }, undeclared: 0 } },
+      } } } },
+    } as unknown as AreaMarketSnapshot;
+    const [view] = contractSegmentViews(contracts, null, withAxis);
+    expect(view.yearBuilt).toEqual([
+      { key: '1960-1984', cell: REPORTED, askGapPct: 15 },
+      { key: '2000-2009', cell: REPORTED, askGapPct: null },
+    ]);
+    const legacy = { offers: { sale: { segments: { apartment: { unitPrice: REPORTED, breakdowns: {} } } } } } as unknown as AreaMarketSnapshot;
+    expect(contractSegmentViews(contracts, null, legacy)[0].yearBuilt.map((row) => row.askGapPct)).toEqual([null, null]);
+  });
+
   it('αναγωγή στον Δήμο ΜΟΝΟ όταν ο δικός μας αριθμός είναι κάτω από το κατώφλι', () => {
     const parent = file('municipality:0701', segment());
     const [own] = contractSegmentViews(file('municipal_unit:070101', segment()), parent, null);

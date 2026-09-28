@@ -39,6 +39,8 @@ const DECLARED_EMPHASIS_TERNARIES = Object.freeze({
   'src/components/mandate/ShowcaseEmailConfirmationContent.tsx': 2,
   'src/components/mandate/inbox/MandateInboxRow.tsx': 1,
   'src/components/projects/ika/components/QrCodePanel.tsx': 1,
+  // ADR-884 Φ2στ-β: «Κλίμακα» γίνεται το κύριο κουμπί ΟΣΟ λείπει η βαθμονόμηση (το επόμενο βήμα), μετά δευτερεύον.
+  'src/components/spatial-tour/editor/TourPlanPane.tsx': 1,
   'src/components/workspace-invite/WorkspaceInviteContent.tsx': 1,
   'src/subapps/procurement/components/ComparisonPanel.tsx': 1,
 });

@@ -33,6 +33,11 @@ jest.mock('@/services/market/market-transactions.reader', () => ({
   readAreaSummary: (areaId: string) => mockSummary(areaId),
 }));
 
+const mockValueZoneFiles = jest.fn();
+jest.mock('@/services/market/value-zones.reader', () => ({
+  readValueZoneFileIds: (ids: readonly string[]) => mockValueZoneFiles(ids),
+}));
+
 import { loadAreaMarketPage } from '../area-market-page.service';
 import { rollupAreaMarket } from '../area-market-rollup.service';
 
@@ -66,6 +71,7 @@ function summaryOf(id: string) {
 beforeEach(() => {
   fake.reset();
   mockSummary.mockImplementation(async (id: string) => ({ kind: 'ready', file: summaryOf(id), index: INDEX }));
+  mockValueZoneFiles.mockResolvedValue([]);
   mockDirectory.mockResolvedValue({
     areas: new Map(AREAS.map((area) => [area.id, area])),
     childrenOf: (parentId: string) => AREAS.filter((area) => area.parentId === parentId),
@@ -130,6 +136,17 @@ describe('loadAreaMarketPage', () => {
     expect(page.contracts.summary.id).toBe('municipal_unit:070101');
     expect(page.contracts.parent?.id).toBe('municipality:0701');
     expect(page.contracts.window).toEqual({ from: 2022, to: 2026 });
+  });
+
+  it('ζώνες αντικειμενικών αξιών (ADR-889 Φ5): ρωτά ο Δήμος ΚΑΙ οι Δ.Ε. του· αποτυχία ⇒ null, η σελίδα ΔΕΝ πέφτει', async () => {
+    mockValueZoneFiles.mockImplementation(async (ids: readonly string[]) => ids.filter((id) => id.startsWith('municipal_unit')));
+    const page = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+    expect(mockValueZoneFiles).toHaveBeenCalledWith(['municipality:0701', 'municipal_unit:070101']);
+    expect(page.kind === 'found' && page.valueZoneFiles).toEqual(['municipal_unit:070101']);
+
+    mockValueZoneFiles.mockResolvedValue(null);
+    const failed = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+    expect(failed.kind === 'found' && failed.valueZoneFiles).toBeNull();
   });
 
   it('καμία εγγραφή ⇒ none (γεγονός)· αποτυχία ανάγνωσης ⇒ unavailable, και η σελίδα ΔΕΝ πέφτει', async () => {

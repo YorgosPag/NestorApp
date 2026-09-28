@@ -12,8 +12,10 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
+import { cn } from '@/lib/utils';
 import type { TourEditorModel, TourInboxEntry } from '@/lib/spatial-tour/tour-editor-model';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
@@ -42,7 +44,7 @@ function InboxRow({ entry, selected, onSelect }: { readonly entry: TourInboxEntr
   const date = t(PANEL_KEYS.capturedAt, { date: formatDate(entry.capture.capturedAt) });
   return (
     <li className="flex items-center gap-2">
-      <Button type="button" variant={selected ? 'secondary' : 'ghost'} size="sm" className="flex-1 justify-start"
+      <Button type="button" variant="ghost" size="sm" className={cn('flex-1 justify-start', selected && COLOR_BRIDGE.selectionControl.pressed)}
         aria-current={selected ? 'true' : undefined} onClick={onSelect}>{date}</Button>
       {entry.readiness === 'baking' && <Badge variant="outline">{t(TOUR_EDITOR_KEYS.baking)}</Badge>}
       {entry.readiness === 'failed' && <Badge variant="destructive">{t(TOUR_EDITOR_KEYS.failed)}</Badge>}
@@ -66,7 +68,7 @@ function PointsSection({ model, selection, onSelect }: TourEditorRailProps) {
               const missing = model.missingArrows.get(nodeId)?.length ?? 0;
               return (
                 <li key={nodeId} className="flex items-center gap-2">
-                  <Button type="button" variant={isSelected(selection, target) ? 'secondary' : 'ghost'} size="sm" className="flex-1 justify-start"
+                  <Button type="button" variant="ghost" size="sm" className={cn('flex-1 justify-start', isSelected(selection, target) && COLOR_BRIDGE.selectionControl.pressed)}
                     aria-current={isSelected(selection, target) ? 'true' : undefined} onClick={() => onSelect(target)}>
                     {nameOf(nodeId)}
                   </Button>

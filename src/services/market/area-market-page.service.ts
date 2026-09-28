@@ -27,6 +27,7 @@ import { publicListingFromDocument } from '@/lib/listings/public-listing-from-do
 import { areaMarketRunFromDocument, areaMarketSnapshotFromDocument } from '@/lib/market/area-market-document';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { readAreaSummary } from '@/services/market/market-transactions.reader';
+import { readValueZoneFileIds } from '@/services/market/value-zones.reader';
 import { readAdminAreaDirectory } from '@/services/places/admin-boundaries.reader';
 import {
   hasAreaMarketPage,
@@ -121,10 +122,11 @@ export async function loadAreaMarketPage(adminDb: AdminFirestore, areaId: string
   const ancestors = adminAreaAncestors(directory.areas, area.id);
   const children = directory.childrenOf(area.id).filter((child) => hasAreaMarketPage(child.level));
   const parentId = marketParentOf(area, ancestors);
-  const [market, listings, contracts] = await Promise.all([
+  const [market, listings, contracts, valueZoneFiles] = await Promise.all([
     readMarket(adminDb, area.id, parentId, today),
     readListings(adminDb, area),
     readContracts(area.id, parentId),
+    readValueZoneFileIds([area.id, ...children.map((child) => child.id)]),
   ]);
-  return { kind: 'found', area, ancestors, children, market, listings, contracts };
+  return { kind: 'found', area, ancestors, children, market, listings, contracts, valueZoneFiles };
 }

@@ -1,5 +1,5 @@
 /**
- * @fileoverview **ΟΙ ΚΑΔΟΙ ΑΝΑΛΥΣΗΣ** — εμβαδόν, υπνοδωμάτια, όροφος: ποιος κάδος, ποια όρια, ποιο τμήμα
+ * @fileoverview **ΟΙ ΚΑΔΟΙ ΑΝΑΛΥΣΗΣ** — εμβαδόν, υπνοδωμάτια, όροφος, έτος κατασκευής: ποιος κάδος, ποια όρια, ποιο τμήμα
  * αναλύεται σε ποιον άξονα (ADR-890 §5.2).
  * @related ADR-890 · `types/area-market.ts` · `market-segments.ts`
  * @module lib/market/market-breakdowns
@@ -73,13 +73,18 @@ export const YEAR_BUILT_BUCKETS: readonly MarketBucket[] = [
   { key: 'gte2020', min: 2020, max: null },
 ];
 
-/** Ποιοι άξονες έχουν νόημα για κάθε τμήμα. Το υπνοδωμάτιο δεν λέει τίποτα για κατάστημα ή οικόπεδο. */
+/**
+ * Ποιοι άξονες έχουν νόημα για κάθε τμήμα. Το υπνοδωμάτιο δεν λέει τίποτα για κατάστημα ή οικόπεδο.
+ *
+ * 🔑 Το `yearBuilt` μπαίνει **ακριβώς** στα τμήματα με κτίσμα (`perSqmBuilding`) — το ίδιο κριτήριο με το οποίο ο
+ * γεννήτορας του ΜΑΜΑ γράφει έτος στα συμβόλαια, ώστε ζητούμενη ↔ συμβόλαιο να συγκρίνονται ανά κάδο (ADR-890 §12).
+ */
 export const SEGMENT_BREAKDOWN_AXES: Readonly<Record<MarketSegment, readonly AreaBreakdownAxis[]>> = {
-  apartment: ['size', 'bedrooms', 'floor'],
-  house: ['size', 'bedrooms'],
-  commercial: ['size', 'floor'],
+  apartment: ['size', 'bedrooms', 'floor', 'yearBuilt'],
+  house: ['size', 'bedrooms', 'yearBuilt'],
+  commercial: ['size', 'floor', 'yearBuilt'],
   land: ['size'],
-  storage: ['size'],
+  storage: ['size', 'yearBuilt'],
   parking: [],
 };
 
@@ -92,6 +97,8 @@ export function bucketsFor(axis: AreaBreakdownAxis, segment: MarketSegment): rea
       return BEDROOM_BUCKETS;
     case 'floor':
       return FLOOR_BUCKETS;
+    case 'yearBuilt':
+      return YEAR_BUILT_BUCKETS;
   }
 }
 

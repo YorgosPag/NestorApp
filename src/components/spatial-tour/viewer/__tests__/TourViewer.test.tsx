@@ -41,6 +41,7 @@ const engine: jest.Mocked<TourPanoramaEngine> = {
 };
 jest.mock('../tour-panorama-engine', () => ({ createTourPanoramaEngine: () => engine }));
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { DEMO_TOUR_MANIFEST } from '../demo/demo-tour';
 import { TourViewer } from '../TourViewer';
 import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
@@ -73,6 +74,16 @@ beforeAll(() => {
   HTMLCanvasElement.prototype.setPointerCapture = () => undefined;
   global.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} } as unknown as typeof ResizeObserver;
 });
+/**
+ * Το jsdom δεν έχει διάταξη (πλάτος 0 ⇒ «στενός» θεατής ⇒ `Sheet`). Ο θεατής αποφασίζει στήλη/`Sheet` από το **δικό του**
+ * πλάτος (Φ2στ-γ Γ2) — εδώ δηλώνεται μια οθόνη υπολογιστή· το `viewerWidth` την αλλάζει για τον κλάδο του κινητού.
+ */
+let viewerWidth = 1280;
+beforeEach(() => {
+  viewerWidth = 1280;
+  jest.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, viewerWidth, 800));
+});
+afterEach(() => jest.restoreAllMocks());
 beforeEach(() => {
   webgl = true;
   failing = new Set();
@@ -81,7 +92,8 @@ beforeEach(() => {
 
 /** Η πρώτη εικόνα φορτώνει ασύγχρονα — η απόδοση περιμένει να κατακάτσει (καμία ενημέρωση εκτός `act`). */
 const renderViewer = async (manifest: TourManifest = DEMO_TOUR_MANIFEST) => {
-  await act(async () => { render(<TourViewer manifest={manifest} source={source} />); });
+  // Ο `TooltipProvider` έρχεται από το layout της σελίδας (`(light)` — ADR-813)· εδώ τον δίνει το test.
+  await act(async () => { render(<TooltipProvider><TourViewer manifest={manifest} source={source} /></TooltipProvider>); });
 };
 /** «Σημείο N» — το όνομα ενός σημείου χωρίς δηλωμένο χώρο (η ψεύτικη `t` κολλά τις τιμές μετά το κλειδί). */
 const P = (n: number) => `spatial-tour:viewer.point:${n}`;
@@ -289,5 +301,83 @@ describe('TourViewer — χωρίς WebGL', () => {
     expect(screen.getByRole('status')).toHaveTextContent('spatial-tour:viewer.noWebgl');
     expect(screen.getAllByRole('listitem')).toHaveLength(6);
     expect(engine.showNow).not.toHaveBeenCalled();
+  });
+});
+
+describe('TourViewer — Γ2: διαχωριστική + μεγέθυνση κάτοψης (Φ2στ-γ · §4.14 σημεία 3 + 5)', () => {
+  const COLUMN_KEY = 'nestor:tour-plan-column:v1';
+  const separator = () => screen.getByRole('separator', { name: 'spatial-tour:viewer.resizeColumn' });
+  const cardPlan = () => floorSection(0).getByRole('group', { name: 'spatial-tour:viewer.plan' });
+  const zoomIn = () => floorSection(0).getByRole('button', { name: 'spatial-tour:viewer.planZoomIn' });
+  const radius = (plan: HTMLElement) => Number(within(plan).getAllByRole('button')[0].getAttribute('r'));
+  const viewBoxWidth = (plan: HTMLElement) => Number((plan.getAttribute('viewBox') ?? '').split(' ')[2]);
+  const nextFrame = () => act(async () => { await new Promise((resolve) => requestAnimationFrame(() => resolve(null))); });
+
+  beforeEach(() => localStorage.clear());
+
+  it('πλατύς θεατής ⇒ WAI-ARIA διαχωριστικό με όνομα, εστιάσιμο· η στήλη ΔΕΝ είναι σε Sheet', async () => {
+    await renderViewer();
+    expect(separator()).toHaveAttribute('tabindex', '0');
+    expect(screen.queryByRole('button', { name: /spatial-tour:viewer\.openPanel/ })).not.toBeInTheDocument();
+    expect(panel().getAllByRole('region')).toHaveLength(2);
+  });
+
+  it('στενός θεατής (ο ΔΙΚΟΣ του χώρος, όχι το παράθυρο) ⇒ κανένα διαχωριστικό, η στήλη πίσω από κουμπί', async () => {
+    viewerWidth = 700;
+    await renderViewer();
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /spatial-tour:viewer\.openPanel/ })).toBeInTheDocument();
+  });
+
+  // ⚠️ Το «βέλος ⇒ εγγραφή» και το «κουμπί ⇒ σύμπτυξη» ΔΕΝ ελέγχονται εδώ: η βιβλιοθήκη πετά «Previous layout not found»
+  // στο jsdom (καμία διάταξη) — ίδιο όριο με το ADR-724 (`WorkspaceSplitLayout.test`). Η λογική της εγγραφής κλειδώνεται
+  // στο `components/ui/__tests__/resizable-persistence.test.tsx`· η σύμπτυξη επαληθεύεται ζωντανά (ADR-884 §4.14).
+  it('το πλάτος ΔΕΝ γράφεται επειδή άνοιξε η σελίδα, ούτε με Tab πάνω στο διαχωριστικό', async () => {
+    await renderViewer();
+    await nextFrame();
+    fireEvent.keyDown(separator(), { key: 'Tab' });
+    await nextFrame();
+    expect(localStorage.getItem(COLUMN_KEY)).toBeNull();
+  });
+
+  it('κουμπί ▯| : ελέγχει τη στήλη (aria-controls) και θυμάται την απόκρυψη από την προηγούμενη επίσκεψη', async () => {
+    localStorage.setItem(COLUMN_KEY, JSON.stringify({ width: 400, collapsed: true }));
+    await renderViewer();
+    const show = screen.getByRole('button', { name: 'spatial-tour:viewer.planColumnShow' });
+    expect(show).toHaveAttribute('aria-expanded', 'false');
+    expect(document.getElementById(show.getAttribute('aria-controls') ?? '')).not.toBeNull();
+  });
+
+  it('«+» ⇒ στενότερο viewBox, αλλά η τελεία μένει ΙΔΙΑ στην οθόνη (ακτίνα ÷ ζουμ)', async () => {
+    await renderViewer();
+    const before = { width: viewBoxWidth(cardPlan()), r: radius(cardPlan()) };
+    await act(async () => { fireEvent.click(zoomIn()); });
+    const after = { width: viewBoxWidth(cardPlan()), r: radius(cardPlan()) };
+    expect(after.width).toBeCloseTo(before.width / 1.5);
+    expect(after.r / after.width).toBeCloseTo(before.r / before.width);
+    expect(floorSection(0).getByRole('button', { name: 'spatial-tour:viewer.planZoomOut' })).toBeEnabled();
+  });
+
+  it('τροχός στη στήλη: σκέτος ⇒ κυλά τη στήλη (καμία μεγέθυνση)· Ctrl + τροχός ⇒ μεγέθυνση', async () => {
+    await renderViewer();
+    const width = viewBoxWidth(cardPlan());
+    fireEvent.wheel(cardPlan(), { deltaY: -200, clientX: 100, clientY: 100 });
+    expect(viewBoxWidth(cardPlan())).toBe(width);
+    await act(async () => { fireEvent.wheel(cardPlan(), { deltaY: -200, clientX: 100, clientY: 100, ctrlKey: true }); });
+    expect(viewBoxWidth(cardPlan())).toBeLessThan(width);
+  });
+
+  it('↗ ανάπτυξη: ΙΔΙΑ θέαση με την κάρτα· κλικ σε τελεία ⇒ μετάβαση ΚΑΙ κλείσιμο', async () => {
+    await renderViewer();
+    await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+    await act(async () => { fireEvent.click(zoomIn()); });
+    const cardViewBox = cardPlan().getAttribute('viewBox');
+    await act(async () => { fireEvent.click(floorSection(0).getByRole('button', { name: 'spatial-tour:viewer.planExpand' })); });
+    const dialog = await screen.findByRole('dialog');
+    const expanded = within(dialog).getByRole('group', { name: 'spatial-tour:viewer.plan' });
+    expect(expanded.getAttribute('viewBox')).toBe(cardViewBox);
+    await act(async () => { fireEvent.click(within(expanded).getByRole('button', { name: `spatial-tour:viewer.goTo:${P(2)}` })); });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
   });
 });

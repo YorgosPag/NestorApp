@@ -48,6 +48,7 @@
     "size": "By size",
     "bedrooms": "By bedrooms",
     "floor": "By floor",
+    "yearBuilt": "By year built",
     "columnBucket": "Category",
     "columnMedian": "Median per m²",
     "columnRange": "Middle 50%",

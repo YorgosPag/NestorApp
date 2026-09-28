@@ -33,9 +33,9 @@
  * προβολής. Καμία δεύτερη υλοποίηση ΕΓΣΑ87, κανένα `proj4`, κανένας μαγικός αριθμός.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-716-geodetic-unit-identification-dxf-import.md §5
- * @see ./egsa87-projection — ADR-656 M12, η ΜΟΝΗ προβολή του έργου
+ * @see @/lib/geo/egsa87-projection — ADR-656 M12, η ΜΟΝΗ προβολή του έργου
  */
-import { geographicToGrid } from './egsa87-projection';
+import { geographicToGrid } from '@/lib/geo/egsa87-projection';
 
 /** Άξονο-ευθυγραμμισμένο παράθυρο σε προβολικά μέτρα. */
 export interface ProjectedEnvelope {

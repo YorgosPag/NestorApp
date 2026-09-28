@@ -39,8 +39,15 @@ export type AskingOffer = (typeof ASKING_OFFERS)[number];
 export const ASKING_EXCLUSIONS = ['noPrice', 'noSize', 'noSegment', 'implausible'] as const;
 export type AskingExclusion = (typeof ASKING_EXCLUSIONS)[number];
 
-/** Οι άξονες ανάλυσης (ADR-890 §6 Φ1: εμβαδόν / υπνοδωμάτια / όροφος). */
-export const AREA_BREAKDOWN_AXES = ['size', 'bedrooms', 'floor'] as const;
+/**
+ * Οι άξονες ανάλυσης (ADR-890 §6 Φ1: εμβαδόν / υπνοδωμάτια / όροφος · §12: έτος κατασκευής).
+ *
+ * 🔑 **ΕΞΕΛΙΞΗ ΣΧΗΜΑΤΟΣ ΧΩΡΙΣ ΑΛΛΑΓΗ ΕΚΔΟΧΗΣ** (ADR-890 §12.1, πρακτική protobuf/Avro): νέος άξονας = νέο
+ * **προαιρετικό** κλειδί στο `breakdowns` ⇒ το `AREA_MARKET_SNAPSHOT_SCHEMA_VERSION` **δεν** ανεβαίνει. Άξονας
+ * **απών** = «δεν μετρήθηκε» (έγγραφο πριν από τον άξονα)· **παρών** με κενούς κάδους = «μετρήθηκε, κανείς δεν
+ * δήλωσε». ⚠️ Τα κλειδιά κάδων είναι σαν αριθμοί πεδίων: αλλαγή ορίων = **νέο** κλειδί, ποτέ το ίδιο.
+ */
+export const AREA_BREAKDOWN_AXES = ['size', 'bedrooms', 'floor', 'yearBuilt'] as const;
 export type AreaBreakdownAxis = (typeof AREA_BREAKDOWN_AXES)[number];
 
 /** Ανάλυση της τιμής μονάδας κατά έναν άξονα: κελί ανά κάδο + πόσες δεν δήλωσαν τον άξονα. */
@@ -157,6 +164,11 @@ export interface AreaMarketPageData {
   readonly listings: AreaListingsPreview;
   /** Πηγές Β + Γ — τιμές συμβολαίων και τιμή ζώνης (ADR-889 Φ2 · ADR-890 Φ2). */
   readonly contracts: AreaContractsState;
+  /**
+   * Τα αρχεία ζωνών αντικειμενικών αξιών που ζωγραφίζει ο χάρτης (ADR-889 Φ5): η ίδια η περιοχή και οι Δ.Ε. της, όσες
+   * έχουν ζώνες. `[]` = καμία ζώνη (γεγονός) · `null` = το ευρετήριο δεν διαβάστηκε («δεν ξέρω»).
+   */
+  readonly valueZoneFiles: readonly string[] | null;
 }
 
 /** Τρεις εκβάσεις: 404 · 5xx (δεν μπορέσαμε να ρωτήσουμε) · η σελίδα. */

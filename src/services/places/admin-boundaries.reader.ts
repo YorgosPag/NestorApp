@@ -15,7 +15,13 @@ import 'server-only';
  */
 
 import { createKeyedServerJsonFiles, createServerJsonFile } from '@/lib/data/server-json-file';
-import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex, type AdminArea } from '@/lib/geo/admin-area-index-file';
+import {
+  ADMIN_AREA_INDEX_FILE,
+  ADMIN_AREA_ROOT_KEY,
+  adminAreaChildrenIndex,
+  readAdminAreaIndex,
+  type AdminArea,
+} from '@/lib/geo/admin-area-index-file';
 import type { AdminAreaChild, AdminAreaLookup } from '@/lib/geo/admin-area-of-point';
 import {
   ADMIN_BOUNDARIES_DIR,
@@ -31,7 +37,7 @@ const logger = createModuleLogger('admin-boundaries.reader');
 /** Πόσα όρια κρατά η διεργασία. ~4 KB το καθένα (διάμεσος Δ.Ε./κοινότητας) ⇒ λίγα MB. */
 const MAX_CACHED_BOUNDARIES = 1024;
 
-const ROOT_KEY = '';
+const ROOT_KEY = ADMIN_AREA_ROOT_KEY;
 
 type ChildrenIndex = ReadonlyMap<string, readonly AdminAreaChild[]>;
 
@@ -44,14 +50,7 @@ interface ServerAreaIndex {
 /** Ευρετήριο → «παιδιά ανά γονέα». Ρίζα = γονέας εκτός ευρετηρίου (Αποκεντρωμένη, βαθμίδα 2). */
 function buildServerAreaIndex(payload: unknown): ServerAreaIndex {
   const areas = readAdminAreaIndex(payload);
-  const children = new Map<string, AdminAreaChild[]>();
-  for (const area of areas.values()) {
-    const key = area.parentId !== null && areas.has(area.parentId) ? area.parentId : ROOT_KEY;
-    const siblings = children.get(key) ?? [];
-    siblings.push({ id: area.id, level: area.level });
-    children.set(key, siblings);
-  }
-  return { areas, children };
+  return { areas, children: adminAreaChildrenIndex(areas) };
 }
 
 const INDEX_FILE = createServerJsonFile<ServerAreaIndex>({

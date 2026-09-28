@@ -14,6 +14,7 @@ import React from 'react';
 import { ContractMedian } from '@/components/market/ContractMedian';
 import { ChartBandPending } from '@/components/ui/chart-card/ChartBandPending';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatPercentage } from '@/lib/intl-formatting';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE, type ReportedStatCell } from '@/lib/market/market-statistics';
 
 import type { ContractSegmentView } from './area-contracts-view';
@@ -78,18 +79,31 @@ function ZoneFigures({ view, price }: { readonly view: ContractSegmentView; read
   );
 }
 
+const signedPct = (pct: number): string => formatPercentage(pct, { maximumFractionDigits: 0, signDisplay: 'exceptZero' });
+
+/**
+ * Ανά έτος κατασκευής, με τη στήλη «Ζητούν» δίπλα στη διάμεσο (ADR-890 §12): η στήλη υπάρχει **μόνο** όταν έστω ένας
+ * κάδος έχει και τις δύο πηγές πάνω από το κατώφλι — αλλιώς θα ήταν στήλη από παύλες.
+ */
 function YearBuiltTable({ view, price }: { readonly view: ContractSegmentView; readonly price: (n: number) => string }) {
   const { t } = useTranslation([NS]);
   if (view.yearBuilt.length === 0) return null;
+  const compared = view.yearBuilt.some((row) => row.askGapPct !== null);
   return (
     <AreaBreakdownTable
       caption={t(`${NS}:yearBuilt.title`)}
       bucketHeader={t(`${NS}:yearBuilt.columnBucket`)}
       countHeader={t(`${NS}:yearBuilt.columnCount`)}
-      rows={view.yearBuilt.map((row) => ({ key: row.key, label: t(`${NS}:yearBuilt.bucket.${row.key}`), cell: row.cell }))}
+      rows={view.yearBuilt.map((row) => ({
+        key: row.key,
+        label: t(`${NS}:yearBuilt.bucket.${row.key}`),
+        cell: row.cell,
+        comparison: row.askGapPct === null ? null : signedPct(row.askGapPct),
+      }))}
       formatPrice={price}
       belowThreshold={t(`${NS}:yearBuilt.belowThreshold`, { min: MARKET_STAT_MIN_SAMPLE })}
-      footnote={null}
+      comparisonHeader={compared ? t(`${NS}:yearBuilt.askGapColumn`) : null}
+      footnote={compared ? t(`${NS}:yearBuilt.askGapNote`, { min: MARKET_STAT_MIN_SAMPLE }) : null}
     />
   );
 }

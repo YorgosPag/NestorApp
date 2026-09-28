@@ -41,7 +41,7 @@ export function OpenDataAttribution({ source }: OpenDataAttributionProps) {
         {' · '}
         <a href={license.url} className={LINK} {...EXTERNAL}>{t(`${NS}:source.license`)}</a>
       </p>
-      <p className="m-0">{t(`${NS}:source.changes`)}</p>
+      <p className="m-0">{t(`${NS}:source.${source}.changes`)}</p>
     </footer>
   );
 }

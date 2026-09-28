@@ -160,3 +160,25 @@ export function createKeyedServerJsonFiles<TSnapshot>(
 
   return { read: (key) => fileOf(key).read() };
 }
+
+/**
+ * **Αναγνώστης σχήματος (`T | null`) → `build` που ΠΕΤΑ** — ώστε ένα αρχείο παλιού σχήματος να καταλήγει στο
+ * `onFailure` (και στο `null` = «δεν ξέρω»), ποτέ σε σιωπηλά λάθος στιγμιότυπο.
+ * 🔑 Εξήχθη από το `market-transactions.reader.ts` όταν ήρθε δεύτερος καταναλωτής (ADR-889 Φ5, ζώνες) — N.0.2.
+ */
+export function strictJsonShape<T>(read: (payload: unknown) => T | null, what: string): (payload: unknown) => T {
+  return (payload) => {
+    const value = read(payload);
+    if (value === null) throw new TypeError(`${what}: μη αναμενόμενο σχήμα`);
+    return value;
+  };
+}
+
+/** `onFailure` που γράφει **προειδοποίηση** με το μήνυμα του σφάλματος (και ό,τι πλαίσιο δώσει ο καλών). */
+export function warnOnJsonFailure(
+  logger: { readonly warn: (message: string, meta: Record<string, string>) => void },
+  message: string,
+  extra: Record<string, string> = {},
+): (error: unknown) => void {
+  return (error) => logger.warn(message, { ...extra, error: error instanceof Error ? error.message : String(error) });
+}

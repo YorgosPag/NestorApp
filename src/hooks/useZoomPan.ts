@@ -36,6 +36,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, TouchEvent } from 'react';
 
+import { clampZoom as clampZoomTo, pointDistance, scaleAbout, stepZoom, wheelZoom } from '@/lib/geometry/zoom-pan-math';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -116,11 +118,9 @@ const ZERO_OFFSET: PanOffset = { x: 0, y: 0 };
 // UTILITIES
 // ============================================================================
 
-/** Euclidean distance between two touch points */
+/** Distance between two touch points — the math lives in `@/lib/geometry/zoom-pan-math` (ADR-884 Φ2στ-γ Γ2). */
 function touchDistance(t1: React.Touch, t2: React.Touch): number {
-  const dx = t1.clientX - t2.clientX;
-  const dy = t1.clientY - t2.clientY;
-  return Math.sqrt(dx * dx + dy * dy);
+  return pointDistance({ x: t1.clientX, y: t1.clientY }, { x: t2.clientX, y: t2.clientY });
 }
 
 // ============================================================================
@@ -159,7 +159,7 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
 
   // ---- Clamp helper ----
   const clampZoom = useCallback(
-    (value: number): number => Math.min(maxZoom, Math.max(minZoom, value)),
+    (value: number): number => clampZoomTo(value, { min: minZoom, max: maxZoom }),
     [minZoom, maxZoom],
   );
 
@@ -174,16 +174,16 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
 
   const zoomIn = useCallback(() => {
     // Multiplicative (big-players) when zoomFactor is set, else additive zoomStep.
-    setZoomRaw(prev => clampZoom(zoomFactor ? prev * zoomFactor : prev + zoomStep));
-  }, [clampZoom, zoomStep, zoomFactor]);
+    setZoomRaw(prev => stepZoom(prev, { min: minZoom, max: maxZoom }, 1, { factor: zoomFactor, step: zoomStep }));
+  }, [minZoom, maxZoom, zoomStep, zoomFactor]);
 
   const zoomOut = useCallback(() => {
     setZoomRaw(prev => {
-      const next = clampZoom(zoomFactor ? prev / zoomFactor : prev - zoomStep);
+      const next = stepZoom(prev, { min: minZoom, max: maxZoom }, -1, { factor: zoomFactor, step: zoomStep });
       if (next <= 1) setPanOffset(ZERO_OFFSET);
       return next;
     });
-  }, [clampZoom, zoomStep, zoomFactor]);
+  }, [minZoom, maxZoom, zoomStep, zoomFactor]);
 
   const resetAll = useCallback(() => {
     setZoomRaw(defaultZoom);
@@ -207,12 +207,10 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
       const mouseY = e.clientY - rect.top - rect.height / 2;
 
       const prevZoom = zoomRef.current;
-      const nextZoom = clampZoom(prevZoom * (1 + -e.deltaY * wheelSensitivity));
-      const ratio = nextZoom / prevZoom;
-      const prevPan = panRef.current;
+      const nextZoom = wheelZoom(prevZoom, e.deltaY, wheelSensitivity, { min: minZoom, max: maxZoom });
 
-      // Keep the world point under the cursor fixed after zoom
-      const nextPan = { x: mouseX * (1 - ratio) + prevPan.x * ratio, y: mouseY * (1 - ratio) + prevPan.y * ratio };
+      // Keep the world point under the cursor fixed after zoom (the ONE formula — zoom-pan-math)
+      const nextPan = scaleAbout(panRef.current, { x: mouseX, y: mouseY }, nextZoom / prevZoom);
 
       setZoomRaw(nextZoom);
       setPanOffset(nextPan);
@@ -220,7 +218,7 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
 
     containerEl.addEventListener('wheel', handleWheel, { passive: false });
     return () => containerEl.removeEventListener('wheel', handleWheel);
-  }, [containerEl, clampZoom, wheelSensitivity]);
+  }, [containerEl, minZoom, maxZoom, wheelSensitivity]);
 
   // =========================================================================
   // MOUSE PAN (stable callbacks using refs)

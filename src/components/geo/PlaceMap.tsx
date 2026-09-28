@@ -202,6 +202,16 @@ export interface PlaceMapProps {
    * ⚠️ **`null` σημαίνει «μην κουνηθείς»**, ποτέ «γύρνα στην αρχή».
    */
   readonly fit?: CameraFrame | null;
+  /**
+   * **Γέμισμα των κλειστών σχημάτων** (προεπιλογή: ναι). ADR-889 Φ5: όταν από πάνω κάθεται **χρωματική** στρώση (ζώνες
+   * αντικειμενικών αξιών), το μπλε γέμισμα του ορίου θα διαβαζόταν ως η πρώτη κλάση της κλίμακας — μένει μόνο το περίγραμμα.
+   */
+  readonly shapeFill?: boolean;
+  /**
+   * **Θεματικές στρώσεις** (`Source`/`Layer` του MapLibre) πάνω από τα σχήματα — ADR-889 Φ5. Υποδοχή, όχι δεύτερος
+   * χάρτης: η επιφάνεια μένει **μία** (κεφαλίδα). Τα παιδιά βρίσκουν τον χάρτη με `useMap()`.
+   */
+  readonly children?: React.ReactNode;
 }
 
 /**
@@ -234,6 +244,7 @@ function PlaceMapLayers({
   halo,
   outline,
   shapes,
+  shapeFill,
   trace,
   pin,
   focus,
@@ -241,6 +252,7 @@ function PlaceMapLayers({
   readonly halo: GeoOutline | null;
   readonly outline: GeoOutline | null;
   readonly shapes: readonly GeoOutline[];
+  readonly shapeFill: boolean;
   readonly trace: readonly GeoPoint[];
   readonly pin: GeoPoint | null;
   readonly focus: PlaceFocus | null;
@@ -257,7 +269,7 @@ function PlaceMapLayers({
 
       {closed !== null && (
         <Source id={SHAPE_SOURCE} type="geojson" data={closed}>
-          <Layer {...SHAPE_FILL} />
+          {shapeFill && <Layer {...SHAPE_FILL} />}
           <Layer {...SHAPE_LINE} />
         </Source>
       )}
@@ -328,6 +340,8 @@ export function PlaceMap({
   disabled = false,
   heightClass = 'h-80',
   initialZoom = BUILDING_ZOOM,
+  shapeFill = true,
+  children,
 }: PlaceMapProps): React.ReactElement {
   const interactive = onPick !== undefined && !disabled;
   const mapRef = useRef<MapRef | null>(null);
@@ -363,7 +377,8 @@ export function PlaceMap({
         onClick={handleClick}
         cursor={interactive ? 'crosshair' : 'default'}
       >
-        <PlaceMapLayers halo={halo} outline={outline} shapes={shapes} trace={trace} pin={pin} focus={focus} />
+        <PlaceMapLayers halo={halo} outline={outline} shapes={shapes} shapeFill={shapeFill} trace={trace} pin={pin} focus={focus} />
+        {children}
       </Map>
 
       {/*

@@ -3,7 +3,7 @@
  */
 
 import { northAngleDeg, surveyCentroidEN, svgRotationDeg } from '../north-arrow-model';
-import { geographicToGrid } from '../../geo-referencing/egsa87-projection';
+import { geographicToGrid } from '@/lib/geo/egsa87-projection';
 import type { GeoReference } from '../../geo-referencing/geo-transform';
 import type { TopoPoint } from '../topo-types';
 

@@ -13,6 +13,8 @@
  * ⚠️ **Φύλλο χωρίς runtime εισαγωγές από `@/`** — το διαβάζει και ο γεννήτορας (`tsx`).
  */
 
+import type { AdminAreaChild } from './admin-area-of-point';
+
 /** Η δημόσια θέση του ευρετηρίου, κάτω από `public/`. */
 export const ADMIN_AREA_INDEX_FILE = 'data/admin-area-index.json';
 
@@ -96,6 +98,26 @@ export function readAdminAreaIndex(payload: unknown): ReadonlyMap<string, AdminA
     if (area !== null) areas.set(area.id, area);
   }
   return areas;
+}
+
+/** Το κλειδί των **ριζών** στο {@link adminAreaChildrenIndex}: γονέας εκτός ευρετηρίου (Αποκεντρωμένη, βαθμίδα 2). */
+export const ADMIN_AREA_ROOT_KEY = '';
+
+/**
+ * **Ευρετήριο → «παιδιά ανά γονέα»** — η ΜΙΑ κατασκευή της ιεραρχίας για τον κριτή περιοχής
+ * (`admin-area-of-point.ts`). Τη ζητούν ο server (απόδοση περιοχής αγγελίας, ADR-890 Φ0) **και** ο γεννήτορας
+ * ζωνών (ADR-889 Φ5): δύο γραφές θα σήμαιναν ότι μια ζώνη και μια αγγελία στο ίδιο σημείο θα μπορούσαν να
+ * καταλήξουν σε διαφορετική Δημοτική Ενότητα.
+ */
+export function adminAreaChildrenIndex(areas: ReadonlyMap<string, AdminArea>): ReadonlyMap<string, readonly AdminAreaChild[]> {
+  const children = new Map<string, AdminAreaChild[]>();
+  for (const area of areas.values()) {
+    const key = area.parentId !== null && areas.has(area.parentId) ? area.parentId : ADMIN_AREA_ROOT_KEY;
+    const siblings = children.get(key) ?? [];
+    siblings.push({ id: area.id, level: area.level });
+    children.set(key, siblings);
+  }
+  return children;
 }
 
 /**

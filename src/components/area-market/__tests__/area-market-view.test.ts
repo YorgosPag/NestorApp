@@ -40,6 +40,15 @@ describe('breakdownViews / exclusionEntries', () => {
     expect(size?.rows.map((row) => row.key)).toEqual(['50-79', '80-119', '120-199']);
   });
 
+  it('ADR-890 §12.1 — άξονας ΑΠΩΝ (παλιό στιγμιότυπο) ⇒ κανένας πίνακας· ΠΑΡΩΝ χωρίς δηλώσεις ⇒ πίνακας με «δεν δήλωσαν»', () => {
+    const summary = summarizeArea('municipality:0701', '2026-09-26', apartments(5, 'a')).offers.sale.segments.apartment;
+    if (summary === undefined) throw new Error('λείπει το τμήμα');
+    const measured = breakdownViews('apartment', summary).find((view) => view.axis === 'yearBuilt');
+    expect(measured).toEqual({ axis: 'yearBuilt', rows: [], undeclared: 5 });
+    const { yearBuilt: _new, ...legacy } = summary.breakdowns;
+    expect(breakdownViews('apartment', { ...summary, breakdowns: legacy }).map((view) => view.axis)).not.toContain('yearBuilt');
+  });
+
   it('οι λόγοι αποκλεισμού με μηδέν δεν εμφανίζονται', () => {
     const snapshot = summarizeArea('municipality:0701', '2026-09-26', [listing({ areaSqm: null })]);
     expect(exclusionEntries(snapshot.offers.sale)).toEqual([['noSize', 1]]);

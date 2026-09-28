@@ -17,7 +17,7 @@ import {
   identifyUnitsByGeodeticEnvelope,
   type GeodeticUnitCandidate,
 } from '../projected-crs-envelopes';
-import { geographicToGrid } from '../egsa87-projection';
+import { geographicToGrid } from '@/lib/geo/egsa87-projection';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
 
 /** Ο πλήρης πίνακας υποψηφίων, από τη SSoT μετατροπής — κανένας μαγικός αριθμός εδώ. */

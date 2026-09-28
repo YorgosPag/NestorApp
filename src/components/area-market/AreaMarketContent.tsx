@@ -116,7 +116,7 @@ export function AreaMarketContent({ data }: { readonly data: AreaMarketPageData 
   return (
     <ShellSurface as="main" measure="wide" className="gap-y-6 py-4">
       <AreaHeader data={data} />
-      <AreaBoundaryMap areaId={data.area.id} />
+      <AreaBoundaryMap areaId={data.area.id} valueZoneFiles={data.valueZoneFiles} />
       {offers.map((view) => (
         <AreaAskingSection key={view.offer} view={view} parentName={parentName} />
       ))}

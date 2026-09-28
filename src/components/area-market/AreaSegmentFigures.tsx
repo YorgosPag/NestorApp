@@ -10,15 +10,24 @@
 
 import React from 'react';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE, type ReportedStatCell } from '@/lib/market/market-statistics';
-import type { AskingOffer } from '@/types/area-market';
+import type { AreaBreakdownAxis, AskingOffer } from '@/types/area-market';
 
 import { askingAmountLabel, unitPriceLabel } from './area-market-format';
 import { breakdownViews, type BreakdownView, type SegmentView } from './area-market-view';
 import { AreaBreakdownTable } from './AreaBreakdownTable';
 
 const NS = 'area-market';
+
+/**
+ * Η ετικέτα ενός κάδου. Οι κάδοι έτους κατασκευής είναι **κοινοί** με τα συμβόλαια (`YEAR_BUILT_BUCKETS`), άρα και
+ * οι ετικέτες τους: ένα SSoT στο `market-contracts`, όχι δίδυμο εδώ (ADR-890 §12).
+ * ⚠️ Δύο κλήσεις με **στατικό πρόθεμα** η καθεμία — ο σαρωτής του route slice (CHECK 3.34) τις λύνει ως υποδέντρα.
+ */
+function bucketLabel(t: Translate, axis: AreaBreakdownAxis, key: string): string {
+  return axis === 'yearBuilt' ? t(`market-contracts:yearBuilt.bucket.${key}`) : t(`${NS}:bucket.${axis}.${key}`);
+}
 
 interface AreaSegmentFiguresProps {
   readonly offer: AskingOffer;
@@ -78,14 +87,14 @@ function SuppressedHeadline({ offer, view, parentName }: AreaSegmentFiguresProps
 
 /** Μια ανάλυση των αγγελιών → ο γενικός πίνακας, με τις λέξεις των αγγελιών. */
 function AskingBreakdown({ offer, view, breakdown }: { readonly offer: AskingOffer; readonly view: SegmentView; readonly breakdown: BreakdownView }) {
-  const { t } = useTranslation([NS, 'common']);
+  const { t } = useTranslation([NS, 'market-contracts', 'common']);
   const { axis } = breakdown;
   return (
     <AreaBreakdownTable
       caption={t(`${NS}:breakdown.${axis}`)}
       bucketHeader={t(`${NS}:breakdown.columnBucket`)}
       countHeader={t(`${NS}:breakdown.columnCount`)}
-      rows={breakdown.rows.map((row) => ({ key: row.key, label: t(`${NS}:bucket.${axis}.${row.key}`), cell: row.cell }))}
+      rows={breakdown.rows.map((row) => ({ key: row.key, label: bucketLabel(t, axis, row.key), cell: row.cell }))}
       formatPrice={(amount) => unitPriceLabel(t, offer, view.segment, amount)}
       belowThreshold={t(`${NS}:breakdown.belowThreshold`, { min: MARKET_STAT_MIN_SAMPLE })}
       footnote={breakdown.undeclared > 0 ? t(`${NS}:breakdown.undeclared`, { count: breakdown.undeclared }) : null}

@@ -43,19 +43,31 @@ export interface ContractSegmentView {
   /** (ζητούμενη ÷ συμβολαίου − 1) σε %, ή `null` όταν κάποιο από τα δύο δεν δημοσιεύεται. */
   readonly askGapPct: number | null;
   readonly trend: readonly ContractTrendPoint[];
-  readonly yearBuilt: readonly { readonly key: string; readonly cell: StatCell }[];
+  readonly yearBuilt: readonly YearBuiltRow[];
+}
+
+/** Μία γραμμή του πίνακα έτους: το κελί συμβολαίων και η απόσταση της ζητούμενης **του ίδιου κάδου** (ADR-890 §12). */
+export interface YearBuiltRow {
+  readonly key: string;
+  readonly cell: StatCell;
+  readonly askGapPct: number | null;
 }
 
 function reported(cell: StatCell | undefined | null): ReportedStatCell | null {
   return cell !== undefined && cell !== null && isReportedStatCell(cell) ? cell : null;
 }
 
+/** (ζητούμενη ÷ συμβολαίου − 1) σε %, **μόνο** όταν και τα δύο κελιά περνούν το κατώφλι. */
+export function gapPct(ask: StatCell | undefined | null, contract: StatCell | undefined | null): number | null {
+  const asked = reported(ask);
+  const signed = reported(contract);
+  if (asked === null || signed === null || signed.median <= 0) return null;
+  return Math.round((asked.median / signed.median - 1) * PERCENT);
+}
+
 /** Η απόσταση ζητούμενης ↔ συμβολαίου για το ίδιο τμήμα, από την πλευρά της **πώλησης**. */
 export function askGapPct(asking: AreaMarketSnapshot | null, segment: MarketSegment, contract: StatCell): number | null {
-  const ask = reported(asking?.offers.sale.segments[segment]?.unitPrice);
-  const signed = reported(contract);
-  if (ask === null || signed === null || signed.median <= 0) return null;
-  return Math.round((ask.median / signed.median - 1) * PERCENT);
+  return gapPct(asking?.offers.sale.segments[segment]?.unitPrice, contract);
 }
 
 export function contractTrend(summary: SegmentSummary, asOf: string): readonly ContractTrendPoint[] {
@@ -67,10 +79,15 @@ export function contractTrend(summary: SegmentSummary, asOf: string): readonly C
   }));
 }
 
-function yearBuiltRows(summary: SegmentSummary): ContractSegmentView['yearBuilt'] {
+/**
+ * Οι γραμμές έτους, με την απόσταση της ζητούμενης **ανά κάδο**. Στιγμιότυπο πριν από τον άξονα (`yearBuilt` απών,
+ * ADR-890 §12.1) ⇒ `null` σε κάθε γραμμή — «δεν μετρήθηκε», ποτέ «0%».
+ */
+function yearBuiltRows(summary: SegmentSummary, asking: AreaMarketSnapshot | null, segment: MarketSegment): readonly YearBuiltRow[] {
+  const askingBuckets = asking?.offers.sale.segments[segment]?.breakdowns.yearBuilt?.buckets;
   return YEAR_BUILT_BUCKETS.flatMap((bucket) => {
     const cell = summary.yearBuilt[bucket.key];
-    return cell === undefined ? [] : [{ key: bucket.key, cell }];
+    return cell === undefined ? [] : [{ key: bucket.key, cell, askGapPct: gapPct(askingBuckets?.[bucket.key], cell) }];
   });
 }
 
@@ -90,7 +107,7 @@ export function contractSegmentViews(
       parentLast12,
       askGapPct: askGapPct(asking, segment, summary.last12),
       trend: contractTrend(summary, own.asOf),
-      yearBuilt: yearBuiltRows(summary),
+      yearBuilt: yearBuiltRows(summary, asking, segment),
     }];
   });
 }

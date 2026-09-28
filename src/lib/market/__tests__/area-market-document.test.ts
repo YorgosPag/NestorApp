@@ -14,6 +14,19 @@ describe('areaMarketSnapshotFromDocument', () => {
     expect(areaMarketSnapshotFromDocument(JSON.parse(JSON.stringify(written)))).toEqual(written);
   });
 
+  it('ADR-890 §12.1 — έγγραφο γραμμένο ΠΡΙΝ από τον άξονα έτους (χωρίς `yearBuilt`) διαβάζεται αυτούσιο, όχι ως απουσία', () => {
+    const apartment = written.offers.sale.segments.apartment;
+    if (apartment === undefined) throw new Error('λείπει το τμήμα');
+    const { yearBuilt: _new, ...legacyBreakdowns } = apartment.breakdowns;
+    const legacy = {
+      ...written,
+      offers: { ...written.offers, sale: { ...written.offers.sale, segments: { apartment: { ...apartment, breakdowns: legacyBreakdowns } } } },
+    };
+    const read = areaMarketSnapshotFromDocument(JSON.parse(JSON.stringify(legacy)));
+    expect(read).toEqual(legacy);
+    expect(read?.offers.sale.segments.apartment?.breakdowns.yearBuilt).toBeUndefined();
+  });
+
   it.each([
     ['άλλη εκδοχή σχήματος', { ...written, schemaVersion: 2 }],
     ['χωρίς offers.rent', { ...written, offers: { sale: written.offers.sale } }],

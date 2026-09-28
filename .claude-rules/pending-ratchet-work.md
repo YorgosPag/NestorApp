@@ -3897,6 +3897,16 @@
 
 ## Pending tasks (priority order)
 
+### 🔢 `clamp` — επτά τοπικά αντίγραφα έξω από το SSoT (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ §4.14)
+- **Τι**: η οικογένεια `clamp` προωθήθηκε στο `src/lib/geometry/scalar.ts` (το `subapps/dxf-viewer/utils/scalar-math.ts`
+  επανεξάγει — πρότυπο `lib/geometry/angle.ts`). Μένουν **τοπικές** δηλώσεις `function clamp(value, min, max)` σε:
+  `components/shared/addresses/editor/helpers/rankSuggestions.ts` · `components/ui/floating/floating-panel-geometry.ts` ·
+  `services/ai-pipeline/modules/uc-017-gantt-ai/analyzers/photo-progress-analyzer.ts` · `services/report-engine/evm-calculator.ts` ·
+  `subapps/dxf-viewer/bim/table/formula/catalog/formula-insert-text.ts` · `…/ui/ribbon/components/table/table-size-grid-keyboard.ts`
+  (το `bim/table/table-cell-run-ops.ts` έχει **άλλη** υπογραφή `clamp(value, limit)` — όχι διπλότυπο).
+- **Διόρθωση**: `import { clamp } from '@/lib/geometry/scalar'` (μέσα στο subapp: από το `utils/scalar-math`) + σβήσιμο της τοπικής·
+  ταυτόσημη σημασιολογία (`Math.max(min, Math.min(max, value))`). 4+ αρχεία σε 4 τομείς ⇒ εδώ, όχι στο ίδιο commit (N.0.2).
+
 ### 🚦 Όριο ρυθμού ανά ΠΡΑΓΜΑΤΙΚΗ διαδρομή, όχι ανά πρότυπο (προτεραιότητα ΥΨΗΛΗ — ασφάλεια, 2026-09-27, ADR-855 · εντοπίστηκε στο ADR-884 §4.11)
 - **Τι**: `buildRateLimitKey(identifier, endpoint)` (`src/lib/middleware/rate-limit-config.ts:385`) βάζει στο κλειδί την **πραγματική**
   διαδρομή του αιτήματος. Κάθε δυναμικό τμήμα (`[id]`, `[...path]`) γεννά **δικό του «κουβά»**: `/api/contacts/A` και `/api/contacts/B`

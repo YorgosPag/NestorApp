@@ -222,6 +222,12 @@
 ---
 
 ## Changelog
+- **2026-09-28 — μετακόμιση της γεωδαισίας (ADR-889 Φ5)**: τα `egsa87-projection.ts` (M12) και `ggrs87-datum.ts`
+  (ADR-782) **μετακόμισαν** από το `systems/geo-referencing/` στο `src/lib/geo/` (`git mv`, μαζί με το test τους),
+  γιατί απέκτησαν δεύτερο καταναλωτή εκτός σχεδιαστή: τον γεννήτορα ζωνών αντικειμενικών αξιών. Ο εθνικός κάνναβος
+  δεν είναι έννοια του σχεδιαστή. Οι εισαγωγείς (`basemap-projection`, `north-arrow-model`, `projected-crs-envelopes`
+  + tests) δείχνουν πλέον στο `@/lib/geo/…`· **καμία** αλλαγή μαθηματικών. Νέα σύνθεση `lib/geo/greek-grid.ts`
+  (`greekGridToGeoPoint`), στην οποία αναθέτει το `basemap-projection.worldMmToGeographic`.
 - **v6** (2026-07-28): **M10 ετικέτες — η περίπτωση «χωρίς υψόμετρο» (→ [ADR-720](./ADR-720-survey-points-without-elevation.md)).**
   Το `TopoPoint.z` έγινε προαιρετικό, οπότε το `buildSurveyPointLabelEntities` απέκτησε **δεύτερη
   παρουσίαση**: γεμάτη κουκκίδα (`dot`) + δεκαδικό για μετρημένο σημείο· **ανοιχτός κύκλος** (`circle`)

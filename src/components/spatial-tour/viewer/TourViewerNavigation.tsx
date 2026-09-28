@@ -12,7 +12,9 @@
  */
 
 import { Button } from '@/components/ui/button';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 import type { TourViewerGraph, ViewerLevelEntry, ViewerNeighbour } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
@@ -61,7 +63,7 @@ export function TourStopList({ graph, level, currentNodeId, onGo }: {
             {onGo === undefined
               ? <span className="text-sm">{name}</span>
               : (
-                <Button type="button" size="sm" variant={here ? 'default' : 'ghost'} className="w-full justify-start"
+                <Button type="button" size="sm" variant="ghost" className={cn('w-full justify-start', here && COLOR_BRIDGE.selectionControl.pressed)}
                   aria-current={here ? 'location' : undefined} aria-label={here ? t(TOUR_VIEWER_KEYS.youAreHere, { name }) : t(TOUR_VIEWER_KEYS.goTo, { name })}
                   onClick={() => onGo(nodeId)}>
                   {name}

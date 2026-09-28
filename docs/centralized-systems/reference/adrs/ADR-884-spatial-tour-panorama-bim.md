@@ -797,7 +797,7 @@ DXF viewer) ⇒ **0,015596 m/px** έναντι αναμενόμενου 0,01560 
 **μέσα** από την οθόνη (σήμερα: μήνυμα «ανεβάστε στις κατόψεις του ακινήτου») · (4) γεννήτορες i18n (`generate:i18n-types` +
 `generate:i18n-shell-slice`) για τα νέα κλειδιά, με σταματημένο dev server.
 
-### 4.14 Φ2στ-γ — «Όπως η Zillow 3D Home», τα 5 σημεία του Giorgio (2026-09-28 · ⏳ σχεδιασμός — Plan Mode στη νέα συνεδρία)
+### 4.14 Φ2στ-γ — «Όπως η Zillow 3D Home», τα 5 σημεία του Giorgio (2026-09-28 · Plan Mode με έγκριση Giorgio · **Γ1 ✅ κώδικας + άγκυρες + ζωντανά** · **Γ2 ✅ κώδικας + άγκυρες + ζωντανά** · ⏳ Γ3)
 
 **Αφορμή**: στιγμιότυπα Zillow (105 Saratoga Ave) με σημειωμένα **5** σημεία όπου ο θεατής μας διαφέρει:
 
@@ -817,6 +817,102 @@ github.com/tschomay/house-viewer/pull/12 (ανοιχτή αναπαραγωγή 
 support.matterport.com/hc/en-us/articles/115015685088 · w3.org/WAI/ARIA/apg (Window Splitter) · github.com/bvaughn/react-resizable-panels ·
 Liu κ.ά. «Raster-to-Vector», ICCV 2017 · CubiCasa5K (2019) · ROS `ipa_room_segmentation` (distance transform + watershed) ·
 krpano floorplan plugin · ggnome.com/doc/panel-tour-map · 3dvista.com (polygon hotspot editor) · kuula.co/help/map-floor-plan.
+
+**Σχέδιο (Plan Mode, έγκριση Giorgio 2026-09-28)**: **Γ1** = σημεία 1+2 (σκηνή) → **Γ2** = 3+5 (διάταξη) → **Γ3** = 4 (σχήματα
+χώρων). SSoT audit: `react-resizable-panels` 4.7.2 **υπάρχει ήδη** (`components/ui/resizable.tsx`, ADR-724) ⇒ κανένα νέο πακέτο ·
+`useZoomPan` = CSS transform, μη ελεγχόμενο ⇒ **δεν** ταιριάζει σε SVG με viewBox σε μέτρα (τα μαθηματικά του εξάγονται στη Γ2) ·
+flood-fill + Moore + Douglas–Peucker υπάρχουν στο `dxf-viewer/bim/mesh-library/mesh-silhouette.ts` (μεταφορά σε `lib/geometry` στη
+Γ3) · **καμία** τομή ακτίνας–πατώματος στον χώρο του πανοράματος (το `raycast-floor-point.ts` του dxf-viewer απαγορεύεται, CHECK
+3.62, και λύνει άλλο πρόβλημα: κινούμενη κάμερα). Σχέδιο: `~/.claude/plans/swirling-inventing-reef.md`.
+
+**Γ1 — βελάκια ξαπλωμένα στο πάτωμα + κουκκίδα κέρσορα (ό,τι μπήκε)**
+
+🏆 **Απόφαση πάνω από τους μεγάλους**: όχι υφή μέσα στο WebGL (θολώνει σε λοξή γωνία — mipmap) αλλά **πραγματικό `<button>` DOM**
+που η σκηνή ξαπλώνει ανά καρέ στο επίπεδο του πατώματος με **CSS `matrix3d` = ομογραφία** από τις 4 γωνίες ενός τετραγώνου του
+πατώματος, προβαλλόμενες με την **ίδια** κάμερα. Ακριβής προοπτική · **διανυσματικό** σεβρόν/κείμενο σε κάθε κλίση · ο browser κάνει
+hit-test στο παραμορφωμένο σχήμα · Tab/Enter/aria όπως πριν · **μηδέν** νέα περάσματα GPU.
+
+| Κομμάτι | Αρχείο | Ρόλος |
+|---|---|---|
+| Ομογραφία (γενικό SSoT) | `lib/geometry/css-homography.ts` | `unitSquareToQuad` (Heckbert 1989, κλειστή μορφή) · `applyHomography` · `quadToMatrix3d(quad, sizePx)` — πρώτη στο repo |
+| `clamp` (SSoT) | `lib/geometry/scalar.ts` | προωθήθηκε από `dxf-viewer/utils/scalar-math.ts` (που **επανεξάγει**, πρότυπο `angle.ts`)· το `tour-viewer-view.ts` έσβησε το τοπικό του· 6 ακόμη τοπικά ⇒ `pending-ratchet-work.md` |
+| Πάτωμα (καθαρό) | `lib/spatial-tour/viewer/tour-floor-geometry.ts` (**αντικαθιστά** το `tour-floor-arrow.ts`) | `TOUR_EYE_HEIGHT_M` 1,6 · `floorSpotAt` (`απόσταση = ύψος / tan(−κλίση)`, `null` πάνω από −3° ή > 10 m) · `floorSquareCorners`/`floorSquareMatrix` · `placeFloorArrows` (ζώνη **σταθερή κοντά στη βάση**· yaw περιορισμένο στο ορατό πλάτος ⇒ στόχος πίσω/δίπλα **καρφώνεται στην άκρη** με `turn` προς τον πραγματικό στόχο — το «<» της Zillow· `spreadAngles` κατά της επικάλυψης· πλάτος οθόνης 72–128 px με βάθος **κατά τον οπτικό άξονα**) · `pickFloorTarget` (πλησιέστερη **συνδεδεμένη** στάση σε κώνο ±45°, ποτέ τηλεμεταφορά) · `FLOOR_PILL_PITCH` (το «χάπι» του επεξεργαστή μένει στη δική του διόπτευση) |
+| Μηχανή | `tour-panorama-engine.ts` | `projectUnclipped` (γωνία δίσκου λίγο εκτός κάδρου ≠ εξαφάνιση)· `toNdc`/`ndcToCss` κοινά με το `project` |
+| Γράφος | `tour-viewer-graph.ts` | `ViewerNeighbour.distance` (από τις θέσεις κάτοψης) |
+| Βελάκι | `TourLinkButton.tsx` | κουμπί μηδενικού μεγέθους · `data-floor-disc` (λευκός ημιδιαφανής, **σκούρο** σεβρόν `text-black/70`, εστίαση = δακτύλιος στον δίσκο) + `data-floor-label` (όρθια ετικέτα, κι αυτή στόχος κλικ) · `floorArrowParts` · `FLOOR_DISC_PX` 100 |
+| Κουκκίδα | `TourFloorCursor.tsx` | `aria-hidden`, `pointer-events: none`, ακτίνα 0,3 m με πραγματική προοπτική· `data-target="none"` ⇒ σβήνει (εκεί το κλικ δεν κάνει τίποτα) |
+| Ανά καρέ | `useTourFloorOverlay.ts` | `useFloorArrows` · `useFloorCursor` (μόνο ποντίκι/γραφίδα· ξαναμπαίνει ανά καρέ· αιώρηση πάνω από στόχο ⇒ **προφόρτωση** όπως το hover στο βελάκι) · `useFloorTap` |
+| Είσοδος | `useTourPanoramaInput.ts` | πάτημα ≠ σύρσιμο με το **ΙΔΙΟ** `DRAG_THRESHOLD_PX` του `usePointerDragRelease`· τσίμπημα ποτέ πάτημα· χειριστής ως getter (ADR-040) |
+| Σκηνή | `TourPanoramaStage.tsx` (`useStageFloor`) | σε μετάβαση (`targetNodeId ≠ null`) βελάκια **και** κουκκίδα κρυφά — πριν «κολυμπούσαν» στη στροφή· κουκκίδα + πάτημα **μόνο** στη θέαση |
+
+**Άγκυρες**: `css-homography.test.ts` (6, μαζί **ασύμμετρο** τετράπλευρο) · `tour-floor-geometry.test.ts` (17: κέντρο στοιχείου = προβολή
+κέντρου δίσκου· μακρινή πλευρά στενότερη· καρφίτσωμα πίσω-αριστερά· βλέμμα ψηλά ⇒ κανένα· άπλωμα· πλάτος οθόνης **ακριβώς** το ζητούμενο
+σε 35°/65°/90°· επιλογή στόχου) · `TourViewer.test.tsx` (+3: πάτημα ⇒ στάση · σύρσιμο ⇒ όχι · κατεύθυνση χωρίς στάση ⇒ μένει).
+**Μεταλλάξεις 8/8 κόκκινες** (κώνος · καρφίτσωμα · μακριά/κοντά · άπλωμα · βάθος άξονα · προοπτική ομογραφίας — **επέζησε** στο πρώτο
+πέρασμα: το συμμετρικό τραπέζιο έχει πράγματι `g = 0`, προστέθηκε ασύμμετρο · σύρσιμο≠πάτημα · ορίζοντας). spatial-tour **46 σουίτες /
+588** ✅ · dxf καταναλωτές του `clamp` ✅ · jscpd ✅ (11 αρχεία) · όχι tsc (N.17).
+✅ **Ζωντανά (2026-09-28, localhost, `stour_a0367f9e…`)**: στο Γραφείο το βελάκι «Διάδρομος» **ξαπλωμένο** στη βάση, καρφωμένο στη
+δεξιά άκρη με «>» όσο ο στόχος ήταν δεξιά (`turn` +39°) · με στροφή μπήκε στο κάδρο με `turn` 0 · **κουκκίδα** κάτω από τον δείκτη (κέντρο
+873,890 για δείκτη 873,888 — CSS px), `data-target="node"` · **πάτημα στο πάτωμα ⇒ Διάδρομος** · στη μετάβαση βελάκια κρυφά
+(στιγμιότυπο στη μέση της) · στον Διάδρομο το βελάκι «Γραφείο» πίσω-αριστερά (`turn` −135°) στην αριστερή άκρη · διάταξη ≥ lg (2400×1121) ·
+κονσόλα χωρίς σφάλματα.
+🔴 **Σφάλμα που έπιασε ΜΟΝΟ η ζωντανή δοκιμή (διορθώθηκε ως κλάση)**: σε πλατύ παράθυρο (καμβάς 2080×961, οριζόντιο πεδίο ~120°) το
+βελάκι της άκρης **κοβόταν από τη βάση**. Ρίζα: η ζώνη ήταν σταθερή **κλίση**, και σε ορθογραμμική προβολή τα σημεία ίδιας κλίσης
+κατεβαίνουν προς τις πλαϊνές άκρες. Τώρα η ζώνη είναι σταθερό **ύψος οθόνης**: `tan(κλίση) = cos(δ) · tan(p₀ + θ)` (κλειστή μορφή) και ακτίνα
+ανά βελάκι. Άγκυρα «ΠΛΑΤΥ παράθυρο 2400×865» (ίδιο ύψος οθόνης άκρης/κέντρου), μετάλλαξη `cos δ → 1` κόκκινη (**9/9**).
+ℹ️ **Δεδομένα, όχι κώδικας**: το βελάκι του Γραφείου δείχνει ~68° δεξιά της πόρτας γιατί η θέση του Γραφείου «μετακινήθηκε κατά λάθος στο
+κέντρο» (handoff 2026-09-28 §2) — η διόπτευση βγαίνει από τις θέσεις. Διόρθωση: σύρσιμο της τελείας του Γραφείου στον επεξεργαστή.
+
+**Γ2 — συρόμενη διαχωριστική + μεγέθυνση ανά κάρτα + ανάπτυξη ↗ (σημεία 3 + 5 · ό,τι μπήκε)**
+
+🏆 **Αποφάσεις πάνω από τους μεγάλους**: (α) στήλη ή `Sheet` το αποφασίζει ο **χώρος του θεατή** (`useContainerClass`, 64rem), όχι το
+παράθυρο — ακολουθεί και το μέγεθος γραμματοσειράς του επισκέπτη (WCAG 1.4.4)· (β) η μεγέθυνση είναι **ΜΙΑ** κατάσταση για κάρτα
+**και** ανάπτυξη (το `FloorplanGallery`, ADR-187, κρατά δύο ανεξάρτητα `useZoomPan` και χάνει ό,τι είδες όταν κλείνει)· (γ) τα σύμβολα
+ορίζονται σε **px** και γίνονται μέτρα με τα **μετρημένα** μέτρα/pixel της επιφάνειας ⇒ ίδια τελεία σε κάθε ζουμ **και** κάθε επιφάνεια·
+(δ) η εικόνα κάτοψης ζητά μεγαλύτερο παράγωγο όταν πλαταίνει η στήλη ή μεγεθύνεις, και αλλάζει **χωρίς κενό** (η παλιά μένει ώσπου
+να αποκωδικοποιηθεί η νέα — πρότυπο πλακιδίων χάρτη).
+
+| Κομμάτι | Αρχείο | Ρόλος |
+|---|---|---|
+| Μαθηματικά ζουμ (SSoT) | `lib/geometry/zoom-pan-math.ts` | `clampZoom` · `stepZoom` · **`scaleAbout`** (ο ΕΝΑΣ τύπος «το σημείο κάτω από τον δείκτη μένει ακίνητο» — ζούσε χειρόγραφος στο `useZoomPan`) · `wheelZoom` · λογαριθμική ράγα `zoomToUnit`/`unitToZoom` · `pointDistance`. Το `useZoomPan` (ADR-187) τα καλεί πλέον — ίδια συμπεριφορά, άγκυρα `useZoomPan.test.tsx` |
+| Ζουμ κάτοψης (καθαρό) | `lib/spatial-tour/viewer/tour-plan-zoom.ts` | 1×–5×, βήμα ×1,5 · `planViewBox` (κέντρο **κόβεται σε κάθε ανάγνωση**) · `zoomPlanAt`/`zoomPlanTo`/`stepPlanZoom`/`panPlanBy` · `clientToPlan` (αντίστροφο του `xMidYMid meet`) · **`planMetresPerPixel`** |
+| Κάδρο ορόφου | `tour-viewer-plan.ts` | `placedStops` + `levelPlanFrame` μεταφέρθηκαν από το `TourPlanMap` — **ένα** κάδρο για χάρτη, μπάρα και ανάπτυξη |
+| Κατάσταση ζουμ | `tour-plan-zoom-store.ts` | `createExternalStore` ανά θεατή, κλειδί `levelId` · `usePlanView` = συνδρομή σε **έναν** όροφο · **δεν** αποθηκεύεται (Zillow/Matterport ανοίγουν πάντα ολόκληρη κάτοψη) |
+| Χειρονομίες | `usePlanZoomGestures.ts` | στη **στήλη** σκέτος τροχός = κύλιση, **Ctrl/⌘ + τροχός** = ζουμ (Google Maps `cooperative` — το pinch του trackpad φτάνει ως `ctrlKey` ⇒ δουλεύει κι αυτό)· στην **ανάπτυξη** σκέτος τροχός· σύρσιμο > 1× με το **ίδιο** `DRAG_THRESHOLD_PX` · `setPointerCapture` **μόνο** όταν αρχίσει σύρσιμο (αλλιώς το κλικ πάει στο `<svg>` αντί για την τελεία)· pinch δύο δαχτύλων |
+| Χάρτης | `TourPlanMap.tsx` | ζουμ = στενότερο `viewBox` (ποτέ CSS `scale`) · τελεία 6 px, κώνος 28 px, γραμμές 1,5 px **σε px** × `planMetresPerPixel` · `touch-pan-y` στο 1×, `touch-none` + `cursor-grab` όταν μεγεθυνθεί |
+| Μπάρα | `TourPlanZoomBar.tsx` | «− ●—— +» (Radix `Slider`, `thumbAriaLabel`, **λογαριθμική** ράγα) + ↗ · tooltips |
+| Κάρτα | `TourPlanCard.tsx` | επιφάνεια που **μετριέται** (`useElementSize`, βήμα 4 px) · URL εικόνας = πλάτος × ζουμ (αντικατέστησε το σταθερό `PANEL_PLAN_CSS_WIDTH = 400`) · `useDecodedImageUrl` · ανάπτυξη `Dialog size="fullscreen"` (ADR-241) με τον **ίδιο** χάρτη και store — κλικ σε τελεία ⇒ μετάβαση **και** κλείσιμο |
+| Διαχωριστική | `TourViewerSplit.tsx` | `ResizablePanelGroup` (ADR-724 wrapper) · στήλη px 280–720, `collapsible`, `preserve-pixel-size` · πανόραμα ≥ 360 px · κουμπί ▯\| κάτω δεξιά (`aria-expanded`/`aria-controls`) · διπλό κλικ = επαναφορά (βιβλιοθήκη) |
+| Πλάτος (αποθήκευση) | `tour-viewer-layout-store.ts` + `STORAGE_KEYS.TOUR_PLAN_COLUMN` (`nestor:tour-plan-column:v1`) | `@/lib/storage` · έλεγχος + κόψιμο σε κάθε ανάγνωση · σύμπτυξη **θυμάται** το πλάτος · ίδια τιμή ⇒ καμία εγγραφή · **όχι** `useDefaultLayout` (ADR-724 §5.3) |
+| **Πότε** γράφεται (SSoT) | `components/ui/resizable-persistence.ts` | `usePanelWidthPersistence` — **εξήχθη** από το `WorkspaceSplitLayout` (ADR-724): φύλακας πρόθεσης, αναβολή ενός καρέ, πληκτρολόγιο που γράφει μόνο του· `Enter` (σύμπτυξη) μετρά ως πρόθεση · `persistSoon` για το κουμπί |
+| Λεπτό διαχωριστικό | `components/ui/resizable.tsx` | `THIN_SEPARATOR_CLASS` (ζούσε αντιγραμμένο) · επανεξαγωγή `usePanelRef` |
+| Μέγεθος στοιχείου (SSoT) | `hooks/media/useElementSize.ts` | `useSizeObserver` (**εξήχθη** από το `useContainerClass`) + `useElementSize` σε σκαλοπάτια· **border-box και στις δύο** μετρήσεις (το παλιό έδινε border-box πρώτα, content-box μετά) |
+| Εικόνα χωρίς κενό | `hooks/media/useDecodedImageUrl.ts` | `HTMLImageElement.decode()` πριν την αλλαγή· σφάλμα ⇒ περνά η νέα (ποτέ κολλημένη) |
+| i18n | `spatial-tour` el/en `viewer.planZoom/planZoomIn/planZoomOut/planExpand/planColumnHide/planColumnShow/resizeColumn` | **άλλα** από τα `zoomIn/zoomOut` του πανοράματος. Τους γεννήτορες i18n (`src/types/i18n.ts`, shell slice) τους τρέχει ο Giorgio |
+
+**Άγκυρες**: `zoom-pan-math.test.ts` (6) · `tour-plan-zoom.test.ts` (11: σημείο κάτω από δείκτη ακίνητο · κόψιμο κέντρου · 6 px = 6 px
+σε 3 επιφάνειες × 4 ζουμ · `meet`) · `useZoomPan.test.tsx` (5, **νέα** — δεν υπήρχε καμία) · `resizable-persistence.test.tsx` (6) ·
+`tour-viewer-layout-store.test.ts` (5) · `useElementSize.test.tsx` (3) · `useDecodedImageUrl.test.tsx` (3) · `TourViewer.test.tsx` (+7:
+διαχωριστικό με όνομα · στενός θεατής ⇒ `Sheet` · καμία εγγραφή στο άνοιγμα/Tab · ▯\| θυμάται την απόκρυψη · «+» στενεύει το viewBox με
+σταθερή τελεία · σκέτος τροχός ≠ Ctrl+τροχός · ↗ ίδια θέαση + κλικ ⇒ μετάβαση **και** κλείσιμο). **Μεταλλάξεις 14/14 κόκκινες** (μία,
+`contentRect` αντί για border-box, **επέζησε** στο πρώτο πέρασμα ⇒ γράφτηκε το `useElementSize.test`). 133 σουίτες / 1.828 ✅ (spatial-tour ·
+hooks · ui · geometry · dxf layout) · jscpd ✅ (21 αρχεία) · όχι tsc (N.17).
+⚠️ **Όρια του jsdom (δηλωμένα, όχι κενά)**: το «βέλος ⇒ εγγραφή» και το «κουμπί ⇒ σύμπτυξη» **δεν** ελέγχονται στον θεατή — η βιβλιοθήκη
+πετά «Previous layout not found» χωρίς διάταξη (ίδιο με ADR-724). Η λογική κλειδώνεται στο `resizable-persistence.test`· η συμπεριφορά
+**ζωντανά** (παρακάτω). Το `jest.setup.js` ορίζει `cancelAnimationFrame = jest.fn()` που **δεν ακυρώνει** — το test της εγγραφής φέρνει
+δικό του ζεύγος, αλλιώς θα «έβλεπε» διπλή εγγραφή που στον browser δεν υπάρχει.
+✅ **Ζωντανά (2026-09-28, localhost, 2400×1121)**: βέλη πληκτρολογίου στο διαχωριστικό 720 → 361 px, αποθηκεύτηκε **361** · σύρσιμο
+361 → 560, αποθηκεύτηκε **μία** φορά · επαναφόρτωση ⇒ **560** · ▯\| ⇒ 0 px `{collapsed:true, width:361}` ⇒ ξανά 361 · «+» ⇒ viewBox
+18,72 → 12,48 m · σκέτος τροχός ⇒ **καμία** μεγέθυνση, Ctrl+τροχός ⇒ 7,80 m · τελεία **12,0 px** στην κάρτα, στην ανάπτυξη, σε κάθε ζουμ
+και σε στήλη 361/560/720 · ↗ ⇒ πλήρης οθόνη, ευκρινής κάτοψη · κλικ «Διάδρομος» εκεί ⇒ ο διάλογος έκλεισε, άφιξη στον Διάδρομο · κονσόλα
+καθαρή (το μόνο μήνυμα είναι επέκτασης του browser).
+🔴 **Σφάλμα που έπιασε ΜΟΝΟ η ζωντανή δοκιμή (διορθώθηκε ως κλάση)**: με «μέτρα ÷ ζουμ» η τελεία ήταν σταθερή στο ζουμ, αλλά στην
+ανάπτυξη **~3×** μεγαλύτερη από την κάρτα — το μέγεθος της επιφάνειας είναι ο ίδιος παράγοντας με το ζουμ, από την άλλη πλευρά. Τώρα
+μέγεθος σε px × `planMetresPerPixel` της μετρημένης επιφάνειας· άγκυρα «6 px = 6 px σε κάθε επιφάνεια», μετάλλαξη κόκκινη.
+ℹ️ **Παρατηρήθηκε μία φορά, δεν αναπαράχθηκε**: μετά από σύρσιμο άλλου χρήστη στην ίδια καρτέλα (η στήλη βρέθηκε στα 720 px), η
+βιβλιοθήκη είχε αφήσει `pointer-events: none` στη στήλη (κατάσταση «active» χωρίς `pointerup` — π.χ. δείκτης αφημένος **έξω** από το
+παράθυρο). Η βιβλιοθήκη το καθαρίζει στην επόμενη κίνηση του δείκτη με `buttons === 0`. Σε καθαρή σελίδα: σύρσιμο + κλικ στο ↗ ⇒ σωστά.
+Αν ξαναφανεί: ζητά αναπαραγωγή — **όχι** τοπικό μπάλωμα πάνω στη βιβλιοθήκη.
 
 ## 5. Η αρχιτεκτονική
 
@@ -1473,3 +1569,5 @@ interface TourCapture {                         // υποσυλλογή
 | 2026-09-27 | **Φ2στ-β Β1 ΥΛΟΠΟΙΗΘΗΚΕ — κάτοψη στη στήλη (§4.13, Plan Mode) · αποφάσεις §12 Δ7.** Έρευνα Zillow/Matterport (παραγόμενη κάτοψη) · Kuula/3DVista/CloudPano (ανεβασμένη εικόνα, κλικ) · 3DVista radar (διόρθωση βορρά) · Pannellum/PSV (εφεδρεία πλήρους οθόνης). Αποφάσεις Giorgio μία-μία: κάτοψη **από τα αρχεία του ακινήτου** · σημεία από **τον υπεύθυνο** · **κάδος ΕΕ**. Νέα: `FloorPlanRecord.image/scale` · `TourCapture.headingSource` · `lib/geometry/scale-calibration.ts` · `lib/spatial-tour/{tour-plan-frame,tour-plan-edit}.ts` · `tileset/tour-plan-layout.ts` · `server/spatial-tour/{tour-plan-files,tour-plan-prepare}.ts` · `GET …/floorplans` · εντολές `floorplan`/`calibrate`/`position`/`orient` (+ αντίστροφες) · `TourViewerLevel.plan` · `planImageUrl` στην πηγή · `editor/{TourPlanPane,TourPlanPicker,TourPlanEditMap,TourPlanDirection}`. 🏆 Πρόταση προσανατολισμού από τα βελάκια (κυκλικός μέσος + διασπορά). Boy Scout: 🔴 `CalibrateScaleDialog` μετρούσε σε pixel καμβά (ADR-340) · `TourGraphRefusal` παράγεται · `tourSubjectFileEntityType` · `locateManagedTour` δίνει `tour`. Άγκυρες ~70 · **μεταλλάξεις 9/9** · jscpd ✅ · πύλες 3.8/3.10/3.35/3.74/3.78/3.91 ✅. ⏳ ζωντανά · PDF · ανέβασμα μέσα από την οθόνη · Β2–Β4. |
 | 2026-09-28 | **Λεξιλόγιο αρνήσεων ΑΝΑ ΛΕΙΤΟΥΡΓΙΑ (Google AIP-193 · Stripe) — αφορμή το CHECK 3.34.** Οι 5 αρνήσεις κάτοψης της Φ2στ-β ανέβασαν το slice της δημόσιας `/listing/[id]/tour` στα **7.667 bytes** (> 7.282). Η μέτρηση έδειξε τη **ρίζα**: ο θεατής εισήγαγε τον `TOUR_REFUSAL_KEY` ⇒ κατέβαζε τις λέξεις **46** αρνήσεων (ανέβασμα, γράφος, κάτοψη) = 5.603 bytes = **73%** του slice, για τις **4** που μπορεί να πει το `view-session`. Θεραπεία **όριο**, όχι σφράγιση προς τα πάνω: `TOUR_VIEW_SESSION_REFUSALS` + `TourViewSessionRefusal` (`lib/spatial-tour/tour-refusal-vocabulary.ts`) · ο διακομιστής **δεμένος με τύπο** (`TourViewSessionOutcome` → `TourViewSessionRefused`, νέα άρνηση στην πύλη δεν μεταγλωττίζεται χωρίς λέξεις) · `TourCallResult<T, R>` + `narrowTourRefusal` (λόγος εκτός συμβολαίου ⇒ `failed`, ποτέ ωμό κλειδί) · `TOUR_VIEW_REFUSAL_KEY` ολόγραφα, με άγκυρα ισότητας προς τον μεγάλο πίνακα (`tour-view-refusal-keys.test.ts`). **Μετρημένο: 7.667 → 3.361 bytes (−56%)**, κάτω από την προηγούμενη σφράγιση· η σφράγιση **κατέβηκε** 5.826 → 3.361. Tests 5 σουίτες / 29 ✅. ⏳ Ίδιο σχήμα πιθανό στο `/offers/[offerId]/tour` (12.125 bytes) — δεν μετρήθηκε. |
 | 2026-09-28 | **Φ2στ-β Β1 ΖΩΝΤΑΝΑ ✅ + δύο σφάλματα που έπιασε ΜΟΝΟ η ζωντανή δοκιμή · §4.14 Φ2στ-γ (5 σημεία Zillow) · §12 Δ8.** Κάτοψη PNG στο ακίνητο → επιλογή → βαθμονόμηση 8,81 m ⇒ 0,015596 m/px (αναμενόμενο 0,01560) → θέσεις → «Ευθυγράμμιση από τα βελάκια» = 4,3475 rad ακριβώς, βελάκι στραμμένο στην ίδια συναλλαγή → δημόσια σελίδα με κάτοψη, τελείες, κώνο που γυρίζει, κλικ = μετάβαση. 🔴 (ε) κλίμακα λάθος κατά 17 % (παράγωγο 1024 vs πρωτότυπο 1200) ⇒ `CalibrateScaleDialog.pixelSpace` · 🔴 (στ) περίγραμμα εστίασης SVG σε **μέτρα** ⇒ `NODE_FOCUS_CLASS`. Άγκυρες 8/8 + 14/14. Αρχεία: `CalibrateScaleDialog.tsx` (+test) · `TourPlanPane.tsx` · `TourPlanMap.tsx` · `TourViewer.test.tsx`. Δ8.1: σχήμα χώρων = έξυπνη ανίχνευση + επιβεβαίωση (DXF χωρίς κλικ). |
+| 2026-09-28 | **Φ2στ-γ Γ1 ΥΛΟΠΟΙΗΘΗΚΕ — βελάκια ξαπλωμένα στο πάτωμα + κουκκίδα κέρσορα + πάτημα στο πάτωμα (§4.14, Plan Mode).** DOM `<button>` + CSS `matrix3d` (ομογραφία των 4 γωνιών ενός τετραγώνου του πατώματος) αντί για υφή WebGL: ευκρινές, προσβάσιμο, χωρίς νέο πέρασμα GPU. Νέα: `lib/geometry/{css-homography,scalar}.ts` · `lib/spatial-tour/viewer/tour-floor-geometry.ts` (αντικαθιστά το `tour-floor-arrow.ts`) · `TourFloorCursor.tsx` · `useTourFloorOverlay.ts` · `engine.projectUnclipped` · `ViewerNeighbour.distance` · πάτημα≠σύρσιμο στο `useTourPanoramaInput`. Boy Scout: `clamp` → SSoT (`dxf-viewer/utils/scalar-math.ts` επανεξάγει)· 6 τοπικά ⇒ pending-ratchet. Άγκυρες 25 · **μεταλλάξεις 8/8** · spatial-tour 46/588 ✅ · jscpd ✅. **Ζωντανά ✅** (βελάκια · καρφίτσωμα άκρης · κουκκίδα · πάτημα ⇒ μετάβαση) + 🔴 σφάλμα μόνο-ζωντανά: βελάκι άκρης κομμένο σε πλατύ παράθυρο ⇒ ζώνη = σταθερό ύψος οθόνης, όχι σταθερή κλίση (μετάλλαξη 9/9). ⏳ Γ2 · Γ3. |
+| 2026-09-28 | **Φ2στ-γ Γ2 ΥΛΟΠΟΙΗΘΗΚΕ + ΖΩΝΤΑΝΑ — συρόμενη διαχωριστική πανοράματος↔στήλης, «− ●—— +» ανά κάρτα ορόφου, ανάπτυξη ↗ (§4.14 σημεία 3 + 5).** `react-resizable-panels` μέσω του ADR-724 wrapper (κανένα νέο πακέτο): στήλη px 280–720, σύμπτυξη με σύρσιμο ή κουμπί ▯\|, αποθήκευση `nestor:tour-plan-column:v1` **μόνο** στο τέλος χειρονομίας· στήλη/`Sheet` από τον **χώρο του θεατή** (64rem), όχι το παράθυρο. Ζουμ κάτοψης = στενότερο `viewBox` 1×–5× (λογαριθμική ράγα · Ctrl/⌘+τροχός στη στήλη, σκέτος στην ανάπτυξη · σύρσιμο · pinch), **μία** κατάσταση για κάρτα και ανάπτυξη. **Τέσσερα SSoT εξήχθησαν αντί να γραφτούν δεύτερη φορά**: `lib/geometry/zoom-pan-math.ts` (από το `useZoomPan`, ADR-187) · `components/ui/resizable-persistence.ts` + `THIN_SEPARATOR_CLASS` (από το `WorkspaceSplitLayout`, ADR-724) · `hooks/media/useElementSize.ts` (από το `useContainerClass` — και διορθώθηκε border-box/content-box). 🔴 Η ζωντανή δοκιμή έπιασε τελείες **3× μεγαλύτερες** στην ανάπτυξη ⇒ σύμβολα σε px × μετρημένα μέτρα/pixel. Άγκυρες +46 (7 νέες σουίτες + 7 στον θεατή) · μεταλλάξεις **14/14** · 133 σουίτες / 1.828 ✅ · jscpd ✅ · όχι tsc. Επόμενο: Γ3. |

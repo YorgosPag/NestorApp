@@ -99,8 +99,26 @@ const ResizableHandle = ({
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
 
 /**
+ * Το **λεπτό** διαχωριστικό: **8px** περιοχή στόχευσης με **1px** ορατή γραμμή στο κέντρο· `ring` στο hover και στο
+ * σύρσιμο (`data-separator` της v4: `inactive` / `hover` / `active` / `disabled`). Ένα οπτικό λεξιλόγιο για τον χώρο
+ * εργασίας του DXF (ADR-724) και τη στήλη κατόψεων της περιήγησης (ADR-884 Φ2στ-γ Γ2) — ζούσε αντιγραμμένο.
+ */
+export const THIN_SEPARATOR_CLASS = [
+  'w-2 bg-transparent',
+  'after:w-px after:bg-border after:transition-colors',
+  'data-[separator=hover]:after:bg-ring',
+  'data-[separator=active]:after:bg-ring data-[separator=active]:after:w-0.5',
+].join(' ');
+
+/**
  * Το μέγεθος που παραδίδει το `onResize` (σε pixels **και** ποσοστό) — εκτίθεται εδώ ώστε ο
  * καταναλωτής να μην εισάγει το ίδιο το `react-resizable-panels`. Ένα σημείο επαφής με τη
  * βιβλιοθήκη, όχι Ν.
  */
 export type { PanelSize } from 'react-resizable-panels';
+
+/**
+ * Ο **προστακτικός** χειρισμός ενός panel (`collapse` / `expand` / `resize` / `isCollapsed`) — για κουμπί απόκρυψης
+ * δίπλα στο διαχωριστικό (ADR-884 Φ2στ-γ Γ2). Από εδώ, για τον ίδιο λόγο με το `PanelSize`: ένα σημείο επαφής.
+ */
+export { usePanelRef } from 'react-resizable-panels';

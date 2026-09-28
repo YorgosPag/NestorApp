@@ -231,6 +231,20 @@
     --chart-7: 146.6 100% 31%;        /* #009e46 Green   */
     --chart-8: 345 53.2% 42.7%;       /* #a73350 Red     */
 
+    /* SEQUENTIAL MAP RAMP (ADR-889 Φ5 — value-zone choropleth). One hue (blue), light → dark,
+       five classes = dataviz reference steps 150/300/400/500/650. Lightness is monotonic
+       (84 → 28 %), so the order reads without hue. It is painted on the OSM raster map, which
+       is LIGHT in both themes — hence identical values in the dark block (a flipped anchor
+       would put the darkest class on a light map). The lightest class recedes toward the map
+       by design (1.54:1 vs white); zone outlines + a numbered legend carry identity, never
+       colour alone (CHECK 3.41). Read at render time via readRootCssVar (MapLibre cannot
+       resolve CSS variables). */
+    --map-seq-1: 213.3 77.8% 84.1%;   /* #b7d3f6 */
+    --map-seq-2: 212.6 77% 67.6%;     /* #6da7ec */
+    --map-seq-3: 212.8 76.8% 56.1%;   /* #3987e5 */
+    --map-seq-4: 213.1 67.5% 44.7%;   /* #256abf */
+    --map-seq-5: 213.5 77.9% 28.4%;   /* #104281 */
+
     /* DEPRECATED ALIASES (ADR-710 §10) — the reports surface used to carry its own
        Okabe-Ito palette. That palette was labelled "colour-blind safe" for years and
        had never been measured: on this surface its yellow scored 1.11:1 contrast,
@@ -440,6 +454,14 @@
     --chart-6: 323 47.5% 53.7%;       /* #c15196 Magenta — lifted for the dark ground */
     --chart-7: 146.1 100% 27.5%;      /* #008c3d Green   — deepened for the dark ground */
     --chart-8: 345.6 78.6% 61.6%;     /* #ea5075 Red     — lifted for the dark ground */
+
+    /* SEQUENTIAL MAP RAMP — identical to light on purpose: the map under it is light in both
+       themes (see the light block). */
+    --map-seq-1: 213.3 77.8% 84.1%;   /* #b7d3f6 */
+    --map-seq-2: 212.6 77% 67.6%;     /* #6da7ec */
+    --map-seq-3: 212.8 76.8% 56.1%;   /* #3987e5 */
+    --map-seq-4: 213.1 67.5% 44.7%;   /* #256abf */
+    --map-seq-5: 213.5 77.9% 28.4%;   /* #104281 */
 
     /* DEPRECATED ALIASES — see the light block. */
     --report-chart-1: var(--chart-1);

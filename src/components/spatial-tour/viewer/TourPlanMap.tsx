@@ -14,6 +14,9 @@
  *   στο σκοτεινό θέμα το `--primary` είναι ταυτόσημο με το `--card` (ADR-770), δηλαδή ο κώνος θα ήταν αόρατος.
  * 🗺️ **Με εικόνα κάτοψης** (Φ2στ-β): το κάδρο **είναι** η εικόνα (σε μέτρα όταν είναι βαθμονομημένη) και οι τελείες κάθονται
  *   στο pixel όπου τις έβαλε ο άνθρωπος· χωρίς εικόνα, το κάδρο χωρά τις τελείες (Φ1).
+ * 🔍 **Μεγέθυνση** (Φ2στ-γ Γ2 · §4.14 σημείο 5): στενότερο `viewBox` (`tour-plan-zoom.ts`), ποτέ CSS `scale` — τα σύμβολα
+ *   ορίζονται σε **px** και γίνονται μέτρα με το `planMetresPerPixel` της **μετρημένης** επιφάνειας ⇒ ίδιο μέγεθος
+ *   σε κάθε ζουμ **και** σε κάθε επιφάνεια — κάρτα ή ανάπτυξη (Zillow · Google Maps). Η θέαση ζει στο `tour-plan-zoom-store.ts`, **κοινή** για κάρτα και ανάπτυξη.
  */
 
 import { type KeyboardEvent, useSyncExternalStore } from 'react';
@@ -23,16 +26,26 @@ import { cn } from '@/lib/utils';
 import { radToDeg } from '@/lib/geometry/angle';
 import { horizontalFov, viewBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
 import type { TourViewerGraph, ViewerLevelEntry, ViewerStop } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
-import { PLAN_CONE_RADIUS_M, conePath, imagePlanFrame, planFrame, toPlanSvg, type PlanFrame } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
-import type { TourPoint } from '@/types/spatial-tour';
+import { conePath, toPlanSvg, type PlacedStop, type PlanFrame } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
+import { planMetresPerPixel, planViewBox } from '@/lib/spatial-tour/viewer/tour-plan-zoom';
+import type { ElementSize } from '@/hooks/media/useElementSize';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 import type { TourCameraStore } from './tour-camera-store';
+import { usePlanView, type TourPlanZoomStore } from './tour-plan-zoom-store';
+import { usePlanZoomGestures, type PlanWheelMode } from './usePlanZoomGestures';
 import { useStopNames } from './useStopNames';
 
-/** Μεγέθη σε μέτρα κάτοψης — το SVG κλιμακώνεται, οι αναλογίες μένουν. */
-const NODE_RADIUS_M = 0.28;
+/**
+ * Μεγέθη συμβόλων σε **css px** — πολλαπλασιάζονται με τα μέτρα ανά pixel της επιφάνειας (`planMetresPerPixel`), άρα η
+ * τελεία είναι ίδια στην κάρτα, στην ανάπτυξη και σε κάθε ζουμ. Βαθμονομημένα ώστε η κάρτα των 320 px να μοιάζει με πριν.
+ */
+const NODE_RADIUS_PX = 6;
+const NODE_STROKE_PX = 1.5;
+const LINK_STROKE_PX = 1.5;
+const CONE_RADIUS_PX = 28;
+const CONE_STROKE_PX = 1;
 /**
  * 🔴 **Ποτέ το περίγραμμα εστίασης του browser σε σχήμα SVG**: το πάχος του μετριέται στις μονάδες του `viewBox`, δηλαδή
  * σε **μέτρα** — μετρήθηκε ζωντανά (2026-09-28) ως μαύρος δακτύλιος ~4 m πάνω στην κάτοψη, στην τελεία που μόλις πατήθηκε
@@ -40,14 +53,20 @@ const NODE_RADIUS_M = 0.28;
  */
 const NODE_FOCUS_CLASS = 'cursor-pointer outline-none focus-visible:stroke-ring';
 
-function TourPlanCone({ camera, at }: { readonly camera: TourCameraStore; readonly at: ViewerStop }) {
+interface ConeProps {
+  readonly camera: TourCameraStore;
+  readonly at: ViewerStop;
+  readonly scale: number;
+}
+
+function TourPlanCone({ camera, at, scale }: ConeProps) {
   const { view, aspect } = useSyncExternalStore(camera.subscribe, camera.get, camera.get);
   if (at.node.position === null) return null;
   const { x, y } = toPlanSvg(at.node.position);
   const bearing = radToDeg(viewBearing(at.stop.headingRad, view.yaw));
   return (
-    <path d={conePath(horizontalFov(view.fov, aspect) / 2, PLAN_CONE_RADIUS_M)} transform={`translate(${x} ${y}) rotate(${bearing})`}
-      className="fill-chart-1/30 stroke-chart-1" strokeWidth={0.04} aria-hidden />
+    <path d={conePath(horizontalFov(view.fov, aspect) / 2, CONE_RADIUS_PX * scale)} transform={`translate(${x} ${y}) rotate(${bearing})`}
+      className="fill-chart-1/30 stroke-chart-1" strokeWidth={CONE_STROKE_PX * scale} aria-hidden />
   );
 }
 
@@ -59,29 +78,30 @@ export interface TourPlanMapProps {
   readonly onGo: (nodeId: string) => void;
   /** Η εικόνα της κάτοψης του ορόφου (από την πηγή) — `null` ⇒ μόνο τελείες. */
   readonly planImageUrl: string | null;
+  /** Το κάδρο του ορόφου (`levelPlanFrame`) — το ίδιο πάνω στο οποίο υπολογίζει και η μπάρα μεγέθυνσης. */
+  readonly frame: PlanFrame;
+  readonly stops: readonly PlacedStop[];
+  /** Το μετρημένο μέγεθος της επιφάνειας (css px) — από αυτό γίνονται μέτρα τα σύμβολα. `0 × 0` = όχι ακόμη. */
+  readonly surface: ElementSize;
+  readonly zoomStore: TourPlanZoomStore;
+  /** `modifier` = στήλη (Ctrl/⌘ + τροχός) · `always` = ανάπτυξη (σκέτος τροχός). */
+  readonly wheelMode: PlanWheelMode;
 }
 
-interface PlacedStop {
-  readonly entry: ViewerStop;
-  readonly point: TourPoint;
+interface LinksProps {
+  readonly graph: TourViewerGraph;
+  readonly stops: readonly PlacedStop[];
+  readonly scale: number;
 }
 
-function positioned(graph: TourViewerGraph, level: ViewerLevelEntry): PlacedStop[] {
-  return level.nodeIds.flatMap((id) => {
-    const entry = graph.stops.get(id);
-    const point = entry?.node.position ?? null;
-    return entry !== undefined && point !== null ? [{ entry, point }] : [];
-  });
-}
-
-function PlanLinks({ graph, stops }: { readonly graph: TourViewerGraph; readonly stops: readonly PlacedStop[] }) {
+function PlanLinks({ graph, stops, scale }: LinksProps) {
   const onLevel = new Map(stops.map((s) => [s.entry.node.id, s]));
   const lines = stops.flatMap((from) => (graph.adjacency.get(from.entry.node.id) ?? []).flatMap((toId) => {
     const to = onLevel.get(toId);
     return to !== undefined && toId > from.entry.node.id ? [{ from, to }] : [];
   }));
   return (
-    <g className="stroke-muted-foreground" strokeWidth={0.06} aria-hidden>
+    <g className="stroke-muted-foreground" strokeWidth={LINK_STROKE_PX * scale} aria-hidden>
       {lines.map(({ from, to }) => {
         const a = toPlanSvg(from.point);
         const b = toPlanSvg(to.point);
@@ -91,44 +111,55 @@ function PlanLinks({ graph, stops }: { readonly graph: TourViewerGraph; readonly
   );
 }
 
-/** Το κάδρο: η εικόνα της κάτοψης όταν υπάρχει, αλλιώς όσο χρειάζεται για τις τελείες. */
-function frameOf(level: ViewerLevelEntry, stops: readonly PlacedStop[], planImageUrl: string | null): PlanFrame | null {
-  if (level.plan !== null && planImageUrl !== null) return imagePlanFrame(level.plan.image, level.plan.metresPerPixel);
-  return planFrame(stops.map((s) => s.point));
+interface DotsProps {
+  readonly stops: readonly PlacedStop[];
+  readonly currentNodeId: string | null;
+  readonly onGo: (nodeId: string) => void;
+  readonly nameOf: (nodeId: string) => string;
+  readonly scale: number;
 }
 
-export function TourPlanMap({ graph, level, currentNodeId, camera, onGo, planImageUrl }: TourPlanMapProps) {
+function PlanDots({ stops, currentNodeId, onGo, nameOf, scale }: DotsProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
-  const nameOf = useStopNames(graph);
-  const stops = positioned(graph, level);
-  const frame = frameOf(level, stops, planImageUrl);
-  if (frame === null) return null;
-  const current = currentNodeId === null ? undefined : graph.stops.get(currentNodeId);
   const activate = (e: KeyboardEvent, nodeId: string) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
     onGo(nodeId);
   };
+  return stops.map(({ entry: s, point }) => {
+    const { x, y } = toPlanSvg(point);
+    const here = s.node.id === currentNodeId;
+    return (
+      <circle key={s.node.id} cx={x} cy={y} r={NODE_RADIUS_PX * scale} role="button" tabIndex={0}
+        aria-label={t(here ? TOUR_VIEWER_KEYS.youAreHere : TOUR_VIEWER_KEYS.goTo, { name: nameOf(s.node.id) })}
+        aria-current={here ? 'location' : undefined}
+        onClick={() => onGo(s.node.id)} onKeyDown={(e) => activate(e, s.node.id)}
+        className={cn(NODE_FOCUS_CLASS, here ? 'fill-chart-1 stroke-background' : 'fill-card stroke-foreground')}
+        strokeWidth={NODE_STROKE_PX * scale} />
+    );
+  });
+}
+
+export function TourPlanMap(props: TourPlanMapProps) {
+  const { graph, level, currentNodeId, camera, onGo, planImageUrl, frame, stops, surface, zoomStore, wheelMode } = props;
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const nameOf = useStopNames(graph);
+  const view = usePlanView(zoomStore, level.id);
+  const gestures = usePlanZoomGestures({ store: zoomStore, levelId: level.id, frame, wheelMode });
+  const box = planViewBox(frame, view);
+  /** Μέτρα ανά css pixel — κάθε μέγεθος συμβόλου σε px γίνεται μέτρα κάτοψης με αυτό. */
+  const scale = planMetresPerPixel(box, surface);
+  const current = currentNodeId === null ? undefined : graph.stops.get(currentNodeId);
+  const zoomed = view.zoom > 1;
   return (
-    <svg viewBox={`${frame.minX} ${frame.minY} ${frame.width} ${frame.height}`} role="group" aria-label={t(TOUR_VIEWER_KEYS.plan)}
-      className="h-full w-full">
+    <svg ref={gestures} viewBox={`${box.minX} ${box.minY} ${box.width} ${box.height}`} role="group" aria-label={t(TOUR_VIEWER_KEYS.plan)}
+      className={cn('h-full w-full select-none', zoomed ? 'cursor-grab touch-none data-[panning=true]:cursor-grabbing' : 'touch-pan-y')}>
       {planImageUrl !== null && level.plan !== null && (
-        <image href={planImageUrl} x={0} y={0} width={frame.width} height={frame.height} preserveAspectRatio="none" aria-hidden />
+        <image href={planImageUrl} x={frame.minX} y={frame.minY} width={frame.width} height={frame.height} preserveAspectRatio="none" aria-hidden />
       )}
-      <PlanLinks graph={graph} stops={stops} />
-      {current !== undefined && current.levelId === level.id && <TourPlanCone camera={camera} at={current} />}
-      {stops.map(({ entry: s, point }) => {
-        const { x, y } = toPlanSvg(point);
-        const here = s.node.id === currentNodeId;
-        return (
-          <circle key={s.node.id} cx={x} cy={y} r={NODE_RADIUS_M} role="button" tabIndex={0}
-            aria-label={t(here ? TOUR_VIEWER_KEYS.youAreHere : TOUR_VIEWER_KEYS.goTo, { name: nameOf(s.node.id) })}
-            aria-current={here ? 'location' : undefined}
-            onClick={() => onGo(s.node.id)} onKeyDown={(e) => activate(e, s.node.id)}
-            className={cn(NODE_FOCUS_CLASS, here ? 'fill-chart-1 stroke-background' : 'fill-card stroke-foreground')}
-            strokeWidth={0.06} />
-        );
-      })}
+      <PlanLinks graph={graph} stops={stops} scale={scale} />
+      {current !== undefined && current.levelId === level.id && <TourPlanCone camera={camera} at={current} scale={scale} />}
+      <PlanDots stops={stops} currentNodeId={currentNodeId} onGo={onGo} nameOf={nameOf} scale={scale} />
     </svg>
   );
 }

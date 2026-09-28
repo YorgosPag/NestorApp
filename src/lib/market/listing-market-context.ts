@@ -15,13 +15,15 @@
 import type { ComparableSalesResult } from './comparable-sales';
 import type { MarketSegment } from './market-segments';
 import type { StatCell } from './market-statistics';
+import type { ValueZoneVerdict } from './value-zone-at-point';
 
 export interface ListingMarketArea {
   readonly id: string;
   readonly name: string;
 }
 
-export type ListingMarketContext =
+/** Τα συμβόλαια της περιοχής — εξαρτώνται από περιοχή **και** τμήμα αγοράς. */
+export type ListingContractsContext =
   /** Η αγγελία δεν έχει διοικητική περιοχή (χωρίς θέση) ⇒ δεν συγκρίνεται. */
   | { readonly kind: 'no-area' }
   /** Είδος ακινήτου χωρίς τμήμα αγοράς ⇒ δεν υπάρχουν συγκρίσιμα συμβόλαια. */
@@ -37,12 +39,34 @@ export type ListingMarketContext =
       readonly last12: StatCell;
       /** Τιμή ζώνης (πηγή Γ), ή `null` όπου δεν έχει νόημα. */
       readonly zone: StatCell | null;
+      /** Διάμεσος «τίμημα ÷ (εμβαδόν × τιμή ζώνης)» των συμβολαίων της περιοχής, σε % — ή `null` όπως το `zone`. */
+      readonly priceToZonePct: StatCell | null;
       /** Η ζητούμενη τιμή της αγγελίας στη μονάδα του τμήματος, ή `null` (χωρίς τιμή / μη αληθοφανής). */
       readonly askingUnitPrice: number | null;
       /** Ό,τι δήλωσε η αγγελία — για τις διαφορές κάθε συγκρίσιμης. */
       readonly target: { readonly size: number | null; readonly yearBuilt: number | null; readonly floor: number | null };
       readonly comparables: ComparableSalesResult;
     };
+
+/**
+ * **Η απάντηση της διαδρομής**: τα συμβόλαια **και** η ζώνη αντικειμενικής αξίας στη θέση της αγγελίας (ADR-889 Φ5).
+ *
+ * 🔑 Η ζώνη είναι **σε κάθε** παραλλαγή: δεν εξαρτάται ούτε από διοικητική περιοχή ούτε από τμήμα αγοράς — μόνο από
+ * το αν η θέση είναι η ίδια η διεύθυνση. Ένα οικόπεδο χωρίς συγκρίσιμα συμβόλαια έχει κι αυτό τιμή ζώνης.
+ */
+export type ListingMarketContext = ListingContractsContext & { readonly valueZone: ValueZoneVerdict };
+
+/**
+ * **Η ζητούμενη τιμή ως % της τιμής ζώνης** — στο ίδιο μέτρο με το `priceToZonePct` των συμβολαίων, ώστε τα δύο να
+ * συγκρίνονται απευθείας («ζητά 140% της ζώνης · τα συμβόλαια της περιοχής κλείνουν στο 101%»). **Δεν** είναι εκτίμηση
+ * αξίας (ADR-889 §7): δύο λόγοι προς τον ίδιο δημόσιο παρονομαστή. `null` όταν λείπει κάποιο σκέλος.
+ */
+export function askingPctOfZone(context: ListingMarketContext): number | null {
+  if (context.kind !== 'ready' || context.valueZone.kind !== 'ready' || context.askingUnitPrice === null) return null;
+  // `priceToZonePct` null ⇒ τμήμα χωρίς κτίσμα (γη, θέσεις): η τιμή ζώνης δεν είναι εκεί μέτρο της ζητούμενης.
+  if (context.priceToZonePct === null) return null;
+  return Math.round((context.askingUnitPrice / context.valueZone.zone.price) * 100);
+}
 
 /** Η δημόσια διαδρομή — ΜΙΑ δήλωση για client και tests. */
 export function listingMarketContextPath(listingId: string): string {
