@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9c1748f626994c7c21ab0458f09235cc4a91bfb26dcc1179c8a99dba461a76ed",
+  "inputsSha256": "d35532b8ba94f6dedc616acaba0d9044d4c557bf480711ea426a36aeddc8df9b",
   "languages": [
     "el"
   ],
@@ -219,7 +219,7 @@
     "src/components/area-market/AreaAskingSection.tsx": "d5e2de702cf9ea5f35fa0bcb3cc7c1d2b9d9703380d408f05f25fc0a79fb1651",
     "src/components/area-market/AreaBoundaryMap.tsx": "26205446f2474ec8e396b45e999e58610869c72b886b9e7dda41a077bedb217b",
     "src/components/area-market/AreaBreakdownTable.tsx": "2ac0f63cab6b97247c9796a0881bb5b7c5c00d3f515f61b71b3fa513aceb2c38",
-    "src/components/area-market/AreaContractCard.tsx": "fbc7eaa5903f74dbafc465fad7f80697fbafa4284a7e80543c1480cc07f4c76d",
+    "src/components/area-market/AreaContractCard.tsx": "768a2634df18f928a84446bbb39b7da21144cf4638b5990f35cf93347624707e",
     "src/components/area-market/AreaContractSection.tsx": "599e74cf43e27407176dc8ed0a292573756e1173e3c536c21098f27836db56cb",
     "src/components/area-market/AreaListingsSection.tsx": "e7f0e113173c6d37453d144e5d3de86b19de2ca5efba6422e2c2eae4f8dbe8ad",
     "src/components/area-market/AreaMarketContent.tsx": "957cf80b31fb0dcc6bee8f2c3caf91a92073cd70855fa08c0727ec6e35652b3a",
@@ -227,8 +227,9 @@
     "src/components/area-market/AreaSegmentFigures.tsx": "3800e4c8a84ca676b383c2cbbd292286ec731844d0f9ebcb01e5ea4e37aa5622",
     "src/components/area-market/AreaValueZoneLayer.tsx": "e68f8d61f6be12972b16b09ee231423f377ec0e10cadae8300d7da731d3917ba",
     "src/components/area-market/AreaValueZonePanel.tsx": "27d8f1b4987e8435ed619577064bb697f884bfc282564e6c2b6c041f49f6ca86",
+    "src/components/area-market/LazyMarketTrendChart.tsx": "594155416f0c37db5a21cd93957aa4dcb8ead9d13ab2d64c836215c46c3faf29",
     "src/components/area-market/area-contracts-view.ts": "ff8e140df41699a624e5ab5f07ef3815058b38737bf3d23e94f7f73fa55e8d77",
-    "src/components/area-market/area-market-format.ts": "d246e1b477a498f811f338bac7d87ed2ec0d5638dc3c275b55ac522e62801dc0",
+    "src/components/area-market/area-market-format.ts": "40df16d82e6c1565a55c71d509773799c755368d314746f98925549090d7e308",
     "src/components/area-market/area-market-view.ts": "8026cdf8706c4feec7b6615e0490b2ee1161cf8b9137f083e957d285f1244be7",
     "src/components/area-market/value-zone-paint.ts": "d3ecf0d6f07ff3d303e9424bad927e346b6bb664e183e826f218abcd982e5b0a",
     "src/components/building-management/tabs/PlaceholderTab.tsx": "5ebf98188f47e4a6ee0c3360df6cad2ae47cb1ee12cf89e5e65115455b35f2e6",

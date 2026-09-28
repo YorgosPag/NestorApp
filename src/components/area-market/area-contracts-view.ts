@@ -15,8 +15,10 @@ import { YEAR_BUILT_BUCKETS } from '@/lib/market/market-breakdowns';
 import { MARKET_SEGMENTS, type MarketSegment } from '@/lib/market/market-segments';
 import {
   isReportedStatCell,
+  medianGapPct,
   quarterOf,
   quartersEndingAt,
+  reportedCell,
   type ReportedStatCell,
   type StatCell,
 } from '@/lib/market/market-statistics';
@@ -25,8 +27,6 @@ import type { AreaMarketSnapshot } from '@/types/area-market';
 
 /** Πόσα τρίμηνα δείχνει η γραμμή τάσης (ADR-889 §6 Φ2: «τάση 8 τριμήνων»). */
 export const CONTRACT_TREND_QUARTERS = 8;
-
-const PERCENT = 100;
 
 export interface ContractTrendPoint {
   readonly quarter: string;
@@ -53,21 +53,9 @@ export interface YearBuiltRow {
   readonly askGapPct: number | null;
 }
 
-function reported(cell: StatCell | undefined | null): ReportedStatCell | null {
-  return cell !== undefined && cell !== null && isReportedStatCell(cell) ? cell : null;
-}
-
-/** (ζητούμενη ÷ συμβολαίου − 1) σε %, **μόνο** όταν και τα δύο κελιά περνούν το κατώφλι. */
-export function gapPct(ask: StatCell | undefined | null, contract: StatCell | undefined | null): number | null {
-  const asked = reported(ask);
-  const signed = reported(contract);
-  if (asked === null || signed === null || signed.median <= 0) return null;
-  return Math.round((asked.median / signed.median - 1) * PERCENT);
-}
-
 /** Η απόσταση ζητούμενης ↔ συμβολαίου για το ίδιο τμήμα, από την πλευρά της **πώλησης**. */
 export function askGapPct(asking: AreaMarketSnapshot | null, segment: MarketSegment, contract: StatCell): number | null {
-  return gapPct(asking?.offers.sale.segments[segment]?.unitPrice, contract);
+  return medianGapPct(asking?.offers.sale.segments[segment]?.unitPrice, contract);
 }
 
 export function contractTrend(summary: SegmentSummary, asOf: string): readonly ContractTrendPoint[] {
@@ -87,7 +75,7 @@ function yearBuiltRows(summary: SegmentSummary, asking: AreaMarketSnapshot | nul
   const askingBuckets = asking?.offers.sale.segments[segment]?.breakdowns.yearBuilt?.buckets;
   return YEAR_BUILT_BUCKETS.flatMap((bucket) => {
     const cell = summary.yearBuilt[bucket.key];
-    return cell === undefined ? [] : [{ key: bucket.key, cell, askGapPct: gapPct(askingBuckets?.[bucket.key], cell) }];
+    return cell === undefined ? [] : [{ key: bucket.key, cell, askGapPct: medianGapPct(askingBuckets?.[bucket.key], cell) }];
   });
 }
 
@@ -100,7 +88,7 @@ export function contractSegmentViews(
   return MARKET_SEGMENTS.flatMap((segment) => {
     const summary = own.segments[segment];
     if (summary === undefined) return [];
-    const parentLast12 = isReportedStatCell(summary.last12) ? null : reported(parent?.segments[segment]?.last12);
+    const parentLast12 = isReportedStatCell(summary.last12) ? null : reportedCell(parent?.segments[segment]?.last12);
     return [{
       segment,
       summary,

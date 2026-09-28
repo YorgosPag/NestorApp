@@ -8,25 +8,18 @@
  * ποια από τις τρεις είναι, και **ποτέ** «αγοραία αξία».
  */
 
-import dynamic from 'next/dynamic';
 import React from 'react';
 
 import { ContractMedian } from '@/components/market/ContractMedian';
-import { ChartBandPending } from '@/components/ui/chart-card/ChartBandPending';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatPercentage } from '@/lib/intl-formatting';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE, type ReportedStatCell } from '@/lib/market/market-statistics';
 
 import type { ContractSegmentView } from './area-contracts-view';
-import { unitPriceLabel } from './area-market-format';
+import { signedPercentLabel, unitPriceLabel } from './area-market-format';
 import { AreaBreakdownTable } from './AreaBreakdownTable';
+import { LazyMarketTrendChart } from './LazyMarketTrendChart';
 
 const NS = 'market-contracts';
-
-const ContractTrendChart = dynamic(() => import('./ContractTrendChart'), {
-  ssr: false,
-  loading: () => <ChartBandPending size="sm" captioned />,
-});
 
 interface AreaContractCardProps {
   readonly view: ContractSegmentView;
@@ -79,8 +72,6 @@ function ZoneFigures({ view, price }: { readonly view: ContractSegmentView; read
   );
 }
 
-const signedPct = (pct: number): string => formatPercentage(pct, { maximumFractionDigits: 0, signDisplay: 'exceptZero' });
-
 /**
  * Ανά έτος κατασκευής, με τη στήλη «Ζητούν» δίπλα στη διάμεσο (ADR-890 §12): η στήλη υπάρχει **μόνο** όταν έστω ένας
  * κάδος έχει και τις δύο πηγές πάνω από το κατώφλι — αλλιώς θα ήταν στήλη από παύλες.
@@ -98,7 +89,7 @@ function YearBuiltTable({ view, price }: { readonly view: ContractSegmentView; r
         key: row.key,
         label: t(`${NS}:yearBuilt.bucket.${row.key}`),
         cell: row.cell,
-        comparison: row.askGapPct === null ? null : signedPct(row.askGapPct),
+        comparison: row.askGapPct === null ? null : signedPercentLabel(row.askGapPct),
       }))}
       formatPrice={price}
       belowThreshold={t(`${NS}:yearBuilt.belowThreshold`, { min: MARKET_STAT_MIN_SAMPLE })}
@@ -122,7 +113,9 @@ export function AreaContractCard({ view, parentName }: AreaContractCardProps) {
           : <Suppressed view={view} parentName={parentName} price={price} />}
         <ZoneFigures view={view} price={price} />
       </header>
-      {hasTrend && <ContractTrendChart points={view.trend} formatPrice={price} />}
+      {hasTrend && (
+        <LazyMarketTrendChart period="quarter" points={view.trend.map((point) => ({ period: point.quarter, cell: point.cell }))} formatPrice={price} />
+      )}
       {isReportedStatCell(headline) && <YearBuiltTable view={view} price={price} />}
     </article>
   );
