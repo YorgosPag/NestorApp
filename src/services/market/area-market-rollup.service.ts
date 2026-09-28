@@ -13,17 +13,30 @@ import 'server-only';
  * 🔑 **Ιδεμποτικό εκ κατασκευής**: ταυτότητες ντετερμινιστικές (`amks` από περιοχή+ημέρα, `amkr` από ημέρα)
  * και `set()` ολόκληρου εγγράφου ⇒ η επανεκτέλεση της ίδιας ημέρας ξαναγράφει τα ίδια έγγραφα.
  *
- * ⚠️ **Ένας γραφέας**: το cron τρέχει με lease (`cron-lease`).
+ * 📈 **Η ΜΗΝΙΑΙΑ ΣΕΙΡΑ (ADR-890 §13)** γράφεται μαζί με τα στιγμιότυπα, **πριν** από το σημάδι: ανάγνωση της χθεσινής
+ * σειράς κάθε περιοχής (`getAll`), συγχώνευση απόψε στο βιβλίο του μήνα (`nextAreaMarketSeries`), `set` ολόκληρου
+ * εγγράφου. Ίδια νύχτα δύο φορές ⇒ ίδιο έγγραφο.
+ *
+ * 🗺️ **Ο ΧΑΡΤΗΣ ΤΙΜΩΝ (ADR-890 §14.4)** γράφεται κι αυτός **πριν** από το σημάδι: ένα έγγραφο `ammp_<ημέρα>` με ό,τι
+ * δημοσιεύεται (`[n, διάμεσος]`) για όλες τις περιοχές — το endpoint του χάρτη αναζήτησης το διαβάζει με **1** ανάγνωση.
+ *
+ * ⚠️ **Ένας γραφέας**: το cron τρέχει με lease (`cron-lease`) — γι' αυτό η ανάγνωση-και-εγγραφή της σειράς δεν
+ * χρειάζεται συναλλαγή.
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { chunkArray } from '@/lib/array-utils';
+import { nextAreaMarketSeries } from '@/lib/market/area-market-series';
 import { groupListingsByArea, summarizeArea } from '@/lib/market/area-market-summary';
+import { buildAreaMarketMap } from '@/lib/market/price-map';
 import { createModuleLogger } from '@/lib/telemetry';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { readLivePublicListings } from '@/services/listings/live-public-listings.reader';
+import { readAreaMarketSeries } from '@/services/market/area-market-snapshot.reader';
+import type { PublicListing } from '@/types/public-listing';
 import {
+  AREA_MARKET_MAP_SCHEMA_VERSION,
   AREA_MARKET_SNAPSHOT_SCHEMA_VERSION,
   type AreaMarketRun,
   type AreaMarketSnapshot,
@@ -45,6 +58,20 @@ async function writeSnapshots(adminDb: AdminFirestore, snapshots: readonly AreaM
   }
 }
 
+/** Η μηνιαία σειρά κάθε περιοχής με αγγελίες απόψε — ανάγνωση σε κομμάτια, εγγραφή σε batches. */
+async function writeSeries(adminDb: AdminFirestore, day: string, byArea: ReadonlyMap<string, readonly PublicListing[]>): Promise<void> {
+  const collection = adminDb.collection(COLLECTIONS.AREA_MARKET_SERIES);
+  for (const areaIds of chunkArray([...byArea.keys()], SNAPSHOTS_PER_BATCH)) {
+    const previous = await readAreaMarketSeries(adminDb, areaIds);
+    const batch = adminDb.batch();
+    for (const areaId of areaIds) {
+      const series = nextAreaMarketSeries(previous.get(areaId) ?? null, areaId, day, byArea.get(areaId) ?? []);
+      batch.set(collection.doc(enterpriseIdService.generateDeterministicAreaMarketSeriesId(areaId)), series);
+    }
+    await batch.commit();
+  }
+}
+
 /**
  * **Μία νύχτα**: διαβάζει τις ζωντανές αγγελίες, γράφει τις συνόψεις και **μετά** το σημάδι.
  * @param day ημέρα αγοράς Αθήνας (`marketDayOf`) — το ρολόι διαβάζεται στον καλούντα
@@ -55,6 +82,11 @@ export async function rollupAreaMarket(adminDb: AdminFirestore, day: string, now
 
   const snapshots = [...groups.byArea].map(([areaId, listings]) => summarizeArea(areaId, day, listings));
   await writeSnapshots(adminDb, snapshots);
+  await writeSeries(adminDb, day, groups.byArea);
+  await adminDb
+    .collection(COLLECTIONS.AREA_MARKET_MAPS)
+    .doc(enterpriseIdService.generateDeterministicAreaMarketMapId(day))
+    .set(buildAreaMarketMap(AREA_MARKET_MAP_SCHEMA_VERSION, day, snapshots));
 
   const run: AreaMarketRun = {
     schemaVersion: AREA_MARKET_SNAPSHOT_SCHEMA_VERSION,

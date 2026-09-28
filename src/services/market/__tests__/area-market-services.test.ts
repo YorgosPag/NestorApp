@@ -93,6 +93,19 @@ describe('rollupAreaMarket', () => {
     await rollupAreaMarket(db, DAY, new Date());
     expect(fake.all(COLLECTIONS.AREA_MARKET_SNAPSHOTS)).toHaveLength(2);
     expect(fake.all(COLLECTIONS.AREA_MARKET_RUNS)).toHaveLength(1);
+    expect(fake.all(COLLECTIONS.AREA_MARKET_SERIES)).toHaveLength(2);
+  });
+
+  it('ADR-890 §13: η μηνιαία σειρά είναι ΕΝΩΣΗ των νυχτών του μήνα — αγγελία που έφυγε μετρά ακόμη', async () => {
+    mockReadLive.mockResolvedValue({ listings: located(5), truncated: false });
+    await rollupAreaMarket(db, '2026-09-26', new Date());
+    mockReadLive.mockResolvedValue({ listings: located(5).slice(0, 2), truncated: false });
+    await rollupAreaMarket(db, '2026-09-27', new Date());
+    const page = await loadAreaMarketPage(db, 'municipality:0701', '2026-09-27');
+    if (page.kind !== 'found' || page.market.kind !== 'ready') throw new Error('no market');
+    const point = page.market.series?.['2026-09'];
+    expect(point?.asOf).toBe('2026-09-27');
+    expect(point?.offers.sale.apartment?.n).toBe(5);
   });
 });
 
@@ -128,6 +141,15 @@ describe('loadAreaMarketPage', () => {
     expect(page.market.snapshot?.areaId).toBe('municipal_unit:070101');
     expect(page.market.parent?.areaId).toBe('municipality:0701');
     expect(page.ancestors.map((area) => area.id)).toEqual(['municipality:0701', 'regional_unit:07']);
+  });
+
+  it('ADR-890 §13: η σελίδα διαβάζει τα σημεία της σειράς, ΠΟΤΕ το βιβλίο του μήνα (fieldMask)', async () => {
+    mockReadLive.mockResolvedValue({ listings: located(6), truncated: false });
+    await rollupAreaMarket(db, '2026-09-25', new Date());
+    const page = await loadAreaMarketPage(db, 'municipal_unit:070101', DAY);
+    if (page.kind !== 'found' || page.market.kind !== 'ready') throw new Error('no market');
+    expect(Object.keys(page.market.series ?? {})).toEqual(['2026-09']);
+    expect(JSON.stringify(page.market.series)).not.toContain('prop_');
   });
 
   it('τιμές συμβολαίων (ADR-890 Φ2): η Δ.Ε. ΚΑΙ ο Δήμος της, για την αναγωγή', async () => {

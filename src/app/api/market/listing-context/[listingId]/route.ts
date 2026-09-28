@@ -16,6 +16,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { marketDayOf } from '@/lib/listings/listing-stats';
 import type { ListingMarketContext } from '@/lib/market/listing-market-context';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
@@ -37,10 +38,12 @@ async function handler(
   const listingId = (await context?.params)?.listingId ?? '';
   if (listingId.trim() === '') return NextResponse.json({ error: 'MISSING_LISTING_ID' }, { status: 400 });
 
-  const listing = await readPublicListingById(getAdminFirestore(), listingId);
+  const adminDb = getAdminFirestore();
+  const listing = await readPublicListingById(adminDb, listingId);
   if (listing === null) return NextResponse.json({ error: 'LISTING_NOT_FOUND' }, { status: 404 });
 
-  const body = await loadListingMarketContext(listing);
+  // Το ρολόι διαβάζεται στο σύνορο (ίδιο ιδίωμα με τη σελίδα περιοχής): ημέρα αγοράς Αθήνας.
+  const body = await loadListingMarketContext(listing, adminDb, marketDayOf(Date.now()));
   if (body === null) {
     return NextResponse.json({ error: 'MARKET_DATA_UNAVAILABLE' }, { status: 503, headers: { 'Retry-After': '30' } });
   }

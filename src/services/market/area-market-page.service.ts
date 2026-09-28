@@ -6,9 +6,8 @@ import 'server-only';
  * @related app/(light)/area/[id]/page.tsx (ο καλών) · area-market-rollup.service.ts (ο γραφέας)
  * @module services/market/area-market-page.service
  *
- * 🔑 **ΚΑΝΕΝΑ ΕΡΩΤΗΜΑ ΓΙΑ ΤΗ ΣΥΝΟΨΗ.** Οι ταυτότητες είναι ντετερμινιστικές, άρα τα σημάδια των τελευταίων
- * {@link AREA_MARKET_LOOKBACK_DAYS} ημερών διαβάζονται με **ένα** `getAll`, και μετά οι συνόψεις (περιοχή +
- * γονέας) με **ένα** δεύτερο. Χωρίς `orderBy`, χωρίς δείκτη (CHECK 3.15/3.91).
+ * 🔑 **ΚΑΝΕΝΑ ΕΡΩΤΗΜΑ ΓΙΑ ΤΗ ΣΥΝΟΨΗ.** Σημάδι → στιγμιότυπα (περιοχή + γονέας) → μηνιαία σειρά, όλα με `getAll`
+ * ντετερμινιστικών ταυτοτήτων μέσω του `area-market-snapshot.reader.ts` (κοινού με τη σελίδα αγγελίας).
  *
  * 🔑 **ΤΙΜΕΣ ΣΥΜΒΟΛΑΙΩΝ (ADR-890 Φ2)** από τα στατικά αρχεία του ADR-889 — περιοχή + Δήμος, για την ίδια αναγωγή.
  * Αποτυχία ανάγνωσής τους **δεν** ρίχνει τη σελίδα: η ενότητα λέει «δεν είναι διαθέσιμες» και τα υπόλοιπα μένουν.
@@ -22,10 +21,8 @@ import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { adminAreaAncestors, isAdminAreaId, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import { adminAreaFieldOfLevel } from '@/lib/geo/admin-area-of-point';
 import { compareListingsByListedAt } from '@/lib/listings/listing-results-order';
-import { shiftMarketDay } from '@/lib/listings/listing-stats';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
-import { areaMarketRunFromDocument, areaMarketSnapshotFromDocument } from '@/lib/market/area-market-document';
-import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { readAreaMarketSeriesPoints, readLatestAreaMarket } from '@/services/market/area-market-snapshot.reader';
 import { readAreaSummary } from '@/services/market/market-transactions.reader';
 import { readValueZoneFileIds } from '@/services/market/value-zones.reader';
 import { readAdminAreaDirectory } from '@/services/places/admin-boundaries.reader';
@@ -34,13 +31,9 @@ import {
   type AreaContractsState,
   type AreaListingsPreview,
   type AreaMarketPage,
-  type AreaMarketRun,
   type AreaMarketState,
 } from '@/types/area-market';
 import type { PublicListing } from '@/types/public-listing';
-
-/** Πόσες νύχτες πίσω ψάχνει η σελίδα ολοκληρωμένη σύνοψη. Πιο παλιά = «δεν υπάρχει πρόσφατη». */
-const AREA_MARKET_LOOKBACK_DAYS = 7;
 
 /** Πόσες αγγελίες διαβάζονται για την προεπισκόπηση (ταξινομούνται στη μνήμη, νεότερες πρώτα). */
 const AREA_LISTINGS_READ_LIMIT = 200;
@@ -48,29 +41,13 @@ const AREA_LISTINGS_READ_LIMIT = 200;
 /** Πόσες αγγελίες δείχνει η σελίδα· οι υπόλοιπες είναι ένα κλικ μακριά, στον χάρτη αποτελεσμάτων. */
 const AREA_LISTINGS_SHOWN = 12;
 
-async function readLatestRun(adminDb: AdminFirestore, today: string): Promise<AreaMarketRun | null> {
-  const runs = adminDb.collection(COLLECTIONS.AREA_MARKET_RUNS);
-  const refs = Array.from({ length: AREA_MARKET_LOOKBACK_DAYS }, (_, back) =>
-    runs.doc(enterpriseIdService.generateDeterministicAreaMarketRunId(shiftMarketDay(today, -back))));
-  const docs = await adminDb.getAll(...refs);
-  // Τα `refs` είναι από το σήμερα προς τα πίσω ⇒ το πρώτο έγκυρο είναι το πιο πρόσφατο.
-  for (const doc of docs) {
-    const run = doc.exists ? areaMarketRunFromDocument(doc.data()) : null;
-    if (run !== null) return run;
-  }
-  return null;
-}
-
 async function readMarket(adminDb: AdminFirestore, areaId: string, parentId: string | null, today: string): Promise<AreaMarketState> {
-  const run = await readLatestRun(adminDb, today);
-  if (run === null) return { kind: 'no-run' };
-  const snapshots = adminDb.collection(COLLECTIONS.AREA_MARKET_SNAPSHOTS);
   const ids = parentId === null ? [areaId] : [areaId, parentId];
-  const docs = await adminDb.getAll(
-    ...ids.map((id) => snapshots.doc(enterpriseIdService.generateDeterministicAreaMarketSnapshotId(id, run.day))),
-  );
-  const [own, parent] = docs.map((doc) => (doc.exists ? areaMarketSnapshotFromDocument(doc.data()) : null));
-  return { kind: 'ready', run, snapshot: own ?? null, parent: parent ?? null };
+  const [latest, series] = await Promise.all([readLatestAreaMarket(adminDb, ids, today), readAreaMarketSeriesPoints(adminDb, [areaId])]);
+  if (latest === null) return { kind: 'no-run' };
+  const own = latest.snapshots.get(areaId) ?? null;
+  const parent = parentId === null ? null : (latest.snapshots.get(parentId) ?? null);
+  return { kind: 'ready', run: latest.run, snapshot: own, parent, series: series.get(areaId) ?? null };
 }
 
 async function readListings(adminDb: AdminFirestore, area: AdminArea): Promise<AreaListingsPreview> {

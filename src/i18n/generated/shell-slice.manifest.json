@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7d829b5c2eef4e4129f8dab46eb04c1fea9469aadd1018e45cb1d889f53625e7",
+  "inputsSha256": "9c1748f626994c7c21ab0458f09235cc4a91bfb26dcc1179c8a99dba461a76ed",
   "languages": [
     "el"
   ],
@@ -1068,8 +1068,9 @@
     "src/services/mandate/showcase-mark-publication.ts": "a7efa19149e02c4a1adbd495b943e19f1b02e4b2befb5156297827a63275badb",
     "src/services/mandate/showcase-mark-source.ts": "90fb6146071cb3e2d18fcfad30607a9818502af6863f4cc4e5793d27a166c119",
     "src/services/mandate/showcase-presence.service.ts": "2d05279217a4b31dbf075b547a2a1fc07590fb374379ee05f97ef392476a4a58",
-    "src/services/market/area-market-page.service.ts": "42fbe718e8fee345c675a035c917c2e371b75a771bd12f42c40e41e9ba892fcd",
+    "src/services/market/area-market-page.service.ts": "4005bdddeeae9b53b419770b7e535aa2f5366a06bd35294a74a057619f31d675",
     "src/services/market/area-market-seo.ts": "fd82095ec4cd309e3322936f409131158e5430d243c9a8deb483acccac03d76e",
+    "src/services/market/area-market-snapshot.reader.ts": "2c71a443dad7071bf62e48ad88735983cc514785116ed8376bf04cb64357bed1",
     "src/services/market/market-transactions.reader.ts": "e5aa906ed25d89e93c88dc8cfc9b65aeecb181f92126bcb95a119d3c65ddf939",
     "src/services/market/value-zones.reader.ts": "fd81a8faff30105d6d5c1e03f97d7f390b8fde70decf50a90346ea3134395459",
     "src/services/notifications/email-subscription-token.service.ts": "98dfec914e0863305b7ddbb4114a79b562368575cabd6a329e8e80b9c25fe1e5",
