@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/routes/area__id.el.json": "510d50079ba26361e3ae6e7b4125430781b26aa343995015dcaf53ab10d6e74b",
+    "src/i18n/generated/routes/area__id.el.json": "9464d132f89dc5d64d18c5b25a14fc287d716599edf9600f75f4dd9c05c45d00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d35532b8ba94f6dedc616acaba0d9044d4c557bf480711ea426a36aeddc8df9b",
+  "inputsSha256": "ec094bfc0ad33367ed16e2dc58a63f00e682ce45112add94f5d57009628a86ae",
   "languages": [
     "el"
   ],
@@ -217,20 +217,23 @@
     "src/components/account/pages/ProfilePageContent.tsx": "0b7b853693ea0caea575f1d5990169dd509567c63566f52825b174f0195fd571",
     "src/components/account/tax-identity-labels.ts": "6ef45577a4701ebce1c90bb24aeb4fb8fd75649b2b71c026855b0f17f90c8623",
     "src/components/area-market/AreaAskingSection.tsx": "d5e2de702cf9ea5f35fa0bcb3cc7c1d2b9d9703380d408f05f25fc0a79fb1651",
+    "src/components/area-market/AreaAskingTrend.tsx": "73652fb12cafb1fe3dc9ffa0885bb72df9e158b59d92412126c0ee28acf59027",
     "src/components/area-market/AreaBoundaryMap.tsx": "26205446f2474ec8e396b45e999e58610869c72b886b9e7dda41a077bedb217b",
     "src/components/area-market/AreaBreakdownTable.tsx": "2ac0f63cab6b97247c9796a0881bb5b7c5c00d3f515f61b71b3fa513aceb2c38",
     "src/components/area-market/AreaContractCard.tsx": "768a2634df18f928a84446bbb39b7da21144cf4638b5990f35cf93347624707e",
     "src/components/area-market/AreaContractSection.tsx": "599e74cf43e27407176dc8ed0a292573756e1173e3c536c21098f27836db56cb",
     "src/components/area-market/AreaListingsSection.tsx": "e7f0e113173c6d37453d144e5d3de86b19de2ca5efba6422e2c2eae4f8dbe8ad",
-    "src/components/area-market/AreaMarketContent.tsx": "957cf80b31fb0dcc6bee8f2c3caf91a92073cd70855fa08c0727ec6e35652b3a",
-    "src/components/area-market/AreaMethodology.tsx": "a60058acf05b750e92a8c7143f2ef19b80fd22fd73c04e3348250a73db55a683",
-    "src/components/area-market/AreaSegmentFigures.tsx": "3800e4c8a84ca676b383c2cbbd292286ec731844d0f9ebcb01e5ea4e37aa5622",
+    "src/components/area-market/AreaMarketContent.tsx": "05185a3ebb8358f2983ce50b91383c621c52271906cec4df88b5f7c8d53e7b3b",
+    "src/components/area-market/AreaMethodology.tsx": "5307fe9fb0d3584435be6c81556bbb2ef0d1af10a4159e85d958714e8f47540c",
+    "src/components/area-market/AreaSegmentFigures.tsx": "77c6f9fa60da221b176502e3f3465e74db448bf032d76074bb8c2c39a0c9d7e0",
     "src/components/area-market/AreaValueZoneLayer.tsx": "e68f8d61f6be12972b16b09ee231423f377ec0e10cadae8300d7da731d3917ba",
     "src/components/area-market/AreaValueZonePanel.tsx": "27d8f1b4987e8435ed619577064bb697f884bfc282564e6c2b6c041f49f6ca86",
+    "src/components/area-market/AreaYieldSection.tsx": "0dca790fa6af92c564177969db03c6e0cd4126dbb99d8c87642eeb903b788d73",
     "src/components/area-market/LazyMarketTrendChart.tsx": "594155416f0c37db5a21cd93957aa4dcb8ead9d13ab2d64c836215c46c3faf29",
     "src/components/area-market/area-contracts-view.ts": "ff8e140df41699a624e5ab5f07ef3815058b38737bf3d23e94f7f73fa55e8d77",
     "src/components/area-market/area-market-format.ts": "40df16d82e6c1565a55c71d509773799c755368d314746f98925549090d7e308",
-    "src/components/area-market/area-market-view.ts": "8026cdf8706c4feec7b6615e0490b2ee1161cf8b9137f083e957d285f1244be7",
+    "src/components/area-market/area-market-insight-view.ts": "15fda3c13d6b811e58a33c76e69b79c536113dca56b78e08742b1e89c2ff5fc6",
+    "src/components/area-market/area-market-view.ts": "3a6020ca186c4b49586eea7535a02b3c38e82ede6d57012a0d9382810aa94924",
     "src/components/area-market/value-zone-paint.ts": "d3ecf0d6f07ff3d303e9424bad927e346b6bb664e183e826f218abcd982e5b0a",
     "src/components/building-management/tabs/PlaceholderTab.tsx": "5ebf98188f47e4a6ee0c3360df6cad2ae47cb1ee12cf89e5e65115455b35f2e6",
     "src/components/completion/completion-bucket-classes.ts": "d046fc132098ac220f1084138d0b1f5ef9b1ce6f3f53070974a0b838ca3749e1",
@@ -1544,7 +1547,16 @@
             "method.exclusions",
             "method.median",
             "method.threshold",
-            "method.title"
+            "method.title",
+            "method.trend",
+            "trend.change",
+            "trend.changes",
+            "trend.pending",
+            "yield.asking",
+            "yield.contract",
+            "yield.note",
+            "yield.suppressed",
+            "yield.title"
           ],
           "prefixes": [
             "breakdown",
@@ -9958,7 +9970,7 @@
     "matchedKeys": 201,
     "routeBoundaries": 0,
     "shellFiles": 869,
-    "sliceBytes": 622992
+    "sliceBytes": 624531
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -4,7 +4,8 @@
  * **Η σελίδα αγοράς μιας περιοχής** — `/area/[id]` (ADR-890 Φ1). Δεδομένα λυμένα στον διακομιστή, εδώ μόνο απόδοση.
  *
  * Σειρά: ταυτότητα (όνομα, βαθμίδα, διοικητική θέση, «στοιχεία της …») → όριο στον χάρτη → ζητούμενες τιμές
- * (πώληση, ενοίκιο) → τιμές συμβολαίων (ADR-890 Φ2) → αγγελίες → Δημοτικές Ενότητες → μεθοδολογία.
+ * (πώληση, ενοίκιο — με μηνιαία τάση, §13) → απόδοση ενοικίου (§5.4) → τιμές συμβολαίων (ADR-890 Φ2) → αγγελίες →
+ * Δημοτικές Ενότητες → μεθοδολογία.
  *
  * 🔑 **Δύο ρολόγια, ονομασμένα**: οι τιμές είναι της **τελευταίας νύχτας** («στοιχεία της …»), η λίστα και το
  * πλήθος αγγελιών ανανεώνονται κάθε 15′ (ISR της σελίδας). Το λέει η σελίδα, ώστε μια νέα αγγελία που δεν μέτρησε
@@ -16,17 +17,20 @@ import React from 'react';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay } from '@/lib/intl-formatting';
+import { monthOfDay } from '@/lib/market/market-statistics';
 import { areaMarketHref } from '@/lib/listings/listing-routes';
 import { Link } from '@/lib/workspace/navigation';
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import { hasAreaMarketPage, MUNICIPALITY_LEVEL, type AreaMarketPageData } from '@/types/area-market';
 
+import { yieldViews, type AreaSeriesInput } from './area-market-insight-view';
 import { offerViews } from './area-market-view';
 import { AreaAskingSection } from './AreaAskingSection';
 import { AreaBoundaryMap } from './AreaBoundaryMap';
 import { AreaContractSection } from './AreaContractSection';
 import { AreaListingsSection } from './AreaListingsSection';
 import { AreaMethodology } from './AreaMethodology';
+import { AreaYieldSection } from './AreaYieldSection';
 
 // 🔴 ADR-744 §18 — το route slice φτάνει στον φυλλομετρητή ΜΟΝΟ από client component (όχι από το `page.tsx`).
 import routeSlice from '@/i18n/generated/routes/area__id.el.json';
@@ -100,6 +104,12 @@ function AreaChildren({ areas }: { readonly areas: readonly AdminArea[] }) {
   );
 }
 
+/** Η σειρά της περιοχής με τον μήνα της τελευταίας νύχτας — `null` πριν από την πρώτη νύχτα με σειρά (§13). */
+function seriesInput(data: AreaMarketPageData): AreaSeriesInput | null {
+  const { market } = data;
+  return market.kind === 'ready' && market.series !== null ? { points: market.series, lastMonth: monthOfDay(market.run.day) } : null;
+}
+
 /** Το όνομα του Δήμου για την αναγωγή των συμβολαίων — μόνο όταν διαβάστηκε το αρχείο του. */
 function contractsParentName(data: AreaMarketPageData): string | null {
   const { contracts } = data;
@@ -111,7 +121,9 @@ export function AreaMarketContent({ data }: { readonly data: AreaMarketPageData 
   const snapshot = market.kind === 'ready' ? market.snapshot : null;
   const parent = market.kind === 'ready' ? market.parent : null;
   const parentName = parent === null ? null : (data.ancestors[0]?.name ?? null);
-  const offers = snapshot === null ? [] : offerViews(snapshot, parent);
+  const offers = snapshot === null ? [] : offerViews(snapshot, parent, seriesInput(data));
+  const contractSummary = data.contracts.kind === 'ready' ? data.contracts.summary : null;
+  const yields = snapshot === null ? [] : yieldViews(snapshot, contractSummary);
 
   return (
     <ShellSurface as="main" measure="wide" className="gap-y-6 py-4">
@@ -120,6 +132,7 @@ export function AreaMarketContent({ data }: { readonly data: AreaMarketPageData 
       {offers.map((view) => (
         <AreaAskingSection key={view.offer} view={view} parentName={parentName} />
       ))}
+      <AreaYieldSection views={yields} />
       <AreaContractSection contracts={data.contracts} asking={snapshot} parentName={contractsParentName(data)} />
       <AreaListingsSection areaId={data.area.id} items={data.listings.items} total={data.listings.total} />
       <AreaChildren areas={data.children} />

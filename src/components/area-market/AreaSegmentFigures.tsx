@@ -2,7 +2,7 @@
 
 /**
  * **Ένα τμήμα αγοράς μιας προσφοράς** — ο κύριος αριθμός (διάμεσος €/τ.μ. + μεσαίο 50% + πλήθος) και οι
- * πίνακες ανάλυσης (ADR-890 Φ1).
+ * πίνακες ανάλυσης (ADR-890 Φ1) · η μηνιαία τάση (ADR-890 §13).
  *
  * 🔑 **Κάτω από το κατώφλι, ΠΟΤΕ αριθμός της περιοχής.** Δείχνεται το πλήθος και, όπου ο Δήμος έχει αριθμό για
  * το ίδιο τμήμα, ο αριθμός **του Δήμου με το όνομά του** (αναγωγή όπως το ONS) — ποτέ ντυμένος ως τοπικός.
@@ -16,6 +16,7 @@ import type { AreaBreakdownAxis, AskingOffer } from '@/types/area-market';
 
 import { askingAmountLabel, unitPriceLabel } from './area-market-format';
 import { breakdownViews, type BreakdownView, type SegmentView } from './area-market-view';
+import { AreaAskingTrend } from './AreaAskingTrend';
 import { AreaBreakdownTable } from './AreaBreakdownTable';
 
 const NS = 'area-market';
@@ -103,7 +104,7 @@ function AskingBreakdown({ offer, view, breakdown }: { readonly offer: AskingOff
 }
 
 export function AreaSegmentFigures({ offer, view, parentName }: AreaSegmentFiguresProps) {
-  const { t } = useTranslation([NS]);
+  const { t } = useTranslation([NS, 'common']);
   const headline = view.summary.unitPrice;
   const breakdowns = isReportedStatCell(headline) ? breakdownViews(view.segment, view.summary) : [];
   return (
@@ -114,6 +115,9 @@ export function AreaSegmentFigures({ offer, view, parentName }: AreaSegmentFigur
           ? <ReportedHeadline offer={offer} view={view} cell={headline} />
           : <SuppressedHeadline offer={offer} view={view} parentName={parentName} />}
       </header>
+      {view.trend !== null && (
+        <AreaAskingTrend trend={view.trend} formatPrice={(amount) => unitPriceLabel(t, offer, view.segment, amount)} />
+      )}
       {breakdowns.map((breakdown) => (
         <AskingBreakdown key={breakdown.axis} offer={offer} view={view} breakdown={breakdown} />
       ))}

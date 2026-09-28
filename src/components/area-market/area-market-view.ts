@@ -11,7 +11,7 @@
 
 import { bucketsFor } from '@/lib/market/market-breakdowns';
 import { MARKET_SEGMENTS, type MarketSegment } from '@/lib/market/market-segments';
-import { isReportedStatCell, type ReportedStatCell, type StatCell } from '@/lib/market/market-statistics';
+import { isReportedStatCell, reportedCell, type ReportedStatCell, type StatCell } from '@/lib/market/market-statistics';
 import {
   AREA_BREAKDOWN_AXES,
   ASKING_EXCLUSIONS,
@@ -24,11 +24,15 @@ import {
   type AskingOffer,
 } from '@/types/area-market';
 
+import { askingTrendView, type AreaSeriesInput, type AskingTrendView } from './area-market-insight-view';
+
 export interface SegmentView {
   readonly segment: MarketSegment;
   readonly summary: AreaSegmentSummary;
   /** Ο αριθμός του γονέα για το ίδιο τμήμα — **μόνο** όταν ο δικός μας είναι κάτω από το κατώφλι. */
   readonly parentUnitPrice: ReportedStatCell | null;
+  /** Η μηνιαία τάση (ADR-890 §13) — `null` = η περιοχή δεν έχει ακόμη σειρά. */
+  readonly trend: AskingTrendView | null;
 }
 
 export interface OfferView {
@@ -37,27 +41,31 @@ export interface OfferView {
   readonly segments: readonly SegmentView[];
 }
 
-function parentCellFor(parent: AreaMarketSnapshot | null, offer: AskingOffer, segment: MarketSegment): ReportedStatCell | null {
-  const cell = parent?.offers[offer].segments[segment]?.unitPrice;
-  return cell !== undefined && isReportedStatCell(cell) ? cell : null;
-}
-
-function segmentViews(snapshot: AreaMarketSnapshot, parent: AreaMarketSnapshot | null, offer: AskingOffer): SegmentView[] {
+function segmentViews(
+  snapshot: AreaMarketSnapshot,
+  parent: AreaMarketSnapshot | null,
+  offer: AskingOffer,
+  series: AreaSeriesInput | null,
+): SegmentView[] {
   const views: SegmentView[] = [];
   for (const segment of MARKET_SEGMENTS) {
     const summary = snapshot.offers[offer].segments[segment];
     if (summary === undefined) continue;
-    const parentUnitPrice = isReportedStatCell(summary.unitPrice) ? null : parentCellFor(parent, offer, segment);
-    views.push({ segment, summary, parentUnitPrice });
+    const parentUnitPrice = isReportedStatCell(summary.unitPrice) ? null : reportedCell(parent?.offers[offer].segments[segment]?.unitPrice);
+    views.push({ segment, summary, parentUnitPrice, trend: series === null ? null : askingTrendView(series, offer, segment) });
   }
   return views;
 }
 
 /** Οι προσφορές που έχουν έστω μία αγγελία, με τα τμήματά τους στη σταθερή σειρά. */
-export function offerViews(snapshot: AreaMarketSnapshot, parent: AreaMarketSnapshot | null): readonly OfferView[] {
+export function offerViews(
+  snapshot: AreaMarketSnapshot,
+  parent: AreaMarketSnapshot | null,
+  series: AreaSeriesInput | null = null,
+): readonly OfferView[] {
   return ASKING_OFFERS
     .filter((offer) => snapshot.offers[offer].listings > 0)
-    .map((offer) => ({ offer, summary: snapshot.offers[offer], segments: segmentViews(snapshot, parent, offer) }));
+    .map((offer) => ({ offer, summary: snapshot.offers[offer], segments: segmentViews(snapshot, parent, offer, series) }));
 }
 
 export interface BreakdownRow {

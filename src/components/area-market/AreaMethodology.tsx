@@ -27,6 +27,7 @@ export function AreaMethodology() {
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.threshold`, { min: MARKET_STAT_MIN_SAMPLE })}</p>
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.exclusions`)}</p>
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.cadence`)}</p>
+      <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.trend`)}</p>
       {CONTRACT_LINES.map((line) => (
         <p key={line} className="m-0 text-sm text-muted-foreground">{t(`${CONTRACTS}:method.${line}`)}</p>
       ))}
