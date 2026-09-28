@@ -22,6 +22,22 @@ export interface ListingMarketArea {
   readonly name: string;
 }
 
+/**
+ * **Ο κάδος έτους κατασκευής της αγγελίας στην περιοχή** (ADR-890 §13.Α): ζητούμενη **και** συμβόλαιο του **ίδιου**
+ * κάδου (`YEAR_BUILT_BUCKETS`), στην **ίδια** περιοχή με τα υπόλοιπα συμβόλαια. «Κτίρια 1960–1984: ζητούν Χ ·
+ * συμβόλαια Υ» — σύγκριση εποχής με εποχή, όχι νεόδμητου με πολυκατοικία του '70.
+ */
+export interface ListingYearBuiltContext {
+  /** Κλειδί κάδου του `YEAR_BUILT_BUCKETS`. */
+  readonly bucket: string;
+  /** Διάμεσος ζητούμενων του κάδου (τελευταία νύχτα) — `null` = δεν μετρήθηκε / δεν διαβάστηκε (ποτέ «καμία»). */
+  readonly asking: StatCell | null;
+  /** Διάμεσος συμβολαίων 12μήνου του κάδου — `null` = η περιοχή δεν έχει συμβόλαια σε αυτόν τον κάδο. */
+  readonly contract: StatCell | null;
+  /** (ζητούμενη ÷ συμβολαίου − 1) %, μόνο όταν και τα δύο περνούν το κατώφλι (`medianGapPct`). */
+  readonly gapPct: number | null;
+}
+
 /** Τα συμβόλαια της περιοχής — εξαρτώνται από περιοχή **και** τμήμα αγοράς. */
 export type ListingContractsContext =
   /** Η αγγελία δεν έχει διοικητική περιοχή (χωρίς θέση) ⇒ δεν συγκρίνεται. */
@@ -46,6 +62,8 @@ export type ListingContractsContext =
       /** Ό,τι δήλωσε η αγγελία — για τις διαφορές κάθε συγκρίσιμης. */
       readonly target: { readonly size: number | null; readonly yearBuilt: number | null; readonly floor: number | null };
       readonly comparables: ComparableSalesResult;
+      /** `null` = η αγγελία δεν δηλώνει έτος, ή το τμήμα δεν έχει κτίσμα (γη, θέσεις). */
+      readonly yearBuilt: ListingYearBuiltContext | null;
     };
 
 /**

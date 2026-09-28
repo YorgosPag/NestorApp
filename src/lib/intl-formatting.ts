@@ -118,11 +118,16 @@ export const formatCalendarDay = (dateKey: string, withYear = false, locale: str
  * formats an instant in the viewer's zone; a month grid heading is a calendar month with no zone — same UTC
  * noon anchoring as `formatCalendarDay`, so the 1st never slides into the previous month west of Greenwich.
  */
-export const formatCalendarMonth = (monthKey: string, locale: string = getCurrentLocale()): string => {
+export const formatCalendarMonth = (
+  monthKey: string,
+  locale: string = getCurrentLocale(),
+  // `'short'` = άξονας γραφήματος («Σεπ 2026», ADR-890 §13): ίδια αγκύρωση UTC, πιο στενό κείμενο.
+  style: 'long' | 'short' = 'long',
+): string => {
   const [year, month] = monthKey.split('-').map(Number);
   const noon = Date.UTC(year, month - 1, 1, 12);
   if (!Number.isFinite(noon)) return monthKey;
-  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(noon));
+  return new Intl.DateTimeFormat(locale, { month: style, year: 'numeric', timeZone: 'UTC' }).format(new Date(noon));
 };
 
 /**

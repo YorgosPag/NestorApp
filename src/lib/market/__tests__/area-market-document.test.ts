@@ -4,7 +4,13 @@
  */
 
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
-import { areaMarketRunFromDocument, areaMarketSnapshotFromDocument } from '@/lib/market/area-market-document';
+import {
+  areaMarketRunFromDocument,
+  areaMarketSeriesFromDocument,
+  areaMarketSeriesPointsFromDocument,
+  areaMarketSnapshotFromDocument,
+} from '@/lib/market/area-market-document';
+import { nextAreaMarketSeries } from '@/lib/market/area-market-series';
 import { summarizeArea } from '@/lib/market/area-market-summary';
 
 describe('areaMarketSnapshotFromDocument', () => {
@@ -48,5 +54,25 @@ describe('areaMarketRunFromDocument', () => {
   it('χωρίς truncated ⇒ null', () => {
     const { truncated: _omit, ...partial } = run;
     expect(areaMarketRunFromDocument(partial)).toBeNull();
+  });
+});
+
+describe('areaMarketSeriesFromDocument / areaMarketSeriesPointsFromDocument (ADR-890 §13)', () => {
+  const written = nextAreaMarketSeries(null, 'municipality:0701', '2026-09-28', [listing({ id: 'prop_1' })]);
+  const stored = JSON.parse(JSON.stringify(written));
+
+  it('ό,τι γράφει ο γραφέας διαβάζεται αυτούσιο· η σελίδα παίρνει μόνο τα σημεία', () => {
+    expect(areaMarketSeriesFromDocument(stored)).toEqual(written);
+    expect(areaMarketSeriesPointsFromDocument(stored)).toEqual(written.points);
+  });
+
+  it('η προβολή της σελίδας (χωρίς βιβλίο, fieldMask) δίνει σημεία — αλλά ΔΕΝ περνά για τον γραφέα', () => {
+    const { book: _book, ...pageView } = stored;
+    expect(areaMarketSeriesPointsFromDocument(pageView)).toEqual(written.points);
+    expect(areaMarketSeriesFromDocument(pageView)).toBeNull();
+  });
+
+  it('άλλη εκδοχή σχήματος ⇒ null (απουσία, όχι βλάβη)', () => {
+    expect(areaMarketSeriesPointsFromDocument({ ...stored, schemaVersion: 2 })).toBeNull();
   });
 });

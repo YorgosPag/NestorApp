@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4a670566aecf9165c055d479813fe52820a2f877b6bd31a6ed677a3ee92f511e",
+  "inputsSha256": "7d829b5c2eef4e4129f8dab46eb04c1fea9469aadd1018e45cb1d889f53625e7",
   "languages": [
     "el"
   ],
@@ -842,7 +842,7 @@
     "src/lib/maps/pmtiles-protocol.ts": "5f5390ed1aa471e4193e2ede9deaee40ed1b66778d12c89712dede10cd8d6e0f",
     "src/lib/maps/protomaps-style.ts": "23321a4a4650dd632c922a93c9c0fc90c74828d033b778d28e5279a7fadf5b31",
     "src/lib/maps/use-basemap-scheme.ts": "8fbb51148ab393788246b08204cb66f8d68355be6a903b93330160797d1fc41a",
-    "src/lib/market/area-market-document.ts": "185ea85934c7fdd0c3fa674c3c0e795edfc70d370384a310fe9c5792712f3db6",
+    "src/lib/market/area-market-document.ts": "dbf09c314a6cd01cbd202e5b31461298bebf7f7b54f0ffecfb20a66a896d10be",
     "src/lib/market/market-breakdowns.ts": "941d5e06a2f0eee5d62ec455cd440f6122d9473a7f9a3c92f44ed56ad1918bdd",
     "src/lib/market/market-segments.ts": "c1439abda46a3a5b297419ca3bf139997fae084abf136fb0910daa4d0e9299d9",
     "src/lib/market/market-statistics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
