@@ -14,7 +14,7 @@ import 'server-only';
  * χωρίς να φορτώσει ποτέ ολόκληρη τη χώρα στη διεργασία.
  */
 
-import { createServerJsonFile, type ServerJsonFile } from '@/lib/data/server-json-file';
+import { createKeyedServerJsonFiles, createServerJsonFile } from '@/lib/data/server-json-file';
 import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { AdminAreaChild, AdminAreaLookup } from '@/lib/geo/admin-area-of-point';
 import {
@@ -64,39 +64,20 @@ const INDEX_FILE = createServerJsonFile<ServerAreaIndex>({
   },
 });
 
-const boundaries = new Map<string, ServerJsonFile<GeoRegion>>();
-
-function boundaryFile(adminId: string): ServerJsonFile<GeoRegion> {
-  const existing = boundaries.get(adminId);
-  if (existing !== undefined) {
-    // Ανανέωση θέσης στο LRU: ο Map κρατά σειρά εισαγωγής.
-    boundaries.delete(adminId);
-    boundaries.set(adminId, existing);
-    return existing;
-  }
-
-  const file = createServerJsonFile<GeoRegion>({
-    publicPath: [...ADMIN_BOUNDARIES_DIR.split('/'), adminBoundaryFileName(adminId)],
-    build: (payload) => {
-      const boundary = readAdminBoundary(payload, adminId);
-      if (boundary === null) throw new TypeError(`Το όριο ${adminId} δεν έχει το αναμενόμενο σχήμα`);
-      return adminBoundaryRegion(boundary);
-    },
-    onFailure: (error) => {
-      logger.warn('Δεν διαβάστηκε όριο περιοχής', {
-        adminId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    },
-  });
-
-  boundaries.set(adminId, file);
-  if (boundaries.size > MAX_CACHED_BOUNDARIES) {
-    const oldest = boundaries.keys().next().value;
-    if (oldest !== undefined) boundaries.delete(oldest);
-  }
-  return file;
-}
+const BOUNDARIES = createKeyedServerJsonFiles<GeoRegion>(MAX_CACHED_BOUNDARIES, (adminId) => ({
+  publicPath: [...ADMIN_BOUNDARIES_DIR.split('/'), adminBoundaryFileName(adminId)],
+  build: (payload) => {
+    const boundary = readAdminBoundary(payload, adminId);
+    if (boundary === null) throw new TypeError(`Το όριο ${adminId} δεν έχει το αναμενόμενο σχήμα`);
+    return adminBoundaryRegion(boundary);
+  },
+  onFailure: (error) => {
+    logger.warn('Δεν διαβάστηκε όριο περιοχής', {
+      adminId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  },
+}));
 
 /**
  * Η πηγή του κριτή περιοχής — ή `null` όταν το ευρετήριο **δεν διαβάστηκε**.
@@ -110,7 +91,7 @@ export async function readAdminAreaLookup(): Promise<AdminAreaLookup | null> {
   const { children } = index;
   return {
     childrenOf: (parentId) => children.get(parentId ?? ROOT_KEY) ?? [],
-    regionOf: (adminId) => boundaryFile(adminId).read(),
+    regionOf: (adminId) => BOUNDARIES.read(adminId),
   };
 }
 

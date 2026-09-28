@@ -1,0 +1,83 @@
+{
+  "section": {
+    "title": "Contract prices",
+    "subtitle": "What was declared in transfer contracts in the 12 months to {date}.",
+    "none": "No transfer contract was recorded in this area in {from}–{to}.",
+    "unavailable": "Contract prices are not available right now."
+  },
+  "card": {
+    "median": "Median contract price",
+    "range": "Half of the contracts between {low} and {high}",
+    "sample": "{count, plural, one {from # contract} other {from # contracts}}",
+    "suppressed": "{count, plural, =0 {No comparable contract} one {# comparable contract} other {# comparable contracts}} in 12 months: at least {min} are needed for a reliable median.",
+    "parentFallback": "All of {name}: {price} ({count, plural, one {# contract} other {# contracts}})",
+    "zone": "Zone price (basis of the objective value): median {price}",
+    "priceToZone": "Price to zone price × area: median {pct}%",
+    "askAbove": "Listings in the area ask {pct}% above contract prices.",
+    "askBelow": "Listings in the area ask {pct}% below contract prices.",
+    "askEqual": "Asking prices of listings match contract prices."
+  },
+  "trend": {
+    "title": "Median by quarter",
+    "median": "Median",
+    "range": "Middle 50%",
+    "p25": "25th percentile",
+    "p75": "75th percentile",
+    "count": "{count, plural, one {# contract} other {# contracts}}",
+    "suppressed": "fewer than {min} contracts",
+    "quarter": "Q{quarter} {year}",
+    "gaps": "Quarters with fewer than {min} contracts are left empty and are not joined by a line."
+  },
+  "yearBuilt": {
+    "title": "By year built (12 months)",
+    "columnBucket": "Year built",
+    "columnCount": "Contracts",
+    "belowThreshold": "fewer than {min}",
+    "bucket": {
+      "lt1960": "Before 1960",
+      "1960-1984": "1960–1984",
+      "1985-1999": "1985–1999",
+      "2000-2009": "2000–2009",
+      "2010-2019": "2010–2019",
+      "gte2020": "2020 and later"
+    }
+  },
+  "listing": {
+    "title": "Contract prices in the area",
+    "context": "{segment} · {area} · 12 months to {date}",
+    "percentile": "This listing's asking price per m² is equal to or higher than {pct}% of the contracts in the area.",
+    "percentileUnit": "This listing's asking price is equal to or higher than {pct}% of the contracts in the area.",
+    "none": "There are not enough contracts of this kind in the area to compare.",
+    "noArea": "This listing has no location in an area, so it is not compared with contracts.",
+    "noSegment": "There are no comparable contracts for this kind of property.",
+    "unavailable": "Contract prices are not available right now.",
+    "seeArea": "All prices for {area}"
+  },
+  "comparables": {
+    "title": "Similar sales",
+    "note": "{count, plural, one {From # comparable contract} other {From # comparable contracts}} {window}, ordered by similarity in area, year built, floor and time. No address: the source does not publish it.",
+    "windowRecent": "in the last {months} months",
+    "windowAll": "in {from}–{to}",
+    "suppressed": "{count, plural, =0 {No comparable contract} one {# comparable contract} other {# comparable contracts}}: at least {min} are needed to show similar sales.",
+    "size": "{size} m²",
+    "basement": "Basement",
+    "deltaSize": "area {delta}%",
+    "deltaYears": "year {delta}",
+    "deltaFloors": "floor {delta}"
+  },
+  "source": {
+    "transferValues": {
+      "owner": "Greek Ministry of National Economy and Finance",
+      "dataset": "Register of Real Estate Transfer Values"
+    },
+    "line": "Source: {owner}, {dataset}",
+    "license": "Licence CC BY 4.0",
+    "changes": "The data have been processed: medians of comparable contracts only (whole property, full ownership, no special conditions), matched to Kallikratis areas."
+  },
+  "method": {
+    "contract": "Contract prices are what was declared in transfer contracts, from the public Register of Real Estate Transfer Values. They are not a valuation or market value, and the declared price may differ from the actual one.",
+    "comparable": "We count only contracts for a whole property in full ownership, with no special conditions (unfinished, listed, expropriation). Shares, bare ownership and usufruct are left out.",
+    "zone": "The zone price is the basis of the objective value per m², before the floor, age and frontage coefficients. The ratio of price to zone price shows how far above or below the tax basis contracts are signed.",
+    "cadence": "The register is updated about once a month; contract data run to the date shown in each section."
+  }
+}

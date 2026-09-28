@@ -19,6 +19,7 @@
 import { type KeyboardEvent, useSyncExternalStore } from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 import { radToDeg } from '@/lib/geometry/angle';
 import { horizontalFov, viewBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
 import type { TourViewerGraph, ViewerLevelEntry, ViewerStop } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
@@ -32,6 +33,12 @@ import { useStopNames } from './useStopNames';
 
 /** Μεγέθη σε μέτρα κάτοψης — το SVG κλιμακώνεται, οι αναλογίες μένουν. */
 const NODE_RADIUS_M = 0.28;
+/**
+ * 🔴 **Ποτέ το περίγραμμα εστίασης του browser σε σχήμα SVG**: το πάχος του μετριέται στις μονάδες του `viewBox`, δηλαδή
+ * σε **μέτρα** — μετρήθηκε ζωντανά (2026-09-28) ως μαύρος δακτύλιος ~4 m πάνω στην κάτοψη, στην τελεία που μόλις πατήθηκε
+ * (η «εδώ» δεν είχε `outline-none`). Η εστίαση φαίνεται με το χρώμα της γραμμής, που κλιμακώνεται σωστά (WCAG 2.4.7).
+ */
+const NODE_FOCUS_CLASS = 'cursor-pointer outline-none focus-visible:stroke-ring';
 
 function TourPlanCone({ camera, at }: { readonly camera: TourCameraStore; readonly at: ViewerStop }) {
   const { view, aspect } = useSyncExternalStore(camera.subscribe, camera.get, camera.get);
@@ -118,7 +125,7 @@ export function TourPlanMap({ graph, level, currentNodeId, camera, onGo, planIma
             aria-label={t(here ? TOUR_VIEWER_KEYS.youAreHere : TOUR_VIEWER_KEYS.goTo, { name: nameOf(s.node.id) })}
             aria-current={here ? 'location' : undefined}
             onClick={() => onGo(s.node.id)} onKeyDown={(e) => activate(e, s.node.id)}
-            className={here ? 'cursor-pointer fill-chart-1 stroke-background' : 'cursor-pointer fill-card stroke-foreground focus-visible:outline-none focus-visible:stroke-ring'}
+            className={cn(NODE_FOCUS_CLASS, here ? 'fill-chart-1 stroke-background' : 'fill-card stroke-foreground')}
             strokeWidth={0.06} />
         );
       })}

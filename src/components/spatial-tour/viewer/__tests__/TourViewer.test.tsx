@@ -34,6 +34,7 @@ const engine: jest.Mocked<TourPanoramaEngine> = {
   setIncomingOpacity: jest.fn(),
   commitIncoming: jest.fn(),
   project: jest.fn(() => ({ x: 10, y: 10 })),
+  projectUnclipped: jest.fn(() => ({ x: 10, y: 10 })),
   unproject: jest.fn(() => ({ yaw: 0, pitch: 0 })),
   onFrame: jest.fn(() => () => undefined),
   dispose: jest.fn(),
@@ -56,7 +57,20 @@ const source: TourPanoramaSource = {
   planImageUrl: (plan) => `plan:${plan.image.contentHash}`,
 };
 
+/** Το jsdom δεν έχει `PointerEvent` ούτε `setPointerCapture` — ό,τι χρειάζεται η είσοδος του καμβά. */
+class TestPointerEvent extends MouseEvent {
+  readonly pointerId: number;
+  readonly pointerType: string;
+  constructor(type: string, init: MouseEventInit & { pointerId?: number; pointerType?: string } = {}) {
+    super(type, init);
+    this.pointerId = init.pointerId ?? 1;
+    this.pointerType = init.pointerType ?? 'mouse';
+  }
+}
+
 beforeAll(() => {
+  global.PointerEvent = TestPointerEvent as unknown as typeof PointerEvent;
+  HTMLCanvasElement.prototype.setPointerCapture = () => undefined;
   global.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} } as unknown as typeof ResizeObserver;
 });
 beforeEach(() => {
@@ -114,6 +128,14 @@ describe('TourViewer — πρώτη εικόνα και προσφορές', () 
     expect(panel().getAllByRole('group', { name: 'spatial-tour:viewer.plan' })).toHaveLength(1);
     const plan = floorSection(0).getByRole('group', { name: 'spatial-tour:viewer.plan' });
     expect(within(plan).getByRole('button', { name: `spatial-tour:viewer.youAreHere:${P(1)}` })).toHaveAttribute('aria-current', 'location');
+  });
+
+  it('Φ2στ-β — καμία τελεία (ούτε η «εδώ») δεν αφήνει το περίγραμμα εστίασης του browser: στο SVG μετριέται σε ΜΕΤΡΑ', async () => {
+    await renderViewer();
+    const plan = floorSection(0).getByRole('group', { name: 'spatial-tour:viewer.plan' });
+    const dots = within(plan).getAllByRole('button');
+    expect(dots.length).toBeGreaterThan(1);
+    for (const dot of dots) expect(dot).toHaveClass('outline-none');
   });
 
   it('Φ2στ — δηλωμένος χώρος: το βελάκι και η επικεφαλίδα λένε τον χώρο, όχι «Σημείο N»', async () => {
@@ -226,6 +248,37 @@ describe('TourViewer — πλοήγηση', () => {
     } finally {
       (source.base as jest.Mock).mockImplementation(original);
     }
+  });
+});
+
+describe('TourViewer — πάτημα στο πάτωμα (Φ2στ-γ · §4.14, πρότυπο Zillow)', () => {
+  // g1 (0,0) heading 0 · γείτονες: g2 (4,0) ανατολικά = yaw 90° · g4 (0,3) βόρεια = yaw 0.
+  const pointerAt = (type: string, x: number) => fireEvent(screen.getByRole('application'), new TestPointerEvent(type, { bubbles: true, button: 0, clientX: x, clientY: 0 }));
+  const floorUnder = (yawDeg: number) => engine.unproject.mockReturnValue({ yaw: (yawDeg * Math.PI) / 180, pitch: -0.45 });
+  afterEach(() => { engine.unproject.mockReturnValue({ yaw: 0, pitch: 0 }); });
+
+  it('πάτημα χωρίς σύρσιμο ⇒ η πλησιέστερη ΣΥΝΔΕΔΕΜΕΝΗ στάση προς τα εκεί', async () => {
+    await renderViewer();
+    await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+    floorUnder(88);
+    await act(async () => { pointerAt('pointerdown', 0); pointerAt('pointerup', 0); });
+    await waitFor(() => expect(hereHeading(P(2))).toBeInTheDocument());
+  });
+
+  it('σύρσιμο (ματιά) ⇒ ΚΑΜΙΑ μετάβαση', async () => {
+    await renderViewer();
+    await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+    floorUnder(88);
+    await act(async () => { pointerAt('pointerdown', 0); pointerAt('pointermove', 30); pointerAt('pointerup', 0); });
+    expect(hereHeading(P(1))).toBeInTheDocument();
+  });
+
+  it('πάτημα προς κατεύθυνση χωρίς στάση ⇒ μένει εκεί (ποτέ τηλεμεταφορά)', async () => {
+    await renderViewer();
+    await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+    floorUnder(-135);
+    await act(async () => { pointerAt('pointerdown', 0); pointerAt('pointerup', 0); });
+    expect(hereHeading(P(1))).toBeInTheDocument();
   });
 });
 

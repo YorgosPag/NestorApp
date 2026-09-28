@@ -118,6 +118,18 @@ describe('CalibrateScaleDialog', () => {
     expect(mockPost).not.toHaveBeenCalled();
   });
 
+  it('pixelSpace: a derivative is shown, the scale is in the ORIGINAL pixels (ADR-884 §4.13, measured live)', async () => {
+    // Φορτώνεται παράγωγο 1280×840· το πρωτότυπο είναι 2560×1680. Τα ίδια κλικ = 1200 pixel πρωτοτύπου ⇒ 4 px/m, όχι 2.
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    render(<CalibrateScaleDialog open onOpenChange={jest.fn()} imageSrc="blob:plan" onSave={onSave}
+      pixelSpace={{ width: 2560, height: 1680 }} />);
+    await clickCanvas(100, 200, 400, 200);
+    typeDistance('300');
+    await act(async () => { fireEvent.click(screen.getByText('floorplan.calibrate.save')); });
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toBeCloseTo(4);
+  });
+
   it('shows error message when POST rejects', async () => {
     mockPost.mockRejectedValueOnce(new Error('network failure'));
     render(<CalibrateScaleDialog {...mkProps()} />);

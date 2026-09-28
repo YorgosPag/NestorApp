@@ -14,8 +14,7 @@
 
 import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
+import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
 import { saleExposureOf } from '@/lib/stay/stay-availability';
 import { stayRequestPreview } from '@/lib/stay/stay-request-preview';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
@@ -37,11 +36,6 @@ interface PublicStay {
   readonly reading: Awaited<ReturnType<typeof readStayCalendar>>;
 }
 
-async function readPublicListing(adminDb: AdminFirestore, listingId: string): Promise<PublicListing | null> {
-  const snap = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(listingId).get();
-  return snap.exists ? publicListingFromDocument(snap.data(), snap.id) : null;
-}
-
 /** Τι βρέθηκε για μια ταυτότητα αγγελίας. */
 type PublicStayRead =
   | { readonly kind: 'stay'; readonly stay: PublicStay }
@@ -50,7 +44,7 @@ type PublicStayRead =
   | { readonly kind: 'missing' };
 
 async function readPublicStay(adminDb: AdminFirestore, listingId: string): Promise<PublicStayRead> {
-  const listing = await readPublicListing(adminDb, listingId);
+  const listing = await readPublicListingById(adminDb, listingId);
   if (listing === null) return { kind: 'missing' };
   if (listing.stay === null || !listing.offerKinds.includes('leaseShort')) return { kind: 'not-a-stay' };
   return { kind: 'stay', stay: { listing, reading: await readStayCalendar(adminDb, listing.id, null) } };

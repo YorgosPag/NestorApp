@@ -53,6 +53,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'search-focus': return () => import('./locales/el/search-focus.json');
     case 'search-region': return () => import('./locales/el/search-region.json');
     case 'area-market': return () => import('./locales/el/area-market.json');
+    case 'market-contracts': return () => import('./locales/el/market-contracts.json');
     case 'admin-member-exit': return () => import('./locales/el/admin-member-exit.json');
     case 'landing-heroes-admin': return () => import('./locales/el/landing-heroes-admin.json');
     case 'listing-detail': return () => import('./locales/el/listing-detail.json');
@@ -181,6 +182,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'search-focus': return () => import('./locales/en/search-focus.json');
     case 'search-region': return () => import('./locales/en/search-region.json');
     case 'area-market': return () => import('./locales/en/area-market.json');
+    case 'market-contracts': return () => import('./locales/en/market-contracts.json');
     case 'admin-member-exit': return () => import('./locales/en/admin-member-exit.json');
     case 'landing-heroes-admin': return () => import('./locales/en/landing-heroes-admin.json');
     case 'listing-detail': return () => import('./locales/en/listing-detail.json');

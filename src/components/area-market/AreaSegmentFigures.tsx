@@ -15,7 +15,7 @@ import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE, type ReportedStatCell } fro
 import type { AskingOffer } from '@/types/area-market';
 
 import { askingAmountLabel, unitPriceLabel } from './area-market-format';
-import { breakdownViews, type SegmentView } from './area-market-view';
+import { breakdownViews, type BreakdownView, type SegmentView } from './area-market-view';
 import { AreaBreakdownTable } from './AreaBreakdownTable';
 
 const NS = 'area-market';
@@ -76,6 +76,23 @@ function SuppressedHeadline({ offer, view, parentName }: AreaSegmentFiguresProps
   );
 }
 
+/** Μια ανάλυση των αγγελιών → ο γενικός πίνακας, με τις λέξεις των αγγελιών. */
+function AskingBreakdown({ offer, view, breakdown }: { readonly offer: AskingOffer; readonly view: SegmentView; readonly breakdown: BreakdownView }) {
+  const { t } = useTranslation([NS, 'common']);
+  const { axis } = breakdown;
+  return (
+    <AreaBreakdownTable
+      caption={t(`${NS}:breakdown.${axis}`)}
+      bucketHeader={t(`${NS}:breakdown.columnBucket`)}
+      countHeader={t(`${NS}:breakdown.columnCount`)}
+      rows={breakdown.rows.map((row) => ({ key: row.key, label: t(`${NS}:bucket.${axis}.${row.key}`), cell: row.cell }))}
+      formatPrice={(amount) => unitPriceLabel(t, offer, view.segment, amount)}
+      belowThreshold={t(`${NS}:breakdown.belowThreshold`, { min: MARKET_STAT_MIN_SAMPLE })}
+      footnote={breakdown.undeclared > 0 ? t(`${NS}:breakdown.undeclared`, { count: breakdown.undeclared }) : null}
+    />
+  );
+}
+
 export function AreaSegmentFigures({ offer, view, parentName }: AreaSegmentFiguresProps) {
   const { t } = useTranslation([NS]);
   const headline = view.summary.unitPrice;
@@ -89,7 +106,7 @@ export function AreaSegmentFigures({ offer, view, parentName }: AreaSegmentFigur
           : <SuppressedHeadline offer={offer} view={view} parentName={parentName} />}
       </header>
       {breakdowns.map((breakdown) => (
-        <AreaBreakdownTable key={breakdown.axis} offer={offer} segment={view.segment} view={breakdown} />
+        <AskingBreakdown key={breakdown.axis} offer={offer} view={view} breakdown={breakdown} />
       ))}
     </article>
   );

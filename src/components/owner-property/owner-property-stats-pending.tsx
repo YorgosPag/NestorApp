@@ -19,7 +19,7 @@
 
 import React from 'react';
 
-import { CHART_FIGURE_HEIGHT, type ChartCardFigureSize } from '@/components/ui/chart-card/figure-height';
+import { ChartBandPending } from '@/components/ui/chart-card/ChartBandPending';
 import { cn } from '@/lib/utils';
 
 const BLOCK = 'block animate-pulse rounded bg-muted';
@@ -60,25 +60,13 @@ export function StatsRowPending(): React.ReactElement {
   );
 }
 
-/** Μία ζώνη γραφήματος: τίτλος (`ChartCardHeader`) · σχέδιο · (λεζάντα) · «Προβολή ως πίνακα». */
-function BandPending({ size, captioned = false }: { readonly size: ChartCardFigureSize; readonly captioned?: boolean }): React.ReactElement {
-  return (
-    <span className="flex flex-col">
-      <span className={cn(BLOCK, 'mb-4 h-7 w-40')} />
-      <span className={cn(BLOCK, 'rounded-md', CHART_FIGURE_HEIGHT[size])} />
-      {captioned && <span className={cn(BLOCK, 'mt-2 h-10')} />}
-      <span className={cn(BLOCK, 'mt-4 h-5 w-44')} />
-    </span>
-  );
-}
-
 /** Οι τρεις ζώνες του `OwnerPropertyStatsChart` — `loading` του `next/dynamic` και μέρος του σκελετού του πίνακα. */
 export function StatsChartPending(): React.ReactElement {
   return (
     <span aria-hidden className="flex flex-col gap-6">
-      <BandPending size="sm" />
-      <BandPending size="strip" />
-      <BandPending size="strip" captioned />
+      <ChartBandPending size="sm" />
+      <ChartBandPending size="strip" />
+      <ChartBandPending size="strip" captioned />
     </span>
   );
 }

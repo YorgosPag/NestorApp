@@ -1,35 +1,9 @@
 /**
- * SCALAR MATH — neutral, dependency-free scalar clamp primitives.
+ * SCALAR MATH — επανεξαγωγή του SSoT `@/lib/geometry/scalar` (ADR-071 · ADR-884 Φ2στ-γ §4.14).
  *
- * Canonical SSoT for the `clamp` family (ADR-071). Promoted here from
- * `rendering/entities/shared/geometry-utils.ts` so that low-level, non-render
- * consumers (config/, bim/, bim-3d/, snapping/, systems/, hooks/, io/) can use
- * the same clamp without importing the rendering layer (dependency inversion).
- *
- * This module MUST stay dependency-free (no imports) — it is the bottom of the
- * math stack. `geometry-utils.ts` re-exports these for backward-compat.
+ * Η οικογένεια `clamp` προωθήθηκε στο `src/lib/geometry/scalar.ts` ώστε να τη μοιράζονται και οι κώδικες έξω από το
+ * subapp (ο δημόσιος θεατής περιήγησης δεν επιτρέπεται να εισάγει από εδώ — CHECK 3.62). Οι ~50 εισαγωγείς του subapp
+ * μένουν αμετάβλητοι· η δήλωση είναι **μία**. Ίδιο πρότυπο με το `lib/geometry/angle.ts`.
  */
 
-/**
- * Clamp a value to the [min, max] range.
- * @example clamp(150, 0, 100) // → 100
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-/**
- * Clamp a value to the [0, 1] range (opacity / alpha / percentage / parametric t).
- * @example clamp01(1.5) // → 1
- */
-export function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-/**
- * Clamp a value to the [0, 255] range (RGB colour components).
- * @example clamp255(300) // → 255
- */
-export function clamp255(value: number): number {
-  return Math.max(0, Math.min(255, value));
-}
+export { clamp, clamp01, clamp255 } from '@/lib/geometry/scalar';

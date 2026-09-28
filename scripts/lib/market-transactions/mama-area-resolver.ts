@@ -57,6 +57,8 @@ export interface MamaArea {
   readonly id: string;
   readonly name: string;
   readonly level: number;
+  /** Ο γονέας στην ιεραρχία (Δ.Ε. → Δήμος) — για την άθροιση ανά Δήμο (ADR-889 Φ2). */
+  readonly parentId: string | null;
 }
 
 export interface MamaAreaResolver {
@@ -198,7 +200,7 @@ export function createMamaAreaResolver(rows: readonly HierarchyEntity[]): MamaAr
     area(areaId) {
       const row = hierarchy.byId.get(areaId);
       if (row === undefined) throw new MamaFormatError(`άγνωστη ταυτότητα περιοχής ${areaId}`);
-      return { id: row.id, name: row.n, level: row.l };
+      return { id: row.id, name: row.n, level: row.l, parentId: row.p };
     },
   };
 }

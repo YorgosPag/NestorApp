@@ -16,7 +16,8 @@ import { SEGMENT_METRIC, type MarketSegment } from '../../../src/lib/market/mark
 import { FULL_OWNERSHIP } from './mama-vocabulary';
 
 // 🔑 Κατώφλι, ποσοστημόρια και σύνοψη ζουν στο `src/lib/market/market-statistics.ts` (ADR-890 Φ1):
-// ο γεννήτορας και η σελίδα περιοχής ρωτούν την ίδια σταθερά.
+// ο γεννήτορας και η σελίδα περιοχής ρωτούν την ίδια σταθερά. Εκεί ζει και το `quarterOf` (ADR-889 Φ2: το
+// ζητά και η γραμμή τάσης της οθόνης).
 
 const FULL_SHARE = 100;
 
@@ -57,10 +58,4 @@ export function comparableUnitPrice(record: MamaRecord, segment: MarketSegment |
 
   const area = measuredArea(record, segment);
   return area !== null && area > 0 ? record.price / area : null;
-}
-
-/** Τρίμηνο της ημερομηνίας `YYYY-MM-DD` → `YYYY-Qn`. */
-export function quarterOf(isoDate: string): string {
-  const month = Number(isoDate.slice(5, 7));
-  return `${isoDate.slice(0, 4)}-Q${Math.ceil(month / 3)}`;
 }

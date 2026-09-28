@@ -28,6 +28,11 @@ jest.mock('@/services/places/admin-boundaries.reader', () => ({
   readAdminAreaDirectory: () => mockDirectory(),
 }));
 
+const mockSummary = jest.fn();
+jest.mock('@/services/market/market-transactions.reader', () => ({
+  readAreaSummary: (areaId: string) => mockSummary(areaId),
+}));
+
 import { loadAreaMarketPage } from '../area-market-page.service';
 import { rollupAreaMarket } from '../area-market-rollup.service';
 
@@ -52,8 +57,15 @@ function seedListings(listings: readonly PublicListing[]): void {
   for (const item of listings) fake.seed(COLLECTIONS.PUBLIC_LISTINGS, item.id, { ...item, schemaVersion: 14 });
 }
 
+const INDEX = { asOf: '2026-09-01', window: { from: 2022, to: 2026 }, areas: new Set<string>(), categorySegments: [] };
+
+function summaryOf(id: string) {
+  return { v: 2, id, asOf: '2026-09-01', segments: {} };
+}
+
 beforeEach(() => {
   fake.reset();
+  mockSummary.mockImplementation(async (id: string) => ({ kind: 'ready', file: summaryOf(id), index: INDEX }));
   mockDirectory.mockResolvedValue({
     areas: new Map(AREAS.map((area) => [area.id, area])),
     childrenOf: (parentId: string) => AREAS.filter((area) => area.parentId === parentId),
@@ -110,5 +122,24 @@ describe('loadAreaMarketPage', () => {
     expect(page.market.snapshot?.areaId).toBe('municipal_unit:070101');
     expect(page.market.parent?.areaId).toBe('municipality:0701');
     expect(page.ancestors.map((area) => area.id)).toEqual(['municipality:0701', 'regional_unit:07']);
+  });
+
+  it('τιμές συμβολαίων (ADR-890 Φ2): η Δ.Ε. ΚΑΙ ο Δήμος της, για την αναγωγή', async () => {
+    const page = await loadAreaMarketPage(db, 'municipal_unit:070101', DAY);
+    if (page.kind !== 'found' || page.contracts.kind !== 'ready') throw new Error('no contracts');
+    expect(page.contracts.summary.id).toBe('municipal_unit:070101');
+    expect(page.contracts.parent?.id).toBe('municipality:0701');
+    expect(page.contracts.window).toEqual({ from: 2022, to: 2026 });
+  });
+
+  it('καμία εγγραφή ⇒ none (γεγονός)· αποτυχία ανάγνωσης ⇒ unavailable, και η σελίδα ΔΕΝ πέφτει', async () => {
+    mockSummary.mockResolvedValue({ kind: 'none', index: INDEX });
+    const empty = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+    expect(empty.kind === 'found' && empty.contracts).toEqual({ kind: 'none', window: { from: 2022, to: 2026 } });
+
+    mockSummary.mockResolvedValue(null);
+    const failed = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+    expect(failed.kind).toBe('found');
+    expect(failed.kind === 'found' && failed.contracts).toEqual({ kind: 'unavailable' });
   });
 });

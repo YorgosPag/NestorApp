@@ -234,3 +234,6 @@ firestore.rules.compiled
 
 # ADR-876 §5.8 Σ22 — τα email που ΚΡΑΤΗΣΕ η πόρτα εξόδου υπό emulator (.eml). Αγκυρωμένο: μόνο η ρίζα.
 /.emulator-outbox/
+
+# Αποδεικτικά αδειών δεδομένων: το πρωτότυπο email (.eml) περιέχει προσωπικά στοιχεία υπαλλήλων και του Giorgio -> μόνο τοπικά. Στο git μένει το README.md.
+/docs/legal/data-licenses/*.eml

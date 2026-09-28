@@ -122,3 +122,41 @@ export function createServerJsonFile<TSnapshot>(
 
   return { read };
 }
+
+/** Μια **οικογένεια** αρχείων ανά κλειδί (ένα ανά περιοχή), με φραγμένη μνήμη. */
+export interface KeyedServerJsonFiles<TSnapshot> {
+  readonly read: (key: string) => Promise<TSnapshot | null>;
+}
+
+/**
+ * **Ένα αρχείο ανά κλειδί, με LRU** — για τις οικογένειες του `public/data` που δεν χωρούν ολόκληρες
+ * στη διεργασία (όρια ADR-883: 7.432 αρχεία · τιμές συμβολαίων ADR-889: 1.000).
+ *
+ * 🔑 Γεννήθηκε ιδιωτικό μέσα στο `admin-boundaries.reader.ts` και εξήχθη όταν ήρθε ο **δεύτερος**
+ * καταναλωτής (ADR-889 Φ2) — N.0.2. Η σειρά εισαγωγής του `Map` **είναι** η σειρά χρήσης: κάθε
+ * ανάγνωση μετακινεί το κλειδί στο τέλος, και η υπέρβαση πετά το πρώτο.
+ */
+export function createKeyedServerJsonFiles<TSnapshot>(
+  maxEntries: number,
+  specOf: (key: string) => ServerJsonFileSpec<TSnapshot>,
+): KeyedServerJsonFiles<TSnapshot> {
+  const files = new Map<string, ServerJsonFile<TSnapshot>>();
+
+  function fileOf(key: string): ServerJsonFile<TSnapshot> {
+    const existing = files.get(key);
+    if (existing !== undefined) {
+      files.delete(key);
+      files.set(key, existing);
+      return existing;
+    }
+    const file = createServerJsonFile(specOf(key));
+    files.set(key, file);
+    if (files.size > maxEntries) {
+      const oldest = files.keys().next().value;
+      if (oldest !== undefined) files.delete(oldest);
+    }
+    return file;
+  }
+
+  return { read: (key) => fileOf(key).read() };
+}

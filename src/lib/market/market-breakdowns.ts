@@ -59,6 +59,20 @@ export const FLOOR_BUCKETS: readonly MarketBucket[] = [
   { key: 'gte5', min: 5, max: null },
 ];
 
+/**
+ * Έτος κατασκευής (ADR-889 Φ2). Τα όρια ακολουθούν τους **σταθμούς του ελληνικού κτιριακού αποθέματος**:
+ * πριν από τον πρώτο αντισεισμικό κανονισμό (1959) · 1960–1984 (ΓΟΚ '73, πρόσθετες διατάξεις '84) · 1985–1999 ·
+ * ΕΑΚ 2000 · ΚΕΝΑΚ (2010) · νεόδμητα από το 2020 (τιμολογούνται χωριστά και στις αγγελίες).
+ */
+export const YEAR_BUILT_BUCKETS: readonly MarketBucket[] = [
+  { key: 'lt1960', min: 0, max: 1960 },
+  { key: '1960-1984', min: 1960, max: 1985 },
+  { key: '1985-1999', min: 1985, max: 2000 },
+  { key: '2000-2009', min: 2000, max: 2010 },
+  { key: '2010-2019', min: 2010, max: 2020 },
+  { key: 'gte2020', min: 2020, max: null },
+];
+
 /** Ποιοι άξονες έχουν νόημα για κάθε τμήμα. Το υπνοδωμάτιο δεν λέει τίποτα για κατάστημα ή οικόπεδο. */
 export const SEGMENT_BREAKDOWN_AXES: Readonly<Record<MarketSegment, readonly AreaBreakdownAxis[]>> = {
   apartment: ['size', 'bedrooms', 'floor'],

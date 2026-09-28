@@ -114,6 +114,11 @@ export interface ViewerNeighbour {
   readonly levelId: string;
   /** `null` όταν κάποιο άκρο δεν έχει θέση ή συμπίπτουν — ο σύνδεσμος δεν έχει κατεύθυνση να δειχθεί. */
   readonly bearing: number | null;
+  /**
+   * Οριζόντια απόσταση σε μέτρα, από τις θέσεις στην κάτοψη — `null` χωρίς θέσεις. Τη ρωτά το κλικ στο πάτωμα
+   * (Φ2στ-γ · §4.14): ποια στάση είναι **πιο κοντά** στο σημείο που πάτησε ο επισκέπτης.
+   */
+  readonly distance: number | null;
 }
 
 function levelEntries(
@@ -184,8 +189,15 @@ export function neighboursOf(graph: TourViewerGraph, nodeId: string): ViewerNeig
   return (graph.adjacency.get(nodeId) ?? []).flatMap((toId) => {
     const to = graph.stops.get(toId);
     if (to === undefined) return [];
-    return [{ nodeId: toId, number: to.number, levelId: to.levelId, bearing: linkBearing(from, to) }];
+    return [{ nodeId: toId, number: to.number, levelId: to.levelId, bearing: linkBearing(from, to), distance: stopDistance(from, to) }];
   });
+}
+
+/** Οριζόντια απόσταση δύο στάσεων στην κάτοψη — `null` αν κάποια δεν έχει θέση. */
+function stopDistance(from: ViewerStop, to: ViewerStop): number | null {
+  const a = from.node.position;
+  const b = to.node.position;
+  return a === null || b === null ? null : Math.hypot(b.x - a.x, b.y - a.y);
 }
 
 function pointsBearing(from: TourPoint | null, to: TourPoint | null): number | null {

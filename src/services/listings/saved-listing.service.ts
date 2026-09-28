@@ -20,6 +20,7 @@ import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { chunkArray } from '@/lib/array-utils';
 import { isAlreadyExistsError } from '@/lib/firestore/firestore-already-exists';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
+import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
 import { priceAtSaveOf, priceSinceSave, readSavedListing } from '@/lib/listings/saved-listing';
 import { mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -45,11 +46,6 @@ function savedListings(adminDb: AdminFirestore) {
 
 function savedDocOf(adminDb: AdminFirestore, saverUserId: string, listingId: string) {
   return savedListings(adminDb).doc(enterpriseIdService.generateDeterministicSavedListingId(saverUserId, listingId));
-}
-
-async function readPublicListing(adminDb: AdminFirestore, listingId: string): Promise<PublicListing | null> {
-  const snapshot = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(listingId).get();
-  return snapshot.exists ? publicListingFromDocument(snapshot.data(), snapshot.id) : null;
 }
 
 /** `true` μόνο αν **αποδείχτηκε** ότι ο δρων διαχειρίζεται την αγγελία. Βλάβη ⇒ `null`. */
@@ -81,7 +77,7 @@ export async function saveListing(
   adminDb: AdminFirestore, actor: ListingActor, listingId: string, nowMs: number,
 ): Promise<SaveOutcome> {
   try {
-    const listing = await readPublicListing(adminDb, listingId);
+    const listing = await readPublicListingById(adminDb, listingId);
     if (listing === null) return 'not-in-market';
     const custodian = await isCustodian(adminDb, listingId, actor, nowMs);
     if (custodian === null) return 'unavailable';

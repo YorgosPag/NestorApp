@@ -104,7 +104,7 @@
   },
   "method": {
     "title": "How the numbers are computed",
-    "asking": "Every price on this page is an asking price: what sellers and landlords ask in their listings. These are not contract prices or valuations, and the final price of a transaction may differ.",
+    "asking": "Asking prices are what sellers and landlords ask in their listings. They are not contract prices or valuations, and the final price of a transaction may differ; that is why contract prices are shown separately.",
     "median": "We show the median, not the average, so a single extreme listing does not change the picture. The “middle 50%” is the range from the 25th to the 75th percentile.",
     "threshold": "A number is shown only when there are at least {min} listings, the same minimum the UK Office for National Statistics (ONS) uses for a reliable median. Below that we show the count only.",
     "exclusions": "Listings without a price or a size, or with a price outside plausible bounds, are left out of the numbers. We still count them and show them, so you know how many listings each number comes from.",

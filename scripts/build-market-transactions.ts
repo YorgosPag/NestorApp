@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Ο ΓΕΝΝΗΤΟΡΑΣ ΤΙΜΩΝ ΣΥΜΒΟΛΑΙΩΝ** — αρχεία ΜΑΜΑ → ένα JSON ανά περιοχή Καλλικράτη (ADR-889 Φ1).
+ * @fileoverview **Ο ΓΕΝΝΗΤΟΡΑΣ ΤΙΜΩΝ ΣΥΜΒΟΛΑΙΩΝ** — αρχεία ΜΑΜΑ → στατιστικά + γραμμές ανά περιοχή Καλλικράτη (ADR-889 Φ1–Φ2).
  * @related ADR-889 · ADR-883 (ίδιο σχήμα: στατικό αρχείο ανά οντότητα) · `scripts/lib/market-transactions/*`
  *
  * ```
@@ -7,21 +7,20 @@
  *                           →  κεφαλίδα κατά θέση ΚΑΙ όνομα            (mama-source)
  *                           →  (νομαρχία, δήμος) → Δ.Ε. / δήμος       (mama-area-resolver)
  *                           →  τμήμα + συγκρίσιμη τιμή μονάδας         (mama-vocabulary · market-statistics)
- *                           →  <out>/areas/<id>.json + <out>/index.json
+ *                           →  public/data/market-transactions/{summary,rows}/<id>.json + index.json
+ *                              (Δ.Ε. ΚΑΙ ο Δήμος τους, αθροισμένος — η αναγωγή της οθόνης, ADR-890 §10.4)
  *                           →  docs/…/reports/adr-889-area-match.md   (ό,τι ΔΕΝ δέθηκε ακριβώς)
  * ```
  *
  * **Εκτέλεση**: `npm run build:market-transactions` · επιλογές `--from=2022 --to=2026 --refresh`
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * 🔴 Η Φ1 ΔΕΝ ΔΗΜΟΣΙΕΥΕΙ — ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΔΟΜΙΚΟ, ΟΧΙ ΥΠΟΣΧΕΣΗ
+ * 🔑 Η Φ2 ΔΗΜΟΣΙΕΥΕΙ — ΜΕ ΑΔΕΙΑ CC-BY 4.0 (ADR-889 §2.1, απάντηση ΥΠΕΘΟΟ 2026-09-28)
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * Η άδεια επαναχρησιμοποίησης είναι **ανοιχτή** (§2.1). Ό,τι γράφεται κάτω από `public/` το σερβίρει το
- * Netcup στο επόμενο push, δηλαδή **δημοσιεύεται**. Γι' αυτό η έξοδος της Φ1 γράφεται στην cache
- * (`node_modules/.cache/market-transactions/out`), που **δεν** μπαίνει στο git και **δεν** σερβίρεται. Ο
- * προορισμός `public/data/market-transactions` προστίθεται στη Φ2, **αφού** απαντήσει η ΓΓΠΣΨΔ. Στο git
- * μπαίνει μόνο η αναφορά αντιστοίχισης, που δεν περιέχει καμία συναλλαγή.
+ * Ως τη Φ1 η έξοδος έμενε στην cache, γιατί ό,τι είναι κάτω από `public/` το σερβίρει το Netcup στο επόμενο
+ * push. Με την άδεια λυμένη, γράφεται στο `public/data/market-transactions/`. Η αναφορά πηγής ταξιδεύει μέσα
+ * στο ευρετήριο από το ΕΝΑ `config/open-data-sources.ts`.
  */
 
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -29,7 +28,6 @@ import { join } from 'node:path';
 
 import ExcelJS from 'exceljs';
 
-import { adminBoundaryFileName } from '../src/lib/geo/admin-boundary-file';
 import { REPO_ROOT, readHierarchyRows } from './lib/admin-boundaries/admin-boundary-source';
 import { createMamaAreaResolver, type MamaAreaResolver } from './lib/market-transactions/mama-area-resolver';
 import { MARKET_TRANSACTIONS_CACHE_DIR, loadMamaYear, type MamaSourceMeta } from './lib/market-transactions/mama-download';
@@ -41,26 +39,34 @@ import {
   MAMA_RIGHTS,
   MAMA_SPECIAL_CONDITIONS,
 } from './lib/market-transactions/mama-vocabulary';
+import { buildAreaSummaryFile } from './lib/market-transactions/area-summary';
 import { comparableUnitPrice } from './lib/market-transactions/market-statistics';
+import { OPEN_DATA_SOURCES } from '../src/config/open-data-sources';
 import { SEGMENT_METRIC, SEGMENT_PROPERTY_TYPES } from '../src/lib/market/market-segments';
 import { MARKET_STAT_MIN_SAMPLE } from '../src/lib/market/market-statistics';
+import { CATEGORY_ORDER, buildAreaRowsFile, type ClassifiedRecord } from './lib/market-transactions/market-transactions-file';
 import {
-  CATEGORY_ORDER,
+  MARKET_TRANSACTIONS_DIR,
   MARKET_TRANSACTIONS_FORMAT_VERSION,
   ROW_FIELDS,
-  buildAreaFile,
-  type ClassifiedRecord,
-} from './lib/market-transactions/market-transactions-file';
+  marketTransactionsPublicPath,
+  type MarketTransactionsKind,
+} from '../src/lib/market/market-transactions-file';
 
-const OUTPUT_DIR = join(MARKET_TRANSACTIONS_CACHE_DIR, 'out');
-const AREAS_DIR = join(OUTPUT_DIR, 'areas');
+const PUBLIC_DIR = join(REPO_ROOT, 'public');
+const OUTPUT_DIR = join(PUBLIC_DIR, ...MARKET_TRANSACTIONS_DIR.split('/'));
+/** Η έξοδος της Φ1 (ADR-889 §5.1α) — σβήνεται, για να μη μείνει δεύτερο, μπαγιάτικο αντίγραφο. */
+const LEGACY_OUTPUT_DIR = join(MARKET_TRANSACTIONS_CACHE_DIR, 'out');
+const MUNICIPALITY_LEVEL = 5;
 const REPORT_PATH = join(REPO_ROOT, 'docs', 'centralized-systems', 'reference', 'reports', 'adr-889-area-match.md');
 
-/** Η πηγή ζητά αναφορά (§2.1). Ταξιδεύει μέσα στο ευρετήριο, όπως το `ATTRIBUTION` των ορίων. */
+/** Η άδεια ζητά αναφορά κυρίου και αλλαγών (§2.1). Ταξιδεύει μέσα στο ευρετήριο, όπως το `ATTRIBUTION` των ορίων. */
 const ATTRIBUTION = {
-  source: 'ΑΑΔΕ / ΓΓΠΣΨΔ — Μητρώο Αξιών Μεταβιβάσεων Ακινήτων',
+  owner: 'ΥΠΕΘΟΟ — Μητρώο Αξιών Μεταβιβάσεων Ακινήτων',
+  dataset: OPEN_DATA_SOURCES.transferValues.datasetUrl,
+  license: OPEN_DATA_SOURCES.transferValues.license,
   legalBasis: 'ΠΟΛ.1040/2018',
-  license: 'ΑΝΟΙΧΤΟ — ADR-889 §2.1 (όχι δημόσια χρήση πριν από γραπτή απάντηση)',
+  changes: 'συγκεντρωτικά στατιστικά μόνο συγκρίσιμων γραμμών (ADR-889 §5.3), αντιστοίχιση σε περιοχές Καλλικράτη (§4)',
   label: 'τιμή συμβολαίου — ΟΧΙ αγοραία αξία',
 } as const;
 
@@ -83,6 +89,8 @@ interface Accumulator {
   readonly pairs: Map<string, PairTally>;
   readonly byArea: Map<string, ClassifiedRecord[]>;
   comparable: number;
+  /** Η τελευταία ημερομηνία συμβολαίου της πηγής — το «έως» κάθε 12μήνου (`area-summary.ts`). */
+  latest: string;
 }
 
 function classify(record: MamaRecord): ClassifiedRecord {
@@ -102,6 +110,7 @@ function accumulate(acc: Accumulator, record: MamaRecord): void {
 
   const item = classify(record);
   if (item.unitPrice !== null) acc.comparable += 1;
+  if (record.contractDate > acc.latest) acc.latest = record.contractDate;
   const bucket = acc.byArea.get(pair.resolution.areaId);
   if (bucket === undefined) acc.byArea.set(pair.resolution.areaId, [item]);
   else bucket.push(item);
@@ -141,28 +150,64 @@ function vocabulary(): Record<string, unknown> {
   };
 }
 
-function writeAreas(acc: Accumulator): Array<readonly [string, string, number, number, number]> {
+type AreaIndexRow = readonly [string, string, number, number, number];
+
+/**
+ * **Οι Δ.Ε. ΚΑΙ ο Δήμος τους.** Η πηγή μιλά σε βαθμίδα Δ.Ε. (§4)· η σελίδα περιοχής όμως ανάγει στον Δήμο όταν η
+ * Δ.Ε. έχει λίγα δεδομένα (ADR-890 §10.4), και ο Δήμος έχει δική του σελίδα. Χωρίς αυτή την άθροιση, ο Δήμος
+ * Θεσσαλονίκης (6 Δ.Ε.) δεν θα είχε αρχείο. Οι δήμοι **χωρίς** Δ.Ε. είναι ήδη βαθμίδα 5 και μένουν ως έχουν.
+ */
+function withMunicipalities(acc: Accumulator): Map<string, ClassifiedRecord[]> {
+  const groups = new Map<string, ClassifiedRecord[]>();
+  const add = (id: string, items: readonly ClassifiedRecord[]): void => {
+    const group = groups.get(id);
+    if (group === undefined) groups.set(id, [...items]);
+    else group.push(...items);
+  };
+  for (const [areaId, items] of acc.byArea) {
+    add(areaId, items);
+    const { parentId } = acc.resolver.area(areaId);
+    if (parentId !== null && acc.resolver.area(parentId).level === MUNICIPALITY_LEVEL) add(parentId, items);
+  }
+  return groups;
+}
+
+function writeFile(kind: MarketTransactionsKind, areaId: string, content: unknown): void {
+  writeFileSync(join(PUBLIC_DIR, ...marketTransactionsPublicPath(kind, areaId)), JSON.stringify(content));
+}
+
+function writeAreas(acc: Accumulator): AreaIndexRow[] {
   rmSync(OUTPUT_DIR, { recursive: true, force: true });
-  mkdirSync(AREAS_DIR, { recursive: true });
-  const rows: Array<readonly [string, string, number, number, number]> = [];
-  for (const areaId of [...acc.byArea.keys()].sort()) {
-    const items = acc.byArea.get(areaId) as ClassifiedRecord[];
-    const file = buildAreaFile(acc.resolver.area(areaId), items);
-    writeFileSync(join(AREAS_DIR, adminBoundaryFileName(areaId)), JSON.stringify(file));
-    rows.push([areaId, file.name, file.level, items.length, items.filter((i) => i.unitPrice !== null).length]);
+  rmSync(LEGACY_OUTPUT_DIR, { recursive: true, force: true });
+  for (const kind of ['summary', 'rows'] as const) mkdirSync(join(OUTPUT_DIR, kind), { recursive: true });
+
+  const groups = withMunicipalities(acc);
+  const rows: AreaIndexRow[] = [];
+  for (const areaId of [...groups.keys()].sort()) {
+    const items = groups.get(areaId) as ClassifiedRecord[];
+    writeFile('summary', areaId, buildAreaSummaryFile(areaId, items, acc.latest));
+    writeFile('rows', areaId, buildAreaRowsFile(areaId, items));
+    const { name, level } = acc.resolver.area(areaId);
+    rows.push([areaId, name, level, items.length, items.filter((i) => i.unitPrice !== null).length]);
   }
   return rows;
 }
 
-function writeIndex(window: { from: number; to: number }, inputs: ReadonlyArray<MamaSourceMeta & { rows: number }>, areas: ReturnType<typeof writeAreas>): void {
-  const index = { v: MARKET_TRANSACTIONS_FORMAT_VERSION, attribution: ATTRIBUTION, window, inputs, vocab: vocabulary(), areas };
-  writeFileSync(join(OUTPUT_DIR, 'index.json'), `${JSON.stringify(index)}\n`);
+function writeIndex(
+  window: { from: number; to: number },
+  asOf: string,
+  inputs: ReadonlyArray<MamaSourceMeta & { rows: number }>,
+  areas: readonly AreaIndexRow[],
+): void {
+  const index = { v: MARKET_TRANSACTIONS_FORMAT_VERSION, attribution: ATTRIBUTION, window, asOf, inputs, vocab: vocabulary(), areas };
+  writeFileSync(join(OUTPUT_DIR, 'index.json'), `${JSON.stringify(index)}
+`);
 }
 
 async function main(): Promise<void> {
   const started = Date.now();
   const window = parseWindow(process.argv.slice(2));
-  const acc: Accumulator = { resolver: createMamaAreaResolver(readHierarchyRows()), pairs: new Map(), byArea: new Map(), comparable: 0 };
+  const acc: Accumulator = { resolver: createMamaAreaResolver(readHierarchyRows()), pairs: new Map(), byArea: new Map(), comparable: 0, latest: '' };
 
   const inputs: Array<MamaSourceMeta & { rows: number }> = [];
   for (let year = window.from; year <= window.to; year += 1) {
@@ -171,14 +216,15 @@ async function main(): Promise<void> {
   }
 
   const areas = writeAreas(acc);
-  writeIndex(window, inputs, areas);
+  writeIndex(window, acc.latest, inputs, areas);
   const pairs = [...acc.pairs.values()];
-  const totals = coverageOf(pairs, acc.comparable, areas.length);
+  // Η αναφορά μετρά τις περιοχές όπου **έδεσε** η πηγή — όχι τους αθροισμένους Δήμους.
+  const totals = coverageOf(pairs, acc.comparable, acc.byArea.size);
   mkdirSync(join(REPORT_PATH, '..'), { recursive: true });
   writeFileSync(REPORT_PATH, renderMatchReport(window, pairs, totals, acc.resolver));
 
   console.table([{ ...totals, seconds: Math.round((Date.now() - started) / 1000) }]);
-  console.log(`✅ ${areas.length} αρχεία περιοχών → ${AREAS_DIR}\n📄 αναφορά → ${REPORT_PATH}`);
+  console.log(`✅ ${areas.length} περιοχές (${acc.byArea.size} από την πηγή + Δήμοι) → ${OUTPUT_DIR}\n📄 αναφορά → ${REPORT_PATH}`);
 }
 
 main().catch((error: unknown) => {

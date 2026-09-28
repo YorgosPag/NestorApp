@@ -14,9 +14,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
 
 const NS = 'area-market';
+const CONTRACTS = 'market-contracts';
+const CONTRACT_LINES = ['contract', 'comparable', 'zone', 'cadence'] as const;
 
 export function AreaMethodology() {
-  const { t } = useTranslation([NS]);
+  const { t } = useTranslation([NS, CONTRACTS]);
   return (
     <section aria-labelledby="area-method" className="flex flex-col gap-2 border-t border-border pt-4">
       <h2 id="area-method" className="m-0 text-lg font-semibold text-foreground">{t(`${NS}:method.title`)}</h2>
@@ -25,6 +27,9 @@ export function AreaMethodology() {
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.threshold`, { min: MARKET_STAT_MIN_SAMPLE })}</p>
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.exclusions`)}</p>
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:method.cadence`)}</p>
+      {CONTRACT_LINES.map((line) => (
+        <p key={line} className="m-0 text-sm text-muted-foreground">{t(`${CONTRACTS}:method.${line}`)}</p>
+      ))}
     </section>
   );
 }

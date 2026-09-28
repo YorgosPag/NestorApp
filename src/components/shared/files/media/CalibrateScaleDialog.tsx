@@ -82,6 +82,12 @@ export type CalibrateScaleDialogProps = CalibratePersistence & {
   onOpenChange: (open: boolean) => void;
   /** URL of the background image to display for click-calibration. */
   imageSrc: string | null;
+  /**
+   * The pixel space the scale is expressed in — default: the natural size of the loaded image. A consumer that shows a
+   * **derivative** (e.g. the tour serves a 1024-px WebP of a 1200-px original) passes the ORIGINAL size, otherwise the
+   * scale would be off by `original / derivative` (ADR-884 §4.13, measured live 2026-09-28: 1200 / 1024 = 17 %).
+   */
+  pixelSpace?: PixelSize;
   /** Called once the calibration has been persisted. */
   onCalibrated?: (scale: BackgroundScale) => void;
 };
@@ -95,7 +101,7 @@ function usePersist(props: CalibratePersistence) {
 }
 
 export function CalibrateScaleDialog(props: CalibrateScaleDialogProps) {
-  const { open, onOpenChange, imageSrc, onCalibrated } = props;
+  const { open, onOpenChange, imageSrc, pixelSpace, onCalibrated } = props;
   const { t } = useTranslation(['files-media']);
   const persist = usePersist(props);
   const [points, setPoints] = useState<PixelPoint[]>([]);
@@ -159,7 +165,7 @@ export function CalibrateScaleDialog(props: CalibrateScaleDialogProps) {
           <DialogTitle>{t('floorplan.calibrate.title')}</DialogTitle>
           <DialogDescription>{t('floorplan.calibrate.instructions')}</DialogDescription>
         </DialogHeader>
-        <CalibrateCanvas imageSrc={imageSrc} points={points} onAddPoint={handleAddPoint} />
+        <CalibrateCanvas imageSrc={imageSrc} pixelSpace={pixelSpace} points={points} onAddPoint={handleAddPoint} />
         <p className="text-sm text-muted-foreground">
           {t('floorplan.calibrate.points', { count: points.length })}
         </p>
@@ -207,30 +213,33 @@ export function CalibrateScaleDialog(props: CalibrateScaleDialogProps) {
 
 interface CalibrateCanvasProps {
   imageSrc: string | null;
-  /** In IMAGE pixels. */
+  pixelSpace?: PixelSize;
+  /** In `pixelSpace` pixels (default: the image's natural pixels). */
   points: PixelPoint[];
   onAddPoint: (p: PixelPoint) => void;
 }
 
-function naturalSize(img: HTMLImageElement | null): PixelSize | null {
-  return img === null || img.naturalWidth <= 0 || img.naturalHeight <= 0 ? null : { width: img.naturalWidth, height: img.naturalHeight };
+/** The pixel space of the loaded image: the declared one, else its natural size — `null` until it has loaded. */
+function spaceOf(img: HTMLImageElement | null, pixelSpace: PixelSize | undefined): PixelSize | null {
+  if (img === null || img.naturalWidth <= 0 || img.naturalHeight <= 0) return null;
+  return pixelSpace ?? { width: img.naturalWidth, height: img.naturalHeight };
 }
 
-function CalibrateCanvas({ imageSrc, points, onAddPoint }: CalibrateCanvasProps) {
+function CalibrateCanvas({ imageSrc, pixelSpace, points, onAddPoint }: CalibrateCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!imageSrc) {
       imgRef.current = null;
-      drawScene(canvasRef.current, null, []);
+      drawScene(canvasRef.current, null, null, []);
       return;
     }
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       imgRef.current = img;
-      drawScene(canvasRef.current, img, points);
+      drawScene(canvasRef.current, img, spaceOf(img, pixelSpace), points);
     };
     img.src = imageSrc;
     // intentional: re-load only when src changes; point redraws covered below
@@ -238,22 +247,22 @@ function CalibrateCanvas({ imageSrc, points, onAddPoint }: CalibrateCanvasProps)
   }, [imageSrc]);
 
   useEffect(() => {
-    drawScene(canvasRef.current, imgRef.current, points);
-  }, [points]);
+    drawScene(canvasRef.current, imgRef.current, spaceOf(imgRef.current, pixelSpace), points);
+  }, [points, pixelSpace]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const c = canvasRef.current;
-      const image = naturalSize(imgRef.current);
+      const space = spaceOf(imgRef.current, pixelSpace);
       // No image yet ⇒ no image pixel to map to: a canvas-pixel point would be a wrong scale.
-      if (!c || image === null) return;
+      if (!c || space === null) return;
       const rect = c.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (c.width / rect.width);
       const y = (e.clientY - rect.top) * (c.height / rect.height);
-      const point = boxToImagePoint({ x, y }, { width: c.width, height: c.height }, image);
+      const point = boxToImagePoint({ x, y }, { width: c.width, height: c.height }, space);
       if (point !== null) onAddPoint(point);
     },
-    [onAddPoint],
+    [onAddPoint, pixelSpace],
   );
 
   return (
@@ -272,13 +281,13 @@ function CalibrateCanvas({ imageSrc, points, onAddPoint }: CalibrateCanvasProps)
 function drawScene(
   canvas: HTMLCanvasElement | null,
   img: HTMLImageElement | null,
+  image: PixelSize | null,
   points: ReadonlyArray<PixelPoint>,
 ): void {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const image = naturalSize(img);
   if (img === null || image === null) return;
   const box = { width: canvas.width, height: canvas.height };
   const topLeft = imageToBoxPoint({ x: 0, y: 0 }, box, image);

@@ -60,7 +60,8 @@ function ScaleStep({ plan, imageUrl, levelKey, actions }: {
       <Button type="button" size="sm" variant={pixels === null ? 'default' : 'outline'} disabled={actions.busy} onClick={() => setOpen(true)}>
         {t(pixels === null ? TOUR_EDITOR_KEYS.planScaleSet : TOUR_EDITOR_KEYS.planScaleChange)}
       </Button>
-      <CalibrateScaleDialog open={open} onOpenChange={setOpen} imageSrc={imageUrl}
+      {/* Η κλίμακα στα pixel του ΠΡΩΤΟΤΥΠΟΥ (`plan.image`) — ο διάλογος δείχνει παράγωγο άλλου πλάτους. */}
+      <CalibrateScaleDialog open={open} onOpenChange={setOpen} imageSrc={imageUrl} pixelSpace={plan.image}
         onSave={async (pixelsPerMetre) => { await actions.calibrate(levelKey, 1 / pixelsPerMetre); }} />
     </section>
   );

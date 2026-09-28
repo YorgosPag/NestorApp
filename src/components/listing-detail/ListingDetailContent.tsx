@@ -36,6 +36,7 @@
  * άλλη λίστα από αυτήν που άφησε (Α3: **75%** των αποτυχιών ήταν ακριβώς εδώ).
  */
 
+import dynamic from 'next/dynamic';
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
@@ -66,6 +67,7 @@ import {
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { formatDateTime } from '@/lib/intl-formatting';
 import type { PublicListing } from '@/types/public-listing';
+import { ListingMarketContextPending } from './ListingMarketContextPending';
 import { ListingPriceBlock } from './ListingPriceBlock';
 import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
@@ -79,6 +81,13 @@ import { ListingStay } from './ListingStay';
 import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import { ListingDetailActions } from './ListingDetailActions';
+
+// ADR-889 Φ2 — ΟΡΙΟ: το `market-contracts` ΔΕΝ μπαίνει στο route slice της αγγελίας (CHECK 3.34). Η ενότητα
+// φέρνει έτσι κι αλλιώς τα δεδομένα της ασύγχρονα, άρα δεν χάνει τίποτα από το πρώτο καρέ.
+const ListingMarketContext = dynamic(() => import('./ListingMarketContext').then((m) => m.ListingMarketContext), {
+  ssr: false,
+  loading: ListingMarketContextPending,
+});
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
 // οτιδήποτε, στον server και στον client, χωρίς κύκλο ζωής React να το καθυστερεί.
@@ -290,6 +299,8 @@ function ListingDetailBody({
           {/* Επαφή + αποθήκευση: μία ετυμηγορία κατόχου για τις δύο (ADR-777 §8.74.7). */}
           <ListingDetailActions listingId={listing.id} />
           <ListingOffers listing={listing} />
+          {/* ADR-889 Φ2 — τιμές συμβολαίων της περιοχής: ΜΕΤΑ την επαφή, ώστε να μη σπρώχνει την κύρια πράξη. */}
+          <ListingMarketContext listingId={listing.id} />
           <ListingAttributeList listing={listing} />
           {/* A17 (ADR-838) — i nomimotita einai pleon DEDOMENO, oxi dilomeno keno. */}
           <ListingLegality listing={listing} />

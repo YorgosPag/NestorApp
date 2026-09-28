@@ -10,6 +10,9 @@ import 'server-only';
  * {@link AREA_MARKET_LOOKBACK_DAYS} ημερών διαβάζονται με **ένα** `getAll`, και μετά οι συνόψεις (περιοχή +
  * γονέας) με **ένα** δεύτερο. Χωρίς `orderBy`, χωρίς δείκτη (CHECK 3.15/3.91).
  *
+ * 🔑 **ΤΙΜΕΣ ΣΥΜΒΟΛΑΙΩΝ (ADR-890 Φ2)** από τα στατικά αρχεία του ADR-889 — περιοχή + Δήμος, για την ίδια αναγωγή.
+ * Αποτυχία ανάγνωσής τους **δεν** ρίχνει τη σελίδα: η ενότητα λέει «δεν είναι διαθέσιμες» και τα υπόλοιπα μένουν.
+ *
  * 🔑 **ΤΡΕΙΣ ΕΚΒΑΣΕΙΣ.** `not-found` (η ταυτότητα δεν είναι σελίδα περιοχής) ⇒ 404 · `unavailable` (δεν
  * μπορέσαμε να ρωτήσουμε) ⇒ 5xx, **ποτέ** 404 · `found`. Ίδιο ιδίωμα με το `/pro/[alias]`.
  */
@@ -23,8 +26,16 @@ import { shiftMarketDay } from '@/lib/listings/listing-stats';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 import { areaMarketRunFromDocument, areaMarketSnapshotFromDocument } from '@/lib/market/area-market-document';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { readAreaSummary } from '@/services/market/market-transactions.reader';
 import { readAdminAreaDirectory } from '@/services/places/admin-boundaries.reader';
-import { hasAreaMarketPage, type AreaListingsPreview, type AreaMarketPage, type AreaMarketRun, type AreaMarketState } from '@/types/area-market';
+import {
+  hasAreaMarketPage,
+  type AreaContractsState,
+  type AreaListingsPreview,
+  type AreaMarketPage,
+  type AreaMarketRun,
+  type AreaMarketState,
+} from '@/types/area-market';
 import type { PublicListing } from '@/types/public-listing';
 
 /** Πόσες νύχτες πίσω ψάχνει η σελίδα ολοκληρωμένη σύνοψη. Πιο παλιά = «δεν υπάρχει πρόσφατη». */
@@ -78,6 +89,17 @@ async function readListings(adminDb: AdminFirestore, area: AdminArea): Promise<A
   return { items: listings.slice(0, AREA_LISTINGS_SHOWN), total: count.data().count };
 }
 
+async function readContracts(areaId: string, parentId: string | null): Promise<AreaContractsState> {
+  const [own, parent] = await Promise.all([
+    readAreaSummary(areaId),
+    parentId === null ? Promise.resolve(null) : readAreaSummary(parentId),
+  ]);
+  if (own === null) return { kind: 'unavailable' };
+  const window = own.index.window;
+  if (own.kind === 'none') return { kind: 'none', window };
+  return { kind: 'ready', window, summary: own.file, parent: parent?.kind === 'ready' ? parent.file : null };
+}
+
 /** Ο γονέας της σύνοψης: μόνο όταν είναι κι αυτός σελίδα περιοχής (Δ.Ε. ⇒ Δήμος). */
 function marketParentOf(area: AdminArea, ancestors: readonly AdminArea[]): string | null {
   const parent = ancestors[0];
@@ -98,9 +120,11 @@ export async function loadAreaMarketPage(adminDb: AdminFirestore, areaId: string
 
   const ancestors = adminAreaAncestors(directory.areas, area.id);
   const children = directory.childrenOf(area.id).filter((child) => hasAreaMarketPage(child.level));
-  const [market, listings] = await Promise.all([
-    readMarket(adminDb, area.id, marketParentOf(area, ancestors), today),
+  const parentId = marketParentOf(area, ancestors);
+  const [market, listings, contracts] = await Promise.all([
+    readMarket(adminDb, area.id, parentId, today),
     readListings(adminDb, area),
+    readContracts(area.id, parentId),
   ]);
-  return { kind: 'found', area, ancestors, children, market, listings };
+  return { kind: 'found', area, ancestors, children, market, listings, contracts };
 }

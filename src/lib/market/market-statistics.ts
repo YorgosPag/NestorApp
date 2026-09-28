@@ -64,3 +64,18 @@ export function summarize(values: readonly number[]): StatCell {
     p75: Math.round(quantile(sorted, 0.75)),
   };
 }
+
+/** Τρίμηνο της ημερομηνίας `YYYY-MM-DD` → `YYYY-Qn`. */
+export function quarterOf(isoDate: string): string {
+  const month = Number(isoDate.slice(5, 7));
+  return `${isoDate.slice(0, 4)}-Q${Math.ceil(month / 3)}`;
+}
+
+/** Τα `count` τρίμηνα που τελειώνουν στο τρίμηνο `last` (`YYYY-Qn`), από το παλαιότερο. */
+export function quartersEndingAt(last: string, count: number): readonly string[] {
+  const index = Number(last.slice(0, 4)) * 4 + Number(last.slice(6)) - 1;
+  return Array.from({ length: count }, (_, i) => {
+    const q = index - (count - 1 - i);
+    return `${Math.floor(q / 4)}-Q${(q % 4) + 1}`;
+  });
+}

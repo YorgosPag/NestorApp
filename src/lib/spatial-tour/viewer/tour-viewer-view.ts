@@ -14,6 +14,7 @@
  */
 
 import { degToRad, normalizeAngleDiff } from '@/lib/geometry/angle';
+import { clamp } from '@/lib/geometry/scalar';
 
 export interface TourView {
   /** Στροφή μέσα στο πανόραμα, δεξιόστροφα θετική, `(-π, π]`. */
@@ -34,8 +35,6 @@ export const KEY_PITCH_STEP = degToRad(10);
 export const KEY_ZOOM_FACTOR = 1.2;
 /** Ευαισθησία ροδέλας: `fov × e^(deltaY × WHEEL_ZOOM_RATE)` (γραμμική στο λογάριθμο — ίδια αίσθηση σε κάθε μεγέθυνση). */
 export const WHEEL_ZOOM_RATE = 0.0015;
-
-const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
 /** Η θέαση μέσα στα όρια — κάθε είσοδος περνά από εδώ, κανείς δεν γράφει θέαση εκτός ορίων. */
 export function clampView(view: TourView): TourView {

@@ -10,9 +10,11 @@
  *   κρατά κατάσταση ανά κουμπί — hook μέσα σε `map` δεν επιτρέπεται.
  * 🔑 **Πρόθεση** (`onIntent`, ADR-884 Φ2ε · §4.11): δείκτης πάνω στο βελάκι **ή** εστίαση πληκτρολογίου ⇒ ο θεατής
  *   προφορτώνει τα πλακίδια της άφιξης (πρότυπο instant.page: το hover προηγείται του κλικ κατά ~300 ms).
- * 🏆 **Θέαση = βελάκι στο πάτωμα** (Φ2στ · §4.12, πρότυπο Zillow 3D Home): το **όνομα του χώρου** από πάνω, από κάτω μια
- *   έλλειψη «ξαπλωμένη» στο πάτωμα με σεβρόν που δείχνει τον δρόμο. Τη γωνία τη γράφει η σκηνή ανά καρέ στη μεταβλητή
- *   `--tour-arrow-turn` (`floorArrowTurnDeg`) — κανένα re-render. Ο επεξεργαστής κρατά το συρόμενο «χάπι».
+ * 🏆 **Θέαση = βελάκι ΞΑΠΛΩΜΕΝΟ στο πάτωμα** (Φ2στ-γ · §4.14, πρότυπο Zillow 3D Home): ένας δίσκος — λευκός ημιδιαφανής, με
+ *   **σκούρο γκρι** σεβρόν — που η σκηνή απλώνει ανά καρέ πάνω στο επίπεδο του πατώματος με CSS `matrix3d` (ομογραφία,
+ *   `lib/geometry/css-homography.ts`), και από πάνω του **όρθια** ετικέτα με το όνομα του χώρου. Διανυσματικό ⇒ ευκρινές σε
+ *   κάθε κλίση· ο browser κάνει hit-test στο παραμορφωμένο σχήμα. Η στροφή του σεβρόν (`--tour-arrow-turn`) ζει **μέσα**
+ *   στο επίπεδο του δίσκου, άρα η προοπτική την παραμορφώνει σωστά. Ο επεξεργαστής κρατά το συρόμενο «χάπι».
  */
 
 import { ChevronUp } from 'lucide-react';
@@ -24,12 +26,27 @@ const BUTTON_CLASS =
 
 /**
  * ⚠️ **ΚΑΜΙΑ κλάση display στο ίδιο το κουμπί** (ζωντανά 2026-09-27): η σκηνή κρύβει το βελάκι εκτός κάδρου με `el.hidden`,
- * και ένα `flex` στην κλάση **νικά** το `[hidden] { display: none }` του browser ⇒ το βελάκι έμενε ορατό στο (0,0). Η διάταξη
- * ζει στο εσωτερικό `span` (`FLOOR_ARROW_BODY_CLASS`). Άγκυρα: `TourLinkButton.test.tsx`.
+ * και ένα `flex` στην κλάση **νικά** το `[hidden] { display: none }` του browser ⇒ το βελάκι έμενε ορατό στο (0,0). Άγκυρα:
+ * `TourLinkButton.test.tsx`. Το κουμπί είναι σημείο μηδενικού μεγέθους στη γωνία της σκηνής· δίσκος και ετικέτα είναι
+ * παιδιά του με δική τους θέση ⇒ η εστίαση φαίνεται **στον δίσκο** (`group-focus-visible`), όχι σε ένα αόρατο κουτί.
  */
-const FLOOR_ARROW_CLASS =
-  'group absolute left-0 top-0 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring';
-const FLOOR_ARROW_BODY_CLASS = 'flex flex-col items-center gap-1';
+const FLOOR_ARROW_CLASS = 'group absolute left-0 top-0 outline-none';
+
+/** Πλευρά (CSS px) του τετράγωνου στοιχείου που ξαπλώνει στο πάτωμα — το μέγεθος οθόνης το ορίζει ο πίνακας, όχι αυτό. */
+export const FLOOR_DISC_PX = 100;
+
+/** Πάνω σε ΦΩΤΟΓΡΑΦΙΑ, όχι στο θέμα της εφαρμογής: λευκός δίσκος, σκούρο σεβρόν — όπως η Zillow (§4.12 (β)). */
+const FLOOR_DISC_CLASS =
+  'absolute left-0 top-0 grid h-[100px] w-[100px] origin-top-left place-items-center rounded-full border-2 border-white/90 bg-white/55 shadow-md transition-colors group-hover:bg-white/80 group-focus-visible:ring-4 group-focus-visible:ring-ring';
+const FLOOR_LABEL_CLASS =
+  'absolute left-0 top-0 whitespace-nowrap rounded-md bg-black/35 px-2 py-0.5 text-sm font-medium text-white drop-shadow';
+
+/** Τα δύο κομμάτια που τοποθετεί η σκηνή ανά καρέ — `null` στο συρόμενο «χάπι» του επεξεργαστή. */
+export function floorArrowParts(el: HTMLElement): { readonly disc: HTMLElement; readonly label: HTMLElement } | null {
+  const disc = el.querySelector<HTMLElement>('[data-floor-disc]');
+  const label = el.querySelector<HTMLElement>('[data-floor-label]');
+  return disc === null || label === null ? null : { disc, label };
+}
 
 interface TourLinkButtonProps {
   readonly label: { readonly text: string; readonly aria: string };
@@ -56,14 +73,10 @@ export function TourLinkButton(props: TourLinkButtonProps) {
   if (onDrop !== undefined) return <DraggableLinkButton {...props} onDrop={onDrop} />;
   return (
     <button type="button" hidden ref={register} aria-label={label.aria} onClick={onGo} onPointerEnter={onIntent} onFocus={onIntent} className={FLOOR_ARROW_CLASS}>
-      <span className={FLOOR_ARROW_BODY_CLASS}>
-        <span className="rounded-md bg-background/75 px-2 py-0.5 text-sm font-medium text-foreground shadow">{label.text}</span>
-        {/* Πάνω στη ΦΩΤΟΓΡΑΦΙΑ, όχι στο θέμα της εφαρμογής: λευκό όπως η Zillow (και όπως τα χειριστήρια του `VideoPlayer`)·
-            ζωντανά 2026-09-27 το `border-background` έβγαινε σκούρο πάνω σε σκούρο πάτωμα στο σκοτεινό θέμα. */}
-        <span aria-hidden className="grid h-9 w-20 place-items-center rounded-[50%] border-2 border-white/90 bg-white/20 shadow-md transition-colors group-hover:bg-white/40">
-          <ChevronUp className="h-6 w-6 rotate-[var(--tour-arrow-turn,0deg)] text-white drop-shadow" />
-        </span>
+      <span aria-hidden data-floor-disc className={FLOOR_DISC_CLASS}>
+        <ChevronUp strokeWidth={3} className="h-12 w-12 rotate-[var(--tour-arrow-turn,0deg)] text-black/70" />
       </span>
+      <span aria-hidden data-floor-label className={FLOOR_LABEL_CLASS}>{label.text}</span>
     </button>
   );
 }

@@ -62,6 +62,11 @@ export interface TourPanoramaEngine {
   putTile(stopKey: string, tileKey: string, address: TourTileAddress, levelSize: number, image: TourFaceImage): void;
   /** Θέση στην οθόνη (CSS px) ενός yaw/κλίσης **του τρέχοντος κύβου** — για τα κουμπιά συνδέσμων πάνω από τον καμβά. */
   project(yaw: number, pitch: number): ScreenPoint;
+  /**
+   * Όπως το `project`, **χωρίς** αποκοπή στο κάδρο — `null` μόνο πίσω από την κάμερα. Το χρειάζονται οι γωνίες ενός δίσκου
+   * στο πάτωμα (Φ2στ-γ · §4.14): μια γωνία λίγο έξω από την άκρη δεν κάνει τον δίσκο να εξαφανιστεί.
+   */
+  projectUnclipped(yaw: number, pitch: number): ScreenPoint;
   /** Το αντίστροφο: σημείο οθόνης (CSS px) → yaw/κλίση **του τρέχοντος κύβου** — το σύρσιμο βελακιού (Φ2δ, §4.10). */
   unproject(x: number, y: number): { readonly yaw: number; readonly pitch: number };
   /** Καλείται μετά από κάθε καρέ — ο κάτοχος ξαναβάζει τα κουμπιά στη θέση τους. */
@@ -215,9 +220,23 @@ class ThreeTourPanoramaEngine implements TourPanoramaEngine {
   }
 
   project(yaw: number, pitch: number): ScreenPoint {
+    const p = this.toNdc(yaw, pitch);
+    return p === null || Math.abs(p.x) > 1 || Math.abs(p.y) > 1 ? null : this.ndcToCss(p);
+  }
+
+  projectUnclipped(yaw: number, pitch: number): ScreenPoint {
+    const p = this.toNdc(yaw, pitch);
+    return p === null ? null : this.ndcToCss(p);
+  }
+
+  /** Συσκευαστικές συντεταγμένες μιας κατεύθυνσης — `null` πίσω από την κάμερα (`z > 1` στο three μετά την προβολή). */
+  private toNdc(yaw: number, pitch: number): Vector3 | null {
     const d = yawPitchToDirection(this.current.heading + yaw, pitch);
     const p = this.probe.set(d.x, d.y, d.z).project(this.camera);
-    if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return null;
+    return p.z > 1 ? null : p;
+  }
+
+  private ndcToCss(p: Vector3): { readonly x: number; readonly y: number } {
     return { x: ((p.x + 1) / 2) * this.size.width, y: ((1 - p.y) / 2) * this.size.height };
   }
 

@@ -13,17 +13,19 @@
  * ✏️ **Οθόνη τοποθέτησης** (Φ2δ · §4.10): με `editing` τα βελάκια **σέρνονται** και ένα στόχαστρο δείχνει το κέντρο· τα
  *   εργαλεία του υπευθύνου παίρνουν ένα {@link TourStageAim} — «ποια διόπτευση είναι κάτω από αυτό το σημείο;». Η ΙΔΙΑ
  *   σκηνή, όχι αντίγραφο.
+ * 🏆 **Πάτωμα** (Φ2στ-γ · §4.14, πρότυπο Zillow 3D Home): βελάκια **ξαπλωμένα** στο πάτωμα, κουκκίδα κέρσορα, πάτημα στο
+ *   πάτωμα ⇒ η πλησιέστερη συνδεδεμένη στάση (`useTourFloorOverlay.ts`). Κουκκίδα και πάτημα **μόνο** στη θέαση — στην οθόνη
+ *   τοποθέτησης ο καμβάς ανήκει στα εργαλεία του υπευθύνου.
  * 🧩 **Ροή πλακιδίων** (Φ2ε · §4.11): η σκηνή κατέχει τον streamer (`useTourTileStreamer`) και τον δίνει στην πλοήγηση·
  *   πρόθεση στο βελάκι (hover/focus) ⇒ προφόρτωση των πλακιδίων της **θέασης άφιξης** (`arrivalFrameOf`).
  */
 
-import { type Dispatch, type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
+import { type Dispatch, type ReactNode, type RefObject, useCallback, useMemo, useRef } from 'react';
 import { Minus, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { viewBearing, yawForBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
-import { FLOOR_ARROW_AHEAD_PITCH, FLOOR_ARROW_PITCH, floorArrowTurnDeg } from '@/lib/spatial-tour/viewer/tour-floor-arrow';
+import { viewBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
 import type { TourViewerGraph, ViewerNeighbour } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import type { TourViewerAction, TourViewerState } from '@/lib/spatial-tour/viewer/tour-viewer-state';
 import { viewAfterZoomStep } from '@/lib/spatial-tour/viewer/tour-viewer-view';
@@ -33,7 +35,9 @@ import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 import { setCameraView, type TourCameraStore } from './tour-camera-store';
 import type { TourPanoramaEngine } from './tour-panorama-engine';
 import type { TourPanoramaSource } from './tour-panorama-source';
+import { TourFloorCursor } from './TourFloorCursor';
 import { TourLinkButton } from './TourLinkButton';
+import { floorCandidates, useFloorArrows, useFloorCursor, useFloorTap } from './useTourFloorOverlay';
 import { useTourNavigation, type TourPanoramaStatus } from './useTourNavigation';
 import { useArrivalPrefetch, usePrefetchNeighbourBases, useTourTileStreamer } from './useTourTileStreamer';
 import { useTourPanoramaEngine } from './useTourPanoramaEngine';
@@ -64,33 +68,6 @@ export interface TourPanoramaStageProps {
   readonly editing?: TourStageEditing;
   /** Η σκηνή γεμίζει τον γονέα της (θεατής σε πλήρες παράθυρο, Φ2στ) — αλλιώς κουτί 16:9 (επεξεργαστής). */
   readonly fill?: boolean;
-}
-
-function usePlaceLinkButtons(
-  engine: TourPanoramaEngine | null,
-  buttons: Map<string, HTMLButtonElement>,
-  neighbours: readonly ViewerNeighbour[],
-  headingRad: number,
-): void {
-  useEffect(() => {
-    if (engine === null) return;
-    const place = () => {
-      for (const n of neighbours) {
-        const el = buttons.get(n.nodeId);
-        // Το βελάκι που σέρνεται ακολουθεί τον δείκτη — το καρέ δεν το ξαναβάζει πίσω.
-        if (el === undefined || n.bearing === null || el.dataset.dragging === 'true') continue;
-        const yaw = yawForBearing(headingRad, n.bearing);
-        const at = engine.project(yaw, FLOOR_ARROW_PITCH);
-        el.hidden = at === null;
-        if (at === null) continue;
-        el.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -50%)`;
-        // Το σεβρόν δείχνει τον δρόμο όπως τον βλέπει το μάτι (Φ2στ): δύο προβολές της ίδιας διόπτευσης στο πάτωμα.
-        el.style.setProperty('--tour-arrow-turn', `${floorArrowTurnDeg(at, engine.project(yaw, FLOOR_ARROW_AHEAD_PITCH))}deg`);
-      }
-    };
-    place();
-    return engine.onFrame(place);
-  }, [engine, buttons, neighbours, headingRad]);
 }
 
 function useStageAim(
@@ -135,19 +112,37 @@ function ZoomMenu({ camera }: { readonly camera: TourCameraStore }) {
   );
 }
 
+/** Πάτωμα της σκηνής: βελάκια πάντα· κουκκίδα + πάτημα μόνο στη θέαση (όχι στην οθόνη τοποθέτησης). */
+function useStageFloor(
+  scene: { readonly engine: TourPanoramaEngine | null; readonly camera: TourCameraStore; readonly canvasRef: RefObject<HTMLCanvasElement | null> },
+  parts: { readonly buttons: Map<string, HTMLButtonElement>; readonly cursorRef: RefObject<HTMLSpanElement | null> },
+  stage: { readonly neighbours: readonly ViewerNeighbour[]; readonly headingRad: number; readonly moving: boolean; readonly viewing: boolean },
+  actions: { readonly go: (nodeId: string) => void; readonly intentOf: (nodeId: string) => () => void },
+) {
+  const { neighbours, headingRad, moving, viewing } = stage;
+  useFloorArrows(scene, parts.buttons, neighbours, headingRad, moving);
+  const candidates = useMemo(() => floorCandidates(neighbours, headingRad), [neighbours, headingRad]);
+  useFloorCursor({ engine: scene.engine, canvasRef: scene.canvasRef, cursorRef: parts.cursorRef, candidates, intentOf: actions.intentOf, enabled: viewing && !moving });
+  const tap = useFloorTap(scene.engine, scene.canvasRef, candidates, actions.go);
+  return viewing ? tap : undefined;
+}
+
 export function TourPanoramaStage({ graph, state, dispatch, camera, source, neighbours, editing, fill = false }: TourPanoramaStageProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cursorRef = useRef<HTMLSpanElement | null>(null);
   const buttons = useRef(new Map<string, HTMLButtonElement>()).current;
   const engine = useTourPanoramaEngine(canvasRef, camera);
   const { streamer, ctx } = useTourTileStreamer(engine, camera, source);
   const status = useTourNavigation(ctx, graph, state, dispatch);
-  useTourPanoramaInput(canvasRef, camera);
   const current = state.nodeId === null ? undefined : graph.stops.get(state.nodeId);
-  usePrefetchNeighbourBases(streamer, graph, neighbours, status === 'ready' && state.targetNodeId === null);
+  const moving = state.targetNodeId !== null;
+  usePrefetchNeighbourBases(streamer, graph, neighbours, status === 'ready' && !moving);
   const intentOf = useArrivalPrefetch(streamer, graph, current, camera);
   const headingRad = current?.stop.headingRad ?? 0;
-  usePlaceLinkButtons(engine, buttons, neighbours, headingRad);
+  const go = useCallback((nodeId: string) => dispatch({ kind: 'go', nodeId }), [dispatch]);
+  const tap = useStageFloor({ engine, camera, canvasRef }, { buttons, cursorRef }, { neighbours, headingRad, moving, viewing: editing === undefined }, { go, intentOf });
+  useTourPanoramaInput(canvasRef, camera, tap);
   const aim = useStageAim(engine, canvasRef, camera, headingRad);
   const labelsOf = useNeighbourLabels(graph, current?.levelId ?? null);
   const register = useCallback((nodeId: string) => (el: HTMLButtonElement | null) => {
@@ -163,9 +158,10 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
       <figure className={fill ? 'absolute inset-0 m-0 overflow-hidden bg-muted' : 'relative m-0 aspect-video w-full overflow-hidden rounded-lg bg-muted'}>
         <canvas ref={canvasRef} tabIndex={0} role="application" aria-label={t(TOUR_VIEWER_KEYS.panorama)}
           className="absolute inset-0 h-full w-full cursor-grab touch-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing" />
+        <TourFloorCursor cursorRef={cursorRef} />
         {neighbours.filter((n) => n.bearing !== null).map((n) => (
           <TourLinkButton key={n.nodeId} label={labelsOf(n)} register={register(n.nodeId)}
-            onGo={() => dispatch({ kind: 'go', nodeId: n.nodeId })} onDrop={dropOf(n.nodeId)} onIntent={intentOf(n.nodeId)} />
+            onGo={() => go(n.nodeId)} onDrop={dropOf(n.nodeId)} onIntent={intentOf(n.nodeId)} />
         ))}
         {editing !== undefined && <EditingReticle />}
         <StageStatus status={status} />

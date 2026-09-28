@@ -14,6 +14,7 @@
 
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { MarketSegment } from '@/lib/market/market-segments';
+import type { AreaSummaryFile } from '@/lib/market/market-transactions-file';
 import type { StatCell } from '@/lib/market/market-statistics';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -118,6 +119,27 @@ export type AreaMarketState =
       readonly parent: AreaMarketSnapshot | null;
     };
 
+/** Το παράθυρο ετών της πηγής (ADR-889 §5.2). */
+export interface MarketTransactionsWindow {
+  readonly from: number;
+  readonly to: number;
+}
+
+/**
+ * Οι τιμές συμβολαίων όπως τις βλέπει η σελίδα. `none` = η περιοχή **δεν** είχε συμβόλαια (γεγονός, δείχνεται) ·
+ * `unavailable` = δεν μπορέσαμε να διαβάσουμε (ποτέ ως «κανένα συμβόλαιο»).
+ */
+export type AreaContractsState =
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'none'; readonly window: MarketTransactionsWindow }
+  | {
+      readonly kind: 'ready';
+      readonly window: MarketTransactionsWindow;
+      readonly summary: AreaSummaryFile;
+      /** Ο Δήμος μιας Δ.Ε. — για την αναγωγή κάτω από το κατώφλι. */
+      readonly parent: AreaSummaryFile | null;
+    };
+
 export interface AreaListingsPreview {
   readonly items: readonly PublicListing[];
   /** Όλες οι δημοσιευμένες αγγελίες της περιοχής **τώρα** (ζωντανή καταμέτρηση). */
@@ -133,6 +155,8 @@ export interface AreaMarketPageData {
   readonly children: readonly AdminArea[];
   readonly market: AreaMarketState;
   readonly listings: AreaListingsPreview;
+  /** Πηγές Β + Γ — τιμές συμβολαίων και τιμή ζώνης (ADR-889 Φ2 · ADR-890 Φ2). */
+  readonly contracts: AreaContractsState;
 }
 
 /** Τρεις εκβάσεις: 404 · 5xx (δεν μπορέσαμε να ρωτήσουμε) · η σελίδα. */
