@@ -47,6 +47,15 @@ export function planFrame(points: readonly TourPoint[]): PlanFrame | null {
   return { minX: x.min, minY: y.min, width: x.span, height: y.span };
 }
 
+/**
+ * **Το κάδρο μιας εικόνας κάτοψης** (ADR-884 Φ2στ-β · §4.13): όλη η εικόνα, σε μέτρα όταν είναι βαθμονομημένη — αλλιώς σε
+ * pixel (τότε δεν υπάρχουν τελείες, μόνο η εικόνα). Αρχή = πάνω-αριστερή γωνία, άρα `toPlanSvg` δεν θέλει μετατόπιση.
+ */
+export function imagePlanFrame(image: { readonly width: number; readonly height: number }, metresPerPixel: number | null): PlanFrame {
+  const unit = metresPerPixel ?? 1;
+  return { minX: 0, minY: 0, width: image.width * unit, height: image.height * unit };
+}
+
 /** Ο κώνος θέασης ως διαδρομή SVG με κορυφή στο `(0, 0)`, ανοιχτός προς τα **πάνω** (βορράς), πριν την περιστροφή. */
 export function conePath(halfAngleRad: number, radius: number): string {
   const dx = Math.sin(halfAngleRad) * radius;

@@ -124,7 +124,8 @@ export function createDemoPanoramaSource(numberOf: (nodeId: string) => number): 
       ) as Record<TourCubeFace, HTMLCanvasElement>;
       return faces satisfies TourCubeFaceImages;
     },
-    // Οι εικονικές όψεις είναι ήδη η τελική εικόνα — κανένα πλακίδιο.
+    // Οι εικονικές όψεις είναι ήδη η τελική εικόνα — κανένα πλακίδιο, καμία κάτοψη.
     tiles: null,
+    planImageUrl: () => null,
   };
 }

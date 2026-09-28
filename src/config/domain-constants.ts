@@ -744,6 +744,9 @@ export const API_ROUTES = {
     /** ADR-884 Φ2β/Φ2δ — τοποθέτηση/αφαίρεση λήψης, βελάκι, αποσύνδεση (μόνο ο υπεύθυνος). */
     GRAPH: (kind: string, subjectId: string) =>
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/graph` as const,
+    /** ADR-884 Φ2στ-β — οι κατόψεις του ακινήτου που μπορεί να πάρει η περιήγηση (μόνο ο υπεύθυνος). */
+    FLOORPLANS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/floorplans` as const,
     /** Η πράξη του φωτογράφου· το token ταξιδεύει στο **σώμα** (RFC 6819 §5.1.5). */
     REDEEM: '/api/spatial-tours/capture-invitations/redeem',
     // ── Θέαση (ADR-884 Κ3β) ──

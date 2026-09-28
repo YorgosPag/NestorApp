@@ -3,8 +3,17 @@
  *
  * Lets the user pick two points on a raster (PDF/Image) background and type
  * the real-world distance + unit they correspond to. Computes
- * `unitsPerMeter = pixelDistance / realInMeters` and POSTs to
- * `/api/floorplan-backgrounds/[id]/calibrate` (Phase 9 STEP D).
+ * `unitsPerMeter = imagePixelDistance / realInMeters` and either POSTs to
+ * `/api/floorplan-backgrounds/[id]/calibrate` (Phase 9 STEP D) or hands the
+ * value to the consumer's own `onSave` (ADR-884 Φ2στ-β — the 360° tour
+ * stores the scale on its own floor-plan record, through its one writer).
+ *
+ * 🔴 **Pixels of the IMAGE, never of the canvas** (fixed 2026-09-27, ADR-884
+ * §4.13): the image is drawn "contain" inside a fixed 640×420 canvas, and the
+ * dialog used to measure the click distance in *canvas* pixels — so the scale
+ * depended on how large the image happened to be, while every consumer
+ * (`MeasureToolOverlay`: `rasterSize` = natural size) measures in image
+ * pixels. Clicks now go through `boxToImagePoint` (`lib/geometry/scale-calibration`).
  *
  * Bundle isolation: NO imports from `src/subapps/dxf-viewer/`. Local React
  * state only — never reads/writes `floorplan_overlays` directly. The
@@ -12,7 +21,7 @@
  * and the dimension/measurement renderers (STEP E) for real-meter labels.
  *
  * @module components/shared/files/media/CalibrateScaleDialog
- * @enterprise ADR-340 §3.6 / Phase 9 STEP I
+ * @enterprise ADR-340 §3.6 / Phase 9 STEP I · ADR-884 Φ2στ-β
  */
 
 'use client';
@@ -40,44 +49,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  CALIBRATION_UNITS,
+  boxToImagePoint,
+  imageToBoxPoint,
+  pixelDistance,
+  pixelsPerMetre,
+  type CalibrationUnit,
+  type PixelPoint,
+  type PixelSize,
+} from '@/lib/geometry/scale-calibration';
 import type { BackgroundScale } from '@/types/floorplan-overlays';
-
-type RealUnit = 'mm' | 'cm' | 'm';
-
-const TO_METERS: Record<RealUnit, number> = { mm: 0.001, cm: 0.01, m: 1 };
 
 const STROKE_COLOR = '#FF6B35';
 const POINT_RADIUS = 5;
 const CANVAS_W = 640;
 const CANVAS_H = 420;
 
-interface Point {
-  x: number;
-  y: number;
-}
+const UNIT_LABEL_KEY: Readonly<Record<CalibrationUnit, string>> = {
+  mm: 'floorplan.calibrate.unitMm',
+  cm: 'floorplan.calibrate.unitCm',
+  m: 'floorplan.calibrate.unitM',
+};
 
-export interface CalibrateScaleDialogProps {
+/** Where the calibration goes: the floorplan-background endpoint, or the consumer's own writer. */
+type CalibratePersistence =
+  | { /** Background id used for the POST endpoint. */ backgroundId: string; onSave?: never }
+  | { backgroundId?: never; /** The consumer persists `unitsPerMeter` (image pixels per metre) itself. */ onSave: (unitsPerMeter: number) => Promise<void> };
+
+export type CalibrateScaleDialogProps = CalibratePersistence & {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Background id used for the POST endpoint. */
-  backgroundId: string;
   /** URL of the background image to display for click-calibration. */
   imageSrc: string | null;
-  /** Called once the server has acknowledged the calibration write. */
+  /** Called once the calibration has been persisted. */
   onCalibrated?: (scale: BackgroundScale) => void;
+};
+
+function usePersist(props: CalibratePersistence) {
+  const { backgroundId, onSave } = props;
+  return useCallback(async (scale: BackgroundScale) => {
+    if (onSave !== undefined) return onSave(scale.unitsPerMeter);
+    await apiClient.post(API_ROUTES.FLOORPLAN_BACKGROUNDS.CALIBRATE(backgroundId), { scale });
+  }, [backgroundId, onSave]);
 }
 
-export function CalibrateScaleDialog({
-  open,
-  onOpenChange,
-  backgroundId,
-  imageSrc,
-  onCalibrated,
-}: CalibrateScaleDialogProps) {
+export function CalibrateScaleDialog(props: CalibrateScaleDialogProps) {
+  const { open, onOpenChange, imageSrc, onCalibrated } = props;
   const { t } = useTranslation(['files-media']);
-  const [points, setPoints] = useState<Point[]>([]);
+  const persist = usePersist(props);
+  const [points, setPoints] = useState<PixelPoint[]>([]);
   const [realDistance, setRealDistance] = useState<string>('');
-  const [unit, setUnit] = useState<RealUnit>('m');
+  const [unit, setUnit] = useState<CalibrationUnit>('m');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +114,7 @@ export function CalibrateScaleDialog({
     }
   }, [open]);
 
-  const handleAddPoint = useCallback((p: Point) => {
+  const handleAddPoint = useCallback((p: PixelPoint) => {
     setPoints((prev) => (prev.length >= 2 ? [p] : [...prev, p]));
   }, []);
 
@@ -106,27 +129,20 @@ export function CalibrateScaleDialog({
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
-    const dist = pixelDistance(points[0], points[1]);
-    if (dist <= 0) {
+    if (pixelDistance(points[0], points[1]) <= 0) {
       setError(t('floorplan.calibrate.errorZeroDistance'));
       return;
     }
-    const realInMeters = realNum * TO_METERS[unit];
-    if (realInMeters <= 0) {
+    const unitsPerMeter = pixelsPerMetre(points[0], points[1], realNum, unit);
+    if (unitsPerMeter === null) {
       setError(t('floorplan.calibrate.errorInvalidDistance'));
       return;
     }
-    const scale: BackgroundScale = {
-      unitsPerMeter: dist / realInMeters,
-      sourceUnit: 'pixel',
-    };
+    const scale: BackgroundScale = { unitsPerMeter, sourceUnit: 'pixel' };
     setIsSaving(true);
     setError(null);
     try {
-      await apiClient.post(
-        API_ROUTES.FLOORPLAN_BACKGROUNDS.CALIBRATE(backgroundId),
-        { scale },
-      );
+      await persist(scale);
       onCalibrated?.(scale);
       onOpenChange(false);
     } catch (e) {
@@ -134,7 +150,7 @@ export function CalibrateScaleDialog({
     } finally {
       setIsSaving(false);
     }
-  }, [canSave, points, realNum, unit, backgroundId, onCalibrated, onOpenChange, t]);
+  }, [canSave, points, realNum, unit, persist, onCalibrated, onOpenChange, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,12 +178,10 @@ export function CalibrateScaleDialog({
           </div>
           <div className="space-y-1">
             <Label htmlFor="cal-unit">{t('floorplan.calibrate.unitLabel')}</Label>
-            <Select value={unit} onValueChange={(v) => setUnit(v as RealUnit)}>
+            <Select value={unit} onValueChange={(v) => setUnit(CALIBRATION_UNITS.find((u) => u === v) ?? 'm')}>
               <SelectTrigger id="cal-unit"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="mm">{t('floorplan.calibrate.unitMm')}</SelectItem>
-                <SelectItem value="cm">{t('floorplan.calibrate.unitCm')}</SelectItem>
-                <SelectItem value="m">{t('floorplan.calibrate.unitM')}</SelectItem>
+                {CALIBRATION_UNITS.map((u) => <SelectItem key={u} value={u}>{t(UNIT_LABEL_KEY[u])}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -193,8 +207,13 @@ export function CalibrateScaleDialog({
 
 interface CalibrateCanvasProps {
   imageSrc: string | null;
-  points: Point[];
-  onAddPoint: (p: Point) => void;
+  /** In IMAGE pixels. */
+  points: PixelPoint[];
+  onAddPoint: (p: PixelPoint) => void;
+}
+
+function naturalSize(img: HTMLImageElement | null): PixelSize | null {
+  return img === null || img.naturalWidth <= 0 || img.naturalHeight <= 0 ? null : { width: img.naturalWidth, height: img.naturalHeight };
 }
 
 function CalibrateCanvas({ imageSrc, points, onAddPoint }: CalibrateCanvasProps) {
@@ -225,11 +244,14 @@ function CalibrateCanvas({ imageSrc, points, onAddPoint }: CalibrateCanvasProps)
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const c = canvasRef.current;
-      if (!c) return;
+      const image = naturalSize(imgRef.current);
+      // No image yet ⇒ no image pixel to map to: a canvas-pixel point would be a wrong scale.
+      if (!c || image === null) return;
       const rect = c.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (c.width / rect.width);
       const y = (e.clientY - rect.top) * (c.height / rect.height);
-      onAddPoint({ x, y });
+      const point = boxToImagePoint({ x, y }, { width: c.width, height: c.height }, image);
+      if (point !== null) onAddPoint(point);
     },
     [onAddPoint],
   );
@@ -250,18 +272,22 @@ function CalibrateCanvas({ imageSrc, points, onAddPoint }: CalibrateCanvasProps)
 function drawScene(
   canvas: HTMLCanvasElement | null,
   img: HTMLImageElement | null,
-  points: ReadonlyArray<Point>,
+  points: ReadonlyArray<PixelPoint>,
 ): void {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (img) {
-    const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
-    const w = img.naturalWidth * scale;
-    const h = img.naturalHeight * scale;
-    ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
-  }
+  const image = naturalSize(img);
+  if (img === null || image === null) return;
+  const box = { width: canvas.width, height: canvas.height };
+  const topLeft = imageToBoxPoint({ x: 0, y: 0 }, box, image);
+  const bottomRight = imageToBoxPoint({ x: image.width, y: image.height }, box, image);
+  ctx.drawImage(img, topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+  drawPoints(ctx, points.map((p) => imageToBoxPoint(p, box, image)));
+}
+
+function drawPoints(ctx: CanvasRenderingContext2D, points: ReadonlyArray<PixelPoint>): void {
   ctx.strokeStyle = STROKE_COLOR;
   ctx.fillStyle = STROKE_COLOR;
   ctx.lineWidth = 2;
@@ -276,12 +302,6 @@ function drawScene(
     ctx.lineTo(points[1].x, points[1].y);
     ctx.stroke();
   }
-}
-
-function pixelDistance(a: Point, b: Point): number {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return Math.sqrt(dx * dx + dy * dy);
 }
 
 function toErrorMessage(e: unknown): string {

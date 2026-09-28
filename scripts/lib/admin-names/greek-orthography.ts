@@ -87,7 +87,9 @@ export function isMonotonicWord(word: string): boolean {
   const tail = [...word].slice(1).join('');
   if (tail !== tail.toLowerCase()) return false;
   const accents = letters(word).filter((letter) => letter.acute).length;
-  return syllableCount(word) >= 2 ? accents === 1 : accents <= 1;
+  // Μονοσύλλαβη ⇒ **κανένας** τόνος (το `<= 1` που ήταν εδώ διαφωνούσε με την τεκμηρίωση και άφηνε
+  // να περάσει το `Φρέ` του ekloges — ο Δήμος Αποκορώνου γράφει `Φρε`, μετρημένο 5/0, ADR-893 Φ2).
+  return syllableCount(word) >= 2 ? accents === 1 : accents === 0;
 }
 
 function capitalise(word: string): string {

@@ -10,6 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
+import { FLOOR_PLAN_DECLARABLE_SOURCES } from '@/constants/spatial-tour-vocabulary';
 import { readJsonBody } from '@/lib/api/json-body';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -55,6 +56,20 @@ const commandSchema = z.discriminatedUnion('op', [
     nodeId: id,
     room: z.object({ types: z.array(z.string().max(32)).max(8), label: z.string().max(200).nullable() }).nullable(),
   }),
+  // ── Η κάτοψη (Φ2στ-β · §4.13): εδώ μόνο σχήμα και φράχτες· «ανήκει στο ακίνητο;», «πάνω στην κάτοψη;» τα κρίνουν ο
+  //    κριτής κάτοψης και οι καθαρές (`tour-plan-prepare` · `tour-plan-edit`). ──
+  z.object({
+    op: z.literal('floorplan'),
+    levelKey,
+    plan: z.object({ fileId: id, source: z.enum(FLOOR_PLAN_DECLARABLE_SOURCES) }).nullable(),
+  }),
+  z.object({ op: z.literal('calibrate'), levelKey, metresPerPixel: z.number().finite().positive().max(1000).nullable() }),
+  z.object({
+    op: z.literal('position'),
+    nodeId: id,
+    point: z.object({ x: z.number().finite().min(-1e6).max(1e6), y: z.number().finite().min(-1e6).max(1e6) }).nullable(),
+  }),
+  z.object({ op: z.literal('orient'), captureId: id, headingRad: z.number().finite().min(-4 * Math.PI).max(4 * Math.PI) }),
 ]);
 
 type GraphResponse = TourGraphEditResponse | TourBadSubjectBody | TourRefusedBody;

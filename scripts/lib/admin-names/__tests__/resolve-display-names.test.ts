@@ -6,6 +6,7 @@
  * Wikidata, αποκεντρωμένη διοίκηση σε εμάς).
  */
 
+import type { EklogesNames } from '../ekloges-names';
 import type { Law3852 } from '../law-3852';
 import { resolveDisplayNames, type RegistryRow, type ReviewedName } from '../resolve-display-names';
 import { levelCodeKey, type WikidataNames } from '../wikidata-names';
@@ -52,8 +53,11 @@ const WIKIDATA = wikidata(
   { 2: ['Αποκεντρωμένη Διοίκηση Μακεδονίας - Θράκης'] },
 );
 
-function resolve(reviewed: readonly ReviewedName[] = []) {
-  return resolveDisplayNames(ROWS, { law: LAW, wikidata: WIKIDATA, reviewed });
+/** Χωρίς ekloges: οι άγκυρες νόμου/Wikidata μένουν ίδιες — η τρίτη πηγή ελέγχεται χωριστά παρακάτω. */
+const NO_EKLOGES: EklogesNames = { municipalities: [], units: [] };
+
+function resolve(reviewed: readonly ReviewedName[] = [], ekloges: EklogesNames = NO_EKLOGES) {
+  return resolveDisplayNames(ROWS, { law: LAW, wikidata: WIKIDATA, ekloges, reviewed });
 }
 
 function nameOf(result: ReturnType<typeof resolve>, level: number, code: string): string | undefined {
@@ -101,7 +105,9 @@ describe('resolveDisplayNames — η πολιτική', () => {
 
 describe('resolveDisplayNames — η επιμέλεια κερδίζει, αλλά ΔΕΝ περνά ανέλεγκτη', () => {
   it('απόφαση ανθρώπου λύνει τη διαφωνία, με την απόδειξη της', () => {
-    const result = resolve([{ l: 6, c: '510401', name: 'Νικαίας', evidence: 'ΦΕΚ Α 87/2010' }]);
+    const result = resolve([
+      { l: 6, c: '510401', name: 'Νικαίας', evidence: 'ΦΕΚ Α 87/2010', disputes: { wikidata: 'η ετικέτα γράφει τον ΔΗΜΟ, όχι την ενότητα' } },
+    ]);
     expect(result.entries.find((entry) => entry.c === '510401')).toMatchObject({
       n: 'Δημοτική Ενότητα Νικαίας',
       source: 'reviewed',
@@ -112,5 +118,49 @@ describe('resolveDisplayNames — η επιμέλεια κερδίζει, αλλ
   it('επιμέλεια με ΑΛΛΟ όνομα ή χωρίς τόνο ⇒ σφάλμα, όχι σιωπή', () => {
     expect(() => resolve([{ l: 5, c: '5207', name: 'Σπετσών Ύδρας', evidence: 'x' }])).toThrow(/different-words/);
     expect(() => resolve([{ l: 5, c: '5207', name: 'Σπετσων', evidence: 'x' }])).toThrow(/not-monotonic/);
+  });
+});
+
+describe('resolveDisplayNames — τρίτη πηγή (ekloges.ypes.gr): ισότιμη ψήφος, ΟΧΙ κριτής', () => {
+  const EKLOGES: EklogesNames = {
+    municipalities: [
+      { id: 9001, name: 'Ιάσμου' },
+      { id: 9171, name: 'Κηφισιάς' },
+      { id: 9204, name: 'Νίκαιας - Αγίου Ιωάννη Ρέντη' },
+      { id: 9207, name: 'Σπετσών' },
+    ],
+    units: [
+      { id: 1, name: 'Ιάσμου', municipalityId: 9001 },
+      { id: 4011, name: 'Νικαίας', municipalityId: 9204 },
+    ],
+  };
+  const sourceOf = (result: ReturnType<typeof resolve>, code: string) => result.entries.find((entry) => entry.c === code)?.source;
+
+  it('τρεις πηγές συμφωνούν ⇒ δεκτό, και το `source` τις ονομάζει όλες', () => {
+    expect(sourceOf(resolve([], EKLOGES), '0103')).toBe('law-3852-2010+wikidata+ekloges-ypes');
+  });
+
+  it('μόνο το ekloges απαντά ⇒ δεκτό (γέμισε κενό που άφηναν νόμος και Wikidata)', () => {
+    const result = resolve([], EKLOGES);
+    expect(nameOf(result, 5, '5207')).toBe('Δήμος Σπετσών');
+    expect(sourceOf(result, '5207')).toBe('ekloges-ypes');
+  });
+
+  it('το Wikidata αυτοδιαφωνεί, νόμος ΚΑΙ ekloges διαλέγουν την ίδια μορφή του ⇒ στηρίζει κι αυτό', () => {
+    expect(sourceOf(resolve([], EKLOGES), '4605')).toBe('law-3852-2010+wikidata+ekloges-ypes');
+  });
+
+  it('🔴 το ekloges ΔΕΝ ανατρέπει συμφωνία νόμου + Wikidata — διαφωνία ⇒ επιμέλεια', () => {
+    const dissenting: EklogesNames = { ...EKLOGES, units: [{ id: 1, name: 'Ιασμού', municipalityId: 9001 }] };
+    const result = resolve([], dissenting);
+    expect(nameOf(result, 6, '010301')).toBeUndefined();
+    expect(result.unresolved.find((entry) => entry.c === '010301')).toMatchObject({ reason: 'conflict', ekloges: ['Ιασμού'] });
+  });
+
+  it('🔴 επιμέλεια που διαφωνεί ΑΔΗΛΩΤΑ με αυτόματη πηγή ⇒ σφάλμα· με `disputes` ⇒ δεκτή', () => {
+    const review = { l: 6, c: '510401', name: 'Νικαίας', evidence: 'ΦΕΚ Α 87/2010' };
+    expect(() => resolve([review], EKLOGES)).toThrow(/ΑΔΗΛΩΤΑ με wikidata: «Νίκαιας»/);
+    const declared = resolve([{ ...review, disputes: { wikidata: 'η ετικέτα γράφει τον ΔΗΜΟ' } }], EKLOGES);
+    expect(nameOf(declared, 6, '510401')).toBe('Δημοτική Ενότητα Νικαίας');
   });
 });

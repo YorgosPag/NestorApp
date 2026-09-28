@@ -12,6 +12,7 @@
  * 🔑 **Κόμβος χωρίς λήψη φεύγει**: αφαίρεση της τελευταίας λήψης ενός κόμβου ⇒ `removeTourNode` (ποτέ ορφανός σύνδεσμος).
  */
 
+import type { FloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
 import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourNode } from '@/types/spatial-tour';
 
 import { levelKeyId, removeTourNode } from './spatial-tour-graph';
@@ -39,7 +40,34 @@ export type TourGraphCommand =
   | { readonly op: 'link'; readonly fromNodeId: string; readonly toNodeId: string; readonly bearingRad: number | null }
   | { readonly op: 'unlink'; readonly fromNodeId: string; readonly toNodeId: string }
   /** Ο χώρος ενός σημείου (Φ2στ · §4.12) — `null` ⇒ ξανά «Σημείο N». */
-  | { readonly op: 'name'; readonly nodeId: string; readonly room: TourRoomInput | null };
+  | { readonly op: 'name'; readonly nodeId: string; readonly room: TourRoomInput | null }
+  // ── Η κάτοψη (Φ2στ-β · §4.13 — οι καθαρές ζουν στο `tour-plan-edit.ts`) ──
+  /** Η κάτοψη ενός ορόφου από τα αρχεία του ακινήτου (Δ7.1) — `null` ⇒ χωρίς κάτοψη. Την εικόνα την ετοιμάζει ο διακομιστής. */
+  | { readonly op: 'floorplan'; readonly levelKey: TourLevelKey; readonly plan: TourFloorPlanPick | null }
+  /** Η κλίμακα της ενεργής κάτοψης (μέτρα ανά pixel εικόνας) — `null` ⇒ αβαθμονόμητη. */
+  | { readonly op: 'calibrate'; readonly levelKey: TourLevelKey; readonly metresPerPixel: number | null }
+  /** Η θέση ενός σημείου σε μέτρα κάτοψης (x ανατολή, y βορράς) — `null` ⇒ εκτός κάτοψης. */
+  | { readonly op: 'position'; readonly nodeId: string; readonly point: { readonly x: number; readonly y: number } | null }
+  /** Ο προσανατολισμός της λήψης ενός σημείου (heading κόσμου) — στρέφει **και** τα βελάκια του. */
+  | { readonly op: 'orient'; readonly captureId: string; readonly headingRad: number };
+
+/** Ό,τι διαλέγει ο άνθρωπος για την κάτοψη ενός ορόφου: ποιο αρχείο του ακινήτου, και **ποιος** το σχεδίασε (δηλωμένο). */
+export interface TourFloorPlanPick {
+  readonly fileId: string;
+  readonly source: FloorPlanDeclarableSource;
+}
+
+/**
+ * Μία κάτοψη του ακινήτου που μπορεί να πάρει η περιήγηση — η απάντηση του `GET …/floorplans` (Φ2στ-β · §4.13). Την
+ * παράγει ο ΕΝΑΣ κριτής (`server/spatial-tour/tour-plan-files.ts`), ο ίδιος που κρίνει την εντολή `floorplan`.
+ */
+export interface TourPlanCandidate {
+  readonly fileId: string;
+  readonly name: string;
+  readonly previewUrl: string | null;
+  /** Ο όροφος της κάτοψης όταν το ακίνητο είναι πολυεπίπεδο (ADR-236) — η οθόνη τον προτείνει πρώτο. */
+  readonly levelFloorId: string | null;
+}
 
 /** Η απάντηση του `POST …/graph` — `revision` ≠ τοπική + 1 ⇒ κάποιος άλλος άλλαξε τον γράφο στο μεταξύ. */
 export interface TourGraphEditResponse {
@@ -47,8 +75,9 @@ export interface TourGraphEditResponse {
   readonly revision: number;
 }
 
-type TourGraphEditRefusal =
-  | 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'room-invalid';
+export type TourGraphEditRefusal =
+  | 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'room-invalid'
+  | 'plan-absent' | 'plan-uncalibrated' | 'position-outside-plan' | 'scale-invalid';
 
 export type TourGraphEditResult =
   | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null }

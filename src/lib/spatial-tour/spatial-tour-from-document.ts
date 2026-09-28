@@ -30,6 +30,7 @@ import {
   isTourCaptureProvenance,
   isTourCaptureSource,
   isTourGrantScope,
+  isTourHeadingSource,
   isTourLinkVia,
   isTourMilestone,
   isTourRoomSource,
@@ -45,7 +46,9 @@ import { normalizeTourRoom } from '@/lib/spatial-tour/tour-room';
 import { custodyOnly, custodyScopeFromData } from '@/lib/workspace/custody-scope';
 import { isInvitationState } from '@/types/invitation-core';
 import type {
+  FloorPlanImage,
   FloorPlanRecord,
+  FloorPlanScale,
   SpatialTour,
   TourAccessRequest,
   TourCapture,
@@ -87,14 +90,37 @@ function readLevelKey(raw: unknown): TourLevelKey | null {
   return null;
 }
 
+const isPositiveNumber = (value: unknown): value is number => isFiniteNumber(value) && value > 0;
+
+/** Η εικόνα της κάτοψης — απούσα ⇒ `null`· `undefined` ⇒ υπάρχει αλλά δεν διαβάζεται (ίδια σύμβαση με τη θέση). */
+function readPlanImage(raw: unknown): FloorPlanImage | null | undefined {
+  if (raw === undefined || raw === null) return null;
+  if (!isRecord(raw) || !isPositiveNumber(raw.width) || !isPositiveNumber(raw.height)) return undefined;
+  const contentHash = text(raw.contentHash);
+  return contentHash === null ? undefined : { width: raw.width, height: raw.height, contentHash };
+}
+
+function readPlanScale(raw: unknown): FloorPlanScale | null | undefined {
+  if (raw === undefined || raw === null) return null;
+  if (!isRecord(raw) || !isPositiveNumber(raw.metresPerPixel)) return undefined;
+  const calibratedBy = text(raw.calibratedBy);
+  const calibratedAt = normalizeToISO(raw.calibratedAt);
+  return calibratedBy === null || calibratedAt === null ? undefined : { metresPerPixel: raw.metresPerPixel, calibratedBy, calibratedAt };
+}
+
 function readFloorPlan(raw: unknown): FloorPlanRecord | null {
   if (!isRecord(raw) || !isFloorPlanSource(raw.source) || !isFloorPlanRecordState(raw.state)) return null;
+  const image = readPlanImage(raw.image);
+  const scale = readPlanScale(raw.scale);
+  if (image === undefined || scale === undefined) return null;
   return {
     source: raw.source,
     state: raw.state,
     fileId: text(raw.fileId),
     approvedBy: text(raw.approvedBy),
     approvedAt: normalizeToISO(raw.approvedAt),
+    ...(image === null ? {} : { image }),
+    ...(scale === null ? {} : { scale }),
   };
 }
 
@@ -211,10 +237,13 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   if (vocabulary === null || signatory === undefined || rights === null || tileset === null) return null;
   if (tourId === null || nodeId === undefined || originalFileId === null || uploadedBy === null) return null;
   if (capturedAt === null || createdAt === null || !isFiniteNumber(raw.headingRad)) return null;
+  // Απών ⇒ `device` (παλιά έγγραφα)· παρών αλλά άγνωστος ⇒ έγγραφο που δεν καταλάβαμε (Φ2στ-β).
+  if (raw.headingSource !== undefined && !isTourHeadingSource(raw.headingSource)) return null;
   return {
     id, tourId, nodeId, capturedAt, createdAt, originalFileId, uploadedBy, rights, tileset, signatory,
     ...vocabulary,
     headingRad: raw.headingRad,
+    ...(raw.headingSource === undefined ? {} : { headingSource: raw.headingSource }),
     baseCaptureId: text(raw.baseCaptureId),
   };
 }

@@ -15,6 +15,7 @@
 import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
 import type { TourCubeFace } from '@/lib/spatial-tour/viewer/tour-cube-faces';
 import type { TourTileAddress } from '@/lib/spatial-tour/viewer/tour-tile-visibility';
+import type { TourViewerPlan } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 
 /**
  * Μία εικόνα ανά όψη — ό,τι δέχεται μια υφή WebGL **με τον ίδιο προσανατολισμό**.
@@ -38,4 +39,9 @@ export interface TourPanoramaSource {
   base(stop: TourManifestStop, signal: AbortSignal): Promise<TourCubeFaceImages>;
   /** `null` ⇒ η βάση είναι και η τελική εικόνα (εικονική πηγή). */
   readonly tiles: TourTileProvider | null;
+  /**
+   * **Η διεύθυνση της εικόνας κάτοψης** ενός ορόφου σε πλάτος που φτάνει για `cssWidth` (ADR-884 Φ2στ-β · §4.13) — `null`
+   * όταν η πηγή δεν σερβίρει κατόψεις (εικονική). Ζει στην πηγή γιατί **μόνο** η πηγή ξέρει τη ρίζα των μέσων.
+   */
+  planImageUrl(plan: TourViewerPlan, cssWidth: number): string | null;
 }

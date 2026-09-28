@@ -68,10 +68,11 @@ interface PanelProps {
   readonly currentNodeId: string | null;
   readonly camera: TourCameraStore;
   readonly onGo: (nodeId: string) => void;
+  readonly source: TourPanoramaSource;
 }
 
 /** Η στήλη στο κινητό — ίδιο περιεχόμενο με τη μόνιμη στήλη· κλείνει μόλις ο επισκέπτης διαλέξει σημείο. */
-function MobilePanel({ graph, currentNodeId, camera, onGo }: PanelProps) {
+function MobilePanel({ graph, currentNodeId, camera, onGo, source }: PanelProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const [open, setOpen] = useState(false);
   const goAndClose = useCallback((nodeId: string) => { setOpen(false); onGo(nodeId); }, [onGo]);
@@ -84,7 +85,7 @@ function MobilePanel({ graph, currentNodeId, camera, onGo }: PanelProps) {
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-[75svh] overflow-y-auto" aria-describedby={undefined}>
         <SheetTitle className="mb-2 text-base">{t(TOUR_VIEWER_KEYS.panelTitle)}</SheetTitle>
-        <TourSidePanel graph={graph} currentNodeId={currentNodeId} camera={camera} onGo={goAndClose} />
+        <TourSidePanel graph={graph} currentNodeId={currentNodeId} camera={camera} onGo={goAndClose} source={source} />
       </SheetContent>
     </Sheet>
   );
@@ -108,10 +109,10 @@ function TourViewerLive({ graph, source }: { readonly graph: TourViewerGraph; re
             {nameOf(state.nodeId)}
           </h2>
         )}
-        <MobilePanel graph={graph} currentNodeId={state.nodeId} camera={camera} onGo={go} />
+        <MobilePanel graph={graph} currentNodeId={state.nodeId} camera={camera} onGo={go} source={source} />
       </section>
       <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border bg-background p-3 lg:block">
-        <TourSidePanel graph={graph} currentNodeId={state.nodeId} camera={camera} onGo={go} />
+        <TourSidePanel graph={graph} currentNodeId={state.nodeId} camera={camera} onGo={go} source={source} />
       </aside>
     </section>
   );

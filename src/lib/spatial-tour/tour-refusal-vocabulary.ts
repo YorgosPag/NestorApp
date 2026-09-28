@@ -28,10 +28,31 @@ export const TOUR_REFUSALS = [
   'capture-absent', 'capture-placed', 'capture-unplaced', 'capture-not-ready', 'node-absent', 'level-absent', 'graph-full',
   // ── Ο χώρος ενός σημείου (Φ2στ) ──
   'room-invalid',
+  // ── Η κάτοψη: εικόνα, κλίμακα, θέση, προσανατολισμός (Φ2στ-β) ──
+  'plan-absent', 'plan-uncalibrated', 'plan-not-eligible', 'position-outside-plan', 'scale-invalid',
 ] as const;
 
 export type TourRefusalName = (typeof TOUR_REFUSALS)[number];
 
 export function isTourRefusalName(value: unknown): value is TourRefusalName {
   return typeof value === 'string' && (TOUR_REFUSALS as readonly string[]).includes(value);
+}
+
+/**
+ * **Οι αρνήσεις της ΠΥΛΗΣ ΘΕΑΣΗΣ** — ό,τι μπορεί να πει το `view-session`, και **τίποτα άλλο** (ADR-884 Κ3β).
+ *
+ * 🏆 **Λεξιλόγιο ανά λειτουργία** (Google AIP-193 `ErrorInfo.reason`, Stripe error codes ανά endpoint): ο πελάτης
+ * χαρτογραφεί **μόνο** όσα μπορεί να του επιστρέψει η κλήση του. Η δημόσια σελίδα θέασης κουβαλούσε τις λέξεις **όλων**
+ * των αρνήσεων (ανέβασμα, γράφος, κάτοψη) — μετρημένο 2026-09-28: 46 κλειδιά = **73%** του slice της, για 4 που φτάνουν.
+ * 🔒 **Δεμένο στον διακομιστή με τύπο**: το `TourViewSessionOutcome` επιστρέφει `TourViewSessionRefusal` — νέα άρνηση
+ * στην πύλη **δεν μεταγλωττίζεται** αν δεν μπει εδώ (και τότε ο πίνακας ετικετών απαιτεί λέξεις).
+ */
+export const TOUR_VIEW_SESSION_REFUSALS = [
+  'tour-absent', 'tour-custody-mismatch', 'sign-in-required', 'not-viewable',
+] as const satisfies readonly TourRefusalName[];
+
+export type TourViewSessionRefusal = (typeof TOUR_VIEW_SESSION_REFUSALS)[number];
+
+export function isTourViewSessionRefusal(value: TourRefusalName): value is TourViewSessionRefusal {
+  return (TOUR_VIEW_SESSION_REFUSALS as readonly TourRefusalName[]).includes(value);
 }

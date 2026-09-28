@@ -120,17 +120,23 @@ function buildIndex(areas: ReadonlyMap<string, AdminArea>): AdminAreaIndex {
     formsByWord.set(word, known);
     return known;
   };
-  const ownWords = new Map([...areas.values()].map((area) => [area.id, nameWordForms(area.name, memoFormsOf)]));
-  const own = new Map([...ownWords].map(([id, words]) => [id, words.flat()]));
-  const vocabulary = buildAdminAreaVocabulary([...own.values()].flat());
-  const ownIds = new Map([...own].map(([id, words]) => [id, vocabularyIds(vocabulary, words)]));
+  // Μία εγγραφή ανά **όνομα** του τόπου (ADR-893 §7): το όνομα και κάθε εναλλακτικό βρίσκουν τον ίδιο
+  // τόπο· η κατάταξη ενοποιεί κατά `id` ({@link rankWith}). Η γενεαλογία μένει του **κύριου** ονόματος.
+  const variants = [...areas.values()].flatMap((area) =>
+    [area.name, ...(area.alternateNames ?? [])].map((name) => ({ area, words: nameWordForms(name, memoFormsOf) })),
+  );
+  const vocabulary = buildAdminAreaVocabulary(variants.flatMap(({ words }) => words.flat()));
+  const ownIds = new Map<string, Int32Array>();
+  for (const { area, words } of variants) {
+    if (!ownIds.has(area.id)) ownIds.set(area.id, vocabularyIds(vocabulary, words.flat()));
+  }
   const lineageOf = lineageBuilder(areas, ownIds);
 
-  const entries = [...areas.values()].map((area) => ({
+  const entries = variants.map(({ area, words }) => ({
     area,
-    own: own.get(area.id) ?? [],
-    ownWords: ownWords.get(area.id) ?? [],
-    ownIds: ownIds.get(area.id) ?? NO_IDS,
+    own: words.flat(),
+    ownWords: words,
+    ownIds: vocabularyIds(vocabulary, words.flat()),
     lineageIds: lineageOf(area),
   }));
   return { areas, entries, vocabulary };
@@ -254,6 +260,12 @@ function rankWith(index: AdminAreaIndex, query: ParsedQuery, correct: boolean, l
     const value = score(entry, query, perWord);
     if (value === null) continue;
     const candidate = { area: entry.area, score: value };
+    // Ο ίδιος τόπος με δεύτερο όνομα (ADR-893 §7): μένει η καλύτερη βαθμολογία του, μία φορά.
+    const already = top.findIndex((ranked) => ranked.area.id === entry.area.id);
+    if (already >= 0) {
+      if (!outranks(candidate, top[already])) continue;
+      top.splice(already, 1);
+    }
     if (top.length === limit && !outranks(candidate, top[limit - 1])) continue;
     let at = top.length;
     while (at > 0 && outranks(candidate, top[at - 1])) at -= 1;
@@ -354,7 +366,11 @@ export function resolveTypedAdminArea(index: AdminAreaIndex, query: string): Typ
   const parsed = parseQuery(query);
   if (parsed.words.length === 0) return NO_AREA;
 
-  const exact = index.entries.filter((entry) => namesExactly(entry, parsed, index.vocabulary)).map((entry) => entry.area);
+  const exact = [
+    ...new Map(
+      index.entries.filter((entry) => namesExactly(entry, parsed, index.vocabulary)).map((entry) => [entry.area.id, entry.area]),
+    ).values(),
+  ];
   const eligible = parsed.level === null ? exact : exact.filter((area) => area.level === parsed.level);
   if (eligible.length === 0) return suggestionFor(index, query);
 

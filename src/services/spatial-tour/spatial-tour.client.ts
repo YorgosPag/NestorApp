@@ -18,9 +18,10 @@ import { isTourRefusalName, type TourRefusalName } from '@/lib/spatial-tour/tour
 import { CORE_INVITATION_REFUSALS, type InvitationCoreRefusal } from '@/types/invitation-core';
 import type { TourCapture, TourSubject } from '@/types/spatial-tour';
 
-export type TourCallResult<T> =
+/** `R` = το λεξιλόγιο αρνήσεων **της κλήσης** (AIP-193) — εξ ορισμού όλο, στενότερο όπου η λειτουργία το δηλώνει. */
+export type TourCallResult<T, R extends TourRefusalName = TourRefusalName> =
   | { readonly kind: 'ok'; readonly value: T }
-  | { readonly kind: 'refused'; readonly reason: TourRefusalName }
+  | { readonly kind: 'refused'; readonly reason: R }
   | { readonly kind: 'failed' };
 
 /** **Ο ΕΝΑΣ αναγνώστης αποτυχιών** — το σώμα `TOUR_REFUSED` με **γνωστό** λόγο, ή τίποτα (γενικό μήνυμα). */
@@ -42,6 +43,18 @@ export async function tourCall<T>(request: () => Promise<T>): Promise<TourCallRe
     const reason = refusalOf(cause);
     return reason === null ? { kind: 'failed' } : { kind: 'refused', reason };
   }
+}
+
+/**
+ * **Στένωση στο λεξιλόγιο της λειτουργίας** — λόγος **εκτός** συμβολαίου ⇒ `failed` (γενικό μήνυμα), όπως κάθε άγνωστος
+ * λόγος στο {@link refusalOf}: η οθόνη δεν ονομάζει ποτέ κάτι που η κλήση της δεν υπόσχεται.
+ */
+export function narrowTourRefusal<T, R extends TourRefusalName>(
+  result: TourCallResult<T>,
+  isContracted: (reason: TourRefusalName) => reason is R,
+): TourCallResult<T, R> {
+  if (result.kind !== 'refused') return result;
+  return isContracted(result.reason) ? { kind: 'refused', reason: result.reason } : { kind: 'failed' };
 }
 
 /**

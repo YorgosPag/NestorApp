@@ -154,6 +154,21 @@ export function isFloorPlanUpgrade(current: FloorPlanSource, candidate: FloorPla
   return floorPlanTier(candidate) < floorPlanTier(current);
 }
 
+/**
+ * **Οι πηγές που ΔΗΛΩΝΕΙ άνθρωπος** όταν διαλέγει εικόνα κάτοψης από τα αρχεία του ακινήτου (ADR-884 Φ2στ-β · §12 Δ7.1).
+ * Οι `device-scan` / `photo-estimate` τις γράφει **μηχανή** (Φ2.Κ) — ποτέ επιλογή σε φόρμα· η `none` είναι η απουσία.
+ * Κανένα από τα δύο δεν προεπιλέγεται σιωπηλά (ίδια αρχή με τον τύπο χώρου, §4.12).
+ */
+export const FLOOR_PLAN_DECLARABLE_SOURCES = ['engineer', 'user-sketch'] as const satisfies readonly FloorPlanSource[];
+export type FloorPlanDeclarableSource = (typeof FLOOR_PLAN_DECLARABLE_SOURCES)[number];
+
+/**
+ * **Από πού ήρθε ο προσανατολισμός μιας λήψης** (ADR-884 Φ2στ-β · §4.13): `device` = GPano/πυξίδα της συσκευής (απών ⇒
+ * αυτό, παλιά έγγραφα αμετάβλητα)· `manual` = ο υπεύθυνος τον ευθυγράμμισε πάνω στην κάτοψη (ή δέχτηκε την πρόταση).
+ */
+export const TOUR_HEADING_SOURCES = ['device', 'manual'] as const;
+export type TourHeadingSource = (typeof TOUR_HEADING_SOURCES)[number];
+
 // =============================================================================
 // 3β. ΟΙ ΧΩΡΟΙ — τι δωμάτιο είναι ένα σημείο (ADR-884 Φ2στ · §4.12)
 // =============================================================================
@@ -203,3 +218,6 @@ export const isFloorPlanSource =(v: unknown): v is FloorPlanSource => includes(F
 export const isTourRoomType = (v: unknown): v is TourRoomType => includes(TOUR_ROOM_TYPES, v);
 export const isTourRoomSource = (v: unknown): v is TourRoomSource => includes(TOUR_ROOM_SOURCES, v);
 export const isFloorPlanRecordState =(v: unknown): v is FloorPlanRecordState => includes(FLOOR_PLAN_RECORD_STATES, v);
+export const isFloorPlanDeclarableSource = (v: unknown): v is FloorPlanDeclarableSource =>
+  includes(FLOOR_PLAN_DECLARABLE_SOURCES, v);
+export const isTourHeadingSource = (v: unknown): v is TourHeadingSource => includes(TOUR_HEADING_SOURCES, v);

@@ -16,10 +16,24 @@
 
 import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
 import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
-import type { TourLevel, TourLevelKey, TourNode, TourPoint } from '@/types/spatial-tour';
+import type { FloorPlanSource } from '@/constants/spatial-tour-vocabulary';
+import type { FloorPlanImage, TourLevel, TourLevelKey, TourNode, TourPoint } from '@/types/spatial-tour';
 
 import { levelKeyId } from '../spatial-tour-graph';
+import { activeFloorPlan } from '../tour-plan-frame';
 import { bearingBetween } from './tour-viewer-bearing';
+
+/**
+ * **Η κάτοψη ενός ορόφου όπως τη χρειάζεται ο θεατής** (ADR-884 Φ2στ-β · §4.13): η εικόνα (η διεύθυνση **παράγεται** από το
+ * `contentHash`, `tour-plan-layout.ts`) και η κλίμακα. 🔒 **Χωρίς** `approvedBy` — ο επισκέπτης δεν μαθαίνει ποιος ενέκρινε.
+ */
+export interface TourViewerPlan {
+  readonly fileId: string;
+  readonly source: FloorPlanSource;
+  readonly image: FloorPlanImage;
+  /** `null` ⇒ αβαθμονόμητη: η κάτοψη φαίνεται, σημεία δεν έχει. */
+  readonly metresPerPixel: number | null;
+}
 
 /** Ό,τι ξέρει ο θεατής για έναν όροφο — ταξιδεύει στο μανιφέστο (ADR-884 Φ2γ, `viewerLevelsOf`). */
 export interface TourViewerLevel {
@@ -28,6 +42,14 @@ export interface TourViewerLevel {
   readonly label: string | null;
   /** Σειρά από κάτω προς τα πάνω. */
   readonly ordinal: number;
+  /** Η ενεργή κάτοψη με εικόνα — `null`/απούσα ⇒ όροφος χωρίς χάρτη (Δ5 `none`, ή μανιφέστο πριν τη Φ2στ-β). */
+  readonly plan?: TourViewerPlan | null;
+}
+
+function viewerPlanOf(level: TourLevel): TourViewerPlan | null {
+  const active = activeFloorPlan(level);
+  if (active?.image == null || active.fileId === null) return null;
+  return { fileId: active.fileId, source: active.source, image: active.image, metresPerPixel: active.scale?.metresPerPixel ?? null };
 }
 
 /**
@@ -35,8 +57,27 @@ export interface TourViewerLevel {
  * BIM ⇒ η σειρά δήλωσης (το υψόμετρο του ορόφου ζει στο BIM — Φ3). Ετικέτα `null` ⇒ ο θεατής λέει «Όροφος {n}»: το όνομα
  * ενός ορόφου BIM θα έρθει με τη σύνδεση στο μοντέλο, όχι επινοημένο εδώ.
  */
+/**
+ * **Το αντίστροφο** του `viewerLevelsOf`, για ό,τι χρειάζεται μόνο την **ενεργή** κάτοψη: η αισιόδοξη εφαρμογή και η
+ * αναίρεση της οθόνης τοποθέτησης τρέχουν τις **ίδιες** καθαρές συναρτήσεις με τον γραφέα (`tour-plan-edit.ts`) πάνω σε
+ * αυτό. Η ιστορία (`superseded`) και το «ποιος ενέκρινε» δεν ταξιδεύουν στο μανιφέστο — και δεν τα ρωτά καμία από αυτές.
+ */
+export function graphLevelsOfViewer(levels: readonly TourViewerLevel[]): TourLevel[] {
+  return levels.map((level) => {
+    const plan = level.plan ?? null;
+    if (plan === null) return { key: level.key, floorPlans: [{ source: 'none', state: 'active', fileId: null, approvedBy: null, approvedAt: null }] };
+    const scale = plan.metresPerPixel === null ? null : { metresPerPixel: plan.metresPerPixel, calibratedBy: '', calibratedAt: '' };
+    return {
+      key: level.key,
+      floorPlans: [{ source: plan.source, state: 'active', fileId: plan.fileId, approvedBy: null, approvedAt: null, image: plan.image, scale }],
+    };
+  });
+}
+
 export function viewerLevelsOf(levels: readonly TourLevel[]): TourViewerLevel[] {
-  return levels.map((level, index) => ({ key: level.key, label: null, ordinal: level.key.kind === 'local' ? level.key.ordinal : index }));
+  return levels.map((level, index) => ({
+    key: level.key, label: null, ordinal: level.key.kind === 'local' ? level.key.ordinal : index, plan: viewerPlanOf(level),
+  }));
 }
 
 export interface ViewerStop {
@@ -52,7 +93,10 @@ export interface ViewerLevelEntry {
   readonly label: string | null;
   readonly ordinal: number;
   readonly nodeIds: readonly string[];
+  /** Χάρτης στη στήλη: υπάρχει **εικόνα** κάτοψης, ή (όροφος χωρίς εικόνα) όλα τα σημεία έχουν θέση. */
   readonly hasPlan: boolean;
+  /** Η εικόνα της κάτοψης — `null` ⇒ ο χάρτης είναι μόνο τελείες (ή δεν υπάρχει). */
+  readonly plan: TourViewerPlan | null;
 }
 
 export interface TourViewerGraph {
@@ -83,12 +127,14 @@ function levelEntries(
     .map(([id, entries]) => {
       const level = declared.get(id);
       const ordinal = level?.ordinal ?? (entries[0].node.levelKey.kind === 'local' ? entries[0].node.levelKey.ordinal : 0);
+      const plan = level?.plan ?? null;
       return {
         id,
         label: level?.label ?? null,
         ordinal,
         nodeIds: entries.map((entry) => entry.node.id),
-        hasPlan: entries.every((entry) => entry.node.position !== null),
+        hasPlan: plan !== null || entries.every((entry) => entry.node.position !== null),
+        plan,
       };
     })
     .sort((a, b) => a.ordinal - b.ordinal || a.id.localeCompare(b.id));

@@ -34,6 +34,7 @@ import { simplifyGeoRing } from '../src/lib/geo/geo-simplify';
 import { ADMIN_BOUNDARIES_DIR, adminBoundaryFileName, type AdminBoundaryPlacesFile } from '../src/lib/geo/admin-boundary-file';
 import { ADMIN_AREA_INDEX_FILE, type AdminAreaIndexRow } from '../src/lib/geo/admin-area-index-file';
 import type { GeoOutline } from '../src/types/geo/coordinates';
+import { withAdminPrefixOf } from '../src/utils/address/place-name';
 import {
   ATTRIBUTION,
   LAYERS,
@@ -236,7 +237,10 @@ function writeIndex(
 ): void {
   const bounded: AdminAreaIndexRow[] = rows
     .filter((row) => written.has(row.id))
-    .map((row) => [row.id, row.n, row.l, row.p]);
+    .map((row): AdminAreaIndexRow => {
+      const alternates = (row.an ?? []).map((alias) => withAdminPrefixOf(row.n, alias));
+      return alternates.length > 0 ? [row.id, row.n, row.l, row.p, alternates] : [row.id, row.n, row.l, row.p];
+    });
   const data = [...bounded, ...settlementRows];
   const meta = {
     ...ATTRIBUTION,

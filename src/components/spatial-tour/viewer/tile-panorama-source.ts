@@ -25,6 +25,7 @@ import {
   tileSegments,
   tilesetLevels,
 } from '@/lib/spatial-tour/tileset/tour-tileset-layout';
+import { planImageSegments, planWidthFor } from '@/lib/spatial-tour/tileset/tour-plan-layout';
 import { TOUR_CUBE_FACES, type TourCubeFace } from '@/lib/spatial-tour/viewer/tour-cube-faces';
 import type { TourTileAddress } from '@/lib/spatial-tour/viewer/tour-tile-visibility';
 import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
@@ -162,6 +163,8 @@ export function createTilePanoramaSource(subject: TourSubject, runtime: TileSour
   }
   return {
     tiles,
+    // Πλάτος σε pixel συσκευής: η στήλη είναι ~400 css px, σε οθόνη 2× θέλει το 1024.
+    planImageUrl: (plan, cssWidth) => url(planImageSegments(plan.image.contentHash, planWidthFor(plan.image.width, cssWidth * 2))),
     async base(stop: TourManifestStop, signal: AbortSignal): Promise<TourCubeFaceImages> {
       const cached = bases.get(stop.tilesetHash);
       if (cached !== undefined) return cached;

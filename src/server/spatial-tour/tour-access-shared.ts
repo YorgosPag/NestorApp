@@ -15,6 +15,7 @@ import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { endOfCalendarDay } from '@/constants/platform-operator';
 import { normalizeCalendarDay } from '@/lib/date-local';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
+import type { TourGraphEditRefusal } from '@/lib/spatial-tour/tour-graph-edit';
 import type { TourViewRefusal } from '@/lib/spatial-tour/tour-view-policy';
 import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
@@ -56,10 +57,12 @@ export type TourAccessRefusal =
   /** Ο γράφος (Φ2β, `tour-graph-write.ts`) — κάθε μία λέει στον υπεύθυνο **τι** να κάνει. */
   | TourGraphRefusal;
 
-/** Αρνήσεις του γραφέα του γράφου — `TourGraphEditRefusal` + ό,τι κρίνει μόνο ο διακομιστής. */
-type TourGraphRefusal =
-  | 'capture-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'node-absent' | 'level-absent'
-  | 'room-invalid' | 'graph-full';
+/**
+ * Αρνήσεις του γραφέα του γράφου — **παράγονται** από τις καθαρές (`TourGraphEditRefusal`) + ό,τι κρίνει μόνο ο
+ * διακομιστής (λήψη που δεν βρέθηκε · όριο κόμβων · αρχείο κάτοψης ακατάλληλο). Ως 2026-09-27 ήταν χειρόγραφο αντίγραφο
+ * της ένωσης — κάθε νέα άρνηση έπρεπε να γραφτεί δύο φορές.
+ */
+type TourGraphRefusal = TourGraphEditRefusal | 'capture-absent' | 'graph-full' | 'plan-not-eligible';
 
 export type TourAccessRefused = { readonly kind: 'refused'; readonly reason: TourAccessRefusal };
 
@@ -115,12 +118,18 @@ export async function locateManagedTour(
   db: Firestore,
   subject: TourSubject,
   actor: TourActor,
-): Promise<{ readonly kind: 'managed'; readonly tourRef: DocumentReference; readonly custody: CustodyScope } | TourAccessRefused> {
+): Promise<{
+  readonly kind: 'managed';
+  readonly tourRef: DocumentReference;
+  readonly custody: CustodyScope;
+  /** Η περιήγηση όπως τη διάβασε η πόρτα — για ό,τι χρειάζεται **πριν** από συναλλαγή (π.χ. η κάτοψη, Φ2στ-β). */
+  readonly tour: SpatialTour;
+} | TourAccessRefused> {
   const location = await locateSpatialTour(db, subject);
   if (location.kind !== 'found' || location.tour === null) return refuseTourAccess('tour-absent');
   if (mayManageTour(location.record, actor) !== 'granted') return refuseTourAccess('not-manager');
   // 🔴 Ο υπεύθυνος της ρίζας **τώρα** δεν διαχειρίζεται περιήγηση του **προηγούμενου** κατόχου (§4.4 — ίδια
   //    διαδρομή μετά από μεταβίβαση). Ίδιος κριτής με τη γέννηση (`tour-genesis.ts`).
   if (!isOwnedByCustody(location.tour.custody, location.custody)) return refuseTourAccess('tour-custody-mismatch');
-  return { kind: 'managed', tourRef: location.tourRef, custody: location.custody };
+  return { kind: 'managed', tourRef: location.tourRef, custody: location.custody, tour: location.tour };
 }

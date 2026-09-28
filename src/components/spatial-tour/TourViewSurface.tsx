@@ -23,11 +23,11 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { TourViewSessionView } from '@/app/api/spatial-tours/_shared/tour-view-route';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import type { TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { openTourViewSessionFromScreen } from '@/services/spatial-tour/spatial-tour-viewing.client';
 import type { TourSubject } from '@/types/spatial-tour';
 
-import { TOUR_REFUSAL_KEY } from './spatial-tour-labels';
+import { TOUR_VIEW_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
 import { VIEW_BASIS_KEY, VIEWER_KEYS } from './tour-access-labels';
 import { TourViewerLoader } from './viewer/TourViewerLoader';
@@ -38,7 +38,7 @@ export const TOUR_VIEW_RENEW_EVERY_MS = 10 * 60 * 1000;
 type SurfaceState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'granted'; readonly view: TourViewSessionView }
-  | { readonly kind: 'refused'; readonly reason: TourRefusalName }
+  | { readonly kind: 'refused'; readonly reason: TourViewSessionRefusal }
   | { readonly kind: 'failed' };
 
 export interface TourViewSurfaceProps {
@@ -49,7 +49,7 @@ export interface TourViewSurfaceProps {
    * Η απάντηση σε άρνηση **με δρόμο** (ADR-884 §9.1 Α5) — η σελίδα αγγελίας δίνει την κάρτα αιτήματος («γιατί» + «τι να
    * κάνω»). Χωρίς αυτήν (προσωπικός σύνδεσμος): το ονομασμένο μήνυμα της άρνησης.
    */
-  readonly renderRefusal?: (reason: TourRefusalName) => ReactNode;
+  readonly renderRefusal?: (reason: TourViewSessionRefusal) => ReactNode;
   /** Πρώτο στοιχείο της επικεφαλίδας — η σελίδα αγγελίας βάζει εδώ το «Πίσω στην αγγελία» (Φ2στ, μία γραμμή όπως η Zillow). */
   readonly lead?: ReactNode;
 }
@@ -92,7 +92,7 @@ export function TourViewSurface({ subject, shareId, renderRefusal, lead }: TourV
     return (
       <SurfaceMessage lead={lead}>
         <p className="text-sm text-destructive" role="alert">
-          {state.kind === 'refused' ? t(TOUR_REFUSAL_KEY[state.reason]) : t(VIEWER_KEYS.unavailable)}
+          {state.kind === 'refused' ? t(TOUR_VIEW_REFUSAL_KEY[state.reason]) : t(VIEWER_KEYS.unavailable)}
         </p>
       </SurfaceMessage>
     );

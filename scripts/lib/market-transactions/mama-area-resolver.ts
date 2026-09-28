@@ -40,6 +40,8 @@ export interface HierarchyEntity {
   readonly id: string;
   readonly n: string;
   readonly sn?: string;
+  /** Εναλλακτικά σύντομα ονόματα (ADR-893 §7) — το ΜΑΜΑ μπορεί να γράφει την παλιά γραφή της ΕΛΣΤΑΤ. */
+  readonly an?: readonly string[];
   readonly l: number;
   readonly p: string | null;
 }
@@ -92,7 +94,13 @@ function indexHierarchy(rows: readonly HierarchyEntity[]): Hierarchy {
   const withUnits = new Set(rows.filter((row) => row.l === UNIT_LEVEL).map((row) => row.p));
   const places: AdminPlace[] = rows
     .filter((row) => row.l === UNIT_LEVEL || row.l === COMMUNITY_LEVEL || (row.l === MUNICIPALITY_LEVEL && !withUnits.has(row.id)))
-    .map((row) => ({ id: row.id, name: row.sn ?? row.n, level: row.l === COMMUNITY_LEVEL ? COMMUNITY_LEVEL : UNIT_LEVEL, parentId: row.p }));
+    .map((row) => ({
+      id: row.id,
+      name: row.sn ?? row.n,
+      level: row.l === COMMUNITY_LEVEL ? COMMUNITY_LEVEL : UNIT_LEVEL,
+      parentId: row.p,
+      ...(row.an ? { alternateNames: row.an } : {}),
+    }));
   return { byId: new Map(rows.map((row) => [row.id, row])), index: buildAdminNameIndex(places) };
 }
 

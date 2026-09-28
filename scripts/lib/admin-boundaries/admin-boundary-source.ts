@@ -68,6 +68,8 @@ export interface HierarchyRow {
   readonly n: string;
   /** Σύντομο όνομα χωρίς πρόθεμα βαθμίδας, σε γενική («ΚΟΜΟΤΗΝΗΣ») — το διαβάζει ο κριτής του ADR-889. */
   readonly sn?: string;
+  /** Εναλλακτικά σύντομα ονόματα — η παλιά γραφή όσων διορθώθηκαν (ADR-893 §7)· τα διαβάζει ο κριτής του ADR-889. */
+  readonly an?: readonly string[];
   readonly c: string;
   readonly l: number;
   /** Ο γονέας — τον χρειάζεται η **σύνθεση** δήμου από δημοτικές ενότητες (ADR-846 Φ4). */

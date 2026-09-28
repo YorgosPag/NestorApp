@@ -66,6 +66,13 @@ export interface AdminPlace {
    * μοιράζονται τον **ίδιο** Τ.Κ. 69100, οπότε διάλεγε τη λάθος με σιγουριά.
    */
   readonly postalCode?: string;
+  /**
+   * **Άλλα ονόματα του ΙΔΙΟΥ τόπου** (ADR-893 §7, ό,τι το OSM λέει `alt_name`) — στην **ίδια μορφή**
+   * με το `name` (πλήρες ή σύντομο, όπως το χτίζει ο καλών). Σήμερα: η παλιά γραφή της ΕΛΣΤΑΤ
+   * για τα ονόματα που **διορθώθηκαν** (`ΣΤΑΓΕΙΡΩΝ` → `Σταγίρων`) — εξωτερικές πηγές (Nominatim, ΜΑΜΑ,
+   * αποθηκευμένες διευθύνσεις) γράφουν ακόμη την παλιά, και πρέπει να βρίσκουν τον **ίδιο** τόπο.
+   */
+  readonly alternateNames?: readonly string[];
 }
 
 /** Βαθμίδα → (διπλωμένο όνομα → οι τόποι που το φέρουν). */
@@ -92,10 +99,13 @@ export function buildAdminNameIndex(places: Iterable<AdminPlace>): AdminNameInde
       byName = new Map<string, AdminPlace[]>();
       index.set(place.level, byName);
     }
-    const key = foldPlaceIdentity(place.name);
-    const bucket = byName.get(key);
-    if (bucket) bucket.push(place);
-    else byName.set(key, [place]);
+    // Κάθε όνομα του τόπου είναι κλειδί· ένα ψευδώνυμο που διπλώνεται στο ίδιο κλειδί μετρά μία φορά.
+    const keys = new Set([place.name, ...(place.alternateNames ?? [])].map(foldPlaceIdentity));
+    for (const key of keys) {
+      const bucket = byName.get(key);
+      if (bucket) bucket.push(place);
+      else byName.set(key, [place]);
+    }
   }
 
   return index;
@@ -230,11 +240,15 @@ function scopedMatches(
 
   const target = foldPlaceIdentity(label);
   const groups: (readonly AdminPlace[])[] = [];
+  // ⚠️ Ένας τόπος ζει κάτω από **κάθε** όνομά του — χωρίς αυτό, όνομα + ψευδώνυμο που ταιριάζουν
+  //    και τα δύο θα έδιναν **δύο ομάδες** για τον ίδιο τόπο, δηλαδή ψευδές «διφορούμενο».
+  const seen = new Set<string>();
 
   byName.forEach((entities, name) => {
     if (name === target) return;
     if (!matches(target, name)) return;
-    const scoped = entities.filter(within);
+    const scoped = entities.filter((entity) => within(entity) && !seen.has(entity.id));
+    for (const entity of scoped) seen.add(entity.id);
     if (scoped.length > 0) groups.push(scoped);
   });
 

@@ -1,8 +1,10 @@
 'use client';
 
 /**
- * @fileoverview **ΤΟ MINI-MAP** — κάτοψη βόρεια-πάνω, κόμβοι, σύνδεσμοι, «είστε εδώ» + κώνος θέασης (ADR-884 Φ1 · §4.8).
- * @related `lib/spatial-tour/viewer/tour-viewer-plan.ts` (όλη η γεωμετρία) · `tour-camera-store.ts`
+ * @fileoverview **ΤΟ MINI-MAP** — κάτοψη βόρεια-πάνω, κόμβοι, σύνδεσμοι, «είστε εδώ» + κώνος θέασης (ADR-884 Φ1 · §4.8 ·
+ * Φ2στ-β · §4.13).
+ * @related `lib/spatial-tour/viewer/tour-viewer-plan.ts` (όλη η γεωμετρία) · `tour-camera-store.ts` ·
+ *   `tour-panorama-source.ts` (`planImageUrl` — μόνο η πηγή ξέρει τη ρίζα των μέσων)
  * @module components/spatial-tour/viewer/TourPlanMap
  *
  * 🔑 **Ο κώνος είναι φύλλο** (`TourPlanCone`): ο **μόνος** React συνδρομητής της θέασης — ζωγραφίζει ένα `<path>` ανά καρέ·
@@ -10,7 +12,8 @@
  * 🔑 Κάθε κόμβος είναι **κουμπί** (`role="button"`, Tab, Enter/Space) — ίδιος δρόμος με τα κουμπιά του πανοράματος.
  * 🎨 Το «είστε εδώ» είναι `chart-1` (ADR-710 θέση 1 = το μπλε της μάρκας, **ίδιο και στα δύο θέματα**) — ΟΧΙ `primary`:
  *   στο σκοτεινό θέμα το `--primary` είναι ταυτόσημο με το `--card` (ADR-770), δηλαδή ο κώνος θα ήταν αόρατος.
- * ⚠️ Η εικόνα της κάτοψης (`FloorPlanRecord.fileId`) **δεν** σερβίρεται ακόμη (Φ2) — σήμερα κόμβοι + σύνδεσμοι.
+ * 🗺️ **Με εικόνα κάτοψης** (Φ2στ-β): το κάδρο **είναι** η εικόνα (σε μέτρα όταν είναι βαθμονομημένη) και οι τελείες κάθονται
+ *   στο pixel όπου τις έβαλε ο άνθρωπος· χωρίς εικόνα, το κάδρο χωρά τις τελείες (Φ1).
  */
 
 import { type KeyboardEvent, useSyncExternalStore } from 'react';
@@ -19,7 +22,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { radToDeg } from '@/lib/geometry/angle';
 import { horizontalFov, viewBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
 import type { TourViewerGraph, ViewerLevelEntry, ViewerStop } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
-import { PLAN_CONE_RADIUS_M, conePath, planFrame, toPlanSvg } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
+import { PLAN_CONE_RADIUS_M, conePath, imagePlanFrame, planFrame, toPlanSvg, type PlanFrame } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
 import type { TourPoint } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
@@ -47,6 +50,8 @@ export interface TourPlanMapProps {
   readonly currentNodeId: string | null;
   readonly camera: TourCameraStore;
   readonly onGo: (nodeId: string) => void;
+  /** Η εικόνα της κάτοψης του ορόφου (από την πηγή) — `null` ⇒ μόνο τελείες. */
+  readonly planImageUrl: string | null;
 }
 
 interface PlacedStop {
@@ -79,11 +84,17 @@ function PlanLinks({ graph, stops }: { readonly graph: TourViewerGraph; readonly
   );
 }
 
-export function TourPlanMap({ graph, level, currentNodeId, camera, onGo }: TourPlanMapProps) {
+/** Το κάδρο: η εικόνα της κάτοψης όταν υπάρχει, αλλιώς όσο χρειάζεται για τις τελείες. */
+function frameOf(level: ViewerLevelEntry, stops: readonly PlacedStop[], planImageUrl: string | null): PlanFrame | null {
+  if (level.plan !== null && planImageUrl !== null) return imagePlanFrame(level.plan.image, level.plan.metresPerPixel);
+  return planFrame(stops.map((s) => s.point));
+}
+
+export function TourPlanMap({ graph, level, currentNodeId, camera, onGo, planImageUrl }: TourPlanMapProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const nameOf = useStopNames(graph);
   const stops = positioned(graph, level);
-  const frame = planFrame(stops.map((s) => s.point));
+  const frame = frameOf(level, stops, planImageUrl);
   if (frame === null) return null;
   const current = currentNodeId === null ? undefined : graph.stops.get(currentNodeId);
   const activate = (e: KeyboardEvent, nodeId: string) => {
@@ -94,6 +105,9 @@ export function TourPlanMap({ graph, level, currentNodeId, camera, onGo }: TourP
   return (
     <svg viewBox={`${frame.minX} ${frame.minY} ${frame.width} ${frame.height}`} role="group" aria-label={t(TOUR_VIEWER_KEYS.plan)}
       className="h-full w-full">
+      {planImageUrl !== null && level.plan !== null && (
+        <image href={planImageUrl} x={0} y={0} width={frame.width} height={frame.height} preserveAspectRatio="none" aria-hidden />
+      )}
       <PlanLinks graph={graph} stops={stops} />
       {current !== undefined && current.levelId === level.id && <TourPlanCone camera={camera} at={current} />}
       {stops.map(({ entry: s, point }) => {

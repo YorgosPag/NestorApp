@@ -170,3 +170,56 @@ describe('Χ — ο χώρος ενός σημείου μέσα από τον Ε
     expect((await readTour()).revision).toBe(4);
   });
 });
+
+describe('Κ — κάτοψη, κλίμακα, θέση, προσανατολισμός (Φ2στ-β · §4.13)', () => {
+  const NONE = { source: 'none', state: 'active', fileId: null, approvedBy: null, approvedAt: null };
+  const PLACED_NODES = [
+    { id: 'tnod_a', levelKey: L0, position: null, links: [{ toNodeId: 'tnod_b', via: 'manual', bearingRad: 1 }] },
+    { id: 'tnod_b', levelKey: L0, position: null, links: [{ toNodeId: 'tnod_a', via: 'manual', bearingRad: 4 }] },
+  ];
+
+  beforeEach(() => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ levels: [{ key: L0, floorPlans: [NONE] }], nodes: PLACED_NODES }) });
+    kit.seedCollection(CAPTURES, { tcap_1: captureDoc({ nodeId: 'tnod_a', headingRad: 0.5 }), tcap_2: captureDoc({ nodeId: 'tnod_b' }) });
+  });
+
+  it('orient: η λήψη παίρνει νέα κατεύθυνση (manual) ΚΑΙ τα βελάκια του σημείου στρέφονται κατά την ίδια Δ — μία συναλλαγή', async () => {
+    expect(await write({ op: 'orient', captureId: 'tcap_1', headingRad: 1.5 })).toEqual({ kind: 'written', revision: 4 });
+    const capture = await readCapture('tcap_1');
+    expect(capture.headingRad).toBeCloseTo(1.5);
+    expect(capture.headingSource).toBe('manual');
+    const tour = await readTour();
+    expect(tour.nodes.find((n) => n.id === 'tnod_a')?.links[0].bearingRad).toBeCloseTo(2);
+    expect(tour.nodes.find((n) => n.id === 'tnod_b')?.links[0].bearingRad).toBe(4);
+  });
+
+  it('orient σε ατοποθέτητη λήψη ⇒ capture-unplaced, καμία εγγραφή', async () => {
+    kit.seedCollection(CAPTURES, { tcap_3: captureDoc() });
+    expect(await write({ op: 'orient', captureId: 'tcap_3', headingRad: 1 })).toEqual({ kind: 'refused', reason: 'capture-unplaced' });
+    expect((await readTour()).revision).toBe(3);
+  });
+
+  it('θέση χωρίς βαθμονομημένη κάτοψη ⇒ plan-uncalibrated · κλίμακα χωρίς εικόνα ⇒ plan-absent', async () => {
+    expect(await write({ op: 'position', nodeId: 'tnod_a', point: { x: 1, y: -1 } })).toEqual({ kind: 'refused', reason: 'plan-uncalibrated' });
+    expect(await write({ op: 'calibrate', levelKey: L0, metresPerPixel: 0.02 })).toEqual({ kind: 'refused', reason: 'plan-absent' });
+    expect((await readTour()).revision).toBe(3);
+  });
+
+  it('κάτοψη από αρχείο ΑΛΛΟΥ ακινήτου ⇒ plan-not-eligible (ο ίδιος κριτής με τη λίστα της οθόνης)', async () => {
+    kit.seedCollection(COLLECTIONS.FILES, {
+      file_other: {
+        companyId: AGENCY, entityType: 'property', entityId: 'prop_OTHER', category: 'floorplans', domain: 'sales', status: 'ready',
+        contentType: 'image/png', storagePath: 'companies/x/plan.png', displayName: 'Κάτοψη', originalFilename: 'plan.png', ext: 'png',
+        createdAt: '2026-09-01T10:00:00.000Z', createdBy: 'boris',
+      },
+    });
+    const pick: TourGraphCommand = { op: 'floorplan', levelKey: L0, plan: { fileId: 'file_other', source: 'engineer' } };
+    expect(await write(pick)).toEqual({ kind: 'refused', reason: 'plan-not-eligible' });
+    expect(await write({ ...pick, plan: { fileId: 'file_missing', source: 'engineer' } })).toEqual({ kind: 'refused', reason: 'plan-not-eligible' });
+    expect((await readTour()).revision).toBe(3);
+  });
+
+  it('«χωρίς κάτοψη» σε όροφο που ήδη δεν έχει ⇒ unchanged', async () => {
+    expect(await write({ op: 'floorplan', levelKey: L0, plan: null })).toEqual({ kind: 'unchanged', revision: 3 });
+  });
+});

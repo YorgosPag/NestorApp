@@ -159,6 +159,16 @@ export function splitAdminPrefix(name: string): AdminPrefixSplit | null {
   return null;
 }
 
+/**
+ * **Ένα σύντομο όνομα με το πρόθεμα βαθμίδας ενός πλήρους** — «Δημοτική Ενότητα Σταγίρων-Ακάνθου» +
+ * «ΣΤΑΓΕΙΡΩΝ-ΑΚΑΝΘΟΥ» → «Δημοτική Ενότητα ΣΤΑΓΕΙΡΩΝ-ΑΚΑΝΘΟΥ». Έτσι τα εναλλακτικά ονόματα (`an`, σύντομα
+ * όπως το `sn`) μπαίνουν σε ευρετήριο **πλήρων** ονομάτων με την ίδια δήλωση βαθμίδας (ADR-893 §7).
+ */
+export function withAdminPrefixOf(fullName: string, shortName: string): string {
+  const split = splitAdminPrefix(fullName);
+  return split === null ? shortName : `${split.written} ${shortName}`;
+}
+
 /** Αφαιρεί το διοικητικό πρόθεμα: «Δήμος Λαγκαδά» / «ΔΗΜΟΣ ΛΑΓΚΑΔΑ» → «Λαγκαδά» / «ΛΑΓΚΑΔΑ». */
 export function stripGreekAdminPrefix(name: string): string {
   return splitAdminPrefix(name)?.rest ?? name.trim();

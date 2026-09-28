@@ -16,11 +16,11 @@
 
 import { useAuthOptional } from '@/auth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import type { TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { loginHref } from '@/lib/routes/return-path';
 import { SwitchAccountButton } from '@/components/workspace-invite/SwitchAccount';
 
-import { TOUR_REFUSAL_KEY } from './spatial-tour-labels';
+import { TOUR_VIEW_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
 import TourAccessCard from './TourAccessCard';
 import { VIEWER_KEYS } from './tour-access-labels';
@@ -37,13 +37,13 @@ function SignedInAs({ email, returnPath }: { readonly email: string; readonly re
 }
 
 export function TourViewRefusal({ reason, listingId, returnPath }: {
-  readonly reason: TourRefusalName;
+  readonly reason: TourViewSessionRefusal;
   readonly listingId: string;
   readonly returnPath: string;
 }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const email = useAuthOptional()?.user?.email ?? null;
-  const verdict = <p className="text-sm text-destructive" role="alert">{t(TOUR_REFUSAL_KEY[reason])}</p>;
+  const verdict = <p className="text-sm text-destructive" role="alert">{t(TOUR_VIEW_REFUSAL_KEY[reason])}</p>;
   return (
     <section className="space-y-4">
       <TourAccessCard listingId={listingId} returnPath={returnPath} whenHidden={verdict} />

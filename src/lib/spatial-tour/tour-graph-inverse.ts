@@ -12,11 +12,19 @@
  * οθόνη ζητά **επιβεβαίωση πριν**, όχι αναίρεση μετά.
  */
 
-import type { SpatialTour, TourLink } from '@/types/spatial-tour';
+import { isFloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
+import type { SpatialTour, TourLevelKey, TourLink } from '@/types/spatial-tour';
 
+import { levelKeyId } from './spatial-tour-graph';
 import type { TourGraphCommand } from './tour-graph-edit';
+import { activeFloorPlan } from './tour-plan-frame';
 
-type Graph = Pick<SpatialTour, 'nodes'>;
+type Graph = Pick<SpatialTour, 'nodes'> & Partial<Pick<SpatialTour, 'levels'>>;
+
+/** Ό,τι δεν ζει στον γράφο αλλά χρειάζεται μια αναίρεση — η κατεύθυνση μιας λήψης **πριν** την εντολή `orient`. */
+export interface TourInverseContext {
+  readonly headingOf?: (captureId: string) => number | undefined;
+}
 
 function linkOf(graph: Graph, from: string, to: string): TourLink | null {
   return graph.nodes.find((node) => node.id === from)?.links.find((link) => link.toNodeId === to) ?? null;
@@ -41,7 +49,7 @@ function restorePair(graph: Graph, a: string, b: string): readonly TourGraphComm
  * αντιστροφή (αφαίρεση λήψης). Κενός πίνακας δεν επιστρέφεται ποτέ: «τίποτα να αναιρεθεί» είναι ευθύνη του καλούντος
  * (απάντηση `changed: false`).
  */
-export function inverseOf(command: TourGraphCommand, before: Graph): readonly TourGraphCommand[] | null {
+export function inverseOf(command: TourGraphCommand, before: Graph, context: TourInverseContext = {}): readonly TourGraphCommand[] | null {
   switch (command.op) {
     case 'place': return [{ op: 'unplace', captureId: command.captureId }];
     case 'unplace': return null;
@@ -52,5 +60,51 @@ export function inverseOf(command: TourGraphCommand, before: Graph): readonly To
       const room = before.nodes.find((node) => node.id === command.nodeId)?.room ?? null;
       return [{ op: 'name', nodeId: command.nodeId, room: room === null ? null : { types: room.types, label: room.label } }];
     }
+    case 'position': {
+      const position = before.nodes.find((node) => node.id === command.nodeId)?.position ?? null;
+      return [{ op: 'position', nodeId: command.nodeId, point: position === null ? null : { x: position.x, y: position.y } }];
+    }
+    case 'calibrate': return restoreCalibration(before, command.levelKey);
+    case 'floorplan': return restoreFloorPlan(before, command.levelKey);
+    case 'orient': {
+      const heading = context.headingOf?.(command.captureId);
+      return heading === undefined ? null : [{ op: 'orient', captureId: command.captureId, headingRad: heading }];
+    }
   }
+}
+
+/** Οι θέσεις του ορόφου όπως ήταν — μία εντολή ανά τοποθετημένο σημείο. */
+function restorePositions(before: Graph, key: TourLevelKey): TourGraphCommand[] {
+  return before.nodes.flatMap((node) => (levelKeyId(node.levelKey) !== levelKeyId(key) || node.position === null ? [] : [{
+    op: 'position' as const, nodeId: node.id, point: { x: node.position.x, y: node.position.y },
+  }]));
+}
+
+function scaleBefore(before: Graph, key: TourLevelKey): number | null | undefined {
+  const level = before.levels?.find((l) => levelKeyId(l.key) === levelKeyId(key));
+  return level === undefined ? undefined : activeFloorPlan(level)?.scale?.metresPerPixel ?? null;
+}
+
+/**
+ * Η κλίμακα όπως ήταν. Αρκεί **μία** εντολή: η ξανακλιμάκωση είναι αντιστρέψιμη (οι τελείες ξαναγυρίζουν στο ίδιο pixel),
+ * και χωρίς προηγούμενη κλίμακα θέσεις δεν υπήρχαν.
+ */
+function restoreCalibration(before: Graph, key: TourLevelKey): readonly TourGraphCommand[] | null {
+  const metresPerPixel = scaleBefore(before, key);
+  return metresPerPixel === undefined ? null : [{ op: 'calibrate', levelKey: key, metresPerPixel }];
+}
+
+/**
+ * Η κάτοψη όπως ήταν, **με** την κλίμακα και τις θέσεις της (η αλλαγή κάτοψης τις έσβησε). Κάτοψη που δεν τη διαλέγει
+ * άνθρωπος (σάρωση · εκτίμηση) δεν ξαναδιαλέγεται από φόρμα ⇒ καμία πιστή αναίρεση (`null`).
+ */
+function restoreFloorPlan(before: Graph, key: TourLevelKey): readonly TourGraphCommand[] | null {
+  const level = before.levels?.find((l) => levelKeyId(l.key) === levelKeyId(key));
+  const active = level === undefined ? null : activeFloorPlan(level);
+  if (active === null) return null;
+  if (active.source === 'none' || active.fileId === null) return [{ op: 'floorplan', levelKey: key, plan: null }];
+  if (!isFloorPlanDeclarableSource(active.source)) return null;
+  const commands: TourGraphCommand[] = [{ op: 'floorplan', levelKey: key, plan: { fileId: active.fileId, source: active.source } }];
+  if (active.scale != null) commands.push({ op: 'calibrate', levelKey: key, metresPerPixel: active.scale.metresPerPixel });
+  return [...commands, ...restorePositions(before, key)];
 }

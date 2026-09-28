@@ -21,19 +21,40 @@ import { CalibrateScaleDialog } from '../CalibrateScaleDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 const mockPost = apiClient.post as jest.Mock;
 
+/**
+ * 🔴 ADR-884 Φ2στ-β · §4.13: η εικόνα έχει **διπλάσιο** φυσικό μέγεθος από τον καμβά (1280×840 σε 640×420). Ένα κλικ
+ * 100 pixel καμβά = 200 pixel εικόνας — αν ο διάλογος μετρούσε σε pixel καμβά (το σφάλμα ως 2026-09-27), η κλίμακα θα
+ * έβγαινε η μισή.
+ */
+class LoadedImage {
+  naturalWidth = 1280;
+  naturalHeight = 840;
+  crossOrigin = '';
+  onload: (() => void) | null = null;
+  set src(_value: string) {
+    queueMicrotask(() => this.onload?.());
+  }
+}
+
+const RealImage = global.Image;
+beforeAll(() => { global.Image = LoadedImage as unknown as typeof Image; });
+afterAll(() => { global.Image = RealImage; });
+
 function mkProps(overrides = {}) {
   return {
     open: true,
     onOpenChange: jest.fn(),
     backgroundId: 'bg-001',
-    imageSrc: null,
+    imageSrc: 'blob:plan',
     onCalibrated: jest.fn(),
     ...overrides,
   };
 }
 
-/** Simulate two canvas clicks at different positions */
-function clickCanvas(canvas: HTMLElement, x1: number, y1: number, x2: number, y2: number) {
+/** Περιμένει να «φορτώσει» η εικόνα, και κάνει δύο κλικ στον καμβά. */
+async function clickCanvas(x1: number, y1: number, x2: number, y2: number) {
+  await act(async () => { await Promise.resolve(); });
+  const canvas = document.querySelector('canvas') as HTMLElement;
   Object.defineProperty(canvas, 'width', { value: 640, configurable: true });
   Object.defineProperty(canvas, 'height', { value: 420, configurable: true });
   jest.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(
@@ -41,6 +62,10 @@ function clickCanvas(canvas: HTMLElement, x1: number, y1: number, x2: number, y2
   );
   fireEvent.click(canvas, { clientX: x1, clientY: y1 });
   fireEvent.click(canvas, { clientX: x2, clientY: y2 });
+}
+
+function typeDistance(value: string) {
+  fireEvent.change(document.getElementById('cal-distance') as HTMLInputElement, { target: { value } });
 }
 
 describe('CalibrateScaleDialog', () => {
@@ -59,65 +84,63 @@ describe('CalibrateScaleDialog', () => {
     expect(saveBtn).toBeDisabled();
   });
 
-  it('2-click + distance → POST called with computed scale', async () => {
+  it('2-click + distance → POST with the scale in IMAGE pixels (not canvas pixels)', async () => {
     mockPost.mockResolvedValueOnce({});
     const onCalibrated = jest.fn();
     const onOpenChange = jest.fn();
     render(<CalibrateScaleDialog {...mkProps({ onCalibrated, onOpenChange })} />);
 
-    const canvas = document.querySelector('canvas') as HTMLElement;
-    clickCanvas(canvas, 100, 100, 200, 200);
-
-    const distInput = document.getElementById('cal-distance') as HTMLInputElement;
-    fireEvent.change(distInput, { target: { value: '1' } });
+    // 300 pixel καμβά οριζόντια = 600 pixel εικόνας · 3 μέτρα ⇒ 200 pixel εικόνας ανά μέτρο.
+    await clickCanvas(100, 200, 400, 200);
+    typeDistance('3');
 
     const saveBtn = screen.getByText('floorplan.calibrate.save');
     expect(saveBtn).not.toBeDisabled();
-
-    await act(async () => {
-      fireEvent.click(saveBtn);
-    });
+    await act(async () => { fireEvent.click(saveBtn); });
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(1));
     const [url, body] = mockPost.mock.calls[0] as [string, { scale: { unitsPerMeter: number } }];
     expect(url).toContain('bg-001');
-    expect(body.scale.unitsPerMeter).toBeGreaterThan(0);
+    expect(body.scale.unitsPerMeter).toBeCloseTo(200);
     expect(onCalibrated).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('onSave instead of backgroundId: the consumer persists, no POST', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    render(<CalibrateScaleDialog open onOpenChange={jest.fn()} imageSrc="blob:plan" onSave={onSave} />);
+    await clickCanvas(100, 200, 400, 200);
+    typeDistance('300');
+    await act(async () => { fireEvent.click(screen.getByText('floorplan.calibrate.save')); });
+    // 600 pixel εικόνας για 300 m ⇒ 2 pixel εικόνας ανά μέτρο.
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toBeCloseTo(2);
+    expect(mockPost).not.toHaveBeenCalled();
   });
 
   it('shows error message when POST rejects', async () => {
     mockPost.mockRejectedValueOnce(new Error('network failure'));
     render(<CalibrateScaleDialog {...mkProps()} />);
-
-    const canvas = document.querySelector('canvas') as HTMLElement;
-    clickCanvas(canvas, 100, 100, 200, 200);
-
-    const distInput = document.getElementById('cal-distance') as HTMLInputElement;
-    fireEvent.change(distInput, { target: { value: '1' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('floorplan.calibrate.save'));
-    });
-
+    await clickCanvas(100, 100, 200, 200);
+    typeDistance('1');
+    await act(async () => { fireEvent.click(screen.getByText('floorplan.calibrate.save')); });
     await waitFor(() => expect(screen.getByText('network failure')).toBeInTheDocument());
   });
 
   it('zero-distance points shows error without POST', async () => {
     render(<CalibrateScaleDialog {...mkProps()} />);
-
-    const canvas = document.querySelector('canvas') as HTMLElement;
     // Both clicks same pixel → dist = 0
-    clickCanvas(canvas, 100, 100, 100, 100);
-
-    const distInput = document.getElementById('cal-distance') as HTMLInputElement;
-    fireEvent.change(distInput, { target: { value: '1' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('floorplan.calibrate.save'));
-    });
-
+    await clickCanvas(100, 100, 100, 100);
+    typeDistance('1');
+    await act(async () => { fireEvent.click(screen.getByText('floorplan.calibrate.save')); });
     expect(screen.getByText('floorplan.calibrate.errorZeroDistance')).toBeInTheDocument();
     expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it('without a loaded image a click is ignored — there is no image pixel to measure', async () => {
+    render(<CalibrateScaleDialog {...mkProps({ imageSrc: null })} />);
+    await clickCanvas(100, 100, 200, 200);
+    typeDistance('1');
+    expect(screen.getByText('floorplan.calibrate.save')).toBeDisabled();
   });
 });

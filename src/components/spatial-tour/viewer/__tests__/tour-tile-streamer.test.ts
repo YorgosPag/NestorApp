@@ -45,6 +45,7 @@ function harness(concurrency = 2, viewportPx = 700) {
   } as unknown as TourPanoramaEngine;
   const source: TourPanoramaSource = {
     base: jest.fn(async () => ({}) as never),
+    planImageUrl: () => null,
     tiles: {
       levels: (stop) => tilesetLevels(stop.faceSize),
       tile: (stop, address, signal) => new Promise<TourFaceImage>((resolve, reject) => {

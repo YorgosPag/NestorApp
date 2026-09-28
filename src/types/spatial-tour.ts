@@ -27,6 +27,7 @@ import type {
   TourAccessRequestState,
   TourCaptureSource,
   TourGrantScope,
+  TourHeadingSource,
   TourLinkVia,
   TourMilestone,
   TourRoomSource,
@@ -55,6 +56,26 @@ export type TourLevelKey =
   /** Ακίνητο χωρίς BIM (μεταπώληση): σειρά ορόφου. */
   | { readonly kind: 'local'; readonly ordinal: number };
 
+/**
+ * **Η εικόνα μιας κάτοψης όπως την ετοίμασε ο διακομιστής** (ADR-884 Φ2στ-β · §4.13): διαστάσεις του πρωτότυπου σε pixel
+ * και το αποτύπωμα των bytes — από αυτό **παράγεται** η διεύθυνση του παραγώγου (`tour-plan-layout.ts`), δεν αποθηκεύεται.
+ */
+export interface FloorPlanImage {
+  readonly width: number;
+  readonly height: number;
+  readonly contentHash: string;
+}
+
+/**
+ * **Η κλίμακα μιας κάτοψης** — από βαθμονόμηση «δύο σημεία + γνωστή απόσταση» (πρότυπο magicplan/CAD). Χωρίς αυτήν
+ * **κανένα** σημείο δεν τοποθετείται: μια μαντεμένη κλίμακα θα έδινε «μέτρα» που δεν είναι μέτρα.
+ */
+export interface FloorPlanScale {
+  readonly metresPerPixel: number;
+  readonly calibratedBy: string;
+  readonly calibratedAt: string;
+}
+
 /** Μία κάτοψη στην ιστορία ενός ορόφου — αναβάθμιση **μόνο** με έγκριση, ποτέ σιωπηλή (§12 Δ5). */
 export interface FloorPlanRecord {
   readonly source: FloorPlanSource;
@@ -63,6 +84,10 @@ export interface FloorPlanRecord {
   readonly fileId: string | null;
   readonly approvedBy: string | null;
   readonly approvedAt: string | null;
+  /** Απών/`null` ⇒ δεν ετοιμάστηκε εικόνα (πηγή `none` ή έγγραφο πριν τη Φ2στ-β). */
+  readonly image?: FloorPlanImage | null;
+  /** Απών/`null` ⇒ αβαθμονόμητη: η κάτοψη **φαίνεται**, αλλά σημεία δεν τοποθετούνται πάνω της. */
+  readonly scale?: FloorPlanScale | null;
 }
 
 export interface TourLevel {
@@ -164,6 +189,8 @@ export interface TourCapture {
   /** Ο άξονας του χρονολογίου. */
   readonly capturedAt: string;
   readonly headingRad: number;
+  /** Από πού ήρθε το `headingRad` — απών ⇒ `device` (Φ2στ-β · §4.13). Το γράφει **μόνο** η εντολή `orient`. */
+  readonly headingSource?: TourHeadingSource;
   readonly source: TourCaptureSource;
   readonly provenance: TourCaptureProvenance;
   /** **Υποχρεωτικό** για `virtual-staging`/`design-study`: η `as-built` που «ντύνει» (αναλλοίωτο #1). */

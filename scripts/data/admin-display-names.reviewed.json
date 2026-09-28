@@ -1,5 +1,5 @@
 {
- "$doc": "ADR-893 — επιμελημένα ονόματα εμφάνισης. Κάθε γραμμή: βαθμίδα (l), κωδικός (c), το όνομα ΧΩΡΙΣ πρόθεμα βαθμίδας όπως γράφεται (name), και η απόδειξη (evidence). Κερδίζει νόμο και Wikidata, αλλά περνά τον ίδιο έλεγχο: ίδιες λέξεις με το επίσημο όνομα + μονοτονικό.",
+ "$doc": "ADR-893 — επιμελημένα ονόματα εμφάνισης. Κάθε γραμμή: βαθμίδα (l), κωδικός (c), το όνομα ΧΩΡΙΣ πρόθεμα βαθμίδας όπως γράφεται (name), η απόδειξη (evidence) και — όπου αυτόματη πηγή λέει άλλο — ΓΙΑΤΙ διαφωνούμε (disputes, υποχρεωτικό). Κερδίζει νόμο, Wikidata και ekloges, αλλά περνά τον ίδιο έλεγχο: ίδιες λέξεις με το επίσημο όνομα + μονοτονικό. Μόνο επίσημες πηγές (δήμοι, Π.Ε., .gov.gr, ΦΕΚ)· Wikipedia ≠ απόδειξη.",
  "entries": [
   {
    "l": 1,
@@ -45,9 +45,40 @@
   },
   {
    "l": 5,
+   "c": "0802",
+   "name": "Αλεξάνδρειας",
+   "evidence": "https://www.alexandria.gr/ — «Δήμος Αλεξάνδρειας» (επίσημο site του δήμου· «Αλεξάνδρειας» ×33, «Αλεξανδρείας» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "ekloges-ypes": "ekloges.ypes.gr: «Αλεξανδρείας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 5,
+   "c": "1205",
+   "name": "Ηράκλειας",
+   "evidence": "https://dimosiraklias.gr/ — «Η διαδικτυακή πήλη [sic] της Ηράκλειας», «Διατελέσαντες Δήμαρχοι Ηράκλειας» (επίσημο site του δήμου· ×14 έναντι «Ηρακλείας» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ηρακλείας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)",
+    "wikidata": "ετικέτα Wikidata: «Ηρακλείας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 5,
    "c": "3802",
    "name": "Ακτίου - Βόνιτσας",
-   "evidence": "https://aktiovonitsa.gov.gr/ — municipality's own official website self-titled \"Δήμος Ακτίου - Βόνιτσας\"; also https://el.wikipedia.org/wiki/Δήμος_Ακτίου_-_Βόνιτσας uses the same accentuation (stress on -τί-)."
+   "evidence": "https://aktiovonitsa.gov.gr/ — municipality's own official website self-titled \"Δήμος Ακτίου - Βόνιτσας\"; also https://el.wikipedia.org/wiki/Δήμος_Ακτίου_-_Βόνιτσας uses the same accentuation (stress on -τί-).",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Άκτιου - Βόνιτσας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 5,
+   "c": "4305",
+   "name": "Μονεμβασίας",
+   "evidence": "https://monemvasia.gov.gr/ — τίτλος «Δήμος Μονεμβασίας» (επίσημο site του δήμου· «Μονεμβασίας» ×24, «Μονεμβασιάς» ×5 — ο ίδιος ο δήμος γράφει και τις δύο, ο τίτλος του την πρώτη, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Μονεμβασιάς» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 5,
@@ -65,7 +96,10 @@
    "l": 5,
    "c": "7203",
    "name": "Οροπεδίου Λασιθίου",
-   "evidence": "https://lasithi.gov.gr/ — official municipal website; https://el.wikipedia.org/wiki/Δήμος_Οροπεδίου_Λασιθίου — Wikipedia article title, stress on -δί- (Ο-ρο-πε-ΔΙ-ου)."
+   "evidence": "https://lasithi.gov.gr/ — official municipal website; https://el.wikipedia.org/wiki/Δήμος_Οροπεδίου_Λασιθίου — Wikipedia article title, stress on -δί- (Ο-ρο-πε-ΔΙ-ου).",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Οροπέδιου Λασιθίου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 5,
@@ -119,25 +153,70 @@
    "l": 6,
    "c": "070304",
    "name": "Αρέθουσας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2107/ — «Αρέθουσας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2107/ — «Αρέθουσας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Αρεθούσας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "070905",
    "name": "Κορωνείας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2123/ — «Κορωνείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2123/ — «Κορωνείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "wikidata": "ετικέτα Wikidata: «Κορώνειας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "080303",
    "name": "Ειρηνούπολης",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1808/ — «Ειρηνούπολης» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1808/ — «Ειρηνούπολης» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ειρηνουπόλης» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "140203",
+   "name": "Πενταλόφου",
+   "evidence": "https://voio.gr/borough/pentalofos/ — «Δ.Ε. Πενταλόφου – ΔΗΜΟΣ ΒΟΙΟΥ» (επίσημο site του δήμου· ×5 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Πεντάλοφου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "150106",
+   "name": "Δοτσικού",
+   "evidence": "https://dimosgrevenon.gr/index.php?Itemid=15&catid=1%3A2011-08-29-21-11-05&id=913%3A-15000000-------&option=com_content&view=article — «Αναβάθμιση οικισμού Δοτσικού» (επίσημο site του δήμου· ×4 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Δότσικου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "150111",
    "name": "Σαμαρίνας",
    "evidence": "https://www.11888.gr/dhmosies-uphresies/60290168/ titled \"Δημοτική Ενότητα Σαμαρίνας\" (Δήμος Γρεβενών)."
+  },
+  {
+   "l": 6,
+   "c": "160108",
+   "name": "Μακεδνών",
+   "evidence": "https://kastoria.gov.gr/domh/voithia-sto-spiti/ — «Δημοτικής Ενότητας Μακεδνών» · https://kastoria.gov.gr/nomiko/makednos-a-e/ — «πρώην Δήμου Μακεδνών» (επίσημο site του δήμου· «Μακέδνων» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "ekloges-ypes": "ekloges.ypes.gr: «Μακέδνων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "160109",
+   "name": "Μεσοποταμίας",
+   "evidence": "https://kastoria.gov.gr/service/antapokrites-oga/mesopotamias/ — «Μεσοποταμίας - Δήμος Καστοριάς» (επίσημο site του δήμου· ×4 έναντι «Μεσοποταμιάς» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "ekloges-ypes": "ekloges.ypes.gr: «Μεσοποταμιάς» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -161,7 +240,19 @@
    "l": 6,
    "c": "180201",
    "name": "Πραμάντων",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2235/ — «Πραμάντων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/2235/ — «Πραμάντων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Πράμαντων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "180404",
+   "name": "Παπίγκου",
+   "evidence": "https://www.zagori.gov.gr/?p=23179 — «Δημοτικού & Νηπιαγωγείου Παπίγκου» (επίσημο site του δήμου· ×4 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Πάπιγκου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -177,9 +268,21 @@
   },
   {
    "l": 6,
+   "c": "190303",
+   "name": "Θεοδωριάνων",
+   "evidence": "https://www.dhmosktzoumerkwn.gr/dhmos/dimotikes-enotites/de-theodorianon.html — «Δημοτική Ενότητα Θεοδωριάνων» (επίσημο site του δήμου· ×7 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Θεοδωριανών» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
    "c": "220203",
    "name": "Λακέρειας",
-   "evidence": "https://old.dimosagias.gr/o-dimos/dioikitiki-diarthrosi.html — official municipal website (Δήμος Αγιάς) navigation text: \"Δ. Ε. Λακέρειας\", accent on the ε before ρ."
+   "evidence": "https://old.dimosagias.gr/o-dimos/dioikitiki-diarthrosi.html — official municipal website (Δήμος Αγιάς) navigation text: \"Δ. Ε. Λακέρειας\", accent on the ε before ρ.",
+   "disputes": {
+    "wikidata": "ετικέτα Wikidata: «Λακερείας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -189,9 +292,30 @@
   },
   {
    "l": 6,
+   "c": "220309",
+   "name": "Τσαριτσάνης",
+   "evidence": "https://dimoselassonas.gr/index.php/dimotikes-enotites/d-e-tsaritsanis/1491-dimotiki-enotita-tsaritsanis — «Δημοτική Ενότητα Τσαριτσάνης» (επίσημο site του δήμου· ×6 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Τσαρίτσανης» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "230103",
+   "name": "Καλλιφωνίου",
+   "evidence": "https://dimoskarditsas.gov.gr/dimotiki-enotita-kallifoniou/ — «Δημοτική Ενότητα Καλλιφωνίου - Δήμος Καρδίτσας» (×4 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Καλλιφώνιου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
    "c": "260302",
    "name": "Αιθήκων",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/4801/ — «Αιθήκων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/4801/ — «Αιθήκων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "wikidata": "ετικέτα Wikidata: «Αιθηκών» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -203,13 +327,44 @@
    "l": 6,
    "c": "280302",
    "name": "Αντικύρας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/803/ — «Αντικύρας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/803/ — «Αντικύρας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "wikidata": "ετικέτα Wikidata: «Αντίκυρας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "320112",
+   "name": "Οθωνών",
+   "evidence": "https://corfu.gr/perioxi/dhmotikh-enothta-othwnwn/ — «Δημοτική Ενότητα Οθωνών - Δήμος Κεντρικής Κέρκυρας…» (×4 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Οθώνων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "320113",
    "name": "Παλαιοκαστριτών",
    "evidence": "https://corfu.gr/perioxi/dhmotikh-enothta-palaiokastritwn/ — official municipal website (Δήμος Κεντρικής Κέρκυρας και Διαποντίων Νήσων), page titled \"Δημοτική Ενότητα Παλαιοκαστριτών\"."
+  },
+  {
+   "l": 6,
+   "c": "350102",
+   "name": "Ελειού-Πρόνων",
+   "evidence": "https://ekloges.ypes.gr/current/stat/e/statics.js — «Ελειού-Πρόνων» · https://argostoli.gov.gr/εκδηλώσεις-στην-δ-ε-ελειού-πρόννων-έω/ — ο δήμος γράφει «Ελειού - Πρόννων» (×4, τόνος στην ΙΔΙΑ συλλαβή· «Προνών» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML). ⚠️ Ο δήμος γράφει ΔΙΠΛΟ ν — πιθανό τέταρτο λάθος γραμμάτων της ΕΛΣΤΑΤ, ADR-893 §6",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ελειού-Προνών» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "370102",
+   "name": "Βραχναιίκων",
+   "evidence": "https://e-patras.gr/el/dimotiki-enotita-brahnaiikon-koinotita-brahnaiikon — «Δημοτική Ενότητα Βραχναιίκων» (×6/0) · https://e-patras.gr/el/dimotiki-enotita-brahneikon (×2/1) — σύνολο 8 έναντι 1 (επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Βραχναίικων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)",
+    "wikidata": "ετικέτα Wikidata: «Βραχναίικων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -221,25 +376,56 @@
    "l": 6,
    "c": "370304",
    "name": "Ωλενίας",
-   "evidence": "https://ddachaias.gr/o-dimos/domi-tou-dimou/dimotiki-enotita-proin-kapodistriakos-dimos-olenias/ — «Ωλενίας» (επίσημο site του δήμου)"
+   "evidence": "https://ddachaias.gr/o-dimos/domi-tou-dimou/dimotiki-enotita-proin-kapodistriakos-dimos-olenias/ — «Ο πρώην Καποδιστριακός Δήμος Ωλενίας» (επίσημο site του δήμου· ×5 έναντι «Ωλένιας» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ωλένιας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)",
+    "ekloges-ypes": "ekloges.ypes.gr: «Ωλένιας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "370403",
+   "name": "Λεοντίου",
+   "evidence": "https://erymanthou.gov.gr/δημοτικές-ενότητες/1368-2/ — «Δ.Ε. Λεοντίου – Δήμος Ερυμάνθου» (×7 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Λεόντιου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "380201",
+   "name": "Ανακτορίου",
+   "evidence": "https://aktiovonitsa.gov.gr/επικοινωνία/ — «Ληξιαρχείο Δ.Ε. Ανακτορίου» (επίσημο site του δήμου· ×1 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ανακτόριου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "380305",
    "name": "Μακρυνείας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/215/ — «Μακρυνείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/215/ — «Μακρυνείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Μακρύνειας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "380603",
    "name": "Αποδοτίας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/208/ — «Αποδοτίας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/208/ — «Αποδοτίας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Αποδοτιάς» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "390103",
    "name": "Ιαρδάνου",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1711/ — «Ιαρδάνου» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1711/ — «Ιαρδάνου» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ιαρδανού» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -249,9 +435,30 @@
   },
   {
    "l": 6,
+   "c": "390303",
+   "name": "Βουπρασίας",
+   "evidence": "https://andravida-killini.gr/el/dimotiki-enotita-vouprasias — «Η Δημοτική Ενότητα Βουπρασίας» (×2 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Βουπρασιάς» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "400503",
+   "name": "Τυρού",
+   "evidence": "https://notiakynouria.gov.gr/node/28907 — «μίσθωση ακινήτου στην ΔΕ Τυρού» (επίσημο site του δήμου· ×8 έναντι «Τύρου» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "ekloges-ypes": "ekloges.ypes.gr: «Τύρου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
    "c": "410203",
-   "name": "Αχλαδόκαμπου",
-   "evidence": "https://argos.gov.gr/dimos/dimotikes-enotites/achladokabos/ — «Αχλαδόκαμπου» (επίσημο site του δήμου)"
+   "name": "Αχλαδοκάμπου",
+   "evidence": "https://argos.gov.gr/dimos/dioikisi/entetalmenoi-symvouloi/entetalmenos-symvoulos-gia-tin-epopteia-kai-ton-syntonismo-ton-draseon-pou-aptontai-ton-thematon-tis-dimotikis-enotitas-achladokabou/ — «Εντεταλμένος Σύμβουλος της Δημοτικής Ενότητας Αχλαδοκάμπου» (×4/0) · η παλιά απόδειξη (…/dimotikes-enotites/achladokabos/) γράφει ΚΑΙ ΤΙΣ ΔΥΟ (2/2) με τίτλο «Δημοτική Ενότητα Αχλαδοκάμπου» (επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνούν Wikidata + https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Αχλαδόκαμπου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -261,9 +468,40 @@
   },
   {
    "l": 6,
+   "c": "430107",
+   "name": "Φάριδος",
+   "evidence": "https://sparti.gov.gr/enimerosi/deltia-typou/8273-etisio-mnimosyno-yper-ton-evergeton-tis-d-e-faridos-tin-kyriaki-5-oktovriou-2025-sto-ksirokampi — «…των Ευεργετών της Δ.Ε. Φάριδος» (×4 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Φαρίδος» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)",
+    "wikidata": "ετικέτα Wikidata: «Φαρίδος» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "430403",
+   "name": "Γερονθρών",
+   "evidence": "https://www.evrotas.gov.gr/el/blog/ορισμός-δημοτικών-συμβούλων-ως-εντεταλμένων-για-τον-δήμο-ευρώτα-για-το-έτος-2025 — «της Δημοτικής Ενότητας Γερονθρών» (×2 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Γερόνθρων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "430505",
+   "name": "Μονεμβασίας",
+   "evidence": "https://monemvasia.gov.gr/ — «Δήμος Μονεμβασίας» (ο δήμος της ομώνυμης ενότητας, ×24 έναντι ×5) · https://polsxedia.ypen.gov.gr/tps_details/%CE%925_141 (ΥΠΕΝ) — «Ο Δήμος Μονεμβασίας…» (3/3, ισοπαλία) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Μονεμβασιάς» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
    "c": "440302",
    "name": "Αιπείας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/3803/ — «Αιπείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/3803/ — «Αιπείας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "wikidata": "ετικέτα Wikidata: «Αίπειας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -275,7 +513,10 @@
    "l": 6,
    "c": "450801",
    "name": "Νέας Φιλαδέλφειας",
-   "evidence": "https://dimosfx.gr/genika/ — «Νέας Φιλαδέλφειας» (επίσημο site του Δήμου Νέας Φιλαδέλφειας - Νέας Χαλκηδόνας)"
+   "evidence": "https://dimosfx.gr/genika/ — «Νέας Φιλαδέλφειας» (επίσημο site του Δήμου Νέας Φιλαδέλφειας - Νέας Χαλκηδόνας)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Νέας Φιλαδελφείας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -321,6 +562,24 @@
   },
   {
    "l": 6,
+   "c": "491104",
+   "name": "Παλαιάς Φώκαιας",
+   "evidence": "https://saronikoscity.gr/dimotikes-enotites/palaia-fokaia/ — «Παλαιάς Φώκαιας» (επίσημο site του δήμου· ×53 έναντι «Φωκαίας» ×1, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "ekloges-ypes": "ekloges.ypes.gr: «Παλαιάς Φωκαίας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "491309",
+   "name": "Συκαμίνου",
+   "evidence": "https://oropos.gov.gr/node/1440 — «Παιδικού Σταθμού Συκαμίνου» (×5/0) · https://oropos.gov.gr/node/1089 (×1/1) — σύνολο 6 έναντι 1 (επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Συκάμινου» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
    "c": "500501",
    "name": "Άνω Λιοσίων",
    "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/1101/ — «Άνω Λιοσίων» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
@@ -341,7 +600,10 @@
    "l": 6,
    "c": "510401",
    "name": "Νικαίας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/4011/ — «Νικαίας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/4011/ — «Νικαίας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "wikidata": "ετικέτα Wikidata: «Νίκαιας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
@@ -383,19 +645,45 @@
    "l": 6,
    "c": "670204",
    "name": "Ηρακλείας",
-   "evidence": "https://penaxou.gov.gr/?page_id=259 — «Δημοτική Κοινότητα Ηρακλείας» υπό «ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΗΡΑΚΛΕΙΑΣ» (επίσημο site Π.Ε. Νάξου· συμφωνεί με ΕΛΣΤΑΤ· ο νόμος σε OCR «Ηράκλειας», το Wikidata «Ηρακλειάς»)"
+   "evidence": "https://penaxou.gov.gr/?page_id=259 — «Δημοτική Κοινότητα Ηρακλείας» (Π.Ε. Νάξου· ×1 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML). ⚠️ ΧΑΜΗΛΟΤΕΡΗ ΒΕΒΑΙΟΤΗΤΑ: το site του Δήμου Νάξου (e-naxos.eu) δεν γράφει καμία μορφή· νόμος και ekloges γράφουν «Ηράκλειας», το Wikidata «Ηρακλειάς» (το νησί)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Ηράκλειας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)",
+    "wikidata": "ετικέτα Wikidata: «Ηρακλειάς» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)",
+    "ekloges-ypes": "ekloges.ypes.gr: «Ηράκλειας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
+  },
+  {
+   "l": 6,
+   "c": "710203",
+   "name": "Αστερουσίων",
+   "evidence": "https://archanonasterousion.gr/Page/Index/22 — «Δήμος Αρχανών-Αστερουσίων» (επίσημο site του δήμου· ×2 έναντι «Αστερουσιών» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML)",
+   "disputes": {
+    "ekloges-ypes": "ekloges.ypes.gr: «Αστερουσιών» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "720403",
-   "name": "Λευκής",
-   "evidence": "https://www.kallikratis.org/dimotiki-enotita-leykis/ — official Kallikratis registry, \"ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΛΕΥΚΗΣ\", part of Δήμος Σητείας (Λασίθι, Crete)."
+   "name": "Λεύκης",
+   "evidence": "https://sitia.gr/7-1-2015-αναστολή-λειτουργίας-σχολείων-στη-δ/ — «στη Δημοτική Ενότητα Λεύκης» (Δήμος Σητείας· ×3 έναντι «Λευκής» ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js. Η παλιά απόδειξη (kallikratis.org, ΚΕΦΑΛΑΙΑ) δεν έδινε τόνο"
+  },
+  {
+   "l": 6,
+   "c": "740105",
+   "name": "Κεραμιών",
+   "evidence": "https://chania.gr/dimos/neosdimos/de-kerameia/de-keramia/ — «Δημοτική Ενότητα Κεραμιών – Δήμος Χανίων» (×11 έναντι ×0, επαληθευμένο 2026-09-27 με μέτρηση ακριβούς μορφής στο ωμό HTML) · συμφωνεί το https://ekloges.ypes.gr/current/stat/e/statics.js",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Κεραμίων» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,
    "c": "740201",
    "name": "Κρυονερίδας",
-   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/5316/ — «Κρυονερίδας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)"
+   "evidence": "https://ekloges.ypes.gr/current/e/home/municipaldistricts/5316/ — «Κρυονερίδας» (Υπουργείο Εσωτερικών, ekloges.ypes.gr)",
+   "disputes": {
+    "law-3852-2010": "ν. 3852/2010 (μεταγραφή OCR Βικιθήκης): «Κρυονέριδας» — μειοψηφεί έναντι της επίσημης απόδειξης της γραμμής (evidence)"
+   }
   },
   {
    "l": 6,

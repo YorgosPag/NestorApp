@@ -3,7 +3,8 @@
  *
  * ```
  * ν. 3852/2010 (Βικιθήκη) ─┐
- * Wikidata (P1116 + τύποι) ─┼→ resolve-display-names (ίδιες λέξεις + μονοτονικό + ομοφωνία)
+ * Wikidata (P1116 + τύποι) ─┤
+ * ekloges.ypes.gr (ΥΠΕΣ)   ─┼→ resolve-display-names (ίδιες λέξεις + μονοτονικό + ομοφωνία)
  * επιμέλεια (reviewed.json) ┘      → scripts/data/admin-display-names.json   (αποφάσεις + αναφορά)
  *                                   → build:administrative-hierarchy τις εφαρμόζει
  * ```
@@ -20,6 +21,8 @@ import { join } from 'node:path';
 
 import { REPO_ROOT, readHierarchyRows } from './lib/admin-boundaries/admin-boundary-source';
 import { loadCachedSource, type CachedSourceMeta } from './lib/cached-download';
+import { loadNameCorrections, withCorrectedNames } from './lib/admin-names/apply-name-corrections';
+import { EKLOGES_SOURCE, parseEklogesStatics } from './lib/admin-names/ekloges-names';
 import { LAW_3852_SOURCE, lawHtmlToText, parseLaw3852 } from './lib/admin-names/law-3852';
 import {
   resolveDisplayNames,
@@ -44,8 +47,15 @@ function provenance(meta: CachedSourceMeta): { readonly url: string; readonly sh
   return { url: meta.url, sha256: meta.sha256, lastModified: meta.lastModified };
 }
 
+/**
+ * Οι γραμμές **με τα διορθωμένα γράμματα** (ADR-893 §7) — ώστε οι πηγές να κρίνουν το σωστό όνομα από το
+ * **πρώτο** πέρασμα (`Σταγίρων-Ακάνθου`), πριν ο μετασχηματιστής γράψει τη διόρθωση στο μητρώο.
+ */
 function registryRows(): readonly RegistryRow[] {
-  return readHierarchyRows().map((row) => ({ id: row.id, n: row.n, sn: row.sn ?? row.n, c: row.c, l: row.l, p: row.p }));
+  const rows = readHierarchyRows().map((row) => ({ id: row.id, n: row.n, sn: row.sn ?? row.n, c: row.c, l: row.l, p: row.p }));
+  const corrected = withCorrectedNames(rows, loadNameCorrections(REPO_ROOT));
+  if (corrected.problems.length > 0) throw new Error(`Διορθώσεις ονόματος: ${corrected.problems.join(' · ')}`);
+  return corrected.rows;
 }
 
 function readReviewed(): readonly ReviewedName[] {
@@ -72,10 +82,12 @@ async function main(): Promise<void> {
   const law = await fetchText(LAW_3852_SOURCE.url, 'law-3852-2010.html', 'ν. 3852/2010 (Βικιθήκη)');
   const byCode = await fetchText(WIKIDATA_QUERIES.byCode, 'wikidata-by-code.json', 'Wikidata κατά κωδικό ΕΛΣΤΑΤ');
   const byType = await fetchText(WIKIDATA_QUERIES.byType, 'wikidata-by-type.json', 'Wikidata κατά τύπο');
+  const ekloges = await fetchText(EKLOGES_SOURCE.url, 'ekloges-statics.js', 'ekloges.ypes.gr (ΥΠΕΣ)');
 
   const result = resolveDisplayNames(registryRows(), {
     law: parseLaw3852(lawHtmlToText(law.text)),
     wikidata: parseWikidataNames(JSON.parse(byCode.text), JSON.parse(byType.text)),
+    ekloges: parseEklogesStatics(ekloges.text),
     reviewed: readReviewed(),
   });
 
@@ -87,6 +99,7 @@ async function main(): Promise<void> {
       sources: [
         { ...LAW_3852_SOURCE, ...provenance(law.meta) },
         { ...WIKIDATA_SOURCE, queries: [provenance(byCode.meta), provenance(byType.meta)] },
+        { ...EKLOGES_SOURCE, ...provenance(ekloges.meta) },
         { id: 'reviewed', file: 'scripts/data/admin-display-names.reviewed.json' },
       ],
       counts,

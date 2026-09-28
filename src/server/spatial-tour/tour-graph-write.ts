@@ -17,6 +17,7 @@ import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/f
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
+import { normalizeAngleRad } from '@/lib/geometry/angle';
 import { checkTourGraph } from '@/lib/spatial-tour/spatial-tour-graph';
 import { spatialTourFromDocument, tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import {
@@ -28,11 +29,20 @@ import {
   type TourGraphCommand,
   type TourGraphEditResult,
 } from '@/lib/spatial-tour/tour-graph-edit';
+import {
+  calibrateLevel,
+  orientNode,
+  positionNode,
+  setLevelFloorPlan,
+  type FloorPlanChoice,
+  type TourEditStamp,
+} from '@/lib/spatial-tour/tour-plan-edit';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type { SpatialTour, TourCapture, TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
+import { prepareTourFloorPlan } from './tour-plan-prepare';
 
 type TourGraphWriteOutcome =
   | { readonly kind: 'written' | 'unchanged'; readonly revision: number }
@@ -42,6 +52,19 @@ interface TxContext {
   readonly tx: Transaction;
   readonly tourRef: DocumentReference;
   readonly tour: SpatialTour;
+  readonly stamp: TourEditStamp;
+  /** Η κάτοψη που ετοιμάστηκε **πριν** τη συναλλαγή (εντολή `floorplan`) — `undefined` για κάθε άλλη εντολή. */
+  readonly floorPlan?: FloorPlanChoice | null;
+}
+
+/**
+ * Η αλλαγή, και τι αλλάζει στη λήψη: ο κόμβος της (τοποθέτηση · αφαίρεση — από το `captureNodeId`) ή ρητά πεδία
+ * (προσανατολισμός).
+ */
+interface EditPlan {
+  readonly result: TourGraphEditResult;
+  readonly captureRef: DocumentReference | null;
+  readonly captureFields?: Readonly<Record<string, unknown>>;
 }
 
 async function readCapture(ctx: TxContext, captureId: string): Promise<{ readonly ref: DocumentReference; readonly capture: TourCapture } | null> {
@@ -58,16 +81,38 @@ async function othersOnNode(ctx: TxContext, nodeId: string, captureId: string): 
   return snap.docs.filter((doc) => doc.id !== captureId).length;
 }
 
-/** Η αλλαγή, και ποια λήψη αλλάζει κόμβο — ό,τι χρειάζεται για την εγγραφή. */
-async function planCommand(
-  ctx: TxContext,
-  command: TourGraphCommand,
-): Promise<{ readonly result: TourGraphEditResult; readonly captureRef: DocumentReference | null } | TourAccessRefused> {
-  if (command.op === 'link') return { result: linkNodes(ctx.tour, command.fromNodeId, command.toNodeId, command.bearingRad), captureRef: null };
-  if (command.op === 'unlink') return { result: unlinkNodes(ctx.tour, command.fromNodeId, command.toNodeId), captureRef: null };
-  if (command.op === 'name') return { result: nameNode(ctx.tour, command.nodeId, command.room), captureRef: null };
+/** Οι εντολές που αγγίζουν **μόνο** τον γράφο — καμία ανάγνωση λήψης. */
+function planGraphOnly(ctx: TxContext, command: TourGraphCommand): TourGraphEditResult | null {
+  switch (command.op) {
+    case 'link': return linkNodes(ctx.tour, command.fromNodeId, command.toNodeId, command.bearingRad);
+    case 'unlink': return unlinkNodes(ctx.tour, command.fromNodeId, command.toNodeId);
+    case 'name': return nameNode(ctx.tour, command.nodeId, command.room);
+    case 'floorplan': return setLevelFloorPlan(ctx.tour, command.levelKey, ctx.floorPlan ?? null, ctx.stamp);
+    case 'calibrate': return calibrateLevel(ctx.tour, command.levelKey, command.metresPerPixel, ctx.stamp);
+    case 'position': return positionNode(ctx.tour, command.nodeId, command.point);
+    default: return null;
+  }
+}
+
+/**
+ * **Προσανατολισμός**: η λήψη πρέπει να κάθεται σε σημείο· τα βελάκια του σημείου στρέφονται κατά τη **διαφορά** και η λήψη
+ * γράφει το νέο heading — στην **ίδια** συναλλαγή, αλλιώς τα βελάκια θα μετακινούνταν μέσα στη φωτογραφία.
+ */
+function planOrient(capture: TourCapture, ref: DocumentReference, ctx: TxContext, headingRad: number): EditPlan | TourAccessRefused {
+  if (capture.nodeId === null) return refuseTourAccess('capture-unplaced');
+  const heading = normalizeAngleRad(headingRad);
+  const result = orientNode(ctx.tour, capture.nodeId, heading - capture.headingRad);
+  return { result, captureRef: ref, captureFields: { headingRad: heading, headingSource: 'manual' } };
+}
+
+/** Η αλλαγή, και τι αλλάζει στη λήψη — ό,τι χρειάζεται για την εγγραφή. */
+async function planCommand(ctx: TxContext, command: TourGraphCommand): Promise<EditPlan | TourAccessRefused> {
+  const graphOnly = planGraphOnly(ctx, command);
+  if (graphOnly !== null) return { result: graphOnly, captureRef: null };
+  if (command.op !== 'place' && command.op !== 'unplace' && command.op !== 'orient') throw new Error(`Unplanned tour graph command: ${command.op}`);
   const found = await readCapture(ctx, command.captureId);
   if (found === null) return refuseTourAccess('capture-absent');
+  if (command.op === 'orient') return planOrient(found.capture, found.ref, ctx, command.headingRad);
   if (command.op === 'place') {
     return { result: placeCapture(ctx.tour, found.capture, command.target, enterpriseIdService.generateTourNodeId()), captureRef: found.ref };
   }
@@ -75,7 +120,7 @@ async function planCommand(
   return { result: unplaceCapture(ctx.tour, found.capture, others), captureRef: found.ref };
 }
 
-function applyEdit(ctx: TxContext, plan: { readonly result: TourGraphEditResult; readonly captureRef: DocumentReference | null }, actorUid: string): TourGraphWriteOutcome {
+function applyEdit(ctx: TxContext, plan: EditPlan): TourGraphWriteOutcome {
   const { result } = plan;
   if (result.kind === 'refused') return refuseTourAccess(result.reason);
   if (result.kind === 'unchanged') return { kind: 'unchanged', revision: ctx.tour.revision };
@@ -83,9 +128,20 @@ function applyEdit(ctx: TxContext, plan: { readonly result: TourGraphEditResult;
   if (violations.some((v) => v.kind === 'too-many-nodes')) return refuseTourAccess('graph-full');
   if (violations.length > 0) throw new Error(`Tour graph violates invariants: ${violations.map((v) => v.kind).join(',')}`);
   const revision = ctx.tour.revision + 1;
-  ctx.tx.update(ctx.tourRef, { levels: result.graph.levels, nodes: result.graph.nodes, revision, updatedAt: nowISO(), updatedBy: actorUid });
+  ctx.tx.update(ctx.tourRef, { levels: result.graph.levels, nodes: result.graph.nodes, revision, updatedAt: ctx.stamp.at, updatedBy: ctx.stamp.uid });
   if (plan.captureRef !== null && result.captureNodeId !== undefined) ctx.tx.update(plan.captureRef, { nodeId: result.captureNodeId });
+  if (plan.captureRef !== null && plan.captureFields !== undefined) ctx.tx.update(plan.captureRef, plan.captureFields);
   return { kind: 'written', revision };
+}
+
+/** Η κάτοψη της εντολής `floorplan`, κριμένη και έτοιμη — `undefined` για κάθε άλλη εντολή, `null` για «χωρίς κάτοψη». */
+async function preparedFloorPlan(
+  db: Firestore,
+  tour: SpatialTour,
+  command: TourGraphCommand,
+): Promise<FloorPlanChoice | TourAccessRefused | null | undefined> {
+  if (command.op !== 'floorplan') return undefined;
+  return command.plan === null ? null : prepareTourFloorPlan(db, tour, command.plan);
 }
 
 /** **Άλλαξε τον γράφο** — μόνο ο υπεύθυνος, σε μία συναλλαγή. */
@@ -96,13 +152,16 @@ export async function writeTourGraph(
   const managed = await locateManagedTour(db, input.subject, input.actor);
   if (managed.kind === 'refused') return managed;
   const { tourRef } = managed;
+  const floorPlan = await preparedFloorPlan(db, managed.tour, input.command);
+  if (floorPlan != null && 'kind' in floorPlan) return floorPlan;
+  const stamp: TourEditStamp = { uid: input.actor.listing.uid, at: nowISO() };
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(tourRef);
     const tour = snap.exists ? spatialTourFromDocument(snap.data(), tourRef.id) : null;
     if (tour === null) return refuseTourAccess(snap.exists ? 'tour-unreadable' : 'tour-absent');
-    const ctx: TxContext = { tx, tourRef, tour };
+    const ctx: TxContext = { tx, tourRef, tour, stamp, floorPlan };
     const plan = await planCommand(ctx, input.command);
     if ('kind' in plan) return plan;
-    return applyEdit(ctx, plan, input.actor.listing.uid);
+    return applyEdit(ctx, plan);
   });
 }

@@ -59,6 +59,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { applyDisplayNames, type DisplayNameRecord } from './lib/admin-names/apply-display-names';
+import { correctedNormalizedName, correctionOutcome, correctionTargets, loadNameCorrections } from './lib/admin-names/apply-name-corrections';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HIERARCHY_PATH = join(REPO_ROOT, 'public', 'data', 'administrative-hierarchy.json');
@@ -82,6 +83,8 @@ interface Row {
   y?: string;
   pc?: string;
   a?: string;
+  /** Εναλλακτικά σύντομα ονόματα — η παλιά γραφή όσων διορθώθηκαν (ADR-893 §7, `admin-name-corrections.json`). */
+  an?: string[];
 }
 
 interface HierarchyFile {
@@ -374,6 +377,40 @@ function verifyAgainstRegistry(rows: readonly Row[]): readonly string[] {
 }
 
 // =============================================================================
+// ΒΗΜΑ 4 — ΤΑ ΛΑΘΗ ΓΡΑΜΜΑΤΩΝ ΤΗΣ ΕΛΣΤΑΤ (ADR-893 §7)
+// =============================================================================
+
+/**
+ * Οι δηλωμένες διορθώσεις ονόματος — ιδεμποτεντ: ήδη διορθωμένη γραμμή κρατά μόνο το ψευδώνυμο.
+ * Το παλιό όνομα μπαίνει στο `an` ώστε αναζήτηση, Nominatim και ΜΑΜΑ να βρίσκουν τον ίδιο τόπο.
+ */
+function correctNames(rows: Row[]): { readonly applied: number; readonly problems: readonly string[] } {
+  const { targets, problems } = correctionTargets(rows, loadNameCorrections(REPO_ROOT));
+  const all = [...problems];
+  let applied = 0;
+  for (const { row, correction } of targets) {
+    const outcome = correctionOutcome(row, correction);
+    if (outcome.kind === 'stale') {
+      all.push(outcome.problem);
+      continue;
+    }
+    if (outcome.kind === 'apply') {
+      const nn = correctedNormalizedName(row.nn, correction);
+      if (nn === null) {
+        all.push(`διόρθωση ονόματος ${correction.l}:${correction.c}: το nn «${row.nn}» δεν περιέχει «${correction.from}»`);
+        continue;
+      }
+      row.n = outcome.n;
+      row.sn = outcome.sn;
+      row.nn = nn;
+      applied += 1;
+    }
+    row.an = [...new Set([...(row.an ?? []), correction.from])];
+  }
+  return { applied, problems: all };
+}
+
+// =============================================================================
 // Η ΕΚΤΕΛΕΣΗ
 // =============================================================================
 
@@ -392,11 +429,13 @@ function main(): void {
 
   const moved = reparentMunicipalUnits(rows);
   const attached = reattachOrphans(rows);
+  // ΠΡΙΝ από τη γραφή: τα γράμματα (ταυτότητα) διορθώνονται πρώτα, η γραφή ελέγχεται πάνω στα διορθωμένα.
+  const corrected = correctNames(rows);
   // ⚠️ ΤΕΛΕΥΤΑΙΟ: οι δήμοι ξαναχτίζονται από το μητρώο ΥΠΕΣ (κεφαλαία) σε κάθε εκτέλεση — η γραφή
   //    μπαίνει από πάνω, και ένας μπαγιάτικος πίνακας μπλοκάρει όπως κάθε άλλο πρόβλημα.
   const display = applyDisplayNames(rows, displayNames.entries);
 
-  const problems = [...display.problems, ...verify(rows)];
+  const problems = [...corrected.problems, ...display.problems, ...verify(rows)];
   if (problems.length > 0) {
     console.error(`\n❌ ΔΕΝ ΓΡΑΦΤΗΚΕ ΤΙΠΟΤΑ — ${problems.length} προβλήματα:\n`);
     for (const problem of problems.slice(0, 25)) console.error(`   • ${problem}`);
@@ -417,7 +456,8 @@ function main(): void {
       authorities: {
         tree: 'ΕΛΣΤΑΤ / Καλλικράτης (ν. 3852/2010) — κωδικός `c`, κλειδί γεωμετρίας',
         municipalities: 'ΥΠΕΣ «Κωδικοί Δήμων — Κλεισθένης» — κωδικός `y`, ύπαρξη & όνομα',
-        display: 'ADR-893 — γραφή ονομάτων βαθμίδων 1–6 (`scripts/data/admin-display-names.json`: ν. 3852/2010 · Wikidata · επιμέλεια)',
+        display: 'ADR-893 — γραφή ονομάτων βαθμίδων 1–6 (`scripts/data/admin-display-names.json`: ν. 3852/2010 · Wikidata · ekloges.ypes.gr · επιμέλεια)',
+        corrections: 'ADR-893 §7 — διορθώσεις ονόματος (`scripts/data/admin-name-corrections.json`) · παλιά γραφή στο `an`',
       },
       adr: 'ADR-846 Φάση 4',
     },
@@ -428,6 +468,7 @@ function main(): void {
   console.log(`✅ ${rows.length} γραμμές · δήμοι ${counts.municipalities}`);
   console.log(`   δημοτικές ενότητες που μετακινήθηκαν: ${moved}`);
   console.log(`   αποκομμένες γραμμές που ξαναδέθηκαν: ${attached}`);
+  console.log(`   διορθώσεις ονόματος (ADR-893 §7): ${corrected.applied}`);
   console.log(`   ονόματα με γραφή εμφάνισης (ADR-893): ${display.applied}`);
 }
 

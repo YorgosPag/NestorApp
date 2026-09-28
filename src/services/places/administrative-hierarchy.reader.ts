@@ -46,6 +46,7 @@ import type { LineageResolver } from '@/lib/agency/coverage-match';
 import { buildAdminNameIndex, type AdminPlace } from '@/lib/places/admin-name-index';
 import type { AdminIdentitySources } from '@/lib/places/admin-identity';
 import { createModuleLogger } from '@/lib/telemetry';
+import { withAdminPrefixOf } from '@/utils/address/place-name';
 
 const logger = createModuleLogger('administrative-hierarchy.reader');
 
@@ -64,6 +65,8 @@ interface RawEntity {
   readonly n: string;
   readonly l: number;
   readonly pc?: string;
+  /** Εναλλακτικά σύντομα ονόματα (ADR-893 §7) — η παλιά γραφή που το Nominatim γράφει ίσως ακόμη. */
+  readonly an?: readonly string[];
 }
 
 /**
@@ -100,6 +103,7 @@ const HIERARCHY_FILE = createServerJsonFile<HierarchyIndexes>({
         level: entity.l,
         parentId: entity.p,
         ...(entity.pc ? { postalCode: entity.pc } : {}),
+        ...(entity.an ? { alternateNames: entity.an.map((alias) => withAdminPrefixOf(entity.n, alias)) } : {}),
       });
     }
     return { parents, places, nameIndex: buildAdminNameIndex(places.values()) };

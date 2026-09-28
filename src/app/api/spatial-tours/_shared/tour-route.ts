@@ -142,6 +142,15 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   'level-absent': 422,
   /** Άγνωστος τύπος χώρου · κανένας · πάνω από 3 · όνομα πολύ μακρύ (Φ2στ, `normalizeTourRoom`). */
   'room-invalid': 422,
+  // ── Η κάτοψη (Φ2στ-β · §4.13) ──────────────────────────────────────────────
+  /** Βαθμονόμηση όροφου χωρίς εικόνα κάτοψης. */
+  'plan-absent': 409,
+  /** Θέση σε κάτοψη χωρίς κλίμακα — τα «μέτρα» θα ήταν μαντεψιά. */
+  'plan-uncalibrated': 409,
+  /** Το αρχείο δεν είναι κάτοψη αυτού του ακινήτου, ή δεν είναι εικόνα που διαβάζεται. */
+  'plan-not-eligible': 422,
+  'position-outside-plan': 422,
+  'scale-invalid': 422,
   'graph-full': 409,
 };
 

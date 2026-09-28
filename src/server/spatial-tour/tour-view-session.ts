@@ -24,12 +24,13 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, tourAccessStanding, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import { judgeTourView } from '@/lib/spatial-tour/tour-view-policy';
+import type { TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { viewerLevelsOf, type TourViewerLevel } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
 import { normalizeUnifiedShare } from '@/server/sharing/share-token-lookup';
 import type { SpatialTour, TourNode, TourSubject } from '@/types/spatial-tour';
 
-import { refuseTourAccess, tourAccessRequestRef, type TourAccessRefused } from './tour-access-shared';
+import { tourAccessRequestRef } from './tour-access-shared';
 import { locateSpatialTour } from './tour-locate';
 import { issueTourViewGrant, type TourViewGrant } from './tour-view-grant';
 import { recordTourRequestVisit } from './tour-view-trace';
@@ -58,6 +59,14 @@ export interface TourManifest {
   readonly ready: boolean;
 }
 
+/**
+ * Η άρνηση της πύλης — **στενή**, όχι το `TourAccessRefusal` όλων των θυρών: ο πελάτης θέασης χαρτογραφεί μόνο αυτές
+ * (`TOUR_VIEW_SESSION_REFUSALS`, ADR-884 Κ3β). Νέα άρνηση εδώ ⇒ δεν μεταγλωττίζεται χωρίς να μπει στο λεξιλόγιο.
+ */
+export type TourViewSessionRefused = { readonly kind: 'refused'; readonly reason: TourViewSessionRefusal };
+
+const refuseView = (reason: TourViewSessionRefusal): TourViewSessionRefused => ({ kind: 'refused', reason });
+
 export type TourViewSessionOutcome =
   | {
       readonly kind: 'granted';
@@ -66,7 +75,7 @@ export type TourViewSessionOutcome =
       readonly token: string | null;
       readonly manifest: TourManifest;
     }
-  | TourAccessRefused;
+  | TourViewSessionRefused;
 
 /** Ενεργός σύνδεσμος **αυτής** της περιήγησης; — ανάγνωση **με id**, κρίση ζωντάνιας και στόχου. */
 async function activeTourShareId(db: Firestore, shareId: string | null, tourId: string, nowMs: number): Promise<string | null> {
@@ -97,9 +106,9 @@ async function manifestOf(tour: SpatialTour, tourRef: DocumentReference, label: 
 /** **Άνοιξε μια επίσκεψη** — κρίση, κουπόνι, ίχνος (μία φορά ανά επίσκεψη), μανιφέστο. */
 export async function openTourViewSession(db: Firestore, input: TourViewSessionInput): Promise<TourViewSessionOutcome> {
   const location = await locateSpatialTour(db, input.subject);
-  if (location.kind !== 'found' || location.tour === null) return refuseTourAccess('tour-absent');
+  if (location.kind !== 'found' || location.tour === null) return refuseView('tour-absent');
   const { tour, tourRef } = location;
-  if (!isOwnedByCustody(tour.custody, location.custody)) return refuseTourAccess('tour-custody-mismatch');
+  if (!isOwnedByCustody(tour.custody, location.custody)) return refuseView('tour-custody-mismatch');
 
   const viewerUid = input.actor?.listing.uid ?? null;
   const isManager = input.actor !== null && mayManageTour(location.record, input.actor) === 'granted';
@@ -111,7 +120,7 @@ export async function openTourViewSession(db: Firestore, input: TourViewSessionI
     lifecycle: tour.lifecycle, visibility: tour.visibility, isManager, viewerUid,
     requestStanding: request.standing, requestId: request.requestId, linkShareId,
   });
-  if (verdict.kind === 'refused') return refuseTourAccess(verdict.reason);
+  if (verdict.kind === 'refused') return refuseView(verdict.reason);
 
   const grant: TourViewGrant = { tourId: tour.id, basis: verdict.basis, basisId: verdict.basisId };
   if (isNewVisit(input.presentedGrant, grant) && verdict.basis === 'request' && request.requestRef !== null) {

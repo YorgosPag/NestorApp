@@ -17,6 +17,7 @@ import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
 import { emptyAdminPath, resolveAdminPath } from '@/lib/places/admin-path';
 import { useLazySnapshot } from '@/hooks/useLazySnapshot';
 import { createModuleLogger } from '@/lib/telemetry';
+import { withAdminPrefixOf } from '@/utils/address/place-name';
 
 const logger = createModuleLogger('useAdministrativeHierarchy');
 
@@ -45,6 +46,8 @@ interface RawEntity {
   pc?: string;
   /** article (settlements only) */
   a?: string;
+  /** εναλλακτικά σύντομα ονόματα — η παλιά γραφή όσων διορθώθηκαν (ADR-893 §7) */
+  an?: readonly string[];
 }
 
 interface RawData {
@@ -84,6 +87,11 @@ export interface AdminEntity {
   level: number;
   postalCode?: string;
   article?: string;
+  /**
+   * Άλλα **πλήρη** ονόματα του ίδιου τόπου (ADR-893 §7) — ίδια μορφή με το `name`, ώστε το
+   * `buildAdminNameIndex` να τα δεικτοδοτεί όπως το όνομα. Σήμερα: η παλιά γραφή της ΕΛΣΤΑΤ.
+   */
+  alternateNames?: readonly string[];
 }
 
 /** Level numbers and their keys */
@@ -192,6 +200,7 @@ function mapRawToEntity(raw: RawEntity): AdminEntity {
   if (raw.y) entity.ypesCode = raw.y;
   if (raw.pc) entity.postalCode = raw.pc;
   if (raw.a) entity.article = raw.a;
+  if (raw.an) entity.alternateNames = raw.an.map((alias) => withAdminPrefixOf(raw.n, alias));
   return entity;
 }
 

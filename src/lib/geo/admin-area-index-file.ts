@@ -35,8 +35,13 @@ export const ADMIN_AREA_INDEX_FILE = 'data/admin-area-index.json';
  *
  * ⚠️ **Πλειάδα, όχι αντικείμενο, επίτηδες**: ~15.000 γραμμές × τέσσερα ονόματα πεδίων θα
  * ήταν ~300 KB **μόνο κλειδιά**, σε αρχείο που κατεβαίνει όταν ανοίξει το πεδίο.
+ *
+ * Το **πέμπτο** στοιχείο (προαιρετικό, ADR-893 §7) = άλλα **πλήρη** ονόματα του ίδιου τόπου — η παλιά
+ * γραφή της ΕΛΣΤΑΤ για όσα διορθώθηκαν. Μόνο όπου υπάρχει: 3 γραμμές, όχι 15.000 κενοί πίνακες.
  */
-export type AdminAreaIndexRow = readonly [id: string, name: string, level: number, parentId: string | null];
+export type AdminAreaIndexRow =
+  | readonly [id: string, name: string, level: number, parentId: string | null]
+  | readonly [id: string, name: string, level: number, parentId: string | null, alternateNames: readonly string[]];
 
 /**
  * Η βαθμίδα των **οικισμών** — η μόνη χωρίς δικό της όριο (η πηγή δίνει **σημεία**, ADR-883 §5.10).
@@ -50,6 +55,8 @@ export interface AdminArea {
   readonly name: string;
   readonly level: number;
   readonly parentId: string | null;
+  /** Άλλα ονόματα του ίδιου τόπου (ADR-893 §7) — η αναζήτηση τα βρίσκει, η οθόνη δείχνει το `name`. */
+  readonly alternateNames?: readonly string[];
 }
 
 /**
@@ -61,12 +68,18 @@ export function boundaryOwnerId(area: AdminArea): string {
   return area.level === SETTLEMENT_LEVEL && area.parentId !== null ? area.parentId : area.id;
 }
 
+function readAlternates(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.length > 0 && value.every((name) => typeof name === 'string') ? value : null;
+}
+
 function readRow(value: unknown): AdminArea | null {
-  if (!Array.isArray(value) || value.length !== 4) return null;
-  const [id, name, level, parentId] = value as unknown[];
+  if (!Array.isArray(value) || (value.length !== 4 && value.length !== 5)) return null;
+  const [id, name, level, parentId, alternates] = value as unknown[];
   if (typeof id !== 'string' || typeof name !== 'string' || typeof level !== 'number') return null;
   if (parentId !== null && typeof parentId !== 'string') return null;
-  return { id, name, level, parentId };
+  if (value.length === 4) return { id, name, level, parentId };
+  const alternateNames = readAlternates(alternates);
+  return alternateNames === null ? null : { id, name, level, parentId, alternateNames };
 }
 
 /**

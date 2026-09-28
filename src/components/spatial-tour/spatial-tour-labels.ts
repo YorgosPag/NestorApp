@@ -10,7 +10,7 @@
 
 import type { MediaLicensePurpose } from '@/constants/media-rights-vocabulary';
 import type { TourCaptureAudience, TourMilestone } from '@/constants/spatial-tour-vocabulary';
-import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import type { TourRefusalName, TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 // ⚠️ TYPE-ONLY πέρα από το σύνορο του διακομιστή — σβήνεται στη μεταγλώττιση.
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import type { TourGrantStanding } from '@/lib/spatial-tour/tour-authority';
@@ -56,7 +56,26 @@ export const TOUR_REFUSAL_KEY: Readonly<Record<TourRefusalName, string>> = {
   'node-absent': 'spatial-tour:refusal.nodeAbsent',
   'level-absent': 'spatial-tour:refusal.levelAbsent',
   'room-invalid': 'spatial-tour:refusal.roomInvalid',
+  'plan-absent': 'spatial-tour:refusal.planAbsent',
+  'plan-uncalibrated': 'spatial-tour:refusal.planUncalibrated',
+  'plan-not-eligible': 'spatial-tour:refusal.planNotEligible',
+  'position-outside-plan': 'spatial-tour:refusal.positionOutsidePlan',
+  'scale-invalid': 'spatial-tour:refusal.scaleInvalid',
   'graph-full': 'spatial-tour:refusal.graphFull',
+};
+
+/**
+ * **Οι λέξεις της ΠΥΛΗΣ ΘΕΑΣΗΣ** — μόνο όσα μπορεί να πει το `view-session` (ADR-884 Κ3β · AIP-193 λεξιλόγιο ανά λειτουργία).
+ * 🔑 Χωριστός πίνακας επειδή ο γεννήτορας του slice ακολουθεί **σύμβολα**: η δημόσια σελίδα θέασης που εισήγαγε τον
+ * {@link TOUR_REFUSAL_KEY} κατέβαζε τις λέξεις **46** αρνήσεων για τις **4** που φτάνουν (μετρημένο 2026-09-28: 73% του slice).
+ * ⛔ Ολόγραφα, ποτέ `spread`/παραγωγή από τον μεγάλο πίνακα (βλ. επικεφαλίδα)· την ισότητα με τον {@link TOUR_REFUSAL_KEY}
+ * τη φυλάει η άγκυρα `tour-view-refusal-keys.test.ts` — **ένα** κείμενο ανά άρνηση, ποτέ δεύτερη διατύπωση.
+ */
+export const TOUR_VIEW_REFUSAL_KEY: Readonly<Record<TourViewSessionRefusal, string>> = {
+  'tour-absent': 'spatial-tour:refusal.tourAbsent',
+  'tour-custody-mismatch': 'spatial-tour:refusal.tourCustodyMismatch',
+  'sign-in-required': 'spatial-tour:refusal.signInRequired',
+  'not-viewable': 'spatial-tour:refusal.notViewable',
 };
 
 /**

@@ -21,7 +21,7 @@ import { createHash } from 'node:crypto';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES, FILE_CATEGORIES, FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
+import { FILE_CATEGORIES, FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
 import { isTourCaptureAudience, isTourMilestone } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
@@ -31,6 +31,7 @@ import { PANORAMA_CONTENT_TYPE, judgePanorama } from '@/lib/spatial-tour/panoram
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { checkTourCapture } from '@/lib/spatial-tour/tour-capture-invariants';
+import { tourSubjectFileEntityType } from '@/lib/spatial-tour/tour-subject-of-listing';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isRecord } from '@/lib/type-guards';
 import { custodyKindOfScope, custodyOnly, isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
@@ -189,7 +190,7 @@ async function persistOriginal(db: Firestore, ctx: FinalizeContext, sizeBytes: n
   const { ticket, custody } = ctx;
   const { fileId, storagePath, recordBase } = buildPendingFileRecordData({
     ...custodyOnly(custody),
-    entityType: ticket.subject.kind === 'owner-property' ? ENTITY_TYPES.OWNER_PROPERTY : ENTITY_TYPES.PROPERTY,
+    entityType: tourSubjectFileEntityType(ticket.subject),
     entityId: ticket.subject.id,
     domain: FILE_DOMAINS.SALES,
     category: FILE_CATEGORIES.PANORAMAS,

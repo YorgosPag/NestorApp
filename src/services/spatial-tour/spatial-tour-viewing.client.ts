@@ -17,10 +17,10 @@ import type { TourAccessInboxRow } from '@/server/spatial-tour/tour-access-inbox
 import type { TourPresence } from '@/server/spatial-tour/tour-presence';
 import type { TourSettings, TourSettingsView } from '@/server/spatial-tour/tour-settings';
 import type { TourAccessRequestState } from '@/constants/spatial-tour-vocabulary';
-import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import { isTourViewSessionRefusal, type TourRefusalName, type TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourSubject } from '@/types/spatial-tour';
 
-import { tourCall, type TourCallResult } from './spatial-tour.client';
+import { narrowTourRefusal, tourCall, type TourCallResult } from './spatial-tour.client';
 
 const routes = API_ROUTES.SPATIAL_TOURS;
 
@@ -94,14 +94,15 @@ export function withdrawTourAccessFromScreen(subject: TourSubject): Promise<Tour
  * 🔴 Η πόρτα **χωρίς ταυτότητα** καλείται **ανώνυμα** (`PUBLIC_REQUEST`): αλλιώς ο μεταφορέας ζητά `getIdToken()` από
  *    ανύπαρκτο χρήστη και πετά 401 **πριν** φύγει το αίτημα — ο ανώνυμος παραλήπτης συνδέσμου δεν θα έβλεπε ποτέ τίποτα.
  */
-export function openTourViewSessionFromScreen(
+export async function openTourViewSessionFromScreen(
   subject: TourSubject,
   input: { readonly signedIn: boolean; readonly shareId: string | null },
-): Promise<TourCallResult<TourViewSessionView>> {
+): Promise<TourCallResult<TourViewSessionView, TourViewSessionRefusal>> {
   const body = { shareId: input.shareId };
-  return tourCall(() => input.signedIn
+  const result = await tourCall(() => input.signedIn
     ? apiClient.post<TourViewSessionView>(routes.VIEW_SESSION(subject.kind, subject.id), body)
     : apiClient.post<TourViewSessionView>(routes.VIEW_SESSION_PUBLIC(subject.kind, subject.id), body, PUBLIC_REQUEST));
+  return narrowTourRefusal(result, isTourViewSessionRefusal);
 }
 
 /**

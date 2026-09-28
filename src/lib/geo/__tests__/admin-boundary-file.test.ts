@@ -10,6 +10,7 @@ import { adminBoundaryFileName, adminBoundaryPath, placeWithinBoundary, readAdmi
 import { ADMIN_AREA_INDEX_FILE, SETTLEMENT_LEVEL, boundaryOwnerId, readAdminAreaIndex } from '../admin-area-index-file';
 import { geoJsonRings } from '../geo-geojson';
 import { isPointInGeoRings } from '../geo-ring';
+import { foldPlaceIdentity } from '@/utils/address/place-name';
 
 const PUBLIC = join(process.cwd(), 'public');
 
@@ -109,8 +110,11 @@ describe('τα παραγόμενα αρχεία (npm run build:admin-boundaries
   });
 
   it('οι δήμοι του Κλεισθένη υπάρχουν ως ΕΝΙΑΙΟ περίγραμμα (σύνθεση + διάλυση)', () => {
-    for (const name of ['ΔΗΜΟΣ ΒΟΡΕΙΑΣ ΚΕΡΚΥΡΑΣ', 'ΔΗΜΟΣ ΔΥΤΙΚΗΣ ΛΕΣΒΟΥ']) {
-      const area = [...index.values()].find((entry) => entry.level === 5 && entry.name === name);
+    for (const name of ['Δήμος Βόρειας Κέρκυρας', 'Δήμος Δυτικής Λέσβου']) {
+      // Κατά ταυτότητα, όχι κατά γραφή (ADR-893: η γραφή εμφάνισης άλλαξε, η ταυτότητα όχι).
+      const area = [...index.values()].find(
+        (entry) => entry.level === 5 && foldPlaceIdentity(entry.name) === foldPlaceIdentity(name),
+      );
       expect(area).toBeDefined();
       const boundary = readAdminBoundary(readPublic(adminBoundaryPath(area!.id)), area!.id);
       expect(boundary).not.toBeNull();

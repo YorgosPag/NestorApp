@@ -53,6 +53,7 @@ const source: TourPanoramaSource = {
     return FACES;
   }),
   tiles: { levels: () => [512], tile: jest.fn(async () => TILE) },
+  planImageUrl: (plan) => `plan:${plan.image.contentHash}`,
 };
 
 beforeAll(() => {

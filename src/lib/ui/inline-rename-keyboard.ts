@@ -15,14 +15,19 @@ import type React from 'react';
  * (DXF viewer) · PropertyDossierTitle (ADR-866 Φ1.2) · DemandTitleEditor (ADR-886). Μετακινήθηκε από το
  * `dxf-viewer/ui/utils/` στο `lib/ui/` (2026-09-18) όταν απέκτησε τον πρώτο καταναλωτή
  * έξω από το subapp — αλλιώς ο φάκελος θα ξανάγραφε το `'Escape'` literal (CHECK 3.7).
+ *
+ * 🔑 **Κάθε εστιασμένο στοιχείο με τοπικό πρόχειρο, όχι μόνο `<input>`** (2026-09-28, ADR-884 Φ2στ-β): ο χάρτης
+ * τοποθέτησης της κάτοψης (`TourPlanEditMap`, ένα `<svg>` με πληκτρολόγιο) έχει το ίδιο «Enter = κράτα το πρόχειρο ·
+ * Escape = πέτα το». Γενικός τύπος αντί για δεύτερο literal — οι υπάρχοντες καταναλωτές δεν αλλάζουν.
+ * Ο καλών ξέρει αν το πλήκτρο καταναλώθηκε από το `event.defaultPrevented`.
  */
 export interface InlineRenameKeyOptions {
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
 
-export function handleInlineRenameKey(
-  event: React.KeyboardEvent<HTMLInputElement>,
+export function handleInlineRenameKey<T extends Element>(
+  event: React.KeyboardEvent<T>,
   { onConfirm, onCancel }: InlineRenameKeyOptions,
 ): void {
   if (event.key === 'Enter') {

@@ -23,11 +23,13 @@ import { initialNode } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { PANEL_KEYS } from '../spatial-tour-labels';
+import { useStopNames } from '../viewer/useStopNames';
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { createTilePanoramaSource } from '../viewer/tile-panorama-source';
 import type { TourPanoramaSource } from '../viewer/tour-panorama-source';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 import { TourEditorRail, type TourEditorSelection } from './TourEditorRail';
+import { TourPlanPane } from './TourPlanPane';
 import { TourPointRemoval } from './TourPointRemoval';
 import { TourRoomForm } from './TourRoomForm';
 import { TourPointWorkspace, TourPreviewWorkspace } from './TourEditorWorkspaces';
@@ -66,9 +68,17 @@ function useSelection(model: TourEditorModel, data: TourEditorData) {
   return { selection, setSelection, epoch, pendingFocus };
 }
 
-function LoadedEditor({ data, actions, source }: { readonly data: TourEditorData; readonly actions: TourEditorActions; readonly source: TourPanoramaSource }) {
+interface LoadedEditorProps {
+  readonly subject: TourSubject;
+  readonly data: TourEditorData;
+  readonly actions: TourEditorActions;
+  readonly source: TourPanoramaSource;
+}
+
+function LoadedEditor({ subject, data, actions, source }: LoadedEditorProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const model = useMemo(() => buildTourEditorModel(data, data.captures), [data]);
+  const nameOf = useStopNames(model.graph);
   const { selection, setSelection, epoch, pendingFocus } = useSelection(model, data);
   const onArrive = useCallback((nodeId: string) => setSelection((prev) => (
     prev?.kind === 'point' && prev.nodeId === nodeId ? prev : { kind: 'point', nodeId })), [setSelection]);
@@ -77,12 +87,17 @@ function LoadedEditor({ data, actions, source }: { readonly data: TourEditorData
     if (!(await actions.place(captureId, target))) pendingFocus.current = null;
   };
   const { name } = actions;
-  const footer = useCallback((nodeId: string) => (
-    <>
-      <TourRoomForm key={nodeId} graph={model.graph} nodeId={nodeId} onSave={(room) => name(nodeId, room)} />
-      <TourPointRemoval model={model} nodeId={nodeId} busy={actions.busy} onUnplace={actions.unplace} />
-    </>
-  ), [model, actions.busy, actions.unplace, name]);
+  const footer = useCallback((nodeId: string) => {
+    const stop = model.graph.stops.get(nodeId)?.stop;
+    return (
+      <>
+        <TourRoomForm key={nodeId} graph={model.graph} nodeId={nodeId} onSave={(room) => name(nodeId, room)} />
+        <TourPlanPane key={`plan-${nodeId}`} subject={subject} source={source} actions={actions} nodes={data.nodes} levels={data.levels}
+          nodeId={nodeId} capture={stop === undefined ? null : { id: stop.captureId, headingRad: stop.headingRad }} nameOf={nameOf} />
+        <TourPointRemoval model={model} nodeId={nodeId} busy={actions.busy} onUnplace={actions.unplace} />
+      </>
+    );
+  }, [model, actions, name, subject, source, data.nodes, data.levels, nameOf]);
   const entry = selection?.kind === 'capture' ? model.inbox.find((e) => e.capture.id === selection.captureId) : undefined;
   const preview = entry === undefined ? null : previewGraphOf(entry.capture);
   return (
@@ -120,5 +135,5 @@ export function TourEditor({ subject }: { readonly subject: TourSubject }) {
       </p>
     );
   }
-  return <LoadedEditor data={data.load.data} actions={actions} source={source} />;
+  return <LoadedEditor subject={subject} data={data.load.data} actions={actions} source={source} />;
 }
