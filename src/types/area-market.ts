@@ -112,6 +112,53 @@ export interface AreaMarketRun {
   readonly completedAt: string;
 }
 
+// ─── Η ΜΗΝΙΑΙΑ ΣΕΙΡΑ ΖΗΤΟΥΜΕΝΩΝ (ADR-890 §13) — ένα έγγραφο ανά περιοχή ──────────────────────────────────
+
+/**
+ * Η εκδοχή του σχήματος της σειράς. Νέο **προαιρετικό** πεδίο δεν την ανεβάζει (ADR-890 §12.1)· μόνο σπάσιμο.
+ */
+export const AREA_MARKET_SERIES_SCHEMA_VERSION = 1;
+
+/** Διάμεσος €/τ.μ. (ή € ανά μονάδα, `SEGMENT_METRIC`) ανά τμήμα αγοράς. Τμήμα χωρίς αγγελία ⇒ απόν. */
+export type AskingSegmentCells = Readonly<Partial<Record<MarketSegment, StatCell>>>;
+
+/**
+ * **Ένα σημείο της σειράς = ένας ημερολογιακός μήνας.** Ορισμός του Zillow (*Median List Price*, «active at any time
+ * in the month»): η διάμεσος πάνω σε **κάθε διακριτή αγγελία που ήταν ενεργή έστω μία νύχτα του μήνα**, με την
+ * τελευταία ζητούμενή της. Ποτέ διάμεσος ημερήσιων διαμέσων — δεν είναι διάμεσος.
+ */
+export interface AreaMarketMonthPoint {
+  /** Η τελευταία νύχτα που μπήκε στο σημείο (`YYYY-MM-DD`). Για κλειστό μήνα = η τελευταία του νύχτα με αγγελίες. */
+  readonly asOf: string;
+  readonly offers: Readonly<Record<AskingOffer, AskingSegmentCells>>;
+}
+
+/** Μήνας `YYYY-MM` → σημείο. Μήνας χωρίς καμία αγγελία της περιοχής ⇒ απών (όχι σημείο με μηδενικά). */
+export type AreaMarketSeriesPoints = Readonly<Record<string, AreaMarketMonthPoint>>;
+
+/** Μία παρατήρηση του βιβλίου: το τμήμα και η τιμή μονάδας της αγγελίας, όπως τα έκρινε το `observeAsking`. */
+export interface AskingBookEntry {
+  readonly segment: MarketSegment;
+  readonly unitPrice: number;
+}
+
+/**
+ * **Το βιβλίο του ΤΡΕΧΟΝΤΟΣ μήνα** — `ταυτότητα αγγελίας → παρατήρηση` ανά προσφορά. Υπάρχει μόνο για να βγαίνει
+ * σωστή μηνιαία διάμεσος από νυχτερινές εκτελέσεις· **δεν** διαβάζεται ποτέ από τη σελίδα (`fieldMask`).
+ */
+export interface AskingMonthBook {
+  readonly month: string;
+  readonly offers: Readonly<Record<AskingOffer, Readonly<Record<string, AskingBookEntry>>>>;
+}
+
+/** Το έγγραφο `area_market_series`: μία περιοχή, όλοι οι μήνες της. */
+export interface AreaMarketSeries {
+  readonly schemaVersion: typeof AREA_MARKET_SERIES_SCHEMA_VERSION;
+  readonly areaId: string;
+  readonly points: AreaMarketSeriesPoints;
+  readonly book: AskingMonthBook;
+}
+
 // ─── Η ΣΕΛΙΔΑ `/area/[id]` — ό,τι περνά από τον διακομιστή στο client component ─────────────────────────
 
 /** Η σύνοψη όπως τη βλέπει η σελίδα: καμία ολοκληρωμένη νύχτα, ή η τελευταία (με τον γονέα για αναγωγή). */
@@ -124,6 +171,8 @@ export type AreaMarketState =
       readonly snapshot: AreaMarketSnapshot | null;
       /** Ο Δήμος μιας Δ.Ε. — για την αναγωγή κάτω από το κατώφλι. */
       readonly parent: AreaMarketSnapshot | null;
+      /** Η μηνιαία σειρά της περιοχής (ADR-890 §13) — `null` = δεν γράφτηκε ακόμη (περιοχή πριν από τη σειρά). */
+      readonly series: AreaMarketSeriesPoints | null;
     };
 
 /** Το παράθυρο ετών της πηγής (ADR-889 §5.2). */

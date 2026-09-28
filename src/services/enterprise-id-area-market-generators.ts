@@ -38,4 +38,9 @@ export abstract class AreaMarketIdGenerators extends SpatialTourIdGenerators {
   generateDeterministicAreaMarketRunId(day: string): string {
     return this.mintDeterministicV4Id(P.AREA_MARKET_RUN, day);
   }
+
+  /** Η μηνιαία σειρά ζητούμενων **μιας** περιοχής (ADR-890 §13) — μία για πάντα. */
+  generateDeterministicAreaMarketSeriesId(areaId: string): string {
+    return this.mintDeterministicV4Id(P.AREA_MARKET_SERIES, areaId);
+  }
 }

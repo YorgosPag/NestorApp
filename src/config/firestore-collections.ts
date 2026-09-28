@@ -357,6 +357,7 @@ export const COLLECTIONS = {
    * |---|---|---|
    * | `area_market_snapshots` (`amks_*`) | μία περιοχή × μία ημέρα — πλήθη, διάμεσοι, κάδοι | για πάντα (η τάση της Φ3) |
    * | `area_market_runs` (`amkr_*`) | σημάδι ολοκλήρωσης της νύχτας, γράφεται **τελευταίο** | για πάντα |
+   * | `area_market_series` (`amsr_*`) | μία περιοχή — μηνιαία σειρά ζητούμενων + βιβλίο του τρέχοντος μήνα (§13) | 60 μήνες |
    *
    * ⛔ **ΚΛΕΙΣΤΕΣ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** (`read/write: false`): γράφει **μόνο** το cron, και η σελίδα
    * `/area/[id]` αποδίδεται στον **διακομιστή** (SEO, ADR-890 §5.5), άρα κανένας πελάτης δεν χρειάζεται
@@ -364,6 +365,7 @@ export const COLLECTIONS = {
    */
   AREA_MARKET_SNAPSHOTS: process.env.NEXT_PUBLIC_AREA_MARKET_SNAPSHOTS_COLLECTION || 'area_market_snapshots',
   AREA_MARKET_RUNS: process.env.NEXT_PUBLIC_AREA_MARKET_RUNS_COLLECTION || 'area_market_runs',
+  AREA_MARKET_SERIES: process.env.NEXT_PUBLIC_AREA_MARKET_SERIES_COLLECTION || 'area_market_series',
   /**
    * ADR-777 §8.74 — **«ΤΗΝ ΚΡΑΤΗΣΑ»** (`svls_*`): μία ανά (άνθρωπο, αγγελία), ντετερμινιστική.
    *
