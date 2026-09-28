@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "946cf15c3187ed2065507facd3f96c9648ad9fd9db5b13a4016bba4122e563dd",
+  "inputsSha256": "e41824a46a587edf7331667a1f00b3ca92ca7aa51ad07b83aa09edcd6b001f87",
   "languages": [
     "el"
   ],
@@ -791,7 +791,6 @@
     "src/lib/geometry/angle.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/geometry/mesh3d/geometry-fingerprint.ts": "7fed79d40fcd2c38259d8857ba2fcda707d54cc2d3e3591403b9dbd70eed265a",
     "src/lib/geometry/mesh3d/triangle-soup.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/geometry/planar-polygon.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/geometry/scale-calibration.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/html/escape-html.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/http/client-ip.ts": "ae071cc32ee742cbf2898a86fef19568463cc20cfbc79f2c5f61be6441380842",
@@ -9401,11 +9400,11 @@
     "src/lib/geo/geo-footprint.ts": "631265aa4e623aeea3034ca8ed7c91b68600d22b0017f5bf056ccaff4a47a63a",
     "src/lib/geo/geo-freehand.ts": "afe36d6b09ad0584f5f3a78f5ae7c8893a29841ba2aab4a7903889ad7269abf4",
     "src/lib/geo/geo-interior-cover.ts": "d15419e03dd45c3202ceb225781aa050c3e81e4ca61ea69ec98f924471044a11",
-    "src/lib/geo/geo-local-frame.ts": "2f167dc263feae586e316ce5bb075f5fbd55797680cbdb4e9620170d6b51a878",
+    "src/lib/geo/geo-local-frame.ts": "f2159407e324747b99cc61e08686d46309c5a1e3ddea9dcd99e7005c2c3effa8",
     "src/lib/geo/geo-polyline-codec.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/lib/geo/geo-ring.ts": "f6003ba3244ce1d46a77f7bc2fcfa47145e8529b8844a1771cce0965b152f3b6",
     "src/lib/geo/geo-shape-relation.ts": "52b3fd6b91e33573a8b029ce033711ac2b4d4b13a8fbeaa3157ca06cfb6d07a6",
-    "src/lib/geo/geo-simplify.ts": "f6003ba3244ce1d46a77f7bc2fcfa47145e8529b8844a1771cce0965b152f3b6",
+    "src/lib/geo/geo-simplify.ts": "fe1c6ccb8636fae3e5de5757474d6f867444383c115b2a98db96f0439894a049",
     "src/lib/geo/recent-place-searches-account-model.ts": "9c8493233d50974a5ec14be3e23272d2efa16c3af62e6392dddfc445ccbbbd4b",
     "src/lib/geo/recent-place-searches-account.ts": "0ac823dfb493729aeb9c0212925adc43687e2ce59d01e24209266ad182750975",
     "src/lib/geo/recent-place-searches-device.ts": "0b671c4a830ec5fd6aeeb8a15688df6a31eaae77925c539521ffa30f78015fac",
@@ -9415,6 +9414,8 @@
     "src/lib/geocoding/address-position-types.ts": "9d4f5ef27e3afaddb30cf696e90b6123ee99bdc2f522ff9d2a406b453e1fbd5c",
     "src/lib/geocoding/geocoding-service.ts": "44e06194df3d42ae880608806942c3f96a53736d13589ca4600741274fb96ae4",
     "src/lib/geocoding/geocoding-types.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
+    "src/lib/geometry/douglas-peucker.ts": "d2cf85a13937e130e1f0a93c56e28004c7082ecf6bacc160d926b78eac2c9d52",
+    "src/lib/geometry/planar-polygon.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/geometry/scalar.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/hash/fnv1a.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/hash/sha256.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -9800,7 +9801,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 201,
     "routeBoundaries": 0,
-    "shellFiles": 869,
+    "shellFiles": 871,
     "sliceBytes": 624531
   },
   "unresolvableKeys": [

@@ -20,6 +20,7 @@
 
 import type { GeoPoint } from '@/types/geo/coordinates';
 import { EARTH_RADIUS_METERS } from './geo-distance';
+import { distanceToSegment } from '@/lib/geometry/planar-polygon';
 
 /** Σημείο σε τοπικά μέτρα — `x` κατά μήκος του παραλλήλου, `y` κατά μήκος του μεσημβρινού. */
 export interface LocalPoint {
@@ -98,15 +99,8 @@ export function fromLocalMetres(point: LocalPoint, origin: GeoPoint): GeoPoint {
  * επιτρέπεται να υποθέτει ότι κάποιος άλλος κοίταξε.
  */
 export function distanceToLocalSegment(point: LocalPoint, a: LocalPoint, b: LocalPoint): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lengthSq = dx * dx + dy * dy;
-
-  // ADR-071: η ονομασμένη `clamp01` ζει στο dxf-viewer και δεν εισάγεται από εδώ.
-  const rawT = lengthSq === 0 ? 0 : ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
-  const t = Math.min(1, Math.max(0, rawT));
-
-  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
+  // Ο επίπεδος τύπος ζει ΜΙΑ φορά (ADR-884 §4.14 Γ3): εδώ μένει μόνο το όνομα του πλαισίου σε μέτρα.
+  return distanceToSegment(point, a, b);
 }
 
 /**

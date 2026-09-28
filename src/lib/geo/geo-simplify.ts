@@ -36,7 +36,8 @@
  */
 
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
-import { distanceToLocalSegment, toLocalMetres, type LocalPoint } from './geo-local-frame';
+import { closedRingKeepMask } from '@/lib/geometry/douglas-peucker';
+import { toLocalMetres } from './geo-local-frame';
 
 /**
  * Η αρχή των αξόνων που **δεν υποτιμά ποτέ** απόσταση — δες την κεφαλίδα.
@@ -50,52 +51,6 @@ function conservativeOrigin(ring: GeoOutline): GeoPoint {
     if (Math.abs(point.lat) < Math.abs(lat)) lat = point.lat;
   }
   return { lat, lng: ring[0].lng };
-}
-
-/**
- * Σημαδεύει ποιες κορυφές του διαστήματος `[first, last]` μένουν — επαναληπτικά, με
- * στοίβα, ώστε μια ακτογραμμή 100.000 κορυφών να μην εξαντλήσει τη στοίβα κλήσεων.
- */
-function markChain(
-  points: readonly LocalPoint[],
-  first: number,
-  last: number,
-  toleranceM: number,
-  keep: boolean[],
-): void {
-  const stack: [number, number][] = [[first, last]];
-
-  while (stack.length > 0) {
-    const [start, end] = stack.pop() as [number, number];
-    let farthest = -1;
-    let farthestDistance = toleranceM;
-
-    for (let i = start + 1; i < end; i++) {
-      const distance = distanceToLocalSegment(points[i], points[start], points[end % points.length]);
-      if (distance > farthestDistance) {
-        farthestDistance = distance;
-        farthest = i;
-      }
-    }
-
-    if (farthest === -1) continue;
-    keep[farthest] = true;
-    stack.push([start, farthest], [farthest, end]);
-  }
-}
-
-/** Η κορυφή που απέχει **περισσότερο** από την πρώτη — το δεύτερο σταθερό σημείο του δακτυλίου. */
-function farthestFromFirst(points: readonly LocalPoint[]): number {
-  let index = 0;
-  let best = -1;
-  for (let i = 1; i < points.length; i++) {
-    const distance = Math.hypot(points[i].x - points[0].x, points[i].y - points[0].y);
-    if (distance > best) {
-      best = distance;
-      index = i;
-    }
-  }
-  return index;
 }
 
 /**
@@ -117,15 +72,8 @@ export function simplifyGeoRing(ring: GeoOutline, toleranceM: number): GeoOutlin
   if (ring.length < 3) return null;
   if (!(toleranceM > 0)) return ring;
 
-  const points = toLocalMetres(ring, conservativeOrigin(ring));
-  const pivot = farthestFromFirst(points);
-  const keep = new Array<boolean>(ring.length).fill(false);
-  keep[0] = true;
-  keep[pivot] = true;
-
-  markChain(points, 0, pivot, toleranceM, keep);
-  // Η δεύτερη αλυσίδα κλείνει τον κύκλο: `ring.length` αντιστοιχεί ξανά στην κορυφή 0.
-  markChain(points, pivot, ring.length, toleranceM, keep);
+  // Απλοποίηση σε τοπικά μέτρα· οι κορυφές κρατιούνται στις γεωγραφικές τους τιμές.
+  const keep = closedRingKeepMask(toLocalMetres(ring, conservativeOrigin(ring)), toleranceM);
 
   const simplified = ring.filter((_, index) => keep[index]);
   return simplified.length >= 3 ? simplified : null;

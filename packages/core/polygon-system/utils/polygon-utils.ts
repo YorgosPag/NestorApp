@@ -14,6 +14,8 @@ import type {
   PropertyLocation,
   PropertyMatchResult
 } from '../types';
+import { simplifyClosedRing, simplifyPolyline } from '@/lib/geometry/douglas-peucker';
+import { pointInPolygon, polygonArea } from '@/lib/geometry/planar-polygon';
 
 /**
  * Validate polygon structure and geometry
@@ -104,23 +106,11 @@ export function validatePolygon(polygon: UniversalPolygon): PolygonValidationRes
 }
 
 /**
- * Calculate polygon area (signed area)
+ * Calculate polygon area (unsigned — το παλιό σχόλιο έλεγε «signed», το σώμα έδινε πάντα απόλυτη τιμή).
+ * SSoT: `@/lib/geometry/planar-polygon` (ADR-884 §4.14 Γ3).
  */
 export function calculatePolygonArea(polygon: UniversalPolygon): number {
-  const points = polygon.points;
-
-  if (points.length < 3) {
-    return 0;
-  }
-
-  let area = 0;
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length;
-    area += points[i].x * points[j].y;
-    area -= points[j].x * points[i].y;
-  }
-
-  return Math.abs(area) / 2;
+  return polygonArea(polygon.points);
 }
 
 /**
@@ -250,29 +240,14 @@ export function getPolygonBounds(polygon: UniversalPolygon): {
 }
 
 /**
- * Check if point is inside polygon (ray casting algorithm)
+ * Check if point is inside polygon (ray casting algorithm — SSoT `@/lib/geometry/planar-polygon`, ADR-884 §4.14 Γ3).
+ * Ανοιχτό πολύγωνο δεν έχει «μέσα».
  */
 export function isPointInPolygon(point: PolygonPoint, polygon: UniversalPolygon): boolean {
-  if (!polygon.isClosed || polygon.points.length < 3) {
+  if (!polygon.isClosed) {
     return false;
   }
-
-  const { x, y } = point;
-  const points = polygon.points;
-  let inside = false;
-
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const xi = points[i].x;
-    const yi = points[i].y;
-    const xj = points[j].x;
-    const yj = points[j].y;
-
-    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-      inside = !inside;
-    }
-  }
-
-  return inside;
+  return pointInPolygon(point, polygon.points);
 }
 
 /**
@@ -327,102 +302,27 @@ function doLinesIntersect(
 }
 
 /**
- * Simplify polygon using Douglas-Peucker algorithm
+ * Simplify polygon using Douglas-Peucker algorithm — SSoT `@/lib/geometry/douglas-peucker` (ADR-884 §4.14 Γ3):
+ * κλειστό πολύγωνο = δακτύλιος (δύο αλυσίδες), ανοιχτό = γραμμή με σταθερά άκρα.
  */
 export function simplifyPolygon(polygon: UniversalPolygon, tolerance: number = 1.0): UniversalPolygon {
   if (polygon.points.length <= 2) {
     return polygon;
   }
 
-  const simplifiedPoints = douglasPeucker(polygon.points, tolerance);
+  const simplifiedPoints = polygon.isClosed
+    ? simplifyClosedRing(polygon.points, tolerance)
+    : simplifyPolyline(polygon.points, tolerance);
 
   return {
     ...polygon,
-    points: simplifiedPoints,
+    points: simplifiedPoints.length >= 3 || !polygon.isClosed ? simplifiedPoints : polygon.points,
     metadata: {
       createdAt: polygon.metadata?.createdAt || new Date(),
       modifiedAt: new Date(),
       ...polygon.metadata
     }
   };
-}
-
-/**
- * Douglas-Peucker line simplification algorithm
- */
-function douglasPeucker(points: PolygonPoint[], tolerance: number): PolygonPoint[] {
-  if (points.length <= 2) {
-    return points;
-  }
-
-  // Find the point with maximum distance from line
-  let maxDistance = 0;
-  let maxIndex = 0;
-  const firstPoint = points[0];
-  const lastPoint = points[points.length - 1];
-
-  for (let i = 1; i < points.length - 1; i++) {
-    const distance = pointToLineDistance(points[i], firstPoint, lastPoint);
-    if (distance > maxDistance) {
-      maxDistance = distance;
-      maxIndex = i;
-    }
-  }
-
-  // If max distance is greater than tolerance, recursively simplify
-  if (maxDistance > tolerance) {
-    const leftSide = douglasPeucker(points.slice(0, maxIndex + 1), tolerance);
-    const rightSide = douglasPeucker(points.slice(maxIndex), tolerance);
-
-    // Merge results (remove duplicate point at junction)
-    return leftSide.slice(0, -1).concat(rightSide);
-  } else {
-    // All points between first and last are within tolerance
-    return [firstPoint, lastPoint];
-  }
-}
-
-/**
- * Calculate perpendicular distance from point to line
- */
-function pointToLineDistance(
-  point: PolygonPoint,
-  lineStart: PolygonPoint,
-  lineEnd: PolygonPoint
-): number {
-  const A = point.x - lineStart.x;
-  const B = point.y - lineStart.y;
-  const C = lineEnd.x - lineStart.x;
-  const D = lineEnd.y - lineStart.y;
-
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-
-  if (lenSq === 0) {
-    // Line start and end are the same point
-    return Math.sqrt(A * A + B * B);
-  }
-
-  const param = dot / lenSq;
-
-  let xx: number;
-  let yy: number;
-
-  if (param < 0) {
-    xx = lineStart.x;
-    yy = lineStart.y;
-  } else if (param > 1) {
-    xx = lineEnd.x;
-    yy = lineEnd.y;
-  } else {
-    xx = lineStart.x + param * C;
-    yy = lineStart.y + param * D;
-  }
-
-  const dx = point.x - xx;
-  const dy = point.y - yy;
-
-  return Math.sqrt(dx * dx + dy * dy);
 }
 
 // ============================================================================

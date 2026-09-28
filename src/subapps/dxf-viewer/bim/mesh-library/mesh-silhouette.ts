@@ -22,6 +22,8 @@
  */
 
 import * as THREE from 'three';
+import { simplifyClosedRing } from '@/lib/geometry/douglas-peucker';
+import { traceComponentContours, traceOuterContour } from '@/lib/geometry/raster/moore-contour';
 
 export interface SilPoint { readonly x: number; readonly y: number }
 
@@ -311,138 +313,18 @@ function rasteriseTriangle(
   }
 }
 
-// ─── Moore-neighbour outer contour trace ─────────────────────────────────────
-
-/** 8 neighbours in clockwise order (E, SE, S, SW, W, NW, N, NE). */
-const N8: ReadonlyArray<readonly [number, number]> = [
-  [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1],
-];
-
-/**
- * Moore-neighbour boundary tracing with explicit backtrack-cell bookkeeping.
- * Returns the ordered outer contour cells of the filled region (one loop).
- */
-export function traceOuterContour(grid: Uint8Array, cols: number, rows: number): Array<[number, number]> {
-  const at = (c: number, r: number): boolean =>
-    c >= 0 && c < cols && r >= 0 && r < rows && grid[r * cols + c] === 1;
-
-  // Start: first filled cell in row-major scan (lowest row, then lowest col).
-  let sc = -1, sr = -1;
-  for (let r = 0; r < rows && sr < 0; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (grid[r * cols + c] === 1) { sc = c; sr = r; break; }
-    }
-  }
-  if (sc < 0) return [];
-
-  const contour: Array<[number, number]> = [];
-  let cc = sc, cr = sr;
-  // Backtrack = the (empty) cell examined just before the start — its west
-  // neighbour (out-of-grid counts as empty).
-  let bc = sc - 1, br = sr;
-  const maxSteps = cols * rows * 8;
-  let steps = 0;
-
-  do {
-    contour.push([cc, cr]);
-    // Clockwise sweep starting just after the backtrack direction.
-    let bIdx = N8.findIndex((d) => d[0] === bc - cc && d[1] === br - cr);
-    if (bIdx < 0) bIdx = 4;
-    let found = false;
-    for (let k = 1; k <= 8; k++) {
-      const dir = (bIdx + k) % 8;
-      const nc = cc + N8[dir][0];
-      const nr = cr + N8[dir][1];
-      if (at(nc, nr)) {
-        // New backtrack = the last (empty) cell checked before this hit.
-        const pdir = (dir + 7) % 8;
-        bc = cc + N8[pdir][0]; br = cr + N8[pdir][1];
-        cc = nc; cr = nr;
-        found = true;
-        break;
-      }
-    }
-    if (!found) break; // isolated pixel
-    if (++steps > maxSteps) break;
-  } while (!(cc === sc && cr === sr));
-
-  return dedupeConsecutive(contour);
-}
+// ─── Moore ίχνος + Douglas–Peucker: SSoT στο @/lib/geometry (ADR-884 §4.14 Γ3) ──────────
+//
+// Μετακόμισαν ώστε η ανίχνευση χώρων της δημόσιας περιήγησης να τρέχει τον ΙΔΙΟ αλγόριθμο (CHECK 3.62).
+// Επανεξάγονται εδώ για τους υπάρχοντες καταναλωτές (`mesh-fill-contours`).
+export { traceOuterContour, traceComponentContours } from '@/lib/geometry/raster/moore-contour';
 
 /**
- * Trace the outer contour of EVERY connected component (8-connectivity) of the
- * grid (ADR-683 Φ5). Each component is flood-filled into its own mask first, so
- * {@link traceOuterContour} (which follows a single region from its first filled
- * cell) traces exactly that component — disjoint same-slot blobs each get a ring.
+ * Douglas–Peucker σε κλειστό δακτύλιο (δύο αλυσίδες — SSoT `@/lib/geometry/douglas-peucker`). Κρατά τη
+ * σύμβαση του αρχείου: ≤ 4 κορυφές ή μη θετική ανοχή ⇒ ο δακτύλιος ως έχει· < 3 μετά την απλοποίηση ⇒ ο αρχικός.
  */
-export function traceComponentContours(
-  grid: Uint8Array, cols: number, rows: number,
-): Array<Array<[number, number]>> {
-  const visited = new Uint8Array(cols * rows);
-  const contours: Array<Array<[number, number]>> = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (grid[r * cols + c] !== 1 || visited[r * cols + c]) continue;
-      const mask = floodComponent(grid, cols, rows, c, r, visited);
-      const contour = traceOuterContour(mask, cols, rows);
-      if (contour.length >= 4) contours.push(contour);
-    }
-  }
-  return contours;
-}
-
-/** Flood-fill (8-conn) the filled component at (sc,sr) into a fresh mask; marks `visited`. */
-function floodComponent(
-  grid: Uint8Array, cols: number, rows: number, sc: number, sr: number, visited: Uint8Array,
-): Uint8Array {
-  const mask = new Uint8Array(cols * rows);
-  const stack: Array<[number, number]> = [[sc, sr]];
-  while (stack.length) {
-    const [c, r] = stack.pop()!;
-    if (c < 0 || c >= cols || r < 0 || r >= rows) continue;
-    const i = r * cols + c;
-    if (grid[i] !== 1 || visited[i]) continue;
-    visited[i] = 1; mask[i] = 1;
-    for (const [dc, dr] of N8) stack.push([c + dc, r + dr]);
-  }
-  return mask;
-}
-
-function dedupeConsecutive(pts: Array<[number, number]>): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  for (const p of pts) {
-    const last = out[out.length - 1];
-    if (!last || last[0] !== p[0] || last[1] !== p[1]) out.push(p);
-  }
-  return out;
-}
-
-// ─── Douglas–Peucker polyline simplification (closed ring) ───────────────────
-
 export function simplify(ring: SilPoint[], eps: number): SilPoint[] {
   if (ring.length <= 4 || eps <= 0) return ring;
-  const keep = new Array<boolean>(ring.length).fill(false);
-  keep[0] = true; keep[ring.length - 1] = true;
-  const stack: Array<[number, number]> = [[0, ring.length - 1]];
-  while (stack.length) {
-    const [s, e] = stack.pop()!;
-    let maxD = -1, idx = -1;
-    for (let i = s + 1; i < e; i++) {
-      const d = perpDist(ring[i], ring[s], ring[e]);
-      if (d > maxD) { maxD = d; idx = i; }
-    }
-    if (maxD > eps && idx > 0) {
-      keep[idx] = true;
-      stack.push([s, idx], [idx, e]);
-    }
-  }
-  const out = ring.filter((_, i) => keep[i]);
+  const out = simplifyClosedRing(ring, eps);
   return out.length >= 3 ? out : ring;
-}
-
-function perpDist(p: SilPoint, a: SilPoint, b: SilPoint): number {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  return Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / len;
 }
