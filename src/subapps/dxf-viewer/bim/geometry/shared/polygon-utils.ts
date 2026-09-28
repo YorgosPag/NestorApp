@@ -15,33 +15,23 @@ import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import type { BimPoint, BimPolygon } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { PlanarPoint } from '../../types/bim-base';
-import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
+import { polygonArea, shoelaceArea } from '@/lib/geometry/planar-polygon';
 import { angleBetweenVectors } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 
-/**
- * Compute signed polygon area via the shoelace (Gauss) formula.
- * Positive → CCW, negative → CW. Caller που θέλει unsigned area κάνει
- * `Math.abs(shoelaceArea(...))`.
- *
- * Returns 0 για < 3 vertices (degenerate polygon).
- */
-export function shoelaceArea(vertices: readonly PlanarPoint[]): number {
-  const n = vertices.length;
-  if (n < 3) return 0;
-  let sum = 0;
-  for (let i = 0; i < n; i++) {
-    const a = vertices[i];
-    const b = vertices[(i + 1) % n];
-    sum += a.x * b.y - b.x * a.y;
-  }
-  return sum / 2;
-}
-
-/** Unsigned area — always ≥ 0. */
-export function polygonArea(vertices: readonly PlanarPoint[]): number {
-  return Math.abs(shoelaceArea(vertices));
-}
+// ─── Επίπεδος πυρήνας (SSoT) — εμβαδόν · σημείο-μέσα · αυτοτομή ──────────────
+//
+// Ζει στο `@/lib/geometry/planar-polygon` (ADR-884 §4.14 Γ3, 2026-09-28): η δημόσια περιήγηση ρωτά τις ίδιες
+// ερωτήσεις και δεν επιτρέπεται να εισάγει από το subapp (CHECK 3.62). Επανεξαγωγή — ίδια σώματα, ίδια σημασιολογία.
+// `shoelaceArea` = προσημασμένο (θετικό CCW) · `polygonArea` = χωρίς πρόσημο · `pointInPolygon` = even-odd,
+// **απροσδιόριστο στο σύνορο** (όχι ανοχή, όχι έλεγχος ακμής — για το σύνορο → `pointInPolygonCovers`, ADR-730·
+// 🔴 ΜΗΝ αλλάξεις το σώμα: είναι το σωστό εργαλείο για κανόνα γεμίσματος even-odd, όπου η ανοχή παχαίνει τα νησιά).
+export {
+  shoelaceArea,
+  polygonArea,
+  pointInPolygon,
+  isPolygonSelfIntersecting,
+} from '@/lib/geometry/planar-polygon';
 
 /**
  * Συνολικό εμβαδόν μιας `polygon-clipping` `MultiPolygon` (outer − holes), στις
@@ -170,21 +160,9 @@ export function closedRingFromEdges<T>(outer: readonly T[], inner: readonly T[])
  * clipping): εκεί το σύνορο είναι σύμβαση απόδοσης και η ανοχή **παχαίνει τα νησιά**. Γι' αυτόν
  * ακριβώς τον λόγο αυτή η συνάρτηση **διατηρείται αμετάβλητη** — είναι το σωστό εργαλείο εκεί,
  * όχι απλώς το παλιό.
+ *
+ * (Το σώμα ζει πλέον στο `@/lib/geometry/planar-polygon` — επανεξάγεται στην κορυφή του αρχείου.)
  */
-export function pointInPolygon(point: PlanarPoint, vertices: readonly PlanarPoint[]): boolean {
-  const n = vertices.length;
-  if (n < 3) return false;
-  let inside = false;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = vertices[i].x, yi = vertices[i].y;
-    const xj = vertices[j].x, yj = vertices[j].y;
-    const intersect =
-      yi > point.y !== yj > point.y &&
-      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi || 1e-12) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
 
 // ─── Τριαδική θέση σημείου / OGC covers-within (SSoT) ─────────────────────────
 //
@@ -203,28 +181,6 @@ export {
   pointInPolygonWithin,
   DEFAULT_BOUNDARY_TOLERANCE_MM,
 } from './polygon-point-location';
-
-/**
- * Naive self-intersection check για polygon edges (O(n²)). Επιστρέφει `true`
- * όταν δύο μη-γειτονικές ακμές τέμνονται. Phase 3 sufficient (μικρά polygons).
- * Phase 3.5 αναβάθμιση σε sweep-line αν χρειαστεί.
- */
-export function isPolygonSelfIntersecting(vertices: readonly PlanarPoint[]): boolean {
-  const n = vertices.length;
-  if (n < 4) return false;
-  for (let i = 0; i < n; i++) {
-    const a1 = vertices[i];
-    const a2 = vertices[(i + 1) % n];
-    for (let j = i + 2; j < n; j++) {
-      // Skip adjacent edge + edge που μοιράζεται κορυφή με την πρώτη.
-      if (i === 0 && j === n - 1) continue;
-      const b1 = vertices[j];
-      const b2 = vertices[(j + 1) % n];
-      if (segmentsIntersect(a1, a2, b1, b2)) return true;
-    }
-  }
-  return false;
-}
 
 /** Convenience: re-export polygon vertices as a closed BimPolygon. */
 export function makePolygon3D(vertices: readonly BimPoint[]): BimPolygon {

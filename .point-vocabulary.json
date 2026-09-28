@@ -11,9 +11,15 @@
       "reason": "Κανονικό λεξιλόγιο του DXF Viewer. `Point2D` = αποθηκευμένο σημείο κάτοψης (1.538 καταναλωτές). `Point3D` = ΓΝΗΣΙΑ ΧΩΡΙΚΟ, `z` ΥΠΟΧΡΕΩΤΙΚΟ — σκάλες (41/49 αρχεία), έλικες, σπείρες, mline. Το όνομα εγγυάται τη διάσταση (Rhino Point3d · Revit XYZ · ArchiCAD API_Coord3D · three.js Vector3)."
     },
     {
+      "file": "src/lib/geometry/planar-polygon.ts",
+      "names": [
+        "PlanarPoint"
+      ],
+      "reason": "`PlanarPoint` = ΠΑΡΑΛΗΠΤΗΣ («ό,τι εκθέτει x/y», ADR-789), όχι τύπος αποθήκευσης. ΜΕΤΑΚΟΜΙΣΕ από το `bim-base.ts` (ADR-884 §4.14 Γ3, 2026-09-28) μαζί με τον επίπεδο πυρήνα (εμβαδόν · σημείο-μέσα · αυτοτομή · απόσταση από τμήμα): η δημόσια περιήγηση ρωτά τις ίδιες ερωτήσεις για τα περιγράμματα χώρων και δεν επιτρέπεται να εισάγει από το subapp (CHECK 3.62). Το `bim-base.ts` επανεξάγει — ΜΙΑ ρίζα, ίδιο όνομα, ίδιοι καταναλωτές."
+    },
+    {
       "file": "src/subapps/dxf-viewer/bim/types/bim-base.ts",
       "names": [
-        "PlanarPoint",
         "PlanProfile",
         "BimPoint",
         "BimPolyline",
@@ -21,7 +27,7 @@
         "PlanBounds",
         "SolidBounds"
       ],
-      "reason": "Λεξιλόγιο οντοτήτων BIM. `PlanarPoint` = ΠΑΡΑΛΗΠΤΗΣ («ό,τι εκθέτει x/y», ADR-789). `PlanProfile` = αποθηκευμένο 2Δ προφίλ. `BimPoint`/`BimPolyline`/`BimPolygon` ΜΠΟΡΕΙ να κουβαλούν `z` — γι' αυτό ΔΕΝ λένε «3D» στο όνομά τους (ADR-792· πρότυπο JTS `Coordinate` έναντι `CoordinateXY`). ΑΝΤΙΘΕΤΑ τα κουτιά ΔΕΝ έχουν προαιρετικό z: το `BimBounds` διασπάστηκε (ADR-793) σε `PlanBounds` (ίχνος, ΧΩΡΙΣ z — το σχήμα που ζει ήδη στο Firestore για floor-finish/thermal-space/wall-covering) και `SolidBounds` (ίχνος + `minZm`/`maxZm`, ΜΟΝΑΔΑ ΣΤΟ ΟΝΟΜΑ). Ήταν ΕΝΑ όνομα για ΔΥΟ πράγματα: 7 παραγωγοί σε μέτρα, 1 (railing) σε ΧΙΛΙΟΣΤΑ, 11 σε ψεύτικο z:0."
+      "reason": "Λεξιλόγιο οντοτήτων BIM. (`PlanarPoint` μετακόμισε στο `src/lib/geometry/planar-polygon.ts` — εδώ μόνο επανεξάγεται.) `PlanProfile` = αποθηκευμένο 2Δ προφίλ. `BimPoint`/`BimPolyline`/`BimPolygon` ΜΠΟΡΕΙ να κουβαλούν `z` — γι' αυτό ΔΕΝ λένε «3D» στο όνομά τους (ADR-792· πρότυπο JTS `Coordinate` έναντι `CoordinateXY`). ΑΝΤΙΘΕΤΑ τα κουτιά ΔΕΝ έχουν προαιρετικό z: το `BimBounds` διασπάστηκε (ADR-793) σε `PlanBounds` (ίχνος, ΧΩΡΙΣ z — το σχήμα που ζει ήδη στο Firestore για floor-finish/thermal-space/wall-covering) και `SolidBounds` (ίχνος + `minZm`/`maxZm`, ΜΟΝΑΔΑ ΣΤΟ ΟΝΟΜΑ). Ήταν ΕΝΑ όνομα για ΔΥΟ πράγματα: 7 παραγωγοί σε μέτρα, 1 (railing) σε ΧΙΛΙΟΣΤΑ, 11 σε ψεύτικο z:0."
     },
     {
       "file": "src/subapps/dxf-viewer/bim/types/stair-types.ts",

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-23",
+  "generated": "2026-09-28",
   "adr": "ADR-792 (CHECK 3.59)",
   "note": "Κοινά ονόματα λεξιλογίου. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
   "violations": [
@@ -15,12 +15,12 @@
     "src/core/canvas/primitives/coordinates.ts#Point2D",
     "src/core/canvas/primitives/coordinates.ts#Vector2D",
     "src/lib/dxf-scene/scene-fit-transform.ts#SceneBounds",
+    "src/lib/geometry/planar-polygon.ts#PlanarPoint",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPoint",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPolygon",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPolyline",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#PlanBounds",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#PlanProfile",
-    "src/subapps/dxf-viewer/bim/types/bim-base.ts#PlanarPoint",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#SolidBounds",
     "src/subapps/dxf-viewer/bim/types/stair-types.ts#BoundingBox3D",
     "src/subapps/dxf-viewer/bim/types/stair-types.ts#Polygon3D",

@@ -13,6 +13,7 @@ import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { GuideBinding } from '../hosting/guide-binding-types';
 import type { FaceAppearanceMap } from './face-appearance-types';
 import type { Point2D } from '../../rendering/types/Types';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 
 // ─── Plan (XY) geometry vocabulary ────────────────────────────────────────────
 
@@ -42,12 +43,13 @@ import type { Point2D } from '../../rendering/types/Types';
  * το «profiles must lie in the XY plane» του Revit) και το {@link BimPoint} (γνήσια χωρικά
  * δεδομένα: σκάλες, MEP routing, στέγες, breaklines).
  *
+ * 🔁 **Η ρίζα μετακόμισε στο `@/lib/geometry/planar-polygon`** (ADR-884 §4.14 Γ3, 2026-09-28): η δημόσια
+ * περιήγηση ρωτά τις ίδιες επίπεδες ερωτήσεις (εμβαδόν χώρου, σημείο μέσα) και δεν επιτρέπεται να εισάγει από
+ * το subapp (CHECK 3.62). Ίδιο όνομα, ίδιος τύπος — εδώ μένει μόνο η επανεξαγωγή (CHECK 3.59: μία ρίζα).
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-789-planar-point-vocabulary.md
  */
-export interface PlanarPoint {
-  readonly x: number;
-  readonly y: number;
-}
+export type { PlanarPoint };
 
 /**
  * **Αποθηκευμένο προφίλ κάτοψης** — 2Δ κορυφές, ΧΩΡΙΣ υψόμετρο (ADR-789 Φάση Δ).

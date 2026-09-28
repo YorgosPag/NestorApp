@@ -175,46 +175,18 @@ export function arePointsCollinear(a: Point2D, b: Point2D, c: Point2D, tolerance
  * 🎯 CENTRALIZED POINT-IN-POLYGON TEST
  * Κεντρικοποιημένη μέθοδος για έλεγχο αν σημείο είναι μέσα σε πολύγωνο
  * Χρησιμοποιείται από selection systems, hit testing, και layer rendering
+ * Το σώμα ζει στο `@/lib/geometry/planar-polygon` (ADR-884 §4.14 Γ3): ήταν ΤΑΥΤΟΣΗΜΟ αντίγραφο του ray casting
+ * (οριζόντια ακμή: το `&&` κόβει πριν τη διαίρεση, άρα ο φρουρός `|| 1e-12` του SSoT δεν αλλάζει αποτέλεσμα).
  */
-export function isPointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
-  let isInside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].x, yi = polygon[i].y;
-    const xj = polygon[j].x, yj = polygon[j].y;
-
-    const intersect = ((yi > point.y) !== (yj > point.y))
-        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-    if (intersect) isInside = !isInside;
-  }
-  return isInside;
-}
+export { pointInPolygon as isPointInPolygon } from '@/lib/geometry/planar-polygon';
 
 /**
  * 🎯 CENTRALIZED SEGMENT-SEGMENT INTERSECTION TEST
  * Cross-product method. Handles collinear endpoint overlap.
  * SSoT for all selection systems (lasso, marquee, crossing).
+ * Το σώμα ζει στο `@/lib/geometry/planar-polygon` (ADR-884 §4.14 Γ3) — επανεξαγωγή, ίδια σημασιολογία.
  */
-export function segmentsIntersect(
-  a1: Point2D, a2: Point2D,
-  b1: Point2D, b2: Point2D,
-): boolean {
-  const cross = (o: Point2D, a: Point2D, b: Point2D) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const d1 = cross(b1, b2, a1);
-  const d2 = cross(b1, b2, a2);
-  const d3 = cross(a1, a2, b1);
-  const d4 = cross(a1, a2, b2);
-  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
-  const onSeg = (p: Point2D, s: Point2D, e: Point2D) =>
-    Math.min(s.x, e.x) <= p.x && p.x <= Math.max(s.x, e.x) &&
-    Math.min(s.y, e.y) <= p.y && p.y <= Math.max(s.y, e.y);
-  if (d1 === 0 && onSeg(a1, b1, b2)) return true;
-  if (d2 === 0 && onSeg(a2, b1, b2)) return true;
-  if (d3 === 0 && onSeg(b1, a1, a2)) return true;
-  if (d4 === 0 && onSeg(b2, a1, a2)) return true;
-  return false;
-}
+export { segmentsIntersect } from '@/lib/geometry/planar-polygon';
 
 /** Σημείο τομής δύο ΤΜΗΜΑΤΩΝ + οι παράμετροι t (στο a) και u (στο b), ∈ [0,1]. */
 export interface SegmentIntersection {

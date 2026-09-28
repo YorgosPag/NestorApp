@@ -2242,7 +2242,7 @@
     },
     "point-in-polygon-semantics": {
       "ssotFile": "src/subapps/dxf-viewer/bim/geometry/shared/polygon-point-location.ts",
-      "description": "ADR-730 — «μέσα στο πολύγωνο» ζει ΜΙΑ φορά. locatePointInPolygon() δίνει τριαδική θέση (interior/boundary/exterior, JTS Location) με ρητή ανοχή σε mm (ArcGIS XY tolerance)· pointInPolygonCovers/Within είναι παράγωγα κατηγορήματα, όχι δεύτεροι αλγόριθμοι. Το ωμό crossing-number pointInPolygon (polygon-utils) μένει για κανόνες γεμίσματος even-odd (hatch/fill/clip), όπου ανοχή συνόρου θα πάχαινε τα νησιά. Βρέθηκαν και αποσύρθηκαν 4 κλώνοι του ίδιου βρόχου (segment-polygon-coverage — δίπλα-δίπλα με τον κύριο, roof-tile-tessellation, clip-geometry, wall-tilt-attach-clip-3d.test). ⚙ Η κλάση «ίδιος βρόχος, ΑΛΛΟ όνομα» ΔΕΝ πιάνεται από εδώ (το 3.7/3.18 είναι name/regex-based) — την καλύπτει το CHECK 3.28 (jscpd, token-based). Ακριβώς έτσι έζησαν οι 4: και οι δύο στο bim/geometry/shared λέγονταν pointInPolygon.",
+      "description": "ADR-730 — «μέσα στο πολύγωνο» ζει ΜΙΑ φορά. locatePointInPolygon() δίνει τριαδική θέση (interior/boundary/exterior, JTS Location) με ρητή ανοχή σε mm (ArcGIS XY tolerance)· pointInPolygonCovers/Within είναι παράγωγα κατηγορήματα, όχι δεύτεροι αλγόριθμοι. Το ωμό crossing-number pointInPolygon (polygon-utils) μένει για κανόνες γεμίσματος even-odd (hatch/fill/clip), όπου ανοχή συνόρου θα πάχαινε τα νησιά. Βρέθηκαν και αποσύρθηκαν 4 κλώνοι του ίδιου βρόχου (segment-polygon-coverage — δίπλα-δίπλα με τον κύριο, roof-tile-tessellation, clip-geometry, wall-tilt-attach-clip-3d.test). ⚙ Η κλάση «ίδιος βρόχος, ΑΛΛΟ όνομα» ΔΕΝ πιάνεται από εδώ (το 3.7/3.18 είναι name/regex-based) — την καλύπτει το CHECK 3.28 (jscpd, token-based). Ακριβώς έτσι έζησαν οι 4: και οι δύο στο bim/geometry/shared λέγονταν pointInPolygon. ADR-884 §4.14 Γ3 (2026-09-28): το ωμό crossing-number ΜΕΤΑΚΟΜΙΣΕ στο src/lib/geometry/planar-polygon.ts (η δημόσια περιήγηση το χρειάζεται και δεν επιτρέπεται να εισάγει από το subapp, CHECK 3.62)· το polygon-utils το επανεξάγει, και το GeometryUtils.isPointInPolygon — ΤΑΥΤΟΣΗΜΟ αντίγραφο με άλλο όνομα — έγινε επανεξαγωγή του.",
       "forbiddenPatterns": [
         "function +pointInPolygon",
         "function +locatePointInPolygon",
@@ -2250,7 +2250,7 @@
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/bim/geometry/shared/polygon-point-location.ts",
-        "src/subapps/dxf-viewer/bim/geometry/shared/polygon-utils.ts",
+        "src/lib/geometry/planar-polygon.ts",
         "src/subapps/dxf-viewer/services/clip/clip-geometry.ts",
         "src/subapps/dxf-viewer/bim-3d/converters/roof-tile-tessellation.ts"
       ],
