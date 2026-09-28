@@ -393,6 +393,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-890 §13 — η μηνιαία σειρά. Ο πειρασμός: «γράφει ο μεσίτης ένα φουσκωμένο σημείο στο βιβλίο».
+    collection: 'area_market_series',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/area-market-series.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-890 §14.4 — ο χάρτης τιμών. Ο πειρασμός: «βάφει ο μεσίτης τη γειτονιά του ακριβότερη».
+    collection: 'area_market_maps',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/area-market-maps.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     collection: 'listing_view_shards',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/listing-view-shards.rules.test.ts',

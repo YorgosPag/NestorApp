@@ -191,9 +191,22 @@ export class FakeFirestore {
    * καλών δεν μπορεί να ζευγαρώσει αποτέλεσμα με αίτημα.
    */
   public async getAll(
-    ...refs: readonly FakeDocRef[]
+    ...args: readonly (FakeDocRef | { readonly fieldMask?: readonly string[] })[]
   ): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }[]> {
-    return Promise.all(refs.map((ref) => ref.get()));
+    // ⚠️ Το αληθινό δέχεται **τελευταίο** όρισμα `ReadOptions` (`{ fieldMask }`, ADR-890 §13): χωρίς αυτό εδώ, η
+    // κλήση έσκαγε σε `ref.get is not a function`, και μια άγκυρα δεν θα μπορούσε να δείξει ότι η σελίδα ΔΕΝ
+    // διαβάζει το βιβλίο του μήνα. Πρώτου επιπέδου πεδία μόνο — ό,τι ζητά σήμερα ο κώδικας.
+    const refs = args.filter((arg): arg is FakeDocRef => arg instanceof FakeDocRef);
+    const mask = args.find((arg): arg is { readonly fieldMask?: readonly string[] } => !(arg instanceof FakeDocRef))?.fieldMask;
+    const snapshots = await Promise.all(refs.map((ref) => ref.get()));
+    if (mask === undefined) return snapshots;
+    return snapshots.map((snapshot) => ({
+      ...snapshot,
+      data: () => {
+        const data = snapshot.data();
+        return data === undefined ? undefined : Object.fromEntries(Object.entries(data).filter(([key]) => mask.includes(key)));
+      },
+    }));
   }
 
   public countWrite(): void {
