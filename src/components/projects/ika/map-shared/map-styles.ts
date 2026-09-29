@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * Shared Map Styles — OSM Tile Configuration & Geofence Layer Specs
+ * Shared Map Styles — Geofence Layer Specs
  * =============================================================================
  *
  * SSOT for MapLibre GL style objects used across IKA map components:
@@ -11,21 +11,17 @@
  * @enterprise ADR-170 — QR Code + GPS Geofencing + Photo Verification
  */
 
-import type { FillLayerSpecification, LineLayerSpecification, StyleSpecification } from 'maplibre-gl';
-import { rasterStyleSpecification } from '@/lib/maps/basemap-catalog';
+import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl';
 
 // =============================================================================
-// MAP BASE STYLE
+// MAP ZOOM
 // =============================================================================
 
 /** Default zoom level for geofence/worker maps */
 export const MAP_ZOOM = 15;
 
-/**
- * Το OSM raster του μητρώου υποβάθρων (ADR-891 Φ1) — πηγή, όροι και απόδοση ζουν στο
- * `@/lib/maps/basemap-catalog`, όχι εδώ.
- */
-export const OSM_MAP_STYLE: StyleSpecification = rasterStyleSpecification('osm-raster');
+// Το φόντο ΔΕΝ ζει εδώ: οι χάρτες του ΙΚΑ το παίρνουν από το `useDefaultBasemap` (`@/lib/maps/use-default-basemap`),
+// το ίδιο self-hosted φόντο με κάθε άλλο χάρτη (ADR-891 Φ4).
 
 // =============================================================================
 // GEOFENCE CIRCLE LAYER STYLES

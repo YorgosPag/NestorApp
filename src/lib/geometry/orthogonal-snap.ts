@@ -21,7 +21,7 @@
  * @module lib/geometry/orthogonal-snap
  */
 
-import { isPolygonSelfIntersecting, polygonArea, shoelaceArea, type PlanarPoint } from './planar-polygon';
+import { intersectLines, isPolygonSelfIntersecting, polygonArea, shoelaceArea, type PlanarPoint } from './planar-polygon';
 
 /**
  * Ρηχό **εξόγκωμα προς τα έξω** που ισοπεδώνεται στην ευθεία της βάσης του: το «μισό πάχος τοίχου» μέσα σε ένα
@@ -72,12 +72,23 @@ export function dominantAxis(ring: readonly PlanarPoint[]): number {
   return axis < 0 ? axis + Math.PI / 2 : axis;
 }
 
+/** Ο πλησιέστερος άξονας (`axis + k·90°`) στη γωνία μιας ακμής. */
+function nearestAxisAngle(angle: number, axis: number): number {
+  const quarter = Math.PI / 2;
+  return axis + Math.round((angle - axis) / quarter) * quarter;
+}
+
+/**
+ * Πόσο απέχει (rad, ≥ 0) η γωνία μιας ακμής από τον πλησιέστερο άξονα της κάτοψης. Ο **ένας** ορισμός του «ακμή σε άξονα»:
+ * τον ρωτούν η ορθογώνια έλξη (εδώ) και η απορρόφηση του συμβόλου πόρτας — δεύτερος ορισμός θα διαφωνούσε στο όριο.
+ */
+export function axisDeviation(angle: number, axis: number): number {
+  return Math.abs(angle - nearestAxisAngle(angle, axis));
+}
+
 /** Διεύθυνση της ακμής, στραμμένη στον πλησιέστερο άξονα αν απέχει ≤ ανοχή. */
 function carrierDirection(angle: number, axis: number, toleranceRad: number): { dx: number; dy: number } {
-  const quarter = Math.PI / 2;
-  const k = Math.round((angle - axis) / quarter);
-  const snapped = axis + k * quarter;
-  const use = Math.abs(angle - snapped) <= toleranceRad ? snapped : angle;
+  const use = axisDeviation(angle, axis) <= toleranceRad ? nearestAxisAngle(angle, axis) : angle;
   return { dx: Math.cos(use), dy: Math.sin(use) };
 }
 
@@ -163,10 +174,7 @@ function flattenProtrusions(
 
 /** Τομή δύο ευθειών φορέων — `null` όταν είναι (σχεδόν) παράλληλες. */
 function intersect(a: CarrierLine, b: CarrierLine): PlanarPoint | null {
-  const denom = a.dx * b.dy - a.dy * b.dx;
-  if (Math.abs(denom) < 1e-9) return null;
-  const t = ((b.px - a.px) * b.dy - (b.py - a.py) * b.dx) / denom;
-  return { x: a.px + t * a.dx, y: a.py + t * a.dy };
+  return intersectLines({ x: a.px, y: a.py }, { x: a.dx, y: a.dy }, { x: b.px, y: b.py }, { x: b.dx, y: b.dy });
 }
 
 /** Μετατοπίζει κάθε ευθεία κατά `outset` προς τα έξω (έξω = δεξιά της φοράς σε θετικό/CCW δακτύλιο). */

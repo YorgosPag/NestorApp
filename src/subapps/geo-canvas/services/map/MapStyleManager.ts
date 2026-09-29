@@ -16,6 +16,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 import {
   basemapStyle,
+  DEFAULT_BASEMAP_SOURCE_ID,
   isVectorArchiveSourceId,
   type BasemapScheme,
   type BasemapSourceId,
@@ -57,7 +58,7 @@ const MAP_STYLE_SOURCE: Readonly<Record<MapStyleType, BasemapSourceId>> = {
   osm: 'carto-positron',
   voyager: 'carto-voyager',
   dark: 'carto-dark-matter',
-  greece: 'protomaps-greece',
+  greece: DEFAULT_BASEMAP_SOURCE_ID,
 };
 
 export interface MapStyleConfig {

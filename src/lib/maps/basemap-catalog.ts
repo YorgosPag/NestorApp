@@ -362,7 +362,25 @@ export type VectorArchiveBasemapSourceId = {
 /** Οι πηγές με **ένα** στυλ, ανεξάρτητο από το θέμα (raster ή έτοιμο style.json τρίτου). */
 export type StaticBasemapSourceId = Exclude<BasemapSourceId, VectorArchiveBasemapSourceId>;
 
+/** Οι πηγές που σερβίρουμε **εμείς** — οι μόνες που δεν εξαρτώνται από όρους και διαθεσιμότητα τρίτου. */
+type SelfHostedBasemapSourceId = {
+  [K in BasemapSourceId]: (typeof BASEMAP_SOURCE_TABLE)[K]['provider'] extends 'nestor' ? K : never;
+}[BasemapSourceId];
+
 export const BASEMAP_SOURCES: Readonly<Record<BasemapSourceId, BasemapSource>> = BASEMAP_SOURCE_TABLE;
+
+/**
+ * **ΤΟ ΦΟΝΤΟ ΜΕ ΤΟ ΟΠΟΙΟ ΑΝΟΙΓΕΙ ΚΑΘΕ ΧΑΡΤΗΣ** (ADR-891 Φ4) — ο δημόσιος (`MapStyleManager`), ο χάρτης θέσης, ο ΙΚΑ.
+ *
+ * 🔑 «Καμία προεπιλογή σε εξωτερική πηγή» είναι **τύπος**, όχι υπόσχεση: μια πηγή τρίτου εδώ δεν μεταγλωττίζεται.
+ */
+export const DEFAULT_BASEMAP_SOURCE_ID: SelfHostedBasemapSourceId & VectorArchiveBasemapSourceId = 'protomaps-greece';
+
+/**
+ * Το φόντο όταν ο δικός μας διακομιστής **δεν απαντά** — ασφαλής αποτυχία, ποτέ προεπιλογή. CARTO Positron: εμπορική
+ * χρήση εντός ορίου και γλυφές μετρημένες για τις ετικέτες της εφαρμογής (`glyphFontstacks`).
+ */
+export const BASEMAP_FALLBACK_SOURCE_ID: StaticBasemapSourceId = 'carto-positron';
 
 export function rasterBasemapSource(id: RasterBasemapSourceId): RasterBasemapSource {
   return BASEMAP_SOURCE_TABLE[id];
@@ -409,27 +427,15 @@ export function attributionHtml(segments: readonly MapAttributionSegment[]): str
     .join('');
 }
 
-export interface RasterStyleOptions {
-  readonly name?: string;
-  readonly paint?: RasterLayerSpecification['paint'];
-}
-
 /**
- * Στυλ MapLibre (v8) για πηγή raster. Αντικαθιστά τους τρεις χειρόγραφους χτίστες που υπήρχαν
- * (`createGreeceCustomStyle`, `OSM_MAP_STYLE`, `MAP_STYLES.DEVELOPMENT`).
+ * Στυλ MapLibre (v8) για πηγή raster — ο **ένας** χτίστης που αντικατέστησε τους τρεις χειρόγραφους
+ * (`createGreeceCustomStyle`, `OSM_MAP_STYLE`, `MAP_STYLES.DEVELOPMENT`). Από τη Φ4 κανένας χάρτης MapLibre δεν **ανοίγει** σε raster (μόνο ρητή επιλογή).
  */
-export function rasterStyleSpecification(
-  id: RasterBasemapSourceId,
-  options: RasterStyleOptions = {},
-): StyleSpecification {
-  return buildRasterStyle(id, rasterBasemapSource(id), options);
-}
-
-function buildRasterStyle(id: BasemapSourceId, source: RasterBasemapSource, options: RasterStyleOptions): StyleSpecification {
+function buildRasterStyle(id: BasemapSourceId, source: RasterBasemapSource): StyleSpecification {
   const layer: RasterLayerSpecification = { id: `${id}-layer`, type: 'raster', source: id };
   return {
     version: 8,
-    name: options.name ?? id,
+    name: id,
     sources: {
       [id]: {
         type: 'raster',
@@ -439,7 +445,7 @@ function buildRasterStyle(id: BasemapSourceId, source: RasterBasemapSource, opti
         attribution: attributionHtml(basemapProviderOf(source).attribution),
       },
     },
-    layers: [options.paint === undefined ? layer : { ...layer, paint: options.paint }],
+    layers: [layer],
   };
 }
 
@@ -450,7 +456,7 @@ function buildRasterStyle(id: BasemapSourceId, source: RasterBasemapSource, opti
 export function basemapStyle(id: StaticBasemapSourceId): string | StyleSpecification {
   const source = BASEMAP_SOURCES[id];
   if (source.format === 'vector-archive') throw new Error(`${id}: vector-archive source — build it with protomapsStyle`);
-  return source.format === 'style' ? source.styleUrl : buildRasterStyle(id, source, {});
+  return source.format === 'style' ? source.styleUrl : buildRasterStyle(id, source);
 }
 
 // ============================================================================

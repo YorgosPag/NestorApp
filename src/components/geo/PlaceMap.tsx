@@ -18,9 +18,9 @@
  * *«ο χάρτης υπάρχει **ΤΡΕΙΣ** φορές … ADR-749 σε χαρτογραφική μορφή»*. Δεν
  * προστίθεται τέταρτος.
  *
- * ⚠️ **Καμία νέα εξάρτηση.** `react-map-gl/maplibre` είναι ήδη εγκατεστημένο και το
- * `OSM_MAP_STYLE` υπάρχει ως SSoT στο `components/projects/ika/map-shared` — το ίδιο
- * που χρησιμοποιούν οι δύο χάρτες του ΙΚΑ. Ένα εργαλείο σχεδίασης από πακέτο
+ * ⚠️ **Καμία νέα εξάρτηση.** `react-map-gl/maplibre` είναι ήδη εγκατεστημένο και το φόντο
+ * έρχεται από το `useDefaultBasemap` — το **ίδιο** self-hosted φόντο με τον δημόσιο χάρτη
+ * και τους χάρτες του ΙΚΑ (ADR-891 Φ4). Ένα εργαλείο σχεδίασης από πακέτο
  * (`mapbox-gl-draw`) θα ήταν **νέα άδεια προς έλεγχο** (N.5) για κάτι που εδώ είναι
  * ένας πίνακας κορυφών.
  *
@@ -38,7 +38,7 @@ import {
 } from '@/lib/maps/maplibre';
 import { MapPin } from 'lucide-react';
 
-import { OSM_MAP_STYLE } from '@/components/projects/ika/map-shared';
+import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
 import { Spinner } from '@/components/ui/spinner/Spinner';
 import { cameraBirthView, useCameraFrame } from '@/components/geo/use-camera-frame';
 import { useFocusCamera } from '@/components/geo/use-focus-camera';
@@ -347,6 +347,7 @@ export function PlaceMap({
 }: PlaceMapProps): React.ReactElement {
   const interactive = onPick !== undefined && !disabled;
   const mapRef = useRef<MapRef | null>(null);
+  const basemap = useDefaultBasemap();
 
   /**
    * ⚠️ **Ο ΧΑΡΤΗΣ ΔΕΝ ΔΕΧΕΤΑΙ ΕΝΤΟΛΕΣ ΠΡΙΝ ΦΟΡΤΩΣΕΙ.** Μια απάντηση που φτάνει όσο το
@@ -386,7 +387,7 @@ export function PlaceMap({
             : cameraBirthView(birthFrame)
         }
         style={{ width: '100%', height: '100%' }}
-        mapStyle={OSM_MAP_STYLE}
+        {...basemap}
         onLoad={() => setReady(true)}
         onClick={handleClick}
         cursor={interactive ? 'crosshair' : 'default'}

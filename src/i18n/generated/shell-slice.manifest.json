@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "755390bbafe74a023987d5bd68359d340a56de07590f769c38a6f19f81a2274a",
+  "inputsSha256": "4e97f34424b180442d984fa94b0348414b51df58ff3ba1cb5ed3a8ac4573aadb",
   "languages": [
     "el"
   ],
@@ -280,7 +280,7 @@
     "src/components/geo/PlaceChooser.tsx": "ee774dd2f54819e8df3c00301287b35a9bc2ed6ae2461c27c4fb8febfb347627",
     "src/components/geo/PlaceChooserStatus.tsx": "3ac066c41b6c156c93cda7f4fa7c143fe851fff29ad6603b11ef3937a8908fb1",
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
-    "src/components/geo/PlaceMap.tsx": "f80f446b6123b22ecbf1f604d9457a4b8990e61b71c7b87c8bcdcdab3f56ffcd",
+    "src/components/geo/PlaceMap.tsx": "39688feb1adfddfc10983029fb0cc0890d5cfbe5bf2d272dda709f0908d41250",
     "src/components/geo/PlaceSummary.tsx": "aa56dd24e0b0a56689c3077bfe62a9deeb0415c3e43330c622f686e080724bb4",
     "src/components/geo/ResolvedPlaceConfirmation.tsx": "05bb80545972f34c99e8bd175b48e5ba148768c26e9c1f222851bf630bf3cd92",
     "src/components/geo/outline-draft.tsx": "522cf963ac96817fb386c275e724d2e3d2a6a12800749249759b7aa114bfc33e",
@@ -441,7 +441,6 @@
     "src/components/owner-property/owner-property-stats-pending.tsx": "673617de4c5602ae44fb8f82ac1d9deeb35ff74401973a933f99e4f59336ba6d",
     "src/components/owner-property/usePrivateMarketingAgencyLabel.ts": "93d98fe3c3d883aef4be97a774ac4575967b73df49f466076ce29d6f21f8be59",
     "src/components/private-space/OwnedListStatus.tsx": "8e60eab3d209116341bda268c5a426de73bdfd1ca163193029d570fe65177e4f",
-    "src/components/projects/ika/map-shared/map-styles.ts": "21e8c2154fa80fc4200b354374f54a125d3e7ea980fb03cc2d52b59565c33810",
     "src/components/property-dossier/MyPropertyDossiersContent.tsx": "f6ca5b68fe5f8650d3573908838e119f7e8b38f4c3e37bbbe83a85a57140f59e",
     "src/components/property-dossier/PropertyDossierCard.tsx": "4ddbc5afbb8570f898810cea202c55f62bc9053fff8c2730f3ad8a97a00582f7",
     "src/components/property-dossier/PropertyDossierDetailContent.tsx": "64db9d49c31370d3ab8130c53eeedc2225fb69bd1943ca2a7e0d96f239eb68f5",
@@ -854,6 +853,7 @@
     "src/lib/maps/pmtiles-protocol.ts": "5f5390ed1aa471e4193e2ede9deaee40ed1b66778d12c89712dede10cd8d6e0f",
     "src/lib/maps/protomaps-style.ts": "23321a4a4650dd632c922a93c9c0fc90c74828d033b778d28e5279a7fadf5b31",
     "src/lib/maps/use-basemap-scheme.ts": "8fbb51148ab393788246b08204cb66f8d68355be6a903b93330160797d1fc41a",
+    "src/lib/maps/use-default-basemap.ts": "4044cf4ed01ee782446776f9d1e92de7d5c141639d5d26aca31a4b65962cdb03",
     "src/lib/market/area-market-document.ts": "dbf09c314a6cd01cbd202e5b31461298bebf7f7b54f0ffecfb20a66a896d10be",
     "src/lib/market/market-breakdowns.ts": "941d5e06a2f0eee5d62ec455cd440f6122d9473a7f9a3c92f44ed56ad1918bdd",
     "src/lib/market/market-segments.ts": "c1439abda46a3a5b297419ca3bf139997fae084abf136fb0910daa4d0e9299d9",
@@ -1308,7 +1308,7 @@
     "src/subapps/geo-canvas/hooks/map/useMapInteractions.ts": "0f181084fc8964bb72b7fb02df08202bd2681c6a50a4f2787b8e758327e5fc59",
     "src/subapps/geo-canvas/hooks/map/useMapState.ts": "d121026e501e2bbee30aebe40b8256300ca6cfb93d3dd9cf6c0fb0ad88d32a09",
     "src/subapps/geo-canvas/services/map/ElevationService.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
-    "src/subapps/geo-canvas/services/map/MapStyleManager.ts": "0ab4013642f03e1d014bf0d7352ee0693e46907bb7ff2be41a84e470c6ec8aa4",
+    "src/subapps/geo-canvas/services/map/MapStyleManager.ts": "c2f14d9664200b7153f0cb57adaec66706e62f529da79353a460b9de43b15f56",
     "src/subapps/geo-canvas/systems/polygon-system/hooks/useCentralizedPolygonSystem.ts": "2f12cc12bb9224532ded1ef39208438c6a977d61d965e226109a376f256c6738",
     "src/subapps/geo-canvas/systems/polygon-system/hooks/usePolygonSystemContext.ts": "42b9e010064fb7a8dc765f924ffcf72c158fda6186b00abd8272c7e62d63252a",
     "src/subapps/geo-canvas/systems/polygon-system/providers/PolygonSystemProvider.tsx": "80f425cd88c44e95d95c1a3abecffb513d9a89e9f2cc360eaaae5dc7606da241",

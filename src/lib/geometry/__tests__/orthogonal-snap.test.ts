@@ -4,7 +4,7 @@
  */
 
 import { polygonArea, type PlanarPoint } from '../planar-polygon';
-import { DEFAULT_ORTHOGONAL_SNAP, dominantAxis, snapRingOrthogonal } from '../orthogonal-snap';
+import { axisDeviation, DEFAULT_ORTHOGONAL_SNAP, dominantAxis, snapRingOrthogonal } from '../orthogonal-snap';
 
 const deg = (d: number): number => (d * Math.PI) / 180;
 
@@ -65,5 +65,17 @@ describe('orthogonal-snap', () => {
     const flat = [{ x: 0, y: 0 }, { x: 10, y: 1.5 }, { x: 0, y: 3 }];
     expect(snapRingOrthogonal(flat)).toBeNull();
     expect(snapRingOrthogonal(flat.slice(0, 2))).toBeNull();
+  });
+});
+
+describe('axisDeviation — ο ΕΝΑΣ ορισμός του «ακμή σε άξονα»', () => {
+  it('απόσταση από τον πλησιέστερο άξονα (axis + k·90°), πάντα ≥ 0, ίδια προς κάθε φορά', () => {
+    const deg = Math.PI / 180;
+    expect(axisDeviation(0, 0)).toBe(0);
+    expect(axisDeviation(100 * deg, 0)).toBeCloseTo(10 * deg);
+    expect(axisDeviation(-100 * deg, 0)).toBeCloseTo(10 * deg);
+    expect(axisDeviation(-5 * deg, 0)).toBeCloseTo(5 * deg);
+    expect(axisDeviation(45 * deg, 0)).toBeCloseTo(45 * deg);
+    expect(axisDeviation(33 * deg, 30 * deg)).toBeCloseTo(3 * deg);
   });
 });

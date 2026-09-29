@@ -120,6 +120,17 @@ export function closestPointOnSegment(point: PlanarPoint, a: PlanarPoint, b: Pla
   return { x: a.x + t * dx, y: a.y + t * dy };
 }
 
+/**
+ * Τομή δύο **ευθειών** (σημείο + διεύθυνση — όχι τμημάτων) · `null` όταν είναι (σχεδόν) παράλληλες. Η **μία** τομή ευθειών:
+ * την καλούν η ορθογώνια έλξη (`orthogonal-snap.ts`) και η απορρόφηση του συμβόλου πόρτας (`space-detect/door-symbol-absorb.ts`).
+ */
+export function intersectLines(p: PlanarPoint, d: PlanarPoint, q: PlanarPoint, e: PlanarPoint): PlanarPoint | null {
+  const denom = d.x * e.y - d.y * e.x;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = ((q.x - p.x) * e.y - (q.y - p.y) * e.x) / denom;
+  return { x: p.x + t * d.x, y: p.y + t * d.y };
+}
+
 /** Απόσταση σημείου από **τμήμα** (όχι ευθεία) — βλ. {@link closestPointOnSegment}. */
 export function distanceToSegment(point: PlanarPoint, a: PlanarPoint, b: PlanarPoint): number {
   const on = closestPointOnSegment(point, a, b);

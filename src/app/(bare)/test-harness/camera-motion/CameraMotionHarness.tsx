@@ -22,7 +22,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { OSM_MAP_STYLE } from '@/components/projects/ika/map-shared';
+import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
 import {
   cameraTrajectory,
   didFly,
@@ -89,6 +89,7 @@ function ResultRow({ row }: { readonly row: HopResult }) {
 
 export default function CameraMotionHarness() {
   const mapRef = useRef<MapRef | null>(null);
+  const basemap = useDefaultBasemap();
   const [rows, setRows] = useState<HopResult[] | null>(null);
   const startedRef = useRef(false);
 
@@ -160,7 +161,7 @@ export default function CameraMotionHarness() {
           **0**, και η μέτρηση τρέχει σε κάδρο `958×0` **βγάζοντας εύλογους αριθμούς**.
         */}
         <div className={styles.mapCanvas}>
-          <Map ref={mapRef} mapStyle={OSM_MAP_STYLE} initialViewState={{ longitude: HOME.center[0], latitude: HOME.center[1], zoom: HOME.zoom }} onLoad={onLoad} />
+          <Map ref={mapRef} {...basemap} initialViewState={{ longitude: HOME.center[0], latitude: HOME.center[1], zoom: HOME.zoom }} onLoad={onLoad} />
         </div>
         <figcaption>Ο χάρτης που μετριέται — ίδιο στυλ με την εφαρμογή.</figcaption>
       </figure>

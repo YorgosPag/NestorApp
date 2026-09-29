@@ -16,9 +16,12 @@ import {
   basemapArchiveFileName,
   basemapProviderOf,
   basemapProviderOfHost,
+  BASEMAP_FALLBACK_SOURCE_ID,
+  BASEMAP_OVERLAY_TEXT_FONT,
+  DEFAULT_BASEMAP_SOURCE_ID,
+  basemapGlyphFontstacks,
   basemapStyle,
   isVectorArchiveSourceId,
-  rasterStyleSpecification,
   unwrapArchiveUrl,
   vectorArchiveBasemapSource,
   type BasemapProviderId,
@@ -117,15 +120,15 @@ describe('Ζ — ο δικός μας χάρτης (ADR-891 §9)', () => {
 });
 
 describe('Γ — ο ΕΝΑΣ χτίστης στυλ raster', () => {
-  const style = rasterStyleSpecification('osm-raster', { name: 'Test', paint: { 'raster-saturation': 0.1 } });
+  const built = basemapStyle('osm-raster');
+  if (typeof built === 'string') throw new Error('osm-raster: αναμενόταν στυλ που χτίσαμε, όχι URL');
+  const style = built;
 
   it('έγκυρο στυλ v8 με μία πηγή και ένα στρώμα που τη δείχνει', () => {
     expect(style.version).toBe(8);
-    expect(style.name).toBe('Test');
+    expect(style.name).toBe('osm-raster');
     expect(Object.keys(style.sources)).toEqual(['osm-raster']);
-    expect(style.layers).toEqual([
-      { id: 'osm-raster-layer', type: 'raster', source: 'osm-raster', paint: { 'raster-saturation': 0.1 } },
-    ]);
+    expect(style.layers).toEqual([{ id: 'osm-raster-layer', type: 'raster', source: 'osm-raster' }]);
   });
 
   it('η πηγή κουβαλά URL, μέγεθος, zoom και απόδοση ΑΠΟ τον πίνακα', () => {
@@ -136,10 +139,6 @@ describe('Γ — ο ΕΝΑΣ χτίστης στυλ raster', () => {
       maxzoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     });
-  });
-
-  it('χωρίς paint, το στρώμα δεν φέρει κενό paint', () => {
-    expect(rasterStyleSpecification('osm-raster').layers[0]).not.toHaveProperty('paint');
   });
 
   it('στυλ παρόχου ⇒ URL· raster ⇒ στυλ που χτίσαμε', () => {
@@ -182,4 +181,20 @@ describe('Ε — ποιος διακομιστής ανήκει σε ποιον'
       expect(basemapProviderOfHost(host)).toBeNull();
     },
   );
+});
+
+describe('Δ — ΚΑΜΙΑ ΠΡΟΕΠΙΛΟΓΗ ΣΕ ΕΞΩΤΕΡΙΚΗ ΠΗΓΗ (ADR-891 Φ4)', () => {
+  it('το φόντο με το οποίο ανοίγει κάθε χάρτης το σερβίρουμε ΕΜΕΙΣ', () => {
+    expect(BASEMAP_SOURCES[DEFAULT_BASEMAP_SOURCE_ID].provider).toBe('nestor');
+  });
+
+  it('η εφεδρεία είναι ΑΛΛΟΣ πάροχος — αλλιώς πέφτει μαζί με τον δικό μας', () => {
+    const fallback = BASEMAP_SOURCES[BASEMAP_FALLBACK_SOURCE_ID];
+    expect(fallback.provider).not.toBe(BASEMAP_SOURCES[DEFAULT_BASEMAP_SOURCE_ID].provider);
+  });
+
+  it('και σερβίρει τη στοίβα των ετικετών της εφαρμογής — αλλιώς οι αριθμοί σβήνουν στην αποτυχία', () => {
+    const glyphs = basemapGlyphFontstacks(BASEMAP_SOURCES[BASEMAP_FALLBACK_SOURCE_ID]);
+    expect(glyphs).toEqual(expect.arrayContaining(BASEMAP_OVERLAY_TEXT_FONT));
+  });
 });

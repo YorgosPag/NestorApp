@@ -50,7 +50,7 @@ const ADVICE = [
   'Θεραπεία: δήλωσε την πηγή ΣΤΟ ΜΗΤΡΩΟ, με πάροχο, διακομιστές, όρους και απόδοση:',
   `  ${CATALOG_FILE} → BASEMAP_PROVIDERS / BASEMAP_SOURCE_TABLE`,
   'και ζήτα τη με όνομα:',
-  "  ✅ basemapStyle('carto-positron')  ·  rasterStyleSpecification('osm-raster')",
+  "  ✅ basemapStyle('carto-positron')  ·  useDefaultBasemap()",
   '',
   'Κ3 — στρώση symbol με text-field: ζήτα τη στοίβα του μητρώου (ADR-891 §9.5):',
   "  ✅ layout={{ 'text-field': …, 'text-font': BASEMAP_OVERLAY_TEXT_FONT }}",

@@ -6,7 +6,7 @@ import { pointInPolygon } from '@/lib/geometry/planar-polygon';
 
 import { detectSpace } from '../space-detect';
 import type { SpaceDetectInput, SpaceDetectResult } from '../space-detect-types';
-import { FIXTURE_MPP, LEFT_ROOM_AREA_M2, planFixture, twoRoomPlan, type PlanFixture } from './plan-fixture';
+import { FIXTURE_MPP, LEFT_ROOM_AREA_M2, doorSymbolPlan, planFixture, twoRoomPlan, type PlanFixture } from './plan-fixture';
 
 type Found = Extract<SpaceDetectResult, { ok: true }>;
 
@@ -133,5 +133,16 @@ describe('detectSpace — αρνήσεις με όνομα', () => {
     const r = found(detect(plan, [3, 2.5]));
     expect(areaM2(r)).toBeGreaterThan(4.9 * 3.9);
     expect(areaM2(r)).toBeLessThan(5.1 * 4.1);
+  });
+});
+
+describe('detectSpace — σύμβολο πόρτας (Revit: η πόρτα ΔΕΝ είναι room-bounding · ADR-884 §4.14)', () => {
+  it('τόξο + ανοιχτό φύλλο ΜΕΣΑ στο δωμάτιο ⇒ ο τομέας του τόξου ΑΝΗΚΕΙ στο δωμάτιο: ορθογώνιο 4 κορυφών ως την παρειά (±2%)', () => {
+    const plan = doorSymbolPlan();
+    const r = found(detect(plan, [2, 4]));
+    expect(r.outline).toHaveLength(4);
+    expect(r.orthogonal).toBe(true);
+    expect(Math.abs(areaM2(r) - LEFT_ROOM_AREA_M2) / LEFT_ROOM_AREA_M2).toBeLessThan(0.02);
+    expect(inside(r, plan, 4.2, 2.2)).toBe(true);
   });
 });

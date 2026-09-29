@@ -4,7 +4,7 @@
  * @module lib/spatial-tour/space-detect/space-detect
  *
  * Ροή: μελάνι (Otsu) → τοίχοι (άνοιγμα + νοητές γραμμές) → χώρος (πυρήνες χωρίς πόρτες + ανταγωνιστική αναγέννηση) →
- * φρουροί (διαρροή · πολύ μικρό) → περίγραμμα (Moore → Douglas–Peucker → ορθογώνια έλξη) → πρόταση διαχωρισμού
+ * φρουροί (διαρροή · πολύ μικρό) → περίγραμμα (Moore → Douglas–Peucker → σύμβολο πόρτας έξω → ορθογώνια έλξη) → πρόταση διαχωρισμού
  * αν ο ίδιος ενιαίος χώρος περιέχει κι άλλο σημείο λήψης.
  *
  * 🔒 **Πάντα ΠΡΟΤΑΣΗ, ποτέ δημοσίευση** (Δ8.1): εδώ δεν γράφεται τίποτα· ο άνθρωπος εγκρίνει στον επεξεργαστή.
@@ -19,6 +19,7 @@ import { polygonArea } from '@/lib/geometry/planar-polygon';
 import { traceOuterContour } from '@/lib/geometry/raster/moore-contour';
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 
+import { absorbDoorSymbols } from './door-symbol-absorb';
 import { suggestSeparation } from './separation-suggest';
 import {
   DEFAULT_SPACE_DETECT,
@@ -43,6 +44,8 @@ const PIXEL_CENTRE_OUTSET = 0.5;
 const DOOR_SCALES = [1, 0.5, 0.25] as const;
 /** Βαθύτερο «μισό πάχος τοίχου» μέσα σε άνοιγμα πόρτας (m) — εξωτερικός τοίχος ~40 cm. */
 const DOOR_REVEAL_MAX_M = 0.2;
+/** Ελάχιστο μήκος ακμής που μετρά ως «τοίχος» για την απορρόφηση συμβόλου πόρτας (m) — η παραστάδα ~20 cm μετρά. */
+const WALL_ANCHOR_MIN_M = 0.15;
 interface Frame {
   readonly cols: number;
   readonly rows: number;
@@ -69,11 +72,21 @@ function countFilled(mask: Uint8Array): number {
   return n;
 }
 
-/** Περίγραμμα pixel: Moore → DP → ορθογώνια έλξη (με δίχτυ: αλλιώς το απλοποιημένο). */
+/** Περίγραμμα pixel: Moore → DP → **σύμβολο πόρτας έξω** → ορθογώνια έλξη (με δίχτυ: αλλιώς το απλοποιημένο). */
 function outlineOf(region: Uint8Array, frame: Frame): { outline: PixelPoint[]; orthogonal: boolean } {
   const contour = traceOuterContour(region, frame.cols, frame.rows).map(([c, r]) => ({ x: c + 0.5, y: r + 0.5 }));
-  const simplified = simplifyClosedRing(contour, frame.options.simplifyToleranceM / frame.mpp);
-  const ring = simplified.length >= 3 ? simplified : contour;
+  const tolerancePx = frame.options.simplifyToleranceM / frame.mpp;
+  const simplified = simplifyClosedRing(contour, tolerancePx);
+  const traced = simplified.length >= 3 ? simplified : contour;
+  // Revit: η πόρτα δεν είναι room-bounding — τόξο + φύλλο δεν δαγκώνουν τον χώρο (`door-symbol-absorb`).
+  const ring = [...absorbDoorSymbols(traced, {
+    axisRad: dominantAxis(traced),
+    toleranceRad: DEFAULT_ORTHOGONAL_SNAP.toleranceRad,
+    noise: tolerancePx,
+    anchorMin: WALL_ANCHOR_MIN_M / frame.mpp,
+    reach: (frame.options.doorWidthM + DOOR_REVEAL_MAX_M) / frame.mpp,
+    revealMax: DOOR_REVEAL_MAX_M / frame.mpp,
+  })];
   const snapped = snapRingOrthogonal(ring, {
     ...DEFAULT_ORTHOGONAL_SNAP,
     outset: PIXEL_CENTRE_OUTSET,

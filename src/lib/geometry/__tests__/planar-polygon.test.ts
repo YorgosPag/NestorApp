@@ -5,7 +5,7 @@
  */
 
 import {
-  distanceToSegment, isPolygonSelfIntersecting, pointInPolygon, polygonArea, segmentsIntersect, shoelaceArea,
+  distanceToSegment, intersectLines, isPolygonSelfIntersecting, pointInPolygon, polygonArea, segmentsIntersect, shoelaceArea,
 } from '../planar-polygon';
 
 const SQUARE = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 }];
@@ -40,5 +40,13 @@ describe('planar-polygon', () => {
     expect(distanceToSegment({ x: 1, y: 2 }, { x: 0, y: 0 }, { x: 4, y: 0 })).toBe(2);
     expect(distanceToSegment({ x: 7, y: 4 }, { x: 0, y: 0 }, { x: 4, y: 0 })).toBe(5);
     expect(distanceToSegment({ x: 3, y: 4 }, { x: 0, y: 0 }, { x: 0, y: 0 })).toBe(5);
+  });
+});
+
+describe('intersectLines — τομή ΕΥΘΕΙΩΝ (όχι τμημάτων)', () => {
+  it('κάθετες · τομή ΕΞΩ από τα δοσμένα σημεία (ευθείες, όχι τμήματα) · παράλληλες ⇒ null', () => {
+    expect(intersectLines({ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 3, y: 5 }, { x: 0, y: -1 })).toEqual({ x: 3, y: 1 });
+    expect(intersectLines({ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 10, y: 0 }, { x: -1, y: 1 })).toEqual({ x: 5, y: 5 });
+    expect(intersectLines({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 2 }, { x: -3, y: 0 })).toBeNull();
   });
 });

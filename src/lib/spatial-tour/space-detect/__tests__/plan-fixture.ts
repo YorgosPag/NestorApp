@@ -47,3 +47,24 @@ export function twoRoomPlan(openingM: number): PlanFixture {
 }
 
 export const LEFT_ROOM_AREA_M2 = 3.7 * 5.6;
+
+/** Πάχος γραμμής συμβόλου πόρτας: 8 cm — ίδιο με τις γραμμές των τοίχων στην πραγματική κάτοψη (επιβιώνει του «ανοίγματος»). */
+const DOOR_STROKE_M = 0.08;
+
+/**
+ * Το {@link twoRoomPlan} με **σύμβολο πόρτας** στο αριστερό δωμάτιο (ADR-884 §4.14 «Σύμβολο πόρτας στο όριο»): μεντεσές στην
+ * παρειά (4,4 · 2,0), φύλλο ΑΝΟΙΧΤΟ προς τα αριστερά (0,9 m) και τόξο τεταρτοκυκλίου ακτίνας 0,9 m ως το (4,4 · 2,9). Χωρίς
+ * απορρόφηση ο τομέας του τόξου (≈ 0,64 m²) κόβεται από το δωμάτιο — όπως στην πραγματική κάτοψη.
+ */
+export function doorSymbolPlan(): PlanFixture {
+  const plan = twoRoomPlan(0.9);
+  const hinge = { x: 4.4, y: 2.0 };
+  const radius = 0.9;
+  const half = DOOR_STROKE_M / 2;
+  plan.fill(hinge.x - radius, hinge.y - half, hinge.x, hinge.y + half);
+  for (let a = 0; a <= Math.PI / 2; a += 0.005) {
+    const x = hinge.x - radius * Math.cos(a), y = hinge.y + radius * Math.sin(a);
+    plan.fill(x - half, y - half, x + half, y + half);
+  }
+  return plan;
+}

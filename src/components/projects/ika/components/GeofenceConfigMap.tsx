@@ -39,7 +39,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
-import { OSM_MAP_STYLE, MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
+import { MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
+import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
 import { GeofenceMarkerPin } from './GeofenceMarkerPin';
 import { useGeofenceConfig, MIN_RADIUS, MAX_RADIUS } from '../hooks/useGeofenceConfig';
 
@@ -69,6 +70,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
+  const basemap = useDefaultBasemap();
 
   const {
     latitude,
@@ -148,7 +150,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               zoom: MAP_ZOOM,
             }}
             style={{ width: '100%', height: 320 }}
-            mapStyle={OSM_MAP_STYLE}
+            {...basemap}
             onClick={handleMapClick}
             cursor="crosshair"
           >

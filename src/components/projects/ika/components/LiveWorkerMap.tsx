@@ -36,7 +36,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
-import { OSM_MAP_STYLE, MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
+import { MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
+import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
 import { WorkerPin, WORKER_STATUS_COLORS } from './WorkerPin';
 import { formatTime, eventTypeLabel } from './live-worker-helpers';
 import { useLiveWorkerMap } from '../hooks/useLiveWorkerMap';
@@ -79,6 +80,7 @@ export function LiveWorkerMap({
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
+  const basemap = useDefaultBasemap();
 
   const {
     geofenceLoading,
@@ -153,7 +155,7 @@ export function LiveWorkerMap({
               zoom: MAP_ZOOM,
             }}
             style={{ width: '100%', height: 380 }}
-            mapStyle={OSM_MAP_STYLE}
+            {...basemap}
           >
             {/* Geofence circle overlay (read-only) */}
             {circleGeoJSON && (

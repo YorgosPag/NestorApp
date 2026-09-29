@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-export { MAP_ZOOM, OSM_MAP_STYLE, createGeofenceLayerStyles } from './map-styles';
+export { MAP_ZOOM, createGeofenceLayerStyles } from './map-styles';
 // ⚠️ Η **απόσταση** δεν εξάγεται από εδώ: ζει στο `@/lib/geo/geo-distance` (SSoT).
 // Μια δεύτερη πόρτα προς την ίδια συνάρτηση θα ήταν ακριβώς η κατάσταση που η
 // ενοποίηση έκλεισε — τέσσερα ονόματα για ένα ερώτημα.
