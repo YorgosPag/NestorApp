@@ -72,6 +72,24 @@ jobs:
       - name: 📦 Install generator runtime (tsx, από το lock)
         run: npm ci --prefix mcp-server --no-audit --no-fund
 
+      # ADR-889 §11.9 — ΔΙΑΓΝΩΣΗ ΠΡΟΣΒΑΣΙΜΟΤΗΤΑΣ. Το πρώτο run (2026-09-29) πήρε 403 από τον gsis.gr, ενώ από
+      # ελληνική IP η ίδια κλήση δίνει 200. Αυτό το βήμα ΞΕΧΩΡΙΖΕΙ «φταίει η κεφαλίδα» από «φταίει η IP»: αν ΟΛΕΣ οι
+      # παραλλαγές δίνουν 403, είναι φραγή δικτύου· αν κάποια δίνει 200, διορθώνεται στο `probeSource`.
+      # Δεν αποτυγχάνει ποτέ — μόνο τυπώνει. Μένει μόνιμα: είναι η πρώτη ερώτηση σε κάθε μελλοντικό κόκκινο.
+      - name: 🌐 Προσβασιμότητα πηγών (διάγνωση)
+        run: |
+          mama="https://www.gsis.gr/sites/default/files/akinhta/mhtrwo-ax-met-ak-$(date +%Y).xlsx"
+          zones="https://data.gov.gr/dataset/1fcf3d7d-e9f3-423d-83ff-59b930aa18f8/resource/7bba2acd-1aea-49f3-badb-60a7961d1b1a/download/zones_for_data_gov_gr.zip"
+          browser='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
+          probe() { printf '%-34s %s\n' "$1" "$(curl -s -o /dev/null -w '%{http_code} %{size_download}B' --max-time 30 "${@:2}" || echo 'δίκτυο: σφάλμα')"; }
+          probe 'ΜΑΜΑ HEAD · User-Agent γεννήτορα' -I -A 'Mozilla/5.0 (NestorApp data generator)' "$mama"
+          probe 'ΜΑΜΑ HEAD · curl χωρίς UA'       -I "$mama"
+          probe 'ΜΑΜΑ HEAD · πλήρης browser'      -I -A "$browser" -H 'Accept-Language: el-GR,el;q=0.9' "$mama"
+          probe 'ΜΑΜΑ GET 1KB · πλήρης browser'   -A "$browser" -r 0-1023 "$mama"
+          probe 'gsis.gr αρχική · browser'        -I -A "$browser" 'https://www.gsis.gr/'
+          probe 'Ζώνες HEAD (data.gov.gr)'        -I -L -A 'Mozilla/5.0 (NestorApp data generator)' "$zones"
+          curl -s -I --max-time 30 -A "$browser" "$mama" | grep -iE '^(server|x-|cf-|via|akamai)' || true
+
       - name: 🔎 Έλεγχος · παραγωγή · πύλες
         id: refresh
         run: >-
