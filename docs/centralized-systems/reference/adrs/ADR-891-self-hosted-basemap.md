@@ -325,10 +325,89 @@
    `curl -sI -H "Range: bytes=0-16383" -H "Accept-Encoding: gzip" https://maps.nestorconstruct.gr/greece-20260926.pmtiles`
    ⇒ `206` · `Content-Range: bytes 0-16383/682840422` · `Access-Control-Allow-Origin: *` · **χωρίς** `Content-Encoding`.
 
+### 9.5 Φ3 — κάλυψη γλυφών στις ετικέτες της εφαρμογής: γραμματοσειρές v2 (2026-09-28)
+
+#### 9.5.1 Το εύρημα (μετρημένο, ζωντανός έλεγχος Φ3)
+
+- Η στρώση `listing-cluster-count` (`ResultsMapSources.tsx`) **δεν είχε `text-font`** ⇒ η MapLibre ζήτησε την προεπιλογή
+  `Open Sans Regular,Arial Unicode MS Regular` ⇒ **404** από τον Caddy, 2 ανά προβολή. Οι αριθμοί φαίνονταν **μόνο** επειδή η
+  MapLibre 5.15 ζωγραφίζει τοπικά (TinySDF, `glyph_manager.ts:143`) όταν αποτύχει εύρος — με τη γραμματοσειρά του **browser**.
+- Το προφανές `text-font: ['Noto Sans Medium']` θα **έσβηνε** το `≈` (U+2248) του `12 · +5≈`: το εύρος `8704-8959` **φορτώνει**
+  κανονικά (Regular: 8 σύμβολα, Medium: 0 — ανάλυση των `.pbf`), άρα καμία εφεδρεία, και ο χαρακτήρας χάνεται **σιωπηλά**.
+- 🔴 **Και ένα δεύτερο, που ο handoff δεν είχε δει**: ο χάρτης αγγελιών αλλάζει υπόβαθρο σε CARTO (`osm`/`voyager`/`dark`) και
+  **πέφτει** σε CARTO αν ο διακομιστής μας δεν απαντήσει (`fallbackCascade`). Κάθε στυλ έχει **άλλον** glyph server. Ένα
+  `text-font` σωστό για τον δικό μας θα ήταν 404 στη CARTO — ή το αντίστροφο.
+
+#### 9.5.2 Έρευνα και αποφάσεις
+
+| Ερώτηση | Απάντηση (πηγή) |
+|---|---|
+| Πώς χτίζει το Protomaps τις στοίβες; | `font-maker` (maplibre, **BSD-3**) με ~50 TTF Noto ανά στοίβα (`basemaps-assets/scripts/create_fonts.sh`): ο **πρώτος** face που έχει τον χαρακτήρα κερδίζει. **Χωρίς** Noto Sans Math |
+| Τρέχει το `font-maker` χωρίς μεταγλωττιστή; | **Ναι**: το web app του (maplibre.org/font-maker) είναι WASM emscripten με τις ίδιες συναρτήσεις με το CLI. Καρφωμένο στο commit `bab9b243` του `gh-pages` + sha256 (`sdfglyph.js`/`.wasm`), τρέχει σε `vm` του Node. Κανένα GitHub Action, κανένα C++ στο PC |
+| Ξαναχτίζουμε ~50 TTF; | **Όχι — ένωση ανά εύρος** (`glyph-pbf.ts`): στα `.pbf` του upstream προστίθενται **μόνο** οι γλυφές που λείπουν. Ισοδύναμο με «font-maker με το Math ως τελευταίο face», γιατί οι παράμετροι SDF είναι **ίδιες** (24 px, buffer 3 — μετρημένο: `(w+6)·(h+6)` = μήκος bitmap και στα δύο). Καμία υπάρχουσα γλυφή δεν αλλάζει (ελληνικά `768-1023.pbf` **ταυτόσημα** byte-προς-byte) |
+| Από πού το Noto Sans Math; | `notofonts/notofonts.github.io` @ `55773c3e`, `unhinted/ttf` — **η ίδια ρίζα** που διαβάζει το Protomaps. OFL-1.1 (© Noto Project Authors), το `LICENSE` του ίδιου commit ταξιδεύει ως `fonts/NotoSansMath-OFL.txt`. Και τα δύο με sha256 |
+| Σε ποιες στοίβες; | `Noto Sans Regular` + `Noto Sans Medium` (`BASEMAP_MATH_SUPPLEMENTED_FONTSTACKS`): +1.099 / +1.293 γλυφές. Italic/Devanagari όχι (καμία ετικέτα μας) |
+| Ποια στοίβα ζητούν οι ετικέτες μας; | **`Noto Sans Regular`** (`BASEMAP_OVERLAY_TEXT_FONT`) = **η τομή** όσων σερβίρουν **όλοι** οι glyph servers. Μετρημένο στη CARTO (αποσυμπιεσμένα `.pbf`, `tiles.basemaps.cartocdn.com/fonts`): σερβίρει `Noto Sans Regular` **με** ψηφία, `+`, `·` **και** `≈` — το ζητούν ήδη τα στυλ της. Άρα **ίδια** ετικέτα σε κάθε υπόβαθρο και στην εφεδρεία |
+| Αντικατάσταση `≈` με `~`; | **Όχι** (απόφαση Giorgio): το `≈` σημαίνει ήδη «περίπου» και στο spatial-tour |
+| Νέο όνομα φακέλου; | **Ναι**: `assets/028c18f713ba-e2` (`BASEMAP_ASSETS_EDITION = 2`). Ο Caddy σερβίρει `immutable` ⇒ νέο περιεχόμενο στο **ίδιο** όνομα δεν θα το έβλεπε ποτέ browser που είχε το παλιό. Ο παλιός φάκελος μένει στον διακομιστή (ασφαλής επιστροφή) |
+| Πώς ξέρει το git τι σερβίρεται; | Ο γεννήτορας γράφει **κατάλογο κάλυψης** `src/lib/maps/generated/basemap-glyph-coverage.json` (κωδικοσημεία σε διαστήματα, ανά στοίβα, **με την έκδοση** assets· 14 KB, μία γραμμή ανά στοίβα) |
+| Πού η λεζάντα του `≈`; | `ClusterApproximationKey` πάνω στον χάρτη, **μόνο** όταν ζωγραφίστηκε ομάδα με `≈` — ADR-777 §8.66.11 |
+
+#### 9.5.3 Τι χτίστηκε
+
+| Κομμάτι | Αρχείο | Ρόλος |
+|---|---|---|
+| **Μητρώο** | `src/lib/maps/basemap-catalog.ts` | `BASEMAP_FONTSTACKS` + τύπος `BasemapFontstack` (**μετακόμισαν** από τον γεννήτορα) · `BASEMAP_MATH_SUPPLEMENTED_FONTSTACKS` · `BASEMAP_OVERLAY_TEXT_FONT` · `BASEMAP_ASSETS_EDITION` · `glyphFontstacks` στις πηγές `style` (CARTO, μετρημένο) · `basemapGlyphFontstacks(source)` (raster ⇒ `[]` = καμία ετικέτα) · νέο `distributedAssets` (Noto Sans Math, OFL) |
+| WASM | `scripts/lib/basemap/font-maker.ts` | Λήψη καρφωμένη, φόρτωση σε `vm`, `renderFontstackRanges(faces)` — 256 εύρη όπως το CLI |
+| Codec | `scripts/lib/basemap/glyph-pbf.ts` | Ανάγνωση κωδικοσημείων, `mergeGlyphRange` (η βάση κερδίζει, bytes της βάσης αυτούσια), διαστήματα. Χωρίς βιβλιοθήκη protobuf· **πετά** σε ό,τι δεν καταλαβαίνει |
+| Συμπλήρωμα | `scripts/lib/basemap/glyph-supplement.ts` | Noto Sans Math → στοίβες του μητρώου · OFL στο bundle · κατάλογος κάλυψης στο git |
+| Γεννήτορας | `basemap-assets.ts` · `build-basemap.ts` | Το συμπλήρωμα τρέχει **πριν** τον έλεγχο αδειών (φέρνει δικό του OFL) |
+| Στρώση | `ResultsMapSources.tsx` | `'text-font': BASEMAP_OVERLAY_TEXT_FONT` |
+| **Πύλη** | CHECK 3.95 **Κ3** (`scripts/lib/basemap-sources/symbol-fonts.js`) | Κάθε `symbol` με `text-field` ζητά τη στοίβα του μητρώου — AST, parse-only. Η λογιστική μετρά στρώσεις (ζωντανά: **1**) |
+| **Άγκυρα κάλυψης** | `src/lib/maps/__tests__/overlay-glyph-coverage.test.ts` | Αλφάβητο **παραγόμενο** από την `CLUSTER_TEXT` (κλειστό σύνολο τελεστών — άγνωστος ⇒ πετά) ⊆ κάλυψη · κατάλογος **ίδιας** έκδοσης με τον χάρτη · κάθε glyph server σερβίρει τη στοίβα · κάθε υπόβαθρο του `MapStyleManager` έχει glyphs |
+
+#### 9.5.4 Επαλήθευση
+
+- Γεννήτορας: `npm run build:basemap -- --assets-only` ⇒ 1.035 αρχεία, 19,0 MB (+1,2 MB). **Δύο** εκτελέσεις ⇒ **ταυτόσημα** bytes
+  (sha256 και των 1.035 αρχείων + του καταλόγου κάλυψης).
+- `Noto Sans Regular/8704-8959.pbf`: 8 → 256 γλυφές, `≈` ✅ (το ίδιο στο Medium). `0-255`: ψηφία, `+`, `·` ✅.
+- Jest: 6 σουίτες / **149** tests πράσινα (`overlay-glyph-coverage` · `glyph-pbf` · `basemap-sources-gate` · `basemap-catalog` ·
+  `basemap-bundle` · `listing-map-drawn-points`). Μεταλλάξεις κόκκινες: κατάλογος χωρίς `≈` · στρώση χωρίς `text-font` ·
+  κυριολεκτική στοίβα.
+- Πύλες: 3.95 ✅ (1 στρώση `symbol` / 13.931 αρχεία) · 3.47 · 3.8 · 3.23 · 3.38 · 3.39 · 3.79 · 3.80 · μεγέθη αρχείων ✅ ·
+  3.34 ✅ (τα κλειδιά της λεζάντας **δεν** μπαίνουν σε κανένα slice — βλ. ADR-777 §8.66.11).
+- ⚠️ **Κόστος, μετρημένο**: το `8704-8959.pbf` γίνεται **113 KB** (από 1,6 KB) — ίσο περίπου με ένα εύρος γραφής (λατινικά 76 KB,
+  ελληνικά 77 KB). Ζητείται **μόνο** όταν ζωγραφιστεί ετικέτα με χαρακτήρα του εύρους (σήμερα: ομάδα με `≈`), και μένει στην cache
+  `immutable`. Με gzip θα ήταν 58 KB — ο Caddy δεν συμπιέζει (§9.1), δηλωμένο ανοιχτό.
+
+#### 9.5.5 Εγκατάσταση στον διακομιστή — ΠΡΙΝ το push του κώδικα
+
+Σειρά όπως §9.4: **πρώτα** ο φάκελος στον διακομιστή και το curl ✅, **μετά** το push. Αλλιώς ο χάρτης ζητά `…-e2/fonts/…` που
+δεν υπάρχει ⇒ 404 σε **κάθε** ετικέτα του υποβάθρου.
+
+1. **Ανέβασμα** (~19 MB, μόνο ο νέος φάκελος — ο παλιός `028c18f713ba` μένει):
+   `scp -r "C:\Nestor_Pagonis\node_modules\.cache\basemap\out\bundle\assets\028c18f713ba-e2" root@159.195.44.221:/srv/basemap/assets/`
+2. **Έλεγχος** (κανένα redeploy — ο Caddy σερβίρει τον φάκελο όπως είναι):
+   `curl -sI "https://maps.nestorconstruct.gr/assets/028c18f713ba-e2/fonts/Noto%20Sans%20Regular/8704-8959.pbf"`
+   ⇒ `200` · `Content-Length: 112948` · `Content-Type: application/x-protobuf` · `Access-Control-Allow-Origin: *`.
+   `curl -s "https://maps.nestorconstruct.gr/assets/028c18f713ba-e2/fonts/Noto%20Sans%20Regular/8704-8959.pbf" | sha256sum`
+   ⇒ `00af24b43ed5985d08a39a8f5c9f0020c88b04e0f8b6a52140cc3a01312833f8`.
+   `curl -sI "https://maps.nestorconstruct.gr/assets/028c18f713ba-e2/fonts/NotoSansMath-OFL.txt"` ⇒ `200` (4.374 bytes).
+3. **Μετά** push· ζωντανά: ομάδα `12 · +5≈` με `≈` ορατό · **μηδέν** 404 γραμματοσειρών στο Network · ίδια ετικέτα σε
+   «Χάρτης»/CARTO · λεζάντα κάτω αριστερά μόνο όταν υπάρχει `≈`.
+
+#### 9.5.6 Δηλωμένα ανοιχτά
+
+- ⏳ **Ζωντανός έλεγχος** (βήμα 3 του §9.5.5) — η Φ3 κλείνει μετά από αυτόν.
+- ⚠️ Η κάλυψη της **CARTO** είναι **μέτρηση της 2026-09-28** στο `glyphFontstacks`, όχι φύλακας: ο πάροχος αλλάζει τα `.pbf` του
+  χωρίς commit από εμάς. Ο φύλακας εκτέλεσης (`basemap-request-sentinel.ts`) βλέπει διακομιστές, όχι γλυφές.
+- ⚠️ gzip μόνο για `*.pbf` στον Caddy (−48% στο `8704-8959`): αλλαγή υποδομής που θέλει δικό της curl, όχι εδώ.
+
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-28 | **Φ3 — γραμματοσειρές v2 + κάλυψη γλυφών** (§9.5). Η ετικέτα συσσωματώματος ζητούσε στοίβα που κανείς δεν σερβίρει (404 + γραμματοσειρά browser) και το `≈` δεν υπήρχε στις στοίβες μας. Noto Sans Math ενωμένο ανά εύρος στο Regular/Medium με το WASM του `font-maker` (καρφωμένο) · assets `…-e2` · στοίβα ετικετών `Noto Sans Regular` = τομή των glyph servers (CARTO μετρημένη) · **CHECK 3.95 Κ3** · άγκυρα κάλυψης πάνω σε κατάλογο στο git · λεζάντα `≈` (ADR-777 §8.66.11). ⏳ Ανέβασμα φακέλου + ζωντανός έλεγχος |
 | 2026-09-28 | **Νεκρός `GeoCanvasApp` διαγράφηκε** (§6.5): 24 αρχεία / 4.648 γρ. + 1 `.txt`, οι baselines 3.38/3.23/3.55 κλαδεύτηκαν μόνο στις γραμμές των σβησμένων αρχείων. Κλείνει το ανεπαλήθευτο «workspace» του §6.4 και το τυφλό σημείο του ADR-777 §8.10.1 |
 | 2026-09-27 | **Φ3 — κεφαλαία χωρίς τόνους** (§9.3). Η MapLibre κεφαλαιοποιεί με το locale του browser ⇒ `ΑΛΒΑΝΊΑ` εκτός `el`. `withoutEngineUppercase` στο `protomaps-style.ts` + άγκυρα |
 | 2026-09-27 | **Φ3 — διακομιστής ζωντανός** (§9.3). `maps.nestorconstruct.gr` σε Coolify/Netcup: sha256 ίδιο με το τοπικό, 206/CORS/immutable, χωρίς `Content-Encoding`, 404 σε λίστα/έξοδο. Το compose περνά το Caddyfile με την επέκταση `content:` του Coolify αντί για `configs.content` (μη τεκμηριωμένο στο Coolify). ⏳ Ζωντανός έλεγχος της εφαρμογής μετά το push |

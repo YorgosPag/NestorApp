@@ -20,7 +20,7 @@
  */
 
 import React, { createContext, useContext, useMemo } from 'react';
-import { CLUSTER_KEY } from '@/lib/maps/listing-clusters';
+import { CLUSTER_KEY, CLUSTER_UNCERTAIN_KEY } from '@/lib/maps/listing-clusters';
 import type { DrawnListingPoints } from '@/lib/listings/listing-price-markers';
 import type { MapEventTarget, RenderedFeature } from './results-map-contract';
 
@@ -32,9 +32,14 @@ import type { MapEventTarget, RenderedFeature } from './results-map-contract';
 export interface DrawnListingSnapshot {
   readonly points: DrawnListingPoints;
   readonly zoom: number | null;
+  /**
+   * Ζωγραφίστηκε ομάδα που γράφει `+N≈`; — **μόνο τότε** φαίνεται η λεζάντα του `≈` (ADR-777 §8.66.11).
+   * Ίδια ανάγνωση με τις πινακίδες: ό,τι είναι στα φορτωμένα πλακίδια, όχι δεύτερος υπολογισμός.
+   */
+  readonly approximateClusters: boolean;
 }
 
-const OUTSIDE_MAP_CORE: DrawnListingSnapshot = { points: 'all', zoom: null };
+const OUTSIDE_MAP_CORE: DrawnListingSnapshot = { points: 'all', zoom: null, approximateClusters: false };
 const DrawnListingPointsContext = createContext<DrawnListingSnapshot>(OUTSIDE_MAP_CORE);
 
 interface DrawnListingPointsProviderProps {
@@ -76,6 +81,18 @@ export function readDrawnListingPoints(features: readonly RenderedFeature[]): Re
 }
 
 /**
+ * Υπάρχει ομάδα με αβέβαιο υποσύνολο; — το ίδιο `> 0` με το `CLUSTER_TEXT`, που **μόνο τότε** γράφει `≈`.
+ */
+export function readApproximateClusters(features: readonly RenderedFeature[]): boolean {
+  return features.some((feature) => {
+    const properties = feature.properties;
+    if (properties === undefined || !(CLUSTER_KEY.pointCount in properties)) return false;
+    const uncertain = properties[CLUSTER_UNCERTAIN_KEY];
+    return typeof uncertain === 'number' && uncertain > 0;
+  });
+}
+
+/**
  * Δέσε την ανάγνωση στο `idle` — **μία** φορά, στο `load` (κανόνας 2 του ADR-040: ο καλών
  * δίνει σταθερό χειριστή, ώστε η ταυτότητά του να μην αγγίζει το `onMapReady`).
  *
@@ -87,8 +104,12 @@ export function bindDrawnListingPoints(
   sourceId: string,
   onDrawn: (snapshot: DrawnListingSnapshot) => void,
 ): void {
-  target.on('idle', () => onDrawn({
-    points: readDrawnListingPoints(target.querySourceFeatures(sourceId)),
-    zoom: target.getZoom(),
-  }));
+  target.on('idle', () => {
+    const features = target.querySourceFeatures(sourceId);
+    onDrawn({
+      points: readDrawnListingPoints(features),
+      zoom: target.getZoom(),
+      approximateClusters: readApproximateClusters(features),
+    });
+  });
 }

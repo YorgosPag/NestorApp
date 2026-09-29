@@ -114,6 +114,14 @@ export const BASEMAP_ARCHIVE_BUILD = '20260926';
 /** Το commit του `protomaps/basemaps-assets` (γραμματοσειρές + sprites) — καρφωμένο με sha256 στον γεννήτορα. */
 export const BASEMAP_ASSETS_REVISION = '028c18f713baecad011301ff7a69acc39bcc2ae7';
 
+/**
+ * **Η έκδοση του ΠΕΡΙΕΧΟΜΕΝΟΥ των assets** — αλλάζει όταν αλλάζει ό,τι χτίζουμε **εμείς** πάνω στο ίδιο
+ * upstream commit (ADR-891 §9.5). Μπαίνει στη διαδρομή, γιατί ο διακομιστής σερβίρει `immutable`: ένα νέο
+ * περιεχόμενο στο **ίδιο** όνομα δεν θα το έβλεπε ποτέ browser που είχε το παλιό.
+ * - `2`: οι στοίβες {@link BASEMAP_MATH_SUPPLEMENTED_FONTSTACKS} + Noto Sans Math (`≈` κ.ά.).
+ */
+export const BASEMAP_ASSETS_EDITION = 2;
+
 /** Το όνομα του αρχείου ενός build μέσα στο bundle (`YYYYMMDD` → `greece-YYYYMMDD.pmtiles`). */
 export function basemapArchiveFileName(build: string): string {
   return `greece-${build}.pmtiles`;
@@ -122,8 +130,40 @@ export function basemapArchiveFileName(build: string): string {
 /** Διαδρομές **μέσα** στο bundle — τις ίδιες γράφει ο γεννήτορας και ζητά ο χάρτης. */
 export const BASEMAP_BUNDLE_PATHS = {
   archive: basemapArchiveFileName(BASEMAP_ARCHIVE_BUILD),
-  assets: `assets/${BASEMAP_ASSETS_REVISION.slice(0, 12)}`,
+  assets: `assets/${BASEMAP_ASSETS_REVISION.slice(0, 12)}-e${BASEMAP_ASSETS_EDITION}`,
 } as const;
+
+// ── ΓΡΑΜΜΑΤΟΣΕΙΡΕΣ ΧΑΡΤΗ (ADR-891 §9.5) ─────────────────────────────────────────────────────────────────────────
+// Η MapLibre ζωγραφίζει κείμενο **μόνο** από στοίβες που σερβίρει ο glyph server του στυλ. Στοίβα που δεν
+// υπάρχει ⇒ 404 ⇒ τοπική εφεδρεία TinySDF με τη γραμματοσειρά του **browser**. Εύρος που φορτώνει αλλά δεν
+// έχει τον χαρακτήρα ⇒ ο χαρακτήρας **σβήνει σιωπηλά**. Γι' αυτό οι στοίβες είναι τύπος, όχι κυριολεκτικά.
+
+/** Οι στοίβες του bundle μας: ό,τι ζητά το `@protomaps/basemaps` 5.x (`text-font`) + Devanagari (με έκφραση). */
+export const BASEMAP_FONTSTACKS = [
+  'Noto Sans Regular',
+  'Noto Sans Medium',
+  'Noto Sans Italic',
+  'Noto Sans Devanagari Regular v1',
+] as const;
+
+export type BasemapFontstack = (typeof BASEMAP_FONTSTACKS)[number];
+
+/**
+ * Οι στοίβες όπου ο γεννήτορας προσθέτει το **Noto Sans Math** ως τελευταίο face: μπαίνει **μόνο** ό,τι λείπει,
+ * όπως κάνει το `font-maker` με πολλά TTF. Το upstream (`create_fonts.sh` του Protomaps) δεν το περιλαμβάνει ⇒
+ * το `≈` (U+2248) έλειπε, ενώ το εύρος `8704-8959` φόρτωνε κανονικά (μετρημένο 2026-09-28).
+ */
+export const BASEMAP_MATH_SUPPLEMENTED_FONTSTACKS: readonly BasemapFontstack[] = ['Noto Sans Regular', 'Noto Sans Medium'];
+
+/**
+ * **Η στοίβα ΚΑΘΕ ετικέτας της εφαρμογής πάνω σε υπόβαθρο** (π.χ. ο αριθμός του συσσωματώματος).
+ *
+ * 🔑 Όχι «η γραμματοσειρά του δικού μας χάρτη», αλλά **η τομή όσων σερβίρουν ΟΛΟΙ οι glyph servers** του
+ * καταλόγου ({@link basemapGlyphFontstacks}): ο χάρτης αγγελιών αλλάζει υπόβαθρο (CARTO) και πέφτει σε CARTO αν
+ * ο διακομιστής μας δεν απαντήσει — η ετικέτα πρέπει να βγαίνει **ίδια** σε όλα. Το CHECK 3.95 (Κ3) απαιτεί κάθε
+ * `symbol` layer με `text-field` να τη ζητά από εδώ.
+ */
+export const BASEMAP_OVERLAY_TEXT_FONT: BasemapFontstack[] = ['Noto Sans Regular'];
 
 /** Το σχήμα του πρωτοκόλλου που καταχωρίζει το σύνορο (`pmtiles-protocol.ts`). */
 export const PMTILES_URL_SCHEME = 'pmtiles://';
@@ -195,6 +235,7 @@ export const BASEMAP_PROVIDERS: Readonly<Record<BasemapProviderId, BasemapProvid
     attribution: OSM_ATTRIBUTION,
     distributedAssets: [
       { asset: 'Γραμματοσειρές χάρτη Noto Sans (glyphs .pbf)', spdx: 'OFL-1.1', licenseFile: 'fonts/OFL.txt' },
+      { asset: 'Noto Sans Math (συμπλήρωμα συμβόλων στα glyphs .pbf)', spdx: 'OFL-1.1', licenseFile: 'fonts/NotoSansMath-OFL.txt' },
       { asset: 'Εικονίδια χάρτη Protomaps (sprites, από tangrams/icons)', spdx: 'MIT', licenseFile: 'sprites/LICENSE.md' },
     ],
   },
@@ -225,6 +266,11 @@ export interface RasterBasemapSource extends BasemapSourceBase {
 export interface StyleBasemapSource extends BasemapSourceBase {
   readonly format: 'style';
   readonly styleUrl: string;
+  /**
+   * Στοίβες που σερβίρει ο glyph server **του τρίτου** και που ζητάμε εμείς (ετικέτες εφαρμογής). Δήλωση
+   * **μετρημένη**, όχι υπόθεση: ο πάροχος τις αλλάζει χωρίς commit από εμάς (ADR-891 §9.5).
+   */
+  readonly glyphFontstacks: readonly string[];
 }
 
 /** Τα δύο θέματα της εφαρμογής — ο χάρτης φόντου ακολουθεί όποιο βάφει (ADR-891 §9). */
@@ -251,6 +297,12 @@ export interface VectorArchiveBasemapSource extends BasemapSourceBase {
 
 export type BasemapSource = RasterBasemapSource | StyleBasemapSource | VectorArchiveBasemapSource;
 
+/**
+ * Οι στοίβες του glyph server της CARTO που **μετρήθηκαν** (2026-09-28, αποσυμπιεσμένα `.pbf`): σερβίρονται, και τα
+ * εύρη `0-255`/`8704-8959` έχουν ψηφία, `+`, `·` **και** `≈`. Το `Noto Sans Regular` το ζητούν ήδη τα στυλ της.
+ */
+const CARTO_GLYPH_FONTSTACKS: readonly string[] = ['Noto Sans Regular', 'Open Sans Regular', 'Open Sans Bold'];
+
 const BASEMAP_SOURCE_TABLE = {
   'osm-raster': {
     format: 'raster',
@@ -265,18 +317,21 @@ const BASEMAP_SOURCE_TABLE = {
     provider: 'carto',
     kind: 'street',
     styleUrl: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    glyphFontstacks: CARTO_GLYPH_FONTSTACKS,
   },
   'carto-voyager': {
     format: 'style',
     provider: 'carto',
     kind: 'street',
     styleUrl: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    glyphFontstacks: CARTO_GLYPH_FONTSTACKS,
   },
   'carto-dark-matter': {
     format: 'style',
     provider: 'carto',
     kind: 'street',
     styleUrl: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    glyphFontstacks: CARTO_GLYPH_FONTSTACKS,
   },
   'protomaps-greece': {
     format: 'vector-archive',
@@ -323,6 +378,15 @@ export function isVectorArchiveSourceId(id: BasemapSourceId): id is VectorArchiv
 
 export function basemapProviderOf(source: BasemapSource): BasemapProvider {
   return BASEMAP_PROVIDERS[source.provider];
+}
+
+/**
+ * Οι στοίβες που σερβίρει ο glyph server της πηγής. **Κενό = καμία ετικέτα**: στυλ raster δεν έχει `glyphs`, και
+ * εκεί ένα `symbol` layer με `text-field` δεν ζωγραφίζει τίποτα.
+ */
+export function basemapGlyphFontstacks(source: BasemapSource): readonly string[] {
+  if (source.format === 'vector-archive') return BASEMAP_FONTSTACKS;
+  return source.format === 'style' ? source.glyphFontstacks : [];
 }
 
 // ============================================================================

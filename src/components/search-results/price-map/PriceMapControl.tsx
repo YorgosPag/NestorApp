@@ -14,7 +14,7 @@ import { Layers, X } from 'lucide-react';
 import React from 'react';
 
 import { usePriceMapModel } from '@/components/search-results/price-map/PriceMapProvider';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -28,17 +28,17 @@ export default function PriceMapControl() {
 
   return (
     <>
-      <Button
+      <ToggleButton
         type="button"
         size="sm"
-        variant={visible ? 'default' : 'secondary'}
-        aria-pressed={visible}
+        variant="secondary"
+        pressed={visible}
         onClick={() => setVisible(!visible)}
         className="pointer-events-auto shadow-sm"
       >
         {visible ? <X className={iconSizes.sm} aria-hidden="true" /> : <Layers className={iconSizes.sm} aria-hidden="true" />}
         {visible ? t('price-map:toggle.close') : t('price-map:toggle.open')}
-      </Button>
+      </ToggleButton>
       {visible && <LazyPriceMapPanel />}
     </>
   );

@@ -1,12 +1,13 @@
 /**
- * @fileoverview **ΤΑ ΣΧΗΜΑΤΑ ΤΩΝ ΧΩΡΩΝ** (ADR-884 Φ2στ-γ Γ3β · §4.14 · §12 Δ8) — καθαρές.
+ * @fileoverview **ΤΑ ΣΧΗΜΑΤΑ ΤΩΝ ΧΩΡΩΝ** (ADR-884 Φ2στ-γ Γ3β · Γ3γ-2α · §4.14 · §12 Δ8) — καθαρές.
  *
  * - **Χ** — περίγραμμα χώρου: νέο/αντικατάσταση · κάθε άρνηση με όνομα · ιδεμποτία · χώρος χωρίς σημείο λήψης δεκτός (Γ3β-1).
+ * - **Ι** — id του πελάτη (Γ3γ-2α, Figma/Linear): πρόθεμα + UUID v4 · `create` ≠ `replace` · ιδεμπότητη επανάληψη · `*-exists`.
  * - **Δ** — δηλωμένο εμβαδόν (Δ8.4 · Γ3β-2): πηγή υποχρεωτική · επιβιώνει αλλαγή σχήματος με την ΑΡΧΙΚΗ σφραγίδα.
  * - **Ε** — επικάλυψη: κοινός τοίχος/νοητή γραμμή ✓ · πάνω στον γείτονα ✗ (Revit «Room overlaps»).
  * - **Γ** — νοητές γραμμές (Δ8.2).
  * - **Κ** — κάτοψη: νέα κλίμακα ξανακλιμακώνει (ίδιο pixel) · νέα κάτοψη/σβήσιμο κλίμακας σβήνει.
- * - **Α** — αναίρεση: κάθε αντίστροφη **εκτελείται** και δίνει ξανά τον αρχικό γράφο (και το X → `null` της κλίμακας).
+ * - **Α** — αναίρεση: κάθε αντίστροφη **εκτελείται** και δίνει ξανά τον αρχικό γράφο **στα ίδια id** (και το X → `null` της κλίμακας).
  * - Κάθε αποτέλεσμα περνά το `checkTourGraph`.
  */
 
@@ -34,6 +35,15 @@ const rect = (x0: number, y0: number, x1: number, y1: number) => [{ x: x0, y: y0
 const draft = (points = rect(1, -1, 5, -4), extra: Partial<TourSpaceDraft> = {}): TourSpaceDraft =>
   ({ points, source: 'detected', room: null, declaredArea: null, ...extra });
 
+/** Ids «επιπέδου Β» όπως θα τα έκοβε ο `enterpriseIdService` στον browser — πρόθεμα + UUID v4. */
+const S1 = 'tspc_11111111-1111-4111-8111-111111111111';
+const S2 = 'tspc_22222222-2222-4222-8222-222222222222';
+const S3 = 'tspc_33333333-3333-4333-8333-333333333333';
+const G1 = 'tsep_11111111-1111-4111-8111-111111111111';
+const G2 = 'tsep_22222222-2222-4222-8222-222222222222';
+const create = (space: TourSpaceDraft, spaceId: string = S1) => ({ levelKey: L0, spaceId, mode: 'create' as const, space });
+const replace = (space: TourSpaceDraft, spaceId: string = S1) => ({ levelKey: L0, spaceId, mode: 'replace' as const, space });
+
 const BASE: Graph = { levels: [{ key: L0, floorPlans: [PLAN] }], nodes: [node('a', { x: 3, y: -2, z: 0 })] };
 
 function edited(result: TourGraphEditResult): Graph {
@@ -44,33 +54,30 @@ function edited(result: TourGraphEditResult): Graph {
 const levelOf = (graph: Graph): TourLevel => graph.levels[0];
 const refusalOf = (result: TourGraphEditResult) => (result.kind === 'refused' ? result.reason : result.kind);
 
-/** Ο γράφος με έναν εγκεκριμένο χώρο `s1` (κουζίνα, δηλωμένο 12,40 από μελέτη) και μία γραμμή `g1`. */
+const KITCHEN = draft(rect(1, -1, 5, -4), { room: { types: ['kitchen'], label: null }, declaredArea: { areaM2: 12.4, source: 'engineer-study' } });
+
+/** Ο γράφος με έναν εγκεκριμένο χώρο `S1` (κουζίνα, δηλωμένο 12,40 από μελέτη) και μία γραμμή `G1`. */
 const WITH_SPACE: Graph = (() => {
-  const room = { types: ['kitchen'], label: null };
-  const one = edited(upsertSpace(BASE, { levelKey: L0, spaceId: null, space: draft(rect(1, -1, 5, -4), { room, declaredArea: { areaM2: 12.4, source: 'engineer-study' } }) }, 's1', STAMP));
-  return edited(upsertSeparation(one, { levelKey: L0, separationId: null, a: { x: 5, y: -1 }, b: { x: 5, y: -4 } }, 'g1', STAMP));
+  const one = edited(upsertSpace(BASE, create(KITCHEN), STAMP));
+  return edited(upsertSeparation(one, { levelKey: L0, separationId: G1, mode: 'create', a: { x: 5, y: -1 }, b: { x: 5, y: -4 } }, STAMP));
 })();
 
 describe('Χ — περίγραμμα χώρου', () => {
-  it('νέος χώρος: id από τον διακομιστή, έγκριση = σφραγίδα, createdId για την αναίρεση', () => {
-    const result = upsertSpace(BASE, { levelKey: L0, spaceId: null, space: draft() }, 's1', STAMP);
-    expect(result).toMatchObject({ kind: 'edited', createdId: 's1' });
-    const [space] = levelOf(edited(result)).spaces ?? [];
-    expect(space).toEqual({ id: 's1', points: rect(1, -1, 5, -4), source: 'detected', approvedBy: 'manager', approvedAt: STAMP.at });
+  it('νέος χώρος: το id του ΠΕΛΑΤΗ γράφεται αυτούσιο, έγκριση = σφραγίδα', () => {
+    const [space] = levelOf(edited(upsertSpace(BASE, create(draft()), STAMP))).spaces ?? [];
+    expect(space).toEqual({ id: S1, points: rect(1, -1, 5, -4), source: 'detected', approvedBy: 'manager', approvedAt: STAMP.at });
   });
 
   it('χώρος ΧΩΡΙΣ σημείο λήψης, με δικό του όνομα, είναι δεκτός (Γ3β-1: η αποθήκη που δεν φωτογραφήθηκε)', () => {
     const storage = draft(rect(10, -6, 12, -8), { room: { types: ['storage'], label: 'Αποθήκη' }, source: 'manual' });
-    const space = (levelOf(edited(upsertSpace(BASE, { levelKey: L0, spaceId: null, space: storage }, 's2', STAMP))).spaces ?? [])[0];
+    const space = (levelOf(edited(upsertSpace(BASE, create(storage, S2), STAMP))).spaces ?? [])[0];
     expect(space.room).toEqual({ types: ['storage'], label: 'Αποθήκη', source: 'manual' });
   });
 
-  it('ίδια δεδομένα ⇒ unchanged (η προηγούμενη έγκριση μένει)· άλλο σχήμα ⇒ νέα έγκριση, χωρίς createdId', () => {
-    const same = draft(rect(1, -1, 5, -4), { room: { types: ['kitchen'], label: null }, declaredArea: { areaM2: 12.4, source: 'engineer-study' } });
-    expect(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: 's1', space: same }, 'x', LATER)).toEqual({ kind: 'unchanged' });
-    const moved = upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: 's1', space: { ...same, points: rect(1, -1, 5, -5) } }, 'x', LATER);
-    expect(moved).not.toHaveProperty('createdId');
-    expect(levelOf(edited(moved)).spaces?.[0]).toMatchObject({ id: 's1', approvedBy: 'editor', approvedAt: LATER.at });
+  it('ίδια δεδομένα ⇒ unchanged (η προηγούμενη έγκριση μένει)· άλλο σχήμα ⇒ νέα έγκριση', () => {
+    expect(upsertSpace(WITH_SPACE, replace(KITCHEN), LATER)).toEqual({ kind: 'unchanged' });
+    const moved = upsertSpace(WITH_SPACE, replace({ ...KITCHEN, points: rect(1, -1, 5, -5) }), LATER);
+    expect(levelOf(edited(moved)).spaces?.[0]).toMatchObject({ id: S1, approvedBy: 'editor', approvedAt: LATER.at });
   });
 
   it.each([
@@ -83,86 +90,115 @@ describe('Χ — περίγραμμα χώρου', () => {
     ['κορυφή έξω από την κάτοψη', draft(rect(18, -1, 22, -4)), 'space-outside-plan'],
     ['άγνωστος τύπος ονόματος', draft(rect(1, -1, 5, -4), { room: { types: ['dungeon'], label: null } }), 'room-invalid'],
   ] as const)('%s ⇒ %s', (_label, space, reason) => {
-    expect(refusalOf(upsertSpace(BASE, { levelKey: L0, spaceId: null, space }, 's1', STAMP))).toBe(reason);
+    expect(refusalOf(upsertSpace(BASE, create(space), STAMP))).toBe(reason);
   });
 
-  it('άγνωστη πηγή ⇒ space-invalid · ανύπαρκτο id ⇒ space-absent · όροφος χωρίς κλίμακα ⇒ plan-uncalibrated', () => {
+  it('άγνωστη πηγή ⇒ space-invalid · replace ανύπαρκτου ⇒ space-absent · όροφος χωρίς κλίμακα ⇒ plan-uncalibrated', () => {
     const badSource = { ...draft(), source: 'guess' } as unknown as TourSpaceDraft;
-    expect(refusalOf(upsertSpace(BASE, { levelKey: L0, spaceId: null, space: badSource }, 's1', STAMP))).toBe('space-invalid');
-    expect(refusalOf(upsertSpace(BASE, { levelKey: L0, spaceId: 'ghost', space: draft() }, 's1', STAMP))).toBe('space-absent');
+    expect(refusalOf(upsertSpace(BASE, create(badSource), STAMP))).toBe('space-invalid');
+    expect(refusalOf(upsertSpace(BASE, replace(draft()), STAMP))).toBe('space-absent');
     const { scale: _s, ...uncalibrated } = PLAN;
     const graph: Graph = { levels: [{ key: L0, floorPlans: [uncalibrated] }], nodes: [] };
-    expect(refusalOf(upsertSpace(graph, { levelKey: L0, spaceId: null, space: draft() }, 's1', STAMP))).toBe('plan-uncalibrated');
-    expect(refusalOf(upsertSpace(BASE, { levelKey: { kind: 'local', ordinal: 9 }, spaceId: null, space: draft() }, 's1', STAMP))).toBe('level-absent');
+    expect(refusalOf(upsertSpace(graph, create(draft()), STAMP))).toBe('plan-uncalibrated');
+    expect(refusalOf(upsertSpace(BASE, { ...create(draft()), levelKey: { kind: 'local', ordinal: 9 } }, STAMP))).toBe('level-absent');
   });
 
   it('αφαίρεση: φεύγει μόνο αυτός · ανύπαρκτος ⇒ unchanged · ο τελευταίος ⇒ το πεδίο λείπει (όπως πριν τη Γ3β)', () => {
-    expect(removeSpace(WITH_SPACE, L0, 'ghost')).toEqual({ kind: 'unchanged' });
-    const level = levelOf(edited(removeSpace(WITH_SPACE, L0, 's1')));
+    expect(removeSpace(WITH_SPACE, L0, S3)).toEqual({ kind: 'unchanged' });
+    const level = levelOf(edited(removeSpace(WITH_SPACE, L0, S1)));
     expect(level).not.toHaveProperty('spaces');
     expect(level.separations).toHaveLength(1);
+  });
+});
+
+describe('Ι — id του πελάτη (Γ3γ-2α)', () => {
+  it.each([
+    ['χωρίς πρόθεμα', '11111111-1111-4111-8111-111111111111'],
+    ['πρόθεμα άλλου είδους (γραμμή)', G2],
+    ['πρόθεμα κόμβου', 'tnod_11111111-1111-4111-8111-111111111111'],
+    ['όχι UUID v4', 'tspc_11111111-1111-1111-1111-111111111111'],
+    ['αυθαίρετο', 's1'],
+  ])('create με %s ⇒ space-invalid (ο κριτής δεν εμπιστεύεται ποτέ id πελάτη)', (_label, spaceId) => {
+    expect(refusalOf(upsertSpace(BASE, create(draft(), spaceId), STAMP))).toBe('space-invalid');
+  });
+
+  it('επανάληψη ΙΔΙΟΥ create (το δίκτυο το ξανάστειλε) ⇒ unchanged, ποτέ δεύτερος χώρος', () => {
+    expect(upsertSpace(WITH_SPACE, create(KITCHEN), LATER)).toEqual({ kind: 'unchanged' });
+  });
+
+  it('create σε id που υπάρχει με ΑΛΛΟ περιεχόμενο ⇒ space-exists (όχι σιωπηλή αντικατάσταση)', () => {
+    expect(refusalOf(upsertSpace(WITH_SPACE, create({ ...KITCHEN, points: rect(1, -1, 5, -5) }), LATER))).toBe('space-exists');
+  });
+
+  it('replace σε χώρο που έσβησε άλλος ⇒ space-absent (ποτέ ανάσταση)', () => {
+    const gone = edited(removeSpace(WITH_SPACE, L0, S1));
+    expect(refusalOf(upsertSpace(gone, replace(KITCHEN), LATER))).toBe('space-absent');
   });
 });
 
 describe('Δ — δηλωμένο εμβαδόν (Δ8.4)', () => {
   it.each([[0], [-3], [10_001], [Number.POSITIVE_INFINITY]])('εμβαδόν %p ⇒ area-invalid', (areaM2) => {
     const space = draft(rect(1, -1, 5, -4), { declaredArea: { areaM2, source: 'owner-declared' } });
-    expect(refusalOf(upsertSpace(BASE, { levelKey: L0, spaceId: null, space }, 's1', STAMP))).toBe('area-invalid');
+    expect(refusalOf(upsertSpace(BASE, create(space), STAMP))).toBe('area-invalid');
   });
 
   it('χωρίς γνωστή πηγή ⇒ area-invalid (Γ3β-2: η πηγή είναι υποχρεωτική)', () => {
     const space = { ...draft(), declaredArea: { areaM2: 12, source: 'hearsay' } } as unknown as TourSpaceDraft;
-    expect(refusalOf(upsertSpace(BASE, { levelKey: L0, spaceId: null, space }, 's1', STAMP))).toBe('area-invalid');
+    expect(refusalOf(upsertSpace(BASE, create(space), STAMP))).toBe('area-invalid');
   });
 
   it('αλλαγή ΣΧΗΜΑΤΟΣ: η δήλωση μένει με την ΑΡΧΙΚΗ σφραγίδα· αλλαγή ΤΙΜΗΣ: νέα σφραγίδα', () => {
-    const kept = draft(rect(1, -1, 5, -5), { room: { types: ['kitchen'], label: null }, declaredArea: { areaM2: 12.4, source: 'engineer-study' } });
-    const reshaped = levelOf(edited(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: 's1', space: kept }, 'x', LATER))).spaces?.[0];
+    const kept = { ...KITCHEN, points: rect(1, -1, 5, -5) };
+    const reshaped = levelOf(edited(upsertSpace(WITH_SPACE, replace(kept), LATER))).spaces?.[0];
     expect(reshaped?.declaredArea).toEqual({ areaM2: 12.4, source: 'engineer-study', declaredBy: 'manager', declaredAt: STAMP.at });
     const retyped = { ...kept, declaredArea: { areaM2: 13, source: 'site-measurement' as const } };
-    const changed = levelOf(edited(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: 's1', space: retyped }, 'x', LATER))).spaces?.[0];
+    const changed = levelOf(edited(upsertSpace(WITH_SPACE, replace(retyped), LATER))).spaces?.[0];
     expect(changed?.declaredArea).toEqual({ areaM2: 13, source: 'site-measurement', declaredBy: 'editor', declaredAt: LATER.at });
   });
 
   it('ίδιο σχήμα, ΜΟΝΟ νέα δήλωση ⇒ αλλαγή (όχι «unchanged») · σβήσιμο της δήλωσης ⇒ αλλαγή', () => {
-    const base = { points: rect(1, -1, 5, -4), room: { types: ['kitchen'], label: null } };
-    const onlyArea = draft(base.points, { room: base.room, declaredArea: { areaM2: 12.5, source: 'engineer-study' } });
-    expect(levelOf(edited(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: 's1', space: onlyArea }, 'x', LATER))).spaces?.[0].declaredArea)
-      .toMatchObject({ areaM2: 12.5 });
-    const cleared = draft(base.points, { room: base.room, declaredArea: null });
-    expect(levelOf(edited(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: 's1', space: cleared }, 'x', LATER))).spaces?.[0])
-      .not.toHaveProperty('declaredArea');
+    const onlyArea = { ...KITCHEN, declaredArea: { areaM2: 12.5, source: 'engineer-study' as const } };
+    expect(levelOf(edited(upsertSpace(WITH_SPACE, replace(onlyArea), LATER))).spaces?.[0].declaredArea).toMatchObject({ areaM2: 12.5 });
+    const cleared = { ...KITCHEN, declaredArea: null };
+    expect(levelOf(edited(upsertSpace(WITH_SPACE, replace(cleared), LATER))).spaces?.[0]).not.toHaveProperty('declaredArea');
   });
 });
 
 describe('Ε — επικάλυψη με άλλον χώρο του ορόφου', () => {
   it('ο γείτονας στον κοινό τοίχο/στη νοητή γραμμή ✓ · 30 cm πάνω του ✗ · ο ίδιος χώρος δεν συγκρίνεται με τον εαυτό του', () => {
-    expect(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: null, space: draft(rect(5, -1, 9, -4)) }, 's2', STAMP).kind).toBe('edited');
-    expect(refusalOf(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: null, space: draft(rect(4.7, -1, 9, -4)) }, 's2', STAMP))).toBe('space-overlap');
-    const pair = edited(upsertSpace(WITH_SPACE, { levelKey: L0, spaceId: null, space: draft(rect(5, -1, 9, -4)) }, 's2', STAMP));
-    // Τρεμούλιασμα 2 cm πάνω στον γείτονα (ορθογώνια έλξη / σύρσιμο) ⇒ δεκτό· ο s1 δεν συγκρίνεται με τον εαυτό του.
-    expect(upsertSpace(pair, { levelKey: L0, spaceId: 's1', space: draft(rect(1, -1, 5.02, -4)) }, 'x', LATER).kind).toBe('edited');
-    expect(refusalOf(upsertSpace(pair, { levelKey: L0, spaceId: 's1', space: draft(rect(1, -1, 5.3, -4)) }, 'x', LATER))).toBe('space-overlap');
+    expect(upsertSpace(WITH_SPACE, create(draft(rect(5, -1, 9, -4)), S2), STAMP).kind).toBe('edited');
+    expect(refusalOf(upsertSpace(WITH_SPACE, create(draft(rect(4.7, -1, 9, -4)), S2), STAMP))).toBe('space-overlap');
+    const pair = edited(upsertSpace(WITH_SPACE, create(draft(rect(5, -1, 9, -4)), S2), STAMP));
+    // Τρεμούλιασμα 2 cm πάνω στον γείτονα (ορθογώνια έλξη / σύρσιμο) ⇒ δεκτό· ο S1 δεν συγκρίνεται με τον εαυτό του.
+    expect(upsertSpace(pair, replace(draft(rect(1, -1, 5.02, -4))), LATER).kind).toBe('edited');
+    expect(refusalOf(upsertSpace(pair, replace(draft(rect(1, -1, 5.3, -4))), LATER))).toBe('space-overlap');
   });
 });
 
 describe('Γ — νοητές γραμμές (Δ8.2)', () => {
-  const line = (a: { x: number; y: number }, b: { x: number; y: number }, separationId: string | null = null) =>
-    ({ levelKey: L0, separationId, a, b });
+  type Mode = 'create' | 'replace';
+  const line = (a: { x: number; y: number }, b: { x: number; y: number }, mode: Mode = 'create', separationId: string = G1) =>
+    ({ levelKey: L0, separationId, mode, a, b });
 
-  it('νέα γραμμή: createdId · ίδια θέση ⇒ unchanged · μετακίνηση ⇒ νέα έγκριση', () => {
-    expect(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5, y: -4 }), 'g1', STAMP)).toMatchObject({ kind: 'edited', createdId: 'g1' });
-    expect(upsertSeparation(WITH_SPACE, line({ x: 5, y: -1 }, { x: 5, y: -4 }, 'g1'), 'x', LATER)).toEqual({ kind: 'unchanged' });
-    const moved = levelOf(edited(upsertSeparation(WITH_SPACE, line({ x: 6, y: -1 }, { x: 6, y: -4 }, 'g1'), 'x', LATER)));
-    expect(moved.separations?.[0]).toEqual({ id: 'g1', a: { x: 6, y: -1 }, b: { x: 6, y: -4 }, approvedBy: 'editor', approvedAt: LATER.at });
+  it('νέα γραμμή με id πελάτη · ίδια θέση ⇒ unchanged · μετακίνηση ⇒ νέα έγκριση', () => {
+    expect(levelOf(edited(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5, y: -4 }), STAMP))).separations?.[0].id).toBe(G1);
+    expect(upsertSeparation(WITH_SPACE, line({ x: 5, y: -1 }, { x: 5, y: -4 }, 'replace'), LATER)).toEqual({ kind: 'unchanged' });
+    const moved = levelOf(edited(upsertSeparation(WITH_SPACE, line({ x: 6, y: -1 }, { x: 6, y: -4 }, 'replace'), LATER)));
+    expect(moved.separations?.[0]).toEqual({ id: G1, a: { x: 6, y: -1 }, b: { x: 6, y: -4 }, approvedBy: 'editor', approvedAt: LATER.at });
   });
 
   it('έξω από την κάτοψη · κοντύτερη από 10 cm ⇒ separation-invalid · ανύπαρκτη ⇒ separation-absent / unchanged', () => {
-    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 25, y: -1 }), 'g', STAMP))).toBe('separation-invalid');
-    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5.05, y: -1 }), 'g', STAMP))).toBe('separation-invalid');
-    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5, y: -4 }, 'ghost'), 'g', STAMP))).toBe('separation-absent');
-    expect(removeSeparation(WITH_SPACE, L0, 'ghost')).toEqual({ kind: 'unchanged' });
-    expect(levelOf(edited(removeSeparation(WITH_SPACE, L0, 'g1')))).not.toHaveProperty('separations');
+    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 25, y: -1 }), STAMP))).toBe('separation-invalid');
+    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5.05, y: -1 }), STAMP))).toBe('separation-invalid');
+    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5, y: -4 }, 'replace', G2), STAMP))).toBe('separation-absent');
+    expect(removeSeparation(WITH_SPACE, L0, G2)).toEqual({ kind: 'unchanged' });
+    expect(levelOf(edited(removeSeparation(WITH_SPACE, L0, G1)))).not.toHaveProperty('separations');
+  });
+
+  it('create: ίδια γραμμή ξανά ⇒ unchanged · άλλη θέση στο ίδιο id ⇒ separation-exists · id χώρου ⇒ separation-invalid', () => {
+    expect(upsertSeparation(WITH_SPACE, line({ x: 5, y: -1 }, { x: 5, y: -4 }), LATER)).toEqual({ kind: 'unchanged' });
+    expect(refusalOf(upsertSeparation(WITH_SPACE, line({ x: 6, y: -1 }, { x: 6, y: -4 }), LATER))).toBe('separation-exists');
+    expect(refusalOf(upsertSeparation(BASE, line({ x: 5, y: -1 }, { x: 5, y: -4 }, 'create', S1), STAMP))).toBe('separation-invalid');
   });
 });
 
@@ -182,65 +218,60 @@ describe('Κ — τα σχήματα ανήκουν στην ΕΙΚΟΝΑ', () =
   });
 });
 
-describe('Α — αναίρεση: κάθε αντίστροφη ΕΚΤΕΛΕΙΤΑΙ και ξαναδίνει τον αρχικό γράφο', () => {
-  let minted = 0;
+describe('Α — αναίρεση: κάθε αντίστροφη ΕΚΤΕΛΕΙΤΑΙ και ξαναδίνει τον αρχικό γράφο, ΣΤΑ ΙΔΙΑ id', () => {
   const run = (graph: Graph, command: TourGraphCommand): Graph => {
-    minted += 1;
     switch (command.op) {
-      case 'space': return edited(upsertSpace(graph, command, command.spaceId ?? `new${minted}`, STAMP));
+      case 'space': return edited(upsertSpace(graph, command, STAMP));
       case 'unspace': return edited(removeSpace(graph, command.levelKey, command.spaceId));
-      case 'separate': return edited(upsertSeparation(graph, command, command.separationId ?? `new${minted}`, STAMP));
+      case 'separate': return edited(upsertSeparation(graph, command, STAMP));
       case 'unseparate': return edited(removeSeparation(graph, command.levelKey, command.separationId));
       case 'calibrate': return edited(calibrateLevel(graph, command.levelKey, command.metresPerPixel, STAMP));
       case 'position': return edited(positionNode(graph, command.nodeId, command.point));
       default: throw new Error(command.op);
     }
   };
-  /** Χωρίς τα id (η επαναγέννηση κόβει νέο — τίποτα δεν δείχνει στο παλιό) και χωρίς σφραγίδες. */
+  /** Με τα id (Γ3γ-2α: η επαναφορά γίνεται στο ΙΔΙΟ id) — χωρίς σφραγίδες. */
   const r = (p: { x: number; y: number } | null) => (p === null ? null : [Number(p.x.toFixed(9)), Number(p.y.toFixed(9))]);
   const shapesOf = (graph: Graph) => ({
-    spaces: (levelOf(graph).spaces ?? []).map(({ points, room, declaredArea, source }) => ({ points, room, area: declaredArea?.areaM2, source })),
-    lines: (levelOf(graph).separations ?? []).map(({ a, b }) => [r(a), r(b)]),
+    spaces: (levelOf(graph).spaces ?? []).map(({ id, points, room, declaredArea, source }) => (
+      { id, points: points.map(r), room, area: declaredArea?.areaM2, source }
+    )),
+    lines: (levelOf(graph).separations ?? []).map(({ id, a, b }) => [id, r(a), r(b)]),
     positions: graph.nodes.map((n) => r(n.position)),
   });
   const roundTrip = (before: Graph, command: TourGraphCommand) => {
     const after = run(before, command);
-    const createdId = (levelOf(after).spaces ?? []).concat().pop()?.id;
-    const inverse = inverseOf(command, before, { createdId: command.op === 'separate' ? levelOf(after).separations?.at(-1)?.id : createdId });
+    const inverse = inverseOf(command, before);
     if (inverse === null) throw new Error('αναμενόταν αντιστρέψιμη');
     return inverse.reduce(run, after);
   };
 
   it.each<[string, TourGraphCommand]>([
-    ['νέος χώρος', { op: 'space', levelKey: L0, spaceId: null, space: draft(rect(10, -6, 12, -8)) }],
-    ['αλλαγή σχήματος', { op: 'space', levelKey: L0, spaceId: 's1', space: draft(rect(1, -1, 6, -6)) }],
-    ['αφαίρεση χώρου (με όνομα + δήλωση)', { op: 'unspace', levelKey: L0, spaceId: 's1' }],
-    ['νέα γραμμή', { op: 'separate', levelKey: L0, separationId: null, a: { x: 8, y: -1 }, b: { x: 8, y: -4 } }],
-    ['μετακίνηση γραμμής', { op: 'separate', levelKey: L0, separationId: 'g1', a: { x: 6, y: -1 }, b: { x: 6, y: -4 } }],
-    ['αφαίρεση γραμμής', { op: 'unseparate', levelKey: L0, separationId: 'g1' }],
+    ['νέος χώρος', { op: 'space', levelKey: L0, spaceId: S2, mode: 'create', space: draft(rect(10, -6, 12, -8)) }],
+    ['αλλαγή σχήματος', { op: 'space', levelKey: L0, spaceId: S1, mode: 'replace', space: draft(rect(1, -1, 6, -6)) }],
+    ['αφαίρεση χώρου (με όνομα + δήλωση)', { op: 'unspace', levelKey: L0, spaceId: S1 }],
+    ['νέα γραμμή', { op: 'separate', levelKey: L0, separationId: G2, mode: 'create', a: { x: 8, y: -1 }, b: { x: 8, y: -4 } }],
+    ['μετακίνηση γραμμής', { op: 'separate', levelKey: L0, separationId: G1, mode: 'replace', a: { x: 6, y: -1 }, b: { x: 6, y: -4 } }],
+    ['αφαίρεση γραμμής', { op: 'unseparate', levelKey: L0, separationId: G1 }],
     ['νέα κλίμακα', { op: 'calibrate', levelKey: L0, metresPerPixel: 0.05 }],
     ['🔴 σβήσιμο κλίμακας (X → null): θέσεις ΚΑΙ σχήματα επανέρχονται', { op: 'calibrate', levelKey: L0, metresPerPixel: null }],
   ])('%s', (_label, command) => {
-    const back = roundTrip(WITH_SPACE, command);
-    const expected = shapesOf(WITH_SPACE);
-    const actual = shapesOf(back);
-    expect(actual.lines).toEqual(expected.lines);
-    expect(actual.positions).toEqual(expected.positions);
-    expect(actual.spaces.map((s) => s.points.map(r))).toEqual(expected.spaces.map((s) => s.points.map(r)));
-    expect(actual.spaces.map(({ room, area, source }) => ({ room, area, source })))
-      .toEqual(expected.spaces.map(({ room, area, source }) => ({ room, area, source })));
+    expect(shapesOf(roundTrip(WITH_SPACE, command))).toEqual(shapesOf(WITH_SPACE));
   });
 
-  it('αλλαγή κάτοψης: η αντίστροφη ξαναγεννά ΚΑΙ χώρους (με όνομα + δήλωση) ΚΑΙ γραμμές, μετά την κλίμακα', () => {
+  it('η αναίρεση μιας δημιουργίας είναι γνωστή ΠΡΙΝ απαντήσει ο διακομιστής: αφαίρεση του ΙΔΙΟΥ id', () => {
+    expect(inverseOf({ op: 'space', levelKey: L0, spaceId: S2, mode: 'create', space: draft() }, BASE))
+      .toEqual([{ op: 'unspace', levelKey: L0, spaceId: S2 }]);
+    expect(inverseOf({ op: 'unspace', levelKey: L0, spaceId: S3 }, WITH_SPACE)).toBeNull();
+  });
+
+  it('αλλαγή κάτοψης: η αντίστροφη ξαναγεννά ΚΑΙ χώρους (με όνομα + δήλωση) ΚΑΙ γραμμές, στα ίδια id, μετά την κλίμακα', () => {
     const inverse = inverseOf({ op: 'floorplan', levelKey: L0, plan: { fileId: 'f2', source: 'user-sketch' } }, WITH_SPACE) ?? [];
     expect(inverse.map((c) => c.op)).toEqual(['floorplan', 'calibrate', 'position', 'separate', 'space']);
+    expect(inverse.at(-2)).toMatchObject({ op: 'separate', separationId: G1, mode: 'create' });
     expect(inverse.at(-1)).toMatchObject({
-      op: 'space', spaceId: null,
+      op: 'space', spaceId: S1, mode: 'create',
       space: { room: { types: ['kitchen'], label: null }, declaredArea: { areaM2: 12.4, source: 'engineer-study' } },
     });
-  });
-
-  it('νέος χώρος χωρίς createdId ⇒ καμία αναίρεση (ποτέ μαντεψιά για το ποιο id)', () => {
-    expect(inverseOf({ op: 'space', levelKey: L0, spaceId: null, space: draft() }, BASE)).toBeNull();
   });
 });

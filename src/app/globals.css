@@ -245,6 +245,20 @@
     --map-seq-4: 213.1 67.5% 44.7%;   /* #256abf */
     --map-seq-5: 213.5 77.9% 28.4%;   /* #104281 */
 
+    /* FLOOR-PLAN OVERLAY (ADR-884 Φ2στ-γ Γ3γ-1 — tour floor plans, Zillow 3D Home pattern). Painted on
+       a floor-plan IMAGE that is white paper with dark lines in BOTH themes — hence identical values
+       in the dark block (same reasoning as the map ramp above). Yellow = the room you are in (pale
+       = its open-plan neighbour), grey = a room with no capture, red = the current capture point,
+       ink = room labels over a white halo. Identity never by colour alone (CHECK 3.41): the current
+       point is also larger, carries the view cone and aria-current. Consumer:
+       components/spatial-tour/viewer/tour-plan-overlay-palette.ts (the ONE place that names them). */
+    --plan-space-here: 53 98% 63%;    /* #fde844 */
+    --plan-space-edge: 45 93% 47%;    /* #e7b008 */
+    --plan-space-idle: 0 0% 45%;      /* #737373 */
+    --plan-here: 0 72% 51%;           /* #dc2828 */
+    --plan-ink: 0 0% 9%;              /* #171717 */
+    --plan-ink-muted: 0 0% 32%;       /* #525252 */
+
     /* DEPRECATED ALIASES (ADR-710 §10) — the reports surface used to carry its own
        Okabe-Ito palette. That palette was labelled "colour-blind safe" for years and
        had never been measured: on this surface its yellow scored 1.11:1 contrast,
@@ -462,6 +476,15 @@
     --map-seq-3: 212.8 76.8% 56.1%;   /* #3987e5 */
     --map-seq-4: 213.1 67.5% 44.7%;   /* #256abf */
     --map-seq-5: 213.5 77.9% 28.4%;   /* #104281 */
+
+    /* FLOOR-PLAN OVERLAY — identical to light on purpose: the plan under it is white paper in both
+       themes (see the light block). */
+    --plan-space-here: 53 98% 63%;    /* #fde844 */
+    --plan-space-edge: 45 93% 47%;    /* #e7b008 */
+    --plan-space-idle: 0 0% 45%;      /* #737373 */
+    --plan-here: 0 72% 51%;           /* #dc2828 */
+    --plan-ink: 0 0% 9%;              /* #171717 */
+    --plan-ink-muted: 0 0% 32%;       /* #525252 */
 
     /* DEPRECATED ALIASES — see the light block. */
     --report-chart-1: var(--chart-1);

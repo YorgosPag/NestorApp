@@ -11,6 +11,8 @@
  * 🔑 **Χωρίς σημείο λήψης, δεκτός** (Γ3β-1): η αποθήκη που δεν φωτογραφήθηκε είναι χώρος — γι' αυτό φέρει δικό της όνομα.
  * 🔑 **Η δήλωση εμβαδού επιβιώνει την αλλαγή σχήματος** (Δ8.4): η οθόνη την ξαναστέλνει, και όταν τιμή + πηγή δεν άλλαξαν μένει
  *   **η αρχική** σφραγίδα «ποιος/πότε».
+ * 🔑 **Το id το κόβει ο πελάτης, το ελέγχει ο κριτής** (Γ3γ-2α, πρότυπο Figma/Linear): η δημιουργία φαίνεται αμέσως με το
+ *   **οριστικό** id — καμία δεύτερη (προσωρινή) ταυτότητα, καμία αναμονή· αντίστοιχα η αναίρεση ξαναγεννά στο **ίδιο** id.
  * 🔑 **Τα σχήματα ανήκουν στην ΕΙΚΟΝΑ**, όπως οι θέσεις: `rescaleLevelShapes` (νέα κλίμακα) · `clearLevelShapes` (νέα κάτοψη).
  */
 
@@ -26,10 +28,12 @@ import {
 } from '@/constants/spatial-tour-vocabulary';
 import { isPolygonSelfIntersecting, polygonArea, type PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { polygonsOverlap } from '@/lib/geometry/planar-polygon-overlap';
+import { isEnterpriseIdOfPrefix } from '@/services/enterprise-id-parse';
+import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from '@/services/enterprise-id-prefixes';
 import type { SpatialTour, TourDeclaredArea, TourLevel, TourLevelKey, TourSeparationLine, TourSpaceOutline } from '@/types/spatial-tour';
 
 import { findTourLevel, levelKeyId } from './spatial-tour-graph';
-import type { TourGraphEditRefusal, TourGraphEditResult, TourPlanXY, TourSpaceDraft } from './tour-graph-edit';
+import type { TourGraphEditRefusal, TourGraphEditResult, TourPlanXY, TourShapeMode, TourSpaceDraft } from './tour-graph-edit';
 import type { TourEditStamp } from './tour-plan-edit';
 import { activeFloorPlan, calibratedPlan, isOnPlan, rescalePoint, type CalibratedPlan } from './tour-plan-frame';
 import { normalizeTourRoom, sameTourRoom } from './tour-room';
@@ -126,14 +130,28 @@ function sameSpace(a: TourSpaceOutline, b: TourSpaceOutline): boolean {
 
 interface SpaceInput {
   readonly levelKey: TourLevelKey;
-  readonly spaceId: string | null;
+  readonly spaceId: string;
+  readonly mode: TourShapeMode;
   readonly space: TourSpaceDraft;
 }
 
+/**
+ * Η πρόθεση απέναντι σε ό,τι υπάρχει: `replace` σε ανύπαρκτο ⇒ `absent` · `create` με id που **δεν** είναι του είδους του
+ * (πρόθεμα + UUID v4 — ο διακομιστής δεν εμπιστεύεται ποτέ id πελάτη) ⇒ `invalid`. Το `create` σε υπάρχον κρίνεται μετά
+ * την κατασκευή (ίδιο περιεχόμενο = ιδεμπότητη επανάληψη).
+ */
+function judgeIntent(
+  id: string, mode: TourShapeMode, exists: boolean, prefix: EnterpriseIdPrefix, absent: TourGraphEditRefusal, invalid: TourGraphEditRefusal,
+): TourGraphEditRefusal | null {
+  if (mode === 'replace') return exists ? null : absent;
+  return isEnterpriseIdOfPrefix(id, prefix) ? null : invalid;
+}
+
 /** Ο χώρος όπως θα γραφτεί — ή η άρνηση. Η έγκριση (`approvedBy/At`) = η σφραγίδα αυτής της εντολής. */
-function buildSpace(input: SpaceInput, level: TourLevel, plan: CalibratedPlan, id: string, stamp: TourEditStamp): TourSpaceOutline | TourGraphEditRefusal {
-  const previous = input.spaceId === null ? undefined : (level.spaces ?? []).find((space) => space.id === input.spaceId);
-  if (input.spaceId !== null && previous === undefined) return 'space-absent';
+function buildSpace(input: SpaceInput, level: TourLevel, plan: CalibratedPlan, stamp: TourEditStamp): TourSpaceOutline | TourGraphEditRefusal {
+  const previous = (level.spaces ?? []).find((space) => space.id === input.spaceId);
+  const intent = judgeIntent(input.spaceId, input.mode, previous !== undefined, ENTERPRISE_ID_PREFIXES.TOUR_SPACE, 'space-absent', 'space-invalid');
+  if (intent !== null) return intent;
   if (!isTourSpaceSource(input.space.source)) return 'space-invalid';
   const ring = judgeOutline(input.space.points, plan);
   if (typeof ring === 'string') return ring;
@@ -143,7 +161,7 @@ function buildSpace(input: SpaceInput, level: TourLevel, plan: CalibratedPlan, i
   if (declaredArea === 'area-invalid') return declaredArea;
   if (overlapsAnother(ring, level, input.spaceId)) return 'space-overlap';
   return {
-    id, points: ring, source: input.space.source, approvedBy: stamp.uid, approvedAt: stamp.at,
+    id: input.spaceId, points: ring, source: input.space.source, approvedBy: stamp.uid, approvedAt: stamp.at,
     ...(room === null ? {} : { room }),
     ...(declaredArea === null ? {} : { declaredArea }),
   };
@@ -152,21 +170,21 @@ function buildSpace(input: SpaceInput, level: TourLevel, plan: CalibratedPlan, i
 // ── Οι εντολές ──────────────────────────────────────────────────────────────
 
 /**
- * **Έγκρινε περίγραμμα χώρου** — νέο (`spaceId === null`, id = `newId`, ήδη κομμένο από τον διακομιστής, N.6) ή αντικατάσταση
- * υπάρχοντος. Ίδια δεδομένα ⇒ `unchanged` (και η προηγούμενη έγκριση μένει).
+ * **Έγκρινε περίγραμμα χώρου** — `create` (id του πελάτη, `tspc_…`) ή `replace` υπάρχοντος. Ίδια δεδομένα ⇒ `unchanged` (και η
+ * προηγούμενη έγκριση μένει) — γι' αυτό η επανάληψη ενός `create` που πέρασε δεν γεννά ποτέ δεύτερο χώρο.
  */
-export function upsertSpace(graph: Graph, input: SpaceInput, newId: string, stamp: TourEditStamp): TourGraphEditResult {
+export function upsertSpace(graph: Graph, input: SpaceInput, stamp: TourEditStamp): TourGraphEditResult {
   const located = locateCalibrated(graph, input.levelKey);
   if (typeof located === 'string') return refused(located);
   const { level, plan } = located;
-  const next = buildSpace(input, level, plan, input.spaceId ?? newId, stamp);
+  const next = buildSpace(input, level, plan, stamp);
   if (typeof next === 'string') return refused(next);
   const spaces = level.spaces ?? [];
   const previous = spaces.find((space) => space.id === next.id);
   if (previous !== undefined && sameSpace(previous, next)) return UNCHANGED;
+  if (previous !== undefined && input.mode === 'create') return refused('space-exists');
   const nextSpaces = previous === undefined ? [...spaces, next] : spaces.map((space) => (space.id === next.id ? next : space));
-  const graphAfter = replaceLevel(graph, levelWithShapes(level, nextSpaces, level.separations ?? []));
-  return previous === undefined ? { kind: 'edited', graph: graphAfter, createdId: next.id } : { kind: 'edited', graph: graphAfter };
+  return { kind: 'edited', graph: replaceLevel(graph, levelWithShapes(level, nextSpaces, level.separations ?? [])) };
 }
 
 /** **Βγάλε** ένα περίγραμμα χώρου — ανύπαρκτο ⇒ ίδιος γράφος (όπως το `unlink`). */
@@ -180,7 +198,8 @@ export function removeSpace(graph: Graph, levelKey: TourLevelKey, spaceId: strin
 
 interface SeparationInput {
   readonly levelKey: TourLevelKey;
-  readonly separationId: string | null;
+  readonly separationId: string;
+  readonly mode: TourShapeMode;
   readonly a: TourPlanXY;
   readonly b: TourPlanXY;
 }
@@ -192,22 +211,28 @@ function judgeSeparation(input: SeparationInput, plan: CalibratedPlan): readonly
   return Math.hypot(b.x - a.x, b.y - a.y) < TOUR_SEPARATION_MIN_LENGTH_M ? null : [a, b];
 }
 
-/** **Βάλε (ή μετακίνησε) νοητή διαχωριστική γραμμή** (Δ8.2) — και τα δύο άκρα πάνω στην κάτοψη, μήκος ≥ ελάχιστο. */
-export function upsertSeparation(graph: Graph, input: SeparationInput, newId: string, stamp: TourEditStamp): TourGraphEditResult {
+/**
+ * **Βάλε (ή μετακίνησε) νοητή διαχωριστική γραμμή** (Δ8.2) — και τα δύο άκρα πάνω στην κάτοψη, μήκος ≥ ελάχιστο. Ίδια σύμβαση
+ * πρόθεσης με τον χώρο (`create` με id πελάτη `tsep_…` · `replace`).
+ */
+export function upsertSeparation(graph: Graph, input: SeparationInput, stamp: TourEditStamp): TourGraphEditResult {
   const located = locateCalibrated(graph, input.levelKey);
   if (typeof located === 'string') return refused(located);
   const { level, plan } = located;
   const lines = level.separations ?? [];
-  const previous = input.separationId === null ? undefined : lines.find((line) => line.id === input.separationId);
-  if (input.separationId !== null && previous === undefined) return refused('separation-absent');
+  const previous = lines.find((line) => line.id === input.separationId);
+  const intent = judgeIntent(
+    input.separationId, input.mode, previous !== undefined, ENTERPRISE_ID_PREFIXES.TOUR_SEPARATION, 'separation-absent', 'separation-invalid',
+  );
+  if (intent !== null) return refused(intent);
   const ends = judgeSeparation(input, plan);
   if (ends === null) return refused('separation-invalid');
   const [a, b] = ends;
   if (previous !== undefined && samePoint(previous.a, a) && samePoint(previous.b, b)) return UNCHANGED;
-  const next: TourSeparationLine = { id: previous?.id ?? newId, a, b, approvedBy: stamp.uid, approvedAt: stamp.at };
+  if (previous !== undefined && input.mode === 'create') return refused('separation-exists');
+  const next: TourSeparationLine = { id: input.separationId, a, b, approvedBy: stamp.uid, approvedAt: stamp.at };
   const nextLines = previous === undefined ? [...lines, next] : lines.map((line) => (line.id === next.id ? next : line));
-  const graphAfter = replaceLevel(graph, levelWithShapes(level, level.spaces ?? [], nextLines));
-  return previous === undefined ? { kind: 'edited', graph: graphAfter, createdId: next.id } : { kind: 'edited', graph: graphAfter };
+  return { kind: 'edited', graph: replaceLevel(graph, levelWithShapes(level, level.spaces ?? [], nextLines)) };
 }
 
 /** **Σβήσε** νοητή γραμμή — ανύπαρκτη ⇒ ίδιος γράφος. Οι δύο χώροι της **δεν** ενώνονται μόνοι τους: είναι εγκεκριμένα σχήματα. */

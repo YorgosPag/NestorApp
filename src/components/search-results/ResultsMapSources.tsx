@@ -24,6 +24,7 @@
 import React from 'react';
 
 import { Layer, Source } from '@/lib/maps/maplibre';
+import { BASEMAP_OVERLAY_TEXT_FONT } from '@/lib/maps/basemap-catalog';
 import type { ListingFocus } from '@/lib/listings/listing-focus';
 import type { SplitListingGeometry } from '@/lib/listings/listings-geojson';
 import {
@@ -130,6 +131,12 @@ export function ResultsMapSources({ geometry, mark, surface, focus }: ResultsMap
           filter={['has', CLUSTER_KEY.pointCount]}
           layout={{
             'text-field': CLUSTER_TEXT,
+            /*
+              🔴 **Η στοίβα ΑΠΟ ΤΟ ΜΗΤΡΩΟ, ποτέ κυριολεκτικό** (CHECK 3.95 Κ3). Χωρίς `text-font` η MapLibre
+              ζητά `Open Sans Regular,Arial Unicode MS Regular` — που **κανένας** glyph server μας δεν
+              σερβίρει ⇒ 404 και ψηφία από τη γραμματοσειρά του browser (ADR-891 §9.5).
+            */
+            'text-font': BASEMAP_OVERLAY_TEXT_FONT,
             'text-size': 12,
             /*
               ⚠️ **`text-allow-overlap` ΥΠΟΧΡΕΩΤΙΚΟ.** Χωρίς αυτό το MapLibre κρύβει

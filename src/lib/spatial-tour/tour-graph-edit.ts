@@ -12,7 +12,9 @@
  * 🔑 **Κόμβος χωρίς λήψη φεύγει**: αφαίρεση της τελευταίας λήψης ενός κόμβου ⇒ `removeTourNode` (ποτέ ορφανός σύνδεσμος).
  */
 
-import type { FloorPlanDeclarableSource, TourDeclaredAreaSource, TourSpaceSource } from '@/constants/spatial-tour-vocabulary';
+import type {
+  FloorPlanDeclarableSource, TourDeclaredAreaSource, TourShapeMode, TourSpaceSource,
+} from '@/constants/spatial-tour-vocabulary';
 import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourNode } from '@/types/spatial-tour';
 
 import { levelKeyId, removeTourNode } from './spatial-tour-graph';
@@ -51,12 +53,21 @@ export type TourGraphCommand =
   /** Ο προσανατολισμός της λήψης ενός σημείου (heading κόσμου) — στρέφει **και** τα βελάκια του. */
   | { readonly op: 'orient'; readonly captureId: string; readonly headingRad: number }
   // ── Τα σχήματα των χώρων (Φ2στ-γ Γ3β · §4.14 — οι καθαρές ζουν στο `tour-space-edit.ts`) ──
-  /** **Έγκρινε** περίγραμμα χώρου: `spaceId === null` ⇒ νέος (το id το κόβει ο διακομιστής), αλλιώς αντικατάσταση. */
-  | { readonly op: 'space'; readonly levelKey: TourLevelKey; readonly spaceId: string | null; readonly space: TourSpaceDraft }
+  /**
+   * **Έγκρινε** περίγραμμα χώρου. Το id το κόβει **ο πελάτης** (`tspc_…`, Γ3γ-2α — πρότυπο Figma/Linear, ταυτότητα «επιπέδου Β»
+   * όπως `ownp`/`pdos`) και ο διακομιστής το ελέγχει· η **πρόθεση** είναι ρητή (`create` ≠ `replace`).
+   */
+  | { readonly op: 'space'; readonly levelKey: TourLevelKey; readonly spaceId: string; readonly mode: TourShapeMode; readonly space: TourSpaceDraft }
   | { readonly op: 'unspace'; readonly levelKey: TourLevelKey; readonly spaceId: string }
-  /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα. */
-  | { readonly op: 'separate'; readonly levelKey: TourLevelKey; readonly separationId: string | null; readonly a: TourPlanXY; readonly b: TourPlanXY }
+  /** Νοητή διαχωριστική γραμμή (Δ8.2) — id του πελάτη (`tsep_…`), ίδια σύμβαση πρόθεσης. */
+  | { readonly op: 'separate'; readonly levelKey: TourLevelKey; readonly separationId: string; readonly mode: TourShapeMode; readonly a: TourPlanXY; readonly b: TourPlanXY }
   | { readonly op: 'unseparate'; readonly levelKey: TourLevelKey; readonly separationId: string };
+
+/**
+ * **Δημιουργία ή αντικατάσταση** σχήματος (λεξιλόγιο `TOUR_SHAPE_MODES`): `create` σε id που υπάρχει με **ίδιο** περιεχόμενο =
+ * ιδεμπότητη επανάληψη (`unchanged`), με άλλο = `*-exists`· `replace` σε id που λείπει = `*-absent`.
+ */
+export type { TourShapeMode };
 
 /** Σημείο σε μέτρα κάτοψης, όπως το στέλνει η οθόνη. */
 export type TourPlanXY = { readonly x: number; readonly y: number };
@@ -94,18 +105,16 @@ export interface TourPlanCandidate {
 export interface TourGraphEditResponse {
   readonly changed: boolean;
   readonly revision: number;
-  /** Το id που έκοψε ο διακομιστής για νέο χώρο/νέα γραμμή — η «Αναίρεση» της δημιουργίας το χρειάζεται. */
-  readonly createdId?: string;
 }
 
 export type TourGraphEditRefusal =
   | 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'room-invalid'
   | 'plan-absent' | 'plan-uncalibrated' | 'position-outside-plan' | 'scale-invalid'
-  | 'space-invalid' | 'space-outside-plan' | 'space-overlap' | 'space-absent' | 'area-invalid'
-  | 'separation-invalid' | 'separation-absent';
+  | 'space-invalid' | 'space-outside-plan' | 'space-overlap' | 'space-absent' | 'space-exists' | 'area-invalid'
+  | 'separation-invalid' | 'separation-absent' | 'separation-exists';
 
 export type TourGraphEditResult =
-  | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null; readonly createdId?: string }
+  | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null }
   | { readonly kind: 'unchanged' }
   | { readonly kind: 'refused'; readonly reason: TourGraphEditRefusal };
 

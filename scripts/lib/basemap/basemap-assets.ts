@@ -9,6 +9,9 @@
  * ⚖️ **Οι άδειες ταξιδεύουν μαζί με τα αντίγραφα**: OFL-1.1 (Noto, `fonts/OFL.txt` από το ίδιο tarball) και MIT
  * (εικονίδια από `tangrams/icons` — το repo των assets **δεν** φέρει το κείμενο, οπότε το κατεβάζουμε καρφωμένο).
  * Αν λείπει αρχείο άδειας που δηλώνει ο κατάλογος, ο γεννήτορας **σταματά**.
+ *
+ * ➕ **Πάνω στο upstream, ένα συμπλήρωμα** (ADR-891 §9.5): το Noto Sans Math μπαίνει στις στοίβες που ορίζει ο
+ * κατάλογος, και ο κατάλογος κάλυψης γράφεται στο git (`glyph-supplement.ts`).
  */
 
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -17,11 +20,14 @@ import { dirname, join } from 'node:path';
 import {
   BASEMAP_ASSETS_REVISION,
   BASEMAP_BUNDLE_PATHS,
+  BASEMAP_FONTSTACKS,
   BASEMAP_PROVIDERS,
   BASEMAP_SOURCES,
 } from '../../../src/lib/maps/basemap-catalog';
 import { loadCachedSource } from '../cached-download';
 import { readTarGz } from '../tar-extract';
+import { REPO_ROOT } from '../admin-boundaries/admin-boundary-source';
+import { applyMathSupplement, writeGlyphCoverage, type GlyphSupplementResult } from './glyph-supplement';
 
 /** sha256 του tarball ανά commit — μετρημένο δύο φορές, ίδιο (το `codeload` του GitHub είναι ντετερμινιστικό). */
 const ASSETS_TARBALL_SHA256: Readonly<Record<string, string>> = {
@@ -34,9 +40,6 @@ const SPRITE_LICENSE = {
   sha256: '46d0ca73c10d7366ef7bf3932d8508267096393ccc9ef3a41d1b1d1fe37023f1',
   bundlePath: 'sprites/LICENSE.md',
 } as const;
-
-/** Οι font stacks που ζητά το `@protomaps/basemaps` 5.x (`text-font`) — και η Devanagari για τα ινδικά ονόματα. */
-export const BASEMAP_FONTSTACKS = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic', 'Noto Sans Devanagari Regular v1'] as const;
 
 /** Τα flavors που ζητά κάποια πηγή του καταλόγου — μόνο αυτά τα sprites μπαίνουν στο bundle. */
 export function catalogSpriteFlavors(): string[] {
@@ -60,6 +63,9 @@ export interface BasemapAssetsResult {
   readonly directory: string;
   readonly files: number;
   readonly bytes: number;
+  readonly supplement: GlyphSupplementResult;
+  /** Ο κατάλογος κάλυψης γραμματοσειρών που γράφτηκε στο git. */
+  readonly coverageFile: string;
 }
 
 function writeFile(root: string, relative: string, data: Buffer): void {
@@ -102,8 +108,11 @@ export async function writeBasemapAssets(cacheDir: string, bundleDir: string): P
   const entries = readTarGz(readFileSync(tarball.path), (path) => isBundledAsset(path, flavors));
   for (const entry of entries) writeFile(directory, entry.path, entry.data);
   writeFile(directory, SPRITE_LICENSE.bundlePath, readFileSync(license.path));
+  // Μετά την εξαγωγή, πριν τον έλεγχο αδειών: το συμπλήρωμα φέρνει και το δικό του OFL (ADR-891 §9.5).
+  const supplement = await applyMathSupplement(directory, cacheDir);
   assertDeclaredLicenses(directory);
+  const coverageFile = writeGlyphCoverage(directory, REPO_ROOT);
 
   const bytes = entries.reduce((sum, e) => sum + e.data.length, 0) + statSync(license.path).size;
-  return { directory, files: entries.length + 1, bytes };
+  return { directory, files: entries.length + 2, bytes, supplement, coverageFile };
 }

@@ -32,6 +32,12 @@ const SOURCE_OWNERS = Object.freeze({
     'θα κοκκίνιζε πάνω στη ΘΕΡΑΠΕΙΑ.',
 });
 
+/**
+ * Κ3 — το όνομα της **μίας** στοίβας ετικετών εφαρμογής στο μητρώο. Ό,τι άλλο στο `text-font` μιας στρώσης
+ * `symbol` με κείμενο είναι εύρημα (ADR-891 §9.5).
+ */
+const OVERLAY_TEXT_FONT_NAME = 'BASEMAP_OVERLAY_TEXT_FONT';
+
 /** Ελάχιστο μήκος λόγου — ίδιο κατώφλι με τα 3.66 · 3.75. */
 const MIN_REASON = 40;
 
@@ -79,6 +85,8 @@ const GATE_STATES = Object.freeze({
   REASONLESS_OWNER: 'reasonless-owner',
   /** ⛔ Κ2 — το μητρώο δεν δηλώνει ΚΑΜΙΑ πηγή: πράσινο με μηδέν προστασία. */
   EMPTY_CATALOG: 'empty-catalog',
+  /** ⛔ Κ3 — στρώση `symbol` με `text-field` χωρίς τη στοίβα του μητρώου (ADR-891 §9.5). */
+  UNDECLARED_TEXT_FONT: 'undeclared-text-font',
   /** ✅ Δηλωμένος ιδιοκτήτης. */
   OWNER: 'owner',
   /** ✅ Κανένα μοτίβο πηγής. */
@@ -90,6 +98,7 @@ const BLOCKING = Object.freeze([
   GATE_STATES.ORPHAN_OWNER,
   GATE_STATES.REASONLESS_OWNER,
   GATE_STATES.EMPTY_CATALOG,
+  GATE_STATES.UNDECLARED_TEXT_FONT,
 ]);
 
 /** Αρχεία που **δεν** κρίνονται: τα tests γράφουν URL πλακιδίων για να ΕΛΕΓΞΟΥΝ το μητρώο. */
@@ -102,6 +111,7 @@ module.exports = {
   CATALOG_FILE,
   GATE_STATES,
   MIN_REASON,
+  OVERLAY_TEXT_FONT_NAME,
   PREFILTER,
   SOURCE_MARKERS,
   SOURCE_OWNERS,

@@ -158,10 +158,13 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   /** Επικαλύπτει άλλον εγκεκριμένο χώρο του ορόφου (Revit «Room overlaps») — κατάσταση, όχι σχήμα ⇒ 409. */
   'space-overlap': 409,
   'space-absent': 404,
+  /** «Νέος» σε id που υπάρχει ήδη με άλλο περιεχόμενο (Γ3γ-2α — id του πελάτη) — σύγκρουση κατάστασης ⇒ 409. */
+  'space-exists': 409,
   /** Δηλωμένο εμβαδόν μη θετικό, πάνω από το όριο, ή χωρίς γνωστή πηγή (Δ8.4). */
   'area-invalid': 422,
   'separation-invalid': 422,
   'separation-absent': 404,
+  'separation-exists': 409,
   'graph-full': 409,
 };
 

@@ -31,8 +31,8 @@ export const TOUR_REFUSALS = [
   // ── Η κάτοψη: εικόνα, κλίμακα, θέση, προσανατολισμός (Φ2στ-β) ──
   'plan-absent', 'plan-uncalibrated', 'plan-not-eligible', 'position-outside-plan', 'scale-invalid',
   // ── Τα σχήματα των χώρων + οι νοητές γραμμές (Φ2στ-γ Γ3β) ──
-  'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'area-invalid',
-  'separation-invalid', 'separation-absent',
+  'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'space-exists', 'area-invalid',
+  'separation-invalid', 'separation-absent', 'separation-exists',
 ] as const;
 
 export type TourRefusalName = (typeof TOUR_REFUSALS)[number];
@@ -68,8 +68,8 @@ export function isTourViewSessionRefusal(value: TourRefusalName): value is TourV
  * (`tourCall`) τις αντιμετωπίζει ως «έξω από το συμβόλαιο» ⇒ γενικό μήνυμα.
  */
 export const TOUR_SHAPE_REFUSALS = [
-  'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'area-invalid',
-  'separation-invalid', 'separation-absent',
+  'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'space-exists', 'area-invalid',
+  'separation-invalid', 'separation-absent', 'separation-exists',
 ] as const satisfies readonly TourRefusalName[];
 
 export type TourShapeRefusal = (typeof TOUR_SHAPE_REFUSALS)[number];

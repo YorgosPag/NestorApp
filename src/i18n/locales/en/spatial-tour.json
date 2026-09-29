@@ -81,9 +81,11 @@
     "spaceOutsidePlan": "All corners of the room must be on the floor plan.",
     "spaceOverlap": "The room overlaps another room on this floor. Adjust one of the two outlines.",
     "spaceAbsent": "The room no longer exists. Refresh the page.",
+    "spaceExists": "The room was changed meanwhile in another tab or by a collaborator. Refresh the page.",
     "areaInvalid": "The declared area must be a positive number, with a source.",
     "separationInvalid": "The separation line must be on the floor plan and have a length.",
     "separationAbsent": "The separation line no longer exists. Refresh the page.",
+    "separationExists": "The separation line was changed meanwhile in another tab or by a collaborator. Refresh the page.",
     "graphFull": "The tour has reached its point limit."
   },
   "panel": {

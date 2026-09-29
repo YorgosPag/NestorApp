@@ -10,9 +10,9 @@
  * 🔑 **Ό,τι δεν αντιστρέφεται πιστά, δεν προσφέρει αναίρεση** (`null`): η αφαίρεση της τελευταίας λήψης ενός σημείου
  * σβήνει το σημείο **και** τους συνδέσμους του — μια «ξανατοποθέτηση» θα γεννούσε **άλλο** σημείο χωρίς βελάκια. Εκεί η
  * οθόνη ζητά **επιβεβαίωση πριν**, όχι αναίρεση μετά.
- * 🔑 **Χώροι και νοητές γραμμές (Γ3β)**: ένας σβησμένος χώρος ξαναγεννιέται με **νέο** id — και αυτό ΕΙΝΑΙ πιστή επαναφορά,
- * γιατί τίποτα δεν δείχνει σε αυτό το id (η συμμετοχή σημείου και η γειτονία **παράγονται**). Η αναίρεση μιας δημιουργίας
- * χρειάζεται το id που έκοψε ο διακομιστής (`createdId`).
+ * 🔑 **Χώροι και νοητές γραμμές (Γ3γ-2α)**: το id το κόβει ο πελάτης, άρα κάθε αναίρεση είναι **πιστή στο ίδιο id** και γνωστή
+ * **πριν** απαντήσει ο διακομιστής: δημιουργία ⇒ αφαίρεση του ίδιου id · αλλαγή ⇒ το προηγούμενο σχήμα · αφαίρεση ⇒
+ * ξαναγέννηση (`create`) με το **ίδιο** id — ό,τι δείχνει σε αυτό (επιλογή, ιστορικό) μένει αληθινό.
  */
 
 import { isFloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
@@ -28,8 +28,6 @@ type Graph = Pick<SpatialTour, 'nodes'> & Partial<Pick<SpatialTour, 'levels'>>;
 export interface TourInverseContext {
   /** Η κατεύθυνση μιας λήψης **πριν** την εντολή `orient`. */
   readonly headingOf?: (captureId: string) => number | undefined;
-  /** Το id που έκοψε ο διακομιστής για νέο χώρο / νέα γραμμή (`TourGraphEditResponse.createdId`). */
-  readonly createdId?: string;
 }
 
 function linkOf(graph: Graph, from: string, to: string): TourLink | null {
@@ -77,9 +75,9 @@ export function inverseOf(command: TourGraphCommand, before: Graph, context: Tou
       return heading === undefined ? null : [{ op: 'orient', captureId: command.captureId, headingRad: heading }];
     }
     case 'space':
-    case 'unspace': return inverseOfSpace(command, before, context);
+    case 'unspace': return inverseOfSpace(command, before);
     case 'separate':
-    case 'unseparate': return inverseOfSeparation(command, before, context);
+    case 'unseparate': return inverseOfSeparation(command, before);
   }
 }
 
@@ -100,30 +98,24 @@ const levelOf = (before: Graph, key: TourLevelKey): TourLevel | undefined => fin
 function inverseOfSpace(
   command: Extract<TourGraphCommand, { op: 'space' | 'unspace' }>,
   before: Graph,
-  context: TourInverseContext,
 ): readonly TourGraphCommand[] | null {
   const { levelKey, spaceId } = command;
-  if (command.op === 'space' && spaceId === null) {
-    return context.createdId === undefined ? null : [{ op: 'unspace', levelKey, spaceId: context.createdId }];
-  }
   const previous = levelOf(before, levelKey)?.spaces?.find((space) => space.id === spaceId);
-  if (previous === undefined) return null;
-  // Αλλαγή ⇒ το προηγούμενο σχήμα στο ΙΔΙΟ id· αφαίρεση ⇒ ξαναγέννηση (νέο id — τίποτα δεν δείχνει στο παλιό).
-  return [{ op: 'space', levelKey, spaceId: command.op === 'space' ? spaceId : null, space: draftOf(previous) }];
+  // Δεν υπήρχε ⇒ η εντολή τον γέννησε: αναίρεση = αφαίρεση του ΙΔΙΟΥ id (αφαίρεση ανύπαρκτου = τίποτα να αναιρεθεί).
+  if (previous === undefined) return command.op === 'space' ? [{ op: 'unspace', levelKey, spaceId }] : null;
+  // Αλλαγή ⇒ το προηγούμενο σχήμα· αφαίρεση ⇒ ξαναγέννηση — και τα δύο στο ΙΔΙΟ id.
+  return [{ op: 'space', levelKey, spaceId, mode: command.op === 'space' ? 'replace' : 'create', space: draftOf(previous) }];
 }
 
 function inverseOfSeparation(
   command: Extract<TourGraphCommand, { op: 'separate' | 'unseparate' }>,
   before: Graph,
-  context: TourInverseContext,
 ): readonly TourGraphCommand[] | null {
   const { levelKey, separationId } = command;
-  if (command.op === 'separate' && separationId === null) {
-    return context.createdId === undefined ? null : [{ op: 'unseparate', levelKey, separationId: context.createdId }];
-  }
   const previous = levelOf(before, levelKey)?.separations?.find((line) => line.id === separationId);
-  if (previous === undefined) return null;
-  return [{ op: 'separate', levelKey, separationId: command.op === 'separate' ? separationId : null, a: xy(previous.a), b: xy(previous.b) }];
+  if (previous === undefined) return command.op === 'separate' ? [{ op: 'unseparate', levelKey, separationId }] : null;
+  const mode = command.op === 'separate' ? 'replace' : 'create';
+  return [{ op: 'separate', levelKey, separationId, mode, a: xy(previous.a), b: xy(previous.b) }];
 }
 
 const xy = (p: TourSeparationLine['a']) => ({ x: p.x, y: p.y });
@@ -131,9 +123,12 @@ const xy = (p: TourSeparationLine['a']) => ({ x: p.x, y: p.y });
 /** Οι χώροι και οι γραμμές του ορόφου όπως ήταν — ξαναγεννιούνται (μια αλλαγή κάτοψης/κλίμακας τα έσβησε). */
 function restoreShapes(level: TourLevel | undefined): TourGraphCommand[] {
   if (level === undefined) return [];
-  const spaces = (level.spaces ?? []).map((space): TourGraphCommand => ({ op: 'space', levelKey: level.key, spaceId: null, space: draftOf(space) }));
+  // Στα ΙΔΙΑ id (Γ3γ-2α): η επαναφορά είναι ό,τι ήταν, όχι αντίγραφό του.
+  const spaces = (level.spaces ?? []).map((space): TourGraphCommand => ({
+    op: 'space', levelKey: level.key, spaceId: space.id, mode: 'create', space: draftOf(space),
+  }));
   const lines = (level.separations ?? []).map((line): TourGraphCommand => ({
-    op: 'separate', levelKey: level.key, separationId: null, a: xy(line.a), b: xy(line.b),
+    op: 'separate', levelKey: level.key, separationId: line.id, mode: 'create', a: xy(line.a), b: xy(line.b),
   }));
   return [...lines, ...spaces];
 }

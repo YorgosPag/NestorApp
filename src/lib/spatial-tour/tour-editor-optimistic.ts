@@ -7,8 +7,9 @@
  *
  * 🔑 **Μία αλήθεια, δύο εκτελέσεις** (πρότυπο Figma/Linear): ο πελάτης τρέχει τον **ίδιο** κώδικα με τον διακομιστή — άρα και
  *   την κρίση επικάλυψης χώρων (`polygonsOverlap`). Άρνηση εδώ ⇒ καμία αισιόδοξη εικόνα· ο διακομιστής ξανακρίνει **πάντα**.
- * 🔑 **Νέος χώρος / νέα γραμμή ΔΕΝ είναι αισιόδοξα**: το id το κόβει ο διακομιστής (N.6) — ένα προσωρινό id εδώ θα ήταν δεύτερη
- *   ταυτότητα για το ίδιο σχήμα. Ομοίως τοποθέτηση · αφαίρεση · κάτοψη · κλίμακα (εικόνα/ξανακλιμάκωση του διακομιστή).
+ * 🔑 **Και ο ΝΕΟΣ χώρος / η νέα γραμμή είναι αισιόδοξα** (Γ3γ-2α): το **οριστικό** id το κόβει ο πελάτης (Figma/Linear, N.6 μέσω
+ *   `enterpriseIdService`) — καμία προσωρινή ταυτότητα, καμία αναμονή. **Μη** αισιόδοξα μένουν τοποθέτηση · αφαίρεση · κάτοψη ·
+ *   κλίμακα (εικόνα/ξανακλιμάκωση/νέο σημείο του διακομιστή).
  */
 
 import type { SpatialTour, TourCapture } from '@/types/spatial-tour';
@@ -29,15 +30,15 @@ function orientResult(graph: Graph, command: Extract<TourGraphCommand, { op: 'or
   return orientNode(graph, capture.nodeId, command.headingRad - capture.headingRad);
 }
 
-/** Σχήματα: μόνο αλλαγή/αφαίρεση **υπάρχοντος** — νέο (`id === null`) ⇒ `null`. */
+/** Σχήματα: δημιουργία, αλλαγή και αφαίρεση — με τον ΙΔΙΟ κριτή (και επικάλυψης) που θα τρέξει ο διακομιστής. */
 function shapeResult(graph: Graph, command: TourGraphCommand): TourGraphEditResult | null {
   switch (command.op) {
     case 'space':
-      return command.spaceId === null ? null : upsertSpace(graph, command, command.spaceId, SCREEN_STAMP);
+      return upsertSpace(graph, command, SCREEN_STAMP);
     case 'unspace':
       return removeSpace(graph, command.levelKey, command.spaceId);
     case 'separate':
-      return command.separationId === null ? null : upsertSeparation(graph, command, command.separationId, SCREEN_STAMP);
+      return upsertSeparation(graph, command, SCREEN_STAMP);
     case 'unseparate':
       return removeSeparation(graph, command.levelKey, command.separationId);
     default:

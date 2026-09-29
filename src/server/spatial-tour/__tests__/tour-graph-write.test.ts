@@ -232,33 +232,42 @@ describe('Σ — σχήματα χώρων + νοητές γραμμές (Φ2σ�
     scale: { metresPerPixel: 0.02, calibratedBy: 'boris', calibratedAt: '2026-09-01T10:00:00.000Z' },
   };
   const rect = (x0: number, y0: number, x1: number, y1: number) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
-  const space = (points = rect(1, -1, 5, -4)): TourGraphCommand =>
-    ({ op: 'space', levelKey: L0, spaceId: null, space: { points, source: 'detected', room: null, declaredArea: null } });
+  const S1 = 'tspc_11111111-1111-4111-8111-111111111111';
+  const S2 = 'tspc_22222222-2222-4222-8222-222222222222';
+  const G1 = 'tsep_11111111-1111-4111-8111-111111111111';
+  const space = (points = rect(1, -1, 5, -4), spaceId = S1): TourGraphCommand =>
+    ({ op: 'space', levelKey: L0, spaceId, mode: 'create', space: { points, source: 'detected', room: null, declaredArea: null } });
 
   beforeEach(() => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ levels: [{ key: L0, floorPlans: [PLAN] }] }) });
   });
 
-  it('νέος χώρος ⇒ id `tspc_` από τον διακομιστή (N.6) στην απάντηση · έγκριση = ο υπεύθυνος · revision + 1', async () => {
-    const outcome = await write(space());
-    expect(outcome).toMatchObject({ kind: 'written', revision: 4, createdId: expect.stringMatching(/^tspc_/) });
+  it('νέος χώρος ⇒ το id του ΠΕΛΑΤΗ γράφεται αυτούσιο (Γ3γ-2α) · έγκριση = ο υπεύθυνος · revision + 1', async () => {
+    expect(await write(space())).toEqual({ kind: 'written', revision: 4 });
     const [stored] = (await readTour()).levels[0].spaces ?? [];
-    expect(stored).toMatchObject({ id: (outcome as { createdId: string }).createdId, approvedBy: 'boris', source: 'detected' });
+    expect(stored).toMatchObject({ id: S1, approvedBy: 'boris', source: 'detected' });
+  });
+
+  it('επανάληψη του ΙΔΙΟΥ create ⇒ unchanged (ένας χώρος) · id άλλου είδους ⇒ space-invalid, καμία εγγραφή', async () => {
+    await write(space());
+    expect(await write(space())).toEqual({ kind: 'unchanged', revision: 4 });
+    expect(await write(space(rect(10, -6, 12, -8), G1))).toEqual({ kind: 'refused', reason: 'space-invalid' });
+    expect((await readTour()).levels[0].spaces).toHaveLength(1);
   });
 
   it('πελάτης με αυτοτεμνόμενο ή επικαλυπτόμενο σχήμα ⇒ ονομασμένη άρνηση, καμία εγγραφή', async () => {
     await write(space());
     const bowtie = [{ x: 6, y: -1 }, { x: 9, y: -4 }, { x: 9, y: -1 }, { x: 6, y: -4 }];
-    expect(await write(space(bowtie))).toEqual({ kind: 'refused', reason: 'space-invalid' });
-    expect(await write(space(rect(4, -1, 8, -4)))).toEqual({ kind: 'refused', reason: 'space-overlap' });
+    expect(await write(space(bowtie, S2))).toEqual({ kind: 'refused', reason: 'space-invalid' });
+    expect(await write(space(rect(4, -1, 8, -4), S2))).toEqual({ kind: 'refused', reason: 'space-overlap' });
     expect((await readTour()).revision).toBe(4);
   });
 
-  it('νοητή γραμμή ⇒ `tsep_` · αφαίρεση ⇒ ο όροφος ξαναγίνεται όπως πριν', async () => {
-    const outcome = await write({ op: 'separate', levelKey: L0, separationId: null, a: { x: 5, y: -1 }, b: { x: 5, y: -4 } });
-    expect(outcome).toMatchObject({ kind: 'written', createdId: expect.stringMatching(/^tsep_/) });
-    const separationId = (outcome as { createdId: string }).createdId;
-    expect(await write({ op: 'unseparate', levelKey: L0, separationId })).toMatchObject({ kind: 'written' });
+  it('νοητή γραμμή με id πελάτη `tsep_` · αφαίρεση ⇒ ο όροφος ξαναγίνεται όπως πριν', async () => {
+    const outcome = await write({ op: 'separate', levelKey: L0, separationId: G1, mode: 'create', a: { x: 5, y: -1 }, b: { x: 5, y: -4 } });
+    expect(outcome).toEqual({ kind: 'written', revision: 4 });
+    expect((await readTour()).levels[0].separations?.[0].id).toBe(G1);
+    expect(await write({ op: 'unseparate', levelKey: L0, separationId: G1 })).toMatchObject({ kind: 'written' });
     expect((await readTour()).levels[0]).not.toHaveProperty('separations');
   });
 

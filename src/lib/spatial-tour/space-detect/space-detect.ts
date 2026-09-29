@@ -22,9 +22,12 @@ import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 import { suggestSeparation } from './separation-suggest';
 import {
   DEFAULT_SPACE_DETECT,
+  type PlanRaster,
+  type PreparedPlanRaster,
   type SeparationSuggestion,
   type SpaceDetectInput,
   type SpaceDetectOptions,
+  type SpaceDetectQuery,
   type SpaceDetectResult,
 } from './space-detect-types';
 import { segmentSpace } from './space-region';
@@ -82,7 +85,7 @@ function outlineOf(region: Uint8Array, frame: Frame): { outline: PixelPoint[]; o
 
 /** Δ8.2 — αν κι άλλο σημείο λήψης πέφτει στον ίδιο χώρο, πρόταση γραμμής προς το **πλησιέστερο**. */
 function separationFor(
-  region: Uint8Array, seedIndex: number, outline: readonly PixelPoint[], input: SpaceDetectInput, frame: Frame,
+  region: Uint8Array, seedIndex: number, outline: readonly PixelPoint[], input: SpaceDetectQuery, frame: Frame,
 ): SeparationSuggestion | null {
   const { cols, rows } = frame;
   const seed = { x: seedIndex % cols, y: Math.floor(seedIndex / cols) };
@@ -101,7 +104,7 @@ function separationFor(
  * στενότερος από αυτή την πόρτα — ο καλών ξαναδοκιμάζει με μικρότερη.
  */
 function attempt(
-  input: SpaceDetectInput, ink: Uint8Array, frame: Frame, openRadiusPx: number, doorScale: number,
+  input: SpaceDetectQuery, ink: Uint8Array, frame: Frame, openRadiusPx: number, doorScale: number,
 ): SpaceDetectResult | 'no-core' {
   const { cols, rows, mpp, options } = frame;
   const walls = wallMask(ink, cols, rows, openRadiusPx, input.separations);
@@ -118,14 +121,18 @@ function attempt(
   return { ok: true, outline, orthogonal, areaPx: polygonArea(outline), separation };
 }
 
-/** Ανιχνεύει τον χώρο γύρω από το `seed`. Ποτέ δεν πετά· κάθε αποτυχία έχει όνομα. */
-export function detectSpace(input: SpaceDetectInput): SpaceDetectResult {
-  const { width: cols, height: rows } = input.raster;
+/** **Προετοίμασε** μια κάτοψη για ανίχνευση — το μελάνι, μία φορά ανά εικόνα. */
+export function prepareSpaceRaster(raster: PlanRaster): PreparedPlanRaster {
+  return { ink: inkMask(raster), width: raster.width, height: raster.height };
+}
+
+/** Ανιχνεύει τον χώρο γύρω από το `seed` σε **προετοιμασμένη** κάτοψη. Ποτέ δεν πετά· κάθε αποτυχία έχει όνομα. */
+export function detectSpaceIn(prepared: PreparedPlanRaster, input: SpaceDetectQuery): SpaceDetectResult {
+  const { width: cols, height: rows, ink } = prepared;
   const mpp = input.metresPerPixel;
   if (!(mpp > 0) || !Number.isFinite(mpp)) return { ok: false, refusal: 'uncalibrated' };
   if (!insideImage(input.seed, cols, rows)) return { ok: false, refusal: 'seed-outside' };
   const frame: Frame = { cols, rows, mpp, options: { ...DEFAULT_SPACE_DETECT, ...input.options } };
-  const ink = inkMask(input.raster);
   for (const doorScale of DOOR_SCALES) {
     const first = attempt(input, ink, frame, frame.options.minWallThicknessM / 2 / mpp, doorScale);
     const result = first !== 'no-core' && !first.ok && first.refusal === 'leak'
@@ -134,4 +141,9 @@ export function detectSpace(input: SpaceDetectInput): SpaceDetectResult {
     if (result !== 'no-core') return result;
   }
   return { ok: false, refusal: 'seed-on-wall' };
+}
+
+/** Ανιχνεύει τον χώρο γύρω από το `seed` (μία εικόνα, μία ερώτηση). */
+export function detectSpace(input: SpaceDetectInput): SpaceDetectResult {
+  return detectSpaceIn(prepareSpaceRaster(input.raster), input);
 }

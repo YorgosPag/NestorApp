@@ -60,6 +60,19 @@ export interface SpaceDetectInput {
   readonly options?: Partial<SpaceDetectOptions>;
 }
 
+/** Η ερώτηση **χωρίς** την εικόνα — ό,τι αλλάζει από κλικ σε κλικ πάνω στην **ίδια** προετοιμασμένη κάτοψη. */
+export type SpaceDetectQuery = Omit<SpaceDetectInput, 'raster'>;
+
+/**
+ * Η κάτοψη **έτοιμη** για ανίχνευση: το μελάνι (Otsu) υπολογίζεται **μία** φορά ανά εικόνα — κάθε κλικ, κάθε βήμα του
+ * ρυθμιστικού πόρτας ξαναχρησιμοποιεί την ίδια (Γ3γ-2α, Worker με κρυφή μνήμη).
+ */
+export interface PreparedPlanRaster {
+  readonly ink: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+}
+
 /** Γιατί δεν βγήκε περίγραμμα — κλειστό λεξιλόγιο, ο επεξεργαστής το μεταφράζει. */
 export type SpaceDetectRefusal =
   | 'uncalibrated'      // χωρίς μέτρα/pixel δεν ξέρουμε πόσο είναι μια πόρτα

@@ -3897,6 +3897,15 @@
 
 ## Pending tasks (priority order)
 
+### 🧵 RPC κύριου νήματος ⇄ Web Worker — τέσσερα χειρόγραφα αντίγραφα στο dxf-viewer (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ Γ3γ-2α §4.14)
+- **Έγινε ήδη (Γ3γ-2α)**: SSoT `src/lib/workers/{worker-rpc-protocol, worker-rpc-client, worker-rpc-host}.ts` — νωχελική γέννηση ·
+  αριθμός αιτήματος → Map · κατάρρευση ⇒ ΟΛΑ τα εκκρεμή `failed` + δίχτυ στον κύριο νήμα, καμία επαναγέννηση · `dispose` ·
+  `latestOnly` · host σειριακός, σφάλμα ⇒ απάντηση. Πρώτος καταναλωτής: `lib/spatial-tour/space-detect/space-detect-client.ts`.
+- **Μένει** (άλλο domain, > 1 h, αλλάζει συμπεριφορά σε κατάρρευση ⇒ test ανά πελάτη): `subapps/dxf-viewer/bim-3d/library/bim-mesh-library/mesh-fill-union-client.ts`
+  (`requestId` string + `drainPending`) · `text-engine/spell/spell-checker.ts` · `io/pointcloud-import.ts` · `io/dxf-import.ts`
+  (+ `utils/performance.ts` που φτιάχνει Worker από URL). Το dxf-viewer **μπορεί** να εισάγει από `@/lib` (η αντίθετη φορά
+  απαγορεύεται, CHECK 3.62). Ο Worker τους πρέπει να περάσει σε `serveWorkerRpc(self, handler)`.
+
 ### 🧷 `isPlainRecord` / `isFiniteNumber` — τοπικά αντίγραφα έξω από το `lib/type-guards` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-889 §11)
 - **Τι**: τα δύο κατηγορήματα προωθήθηκαν στο `src/lib/type-guards.ts` (`isPlainRecord` = αντικείμενο **και όχι** πίνακας —
   αυστηρότερο από το `isRecord` · `isFiniteNumber`)· τα `lib/market/{market-transactions-file,value-zone-file}.ts` ήδη εισάγουν.

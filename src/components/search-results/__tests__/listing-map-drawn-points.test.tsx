@@ -5,6 +5,7 @@
  *   Ζ1 · ανάγνωση: ομάδα (`point_count`) ⇒ έξω · μεμονωμένο σημείο ⇒ μέσα · διπλό από δύο πλακίδια ⇒ μία φορά.
  *   Ζ2 · σύνδεση: ο χάρτης ρωτιέται στο `idle`, στην πηγή που έδωσε ο πυρήνας — όχι νωρίτερα.
  *   Ζ3 · ενσωμάτωση: μέσα στον πυρήνα, πινακίδα σε σημείο ομάδας ΔΕΝ αποδίδεται· έξω από πυρήνα, όλες.
+ *   Ζ5 · λεζάντα `≈` (§8.66.11): φαίνεται ΜΟΝΟ όταν ζωγραφίστηκε ομάδα με αβέβαιο υποσύνολο.
  *   Ζ4 · σύγκρουση (κανόνας 5): η δεύτερη κατά σειρά γίνεται `invisible` ΣΤΟ ΠΕΡΙΒΛΗΜΑ· hover ⇒ ξαναφαίνεται·
  *        αλλαγή ζουμ ⇒ ξαναμέτρηση.
  *
@@ -16,7 +17,7 @@ import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, isNamespaceReady: true }),
 }));
 
 jest.mock('@/lib/maps/maplibre', () => ({
@@ -28,8 +29,11 @@ jest.mock('@/lib/maps/maplibre', () => ({
 import {
   bindDrawnListingPoints,
   DrawnListingPointsProvider,
+  readApproximateClusters,
   readDrawnListingPoints,
 } from '../listing-map-drawn-points';
+import { ClusterApproximationKey } from '../ClusterApproximationKey';
+import { CLUSTER_UNCERTAIN_KEY } from '@/lib/maps/listing-clusters';
 import { ListingPriceMarkers } from '../ListingPriceMarkers';
 import type { MapEventTarget, RenderedFeature } from '../results-map-contract';
 import { NO_LISTING_FOCUS } from '@/lib/listings/listing-focus';
@@ -54,6 +58,26 @@ describe('Ζ1 — τι ζωγράφισε η πηγή', () => {
   });
 });
 
+describe('Ζ5 — η λεζάντα του ≈ ακολουθεί ό,τι ζωγραφίστηκε (§8.66.11)', () => {
+  const approx: RenderedFeature = { properties: { point_count: 17, [CLUSTER_UNCERTAIN_KEY]: 5 } };
+  const exact: RenderedFeature = { properties: { point_count: 17, [CLUSTER_UNCERTAIN_KEY]: 0 } };
+
+  it('ομάδα με αβέβαιο υποσύνολο ⇒ ναι · ομάδα χωρίς ⇒ όχι · σημείο με ίδιο πεδίο ⇒ όχι (δεν είναι ομάδα)', () => {
+    expect(readApproximateClusters([exact, POINT_A, approx])).toBe(true);
+    expect(readApproximateClusters([exact, CLUSTER, POINT_A])).toBe(false);
+    expect(readApproximateClusters([{ properties: { id: 'a', [CLUSTER_UNCERTAIN_KEY]: 3 } }])).toBe(false);
+  });
+
+  it('η λεζάντα αποδίδεται μόνο όταν ζωγραφίστηκε «≈» — ως σημασιολογικό aside με όνομα', () => {
+    const { rerender } = render(<ClusterApproximationKey visible={false} />);
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    rerender(<ClusterApproximationKey visible />);
+    expect(screen.getByRole('complementary', { name: 'search-focus:clusterKey.label' })).toHaveTextContent(
+      'search-focus:clusterKey.approximate',
+    );
+  });
+});
+
 describe('Ζ2 — ο χάρτης ρωτιέται στο idle', () => {
   it('καμία ανάγνωση πριν το idle· στο idle, η πηγή του πυρήνα', () => {
     const handlers = new Map<string, () => void>();
@@ -73,6 +97,7 @@ describe('Ζ2 — ο χάρτης ρωτιέται στο idle', () => {
     const snapshot = onDrawn.mock.calls[0][0] as { points: ReadonlySet<string>; zoom: number };
     expect([...snapshot.points]).toEqual(['b']);
     expect(snapshot.zoom).toBe(15.5);
+    expect(onDrawn.mock.calls[0][0]).toHaveProperty('approximateClusters', false);
   });
 });
 

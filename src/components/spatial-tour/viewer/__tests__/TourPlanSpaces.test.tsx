@@ -66,7 +66,7 @@ describe('TourPlanSpaces — ρόλοι', () => {
   it('στο σαλόνι ⇒ σαλόνι κίτρινο, κουζίνα (ενιαίος γείτονας) απαλή, αποθήκη γκρι, μπάνιο τίποτα', () => {
     const { container } = renderSpaces('n-living');
     expect(toneOf(container)).toEqual({ living: 'here', kitchen: 'joined', bath: 'idle', store: 'uncaptured' });
-    expect(container.querySelector('path[data-tone="here"]')?.getAttribute('class')).toContain('fill-yellow-300');
+    expect(container.querySelector('path[data-tone="here"]')?.getAttribute('class')).toContain('--plan-space-here');
   });
 
   it('στο μπάνιο ⇒ μόνο το μπάνιο κίτρινο (κοινός αληθινός τοίχος ≠ γειτονία)· η κουζίνα χωρίς σημείο λήψης ⇒ γκρι', () => {

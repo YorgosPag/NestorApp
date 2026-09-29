@@ -17,9 +17,11 @@ export const TOUR_SHAPE_REFUSAL_KEY: Readonly<Record<TourShapeRefusal, string>> 
   'space-outside-plan': 'spatial-tour:refusal.spaceOutsidePlan',
   'space-overlap': 'spatial-tour:refusal.spaceOverlap',
   'space-absent': 'spatial-tour:refusal.spaceAbsent',
+  'space-exists': 'spatial-tour:refusal.spaceExists',
   'area-invalid': 'spatial-tour:refusal.areaInvalid',
   'separation-invalid': 'spatial-tour:refusal.separationInvalid',
   'separation-absent': 'spatial-tour:refusal.separationAbsent',
+  'separation-exists': 'spatial-tour:refusal.separationExists',
 };
 
 /** Τα μηνύματα επιτυχίας των εντολών σχημάτων (`space/unspace/separate/unseparate`). */

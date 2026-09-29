@@ -8,11 +8,13 @@
  *   `lib/spatial-tour/tour-graph-inverse.ts`
  * @module components/spatial-tour/editor/useTourEditorActions
  *
- * 🔑 **Βελάκι · αποσύνδεση · χώρος σημείου · θέση · προσανατολισμός · αλλαγή/αφαίρεση σχήματος χώρου = αισιόδοξα** (πρότυπο
+ * 🔑 **Βελάκι · αποσύνδεση · χώρος σημείου · θέση · προσανατολισμός · ΚΑΘΕ πράξη σχήματος χώρου = αισιόδοξα** (πρότυπο
  *   Gmail/Figma): η αλλαγή φαίνεται αμέσως με τη **ΜΙΑ** καθαρή συνάρτηση του γραφέα (`tour-editor-optimistic.ts`), και μετά
  *   έρχεται η αλήθεια του διακομιστή (ξαναφόρτωση). Άρνηση ⇒ επαναφορά + ονομασμένο μήνυμα.
- * 🔑 **Τοποθέτηση · αφαίρεση · κάτοψη · κλίμακα · ΝΕΟ σχήμα = κλειδωμένα**: νέο id στον διακομιστή (N.6) · εικόνα που
- *   ετοιμάζει ο διακομιστής · ξανακλιμάκωση όλου του ορόφου. Μια αισιόδοξη εικόνα εδώ θα ήταν δεύτερη αλήθεια.
+ * 🔑 **Τοποθέτηση · αφαίρεση · κάτοψη · κλίμακα = κλειδωμένα**: νέο σημείο στον διακομιστή · εικόνα που ετοιμάζει ο διακομιστής ·
+ *   ξανακλιμάκωση όλου του ορόφου. Μια αισιόδοξη εικόνα εδώ θα ήταν δεύτερη αλήθεια.
+ * 🔑 **Νέο σχήμα = οριστικό id ΕΔΩ** (Γ3γ-2α, πρότυπο Figma/Linear): το κόβει ο `enterpriseIdService` (N.6) τη στιγμή της
+ *   έγκρισης ⇒ φαίνεται αμέσως, σύρεται/αναιρείται αμέσως· ο διακομιστής ελέγχει πρόθεμα/UUID και ξανακρίνει.
  * 🔑 **Αναίρεση = νέες εντολές μέσα από τον ίδιο γραφέα** (`inverseOf`), ποτέ τοπική στοίβα καταστάσεων. Το «πριν» είναι ο
  *   γράφος της οθόνης **με** τα σχήματα χώρων (Γ3γ-1) — αλλιώς η αναίρεση αλλαγής/αφαίρεσης χώρου δεν θα είχε τι να ξαναγράψει.
  */
@@ -33,6 +35,7 @@ import { isTourShapeRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourRoomInput } from '@/lib/spatial-tour/tour-room';
 import { graphLevelsOfViewer, viewerLevelsOf } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { editTourGraphFromScreen } from '@/services/spatial-tour/spatial-tour-graph.client';
 import type { SpatialTour, TourLevelKey, TourSubject } from '@/types/spatial-tour';
 
@@ -60,12 +63,12 @@ export interface TourEditorActions {
   /** Κατεύθυνση λήψης κόσμου — στρέφει και τα βελάκια του σημείου. */
   readonly orient: (captureId: string, headingRad: number) => void;
   /**
-   * Έγκριση περιγράμματος χώρου (Γ3β) — `spaceId === null` ⇒ νέος (**κλειδωμένο**: το id το κόβει ο διακομιστής, N.6)·
-   * αλλαγή υπάρχοντος ⇒ αισιόδοξα, με την **ίδια** κρίση (και επικάλυψης) που θα κάνει ο διακομιστής.
+   * Έγκριση περιγράμματος χώρου — `spaceId === null` ⇒ νέος (id κομμένο **εδώ**, `create`), αλλιώς `replace`. Αισιόδοξα, με
+   * την **ίδια** κρίση (και επικάλυψης) που θα κάνει ο διακομιστής.
    */
   readonly space: (levelKey: TourLevelKey, spaceId: string | null, space: TourSpaceDraft) => Promise<boolean>;
   readonly unspace: (levelKey: TourLevelKey, spaceId: string) => Promise<boolean>;
-  /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα (κλειδωμένο), αλλιώς αισιόδοξα. */
+  /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα (id κομμένο εδώ), αλλιώς αλλαγή· πάντα αισιόδοξα. */
   readonly separate: (levelKey: TourLevelKey, separationId: string | null, a: TourPlanXY, b: TourPlanXY) => Promise<boolean>;
   readonly unseparate: (levelKey: TourLevelKey, separationId: string) => Promise<boolean>;
 }
@@ -149,9 +152,7 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
       await reload();
       return false;
     }
-    const undo = result.value.changed
-      ? inverseOf(command, graph, { headingOf: (id) => captureOf(id)?.headingRad, createdId: result.value.createdId })
-      : null;
+    const undo = result.value.changed ? inverseOf(command, graph, { headingOf: (id) => captureOf(id)?.headingRad }) : null;
     success(t(SUCCESS_KEY[command.op]), undo === null ? undefined : {
       actions: [{ label: t(TOUR_EDITOR_KEYS.undo), onClick: () => void runUndo(undo) }],
     });
@@ -175,10 +176,14 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
     calibrate: (levelKey, metresPerPixel) => locked({ op: 'calibrate', levelKey, metresPerPixel }),
     position: (nodeId, point) => void send({ op: 'position', nodeId, point }),
     orient: (captureId, headingRad) => void send({ op: 'orient', captureId, headingRad }),
-    // Νέο σχήμα ⇒ κλειδωμένο (id στον διακομιστή)· αλλαγή/αφαίρεση υπάρχοντος ⇒ αισιόδοξα.
-    space: (levelKey, spaceId, space) => (spaceId === null ? locked : send)({ op: 'space', levelKey, spaceId, space }),
+    // Νέο σχήμα ⇒ το οριστικό id κόβεται ΕΔΩ (N.6) — ίδια αισιόδοξη ροή με την αλλαγή/αφαίρεση.
+    space: (levelKey, spaceId, space) => send(spaceId === null
+      ? { op: 'space', levelKey, spaceId: enterpriseIdService.generateTourSpaceId(), mode: 'create', space }
+      : { op: 'space', levelKey, spaceId, mode: 'replace', space }),
     unspace: (levelKey, spaceId) => send({ op: 'unspace', levelKey, spaceId }),
-    separate: (levelKey, separationId, a, b) => (separationId === null ? locked : send)({ op: 'separate', levelKey, separationId, a, b }),
+    separate: (levelKey, separationId, a, b) => send(separationId === null
+      ? { op: 'separate', levelKey, separationId: enterpriseIdService.generateTourSeparationId(), mode: 'create', a, b }
+      : { op: 'separate', levelKey, separationId, mode: 'replace', a, b }),
     unseparate: (levelKey, separationId) => send({ op: 'unseparate', levelKey, separationId }),
   };
 }

@@ -80,8 +80,8 @@ describe('Ζ — ο δικός μας χάρτης (ADR-891 §9)', () => {
 
   it('σερβίρεται από το maps.nestorconstruct.gr (υποτομέας, όχι διαδρομή του Coolify)', () => {
     expect(source.archiveUrl).toBe('pmtiles://https://maps.nestorconstruct.gr/greece-20260926.pmtiles');
-    expect(source.glyphsUrl).toBe('https://maps.nestorconstruct.gr/assets/028c18f713ba/fonts/{fontstack}/{range}.pbf');
-    expect(source.spriteBaseUrl).toBe('https://maps.nestorconstruct.gr/assets/028c18f713ba/sprites/v4');
+    expect(source.glyphsUrl).toBe('https://maps.nestorconstruct.gr/assets/028c18f713ba-e2/fonts/{fontstack}/{range}.pbf');
+    expect(source.spriteBaseUrl).toBe('https://maps.nestorconstruct.gr/assets/028c18f713ba-e2/sprites/v4');
   });
 
   it('το όνομα του αρχείου φέρει το build — immutable cache χωρίς ψέματα', () => {
@@ -98,6 +98,7 @@ describe('Ζ — ο δικός μας χάρτης (ADR-891 §9)', () => {
   it('ό,τι διανέμουμε εμείς δηλώνεται με άδεια και αρχείο άδειας — οι τρίτοι δεν διανέμουν μέσω μας', () => {
     expect(BASEMAP_PROVIDERS.nestor.distributedAssets.map((a) => [a.spdx, a.licenseFile])).toEqual([
       ['OFL-1.1', 'fonts/OFL.txt'],
+      ['OFL-1.1', 'fonts/NotoSansMath-OFL.txt'], // ADR-891 §9.5 — συμπλήρωμα συμβόλων (notofonts @55773c3e)
       ['MIT', 'sprites/LICENSE.md'],
     ]);
     expect(BASEMAP_PROVIDERS.osmf.distributedAssets).toEqual([]);

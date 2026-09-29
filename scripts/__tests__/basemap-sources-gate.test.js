@@ -13,6 +13,7 @@ const path = require('node:path');
 
 const { CATALOG_FILE, GATE_STATES, SOURCE_OWNERS, isTestFile } = require('../lib/basemap-sources/contract.js');
 const { judgeText, sweep } = require('../lib/basemap-sources/gate.js');
+const { judgeSymbolFonts } = require('../lib/basemap-sources/symbol-fonts.js');
 const { main } = require('../check-basemap-sources.js');
 
 const markersOf = (source, file = 'x.ts') => judgeText(file, source).map((hit) => hit.marker);
@@ -53,6 +54,31 @@ describe('Α — τα δομικά μοτίβα, σε κυριολεκτικές
 
   it('TSX: συμβολοσειρά σε ιδιότητα JSX μετρά', () => {
     expect(markersOf('export const A = () => <Map mapStyle="mapbox://styles/x" />;', 'a.tsx')).toEqual(['mapbox-scheme']);
+  });
+});
+
+const fontFindings = (source, file = 'x.tsx') => judgeSymbolFonts(file, source).findings.length;
+
+describe('Α′ — Κ3: η στοίβα των ετικετών (ADR-891 §9.5)', () => {
+  it.each([
+    ["<Layer type=\"symbol\" layout={{ 'text-field': 'n' }} />", 1],
+    ["<Layer type=\"symbol\" layout={{ 'text-field': 'n', 'text-font': ['Noto Sans Regular'] }} />", 1],
+    ["<Layer type=\"symbol\" layout={{ 'text-field': 'n', 'text-font': BASEMAP_OVERLAY_TEXT_FONT }} />", 0],
+    ["<Layer type=\"symbol\" layout={{ 'text-field': 'n', 'text-font': catalog.BASEMAP_OVERLAY_TEXT_FONT }} />", 0],
+    ["<Layer type={'symbol'} layout={{ 'text-field': 'n' }} />", 1],
+    ["<Layer type=\"symbol\" layout={LAYOUT} />", 1], // δεν μαντεύουμε τι έχει μια μεταβλητή
+    ["<Layer type=\"symbol\" layout={{ 'icon-image': 'pin' }} />", 0], // μόνο εικονίδιο ⇒ καμία γραμματοσειρά
+    ["<Layer type=\"circle\" layout={{ 'text-field': 'n' }} />", 0],
+  ])('%s ⇒ %i εύρημα', (jsx, expected) => {
+    expect(fontFindings(`export const L = () => ${jsx};`)).toBe(expected);
+  });
+
+  it.each([
+    ["map.addLayer({ id: 'a', type: 'symbol', layout: { 'text-field': 'n' } });", 1],
+    ["map.addLayer({ id: 'a', type: 'symbol', layout: { 'text-field': 'n', 'text-font': BASEMAP_OVERLAY_TEXT_FONT } });", 0],
+    ["const isText = layer.type === 'symbol';", 0], // σύγκριση, όχι δήλωση στρώσης
+  ])('αντικείμενο: %s ⇒ %i', (source, expected) => {
+    expect(fontFindings(source, 'x.ts')).toBe(expected);
   });
 });
 
@@ -133,6 +159,36 @@ describe('Γ — μεταλλάξεις', () => {
     const root = tree({
       [CATALOG_FILE]: CATALOG_BODY,
       'src/lib/maps/__tests__/c.test.ts': "expect('https://tile.openstreetmap.org/{z}/{x}/{y}.png').toBe('');\n",
+    });
+    expect(sweep(root).violations).toEqual([]);
+  });
+
+  it('🔴 Μ5 — στρώση symbol με κείμενο χωρίς text-font ⇒ undeclared-text-font (Κ3), με αρχείο:γραμμή', () => {
+    const root = tree({
+      [CATALOG_FILE]: CATALOG_BODY,
+      'src/c/Clusters.tsx': "export const C = () => <Layer type=\"symbol\" layout={{ 'text-field': 'x' }} />;\n",
+    });
+    const result = sweep(root);
+    expect(statesOf(result)).toEqual([GATE_STATES.UNDECLARED_TEXT_FONT]);
+    expect(result.violations[0].rel).toBe('src/c/Clusters.tsx:1');
+    expect(result.symbolLayers).toBe(1);
+  });
+
+  it('Κ3 — η στοίβα του μητρώου ⇒ πράσινο· και η στρώση ΜΕΤΡΙΕΤΑΙ (όχι «0 επειδή δεν κοίταξα»)', () => {
+    const root = tree({
+      [CATALOG_FILE]: CATALOG_BODY,
+      'src/c/Clusters.tsx':
+        "export const C = () => <Layer type=\"symbol\" layout={{ 'text-field': 'x', 'text-font': BASEMAP_OVERLAY_TEXT_FONT }} />;\n",
+    });
+    const result = sweep(root);
+    expect(result.violations).toEqual([]);
+    expect(result.symbolLayers).toBe(1);
+  });
+
+  it('test αρχείο με στρώση symbol δεν κρίνεται (ίδιο σύνορο με την Κ1)', () => {
+    const root = tree({
+      [CATALOG_FILE]: CATALOG_BODY,
+      'src/c/__tests__/c.test.tsx': "render(<Layer type=\"symbol\" layout={{ 'text-field': 'x' }} />);\n",
     });
     expect(sweep(root).violations).toEqual([]);
   });

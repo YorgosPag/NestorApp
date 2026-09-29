@@ -6,7 +6,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { BASEMAP_FONTSTACKS, catalogSpriteFlavors, isBundledAsset } from '../basemap-assets';
+import { BASEMAP_FONTSTACKS } from '../../../../src/lib/maps/basemap-catalog';
+import { catalogSpriteFlavors, isBundledAsset } from '../basemap-assets';
 import { parseByteRange } from '../byte-range';
 
 const INFRA = join(__dirname, '..', '..', '..', '..', 'infra', 'basemap');

@@ -87,6 +87,9 @@ function parseArgs(argv: readonly string[]): { build: string | null; dryRun: boo
 async function buildAssets(): Promise<void> {
   const assets = await writeBasemapAssets(CACHE_DIR, BUNDLE_DIR);
   console.log(`🔤 assets: ${assets.files} αρχεία · ${(assets.bytes / 1e6).toFixed(1)} MB → ${assets.directory}`);
+  const added = Object.entries(assets.supplement.addedByStack).map(([stack, n]) => `${stack} +${n}`).join(' · ');
+  console.log(`➕ Noto Sans Math: ${added}`);
+  console.log(`🧾 κάλυψη γλυφών → ${assets.coverageFile} (στο git — ADR-891 §9.5)`);
 }
 
 /** Ο κατάλογος ζητά **ένα** build· αν χτίσαμε άλλο, ο χάρτης θα ζητούσε αρχείο που δεν ανεβάσαμε. */

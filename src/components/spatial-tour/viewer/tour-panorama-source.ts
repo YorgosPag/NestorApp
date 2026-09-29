@@ -45,3 +45,9 @@ export interface TourPanoramaSource {
    */
   planImageUrl(plan: TourViewerPlan, cssWidth: number): string | null;
 }
+
+/**
+ * «Όσο πιο λεπτομερές γίνεται» — με αυτό το πλάτος το `planImageUrl` δίνει το **μεγαλύτερο** παράγωγο (ανάγνωση pixel για την
+ * ανίχνευση χώρων, Γ3γ-2α: 2048 px ⇒ ~7 mm/pixel σε κάτοψη 15 m). Όχι για εμφάνιση.
+ */
+export const PLAN_LARGEST_CSS_WIDTH = Number.POSITIVE_INFINITY;

@@ -26,6 +26,7 @@ const {
   SOURCE_OWNERS,
   isTestFile,
 } = require('./contract.js');
+const { judgeSymbolFonts } = require('./symbol-fonts.js');
 
 /** Το κείμενο κάθε κυριολεκτικής συμβολοσειράς (και κάθε σταθερού κομματιού template). */
 function literalTexts(fileName, text) {
@@ -69,6 +70,16 @@ function judgeOwners(root, owners) {
   return findings;
 }
 
+/** Κ3 — κρίνει τις στρώσεις `symbol` του αρχείου· γράφει ευρήματα, επιστρέφει πόσες στρώσεις είδε. */
+function recordSymbolFonts(abs, rel, text, tally, violations) {
+  const { layers, findings } = judgeSymbolFonts(abs, text);
+  for (const finding of findings) {
+    tally[GATE_STATES.UNDECLARED_TEXT_FONT] += 1;
+    violations.push({ state: GATE_STATES.UNDECLARED_TEXT_FONT, rel: `${rel}:${finding.line}`, detail: finding.why });
+  }
+  return layers;
+}
+
 function emptyTally() {
   return Object.fromEntries(Object.values(GATE_STATES).map((state) => [state, 0]));
 }
@@ -85,12 +96,15 @@ function sweep(root, options = {}) {
   const violations = [];
   let catalogSources = 0;
   let population = 0;
+  let symbolLayers = 0;
 
   for (const abs of collectSourceFiles(root, ['src'])) {
     const rel = toPosix(path.relative(root, abs));
     if (isTestFile(rel)) continue;
     population += 1;
-    const hits = judgeText(abs, fs.readFileSync(abs, 'utf8'));
+    const text = fs.readFileSync(abs, 'utf8');
+    symbolLayers += recordSymbolFonts(abs, rel, text, tally, violations);
+    const hits = judgeText(abs, text);
     if (Object.hasOwn(owners, rel)) {
       tally[GATE_STATES.OWNER] += 1;
       if (rel === catalog) catalogSources = hits.length;
@@ -115,7 +129,7 @@ function sweep(root, options = {}) {
     violations.push({ state: GATE_STATES.EMPTY_CATALOG, rel: catalog, detail: 'το μητρώο δεν δηλώνει καμία πηγή' });
   }
 
-  return { violations, tally, population, catalogSources };
+  return { violations, tally, population, catalogSources, symbolLayers };
 }
 
 module.exports = { BLOCKING, judgeText, literalTexts, sweep };

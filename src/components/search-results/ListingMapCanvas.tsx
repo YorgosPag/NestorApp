@@ -17,6 +17,7 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
@@ -42,6 +43,16 @@ import {
 } from './listing-map-drawn-points';
 import { ListingMapStackPopup } from './ListingMapStackPopup';
 import { useListingArrival } from './useListingArrival';
+
+/**
+ * **Η λεζάντα του `≈` πίσω από όριο `dynamic`** (ADR-777 §8.66.11): δεν αποδίδεται ΠΟΤΕ στον server — φαίνεται μόνο
+ * όταν ο χάρτης ζωγραφίσει ομάδα με `≈` — άρα τα κλειδιά της δεν πληρώνουν πρώτο καρέ (route slice, CHECK 3.34).
+ * ⚠️ Ο τύπος γράφεται ΕΔΩ και όχι `import type`: ο αναλυτής κλειστότητας θα ακολουθούσε την εισαγωγή.
+ */
+const ClusterApproximationKey = dynamic<{ readonly visible: boolean }>(
+  () => import('./ClusterApproximationKey').then((m) => m.ClusterApproximationKey),
+  { ssr: false },
+);
 
 export interface ListingMapCanvasProps {
   /**
@@ -233,10 +244,12 @@ export function ListingMapCanvas({
    * §8.78 — ποια σημεία ζωγραφίστηκαν **χωριστά** (όχι μέσα σε ομάδα) και σε ποιο ζουμ: μόνο εκεί
    * κάθεται πινακίδα, και οι συγκρούσεις ξαναμετριούνται μόνο όταν αλλάξει το ζουμ.
    */
-  const [drawn, setDrawn] = useState<DrawnListingSnapshot>({ points: 'unknown', zoom: null });
+  const [drawn, setDrawn] = useState<DrawnListingSnapshot>({ points: 'unknown', zoom: null, approximateClusters: false });
   const reportDrawn = useCallback((next: DrawnListingSnapshot) => {
     setDrawn((previous) => (
-      previous.zoom === next.zoom && sameDrawnListingPoints(previous.points, next.points) ? previous : next
+      previous.zoom === next.zoom &&
+      previous.approximateClusters === next.approximateClusters &&
+      sameDrawnListingPoints(previous.points, next.points) ? previous : next
     ));
   }, []);
   const stackEntries = stack === null || describeListing === undefined ? [] : describeStack(stack, describeListing);
@@ -427,6 +440,7 @@ export function ListingMapCanvas({
       onMapReady={handleMapReady}
     >
       <ResultsMapSources geometry={geometry} mark={mark} surface={surface} focus={focus} />
+      <ClusterApproximationKey visible={drawn.approximateClusters} />
 
       {/*
         Οι επικαλύψεις του καταναλωτή — **μετά** την πηγή, ώστε να κάθονται πάνω από τα

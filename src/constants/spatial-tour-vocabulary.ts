@@ -211,6 +211,13 @@ export const TOUR_SPACE_SOURCES = ['detected', 'manual', 'dxf'] as const;
 export type TourSpaceSource = (typeof TOUR_SPACE_SOURCES)[number];
 
 /**
+ * **Η πρόθεση μιας εντολής σχήματος** (Γ3γ-2α · πρότυπο Linear CreationTransaction ≠ UpdateTransaction): το id το κόβει ο
+ * πελάτης, άρα ο κριτής πρέπει να ξέρει αν ζητήθηκε **νέο** ή **αλλαγή** — ποτέ τυφλό upsert (θα ανάσταινε σβησμένο χώρο).
+ */
+export const TOUR_SHAPE_MODES = ['create', 'replace'] as const;
+export type TourShapeMode = (typeof TOUR_SHAPE_MODES)[number];
+
+/**
  * **Από πού ήρθε ένα δηλωμένο εμβαδόν** (Δ8.4 · απόφαση Giorgio Γ3β-2): υποχρεωτικό — ο αγοραστής ξεχωρίζει τη μελέτη από
  * την εκτίμηση. Η σειρά = φθίνουσα αξιοπιστία (και σειρά επιλογέα).
  */

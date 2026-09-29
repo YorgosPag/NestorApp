@@ -11,5 +11,9 @@
   },
   "stack": {
     "heading": "{count, plural, one {# listing at this spot} other {# listings at this spot}}"
+  },
+  "clusterKey": {
+    "label": "What ≈ means on clusters",
+    "approximate": "“+5≈” = 5 more listings we know only by area, not by address."
   }
 }

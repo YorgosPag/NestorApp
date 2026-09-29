@@ -46,7 +46,7 @@ import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './t
 import { prepareTourFloorPlan } from './tour-plan-prepare';
 
 type TourGraphWriteOutcome =
-  | { readonly kind: 'written' | 'unchanged'; readonly revision: number; readonly createdId?: string }
+  | { readonly kind: 'written' | 'unchanged'; readonly revision: number }
   | TourAccessRefused;
 
 interface TxContext {
@@ -91,13 +91,10 @@ function planGraphOnly(ctx: TxContext, command: TourGraphCommand): TourGraphEdit
     case 'floorplan': return setLevelFloorPlan(ctx.tour, command.levelKey, ctx.floorPlan ?? null, ctx.stamp);
     case 'calibrate': return calibrateLevel(ctx.tour, command.levelKey, command.metresPerPixel, ctx.stamp);
     case 'position': return positionNode(ctx.tour, command.nodeId, command.point);
-    // Γ3β — το id κόβεται ΜΟΝΟ για νέο σχήμα (N.6)· ο κριτής ξανακρίνει ό,τι έστειλε η οθόνη.
-    case 'space': return upsertSpace(ctx.tour, command, command.spaceId ?? enterpriseIdService.generateTourSpaceId(), ctx.stamp);
+    // Γ3γ-2α — το id το κόβει ο ΠΕΛΑΤΗΣ (Figma/Linear)· ο κριτής ελέγχει πρόθεμα/UUID και ξανακρίνει ό,τι έστειλε η οθόνη.
+    case 'space': return upsertSpace(ctx.tour, command, ctx.stamp);
     case 'unspace': return removeSpace(ctx.tour, command.levelKey, command.spaceId);
-    case 'separate': {
-      const newId = command.separationId ?? enterpriseIdService.generateTourSeparationId();
-      return upsertSeparation(ctx.tour, command, newId, ctx.stamp);
-    }
+    case 'separate': return upsertSeparation(ctx.tour, command, ctx.stamp);
     case 'unseparate': return removeSeparation(ctx.tour, command.levelKey, command.separationId);
     default: return null;
   }
@@ -140,7 +137,7 @@ function applyEdit(ctx: TxContext, plan: EditPlan): TourGraphWriteOutcome {
   ctx.tx.update(ctx.tourRef, { levels: result.graph.levels, nodes: result.graph.nodes, revision, updatedAt: ctx.stamp.at, updatedBy: ctx.stamp.uid });
   if (plan.captureRef !== null && result.captureNodeId !== undefined) ctx.tx.update(plan.captureRef, { nodeId: result.captureNodeId });
   if (plan.captureRef !== null && plan.captureFields !== undefined) ctx.tx.update(plan.captureRef, plan.captureFields);
-  return result.createdId === undefined ? { kind: 'written', revision } : { kind: 'written', revision, createdId: result.createdId };
+  return { kind: 'written', revision };
 }
 
 /** Η κάτοψη της εντολής `floorplan`, κριμένη και έτοιμη — `undefined` για κάθε άλλη εντολή, `null` για «χωρίς κάτοψη». */

@@ -1,6 +1,6 @@
 /**
  * @fileoverview **POST /api/spatial-tours/{kind}/{subjectId}/graph** — τοποθέτηση/αφαίρεση λήψης, βελάκι, αποσύνδεση, κάτοψη,
- * και (Γ3β) σχήματα χώρων + νοητές γραμμές· για νέο σχήμα η απάντηση φέρει το `createdId`.
+ * και (Γ3β) σχήματα χώρων + νοητές γραμμές — με id που κόβει **ο πελάτης** (Γ3γ-2α) και ελέγχεται εδώ και στον κριτή.
  * @related ADR-884 Φ2β · §4.9 · `server/spatial-tour/tour-graph-write.ts` (η κρίση και η εγγραφή)
  * @module app/api/spatial-tours/[kind]/[subjectId]/graph/route
  *
@@ -14,6 +14,7 @@ import { z } from 'zod';
 import {
   FLOOR_PLAN_DECLARABLE_SOURCES,
   TOUR_DECLARED_AREA_SOURCES,
+  TOUR_SHAPE_MODES,
   TOUR_SPACE_MAX_VERTICES,
   TOUR_SPACE_MIN_VERTICES,
   TOUR_SPACE_SOURCES,
@@ -24,6 +25,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import type { TourGraphEditResponse } from '@/lib/spatial-tour/tour-graph-edit';
 import { writeTourGraph } from '@/server/spatial-tour/tour-graph-write';
+import { isEnterpriseIdOfPrefix } from '@/services/enterprise-id-parse';
+import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from '@/services/enterprise-id-prefixes';
 
 import {
   readTourSubject,
@@ -49,6 +52,11 @@ const levelKey = z.discriminatedUnion('kind', [
 const planXY = z.object({ x: z.number().finite().min(-1e6).max(1e6), y: z.number().finite().min(-1e6).max(1e6) });
 /** Όνομα χώρου/σημείου — ίδιος φράχτης με την εντολή `name` (το «έγκυρο» το κρίνει το `normalizeTourRoom`). */
 const roomInput = z.object({ types: z.array(z.string().max(32)).max(8), label: z.string().max(200).nullable() });
+/** Id σχήματος που έκοψε ο πελάτης (Γ3γ-2α): **μόνο** του είδους του — πρόθεμα + UUID v4 (N.6, ταυτότητα «επιπέδου Β»). */
+const shapeId = (prefix: EnterpriseIdPrefix) => id.refine((value) => isEnterpriseIdOfPrefix(value, prefix));
+const spaceId = shapeId(ENTERPRISE_ID_PREFIXES.TOUR_SPACE);
+const separationId = shapeId(ENTERPRISE_ID_PREFIXES.TOUR_SEPARATION);
+const mode = z.enum(TOUR_SHAPE_MODES);
 const spaceDraft = z.object({
   points: z.array(planXY).min(TOUR_SPACE_MIN_VERTICES).max(TOUR_SPACE_MAX_VERTICES),
   source: z.enum(TOUR_SPACE_SOURCES),
@@ -82,10 +90,10 @@ const commandSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('orient'), captureId: id, headingRad: z.number().finite().min(-4 * Math.PI).max(4 * Math.PI) }),
   // ── Τα σχήματα των χώρων (Φ2στ-γ Γ3β · §4.14): εδώ μόνο σχήμα και φράχτες μεγέθους· «πάνω στην κάτοψη;», «αυτοτέμνεται;»,
   //    «επικαλύπτει άλλον;» τα κρίνει ΜΙΑ αρχή, το `tour-space-edit.ts` — ο διακομιστής ξανακρίνει πάντα. ──
-  z.object({ op: z.literal('space'), levelKey, spaceId: id.nullable(), space: spaceDraft }),
-  z.object({ op: z.literal('unspace'), levelKey, spaceId: id }),
-  z.object({ op: z.literal('separate'), levelKey, separationId: id.nullable(), a: planXY, b: planXY }),
-  z.object({ op: z.literal('unseparate'), levelKey, separationId: id }),
+  z.object({ op: z.literal('space'), levelKey, spaceId, mode, space: spaceDraft }),
+  z.object({ op: z.literal('unspace'), levelKey, spaceId }),
+  z.object({ op: z.literal('separate'), levelKey, separationId, mode, a: planXY, b: planXY }),
+  z.object({ op: z.literal('unseparate'), levelKey, separationId }),
 ]);
 
 type GraphResponse = TourGraphEditResponse | TourBadSubjectBody | TourRefusedBody;
@@ -100,7 +108,6 @@ async function handler(request: NextRequest, actor: ApiActor, segment?: TourSegm
   return NextResponse.json({
     changed: outcome.kind === 'written',
     revision: outcome.revision,
-    ...(outcome.createdId === undefined ? {} : { createdId: outcome.createdId }),
   });
 }
 
