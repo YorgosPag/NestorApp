@@ -16,6 +16,8 @@ import 'server-only';
 import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { TOUR_FACE_DETECTOR_VERSION } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { normalizeAngleRad } from '@/lib/geometry/angle';
 import { checkTourGraph } from '@/lib/spatial-tour/spatial-tour-graph';
@@ -37,11 +39,11 @@ import {
   type FloorPlanChoice,
   type TourEditStamp,
 } from '@/lib/spatial-tour/tour-plan-edit';
-import { applyRedactionEdits, redactionEditsOf, redactionsOf } from '@/lib/spatial-tour/tour-redaction-edit';
+import { applyRedactionEdits, planAutoRedactions, redactionEditsOf, redactionsOf } from '@/lib/spatial-tour/tour-redaction-edit';
 import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from '@/lib/spatial-tour/tour-space-edit';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import type { SpatialTour, TourCapture, TourSubject } from '@/types/spatial-tour';
+import type { SpatialTour, TourCapture, TourFaceScan, TourRedaction, TourRedactionRegion, TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
 import { prepareTourFloorPlan } from './tour-plan-prepare';
@@ -181,6 +183,72 @@ async function preparedFloorPlan(
 ): Promise<FloorPlanChoice | TourAccessRefused | null | undefined> {
   if (command.op !== 'floorplan') return undefined;
   return command.plan === null ? null : prepareTourFloorPlan(db, tour, command.plan);
+}
+
+// ── Αυτόματη σάρωση προσώπων (Φ2ζ ζ4) — ο ΙΔΙΟΣ γραφέας, με αρχή το σύστημα ──────────────────────────────────────
+
+/** Ό,τι έγραψε η σάρωση — και σε ποιο κλειδί, με ποιες περιοχές, ψήνει τώρα ο ψήστης. */
+export type FaceScanWriteOutcome =
+  | { readonly kind: 'recorded'; readonly key: string; readonly redactions: readonly TourRedaction[]; readonly scan: TourFaceScan }
+  | { readonly kind: 'superseded' };
+
+const SUPERSEDED: FaceScanWriteOutcome = { kind: 'superseded' };
+
+/** Η λήψη που σαρώθηκε, όπως τη διάβασε η συναλλαγή, και το κλειδί στο οποίο σαρώθηκε. */
+interface ScanTarget {
+  readonly ref: DocumentReference;
+  readonly capture: TourCapture;
+  readonly key: string;
+}
+
+/**
+ * Η λήψη είναι ακόμη **αυτή** που σαρώθηκε: στο ίδιο κλειδί, και όχι ήδη σαρωμένη από αυτή την έκδοση. `pending` = ο ψήστης
+ * (πριν δημοσιεύσει) · `ready` = το backfill των λήψεων πριν το ζ4 (0 πρόσωπα ⇒ μόνο το ίχνος, καμία διακοπή).
+ */
+function isScanTarget(capture: TourCapture | null, expectedKey: string): capture is TourCapture {
+  return capture !== null
+    && (capture.tileset.state === 'pending' || capture.tileset.state === 'ready')
+    && capture.tileset.contentHash === expectedKey
+    && capture.faceScan?.version !== TOUR_FACE_DETECTOR_VERSION;
+}
+
+/** Τα πρόσωπα → `auto` περιοχές + ίχνος σάρωσης, και η εγγραφή τους (νέο κλειδί ⇒ από το `applyEdit`, `revision + 1`). */
+function writeFaceScan(ctx: TxContext, target: ScanTarget, faces: readonly TourRedactionRegion[]): FaceScanWriteOutcome {
+  const { ref: captureRef, capture, key } = target;
+  const current = redactionsOf(capture);
+  const auto = planAutoRedactions(current, faces, ctx.stamp, () => enterpriseIdService.generateTourRedactionId());
+  const scan: TourFaceScan = { version: TOUR_FACE_DETECTOR_VERSION, faces: faces.length, added: auto.added, saturated: auto.saturated, at: ctx.stamp.at };
+  if (auto.added === 0) {
+    ctx.tx.update(captureRef, { faceScan: scan });
+    return { kind: 'recorded', key, redactions: current, scan };
+  }
+  const change = redactedCaptureChange(capture, auto.redactions);
+  const graph = { levels: ctx.tour.levels, nodes: ctx.tour.nodes };
+  const written = applyEdit(ctx, { result: { kind: 'edited', graph }, captureRef, captureFields: { ...change.fields, faceScan: scan } });
+  if (written.kind !== 'written') throw new Error(`Face scan write refused: ${written.kind}`);
+  return { kind: 'recorded', key: change.fields.tileset?.contentHash ?? key, redactions: auto.redactions, scan };
+}
+
+/**
+ * **Γράψε τη σάρωση προσώπων μιας λήψης** — ο ΙΔΙΟΣ γραφέας με το πινέλο (ίδια `redactedCaptureChange`, ίδιο `applyEdit`), με
+ * αρχή το **σύστημα** (ο ψήστης, όχι άνθρωπος). CAS στο κλειδί: αν στο μεταξύ άλλαξε το θόλωμα ή τη σάρωσε ήδη άλλος ψήστης ⇒
+ * `superseded` και **τίποτα** δεν γράφεται (το ψήσιμο το κάνει ο άλλος). Ιδεμπότητο: μία σάρωση ανά έκδοση ανιχνευτή.
+ */
+export async function recordFaceScan(
+  db: Firestore,
+  captureRef: DocumentReference,
+  input: { readonly expectedKey: string; readonly faces: readonly TourRedactionRegion[] },
+): Promise<FaceScanWriteOutcome> {
+  const tourRef = captureRef.parent.parent;
+  if (tourRef === null) return SUPERSEDED;
+  const stamp: TourEditStamp = { uid: SYSTEM_IDENTITY.ID, at: nowISO() };
+  return db.runTransaction(async (tx) => {
+    const [tourSnap, captureSnap] = [await tx.get(tourRef), await tx.get(captureRef)];
+    const tour = tourSnap.exists ? spatialTourFromDocument(tourSnap.data(), tourRef.id) : null;
+    const capture = captureSnap.exists ? tourCaptureFromDocument(captureSnap.data(), captureRef.id) : null;
+    if (tour === null || !isScanTarget(capture, input.expectedKey)) return SUPERSEDED;
+    return writeFaceScan({ tx, tourRef, tour, stamp }, { ref: captureRef, capture, key: input.expectedKey }, input.faces);
+  });
 }
 
 /** **Άλλαξε τον γράφο** — μόνο ο υπεύθυνος, σε μία συναλλαγή. */

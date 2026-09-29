@@ -42,8 +42,18 @@ function retire(tileset: TourCaptureTileset, nextKey: string): readonly string[]
 }
 
 /**
+ * **Δεν δημοσιεύτηκε ποτέ** (ζ4): πρώτο ψήσιμο — `pending` και καμία αλλαγή θολώματος ως τώρα. Το κλειδί του δεν έδειξε ποτέ
+ * pixel σε κανέναν ⇒ τίποτα να αποσυρθεί (ό,τι ανεβαίνει ταυτόχρονα το σβήνει ο ψήστης με `discardIfSuperseded`).
+ */
+export function isFirstBake(capture: Pick<TourCapture, 'originalHash' | 'tileset'>): boolean {
+  return capture.tileset.state === 'pending' && capture.originalHash === undefined;
+}
+
+/**
  * **Η αλλαγή της λήψης** για νέες περιοχές. Ίδιο κλειδί (π.χ. ίδια pixel με άλλα id) ⇒ μόνο οι περιοχές, κανένα ψήσιμο.
  * Λήψη χωρίς hash πρωτοτύπου δεν γεννιέται ποτέ από την ολοκλήρωση — εδώ θα ήταν βλάβη ⇒ `throw`, ποτέ ψήσιμο στα τυφλά.
+ * Το τρέχον κλειδί αποσύρεται — **εκτός** αν η λήψη δεν δημοσιεύτηκε ποτέ (`isFirstBake`): τότε το `retiredKeys` μένει άδειο και
+ * ο επεξεργαστής κρατά τη συμπεριφορά του πρώτου ψησίματος (`isRebakingAfterRedaction`).
  */
 export function redactedCaptureChange(
   capture: Pick<TourCapture, 'id' | 'originalHash' | 'tileset'>,
@@ -53,7 +63,7 @@ export function redactedCaptureChange(
   if (originalHash === null) throw new Error(`Tour capture without original hash: ${capture.id}`);
   const key = tilesetKeyOf(originalHash, redactions);
   if (key === capture.tileset.contentHash) return { fields: { redactions, originalHash }, rebake: false };
-  const retiredKeys = retire(capture.tileset, key);
+  const retiredKeys = isFirstBake(capture) ? [] : retire(capture.tileset, key);
   const tileset: TourCaptureTileset = { state: 'pending', contentHash: key, faceSize: null, ...(retiredKeys.length > 0 ? { retiredKeys } : {}) };
   return { fields: { redactions, originalHash, tileset }, rebake: true };
 }

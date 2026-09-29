@@ -175,6 +175,27 @@ describe('tourCaptureFromDocument', () => {
       expect(tourCaptureFromDocument({ ...CAPTURE_DOC, ...patch }, 'tcap_1')).toBeNull();
     });
   });
+
+  describe('σάρωση προσώπων (Φ2ζ ζ4 · §4.15)', () => {
+    const SCAN = { version: 'yunet-2026may-v1', faces: 3, added: 2, saturated: false, at: '2026-09-29T12:00:00.000Z' };
+
+    it('✅ διαβάζει το ίχνος· απόν ⇒ το πεδίο λείπει (δεν σαρώθηκε — τα παλιά έγγραφα αμετάβλητα)', () => {
+      expect(tourCaptureFromDocument({ ...CAPTURE_DOC, faceScan: SCAN }, 'tcap_1')?.faceScan).toEqual(SCAN);
+      expect(tourCaptureFromDocument(CAPTURE_DOC, 'tcap_1')).not.toHaveProperty('faceScan');
+    });
+
+    // 🔴 Ποτέ «αδιάβαστο = δεν σαρώθηκε»: θα ξανασάρωνε και θα ξαναγεννούσε ό,τι έσβησε ο άνθρωπος.
+    it.each([
+      ['ίχνος χωρίς έκδοση', { ...SCAN, version: undefined }],
+      ['αρνητικό πλήθος προσώπων', { ...SCAN, faces: -1 }],
+      ['μη ακέραιες προσθήκες', { ...SCAN, added: 1.5 }],
+      ['κορεσμός που δεν είναι boolean', { ...SCAN, saturated: 'no' }],
+      ['χωρίς χρόνο', { ...SCAN, at: undefined }],
+      ['ίχνος που δεν είναι αντικείμενο', 'scanned'],
+    ])('🔴 αρνείται λήψη με %s', (_label, faceScan) => {
+      expect(tourCaptureFromDocument({ ...CAPTURE_DOC, faceScan }, 'tcap_1')).toBeNull();
+    });
+  });
 });
 
 const REQUEST_DOC = {

@@ -140,6 +140,12 @@ jobs:
           # την cache του browser σε κάθε deploy. ⚠️ Ίδια γραμμή στο `bundle-ratchet.yml` (CHECK 3.57).
           NEXT_PUBLIC_DEPLOYMENT_ID: ${{ github.sha }}
 
+      # ADR-884 Φ2ζ ζ4 — ο worker του ανιχνευτή προσώπων κάνει `require('onnxruntime-web')` από το cwd και φορτώνει το
+      # `.wasm` ΔΥΝΑΜΙΚΑ (ο ιχνηλάτης δεν τα βλέπει μόνος του — `outputFileTracingIncludes` στο next.config). Αν λείπουν, ο
+      # ψήστης αναβάλλει ΚΑΘΕ λήψη (fail-closed) σιωπηλά στην παραγωγή ⇒ εκτελούμε τον ΙΔΙΟ worker από το standalone, ΕΔΩ.
+      - name: Verify face-detector runtime in standalone
+        run: node scripts/face-detector-smoke.cjs .next/standalone
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:

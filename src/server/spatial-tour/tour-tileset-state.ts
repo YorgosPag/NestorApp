@@ -24,13 +24,13 @@ type TilesetTransition =
 export type TilesetTransitionOutcome = 'written' | 'not-pending' | 'hash-changed' | 'missing';
 
 /**
- * Η νέα τιμή του tileset — καθαρή. Χωρίς `retiredKeys` (Φ2ζ): ο ψήστης τα έσβησε **πριν** ψήσει, άρα η λίστα αδειάζει μόνο εδώ,
- * με την ολοκλήρωση — ποτέ πριν σβηστούν.
+ * Η νέα τιμή του tileset — καθαρή. `ready` ⇒ **χωρίς** `retiredKeys` (Φ2ζ): ο ψήστης τα έσβησε **πριν** ψήσει, άρα η λίστα
+ * αδειάζει μόνο με την ολοκλήρωση — ποτέ πριν σβηστούν. `failed` ⇒ η λίστα **μένει** (ζ4): λέει «αυτή η λήψη είχε δημοσιευμένα
+ * πλακίδια που αντικαταστάθηκαν και τίποτα δεν πήρε τη θέση τους» (`isRebakingAfterRedaction`)· η ξανα-διαγραφή είναι ιδεμπότητη.
  */
-function nextTileset(contentHash: string, transition: TilesetTransition): TourCaptureTileset {
-  return transition.to === 'ready'
-    ? { state: 'ready', contentHash, faceSize: transition.faceSize }
-    : { state: 'failed', contentHash, faceSize: null };
+function nextTileset(current: TourCaptureTileset, contentHash: string, transition: TilesetTransition): TourCaptureTileset {
+  if (transition.to === 'ready') return { state: 'ready', contentHash, faceSize: transition.faceSize };
+  return { state: 'failed', contentHash, faceSize: null, ...(current.retiredKeys === undefined ? {} : { retiredKeys: current.retiredKeys }) };
 }
 
 /** **Γράψε τη μετάβαση** — μόνο από `pending`, μόνο για το ίδιο περιεχόμενο. */
@@ -46,7 +46,7 @@ export async function transitionTileset(
     if (capture === null) return 'missing';
     if (capture.tileset.state !== 'pending') return 'not-pending';
     if (capture.tileset.contentHash !== bakedHash) return 'hash-changed';
-    tx.update(captureRef, { tileset: nextTileset(bakedHash, transition) });
+    tx.update(captureRef, { tileset: nextTileset(capture.tileset, bakedHash, transition) });
     return 'written';
   });
 }

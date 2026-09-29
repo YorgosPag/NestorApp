@@ -34,12 +34,14 @@ export function isCaptureViewable(capture: Pick<TourCapture, 'tileset'>): boolea
 }
 
 /**
- * **Ξαναψήνεται μετά από θόλωμα;** (Φ2ζ ζ3 · §4.15) — δεν έχει πλακίδια **και** θολώθηκε ποτέ (`originalHash` γράφεται **μόνο**
- * από την εντολή θολώματος). Διαφέρει από το πρώτο ψήσιμο μιας νέας λήψης: εκεί ο επεξεργαστής δείχνει την προηγούμενη έτοιμη
- * λήψη του κόμβου (Φ2δ)· εδώ **όχι** — η προηγούμενη εικόνα αυτής της λήψης είναι ακριβώς ό,τι ζητήθηκε να κρυφτεί.
+ * **Ξαναψήνεται μετά από θόλωμα;** (Φ2ζ ζ3 · §4.15) — δεν έχει πλακίδια **και** είχε δημοσιευμένα που **αποσύρθηκαν**
+ * (`retiredKeys`: τα γράφει κάθε αλλαγή pixel πάνω σε λήψη που δημοσιεύτηκε, τα κρατά και το `failed`). Διαφέρει από το πρώτο
+ * ψήσιμο μιας νέας λήψης: εκεί ο επεξεργαστής δείχνει την προηγούμενη έτοιμη λήψη του κόμβου (Φ2δ) — **και** όταν η αυτόματη
+ * σάρωση προσώπων (ζ4) άλλαξε το κλειδί της πριν δημοσιευτεί ποτέ. Εδώ **όχι**: η προηγούμενη εικόνα αυτής της λήψης είναι
+ * ακριβώς ό,τι ζητήθηκε να κρυφτεί. 🔑 Όχι `originalHash` (το σήμα ως το ζ3): το γράφει πλέον **και** η σάρωση του πρώτου ψησίματος.
  */
-export function isRebakingAfterRedaction(capture: Pick<TourCapture, 'tileset' | 'originalHash'>): boolean {
-  return !isCaptureViewable(capture) && capture.originalHash !== undefined;
+export function isRebakingAfterRedaction(capture: Pick<TourCapture, 'tileset'>): boolean {
+  return !isCaptureViewable(capture) && (capture.tileset.retiredKeys?.length ?? 0) > 0;
 }
 
 /**

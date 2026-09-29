@@ -63,6 +63,11 @@ describe('mapAttribution — η ΜΙΑ ανάγνωση από φορτωμέν�
   it('πηγή χωρίς απόδοση (π.χ. GeoJSON του χρήστη) δεν προσθέτει τίποτα', () => {
     expect(mapAttribution(fakeMap({ shape: undefined }))).toEqual([]);
   });
+
+  it('🔴 στυλ ΣΕ ΦΟΡΤΩΣΗ (`getStyle()` = undefined, `styledata` πριν από το `load`) ⇒ null, ποτέ εξαίρεση (ADR-890 §16)', () => {
+    const loading = { getStyle: () => undefined, getSource: () => undefined };
+    expect(mapAttribution(loading)).toBeNull();
+  });
 });
 
 describe('sameAttribution', () => {

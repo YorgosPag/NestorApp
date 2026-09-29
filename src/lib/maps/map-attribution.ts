@@ -87,9 +87,14 @@ export function mergeAttributions(htmlPerSource: readonly string[]): MapAttribut
   });
 }
 
-/** Ό,τι χρειάζεται η ανάγνωση από έναν φορτωμένο χάρτη — τίποτα περισσότερο (ώστε τα tests να μη στήνουν WebGL). */
+/**
+ * Ό,τι χρειάζεται η ανάγνωση από έναν χάρτη — τίποτα περισσότερο (ώστε τα tests να μη στήνουν WebGL).
+ * ⚠️ Το `getStyle()` είναι **`undefined` όσο το στυλ δεν έχει φορτώσει** — έτσι συμπεριφέρεται η MapLibre (το
+ * `Style.serialize()` επιστρέφει κενό πριν από το `load`), παρότι ο τύπος της το κρύβει. Και `styledata` πυροδοτείται
+ * και **πριν** από το `load` (π.χ. `addImage` μιας διαγράμμισης, ADR-890 §16): χωρίς αυτό, η σελίδα έπεφτε ολόκληρη.
+ */
 export interface AttributedMap {
-  getStyle(): { readonly sources: Readonly<Record<string, unknown>> };
+  getStyle(): { readonly sources: Readonly<Record<string, unknown>> } | undefined;
   getSource(id: string): { readonly attribution?: string } | undefined;
 }
 
@@ -97,9 +102,12 @@ export interface AttributedMap {
  * **Η απόδοση όπως τη δηλώνουν οι πηγές του φορτωμένου στυλ** (TileJSON / `attribution`) — η ΜΙΑ ανάγνωση,
  * για το στιγμιότυπο (`capture-map-snapshot.ts`) **και** για τον ζωντανό χάρτη (`maplibre.ts`, ADR-891 §8).
  */
-export function mapAttribution(map: AttributedMap): MapAttributionSegment[] {
-  const ids = Object.keys(map.getStyle().sources);
-  return mergeAttributions(ids.map((id) => map.getSource(id)?.attribution ?? ''));
+export function mapAttribution(map: AttributedMap): MapAttributionSegment[] | null {
+  // `null` = «δεν ξέρω ακόμη» (στυλ σε φόρτωση) — ΟΧΙ `[]`: κενή απόδοση θα έσβηνε στιγμιαία την υποχρέωση της
+  // άδειας σε κάθε αλλαγή στυλ (π.χ. θέματος). Ο καλών κρατά ό,τι ήξερε.
+  const style = map.getStyle();
+  if (style === undefined) return null;
+  return mergeAttributions(Object.keys(style.sources).map((id) => map.getSource(id)?.attribution ?? ''));
 }
 
 /** Ίδια απόδοση; — ώστε ο ζωντανός χάρτης να μην ξαναζωγραφίζει σε κάθε φόρτωση πλακιδίου. */

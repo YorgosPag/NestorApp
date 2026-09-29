@@ -67,6 +67,7 @@ import type {
   TourLink,
   TourNode,
   TourPoint,
+  TourFaceScan,
   TourRedaction,
   TourRoom,
   TourSeparationLine,
@@ -100,6 +101,8 @@ function readLevelKey(raw: unknown): TourLevelKey | null {
 }
 
 const isPositiveNumber = (value: unknown): value is number => isFiniteNumber(value) && value > 0;
+/** Ακέραιος ≥ 0 — μετρητής. */
+const isCount = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0;
 
 /** Η εικόνα της κάτοψης — απούσα ⇒ `null`· `undefined` ⇒ υπάρχει αλλά δεν διαβάζεται (ίδια σύμβαση με τη θέση). */
 function readPlanImage(raw: unknown): FloorPlanImage | null | undefined {
@@ -284,6 +287,19 @@ function readRedactions(raw: unknown): readonly TourRedaction[] | null {
   return raw === undefined ? [] : readAll(raw, readRedaction);
 }
 
+/**
+ * Η αυτόματη σάρωση προσώπων (Φ2ζ ζ4): απούσα ⇒ `undefined` (δεν σαρώθηκε)· παρούσα αλλά αδιάβαστη ⇒ `null` και η λήψη δεν
+ * διαβάζεται. 🔴 Ποτέ «αδιάβαστη = δεν σαρώθηκε»: θα ξανασάρωνε και θα ξαναγεννούσε ό,τι έσβησε ο άνθρωπος.
+ */
+function readFaceScan(raw: unknown): TourFaceScan | null | undefined {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw) || typeof raw.saturated !== 'boolean') return null;
+  const [version, at] = [text(raw.version), normalizeToISO(raw.at)];
+  const { faces, added } = raw;
+  if (version === null || at === null || !isCount(faces) || !isCount(added)) return null;
+  return { version, faces, added, saturated: raw.saturated, at };
+}
+
 /** Τα πεδία λεξιλογίου μιας λήψης — όλα ή τίποτα. */
 function readCaptureVocabulary(raw: Record<string, unknown>) {
   const { source, provenance, audience } = raw;
@@ -312,6 +328,7 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   const rights = readMediaRights(raw.rights);
   const tileset = readTileset(raw.tileset);
   const redactions = readRedactions(raw.redactions);
+  const faceScan = readFaceScan(raw.faceScan);
   const originalHash = raw.originalHash === undefined ? undefined : text(raw.originalHash);
   const nodeId = readPlacement(raw.nodeId);
   const [tourId, originalFileId, uploadedBy] = [raw.tourId, raw.originalFileId, raw.uploadedBy].map(text);
@@ -322,7 +339,7 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   // Απών ⇒ `device` (παλιά έγγραφα)· παρών αλλά άγνωστος ⇒ έγγραφο που δεν καταλάβαμε (Φ2στ-β).
   if (raw.headingSource !== undefined && !isTourHeadingSource(raw.headingSource)) return null;
   // Θολώματα / hash πρωτοτύπου (Φ2ζ): παρόντα αλλά αδιάβαστα ⇒ έγγραφο που δεν καταλάβαμε (ποτέ ψήσιμο χωρίς αυτά).
-  if (redactions === null || originalHash === null) return null;
+  if (redactions === null || originalHash === null || faceScan === null) return null;
   return {
     id, tourId, nodeId, capturedAt, createdAt, originalFileId, uploadedBy, rights, tileset, signatory,
     ...vocabulary,
@@ -330,6 +347,7 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
     ...(raw.headingSource === undefined ? {} : { headingSource: raw.headingSource }),
     ...(originalHash === undefined ? {} : { originalHash }),
     ...(redactions.length > 0 ? { redactions } : {}),
+    ...(faceScan === undefined ? {} : { faceScan }),
     baseCaptureId: text(raw.baseCaptureId),
   };
 }
@@ -386,7 +404,7 @@ export function tourAccessRequestFromDocument(raw: unknown, id: string): TourAcc
  */
 function readViewCount(raw: unknown): number | null {
   if (raw === undefined || raw === null) return 0;
-  return Number.isInteger(raw) && (raw as number) >= 0 ? (raw as number) : null;
+  return isCount(raw) ? raw : null;
 }
 
 /**

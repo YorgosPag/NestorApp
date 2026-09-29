@@ -113,7 +113,8 @@ describe('Ξ — σημείο που ξαναψήνεται μετά από θό
   it('αποτυχημένη επανα-ψήση ⇒ «failed», ποτέ σιωπηλή επιστροφή σε άλλη λήψη', () => {
     const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
       capture('c_old', 'a', '2026-09-01T10:00:00.000Z'),
-      capture('c_blur', 'a', '2026-09-05T10:00:00.000Z', { tileset: { state: 'failed', contentHash: 'k2', faceSize: null }, originalHash: 'h' }),
+      // Το `failed` ΚΡΑΤΑ τα αποσυρμένα κλειδιά (ζ4): «είχε δημοσιευμένα πλακίδια, τίποτα δεν πήρε τη θέση τους».
+      capture('c_blur', 'a', '2026-09-05T10:00:00.000Z', { tileset: { state: 'failed', contentHash: 'k2', faceSize: null, retiredKeys: ['h'] }, originalHash: 'h' }),
     ]);
     expect(model.rebaking.map((r) => r.readiness)).toEqual(['failed']);
     expect(model.graph.stops.has('a')).toBe(false);
@@ -152,6 +153,15 @@ describe('Ξ — σημείο που ξαναψήνεται μετά από θό
     const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
       capture('c_ready', 'a', '2026-09-01T10:00:00.000Z'),
       capture('c_new', 'a', '2026-09-05T10:00:00.000Z', { tileset: PENDING }),
+    ]);
+    expect(model.graph.stops.get('a')?.stop.captureId).toBe('c_ready');
+    expect(model.rebaking).toEqual([]);
+  });
+
+  it('ζ4: η αυτόματη σάρωση άλλαξε το κλειδί ΠΡΙΝ δημοσιευτεί ποτέ (originalHash, κανένα αποσυρμένο) ⇒ ακόμη πρώτο ψήσιμο (Φ2δ)', () => {
+    const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
+      capture('c_ready', 'a', '2026-09-01T10:00:00.000Z'),
+      capture('c_new', 'a', '2026-09-05T10:00:00.000Z', { tileset: { state: 'pending', contentHash: 'k_auto', faceSize: null }, originalHash: 'h' }),
     ]);
     expect(model.graph.stops.get('a')?.stop.captureId).toBe('c_ready');
     expect(model.rebaking).toEqual([]);

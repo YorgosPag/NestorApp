@@ -15,6 +15,7 @@ import { inverseOf } from '../tour-graph-inverse';
 import {
   normalizeRedactionRegion,
   originalHashOf,
+  planAutoRedactions,
   redactionKeyMaterial,
   removeRedaction,
   upsertRedaction,
@@ -135,5 +136,42 @@ describe('Ν — αναίρεση', () => {
   it('αφαίρεση ανύπαρκτης ή χωρίς το «πριν» ⇒ καμία αναίρεση', () => {
     expect(inverseOf({ op: 'unredact', captureId: 'tcap_1', redactionId: ID }, graph, context([]))).toBeNull();
     expect(inverseOf(redact('create'), graph)).toBeNull();
+  });
+});
+
+describe('Σ — αυτόματη σάρωση προσώπων (ζ4)', () => {
+  const SYSTEM = { uid: 'system', at: '2026-09-29T12:00:00.000Z' };
+  let next = 0;
+  const newId = () => `tred_auto_${++next}`;
+  beforeEach(() => { next = 0; });
+
+  it('πρόσωπα ⇒ auto περιοχές ΔΙΠΛΑ στις υπάρχουσες, με id του καλούντος και σφραγίδα του συστήματος · yaw κανονικοποιημένο', () => {
+    const manual = redaction({ source: 'manual', createdBy: 'boris', yawRad: -2 });
+    const plan = planAutoRedactions([manual], [REGION, { yawRad: 0.5 + 2 * Math.PI, pitchRad: -0.4, radiusRad: 0.1 }], SYSTEM, newId);
+    expect(plan.added).toBe(2);
+    expect(plan.saturated).toBe(false);
+    expect(plan.redactions[0]).toBe(manual);
+    expect(plan.redactions.slice(1)).toEqual([
+      { id: 'tred_auto_1', ...REGION, source: 'auto', createdBy: 'system', createdAt: SYSTEM.at },
+      { id: 'tred_auto_2', yawRad: expect.closeTo(0.5, 9), pitchRad: -0.4, radiusRad: 0.1, source: 'auto', createdBy: 'system', createdAt: SYSTEM.at },
+    ]);
+  });
+
+  it('πρόσωπο που ΣΚΕΠΑΖΕΤΑΙ ήδη (και από χειροκίνητη) ⇒ καμία δεύτερη περιοχή, κανένα id', () => {
+    const manual = redaction({ source: 'manual', radiusRad: 0.5 });
+    expect(planAutoRedactions([manual], [REGION], SYSTEM, newId)).toEqual({ redactions: [manual], added: 0, saturated: false });
+    expect(next).toBe(0);
+  });
+
+  it('άκυρη γεωμετρία (πέρα από τον πόλο) δεν γίνεται ποτέ περιοχή', () => {
+    expect(planAutoRedactions([], [{ yawRad: 0, pitchRad: 2, radiusRad: 0.1 }], SYSTEM, newId).added).toBe(0);
+  });
+
+  it('όριο: χωρούν μόνο όσα μένουν ως το MAX — ποτέ πάνω από αυτό', () => {
+    const full = Array.from({ length: MAX_TOUR_REDACTIONS - 1 }, (_, k) => redaction({ id: `tred_m${k}`, yawRad: -3 + k * 0.01, radiusRad: 0.005 }));
+    const faces = [0.5, 1.5, 2.5].map((yawRad) => ({ yawRad, pitchRad: 0, radiusRad: 0.05 }));
+    const plan = planAutoRedactions(full, faces, SYSTEM, newId);
+    expect(plan.redactions).toHaveLength(MAX_TOUR_REDACTIONS);
+    expect(plan.added).toBe(1);
   });
 });

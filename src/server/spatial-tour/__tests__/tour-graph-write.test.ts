@@ -14,7 +14,7 @@ jest.mock('server-only', () => ({}));
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { MAX_TOUR_NODES, MAX_TOUR_SPACES_PER_LEVEL } from '@/constants/spatial-tour-vocabulary';
+import { MAX_TOUR_NODES, MAX_TOUR_SPACES_PER_LEVEL, TOUR_FACE_DETECTOR_VERSION } from '@/constants/spatial-tour-vocabulary';
 import { spatialTourFromDocument, tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
@@ -23,7 +23,11 @@ import type { TourSubject } from '@/types/spatial-tour';
 
 import type { TourGraphCommand } from '@/lib/spatial-tour/tour-graph-edit';
 
-import { writeTourGraph } from '../tour-graph-write';
+import type { DocumentReference } from 'firebase-admin/firestore';
+
+import { isRebakingAfterRedaction } from '@/lib/spatial-tour/tour-manifest-stop';
+
+import { recordFaceScan, writeTourGraph } from '../tour-graph-write';
 import { tilesetKeyOf } from '../tour-redaction-apply';
 import { viewerStops } from '../tour-viewer-stops';
 
@@ -372,5 +376,76 @@ describe('Δ — δέσμη θολώματος (Φ2ζ ζ3 · §4.15 — το «A
     expect(same).toEqual({ kind: 'written', revision: 5 });
     expect((await readCapture('tcap_1')).tileset.contentHash).toBe(key);
     expect(await write(batch([{ op: 'redact', redactionId: R1, mode: 'create', region: A }]))).toEqual({ kind: 'unchanged', revision: 5 });
+  });
+});
+
+describe('Σ — η αυτόματη σάρωση προσώπων μέσα από τον ΕΝΑ γραφέα (Φ2ζ ζ4 · §4.15)', () => {
+  const FACE = { yawRad: 0.5, pitchRad: 0.1, radiusRad: 0.2 };
+  const OTHER = { yawRad: -1.5, pitchRad: 0, radiusRad: 0.1 };
+  const FIRST_BAKE = { state: 'pending', contentHash: 'h1', faceSize: null };
+  const ref = (id = 'tcap_1') => db.collection(CAPTURES).doc(id) as unknown as DocumentReference;
+  const seed = (overrides: Record<string, unknown>) => kit.seedCollection(CAPTURES, { tcap_1: captureDoc(overrides) });
+
+  it('πρώτο ψήσιμο με πρόσωπα ⇒ auto περιοχές (σύστημα) + νέο κλειδί · ΚΑΝΕΝΑ αποσυρμένο · revision + 1 · ακόμη «πρώτο ψήσιμο»', async () => {
+    seed({ tileset: FIRST_BAKE });
+    const outcome = await recordFaceScan(db, ref(), { expectedKey: 'h1', faces: [FACE, OTHER] });
+    const capture = await readCapture('tcap_1');
+    expect(capture.redactions?.map((r) => [r.source, r.createdBy, r.yawRad])).toEqual([['auto', 'system', 0.5], ['auto', 'system', -1.5]]);
+    expect(capture.redactions?.every((r) => r.id.startsWith('tred_'))).toBe(true);
+    const key = tilesetKeyOf('h1', capture.redactions ?? []);
+    expect(capture.tileset).toEqual({ state: 'pending', contentHash: key, faceSize: null });
+    expect(capture.originalHash).toBe('h1');
+    expect(capture.faceScan).toEqual({ version: TOUR_FACE_DETECTOR_VERSION, faces: 2, added: 2, saturated: false, at: expect.any(String) });
+    expect(outcome).toEqual({ kind: 'recorded', key, redactions: capture.redactions, scan: capture.faceScan });
+    expect((await readTour()).revision).toBe(4);
+    expect(isRebakingAfterRedaction(capture)).toBe(false);
+  });
+
+  it('κανένα πρόσωπο ⇒ μόνο το ίχνος · ίδιο κλειδί · καμία αλλαγή γράφου', async () => {
+    seed({ tileset: FIRST_BAKE });
+    expect(await recordFaceScan(db, ref(), { expectedKey: 'h1', faces: [] })).toMatchObject({ kind: 'recorded', key: 'h1', redactions: [] });
+    const capture = await readCapture('tcap_1');
+    expect(capture.tileset).toEqual(FIRST_BAKE);
+    expect(capture.faceScan).toMatchObject({ faces: 0, added: 0 });
+    expect(capture.originalHash).toBeUndefined();
+    expect((await readTour()).revision).toBe(3);
+  });
+
+  it('πρόσωπο που σκεπάζει ήδη χειροκίνητη περιοχή ⇒ δεν προστίθεται δεύτερη', async () => {
+    const manual = { id: enterpriseIdService.generateTourRedactionId(), ...FACE, radiusRad: 0.4, source: 'manual', createdBy: 'boris', createdAt: '2026-09-29T10:00:00.000Z' };
+    const key = tilesetKeyOf('h1', [manual as never]);
+    seed({ originalHash: 'h1', redactions: [manual], tileset: { state: 'pending', contentHash: key, faceSize: null, retiredKeys: ['h0'] } });
+    expect(await recordFaceScan(db, ref(), { expectedKey: key, faces: [FACE] })).toMatchObject({ kind: 'recorded', key });
+    const capture = await readCapture('tcap_1');
+    expect(capture.redactions?.map((r) => r.source)).toEqual(['manual']);
+    expect(capture.faceScan).toMatchObject({ faces: 1, added: 0 });
+  });
+
+  it('λήψη που δημοσιεύτηκε (backfill) ⇒ το τρέχον κλειδί αποσύρεται — τα πλακίδιά του έδειχναν το πρόσωπο', async () => {
+    seed({ tileset: { state: 'pending', contentHash: 'k_old', faceSize: null, retiredKeys: ['h1'] }, originalHash: 'h1' });
+    await recordFaceScan(db, ref(), { expectedKey: 'k_old', faces: [FACE] });
+    expect((await readCapture('tcap_1')).tileset.retiredKeys).toEqual(['h1', 'k_old']);
+  });
+
+  it('CAS: άλλαξε το κλειδί στο μεταξύ · ήδη σαρωμένη από αυτή την έκδοση · failed ⇒ superseded, ΤΙΠΟΤΑ δεν γράφεται', async () => {
+    seed({ tileset: FIRST_BAKE });
+    expect(await recordFaceScan(db, ref(), { expectedKey: 'h_other', faces: [FACE] })).toEqual({ kind: 'superseded' });
+    await recordFaceScan(db, ref(), { expectedKey: 'h1', faces: [] });
+    expect(await recordFaceScan(db, ref(), { expectedKey: 'h1', faces: [FACE] })).toEqual({ kind: 'superseded' });
+    expect((await readCapture('tcap_1')).redactions).toBeUndefined();
+    seed({ tileset: { state: 'failed', contentHash: 'h1', faceSize: null } });
+    expect(await recordFaceScan(db, ref(), { expectedKey: 'h1', faces: [FACE] })).toEqual({ kind: 'superseded' });
+    expect(await recordFaceScan(db, ref('tcap_zz'), { expectedKey: 'h1', faces: [FACE] })).toEqual({ kind: 'superseded' });
+    expect((await readTour()).revision).toBe(3);
+  });
+
+  it('ό,τι έσβησε ο άνθρωπος μετά τη σάρωση ΔΕΝ ξαναγεννιέται (μία σάρωση ανά έκδοση)', async () => {
+    seed({ tileset: FIRST_BAKE });
+    await recordFaceScan(db, ref(), { expectedKey: 'h1', faces: [FACE] });
+    const [auto] = (await readCapture('tcap_1')).redactions ?? [];
+    await write({ op: 'unredact', captureId: 'tcap_1', redactionId: auto.id });
+    const after = await readCapture('tcap_1');
+    expect(after.redactions).toBeUndefined();
+    expect(await recordFaceScan(db, ref(), { expectedKey: after.tileset.contentHash ?? '', faces: [FACE] })).toEqual({ kind: 'superseded' });
   });
 });

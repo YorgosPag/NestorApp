@@ -24,6 +24,7 @@ import { normalizeAngleDiff } from '@/lib/geometry/angle';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import type { TourCapture, TourRedaction, TourRedactionRegion } from '@/types/spatial-tour';
 
+import { fitRegions, isCoveredBy } from './tileset/tour-face-regions';
 import { TOUR_REDACTION_RENDER_VERSION } from './tileset/tour-redaction-mask';
 import type { TourGraphCommand, TourGraphEditRefusal, TourRedactionEdit } from './tour-graph-edit';
 import type { TourEditStamp } from './tour-plan-edit';
@@ -184,4 +185,35 @@ export function redactionEditsBetween(
   const created = [...after].sort(byId).filter((r) => !was.has(r.id))
     .map((r): TourRedactionEdit => ({ op: 'redact', redactionId: r.id, mode: 'create', region: regionOf(r) }));
   return [...removed, ...replaced, ...created];
+}
+
+// ── Αυτόματη σάρωση προσώπων (ζ4) ──────────────────────────────────────────────
+
+/** Τι έφερε μια σάρωση προσώπων στις περιοχές μιας λήψης. */
+export interface AutoRedactionPlan {
+  readonly redactions: readonly TourRedaction[];
+  /** Πόσες `auto` περιοχές προστέθηκαν. */
+  readonly added: number;
+  /** Δεν χώρεσαν όλα τα πρόσωπα στο `MAX_TOUR_REDACTIONS` ούτε με συγχώνευση. */
+  readonly saturated: boolean;
+}
+
+/**
+ * **Πρόσθεσε τα πρόσωπα που βρήκε ο ανιχνευτής** ως `auto` περιοχές — δίπλα σε όσες υπάρχουν, **ποτέ** στη θέση τους: ό,τι
+ * καλύπτεται ήδη (και από χειροκίνητη) δεν προστίθεται, τα υπόλοιπα χωρούν στις θέσεις που μένουν (συγχώνευση ως 45°). Το id
+ * το δίνει ο καλών (`generateTourRedactionId`, N.6) — εδώ μένει καθαρό.
+ */
+export function planAutoRedactions(
+  current: readonly TourRedaction[],
+  faces: readonly TourRedactionRegion[],
+  stamp: TourEditStamp,
+  newId: () => string,
+): AutoRedactionPlan {
+  const fresh = faces.map(normalizeRedactionRegion)
+    .filter((region): region is TourRedactionRegion => region !== null && !isCoveredBy(region, current));
+  const fitted = fitRegions(fresh, MAX_TOUR_REDACTIONS - current.length);
+  const added = fitted.regions.map(normalizeRedactionRegion)
+    .filter((region): region is TourRedactionRegion => region !== null)
+    .map((region): TourRedaction => ({ id: newId(), ...region, source: 'auto', createdBy: stamp.uid, createdAt: stamp.at }));
+  return { redactions: [...current, ...added], added: added.length, saturated: fitted.saturated };
 }

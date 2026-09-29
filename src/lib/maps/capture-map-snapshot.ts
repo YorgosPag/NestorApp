@@ -35,9 +35,12 @@ export const SNAPSHOT_TIMEOUT_MS = 10_000;
 const SNAPSHOT_MIME = 'image/webp';
 const SNAPSHOT_QUALITY = 0.9;
 
-/** Η απόδοση όπως τη δηλώνουν οι πηγές του φορτωμένου στυλ — η ΜΙΑ ανάγνωση του `map-attribution.ts`. */
+/**
+ * Η απόδοση όπως τη δηλώνουν οι πηγές του φορτωμένου στυλ — η ΜΙΑ ανάγνωση του `map-attribution.ts`. Το στιγμιότυπο
+ * τραβιέται μετά την απόδοση, άρα το στυλ έχει φορτώσει· το `?? []` είναι μόνο ο τύπος του «ακόμη».
+ */
 function readAttribution(map: MapLibreMap): MapSnapshotResult['attribution'] {
-  return mapAttribution(map);
+  return mapAttribution(map) ?? [];
 }
 
 /**

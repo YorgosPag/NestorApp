@@ -42,7 +42,8 @@ interface RenderedTileset {
 
 const RGB = 3;
 
-async function decodeEquirect(bytes: Buffer): Promise<RawImage> {
+/** **Αποκωδικοποίηση μία φορά** ανά ψήσιμο — τη μοιράζονται η σάρωση προσώπων (ζ4) και η απόδοση. Πετά σε μη-εικόνα. */
+export async function decodeEquirect(bytes: Buffer): Promise<RawImage> {
   const { data, info } = await sharp(bytes).removeAlpha().toColourspace('srgb').raw().toBuffer({ resolveWithObject: true });
   return { data, width: info.width, height: info.height, channels: info.channels };
 }
@@ -53,7 +54,8 @@ function rawInput(image: RawImage): sharp.Sharp {
   });
 }
 
-async function resized(face: RawImage, size: number): Promise<RawImage> {
+/** Τετράγωνη ωμή εικόνα σε πλευρά `size` (lanczos3) — επίπεδα πλακιδίων, προεπισκόπηση, πυραμίδα σάρωσης προσώπων. */
+export async function resized(face: RawImage, size: number): Promise<RawImage> {
   if (size === face.width) return face;
   const data = await rawInput(face).resize(size, size, { kernel: 'lanczos3' }).raw().toBuffer();
   return { data, width: size, height: size, channels: RGB };
@@ -113,11 +115,12 @@ async function redacted(source: RawImage, regions: readonly TourRedactionRegion[
 }
 
 /**
- * **Ψήσε** — επιστρέφει το μέγεθος όψης αμέσως και τα αντικείμενα ως ροή. Οι `regions` θολώνονται στην **ίδια** αποκωδικοποίηση
- * (επί τόπου στα ωμά bytes που ανήκουν μόνο σε αυτό το ψήσιμο).
+ * **Ψήσε** — επιστρέφει το μέγεθος όψης αμέσως και τα αντικείμενα ως ροή. Δέχεται την **ήδη** αποκωδικοποιημένη εικόνα
+ * (`decodeEquirect`): η σάρωση προσώπων τη διαβάζει πρώτα, ανέπαφη. Οι `regions` θολώνονται **επί τόπου** στα ωμά bytes — που
+ * ανήκουν μόνο σε αυτό το ψήσιμο, άρα καμία σάρωση μετά από εδώ.
  */
-export async function renderTileset(bytes: Buffer, hash: string, regions: readonly TourRedactionRegion[] = []): Promise<RenderedTileset> {
-  const source = await redacted(await decodeEquirect(bytes), regions);
+export async function renderTileset(decoded: RawImage, hash: string, regions: readonly TourRedactionRegion[] = []): Promise<RenderedTileset> {
+  const source = await redacted(decoded, regions);
   const faceSize = faceSizeForEquirect(source.width);
   return { faceSize, objects: tilesetObjects(source, hash, faceSize) };
 }

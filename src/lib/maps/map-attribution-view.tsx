@@ -51,6 +51,8 @@ export function useMapAttribution(): readonly [readonly MapAttributionSegment[],
   const [segments, setSegments] = useState<readonly MapAttributionSegment[]>([]);
   const observe = useCallback((map: AttributedMap) => {
     const next = mapAttribution(map);
+    // Στυλ σε φόρτωση ⇒ κρατά την προηγούμενη απόδοση (ποτέ στιγμιαία κενή).
+    if (next === null) return;
     setSegments((previous) => (sameAttribution(previous, next) ? previous : next));
   }, []);
   return [segments, observe];

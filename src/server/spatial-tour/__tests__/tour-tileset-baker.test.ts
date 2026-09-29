@@ -7,6 +7,9 @@
  * - **Ι** — ιδεμπότητο: δεύτερο ψήσιμο δεν γράφει τίποτα· ταυτόχρονα ψησίματα ⇒ μία μετάβαση.
  * - **Α** — αποτυχίες: hash που δεν ταιριάζει / αρχείο που λείπει ⇒ `failed`· προσωρινό σφάλμα αποθήκευσης ⇒ μένει `pending`.
  * - **Κ** — η μετάβαση: ποτέ πάνω σε νέο περιεχόμενο (άλλο hash), ποτέ `failed` πάνω σε `ready`.
+ * - **Π** — πρόσωπα (ζ4): σάρωση ΠΡΙΝ τη δημοσίευση με τον πραγματικό ανιχνευτή· το κλειδί του πρωτοτύπου δεν ανεβαίνει ποτέ·
+ *   ανιχνευτής που λείπει ⇒ `deferred` και ΚΑΝΕΝΑ πλακίδιο· σαρωμένη λήψη δεν ξανασαρώνεται.
+ * - **Β** — backfill (ζ4): 0 πρόσωπα ⇒ μόνο ίχνος, καμία επανα-ψήση· πρόσωπα ⇒ νέο κλειδί, τα παλιά πλακίδια σβήνονται.
  */
 
 jest.mock('server-only', () => ({}));
@@ -48,15 +51,19 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { previewSegments, tileSegments } from '@/lib/spatial-tour/tileset/tour-tileset-layout';
 import { tourMediaObjectPath } from '@/lib/spatial-tour/tour-media-path';
+import { TOUR_FACE_DETECTOR_VERSION } from '@/constants/spatial-tour-vocabulary';
 import { TOUR_CUBE_FACES } from '@/lib/spatial-tour/viewer/tour-cube-faces';
 import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 
 import type { TourRedaction } from '@/types/spatial-tour';
 
+import { disposeFaceDetector } from '../face-detection/yunet-session';
+import { backfillFaceScan } from '../tour-face-backfill';
 import { tilesetKeyOf } from '../tour-redaction-apply';
 import { bakeTourTileset } from '../tour-tileset-baker';
 import { transitionTileset } from '../tour-tileset-state';
 import { viewerStops } from '../tour-viewer-stops';
+import { equirectWithFaces } from './fixtures/face-equirect';
 
 const AGENCY = 'comp_agency';
 const TOUR_ID = 'stour_test';
@@ -105,6 +112,8 @@ beforeEach(() => {
   kit.seedCollection(COLLECTIONS.FILES, { file_1: { companyId: AGENCY, storagePath: ORIGINAL_PATH } });
   objects.set(ORIGINAL_PATH, { bytes: panorama, contentType: 'image/jpeg' });
 });
+
+afterAll(() => disposeFaceDetector());
 
 const captureRef = (id = 'tcap_1') => db.collection(CAPTURES).doc(id) as unknown as DocumentReference;
 const seedCapture = (overrides: Record<string, unknown> = {}, id = 'tcap_1') => kit.seedCollection(CAPTURES, { [id]: captureDoc(overrides) });
@@ -242,5 +251,105 @@ describe('Θ — θόλωμα (Φ2ζ · §4.15 · Α8)', () => {
     expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'baked', transition: 'hash-changed' });
     expect([...objects.keys()].some((path) => path.startsWith(`${tourMediaObjectPath(TOUR_ID, [key])}/`))).toBe(false);
     expect((await readCapture())?.tileset.contentHash).toBe('e'.repeat(64));
+  });
+});
+
+describe('Π — πρόσωπα: σάρωση ΠΡΙΝ από κάθε δημοσίευση (Φ2ζ ζ4 · §4.15)', () => {
+  let withFace: Buffer;
+  let faceHash: string;
+
+  beforeAll(async () => {
+    withFace = await equirectWithFaces(1024, [{ yawRad: 0, pitchRad: 0, widthRad: 0.6 }]);
+    faceHash = createHash('sha256').update(withFace).digest('hex');
+  });
+
+  const seedFace = (overrides: Record<string, unknown> = {}) => {
+    objects.set(ORIGINAL_PATH, { bytes: withFace, contentType: 'image/jpeg' });
+    seedCapture({ tileset: { state: 'pending', contentHash: faceHash, faceSize: null }, ...overrides });
+  };
+  const uploadedUnder = (key: string) => [...objects.keys()].filter((path) => path.startsWith(`${tourMediaObjectPath(TOUR_ID, [key])}/`));
+
+  async function withBrokenDetector<T>(run: () => Promise<T>): Promise<T> {
+    const previous = process.env.FACE_MODEL_DIR;
+    process.env.FACE_MODEL_DIR = '/no/such/model/dir';
+    await disposeFaceDetector();
+    try {
+      return await run();
+    } finally {
+      if (previous === undefined) delete process.env.FACE_MODEL_DIR;
+      else process.env.FACE_MODEL_DIR = previous;
+      await disposeFaceDetector();
+    }
+  }
+
+  it('πρόσωπο ⇒ auto περιοχή (σύστημα) · ψήνεται στο ΝΕΟ κλειδί · το κλειδί του πρωτοτύπου δεν ανεβαίνει ΠΟΤΕ · revision + 1', async () => {
+    seedFace();
+    expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'baked', transition: 'written' });
+    const capture = await readCapture();
+    expect(capture?.redactions?.map((r) => [r.source, r.createdBy])).toEqual([['auto', 'system']]);
+    expect(capture?.faceScan).toMatchObject({ version: TOUR_FACE_DETECTOR_VERSION, faces: 1, added: 1, saturated: false });
+    const key = tilesetKeyOf(faceHash, capture?.redactions ?? []);
+    expect(key).not.toBe(faceHash);
+    expect(capture?.tileset).toEqual({ state: 'ready', contentHash: key, faceSize: 512 });
+    expect(uploadedUnder(faceHash)).toEqual([]);
+    expect(uploadedUnder(key)).toHaveLength(7);
+    expect((await db.collection(TOURS).doc(TOUR_ID).get()).data()?.revision).toBe(1);
+  });
+
+  it('ανιχνευτής που λείπει ⇒ deferred · ΚΑΝΕΝΑ πλακίδιο · η λήψη μένει pending, χωρίς ίχνος σάρωσης (fail-closed)', async () => {
+    seedFace();
+    expect((await withBrokenDetector(() => bakeTourTileset(db, captureRef()))).kind).toBe('deferred');
+    expect([...objects.keys()]).toEqual([ORIGINAL_PATH]);
+    const capture = await readCapture();
+    expect(capture?.tileset).toEqual({ state: 'pending', contentHash: faceHash, faceSize: null });
+    expect(capture).not.toHaveProperty('faceScan');
+  });
+
+  it('ήδη σαρωμένη από αυτή την έκδοση ⇒ ΔΕΝ ξανασαρώνεται (ό,τι έσβησε ο άνθρωπος μένει σβησμένο)', async () => {
+    seedFace({ faceScan: { version: TOUR_FACE_DETECTOR_VERSION, faces: 1, added: 1, saturated: false, at: '2026-09-29T12:00:00.000Z' } });
+    expect(await withBrokenDetector(() => bakeTourTileset(db, captureRef()))).toMatchObject({ kind: 'baked' });
+    expect((await readCapture())?.redactions).toBeUndefined();
+  });
+
+  it('failed ΚΡΑΤΑ τα αποσυρμένα κλειδιά — «είχε δημοσιευμένα, τίποτα δεν πήρε τη θέση τους»', async () => {
+    const tileset = { state: 'pending', contentHash: 'k'.repeat(64), faceSize: null, retiredKeys: ['r'.repeat(64)] };
+    seedCapture({ originalHash: 'b'.repeat(64), tileset });
+    expect(await bakeTourTileset(db, captureRef())).toEqual({ kind: 'failed', reason: 'hash-mismatch' });
+    expect((await readCapture())?.tileset).toEqual({ ...tileset, state: 'failed' });
+  });
+
+  describe('Β — backfill λήψεων που ψήθηκαν πριν το ζ4', () => {
+    const READY = (key: string) => ({ tileset: { state: 'ready', contentHash: key, faceSize: 512 } });
+
+    it('χωρίς πρόσωπα: ξηρό ⇒ μέτρηση, τίποτα δεν γράφεται · γραφή ⇒ μόνο το ίχνος, ΚΑΜΙΑ επανα-ψήση, ίδιο κλειδί', async () => {
+      seedCapture(READY(hash));
+      expect(await backfillFaceScan(db, captureRef(), false)).toEqual({ kind: 'would-record', faces: 0 });
+      expect(await readCapture()).not.toHaveProperty('faceScan');
+      expect(await backfillFaceScan(db, captureRef(), true)).toEqual({ kind: 'recorded', faces: 0, added: 0, bake: null });
+      const capture = await readCapture();
+      expect(capture?.tileset).toEqual({ state: 'ready', contentHash: hash, faceSize: 512 });
+      expect(capture?.faceScan).toMatchObject({ faces: 0 });
+      expect(await backfillFaceScan(db, captureRef(), true)).toEqual({ kind: 'current' });
+    });
+
+    it('με πρόσωπο: νέο κλειδί · τα ΠΑΛΙΑ πλακίδια (έδειχναν το πρόσωπο) σβήνονται · ready στο θολωμένο', async () => {
+      objects.set(ORIGINAL_PATH, { bytes: withFace, contentType: 'image/jpeg' });
+      const oldTile = tourMediaObjectPath(TOUR_ID, tileSegments(faceHash, 0, TOUR_CUBE_FACES[0], 0, 0))!;
+      objects.set(oldTile, { bytes: Buffer.from('unblurred face'), contentType: 'image/jpeg' });
+      seedCapture(READY(faceHash));
+      expect(await backfillFaceScan(db, captureRef(), false)).toEqual({ kind: 'would-record', faces: 1 });
+      expect(await backfillFaceScan(db, captureRef(), true)).toMatchObject({ kind: 'recorded', faces: 1, added: 1, bake: { kind: 'baked', transition: 'written' } });
+      const capture = await readCapture();
+      expect(objects.has(oldTile)).toBe(false);
+      expect(capture?.tileset).toEqual({ state: 'ready', contentHash: tilesetKeyOf(faceHash, capture?.redactions ?? []), faceSize: 512 });
+    });
+
+    it('λήψη που δεν είναι ready ⇒ not-ready (τη σαρώνει ο ψήστης) · ανιχνευτής που λείπει ⇒ error με όνομα, τίποτα γραμμένο', async () => {
+      seedCapture();
+      expect(await backfillFaceScan(db, captureRef(), true)).toEqual({ kind: 'not-ready' });
+      seedCapture(READY(hash));
+      expect(await withBrokenDetector(() => backfillFaceScan(db, captureRef(), true))).toMatchObject({ kind: 'error' });
+      expect(await readCapture()).not.toHaveProperty('faceScan');
+    });
   });
 });

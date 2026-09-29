@@ -244,6 +244,22 @@ export interface TourRedaction extends TourRedactionRegion {
   readonly createdAt: string;
 }
 
+/**
+ * **Το ίχνος της αυτόματης σάρωσης προσώπων** (Φ2ζ ζ4). 🔑 Μία σάρωση **ανά έκδοση ανιχνευτή** ⇒ ό,τι σβήσει ο άνθρωπος δεν
+ * ξαναπροστίθεται (Matterport/Zillow δεν το ξεχωρίζουν).
+ */
+export interface TourFaceScan {
+  /** `TOUR_FACE_DETECTOR_VERSION` τη στιγμή της σάρωσης. */
+  readonly version: string;
+  /** Πόσα πρόσωπα βρέθηκαν (μετά την αφαίρεση διπλών πάνω στη σφαίρα). */
+  readonly faces: number;
+  /** Πόσες `auto` περιοχές **προστέθηκαν** (όσα πρόσωπα δεν καλύπτονταν ήδη, μετά τη συγχώνευση). */
+  readonly added: number;
+  /** Δεν χώρεσαν όλα στο `MAX_TOUR_REDACTIONS` ούτε με συγχώνευση ⇒ ο άνθρωπος πρέπει να κοιτάξει. */
+  readonly saturated: boolean;
+  readonly at: string;
+}
+
 export interface TourCaptureTileset {
   readonly state: TourTilesetState;
   /**
@@ -297,6 +313,11 @@ export interface TourCapture {
   readonly tileset: TourCaptureTileset;
   /** Οι θολωμένες περιοχές (Φ2ζ · Α8) — απόν/κενό ⇒ καμία (παλιά έγγραφα αμετάβλητα). ≤ `MAX_TOUR_REDACTIONS`. */
   readonly redactions?: readonly TourRedaction[];
+  /**
+   * Η **αυτόματη σάρωση προσώπων** του ψήστη (Φ2ζ ζ4) — απούσα ⇒ δεν σαρώθηκε ακόμη (ή σαρώθηκε πριν το ζ4). Γράφεται στην
+   * **ίδια** συναλλαγή με τις `auto` περιοχές που βρήκε.
+   */
+  readonly faceScan?: TourFaceScan;
   /** Ο **δράστης** — όχι ο κάτοχος (φωτογράφος με άδεια λήψης, Φ0.5). */
   readonly uploadedBy: string;
   readonly createdAt: string;

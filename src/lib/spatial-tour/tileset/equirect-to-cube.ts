@@ -45,13 +45,26 @@ function sampleBilinear(src: RawImage, x: number, y: number, out: Uint8Array, at
   }
 }
 
-/** Μία όψη πλευράς `size`, ωμό RGB (3 κανάλια). */
-export function renderCubeFace(src: RawImage, face: TourCubeFace, size: number): RawImage {
+/**
+ * Το `(u, v)` της όψης στο κέντρο του εικονοστοιχείου `(i, j)` μιας απόδοσης πλευράς `size` με **επικάλυψη** `overscan` (κλάσμα
+ * ανά πλευρά: uv στο `[-o, 1+o]`, ευρύτερο οπτικό πεδίο στο ίδιο επίπεδο της όψης). `overscan = 0` ⇒ η όψη ακριβώς.
+ * Το ΕΝΑ αντίστροφο το χρειάζεται η ανίχνευση προσώπων (Φ2ζ ζ4): pixel όψης → κατεύθυνση.
+ */
+export function faceUvOfPixel(i: number, j: number, size: number, overscan = 0): { readonly u: number; readonly v: number } {
+  const span = 1 + 2 * overscan;
+  return { u: -overscan + (i / size) * span, v: 1 + overscan - (j / size) * span };
+}
+
+/**
+ * Μία όψη πλευράς `size`, ωμό RGB (3 κανάλια). Με `overscan > 0` η όψη βλέπει και λίγο από τις γειτονικές (ανίχνευση προσώπων
+ * πάνω σε ακμές)· τα πλακίδια του ψήστη καλούν χωρίς αυτό.
+ */
+export function renderCubeFace(src: RawImage, face: TourCubeFace, size: number, overscan = 0): RawImage {
   const out = new Uint8Array(size * size * 3);
   for (let j = 0; j < size; j++) {
-    const v = 1 - (j + 0.5) / size;
     for (let i = 0; i < size; i++) {
-      const { yaw, pitch } = directionToYawPitch(cubeFaceUvToDirection(face, (i + 0.5) / size, v));
+      const { u, v } = faceUvOfPixel(i + 0.5, j + 0.5, size, overscan);
+      const { yaw, pitch } = directionToYawPitch(cubeFaceUvToDirection(face, u, v));
       const p = equirectPixelOf(yaw, pitch, src.width, src.height);
       sampleBilinear(src, p.x, p.y, out, (j * size + i) * 3);
     }

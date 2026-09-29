@@ -29,6 +29,22 @@ const resolveDistDir = () => {
   return requested;
 };
 
+// ADR-884 Φ2ζ ζ4 — τα ΜΕΤΡΗΜΕΝΑ αρχεία που φορτώνει ο worker του ανιχνευτή προσώπων (`require('onnxruntime-web')` σε worker
+// thread, ίχνος `fs` 2026-09-29): η είσοδος CommonJS, το onnxruntime-common και το `.wasm`. Ο worker ζει ως ΚΕΙΜΕΝΟ
+// (`yunet-worker-source.ts`) ⇒ ο ιχνηλάτης δεν βλέπει κανένα από αυτά μόνος του.
+// pnpm `node-linker=isolated`: και τα symlink (`node_modules/onnxruntime-web`, ο αδελφός `…/onnxruntime-web@*/node_modules/
+// onnxruntime-common`) και οι πραγματικοί φάκελοι στο `.pnpm` — αλλιώς το `require` δεν λύνεται στο standalone. Το CI το αποδεικνύει
+// (docker-build: «Verify face-detector runtime in standalone» — εκτελεί τον ίδιο worker από το `.next/standalone`).
+const ONNX_RUNTIME_FILES = [
+  './node_modules/onnxruntime-web/package.json',
+  './node_modules/.pnpm/onnxruntime-web@*/node_modules/onnxruntime-web/package.json',
+  './node_modules/.pnpm/onnxruntime-web@*/node_modules/onnxruntime-web/dist/ort.node.min.js',
+  './node_modules/.pnpm/onnxruntime-web@*/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
+  './node_modules/.pnpm/onnxruntime-web@*/node_modules/onnxruntime-common/package.json',
+  './node_modules/.pnpm/onnxruntime-common@*/node_modules/onnxruntime-common/package.json',
+  './node_modules/.pnpm/onnxruntime-common@*/node_modules/onnxruntime-common/dist/cjs/**',
+];
+
 /** @type {import('next').NextConfig} */
 // Vercel rebuild trigger: 2026-03-23
 const nextConfig = {
@@ -124,6 +140,13 @@ const nextConfig = {
 
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
+
+  // ADR-884 Φ2ζ ζ4 — ο worker του ανιχνευτή προσώπων (βλ. ONNX_RUNTIME_FILES). Χωρίς αυτά ο ψήστης αναβάλλει κάθε λήψη
+  // (fail-closed), δεν δημοσιεύει — και το docker-build το πιάνει πριν το image. Μόνο οι διαδρομές που ψήνουν.
+  outputFileTracingIncludes: {
+    '/api/spatial-tours/**': ONNX_RUNTIME_FILES,
+    '/api/cron/tour-tileset-bake': ONNX_RUNTIME_FILES,
+  },
 
   // pdfjs-dist: removed from transpilePackages (conflicts with serverExternalPackages).
   // Server-side: loaded natively from node_modules via serverExternalPackages.
