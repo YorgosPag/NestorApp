@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΤΟ ΣΥΜΒΟΛΑΙΟ ΚΥΡΙΟΥ ΝΗΜΑΤΟΣ ⇄ WEB WORKER** — ένα αίτημα, μία απάντηση, ταυτισμένα με αριθμό (ADR-884 Φ2στ-γ
- * Γ3γ-2α · §4.14). Καθαροί τύποι, χωρίς DOM.
+ * Γ3γ-2α · §4.14). Καθαροί τύποι, χωρίς DOM (η `location` μόνο ως προαιρετική βάση του `absoluteWorkerUrl`).
  * @related `worker-rpc-client.ts` (η πλευρά του κύριου νήματος) · `worker-rpc-host.ts` (η πλευρά του Worker)
  * @module lib/workers/worker-rpc-protocol
  *
@@ -41,4 +41,14 @@ export interface WorkerLike {
 export interface WorkerRpcScope {
   postMessage(message: unknown): void;
   addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
+}
+
+/**
+ * **Κάθε URL που περνά σε Worker γίνεται ΑΠΟΛΥΤΟ στον κύριο νήμα** (ADR-884 Γ3γ-2β, μετρημένο ζωντανά): ο Turbopack γεννά τους
+ * module Workers από `blob:` URL, και εκεί ένα σχετικό `/api/…` **δεν έχει βάση** — `fetch` πετά «Failed to parse URL». Στο jsdom
+ * δεν φαίνεται (δεν υπάρχει πραγματικός Worker). Η βάση λύνεται **εδώ**, στην πλευρά που ξέρει τη σελίδα· χωρίς `location` (Node,
+ * tests) ⇒ ως έχει.
+ */
+export function absoluteWorkerUrl(url: string, base: string | undefined = globalThis.location?.href): string {
+  return base === undefined ? url : new URL(url, base).href;
 }

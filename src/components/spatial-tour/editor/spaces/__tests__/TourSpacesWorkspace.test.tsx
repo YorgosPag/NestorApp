@@ -101,6 +101,21 @@ describe('Α — προτάσεις και έγκριση', () => {
   });
 });
 
+describe('Α2 — η πρόταση είναι τοπική και ζωντανή', () => {
+  it('σύρσιμο γωνίας πρότασης ⇒ ΚΑΜΙΑ εγγραφή · η ΛΙΣΤΑ δείχνει το νέο εμβαδόν (όχι το παλιό της ανίχνευσης)', async () => {
+    detect.mockResolvedValue(found(rect(5, -1, 9, -4)));
+    const { actions } = renderWorkspace();
+    const corner = await screen.findByRole('button', { name: 'spatial-tour:spaceEditor.vertex:{"index":2,"total":4}' });
+    fireEvent.pointerDown(corner, { pointerId: 1, button: 0, clientX: 900, clientY: 100 });
+    fireEvent.pointerMove(corner, { pointerId: 1, clientX: 950, clientY: 100 });
+    fireEvent.pointerMove(corner, { pointerId: 1, clientX: 1000, clientY: 100 });
+    fireEvent.pointerUp(corner, { pointerId: 1, clientX: 1000, clientY: 100 });
+    expect(actions.space).not.toHaveBeenCalled();
+    const list = screen.getByRole('navigation');
+    expect(within(list).getByText(/measuredValue:\{"area":"14"\}/)).toBeTruthy();
+  });
+});
+
 describe('Κ — κριτής πριν το κουμπί · φύλακας', () => {
   it('πρόταση που μπαίνει στον S1 ⇒ Έγκριση ανενεργή, με τον λόγο (`space-overlap`)', async () => {
     detect.mockResolvedValue(found(rect(3, -1, 9, -4)));

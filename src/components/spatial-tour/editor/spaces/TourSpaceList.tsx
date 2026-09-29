@@ -7,12 +7,14 @@
  * @module components/spatial-tour/editor/spaces/TourSpaceList
  *
  * 🔑 **Πρώτα οι προτάσεις** (περιμένουν απόφαση), μετά οι εγκεκριμένοι χώροι· η επιλεγμένη γραμμή έχει `aria-pressed`.
+ * 🔑 **Εμβαδόν από το ΤΡΕΧΟΝ περίγραμμα** (όπως το πάνελ) — όχι το `areaM2` της ανίχνευσης, που παλιώνει με το πρώτο σύρσιμο
+ *   (μετρήθηκε ζωντανά: λίστα ≈ 9, πάνελ ≈ 10 μετά από σύρσιμο γωνίας).
  */
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatNumber } from '@/lib/intl-formatting';
-import { pointInPolygon, type PlanarPoint } from '@/lib/geometry/planar-polygon';
+import { pointInPolygon, polygonArea, type PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { plainRoomDisplay } from '@/lib/spatial-tour/tour-room';
 import { spaceArea } from '@/lib/spatial-tour/viewer/tour-space-view';
 import type { TourViewerSpace } from '@/lib/spatial-tour/viewer/tour-viewer-shapes';
@@ -66,7 +68,7 @@ export function TourSpaceList({ store, spaces, stops, nameOf }: TourSpaceListPro
   const rows: Row[] = [
     ...proposals.map((p): Row => ({
       selection: { kind: 'proposal', key: p.key }, title: nameOfRow(p.outline, null),
-      detail: `${t(TOUR_SPACE_EDITOR_KEYS.proposal)} · ${t(TOUR_SPACE_EDITOR_KEYS.measuredValue, { area: formatNumber(p.areaM2, { maximumFractionDigits: 0 }) })}`,
+      detail: `${t(TOUR_SPACE_EDITOR_KEYS.proposal)} · ${t(TOUR_SPACE_EDITOR_KEYS.measuredValue, { area: formatNumber(polygonArea(p.outline), { maximumFractionDigits: 0 }) })}`,
     })),
     ...spaces.map((s): Row => ({
       selection: { kind: 'space', id: s.id }, title: nameOfRow(s.points, s), detail: spaceAreaText(t, spaceArea(s)),

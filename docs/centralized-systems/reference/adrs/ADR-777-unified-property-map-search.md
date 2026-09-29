@@ -14322,16 +14322,21 @@ Starter $20/μήνα) · CARTO raster θέλει κλειδί (αλλιώς υδ
    ένας ζωγράφος για τον δημόσιο χάρτη **και** το στιγμιότυπο· ο κρυφός χάρτης ζωγραφίζει με τα
    **ίδια** `ResultsMapSources`/`ResultsMapLayers` και τα **ίδια** χρώματα (`readListingMapPaint`,
    βγήκε από τον `ResultsMap` σε `search-results/listing-map-paint.ts`, χωρίς εξάρτηση χάρτη).
-3. **Όριο ζουμ = όριο ακρίβειας.** `listingSnapshotCamera`: σημείο ⇒ ζουμ 15 (γειτονιά)· περιοχή ⇒ η
-   διάμετρος πιάνει το 80% του κουτιού· περίγραμμα ⇒ χωρά ολόκληρο· **ποτέ πάνω από 16**, ενώ ο
-   δημόσιος χάρτης επιτρέπει 19.
+3. **Όριο ζουμ = όριο ακρίβειας.** ~~`listingSnapshotCamera`: … ποτέ πάνω από 16~~ — 🔄 **2026-09-29
+   (ADR-847 §9.6): η μικρογραφία ΕΙΝΑΙ το καρέ άφιξης του δημόσιου χάρτη, κλιμακωμένο στο κουτί.** Η
+   δεύτερη μηχανή (χειρόγραφο zoom-to-fit, ταβάνι **16** — πάνω από το **15** της άφιξης του χάρτη —
+   δική της έκταση, `jumpTo` εκτός αρχής κάμερας) διαγράφηκε. Έκταση = `listingFeatureExtent` του
+   feature που ζωγραφίζεται (η **ίδια** με το `listingArrivalArea`)· λήψη = `fitBounds` με
+   `cameraFramingInBox('arrive', 'suggested', SNAPSHOT_VIEWPORT)`: το σχήμα πιάνει το 80% κάθε
+   διάστασης (η απόφαση του 80% μεταφέρθηκε αμετάβλητη στην αρχή), ταβάνι **15** όπως ο χάρτης. Ορατό:
+   μόνο πολύ μικρά περιγράμματα z16 → z15. Άγκυρα ισοτιμίας `lib/maps/__tests__/listing-snapshot-parity.test.ts`.
 
 **Απόδοση — ΕΝΑ WebGL context για Ν κάρτες.** Οι περιηγητές κρατούν ~16 ζωντανά contexts· χάρτης
 ανά κάρτα θα τα εξαντλούσε. `ListingMapSnapshotProvider` (ιδιοκτήτης κύκλου ζωής, ένας ανά σελίδα:
 λίστα `/offers` + σελίδα λεπτομέρειας) → `map-snapshot-store` (ιδεμποτή ουρά, κλειδί = σημάδι +
 χρώματα, άρα αλλαγή θέματος = νέα εικόνα) → `ListingMapSnapshotStage` (κρυφός `<Map>`,
-`next/dynamic` χωρίς SSR, ανεβαίνει **μόνο** στο πρώτο αίτημα) → `captureMapSnapshot` (`jumpTo` →
-`idle` → `toBlob` webp, `preserveDrawingBuffer`, όριο 10 s ⇒ αποτυχία ⇒ εφεδρεία). Η κάρτα ζητά
+`next/dynamic` χωρίς SSR, ανεβαίνει **μόνο** στο πρώτο αίτημα) → `captureMapSnapshot` (`fitBounds` μέσω
+της αρχής κάμερας — ADR-847 §9.6, πριν `jumpTo` → `idle` → `toBlob` webp, `preserveDrawingBuffer`, όριο 10 s ⇒ αποτυχία ⇒ εφεδρεία). Η κάρτα ζητά
 μόνο όταν πλησιάσει την οθόνη (`useNearViewport`, νέο κοινό hook, μανδαλωμένο, ref callback).
 Κάτοχος με φωτογραφίες παντού **δεν κατεβάζει ποτέ** τη MapLibre.
 
@@ -14350,7 +14355,7 @@ provider / αποτυχία / σημάδι-σκουπίδι ⇒ η **δηλωμ�
 | Σουίτα | Τι ρωτά | Μετάλλαξη |
 |---|---|---|
 | `lib/listings/__tests__/listing-map-mark.test.ts` | σημάδι ανά ακρίβεια · **καμία** διαρροή `accuracy`/`osmRef` · αναγνώστης απορρίπτει σκουπίδια/μισό περίγραμμα · **ίδιο feature** δημόσιου χάρτη και στιγμιότυπου | — |
-| `lib/maps/__tests__/map-snapshot-camera.test.ts` | διάμετρος = 80% κουτιού · πόλη πιο μακριά από συνοικία · ψαλίδι στο 16 | — |
+| ~~`lib/maps/__tests__/map-snapshot-camera.test.ts`~~ → `lib/maps/__tests__/listing-snapshot-parity.test.ts` *(2026-09-29, ADR-847 §9.6)* | κάρτα και άφιξη χάρτη φτάνουν στην **ίδια** κλήση `fitBounds` (έκταση · ταβάνι · κίνηση) για κάθε σχήμα · περιθώριο ανά άξονα, αναλογικό · άδειο περίγραμμα ⇒ `null` | ταβάνι λήψης `'area'` ⇒ 🔴 |
 | `lib/maps/__tests__/map-snapshot-store.test.ts` | ιδεμποτία · σειρά · `dispose` αποδεσμεύει URL, σκοτώνει το κατάστημα | — |
 | `lib/maps/__tests__/map-attribution.test.ts` | ο σύνδεσμος OSM επιβιώνει · `javascript:` ⇒ κείμενο | — |
 | `listing-map-snapshot/__tests__/snapshot-frame.test.ts` | ο αριθμός του ζουμ και η κλάση Tailwind λένε το ίδιο κουτί | — |

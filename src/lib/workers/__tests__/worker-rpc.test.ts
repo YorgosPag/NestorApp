@@ -12,7 +12,7 @@
 
 import { createWorkerRpcClient, latestOnly } from '../worker-rpc-client';
 import { serveWorkerRpc } from '../worker-rpc-host';
-import type { WorkerLike, WorkerRpcResult, WorkerRpcScope } from '../worker-rpc-protocol';
+import { absoluteWorkerUrl, type WorkerLike, type WorkerRpcResult, type WorkerRpcScope } from '../worker-rpc-protocol';
 
 type Listener = (event: MessageEvent) => void;
 type ErrorListener = (event: ErrorEvent) => void;
@@ -121,5 +121,14 @@ describe('latestOnly', () => {
     const second = call(2);
     expect(executed).toEqual([1, 2]);
     await expect(second).resolves.toEqual(ok(2));
+  });
+});
+
+describe('absoluteWorkerUrl — ADR-884 Γ3γ-2β (μετρημένο ζωντανά: Worker σε `blob:` ⇒ «Failed to parse URL»)', () => {
+  it('σχετικό ⇒ απόλυτο ως προς τη σελίδα · ήδη απόλυτο ⇒ ίδιο · χωρίς βάση (Node) ⇒ ως έχει', () => {
+    const page = 'http://localhost:3000/o/pagonis/properties/p1';
+    expect(absoluteWorkerUrl('/api/spatial-tours/x/p1/w1024.webp', page)).toBe('http://localhost:3000/api/spatial-tours/x/p1/w1024.webp');
+    expect(absoluteWorkerUrl('https://cdn.example/a.webp', page)).toBe('https://cdn.example/a.webp');
+    expect(absoluteWorkerUrl('/api/a', undefined)).toBe('/api/a');
   });
 });
