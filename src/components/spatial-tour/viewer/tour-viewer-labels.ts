@@ -9,7 +9,14 @@
  *   σελίδα **δεν** δείχνει ακόμη. Ο θεατής φορτώνεται πίσω από `next/dynamic`: οι λέξεις του ταξιδεύουν μαζί του (Φ2).
  */
 
-import type { TourRoomType } from '@/constants/spatial-tour-vocabulary';
+import type { TourDeclaredAreaSource, TourRoomType } from '@/constants/spatial-tour-vocabulary';
+
+/** Η πηγή ενός δηλωμένου εμβαδού στη γλώσσα του επισκέπτη (Δ8.6) — ένα κλειδί ανά τιμή του `TOUR_DECLARED_AREA_SOURCES`. */
+export const TOUR_DECLARED_SOURCE_KEY: Readonly<Record<TourDeclaredAreaSource, string>> = {
+  'engineer-study': 'spatial-tour:viewer.declaredSource.engineerStudy',
+  'site-measurement': 'spatial-tour:viewer.declaredSource.siteMeasurement',
+  'owner-declared': 'spatial-tour:viewer.declaredSource.ownerDeclared',
+};
 
 export const TOUR_VIEWER_KEYS = {
   panorama: 'spatial-tour:viewer.panorama',
@@ -34,6 +41,11 @@ export const TOUR_VIEWER_KEYS = {
   planColumnHide: 'spatial-tour:viewer.planColumnHide',
   planColumnShow: 'spatial-tour:viewer.planColumnShow',
   resizeColumn: 'spatial-tour:viewer.resizeColumn',
+  // ── Σχήματα χώρων πάνω στην κάτοψη (Φ2στ-γ Γ3γ-1 · Δ8.4) ──
+  spaceAreaMeasured: 'spatial-tour:viewer.spaceAreaMeasured',
+  spaceAreaDeclared: 'spatial-tour:viewer.spaceAreaDeclared',
+  spaceAreaNote: 'spatial-tour:viewer.spaceAreaNote',
+  spaceDeclaredFrom: 'spatial-tour:viewer.spaceDeclaredFrom',
   loading: 'spatial-tour:viewer.loading',
   loadFailed: 'spatial-tour:viewer.loadFailed',
   noWebgl: 'spatial-tour:viewer.noWebgl',

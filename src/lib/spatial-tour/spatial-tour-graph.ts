@@ -12,8 +12,8 @@
  * **Layering**: leaf — καθαρές συναρτήσεις.
  */
 
-import { MAX_TOUR_NODES } from '@/constants/spatial-tour-vocabulary';
-import type { SpatialTour, TourLevelKey, TourNode } from '@/types/spatial-tour';
+import { MAX_TOUR_NODES, MAX_TOUR_SEPARATIONS_PER_LEVEL, MAX_TOUR_SPACES_PER_LEVEL } from '@/constants/spatial-tour-vocabulary';
+import type { SpatialTour, TourLevel, TourLevelKey, TourNode } from '@/types/spatial-tour';
 
 export type TourGraphViolation =
   | { readonly kind: 'too-many-nodes'; readonly count: number }
@@ -23,11 +23,38 @@ export type TourGraphViolation =
   | { readonly kind: 'node-on-unknown-level'; readonly nodeId: string }
   | { readonly kind: 'duplicate-level'; readonly levelKey: string }
   | { readonly kind: 'active-floor-plan-count'; readonly levelKey: string; readonly activeCount: number }
-  | { readonly kind: 'floor-plan-file-mismatch'; readonly levelKey: string };
+  | { readonly kind: 'floor-plan-file-mismatch'; readonly levelKey: string }
+  // ── Γ3β: σχήματα χώρων ανά όροφο ──
+  | { readonly kind: 'too-many-shapes'; readonly levelKey: string }
+  | { readonly kind: 'duplicate-shape-id'; readonly shapeId: string };
 
 /** Ταυτότητα ορόφου ως κείμενο — για σύγκριση και για το μήνυμα της παράβασης. */
 export function levelKeyId(key: TourLevelKey): string {
   return key.kind === 'floor' ? `floor:${key.floorId}` : `local:${key.ordinal}`;
+}
+
+/** **Ο όροφος με αυτό το κλειδί** — η μία αναζήτηση (ήταν αντίγραφο σε εντολές κάτοψης και αντίστροφες). */
+export function findTourLevel<L extends Pick<TourLevel, 'key'>>(levels: readonly L[] | undefined, key: TourLevelKey): L | undefined {
+  const id = levelKeyId(key);
+  return levels?.find((level) => levelKeyId(level.key) === id);
+}
+
+/** Γ3β — όρια ανά όροφο και μοναδικά id χώρων/γραμμών σε **όλη** την περιήγηση. */
+function shapeViolations(levels: SpatialTour['levels']): TourGraphViolation[] {
+  const out: TourGraphViolation[] = [];
+  const ids = new Set<string>();
+  for (const level of levels) {
+    const spaces = level.spaces ?? [];
+    const separations = level.separations ?? [];
+    if (spaces.length > MAX_TOUR_SPACES_PER_LEVEL || separations.length > MAX_TOUR_SEPARATIONS_PER_LEVEL) {
+      out.push({ kind: 'too-many-shapes', levelKey: levelKeyId(level.key) });
+    }
+    for (const { id } of [...spaces, ...separations]) {
+      if (ids.has(id)) out.push({ kind: 'duplicate-shape-id', shapeId: id });
+      ids.add(id);
+    }
+  }
+  return out;
 }
 
 /** #4 — ακριβώς ένα `active` ανά όροφο· `fileId === null` ⇔ πηγή `none`. */
@@ -72,7 +99,7 @@ function nodeViolations(tour: Pick<SpatialTour, 'nodes' | 'levels'>): TourGraphV
 export function checkTourGraph(tour: Pick<SpatialTour, 'nodes' | 'levels'>): TourGraphViolation[] {
   const out: TourGraphViolation[] = [];
   if (tour.nodes.length > MAX_TOUR_NODES) out.push({ kind: 'too-many-nodes', count: tour.nodes.length });
-  return [...out, ...levelViolations(tour.levels), ...nodeViolations(tour)];
+  return [...out, ...levelViolations(tour.levels), ...shapeViolations(tour.levels), ...nodeViolations(tour)];
 }
 
 /**

@@ -24,6 +24,7 @@ import type { GeoBoundingBox, GeoOutline, GeoPolyline } from '@/types/geo/coordi
 import { adminBoundaryFileName } from '../geo/admin-boundary-file';
 import { geoJsonRings } from '../geo/geo-geojson';
 import { isGeoPolyline } from '../geo/geo-line';
+import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards';
 
 export const VALUE_ZONES_FORMAT_VERSION = 1;
 
@@ -122,14 +123,6 @@ export interface ValueZonesIndex {
 // ΑΝΑΓΝΩΣΤΕΣ — `null` = «δεν ξέρω», ΠΟΤΕ «καμία ζώνη»
 // ============================================================================
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function bboxOfTuple(value: unknown): GeoBoundingBox | null {
   if (!Array.isArray(value) || value.length !== 4 || !value.every(isFiniteNumber)) return null;
   const [west, south, east, north] = value as [number, number, number, number];
@@ -145,7 +138,7 @@ function readZoneFields(row: Record<string, unknown>): (Omit<ZoneFields, 'bbox'>
 }
 
 function readZone(value: unknown): ValueZone | null {
-  if (!isRecord(value) || !isRecord(value.geometry)) return null;
+  if (!isPlainRecord(value) || !isPlainRecord(value.geometry)) return null;
   const fields = readZoneFields(value);
   const geometry = value.geometry as Partial<GeoJSON.MultiPolygon>;
   if (fields === null || geometry.type !== 'MultiPolygon' || !Array.isArray(geometry.coordinates)) return null;
@@ -160,7 +153,7 @@ function toPolyline(line: readonly GeoJSON.Position[]): GeoPolyline | null {
 }
 
 function readFront(value: unknown): ValueFront | null {
-  if (!isRecord(value) || !isRecord(value.geometry) || typeof value.street !== 'string') return null;
+  if (!isPlainRecord(value) || !isPlainRecord(value.geometry) || typeof value.street !== 'string') return null;
   const fields = readZoneFields(value);
   const geometry = value.geometry as Partial<GeoJSON.MultiLineString>;
   if (fields === null || geometry.type !== 'MultiLineString' || !Array.isArray(geometry.coordinates)) return null;
@@ -182,7 +175,7 @@ function readAll<T>(value: unknown, read: (item: unknown) => T | null): readonly
 }
 
 export function readValueZoneArea(payload: unknown, expectedId: string): ValueZoneArea | null {
-  if (!isRecord(payload) || payload.v !== VALUE_ZONES_FORMAT_VERSION || payload.id !== expectedId) return null;
+  if (!isPlainRecord(payload) || payload.v !== VALUE_ZONES_FORMAT_VERSION || payload.id !== expectedId) return null;
   if (!isFiniteNumber(payload.toleranceM) || payload.toleranceM < 0) return null;
   const bbox = bboxOfTuple(payload.bbox);
   const zones = readAll(payload.zones, readZone);
@@ -192,11 +185,11 @@ export function readValueZoneArea(payload: unknown, expectedId: string): ValueZo
 }
 
 export function readValueZonesIndex(payload: unknown): ValueZonesIndex | null {
-  if (!isRecord(payload) || payload.v !== VALUE_ZONES_FORMAT_VERSION) return null;
+  if (!isPlainRecord(payload) || payload.v !== VALUE_ZONES_FORMAT_VERSION) return null;
   const { validFrom, source, areas } = payload;
-  if (!isRecord(validFrom) || typeof validFrom.from !== 'string' || typeof validFrom.to !== 'string') return null;
-  if (!isRecord(source) || typeof source.url !== 'string' || typeof source.sha256 !== 'string') return null;
-  if (!isRecord(areas)) return null;
+  if (!isPlainRecord(validFrom) || typeof validFrom.from !== 'string' || typeof validFrom.to !== 'string') return null;
+  if (!isPlainRecord(source) || typeof source.url !== 'string' || typeof source.sha256 !== 'string') return null;
+  if (!isPlainRecord(areas)) return null;
   const boxes = new Map<string, GeoBoundingBox>();
   for (const [id, tuple] of Object.entries(areas)) {
     const box = bboxOfTuple(tuple);

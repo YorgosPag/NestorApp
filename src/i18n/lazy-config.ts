@@ -57,6 +57,7 @@ export const SUPPORTED_NAMESPACES = [
   'search-region',    // ADR-883 — to orio dioikitikis periochis ston charti (ektos proypologismou tou search-results, ADR-744)
   'area-market',      // ADR-890 F1 — i dimosia selida /area/[id] (zitoumenes times ana dimo / D.E.)
   'market-contracts', // ADR-889 F2 — times symvolaion (MAMA): selida periochis KAI selida angelias
+  'price-map',        // ADR-890 §14 — o chartis timon €/t.m. stin anazitisi; fortonetai MONO otan anoixei i strosi (next/dynamic)
   'listing-detail',   // ADR-842 F3 — dimosia othoni 3, MONO ta stoixeia tou akinitou
   'model-freshness',  // ADR-845 O-25 — «isxyei akoma to dimosievmeno 3D;» (mono o katoxos)
   'short-stay',       // ADR-835 F3 — o xronos stin anazitisi (vraxyxronia diamoni)

@@ -24,7 +24,6 @@ export type { FloorPlanControlPointPickerProps } from './components/FloorPlanCon
 
 // Floor Plan Upload & Management
 // export { FloorPlanUploader } from './components/FloorPlanUploader';
-// export { FloorPlanPreview } from './components/FloorPlanPreview';
 // export { FloorPlanControls } from './components/FloorPlanControls';
 
 // Georeferencing Workflow

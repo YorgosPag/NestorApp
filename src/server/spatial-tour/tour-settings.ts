@@ -24,12 +24,17 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import type { SpatialTourLifecycle, SpatialTourVisibility } from '@/constants/spatial-tour-vocabulary';
+import {
+  TOUR_SPACE_AREA_DISPLAY_DEFAULT,
+  type SpatialTourLifecycle,
+  type SpatialTourVisibility,
+  type TourSpaceAreaDisplay,
+} from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import { supportedTourVisibilities } from '@/lib/spatial-tour/tour-view-policy';
-import type { TourSubject } from '@/types/spatial-tour';
+import type { SpatialTour, TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
 import { ensureManagedTour, TOUR_GENESIS_SETTINGS } from './tour-genesis';
@@ -39,7 +44,23 @@ import { readViewerStops, readViewerStopsInTransaction } from './tour-viewer-sto
 export interface TourSettings {
   readonly visibility: SpatialTourVisibility;
   readonly lifecycle: SpatialTourLifecycle;
+  /** Εμβαδά χώρων στη δημόσια σελίδα (ADR-884 Γ3β · Δ8.4) — διακόπτης ανά περιήγηση, προεπιλογή `shown`. */
+  readonly spaceAreaDisplay: TourSpaceAreaDisplay;
 }
+
+/**
+ * Ό,τι δέχεται η αλλαγή: ο διακόπτης εμβαδών είναι **προαιρετικός** — λείπει ⇒ μένει όπως είναι (μια καρτέλα ανοιχτή πριν
+ * τη Γ3β στέλνει μόνο ορατότητα + κύκλο ζωής, και δεν επιτρέπεται να τον γυρίσει σιωπηλά).
+ */
+export type TourSettingsInput = Omit<TourSettings, 'spaceAreaDisplay'> & { readonly spaceAreaDisplay?: TourSpaceAreaDisplay };
+
+/** Οι ρυθμίσεις μιας διαβασμένης περιήγησης — το απόν πεδίο εμβαδών διαβάζεται ως η προεπιλογή. */
+function settingsOf(tour: Pick<SpatialTour, 'visibility' | 'lifecycle' | 'spaceAreaDisplay'>): TourSettings {
+  return { visibility: tour.visibility, lifecycle: tour.lifecycle, spaceAreaDisplay: tour.spaceAreaDisplay ?? TOUR_SPACE_AREA_DISPLAY_DEFAULT };
+}
+
+const sameSettings = (a: TourSettings, b: TourSettings) =>
+  a.visibility === b.visibility && a.lifecycle === b.lifecycle && a.spaceAreaDisplay === b.spaceAreaDisplay;
 
 /** Οι ρυθμίσεις όπως είναι — και η ταυτότητα της περιήγησης (για τους συνδέσμους ανά παραλήπτη, ADR-315). */
 export interface TourSettingsReading {
@@ -87,7 +108,7 @@ export async function readManagedTourSettings(
   const tour = snap.exists ? spatialTourFromDocument(snap.data(), managed.tourRef.id) : null;
   if (tour === null) return refuseTourAccess('tour-unreadable');
   return {
-    kind: 'read', tourId: tour.id, settings: { visibility: tour.visibility, lifecycle: tour.lifecycle }, exists: true,
+    kind: 'read', tourId: tour.id, settings: settingsOf(tour), exists: true,
     viewerStopCount: (await readViewerStops(managed.tourRef)).length,
     supportedVisibilities: supportedTourVisibilities(tour.custody),
   };
@@ -102,7 +123,7 @@ async function readUnbornSettings(
   if (location.kind !== 'found') return refuseTourAccess('tour-absent');
   if (mayManageTour(location.record, input.actor) !== 'granted') return refuseTourAccess('not-manager');
   return {
-    kind: 'read', tourId: location.tourRef.id, settings: TOUR_GENESIS_SETTINGS, exists: false, viewerStopCount: 0,
+    kind: 'read', tourId: location.tourRef.id, settings: settingsOf(TOUR_GENESIS_SETTINGS), exists: false, viewerStopCount: 0,
     supportedVisibilities: supportedTourVisibilities(location.custody),
   };
 }
@@ -113,23 +134,21 @@ async function readUnbornSettings(
  */
 export async function updateTourSettings(
   db: Firestore,
-  input: { readonly subject: TourSubject; readonly actor: TourActor; readonly settings: TourSettings },
+  input: { readonly subject: TourSubject; readonly actor: TourActor; readonly settings: TourSettingsInput },
 ): Promise<TourSettingsOutcome> {
   const managed = await ensureManagedTour(db, input.subject, input.actor);
   if (managed.kind === 'refused') return managed;
   const { tourRef } = managed;
-  const next = input.settings;
 
   const outcome = await db.runTransaction<TourSettingsOutcome>(async (tx) => {
     const snap = await tx.get(tourRef);
     const tour = snap.exists ? spatialTourFromDocument(snap.data(), tourRef.id) : null;
     if (tour === null) return refuseTourAccess(snap.exists ? 'tour-unreadable' : 'tour-absent');
-    const before: TourSettings = { visibility: tour.visibility, lifecycle: tour.lifecycle };
+    const before = settingsOf(tour);
+    const next: TourSettings = { ...input.settings, spaceAreaDisplay: input.settings.spaceAreaDisplay ?? before.spaceAreaDisplay };
     // 🔑 Ο ΙΔΙΟΣ κριτής με την οθόνη (`supportedVisibilities` της ανάγνωσης) — π.χ. `link-only` μόνο για γραφείο.
     if (!supportedTourVisibilities(tour.custody).includes(next.visibility)) return refuseTourAccess('visibility-unsupported');
-    if (before.visibility === next.visibility && before.lifecycle === next.lifecycle) {
-      return { kind: 'unchanged', settings: before };
-    }
+    if (sameSettings(before, next)) return { kind: 'unchanged', settings: before };
     if (next.lifecycle === 'published' && before.lifecycle !== 'published') {
       // 🔑 Ο ΙΔΙΟΣ κριτής με τον θεατή (§4.7 Α8), μέσα στη συναλλαγή: ό,τι δημοσιεύεται, **δείχνεται**.
       if ((await readViewerStopsInTransaction(tx, tourRef)).length === 0) return refuseTourAccess('publish-needs-capture');
@@ -137,6 +156,7 @@ export async function updateTourSettings(
     tx.update(tourRef, {
       visibility: next.visibility,
       lifecycle: next.lifecycle,
+      spaceAreaDisplay: next.spaceAreaDisplay,
       updatedAt: nowISO(),
       updatedBy: input.actor.listing.uid,
     });

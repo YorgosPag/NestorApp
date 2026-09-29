@@ -21,6 +21,7 @@ import 'server-only';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { TOUR_SPACE_AREA_DISPLAY_DEFAULT, type TourSpaceAreaDisplay } from '@/constants/spatial-tour-vocabulary';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, tourAccessStanding, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import { judgeTourView } from '@/lib/spatial-tour/tour-view-policy';
@@ -57,6 +58,8 @@ export interface TourManifest {
   readonly stops: readonly TourManifestStop[];
   /** Υπάρχει τουλάχιστον μία στάση με έτοιμα πλακίδια; */
   readonly ready: boolean;
+  /** Εμβαδά χώρων πάνω στην κάτοψη (Δ8.4) — ο διακόπτης της περιήγησης, ήδη λυμένος στην προεπιλογή. */
+  readonly spaceAreaDisplay: TourSpaceAreaDisplay;
 }
 
 /**
@@ -98,9 +101,18 @@ async function requestStandingOf(tourRef: DocumentReference, uid: string | null,
     : { standing: tourAccessStanding(stored, nowMs), requestId: stored.id, requestRef };
 }
 
-async function manifestOf(tour: SpatialTour, tourRef: DocumentReference, label: string | null): Promise<TourManifest> {
+/**
+ * 🔒 **Κρυφά εμβαδά = επιβολή ΕΔΩ** (Φ0.4 · Δ8.4): με τον διακόπτη κλειστό, ο **μη διαχειριστής** δεν λαμβάνει δηλωμένα
+ * εμβαδά. Ο διαχειριστής λαμβάνει πάντα όλα — ο επεξεργαστής τα χρειάζεται (φύλακας 15%) και ο ίδιος τα έγραψε.
+ */
+async function manifestOf(tour: SpatialTour, tourRef: DocumentReference, label: string | null, isManager: boolean): Promise<TourManifest> {
   const stops = await readViewerStops(tourRef);
-  return { tourId: tour.id, label, nodes: tour.nodes, levels: viewerLevelsOf(tour.levels), stops, ready: stops.length > 0 };
+  const spaceAreaDisplay = tour.spaceAreaDisplay ?? TOUR_SPACE_AREA_DISPLAY_DEFAULT;
+  const areas = isManager ? 'shown' : spaceAreaDisplay;
+  return {
+    tourId: tour.id, label, nodes: tour.nodes, levels: viewerLevelsOf(tour.levels, { areas }), stops, ready: stops.length > 0,
+    spaceAreaDisplay,
+  };
 }
 
 /** **Άνοιξε μια επίσκεψη** — κρίση, κουπόνι, ίχνος (μία φορά ανά επίσκεψη), μανιφέστο. */
@@ -126,7 +138,7 @@ export async function openTourViewSession(db: Firestore, input: TourViewSessionI
   if (isNewVisit(input.presentedGrant, grant) && verdict.basis === 'request' && request.requestRef !== null) {
     await recordTourRequestVisit(db, request.requestRef);
   }
-  const manifest = await manifestOf(tour, tourRef, location.label);
+  const manifest = await manifestOf(tour, tourRef, location.label, isManager);
   return { kind: 'granted', grant, token: issueTourViewGrant(grant, input.nowMs), manifest };
 }
 

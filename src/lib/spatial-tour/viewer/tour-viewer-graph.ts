@@ -16,12 +16,21 @@
 
 import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
 import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
-import type { FloorPlanSource } from '@/constants/spatial-tour-vocabulary';
+import type { FloorPlanSource, TourSpaceAreaDisplay } from '@/constants/spatial-tour-vocabulary';
+import { TOUR_SPACE_AREA_DISPLAY_DEFAULT } from '@/constants/spatial-tour-vocabulary';
 import type { FloorPlanImage, TourLevel, TourLevelKey, TourNode, TourPoint } from '@/types/spatial-tour';
 
 import { levelKeyId } from '../spatial-tour-graph';
 import { activeFloorPlan } from '../tour-plan-frame';
 import { bearingBetween } from './tour-viewer-bearing';
+import {
+  graphShapesOfViewer,
+  viewerShapesOf,
+  type ShapeProjection,
+  type TourViewerSeparation,
+  type TourViewerShapes,
+  type TourViewerSpace,
+} from './tour-viewer-shapes';
 
 /**
  * **Η κάτοψη ενός ορόφου όπως τη χρειάζεται ο θεατής** (ADR-884 Φ2στ-β · §4.13): η εικόνα (η διεύθυνση **παράγεται** από το
@@ -35,8 +44,11 @@ export interface TourViewerPlan {
   readonly metresPerPixel: number | null;
 }
 
-/** Ό,τι ξέρει ο θεατής για έναν όροφο — ταξιδεύει στο μανιφέστο (ADR-884 Φ2γ, `viewerLevelsOf`). */
-export interface TourViewerLevel {
+/**
+ * Ό,τι ξέρει ο θεατής για έναν όροφο — ταξιδεύει στο μανιφέστο (ADR-884 Φ2γ, `viewerLevelsOf`). Τα σχήματα χώρων
+ * (`spaces`/`separations`, Γ3γ-1) έρχονται από το `tour-viewer-shapes.ts`, χωρίς «ποιος/πότε».
+ */
+export interface TourViewerLevel extends TourViewerShapes {
   readonly key: TourLevelKey;
   /** Ετικέτα για άνθρωπο — `null` ⇒ ο θεατής δείχνει τον αριθμό του ορόφου. */
   readonly label: string | null;
@@ -65,18 +77,25 @@ function viewerPlanOf(level: TourLevel): TourViewerPlan | null {
 export function graphLevelsOfViewer(levels: readonly TourViewerLevel[]): TourLevel[] {
   return levels.map((level) => {
     const plan = level.plan ?? null;
-    if (plan === null) return { key: level.key, floorPlans: [{ source: 'none', state: 'active', fileId: null, approvedBy: null, approvedAt: null }] };
+    const shapes = graphShapesOfViewer(level);
+    if (plan === null) return { key: level.key, floorPlans: [{ source: 'none', state: 'active', fileId: null, approvedBy: null, approvedAt: null }], ...shapes };
     const scale = plan.metresPerPixel === null ? null : { metresPerPixel: plan.metresPerPixel, calibratedBy: '', calibratedAt: '' };
     return {
       key: level.key,
       floorPlans: [{ source: plan.source, state: 'active', fileId: plan.fileId, approvedBy: null, approvedAt: null, image: plan.image, scale }],
+      ...shapes,
     };
   });
 }
 
-export function viewerLevelsOf(levels: readonly TourLevel[]): TourViewerLevel[] {
+/**
+ * Η προβολή είναι **υποχρεωτικό** όρισμα, επίτηδες: μια προεπιλογή «όλα» θα έστελνε σιωπηλά δηλωμένα εμβαδά στο κοινό από
+ * όποιον καλών την ξεχάσει. Ο διαχειριστής βλέπει πάντα όλα (φύλακας 15%, Δ8.4) — το αποφασίζει ο καλών, όχι εδώ.
+ */
+export function viewerLevelsOf(levels: readonly TourLevel[], projection: ShapeProjection): TourViewerLevel[] {
   return levels.map((level, index) => ({
     key: level.key, label: null, ordinal: level.key.kind === 'local' ? level.key.ordinal : index, plan: viewerPlanOf(level),
+    ...viewerShapesOf(level, projection),
   }));
 }
 
@@ -97,6 +116,10 @@ export interface ViewerLevelEntry {
   readonly hasPlan: boolean;
   /** Η εικόνα της κάτοψης — `null` ⇒ ο χάρτης είναι μόνο τελείες (ή δεν υπάρχει). */
   readonly plan: TourViewerPlan | null;
+  /** Εγκεκριμένα περιγράμματα χώρων (Γ3γ-1) — κενό ⇒ μόνο τελείες (Δ8.3). */
+  readonly spaces: readonly TourViewerSpace[];
+  /** Νοητές γραμμές — από αυτές **παράγεται** η γειτονία (Δ8.2, `tour-space-view.ts`). */
+  readonly separations: readonly TourViewerSeparation[];
 }
 
 export interface TourViewerGraph {
@@ -105,6 +128,8 @@ export interface TourViewerGraph {
   /** Μόνο όροφοι με τουλάχιστον μία στάση, από κάτω προς τα πάνω. */
   readonly levels: readonly ViewerLevelEntry[];
   readonly adjacency: ReadonlyMap<string, readonly string[]>;
+  /** Εμβαδά χώρων πάνω στην κάτοψη (Δ8.4, διακόπτης ανά περιήγηση). */
+  readonly spaceAreas: TourSpaceAreaDisplay;
 }
 
 export interface ViewerNeighbour {
@@ -140,6 +165,9 @@ function levelEntries(
         nodeIds: entries.map((entry) => entry.node.id),
         hasPlan: plan !== null || entries.every((entry) => entry.node.position !== null),
         plan,
+        // Χωρίς εικόνα κάτοψης τα σχήματα δεν έχουν πάνω σε τι να σταθούν (ανήκουν στην εικόνα, Γ3β).
+        spaces: plan === null ? [] : level?.spaces ?? [],
+        separations: plan === null ? [] : level?.separations ?? [],
       };
     })
     .sort((a, b) => a.ordinal - b.ordinal || a.id.localeCompare(b.id));
@@ -164,7 +192,7 @@ function adjacencyOf(stops: ReadonlyMap<string, ViewerStop>): Map<string, string
  * «Σημείο 2» για διαφορετικό σημείο.
  */
 export function buildViewerGraph(
-  manifest: Pick<TourManifest, 'nodes' | 'stops'>,
+  manifest: Pick<TourManifest, 'nodes' | 'stops'> & Partial<Pick<TourManifest, 'spaceAreaDisplay'>>,
   levels: readonly TourViewerLevel[],
 ): TourViewerGraph {
   const stopOfNode = new Map<string, TourManifestStop>();
@@ -179,7 +207,10 @@ export function buildViewerGraph(
     counters.set(levelId, number);
     stops.set(node.id, { stop, node, levelId, number });
   }
-  return { stops, levels: levelEntries(stops, levels), adjacency: adjacencyOf(stops) };
+  return {
+    stops, levels: levelEntries(stops, levels), adjacency: adjacencyOf(stops),
+    spaceAreas: manifest.spaceAreaDisplay ?? TOUR_SPACE_AREA_DISPLAY_DEFAULT,
+  };
 }
 
 /** Οι γείτονες ενός κόμβου που **έχουν** στάση, με τη διόπτευση προς αυτούς. */

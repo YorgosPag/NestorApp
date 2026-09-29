@@ -4,8 +4,8 @@
     "adr": "ADR-770",
     "description": "Στατική πύλη αντίθεσης UI — κάθε `text-*` που λύνεται σε token ΕΠΙΦΑΝΕΙΑΣ (λίστα ΠΑΡΑΓΟΜΕΝΗ από το tailwind.config.ts, ADR-770 §16) και που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιή, ανά αρχείο και ανά κατάσταση.",
     "generatedBy": "node scripts/check-text-primary-ratchet.js --write-baseline",
-    "totalInvisible": 438,
-    "totalFiles": 230,
+    "totalInvisible": 428,
+    "totalFiles": 226,
     "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό.",
     "examinedByEye": "undefined ‖ ΠΕΜΠΤΗ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΝΕΑ ΧΡΗΣΗ — ΕΙΝΑΙ ΜΕΤΑΚΟΜΙΣΗ (ADR-332, 2026-09-06): η ΤΡΙΤΗ εγγραφή (AddressMapCandidateLayer.tsx:186, η τονισμένη πινέζα) ΕΞΗΧΘΗ στο νέο address-map-edge-indicator.tsx. Η εγγραφή ακολούθησε το αρχείο: το παλιό ΕΧΑΣΕ την element-light-bg, το νέο την απέκτησε. ✅ ΜΕΤΡΗΜΕΝΟ, όχι υποτιθέμενο: αναπαραγωγή της baseline δίνει diff ΑΚΡΙΒΩΣ τριών γραμμών — REMOVED AddressMapCandidateLayer (η πινέζα έφυγε), ADDED address-map-edge-indicator, και REMOVED searchable-combobox (ξένη θεραπεία, καθαρό κέρδος). ΣΥΝΟΛΟ ΑΟΡΑΤΩΝ 451 → 451, ΑΡΧΕΙΑ 237 → 236: ΚΑΜΙΑ νέα αόρατη χρήση μπήκε με αυτή την ενημέρωση. Η ΑΠΟΔΕΙΞΗ ΤΗΣ ΤΡΙΤΗΣ ΙΣΧΥΕΙ ΑΚΕΡΑΙΗ στο νέο σπίτι, και είναι ο λόγος που η μετακόμιση επιτρέπεται: στη γραμμή 107 το `bg-foreground` και το `text-background` ορίζονται στην ΙΔΙΑ κλάση (`border-solid border-background bg-foreground text-background`), άρα το φόντο ΔΕΝ είναι ερώτημα προγόνων. Το `file-light-bg` που εμφανίστηκε δίπλα του δεν είναι δεύτερη χρήση: είναι η ίδια πινέζα, ταξινομημένη πλέον και σε επίπεδο αρχείου επειδή το αρχείο ΕΙΝΑΙ μόνο αυτή. ⚠️ Ο όρος του D26 μένει ο ίδιος: αν κάποιος χωρίσει το `bg-` από το `text-` σε διαφορετικά στοιχεία, η εγγραφή παύει να ισχύει και ξαναμετριέται. ‖ ΕΚΤΗ, ΚΑΙ ΠΑΛΙ ΜΕΤΑΚΟΜΙΣΗ (ADR-770 §18, 2026-09-17): το ανεστραμμένο μονόχρωμο κουμπί κύριας ενέργειας (`bg-foreground text-background`) ζούσε ΧΕΙΡΟΓΡΑΦΟ σε PlaceSearchBox.tsx και PublicSiteHeader.tsx (element-light-bg: 1 το καθένα). Έγινε ΕΝΑ SSoT, `COLOR_BRIDGE.action.primary`, και οι δύο το ζητούν. ✅ ΜΕΤΡΗΜΕΝΟ: diff της αναπαραγωγής = ΑΚΡΙΒΩΣ τρεις γραμμές — REMOVED PlaceSearchBox · REMOVED PublicSiteHeader · ADDED color-bridge.ts (element-light-bg: 1). ΑΟΡΑΤΕΣ 438 → 438, ΑΡΧΕΙΑ 231 → 230. Η απόδειξη είναι ίδια με της πέμπτης: `bg-` και `text-` στην ΙΔΙΑ συμβολοσειρά, άρα το φόντο ΔΕΝ είναι ερώτημα προγόνων. ⚠️ Όποιος χωρίσει το `bg-foreground` από το `text-background` σε διαφορετικά στοιχεία ακυρώνει την εγγραφή. ⚠️ Ο γεννήτορας (--write-baseline) ΣΒΗΝΕΙ αυτό το πεδίο — επαναφέρθηκε με το χέρι."
   },
@@ -662,20 +662,8 @@
     "src/subapps/dxf-viewer/ui/ribbon/components/__tests__/RibbonToggleWidget.test.tsx": {
       "theme-surface": 3
     },
-    "src/subapps/geo-canvas/app/GeoCanvasContent.tsx": {
-      "theme-surface": 1
-    },
-    "src/subapps/geo-canvas/app/GeoCanvasPanels.tsx": {
-      "theme-surface": 7
-    },
-    "src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx": {
-      "theme-surface": 1
-    },
     "src/subapps/geo-canvas/floor-plan-system/components/FloorPlanPreview.tsx": {
       "theme-surface": 2
-    },
-    "src/subapps/geo-canvas/floor-plan-system/components/FloorPlanUploadModal.tsx": {
-      "theme-surface": 1
     },
     "src/subapps/geo-canvas/systems/polygon-system/components/PolygonControls.tsx": {
       "theme-surface": 1

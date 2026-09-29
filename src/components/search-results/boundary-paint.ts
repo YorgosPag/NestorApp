@@ -21,6 +21,12 @@ import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
  */
 export const BELOW_LISTINGS = 'listing-outline-fill';
 
+/**
+ * Το **κατώτερο** επίπεδο του ορίου περιοχής (η μάσκα). Ό,τι είναι **περιεχόμενο κάτω από το πλαίσιο** — ο χάρτης
+ * τιμών (ADR-890 §14) — μπαίνει πριν από αυτό όταν υπάρχει, ώστε το όριο και η μάσκα να μένουν από πάνω.
+ */
+export const LOWEST_BOUNDARY_LAYER = 'admin-boundary-mask-fill';
+
 export interface BoundaryPaint {
   readonly line: string;
   readonly halo: string;

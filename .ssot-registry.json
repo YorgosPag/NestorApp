@@ -3424,7 +3424,7 @@
     },
     "no-navigation-flash": {
       "ssotFile": "src/lib/stale-cache.ts",
-      "description": "Hooks fetching list data MUST use createStaleCache + silentInitialFetch (ADR-300). PageContents MUST NOT gate render on isNamespaceReady or bare `if (loading)` returning <Loader2> — sister pages prove the canonical pattern is `if (loading && data.length === 0) return <PageLoadingState/>`. Regex-based ratchet CHECK 3.25 enforces this; this registry layer is a defense-in-depth grep against the most distinctive flash trigger (ADR-267 Phase H+3). ADR-884 §4.7 EXCEPTION (2026-09-27): TourViewerLoader is not a PageContent but a ssr:false leaf that mounts the WebGL tour viewer; it withholds the viewer until its words are ready BY DECISION (Κ-ωμά: no raw keys on the first frame), and the page around it keeps rendering — no navigation flash. Remove when the words-before-first-frame work (useSuspense + per-region boundaries) lands.",
+      "description": "Hooks fetching list data MUST use createStaleCache + silentInitialFetch (ADR-300). PageContents MUST NOT gate render on isNamespaceReady or bare `if (loading)` returning <Loader2> — sister pages prove the canonical pattern is `if (loading && data.length === 0) return <PageLoadingState/>`. Regex-based ratchet CHECK 3.25 enforces this; this registry layer is a defense-in-depth grep against the most distinctive flash trigger (ADR-267 Phase H+3). ADR-884 §4.7 EXCEPTION (2026-09-27): TourViewerLoader is not a PageContent but a ssr:false leaf that mounts the WebGL tour viewer; it withholds the viewer until its words are ready BY DECISION (Κ-ωμά: no raw keys on the first frame), and the page around it keeps rendering — no navigation flash. Remove when the words-before-first-frame work (useSuspense + per-region boundaries) lands. ADR-890 §14 EXCEPTION (2026-09-28): PriceMapControl is likewise not a PageContent but a dynamically loaded map-control leaf (price-map-entry.tsx); it withholds only its own toggle button until the price-map namespace is ready (no raw keys, CHECK 3.51) while the search page keeps rendering — no navigation flash. Same removal condition.",
       "forbiddenPatterns": [
         "if\\s*\\(\\s*!\\s*isNamespaceReady\\s*\\)"
       ],
@@ -3432,7 +3432,8 @@
         "src/lib/stale-cache.ts",
         "src/hooks/useAsyncData.ts",
         "src/subapps/dxf-viewer/",
-        "src/components/spatial-tour/viewer/TourViewerLoader.tsx"
+        "src/components/spatial-tour/viewer/TourViewerLoader.tsx",
+        "src/components/search-results/price-map/PriceMapControl.tsx"
       ],
       "tier": 2
     },

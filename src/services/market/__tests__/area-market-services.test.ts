@@ -40,6 +40,7 @@ jest.mock('@/services/market/value-zones.reader', () => ({
 
 import { loadAreaMarketPage } from '../area-market-page.service';
 import { rollupAreaMarket } from '../area-market-rollup.service';
+import { readLatestAreaMarketMap } from '../area-market-snapshot.reader';
 
 const THESSALONIKI: AdminAreaAssignment = {
   regionId: 'region:112',
@@ -106,6 +107,30 @@ describe('rollupAreaMarket', () => {
     const point = page.market.series?.['2026-09'];
     expect(point?.asOf).toBe('2026-09-27');
     expect(point?.offers.sale.apartment?.n).toBe(5);
+  });
+});
+
+describe('ADR-890 §14.4 — ο χάρτης τιμών της νύχτας', () => {
+  it('ΕΝΑ έγγραφο ανά νύχτα, με μόνο τα δημοσιεύσιμα: [n, διάμεσος] πάνω από το κατώφλι, [n] κάτω', async () => {
+    mockReadLive.mockResolvedValue({ listings: located(5), truncated: false });
+    await rollupAreaMarket(db, DAY, new Date());
+    await rollupAreaMarket(db, DAY, new Date());
+    expect(fake.all(COLLECTIONS.AREA_MARKET_MAPS)).toHaveLength(1);
+    const map = await readLatestAreaMarketMap(db, DAY);
+    const cell = map?.offers.sale['municipality:0701']?.apartment;
+    expect(cell).toHaveLength(2);
+    expect(cell?.[0]).toBe(5);
+  });
+
+  it('κάτω από το κατώφλι ⇒ μόνο το πλήθος — ο αριθμός δεν φτάνει ποτέ στο έγγραφο', async () => {
+    mockReadLive.mockResolvedValue({ listings: located(3), truncated: false });
+    await rollupAreaMarket(db, DAY, new Date());
+    const map = await readLatestAreaMarketMap(db, DAY);
+    expect(map?.offers.sale['municipal_unit:070101']?.apartment).toEqual([3]);
+  });
+
+  it('καμία ολοκληρωμένη νύχτα ⇒ null (γεγονός «κανένας χάρτης»), όχι σφάλμα', async () => {
+    expect(await readLatestAreaMarketMap(db, DAY)).toBeNull();
   });
 });
 

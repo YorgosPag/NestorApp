@@ -10,7 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
-import { SPATIAL_TOUR_LIFECYCLES, SPATIAL_TOUR_VISIBILITIES } from '@/constants/spatial-tour-vocabulary';
+import { SPATIAL_TOUR_LIFECYCLES, SPATIAL_TOUR_VISIBILITIES, TOUR_SPACE_AREA_DISPLAYS } from '@/constants/spatial-tour-vocabulary';
 import { readJsonBody } from '@/lib/api/json-body';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -33,6 +33,8 @@ export const dynamic = 'force-dynamic';
 const settingsSchema = z.object({
   visibility: z.enum(SPATIAL_TOUR_VISIBILITIES),
   lifecycle: z.enum(SPATIAL_TOUR_LIFECYCLES),
+  /** Γ3β · Δ8.4 — προαιρετικό: λείπει ⇒ μένει όπως είναι (η υπηρεσία το λύνει μέσα στη συναλλαγή). */
+  spaceAreaDisplay: z.enum(TOUR_SPACE_AREA_DISPLAYS).optional(),
 });
 
 type Failure = TourBadSubjectBody | TourRefusedBody;

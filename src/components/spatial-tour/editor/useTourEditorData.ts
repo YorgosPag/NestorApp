@@ -37,9 +37,15 @@ export type TourEditorLoad =
 export interface TourEditorDataHandle {
   readonly load: TourEditorLoad;
   readonly reload: () => Promise<void>;
-  /** Αισιόδοξη αντικατάσταση των κόμβων — η επόμενη φόρτωση φέρνει την αλήθεια του διακομιστή. */
-  readonly setNodes: (nodes: readonly TourNode[]) => void;
+  /**
+   * Αισιόδοξη αντικατάσταση του γράφου (κόμβοι **και** όροφοι με τα σχήματα χώρων, Γ3γ-1) — η επόμενη φόρτωση φέρνει την
+   * αλήθεια του διακομιστή.
+   */
+  readonly setGraph: (graph: TourEditorGraphData) => void;
 }
+
+/** Ο γράφος της οθόνης — ό,τι αλλάζει μια εντολή (οι λήψεις αλλάζουν μόνο με φόρτωση). */
+export type TourEditorGraphData = Pick<TourEditorData, 'nodes' | 'levels'>;
 
 export function useTourEditorData(subject: TourSubject): TourEditorDataHandle {
   const [load, setLoad] = useState<TourEditorLoad>({ kind: 'loading' });
@@ -55,10 +61,10 @@ export function useTourEditorData(subject: TourSubject): TourEditorDataHandle {
     const { nodes, levels } = session.value.manifest;
     setLoad({ kind: 'loaded', data: { nodes, levels, captures: captures.value.captures } });
   }, [subject]);
-  const setNodes = useCallback((nodes: readonly TourNode[]) => {
-    setLoad((prev) => (prev.kind === 'loaded' ? { kind: 'loaded', data: { ...prev.data, nodes } } : prev));
+  const setGraph = useCallback(({ nodes, levels }: TourEditorGraphData) => {
+    setLoad((prev) => (prev.kind === 'loaded' ? { kind: 'loaded', data: { ...prev.data, nodes, levels } } : prev));
   }, []);
   useEffect(() => { void reload(); }, [reload]);
   useInterval(() => void reload(), TOUR_VIEW_RENEW_EVERY_MS);
-  return { load, reload, setNodes };
+  return { load, reload, setGraph };
 }

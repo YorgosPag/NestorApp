@@ -119,3 +119,17 @@ export function distanceToSegment(point: PlanarPoint, a: PlanarPoint, b: PlanarP
   const t = Math.min(1, Math.max(0, rawT));
   return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
 }
+
+/**
+ * Απόσταση σημείου από το **σύνορο** ενός κλειστού δακτυλίου (χωρίς επανάληψη της πρώτης κορυφής) — η μικρότερη προς κάθε
+ * ακμή. Ίδια απάντηση μέσα κι έξω· το πρόσημο (μέσα/έξω) το προσθέτει ο καλών με το {@link pointInPolygon}.
+ * `+∞` για κενό δακτύλιο.
+ */
+export function distanceToRing(point: PlanarPoint, ring: readonly PlanarPoint[]): number {
+  let min = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < ring.length; i++) {
+    const d = distanceToSegment(point, ring[i], ring[(i + 1) % ring.length]);
+    if (d < min) min = d;
+  }
+  return min;
+}

@@ -50,4 +50,5 @@ export const DEMO_TOUR_MANIFEST: TourManifest = {
     faceSize: 1024,
   })),
   ready: true,
+  spaceAreaDisplay: 'shown',
 };

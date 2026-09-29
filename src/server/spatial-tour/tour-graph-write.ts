@@ -37,6 +37,7 @@ import {
   type FloorPlanChoice,
   type TourEditStamp,
 } from '@/lib/spatial-tour/tour-plan-edit';
+import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from '@/lib/spatial-tour/tour-space-edit';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type { SpatialTour, TourCapture, TourSubject } from '@/types/spatial-tour';
@@ -45,7 +46,7 @@ import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './t
 import { prepareTourFloorPlan } from './tour-plan-prepare';
 
 type TourGraphWriteOutcome =
-  | { readonly kind: 'written' | 'unchanged'; readonly revision: number }
+  | { readonly kind: 'written' | 'unchanged'; readonly revision: number; readonly createdId?: string }
   | TourAccessRefused;
 
 interface TxContext {
@@ -90,6 +91,14 @@ function planGraphOnly(ctx: TxContext, command: TourGraphCommand): TourGraphEdit
     case 'floorplan': return setLevelFloorPlan(ctx.tour, command.levelKey, ctx.floorPlan ?? null, ctx.stamp);
     case 'calibrate': return calibrateLevel(ctx.tour, command.levelKey, command.metresPerPixel, ctx.stamp);
     case 'position': return positionNode(ctx.tour, command.nodeId, command.point);
+    // Γ3β — το id κόβεται ΜΟΝΟ για νέο σχήμα (N.6)· ο κριτής ξανακρίνει ό,τι έστειλε η οθόνη.
+    case 'space': return upsertSpace(ctx.tour, command, command.spaceId ?? enterpriseIdService.generateTourSpaceId(), ctx.stamp);
+    case 'unspace': return removeSpace(ctx.tour, command.levelKey, command.spaceId);
+    case 'separate': {
+      const newId = command.separationId ?? enterpriseIdService.generateTourSeparationId();
+      return upsertSeparation(ctx.tour, command, newId, ctx.stamp);
+    }
+    case 'unseparate': return removeSeparation(ctx.tour, command.levelKey, command.separationId);
     default: return null;
   }
 }
@@ -125,13 +134,13 @@ function applyEdit(ctx: TxContext, plan: EditPlan): TourGraphWriteOutcome {
   if (result.kind === 'refused') return refuseTourAccess(result.reason);
   if (result.kind === 'unchanged') return { kind: 'unchanged', revision: ctx.tour.revision };
   const violations = checkTourGraph(result.graph);
-  if (violations.some((v) => v.kind === 'too-many-nodes')) return refuseTourAccess('graph-full');
+  if (violations.some((v) => v.kind === 'too-many-nodes' || v.kind === 'too-many-shapes')) return refuseTourAccess('graph-full');
   if (violations.length > 0) throw new Error(`Tour graph violates invariants: ${violations.map((v) => v.kind).join(',')}`);
   const revision = ctx.tour.revision + 1;
   ctx.tx.update(ctx.tourRef, { levels: result.graph.levels, nodes: result.graph.nodes, revision, updatedAt: ctx.stamp.at, updatedBy: ctx.stamp.uid });
   if (plan.captureRef !== null && result.captureNodeId !== undefined) ctx.tx.update(plan.captureRef, { nodeId: result.captureNodeId });
   if (plan.captureRef !== null && plan.captureFields !== undefined) ctx.tx.update(plan.captureRef, plan.captureFields);
-  return { kind: 'written', revision };
+  return result.createdId === undefined ? { kind: 'written', revision } : { kind: 'written', revision, createdId: result.createdId };
 }
 
 /** Η κάτοψη της εντολής `floorplan`, κριμένη και έτοιμη — `undefined` για κάθε άλλη εντολή, `null` για «χωρίς κάτοψη». */

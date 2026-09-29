@@ -188,3 +188,51 @@ describe('Μ — το μανιφέστο', () => {
     expect(outcome.kind === 'granted' && outcome.manifest.ready).toBe(false);
   });
 });
+
+// Γ3γ-1 — τα σχήματα χώρων ταξιδεύουν στο μανιφέστο **χωρίς** «ποιος/πότε»· κρυφά εμβαδά = επιβολή στον διακομιστή (Φ0.4).
+describe('Χ — οι χώροι στο μανιφέστο', () => {
+  const AT = '2026-09-28T10:00:00.000Z';
+  const SPACE = {
+    id: 'tspc_1', source: 'detected', approvedBy: 'boris', approvedAt: AT,
+    points: [{ x: 1, y: -1 }, { x: 5, y: -1 }, { x: 5, y: -4 }, { x: 1, y: -4 }],
+    room: { types: ['office'], label: null, source: 'manual' },
+    declaredArea: { areaM2: 12.4, source: 'engineer-study', declaredBy: 'boris', declaredAt: AT },
+  };
+  const LINE = { id: 'tsep_1', a: { x: 5, y: -1 }, b: { x: 5, y: -4 }, approvedBy: 'boris', approvedAt: AT };
+  const LEVEL = {
+    key: { kind: 'local', ordinal: 0 },
+    floorPlans: [{ source: 'none', state: 'active', fileId: null, approvedBy: null, approvedAt: null }],
+    spaces: [SPACE], separations: [LINE],
+  };
+  const levelOf = async (overrides: Record<string, unknown>, actor: TourActor | null = null) => {
+    seed(tourDoc({ visibility: 'public', levels: [LEVEL], ...overrides }));
+    const outcome = await open({ actor });
+    if (outcome.kind !== 'granted') throw new Error('expected granted');
+    return outcome.manifest;
+  };
+
+  it('Χ1 — σχήματα με ό,τι χρειάζεται η αναίρεση, ΚΑΝΕΝΑ uid ή χρονοσφραγίδα', async () => {
+    const manifest = await levelOf({});
+    expect(manifest.spaceAreaDisplay).toBe('shown');
+    expect(manifest.levels[0].spaces).toEqual([{
+      id: 'tspc_1', source: 'detected', points: SPACE.points, room: SPACE.room,
+      declaredArea: { areaM2: 12.4, source: 'engineer-study' },
+    }]);
+    expect(manifest.levels[0].separations).toEqual([{ id: 'tsep_1', a: LINE.a, b: LINE.b }]);
+    expect(JSON.stringify(manifest.levels)).not.toMatch(/boris|approvedBy|declaredBy|approvedAt|declaredAt/);
+  });
+
+  it('Χ2 — εμβαδά κρυφά ⇒ ο επισκέπτης ΔΕΝ λαμβάνει το δηλωμένο· ο διαχειριστής το λαμβάνει', async () => {
+    const visitor = await levelOf({ spaceAreaDisplay: 'hidden' });
+    expect(visitor.spaceAreaDisplay).toBe('hidden');
+    expect(visitor.levels[0].spaces?.[0]).not.toHaveProperty('declaredArea');
+    const manager = await levelOf({ spaceAreaDisplay: 'hidden' }, MANAGER);
+    expect(manager.levels[0].spaces?.[0].declaredArea).toEqual({ areaM2: 12.4, source: 'engineer-study' });
+  });
+
+  it('Χ3 — παλιό έγγραφο χωρίς σχήματα ⇒ κανένα πεδίο (όχι κενές λίστες)', async () => {
+    const manifest = await levelOf({ levels: [{ key: LEVEL.key, floorPlans: LEVEL.floorPlans }] });
+    expect(manifest.levels[0]).not.toHaveProperty('spaces');
+    expect(manifest.levels[0]).not.toHaveProperty('separations');
+  });
+});

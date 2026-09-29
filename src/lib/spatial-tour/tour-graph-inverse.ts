@@ -10,20 +10,26 @@
  * 🔑 **Ό,τι δεν αντιστρέφεται πιστά, δεν προσφέρει αναίρεση** (`null`): η αφαίρεση της τελευταίας λήψης ενός σημείου
  * σβήνει το σημείο **και** τους συνδέσμους του — μια «ξανατοποθέτηση» θα γεννούσε **άλλο** σημείο χωρίς βελάκια. Εκεί η
  * οθόνη ζητά **επιβεβαίωση πριν**, όχι αναίρεση μετά.
+ * 🔑 **Χώροι και νοητές γραμμές (Γ3β)**: ένας σβησμένος χώρος ξαναγεννιέται με **νέο** id — και αυτό ΕΙΝΑΙ πιστή επαναφορά,
+ * γιατί τίποτα δεν δείχνει σε αυτό το id (η συμμετοχή σημείου και η γειτονία **παράγονται**). Η αναίρεση μιας δημιουργίας
+ * χρειάζεται το id που έκοψε ο διακομιστής (`createdId`).
  */
 
 import { isFloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
-import type { SpatialTour, TourLevelKey, TourLink } from '@/types/spatial-tour';
+import type { SpatialTour, TourLevel, TourLevelKey, TourLink, TourSeparationLine, TourSpaceOutline } from '@/types/spatial-tour';
 
-import { levelKeyId } from './spatial-tour-graph';
-import type { TourGraphCommand } from './tour-graph-edit';
+import { findTourLevel, levelKeyId } from './spatial-tour-graph';
+import type { TourGraphCommand, TourSpaceDraft } from './tour-graph-edit';
 import { activeFloorPlan } from './tour-plan-frame';
 
 type Graph = Pick<SpatialTour, 'nodes'> & Partial<Pick<SpatialTour, 'levels'>>;
 
-/** Ό,τι δεν ζει στον γράφο αλλά χρειάζεται μια αναίρεση — η κατεύθυνση μιας λήψης **πριν** την εντολή `orient`. */
+/** Ό,τι δεν ζει στον γράφο αλλά χρειάζεται μια αναίρεση. */
 export interface TourInverseContext {
+  /** Η κατεύθυνση μιας λήψης **πριν** την εντολή `orient`. */
   readonly headingOf?: (captureId: string) => number | undefined;
+  /** Το id που έκοψε ο διακομιστής για νέο χώρο / νέα γραμμή (`TourGraphEditResponse.createdId`). */
+  readonly createdId?: string;
 }
 
 function linkOf(graph: Graph, from: string, to: string): TourLink | null {
@@ -64,14 +70,75 @@ export function inverseOf(command: TourGraphCommand, before: Graph, context: Tou
       const position = before.nodes.find((node) => node.id === command.nodeId)?.position ?? null;
       return [{ op: 'position', nodeId: command.nodeId, point: position === null ? null : { x: position.x, y: position.y } }];
     }
-    case 'calibrate': return restoreCalibration(before, command.levelKey);
+    case 'calibrate': return restoreCalibration(before, command.levelKey, command.metresPerPixel);
     case 'floorplan': return restoreFloorPlan(before, command.levelKey);
     case 'orient': {
       const heading = context.headingOf?.(command.captureId);
       return heading === undefined ? null : [{ op: 'orient', captureId: command.captureId, headingRad: heading }];
     }
+    case 'space':
+    case 'unspace': return inverseOfSpace(command, before, context);
+    case 'separate':
+    case 'unseparate': return inverseOfSeparation(command, before, context);
   }
 }
+
+// ── Χώροι και νοητές γραμμές (Γ3β) ─────────────────────────────────────────
+
+/** Ο χώρος ως εντολή της οθόνης — ό,τι χρειάζεται για να ξαναγεννηθεί ίδιος. */
+function draftOf(space: TourSpaceOutline): TourSpaceDraft {
+  return {
+    points: space.points.map((p) => ({ x: p.x, y: p.y })),
+    source: space.source,
+    room: space.room == null ? null : { types: space.room.types, label: space.room.label },
+    declaredArea: space.declaredArea == null ? null : { areaM2: space.declaredArea.areaM2, source: space.declaredArea.source },
+  };
+}
+
+const levelOf = (before: Graph, key: TourLevelKey): TourLevel | undefined => findTourLevel(before.levels, key);
+
+function inverseOfSpace(
+  command: Extract<TourGraphCommand, { op: 'space' | 'unspace' }>,
+  before: Graph,
+  context: TourInverseContext,
+): readonly TourGraphCommand[] | null {
+  const { levelKey, spaceId } = command;
+  if (command.op === 'space' && spaceId === null) {
+    return context.createdId === undefined ? null : [{ op: 'unspace', levelKey, spaceId: context.createdId }];
+  }
+  const previous = levelOf(before, levelKey)?.spaces?.find((space) => space.id === spaceId);
+  if (previous === undefined) return null;
+  // Αλλαγή ⇒ το προηγούμενο σχήμα στο ΙΔΙΟ id· αφαίρεση ⇒ ξαναγέννηση (νέο id — τίποτα δεν δείχνει στο παλιό).
+  return [{ op: 'space', levelKey, spaceId: command.op === 'space' ? spaceId : null, space: draftOf(previous) }];
+}
+
+function inverseOfSeparation(
+  command: Extract<TourGraphCommand, { op: 'separate' | 'unseparate' }>,
+  before: Graph,
+  context: TourInverseContext,
+): readonly TourGraphCommand[] | null {
+  const { levelKey, separationId } = command;
+  if (command.op === 'separate' && separationId === null) {
+    return context.createdId === undefined ? null : [{ op: 'unseparate', levelKey, separationId: context.createdId }];
+  }
+  const previous = levelOf(before, levelKey)?.separations?.find((line) => line.id === separationId);
+  if (previous === undefined) return null;
+  return [{ op: 'separate', levelKey, separationId: command.op === 'separate' ? separationId : null, a: xy(previous.a), b: xy(previous.b) }];
+}
+
+const xy = (p: TourSeparationLine['a']) => ({ x: p.x, y: p.y });
+
+/** Οι χώροι και οι γραμμές του ορόφου όπως ήταν — ξαναγεννιούνται (μια αλλαγή κάτοψης/κλίμακας τα έσβησε). */
+function restoreShapes(level: TourLevel | undefined): TourGraphCommand[] {
+  if (level === undefined) return [];
+  const spaces = (level.spaces ?? []).map((space): TourGraphCommand => ({ op: 'space', levelKey: level.key, spaceId: null, space: draftOf(space) }));
+  const lines = (level.separations ?? []).map((line): TourGraphCommand => ({
+    op: 'separate', levelKey: level.key, separationId: null, a: xy(line.a), b: xy(line.b),
+  }));
+  return [...lines, ...spaces];
+}
+
+// ── Η κάτοψη ─────────────────────────────────────────────────────────────────
 
 /** Οι θέσεις του ορόφου όπως ήταν — μία εντολή ανά τοποθετημένο σημείο. */
 function restorePositions(before: Graph, key: TourLevelKey): TourGraphCommand[] {
@@ -81,30 +148,34 @@ function restorePositions(before: Graph, key: TourLevelKey): TourGraphCommand[] 
 }
 
 function scaleBefore(before: Graph, key: TourLevelKey): number | null | undefined {
-  const level = before.levels?.find((l) => levelKeyId(l.key) === levelKeyId(key));
+  const level = levelOf(before, key);
   return level === undefined ? undefined : activeFloorPlan(level)?.scale?.metresPerPixel ?? null;
 }
 
 /**
- * Η κλίμακα όπως ήταν. Αρκεί **μία** εντολή: η ξανακλιμάκωση είναι αντιστρέψιμη (οι τελείες ξαναγυρίζουν στο ίδιο pixel),
- * και χωρίς προηγούμενη κλίμακα θέσεις δεν υπήρχαν.
+ * Η κλίμακα όπως ήταν. Νέα κλίμακα πάνω σε παλιά: αρκεί **μία** εντολή (η ξανακλιμάκωση αντιστρέφεται — θέσεις και σχήματα
+ * ξαναγυρίζουν στο ίδιο pixel)· χωρίς προηγούμενη κλίμακα θέσεις δεν υπήρχαν. 🔴 Όμως **σβήσιμο** της κλίμακας (X → `null`)
+ * σβήνει θέσεις και σχήματα ⇒ η αναίρεση τα ξαναβάζει (ως τη Γ3β εδώ επέστρεφε μόνο την κλίμακα — οι θέσεις χάνονταν).
  */
-function restoreCalibration(before: Graph, key: TourLevelKey): readonly TourGraphCommand[] | null {
+function restoreCalibration(before: Graph, key: TourLevelKey, after: number | null): readonly TourGraphCommand[] | null {
   const metresPerPixel = scaleBefore(before, key);
-  return metresPerPixel === undefined ? null : [{ op: 'calibrate', levelKey: key, metresPerPixel }];
+  if (metresPerPixel === undefined) return null;
+  const commands: TourGraphCommand[] = [{ op: 'calibrate', levelKey: key, metresPerPixel }];
+  if (after !== null || metresPerPixel === null) return commands;
+  return [...commands, ...restorePositions(before, key), ...restoreShapes(levelOf(before, key))];
 }
 
 /**
- * Η κάτοψη όπως ήταν, **με** την κλίμακα και τις θέσεις της (η αλλαγή κάτοψης τις έσβησε). Κάτοψη που δεν τη διαλέγει
- * άνθρωπος (σάρωση · εκτίμηση) δεν ξαναδιαλέγεται από φόρμα ⇒ καμία πιστή αναίρεση (`null`).
+ * Η κάτοψη όπως ήταν, **με** την κλίμακα, τις θέσεις και τα σχήματά της (η αλλαγή κάτοψης τα έσβησε). Κάτοψη που δεν τη
+ * διαλέγει άνθρωπος (σάρωση · εκτίμηση) δεν ξαναδιαλέγεται από φόρμα ⇒ καμία πιστή αναίρεση (`null`).
  */
 function restoreFloorPlan(before: Graph, key: TourLevelKey): readonly TourGraphCommand[] | null {
-  const level = before.levels?.find((l) => levelKeyId(l.key) === levelKeyId(key));
+  const level = levelOf(before, key);
   const active = level === undefined ? null : activeFloorPlan(level);
   if (active === null) return null;
   if (active.source === 'none' || active.fileId === null) return [{ op: 'floorplan', levelKey: key, plan: null }];
   if (!isFloorPlanDeclarableSource(active.source)) return null;
   const commands: TourGraphCommand[] = [{ op: 'floorplan', levelKey: key, plan: { fileId: active.fileId, source: active.source } }];
   if (active.scale != null) commands.push({ op: 'calibrate', levelKey: key, metresPerPixel: active.scale.metresPerPixel });
-  return [...commands, ...restorePositions(before, key)];
+  return [...commands, ...restorePositions(before, key), ...restoreShapes(level)];
 }

@@ -28,6 +28,7 @@ import type { TourCameraStore } from './tour-camera-store';
 import type { TourPanoramaSource } from './tour-panorama-source';
 import { usePlanView, type TourPlanZoomStore } from './tour-plan-zoom-store';
 import { TourPlanMap } from './TourPlanMap';
+import { TourPlanAreaNote } from './TourPlanSpaces';
 import { TourPlanZoomBar } from './TourPlanZoomBar';
 import type { PlanWheelMode } from './usePlanZoomGestures';
 
@@ -84,11 +85,13 @@ export function TourPlanCard({ label, onGo, ...props }: TourPlanCardProps) {
     <>
       <PlanSurface {...common} onGo={onGo} wheelMode="modifier" className="m-0 aspect-[4/3] w-full overflow-hidden rounded-md bg-muted" />
       <TourPlanZoomBar levelId={props.level.id} frame={frame} store={props.zoomStore} onExpand={() => setExpanded(true)} />
+      {showsImage && <TourPlanAreaNote level={props.level} areas={props.graph.spaceAreas} />}
       <Dialog open={expanded} onOpenChange={setExpanded}>
         <DialogContent size="fullscreen" className="flex flex-col gap-2 p-4" aria-describedby={undefined}>
           <DialogTitle className="m-0 text-base">{label}</DialogTitle>
           <PlanSurface {...common} onGo={goAndClose} wheelMode="always" className="m-0 min-h-0 flex-1 overflow-hidden rounded-md bg-muted" />
           <TourPlanZoomBar levelId={props.level.id} frame={frame} store={props.zoomStore} />
+          {showsImage && <TourPlanAreaNote level={props.level} areas={props.graph.spaceAreas} />}
         </DialogContent>
       </Dialog>
     </>

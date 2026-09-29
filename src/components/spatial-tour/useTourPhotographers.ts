@@ -15,7 +15,7 @@ import { useCallback, useState } from 'react';
 
 import { useReconciledResource } from '@/hooks/useReconciledResource';
 
-import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import type { TourGeneralRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import {
   issueTourCaptureInvitationFromScreen,
   listTourCaptureGrantsFromScreen,
@@ -38,7 +38,7 @@ export type PhotographersLoad =
 /** Η έκβαση της τελευταίας πράξης — για το μήνυμα κάτω από τη φόρμα. */
 export type PhotographerActResult =
   | { readonly kind: 'issued'; readonly issued: IssuedTourCaptureInvitation }
-  | { readonly kind: 'refused'; readonly reason: TourRefusalName }
+  | { readonly kind: 'refused'; readonly reason: TourGeneralRefusal }
   | { readonly kind: 'failed' };
 
 async function loadPhotographers(subject: TourSubject): Promise<PhotographersLoad> {

@@ -11,15 +11,17 @@
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { TourGraphCommand, TourGraphEditResponse, TourPlanCandidate } from '@/lib/spatial-tour/tour-graph-edit';
+import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourSubject } from '@/types/spatial-tour';
 
-import { tourCall, type TourCallResult } from './spatial-tour.client';
+import { tourCall, tourGraphCall, type TourCallResult } from './spatial-tour.client';
 
+/** Ο γράφος λέει **και** τις αρνήσεις σχημάτων (Γ3γ-1) — τις χαρτογραφεί ο επεξεργαστής (`TOUR_SHAPE_REFUSAL_KEY`). */
 export function editTourGraphFromScreen(
   subject: TourSubject,
   command: TourGraphCommand,
-): Promise<TourCallResult<TourGraphEditResponse>> {
-  return tourCall(() => apiClient.post<TourGraphEditResponse>(API_ROUTES.SPATIAL_TOURS.GRAPH(subject.kind, subject.id), command));
+): Promise<TourCallResult<TourGraphEditResponse, TourRefusalName>> {
+  return tourGraphCall(() => apiClient.post<TourGraphEditResponse>(API_ROUTES.SPATIAL_TOURS.GRAPH(subject.kind, subject.id), command));
 }
 
 /** Οι κατόψεις του ακινήτου που μπορεί να πάρει η περιήγηση (Φ2στ-β · §4.13) — ό,τι θα δεχτεί και ο γραφέας. */

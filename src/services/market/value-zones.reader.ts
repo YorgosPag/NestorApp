@@ -15,10 +15,10 @@ import 'server-only';
  * ⚠️ **Όριο μνήμης (LRU)**: 1.033 αρχεία, διάμεσος 10 KB, μέγιστο ~200 KB (Αθήνα) — οι αγγελίες συγκεντρώνονται.
  */
 
+import { strictJsonShape } from '@/lib/data/json-shape';
 import {
   createKeyedServerJsonFiles,
   createServerJsonFile,
-  strictJsonShape,
   warnOnJsonFailure,
 } from '@/lib/data/server-json-file';
 import {

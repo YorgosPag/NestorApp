@@ -36,6 +36,7 @@ import { RegionBoundaryChip } from './RegionBoundaryChip';
 import { DrawAreaToolbar } from './draw/DrawAreaToolbar';
 import { DrawnAreaChip } from './draw/DrawnAreaChip';
 import { SaveSearchButton } from './save-search/SaveSearchButton';
+import { LazyPriceMapControl } from './price-map/price-map-entry';
 
 interface MapAreaChromeProps {
   readonly mapArea: MapAreaSearch;
@@ -114,6 +115,7 @@ export function MapAreaChrome({ mapArea, region, session, filters, listings, cov
       regionChip={areaChip({ session, region, drawn, mapArea, previewCount })}
       drawButton={<DrawAreaButton onStart={() => session.start(null)} />}
       saveButton={session.active ? null : <SaveSearchButton />}
+      layerControl={session.active ? null : <LazyPriceMapControl />}
     />
   );
 }

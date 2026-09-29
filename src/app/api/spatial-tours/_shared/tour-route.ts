@@ -151,6 +151,17 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   'plan-not-eligible': 422,
   'position-outside-plan': 422,
   'scale-invalid': 422,
+  // ── Τα σχήματα των χώρων (Φ2στ-γ Γ3β · §4.14) ─────────────────────────────
+  /** Λίγες/πολλές κορυφές · αυτοτομή · εμβαδόν κάτω από το ελάχιστο · άγνωστη πηγή. */
+  'space-invalid': 422,
+  'space-outside-plan': 422,
+  /** Επικαλύπτει άλλον εγκεκριμένο χώρο του ορόφου (Revit «Room overlaps») — κατάσταση, όχι σχήμα ⇒ 409. */
+  'space-overlap': 409,
+  'space-absent': 404,
+  /** Δηλωμένο εμβαδόν μη θετικό, πάνω από το όριο, ή χωρίς γνωστή πηγή (Δ8.4). */
+  'area-invalid': 422,
+  'separation-invalid': 422,
+  'separation-absent': 404,
   'graph-full': 409,
 };
 

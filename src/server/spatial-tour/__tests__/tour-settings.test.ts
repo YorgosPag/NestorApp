@@ -56,6 +56,12 @@ beforeEach(() => {
 
 const settings = (visibility: 'public' | 'on-request' | 'link-only', lifecycle: 'draft' | 'published' | 'withdrawn') =>
   ({ visibility, lifecycle }) as const;
+/** Ό,τι επιστρέφει η υπηρεσία — με τον διακόπτη εμβαδών λυμένο (Γ3β · Δ8.4: απών ⇒ `shown`). */
+const full = (
+  visibility: 'public' | 'on-request' | 'link-only',
+  lifecycle: 'draft' | 'published' | 'withdrawn',
+  spaceAreaDisplay: 'shown' | 'hidden' = 'shown',
+) => ({ visibility, lifecycle, spaceAreaDisplay }) as const;
 
 describe('Ρ — οι ρυθμίσεις', () => {
   it('Ρ1 — ξένος ⇒ not-manager, καμία εγγραφή', async () => {
@@ -77,16 +83,17 @@ describe('Ρ — οι ρυθμίσεις', () => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
     kit.seedCollection(CAPTURES, { tcap_1: capture() });
     const target = settings('on-request', 'published');
-    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: target })).toEqual({ kind: 'updated', settings: target });
+    const resolved = full('on-request', 'published');
+    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: target })).toEqual({ kind: 'updated', settings: resolved });
     expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ visibility: 'on-request', lifecycle: 'published', updatedBy: 'boris' });
     kit.clearWrites();
-    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: target })).toEqual({ kind: 'unchanged', settings: target });
+    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: target })).toEqual({ kind: 'unchanged', settings: resolved });
     expect(kit.writes()).toEqual([]);
   });
 
   it('Ρ4 — η επιλογή ορατότητας ΓΕΝΝΑ την περιήγηση (πρώτη πράξη), πάντα ως πρόχειρη', async () => {
     const outcome = await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: settings('link-only', 'draft') });
-    expect(outcome).toEqual({ kind: 'updated', settings: settings('link-only', 'draft') });
+    expect(outcome).toEqual({ kind: 'updated', settings: full('link-only', 'draft') });
     expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ visibility: 'link-only', lifecycle: 'draft' });
   });
 
@@ -129,10 +136,24 @@ describe('Ρ — οι ρυθμίσεις', () => {
     kit.clearWrites();
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: MANAGER }))
       .toEqual({
-        kind: 'read', tourId: TOUR_ID, settings: { visibility: 'public', lifecycle: 'draft' }, exists: false,
+        kind: 'read', tourId: TOUR_ID, settings: full('public', 'draft'), exists: false,
         viewerStopCount: 0, supportedVisibilities: ['public', 'on-request', 'link-only'],
       });
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: STRANGER })).toEqual({ kind: 'refused', reason: 'not-manager' });
+    expect(kit.writes()).toEqual([]);
+  });
+
+  // Γ3β · Δ8.4 — ο διακόπτης εμβαδών: ρύθμιση, όχι γράφος (το `revision` δεν αγγίζεται).
+  it('Ρ9 — εμβαδά: «απόκρυψη» γράφεται· αίτημα ΧΩΡΙΣ το πεδίο (παλιά καρτέλα) δεν τον γυρίζει σιωπηλά', async () => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
+    expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: MANAGER }))
+      .toMatchObject({ kind: 'read', settings: full('public', 'draft') });
+    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: full('public', 'draft', 'hidden') }))
+      .toEqual({ kind: 'updated', settings: full('public', 'draft', 'hidden') });
+    expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ spaceAreaDisplay: 'hidden', revision: 0 });
+    kit.clearWrites();
+    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: settings('public', 'draft') }))
+      .toEqual({ kind: 'unchanged', settings: full('public', 'draft', 'hidden') });
     expect(kit.writes()).toEqual([]);
   });
 });

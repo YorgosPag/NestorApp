@@ -29,13 +29,17 @@ import {
   isTourCaptureAudience,
   isTourCaptureProvenance,
   isTourCaptureSource,
+  isTourDeclaredAreaSource,
   isTourGrantScope,
   isTourHeadingSource,
   isTourLinkVia,
   isTourMilestone,
   isTourRoomSource,
+  isTourSpaceAreaDisplay,
+  isTourSpaceSource,
   isTourTilesetState,
 } from '@/constants/spatial-tour-vocabulary';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { text } from '@/lib/agency/showcase-read-primitives';
 import { normalizeToISO } from '@/lib/date-local';
 import { readSignatory } from '@/lib/listings/model-declaration-metadata';
@@ -56,12 +60,15 @@ import type {
   TourCaptureInvitation,
   TourCaptureSignatory,
   TourCaptureTileset,
+  TourDeclaredArea,
   TourLevel,
   TourLevelKey,
   TourLink,
   TourNode,
   TourPoint,
   TourRoom,
+  TourSeparationLine,
+  TourSpaceOutline,
   TourSubject,
 } from '@/types/spatial-tour';
 
@@ -124,11 +131,57 @@ function readFloorPlan(raw: unknown): FloorPlanRecord | null {
   };
 }
 
+// ── Σχήματα χώρων (Γ3β): λείπει ⇒ κανένα· υπάρχει αλλά δεν διαβάζεται ⇒ ο όροφος (άρα η περιήγηση) `null` ──
+
+function readPlanar(raw: unknown): PlanarPoint | null {
+  return isRecord(raw) && isFiniteNumber(raw.x) && isFiniteNumber(raw.y) ? { x: raw.x, y: raw.y } : null;
+}
+
+function readDeclaredArea(raw: unknown): TourDeclaredArea | null | undefined {
+  if (raw === undefined || raw === null) return null;
+  if (!isRecord(raw) || !isPositiveNumber(raw.areaM2) || !isTourDeclaredAreaSource(raw.source)) return undefined;
+  const declaredBy = text(raw.declaredBy);
+  const declaredAt = normalizeToISO(raw.declaredAt);
+  return declaredBy === null || declaredAt === null ? undefined : { areaM2: raw.areaM2, source: raw.source, declaredBy, declaredAt };
+}
+
+function readSpace(raw: unknown): TourSpaceOutline | null {
+  if (!isRecord(raw) || !isTourSpaceSource(raw.source)) return null;
+  const [id, approvedBy, approvedAt] = [text(raw.id), text(raw.approvedBy), normalizeToISO(raw.approvedAt)];
+  const points = readAll(raw.points, readPlanar);
+  const room = readRoom(raw.room);
+  const declaredArea = readDeclaredArea(raw.declaredArea);
+  if (id === null || approvedBy === null || approvedAt === null || points === null || points.length < 3) return null;
+  if (room === undefined || declaredArea === undefined) return null;
+  return {
+    id, points, source: raw.source, approvedBy, approvedAt,
+    ...(room === null ? {} : { room }),
+    ...(declaredArea === null ? {} : { declaredArea }),
+  };
+}
+
+function readSeparation(raw: unknown): TourSeparationLine | null {
+  if (!isRecord(raw)) return null;
+  const [id, approvedBy, approvedAt] = [text(raw.id), text(raw.approvedBy), normalizeToISO(raw.approvedAt)];
+  const [a, b] = [readPlanar(raw.a), readPlanar(raw.b)];
+  return id === null || approvedBy === null || approvedAt === null || a === null || b === null ? null : { id, a, b, approvedBy, approvedAt };
+}
+
+/** Προαιρετικός πίνακας: λείπει ⇒ `[]` · δεν διαβάζεται (ή κάποιο στοιχείο του) ⇒ `null`. */
+const readOptionalAll = <T>(raw: unknown, read: (item: unknown) => T | null): T[] | null => (raw === undefined ? [] : readAll(raw, read));
+
 function readLevel(raw: unknown): TourLevel | null {
   if (!isRecord(raw)) return null;
   const key = readLevelKey(raw.key);
   const floorPlans = readAll(raw.floorPlans, readFloorPlan);
-  return key === null || floorPlans === null ? null : { key, floorPlans };
+  const spaces = readOptionalAll(raw.spaces, readSpace);
+  const separations = readOptionalAll(raw.separations, readSeparation);
+  if (key === null || floorPlans === null || spaces === null || separations === null) return null;
+  return {
+    key, floorPlans,
+    ...(spaces.length > 0 ? { spaces } : {}),
+    ...(separations.length > 0 ? { separations } : {}),
+  };
 }
 
 function readPoint(raw: unknown): TourPoint | null | undefined {
@@ -176,10 +229,13 @@ export function spatialTourFromDocument(raw: unknown, id: string): SpatialTour |
   if (!isSpatialTourVisibility(raw.visibility) || !isSpatialTourLifecycle(raw.lifecycle)) return null;
   if (!Number.isInteger(raw.revision) || (raw.revision as number) < 0) return null;
   if (createdAt === null || updatedAt === null || createdBy === null || updatedBy === null) return null;
+  // Εμβαδά χώρων (Δ8.4): λείπει ⇒ `shown` (παλιά έγγραφα)· υπάρχει αλλά άγνωστο ⇒ δεν διαβάζεται.
+  if (raw.spaceAreaDisplay !== undefined && !isTourSpaceAreaDisplay(raw.spaceAreaDisplay)) return null;
   return {
     id, custody, subject, levels, nodes,
     visibility: raw.visibility,
     lifecycle: raw.lifecycle,
+    ...(raw.spaceAreaDisplay === undefined ? {} : { spaceAreaDisplay: raw.spaceAreaDisplay }),
     revision: raw.revision as number,
     createdAt, createdBy, updatedAt, updatedBy,
   };

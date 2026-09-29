@@ -33,14 +33,10 @@ import {
 } from '../src/lib/market/value-zone-file';
 import { REPO_ROOT } from './lib/admin-boundaries/admin-boundary-source';
 import { createFsAdminAreaLookup } from './lib/admin-boundaries/admin-area-lookup';
-import { loadCachedSource } from './lib/cached-download';
 import { assignZonesToAreas, type AreaZones } from './lib/value-zones/zone-areas';
 import { unionBbox } from './lib/value-zones/zone-geometry';
+import { VALUE_ZONES_RUN_SUMMARY_PATH, loadValueZonesSource, type ValueZonesRunSummary } from './lib/value-zones/zone-download';
 import { readZoneSource } from './lib/value-zones/zone-source';
-
-/** Ο πόρος shp του συνόλου δεδομένων (ADR-889 §2.3). Η σελίδα του συνόλου ζει στο `OPEN_DATA_SOURCES.valueZones`. */
-const SOURCE_URL =
-  'https://data.gov.gr/dataset/1fcf3d7d-e9f3-423d-83ff-59b930aa18f8/resource/7bba2acd-1aea-49f3-badb-60a7961d1b1a/download/zones_for_data_gov_gr.zip';
 
 /**
  * **Εγγυημένη μέγιστη απόκλιση, σε μέτρα.** Οι ζώνες ακολουθούν άξονες δρόμων: 2 m είναι κάτω από το μισό πλάτος του
@@ -49,7 +45,6 @@ const SOURCE_URL =
 const TOLERANCE_M = 2;
 
 const OUTPUT_DIR = join(REPO_ROOT, 'public', VALUE_ZONES_DIR);
-const CACHE_PATH = join(REPO_ROOT, 'node_modules', '.cache', 'value-zones', 'zones_for_data_gov_gr.zip');
 
 // ─── Συγχώνευση: ίδια ζώνη σε πολλές εγγραφές (4 διπλά id επιφανειών · μέτωπα ανά τμήμα δρόμου) ───
 
@@ -139,7 +134,7 @@ function reportSizes(): void {
 
 async function main(): Promise<void> {
   console.log('▶ build:value-zones');
-  const cached = await loadCachedSource({ url: SOURCE_URL, path: CACHE_PATH, label: 'ζώνες ΥΠΕΘΟΟ', refresh: process.argv.includes('--refresh') });
+  const cached = await loadValueZonesSource(process.argv.includes('--refresh'));
   const source = readZoneSource(readFileSync(cached.path));
   console.log(`  πηγή: ${source.zones.length} επιφάνειες · ${source.fronts.length} τμήματα μετώπων (${OPEN_DATA_SOURCES.valueZones.datasetUrl})`);
 
@@ -150,6 +145,15 @@ async function main(): Promise<void> {
   const zoneCount = files.reduce((sum, file) => sum + file.zones.length, 0);
   const frontCount = files.reduce((sum, file) => sum + file.fronts.length, 0);
   console.log(`  έξοδος: ${files.length} περιοχές · ${zoneCount} ζώνες · ${frontCount} μέτωπα (ανά δρόμο)`);
+  // Η σύνοψη για την πύλη της ανανέωσης (ADR-889 §11) — στην cache, ΟΧΙ στο `public/`.
+  const summary: ValueZonesRunSummary = {
+    areas: files.length,
+    zones: zoneCount,
+    fronts: frontCount,
+    unassigned: report.unassigned.length,
+    collapsed: report.collapsed.length,
+  };
+  writeFileSync(VALUE_ZONES_RUN_SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
   console.log(`  χωρίς περιοχή: ${report.unassigned.length} ${JSON.stringify(report.unassigned.slice(0, 20))}`);
   console.log(`  μικρότερες από την ανοχή: ${report.collapsed.length} ${JSON.stringify(report.collapsed.slice(0, 20))}`);
   reportSizes();

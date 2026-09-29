@@ -63,6 +63,8 @@ import { ResultsList } from './ResultsList';
 import { ResultsListHeader } from './ResultsListHeader';
 import { ResultsOrderControl, ResultsOrderNote } from './filters/ResultsOrderControl';
 import { ResultsMap } from './ResultsMap';
+import { PriceMapProvider } from './price-map/PriceMapProvider';
+import { PriceMapMapLayer } from './price-map/price-map-entry';
 import { ResultsSheet } from './ResultsSheet';
 import { StayTotalsProvider } from './StayTotalsContext';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
@@ -410,6 +412,8 @@ export function SearchResultsContent() {
             aria-label={t('search-results:map.label')}
             className="absolute inset-0 isolate md:static"
           >
+            {/* ADR-890 §14 — ο χάρτης τιμών: ένα μοντέλο για τη στρώση (παιδί του χάρτη) και τον διακόπτη (στη στήλη χειριστηρίων). */}
+            <PriceMapProvider criteria={filters.criteria}>
             {/*
               **Ο ΑΜΦΙΔΡΟΜΟΣ ΔΕΣΜΟΣ, ΟΛΟΚΛΗΡΟΣ** (Α3) — τέσσερα σύρματα, όχι δύο:
               hover στη λίστα → `peek` · hover στον χάρτη → `peek` · κλικ στον χάρτη →
@@ -438,6 +442,7 @@ export function SearchResultsContent() {
               boundaryPlace={region.status === 'ready' ? region.boundary.place : null}
             >
               <SearchAreaMapLayer session={draw} applied={searchDrawnArea(filters.near)} />
+              <PriceMapMapLayer />
             </ResultsMap>
 
             {/*
@@ -455,6 +460,7 @@ export function SearchResultsContent() {
               listings={listings}
               coverage={coverage}
             />
+            </PriceMapProvider>
           </section>
         </div>
       </StayTotalsProvider>

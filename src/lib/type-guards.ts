@@ -55,3 +55,21 @@ export function trimmedStringOrNull(value: unknown): string | null {
 export function isNonEmptyArray<T = unknown>(value: T[] | readonly T[] | null | undefined | unknown): value is T[] & { length: number; 0: T } {
   return Array.isArray(value) && value.length > 0;
 }
+
+/**
+ * Type guard: a JSON **object** — non-null and **not** an array.
+ *
+ * Stricter than `isRecord`: shape readers of stored/served JSON must not accept `[]` where an object is expected.
+ * @see ADR-889 §11 — extracted from the private copies of the market file readers (N.0.2)
+ */
+export function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Type guard: a finite number (rejects `NaN`, `±Infinity` and non-numbers).
+ * @see ADR-889 §11 — extracted from the private copies of the market file readers (N.0.2)
+ */
+export function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}

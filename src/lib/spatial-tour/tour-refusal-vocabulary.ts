@@ -30,6 +30,9 @@ export const TOUR_REFUSALS = [
   'room-invalid',
   // ── Η κάτοψη: εικόνα, κλίμακα, θέση, προσανατολισμός (Φ2στ-β) ──
   'plan-absent', 'plan-uncalibrated', 'plan-not-eligible', 'position-outside-plan', 'scale-invalid',
+  // ── Τα σχήματα των χώρων + οι νοητές γραμμές (Φ2στ-γ Γ3β) ──
+  'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'area-invalid',
+  'separation-invalid', 'separation-absent',
 ] as const;
 
 export type TourRefusalName = (typeof TOUR_REFUSALS)[number];
@@ -55,4 +58,29 @@ export type TourViewSessionRefusal = (typeof TOUR_VIEW_SESSION_REFUSALS)[number]
 
 export function isTourViewSessionRefusal(value: TourRefusalName): value is TourViewSessionRefusal {
   return (TOUR_VIEW_SESSION_REFUSALS as readonly TourRefusalName[]).includes(value);
+}
+
+/**
+ * **Οι αρνήσεις του ΓΡΑΦΕΑ ΣΧΗΜΑΤΩΝ** (ADR-884 Φ2στ-γ Γ3γ-1 · AIP-193) — τις λέει **μόνο** το `POST …/graph` στις εντολές
+ * `space/unspace/separate/unseparate`, άρα τις χαρτογραφεί **μόνο** ο επεξεργαστής (πίσω από `next/dynamic`).
+ * 🔑 Μετρημένο 2026-09-28 (CHECK 3.34): στον ενιαίο πίνακα οι λέξεις τους (~1 KB) ανέβαζαν το slice των σελίδων ρυθμίσεων
+ * και φωτογράφου πάνω από το ταβάνι — για αρνήσεις που εκεί **δεν φτάνουν ποτέ**. Ο γενικός αναγνώστης της οθόνης
+ * (`tourCall`) τις αντιμετωπίζει ως «έξω από το συμβόλαιο» ⇒ γενικό μήνυμα.
+ */
+export const TOUR_SHAPE_REFUSALS = [
+  'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'area-invalid',
+  'separation-invalid', 'separation-absent',
+] as const satisfies readonly TourRefusalName[];
+
+export type TourShapeRefusal = (typeof TOUR_SHAPE_REFUSALS)[number];
+
+/** Κάθε άρνηση **εκτός** του γραφέα σχημάτων — το λεξιλόγιο όλων των άλλων οθονών. */
+export type TourGeneralRefusal = Exclude<TourRefusalName, TourShapeRefusal>;
+
+export function isTourShapeRefusal(value: TourRefusalName): value is TourShapeRefusal {
+  return (TOUR_SHAPE_REFUSALS as readonly TourRefusalName[]).includes(value);
+}
+
+export function isTourGeneralRefusal(value: TourRefusalName): value is TourGeneralRefusal {
+  return !isTourShapeRefusal(value);
 }

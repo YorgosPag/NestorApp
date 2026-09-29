@@ -8,37 +8,39 @@
  *   `lib/spatial-tour/tour-graph-inverse.ts`
  * @module components/spatial-tour/editor/useTourEditorActions
  *
- * 🔑 **Βελάκι · αποσύνδεση · χώρος · θέση · προσανατολισμός = αισιόδοξα** (πρότυπο Gmail): η αλλαγή φαίνεται αμέσως με τη
- *   **ΜΙΑ** καθαρή συνάρτηση του γραφέα, και μετά έρχεται η αλήθεια του διακομιστή (ξαναφόρτωση). Άρνηση ⇒ επαναφορά +
- *   ονομασμένο μήνυμα.
- * 🔑 **Τοποθέτηση · αφαίρεση · κάτοψη · κλίμακα = κλειδωμένα**: νέο id στον διακομιστή (N.6) · εικόνα που ετοιμάζει ο
- *   διακομιστής · ξανακλιμάκωση όλου του ορόφου. Μια αισιόδοξη εικόνα εδώ θα ήταν δεύτερη αλήθεια.
- * 🔑 **Αναίρεση = νέες εντολές μέσα από τον ίδιο γραφέα** (`inverseOf`), ποτέ τοπική στοίβα καταστάσεων.
+ * 🔑 **Βελάκι · αποσύνδεση · χώρος σημείου · θέση · προσανατολισμός · αλλαγή/αφαίρεση σχήματος χώρου = αισιόδοξα** (πρότυπο
+ *   Gmail/Figma): η αλλαγή φαίνεται αμέσως με τη **ΜΙΑ** καθαρή συνάρτηση του γραφέα (`tour-editor-optimistic.ts`), και μετά
+ *   έρχεται η αλήθεια του διακομιστή (ξαναφόρτωση). Άρνηση ⇒ επαναφορά + ονομασμένο μήνυμα.
+ * 🔑 **Τοποθέτηση · αφαίρεση · κάτοψη · κλίμακα · ΝΕΟ σχήμα = κλειδωμένα**: νέο id στον διακομιστή (N.6) · εικόνα που
+ *   ετοιμάζει ο διακομιστής · ξανακλιμάκωση όλου του ορόφου. Μια αισιόδοξη εικόνα εδώ θα ήταν δεύτερη αλήθεια.
+ * 🔑 **Αναίρεση = νέες εντολές μέσα από τον ίδιο γραφέα** (`inverseOf`), ποτέ τοπική στοίβα καταστάσεων. Το «πριν» είναι ο
+ *   γράφος της οθόνης **με** τα σχήματα χώρων (Γ3γ-1) — αλλιώς η αναίρεση αλλαγής/αφαίρεσης χώρου δεν θα είχε τι να ξαναγράψει.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import {
-  linkNodes,
-  nameNode,
-  unlinkNodes,
-  type TourFloorPlanPick,
-  type TourGraphCommand,
-  type TourPlacementTarget,
+import { optimisticGraph, type OptimisticCaptureOf } from '@/lib/spatial-tour/tour-editor-optimistic';
+import type {
+  TourFloorPlanPick,
+  TourGraphCommand,
+  TourPlacementTarget,
+  TourPlanXY,
+  TourSpaceDraft,
 } from '@/lib/spatial-tour/tour-graph-edit';
 import { inverseOf } from '@/lib/spatial-tour/tour-graph-inverse';
-import { orientNode, positionNode } from '@/lib/spatial-tour/tour-plan-edit';
+import { isTourShapeRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourRoomInput } from '@/lib/spatial-tour/tour-room';
-import { graphLevelsOfViewer } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
+import { graphLevelsOfViewer, viewerLevelsOf } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { editTourGraphFromScreen } from '@/services/spatial-tour/spatial-tour-graph.client';
-import type { SpatialTour, TourCapture, TourLevelKey, TourNode, TourSubject } from '@/types/spatial-tour';
+import type { SpatialTour, TourLevelKey, TourSubject } from '@/types/spatial-tour';
 
 import { TOUR_REFUSAL_KEY } from '../spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
-import type { TourEditorDataHandle } from './useTourEditorData';
+import { TOUR_SHAPE_KEYS, TOUR_SHAPE_REFUSAL_KEY } from './tour-shape-labels';
+import type { TourEditorDataHandle, TourEditorGraphData } from './useTourEditorData';
 
 export interface TourEditorActions {
   /** Κλειδωμένη πράξη σε εξέλιξη — οι φόρμες κλειδώνουν. */
@@ -57,25 +59,25 @@ export interface TourEditorActions {
   readonly position: (nodeId: string, point: { readonly x: number; readonly y: number } | null) => void;
   /** Κατεύθυνση λήψης κόσμου — στρέφει και τα βελάκια του σημείου. */
   readonly orient: (captureId: string, headingRad: number) => void;
+  /**
+   * Έγκριση περιγράμματος χώρου (Γ3β) — `spaceId === null` ⇒ νέος (**κλειδωμένο**: το id το κόβει ο διακομιστής, N.6)·
+   * αλλαγή υπάρχοντος ⇒ αισιόδοξα, με την **ίδια** κρίση (και επικάλυψης) που θα κάνει ο διακομιστής.
+   */
+  readonly space: (levelKey: TourLevelKey, spaceId: string | null, space: TourSpaceDraft) => Promise<boolean>;
+  readonly unspace: (levelKey: TourLevelKey, spaceId: string) => Promise<boolean>;
+  /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα (κλειδωμένο), αλλιώς αισιόδοξα. */
+  readonly separate: (levelKey: TourLevelKey, separationId: string | null, a: TourPlanXY, b: TourPlanXY) => Promise<boolean>;
+  readonly unseparate: (levelKey: TourLevelKey, separationId: string) => Promise<boolean>;
 }
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
-type CaptureOf = (captureId: string) => Pick<TourCapture, 'headingRad' | 'nodeId'> | undefined;
 
-function optimisticOrient(graph: Graph, command: Extract<TourGraphCommand, { op: 'orient' }>, captureOf: CaptureOf) {
-  const capture = captureOf(command.captureId);
-  if (capture === undefined || capture.nodeId === null) return null;
-  return orientNode(graph, capture.nodeId, command.headingRad - capture.headingRad);
-}
+/** Ο διαχειριστής βλέπει όλα — ίδια προβολή με το μανιφέστο που του στέλνει ο διακομιστής (`manifestOf`). */
+const EDITOR_PROJECTION = { areas: 'shown' } as const;
 
-/** Η αισιόδοξη εικόνα μιας εντολής — `null` για ό,τι δεν εφαρμόζεται αισιόδοξα. */
-function optimisticNodes(command: TourGraphCommand, graph: Graph, captureOf: CaptureOf): readonly TourNode[] | null {
-  const result = command.op === 'link' ? linkNodes(graph, command.fromNodeId, command.toNodeId, command.bearingRad)
-    : command.op === 'unlink' ? unlinkNodes(graph, command.fromNodeId, command.toNodeId)
-    : command.op === 'name' ? nameNode(graph, command.nodeId, command.room)
-    : command.op === 'position' ? positionNode(graph, command.nodeId, command.point)
-    : command.op === 'orient' ? optimisticOrient(graph, command, captureOf) : null;
-  return result?.kind === 'edited' ? result.graph.nodes : null;
+/** Ο γράφος των καθαρών εντολών ⇒ τα δεδομένα της οθόνης (το αντίστροφο του `useEditorGraph`). */
+function screenGraphOf(graph: Graph): TourEditorGraphData {
+  return { nodes: graph.nodes, levels: viewerLevelsOf(graph.levels, EDITOR_PROJECTION) };
 }
 
 const SUCCESS_KEY: Record<TourGraphCommand['op'], string> = {
@@ -88,14 +90,29 @@ const SUCCESS_KEY: Record<TourGraphCommand['op'], string> = {
   calibrate: TOUR_EDITOR_KEYS.planCalibrated,
   position: TOUR_EDITOR_KEYS.pointPositioned,
   orient: TOUR_EDITOR_KEYS.pointOriented,
+  space: TOUR_SHAPE_KEYS.spaceApproved,
+  unspace: TOUR_SHAPE_KEYS.spaceRemoved,
+  separate: TOUR_SHAPE_KEYS.separationSaved,
+  unseparate: TOUR_SHAPE_KEYS.separationRemoved,
 };
 
-/** Ο γράφος της οθόνης (κόμβοι + ενεργές κατόψεις) και οι λήψεις — `null` πριν φορτωθεί. */
-function useEditorGraph(load: TourEditorDataHandle['load']): { readonly graph: Graph; readonly captureOf: CaptureOf } | null {
+interface EditorGraph {
+  readonly graph: Graph;
+  /** Τα δεδομένα της οθόνης **όπως ήρθαν** — η επαναφορά μετά από άρνηση. */
+  readonly screen: TourEditorGraphData;
+  readonly captureOf: OptimisticCaptureOf;
+}
+
+/** Ο γράφος της οθόνης (κόμβοι + όροφοι με κατόψεις **και σχήματα χώρων**) και οι λήψεις — `null` πριν φορτωθεί. */
+function useEditorGraph(load: TourEditorDataHandle['load']): EditorGraph | null {
   return useMemo(() => {
     if (load.kind !== 'loaded') return null;
     const { nodes, levels, captures } = load.data;
-    return { graph: { nodes, levels: graphLevelsOfViewer(levels) }, captureOf: (id: string) => captures.find((c) => c.id === id) };
+    return {
+      graph: { nodes, levels: graphLevelsOfViewer(levels) },
+      screen: { nodes, levels },
+      captureOf: (id: string) => captures.find((c) => c.id === id),
+    };
   }, [load]);
 }
 
@@ -104,7 +121,7 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
   const { success, error } = useNotifications();
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(0);
-  const { reload, setNodes } = data;
+  const { reload, setGraph } = data;
   const editor = useEditorGraph(data.load);
 
   const runUndo = useCallback(async (commands: readonly TourGraphCommand[]) => {
@@ -117,26 +134,30 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
 
   const send = useCallback(async (command: TourGraphCommand): Promise<boolean> => {
     if (editor === null) return false;
-    const { graph, captureOf } = editor;
-    const optimistic = optimisticNodes(command, graph, captureOf);
-    if (optimistic !== null) setNodes(optimistic);
+    const { graph, screen, captureOf } = editor;
+    const optimistic = optimisticGraph(command, graph, captureOf);
+    if (optimistic !== null) setGraph(screenGraphOf(optimistic));
     inFlight.current += 1;
     const result = await editTourGraphFromScreen(subject, command);
     inFlight.current -= 1;
     if (result.kind !== 'ok') {
       // Επαναφορά μόνο αν καμία άλλη αλλαγή δεν πέρασε στο μεταξύ — αλλιώς η αλήθεια έρχεται από τη φόρτωση.
-      if (optimistic !== null && inFlight.current === 0) setNodes(graph.nodes);
-      error(t(result.kind === 'refused' ? TOUR_REFUSAL_KEY[result.reason] : TOUR_EDITOR_KEYS.saveFailed));
+      if (optimistic !== null && inFlight.current === 0) setGraph(screen);
+      const reason = result.kind === 'refused' ? result.reason : null;
+      error(t(reason === null ? TOUR_EDITOR_KEYS.saveFailed
+        : isTourShapeRefusal(reason) ? TOUR_SHAPE_REFUSAL_KEY[reason] : TOUR_REFUSAL_KEY[reason]));
       await reload();
       return false;
     }
-    const undo = result.value.changed ? inverseOf(command, graph, { headingOf: (id) => captureOf(id)?.headingRad }) : null;
+    const undo = result.value.changed
+      ? inverseOf(command, graph, { headingOf: (id) => captureOf(id)?.headingRad, createdId: result.value.createdId })
+      : null;
     success(t(SUCCESS_KEY[command.op]), undo === null ? undefined : {
       actions: [{ label: t(TOUR_EDITOR_KEYS.undo), onClick: () => void runUndo(undo) }],
     });
     await reload();
     return true;
-  }, [editor, subject, setNodes, reload, success, error, t, runUndo]);
+  }, [editor, subject, setGraph, reload, success, error, t, runUndo]);
 
   const locked = useCallback(async (command: TourGraphCommand) => {
     setBusy(true);
@@ -154,5 +175,10 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
     calibrate: (levelKey, metresPerPixel) => locked({ op: 'calibrate', levelKey, metresPerPixel }),
     position: (nodeId, point) => void send({ op: 'position', nodeId, point }),
     orient: (captureId, headingRad) => void send({ op: 'orient', captureId, headingRad }),
+    // Νέο σχήμα ⇒ κλειδωμένο (id στον διακομιστή)· αλλαγή/αφαίρεση υπάρχοντος ⇒ αισιόδοξα.
+    space: (levelKey, spaceId, space) => (spaceId === null ? locked : send)({ op: 'space', levelKey, spaceId, space }),
+    unspace: (levelKey, spaceId) => send({ op: 'unspace', levelKey, spaceId }),
+    separate: (levelKey, separationId, a, b) => (separationId === null ? locked : send)({ op: 'separate', levelKey, separationId, a, b }),
+    unseparate: (levelKey, separationId) => send({ op: 'unseparate', levelKey, separationId }),
   };
 }

@@ -1,0 +1,56 @@
+{
+  "toggle": {
+    "open": "Prices €/m²",
+    "close": "Close price map"
+  },
+  "title": "Prices by area",
+  "offerLabel": "Offer",
+  "source": {
+    "label": "Source",
+    "contracts": "Contracts",
+    "asking": "Asking",
+    "rentOnlyAsking": "Rentals have asking prices only: the transfer registry does not record leases."
+  },
+  "segmentLabel": "Property type",
+  "legend": {
+    "caption": "Median per area",
+    "below": "below {high}",
+    "range": "{low} – {high}",
+    "above": "{low} and above",
+    "inherited": "municipality value (few in the unit)",
+    "few": "fewer than {min}: no figure"
+  },
+  "status": {
+    "loading": "Loading prices…",
+    "unavailable": "Prices are not available right now.",
+    "none": "There is no asking-price summary yet.",
+    "geometryUnavailable": "Area boundaries are not available right now."
+  },
+  "count": {
+    "contracts": "{count, plural, one {# contract} other {# contracts}}",
+    "asking": "{count, plural, one {# listing} other {# listings}}"
+  },
+  "asOf": {
+    "contracts": "12-month contracts up to {date}",
+    "asking": "Asking prices of {date}"
+  },
+  "selection": {
+    "hint": "Tap an area to see its price.",
+    "own": "{name}: {price} ({count})",
+    "parent": "{name}: few data ({count}). {parentName}: {price} ({parentCount})",
+    "few": "{name}: fewer than {min} ({count}), no figure",
+    "link": "Area analysis"
+  },
+  "table": {
+    "summary": "{count, plural, one {# area on screen} other {# areas on screen}}",
+    "limited": "the {shown} most expensive",
+    "caption": "Median per area on screen, most expensive first",
+    "area": "Area",
+    "price": "Median",
+    "sample": "Sample",
+    "inherited": "municipality value",
+    "few": "few",
+    "empty": "No area on screen."
+  },
+  "note": "Median price per m² of the area. Not a property valuation."
+}

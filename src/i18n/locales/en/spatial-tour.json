@@ -77,6 +77,13 @@
     "planNotEligible": "This file is not a floor plan of the property in image format (JPG, PNG, WebP).",
     "positionOutsidePlan": "The point must be on the floor plan.",
     "scaleInvalid": "The scale is not valid. Mark two different points and a distance greater than zero.",
+    "spaceInvalid": "The room outline is not valid: its sides must not cross and the room must have an area.",
+    "spaceOutsidePlan": "All corners of the room must be on the floor plan.",
+    "spaceOverlap": "The room overlaps another room on this floor. Adjust one of the two outlines.",
+    "spaceAbsent": "The room no longer exists. Refresh the page.",
+    "areaInvalid": "The declared area must be a positive number, with a source.",
+    "separationInvalid": "The separation line must be on the floor plan and have a length.",
+    "separationAbsent": "The separation line no longer exists. Refresh the page.",
     "graphFull": "The tour has reached its point limit."
   },
   "panel": {
@@ -188,6 +195,8 @@
   "viewing": {
     "settingsTitle": "Who sees the tour",
     "visibility": "Visibility",
+    "spaceAreas": "Room areas on the public page",
+    "spaceAreasHint": "On the floor plan, next to each room’s name: “≈” when measured on the floor plan, exact when declared with a source.",
     "lifecycle": "Status",
     "publish": "Publish",
     "withdraw": "Withdraw",
@@ -276,7 +285,16 @@
     "planExpand": "Expand floor plan to full screen",
     "planColumnHide": "Hide floor plan column",
     "planColumnShow": "Show floor plan column",
-    "resizeColumn": "Resize floor plan column"
+    "resizeColumn": "Resize floor plan column",
+    "spaceAreaMeasured": "≈ {area} m²",
+    "spaceAreaDeclared": "{area} m²",
+    "spaceAreaNote": "Areas with “≈”: net area measured on the floor plan, approximate. Without “≈”: declared, with its source.",
+    "spaceDeclaredFrom": "Declared area — {source}",
+    "declaredSource": {
+      "engineerStudy": "from an engineer’s study",
+      "siteMeasurement": "from an on-site measurement",
+      "ownerDeclared": "declared by the owner or agent"
+    }
   },
   "editor": {
     "description": "Put each panorama on a floor and a point, and use arrows to show where the next room is.",
@@ -359,7 +377,11 @@
     "planSuggest": "Align from the arrows",
     "planSuggestHint": "Computed from {count, plural, one {# arrow} other {# arrows}} to points with a position.",
     "planSuggestSpread": "The arrows disagree by up to {degrees}° — check positions and arrows.",
-    "pointOriented": "The direction was saved."
+    "pointOriented": "The direction was saved.",
+    "spaceApproved": "The room was approved.",
+    "spaceRemoved": "The room was removed.",
+    "separationSaved": "The separation line was saved.",
+    "separationRemoved": "The separation line was removed."
   },
   "rooms": {
     "types": {

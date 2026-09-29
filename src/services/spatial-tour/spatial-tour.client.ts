@@ -14,12 +14,20 @@ import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { TourCaptureInvitationView } from '@/app/api/spatial-tours/[kind]/[subjectId]/capture-invitations/route';
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import type { TourCaptureGrantView } from '@/server/spatial-tour/tour-capture-invitation';
-import { isTourRefusalName, type TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import {
+  isTourGeneralRefusal,
+  isTourRefusalName,
+  type TourGeneralRefusal,
+  type TourRefusalName,
+} from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { CORE_INVITATION_REFUSALS, type InvitationCoreRefusal } from '@/types/invitation-core';
 import type { TourCapture, TourSubject } from '@/types/spatial-tour';
 
-/** `R` = το λεξιλόγιο αρνήσεων **της κλήσης** (AIP-193) — εξ ορισμού όλο, στενότερο όπου η λειτουργία το δηλώνει. */
-export type TourCallResult<T, R extends TourRefusalName = TourRefusalName> =
+/**
+ * `R` = το λεξιλόγιο αρνήσεων **της κλήσης** (AIP-193) — εξ ορισμού όλο **εκτός** του γραφέα σχημάτων (Γ3γ-1), στενότερο
+ * όπου η λειτουργία το δηλώνει, πλήρες μόνο στον γράφο ({@link tourGraphCall}).
+ */
+export type TourCallResult<T, R extends TourRefusalName = TourGeneralRefusal> =
   | { readonly kind: 'ok'; readonly value: T }
   | { readonly kind: 'refused'; readonly reason: R }
   | { readonly kind: 'failed' };
@@ -35,14 +43,30 @@ function isInvitationCoreRefusal(value: unknown): value is InvitationCoreRefusal
   return typeof value === 'string' && (CORE_INVITATION_REFUSALS as readonly string[]).includes(value);
 }
 
-/** **Η ΜΙΑ περιτύλιξη κλήσης** — την μοιράζονται η ροή φωτογράφου και η θέαση (`spatial-tour-viewing.client.ts`). */
-export async function tourCall<T>(request: () => Promise<T>): Promise<TourCallResult<T>> {
+/** Ολόκληρο το λεξιλόγιο — το {@link refusalOf} έχει ήδη απορρίψει κάθε άγνωστο λόγο. */
+const anyTourRefusal = (_reason: TourRefusalName): _reason is TourRefusalName => true;
+
+/** Η κλήση με **ρητό** συμβόλαιο αρνήσεων — λόγος εκτός συμβολαίου ⇒ `failed`. */
+async function tourCallAs<T, R extends TourRefusalName>(
+  request: () => Promise<T>,
+  isContracted: (reason: TourRefusalName) => reason is R,
+): Promise<TourCallResult<T, R>> {
   try {
     return { kind: 'ok', value: await request() };
   } catch (cause: unknown) {
     const reason = refusalOf(cause);
-    return reason === null ? { kind: 'failed' } : { kind: 'refused', reason };
+    return reason === null || !isContracted(reason) ? { kind: 'failed' } : { kind: 'refused', reason };
   }
+}
+
+/** **Η ΜΙΑ περιτύλιξη κλήσης** — την μοιράζονται η ροή φωτογράφου και η θέαση (`spatial-tour-viewing.client.ts`). */
+export function tourCall<T>(request: () => Promise<T>): Promise<TourCallResult<T>> {
+  return tourCallAs(request, isTourGeneralRefusal);
+}
+
+/** Η κλήση του **γράφου** — ο μόνος που μπορεί να πει και τις αρνήσεις σχημάτων (`TOUR_SHAPE_REFUSALS`, Γ3γ-1). */
+export function tourGraphCall<T>(request: () => Promise<T>): Promise<TourCallResult<T, TourRefusalName>> {
+  return tourCallAs(request, anyTourRefusal);
 }
 
 /**
@@ -50,7 +74,7 @@ export async function tourCall<T>(request: () => Promise<T>): Promise<TourCallRe
  * λόγος στο {@link refusalOf}: η οθόνη δεν ονομάζει ποτέ κάτι που η κλήση της δεν υπόσχεται.
  */
 export function narrowTourRefusal<T, R extends TourRefusalName>(
-  result: TourCallResult<T>,
+  result: TourCallResult<T, TourRefusalName>,
   isContracted: (reason: TourRefusalName) => reason is R,
 ): TourCallResult<T, R> {
   if (result.kind !== 'refused') return result;

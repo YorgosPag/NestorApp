@@ -51,6 +51,11 @@ interface MapAreaControlProps {
   readonly drawButton?: React.ReactNode;
   /** ADR-888 — «Αποθήκευση αναζήτησης». Ορατό **και** με σχεδιασμένη περιοχή — εκεί είναι η κύρια χρήση. */
   readonly saveButton?: React.ReactNode;
+  /**
+   * ADR-890 §14 — **στρώσεις του χάρτη** (χάρτης τιμών €/τ.μ.): διακόπτης + πάνελ, **πάντα** ορατό — η στρώση δεν
+   * εξαρτάται από το αν υπάρχει όριο ή σχέδιο. Τελευταίο στη στήλη: ρύθμιση προβολής, όχι πράξη αναζήτησης.
+   */
+  readonly layerControl?: React.ReactNode;
   readonly className?: string;
 }
 
@@ -64,6 +69,7 @@ export function MapAreaControl({
   regionChip,
   drawButton,
   saveButton,
+  layerControl,
   className,
 }: MapAreaControlProps) {
   const { t } = useTranslation(['search-results']);
@@ -117,6 +123,8 @@ export function MapAreaControl({
       {!regionChip && drawButton}
 
       {saveButton}
+
+      {layerControl}
     </nav>
   );
 }

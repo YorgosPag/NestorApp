@@ -15,6 +15,7 @@
  */
 
 import { normalizeAngleDiff, normalizeAngleRad } from '@/lib/geometry/angle';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 import type { FloorPlanImage, FloorPlanRecord, TourLevel, TourNode, TourPoint } from '@/types/spatial-tour';
 
@@ -40,23 +41,24 @@ export function imagePixelToPlan(pixel: PixelPoint, metresPerPixel: number): Tou
   return { x: pixel.x * metresPerPixel, y: -pixel.y * metresPerPixel, z: 0 };
 }
 
-export function planToImagePixel(point: TourPoint, metresPerPixel: number): PixelPoint {
+export function planToImagePixel(point: PlanarPoint, metresPerPixel: number): PixelPoint {
   return { x: point.x / metresPerPixel, y: -point.y / metresPerPixel };
 }
 
 /** Πέφτει το σημείο **πάνω** στην εικόνα; (με ανοχή μισού pixel — το κλικ στην άκρη είναι στην κάτοψη). */
-export function isOnPlan(point: TourPoint, plan: CalibratedPlan): boolean {
+export function isOnPlan(point: PlanarPoint, plan: CalibratedPlan): boolean {
   const { x, y } = planToImagePixel(point, plan.metresPerPixel);
   return x >= -0.5 && y >= -0.5 && x <= plan.image.width + 0.5 && y <= plan.image.height + 0.5;
 }
 
 /**
  * **Ξανακλιμάκωση** μιας θέσης όταν αλλάζει η κλίμακα: η τελεία μένει στο **ίδιο pixel** της εικόνας (εκεί την έβαλε ο
- * άνθρωπος) — αλλάζουν μόνο τα μέτρα της.
+ * άνθρωπος) — αλλάζουν μόνο τα μέτρα της. **Ένα** SSoT για θέσεις σημείων (`TourPoint`, το `z` μένει) **και** κορυφές χώρων /
+ * άκρα νοητών γραμμών (`PlanarPoint`, Γ3β).
  */
-export function rescalePoint(point: TourPoint, fromMetresPerPixel: number, toMetresPerPixel: number): TourPoint {
+export function rescalePoint<P extends PlanarPoint>(point: P, fromMetresPerPixel: number, toMetresPerPixel: number): P {
   const ratio = toMetresPerPixel / fromMetresPerPixel;
-  return { x: point.x * ratio, y: point.y * ratio, z: point.z };
+  return { ...point, x: point.x * ratio, y: point.y * ratio };
 }
 
 export interface HeadingSuggestion {

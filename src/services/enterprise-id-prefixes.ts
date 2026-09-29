@@ -225,6 +225,8 @@ export const ENTERPRISE_ID_PREFIXES = {
                               // ΤΕΛΕΥΤΑΙΟ ⇒ η σελίδα δεν διαβάζει ποτέ μισογραμμένη ημέρα. ΞΕΧΩΡΙΣΤΟ από το amks.
   AREA_MARKET_SERIES: 'amsr', // ADR-890 §13: Η ΜΗΝΙΑΙΑ ΣΕΙΡΑ ΖΗΤΟΥΜΕΝΩΝ μιας περιοχής — μία ανά περιοχή,
                               // ντετερμινιστικό από την περιοχή ⇒ η σελίδα τη βρίσκει με doc(id), χωρίς ερώτημα.
+  AREA_MARKET_MAP: 'ammp',    // ADR-890 §14.4: Ο ΧΑΡΤΗΣ ΤΙΜΩΝ μιας νύχτας — ΕΝΑ έγγραφο με όλες τις περιοχές,
+                              // ντετερμινιστικό από την ημέρα ⇒ το endpoint το βρίσκει με 1 ανάγνωση, χωρίς ερώτημα.
   SAVED_LISTING: 'svls',      // ADR-777 §8.74: «ΤΗΝ ΚΡΑΤΗΣΑ» — μία ανά (άνθρωπο, αγγελία), ντετερμινιστική ⇒
                               // το δεύτερο κλικ βρίσκει το ίδιο έγγραφο. Η αφαίρεση το ΣΒΗΝΕΙ (ελαχιστοποίηση).
   USER_PLACE_SEARCHES: 'uplsrch', // ADR-882 Φάση 2: ΤΟ ΙΣΤΟΡΙΚΟ ΑΝΑΖΗΤΗΣΕΩΝ ΤΟΠΟΥ του λογαριασμού —
@@ -236,6 +238,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   TOUR_ACCESS_REQUEST: 'tacr', // ντετερμινιστικό από (περιήγηση, άνθρωπο) ⇒ ένα αίτημα θέασης ανά άνθρωπο
   TOUR_CAPTURE_INVITATION: 'tcin', // πρόσκληση φωτογράφου· επαναποστολή = νέο id, το παλιό `revoked` (ADR-853 §20)
   TOUR_UPLOAD: 'tupl',        // ένα ανέβασμα σε καραντίνα (Κ3α) — ο σπόρος του ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟΥ `tcap` της ολοκλήρωσης
+  TOUR_SPACE: 'tspc',         // Γ3β: περίγραμμα χώρου ορόφου (Revit Room) — στοιχείο πίνακα, όχι έγγραφο· τυχαίο
+  TOUR_SEPARATION: 'tsep',    // Γ3β: νοητή διαχωριστική γραμμή (Revit Room Separation Line) — στοιχείο πίνακα· τυχαίο
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

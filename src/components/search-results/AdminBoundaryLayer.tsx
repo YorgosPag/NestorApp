@@ -29,6 +29,7 @@ import {
   BELOW_LISTINGS,
   BOUNDARY_HALO_WIDTH,
   BOUNDARY_LINE_WIDTH,
+  LOWEST_BOUNDARY_LAYER,
   readBoundaryPaint,
 } from './boundary-paint';
 
@@ -45,7 +46,7 @@ export function AdminBoundaryLayer({ geometry }: AdminBoundaryLayerProps) {
     <>
       <Source id="admin-boundary-mask" type="geojson" data={mask}>
         <Layer
-          id="admin-boundary-mask-fill"
+          id={LOWEST_BOUNDARY_LAYER}
           type="fill"
           beforeId={BELOW_LISTINGS}
           paint={{ 'fill-color': paint.mask, 'fill-opacity': 0.22 }}

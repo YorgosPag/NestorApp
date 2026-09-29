@@ -2,8 +2,8 @@
   "_meta": {
     "description": "Native HTML title= tooltip ratchet (CHECK 3.23)",
     "generated": "2026-04-28T14:22:42.603Z",
-    "totalViolations": 39,
-    "totalFiles": 28,
+    "totalViolations": 38,
+    "totalFiles": 27,
     "rule": "title= on HTML elements must use centralized Tooltip component"
   },
   "files": {
@@ -31,7 +31,6 @@
     "src/subapps/dxf-viewer/ui/toolbar/overlay-section/PolygonControls.tsx": 1,
     "src/subapps/dxf-viewer/ui/toolbar/ScaleControls.tsx": 1,
     "src/subapps/dxf-viewer/ui/toolbar/ZoomControls.tsx": 1,
-    "src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx": 1,
     "src/subapps/geo-canvas/components/map-layers/LiveDrawingPreview.tsx": 2,
     "src/subapps/geo-canvas/components/map-layers/PolygonSystemLayers.tsx": 4,
     "src/subapps/geo-canvas/components/map-overlays/GeoMapControls.tsx": 1

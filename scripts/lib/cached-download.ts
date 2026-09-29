@@ -101,6 +101,58 @@ async function download(request: CachedSourceRequest): Promise<CachedSourceMeta>
   return meta;
 }
 
+/** Ό,τι λέει ο διακομιστής για την πηγή **χωρίς** να τη στείλει — ο φθηνός έλεγχος «άλλαξε;» (ADR-889 §11). */
+export interface SourceProbe {
+  readonly url: string;
+  readonly status: number;
+  readonly lastModified: string | null;
+  /** `Content-Length`· `null` αν δεν δόθηκε. */
+  readonly bytes: number | null;
+}
+
+const PROBE_ATTEMPTS = 3;
+const PROBE_BACKOFF_MS = 2_000;
+
+/**
+ * ⚠️ **`Accept-Encoding: identity`** — μετρημένο 2026-09-28: με την προεπιλογή του `fetch` (gzip) ο gsis.gr απαντά
+ * στο `HEAD` με `Content-Length: 20` (ένα κενό gzip), όχι το μέγεθος του αρχείου ⇒ «άλλαξε» σε ΚΑΘΕ έλεγχο. Και αν
+ * ο διακομιστής κωδικοποιήσει παρ' όλα αυτά, το μήκος **δεν** είναι το μέγεθος του αρχείου ⇒ `null`.
+ */
+async function probeOnce(url: string): Promise<SourceProbe> {
+  const response = await fetch(url, {
+    method: 'HEAD',
+    redirect: 'follow',
+    headers: { 'User-Agent': USER_AGENT, 'Accept-Encoding': 'identity' },
+  });
+  const length = response.headers.get('content-length');
+  const encoded = response.headers.get('content-encoding') !== null;
+  return {
+    url,
+    status: response.status,
+    lastModified: response.headers.get('last-modified'),
+    bytes: length === null || encoded ? null : Number(length),
+  };
+}
+
+/**
+ * `HEAD` με επαναλήψεις. **Απάντηση** του διακομιστή (και 404) επιστρέφεται ως έχει — την κρίνει ο καλών·
+ * **σφάλμα δικτύου** ή 5xx επαναλαμβάνεται και, στο τέλος, **πετά**: «πηγή κάτω» είναι κόκκινο, ποτέ «καμία αλλαγή».
+ */
+export async function probeSource(url: string, attempts = PROBE_ATTEMPTS, backoffMs = PROBE_BACKOFF_MS): Promise<SourceProbe> {
+  let failure = '';
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const probe = await probeOnce(url);
+      if (probe.status < 500) return probe;
+      failure = `HTTP ${probe.status}`;
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, backoffMs * attempt));
+  }
+  throw new Error(`${url}: η πηγή δεν απάντησε μετά από ${attempts} προσπάθειες (${failure})`);
+}
+
 /** sha256 αρχείου **με ροή** — για εξόδους εκατοντάδων MB, που δεν χωρούν ολόκληρες στη μνήμη. */
 export async function fileSha256(path: string): Promise<string> {
   const hash = createHash('sha256');

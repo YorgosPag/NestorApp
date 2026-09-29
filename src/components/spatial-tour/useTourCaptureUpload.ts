@@ -14,7 +14,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { refusalOfDeclaredPanorama } from '@/lib/spatial-tour/panorama-policy';
-import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import type { TourGeneralRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { transferResumable } from '@/lib/storage/resumable-upload-client';
 import {
   finalizeTourUploadFromScreen,
@@ -27,7 +27,7 @@ export type TourUploadPhase =
   | { readonly kind: 'uploading'; readonly percent: number; readonly interrupted: boolean }
   | { readonly kind: 'verifying' }
   | { readonly kind: 'done'; readonly capture: TourCapture; readonly replayed: boolean }
-  | { readonly kind: 'refused'; readonly reason: TourRefusalName }
+  | { readonly kind: 'refused'; readonly reason: TourGeneralRefusal }
   | { readonly kind: 'failed' };
 
 const IDLE: TourUploadPhase = { kind: 'idle' };

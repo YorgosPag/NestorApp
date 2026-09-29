@@ -27,6 +27,15 @@ export const LIFECYCLE_KEY: Readonly<Record<SpatialTourLifecycle, string>> = {
   withdrawn: 'spatial-tour:lifecycle.withdrawn',
 };
 
+/**
+ * Ο διακόπτης εμβαδών χώρων (ADR-884 Φ2στ-γ Γ3γ-1 · Δ8.4) — **χωριστό** αντικείμενο: ο γεννήτορας του slice κουβαλά όλο το
+ * αντικείμενο που αγγίζει μια σελίδα, και το `VIEWING_KEYS` το αγγίζουν και οθόνες που δεν δείχνουν τον διακόπτη.
+ */
+export const SPACE_AREA_SETTING_KEYS = {
+  label: 'spatial-tour:viewing.spaceAreas',
+  hint: 'spatial-tour:viewing.spaceAreasHint',
+} as const;
+
 export const VIEWING_KEYS = {
   settingsTitle: 'spatial-tour:viewing.settingsTitle',
   visibility: 'spatial-tour:viewing.visibility',

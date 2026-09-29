@@ -18,6 +18,7 @@
 import { adminBoundaryFileName } from '../geo/admin-boundary-file';
 import { MARKET_SEGMENTS, type MarketSegment } from './market-segments';
 import type { StatCell } from './market-statistics';
+import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards';
 
 /** v2 (ADR-889 Φ2): χωριστά `summary/` + `rows/` και ευρετήριο με αναφορά CC-BY. */
 export const MARKET_TRANSACTIONS_FORMAT_VERSION = 2;
@@ -103,25 +104,26 @@ export function marketTransactionsPublicPath(kind: MarketTransactionsKind, areaI
 
 export const MARKET_TRANSACTIONS_INDEX_PUBLIC_PATH: readonly string[] = [...MARKET_TRANSACTIONS_DIR.split('/'), 'index.json'];
 
+/**
+ * **Το συγκεντρωτικό του χάρτη τιμών** (ADR-890 §14.4): 12μηνο ανά περιοχή × τμήμα σε **ένα** αρχείο, ώστε ο
+ * browser να μην κατεβάζει 1.247 αρχεία `summary/`. Σχήμα: `lib/market/price-map.ts` (`ContractPriceMapFile`).
+ */
+export const MARKET_TRANSACTIONS_PRICE_MAP_PUBLIC_PATH: readonly string[] = [
+  ...MARKET_TRANSACTIONS_DIR.split('/'),
+  'price-map.json',
+];
+
 // ── Αναγνώστες σχήματος — `null` = «δεν είναι αυτό το αρχείο», ποτέ «κενό» ─────────────────────────
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
 function readStatCell(value: unknown): StatCell | null {
-  if (!isRecord(value) || !isFiniteNumber(value.n)) return null;
+  if (!isPlainRecord(value) || !isFiniteNumber(value.n)) return null;
   if (value.median === undefined) return { n: value.n };
   if (!isFiniteNumber(value.median) || !isFiniteNumber(value.p25) || !isFiniteNumber(value.p75)) return null;
   return { n: value.n, median: value.median, p25: value.p25, p75: value.p75 };
 }
 
 function readCellRecord(value: unknown): Record<string, StatCell> | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const out: Record<string, StatCell> = {};
   for (const [key, raw] of Object.entries(value)) {
     const cell = readStatCell(raw);
@@ -136,7 +138,7 @@ function readOptionalCell(value: unknown): StatCell | null | undefined {
 }
 
 function readSegmentSummary(value: unknown): SegmentSummary | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const quarters = readCellRecord(value.quarters);
   const yearBuilt = readCellRecord(value.yearBuilt);
   const last12 = readStatCell(value.last12);
@@ -153,8 +155,8 @@ function isMarketSegment(value: string): value is MarketSegment {
 
 /** **Διαβάζει ένα `summary/<id>.json`** — ή `null` αν δεν είναι (άλλη ταυτότητα, παλιό σχήμα, σελίδα σφάλματος). */
 export function readAreaSummaryFile(payload: unknown, expectedId: string): AreaSummaryFile | null {
-  if (!isRecord(payload) || payload.v !== MARKET_TRANSACTIONS_FORMAT_VERSION || payload.id !== expectedId) return null;
-  if (typeof payload.asOf !== 'string' || !isRecord(payload.segments)) return null;
+  if (!isPlainRecord(payload) || payload.v !== MARKET_TRANSACTIONS_FORMAT_VERSION || payload.id !== expectedId) return null;
+  if (typeof payload.asOf !== 'string' || !isPlainRecord(payload.segments)) return null;
   const segments: Partial<Record<MarketSegment, SegmentSummary>> = {};
   for (const [key, raw] of Object.entries(payload.segments)) {
     const summary = readSegmentSummary(raw);
@@ -174,7 +176,7 @@ function isEncodedRow(value: unknown): value is EncodedRow {
 
 /** **Διαβάζει ένα `rows/<id>.json`** — ή `null`. Κάθε πλειάδα ελέγχεται σε μήκος και τύπους κελιών. */
 export function readAreaRowsFile(payload: unknown, expectedId: string): AreaRowsFile | null {
-  if (!isRecord(payload) || payload.v !== MARKET_TRANSACTIONS_FORMAT_VERSION || payload.id !== expectedId) return null;
+  if (!isPlainRecord(payload) || payload.v !== MARKET_TRANSACTIONS_FORMAT_VERSION || payload.id !== expectedId) return null;
   const { districts, rows } = payload;
   if (!Array.isArray(districts) || !districts.every((d) => typeof d === 'string')) return null;
   if (!Array.isArray(rows) || !rows.every(isEncodedRow)) return null;
@@ -191,10 +193,10 @@ export interface MarketTransactionsIndex {
 }
 
 function readCategorySegments(vocab: unknown): (MarketSegment | null)[] | null {
-  if (!isRecord(vocab) || !Array.isArray(vocab.categories)) return null;
+  if (!isPlainRecord(vocab) || !Array.isArray(vocab.categories)) return null;
   const out: (MarketSegment | null)[] = [];
   for (const category of vocab.categories) {
-    if (!isRecord(category)) return null;
+    if (!isPlainRecord(category)) return null;
     const { segment } = category;
     if (segment === null) out.push(null);
     else if (typeof segment === 'string' && isMarketSegment(segment)) out.push(segment);
@@ -205,9 +207,9 @@ function readCategorySegments(vocab: unknown): (MarketSegment | null)[] | null {
 
 /** **Διαβάζει το `index.json`** — ή `null`. */
 export function readMarketTransactionsIndex(payload: unknown): MarketTransactionsIndex | null {
-  if (!isRecord(payload) || payload.v !== MARKET_TRANSACTIONS_FORMAT_VERSION || typeof payload.asOf !== 'string') return null;
+  if (!isPlainRecord(payload) || payload.v !== MARKET_TRANSACTIONS_FORMAT_VERSION || typeof payload.asOf !== 'string') return null;
   const { window, areas } = payload;
-  if (!isRecord(window) || !isFiniteNumber(window.from) || !isFiniteNumber(window.to)) return null;
+  if (!isPlainRecord(window) || !isFiniteNumber(window.from) || !isFiniteNumber(window.to)) return null;
   if (!Array.isArray(areas)) return null;
   const categorySegments = readCategorySegments(payload.vocab);
   if (categorySegments === null) return null;

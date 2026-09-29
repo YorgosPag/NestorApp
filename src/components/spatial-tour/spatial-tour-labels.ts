@@ -10,13 +10,18 @@
 
 import type { MediaLicensePurpose } from '@/constants/media-rights-vocabulary';
 import type { TourCaptureAudience, TourMilestone } from '@/constants/spatial-tour-vocabulary';
-import type { TourRefusalName, TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import type { TourGeneralRefusal, TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 // ⚠️ TYPE-ONLY πέρα από το σύνορο του διακομιστή — σβήνεται στη μεταγλώττιση.
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import type { TourGrantStanding } from '@/lib/spatial-tour/tour-authority';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
 
-export const TOUR_REFUSAL_KEY: Readonly<Record<TourRefusalName, string>> = {
+/**
+ * Οι λέξεις **κάθε** άρνησης εκτός του γραφέα σχημάτων — εκείνες ζουν στο `TOUR_SHAPE_REFUSAL_KEY` του επεξεργαστή
+ * (Γ3γ-1 · CHECK 3.34: ο πίνακας αυτός ταξιδεύει στο slice των σελίδων ρυθμίσεων/φωτογράφου, όπου δεν φτάνουν ποτέ).
+ * Διαμέριση — κάθε άρνηση σε **ακριβώς έναν** από τους δύο: άγκυρα `tour-view-refusal-keys.test.ts`.
+ */
+export const TOUR_REFUSAL_KEY: Readonly<Record<TourGeneralRefusal, string>> = {
   'tour-absent': 'spatial-tour:refusal.tourAbsent',
   'not-requestable': 'spatial-tour:refusal.notRequestable',
   'not-manager': 'spatial-tour:refusal.notManager',

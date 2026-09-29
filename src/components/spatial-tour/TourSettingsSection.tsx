@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { isSpatialTourVisibility, SPATIAL_TOUR_VISIBILITIES, type SpatialTourVisibility } from '@/constants/spatial-tour-vocabulary';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TourSettings } from '@/server/spatial-tour/tour-settings';
@@ -26,7 +27,13 @@ import type { TourSubject } from '@/types/spatial-tour';
 
 import { TOUR_FAILURE_KEYS, TOUR_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
-import { LIFECYCLE_KEY, VIEWING_KEYS, VISIBILITY_HINT_KEY, VISIBILITY_KEY } from './spatial-tour-viewing-labels';
+import {
+  LIFECYCLE_KEY,
+  SPACE_AREA_SETTING_KEYS,
+  VIEWING_KEYS,
+  VISIBILITY_HINT_KEY,
+  VISIBILITY_KEY,
+} from './spatial-tour-viewing-labels';
 import { useTourSettings, type TourViewingNotice } from './useTourViewing';
 
 // ⚠️ ΟΡΙΟ `next/dynamic` (ADR-744 Κ2): ο διάλογος κοινοποίησης φέρνει `files` · `files-media` · `properties-detail` —
@@ -70,6 +77,8 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
           </p>
         </section>
       </section>
+      <SpaceAreasField shown={settings.spaceAreaDisplay === 'shown'}
+        onChange={(shown) => void update({ ...settings, spaceAreaDisplay: shown ? 'shown' : 'hidden' })} />
       <p className="text-xs text-muted-foreground">{t(VIEWING_KEYS.explicitGrantsNote)}</p>
       {!showsSomething && <p className="text-sm text-muted-foreground" role="note">{t(VIEWING_KEYS.needsStop)}</p>}
       <SettingsNotice notice={notice} />
@@ -104,6 +113,23 @@ function VisibilityField({ settings, supported, onChange }: {
       {supported.length < SPATIAL_TOUR_VISIBILITIES.length && (
         <p className="text-xs text-muted-foreground">{t(TOUR_REFUSAL_KEY['visibility-unsupported'])}</p>
       )}
+    </section>
+  );
+}
+
+/**
+ * **Εμβαδά χώρων στη δημόσια σελίδα** (ADR-884 Δ8.4 · Γ3γ-1) — ένας διακόπτης ανά περιήγηση, αισιόδοξα (`useTourSettings`).
+ * Διακόπτης και όχι δύο κουμπιά: είναι **κατάσταση** εμφάνισης που αναστρέφεται ελεύθερα, όχι πράξη με συνέπειες (ADR-770 §19).
+ */
+function SpaceAreasField({ shown, onChange }: { readonly shown: boolean; readonly onChange: (shown: boolean) => void }) {
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  return (
+    <section className="flex items-start justify-between gap-3">
+      <section className="space-y-1">
+        <Label htmlFor="tour-space-areas">{t(SPACE_AREA_SETTING_KEYS.label)}</Label>
+        <p id="tour-space-areas-hint" className="text-xs text-muted-foreground">{t(SPACE_AREA_SETTING_KEYS.hint)}</p>
+      </section>
+      <Switch id="tour-space-areas" checked={shown} onCheckedChange={onChange} aria-describedby="tour-space-areas-hint" />
     </section>
   );
 }

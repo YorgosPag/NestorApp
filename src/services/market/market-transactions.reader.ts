@@ -15,7 +15,8 @@ import 'server-only';
  * περιοχές, άρα λίγα «ζεστά» αρχεία αρκούν.
  */
 
-import { createKeyedServerJsonFiles, createServerJsonFile, strictJsonShape, warnOnJsonFailure } from '@/lib/data/server-json-file';
+import { strictJsonShape } from '@/lib/data/json-shape';
+import { createKeyedServerJsonFiles, createServerJsonFile, warnOnJsonFailure } from '@/lib/data/server-json-file';
 import {
   MARKET_TRANSACTIONS_INDEX_PUBLIC_PATH,
   marketTransactionsPublicPath,

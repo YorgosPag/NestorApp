@@ -3897,6 +3897,19 @@
 
 ## Pending tasks (priority order)
 
+### 🧷 `isPlainRecord` / `isFiniteNumber` — τοπικά αντίγραφα έξω από το `lib/type-guards` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-889 §11)
+- **Τι**: τα δύο κατηγορήματα προωθήθηκαν στο `src/lib/type-guards.ts` (`isPlainRecord` = αντικείμενο **και όχι** πίνακας —
+  αυστηρότερο από το `isRecord` · `isFiniteNumber`)· τα `lib/market/{market-transactions-file,value-zone-file}.ts` ήδη εισάγουν.
+  Μένουν **ιδιωτικές** δηλώσεις με ταυτόσημο σώμα:
+  - `typeof value === 'object' && value !== null && !Array.isArray(value)` σε `lib/api/space-commercial-fields.ts` ·
+    `lib/demand/demand-seeks-read.ts` · `lib/listings/model-declaration-metadata.ts` · `lib/market/area-market-document.ts`
+    (εκεί στενεύει σε `DocumentData` — ο τύπος επιστροφής διαφέρει, να κριθεί)
+  - `function isFiniteNumber` σε 7 αρχεία (`grep -rln "^function isFiniteNumber" src`): `app/api/floorplan-backgrounds/[id]/route.ts` ·
+    `components/ui/floating/floating-panel-geometry.ts` · `lib/geo/admin-boundary-file.ts` · `lib/geo/recent-place-searches-account-model.ts` ·
+    `lib/listings/listing-map-mark.ts` · `lib/listings/model-declaration-metadata.ts` · `subapps/dxf-viewer/systems/basemap/basemap-placement-schema.ts`
+- **Διόρθωση**: `import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards'` + σβήσιμο της τοπικής (ελέγξτε ότι το σώμα είναι
+  **ταυτόσημο** — ένα `isRecord` που δέχεται πίνακες ΔΕΝ είναι το ίδιο). 10+ αρχεία σε 6 τομείς ⇒ εδώ, όχι στο commit του ADR-889 Φ4 (N.0.2).
+
 ### 🔢 `clamp` — επτά τοπικά αντίγραφα έξω από το SSoT (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ §4.14)
 - **Τι**: η οικογένεια `clamp` προωθήθηκε στο `src/lib/geometry/scalar.ts` (το `subapps/dxf-viewer/utils/scalar-math.ts`
   επανεξάγει — πρότυπο `lib/geometry/angle.ts`). Μένουν **τοπικές** δηλώσεις `function clamp(value, min, max)` σε:
@@ -3906,6 +3919,25 @@
   (το `bim/table/table-cell-run-ops.ts` έχει **άλλη** υπογραφή `clamp(value, limit)` — όχι διπλότυπο).
 - **Διόρθωση**: `import { clamp } from '@/lib/geometry/scalar'` (μέσα στο subapp: από το `utils/scalar-math`) + σβήσιμο της τοπικής·
   ταυτόσημη σημασιολογία (`Math.max(min, Math.min(max, value))`). 4+ αρχεία σε 4 τομείς ⇒ εδώ, όχι στο ίδιο commit (N.0.2).
+
+### 📐 Επίπεδη γεωμετρία — τα υπόλοιπα αντίγραφα έξω από το `lib/geometry` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ Γ3)
+- **Έγινε ήδη (Γ3α)**: SSoT `src/lib/geometry/planar-polygon.ts` (εμβαδόν · σημείο-μέσα · αυτοτομή · `segmentsIntersect` ·
+  `distanceToSegment` · ρίζα `PlanarPoint`) + `douglas-peucker.ts` (δακτύλιος + γραμμή). Επανεξάγουν / καλούν: dxf `polygon-utils`,
+  `GeometryUtils` (`segmentsIntersect`, `isPointInPolygon`), `bim-base` (`PlanarPoint`), `lib/geo/geo-local-frame` + `geo-simplify`,
+  `mesh-silhouette`, `packages/core/polygon-system` (DP · εμβαδόν · σημείο-μέσα).
+- **Μένει**: (1) `packages/core/polygon-system/utils/polygon-utils.ts` → ιδιωτικά `checkSelfIntersection` + `doLinesIntersect`:
+  **ΑΛΛΗ σημασιολογία** (δεν ελέγχει την ακμή κλεισίματος · κατώφλι παραλληλίας 0,001 **απόλυτο**) και ταΐζουν το `validatePolygon`
+  ⇒ ενοποίηση = αλλαγή αποτελέσματος επικύρωσης· χρειάζεται απόφαση + test. (2) `lib/geo/geo-local-frame.ts` → `localSegmentCrossing`
+  (γνήσια τομή, με σημείο) έναντι `segmentsIntersect` (με επαφή, boolean) — διαφορετικό ερώτημα, **όχι** διπλότυπο· αν μπει τρίτος
+  καταναλωτής, ένας πυρήνας `segmentIntersectionRaw`. (3) Η οικογένεια «σημείο τομής ευθειών» του dxf (βλ. γραμμή για ADR-507 Φ3
+  πιο πάνω) θα πρέπει να ζήσει κι αυτή στο `lib/geometry`.
+  (4) **Γ3γ-1 (2026-09-28)**: νέο SSoT `lib/geometry/polygon-label-point.ts` (πραγματικός πόλος απροσπέλαστου, Garcia-Castellanos
+  2007 / polylabel) + `planar-polygon.distanceToRing` (το `planar-polygon-overlap` το καλεί ήδη). Το
+  `dxf-viewer/bim/geometry/shared/polygon-interior-point.ts` λύνει την **ίδια** ερώτηση με προσέγγιση O(n²) (κεντροειδές + μέσα ζευγών
+  κορυφών) και έχει δικό του `clearanceToBoundary` (= `distanceToRing`). **Δεν** ανατέθηκε στη Γ3γ-1: αλλάζει τη θέση της λαβής
+  περιστροφής/σταυρού μετακίνησης των ελεύθερων υποστυλωμάτων (ADR-363/449/520 — το `clearance` μεγαλώνει, άρα η εγγύηση «μέσα»
+  μένει) ⇒ χρειάζεται τα jest των λαβών του dxf + ζωντανή ματιά. Προσοχή: σε < 3 κορυφές το dxf δίνει **κεντροειδές** (άγκυρα
+  `{x:5,y:0}`), το SSoT την πρώτη κορυφή — ο προσαρμογέας κρατά τη συμπεριφορά του dxf.
 
 ### 🚦 Όριο ρυθμού ανά ΠΡΑΓΜΑΤΙΚΗ διαδρομή, όχι ανά πρότυπο (προτεραιότητα ΥΨΗΛΗ — ασφάλεια, 2026-09-27, ADR-855 · εντοπίστηκε στο ADR-884 §4.11)
 - **Τι**: `buildRateLimitKey(identifier, endpoint)` (`src/lib/middleware/rate-limit-config.ts:385`) βάζει στο κλειδί την **πραγματική**

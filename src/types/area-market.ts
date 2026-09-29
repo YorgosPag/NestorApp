@@ -16,6 +16,7 @@ import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { MarketSegment } from '@/lib/market/market-segments';
 import type { AreaSummaryFile } from '@/lib/market/market-transactions-file';
 import type { StatCell } from '@/lib/market/market-statistics';
+import type { PriceMapAreas } from '@/lib/market/price-map';
 import type { PublicListing } from '@/types/public-listing';
 
 /** Η εκδοχή του σχήματος του εγγράφου. */
@@ -110,6 +111,21 @@ export interface AreaMarketRun {
   readonly truncated: boolean;
   /** ISO χρόνος ολοκλήρωσης. */
   readonly completedAt: string;
+}
+
+// ─── Ο ΧΑΡΤΗΣ ΤΙΜΩΝ ΜΙΑΣ ΝΥΧΤΑΣ (ADR-890 §14.4) — ένα έγγραφο για όλη την Ελλάδα ──────────────────────────
+
+/** Η εκδοχή του σχήματος του χάρτη. Προσθετικό πεδίο δεν την ανεβάζει (ADR-890 §12.1). */
+export const AREA_MARKET_MAP_SCHEMA_VERSION = 1;
+
+/**
+ * Το έγγραφο `area_market_maps`: **μόνο** ό,τι δημοσιεύεται (`[n]` / `[n, διάμεσος]`), για κάθε περιοχή με αγγελίες
+ * τη νύχτα `day`. Γράφεται **πριν** από το σημάδι της νύχτας, όπως τα στιγμιότυπα.
+ */
+export interface AreaMarketMap {
+  readonly schemaVersion: typeof AREA_MARKET_MAP_SCHEMA_VERSION;
+  readonly day: string;
+  readonly offers: Readonly<Record<AskingOffer, PriceMapAreas>>;
 }
 
 // ─── Η ΜΗΝΙΑΙΑ ΣΕΙΡΑ ΖΗΤΟΥΜΕΝΩΝ (ADR-890 §13) — ένα έγγραφο ανά περιοχή ──────────────────────────────────

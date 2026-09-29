@@ -14,7 +14,7 @@ jest.mock('server-only', () => ({}));
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { MAX_TOUR_NODES } from '@/constants/spatial-tour-vocabulary';
+import { MAX_TOUR_NODES, MAX_TOUR_SPACES_PER_LEVEL } from '@/constants/spatial-tour-vocabulary';
 import { spatialTourFromDocument, tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
@@ -221,5 +221,53 @@ describe('Κ — κάτοψη, κλίμακα, θέση, προσανατολι�
 
   it('«χωρίς κάτοψη» σε όροφο που ήδη δεν έχει ⇒ unchanged', async () => {
     expect(await write({ op: 'floorplan', levelKey: L0, plan: null })).toEqual({ kind: 'unchanged', revision: 3 });
+  });
+});
+
+// Γ3β — τα σχήματα των χώρων μέσα από τον ΕΝΑ γραφέα: ο διακομιστής ΞΑΝΑΚΡΙΝΕΙ ό,τι στέλνει η οθόνη.
+describe('Σ — σχήματα χώρων + νοητές γραμμές (Φ2στ-γ Γ3β · §4.14)', () => {
+  const PLAN = {
+    source: 'engineer', state: 'active', fileId: 'f1', approvedBy: 'boris', approvedAt: '2026-09-01T10:00:00.000Z',
+    image: { width: 1000, height: 500, contentHash: 'h1' },
+    scale: { metresPerPixel: 0.02, calibratedBy: 'boris', calibratedAt: '2026-09-01T10:00:00.000Z' },
+  };
+  const rect = (x0: number, y0: number, x1: number, y1: number) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+  const space = (points = rect(1, -1, 5, -4)): TourGraphCommand =>
+    ({ op: 'space', levelKey: L0, spaceId: null, space: { points, source: 'detected', room: null, declaredArea: null } });
+
+  beforeEach(() => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ levels: [{ key: L0, floorPlans: [PLAN] }] }) });
+  });
+
+  it('νέος χώρος ⇒ id `tspc_` από τον διακομιστή (N.6) στην απάντηση · έγκριση = ο υπεύθυνος · revision + 1', async () => {
+    const outcome = await write(space());
+    expect(outcome).toMatchObject({ kind: 'written', revision: 4, createdId: expect.stringMatching(/^tspc_/) });
+    const [stored] = (await readTour()).levels[0].spaces ?? [];
+    expect(stored).toMatchObject({ id: (outcome as { createdId: string }).createdId, approvedBy: 'boris', source: 'detected' });
+  });
+
+  it('πελάτης με αυτοτεμνόμενο ή επικαλυπτόμενο σχήμα ⇒ ονομασμένη άρνηση, καμία εγγραφή', async () => {
+    await write(space());
+    const bowtie = [{ x: 6, y: -1 }, { x: 9, y: -4 }, { x: 9, y: -1 }, { x: 6, y: -4 }];
+    expect(await write(space(bowtie))).toEqual({ kind: 'refused', reason: 'space-invalid' });
+    expect(await write(space(rect(4, -1, 8, -4)))).toEqual({ kind: 'refused', reason: 'space-overlap' });
+    expect((await readTour()).revision).toBe(4);
+  });
+
+  it('νοητή γραμμή ⇒ `tsep_` · αφαίρεση ⇒ ο όροφος ξαναγίνεται όπως πριν', async () => {
+    const outcome = await write({ op: 'separate', levelKey: L0, separationId: null, a: { x: 5, y: -1 }, b: { x: 5, y: -4 } });
+    expect(outcome).toMatchObject({ kind: 'written', createdId: expect.stringMatching(/^tsep_/) });
+    const separationId = (outcome as { createdId: string }).createdId;
+    expect(await write({ op: 'unseparate', levelKey: L0, separationId })).toMatchObject({ kind: 'written' });
+    expect((await readTour()).levels[0]).not.toHaveProperty('separations');
+  });
+
+  it('γεμάτος όροφος (80 χώροι) ⇒ graph-full, καμία εγγραφή', async () => {
+    const spaces = Array.from({ length: MAX_TOUR_SPACES_PER_LEVEL }, (_, i) => ({
+      id: `tspc_${i}`, source: 'manual', approvedBy: 'boris', approvedAt: '2026-09-01T10:00:00.000Z',
+      points: rect(0.2 * (i % 40), -0.2 * Math.floor(i / 40) - 5, 0.2 * (i % 40) + 0.19, -0.2 * Math.floor(i / 40) - 5.19),
+    }));
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ levels: [{ key: L0, floorPlans: [PLAN], spaces }] }) });
+    expect(await write(space(rect(12, -1, 16, -4)))).toEqual({ kind: 'refused', reason: 'graph-full' });
   });
 });

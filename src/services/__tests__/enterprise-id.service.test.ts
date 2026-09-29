@@ -49,6 +49,9 @@ describe('EnterpriseIdService', () => {
         [service.generateSessionId(), ENTERPRISE_ID_PREFIXES.SESSION],
         [service.generateErrorId(), ENTERPRISE_ID_PREFIXES.ERROR],
         [service.generateFloorplanBackgroundId(), ENTERPRISE_ID_PREFIXES.RASTER_BACKGROUND],
+        // ADR-884 Γ3β — χώροι και νοητές γραμμές της περιήγησης.
+        [service.generateTourSpaceId(), ENTERPRISE_ID_PREFIXES.TOUR_SPACE],
+        [service.generateTourSeparationId(), ENTERPRISE_ID_PREFIXES.TOUR_SEPARATION],
       ];
 
       for (const [id, expectedPrefix] of tests) {
@@ -281,6 +284,8 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicAreaMarketSnapshotId',
       // ADR-890 §13 — ΜΙΑ μηνιαία σειρά ανά περιοχή.
       'generateDeterministicAreaMarketSeriesId',
+      // ADR-890 §14.4 — ΕΝΑΣ χάρτης τιμών ανά νύχτα.
+      'generateDeterministicAreaMarketMapId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -386,6 +391,7 @@ describe('EnterpriseIdService', () => {
       generateDeterministicAreaMarketRunId: 'amkr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicAreaMarketSnapshotId: 'amks_a3465a29-77be-4408-8a03-69ee02783a05',
       generateDeterministicAreaMarketSeriesId: 'amsr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicAreaMarketMapId: 'ammp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

@@ -70,7 +70,7 @@ describe('Σ — το cookie θέασης στη διαδρομή', () => {
     const grant = { tourId: TOUR_ID, basis: 'public', basisId: TOUR_ID } as const;
     openMock.mockResolvedValue({
       kind: 'granted', grant, token: issueTourViewGrant(grant),
-      manifest: { tourId: TOUR_ID, label: null, nodes: [], levels: [], stops: [], ready: false },
+      manifest: { tourId: TOUR_ID, label: null, nodes: [], levels: [], stops: [], ready: false, spaceAreaDisplay: 'shown' },
     });
     const response = await respondTourViewSession(sessionRequest(null), SEGMENT, null);
     expect(response.status).toBe(200);

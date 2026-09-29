@@ -231,6 +231,15 @@ call sites.** Γι' αυτό η διεύρυνση είναι ασφαλέστε
 2 patterns **με** την απόδειξή τους (καθαρό 0) και ξεχρέωσε τρία (`browser-sha256`,
 `point-in-polygon-semantics`, `geometry`). **605 → 600**, ταβάνι **603 → 600**.
 
+### 7.3 Η ρίζα μετακόμισε στο `lib/geometry` (ADR-884 §4.14 Γ3, 2026-09-28)
+
+`PlanarPoint` **δηλώνεται** πλέον στο `src/lib/geometry/planar-polygon.ts`, μαζί με τον επίπεδο πυρήνα που το καταναλώνει
+(`shoelaceArea` · `polygonArea` · `pointInPolygon` · `segmentsIntersect` · `isPolygonSelfIntersecting` · `distanceToSegment`).
+Αιτία: η δημόσια περιήγηση (ανίχνευση σχημάτων χώρων) ρωτά τις ίδιες επίπεδες ερωτήσεις και **δεν** επιτρέπεται να εισάγει από το
+subapp (CHECK 3.62). Το `bim-base.ts` **επανεξάγει** (`export type { PlanarPoint }`) και το `polygon-utils` επανεξάγει τις
+συναρτήσεις — ίδια σώματα, ίδιοι 137 καταναλωτές, **μηδέν** αλλαγή εισαγωγών. Το `.point-vocabulary.json` δηλώνει τη νέα ρίζα με
+λόγο· η baseline του CHECK 3.59 θέλει reseed — απόφαση Giorgio (η πύλη μπλοκάρει νέα ρίζα **ώστε να τη δει άνθρωπος**).
+
 ---
 
 ## 8. ✅ Φάση Δ — ΤΟ ΑΠΟΘΗΚΕΥΜΕΝΟ ΠΡΟΦΙΛ ΚΑΤΟΨΗΣ (2026-08-22)

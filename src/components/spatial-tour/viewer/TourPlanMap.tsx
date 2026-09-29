@@ -10,8 +10,9 @@
  * 🔑 **Ο κώνος είναι φύλλο** (`TourPlanCone`): ο **μόνος** React συνδρομητής της θέασης — ζωγραφίζει ένα `<path>` ανά καρέ·
  *   η κάτοψη, οι κόμβοι και οι σύνδεσμοι **δεν** ξαναζωγραφίζονται όταν ο επισκέπτης κοιτάζει γύρω (πνεύμα ADR-040).
  * 🔑 Κάθε κόμβος είναι **κουμπί** (`role="button"`, Tab, Enter/Space) — ίδιος δρόμος με τα κουμπιά του πανοράματος.
- * 🎨 Το «είστε εδώ» είναι `chart-1` (ADR-710 θέση 1 = το μπλε της μάρκας, **ίδιο και στα δύο θέματα**) — ΟΧΙ `primary`:
- *   στο σκοτεινό θέμα το `--primary` είναι ταυτόσημο με το `--card` (ADR-770), δηλαδή ο κώνος θα ήταν αόρατος.
+ * 🎨 **Χρώματα Zillow, πάνω σε εικόνα** (Φ2στ-γ Γ3γ-1 · `tour-plan-overlay-palette.ts`): **κόκκινη** η τρέχουσα τελεία και ο
+ *   κώνος της, **μπλε** (`chart-1`, ίδιο και στα δύο θέματα) οι άλλες, **κίτρινος** ο χώρος όπου είσαι (`TourPlanSpaces`). Ποτέ
+ *   `primary`/`card`: στο σκοτεινό θέμα το `--primary` είναι ταυτόσημο με το `--card` (ADR-770) και η κάτοψη μένει λευκή.
  * 🗺️ **Με εικόνα κάτοψης** (Φ2στ-β): το κάδρο **είναι** η εικόνα (σε μέτρα όταν είναι βαθμονομημένη) και οι τελείες κάθονται
  *   στο pixel όπου τις έβαλε ο άνθρωπος· χωρίς εικόνα, το κάδρο χωρά τις τελείες (Φ1).
  * 🔍 **Μεγέθυνση** (Φ2στ-γ Γ2 · §4.14 σημείο 5): στενότερο `viewBox` (`tour-plan-zoom.ts`), ποτέ CSS `scale` — τα σύμβολα
@@ -33,6 +34,8 @@ import type { ElementSize } from '@/hooks/media/useElementSize';
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 import type { TourCameraStore } from './tour-camera-store';
+import { PLAN_CONE_CLASS, PLAN_DOT_CLASS } from './tour-plan-overlay-palette';
+import { TourPlanSpaces } from './TourPlanSpaces';
 import { usePlanView, type TourPlanZoomStore } from './tour-plan-zoom-store';
 import { usePlanZoomGestures, type PlanWheelMode } from './usePlanZoomGestures';
 import { useStopNames } from './useStopNames';
@@ -42,6 +45,8 @@ import { useStopNames } from './useStopNames';
  * τελεία είναι ίδια στην κάρτα, στην ανάπτυξη και σε κάθε ζουμ. Βαθμονομημένα ώστε η κάρτα των 320 px να μοιάζει με πριν.
  */
 const NODE_RADIUS_PX = 6;
+/** Η τρέχουσα τελεία είναι **και** μεγαλύτερη — το «εδώ» δεν λέγεται μόνο με χρώμα (CHECK 3.41). */
+const HERE_RADIUS_PX = 7.5;
 const NODE_STROKE_PX = 1.5;
 const LINK_STROKE_PX = 1.5;
 const CONE_RADIUS_PX = 28;
@@ -66,7 +71,7 @@ function TourPlanCone({ camera, at, scale }: ConeProps) {
   const bearing = radToDeg(viewBearing(at.stop.headingRad, view.yaw));
   return (
     <path d={conePath(horizontalFov(view.fov, aspect) / 2, CONE_RADIUS_PX * scale)} transform={`translate(${x} ${y}) rotate(${bearing})`}
-      className="fill-chart-1/30 stroke-chart-1" strokeWidth={CONE_STROKE_PX * scale} aria-hidden />
+      className={PLAN_CONE_CLASS} strokeWidth={CONE_STROKE_PX * scale} aria-hidden />
   );
 }
 
@@ -130,11 +135,11 @@ function PlanDots({ stops, currentNodeId, onGo, nameOf, scale }: DotsProps) {
     const { x, y } = toPlanSvg(point);
     const here = s.node.id === currentNodeId;
     return (
-      <circle key={s.node.id} cx={x} cy={y} r={NODE_RADIUS_PX * scale} role="button" tabIndex={0}
+      <circle key={s.node.id} cx={x} cy={y} r={(here ? HERE_RADIUS_PX : NODE_RADIUS_PX) * scale} role="button" tabIndex={0}
         aria-label={t(here ? TOUR_VIEWER_KEYS.youAreHere : TOUR_VIEWER_KEYS.goTo, { name: nameOf(s.node.id) })}
         aria-current={here ? 'location' : undefined}
         onClick={() => onGo(s.node.id)} onKeyDown={(e) => activate(e, s.node.id)}
-        className={cn(NODE_FOCUS_CLASS, here ? 'fill-chart-1 stroke-background' : 'fill-card stroke-foreground')}
+        className={cn(NODE_FOCUS_CLASS, here ? PLAN_DOT_CLASS.here : PLAN_DOT_CLASS.other)}
         strokeWidth={NODE_STROKE_PX * scale} />
     );
   });
@@ -156,6 +161,9 @@ export function TourPlanMap(props: TourPlanMapProps) {
       className={cn('h-full w-full select-none', zoomed ? 'cursor-grab touch-none data-[panning=true]:cursor-grabbing' : 'touch-pan-y')}>
       {planImageUrl !== null && level.plan !== null && (
         <image href={planImageUrl} x={frame.minX} y={frame.minY} width={frame.width} height={frame.height} preserveAspectRatio="none" aria-hidden />
+      )}
+      {planImageUrl !== null && (
+        <TourPlanSpaces level={level} stops={stops} currentNodeId={currentNodeId} nameOf={nameOf} areas={graph.spaceAreas} scale={scale} />
       )}
       <PlanLinks graph={graph} stops={stops} scale={scale} />
       {current !== undefined && current.levelId === level.id && <TourPlanCone camera={camera} at={current} scale={scale} />}

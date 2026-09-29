@@ -9,6 +9,7 @@
 
 import React, { useId } from 'react';
 
+import { MapRampLegend, type MapLegendItem } from '@/components/market/MapRampLegend';
 import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -19,15 +20,6 @@ import { rampStepOf, type PriceClass } from '@/lib/market/value-zone-classes';
 import type { ValueZoneSelection } from './AreaValueZoneLayer';
 
 const NS = 'market-contracts';
-
-/** Στατικές κλάσεις (το Tailwind δεν βλέπει δυναμικά ονόματα) — μία ανά απόχρωση της `--map-seq-*`. */
-const SWATCH_CLASS: Readonly<Record<number, string>> = {
-  1: 'bg-[hsl(var(--map-seq-1))]',
-  2: 'bg-[hsl(var(--map-seq-2))]',
-  3: 'bg-[hsl(var(--map-seq-3))]',
-  4: 'bg-[hsl(var(--map-seq-4))]',
-  5: 'bg-[hsl(var(--map-seq-5))]',
-};
 
 export type ValueZonePanelStatus = 'loading' | 'ready' | 'none' | 'unavailable';
 
@@ -41,25 +33,16 @@ interface AreaValueZonePanelProps {
 
 function Legend({ classes }: { readonly classes: readonly PriceClass[] }) {
   const { t } = useTranslation([NS]);
-  return (
-    <figure className="m-0 flex flex-col gap-1">
-      <figcaption className="text-xs font-medium text-muted-foreground">{t(`${NS}:valueZone.map.legend`)}</figcaption>
-      <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-xs text-foreground">
-        {classes.map((item, index) => (
-          <li key={item.low} className="flex items-center gap-1.5">
-            <span aria-hidden className={`block size-3 rounded-sm border border-border ${SWATCH_CLASS[rampStepOf(index, classes.length)]}`} />
-            {item.low === item.high
-              ? formatCurrency(item.low)
-              : t(`${NS}:valueZone.map.class`, { low: formatCurrency(item.low), high: formatCurrency(item.high) })}
-          </li>
-        ))}
-        <li className="flex items-center gap-1.5">
-          <span aria-hidden className="block h-1 w-4 rounded-full bg-[hsl(var(--map-seq-5))]" />
-          {t(`${NS}:valueZone.map.fronts`)}
-        </li>
-      </ul>
-    </figure>
-  );
+  const items: MapLegendItem[] = classes.map((item, index) => ({
+    key: String(item.low),
+    swatch: { kind: 'ramp', step: rampStepOf(index, classes.length) },
+    label:
+      item.low === item.high
+        ? formatCurrency(item.low)
+        : t(`${NS}:valueZone.map.class`, { low: formatCurrency(item.low), high: formatCurrency(item.high) }),
+  }));
+  items.push({ key: 'fronts', swatch: { kind: 'line', step: 5 }, label: t(`${NS}:valueZone.map.fronts`) });
+  return <MapRampLegend caption={t(`${NS}:valueZone.map.legend`)} items={items} />;
 }
 
 function SelectionLine({ selection }: { readonly selection: ValueZoneSelection | null }) {

@@ -56,6 +56,48 @@ describe('spatialTourFromDocument', () => {
     expect(read({ types: ['office'], label: null, source: 'bim' })).toBeNull();
   });
 
+  // Γ3β — σχήματα χώρων + νοητές γραμμές + διακόπτης εμβαδών: ίδια σύμβαση «λείπει ⇒ τίποτα · δεν διαβάζεται ⇒ null».
+  describe('σχήματα χώρων (Γ3β)', () => {
+    const AT = '2026-09-28T10:00:00.000Z';
+    const SPACE = {
+      id: 'tspc_1', source: 'detected', approvedBy: 'usr_1', approvedAt: AT,
+      points: [{ x: 1, y: -1 }, { x: 5, y: -1 }, { x: 5, y: -4 }],
+      room: { types: ['storage'], label: 'Αποθήκη', source: 'manual' },
+      declaredArea: { areaM2: 12.4, source: 'engineer-study', declaredBy: 'usr_1', declaredAt: AT },
+    };
+    const LINE = { id: 'tsep_1', a: { x: 5, y: -1 }, b: { x: 5, y: -4 }, approvedBy: 'usr_1', approvedAt: AT };
+    const read = (level: Record<string, unknown>, top: Record<string, unknown> = {}) =>
+      spatialTourFromDocument({ ...TOUR_DOC, ...top, levels: [{ ...TOUR_DOC.levels[0], ...level }] }, 'stour_1');
+
+    it('✅ διαβάζονται ολόκληρα · 🟰 παλιό έγγραφο (χωρίς πεδία) μένει αμετάβλητο', () => {
+      expect(read({ spaces: [SPACE], separations: [LINE] })?.levels[0]).toMatchObject({ spaces: [SPACE], separations: [LINE] });
+      const legacy = read({});
+      expect(legacy?.levels[0]).not.toHaveProperty('spaces');
+      expect(legacy?.levels[0]).not.toHaveProperty('separations');
+      expect(legacy).not.toHaveProperty('spaceAreaDisplay');
+      expect(read({ spaces: [{ ...SPACE, room: undefined, declaredArea: undefined }] })?.levels[0].spaces?.[0])
+        .not.toHaveProperty('declaredArea');
+    });
+
+    it.each([
+      ['κορυφή που δεν διαβάζεται', { spaces: [{ ...SPACE, points: [...SPACE.points, { x: 'ένα', y: 0 }] }] }],
+      ['δύο κορυφές', { spaces: [{ ...SPACE, points: SPACE.points.slice(0, 2) }] }],
+      ['άγνωστη πηγή περιγράμματος', { spaces: [{ ...SPACE, source: 'guess' }] }],
+      ['χωρίς έγκριση', { spaces: [{ ...SPACE, approvedBy: undefined }] }],
+      ['δηλωμένο χωρίς πηγή', { spaces: [{ ...SPACE, declaredArea: { ...SPACE.declaredArea, source: 'hearsay' } }] }],
+      ['άγνωστο όνομα χώρου', { spaces: [{ ...SPACE, room: { types: ['dungeon'], label: null, source: 'manual' } }] }],
+      ['γραμμή χωρίς άκρο', { separations: [{ ...LINE, b: null }] }],
+      ['χώροι που δεν είναι πίνακας', { spaces: { tspc_1: SPACE } }],
+    ])('🔴 %s ⇒ ολόκληρη η περιήγηση null', (_label, level) => {
+      expect(read(level)).toBeNull();
+    });
+
+    it('διακόπτης εμβαδών: `hidden` διαβάζεται · 🔴 άγνωστη τιμή ⇒ null', () => {
+      expect(read({}, { spaceAreaDisplay: 'hidden' })?.spaceAreaDisplay).toBe('hidden');
+      expect(read({}, { spaceAreaDisplay: 'maybe' })).toBeNull();
+    });
+  });
+
   it.each([
     ['χωρίς κάτοχο', { companyId: undefined }],
     ['δύο κάτοχοι', { userId: 'usr_1' }],

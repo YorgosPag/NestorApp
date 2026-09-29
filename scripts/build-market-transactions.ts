@@ -13,6 +13,7 @@
  * ```
  *
  * **Εκτέλεση**: `npm run build:market-transactions` · επιλογές `--from=2022 --to=2026 --refresh`
+ * (χωρίς `--to`: το τελευταίο **δημοσιευμένο** έτος — `resolveMamaWindow`, ADR-889 §11)
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔑 Η Φ2 ΔΗΜΟΣΙΕΥΕΙ — ΜΕ ΑΔΕΙΑ CC-BY 4.0 (ADR-889 §2.1, απάντηση ΥΠΕΘΟΟ 2026-09-28)
@@ -30,7 +31,14 @@ import ExcelJS from 'exceljs';
 
 import { REPO_ROOT, readHierarchyRows } from './lib/admin-boundaries/admin-boundary-source';
 import { createMamaAreaResolver, type MamaAreaResolver } from './lib/market-transactions/mama-area-resolver';
-import { MARKET_TRANSACTIONS_CACHE_DIR, loadMamaYear, type MamaSourceMeta } from './lib/market-transactions/mama-download';
+import {
+  MAMA_RUN_SUMMARY_PATH,
+  type MamaRunSummary,
+  MARKET_TRANSACTIONS_CACHE_DIR,
+  loadMamaYear,
+  resolveMamaWindow,
+  type MamaSourceMeta,
+} from './lib/market-transactions/mama-download';
 import { coverageOf, renderMatchReport, type PairTally } from './lib/market-transactions/mama-match-report';
 import { assertMamaHeader, parseMamaRow, type MamaRecord } from './lib/market-transactions/mama-source';
 import {
@@ -40,6 +48,7 @@ import {
   MAMA_SPECIAL_CONDITIONS,
 } from './lib/market-transactions/mama-vocabulary';
 import { buildAreaSummaryFile } from './lib/market-transactions/area-summary';
+import { buildContractPriceMapFile } from './lib/market-transactions/price-map-file';
 import { comparableUnitPrice } from './lib/market-transactions/market-statistics';
 import { OPEN_DATA_SOURCES } from '../src/config/open-data-sources';
 import { SEGMENT_METRIC, SEGMENT_PROPERTY_TYPES } from '../src/lib/market/market-segments';
@@ -48,8 +57,10 @@ import { CATEGORY_ORDER, buildAreaRowsFile, type ClassifiedRecord } from './lib/
 import {
   MARKET_TRANSACTIONS_DIR,
   MARKET_TRANSACTIONS_FORMAT_VERSION,
+  MARKET_TRANSACTIONS_PRICE_MAP_PUBLIC_PATH,
   ROW_FIELDS,
   marketTransactionsPublicPath,
+  type AreaSummaryFile,
   type MarketTransactionsKind,
 } from '../src/lib/market/market-transactions-file';
 
@@ -69,20 +80,6 @@ const ATTRIBUTION = {
   changes: 'συγκεντρωτικά στατιστικά μόνο συγκρίσιμων γραμμών (ADR-889 §5.3), αντιστοίχιση σε περιοχές Καλλικράτη (§4)',
   label: 'τιμή συμβολαίου — ΟΧΙ αγοραία αξία',
 } as const;
-
-/** Το παράθυρο ετών: τα πέντε τελευταία (§5.2 βήμα 1), ή ό,τι δοθεί με `--from` / `--to`. */
-function parseWindow(argv: readonly string[]): { from: number; to: number; refresh: boolean } {
-  const value = (name: string): number | null => {
-    const arg = argv.find((a) => a.startsWith(`--${name}=`));
-    return arg === undefined ? null : Number(arg.slice(name.length + 3));
-  };
-  const to = value('to') ?? new Date().getFullYear();
-  const from = value('from') ?? to - 4;
-  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 2017 || from > to) {
-    throw new Error(`άκυρο παράθυρο ετών ${from}–${to} (το μητρώο αρχίζει το 2017)`);
-  }
-  return { from, to, refresh: argv.includes('--refresh') };
-}
 
 interface Accumulator {
   readonly resolver: MamaAreaResolver;
@@ -176,21 +173,30 @@ function writeFile(kind: MarketTransactionsKind, areaId: string, content: unknow
   writeFileSync(join(PUBLIC_DIR, ...marketTransactionsPublicPath(kind, areaId)), JSON.stringify(content));
 }
 
-function writeAreas(acc: Accumulator): AreaIndexRow[] {
+interface WrittenAreas {
+  readonly rows: AreaIndexRow[];
+  /** Τα `summary` που γράφτηκαν — η πρώτη ύλη του συγκεντρωτικού του χάρτη τιμών (ADR-890 §14.4). */
+  readonly summaries: AreaSummaryFile[];
+}
+
+function writeAreas(acc: Accumulator): WrittenAreas {
   rmSync(OUTPUT_DIR, { recursive: true, force: true });
   rmSync(LEGACY_OUTPUT_DIR, { recursive: true, force: true });
   for (const kind of ['summary', 'rows'] as const) mkdirSync(join(OUTPUT_DIR, kind), { recursive: true });
 
   const groups = withMunicipalities(acc);
   const rows: AreaIndexRow[] = [];
+  const summaries: AreaSummaryFile[] = [];
   for (const areaId of [...groups.keys()].sort()) {
     const items = groups.get(areaId) as ClassifiedRecord[];
-    writeFile('summary', areaId, buildAreaSummaryFile(areaId, items, acc.latest));
+    const summary = buildAreaSummaryFile(areaId, items, acc.latest);
+    summaries.push(summary);
+    writeFile('summary', areaId, summary);
     writeFile('rows', areaId, buildAreaRowsFile(areaId, items));
     const { name, level } = acc.resolver.area(areaId);
     rows.push([areaId, name, level, items.length, items.filter((i) => i.unitPrice !== null).length]);
   }
-  return rows;
+  return { rows, summaries };
 }
 
 function writeIndex(
@@ -206,22 +212,31 @@ function writeIndex(
 
 async function main(): Promise<void> {
   const started = Date.now();
-  const window = parseWindow(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  const window = await resolveMamaWindow(argv);
+  const refresh = argv.includes('--refresh');
   const acc: Accumulator = { resolver: createMamaAreaResolver(readHierarchyRows()), pairs: new Map(), byArea: new Map(), comparable: 0, latest: '' };
 
   const inputs: Array<MamaSourceMeta & { rows: number }> = [];
   for (let year = window.from; year <= window.to; year += 1) {
-    const source = await loadMamaYear(year, window.refresh);
+    const source = await loadMamaYear(year, refresh);
     inputs.push({ ...source.meta, rows: await readYear(source.path, year, acc) });
   }
 
-  const areas = writeAreas(acc);
+  const { rows: areas, summaries } = writeAreas(acc);
   writeIndex(window, acc.latest, inputs, areas);
+  writeFileSync(
+    join(PUBLIC_DIR, ...MARKET_TRANSACTIONS_PRICE_MAP_PUBLIC_PATH),
+    JSON.stringify(buildContractPriceMapFile(summaries, acc.latest)),
+  );
   const pairs = [...acc.pairs.values()];
   // Η αναφορά μετρά τις περιοχές όπου **έδεσε** η πηγή — όχι τους αθροισμένους Δήμους.
   const totals = coverageOf(pairs, acc.comparable, acc.byArea.size);
   mkdirSync(join(REPORT_PATH, '..'), { recursive: true });
   writeFileSync(REPORT_PATH, renderMatchReport(window, pairs, totals, acc.resolver));
+  // Η σύνοψη για την πύλη της ανανέωσης (ADR-889 §11) — στην cache, ΟΧΙ στο `public/` (δεν σερβίρεται, δεν μπαίνει στο git).
+  const runSummary: MamaRunSummary = { window, asOf: acc.latest, totals };
+  writeFileSync(MAMA_RUN_SUMMARY_PATH, `${JSON.stringify(runSummary, null, 2)}\n`);
 
   console.table([{ ...totals, seconds: Math.round((Date.now() - started) / 1000) }]);
   console.log(`✅ ${areas.length} περιοχές (${acc.byArea.size} από την πηγή + Δήμοι) → ${OUTPUT_DIR}\n📄 αναφορά → ${REPORT_PATH}`);

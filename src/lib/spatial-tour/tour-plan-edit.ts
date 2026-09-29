@@ -7,7 +7,8 @@
  *
  * 🔑 **Οι τελείες ανήκουν στην ΕΙΚΟΝΑ**: ο άνθρωπος έδειξε ένα pixel της κάτοψης. Άρα (α) αλλαγή κλίμακας ⇒ οι θέσεις του
  *   ορόφου **ξανακλιμακώνονται** (μένουν στο ίδιο pixel) · (β) αλλαγή κάτοψης ⇒ οι θέσεις του ορόφου **σβήνουν** (το pixel
- *   μιας άλλης εικόνας δεν σημαίνει τίποτα) — ρητά, με «Αναίρεση» στην οθόνη (Δ5: «οι κόμβοι ξανατοποθετούνται»).
+ *   μιας άλλης εικόνας δεν σημαίνει τίποτα) — ρητά, με «Αναίρεση» στην οθόνη (Δ5: «οι κόμβοι ξανατοποθετούνται»). Το ίδιο και
+ *   για τα **σχήματα χώρων** και τις νοητές γραμμές του ορόφου (Γ3β — `tour-space-edit.ts`).
  * 🔑 **Καμία θέση χωρίς κλίμακα** (`plan-uncalibrated`): τα «μέτρα» μιας αβαθμονόμητης εικόνας θα ήταν μαντεψιά.
  * 🔑 **Προσανατολισμός = στροφή ΚΑΙ των βελακιών**: ένα βελάκι είναι διόπτευση κόσμου = heading + yaw. Αν αλλάξει το heading
  *   και όχι το βελάκι, το βελάκι **μετακινείται μέσα στη φωτογραφία** — από την πόρτα στον τοίχο. Άρα ίδια Δ και στα δύο.
@@ -17,9 +18,10 @@ import type { FloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabul
 import { normalizeAngleDiff, normalizeAngleRad } from '@/lib/geometry/angle';
 import type { FloorPlanImage, FloorPlanRecord, SpatialTour, TourLevel, TourLevelKey, TourNode } from '@/types/spatial-tour';
 
-import { levelKeyId } from './spatial-tour-graph';
+import { findTourLevel, levelKeyId } from './spatial-tour-graph';
 import type { TourGraphEditResult, TourGraphEditRefusal } from './tour-graph-edit';
 import { activeFloorPlan, calibratedPlan, isOnPlan, rescalePoint } from './tour-plan-frame';
+import { clearLevelShapes, rescaleLevelShapes } from './tour-space-edit';
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
 
@@ -44,12 +46,16 @@ const UNCHANGED: TourGraphEditResult = { kind: 'unchanged' };
 
 const onLevel = (node: TourNode, key: TourLevelKey) => levelKeyId(node.levelKey) === levelKeyId(key);
 
-function findLevel(graph: Graph, key: TourLevelKey): TourLevel | undefined {
-  return graph.levels.find((level) => levelKeyId(level.key) === levelKeyId(key));
-}
+const findLevel = (graph: Graph, key: TourLevelKey): TourLevel | undefined => findTourLevel(graph.levels, key);
 
-function replaceLevel(levels: readonly TourLevel[], key: TourLevelKey, floorPlans: readonly FloorPlanRecord[]): TourLevel[] {
-  return levels.map((level) => (levelKeyId(level.key) === levelKeyId(key) ? { ...level, floorPlans } : level));
+/** Ο όροφος με νέες κατόψεις — και τα **σχήματα** του (Γ3β) όπως τα θέλει η αλλαγή (`shapes`). */
+function replaceLevel(
+  levels: readonly TourLevel[],
+  key: TourLevelKey,
+  floorPlans: readonly FloorPlanRecord[],
+  shapes: (level: TourLevel) => TourLevel,
+): TourLevel[] {
+  return levels.map((level) => (levelKeyId(level.key) === levelKeyId(key) ? shapes({ ...level, floorPlans }) : level));
 }
 
 /** Η ενεργή γίνεται `superseded`, η νέα μπαίνει `active` — η ιστορία δεν σβήνεται ποτέ (Δ5). */
@@ -71,7 +77,7 @@ export function setLevelFloorPlan(graph: Graph, key: TourLevelKey, choice: Floor
   if (level === undefined) return refused('level-absent');
   const active = activeFloorPlan(level);
   if (choice === null ? active?.source === 'none' : active?.fileId === choice.fileId && active.source === choice.source) return UNCHANGED;
-  const levels = replaceLevel(graph.levels, key, supersedeWith(level, recordOf(choice, stamp)));
+  const levels = replaceLevel(graph.levels, key, supersedeWith(level, recordOf(choice, stamp)), clearLevelShapes);
   const nodes = graph.nodes.map((node) => (onLevel(node, key) && node.position !== null ? { ...node, position: null } : node));
   return { kind: 'edited', graph: { levels, nodes } };
 }
@@ -96,7 +102,7 @@ export function calibrateLevel(graph: Graph, key: TourLevelKey, metresPerPixel: 
   if (active?.image == null) return refused('plan-absent');
   const before = active.scale?.metresPerPixel ?? null;
   if (before === metresPerPixel || (before !== null && metresPerPixel !== null && Math.abs(before - metresPerPixel) < EPSILON)) return UNCHANGED;
-  const levels = replaceLevel(graph.levels, key, scaledPlans(level, metresPerPixel, stamp));
+  const levels = replaceLevel(graph.levels, key, scaledPlans(level, metresPerPixel, stamp), (l) => rescaleLevelShapes(l, before, metresPerPixel));
   const nodes = graph.nodes.map((node) => {
     if (!onLevel(node, key) || node.position === null) return node;
     const position = before === null || metresPerPixel === null ? null : rescalePoint(node.position, before, metresPerPixel);

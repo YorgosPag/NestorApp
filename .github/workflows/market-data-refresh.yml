@@ -1,0 +1,111 @@
+name: T2 📈 Market Data Refresh (ADR-889 Φ4)
+
+# =============================================================================
+# ADR-889 §11 — ΑΥΤΟΜΑΤΗ ΑΝΑΝΕΩΣΗ: συμβόλαια ΜΑΜΑ (+ price-map.json) και ζώνες αντικειμενικών αξιών.
+#
+# ΙΔΙΩΜΑ Renovate / Dependabot: ΣΥΧΝΟΣ έλεγχος, ΣΠΑΝΙΑ δουλειά, ΑΝΘΡΩΠΟΣ στο merge.
+#   1. HEAD σε κάθε αρχείο πηγής (δευτερόλεπτα) — ίδιο ⇒ τέλος, πράσινο, κανένα PR.
+#   2. Άλλαξε ⇒ παραγωγή ΔΥΟ φορές (ντετερμινισμός) + πύλες + jest στα πραγματικά αρχεία.
+#   3. Πέρασαν ⇒ ΕΝΑ PR στον σταθερό κλάδο data/market-data-refresh (force-push: το ίδιο PR ενημερώνεται,
+#      δεν πολλαπλασιάζεται). Σώμα = η αναφορά αλλαγών.
+#
+# 🔴 ΠΟΤΕ push/merge στο main από εδώ. Merge = ανάπτυξη στο nestorconstruct.gr = απόφαση Giorgio (N.(-1)).
+#    Το PR που ανοίγει το GITHUB_TOKEN δεν ξυπνά άλλα workflows (σχεδιασμένο από το GitHub) — οι πύλες τρέχουν ΕΔΩ.
+# 🔑 Ατομικότητα: η μονάδα συναλλαγής είναι το ΕΝΑ commit του PR — όλα τα αρχεία ή κανένα.
+# ⚠️ Προϋπόθεση (μία φορά, runbook ADR-889 §11.6): Settings → Actions → General →
+#    «Allow GitHub Actions to create and approve pull requests». Χωρίς αυτό το βήμα PR κοκκινίζει ΡΗΤΑ.
+#
+# ΕΙΔΟΠΟΙΗΣΗ: κόκκινο ⇒ CI Health (Tier 2, digest) + email αποτυχίας του GitHub· αλλαγή ⇒ το ίδιο το PR.
+# Γιατί GitHub schedule και ΟΧΙ ο cron του Netcup (ADR-740): το προϊόν είναι COMMIT, όχι εκτέλεση στην παραγωγή·
+# ο cron της εφαρμογής θα χρειαζόταν token εγγραφής στο GitHub μέσα στην παραγωγή.
+# =============================================================================
+
+on:
+  schedule:
+    # Κάθε Δευτέρα 03:00 UTC (06:00 Αθήνα). Μετρημένο: το τρέχον έτος ξαναγράφεται ~μηνιαία, τα προηγούμενα
+    # οριστικοποιούνται Ιαν–Μαρ ⇒ εβδομαδιαίος έλεγχος = καθυστέρηση ≤ 7 ημέρες, κόστος δευτερόλεπτα.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Παραγωγή χωρίς έλεγχο κεφαλίδων (π.χ. μετά από αλλαγή γεννήτορα)'
+        type: boolean
+        default: false
+      accept_drop:
+        description: 'Ανθρώπινη αποδοχή πτώσης όγκου > 2% (πύλη Ε5) — δηλώνεται στην αναφορά'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # push ΜΟΝΟ στον κλάδο data/market-data-refresh
+  pull-requests: write
+
+concurrency:
+  group: market-data-refresh
+  cancel-in-progress: false
+
+env:
+  BRANCH: data/market-data-refresh
+  REPORT: ${{ github.workspace }}/../market-data-refresh-report.md
+
+jobs:
+  refresh:
+    name: 📈 Έλεγχος πηγών · παραγωγή · πύλες · PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Οι γεννήτορες τρέχουν με το tsx του mcp-server (package.json: build:*) — ίδια εντολή με τον άνθρωπο.
+      - name: 📦 Install generator runtime (tsx, από το lock)
+        run: npm ci --prefix mcp-server --no-audit --no-fund
+
+      - name: 🔎 Έλεγχος · παραγωγή · πύλες
+        id: refresh
+        run: >-
+          npm run refresh:market-data --
+          --github-output
+          --report="$REPORT"
+          ${{ inputs.force && '--force' || '' }}
+          ${{ inputs.accept_drop && '--accept-drop' || '' }}
+
+      - name: 📋 Αναφορά στη σύνοψη του run
+        if: always()
+        run: |
+          if [ -f "$REPORT" ]; then cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: 📬 Άνοιγμα / ενημέρωση PR
+        if: steps.refresh.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -- public/data/market-transactions public/data/value-zones docs/centralized-systems/reference/reports/adr-889-area-match.md
+          if git diff --cached --quiet; then
+            echo "::notice title=Market Data Refresh::Η πηγή άλλαξε κεφαλίδα αλλά η έξοδος είναι byte-ταυτόσημη — κανένα PR."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -C "$BRANCH"
+          git commit -m "data(market): αυτόματη ανανέωση ΜΑΜΑ / ζωνών (ADR-889 Φ4)" -m "Πηγή: ΥΠΕΘΟΟ (CC-BY 4.0). Αναφορά αλλαγών στο σώμα του PR."
+          git push --force origin "$BRANCH"
+          state="$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null || true)"
+          if [ "$state" = "OPEN" ]; then
+            gh pr edit "$BRANCH" --body-file "$REPORT"
+          else
+            gh pr create --base main --head "$BRANCH" \
+              --title "data(market): ανανέωση συμβολαίων ΜΑΜΑ / ζωνών αντικειμενικών αξιών (ADR-889 Φ4)" \
+              --body-file "$REPORT"
+          fi

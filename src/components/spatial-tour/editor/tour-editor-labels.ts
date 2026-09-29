@@ -1,7 +1,8 @@
 /**
  * @fileoverview **ΤΑ ΚΛΕΙΔΙΑ ΤΗΣ ΟΘΟΝΗΣ ΤΟΠΟΘΕΤΗΣΗΣ** — `spatial-tour:editor.*` (ADR-884 Φ2δ · §4.10).
  * @related `../viewer/tour-viewer-labels.ts` (τα κλειδιά του θεατή — ίδιο σκεπτικό χωριστού αντικειμένου) ·
- *   `../spatial-tour-labels.ts` (`TOUR_REFUSAL_KEY` — οι αρνήσεις του γράφου ζουν εκεί, στο ΕΝΑ λεξιλόγιο)
+ *   `../spatial-tour-labels.ts` (`TOUR_REFUSAL_KEY` — οι αρνήσεις του γράφου) · `tour-shape-labels.ts` (οι αρνήσεις και τα
+ *   μηνύματα των σχημάτων χώρων — διαμέριση, Γ3γ-1)
  * @module components/spatial-tour/editor/tour-editor-labels
  *
  * 🔑 **Χωριστό αντικείμενο**: η οθόνη φορτώνεται πίσω από `next/dynamic` μόνο για τον υπεύθυνο — οι λέξεις της δεν
@@ -91,4 +92,5 @@ export const TOUR_EDITOR_KEYS = {
   planSuggestHint: 'spatial-tour:editor.planSuggestHint',
   planSuggestSpread: 'spatial-tour:editor.planSuggestSpread',
   pointOriented: 'spatial-tour:editor.pointOriented',
+  // Τα σχήματα χώρων (Γ3β) έχουν δικό τους αρχείο: `tour-shape-labels.ts` (CHECK 3.34, Γ3γ-1).
 } as const;

@@ -41,6 +41,16 @@ export abstract class SpatialTourIdGenerators extends SavedListingIdGenerators {
     return this.generateId(P.TOUR_NODE).id;
   }
 
+  /** Περίγραμμα χώρου ενός ορόφου (Γ3β) — τυχαίο: τίποτα δεν το δείχνει, η συμμετοχή σημείου **παράγεται**. */
+  generateTourSpaceId(): string {
+    return this.generateId(P.TOUR_SPACE).id;
+  }
+
+  /** Νοητή διαχωριστική γραμμή ενός ορόφου (Γ3β, Δ8.2) — τυχαίο, για τον ίδιο λόγο. */
+  generateTourSeparationId(): string {
+    return this.generateId(P.TOUR_SEPARATION).id;
+  }
+
   generateTourCaptureId(): string {
     return this.generateId(P.TOUR_CAPTURE).id;
   }

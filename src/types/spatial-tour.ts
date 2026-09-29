@@ -30,11 +30,15 @@ import type {
   TourHeadingSource,
   TourLinkVia,
   TourMilestone,
+  TourDeclaredAreaSource,
   TourRoomSource,
   TourRoomType,
+  TourSpaceAreaDisplay,
+  TourSpaceSource,
   TourTilesetState,
 } from '@/constants/spatial-tour-vocabulary';
 import type { ScopedGrant } from '@/lib/auth/scoped-grant';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { ModelSignatory } from '@/lib/listings/listing-model-declaration';
 import type { CustodyScope } from '@/lib/workspace/custody-scope';
 import type { InvitationRecordCore } from '@/types/invitation-core';
@@ -94,6 +98,53 @@ export interface TourLevel {
   readonly key: TourLevelKey;
   /** Ιστορία — **ακριβώς ένα** `active` (αναλλοίωτο #4). */
   readonly floorPlans: readonly FloorPlanRecord[];
+  /**
+   * Τα εγκεκριμένα περιγράμματα χώρων του ορόφου (ADR-884 Γ3β · Δ8.1) — απών ⇒ κανένα. Ανήκουν στην **εικόνα** της ενεργής
+   * κάτοψης, όπως οι θέσεις: αλλαγή κλίμακας ⇒ ξανακλιμάκωση, αλλαγή κάτοψης ⇒ σβήνουν.
+   */
+  readonly spaces?: readonly TourSpaceOutline[];
+  /** Οι νοητές διαχωριστικές γραμμές του ορόφου (Δ8.2, Revit Room Separation Lines) — απών ⇒ καμία. */
+  readonly separations?: readonly TourSeparationLine[];
+}
+
+/**
+ * **Δηλωμένο εμβαδόν** ενός χώρου (Δ8.4): υπερισχύει του μετρημένου στην προβολή, **με** προέλευση. Το «ποιος/πότε» το γράφει
+ * ο διακομιστής· αλλαγή σχήματος του χώρου **δεν** το σβήνει (η σύγκριση με το μετρημένο = φύλακας στον επεξεργαστή).
+ */
+export interface TourDeclaredArea {
+  readonly areaM2: number;
+  readonly source: TourDeclaredAreaSource;
+  readonly declaredBy: string;
+  readonly declaredAt: string;
+}
+
+/**
+ * **Περίγραμμα χώρου** πάνω στην κάτοψη (ADR-884 Γ3β · Revit Room): περιοχή ορόφου, **όχι** ιδιότητα σημείου. Η συμμετοχή ενός
+ * σημείου λήψης **παράγεται** (σημείο-μέσα-σε-πολύγωνο της θέσης του) και η γειτονία επίσης (κοινή νοητή γραμμή) — τίποτα δεν
+ * αποθηκεύεται δεύτερη φορά, άρα τίποτα δεν παλιώνει όταν μετακινηθεί σημείο. Χώρος **χωρίς** σημείο λήψης επιτρέπεται (Γ3β-1:
+ * η αποθήκη που δεν φωτογραφήθηκε) — γι' αυτό έχει δικό του όνομα· το όνομα του σημείου υπερισχύει όπου υπάρχει.
+ */
+export interface TourSpaceOutline {
+  readonly id: string;
+  /** Κλειστός δακτύλιος σε μέτρα κάτοψης (πλαίσιο `imagePixelToPlan`: x ανατολή, y βορράς) — χωρίς επανάληψη της πρώτης. */
+  readonly points: readonly PlanarPoint[];
+  readonly source: TourSpaceSource;
+  /** Το όνομα του χώρου — **το ίδιο** σχήμα με του σημείου (`TourRoom`)· απών/`null` ⇒ από το σημείο μέσα του, αν υπάρχει. */
+  readonly room?: TourRoom | null;
+  readonly declaredArea?: TourDeclaredArea | null;
+  /** Ποιος ενέκρινε **αυτό** το σχήμα και πότε — η τελευταία αλλαγή σχήματος είναι νέα έγκριση. */
+  readonly approvedBy: string;
+  readonly approvedAt: string;
+}
+
+/** **Νοητή διαχωριστική γραμμή** (Δ8.2): ο ανιχνευτής τη βλέπει ως τοίχο· δύο χώροι που τη μοιράζονται είναι «ενιαίοι γείτονες». */
+export interface TourSeparationLine {
+  readonly id: string;
+  readonly a: PlanarPoint;
+  readonly b: PlanarPoint;
+  /** Ποιος ενέκρινε **αυτή** τη θέση της γραμμής και πότε (ίδια σημασία με τον χώρο). */
+  readonly approvedBy: string;
+  readonly approvedAt: string;
 }
 
 /** Σύνθετη θέση κάτοψης: x = ανατολή, y = βορράς, z = υψόμετρο, σε μέτρα (`planMetresToWorld` στον θεατή). */
@@ -145,6 +196,8 @@ export interface SpatialTour {
   readonly subject: TourSubject;
   readonly visibility: SpatialTourVisibility;
   readonly lifecycle: SpatialTourLifecycle;
+  /** Εμβαδά χώρων στη δημόσια σελίδα (Δ8.4) — απών ⇒ `shown`. Ρύθμιση, όχι γράφος: **δεν** αυξάνει το `revision`. */
+  readonly spaceAreaDisplay?: TourSpaceAreaDisplay;
   readonly levels: readonly TourLevel[];
   /** ≤ `MAX_TOUR_NODES`. */
   readonly nodes: readonly TourNode[];

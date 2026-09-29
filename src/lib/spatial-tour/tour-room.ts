@@ -59,8 +59,16 @@ const typesKey = (room: TourRoom) => room.types.join('+');
 export function tourRoomDisplay(node: TourNode, levelNodes: readonly TourNode[]): TourRoomDisplay | null {
   const room = node.room ?? null;
   if (room === null) return null;
-  if (room.label !== null) return { kind: 'label', text: room.label };
+  if (room.label !== null) return plainRoomDisplay(room);
   const key = typesKey(room);
   const alike = levelNodes.filter((n) => n.room && n.room.label === null && typesKey(n.room) === key);
   return { kind: 'types', types: room.types, ordinal: alike.length > 1 ? alike.findIndex((n) => n.id === node.id) + 1 : null };
+}
+
+/**
+ * Το όνομα ενός **χώρου χωρίς σημείο λήψης** (ADR-884 Δ8.5 · Γ3γ-1) — το δικό του όνομα, χωρίς αρίθμηση: η αρίθμηση όμοιων
+ * ανήκει στα σημεία, και ο χώρος χωρίς σημείο δεν μπαίνει στη σειρά τους.
+ */
+export function plainRoomDisplay(room: TourRoom): TourRoomDisplay {
+  return room.label !== null ? { kind: 'label', text: room.label } : { kind: 'types', types: room.types, ordinal: null };
 }

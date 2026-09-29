@@ -12,7 +12,7 @@
  * 🔑 **Κόμβος χωρίς λήψη φεύγει**: αφαίρεση της τελευταίας λήψης ενός κόμβου ⇒ `removeTourNode` (ποτέ ορφανός σύνδεσμος).
  */
 
-import type { FloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
+import type { FloorPlanDeclarableSource, TourDeclaredAreaSource, TourSpaceSource } from '@/constants/spatial-tour-vocabulary';
 import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourNode } from '@/types/spatial-tour';
 
 import { levelKeyId, removeTourNode } from './spatial-tour-graph';
@@ -49,7 +49,28 @@ export type TourGraphCommand =
   /** Η θέση ενός σημείου σε μέτρα κάτοψης (x ανατολή, y βορράς) — `null` ⇒ εκτός κάτοψης. */
   | { readonly op: 'position'; readonly nodeId: string; readonly point: { readonly x: number; readonly y: number } | null }
   /** Ο προσανατολισμός της λήψης ενός σημείου (heading κόσμου) — στρέφει **και** τα βελάκια του. */
-  | { readonly op: 'orient'; readonly captureId: string; readonly headingRad: number };
+  | { readonly op: 'orient'; readonly captureId: string; readonly headingRad: number }
+  // ── Τα σχήματα των χώρων (Φ2στ-γ Γ3β · §4.14 — οι καθαρές ζουν στο `tour-space-edit.ts`) ──
+  /** **Έγκρινε** περίγραμμα χώρου: `spaceId === null` ⇒ νέος (το id το κόβει ο διακομιστής), αλλιώς αντικατάσταση. */
+  | { readonly op: 'space'; readonly levelKey: TourLevelKey; readonly spaceId: string | null; readonly space: TourSpaceDraft }
+  | { readonly op: 'unspace'; readonly levelKey: TourLevelKey; readonly spaceId: string }
+  /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα. */
+  | { readonly op: 'separate'; readonly levelKey: TourLevelKey; readonly separationId: string | null; readonly a: TourPlanXY; readonly b: TourPlanXY }
+  | { readonly op: 'unseparate'; readonly levelKey: TourLevelKey; readonly separationId: string };
+
+/** Σημείο σε μέτρα κάτοψης, όπως το στέλνει η οθόνη. */
+export type TourPlanXY = { readonly x: number; readonly y: number };
+
+/**
+ * Ό,τι εγκρίνει ο άνθρωπος για έναν χώρο — **χωρίς** «ποιος/πότε» (τα γράφει ο διακομιστής). Το δηλωμένο εμβαδόν ταξιδεύει
+ * **πάντα** μαζί με το σχήμα: η οθόνη το ξαναστέλνει όπως ήταν, ώστε μια αλλαγή σχήματος να μην το σβήσει ποτέ (Δ8.4).
+ */
+export interface TourSpaceDraft {
+  readonly points: readonly TourPlanXY[];
+  readonly source: TourSpaceSource;
+  readonly room: TourRoomInput | null;
+  readonly declaredArea: { readonly areaM2: number; readonly source: TourDeclaredAreaSource } | null;
+}
 
 /** Ό,τι διαλέγει ο άνθρωπος για την κάτοψη ενός ορόφου: ποιο αρχείο του ακινήτου, και **ποιος** το σχεδίασε (δηλωμένο). */
 export interface TourFloorPlanPick {
@@ -73,14 +94,18 @@ export interface TourPlanCandidate {
 export interface TourGraphEditResponse {
   readonly changed: boolean;
   readonly revision: number;
+  /** Το id που έκοψε ο διακομιστής για νέο χώρο/νέα γραμμή — η «Αναίρεση» της δημιουργίας το χρειάζεται. */
+  readonly createdId?: string;
 }
 
 export type TourGraphEditRefusal =
   | 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'room-invalid'
-  | 'plan-absent' | 'plan-uncalibrated' | 'position-outside-plan' | 'scale-invalid';
+  | 'plan-absent' | 'plan-uncalibrated' | 'position-outside-plan' | 'scale-invalid'
+  | 'space-invalid' | 'space-outside-plan' | 'space-overlap' | 'space-absent' | 'area-invalid'
+  | 'separation-invalid' | 'separation-absent';
 
 export type TourGraphEditResult =
-  | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null }
+  | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null; readonly createdId?: string }
   | { readonly kind: 'unchanged' }
   | { readonly kind: 'refused'; readonly reason: TourGraphEditRefusal };
 

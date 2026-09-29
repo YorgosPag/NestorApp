@@ -199,6 +199,56 @@ export const TOUR_ROOM_SOURCES = ['manual'] as const;
 export type TourRoomSource = (typeof TOUR_ROOM_SOURCES)[number];
 
 // =============================================================================
+// 3γ. ΤΑ ΣΧΗΜΑΤΑ ΤΩΝ ΧΩΡΩΝ — περιγράμματα + νοητές γραμμές ανά όροφο (ADR-884 Φ2στ-γ Γ3β · §12 Δ8)
+// =============================================================================
+
+/**
+ * **Από πού ήρθε ένα περίγραμμα χώρου**: `detected` = πρόταση της ανίχνευσης (Γ3α) που ενέκρινε άνθρωπος · `manual` = σχεδιάστηκε
+ * με το χέρι · `dxf` = κλειστό περίγραμμα χώρου σχεδίου (Δ8.1, όταν έρθει κάτοψη DXF). Σε **κάθε** περίπτωση το περίγραμμα
+ * δημοσιεύεται μόνο με έγκριση — ποτέ αυτόματα.
+ */
+export const TOUR_SPACE_SOURCES = ['detected', 'manual', 'dxf'] as const;
+export type TourSpaceSource = (typeof TOUR_SPACE_SOURCES)[number];
+
+/**
+ * **Από πού ήρθε ένα δηλωμένο εμβαδόν** (Δ8.4 · απόφαση Giorgio Γ3β-2): υποχρεωτικό — ο αγοραστής ξεχωρίζει τη μελέτη από
+ * την εκτίμηση. Η σειρά = φθίνουσα αξιοπιστία (και σειρά επιλογέα).
+ */
+export const TOUR_DECLARED_AREA_SOURCES = ['engineer-study', 'site-measurement', 'owner-declared'] as const;
+export type TourDeclaredAreaSource = (typeof TOUR_DECLARED_AREA_SOURCES)[number];
+
+/** **Εμβαδά χώρων στη δημόσια σελίδα** — διακόπτης ανά περιήγηση (Δ8.4)· απών ⇒ `shown`. */
+export const TOUR_SPACE_AREA_DISPLAYS = ['shown', 'hidden'] as const;
+export type TourSpaceAreaDisplay = (typeof TOUR_SPACE_AREA_DISPLAYS)[number];
+/** Η προεπιλογή (Δ8.4: «μετρημένο ως προεπιλογή») — και η ανάγνωση παλιού εγγράφου χωρίς το πεδίο. */
+export const TOUR_SPACE_AREA_DISPLAY_DEFAULT: TourSpaceAreaDisplay = 'shown';
+
+/** Κορυφές ενός περιγράμματος — τρίγωνο ως ~δωμάτιο με καμπύλες (το DP της Γ3α δίνει δεκάδες, όχι εκατοντάδες). */
+export const TOUR_SPACE_MIN_VERTICES = 3;
+export const TOUR_SPACE_MAX_VERTICES = 200;
+/** Όρια ανά όροφο — ο γράφος ζει σε **ένα** έγγραφο (όριο 1 MiB): 80 × 200 κορυφές ≈ 0,5 MB στη χειρότερη. */
+export const MAX_TOUR_SPACES_PER_LEVEL = 80;
+export const MAX_TOUR_SEPARATIONS_PER_LEVEL = 80;
+/** Κάτω από αυτό δεν είναι χώρος αλλά μουτζούρα (μισό τετραγωνικό ≈ ντουλάπι 70 × 70). */
+export const TOUR_SPACE_MIN_AREA_M2 = 0.25;
+/**
+ * **Ανοχή επικάλυψης** δύο χώρων: τα περιγράμματα που ακουμπούν σε κοινό τοίχο ή κοινή νοητή γραμμή «τρέμουν» κατά μισό pixel
+ * εδώ κι εκεί (ορθογώνια έλξη, σύρσιμο κορυφών) ⇒ επικάλυψη = βαθύτερη από 5 cm.
+ */
+export const TOUR_SPACE_OVERLAP_TOLERANCE_M = 0.05;
+/** Άνω όριο δηλωμένου εμβαδού ενός χώρου — πιάνει το «2800» αντί για «28,00». */
+export const TOUR_DECLARED_AREA_MAX_M2 = 10_000;
+/** Νοητή γραμμή κοντύτερη από αυτό δεν χωρίζει τίποτα. */
+export const TOUR_SEPARATION_MIN_LENGTH_M = 0.1;
+/**
+ * **Πόσο κοντά στη νοητή γραμμή τελειώνει ένας χώρος που «την ακουμπά»** (Δ8.2 · Γ3γ-1 — η γειτονία **παράγεται**). Η ανίχνευση
+ * σταματά το περίγραμμα λίγο πριν τη γραμμή: πάχος ραστεροποίησης (1 px) + ½ pixel ορθογώνιας έλξης + απλοποίηση DP (5 cm) ⇒
+ * ~8–10 cm σε συνήθεις κλίμακες· με το χέρι, ο άνθρωπος αφήνει λίγα εκατοστά. 15 cm = περιθώριο πάνω από αυτά, **κάτω** από το
+ * πάχος ενός τοίχου (≥ 20 cm): χώρος στην άλλη πλευρά αληθινού τοίχου δεν γίνεται ποτέ «ενιαίος γείτονας».
+ */
+export const TOUR_SPACE_ADJACENCY_TOLERANCE_M = 0.15;
+
+// =============================================================================
 // 4. GUARDS
 // =============================================================================
 
@@ -221,3 +271,6 @@ export const isFloorPlanRecordState =(v: unknown): v is FloorPlanRecordState => 
 export const isFloorPlanDeclarableSource = (v: unknown): v is FloorPlanDeclarableSource =>
   includes(FLOOR_PLAN_DECLARABLE_SOURCES, v);
 export const isTourHeadingSource = (v: unknown): v is TourHeadingSource => includes(TOUR_HEADING_SOURCES, v);
+export const isTourSpaceSource = (v: unknown): v is TourSpaceSource => includes(TOUR_SPACE_SOURCES, v);
+export const isTourDeclaredAreaSource = (v: unknown): v is TourDeclaredAreaSource => includes(TOUR_DECLARED_AREA_SOURCES, v);
+export const isTourSpaceAreaDisplay = (v: unknown): v is TourSpaceAreaDisplay => includes(TOUR_SPACE_AREA_DISPLAYS, v);

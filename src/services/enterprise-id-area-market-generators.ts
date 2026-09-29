@@ -43,4 +43,9 @@ export abstract class AreaMarketIdGenerators extends SpatialTourIdGenerators {
   generateDeterministicAreaMarketSeriesId(areaId: string): string {
     return this.mintDeterministicV4Id(P.AREA_MARKET_SERIES, areaId);
   }
+
+  /** Ο χάρτης τιμών **μιας** νύχτας — όλες οι περιοχές σε ένα έγγραφο (ADR-890 §14.4). */
+  generateDeterministicAreaMarketMapId(day: string): string {
+    return this.mintDeterministicV4Id(P.AREA_MARKET_MAP, day);
+  }
 }

@@ -62,7 +62,8 @@
  * `flyTo`/`fitBounds` σε `jumpTo`. Ο έλεγχος υπάρχει **τρεις φορές** στο bundle και
  * είναι `!options.essential && browser.prefersReducedMotion`.
  *
- * 🔴 Το `subapps/geo-canvas/app/useBoundaryLayers.ts` περνούσε **`essential: true`** και
+ * 🔴 Το `subapps/geo-canvas/app/useBoundaryLayers.ts` *(διαγράφηκε ως νεκρό 2026-09-28,
+ * ADR-891 §6.5 — το μάθημα μένει)* περνούσε **`essential: true`** και
  * στις **δύο** πτήσεις του — δηλαδή **οι δύο μακρύτερες κινήσεις της εφαρμογής (2000 ms)
  * ήταν οι μόνες που δεν μπορούσε να απενεργοποιήσει άνθρωπος με αιθουσαία διαταραχή**.
  * Δεν το αποφάσισε κανείς: το `essential: true` είναι αντιγραμμένο αυτούσιο από το

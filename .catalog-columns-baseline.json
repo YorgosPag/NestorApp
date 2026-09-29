@@ -5,7 +5,7 @@
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά πλέγματα των οποίων τα παιδιά προέρχονται από .map() (άγνωστο πλήθος) και που παρ΄ όλα αυτά αποφασίζουν το πλήθος στηλών από το πλάτος του ΠΑΡΑΘΥΡΟΥ. Η θεραπεία είναι κρίση ανά περίπτωση — ένα πλέγμα σταθερής αρίτητας που θα γινόταν εγγενές μειώνει τον αριθμό και ΧΑΛΑΕΙ την οθόνη.",
   "violation_count": 0,
-  "declaration_count": 293,
+  "declaration_count": 290,
   "files_scanned": 1679,
   "by_state": {
     "catalog-window-ladder": 0,
@@ -124,9 +124,6 @@
     "src/components/crm/pages/CrmTeamsPageContent.tsx::cn('grid gap-6 p-4', gridPatterns.cards.tile)",
     "src/components/crm/tasks/TaskDetailPanel.tsx::grid grid-cols-2 gap-3",
     "src/components/dashboard/NavigationGrid.tsx::gap-4 grid gridPatterns.cards.tile",
-    "src/components/development/ErrorReportingDashboard.tsx::grid grid-cols-2 gap-4",
-    "src/components/development/ErrorReportingDashboard.tsx::grid grid-cols-2 gap-4 text-sm",
-    "src/components/development/ErrorReportingDashboard.tsx::mt-3 grid grid-cols-4 gap-2 text-xs",
     "src/components/email/SendEmailModal.tsx::gap-3 grid gridPatterns.cards.tile",
     "src/components/file-manager/FileManagerErrorView.tsx::grid grid-cols-2 gap-2",
     "src/components/file-manager/FileManagerPageContent.tsx::gap-4 p-4 grid gridPatterns.cards.tile",

@@ -17,7 +17,7 @@ import type { TourAccessInboxRow } from '@/server/spatial-tour/tour-access-inbox
 import type { TourPresence } from '@/server/spatial-tour/tour-presence';
 import type { TourSettings, TourSettingsView } from '@/server/spatial-tour/tour-settings';
 import type { TourAccessRequestState } from '@/constants/spatial-tour-vocabulary';
-import { isTourViewSessionRefusal, type TourRefusalName, type TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import { isTourViewSessionRefusal, type TourGeneralRefusal, type TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { narrowTourRefusal, tourCall, type TourCallResult } from './spatial-tour.client';
@@ -52,7 +52,7 @@ export function listTourAccessRequestsFromScreen(
 /** Αποτέλεσμα **ανά άνθρωπο** — ένας που αποσύρθηκε στο μεταξύ δεν ρίχνει τους άλλους. */
 export type TourDecisionRow =
   | { readonly requesterUid: string; readonly kind: 'decided'; readonly state: 'approved' | 'declined'; readonly contact: TourAccessContactOutcome; readonly expiresAt: string | null }
-  | { readonly requesterUid: string; readonly kind: 'refused'; readonly reason: TourRefusalName };
+  | { readonly requesterUid: string; readonly kind: 'refused'; readonly reason: TourGeneralRefusal };
 
 export function decideTourAccessFromScreen(
   subject: TourSubject,
