@@ -2,7 +2,7 @@
  * @fileoverview **Πού γράφεται η ετικέτα μιας γεωγραφικής περιοχής** — ο πόλος απροσπέλαστου του **μεγαλύτερου**
  * πολυγώνου ενός MultiPolygon, σε **μέτρα** (όχι μοίρες), επιστρεμμένος ως `[lon, lat]` (ADR-890 §15).
  * @related `lib/geometry/polygon-label-point.ts` (ο αλγόριθμος, SSoT) · `geo-local-frame.ts` (η προβολή, SSoT)
- * @module lib/geo/geo-label-point
+ * @module scripts/lib/admin-overview/geo-label-point
  *
  * 🔑 **Γιατί σε μέτρα**: στις 40° η μοίρα μήκους είναι ~0,77 της μοίρας πλάτους· το polylabel σε μοίρες θα
  *    «νόμιζε» ότι ένας στενός βορειονότιος Δήμος είναι φαρδύς, και η ετικέτα θα άγγιζε το σύνορο.
@@ -15,7 +15,7 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 
 import { polygonArea } from '@/lib/geometry/planar-polygon';
 import { polygonLabelPoint } from '@/lib/geometry/polygon-label-point';
-import { fromLocalMetres, toLocalMetres } from './geo-local-frame';
+import { fromLocalMetres, toLocalMetres } from '@/lib/geo/geo-local-frame';
 
 /** Αρκεί ακρίβεια 25 m: η ετικέτα είναι κείμενο δεκάδων pixel, όχι σημείο μέτρησης. */
 const LABEL_PRECISION_M = 25;

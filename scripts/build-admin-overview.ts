@@ -29,7 +29,7 @@ import { gzipSync } from 'node:zlib';
 
 import { ADMIN_LEVEL } from '../src/lib/geo/admin-area-index-file';
 import { adminBoundaryFileName } from '../src/lib/geo/admin-boundary-file';
-import { geoLabelPoint } from '../src/lib/geo/geo-label-point';
+import { geoLabelPoint } from './lib/admin-overview/geo-label-point';
 import {
   ADMIN_OVERVIEW_CHILDREN_DIR,
   ADMIN_OVERVIEW_CHILDREN_MIN,
