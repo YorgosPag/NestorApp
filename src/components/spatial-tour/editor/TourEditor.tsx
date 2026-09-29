@@ -93,7 +93,8 @@ function LoadedEditor({ subject, data, actions, source }: LoadedEditorProps) {
       <>
         <TourRoomForm key={nodeId} graph={model.graph} nodeId={nodeId} onSave={(room) => name(nodeId, room)} />
         <TourPlanPane key={`plan-${nodeId}`} subject={subject} source={source} actions={actions} nodes={data.nodes} levels={data.levels}
-          nodeId={nodeId} capture={stop === undefined ? null : { id: stop.captureId, headingRad: stop.headingRad }} nameOf={nameOf} />
+          nodeId={nodeId} capture={stop === undefined ? null : { id: stop.captureId, headingRad: stop.headingRad }} nameOf={nameOf}
+          graph={model.graph} />
         <TourPointRemoval model={model} nodeId={nodeId} busy={actions.busy} onUnplace={actions.unplace} />
       </>
     );

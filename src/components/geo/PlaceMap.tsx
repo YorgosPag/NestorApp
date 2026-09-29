@@ -40,7 +40,7 @@ import { MapPin } from 'lucide-react';
 
 import { OSM_MAP_STYLE } from '@/components/projects/ika/map-shared';
 import { Spinner } from '@/components/ui/spinner/Spinner';
-import { useCameraFrame } from '@/components/geo/use-camera-frame';
+import { cameraBirthView, useCameraFrame } from '@/components/geo/use-camera-frame';
 import { useFocusCamera } from '@/components/geo/use-focus-camera';
 import type { CameraFrame } from '@/types/geo/camera-frame';
 import { outlineToGeoJson, pointsToGeoJson } from '@/lib/geo/geo-geojson';
@@ -113,7 +113,7 @@ const HALO_LINE = {
 /* eslint-enable design-system/no-hardcoded-colors */
 
 export interface PlaceMapProps {
-  /** Πού κοιτάζει ο χάρτης όταν ανοίγει. */
+  /** Πού κοιτάζει ο χάρτης όταν ανοίγει — **εκτός** αν υπάρχει ήδη `fit` στην προσάρτηση (τότε γεννιέται σε εκείνο). */
   readonly center: GeoPoint;
   /**
    * Ο άνθρωπος πάτησε εδώ.
@@ -189,7 +189,7 @@ export interface PlaceMapProps {
    *
    * | prop | απαντά | πότε διαβάζεται |
    * |---|---|---|
-   * | `center` + `initialZoom` | *«πού ανοίγει»* | **μία φορά**, στην προσάρτηση |
+   * | `center` + `initialZoom` | *«πού ανοίγει»* όταν **δεν** υπάρχει `fit` | **μία φορά**, στην προσάρτηση |
    * | `focus` | *«πού πήγε επειδή κάποιος **ρώτησε**»* | κάθε αλλαγή — **ΜΕ** βεβαιότητα, που **ζωγραφίζεται** |
    * | `fit` | *«πού πήγε επειδή κάποιος **δήλωσε**»* | κάθε αλλαγή — **ΧΩΡΙΣ** καμία βεβαιότητα |
    *
@@ -198,6 +198,8 @@ export interface PlaceMapProps {
    * ανθρώπου *(ADR-846)* δεν έχει περιθώριο σφάλματος — ο δανεισμός θα το **επινοούσε
    * στην οθόνη**. Και τα δύο περνούν από την **ίδια** μηχανή κίνησης
    * ({@link useCameraFrame}), άρα δεν υπάρχει δεύτερη πτήση να αποκλίνει.
+   *
+   * 🔑 **Το `fit` της προσάρτησης είναι και η θέση ΓΕΝΝΗΣΗΣ** (ADR-847): ο χάρτης ανοίγει ήδη εκεί, χωρίς πτήση.
    *
    * ⚠️ **`null` σημαίνει «μην κουνηθείς»**, ποτέ «γύρνα στην αρχή».
    */
@@ -353,8 +355,16 @@ export function PlaceMap({
    * γρήγορο του προγραμματιστή. Το `ready` κάνει την πτήση να **περιμένει**.
    */
   const [ready, setReady] = useState(false);
+
+  /**
+   * 🔑 **ΤΟ ΚΑΡΕ ΤΗΣ ΓΕΝΝΗΣΗΣ** — το `fit` της προσάρτησης, κρατημένο **μία φορά**, όπως το `initialViewState` που
+   * το δέχεται. Όταν υπάρχει, ο χάρτης **γεννιέται** εκεί (`center`/`initialZoom` αγνοούνται) και το `useCameraFrame`
+   * πετά μόνο σε **αλλαγή** καρέ. Χωρίς αυτό άνοιγε σε `BUILDING_ZOOM` και πετούσε στην έκταση μετά το `load`
+   * (ADR-847, μετρημένο στο `/area`: 36 άχρηστα πλακίδια, ~3 s κίνησης).
+   */
+  const [birthFrame] = useState(fit);
   useFocusCamera(mapRef, ready, focus);
-  useCameraFrame(mapRef, ready, fit);
+  useCameraFrame(mapRef, ready, fit, birthFrame);
 
   const halo = useMemo(() => halosOf(focus), [focus]);
 
@@ -370,7 +380,11 @@ export function PlaceMap({
     <figure className={cn('relative overflow-hidden rounded-lg border border-border', heightClass)}>
       <Map
         ref={mapRef}
-        initialViewState={{ latitude: center.lat, longitude: center.lng, zoom: initialZoom }}
+        initialViewState={
+          birthFrame === null
+            ? { latitude: center.lat, longitude: center.lng, zoom: initialZoom }
+            : cameraBirthView(birthFrame)
+        }
         style={{ width: '100%', height: '100%' }}
         mapStyle={OSM_MAP_STYLE}
         onLoad={() => setReady(true)}

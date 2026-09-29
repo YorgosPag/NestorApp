@@ -10,11 +10,13 @@
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 
 import {
+  declaredAreaDeviates,
   joinedSpaceIds,
   labelFits,
   planSpaces,
   spaceArea,
   spaceAt,
+  spaceCoverage,
   spaceTouchesLine,
 } from '../tour-space-view';
 import type { TourViewerSeparation, TourViewerSpace } from '../tour-viewer-shapes';
@@ -115,5 +117,38 @@ describe('labelFits', () => {
     expect(labelFits(0.15, ['Σαλόνι', '≈ 24 τ.μ.'], 0.2)).toBe(false); // ύψος 0,48 > 2 × 0,15
     expect(labelFits(0.15, ['≈ 24 τ.μ.'], 0.2)).toBe(false);
     expect(labelFits(0.5, ['Ένα πολύ μεγάλο όνομα χώρου'], 0.2)).toBe(false); // πλάτος
+  });
+});
+
+describe('πληρότητα — Δ8.3 (Γ3γ-2β)', () => {
+  it('«Χώροι: 2 από 3 σημεία» — και ΠΟΙΟ λείπει, με τη σειρά του', () => {
+    const placed = [
+      { nodeId: 'p-living', point: { x: 3, y: 2 } },
+      { nodeId: 'p-hall', point: { x: 9.1, y: 2 } }, // στον τοίχο κουζίνας–μπάνιου ⇒ κανένας χώρος
+      { nodeId: 'p-bath', point: { x: 10, y: 2 } },
+    ];
+    expect(spaceCoverage(SPACES, placed)).toEqual({ covered: 2, total: 3, missing: ['p-hall'] });
+  });
+
+  it('όροφος χωρίς σημεία ⇒ 0 από 0, τίποτα δεν λείπει', () => {
+    expect(spaceCoverage(SPACES, [])).toEqual({ covered: 0, total: 0, missing: [] });
+  });
+});
+
+describe('φύλακας 15% — Δ8.4 · Δ9.4', () => {
+  it('«δηλώσατε 20, η κάτοψη δείχνει ≈ 12» ⇒ ρωτά · 12,40 έναντι 12 ⇒ σιωπά', () => {
+    expect(declaredAreaDeviates(20, 12)).toBe(true);
+    expect(declaredAreaDeviates(12.4, 12)).toBe(false);
+  });
+
+  it('το όριο είναι ΑΥΣΤΗΡΑ πάνω από 15%, σχετικά με το ΜΕΤΡΗΜΕΝΟ (και προς τα κάτω)', () => {
+    expect(declaredAreaDeviates(11.5, 10)).toBe(false); // 15% ακριβώς
+    expect(declaredAreaDeviates(11.6, 10)).toBe(true);
+    expect(declaredAreaDeviates(8.4, 10)).toBe(true);
+    expect(declaredAreaDeviates(8.6, 10)).toBe(false);
+  });
+
+  it('χωρίς μετρημένο ⇒ ποτέ (δεν υπάρχει μέτρο σύγκρισης)', () => {
+    expect(declaredAreaDeviates(20, 0)).toBe(false);
   });
 });

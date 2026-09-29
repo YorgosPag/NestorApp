@@ -30,6 +30,7 @@ import {
   spaceLabelPoint,
   type PlanSpace,
   type TourSpaceArea,
+  type TourSpaceTone,
 } from '@/lib/spatial-tour/viewer/tour-space-view';
 import type { PolygonLabelPoint } from '@/lib/geometry/polygon-label-point';
 
@@ -58,7 +59,7 @@ export function spaceAreaText(t: Translate, area: TourSpaceArea): string {
   });
 }
 
-const ringPath = (points: PlanSpace['space']['points']): string =>
+export const ringPath = (points: PlanSpace['space']['points']): string =>
   `${points.map((p, i) => { const s = toPlanSvg(p); return `${i === 0 ? 'M' : 'L'}${s.x} ${s.y}`; }).join(' ')} Z`;
 
 /** Ένας χώρος έτοιμος για ζωγραφική — το σημείο ετικέτας και το εμβαδόν υπολογίζονται **μία** φορά, όχι σε κάθε ζουμ. */
@@ -107,6 +108,10 @@ export interface TourPlanSpacesProps {
   readonly areas: TourSpaceAreaDisplay;
   /** Μέτρα ανά css pixel της επιφάνειας (`planMetresPerPixel`). */
   readonly scale: number;
+  /** Χρώματα ανά ρόλο — ο επεξεργαστής χώρων δείχνει **κάθε** εγκεκριμένο χώρο (`SPACE_EDITOR_TONE_CLASS`, Γ3γ-2β). */
+  readonly toneClass?: Readonly<Record<TourSpaceTone, string>>;
+  /** Χώρος που ζωγραφίζεται αλλού (υπό επεξεργασία) — λείπει από εδώ, ώστε να μη φαίνεται διπλός. */
+  readonly hiddenSpaceId?: string | null;
 }
 
 /**
@@ -137,21 +142,23 @@ function useSpaceNames(stops: readonly PlacedStop[], nameOf: (nodeId: string) =>
   }, [stops, nameOf, t]);
 }
 
-export function TourPlanSpaces({ level, stops, currentNodeId, nameOf, areas, scale }: TourPlanSpacesProps) {
+export function TourPlanSpaces(props: TourPlanSpacesProps) {
+  const { level, stops, currentNodeId, nameOf, areas, scale, toneClass = SPACE_TONE_CLASS, hiddenSpaceId = null } = props;
   const nameOfSpace = useSpaceNames(stops, nameOf);
   const drawn = useMemo((): readonly DrawnSpace[] => planSpaces(
     level.spaces, level.separations, stops.map((s) => ({ nodeId: s.entry.node.id, point: s.point })), currentNodeId,
   ).map((item) => ({ item, label: spaceLabelPoint(item.space), area: spaceArea(item.space), name: nameOfSpace(item) })),
   [level.spaces, level.separations, stops, currentNodeId, nameOfSpace]);
-  if (drawn.length === 0) return null;
+  const shown = hiddenSpaceId === null ? drawn : drawn.filter((d) => d.item.space.id !== hiddenSpaceId);
+  if (shown.length === 0) return null;
   return (
     <g data-plan-spaces="" className="pointer-events-none select-none">
       <g aria-hidden strokeWidth={SPACE_STROKE_PX * scale} strokeLinejoin="round">
-        {drawn.map(({ item }) => (
-          <path key={item.space.id} d={ringPath(item.space.points)} data-tone={item.tone} className={SPACE_TONE_CLASS[item.tone]} />
+        {shown.map(({ item }) => (
+          <path key={item.space.id} d={ringPath(item.space.points)} data-tone={item.tone} className={toneClass[item.tone]} />
         ))}
       </g>
-      {drawn.map((space) => <SpaceLabel key={space.item.space.id} drawn={space} areas={areas} scale={scale} />)}
+      {shown.map((space) => <SpaceLabel key={space.item.space.id} drawn={space} areas={areas} scale={scale} />)}
     </g>
   );
 }

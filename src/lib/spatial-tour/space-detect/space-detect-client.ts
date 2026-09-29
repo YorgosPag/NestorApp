@@ -12,7 +12,7 @@
 
 import { fetchImagePixels } from '@/lib/media/image-pixels';
 import { createWorkerRpcClient, latestOnly } from '@/lib/workers/worker-rpc-client';
-import type { WorkerLike, WorkerRpcResult } from '@/lib/workers/worker-rpc-protocol';
+import { absoluteWorkerUrl, type WorkerLike, type WorkerRpcResult } from '@/lib/workers/worker-rpc-protocol';
 
 import { createSpaceDetectHost, type SpaceDetectMessage, type SpaceDetectReply } from './space-detect-host';
 import type { PlanDetectRequest, PlanDetectResult } from './space-detect-plan';
@@ -56,8 +56,9 @@ export function createSpaceDetector(deps: SpaceDetectorDeps = {}): SpaceDetector
   const client = createWorkerRpcClient<SpaceDetectMessage, SpaceDetectReply>({ spawn: deps.spawn ?? spawnSpaceDetectWorker, fallback });
   const detectLatest = latestOnly((message: SpaceDetectMessage) => client.call(message));
   return {
-    load: async (url) => loadedOf(await client.call({ kind: 'load', url })),
-    detect: async (url, request) => detectedOf(await detectLatest({ kind: 'detect', url, request })),
+    // Απόλυτο URL ΠΡΙΝ το σύνορο: ο Worker ζει σε `blob:` και δεν ξέρει τη σελίδα (`absoluteWorkerUrl`).
+    load: async (url) => loadedOf(await client.call({ kind: 'load', url: absoluteWorkerUrl(url) })),
+    detect: async (url, request) => detectedOf(await detectLatest({ kind: 'detect', url: absoluteWorkerUrl(url), request })),
     dispose: client.dispose,
   };
 }

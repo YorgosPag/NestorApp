@@ -1,10 +1,11 @@
 /**
  * @fileoverview **Το κουτί του στιγμιότυπου** — ένας αριθμός για την αριθμητική, μία κλάση για τη διάταξη.
- * @related ADR-777 §8.70 (Φάση 2) · §8.80 · lib/maps/map-snapshot-camera · search-results/listing-card-frame
+ * @related ADR-777 §8.70 (Φάση 2) · §8.80 · ADR-847 §9.6 · lib/maps/capture-map-snapshot · search-results/listing-card-frame
  * @module components/listing-map-snapshot/snapshot-frame
  *
- * ⚠️ **Οι δύο τιμές λένε το ΙΔΙΟ πράγμα σε δύο γλώσσες** (TS για το ζουμ, Tailwind για τον
- * καμβά): αν αποκλίνουν, η σκίαση δεν πιάνει πια το ποσοστό που υπολογίστηκε. Η άγκυρα
+ * ⚠️ **Οι δύο τιμές λένε το ΙΔΙΟ πράγμα σε δύο γλώσσες** (TS για το περιθώριο του καδραρίσματος,
+ * Tailwind για τον καμβά): αν αποκλίνουν, το `fitBounds` καδράρει στο δοχείο με περιθώριο
+ * υπολογισμένο για **άλλο** κουτί, και η σκίαση δεν πιάνει πια το δηλωμένο ποσοστό. Η άγκυρα
  * `snapshot-frame.test.ts` τις κρατά ίσες.
  *
  * 🔑 **Ο λόγος ΔΕΝ είναι δικός του** (§8.80): είναι ο {@link LISTING_CARD_ASPECT} της κάρτας, γιατί
@@ -14,12 +15,12 @@
  * **μικραίνουν** χωρίς απώλεια, ενώ δεύτερο κουτί θα σήμαινε δεύτερη λήψη ανά αγγελία.
  */
 
-import type { SnapshotViewport } from '@/lib/maps/map-snapshot-camera';
+import type { FrameBox } from '@/lib/geo/camera-motion';
 import { LISTING_CARD_ASPECT } from '@/components/search-results/listing-card-frame';
 
 const SNAPSHOT_WIDTH_PX = 360;
 
-export const SNAPSHOT_VIEWPORT: SnapshotViewport = {
+export const SNAPSHOT_VIEWPORT: FrameBox = {
   widthPx: SNAPSHOT_WIDTH_PX,
   heightPx: (SNAPSHOT_WIDTH_PX * LISTING_CARD_ASPECT.h) / LISTING_CARD_ASPECT.w,
 };

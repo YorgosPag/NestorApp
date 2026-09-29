@@ -13,8 +13,9 @@
  *   έρχεται η αλήθεια του διακομιστή (ξαναφόρτωση). Άρνηση ⇒ επαναφορά + ονομασμένο μήνυμα.
  * 🔑 **Τοποθέτηση · αφαίρεση · κάτοψη · κλίμακα = κλειδωμένα**: νέο σημείο στον διακομιστή · εικόνα που ετοιμάζει ο διακομιστής ·
  *   ξανακλιμάκωση όλου του ορόφου. Μια αισιόδοξη εικόνα εδώ θα ήταν δεύτερη αλήθεια.
- * 🔑 **Νέο σχήμα = οριστικό id ΕΔΩ** (Γ3γ-2α, πρότυπο Figma/Linear): το κόβει ο `enterpriseIdService` (N.6) τη στιγμή της
- *   έγκρισης ⇒ φαίνεται αμέσως, σύρεται/αναιρείται αμέσως· ο διακομιστής ελέγχει πρόθεμα/UUID και ξανακρίνει.
+ * 🔑 **Νέο σχήμα = οριστικό id στον browser** (Γ3γ-2α, πρότυπο Figma/Linear): το κόβει ο `enterpriseIdService` (N.6) μέσω
+ *   `newSpaceId` όταν **γεννιέται** το σχήμα στην οθόνη (Γ3γ-2β — η πρόταση το έχει ήδη, άρα ο προέλεγχος τρέχει την ίδια εντολή)
+ *   ⇒ φαίνεται αμέσως, σύρεται/αναιρείται αμέσως· ο διακομιστής ελέγχει πρόθεμα/UUID και ξανακρίνει.
  * 🔑 **Αναίρεση = νέες εντολές μέσα από τον ίδιο γραφέα** (`inverseOf`), ποτέ τοπική στοίβα καταστάσεων. Το «πριν» είναι ο
  *   γράφος της οθόνης **με** τα σχήματα χώρων (Γ3γ-1) — αλλιώς η αναίρεση αλλαγής/αφαίρεσης χώρου δεν θα είχε τι να ξαναγράψει.
  */
@@ -28,10 +29,10 @@ import type {
   TourGraphCommand,
   TourPlacementTarget,
   TourPlanXY,
+  TourShapeMode,
   TourSpaceDraft,
 } from '@/lib/spatial-tour/tour-graph-edit';
 import { inverseOf } from '@/lib/spatial-tour/tour-graph-inverse';
-import { isTourShapeRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourRoomInput } from '@/lib/spatial-tour/tour-room';
 import { graphLevelsOfViewer, viewerLevelsOf } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -39,10 +40,9 @@ import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { editTourGraphFromScreen } from '@/services/spatial-tour/spatial-tour-graph.client';
 import type { SpatialTour, TourLevelKey, TourSubject } from '@/types/spatial-tour';
 
-import { TOUR_REFUSAL_KEY } from '../spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
-import { TOUR_SHAPE_KEYS, TOUR_SHAPE_REFUSAL_KEY } from './tour-shape-labels';
+import { TOUR_SHAPE_KEYS, tourGraphRefusalKey } from './tour-shape-labels';
 import type { TourEditorDataHandle, TourEditorGraphData } from './useTourEditorData';
 
 export interface TourEditorActions {
@@ -63,14 +63,23 @@ export interface TourEditorActions {
   /** Κατεύθυνση λήψης κόσμου — στρέφει και τα βελάκια του σημείου. */
   readonly orient: (captureId: string, headingRad: number) => void;
   /**
-   * Έγκριση περιγράμματος χώρου — `spaceId === null` ⇒ νέος (id κομμένο **εδώ**, `create`), αλλιώς `replace`. Αισιόδοξα, με
-   * την **ίδια** κρίση (και επικάλυψης) που θα κάνει ο διακομιστής.
+   * Έγκριση/αλλαγή περιγράμματος χώρου με **ρητή πρόθεση** (`create` με id που κόπηκε ήδη με {@link TourEditorActions.newSpaceId}
+   * — Γ3γ-2β: η πρόταση έχει το οριστικό της id από τη γέννησή της, άρα ο προέλεγχος τρέχει την ΙΔΙΑ εντολή — ή `replace`).
+   * Αισιόδοξα, με την **ίδια** κρίση (και επικάλυψης) που θα κάνει ο διακομιστής.
    */
-  readonly space: (levelKey: TourLevelKey, spaceId: string | null, space: TourSpaceDraft) => Promise<boolean>;
+  readonly space: (levelKey: TourLevelKey, target: TourShapeTarget, space: TourSpaceDraft) => Promise<boolean>;
+  /** Οριστικό id νέου χώρου (N.6, `enterpriseIdService`) — κόβεται **μία** φορά, όταν γεννιέται το σχήμα στην οθόνη. */
+  readonly newSpaceId: () => string;
   readonly unspace: (levelKey: TourLevelKey, spaceId: string) => Promise<boolean>;
   /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα (id κομμένο εδώ), αλλιώς αλλαγή· πάντα αισιόδοξα. */
   readonly separate: (levelKey: TourLevelKey, separationId: string | null, a: TourPlanXY, b: TourPlanXY) => Promise<boolean>;
   readonly unseparate: (levelKey: TourLevelKey, separationId: string) => Promise<boolean>;
+}
+
+/** Ποιο σχήμα αγγίζει μια εντολή και με ποια πρόθεση (λεξιλόγιο `TOUR_SHAPE_MODES` — ποτέ τυφλό upsert). */
+export interface TourShapeTarget {
+  readonly mode: TourShapeMode;
+  readonly spaceId: string;
 }
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
@@ -147,8 +156,7 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
       // Επαναφορά μόνο αν καμία άλλη αλλαγή δεν πέρασε στο μεταξύ — αλλιώς η αλήθεια έρχεται από τη φόρτωση.
       if (optimistic !== null && inFlight.current === 0) setGraph(screen);
       const reason = result.kind === 'refused' ? result.reason : null;
-      error(t(reason === null ? TOUR_EDITOR_KEYS.saveFailed
-        : isTourShapeRefusal(reason) ? TOUR_SHAPE_REFUSAL_KEY[reason] : TOUR_REFUSAL_KEY[reason]));
+      error(t(reason === null ? TOUR_EDITOR_KEYS.saveFailed : tourGraphRefusalKey(reason)));
       await reload();
       return false;
     }
@@ -176,10 +184,9 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
     calibrate: (levelKey, metresPerPixel) => locked({ op: 'calibrate', levelKey, metresPerPixel }),
     position: (nodeId, point) => void send({ op: 'position', nodeId, point }),
     orient: (captureId, headingRad) => void send({ op: 'orient', captureId, headingRad }),
-    // Νέο σχήμα ⇒ το οριστικό id κόβεται ΕΔΩ (N.6) — ίδια αισιόδοξη ροή με την αλλαγή/αφαίρεση.
-    space: (levelKey, spaceId, space) => send(spaceId === null
-      ? { op: 'space', levelKey, spaceId: enterpriseIdService.generateTourSpaceId(), mode: 'create', space }
-      : { op: 'space', levelKey, spaceId, mode: 'replace', space }),
+    // Νέο σχήμα ⇒ το οριστικό id κόβεται στον browser (N.6) — ίδια αισιόδοξη ροή με την αλλαγή/αφαίρεση.
+    space: (levelKey, target, space) => send({ op: 'space', levelKey, spaceId: target.spaceId, mode: target.mode, space }),
+    newSpaceId: () => enterpriseIdService.generateTourSpaceId(),
     unspace: (levelKey, spaceId) => send({ op: 'unspace', levelKey, spaceId }),
     separate: (levelKey, separationId, a, b) => send(separationId === null
       ? { op: 'separate', levelKey, separationId: enterpriseIdService.generateTourSeparationId(), mode: 'create', a, b }

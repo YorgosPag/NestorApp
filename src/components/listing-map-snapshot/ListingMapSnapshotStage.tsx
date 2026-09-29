@@ -2,13 +2,17 @@
 
 /**
  * @fileoverview **Ο κρυφός χάρτης** — ΕΝΑ WebGL context που ζωγραφίζει τις κάρτες μία-μία.
- * @related ADR-777 §8.70 (Φάση 2) · lib/maps/capture-map-snapshot · search-results/ResultsMapSources
+ * @related ADR-777 §8.70 (Φάση 2) · ADR-847 §9.6 · lib/maps/capture-map-snapshot · search-results/ResultsMapSources
  * @module components/listing-map-snapshot/ListingMapSnapshotStage
  *
  * 🔑 **Ό,τι βλέπει ο κόσμος, κυριολεκτικά.** Το υπόβαθρο είναι το {@link INITIAL_MAP_STYLE} του
  * δημόσιου χάρτη και τα σχήματα ζωγραφίζονται από τα **ίδια** `ResultsMapSources` πάνω στο feature
  * του **ίδιου** `listingFeature`. Δεν υπάρχει δεύτερος ζωγράφος που να μπορεί να αποκλίνει: αν
  * αλλάξει η «σκιασμένη πόλη» στον δημόσιο χάρτη, αλλάζει και εδώ.
+ *
+ * 🔑 **Και το ΚΑΔΡΟ βγαίνει από το ίδιο feature** (ADR-847 §9.6): η έκταση είναι το
+ * `listingFeatureExtent` του feature που **ζωγραφίζεται**, δηλαδή η ίδια απάντηση με την άφιξη του
+ * δημόσιου χάρτη σε αυτή την αγγελία (`listingArrivalArea`).
  *
  * ⚠️ Φορτώνεται **δυναμικά** (`next/dynamic`, χωρίς SSR) από τον provider, και **μόνο** όταν
  * κάποια κάρτα ζητήσει στιγμιότυπο: ένας κάτοχος που έχει παντού φωτογραφίες δεν κατεβάζει ποτέ
@@ -19,9 +23,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Map, type MapRef } from '@/lib/maps/maplibre';
 import { captureMapSnapshot } from '@/lib/maps/capture-map-snapshot';
-import { listingSnapshotCamera } from '@/lib/maps/map-snapshot-camera';
-import type { MapSnapshotJob } from '@/lib/maps/map-snapshot-store';
+import type { MapSnapshotJob, MapSnapshotResult } from '@/lib/maps/map-snapshot-store';
 import { listingFeature, splitListingGeometry } from '@/lib/listings/listings-geojson';
+import { listingFeatureExtent } from '@/lib/listings/listing-map-bounds';
 import { NO_LISTING_FOCUS } from '@/lib/listings/listing-focus';
 import { ResultsMapSources } from '@/components/search-results/ResultsMapSources';
 import { readListingMapPaint } from '@/components/search-results/listing-map-paint';
@@ -74,23 +78,30 @@ export default function ListingMapSnapshotStage({ store }: ListingMapSnapshotSta
   const mapStyle = mapStyleManager.getStyleUrl(INITIAL_MAP_STYLE, SNAPSHOT_BASEMAP_SCHEME);
   const idlePaint = useMemo(() => readListingMapPaint(), []);
 
+  const feature = useMemo(
+    () => (job === null ? null : listingFeature(SNAPSHOT_FEATURE_ID, '', job.payload.mark)),
+    [job],
+  );
+
   useEffect(() => {
     const map = mapRef.current?.getMap();
-    if (!map || job === null) return undefined;
-    const camera = listingSnapshotCamera(job.payload.mark, SNAPSHOT_VIEWPORT);
-    return captureMapSnapshot(map, camera, (result) => {
+    if (!map || job === null || feature === null) return undefined;
+    const settle = (result: MapSnapshotResult | null): void => {
       store.settle(job.key, result);
       setJob(null);
-    });
-  }, [job, store, setJob]);
+    };
+    const extent = listingFeatureExtent(feature);
+    // Περίγραμμα χωρίς κορυφές ⇒ τίποτα να καδραριστεί: δηλωμένη απουσία, όχι χάρτης «κάπου».
+    if (extent === null) {
+      settle(null);
+      return undefined;
+    }
+    return captureMapSnapshot(map, extent, SNAPSHOT_VIEWPORT, settle);
+  }, [job, feature, store, setJob]);
 
   const geometry = useMemo(
-    () =>
-      splitListingGeometry({
-        type: 'FeatureCollection',
-        features: job === null ? [] : [listingFeature(SNAPSHOT_FEATURE_ID, '', job.payload.mark)],
-      }),
-    [job],
+    () => splitListingGeometry({ type: 'FeatureCollection', features: feature === null ? [] : [feature] }),
+    [feature],
   );
   const paint = job?.payload.paint ?? idlePaint;
 

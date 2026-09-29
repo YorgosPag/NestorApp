@@ -11,7 +11,14 @@
 import { join } from 'node:path';
 
 import { REPO_ROOT } from '../admin-boundaries/admin-boundary-source';
-import { loadCachedSource, probeSource, type CachedSourceMeta, type SourceProbe } from '../cached-download';
+import {
+  SourceHttpError,
+  loadCachedSource,
+  probeSource,
+  type CachedSourceMeta,
+  type SourceAccessRestriction,
+  type SourceProbe,
+} from '../cached-download';
 import type { CoverageTotals } from './mama-match-report';
 
 /**
@@ -52,7 +59,7 @@ export async function latestPublishedMamaYear(now: Date, probe: Probe = probeSou
   const result = await probe(mamaSourceUrl(year));
   if (result.status === 404) return year - 1;
   if (result.status >= 200 && result.status < 300) return year;
-  throw new Error(`ΜΑΜΑ ${year}: απρόσμενο HTTP ${result.status} στον έλεγχο δημοσίευσης`);
+  throw new SourceHttpError(`ΜΑΜΑ ${year}: απρόσμενο HTTP ${result.status} στον έλεγχο δημοσίευσης`, result.url, result.status);
 }
 
 function yearArg(argv: readonly string[], name: string): number | null {
@@ -69,6 +76,19 @@ export async function resolveMamaWindow(argv: readonly string[], now = new Date(
   }
   return { from, to };
 }
+
+/**
+ * 🔴 ADR-889 §11.11 — ο gsis.gr (Akamai) απαντά **403** εκτός Ελλάδας, ακόμη και στην αρχική του σελίδα: μετρημένο
+ * 2026-09-29 από τον runner του GitHub (ΗΠΑ) σε 6 παραλλαγές κεφαλίδων **και** από το Netcup (Γερμανία)· από ελληνική IP
+ * 200. Ο δρόμος λήψης σήμερα: runbook §11.8 (ανανέωση από ελληνική IP).
+ */
+export const MAMA_SOURCE_ACCESS: SourceAccessRestriction = {
+  kind: 'geo',
+  allowedRegion: 'GR',
+  status: 403,
+  evidence: '2026-09-29 · GitHub runner (US) + Netcup (DE) ⇒ 403 · ελληνική IP ⇒ 200',
+  adr: 'ADR-889 §11.11',
+};
 
 export function mamaSourceUrl(year: number): string {
   return `https://www.gsis.gr/sites/default/files/akinhta/mhtrwo-ax-met-ak-${year}.xlsx`;

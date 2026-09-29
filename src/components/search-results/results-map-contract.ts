@@ -16,6 +16,7 @@
  */
 
 import { cameraFraming } from '@/lib/geo/camera-motion';
+import { extentBounds } from '@/lib/maps/extent-bounds';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
 import type { MapAreaSource } from './results-map-area';
@@ -162,8 +163,5 @@ export function fitMapToBounds(
  * το ίδιο το σχήμα μπορεί να μην κάνει (Α5).
  */
 export function fitMapToArea(target: MapEventTarget, area: GeoBoundingBox): void {
-  fitMapToBounds(target, [
-    [area.west, area.south],
-    [area.east, area.north],
-  ]);
+  fitMapToBounds(target, extentBounds(area));
 }

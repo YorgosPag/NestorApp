@@ -10,8 +10,8 @@
  * το sha256 της εξόδου, όχι η ημερομηνία του διακομιστή.
  */
 
-import type { SourceProbe } from '../cached-download';
-import { mamaSourceUrl, type MamaWindow } from '../market-transactions/mama-download';
+import { SourceHttpError, type SourceAccessRestriction, type SourceProbe } from '../cached-download';
+import { MAMA_SOURCE_ACCESS, mamaSourceUrl, type MamaWindow } from '../market-transactions/mama-download';
 import { VALUE_ZONES_SOURCE_URL } from '../value-zones/zone-download';
 import type { MamaInput, MarketSnapshot, ZoneSnapshot } from './refresh-snapshot';
 
@@ -23,6 +23,70 @@ export interface ProbeDecision {
   readonly reasons: readonly string[];
 }
 
+/**
+ * Η κρίση **μίας** πηγής: ελέγχθηκε (άλλαξε ή όχι) **ή** είναι απρόσιτη από εδώ.
+ *
+ * 🔑 Οι δύο πηγές κρίνονται **χωριστά** (ADR-889 §11.10): ο gsis.gr απαντά 403 εκτός Ελλάδας (μετρημένο 2026-09-29),
+ * ενώ το data.gov.gr περνά. Μια απρόσιτη πηγή **δεν** ρίχνει την άλλη — και δεν γίνεται ποτέ σιωπηλό «ίδιο»: το αν είναι
+ * γνωστός περιορισμός (⚠️) ή βλάβη (🔴) το κρίνει το `classifyAccess`.
+ */
+export type SourceCheck =
+  | { readonly reachable: true; readonly decision: ProbeDecision }
+  /** `status`: η απάντηση του διακομιστή (`SourceHttpError`)· `null` = δίκτυο / 5xx / άλλο σφάλμα. */
+  | { readonly reachable: false; readonly reason: string; readonly status: number | null };
+
+/**
+ * Η πρόσβαση μιας πηγής σε σχέση με τον **δηλωμένο** περιορισμό της (ADR-889 §11.11):
+ * - `ok` — απάντησε, κανένας περιορισμός
+ * - `expected-restriction` — απρόσιτη με **ακριβώς** το δηλωμένο status ⇒ ⚠️ (το κόκκινο το δίνει η φρεσκάδα, Ε8)
+ * - `restriction-lifted` — δηλωμένη ως περιορισμένη, αλλά **απάντησε** ⇒ ⚠️ «η δήλωση ίσως πάλιωσε»
+ * - `unexpected` — κάθε άλλη αποτυχία (5xx, δίκτυο, άλλο status, αδήλωτη) ⇒ 🔴
+ */
+export type SourceAccess = 'ok' | 'expected-restriction' | 'restriction-lifted' | 'unexpected';
+
+export function classifyAccess(check: SourceCheck, restriction: SourceAccessRestriction | null): SourceAccess {
+  if (check.reachable) return restriction === null ? 'ok' : 'restriction-lifted';
+  return restriction !== null && check.status === restriction.status ? 'expected-restriction' : 'unexpected';
+}
+
+/** Οι πηγές της ανανέωσης, σε σταθερή σειρά (αναφορά, log, παραγωγή). */
+export const SOURCE_IDS = ['market', 'zones'] as const;
+export type SourceId = (typeof SOURCE_IDS)[number];
+
+/** Τα ονόματα των πηγών — **ένα** σημείο για επικεφαλίδα, ετυμηγορία και log. */
+export const SOURCE_LABELS: Readonly<Record<SourceId, string>> = { market: 'Συμβόλαια (ΜΑΜΑ)', zones: 'Ζώνες αντικειμενικών αξιών' };
+
+/** Ο δηλωμένος περιορισμός κάθε πηγής — η δήλωση ζει δίπλα στο URL της, εδώ μόνο αντιστοιχίζεται. */
+export const SOURCE_RESTRICTIONS: Readonly<Record<SourceId, SourceAccessRestriction | null>> = { market: MAMA_SOURCE_ACCESS, zones: null };
+
+export type SourceChecks = Readonly<Record<SourceId, SourceCheck>>;
+
+/** Η πρόσβαση κάθε πηγής, με τον δηλωμένο περιορισμό της. */
+export function accessOf(checks: SourceChecks): Readonly<Record<SourceId, SourceAccess>> {
+  return { market: classifyAccess(checks.market, SOURCE_RESTRICTIONS.market), zones: classifyAccess(checks.zones, SOURCE_RESTRICTIONS.zones) };
+}
+
+/**
+ * Τρέχει τον έλεγχο μιας πηγής και μετατρέπει **κάθε** αποτυχία του (HTTP ≠ 2xx/404, δίκτυο, απρόσμενο έτος) σε
+ * `reachable: false` με το αρχικό μήνυμα. Με `force` η κεφαλίδα δεν αποφασίζει — η **προσβασιμότητα** όμως ελέγχεται
+ * πάντα, ώστε η παραγωγή να μην ξεκινήσει μια λήψη που είναι γνωστό ότι θα κοπεί.
+ */
+export async function checkSource(run: () => Promise<ProbeDecision>, force: boolean): Promise<SourceCheck> {
+  try {
+    const decision = await run();
+    if (!force) return { reachable: true, decision };
+    return { reachable: true, decision: { changed: true, reasons: ['παραγωγή με `--force` (η κεφαλίδα δεν αποφασίζει)', ...decision.reasons] } };
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { reachable: false, reason, status: error instanceof SourceHttpError ? error.status : null };
+  }
+}
+
+/** Θα ξαναπαραχθεί; — μόνο αν η πηγή είναι προσβάσιμη **και** άλλαξε. */
+export function needsBuild(check: SourceCheck): boolean {
+  return check.reachable && check.decision.changed;
+}
+
 const UNCHANGED: ProbeDecision = { changed: false, reasons: [] };
 
 function decision(reasons: readonly string[]): ProbeDecision {
@@ -30,7 +94,8 @@ function decision(reasons: readonly string[]): ProbeDecision {
 }
 
 function assertServed(probe: SourceProbe, label: string): void {
-  if (probe.status < 200 || probe.status >= 300) throw new Error(`${label}: HTTP ${probe.status} από ${probe.url} — η πηγή δεν σερβίρει το αρχείο`);
+  if (probe.status >= 200 && probe.status < 300) return;
+  throw new SourceHttpError(`${label}: HTTP ${probe.status} από ${probe.url} — η πηγή δεν σερβίρει το αρχείο`, probe.url, probe.status);
 }
 
 /** Διαφορά κεφαλίδας ↔ καταγεγραμμένης προέλευσης. Άγνωστη ημερομηνία ⇒ «άλλαξε» (αποφασίζει το sha256 της εξόδου). */

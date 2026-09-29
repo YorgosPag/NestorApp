@@ -7,7 +7,8 @@
  *   (θέση) · `TourPlanDirection.tsx` (κατεύθυνση) · `useTourEditorActions.ts` (οι εντολές)
  * @module components/spatial-tour/editor/TourPlanPane
  *
- * 🔑 **Τρία βήματα, με τη σειρά που τα απαιτεί ο γραφέας**: κάτοψη → κλίμακα → θέση/κατεύθυνση. Κάθε βήμα εμφανίζεται μόνο
+ * 🔑 **Τέσσερα βήματα, με τη σειρά που τα απαιτεί ο γραφέας**: κάτοψη → κλίμακα → θέση/κατεύθυνση → χώροι (Γ3γ-2β,
+ *   `spaces/TourSpacesLauncher.tsx`). Κάθε βήμα εμφανίζεται μόνο
  *   όταν το προηγούμενο υπάρχει — η οθόνη δεν προσφέρει ποτέ πράξη που ο γραφέας θα αρνηθεί (`plan-absent` ·
  *   `plan-uncalibrated`).
  */
@@ -20,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 import { levelKeyId } from '@/lib/spatial-tour/spatial-tour-graph';
 import { imagePixelToPlan } from '@/lib/spatial-tour/tour-plan-frame';
-import type { TourViewerLevel, TourViewerPlan } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
+import type { TourViewerGraph, TourViewerLevel, TourViewerPlan } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import type { TourLevelKey, TourNode, TourSubject } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
@@ -29,6 +30,7 @@ import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 import { TourPlanDirection } from './TourPlanDirection';
 import { TourPlanEditMap } from './TourPlanEditMap';
 import { TourPlanPicker } from './TourPlanPicker';
+import { TourSpacesLauncher } from './spaces/TourSpacesLauncher';
 import type { TourEditorActions } from './useTourEditorActions';
 
 /** Πλάτος (css px) του χάρτη τοποθέτησης — η πηγή διαλέγει το παράγωγο που φτάνει. */
@@ -44,6 +46,8 @@ export interface TourPlanPaneProps {
   /** Η λήψη που βλέπει ο επισκέπτης σε αυτό το σημείο — αυτή ευθυγραμμίζεται. `null` ⇒ καμία έτοιμη λήψη. */
   readonly capture: { readonly id: string; readonly headingRad: number } | null;
   readonly nameOf: (nodeId: string) => string;
+  /** Ο γράφος του επεξεργαστή (στάσεις + όροφοι με σχήματα) — το βήμα «Χώροι» (Γ3γ-2β). */
+  readonly graph: TourViewerGraph;
 }
 
 function ScaleStep({ plan, imageUrl, levelKey, actions }: {
@@ -125,6 +129,10 @@ export function TourPlanPane(props: TourPlanPaneProps) {
         <>
           <ScaleStep plan={plan} imageUrl={imageUrl} levelKey={level.key} actions={actions} />
           {imageUrl !== null && <PlaceStep props={props} plan={plan} imageUrl={imageUrl} />}
+          {imageUrl !== null && (
+            <TourSpacesLauncher graph={props.graph} levelId={levelKeyId(level.key)} levelKey={level.key} nodes={nodes} levels={levels}
+              source={source} actions={actions} nameOf={props.nameOf} calibrated={plan.metresPerPixel !== null} />
+          )}
         </>
       )}
     </section>

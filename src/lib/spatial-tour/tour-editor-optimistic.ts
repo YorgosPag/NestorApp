@@ -14,7 +14,14 @@
 
 import type { SpatialTour, TourCapture } from '@/types/spatial-tour';
 
-import { linkNodes, nameNode, unlinkNodes, type TourGraphCommand, type TourGraphEditResult } from './tour-graph-edit';
+import {
+  linkNodes,
+  nameNode,
+  unlinkNodes,
+  type TourGraphCommand,
+  type TourGraphEditRefusal,
+  type TourGraphEditResult,
+} from './tour-graph-edit';
 import { orientNode, positionNode, type TourEditStamp } from './tour-plan-edit';
 import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from './tour-space-edit';
 
@@ -64,4 +71,14 @@ function resultOf(command: TourGraphCommand, graph: Graph, captureOf: Optimistic
 export function optimisticGraph(command: TourGraphCommand, graph: Graph, captureOf: OptimisticCaptureOf): Graph | null {
   const result = resultOf(command, graph, captureOf);
   return result?.kind === 'edited' ? result.graph : null;
+}
+
+/**
+ * **Η κρίση του γραφέα ΠΡΙΝ σταλεί** (Γ3γ-2β · Δ9.6) — ο **ίδιος** κριτής σχημάτων με την αισιόδοξη εικόνα και τον διακομιστή. Η
+ * οθόνη δεν προσφέρει ποτέ «Έγκριση» για σχήμα που θα απορριφθεί, και λέει **γιατί**. `null` ⇒ θα γίνει δεκτό (ή δεν αλλάζει
+ * τίποτα). Μόνο εντολές σχημάτων — οι άλλες δεν προκρίνονται εδώ.
+ */
+export function judgeShapeCommand(command: TourGraphCommand, graph: Graph): TourGraphEditRefusal | null {
+  const result = shapeResult(graph, command);
+  return result?.kind === 'refused' ? result.reason : null;
 }

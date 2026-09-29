@@ -110,6 +110,38 @@ export interface SourceProbe {
   readonly bytes: number | null;
 }
 
+/**
+ * Η πηγή **απάντησε**, αλλά όχι με το αρχείο (4xx ή απρόσμενο status). Κρατά το `status` **δομημένο**, όχι μόνο μέσα στο
+ * κείμενο: ο καλών ξεχωρίζει έτσι έναν **δηλωμένο** περιορισμό πρόσβασης (π.χ. γεωφραγή 403, ADR-889 §11.11) από
+ * οποιαδήποτε άλλη αποτυχία, που μένει κόκκινη.
+ */
+export class SourceHttpError extends Error {
+  constructor(
+    message: string,
+    readonly url: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'SourceHttpError';
+  }
+}
+
+/**
+ * Ένας **δηλωμένος, μετρημένος** περιορισμός πρόσβασης σε πηγή (δηλώνεται δίπλα στο URL της). Δεν είναι εξαίρεση για
+ * να σωπάσει ένα κόκκινο: αναγνωρίζεται **μόνο** με το ακριβές `status`, και η αυτόματη ανανέωση αναφέρει πότε η πηγή
+ * απαντά κανονικά (τότε η δήλωση είναι μπαγιάτικη). Το κόκκινο «τα δεδομένα πάλιωσαν» το δίνει η φρεσκάδα (ADR-889 §11.11).
+ */
+export interface SourceAccessRestriction {
+  readonly kind: 'geo';
+  /** Από πού απαντά η πηγή (ISO 3166-1). */
+  readonly allowedRegion: string;
+  /** Η απάντηση εκτός περιοχής — **μόνο** αυτή αναγνωρίζεται ως ο περιορισμός. */
+  readonly status: number;
+  /** Πότε μετρήθηκε και από πού. */
+  readonly evidence: string;
+  readonly adr: string;
+}
+
 const PROBE_ATTEMPTS = 3;
 const PROBE_BACKOFF_MS = 2_000;
 

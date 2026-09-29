@@ -13,7 +13,7 @@ import type { FloorPlanRecord, SpatialTour, TourNode } from '@/types/spatial-tou
 
 import type { TourGraphCommand, TourGraphEditResult, TourSpaceDraft } from '../tour-graph-edit';
 import { inverseOf } from '../tour-graph-inverse';
-import { optimisticGraph } from '../tour-editor-optimistic';
+import { judgeShapeCommand, optimisticGraph } from '../tour-editor-optimistic';
 import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from '../tour-space-edit';
 import { graphLevelsOfViewer, viewerLevelsOf } from '../viewer/tour-viewer-graph';
 
@@ -141,5 +141,29 @@ describe('αισιόδοξη εικόνα', () => {
 
   it('κλειδωμένες εντολές (κάτοψη/κλίμακα) ⇒ καμία αισιόδοξη εικόνα', () => {
     expect(optimisticGraph({ op: 'calibrate', levelKey: L0, metresPerPixel: 0.03 }, SCREEN, NO_CAPTURES)).toBeNull();
+  });
+});
+
+describe('προέλεγχος πριν την έγκριση — Γ3γ-2β · Δ9.6 (ο ΙΔΙΟΣ κριτής)', () => {
+  it('νέος χώρος πάνω στην κουζίνα ⇒ «space-overlap» ΠΡΙΝ σταλεί — ίδια απάντηση με τον γραφέα', () => {
+    const command: TourGraphCommand = { op: 'space', levelKey: L0, spaceId: S3, mode: 'create', space: draft(rect(2, -2, 7, -5)) };
+    expect(judgeShapeCommand(command, SCREEN)).toBe('space-overlap');
+    const server = upsertSpace(SERVER, command, STAMP);
+    expect(server.kind === 'refused' ? server.reason : null).toBe('space-overlap');
+  });
+
+  it('νέος χώρος δίπλα, σε κοινό τοίχο ⇒ καμία άρνηση', () => {
+    const command: TourGraphCommand = { op: 'space', levelKey: L0, spaceId: S3, mode: 'create', space: draft(rect(5, -1, 8, -4)) };
+    expect(judgeShapeCommand(command, SCREEN)).toBeNull();
+  });
+
+  it('δύο κορυφές ⇒ «space-invalid» · αλλαγή σβησμένου ⇒ «space-absent»', () => {
+    const tooFew = draft([{ x: 1, y: -1 }, { x: 2, y: -2 }]);
+    expect(judgeShapeCommand({ op: 'space', levelKey: L0, spaceId: S3, mode: 'create', space: tooFew }, SCREEN)).toBe('space-invalid');
+    expect(judgeShapeCommand({ op: 'space', levelKey: L0, spaceId: S3, mode: 'replace', space: draft(rect(14, -1, 16, -3)) }, SCREEN)).toBe('space-absent');
+  });
+
+  it('εντολή που ΔΕΝ είναι σχήματος ⇒ δεν προκρίνεται εδώ', () => {
+    expect(judgeShapeCommand({ op: 'position', nodeId: 'a', point: null }, SCREEN)).toBeNull();
   });
 });

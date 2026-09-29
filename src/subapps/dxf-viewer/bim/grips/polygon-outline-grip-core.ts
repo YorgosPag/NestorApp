@@ -26,6 +26,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { BimPoint } from '../types/bim-base';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { EntityGripKind, GripKindByEntity } from '../../hooks/grip-kinds';
+import { insertRingVertex, moveRingVertex, removeRingVertex } from '@/lib/geometry/ring-edit';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { constrainDeltaToDominantAxis } from './ortho-delta';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
@@ -105,17 +106,17 @@ export function buildPolygonOutlineGrips<K extends keyof GripKindByEntity & stri
 }
 
 /**
- * Move vertex `index` by `delta`, cloning the rest. Returns `null` for a no-op —
- * out-of-range index OR zero delta — so the caller keeps `originalParams` unchanged.
+ * Move vertex `index` by `delta`. Returns `null` for a no-op — out-of-range index OR zero delta — so the caller
+ * keeps `originalParams` unchanged. Delegates to the ONE ring-edit SSoT (`@/lib/geometry/ring-edit`, ADR-884 Γ3γ-2β).
  */
 export function moveOutlineVertexInList(
   verts: readonly BimPoint[],
   index: number,
   delta: Point2D,
 ): BimPoint[] | null {
-  if (index >= verts.length) return null;
-  if (delta.x === 0 && delta.y === 0) return null;
-  return verts.map((v, i) => (i === index ? translatePoint(v, delta) : cloneOutlineVertex(v)));
+  const vertex = verts[index];
+  if (vertex === undefined) return null;
+  return moveRingVertex(verts, index, translatePoint(vertex, delta));
 }
 
 /**
@@ -128,18 +129,9 @@ export function insertOutlineVertexInList(
   edgeIndex: number,
   delta: Point2D,
 ): BimPoint[] | null {
-  if (edgeIndex >= verts.length) return null;
-  const inserted = outlineEdgeInsertedVertex(
-    verts[edgeIndex],
-    verts[(edgeIndex + 1) % verts.length],
-    delta,
-  );
-  const next: BimPoint[] = [];
-  for (let i = 0; i < verts.length; i++) {
-    next.push(cloneOutlineVertex(verts[i]));
-    if (i === edgeIndex) next.push(inserted);
-  }
-  return next;
+  if (edgeIndex < 0 || edgeIndex >= verts.length) return null;
+  const inserted = outlineEdgeInsertedVertex(verts[edgeIndex], verts[(edgeIndex + 1) % verts.length], delta);
+  return insertRingVertex(verts, edgeIndex, inserted);
 }
 
 /**
@@ -152,9 +144,7 @@ export function removeOutlineVertexInList(
   verts: readonly BimPoint[],
   vertexIndex: number,
 ): BimPoint[] | null {
-  if (verts.length <= 3) return null;
-  if (vertexIndex < 0 || vertexIndex >= verts.length) return null;
-  return verts.filter((_, i) => i !== vertexIndex);
+  return removeRingVertex(verts, vertexIndex);
 }
 
 /** The `input` shape every `apply*GripDrag` receives (params + delta + Ortho flag). */

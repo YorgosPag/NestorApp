@@ -15,6 +15,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { buildTourEditorModel } from '@/lib/spatial-tour/tour-editor-model';
 import { CAPTURE } from '@/lib/spatial-tour/__tests__/spatial-tour-fixtures';
 import type { TourCapture, TourNode } from '@/types/spatial-tour';
+import { installPointerEvents } from '@/test-utils/pointer-event';
 
 import type { TourStageAim } from '../../viewer/TourPanoramaStage';
 import { TourArrowTools } from '../TourArrowTools';
@@ -27,16 +28,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 }));
 
 /** Το jsdom δεν έχει `PointerEvent` ⇒ χωρίς αυτό χάνονται `button`/`clientX`/`pointerId` (όριο περιβάλλοντος, όχι κώδικα). */
-beforeAll(() => {
-  class TestPointerEvent extends MouseEvent {
-    readonly pointerId: number;
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init);
-      this.pointerId = init.pointerId ?? 0;
-    }
-  }
-  window.PointerEvent = TestPointerEvent as unknown as typeof PointerEvent;
-});
+beforeAll(installPointerEvents);
 
 const L0 = { kind: 'local', ordinal: 0 } as const;
 const node = (id: string, links: TourNode['links'] = []): TourNode => ({ id, levelKey: L0, position: null, links });

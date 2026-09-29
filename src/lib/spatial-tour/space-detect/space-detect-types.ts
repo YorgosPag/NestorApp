@@ -47,6 +47,12 @@ export const DEFAULT_SPACE_DETECT: SpaceDetectOptions = {
   seedSearchM: 0.3,
 };
 
+/**
+ * **Το ρυθμιστικό πόρτας του επεξεργαστή** (Δ9.7): από στενή εσωτερική πόρτα (0,6) ως διπλή/συρόμενη (2,0). Πάνω από αυτό,
+ * ένα άνοιγμα είναι ενιαίος χώρος που χωρίζεται με νοητή γραμμή (Δ8.2), όχι «πόρτα».
+ */
+export const SPACE_DOOR_WIDTH_RANGE_M = { min: 0.6, max: 2.0, step: 0.05 } as const;
+
 export interface SpaceDetectInput {
   readonly raster: PlanRaster;
   /** Μέτρα ανά pixel **αυτής** της εικόνας. */

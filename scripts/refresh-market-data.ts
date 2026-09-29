@@ -30,28 +30,39 @@ import { MAMA_RUN_SUMMARY_PATH, resolveMamaWindow, type MamaRunSummary } from '.
 import { VALUE_ZONES_RUN_SUMMARY_PATH, type ValueZonesRunSummary } from './lib/value-zones/zone-download';
 import { diffMarket, diffZones, type MarketDiff, type ZoneDiff } from './lib/market-data-refresh/refresh-diff';
 import {
-  allGatesPass,
   coverageGate,
   determinismGate,
+  freshnessGate,
   massShiftGate,
+  prGatesPass,
   realFilesGate,
   unassignedZonesGate,
   volumeGate,
   type GateResult,
 } from './lib/market-data-refresh/refresh-gates';
-import { probeMarket, probeZones, type ProbeDecision } from './lib/market-data-refresh/refresh-probe';
-import { renderRefreshReport } from './lib/market-data-refresh/refresh-report';
+import {
+  SOURCE_IDS,
+  SOURCE_LABELS,
+  accessOf,
+  checkSource,
+  needsBuild,
+  probeMarket,
+  probeZones,
+  type SourceCheck,
+  type SourceChecks,
+  type SourceId,
+} from './lib/market-data-refresh/refresh-probe';
+import { accessLine, renderRefreshReport } from './lib/market-data-refresh/refresh-report';
 import { readDataSnapshot, type DataSnapshot } from './lib/market-data-refresh/refresh-snapshot';
 
 const PUBLIC_DIR = join(REPO_ROOT, 'public');
 const DEFAULT_REPORT_PATH = join(REPO_ROOT, 'node_modules', '.cache', 'market-data-refresh', 'report.md');
 
 /** Ένα σύνολο δεδομένων: ο γεννήτοράς του (script του `package.json` = SSoT της εντολής) και ο φάκελος εξόδου του. */
-const DATASETS = {
+const DATASETS: Readonly<Record<SourceId, { readonly script: string; readonly outputDir: string }>> = {
   market: { script: 'build:market-transactions', outputDir: join(PUBLIC_DIR, ...MARKET_TRANSACTIONS_DIR.split('/')) },
   zones: { script: 'build:value-zones', outputDir: join(PUBLIC_DIR, ...VALUE_ZONES_DIR.split('/')) },
-} as const;
-type DatasetId = keyof typeof DATASETS;
+};
 
 /** Η σουίτα jest πάνω στα πραγματικά αρχεία (Ε7) — η λίστα ζει στο `package.json`. */
 const REAL_FILES_TEST_SCRIPT = 'test:market-data-real-files';
@@ -109,7 +120,7 @@ interface BuildOutcome {
 }
 
 /** Ε3 — δύο εκτελέσεις: η πρώτη με **νέα λήψη** της πηγής, η δεύτερη από την cache. Σφάλμα γεννήτορα ⇒ πετά (Ε1). */
-async function buildTwice(id: DatasetId): Promise<BuildOutcome> {
+async function buildTwice(id: SourceId): Promise<BuildOutcome> {
   const { script, outputDir } = DATASETS[id];
   if (!npmRun(script, ['--refresh'])) throw new Error(`${script}: ο γεννήτορας απέτυχε (Ε1 — σχήμα πηγής ή δίκτυο)`);
   const first = await hashTree(outputDir);
@@ -123,16 +134,18 @@ function readRunSummary<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
 
-interface Probes {
-  readonly market: ProbeDecision;
-  readonly zones: ProbeDecision;
-}
+type Probes = SourceChecks;
 
+/**
+ * Κάθε πηγή κρίνεται **χωριστά** (ADR-889 §11.10): ο gsis.gr κόβει τους runners του GitHub (403), ενώ το data.gov.gr
+ * περνά — η απρόσιτη πηγή δεν ρίχνει την άλλη. Και με `--force` ο έλεγχος τρέχει: η κεφαλίδα δεν αποφασίζει, η
+ * προσβασιμότητα όμως ναι.
+ */
 async function probeAll(before: DataSnapshot, force: boolean): Promise<Probes> {
-  const forced: ProbeDecision = { changed: true, reasons: ['παραγωγή με `--force` (χωρίς έλεγχο κεφαλίδων)'] };
-  if (force) return { market: forced, zones: forced };
-  const window = await resolveMamaWindow([]);
-  return { market: await probeMarket(before.market, window, probeSource), zones: await probeZones(before.zones, probeSource) };
+  return {
+    market: await checkSource(async () => probeMarket(before.market, await resolveMamaWindow([]), probeSource), force),
+    zones: await checkSource(() => probeZones(before.zones, probeSource), force),
+  };
 }
 
 interface Rebuilt {
@@ -145,15 +158,15 @@ async function rebuild(probes: Probes, before: DataSnapshot, acceptDrop: boolean
   const gates: GateResult[] = [];
   const mismatched: string[] = [];
   let files = 0;
-  for (const id of ['market', 'zones'] as const) {
-    if (!probes[id].changed) continue;
+  for (const id of SOURCE_IDS) {
+    if (!needsBuild(probes[id])) continue;
     const outcome = await buildTwice(id);
     mismatched.push(...outcome.mismatched);
     files += outcome.files;
   }
   const after = readDataSnapshot(PUBLIC_DIR);
-  const market = probes.market.changed && after.market !== null ? diffMarket(before.market, after.market) : null;
-  const zones = probes.zones.changed && after.zones !== null ? diffZones(before.zones, after.zones) : null;
+  const market = needsBuild(probes.market) && after.market !== null ? diffMarket(before.market, after.market) : null;
+  const zones = needsBuild(probes.zones) && after.zones !== null ? diffZones(before.zones, after.zones) : null;
   if (market !== null) gates.push(coverageGate(readRunSummary<MamaRunSummary>(MAMA_RUN_SUMMARY_PATH).totals));
   gates.push(determinismGate(mismatched, files));
   if (zones !== null) gates.push(unassignedZonesGate(readRunSummary<ValueZonesRunSummary>(VALUE_ZONES_RUN_SUMMARY_PATH)));
@@ -168,26 +181,80 @@ function writeGithubOutput(enabled: boolean, changed: boolean): void {
   if (enabled && target !== undefined) appendFileSync(target, `changed=${changed}\n`);
 }
 
+function describeCheck(check: SourceCheck): string {
+  if (!check.reachable) return `ΑΠΡΟΣΙΤΗ (HTTP ${check.status ?? '—'})`;
+  return `${check.decision.changed ? 'ΑΛΛΑΞΕ' : 'ίδιο'}${check.decision.reasons.map((reason) => `\n  - ${reason}`).join('')}`;
+}
+
+/** `::error` / `::warning` στη σελίδα του run του GitHub· τοπικά απλή γραμμή. */
+function annotate(level: 'error' | 'warning', title: string, message: string): void {
+  if (process.env.GITHUB_ACTIONS === 'true') console.log(`::${level} title=${title}::${message}`);
+  else console.error(`${level === 'error' ? '🔴' : '⚠️'} ${title}: ${message}`);
+}
+
+/**
+ * Η πρόσβαση κάθε πηγής (ADR-889 §11.11): **αδήλωτα** απρόσιτη ⇒ κόκκινο (`exitCode 1`)· δηλωμένος περιορισμός ⇒ ⚠️.
+ * Ποτέ σιωπηλό «ίδιο». Επιστρέφει αν υπάρχει κάτι μη-πράσινο (τότε γράφεται αναφορά).
+ */
+function flagAccess(probes: Probes): boolean {
+  const access = accessOf(probes);
+  let notable = false;
+  for (const id of SOURCE_IDS) {
+    const line = accessLine(id, probes[id]);
+    if (line === null) continue;
+    notable = true;
+    // Το annotation έχει δικό του σήμα επιπέδου· χωρίς Markdown και χωρίς το εικονίδιο της αναφοράς.
+    annotate(access[id] === 'unexpected' ? 'error' : 'warning', SOURCE_LABELS[id], line.replace(/\*\*/g, '').replace(/^(🔴|⚠️) /u, ''));
+    if (access[id] === 'unexpected') process.exitCode = 1;
+  }
+  return notable;
+}
+
+/** Ε8 πάνω στο ΜΑΜΑ που σερβίρει **τώρα** το `public/` (μετά την παραγωγή, αν έγινε). Κόκκινο ⇒ `exitCode 1`. */
+function checkFreshness(): GateResult {
+  const gate = freshnessGate(readDataSnapshot(PUBLIC_DIR).market?.asOf ?? null, new Date());
+  if (!gate.ok) {
+    annotate('error', gate.title, gate.detail);
+    process.exitCode = 1;
+  } else if (gate.warning) annotate('warning', gate.title, gate.detail);
+  return gate;
+}
+
+function writeReport(path: string, report: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, report);
+  console.log(`\n${report}\n📄 αναφορά → ${path}`);
+}
+
+/**
+ * Κωδικός εξόδου **0** μόνο όταν: καμία πηγή δεν είναι **αδήλωτα** απρόσιτη **και** κάθε πύλη πέρασε — μαζί η φρεσκάδα Ε8.
+ * Το `changed=` του `$GITHUB_OUTPUT` λέει κάτι άλλο — «υπάρχει έγκυρη νέα έξοδος για PR» — γι' αυτό μπορεί να είναι `true`
+ * σε κόκκινο run. Το workflow τα διαβάζει χωριστά (ADR-889 §11.10 · §11.11).
+ */
 async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2));
   const before = readDataSnapshot(PUBLIC_DIR);
   const probes = await probeAll(before, options.force);
   if (options.probeOnly) {
-    for (const [id, probe] of Object.entries(probes)) console.log(`${id}: ${probe.changed ? 'ΑΛΛΑΞΕ' : 'ίδιο'}${probe.reasons.map((r: string) => `
-  - ${r}`).join('')}`);
+    for (const id of SOURCE_IDS) console.log(`${id}: ${describeCheck(probes[id])}`);
+    flagAccess(probes);
+    const freshness = checkFreshness();
+    console.log(`${freshness.id}: ${freshness.ok ? (freshness.warning ? '⚠️' : '✅') : '❌'} ${freshness.detail}`);
     return;
   }
-  if (!probes.market.changed && !probes.zones.changed) {
-    console.log('✅ Καμία αλλαγή στις πηγές (ΜΑΜΑ + ζώνες) — τίποτα προς παραγωγή, κανένα PR.');
+  const notable = flagAccess(probes);
+  if (!needsBuild(probes.market) && !needsBuild(probes.zones)) {
+    const freshness = checkFreshness();
+    if (notable || !freshness.ok || freshness.warning === true) {
+      writeReport(options.reportPath, renderRefreshReport({ market: { check: probes.market, diff: null }, zones: { check: probes.zones, diff: null }, gates: [freshness] }));
+    } else console.log(`✅ Καμία αλλαγή στις πηγές (ΜΑΜΑ + ζώνες) — κανένα PR. ${freshness.detail}.`);
     writeGithubOutput(options.githubOutput, false);
     return;
   }
-  const { gates, market, zones } = await rebuild(probes, before, options.acceptDrop);
-  const report = renderRefreshReport({ market: { probe: probes.market, diff: market }, zones: { probe: probes.zones, diff: zones }, gates });
-  mkdirSync(dirname(options.reportPath), { recursive: true });
-  writeFileSync(options.reportPath, report);
-  console.log(`\n${report}\n📄 αναφορά → ${options.reportPath}`);
-  const passed = allGatesPass(gates);
+  const { gates: outputGates, market, zones } = await rebuild(probes, before, options.acceptDrop);
+  const gates = [...outputGates, checkFreshness()];
+  writeReport(options.reportPath, renderRefreshReport({ market: { check: probes.market, diff: market }, zones: { check: probes.zones, diff: zones }, gates }));
+  const passed = prGatesPass(gates);
   writeGithubOutput(options.githubOutput, passed);
   if (!passed) process.exitCode = 1;
 }

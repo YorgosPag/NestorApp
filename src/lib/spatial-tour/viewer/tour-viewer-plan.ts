@@ -34,6 +34,11 @@ export function toPlanSvg(point: TourPoint): { readonly x: number; readonly y: n
   return { x: point.x, y: -point.y };
 }
 
+/** Το αντίστροφο του {@link toPlanSvg}: σημείο του SVG (π.χ. από `clientToPlan`) ⇒ μέτρα κάτοψης (y βορράς). */
+export function fromPlanSvg(point: { readonly x: number; readonly y: number }): { readonly x: number; readonly y: number } {
+  return { x: point.x, y: -point.y };
+}
+
 function spanOf(min: number, max: number): { readonly min: number; readonly span: number } {
   const span = Math.max(PLAN_MIN_SPAN_M, max - min + 2 * PLAN_PADDING_M);
   return { min: (min + max) / 2 - span / 2, span };

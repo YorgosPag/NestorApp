@@ -10,7 +10,13 @@
  * ⛔ Κάθε κλειδί ολόγραφο με `spatial-tour:` (βλ. `spatial-tour-labels.ts`).
  */
 
-import type { TourShapeRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
+import {
+  isTourShapeRefusal,
+  type TourRefusalName,
+  type TourShapeRefusal,
+} from '@/lib/spatial-tour/tour-refusal-vocabulary';
+
+import { TOUR_REFUSAL_KEY } from '../spatial-tour-labels';
 
 export const TOUR_SHAPE_REFUSAL_KEY: Readonly<Record<TourShapeRefusal, string>> = {
   'space-invalid': 'spatial-tour:refusal.spaceInvalid',
@@ -31,3 +37,11 @@ export const TOUR_SHAPE_KEYS = {
   separationSaved: 'spatial-tour:editor.separationSaved',
   separationRemoved: 'spatial-tour:editor.separationRemoved',
 } as const;
+
+/**
+ * **Η λέξη μιας άρνησης του γραφέα γράφου** — σχήματος από τον πίνακα του επεξεργαστή, κάθε άλλη από τον γενικό (η ΜΙΑ διαμέριση·
+ * την καλούν το μήνυμα μετά την αποστολή **και** ο προέλεγχος του βήματος «Χώροι», Γ3γ-2β).
+ */
+export function tourGraphRefusalKey(reason: TourRefusalName): string {
+  return isTourShapeRefusal(reason) ? TOUR_SHAPE_REFUSAL_KEY[reason] : TOUR_REFUSAL_KEY[reason];
+}

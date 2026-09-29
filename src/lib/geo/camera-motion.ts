@@ -285,3 +285,70 @@ export function cameraFraming(
     maxZoom: CEILING_ZOOM[ceiling],
   };
 }
+
+/**
+ * **Το κουτί μιας μικρογραφίας σε CSS pixel** — το μέγεθος της ίδιας της επιφάνειας.
+ *
+ * ⚠️ **Δεν είναι γεωμετρία σκηνής** (§4 του ADR-847: κέντρο, ορθογώνιο και ζουμ δεν περνούν από
+ * εδώ). Είναι ο **παρονομαστής** του λόγου που δηλώνει η αρχή — χωρίς αυτόν ένας λόγος δεν γίνεται
+ * pixel, και η MapLibre δέχεται περιθώριο **μόνο** σε pixel.
+ */
+export interface FrameBox {
+  readonly widthPx: number;
+  readonly heightPx: number;
+}
+
+/**
+ * **Σε μικρογραφία το σχήμα πιάνει αυτό το κλάσμα κάθε διάστασης** ⇒ 10% αέρας ανά πλευρά.
+ *
+ * 🔴 **Γιατί ΛΟΓΟΣ και όχι pixel** (ADR-847 §9.6): τα `pin`/`label` απαντούν *«πόσο φαρδύ σύμβολο
+ * κάθεται στην άκρη;»* — ερώτηση σε **σταθερά** pixel, γιατί η ετικέτα έχει το ίδιο μέγεθος σε
+ * κάθε χάρτη. Σε μικρογραφία η ερώτηση είναι άλλη: *«πόση γειτονιά φαίνεται γύρω από το σχήμα;»* —
+ * και αυτή **κλιμακώνεται με το κουτί**. Τα 64 px του `label` σε κουτί 360×240 αφήνουν **112 px**
+ * ύψος για το σχήμα (47%)· σε 176×132 **4 px**. Ο λόγος δίνει το ίδιο καρέ σε κάθε μέγεθος.
+ *
+ * 🔑 Η τιμή **βρέθηκε, δεν επινοήθηκε**: είναι η απόφαση του ADR-777 §8.70.7 (*«η διάμετρος πιάνει
+ * το 80% του κουτιού»*), που ζούσε ως `SNAPSHOT_AREA_SHARE` σε δεύτερη μηχανή καδραρίσματος και
+ * μεταφέρθηκε εδώ **αμετάβλητη**.
+ */
+const MINIATURE_SUBJECT_SHARE = 0.8;
+
+/** Το περιθώριο ανά πλευρά, όπως το δέχεται το `fitBounds` — ποτέ εξαγόμενο (βλ. {@link CameraFramingOptions}). */
+interface FramePaddingPx {
+  readonly top: number;
+  readonly bottom: number;
+  readonly left: number;
+  readonly right: number;
+}
+
+type CameraBoxFramingOptions = CameraFlightOptions & {
+  readonly padding: FramePaddingPx;
+  readonly maxZoom: number;
+};
+
+/**
+ * **Το καδράρισμα μιας ΜΙΚΡΟΓΡΑΦΙΑΣ** — ίδια πρόθεση και ίδιο ταβάνι με έναν ζωντανό χάρτη,
+ * περιθώριο **αναλογικό** του κουτιού αντί για σύμβολο στην άκρη.
+ *
+ * 🔑 **Η μικρογραφία = το καρέ άφιξης του ζωντανού χάρτη, κλιμακωμένο στο κουτί** (ADR-847 §9.6).
+ * Google Static Maps (`visible=`) και Mapbox Static (`auto` + `padding`) αφήνουν τη **μηχανή** να
+ * καδράρει· εδώ επιπλέον το ταβάνι είναι το **ίδιο** `PrecisionCeiling` με του χάρτη, άρα η κάρτα
+ * δεν μπορεί να ισχυριστεί **περισσότερη** ακρίβεια από τον χάρτη που ανοίγει.
+ *
+ * @example
+ * map.fitBounds(extentBounds(extent), cameraFramingInBox('arrive', 'suggested', SNAPSHOT_VIEWPORT));
+ */
+export function cameraFramingInBox(
+  intent: CameraIntent,
+  ceiling: PrecisionCeiling,
+  box: FrameBox,
+): CameraBoxFramingOptions {
+  const airPerSide = (1 - MINIATURE_SUBJECT_SHARE) / 2;
+  const vertical = box.heightPx * airPerSide;
+  const horizontal = box.widthPx * airPerSide;
+  return {
+    ...cameraFlight(intent),
+    padding: { top: vertical, bottom: vertical, left: horizontal, right: horizontal },
+    maxZoom: CEILING_ZOOM[ceiling],
+  };
+}

@@ -28,6 +28,7 @@ import { join } from 'path';
 import {
   cameraFlight,
   cameraFraming,
+  cameraFramingInBox,
   type CameraIntent,
   type FrameEdge,
   type PrecisionCeiling,
@@ -132,6 +133,38 @@ describe('Β. cameraFraming — η πρόθεση γίνεται κάδρο', ()
     const zoomOf = (c: PrecisionCeiling) => cameraFraming('travel', 'pin', c).maxZoom;
     expect(zoomOf('suggested')).toBeLessThan(zoomOf('area'));
     expect(zoomOf('area')).toBeLessThan(zoomOf('confirmed'));
+  });
+});
+
+describe('Β2. cameraFramingInBox — η μικρογραφία = το ίδιο καρέ, κλιμακωμένο στο κουτί (§9.6)', () => {
+  const BOX = { widthPx: 360, heightPx: 240 };
+  const CEILINGS: readonly PrecisionCeiling[] = ['suggested', 'area', 'confirmed'];
+  const INTENTS: readonly CameraIntent[] = ['arrive', 'travel'];
+
+  it('🔑 ίδια κίνηση ΚΑΙ ίδιο ταβάνι με τον ζωντανό χάρτη — αλλιώς η κάρτα ισχυρίζεται άλλη ακρίβεια', () => {
+    for (const intent of INTENTS) {
+      for (const ceiling of CEILINGS) {
+        const { padding: _p, maxZoom, ...motion } = cameraFramingInBox(intent, ceiling, BOX);
+        expect(motion).toEqual(cameraFlight(intent));
+        expect(maxZoom).toBe(cameraFraming(intent, 'label', ceiling).maxZoom);
+      }
+    }
+  });
+
+  it('🔴 το περιθώριο ΚΛΙΜΑΚΩΝΕΤΑΙ με το κουτί — σταθερά pixel θα έτρωγαν τη μικρογραφία', () => {
+    const small = cameraFramingInBox('arrive', 'suggested', BOX).padding;
+    const large = cameraFramingInBox('arrive', 'suggested', { widthPx: 720, heightPx: 480 }).padding;
+    expect(large.top).toBeCloseTo(small.top * 2, 9);
+    expect(large.left).toBeCloseTo(small.left * 2, 9);
+  });
+
+  it('κάθε άξονας με τη ΔΙΚΗ του διάστασης, και το σχήμα κρατά την πλειονότητα του κουτιού', () => {
+    const { top, bottom, left, right } = cameraFramingInBox('arrive', 'suggested', BOX).padding;
+    expect(top).toBe(bottom);
+    expect(left).toBe(right);
+    expect(left / BOX.widthPx).toBeCloseTo(top / BOX.heightPx, 9);
+    expect(BOX.heightPx - top - bottom).toBeGreaterThan(BOX.heightPx / 2);
+    expect(top).toBeGreaterThan(0);
   });
 });
 

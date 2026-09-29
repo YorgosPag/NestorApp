@@ -34,3 +34,20 @@ export const PLAN_CONE_CLASS = 'fill-[hsl(var(--plan-here)/0.25)] stroke-[hsl(va
 /** Κείμενο ετικέτας χώρου με λευκή άλω (`paint-order: stroke` ⇒ το περίγραμμα ζωγραφίζεται **πριν** το γέμισμα). */
 export const SPACE_LABEL_CLASS = 'fill-[hsl(var(--plan-ink))] stroke-white [paint-order:stroke] font-medium';
 export const SPACE_LABEL_UNCAPTURED_CLASS = 'fill-[hsl(var(--plan-ink-muted))] stroke-white [paint-order:stroke]';
+
+/**
+ * **Ο επεξεργαστής χώρων** (Γ3γ-2β · Δ9): εκεί ΚΑΘΕ εγκεκριμένος χώρος πρέπει να φαίνεται (στον θεατή ο «άλλος» χώρος είναι
+ * διάφανος) · η **πρόταση** είναι διακεκομμένη κίτρινη (δεν έχει εγκριθεί — Δ8.1) · η **επιλογή** και οι λαβές είναι μπλε
+ * (`chart-1`, ίδιο σε δύο θέματα) — όπως η επιλογή στο Figma/Revit, ξεχωριστή από το κίτρινο «εδώ» του θεατή.
+ */
+const SPACE_APPROVED_CLASS = 'fill-[hsl(var(--plan-space-idle)/0.12)] stroke-[hsl(var(--plan-space-idle))]';
+export const SPACE_EDITOR_TONE_CLASS: Readonly<Record<TourSpaceTone, string>> = {
+  here: SPACE_APPROVED_CLASS, joined: SPACE_APPROVED_CLASS, uncaptured: SPACE_APPROVED_CLASS, idle: SPACE_APPROVED_CLASS,
+};
+export const SPACE_PROPOSAL_CLASS = 'fill-[hsl(var(--plan-space-here)/0.25)] stroke-[hsl(var(--plan-space-edge))]';
+export const SPACE_SELECTED_CLASS = 'fill-chart-1/15 stroke-chart-1';
+export const SPACE_HANDLE_CLASS = 'fill-white stroke-chart-1 cursor-move outline-none focus-visible:fill-chart-1';
+export const SPACE_MIDPOINT_CLASS = 'fill-chart-1/60 stroke-white cursor-copy outline-none focus-visible:fill-chart-1';
+export const SPACE_SEPARATION_CLASS = 'stroke-[hsl(var(--plan-ink))]';
+export const SPACE_SEPARATION_SUGGESTED_CLASS = 'stroke-[hsl(var(--plan-here))]';
+export const SPACE_PEN_CLASS = 'fill-chart-1/10 stroke-chart-1';

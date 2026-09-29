@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΤΟ ΟΡΘΟΓΩΝΙΟ ΠΟΥ ΠΕΡΙΚΛΕΙΕΙ Ο,ΤΙ ΖΩΓΡΑΦΙΖΕΤΑΙ** — μία απάντηση.
- * @related ADR-777 §8.60 · lib/listings/listings-geojson.ts
+ * @related ADR-777 §8.60 · §8.70.7 · ADR-847 §9.6 · lib/listings/listings-geojson.ts
  * @module lib/listings/listing-map-bounds
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -14,12 +14,13 @@
  * δεν κράτησε αντίγραφο.
  */
 
-import type { ListingGeoJson } from './listings-geojson';
+import type { ListingFeature, ListingGeoJson } from './listings-geojson';
 import { areaBoundingBox } from '@/lib/geo/geo-area';
+import type { ExtentBounds } from '@/lib/maps/extent-bounds';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
-/** `[[δυτικά, νότια], [ανατολικά, βόρεια]]` — η μορφή που δέχεται το `fitBounds`. */
-export type ListingBounds = [[number, number], [number, number]];
+/** `[[δυτικά, νότια], [ανατολικά, βόρεια]]` — η μορφή που δέχεται το `fitBounds` (η ΜΙΑ, `lib/maps/extent-bounds`). */
+export type ListingBounds = ExtentBounds;
 
 /**
  * Το ορθογώνιο που περικλείει **ό,τι ζωγραφίζεται** — ή `null` αν δεν ζωγραφίζεται τίποτα.
@@ -51,26 +52,30 @@ export function listingBounds(
 }
 
 /**
- * **Το κάδρο της ΑΦΙΞΗΣ σε ΜΙΑ αγγελία** — ο σύνδεσμος `?selected=` (ADR-777 §8.77).
+ * **Η ΕΚΤΑΣΗ ΜΙΑΣ ΑΓΓΕΛΙΑΣ** — ό,τι **ισχυρίζεται** το σχήμα της, όχι μόνο το κέντρο του.
  *
- * 🔑 **Το κάδρο περικλείει ό,τι ΙΣΧΥΡΙΖΕΤΑΙ το σχήμα, όχι μόνο το κέντρο του.** Μια αγγελία
- * «κάπου στην πόλη» έχει σημείο **και** κύκλο αβεβαιότητας 10 χλμ· ένα κάδρο στο σημείο θα
- * ζουμάριζε σε επίπεδο δρόμου, δηλαδή θα έδειχνε με βεβαιότητα **ένα οικόπεδο που δεν ξέρουμε**
- * (Α5). Εδώ το κάδρο είναι ο **περιγεγραμμένος** κύκλος (`areaBoundingBox`, το σφαιρικό φράγμα)·
- * για ακριβή πινέζα (αβεβαιότητα 0) είναι ένα σημείο, και το ταβάνι `suggested` του
- * `fitMapToArea` ορίζει το ζουμ — το **ίδιο** ταβάνι με το ζουμ ομάδας, άρα η αγγελία
- * ζωγραφίζεται **χωριστά** από τις γειτονικές.
- * Περίγραμμα (`outline`) ⇒ το ορθογώνιο του περιγράμματος, από τον **ίδιο** υπολογισμό.
+ * 🔑 **Η ΜΙΑ απάντηση για ΔΥΟ κάδρα** (ADR-847 §9.6): την άφιξη του δημόσιου χάρτη σε μία αγγελία
+ * ({@link listingArrivalArea}) και τη μικρογραφία της κάρτας (ADR-777 §8.70.7). Μέχρι 2026-09-29 η
+ * μικρογραφία την **ξανάγραφε** (δικό της bbox περιγράμματος, δική της διάμετρος από τον
+ * `LISTING_UNCERTAINTY_KM`) ⇒ το ίδιο ακίνητο φαινόταν αλλιώς στην κάρτα και αλλιώς στον χάρτη.
  *
- * @returns `null` όταν η αγγελία **δεν ζωγραφίζεται** (αποσύρθηκε, δεν έχει θέση, λάθος id) —
- *          ο καλών τότε καδράρει τα δεδομένα όπως πάντα: ο σύνδεσμος ζητά, η σελίδα αποφασίζει.
+ * 🔑 **Γιατί παίρνει FEATURE και όχι σημάδι**: ο κοινός παρονομαστής των δύο καλούντων είναι το
+ * feature του **ενός** ζωγράφου (`listingFeature`) — ο χάρτης έχει μόνο features, η μικρογραφία
+ * χτίζει ήδη το feature που ζωγραφίζει. Έτσι το κάδρο βγαίνει από **αυτό που ζωγραφίστηκε**, και η
+ * αβεβαιότητα διαβάζεται από το `uncertaintyM` του feature, όχι ξανά από τον πίνακα.
+ *
+ * - **περίγραμμα** ⇒ το ορθογώνιο του περιγράμματος (ο **ίδιος** υπολογισμός με το {@link listingBounds})·
+ * - **περιοχή** (δακτύλιος · συνοικία · πόλη) ⇒ ο **περιγεγραμμένος** κύκλος αβεβαιότητας
+ *   (`areaBoundingBox`, σφαιρικό φράγμα) — ένα κάδρο στο σημείο θα έδειχνε με βεβαιότητα **ένα
+ *   οικόπεδο που δεν ξέρουμε** (Α5)·
+ * - **ακριβής πινέζα** (αβεβαιότητα 0) ⇒ ένα σημείο· το ζουμ το ορίζει τότε το **ταβάνι** του καλούντα.
+ *
+ * @returns `null` μόνο για περίγραμμα **χωρίς κορυφές** — ποτέ σιωπηλή προεπιλογή (ένα `[0,0]` θα
+ *          έστελνε τον χάρτη στον κόλπο της Γουινέας χωρίς να το πει κανείς).
  */
-export function listingArrivalArea(data: ListingGeoJson, id: string): GeoBoundingBox | null {
-  const feature = data.features.find((candidate) => candidate.properties.id === id);
-  if (feature === undefined) return null;
-
+export function listingFeatureExtent(feature: ListingFeature): GeoBoundingBox | null {
   if (feature.geometry.type !== 'Point') {
-    const bounds = listingBounds({ ...data, features: [feature] });
+    const bounds = listingBounds({ type: 'FeatureCollection', features: [feature] });
     return bounds === null ? null : { west: bounds[0][0], south: bounds[0][1], east: bounds[1][0], north: bounds[1][1] };
   }
 
@@ -79,4 +84,19 @@ export function listingArrivalArea(data: ListingGeoJson, id: string): GeoBoundin
   return radiusKm > 0
     ? areaBoundingBox({ center: { lat, lng }, radiusKm })
     : { west: lng, south: lat, east: lng, north: lat };
+}
+
+/**
+ * **Το κάδρο της ΑΦΙΞΗΣ σε ΜΙΑ αγγελία** — ο σύνδεσμος `?selected=` (ADR-777 §8.77).
+ *
+ * Η έκταση είναι το {@link listingFeatureExtent}· το ταβάνι `suggested` του `fitMapToArea` ορίζει το
+ * ζουμ της ακριβούς πινέζας — το **ίδιο** ταβάνι με το ζουμ ομάδας, άρα η αγγελία ζωγραφίζεται
+ * **χωριστά** από τις γειτονικές.
+ *
+ * @returns `null` όταν η αγγελία **δεν ζωγραφίζεται** (αποσύρθηκε, δεν έχει θέση, λάθος id) —
+ *          ο καλών τότε καδράρει τα δεδομένα όπως πάντα: ο σύνδεσμος ζητά, η σελίδα αποφασίζει.
+ */
+export function listingArrivalArea(data: ListingGeoJson, id: string): GeoBoundingBox | null {
+  const feature = data.features.find((candidate) => candidate.properties.id === id);
+  return feature === undefined ? null : listingFeatureExtent(feature);
 }

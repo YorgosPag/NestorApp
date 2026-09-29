@@ -13,13 +13,19 @@ import {
   allGatesPass,
   coverageGate,
   determinismGate,
+  freshnessGate,
   massShiftGate,
+  prGatesPass,
   unassignedZonesGate,
   volumeGate,
+  type GateResult,
 } from '../lib/market-data-refresh/refresh-gates';
-import { renderRefreshReport } from '../lib/market-data-refresh/refresh-report';
+import type { SourceCheck } from '../lib/market-data-refresh/refresh-probe';
+import { accessLine, renderRefreshReport } from '../lib/market-data-refresh/refresh-report';
 import type { MamaInput, MarketSnapshot, ZonePrice, ZoneSnapshot } from '../lib/market-data-refresh/refresh-snapshot';
 import type { PriceMapAreas } from '../../src/lib/market/price-map';
+
+const checked = (reasons: readonly string[]): SourceCheck => ({ reachable: true, decision: { changed: reasons.length > 0, reasons } });
 
 function input(year: number, rows: number, sha = `sha-${year}`): MamaInput {
   return { year, url: mamaSourceUrl(year), lastModified: 'LM', bytes: 1, sha256: sha, rows };
@@ -116,8 +122,8 @@ describe('αναφορά PR', () => {
   const after = market({ a: { apartment: [40, 1100] } }, [input(2026, 1100, 'new')]);
   const report = () =>
     renderRefreshReport({
-      market: { probe: { changed: true, reasons: ['ΜΑΜΑ 2026: Last-Modified x → y'] }, diff: diffMarket(before, after) },
-      zones: { probe: { changed: false, reasons: [] }, diff: null },
+      market: { check: checked(['ΜΑΜΑ 2026: Last-Modified x → y']), diff: diffMarket(before, after) },
+      zones: { check: checked([]), diff: null },
       gates: [determinismGate([], 3), volumeGate(null, null, false)],
     });
 
@@ -138,12 +144,71 @@ describe('αναφορά PR', () => {
 
   it('κόκκινη πύλη ⇒ «κανένα PR»· παράκαμψη ⇒ δηλώνεται', () => {
     const failed = renderRefreshReport({
-      market: { probe: { changed: false, reasons: [] }, diff: null },
-      zones: { probe: { changed: false, reasons: [] }, diff: null },
+      market: { check: checked([]), diff: null },
+      zones: { check: checked([]), diff: null },
       gates: [determinismGate(['x'], 1), { id: 'E5', title: 't', ok: true, detail: 'd', overridden: true }],
     });
     expect(failed).toContain('❌ Πύλη απέτυχε');
     expect(failed).toContain('παράκαμψη με ανθρώπινη απόφαση');
     expect(allGatesPass([determinismGate(['x'], 1)])).toBe(false);
+  });
+
+  const mamaDown = (status: number | null): SourceCheck => ({ reachable: false, reason: `ΜΑΜΑ 2026: απρόσμενο HTTP ${status ?? '—'}`, status });
+  const reportFor = (market: SourceCheck, gates: GateResult[] = []): string =>
+    renderRefreshReport({ market: { check: market, diff: null }, zones: { check: checked(['ζώνες: Last-Modified a → b']), diff: null }, gates });
+
+  it('ΑΔΗΛΩΤΗ αποτυχία (500) ⇒ ρητό 🔴 στην κορυφή ΚΑΙ στην ενότητα· η άλλη πηγή αναφέρεται κανονικά', () => {
+    const text = reportFor(mamaDown(500));
+    expect(text).toContain('🔴 **Απρόσιτη πηγή**: Συμβόλαια (ΜΑΜΑ) — το run είναι κόκκινο');
+    expect(text).toContain('## Συμβόλαια (ΜΑΜΑ)\n\n🔴 **Απρόσιτη πηγή** — ΜΑΜΑ 2026: απρόσμενο HTTP 500');
+    expect(text).not.toContain('Συμβόλαια (ΜΑΜΑ)\n\nΧωρίς αλλαγή');
+    expect(text.indexOf('🔴')).toBeLessThan(text.indexOf('## Πύλες'));
+  });
+
+  it('ΔΗΛΩΜΕΝΗ γεωφραγή (403) ⇒ ⚠️ με το τεκμήριο και τον δρόμο (runbook), ΚΑΝΕΝΑ 🔴', () => {
+    const text = reportFor(mamaDown(403));
+    expect(text).toContain('⚠️ **Δηλωμένος περιορισμός πρόσβασης**: Συμβόλαια (ΜΑΜΑ)');
+    expect(text).toContain('⚠️ **Γνωστός περιορισμός πρόσβασης** (γεωφραγή, μόνο από GR');
+    expect(text).toContain('§11.8');
+    expect(text).not.toContain('🔴');
+  });
+
+  it('η δηλωμένη πηγή ΑΠΑΝΤΗΣΕ ⇒ ⚠️ «αφαίρεσε τη δήλωση»· ακριβώς μία γραμμή πρόσβασης ανά περίπτωση', () => {
+    const text = reportFor(checked([]));
+    expect(text).toContain('αφαίρεσε τη δήλωση');
+    expect(accessLine('zones', checked([]))).toBeNull();
+  });
+
+  it('Ε8 κόκκινη χωρίς άλλη αποτυχία ⇒ «μπαγιάτικα», ΟΧΙ «κανένα PR»· ⚠️ φρεσκάδας ⇒ ⚠️ στον πίνακα', () => {
+    const stale = freshnessGate('2026-07-01', new Date('2026-09-29'));
+    const text = reportFor(checked([]), [determinismGate([], 1), stale]);
+    expect(text).toContain('**μπαγιάτικα** (Ε8)');
+    expect(text).not.toContain('κανένα PR**');
+    expect(prGatesPass([determinismGate([], 1), stale])).toBe(true);
+    expect(allGatesPass([determinismGate([], 1), stale])).toBe(false);
+    expect(reportFor(checked([]), [freshnessGate('2026-08-15', new Date('2026-09-29'))])).toContain('| ⚠️ | E8 |');
+  });
+});
+
+describe('Ε8 — φρεσκάδα (dbt source freshness)', () => {
+  const now = new Date('2026-09-29T03:00:00Z');
+  const t = REFRESH_THRESHOLDS;
+
+  it(`όρια ±1: ≤ ${t.freshnessWarnAfterDays} ✅ · ${t.freshnessWarnAfterDays + 1} ⚠️ · ${t.freshnessErrorAfterDays} ⚠️ · ${t.freshnessErrorAfterDays + 1} ❌`, () => {
+    const at = (days: number) => freshnessGate(new Date(now.getTime() - days * 86_400_000).toISOString().slice(0, 10), now);
+    expect(at(t.freshnessWarnAfterDays)).toMatchObject({ ok: true });
+    expect(at(t.freshnessWarnAfterDays).warning).toBeUndefined();
+    expect(at(t.freshnessWarnAfterDays + 1)).toMatchObject({ ok: true, warning: true });
+    expect(at(t.freshnessErrorAfterDays)).toMatchObject({ ok: true, warning: true });
+    expect(at(t.freshnessErrorAfterDays + 1)).toMatchObject({ ok: false });
+  });
+
+  it('το μετρημένο σήμερα (asOf 2026-09-01) περνά καθαρά', () => {
+    expect(freshnessGate('2026-09-01', now)).toMatchObject({ ok: true, detail: expect.stringContaining('28 ημέρες') });
+  });
+
+  it('άκυρο / απόν asOf ⇒ ❌, ποτέ σιωπηλό «περνά»', () => {
+    expect(freshnessGate(null, now).ok).toBe(false);
+    expect(freshnessGate('2026-02-30', now).ok).toBe(false);
   });
 });

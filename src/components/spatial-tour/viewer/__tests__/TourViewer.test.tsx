@@ -42,6 +42,7 @@ const engine: jest.Mocked<TourPanoramaEngine> = {
 jest.mock('../tour-panorama-engine', () => ({ createTourPanoramaEngine: () => engine }));
 
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { TestPointerEvent, installPointerEvents } from '@/test-utils/pointer-event';
 import { DEMO_TOUR_MANIFEST } from '../demo/demo-tour';
 import { TourViewer } from '../TourViewer';
 import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
@@ -58,20 +59,9 @@ const source: TourPanoramaSource = {
   planImageUrl: (plan) => `plan:${plan.image.contentHash}`,
 };
 
-/** Το jsdom δεν έχει `PointerEvent` ούτε `setPointerCapture` — ό,τι χρειάζεται η είσοδος του καμβά. */
-class TestPointerEvent extends MouseEvent {
-  readonly pointerId: number;
-  readonly pointerType: string;
-  constructor(type: string, init: MouseEventInit & { pointerId?: number; pointerType?: string } = {}) {
-    super(type, init);
-    this.pointerId = init.pointerId ?? 1;
-    this.pointerType = init.pointerType ?? 'mouse';
-  }
-}
-
+/** Το jsdom δεν έχει `PointerEvent` ούτε `setPointerCapture` — ό,τι χρειάζεται η είσοδος του καμβά (`test-utils/pointer-event`). */
 beforeAll(() => {
-  global.PointerEvent = TestPointerEvent as unknown as typeof PointerEvent;
-  HTMLCanvasElement.prototype.setPointerCapture = () => undefined;
+  installPointerEvents();
   global.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} } as unknown as typeof ResizeObserver;
 });
 /**

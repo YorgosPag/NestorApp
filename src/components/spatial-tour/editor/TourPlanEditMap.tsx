@@ -12,6 +12,8 @@
  * ⌨️ **Και χωρίς ποντίκι** (WCAG 2.1.1): τα βελάκια μετακινούν ένα **πρόχειρο** σημείο (0,1 m · Shift = 1 m), το Enter το
  *   αποθηκεύει, το Escape το ακυρώνει — μία αποθήκευση ανά απόφαση, όχι μία ανά πάτημα.
  * 🎯 Ο κώνος δείχνει την **κατεύθυνση της λήψης** (το κέντρο της φωτογραφίας) — αυτό που ευθυγραμμίζει ο άνθρωπος.
+ * 🎨 **Χρώματα της κάτοψης, όχι του θέματος** (Γ3γ-2β): η εικόνα είναι λευκό χαρτί και στα δύο θέματα ⇒ `tour-plan-overlay-palette`
+ *   (κόκκινο το επιλεγμένο σημείο και ο κώνος του, μπλε τα άλλα — ίδια με τον θεατή).
  */
 
 import { type KeyboardEvent, type MouseEvent, useState } from 'react';
@@ -25,6 +27,7 @@ import { PLAN_CONE_RADIUS_M, conePath } from '@/lib/spatial-tour/viewer/tour-vie
 import type { FloorPlanImage, TourNode } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
+import { PLAN_CONE_CLASS, PLAN_DOT_CLASS } from '../viewer/tour-plan-overlay-palette';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 
 /** Ακτίνα τελείας σε μέτρα — ίδια με τον θεατή. */
@@ -88,7 +91,7 @@ function PlanNodes({ nodes, selectedNodeId, metresPerPixel, radius, nameOf }: Pi
         const here = node.id === selectedNodeId;
         return [(
           <circle key={node.id} cx={x} cy={y} r={radius} strokeWidth={radius / 4}
-            className={here ? 'fill-chart-1 stroke-background' : 'fill-card stroke-foreground'}>
+            className={here ? PLAN_DOT_CLASS.here : PLAN_DOT_CLASS.other}>
             <title>{nameOf(node.id)}</title>
           </circle>
         )];
@@ -119,7 +122,7 @@ export function TourPlanEditMap(props: TourPlanEditMapProps) {
       {cone !== null && headingRad !== null && (
         <path d={conePath(DIRECTION_HALF_ANGLE_RAD, PLAN_CONE_RADIUS_M / metresPerPixel)}
           transform={`translate(${cone.x} ${cone.y}) rotate(${radToDeg(headingRad)})`}
-          className="fill-chart-1/30 stroke-chart-1" strokeWidth={radius / 5} aria-hidden />
+          className={PLAN_CONE_CLASS} strokeWidth={radius / 5} aria-hidden />
       )}
       <PlanNodes nodes={nodes} selectedNodeId={selectedNodeId} metresPerPixel={metresPerPixel} radius={radius} nameOf={nameOf} />
       {keyboard.draft !== null && (

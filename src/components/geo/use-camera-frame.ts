@@ -44,8 +44,9 @@
 import { useEffect, useRef } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 
-import { cameraFlight, cameraFraming } from '@/lib/geo/camera-motion';
+import { cameraFlight, cameraFraming, type CameraIntent } from '@/lib/geo/camera-motion';
 import { cameraFrameSignature, type CameraFrame } from '@/types/geo/camera-frame';
+import { extentBounds, type ExtentBounds } from '@/lib/maps/extent-bounds';
 
 /**
  * 🔑 **ΟΙ ΤΡΕΙΣ ΣΤΑΘΕΡΕΣ ΕΦΥΓΑΝ ΑΠΟ ΕΔΩ** *(`FLIGHT_MS = 900` · `FIT_PADDING = 48` ·
@@ -58,16 +59,53 @@ import { cameraFrameSignature, type CameraFrame } from '@/types/geo/camera-frame
  */
 
 /**
+ * Το καδράρισμα **έκτασης** — ΕΝΑ, για τη γέννηση και για την πτήση. Ο γεωκωδικοποιητής, η δηλωμένη εμβέλεια και το
+ * όριο δήμου δείχνουν **ονομασμένη περιοχή** γύρω από **πινέζα**: τρεις ερωτήσεις, τρεις δηλωμένες απαντήσεις.
+ */
+function extentFraming(intent: CameraIntent) {
+  return cameraFraming(intent, 'pin', 'area');
+}
+
+/** Η θέση γέννησης του `<Map>` (`initialViewState` του react-map-gl) — βλ. {@link cameraBirthView}. */
+export type CameraBirthView =
+  | { readonly latitude: number; readonly longitude: number; readonly zoom: number }
+  | {
+      readonly bounds: ExtentBounds;
+      readonly fitBoundsOptions: { readonly padding: number; readonly maxZoom: number };
+    };
+
+/**
+ * **Ο ΧΑΡΤΗΣ ΓΕΝΝΙΕΤΑΙ ΗΔΗ ΣΤΟ ΚΑΡΕ** — δεν ανοίγει κάπου αλλού για να πετάξει εκεί (ADR-847 §9.5).
+ *
+ * 🔴 **Μετρημένο 2026-09-29, `/area/municipality:0701`**: ο χάρτης άνοιγε στο `BUILDING_ZOOM` (18) στο κέντρο του bbox
+ * — για παραλιακό δήμο, **θάλασσα** — και μόνο μετά το `load` πετούσε στην έκταση: **36 αιτήματα πλακιδίων** z19/18/17
+ * που κανείς δεν είδε, και ~3 s κίνησης σε σελίδα που ο άνθρωπος μόλις άνοιξε. Google Maps / Zillow ανοίγουν
+ * **απευθείας** στην έκταση.
+ *
+ * 🔑 Ίδιο `padding`/`maxZoom` με την πτήση (`extentFraming`), χωρίς διάρκεια: το react-map-gl εφαρμόζει τα `bounds`
+ * στην κατασκευή με `duration: 0` — ο χάρτης **δεν** χρειάζεται `load` για να ξέρει πού κοιτά.
+ */
+export function cameraBirthView(frame: CameraFrame): CameraBirthView {
+  if (frame.kind === 'point') {
+    return { latitude: frame.point.lat, longitude: frame.point.lng, zoom: frame.zoom };
+  }
+  const { padding, maxZoom } = extentFraming('arrive');
+  return { bounds: extentBounds(frame.extent), fitBoundsOptions: { padding, maxZoom } };
+}
+
+/**
  * **Κινεί την κάμερα όποτε αλλάζει το ΚΑΡΕ** — ποτέ σε κάθε απόδοση.
  *
  * @param mapRef — το `ref` του `<Map>`
  * @param ready — ο χάρτης φόρτωσε· πριν από αυτό κάθε `flyTo` πέφτει στο κενό
  * @param frame — πού να κοιτάξει, ή `null` όταν κανείς δεν ζήτησε τίποτα
+ * @param bornWith — το καρέ με το οποίο **γεννήθηκε** ο χάρτης ({@link cameraBirthView}), ή `null`
  */
 export function useCameraFrame(
   mapRef: React.RefObject<MapRef | null>,
   ready: boolean,
   frame: CameraFrame | null,
+  bornWith: CameraFrame | null = null,
 ): void {
   /**
    * 🔑 **ΤΑΥΤΟΤΗΤΑ ΚΑΤΑ ΤΙΜΗ, ΟΧΙ ΤΟ ΑΝΤΙΚΕΙΜΕΝΟ ΣΤΙΣ ΕΞΑΡΤΗΣΕΙΣ.** Το καρέ χτίζεται
@@ -88,26 +126,24 @@ export function useCameraFrame(
   const latest = useRef(frame);
   latest.current = frame;
 
+  /**
+   * 🔑 **Η ΥΠΟΓΡΑΦΗ ΤΗΣ ΓΕΝΝΗΣΗΣ, ΚΑΤΑΝΑΛΩΝΕΤΑΙ ΜΙΑ ΦΟΡΑ.** Ο χάρτης βρίσκεται ήδη εκεί· μια πτήση προς το ίδιο καρέ
+   * θα ήταν κίνηση του τίποτα. Σβήνεται στην **πρώτη** απόφαση μετά το `ready` — ό,τι κι αν αποφασιστεί — ώστε ένα
+   * μεταγενέστερο A→B→A να ξαναπετά στο A. Το `null` στο μεταξύ (*«μην κουνηθείς»*) δεν την καταναλώνει.
+   */
+  const born = useRef(cameraFrameSignature(bornWith));
+
   useEffect(() => {
     const map = mapRef.current;
     const current = latest.current;
     if (map === null || !ready || current === null) return;
 
+    const alreadyThere = signature === born.current;
+    born.current = null;
+    if (alreadyThere) return;
+
     if (current.kind === 'extent') {
-      const { south, west, north, east } = current.extent;
-      // ⚠️ Το MapLibre θέλει **`[[δ, ν], [α, β]]`** — άλλη σειρά από του Nominatim.
-      //    Η μετάφραση έγινε ήδη μία φορά στο σύνορο (`extractExtent`)· εδώ διαβάζονται
-      //    **ονομαστικά** πεδία, ώστε καμία σιωπηρή σύμβαση σειράς να μη μεταφέρεται.
-      map.fitBounds(
-        [
-          [west, south],
-          [east, north],
-        ],
-        // Ο γεωκωδικοποιητής και η δηλωμένη εμβέλεια δείχνουν **ονομασμένη περιοχή**
-        // (δρόμος, συνοικία, δήμος) γύρω από **πινέζα** — και ο άνθρωπος κοιτούσε ήδη
-        // τον χάρτη όταν πάτησε. Τρεις ερωτήσεις, τρεις δηλωμένες απαντήσεις.
-        cameraFraming('travel', 'pin', 'area'),
-      );
+      map.fitBounds(extentBounds(current.extent), extentFraming('travel'));
       return;
     }
 

@@ -101,6 +101,23 @@ function judgeOutline(points: readonly TourPlanXY[], plan: CalibratedPlan): read
   return ring;
 }
 
+/**
+ * **Ο χώρος ως εντολή της οθόνης** — ό,τι χρειάζεται για να ξαναγεννηθεί ίδιος, **χωρίς** «ποιος/πότε». Ένα SSoT για την αναίρεση
+ * (`tour-graph-inverse.ts`) και για την οθόνη που αλλάζει εγκεκριμένο χώρο (Γ3γ-2β): η δήλωση και το όνομα ταξιδεύουν **πάντα**
+ * μαζί με το σχήμα, ώστε μια αλλαγή γωνίας να μην τα σβήσει ποτέ (Δ8.4). Δομικός τύπος ⇒ δέχεται και τον χώρο του θεατή.
+ */
+export function draftOf(space: Pick<TourSpaceOutline, 'points' | 'source'> & {
+  readonly room?: TourSpaceOutline['room'] | null;
+  readonly declaredArea?: Pick<TourDeclaredArea, 'areaM2' | 'source'> | null;
+}): TourSpaceDraft {
+  return {
+    points: space.points.map((p) => ({ x: p.x, y: p.y })),
+    source: space.source,
+    room: space.room == null ? null : { types: space.room.types, label: space.room.label },
+    declaredArea: space.declaredArea == null ? null : { areaM2: space.declaredArea.areaM2, source: space.declaredArea.source },
+  };
+}
+
 type DeclaredDraft = TourSpaceDraft['declaredArea'];
 
 /** Δήλωση: θετική, πεπερασμένη, ≤ όριο, γνωστή πηγή· ίδια τιμή + πηγή ⇒ **η αρχική** σφραγίδα (Δ8.4). */

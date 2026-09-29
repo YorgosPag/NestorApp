@@ -84,8 +84,19 @@ function panMove(svg: SVGSVGElement, t: GestureTarget, g: GestureState, e: Point
   setPlanView(t.store, t.levelId, panPlanBy(t.frame, view, { x: (e.clientX - prev.x) * unit, y: (e.clientY - prev.y) * unit }));
 }
 
+/**
+ * **Στοιχεία που σέρνονται ΜΟΝΑ τους** (λαβές κορυφών του επεξεργαστή χώρων, ADR-884 Γ3γ-2β): το πάτημα πάνω τους **δεν** ξεκινά
+ * μετακίνηση της κάτοψης — αλλιώς, σε μεγέθυνση, το σύρσιμο μιας γωνίας θα έσερνε και τον χάρτη από κάτω (πρότυπο MapLibre
+ * «interactive layers»). Ο native listener του `<svg>` τρέχει πριν από το React, άρα ένα `stopPropagation` εκεί δεν αρκεί.
+ */
+export const PLAN_HANDLE_ATTR = 'data-plan-handle';
+
+function isHandle(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(`[${PLAN_HANDLE_ATTR}]`) !== null;
+}
+
 function onPointerDown(t: GestureTarget, g: GestureState, e: PointerEvent): void {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || isHandle(e.target)) return;
   g.pointers.set(e.pointerId, clientPoint(e));
   if (g.pointers.size === 2) {
     const [a, b] = [...g.pointers.values()];

@@ -16,10 +16,11 @@
  */
 
 import { isFloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
-import type { SpatialTour, TourLevel, TourLevelKey, TourLink, TourSeparationLine, TourSpaceOutline } from '@/types/spatial-tour';
+import type { SpatialTour, TourLevel, TourLevelKey, TourLink, TourSeparationLine } from '@/types/spatial-tour';
 
 import { findTourLevel, levelKeyId } from './spatial-tour-graph';
-import type { TourGraphCommand, TourSpaceDraft } from './tour-graph-edit';
+import { draftOf } from './tour-space-edit';
+import type { TourGraphCommand } from './tour-graph-edit';
 import { activeFloorPlan } from './tour-plan-frame';
 
 type Graph = Pick<SpatialTour, 'nodes'> & Partial<Pick<SpatialTour, 'levels'>>;
@@ -82,16 +83,6 @@ export function inverseOf(command: TourGraphCommand, before: Graph, context: Tou
 }
 
 // ── Χώροι και νοητές γραμμές (Γ3β) ─────────────────────────────────────────
-
-/** Ο χώρος ως εντολή της οθόνης — ό,τι χρειάζεται για να ξαναγεννηθεί ίδιος. */
-function draftOf(space: TourSpaceOutline): TourSpaceDraft {
-  return {
-    points: space.points.map((p) => ({ x: p.x, y: p.y })),
-    source: space.source,
-    room: space.room == null ? null : { types: space.room.types, label: space.room.label },
-    declaredArea: space.declaredArea == null ? null : { areaM2: space.declaredArea.areaM2, source: space.declaredArea.source },
-  };
-}
 
 const levelOf = (before: Graph, key: TourLevelKey): TourLevel | undefined => findTourLevel(before.levels, key);
 

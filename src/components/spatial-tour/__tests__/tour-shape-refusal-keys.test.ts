@@ -15,7 +15,7 @@ import {
 import { tourCall, tourGraphCall } from '@/services/spatial-tour/spatial-tour.client';
 
 import { TOUR_REFUSAL_KEY } from '../spatial-tour-labels';
-import { TOUR_SHAPE_REFUSAL_KEY } from '../editor/tour-shape-labels';
+import { TOUR_SHAPE_REFUSAL_KEY, tourGraphRefusalKey } from '../editor/tour-shape-labels';
 
 jest.mock('@/lib/api/enterprise-api-client', () => ({
   apiClient: {},
@@ -31,6 +31,14 @@ it('κάθε άρνηση του λεξιλογίου έχει λέξεις σε
     expect([reason, inGeneral !== inShape]).toEqual([reason, true]);
     expect(inShape).toBe(isTourShapeRefusal(reason));
   }
+});
+
+it('`tourGraphRefusalKey` (Γ3γ-2β — μήνυμα ΚΑΙ προέλεγχος): κάθε άρνηση ⇒ το κλειδί του ΣΩΣΤΟΥ πίνακα', () => {
+  for (const reason of TOUR_REFUSALS) {
+    const expected = isTourShapeRefusal(reason) ? TOUR_SHAPE_REFUSAL_KEY[reason] : TOUR_REFUSAL_KEY[reason];
+    expect([reason, tourGraphRefusalKey(reason)]).toEqual([reason, expected]);
+  }
+  expect(tourGraphRefusalKey('space-overlap')).toBe('spatial-tour:refusal.spaceOverlap');
 });
 
 it('ο πίνακας σχημάτων έχει ΜΟΝΟ τις αρνήσεις σχημάτων', () => {

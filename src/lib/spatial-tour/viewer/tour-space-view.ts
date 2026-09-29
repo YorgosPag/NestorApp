@@ -12,7 +12,11 @@
  * 🔑 **Κοινός αληθινός τοίχος ≠ γειτονία**: μόνο η νοητή γραμμή ενώνει (Δ8.2). Κουζίνα και μπάνιο με κοινό τοίχο δεν «ανάβουν» μαζί.
  */
 
-import { TOUR_SPACE_ADJACENCY_TOLERANCE_M, type TourDeclaredAreaSource } from '@/constants/spatial-tour-vocabulary';
+import {
+  TOUR_DECLARED_AREA_WARN_RATIO,
+  TOUR_SPACE_ADJACENCY_TOLERANCE_M,
+  type TourDeclaredAreaSource,
+} from '@/constants/spatial-tour-vocabulary';
 import { distanceToRing, pointInPolygon, polygonArea, type PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { polygonLabelPoint, type PolygonLabelPoint } from '@/lib/geometry/polygon-label-point';
 
@@ -115,6 +119,28 @@ export function planSpaces(
       : nodeIds.length === 0 ? 'uncaptured' : 'idle';
     return { space, tone, nodeIds };
   });
+}
+
+/** Η πληρότητα ενός ορόφου (Δ8.3): πόσα τοποθετημένα σημεία έχουν χώρο — και **ποια** λείπουν, με τη σειρά τους. */
+export interface SpaceCoverage {
+  readonly covered: number;
+  readonly total: number;
+  readonly missing: readonly string[];
+}
+
+/** «Χώροι: 3 από 4 σημεία» — προειδοποίηση του επεξεργαστή, **όχι** φραγή δημοσίευσης (Δ8.3). */
+export function spaceCoverage(spaces: readonly TourViewerSpace[], placed: readonly PlacedPoint[]): SpaceCoverage {
+  const missing = placed.filter(({ point }) => spaceAt(spaces, point) === null).map(({ nodeId }) => nodeId);
+  return { covered: placed.length - missing.length, total: placed.length, missing };
+}
+
+/**
+ * **Φύλακας 15%** (Δ8.4 · Δ9.4): απέχει το δηλωμένο από το μετρημένο περισσότερο από {@link TOUR_DECLARED_AREA_WARN_RATIO}; —
+ * σχετικά με το **μετρημένο** («δηλώσατε 20, η κάτοψη δείχνει ≈ 12»). Μετρημένο ≤ 0 ⇒ ποτέ (δεν υπάρχει μέτρο σύγκρισης).
+ */
+export function declaredAreaDeviates(declaredM2: number, measuredM2: number): boolean {
+  if (!(measuredM2 > 0)) return false;
+  return Math.abs(declaredM2 - measuredM2) / measuredM2 > TOUR_DECLARED_AREA_WARN_RATIO;
 }
 
 /** Μέσο πλάτος χαρακτήρα ως κλάσμα του μεγέθους γραμματοσειράς — συντηρητικό για ελληνικά/λατινικά κεφαλαία-πεζά. */

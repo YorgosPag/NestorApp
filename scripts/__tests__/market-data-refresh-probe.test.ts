@@ -7,9 +7,18 @@
 
 import type { SourceProbe } from '../lib/cached-download';
 import { probeSource } from '../lib/cached-download';
-import { latestPublishedMamaYear, mamaSourceUrl, resolveMamaWindow } from '../lib/market-transactions/mama-download';
+import { MAMA_SOURCE_ACCESS, latestPublishedMamaYear, mamaSourceUrl, resolveMamaWindow } from '../lib/market-transactions/mama-download';
 import { VALUE_ZONES_SOURCE_URL } from '../lib/value-zones/zone-download';
-import { probeMarket, probeZones, type Probe } from '../lib/market-data-refresh/refresh-probe';
+import {
+  SOURCE_RESTRICTIONS,
+  checkSource,
+  classifyAccess,
+  needsBuild,
+  probeMarket,
+  probeZones,
+  type Probe,
+  type SourceCheck,
+} from '../lib/market-data-refresh/refresh-probe';
 import { marketSnapshotOf, zoneSnapshotOf, type MamaInput, type MarketSnapshot, type ZoneSnapshot } from '../lib/market-data-refresh/refresh-snapshot';
 
 const LM = 'Thu, 03 Sep 2026 05:15:52 GMT';
@@ -103,6 +112,66 @@ describe('probeZones', () => {
 
   it('πόρος που λείπει ⇒ ΣΦΑΛΜΑ', async () => {
     await expect(probeZones(zones, server({}))).rejects.toThrow('HTTP 404');
+  });
+});
+
+describe('checkSource — οι πηγές κρίνονται ΧΩΡΙΣΤΑ (§11.10)', () => {
+  const zones: ZoneSnapshot = { source: { url: VALUE_ZONES_SOURCE_URL, lastModified: LM, sha256: 'z' }, areaCount: 1, zones: new Map() };
+  // Ο μετρημένος κόσμος του runner (2026-09-29): gsis.gr 403 σε ΟΛΑ, data.gov.gr 200 με νέα ημερομηνία.
+  const runner = server({ [mamaSourceUrl(2026)]: { status: 403 }, [VALUE_ZONES_SOURCE_URL]: { status: 200, lastModified: 'νέα' } });
+  const mama = async () => probeMarket(market(), await resolveMamaWindow([], new Date('2026-09-28'), runner), runner);
+
+  it('403 στο ΜΑΜΑ ⇒ ΑΠΡΟΣΙΤΗ με την αιτία — ΠΟΤΕ «ίδιο»· οι ζώνες ελέγχονται και αλλάζουν κανονικά', async () => {
+    const market403 = await checkSource(mama, false);
+    expect(market403).toEqual({ reachable: false, reason: expect.stringContaining('HTTP 403'), status: 403 });
+    expect(needsBuild(market403)).toBe(false);
+    const zoneCheck = await checkSource(() => probeZones(zones, runner), false);
+    expect(zoneCheck).toMatchObject({ reachable: true, decision: { changed: true } });
+    expect(needsBuild(zoneCheck)).toBe(true);
+  });
+
+  it('--force: η κεφαλίδα δεν αποφασίζει, η προσβασιμότητα ΝΑΙ', async () => {
+    expect(await checkSource(mama, true)).toMatchObject({ reachable: false });
+    const unchanged = server({ [VALUE_ZONES_SOURCE_URL]: { status: 200, lastModified: LM } });
+    const forced = await checkSource(() => probeZones(zones, unchanged), true);
+    expect(forced).toMatchObject({ reachable: true, decision: { changed: true, reasons: [expect.stringContaining('--force')] } });
+  });
+
+  it('σφάλμα δικτύου ⇒ απρόσιτη (όχι εξαίρεση που ρίχνει και την άλλη πηγή)', async () => {
+    const down: Probe = () => Promise.reject(new Error('fetch failed'));
+    expect(await checkSource(() => probeZones(zones, down), false)).toEqual({ reachable: false, reason: 'fetch failed', status: null });
+  });
+
+  it('404 σε έτος του παραθύρου ⇒ status 404 (τυπωμένο σφάλμα, όχι μόνο κείμενο)', async () => {
+    const gone = server(servedYears([2022, 2023, 2024, 2026]));
+    expect(await checkSource(() => probeMarket(market(), { from: 2022, to: 2026 }, gone), false)).toMatchObject({ reachable: false, status: 404 });
+  });
+});
+
+describe('classifyAccess — δηλωμένος περιορισμός ≠ βλάβη (§11.11)', () => {
+  const blocked = (status: number | null): SourceCheck => ({ reachable: false, reason: 'x', status });
+  const reachable: SourceCheck = { reachable: true, decision: { changed: false, reasons: [] } };
+
+  it('403 με δηλωμένη γεωφραγή 403 ⇒ αναμενόμενο (⚠️, όχι κόκκινο)', () => {
+    expect(classifyAccess(blocked(403), MAMA_SOURCE_ACCESS)).toBe('expected-restriction');
+  });
+
+  it('ΑΛΛΗ αποτυχία στην ίδια πηγή ⇒ βλάβη (🔴): 500/δίκτυο · 404 · 451', () => {
+    for (const status of [null, 404, 451]) expect(classifyAccess(blocked(status), MAMA_SOURCE_ACCESS)).toBe('unexpected');
+  });
+
+  it('αδήλωτη πηγή με 403 ⇒ βλάβη — ο περιορισμός δεν μαντεύεται', () => {
+    expect(classifyAccess(blocked(403), null)).toBe('unexpected');
+  });
+
+  it('δηλωμένη αλλά απάντησε ⇒ «restriction-lifted» (η δήλωση ελέγχει τον εαυτό της)· αδήλωτη ⇒ ok', () => {
+    expect(classifyAccess(reachable, MAMA_SOURCE_ACCESS)).toBe('restriction-lifted');
+    expect(classifyAccess(reachable, null)).toBe('ok');
+  });
+
+  it('το μητρώο: μόνο το ΜΑΜΑ δηλώνει περιορισμό, και είναι ακριβώς ο μετρημένος (GR, 403)', () => {
+    expect(SOURCE_RESTRICTIONS).toEqual({ market: MAMA_SOURCE_ACCESS, zones: null });
+    expect(MAMA_SOURCE_ACCESS).toMatchObject({ kind: 'geo', allowedRegion: 'GR', status: 403 });
   });
 });
 

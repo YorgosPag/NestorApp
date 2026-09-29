@@ -108,16 +108,22 @@ export function isPolygonSelfIntersecting(vertices: readonly PlanarPoint[]): boo
 }
 
 /**
- * Απόσταση σημείου από **τμήμα** (όχι ευθεία): η προβολή κόβεται στο `[0, 1]`. Εκφυλισμένο τμήμα (`a === b`)
- * δίνει απόσταση από το `a`.
+ * Το πλησιέστερο σημείο ενός **τμήματος** (όχι ευθείας): η προβολή κόβεται στο `[0, 1]`. Εκφυλισμένο τμήμα (`a === b`)
+ * δίνει το `a`. Η **μία** προβολή — την καλούν η απόσταση και η έλξη (`planar-snap.ts`).
  */
-export function distanceToSegment(point: PlanarPoint, a: PlanarPoint, b: PlanarPoint): number {
+export function closestPointOnSegment(point: PlanarPoint, a: PlanarPoint, b: PlanarPoint): PlanarPoint {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const lengthSq = dx * dx + dy * dy;
   const rawT = lengthSq === 0 ? 0 : ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
   const t = Math.min(1, Math.max(0, rawT));
-  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
+  return { x: a.x + t * dx, y: a.y + t * dy };
+}
+
+/** Απόσταση σημείου από **τμήμα** (όχι ευθεία) — βλ. {@link closestPointOnSegment}. */
+export function distanceToSegment(point: PlanarPoint, a: PlanarPoint, b: PlanarPoint): number {
+  const on = closestPointOnSegment(point, a, b);
+  return Math.hypot(point.x - on.x, point.y - on.y);
 }
 
 /**

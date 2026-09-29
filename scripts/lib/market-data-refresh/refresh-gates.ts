@@ -9,6 +9,8 @@
  * σταματά ήδη τον γεννήτορα, η Ε7 είναι σουίτα jest (`npm run test:market-data-real-files`).
  */
 
+import { daysBetweenDateKeys } from '../../../src/lib/calendar/date-key';
+import { utcDateOf } from '../../../src/lib/date-local';
 import type { CoverageTotals } from '../market-transactions/mama-match-report';
 import type { ValueZonesRunSummary } from '../value-zones/zone-download';
 import type { MarketDiff, ZoneDiff } from './refresh-diff';
@@ -26,9 +28,16 @@ export const REFRESH_THRESHOLDS = {
   massShiftMaxShare: 0.2,
   /** Κάτω από τόσα επιλέξιμα κελιά ένα ποσοστό δεν λέει τίποτα — η Ε6 σωπαίνει ρητά. */
   massShiftMinCells: 30,
+  /**
+   * Ε8 — φρεσκάδα (ιδίωμα dbt `source freshness`: `warn_after` / `error_after` στην ηλικία της νεότερης εγγραφής).
+   * Μετρημένο: `asOf` 2026-09-01 σε αρχείο με Last-Modified 2026-09-03 + ≈μηνιαία δημοσίευση ⇒ κανονική ηλικία ≤ ~33
+   * ημέρες. ⚠️ **Ένα** σημείο μέτρησης — προσωρινά όρια, τα PR της ανανέωσης θα τα μετρούν (ADR-889 §11.11).
+   */
+  freshnessWarnAfterDays: 40,
+  freshnessErrorAfterDays: 60,
 } as const;
 
-export type GateId = 'E2' | 'E3' | 'E4' | 'E5' | 'E6' | 'E7';
+export type GateId = 'E2' | 'E3' | 'E4' | 'E5' | 'E6' | 'E7' | 'E8';
 
 export interface GateResult {
   readonly id: GateId;
@@ -37,6 +46,8 @@ export interface GateResult {
   readonly detail: string;
   /** Παρακάμπτεται με ρητή ανθρώπινη απόφαση (`--accept-drop`) — και τότε το λέει η αναφορά. */
   readonly overridden?: boolean;
+  /** Περνά, αλλά πλησιάζει το όριο (⚠️) — π.χ. η Ε8 μετά το `freshnessWarnAfterDays`. */
+  readonly warning?: boolean;
 }
 
 const pct = (value: number): string => `${(value * 100).toFixed(2)}%`;
@@ -118,6 +129,31 @@ export function realFilesGate(ok: boolean): GateResult {
     ok,
     detail: ok ? 'πράσινο' : 'ΚΟΚΚΙΝΟ — δες το log· αν κοκκίνισαν τα όρια του χάρτη, αλλάζουν συνειδητά (ADR-890 §14.2)',
   };
+}
+
+/**
+ * Ε8 — **φρεσκάδα** του ΜΑΜΑ που σερβίρει το `main`: ηλικία του `asOf` (τελευταίο συμβόλαιο της πηγής) στην ημέρα `now`
+ * (UTC). 🔑 Μετρά το **αποτέλεσμα**, όχι τον δρόμο λήψης: μένει σωστή αν η ανανέωση γίνει από τον runner, από ελληνική
+ * IP (runbook §11.8) ή αύριο από το data.gov.gr — και πιάνει και την ξεχασμένη χειροκίνητη ανανέωση.
+ * Άκυρο `asOf` ⇒ ❌ (ποτέ σιωπηλό «περνά»).
+ */
+export function freshnessGate(asOf: string | null, now: Date): GateResult {
+  const t = REFRESH_THRESHOLDS;
+  const title = `Φρεσκάδα συμβολαίων (⚠️ > ${t.freshnessWarnAfterDays} · ❌ > ${t.freshnessErrorAfterDays} ημέρες)`;
+  const today = utcDateOf(now.getTime());
+  const age = asOf === null || today === null ? null : daysBetweenDateKeys(asOf, today);
+  if (age === null) return { id: 'E8', title, ok: false, detail: `άκυρο ή απόν \`asOf\` (${asOf ?? '—'})` };
+  const detail = `τελευταίο συμβόλαιο ${asOf} · ${age} ημέρες πριν από ${today}`;
+  if (age > t.freshnessErrorAfterDays) return { id: 'E8', title, ok: false, detail: `${detail} — **μπαγιάτικα**· runbook ADR-889 §11.8` };
+  return { id: 'E8', title, ok: true, detail, ...(age > t.freshnessWarnAfterDays ? { warning: true } : {}) };
+}
+
+/**
+ * Οι πύλες που κρίνουν τη **νέα έξοδο** (Ε2–Ε7) μπλοκάρουν το PR. Η Ε8 κρίνει το **`main`**: ένα PR με φρέσκα δεδομένα
+ * είναι ακριβώς η θεραπεία της, άρα δεν το μπλοκάρει — κοκκινίζει όμως το run.
+ */
+export function prGatesPass(results: readonly GateResult[]): boolean {
+  return allGatesPass(results.filter((result) => result.id !== 'E8'));
 }
 
 export function allGatesPass(results: readonly GateResult[]): boolean {
