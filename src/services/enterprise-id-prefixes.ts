@@ -240,6 +240,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   TOUR_UPLOAD: 'tupl',        // ένα ανέβασμα σε καραντίνα (Κ3α) — ο σπόρος του ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟΥ `tcap` της ολοκλήρωσης
   TOUR_SPACE: 'tspc',         // Γ3β: περίγραμμα χώρου ορόφου (Revit Room) — στοιχείο πίνακα, όχι έγγραφο· τυχαίο
   TOUR_SEPARATION: 'tsep',    // Γ3β: νοητή διαχωριστική γραμμή (Revit Room Separation Line) — στοιχείο πίνακα· τυχαίο
+  TOUR_REDACTION: 'tred',     // Φ2ζ: θολωμένη περιοχή μιας λήψης (Α8) — στοιχείο πίνακα της λήψης· id του πελάτη, τυχαίο
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

@@ -892,5 +892,10 @@
     "didYouMeanArea": "No area has exactly this name — did you mean one from the list? Press Enter again to search it as an address",
     "emptyQuery": "Type a city, area or street to get started.",
     "emptyQueryOrSpecialty": "Type an area or choose a specialty to get started."
+  },
+  "newSignIn": {
+    "title": "New sign-in to your account",
+    "body": "Your account was signed in from {device}, near {place}. If this was you, there is nothing to do. If not, sign that device out from “Account → Security” and change your password.",
+    "bodyNoPlace": "Your account was signed in from {device}. If this was you, there is nothing to do. If not, sign that device out from “Account → Security” and change your password."
   }
 }

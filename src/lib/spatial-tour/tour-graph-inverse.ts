@@ -16,12 +16,14 @@
  */
 
 import { isFloorPlanDeclarableSource } from '@/constants/spatial-tour-vocabulary';
-import type { SpatialTour, TourLevel, TourLevelKey, TourLink, TourSeparationLine } from '@/types/spatial-tour';
+import type { SpatialTour, TourLevel, TourLevelKey, TourLink, TourRedaction, TourSeparationLine } from '@/types/spatial-tour';
 
 import { findTourLevel, levelKeyId } from './spatial-tour-graph';
 import { draftOf } from './tour-space-edit';
 import type { TourGraphCommand } from './tour-graph-edit';
+import { UNSTAMPED } from './tour-plan-edit';
 import { activeFloorPlan } from './tour-plan-frame';
+import { applyRedactionEdits, redactionEditsBetween } from './tour-redaction-edit';
 
 type Graph = Pick<SpatialTour, 'nodes'> & Partial<Pick<SpatialTour, 'levels'>>;
 
@@ -29,6 +31,8 @@ type Graph = Pick<SpatialTour, 'nodes'> & Partial<Pick<SpatialTour, 'levels'>>;
 export interface TourInverseContext {
   /** Η κατεύθυνση μιας λήψης **πριν** την εντολή `orient`. */
   readonly headingOf?: (captureId: string) => number | undefined;
+  /** Οι θολωμένες περιοχές μιας λήψης **πριν** την εντολή `redact/unredact/redactions` (Φ2ζ). */
+  readonly redactionsOf?: (captureId: string) => readonly TourRedaction[] | undefined;
 }
 
 function linkOf(graph: Graph, from: string, to: string): TourLink | null {
@@ -79,7 +83,44 @@ export function inverseOf(command: TourGraphCommand, before: Graph, context: Tou
     case 'unspace': return inverseOfSpace(command, before);
     case 'separate':
     case 'unseparate': return inverseOfSeparation(command, before);
+    case 'redact':
+    case 'unredact': return inverseOfRedaction(command, context);
+    case 'redactions': return inverseOfRedactionBatch(command, context);
   }
+}
+
+// ── Θολωμένες περιοχές (Φ2ζ) ────────────────────────────────────────────────
+
+/**
+ * Ίδιο σχήμα με τους χώρους, πάνω στις περιοχές της **λήψης**: δεν υπήρχε ⇒ αφαίρεση του ίδιου id · αλλαγή ⇒ η προηγούμενη
+ * γεωμετρία · αφαίρεση ⇒ ξαναγέννηση στο ίδιο id. Χωρίς τις περιοχές του «πριν» ⇒ καμία πιστή αναίρεση (`null`).
+ */
+function inverseOfRedaction(
+  command: Extract<TourGraphCommand, { op: 'redact' | 'unredact' }>,
+  context: TourInverseContext,
+): readonly TourGraphCommand[] | null {
+  const current = context.redactionsOf?.(command.captureId);
+  if (current === undefined) return null;
+  const { captureId, redactionId } = command;
+  const previous = current.find((redaction) => redaction.id === redactionId);
+  if (previous === undefined) return command.op === 'redact' ? [{ op: 'unredact', captureId, redactionId }] : null;
+  const region = { yawRad: previous.yawRad, pitchRad: previous.pitchRad, radiusRad: previous.radiusRad };
+  return [{ op: 'redact', captureId, redactionId, mode: command.op === 'redact' ? 'replace' : 'create', region }];
+}
+
+/**
+ * **Αναίρεση δέσμης** (ζ3): η δέσμη που πάει από το «μετά» πίσω στο «πριν», σε **μία** εντολή ⇒ **μία** επανα-ψήση. Το «μετά»
+ * βγαίνει από τον ΙΔΙΟ κριτή με τον γραφέα· άρνηση ή «καμία αλλαγή» ⇒ τίποτα να αναιρεθεί (`null`).
+ */
+function inverseOfRedactionBatch(
+  command: Extract<TourGraphCommand, { op: 'redactions' }>,
+  context: TourInverseContext,
+): readonly TourGraphCommand[] | null {
+  const before = context.redactionsOf?.(command.captureId);
+  if (before === undefined) return null;
+  const after = applyRedactionEdits(before, command.edits, UNSTAMPED);
+  if (after.kind !== 'edited') return null;
+  return [{ op: 'redactions', captureId: command.captureId, edits: redactionEditsBetween(after.redactions, before) }];
 }
 
 // ── Χώροι και νοητές γραμμές (Γ3β) ─────────────────────────────────────────

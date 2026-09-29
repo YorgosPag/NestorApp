@@ -17,10 +17,14 @@ import { type ReactNode, useEffect, useMemo, useReducer, useState } from 'react'
 import type { TourPlacementTarget } from '@/lib/spatial-tour/tour-graph-edit';
 import { neighboursOf, type TourViewerGraph, type TourViewerLevel } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { initialViewerState, tourViewerReducer } from '@/lib/spatial-tour/viewer/tour-viewer-state';
+import type { TourCapture } from '@/types/spatial-tour';
 
 import { createTourCameraStore } from '../viewer/tour-camera-store';
 import type { TourPanoramaSource } from '../viewer/tour-panorama-source';
-import { TourPanoramaStage, type TourStageAim } from '../viewer/TourPanoramaStage';
+import { TourPanoramaStage, type TourStageAim, type TourStageScene } from '../viewer/TourPanoramaStage';
+import { TourRedactionOverlay } from './redaction/TourRedactionOverlay';
+import { TourRedactionTools } from './redaction/TourRedactionTools';
+import { type RedactionToolDeps, useRedactionTool } from './redaction/useRedactionTool';
 import { TourArrowTools } from './TourArrowTools';
 import { TourPlacementForm } from './TourPlacementForm';
 
@@ -33,10 +37,14 @@ interface PointWorkspaceProps {
   readonly onUnlink: (a: string, b: string) => void;
   /** Τα εργαλεία του σημείου κάτω από τα βελάκια (αφαίρεση πανοράματος). */
   readonly footer: (nodeId: string) => ReactNode;
+  /** Η λήψη πίσω από μια στάση — οι θολωμένες περιοχές της (Φ2ζ ζ3). */
+  readonly captureOf: (captureId: string) => TourCapture | undefined;
+  /** Εφαρμογή προχείρου θολώματος + id νέου κύκλου (N.6). */
+  readonly redaction: RedactionToolDeps;
 }
 
 export function TourPointWorkspace(props: PointWorkspaceProps) {
-  const { graph, source, requestedNodeId, onArrive, onPlaceArrow, onUnlink, footer } = props;
+  const { graph, source, requestedNodeId, onArrive, onPlaceArrow, onUnlink, footer, captureOf, redaction } = props;
   const [state, dispatch] = useReducer(tourViewerReducer, requestedNodeId, initialViewerState);
   const [camera] = useState(createTourCameraStore);
   useEffect(() => {
@@ -45,16 +53,20 @@ export function TourPointWorkspace(props: PointWorkspaceProps) {
   useEffect(() => { if (state.nodeId !== null) onArrive(state.nodeId); }, [state.nodeId, onArrive]);
   const nodeId = state.nodeId;
   const neighbours = useMemo(() => (nodeId === null ? [] : neighboursOf(graph, nodeId)), [graph, nodeId]);
+  const captureId = nodeId === null ? null : graph.stops.get(nodeId)?.stop.captureId ?? null;
+  const tool = useRedactionTool(captureId === null ? undefined : captureOf(captureId), redaction);
   const editing = useMemo(() => (nodeId === null ? undefined : {
     onPlaceArrow: (to: string, bearing: number) => onPlaceArrow(nodeId, to, bearing),
-    renderTools: (aim: TourStageAim) => (
+    renderTools: (aim: TourStageAim, scene: TourStageScene) => (
       <section className="space-y-3">
         <TourArrowTools aim={aim} graph={graph} nodeId={nodeId} onPlaceArrow={(to, bearing) => onPlaceArrow(nodeId, to, bearing)}
           onUnlink={(to) => onUnlink(nodeId, to)} />
+        <TourRedactionTools tool={tool} scene={scene} />
         {footer(nodeId)}
       </section>
     ),
-  }), [nodeId, graph, onPlaceArrow, onUnlink, footer]);
+    renderOverlay: (scene: TourStageScene) => <TourRedactionOverlay scene={scene} tool={tool} />,
+  }), [nodeId, graph, onPlaceArrow, onUnlink, footer, tool]);
   return <TourPanoramaStage graph={graph} state={state} dispatch={dispatch} camera={camera} source={source} neighbours={neighbours} editing={editing} />;
 }
 

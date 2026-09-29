@@ -262,6 +262,24 @@ export const TOUR_SPACE_ADJACENCY_TOLERANCE_M = 0.15;
 export const TOUR_DECLARED_AREA_WARN_RATIO = 0.15;
 
 // =============================================================================
+// 3γ. Η ΙΔΙΩΤΙΚΟΤΗΤΑ — θολωμένες περιοχές μιας λήψης (ADR-884 Φ2ζ · §4.15 · Α8)
+// =============================================================================
+
+/**
+ * **Ποιος βρήκε μια θολωμένη περιοχή**: `manual` = ο υπεύθυνος με το πινέλο (Matterport Blur Brush) · `auto` = η ανίχνευση
+ * προσώπων του ψήστη (Zillow: αυτόματα, προεπιλεγμένα ενεργό). Η προέλευση **δεν** αλλάζει το αποτέλεσμα — μόνο το ίχνος.
+ */
+export const TOUR_REDACTION_SOURCES = ['manual', 'auto'] as const;
+export type TourRedactionSource = (typeof TOUR_REDACTION_SOURCES)[number];
+
+/** Άνω όριο περιοχών ανά λήψη — φράχτης μεγέθους εγγράφου, όχι πολιτική (ένα πλήθος σε αίθουσα ≈ δεκάδες πρόσωπα). */
+export const MAX_TOUR_REDACTIONS = 64;
+/** Μικρότερη γωνιακή ακτίνα (≈ 0,3°): κάτω από αυτό η περιοχή είναι λιγότερο από ένα pixel σε 8K — δεν κρύβει τίποτα. */
+export const TOUR_REDACTION_MIN_RADIUS_RAD = 0.005;
+/** Μεγαλύτερη γωνιακή ακτίνα (45°): ένα θόλωμα μισού ορίζοντα δεν είναι προστασία προσώπου αλλά απόκρυψη χώρου (Zillow Guidelines). */
+export const TOUR_REDACTION_MAX_RADIUS_RAD = Math.PI / 4;
+
+// =============================================================================
 // 4. GUARDS
 // =============================================================================
 
@@ -287,3 +305,4 @@ export const isTourHeadingSource = (v: unknown): v is TourHeadingSource => inclu
 export const isTourSpaceSource = (v: unknown): v is TourSpaceSource => includes(TOUR_SPACE_SOURCES, v);
 export const isTourDeclaredAreaSource = (v: unknown): v is TourDeclaredAreaSource => includes(TOUR_DECLARED_AREA_SOURCES, v);
 export const isTourSpaceAreaDisplay = (v: unknown): v is TourSpaceAreaDisplay => includes(TOUR_SPACE_AREA_DISPLAYS, v);
+export const isTourRedactionSource = (v: unknown): v is TourRedactionSource => includes(TOUR_REDACTION_SOURCES, v);

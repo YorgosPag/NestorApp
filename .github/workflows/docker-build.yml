@@ -72,6 +72,31 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 🌍 ADR-894 — Η ΤΟΠΙΚΗ ΒΑΣΗ GeoIP ΜΠΑΙΝΕΙ ΣΤΗΝ ΕΙΚΟΝΑ (DB-IP City Lite, CC BY 4.0, μηνιαία).
+      # Η τοποθεσία των συνεδριών επιλύεται στον ΔΙΚΟ μας server — η IP δεν φεύγει σε τρίτο.
+      # Cache ανά μήνα ⇒ η λήψη (~60 MB) γίνεται μία φορά τον μήνα, όχι σε κάθε push.
+      # 🔑 ΠΟΤΕ ΔΕΝ ΣΤΑΜΑΤΑ ΤΟ DEPLOY: πηγή κάτω ⇒ `::warning::` και εικόνα χωρίς βάση — ο server
+      # υποβαθμίζει σε «άγνωστη τοποθεσία» (ίδια σημασία με το carry-forward των assets, ADR-860 §Ε1).
+      # Το `mkdir` εγγυάται ότι το `COPY data/geoip` του Dockerfile βρίσκει πάντα φάκελο.
+      - name: GeoIP cache key (month)
+        id: geoip-month
+        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore GeoIP download cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/geoip
+          key: geoip-dbip-city-lite-${{ steps.geoip-month.outputs.month }}
+          restore-keys: geoip-dbip-city-lite-
+
+      - name: Fetch GeoIP database (DB-IP City Lite)
+        run: |
+          mkdir -p data/geoip
+          npm ci --prefix mcp-server --no-audit --no-fund
+          if ! pnpm run geoip:fetch; then
+            echo "::warning::ADR-894 — η βάση GeoIP δεν κατέβηκε· η εικόνα φεύγει χωρίς αυτή (τοποθεσίες συνεδριών: «άγνωστη»)."
+          fi
+
       # ⚠️ `build:ci`, NOT `build`: the `build` script hardcodes
       # `cross-env NODE_OPTIONS=--max-old-space-size=8192`, which OVERWRITES the
       # NODE_OPTIONS below — the 12288 was silently discarded and the build ran

@@ -13,8 +13,7 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { format, addDays, subDays, isToday } from 'date-fns';
-import { el } from 'date-fns/locale';
+import { addDays, subDays, isToday } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import {
@@ -29,6 +28,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/lib/intl-utils';
 import type { AttendanceViewMode } from '../contracts';
 import '@/lib/design-system';
 
@@ -58,19 +58,19 @@ export function DateNavigator({
   const handleNextDay = () => onDateChange(addDays(date, 1));
   const handleToday = () => onDateChange(new Date());
 
-  const dateLabel = format(date, 'EEEE, d MMMM yyyy', { locale: el });
+  const dateLabel = formatDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const isTodaySelected = isToday(date);
 
   return (
-    <nav className={cn('flex items-center', spacing.gap.md)} aria-label="Date navigation">
+    <nav className={cn('flex items-center', spacing.gap.md)} aria-label={t('ika.periodNavigation.dateLabel')}>
       {/* Previous day */}
       <Button
         variant="outline"
         size="icon"
         onClick={handlePrevDay}
-        aria-label="Previous day"
+        aria-label={t('ika.periodNavigation.previousDay')}
       >
-        <ChevronLeft className={iconSizes.sm} />
+        <ChevronLeft className={iconSizes.sm} aria-hidden="true" />
       </Button>
 
       {/* Today button */}
@@ -89,9 +89,9 @@ export function DateNavigator({
         variant="outline"
         size="icon"
         onClick={handleNextDay}
-        aria-label="Next day"
+        aria-label={t('ika.periodNavigation.nextDay')}
       >
-        <ChevronRight className={iconSizes.sm} />
+        <ChevronRight className={iconSizes.sm} aria-hidden="true" />
       </Button>
 
       {/* Date label */}

@@ -18,7 +18,7 @@
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers } from "@/components/ui/navigation/TabsComponents";
 import { Users, Clock, Calculator, CreditCard, Landmark, Settings } from 'lucide-react';
@@ -33,12 +33,14 @@ import { useIkaTabWarnings } from './ika/hooks/useIkaTabWarnings';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
+import type { Project } from '@/types/project';
+import { addressListCenter } from '@/utils/address/address-list-center';
 
 interface IkaTabProps {
   /** Project data passed from UniversalTabsRenderer */
-  project?: { id: string; [key: string]: unknown };
+  project?: Pick<Project, 'id' | 'addresses'>;
   /** Alternative data prop from UniversalTabsRenderer */
-  data?: { id: string; [key: string]: unknown };
+  data?: Pick<Project, 'id' | 'addresses'>;
 }
 
 export function IkaTab({ project, data }: IkaTabProps) {
@@ -48,6 +50,9 @@ export function IkaTab({ project, data }: IkaTabProps) {
   // Extract projectId from either prop
   const projectData = project ?? data;
   const projectId = projectData?.id;
+  // Το εργοτάξιο ως σημείο — ΕΝΑΣ κριτής (ADR-332 D23), όχι δεύτερο `find(isPrimary)` (ADR-891 §10.3).
+  const addresses = projectData?.addresses;
+  const siteCenter = useMemo(() => addressListCenter(addresses), [addresses]);
 
   // Cache hit from project-details.tsx — no extra network request.
   const { hasWorkersWithoutClass } = useIkaTabWarnings(projectId);
@@ -69,7 +74,7 @@ export function IkaTab({ project, data }: IkaTabProps) {
       id: 'timesheet',
       label: t('ika.timesheet'),
       icon: Clock,
-      content: <TimesheetTabContent projectId={projectId} />,
+      content: <TimesheetTabContent projectId={projectId} siteCenter={siteCenter} />,
     },
     {
       id: 'stamps-calculation',

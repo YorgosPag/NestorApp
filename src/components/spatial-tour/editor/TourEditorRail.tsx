@@ -21,8 +21,9 @@ import type { TourEditorModel, TourInboxEntry } from '@/lib/spatial-tour/tour-ed
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { PANEL_KEYS } from '../spatial-tour-labels';
 import { useLevelLabel } from '../viewer/TourViewerNavigation';
-import { useStopNames } from '../viewer/useStopNames';
+import { useOffGraphPointName, useStopNames } from '../viewer/useStopNames';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
+import { TOUR_REDACTION_KEYS } from './tour-redaction-labels';
 
 export type TourEditorSelection =
   | { readonly kind: 'capture'; readonly captureId: string }
@@ -83,6 +84,35 @@ function PointsSection({ model, selection, onSelect }: TourEditorRailProps) {
   );
 }
 
+/** Σημεία που ξαναψήνονται (θόλωμα, ζ3) — εκτός γράφου, αλλά **ποτέ** εξαφανισμένα από τη στήλη. */
+function RebakingSection({ model, selection, onSelect }: TourEditorRailProps) {
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const nameOf = useOffGraphPointName();
+  if (model.rebaking.length === 0) return null;
+  return (
+    <section aria-labelledby="tour-editor-rebaking" className="space-y-1">
+      <h3 id="tour-editor-rebaking" className="text-sm font-semibold">{t(TOUR_REDACTION_KEYS.rebakingSection)}</h3>
+      <ul className="m-0 list-none space-y-1 p-0">
+        {model.rebaking.map((entry) => {
+          const target = { kind: 'point', nodeId: entry.nodeId } as const;
+          const selected = isSelected(selection, target);
+          return (
+            <li key={entry.nodeId} className="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="sm" className={cn('flex-1 justify-start', selected && COLOR_BRIDGE.selectionControl.pressed)}
+                aria-current={selected ? 'true' : undefined} onClick={() => onSelect(target)}>
+                {nameOf(entry.node, entry.levelPeers) ?? t(PANEL_KEYS.capturedAt, { date: formatDate(entry.capture.capturedAt) })}
+              </Button>
+              <Badge variant={entry.readiness === 'failed' ? 'destructive' : 'outline'}>
+                {t(entry.readiness === 'failed' ? TOUR_EDITOR_KEYS.failed : TOUR_REDACTION_KEYS.rebaking)}
+              </Badge>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function TourEditorRail({ model, selection, onSelect }: TourEditorRailProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   return (
@@ -104,6 +134,7 @@ export function TourEditorRail({ model, selection, onSelect }: TourEditorRailPro
         <h3 id="tour-editor-points" className="text-sm font-semibold">{t(TOUR_EDITOR_KEYS.points)}</h3>
         <PointsSection model={model} selection={selection} onSelect={onSelect} />
       </section>
+      <RebakingSection model={model} selection={selection} onSelect={onSelect} />
     </nav>
   );
 }

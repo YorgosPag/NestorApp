@@ -12,7 +12,7 @@
  * αριθμό (`excluded`), και κάθε ανάλυση λέει πόσες αγγελίες **δεν δήλωσαν** τον άξονα (`undeclared`).
  */
 
-import type { AdminArea } from '@/lib/geo/admin-area-index-file';
+import { ADMIN_LEVEL, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { MarketSegment } from '@/lib/market/market-segments';
 import type { AreaSummaryFile } from '@/lib/market/market-transactions-file';
 import type { StatCell } from '@/lib/market/market-statistics';
@@ -22,14 +22,30 @@ import type { PublicListing } from '@/types/public-listing';
 /** Η εκδοχή του σχήματος του εγγράφου. */
 export const AREA_MARKET_SNAPSHOT_SCHEMA_VERSION = 1;
 
-/** Οι βαθμίδες που έχουν σελίδα περιοχής (ADR-890 §5.1): Δήμος (5) και Δημοτική Ενότητα (6). */
-export const MUNICIPALITY_LEVEL = 5;
-export const MUNICIPAL_UNIT_LEVEL = 6;
-export const AREA_MARKET_LEVELS = [MUNICIPALITY_LEVEL, MUNICIPAL_UNIT_LEVEL] as const;
+/**
+ * Οι βαθμίδες που έχουν σελίδα περιοχής: Περιφέρεια (3) · Π.Ε. (4) · Δήμος (5) · Δ.Ε. (6) — ADR-890 §5.1 · §16.
+ * 🔑 **Μία λίστα, τρεις συνέπειες**: σελίδα (`hasAreaMarketPage`) · κλειδιά της νυχτερινής σύνοψης (`areaMarketKeysOf`,
+ * άρα διάμεσος **από τις αγγελίες** ανά βαθμίδα) · άθροιση ανά πρόγονο στον γεννήτορα συμβολαίων (ADR-889 §4).
+ */
+export const AREA_MARKET_LEVELS = [
+  ADMIN_LEVEL.region,
+  ADMIN_LEVEL.regionalUnit,
+  ADMIN_LEVEL.municipality,
+  ADMIN_LEVEL.municipalUnit,
+] as const;
+export type AreaMarketLevel = (typeof AREA_MARKET_LEVELS)[number];
 
 /** Έχει αυτή η βαθμίδα δική της σελίδα περιοχής; */
-export function hasAreaMarketPage(level: number): boolean {
+export function hasAreaMarketPage(level: number): level is AreaMarketLevel {
   return (AREA_MARKET_LEVELS as readonly number[]).includes(level);
+}
+
+/**
+ * Δείχνει ο χάρτης αυτής της βαθμίδας **ζώνες αντικειμενικών αξιών**; Μόνο Δήμος και Δ.Ε.: σε Π.Ε./Περιφέρεια θα ήταν
+ * χιλιάδες ζώνες — εκεί ο χάρτης είναι μόνο ο χωροπληθής των παιδιών (ADR-890 §16).
+ */
+export function hasValueZoneMap(level: number): boolean {
+  return level >= ADMIN_LEVEL.municipality && hasAreaMarketPage(level);
 }
 
 /** Οι δύο ζητούμενες τιμές που συνοψίζονται. Η διανυκτέρευση δεν είναι αγορά κατοικίας. */
@@ -212,6 +228,16 @@ export type AreaContractsState =
       readonly parent: AreaSummaryFile | null;
     };
 
+/**
+ * **Οι τιμές των παιδιών μιας περιοχής** για τον χάρτη σύγκρισης και τον πίνακα (ADR-890 §15 · §16) — προβολή του **ίδιου**
+ * `price-map.json` με τον χάρτη της αναζήτησης, κομμένη στα παιδιά **και** στην ίδια την περιοχή (για την αναγωγή).
+ * `none` = η σελίδα δεν έχει χάρτη σύγκρισης (Δ.Ε., ή περιοχή με < 2 παιδιά) · `unavailable` = δεν διαβάστηκε (ποτέ «λίγα»).
+ */
+export type AreaChildPricesState =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'ready'; readonly asOf: string; readonly areas: PriceMapAreas };
+
 export interface AreaListingsPreview {
   readonly items: readonly PublicListing[];
   /** Όλες οι δημοσιευμένες αγγελίες της περιοχής **τώρα** (ζωντανή καταμέτρηση). */
@@ -231,9 +257,12 @@ export interface AreaMarketPageData {
   readonly contracts: AreaContractsState;
   /**
    * Τα αρχεία ζωνών αντικειμενικών αξιών που ζωγραφίζει ο χάρτης (ADR-889 Φ5): η ίδια η περιοχή και οι Δ.Ε. της, όσες
-   * έχουν ζώνες. `[]` = καμία ζώνη (γεγονός) · `null` = το ευρετήριο δεν διαβάστηκε («δεν ξέρω»).
+   * έχουν ζώνες. `[]` = καμία ζώνη (γεγονός — και **πάντα** σε Π.Ε./Περιφέρεια, `hasValueZoneMap`) · `null` = το
+   * ευρετήριο δεν διαβάστηκε («δεν ξέρω»).
    */
   readonly valueZoneFiles: readonly string[] | null;
+  /** Οι τιμές συμβολαίων των **παιδιών** της περιοχής, για τον χάρτη σύγκρισης και τον πίνακα (ADR-890 §15 · §16). */
+  readonly childPrices: AreaChildPricesState;
 }
 
 /** Τρεις εκβάσεις: 404 · 5xx (δεν μπορέσαμε να ρωτήσουμε) · η σελίδα. */

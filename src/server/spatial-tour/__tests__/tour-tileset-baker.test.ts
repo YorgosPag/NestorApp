@@ -16,6 +16,8 @@ jest.setTimeout(120_000);
 
 const objects = new Map<string, { bytes: Buffer; contentType: string | null }>();
 let failSaves = false;
+/** Άγκιστρο στην πρώτη αποθήκευση — προσομοιώνει αλλαγή θολώματος ΕΝΩ ψήνεται (Φ2ζ). */
+let onFirstSave: (() => Promise<void>) | null = null;
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' },
@@ -25,9 +27,15 @@ jest.mock('@/lib/firebaseAdmin', () => ({
       download: async () => [objects.get(path)?.bytes ?? Buffer.alloc(0)],
       save: async (bytes: Buffer, options: { contentType?: string }) => {
         if (failSaves) throw new Error('storage unavailable');
+        const hook = onFirstSave;
+        onFirstSave = null;
+        if (hook !== null) await hook();
         objects.set(path, { bytes, contentType: options.contentType ?? null });
       },
     }),
+    deleteFiles: async ({ prefix }: { prefix: string }) => {
+      for (const path of [...objects.keys()]) if (path.startsWith(prefix)) objects.delete(path);
+    },
   }),
 }));
 
@@ -43,6 +51,9 @@ import { tourMediaObjectPath } from '@/lib/spatial-tour/tour-media-path';
 import { TOUR_CUBE_FACES } from '@/lib/spatial-tour/viewer/tour-cube-faces';
 import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 
+import type { TourRedaction } from '@/types/spatial-tour';
+
+import { tilesetKeyOf } from '../tour-redaction-apply';
 import { bakeTourTileset } from '../tour-tileset-baker';
 import { transitionTileset } from '../tour-tileset-state';
 import { viewerStops } from '../tour-viewer-stops';
@@ -83,6 +94,7 @@ beforeEach(() => {
   db = kit.instance as unknown as Firestore;
   objects.clear();
   failSaves = false;
+  onFirstSave = null;
   kit.seedCollection(TOURS, {
     [TOUR_ID]: {
       companyId: AGENCY, subject: { kind: 'company-property', id: 'prop_1' }, visibility: 'public', lifecycle: 'published',
@@ -172,5 +184,63 @@ describe('Κ — η μετάβαση', () => {
     seedCapture({ tileset: { state: 'ready', contentHash: hash, faceSize: 512 } });
     expect(await transitionTileset(db, captureRef(), hash, { to: 'failed' })).toBe('not-pending');
     expect((await readCapture())?.tileset.state).toBe('ready');
+  });
+});
+
+describe('Θ — θόλωμα (Φ2ζ · §4.15 · Α8)', () => {
+  const REGION = { id: 'tred_1', yawRad: 0, pitchRad: 0, radiusRad: 0.5, source: 'manual', createdBy: 'boris', createdAt: '2026-09-29T10:00:00.000Z' };
+  let checker: Buffer;
+  let checkerHash: string;
+
+  beforeAll(async () => {
+    // Σκακιέρα 4 px: υψηλή αντίθεση παντού — ό,τι θολώθηκε φαίνεται ως πτώση της διασποράς.
+    const [w, h, cell] = [1024, 512, 4];
+    const raw = Buffer.alloc(w * h * 3);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) raw.fill((Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0 ? 0 : 255, (y * w + x) * 3, (y * w + x) * 3 + 3);
+    checker = await sharp(raw, { raw: { width: w, height: h, channels: 3 } }).jpeg({ quality: 95 }).toBuffer();
+    checkerHash = createHash('sha256').update(checker).digest('hex');
+  });
+
+  const seedRedacted = (tileset: Record<string, unknown> = {}) => {
+    objects.set(ORIGINAL_PATH, { bytes: checker, contentType: 'image/jpeg' });
+    const key = tilesetKeyOf(checkerHash, [REGION as TourRedaction]);
+    seedCapture({ originalHash: checkerHash, redactions: [REGION], tileset: { state: 'pending', contentHash: key, faceSize: null, ...tileset } });
+    return key;
+  };
+
+  async function centreSpread(key: string, face: (typeof TOUR_CUBE_FACES)[number]): Promise<number> {
+    const tile = objects.get(tourMediaObjectPath(TOUR_ID, tileSegments(key, 0, face, 0, 0)) ?? '')!;
+    // ⚠️ `stats()` μετρά την ΕΙΣΟΔΟ του pipeline, όχι το αποκομμένο — πρώτα `toBuffer()` (μετρημένο: αλλιώς centre ≡ full).
+    const centre = await sharp(tile.bytes).extract({ left: 192, top: 192, width: 128, height: 128 }).toBuffer();
+    const stats = await sharp(centre).stats();
+    return stats.channels[0].stdev;
+  }
+
+  it('επαληθεύει με το hash του ΠΡΩΤΟΤΥΠΟΥ, γράφει στο ΚΛΕΙΔΙ · ακριβώς μία όψη θολωμένη στο κέντρο, οι άλλες ανέπαφες', async () => {
+    const key = seedRedacted();
+    expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'baked', transition: 'written' });
+    const spreads = await Promise.all(TOUR_CUBE_FACES.map((face) => centreSpread(key, face)));
+    expect(spreads.filter((s) => s < 12)).toHaveLength(1);
+    expect(spreads.filter((s) => s > 60)).toHaveLength(5);
+    expect([...objects.keys()].some((path) => path.includes(checkerHash))).toBe(false);
+    expect((await readCapture())?.tileset).toEqual({ state: 'ready', contentHash: key, faceSize: 512 });
+  });
+
+  it('τα αποσυρμένα κλειδιά σβήνονται ΠΡΙΝ το ψήσιμο · η λίστα αδειάζει με το ready', async () => {
+    const old = 'd'.repeat(64);
+    const oldTile = tourMediaObjectPath(TOUR_ID, tileSegments(old, 0, TOUR_CUBE_FACES[0], 0, 0))!;
+    objects.set(oldTile, { bytes: Buffer.from('unblurred'), contentType: 'image/jpeg' });
+    seedRedacted({ retiredKeys: [old] });
+    await bakeTourTileset(db, captureRef());
+    expect(objects.has(oldTile)).toBe(false);
+    expect((await readCapture())?.tileset).not.toHaveProperty('retiredKeys');
+  });
+
+  it('το θόλωμα άλλαξε ΕΝΩ έψηνε ⇒ ό,τι ανέβηκε για το παλιό κλειδί σβήνεται, καμία μετάβαση', async () => {
+    const key = seedRedacted();
+    onFirstSave = async () => { await captureRef().update({ tileset: { state: 'pending', contentHash: 'e'.repeat(64), faceSize: null } }); };
+    expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'baked', transition: 'hash-changed' });
+    expect([...objects.keys()].some((path) => path.startsWith(`${tourMediaObjectPath(TOUR_ID, [key])}/`))).toBe(false);
+    expect((await readCapture())?.tileset.contentHash).toBe('e'.repeat(64));
   });
 });

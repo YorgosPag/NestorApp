@@ -33,6 +33,8 @@ export const TOUR_REFUSALS = [
   // ── Τα σχήματα των χώρων + οι νοητές γραμμές (Φ2στ-γ Γ3β) ──
   'space-invalid', 'space-outside-plan', 'space-overlap', 'space-absent', 'space-exists', 'area-invalid',
   'separation-invalid', 'separation-absent', 'separation-exists',
+  // ── Η ιδιωτικότητα μιας λήψης: θολωμένες περιοχές (Φ2ζ) ──
+  'redaction-invalid', 'redaction-absent', 'redaction-exists', 'redaction-limit',
 ] as const;
 
 export type TourRefusalName = (typeof TOUR_REFUSALS)[number];
@@ -74,13 +76,27 @@ export const TOUR_SHAPE_REFUSALS = [
 
 export type TourShapeRefusal = (typeof TOUR_SHAPE_REFUSALS)[number];
 
-/** Κάθε άρνηση **εκτός** του γραφέα σχημάτων — το λεξιλόγιο όλων των άλλων οθονών. */
-export type TourGeneralRefusal = Exclude<TourRefusalName, TourShapeRefusal>;
+/**
+ * **Οι αρνήσεις του ΘΟΛΩΜΑΤΟΣ** (ADR-884 Φ2ζ · AIP-193) — τις λέει **μόνο** το `POST …/graph` στις εντολές `redact/unredact`,
+ * άρα τις χαρτογραφεί **μόνο** το πινέλο θολώματος του επεξεργαστή. Ίδιος λόγος ύπαρξης με τις αρνήσεις σχημάτων (CHECK 3.34).
+ */
+export const TOUR_REDACTION_REFUSALS = [
+  'redaction-invalid', 'redaction-absent', 'redaction-exists', 'redaction-limit',
+] as const satisfies readonly TourRefusalName[];
+
+export type TourRedactionRefusal = (typeof TOUR_REDACTION_REFUSALS)[number];
+
+/** Κάθε άρνηση **εκτός** των γραφέων σχημάτων και θολώματος — το λεξιλόγιο όλων των άλλων οθονών. */
+export type TourGeneralRefusal = Exclude<TourRefusalName, TourShapeRefusal | TourRedactionRefusal>;
 
 export function isTourShapeRefusal(value: TourRefusalName): value is TourShapeRefusal {
   return (TOUR_SHAPE_REFUSALS as readonly TourRefusalName[]).includes(value);
 }
 
+export function isTourRedactionRefusal(value: TourRefusalName): value is TourRedactionRefusal {
+  return (TOUR_REDACTION_REFUSALS as readonly TourRefusalName[]).includes(value);
+}
+
 export function isTourGeneralRefusal(value: TourRefusalName): value is TourGeneralRefusal {
-  return !isTourShapeRefusal(value);
+  return !isTourShapeRefusal(value) && !isTourRedactionRefusal(value);
 }

@@ -29,7 +29,7 @@ import {
   type RecentPlaceSearch,
 } from '@/lib/geo/recent-place-searches';
 import { adminAreaLineage, searchAdminAreas, type AdminAreaIndex } from '@/lib/geo/admin-area-search';
-import { SETTLEMENT_LEVEL, type AdminArea } from '@/lib/geo/admin-area-index-file';
+import { ADMIN_LEVEL, SETTLEMENT_LEVEL, type AdminArea } from '@/lib/geo/admin-area-index-file';
 
 export type PlaceRecallOption =
   | { readonly kind: 'current-location' }
@@ -50,13 +50,10 @@ export type PlaceRecallOption =
   | { readonly kind: 'area'; readonly area: AdminArea; readonly within: string | null }
   | { readonly kind: 'clear-history' };
 
-/** Η βαθμίδα του δήμου — ο τόπος που αναγνωρίζει ο κόσμος πάνω από ένα χωριό. */
-const MUNICIPALITY_LEVEL = 5;
-
 function withinOf(areas: AdminAreaIndex, area: AdminArea): string | null {
   const lineage = adminAreaLineage(areas, area.id);
   if (area.level !== SETTLEMENT_LEVEL) return lineage[0]?.name ?? null;
-  const shown = [lineage[0], lineage.find((ancestor) => ancestor.level === MUNICIPALITY_LEVEL)]
+  const shown = [lineage[0], lineage.find((ancestor) => ancestor.level === ADMIN_LEVEL.municipality)]
     .filter((ancestor): ancestor is AdminArea => ancestor !== undefined);
   const names = [...new Set(shown.map((ancestor) => ancestor.name))];
   return names.length === 0 ? null : names.join(' · ');

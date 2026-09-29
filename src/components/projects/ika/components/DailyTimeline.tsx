@@ -141,10 +141,15 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
                       size="icon"
                       className="h-6 w-6"
                       onClick={() => toggleExpanded(summary.contactId)}
+                      aria-expanded={isExpanded}
+                      aria-label={t(
+                        isExpanded ? 'ika.timesheetTab.hideRecords' : 'ika.timesheetTab.showRecords',
+                        { name: summary.workerName },
+                      )}
                     >
                       {isExpanded
-                        ? <ChevronUp className={iconSizes.xs} />
-                        : <ChevronDown className={iconSizes.xs} />
+                        ? <ChevronUp className={iconSizes.xs} aria-hidden="true" />
+                        : <ChevronDown className={iconSizes.xs} aria-hidden="true" />
                       }
                     </Button>
                   )}

@@ -21,7 +21,7 @@
  */
 
 import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
+import { getContext, withSeedContext } from '../_harness/auth-contexts';
 import { assertCell, expectAllow, expectDeny, type AssertTarget } from '../_harness/assertions';
 import { seedUser } from '../_harness/seed-helpers-users';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
@@ -285,6 +285,66 @@ describe('users.rules — uid-ownership + companyAdmin write (usersMatrix)', () 
         email: 'own@test.com',
         createdAt: new Date(),
       }));
+    });
+  });
+
+  // ── ADR-894 — users/{uid}/sessions: ο client ΜΟΝΟ διαβάζει ──────────────
+  // Μέχρι 2026-09-29 ο κανόνας ήταν `read, write: if isOwner` και κανένα test δεν τον άγγιζε
+  // (το manifest έγραφε «covered by parent block»). Εδώ: ο ιδιοκτήτης διαβάζει· ΚΑΝΕΝΑΣ δεν γράφει
+  // — ούτε ο ίδιος — γιατί τοποθεσία και συσκευή τα γράφει μόνο ο server από το ίδιο το αίτημα.
+  describe('sessions subcollection — server-written, owner-read (ADR-894)', () => {
+    const ownUid = PERSONA_CLAIMS.same_tenant_user.uid;
+    const sessionId = 'sess_00000000-0000-4000-8000-000000000001';
+    const sessionPath = (uid: string) => `users/${uid}/sessions/${sessionId}`;
+    const sessionDoc = {
+      id: sessionId,
+      userId: ownUid,
+      status: 'active',
+      location: { countryCode: 'GR', city: 'Thessaloniki', region: null, precision: 'city', basis: 'geoip', source: null, ipFingerprint: 'f' },
+    };
+
+    const seedSession = () => withSeedContext(env, async (ctx) => {
+      await ctx.firestore().doc(sessionPath(ownUid)).set(sessionDoc);
+    });
+    const ownRef = () => getContext(env, 'same_tenant_user').firestore().doc(sessionPath(ownUid));
+
+    it('Σ1 — ο ιδιοκτήτης διαβάζει τη δική του συνεδρία → ALLOW', async () => {
+      await seedSession();
+      await expectAllow(ownRef().get());
+    });
+
+    it('Σ2 — άλλος χρήστης (ακόμη και διαχειριστής του ίδιου χώρου) → DENY', async () => {
+      await seedSession();
+      const adminRef = getContext(env, 'same_tenant_admin').firestore().doc(sessionPath(ownUid));
+      await expectDeny(adminRef.get());
+    });
+
+    it('Σ3 — ο ιδιοκτήτης ΔΕΝ γεννά συνεδρία από τον client → DENY', async () => {
+      await expectDeny(ownRef().set(sessionDoc));
+    });
+
+    it('Σ4 — ο ιδιοκτήτης ΔΕΝ πλαστογραφεί την τοποθεσία → DENY', async () => {
+      await seedSession();
+      await expectDeny(ownRef().update({ 'location.countryCode': 'US', 'location.city': 'New York' }));
+    });
+
+    it('Σ5 — ο ιδιοκτήτης ΔΕΝ σβήνει/ανακαλεί από τον client → DENY', async () => {
+      await seedSession();
+      await expectDeny(ownRef().update({ status: 'revoked' }));
+      await expectDeny(ownRef().delete());
+    });
+
+    // ADR-894 §10 Β1 — η λίστα ανακλημένων συνδέσεων είναι του server ΜΟΝΟ: μια ανακλημένη
+    // συσκευή που μπορούσε να τη γράψει θα έσβηνε τον εαυτό της από αυτήν.
+    it('Σ6 — users/{uid}/security: ούτε ο ιδιοκτήτης διαβάζει ή γράφει → DENY', async () => {
+      const securityPath = `users/${ownUid}/security/revoked_sign_ins`;
+      await withSeedContext(env, async (ctx) => {
+        await ctx.firestore().doc(securityPath).set({ entries: [] });
+      });
+      const ownSecurity = getContext(env, 'same_tenant_user').firestore().doc(securityPath);
+      await expectDeny(ownSecurity.get());
+      await expectDeny(ownSecurity.set({ entries: [] }));
+      await expectDeny(ownSecurity.delete());
     });
   });
 });

@@ -622,6 +622,10 @@ export const API_ROUTES = {
   // ── Auth ──────────────────────────────────────────────────────────────
   AUTH: {
     SESSION: '/api/auth/session',
+    /** ADR-894 — `POST` «αυτός ο browser είναι ενεργός» · `DELETE ?keep=` ανάκληση όλων των άλλων. */
+    ACTIVE_SESSIONS: '/api/auth/active-sessions',
+    /** ADR-894 — `DELETE ?reason=` ανάκληση **μίας** συσκευής του ίδιου χρήστη. */
+    ACTIVE_SESSION: (sessionId: string) => `/api/auth/active-sessions/${encodeURIComponent(sessionId)}` as const,
     MFA_ENROLL_COMPLETE: '/api/auth/mfa/enroll/complete',
     /** ADR-851 — email επαναφοράς από το δικό μας mailer (δημόσιο, πάντα `202`). */
     PASSWORD_RESET: '/api/auth/password-reset',

@@ -34,6 +34,15 @@ export function faceSizeForEquirect(width: number): number {
   return Math.min(TOUR_FACE_SIZE_CEILING, tiles * TOUR_TILE_SIZE);
 }
 
+/**
+ * Το **εκτιμώμενο** πλάτος του equirect μιας όψης — το αντίστροφο του {@link faceSizeForEquirect} (`π · όψη`). Εκτίμηση: η
+ * στρογγύλευση στο πλακίδιο και το ταβάνι χάνουν πληροφορία· αρκεί για ό,τι μετρά **γωνίες** (π.χ. το κελί της προεπισκόπησης
+ * θολώματος), ποτέ για pixel.
+ */
+export function equirectWidthOfFace(faceSize: number): number {
+  return Math.round(faceSize * Math.PI);
+}
+
 /** Τα επίπεδα ανάλυσης (πλευρά όψης), από το μικρότερο: 512, 1024, … και τελευταίο η ίδια η όψη. */
 export function tilesetLevels(faceSize: number): readonly number[] {
   const levels: number[] = [];

@@ -29,12 +29,13 @@ import { createExternalStore } from '@/lib/state/createExternalStore';
 import {
   directionToYawPitch, TOUR_CUBE_FACES, yawPitchToDirection,
 } from '@/lib/spatial-tour/viewer/tour-cube-faces';
+import type { PackedRedactionPreview } from '@/lib/spatial-tour/viewer/tour-redaction-preview';
 import type { TourTileAddress } from '@/lib/spatial-tour/viewer/tour-tile-visibility';
 import type { TourView } from '@/lib/spatial-tour/viewer/tour-viewer-view';
 
 import type { TourCubeFaceImages, TourFaceImage } from './tour-panorama-source';
 import { TOUR_FACE_UNIFORM, TOUR_PANORAMA_FRAGMENT_SHADER, TOUR_PANORAMA_VERTEX_SHADER } from './tour-panorama-shader';
-import { createTileLayer, panoramaTexture, type TileLayer } from './tour-tile-layer';
+import { createRedactionUniforms, createTileLayer, panoramaTexture, type RedactionUniforms, type TileLayer } from './tour-tile-layer';
 
 /** Θέση στην οθόνη ενός σημείου του πανοράματος — `null` όταν είναι πίσω από τον θεατή ή εκτός κάδρου. */
 export type ScreenPoint = { readonly x: number; readonly y: number } | null;
@@ -69,6 +70,11 @@ export interface TourPanoramaEngine {
   projectUnclipped(yaw: number, pitch: number): ScreenPoint;
   /** Το αντίστροφο: σημείο οθόνης (CSS px) → yaw/κλίση **του τρέχοντος κύβου** — το σύρσιμο βελακιού (Φ2δ, §4.10). */
   unproject(x: number, y: number): { readonly yaw: number; readonly pitch: number };
+  /**
+   * **Προεπισκόπηση θολώματος** (Φ2ζ ζ3 · §4.15) στον κύβο της στάσης `stopKey` — αγνοείται αν κανένας δεν τη δείχνει. Ο κύβος
+   * που αλλάζει στάση ξεχνά την προεπισκόπηση (ποτέ «κύκλοι του Α πάνω στο Β»).
+   */
+  setRedactionPreview(stopKey: string, preview: PackedRedactionPreview, cellRad: number): void;
   /** Καλείται μετά από κάθε καρέ — ο κάτοχος ξαναβάζει τα κουμπιά στη θέση τους. */
   onFrame(listener: () => void): () => void;
   dispose(): void;
@@ -78,6 +84,7 @@ interface Cube {
   readonly mesh: Mesh<BoxGeometry, ShaderMaterial>;
   /** Τα πλακίδια πάνω από τη βάση — παιδί του `mesh`, άρα στρέφεται και κρύβεται μαζί του. */
   readonly tiles: TileLayer;
+  readonly redaction: RedactionUniforms;
   textures: Texture[];
   heading: number;
 }
@@ -91,7 +98,8 @@ const LAYER_ORDER_STRIDE = 10;
 
 function makeCube(layer: 0 | 1): Cube {
   const opacity = { value: 1 };
-  const uniforms: Record<string, { value: Texture | number | null }> = { opacity };
+  const redaction = createRedactionUniforms();
+  const uniforms: Record<string, { value: Texture | Float32Array | number | null }> = { opacity, ...redaction };
   for (const face of TOUR_CUBE_FACES) uniforms[TOUR_FACE_UNIFORM[face]] = { value: null };
   const material = new ShaderMaterial({
     uniforms,
@@ -104,9 +112,9 @@ function makeCube(layer: 0 | 1): Cube {
   const mesh = new Mesh(new BoxGeometry(2, 2, 2), material);
   mesh.visible = false;
   mesh.frustumCulled = false;
-  const tiles = createTileLayer(opacity);
+  const tiles = createTileLayer(opacity, redaction);
   mesh.add(tiles.group);
-  const cube: Cube = { mesh, tiles, textures: [], heading: 0 };
+  const cube: Cube = { mesh, tiles, redaction, textures: [], heading: 0 };
   setLayer(cube, layer);
   return cube;
 }
@@ -114,6 +122,7 @@ function makeCube(layer: 0 | 1): Cube {
 function loadCube(cube: Cube, faces: TourCubeFaceImages | null, headingRad = 0, stopKey: string | null = null): void {
   cube.heading = headingRad;
   cube.mesh.rotation.y = -headingRad;
+  if (cube.tiles.stopKey !== stopKey || faces === null) cube.redaction.redactionCount.value = 0;
   cube.tiles.setStop(faces === null ? null : stopKey);
   for (const texture of cube.textures) texture.dispose();
   cube.textures = [];
@@ -246,6 +255,15 @@ class ThreeTourPanoramaEngine implements TourPanoramaEngine {
     const ndcY = 1 - (y / this.size.height) * 2;
     const { yaw, pitch } = directionToYawPitch(this.probe.set(ndcX, ndcY, 0.5).unproject(this.camera));
     return { yaw: normalizeAngleDiff(yaw - this.current.heading), pitch };
+  }
+
+  setRedactionPreview(stopKey: string, preview: PackedRedactionPreview, cellRad: number): void {
+    const cube = this.cubeShowing(stopKey);
+    if (cube === null) return;
+    cube.redaction.redactions.value.set(preview.data);
+    cube.redaction.redactionCount.value = preview.count;
+    cube.redaction.redactionCellRad.value = cellRad;
+    this.request();
   }
 
   onFrame(listener: () => void): () => void {

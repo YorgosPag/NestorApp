@@ -23,7 +23,10 @@ type TilesetTransition =
 
 export type TilesetTransitionOutcome = 'written' | 'not-pending' | 'hash-changed' | 'missing';
 
-/** Η νέα τιμή του tileset — καθαρή. */
+/**
+ * Η νέα τιμή του tileset — καθαρή. Χωρίς `retiredKeys` (Φ2ζ): ο ψήστης τα έσβησε **πριν** ψήσει, άρα η λίστα αδειάζει μόνο εδώ,
+ * με την ολοκλήρωση — ποτέ πριν σβηστούν.
+ */
 function nextTileset(contentHash: string, transition: TilesetTransition): TourCaptureTileset {
   return transition.to === 'ready'
     ? { state: 'ready', contentHash, faceSize: transition.faceSize }

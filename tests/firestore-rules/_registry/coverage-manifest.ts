@@ -1346,7 +1346,11 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Read: uid==userId || (companyId && belongsToCompany) || isSuperAdminOnly (SPEC-259B).
     // Create/update: uid==userId || (companyId && isCompanyAdminOfCompany).
     // Delete: if false — user docs never client-deleted.
-    // Nested sessions subcollection is covered by this parent block.
+    // Nested sessions subcollection (ADR-894): owner-read, write: if false (server-written) —
+    // explicit anchors Σ1–Σ5 in the same suite (until 2026-09-29 this line claimed «covered by
+    // parent block» while NO test touched the subcollection).
+    // Nested security subcollection (ADR-894 §10 Β1): read, write: if false (server-only
+    // revoked sign-ins) — anchor Σ6 in the same suite.
     ...usersMatrix(),
   },
   {

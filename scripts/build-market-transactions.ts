@@ -47,6 +47,7 @@ import {
   MAMA_RIGHTS,
   MAMA_SPECIAL_CONDITIONS,
 } from './lib/market-transactions/mama-vocabulary';
+import { groupByAreaAncestry } from './lib/market-transactions/area-ancestry';
 import { buildAreaSummaryFile } from './lib/market-transactions/area-summary';
 import { buildContractPriceMapFile } from './lib/market-transactions/price-map-file';
 import { comparableUnitPrice } from './lib/market-transactions/market-statistics';
@@ -59,16 +60,17 @@ import {
   MARKET_TRANSACTIONS_FORMAT_VERSION,
   MARKET_TRANSACTIONS_PRICE_MAP_PUBLIC_PATH,
   ROW_FIELDS,
+  hasMarketRows,
   marketTransactionsPublicPath,
   type AreaSummaryFile,
   type MarketTransactionsKind,
 } from '../src/lib/market/market-transactions-file';
+import { hasAreaMarketPage } from '../src/types/area-market';
 
 const PUBLIC_DIR = join(REPO_ROOT, 'public');
 const OUTPUT_DIR = join(PUBLIC_DIR, ...MARKET_TRANSACTIONS_DIR.split('/'));
 /** Η έξοδος της Φ1 (ADR-889 §5.1α) — σβήνεται, για να μη μείνει δεύτερο, μπαγιάτικο αντίγραφο. */
 const LEGACY_OUTPUT_DIR = join(MARKET_TRANSACTIONS_CACHE_DIR, 'out');
-const MUNICIPALITY_LEVEL = 5;
 const REPORT_PATH = join(REPO_ROOT, 'docs', 'centralized-systems', 'reference', 'reports', 'adr-889-area-match.md');
 
 /** Η άδεια ζητά αναφορά κυρίου και αλλαγών (§2.1). Ταξιδεύει μέσα στο ευρετήριο, όπως το `ATTRIBUTION` των ορίων. */
@@ -149,26 +151,6 @@ function vocabulary(): Record<string, unknown> {
 
 type AreaIndexRow = readonly [string, string, number, number, number];
 
-/**
- * **Οι Δ.Ε. ΚΑΙ ο Δήμος τους.** Η πηγή μιλά σε βαθμίδα Δ.Ε. (§4)· η σελίδα περιοχής όμως ανάγει στον Δήμο όταν η
- * Δ.Ε. έχει λίγα δεδομένα (ADR-890 §10.4), και ο Δήμος έχει δική του σελίδα. Χωρίς αυτή την άθροιση, ο Δήμος
- * Θεσσαλονίκης (6 Δ.Ε.) δεν θα είχε αρχείο. Οι δήμοι **χωρίς** Δ.Ε. είναι ήδη βαθμίδα 5 και μένουν ως έχουν.
- */
-function withMunicipalities(acc: Accumulator): Map<string, ClassifiedRecord[]> {
-  const groups = new Map<string, ClassifiedRecord[]>();
-  const add = (id: string, items: readonly ClassifiedRecord[]): void => {
-    const group = groups.get(id);
-    if (group === undefined) groups.set(id, [...items]);
-    else group.push(...items);
-  };
-  for (const [areaId, items] of acc.byArea) {
-    add(areaId, items);
-    const { parentId } = acc.resolver.area(areaId);
-    if (parentId !== null && acc.resolver.area(parentId).level === MUNICIPALITY_LEVEL) add(parentId, items);
-  }
-  return groups;
-}
-
 function writeFile(kind: MarketTransactionsKind, areaId: string, content: unknown): void {
   writeFileSync(join(PUBLIC_DIR, ...marketTransactionsPublicPath(kind, areaId)), JSON.stringify(content));
 }
@@ -184,7 +166,8 @@ function writeAreas(acc: Accumulator): WrittenAreas {
   rmSync(LEGACY_OUTPUT_DIR, { recursive: true, force: true });
   for (const kind of ['summary', 'rows'] as const) mkdirSync(join(OUTPUT_DIR, kind), { recursive: true });
 
-  const groups = withMunicipalities(acc);
+  // Κάθε περιοχή με σελίδα, από τις **εγγραφές** των φύλλων της — ποτέ διάμεσος διαμέσων (ADR-890 §16).
+  const groups = groupByAreaAncestry(acc.byArea, (id) => acc.resolver.area(id), hasAreaMarketPage);
   const rows: AreaIndexRow[] = [];
   const summaries: AreaSummaryFile[] = [];
   for (const areaId of [...groups.keys()].sort()) {
@@ -192,8 +175,8 @@ function writeAreas(acc: Accumulator): WrittenAreas {
     const summary = buildAreaSummaryFile(areaId, items, acc.latest);
     summaries.push(summary);
     writeFile('summary', areaId, summary);
-    writeFile('rows', areaId, buildAreaRowsFile(areaId, items));
     const { name, level } = acc.resolver.area(areaId);
+    if (hasMarketRows(level)) writeFile('rows', areaId, buildAreaRowsFile(areaId, items));
     rows.push([areaId, name, level, items.length, items.filter((i) => i.unitPrice !== null).length]);
   }
   return { rows, summaries };
@@ -239,7 +222,7 @@ async function main(): Promise<void> {
   writeFileSync(MAMA_RUN_SUMMARY_PATH, `${JSON.stringify(runSummary, null, 2)}\n`);
 
   console.table([{ ...totals, seconds: Math.round((Date.now() - started) / 1000) }]);
-  console.log(`✅ ${areas.length} περιοχές (${acc.byArea.size} από την πηγή + Δήμοι) → ${OUTPUT_DIR}\n📄 αναφορά → ${REPORT_PATH}`);
+  console.log(`✅ ${areas.length} περιοχές (${acc.byArea.size} φύλλα της πηγής + οι πρόγονοί τους με σελίδα) → ${OUTPUT_DIR}\n📄 αναφορά → ${REPORT_PATH}`);
 }
 
 main().catch((error: unknown) => {

@@ -153,6 +153,19 @@ export function resolvePriceMapArea(
   return { kind: 'few', n: sampleOf(own) };
 }
 
+/**
+ * **Υποσύνολο** των περιοχών, για ό,τι χρειάζεται μία σελίδα (ADR-890 §15: τα παιδιά ενός Δήμου + ο ίδιος, για την
+ * αναγωγή). Περιοχή χωρίς εγγραφή απλώς λείπει — ο `resolvePriceMapArea` τη λέει «λίγα» με `n = 0`, όπως ο χάρτης.
+ */
+export function pickPriceMapAreas(areas: PriceMapAreas, ids: readonly string[]): PriceMapAreas {
+  const picked: Record<string, PriceMapSegments> = {};
+  for (const id of ids) {
+    const segments = areas[id];
+    if (segments !== undefined) picked[id] = segments;
+  }
+  return picked;
+}
+
 /** Τα τμήματα μιας περιοχής από κελιά στατιστικών — κοινό για γεννήτορα συμβολαίων και γραφέα ζητούμενων. */
 export function priceMapSegmentsOf(cells: Readonly<Partial<Record<MarketSegment, StatCell | null>>>): PriceMapSegments {
   const segments: Partial<Record<MarketSegment, PriceMapCell>> = {};

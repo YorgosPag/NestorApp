@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useInterval } from '@/hooks/useInterval';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TourPlacementTarget } from '@/lib/spatial-tour/tour-graph-edit';
 import { buildTourEditorModel, previewGraphOf, type TourEditorModel } from '@/lib/spatial-tour/tour-editor-model';
@@ -31,6 +32,7 @@ import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 import { TourEditorRail, type TourEditorSelection } from './TourEditorRail';
 import { TourPlanPane } from './TourPlanPane';
 import { TourPointRemoval } from './TourPointRemoval';
+import { TourRebakingNotice } from './redaction/TourRebakingNotice';
 import { TourRoomForm } from './TourRoomForm';
 import { TourPointWorkspace, TourPreviewWorkspace } from './TourEditorWorkspaces';
 import { useTourEditorActions, type TourEditorActions } from './useTourEditorActions';
@@ -44,9 +46,14 @@ function firstSelection(model: TourEditorModel): TourEditorSelection | null {
 }
 
 function isLive(model: TourEditorModel, selection: TourEditorSelection): boolean {
-  return selection.kind === 'point' ? model.graph.stops.has(selection.nodeId)
+  // Σημείο που ξαναψήνεται (θόλωμα, ζ3) μένει επιλεγμένο — η οθόνη λέει «ετοιμάζεται», δεν πηδά αλλού.
+  return selection.kind === 'point'
+    ? model.graph.stops.has(selection.nodeId) || model.rebaking.some((entry) => entry.nodeId === selection.nodeId)
     : model.inbox.some((entry) => entry.capture.id === selection.captureId);
 }
+
+/** Κάθε πόσο ξαναρωτά η οθόνη όσο κάποιο σημείο ξαναψήνεται — ένα 8K ψήνεται σε δευτερόλεπτα, όχι λεπτά. */
+const REBAKE_POLL_MS = 4000;
 
 /** Η επιλογή ακολουθεί τα δεδομένα: νέο σημείο μετά την τοποθέτηση · η πρώτη διαθέσιμη όταν χαθεί η τρέχουσα. */
 function useSelection(model: TourEditorModel, data: TourEditorData) {
@@ -73,21 +80,28 @@ interface LoadedEditorProps {
   readonly data: TourEditorData;
   readonly actions: TourEditorActions;
   readonly source: TourPanoramaSource;
+  /** Το ρολόι του «ετοιμάζεται ξανά» — παραλείπει όσο εκκρεμεί φόρτωση (`useTourEditorData.poll`). */
+  readonly poll: () => void;
 }
 
-function LoadedEditor({ subject, data, actions, source }: LoadedEditorProps) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
-  const model = useMemo(() => buildTourEditorModel(data, data.captures), [data]);
-  const nameOf = useStopNames(model.graph);
-  const { selection, setSelection, epoch, pendingFocus } = useSelection(model, data);
-  const onArrive = useCallback((nodeId: string) => setSelection((prev) => (
-    prev?.kind === 'point' && prev.nodeId === nodeId ? prev : { kind: 'point', nodeId })), [setSelection]);
-  const place = async (captureId: string, target: TourPlacementTarget) => {
-    pendingFocus.current = captureId;
-    if (!(await actions.place(captureId, target))) pendingFocus.current = null;
-  };
+/**
+ * Το θόλωμα (ζ3): η λήψη πίσω από κάθε στάση, η εφαρμογή του προχείρου, και **polling μόνο όσο** κάποιο σημείο ξαναψήνεται (ποτέ
+ * συνεχές — το κουπόνι ανανεώνεται ήδη από το `useTourEditorData`).
+ */
+function useRedactionWiring(model: TourEditorModel, data: TourEditorData, actions: TourEditorActions, poll: () => void) {
+  useInterval(poll, REBAKE_POLL_MS, model.rebaking.length > 0);
+  const captureOf = useCallback((captureId: string) => data.captures.find((c) => c.id === captureId), [data.captures]);
+  const { redactions, newRedactionId } = actions;
+  const redaction = useMemo(() => ({ apply: redactions, newId: newRedactionId }), [redactions, newRedactionId]);
+  return { captureOf, redaction };
+}
+
+/** Τα εργαλεία του σημείου κάτω από βελάκια/θόλωμα: χώρος · κάτοψη · αφαίρεση πανοράματος. */
+function usePointFooter(
+  { subject, data, actions, source }: Omit<LoadedEditorProps, 'poll'>, model: TourEditorModel, nameOf: (nodeId: string) => string,
+) {
   const { name } = actions;
-  const footer = useCallback((nodeId: string) => {
+  return useCallback((nodeId: string) => {
     const stop = model.graph.stops.get(nodeId)?.stop;
     return (
       <>
@@ -99,16 +113,33 @@ function LoadedEditor({ subject, data, actions, source }: LoadedEditorProps) {
       </>
     );
   }, [model, actions, name, subject, source, data.nodes, data.levels, nameOf]);
+}
+
+function LoadedEditor({ subject, data, actions, source, poll }: LoadedEditorProps) {
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const model = useMemo(() => buildTourEditorModel(data, data.captures), [data]);
+  const { captureOf, redaction } = useRedactionWiring(model, data, actions, poll);
+  const nameOf = useStopNames(model.graph);
+  const { selection, setSelection, epoch, pendingFocus } = useSelection(model, data);
+  const onArrive = useCallback((nodeId: string) => setSelection((prev) => (
+    prev?.kind === 'point' && prev.nodeId === nodeId ? prev : { kind: 'point', nodeId })), [setSelection]);
+  const place = async (captureId: string, target: TourPlacementTarget) => {
+    pendingFocus.current = captureId;
+    if (!(await actions.place(captureId, target))) pendingFocus.current = null;
+  };
+  const footer = usePointFooter({ subject, data, actions, source }, model, nameOf);
   const entry = selection?.kind === 'capture' ? model.inbox.find((e) => e.capture.id === selection.captureId) : undefined;
   const preview = entry === undefined ? null : previewGraphOf(entry.capture);
+  const rebaking = selection?.kind === 'point' ? model.rebaking.find((r) => r.nodeId === selection.nodeId) : undefined;
   return (
     <section className="grid min-h-0 flex-1 gap-4 md:grid-cols-[16rem_1fr]">
       <TourEditorRail model={model} selection={selection} onSelect={setSelection} />
       <section className="grid min-h-0 content-start gap-3 overflow-y-auto xl:grid-cols-[minmax(0,1fr)_22rem]" aria-live="polite">
-        {selection?.kind === 'point' && (
+        {selection?.kind === 'point' && rebaking === undefined && (
           <TourPointWorkspace key={epoch} graph={model.graph} source={source} requestedNodeId={selection.nodeId} onArrive={onArrive}
-            onPlaceArrow={actions.placeArrow} onUnlink={actions.unlink} footer={footer} />
+            onPlaceArrow={actions.placeArrow} onUnlink={actions.unlink} footer={footer} captureOf={captureOf} redaction={redaction} />
         )}
+        {rebaking !== undefined && <TourRebakingNotice entry={rebaking} />}
         {entry !== undefined && preview !== null && (
           <TourPreviewWorkspace key={entry.capture.id} preview={preview} source={source} captureId={entry.capture.id} levels={data.levels}
             tourGraph={model.graph} busy={actions.busy} onPlace={(target) => void place(entry.capture.id, target)} />
@@ -136,5 +167,5 @@ export function TourEditor({ subject }: { readonly subject: TourSubject }) {
       </p>
     );
   }
-  return <LoadedEditor subject={subject} data={data.load.data} actions={actions} source={source} />;
+  return <LoadedEditor subject={subject} data={data.load.data} actions={actions} source={source} poll={data.poll} />;
 }

@@ -237,3 +237,7 @@ firestore.rules.compiled
 
 # Αποδεικτικά αδειών δεδομένων: το πρωτότυπο email (.eml) περιέχει προσωπικά στοιχεία υπαλλήλων και του Giorgio -> μόνο τοπικά. Στο git μένει το README.md.
 /docs/legal/data-licenses/*.eml
+
+# ADR-894 — η τοπική βάση GeoIP (DB-IP City Lite, ~130 MB): την παράγει το `pnpm run geoip:fetch` (τοπικά και
+# στο docker-build.yml, όπου μπαίνει στο image). ΠΟΤΕ στο git. Αγκυρωμένο: μόνο η ρίζα.
+/data/geoip/

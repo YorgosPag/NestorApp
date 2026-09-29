@@ -26,6 +26,7 @@ import {
   lineageIdsOf,
   useAdministrativeHierarchy,
 } from '@/hooks/useAdministrativeHierarchy';
+import { SETTLEMENT_LEVEL } from '@/lib/geo/admin-area-index-file';
 import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
 import {
   identifyExact,
@@ -44,9 +45,6 @@ const AUTOFILL_DEBOUNCE_MS = 1500;
 
 /** Ελάχιστο μήκος οδού πριν το ερώτημα έχει νόημα. */
 const MIN_STREET_LENGTH = 2;
-
-/** Το επίπεδο του οικισμού στην ελληνική διοικητική ιεραρχία. */
-const SETTLEMENT_LEVEL = 8;
 
 export interface SettlementAutoFillInput {
   readonly current: AddressWithHierarchyValue;

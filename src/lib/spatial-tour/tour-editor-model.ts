@@ -14,8 +14,9 @@
  */
 
 import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
-import type { TourCapture } from '@/types/spatial-tour';
+import type { TourCapture, TourNode } from '@/types/spatial-tour';
 
+import { levelKeyId } from './spatial-tour-graph';
 import { selectEditorCaptures } from './tour-capture-invariants';
 import { isCaptureViewable, stopOfCapture, type TourManifestStop } from './tour-manifest-stop';
 import { buildViewerGraph, neighboursOf, type TourViewerGraph } from './viewer/tour-viewer-graph';
@@ -37,6 +38,24 @@ export interface TourEditorModel {
   readonly missingArrows: ReadonlyMap<string, readonly string[]>;
   /** Ανά σημείο: πόσες λήψεις κάθονται εκεί — η αφαίρεση της τελευταίας σβήνει το σημείο (επιβεβαίωση). */
   readonly capturesOnNode: ReadonlyMap<string, number>;
+  /**
+   * Σημεία των οποίων η **νεότερη** λήψη δεν έχει (ακόμη) πλακίδια — ξαναψήνεται μετά από θόλωμα (ζ3), ή απέτυχε. Δεν είναι στον
+   * γράφο (καμία φωτογραφία να δειχτεί), αλλά **δεν** εξαφανίζονται: η οθόνη λέει «ετοιμάζεται ξανά».
+   */
+  readonly rebaking: readonly TourRebakingEntry[];
+}
+
+export interface TourRebakingEntry {
+  readonly nodeId: string;
+  readonly capture: TourCapture;
+  readonly readiness: Exclude<TourInboxReadiness, 'ready'>;
+  /**
+   * Ο κόμβος του γράφου (`null` ⇒ ορφανή λήψη) + οι ομοιόροφοί του που είναι σημεία (στάσεις **ή** ετοιμάζονται), με τη σειρά
+   * του γράφου — ώστε η στήλη να λέει **«Γραφείο»**, με την **ίδια** αρίθμηση όμοιων χώρων, και όχι «Λήψη 27/09» (εύρημα ζωντανής
+   * «Εφαρμογής», §4.15 ζ3).
+   */
+  readonly node: TourNode | null;
+  readonly levelPeers: readonly TourNode[];
 }
 
 function readinessOf(capture: TourCapture): TourInboxReadiness {
@@ -59,10 +78,30 @@ function inboxOf(captures: readonly TourCapture[]): TourInboxEntry[] {
     .map((capture) => ({ capture, readiness: readinessOf(capture) }));
 }
 
-function editorStops(captures: readonly TourCapture[]): TourManifestStop[] {
-  return selectEditorCaptures(captures).flatMap((capture) => {
-    const stop = capture.nodeId === null ? null : stopOfCapture(capture, capture.nodeId);
-    return stop === null ? [] : [stop];
+type PendingRebake = Omit<TourRebakingEntry, 'node' | 'levelPeers'>;
+
+/** Η νεότερη λήψη κάθε κόμβου χωρίζεται σε **στάση** (έχει πλακίδια) ή **σημείο που ετοιμάζεται** — ποτέ παλαιότερη φωτογραφία. */
+function editorStops(captures: readonly TourCapture[]): { readonly stops: TourManifestStop[]; readonly rebaking: PendingRebake[] } {
+  const stops: TourManifestStop[] = [];
+  const rebaking: PendingRebake[] = [];
+  for (const capture of selectEditorCaptures(captures)) {
+    if (capture.nodeId === null) continue;
+    const stop = stopOfCapture(capture, capture.nodeId);
+    const readiness = readinessOf(capture);
+    if (stop !== null) stops.push(stop);
+    else if (readiness !== 'ready') rebaking.push({ nodeId: capture.nodeId, capture, readiness });
+  }
+  return { stops, rebaking };
+}
+
+/** Ο κόμβος κάθε σημείου που ετοιμάζεται + οι ομοιόροφοι **σημεία** του, με τη σειρά του γράφου (η ΙΔΙΑ με του θεατή). */
+function withNodes(nodes: readonly TourNode[], stops: readonly TourManifestStop[], pending: readonly PendingRebake[]): TourRebakingEntry[] {
+  const points = new Set([...stops.map((stop) => stop.nodeId), ...pending.map((entry) => entry.nodeId)]);
+  return pending.map((entry) => {
+    const node = nodes.find((n) => n.id === entry.nodeId) ?? null;
+    const level = node === null ? null : levelKeyId(node.levelKey);
+    const levelPeers = node === null ? [] : nodes.filter((n) => points.has(n.id) && levelKeyId(n.levelKey) === level);
+    return { ...entry, node, levelPeers };
   });
 }
 
@@ -86,8 +125,12 @@ export function buildTourEditorModel(
   manifest: Pick<TourManifest, 'nodes' | 'levels'>,
   captures: readonly TourCapture[],
 ): TourEditorModel {
-  const graph = buildViewerGraph({ nodes: manifest.nodes, stops: editorStops(captures) }, manifest.levels);
-  return { graph, inbox: inboxOf(captures), missingArrows: missingArrowsOf(graph), capturesOnNode: countOnNode(captures) };
+  const { stops, rebaking } = editorStops(captures);
+  const graph = buildViewerGraph({ nodes: manifest.nodes, stops }, manifest.levels);
+  return {
+    graph, inbox: inboxOf(captures), missingArrows: missingArrowsOf(graph), capturesOnNode: countOnNode(captures),
+    rebaking: withNodes(manifest.nodes, stops, rebaking),
+  };
 }
 
 /**

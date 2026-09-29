@@ -389,7 +389,31 @@
     "separationSaved": "The separation line was saved.",
     "separationRemoved": "The separation line was removed.",
     "redactionSaved": "The area was blurred — the point is being prepared again and will appear blurred.",
-    "redactionRemoved": "The blur was removed — the point is being prepared again."
+    "redactionRemoved": "The blur was removed — the point is being prepared again.",
+    "blur": {
+      "applied": "Blur applied — the point is being prepared again and will reappear blurred.",
+      "title": "Privacy blur",
+      "hint": "Blur faces, licence plates, documents and family photos. Blurring protects people — it does not hide the space.",
+      "brush": "Blur brush",
+      "brushHint": "Drag on the photo to draw a circle; drag a circle to move it. Hold Space (or the middle button) to look around.",
+      "atReticle": "Blur at reticle",
+      "empty": "No blur circles at this point.",
+      "item": "Circle {number}",
+      "itemAuto": "Automatic",
+      "itemDraft": "Not applied",
+      "size": "Size of circle {number}",
+      "remove": "Remove circle {number}",
+      "removing": "{count, plural, one {# circle will be removed when applied.} other {# circles will be removed when applied.}}",
+      "handleMove": "Circle {number}: arrow keys to move, + and − to resize, Delete to remove",
+      "handleResize": "Size of circle {number}: drag to grow or shrink",
+      "apply": "{count, plural, one {Apply # change} other {Apply # changes}}",
+      "applyNote": "Applying prepares the point again; until then visitors cannot see it. The photo stays untouched — every blur can be undone.",
+      "discard": "Discard",
+      "rebaking": "Being prepared again",
+      "rebakingHint": "The blur is being applied to this point's photo. It will appear once ready — until then visitors cannot see it.",
+      "rebakeFailed": "Preparing this point failed. Undo the last blur change or try again.",
+      "rebakingSection": "Points being prepared again"
+    }
   },
   "rooms": {
     "types": {

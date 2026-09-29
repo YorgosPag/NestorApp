@@ -23,7 +23,8 @@ import { hasSignatory } from '@/lib/listings/listing-model-declaration';
 import { attestsNationalRegistry } from '@/lib/professional/professional-attestation';
 import type { SpatialTour, TourCapture } from '@/types/spatial-tour';
 
-import { isCaptureViewable } from './tour-manifest-stop';
+import { isCaptureViewable, isRebakingAfterRedaction } from './tour-manifest-stop';
+
 
 export type TourCaptureViolation =
   | { readonly kind: 'base-capture-missing'; readonly captureId: string }
@@ -117,12 +118,16 @@ export function selectViewerCaptures<C extends NodeCapture>(captures: readonly C
 }
 
 /**
- * **Ό,τι βλέπει ο υπεύθυνος στην οθόνη τοποθέτησης** (Φ2δ · §4.10): κάθε κοινό, πιο πρόσφατη **έτοιμη** λήψη ανά κόμβο —
- * ίδιος κανόνας επιλογής με το ράφι και τον θεατή. Η ετοιμότητα ρωτιέται **εδώ**, όχι μετά: ο υπεύθυνος πρέπει να
- * βλέπει φωτογραφία σε κάθε σημείο για να βάλει βελάκι.
+ * **Ό,τι βλέπει ο υπεύθυνος στην οθόνη τοποθέτησης** (Φ2δ · §4.10): κάθε κοινό, πιο πρόσφατη **έτοιμη** λήψη ανά κόμβο — ίδιος
+ * κανόνας επιλογής με το ράφι και τον θεατή· ο υπεύθυνος πρέπει να βλέπει φωτογραφία σε κάθε σημείο για να βάλει βελάκι (μια
+ * νέα λήψη που ψήνεται για πρώτη φορά **δεν** κρύβει την προηγούμενη).
+ * 🔴 **Εκτός** όταν η πιο πρόσφατη λήψη **ξαναψήνεται μετά από θόλωμα** (ζ3 · §4.15, `isRebakingAfterRedaction`): τότε επιστρέφεται
+ * **αυτή** (χωρίς πλακίδια) — ποτέ η παλαιότερη φωτογραφία του κόμβου στη θέση της, ποτέ σημείο που χάνεται από την οθόνη.
  */
-export function selectEditorCaptures<C extends NodeCapture & Pick<TourCapture, 'tileset'>>(captures: readonly C[]): C[] {
-  return latestPerNode(captures, isCaptureViewable);
+export function selectEditorCaptures<C extends NodeCapture & Pick<TourCapture, 'tileset' | 'originalHash'>>(captures: readonly C[]): C[] {
+  const rebaking = latestPerNode(captures, () => true).filter(isRebakingAfterRedaction);
+  const held = new Set(rebaking.map((capture) => capture.nodeId));
+  return [...latestPerNode(captures, isCaptureViewable).filter((capture) => !held.has(capture.nodeId)), ...rebaking];
 }
 
 /** Αλλαγή κοινού μιας λήψης: προς `public-listing` **μόνο** με ρητή πράξη του υπευθύνου (#3, §12 Δ6). */

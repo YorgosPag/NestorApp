@@ -165,6 +165,14 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   'separation-invalid': 422,
   'separation-absent': 404,
   'separation-exists': 409,
+  // ── Η ιδιωτικότητα: θολωμένες περιοχές (Φ2ζ · §4.15) ─────────────────────────
+  /** Εκτός σφαίρας (πλάτος > ±90°) · ακτίνα εκτός ορίων · id που δεν είναι `tred_…`. */
+  'redaction-invalid': 422,
+  'redaction-absent': 404,
+  /** «Νέα» σε id που υπάρχει ήδη με άλλη γεωμετρία (id του πελάτη) — σύγκρουση κατάστασης. */
+  'redaction-exists': 409,
+  /** Περισσότερες από `MAX_TOUR_REDACTIONS` περιοχές σε μία λήψη — φράχτης εγγράφου. */
+  'redaction-limit': 409,
   'graph-full': 409,
 };
 

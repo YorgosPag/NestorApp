@@ -205,6 +205,8 @@ async function identityFromDecodedToken(
     globalRole: verdict.globalRole,
     mfaEnrolled: decodedToken.mfaEnrolled === true,
     isAuthenticated: true,
+    // ADR-894 §10 Β1 — η ταυτότητα της σύνδεσης (σταθερή σε κάθε refresh), για ανάκληση ανά συσκευή.
+    authTimeSec: decodedToken.auth_time,
     permissions: readPermissionsClaim(decodedToken.permissions),
   };
 

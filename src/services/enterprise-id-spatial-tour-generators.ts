@@ -51,6 +51,11 @@ export abstract class SpatialTourIdGenerators extends SavedListingIdGenerators {
     return this.generateId(P.TOUR_SEPARATION).id;
   }
 
+  /** Θολωμένη περιοχή μιας λήψης (Φ2ζ, Α8) — τυχαίο: το κόβει ο πελάτης, ώστε η αναίρεση να ξαναγεννά το **ίδιο** id. */
+  generateTourRedactionId(): string {
+    return this.generateId(P.TOUR_REDACTION).id;
+  }
+
   generateTourCaptureId(): string {
     return this.generateId(P.TOUR_CAPTURE).id;
   }

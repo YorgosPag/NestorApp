@@ -32,13 +32,12 @@ import { join } from 'node:path';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
 import { simplifyGeoRing } from '../src/lib/geo/geo-simplify';
 import { ADMIN_BOUNDARIES_DIR, adminBoundaryFileName, type AdminBoundaryPlacesFile } from '../src/lib/geo/admin-boundary-file';
-import { ADMIN_AREA_INDEX_FILE, type AdminAreaIndexRow } from '../src/lib/geo/admin-area-index-file';
+import { ADMIN_AREA_INDEX_FILE, ADMIN_LEVEL, type AdminAreaIndexRow } from '../src/lib/geo/admin-area-index-file';
 import type { GeoOutline } from '../src/types/geo/coordinates';
 import { withAdminPrefixOf } from '../src/utils/address/place-name';
 import {
   ATTRIBUTION,
   LAYERS,
-  MUNICIPAL_UNIT_LEVEL,
   REPO_ROOT,
   buildIdIndex,
   composeMunicipalitiesFromUnits,
@@ -271,7 +270,7 @@ async function prepareLayers(
   for (const { layer, level } of LAYERS) {
     if (TOLERANCE_M[level] === undefined) continue;
     const collection = await loadLayer(layer);
-    if (level === MUNICIPAL_UNIT_LEVEL) municipalUnits = collection;
+    if (level === ADMIN_LEVEL.municipalUnit) municipalUnits = collection;
     const levelStats: LevelStats = { level, written: 0, skipped: 0, collapsed: 0, bytes: [] };
     for (const feature of collection.features) {
       const match = matchFeature(feature, level, index, ambiguous);

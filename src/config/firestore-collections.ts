@@ -1188,6 +1188,8 @@ export const SUBCOLLECTIONS = {
   USER_PREFERENCES: process.env.NEXT_PUBLIC_USER_PREFERENCES_SUBCOL || 'preferences',
   USER_SESSIONS: process.env.NEXT_PUBLIC_USER_SESSIONS_SUBCOL || 'sessions',
   USER_NOTIFICATIONS: process.env.NEXT_PUBLIC_USER_NOTIFICATIONS_SUBCOL || 'notifications',
+  /** ADR-894 §10 Β1 — κατάσταση ασφαλείας ανά χρήστη (ανακλημένες συνδέσεις). ΜΟΝΟ server· κανόνας `read, write: if false`. */
+  USER_SECURITY: process.env.NEXT_PUBLIC_USER_SECURITY_SUBCOL || 'security',
 
   // Company subcollections (RBAC paths: /companies/{id}/projects, /companies/{id}/properties)
   COMPANY_PROJECTS: process.env.NEXT_PUBLIC_COMPANY_PROJECTS_SUBCOL || 'projects',
@@ -1399,6 +1401,7 @@ export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly st
   USER_PREFERENCES: 'USERS',
   USER_SESSIONS: 'USERS',
   USER_NOTIFICATIONS: 'USERS',
+  USER_SECURITY: 'USERS',
 
   // Company subcollections → COMPANIES
   COMPANY_PROJECTS: 'COMPANIES',

@@ -37,6 +37,7 @@ import {
   type FloorPlanChoice,
   type TourEditStamp,
 } from '@/lib/spatial-tour/tour-plan-edit';
+import { applyRedactionEdits, redactionEditsOf, redactionsOf } from '@/lib/spatial-tour/tour-redaction-edit';
 import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from '@/lib/spatial-tour/tour-space-edit';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
@@ -44,9 +45,15 @@ import type { SpatialTour, TourCapture, TourSubject } from '@/types/spatial-tour
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
 import { prepareTourFloorPlan } from './tour-plan-prepare';
+import { redactedCaptureChange } from './tour-redaction-apply';
 
 type TourGraphWriteOutcome =
-  | { readonly kind: 'written' | 'unchanged'; readonly revision: number }
+  | {
+      readonly kind: 'written' | 'unchanged';
+      readonly revision: number;
+      /** Η λήψη που περιμένει ψήσιμο μετά την εγγραφή (αλλαγή θολώματος, Φ2ζ) — ο καλών το ξεκινά (`after`). */
+      readonly rebakeCapture?: DocumentReference;
+    }
   | TourAccessRefused;
 
 interface TxContext {
@@ -66,6 +73,8 @@ interface EditPlan {
   readonly result: TourGraphEditResult;
   readonly captureRef: DocumentReference | null;
   readonly captureFields?: Readonly<Record<string, unknown>>;
+  /** Η λήψη άλλαξε pixel (θόλωμα) ⇒ ψήνεται ξανά μετά τη συναλλαγή. */
+  readonly rebake?: boolean;
 }
 
 async function readCapture(ctx: TxContext, captureId: string): Promise<{ readonly ref: DocumentReference; readonly capture: TourCapture } | null> {
@@ -111,14 +120,38 @@ function planOrient(capture: TourCapture, ref: DocumentReference, ctx: TxContext
   return { result, captureRef: ref, captureFields: { headingRad: heading, headingSource: 'manual' } };
 }
 
+/**
+ * **Θόλωμα** (Φ2ζ): αλλάζει τη **λήψη**, όχι τον γράφο — αλλά περνά από τον ίδιο γραφέα και ανεβάζει το `revision` (μία
+ * διαδρομή αλλαγών, μία αισιόδοξη ροή στην οθόνη). Νέα pixel ⇒ νέο κλειδί σε `pending` ⇒ ψήσιμο μετά τη συναλλαγή.
+ */
+function planRedaction(
+  capture: TourCapture,
+  ref: DocumentReference,
+  ctx: TxContext,
+  command: Extract<TourGraphCommand, { op: 'redact' | 'unredact' | 'redactions' }>,
+): EditPlan | TourAccessRefused {
+  // Μονή εντολή = δέσμη ενός (ζ3): ΕΝΑΣ δρόμος, ατομικός, μία αλλαγή κλειδιού όσες κι αν είναι οι αλλαγές.
+  const edit = applyRedactionEdits(redactionsOf(capture), redactionEditsOf(command), ctx.stamp);
+  if (edit.kind !== 'edited') return { result: edit, captureRef: null };
+  const change = redactedCaptureChange(capture, edit.redactions);
+  const graph = { levels: ctx.tour.levels, nodes: ctx.tour.nodes };
+  return { result: { kind: 'edited', graph }, captureRef: ref, captureFields: change.fields, rebake: change.rebake };
+}
+
+const isRedactionCommand = (command: TourGraphCommand): command is Extract<TourGraphCommand, { op: 'redact' | 'unredact' | 'redactions' }> =>
+  command.op === 'redact' || command.op === 'unredact' || command.op === 'redactions';
+
 /** Η αλλαγή, και τι αλλάζει στη λήψη — ό,τι χρειάζεται για την εγγραφή. */
 async function planCommand(ctx: TxContext, command: TourGraphCommand): Promise<EditPlan | TourAccessRefused> {
   const graphOnly = planGraphOnly(ctx, command);
   if (graphOnly !== null) return { result: graphOnly, captureRef: null };
-  if (command.op !== 'place' && command.op !== 'unplace' && command.op !== 'orient') throw new Error(`Unplanned tour graph command: ${command.op}`);
+  if (command.op !== 'place' && command.op !== 'unplace' && command.op !== 'orient' && !isRedactionCommand(command)) {
+    throw new Error(`Unplanned tour graph command: ${command.op}`);
+  }
   const found = await readCapture(ctx, command.captureId);
   if (found === null) return refuseTourAccess('capture-absent');
   if (command.op === 'orient') return planOrient(found.capture, found.ref, ctx, command.headingRad);
+  if (isRedactionCommand(command)) return planRedaction(found.capture, found.ref, ctx, command);
   if (command.op === 'place') {
     return { result: placeCapture(ctx.tour, found.capture, command.target, enterpriseIdService.generateTourNodeId()), captureRef: found.ref };
   }
@@ -137,7 +170,7 @@ function applyEdit(ctx: TxContext, plan: EditPlan): TourGraphWriteOutcome {
   ctx.tx.update(ctx.tourRef, { levels: result.graph.levels, nodes: result.graph.nodes, revision, updatedAt: ctx.stamp.at, updatedBy: ctx.stamp.uid });
   if (plan.captureRef !== null && result.captureNodeId !== undefined) ctx.tx.update(plan.captureRef, { nodeId: result.captureNodeId });
   if (plan.captureRef !== null && plan.captureFields !== undefined) ctx.tx.update(plan.captureRef, plan.captureFields);
-  return { kind: 'written', revision };
+  return { kind: 'written', revision, ...(plan.rebake === true && plan.captureRef !== null ? { rebakeCapture: plan.captureRef } : {}) };
 }
 
 /** Η κάτοψη της εντολής `floorplan`, κριμένη και έτοιμη — `undefined` για κάθε άλλη εντολή, `null` για «χωρίς κάτοψη». */

@@ -43,6 +43,7 @@ import { MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
 import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
 import { GeofenceMarkerPin } from './GeofenceMarkerPin';
 import { useGeofenceConfig, MIN_RADIUS, MAX_RADIUS } from '../hooks/useGeofenceConfig';
+import type { CoordinatePoint } from '@/utils/address/address-list-center';
 
 // =============================================================================
 // CONSTANTS
@@ -60,13 +61,15 @@ const { fill: CIRCLE_FILL, line: CIRCLE_LINE } = createGeofenceLayerStyles(
 
 interface GeofenceConfigMapProps {
   projectId: string;
+  /** Το σημείο του εργοταξίου — σπόρος της ζώνης και στόχος της «Επαναφοράς». */
+  siteCenter?: CoordinatePoint;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
+export function GeofenceConfigMap({ projectId, siteCenter }: GeofenceConfigMapProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -91,7 +94,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
     handleRadiusSliderChange,
     handleReset,
     handleToggleEnabled,
-  } = useGeofenceConfig(projectId, t);
+  } = useGeofenceConfig(projectId, t, siteCenter);
 
   if (isLoading) {
     return <CardLoadingState />;

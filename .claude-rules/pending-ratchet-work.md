@@ -2,6 +2,15 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **29/09 — ΣΥΝΔΕΣΜΟΣ ΜΕΣΑ ΣΕ ΚΕΙΜΕΝΟ: ΕΝΑ SSoT, ΔΕΚΑΔΕΣ LITERALS** *(N.0.2 · ADR-890 §15.6 · WCAG 1.4.1)*
+
+  Νέο `lib/ui/link-style.ts` → `VISIBLE_LINK_CLASS` (υπογράμμιση **πάντα**, πιο παχιά στο hover). Το χρησιμοποιούν μόνο η
+  διαδρομή και ο πίνακας Δ.Ε. της `/area`. Έξω μένουν δύο οικογένειες literals (μετρημένο 29/09, `.tsx` στο `src/`):
+  `hover:underline` (**αόρατο στην αφή**: ο σύνδεσμος φαίνεται απλό κείμενο στο κινητό) και `underline underline-offset-4`
+  (σωστό, αλλά αντίγραφο). Θεραπεία: μετάβαση στο `VISIBLE_LINK_CLASS` όπου ο σύνδεσμος ζει μέσα σε κείμενο· όπου το
+  `hover:underline` είναι σκόπιμο (κάρτα/κουμπί που ήδη **μοιάζει** πατήσιμο), γραπτός λόγος. Μέτρα πρώτα:
+  `grep -rl "hover:underline" src --include=*.tsx`.
+
 - 🟠 **26/09 — `findContactByEmail`: ΣΩΣΤΟ ΤΩΡΑ, ΑΛΛΑ O(n) ΑΝΑΓΝΩΣΕΙΣ ΑΝΑ ΕΛΕΓΧΟ** *(ADR-884 §4.6 · ADR-827)*
 
   Ήταν `.limit(50)` χωρίς σελιδοποίηση ⇒ σε γραφείο με >50 επαφές δεύτερη καρτέλα για τον ίδιο άνθρωπο (διορθώθηκε:
@@ -3896,6 +3905,29 @@
 ---
 
 ## Pending tasks (priority order)
+
+### 🕐 `getRelativeTime` — τέσσερα τοπικά αντίγραφα του «πριν από Χ» έξω από το `intl-formatting` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-29, ADR-894)
+- **SSoT**: `formatRelativeTime` του `src/lib/intl-formatting.ts` (`Intl.RelativeTimeFormat` στη γλώσσα του αναγνώστη).
+  Το `lib/obligations/utils.ts` ήδη αναθέτει σε αυτό ✅· το `session-helpers.ts` μεταφέρθηκε 2026-09-29 (ήταν **σκληρά ελληνικά**).
+- **Μένουν** (grep `getRelativeTime` 2026-09-29): `components/communications/utils/formatters.ts` · `components/crm/inbox/thread-view-helpers.tsx` ·
+  `components/crm/unified-inbox-helpers.tsx` · `domain/cards/conversation/ConversationListCard.tsx`. Τρία δέχονται `t` (δικά τους
+  κλειδιά i18n) — πρώτα έλεγχος αν οι φράσεις τους διαφέρουν σκόπιμα από του `Intl`, **μετά** ανάθεση. Όχι τυφλή αντικατάσταση.
+
+### 🌍 `security-defaults.ts` — ονόματα χωρών σκληρά στον κώδικα (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-29, ADR-894)
+- `src/services/security/security-defaults.ts:155+` γράφει `countryName: 'Ελλάδα' | 'Κύπρος' | 'ΗΠΑ'` και το
+  `EnterpriseSecurityService.ts:290` το δείχνει ως `label` ⇒ ελληνικά και στο αγγλικό UI (N.11, αόρατο στον scanner).
+- **Σωστή λύση** (ίδια με το ADR-894 §4.4): κράτα μόνο `countryCode`, απόδοση με `getDisplayNames().region.of(code)` στην οθόνη.
+  **Μη** «διορθωθεί» τυφλά: να ελεγχθεί πρώτα αν το `countryName` αποθηκεύεται σε Firestore (τότε θέλει ανεκτική ανάγνωση).
+
+### ♿ Κουμπιά-εικονίδια χωρίς προσβάσιμο όνομα — πύλη ΚΛΑΣΗΣ, όχι διόρθωση ανά αρχείο (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-29, ADR-891 §10.4 Θ2)
+- **Έγινε ήδη (ΙΚΑ)**: `WorkerCard` (όνομα με τον εργαζόμενο, πρότυπο GitHub/Gmail) · `DailyTimeline` (+ `aria-expanded`) ·
+  `DateNavigator` · `MonthYearSelector` (ήταν ωμά αγγλικά `aria-label="Previous day"` — **αόρατα** στον scanner του N.11).
+  Κλειδιά `ika.periodNavigation.*`, `ika.workersTab.removeWorkerNamed`, `ika.timesheetTab.{show,hide}Records`. Άγκυρα:
+  `src/components/projects/ika/components/__tests__/ika-icon-button-names.test.tsx`.
+- **Μένει**: μέτρηση 2026-09-29 (ευρετική, regex στο opening tag): **129** `<Button size="icon">` στο `src/`, **75** χωρίς
+  `aria-label` σε **46** αρχεία (κάποια ίσως ονομάζονται από `sr-only` παιδί ⇒ η πύλη πρέπει να το ξέρει).
+- **Σωστή λύση (κλάση)**: στο `@/components/ui/button` ο τύπος να **απαιτεί** `aria-label` | `aria-labelledby` όταν `size="icon"`
+  (discriminated union — το Figma/Radix Themes `IconButton` κάνει το ίδιο) **ή** πύλη AST ratchet (πρότυπο CHECK 3.23). Όχι 46 χειρόγραφες διορθώσεις.
 
 ### 🧵 RPC κύριου νήματος ⇄ Web Worker — τέσσερα χειρόγραφα αντίγραφα στο dxf-viewer (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ Γ3γ-2α §4.14)
 - **Έγινε ήδη (Γ3γ-2α)**: SSoT `src/lib/workers/{worker-rpc-protocol, worker-rpc-client, worker-rpc-host}.ts` — νωχελική γέννηση ·

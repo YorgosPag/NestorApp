@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-09-27T07:34:58.161Z",
+    "timestamp": "2026-09-29T16:37:46.121Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:f6a6de154a5980f4febfca9d96e53cd8fc07eb13aeadb150fbbdbeea4a1f460f"
+        "value": "sha256:11f0a046d0c40eee2f4307acacdf15db73818e1da224d7f67df84bc31e46e421"
       }
     ]
   },
@@ -19363,6 +19363,31 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:npm/maxmind@5.0.7",
+      "name": "maxmind",
+      "version": "5.0.7",
+      "purl": "pkg:npm/maxmind@5.0.7",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:npm/merge-stream@2.0.0",
       "name": "merge-stream",
       "version": "2.0.0",
@@ -19667,6 +19692,31 @@
       "name": "mkdirp",
       "version": "0.5.6",
       "purl": "pkg:npm/mkdirp@0.5.6",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/mmdb-lib@3.0.3",
+      "name": "mmdb-lib",
+      "version": "3.0.3",
+      "purl": "pkg:npm/mmdb-lib@3.0.3",
       "scope": "optional",
       "licenses": [
         {
@@ -25047,6 +25097,31 @@
         {
           "license": {
             "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/tiny-lru@13.0.0",
+      "name": "tiny-lru",
+      "version": "13.0.0",
+      "purl": "pkg:npm/tiny-lru@13.0.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
           }
         }
       ],

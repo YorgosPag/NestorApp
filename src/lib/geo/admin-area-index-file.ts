@@ -46,10 +46,23 @@ export type AdminAreaIndexRow =
   | readonly [id: string, name: string, level: number, parentId: string | null, alternateNames: readonly string[]];
 
 /**
+ * **Οι βαθμίδες της διοικητικής ιεραρχίας (Καλλικράτης, ADR-883) — SSoT.** Ο αριθμός είναι το `level` του
+ * ευρετηρίου και της ιεραρχίας· κανένα αρχείο δεν ξαναγράφει τοπικά «5» ή «6» (ADR-890 §16, N.0.2).
+ */
+export const ADMIN_LEVEL = {
+  region: 3,
+  regionalUnit: 4,
+  municipality: 5,
+  municipalUnit: 6,
+  community: 7,
+  settlement: 8,
+} as const;
+
+/**
  * Η βαθμίδα των **οικισμών** — η μόνη χωρίς δικό της όριο (η πηγή δίνει **σημεία**, ADR-883 §5.10).
  * Επιλογή οικισμού ⇒ το όριο του γονέα + πινέζα στο χωριό.
  */
-export const SETTLEMENT_LEVEL = 8;
+export const SETTLEMENT_LEVEL = ADMIN_LEVEL.settlement;
 
 /** Μια περιοχή του ευρετηρίου, με ονόματα πεδίων — ό,τι βλέπει ο υπόλοιπος κώδικας. */
 export interface AdminArea {

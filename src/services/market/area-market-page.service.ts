@@ -9,7 +9,8 @@ import 'server-only';
  * 🔑 **ΚΑΝΕΝΑ ΕΡΩΤΗΜΑ ΓΙΑ ΤΗ ΣΥΝΟΨΗ.** Σημάδι → στιγμιότυπα (περιοχή + γονέας) → μηνιαία σειρά, όλα με `getAll`
  * ντετερμινιστικών ταυτοτήτων μέσω του `area-market-snapshot.reader.ts` (κοινού με τη σελίδα αγγελίας).
  *
- * 🔑 **ΤΙΜΕΣ ΣΥΜΒΟΛΑΙΩΝ (ADR-890 Φ2)** από τα στατικά αρχεία του ADR-889 — περιοχή + Δήμος, για την ίδια αναγωγή.
+ * 🔑 **ΤΙΜΕΣ ΣΥΜΒΟΛΑΙΩΝ (ADR-890 Φ2)** από τα στατικά αρχεία του ADR-889 — περιοχή + γονέας με σελίδα, για την ίδια
+ * αναγωγή (Δ.Ε. → Δήμος → Π.Ε. → Περιφέρεια, §16).
  * Αποτυχία ανάγνωσής τους **δεν** ρίχνει τη σελίδα: η ενότητα λέει «δεν είναι διαθέσιμες» και τα υπόλοιπα μένουν.
  *
  * 🔑 **ΤΡΕΙΣ ΕΚΒΑΣΕΙΣ.** `not-found` (η ταυτότητα δεν είναι σελίδα περιοχής) ⇒ 404 · `unavailable` (δεν
@@ -20,14 +21,18 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { adminAreaAncestors, isAdminAreaId, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import { adminAreaFieldOfLevel } from '@/lib/geo/admin-area-of-point';
+import { ADMIN_OVERVIEW_CHILDREN_MIN } from '@/lib/geo/admin-overview-file';
 import { compareListingsByListedAt } from '@/lib/listings/listing-results-order';
+import { pickPriceMapAreas } from '@/lib/market/price-map';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 import { readAreaMarketSeriesPoints, readLatestAreaMarket } from '@/services/market/area-market-snapshot.reader';
-import { readAreaSummary } from '@/services/market/market-transactions.reader';
+import { readAreaSummary, readContractPriceMap } from '@/services/market/market-transactions.reader';
 import { readValueZoneFileIds } from '@/services/market/value-zones.reader';
 import { readAdminAreaDirectory } from '@/services/places/admin-boundaries.reader';
 import {
   hasAreaMarketPage,
+  hasValueZoneMap,
+  type AreaChildPricesState,
   type AreaContractsState,
   type AreaListingsPreview,
   type AreaMarketPage,
@@ -78,7 +83,19 @@ async function readContracts(areaId: string, parentId: string | null): Promise<A
   return { kind: 'ready', window, summary: own.file, parent: parent?.kind === 'ready' ? parent.file : null };
 }
 
-/** Ο γονέας της σύνοψης: μόνο όταν είναι κι αυτός σελίδα περιοχής (Δ.Ε. ⇒ Δήμος). */
+/**
+ * Οι τιμές των **παιδιών** για τον χάρτη σύγκρισης (ADR-890 §15 · §16: Περιφέρεια → Π.Ε. → Δήμοι → Δ.Ε.) — **μόνο** όταν
+ * η περιοχή έχει αρχείο παιδιών (ίδιος κανόνας με τον γεννήτορα, `ADMIN_OVERVIEW_CHILDREN_MIN`). Κρατά και την ίδια την
+ * περιοχή: αναγωγή κάτω από το κατώφλι.
+ */
+async function readChildPrices(area: AdminArea, children: readonly AdminArea[]): Promise<AreaChildPricesState> {
+  if (children.length < ADMIN_OVERVIEW_CHILDREN_MIN) return { kind: 'none' };
+  const file = await readContractPriceMap();
+  if (file === null) return { kind: 'unavailable' };
+  return { kind: 'ready', asOf: file.asOf, areas: pickPriceMapAreas(file.areas, [area.id, ...children.map((child) => child.id)]) };
+}
+
+/** Ο γονέας της σύνοψης: μόνο όταν είναι κι αυτός σελίδα περιοχής (Δ.Ε. ⇒ Δήμος ⇒ Π.Ε. ⇒ Περιφέρεια, §16). */
 function marketParentOf(area: AdminArea, ancestors: readonly AdminArea[]): string | null {
   const parent = ancestors[0];
   return parent !== undefined && hasAreaMarketPage(parent.level) && parent.level < area.level ? parent.id : null;
@@ -99,11 +116,12 @@ export async function loadAreaMarketPage(adminDb: AdminFirestore, areaId: string
   const ancestors = adminAreaAncestors(directory.areas, area.id);
   const children = directory.childrenOf(area.id).filter((child) => hasAreaMarketPage(child.level));
   const parentId = marketParentOf(area, ancestors);
-  const [market, listings, contracts, valueZoneFiles] = await Promise.all([
+  const [market, listings, contracts, valueZoneFiles, childPrices] = await Promise.all([
     readMarket(adminDb, area.id, parentId, today),
     readListings(adminDb, area),
     readContracts(area.id, parentId),
-    readValueZoneFileIds([area.id, ...children.map((child) => child.id)]),
+    hasValueZoneMap(area.level) ? readValueZoneFileIds([area.id, ...children.map((child) => child.id)]) : Promise.resolve([]),
+    readChildPrices(area, children),
   ]);
-  return { kind: 'found', area, ancestors, children, market, listings, contracts, valueZoneFiles };
+  return { kind: 'found', area, ancestors, children, market, listings, contracts, valueZoneFiles, childPrices };
 }

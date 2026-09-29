@@ -10,6 +10,9 @@
  * @gdpr-compliant true
  */
 
+import type { SessionEndReason } from './session-lifecycle';
+import type { IpPlace } from '@/lib/geo/ip-place.types';
+
 // ============================================================================
 // DEVICE INFORMATION TYPES
 // ============================================================================
@@ -71,24 +74,14 @@ export interface SessionDeviceInfo {
 // ============================================================================
 
 /**
- * Session location information
- * GDPR: City-level only, IP hashed, marked as approximate
+ * Η τοποθεσία μιας συνεδρίας — **επιλυμένη στον server**, από την IP του αιτήματος, με τοπική βάση GeoIP (ADR-894).
+ *
+ * GDPR: επίπεδο πόλης το πολύ· η IP **δεν** αποθηκεύεται ποτέ, μόνο το αποτύπωμά της με **μυστικό** αλάτι
+ * (`clientIpFingerprint`, ADR-876 §5). Κωδικός χώρας αντί για όνομα — το όνομα αποδίδεται στην οθόνη.
  */
-export interface SessionLocation {
-  /** Hashed IP address (SHA-256, first 8 chars) - GDPR compliant */
-  ipHash: string;
-  /** Country code (ISO 3166-1 alpha-2) */
-  countryCode: string;
-  /** Country name (localized) */
-  countryName: string;
-  /** City name (approximate) */
-  city: string;
-  /** Region/State (optional) */
-  region?: string;
-  /** Timezone */
-  timezone: string;
-  /** Flag: Always true to indicate approximate location */
-  isApproximate: true;
+export interface SessionLocation extends IpPlace {
+  /** `clientIpFingerprint(ip)` — για σύγκριση «άλλαξε δίκτυο;», ποτέ η ίδια η IP· `null` χωρίς διεύθυνση. */
+  ipFingerprint: string | null;
 }
 
 // ============================================================================
@@ -155,14 +148,17 @@ export interface UserSession {
   userId: string;
   /** Device information */
   deviceInfo: SessionDeviceInfo;
-  /** Location information (GDPR compliant) */
+  /** Η τοποθεσία στη σύνδεση (GDPR compliant) */
   location: SessionLocation;
+  /**
+   * Η **τελευταία** τοποθεσία, όταν η συσκευή άλλαξε δίκτυο μετά τη σύνδεση (ADR-894 §4). Απούσα = ίδια με τη σύνδεση.
+   * Το GitHub δείχνει μόνο την πρώτη· ένας κλεμμένος υπολογιστής που συνεχίζει από άλλη πόλη **φαίνεται** εδώ.
+   */
+  lastLocation?: SessionLocation;
   /** Timestamp information */
   timestamps: SessionTimestamps;
   /** Current session status */
   status: SessionStatus;
-  /** Whether this is the current device's session */
-  isCurrent: boolean;
   /** Session metadata */
   metadata: SessionMetadata;
   /** Revocation reason (if revoked) */
@@ -176,13 +172,26 @@ export interface UserSession {
 // ============================================================================
 
 /**
- * Session creation input
+ * Ό,τι ξέρει **μόνο** ο browser για τη συσκευή του — τα υπόλοιπα (UA, IP, τοποθεσία) τα διαβάζει ο server
+ * από το ίδιο το αίτημα, ώστε να μη μπορούν να πλαστογραφηθούν (ADR-894 §4).
  */
-export interface CreateSessionInput {
-  userId: string;
+export interface ClientDeviceHints {
+  screenResolution?: string;
+  language?: string;
+}
+
+/**
+ * `POST /api/auth/active-sessions` — «αυτός ο browser είναι ενεργός». `sessionId` = η εγγραφή που
+ * θυμάται ο browser (αν θυμάται)· ο server την αγγίζει αν ζει, αλλιώς φτιάχνει νέα.
+ */
+export interface SyncActiveSessionInput extends ClientDeviceHints {
+  sessionId: string | null;
   loginMethod: LoginMethod;
-  rememberMe?: boolean;
-  twoFactorUsed?: boolean;
+}
+
+export interface SyncActiveSessionResult {
+  sessionId: string;
+  created: boolean;
 }
 
 /**
@@ -273,10 +282,12 @@ export interface SessionEvent {
 export interface SessionDisplayItem {
   /** Session ID */
   id: string;
-  /** Display label (e.g., "Chrome on Windows") */
-  displayLabel: string;
-  /** Location display (e.g., "Athens, Greece") */
-  locationDisplay: string;
+  /** Browser + έκδοση (π.χ. «Chrome 140») — η φράση «X σε Y» συντίθεται στην οθόνη, μέσω i18n */
+  browser: string;
+  /** Λειτουργικό σύστημα */
+  os: OperatingSystem;
+  /** Η πιο πρόσφατη γνωστή τοποθεσία — αποδίδεται στη γλώσσα του αναγνώστη από την οθόνη, ποτέ εδώ */
+  location: SessionLocation;
   /** Last active relative time (e.g., "2 hours ago") */
   lastActiveRelative: string;
   /** Is this the current session */
@@ -291,6 +302,20 @@ export interface SessionDisplayItem {
   timestamps: SessionTimestamps;
 }
 
+/** ADR-894 §10 Β2 — μια συνεδρία που **τελείωσε** (Google «Your devices»: 28 ημέρες). */
+export interface EndedSessionDisplayItem extends SessionDisplayItem {
+  /** Γιατί τελείωσε — κλειστό σύνολο (`session-lifecycle.ts`), κείμενο από το locale. */
+  endReason: SessionEndReason;
+  /** Πότε τελείωσε. */
+  endedAt: Date;
+}
+
+/** Η λίστα συσκευών από **ένα** ερώτημα: ζωντανές + όσες τελείωσαν στο παράθυρο. */
+export interface SessionsOverviewDisplay {
+  live: SessionDisplayItem[];
+  ended: EndedSessionDisplayItem[];
+}
+
 /**
  * Session management action result
  */
@@ -303,4 +328,9 @@ export interface SessionActionResult {
   affectedSessions: string[];
   /** Action performed */
   action: 'revoke' | 'revoke_all' | 'extend' | 'update';
+  /**
+   * ADR-894 §10 Β1 — ανακλήθηκαν **όλες** οι συνδέσεις και αυτή η συσκευή **δεν** πήρε νέο κλειδί (χωρίς
+   * Bearer, ή αποτυχία υιοθέτησης) ⇒ η οθόνη στέλνει στη σύνδεση. Η πράξη **έγινε**.
+   */
+  signInRequired?: boolean;
 }

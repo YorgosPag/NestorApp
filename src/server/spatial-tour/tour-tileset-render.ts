@@ -15,6 +15,7 @@ import 'server-only';
 import sharp from 'sharp';
 
 import { renderCubeFace, type RawImage } from '@/lib/spatial-tour/tileset/equirect-to-cube';
+import { applyRedactions, redactionProxyWidth } from '@/lib/spatial-tour/tileset/tour-redaction-mask';
 import {
   TOUR_PREVIEW_FACE_SIZE,
   TOUR_TILE_JPEG_QUALITY,
@@ -26,6 +27,7 @@ import {
   tilesetLevels,
 } from '@/lib/spatial-tour/tileset/tour-tileset-layout';
 import { TOUR_CUBE_FACES, type TourCubeFace } from '@/lib/spatial-tour/viewer/tour-cube-faces';
+import type { TourRedactionRegion } from '@/types/spatial-tour';
 
 /** Ένα αντικείμενο προς αποθήκευση: τα τμήματα διαδρομής μετά το `tour-tiles/{tourId}/` και τα bytes. */
 export interface TilesetObject {
@@ -90,9 +92,32 @@ async function* tilesetObjects(source: RawImage, hash: string, faceSize: number)
   yield { segments: previewSegments(hash), body: await jpeg(rawInput(strip)) };
 }
 
-/** **Ψήσε** — επιστρέφει το μέγεθος όψης αμέσως και τα αντικείμενα ως ροή. */
-export async function renderTileset(bytes: Buffer, hash: string): Promise<RenderedTileset> {
-  const source = await decodeEquirect(bytes);
+/**
+ * **Το θολωμένο αντίγραφο** (Φ2ζ): σμίκρυνση σε `redactionProxyWidth` με μέσο όρο περιοχής, μεγέθυνση πίσω με κυβική — η
+ * πληροφορία μέσα στο κελί **χάνεται** (όχι αντιστρέψιμο θόλωμα γνωστού πυρήνα) και κοστίζει κλάσμα ενός Gaussian 8K.
+ */
+async function blurredCopy(source: RawImage): Promise<Buffer> {
+  const width = redactionProxyWidth(source.width);
+  const height = Math.max(4, Math.round((width * source.height) / source.width));
+  const proxy = await rawInput(source).resize(width, height, { kernel: 'mitchell' }).raw().toBuffer();
+  return sharp(proxy, { raw: { width, height, channels: RGB } })
+    .resize(source.width, source.height, { kernel: 'cubic' }).raw().toBuffer();
+}
+
+/** Το equirect με τις θολωμένες περιοχές (Φ2ζ · Α8) — **πριν** τον κύβο, ώστε πλακίδια **και** προεπισκόπηση να είναι θολωμένα. */
+async function redacted(source: RawImage, regions: readonly TourRedactionRegion[]): Promise<RawImage> {
+  if (regions.length === 0) return source;
+  const blurred = await blurredCopy(source);
+  applyRedactions(source.data, blurred, source, regions);
+  return source;
+}
+
+/**
+ * **Ψήσε** — επιστρέφει το μέγεθος όψης αμέσως και τα αντικείμενα ως ροή. Οι `regions` θολώνονται στην **ίδια** αποκωδικοποίηση
+ * (επί τόπου στα ωμά bytes που ανήκουν μόνο σε αυτό το ψήσιμο).
+ */
+export async function renderTileset(bytes: Buffer, hash: string, regions: readonly TourRedactionRegion[] = []): Promise<RenderedTileset> {
+  const source = await redacted(await decodeEquirect(bytes), regions);
   const faceSize = faceSizeForEquirect(source.width);
   return { faceSize, objects: tilesetObjects(source, hash, faceSize) };
 }

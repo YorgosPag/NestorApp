@@ -241,10 +241,10 @@
       "thisDevice": "This device",
       "revokeSession": "Revoke",
       "revokeSessionTitle": "Revoke Session",
-      "revokeSessionDescription": "This will sign out this device. The user will need to sign in again.",
+      "revokeSessionDescription": "The device is signed out immediately; signing in again will require the account credentials.",
       "revokeAllOther": "Sign out all other devices",
       "revokeAllTitle": "Sign Out All Other Devices",
-      "revokeAllDescription": "This will sign out all devices except this one. Other users will need to sign in again.",
+      "revokeAllDescription": "All other devices are signed out immediately and each will need to sign in again. This device stays signed in.",
       "revokeAll": "Sign out all",
       "comingSoon": "Coming Soon",
       "twoFactorTitle": "Two factor title",
@@ -258,7 +258,22 @@
       "agentsRevoking": "Disconnecting...",
       "agentsRevokeTitle": "Disconnect agent",
       "agentsRevokeDescription": "The agent {clientName} loses access immediately. It will need a new approval to reconnect.",
-      "agentsRevokeError": "Disconnecting failed. Please try again."
+      "agentsRevokeError": "Disconnecting failed. Please try again.",
+      "deviceLabel": "{browser} on {os}",
+      "locationUnknown": "Unknown location",
+      "locationApproximateNote": "Locations are approximate: estimated from the IP address, on our own server, and may differ (VPN, mobile network).",
+      "revokeSessionAria": "Sign out device {device}",
+      "sessionsLoading": "Loading sessions",
+      "revokeError": "Signing out failed. Please try again.",
+      "endedSessionsTitle": "Ended sessions",
+      "endedSessionsWindow": "Last {days} days · {count}",
+      "endedAt": "{reason} · {when}",
+      "endReason": {
+        "signed_out": "Signed out",
+        "removed": "Signed out from another device",
+        "device_limit": "Signed out due to the device limit",
+        "expired": "Expired after inactivity"
+      }
     },
     "privacy": {
       "title": "Privacy",
@@ -376,6 +391,13 @@
     "refused": {
       "notAMember": "You are not a member of this workspace — there is nothing to leave.",
       "lastManager": "You are the last administrator of this workspace. Appoint another administrator first, so the workspace is not left without management."
+    }
+  },
+  "source": {
+    "ipGeolocation": {
+      "owner": "DB-IP",
+      "dataset": "IP Geolocation (City Lite)",
+      "changes": "The lookup runs locally on our own server; we keep only city and country, never the IP address."
     }
   }
 }

@@ -31,6 +31,12 @@ export interface TourEditStamp {
   readonly at: string;
 }
 
+/**
+ * **Η σφραγίδα ενός υπολογισμού που δεν γράφεται** (αισιόδοξη εικόνα · αναίρεση · πρόχειρο) — κενή: το «ποιος/πότε» το γράφει ο
+ * διακομιστής, και δεν αλλάζει ούτε ένα pixel ούτε μια κρίση.
+ */
+export const UNSTAMPED: TourEditStamp = { uid: '', at: '' };
+
 /** Η κάτοψη που διάλεξε ο άνθρωπος, **με** την εικόνα που ετοίμασε ο διακομιστής (διαστάσεις + αποτύπωμα). */
 export interface FloorPlanChoice {
   readonly fileId: string;

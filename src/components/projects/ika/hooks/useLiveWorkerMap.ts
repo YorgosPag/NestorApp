@@ -11,23 +11,16 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import type { CoordinatePoint } from '@/utils/address/address-list-center';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { generateCircleGeoJSON } from '../map-shared/geo-math';
 // ⚠️ Με ψευδώνυμο: το `distanceMeters` είναι ήδη **τιμή** σε αυτό το αρχείο (πεδίο του
 // συμβολαίου, γρ. 41). Η σύγκρουση είναι πραγματική — μέτρηση έναντι μετρημένου.
 import { distanceMeters as greatCircleMeters } from '@/lib/geo/geo-distance';
-import type { GeofenceApiResponse } from '../map-shared/geofence-api-types';
+import { useProjectGeofence } from '../map-shared/project-geofence-store';
 import { eventTypeLabel } from '../components/live-worker-helpers';
-import type {
-  AttendanceEvent,
-  GeofenceConfig,
-  ProjectWorker,
-} from '../contracts';
-import { createStaleCache } from '@/lib/stale-cache';
-
-const liveWorkerMapCache = createStaleCache<GeofenceConfig | null>('project-live-worker-map');
+import type { AttendanceEvent, ProjectWorker } from '../contracts';
 
 // =============================================================================
 // TYPES
@@ -59,11 +52,13 @@ export function useLiveWorkerMap(
   events: AttendanceEvent[],
   latestEvent: AttendanceEvent | null,
   workers: ProjectWorker[],
-  t: (key: string) => string
+  t: (key: string) => string,
+  /** Το σημείο του εργοταξίου (`addressListCenter`) — εφεδρεία πριν την Αθήνα (ADR-891 §10.3). */
+  siteCenter?: CoordinatePoint,
 ) {
-  // Geofence config (loaded from server)
-  const [geofence, setGeofence] = useState<GeofenceConfig | null>(liveWorkerMapCache.get(projectId) ?? null);
-  const [geofenceLoading, setGeofenceLoading] = useState(!liveWorkerMapCache.hasLoaded(projectId));
+  // Geofence config — ΜΙΑ αλήθεια με τον GeofenceConfigMap (μια αποθήκευση φαίνεται αμέσως εδώ)
+  const { geofence, hasLoaded } = useProjectGeofence(projectId);
+  const geofenceLoading = !hasLoaded;
 
   // Popup state
   const [selectedWorker, setSelectedWorker] = useState<SelectedWorker | null>(null);
@@ -71,33 +66,6 @@ export function useLiveWorkerMap(
   // Track previous latestEvent to avoid duplicate toasts
   const prevLatestEventIdRef = useRef<string | null>(null);
   const { error: showError } = useNotifications();
-
-  // ---------------------------------------------------------------------------
-  // LOAD GEOFENCE CONFIG
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    async function loadGeofence() {
-      try {
-        if (!liveWorkerMapCache.hasLoaded(projectId)) setGeofenceLoading(true);
-        const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
-        const data = (await res.json()) as GeofenceApiResponse;
-        if (data.success && data.geofence) {
-          liveWorkerMapCache.set(data.geofence, projectId);
-          setGeofence(data.geofence);
-        } else {
-          liveWorkerMapCache.set(null, projectId);
-        }
-      } catch {
-        // Geofence not configured — map still works without it
-        liveWorkerMapCache.set(null, projectId);
-      } finally {
-        setGeofenceLoading(false);
-      }
-    }
-
-    loadGeofence();
-  }, [projectId]);
 
   // ---------------------------------------------------------------------------
   // WORKER NAME LOOKUP
@@ -221,11 +189,14 @@ export function useLiveWorkerMap(
     if (firstWithCoords) {
       return { latitude: firstWithCoords.lat, longitude: firstWithCoords.lng };
     }
+    if (siteCenter) {
+      return { latitude: siteCenter.lat, longitude: siteCenter.lng };
+    }
     return {
       latitude: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
       longitude: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
     };
-  }, [geofence, workerMarkers]);
+  }, [geofence, workerMarkers, siteCenter]);
 
   // ---------------------------------------------------------------------------
   // GEOFENCE GEOJSON

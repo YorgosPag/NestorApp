@@ -14,6 +14,10 @@ COPY --chown=nextjs:nodejs .next/static ./.next/static
 # Copy public folder
 COPY --chown=nextjs:nodejs public ./public
 
+# ADR-894 — η τοπική βάση GeoIP (DB-IP City Lite). Την κατεβάζει το docker-build.yml (`geoip:fetch`)·
+# ο server τη διαβάζει από `/app/data/geoip` (ή `GEOIP_DB_PATH`). Φάκελος χωρίς βάση ⇒ «άγνωστη τοποθεσία».
+COPY --chown=nextjs:nodejs data/geoip ./data/geoip
+
 USER nextjs
 
 EXPOSE 3000

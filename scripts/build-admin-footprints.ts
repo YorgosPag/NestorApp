@@ -51,6 +51,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { ADMIN_LEVEL } from '../src/lib/geo/admin-area-index-file';
 import { ringsFootprint } from '../src/lib/geo/geo-footprint';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
 import { DEFAULT_INTERIOR_COVER, interiorCircleCover } from '../src/lib/geo/geo-interior-cover';
@@ -59,7 +60,6 @@ import type { GeoFootprint } from '../src/types/geo/admin-footprint';
 import {
   ATTRIBUTION,
   LAYERS,
-  MUNICIPAL_UNIT_LEVEL,
   REPO_ROOT,
   buildIdIndex,
   composeMunicipalitiesFromUnits,
@@ -372,7 +372,7 @@ async function main(): Promise<void> {
   let municipalUnits: GeoJSON.FeatureCollection | null = null;
   for (const { layer, level } of LAYERS) {
     const collection = await loadLayer(layer);
-    if (level === MUNICIPAL_UNIT_LEVEL) municipalUnits = collection;
+    if (level === ADMIN_LEVEL.municipalUnit) municipalUnits = collection;
     reports.push(collectLayer(collection, level, layer, index, ambiguous, footprints));
   }
 

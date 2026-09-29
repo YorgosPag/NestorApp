@@ -31,6 +31,7 @@ import {
   type AdminNameIndex,
   type AdminPlace,
 } from '../../../src/lib/places/admin-name-index';
+import { ADMIN_LEVEL } from '../../../src/lib/geo/admin-area-index-file';
 import { foldPlaceIdentity } from '../../../src/utils/address/place-name';
 import { MAMA_AREA_ALIASES, MAMA_PREFECTURE_REGIONAL_UNITS } from './mama-area-tables';
 import { MamaFormatError } from './mama-source';
@@ -66,11 +67,6 @@ export interface MamaAreaResolver {
   area(areaId: string): MamaArea;
 }
 
-const REGIONAL_UNIT_LEVEL = 4;
-const MUNICIPALITY_LEVEL = 5;
-const UNIT_LEVEL = 6;
-const COMMUNITY_LEVEL = 7;
-
 /** Η νομαρχία χωρίς το «(ΝΟΜΑΡΧΙΑ)», διπλωμένη — για τη σύγκριση «ετικέτα ίση με νομαρχία». */
 function prefectureKey(label: string): string {
   return foldPlaceIdentity(label.replace(/\(ΝΟΜΑΡΧΙΑ\)/g, ''));
@@ -93,13 +89,13 @@ interface Hierarchy {
  * στη 7. Το όνομα είναι το σύντομο (`sn`), που η ΕΛΣΤΑΤ γράφει ήδη σε **γενική**, όπως και το ΜΑΜΑ.
  */
 function indexHierarchy(rows: readonly HierarchyEntity[]): Hierarchy {
-  const withUnits = new Set(rows.filter((row) => row.l === UNIT_LEVEL).map((row) => row.p));
+  const withUnits = new Set(rows.filter((row) => row.l === ADMIN_LEVEL.municipalUnit).map((row) => row.p));
   const places: AdminPlace[] = rows
-    .filter((row) => row.l === UNIT_LEVEL || row.l === COMMUNITY_LEVEL || (row.l === MUNICIPALITY_LEVEL && !withUnits.has(row.id)))
+    .filter((row) => row.l === ADMIN_LEVEL.municipalUnit || row.l === ADMIN_LEVEL.community || (row.l === ADMIN_LEVEL.municipality && !withUnits.has(row.id)))
     .map((row) => ({
       id: row.id,
       name: row.sn ?? row.n,
-      level: row.l === COMMUNITY_LEVEL ? COMMUNITY_LEVEL : UNIT_LEVEL,
+      level: row.l === ADMIN_LEVEL.community ? ADMIN_LEVEL.community : ADMIN_LEVEL.municipalUnit,
       parentId: row.p,
       ...(row.an ? { alternateNames: row.an } : {}),
     }));
@@ -114,8 +110,8 @@ function ancestorAt(hierarchy: Hierarchy, id: string, level: number): HierarchyE
 
 /** Η μονάδα μιας οντότητας του ευρετηρίου: η ίδια, ή για κοινότητα η Δ.Ε. (αλλιώς ο δήμος) που την περιέχει. */
 function areaOf(hierarchy: Hierarchy, place: AdminPlace): string {
-  if (place.level !== COMMUNITY_LEVEL) return place.id;
-  const unit = ancestorAt(hierarchy, place.id, UNIT_LEVEL) ?? ancestorAt(hierarchy, place.id, MUNICIPALITY_LEVEL);
+  if (place.level !== ADMIN_LEVEL.community) return place.id;
+  const unit = ancestorAt(hierarchy, place.id, ADMIN_LEVEL.municipalUnit) ?? ancestorAt(hierarchy, place.id, ADMIN_LEVEL.municipality);
   if (unit === null) throw new MamaFormatError(`ιεραρχία: η κοινότητα ${place.id} δεν έχει Δ.Ε. ή δήμο`);
   return unit.id;
 }
@@ -129,18 +125,18 @@ function fromIds(ids: readonly string[], via: ResolvedVia): Attempt {
 }
 
 function exactAttempt(hierarchy: Hierarchy, label: string, within: (p: AdminPlace) => boolean, communities: boolean): Attempt {
-  const units = exactNameMatches(hierarchy.index, UNIT_LEVEL, label).filter(within);
+  const units = exactNameMatches(hierarchy.index, ADMIN_LEVEL.municipalUnit, label).filter(within);
   const unit = fromIds(units.map((p) => p.id), 'exact');
   if (unit !== null || !communities) return unit;
-  const found = exactNameMatches(hierarchy.index, COMMUNITY_LEVEL, label).filter(within);
+  const found = exactNameMatches(hierarchy.index, ADMIN_LEVEL.community, label).filter(within);
   return fromIds(found.map((p) => areaOf(hierarchy, p)), 'community');
 }
 
 function tolerantAttempt(hierarchy: Hierarchy, label: string, within: (p: AdminPlace) => boolean): Attempt {
-  const near = nearNameMatchesWithin(hierarchy.index, UNIT_LEVEL, label, within).flat();
+  const near = nearNameMatchesWithin(hierarchy.index, ADMIN_LEVEL.municipalUnit, label, within).flat();
   const nearResult = fromIds(near.map((p) => p.id), 'near');
   if (nearResult !== null) return nearResult;
-  const inflected = inflectedNameMatchesWithin(hierarchy.index, UNIT_LEVEL, label, within).flat();
+  const inflected = inflectedNameMatchesWithin(hierarchy.index, ADMIN_LEVEL.municipalUnit, label, within).flat();
   return fromIds(inflected.map((p) => p.id), 'inflected');
 }
 
@@ -149,7 +145,7 @@ function scopeOf(hierarchy: Hierarchy, prefecture: string): (place: AdminPlace) 
   if (codes === undefined) throw new MamaFormatError(`άγνωστη νομαρχία ${JSON.stringify(prefecture)} — λείπει από τον πίνακα`);
   const scope = new Set(codes.map((code) => `regional_unit:${code}`));
   return (place) => {
-    const unit = ancestorAt(hierarchy, place.id, REGIONAL_UNIT_LEVEL);
+    const unit = ancestorAt(hierarchy, place.id, ADMIN_LEVEL.regionalUnit);
     return unit !== null && scope.has(unit.id);
   };
 }
@@ -172,7 +168,7 @@ function resolvePair(hierarchy: Hierarchy, prefecture: string, label: string): A
 function assertAliases(hierarchy: Hierarchy): void {
   for (const alias of MAMA_AREA_ALIASES) {
     const row = hierarchy.byId.get(alias.areaId);
-    if (row === undefined || (row.l !== UNIT_LEVEL && row.l !== MUNICIPALITY_LEVEL)) {
+    if (row === undefined || (row.l !== ADMIN_LEVEL.municipalUnit && row.l !== ADMIN_LEVEL.municipality)) {
       throw new MamaFormatError(`ψευδώνυμο ${alias.label}: η ${alias.areaId} δεν είναι Δ.Ε. ή δήμος της ιεραρχίας`);
     }
   }

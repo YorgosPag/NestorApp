@@ -92,8 +92,9 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
               size="icon"
               className="ml-2 shrink-0"
               onClick={() => onRemove(worker)}
+              aria-label={t('ika.workersTab.removeWorkerNamed', { name: worker.name })}
             >
-              <Trash2 className={cn(iconSizes.sm, colors.text.error)} />
+              <Trash2 className={cn(iconSizes.sm, colors.text.error)} aria-hidden="true" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('ika.workersTab.removeWorker')}</TooltipContent>

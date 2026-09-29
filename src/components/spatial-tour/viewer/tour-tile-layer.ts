@@ -19,6 +19,7 @@ import {
   Texture,
 } from 'three';
 
+import { TOUR_REDACTION_PREVIEW_MAX } from '@/lib/spatial-tour/viewer/tour-redaction-preview';
 import { tileQuad, type TourTileAddress } from '@/lib/spatial-tour/viewer/tour-tile-visibility';
 
 import type { TourFaceImage } from './tour-panorama-source';
@@ -34,6 +35,24 @@ export function panoramaTexture(image: TourFaceImage): Texture {
   texture.minFilter = LinearFilter;
   texture.generateMipmaps = false;
   return texture;
+}
+
+/**
+ * **Τα uniforms της προεπισκόπησης θολώματος ενός κύβου** (Φ2ζ ζ3) — το ΙΔΙΟ αντικείμενο στη βάση και σε κάθε πλακίδιο (όπως το
+ * `opacity`): μία εγγραφή, όλα τα υλικά του κύβου τη βλέπουν.
+ */
+export interface RedactionUniforms {
+  readonly redactions: { value: Float32Array };
+  readonly redactionCount: { value: number };
+  readonly redactionCellRad: { value: number };
+}
+
+export function createRedactionUniforms(): RedactionUniforms {
+  return {
+    redactions: { value: new Float32Array(4 * TOUR_REDACTION_PREVIEW_MAX) },
+    redactionCount: { value: 0 },
+    redactionCellRad: { value: 1 },
+  };
 }
 
 export interface TileLayer {
@@ -55,14 +74,16 @@ interface TileEntry {
   readonly level: number;
 }
 
-function tileMesh(address: TourTileAddress, levelSize: number, texture: Texture, opacity: { value: number }): Mesh<BufferGeometry, ShaderMaterial> {
+function tileMesh(
+  address: TourTileAddress, levelSize: number, texture: Texture, opacity: { value: number }, redaction: RedactionUniforms,
+): Mesh<BufferGeometry, ShaderMaterial> {
   const quad = tileQuad(address, levelSize);
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(quad.positions, 3));
   geometry.setAttribute('uv', new Float32BufferAttribute(quad.uvs, 2));
   geometry.setIndex(quad.indices);
   const material = new ShaderMaterial({
-    uniforms: { map: { value: texture }, opacity },
+    uniforms: { map: { value: texture }, opacity, redactions: redaction.redactions, redactionCount: redaction.redactionCount },
     vertexShader: TOUR_TILE_VERTEX_SHADER,
     fragmentShader: TOUR_TILE_FRAGMENT_SHADER,
     transparent: true,
@@ -82,8 +103,8 @@ function disposeEntry(group: Group, entry: TileEntry): void {
   entry.texture.dispose();
 }
 
-/** Η στρώση πλακιδίων ενός κύβου — `opacity` = το ΙΔΙΟ αντικείμενο uniform με τη βάση του. */
-export function createTileLayer(opacity: { value: number }): TileLayer {
+/** Η στρώση πλακιδίων ενός κύβου — `opacity` και `redaction` = τα ΙΔΙΑ αντικείμενα uniform με τη βάση του. */
+export function createTileLayer(opacity: { value: number }, redaction: RedactionUniforms = createRedactionUniforms()): TileLayer {
   const group = new Group();
   const tiles = new Map<string, TileEntry>();
   let stopKey: string | null = null;
@@ -106,7 +127,7 @@ export function createTileLayer(opacity: { value: number }): TileLayer {
     put(forStop, tileKey, address, levelSize, image) {
       if (forStop !== stopKey || tiles.has(tileKey)) return false;
       const texture = panoramaTexture(image);
-      const mesh = tileMesh(address, levelSize, texture, opacity);
+      const mesh = tileMesh(address, levelSize, texture, opacity, redaction);
       mesh.renderOrder = baseOrder + 1 + address.level;
       tiles.set(tileKey, { mesh, texture, level: address.level });
       group.add(mesh);

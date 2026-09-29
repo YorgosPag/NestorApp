@@ -1,8 +1,9 @@
 /**
- * @fileoverview **Το ζωγράφισμα του χάρτη τιμών** (ADR-890 §14) — εκφράσεις `feature-state` και το μοτίβο διαγράμμισης.
+ * @fileoverview **Το ζωγράφισμα του χωροπληθή χάρτη τιμών** (ADR-890 §14 · §15) — εκφράσεις `feature-state` και το
+ * μοτίβο διαγράμμισης. **Δύο χάρτες, ένα ζωγράφισμα**: ο χάρτης της αναζήτησης και ο χάρτης σύγκρισης της σελίδας Δήμου.
  * @related `lib/market/price-map-view.ts` (`PriceMapFeatureState`: `c` κλάση · `k` είδος · `s` επιλεγμένη) ·
- *   `components/market/map-ramp.ts` (τα χρώματα)
- * @module components/search-results/price-map/price-map-paint
+ *   `components/market/map-ramp.ts` (τα χρώματα) · `choropleth-sync.ts` (ο συγχρονισμός)
+ * @module components/market/choropleth/price-map-paint
  *
  * 🔑 **Η γεωμετρία δεν ξέρει τιμές**: κάθε χρώμα διαβάζεται από την κατάσταση της περιοχής. Αλλαγή πηγής ή τμήματος
  * ξαναγράφει ~1.000 καταστάσεις — **καμία** επαναφόρτωση ή επανατεμαχισμός γεωμετρίας.
@@ -64,6 +65,14 @@ export function priceMapLinePaint(): LinePaint {
     'line-width': ['case', SELECTED, 2.5, 0.6],
     'line-opacity': ['case', SELECTED, 1, 0.7],
   } as LinePaint;
+}
+
+/**
+ * **Ετικέτα τιμής πάνω στην περιοχή** (ADR-890 §15): χρώμα κειμένου του θέματος με φωτοστέφανο του φόντου — διαβάζεται
+ * πάνω σε **κάθε** κλάση της κλίμακας, από την ανοιχτότερη ως τη σκουρότερη, και στα δύο υπόβαθρα.
+ */
+export function priceMapLabelPaint(): { readonly color: string; readonly halo: string } {
+  return { color: readThemeColor('--foreground'), halo: readThemeColor('--background') };
 }
 
 /** Ο ελάχιστος χάρτης που χρειάζεται η εικόνα — ώστε το module να μη δένεται με τον τύπο του MapLibre. */

@@ -15,6 +15,8 @@
  * ⚠️ **Φύλλο χωρίς εισαγωγές χρόνου εκτέλεσης από `@/`** — το διαβάζει ο γεννήτορας με `tsx`.
  */
 
+import { adminBoundaryFileName } from './admin-boundary-file';
+
 /** Όπου ζουν — κάτω από `public/`, άρα σερβίρονται στατικά (CDN). */
 export const ADMIN_OVERVIEW_DIR = 'data/admin-overview';
 
@@ -22,11 +24,12 @@ export const ADMIN_OVERVIEW_DIR = 'data/admin-overview';
 export const ADMIN_OVERVIEW_FORMAT_VERSION = 1;
 
 /**
- * Οι βαθμίδες του χάρτη, από την αδρότερη στη λεπτότερη.
+ * Οι βαθμίδες επισκόπησης, από την αδρότερη στη λεπτότερη.
+ * - `regional_unit`: 75 Π.Ε. — τα παιδιά μιας Περιφέρειας στη σελίδα της (ADR-890 §16).
  * - `municipality`: 333 Δήμοι.
  * - `municipal_unit`: τα **φύλλα** — 948 Δ.Ε. + οι Δήμοι **χωρίς** Δ.Ε. (αυτοί είναι το δικό τους φύλλο).
  */
-export const ADMIN_OVERVIEW_TIERS = ['municipality', 'municipal_unit'] as const;
+export const ADMIN_OVERVIEW_TIERS = ['regional_unit', 'municipality', 'municipal_unit'] as const;
 export type AdminOverviewTier = (typeof ADMIN_OVERVIEW_TIERS)[number];
 
 /**
@@ -40,6 +43,13 @@ export interface AdminOverviewProperties {
   /** Ο Δήμος μιας Δ.Ε.· `null` για Δήμο (ή Δήμο-φύλλο χωρίς Δ.Ε.). */
   readonly parent: string | null;
   readonly parentName: string | null;
+  /**
+   * **Σημείο ετικέτας** `[lon, lat]` — ο πόλος απροσπέλαστου του μεγαλύτερου πολυγώνου (ADR-890 §15). Μόνο στα αρχεία
+   * **παιδιών** (`children/`), όπου η τιμή γράφεται πάνω στην περιοχή· προσθετικό πεδίο, άρα ίδια εκδοχή (§12.1).
+   * 🔑 Προϋπολογισμένο, όχι από το MapLibre: εκείνο βάζει ετικέτα σε **κάθε** πολύγωνο ενός MultiPolygon και σε κάθε
+   * κομμάτι πλακιδίου — νησίδα ή σύνορο πλακιδίου ⇒ διπλή τιμή πάνω στον χάρτη.
+   */
+  readonly label?: readonly [lon: number, lat: number];
 }
 
 export type AdminOverviewFeature = GeoJSON.Feature<GeoJSON.MultiPolygon, AdminOverviewProperties>;
@@ -59,6 +69,27 @@ export function adminOverviewPath(tier: AdminOverviewTier): string {
   return `/${ADMIN_OVERVIEW_DIR}/${tier}.json`;
 }
 
+/** Υποφάκελος των αρχείων **παιδιών ανά γονέα** (ADR-890 §15) — ίδιο σχήμα, ίδια τόξα με το αρχείο της βαθμίδας. */
+export const ADMIN_OVERVIEW_CHILDREN_DIR = 'children';
+
+/**
+ * Αρχείο παιδιών υπάρχει **μόνο** για γονέα με τόσα παιδιά με γεωμετρία: με ένα, ο «χάρτης σύγκρισης» θα ήταν ένα
+ * χρώμα χωρίς σύγκριση. Ο γεννήτορας γράφει με αυτόν τον κανόνα, η σελίδα ζητά με τον ίδιο (ADR-890 §15).
+ */
+export const ADMIN_OVERVIEW_CHILDREN_MIN = 2;
+
+/**
+ * Η δημόσια διαδρομή των **παιδιών** ενός Δήμου: οι Δ.Ε. του, κομμένες από την **ίδια** τοπολογική απλοποίηση με το
+ * `municipal_unit.json` — ώστε ο χάρτης της σελίδας Δήμου να μην κατεβάζει τα 463 KB όλης της χώρας για δύο Δ.Ε.
+ */
+export function adminOverviewChildrenPath(parentId: string): string {
+  return `/${ADMIN_OVERVIEW_DIR}/${ADMIN_OVERVIEW_CHILDREN_DIR}/${adminBoundaryFileName(parentId)}`;
+}
+
+function isLabel(value: unknown): value is readonly [number, number] {
+  return Array.isArray(value) && value.length === 2 && value.every((n) => typeof n === 'number' && Number.isFinite(n));
+}
+
 function isOverviewFeature(value: unknown): value is AdminOverviewFeature {
   if (typeof value !== 'object' || value === null) return false;
   const feature = value as Partial<AdminOverviewFeature>;
@@ -69,7 +100,8 @@ function isOverviewFeature(value: unknown): value is AdminOverviewFeature {
     typeof properties?.id === 'string' &&
     typeof properties.name === 'string' &&
     (properties.parent === null || typeof properties.parent === 'string') &&
-    (properties.parentName === null || typeof properties.parentName === 'string')
+    (properties.parentName === null || typeof properties.parentName === 'string') &&
+    (properties.label === undefined || isLabel(properties.label))
   );
 }
 

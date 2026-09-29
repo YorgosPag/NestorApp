@@ -42,6 +42,18 @@ function nodesByLevel(graph: TourViewerGraph): ReadonlyMap<string, readonly Tour
   ]));
 }
 
+/**
+ * **Πώς λέγεται ένα σημείο ΕΚΤΟΣ γράφου** (ξαναψήνεται μετά από θόλωμα, ζ3) — ο χώρος του με την ίδια αρίθμηση όμοιων·
+ * `null` όταν δεν έχει χώρο (ο καλών δείχνει την ημερομηνία της λήψης: «Σημείο N» δεν υπάρχει εκτός γράφου).
+ */
+export function useOffGraphPointName(): (node: TourNode | null, levelPeers: readonly TourNode[]) => string | null {
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  return useCallback((node: TourNode | null, levelPeers: readonly TourNode[]) => {
+    const display = node === null ? null : tourRoomDisplay(node, levelPeers);
+    return display === null ? null : roomDisplayText(t, display);
+  }, [t]);
+}
+
 /** **Πώς λέγεται το σημείο `nodeId`** — ο χώρος του, αλλιώς «Σημείο N»· κενό για άγνωστο σημείο. */
 export function useStopNames(graph: TourViewerGraph): (nodeId: string) => string {
   const { t } = useTranslation(SPATIAL_TOUR_NS);

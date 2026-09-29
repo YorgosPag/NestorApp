@@ -26,11 +26,19 @@ import 'server-only';
  *
  * ⚠️ **Αποτυχία ερώτησης**: παλιά σφραγίδα αν υπάρχει (stale-if-error)· αλλιώς **άρνηση** — όπως το
  * `checkRevoked`, που ρίχνει. «Δεν μπόρεσα να ρωτήσω» δεν είναι «δεν ανακλήθηκε» (N.12).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 ADR-894 §10 Β1 — ΚΑΙ ΑΝΑ ΣΥΝΔΕΣΗ, ΟΧΙ ΜΟΝΟ ΑΝΑ ΛΟΓΑΡΙΑΣΜΟ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η σφραγίδα του λογαριασμού κόβει **όλες** τις συσκευές. Η «Αποσύνδεση **αυτής** της συσκευής» γράφει το
+ * `auth_time` της σύνδεσης στη λίστα `revoked-sign-ins`, και εδώ διαβάζεται **μαζί** με το `getUser`
+ * (παράλληλα, στην **ίδια** μνήμη 30″) ⇒ καμία επιπλέον ανάγνωση ανά αίτημα, ένας κριτής για τα δύο.
  */
 
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
 import { getAdminAuth } from '@/lib/firebaseAdmin';
+import { readRevokedSignIns } from '@/lib/auth/revoked-sign-ins';
 import { SESSION_POLICY } from '@/lib/auth/security-policy';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -47,7 +55,11 @@ export interface RevocationState {
   readonly disabled: boolean;
   /** Ο λογαριασμός **δεν υπάρχει** πια ⇒ κάθε διαπιστευτήριο άκυρο. */
   readonly missing: boolean;
+  /** Συνδέσεις (`auth_time`, δευτ.) που ανακλήθηκαν **μία-μία** — ADR-894 §10 Β1. */
+  readonly revokedSignInsSec: ReadonlySet<number>;
 }
+
+const NO_REVOKED_SIGN_INS: ReadonlySet<number> = new Set();
 
 interface CachedState {
   readonly state: RevocationState;
@@ -59,6 +71,7 @@ const cache = new Map<string, CachedState>();
 /** **Η καθαρή σύγκριση** — η ίδια με το `verifyDecodedJWTNotRevokedOrDisabled` του firebase-admin. */
 export function isCredentialRevoked(decoded: Pick<DecodedIdToken, 'auth_time'>, state: RevocationState): boolean {
   if (state.missing || state.disabled) return true;
+  if (state.revokedSignInsSec.has(decoded.auth_time)) return true;
   return decoded.auth_time * MS_PER_SECOND < state.validAfterMs;
 }
 
@@ -95,13 +108,18 @@ async function readRevocationState(uid: string, nowMs: number): Promise<Revocati
 
 async function fetchRevocationState(uid: string): Promise<RevocationState> {
   try {
-    const user = await getAdminAuth().getUser(uid);
-    const validAfter = user.tokensValidAfterTime ? Date.parse(user.tokensValidAfterTime) : 0;
-    return { validAfterMs: Number.isNaN(validAfter) ? 0 : validAfter, disabled: user.disabled, missing: false };
+    const [user, revokedSignInsSec] = await Promise.all([getAdminAuth().getUser(uid), readRevokedSignIns(uid)]);
+    return { validAfterMs: readValidAfterMs(user.tokensValidAfterTime), disabled: user.disabled, missing: false, revokedSignInsSec };
   } catch (error: unknown) {
-    if (isUserNotFound(error)) return { validAfterMs: 0, disabled: false, missing: true };
+    if (isUserNotFound(error)) return { validAfterMs: 0, disabled: false, missing: true, revokedSignInsSec: NO_REVOKED_SIGN_INS };
     throw error;
   }
+}
+
+/** `tokensValidAfterTime` (UTC string) → ms· `0` = ποτέ ανάκληση. Ο ΕΝΑΣ αναγνώστης (και για το κλάδεμα της λίστας). */
+export function readValidAfterMs(tokensValidAfterTime: string | undefined): number {
+  const validAfter = tokensValidAfterTime ? Date.parse(tokensValidAfterTime) : 0;
+  return Number.isNaN(validAfter) ? 0 : validAfter;
 }
 
 function isUserNotFound(error: unknown): boolean {

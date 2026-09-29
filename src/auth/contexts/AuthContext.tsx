@@ -110,34 +110,22 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-async function syncActiveSession(firebaseUser: FirebaseUser): Promise<void> {
+/**
+ * «Αυτός ο browser είναι ενεργός» (ADR-894). Ο server γράφει την εγγραφή — UA, IP και τοποθεσία από το
+ * ίδιο το αίτημα. Μία εγγραφή ανά browser: το id ζει στο localStorage και οι καρτέλες σειριοποιούνται.
+ */
+async function syncActiveSession(firebaseUser: FirebaseUser): Promise<string | null> {
   try {
-    if (!db) {
-      return;
-    }
-
-    sessionService.initialize(db);
-    const existingSessionId = typeof sessionStorage !== 'undefined'
-      ? sessionStorage.getItem('currentSessionId')
-      : null;
-
-    if (existingSessionId) {
-      await sessionService.updateSessionActivity(firebaseUser.uid, existingSessionId);
-      logger.debug('[AuthContext] Session activity updated:', { sessionId: existingSessionId });
-      return;
-    }
-
     const loginMethod = firebaseUser.providerData.some(
       (provider) => provider.providerId === 'google.com',
     ) ? 'google' : 'email';
 
-    await sessionService.createSession({
-      userId: firebaseUser.uid,
-      loginMethod,
-    });
-    logger.debug('[AuthContext] New session created for Active Sessions tracking');
+    const { sessionId, created } = await sessionService.syncActiveSession(firebaseUser.uid, loginMethod);
+    logger.debug('[AuthContext] Active session synced', { sessionId, created });
+    return sessionId;
   } catch (sessionError) {
     logger.warn('[AuthContext] Failed to manage session (non-blocking)', { error: sessionError });
+    return null;
   }
 }
 
@@ -148,6 +136,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionPhase, setSessionPhase] = useState<SessionPhase>('anonymous');
+  // ADR-894 — η εγγραφή «αυτή η συσκευή», όταν την επιβεβαιώσει ο server (δένει τη συνδρομή ανάκλησης).
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // ADR-859 — ο δεύτερος παράγοντας έχει ΕΝΑΝ κάτοχο (ήταν γραμμένος δύο φορές).
   // ⚠️ Αποδομημένο: το αντικείμενο είναι νέο σε κάθε απόδοση, οι συναρτήσεις σταθερές —
@@ -212,6 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(null);
         setDeclaredOccupation(null);
         setVatNumber(null);
+        setActiveSessionId(null);
         setLoading(false);
         return;
       }
@@ -227,6 +218,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(null);
         setDeclaredOccupation(null);
         setVatNumber(null);
+        setActiveSessionId(null);
         setLoading(false);
         return;
       }
@@ -288,7 +280,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setSessionPhase('established');
       setUser(authUser);
 
-      await syncActiveSession(firebaseUser);
+      // Παράπλευρη ενέργεια — δεν καθυστερεί την οθόνη (N.7.2 #6).
+      void syncActiveSession(firebaseUser).then(setActiveSessionId);
 
       setLoading(false);
     });
@@ -297,19 +290,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const sessionId = typeof sessionStorage !== 'undefined'
-      ? sessionStorage.getItem('currentSessionId')
-      : null;
+    const sessionId = user ? activeSessionId : null;
 
     if (!sessionId || !user) {
       return;
     }
 
-    return EnterpriseSessionService.subscribeToSessionEvents(sessionId, () => {
+    return EnterpriseSessionService.watchSessionRevocation(user.uid, sessionId, () => {
       logger.warn('[AuthContext] Session revoked remotely — signing out');
       void actions.signOut();
     });
-  }, [actions, user]);
+  }, [actions, user, activeSessionId]);
 
   // ADR-360: Auto-refresh ID token when server bumps claimsUpdatedAt mirror
   useClaimsRefresh({

@@ -15,6 +15,7 @@
  * ⚠️ **Φύλλο χωρίς runtime εισαγωγές από `@/`**: το διαβάζει και ο γεννήτορας (`tsx`).
  */
 
+import { ADMIN_LEVEL } from '../geo/admin-area-index-file';
 import { adminBoundaryFileName } from '../geo/admin-boundary-file';
 import { MARKET_SEGMENTS, type MarketSegment } from './market-segments';
 import type { StatCell } from './market-statistics';
@@ -25,6 +26,18 @@ export const MARKET_TRANSACTIONS_FORMAT_VERSION = 2;
 
 /** Ο φάκελος μέσα στο `public/`. */
 export const MARKET_TRANSACTIONS_DIR = 'data/market-transactions';
+
+/**
+ * **Οι βαθμίδες με αρχείο `rows/`** (ADR-890 §16): Δήμος και Δ.Ε. Οι γραμμές υπάρχουν για τις **συγκρίσιμες**, που είναι
+ * εξ ορισμού τοπικές (Redfin/Zillow: comps από τη γειτονιά, συγκεντρωτικά ανά περιοχή). Π.Ε. και Περιφέρεια έχουν
+ * **μόνο** `summary/` — η Αττική θα ήταν > 10 MB γραμμών χωρίς κανέναν αναγνώστη. Ο γεννήτορας γράφει με αυτόν τον
+ * κανόνα και ο αναγνώστης ρωτά με τον ίδιο.
+ */
+const MARKET_ROWS_LEVELS = [ADMIN_LEVEL.municipality, ADMIN_LEVEL.municipalUnit] as const;
+
+export function hasMarketRows(level: number): boolean {
+  return (MARKET_ROWS_LEVELS as readonly number[]).includes(level);
+}
 
 /** Η σειρά των πεδίων της πλειάδας — δημοσιεύεται και στο ευρετήριο (`vocab.rowFields`). */
 export const ROW_FIELDS = [
@@ -188,6 +201,8 @@ export interface MarketTransactionsIndex {
   readonly asOf: string;
   readonly window: { readonly from: number; readonly to: number };
   readonly areas: ReadonlySet<string>;
+  /** Οι περιοχές με αρχείο `rows/` — υποσύνολο του `areas`, κατά {@link hasMarketRows}. */
+  readonly rowAreas: ReadonlySet<string>;
   /** δείκτης κατηγορίας (πεδίο `category`) → τμήμα, ή `null` = εκτός στατιστικών. */
   readonly categorySegments: readonly (MarketSegment | null)[];
 }
@@ -213,7 +228,12 @@ export function readMarketTransactionsIndex(payload: unknown): MarketTransaction
   if (!Array.isArray(areas)) return null;
   const categorySegments = readCategorySegments(payload.vocab);
   if (categorySegments === null) return null;
-  const ids = areas.map((row) => (Array.isArray(row) && typeof row[0] === 'string' ? row[0] : null));
-  if (ids.some((id) => id === null)) return null;
-  return { asOf: payload.asOf, window: { from: window.from, to: window.to }, areas: new Set(ids as string[]), categorySegments };
+  const ids = new Set<string>();
+  const rowAreas = new Set<string>();
+  for (const row of areas) {
+    if (!Array.isArray(row) || typeof row[0] !== 'string' || !isFiniteNumber(row[2])) return null;
+    ids.add(row[0]);
+    if (hasMarketRows(row[2])) rowAreas.add(row[0]);
+  }
+  return { asOf: payload.asOf, window: { from: window.from, to: window.to }, areas: ids, rowAreas, categorySegments };
 }

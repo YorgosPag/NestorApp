@@ -352,6 +352,21 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
     why:
       'ΣΥΝΕΔΡΙΑ ΘΕΑΣΗΣ ΜΕ ΛΟΓΑΡΙΑΣΜΟ (ADR-884 Φ0.4 · Κ3β). Ο εγκεκριμένος αιτών είναι ΠΟΛΙΤΗΣ χωρίς οργανισμό· ο υπεύθυνος μπορεί να είναι ιδιώτης (Α14). Η βάση (manager · request · link · public) την κρίνει ο judgeTourView πάνω σε mayManageTour + tourAccessStanding — η ταυτότητα μόνο ΤΡΟΦΟΔΟΤΕΙ τους κριτές. Η δημόσια πόρτα (`view-session/public`) δεν ρωτά ποτέ ταυτότητα.',
   },
+  {
+    route: 'src/app/api/auth/active-sessions/route.ts',
+    why:
+      'ΟΙ ΣΥΣΚΕΥΕΣ ΜΟΥ (ADR-894). Κάθε συνδεδεμένος άνθρωπος έχει συσκευές — και ο ιδιώτης χωρίς οργανισμό, '
+      + 'στον οποίο το withAuth θα απαντούσε 401 ⇒ καμία εγγραφή, καμία ανάκληση. Γράφει ΜΟΝΟ κάτω από '
+      + 'users/{actor.ctx.uid}/sessions — κανένα uid από το σώμα. POST = «αυτός ο browser είναι ενεργός» '
+      + '(UA, IP και τοποθεσία από το ίδιο το αίτημα)· DELETE ?keep = ανάκληση όλων των άλλων.',
+  },
+  {
+    route: 'src/app/api/auth/active-sessions/[sessionId]/route.ts',
+    why:
+      'ΑΝΑΚΛΗΣΗ ΜΙΑΣ ΣΥΣΚΕΥΗΣ (ADR-894). Ίδιος πληθυσμός με την πόρτα των συσκευών. Το sessionId ψάχνεται '
+      + 'ΜΟΝΟ κάτω από users/{actor.ctx.uid}/sessions ⇒ ξένη συνεδρία δεν εκφράζεται (ίδιο 404 με ανύπαρκτη)· '
+      + 'επικυρώνεται ως sess_<uuid v4> ώστε κανένα «/» να μη φτιάξει άλλη διαδρομή εγγράφου.',
+  },
 ];
 
 /**

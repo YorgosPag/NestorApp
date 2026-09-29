@@ -1,64 +1,96 @@
 /**
- * 🔐 ENTERPRISE SESSION SERVICE
+ * 🔐 ENTERPRISE SESSION SERVICE (client)
  *
- * Enterprise-grade session management service for tracking and managing
- * user sessions across devices. Follows Google/Microsoft/Okta patterns.
+ * Active-session tracking across devices — Google «Your devices» / GitHub «Sessions» patterns.
+ *
+ * ADR-894: ο client **μόνο διαβάζει** τις εγγραφές (`users/{uid}/sessions`, κανόνας `write: if false`).
+ * Κάθε εγγραφή περνά από τις διαδρομές `/api/auth/active-sessions/**`, όπου ο server διαβάζει UA, IP και
+ * τοποθεσία από το **ίδιο** το αίτημα (`session-server.service.ts`). Μέχρι τις 2026-09-29 ο browser τα
+ * έγραφε μόνος του, με τοποθεσία από το `ipapi.co` — πλαστογραφήσιμη, και με την IP σε τρίτο.
  *
  * Split into SRP modules (ADR-065):
- * - session-device-detection.ts — device/browser/OS detection, location
+ * - session-device-detection.ts — device/browser/OS detection (pure, server-side)
  * - session-helpers.ts — pure functions: data mapping, display, statistics
  *
  * @module services/session/EnterpriseSessionService
  */
 
-import { generateSessionId } from '@/services/enterprise-id.service';
-import { getDeploymentId } from '@/lib/app-version/deployment-identity';
 import {
   collection,
-  doc,
-  setDoc,
+  documentId,
   getDocs,
-  updateDoc,
   query,
   where,
   orderBy,
   limit,
   Timestamp,
-  writeBatch
 } from 'firebase/firestore';
-import { nowTimestamp } from '@/lib/firestore-now';
-import type { Firestore } from 'firebase/firestore';
+import type { DocumentData, Firestore } from 'firebase/firestore';
+import { adoptIssuedSession } from '@/auth/issued-session';
+import type { SessionContinuation } from '@/server/auth/session-reissue';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { API_ROUTES } from '@/config/domain-constants';
 import { SUBCOLLECTIONS, COLLECTIONS } from '@/config/firestore-collections';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { safeGetItem, safeRemoveItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage/safe-storage';
 import type {
   UserSession,
-  SessionStatus,
-  SessionTimestamps,
-  CreateSessionInput,
+  LoginMethod,
   SessionQueryFilters,
   SessionStatistics,
-  SessionDisplayItem,
+  SessionsOverviewDisplay,
   SessionActionResult,
-  SessionMetadata
+  SyncActiveSessionInput,
+  SyncActiveSessionResult,
 } from './session.types';
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { getDeviceInfo, getApproximateLocation } from './session-device-detection';
+import { detectBrowser, detectOS, getClientDeviceHints } from './session-device-detection';
 import {
-  DEFAULT_SESSION_DURATION_HOURS,
-  EXTENDED_SESSION_DURATION_DAYS,
-  MAX_CONCURRENT_SESSIONS,
   mapDocToSession,
   formatSessionsForDisplay,
-  computeSessionStatistics
+  formatEndedSessionsForDisplay,
+  computeSessionStatistics,
+  isSessionLive
 } from './session-helpers';
+import { partitionSessionsOverview, SESSION_HISTORY_WINDOW_DAYS, type SessionsOverview } from './session-lifecycle';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const logger = createModuleLogger('EnterpriseSessionService');
 
-// ADR-860 §Ε0 — η ΜΙΑ ταυτότητα έκδοσης (git SHA του build). Το `NEXT_PUBLIC_APP_VERSION` που
-// διαβαζόταν εδώ δεν οριζόταν ΠΟΥΘΕΝΑ ⇒ κάθε συνεδρία γραφόταν ως '1.0.0'. Η εφεδρική τιμή
-// μένει για τοπικά builds χωρίς ταυτότητα, ώστε το υποχρεωτικό `appVersion: string` να μη σπάσει.
-const APP_VERSION = getDeploymentId() ?? '1.0.0';
+/** Όνομα του Web Lock — ένα ανά χρήστη, κοινό σε όλες τις καρτέλες του browser. */
+const SYNC_LOCK_PREFIX = 'nestor-active-session-sync:';
+
+function storageKeyOf(uid: string): string {
+  return `${STORAGE_KEYS.ACTIVE_SESSION_PREFIX}${uid}`;
+}
+
+/**
+ * Σειριοποίηση ανάμεσα σε καρτέλες (Web Locks API): δύο καρτέλες που ανοίγουν μαζί **δεν** φτιάχνουν δύο
+ * εγγραφές — η δεύτερη περιμένει και βρίσκει το id της πρώτης. Χωρίς υποστήριξη ⇒ απευθείας εκτέλεση.
+ */
+function withBrowserLock<T>(name: string, task: () => Promise<T>): Promise<T> {
+  if (typeof navigator === 'undefined' || !navigator.locks) return task();
+  return navigator.locks.request(name, task);
+}
+
+/**
+ * ADR-894 §10 Β1 — ο server ανακάλεσε **όλες** τις συνδέσεις: η συσκευή συνεχίζει με το νέο κλειδί.
+ * @returns `true` αν χρειάζεται νέα σύνδεση (δεν δόθηκε κλειδί, ή δεν υιοθετήθηκε).
+ */
+async function continueAfterRevocation(session: SessionContinuation | undefined): Promise<boolean> {
+  if (!session || session.kind === 'unchanged') return false;
+  if (session.kind === 'ended') return true;
+  return (await adoptIssuedSession(session.token)).kind === 'not-signed-in';
+}
+
+function realtimeDeviceLabel(): string {
+  if (typeof navigator === 'undefined') return '';
+  const ua = navigator.userAgent;
+  return `${detectBrowser(ua).type} on ${detectOS(ua).os}`;
+}
 
 // ============================================================================
 // ENTERPRISE SESSION SERVICE
@@ -72,7 +104,6 @@ export class EnterpriseSessionService {
   private static instance: EnterpriseSessionService;
   private db: Firestore | null = null;
   private initialized = false;
-  private currentSessionId: string | null = null;
 
   private constructor() {}
 
@@ -87,245 +118,115 @@ export class EnterpriseSessionService {
   }
 
   /**
-   * Initialize service with Firestore
+   * Initialize service with Firestore (reads only)
    */
   initialize(firestore: Firestore): void {
     this.db = firestore;
     this.initialized = true;
-    logger.info('🔐 EnterpriseSessionService initialized');
   }
 
-  /**
-   * Ensure service is initialized
-   */
   private ensureInitialized(): void {
     if (!this.initialized || !this.db) {
       throw new Error('EnterpriseSessionService not initialized. Call initialize(firestore) first.');
     }
   }
 
-  /**
-   * Get sessions subcollection reference for a user
-   */
   private getSessionsCollection(userId: string) {
     this.ensureInitialized();
-    return collection(
-      this.db!,
-      COLLECTIONS.USERS,
-      userId,
-      SUBCOLLECTIONS.USER_SESSIONS
-    );
+    return collection(this.db!, COLLECTIONS.USERS, userId, SUBCOLLECTIONS.USER_SESSIONS);
   }
 
   // ==========================================================================
-  // SESSION LIFECYCLE
+  // SESSION LIFECYCLE (server-written, ADR-894)
   // ==========================================================================
 
+  /** Η εγγραφή **αυτού** του browser για τον χρήστη, αν υπάρχει. */
+  getCurrentSessionId(userId: string): string | null {
+    // String fallback ⇒ ωμή ανάγνωση (το `safeSetItem` γράφει string ωμό· με fallback `null` θα γινόταν JSON.parse).
+    return safeGetItem(storageKeyOf(userId), '') || null;
+  }
+
   /**
-   * Create a new session on login
+   * «Αυτός ο browser είναι ενεργός» — μία φορά ανά φόρτωση, από οποιαδήποτε καρτέλα. Ο server αγγίζει
+   * τη γνωστή εγγραφή ή γεννά νέα· το id που επιστρέφει γίνεται η μνήμη του browser.
    */
-  async createSession(input: CreateSessionInput): Promise<UserSession> {
-    this.ensureInitialized();
-
-    const { userId, loginMethod, rememberMe = false, twoFactorUsed = false } = input;
-
-    // Check for max concurrent sessions
-    const activeSessions = await this.getActiveSessions(userId);
-    if (activeSessions.length >= MAX_CONCURRENT_SESSIONS) {
-      // Revoke oldest session
-      const oldestSession = activeSessions.sort(
-        (a, b) => a.timestamps.createdAt.getTime() - b.timestamps.createdAt.getTime()
-      )[0];
-      await this.revokeSession(userId, oldestSession.id, 'auto_revoked_max_sessions');
-    }
-
-    // Generate session ID
-    const sessionId = generateSessionId();
-
-    // Get device and location info
-    const deviceInfo = getDeviceInfo();
-    const location = await getApproximateLocation();
-
-    // Calculate expiration
-    const now = new Date();
-    const expirationHours = rememberMe
-      ? EXTENDED_SESSION_DURATION_DAYS * 24
-      : DEFAULT_SESSION_DURATION_HOURS;
-    const expiresAt = new Date(now.getTime() + expirationHours * 60 * 60 * 1000);
-
-    const timestamps: SessionTimestamps = {
-      createdAt: now,
-      lastActiveAt: now,
-      expiresAt
-    };
-
-    const metadata: SessionMetadata = {
-      loginMethod,
-      rememberMe,
-      twoFactorUsed,
-      appVersion: APP_VERSION,
-      source: 'web'
-    };
-
-    const session: UserSession = {
-      id: sessionId,
-      userId,
-      deviceInfo,
-      location,
-      timestamps,
-      status: 'active',
-      isCurrent: true,
-      metadata
-    };
-
-    // Save to Firestore
-    const sessionsRef = this.getSessionsCollection(userId);
-    await setDoc(doc(sessionsRef, sessionId), {
-      ...session,
-      timestamps: {
-        createdAt: Timestamp.fromDate(timestamps.createdAt),
-        lastActiveAt: Timestamp.fromDate(timestamps.lastActiveAt),
-        expiresAt: Timestamp.fromDate(timestamps.expiresAt)
+  async syncActiveSession(userId: string, loginMethod: LoginMethod): Promise<SyncActiveSessionResult> {
+    return withBrowserLock(`${SYNC_LOCK_PREFIX}${userId}`, async () => {
+      const body: SyncActiveSessionInput = {
+        sessionId: this.getCurrentSessionId(userId),
+        loginMethod,
+        ...getClientDeviceHints(),
+      };
+      const result = await apiClient.post<SyncActiveSessionResult>(API_ROUTES.AUTH.ACTIVE_SESSIONS, body);
+      safeSetItem(storageKeyOf(userId), result.sessionId);
+      if (result.created) {
+        RealtimeService.dispatch('SESSION_CREATED', {
+          sessionId: result.sessionId,
+          session: { userId, deviceInfo: realtimeDeviceLabel() },
+          timestamp: Date.now(),
+        });
       }
+      return result;
     });
-
-    // Store current session ID
-    this.currentSessionId = sessionId;
-
-    // Mark other sessions as not current
-    await this.markOtherSessionsNotCurrent(userId, sessionId);
-
-    logger.info(`🔐 Session created: ${sessionId} for user ${userId}`);
-
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatch('SESSION_CREATED',{
-      sessionId,
-      session: {
-        userId,
-        deviceInfo: `${deviceInfo.browser} on ${deviceInfo.os}`,
-      },
-      timestamp: Date.now(),
-    });
-
-    return session;
-  }
-
-  /**
-   * Update session activity
-   */
-  async updateSessionActivity(userId: string, sessionId?: string): Promise<void> {
-    this.ensureInitialized();
-
-    const targetSessionId = sessionId || this.currentSessionId;
-    if (!targetSessionId) {
-      return;
-    }
-
-    const sessionsRef = this.getSessionsCollection(userId);
-    const sessionRef = doc(sessionsRef, targetSessionId);
-
-    try {
-      await updateDoc(sessionRef, {
-        'timestamps.lastActiveAt': nowTimestamp()
-      });
-    } catch (error) {
-      logger.warn('Failed to update session activity:', error);
-    }
   }
 
   /**
    * Revoke a specific session
    */
-  async revokeSession(
-    userId: string,
-    sessionId: string,
-    reason?: string
-  ): Promise<SessionActionResult> {
-    this.ensureInitialized();
-
+  async revokeSession(userId: string, sessionId: string): Promise<SessionActionResult> {
     try {
-      const sessionsRef = this.getSessionsCollection(userId);
-      const sessionRef = doc(sessionsRef, sessionId);
-
-      await updateDoc(sessionRef, {
-        status: 'revoked' as SessionStatus,
-        'timestamps.revokedAt': nowTimestamp(),
-        revocationReason: reason || 'user_requested'
-      });
-
-      logger.info(`🔐 Session revoked: ${sessionId}`);
+      const { session } = await apiClient.delete<{ session?: SessionContinuation }>(
+        `${API_ROUTES.AUTH.ACTIVE_SESSION(sessionId)}?reason=user_requested`,
+      );
+      if (sessionId === this.getCurrentSessionId(userId)) safeRemoveItem(storageKeyOf(userId));
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatch('SESSION_DELETED',{
-        sessionId,
-        timestamp: Date.now(),
-      });
-
-      return {
-        success: true,
-        affectedSessions: [sessionId],
-        action: 'revoke'
-      };
+      RealtimeService.dispatch('SESSION_DELETED', { sessionId, timestamp: Date.now() });
+      const signInRequired = await continueAfterRevocation(session);
+      return { success: true, affectedSessions: [sessionId], action: 'revoke', signInRequired };
     } catch (error) {
       logger.error('Failed to revoke session:', error);
-      return {
-        success: false,
-        error: getErrorMessage(error),
-        affectedSessions: [],
-        action: 'revoke'
-      };
+      return { success: false, error: getErrorMessage(error), affectedSessions: [], action: 'revoke' };
     }
   }
 
   /**
-   * Revoke all sessions except current
+   * Revoke all sessions except this browser's
    */
   async revokeAllOtherSessions(userId: string): Promise<SessionActionResult> {
-    this.ensureInitialized();
-
     try {
-      const activeSessions = await this.getActiveSessions(userId);
-      const sessionsToRevoke = activeSessions.filter(s => !s.isCurrent);
-
-      const batch = writeBatch(this.db!);
-      const sessionsRef = this.getSessionsCollection(userId);
-
-      for (const session of sessionsToRevoke) {
-        const sessionRef = doc(sessionsRef, session.id);
-        batch.update(sessionRef, {
-          status: 'revoked' as SessionStatus,
-          'timestamps.revokedAt': nowTimestamp(),
-          revocationReason: 'revoked_all_other'
-        });
+      const keep = this.getCurrentSessionId(userId);
+      const url = keep
+        ? `${API_ROUTES.AUTH.ACTIVE_SESSIONS}?keep=${encodeURIComponent(keep)}`
+        : API_ROUTES.AUTH.ACTIVE_SESSIONS;
+      const { revokedSessionIds, session } = await apiClient.delete<{
+        revokedSessionIds: string[];
+        session?: SessionContinuation;
+      }>(url);
+      for (const sessionId of revokedSessionIds) {
+        RealtimeService.dispatch('SESSION_DELETED', { sessionId, timestamp: Date.now() });
       }
-
-      await batch.commit();
-
-      logger.info(`🔐 Revoked ${sessionsToRevoke.length} other sessions for user ${userId}`);
-
-      return {
-        success: true,
-        affectedSessions: sessionsToRevoke.map(s => s.id),
-        action: 'revoke_all'
-      };
+      const signInRequired = await continueAfterRevocation(session);
+      return { success: true, affectedSessions: revokedSessionIds, action: 'revoke_all', signInRequired };
     } catch (error) {
       logger.error('Failed to revoke all sessions:', error);
-      return {
-        success: false,
-        error: getErrorMessage(error),
-        affectedSessions: [],
-        action: 'revoke_all'
-      };
+      return { success: false, error: getErrorMessage(error), affectedSessions: [], action: 'revoke_all' };
     }
   }
 
   /**
-   * End current session (logout)
+   * End this browser's session (logout). Ποτέ δεν ρίχνει: η αποσύνδεση δεν αποτυγχάνει επειδή απέτυχε η ανάκληση.
+   * ⚠️ **Χωρίς** `SESSION_DELETED`: θα ξαναπυροδοτούσε το signOut αυτής της καρτέλας· τις άλλες καρτέλες
+   * τις αποσυνδέει ήδη το Firebase Auth (κοινή κατάσταση ανά browser).
    */
   async endCurrentSession(userId: string): Promise<void> {
-    if (this.currentSessionId) {
-      await this.revokeSession(userId, this.currentSessionId, 'logout');
-      this.currentSessionId = null;
+    const sessionId = this.getCurrentSessionId(userId);
+    safeRemoveItem(storageKeyOf(userId));
+    if (!sessionId) return;
+    try {
+      await apiClient.delete(`${API_ROUTES.AUTH.ACTIVE_SESSION(sessionId)}?reason=logout`);
+    } catch (error) {
+      logger.warn('Failed to end session on logout (non-blocking)', { error: getErrorMessage(error) });
     }
   }
 
@@ -334,29 +235,36 @@ export class EnterpriseSessionService {
   // ==========================================================================
 
   /**
-   * Get all active sessions for a user
+   * Get all live sessions for a user (active **and** not expired)
    */
   async getActiveSessions(userId: string): Promise<UserSession[]> {
-    this.ensureInitialized();
-
-    const sessionsRef = this.getSessionsCollection(userId);
     const q = query(
       // 🔒 companyId: N/A — subcollection users/{userId}/sessions, tenant-isolated
-      // via path + rule `allow read, write: if isOwner(userId)`. No companyId field.
-      sessionsRef,
+      // via path + rule `allow read: if isOwner(userId)`. No companyId field.
+      this.getSessionsCollection(userId),
       where('status', '==', 'active'),
       orderBy('timestamps.lastActiveAt', 'desc')
     );
 
     const snapshot = await getDocs(q);
-    const sessions: UserSession[] = [];
+    const now = new Date();
+    return snapshot.docs.map(docSnap => mapDocToSession(docSnap.data())).filter(s => isSessionLive(s, now));
+  }
 
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      sessions.push(mapDocToSession(data));
-    });
-
-    return sessions;
+  /**
+   * ADR-894 §10 Β2 — ζωντανές **και** όσες τελείωσαν τις τελευταίες 28 ημέρες (Google «Your devices»), από
+   * **ένα** ερώτημα: εύρος και ταξινόμηση στο **ίδιο** πεδίο ⇒ αρκεί ο αυτόματος μονοπεδικός δείκτης.
+   */
+  async getSessionsOverview(userId: string, now: Date = new Date()): Promise<SessionsOverview<UserSession>> {
+    const since = Timestamp.fromMillis(now.getTime() - SESSION_HISTORY_WINDOW_DAYS * DAY_MS);
+    const q = query(
+      // 🔒 companyId: N/A — subcollection users/{userId}/sessions, tenant-isolated via path + owner rule.
+      this.getSessionsCollection(userId),
+      where('timestamps.lastActiveAt', '>=', since),
+      orderBy('timestamps.lastActiveAt', 'desc'),
+    );
+    const snapshot = await getDocs(q);
+    return partitionSessionsOverview(snapshot.docs.map((docSnap) => mapDocToSession(docSnap.data())), now);
   }
 
   /**
@@ -366,29 +274,20 @@ export class EnterpriseSessionService {
     userId: string,
     filters?: SessionQueryFilters
   ): Promise<UserSession[]> {
-    this.ensureInitialized();
-
-    const sessionsRef = this.getSessionsCollection(userId);
-    let q = query(sessionsRef, orderBy('timestamps.createdAt', 'desc'));
-
+    let q = query(this.getSessionsCollection(userId), orderBy('timestamps.createdAt', 'desc'));
     if (filters?.limit) {
       q = query(q, limit(filters.limit));
     }
 
     const snapshot = await getDocs(q);
-    let sessions: UserSession[] = [];
-
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      sessions.push(mapDocToSession(data));
-    });
+    let sessions = snapshot.docs.map(docSnap => mapDocToSession(docSnap.data()));
 
     // Apply client-side filters
     if (filters?.status) {
       sessions = sessions.filter(s => s.status === filters.status);
     }
     if (filters?.activeOnly) {
-      sessions = sessions.filter(s => s.status === 'active');
+      sessions = sessions.filter(s => isSessionLive(s));
     }
     if (filters?.deviceType) {
       sessions = sessions.filter(s => s.deviceInfo.type === filters.deviceType);
@@ -410,75 +309,49 @@ export class EnterpriseSessionService {
   // ==========================================================================
 
   /**
-   * Get sessions formatted for UI display
+   * Get sessions formatted for UI display — «τρέχουσα» = η εγγραφή αυτού του browser.
    */
-  async getSessionsForDisplay(userId: string): Promise<SessionDisplayItem[]> {
-    const sessions = await this.getActiveSessions(userId);
-    return formatSessionsForDisplay(sessions);
+  async getSessionsForDisplay(userId: string): Promise<SessionsOverviewDisplay> {
+    const { live, ended } = await this.getSessionsOverview(userId);
+    return {
+      live: formatSessionsForDisplay([...live], this.getCurrentSessionId(userId)),
+      ended: formatEndedSessionsForDisplay(ended),
+    };
   }
 
   /**
-   * Get current session ID
+   * **Ανακλήθηκε αυτή η συσκευή;** — δύο κανάλια, ένας ακροατής:
+   * - ίδιος browser, άλλη καρτέλα: `SESSION_DELETED` (ADR-228 Tier 1)·
+   * - **άλλη συσκευή** (ADR-894 §10 Β1 — Google «Sign out» από τη λίστα): η δική μας εγγραφή, μέσω του
+   *   `firestoreQueryService` (SSoT συνδρομών). Μέχρι τη Φάση 2 η άλλη συσκευή **δεν μάθαινε τίποτα**.
+   * ⚠️ Μόνο `revoked` αποσυνδέει: το `expired` (αδράνεια) δεν είναι ανάκληση· και απούσα εγγραφή
+   *   (πρώτο στιγμιότυπο από cache, ή σβήσιμο TTL) δεν είναι απόδειξη ανάκλησης.
    */
-  getCurrentSessionId(): string | null {
-    return this.currentSessionId;
-  }
-
-  /**
-   * Subscribe to session events for cross-tab sync (ADR-228 Tier 1).
-   * When a session is revoked (e.g., admin force-logout), other tabs react.
-   */
-  static subscribeToSessionEvents(
-    currentSessionId: string,
-    onSessionRevoked: () => void
-  ): () => void {
-    const unsubDeleted = RealtimeService.subscribe('SESSION_DELETED', (payload) => {
-      if (payload.sessionId === currentSessionId) {
-        logger.warn('Current session revoked — triggering logout');
-        onSessionRevoked();
-      }
+  static watchSessionRevocation(userId: string, currentSessionId: string, onSessionRevoked: () => void): () => void {
+    let fired = false;
+    const fire = (channel: string) => {
+      if (fired) return;
+      fired = true;
+      logger.warn('Current session revoked — triggering logout', { channel });
+      onSessionRevoked();
+    };
+    const offTabs = RealtimeService.subscribe('SESSION_DELETED', (payload) => {
+      if (payload.sessionId === currentSessionId) fire('tab');
     });
-
-    return unsubDeleted;
-  }
-
-  /**
-   * Set current session ID (for restoring from storage)
-   */
-  setCurrentSessionId(sessionId: string): void {
-    this.currentSessionId = sessionId;
-  }
-
-  // ==========================================================================
-  // PRIVATE HELPERS
-  // ==========================================================================
-
-  /**
-   * Mark other sessions as not current
-   */
-  private async markOtherSessionsNotCurrent(
-    userId: string,
-    currentSessionId: string
-  ): Promise<void> {
-    const sessionsRef = this.getSessionsCollection(userId);
-    const q = query(
-      // 🔒 companyId: N/A — subcollection users/{userId}/sessions, tenant-isolated
-      // via path + rule `allow read, write: if isOwner(userId)`. No companyId field.
-      sessionsRef,
-      where('status', '==', 'active'),
-      where('isCurrent', '==', true)
+    const offRemote = firestoreQueryService.subscribeSubcollection<DocumentData>(
+      'USERS',
+      userId,
+      SUBCOLLECTIONS.USER_SESSIONS,
+      (result) => {
+        if (result.documents.some((doc) => doc.status === 'revoked')) fire('remote');
+      },
+      (error) => logger.warn('Session revocation watch failed', { error: getErrorMessage(error) }),
+      { constraints: [where(documentId(), '==', currentSessionId)] },
     );
-
-    const snapshot = await getDocs(q);
-    const batch = writeBatch(this.db!);
-
-    snapshot.forEach(docSnap => {
-      if (docSnap.id !== currentSessionId) {
-        batch.update(docSnap.ref, { isCurrent: false });
-      }
-    });
-
-    await batch.commit();
+    return () => {
+      offTabs();
+      offRemote();
+    };
   }
 }
 

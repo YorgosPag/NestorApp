@@ -1,18 +1,21 @@
 /**
- * 🔐 SESSION — DEVICE DETECTION & LOCATION UTILITIES
+ * 🔐 SESSION — DEVICE DETECTION
  *
- * Device fingerprinting, browser/OS detection, and GDPR-compliant
- * location approximation for session management.
+ * Browser/OS/device detection from the user agent — **pure** functions, run by the **server** on the
+ * request's own `user-agent` header (ADR-894). The browser contributes only what the server cannot
+ * see (screen, language), via `getClientDeviceHints()`.
+ *
+ * ⛔ Η τοποθεσία **δεν** ζει πια εδώ: μέχρι τις 2026-09-29 ο browser ρωτούσε το `ipapi.co` και έκανε
+ * hash της IP με αλάτι γραμμένο στον κώδικα (αντιστρέψιμο). Πλέον: `lib/geo/ip-geolocation.ts`, στον server.
  *
  * @module services/session/session-device-detection
- * @see EnterpriseSessionService.ts
+ * @see session-server.service.ts
  * @gdpr-compliant true
  */
 
-import { isWebCryptoAvailable, sha256HexOfText } from '@/lib/hash/sha256';
 import type {
+  ClientDeviceHints,
   SessionDeviceInfo,
-  SessionLocation,
   DeviceType,
   BrowserType,
   OperatingSystem,
@@ -91,86 +94,35 @@ export function detectOS(userAgent: string): { os: OperatingSystem; version: str
   return { os: 'Unknown', version: 'Unknown' };
 }
 
-/** Get aggregated device information from browser */
-export function getDeviceInfo(): SessionDeviceInfo {
-  if (typeof navigator === 'undefined') {
-    return {
-      type: 'unknown',
-      browser: 'Server',
-      browserType: 'Unknown',
-      os: 'Unknown',
-      osVersion: 'Unknown',
-      userAgent: 'Server-side',
-      language: 'en'
-    };
-  }
+/** Αρκετό για κάθε πραγματικό UA· ένα τεράστιο header δεν γίνεται τεράστιο έγγραφο. */
+const MAX_STORED_USER_AGENT_LENGTH = 512;
 
-  const userAgent = navigator.userAgent;
+/**
+ * **Server**: η συσκευή από το `user-agent` του **ίδιου** του αιτήματος + τις ενδείξεις του browser.
+ * Ο client δεν δηλώνει πια «είμαι Chrome σε Windows» — το λέει η κεφαλίδα που έστειλε.
+ */
+export function deviceInfoFromUserAgent(userAgent: string, hints: ClientDeviceHints): SessionDeviceInfo {
   const browser = detectBrowser(userAgent);
   const osInfo = detectOS(userAgent);
-
   return {
     type: detectDeviceType(userAgent),
     browser: `${browser.type} ${browser.version}`,
     browserType: browser.type,
     os: osInfo.os,
     osVersion: osInfo.version,
-    userAgent,
-    screenResolution: typeof screen !== 'undefined'
-      ? `${screen.width}x${screen.height}`
-      : undefined,
-    language: navigator.language || 'en'
+    userAgent: userAgent.slice(0, MAX_STORED_USER_AGENT_LENGTH),
+    ...(hints.screenResolution ? { screenResolution: hints.screenResolution } : {}),
+    // BCP 47 «und» = απροσδιόριστη — καλύτερο από ένα επινοημένο 'en'.
+    language: hints.language ?? 'und',
   };
 }
 
-// ============================================================================
-// LOCATION UTILITIES (GDPR COMPLIANT)
-// ============================================================================
-
-/** Hash IP address for GDPR compliance (SHA-256, first 8 chars) */
-async function hashIP(ip: string): Promise<string> {
-  // Υποβάθμιση αντί για σφάλμα: μια μασκαρισμένη διεύθυνση εξυπηρετεί το GDPR
-  // εξίσου καλά, ενώ μια εξαίρεση θα έριχνε τον εντοπισμό συσκευής ολόκληρο.
-  if (!isWebCryptoAvailable()) {
-    return ip.split('.').slice(0, 2).join('.') + '.x.x';
-  }
-
-  const hashHex = await sha256HexOfText(ip + 'enterprise-salt-2024');
-  return hashHex.substring(0, 8);
-}
-
-/** Get approximate location from IP (GDPR compliant, timezone fallback) */
-export async function getApproximateLocation(): Promise<SessionLocation> {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  const defaultLocation: SessionLocation = {
-    ipHash: 'unknown',
-    countryCode: 'GR',
-    countryName: 'Ελλάδα',
-    city: 'Unknown',
-    timezone,
-    isApproximate: true
+/** **Browser**: μόνο ό,τι ο server δεν μπορεί να δει. */
+export function getClientDeviceHints(): ClientDeviceHints {
+  if (typeof navigator === 'undefined') return {};
+  return {
+    ...(typeof screen !== 'undefined' ? { screenResolution: `${screen.width}x${screen.height}` } : {}),
+    ...(navigator.language ? { language: navigator.language } : {}),
   };
-
-  try {
-    const response = await fetch('https://ipapi.co/json/', {
-      signal: AbortSignal.timeout(3000)
-    });
-
-    if (!response.ok) return defaultLocation;
-
-    const data = await response.json();
-
-    return {
-      ipHash: await hashIP(data.ip || 'unknown'),
-      countryCode: data.country_code || 'GR',
-      countryName: data.country_name || 'Unknown',
-      city: data.city || 'Unknown',
-      region: data.region || undefined,
-      timezone: data.timezone || timezone,
-      isApproximate: true
-    };
-  } catch {
-    return defaultLocation;
-  }
 }
+

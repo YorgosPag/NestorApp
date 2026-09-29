@@ -112,21 +112,32 @@ function shownMedian(selection: PriceMapSelection): number | null {
 }
 
 /**
- * **Οι περιοχές στην οθόνη**, για τον πίνακα που αντικαθιστά το κλικ στο πληκτρολόγιο (WCAG 2.1.1): ακριβότερη
- * πρώτα, όσες έχουν λίγα στο τέλος (με όνομα), έως `VISIBLE_ROWS_LIMIT`. Μία γραμμή ανά περιοχή.
+ * **Κατάταξη περιοχών**: ακριβότερη πρώτα, όσες έχουν λίγα στο τέλος (με όνομα). Μία γραμμή ανά περιοχή. Κοινή για
+ * τον πίνακα «στην οθόνη» της αναζήτησης και τον πίνακα Δ.Ε. της σελίδας Δήμου (ADR-890 §15) — ίδια σειρά παντού.
+ */
+export function rankedSelectionsOf(
+  properties: readonly AdminOverviewProperties[],
+  areas: PriceMapAreas,
+  choice: PriceMapChoice,
+): readonly PriceMapSelection[] {
+  const unique = new Map(properties.map((item) => [item.id, item]));
+  return [...unique.values()]
+    .map((item) => selectionOf(item, areas, choice))
+    .sort((a, b) => {
+      const [ma, mb] = [shownMedian(a), shownMedian(b)];
+      if (ma !== mb) return ma === null ? 1 : mb === null ? -1 : mb - ma;
+      return compareByLocale(a.name, b.name);
+    });
+}
+
+/**
+ * **Οι περιοχές στην οθόνη**, για τον πίνακα που αντικαθιστά το κλικ στο πληκτρολόγιο (WCAG 2.1.1): η κατάταξη του
+ * `rankedSelectionsOf`, έως `VISIBLE_ROWS_LIMIT`.
  */
 export function visibleRowsOf(
   rendered: readonly AdminOverviewProperties[],
   areas: PriceMapAreas,
   choice: PriceMapChoice,
 ): readonly PriceMapSelection[] {
-  const unique = new Map(rendered.map((properties) => [properties.id, properties]));
-  return [...unique.values()]
-    .map((properties) => selectionOf(properties, areas, choice))
-    .sort((a, b) => {
-      const [ma, mb] = [shownMedian(a), shownMedian(b)];
-      if (ma !== mb) return ma === null ? 1 : mb === null ? -1 : mb - ma;
-      return compareByLocale(a.name, b.name);
-    })
-    .slice(0, VISIBLE_ROWS_LIMIT);
+  return rankedSelectionsOf(rendered, areas, choice).slice(0, VISIBLE_ROWS_LIMIT);
 }

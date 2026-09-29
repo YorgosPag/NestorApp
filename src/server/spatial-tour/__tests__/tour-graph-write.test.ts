@@ -24,6 +24,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 import type { TourGraphCommand } from '@/lib/spatial-tour/tour-graph-edit';
 
 import { writeTourGraph } from '../tour-graph-write';
+import { tilesetKeyOf } from '../tour-redaction-apply';
 import { viewerStops } from '../tour-viewer-stops';
 
 const AGENCY = 'comp_agency';
@@ -278,5 +279,98 @@ describe('Σ — σχήματα χώρων + νοητές γραμμές (Φ2σ�
     }));
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ levels: [{ key: L0, floorPlans: [PLAN], spaces }] }) });
     expect(await write(space(rect(12, -1, 16, -4)))).toEqual({ kind: 'refused', reason: 'graph-full' });
+  });
+});
+
+describe('Θ — θόλωμα (Φ2ζ · §4.15 · Α8)', () => {
+  const R1 = enterpriseIdService.generateTourRedactionId();
+  const REGION = { yawRad: 0.5, pitchRad: 0.1, radiusRad: 0.2 };
+  const redact = (mode: 'create' | 'replace' = 'create', region = REGION, redactionId = R1): TourGraphCommand =>
+    ({ op: 'redact', captureId: 'tcap_1', redactionId, mode, region });
+
+  it('νέα περιοχή ⇒ revision + 1 · νέο κλειδί σε pending (fail-closed) · το παλιό αποσύρεται · ψήσιμο ζητείται', async () => {
+    const outcome = await write(redact());
+    expect(outcome).toMatchObject({ kind: 'written', revision: 4 });
+    expect(outcome).toHaveProperty('rebakeCapture');
+    const capture = await readCapture('tcap_1');
+    const key = tilesetKeyOf('h1', capture.redactions ?? []);
+    expect(capture.redactions).toEqual([{ id: R1, ...REGION, source: 'manual', createdBy: 'boris', createdAt: expect.any(String) }]);
+    expect(capture.originalHash).toBe('h1');
+    expect(capture.tileset).toEqual({ state: 'pending', contentHash: key, faceSize: null, retiredKeys: ['h1'] });
+    expect(key).not.toBe('h1');
+    expect(viewerStops([{ ...capture, nodeId: 'tnod_x' }])).toEqual([]);
+  });
+
+  it('αφαίρεση ⇒ κλειδί ξανά το πρωτότυπο · αποσύρεται το θολωμένο, ΠΟΤΕ το τρέχον', async () => {
+    await write(redact());
+    const blurredKey = (await readCapture('tcap_1')).tileset.contentHash;
+    expect(await write({ op: 'unredact', captureId: 'tcap_1', redactionId: R1 })).toMatchObject({ kind: 'written', revision: 5 });
+    const capture = await readCapture('tcap_1');
+    expect(capture.redactions).toBeUndefined();
+    expect(capture.tileset).toEqual({ state: 'pending', contentHash: 'h1', faceSize: null, retiredKeys: [blurredKey] });
+  });
+
+  it('επανάληψη ίδιας περιοχής ⇒ unchanged, κανένα ψήσιμο, καμία εγγραφή', async () => {
+    await write(redact());
+    expect(await write(redact())).toEqual({ kind: 'unchanged', revision: 4 });
+  });
+
+  it('αρνήσεις με όνομα, καμία εγγραφή: φωτογράφος · ξένο id · πέρα από τον πόλο · ανύπαρκτη · άλλη γεωμετρία σε ίδιο id', async () => {
+    expect(await write(redact(), PHOTOGRAPHER)).toEqual({ kind: 'refused', reason: 'not-manager' });
+    expect(await write(redact('create', REGION, enterpriseIdService.generateTourSpaceId()))).toEqual({ kind: 'refused', reason: 'redaction-invalid' });
+    expect(await write(redact('create', { ...REGION, pitchRad: 2 }))).toEqual({ kind: 'refused', reason: 'redaction-invalid' });
+    expect(await write(redact('replace'))).toEqual({ kind: 'refused', reason: 'redaction-absent' });
+    await write(redact());
+    expect(await write(redact('create', { ...REGION, radiusRad: 0.3 }))).toEqual({ kind: 'refused', reason: 'redaction-exists' });
+    expect((await readTour()).revision).toBe(4);
+  });
+
+  it('άγνωστη λήψη ⇒ capture-absent', async () => {
+    expect(await write({ op: 'unredact', captureId: 'tcap_zz', redactionId: R1 })).toEqual({ kind: 'refused', reason: 'capture-absent' });
+  });
+});
+
+describe('Δ — δέσμη θολώματος (Φ2ζ ζ3 · §4.15 — το «Apply»)', () => {
+  const R1 = enterpriseIdService.generateTourRedactionId();
+  const R2 = enterpriseIdService.generateTourRedactionId();
+  const A = { yawRad: 0.5, pitchRad: 0.1, radiusRad: 0.2 };
+  const B = { yawRad: -1, pitchRad: -0.3, radiusRad: 0.1 };
+  const batch = (edits: Extract<TourGraphCommand, { op: 'redactions' }>['edits']): TourGraphCommand =>
+    ({ op: 'redactions', captureId: 'tcap_1', edits });
+
+  it('δύο νέοι κύκλοι ⇒ ΜΙΑ εγγραφή (revision + 1) · ΕΝΑ νέο κλειδί με ΚΑΙ τους δύο · ΕΝΑ ψήσιμο', async () => {
+    const outcome = await write(batch([
+      { op: 'redact', redactionId: R1, mode: 'create', region: A },
+      { op: 'redact', redactionId: R2, mode: 'create', region: B },
+    ]));
+    expect(outcome).toMatchObject({ kind: 'written', revision: 4 });
+    expect(outcome).toHaveProperty('rebakeCapture');
+    const capture = await readCapture('tcap_1');
+    expect(capture.redactions?.map((r) => r.id)).toEqual([R1, R2]);
+    expect(capture.tileset).toEqual({ state: 'pending', contentHash: tilesetKeyOf('h1', capture.redactions ?? []), faceSize: null, retiredKeys: ['h1'] });
+  });
+
+  it('ΑΤΟΜΙΚΗ: μία άρνηση ⇒ καμία αλλαγή, ούτε από τις έγκυρες πριν από αυτήν', async () => {
+    expect(await write(batch([
+      { op: 'redact', redactionId: R1, mode: 'create', region: A },
+      { op: 'redact', redactionId: R2, mode: 'replace', region: B },
+    ]))).toEqual({ kind: 'refused', reason: 'redaction-absent' });
+    const capture = await readCapture('tcap_1');
+    expect(capture.redactions).toBeUndefined();
+    expect(capture.tileset.contentHash).toBe('h1');
+    expect((await readTour()).revision).toBe(3);
+  });
+
+  it('δέσμη που καταλήγει στα ίδια pixel ⇒ καμία επανα-ψήση· επανάληψη ⇒ unchanged', async () => {
+    await write(batch([{ op: 'redact', redactionId: R1, mode: 'create', region: A }]));
+    const key = (await readCapture('tcap_1')).tileset.contentHash;
+    // Αφαίρεση + ξαναγέννηση στο ίδιο id/γεωμετρία: οι περιοχές ξαναγράφονται (νέα σφραγίδα), το κλειδί ΔΕΝ αλλάζει.
+    const same = await write(batch([
+      { op: 'unredact', redactionId: R1 },
+      { op: 'redact', redactionId: R1, mode: 'create', region: A },
+    ]));
+    expect(same).toEqual({ kind: 'written', revision: 5 });
+    expect((await readCapture('tcap_1')).tileset.contentHash).toBe(key);
+    expect(await write(batch([{ op: 'redact', redactionId: R1, mode: 'create', region: A }]))).toEqual({ kind: 'unchanged', revision: 5 });
   });
 });

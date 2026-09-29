@@ -15,19 +15,21 @@ import type { Map as MapInstance } from 'maplibre-gl';
 import React, { useMemo } from 'react';
 
 import { usePriceMapModel } from '@/components/search-results/price-map/PriceMapProvider';
-import type { AdminOverviewFile, AdminOverviewTier } from '@/lib/geo/admin-overview-file';
+import type { AdminOverviewFile } from '@/lib/geo/admin-overview-file';
 import type { BasemapScheme } from '@/lib/maps/basemap-catalog';
 import { Layer, Source, useMap } from '@/lib/maps/maplibre';
 import { useBasemapScheme } from '@/lib/maps/use-basemap-scheme';
 import { UNIT_TIER_MIN_ZOOM } from '@/lib/market/price-map-view';
 
-import { priceMapFillPaint, priceMapHatchPaint, priceMapLinePaint } from './price-map-paint';
-import { PRICE_MAP_TIER_IDS, useHatchImage, useLayerOrder, useMapEvents, useTierStates } from './price-map-sync';
+import { useHatchImage } from '@/components/market/choropleth/choropleth-sync';
+import { priceMapFillPaint, priceMapHatchPaint, priceMapLinePaint } from '@/components/market/choropleth/price-map-paint';
+
+import { PRICE_MAP_TIER_IDS, useLayerOrder, useMapEvents, useTierStates, type PriceMapTier } from './price-map-sync';
 
 const MAX_ZOOM = 24;
 
 interface TierLayersProps {
-  readonly tier: AdminOverviewTier;
+  readonly tier: PriceMapTier;
   readonly file: AdminOverviewFile;
   readonly minzoom: number;
   readonly maxzoom: number;

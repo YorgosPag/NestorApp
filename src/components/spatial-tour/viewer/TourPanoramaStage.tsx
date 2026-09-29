@@ -29,16 +29,19 @@ import { viewBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
 import type { TourViewerGraph, ViewerNeighbour } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import type { TourViewerAction, TourViewerState } from '@/lib/spatial-tour/viewer/tour-viewer-state';
 import { viewAfterZoomStep } from '@/lib/spatial-tour/viewer/tour-viewer-view';
+import { redactionCellRad, type PackedRedactionPreview } from '@/lib/spatial-tour/viewer/tour-redaction-preview';
+import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 import { setCameraView, type TourCameraStore } from './tour-camera-store';
-import type { TourPanoramaEngine } from './tour-panorama-engine';
+import type { ScreenPoint, TourPanoramaEngine } from './tour-panorama-engine';
 import type { TourPanoramaSource } from './tour-panorama-source';
 import { TourFloorCursor } from './TourFloorCursor';
 import { TourLinkButton } from './TourLinkButton';
 import { floorCandidates, useFloorArrows, useFloorCursor, useFloorTap } from './useTourFloorOverlay';
 import { useTourNavigation, type TourPanoramaStatus } from './useTourNavigation';
+import { tourStopKey } from './tour-tile-streamer';
 import { useArrivalPrefetch, usePrefetchNeighbourBases, useTourTileStreamer } from './useTourTileStreamer';
 import { useTourPanoramaEngine } from './useTourPanoramaEngine';
 import { useTourPanoramaInput } from './useTourPanoramaInput';
@@ -52,9 +55,36 @@ export interface TourStageAim {
   readonly centerBearing: () => number | null;
 }
 
+/** Κατεύθυνση σε συντεταγμένες **πανοράματος** (yaw 0 = κέντρο της εικόνας, ανεξάρτητο από το heading — Φ2ζ). */
+export interface PanoramaDirection {
+  readonly yaw: number;
+  readonly pitch: number;
+}
+
+/**
+ * **Η σκηνή για τα εργαλεία που ζωγραφίζουν ΠΑΝΩ στη φωτογραφία** (Φ2ζ ζ3 — πινέλο θολώματος): προβολή και στις δύο κατευθύνσεις
+ * σε συντεταγμένες πανοράματος, καρέ, προεπισκόπηση. Τα εργαλεία δεν βλέπουν τη μηχανή.
+ */
+export interface TourStageScene {
+  /** Η στάση που δείχνει η σκηνή — `null` πριν φορτώσει. */
+  readonly stop: { readonly captureId: string; readonly faceSize: number } | null;
+  readonly camera: TourCameraStore;
+  /** Κάτω από ένα σημείο της οθόνης — `null` έξω από την εικόνα ή πριν φορτώσει η μηχανή. */
+  readonly panoramaAtClient: (clientX: number, clientY: number) => PanoramaDirection | null;
+  readonly centerPanorama: () => PanoramaDirection | null;
+  /** Θέση μέσα στη σκηνή (CSS px) — `null` πίσω από τον θεατή ή εκτός κάδρου. */
+  readonly project: (direction: PanoramaDirection) => ScreenPoint;
+  /** Ύψος της σκηνής (CSS px) — η κλίμακα του συρσίματος ματιάς. */
+  readonly height: () => number;
+  readonly onFrame: (listener: () => void) => () => void;
+  readonly setRedactionPreview: (preview: PackedRedactionPreview) => void;
+}
+
 export interface TourStageEditing {
   readonly onPlaceArrow: (toNodeId: string, bearingRad: number) => void;
-  readonly renderTools: (aim: TourStageAim) => ReactNode;
+  readonly renderTools: (aim: TourStageAim, scene: TourStageScene) => ReactNode;
+  /** Ό,τι ζει **μέσα** στο κάδρο, πάνω από τον καμβά (επιφάνεια πινέλου, λαβές). */
+  readonly renderOverlay?: (scene: TourStageScene) => ReactNode;
 }
 
 export interface TourPanoramaStageProps {
@@ -70,6 +100,16 @@ export interface TourPanoramaStageProps {
   readonly fill?: boolean;
 }
 
+/** **Η ΜΙΑ προβολή οθόνη → πανόραμα** — σε αυτήν χτίζονται και η διόπτευση των βελακιών και το πινέλο θολώματος. */
+function panoramaAtClientOf(engine: TourPanoramaEngine | null, canvas: HTMLCanvasElement | null, clientX: number, clientY: number): PanoramaDirection | null {
+  const rect = canvas?.getBoundingClientRect();
+  if (engine === null || rect === undefined) return null;
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+  return engine.unproject(x, y);
+}
+
 function useStageAim(
   engine: TourPanoramaEngine | null,
   canvasRef: RefObject<HTMLCanvasElement | null>,
@@ -78,15 +118,36 @@ function useStageAim(
 ): TourStageAim {
   return useMemo(() => ({
     bearingAtClient: (clientX: number, clientY: number) => {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (engine === null || rect === undefined) return null;
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
-      return viewBearing(headingRad, engine.unproject(x, y).yaw);
+      const at = panoramaAtClientOf(engine, canvasRef.current, clientX, clientY);
+      return at === null ? null : viewBearing(headingRad, at.yaw);
     },
     centerBearing: () => (engine === null ? null : viewBearing(headingRad, camera.get().view.yaw)),
   }), [engine, canvasRef, camera, headingRad]);
+}
+
+const NO_UNSUBSCRIBE = () => undefined;
+
+function useStageScene(
+  engine: TourPanoramaEngine | null,
+  canvasRef: RefObject<HTMLCanvasElement | null>,
+  camera: TourCameraStore,
+  stop: TourManifestStop | undefined,
+): TourStageScene {
+  return useMemo(() => {
+    const view = () => camera.get().view;
+    return {
+      stop: stop === undefined ? null : { captureId: stop.captureId, faceSize: stop.faceSize },
+      camera,
+      panoramaAtClient: (clientX: number, clientY: number) => panoramaAtClientOf(engine, canvasRef.current, clientX, clientY),
+      centerPanorama: () => (engine === null ? null : { yaw: view().yaw, pitch: view().pitch }),
+      project: (d: PanoramaDirection) => (engine === null ? null : engine.project(d.yaw, d.pitch)),
+      height: () => canvasRef.current?.clientHeight ?? 0,
+      onFrame: (listener: () => void) => (engine === null ? NO_UNSUBSCRIBE : engine.onFrame(listener)),
+      setRedactionPreview: (preview: PackedRedactionPreview) => {
+        if (engine !== null && stop !== undefined) engine.setRedactionPreview(tourStopKey(stop), preview, redactionCellRad(stop.faceSize));
+      },
+    };
+  }, [engine, canvasRef, camera, stop]);
 }
 
 function StageStatus({ status }: { readonly status: TourPanoramaStatus }) {
@@ -127,6 +188,18 @@ function useStageFloor(
   return viewing ? tap : undefined;
 }
 
+/** Τα κουμπιά συνδέσμων: καταχώριση για τη θέση τους ανά καρέ · άφεση βελακιού (μόνο στην οθόνη τοποθέτησης). */
+function useLinkButtonWiring(buttons: Map<string, HTMLButtonElement>, aim: TourStageAim, editing: TourStageEditing | undefined) {
+  const register = useCallback((nodeId: string) => (el: HTMLButtonElement | null) => {
+    if (el === null) buttons.delete(nodeId); else buttons.set(nodeId, el);
+  }, [buttons]);
+  const dropOf = (nodeId: string) => (editing === undefined ? undefined : (x: number, y: number) => {
+    const bearing = aim.bearingAtClient(x, y);
+    if (bearing !== null) editing.onPlaceArrow(nodeId, bearing);
+  });
+  return { register, dropOf };
+}
+
 export function TourPanoramaStage({ graph, state, dispatch, camera, source, neighbours, editing, fill = false }: TourPanoramaStageProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -144,14 +217,9 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
   const tap = useStageFloor({ engine, camera, canvasRef }, { buttons, cursorRef }, { neighbours, headingRad, moving, viewing: editing === undefined }, { go, intentOf });
   useTourPanoramaInput(canvasRef, camera, tap);
   const aim = useStageAim(engine, canvasRef, camera, headingRad);
+  const scene = useStageScene(engine, canvasRef, camera, current?.stop);
   const labelsOf = useNeighbourLabels(graph, current?.levelId ?? null);
-  const register = useCallback((nodeId: string) => (el: HTMLButtonElement | null) => {
-    if (el === null) buttons.delete(nodeId); else buttons.set(nodeId, el);
-  }, [buttons]);
-  const dropOf = (nodeId: string) => (editing === undefined ? undefined : (x: number, y: number) => {
-    const bearing = aim.bearingAtClient(x, y);
-    if (bearing !== null) editing.onPlaceArrow(nodeId, bearing);
-  });
+  const { register, dropOf } = useLinkButtonWiring(buttons, aim, editing);
 
   return (
     <>
@@ -164,10 +232,11 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
             onGo={() => go(n.nodeId)} onDrop={dropOf(n.nodeId)} onIntent={intentOf(n.nodeId)} />
         ))}
         {editing !== undefined && <EditingReticle />}
+        {editing?.renderOverlay?.(scene)}
         <StageStatus status={status} />
         <ZoomMenu camera={camera} />
       </figure>
-      {editing?.renderTools(aim)}
+      {editing?.renderTools(aim, scene)}
     </>
   );
 }

@@ -8,6 +8,9 @@
  * 2. **σύνδεσμο στην άδεια**·
  * 3. **δήλωση ότι τα δεδομένα άλλαξαν** — τι επεξεργασία έγινε.
  *
+ * 🔑 **Κάθε πηγή, όχι μόνο της αγοράς** (ADR-894): τα κείμενα ανά πηγή ζουν στο `textNamespace` της πηγής· οι
+ * γενικές φράσεις μία φορά εδώ. Έτσι η απόδοση του DB-IP στη λίστα συσκευών είναι **η ίδια** μηχανή.
+ *
  * 🔑 Γιατί component και όχι γραμμή σε κάθε κάρτα: η αναφορά είναι **υποχρέωση άδειας**. Αντιγραμμένη, η
  * επόμενη αλλαγή θα διορθωνόταν σε ένα σημείο και θα ξεχνιόταν στα άλλα — ακριβώς ό,τι συνέβη με τις
  * αποδόσεις των χαρτών (`lib/maps/map-attribution.ts`: πέντε χάρτες, πέντε ξεχασμένες).
@@ -27,21 +30,21 @@ interface OpenDataAttributionProps {
 }
 
 export function OpenDataAttribution({ source }: OpenDataAttributionProps) {
-  const { t } = useTranslation([NS]);
-  const { datasetUrl, license } = OPEN_DATA_SOURCES[source];
+  const { datasetUrl, license, textNamespace } = OPEN_DATA_SOURCES[source];
+  const { t } = useTranslation([NS, textNamespace]);
   return (
     <footer className="flex flex-col gap-1 text-xs text-muted-foreground">
       <p className="m-0">
         <a href={datasetUrl} className={LINK} {...EXTERNAL}>
           {t(`${NS}:source.line`, {
-            owner: t(`${NS}:source.${source}.owner`),
-            dataset: t(`${NS}:source.${source}.dataset`),
+            owner: t(`${textNamespace}:source.${source}.owner`),
+            dataset: t(`${textNamespace}:source.${source}.dataset`),
           })}
         </a>
         {' · '}
         <a href={license.url} className={LINK} {...EXTERNAL}>{t(`${NS}:source.license`)}</a>
       </p>
-      <p className="m-0">{t(`${NS}:source.${source}.changes`)}</p>
+      <p className="m-0">{t(`${textNamespace}:source.${source}.changes`)}</p>
     </footer>
   );
 }

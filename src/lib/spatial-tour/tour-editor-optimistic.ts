@@ -22,14 +22,14 @@ import {
   type TourGraphEditRefusal,
   type TourGraphEditResult,
 } from './tour-graph-edit';
-import { orientNode, positionNode, type TourEditStamp } from './tour-plan-edit';
+import { orientNode, positionNode, UNSTAMPED } from './tour-plan-edit';
 import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from './tour-space-edit';
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
 export type OptimisticCaptureOf = (captureId: string) => Pick<TourCapture, 'headingRad' | 'nodeId'> | undefined;
 
-/** Η σφραγίδα της αισιόδοξης εικόνας — κενή: το «ποιος/πότε» το γράφει ο διακομιστής, και η οθόνη δεν το δείχνει. */
-const SCREEN_STAMP: TourEditStamp = { uid: '', at: '' };
+/** Η σφραγίδα της αισιόδοξης εικόνας — το «ποιος/πότε» το γράφει ο διακομιστής, και η οθόνη δεν το δείχνει. */
+const SCREEN_STAMP = UNSTAMPED;
 
 function orientResult(graph: Graph, command: Extract<TourGraphCommand, { op: 'orient' }>, captureOf: OptimisticCaptureOf) {
   const capture = captureOf(command.captureId);

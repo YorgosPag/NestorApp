@@ -34,6 +34,7 @@ import {
   isTourHeadingSource,
   isTourLinkVia,
   isTourMilestone,
+  isTourRedactionSource,
   isTourRoomSource,
   isTourSpaceAreaDisplay,
   isTourSpaceSource,
@@ -66,6 +67,7 @@ import type {
   TourLink,
   TourNode,
   TourPoint,
+  TourRedaction,
   TourRoom,
   TourSeparationLine,
   TourSpaceOutline,
@@ -257,7 +259,29 @@ function readCaptureSignatory(raw: unknown): TourCaptureSignatory | null | undef
 function readTileset(raw: unknown): TourCaptureTileset | null {
   if (!isRecord(raw) || !isTourTilesetState(raw.state)) return null;
   const faceSize = isFiniteNumber(raw.faceSize) && raw.faceSize > 0 ? raw.faceSize : null;
-  return { state: raw.state, contentHash: text(raw.contentHash), faceSize };
+  // Αποσυρμένα κλειδιά (Φ2ζ): λείπει ⇒ κανένα· υπάρχει αλλά δεν διαβάζεται ⇒ ΟΛΗ η λήψη `null` — μια σιωπηλά χαμένη λίστα
+  // θα άφηνε στον κάδο πλακίδια με ό,τι ζητήθηκε να κρυφτεί.
+  const retiredKeys = raw.retiredKeys === undefined ? [] : readAll(raw.retiredKeys, text);
+  if (retiredKeys === null) return null;
+  return { state: raw.state, contentHash: text(raw.contentHash), faceSize, ...(retiredKeys.length > 0 ? { retiredKeys } : {}) };
+}
+
+function readRedaction(raw: unknown): TourRedaction | null {
+  if (!isRecord(raw) || !isTourRedactionSource(raw.source)) return null;
+  const [id, createdBy] = [text(raw.id), text(raw.createdBy)];
+  const createdAt = normalizeToISO(raw.createdAt);
+  const { yawRad, pitchRad, radiusRad } = raw;
+  if (id === null || createdBy === null || createdAt === null) return null;
+  if (!isFiniteNumber(yawRad) || !isFiniteNumber(pitchRad) || !isFiniteNumber(radiusRad)) return null;
+  return { id, yawRad, pitchRad, radiusRad, source: raw.source, createdBy, createdAt };
+}
+
+/**
+ * Οι θολωμένες περιοχές (Φ2ζ): λείπουν ⇒ `[]`· υπάρχουν αλλά **έστω μία** δεν διαβάζεται ⇒ `null` και η λήψη δεν διαβάζεται.
+ * 🔴 Ποτέ «πέτα την αδιάβαστη»: ο ψήστης θα έψηνε χωρίς αυτήν — θα **ξεθόλωνε** ένα πρόσωπο σιωπηλά.
+ */
+function readRedactions(raw: unknown): readonly TourRedaction[] | null {
+  return raw === undefined ? [] : readAll(raw, readRedaction);
 }
 
 /** Τα πεδία λεξιλογίου μιας λήψης — όλα ή τίποτα. */
@@ -287,6 +311,8 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   const signatory = readCaptureSignatory(raw.signatory);
   const rights = readMediaRights(raw.rights);
   const tileset = readTileset(raw.tileset);
+  const redactions = readRedactions(raw.redactions);
+  const originalHash = raw.originalHash === undefined ? undefined : text(raw.originalHash);
   const nodeId = readPlacement(raw.nodeId);
   const [tourId, originalFileId, uploadedBy] = [raw.tourId, raw.originalFileId, raw.uploadedBy].map(text);
   const [capturedAt, createdAt] = [normalizeToISO(raw.capturedAt), normalizeToISO(raw.createdAt)];
@@ -295,11 +321,15 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   if (capturedAt === null || createdAt === null || !isFiniteNumber(raw.headingRad)) return null;
   // Απών ⇒ `device` (παλιά έγγραφα)· παρών αλλά άγνωστος ⇒ έγγραφο που δεν καταλάβαμε (Φ2στ-β).
   if (raw.headingSource !== undefined && !isTourHeadingSource(raw.headingSource)) return null;
+  // Θολώματα / hash πρωτοτύπου (Φ2ζ): παρόντα αλλά αδιάβαστα ⇒ έγγραφο που δεν καταλάβαμε (ποτέ ψήσιμο χωρίς αυτά).
+  if (redactions === null || originalHash === null) return null;
   return {
     id, tourId, nodeId, capturedAt, createdAt, originalFileId, uploadedBy, rights, tileset, signatory,
     ...vocabulary,
     headingRad: raw.headingRad,
     ...(raw.headingSource === undefined ? {} : { headingSource: raw.headingSource }),
+    ...(originalHash === undefined ? {} : { originalHash }),
+    ...(redactions.length > 0 ? { redactions } : {}),
     baseCaptureId: text(raw.baseCaptureId),
   };
 }

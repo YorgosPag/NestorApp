@@ -38,6 +38,12 @@ export interface TourEditorDataHandle {
   readonly load: TourEditorLoad;
   readonly reload: () => Promise<void>;
   /**
+   * **Ρολόι** (ανανέωση κουπονιού · «ετοιμάζεται ξανά»): φορτώνει **μόνο αν καμία φόρτωση δεν εκκρεμεί**. Με το «νεότερη κερδίζει»
+   * ένα ρολόι πιο γρήγορο από τον διακομιστή πετούσε **κάθε** απάντηση — η οθόνη δεν ενημερωνόταν ποτέ όσο ο διακομιστής αργούσε,
+   * δηλαδή ακριβώς όσο ψήνει (ζωντανή «Εφαρμογή», §4.15 ζ3). Οι φορτώσεις μετά από εντολή μένουν `reload` (κερδίζουν).
+   */
+  readonly poll: () => void;
+  /**
    * Αισιόδοξη αντικατάσταση του γράφου (κόμβοι **και** όροφοι με τα σχήματα χώρων, Γ3γ-1) — η επόμενη φόρτωση φέρνει την
    * αλήθεια του διακομιστή.
    */
@@ -50,21 +56,28 @@ export type TourEditorGraphData = Pick<TourEditorData, 'nodes' | 'levels'>;
 export function useTourEditorData(subject: TourSubject): TourEditorDataHandle {
   const [load, setLoad] = useState<TourEditorLoad>({ kind: 'loading' });
   const sequence = useRef(0);
+  const inFlight = useRef(0);
   const reload = useCallback(async () => {
     const mine = ++sequence.current;
-    const [session, captures] = await Promise.all([
-      openTourViewSessionFromScreen(subject, { signedIn: true, shareId: null }),
-      listTourCapturesFromScreen(subject),
-    ]);
-    if (mine !== sequence.current) return;
-    if (session.kind !== 'ok' || captures.kind !== 'ok') return setLoad({ kind: 'failed' });
-    const { nodes, levels } = session.value.manifest;
-    setLoad({ kind: 'loaded', data: { nodes, levels, captures: captures.value.captures } });
+    inFlight.current += 1;
+    try {
+      const [session, captures] = await Promise.all([
+        openTourViewSessionFromScreen(subject, { signedIn: true, shareId: null }),
+        listTourCapturesFromScreen(subject),
+      ]);
+      if (mine !== sequence.current) return;
+      if (session.kind !== 'ok' || captures.kind !== 'ok') return setLoad({ kind: 'failed' });
+      const { nodes, levels } = session.value.manifest;
+      setLoad({ kind: 'loaded', data: { nodes, levels, captures: captures.value.captures } });
+    } finally {
+      inFlight.current -= 1;
+    }
   }, [subject]);
+  const poll = useCallback(() => { if (inFlight.current === 0) void reload(); }, [reload]);
   const setGraph = useCallback(({ nodes, levels }: TourEditorGraphData) => {
     setLoad((prev) => (prev.kind === 'loaded' ? { kind: 'loaded', data: { ...prev.data, nodes, levels } } : prev));
   }, []);
   useEffect(() => { void reload(); }, [reload]);
-  useInterval(() => void reload(), TOUR_VIEW_RENEW_EVERY_MS);
-  return { load, reload, setGraph };
+  useInterval(poll, TOUR_VIEW_RENEW_EVERY_MS);
+  return { load, reload, poll, setGraph };
 }

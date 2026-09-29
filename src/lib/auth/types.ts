@@ -330,6 +330,15 @@ export interface AuthContext {
   mfaEnrolled: boolean;
   isAuthenticated: true;
   /**
+   * **Πότε έγινε η σύνδεση** που κρατά αυτό το διαπιστευτήριο (`auth_time`, δευτερόλεπτα) — ADR-894 §10 Β1.
+   *
+   * 🔑 Σταθερό σε κάθε ανανέωση token της **ίδιας** σύνδεσης ⇒ είναι η ταυτότητα «αυτής της σύνδεσης
+   * αυτής της συσκευής», πάνω στην οποία δένεται η ανάκληση **μίας** συσκευής (`revoked-sign-ins`).
+   * ⚠️ Προαιρετικό επίτηδες: κατασκευαστές context που δεν προέρχονται από token (dev principal ·
+   * εσωτερικές κλήσεις) **δεν έχουν** σύνδεση να δηλώσουν.
+   */
+  authTimeSec?: number;
+  /**
    * ADR-354 entry point #6 — true when `companyId` was overridden by the
    * super-admin switcher header. Routes use this to scope admin endpoints
    * to the effective company instead of returning cross-tenant data.

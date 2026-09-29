@@ -139,13 +139,18 @@ describe('summarizeOffer — κατώφλι, λογιστική, κάδοι', ()
   });
 });
 
-describe('περιοχές — δήμος ΚΑΙ Δ.Ε., και οι δήμοι χωρίς Δ.Ε.', () => {
-  it('αγγελία με Δ.Ε. μετρά και στις δύο βαθμίδες', () => {
-    expect(areaMarketKeysOf(listing({ adminArea: THESSALONIKI }))).toEqual(['municipality:0701', 'municipal_unit:070101']);
+describe('περιοχές — κάθε βαθμίδα με σελίδα, και οι δήμοι χωρίς Δ.Ε.', () => {
+  it('αγγελία με Δ.Ε. μετρά σε ΟΛΕΣ τις βαθμίδες με σελίδα (ADR-890 §16: διάμεσος από τις αγγελίες, όχι από διαμέσους)', () => {
+    expect(areaMarketKeysOf(listing({ adminArea: THESSALONIKI }))).toEqual([
+      'region:112',
+      'regional_unit:07',
+      'municipality:0701',
+      'municipal_unit:070101',
+    ]);
   });
 
-  it('δήμος χωρίς Δ.Ε. (Αθηναίων) μετρά μόνο στον δήμο', () => {
-    expect(areaMarketKeysOf(listing({ adminArea: ATHENS }))).toEqual(['municipality:4501']);
+  it('δήμος χωρίς Δ.Ε. (Αθηναίων) δεν έχει κλειδί Δ.Ε.', () => {
+    expect(areaMarketKeysOf(listing({ adminArea: ATHENS }))).toEqual(['region:112', 'regional_unit:07', 'municipality:4501']);
   });
 
   it('χωρίς adminArea ⇒ καμία περιοχή, μετριέται ως unassigned', () => {

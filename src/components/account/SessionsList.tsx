@@ -4,26 +4,20 @@
  * 🔐 SESSIONS LIST COMPONENT
  *
  * Enterprise component for displaying and managing active sessions.
- * Follows Google/Microsoft patterns for session management UI.
+ * Follows Google «Your devices» / GitHub «Sessions» patterns.
+ *
+ * ADR-894: η τοποθεσία έρχεται ως **κωδικοί** από τον server (τοπική GeoIP) και αποδίδεται εδώ στη γλώσσα
+ * του αναγνώστη· η «τρέχουσα συσκευή» είναι η εγγραφή αυτού του browser· η απόδοση CC BY του DB-IP είναι
+ * υποχρέωση της άδειας σε κάθε σελίδα που δείχνει αποτελέσματα.
  *
  * @module components/account/SessionsList
  * @enterprise-ready true
  */
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createStaleCache } from '@/lib/stale-cache';
-import {
-  Monitor,
-  Smartphone,
-  Tablet,
-  Globe,
-  LogOut,
-  RefreshCw,
-  Shield,
-  AlertTriangle,
-  Check
-} from 'lucide-react';
+import { LogOut, RefreshCw, Shield, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +32,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
 import { cn } from '@/lib/utils';
+import { getDisplayNames } from '@/lib/intl-formatting';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -47,13 +43,20 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
-import type { SessionDisplayItem, DeviceType, BrowserType } from '@/services/session';
+import type { SessionDisplayItem, SessionsOverviewDisplay } from '@/services/session';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { sessionLocationLabel } from './session-location-label';
+import { SessionDeviceSummary, type Translate } from './session-device-summary';
+import { EndedSessionsSection } from './EndedSessionsSection';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('SessionsList');
 
-const sessionsListCache = createStaleCache<SessionDisplayItem[]>('account-sessions');
+const sessionsListCache = createStaleCache<SessionsOverviewDisplay>('account-sessions');
+const EMPTY_OVERVIEW: SessionsOverviewDisplay = { live: [], ended: [] };
+
+const DESTRUCTIVE_ACTION = 'bg-destructive text-destructive-foreground hover:bg-destructive/90';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -67,82 +70,68 @@ interface SessionsListProps {
 }
 
 // ============================================================================
-// ICON HELPERS
+// DATA HOOK
 // ============================================================================
 
-/**
- * Get device icon based on device type
- */
-function getDeviceIcon(deviceType: DeviceType, className: string): React.ReactNode {
-  switch (deviceType) {
-    case 'mobile':
-      return <Smartphone className={className} aria-hidden="true" />;
-    case 'tablet':
-      return <Tablet className={className} aria-hidden="true" />;
-    case 'desktop':
-    default:
-      return <Monitor className={className} aria-hidden="true" />;
-  }
-}
+type SessionsSetter = React.Dispatch<React.SetStateAction<SessionsOverviewDisplay>>;
 
-/**
- * Get browser icon color based on browser type
- */
-function getBrowserColor(browserType: BrowserType): string {
-  switch (browserType) {
-    case 'Chrome':
-      return 'text-[hsl(var(--text-success))]';
-    case 'Firefox':
-      return 'text-[hsl(var(--text-warning))]';
-    case 'Safari':
-      return 'text-primary';
-    case 'Edge':
-      return 'text-primary';
-    default:
-      return 'text-muted-foreground';
-  }
-}
-
-// ============================================================================
-// SESSIONS LIST COMPONENT
-// ============================================================================
-
-export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const colors = useSemanticColors();
-  const borders = useBorderTokens();
-  const layout = useLayoutClasses();
-  const iconSizes = useIconSizes();
-  const typography = useTypography();
-
-  // State
-  const [sessions, setSessions] = useState<SessionDisplayItem[]>(sessionsListCache.get(userId) ?? []);
-  const [isLoading, setIsLoading] = useState(!sessionsListCache.hasLoaded(userId));
-  const [error, setError] = useState<string | null>(null);
+/** Ανάκληση — μία συσκευή ή όλες οι άλλες. Η λίστα ενημερώνεται μόνο μετά την επιβεβαίωση του server. */
+function useSessionRevocation(userId: string, t: Translate, setSessions: SessionsSetter, setError: (e: string) => void, onSessionsChange?: () => void) {
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [isRevokingAll, setIsRevokingAll] = useState(false);
+  const { signOut } = useAuth();
 
-  // Initialize session service
-  useEffect(() => {
-    if (db) {
-      sessionService.initialize(db);
+  // ADR-894 §10 Β1 — ανακλήθηκαν ΟΛΕΣ οι συνδέσεις και αυτή η συσκευή δεν πήρε νέο κλειδί ⇒ σύνδεση ξανά.
+  const settle = (result: { success: boolean; signInRequired?: boolean }, keep: (s: SessionDisplayItem) => boolean) => {
+    if (result.signInRequired) {
+      void signOut();
+      return;
     }
+    if (result.success) {
+      setSessions(prev => ({ ...prev, live: prev.live.filter(keep) }));
+      onSessionsChange?.();
+    } else {
+      setError(t('account.security.revokeError'));
+    }
+  };
+
+  const revokeSession = async (sessionId: string) => {
+    setRevokingSessionId(sessionId);
+    const result = await sessionService.revokeSession(userId, sessionId);
+    settle(result, s => s.id !== sessionId);
+    setRevokingSessionId(null);
+  };
+
+  const revokeAllOther = async () => {
+    setIsRevokingAll(true);
+    const result = await sessionService.revokeAllOtherSessions(userId);
+    settle(result, s => s.isCurrent);
+    setIsRevokingAll(false);
+  };
+
+  return { revokingSessionId, isRevokingAll, revokeSession, revokeAllOther };
+}
+
+function useSessions(userId: string, t: Translate, onSessionsChange?: () => void) {
+  const [overview, setOverview] = useState<SessionsOverviewDisplay>(sessionsListCache.get(userId) ?? EMPTY_OVERVIEW);
+  const [isLoading, setIsLoading] = useState(!sessionsListCache.hasLoaded(userId));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (db) sessionService.initialize(db);
   }, []);
 
-  // Fetch sessions
   const fetchSessions = useCallback(async () => {
     if (!userId) return;
-
     if (!sessionsListCache.hasLoaded(userId)) setIsLoading(true);
     setError(null);
-
     try {
-      const sessionsList = await sessionService.getSessionsForDisplay(userId);
-      sessionsListCache.set(sessionsList, userId);
-      setSessions(sessionsList);
+      const next = await sessionService.getSessionsForDisplay(userId);
+      sessionsListCache.set(next, userId);
+      setOverview(next);
     } catch (err) {
       logger.error('Failed to fetch sessions', { error: err });
-      setError(t('account.security.sessionsLoadError') || 'Failed to load sessions');
+      setError(t('account.security.sessionsLoadError'));
     } finally {
       setIsLoading(false);
     }
@@ -152,283 +141,222 @@ export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
     fetchSessions();
   }, [fetchSessions]);
 
-  // Revoke single session
-  const handleRevokeSession = async (sessionId: string) => {
-    setRevokingSessionId(sessionId);
+  const revocation = useSessionRevocation(userId, t, setOverview, setError, onSessionsChange);
+  return { sessions: overview.live, ended: overview.ended, isLoading, error, fetchSessions, ...revocation };
+}
 
-    try {
-      const result = await sessionService.revokeSession(userId, sessionId, 'user_requested');
+// ============================================================================
+// PRESENTATION
+// ============================================================================
 
-      if (result.success) {
-        setSessions(prev => prev.filter(s => s.id !== sessionId));
-        onSessionsChange?.();
-      } else {
-        setError(result.error || 'Failed to revoke session');
-      }
-    } catch (err) {
-      logger.error('Failed to revoke session', { error: err });
-      setError('Failed to revoke session');
-    } finally {
-      setRevokingSessionId(null);
-    }
-  };
+interface SessionsCardProps {
+  t: Translate;
+  count?: number;
+  withDescription?: boolean;
+  children: React.ReactNode;
+}
 
-  // Revoke all other sessions
-  const handleRevokeAllOther = async () => {
-    setIsRevokingAll(true);
-
-    try {
-      const result = await sessionService.revokeAllOtherSessions(userId);
-
-      if (result.success) {
-        setSessions(prev => prev.filter(s => s.isCurrent));
-        onSessionsChange?.();
-      } else {
-        setError(result.error || 'Failed to revoke sessions');
-      }
-    } catch (err) {
-      logger.error('Failed to revoke all sessions', { error: err });
-      setError('Failed to revoke sessions');
-    } finally {
-      setIsRevokingAll(false);
-    }
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardHeader>
-          <CardTitle className={layout.flexCenterGap2}>
-            <Shield className={iconSizes.md} aria-hidden="true" />
-            {t('account.security.sessionsTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <figure
-            className={cn(layout.flexCenterGap2, layout.padding4)}
-            role="status"
-            aria-label="Loading sessions"
-          >
-            <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} aria-hidden="true" />
-            <figcaption className={cn(typography.body.sm, colors.text.muted)}>
-              {t('common.loading') || 'Loading...'}
-            </figcaption>
-          </figure>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardHeader>
-          <CardTitle className={layout.flexCenterGap2}>
-            <Shield className={iconSizes.md} aria-hidden="true" />
-            {t('account.security.sessionsTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <figure
-            className={cn(
-              layout.flexCenterGap2,
-              layout.padding4,
-              borders.radiusClass.md,
-              colors.bg.error
-            )}
-          >
-            <AlertTriangle className={cn(iconSizes.sm, colors.text.error)} aria-hidden="true" />
-            <figcaption className={cn(typography.body.sm, colors.text.error)}>
-              {error}
-            </figcaption>
-          </figure>
-          <Button
-            variant="outline"
-            onClick={fetchSessions}
-            className="mt-4"
-          >
-            <RefreshCw className={cn(iconSizes.xs, 'mr-2')} aria-hidden="true" />
-            {t('common.retry') || 'Retry'}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No sessions state
-  if (sessions.length === 0) {
-    return (
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardHeader>
-          <CardTitle className={layout.flexCenterGap2}>
-            <Shield className={iconSizes.md} aria-hidden="true" />
-            {t('account.security.sessionsTitle')}
-          </CardTitle>
-          <CardDescription>
-            {t('account.security.sessionsDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className={cn(typography.body.sm, colors.text.muted)}>
-            {t('account.security.noSessions') || 'No active sessions found'}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Sessions list
+function SessionsCard({ t, count, withDescription = true, children }: SessionsCardProps) {
+  const borders = useBorderTokens();
+  const layout = useLayoutClasses();
+  const iconSizes = useIconSizes();
   return (
     <Card className={borders.getElementBorder('card', 'default')}>
       <CardHeader>
         <CardTitle className={layout.flexCenterGap2}>
           <Shield className={iconSizes.md} aria-hidden="true" />
           {t('account.security.sessionsTitle')}
-          <Badge variant="secondary" className="ml-2">
-            {sessions.length}
-          </Badge>
+          {count !== undefined && <Badge variant="secondary" className="ml-2">{count}</Badge>}
         </CardTitle>
-        <CardDescription>
-          {t('account.security.sessionsDescription')}
-        </CardDescription>
+        {withDescription && <CardDescription>{t('account.security.sessionsDescription')}</CardDescription>}
       </CardHeader>
+      {children}
+    </Card>
+  );
+}
 
-      <CardContent className={layout.flexColGap4}>
-        {/* Sessions List */}
-        <ul className={layout.flexColGap2} role="list" aria-label="Active sessions">
-          {sessions.map(session => (
-            <li
-              key={session.id}
-              className={cn(
-                layout.flexCenterBetween,
-                layout.padding3,
-                borders.radiusClass.md,
-                'bg-muted/30',
-                session.isCurrent && 'ring-2 ring-primary/50'
-              )}
-            >
-              <article className={layout.flexCenterGap4}>
-                {/* Device Icon */}
-                <figure
-                  className={cn(
-                    layout.padding2,
-                    borders.radiusClass.md,
-                    'bg-background',
-                    getBrowserColor(session.browserType)
-                  )}
-                >
-                  {getDeviceIcon(session.deviceType, iconSizes.md)}
-                </figure>
+interface ConfirmDialogProps {
+  t: Translate;
+  title: string;
+  description: string;
+  action: string;
+  onConfirm: () => void;
+  children: React.ReactNode;
+}
 
-                {/* Session Info */}
-                <section>
-                  <header className={layout.flexCenterGap2}>
-                    <h4 className={cn(typography.body.base, 'font-medium')}>
-                      {session.displayLabel}
-                    </h4>
-                    {session.isCurrent && (
-                      <Badge variant="default" className="text-xs">
-                        <Check className={cn(iconSizes.xs, 'mr-1')} aria-hidden="true" />
-                        {t('account.security.thisDevice') || 'This device'}
-                      </Badge>
-                    )}
-                  </header>
+function ConfirmDialog({ t, title, description, action, onConfirm, children }: ConfirmDialogProps) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className={DESTRUCTIVE_ACTION}>{action}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
-                  <footer className={cn(layout.flexCenterGap2, 'mt-1')}>
-                    <Globe className={cn(iconSizes.xs, colors.text.muted)} aria-hidden="true" />
-                    <span className={cn(typography.body.sm, colors.text.muted)}>
-                      {session.locationDisplay}
-                    </span>
-                    <span className={cn(typography.body.sm, colors.text.muted)}>•</span>
-                    <time className={cn(typography.body.sm, colors.text.muted)}>
-                      {session.lastActiveRelative}
-                    </time>
-                  </footer>
-                </section>
-              </article>
+interface SessionRowProps {
+  t: Translate;
+  session: SessionDisplayItem;
+  locationLabel: string;
+  isRevoking: boolean;
+  onRevoke: (sessionId: string) => void;
+}
 
-              {/* Revoke Button (not for current session) */}
-              {!session.isCurrent && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={revokingSessionId === session.id}
-                      aria-label={`Revoke session ${session.displayLabel}`}
-                    >
-                      <LogOut className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {t('account.security.revokeSessionTitle') || 'Revoke Session'}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('account.security.revokeSessionDescription') ||
-                          'This will sign out this device. The user will need to sign in again.'}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>
-                        {t('common.cancel') || 'Cancel'}
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleRevokeSession(session.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {t('account.security.revokeSession') || 'Revoke'}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </li>
-          ))}
-        </ul>
+function SessionRow({ t, session, locationLabel, isRevoking, onRevoke }: SessionRowProps) {
+  const borders = useBorderTokens();
+  const layout = useLayoutClasses();
+  const iconSizes = useIconSizes();
+  const device = t('account.security.deviceLabel', { browser: session.browser, os: session.os });
 
-        {/* Revoke All Button */}
-        {sessions.filter(s => !s.isCurrent).length > 0 && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full"
-                disabled={isRevokingAll}
-              >
-                <LogOut className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
-                {t('account.security.revokeAllOther') || 'Sign out all other devices'}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {t('account.security.revokeAllTitle') || 'Sign Out All Other Devices'}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('account.security.revokeAllDescription') ||
-                    'This will sign out all devices except this one. Other users will need to sign in again.'}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>
-                  {t('common.cancel') || 'Cancel'}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleRevokeAllOther}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {t('account.security.revokeAll') || 'Sign out all'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+  return (
+    <li className={cn(layout.flexCenterBetween, layout.padding3, borders.radiusClass.md, 'bg-muted/30', session.isCurrent && 'ring-2 ring-primary/50')}>
+      <SessionDeviceSummary
+        t={t}
+        session={session}
+        device={device}
+        locationLabel={locationLabel}
+        when={{ label: session.lastActiveRelative, at: session.timestamps.lastActiveAt }}
+      />
+      {!session.isCurrent && (
+        <ConfirmDialog
+          t={t}
+          title={t('account.security.revokeSessionTitle')}
+          description={t('account.security.revokeSessionDescription')}
+          action={t('account.security.revokeSession')}
+          onConfirm={() => onRevoke(session.id)}
+        >
+          <Button variant="ghost" size="sm" disabled={isRevoking} aria-label={t('account.security.revokeSessionAria', { device })}>
+            <LogOut className={iconSizes.sm} aria-hidden="true" />
+          </Button>
+        </ConfirmDialog>
+      )}
+    </li>
+  );
+}
+
+interface SessionsStatusCardProps {
+  t: Translate;
+  /** `loading` = περιστρεφόμενο εικονίδιο · `error` = μήνυμα + «Επανάληψη». Μία κάρτα κατάστασης, δύο τόνοι. */
+  tone: 'loading' | 'error';
+  message: string;
+  onRetry?: () => void;
+}
+
+function SessionsStatusCard({ t, tone, message, onRetry }: SessionsStatusCardProps) {
+  const colors = useSemanticColors();
+  const borders = useBorderTokens();
+  const layout = useLayoutClasses();
+  const iconSizes = useIconSizes();
+  const typography = useTypography();
+  const isError = tone === 'error';
+  const text = isError ? colors.text.error : colors.text.muted;
+  return (
+    <SessionsCard t={t} withDescription={false}>
+      <CardContent>
+        <figure
+          className={cn(layout.flexCenterGap2, layout.padding4, isError && cn(borders.radiusClass.md, colors.bg.error))}
+          {...(isError ? {} : { role: 'status', 'aria-label': t('account.security.sessionsLoading') })}
+        >
+          {isError
+            ? <AlertTriangle className={cn(iconSizes.sm, colors.text.error)} aria-hidden="true" />
+            : <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} aria-hidden="true" />}
+          <figcaption className={cn(typography.body.sm, text)}>{message}</figcaption>
+        </figure>
+        {onRetry && (
+          <Button variant="outline" onClick={onRetry} className="mt-4">
+            <RefreshCw className={cn(iconSizes.xs, 'mr-2')} aria-hidden="true" />
+            {t('common.retry')}
+          </Button>
         )}
       </CardContent>
-    </Card>
+    </SessionsCard>
+  );
+}
+
+// ============================================================================
+// SESSIONS LIST COMPONENT
+// ============================================================================
+
+type SessionsState = ReturnType<typeof useSessions>;
+
+function RevokeAllOthersButton({ t, state }: { t: Translate; state: SessionsState }) {
+  const iconSizes = useIconSizes();
+  return (
+    <ConfirmDialog
+      t={t}
+      title={t('account.security.revokeAllTitle')}
+      description={t('account.security.revokeAllDescription')}
+      action={t('account.security.revokeAll')}
+      onConfirm={state.revokeAllOther}
+    >
+      <Button variant="outline" className="w-full" disabled={state.isRevokingAll}>
+        <LogOut className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
+        {t('account.security.revokeAllOther')}
+      </Button>
+    </ConfirmDialog>
+  );
+}
+
+function SessionsListContent({ t, state }: { t: Translate; state: SessionsState }) {
+  const colors = useSemanticColors();
+  const layout = useLayoutClasses();
+  const typography = useTypography();
+  // Το `t` αλλάζει με τη γλώσσα ⇒ τα ονόματα χωρών ξαναβγαίνουν στη νέα γλώσσα.
+  const regionNames = useMemo(() => getDisplayNames().region, [t]);
+  const unknownLocation = t('account.security.locationUnknown');
+  return (
+    <CardContent className={layout.flexColGap4}>
+      <ul className={layout.flexColGap2} role="list" aria-label={t('account.security.sessionsTitle')}>
+        {state.sessions.map(session => (
+          <SessionRow
+            key={session.id}
+            t={t}
+            session={session}
+            locationLabel={sessionLocationLabel(session.location, regionNames, unknownLocation)}
+            isRevoking={state.revokingSessionId === session.id}
+            onRevoke={state.revokeSession}
+          />
+        ))}
+      </ul>
+      {state.sessions.some(s => !s.isCurrent) && <RevokeAllOthersButton t={t} state={state} />}
+      <EndedSessionsSection t={t} sessions={state.ended} />
+      <p className={cn(typography.body.sm, colors.text.muted)}>{t('account.security.locationApproximateNote')}</p>
+      <OpenDataAttribution source="ipGeolocation" />
+    </CardContent>
+  );
+}
+
+export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
+  const { t } = useTranslation(COMMON_NAMESPACES);
+  const colors = useSemanticColors();
+  const typography = useTypography();
+  const state = useSessions(userId, t, onSessionsChange);
+
+  if (state.isLoading) return <SessionsStatusCard t={t} tone="loading" message={t('common.loading')} />;
+  if (state.error) return <SessionsStatusCard t={t} tone="error" message={state.error} onRetry={state.fetchSessions} />;
+
+  if (state.sessions.length === 0) {
+    return (
+      <SessionsCard t={t}>
+        <CardContent>
+          <p className={cn(typography.body.sm, colors.text.muted)}>{t('account.security.noSessions')}</p>
+        </CardContent>
+      </SessionsCard>
+    );
+  }
+
+  return (
+    <SessionsCard t={t} count={state.sessions.length}>
+      <SessionsListContent t={t} state={state} />
+    </SessionsCard>
   );
 }
 

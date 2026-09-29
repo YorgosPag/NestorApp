@@ -21,16 +21,23 @@ export interface OpenDataLicense {
   readonly url: string;
 }
 
+/**
+ * Το namespace i18n όπου ζουν τα κείμενα **αυτής** της πηγής (`source.<id>.owner|dataset|changes`). Οι γενικές
+ * φράσεις (`source.line` · `source.license`) μένουν **μία** φορά στο `market-contracts` (ADR-894).
+ */
+export type OpenDataTextNamespace = 'market-contracts' | 'common-account';
+
 export interface OpenDataSource {
   readonly id: OpenDataSourceId;
-  /** Η σελίδα του συνόλου δεδομένων στο data.gov.gr. */
+  /** Η σελίδα του συνόλου δεδομένων — ή του κυρίου, όπου τον σύνδεσμο αυτόν ζητά η ίδια η άδεια (DB-IP). */
   readonly datasetUrl: string;
   readonly license: OpenDataLicense;
+  readonly textNamespace: OpenDataTextNamespace;
 }
 
 const CC_BY_4: OpenDataLicense = { spdx: 'CC-BY-4.0', url: 'https://creativecommons.org/licenses/by/4.0/' };
 
-export const OPEN_DATA_SOURCE_IDS = ['transferValues', 'valueZones'] as const;
+export const OPEN_DATA_SOURCE_IDS = ['transferValues', 'valueZones', 'ipGeolocation'] as const;
 export type OpenDataSourceId = (typeof OPEN_DATA_SOURCE_IDS)[number];
 
 export const OPEN_DATA_SOURCES: Readonly<Record<OpenDataSourceId, OpenDataSource>> = {
@@ -39,6 +46,7 @@ export const OPEN_DATA_SOURCES: Readonly<Record<OpenDataSourceId, OpenDataSource
     id: 'transferValues',
     datasetUrl: 'https://data.gov.gr/dataset/mitroo-axion-metavivaseon-akiniton',
     license: CC_BY_4,
+    textNamespace: 'market-contracts',
   },
   /** Ζώνες αντικειμενικών αξιών (valuemaps) — κύριος ΥΠΕΘΟΟ (ADR-889 §2.3). */
   valueZones: {
@@ -46,5 +54,16 @@ export const OPEN_DATA_SOURCES: Readonly<Record<OpenDataSourceId, OpenDataSource
     datasetUrl:
       'https://data.gov.gr/dataset/geochoriki-apeikonisi-zonon-systimatos-antikeimenikoy-prosdiorismoy-axion-akiniton-kai-ypologismos-a',
     license: CC_BY_4,
+    textNamespace: 'market-contracts',
+  },
+  /**
+   * DB-IP City Lite — η τοπική βάση GeoIP της τοποθεσίας των συνεδριών (ADR-894). Οι όροι της ζητούν
+   * **σύνδεσμο προς το DB-IP.com** σε κάθε σελίδα που δείχνει αποτελέσματα ⇒ `datasetUrl` = ο κύριος.
+   */
+  ipGeolocation: {
+    id: 'ipGeolocation',
+    datasetUrl: 'https://db-ip.com',
+    license: CC_BY_4,
+    textNamespace: 'common-account',
   },
 };

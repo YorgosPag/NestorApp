@@ -3,30 +3,21 @@
  * useGeofenceConfig — State & Handlers for Geofence Configuration
  * =============================================================================
  *
- * Manages geofence state (center, radius, enabled), loads existing config
- * from the API, and provides save/reset/interaction handlers.
+ * Manages the geofence DRAFT (center, radius, enabled) and provides save/reset/interaction
+ * handlers. The SAVED config is read from — and published to — `project-geofence-store`,
+ * the single source shared with LiveWorkerMap (ADR-891 §10.3).
  *
  * @module components/projects/ika/hooks/useGeofenceConfig
  * @enterprise ADR-170 — QR Code + GPS Geofencing + Photo Verification
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import { generateCircleGeoJSON } from '../map-shared/geo-math';
-import type { GeofenceApiResponse } from '../map-shared/geofence-api-types';
+import { publishProjectGeofence, useProjectGeofence } from '../map-shared/project-geofence-store';
 import { saveGeofenceConfigWithPolicy } from '@/services/ika/ika-mutation-gateway';
-import { createStaleCache } from '@/lib/stale-cache';
-
-interface GeofenceCachedConfig {
-  latitude: number;
-  longitude: number;
-  radiusMeters: number;
-  enabled: boolean;
-}
-
-const geofenceConfigCache = createStaleCache<GeofenceCachedConfig>('geofence-config');
+import type { CoordinatePoint } from '@/utils/address/address-list-center';
 
 // =============================================================================
 // CONSTANTS
@@ -40,62 +31,43 @@ export const DEFAULT_RADIUS = 200;
 // HOOK
 // =============================================================================
 
-export function useGeofenceConfig(projectId: string, t: (key: string) => string) {
-  const _cachedGeofence = geofenceConfigCache.get(projectId);
+/**
+ * @param siteCenter - Το σημείο του εργοταξίου (`addressListCenter` των διευθύνσεων του έργου).
+ *   Είναι ο σπόρος όταν δεν υπάρχει αποθηκευμένη ζώνη, και ο στόχος της «Επαναφοράς»· η Αθήνα
+ *   του `GEOGRAPHIC_CONFIG` μένει **μόνο** για έργο χωρίς καμία θέση (ADR-891 §10.3).
+ */
+export function useGeofenceConfig(
+  projectId: string,
+  t: (key: string) => string,
+  siteCenter?: CoordinatePoint,
+) {
+  // Η ΑΠΟΘΗΚΕΥΜΕΝΗ ζώνη ζει στο κατάστημα (ΜΙΑ αλήθεια με τον LiveWorkerMap)· εδώ ζει μόνο το ΠΡΟΧΕΙΡΟ.
+  const { geofence: saved, hasLoaded } = useProjectGeofence(projectId);
+  const seedLat = siteCenter?.lat ?? GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE;
+  const seedLng = siteCenter?.lng ?? GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE;
 
-  // Geofence state — seeded from cache on re-navigation
-  const [latitude, setLatitude] = useState(_cachedGeofence?.latitude ?? GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE);
-  const [longitude, setLongitude] = useState(_cachedGeofence?.longitude ?? GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
-  const [radiusMeters, setRadiusMeters] = useState(_cachedGeofence?.radiusMeters ?? DEFAULT_RADIUS);
-  const [enabled, setEnabled] = useState(_cachedGeofence?.enabled ?? false);
+  const [latitude, setLatitude] = useState(saved?.latitude ?? seedLat);
+  const [longitude, setLongitude] = useState(saved?.longitude ?? seedLng);
+  const [radiusMeters, setRadiusMeters] = useState(saved?.radiusMeters ?? DEFAULT_RADIUS);
+  const [enabled, setEnabled] = useState(saved?.enabled ?? false);
 
   // UI state
-  const [isLoading, setIsLoading] = useState(!geofenceConfigCache.hasLoaded(projectId));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   // ---------------------------------------------------------------------------
-  // LOAD EXISTING CONFIG
+  // SYNC DRAFT ← SAVED (μόνο όταν ο άνθρωπος δεν έχει αναποθήκευτες αλλαγές)
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    async function loadGeofence() {
-      try {
-        if (!geofenceConfigCache.hasLoaded(projectId)) setIsLoading(true);
-        const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
-        const data = (await res.json()) as GeofenceApiResponse;
-
-        if (data.success && data.geofence) {
-          setLatitude(data.geofence.latitude);
-          setLongitude(data.geofence.longitude);
-          setRadiusMeters(data.geofence.radiusMeters);
-          setEnabled(data.geofence.enabled);
-          geofenceConfigCache.set({
-            latitude: data.geofence.latitude,
-            longitude: data.geofence.longitude,
-            radiusMeters: data.geofence.radiusMeters,
-            enabled: data.geofence.enabled,
-          }, projectId);
-        } else {
-          // No config yet — mark as loaded with defaults
-          geofenceConfigCache.set({
-            latitude: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
-            longitude: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
-            radiusMeters: DEFAULT_RADIUS,
-            enabled: false,
-          }, projectId);
-        }
-      } catch {
-        // Not configured yet — use defaults
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadGeofence();
-  }, [projectId]);
+    if (!hasLoaded || hasChanges) return;
+    setLatitude(saved?.latitude ?? seedLat);
+    setLongitude(saved?.longitude ?? seedLng);
+    setRadiusMeters(saved?.radiusMeters ?? DEFAULT_RADIUS);
+    setEnabled(saved?.enabled ?? false);
+  }, [saved, hasLoaded, hasChanges, seedLat, seedLng]);
 
   // ---------------------------------------------------------------------------
   // SAVE CONFIG
@@ -116,6 +88,8 @@ export function useGeofenceConfig(projectId: string, t: (key: string) => string)
       });
 
       if (data.success) {
+        // Η απάντηση του διακομιστή γίνεται η αλήθεια για ΚΑΘΕ αναγνώστη (LiveWorkerMap στην ίδια οθόνη).
+        if (data.geofence) publishProjectGeofence(projectId, data.geofence);
         setSaveSuccess(true);
         setHasChanges(false);
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -178,11 +152,11 @@ export function useGeofenceConfig(projectId: string, t: (key: string) => string)
   // ---------------------------------------------------------------------------
 
   const handleReset = useCallback(() => {
-    setLatitude(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE);
-    setLongitude(GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
+    setLatitude(seedLat);
+    setLongitude(seedLng);
     setRadiusMeters(DEFAULT_RADIUS);
     setHasChanges(true);
-  }, []);
+  }, [seedLat, seedLng]);
 
   // ---------------------------------------------------------------------------
   // TOGGLE ENABLED
@@ -208,7 +182,7 @@ export function useGeofenceConfig(projectId: string, t: (key: string) => string)
     longitude,
     radiusMeters,
     enabled,
-    isLoading,
+    isLoading: !hasLoaded,
     isSaving,
     error,
     saveSuccess,

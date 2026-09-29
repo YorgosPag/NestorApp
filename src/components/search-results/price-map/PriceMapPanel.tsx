@@ -11,9 +11,13 @@
 
 import React, { useMemo } from 'react';
 
-import { MapRampLegend, type MapLegendItem } from '@/components/market/MapRampLegend';
+import {
+  PRICE_MAP_WORD_NAMESPACES,
+  PriceMapLegend,
+  priceMapRowPrice,
+  priceMapSelectionText,
+} from '@/components/market/choropleth/price-map-words';
 import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
-import { unitPriceLabel } from '@/components/area-market/area-market-format';
 import { usePriceMapModel } from '@/components/search-results/price-map/PriceMapProvider';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,8 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay } from '@/lib/intl-formatting';
 import { areaMarketHref } from '@/lib/listings/listing-routes';
 import type { MarketSegment } from '@/lib/market/market-segments';
-import { MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
-import { PRICE_MAP_BREAKS, priceMapLegend, type PriceMapSource } from '@/lib/market/price-map';
+import type { PriceMapSource } from '@/lib/market/price-map';
 import {
   segmentsFor,
   selectionOf,
@@ -35,17 +38,7 @@ import { Link } from '@/lib/workspace/navigation';
 import { ASKING_OFFERS, type AskingOffer } from '@/types/area-market';
 
 const NS = 'price-map';
-const NAMESPACES = [NS, 'area-market', 'market-contracts', 'common'];
-
-type T = ReturnType<typeof useTranslation>['t'];
-
-function priceOf(t: T, choice: PriceMapChoice, amount: number): string {
-  return unitPriceLabel(t, choice.offer, choice.segment, amount);
-}
-
-function countOf(t: T, source: PriceMapSource, count: number): string {
-  return t(`${NS}:count.${source}`, { count });
-}
+const NAMESPACES = [...PRICE_MAP_WORD_NAMESPACES];
 
 function ChoiceControls({ choice, onChange }: { readonly choice: PriceMapChoice; readonly onChange: (next: PriceMapChoice) => void }) {
   const { t } = useTranslation(NAMESPACES);
@@ -83,42 +76,6 @@ function ChoiceControls({ choice, onChange }: { readonly choice: PriceMapChoice;
   );
 }
 
-function Legend({ choice }: { readonly choice: PriceMapChoice }) {
-  const { t } = useTranslation(NAMESPACES);
-  const items = useMemo((): MapLegendItem[] => {
-    const classes = priceMapLegend(PRICE_MAP_BREAKS[choice.offer][choice.segment] ?? []);
-    const ramp = classes.map((item, index): MapLegendItem => {
-      const low = item.low === null ? '' : priceOf(t, choice, item.low);
-      const high = item.high === null ? '' : priceOf(t, choice, item.high);
-      const key = item.low === null ? 'below' : item.high === null ? 'above' : 'range';
-      return { key: `c${index}`, swatch: { kind: 'ramp', step: index + 1 }, label: t(`${NS}:legend.${key}`, { low, high }) };
-    });
-    return [
-      ...ramp,
-      { key: 'inherited', swatch: { kind: 'inherited' }, label: t(`${NS}:legend.inherited`) },
-      { key: 'few', swatch: { kind: 'few' }, label: t(`${NS}:legend.few`, { min: MARKET_STAT_MIN_SAMPLE }) },
-    ];
-  }, [choice, t]);
-  return <MapRampLegend caption={t(`${NS}:legend.caption`)} items={items} />;
-}
-
-/** Η πρόταση μιας περιοχής — **ίδια** για το κλικ και για τη γραμμή του πίνακα. */
-function selectionText(t: T, choice: PriceMapChoice, selection: PriceMapSelection): string {
-  const { resolution } = selection;
-  const count = countOf(t, choice.source, resolution.n);
-  if (resolution.kind === 'own') return t(`${NS}:selection.own`, { name: selection.name, price: priceOf(t, choice, resolution.median), count });
-  if (resolution.kind === 'parent') {
-    return t(`${NS}:selection.parent`, {
-      name: selection.name,
-      count,
-      parentName: selection.parentName ?? '',
-      price: priceOf(t, choice, resolution.median),
-      parentCount: countOf(t, choice.source, resolution.parentN),
-    });
-  }
-  return t(`${NS}:selection.few`, { name: selection.name, min: MARKET_STAT_MIN_SAMPLE, count });
-}
-
 function SelectionOutput({ choice, selection }: { readonly choice: PriceMapChoice; readonly selection: PriceMapSelection | null }) {
   const { t } = useTranslation(NAMESPACES);
   return (
@@ -127,7 +84,7 @@ function SelectionOutput({ choice, selection }: { readonly choice: PriceMapChoic
         <span className="text-xs text-muted-foreground">{t(`${NS}:selection.hint`)}</span>
       ) : (
         <>
-          <span className="font-medium text-foreground">{selectionText(t, choice, selection)}</span>
+          <span className="font-medium text-foreground">{priceMapSelectionText(t, choice, selection)}</span>
           <Link href={areaMarketHref(selection.id)} className="text-xs underline underline-offset-4">
             {t(`${NS}:selection.link`)}
           </Link>
@@ -135,13 +92,6 @@ function SelectionOutput({ choice, selection }: { readonly choice: PriceMapChoic
       )}
     </output>
   );
-}
-
-function rowPrice(t: T, choice: PriceMapChoice, row: PriceMapSelection): string {
-  const { resolution } = row;
-  if (resolution.kind === 'few') return t(`${NS}:table.few`);
-  const price = priceOf(t, choice, resolution.median);
-  return resolution.kind === 'parent' ? `${price} (${t(`${NS}:table.inherited`)})` : price;
 }
 
 interface VisibleAreasProps {
@@ -177,7 +127,7 @@ function VisibleAreas({ choice, rows, total }: VisibleAreasProps) {
                 <th scope="row" className="py-1 pr-2 font-normal">
                   <Link href={areaMarketHref(row.id)} className="underline-offset-4 hover:underline">{row.name}</Link>
                 </th>
-                <td className="py-1 pr-2 tabular-nums">{rowPrice(t, choice, row)}</td>
+                <td className="py-1 pr-2 tabular-nums">{priceMapRowPrice(t, choice, row)}</td>
                 <td className="py-1 tabular-nums">{row.resolution.n}</td>
               </tr>
             ))}
@@ -212,7 +162,7 @@ export default function PriceMapPanel() {
       <StatusLine />
       {areas !== null && (
         <>
-          <Legend choice={choice} />
+          <PriceMapLegend choice={choice} />
           <SelectionOutput choice={choice} selection={selection} />
           <VisibleAreas choice={choice} rows={rows} total={rendered.length} />
         </>

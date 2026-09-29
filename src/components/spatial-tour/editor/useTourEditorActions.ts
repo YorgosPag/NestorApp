@@ -29,19 +29,22 @@ import type {
   TourGraphCommand,
   TourPlacementTarget,
   TourPlanXY,
+  TourRedactionEdit,
   TourShapeMode,
   TourSpaceDraft,
 } from '@/lib/spatial-tour/tour-graph-edit';
 import { inverseOf } from '@/lib/spatial-tour/tour-graph-inverse';
+import { redactionsOf } from '@/lib/spatial-tour/tour-redaction-edit';
 import type { TourRoomInput } from '@/lib/spatial-tour/tour-room';
 import { graphLevelsOfViewer, viewerLevelsOf } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { editTourGraphFromScreen } from '@/services/spatial-tour/spatial-tour-graph.client';
-import type { SpatialTour, TourLevelKey, TourSubject } from '@/types/spatial-tour';
+import type { SpatialTour, TourLevelKey, TourRedaction, TourSubject } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
+import { TOUR_REDACTION_KEYS } from './tour-redaction-labels';
 import { TOUR_SHAPE_KEYS, tourGraphRefusalKey } from './tour-shape-labels';
 import type { TourEditorDataHandle, TourEditorGraphData } from './useTourEditorData';
 
@@ -74,6 +77,13 @@ export interface TourEditorActions {
   /** Νοητή διαχωριστική γραμμή (Δ8.2) — `separationId === null` ⇒ νέα (id κομμένο εδώ), αλλιώς αλλαγή· πάντα αισιόδοξα. */
   readonly separate: (levelKey: TourLevelKey, separationId: string | null, a: TourPlanXY, b: TourPlanXY) => Promise<boolean>;
   readonly unseparate: (levelKey: TourLevelKey, separationId: string) => Promise<boolean>;
+  /**
+   * **Εφαρμογή του προχείρου θολώματος** μιας λήψης (Φ2ζ ζ3) — **μία** εντολή-δέσμη ⇒ μία επανα-ψήση, μία «Αναίρεση». Όχι αισιόδοξη
+   * εικόνα: τα pixel τα φτιάχνει ο ψήστης· η άμεση εικόνα είναι η προεπισκόπηση του προχείρου (shader).
+   */
+  readonly redactions: (captureId: string, edits: readonly TourRedactionEdit[]) => Promise<boolean>;
+  /** Οριστικό id νέου κύκλου θολώματος (N.6) — κόβεται όταν **γεννιέται** ο κύκλος στο πρόχειρο. */
+  readonly newRedactionId: () => string;
 }
 
 /** Ποιο σχήμα αγγίζει μια εντολή και με ποια πρόθεση (λεξιλόγιο `TOUR_SHAPE_MODES` — ποτέ τυφλό upsert). */
@@ -106,6 +116,9 @@ const SUCCESS_KEY: Record<TourGraphCommand['op'], string> = {
   unspace: TOUR_SHAPE_KEYS.spaceRemoved,
   separate: TOUR_SHAPE_KEYS.separationSaved,
   unseparate: TOUR_SHAPE_KEYS.separationRemoved,
+  redact: TOUR_REDACTION_KEYS.redactionSaved,
+  unredact: TOUR_REDACTION_KEYS.redactionRemoved,
+  redactions: TOUR_REDACTION_KEYS.applied,
 };
 
 interface EditorGraph {
@@ -113,6 +126,8 @@ interface EditorGraph {
   /** Τα δεδομένα της οθόνης **όπως ήρθαν** — η επαναφορά μετά από άρνηση. */
   readonly screen: TourEditorGraphData;
   readonly captureOf: OptimisticCaptureOf;
+  /** Οι θολωμένες περιοχές μιας λήψης **όπως τις βλέπει η οθόνη** — το «πριν» της αναίρεσης (`undefined` ⇒ άγνωστη λήψη). */
+  readonly redactionsOf: (captureId: string) => readonly TourRedaction[] | undefined;
 }
 
 /** Ο γράφος της οθόνης (κόμβοι + όροφοι με κατόψεις **και σχήματα χώρων**) και οι λήψεις — `null` πριν φορτωθεί. */
@@ -124,6 +139,10 @@ function useEditorGraph(load: TourEditorDataHandle['load']): EditorGraph | null 
       graph: { nodes, levels: graphLevelsOfViewer(levels) },
       screen: { nodes, levels },
       captureOf: (id: string) => captures.find((c) => c.id === id),
+      redactionsOf: (id: string) => {
+        const capture = captures.find((c) => c.id === id);
+        return capture === undefined ? undefined : redactionsOf(capture);
+      },
     };
   }, [load]);
 }
@@ -146,7 +165,7 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
 
   const send = useCallback(async (command: TourGraphCommand): Promise<boolean> => {
     if (editor === null) return false;
-    const { graph, screen, captureOf } = editor;
+    const { graph, screen, captureOf, redactionsOf: redactionsBefore } = editor;
     const optimistic = optimisticGraph(command, graph, captureOf);
     if (optimistic !== null) setGraph(screenGraphOf(optimistic));
     inFlight.current += 1;
@@ -160,7 +179,7 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
       await reload();
       return false;
     }
-    const undo = result.value.changed ? inverseOf(command, graph, { headingOf: (id) => captureOf(id)?.headingRad }) : null;
+    const undo = result.value.changed ? inverseOf(command, graph, { headingOf: (id) => captureOf(id)?.headingRad, redactionsOf: redactionsBefore }) : null;
     success(t(SUCCESS_KEY[command.op]), undo === null ? undefined : {
       actions: [{ label: t(TOUR_EDITOR_KEYS.undo), onClick: () => void runUndo(undo) }],
     });
@@ -192,5 +211,7 @@ export function useTourEditorActions(subject: TourSubject, data: TourEditorDataH
       ? { op: 'separate', levelKey, separationId: enterpriseIdService.generateTourSeparationId(), mode: 'create', a, b }
       : { op: 'separate', levelKey, separationId, mode: 'replace', a, b }),
     unseparate: (levelKey, separationId) => send({ op: 'unseparate', levelKey, separationId }),
+    redactions: (captureId, edits) => send({ op: 'redactions', captureId, edits }),
+    newRedactionId: () => enterpriseIdService.generateTourRedactionId(),
   };
 }

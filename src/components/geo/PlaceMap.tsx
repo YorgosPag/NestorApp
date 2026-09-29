@@ -71,8 +71,14 @@ const SHAPE_FILL = {
   paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.18 },
 };
 
+/**
+ * Το περίγραμμα των σχημάτων — **δημόσιο id**, ώστε θεματική στρώση-παιδί (π.χ. ο χάρτης σύγκρισης Δ.Ε., ADR-890 §15)
+ * να μπαίνει **κάτω** από αυτό χωρίς να αντιγράφει το κυριολεκτικό.
+ */
+export const PLACE_SHAPE_LINE_LAYER = 'place-shape-line';
+
 const SHAPE_LINE = {
-  id: 'place-shape-line',
+  id: PLACE_SHAPE_LINE_LAYER,
   type: 'line' as const,
   source: SHAPE_SOURCE,
   paint: { 'line-color': '#2563eb', 'line-width': 2 },

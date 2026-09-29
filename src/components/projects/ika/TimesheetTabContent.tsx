@@ -47,13 +47,16 @@ import { GeofenceConfigMap } from './components/GeofenceConfigMap';
 import { LiveWorkerMap } from './components/LiveWorkerMap';
 
 import type { AttendanceViewMode } from './contracts';
+import type { CoordinatePoint } from '@/utils/address/address-list-center';
 
 interface TimesheetTabContentProps {
   /** Project ID from parent IKA tab */
   projectId?: string;
+  /** Το σημείο του εργοταξίου (`addressListCenter`) — κέντρο των δύο χαρτών όταν δεν υπάρχει ζώνη. */
+  siteCenter?: CoordinatePoint;
 }
 
-export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
+export function TimesheetTabContent({ projectId, siteCenter }: TimesheetTabContentProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -203,6 +206,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
         latestEvent={latestEvent}
         isLive={isLive}
         workers={workers}
+        siteCenter={siteCenter}
       />
 
       {/* Dashboard summary cards */}
@@ -228,7 +232,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
       {/* QR Code + Geofence — ADR-170 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         <QrCodePanel projectId={projectId} />
-        <GeofenceConfigMap projectId={projectId} />
+        <GeofenceConfigMap projectId={projectId} siteCenter={siteCenter} />
       </div>
 
       {/* Manual record dialog */}

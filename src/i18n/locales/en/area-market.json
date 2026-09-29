@@ -5,6 +5,8 @@
     "descriptionEmpty": "Property market in {name}: listings, the area boundary on the map, and asking prices once there are enough listings."
   },
   "level": {
+    "region": "Region",
+    "regionalUnit": "Regional unit",
     "municipality": "Municipality",
     "municipalUnit": "Municipal unit"
   },
@@ -93,15 +95,45 @@
   "map": {
     "title": "The area boundary",
     "loading": "Loading the boundary…",
-    "unavailable": "The boundary is not available right now."
+    "unavailable": "The boundary is not available right now.",
+    "mode": {
+      "label": "What the map shows",
+      "zones": "Official value zones"
+    }
+  },
+  "childMap": {
+    "open": "Open the page: {name}",
+    "fewLabel": "few contracts",
+    "regionalUnits": {
+      "title": "Regional units",
+      "caption": "Median contract price by regional unit ({segment}), most expensive first",
+      "prices": "Prices by regional unit",
+      "hint": "Hover over or tap a regional unit to see its price; click (or tap again) to open its page.",
+      "parentLabel": "Region: {price}",
+      "inherited": "region price (few in the regional unit)",
+      "inheritedShort": "region price"
+    },
+    "municipalities": {
+      "title": "Municipalities",
+      "caption": "Median contract price by municipality ({segment}), most expensive first",
+      "prices": "Prices by municipality",
+      "hint": "Hover over or tap a municipality to see its price; click (or tap again) to open its page.",
+      "parentLabel": "Regional unit: {price}",
+      "inherited": "regional unit price (few in the municipality)",
+      "inheritedShort": "regional unit price"
+    },
+    "municipalUnits": {
+      "title": "Municipal units",
+      "caption": "Median contract price by municipal unit ({segment}), most expensive first",
+      "prices": "Prices by municipal unit",
+      "hint": "Hover over or tap a municipal unit to see its price; click (or tap again) to open its page.",
+      "parentLabel": "Municipality: {price}"
+    }
   },
   "listings": {
     "title": "Listings in the area",
     "seeAll": "{count, plural, one {See the listing on the map} other {See all # listings on the map}}",
     "empty": "There is no published listing in this area right now."
-  },
-  "children": {
-    "title": "Municipal units"
   },
   "method": {
     "title": "How the numbers are computed",

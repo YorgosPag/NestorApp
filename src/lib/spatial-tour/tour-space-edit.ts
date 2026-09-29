@@ -155,9 +155,10 @@ interface SpaceInput {
 /**
  * Η πρόθεση απέναντι σε ό,τι υπάρχει: `replace` σε ανύπαρκτο ⇒ `absent` · `create` με id που **δεν** είναι του είδους του
  * (πρόθεμα + UUID v4 — ο διακομιστής δεν εμπιστεύεται ποτέ id πελάτη) ⇒ `invalid`. Το `create` σε υπάρχον κρίνεται μετά
- * την κατασκευή (ίδιο περιεχόμενο = ιδεμπότητη επανάληψη).
+ * την κατασκευή (ίδιο περιεχόμενο = ιδεμπότητη επανάληψη). **Ο ΕΝΑΣ** κριτής πρόθεσης για κάθε στοιχείο με id πελάτη —
+ * χώρους, νοητές γραμμές και θολωμένες περιοχές (Φ2ζ, `tour-redaction-edit.ts`).
  */
-function judgeIntent(
+export function judgeShapeIntent(
   id: string, mode: TourShapeMode, exists: boolean, prefix: EnterpriseIdPrefix, absent: TourGraphEditRefusal, invalid: TourGraphEditRefusal,
 ): TourGraphEditRefusal | null {
   if (mode === 'replace') return exists ? null : absent;
@@ -167,7 +168,7 @@ function judgeIntent(
 /** Ο χώρος όπως θα γραφτεί — ή η άρνηση. Η έγκριση (`approvedBy/At`) = η σφραγίδα αυτής της εντολής. */
 function buildSpace(input: SpaceInput, level: TourLevel, plan: CalibratedPlan, stamp: TourEditStamp): TourSpaceOutline | TourGraphEditRefusal {
   const previous = (level.spaces ?? []).find((space) => space.id === input.spaceId);
-  const intent = judgeIntent(input.spaceId, input.mode, previous !== undefined, ENTERPRISE_ID_PREFIXES.TOUR_SPACE, 'space-absent', 'space-invalid');
+  const intent = judgeShapeIntent(input.spaceId, input.mode, previous !== undefined, ENTERPRISE_ID_PREFIXES.TOUR_SPACE, 'space-absent', 'space-invalid');
   if (intent !== null) return intent;
   if (!isTourSpaceSource(input.space.source)) return 'space-invalid';
   const ring = judgeOutline(input.space.points, plan);
@@ -238,7 +239,7 @@ export function upsertSeparation(graph: Graph, input: SeparationInput, stamp: To
   const { level, plan } = located;
   const lines = level.separations ?? [];
   const previous = lines.find((line) => line.id === input.separationId);
-  const intent = judgeIntent(
+  const intent = judgeShapeIntent(
     input.separationId, input.mode, previous !== undefined, ENTERPRISE_ID_PREFIXES.TOUR_SEPARATION, 'separation-absent', 'separation-invalid',
   );
   if (intent !== null) return refused(intent);

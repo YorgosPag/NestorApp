@@ -11,6 +11,7 @@
 import { strictJsonShape } from '@/lib/data/json-shape';
 import { createLazyJsonSnapshot, type LazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
 import {
+  adminOverviewChildrenPath,
   adminOverviewPath,
   readAdminOverviewFile,
   type AdminOverviewFile,
@@ -34,19 +35,28 @@ const logFailure = (what: string) => (error: unknown) => {
   logger.warn('Δεν φορτώθηκε πηγή του χάρτη τιμών', { what, error: error instanceof Error ? error.message : String(error) });
 };
 
-const overviewSources = new Map<AdminOverviewTier, LazyJsonSnapshot<AdminOverviewFile>>();
+const overviewSources = new Map<string, LazyJsonSnapshot<AdminOverviewFile>>();
+
+/** Μία πηγή γεωμετρίας **ανά διεύθυνση**, με έλεγχο σχήματος — ίδια ταυτότητα σε κάθε κλήση (σταθερό `useLazySnapshot`). */
+function overviewFileSource(url: string, label: string): LazyJsonSnapshot<AdminOverviewFile> {
+  const existing = overviewSources.get(url);
+  if (existing !== undefined) return existing;
+  const source = createLazyJsonSnapshot({ url, build: strictJsonShape(readAdminOverviewFile, label), onFailure: logFailure(label) });
+  overviewSources.set(url, source);
+  return source;
+}
 
 /** Η γεωμετρία μιας βαθμίδας — μία φόρτωση ανά σελίδα. */
 export function adminOverviewSource(tier: AdminOverviewTier): LazyJsonSnapshot<AdminOverviewFile> {
-  const existing = overviewSources.get(tier);
-  if (existing !== undefined) return existing;
-  const source = createLazyJsonSnapshot({
-    url: adminOverviewPath(tier),
-    build: strictJsonShape(readAdminOverviewFile, tier),
-    onFailure: logFailure(tier),
-  });
-  overviewSources.set(tier, source);
-  return source;
+  return overviewFileSource(adminOverviewPath(tier), tier);
+}
+
+/**
+ * Η γεωμετρία των **παιδιών ενός Δήμου** (ADR-890 §15) — λίγα KB, ίδια τόξα με το `municipal_unit.json`. Μία φόρτωση
+ * ανά Δήμο και σελίδα· μια πηγή **ανά κλειδί**, όπως το όριο του ADR-883.
+ */
+export function adminOverviewChildrenSource(parentId: string): LazyJsonSnapshot<AdminOverviewFile> {
+  return overviewFileSource(adminOverviewChildrenPath(parentId), parentId);
 }
 
 /** Πηγή Β — το συγκεντρωτικό των συμβολαίων (12 KB gzip). */

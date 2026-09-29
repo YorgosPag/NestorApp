@@ -8,11 +8,12 @@
  * το «νέο σημείο» κόβει νέο id — μια επανάληψη δικτύου πρέπει να πάρει την **ίδια** απάντηση, όχι «ήδη τοποθετημένη».
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import {
   FLOOR_PLAN_DECLARABLE_SOURCES,
+  MAX_TOUR_REDACTIONS,
   TOUR_DECLARED_AREA_SOURCES,
   TOUR_SHAPE_MODES,
   TOUR_SPACE_MAX_VERTICES,
@@ -25,6 +26,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import type { TourGraphEditResponse } from '@/lib/spatial-tour/tour-graph-edit';
 import { writeTourGraph } from '@/server/spatial-tour/tour-graph-write';
+import { bakeTourTileset } from '@/server/spatial-tour/tour-tileset-baker';
 import { isEnterpriseIdOfPrefix } from '@/services/enterprise-id-parse';
 import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from '@/services/enterprise-id-prefixes';
 
@@ -56,6 +58,13 @@ const roomInput = z.object({ types: z.array(z.string().max(32)).max(8), label: z
 const shapeId = (prefix: EnterpriseIdPrefix) => id.refine((value) => isEnterpriseIdOfPrefix(value, prefix));
 const spaceId = shapeId(ENTERPRISE_ID_PREFIXES.TOUR_SPACE);
 const separationId = shapeId(ENTERPRISE_ID_PREFIXES.TOUR_SEPARATION);
+const redactionId = shapeId(ENTERPRISE_ID_PREFIXES.TOUR_REDACTION);
+/** Κύκλος πάνω στη σφαίρα του πανοράματος (ακτίνια) — φράχτες μεγέθους· τα όρια πολιτικής τα κρίνει ο κριτής. */
+const redactionRegion = z.object({
+  yawRad: z.number().finite().min(-4 * Math.PI).max(4 * Math.PI),
+  pitchRad: z.number().finite().min(-Math.PI).max(Math.PI),
+  radiusRad: z.number().finite().positive().max(Math.PI),
+});
 const mode = z.enum(TOUR_SHAPE_MODES);
 const spaceDraft = z.object({
   points: z.array(planXY).min(TOUR_SPACE_MIN_VERTICES).max(TOUR_SPACE_MAX_VERTICES),
@@ -94,6 +103,19 @@ const commandSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('unspace'), levelKey, spaceId }),
   z.object({ op: z.literal('separate'), levelKey, separationId, mode, a: planXY, b: planXY }),
   z.object({ op: z.literal('unseparate'), levelKey, separationId }),
+  // ── Η ιδιωτικότητα (Φ2ζ · §4.15): εδώ μόνο φράχτες· «έγκυρη περιοχή;» (πόλοι, όρια ακτίνας) το κρίνει ΜΙΑ αρχή,
+  //    το `normalizeRedactionRegion` — ίδια και στην οθόνη. ──
+  z.object({ op: z.literal('redact'), captureId: id, redactionId, mode, region: redactionRegion }),
+  z.object({ op: z.literal('unredact'), captureId: id, redactionId }),
+  // Δέσμη (ζ3): ίδια σχήματα αλλαγών· όριο = αφαίρεση ΟΛΩΝ + ισάριθμες νέες (το ατομικό «έγκυρο» το κρίνει ο κριτής).
+  z.object({
+    op: z.literal('redactions'),
+    captureId: id,
+    edits: z.array(z.discriminatedUnion('op', [
+      z.object({ op: z.literal('redact'), redactionId, mode, region: redactionRegion }),
+      z.object({ op: z.literal('unredact'), redactionId }),
+    ])).min(1).max(2 * MAX_TOUR_REDACTIONS),
+  }),
 ]);
 
 type GraphResponse = TourGraphEditResponse | TourBadSubjectBody | TourRefusedBody;
@@ -103,8 +125,12 @@ async function handler(request: NextRequest, actor: ApiActor, segment?: TourSegm
   if (subject === null) return tourBadSubjectResponse();
   const parsed = await readJsonBody(request, commandSchema);
   if ('rejected' in parsed) return parsed.rejected;
-  const outcome = await writeTourGraph(getAdminFirestore(), { subject, actor: tourActorOf(actor), command: parsed.data });
+  const db = getAdminFirestore();
+  const outcome = await writeTourGraph(db, { subject, actor: tourActorOf(actor), command: parsed.data });
   if (outcome.kind === 'refused') return tourRefusedResponse(outcome.reason);
+  // Αλλαγή θολώματος (Φ2ζ): το σημείο είναι ήδη κρυφό (`pending`) — ψήνεται αμέσως μετά την απάντηση· δίχτυ το cron.
+  const { rebakeCapture } = outcome;
+  if (rebakeCapture !== undefined) after(() => bakeTourTileset(db, rebakeCapture));
   return NextResponse.json({
     changed: outcome.kind === 'written',
     revision: outcome.revision,

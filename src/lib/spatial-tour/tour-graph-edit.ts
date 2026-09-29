@@ -15,7 +15,7 @@
 import type {
   FloorPlanDeclarableSource, TourDeclaredAreaSource, TourShapeMode, TourSpaceSource,
 } from '@/constants/spatial-tour-vocabulary';
-import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourNode } from '@/types/spatial-tour';
+import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourNode, TourRedactionRegion } from '@/types/spatial-tour';
 
 import { levelKeyId, removeTourNode } from './spatial-tour-graph';
 import { isCaptureViewable } from './tour-manifest-stop';
@@ -61,7 +61,24 @@ export type TourGraphCommand =
   | { readonly op: 'unspace'; readonly levelKey: TourLevelKey; readonly spaceId: string }
   /** Νοητή διαχωριστική γραμμή (Δ8.2) — id του πελάτη (`tsep_…`), ίδια σύμβαση πρόθεσης. */
   | { readonly op: 'separate'; readonly levelKey: TourLevelKey; readonly separationId: string; readonly mode: TourShapeMode; readonly a: TourPlanXY; readonly b: TourPlanXY }
-  | { readonly op: 'unseparate'; readonly levelKey: TourLevelKey; readonly separationId: string };
+  | { readonly op: 'unseparate'; readonly levelKey: TourLevelKey; readonly separationId: string }
+  // ── Η ιδιωτικότητα μιας λήψης (Φ2ζ · §4.15 · Α8 — οι καθαρές ζουν στο `tour-redaction-edit.ts`) ──
+  /**
+   * **Θόλωσε** μια περιοχή της λήψης (Matterport Blur Brush) — id του πελάτη (`tred_…`), ίδια σύμβαση πρόθεσης με τους χώρους.
+   * Αλλάζει τη **λήψη**, όχι τον γράφο: ο γραφέας την ξαναψήνει (τα πλακίδια της είναι αυτό που βλέπει ο επισκέπτης).
+   */
+  | { readonly op: 'redact'; readonly captureId: string; readonly redactionId: string; readonly mode: TourShapeMode; readonly region: TourRedactionRegion }
+  | { readonly op: 'unredact'; readonly captureId: string; readonly redactionId: string }
+  /**
+   * **Δέσμη** αλλαγών θολώματος μιας λήψης (ζ3 — το «Apply» της Matterport): **ατομική** (μία άρνηση ⇒ καμία αλλαγή), **μία**
+   * αλλαγή κλειδιού, **μία** επανα-ψήση — όσοι κύκλοι κι αν άλλαξαν στο πρόχειρο.
+   */
+  | { readonly op: 'redactions'; readonly captureId: string; readonly edits: readonly TourRedactionEdit[] };
+
+/** Μία αλλαγή θολώματος μέσα σε δέσμη — τα `redact`/`unredact` χωρίς τη λήψη (η δέσμη την ορίζει μία φορά). */
+export type TourRedactionEdit =
+  | { readonly op: 'redact'; readonly redactionId: string; readonly mode: TourShapeMode; readonly region: TourRedactionRegion }
+  | { readonly op: 'unredact'; readonly redactionId: string };
 
 /**
  * **Δημιουργία ή αντικατάσταση** σχήματος (λεξιλόγιο `TOUR_SHAPE_MODES`): `create` σε id που υπάρχει με **ίδιο** περιεχόμενο =
@@ -111,7 +128,8 @@ export type TourGraphEditRefusal =
   | 'node-absent' | 'level-absent' | 'capture-placed' | 'capture-unplaced' | 'capture-not-ready' | 'room-invalid'
   | 'plan-absent' | 'plan-uncalibrated' | 'position-outside-plan' | 'scale-invalid'
   | 'space-invalid' | 'space-outside-plan' | 'space-overlap' | 'space-absent' | 'space-exists' | 'area-invalid'
-  | 'separation-invalid' | 'separation-absent' | 'separation-exists';
+  | 'separation-invalid' | 'separation-absent' | 'separation-exists'
+  | 'redaction-invalid' | 'redaction-absent' | 'redaction-exists' | 'redaction-limit';
 
 export type TourGraphEditResult =
   | { readonly kind: 'edited'; readonly graph: Graph; readonly captureNodeId?: string | null }

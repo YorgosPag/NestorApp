@@ -77,6 +77,11 @@ export const STORAGE_KEYS = {
   // Ανά **συσκευή**, όχι ανά αγγελία: είναι ιδιότητα της οθόνης του επισκέπτη (ADR-724 §5.3 — τα CAD
   // θυμούνται px). Σχήμα με έκδοση στο όνομα — `components/spatial-tour/viewer/tour-viewer-layout-store.ts`.
   TOUR_PLAN_COLUMN: 'nestor:tour-plan-column:v1',
+
+  // ADR-894 — η εγγραφή συνεδρίας **αυτού του browser** (prefix — append uid). localStorage και όχι
+  // sessionStorage, επίτηδες: μία εγγραφή ανά **συσκευή** (Google «Your devices»), όχι μία ανά καρτέλα —
+  // το sessionStorage γεννούσε νέα συνεδρία (και αίτημα τοποθεσίας) σε κάθε καρτέλα.
+  ACTIVE_SESSION_PREFIX: 'nestor_active_session_',
 } as const;
 
 export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

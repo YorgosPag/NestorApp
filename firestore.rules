@@ -2903,10 +2903,22 @@ service cloud.firestore {
       // 🗑️ DELETE: Απαγορεύεται — user documents δεν σβήνονται
       allow delete: if false;
 
-      // 🔐 SESSIONS SUBCOLLECTION - Enterprise Active Sessions Management
+      // 🔐 SESSIONS SUBCOLLECTION - Enterprise Active Sessions Management (ADR-894)
       match /sessions/{sessionId} {
-        // Ο χρήστης μπορεί να διαβάζει και να γράφει ΜΟΝΟ τα δικά του sessions
-        allow read, write: if isOwner(userId);
+        // Ο χρήστης ΔΙΑΒΑΖΕΙ μόνο τα δικά του sessions. ΚΑΜΙΑ γραφή από τον client: συσκευή,
+        // IP-αποτύπωμα και τοποθεσία τα γράφει ΜΟΝΟ ο server (Admin SDK, /api/auth/active-sessions)
+        // από το ίδιο το αίτημα. Μέχρι 2026-09-29 ήταν `read, write` ⇒ η «λίστα συσκευών» ήταν
+        // πλαστογραφήσιμη από οποιονδήποτε κρατούσε το token.
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      // 🔐 SECURITY SUBCOLLECTION — ανακλημένες συνδέσεις (ADR-894 §10 Β1)
+      match /security/{docId} {
+        // Η λίστα που αρνείται διαπιστευτήρια ανά συσκευή. Την κρίνει ΜΟΝΟ ο server (Admin SDK)·
+        // ούτε ο ιδιοκτήτης τη διαβάζει ή τη γράφει — αλλιώς μια ανακλημένη συσκευή θα έσβηνε
+        // τον εαυτό της από τη λίστα.
+        allow read, write: if false;
       }
     }
 

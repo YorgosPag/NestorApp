@@ -22,6 +22,8 @@ jest.mock('@/lib/firebaseAdmin', () => ({
     verifySessionCookie: mockVerifySessionCookie,
   }),
 }));
+const mockReadRevokedSignIns = jest.fn(async (_uid: string): Promise<ReadonlySet<number>> => new Set<number>());
+jest.mock('@/lib/auth/revoked-sign-ins', () => ({ readRevokedSignIns: (uid: string) => mockReadRevokedSignIns(uid) }));
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }));
@@ -52,13 +54,13 @@ beforeEach(() => {
 describe('Σ — η καθαρή σύγκριση (ίδια με το checkRevoked του firebase-admin)', () => {
   it('Σ1 — σύνδεση ΠΡΙΝ από την ανάκληση ⇒ άκυρο· ΜΕΤΑ ⇒ έγκυρο', () => {
     const revokedAt = Date.parse(REVOKED_AFTER);
-    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: revokedAt, disabled: false, missing: false })).toBe(true);
-    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: Date.parse(REVOKED_BEFORE), disabled: false, missing: false })).toBe(false);
+    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: revokedAt, disabled: false, missing: false, revokedSignInsSec: new Set<number>() })).toBe(true);
+    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: Date.parse(REVOKED_BEFORE), disabled: false, missing: false, revokedSignInsSec: new Set<number>() })).toBe(false);
   });
 
   it('Σ2 — κλειδωμένος ή ανύπαρκτος λογαριασμός ⇒ άκυρο, ό,τι κι αν λέει η ώρα', () => {
-    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: 0, disabled: true, missing: false })).toBe(true);
-    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: 0, disabled: false, missing: true })).toBe(true);
+    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: 0, disabled: true, missing: false, revokedSignInsSec: new Set<number>() })).toBe(true);
+    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, { validAfterMs: 0, disabled: false, missing: true, revokedSignInsSec: new Set<number>() })).toBe(true);
   });
 });
 
@@ -118,5 +120,41 @@ describe('Σ — το σύνορο: και οι δύο πόρτες (Bearer · c
     mockVerifyIdToken.mockResolvedValue(decoded('uid_i'));
     mockGetUser.mockResolvedValue(account());
     await expect(verifyIdToken('token')).resolves.toEqual(decoded('uid_i'));
+  });
+});
+
+// ADR-894 §10 Β1 — «Αποσύνδεση ΑΥΤΗΣ της συσκευής»: η σύνδεση (`auth_time`) ανακαλείται μόνη της.
+describe('Α — ανά σύνδεση, όχι μόνο ανά λογαριασμό (ADR-894 §10 Β1)', () => {
+  const OTHER_DEVICE_S = SIGNED_IN_AT_S + 3_600;
+
+  it('Α1 — ανακλημένη σύνδεση ⇒ άκυρο· ΑΛΛΗ σύνδεση του ίδιου λογαριασμού ⇒ έγκυρο', () => {
+    const state = { validAfterMs: 0, disabled: false, missing: false, revokedSignInsSec: new Set([SIGNED_IN_AT_S]) };
+    expect(isCredentialRevoked({ auth_time: SIGNED_IN_AT_S }, state)).toBe(true);
+    expect(isCredentialRevoked({ auth_time: OTHER_DEVICE_S }, state)).toBe(false);
+  });
+
+  it('Α2 🔴 το σύνορο: η ανακλημένη συσκευή παίρνει null, η άλλη περνά', async () => {
+    forgetRevocationState('uid_j');
+    mockGetUser.mockResolvedValue(account());
+    mockReadRevokedSignIns.mockResolvedValue(new Set([SIGNED_IN_AT_S]));
+    mockVerifyIdToken.mockResolvedValueOnce(decoded('uid_j'));
+    await expect(verifyIdToken('revoked-device')).resolves.toBeNull();
+    const other = { uid: 'uid_j', auth_time: OTHER_DEVICE_S } as DecodedIdToken;
+    mockVerifySessionCookie.mockResolvedValueOnce(other);
+    await expect(verifySessionCookie('other-device')).resolves.toEqual(other);
+    mockReadRevokedSignIns.mockResolvedValue(new Set<number>());
+  });
+
+  it('Α3 — ΜΙΑ ανάγνωση της λίστας ανά παράθυρο, μαζί με το getUser (όχι ανά αίτημα)', async () => {
+    mockGetUser.mockResolvedValue(account());
+    await isCredentialStillValid(decoded('uid_k'), clock);
+    await isCredentialStillValid(decoded('uid_k'), clock + 1_000);
+    expect(mockReadRevokedSignIns).toHaveBeenCalledTimes(1);
+  });
+
+  it('Α4 — η λίστα δεν διαβάζεται και δεν υπάρχει μνήμη ⇒ ΡΙΧΝΕΙ (ποτέ «έγκυρο» στα τυφλά)', async () => {
+    mockGetUser.mockResolvedValue(account());
+    mockReadRevokedSignIns.mockRejectedValueOnce(new Error('FIRESTORE_UNAVAILABLE'));
+    await expect(isCredentialStillValid(decoded('uid_l'), clock)).rejects.toThrow('FIRESTORE_UNAVAILABLE');
   });
 });

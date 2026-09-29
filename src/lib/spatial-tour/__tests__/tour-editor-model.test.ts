@@ -97,3 +97,63 @@ describe('προεπισκόπηση', () => {
     expect(previewGraphOf(capture('c2', null, '2026-09-01T10:00:00.000Z', { tileset: PENDING }))).toBeNull();
   });
 });
+
+describe('Ξ — σημείο που ξαναψήνεται μετά από θόλωμα (Φ2ζ ζ3 · §4.15)', () => {
+  const REBAKING = { state: 'pending', contentHash: 'k2', faceSize: null, retiredKeys: ['h'] } as const;
+
+  it('η νεότερη λήψη ξαναψήνεται ⇒ ΟΧΙ η παλαιότερη φωτογραφία στη θέση της· το σημείο μένει ως «ετοιμάζεται»', () => {
+    const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
+      capture('c_old', 'a', '2026-09-01T10:00:00.000Z'),
+      capture('c_blur', 'a', '2026-09-05T10:00:00.000Z', { tileset: REBAKING, originalHash: 'h' }),
+    ]);
+    expect(model.graph.stops.has('a')).toBe(false);
+    expect(model.rebaking.map((r) => [r.nodeId, r.capture.id, r.readiness])).toEqual([['a', 'c_blur', 'baking']]);
+  });
+
+  it('αποτυχημένη επανα-ψήση ⇒ «failed», ποτέ σιωπηλή επιστροφή σε άλλη λήψη', () => {
+    const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
+      capture('c_old', 'a', '2026-09-01T10:00:00.000Z'),
+      capture('c_blur', 'a', '2026-09-05T10:00:00.000Z', { tileset: { state: 'failed', contentHash: 'k2', faceSize: null }, originalHash: 'h' }),
+    ]);
+    expect(model.rebaking.map((r) => r.readiness)).toEqual(['failed']);
+    expect(model.graph.stops.has('a')).toBe(false);
+  });
+
+  it('θολωμένη λήψη που ΕΙΝΑΙ έτοιμη ⇒ κανονική στάση, καμία εκκρεμότητα', () => {
+    const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
+      capture('c_blur', 'a', '2026-09-05T10:00:00.000Z', { originalHash: 'h' }),
+    ]);
+    expect(model.graph.stops.get('a')?.stop.captureId).toBe('c_blur');
+    expect(model.rebaking).toEqual([]);
+  });
+
+  it('το σημείο που ξαναψήνεται κρατά τον ΚΟΜΒΟ του + ομοιόροφα ΣΗΜΕΙΑ με τη σειρά του γράφου (όνομα «Γραφείο 2», όχι ημερομηνία)', () => {
+    const office = (id: string): TourNode => ({ ...node(id), room: { types: ['office'], label: null, source: 'manual' } });
+    const other = { ...node('z'), levelKey: { kind: 'local', ordinal: 1 } } as const;
+    const nodes = [office('a'), node('empty'), office('b'), other];
+    const model = buildTourEditorModel({ nodes, levels: LEVELS }, [
+      capture('ca', 'a', '2026-09-01T10:00:00.000Z'),
+      capture('cz', 'z', '2026-09-01T10:00:00.000Z'),
+      capture('c_blur', 'b', '2026-09-05T10:00:00.000Z', { tileset: REBAKING, originalHash: 'h' }),
+    ]);
+    const [entry] = model.rebaking;
+    expect(entry?.node?.id).toBe('b');
+    expect(entry?.levelPeers.map((n) => n.id)).toEqual(['a', 'b']);
+  });
+
+  it('ορφανή λήψη (κόμβος εκτός γράφου) ⇒ κανένας κόμβος — η στήλη πέφτει στην ημερομηνία', () => {
+    const model = buildTourEditorModel({ nodes: [], levels: LEVELS }, [
+      capture('c_blur', 'gone', '2026-09-05T10:00:00.000Z', { tileset: REBAKING, originalHash: 'h' }),
+    ]);
+    expect(model.rebaking.map((r) => [r.node, r.levelPeers])).toEqual([[null, []]]);
+  });
+
+  it('το ΠΡΩΤΟ ψήσιμο νέας λήψης (χωρίς originalHash) κρατά την παλιά συμπεριφορά (Φ2δ)', () => {
+    const model = buildTourEditorModel({ nodes: [node('a')], levels: LEVELS }, [
+      capture('c_ready', 'a', '2026-09-01T10:00:00.000Z'),
+      capture('c_new', 'a', '2026-09-05T10:00:00.000Z', { tileset: PENDING }),
+    ]);
+    expect(model.graph.stops.get('a')?.stop.captureId).toBe('c_ready');
+    expect(model.rebaking).toEqual([]);
+  });
+});

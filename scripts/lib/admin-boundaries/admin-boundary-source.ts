@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ADMIN_LEVEL } from '../../../src/lib/geo/admin-area-index-file';
 import { loadCachedSource } from '../cached-download';
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -59,9 +60,6 @@ export const LAYERS: readonly { readonly layer: string; readonly level: number }
   { layer: 'dimotikes_enotites', level: 6 },
   { layer: 'dimotikes_topikes_koinotites', level: 7 },
 ];
-
-/** Το επίπεδο των δημοτικών ενοτήτων — η πρώτη ύλη της σύνθεσης των νέων δήμων. */
-export const MUNICIPAL_UNIT_LEVEL = 6;
 
 export interface HierarchyRow {
   readonly id: string;
@@ -194,7 +192,7 @@ export function composeMunicipalitiesFromUnits(
 
   const childCodes = new Map<string, string[]>();
   for (const row of rows) {
-    if (row.l !== MUNICIPAL_UNIT_LEVEL || row.p === null) continue;
+    if (row.l !== ADMIN_LEVEL.municipalUnit || row.p === null) continue;
     const siblings = childCodes.get(row.p);
     if (siblings) siblings.push(row.c);
     else childCodes.set(row.p, [row.c]);
@@ -202,7 +200,7 @@ export function composeMunicipalitiesFromUnits(
 
   const composed = new Map<string, { geometry: GeoJSON.MultiPolygon; children: number }>();
   for (const row of rows) {
-    if (row.l !== 5 || known.has(row.id)) continue;
+    if (row.l !== ADMIN_LEVEL.municipality || known.has(row.id)) continue;
     const codes = childCodes.get(row.id) ?? [];
     const coordinates = codes.flatMap((code) => polygonsByCode.get(code) ?? []);
     if (coordinates.length === 0) continue;

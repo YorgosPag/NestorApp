@@ -22,6 +22,7 @@ const AREAS: readonly AdminArea[] = [
   { id: 'regional_unit:07', name: 'ΠΕΡΙΦΕΡΕΙΑΚΗ ΕΝΟΤΗΤΑ ΘΕΣΣΑΛΟΝΙΚΗΣ', level: 4, parentId: null },
   { id: 'municipality:0701', name: 'ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ', level: 5, parentId: 'regional_unit:07' },
   { id: 'municipal_unit:070101', name: 'ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΘΕΣΣΑΛΟΝΙΚΗΣ', level: 6, parentId: 'municipality:0701' },
+  { id: 'community:07010101', name: 'ΚΟΙΝΟΤΗΤΑ ΘΕΣΣΑΛΟΝΙΚΗΣ', level: 7, parentId: 'municipal_unit:070101' },
 ];
 const mockDirectory = jest.fn();
 jest.mock('@/services/places/admin-boundaries.reader', () => ({
@@ -29,8 +30,10 @@ jest.mock('@/services/places/admin-boundaries.reader', () => ({
 }));
 
 const mockSummary = jest.fn();
+const mockPriceMap = jest.fn();
 jest.mock('@/services/market/market-transactions.reader', () => ({
   readAreaSummary: (areaId: string) => mockSummary(areaId),
+  readContractPriceMap: () => mockPriceMap(),
 }));
 
 const mockValueZoneFiles = jest.fn();
@@ -63,7 +66,7 @@ function seedListings(listings: readonly PublicListing[]): void {
   for (const item of listings) fake.seed(COLLECTIONS.PUBLIC_LISTINGS, item.id, { ...item, schemaVersion: 14 });
 }
 
-const INDEX = { asOf: '2026-09-01', window: { from: 2022, to: 2026 }, areas: new Set<string>(), categorySegments: [] };
+const INDEX = { asOf: '2026-09-01', window: { from: 2022, to: 2026 }, areas: new Set<string>(), rowAreas: new Set<string>(), categorySegments: [] };
 
 function summaryOf(id: string) {
   return { v: 2, id, asOf: '2026-09-01', segments: {} };
@@ -73,6 +76,7 @@ beforeEach(() => {
   fake.reset();
   mockSummary.mockImplementation(async (id: string) => ({ kind: 'ready', file: summaryOf(id), index: INDEX }));
   mockValueZoneFiles.mockResolvedValue([]);
+  mockPriceMap.mockResolvedValue(null);
   mockDirectory.mockResolvedValue({
     areas: new Map(AREAS.map((area) => [area.id, area])),
     childrenOf: (parentId: string) => AREAS.filter((area) => area.parentId === parentId),
@@ -80,11 +84,11 @@ beforeEach(() => {
 });
 
 describe('rollupAreaMarket', () => {
-  it('γράφει ένα έγγραφο ανά περιοχή (δήμος + Δ.Ε.) και το σημάδι', async () => {
+  it('γράφει ένα έγγραφο ανά περιοχή (Περιφέρεια + Π.Ε. + Δήμος + Δ.Ε., §16) και το σημάδι', async () => {
     mockReadLive.mockResolvedValue({ listings: [...located(5), listing({ id: 'prop_x' })], truncated: false });
     const run = await rollupAreaMarket(db, DAY, new Date('2026-09-26T00:25:00Z'));
-    expect(run).toEqual(expect.objectContaining({ day: DAY, areas: 2, listings: 6, unassigned: 1, truncated: false }));
-    expect(fake.all(COLLECTIONS.AREA_MARKET_SNAPSHOTS)).toHaveLength(2);
+    expect(run).toEqual(expect.objectContaining({ day: DAY, areas: 4, listings: 6, unassigned: 1, truncated: false }));
+    expect(fake.all(COLLECTIONS.AREA_MARKET_SNAPSHOTS)).toHaveLength(4);
     expect(fake.all(COLLECTIONS.AREA_MARKET_RUNS)).toHaveLength(1);
   });
 
@@ -92,9 +96,9 @@ describe('rollupAreaMarket', () => {
     mockReadLive.mockResolvedValue({ listings: located(3), truncated: false });
     await rollupAreaMarket(db, DAY, new Date());
     await rollupAreaMarket(db, DAY, new Date());
-    expect(fake.all(COLLECTIONS.AREA_MARKET_SNAPSHOTS)).toHaveLength(2);
+    expect(fake.all(COLLECTIONS.AREA_MARKET_SNAPSHOTS)).toHaveLength(4);
     expect(fake.all(COLLECTIONS.AREA_MARKET_RUNS)).toHaveLength(1);
-    expect(fake.all(COLLECTIONS.AREA_MARKET_SERIES)).toHaveLength(2);
+    expect(fake.all(COLLECTIONS.AREA_MARKET_SERIES)).toHaveLength(4);
   });
 
   it('ADR-890 §13: η μηνιαία σειρά είναι ΕΝΩΣΗ των νυχτών του μήνα — αγγελία που έφυγε μετρά ακόμη', async () => {
@@ -139,8 +143,22 @@ describe('loadAreaMarketPage', () => {
     expect(await loadAreaMarketPage(db, '../etc/passwd', DAY)).toEqual({ kind: 'not-found' });
   });
 
-  it('βαθμίδα χωρίς σελίδα (Π.Ε.) ⇒ not-found', async () => {
-    expect(await loadAreaMarketPage(db, 'regional_unit:07', DAY)).toEqual({ kind: 'not-found' });
+  it('βαθμίδα χωρίς σελίδα (Κοινότητα) ⇒ not-found', async () => {
+    expect(await loadAreaMarketPage(db, 'community:07010101', DAY)).toEqual({ kind: 'not-found' });
+  });
+
+  it('ADR-890 §16: η Π.Ε. έχει σελίδα — παιδιά οι Δήμοι της, καμία ζώνη (δεν ρωτιέται καν το ευρετήριο ζωνών)', async () => {
+    const page = await loadAreaMarketPage(db, 'regional_unit:07', DAY);
+    if (page.kind !== 'found') throw new Error(page.kind);
+    expect(page.children.map((child) => child.id)).toEqual(['municipality:0701']);
+    expect(page.valueZoneFiles).toEqual([]);
+    expect(mockValueZoneFiles).not.toHaveBeenCalled();
+  });
+
+  it('ADR-890 §16: ο Δήμος ανάγεται πλέον στην Π.Ε. του (συμβόλαια), όπως η Δ.Ε. στον Δήμο', async () => {
+    const page = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+    if (page.kind !== 'found' || page.contracts.kind !== 'ready') throw new Error('no contracts');
+    expect(page.contracts.parent?.id).toBe('regional_unit:07');
   });
 
   it('ευρετήριο που δεν διαβάστηκε ⇒ unavailable (5xx), ποτέ not-found', async () => {
@@ -205,5 +223,54 @@ describe('loadAreaMarketPage', () => {
     const failed = await loadAreaMarketPage(db, 'municipality:0701', DAY);
     expect(failed.kind).toBe('found');
     expect(failed.kind === 'found' && failed.contracts).toEqual({ kind: 'unavailable' });
+  });
+
+  describe('ADR-890 §15 — οι τιμές των Δ.Ε. για τον χάρτη σύγκρισης του Δήμου', () => {
+    const TRIANDRIA: AdminArea = { id: 'municipal_unit:070102', name: 'ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΤΡΙΑΝΔΡΙΑΣ', level: 6, parentId: 'municipality:0701' };
+    const WITH_TWO = [...AREAS, TRIANDRIA];
+    const PRICE_MAP = {
+      v: 1,
+      asOf: '2026-09-01',
+      areas: {
+        'municipality:0701': { apartment: [1068, 1547] },
+        'municipal_unit:070101': { apartment: [1052, 1544] },
+        'municipal_unit:070102': { apartment: [16, 1659] },
+        'municipality:4501': { apartment: [900, 3000] },
+      },
+    };
+
+    beforeEach(() => {
+      mockDirectory.mockResolvedValue({
+        areas: new Map(WITH_TWO.map((area) => [area.id, area])),
+        childrenOf: (parentId: string) => WITH_TWO.filter((area) => area.parentId === parentId),
+      });
+    });
+
+    it('Δήμος με ≥ 2 Δ.Ε. ⇒ ready, ΜΟΝΟ τα παιδιά + ο ίδιος (για την αναγωγή) — ποτέ όλη η χώρα στη σελίδα', async () => {
+      mockPriceMap.mockResolvedValue(PRICE_MAP);
+      const page = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+      expect(page.kind === 'found' && page.childPrices).toEqual({
+        kind: 'ready',
+        asOf: '2026-09-01',
+        areas: {
+          'municipality:0701': { apartment: [1068, 1547] },
+          'municipal_unit:070101': { apartment: [1052, 1544] },
+          'municipal_unit:070102': { apartment: [16, 1659] },
+        },
+      });
+    });
+
+    it('αποτυχία ανάγνωσης ⇒ unavailable (ποτέ «λίγα»), και η σελίδα ΔΕΝ πέφτει', async () => {
+      const page = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+      expect(page.kind).toBe('found');
+      expect(page.kind === 'found' && page.childPrices).toEqual({ kind: 'unavailable' });
+    });
+
+    it('Δ.Ε. ή Δήμος με < 2 Δ.Ε. ⇒ none, χωρίς καν να διαβαστεί ο χάρτης', async () => {
+      mockPriceMap.mockResolvedValue(PRICE_MAP);
+      const leaf = await loadAreaMarketPage(db, 'municipal_unit:070101', DAY);
+      expect(leaf.kind === 'found' && leaf.childPrices).toEqual({ kind: 'none' });
+      expect(mockPriceMap).not.toHaveBeenCalled();
+    });
   });
 });

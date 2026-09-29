@@ -70,9 +70,9 @@ export function MonthYearSelector({ month, year, onChange }: MonthYearSelectorPr
   }
 
   return (
-    <nav className={cn('flex items-center', spacing.gap.sm)} aria-label="Month/year selector">
-      <Button variant="outline" size="icon" onClick={handlePrev} aria-label="Previous month">
-        <ChevronLeft className={iconSizes.sm} />
+    <nav className={cn('flex items-center', spacing.gap.sm)} aria-label={t('ika.periodNavigation.monthYearLabel')}>
+      <Button variant="outline" size="icon" onClick={handlePrev} aria-label={t('ika.periodNavigation.previousMonth')}>
+        <ChevronLeft className={iconSizes.sm} aria-hidden="true" />
       </Button>
 
       <Select value={String(month)} onValueChange={(val) => onChange(parseInt(val, 10), year)}>
@@ -101,8 +101,8 @@ export function MonthYearSelector({ month, year, onChange }: MonthYearSelectorPr
         </SelectContent>
       </Select>
 
-      <Button variant="outline" size="icon" onClick={handleNext} aria-label="Next month">
-        <ChevronRight className={iconSizes.sm} />
+      <Button variant="outline" size="icon" onClick={handleNext} aria-label={t('ika.periodNavigation.nextMonth')}>
+        <ChevronRight className={iconSizes.sm} aria-hidden="true" />
       </Button>
     </nav>
   );

@@ -31,26 +31,12 @@ import 'server-only';
 
 import type { NextRequest } from 'next/server';
 
-import { getAdminAuth } from '@/lib/firebaseAdmin';
-import { extractBearerToken } from '@/lib/auth/token-credentials';
-import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
+import { reissueCallerSession, type SessionContinuation } from '@/server/auth/session-reissue';
 
 import type { HomeAfterExit } from './member-exit-claims';
 
-const logger = createModuleLogger('member-exit-session');
-
-/**
- * Τι μαθαίνει ο πελάτης για τη δική του συνεδρία — κλειστό σύνολο.
- * - `unchanged` — ο οικείος χώρος δεν άλλαξε, καμία ανάκληση: η συνεδρία του συνεχίζει ως έχει.
- * - `reissued`  — ανακλήθηκαν όλες· αυτό είναι το κλειδί της νέας συνεδρίας **αυτής** της συσκευής.
- * - `ended`     — ανακλήθηκαν όλες και **δεν** δίνεται κλειδί (όχι Bearer, ή αποτυχία έκδοσης):
- *                 ο πελάτης το λέει με λόγια και στέλνει στη σύνδεση — η αποχώρηση **έγινε**.
- */
-export type SessionContinuation =
-  | { readonly kind: 'unchanged' }
-  | { readonly kind: 'reissued'; readonly token: string }
-  | { readonly kind: 'ended' };
+/** Ο τύπος ζει πλέον στο `server/auth/session-reissue` (δεύτερος καλών: ADR-894 §10 Β1)· επανεξάγεται για τους πελάτες. */
+export type { SessionContinuation };
 
 /**
  * Μετά την αποχώρηση: χρειάζεται νέα συνεδρία, και δικαιούται αυτό το αίτημα να την πάρει;
@@ -62,11 +48,5 @@ export async function continueSessionAfterExit(
   home: HomeAfterExit,
 ): Promise<SessionContinuation> {
   if (home.kind === 'untouched') return { kind: 'unchanged' };
-  if (extractBearerToken(request) === null) return { kind: 'ended' };
-  try {
-    return { kind: 'reissued', token: await getAdminAuth().createCustomToken(uid) };
-  } catch (error: unknown) {
-    logger.error('Το κλειδί συνέχειας δεν εκδόθηκε — η αποχώρηση ΕΓΙΝΕ', { uid, error: getErrorMessage(error) });
-    return { kind: 'ended' };
-  }
+  return reissueCallerSession(request, uid, 'workspace-exit');
 }

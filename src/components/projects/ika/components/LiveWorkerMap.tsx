@@ -38,10 +38,12 @@ import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
 import { MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
 import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
+import { MAP_OVERLAY_SURFACE } from '@/subapps/geo-canvas/components/map-overlays/overlay-surface';
 import { WorkerPin, WORKER_STATUS_COLORS } from './WorkerPin';
 import { formatTime, eventTypeLabel } from './live-worker-helpers';
 import { useLiveWorkerMap } from '../hooks/useLiveWorkerMap';
 import type { AttendanceEvent, ProjectWorker } from '../contracts';
+import type { CoordinatePoint } from '@/utils/address/address-list-center';
 
 // =============================================================================
 // CONSTANTS
@@ -64,6 +66,8 @@ interface LiveWorkerMapProps {
   latestEvent: AttendanceEvent | null;
   isLive: boolean;
   workers: ProjectWorker[];
+  /** Το σημείο του εργοταξίου — κέντρο όταν δεν υπάρχει ζώνη ούτε θέση εργαζομένου. */
+  siteCenter?: CoordinatePoint;
 }
 
 // =============================================================================
@@ -76,6 +80,7 @@ export function LiveWorkerMap({
   latestEvent,
   isLive,
   workers,
+  siteCenter,
 }: LiveWorkerMapProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
@@ -94,7 +99,7 @@ export function LiveWorkerMap({
     setSelectedWorker,
     selectedMarkerData,
     handleClosePopup,
-  } = useLiveWorkerMap(projectId, events, latestEvent, workers, t);
+  } = useLiveWorkerMap(projectId, events, latestEvent, workers, t, siteCenter);
 
   if (geofenceLoading) {
     return <CardLoadingState />;
@@ -244,13 +249,19 @@ export function LiveWorkerMap({
             )}
           </MapGL>
 
-          {/* No events overlay */}
+          {/* No events: αδιαφανές πάνελ (SSoT), όχι λευκό πέπλο — το πέπλο ξέπλενε το φόντο και την απόδοση.
+              ΠΑΝΩ, όχι στο κέντρο: ο χάρτης κεντράρει στη ζώνη, άρα ένα κεντρικό πάνελ κρύβει το εργοτάξιο (ADR-891 §10.3). */}
           {workerMarkers.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm pointer-events-none">
-              <p className={typography.special.secondary}>
-                {t('ika.attendance.liveMap.noEvents')}
-              </p>
-            </div>
+            <p
+              role="status"
+              className={cn(
+                MAP_OVERLAY_SURFACE,
+                'pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 px-3 py-1.5',
+                typography.special.secondary,
+              )}
+            >
+              {t('ika.attendance.liveMap.noEvents')}
+            </p>
           )}
         </div>
       </CardContent>

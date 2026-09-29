@@ -29,6 +29,7 @@ import type {
   TourGrantScope,
   TourHeadingSource,
   TourLinkVia,
+  TourRedactionSource,
   TourMilestone,
   TourDeclaredAreaSource,
   TourRoomSource,
@@ -219,14 +220,47 @@ export interface TourCaptureSignatory {
   readonly attestation: ProfessionalAttestation;
 }
 
+/**
+ * **Η γεωμετρία μιας θολωμένης περιοχής** (ADR-884 Φ2ζ · §4.15): **κύκλος πάνω στη σφαίρα** — κέντρο (yaw/pitch **του
+ * πανοράματος**, ίδια σύμβαση με τον θεατή: yaw 0 = κέντρο εικόνας, θετικό = δεξιά) + γωνιακή ακτίνα. Αμετάβλητος στη ραφή ±π
+ * και στους πόλους (ένα ορθογώνιο στο equirect δεν είναι), και ανεξάρτητος από το `headingRad`: ο προσανατολισμός αλλάζει τον
+ * κόσμο, όχι τα pixel της φωτογραφίας.
+ */
+export interface TourRedactionRegion {
+  readonly yawRad: number;
+  readonly pitchRad: number;
+  readonly radiusRad: number;
+}
+
+/**
+ * **Μία θολωμένη περιοχή μιας λήψης** (Α8). Αποθηκεύεται ως **δεδομένα**, όχι ως αλλοιωμένα pixel: το πρωτότυπο μένει ιδιωτικό
+ * και ανέπαφο, ο ψήστης εφαρμόζει το θόλωμα σε ό,τι σερβίρεται ⇒ διόρθωση/αναίρεση = επανα-ψήση (η Matterport: «cannot unblur»).
+ */
+export interface TourRedaction extends TourRedactionRegion {
+  /** `tred_…` — το κόβει ο πελάτης (πρότυπο χώρων Γ3γ-2α)· η αναίρεση μιας αφαίρεσης ξαναγεννά το **ίδιο** id. */
+  readonly id: string;
+  readonly source: TourRedactionSource;
+  readonly createdBy: string;
+  readonly createdAt: string;
+}
+
 export interface TourCaptureTileset {
   readonly state: TourTilesetState;
+  /**
+   * Το **κλειδί** των πλακιδίων (το τμήμα της διαδρομής τους). Χωρίς θολώματα = το sha256 του πρωτοτύπου (όπως πριν τη Φ2ζ)·
+   * με θολώματα = παράγωγο του πρωτοτύπου **και** των περιοχών (`server/spatial-tour/tour-redaction-apply.ts`).
+   */
   readonly contentHash: string | null;
   /**
    * Πλευρά όψης του ψημένου κύβου (ADR-884 Φ2α) — `null` ως να ψηθεί. Τα επίπεδα **παράγονται** από αυτήν
    * (`tilesetLevels`, `lib/spatial-tour/tileset/tour-tileset-layout.ts`) — δεν αποθηκεύονται δεύτερη φορά.
    */
   readonly faceSize: number | null;
+  /**
+   * Κλειδιά πλακιδίων που **αποσύρθηκαν** (Φ2ζ): μετά από αλλαγή θολώματος τα παλιά πλακίδια δείχνουν ό,τι ζητήθηκε να
+   * κρυφτεί ⇒ ο ψήστης τα **διαγράφει** πριν ψήσει τα νέα και αδειάζει τη λίστα μόνο αφού τα διέγραψε. Απόν ⇒ καμία εκκρεμότητα.
+   */
+  readonly retiredKeys?: readonly string[];
 }
 
 /** Μία λήψη ενός σημείου, σε μία ημερομηνία (υποσυλλογή `tour_captures`). */
@@ -254,8 +288,15 @@ export interface TourCapture {
   readonly milestone: TourMilestone | null;
   /** Το `FileRecord` του πρωτότυπου πανοράματος. */
   readonly originalFileId: string;
+  /**
+   * Το sha256 του πρωτοτύπου (Φ2ζ) — ο ψήστης επαληθεύει με αυτό τα bytes. Απόν ⇒ ίσο με `tileset.contentHash` (λήψη που δεν
+   * θολώθηκε ποτέ: εκεί το κλειδί των πλακιδίων **είναι** το hash του πρωτοτύπου)· το γράφει η πρώτη αλλαγή θολώματος.
+   */
+  readonly originalHash?: string;
   readonly rights: MediaRights;
   readonly tileset: TourCaptureTileset;
+  /** Οι θολωμένες περιοχές (Φ2ζ · Α8) — απόν/κενό ⇒ καμία (παλιά έγγραφα αμετάβλητα). ≤ `MAX_TOUR_REDACTIONS`. */
+  readonly redactions?: readonly TourRedaction[];
   /** Ο **δράστης** — όχι ο κάτοχος (φωτογράφος με άδεια λήψης, Φ0.5). */
   readonly uploadedBy: string;
   readonly createdAt: string;

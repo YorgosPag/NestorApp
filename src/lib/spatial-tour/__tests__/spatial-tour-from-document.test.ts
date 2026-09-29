@@ -142,6 +142,39 @@ describe('tourCaptureFromDocument', () => {
   it('✅ δηλωμένα ατοποθέτητη (nodeId: null) ⇒ «εισερχόμενα», όχι άρνηση', () => {
     expect(tourCaptureFromDocument({ ...CAPTURE_DOC, nodeId: null }, 'tcap_1')).toMatchObject({ nodeId: null });
   });
+
+  describe('θόλωμα (Φ2ζ · §4.15)', () => {
+    const REDACTION = {
+      id: 'tred_1', yawRad: 0.5, pitchRad: 0.1, radiusRad: 0.2, source: 'auto', createdBy: 'system', createdAt: '2026-09-29T10:00:00.000Z',
+    };
+    const TILESET = { state: 'pending', contentHash: 'k'.repeat(64), faceSize: null };
+
+    it('✅ διαβάζει περιοχές + hash πρωτοτύπου + αποσυρμένα κλειδιά· απόντα ⇒ τα πεδία λείπουν (παλιά έγγραφα αμετάβλητα)', () => {
+      const doc = { ...CAPTURE_DOC, redactions: [REDACTION], originalHash: 'o'.repeat(64), tileset: { ...TILESET, retiredKeys: ['r'.repeat(64)] } };
+      expect(tourCaptureFromDocument(doc, 'tcap_1')).toMatchObject({
+        redactions: [REDACTION], originalHash: 'o'.repeat(64), tileset: { retiredKeys: ['r'.repeat(64)] },
+      });
+      const plain = tourCaptureFromDocument(CAPTURE_DOC, 'tcap_1');
+      expect(plain).not.toHaveProperty('redactions');
+      expect(plain).not.toHaveProperty('originalHash');
+      expect(plain?.tileset).not.toHaveProperty('retiredKeys');
+    });
+
+    it('✅ κενή λίστα περιοχών (μετά την τελευταία αφαίρεση) ⇒ καμία', () => {
+      expect(tourCaptureFromDocument({ ...CAPTURE_DOC, redactions: [] }, 'tcap_1')).not.toHaveProperty('redactions');
+    });
+
+    // 🔴 Ποτέ «πέτα την αδιάβαστη»: ο ψήστης θα έψηνε χωρίς αυτήν — θα ΞΕΘΟΛΩΝΕ ένα πρόσωπο σιωπηλά.
+    it.each([
+      ['περιοχή άγνωστης προέλευσης', { redactions: [{ ...REDACTION, source: 'ai' }] }],
+      ['περιοχή χωρίς ακτίνα', { redactions: [{ ...REDACTION, radiusRad: undefined }] }],
+      ['περιοχές που δεν είναι λίστα', { redactions: { 0: REDACTION } }],
+      ['hash πρωτοτύπου που δεν είναι κείμενο', { originalHash: 42 }],
+      ['αποσυρμένα κλειδιά που δεν διαβάζονται', { tileset: { ...TILESET, retiredKeys: [7] } }],
+    ])('🔴 αρνείται λήψη με %s', (_label, patch) => {
+      expect(tourCaptureFromDocument({ ...CAPTURE_DOC, ...patch }, 'tcap_1')).toBeNull();
+    });
+  });
 });
 
 const REQUEST_DOC = {

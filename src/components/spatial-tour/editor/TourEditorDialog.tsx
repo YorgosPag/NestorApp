@@ -12,6 +12,7 @@
  *   φωτογράφου, που δεν βλέπει ποτέ το κουμπί — οι λέξεις `editor.*` δεν μπαίνουν στο slice της (ΜΕΤΡΗΜΕΝΟ 2026-09-27:
  *   στο `panel.*` ανέβαζαν το `/tour-captures` πάνω από το ταβάνι του, ADR-744 §15).
  * 🔑 Στο κλείσιμο τα εισερχόμενα ξαναφορτώνονται (`onClosed`) — τα σήματα «ατοποθέτητη» άλλαξαν.
+ * 🔑 **Esc = ένας ιδιοκτήτης** (`tour-editor-escape.ts`): ρωτά πρώτα το ενεργό εργαλείο (πινέλο θολώματος), μόνο μετά κλείνει.
  */
 
 import dynamic from 'next/dynamic';
@@ -24,12 +25,14 @@ import type { TourSubject } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
+import { TourEditorEscapeContext, useTourEditorEscapeOwner } from './tour-editor-escape';
 
 const TourEditor = dynamic(() => import('./TourEditor').then((m) => m.TourEditor), { ssr: false });
 
 export function TourEditorDialog({ subject, onClosed }: { readonly subject: TourSubject; readonly onClosed: () => void }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const [open, setOpen] = useState(false);
+  const escape = useTourEditorEscapeOwner();
   const change = (next: boolean) => {
     setOpen(next);
     if (!next) onClosed();
@@ -37,12 +40,12 @@ export function TourEditorDialog({ subject, onClosed }: { readonly subject: Tour
   return (
     <Dialog open={open} onOpenChange={change}>
       <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>{t(TOUR_EDITOR_KEYS.open)}</Button>
-      <DialogContent size="fullscreen" className="flex flex-col gap-3">
+      <DialogContent size="fullscreen" className="flex flex-col gap-3" onEscapeKeyDown={(event) => { if (escape.consume()) event.preventDefault(); }}>
         <DialogHeader>
           <DialogTitle>{t(TOUR_EDITOR_KEYS.title)}</DialogTitle>
           <DialogDescription>{t(TOUR_EDITOR_KEYS.description)}</DialogDescription>
         </DialogHeader>
-        {open && <TourEditor subject={subject} />}
+        {open && <TourEditorEscapeContext.Provider value={escape}><TourEditor subject={subject} /></TourEditorEscapeContext.Provider>}
       </DialogContent>
     </Dialog>
   );

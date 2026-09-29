@@ -14,7 +14,7 @@
  * υπάρχουσα ταυτότητα), οπότε ο πλαστός **οφείλει** να το τηρεί.
  */
 
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 type Doc = Record<string, unknown>;
 
@@ -51,19 +51,31 @@ function readPath(doc: Doc, path: string): unknown {
  * JavaScript είναι `true`, και το πραγματικό Firestore **δεν** συγκρίνει ποτέ αριθμό
  * με συμβολοσειρά.
  */
-function matches(doc: Doc, clause: WhereClause): boolean {
-  const value = readPath(doc, clause.field);
-  if (clause.op === '==') return value === clause.value;
-  // ADR-862 Φ0 Β14 — η μετανάστευση ρωτά `where('cdeState', 'in', [...])`.
-  if (clause.op === 'in') return Array.isArray(clause.value) && clause.value.includes(value);
+/**
+ * ADR-894 §10 Β2/Β3 — το πραγματικό Firestore **ταξινομεί** `Timestamp` χρονολογικά· εδώ γινόταν `false`
+ * (ανόμοιος «τύπος» αντικειμένου) ⇒ κάθε ερώτημα εύρους σε χρόνο επέστρεφε σιωπηλά **κενό**. Δύο `Timestamp`
+ * συγκρίνονται ως ms· Timestamp απέναντι σε άλλο τύπο μένει `false` (όπως πριν).
+ */
+function orderedValue(value: unknown): unknown {
+  return value instanceof Timestamp ? value.toMillis() : value;
+}
 
+function matches(doc: Doc, clause: WhereClause): boolean {
+  const raw = readPath(doc, clause.field);
+  if (clause.op === '==') return raw === clause.value;
+  // ADR-862 Φ0 Β14 — η μετανάστευση ρωτά `where('cdeState', 'in', [...])`.
+  if (clause.op === 'in') return Array.isArray(clause.value) && clause.value.includes(raw);
+
+  const bothTimestamps = raw instanceof Timestamp && clause.value instanceof Timestamp;
+  const value = bothTimestamps ? orderedValue(raw) : raw;
+  const bound = bothTimestamps ? orderedValue(clause.value) : clause.value;
   const comparable =
-    (typeof value === 'number' && typeof clause.value === 'number') ||
-    (typeof value === 'string' && typeof clause.value === 'string');
+    (typeof value === 'number' && typeof bound === 'number') ||
+    (typeof value === 'string' && typeof bound === 'string');
   if (!comparable) return false;
 
   const left = value as number | string;
-  const right = clause.value as number | string;
+  const right = bound as number | string;
   // ADR-867 Ε10 — «το προηγούμενο ζωντανό μήνυμα» ρωτά `where('createdAt', '<', …)`: αυστηρή σύγκριση.
   if (clause.op === '<') return left < right;
   if (clause.op === '>') return left > right;
