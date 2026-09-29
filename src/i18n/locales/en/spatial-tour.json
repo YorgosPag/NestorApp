@@ -86,6 +86,10 @@
     "separationInvalid": "The separation line must be on the floor plan and have a length.",
     "separationAbsent": "The separation line no longer exists. Refresh the page.",
     "separationExists": "The separation line was changed meanwhile in another tab or by a collaborator. Refresh the page.",
+    "redactionInvalid": "The blur area must be inside the photo, neither too small nor too large.",
+    "redactionAbsent": "The blur area no longer exists. Refresh the page.",
+    "redactionExists": "The blur area was changed meanwhile in another tab or by a collaborator. Refresh the page.",
+    "redactionLimit": "The photo has reached its limit of blur areas.",
     "graphFull": "The tour has reached its point limit."
   },
   "panel": {
@@ -383,7 +387,9 @@
     "spaceApproved": "The room was approved.",
     "spaceRemoved": "The room was removed.",
     "separationSaved": "The separation line was saved.",
-    "separationRemoved": "The separation line was removed."
+    "separationRemoved": "The separation line was removed.",
+    "redactionSaved": "The area was blurred — the point is being prepared again and will appear blurred.",
+    "redactionRemoved": "The blur was removed — the point is being prepared again."
   },
   "rooms": {
     "types": {

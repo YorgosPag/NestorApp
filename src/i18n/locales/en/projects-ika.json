@@ -6,6 +6,14 @@
     "apdPayments": "APD & Payments",
     "efkaDeclaration": "Project Declaration",
     "efkaSettings": "EFKA Settings",
+    "periodNavigation": {
+      "dateLabel": "Date navigation",
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "monthYearLabel": "Month and year selection",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
+    },
     "efkaSettingsTab": {
       "title": "EFKA Construction Workers Settings (KPK 781)",
       "description": "Manage insurance classes and contribution rates",
@@ -50,6 +58,7 @@
       "description": "Manage workers assigned to this project",
       "addWorker": "Add Worker",
       "removeWorker": "Remove",
+      "removeWorkerNamed": "Remove {name}",
       "confirmRemove": "Are you sure you want to remove this worker from the project?",
       "noWorkers": "No workers assigned to this project",
       "noWorkersHint": "Click \"Add Worker\" to get started",
@@ -145,6 +154,8 @@
       "noWorkersHint": "Add workers from the \"Workers\" tab",
       "noEvents": "No records for this day",
       "addEvent": "New Record",
+      "showRecords": "Show records for {name}",
+      "hideRecords": "Hide records for {name}",
       "today": "Today",
       "viewMode": {
         "daily": "Day",
@@ -279,7 +290,7 @@
         "inside": "inside zone",
         "outside": "outside zone",
         "checkedOut": "checked out",
-        "noEvents": "No attendance events today",
+        "noEvents": "No attendance records today",
         "outsideAlert": "outside site zone",
         "popupEvent": "Event",
         "popupTime": "Time",

@@ -366,7 +366,7 @@
   },
   "attendance": {
     "siteAttendance": "Παρουσιολόγιο Εργοταξίου",
-    "scanForCheckInOut": "Σκανάρετε για check-in/check-out"
+    "scanForCheckInOut": "Σκανάρετε για προσέλευση/αποχώρηση"
   },
   "impactGuard": {
     "titles": {
