@@ -140,9 +140,13 @@ jobs:
           # την cache του browser σε κάθε deploy. ⚠️ Ίδια γραμμή στο `bundle-ratchet.yml` (CHECK 3.57).
           NEXT_PUBLIC_DEPLOYMENT_ID: ${{ github.sha }}
 
-      # ADR-884 Φ2ζ ζ4 — ο worker του ανιχνευτή προσώπων κάνει `require('onnxruntime-web')` από το cwd και φορτώνει το
-      # `.wasm` ΔΥΝΑΜΙΚΑ (ο ιχνηλάτης δεν τα βλέπει μόνος του — `outputFileTracingIncludes` στο next.config). Αν λείπουν, ο
-      # ψήστης αναβάλλει ΚΑΘΕ λήψη (fail-closed) σιωπηλά στην παραγωγή ⇒ εκτελούμε τον ΙΔΙΟ worker από το standalone, ΕΔΩ.
+      # ADR-884 Φ2ζ ζ4 — ο worker του ανιχνευτή προσώπων κάνει `require('onnxruntime-web')` από το cwd και φορτώνει
+      # `.mjs`/`.wasm` ΔΥΝΑΜΙΚΑ ⇒ ο ιχνηλάτης του Next δεν τα βλέπει. 🔴 Μετρημένο (run 36686300241): το
+      # `outputFileTracingIncludes` με pnpm isolated αντέγραψε μόνο το package.json ⇒ αντιγράφουμε ρητά τα δύο πακέτα
+      # και εκτελούμε τον ΙΔΙΟ worker από το standalone. Αν αποτύχει ⇒ κανένα image (ο ψήστης θα ανέβαλλε κάθε λήψη σιωπηλά).
+      - name: Vendor face-detector runtime into standalone
+        run: node scripts/vendor-face-detector-runtime.cjs .next/standalone
+
       - name: Verify face-detector runtime in standalone
         run: node scripts/face-detector-smoke.cjs .next/standalone
 

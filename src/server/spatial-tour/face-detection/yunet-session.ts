@@ -4,7 +4,7 @@ import 'server-only';
  * @fileoverview **Ο ΑΝΙΧΝΕΥΤΗΣ ΠΡΟΣΩΠΩΝ, ΖΩΝΤΑΝΟΣ** — το YuNet στο `onnxruntime-web` (WASM) μέσα σε **worker thread**, με ρητό
  * κύκλο ζωής: γεννιέται στην πρώτη σάρωση, πεθαίνει μετά από αδράνεια (ADR-884 Φ2ζ ζ4 · §4.15).
  * @related `yunet-worker-source.ts` (ο κώδικας του worker) · `yunet-decode.ts` (οι αριθμοί) · `../tour-face-scan.ts` (ο καταναλωτής) ·
- *   `data/models/face-detection/README.md` · `next.config.js` (`outputFileTracingIncludes`) · `Dockerfile` (`COPY data/models`)
+ *   `data/models/face-detection/README.md` · `scripts/vendor-face-detector-runtime.cjs` (ο runtime στο standalone) · `Dockerfile` (`COPY data/models`)
  * @module server/spatial-tour/face-detection/yunet-session
  *
  * ⚖️ **`onnxruntime-web`, όχι `onnxruntime-node`**: το image είναι `node:22-alpine` (musl) και το `onnxruntime-node` δεν έχει

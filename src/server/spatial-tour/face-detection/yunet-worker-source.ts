@@ -1,11 +1,13 @@
 /**
  * @fileoverview **Ο ΚΩΔΙΚΑΣ ΤΟΥ WORKER ΤΟΥ ΑΝΙΧΝΕΥΤΗ** — και το πρωτόκολλο μηνυμάτων του (ADR-884 Φ2ζ ζ4).
- * @related `yunet-session.ts` (ο ιδιοκτήτης του worker) · `next.config.js` (`outputFileTracingIncludes` — τα αρχεία που φορτώνει)
+ * @related `yunet-session.ts` (ο ιδιοκτήτης του worker) · `scripts/vendor-face-detector-runtime.cjs` (τα αρχεία που φορτώνει, στο standalone)
  * @module server/spatial-tour/face-detection/yunet-worker-source
  *
  * 🔑 **Κείμενο, όχι αρχείο** (`new Worker(source, { eval: true })`): κανένα δεύτερο αρχείο να ξεχάσει ο bundler ή το standalone
  *   του Next. Το `require('onnxruntime-web')` λύνεται από το `cwd` (`/app` στο image) — δηλαδή την είσοδο **CommonJS**
- *   `dist/ort.node.min.js` + `onnxruntime-common/dist/cjs/*` + το `ort-wasm-simd-threaded.wasm` (μετρημένο με ίχνος `fs`).
+ *   `dist/ort.node.min.js` + `onnxruntime-common/dist/cjs/*` + το ζεύγος `ort-wasm-simd-threaded.{mjs,wasm}` (το `.mjs` με `import()`,
+ *   αόρατο σε ίχνος `fs` — το απέδειξε το smoke σε καθαρό φάκελο, 2026-09-30). Ο ιχνηλάτης του Next **δεν** τα φέρνει στο standalone ⇒
+ *   `scripts/vendor-face-detector-runtime.cjs` στο CI.
  * 🔑 Οι έξοδοι **αντιγράφονται** (`slice`) πριν μεταφερθούν: ποτέ μεταφορά buffer που ίσως είναι όψη της μνήμης του WASM.
  */
 
