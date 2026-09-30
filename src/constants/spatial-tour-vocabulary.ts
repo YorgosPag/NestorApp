@@ -303,7 +303,7 @@ export const TOUR_FACE_NMS_IOU = 0.3;
  */
 export const TOUR_FACE_SCAN_MAX_FACE_PX = 2560;
 /** Πόσες βαθμίδες (οκτάβες) έχει η πυραμίδα. */
-export const TOUR_FACE_SCAN_OCTAVES = 1;
+export const TOUR_FACE_SCAN_OCTAVES = 3;
 /**
  * Πάνω από αυτή την πλευρά η όψη σαρώνεται σε **πλακίδια** με επικάλυψη (το δίκτυο είναι πλήρως συνελικτικό ⇒ ίδιο αποτέλεσμα):
  * αιχμή μνήμης ~300 MB αντί ~590 MB στη διεργασία που σερβίρει και σελίδες (μετρημένο).

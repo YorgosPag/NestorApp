@@ -19,10 +19,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { TOUR_FACE_SCAN_MAX_TILE_PX, TOUR_FACE_SCAN_TILE_OVERLAP_PX, TOUR_REDACTION_MAX_RADIUS_RAD } from '@/constants/spatial-tour-vocabulary';
+import { distinctFaces } from '@/lib/spatial-tour/tileset/tour-face-regions';
 import { angularDistance } from '@/lib/spatial-tour/tileset/tour-redaction-mask';
 
 import { disposeFaceDetector, faceModelPath } from '../face-detection/yunet-session';
-import { faceScanSizes, faceScanTiles, scanFaces } from '../tour-face-scan';
+import { faceScanSizes, faceScanTiles, facesOfCubeFace, scanFaces } from '../tour-face-scan';
 import { decodeEquirect } from '../tour-tileset-render';
 import { equirectWithFaces, type FacePlacement } from './fixtures/face-equirect';
 
@@ -76,6 +77,20 @@ describe('Π — πρόσωπο δίπλα στον φακό', () => {
   it('πολύ μεγάλο για την πρώτη βαθμίδα ⇒ το πιάνει η πυραμίδα', async () => {
     const at = { yawRad: 1.9, pitchRad: -0.1, widthRad: 1.5 };
     const faces = await scan([at]);
+    expect(faces).toHaveLength(1);
+    expectCovers(faces[0], at);
+  });
+});
+
+describe('Τ — όψη που σαρώνεται σε πλακίδια', () => {
+  // Μία όψη, μία βαθμίδα: η ίδια διαδρομή πλακιδίων με 1/18 του κόστους (οι βρόχοι JS είναι ~15× πιο αργοί μέσα στο jest·
+  // εκτός jest όλη η σάρωση όψης 1536 μετρήθηκε 8″).
+  it('όψη 1536 = 2×2 πλακίδια· πρόσωπο ΜΟΝΟ στο δεξί πλακίδιο ⇒ ένας κύκλος, στη σωστή θέση (όχι μετατοπισμένος)', async () => {
+    expect(faceScanSizes(4096)[0]).toBe(1536);
+    expect(faceScanTiles(1536)).toHaveLength(4);
+    const at = { yawRad: 0.4, pitchRad: 0.05, widthRad: 0.15 };
+    // Η ένωση διπλών (επικάλυψη πλακιδίων) είναι του `distinctFaces`, όπως στο `scanFaces`.
+    const faces = distinctFaces(await facesOfCubeFace(await decodeEquirect(await equirectWithFaces(4096, [at])), 'front', [1536]));
     expect(faces).toHaveLength(1);
     expectCovers(faces[0], at);
   });

@@ -64,8 +64,8 @@ async function boxesOfImage(image: RawImage): Promise<readonly FaceBox[]> {
   return boxes;
 }
 
-/** Τα πρόσωπα μιας όψης, σε όλες τις βαθμίδες της πυραμίδας. */
-async function facesOfCubeFace(equirect: RawImage, face: TourCubeFace, sizes: readonly number[]): Promise<FaceOnSphere[]> {
+/** Τα πρόσωπα μιας όψης, σε όλες τις δοσμένες βαθμίδες (η πρώτη αποδίδεται, οι υπόλοιπες σμικρύνονται από αυτήν). */
+export async function facesOfCubeFace(equirect: RawImage, face: TourCubeFace, sizes: readonly number[]): Promise<FaceOnSphere[]> {
   const [first, ...rest] = sizes;
   const largest = renderCubeFace(equirect, face, first, TOUR_FACE_SCAN_OVERSCAN);
   const found: FaceOnSphere[] = [];
