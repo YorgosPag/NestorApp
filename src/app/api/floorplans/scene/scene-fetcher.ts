@@ -2,7 +2,9 @@ import 'server-only';
 
 import { gunzipSync } from 'zlib';
 import { NextResponse } from 'next/server';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
+import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { LISTED_COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -17,6 +19,8 @@ export interface FileRecordData {
   projectId?: string;
   storagePath?: string;
   processedData?: { processedDataPath?: string; fileType?: string };
+  /** ADR-895 Α1 — σε ποιον κάδο ζουν τα bytes· απόν ⇒ κανονικός κάδος. */
+  storagePlacement?: FileStoragePlacement;
 }
 
 export async function fetchFileRecord(fileId: string): Promise<FileRecordData | null> {
@@ -40,10 +44,10 @@ export async function isFilePublic(file: FileRecordData): Promise<boolean> {
 export async function downloadSceneFile(
   file: FileRecordData,
   fileId: string,
-  storageBucket: string
 ): Promise<{ buffer: Buffer; etag: string; isGzip: boolean } | null> {
-  const adminStorage = getAdminStorage();
-  const bucket = adminStorage.bucket(storageBucket);
+  // ADR-895 Α2 — ο κάδος αποφασίζεται από την εγγραφή (`storagePlacement`), ποτέ από env.
+  // Η επεξεργασμένη σκηνή ζει ΔΙΠΛΑ στο πρωτότυπο, άρα ίδιος κάδος.
+  const bucket = fileRecordBucket(file);
   const rawPath = file.storagePath ?? '';
 
   const sceneJsonPath = rawPath
@@ -57,7 +61,7 @@ export async function downloadSceneFile(
 
   logger.debug('downloadSceneFile paths', {
     fileId,
-    storageBucket,
+    bucketName: bucket.name,
     rawPath,
     sceneJsonPath,
     processedDataPath: file.processedData?.processedDataPath ?? null,

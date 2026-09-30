@@ -34,7 +34,8 @@
 import 'server-only';
 
 import type { Bucket } from '@google-cloud/storage';
-import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { rasterizeDxfScene } from '@/services/dxf-raster/dxf-raster-generator';
 import type { DxfSceneInput } from '@/services/dxf-raster/svg-from-dxf-scene';
@@ -108,6 +109,8 @@ export async function ensureDxfThumbnail(fileId: string): Promise<EnsureThumbnai
     fileId,
     dxfStoragePath: storagePath,
     processedPath,
+    // ADR-895 Α2 — η μικρογραφία ζει ΔΙΠΛΑ στο πρωτότυπο, άρα ίδιος κάδος.
+    record: data,
   });
   logger.info('DXF self-heal rasterized', { fileId });
   return 'rasterized';
@@ -124,7 +127,8 @@ export async function ensureProcessedDataForDxf(args: {
   storagePath: string;
   data: Record<string, unknown>;
 }): Promise<string> {
-  const bucket = getAdminBucket();
+  // ADR-895 Α2 — ο κάδος αποφασίζεται από την εγγραφή (`storagePlacement`), ποτέ σιωπηλά.
+  const bucket = fileRecordBucket(args.data);
   const adminDb = getAdminFirestore();
   if (!adminDb) throw new Error('Admin Firestore unavailable');
 
@@ -170,8 +174,11 @@ export async function rasterizeDxfThumbnail(args: {
   fileId: string;
   dxfStoragePath: string;
   processedPath: string;
+  /** ADR-895 Α2 — η εγγραφή που αποφασίζει τον κάδο· η μικρογραφία ζει δίπλα στο πρωτότυπο. */
+  record: { storagePlacement?: unknown };
 }): Promise<RasterizeResult> {
-  const bucket = getAdminBucket();
+  // ADR-895 Α2 — ο κάδος αποφασίζεται από την εγγραφή, ποτέ σιωπηλά.
+  const bucket = fileRecordBucket(args.record);
   const adminDb = getAdminFirestore();
   if (!adminDb) throw new Error('Admin Firestore unavailable');
 

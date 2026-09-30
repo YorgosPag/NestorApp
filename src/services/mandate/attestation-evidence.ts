@@ -33,6 +33,8 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { UPLOAD_LIMITS } from '@/config/file-upload-config';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
+import type { FileStoragePlacementSubject } from '@/lib/files/file-storage-placement';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { attestationEvidencePath, ownerPropertyIdOfEvidencePath } from '@/lib/mandate/mandate-evidence';
 import { sha256PassThrough } from '@/lib/storage/sha256-pass-through';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -68,8 +70,11 @@ export interface EvidenceBucket {
 
 const adminEvidenceBucket = (): EvidenceBucket => getAdminBucket();
 
-/** Η πηγή — **από το `FileRecord`** μέσω του κριτή, ποτέ από το σύρμα. */
-export interface EvidenceSource {
+/**
+ * Η πηγή — **από το `FileRecord`** μέσω του κριτή, ποτέ από το σύρμα. Το `storagePlacement` (ADR-895) λέει σε
+ * ποιον κάδο ζουν τα bytes της πηγής· το **αποδεικτικό** μένει πάντα στον κανονικό (Locked retention).
+ */
+export interface EvidenceSource extends FileStoragePlacementSubject {
   readonly storagePath: string;
   readonly contentType: string;
   readonly fileName: string;
@@ -86,15 +91,19 @@ export type FreezeOutcome =
 export async function freezeAttestationEvidence(
   source: EvidenceSource,
   ownerPropertyId: string,
-  bucket: EvidenceBucket = adminEvidenceBucket(),
+  injectedBucket?: EvidenceBucket,
 ): Promise<FreezeOutcome> {
   const id = generateMandateEvidenceId();
   const path = attestationEvidencePath(ownerPropertyId, id);
   const hash = sha256PassThrough(UPLOAD_LIMITS.MAX_FILE_SIZE);
+  // Ο ενιαίος κάδος των tests υπηρετεί και τα δύο άκρα· στην παραγωγή η πηγή διαβάζεται **εκεί που λέει η εγγραφή**
+  // (ADR-895) και το αποδεικτικό γράφεται στον κανονικό. Άγνωστη θέση ⇒ πετά μέσα στο `try` ⇒ `failed`, ποτέ μαντεψιά.
+  const bucket = injectedBucket ?? adminEvidenceBucket();
   const target = bucket.file(path);
   try {
+    const sourceBucket: Pick<EvidenceBucket, 'file'> = injectedBucket ?? fileRecordBucket(source);
     await pipeline(
-      bucket.file(source.storagePath).createReadStream(),
+      sourceBucket.file(source.storagePath).createReadStream(),
       hash.stream,
       target.createWriteStream({ contentType: source.contentType, resumable: false, metadata: { metadata: { evidenceOf: ownerPropertyId } } }),
     );

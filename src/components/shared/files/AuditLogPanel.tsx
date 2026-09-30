@@ -40,6 +40,7 @@ import {
   XCircle,
   Ban,
   MessageSquare,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
@@ -89,6 +90,8 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   hold_place: Lock,
   hold_release: Unlock,
   move: FolderInput,
+  // ADR-895 Φ4 — τα bytes άλλαξαν κάδο (κατοικία δεδομένων), όχι φάκελο.
+  storage_relocate: Globe,
   approval_request: Send,
   approval_approve: CheckCircle,
   approval_reject: XCircle,
@@ -127,6 +130,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   hold_place: 'text-destructive',
   hold_release: 'text-[hsl(var(--text-success))]',
   move: 'text-primary',
+  storage_relocate: 'text-[hsl(var(--text-info))]',
   approval_request: 'text-[hsl(var(--text-warning))]',
   approval_approve: 'text-[hsl(var(--text-success))]',
   approval_reject: 'text-destructive',

@@ -12,6 +12,8 @@
  * @module config/gcs-buckets
  */
 
+import { FILES_EU_BUCKET_LOCATION, FILES_EU_BUCKET_SUFFIX } from '@/lib/files/file-storage-placement';
+
 // ---------------------------------------------------------------------------
 // Project ID (SSoT)
 // ---------------------------------------------------------------------------
@@ -145,31 +147,62 @@ export const GCS_TOUR_MEDIA_BUCKET =
   process.env.GCS_TOUR_MEDIA_BUCKET ?? `${GCP_PROJECT_ID}-tour-media`;
 
 /**
- * Η **επιθυμητή κατάσταση** του κάδου μέσων — τη συμφιλιώνει ο ΕΝΑΣ γραφέας (`server/spatial-tour/tour-media-provision`)
- * και την ελέγχει το δίχτυ απόκλισης.
+ * **Ο ΚΑΔΟΣ ΠΡΩΤΟΤΥΠΩΝ ΣΤΗΝ ΕΕ** (ADR-895 Α4) — τα bytes των `FileRecord` με `storagePlacement = 'eu-originals'`.
+ * ⚠️ **Χωριστός από το `GCS_TOUR_MEDIA_BUCKET`** επίτηδες: εκεί soft delete **0** (αποσυρμένα πλακίδια = ό,τι θολώθηκε),
+ * εδώ τα bytes είναι **αναντικατάστατα** ⇒ η αντίθετη πολιτική. Ποιος κάδος ισχύει για **μια** εγγραφή το αποφασίζει
+ * **μόνο** το `server/files/file-record-bucket`. Η δήλωση = `GCS_FILES_EU_BUCKET_CONFIG` (Φ1).
+ */
+export const GCS_FILES_EU_BUCKET =
+  process.env.GCS_FILES_EU_BUCKET ?? `${GCP_PROJECT_ID}${FILES_EU_BUCKET_SUFFIX}`;
+
+/**
+ * **Το CORS του υπογεγραμμένου εισιτηρίου ανεβάσματος** — ΕΝΑ, κοινό σε κάθε ιδιωτικό κάδο που δέχεται PUT από τον
+ * browser (μέσα περιήγησης · πρωτότυπα ΕΕ, ADR-895 Ε4). Μία λίστα origins, όχι μία ανά κάδο.
+ *
+ * **Μόνο** το PUT του resumable, **μόνο** από τα origins της εφαρμογής (ποτέ `*` — ιδιωτικός κάδος). Ρητή λίστα και όχι
+ * `NEXT_PUBLIC_APP_URL`: η προμήθεια τρέχει από το μηχάνημα του Giorgio, όπου αυτό είναι `localhost` ⇒ θα έγραφε CORS
+ * **χωρίς** την παραγωγή. `Range` = η απάντηση 308 λέει πόσα bytes έφτασαν (`lib/storage/resumable-upload-client`).
+ */
+export const APP_UPLOAD_CORS = {
+  origin: ['https://nestorconstruct.gr', 'https://www.nestorconstruct.gr', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  method: ['PUT'],
+  responseHeader: ['Content-Type', 'Content-Range', 'Range', 'X-Goog-Resumable'],
+  maxAgeSeconds: 3600,
+} as const;
+
+/**
+ * Η **επιθυμητή κατάσταση** του κάδου μέσων — τη συμφιλιώνει ο ΕΝΑΣ μηχανισμός ιδιωτικών κάδων
+ * (`server/storage/declared-private-bucket`) και την ελέγχει το δίχτυ απόκλισης. Τα αναλλοίωτα κάθε ιδιωτικού κάδου
+ * (UBLA · Public Access Prevention · χωρίς HNS/versioning/object retention) ζουν **εκεί**, όχι εδώ — δεν είναι επιλογή.
  *
  * - `EUROPE-WEST3` (Φρανκφούρτη): απόφαση Giorgio 2026-09-30 — η πλησιέστερη περιοχή στον server (Netcup, Νυρεμβέργη)·
  *   κάθε πλακίδιο περνά από εκεί.
  * - 🏆 `softDeleteRetentionSeconds: 0`: τα **αποσυρμένα** πλακίδια δείχνουν ό,τι ζητήθηκε να θολωθεί (Φ2ζ). Η προεπιλογή
  *   της GCS (7 ημέρες ανακτήσιμα) θα κρατούσε ακριβώς αυτά — και θα χρέωνε κάθε επανα-ψήση. Το πρωτότυπο είναι η πηγή.
  * - `ingestTtlDays`: η καραντίνα που δεν ολοκληρώθηκε σβήνεται μόνη της (ADR-884 Κ3α).
- * - `cors`: **μόνο** το PUT του resumable, **μόνο** από τα origins της εφαρμογής (ποτέ `*` — ιδιωτικός κάδος). Ρητή λίστα
- *   και όχι `NEXT_PUBLIC_APP_URL`: η προμήθεια τρέχει από το μηχάνημα του Giorgio, όπου αυτό είναι `localhost` ⇒ θα
- *   έγραφε CORS **χωρίς** την παραγωγή. `Range` = η απάντηση 308 λέει πόσα bytes έφτασαν (`lib/storage/resumable-upload-client`).
  */
 export const GCS_TOUR_MEDIA_BUCKET_CONFIG = {
   location: 'EUROPE-WEST3',
   storageClass: 'STANDARD' as const,
-  uniformBucketLevelAccess: true,
-  publicAccessPrevention: 'enforced' as const,
   softDeleteRetentionSeconds: 0,
   ingestTtlDays: 1,
-  cors: {
-    origin: ['https://nestorconstruct.gr', 'https://www.nestorconstruct.gr', 'http://localhost:3000', 'http://127.0.0.1:3000'],
-    method: ['PUT'],
-    responseHeader: ['Content-Type', 'Content-Range', 'Range', 'X-Goog-Resumable'],
-    maxAgeSeconds: 3600,
-  },
+  cors: APP_UPLOAD_CORS,
+} as const;
+
+/**
+ * Η **επιθυμητή κατάσταση** του κάδου πρωτοτύπων ΕΕ (ADR-895 Α4 · Ε2/Ε3) — ίδιος μηχανισμός με τον κάδο μέσων.
+ *
+ * - 🔴 `softDeleteRetentionSeconds: 604800` (7 ημέρες, Ε3): τα πρωτότυπα είναι **αναντικατάστατα** ⇒ δίχτυ κατά λάθους
+ *   διαγραφής — η **αντίθετη** πολιτική από τον κάδο μέσων, γι' αυτό δύο κάδοι. Το 7 είναι το **ελάχιστο** μη μηδενικό της
+ *   GCS (εύρος 7–90). ⚠️ Διαγραφή GDPR: τα bytes μένουν ανακτήσιμα ≤7 ημέρες **εκτός χρήσης** (ADR-895 §3, σημείο 8).
+ * - **Κανένας** κανόνας κύκλου ζωής: ένα πρωτότυπο δεν λήγει ποτέ μόνο του — το σβήνει μόνο ο κριτής purge.
+ * - `cors`: το PUT του υπογεγραμμένου εισιτηρίου (Ε4 — ο client δεν ξέρει ποτέ κάδο).
+ */
+export const GCS_FILES_EU_BUCKET_CONFIG = {
+  location: FILES_EU_BUCKET_LOCATION,
+  storageClass: 'STANDARD' as const,
+  softDeleteRetentionSeconds: 604_800,
+  cors: APP_UPLOAD_CORS,
 } as const;
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@
   "modules": [
     "config/search-index-core.ts",
     "lib/dxf/decode-processed-json.ts",
+    "lib/files/file-storage-placement.ts",
     "lib/idempotency/event-claim.ts",
     "lib/search/search-index-version.ts",
     "lib/search/search.ts",

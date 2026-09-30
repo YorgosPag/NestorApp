@@ -298,7 +298,7 @@
     },
     "storage-public-upload": {
       "ssotFile": "src/services/storage-admin/public-upload.service.ts",
-      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically. Reading legacy storage.googleapis.com URLs already persisted on documents is the download twin's job (src/lib/firebaseAdmin-storage.ts, allowlisted) — it strips the prefix, it never mints a public URL. ADR-884 Φ2α EXCEPTION (2026-09-27): the tour tileset baker writes PRIVATE tiles under tour-tiles/ (storage-path-custody = server-only, read only behind a server view grant) — uploadPublicFile mints a public URL, which is exactly wrong here, and failure mode (3) no longer applies because onStorageFinalize is mark-only (ADR-694 A1). ADR-884 Φ2ζ ζ5 (2026-09-30): tiles (and the upload quarantine) of NEW tours go to a THIRD, private bucket (GCS_TOUR_MEDIA_BUCKET, EUROPE-WEST3, UBLA + publicAccessPrevention=enforced, softDelete 0) chosen ONLY by server/spatial-tour/tour-media-store (explicit per-tour mediaPlacement, never a silent fallback); tours without the field stay in the default bucket until migrated. The default-bucket onStorageFinalize functions do not see that bucket — correct: the quarantine is cleaned by its 1-day lifecycle rule (declared in code, tour-media-provision), tiles by the baker. ADR-841 A12 EXCEPTION (2026-09-01): the public shelf writes to a SECOND, separate bucket (GCS_PUBLIC_MEDIA_BUCKET, EUROPE-WEST1, UBLA + allUsers:objectViewer at BUCKET level) and none of the three failure modes above applies there. (1) no makePublic() is called — the grant is bucket-wide IAM, which is exactly what the GCS built-in edge cache requires; (2) the storage.googleapis.com URL is valid BY CONSTRUCTION on that bucket, it does not assume a per-object ACL; (3) orphan-cleanup binds functions.storage.object() with NO bucket argument (functions/src/storage/orphan-cleanup.ts:110), i.e. the DEFAULT bucket only — it never fires on the public shelf, so there is no pre-claim race to lose. Crucially, uploadPublicFile() is NOT the right canonical here by its own documentation: it uploads PRIVATELY and returns an auth-gated proxy URL (/api/storage/file/{path}), and its own 'When NOT to use this' section excludes unauthenticated contexts — routing the shelf through it would break anonymous reads. public-shelf.service.ts is the SOLE writer of that bucket and storage-path-public-shelf.ts is the SOLE key/URL builder for it; they are the SSoT for the public bucket, not a bypass of the SSoT for the private one.",
+      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically. Reading legacy storage.googleapis.com URLs already persisted on documents is the download twin's job (src/lib/firebaseAdmin-storage.ts, allowlisted) — it strips the prefix, it never mints a public URL. ADR-884 Φ2α EXCEPTION (2026-09-27): the tour tileset baker writes PRIVATE tiles under tour-tiles/ (storage-path-custody = server-only, read only behind a server view grant) — uploadPublicFile mints a public URL, which is exactly wrong here, and failure mode (3) no longer applies because onStorageFinalize is mark-only (ADR-694 A1). ADR-884 Φ2ζ ζ5 (2026-09-30): tiles (and the upload quarantine) of NEW tours go to a THIRD, private bucket (GCS_TOUR_MEDIA_BUCKET, EUROPE-WEST3, UBLA + publicAccessPrevention=enforced, softDelete 0) chosen ONLY by server/spatial-tour/tour-media-store (explicit per-tour mediaPlacement, never a silent fallback); tours without the field stay in the default bucket until migrated. The default-bucket onStorageFinalize functions do not see that bucket — correct: the quarantine is cleaned by its 1-day lifecycle rule (declared in code, server/storage/private-bucket-registry), tiles by the baker. ADR-841 A12 EXCEPTION (2026-09-01): the public shelf writes to a SECOND, separate bucket (GCS_PUBLIC_MEDIA_BUCKET, EUROPE-WEST1, UBLA + allUsers:objectViewer at BUCKET level) and none of the three failure modes above applies there. (1) no makePublic() is called — the grant is bucket-wide IAM, which is exactly what the GCS built-in edge cache requires; (2) the storage.googleapis.com URL is valid BY CONSTRUCTION on that bucket, it does not assume a per-object ACL; (3) orphan-cleanup binds functions.storage.object() with NO bucket argument (functions/src/storage/orphan-cleanup.ts:110), i.e. the DEFAULT bucket only — it never fires on the public shelf, so there is no pre-claim race to lose. Crucially, uploadPublicFile() is NOT the right canonical here by its own documentation: it uploads PRIVATELY and returns an auth-gated proxy URL (/api/storage/file/{path}), and its own 'When NOT to use this' section excludes unauthenticated contexts — routing the shelf through it would break anonymous reads. public-shelf.service.ts is the SOLE writer of that bucket and storage-path-public-shelf.ts is the SOLE key/URL builder for it; they are the SSoT for the public bucket, not a bypass of the SSoT for the private one.",
       "forbiddenPatterns": [
         "\\.makePublic\\(\\)",
         "https://storage\\.googleapis\\.com/\\$\\{",
@@ -1767,6 +1767,52 @@
       ],
       "allowlist": [
         "src/lib/message-utils.ts"
+      ],
+      "tier": 2
+    },
+    "file-record-bucket": {
+      "ssotFile": "src/server/files/file-record-bucket.ts",
+      "description": "ADR-895 A2/A10 — the bucket holding a FileRecord ORIGINAL's bytes is decided ONLY by fileRecordBucket(record) / fileStorageBucket(placement) / originalStorageBuckets() (per-record FileRecord.storagePlacement; absent = legacy-default; unknown = throw, never a silent default). Why: 40 scattered getAdminBucket()/.bucket() calls each GUESSED the bucket; with a 2nd bucket every guess becomes a silent 404 — purge marked 'purged' while EU bytes stay (GDPR erasure failed), legal hold never locked the bytes, backup never saw the bucket. Allowlist = the SSoT + accessors + call sites whose objects are NOT FileRecord originals, each for a stated reason: tour derivatives (tour-media-store); persisted public URLs (firebaseAdmin-storage); executed one-off migrations (migrate-dxf cad_files, normalize-storage-paths 2026-07-26); asset packs; mandate evidence copies (Locked retention, canonical bucket); generated showcase PDFs; backup bucket; public shelf bucket. PENDING Φ5 (writers that create NEW objects before/without a FileRecord — placement at birth comes with the Φ5 policy): telegram/email ingestion, vendor quote upload, public-upload.service, AI messaging-handler (takes paths, must take fileIds). A new getAdminBucket() anywhere else = BLOCK: use the selector, or add the file here WITH a reason.",
+      "forbiddenPatterns": [
+        "getAdminBucket\\(\\)",
+        "getAdminStorage\\(\\)\\.bucket\\(",
+        "getStorage\\(\\)\\.bucket\\(",
+        "\\.bucket\\(process\\.env\\.(NEXT_PUBLIC_)?FIREBASE_STORAGE_BUCKET"
+      ],
+      "allowlist": [
+        "src/server/files/file-record-bucket.ts",
+        "src/lib/firebaseAdmin.ts",
+        "src/server/spatial-tour/tour-media-store.ts",
+        "src/lib/firebaseAdmin-storage.ts",
+        "src/app/api/admin/migrate-dxf/migration-operations.ts",
+        "src/app/api/admin/migrations/normalize-storage-paths/route.ts",
+        "src/app/api/asset-packs/[packId]/[version]/[fileName]/route.ts",
+        "src/app/api/communications/webhooks/telegram/telegram/media-download-storage.ts",
+        "src/services/communications/inbound/email-inbound-attachments.ts",
+        "src/app/api/owner-properties/[ownerPropertyId]/mandate-evidence/[evidenceId]/legal-hold/route.ts",
+        "src/lib/cron/jobs/mandate-evidence-retention.job.ts",
+        "src/services/mandate/mandate-evidence-access.ts",
+        "src/services/mandate/attestation-evidence.ts",
+        "src/app/api/properties/[id]/showcase/generate/helpers.ts",
+        "src/services/showcase-core/api/create-pdf-route.ts",
+        "src/app/api/showcase/shared-pdf-proxy-helpers.ts",
+        "src/app/api/vendor/quote/upload.ts",
+        "src/services/ai-pipeline/tools/handlers/messaging-handler.ts",
+        "src/services/backup/backup-gcs.service.ts",
+        "src/services/listings/public-shelf-bucket.ts",
+        "src/services/listings/public-shelf-provision.ts",
+        "src/services/storage-admin/public-upload.service.ts"
+      ],
+      "tier": 2
+    },
+    "declared-private-bucket": {
+      "ssotFile": "src/server/storage/declared-private-bucket.ts",
+      "description": "ADR-895 A5 (generalises ADR-884 Φ2ζ ζ5) — the policy of EVERY private GCS bucket (soft delete, Public Access Prevention, hierarchical namespace, object retention, versioning, lifecycle, CORS) is declared in server/storage/private-bucket-registry and written ONLY by ensurePrivateBucket() (pure drift judge + idempotent reconcile; the storage-bucket-drift cron reads the same registry). Why: before this there were two near-identical provisioners and a third was about to be copied for files-eu; a hand-written bucket policy elsewhere is invisible to the drift net, and one wrong key breaks things silently — hierarchicalNamespace disables object holds (legal hold, ADR-864), soft delete 0 on originals makes an accidental deletion unrecoverable, a missing PAP makes a private bucket publishable. The keys below only ever appear when WRITING bucket policy (readers use ?.key). The public shelf (allUsers, CORS *) is a deliberately separate provisioner with the opposite policy and writes none of these keys. New private bucket = one declaration in the registry, never a new writer.",
+      "forbiddenPatterns": [
+        "(softDeletePolicy|publicAccessPrevention|hierarchicalNamespace|enableObjectRetention)\\s*:"
+      ],
+      "allowlist": [
+        "src/server/storage/declared-private-bucket.ts"
       ],
       "tier": 2
     },

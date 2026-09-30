@@ -13,6 +13,11 @@ import type * as admin from 'firebase-admin';
 export interface CustodyFixtureOptions {
   /** `${collection}/${docId}` → υπάρχει. */
   readonly docs?: Readonly<Record<string, boolean>>;
+  /**
+   * `${collection}/${docId}` → τα δεδομένα του εγγράφου (ADR-895 — `storagePlacement` κ.ά.).
+   * Ένα κλειδί εδώ σημαίνει επίσης «υπάρχει» — δεν χρειάζεται ταυτόχρονα στο `docs`.
+   */
+  readonly docData?: Readonly<Record<string, Record<string, unknown>>>;
   /** `${collection}:${field}=${value}` → το doc id που ταιριάζει (ή απόν = κανένα). */
   readonly query?: Readonly<Record<string, string>>;
   /** Κάθε ανάγνωση πετά — προσομοιώνει αστοχία δικτύου/δικαιωμάτων. */
@@ -32,7 +37,10 @@ export function candidateKeyFixtures(opts: CustodyFixtureOptions): admin.firesto
           return {
             async get() {
               if (opts.throwOnGet) throw new Error('simulated firestore failure');
-              return { id: docId, exists: Boolean(opts.docs?.[`${collection}/${docId}`]) };
+              const key = `${collection}/${docId}`;
+              const data = opts.docData?.[key];
+              const exists = Boolean(opts.docs?.[key]) || data !== undefined;
+              return { id: docId, exists, data: () => data };
             },
           };
         },

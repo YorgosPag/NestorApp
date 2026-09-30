@@ -22,7 +22,7 @@ import { createHash } from 'node:crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import sharp from 'sharp';
 
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import {
   TOUR_PLAN_CONTENT_TYPE,
   TOUR_PLAN_WEBP_QUALITY,
@@ -69,7 +69,8 @@ async function uprightImage(bytes: Buffer): Promise<{ readonly upright: Buffer; 
 export async function prepareTourFloorPlan(db: Firestore, tour: SpatialTour, pick: TourFloorPlanPick): Promise<FloorPlanChoice | TourAccessRefused> {
   const file = await readTourPlanFile(db, tour, pick.fileId);
   if (file === null) return refuseTourAccess('plan-not-eligible');
-  const [bytes] = await getAdminBucket().file(file.storagePath).download();
+  // ADR-895 Α2 — η ανάγνωση της κάτοψης-πηγής ρωτά την εγγραφή, ποτέ σιωπηλά τον κανονικό κάδο.
+  const [bytes] = await fileRecordBucket(file).file(file.storagePath).download();
   const contentHash = createHash('sha256').update(bytes).digest('hex');
   const image = await uprightImage(bytes);
   if (image === null) return refuseTourAccess('plan-not-eligible');

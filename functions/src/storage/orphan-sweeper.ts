@@ -44,6 +44,8 @@ import * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
 import { generateCloudAuditId } from '../config/enterprise-id';
 import { resolveCustody } from './storage-path-custody';
+import { fileStorageBucketNames } from './file-record-bucket';
+import type { FileStorageBucketNames } from '../generated/lib/files/file-storage-placement';
 
 /** Ημέρες ωρίμανσης πριν ένας υποψήφιος γίνει επιλέξιμος (S3 lifecycle parity). */
 const RETENTION_DAYS = 7;
@@ -91,12 +93,18 @@ async function writeAudit(
 /**
  * Επεξεργάζεται ΕΝΑΝ ώριμο υποψήφιο. Επιστρέφει τι συνέβη, ώστε ο caller να μετρά
  * χωρίς να ξέρει λεπτομέρειες.
+ *
+ * ADR-895 Α7: ο κάδος **δεν** είναι πια ένας κοινός παράμετρος — είναι το `bucket` που
+ * καταγράφηκε πάνω στον ΙΔΙΟ τον υποψήφιο (απών ⇒ ο κανονικός κάδος, συμβατό με σημάδια
+ * πριν το ADR-895), και ο επανέλεγχος custody ρωτά ρητά «διεκδικεί κάποιο `FileRecord`
+ * ΑΥΤΟΝ τον κάδο για αυτό το path;» — ένα record σε ΑΛΛΟΝ κάδο δεν προστατεύει εδώ.
  */
 async function sweepOne(
   db: admin.firestore.Firestore,
-  bucket: ReturnType<ReturnType<typeof admin.storage>['bucket']>,
+  storage: ReturnType<typeof admin.storage>,
   doc: admin.firestore.QueryDocumentSnapshot,
   dryRun: boolean,
+  bucketNames: FileStorageBucketNames,
 ): Promise<'deleted' | 'healed' | 'skipped'> {
   const filePath = doc.get('storagePath') as string | undefined;
   if (!filePath) {
@@ -104,12 +112,15 @@ async function sweepOne(
     return 'skipped';
   }
 
+  const bucketName = (doc.get('bucket') as string | undefined) ?? bucketNames['legacy-default'];
+
   // Φράγμα 4 — επανέλεγχος. Το σημάδι είναι ημερών· ο κόσμος μπορεί να άλλαξε.
-  const custody = await resolveCustody(db, filePath);
+  const custody = await resolveCustody(db, filePath, { bucketName, bucketNames });
   if (custody.kind !== 'orphaned') {
     await doc.ref.delete();
     functions.logger.info('OrphanSweeper: candidate no longer orphaned, released', {
       filePath,
+      bucketName,
       custodyKind: custody.kind,
     });
     return 'healed';
@@ -118,17 +129,19 @@ async function sweepOne(
   if (dryRun) {
     functions.logger.warn('OrphanSweeper: DRY-RUN would delete', {
       filePath,
+      bucketName,
       custodyRule: custody.rule,
       ownerId: custody.ownerId,
     });
     return 'skipped';
   }
 
-  await bucket.file(filePath).delete();
+  await storage.bucket(bucketName).file(filePath).delete();
   await writeAudit(db, filePath, custody.ownerId, custody.rule);
   await doc.ref.delete();
   functions.logger.warn('OrphanSweeper: orphan reclaimed', {
     filePath,
+    bucketName,
     custodyRule: custody.rule,
     ownerId: custody.ownerId,
   });
@@ -138,11 +151,15 @@ async function sweepOne(
 /**
  * Ο πυρήνας, εξαγόμενος ώστε να ελέγχεται χωρίς scheduler. Σαρώνει τους ώριμους
  * `orphaned` υποψηφίους και εφαρμόζει τα φράγματα 2–4.
+ *
+ * `bucketNames` (ADR-895 Α7): τα ονόματα κάδων ανά θέση — injected, όχι διαβασμένα εδώ,
+ * ίδιο DI μοτίβο με `db`/`storage`/`now` (testability χωρίς Admin SDK/emulator).
  */
 export async function runOrphanSweep(
   db: admin.firestore.Firestore,
   storage: ReturnType<typeof admin.storage>,
   now: Date,
+  bucketNames: FileStorageBucketNames,
 ): Promise<SweepSummary> {
   const dryRun = !isSweepEnabled();
   const cutoff = new Date(now.getTime() - RETENTION_DAYS * MS_PER_DAY);
@@ -154,14 +171,13 @@ export async function runOrphanSweep(
     .limit(MAX_DELETIONS_PER_RUN)
     .get();
 
-  const bucket = storage.bucket();
   let deleted = 0;
   let healed = 0;
   let skipped = 0;
 
   for (const doc of snap.docs) {
     try {
-      const result = await sweepOne(db, bucket, doc, dryRun);
+      const result = await sweepOne(db, storage, doc, dryRun, bucketNames);
       if (result === 'deleted') deleted += 1;
       else if (result === 'healed') healed += 1;
       else skipped += 1;
@@ -184,6 +200,6 @@ export const orphanSweeper = functions
   .pubsub.schedule('30 3 * * *')
   .timeZone('UTC')
   .onRun(async () => {
-    await runOrphanSweep(admin.firestore(), admin.storage(), new Date());
+    await runOrphanSweep(admin.firestore(), admin.storage(), new Date(), fileStorageBucketNames());
     return null;
   });

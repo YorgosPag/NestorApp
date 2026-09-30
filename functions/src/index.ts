@@ -52,6 +52,8 @@ const HOLD_TYPES = {
 // SSoT: Collection names from centralized config
 import { COLLECTIONS } from './config/firestore-collections';
 import { generateCloudAuditId } from './config/enterprise-id';
+import { fileRecordBucket } from './storage/file-record-bucket';
+import { UnknownFileStoragePlacementError } from './generated/lib/files/file-storage-placement';
 
 // ============================================================================
 // TYPES
@@ -68,6 +70,8 @@ interface FileRecord {
   hold?: string;
   retentionUntil?: string;
   lifecycleState?: string;
+  /** ADR-895 Α1 — σε ποιον κάδο ζουν τα bytes. Απόν ⇒ ο κανονικός κάδος (legacy). */
+  storagePlacement?: unknown;
 }
 
 interface PurgeResult {
@@ -104,26 +108,45 @@ async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
 }
 
 /**
- * Delete file from Storage
+ * Delete file from Storage — ADR-895 Α2/Α7: ρωτά τον κάδο ΤΗΣ εγγραφής, όχι πάντα τον
+ * κανονικό. «Λείπει» σημαίνει «λείπει ΕΚΕΙ που λέει η εγγραφή» (Α3) — ένα 404 στον λάθος
+ * κάδο δεν πρέπει ποτέ να διαβαστεί ως «ήδη διαγράφηκε» (ADR-895 Ρ1).
  * @enterprise Handles missing files gracefully
  */
-async function deleteFromStorage(storagePath: string): Promise<boolean> {
+async function deleteFromStorage(fileRecord: FileRecord): Promise<boolean> {
+  const { storagePath } = fileRecord;
+  let bucket: ReturnType<typeof storage.bucket>;
   try {
-    const bucket = storage.bucket();
+    bucket = fileRecordBucket(fileRecord);
+  } catch (error) {
+    if (error instanceof UnknownFileStoragePlacementError) {
+      functions.logger.error('Storage delete refused — unknown storage placement', {
+        storagePath,
+        error: error.message,
+      });
+      return false;
+    }
+    throw error;
+  }
+
+  try {
     const file = bucket.file(storagePath);
 
     // Check if file exists before deleting
     const [exists] = await file.exists();
     if (!exists) {
-      functions.logger.warn('Storage file not found (already deleted?)', { storagePath });
-      return true; // Not an error - file already gone
+      functions.logger.warn('Storage file not found in its own bucket (already deleted?)', {
+        storagePath,
+        bucketName: bucket.name,
+      });
+      return true; // Not an error - file already gone from where the record says it lives
     }
 
     await file.delete();
-    functions.logger.info('Storage file deleted', { storagePath });
+    functions.logger.info('Storage file deleted', { storagePath, bucketName: bucket.name });
     return true;
   } catch (error) {
-    functions.logger.error('Failed to delete storage file', { storagePath, error });
+    functions.logger.error('Failed to delete storage file', { storagePath, bucketName: bucket.name, error });
     return false;
   }
 }
@@ -139,7 +162,7 @@ async function purgeFile(fileRecord: FileRecord): Promise<PurgeResult> {
 
   try {
     // Step 1: Delete from Storage
-    const storageDeleted = await deleteFromStorage(storagePath);
+    const storageDeleted = await deleteFromStorage(fileRecord);
     if (!storageDeleted) {
       return {
         success: false,
@@ -335,3 +358,8 @@ export { onStorageFinalize } from './storage/orphan-cleanup';
 export { orphanSweeper } from './storage/orphan-sweeper';
 export { onDxfProcessedFinalize } from './storage/dxf-thumbnail-onfinalize';
 export { orphanSpikeAlert } from './storage/orphan-spike-alert';
+
+// ADR-895 Φ2 — οι ΙΔΙΟΙ δύο handlers για τον κάδο πρωτοτύπων ΕΕ: gen2 στο `europe-west3`
+// (Eventarc: ίδια περιοχή με τον κάδο· bytes ΕΕ επεξεργάζονται μόνο στην ΕΕ). Λεπτά bindings,
+// κανένα αντίγραφο σώματος — `storage/regional-storage-triggers.ts`.
+export { onStorageFinalizeFilesEu, onDxfProcessedFinalizeFilesEu } from './storage/regional-storage-triggers';

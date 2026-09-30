@@ -23,7 +23,7 @@ import { getStorage, type Storage } from 'firebase-admin/storage';
 import { getApp } from 'firebase-admin/app';
 import type { Bucket } from '@google-cloud/storage';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
-import { GCS_TOUR_MEDIA_BUCKET } from '@/config/gcs-buckets';
+import { GCS_FILES_EU_BUCKET, GCS_TOUR_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { createModuleLogger } from '@/lib/telemetry';
 
 import { initializeWithCredentialChain } from './firebaseAdmin-credentials';
@@ -165,6 +165,14 @@ export function getAdminBucket(): Bucket {
  */
 export function getTourMediaBucket(): Bucket {
   return getAdminStorage().bucket(GCS_TOUR_MEDIA_BUCKET);
+}
+
+/**
+ * Ο κάδος **πρωτοτύπων στην ΕΕ** (ADR-895 Α4). Όνομα από το SSoT `config/gcs-buckets`· ποιος κάδος ισχύει για
+ * **μια** εγγραφή το αποφασίζει μόνο το `server/files/file-record-bucket` (από το `FileRecord.storagePlacement`).
+ */
+export function getFilesEuBucket(): Bucket {
+  return getAdminStorage().bucket(GCS_FILES_EU_BUCKET);
 }
 
 /**

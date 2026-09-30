@@ -58,6 +58,10 @@
 import type * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
 import { findFileOwner } from '../shared/file-ownership-resolver';
+import {
+  fileStorageBucketNameOf,
+  type FileStorageBucketNames,
+} from '../generated/lib/files/file-storage-placement';
 
 /** Γιατί δεν μπορέσαμε να αποφανθούμε — καταγράφεται ώστε τα κενά να είναι μετρήσιμα. */
 export type CustodyUnknownReason =
@@ -73,6 +77,17 @@ export type CustodyOutcome =
   | { readonly kind: 'claimed'; readonly rule: string; readonly ownerId: string }
   | { readonly kind: 'orphaned'; readonly rule: string; readonly ownerId: string }
   | { readonly kind: 'unknown'; readonly reason: CustodyUnknownReason };
+
+/**
+ * Σε ποιον κάδο ζει το αντικείμενο υπό εξέταση (ADR-895 Α7). Χωρίς αυτό, ο κανόνας `files`
+ * ρωτά μόνο «υπάρχει το `FileRecord`;» — με αυτό ρωτά «υπάρχει το `FileRecord` ΚΑΙ η
+ * ΕΝΕΡΓΗ θέση του λύνεται σε ΑΥΤΟΝ τον κάδο;». Ένα record που ζει σε ΑΛΛΟΝ κάδο δεν
+ * προστατεύει αντικείμενο εδώ — είναι ακριβώς το σενάριο «απομεινάρι μετά από μετάβαση».
+ */
+export interface CustodyBucketContext {
+  readonly bucketName: string;
+  readonly bucketNames: FileStorageBucketNames;
+}
 
 /**
  * Ένας κανόνας κηδεμονίας: αναγνωρίζει ένα σχήμα path και λέει πού ζει ο ιδιοκτήτης.
@@ -248,15 +263,57 @@ async function positiveOnlyClaim(
 }
 
 /**
+ * Bucket-aware ιδιοκτησία ΜΟΝΟ για τον κανόνα `files` (ADR-895 Α7): σε αντίθεση με τους
+ * υπόλοιπους κανόνες, ένα `FileRecord` μπορεί να υπάρχει αλλά η ΕΝΕΡΓΗ θέση του
+ * (`storagePlacement`) να λύνεται σε ΑΛΛΟΝ κάδο — δηλαδή αυτό το αντικείμενο, σε ΑΥΤΟΝ
+ * τον κάδο, δεν έχει πια νόμιμο ιδιοκτήτη, ακόμη κι αν το record υπάρχει κάπου αλλού.
+ *
+ * Επιστρέφει `null` ΜΟΝΟ όταν το record δεν υπάρχει ΚΑΘΟΛΟΥ — τότε ο καλών δοκιμάζει τους
+ * legacy providers (`file_shares`, `imported_meshes`: δεν έχουν `storagePlacement`, οπότε
+ * η ερώτηση κάδου δεν έχει νόημα εκεί). Όταν το record υπάρχει, η απάντηση είναι πάντα
+ * οριστική (claimed/orphaned/unknown) — ΠΟΤΕ δεν περνά από τους legacy providers, γιατί
+ * αυτοί θα ξαναέβρισκαν το ΙΔΙΟ record μέσω μιας bucket-τυφλής ερώτησης (θα ακύρωναν
+ * ακριβώς αυτόν τον έλεγχο).
+ */
+async function filesCustodyForBucket(
+  db: admin.firestore.Firestore,
+  fileId: string,
+  ctx: CustodyBucketContext,
+): Promise<CustodyOutcome | null> {
+  let snap: FirebaseFirestore.DocumentSnapshot;
+  try {
+    snap = await db.collection(COLLECTIONS.FILES).doc(fileId).get();
+  } catch {
+    return { kind: 'unknown', reason: 'lookup-failed' };
+  }
+  if (!snap.exists) return null;
+
+  try {
+    const bucketName = fileStorageBucketNameOf(snap.data() ?? {}, ctx.bucketNames);
+    return bucketName === ctx.bucketName
+      ? { kind: 'claimed', rule: 'files', ownerId: fileId }
+      : { kind: 'orphaned', rule: 'files', ownerId: fileId };
+  } catch {
+    // Άγνωστη τιμή `storagePlacement` — ΠΟΤΕ διαγραφή πάνω σε αβέβαιη θέση (Α2 fail-closed).
+    return { kind: 'unknown', reason: 'lookup-failed' };
+  }
+}
+
+/**
  * Το πόρισμα κηδεμονίας για ένα αντικείμενο Storage.
  *
  * **Εγγύηση:** επιστρέφει `orphaned` ΜΟΝΟ όταν ένας ρητός κανόνας custody αναγνώρισε
  * το path ΚΑΙ το ερώτημα ιδιοκτησίας απάντησε οριστικά «δεν υπάρχει». Αποτυχία
  * ερωτήματος, άγνωστο σχήμα, ή μη company-scoped path → `unknown` → το αρχείο ζει.
+ *
+ * `bucketContext` (προαιρετικό, ADR-895 Α7): όταν δίνεται ΚΑΙ ο κανόνας που ταίριαξε
+ * είναι `files`, η ιδιοκτησία γίνεται bucket-aware (βλ. {@link filesCustodyForBucket}).
+ * Χωρίς αυτό, η συμπεριφορά είναι ακριβώς η ίδια με πριν το ADR-895.
  */
 export async function resolveCustody(
   db: admin.firestore.Firestore,
   filePath: string,
+  bucketContext?: CustodyBucketContext,
 ): Promise<CustodyOutcome> {
   const tail = companyScopedTail(filePath);
   if (!tail) return { kind: 'unknown', reason: 'not-company-scoped' };
@@ -267,6 +324,13 @@ export async function resolveCustody(
   }
 
   const { rule, ownerId } = matched;
+
+  if (rule.name === 'files' && bucketContext) {
+    const bucketOutcome = await filesCustodyForBucket(db, ownerId, bucketContext);
+    if (bucketOutcome) return bucketOutcome;
+    return (await positiveOnlyClaim(db, tail)) ?? { kind: 'unknown', reason: 'no-custody-rule' };
+  }
+
   const exists = await ownerExists(db, rule, ownerId);
   if (exists === null) return { kind: 'unknown', reason: 'lookup-failed' };
   if (exists) return { kind: 'claimed', rule: rule.name, ownerId };

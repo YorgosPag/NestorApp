@@ -89,3 +89,15 @@ describe('buildPendingFileRecordData — όχι ακριβώς ένας κάτο
     expect(() => buildPendingFileRecordData(both)).toThrow('Exactly one owner');
   });
 });
+
+describe('buildPendingFileRecordData — θέση bytes (ADR-895 Φ3)', () => {
+  test('χωρίς θέση στην είσοδο ⇒ ΚΑΝΕΝΑ κλειδί `storagePlacement` (απουσία = legacy, Α1 — οι άλλοι καλούντες αμετάβλητοι)', () => {
+    const { recordBase } = buildPendingFileRecordData({ ...COORDINATES, companyId: 'comp_1' });
+    expect(recordBase).not.toHaveProperty('storagePlacement');
+  });
+
+  test.each(['eu-originals', 'legacy-default'] as const)('ρητή θέση `%s` ⇒ γράφεται αυτολεξεί στη γέννηση', (placement) => {
+    const { recordBase } = buildPendingFileRecordData({ ...COORDINATES, companyId: 'comp_1', storagePlacement: placement });
+    expect(recordBase.storagePlacement).toBe(placement);
+  });
+});

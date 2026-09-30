@@ -146,6 +146,81 @@ describe('resolveCustody — fail-safe default: άγνωστο ⇒ ΠΟΤΕ orph
   });
 });
 
+describe('resolveCustody — bucket-aware custody για τον κανόνα `files` (ADR-895 Α7)', () => {
+  const COMPANY = 'comp_bucket';
+  const FILE_ID = 'file_bkt_1';
+  const PATH = `companies/${COMPANY}/projects/p1/entities/floor/f1/categories/floorplans/files/${FILE_ID}.pdf`;
+  const BUCKET_NAMES = { 'legacy-default': 'default-bucket', 'eu-originals': 'eu-bucket' } as const;
+
+  it('🔴 record σε ΕΕ κάδο, ίδιο path: το αντικείμενο του ΚΑΝΟΝΙΚΟΥ κάδου είναι orphan — κανένα record δεν διεκδικεί ΑΥΤΟΝ τον κάδο', async () => {
+    const db = candidateKeyFixtures({
+      docData: { [`files/${FILE_ID}`]: { storagePlacement: 'eu-originals' } },
+    });
+    const out = await resolveCustody(db, PATH, {
+      bucketName: BUCKET_NAMES['legacy-default'],
+      bucketNames: BUCKET_NAMES,
+    });
+    expect(out).toEqual({ kind: 'orphaned', rule: 'files', ownerId: FILE_ID });
+  });
+
+  it('🔴 και το αντίστροφο: record legacy (κανονικός κάδος), το αντικείμενο στον κάδο ΕΕ είναι orphan', async () => {
+    const db = candidateKeyFixtures({
+      docData: { [`files/${FILE_ID}`]: { storagePlacement: 'legacy-default' } },
+    });
+    const out = await resolveCustody(db, PATH, {
+      bucketName: BUCKET_NAMES['eu-originals'],
+      bucketNames: BUCKET_NAMES,
+    });
+    expect(out).toEqual({ kind: 'orphaned', rule: 'files', ownerId: FILE_ID });
+  });
+
+  it('record υπάρχει ΚΑΙ διεκδικεί ΑΥΤΟΝ τον κάδο → claimed', async () => {
+    const db = candidateKeyFixtures({
+      docData: { [`files/${FILE_ID}`]: { storagePlacement: 'eu-originals' } },
+    });
+    const out = await resolveCustody(db, PATH, {
+      bucketName: BUCKET_NAMES['eu-originals'],
+      bucketNames: BUCKET_NAMES,
+    });
+    expect(out).toEqual({ kind: 'claimed', rule: 'files', ownerId: FILE_ID });
+  });
+
+  it('απόν `storagePlacement` (legacy) + κανονικός κάδος → claimed (backward-compatible)', async () => {
+    const db = candidateKeyFixtures({ docData: { [`files/${FILE_ID}`]: {} } });
+    const out = await resolveCustody(db, PATH, {
+      bucketName: BUCKET_NAMES['legacy-default'],
+      bucketNames: BUCKET_NAMES,
+    });
+    expect(out).toEqual({ kind: 'claimed', rule: 'files', ownerId: FILE_ID });
+  });
+
+  it('record ΔΕΝ υπάρχει καθόλου → όχι claimed/orphaned μέσω `files`, δοκιμάζει legacy → unknown', async () => {
+    const db = candidateKeyFixtures({ docData: {} });
+    const out = await resolveCustody(db, PATH, {
+      bucketName: BUCKET_NAMES['legacy-default'],
+      bucketNames: BUCKET_NAMES,
+    });
+    expect(out).toEqual({ kind: 'unknown', reason: 'no-custody-rule' });
+  });
+
+  it('άγνωστη τιμή `storagePlacement` → unknown, ΠΟΤΕ orphaned (Α2 fail-closed)', async () => {
+    const db = candidateKeyFixtures({
+      docData: { [`files/${FILE_ID}`]: { storagePlacement: 'nowhere' } },
+    });
+    const out = await resolveCustody(db, PATH, {
+      bucketName: BUCKET_NAMES['legacy-default'],
+      bucketNames: BUCKET_NAMES,
+    });
+    expect(out).toEqual({ kind: 'unknown', reason: 'lookup-failed' });
+  });
+
+  it('χωρίς bucketContext (παλιά κλήση) → συμπεριφορά ταυτόσημη με πριν το ADR-895', async () => {
+    const db = candidateKeyFixtures({ docs: { [`files/${FILE_ID}`]: true } });
+    const out = await resolveCustody(db, PATH);
+    expect(out).toEqual({ kind: 'claimed', rule: 'files', ownerId: FILE_ID });
+  });
+});
+
 describe('resolveCustody — legacy αναγνώριση μόνο θετικά (ADR-031/312 back-compat)', () => {
   it('path χωρίς κανόνα αλλά με FileRecord claim → claimed μέσω legacy provider', async () => {
     const db = candidateKeyFixtures({ docs: { 'files/legacy_1': true } });

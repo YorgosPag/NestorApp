@@ -16,7 +16,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { FakeEvidenceBucket } from '@/services/mandate/__tests__/fake-evidence-bucket';
 
 let fake: FakeFirestore;
@@ -30,7 +30,7 @@ jest.mock('@/services/file-audit-admin.service', () => ({
 }));
 
 import { recordFileAudit } from '@/services/file-audit-admin.service';
-import { placeFileHold, releaseFileHold, type HoldableBucket } from '../file-hold.service';
+import { placeFileHold, releaseFileHold, type HoldableBucket, type HoldBucketResolver } from '../file-hold.service';
 
 const COMPANY = 'c_alpha';
 const actor = { uid: 'u_admin', companyId: COMPANY };
@@ -61,8 +61,11 @@ async function holdOf(id: string): Promise<unknown> {
   return snapshot.data()?.hold;
 }
 
-const place = (bucket: HoldableBucket, fileId = 'file_v2') =>
-  placeFileHold({ actor, fileId, holdType: 'legal', reason: 'αγωγή 123/2026' }, bucket);
+/** Ένα σταθερό ψεύτικο bucket για ΚΑΘΕ θέση — οι περισσότερες άγκυρες δεν διαφοροποιούν θέση. */
+const oneBucket = (bucket: HoldableBucket): HoldBucketResolver => () => bucket;
+
+const place = (bucketOf: HoldBucketResolver, fileId = 'file_v2') =>
+  placeFileHold({ actor, fileId, holdType: 'legal', reason: 'αγωγή 123/2026' }, bucketOf);
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -70,7 +73,7 @@ describe('🏆 Α44 — όλη η στοίβα, βάση ΚΑΙ bytes', () => {
   it('🔴 δέσμευση στην κεφαλή ⇒ δεσμεύεται ΚΑΙ η προηγούμενη έκδοση, και η πλατφόρμα αρνείται διαγραφή', async () => {
     const { bucket } = world();
 
-    const outcome = await place(bucket);
+    const outcome = await place(oneBucket(bucket));
 
     expect(outcome).toEqual({ kind: 'placed', fileIds: expect.arrayContaining(['file_v1', 'file_v2']) });
     expect(await holdOf('file_v1')).toBe('legal');
@@ -82,9 +85,9 @@ describe('🏆 Α44 — όλη η στοίβα, βάση ΚΑΙ bytes', () => {
 
   it('🔴 δεύτερη δέσμευση ⇒ `already-held`, ποτέ σιωπηλή αντικατάσταση', async () => {
     const { bucket } = world();
-    await place(bucket);
+    await place(oneBucket(bucket));
 
-    const second = await placeFileHold({ actor, fileId: 'file_v1', holdType: 'admin', reason: 'άλλο' }, bucket);
+    const second = await placeFileHold({ actor, fileId: 'file_v1', holdType: 'admin', reason: 'άλλο' }, oneBucket(bucket));
 
     expect(second).toEqual({ kind: 'already-held', holdType: 'legal' });
     expect(await holdOf('file_v2')).toBe('legal');
@@ -92,7 +95,7 @@ describe('🏆 Α44 — όλη η στοίβα, βάση ΚΑΙ bytes', () => {
 
   it('🔑 ξένος μισθωτής ⇒ `not-found`', async () => {
     const { bucket } = world();
-    expect(await placeFileHold({ actor: { ...actor, companyId: 'c_beta' }, fileId: 'file_v2', holdType: 'legal', reason: 'x' }, bucket))
+    expect(await placeFileHold({ actor: { ...actor, companyId: 'c_beta' }, fileId: 'file_v2', holdType: 'legal', reason: 'x' }, oneBucket(bucket)))
       .toEqual({ kind: 'not-found' });
   });
 });
@@ -106,7 +109,7 @@ describe('🏆 Α45 — ποτέ «δεσμευμένο στη βάση, ελε�
         : bucket.file(path)),
     };
 
-    expect(await place(failing)).toEqual({ kind: 'failed' });
+    expect(await place(oneBucket(failing))).toEqual({ kind: 'failed' });
     expect(await holdOf('file_v1')).toBeUndefined();
     expect(await holdOf('file_v2')).toBeUndefined();
     expect(bucket.objects.get(pathOf('file_v2'))?.hold).toBe(false);
@@ -118,7 +121,7 @@ describe('🏆 Α45 — ποτέ «δεσμευμένο στη βάση, ελε�
       fake.write(COLLECTIONS.FILES, 'file_v2', { ...JSON.parse(fake.snapshotOf(COLLECTIONS.FILES, 'file_v2')), hold: 'regulatory' });
     };
 
-    expect(await place(bucket)).toEqual({ kind: 'already-held', holdType: 'regulatory' });
+    expect(await place(oneBucket(bucket))).toEqual({ kind: 'already-held', holdType: 'regulatory' });
     expect(bucket.objects.get(pathOf('file_v1'))?.hold).toBe(true);
     expect(bucket.objects.get(pathOf('file_v2'))?.hold).toBe(true);
   });
@@ -127,22 +130,49 @@ describe('🏆 Α45 — ποτέ «δεσμευμένο στη βάση, ελε�
 describe('🏆 Α46 — αποδέσμευση', () => {
   it('🔴 βάση `none` + ίχνος + bytes ελεύθερα · δεύτερη φορά ⇒ `not-held`', async () => {
     const { bucket } = world();
-    await place(bucket);
+    await place(oneBucket(bucket));
 
-    const released = await releaseFileHold({ actor, fileId: 'file_v1' }, bucket);
+    const released = await releaseFileHold({ actor, fileId: 'file_v1' }, oneBucket(bucket));
 
     expect(released).toEqual({ kind: 'released', fileIds: expect.arrayContaining(['file_v1', 'file_v2']) });
     expect(await holdOf('file_v1')).toBe('none');
     expect(bucket.objects.get(pathOf('file_v1'))?.hold).toBe(false);
     expect(recordFileAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'hold_release' }));
-    expect(await releaseFileHold({ actor, fileId: 'file_v1' }, bucket)).toEqual({ kind: 'not-held' });
+    expect(await releaseFileHold({ actor, fileId: 'file_v1' }, oneBucket(bucket))).toEqual({ kind: 'not-held' });
   });
 
   it('🔴 μισή αποτυχία (βάση ελεύθερη, bytes κλειδωμένα) ⇒ η επανάληψη ξεκλειδώνει', async () => {
     const { bucket } = world();
     await bucket.file(pathOf('file_v1')).setMetadata({ temporaryHold: true });
 
-    expect(await releaseFileHold({ actor, fileId: 'file_v2' }, bucket)).toEqual({ kind: 'not-held' });
+    expect(await releaseFileHold({ actor, fileId: 'file_v2' }, oneBucket(bucket))).toEqual({ kind: 'not-held' });
     expect(bucket.objects.get(pathOf('file_v1'))?.hold).toBe(false);
+  });
+});
+
+describe('🏆 ADR-895 — στοίβα με εκδόσεις σε ΔΙΑΦΟΡΕΤΙΚΟΥΣ κάδους (μετάβαση εν εξελίξει)', () => {
+  it('🔴 δέσμευση σε στοίβα με v1=legacy-default + v2=eu-originals ⇒ ΚΑΘΕ έκδοση κλειδώνει στον ΔΙΚΟ της κάδο', async () => {
+    fake = new FakeFirestore();
+    seed('file_v1', { lifecycleState: 'archived', supersededByFileId: 'file_v2' });
+    seed('file_v2', { createdAt: '2026-09-10T10:00:00.000Z', storagePlacement: 'eu-originals' });
+    const legacyBucket = new FakeEvidenceBucket();
+    const euBucket = new FakeEvidenceBucket();
+    legacyBucket.put(pathOf('file_v1'), 'v1');
+    euBucket.put(pathOf('file_v2'), 'v2');
+    const bucketOf: HoldBucketResolver = (placement) => (placement === 'eu-originals' ? euBucket : legacyBucket);
+
+    const outcome = await placeFileHold({ actor, fileId: 'file_v2', holdType: 'legal', reason: 'αγωγή' }, bucketOf);
+
+    expect(outcome).toEqual({ kind: 'placed', fileIds: expect.arrayContaining(['file_v1', 'file_v2']) });
+    expect(legacyBucket.objects.get(pathOf('file_v1'))?.hold).toBe(true);
+    expect(euBucket.objects.get(pathOf('file_v2'))?.hold).toBe(true);
+    // 🔒 Ποτέ διασταύρωση: το v1 ΔΕΝ υπάρχει στον κάδο ΕΕ, το v2 ΔΕΝ υπάρχει στον κάδο legacy.
+    expect(euBucket.objects.has(pathOf('file_v1'))).toBe(false);
+    expect(legacyBucket.objects.has(pathOf('file_v2'))).toBe(false);
+
+    const released = await releaseFileHold({ actor, fileId: 'file_v1' }, bucketOf);
+    expect(released).toEqual({ kind: 'released', fileIds: expect.arrayContaining(['file_v1', 'file_v2']) });
+    expect(legacyBucket.objects.get(pathOf('file_v1'))?.hold).toBe(false);
+    expect(euBucket.objects.get(pathOf('file_v2'))?.hold).toBe(false);
   });
 });

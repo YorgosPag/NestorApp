@@ -85,7 +85,8 @@ export function publishedAgencyMediaSources(
     if (material === null) return [];
     // 🎯 ADR-880 — η δήλωση ταξιδεύει δεμένη στο **αρχείο**, ποτέ στη θέση (το ράφι πετά απορρίψεις).
     const focalPoint = declaration.focalPoints?.get(file.id) ?? null;
-    return [{ privateStoragePath: file.storagePath, material, focalPoint }];
+    // ADR-895 — η θέση ταξιδεύει ΜΑΖΙ με το μονοπάτι: μονοπάτι χωρίς κάδο = μαντεψιά.
+    return [{ privateStoragePath: file.storagePath, storagePlacement: file.storagePlacement, material, focalPoint }];
   });
 }
 

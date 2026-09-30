@@ -20,7 +20,9 @@ import type { FileRecord } from '@/types/file-record';
 /** Το `FileRecord` όσο το χρειάζεται η **καταλληλότητα** — `Pick` του αληθινού συμβολαίου, ώστε μετονομασία να **σπάει** εδώ. */
 export type ListingFileCandidate = Pick<
   FileRecord,
-  'id' | 'entityType' | 'storagePath' | 'contentType' | 'status' | 'createdAt' | 'lifecycleState' | 'isDeleted'
+  | 'id' | 'entityType' | 'storagePath' | 'contentType' | 'status' | 'createdAt' | 'lifecycleState' | 'isDeleted'
+  // ADR-895 Α1 — σε ποιον κάδο ζουν τα bytes (απόν ⇒ legacy)· ταξιδεύει μαζί με το `storagePath`, ποτέ χωριστά.
+  | 'storagePlacement'
 >;
 
 /**

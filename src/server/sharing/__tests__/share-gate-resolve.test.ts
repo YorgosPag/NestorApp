@@ -19,11 +19,16 @@ jest.mock('@/lib/telemetry', () => ({
 jest.mock('@/lib/storage/signed-download-url', () => ({
   signedDownloadUrl: jest.fn(async () => ({ outcome: 'signed', url: 'https://signed.example/x', expiresAt: 0 })),
 }));
+/** ADR-895 Α2 — `files/{fileId}` είναι `FileRecord`: το `share-download.ts` περνά `fileRecordBucket(record)`. */
+const NORMAL_BUCKET = { name: 'bucket-under-test' };
+jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminBucket: () => NORMAL_BUCKET,
+}));
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { hashShareToken } from '@/lib/sharing/share-token';
 import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { isShareAccessGrantValid, issueShareAccessGrant } from '../share-access-grant';
@@ -36,8 +41,8 @@ import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 const TOKEN = 'NewGenerationToken_abcdefghijklmnopqrstuvwxy';
 const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 const noGrant = () => false;
 const noDevice = (): string | null => null;
 
@@ -59,7 +64,7 @@ async function seedShare(extra: Record<string, unknown>): Promise<void> {
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
   process.env.SHARE_ACCESS_SECRET = 'test-secret-with-enough-entropy-0123456789';
   (signedDownloadUrl as jest.Mock).mockClear();
 });
@@ -211,7 +216,7 @@ describe('file links — one opening = one access (Google Drive model)', () => {
     const { outcome, grant } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toMatchObject({ status: 'resolved', share: { kind: 'file', data: { previewUrl: 'https://signed.example/x' } } });
-    expect(signedDownloadUrl).toHaveBeenCalledWith({ storagePath: 'companies/comp_1/f_1.pdf' });
+    expect(signedDownloadUrl).toHaveBeenCalledWith({ bucket: NORMAL_BUCKET, storagePath: 'companies/comp_1/f_1.pdf' });
     expect(grant?.shareId).toBe('share_1');
     expect(kit.getData(COLLECTIONS.SHARES, 'share_1')).toMatchObject({ accessCount: 1 });
   });
@@ -222,7 +227,7 @@ describe('file links — one opening = one access (Google Drive model)', () => {
     await expect(issueShareDownload({ adminDb: db(), token: TOKEN, hasGrant: (id) => id === 'share_1' }))
       .resolves.toEqual({ status: 'signed', url: 'https://signed.example/x' });
     expect(signedDownloadUrl).toHaveBeenLastCalledWith({
-      storagePath: 'companies/comp_1/f_1.pdf', downloadFileName: 'Συμβόλαιο.pdf',
+      bucket: NORMAL_BUCKET, storagePath: 'companies/comp_1/f_1.pdf', downloadFileName: 'Συμβόλαιο.pdf',
     });
     expect(kit.getData(COLLECTIONS.SHARES, 'share_1')).toMatchObject({ accessCount: 1 });
   });

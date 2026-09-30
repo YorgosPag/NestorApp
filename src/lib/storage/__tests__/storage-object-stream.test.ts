@@ -6,10 +6,12 @@
  */
 
 import { PassThrough } from 'node:stream';
+import type { Bucket } from '@google-cloud/storage';
 
 jest.mock('server-only', () => ({}));
 const file = { getMetadata: jest.fn(), createReadStream: jest.fn() };
-jest.mock('@/lib/firebaseAdmin', () => ({ getAdminBucket: () => ({ file: () => file }) }));
+// ADR-895: ο κάδος είναι υποχρεωτικός — ο πλαστός δίνεται ρητά σε κάθε κλήση, καμία σιωπηλή προεπιλογή.
+const bucket = { file: () => file } as unknown as Bucket;
 
 import { openStorageObject, parseByteRange } from '../storage-object-stream';
 
@@ -28,20 +30,20 @@ describe('openStorageObject — ένα αίτημα (singleRequest)', () => {
 
   it('χωρίς Range: ΚΑΝΕΝΑ getMetadata· τύπος, μέγεθος και ETag από την ίδια την απάντηση', async () => {
     file.createReadStream.mockReturnValue(mediaStream(200, { 'content-type': 'image/jpeg', 'content-length': '4', 'x-goog-generation': '17' }));
-    const opened = await openStorageObject('tour-tiles/x.jpg', null, { singleRequest: true });
+    const opened = await openStorageObject('tour-tiles/x.jpg', null, { singleRequest: true, bucket });
     expect(file.getMetadata).not.toHaveBeenCalled();
     expect(opened).toMatchObject({ kind: 'found', contentType: 'image/jpeg', contentLength: 4, etag: '"17"', storedCacheControl: null, range: null });
   });
 
   it('404 στην απάντηση (το `response` εκπέμπεται ΚΑΙ τότε) ⇒ absent, όχι found', async () => {
     file.createReadStream.mockReturnValue(mediaStream(404, {}));
-    await expect(openStorageObject('tour-tiles/none.jpg', null, { singleRequest: true })).resolves.toEqual({ kind: 'absent' });
+    await expect(openStorageObject('tour-tiles/none.jpg', null, { singleRequest: true, bucket })).resolves.toEqual({ kind: 'absent' });
   });
 
   it('με Range ⇒ ο κανονικός δρόμος (χρειάζεται το συνολικό μέγεθος για το 206/416)', async () => {
     file.getMetadata.mockResolvedValue([{ size: '100', contentType: 'video/mp4', generation: 3 }]);
     file.createReadStream.mockReturnValue(new PassThrough());
-    const opened = await openStorageObject('m.mp4', 'bytes=0-9', { singleRequest: true });
+    const opened = await openStorageObject('m.mp4', 'bytes=0-9', { singleRequest: true, bucket });
     expect(file.getMetadata).toHaveBeenCalledTimes(1);
     expect(opened).toMatchObject({ kind: 'found', range: { start: 0, end: 9 }, contentLength: 10 });
   });
@@ -49,7 +51,7 @@ describe('openStorageObject — ένα αίτημα (singleRequest)', () => {
   it('χωρίς την επιλογή ⇒ ο κανονικός δρόμος (το αποθηκευμένο Cache-Control δεν χάνεται σιωπηλά)', async () => {
     file.getMetadata.mockResolvedValue([{ size: '4', contentType: 'image/png', cacheControl: 'public, max-age=60' }]);
     file.createReadStream.mockReturnValue(new PassThrough());
-    const opened = await openStorageObject('f.png');
+    const opened = await openStorageObject('f.png', null, { bucket });
     expect(opened).toMatchObject({ kind: 'found', storedCacheControl: 'public, max-age=60' });
   });
 });

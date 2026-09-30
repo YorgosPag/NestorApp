@@ -20,21 +20,28 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 let fake: FakeFirestore;
 let deletedObjects: string[] = [];
 
+// ADR-895: ο γραφέας ρωτά πλέον το `fileRecordBucket` — τα αρχεία εδώ είναι όλα `legacy-default`
+// (κανένα `storagePlacement`) ⇒ `getAdminBucket()`. `getFilesEuBucket()` ορίζεται ώστε το import να μη σκάσει.
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: (): AdminFirestore => fake as unknown as AdminFirestore,
   FieldValue: { serverTimestamp: () => ({ __fieldValue: 'serverTimestamp' }) },
-  getAdminStorage: () => ({
-    bucket: () => ({
-      file: (path: string) => ({
-        delete: async (): Promise<void> => {
-          deletedObjects.push(path);
-        },
-      }),
+  getAdminBucket: () => ({
+    file: (path: string) => ({
+      delete: async (): Promise<void> => {
+        deletedObjects.push(path);
+      },
+    }),
+  }),
+  getFilesEuBucket: () => ({
+    file: () => ({
+      delete: async (): Promise<void> => {
+        throw new Error('the anchors in this file never expect the EU bucket');
+      },
     }),
   }),
 }));

@@ -44,7 +44,7 @@
 import type { File } from '@google-cloud/storage';
 
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import {
   MODEL_DECLARATION_METADATA_KEY,
   decodeModelDeclaration,
@@ -263,7 +263,9 @@ async function bakeOne<M>(
   const path = source.privateStoragePath;
 
   try {
-    const original = getAdminBucket().file(path);
+    // ADR-895 Α2 — ο κάδος της πηγής αποφασίζεται από τη δηλωμένη θέση της (`storagePlacement`),
+    // όταν η πηγή είναι `FileRecord`· απόν ⇒ κανονικός κάδος (ίδια συμπεριφορά με σήμερα).
+    const original = fileRecordBucket(source).file(path);
     const [meta] = await original.getMetadata();
 
     const origin = originOf(kind, subjectId, path, meta.generation, meta.timeCreated);

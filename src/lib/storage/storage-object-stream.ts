@@ -23,7 +23,6 @@ import 'server-only';
 
 import type { Bucket } from '@google-cloud/storage';
 
-import { getAdminBucket } from '@/lib/firebaseAdmin';
 
 export interface StorageObjectRange {
   readonly start: number;
@@ -87,10 +86,10 @@ export interface OpenStorageObjectOptions {
    */
   readonly singleRequest?: boolean;
   /**
-   * Ο κάδος — προεπιλογή ο κανονικός (`getAdminBucket`). Τα μέσα της περιήγησης δίνουν τον δικό τους από τον ΕΝΑ επιλογέα
-   * (`server/spatial-tour/tour-media-store`, ADR-884 Φ2ζ ζ5) — ποτέ δεύτερη υλοποίηση ροής.
+   * Ο κάδος — **υποχρεωτικός** (ADR-895: καμία σιωπηλή προεπιλογή). Τα bytes `FileRecord` από τον ΕΝΑ επιλογέα
+   * (`server/files/file-record-bucket`), τα μέσα περιήγησης από το `tour-media-store` — ποτέ δεύτερη υλοποίηση ροής.
    */
-  readonly bucket?: Bucket;
+  readonly bucket: Bucket;
 }
 
 /** Τα πεδία της απάντησης `alt=media` που διαβάζουμε — ό,τι χρειάζεται, χωρίς να δεθούμε στον τύπο του `request`. */
@@ -122,7 +121,7 @@ function foundFromResponse(res: MediaResponse, stream: ReadableStream<Uint8Array
 }
 
 /** **Ένα ταξίδι**: η ανάγνωση ξεκινά αμέσως, και η απάντηση λέει «υπάρχει;» και «τι είναι;». */
-function openInOneRequest(file: ReturnType<ReturnType<typeof getAdminBucket>['file']>): Promise<StorageObjectStream> {
+function openInOneRequest(file: ReturnType<Bucket['file']>): Promise<StorageObjectStream> {
   return new Promise((resolve, reject) => {
     const node = file.createReadStream();
     let settled = false;
@@ -151,10 +150,10 @@ function openInOneRequest(file: ReturnType<ReturnType<typeof getAdminBucket>['fi
 /** **Άνοιξε το αντικείμενο** — προαιρετικά με κεφαλίδα `Range`. Πετά μόνο σε βλάβη (όχι σε απουσία). */
 export async function openStorageObject(
   path: string,
-  rangeHeader: string | null = null,
-  options: OpenStorageObjectOptions = {},
+  rangeHeader: string | null,
+  options: OpenStorageObjectOptions,
 ): Promise<StorageObjectStream> {
-  const file = (options.bucket ?? getAdminBucket()).file(path);
+  const file = options.bucket.file(path);
   if (options.singleRequest === true && rangeHeader === null) return openInOneRequest(file);
   let metadata: Awaited<ReturnType<typeof file.getMetadata>>[0];
   try {

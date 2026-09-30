@@ -24,16 +24,19 @@
  * - `COLLECTIONS.FILES` (firestore-collections.ts) — collection name
  * - `ENTITY_TYPES.PROPERTY`, `FILE_CATEGORIES.*` (domain-constants.ts) —
  *   filter values
- * - `getAdminFirestore()` / `getAdminBucket()` (firebaseAdmin.ts) —
- *   server credentials
+ * - `getAdminFirestore()` (firebaseAdmin.ts) — server credentials
+ * - `fileRecordBucket()` (server/files/file-record-bucket.ts) — which bucket
+ *   holds the bytes, per-record (ADR-895 Α2)
  *
  * @module services/property-media/property-media.service
- * @enterprise ADR-312 (Property Showcase), ADR-031 (File Storage)
+ * @enterprise ADR-312 (Property Showcase), ADR-031 (File Storage), ADR-895 (data residency)
  */
 
 import 'server-only';
 
-import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
+import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, type FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -59,6 +62,8 @@ export interface PropertyMediaItem {
   thumbnailUrl?: string;
   /** Storage path of the raster preview (used for server-side downloads). */
   thumbnailStoragePath?: string;
+  /** ADR-895 Α1 — σε ποιον κάδο ζουν τα bytes· απόν ⇒ κανονικός κάδος. */
+  storagePlacement?: FileStoragePlacement;
 }
 
 export interface PropertyMediaBuffer extends PropertyMediaItem {
@@ -113,6 +118,7 @@ function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaIt
     ext: rawExt ? rawExt.toLowerCase() : undefined,
     thumbnailUrl: (data.thumbnailUrl as string) || undefined,
     thumbnailStoragePath: (data.thumbnailStoragePath as string) || undefined,
+    storagePlacement: data.storagePlacement as FileStoragePlacement | undefined,
   };
 }
 
@@ -212,7 +218,6 @@ export async function downloadEntityMedia(
 
   if (candidates.length === 0) return [];
 
-  const bucket = getAdminBucket();
   const buffers: PropertyMediaBuffer[] = [];
 
   await Promise.all(
@@ -220,7 +225,9 @@ export async function downloadEntityMedia(
       try {
         const useThumbnail = meta.ext === 'dxf' && !!meta.thumbnailStoragePath;
         const path = useThumbnail ? (meta.thumbnailStoragePath as string) : meta.storagePath;
-        const [buffer] = await bucket.file(path).download();
+        // ADR-895 Α2 — ο κάδος αποφασίζεται ανά εγγραφή (`storagePlacement`), ποτέ ενιαία·
+        // η μικρογραφία ζει ΔΙΠΛΑ στο πρωτότυπο, άρα ίδιος κάδος με το `meta`.
+        const [buffer] = await fileRecordBucket(meta).file(path).download();
         const format: 'JPEG' | 'PNG' = useThumbnail
           ? 'PNG'
           : JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];

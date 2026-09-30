@@ -38,13 +38,19 @@ const CLAIMED = { kind: 'claimed', rule: 'bim-material-textures', ownerId: 'bmat
 const PATH = 'companies/c1/bim-material-textures/bmat_1/albedo.jpg';
 
 /** Fake candidate doc — μόνο η επιφάνεια που αγγίζει ο sweeper. */
-function candidateDoc(storagePath: string | undefined, deleteSpy: jest.Mock) {
+function candidateDoc(storagePath: string | undefined, deleteSpy: jest.Mock, bucket?: string) {
   return {
     id: 'cand_1',
-    get: (field: string) => (field === 'storagePath' ? storagePath : undefined),
+    get: (field: string) => {
+      if (field === 'storagePath') return storagePath;
+      if (field === 'bucket') return bucket;
+      return undefined;
+    },
     ref: { delete: deleteSpy },
   };
 }
+
+const BUCKET_NAMES = { 'legacy-default': 'default-bucket', 'eu-originals': 'eu-bucket' } as const;
 
 function fakeDb(docs: ReturnType<typeof candidateDoc>[], auditSet = jest.fn()) {
   return {
@@ -59,8 +65,14 @@ function fakeDb(docs: ReturnType<typeof candidateDoc>[], auditSet = jest.fn()) {
   } as never;
 }
 
-function fakeStorage(deleteFile: jest.Mock) {
-  return { bucket: () => ({ file: () => ({ delete: deleteFile }) }) } as never;
+/** Καταγράφει με ΠΟΙΟ όνομα κάδου καλέστηκε το `storage.bucket(...)` (ADR-895 Α7). */
+function fakeStorage(deleteFile: jest.Mock, bucketNameSpy: jest.Mock = jest.fn()) {
+  return {
+    bucket: (name?: string) => {
+      bucketNameSpy(name);
+      return { file: () => ({ delete: deleteFile }) };
+    },
+  } as never;
 }
 
 const NOW = new Date('2026-08-01T00:00:00Z');
@@ -80,6 +92,7 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
       fakeDb([candidateDoc(PATH, candidateDelete)]),
       fakeStorage(deleteFile),
       NOW,
+      BUCKET_NAMES,
     );
 
     expect(out.dryRun).toBe(true);
@@ -99,6 +112,7 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
       fakeDb([candidateDoc(PATH, candidateDelete)]),
       fakeStorage(deleteFile),
       NOW,
+      BUCKET_NAMES,
     );
 
     expect(out.healed).toBe(1);
@@ -116,6 +130,7 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
       fakeDb([candidateDoc(PATH, jest.fn())]),
       fakeStorage(deleteFile),
       NOW,
+      BUCKET_NAMES,
     );
 
     expect(out.deleted).toBe(0);
@@ -133,6 +148,7 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
       fakeDb([candidateDoc(PATH, candidateDelete)], auditSet),
       fakeStorage(deleteFile),
       NOW,
+      BUCKET_NAMES,
     );
 
     expect(out.deleted).toBe(1);
@@ -155,6 +171,7 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
       fakeDb([candidateDoc(undefined, candidateDelete)]),
       fakeStorage(deleteFile),
       NOW,
+      BUCKET_NAMES,
     );
 
     expect(out.deleted).toBe(0);
@@ -171,10 +188,63 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
       fakeDb([candidateDoc(PATH, jest.fn()), candidateDoc(PATH, jest.fn())]),
       fakeStorage(deleteFile),
       NOW,
+      BUCKET_NAMES,
     );
 
     expect(out.examined).toBe(2);
     expect(out.skipped).toBe(1);
     expect(out.deleted).toBe(1);
+  });
+});
+
+describe('runOrphanSweep — κάδος ΤΟΥ υποψηφίου, όχι πάντα ο κανονικός (ADR-895 Α7)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.ORPHAN_SWEEP_ENABLED = 'true';
+  });
+  afterEach(() => {
+    delete process.env.ORPHAN_SWEEP_ENABLED;
+  });
+
+  it('🔴 candidate σημαδεμένος στον κάδο ΕΕ → η διαγραφή γίνεται ΣΤΟΝ ΚΑΔΟ ΕΕ, όχι στον κανονικό', async () => {
+    mockResolveCustody.mockResolvedValue(ORPHANED);
+    const deleteFile = jest.fn();
+    const bucketNameSpy = jest.fn();
+
+    await runOrphanSweep(
+      fakeDb([candidateDoc(PATH, jest.fn(), 'eu-bucket')]),
+      fakeStorage(deleteFile, bucketNameSpy),
+      NOW,
+      BUCKET_NAMES,
+    );
+
+    expect(bucketNameSpy).toHaveBeenCalledWith('eu-bucket');
+    expect(bucketNameSpy).not.toHaveBeenCalledWith('default-bucket');
+    // Ο επανέλεγχος custody ρωτήθηκε ΓΙΑ τον σωστό κάδο.
+    expect(mockResolveCustody).toHaveBeenCalledWith(
+      expect.anything(),
+      PATH,
+      { bucketName: 'eu-bucket', bucketNames: BUCKET_NAMES },
+    );
+  });
+
+  it('candidate ΧΩΡΙΣ πεδίο `bucket` (σημάδι πριν το ADR-895) → fallback στον κανονικό κάδο', async () => {
+    mockResolveCustody.mockResolvedValue(ORPHANED);
+    const deleteFile = jest.fn();
+    const bucketNameSpy = jest.fn();
+
+    await runOrphanSweep(
+      fakeDb([candidateDoc(PATH, jest.fn())]), // bucket = undefined
+      fakeStorage(deleteFile, bucketNameSpy),
+      NOW,
+      BUCKET_NAMES,
+    );
+
+    expect(bucketNameSpy).toHaveBeenCalledWith('default-bucket');
+    expect(mockResolveCustody).toHaveBeenCalledWith(
+      expect.anything(),
+      PATH,
+      { bucketName: 'default-bucket', bucketNames: BUCKET_NAMES },
+    );
   });
 });

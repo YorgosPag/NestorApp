@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * ENTERPRISE BACKUP MANIFEST TYPES — ADR-313
+ * ENTERPRISE BACKUP MANIFEST TYPES — ADR-313 (+ ADR-895 Α6)
  * =============================================================================
  *
  * Type definitions for the manifest-driven backup/restore system.
@@ -10,7 +10,10 @@
  *
  * @module services/backup/backup-manifest.types
  * @see adrs/ADR-313-enterprise-backup-restore.md
+ * @see adrs/ADR-895-file-data-residency.md §5 Α6 — per-record bucket catalogue
  */
+
+import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 
 // ---------------------------------------------------------------------------
 // Backup Manifest (root)
@@ -151,8 +154,15 @@ export interface StorageManifestEntry {
   /** SHA-256 of the file */
   sha256: string;
 
-  /** Relative path in backup */
+  /** Relative path in backup — αυθεντία για ΠΟΥ ζουν τα bytes, νέο ή παλιό σχήμα (βλ. `placement`). */
   backupFile: string;
+
+  /**
+   * 🌍 ADR-895 Α6: ο κάδος καταλόγου όπου ζούσαν τα bytes ΤΗ ΣΤΙΓΜΗ του backup. **Απόν** ⇒ manifest
+   * πριν το ADR-895 ⇒ `legacy-default` (ίδια σημασία με `FileRecord.storagePlacement` — ADR-895 Α1).
+   * Νέα backups το γράφουν ΠΑΝΤΑ (ακόμη και για `legacy-default`).
+   */
+  placement?: FileStoragePlacement;
 }
 
 // ---------------------------------------------------------------------------

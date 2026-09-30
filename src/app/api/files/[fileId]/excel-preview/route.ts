@@ -24,7 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { getErrorMessage } from '@/lib/error-utils';
 import { fileResource } from '../../_shared/file-ownership';
 import ExcelJS from 'exceljs';
@@ -146,7 +146,8 @@ async function handleGet(
       return NextResponse.json({ error: 'Not an Excel file' }, { status: 400 });
     }
 
-    const [fileBuffer] = await getAdminBucket().file(storagePath).download();
+    // ADR-895 Α2 — ο κάδος αποφασίζεται από την εγγραφή (`storagePlacement`), ποτέ σιωπηλά.
+    const [fileBuffer] = await fileRecordBucket(data ?? {}).file(storagePath).download();
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer.buffer as ArrayBuffer);

@@ -38,7 +38,8 @@
 
 import 'server-only';
 
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import type { Bucket } from '@google-cloud/storage';
+
 import { attachmentDisposition } from '@/lib/http/content-disposition';
 
 // =============================================================================
@@ -67,6 +68,12 @@ export const SIGNED_URL_MAX_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 // =============================================================================
 
 export interface SignedDownloadRequest {
+  /**
+   * **Ο κάδος όπου ζει το αντικείμενο** — ρητό, ΠΟΤΕ προαιρετικό (ADR-895 Α2). Ο καλών
+   * FileRecord δίνει `fileRecordBucket(record)`· ο καλών κάτι άλλο δίνει τον δικό του
+   * κάδο ρητά, με σχόλιο γιατί. Κανένας σιωπηλός προεπιλεγμένος κάδος εδώ.
+   */
+  readonly bucket: Bucket;
   /** Το object name **όπως ζει στο bucket** — από το έγγραφο, ποτέ από το αίτημα. */
   readonly storagePath: string;
   /** Χρόνος ζωής σε ms. Προεπιλογή {@link SIGNED_DOWNLOAD_TTL_MS}. */
@@ -107,14 +114,14 @@ export type SignedDownloadRejection =
  *
  * @example
  * // ΜΟΝΟ αφού ο φρουρός έχει πει «ναι»:
- * const signed = await signedDownloadUrl({ storagePath: record.storagePath });
+ * const signed = await signedDownloadUrl({ bucket: fileRecordBucket(record), storagePath: record.storagePath });
  * if (signed.outcome !== 'signed') return serverError();
  * return NextResponse.redirect(signed.url, 307);
  */
 export async function signedDownloadUrl(
   request: SignedDownloadRequest,
 ): Promise<SignedDownloadOutcome> {
-  const { storagePath, ttlMs = SIGNED_DOWNLOAD_TTL_MS, longLivedReason, downloadFileName } = request;
+  const { bucket, storagePath, ttlMs = SIGNED_DOWNLOAD_TTL_MS, longLivedReason, downloadFileName } = request;
 
   if (typeof storagePath !== 'string' || storagePath.trim().length === 0) {
     return { outcome: 'rejected', why: 'path-missing' };
@@ -130,7 +137,7 @@ export async function signedDownloadUrl(
   }
 
   const expiresAt = Date.now() + ttlMs;
-  const [url] = await getAdminBucket()
+  const [url] = await bucket
     .file(storagePath.trim())
     .getSignedUrl({
       action: 'read',

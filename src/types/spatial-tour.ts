@@ -205,6 +205,11 @@ export interface SpatialTour {
    * `revision`· τον επιλύει μόνο το `server/spatial-tour/tour-media-store`.
    */
   readonly mediaPlacement?: TourMediaPlacement;
+  /**
+   * Πότε **άλλαξε** η θέση (μετάβαση US → ΕΕ, `server/spatial-tour/tour-media-migration`) — απόν ⇒ δεν μετακινήθηκε ποτέ. Φράζει
+   * τον καθαρισμό του παλιού κάδου: σβήνεται μόνο αφού λήξουν τα κουπόνια θέασης που εκδόθηκαν πριν.
+   */
+  readonly mediaPlacementChangedAt?: string;
   readonly levels: readonly TourLevel[];
   /** ≤ `MAX_TOUR_NODES`. */
   readonly nodes: readonly TourNode[];

@@ -9,6 +9,9 @@
  *
  * 🔑 **Καμία νέα υποδομή** (ADR-740): lease, monitor, catch-up υπάρχουν· εδώ δηλώνεται **ποια** εργασία είναι.
  *
+ * 🌍 **ADR-895 (εκτός εμβέλειας, σκόπιμα)**: το `getAdminBucket()` εδώ είναι σωστό ΟΠΩΣ είναι — το
+ * αποδεικτικό δεν είναι `FileRecord` original (βλ. σημείωση στο `evidence-retention.service.ts`).
+ *
  * @module lib/cron/jobs/mandate-evidence-retention.job
  */
 

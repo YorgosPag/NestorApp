@@ -61,6 +61,8 @@ export type AgencyMediaCandidate = Pick<
   | 'id'
   | 'entityType'
   | 'storagePath'
+  // ADR-895 Α1 — σε ποιον κάδο ζουν τα bytes· το ράφι διαβάζει την πηγή εκεί (απόν ⇒ legacy).
+  | 'storagePlacement'
   | 'category'
   | 'classification'
   | 'contentType'

@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 531,
+  "population": 542,
   "tally": {
     "undeclared": 55,
     "prefix-shadowed-by-declaration": 28,
-    "declared-over-default": 92,
-    "declared-agrees": 256,
-    "declared-via-factory": 100
+    "declared-over-default": 94,
+    "declared-agrees": 263,
+    "declared-via-factory": 102
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -22,7 +22,7 @@
     "STANDARD→HIGH": 1
   },
   "violation_count": 83,
-  "declaration_count": 100,
+  "declaration_count": 102,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -148,6 +148,7 @@
     "createScanCronRoute::/api/cron/purge-deleted-entities",
     "createScanCronRoute::/api/cron/stay-channel-import",
     "createScanCronRoute::/api/cron/stay-hold-expiry",
+    "createScanCronRoute::/api/cron/storage-bucket-drift",
     "createScanCronRoute::/api/cron/tour-tileset-bake",
     "createShowcaseEmailRoute::/api/buildings/[buildingId]/showcase/email",
     "createShowcaseEmailRoute::/api/parking/[id]/showcase/email",

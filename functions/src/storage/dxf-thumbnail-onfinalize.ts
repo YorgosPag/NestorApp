@@ -40,6 +40,9 @@ import {
   DXF_THUMBNAIL_HEIGHT,
 } from '../shared/dxf-raster-generator';
 import { decodeProcessedJsonBytes } from '../generated/lib/dxf/decode-processed-json';
+import { fileStorageBucketNames } from './file-record-bucket';
+import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
+import { FINALIZE_RUNTIME, gen1Memory } from './finalize-runtime';
 
 const PROCESSED_SUFFIX = '.dxf.processed.json';
 const THUMBNAIL_SUFFIX = '.thumbnail.png';
@@ -51,13 +54,20 @@ interface RegenerateArgs {
   fileId: string;
   /** Optional Firestore document snapshot — pass it if already loaded. */
   fileDoc?: FirebaseFirestore.DocumentSnapshot;
+  /**
+   * Ο κάδος όπου ζει το πρωτότυπο `.dxf` (ADR-895 Α7) — ίδιος με το `object.bucket` του
+   * trigger που ξεκίνησε τη ροή. Απών ⇒ ο κανονικός κάδος (κλήσεις εκτός trigger, π.χ.
+   * self-heal). Ποτέ μαντεψιά: το processed JSON και η μικρογραφία ζουν πάντα ΔΙΠΛΑ στο
+   * πρωτότυπο, όχι σε άλλον κάδο.
+   */
+  bucketName?: string;
 }
 
 export async function regenerateDxfThumbnail(
   args: RegenerateArgs
 ): Promise<{ thumbnailUrl: string; pngBytes: number; rendered: number; skipped: number }> {
   const db = admin.firestore();
-  const bucket = admin.storage().bucket();
+  const bucket = args.bucketName ? admin.storage().bucket(args.bucketName) : admin.storage().bucket();
 
   const processedPath = `${args.dxfStoragePath}.processed.json`;
   const thumbnailPath = `${args.dxfStoragePath}${THUMBNAIL_SUFFIX}`;
@@ -121,45 +131,61 @@ export async function regenerateDxfThumbnail(
   };
 }
 
+/**
+ * **Το σώμα** — ίδιο για κάθε κάδο και κάθε γενιά (ADR-895 Α7 · Φ2). Το καλούν το gen1 binding του
+ * κανονικού κάδου (εδώ) και τα gen2 bindings των περιφερειακών (`regional-storage-triggers.ts`), που
+ * τρέχουν στην περιοχή του κάδου τους ⇒ τα bytes ΕΕ ραστεροποιούνται στην ΕΕ και η μικρογραφία
+ * γράφεται δίπλα στο πρωτότυπο, στον ΙΔΙΟ κάδο.
+ */
+export async function generateDxfThumbnailOnFinalize(object: FinalizedObject): Promise<void> {
+  const filePath = object.name;
+  if (!filePath) return;
+  if (!filePath.startsWith('companies/')) return;
+  if (!filePath.endsWith(PROCESSED_SUFFIX)) return;
+
+  const dxfStoragePath = filePath.slice(0, -'.processed.json'.length);
+
+  const segments = dxfStoragePath.split('/');
+  const fileName = segments[segments.length - 1];
+  const fileId = fileName.split('.')[0];
+  if (!fileId) return;
+
+  const db = admin.firestore();
+  const fileRef = db.collection(COLLECTIONS.FILES).doc(fileId);
+  const snap = await fileRef.get();
+  if (!snap.exists) {
+    functions.logger.warn('DXF thumbnail skipped — no file record', { fileId, filePath });
+    return;
+  }
+  const data = snap.data() as Record<string, unknown>;
+  if (typeof data.thumbnailUrl === 'string' && data.thumbnailUrl.length > 0) {
+    functions.logger.info('DXF thumbnail skipped — already present', { fileId });
+    return;
+  }
+
+  try {
+    await regenerateDxfThumbnail({ dxfStoragePath, fileId, fileDoc: snap, bucketName: object.bucket });
+  } catch (err) {
+    functions.logger.error('DXF thumbnail generation failed', {
+      fileId,
+      dxfStoragePath,
+      bucket: object.bucket,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+  }
+}
+
+/** gen1 — ο κανονικός κάδος, όπως πάντα (όνομα/γενιά αμετάβλητα: αλλαγή = delete+create στο deploy). */
 export const onDxfProcessedFinalize = functions
-  .runWith({ timeoutSeconds: 120, memory: '512MB' })
+  .runWith({
+    timeoutSeconds: FINALIZE_RUNTIME.dxfThumbnail.timeoutSeconds,
+    memory: gen1Memory(FINALIZE_RUNTIME.dxfThumbnail),
+  })
   .storage.object()
-  .onFinalize(async (object) => {
-    const filePath = object.name;
-    if (!filePath) return;
-    if (!filePath.startsWith('companies/')) return;
-    if (!filePath.endsWith(PROCESSED_SUFFIX)) return;
-
-    const dxfStoragePath = filePath.slice(0, -'.processed.json'.length);
-
-    const segments = dxfStoragePath.split('/');
-    const fileName = segments[segments.length - 1];
-    const fileId = fileName.split('.')[0];
-    if (!fileId) return;
-
-    const db = admin.firestore();
-    const fileRef = db.collection(COLLECTIONS.FILES).doc(fileId);
-    const snap = await fileRef.get();
-    if (!snap.exists) {
-      functions.logger.warn('DXF thumbnail skipped — no file record', { fileId, filePath });
-      return;
-    }
-    const data = snap.data() as Record<string, unknown>;
-    if (typeof data.thumbnailUrl === 'string' && data.thumbnailUrl.length > 0) {
-      functions.logger.info('DXF thumbnail skipped — already present', { fileId });
-      return;
-    }
-
-    try {
-      await regenerateDxfThumbnail({ dxfStoragePath, fileId, fileDoc: snap });
-    } catch (err) {
-      functions.logger.error('DXF thumbnail generation failed', {
-        fileId,
-        dxfStoragePath,
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-    }
+  .onFinalize(async (raw) => {
+    const object = finalizedObjectOf(raw, fileStorageBucketNames());
+    if (object) await generateDxfThumbnailOnFinalize(object);
   });
 
 function extractScene(raw: unknown):

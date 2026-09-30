@@ -13,7 +13,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -88,17 +89,6 @@ async function handleProcessFloorplan(
 
     // 2. FIREBASE ADMIN
     const adminDb = getAdminFirestore();
-    const adminStorage = getAdminStorage();
-    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-
-    if (!storageBucket) {
-      return NextResponse.json(
-        { success: false, error: 'Storage bucket not configured', errorCode: 'CONFIG_ERROR' },
-        { status: 500 }
-      );
-    }
-
-    const bucket = adminStorage.bucket(storageBucket);
 
     // 3.+4. FETCH FILE RECORD **ΚΑΙ** TENANT ISOLATION — μία πράξη (ADR-742 §7.1)
     //
@@ -118,6 +108,10 @@ async function handleProcessFloorplan(
     }
 
     const fileData = { id: owned.doc.id, ...owned.doc.data } as FileRecordData;
+
+    // ADR-895 Α2 — ο κάδος αποφασίζεται από την εγγραφή (`storagePlacement`), ποτέ από env.
+    // Το processed JSON γράφεται στον ΙΔΙΟ κάδο μέσα στο `processDxf` (δίπλα στο πρωτότυπο).
+    const bucket = fileRecordBucket(fileData);
 
     // 5. CHECK ALREADY PROCESSED (fast path — no lock needed)
     if (fileData.processedData && !forceReprocess) {

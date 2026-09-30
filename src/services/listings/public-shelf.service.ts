@@ -56,7 +56,7 @@
 
 import type { File } from '@google-cloud/storage';
 
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
@@ -229,7 +229,9 @@ async function addressOne<M>(
   existing: readonly File[],
 ): Promise<AddressedImage<M> | null> {
   try {
-    const original = getAdminBucket().file(source.privateStoragePath);
+    // ADR-895 Α2 — ο κάδος της πηγής αποφασίζεται από τη δηλωμένη θέση της (`storagePlacement`),
+    // όταν η πηγή είναι `FileRecord`· απόν ⇒ κανονικός κάδος (ίδια συμπεριφορά με σήμερα).
+    const original = fileRecordBucket(source).file(source.privateStoragePath);
     const [meta] = await original.getMetadata();
     const sourceRef = sourceReference(source.privateStoragePath, String(meta.generation ?? ''));
 

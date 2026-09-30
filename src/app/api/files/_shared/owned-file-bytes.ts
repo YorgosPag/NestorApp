@@ -16,7 +16,7 @@
  * fileResource.load()            →  υπάρχει; δικό μου;     (ADR-742 §7undecies)
  * containerVisibilityRefusal()   →  το βλέπω καν;          (ADR-862 Φ0 Β5/Β7)
  * isDeleted / storagePath        →  υπάρχει αντικείμενο;
- * getAdminBucket().download()    →  τα bytes
+ * fileRecordBucket(data).download() → τα bytes (ADR-895 Α2: ο κάδος από την εγγραφή)
  * ```
  *
  * 🔴 **Ο ΚΙΝΔΥΝΟΣ ΔΕΝ ΕΙΝΑΙ ΟΙ ΓΡΑΜΜΕΣ — ΕΙΝΑΙ Η ΣΕΙΡΑ** (μάθημα `owned-doc-loader`):
@@ -56,7 +56,7 @@ import 'server-only';
 import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
 import type { ProjectMemberRead } from '@/lib/auth/project-member-read';
 import type { AuthContext, PermissionId } from '@/lib/auth';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { storagePathCustody } from '@/lib/storage/storage-path-custody';
 
 import type { FileCustodyCaller } from './file-custody-route';
@@ -74,6 +74,8 @@ interface FileBytesRecord {
   originalFilename?: string;
   ext?: string;
   isDeleted?: boolean;
+  /** ADR-895 Α2 — σε ποιον κάδο ζουν τα bytes· απόν ⇒ κανονικός κάδος. */
+  storagePlacement?: unknown;
 }
 
 export interface OwnedFileBytesQuery {
@@ -212,10 +214,9 @@ async function deliverRecordBytes(data: FileBytesRecord, fileId: string): Promis
   if (data.isDeleted === true) return REFUSED;
   if (data.storagePath === undefined || data.storagePath.length === 0) return REFUSED;
 
-  // (4) τα bytes — `getAdminBucket()` είναι ο SSoT (`lib/firebaseAdmin.ts:151`):
-  //     ο implicit default του Admin SDK λύνεται σε `{projectId}.appspot.com` σε
-  //     κάποιες διαδρομές αρχικοποίησης και γεννά ασυνέπειες `exists()`.
-  const [buffer] = await getAdminBucket().file(data.storagePath).download();
+  // (4) τα bytes — `fileRecordBucket(data)` είναι ο SSoT (ADR-895 Α2): ο κάδος
+  //     αποφασίζεται από την εγγραφή (`storagePlacement`), ποτέ σιωπηλά.
+  const [buffer] = await fileRecordBucket(data).file(data.storagePath).download();
 
   return {
     outcome: 'bytes',

@@ -40,6 +40,8 @@ export interface DxfLevelRow {
 export interface FileRow {
   ref: FirebaseFirestore.DocumentReference;
   storagePath: string | null;
+  /** ADR-895 — σε ποιον κάδο ζουν τα bytes (απόν ⇒ legacy)· το κρίνει ο `fileRecordBucket`. */
+  storagePlacement?: unknown;
 }
 
 // ============================================================================
@@ -94,7 +96,7 @@ export async function loadFileRows(
     fileIds.map(async (id) => {
       const snap = await db.collection(COLLECTIONS.FILES).doc(id).get();
       if (!snap.exists) return null;
-      const data = snap.data() as { companyId?: string; storagePath?: string };
+      const data = snap.data() as { companyId?: string; storagePath?: string; storagePlacement?: unknown };
       // ADR-742 §4 — αρχείο **χωρίς** μισθωτή δεν ανήκει σε κανέναν, άρα δεν
       // σβήνεται από κανέναν. Σε **wipe** η κατεύθυνση του σφάλματος έχει
       // σημασία: fail-closed είναι παράλειψη, fail-open είναι απώλεια δεδομένων.
@@ -106,6 +108,7 @@ export async function loadFileRows(
         ref: snap.ref,
         storagePath:
           typeof data.storagePath === 'string' ? data.storagePath : null,
+        storagePlacement: data.storagePlacement,
       } satisfies FileRow;
     }),
   );
@@ -131,11 +134,12 @@ export async function listAllFloorFileRows(
     .where('entityId', '==', floorId)
     .get();
   return snap.docs.map((d) => {
-    const data = d.data() as { storagePath?: string };
+    const data = d.data() as { storagePath?: string; storagePlacement?: unknown };
     return {
       ref: d.ref,
       storagePath:
         typeof data.storagePath === 'string' ? data.storagePath : null,
+      storagePlacement: data.storagePlacement,
     } satisfies FileRow;
   });
 }

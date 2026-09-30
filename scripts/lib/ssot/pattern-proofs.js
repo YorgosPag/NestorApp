@@ -330,6 +330,36 @@ import { SOFT_DELETE_CONFIG } from '@/lib/firestore/soft-delete-config';
 function check(entity: string) { return SOFT_DELETE_CONFIG[entity]; }`,
   },
 
+  // ADR-895 A10: no FileRecord byte access may guess the bucket.
+  'file-record-bucket': {
+    shouldMatch: `// Scanner must catch every way of guessing "the" bucket:
+const bytes = await getAdminBucket().file(record.storagePath).download();
+const b = getAdminStorage().bucket();
+const c = getStorage().bucket();
+const d = adminStorage.bucket(process.env.FIREBASE_STORAGE_BUCKET);
+const e = storage.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);`,
+    shouldSkip: `// Scanner must pass the ONE selector and its catalogue:
+import { fileRecordBucket, fileStorageBucket, originalStorageBuckets } from '@/server/files/file-record-bucket';
+const bytes = await fileRecordBucket(record).file(record.storagePath).download();
+const eu = fileStorageBucket('eu-originals');
+for (const { bucket } of originalStorageBuckets()) void bucket;`,
+  },
+
+  // ADR-895 A5: one writer of private-bucket policy (the declared-private-bucket mechanism).
+  'declared-private-bucket': {
+    shouldMatch: `// Scanner must catch a hand-written bucket policy outside the ONE mechanism:
+await bucket.setMetadata({ softDeletePolicy: { retentionDurationSeconds: 0 } });
+await bucket.create({ iamConfiguration: { publicAccessPrevention: 'inherited' } });
+await bucket.create({ hierarchicalNamespace: { enabled: true } });
+await storage.createBucket(name, { enableObjectRetention: true });`,
+    shouldSkip: `// Scanner must pass readers and the registry API:
+import { ensurePrivateBucket, inspectPrivateBucket } from '@/server/storage/declared-private-bucket';
+const pap = metadata.iamConfiguration?.publicAccessPrevention;
+const days = Number(metadata.softDeletePolicy?.retentionDurationSeconds);
+const hns = metadata.hierarchicalNamespace?.enabled === true;
+const state = await inspectPrivateBucket(declaredPrivateBucket('files-eu'));`,
+  },
+
   'gcs-buckets': {
     shouldMatch: `// Scanner must catch hardcoded GCP project ID + template-built backup bucket:
 const projectId = 'pagonis-87766';

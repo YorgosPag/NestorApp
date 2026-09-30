@@ -96,9 +96,9 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
         continue;
       }
       // Bytes πρώτα· άρνηση της πλατφόρμας (GCS hold) ⇒ η εγγραφή ΔΕΝ ανωνυμοποιείται ως «σβησμένη»
-      // (ADR-864 §21 — ίδιος γραφέας με το purge).
+      // (ADR-864 §21 — ίδιος γραφέας με το purge). 🌍 ADR-895: ο κάδος έρχεται από την εγγραφή.
       const storagePath = data.storagePath as string | undefined;
-      if (storagePath && (await deleteStorageObjectForPurge(storagePath)) === 'refused') {
+      if (storagePath && (await deleteStorageObjectForPurge({ storagePath, storagePlacement: data.storagePlacement })) === 'refused') {
         results.filesSkippedHold++;
         retainedFileIds.add(fileDoc.id);
         continue;

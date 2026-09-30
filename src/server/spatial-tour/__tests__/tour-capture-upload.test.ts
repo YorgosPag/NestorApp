@@ -14,8 +14,11 @@ jest.mock('server-only', () => ({}));
 
 type StoredObject = { bytes: Buffer };
 const objects = new Map<string, StoredObject>();
-/** Ποιος κάδος (ADR-884 Φ2ζ ζ5): ο κανονικός ή ο ιδιωτικός κάδος μέσων στην ΕΕ. Τα αντικείμενα κλειδώνονται `κάδος|διαδρομή`. */
-type FakeBucketName = 'default' | 'tour-eu';
+/**
+ * Ποιος κάδος: ο κανονικός · ο ιδιωτικός κάδος μέσων στην ΕΕ (ADR-884 ζ5) · ο κάδος πρωτοτύπων ΕΕ (ADR-895 Φ3).
+ * Τα αντικείμενα κλειδώνονται `κάδος|διαδρομή`.
+ */
+type FakeBucketName = 'default' | 'tour-eu' | 'files-eu';
 const sessions: Array<{ bucket: FakeBucketName; path: string; origin: string; contentLength: number }> = [];
 
 function fakeBucket(bucket: FakeBucketName) {
@@ -43,6 +46,7 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' },
   getAdminBucket: () => fakeBucket('default'),
   getTourMediaBucket: () => fakeBucket('tour-eu'),
+  getFilesEuBucket: () => fakeBucket('files-eu'),
 }));
 jest.mock('@/services/file-audit-admin.service', () => ({
   recordFileAudit: async (input: unknown) => { audits.push(input); return 'audit_1'; },
@@ -189,9 +193,13 @@ describe('Ο/Ι — η ολοκλήρωση', () => {
     expect(file).not.toHaveProperty('purpose');
     expect(file?.displayName).toBe('panoramas - Διαμέρισμα Α2');
     expect(objects.has(ingestKey(uploadId))).toBe(false);
-    // ζ5: το πρωτότυπο είναι `FileRecord` ⇒ ο ΚΑΝΟΝΙΚΟΣ κάδος (ζ5β), όχι ο κάδος μέσων.
-    expect(objects.has(`default|${String(file?.storagePath)}`)).toBe(true);
+    // 🔴 ADR-895 Φ3: νέα περιήγηση (`tour-eu`) ⇒ το πρωτότυπο γεννιέται `eu-originals` — εγγραφή, bytes ΚΑΙ URL.
+    //    Ποτέ στον κανονικό (ΗΠΑ), ποτέ στον κάδο μέσων (soft delete 0 — λάθος πολιτική για πρωτότυπο).
+    expect(file?.storagePlacement).toBe('eu-originals');
+    expect(objects.has(`files-eu|${String(file?.storagePath)}`)).toBe(true);
+    expect(objects.has(`default|${String(file?.storagePath)}`)).toBe(false);
     expect(objects.has(`tour-eu|${String(file?.storagePath)}`)).toBe(false);
+    expect(file?.downloadUrl).toMatch(/\?placement=eu-originals$/);
     expect(audits).toEqual([expect.objectContaining({ action: 'upload', fileId: outcome.capture.originalFileId, companyId: AGENCY })]);
   });
 
@@ -280,7 +288,24 @@ describe('Θ — θέση μέσων (ADR-884 Φ2ζ ζ5)', () => {
     expect(ingestKey(uploadId)).toMatch(/^tour-eu\|/);
     makeTourLegacy();
     const outcome = await finalize(ticket);
-    expect(outcome.kind).toBe('finalized');
+    if (outcome.kind !== 'finalized') throw new Error(JSON.stringify(outcome));
     expect(objects.has(ingestKey(uploadId))).toBe(false);
+    // ADR-895 Φ3: τα bytes ΗΤΑΝ στην ΕΕ ⇒ το πρωτότυπο μένει στην ΕΕ, ό,τι κι αν λέει τώρα η περιήγηση.
+    const file = kit.getData(COLLECTIONS.FILES, outcome.capture.originalFileId);
+    expect(file?.storagePlacement).toBe('eu-originals');
+    expect(objects.has(`files-eu|${String(file?.storagePath)}`)).toBe(true);
+  });
+
+  it('🔴 Θ3 — περιήγηση ΧΩΡΙΣ θέση (πριν το ζ5) ⇒ πρωτότυπο `legacy-default` ΡΗΤΑ, στον κανονικό, URL χωρίς παράμετρο (ADR-895 Φ3)', async () => {
+    await start(MANAGER, panorama);
+    makeTourLegacy();
+    const { ticket } = await startAndUpload(MANAGER, panorama);
+    const outcome = await finalize(ticket);
+    if (outcome.kind !== 'finalized') throw new Error(JSON.stringify(outcome));
+    const file = kit.getData(COLLECTIONS.FILES, outcome.capture.originalFileId);
+    expect(file?.storagePlacement).toBe('legacy-default');
+    expect(objects.has(`default|${String(file?.storagePath)}`)).toBe(true);
+    expect(objects.has(`files-eu|${String(file?.storagePath)}`)).toBe(false);
+    expect(String(file?.downloadUrl)).not.toContain('placement=');
   });
 });

@@ -27,6 +27,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ShareDownloadOutcome } from '@/services/sharing/share-resolve-contract';
 import { recordShareAccess } from './share-access';
@@ -52,7 +53,9 @@ export async function signSharedFileUrl(
   if (!snap.exists || storagePath === '') return null;
 
   const fileName = typeof data?.originalFilename === 'string' ? data.originalFilename : undefined;
+  // ADR-895 Α2 — `files/{fileId}` είναι FileRecord: ο κάδος αποφασίζεται από την εγγραφή.
   const signed = await signedDownloadUrl({
+    bucket: fileRecordBucket(data ?? {}),
     storagePath,
     ...(disposition === 'attachment' ? { downloadFileName: fileName } : {}),
   });

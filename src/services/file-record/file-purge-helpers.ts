@@ -14,7 +14,7 @@
 
 import 'server-only';
 
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import {
@@ -24,6 +24,8 @@ import {
   type CustodyScope,
 } from '@/lib/workspace/custody-scope';
 import { isHoldActive, type FileHoldSubject } from '@/lib/files/file-hold';
+import { UnknownFileStoragePlacementError, type FileStoragePlacementSubject } from '@/lib/files/file-storage-placement';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
@@ -81,20 +83,40 @@ export function isFileHeld(data: FileHoldSubject): boolean {
   return isHoldActive(data, Date.now());
 }
 
+/** Ό,τι χρειάζεται η διαγραφή — η εγγραφή (ή αντίγραφό της) που ξέρει ΠΟΥ ζουν τα bytes της (ADR-895 Α3). */
+export interface PurgeStorageSubject extends FileStoragePlacementSubject {
+  readonly storagePath: string;
+}
+
 /**
  * **Σβήσε τα bytes — ή πες ΓΙΑΤΙ όχι.** 🔒 ADR-864 §21: με GCS `temporaryHold` η πλατφόρμα
  * **αρνείται** τη διαγραφή. Πριν, κάθε αποτυχία ήταν «non-blocking» και η εγγραφή γινόταν
  * `purged` ⇒ η βάση θα έλεγε «σβήστηκε» για bytes που **υπάρχουν**. Μόνο το 404 είναι αθώο
  * (τα bytes λείπουν ήδη)· κάθε άλλη αποτυχία αφήνει την εγγραφή όπως ήταν, για τον επόμενο γύρο.
+ *
+ * 🌍 ADR-895 Α3: το 404 σημαίνει «λείπει» **μόνο** στον κάδο **που λέει η εγγραφή** (`fileRecordBucket`).
+ * Άγνωστη `storagePlacement` ⇒ `'refused'` (ΠΟΤΕ ο κανονικός κάδος «για ασφάλεια» — ADR-895 §2.3 Ρ1).
  */
-export async function deleteStorageObjectForPurge(storagePath: string): Promise<StorageObjectDeletion> {
+export async function deleteStorageObjectForPurge(subject: PurgeStorageSubject): Promise<StorageObjectDeletion> {
+  let bucket: ReturnType<typeof fileRecordBucket>;
   try {
-    await getAdminStorage().bucket().file(storagePath).delete();
+    bucket = fileRecordBucket(subject);
+  } catch (error: unknown) {
+    if (error instanceof UnknownFileStoragePlacementError) {
+      logger.warn('Storage deletion refused — unknown storagePlacement, no honest bucket to ask', {
+        storagePath: subject.storagePath, value: error.value,
+      });
+      return 'refused';
+    }
+    throw error;
+  }
+  try {
+    await bucket.file(subject.storagePath).delete();
     return 'deleted';
   } catch (error: unknown) {
     if ((error as { code?: unknown }).code === 404) return 'absent';
     logger.warn('Storage deletion refused — the record stays unpurged', {
-      storagePath, error: getErrorMessage(error),
+      storagePath: subject.storagePath, error: getErrorMessage(error),
     });
     return 'refused';
   }
@@ -115,11 +137,13 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
     //    δεν κοστίζει τα bytes της — πριν, τα bytes σβήνονταν και μετά αποτύγχανε η ενημέρωση.
     const snap = await ref.get();
     if (!snap.exists) return { success: false, storageDeleted: false, error: 'record-not-found' };
-    const owner = custodyScopeFromData(snap.data() ?? {});
+    const snapData = snap.data() ?? {};
+    const owner = custodyScopeFromData(snapData);
 
     // Bytes πρώτα — και άρνηση της πλατφόρμας (δέσμευση) ⇒ η εγγραφή ΔΕΝ γίνεται `purged`.
+    // 🌍 ADR-895: ο κάδος έρχεται ΑΠΟ την ίδια την εγγραφή (`snapData.storagePlacement`) — ποτέ μαντεψιά.
     if (storagePath) {
-      const deletion = await deleteStorageObjectForPurge(storagePath);
+      const deletion = await deleteStorageObjectForPurge({ storagePath, storagePlacement: snapData.storagePlacement });
       if (deletion === 'refused') {
         return { success: false, storageDeleted: false, error: 'storage-deletion-refused' };
       }

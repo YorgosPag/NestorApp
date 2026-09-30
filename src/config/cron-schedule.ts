@@ -63,6 +63,7 @@ import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
+import { runStorageBucketDrift } from '@/lib/cron/jobs/storage-bucket-drift.job';
 import { runTourTilesetBake } from '@/lib/cron/jobs/tour-tileset-bake.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
 
@@ -291,6 +292,21 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 5,
     leaseMinutes: 10,
     run: runFirebaseAuthConfigDrift,
+  },
+  {
+    slug: 'storage-bucket-drift',
+    path: '/api/cron/storage-bucket-drift',
+    description: 'Έλεγχος: συμφωνούν οι δηλωμένοι κάδοι GCS (μέσα περιήγησης, δημόσιο ράφι) με το git; (ADR-884 ζ5 · πρότυπο ADR-851)',
+    enabled: true,
+    // 🔑 **Ημερήσια, ίδιος λόγος με το ADR-851**: η ρύθμιση κάδου αλλάζει μόνο με χέρι στην κονσόλα — σπάνια, αλλά
+    // σιωπηλά. Μία ματιά τη μέρα φράζει την αόρατη απόκλιση σε ≤24 ώρες, με δύο αναγνώσεις metadata ανά κάδο.
+    // ⚠️ **04:29**: λεπτό που δεν κατέχει κανείς (*/5 από :02 · */10 από :04 · */10 · :15 · :35 · 8-59/15).
+    schedule: '29 4 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 10,
+    run: runStorageBucketDrift,
   },
   {
     slug: 'demand-interest-announce',

@@ -30,7 +30,7 @@ import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { TOUR_FACE_DETECTOR_VERSION, isTourMediaPlacement } from '@/constants/spatial-tour-vocabulary';
 import type { RawImage } from '@/lib/spatial-tour/tileset/equirect-to-cube';
@@ -84,16 +84,22 @@ async function readTourStorage(tourRef: DocumentReference): Promise<TourStorage>
   return { custody, tiles: tourMediaBucket(placement) };
 }
 
-/** Η διαδρομή αποθήκευσης του πρωτοτύπου — από το `FileRecord` του διαμερίσματος της περιήγησης. */
-async function originalStoragePath(db: Firestore, custody: CustodyScope, fileId: string): Promise<string> {
+/** Η θέση του πρωτοτύπου — διαδρομή **και** κάδος, από το `FileRecord` του διαμερίσματος της περιήγησης (ADR-895 Α2). */
+interface OriginalFileLocation {
+  readonly storagePath: string;
+  readonly bucket: Bucket;
+}
+
+async function originalFileLocation(db: Firestore, custody: CustodyScope, fileId: string): Promise<OriginalFileLocation> {
   const fileSnap = await db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]]).doc(fileId).get();
   const record = fileSnap.data();
   if (!isRecord(record) || typeof record.storagePath !== 'string') throw new PermanentBakeFailure('original-missing');
-  return record.storagePath;
+  // Ο κάδος αποφασίζεται από την εγγραφή (`storagePlacement`), ποτέ σιωπηλά.
+  return { storagePath: record.storagePath, bucket: fileRecordBucket(record) };
 }
 
-async function readOriginal(storagePath: string, contentHash: string): Promise<Buffer> {
-  const object = getAdminBucket().file(storagePath);
+async function readOriginal(bucket: Bucket, storagePath: string, contentHash: string): Promise<Buffer> {
+  const object = bucket.file(storagePath);
   const [exists] = await object.exists();
   if (!exists) throw new PermanentBakeFailure('original-missing');
   const [bytes] = await object.download();
@@ -122,7 +128,8 @@ export async function loadCaptureOriginal(db: Firestore, tourRef: DocumentRefere
 async function loadOriginalOf(db: Firestore, custody: CustodyScope, capture: TourCapture): Promise<Buffer> {
   const original = originalHashOf(capture);
   if (original === null) throw new PermanentBakeFailure('original-missing');
-  return readOriginal(await originalStoragePath(db, custody, capture.originalFileId), original);
+  const location = await originalFileLocation(db, custody, capture.originalFileId);
+  return readOriginal(location.bucket, location.storagePath, original);
 }
 
 /** Ανεβάζει τη ροή σε δέσμες — ο υπολογισμός της επόμενης δέσμης περιμένει την προηγούμενη (φραγμένη μνήμη). */

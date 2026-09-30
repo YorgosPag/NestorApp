@@ -33,8 +33,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { HOLD_TYPES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
-import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { hasActiveHold, type PlaceableHoldType } from '@/lib/files/file-hold';
+import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
+import { fileStorageBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { readVersionStack } from '@/services/iso19650/version-stack';
@@ -69,8 +71,31 @@ class HoldConflict extends Error {
 // BYTES
 // =============================================================================
 
-const storagePathsOf = (versions: readonly FileRecord[]): string[] =>
-  [...new Set(versions.map((v) => v.storagePath).filter((p): p is string => typeof p === 'string' && p.length > 0))];
+/**
+ * 🌍 ADR-895: ΠΟΙΟΣ κάδος για μια δοθείσα θέση — προεπιλογή ο **ΕΝΑΣ επιλογέας** (`fileStorageBucket`).
+ * Οι άγκυρες περνούν δικό τους (δύο ψεύτικους κάδους) — η στοίβα μπορεί να έχει εκδόσεις σε
+ * ΔΙΑΦΟΡΕΤΙΚΟΥΣ κάδους (μετάβαση εν εξελίξει), άρα δεν αρκεί **ένας** ενέσιμος κάδος πια.
+ */
+export type HoldBucketResolver = (placement: FileStoragePlacement) => HoldableBucket;
+
+const defaultHoldBucketResolver: HoldBucketResolver = (placement) => fileStorageBucket(placement);
+
+/** Τα storagePath της στοίβας, ομαδοποιημένα ανά ΘΕΣΗ (ADR-895 Α3) — όχι ένα επίπεδο σύνολο πια. */
+function pathsByPlacement(versions: readonly FileRecord[]): ReadonlyMap<FileStoragePlacement, readonly string[]> {
+  const map = new Map<FileStoragePlacement, string[]>();
+  for (const version of versions) {
+    const path = version.storagePath;
+    if (typeof path !== 'string' || path.length === 0) continue;
+    const placement = fileStoragePlacementOf(version);
+    const existing = map.get(placement);
+    if (existing) {
+      if (!existing.includes(path)) existing.push(path);
+    } else {
+      map.set(placement, [path]);
+    }
+  }
+  return map;
+}
 
 /** Γύρισε τον διακόπτη σε κάθε αντικείμενο — ή πέτα. 404 = το αντικείμενο δεν έχει bytes. */
 async function setTemporaryHold(bucket: HoldableBucket, paths: readonly string[], temporaryHold: boolean): Promise<void> {
@@ -83,6 +108,17 @@ async function setTemporaryHold(bucket: HoldableBucket, paths: readonly string[]
   }
 }
 
+/** Ίδιος διακόπτης σε ΚΑΘΕ κάδο που εμπλέκεται στη στοίβα — μία εγγραφή ανά θέση (ADR-895 Α3). */
+async function setTemporaryHoldAcrossStack(
+  versions: readonly FileRecord[],
+  bucketOf: HoldBucketResolver,
+  temporaryHold: boolean,
+): Promise<void> {
+  for (const [placement, paths] of pathsByPlacement(versions)) {
+    await setTemporaryHold(bucketOf(placement), paths, temporaryHold);
+  }
+}
+
 /**
  * 🔑 **ΤΑ BYTES ΑΚΟΛΟΥΘΟΥΝ ΤΗ ΒΑΣΗ** — η μία απάντηση σε κάθε συνδυασμό ταυτόχρονων πράξεων.
  * Διαβάζει την κατάσταση **μετά** τη γραφή και θέτει τον διακόπτη ανάλογα. Χωρίς αυτό, δύο
@@ -90,11 +126,11 @@ async function setTemporaryHold(bucket: HoldableBucket, paths: readonly string[]
  * τοποθέτηση + αποδέσμευση θα άφηναν «δεσμευμένο στη βάση, ελεύθερο στο bucket».
  * Κάθε ενδιάμεση ασυμφωνία είναι προς την **ασφαλή** πλευρά (bytes κλειδωμένα, βάση ελεύθερη).
  */
-async function reconcileBytes(fileIds: readonly string[], paths: readonly string[], bucket: HoldableBucket): Promise<void> {
+async function reconcileBytes(fileIds: readonly string[], versions: readonly FileRecord[], bucketOf: HoldBucketResolver): Promise<void> {
   const db = getAdminFirestore();
   const snapshots = await Promise.all(fileIds.map((id) => db.collection(COLLECTIONS.FILES).doc(id).get()));
   const held = snapshots.some((snapshot) => snapshot.exists && hasActiveHold(snapshot.data() ?? {}));
-  await setTemporaryHold(bucket, paths, held);
+  await setTemporaryHoldAcrossStack(versions, bucketOf, held);
 }
 
 // =============================================================================
@@ -159,27 +195,26 @@ export interface PlaceFileHoldInput {
   readonly reason: string;
 }
 
-/** **Τοποθέτηση** στη στοίβα του αρχείου: bytes πρώτα, βάση μετά, συμφιλίωση στο τέλος. */
-export async function placeFileHold(input: PlaceFileHoldInput, bucket: HoldableBucket = getAdminBucket()): Promise<FileHoldOutcome> {
+/** **Τοποθέτηση** στη στοίβα του αρχείου: bytes πρώτα (σε ΚΑΘΕ κάδο της στοίβας), βάση μετά, συμφιλίωση στο τέλος. */
+export async function placeFileHold(input: PlaceFileHoldInput, bucketOf: HoldBucketResolver = defaultHoldBucketResolver): Promise<FileHoldOutcome> {
   const stack = await heldVersionStack(input.actor, input.fileId);
   if (stack.kind === 'not-found') return { kind: 'not-found' };
   const held = stack.versions.find((version) => hasActiveHold(version));
   if (held) return { kind: 'already-held', holdType: String(held.hold) };
 
   const ids = stack.versions.map((v) => v.id);
-  const paths = storagePathsOf(stack.versions);
   try {
-    await setTemporaryHold(bucket, paths, true);
+    await setTemporaryHoldAcrossStack(stack.versions, bucketOf, true);
     const placedAt = nowISO();
     const fileIds = await writeStack(ids, (current) => {
       if (hasActiveHold(current)) throw new HoldConflict(String(current.hold));
       return { hold: input.holdType, holdPlacedBy: input.actor.uid, holdPlacedAt: placedAt, holdReason: input.reason };
     });
     await auditEach(fileIds, input.actor, 'hold_place', { holdType: input.holdType, reason: input.reason });
-    await reconcileBytes(ids, paths, bucket);
+    await reconcileBytes(ids, stack.versions, bucketOf);
     return { kind: 'placed', fileIds };
   } catch (error: unknown) {
-    await reconcileBytes(ids, paths, bucket).catch((e: unknown) =>
+    await reconcileBytes(ids, stack.versions, bucketOf).catch((e: unknown) =>
       logger.error('Byte reconciliation failed — bytes stay locked (safe side)', { fileId: input.fileId, error: getErrorMessage(e) }));
     if (error instanceof HoldConflict) return { kind: 'already-held', holdType: error.holdType };
     logger.error('File hold was not placed', { fileId: input.fileId, error: getErrorMessage(error) });
@@ -192,8 +227,8 @@ export interface ReleaseFileHoldInput {
   readonly fileId: string;
 }
 
-/** **Αποδέσμευση**: βάση πρώτα, bytes μετά — και τα bytes συμφιλιώνονται πάντα (ιδεμπότητο). */
-export async function releaseFileHold(input: ReleaseFileHoldInput, bucket: HoldableBucket = getAdminBucket()): Promise<FileHoldOutcome> {
+/** **Αποδέσμευση**: βάση πρώτα, bytes μετά (σε ΚΑΘΕ κάδο της στοίβας) — και τα bytes συμφιλιώνονται πάντα (ιδεμπότητο). */
+export async function releaseFileHold(input: ReleaseFileHoldInput, bucketOf: HoldBucketResolver = defaultHoldBucketResolver): Promise<FileHoldOutcome> {
   const stack = await heldVersionStack(input.actor, input.fileId);
   if (stack.kind === 'not-found') return { kind: 'not-found' };
 
@@ -204,7 +239,7 @@ export async function releaseFileHold(input: ReleaseFileHoldInput, bucket: Holda
       hasActiveHold(current) ? { hold: HOLD_TYPES.NONE, holdReleasedBy: input.actor.uid, holdReleasedAt: releasedAt } : null);
     if (fileIds.length > 0) await auditEach(fileIds, input.actor, 'hold_release', {});
     // Και όταν η βάση έλεγε ήδη «καμία»: μισή αποτυχία προηγούμενης αποδέσμευσης διορθώνεται εδώ.
-    await reconcileBytes(ids, storagePathsOf(stack.versions), bucket);
+    await reconcileBytes(ids, stack.versions, bucketOf);
     return fileIds.length > 0 ? { kind: 'released', fileIds } : { kind: 'not-held' };
   } catch (error: unknown) {
     logger.error('File hold was not released', { fileId: input.fileId, error: getErrorMessage(error) });

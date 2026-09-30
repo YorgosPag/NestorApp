@@ -25,6 +25,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { MANDATE_EVIDENCE_ROOT, evidencesOfMandate } from '@/lib/mandate/mandate-evidence';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
 import { storagePathCustody } from '@/lib/storage/storage-path-custody';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -68,7 +69,13 @@ export async function openMandateEvidence(
   if (evidence === null) return { kind: 'absent' };
 
   try {
-    const signed = await signedDownloadUrl({ storagePath: evidence.path, downloadFileName: evidence.fileName });
+    // ADR-895 Α2 — το αποδεικτικό ΔΕΝ είναι `FileRecord` (ζει σε `mandate-evidence/…`,
+    // δικό του θεματοφύλακα)· εκτός εμβέλειας Φ0 ⇒ ρητά ο κανονικός κάδος.
+    const signed = await signedDownloadUrl({
+      bucket: getAdminBucket(),
+      storagePath: evidence.path,
+      downloadFileName: evidence.fileName,
+    });
     if (signed.outcome !== 'signed') return { kind: 'failed' };
     await recordOwnerPropertyEvidenceAccess(property, auditActorOf(who), evidence);
     return { kind: 'signed', url: signed.url };

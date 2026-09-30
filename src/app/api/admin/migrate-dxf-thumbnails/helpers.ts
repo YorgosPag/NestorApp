@@ -122,6 +122,8 @@ export async function runDxfThumbnailMigration(
         fileId: c.id,
         dxfStoragePath: storagePath,
         processedPath,
+        // ADR-895 Α2 — η μικρογραφία ζει ΔΙΠΛΑ στο πρωτότυπο, άρα ίδιος κάδος.
+        record: data,
       });
       items.push({ fileId: c.id, status: 'rasterized', ...result });
       rasterized += 1;

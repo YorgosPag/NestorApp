@@ -56,7 +56,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileStorageBucket, fileStoragePlacementOfBucket } from '@/server/files/file-record-bucket';
+import { FILE_STORAGE_PLACEMENT_LEGACY } from '@/lib/files/file-storage-placement';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { attachmentDisposition } from '@/lib/http/content-disposition';
@@ -155,11 +156,18 @@ async function deliverableByUrl(
     return refuse(ref.why, 403);
   }
 
-  const bucket = getAdminBucket();
-  if (ref.bucket !== null && ref.bucket !== bucket.name) {
+  // ADR-895 Α8 — η ισότητα με **ένα** όνομα έγινε λίστα: κάθε κάδος πρωτοτύπων
+  // (ADR-895 Α6) γίνεται δεκτός, όχι μόνο ο κανονικός. `null` (same-origin proxy
+  // σχήμα) δεν κουβαλάει bucket ⇒ θεωρείται ο κανονικός, όπως πάντα (Φ0: μηδέν
+  // αλλαγή συμπεριφοράς).
+  const placement = ref.bucket === null
+    ? FILE_STORAGE_PLACEMENT_LEGACY
+    : fileStoragePlacementOfBucket(ref.bucket);
+  if (placement === null) {
     logger.error('SECURITY: URL points at a foreign bucket', { bucket: ref.bucket });
     return refuse('foreign-bucket', 403);
   }
+  const bucket = fileStorageBucket(placement);
 
   // (3) Ποιανού είναι αυτή η διαδρομή;
   const verdict = judgeStorageCustody(ref.storagePath, ctx);

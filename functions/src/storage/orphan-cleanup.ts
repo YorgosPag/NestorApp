@@ -51,15 +51,30 @@ import * as admin from 'firebase-admin';
 const db = admin.firestore();
 
 import { COLLECTIONS } from '../config/firestore-collections';
+import {
+  FILE_STORAGE_PLACEMENT_LEGACY,
+  type FileStoragePlacement,
+} from '../generated/lib/files/file-storage-placement';
 import { resolveCustody } from './storage-path-custody';
+import { fileStorageBucketNames } from './file-record-bucket';
+import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
+import { FINALIZE_RUNTIME, gen1Memory } from './finalize-runtime';
 
 /**
  * Σταθερό doc id από το storage path: base64url, χωρίς `/` (απαγορευμένο σε doc ids)
- * και χωρίς padding. Ίδιο path → ίδιο έγγραφο → το re-upload ενημερώνει, δεν
+ * και χωρίς padding. Ίδιο αντικείμενο → ίδιο έγγραφο → το re-upload ενημερώνει, δεν
  * πολλαπλασιάζει (idempotent).
+ *
+ * 🔴 ADR-895 Ρ14 — το αντικείμενο είναι **(κάδος, path)**, όχι path. Στη μετάβαση (copy → verify →
+ * delete) το ΙΔΙΟ path ζει σε δύο κάδους· με κλειδί μόνο το path τα δύο σημάδια γίνονταν ΕΝΑ έγγραφο
+ * και το `bucket` του δεύτερου έσβηνε του πρώτου ⇒ ο sweeper θα έκρινε λάθος αντικείμενο. Η **θέση**
+ * (όχι το όνομα κάδου: σταθερή ανά περιβάλλον) μπαίνει στο κλειδί — εκτός από το legacy, που κρατά
+ * το κλειδί **αυτολεξεί** ώστε κάθε υπάρχον σημάδι να μένει έγκυρο (ίδιο πρότυπο με το `?placement=`).
+ * Ασφαλές ως διακριτό: ο marker δέχεται μόνο paths `companies/…`, ποτέ `{θέση}:…`.
  */
-export function candidateDocId(filePath: string): string {
-  return Buffer.from(filePath, 'utf8')
+export function candidateDocId(filePath: string, placement: FileStoragePlacement): string {
+  const key = placement === FILE_STORAGE_PLACEMENT_LEGACY ? filePath : `${placement}:${filePath}`;
+  return Buffer.from(key, 'utf8')
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
@@ -75,18 +90,22 @@ export function candidateDocId(filePath: string): string {
 async function markCandidate(
   filePath: string,
   outcome: { readonly kind: string; readonly rule?: string; readonly reason?: string },
-  object: functions.storage.ObjectMetadata,
+  object: FinalizedObject,
 ): Promise<void> {
-  const ref = db.collection(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES).doc(candidateDocId(filePath));
+  const ref = db.collection(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES).doc(candidateDocId(filePath, object.placement));
   const snap = await ref.get();
   await ref.set(
     {
       storagePath: filePath,
+      // ADR-895 Α7 — ο κάδος όπου ΖΟΥΣΕ το αντικείμενο όταν σημαδεύτηκε, ώστε ο sweeper να
+      // σβήσει στο ΣΩΣΤΟ κάδο (ποτέ πάντα τον κανονικό). Σημάδια πριν το ADR-895 δεν έχουν
+      // αυτό το πεδίο — ο sweeper το διαβάζει με fallback στον κανονικό κάδο.
+      bucket: object.bucket,
       custodyKind: outcome.kind,
       custodyRule: outcome.rule ?? null,
       unknownReason: outcome.reason ?? null,
-      contentType: object.contentType ?? null,
-      size: object.size ?? null,
+      contentType: object.contentType,
+      size: object.size,
       lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
       ...(snap.exists ? {} : { firstSeenAt: admin.firestore.FieldValue.serverTimestamp() }),
     },
@@ -95,50 +114,68 @@ async function markCandidate(
 }
 
 /** Ένας υποψήφιος που απέκτησε ιδιοκτήτη παύει να είναι υποψήφιος (self-healing). */
-async function clearCandidate(filePath: string): Promise<void> {
+async function clearCandidate(filePath: string, placement: FileStoragePlacement): Promise<void> {
   await db
     .collection(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES)
-    .doc(candidateDocId(filePath))
+    .doc(candidateDocId(filePath, placement))
     .delete()
     .catch(() => {
       /* δεν υπήρχε — η συνήθης περίπτωση */
     });
 }
 
+/**
+ * **Το σώμα** — ίδιο για κάθε κάδο και κάθε γενιά (ADR-895 Α7 · Φ2). Το καλούν το gen1 binding
+ * του κανονικού κάδου (εδώ) και τα gen2 bindings των περιφερειακών (`regional-storage-triggers.ts`).
+ */
+export async function markOrphanCandidateOnFinalize(object: FinalizedObject): Promise<void> {
+  const filePath = object.name;
+  if (!filePath) return;
+
+  // Μόνο enterprise paths· temp/ και cad/ εξαιρούνται εξ ορισμού.
+  if (!filePath.startsWith('companies/')) return;
+
+  // Companion thumbnails ({fileId}_thumb.{ext}) — παράγωγα, ζουν όσο ο γονιός τους.
+  const fileName = filePath.split('/').pop();
+  if (!fileName || fileName.includes('_thumb.')) return;
+
+  // ADR-895 Α7: bucket-aware κρίση — ένα record σε ΑΛΛΟΝ κάδο δεν προστατεύει ΑΥΤΟ το αντικείμενο.
+  const custody = await resolveCustody(db, filePath, {
+    bucketName: object.bucket,
+    bucketNames: fileStorageBucketNames(),
+  });
+
+  if (custody.kind === 'claimed') {
+    // Μπορεί να ήταν υποψήφιος από προηγούμενη παρατήρηση (π.χ. το claim γράφτηκε
+    // μετά το upload — debounced auto-save, ADR-683 §11). Καθαρίζουμε το σημάδι.
+    await clearCandidate(filePath, object.placement);
+    return;
+  }
+
+  await markCandidate(filePath, custody, object);
+
+  // ⚠️ ΚΑΜΙΑ ΔΙΑΓΡΑΦΗ ΕΔΩ — by design (ADR-694 Α1). Το `unknown` δεν είναι καν
+  // υποψήφιο προς ανάκτηση· καταγράφεται ώστε τα κενά του μητρώου custody να είναι
+  // μετρήσιμα αντί για αόρατα.
+  functions.logger.info('Storage custody: candidate recorded (no deletion)', {
+    filePath,
+    bucket: object.bucket,
+    custodyKind: custody.kind,
+    custodyRule: custody.kind === 'orphaned' ? custody.rule : undefined,
+    unknownReason: custody.kind === 'unknown' ? custody.reason : undefined,
+    contentType: object.contentType,
+    size: object.size,
+  });
+}
+
+/** gen1 — ο κανονικός κάδος, όπως πάντα (όνομα/γενιά αμετάβλητα: αλλαγή = delete+create στο deploy). */
 export const onStorageFinalize = functions
-  .runWith({ timeoutSeconds: 60, memory: '256MB' })
+  .runWith({
+    timeoutSeconds: FINALIZE_RUNTIME.orphanMarker.timeoutSeconds,
+    memory: gen1Memory(FINALIZE_RUNTIME.orphanMarker),
+  })
   .storage.object()
-  .onFinalize(async (object) => {
-    const filePath = object.name;
-    if (!filePath) return;
-
-    // Μόνο enterprise paths· temp/ και cad/ εξαιρούνται εξ ορισμού.
-    if (!filePath.startsWith('companies/')) return;
-
-    // Companion thumbnails ({fileId}_thumb.{ext}) — παράγωγα, ζουν όσο ο γονιός τους.
-    const fileName = filePath.split('/').pop();
-    if (!fileName || fileName.includes('_thumb.')) return;
-
-    const custody = await resolveCustody(db, filePath);
-
-    if (custody.kind === 'claimed') {
-      // Μπορεί να ήταν υποψήφιος από προηγούμενη παρατήρηση (π.χ. το claim γράφτηκε
-      // μετά το upload — debounced auto-save, ADR-683 §11). Καθαρίζουμε το σημάδι.
-      await clearCandidate(filePath);
-      return;
-    }
-
-    await markCandidate(filePath, custody, object);
-
-    // ⚠️ ΚΑΜΙΑ ΔΙΑΓΡΑΦΗ ΕΔΩ — by design (ADR-694 Α1). Το `unknown` δεν είναι καν
-    // υποψήφιο προς ανάκτηση· καταγράφεται ώστε τα κενά του μητρώου custody να είναι
-    // μετρήσιμα αντί για αόρατα.
-    functions.logger.info('Storage custody: candidate recorded (no deletion)', {
-      filePath,
-      custodyKind: custody.kind,
-      custodyRule: custody.kind === 'orphaned' ? custody.rule : undefined,
-      unknownReason: custody.kind === 'unknown' ? custody.reason : undefined,
-      contentType: object.contentType,
-      size: object.size,
-    });
+  .onFinalize(async (raw) => {
+    const object = finalizedObjectOf(raw, fileStorageBucketNames());
+    if (object) await markOrphanCandidateOnFinalize(object);
   });

@@ -42,7 +42,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { AuthContext } from '@/lib/auth';
 
@@ -52,6 +52,9 @@ let fake: FakeFirestore;
 let adminAvailable = true;
 /** 🔑 **Ο μετρητής που αποδεικνύει ότι τα bytes δεν έφυγαν.** */
 let downloads: string[] = [];
+/** ADR-895 — ο **δεύτερος** μετρητής: αποδεικνύει ότι μια `eu-originals` εγγραφή διαβάζεται
+ * από τον ΔΙΚΟ της κάδο, ποτέ από τον κανονικό (και το αντίστροφο). */
+let euDownloads: string[] = [];
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: (): AdminFirestore => fake as unknown as AdminFirestore,
@@ -62,6 +65,15 @@ jest.mock('@/lib/firebaseAdmin', () => ({
       download: async (): Promise<[Buffer]> => {
         downloads.push(path);
         return [Buffer.from('BYTES')];
+      },
+    }),
+  }),
+  getFilesEuBucket: () => ({
+    name: 'files-eu-bucket-under-test',
+    file: (path: string) => ({
+      download: async (): Promise<[Buffer]> => {
+        euDownloads.push(path);
+        return [Buffer.from('EU-BYTES')];
       },
     }),
   }),
@@ -148,6 +160,7 @@ beforeEach(() => {
   fake = new FakeFirestore();
   adminAvailable = true;
   downloads = [];
+  euDownloads = [];
   jest.clearAllMocks();
 });
 
@@ -406,5 +419,39 @@ describe('Δ — καμία διαδρομή δεν γράφει δική της
     );
 
     expect(offenders).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Ρ — ADR-895 Α2: Ο ΚΑΔΟΣ ΑΠΟΦΑΣΙΖΕΤΑΙ ΑΠΟ ΤΗΝ ΕΓΓΡΑΦΗ, ΠΟΤΕ ΣΙΩΠΗΛΑ
+// =============================================================================
+
+describe('Ρ — η θέση της εγγραφής αποφασίζει τον κάδο', () => {
+  it('Ρ1 — `storagePlacement: "eu-originals"` ⇒ τα bytes έρχονται ΑΠΟ ΤΟΝ ΚΑΔΟ ΕΕ, ποτέ τον κανονικό', async () => {
+    seedFile({ storagePlacement: 'eu-originals' });
+
+    const result = await load();
+
+    expect(result.outcome).toBe('bytes');
+    expect(euDownloads).toHaveLength(1);
+    expect(downloads).toEqual([]);
+  });
+
+  it('Ρ2 — απόν `storagePlacement` ⇒ legacy ⇒ ο κανονικός κάδος, ποτέ ο κάδος ΕΕ (Φ0: καμία αλλαγή συμπεριφοράς)', async () => {
+    seedFile();
+
+    const result = await load();
+
+    expect(result.outcome).toBe('bytes');
+    expect(downloads).toHaveLength(1);
+    expect(euDownloads).toEqual([]);
+  });
+
+  it('🔴 Ρ3 — ΑΓΝΩΣΤΗ θέση ⇒ πετά (fail-closed), ΠΟΤΕ σιωπηλός κανονικός κάδος', async () => {
+    seedFile({ storagePlacement: 'some-future-placement' });
+
+    await expect(load()).rejects.toThrow();
+    expect(downloads).toEqual([]);
+    expect(euDownloads).toEqual([]);
   });
 });

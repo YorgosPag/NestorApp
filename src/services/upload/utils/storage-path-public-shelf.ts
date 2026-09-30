@@ -59,6 +59,7 @@
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { AnyPublicShelfKind } from './public-shelf-kinds';
 import type {
   ModelShelfEncoding,
@@ -226,6 +227,12 @@ export interface PublicShelfSource<M = ListingMaterial> {
    * Και οι παραγωγοί που **δεν** κόβονται ποτέ (σήματα γραφείων) δεν έχουν τι να απαντήσουν.
    */
   readonly focalPoint?: PhotoFocalPoint | null;
+  /**
+   * **ADR-895 Α1** — σε ποιον κάδο ζει το πρωτότυπο *(`FileRecord.storagePlacement`)*, όταν η
+   * πηγή είναι `FileRecord` και ο παραγωγός το ξέρει. Απόν ⇒ κανονικός κάδος
+   * (`fileRecordBucket` το διαβάζει ως `legacy-default`) — ίδια συμπεριφορά με σήμερα.
+   */
+  readonly storagePlacement?: FileStoragePlacement;
 }
 
 /** Τα τρία μέρη ενός κλειδιού ραφιού. */

@@ -239,12 +239,15 @@ export function spatialTourFromDocument(raw: unknown, id: string): SpatialTour |
   if (raw.spaceAreaDisplay !== undefined && !isTourSpaceAreaDisplay(raw.spaceAreaDisplay)) return null;
   // Θέση μέσων (Φ2ζ ζ5): λείπει ⇒ legacy (το λύνει το tour-media-store)· άγνωστη ⇒ δεν διαβάζεται (ποτέ «μαντεύω κάδο»).
   if (raw.mediaPlacement !== undefined && !isTourMediaPlacement(raw.mediaPlacement)) return null;
+  const mediaPlacementChangedAt = raw.mediaPlacementChangedAt === undefined ? undefined : normalizeToISO(raw.mediaPlacementChangedAt);
+  if (mediaPlacementChangedAt === null) return null;
   return {
     id, custody, subject, levels, nodes,
     visibility: raw.visibility,
     lifecycle: raw.lifecycle,
     ...(raw.spaceAreaDisplay === undefined ? {} : { spaceAreaDisplay: raw.spaceAreaDisplay }),
     ...(raw.mediaPlacement === undefined ? {} : { mediaPlacement: raw.mediaPlacement }),
+    ...(mediaPlacementChangedAt === undefined ? {} : { mediaPlacementChangedAt }),
     revision: raw.revision as number,
     createdAt, createdBy, updatedAt, updatedBy,
   };

@@ -2,7 +2,7 @@ import 'server-only';
 
 /**
  * @fileoverview **ΣΕ ΠΟΙΟΝ ΚΑΔΟ ΖΟΥΝ ΤΑ ΜΕΣΑ ΜΙΑΣ ΠΕΡΙΗΓΗΣΗΣ** — ο ΕΝΑΣ επιλογέας (ADR-884 Φ2ζ ζ5 · §12 Δ11.6).
- * @related `config/gcs-buckets` (ονόματα) · `lib/firebaseAdmin` (accessors) · `tour-media-provision.ts` (η γέννηση του κάδου)
+ * @related `config/gcs-buckets` (ονόματα) · `lib/firebaseAdmin` (accessors) · `server/storage/private-bucket-registry` (η δήλωση και η γέννηση του κάδου)
  * @module server/spatial-tour/tour-media-store
  *
  * 🔑 **Ρητή θέση, ποτέ σιωπηλό fallback**: ο ψήστης, η καραντίνα, τα παράγωγα κάτοψης και η διαδρομή μέσων ρωτούν **εδώ** με
@@ -10,7 +10,8 @@ import 'server-only';
  * τον άλλον» θα έκρυβε αντικείμενα που δεν ψήθηκαν ποτέ στον νέο κάδο — εδώ η απουσία είναι **404**, ορατή.
  *
  * ⛔ Κανένα αρχείο του `server/spatial-tour` δεν καλεί `getAdminBucket()` για `tour-ingest/` ή `tour-tiles/`.
- * Το **πρωτότυπο** πανόραμα (`FileRecord`) **δεν** περνά από εδώ — μένει στον κανονικό κάδο (ζ5β, χωριστό ADR).
+ * Το **πρωτότυπο** πανόραμα (`FileRecord`) **δεν** περνά από εδώ — ζει όπου λέει το `storagePlacement` του (ADR-895,
+ * επιλογέας `server/files/file-record-bucket`)· η θέση του κρίνεται στη γέννηση από την καραντίνα (`lib/files/new-file-placement`).
  */
 
 import type { Bucket } from '@google-cloud/storage';

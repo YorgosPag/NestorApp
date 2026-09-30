@@ -13,9 +13,15 @@
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-const signedDownloadUrl = jest.fn<Promise<unknown>, [{ storagePath: string; downloadFileName?: string }]>();
+/** ADR-895 Α2 — το αποδεικτικό ΔΕΝ είναι `FileRecord`, άρα ο καλών περνά αυτόν τον κάδο ρητά. */
+const NORMAL_BUCKET = { name: 'bucket-under-test' };
+
+const signedDownloadUrl = jest.fn<Promise<unknown>, [{ bucket: unknown; storagePath: string; downloadFileName?: string }]>();
 const recordOwnerPropertyEvidenceAccess = jest.fn<Promise<void>, [unknown, { uid: string }, { id: string }]>();
 
+jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminBucket: () => NORMAL_BUCKET,
+}));
 jest.mock('@/lib/storage/signed-download-url', () => ({
   signedDownloadUrl: (...args: Parameters<typeof signedDownloadUrl>) => signedDownloadUrl(...args),
 }));
@@ -25,7 +31,7 @@ jest.mock('@/services/owner-property/owner-property-audit', () => ({
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { COLLECTIONS } = require('@/config/firestore-collections') as typeof import('@/config/firestore-collections');
-const { FakeFirestore } = require('@/services/places/__tests__/fake-firestore') as typeof import('@/services/places/__tests__/fake-firestore');
+const { FakeFirestore } = require('@/test-utils/fake-firestore/fake-firestore') as typeof import('@/test-utils/fake-firestore/fake-firestore');
 const fixtures = require('@/lib/owner-property/__tests__/owner-property-fixtures') as typeof import('@/lib/owner-property/__tests__/owner-property-fixtures');
 const access = require('../mandate-evidence-access') as typeof import('../mandate-evidence-access');
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -68,7 +74,7 @@ describe('🏆 Α33 — το αποδεικτικό ανήκει στη ΣΧΕΣ
     const outcome = await access.openMandateEvidence(seeded([expired]), { ownerPropertyId: 'ownp_a', who: { kind: 'owner-account', actor: OWNER }, evidenceId: 'mevd_1' });
 
     expect(outcome).toEqual({ kind: 'signed', url: 'https://signed.example/x' });
-    expect(signedDownloadUrl).toHaveBeenCalledWith({ storagePath: 'mandate-evidence/ownp_a/mevd_1', downloadFileName: 'mevd_1.pdf' });
+    expect(signedDownloadUrl).toHaveBeenCalledWith({ bucket: NORMAL_BUCKET, storagePath: 'mandate-evidence/ownp_a/mevd_1', downloadFileName: 'mevd_1.pdf' });
   });
 
   it('🔴 ο σύνδεσμος βλέπει ΜΟΝΟ την εντολή της πρόσκλησής του', async () => {

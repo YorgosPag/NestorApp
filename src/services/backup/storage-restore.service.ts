@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * STORAGE RESTORE SERVICE — ADR-313
+ * STORAGE RESTORE SERVICE — ADR-313 (+ ADR-895 Α6)
  * =============================================================================
  *
  * Restores Firebase Storage files from backup GCS bucket.
@@ -12,17 +12,28 @@
  * - Concurrency-limited parallel processing
  * - Skip existing files with matching SHA-256 (idempotent)
  *
+ * 🌍 **ADR-895 backup layout — decided here, ONE rule for old and new manifests**: the `backupFile`
+ * recorded in the manifest is the AUTHORITY for where bytes live inside the backup bucket. We never
+ * reconstruct that path. Backups written after Φ0 store it as `storage/{placement}/{storagePath}`
+ * (StorageBackupService); backups written before ADR-895 stored `storage/{storagePath}` with no
+ * placement segment. Both are read identically here — `gcsService.createReadStream(\`${backupId}/${entry.backupFile}\`)`.
+ * The only thing this file decides is a SEPARATE question — the RESTORE TARGET bucket — from
+ * `entry.placement`: absent ⇒ `legacy-default` (`fileStoragePlacementOf`, ADR-895 Α1), unknown value
+ * ⇒ this entry fails (caught per-entry by the batch loop), never guessed.
+ *
  * @module services/backup/storage-restore.service
  * @see adrs/ADR-313-enterprise-backup-restore.md
+ * @see adrs/ADR-895-file-data-residency.md §5 Α6
  */
 
-import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sha256PassThrough } from '@/lib/storage/sha256-pass-through';
 import { pipeline } from 'stream/promises';
 
-import type { Bucket } from '@google-cloud/storage';
+import { fileStoragePlacementOf } from '@/lib/files/file-storage-placement';
+import { fileStorageBucket } from '@/server/files/file-record-bucket';
+
 import type { BackupGcsService } from './backup-gcs.service';
 import type { StorageManifestEntry } from './backup-manifest.types';
 
@@ -57,11 +68,9 @@ export interface StorageRestoreResult {
 // ---------------------------------------------------------------------------
 
 export class StorageRestoreService {
-  private targetBucket: Bucket;
   private concurrency: number;
 
   constructor(concurrency = DEFAULT_CONCURRENCY) {
-    this.targetBucket = getAdminStorage().bucket();
     this.concurrency = concurrency;
   }
 
@@ -152,7 +161,10 @@ export class StorageRestoreService {
     entry: StorageManifestEntry,
     gcsService: BackupGcsService,
   ): Promise<{ status: 'restored' | 'skipped' | 'failed'; bytes: number }> {
-    const targetFile = this.targetBucket.file(entry.storagePath);
+    // 🌍 ADR-895 Α1/Α3: ΠΟΙΟΣ κάδος γράφεται — απόν ⇒ legacy, άγνωστο ⇒ πέτα (ο καλών το πιάνει ως 'failed').
+    const placement = fileStoragePlacementOf({ storagePlacement: entry.placement });
+    const targetBucket = fileStorageBucket(placement);
+    const targetFile = targetBucket.file(entry.storagePath);
 
     // Check if file exists with matching hash
     const [exists] = await targetFile.exists();

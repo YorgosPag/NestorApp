@@ -44,6 +44,8 @@ import type {
   PersonalPendingFileRecordInput,
   BuildFinalizeUpdateInput,
   FinalizeUpdateData,
+  BuildPlacementTransitionInput,
+  PlacementTransitionUpdateData,
 } from './file-record-core-types';
 
 // Τα συμβόλαια ζουν στο `file-record-core-types` (N.7.1)· επανεξάγονται ώστε κανένας
@@ -62,6 +64,8 @@ export type {
   BuildPendingFileRecordResult,
   BuildFinalizeUpdateInput,
   FinalizeUpdateData,
+  BuildPlacementTransitionInput,
+  PlacementTransitionUpdateData,
 } from './file-record-core-types';
 
 // ============================================================================
@@ -230,6 +234,11 @@ export function buildPendingFileRecordData(
   if (input.userDrawingUnits) {
     recordBase.userDrawingUnits = input.userDrawingUnits;
   }
+  // ADR-895 Φ3 — γράφεται ΜΟΝΟ όταν ο συγγραφέας ρώτησε την πολιτική (`placementForNewFile`)·
+  // η απουσία σημαίνει `legacy-default` (Α1) ⇒ κάθε άλλος καλών μένει αμετάβλητος byte προς byte.
+  if (input.storagePlacement !== undefined) {
+    recordBase.storagePlacement = input.storagePlacement;
+  }
 
   return {
     fileId,
@@ -271,6 +280,27 @@ export function buildFinalizeFileRecordUpdate(
   }
 
   return updateData;
+}
+
+/**
+ * **Η μετάβαση θέσης** (ADR-895 Φ4 §7.5) — ο ΜΟΝΟΣ κώδικας που αλλάζει `storagePlacement` μετά τη γέννηση.
+ * Ο προσαρμογέας τον γράφει **μέσα σε CAS** (συναλλαγή που ξαναδιάβασε θέση + `hash` + κατάσταση).
+ * 🔑 Θέση, URL και ιστορικό ταξιδεύουν **μαζί**: ο proxy διαβάζει μόνο το `?placement=` του URL, άρα θέση χωρίς
+ * νέο URL = 404 μετά τον καθαρισμό· και χωρίς `placementTransition` η πηγή δεν θα καθαριζόταν ποτέ.
+ */
+export function buildPlacementTransitionUpdate(input: BuildPlacementTransitionInput): PlacementTransitionUpdateData {
+  // Σφάλμα προγραμματιστή (αμετάβλητο), όχι μήνυμα προς άνθρωπο — γι' αυτό χωρίς i18n.
+  if (input.from === input.to) throw new Error(`placement transition without change (${input.from})`);
+  return {
+    storagePlacement: input.to,
+    downloadUrl: input.downloadUrl,
+    placementTransition: { from: input.from, sourcePath: input.storagePath, changedAt: input.changedAt },
+  };
+}
+
+/** Η πηγή σβήστηκε — κρατά το ιστορικό, σημειώνει μόνο τη στιγμή (τελεία μονοπατιού: κανένα άλλο πεδίο δεν αγγίζεται). */
+export function buildSourceCleanedUpdate(cleanedAt: string): { 'placementTransition.sourceCleanedAt': string } {
+  return { 'placementTransition.sourceCleanedAt': cleanedAt };
 }
 
 // Ingestion functions extracted to file-record-ingestion.ts (SRP — ADR N.7.1)

@@ -26,6 +26,9 @@ import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions'
 import type { CdeReadReach } from '@/config/iso19650-constants';
 import type { FileDisplayNameResult } from '@/services/upload/utils/file-display-name';
 import type { FileCustody } from '@/lib/files/file-custody';
+// ADR-895 Α1 — η θέση των bytes, γραμμένη στη γέννηση. Type-only.
+import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
+import type { FilePlacementTransition } from '@/types/file-record';
 
 // ============================================================================
 // TYPES - INPUT/OUTPUT CONTRACTS
@@ -124,6 +127,10 @@ export interface PendingFileRecordCoordinates {
 
   // ADR-716 Φ5 — ρητή επιλογή μονάδων DXF (μόνο όταν ο χρήστης την έκανε)
   userDrawingUnits?: SceneUnits;
+
+  // ADR-895 Φ3 — η θέση των bytes, όπως την έκρινε το `placementForNewFile` ΠΡΙΝ τη γέννηση·
+  // απουσία = `legacy-default` (Α1), ποτέ «άγνωστο».
+  storagePlacement?: FileStoragePlacement;
 
   // Language for display name
   language?: 'el' | 'en';
@@ -243,6 +250,9 @@ export interface FileRecordCommonBase {
 
   // ADR-716 Φ5 — ρητή ετυμηγορία μονάδων· ιδιότητα του ΣΥΝΔΕΣΜΟΥ, όχι της στιγμής
   userDrawingUnits?: SceneUnits;
+
+  // ADR-895 Α1 — ο κάδος των bytes· αλλάζει ΜΟΝΟ με CAS της μετάβασης
+  storagePlacement?: FileStoragePlacement;
 }
 
 /**
@@ -307,4 +317,24 @@ export interface FinalizeUpdateData {
   downloadUrl: string;
   hash?: string;
   thumbnailUrl?: string;
+}
+
+/**
+ * ADR-895 Φ4 — είσοδος της **μετάβασης θέσης**. Το `downloadUrl` το υπολογίζει ο προσαρμογέας
+ * (`buildProxyUrl(storagePath, to)`) — ο πυρήνας μένει καθαρός, όπως στο finalize.
+ */
+export interface BuildPlacementTransitionInput {
+  storagePath: string;
+  from: FileStoragePlacement;
+  to: FileStoragePlacement;
+  downloadUrl: string;
+  /** ISO — η στιγμή του CAS. */
+  changedAt: string;
+}
+
+/** ADR-895 Φ4 — θέση + URL + ιστορικό, **μαζί**: ποτέ θέση χωρίς το URL που τη δείχνει (ο proxy διαβάζει μόνο το URL). */
+export interface PlacementTransitionUpdateData {
+  storagePlacement: FileStoragePlacement;
+  downloadUrl: string;
+  placementTransition: FilePlacementTransition;
 }

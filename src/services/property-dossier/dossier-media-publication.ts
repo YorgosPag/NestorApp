@@ -143,6 +143,8 @@ export function publishedDossierMediaSources(
 ): readonly PublicShelfSource[] {
   return publishedDossierFiles(dossier, files, declared).map(({ file, material }) => ({
     privateStoragePath: file.storagePath,
+    // ADR-895 — η θέση ταξιδεύει ΜΑΖΙ με το μονοπάτι.
+    storagePlacement: file.storagePlacement,
     material,
     // 🎯 ADR-880 — δεμένο στο **αρχείο**, ποτέ στη θέση.
     focalPoint: focalPoints.get(file.id) ?? null,

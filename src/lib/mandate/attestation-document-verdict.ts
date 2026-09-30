@@ -26,6 +26,8 @@ interface AttestationFileFacts {
   readonly status?: unknown;
   readonly isDeleted?: unknown;
   readonly storagePath?: unknown;
+  /** ADR-895 — σε ποιον κάδο ζουν τα bytes· **δεν** κρίνεται εδώ, τον επιλύει ο `fileRecordBucket` (άγνωστη ⇒ πετά). */
+  readonly storagePlacement?: unknown;
   readonly contentType?: unknown;
   readonly displayName?: unknown;
 }
@@ -34,6 +36,8 @@ export type AttestationDocumentVerdict =
   | {
       readonly kind: 'attached';
       readonly storagePath: string;
+      /** ADR-895 — η θέση ταξιδεύει ΜΑΖΙ με το μονοπάτι (απούσα ⇒ legacy)· το πάγωμα διαβάζει την πηγή εκεί. */
+      readonly storagePlacement?: unknown;
       /** Για το πάγωμα (ADR-864 §19): τύπος και όνομα **του `FileRecord`**, ποτέ του σύρματος. */
       readonly contentType: string;
       readonly fileName: string;
@@ -61,6 +65,7 @@ export function judgeAttestationDocument(
   return {
     kind: 'attached',
     storagePath: facts.storagePath,
+    ...(facts.storagePlacement !== undefined ? { storagePlacement: facts.storagePlacement } : {}),
     contentType: typeof facts.contentType === 'string' && facts.contentType !== '' ? facts.contentType : 'application/octet-stream',
     fileName: typeof facts.displayName === 'string' && facts.displayName.trim() !== '' ? facts.displayName.trim() : fileNameOf(facts.storagePath),
   };

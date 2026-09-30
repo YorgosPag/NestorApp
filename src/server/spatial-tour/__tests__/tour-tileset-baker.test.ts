@@ -22,6 +22,8 @@ type StoredObject = { bytes: Buffer; contentType: string | null };
 const objects = new Map<string, StoredObject>();
 /** Ο ιδιωτικός κάδος μέσων στην ΕΕ (ADR-884 Φ2ζ ζ5). */
 const euObjects = new Map<string, StoredObject>();
+/** ADR-895 Α2 — ο κάδος πρωτοτύπων `FileRecord` στην ΕΕ. ΞΕΧΩΡΙΣΤΟΣ από τον `euObjects` των πλακιδίων: δύο ερωτήματα, δύο κάδοι. */
+const filesEuObjects = new Map<string, StoredObject>();
 let failSaves = false;
 /** Άγκιστρο στην πρώτη αποθήκευση — προσομοιώνει αλλαγή θολώματος ΕΝΩ ψήνεται (Φ2ζ). */
 let onFirstSave: (() => Promise<void>) | null = null;
@@ -30,6 +32,7 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' },
   getAdminBucket: () => fakeBucket(objects),
   getTourMediaBucket: () => fakeBucket(euObjects),
+  getFilesEuBucket: () => fakeBucket(filesEuObjects),
 }));
 
 function fakeBucket(store: Map<string, StoredObject>) {
@@ -62,7 +65,7 @@ import { previewSegments, tileSegments } from '@/lib/spatial-tour/tileset/tour-t
 import { tourMediaObjectPath } from '@/lib/spatial-tour/tour-media-path';
 import { TOUR_FACE_DETECTOR_VERSION } from '@/constants/spatial-tour-vocabulary';
 import { TOUR_CUBE_FACES } from '@/lib/spatial-tour/viewer/tour-cube-faces';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import type { TourRedaction } from '@/types/spatial-tour';
 
@@ -80,7 +83,7 @@ const TOURS = COLLECTIONS.SPATIAL_TOURS;
 const CAPTURES = `${TOURS}/${TOUR_ID}/${SUBCOLLECTIONS.TOUR_CAPTURES}`;
 const ORIGINAL_PATH = 'companies/comp_agency/files/file_1.jpg';
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 let panorama: Buffer;
 let hash: string;
@@ -106,10 +109,11 @@ function captureDoc(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   objects.clear();
   euObjects.clear();
+  filesEuObjects.clear();
   failSaves = false;
   onFirstSave = null;
   kit.seedCollection(TOURS, {
@@ -393,6 +397,28 @@ describe('Μ — ο κάδος μέσων (ADR-884 Φ2ζ ζ5)', () => {
     seedCapture();
     expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'deferred' });
     expect([...tilesOf(euObjects), ...tilesOf(objects)]).toEqual([]);
+    expect((await readCapture())?.tileset.state).toBe('pending');
+  });
+});
+
+describe('Ρ — ADR-895 Α2: ο κάδος του ΠΡΩΤΟΤΥΠΟΥ αποφασίζεται από το FileRecord', () => {
+  const setFilePlacement = (storagePlacement: unknown) =>
+    kit.seedCollection(COLLECTIONS.FILES, { file_1: { companyId: AGENCY, storagePath: ORIGINAL_PATH, storagePlacement } });
+
+  it('🔑 Ρ1 — `storagePlacement: "eu-originals"` ⇒ το πρωτότυπο διαβάζεται ΑΠΟ ΤΟΝ ΚΑΔΟ ΕΕ, ποτέ τον κανονικό', async () => {
+    setFilePlacement('eu-originals');
+    objects.delete(ORIGINAL_PATH);
+    filesEuObjects.set(ORIGINAL_PATH, { bytes: panorama, contentType: 'image/jpeg' });
+    seedCapture();
+
+    expect(await bakeTourTileset(db, captureRef())).toEqual({ kind: 'baked', faceSize: 512, objects: 7, transition: 'written' });
+  });
+
+  it('🔴 Ρ2 — ΑΓΝΩΣΤΗ `storagePlacement` στο FileRecord ⇒ deferred, ΚΑΝΕΝΑ πλακίδιο (ποτέ σιωπηλά ο κανονικός κάδος)', async () => {
+    setFilePlacement('some-future-placement');
+    seedCapture();
+
+    expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'deferred' });
     expect((await readCapture())?.tileset.state).toBe('pending');
   });
 });

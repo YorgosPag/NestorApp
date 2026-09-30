@@ -22,14 +22,21 @@ import { join } from 'path';
 
 const update = jest.fn(async () => undefined);
 const set = jest.fn(async () => undefined);
+/** Ο κάδος `legacy-default` — ό,τι έβλεπαν όλες οι άγκυρες πριν το ADR-895. */
 let deletion: () => Promise<void> = async () => undefined;
+/** Ο κάδος `eu-originals` — ξεχωριστός δράστης, ώστε οι άγκυρες Α895 να αποδείξουν ΠΟΙΟΣ κάδος χτυπήθηκε. */
+let euDeletion: () => Promise<void> = async () => undefined;
+/** Η εγγραφή που «διαβάζει» το `purgeFileRecord` — μεταβλητή ώστε οι άγκυρες Α895 να δηλώνουν `storagePlacement`. */
+let recordData: Record<string, unknown> = { companyId: 'c' };
 
+// ADR-895: `deleteStorageObjectForPurge` ρωτά πλέον το `fileRecordBucket` — legacy ⇒ `getAdminBucket()`, `eu-originals` ⇒ `getFilesEuBucket()`.
 jest.mock('@/lib/firebaseAdmin', () => ({
-  getAdminStorage: () => ({ bucket: () => ({ file: () => ({ delete: () => deletion() }) }) }),
+  getAdminBucket: () => ({ file: () => ({ delete: () => deletion() }) }),
+  getFilesEuBucket: () => ({ file: () => ({ delete: () => euDeletion() }) }),
   // `get`: ADR-866 §2.6.11 — η εκκαθάριση διαβάζει ΠΡΩΤΑ την εγγραφή (κάτοχος βιβλίου · ύπαρξη πριν τα bytes).
   getAdminFirestore: () => ({
     collection: () => ({
-      doc: () => ({ update, set, get: async () => ({ exists: true, data: () => ({ companyId: 'c' }) }) }),
+      doc: () => ({ update, set, get: async () => ({ exists: true, data: () => recordData }) }),
     }),
   }),
 }));
@@ -125,7 +132,12 @@ describe('🏆 Α49 — κώδικας και κανόνας φυλάνε τα �
 });
 
 describe('🏆 Α48 — οριστική διαγραφή: ποτέ πάνω σε δεσμευμένα bytes', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    deletion = async () => undefined;
+    euDeletion = async () => undefined;
+    recordData = { companyId: 'c' };
+  });
 
   it('🔴 η πλατφόρμα αρνείται (hold) ⇒ ΚΑΜΙΑ εγγραφή `purged`, ΚΑΝΕΝΑ ίχνος διαγραφής', async () => {
     deletion = async () => { throw Object.assign(new Error('temporary hold'), { code: 403 }); };
@@ -160,5 +172,40 @@ describe('🏆 Α48 — οριστική διαγραφή: ποτέ πάνω σ�
     'src/app/api/files/gdpr-delete/route.ts',
   ])('🔴 %s — κανένα «non-blocking» σβήσιμο bytes δίπλα στον ΕΝΑ γραφέα', (file) => {
     expect(source(file)).not.toMatch(/\.file\([^)]*\)\.delete\(/);
+  });
+});
+
+describe('🏆 ADR-895 — «τίμιο 404»: ο κάδος έρχεται ΑΠΟ την εγγραφή, ποτέ μαντεψιά', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    deletion = async () => undefined;
+    euDeletion = async () => undefined;
+    recordData = { companyId: 'c' };
+  });
+
+  it('🔴 εγγραφή `eu-originals` ⇒ διαγράφεται στον κάδο ΕΕ, ΠΟΤΕ στον κανονικό — και το 404 εκεί δεν σημαίνει τίποτα', async () => {
+    recordData = { companyId: 'c', storagePlacement: 'eu-originals' };
+    // Ο κανονικός κάδος θα απαντούσε «απόν» (404) — ΑΝ κάποιος τον ρωτούσε. Δεν πρέπει να τον ρωτήσει κανείς.
+    deletion = async () => { throw Object.assign(new Error('not found — but wrong bucket'), { code: 404 }); };
+    let euCalled = false;
+    euDeletion = async () => { euCalled = true; };
+
+    const result = await purgeFileRecord({ fileId: 'f1', custody: 'company', storagePath: 'p', performedBy: 'system:purge', purgeReason: 'cron_trash' });
+
+    expect(euCalled).toBe(true);
+    expect(result).toEqual({ success: true, storageDeleted: true });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ lifecycleState: 'purged' }));
+  });
+
+  it('🔴 άγνωστη `storagePlacement` ⇒ `refused` — ΠΟΤΕ ο κανονικός κάδος «για ασφάλεια», η εγγραφή ΔΕΝ γίνεται purged', async () => {
+    recordData = { companyId: 'c', storagePlacement: 'mars-originals' };
+    let legacyCalled = false;
+    deletion = async () => { legacyCalled = true; };
+
+    const result = await purgeFileRecord({ fileId: 'f1', custody: 'company', storagePath: 'p', performedBy: 'system:purge', purgeReason: 'cron_trash' });
+
+    expect(legacyCalled).toBe(false);
+    expect(result).toEqual({ success: false, storageDeleted: false, error: 'storage-deletion-refused' });
+    expect(update).not.toHaveBeenCalled();
   });
 });

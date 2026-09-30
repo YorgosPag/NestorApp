@@ -29,9 +29,9 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
   getAdminFirestore,
-  getAdminStorage,
   type Firestore,
 } from '@/lib/firebaseAdmin';
+import { deleteStorageObjects, sumTallies, sweepFloorCategoryPath } from './floor-wipe-storage';
 import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import {
   buildCategoryStoragePrefix,
@@ -158,88 +158,6 @@ async function clearDxfLevelsInChunks(
   return cleared;
 }
 
-/**
- * ADR-709: sweep ONE prefix. Callers pass both the canonical prefix and — when
- * the floor's project is known — the legacy project-scoped one, so objects
- * written before ADR-709 are still reachable.
- */
-async function sweepFloorCategoryPath(
-  prefix: string,
-): Promise<{ deleted: number; failed: number }> {
-  const bucket = getAdminStorage().bucket();
-  let deleted = 0;
-  let failed = 0;
-  try {
-    const [matches] = await bucket.getFiles({ prefix });
-    if (matches.length === 0) return { deleted, failed };
-    await Promise.all(
-      matches.map(async (f) => {
-        try {
-          await f.delete({ ignoreNotFound: true });
-          deleted += 1;
-        } catch (innerErr) {
-          failed += 1;
-          logger.warn('Floor-category sweep delete failed (non-blocking)', {
-            path: f.name,
-            error: getErrorMessage(innerErr),
-          });
-        }
-      }),
-    );
-  } catch (err) {
-    failed += 1;
-    logger.warn('Floor-category sweep prefix-list failed (non-blocking)', {
-      prefix,
-      error: getErrorMessage(err),
-    });
-  }
-  return { deleted, failed };
-}
-
-async function deleteStorageObjects(
-  storagePaths: string[],
-): Promise<{ deleted: number; failed: number }> {
-  if (storagePaths.length === 0) return { deleted: 0, failed: 0 };
-  const bucket = getAdminStorage().bucket();
-  let deleted = 0;
-  let failed = 0;
-  // Prefix-list per canonical storagePath to also catch FloorplanProcessService
-  // derivations: `{storagePath}.processed.json`, `{storagePath}.thumbnail.png`,
-  // and any future derivation appended to the canonical path.
-  await Promise.all(
-    storagePaths.map(async (path) => {
-      try {
-        const [matches] = await bucket.getFiles({ prefix: path });
-        if (matches.length === 0) {
-          await bucket.file(path).delete({ ignoreNotFound: true });
-          return;
-        }
-        await Promise.all(
-          matches.map(async (f) => {
-            try {
-              await f.delete({ ignoreNotFound: true });
-              deleted += 1;
-            } catch (innerErr) {
-              failed += 1;
-              logger.warn('Storage delete failed (derivation, non-blocking)', {
-                path: f.name,
-                error: getErrorMessage(innerErr),
-              });
-            }
-          }),
-        );
-      } catch (err) {
-        failed += 1;
-        logger.warn('Storage prefix-list failed (non-blocking)', {
-          path,
-          error: getErrorMessage(err),
-        });
-      }
-    }),
-  );
-  return { deleted, failed };
-}
-
 // ============================================================================
 // SERVICE
 // ============================================================================
@@ -345,10 +263,7 @@ async function executeWipe(
       deleteRefsInChunks(db, fileRows.map((f) => f.ref)),
     ]);
 
-  const storagePaths = fileRows
-    .map((f) => f.storagePath)
-    .filter((p): p is string => typeof p === 'string' && p.length > 0);
-  const storage = await deleteStorageObjects(storagePaths);
+  const storage = await deleteStorageObjects(fileRows);
 
   // Extra sweep: catch orphan binaries left under the floor-category prefix
   // (derivations whose parent FileRecord was already deleted by an earlier wipe
@@ -371,10 +286,7 @@ async function executeWipe(
       : []),
   ];
   const sweepResults = await Promise.all(sweepPrefixes.map(sweepFloorCategoryPath));
-  const sweep = sweepResults.reduce(
-    (acc, r) => ({ deleted: acc.deleted + r.deleted, failed: acc.failed + r.failed }),
-    { deleted: 0, failed: 0 },
-  );
+  const sweep = sumTallies(sweepResults);
 
   return {
     floorplanOverlaysDeleted: cascade.floorplanOverlaysDeleted,

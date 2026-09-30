@@ -59,6 +59,20 @@ export class MessagingHandler implements ToolHandler {
   // Shared: Fuzzy Greek↔Latin contact search
   // --------------------------------------------------------------------------
 
+  /** Οι επαφές της εταιρείας που ταιριάζουν στο όνομα — η ΜΙΑ αναζήτηση για email και για μηνύματα καναλιών. */
+  private async findContactsByName(
+    companyId: string,
+    contactName: string,
+  ): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+    const allSearchTerms = this.buildSearchTerms(contactName);
+    const contactsSnap = await getAdminFirestore()
+      .collection(COLLECTIONS.CONTACTS)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
+      .limit(50)
+      .get();
+    return contactsSnap.docs.filter(doc => this.matchesContact(doc, allSearchTerms));
+  }
+
   private buildSearchTerms(contactName: string): string[] {
     const searchWords = contactName.toLowerCase().split(/\s+/).filter(Boolean);
     const latinWords = searchWords.map(w => greekToLatin(w)).filter(Boolean);
@@ -101,16 +115,7 @@ export class MessagingHandler implements ToolHandler {
       return { success: false, error: 'contactName is required' };
     }
 
-    const allSearchTerms = this.buildSearchTerms(contactName);
-
-    const db = getAdminFirestore();
-    const contactsSnap = await db
-      .collection(COLLECTIONS.CONTACTS)
-      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-      .limit(50)
-      .get();
-
-    const matchingContacts = contactsSnap.docs.filter(doc => this.matchesContact(doc, allSearchTerms));
+    const matchingContacts = await this.findContactsByName(ctx.companyId, contactName);
 
     if (matchingContacts.length === 0) {
       return { success: false, error: `Contact "${contactName}" not found` };
@@ -131,16 +136,23 @@ export class MessagingHandler implements ToolHandler {
       };
     }
 
-    const { wrapInBrandedTemplate, escapeHtml } = await import(
-      '@/services/email-templates'
-    );
+    const [
+      { wrapInBrandedTemplate, escapeHtml },
+      { buildGreeting, buildClosing },
+      { readCompanyPublicName },
+      { resolveSenderIdentity },
+    ] = await Promise.all([
+      import('@/services/email-templates'),
+      import('@/services/email-templates/confirmation-email-shared'),
+      import('@/services/company/company-public-name.reader'),
+      import('@/services/company/sender-identity'),
+    ]);
 
     const recipientName = String(contactData.displayName ?? contactData.firstName ?? contactName);
-    const contentHtml = `
-      <p style="margin: 0 0 16px;">Αγαπητέ/ή ${escapeHtml(recipientName)},</p>
-      <p style="margin: 0 0 16px;">${escapeHtml(body)}</p>
-      <p style="margin: 24px 0 0; color: #6B7280;">Με εκτίμηση,<br/>Pagonis Energo</p>
-    `;
+    // N.11 + ADR-857: χαιρετισμός/υπογραφή από τα ΚΟΙΝΑ δομικά στοιχεία των email (όχι τοπικό ωμό κείμενο), και
+    // υπογράφει η ΕΤΑΙΡΕΙΑ-αποστολέας (ήταν καρφωμένο «Pagonis Energo» σε κάθε μισθωτή)· χωρίς επωνυμία ⇒ ο αποστολέας.
+    const signer = (await readCompanyPublicName(getAdminFirestore(), ctx.companyId)) ?? resolveSenderIdentity().name;
+    const contentHtml = `${buildGreeting(recipientName, escapeHtml(body))}${buildClosing('', signer)}`;
 
     const htmlBody = wrapInBrandedTemplate({ contentHtml });
 
@@ -149,8 +161,10 @@ export class MessagingHandler implements ToolHandler {
     const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
 
     if (attachmentPaths.length > 0) {
-      const { getStorage } = await import('firebase-admin/storage');
-      const bucket = getStorage().bucket();
+      // ADR-895: ρητά ο κανονικός κάδος (όχι η έμμεση προεπιλογή του SDK). ⏳ Φ5: το εργαλείο δέχεται μονοπάτια,
+      // όχι fileIds ⇒ δεν ξέρει τη θέση bytes· πριν γεννηθούν πρωτότυπα στην ΕΕ, να δέχεται fileId + fileRecordBucket.
+      const { getAdminBucket } = await import('@/lib/firebaseAdmin');
+      const bucket = getAdminBucket();
 
       for (const storagePath of attachmentPaths.slice(0, 5)) {
         try {
@@ -251,16 +265,7 @@ export class MessagingHandler implements ToolHandler {
       return { success: false, error: 'contactName and text are required' };
     }
 
-    const allSearchTerms = this.buildSearchTerms(contactName);
-
-    const db = getAdminFirestore();
-    const contactsSnap = await db
-      .collection(COLLECTIONS.CONTACTS)
-      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-      .limit(50)
-      .get();
-
-    const matchingContacts = contactsSnap.docs.filter(doc => this.matchesContact(doc, allSearchTerms));
+    const matchingContacts = await this.findContactsByName(ctx.companyId, contactName);
 
     if (matchingContacts.length === 0) {
       return { success: false, error: `Contact "${contactName}" not found` };
@@ -271,7 +276,7 @@ export class MessagingHandler implements ToolHandler {
     const contactDisplayName = String(contactData.displayName ?? contactData.firstName ?? contactName);
 
     const platform = channel === 'messenger' ? 'messenger' : 'instagram';
-    const identitiesSnap = await db
+    const identitiesSnap = await getAdminFirestore()
       .collection(COLLECTIONS.EXTERNAL_IDENTITIES)
       .where('contactId', '==', contactId)
       .where('platform', '==', platform)

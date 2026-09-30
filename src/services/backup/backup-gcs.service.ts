@@ -11,10 +11,18 @@
  *     ├── manifest.json
  *     ├── collections/{name}.ndjson.gz
  *     ├── subcollections/{parent}__{name}.ndjson.gz
- *     └── storage/{storagePath}  (Phase 3 — raw binary files)
+ *     └── storage/…  (Phase 3 — raw binary files; the exact path is opaque here — see below)
+ *
+ * 🌍 **ADR-895 Α6**: the `storage/…` sub-path is written by `StorageBackupService` and is opaque to
+ * this service — it just writes/reads whatever `relativePath` / `gcsPath` it is given. Backups
+ * written after Φ0 use `storage/{placement}/{storagePath}` (one segment per bucket in the catalogue,
+ * so two catalogue buckets never collide); manifests from before ADR-895 used `storage/{storagePath}`
+ * with no placement segment. `StorageManifestEntry.backupFile` is the recorded AUTHORITY for either
+ * shape — `StorageRestoreService` never reconstructs it.
  *
  * @module services/backup/backup-gcs.service
  * @see adrs/ADR-313-enterprise-backup-restore.md §8
+ * @see adrs/ADR-895-file-data-residency.md §5 Α6
  */
 
 import { getAdminStorage } from '@/lib/firebaseAdmin';

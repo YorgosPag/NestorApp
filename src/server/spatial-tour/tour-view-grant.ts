@@ -40,12 +40,6 @@ import { effectiveMediaPlacement } from '@/server/spatial-tour/tour-media-store'
 import type { TourSubject } from '@/types/spatial-tour';
 
 const TOUR_VIEW_GRANT: AccessGrantKind = { purpose: 'tour-view', subjectFieldCount: 4 };
-/**
- * Το κουπόνι **πριν** το ζ5 (χωρίς θέση μέσων) — μόνο ανάγνωση, ώστε ανοιχτοί θεατές να μη χάσουν τα πλακίδια στο deploy.
- * Όλες οι περιηγήσεις ήταν τότε στον κανονικό κάδο ⇒ διαβάζεται ως `legacy-default`. 🧹 Αφαιρείται μετά από μία διάρκεια ζωής
- * κουπονιού (`ACCESS_GRANT_TTL_SECONDS`) από την ανάπτυξη του ζ5.
- */
-const TOUR_VIEW_GRANT_PRE_Z5: AccessGrantKind = { purpose: 'tour-view', subjectFieldCount: 3 };
 const COOKIE_PREFIX = 'nestor_tour_';
 
 export const TOUR_VIEW_GRANT_TTL_SECONDS = ACCESS_GRANT_TTL_SECONDS;
@@ -57,7 +51,7 @@ export interface TourViewGrant {
   readonly basisId: string;
   /**
    * Πού ζουν τα μέσα της περιήγησης (ADR-884 Φ2ζ ζ5) — **υπογεγραμμένο**, ώστε η διαδρομή μέσων να διαλέγει κάδο χωρίς να
-   * διαβάσει τη βάση ανά πλακίδιο. Απόν ⇒ `legacy-default`.
+   * διαβάσει τη βάση ανά πλακίδιο. Στην **έκδοση** απόν ⇒ `legacy-default`· στην **ανάγνωση** πάντα παρόν.
    */
   readonly mediaPlacement?: TourMediaPlacement;
 }
@@ -74,12 +68,13 @@ export function issueTourViewGrant(grant: TourViewGrant, nowMs: number = Date.no
 
 /** Καθαρή ανάγνωση: η απόδειξη αν το κουπόνι είναι έγκυρο **για αυτή την περιήγηση**, αλλιώς `null`. */
 export function readTourViewGrant(token: string, tourId: string, nowMs: number = Date.now()): TourViewGrant | null {
-  const fields = readAccessGrant(TOUR_VIEW_GRANT, token, nowMs) ?? readAccessGrant(TOUR_VIEW_GRANT_PRE_Z5, token, nowMs);
+  const fields = readAccessGrant(TOUR_VIEW_GRANT, token, nowMs);
   if (fields === null) return null;
   const [grantedTourId, basis, basisId, placement] = fields;
   if (grantedTourId !== tourId || !isTourViewBasis(basis) || basisId === '') return null;
-  if (placement !== undefined && !isTourMediaPlacement(placement)) return null;
-  return { tourId: grantedTourId, basis, basisId, mediaPlacement: effectiveMediaPlacement(placement) };
+  // Η θέση είναι ΥΠΟΧΡΕΩΤΙΚΗ: το κουπόνι 3 πεδίων (πριν το ζ5) αφαιρέθηκε μετά από μία διάρκεια ζωής του — ο browser ξαναπαίρνει κουπόνι.
+  if (!isTourMediaPlacement(placement)) return null;
+  return { tourId: grantedTourId, basis, basisId, mediaPlacement: placement };
 }
 
 /** Το κουπόνι που φέρει το αίτημα για **αυτή** την περιήγηση, επαληθευμένο. */

@@ -19,6 +19,13 @@
  *
  * ⚠️ Δεν πιάνει σφάλματα σάρωσης σκόπιμα — ο dispatcher τα στέλνει στο monitor του slug.
  *
+ * 🌍 **ADR-895 (εκτός εμβέλειας, σκόπιμα)**: το αποδεικτικό εδώ **ΔΕΝ** είναι `FileRecord` original —
+ * είναι **αντίγραφο** που το `freezeAttestationEvidence` παγώνει σε **σταθερή** ρίζα
+ * (`MANDATE_EVIDENCE_ROOT`) μέσα στον **έναν** κανονικό κάδο, με **δική του** πολιτική διατήρησης
+ * (Locked retention 5+ έτη, όχι `FILE_STORAGE_PLACEMENTS`). Δεν έχει `storagePlacement` πεδίο και δεν
+ * απαριθμείται στο `originalStorageBuckets()` (ADR-895 Α6). Ό,τι *διαβάζει* τον κάδο ΠΗΓΗΣ
+ * (`source.storagePath` στο πάγωμα) είναι ευθύνη του `attestation-evidence.ts`, όχι εδώ.
+ *
  * **Layering**: server-only.
  */
 

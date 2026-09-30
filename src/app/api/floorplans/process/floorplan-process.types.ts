@@ -5,6 +5,7 @@
 
 import type { FloorplanProcessedData } from '@/types/file-record';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
+import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 
 export interface ProcessFloorplanRequest {
   fileId: string;
@@ -59,6 +60,8 @@ export interface FileRecordData {
    * request schema, καμία δεύτερη πηγή αλήθειας.
    */
   userDrawingUnits?: SceneUnits;
+  /** ADR-895 Α1 — σε ποιον κάδο ζουν τα bytes· απόν ⇒ κανονικός κάδος. */
+  storagePlacement?: FileStoragePlacement;
 }
 
 export interface FirebaseAdminError {

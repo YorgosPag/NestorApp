@@ -14,6 +14,9 @@
  * άξονας — ξένο γραφείο ή άλλο ακίνητο ⇒ η ίδια απουσία (404).
  *
  * ⚡ `SENSITIVE` ρητά (CHECK 3.78): αλλάζει **τι μπορεί να διατεθεί ποτέ**.
+ *
+ * 🌍 **ADR-895 (εκτός εμβέλειας, σκόπιμα)**: το `getAdminBucket()` εδώ είναι σωστό ΟΠΩΣ είναι — το
+ * αποδεικτικό δεν είναι `FileRecord` original (βλ. σημείωση στο `evidence-retention.service.ts`).
  */
 
 import { NextResponse, type NextRequest } from 'next/server';

@@ -131,9 +131,9 @@ describe('Θ — η θέση μέσων μέσα στο κουπόνι (ADR-884 
     expect(readTourViewGrant(token, 'stour_a', NOW)).toEqual({ ...GRANT, mediaPlacement: 'tour-eu' });
   });
 
-  it('🔴 Θ2 — κουπόνι ΠΡΙΝ το ζ5 (3 πεδία) ⇒ ισχύει ακόμη, στον κανονικό κάδο — κανένας ανοιχτός θεατής δεν χάνει πλακίδια στο deploy', () => {
+  it('🔴 Θ2 — κουπόνι ΠΡΙΝ το ζ5 (3 πεδία, χωρίς θέση) ⇒ ΤΙΠΟΤΑ: η γέφυρα του deploy αφαιρέθηκε, ποτέ «μαντεύω κάδο»', () => {
     const legacy = issueAccessGrant({ purpose: 'tour-view', subjectFieldCount: 3 }, ['stour_a', 'request', 'tacr_1'], NOW)!;
-    expect(readTourViewGrant(legacy, 'stour_a', NOW)).toEqual({ ...GRANT, mediaPlacement: 'legacy-default' });
+    expect(readTourViewGrant(legacy, 'stour_a', NOW)).toBeNull();
   });
 
   it('🔴 Θ3 — υπογεγραμμένη αλλά ΑΓΝΩΣΤΗ θέση ⇒ τίποτα (ποτέ «μαντεύω κάδο»)', () => {

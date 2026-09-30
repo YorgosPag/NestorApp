@@ -43,12 +43,6 @@ const getHandler = withStandardRateLimit(async (request: NextRequest): Promise<N
     return NextResponse.json({ success: false, error: 'fileId is required' }, { status: 400 });
   }
 
-  const storageBucket =
-    process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-  if (!storageBucket) {
-    return NextResponse.json({ success: false, error: 'Storage not configured' }, { status: 500 });
-  }
-
   try {
     // 1. Fetch file record (no auth needed)
     const file = await fetchFileRecord(fileId);
@@ -75,8 +69,8 @@ const getHandler = withStandardRateLimit(async (request: NextRequest): Promise<N
       if (refusal) return refusal;
     }
 
-    // 4. Download scene
-    const result = await downloadSceneFile(file, fileId, storageBucket);
+    // 4. Download scene — ADR-895 Α2: ο κάδος αποφασίζεται από την εγγραφή, ποτέ από env.
+    const result = await downloadSceneFile(file, fileId);
     if (!result) {
       return NextResponse.json({ success: false, error: 'Scene not found' }, { status: 404 });
     }

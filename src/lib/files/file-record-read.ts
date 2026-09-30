@@ -49,7 +49,9 @@ import { fieldToISO } from '@/lib/date-local';
 //    φρουροί έμεναν **χωρίς κανέναν καταναλωτή** — δηλαδή θα είχα γράψει νεκρό
 //    κώδικα ΚΑΙ διπλό έλεγχο, στο αρχείο που υπάρχει για να τα αποτρέπει.
 import { isCdeReadReach, isCdeState, isSuitabilityCode } from '@/services/iso19650/validators';
-import { isFileRecord, type FileRecord } from '@/types/file-record';
+import { isFileRecord, type FilePlacementTransition, type FileRecord } from '@/types/file-record';
+import { FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
+import { isFileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type {
   ContainerActRecord,
   ContainerActs,
@@ -367,5 +369,50 @@ export function containerFactsOf(record: FileRecord, state: ContainerState): Con
     companyId: text(record.companyId),
     createdBy: record.createdBy,
     state,
+  };
+}
+
+// =============================================================================
+// ΤΑ ΓΕΓΟΝΟΤΑ ΤΟΥ ΚΑΘΑΡΙΣΜΟΥ ΜΙΑΣ ΜΕΤΑΒΑΣΗΣ ΘΕΣΗΣ — ADR-895 Φ4 §7.5
+// =============================================================================
+
+/** Ό,τι χρειάζεται ο καθαρισμός της πηγής — **τίποτα** παραπάνω. */
+export interface PlacementCleanupFacts {
+  /** Η εκκρεμής (ή ολοκληρωμένη) μετάβαση· `null` = καμία, ή δεν διαβάζεται (⇒ κανένα σβήσιμο). */
+  readonly transition: FilePlacementTransition | null;
+  /** Εκκαθαρισμένη εγγραφή (purge/GDPR): τα bytes πρέπει να φύγουν **χωρίς** έλεγχο ισοτιμίας. */
+  readonly purged: boolean;
+  /** Η τρέχουσα θέση, **ωμή** — την ερμηνεύει ο ΕΝΑΣ κριτής (`fileStoragePlacementOf`), που πετά σε άγνωστη. */
+  readonly storagePlacement: unknown;
+  /** Το τρέχον μονοπάτι· `null` όταν το purge το μηδένισε. */
+  readonly storagePath: string | null;
+}
+
+function readPlacementTransition(raw: unknown): FilePlacementTransition | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+  const sourcePath = text(source.sourcePath);
+  const changedAt = text(source.changedAt);
+  if (!isFileStoragePlacement(source.from) || sourcePath === null || changedAt === null) return null;
+  const cleanedAt = text(source.sourceCleanedAt);
+  return { from: source.from, sourcePath, changedAt, ...(cleanedAt !== null ? { sourceCleanedAt: cleanedAt } : {}) };
+}
+
+/**
+ * **Τα γεγονότα του καθαρισμού — και από εκκαθαρισμένη εγγραφή.**
+ *
+ * 🔑 Γιατί **όχι** {@link readFileRecord}: το purge/GDPR μηδενίζει το `storagePath`, άρα ο φρουρός σχήματος
+ * **απορρίπτει** ακριβώς την εγγραφή της οποίας η πηγή πρέπει οπωσδήποτε να φύγει (ADR-895 Ρ16). Ο καθαρισμός
+ * δεν χρειάζεται το έγγραφο — μόνο **πού** ήταν τα bytes και **αν** ζει ακόμη.
+ */
+export function readPlacementCleanupFacts(raw: unknown): PlacementCleanupFacts | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+  const storagePath = text(source.storagePath);
+  return {
+    transition: readPlacementTransition(source.placementTransition),
+    purged: source.isDeleted === true || source.lifecycleState === FILE_LIFECYCLE_STATES.PURGED || storagePath === null,
+    storagePlacement: source.storagePlacement,
+    storagePath,
   };
 }

@@ -25,7 +25,10 @@ import { FILE_CATEGORIES, FILE_DOMAINS, FILE_STATUS } from '@/config/domain-cons
 import { isTourCaptureAudience, isTourMilestone } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
-import { FieldValue, getAdminBucket } from '@/lib/firebaseAdmin';
+import { fileStoragePlacementOf } from '@/lib/files/file-storage-placement';
+import { placementForNewFile } from '@/lib/files/new-file-placement';
+import { FieldValue } from '@/lib/firebaseAdmin';
+import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { readMediaRights } from '@/lib/media-rights/media-rights-read';
 import { PANORAMA_CONTENT_TYPE, judgePanorama } from '@/lib/spatial-tour/panorama-policy';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
@@ -51,7 +54,7 @@ import {
   type TourUploadRefused,
   type TourUploadUnavailable,
 } from './tour-capture-upload';
-import { tourMediaBucket } from './tour-media-store';
+import { effectiveMediaPlacement, tourMediaBucket } from './tour-media-store';
 import { readTourUploadTicket, type TourUploadTicket } from './tour-upload-ticket';
 
 const logger = createModuleLogger('tour-capture-finalize');
@@ -208,14 +211,19 @@ async function persistOriginal(db: Firestore, ctx: FinalizeContext, sizeBytes: n
     //    το `purpose: 'panorama'` έγραφε «panoramas panorama». Σύμβαση `model-file-record` / `version-promotion`:
     //    μόνο κατηγορία (την μεταφράζει η οθόνη, `useFileDisplayName`) + η ετικέτα του ακινήτου.
     ...(ctx.label !== null ? { entityLabel: ctx.label } : {}),
+    // ADR-895 Φ3 — η θέση κρίνεται ΣΤΗ ΓΕΝΝΗΣΗ από την καραντίνα που δέσμευσε το εισιτήριο (εκεί ΕΙΝΑΙ ήδη τα
+    // bytes), όχι από την τρέχουσα περιήγηση: `tour-eu` ⇒ `eu-originals`, ποτέ bytes ΕΕ μέσω ΗΠΑ.
+    storagePlacement: placementForNewFile({ kind: 'tour-capture', ingestPlacement: effectiveMediaPlacement(ticket.ingestPlacement) }),
     fileId: enterpriseIdService.generateDeterministicFileId(`tour-upload:${ticket.uploadId}`),
   });
+  const placement = fileStoragePlacementOf(recordBase);
   const fileRef = db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]]).doc(fileId);
   await fileRef.set({ ...recordBase, createdAt: FieldValue.serverTimestamp() });
-  // Το πρωτότυπο είναι `FileRecord` ⇒ ο κανονικός κάδος (ζ5β)· από κάδο ΕΕ η αντιγραφή είναι rewrite μεταξύ κάδων.
-  await quarantineObject(ctx).copy(getAdminBucket().file(storagePath));
+  // ADR-895 Α2 — ο κάδος προορισμού τον λέει η εγγραφή που μόλις γράφτηκε (ο ΕΝΑΣ επιλογέας)· καραντίνα `tour-media`
+  // → `files-eu` = rewrite μέσα στην ίδια περιοχή (το SDK συνεχίζει μόνο του το `rewriteToken`).
+  await quarantineObject(ctx).copy(fileRecordBucket(recordBase).file(storagePath));
   await fileRef.update({
-    ...buildFinalizeFileRecordUpdate({ sizeBytes, downloadUrl: buildProxyUrl(storagePath), hash: contentHash, nextStatus: FILE_STATUS.READY }),
+    ...buildFinalizeFileRecordUpdate({ sizeBytes, downloadUrl: buildProxyUrl(storagePath, placement), hash: contentHash, nextStatus: FILE_STATUS.READY }),
     updatedAt: FieldValue.serverTimestamp(),
   });
   return fileId;
