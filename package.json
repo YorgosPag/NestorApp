@@ -279,7 +279,7 @@
     "test:one-version": "jest scripts/__tests__/one-version-gate.test.js",
     "test:map-boundary": "jest scripts/__tests__/map-boundary-gate.test.js",
     "test:basemap-sources": "jest scripts/__tests__/basemap-sources-gate.test.js src/lib/maps/__tests__/basemap-catalog.test.ts src/lib/maps/__tests__/basemap-request-sentinel.test.ts src/lib/maps/__tests__/overlay-glyph-coverage.test.ts",
-    "test:rules-liveness": "jest scripts/__tests__/rules-liveness-gate.test.js src/lib/auth/__tests__/revoked-sign-ins-claim.test.ts",
+    "test:rules-liveness": "jest scripts/__tests__/rules-liveness-gate.test.js src/lib/auth/__tests__/revoked-sign-ins-claim.test.ts src/lib/auth/__tests__/claims-write-lease.test.ts",
     "test:listing-model-custody": "jest scripts/__tests__/listing-model-custody-gate.test.js",
     "test:navigation-boundary": "jest scripts/__tests__/navigation-boundary-gate.test.js",
     "workspace-scope:report": "node scripts/check-workspace-scope.js --all --report",
