@@ -91,6 +91,29 @@ function build(gates, rows, fingerprint, counts) {
   ].join('\n');
 }
 
+/**
+ * Το νέο CLAUDE.md. 🔴 Οι μετρήσεις κρίνονται πάνω στο ΝΕΟ κείμενο, όχι στο παλιό: αλλιώς μια πύλη που μόλις
+ * απέκτησε γραμμή μετριέται «αδήλωτη» και το αμέσως επόμενο `--check` δηλώνει μπαγιάτικο ό,τι μόλις γράφτηκε
+ * (μετρημένο 2026-09-30 με το 3.96: «αδήλωτες 12» αντί για 11 — χρειαζόταν δεύτερο πέρασμα).
+ * Οι μετρήσεις έρχονται από την ΙΔΙΑ απογραφή που κρίνει το CHECK 3.66 — καμία δεύτερη μηχανή.
+ */
+function regenerate(raw, blockFor, rowCount) {
+  const { takeInventory } = require('./lib/gate-inventory/inventory');
+  const { judge, STATES, idsOf } = require('./lib/gate-inventory/judge');
+  const eol = raw.includes('\r\n') ? '\r\n' : '\n';
+  const lines = raw.split(/\r?\n/);
+  const region = locateRegion(lines);
+  const assemble = (counts) =>
+    [...lines.slice(0, region.start), ...blockFor(counts).split('\n'), ...lines.slice(region.end + 1)].join(eol);
+  const countsOn = (guide) => {
+    const inv = takeInventory(ROOT, { guide });
+    return { ...inv.counts, rows: rowCount, undocumented: idsOf(judge(inv), STATES.UNDOCUMENTED).length };
+  };
+  // Πρώτο πέρασμα: μπαίνουν οι γραμμές· δεύτερο: οι αριθμοί μετρώνται πάνω τους. Σταθερό σημείο — η γραμμή των
+  // αριθμών δεν περιέχει αναγνωριστικά πυλών, άρα δεν αλλάζει τη μέτρηση.
+  return assemble(countsOn(assemble(countsOn(raw))));
+}
+
 function main(argv) {
   const check = argv.includes('--check');
   const { gates, fingerprint } = readGateSources(ROOT);
@@ -102,18 +125,8 @@ function main(argv) {
     return 1;
   }
 
-  // Οι μετρήσεις έρχονται από την ΙΔΙΑ απογραφή που κρίνει το CHECK 3.66 — καμία δεύτερη μηχανή.
-  const { takeInventory } = require('./lib/gate-inventory/inventory');
-  const { judge, STATES, idsOf } = require('./lib/gate-inventory/judge');
-  const inv = takeInventory(ROOT);
-  const counts = { ...inv.counts, rows: rows.length, undocumented: idsOf(judge(inv), STATES.UNDOCUMENTED).length };
-
   const raw = fs.readFileSync(path.join(ROOT, GUIDE), 'utf8');
-  const eol = raw.includes('\r\n') ? '\r\n' : '\n';
-  const lines = raw.split(/\r?\n/);
-  const region = locateRegion(lines);
-  const block = build(gates, rows, fingerprint, counts).split('\n');
-  const next = [...lines.slice(0, region.start), ...block, ...lines.slice(region.end + 1)].join(eol);
+  const next = regenerate(raw, (counts) => build(gates, rows, fingerprint, counts), rows.length);
 
   if (check) {
     if (next === raw) { console.log(`✅ CLAUDE.md φρέσκο (sha256:${fingerprint.slice(0, 12)}…, ${rows.length} πύλες)`); return 0; }

@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "10b741283d615937e6b6f20d1e182afa2eaaffb1963787c01e081429e5b8ea51",
+  "inputsSha256": "427c1d6c854c7a4aaa029e4d70185e95e8efe83504d224211eb5d2a5650f05a5",
   "languages": [
     "el"
   ],
@@ -735,8 +735,9 @@
     "src/lib/auth/claim-payload.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/claims-mirror-fields.ts": "26d42fce23921970419d501a19d49ece4b94eade9495bf5d735449643c584fe3",
     "src/lib/auth/claims-seat.ts": "06bb65f5d3a2e60025c426eae720c10dfa6e4f8b53d5122b8e71e63e81e1831e",
+    "src/lib/auth/claims-write-lease.ts": "200bb685ccbe6bc4891336bbf9295576dd8d1f0455f38014598b492abb5a1867",
     "src/lib/auth/identity-materialisation.ts": "4662a06e6b480936dbb054045fb9f8fed9274e81517a8a4740d4aa457df7d50d",
-    "src/lib/auth/set-claims-with-mirror.ts": "631a6993b455490b5be929040c3f1e1bebd2eb37a99307a30f2061ba73125d83",
+    "src/lib/auth/set-claims-with-mirror.ts": "286e4b426dd10ab4a126d96ef2b18d887e167654a67acea6e31ba030aef1380a",
     "src/lib/browser/document-navigation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/cache/bounded-lru.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/calendar/holiday-question.ts": "010e08d4d2d577529653efb949c0aee25c95b3a7a05e1f9a51d73d48c1adff8a",
@@ -9012,7 +9013,7 @@
     "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
     "src/auth/components/AuthScreenChrome.tsx": "438ba62471b0ecb90ed4ae4f7d58ef619ac66bdb650ef41df84a906154fdcc7e",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
-    "src/auth/contexts/AuthContext.tsx": "f752fae280cfdc84942ebc155768acc3670e99faf6c39212a3d48caadf35ed95",
+    "src/auth/contexts/AuthContext.tsx": "0e5e4380ef2add655b1c4a1bacfc7f0e48fc99d309048e248a7ce56af6444481",
     "src/auth/contexts/UserRoleContext.tsx": "a59baf9567821da7a2c787f7bfdf9b14581224dbd72f9ac1a4b2d09a3293036b",
     "src/auth/contexts/auth-context/auth-context-errors.ts": "9d2f51a2f97927908dbc989a10596fa748dff25fc61f6d6d90ba11376ae6ca9a",
     "src/auth/contexts/auth-context/auth-context-profile.ts": "b3e612bd014234f64110351ce8351a40374453d54bd8c1d671ef58a25167d80f",
@@ -9020,6 +9021,7 @@
     "src/auth/contexts/auth-context/second-factor.ts": "1f51a6fc340066167cf436ba0f60b19caf7222bcc94494f8fc171164db8c09aa",
     "src/auth/contexts/auth-context/session-handover.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/auth/contexts/auth-context/use-claims-refresh.ts": "c0230ceccf51d9533b7edaede3b5da155da963a304e76c434a6c2f30dd0a5701",
+    "src/auth/contexts/auth-context/use-sign-in-revocation.ts": "f128dcc57530d04244cefe0faf437a6751048718395d4ee757b6c23d8da83ee2",
     "src/auth/contexts/auth-context/useAuthActions.ts": "83e89c08abf488155b3f83deea1eab52d2fe40dd6a3bb1a56fb79142795eb4fa",
     "src/auth/firebase-auth-language.ts": "66da0fe048471179d6ad9500e1df6b717b43b1cc5e7cea6811ec89c68c79285e",
     "src/auth/hooks/useAuth.ts": "2c3f64bad43714d2f7e5cabf304b8d8bb3cd1bf83f9c66774067fe65d10fec81",
@@ -9425,7 +9427,8 @@
     "src/lib/auth/project-member-read.ts": "e630b50e10df581f56f915ba7277adad7ce7043f078917b71b4e38c2ef9450a2",
     "src/lib/auth/project-member-ref.ts": "90b0ff1eadd998a5ed0afdae0123e47ebd9409f657e309b2d51a75151e20876b",
     "src/lib/auth/revocation-watermark.ts": "f4da92ec435bbe79c3331b55b4b3ec3ae8684a5b3f9b4cfbe4bfc3382e7054d2",
-    "src/lib/auth/revoked-sign-ins.ts": "514f112f08f2f2a9a6123414a305804b37a302a80491ed572f24efb1f2fddb4c",
+    "src/lib/auth/revoked-sign-ins-claim.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/auth/revoked-sign-ins.ts": "651d9890f434f3b68b20e3990a50684cff5b5b4d9ed496b5edff543a32a5b020",
     "src/lib/auth/role-catalogue.ts": "794d368d33bfe733ccf3ca87cc35f11681de79c043fd326b055c9f07efd681bc",
     "src/lib/auth/roles.ts": "1e61e55fd5628c54d6d3e0f9e6e1b7ad1b742105586c80d2afec7e6c53967ce8",
     "src/lib/auth/scoped-grant.ts": "614c2dcf29dbd2769121b0eb84ba13d64cee9ea7c92f49d6cdbd8942e263505d",
@@ -9891,7 +9894,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 201,
     "routeBoundaries": 0,
-    "shellFiles": 875,
+    "shellFiles": 877,
     "sliceBytes": 628861
   },
   "unresolvableKeys": [

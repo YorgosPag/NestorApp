@@ -19,6 +19,7 @@ import {
   isAuthenticatedPersona,
   type StoragePersona,
 } from '../_registry/personas';
+import { REVOKED_SIGN_INS_CLAIM } from '../../../src/lib/auth/revoked-sign-ins-claim';
 
 /**
  * Get an authenticated or unauthenticated test context for a persona.
@@ -50,6 +51,24 @@ export function getAnonymousStorageContext(env: RulesTestEnvironment): RulesTest
 /** Explicit super-admin shortcut. */
 export function getSuperAdminStorageContext(env: RulesTestEnvironment): RulesTestContext {
   return getStorageContext(env, 'super_admin');
+}
+
+/**
+ * ADR-894 §10.7 — ζωντανή σύνδεση: το token της περσόνας με **συγκεκριμένο** `auth_time` και το claim
+ * `revokedSignIns` που προβάλλει ο γραφέας claims. Ίδιο όνομα claim με την παραγωγή (το σταθερό του πυρήνα).
+ */
+export function getSignInStorageContext(
+  env: RulesTestEnvironment,
+  persona: Exclude<StoragePersona, 'anonymous'>,
+  signIn: { readonly authTime: number; readonly revokedSignIns?: readonly number[] },
+): RulesTestContext {
+  const claims = PERSONA_CLAIMS[persona];
+  return env.authenticatedContext(claims.uid, {
+    companyId: claims.companyId,
+    globalRole: claims.globalRole,
+    auth_time: signIn.authTime,
+    ...(signIn.revokedSignIns ? { [REVOKED_SIGN_INS_CLAIM]: [...signIn.revokedSignIns] } : {}),
+  });
 }
 
 /**

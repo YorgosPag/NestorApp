@@ -955,6 +955,15 @@ if (!process.env.SKIP_LISTING_MODEL_CUSTODY && allFiles.length > 0)
 if (!process.env.SKIP_BASEMAP_SOURCES && allFiles.length > 0)
   addThread('3.95', 'Basemap sources', 'scripts/check-basemap-sources.js', allFiles);
 
+// CHECK 3.96 — Η ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ ΣΤΟΥΣ ΚΑΝΟΝΕΣ (ADR-894 §10.7). «Περνά ΚΑΘΕ `allow` που δίνει πρόσβαση
+// σε συνδεδεμένο άνθρωπο από το `signInIsLive()`;» — Firestore ΚΑΙ Storage.
+// 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-09-30): 26 `allow` σε 13 συλλογές `accounting_*` παρέκαμπταν τις ρίζες με σκέτο
+// `request.auth.uid == createdBy` ⇒ η ανάκληση συσκευής δεν τους έφτανε, και ο ΠΡΩΗΝ μέλος άλλαζε/έσβηνε.
+// 🔑 Ρωτά το ΚΑΤΗΓΟΡΗΜΑ (σταθερό σημείο συναρτήσεων), όχι λίστα ριζών· `if true` μόνο στο κλειστό σύνολο.
+// ⛔ ZERO-TOLERANCE, καμία baseline. Σκανδάλη: τα δύο αρχεία κανόνων · η πηγή του claim · η ίδια η πύλη.
+if (!process.env.SKIP_RULES_SIGN_IN_LIVENESS && allFiles.length > 0)
+  addThread('3.96', 'Rules sign-in liveness', 'scripts/check-rules-sign-in-liveness.js', allFiles);
+
 // CHECK 3.64 — ΠΥΛΗ ΤΗΣ ΒΑΘΜΙΔΑΣ ΜΕΤΡΗΣΗΣ ΚΕΙΜΕΝΟΥ (ADR-799 Φάση 2). «Μέτρησε αυτή η σουίτα
 // κείμενο σε βαθμίδα που ΔΕΝ ΒΛΕΠΕΙ ό,τι της ζητήθηκε — και αν ναι, το ξέρει κάποιος;»
 // 🔴 ΤΟ ΓΕΓΟΝΟΣ: το `jsdom>canvas: '-'` (19fbc2cc, ΣΩΣΤΟ — αλυσίδα CVE του tar) εξαφάνισε το

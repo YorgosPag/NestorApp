@@ -31,12 +31,17 @@ import { Timestamp, type DocumentData } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { MAX_CLAIMED_REVOKED_SIGN_INS, isAuthTime } from '@/lib/auth/revoked-sign-ins-claim';
 
 /** Το ένα έγγραφο της λίστας — σταθερό id, ένα ανά χρήστη (όχι νέα οντότητα ⇒ κανένας γεννήτορας ID). */
 export const REVOKED_SIGN_INS_DOC_ID = 'revoked_sign_ins';
 
-/** Πάνω από τόσες ανακλημένες συνδέσεις ⇒ ανάκληση όλων (`revokeRefreshTokens`) και άδειασμα. */
-export const MAX_REVOKED_SIGN_INS = 100;
+/**
+ * Πάνω από τόσες ανακλημένες συνδέσεις ⇒ ανάκληση όλων (`revokeRefreshTokens`) και άδειασμα. 🔑 **Παράγεται** από
+ * τον χώρο του claim (§10.7): η λίστα προβάλλεται στο token, άρα όριο μεγαλύτερο από όσο χωρά εκεί θα άφηνε
+ * ανακλημένη σύνδεση που ο κανόνας **δεν βλέπει**. (Ήταν 100 — δεν χωρούσε ποτέ στα 1000 bytes.)
+ */
+export const MAX_REVOKED_SIGN_INS = MAX_CLAIMED_REVOKED_SIGN_INS;
 
 const MS_PER_SECOND = 1000;
 
@@ -58,10 +63,6 @@ export type RevokedSignInsPlan =
   | { readonly kind: 'unchanged' }
   | { readonly kind: 'write'; readonly entries: readonly RevokedSignIn[] }
   | { readonly kind: 'escalate' };
-
-function isAuthTime(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
-}
 
 /**
  * **Η καθαρή απόφαση** — τι γράφεται, ή αν πρέπει να ανακληθούν όλες. Ιδεμποτική: ίδια είσοδος ⇒ `unchanged`.

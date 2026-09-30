@@ -36,7 +36,7 @@ import {
   teardownStorageEmulator,
   resetStorageData,
 } from '../_harness/emulator';
-import { getStorageContext } from '../_harness/auth-contexts';
+import { getSignInStorageContext, getStorageContext } from '../_harness/auth-contexts';
 import { assertStorageCell, type AssertStorageTarget } from '../_harness/assertions';
 import { seedStorageFile } from '../_harness/seed-helpers';
 import { STORAGE_RULES_COVERAGE } from '../_registry/coverage-manifest';
@@ -116,6 +116,27 @@ describe('canonical-path-personal.storage — ο κάτοχος και κανε�
       const ref = owner.storage().ref(`${TEST_PATH}--pdf`);
 
       await assertSucceeds(ref.put(new Uint8Array([0x25, 0x50]), { contentType: 'application/pdf' }));
+    });
+  });
+
+  // ADR-894 §10.7 — η ανάκληση ΜΙΑΣ συσκευής φτάνει και στο Storage (0 αναγνώσεις: το claim ταξιδεύει στο token).
+  describe('🔴 Ζ — ζωντανή σύνδεση (signInIsLive, ADR-894 §10.7)', () => {
+    const SIGN_IN = 1_790_000_000;
+
+    it('Ζ1 ο κάτοχος με ΑΝΑΚΛΗΜΕΝΗ σύνδεση ΔΕΝ διαβάζει, ΔΕΝ ανεβάζει, ΔΕΝ σβήνει ούτε τα δικά του', async () => {
+      await seedStorageFile(env, TEST_PATH);
+      const revoked = getSignInStorageContext(env, 'same_tenant_user', { authTime: SIGN_IN, revokedSignIns: [SIGN_IN] });
+
+      await assertFails(revoked.storage().ref(TEST_PATH).getMetadata());
+      await assertFails(revoked.storage().ref(`${TEST_PATH}--new`).put(new Uint8Array([0x25, 0x50]), { contentType: 'application/pdf' }));
+      await assertFails(revoked.storage().ref(TEST_PATH).delete());
+    });
+
+    it('🔑 Ζ2 ανακλήθηκε ΑΛΛΗ σύνδεση του ίδιου λογαριασμού ⇒ αυτή διαβάζει κανονικά — ο παρονομαστής', async () => {
+      await seedStorageFile(env, TEST_PATH);
+      const live = getSignInStorageContext(env, 'same_tenant_user', { authTime: SIGN_IN, revokedSignIns: [SIGN_IN + 1] });
+
+      await assertSucceeds(live.storage().ref(TEST_PATH).getMetadata());
     });
   });
 });

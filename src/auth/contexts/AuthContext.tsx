@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { sessionService, EnterpriseSessionService } from '@/services/session';
+import { sessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
 import { AUTH_EVENTS } from '@/config/domain-constants';
 import type {
@@ -36,6 +36,7 @@ import { bindAuthLanguage } from '@/auth/firebase-auth-language';
 import { useAuthActions } from './auth-context/useAuthActions';
 import { useSecondFactor } from './auth-context/second-factor';
 import { useClaimsRefresh } from './auth-context/use-claims-refresh';
+import { useSignInRevocation } from './auth-context/use-sign-in-revocation';
 
 const logger = createModuleLogger('AuthContext');
 
@@ -289,18 +290,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const sessionId = user ? activeSessionId : null;
-
-    if (!sessionId || !user) {
-      return;
-    }
-
-    return EnterpriseSessionService.watchSessionRevocation(user.uid, sessionId, () => {
-      logger.warn('[AuthContext] Session revoked remotely — signing out');
-      void actions.signOut();
-    });
-  }, [actions, user, activeSessionId]);
+  // ADR-894 §10.1 + §10.7: ανάκληση ΑΥΤΗΣ της συσκευής — από την εγγραφή της ή από το ίδιο της το token.
+  useSignInRevocation({ uid: user?.uid, activeSessionId, signOut: actions.signOut });
 
   // ADR-360: Auto-refresh ID token when server bumps claimsUpdatedAt mirror
   useClaimsRefresh({

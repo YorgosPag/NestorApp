@@ -22,9 +22,11 @@ import {
   teardownEmulator,
   resetData,
 } from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
+import { getContext, getSignInContext } from '../_harness/auth-contexts';
 import {
   assertCell,
+  expectAllow,
+  expectDeny,
   type AssertTarget,
 } from '../_harness/assertions';
 import { seedAccountingJournalEntry } from '../_harness/seed-helpers';
@@ -94,4 +96,35 @@ describe('accounting_journal_entries.rules — role_dual (ΚΦΔ Q3/Q4)', () => 
       });
     });
   }
+
+  // ── ADR-894 §10.7 — ο κλάδος «ο δημιουργός τα δικά του» ────────────────────
+  // Ήταν σκέτο `request.auth.uid == createdBy` στα `canUpdateAccounting`/`canDeleteAccounting` (κοινά σε 13
+  // συλλογές `accounting_*`): το ΜΟΝΟ σημείο του αρχείου που παρέκαμπτε τη ρίζα `isAuthenticated()` — και
+  // άφηνε τον ΠΡΩΗΝ μέλος να αλλάζει/σβήνει δικές του εγγραφές μετά την αποχώρηση.
+  describe('ο δημιουργός — μόνο ΟΣΟ είναι μέλος και η σύνδεσή του ζει (ADR-894 §10.7)', () => {
+    const SIGN_IN = 1_790_000_000;
+    const entryOf = (ctx: ReturnType<typeof getContext>) =>
+      ctx.firestore().collection('accounting_journal_entries').doc('journal-creator');
+    const update = { companyId: SAME_TENANT_COMPANY_ID, updatedAt: new Date() };
+
+    it('Λ1 🔴 πρώην μέλος (δημιουργός, τώρα σε άλλη εταιρεία) ⇒ DENY ενημέρωση ΚΑΙ διαγραφή', async () => {
+      await seedAccountingJournalEntry(env, 'journal-creator', { createdByUid: PERSONA_CLAIMS.cross_tenant_user.uid });
+      const exMember = getContext(env, 'cross_tenant_user');
+      await expectDeny(entryOf(exMember).update(update));
+      await expectDeny(entryOf(exMember).delete());
+    });
+
+    it('Λ2 🔴 δημιουργός με ΑΝΑΚΛΗΜΕΝΗ σύνδεση ⇒ DENY', async () => {
+      await seedAccountingJournalEntry(env, 'journal-creator');
+      const revoked = getSignInContext(env, 'same_tenant_user', { authTime: SIGN_IN, revokedSignIns: [SIGN_IN] });
+      await expectDeny(entryOf(revoked).update(update));
+      await expectDeny(entryOf(revoked).delete());
+    });
+
+    it('Λ3 — δημιουργός, μέλος, ζωντανή σύνδεση ⇒ ALLOW (αμετάβλητη συμπεριφορά)', async () => {
+      await seedAccountingJournalEntry(env, 'journal-creator');
+      const live = getSignInContext(env, 'same_tenant_user', { authTime: SIGN_IN, revokedSignIns: [SIGN_IN + 1] });
+      await expectAllow(entryOf(live).update(update));
+    });
+  });
 });

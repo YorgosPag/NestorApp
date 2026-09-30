@@ -35,14 +35,24 @@ service firebase.storage {
     // 🔐 HELPER FUNCTIONS
     // =========================================================================
 
+    // 🔒 ADR-894 §10.7 — ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ. Η λίστα `users/{uid}/security/revoked_sign_ins` (ανακλημένα `auth_time`,
+    // ΜΙΑ συσκευή τη φορά) προβάλλεται στο claim `revokedSignIns` από τον ΕΝΑ γραφέα claims (`set-claims-with-mirror`).
+    // 0 αναγνώσεις ανά αίτημα· το ID token ζει ≤ 1 ώρα ⇒ ο κακόβουλος client της ανακλημένης συσκευής κόβεται σε
+    // ≤ 1 ώρα — η ίδια εγγύηση που δίνει η Firebase στην ανάκληση ΟΛΩΝ. Το σύνορο του server κόβει ΑΜΕΣΑ.
+    // ⛔ Καλείται ΜΟΝΟ από τις δύο ρίζες (`isAuthenticated`, `isOwner`)· κάθε `allow` περνά από αυτές — το αποδεικνύει
+    //    το CHECK 3.96. Το literal `revokedSignIns` = `REVOKED_SIGN_INS_CLAIM` (`lib/auth/revoked-sign-ins-claim.ts`).
+    function signInIsLive() {
+      return !(request.auth.token.get('auth_time', 0) in request.auth.token.get('revokedSignIns', []));
+    }
+
     // Check if user is authenticated
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && signInIsLive();
     }
 
     // Check if user owns the resource (by UID in path or metadata)
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     // Get user's companyId from custom claims

@@ -11,6 +11,9 @@
  */
 
 jest.mock('server-only', () => ({}));
+// ADR-894 §10.7 — η λίστα ανακλήσεων που προβάλλει ο γραφέας έχει τις δικές της άγκυρες (revoked-sign-ins-claim.test).
+jest.mock('@/lib/auth/revoked-sign-ins', () => ({ readRevokedSignIns: async () => new Set<number>() }));
+jest.mock('@/lib/auth/claims-write-lease', () => ({ withClaimsWriteLease: (_uid: string, work: () => Promise<unknown>) => work() }));
 
 const seatGet = jest.fn();
 jest.mock('@/lib/workspace/workspace-member-ref', () => ({

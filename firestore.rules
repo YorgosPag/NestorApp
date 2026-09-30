@@ -5996,14 +5996,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 🔒 ADR-894 §10.7 — ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ. Η λίστα `users/{uid}/security/revoked_sign_ins` (ανακλημένα `auth_time`,
+    // ΜΙΑ συσκευή τη φορά) προβάλλεται στο claim `revokedSignIns` από τον ΕΝΑ γραφέα claims (`set-claims-with-mirror`).
+    // 0 αναγνώσεις ανά αίτημα· το ID token ζει ≤ 1 ώρα ⇒ ο κακόβουλος client της ανακλημένης συσκευής κόβεται σε
+    // ≤ 1 ώρα — η ίδια εγγύηση που δίνει η Firebase στην ανάκληση ΟΛΩΝ. Το σύνορο του server κόβει ΑΜΕΣΑ.
+    // ⛔ Καλείται ΜΟΝΟ από τις δύο ρίζες (`isAuthenticated`, `isOwner`)· κάθε `allow` περνά από αυτές — το αποδεικνύει
+    //    το CHECK 3.96. Το literal `revokedSignIns` = `REVOKED_SIGN_INS_CLAIM` (`lib/auth/revoked-sign-ins-claim.ts`).
+    function signInIsLive() {
+      return !(request.auth.token.get('auth_time', 0) in request.auth.token.get('revokedSignIns', []));
+    }
+
     // Authentication helper
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && signInIsLive();
     }
 
     // User ownership helper
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     // =========================================================================
@@ -6294,8 +6304,11 @@ service cloud.firestore {
     }
 
     // Accounting: tenant-scoped update (creator or admin, companyId immutable)
+    // 🔒 ADR-894 §10.7: ήταν σκέτο `request.auth.uid == createdBy` ⇒ (α) το ΜΟΝΟ σημείο του αρχείου που παρέκαμπτε
+    //    τη ρίζα `isAuthenticated()` (26 `allow` σε 13 συλλογές, μετρημένο) και (β) ο ΠΡΩΗΝ μέλος άλλαζε/έσβηνε δικές
+    //    του εγγραφές μετά την αποχώρηση. «Ο δημιουργός τα δικά του» ισχύει ΟΣΟ είναι μέλος (Xero/QBO).
     function canUpdateAccounting(companyId, createdBy) {
-      return (request.auth.uid == createdBy || isCompanyAdminOfCompany(companyId))
+      return ((isOwner(createdBy) && belongsToCompany(companyId)) || isCompanyAdminOfCompany(companyId))
              && request.resource.data.companyId == companyId;
     }
 
@@ -6307,7 +6320,7 @@ service cloud.firestore {
 
     // Accounting: delete — creator deletes own, admin deletes all (Q6 Xero/QBO pattern)
     function canDeleteAccounting(companyId, createdBy) {
-      return request.auth.uid == createdBy || isCompanyAdminOfCompany(companyId);
+      return (isOwner(createdBy) && belongsToCompany(companyId)) || isCompanyAdminOfCompany(companyId);
     }
 
     // Accounting: admin-only write for settings/config singletons

@@ -41,10 +41,13 @@ const resolveIpPlace = jest.fn(async (ip: string): Promise<IpPlace> => (ip === H
 
 const revokeRefreshTokens = jest.fn(async (_uid: string) => undefined);
 const createCustomToken = jest.fn(async (_uid: string) => 'custom_token_1');
+// ADR-894 §10.7 — τα claims ζουν στο Auth: εδώ ένας χάρτης, ώστε η ΠΡΟΒΟΛΗ της λίστας να κρίνεται στον πραγματικό γραφέα.
+const claimsOf = new Map<string, Record<string, unknown>>();
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: (): AdminFirestore => fake as unknown as AdminFirestore,
   getAdminAuth: () => ({
-    getUser: async () => ({ tokensValidAfterTime: undefined, disabled: false }),
+    getUser: async (uid: string) => ({ tokensValidAfterTime: undefined, disabled: false, customClaims: claimsOf.get(uid) }),
+    setCustomUserClaims: async (uid: string, claims: Record<string, unknown>) => { claimsOf.set(uid, claims); },
     revokeRefreshTokens: (uid: string) => revokeRefreshTokens(uid),
     createCustomToken: (uid: string) => createCustomToken(uid),
   }),
@@ -142,6 +145,7 @@ beforeEach(() => {
   revokeRefreshTokens.mockClear();
   createCustomToken.mockClear();
   dispatchNotification.mockClear();
+  claimsOf.clear();
   callerAuthTime = MY_SIGN_IN;
 });
 
@@ -256,6 +260,15 @@ describe('DELETE /api/auth/active-sessions/{sessionId}', () => {
     expect(revokeRefreshTokens).not.toHaveBeenCalled(); // ΜΙΑ συσκευή, όχι όλες
   });
 
+  it('Δ7 🔴 §10.7 — η ανάκληση φτάνει και στους ΚΑΝΟΝΕΣ: το claim `revokedSignIns` = η λίστα, τα άλλα claims μένουν', async () => {
+    claimsOf.set(ME, { globalRole: 'external_user', mfaEnrolled: true });
+    seedLive(ME, sessionIdOf(2), 1, OTHER_SIGN_IN);
+    expect((await revoke(sessionIdOf(2))).status).toBe(200);
+    expect(claimsOf.get(ME)).toEqual(expect.objectContaining({
+      globalRole: 'external_user', mfaEnrolled: true, revokedSignIns: [OTHER_SIGN_IN],
+    }));
+  });
+
   it('Δ5 🔴 φρουρός εαυτού: εγγραφή με τη ΔΙΚΗ μου σύνδεση (φάντασμα του ίδιου browser) δεν με αποσυνδέει', async () => {
     seedLive(ME, sessionIdOf(3), 1, MY_SIGN_IN);
     expect((await revoke(sessionIdOf(3))).status).toBe(200);
@@ -291,6 +304,14 @@ describe('DELETE /api/auth/active-sessions?keep=', () => {
     const body = await (await revokeOthers(`?keep=${sessionIdOf(1)}`)).json();
     expect(revokeRefreshTokens).toHaveBeenCalledWith(ME);
     expect(body.session).toEqual({ kind: 'reissued', token: 'custom_token_1' });
+  });
+
+  it('Α5 — §10.7 μετά την ανάκληση ΟΛΩΝ η λίστα αδειάζει ⇒ και το claim (κανένα byte για ό,τι καλύπτει η σφραγίδα)', async () => {
+    claimsOf.set(ME, { globalRole: 'external_user', revokedSignIns: [OTHER_SIGN_IN] });
+    [1, 2].forEach((n) => seedLive(ME, sessionIdOf(n), n));
+    await revokeOthers(`?keep=${sessionIdOf(1)}`);
+    expect(claimsOf.get(ME)).not.toHaveProperty('revokedSignIns');
+    expect(claimsOf.get(ME)).toEqual(expect.objectContaining({ globalRole: 'external_user' }));
   });
 
   it('Α4 🔴 κλειδί ΠΟΤΕ από σκέτο cookie (χωρίς Bearer) ⇒ ended', async () => {

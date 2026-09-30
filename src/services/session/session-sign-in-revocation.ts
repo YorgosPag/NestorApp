@@ -17,6 +17,7 @@ import 'server-only';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { forgetRevocationState, readValidAfterMs } from '@/lib/auth/revocation-watermark';
 import { clearRevokedSignIns, recordRevokedSignIns } from '@/lib/auth/revoked-sign-ins';
+import { syncRevokedSignInsClaim } from '@/lib/auth/set-claims-with-mirror';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -55,7 +56,25 @@ export async function denySignIns(
     return { everySignInEnded: true };
   }
   forgetRevocationState(uid);
+  await projectOntoTokens(uid);
   return { everySignInEnded: false };
+}
+
+/**
+ * ADR-894 §10.7 — η λίστα φτάνει και στους **κανόνες** (claim `revokedSignIns`): ο κακόβουλος client της ανακλημένης
+ * συσκευής κόβεται και στην απευθείας Firestore/Storage με την επόμενη ανανέωση του token (≤ 1 ώρα).
+ * ⚠️ Δεν ρίχνει: η ανάκληση **έγινε** (σύνορο server + ο τίμιος client ήδη αρνούνται)· ένα claim που έμεινε πίσω
+ * διορθώνεται στην επόμενη εγγραφή claims, που ξαναβγάζει πάντα τη λίστα.
+ */
+async function projectOntoTokens(uid: string): Promise<void> {
+  try {
+    await syncRevokedSignInsClaim(uid);
+  } catch (error: unknown) {
+    logger.error('Το claim ανακλήσεων δεν συγχρονίστηκε — οι κανόνες δεν το βλέπουν ακόμη', {
+      uid,
+      error: getErrorMessage(error),
+    });
+  }
 }
 
 /** Ανάκληση **όλων** των συνδέσεων του λογαριασμού (Firebase refresh tokens). */
@@ -68,4 +87,6 @@ export async function endEverySignIn(uid: string): Promise<void> {
     // Η ανάκληση ΕΓΙΝΕ· μια λίστα που δεν άδειασε απλώς κλαδεύεται στην επόμενη εγγραφή.
     logger.warn('Η λίστα ανακλημένων συνδέσεων δεν άδειασε', { uid, error: getErrorMessage(error) });
   }
+  // Άδεια λίστα ⇒ άδειο claim (όλα τα παλιά `auth_time` τα καλύπτει πλέον η ανάκληση όλων).
+  await projectOntoTokens(uid);
 }

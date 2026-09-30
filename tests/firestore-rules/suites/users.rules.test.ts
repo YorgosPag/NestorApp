@@ -21,7 +21,7 @@
  */
 
 import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator';
-import { getContext, withSeedContext } from '../_harness/auth-contexts';
+import { getContext, getSignInContext, withSeedContext } from '../_harness/auth-contexts';
 import { assertCell, expectAllow, expectDeny, type AssertTarget } from '../_harness/assertions';
 import { seedUser } from '../_harness/seed-helpers-users';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
@@ -345,6 +345,40 @@ describe('users.rules — uid-ownership + companyAdmin write (usersMatrix)', () 
       await expectDeny(ownSecurity.get());
       await expectDeny(ownSecurity.set({ entries: [] }));
       await expectDeny(ownSecurity.delete());
+    });
+  });
+
+  // ── ADR-894 §10.7 — ζωντανή σύνδεση στη ΡΙΖΑ των κανόνων ─────────────────
+  // Η λίστα ανακλημένων συνδέσεων προβάλλεται στο claim `revokedSignIns`· το `signInIsLive()` το ρωτά
+  // μέσα από τις `isAuthenticated()` / `isOwner()`. Ένα token με το ΔΙΚΟ του `auth_time` στη λίστα δεν
+  // περνά ΠΟΥΘΕΝΑ — ούτε στο δικό του προφίλ, ούτε μέσω του κλάδου εταιρείας.
+  describe('ζωντανή σύνδεση — signInIsLive() (ADR-894 §10.7)', () => {
+    const ownUid = PERSONA_CLAIMS.same_tenant_user.uid;
+    const SIGN_IN = 1_790_000_000;
+    const ownProfile = (revokedSignIns?: readonly number[]) => getSignInContext(
+      env, 'same_tenant_user', { authTime: SIGN_IN, ...(revokedSignIns ? { revokedSignIns } : {}) },
+    ).firestore().doc(`users/${ownUid}`);
+
+    it('Ζ1 🔴 ανακλημένη σύνδεση (το δικό της auth_time στη λίστα) ⇒ DENY ανάγνωση ΚΑΙ εγγραφή του δικού της προφίλ', async () => {
+      await seedUser(env, ownUid);
+      await expectDeny(ownProfile([SIGN_IN]).get());
+      await expectDeny(ownProfile([SIGN_IN]).update({ displayName: 'x', updatedAt: new Date() }));
+    });
+
+    it('Ζ2 — άλλη σύνδεση του ΙΔΙΟΥ λογαριασμού ανακλήθηκε ⇒ αυτή μένει ζωντανή (ALLOW)', async () => {
+      await seedUser(env, ownUid);
+      await expectAllow(ownProfile([SIGN_IN + 1]).get());
+    });
+
+    it('Ζ3 — χωρίς το claim (κανένας λογαριασμός με ανακλήσεις) ⇒ ALLOW, αμετάβλητη συμπεριφορά', async () => {
+      await seedUser(env, ownUid);
+      await expectAllow(ownProfile().get());
+    });
+
+    it('Ζ4 🔴 ο κλάδος εταιρείας (διαχειριστής) ΔΕΝ παρακάμπτει: ανακλημένη σύνδεση διαχειριστή ⇒ DENY', async () => {
+      await seedUser(env, ownUid);
+      const admin = getSignInContext(env, 'same_tenant_admin', { authTime: SIGN_IN, revokedSignIns: [SIGN_IN] });
+      await expectDeny(admin.firestore().doc(`users/${ownUid}`).get());
     });
   });
 });
