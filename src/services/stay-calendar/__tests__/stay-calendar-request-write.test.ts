@@ -17,7 +17,7 @@ import type { StayActor } from '@/lib/stay/stay-command-authority';
 import { STAY_GUEST_MAX_ACTIVE_HOLDS } from '@/lib/stay/stay-guest-head';
 import { listingOf } from '@/lib/stay/__tests__/stay-rules-fixtures';
 import { offerOf, validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { executeStayCalendarCommand } from '@/services/stay-calendar/stay-calendar-write.service';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import { STAY_RULES_NONE } from '@/types/stay-rules';

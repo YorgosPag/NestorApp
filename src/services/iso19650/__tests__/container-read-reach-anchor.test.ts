@@ -19,7 +19,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CDE_STATE_VALUES } from '@/config/iso19650-constants';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readContainerState } from '@/lib/files/file-record-read';
 import {
   BIRTH_READ_REACH,

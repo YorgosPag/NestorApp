@@ -81,7 +81,7 @@ jest.mock('@/app/api/showcase/shared-pdf-proxy-helpers', () => ({
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { streamPdfFromStorage } from '@/app/api/showcase/shared-pdf-proxy-helpers';
 import { approveCommunication, rejectCommunication } from '@/services/communications-triage-actions';
 import { createUnifiedPublicShowcasePdfRoute } from '@/services/showcase-core/api/create-unified-public-pdf-route';
@@ -95,12 +95,12 @@ const TOKEN = 'PublicToken0123456789abcdefghijk';
 const ENTITY_ID = 'bld_target_001';
 const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  kit = createMockFirestore();
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  kit = new FakeFirestore();
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
 });
 
 // =============================================================================
@@ -125,13 +125,13 @@ describe('ADR-742 — ανάντη φύλακας: communications-triage-actions
       kit.seedCollection(COLLECTIONS.MESSAGES, {
         [COMM_ID]: { id: COMM_ID, companyId: '', status: 'pending' },
       });
-      kit.clearWrites();
+      kit.clearWriteLog();
 
       const result = await fn('');
 
       // `invalid_context`, ΟΧΙ `tenant_mismatch`: η άρνηση γεννιέται ανάντη.
       expect(result).toMatchObject({ ok: false, code: 'invalid_context' });
-      expect(kit.writes()).toEqual([]);
+      expect(kit.writeLog()).toEqual([]);
     },
   );
 
@@ -141,12 +141,12 @@ describe('ADR-742 — ανάντη φύλακας: communications-triage-actions
       kit.seedCollection(COLLECTIONS.MESSAGES, {
         [COMM_ID]: { id: COMM_ID, companyId: 'comp_OWNER', status: 'pending' },
       });
-      kit.clearWrites();
+      kit.clearWriteLog();
 
       const result = await fn('comp_INTRUDER');
 
       expect(result).toMatchObject({ ok: false, code: 'tenant_mismatch' });
-      expect(kit.writes()).toEqual([]);
+      expect(kit.writeLog()).toEqual([]);
     },
   );
 });
@@ -187,7 +187,7 @@ describe('ADR-742 — ανάντη φύλακας: δημόσια διαδρομ
         ...(entityCompanyId === undefined ? {} : { companyId: entityCompanyId }),
       },
     });
-    kit.clearWrites();
+    kit.clearWriteLog();
   }
 
   test('🔴 share με ΚΕΝΟ μισθωτή → 404 στην ανάλυση, το PDF δεν ρέει ΠΟΤΕ', async () => {

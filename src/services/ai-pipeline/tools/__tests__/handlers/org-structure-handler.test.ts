@@ -15,7 +15,7 @@ import '../setup';
 
 import { OrgStructureHandler } from '../../handlers/org-structure-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 jest.mock('@/services/org-structure/org-structure-repository', () => ({
@@ -113,12 +113,12 @@ function makeOrgStructure(): Record<string, unknown> {
 
 describe('OrgStructureHandler', () => {
   let handler: OrgStructureHandler;
-  let mockDb: MockFirestoreKit;
+  let mockDb: FakeFirestore;
 
   beforeEach(() => {
     handler = new OrgStructureHandler();
-    mockDb = createMockFirestore();
-    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb.instance);
+    mockDb = new FakeFirestore();
+    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb);
     jest.clearAllMocks();
   });
 

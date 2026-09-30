@@ -5,7 +5,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { FirstContact } from '@/types/first-contact';
 import type { SavedListing } from '@/types/saved-listing';
 

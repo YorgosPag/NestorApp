@@ -35,8 +35,8 @@ jest.mock('@/services/entity-audit.service', () => {
 
 const { COLLECTIONS } = require('@/config/firestore-collections') as
   typeof import('@/config/firestore-collections');
-const { FakeFirestore } = require('@/services/places/__tests__/fake-firestore') as
-  typeof import('@/services/places/__tests__/fake-firestore');
+const { FakeFirestore } = require('@/test-utils/fake-firestore/fake-firestore') as
+  typeof import('@/test-utils/fake-firestore/fake-firestore');
 const { enterpriseIdService } = require('@/services/enterprise-id.service') as
   typeof import('@/services/enterprise-id.service');
 const write = require('../property-dossier-write.service') as

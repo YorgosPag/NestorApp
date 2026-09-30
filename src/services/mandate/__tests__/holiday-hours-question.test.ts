@@ -15,7 +15,7 @@
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { FakeShelfBucket } from '@/services/upload/__fixtures__/fake-shelf-bucket';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';

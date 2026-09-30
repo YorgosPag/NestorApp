@@ -20,7 +20,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { givenCompanyProfile, givenRegistryCheck } from '@/services/mandate/__tests__/showcase-legal-fixture';
 
 import { adoptRegistryLegalName } from '../legal-name-adoption.service';

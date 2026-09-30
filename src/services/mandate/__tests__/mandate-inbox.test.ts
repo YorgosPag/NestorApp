@@ -13,7 +13,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
   readAgencyRequest,
   readMandateInbox,

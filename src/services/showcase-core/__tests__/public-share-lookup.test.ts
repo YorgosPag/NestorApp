@@ -20,7 +20,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { hashShareToken } from '@/lib/sharing/share-token';
 import { issueShareAccessGrant, shareAccessCookieName } from '@/server/sharing/share-access-grant';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import { lookupPublicShowcaseShare, publicShowcaseRefusalResponse } from '../api/public-share-lookup';
 
@@ -28,8 +28,8 @@ const TOKEN = 'NewGenerationToken_abcdefghijklmnopqrstuvwxy';
 const LEGACY_TOKEN = 'LegacyToken0123456789abcdefghijk';
 const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 const request = (cookie?: string) =>
   new NextRequest('https://nestorconstruct.gr/api/building-showcase/x', cookie ? { headers: { cookie } } : undefined);
 
@@ -61,7 +61,7 @@ const lookup = (params: { token?: string; cookie?: string; requirePdfPath?: bool
   });
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
   process.env.SHARE_ACCESS_SECRET = 'test-secret-with-enough-entropy-0123456789';
 });
 

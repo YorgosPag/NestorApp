@@ -16,7 +16,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { openTourViewSession, type TourViewSessionInput } from '../tour-view-session';
@@ -65,7 +65,7 @@ function capture(overrides: Record<string, unknown> = {}) {
   };
 }
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 function seed(tour: Record<string, unknown> = tourDoc()) {
@@ -78,8 +78,8 @@ const open = (overrides: Partial<TourViewSessionInput> = {}) =>
 
 beforeEach(() => {
   process.env.SHARE_ACCESS_SECRET = 'test-secret-with-enough-entropy-0123456789abcdef';
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
 });
 
 describe('Β — οι βάσεις', () => {
@@ -134,10 +134,10 @@ describe('Ι — μία επίσκεψη, μία μέτρηση', () => {
 
   it('Ι2 — δημόσια βάση και υπεύθυνος δεν γράφουν τίποτα', async () => {
     seed(tourDoc({ visibility: 'public' }));
-    kit.clearWrites();
+    kit.clearWriteLog();
     await open();
     await open({ actor: MANAGER });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 

@@ -8,7 +8,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import type { ListingResolution } from '@/services/listings/listing-resolver';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const mockResolveListing = jest.fn<Promise<ListingResolution>, [unknown, string, string]>();
 jest.mock('@/services/listings/listing-resolver', () => ({

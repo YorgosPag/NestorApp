@@ -17,7 +17,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { locatePlace } from '@/services/demand/place-interest.service';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const OWNER_LISTING = {

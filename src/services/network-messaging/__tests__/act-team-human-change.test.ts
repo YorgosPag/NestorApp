@@ -16,7 +16,7 @@
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import {

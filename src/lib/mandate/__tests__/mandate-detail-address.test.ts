@@ -31,7 +31,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { firstActionUrl } from '@/lib/notifications/notification-destination';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { announceMandateDecision } from '@/services/mandate/mandate-decision-notifier.service';
 import { announceMandateRequestAnswer } from '@/services/mandate/mandate-request-notifier.service';
 import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';

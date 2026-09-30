@@ -27,7 +27,7 @@ import { NextResponse } from 'next/server';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { gateShowcase } from '@/lib/auth/brokerage-gate';
 import { showcaseOwnerId } from '@/lib/auth/brokerage-authority';
 import type { ClassifiedOccupation } from '@/types/agency-profile';

@@ -22,7 +22,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { hashShareToken } from '@/lib/sharing/share-token';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
   describeOwnershipCallSites,
   withOwner,
@@ -36,11 +36,11 @@ import { validateAgainstLinkPolicy } from '@/services/sharing/resolver-core/shar
 import { SHARE_KIND_LINK_POLICY } from '@/services/sharing/share-resolve-contract';
 
 const CREATOR = { uid: 'usr_1', companyId: 'comp_1' };
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
   kit.seedCollection(COLLECTIONS.CONTACTS, { ct_1: { companyId: 'comp_1', displayName: 'Μαρία' } });
   kit.seedCollection(COLLECTIONS.FILES, { f_1: { companyId: 'comp_1' } });
   (recordFileAudit as jest.Mock).mockClear();
@@ -94,7 +94,7 @@ describe('createShareOnServer', () => {
     const outcome = await createShareOnServer(db(), { uid: 'intruder', companyId: 'comp_2' }, contactRequest()!);
 
     expect(outcome).toEqual({ ok: false, refusal: 'forbidden' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('applies the resolver’s own rule (contact without consented fields)', async () => {
@@ -161,10 +161,10 @@ describe('revokeShareOnServer', () => {
   });
 
   it('🔴 another tenant gets «not-found» and nothing is written', async () => {
-    kit.clearWrites();
+    kit.clearWriteLog();
 
     await expect(revokeShareOnServer(db(), { uid: 'x', companyId: 'comp_2' }, 'share_x')).resolves.toBe('not-found');
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 
@@ -182,8 +182,8 @@ describeOwnershipCallSites('revokeShareOnServer — share ownership (ADR-742)', 
       kit.seedCollection(COLLECTIONS.SHARES, {
         [OWNED_SHARE_ID]: withOwner({ companyId: 'placeholder', isActive: true }, owner),
       });
-      kit.clearWrites();
-      return writeJournalProbe(() => kit.writes());
+      kit.clearWriteLog();
+      return writeJournalProbe(() => kit.writeLog());
     },
     act: callerCompanyId => revokeShareOnServer(db(), { uid: 'usr_1', companyId: callerCompanyId }, OWNED_SHARE_ID),
     refused: result => result === 'not-found',

@@ -53,8 +53,8 @@ jest.mock('@/services/mandate/showcase-presence.service', () => ({
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { COLLECTIONS } = require('@/config/firestore-collections') as
   typeof import('@/config/firestore-collections');
-const { FakeFirestore } = require('@/services/places/__tests__/fake-firestore') as
-  typeof import('@/services/places/__tests__/fake-firestore');
+const { FakeFirestore } = require('@/test-utils/fake-firestore/fake-firestore') as
+  typeof import('@/test-utils/fake-firestore/fake-firestore');
 const { validOwnerProperty } = require('@/lib/owner-property/__tests__/owner-property-fixtures') as
   typeof import('@/lib/owner-property/__tests__/owner-property-fixtures');
 const { republishOwnerProperty } = require('../owner-property-publication.service') as

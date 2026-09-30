@@ -12,7 +12,7 @@ jest.mock('server-only', () => ({}));
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createMockFirestore } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { SpatialTour } from '@/types/spatial-tour';
 
 import { listTourPlanFiles, tourPlanFileOf } from '../tour-plan-files';
@@ -55,14 +55,14 @@ describe('Κ — ο κριτής', () => {
 
 describe('Λ — η λίστα της οθόνης', () => {
   it('μόνο ό,τι περνά τον κριτή, με όνομα, προεπισκόπηση και όροφο', async () => {
-    const kit = createMockFirestore();
+    const kit = new FakeFirestore();
     kit.seedCollection(COLLECTIONS.FILES, {
       f_ok: planFile(),
       f_pdf: planFile({ contentType: 'application/pdf' }),
       f_other: planFile({ entityId: 'prop_2' }),
       f_foreign: planFile({ companyId: 'comp_other' }),
     });
-    const plans = await listTourPlanFiles(kit.instance as unknown as Firestore, TOUR);
+    const plans = await listTourPlanFiles(kit as unknown as Firestore, TOUR);
     expect(plans).toEqual([{ fileId: 'f_ok', name: 'Ισόγειο', previewUrl: 'https://thumb/plan.png', levelFloorId: 'floor_0' }]);
   });
 });

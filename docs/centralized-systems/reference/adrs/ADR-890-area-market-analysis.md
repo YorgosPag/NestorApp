@@ -1128,7 +1128,7 @@ deploy), ο νέος δέχεται την απουσία.
 ### 17.6 Δηλωμένα ανοιχτά
 
 - Ζητούμενες στον χάρτη σύγκρισης: κριτήριο στο §17.3.
-- Δύο πλαστά Firestore → ένα (pending-ratchet).
+- Δύο πλαστά Firestore → ένα: ✅ ήταν **τρία**· ενοποιήθηκαν σε `src/test-utils/fake-firestore/` ως **verified fake** (ίδια σουίτα συμβολαίου στο fake και στον emulator) — ADR-742 §7sexdecies. ⏳ 5 καλούντες με ξένες αλλαγές εκκρεμούν.
 - `VISIBLE_LINK_CLASS` παντού (από §15.6, pending-ratchet).
 
 ## Changelog

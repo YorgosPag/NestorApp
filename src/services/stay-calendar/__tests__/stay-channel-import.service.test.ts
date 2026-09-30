@@ -14,7 +14,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { offerOf, validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
   applyStayChannelRead,
   removeStayChannelFeed,

@@ -23,7 +23,7 @@
 import sharp from 'sharp';
 
 import { FakeShelfBucket } from '@/services/upload/__fixtures__/fake-shelf-bucket';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();

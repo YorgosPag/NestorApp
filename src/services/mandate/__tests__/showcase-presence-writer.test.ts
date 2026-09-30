@@ -30,7 +30,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { storedShowcaseDoc } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import { refreshShowcasePresence } from '../showcase-presence.service';

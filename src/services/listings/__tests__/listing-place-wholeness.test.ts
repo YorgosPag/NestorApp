@@ -37,7 +37,7 @@ import {
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
 import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { PlaceRef } from '@/types/geo/public-place';
 
 const AT = '2026-08-11T12:00:00.000Z';

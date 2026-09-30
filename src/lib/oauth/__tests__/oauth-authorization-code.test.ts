@@ -7,7 +7,7 @@
 
 import { createHash } from 'node:crypto';
 
-import { FakeFirestore } from './fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fakeDb = new FakeFirestore();
 
@@ -58,13 +58,13 @@ function redemption(code: string, overrides: Record<string, string> = {}) {
 describe('issueAuthorizationCode', () => {
   it('ΔΕΝ γράφει το ωμό code στη βάση', async () => {
     const code = await issueAuthorizationCode(grant());
-    const serialized = JSON.stringify([...fakeDb.dump(COLLECTIONS.OAUTH_CODES).entries()]);
+    const serialized = JSON.stringify([...fakeDb.pathBucket(COLLECTIONS.OAUTH_CODES).entries()]);
     expect(serialized).not.toContain(code);
   });
 
   it('το doc id φέρει το enterprise πρόθεμα', async () => {
     await issueAuthorizationCode(grant());
-    const ids = [...fakeDb.dump(COLLECTIONS.OAUTH_CODES).keys()];
+    const ids = [...fakeDb.pathBucket(COLLECTIONS.OAUTH_CODES).keys()];
     expect(ids.every((id) => /^oacode_[0-9a-f]{64}$/.test(id))).toBe(true);
   });
 });

@@ -30,7 +30,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { endOfDay } from '@/lib/mandate/mandate-term-window';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const enqueued: Record<string, unknown>[] = [];
 

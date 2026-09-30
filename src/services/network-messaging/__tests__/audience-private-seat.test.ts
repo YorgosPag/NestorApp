@@ -17,7 +17,7 @@
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { networkAudiencePrivateFromDocument } from '@/lib/network-messaging/network-thread-from-document';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { joinAudienceSeats, legacyPrivateResidue } from '@/services/network-messaging/audience-seats';
 import { networkUnreadStillPending } from '@/services/network-messaging/network-unread-email';
 import { listNetworkThreads } from '@/services/network-messaging/thread-directory';

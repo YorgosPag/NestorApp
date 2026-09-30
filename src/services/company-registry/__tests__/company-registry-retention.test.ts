@@ -14,7 +14,7 @@
  */
 
 jest.mock('@/lib/firebaseAdmin', () => {
-  const { FakeFirestore: Fake } = jest.requireActual('@/services/places/__tests__/fake-firestore');
+  const { FakeFirestore: Fake } = jest.requireActual('@/test-utils/fake-firestore/fake-firestore');
   const fake = new Fake();
   return {
     fake,
@@ -34,7 +34,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { REGISTRY_CHECKED_AT, registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
-import type { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import type { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
   COMPANY_PROFILE,
   givenCompanyProfile,

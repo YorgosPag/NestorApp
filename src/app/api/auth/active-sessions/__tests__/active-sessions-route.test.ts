@@ -23,7 +23,7 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { IpPlace } from '@/lib/geo/ip-place.types';
 
 const fake = new FakeFirestore();

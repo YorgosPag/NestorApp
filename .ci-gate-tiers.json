@@ -148,6 +148,12 @@
       "why": "Συμβόλαιο cloud functions — σπάει λειτουργία, όχι μετρική."
     },
     {
+      "file": "firestore-contract.yml",
+      "name": "T2 🔬 Firestore Verified Fake (ADR-742)",
+      "tier": 2,
+      "why": "Συμβόλαιο του ψεύτικου Firestore απέναντι στον emulator — ψέμα του fake = ≈140 σουίτες κρίνουν κώδικα που δεν τρέχει."
+    },
+    {
       "file": "gitleaks-scan.yml",
       "name": "T2 🔐 Secret Scan (ADR-598 G12)",
       "tier": 2,

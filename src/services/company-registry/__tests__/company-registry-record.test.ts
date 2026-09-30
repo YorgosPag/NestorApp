@@ -27,7 +27,7 @@ import {
   REGISTRY_CHECKED_AT as CHECKED_AT,
   registryRecord,
 } from '@/lib/company/__fixtures__/registry-record-fixture';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { givenCompanyProfile } from '@/services/mandate/__tests__/showcase-legal-fixture';
 
 const COMPANY_ID = 'comp_registry_a';

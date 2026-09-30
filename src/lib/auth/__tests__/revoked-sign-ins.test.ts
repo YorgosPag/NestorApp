@@ -15,7 +15,7 @@ jest.mock('server-only', () => ({}));
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fake = new FakeFirestore();
 jest.mock('@/lib/firebaseAdmin', () => ({

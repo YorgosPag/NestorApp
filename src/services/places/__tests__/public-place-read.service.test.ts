@@ -19,7 +19,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { placeKindOf, verifyPlaceRef } from '../public-place-read.service';
-import { FakeFirestore } from './fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const LAND_ID = 'land_0cb5cbb6-bb31-4954-a7f9-8e8f9ac00a00';
 const BUILDING_ID = 'pbld_24b3a8d7-2e56-40e6-8053-9c1628b425bf';

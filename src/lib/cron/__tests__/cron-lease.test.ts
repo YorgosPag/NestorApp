@@ -15,7 +15,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 
-import { FakeFirestore } from '@/lib/oauth/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fake = new FakeFirestore();
 
@@ -116,7 +116,7 @@ describe('απελευθέρωση', () => {
     await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterSuccess(SLUG);
 
-    const raw = fake.dump('cron_job_state').get(SLUG);
+    const raw = fake.pathBucket('cron_job_state').get(SLUG);
     expect(raw?.lastSuccessAt).toBeDefined();
     expect(raw?.lastSuccessAt).not.toBeNull();
   });
@@ -125,7 +125,7 @@ describe('απελευθέρωση', () => {
     await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterFailure(SLUG, 'boom');
 
-    const raw = fake.dump('cron_job_state').get(SLUG);
+    const raw = fake.pathBucket('cron_job_state').get(SLUG);
     expect(raw?.lastSuccessAt).toBeUndefined();
   });
 

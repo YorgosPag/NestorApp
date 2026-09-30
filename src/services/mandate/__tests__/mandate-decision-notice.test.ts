@@ -12,7 +12,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { OwnerProperty } from '@/types/owner-property';
 import { mandatesOf, type BrokeredListingMandate } from '@/types/owner-property-mandate';

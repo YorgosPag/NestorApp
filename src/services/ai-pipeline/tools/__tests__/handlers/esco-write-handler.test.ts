@@ -14,7 +14,7 @@ import '../setup';
 
 import { executeSetContactEsco } from '../../handlers/esco-write-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 // ── Mocked ESCO enforcement ──
@@ -26,11 +26,11 @@ const mockEnforceEscoSkill = jest.requireMock('@/services/ai-pipeline/tools/esco
 // ============================================================================
 
 describe('EscoWriteHandler (set_contact_esco)', () => {
-  let mockDb: MockFirestoreKit;
+  let mockDb: FakeFirestore;
 
   beforeEach(() => {
-    mockDb = createMockFirestore();
-    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb.instance);
+    mockDb = new FakeFirestore();
+    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb);
     jest.clearAllMocks();
 
     // Seed a default contact

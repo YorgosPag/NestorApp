@@ -13,7 +13,7 @@ jest.mock('@/lib/telemetry', () => ({
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { hashShareToken } from '@/lib/sharing/share-token';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { judgeShareAccess, recordShareAccess } from '../share-access';
@@ -32,8 +32,8 @@ const LEGACY_TOKEN = 'LegacyToken0123456789abcdefghijk';
 const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 const PAST = new Date(Date.now() - 86_400_000).toISOString();
 
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 
 const unifiedDoc = async (extra: Record<string, unknown> = {}) => ({
   tokenHash: await hashShareToken(TOKEN),
@@ -50,7 +50,7 @@ const unifiedDoc = async (extra: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
 });
 
 // =============================================================================

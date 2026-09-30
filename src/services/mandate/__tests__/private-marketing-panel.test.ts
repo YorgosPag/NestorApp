@@ -20,7 +20,7 @@ jest.mock('@/services/company/company-public-name.reader', () => ({
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { COLLECTIONS } = require('@/config/firestore-collections') as typeof import('@/config/firestore-collections');
-const { FakeFirestore } = require('@/services/places/__tests__/fake-firestore') as typeof import('@/services/places/__tests__/fake-firestore');
+const { FakeFirestore } = require('@/test-utils/fake-firestore/fake-firestore') as typeof import('@/test-utils/fake-firestore/fake-firestore');
 const fixtures = require('@/lib/owner-property/__tests__/owner-property-fixtures') as typeof import('@/lib/owner-property/__tests__/owner-property-fixtures');
 const { readPrivateMarketingPanels } = require('../private-marketing-panel.service') as typeof import('../private-marketing-panel.service');
 const { consentValuesFor, consentTextVerdict } = require('@/lib/mandate/private-marketing-consent-text') as typeof import('@/lib/mandate/private-marketing-consent-text');

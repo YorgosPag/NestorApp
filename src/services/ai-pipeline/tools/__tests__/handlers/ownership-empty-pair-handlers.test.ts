@@ -35,7 +35,7 @@ jest.mock('firebase-admin/firestore', () => ({
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getPO } from '@/services/procurement';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext } from '../test-utils/context-factory';
 import { AttachmentHandler } from '../../handlers/attachment-handler';
 import { ProcurementHandler } from '../../handlers/procurement-handler';
@@ -54,12 +54,12 @@ const CONTACT_ID = 'cont_target_001';
 const FILE_ID = 'file_target_001';
 const PO_ID = 'po_target_001';
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  kit = createMockFirestore();
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  kit = new FakeFirestore();
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
 });
 
 /** Σπέρνει την επαφή-στόχο με τον δοσμένο ιδιοκτήτη. */
@@ -90,8 +90,8 @@ const SITES: readonly OwnershipCallSiteSpec[] = [
           contentType: 'application/pdf',
         },
       });
-      kit.clearWrites();
-      return writeJournalProbe(() => kit.writes());
+      kit.clearWriteLog();
+      return writeJournalProbe(() => kit.writeLog());
     },
     act: callerCompanyId =>
       new AttachmentHandler().execute(

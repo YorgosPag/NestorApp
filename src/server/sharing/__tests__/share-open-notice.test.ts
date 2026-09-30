@@ -23,7 +23,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { hashShareToken } from '@/lib/sharing/share-token';
 import { announceTourLinkOpened } from '@/server/spatial-tour/tour-access-notifier';
 import { SHARE_KIND_LINK_POLICY, type ResolvableShareKind } from '@/services/sharing/share-resolve-contract';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { ShareEntityType } from '@/types/sharing';
 
 import {
@@ -43,8 +43,8 @@ const DEVICE_B = 'DeviceB_abcdefghijklmnopqrstuvwxyz0123456789';
 const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 
 const announce = announceTourLinkOpened as jest.MockedFunction<typeof announceTourLinkOpened>;
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 const noGrant = () => false;
 
 /**
@@ -69,7 +69,7 @@ function open(device: string | null) {
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
   process.env.SHARE_ACCESS_SECRET = 'test-secret-with-enough-entropy-0123456789';
   announce.mockClear();
 });

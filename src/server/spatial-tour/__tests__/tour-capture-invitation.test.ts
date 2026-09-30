@@ -27,7 +27,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { tourCaptureGrantFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayUploadTourCapture, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import {
@@ -77,7 +77,7 @@ const photographer = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 function seed() {
@@ -100,11 +100,11 @@ async function issue(overrides: Partial<IssueTourCaptureInvitationInput> = {}) {
   return outcome;
 }
 
-const grantWrites = () => kit.writes().filter((w) => w.collection === GRANTS);
+const grantWrites = () => kit.writeLog().filter((w) => w.collection === GRANTS);
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   settleMock.mockReset();
   seed();
 });
@@ -176,10 +176,10 @@ describe('Φ — ο φωτογράφος', () => {
     const { grantExpiresAt: _dropped, ...corrupt } = kit.getData(INVITATIONS, invitation.id) ?? {};
     void _dropped;
     kit.seedCollection(INVITATIONS, { [invitation.id]: corrupt });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await acceptTourCaptureInvitation(db, { token, identity: photographer() }))
       .toEqual({ kind: 'unavailable', reason: 'invitation-corrupt' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it('🔑 Φ6 — ανεπιβεβαίωτο email του ΣΩΣΤΟΥ ανθρώπου ⇒ μπαίνει, και η πρόσκληση το επιβεβαιώνει (ADR-853 §15)', async () => {
@@ -198,7 +198,7 @@ describe('Υ — ο υπεύθυνος', () => {
       subject: SUBJECT, actor: STRANGER, inviteeEmailRaw: EMAIL, grantExpiresOn: inDays(30), reason: 'x',
     });
     expect(outcome).toEqual({ kind: 'refused', reason: 'not-manager' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it.each([
@@ -210,7 +210,7 @@ describe('Υ — ο υπεύθυνος', () => {
       subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresOn, reason: 'x',
     });
     expect(outcome).toEqual({ kind: 'refused', reason });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it('Υ3 — κενός λόγος ⇒ `reason-required`', async () => {
@@ -241,9 +241,9 @@ describe('Υ — ο υπεύθυνος', () => {
     const { token, invitation } = await issue();
     const input = { subject: SUBJECT, actor: MANAGER, invitationId: invitation.id };
     expect(await revokeTourCaptureInvitation(db, input)).toEqual({ kind: 'revoked' });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await revokeTourCaptureInvitation(db, input)).toEqual({ kind: 'already', state: 'revoked' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
     expect(await acceptTourCaptureInvitation(db, { token, identity: photographer() }))
       .toEqual({ kind: 'refused', reason: 'revoked' });
     expect(await revokeTourCaptureInvitation(db, { ...input, actor: STRANGER }))
@@ -275,13 +275,13 @@ describe('Υ — ο υπεύθυνος', () => {
       ...Object.fromEntries([live, stale, accepted].map((i) => [i.invitation.id, kit.getData(INVITATIONS, i.invitation.id)])),
       [stale.invitation.id]: { ...kit.getData(INVITATIONS, stale.invitation.id), expiresAt: new Date(Date.now() - 1000).toISOString() },
     });
-    kit.clearWrites();
+    kit.clearWriteLog();
 
     const listed = await listPendingTourCaptureInvitations(db, { subject: SUBJECT, actor: MANAGER });
     if (listed.kind !== 'listed') throw new Error('αναμενόταν λίστα');
     const states = Object.fromEntries(listed.invitations.map((i) => [i.id, i.state]));
     expect(states).toEqual({ [live.invitation.id]: 'pending', [stale.invitation.id]: 'expired' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it('Υ9 — λίστα αδειών: ενεργή ⇒ `active`, ανακλημένη ⇒ `revoked` (ορατή για ξαναπρόσκληση)· ξένος ⇒ `not-manager`', async () => {

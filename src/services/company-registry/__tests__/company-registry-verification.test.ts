@@ -27,7 +27,7 @@ import {
   type RegistryVerificationDeps,
 } from '@/services/company-registry/company-registry-verification.service';
 import { registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { givenCompanyProfile, givenRegistryCheck } from '@/services/mandate/__tests__/showcase-legal-fixture';
 import type { RegistryLookupVerdict } from '@/types/company-registry';
 

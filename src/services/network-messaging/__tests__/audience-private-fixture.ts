@@ -10,7 +10,7 @@
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { NETWORK_AUDIENCE_PRIVATE_FIELDS } from '@/types/network-thread';
 
-import type { FakeFirestore } from '../../places/__tests__/fake-firestore';
+import type { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const publicPath = (threadId: string): string =>
   `${COLLECTIONS.NETWORK_THREADS}/${threadId}/${SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE}`;

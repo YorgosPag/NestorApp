@@ -54,7 +54,7 @@ import sharp from 'sharp';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { finalizeTourCaptureUpload } from '../tour-capture-finalize';
@@ -86,7 +86,7 @@ const RIGHTS = {
 };
 const DECLARATION = { source: 'camera-360', audience: 'public-listing', milestone: 'pre-closure', rights: RIGHTS, originalFilename: 'σαλόνι.jpg' };
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 let panorama: Buffer;
 let flat: Buffer;
@@ -98,8 +98,8 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   objects.clear();
   sessions.length = 0;
   audits.length = 0;
@@ -170,7 +170,7 @@ describe('Ε — η έναρξη', () => {
     expect(await start(MANAGER, panorama, 'image/png')).toEqual({ kind: 'refused', reason: 'not-jpeg' });
     expect(await startTourCaptureUpload(db, { subject: SUBJECT, actor: MANAGER, contentType: 'image/jpeg', contentLength: 41 * 1024 * 1024, origin: ORIGIN }))
       .toEqual({ kind: 'refused', reason: 'too-large' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
     expect(sessions).toHaveLength(0);
   });
 });

@@ -12,7 +12,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 
-import { FakeFirestore } from './fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fakeDb = new FakeFirestore();
 
@@ -39,11 +39,11 @@ function seed(collection: string, id: string, expiresAtMs: number): void {
 }
 
 function idsIn(collection: string): string[] {
-  return [...fakeDb.dump(collection).keys()].sort();
+  return [...fakeDb.pathBucket(collection).keys()].sort();
 }
 
 function clear(collection: string): void {
-  [...fakeDb.dump(collection).keys()].forEach((id) => {
+  [...fakeDb.pathBucket(collection).keys()].forEach((id) => {
     void fakeDb.collection(collection).doc(id).delete();
   });
 }

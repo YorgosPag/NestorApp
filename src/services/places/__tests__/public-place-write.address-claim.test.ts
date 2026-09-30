@@ -12,7 +12,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { ResolvedPlaceFacts } from '@/lib/places/place-facts';
-import { FakeFirestore } from './fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 jest.mock('../place-source-verification', () => ({
   verifyPlaceClaim: jest.fn(),

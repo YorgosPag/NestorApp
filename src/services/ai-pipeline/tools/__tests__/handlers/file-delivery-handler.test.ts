@@ -11,7 +11,7 @@ import '../setup';
 
 import { FileDeliveryHandler } from '../../handlers/file-delivery-handler';
 import { createCustomerContext, createAdminContext } from '../test-utils/context-factory';
-import { createMockFirestore } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 jest.mock('@/config/firestore-collections', () => ({
@@ -31,11 +31,11 @@ jest.mock('@/services/ai-pipeline/shared/channel-reply-dispatcher', () => ({
 // ============================================================================
 
 function setupFirestore(collections: Record<string, Record<string, Record<string, unknown>>>) {
-  const kit = createMockFirestore();
+  const kit = new FakeFirestore();
   for (const [name, docs] of Object.entries(collections)) {
     kit.seedCollection(name, docs);
   }
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
   return kit;
 }
 

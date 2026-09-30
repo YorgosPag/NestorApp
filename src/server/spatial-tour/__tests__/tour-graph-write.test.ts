@@ -18,7 +18,7 @@ import { MAX_TOUR_NODES, MAX_TOUR_SPACES_PER_LEVEL, TOUR_FACE_DETECTOR_VERSION }
 import { spatialTourFromDocument, tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import type { TourGraphCommand } from '@/lib/spatial-tour/tour-graph-edit';
@@ -44,7 +44,7 @@ const MANAGER: TourActor = {
 };
 const PHOTOGRAPHER: TourActor = { listing: { uid: 'uid_photo', companyId: null }, capability: { globalRole: 'external_user', permissions: [] } };
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 function tourDoc(overrides: Record<string, unknown> = {}) {
@@ -70,8 +70,8 @@ function captureDoc(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   kit.seedCollection(COLLECTIONS.PROPERTIES, { prop_1: { companyId: AGENCY, name: 'Διαμέρισμα Α2' } });
   kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
   kit.seedCollection(CAPTURES, { tcap_1: captureDoc(), tcap_2: captureDoc() });

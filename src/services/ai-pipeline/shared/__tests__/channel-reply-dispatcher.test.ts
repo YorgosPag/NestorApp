@@ -76,7 +76,7 @@ import { sendWhatsAppMessage } from '@/app/api/communications/webhooks/whatsapp/
 import { sendMessengerMessage } from '@/app/api/communications/webhooks/messenger/messenger-client';
 import { sendInstagramMessage } from '@/app/api/communications/webhooks/instagram/instagram-client';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 // ============================================================================
 // HELPERS
@@ -304,11 +304,11 @@ describe('channel-reply-dispatcher', () => {
 
   describe('In-App dispatch', () => {
     it('should update Firestore voice command document', async () => {
-      const kit = createMockFirestore();
+      const kit = new FakeFirestore();
       kit.seedCollection('voice_commands', {
         cmd_001: { status: 'processing' },
       });
-      (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+      (getAdminFirestore as jest.Mock).mockReturnValue(kit);
 
       const result = await sendChannelReply(
         baseParams(PipelineChannel.IN_APP, {

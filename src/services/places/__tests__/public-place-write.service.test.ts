@@ -20,7 +20,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PublicBuilding, PublicLand } from '@/types/geo/public-place';
-import { FakeFirestore } from './fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 jest.mock('../place-source-verification', () => ({
   verifyPlaceClaim: jest.fn(),

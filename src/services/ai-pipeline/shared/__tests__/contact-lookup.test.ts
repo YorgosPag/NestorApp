@@ -62,7 +62,7 @@ jest.mock('@/services/realtime/types', () => ({
   SYNC_SOURCE_AI_AGENT: 'ai_agent',
 }));
 
-import { createMockFirestore } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   findContactByEmail,
@@ -84,9 +84,9 @@ import {
 const COMPANY_ID = 'comp_test_001';
 
 function setupFirestore(contacts: Record<string, Record<string, unknown>>) {
-  const kit = createMockFirestore();
+  const kit = new FakeFirestore();
   kit.seedCollection('contacts', contacts);
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
   return kit;
 }
 

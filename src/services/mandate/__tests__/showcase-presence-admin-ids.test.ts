@@ -30,7 +30,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { storedShowcaseDoc } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readAdminFootprints } from '@/services/places/admin-footprints.reader';
 import { refreshShowcasePresence } from '../showcase-presence.service';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';

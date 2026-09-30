@@ -22,7 +22,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { CAPTURE_DOC } from '@/lib/spatial-tour/__tests__/spatial-tour-fixtures';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import { createShareOnServer, parseCreateShareRequest } from '../share-create';
 import { updateShareOnServer } from '../share-update';
@@ -32,11 +32,11 @@ const TOUR_ID = enterpriseIdService.generateDeterministicSpatialTourId('company-
 const CAPTURES = `${COLLECTIONS.SPATIAL_TOURS}/${TOUR_ID}/${SUBCOLLECTIONS.TOUR_CAPTURES}`;
 const PUBLISHER = { globalRole: 'internal_user', permissions: ['listings:listings:publish'], companyId: AGENCY };
 
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
   kit.seedCollection(COLLECTIONS.PROPERTIES, { prop_1: { companyId: AGENCY } });
   kit.seedCollection(COLLECTIONS.SPATIAL_TOURS, {
     [TOUR_ID]: {
@@ -66,9 +66,9 @@ describe('spatial_tour — ο υπεύθυνος δίνει σύνδεσμο', (
     ['καλών χωρίς όψη ρόλου (fail-closed)', { uid: 'boris', companyId: AGENCY }],
     ['άλλος μισθωτής', { uid: 'carl', companyId: 'comp_rival', capability: { ...PUBLISHER, companyId: 'comp_rival' } }],
   ])('%s ⇒ forbidden, καμία εγγραφή', async (_name, creator) => {
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await createShareOnServer(db(), creator, tourRequest())).toMatchObject({ ok: false, refusal: 'forbidden' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   // 🔴 ζωντανά 2026-09-26 (ADR-884 §4.7 Α8): σύνδεσμος για περιήγηση χωρίς στάση θεατή = ο παραλήπτης βλέπει
@@ -79,10 +79,10 @@ describe('spatial_tour — ο υπεύθυνος δίνει σύνδεσμο', (
     ['ατοποθέτητη λήψη', { nodeId: null }],
   ])('%s ⇒ invalid nothing-to-share, καμία εγγραφή', async (_name, overrides) => {
     kit.seedCollection(CAPTURES, { tcap_1: { ...CAPTURE_DOC, tourId: TOUR_ID, ...overrides } });
-    kit.clearWrites();
+    kit.clearWriteLog();
     const outcome = await createShareOnServer(db(), { uid: 'boris', companyId: AGENCY, capability: PUBLISHER }, tourRequest());
     expect(outcome).toEqual({ ok: false, refusal: 'invalid', reason: 'nothing-to-share' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('ξένος σε άδεια περιήγηση ⇒ forbidden (ποτέ «υπάρχει, αλλά είναι άδεια»)', async () => {
@@ -117,9 +117,9 @@ describe('spatial_tour — η αλλαγή ρυθμίσεων δεν είναι 
     ['προσθήκη κωδικού', { password: 'secret' }, 'password-not-allowed'],
     ['σβήσιμο του «για ποιον»', { label: null }, 'label-required'],
   ])('%s ⇒ invalid, καμία εγγραφή', async (_name, request, reason) => {
-    kit.clearWrites();
+    kit.clearWriteLog();
     const outcome = await updateShareOnServer(db(), { uid: 'boris', companyId: AGENCY }, 'share_t', request);
     expect(outcome).toEqual({ ok: false, refusal: 'invalid', reason });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });

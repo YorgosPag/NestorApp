@@ -17,7 +17,7 @@ import '../setup';
 
 import { FirestoreHandler } from '../../handlers/firestore-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 // ============================================================================
@@ -26,12 +26,12 @@ import { createAdminContext, createCustomerContext } from '../test-utils/context
 
 describe('FirestoreHandler', () => {
   let handler: FirestoreHandler;
-  let mockDb: MockFirestoreKit;
+  let mockDb: FakeFirestore;
 
   beforeEach(() => {
     handler = new FirestoreHandler();
-    mockDb = createMockFirestore();
-    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb.instance);
+    mockDb = new FakeFirestore();
+    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb);
     jest.clearAllMocks();
   });
 

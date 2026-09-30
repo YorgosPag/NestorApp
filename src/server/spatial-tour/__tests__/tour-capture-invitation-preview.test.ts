@@ -20,7 +20,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { issueTourCaptureInvitation, revokeTourCaptureInvitation } from '../tour-capture-invitation';
@@ -38,7 +38,7 @@ const MANAGER: TourActor = {
 };
 const grantExpiresOn = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 async function issue(subject: TourSubject = SUBJECT, actor: TourActor = MANAGER) {
@@ -50,8 +50,8 @@ async function issue(subject: TourSubject = SUBJECT, actor: TourActor = MANAGER)
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   kit.seedCollection(COLLECTIONS.PROPERTIES, { prop_1: { companyId: 'comp_agency', name: 'Διαμέρισμα Α2' } });
 });
 

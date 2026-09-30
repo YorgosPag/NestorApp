@@ -17,7 +17,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { CAPTURE_DOC } from '@/lib/spatial-tour/__tests__/spatial-tour-fixtures';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { readTourPresence } from '../tour-presence';
@@ -45,12 +45,12 @@ const tourDoc = (overrides: Record<string, unknown> = {}) => ({
 });
 const capture = (overrides: Record<string, unknown> = {}) => ({ ...CAPTURE_DOC, tourId: TOUR_ID, ...overrides });
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   kit.seedCollection(COLLECTIONS.PROPERTIES, { prop_1: { companyId: AGENCY } });
 });
 
@@ -66,10 +66,10 @@ const full = (
 describe('Ρ — οι ρυθμίσεις', () => {
   it('Ρ1 — ξένος ⇒ not-manager, καμία εγγραφή', async () => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await updateTourSettings(db, { subject: SUBJECT, actor: STRANGER, settings: settings('on-request', 'draft') }))
       .toEqual({ kind: 'refused', reason: 'not-manager' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Ρ2 — δημοσίευση χωρίς λήψη για το κοινό ⇒ publish-needs-capture', async () => {
@@ -86,9 +86,9 @@ describe('Ρ — οι ρυθμίσεις', () => {
     const resolved = full('on-request', 'published');
     expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: target })).toEqual({ kind: 'updated', settings: resolved });
     expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ visibility: 'on-request', lifecycle: 'published', updatedBy: 'boris' });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: target })).toEqual({ kind: 'unchanged', settings: resolved });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Ρ4 — η επιλογή ορατότητας ΓΕΝΝΑ την περιήγηση (πρώτη πράξη), πάντα ως πρόχειρη', async () => {
@@ -119,10 +119,10 @@ describe('Ρ — οι ρυθμίσεις', () => {
   ])('Ρ7 — λήψη για το κοινό %s ⇒ publish-needs-capture, καμία εγγραφή (ο κριτής του θεατή)', async (_name, doc) => {
     kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
     kit.seedCollection(CAPTURES, { tcap_1: doc });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: settings('on-request', 'published') }))
       .toEqual({ kind: 'refused', reason: 'publish-needs-capture' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Ρ8 — η ανάγνωση λέει στην οθόνη πόσες στάσεις έχει ο θεατής (ίδιος κριτής με δημοσίευση + σύνδεσμο)', async () => {
@@ -133,14 +133,14 @@ describe('Ρ — οι ρυθμίσεις', () => {
   });
 
   it('Ρ5 — η ανάγνωση αγέννητης περιήγησης δίνει τις ρυθμίσεις γέννησης ΧΩΡΙΣ εγγραφή', async () => {
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: MANAGER }))
       .toEqual({
         kind: 'read', tourId: TOUR_ID, settings: full('public', 'draft'), exists: false,
         viewerStopCount: 0, supportedVisibilities: ['public', 'on-request', 'link-only'],
       });
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: STRANGER })).toEqual({ kind: 'refused', reason: 'not-manager' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   // Γ3β · Δ8.4 — ο διακόπτης εμβαδών: ρύθμιση, όχι γράφος (το `revision` δεν αγγίζεται).
@@ -151,10 +151,10 @@ describe('Ρ — οι ρυθμίσεις', () => {
     expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: full('public', 'draft', 'hidden') }))
       .toEqual({ kind: 'updated', settings: full('public', 'draft', 'hidden') });
     expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ spaceAreaDisplay: 'hidden', revision: 0 });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: settings('public', 'draft') }))
       .toEqual({ kind: 'unchanged', settings: full('public', 'draft', 'hidden') });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 

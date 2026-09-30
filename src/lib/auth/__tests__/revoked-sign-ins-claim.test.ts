@@ -13,7 +13,7 @@
 
 jest.mock('server-only', () => ({}));
 
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fake = new FakeFirestore();
 const claimsOf = new Map<string, Record<string, unknown>>();

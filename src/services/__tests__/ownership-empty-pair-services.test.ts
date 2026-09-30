@@ -50,7 +50,7 @@ jest.mock('@/services/property-showcase/telegram-text-digest', () => ({
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
   describeOwnershipCallSites,
   downstreamCallProbe,
@@ -75,12 +75,12 @@ import type { Firestore } from '@/lib/firebaseAdmin';
 
 const DOC_ID = 'doc_target_001';
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  kit = createMockFirestore();
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  kit = new FakeFirestore();
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
 });
 
 /**
@@ -96,8 +96,8 @@ function seedOne(
   kit.seedCollection(collection, {
     [DOC_ID]: withOwner({ id: DOC_ID, companyId: 'placeholder', ...extra }, owner),
   });
-  kit.clearWrites();
-  return writeJournalProbe(() => kit.writes());
+  kit.clearWriteLog();
+  return writeJournalProbe(() => kit.writeLog());
 }
 
 /** Το λεξιλόγιο άρνησης «σχήμα αποτελέσματος με `success: false`». */
@@ -187,7 +187,7 @@ const SITES: readonly OwnershipCallSiteSpec[] = [
     name: 'loadFileRows — σε wipe, fail-open σημαίνει ΔΙΑΓΡΑΦΗ ξένου αρχείου',
     arrange: owner => seedOne(COLLECTIONS.FILES, owner, { storagePath: 'p/x.pdf' }),
     act: callerCompanyId =>
-      loadFileRows(kit.instance as unknown as Firestore, callerCompanyId, [DOC_ID]),
+      loadFileRows(kit as unknown as Firestore, callerCompanyId, [DOC_ID]),
     refused: result => Array.isArray(result) && result.length === 0,
   },
   {
@@ -195,7 +195,7 @@ const SITES: readonly OwnershipCallSiteSpec[] = [
     name: 'loadFloorProjectId — διαρροή projectId ξένου ορόφου',
     arrange: owner => seedOne(COLLECTIONS.FLOORS, owner, { projectId: 'proj_secret' }),
     act: callerCompanyId =>
-      loadFloorProjectId(kit.instance as unknown as Firestore, callerCompanyId, DOC_ID),
+      loadFloorProjectId(kit as unknown as Firestore, callerCompanyId, DOC_ID),
     refused: result => result === null,
   },
 ];

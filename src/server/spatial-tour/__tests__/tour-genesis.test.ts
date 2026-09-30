@@ -18,7 +18,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour } from '../tour-access-shared';
@@ -39,13 +39,13 @@ const actorOf = (uid: string, companyId: string | null, permissions: string[]): 
 const MANAGER = actorOf('boris', AGENCY, ['listings:listings:publish']);
 const STRANGER = actorOf('carl', 'comp_rival', ['listings:listings:publish']);
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
-const tourWrites = () => kit.writes().filter((w) => w.collection === TOURS);
+const tourWrites = () => kit.writeLog().filter((w) => w.collection === TOURS);
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   kit.seedCollection(COLLECTIONS.PROPERTIES, { prop_1: { companyId: AGENCY } });
 });
 

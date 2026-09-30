@@ -34,7 +34,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { isContainerVisible, type ContainerState } from '@/types/container-access';
 

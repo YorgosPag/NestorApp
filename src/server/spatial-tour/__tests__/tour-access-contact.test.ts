@@ -23,7 +23,7 @@ import { readAccountIdentities } from '@/server/auth/account-identities';
 import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { decideTourAccessRequests } from '../tour-access-decision';
@@ -50,7 +50,7 @@ const identity = (uid: string) => ({
   uid, displayName: 'Δώρα Αγοράστρια', email: 'dora@example.com', emailVerified: true, givenName: 'Δώρα', familyName: 'Αγοράστρια',
 });
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 function seed(tourOverrides: Record<string, unknown> = {}) {
@@ -69,8 +69,8 @@ const decide = (decision: 'approved' | 'declined') =>
 
 beforeEach(() => {
   jest.clearAllMocks();
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
   (readAccountIdentities as jest.Mock).mockResolvedValue(new Map([['dora', identity('dora')]]));
 });
 

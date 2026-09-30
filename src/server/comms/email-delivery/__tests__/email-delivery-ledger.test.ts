@@ -9,7 +9,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { EmailDeliveryEvent } from '@/types/email-delivery';
 
 import { isStandingEvidence, mailboxAbsentSince } from '@/lib/communications/email-delivery/recipient-standing';

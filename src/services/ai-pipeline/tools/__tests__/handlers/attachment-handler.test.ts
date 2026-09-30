@@ -12,7 +12,7 @@ import '../setup';
 
 import { AttachmentHandler } from '../../handlers/attachment-handler';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
-import { createMockFirestore } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 jest.mock('@/config/firestore-collections', () => ({
@@ -44,10 +44,10 @@ function setupFirestore(
   files: Record<string, Record<string, unknown>> = {},
   contacts: Record<string, Record<string, unknown>> = {},
 ) {
-  const kit = createMockFirestore();
+  const kit = new FakeFirestore();
   kit.seedCollection('files', files);
   kit.seedCollection('contacts', contacts);
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
   return kit;
 }
 

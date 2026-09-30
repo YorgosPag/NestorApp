@@ -9,7 +9,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { storedShowcaseDoc, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { submitMandateRequest } from '@/services/mandate/mandate-request.service';
 import type { MandateRequestDeclaration } from '@/services/mandate/mandate-request-vocabulary';

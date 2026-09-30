@@ -6,7 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { LISTING_STATS_RETENTION_DAYS, shiftMarketDay } from '@/lib/listings/listing-stats';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { nextListingStats, rollupListingStats } from '../listing-stats-rollup.service';
 import type { StoredListingStats } from '../listing-stats-document';
 

@@ -19,7 +19,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { endOfCalendarDay } from '@/constants/platform-operator';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { decideTourAccessRequests, listTourAccessRequests, revokeTourAccess } from '../tour-access-decision';
@@ -63,7 +63,7 @@ function tourDoc(overrides: Record<string, unknown> = {}) {
   };
 }
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 let db: Firestore;
 
 function seed(tour: Record<string, unknown> | null = tourDoc()) {
@@ -72,8 +72,8 @@ function seed(tour: Record<string, unknown> | null = tourDoc()) {
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
-  db = kit.instance as unknown as Firestore;
+  kit = new FakeFirestore();
+  db = kit as unknown as Firestore;
 });
 
 describe('Ε — ο εντοπισμός από τη ρίζα', () => {
@@ -108,10 +108,10 @@ describe('Α — ο αιτών', () => {
   it('Α2 — δεύτερο αίτημα σε εκκρεμές ⇒ already-pending, ΚΑΜΙΑ εγγραφή (idempotent)', async () => {
     seed();
     await requestTourAccess(db, { subject: COMPANY_SUBJECT, requesterUid: 'buyer', message: null });
-    kit.clearWrites();
+    kit.clearWriteLog();
     const again = await requestTourAccess(db, { subject: COMPANY_SUBJECT, requesterUid: 'buyer', message: null });
     expect(again.kind).toBe('already-pending');
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it.each([
@@ -122,7 +122,7 @@ describe('Α — ο αιτών', () => {
     seed(tourDoc(patch));
     const outcome = await requestTourAccess(db, { subject: COMPANY_SUBJECT, requesterUid: 'buyer', message: null });
     expect(outcome).toEqual({ kind: 'refused', reason: 'not-requestable' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it('Α4 — ρίζα χωρίς περιήγηση ⇒ tour-absent', async () => {
@@ -148,7 +148,7 @@ describe('Υ — ο υπεύθυνος', () => {
     for (const uid of ['buyer', 'buyer2']) {
       await requestTourAccess(db, { subject: COMPANY_SUBJECT, requesterUid: uid, message: null });
     }
-    kit.clearWrites();
+    kit.clearWriteLog();
   });
 
   const approve = (actor: TourActor, expiresOn: string | null, uids = ['buyer']) =>
@@ -156,7 +156,7 @@ describe('Υ — ο υπεύθυνος', () => {
 
   it('Υ1 — 🔴 ξένος μισθωτής ⇒ not-manager, καμία εγγραφή', async () => {
     expect(await approve(STRANGER, inDays(30))).toEqual({ kind: 'refused', reason: 'not-manager' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it.each([
@@ -166,17 +166,17 @@ describe('Υ — ο υπεύθυνος', () => {
     ['λήξη πέρα από τον ορίζοντα', inDays(TOUR_ACCESS_MAX_DAYS + 1), 'expiry-too-far'],
   ])('Υ2 — 🔴 έγκριση %s ⇒ %s, καμία εγγραφή', async (_label, expiresOn, reason) => {
     expect(await approve(MANAGER, expiresOn)).toEqual({ kind: 'refused', reason });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it('Υ2β — 🔴 «έως μέρα Χ» ⇒ η άδεια λήγει στο ΤΕΛΟΣ της Χ, ώρα Ελλάδας· στιγμή αντί για μέρα ⇒ άρνηση (ADR-884 §9.1 Α6)', async () => {
     const day = inDays(30);
     await approve(MANAGER, day);
     expect(kit.getData(REQUESTS, requestId('buyer'))).toMatchObject({ state: 'approved', expiresAt: endOfCalendarDay(day).toISOString() });
-    kit.clearWrites();
+    kit.clearWriteLog();
     expect(await approve(MANAGER, new Date(Date.now() + 30 * 86_400_000).toISOString(), ['buyer2']))
       .toEqual({ kind: 'refused', reason: 'expiry-required' });
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
   });
 
   it('Υ3 — μαζική έγκριση: αποτέλεσμα ανά άνθρωπο, άγνωστος δεν ρίχνει τους άλλους', async () => {
@@ -238,7 +238,7 @@ describe('Λ — 🔴 η λήξη ΠΑΡΑΓΕΤΑΙ', () => {
       },
     });
     expect(await readTourViewStanding(db, { subject: COMPANY_SUBJECT, requesterUid: 'buyer' })).toBe('expired');
-    expect(kit.writes()).toHaveLength(0);
+    expect(kit.writeLog()).toHaveLength(0);
     const again = await requestTourAccess(db, { subject: COMPANY_SUBJECT, requesterUid: 'buyer', message: null });
     expect(again).toMatchObject({ kind: 'requested', request: { requestCount: 2 } });
   });

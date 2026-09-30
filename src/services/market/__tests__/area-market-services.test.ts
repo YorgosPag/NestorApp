@@ -10,7 +10,7 @@ import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { PublicListing } from '@/types/public-listing';
 
 const mockReadLive = jest.fn();

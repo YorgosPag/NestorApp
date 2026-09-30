@@ -11,7 +11,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { REGISTRY_CHECKED_AT, registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
-import type { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import type { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { RegistryCompanyRecord } from '@/types/company-registry';
 import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
 

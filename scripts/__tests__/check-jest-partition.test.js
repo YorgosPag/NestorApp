@@ -327,8 +327,11 @@ describe('Κ — τα σημεία που πληρώθηκαν', () => {
     expect(prefixes.some((prefix) => prefix.startsWith('build'))).toBe(false);
   });
 
-  it('Κ3 και τα ΤΕΣΣΕΡΑ αδέλφια παράγουν εξαίρεση — όχι ένα, όπως η χειρόγραφη λίστα', () => {
+  // ADR-742 §7sexdecies (2026-09-30): το πέμπτο αδέλφι (`firestore-contract`) μπήκε ΧΩΡΙΣ καμία αλλαγή στο
+  // `jest.config.js` — η εξαίρεση παράγεται από το `testMatch` του, όπως υπόσχεται ο σχεδιασμός.
+  it('Κ3 και τα ΠΕΝΤΕ αδέλφια παράγουν εξαίρεση — όχι ένα, όπως η χειρόγραφη λίστα', () => {
     expect(siblingOwnedPrefixes(PROJECT_ROOT).sort()).toEqual([
+      '/tests/firestore-contract/suites/',
       '/tests/firestore-rules/suites/',
       '/tests/functions-integration/suites/',
       '/tests/service-integration/suites/',

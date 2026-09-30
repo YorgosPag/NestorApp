@@ -41,8 +41,8 @@ jest.mock('@/services/owner-property/owner-property-audit', () => ({
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { COLLECTIONS } = require('@/config/firestore-collections') as
   typeof import('@/config/firestore-collections');
-const { FakeFirestore } = require('@/services/places/__tests__/fake-firestore') as
-  typeof import('@/services/places/__tests__/fake-firestore');
+const { FakeFirestore } = require('@/test-utils/fake-firestore/fake-firestore') as
+  typeof import('@/test-utils/fake-firestore/fake-firestore');
 const { validOwnerProperty } = require('@/lib/owner-property/__tests__/owner-property-fixtures') as
   typeof import('@/lib/owner-property/__tests__/owner-property-fixtures');
 const { setOwnerPropertyAudience } = require('../owner-property-write.service') as

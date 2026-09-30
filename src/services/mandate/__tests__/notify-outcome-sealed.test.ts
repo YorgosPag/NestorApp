@@ -26,7 +26,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { validDraft } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import { requireBrokerageCapability } from '@/lib/auth/brokerage-authority';
 import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';

@@ -5,7 +5,7 @@
  * **τι συμβαίνει όταν εμφανιστεί refresh token που έχει ήδη χρησιμοποιηθεί;**
  */
 
-import { FakeFirestore } from './fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fakeDb = new FakeFirestore();
 
@@ -44,7 +44,7 @@ function grant(overrides: Record<string, unknown> = {}) {
 describe('issueTokenPair', () => {
   it('ΔΕΝ γράφει ποτέ το ωμό μυστικό στη βάση', async () => {
     const issued = await issueTokenPair(grant());
-    const stored = fakeDb.dump(COLLECTIONS.OAUTH_TOKENS);
+    const stored = fakeDb.pathBucket(COLLECTIONS.OAUTH_TOKENS);
 
     const serialized = JSON.stringify([...stored.entries()]);
     expect(serialized).not.toContain(issued.accessToken);
@@ -53,7 +53,7 @@ describe('issueTokenPair', () => {
 
   it('το doc id είναι το SHA-256 του μυστικού με το enterprise πρόθεμα', async () => {
     const issued = await issueTokenPair(grant());
-    const stored = fakeDb.dump(COLLECTIONS.OAUTH_TOKENS);
+    const stored = fakeDb.pathBucket(COLLECTIONS.OAUTH_TOKENS);
 
     const id = tokenDocId(issued.accessToken);
     expect(id).toMatch(/^oatok_[0-9a-f]{64}$/);
@@ -62,7 +62,7 @@ describe('issueTokenPair', () => {
 
   it('access και refresh μοιράζονται οικογένεια', async () => {
     const issued = await issueTokenPair(grant());
-    const stored = fakeDb.dump(COLLECTIONS.OAUTH_TOKENS);
+    const stored = fakeDb.pathBucket(COLLECTIONS.OAUTH_TOKENS);
 
     const access = stored.get(tokenDocId(issued.accessToken));
     const refresh = stored.get(tokenDocId(issued.refreshToken));
@@ -72,7 +72,7 @@ describe('issueTokenPair', () => {
 
   it('το refresh ζει πολύ περισσότερο από το access', async () => {
     const issued = await issueTokenPair(grant());
-    const stored = fakeDb.dump(COLLECTIONS.OAUTH_TOKENS);
+    const stored = fakeDb.pathBucket(COLLECTIONS.OAUTH_TOKENS);
 
     const access = stored.get(tokenDocId(issued.accessToken)) as { expiresAt: { toMillis(): number } };
     const refresh = stored.get(tokenDocId(issued.refreshToken)) as { expiresAt: { toMillis(): number } };

@@ -10,7 +10,7 @@
  * παραβιάζουν) τον mod-11 — δεν αντιστοιχούν σε πρόσωπο.
  */
 
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isValidGreekVat } from '@/lib/validation/vat-validation';
 import {

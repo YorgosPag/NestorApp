@@ -71,7 +71,7 @@
  * @see adrs/ADR-742 §4, §7terdecies
  */
 
-import type { MockWriteRecord } from '@/test-utils/mock-firestore';
+import type { FakeWriteRecord } from '@/test-utils/fake-firestore/fake-firestore';
 
 /**
  * Ποιον μισθωτή φέρει το έγγραφο-στόχος όταν στηθεί.
@@ -99,7 +99,7 @@ export interface SideEffectProbe {
 }
 
 /** Έτοιμος ανιχνευτής για διαδρομές που γράφουν: το ημερολόγιο του mock. */
-export function writeJournalProbe(writes: () => readonly MockWriteRecord[]): SideEffectProbe {
+export function writeJournalProbe(writes: () => readonly FakeWriteRecord[]): SideEffectProbe {
   return { effects: writes };
 }
 

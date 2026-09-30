@@ -13,7 +13,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import { offerOf, validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readStayCalendarView } from '@/services/stay-calendar/stay-calendar-read.service';
 import { executeStayCalendarCommand } from '@/services/stay-calendar/stay-calendar-write.service';
 import { STAY_RULES_NONE } from '@/types/stay-rules';

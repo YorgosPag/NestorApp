@@ -32,7 +32,7 @@ import {
 } from '@/services/enterprise-id.service';
 import { actTeamDocument } from '@/services/network-messaging/act-team-writer';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
   privateFieldsOnPublicRows,
   privateSideOf,

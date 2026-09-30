@@ -43,7 +43,7 @@ import { FakeShelfBucket } from '@/services/upload/__fixtures__/fake-shelf-bucke
 // 🔑 **Ο ψεύτικος Firestore είναι ΚΙ ΑΥΤΟΣ ΚΟΙΝΟΣ** (N.18): η `FakeFirestore` ζει ήδη
 //    στο `services/places/__tests__` και τη χρησιμοποιεί ο κριτής της φορολογικής
 //    ταυτότητας. Δεύτερη υλοποίηση εδώ θα ήταν το κλασικό sibling clone.
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();

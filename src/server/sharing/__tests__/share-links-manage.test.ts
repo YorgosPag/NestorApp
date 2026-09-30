@@ -25,7 +25,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { resolveUserDisplayName } from '@/services/entity-audit.service';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import { createShareOnServer, parseCreateShareRequest } from '../share-create';
 import {
@@ -44,8 +44,8 @@ const FUTURE = '2026-10-01T00:00:00.000Z';
 const PAST = '2026-09-01T00:00:00.000Z';
 const FILE_REF = { entityType: 'file', entityId: 'f_1' } as const;
 
-let kit: MockFirestoreKit;
-const db = (): Firestore => kit.instance as unknown as Firestore;
+let kit: FakeFirestore;
+const db = (): Firestore => kit as unknown as Firestore;
 
 function unifiedShare(extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -70,7 +70,7 @@ function unifiedShare(extra: Record<string, unknown> = {}): Record<string, unkno
 }
 
 beforeEach(() => {
-  kit = createMockFirestore();
+  kit = new FakeFirestore();
   kit.seedCollection(COLLECTIONS.FILES, { f_1: { companyId: 'comp_1' }, f_other: { companyId: 'comp_2' } });
   kit.seedCollection(COLLECTIONS.SHARES, {
     sh_old: unifiedShare({ createdAt: '2026-09-10T10:00:00.000Z', label: null }),
@@ -197,11 +197,11 @@ describe('updateShareOnServer (Α13 — same URL)', () => {
   });
 
   it('refuses a limit below the opens already made — and writes nothing', async () => {
-    kit.clearWrites();
+    kit.clearWriteLog();
 
     await expect(updateShareOnServer(db(), ACTOR, 'sh_new', { maxAccesses: 1 }))
       .resolves.toEqual({ ok: false, refusal: 'invalid', reason: 'max-below-count' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('writes the legacy vocabulary on a legacy link', async () => {
@@ -211,11 +211,11 @@ describe('updateShareOnServer (Α13 — same URL)', () => {
   });
 
   it('🔴 a revoked or foreign link is «not-found» — settings are no back door to revival', async () => {
-    kit.clearWrites();
+    kit.clearWriteLog();
 
     await expect(updateShareOnServer(db(), ACTOR, 'sh_revoked', { expiresInHours: 24 })).resolves.toMatchObject({ refusal: 'not-found' });
     await expect(updateShareOnServer(db(), ACTOR, 'sh_foreign', { expiresInHours: 24 })).resolves.toMatchObject({ refusal: 'not-found' });
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 
@@ -238,10 +238,10 @@ describe('revokeAllShareLinks', () => {
   });
 
   it('🔴 another tenant’s entity ⇒ null and nothing is written', async () => {
-    kit.clearWrites();
+    kit.clearWriteLog();
 
     await expect(revokeAllShareLinks(db(), ACTOR, { entityType: 'file', entityId: 'f_other' })).resolves.toBeNull();
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 

@@ -11,7 +11,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { FakeShelfBucket } from '@/services/upload/__fixtures__/fake-shelf-bucket';
 import { requireBrokerageCapability, isBrokerageDenial } from '@/lib/auth/brokerage-authority';
 import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';

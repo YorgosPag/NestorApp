@@ -20,7 +20,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { withdrawNotifications } from '@/server/notifications/notification-withdraw';
 import { messageEventId, retractionWithdrawals } from '@/services/network-messaging/network-notifier';
 import { directoryItem } from '@/services/network-messaging/thread-directory';

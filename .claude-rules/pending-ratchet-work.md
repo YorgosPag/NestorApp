@@ -2,14 +2,26 @@
 
 **STATUS: ACTIVE**
 
-- 🟡 **30/09 — ΔΥΟ ΠΛΑΣΤΑ FIRESTORE ΓΙΑ ΤΟ ΙΔΙΟ ΠΡΑΓΜΑ** *(N.0.2 · N.18 · ADR-890 §17)*
+- 🟡 **30/09 — ΕΝΑ ΨΕΥΤΙΚΟ FIRESTORE: η ουρά της μετάβασης** *(ADR-742 §7sexdecies · verified fake)*
 
-  `src/test-utils/mock-firestore.ts` (**36** καλούντες) και `src/services/places/__tests__/fake-firestore.ts` (**99**
-  καλούντες, 845 γραμμές) υλοποιούν ανεξάρτητα `where/orderBy/limit/startAfter/count/batch/transaction`. Αποκλίνουν
-  σιωπηλά: μέχρι 30/09 ο πρώτος **αγνοούσε** το `orderBy`, ο δεύτερος ταξινομούσε αλλά **δεν εξαιρούσε** έγγραφα χωρίς το
-  πεδίο — και οι δύο τυφλοί στην παγίδα «το `orderBy` κρύβει έγγραφα» (διορθώθηκαν και οι δύο στο ADR-890 §17).
-  Θεραπεία: ένα πλαστό στο `src/test-utils/` (υπερσύνολο), μετάβαση των καλούντων, διαγραφή του δεύτερου. Μέτρα πρώτα:
-  `grep -rl "places/__tests__/fake-firestore" src | wc -l`.
+  ✅ Το SSoT υπάρχει: `src/test-utils/fake-firestore/`, με σουίτα συμβολαίου που τρέχει και στον emulator
+  (`firestore-contract.yml`). Ήταν **τρία** fakes, όχι δύο: του oauth διαγράφηκε ήδη. ⏳ Μένουν **5 καλούντες** που είχαν
+  ξένες αλλαγές στο κοινό δέντρο: `owned-file-bytes` · `file-hold-service` · `file-purge-custody` · `share-gate-resolve` ·
+  `tour-tileset-baker`. Θεραπεία, όταν καθαρίσουν:
+  1. μετάβαση των πέντε·
+  2. διαγραφή `test-utils/mock-firestore.ts` + `places/__tests__/fake-firestore.ts`·
+  3. σβήσιμο των γραμμών `PENDING_CALLERS`/`LEGACY_FAKES` στο `fake-firestore-singleton.anchor.test.ts` (το Φ3 το απαιτεί)·
+  4. γραμμή allowlist `backend-unavailable` στο `.ssot-registry.json`·
+  5. scripts `test:firestore-contract(:emulator)` στο `package.json`.
+
+  Μέτρα: `grep -rlE "test-utils/mock-firestore'|places/__tests__/fake-firestore'" src`.
+
+- 🟡 **30/09 — 76 INLINE STUBS FIRESTORE (`collection: jest.fn`) ΑΝΤΙ ΓΙΑ ΤΟ ΕΝΑ FAKE** *(ADR-742 §7sexdecies.1)*
+
+  Δεν είναι fakes: επαληθεύουν **κλήσεις**, δεν προσομοιώνουν βάση. Γι' αυτό ο φρουρός δεν τα απαγορεύει. Είναι όμως
+  τυφλά σε κάθε παγίδα του Firestore (`orderBy`, `merge`, `NOT_FOUND`) που το verified fake πλέον αποδεικνύει. Θεραπεία,
+  όταν αγγίζεται ένα τέτοιο αρχείο (Boy Scout): μετάβαση στο `FakeFirestore` + ισχυρισμοί πάνω στην **κατάσταση** / στο
+  `writeLog()` αντί για `toHaveBeenCalledWith`. Μέτρα: `grep -rlE "collection: jest\.fn|collection = jest\.fn" src --include=*.test.ts`.
 
 - 🟡 **29/09 — ΣΥΝΔΕΣΜΟΣ ΜΕΣΑ ΣΕ ΚΕΙΜΕΝΟ: ΕΝΑ SSoT, ΔΕΚΑΔΕΣ LITERALS** *(N.0.2 · ADR-890 §15.6 · WCAG 1.4.1)*
 

@@ -36,7 +36,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readContainerState } from '@/lib/files/file-record-read';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';

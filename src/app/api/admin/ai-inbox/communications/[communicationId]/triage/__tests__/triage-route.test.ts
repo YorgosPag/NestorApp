@@ -64,7 +64,7 @@ import { buildRequestContext } from '@/lib/auth/auth-context';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { logCommunicationApproved } from '@/lib/auth/audit';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { AuthContext, GlobalRole } from '@/lib/auth/types';
 import { POST } from '../route';
 
@@ -72,7 +72,7 @@ const COMM_ID = 'msg_triage_001';
 const OWNER = 'comp_OWNER';
 const INTRUDER = 'comp_INTRUDER';
 
-let kit: MockFirestoreKit;
+let kit: FakeFirestore;
 
 function caller(overrides: Partial<AuthContext> & { globalRole?: GlobalRole } = {}): AuthContext {
   return {
@@ -96,17 +96,17 @@ async function post(body: unknown, communicationId = COMM_ID) {
 }
 
 function tasksWritten() {
-  return kit.writes().filter((w) => w.collection === COLLECTIONS.TASKS);
+  return kit.writeLog().filter((w) => w.collection === COLLECTIONS.TASKS);
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  kit = createMockFirestore();
-  (getAdminFirestore as jest.Mock).mockReturnValue(kit.instance);
+  kit = new FakeFirestore();
+  (getAdminFirestore as jest.Mock).mockReturnValue(kit);
   kit.seedCollection(COLLECTIONS.MESSAGES, {
     [COMM_ID]: { id: COMM_ID, companyId: OWNER, triageStatus: 'pending', from: 'x@y.gr', content: 'hi' },
   });
-  kit.clearWrites();
+  kit.clearWriteLog();
 });
 
 // =============================================================================
@@ -120,7 +120,7 @@ describe('Α. Ποιος ρωτά — το σύνορο, ποτέ ο πελάτ�
     const res = await post({ decision: 'approve' });
 
     expect(res.status).toBe(401);
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Α2 — ρόλος εκτός κονσόλας (`internal_user`) ⇒ 403 ROLE_REQUIRED', async () => {
@@ -130,7 +130,7 @@ describe('Α. Ποιος ρωτά — το σύνορο, ποτέ ο πελάτ�
 
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('ROLE_REQUIRED');
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Α3 — διαχειριστής ΧΩΡΙΣ MFA ⇒ 403 MFA_REQUIRED (ίδια πόρτα με τη σελίδα)', async () => {
@@ -140,7 +140,7 @@ describe('Α. Ποιος ρωτά — το σύνορο, ποτέ ο πελάτ�
 
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('MFA_REQUIRED');
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Α4 — σώμα με `adminUid`/`companyId` ⇒ 400: δεν «αγνοείται», απορρίπτεται', async () => {
@@ -149,7 +149,7 @@ describe('Α. Ποιος ρωτά — το σύνορο, ποτέ ο πελάτ�
     const res = await post({ decision: 'approve', adminUid: 'someone_else', companyId: INTRUDER });
 
     expect(res.status).toBe(400);
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 
@@ -169,7 +169,7 @@ describe('Β. Ξένο μήνυμα', () => {
     // ανά αίτημα (`requestId`, `timestamp`), που τα προσθέτει ο `apiErrorHandler` σε κάθε απάντηση.
     const oracle = ({ requestId: _r, timestamp: _t, ...rest }: Record<string, unknown>) => rest;
     expect(oracle(foreign.body)).toEqual(oracle(missing.body));
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 
   it('Β2 — ο bypass ρόλος (ήδη καθολική ορατότητα) παίρνει την ειλικρινή άρνηση 403 — χωρίς εγγραφή', async () => {
@@ -178,7 +178,7 @@ describe('Β. Ξένο μήνυμα', () => {
     const res = await post({ decision: 'reject' });
 
     expect(res.status).toBe(403);
-    expect(kit.writes()).toEqual([]);
+    expect(kit.writeLog()).toEqual([]);
   });
 });
 
@@ -196,7 +196,7 @@ describe('Γ. Νόμιμη απόφαση', () => {
     expect(res.body.data.taskId).toEqual(expect.any(String));
     const [task] = tasksWritten();
     expect(task.data).toMatchObject({ assignedTo: 'admin_owner', companyId: OWNER });
-    expect(kit.writes()).toContainEqual(expect.objectContaining({
+    expect(kit.writeLog()).toContainEqual(expect.objectContaining({
       kind: 'update', collection: COLLECTIONS.MESSAGES, docId: COMM_ID,
       data: expect.objectContaining({ triageStatus: 'approved' }),
     }));
@@ -218,7 +218,7 @@ describe('Γ. Νόμιμη απόφαση', () => {
 
     expect(res.status).toBe(200);
     expect(tasksWritten()).toEqual([]);
-    expect(kit.writes()).toContainEqual(expect.objectContaining({
+    expect(kit.writeLog()).toContainEqual(expect.objectContaining({
       kind: 'update', docId: COMM_ID, data: expect.objectContaining({ triageStatus: 'rejected' }),
     }));
   });

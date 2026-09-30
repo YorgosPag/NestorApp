@@ -54,7 +54,7 @@ import {
   setNetworkThreadMuted,
 } from '@/services/network-messaging/thread-messages';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const BORN = '2026-09-17T10:00:00.000Z';

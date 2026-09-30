@@ -16,7 +16,7 @@
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';

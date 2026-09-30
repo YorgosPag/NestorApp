@@ -14,7 +14,7 @@ import '../setup';
 
 import { ContactHandler } from '../../handlers/contact-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 // ── Mocked modules for assertions ──
@@ -32,12 +32,12 @@ const mockUpdateContactField = jest.requireMock(
 
 describe('ContactHandler', () => {
   let handler: ContactHandler;
-  let mockDb: MockFirestoreKit;
+  let mockDb: FakeFirestore;
 
   beforeEach(() => {
     handler = new ContactHandler();
-    mockDb = createMockFirestore();
-    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb.instance);
+    mockDb = new FakeFirestore();
+    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb);
     jest.clearAllMocks();
   });
 

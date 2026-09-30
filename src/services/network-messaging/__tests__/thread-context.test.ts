@@ -18,7 +18,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { actNetworkRefs } from '@/lib/network-messaging/act-network-refs';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { NetworkAudienceEntry, NetworkThread } from '@/types/network-thread';
 import { NO_EARLIER_TENURES } from '@/types/network-thread';
 

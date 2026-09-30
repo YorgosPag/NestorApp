@@ -20,7 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import {
   IDEMPOTENCY_ERROR,

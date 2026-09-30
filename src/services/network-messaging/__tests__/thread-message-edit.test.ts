@@ -16,7 +16,7 @@
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { privateFieldsOnPublicRows, privateSideOf } from './audience-private-fixture';
 import { ensureActThread, type ActThreadTopic } from '@/services/network-messaging/thread-writer';
 import {

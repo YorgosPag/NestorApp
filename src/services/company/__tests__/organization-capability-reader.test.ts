@@ -23,7 +23,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readCapabilityApplicants } from '@/services/company/organization-capability.reader';
 import { declareBrokerage } from '@/services/company/organization-capability.service';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';

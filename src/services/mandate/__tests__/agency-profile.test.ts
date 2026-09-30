@@ -23,7 +23,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { requireBrokerageCapability, isBrokerageDenial } from '@/lib/auth/brokerage-authority';
 import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';

@@ -24,7 +24,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { brokeredOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
 import { OPEN_LISTING } from '@/types/listing-agreement';
 import type { OwnerProperty } from '@/types/owner-property';

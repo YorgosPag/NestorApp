@@ -18,17 +18,17 @@ jest.mock('@/services/procurement', () => ({
 
 import { AgenticToolExecutor } from '../../agentic-tool-executor';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext } from '../test-utils/context-factory';
 
 describe('AgenticToolExecutor', () => {
   let executor: AgenticToolExecutor;
-  let mockDb: MockFirestoreKit;
+  let mockDb: FakeFirestore;
 
   beforeEach(() => {
     executor = new AgenticToolExecutor();
-    mockDb = createMockFirestore();
-    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb.instance);
+    mockDb = new FakeFirestore();
+    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb);
     jest.clearAllMocks();
   });
 

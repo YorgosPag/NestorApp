@@ -13,7 +13,7 @@ import '../setup';
 
 import { MessagingHandler } from '../../handlers/messaging-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 const mockSendChannelReply = jest.requireMock(
@@ -22,12 +22,12 @@ const mockSendChannelReply = jest.requireMock(
 
 describe('MessagingHandler', () => {
   let handler: MessagingHandler;
-  let mockDb: MockFirestoreKit;
+  let mockDb: FakeFirestore;
 
   beforeEach(() => {
     handler = new MessagingHandler();
-    mockDb = createMockFirestore();
-    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb.instance);
+    mockDb = new FakeFirestore();
+    (getAdminFirestore as jest.Mock).mockReturnValue(mockDb);
     jest.clearAllMocks();
     mockSendChannelReply.mockReturnValue({ success: true, messageId: 'msg_001' });
   });

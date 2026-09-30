@@ -18,7 +18,7 @@
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { mandateActSeed, mandateEdgesOf } from '@/lib/network-edge/edge-sources';
 import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import {
