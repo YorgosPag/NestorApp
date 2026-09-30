@@ -134,7 +134,7 @@ export async function openTourViewSession(db: Firestore, input: TourViewSessionI
   });
   if (verdict.kind === 'refused') return refuseView(verdict.reason);
 
-  const grant: TourViewGrant = { tourId: tour.id, basis: verdict.basis, basisId: verdict.basisId };
+  const grant: TourViewGrant = { tourId: tour.id, basis: verdict.basis, basisId: verdict.basisId, mediaPlacement: tour.mediaPlacement };
   if (isNewVisit(input.presentedGrant, grant) && verdict.basis === 'request' && request.requestRef !== null) {
     await recordTourRequestVisit(db, request.requestRef);
   }

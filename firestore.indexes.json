@@ -54,6 +54,62 @@
       ]
     },
     {
+      "collectionGroup": "public_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "adminArea.regionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "listedAt.at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "public_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "adminArea.regionalUnitId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "listedAt.at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "public_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "adminArea.municipalityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "listedAt.at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "public_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "adminArea.municipalUnitId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "listedAt.at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "storage_orphan_candidates",
       "queryScope": "COLLECTION",
       "fields": [

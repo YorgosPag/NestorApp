@@ -130,6 +130,48 @@ export const GCS_PUBLIC_MEDIA_BUCKET_CONFIG = {
   ],
 } as const;
 
+/**
+ * **ΤΑ ΜΕΣΑ ΤΗΣ ΠΕΡΙΗΓΗΣΗΣ** — ιδιωτικός κάδος στην ΕΕ (ADR-884 Φ2ζ ζ5 · §12 Δ7.3 / Δ11).
+ *
+ * Κρατά ό,τι ανήκει **αποκλειστικά** στην περιήγηση: την καραντίνα ανεβάσματος (`tour-ingest/`) και τα παράγωγα
+ * (`tour-tiles/` — πλακίδια + εικόνες κάτοψης). Το **πρωτότυπο** πανόραμα είναι `FileRecord` και μένει στον κανονικό
+ * κάδο (ζ5β = θέση ανά εγγραφή, χωριστό ADR).
+ *
+ * ⚠️ **Αντίθετο του δημόσιου ραφιού από κάθε άποψη**: κανένα `allUsers`, **Public Access Prevention = enforced**
+ * (ο κάδος δεν *μπορεί* να γίνει δημόσιος, ούτε από λάθος στην κονσόλα) και CORS **μόνο** για το PUT του resumable
+ * από τα origins της εφαρμογής — τα bytes διαβάζονται μόνο μέσα από τη διαδρομή μέσων (κουπόνι θέασης).
+ */
+export const GCS_TOUR_MEDIA_BUCKET =
+  process.env.GCS_TOUR_MEDIA_BUCKET ?? `${GCP_PROJECT_ID}-tour-media`;
+
+/**
+ * Η **επιθυμητή κατάσταση** του κάδου μέσων — τη συμφιλιώνει ο ΕΝΑΣ γραφέας (`server/spatial-tour/tour-media-provision`)
+ * και την ελέγχει το δίχτυ απόκλισης.
+ *
+ * - `EUROPE-WEST3` (Φρανκφούρτη): απόφαση Giorgio 2026-09-30 — η πλησιέστερη περιοχή στον server (Netcup, Νυρεμβέργη)·
+ *   κάθε πλακίδιο περνά από εκεί.
+ * - 🏆 `softDeleteRetentionSeconds: 0`: τα **αποσυρμένα** πλακίδια δείχνουν ό,τι ζητήθηκε να θολωθεί (Φ2ζ). Η προεπιλογή
+ *   της GCS (7 ημέρες ανακτήσιμα) θα κρατούσε ακριβώς αυτά — και θα χρέωνε κάθε επανα-ψήση. Το πρωτότυπο είναι η πηγή.
+ * - `ingestTtlDays`: η καραντίνα που δεν ολοκληρώθηκε σβήνεται μόνη της (ADR-884 Κ3α).
+ * - `cors`: **μόνο** το PUT του resumable, **μόνο** από τα origins της εφαρμογής (ποτέ `*` — ιδιωτικός κάδος). Ρητή λίστα
+ *   και όχι `NEXT_PUBLIC_APP_URL`: η προμήθεια τρέχει από το μηχάνημα του Giorgio, όπου αυτό είναι `localhost` ⇒ θα
+ *   έγραφε CORS **χωρίς** την παραγωγή. `Range` = η απάντηση 308 λέει πόσα bytes έφτασαν (`lib/storage/resumable-upload-client`).
+ */
+export const GCS_TOUR_MEDIA_BUCKET_CONFIG = {
+  location: 'EUROPE-WEST3',
+  storageClass: 'STANDARD' as const,
+  uniformBucketLevelAccess: true,
+  publicAccessPrevention: 'enforced' as const,
+  softDeleteRetentionSeconds: 0,
+  ingestTtlDays: 1,
+  cors: {
+    origin: ['https://nestorconstruct.gr', 'https://www.nestorconstruct.gr', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    method: ['PUT'],
+    responseHeader: ['Content-Type', 'Content-Range', 'Range', 'X-Goog-Resumable'],
+    maxAgeSeconds: 3600,
+  },
+} as const;
+
 // ---------------------------------------------------------------------------
 // Bucket metadata (for auto-creation)
 // ---------------------------------------------------------------------------

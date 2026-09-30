@@ -17,30 +17,39 @@ jest.mock('server-only', () => ({}));
 // την καθυστέρηση στο επόμενο test. Λήξη χρόνου εδώ ≠ πιασμένη μετάλλαξη.
 jest.setTimeout(120_000);
 
-const objects = new Map<string, { bytes: Buffer; contentType: string | null }>();
+type StoredObject = { bytes: Buffer; contentType: string | null };
+/** Ο κανονικός κάδος (πρωτότυπα + μέσα περιηγήσεων πριν το ζ5). */
+const objects = new Map<string, StoredObject>();
+/** Ο ιδιωτικός κάδος μέσων στην ΕΕ (ADR-884 Φ2ζ ζ5). */
+const euObjects = new Map<string, StoredObject>();
 let failSaves = false;
 /** Άγκιστρο στην πρώτη αποθήκευση — προσομοιώνει αλλαγή θολώματος ΕΝΩ ψήνεται (Φ2ζ). */
 let onFirstSave: (() => Promise<void>) | null = null;
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' },
-  getAdminBucket: () => ({
+  getAdminBucket: () => fakeBucket(objects),
+  getTourMediaBucket: () => fakeBucket(euObjects),
+}));
+
+function fakeBucket(store: Map<string, StoredObject>) {
+  return {
     file: (path: string) => ({
-      exists: async () => [objects.has(path)],
-      download: async () => [objects.get(path)?.bytes ?? Buffer.alloc(0)],
+      exists: async () => [store.has(path)],
+      download: async () => [store.get(path)?.bytes ?? Buffer.alloc(0)],
       save: async (bytes: Buffer, options: { contentType?: string }) => {
         if (failSaves) throw new Error('storage unavailable');
         const hook = onFirstSave;
         onFirstSave = null;
         if (hook !== null) await hook();
-        objects.set(path, { bytes, contentType: options.contentType ?? null });
+        store.set(path, { bytes, contentType: options.contentType ?? null });
       },
     }),
     deleteFiles: async ({ prefix }: { prefix: string }) => {
-      for (const path of [...objects.keys()]) if (path.startsWith(prefix)) objects.delete(path);
+      for (const path of [...store.keys()]) if (path.startsWith(prefix)) store.delete(path);
     },
-  }),
-}));
+  };
+}
 
 import { createHash } from 'node:crypto';
 
@@ -100,6 +109,7 @@ beforeEach(() => {
   kit = createMockFirestore();
   db = kit.instance as unknown as Firestore;
   objects.clear();
+  euObjects.clear();
   failSaves = false;
   onFirstSave = null;
   kit.seedCollection(TOURS, {
@@ -351,5 +361,38 @@ describe('Π — πρόσωπα: σάρωση ΠΡΙΝ από κάθε δημο�
       expect(await withBrokenDetector(() => backfillFaceScan(db, captureRef(), true))).toMatchObject({ kind: 'error' });
       expect(await readCapture()).not.toHaveProperty('faceScan');
     });
+  });
+});
+
+describe('Μ — ο κάδος μέσων (ADR-884 Φ2ζ ζ5)', () => {
+  const setPlacement = (mediaPlacement: unknown) =>
+    kit.seedCollection(TOURS, { [TOUR_ID]: { ...kit.getData(TOURS, TOUR_ID), mediaPlacement } });
+  const tilesOf = (store: Map<string, StoredObject>) => [...store.keys()].filter((path) => path.startsWith(`tour-tiles/${TOUR_ID}/`));
+
+  it('🔴 Μ1 — περιήγηση `tour-eu` ⇒ ΟΛΑ τα πλακίδια στον κάδο της ΕΕ, ΚΑΝΕΝΑ στον κανονικό · το πρωτότυπο διαβάζεται από τον κανονικό', async () => {
+    setPlacement('tour-eu');
+    seedCapture();
+    expect(await bakeTourTileset(db, captureRef())).toEqual({ kind: 'baked', faceSize: 512, objects: 7, transition: 'written' });
+    expect(tilesOf(euObjects)).toHaveLength(7);
+    expect(tilesOf(objects)).toEqual([]);
+    expect(objects.has(ORIGINAL_PATH)).toBe(true);
+  });
+
+  it('Μ2 — αποσυρμένα κλειδιά σβήνονται στον κάδο της ΘΕΣΗΣ (όχι στον άλλο)', async () => {
+    setPlacement('tour-eu');
+    euObjects.set(`tour-tiles/${TOUR_ID}/old_key/preview.jpg`, { bytes: Buffer.alloc(1), contentType: null });
+    objects.set(`tour-tiles/${TOUR_ID}/old_key/preview.jpg`, { bytes: Buffer.alloc(1), contentType: null });
+    seedCapture({ tileset: { state: 'pending', contentHash: hash, faceSize: null, retiredKeys: ['old_key'] } });
+    await bakeTourTileset(db, captureRef());
+    expect(euObjects.has(`tour-tiles/${TOUR_ID}/old_key/preview.jpg`)).toBe(false);
+    expect(objects.has(`tour-tiles/${TOUR_ID}/old_key/preview.jpg`)).toBe(true);
+  });
+
+  it('🔴 Μ3 — ΑΓΝΩΣΤΗ θέση ⇒ deferred, κανένα πλακίδιο πουθενά (ποτέ «μαντεύω κάδο»)', async () => {
+    setPlacement('mars');
+    seedCapture();
+    expect(await bakeTourTileset(db, captureRef())).toMatchObject({ kind: 'deferred' });
+    expect([...tilesOf(euObjects), ...tilesOf(objects)]).toEqual([]);
+    expect((await readCapture())?.tileset.state).toBe('pending');
   });
 });

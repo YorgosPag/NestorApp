@@ -36,6 +36,7 @@ import {
   isTourMilestone,
   isTourRedactionSource,
   isTourRoomSource,
+  isTourMediaPlacement,
   isTourSpaceAreaDisplay,
   isTourSpaceSource,
   isTourTilesetState,
@@ -236,11 +237,14 @@ export function spatialTourFromDocument(raw: unknown, id: string): SpatialTour |
   if (createdAt === null || updatedAt === null || createdBy === null || updatedBy === null) return null;
   // Εμβαδά χώρων (Δ8.4): λείπει ⇒ `shown` (παλιά έγγραφα)· υπάρχει αλλά άγνωστο ⇒ δεν διαβάζεται.
   if (raw.spaceAreaDisplay !== undefined && !isTourSpaceAreaDisplay(raw.spaceAreaDisplay)) return null;
+  // Θέση μέσων (Φ2ζ ζ5): λείπει ⇒ legacy (το λύνει το tour-media-store)· άγνωστη ⇒ δεν διαβάζεται (ποτέ «μαντεύω κάδο»).
+  if (raw.mediaPlacement !== undefined && !isTourMediaPlacement(raw.mediaPlacement)) return null;
   return {
     id, custody, subject, levels, nodes,
     visibility: raw.visibility,
     lifecycle: raw.lifecycle,
     ...(raw.spaceAreaDisplay === undefined ? {} : { spaceAreaDisplay: raw.spaceAreaDisplay }),
+    ...(raw.mediaPlacement === undefined ? {} : { mediaPlacement: raw.mediaPlacement }),
     revision: raw.revision as number,
     createdAt, createdBy, updatedAt, updatedBy,
   };

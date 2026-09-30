@@ -29,6 +29,7 @@ import type {
   TourGrantScope,
   TourHeadingSource,
   TourLinkVia,
+  TourMediaPlacement,
   TourRedactionSource,
   TourMilestone,
   TourDeclaredAreaSource,
@@ -199,6 +200,11 @@ export interface SpatialTour {
   readonly lifecycle: SpatialTourLifecycle;
   /** Εμβαδά χώρων στη δημόσια σελίδα (Δ8.4) — απών ⇒ `shown`. Ρύθμιση, όχι γράφος: **δεν** αυξάνει το `revision`. */
   readonly spaceAreaDisplay?: TourSpaceAreaDisplay;
+  /**
+   * Σε ποιον κάδο ζουν τα μέσα της (ADR-884 Φ2ζ ζ5) — απόν ⇒ `legacy-default`. Υποδομή, όχι γράφος: **δεν** αυξάνει το
+   * `revision`· τον επιλύει μόνο το `server/spatial-tour/tour-media-store`.
+   */
+  readonly mediaPlacement?: TourMediaPlacement;
   readonly levels: readonly TourLevel[];
   /** ≤ `MAX_TOUR_NODES`. */
   readonly nodes: readonly TourNode[];

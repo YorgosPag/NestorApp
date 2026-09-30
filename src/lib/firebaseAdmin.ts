@@ -23,6 +23,7 @@ import { getStorage, type Storage } from 'firebase-admin/storage';
 import { getApp } from 'firebase-admin/app';
 import type { Bucket } from '@google-cloud/storage';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
+import { GCS_TOUR_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { createModuleLogger } from '@/lib/telemetry';
 
 import { initializeWithCredentialChain } from './firebaseAdmin-credentials';
@@ -156,6 +157,14 @@ export function getAdminBucket(): Bucket {
     );
   }
   return getAdminStorage().bucket(bucketName.trim());
+}
+
+/**
+ * Ο ιδιωτικός κάδος **μέσων της περιήγησης** στην ΕΕ (ADR-884 Φ2ζ ζ5). Όνομα από το SSoT `config/gcs-buckets`·
+ * ποιος κάδος ισχύει για **μια** περιήγηση το αποφασίζει μόνο το `server/spatial-tour/tour-media-store`.
+ */
+export function getTourMediaBucket(): Bucket {
+  return getAdminStorage().bucket(GCS_TOUR_MEDIA_BUCKET);
 }
 
 /**

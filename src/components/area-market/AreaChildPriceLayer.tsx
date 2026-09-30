@@ -19,7 +19,13 @@ import type { Map as MapInstance } from 'maplibre-gl';
 import React, { useEffect, useMemo, useRef } from 'react';
 
 import { useFeatureStateSync, useHatchImage, useLayerOrderBelow } from '@/components/market/choropleth/choropleth-sync';
-import { priceMapFillPaint, priceMapHatchPaint, priceMapLabelPaint, priceMapLinePaint } from '@/components/market/choropleth/price-map-paint';
+import {
+  priceMapFillPaint,
+  priceMapHatchPaint,
+  priceMapLabelLayout,
+  priceMapLabelPaint,
+  priceMapLinePaint,
+} from '@/components/market/choropleth/price-map-paint';
 import { PLACE_SHAPE_LINE_LAYER } from '@/components/geo/PlaceMap';
 import type { AdminOverviewFile } from '@/lib/geo/admin-overview-file';
 import { areaMarketHref } from '@/lib/listings/listing-routes';
@@ -42,6 +48,8 @@ const IDS = {
 } as const;
 const OWN_LAYERS = [IDS.fill, IDS.hatch, IDS.line];
 const BELOW = [PLACE_SHAPE_LINE_LAYER];
+/** Η κοινή διάταξη ετικετών. Στο JSX ξαναδηλώνονται ρητά `text-field` + `text-font` (CHECK 3.95 διαβάζει μόνο κυριολεκτικό `layout`)· το react-map-gl διαφοροποιεί το `layout` ανά κλειδί (deepEqual) ⇒ νέο αντικείμενο ανά απόδοση δεν ξαναστέλνει τίποτα. */
+const LABEL_LAYOUT = priceMapLabelLayout(BASEMAP_OVERLAY_TEXT_FONT);
 
 interface AreaChildPriceLayerProps {
   readonly model: AreaChildMapModel;
@@ -136,7 +144,7 @@ export function AreaChildPriceLayer({ model, file, labelText }: AreaChildPriceLa
         <Layer
           id={IDS.labels}
           type="symbol"
-          layout={{ 'text-field': ['get', 'text'], 'text-font': BASEMAP_OVERLAY_TEXT_FONT, 'text-size': 13, 'text-max-width': 8 }}
+          layout={{ ...LABEL_LAYOUT, 'text-field': ['get', 'text'], 'text-font': BASEMAP_OVERLAY_TEXT_FONT }}
           paint={{ 'text-color': paint.label.color, 'text-halo-color': paint.label.halo, 'text-halo-width': 1.5 }}
         />
       </Source>

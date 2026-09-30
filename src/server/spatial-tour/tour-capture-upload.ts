@@ -17,7 +17,9 @@ import 'server-only';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import type { TourMediaPlacement } from '@/constants/spatial-tour-vocabulary';
 import { refusalOfDeclaredPanorama, type PanoramaRefusal } from '@/lib/spatial-tour/panorama-policy';
+import { TOUR_INGEST_ROOT } from '@/lib/spatial-tour/tour-media-path';
 import { tourCaptureGrantFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, mayUploadTourCapture, type TourActor, type TourUploadVerdict } from '@/lib/spatial-tour/tour-authority';
 import { openResumableUploadSession } from '@/lib/storage/resumable-upload-session';
@@ -28,6 +30,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 import { refuseTourAccess, type TourAccessRefusal } from './tour-access-shared';
 import { ensureManagedTour } from './tour-genesis';
 import { locateSpatialTour } from './tour-locate';
+import { effectiveMediaPlacement, tourMediaBucket } from './tour-media-store';
 import { TOUR_UPLOAD_TICKET_TTL_MS, issueTourUploadTicket } from './tour-upload-ticket';
 
 /** Ο κριτής αρνήθηκε — με το **δικό του** όνομα (έληξε · ανακλήθηκε · καμία άδεια), ώστε ο φωτογράφος να ξέρει τι ζητά. */
@@ -58,7 +61,7 @@ const refuse = (reason: TourUploadRefusal): TourUploadRefused => ({ kind: 'refus
 
 /** **Η διαδρομή της καραντίνας** — κάτω από την περιήγηση, ώστε ο κανόνας κύκλου ζωής να την καθαρίζει ολόκληρη. */
 export function tourIngestPath(tourId: string, uploadId: string): string {
-  return `tour-ingest/${tourId}/${uploadId}`;
+  return `${TOUR_INGEST_ROOT}/${tourId}/${uploadId}`;
 }
 
 /** Ο δράστης **μπορεί** να ανεβάσει σε αυτή την περιήγηση — και πού ζει. */
@@ -67,6 +70,8 @@ export interface UploaderStanding {
   readonly custody: CustodyScope;
   /** Πώς λέγεται το ακίνητο — ετικέτα του `FileRecord` του πανοράματος (Κ3β). `null` αν λείπει. */
   readonly label: string | null;
+  /** Πού ζουν τα μέσα της περιήγησης (ADR-884 Φ2ζ ζ5) — εκεί ανοίγει η καραντίνα. */
+  readonly mediaPlacement: TourMediaPlacement;
 }
 
 /**
@@ -83,7 +88,9 @@ export async function judgeUploader(
   if (location.kind !== 'found') return refuseTourAccess('tour-absent');
   if (allowGenesis && mayManageTour(location.record, actor) === 'granted') {
     const ensured = await ensureManagedTour(db, subject, actor);
-    return ensured.kind === 'refused' ? ensured : { tourRef: ensured.tourRef, custody: ensured.custody, label: location.label };
+    if (ensured.kind === 'refused') return ensured;
+    const mediaPlacement = effectiveMediaPlacement(ensured.tour.mediaPlacement);
+    return { tourRef: ensured.tourRef, custody: ensured.custody, label: location.label, mediaPlacement };
   }
   if (location.tour === null) return refuseTourAccess('tour-absent');
   if (!isOwnedByCustody(location.tour.custody, location.custody)) return refuseTourAccess('tour-custody-mismatch');
@@ -92,7 +99,8 @@ export async function judgeUploader(
   const grant = grantSnap.exists ? tourCaptureGrantFromDocument(grantSnap.data(), actor.listing.uid) : null;
   const verdict = mayUploadTourCapture(location.record, actor, grant, Date.now());
   if (verdict === 'granted-as-manager' || verdict === 'granted-by-capture-grant') {
-    return { tourRef: location.tourRef, custody: location.custody, label: location.label };
+    const mediaPlacement = effectiveMediaPlacement(location.tour.mediaPlacement);
+    return { tourRef: location.tourRef, custody: location.custody, label: location.label, mediaPlacement };
   }
   return refuse(verdict);
 }
@@ -134,7 +142,7 @@ export async function startTourCaptureUpload(
   const expiresAtMs = Date.now() + TOUR_UPLOAD_TICKET_TTL_MS;
   const ticket = issueTourUploadTicket({
     uploadId, subject: input.subject, uploaderUid: input.actor.listing.uid,
-    custody: standing.custody, contentLength: input.contentLength, expiresAtMs,
+    custody: standing.custody, contentLength: input.contentLength, expiresAtMs, ingestPlacement: standing.mediaPlacement,
   });
   if (ticket === null) return { kind: 'unavailable', reason: 'secret-missing' };
 
@@ -143,6 +151,7 @@ export async function startTourCaptureUpload(
     contentType: input.contentType,
     contentLength: input.contentLength,
     origin: input.origin,
+    bucket: tourMediaBucket(standing.mediaPlacement),
   });
   if (session.outcome !== 'opened') return { kind: 'unavailable', reason: 'storage-refused' };
   return { kind: 'started', uploadId, ticket, sessionUri: session.sessionUri, expiresAt: new Date(expiresAtMs).toISOString() };

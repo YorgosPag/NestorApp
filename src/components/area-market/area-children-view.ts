@@ -16,7 +16,13 @@ import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { AdminOverviewFeature, AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
 import type { MarketSegment } from '@/lib/market/market-segments';
 import type { PriceMapAreas } from '@/lib/market/price-map';
-import { rankedSelectionsOf, segmentsFor, type PriceMapChoice, type PriceMapSelection } from '@/lib/market/price-map-view';
+import {
+  comparePriceMapLabelPriority,
+  rankedSelectionsOf,
+  segmentsFor,
+  type PriceMapChoice,
+  type PriceMapSelection,
+} from '@/lib/market/price-map-view';
 
 /** Το τμήμα με το οποίο ανοίγει ο χάρτης, όταν έχει νόημα — ίδια αφετηρία με τον χάρτη της αναζήτησης. */
 const DEFAULT_SEGMENT: MarketSegment = 'apartment';
@@ -56,6 +62,8 @@ export type ChildLabelText = (row: PriceMapSelection) => string;
 /**
  * **Οι ετικέτες τιμής**, ένα σημείο ανά παιδί (το προϋπολογισμένο `label` του γεννήτορα). Το κείμενο ζει σε
  * **ιδιότητα**, όχι σε `feature-state`: η MapLibre δεν διαβάζει κατάσταση σε `layout` (`text-field`).
+ * Το `rank` (0 = πρώτη) είναι η δηλωμένη προτεραιότητα τοποθέτησης (`comparePriceMapLabelPriority`, ADR-890 §17) και
+ * το διαβάζει το `symbol-sort-key` της κοινής διάταξης (`priceMapLabelLayout`).
  */
 export function childLabelsOf(
   features: readonly AdminOverviewFeature[],
@@ -63,12 +71,13 @@ export function childLabelsOf(
   text: ChildLabelText,
 ): GeoJSON.FeatureCollection<GeoJSON.Point> {
   const byId = new Map(rows.map((row) => [row.id, row]));
+  const rankOf = new Map([...rows].sort(comparePriceMapLabelPriority).map((row, rank) => [row.id, rank]));
   const points: GeoJSON.Feature<GeoJSON.Point>[] = [];
   for (const feature of features) {
     const { id, label } = feature.properties;
     const row = byId.get(id);
     if (label === undefined || row === undefined) continue;
-    points.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [...label] }, properties: { id, text: text(row) } });
+    points.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [...label] }, properties: { id, text: text(row), rank: rankOf.get(id) } });
   }
   return { type: 'FeatureCollection', features: points };
 }

@@ -52,6 +52,7 @@
     "migrate:network-inbox": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/reconcile-network-inbox.ts",
     "backfill:first-contact-offerer": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-first-contact-offerer.ts",
     "backfill:tour-face-scan": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-tour-face-scan.ts",
+    "provision:tour-media": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/provision-tour-media-bucket.ts",
     "notifications:replay": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/notifications/replay-notification.ts",
     "notifications:destination-drift": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/notifications/destination-drift.ts",
     "cron:run": "tsx scripts/cron/run-cron-job.ts",

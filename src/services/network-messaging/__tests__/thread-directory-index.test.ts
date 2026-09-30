@@ -12,45 +12,21 @@
  *   Ι-2  Το όνομα της υποσυλλογής στον δείκτη είναι **το ίδιο** με το SSoT των συλλογών
  */
 
-import fs from 'fs';
-import path from 'path';
-
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { THREAD_DIRECTORY_INDEX } from '@/services/network-messaging/thread-directory';
+import { indexesMatching, indexOrderOf, readCompositeIndexes, type IndexField } from '@/test-utils/firestore-indexes';
 
-interface IndexField {
-  readonly fieldPath: string;
-  readonly order?: 'ASCENDING' | 'DESCENDING';
-}
-interface CompositeIndex {
-  readonly collectionGroup: string;
-  readonly queryScope: 'COLLECTION' | 'COLLECTION_GROUP';
-  readonly fields: readonly IndexField[];
-}
-
-const INDEXES = (
-  JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../firestore.indexes.json'), 'utf8')) as {
-    readonly indexes: readonly CompositeIndex[];
-  }
-).indexes;
+const INDEXES = readCompositeIndexes();
 
 /** Τα πεδία που ΠΡΕΠΕΙ να έχει ο δείκτης — παραγόμενα από τη δήλωση του ερωτήματος, όχι γραμμένα εδώ. */
 const EXPECTED: readonly IndexField[] = [
   ...THREAD_DIRECTORY_INDEX.equality.map((fieldPath) => ({ fieldPath, order: 'ASCENDING' as const })),
-  {
-    fieldPath: THREAD_DIRECTORY_INDEX.orderBy.field,
-    order: THREAD_DIRECTORY_INDEX.orderBy.direction === 'desc' ? 'DESCENDING' : 'ASCENDING',
-  },
+  { fieldPath: THREAD_DIRECTORY_INDEX.orderBy.field, order: indexOrderOf(THREAD_DIRECTORY_INDEX.orderBy.direction) },
 ];
 
 describe('Ι — ο κατάλογος νημάτων έχει τον δείκτη του', () => {
   it('Ι-1 ο δείκτης υπάρχει, με ΑΚΡΙΒΩΣ τα πεδία και τη φορά του ερωτήματος', () => {
-    const matches = INDEXES.filter(
-      (index) =>
-        index.collectionGroup === SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE &&
-        index.queryScope === 'COLLECTION_GROUP' &&
-        JSON.stringify(index.fields) === JSON.stringify(EXPECTED),
-    );
+    const matches = indexesMatching(INDEXES, SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE, 'COLLECTION_GROUP', EXPECTED);
 
     expect(matches).toHaveLength(1);
   });

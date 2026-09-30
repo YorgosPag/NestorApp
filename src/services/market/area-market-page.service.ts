@@ -40,11 +40,21 @@ import {
 } from '@/types/area-market';
 import type { PublicListing } from '@/types/public-listing';
 
-/** Πόσες αγγελίες διαβάζονται για την προεπισκόπηση (ταξινομούνται στη μνήμη, νεότερες πρώτα). */
-const AREA_LISTINGS_READ_LIMIT = 200;
-
 /** Πόσες αγγελίες δείχνει η σελίδα· οι υπόλοιπες είναι ένα κλικ μακριά, στον χάρτη αποτελεσμάτων. */
 const AREA_LISTINGS_SHOWN = 12;
+
+/** Πόσες αγγελίες **άγνωστης** ημερομηνίας διαβάζονται για συμπλήρωση (ταξινομούνται στη μνήμη, τίτλος → id). */
+const UNKNOWN_LISTED_AT_READ_LIMIT = 200;
+
+/**
+ * **Ο δείκτης που ζητά η προεπισκόπηση αγγελιών** (ADR-890 §17): `adminArea.<πεδίο βαθμίδας> ↑` + `listedAt.at ↓`, ένας
+ * ανά βαθμίδα με σελίδα. Το πεδίο του ερωτήματος είναι δυναμικό, άρα η πύλη 3.91 το βλέπει «μη αναλύσιμο»· τον δείκτη
+ * τον φυλάει η άγκυρα `area-listings-index.test.ts`, που διαβάζει **αυτή** τη δήλωση — δύο αντίγραφα χωρίς απόκλιση.
+ */
+export const AREA_LISTINGS_INDEX = {
+  orderBy: { field: 'listedAt.at', direction: 'desc' },
+  unknown: { field: 'listedAt.kind', value: 'unknown' },
+} as const;
 
 async function readMarket(adminDb: AdminFirestore, areaId: string, parentId: string | null, today: string): Promise<AreaMarketState> {
   const ids = parentId === null ? [areaId] : [areaId, parentId];
@@ -55,6 +65,23 @@ async function readMarket(adminDb: AdminFirestore, areaId: string, parentId: str
   return { kind: 'ready', run: latest.run, snapshot: own, parent, series: series.get(areaId) ?? null };
 }
 
+function listingsOf(snapshot: FirebaseFirestore.QuerySnapshot): PublicListing[] {
+  const listings: PublicListing[] = [];
+  for (const doc of snapshot.docs) {
+    const listing = publicListingFromDocument(doc.data(), doc.id);
+    if (listing !== null) listings.push(listing);
+  }
+  return listings;
+}
+
+/**
+ * **Οι νεότερες αγγελίες της περιοχής — ίδια σειρά με το `compareListingsByListedAt`, σε οποιοδήποτε μέγεθος.**
+ *
+ * 🔴 Το `orderBy('listedAt.at')` **εξαιρεί** όσες δεν έχουν το πεδίο, δηλαδή τις άγνωστης ημερομηνίας (μετρημένο
+ * 2026-09-30: **9 από 15**). Γι' αυτό δύο ερωτήματα: οι γνωστές ταξινομημένες από τον δείκτη, και —μόνο αν δεν γέμισαν
+ * τη σελίδα— οι άγνωστες, που ο συγκριτής βάζει έτσι κι αλλιώς **στο τέλος**. Το άθροισμα είναι ακριβώς η σειρά του
+ * συγκριτή· καμία αγγελία δεν χάνεται σιωπηλά.
+ */
 async function readListings(adminDb: AdminFirestore, area: AdminArea): Promise<AreaListingsPreview> {
   const field = adminAreaFieldOfLevel(area.level);
   if (field === null) return { items: [], total: 0 };
@@ -62,11 +89,15 @@ async function readListings(adminDb: AdminFirestore, area: AdminArea): Promise<A
   // προβολή χωρίς ταυτότητα πελάτη· η ερώτηση «ποιες αγγελίες είναι σε αυτόν τον δήμο» είναι εξ ορισμού
   // πάνω από όλους τους μισθωτές, όπως η αναζήτηση.
   const query = adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).where(`adminArea.${field}`, '==', area.id);
-  const [snapshot, count] = await Promise.all([query.limit(AREA_LISTINGS_READ_LIMIT).get(), query.count().get()]);
-  const listings: PublicListing[] = [];
-  for (const doc of snapshot.docs) {
-    const listing = publicListingFromDocument(doc.data(), doc.id);
-    if (listing !== null) listings.push(listing);
+  const { orderBy, unknown } = AREA_LISTINGS_INDEX;
+  const [known, count] = await Promise.all([
+    query.orderBy(orderBy.field, orderBy.direction).limit(AREA_LISTINGS_SHOWN).get(),
+    query.count().get(),
+  ]);
+  const listings = listingsOf(known);
+  if (known.size < AREA_LISTINGS_SHOWN) {
+    const rest = await query.where(unknown.field, '==', unknown.value).limit(UNKNOWN_LISTED_AT_READ_LIMIT).get();
+    listings.push(...listingsOf(rest));
   }
   listings.sort(compareListingsByListedAt);
   return { items: listings.slice(0, AREA_LISTINGS_SHOWN), total: count.data().count };

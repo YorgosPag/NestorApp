@@ -26,6 +26,7 @@ import { decodeRouteParam } from '@/lib/routes/route-param';
 import { tourMediaObjectPath } from '@/lib/spatial-tour/tour-media-path';
 import { openStorageObject, type StorageObjectStream } from '@/lib/storage/storage-object-stream';
 import { createModuleLogger } from '@/lib/telemetry';
+import { tourMediaBucket } from '@/server/spatial-tour/tour-media-store';
 import { requestTourViewGrant } from '@/server/spatial-tour/tour-view-grant';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 
@@ -58,13 +59,16 @@ async function handleGet(request: NextRequest, segment?: Segment): Promise<NextR
   if (!isPlaceSource(kind) || subjectId === '') return status(400);
 
   const tourId = enterpriseIdService.generateDeterministicSpatialTourId(kind, subjectId);
-  if (requestTourViewGrant(request, tourId) === null) return status(401);
+  const grant = requestTourViewGrant(request, tourId);
+  if (grant === null) return status(401);
   const objectPath = tourMediaObjectPath(tourId, (params?.path ?? []).map(decodeRouteParam));
   if (objectPath === null) return status(400);
 
   try {
     // Ένα ταξίδι ως τον κάδο (Φ2ε · §4.11): η κρυφή μνήμη των μέσων είναι ΔΙΚΗ μας (`CACHE_CONTROL`), όχι η αποθηκευμένη.
-    const opened = await openStorageObject(objectPath, request.headers.get('range'), { singleRequest: true });
+    // Ο κάδος από την υπογεγραμμένη άδεια (ζ5) — καμία ανάγνωση βάσης ανά πλακίδιο, κανένα «δοκίμασε και τον άλλον».
+    const bucket = tourMediaBucket(grant.mediaPlacement);
+    const opened = await openStorageObject(objectPath, request.headers.get('range'), { singleRequest: true, bucket });
     if (opened.kind === 'absent') return status(404);
     if (opened.kind === 'range-unsatisfiable') {
       return new NextResponse(null, { status: 416, headers: { 'Content-Range': `bytes */${opened.totalSize}` } });

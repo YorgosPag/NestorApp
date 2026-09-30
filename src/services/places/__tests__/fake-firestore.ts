@@ -718,8 +718,11 @@ export class FakeQuery {
     if (this.failing()) throw new Error('FAKE_FIRESTORE_UNAVAILABLE');
 
     const order = this.order;
+    // ADR-890 §17 — όπως στη Firestore, το `orderBy` **εξαιρεί** έγγραφα χωρίς το πεδίο (η παγίδα που κρύβει
+    // σιωπηλά αγγελίες άγνωστης ημερομηνίας)· fake που την αγνοεί κάνει τα tests τυφλά σε αυτήν.
     const filtered = [...this.bucket.entries()]
-      .filter(([, doc]) => this.clauses.every((clause) => matches(doc, clause)));
+      .filter(([, doc]) => this.clauses.every((clause) => matches(doc, clause)))
+      .filter(([, doc]) => order === null || readPath(doc, order) !== undefined);
     const sorted = order === null ? filtered : [...filtered].sort(([, a], [, b]) => {
       const left = readPath(a, order) as string | number;
       const right = readPath(b, order) as string | number;

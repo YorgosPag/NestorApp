@@ -35,15 +35,17 @@ import type { FloorPlanChoice } from '@/lib/spatial-tour/tour-plan-edit';
 import type { SpatialTour } from '@/types/spatial-tour';
 
 import { refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
+import { tourMediaBucket } from './tour-media-store';
 import { readTourPlanFile } from './tour-plan-files';
 
 /** Τα παράγωγα είναι αμετάβλητα (η διαδρομή φέρει hash + έκδοση). Ίδια πολιτική με τα πλακίδια. */
 const PLAN_CACHE_CONTROL = 'private, max-age=31536000, immutable';
 
-async function uploadDerivative(tourId: string, contentHash: string, width: number, upright: Buffer): Promise<void> {
-  const path = tourMediaObjectPath(tourId, planImageSegments(contentHash, width));
+async function uploadDerivative(tour: SpatialTour, contentHash: string, width: number, upright: Buffer): Promise<void> {
+  const path = tourMediaObjectPath(tour.id, planImageSegments(contentHash, width));
   if (path === null) throw new Error(`Plan derivative path rejected: ${contentHash}/${width}`);
-  const object = getAdminBucket().file(path);
+  // Τα παράγωγα ζουν δίπλα στα πλακίδια, στον κάδο μέσων της περιήγησης (ζ5)· η κάτοψη-πηγή είναι `FileRecord` (κανονικός).
+  const object = tourMediaBucket(tour.mediaPlacement).file(path);
   const [exists] = await object.exists();
   if (exists) return;
   const body = await sharp(upright).resize({ width, withoutEnlargement: true }).webp({ quality: TOUR_PLAN_WEBP_QUALITY }).toBuffer();
@@ -72,7 +74,7 @@ export async function prepareTourFloorPlan(db: Firestore, tour: SpatialTour, pic
   const image = await uprightImage(bytes);
   if (image === null) return refuseTourAccess('plan-not-eligible');
   for (const width of planDerivativeWidths(image.width)) {
-    await uploadDerivative(tour.id, contentHash, width, image.upright);
+    await uploadDerivative(tour, contentHash, width, image.upright);
   }
   return { fileId: pick.fileId, source: pick.source, image: { width: image.width, height: image.height, contentHash } };
 }

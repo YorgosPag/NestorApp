@@ -230,6 +230,18 @@ export type TourSpaceAreaDisplay = (typeof TOUR_SPACE_AREA_DISPLAYS)[number];
 /** Η προεπιλογή (Δ8.4: «μετρημένο ως προεπιλογή») — και η ανάγνωση παλιού εγγράφου χωρίς το πεδίο. */
 export const TOUR_SPACE_AREA_DISPLAY_DEFAULT: TourSpaceAreaDisplay = 'shown';
 
+/**
+ * **Σε ποιον κάδο ζουν τα μέσα μιας περιήγησης** (ADR-884 Φ2ζ ζ5 · §12 Δ11.6) — ρητή θέση, ποτέ σιωπηλό «δοκίμασε εδώ, αλλιώς
+ * εκεί». `legacy-default` = ο κανονικός κάδος (US-EAST1, πριν το ζ5)· `tour-eu` = ο ιδιωτικός κάδος μέσων στην ΕΕ. Απόν ⇒
+ * `legacy-default` (παλιά έγγραφα)· οι **νέες** περιηγήσεις γεννιούνται `tour-eu`. Αλλάζει μόνο με μετάβαση που ψήνει πρώτα.
+ */
+export const TOUR_MEDIA_PLACEMENTS = ['legacy-default', 'tour-eu'] as const;
+export type TourMediaPlacement = (typeof TOUR_MEDIA_PLACEMENTS)[number];
+/** Η ανάγνωση εγγράφου/άδειας χωρίς το πεδίο. */
+export const TOUR_MEDIA_PLACEMENT_LEGACY: TourMediaPlacement = 'legacy-default';
+/** Πού γεννιούνται οι νέες περιηγήσεις. */
+export const TOUR_MEDIA_PLACEMENT_FOR_NEW_TOURS: TourMediaPlacement = 'tour-eu';
+
 /** Κορυφές ενός περιγράμματος — τρίγωνο ως ~δωμάτιο με καμπύλες (το DP της Γ3α δίνει δεκάδες, όχι εκατοντάδες). */
 export const TOUR_SPACE_MIN_VERTICES = 3;
 export const TOUR_SPACE_MAX_VERTICES = 200;
@@ -348,4 +360,5 @@ export const isTourHeadingSource = (v: unknown): v is TourHeadingSource => inclu
 export const isTourSpaceSource = (v: unknown): v is TourSpaceSource => includes(TOUR_SPACE_SOURCES, v);
 export const isTourDeclaredAreaSource = (v: unknown): v is TourDeclaredAreaSource => includes(TOUR_DECLARED_AREA_SOURCES, v);
 export const isTourSpaceAreaDisplay = (v: unknown): v is TourSpaceAreaDisplay => includes(TOUR_SPACE_AREA_DISPLAYS, v);
+export const isTourMediaPlacement = (v: unknown): v is TourMediaPlacement => includes(TOUR_MEDIA_PLACEMENTS, v);
 export const isTourRedactionSource = (v: unknown): v is TourRedactionSource => includes(TOUR_REDACTION_SOURCES, v);

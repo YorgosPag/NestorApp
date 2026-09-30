@@ -130,6 +130,24 @@ export function rankedSelectionsOf(
     });
 }
 
+/** Βαθμίδα προτεραιότητας ετικέτας: δική τιμή → τιμή γονέα (αναγωγή) → λίγα. */
+const LABEL_TIER: Readonly<Record<PriceMapResolution['kind'], number>> = { own: 0, parent: 1, few: 2 };
+
+/**
+ * **Ποια ετικέτα τιμής τοποθετείται πρώτη όταν δεν χωρούν όλες** (ADR-890 §17). Μετρημένο στο πυκνό κέντρο της Π.Ε.
+ * Θεσσαλονίκης: 7 σημεία σε ~40×35 px ⇒ κάποιες κρύβονται αναγκαστικά, και χωρίς δηλωμένη σειρά κέρδιζε η **σειρά του
+ * πίνακα** (έκρυβε την Καλαμαριά, την ακριβότερη). Κανόνας: πρώτα οι **δικές** τιμές, και ανάμεσά τους ο **πιο
+ * αξιόπιστος** αριθμός (μεγαλύτερο δείγμα)· μετά η αναγωγή, τέλος τα «λίγα». Ισοπαλία κατά id — ντετερμινιστικά.
+ * Ό,τι κρύβεται μένει στον πίνακα (SSR) και στο πέρασμα/πάτημα.
+ */
+export function comparePriceMapLabelPriority(a: PriceMapSelection, b: PriceMapSelection): number {
+  const byTier = LABEL_TIER[a.resolution.kind] - LABEL_TIER[b.resolution.kind];
+  if (byTier !== 0) return byTier;
+  const bySample = b.resolution.n - a.resolution.n;
+  if (bySample !== 0) return bySample;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
 /**
  * **Οι περιοχές στην οθόνη**, για τον πίνακα που αντικαθιστά το κλικ στο πληκτρολόγιο (WCAG 2.1.1): η κατάταξη του
  * `rankedSelectionsOf`, έως `VISIBLE_ROWS_LIMIT`.

@@ -51,6 +51,7 @@ import {
   type TourUploadRefused,
   type TourUploadUnavailable,
 } from './tour-capture-upload';
+import { tourMediaBucket } from './tour-media-store';
 import { readTourUploadTicket, type TourUploadTicket } from './tour-upload-ticket';
 
 const logger = createModuleLogger('tour-capture-finalize');
@@ -148,8 +149,13 @@ interface FinalizeContext {
 }
 
 /** Τα bytes της καραντίνας — ακριβώς όσα δηλώθηκαν, αλλιώς ονομασμένη άρνηση. */
+/** Το αντικείμενο της καραντίνας — στον κάδο που **δέσμευσε το εισιτήριο** στην έναρξη (ζ5), όχι στον τρέχοντα της περιήγησης. */
+function quarantineObject(ctx: FinalizeContext) {
+  return tourMediaBucket(ctx.ticket.ingestPlacement).file(tourIngestPath(ctx.tourRef.id, ctx.ticket.uploadId));
+}
+
 async function readQuarantine(ctx: FinalizeContext): Promise<Buffer | TourUploadRefused> {
-  const object = getAdminBucket().file(tourIngestPath(ctx.tourRef.id, ctx.ticket.uploadId));
+  const object = quarantineObject(ctx);
   const [exists] = await object.exists();
   if (!exists) return refuse('upload-missing');
   const [metadata] = await object.getMetadata();
@@ -159,7 +165,7 @@ async function readQuarantine(ctx: FinalizeContext): Promise<Buffer | TourUpload
 }
 
 async function discardQuarantine(ctx: FinalizeContext): Promise<void> {
-  await getAdminBucket().file(tourIngestPath(ctx.tourRef.id, ctx.ticket.uploadId)).delete({ ignoreNotFound: true });
+  await quarantineObject(ctx).delete({ ignoreNotFound: true });
 }
 
 async function finalizeFromQuarantine(db: Firestore, ctx: FinalizeContext): Promise<FinalizeTourCaptureUploadOutcome> {
@@ -206,7 +212,8 @@ async function persistOriginal(db: Firestore, ctx: FinalizeContext, sizeBytes: n
   });
   const fileRef = db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]]).doc(fileId);
   await fileRef.set({ ...recordBase, createdAt: FieldValue.serverTimestamp() });
-  await getAdminBucket().file(tourIngestPath(ctx.tourRef.id, ticket.uploadId)).copy(getAdminBucket().file(storagePath));
+  // Το πρωτότυπο είναι `FileRecord` ⇒ ο κανονικός κάδος (ζ5β)· από κάδο ΕΕ η αντιγραφή είναι rewrite μεταξύ κάδων.
+  await quarantineObject(ctx).copy(getAdminBucket().file(storagePath));
   await fileRef.update({
     ...buildFinalizeFileRecordUpdate({ sizeBytes, downloadUrl: buildProxyUrl(storagePath), hash: contentHash, nextStatus: FILE_STATUS.READY }),
     updatedAt: FieldValue.serverTimestamp(),

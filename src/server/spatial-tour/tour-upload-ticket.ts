@@ -16,6 +16,7 @@ import 'server-only';
  */
 
 import { isPlaceSource } from '@/constants/place-sources';
+import { isTourMediaPlacement, type TourMediaPlacement } from '@/constants/spatial-tour-vocabulary';
 import { decodeSignedToken, encodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
 import type { CustodyScope } from '@/lib/workspace/custody-scope';
 import type { TourSubject } from '@/types/spatial-tour';
@@ -39,6 +40,11 @@ export interface TourUploadTicket {
   /** Τα bytes που **δηλώθηκαν** — το αντικείμενο πρέπει να έχει ακριβώς αυτό το μέγεθος. */
   readonly contentLength: number;
   readonly expiresAtMs: number;
+  /**
+   * Σε ποιον κάδο άνοιξε η καραντίνα (ADR-884 Φ2ζ ζ5) — **δεσμεύεται στην έναρξη**, ώστε η ολοκλήρωση να διαβάσει εκεί όπου
+   * ανέβηκαν τα bytes, ακόμη κι αν η περιήγηση άλλαξε θέση ενδιάμεσα. Απόν (εισιτήριο πριν το ζ5) ⇒ ο κανονικός κάδος.
+   */
+  readonly ingestPlacement?: TourMediaPlacement;
 }
 
 export type TourUploadTicketReading =
@@ -64,12 +70,13 @@ export function issueTourUploadTicket(ticket: TourUploadTicket): string | null {
   return encodeSignedToken(secret, [
     TICKET_PURPOSE, ticket.uploadId, ticket.subject.kind, ticket.subject.id, ticket.uploaderUid,
     custodyKind, custodyId, String(ticket.contentLength), String(ticket.expiresAtMs),
+    ...(ticket.ingestPlacement === undefined ? [] : [ticket.ingestPlacement]),
   ]);
 }
 
 /** Τα πεδία → εισιτήριο, ή `null` αν οποιοδήποτε δεν διαβάζεται (κανένα «μισό» εισιτήριο). */
 function ticketOf(fields: readonly string[]): TourUploadTicket | null {
-  const [purpose, uploadId, kind, subjectId, uploaderUid, custodyKind, custodyId, length, exp] = fields;
+  const [purpose, uploadId, kind, subjectId, uploaderUid, custodyKind, custodyId, length, exp, placement] = fields;
   if (purpose !== TICKET_PURPOSE || !uploadId || !subjectId || !uploaderUid || !custodyId || !isPlaceSource(kind)) return null;
   const contentLength = Number(length);
   const expiresAtMs = Number(exp);
@@ -77,7 +84,10 @@ function ticketOf(fields: readonly string[]): TourUploadTicket | null {
   const custody: CustodyScope | null =
     custodyKind === 'u' ? { userId: custodyId } : custodyKind === 'c' ? { companyId: custodyId } : null;
   if (custody === null) return null;
-  return { uploadId, subject: { kind, id: subjectId }, uploaderUid, custody, contentLength, expiresAtMs };
+  // Δέκατο πεδίο (ζ5): λείπει ⇒ εισιτήριο πριν το ζ5· υπάρχει αλλά άγνωστο ⇒ κανένα «μισό» εισιτήριο.
+  if (placement !== undefined && !isTourMediaPlacement(placement)) return null;
+  const base = { uploadId, subject: { kind, id: subjectId }, uploaderUid, custody, contentLength, expiresAtMs };
+  return placement === undefined ? base : { ...base, ingestPlacement: placement };
 }
 
 /** **Εισιτήριο → τι υποσχέθηκε η έναρξη.** Η υπογραφή και η λήξη κρίνονται **πριν** από κάθε ανάγνωση βάσης. */

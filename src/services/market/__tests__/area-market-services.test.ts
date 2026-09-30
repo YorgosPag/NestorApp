@@ -274,3 +274,41 @@ describe('loadAreaMarketPage', () => {
     });
   });
 });
+
+describe('ADR-890 §17 — οι νεότερες αγγελίες της περιοχής, σε οποιοδήποτε μέγεθος', () => {
+  /** Αγγελία με γνωστή ημερομηνία: μεγαλύτερος δείκτης = νεότερη. */
+  function known(index: number): PublicListing {
+    const at = new Date(Date.UTC(2026, 0, 1 + index)).toISOString();
+    return listing({ id: `prop_k${String(index).padStart(2, '0')}`, title: `Γνωστή ${index}`, adminArea: THESSALONIKI, listedAt: { kind: 'known', at } });
+  }
+  function unknown(title: string): PublicListing {
+    return listing({ id: `ownp_${title}`, title, adminArea: THESSALONIKI, listedAt: { kind: 'unknown', reason: 'predates-record' } });
+  }
+  async function shownIds(): Promise<{ ids: readonly string[]; total: number }> {
+    const page = await loadAreaMarketPage(db, 'municipality:0701', DAY);
+    if (page.kind !== 'found') throw new Error(page.kind);
+    return { ids: page.listings.items.map((item) => item.id), total: page.listings.total };
+  }
+
+  it('14 γνωστές + 3 άγνωστες ⇒ ΑΚΡΙΒΩΣ οι 12 νεότερες, φθίνουσα· το σύνολο μετρά όλες', async () => {
+    seedListings([unknown('Α'), ...Array.from({ length: 14 }, (_, index) => known(index)), unknown('Β'), unknown('Γ')]);
+    const { ids, total } = await shownIds();
+    expect(ids).toEqual(Array.from({ length: 12 }, (_, index) => `prop_k${String(13 - index).padStart(2, '0')}`));
+    expect(total).toBe(17);
+  });
+
+  it('🔴 3 γνωστές + 9 άγνωστες ⇒ οι γνωστές πρώτα, μετά ΟΛΕΣ οι άγνωστες κατά τίτλο — καμία δεν χάνεται στο orderBy', async () => {
+    const titles = ['Θ', 'Β', 'Η', 'Α', 'Ζ', 'Γ', 'Ι', 'Ε', 'Δ'];
+    seedListings([...titles.map(unknown), known(0), known(2), known(1)]);
+    const { ids, total } = await shownIds();
+    expect(ids).toEqual(['prop_k02', 'prop_k01', 'prop_k00', ...['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι'].map((title) => `ownp_${title}`)]);
+    expect(total).toBe(12);
+  });
+
+  it('12 γνωστές + 1 άγνωστη ⇒ η σελίδα γεμίζει μόνο με γνωστές (η άγνωστη πάει στο τέλος, όπως στον συγκριτή)', async () => {
+    seedListings([...Array.from({ length: 12 }, (_, index) => known(index)), unknown('Α')]);
+    const { ids } = await shownIds();
+    expect(ids).not.toContain('ownp_Α');
+    expect(ids).toHaveLength(12);
+  });
+});

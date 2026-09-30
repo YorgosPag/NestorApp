@@ -24,6 +24,7 @@ import 'server-only';
 
 import { createHash } from 'node:crypto';
 
+import type { Bucket } from '@google-cloud/storage';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -31,17 +32,18 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
-import { TOUR_FACE_DETECTOR_VERSION } from '@/constants/spatial-tour-vocabulary';
+import { TOUR_FACE_DETECTOR_VERSION, isTourMediaPlacement } from '@/constants/spatial-tour-vocabulary';
 import type { RawImage } from '@/lib/spatial-tour/tileset/equirect-to-cube';
 import { originalHashOf, redactionsOf } from '@/lib/spatial-tour/tour-redaction-edit';
 import { TOUR_TILE_CONTENT_TYPE } from '@/lib/spatial-tour/tileset/tour-tileset-layout';
 import { tourMediaObjectPath } from '@/lib/spatial-tour/tour-media-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isRecord } from '@/lib/type-guards';
-import { custodyKindOfScope, custodyScopeFromData } from '@/lib/workspace/custody-scope';
+import { custodyKindOfScope, custodyScopeFromData, type CustodyScope } from '@/lib/workspace/custody-scope';
 import type { TourCapture, TourCaptureTileset, TourRedactionRegion } from '@/types/spatial-tour';
 
 import { scanFaces } from './tour-face-scan';
+import { tourMediaBucket } from './tour-media-store';
 import { recordFaceScan } from './tour-graph-write';
 import { decodeEquirect, renderTileset, type TilesetObject } from './tour-tileset-render';
 import { transitionTileset, type TilesetTransitionOutcome } from './tour-tileset-state';
@@ -65,11 +67,25 @@ export class PermanentBakeFailure extends Error {
   }
 }
 
-/** Η διαδρομή αποθήκευσης του πρωτοτύπου — από το `FileRecord` του διαμερίσματος της περιήγησης. */
-async function originalStoragePath(db: Firestore, tourRef: DocumentReference, fileId: string): Promise<string> {
+/** Ό,τι χρειάζεται ο ψήστης από την περιήγηση — **μία** ανάγνωση: ο κάτοχος (πρωτότυπο) και ο κάδος των πλακιδίων (ζ5). */
+interface TourStorage {
+  readonly custody: CustodyScope;
+  readonly tiles: Bucket;
+}
+
+async function readTourStorage(tourRef: DocumentReference): Promise<TourStorage> {
   const tourSnap = await tourRef.get();
-  const custody = tourSnap.exists ? custodyScopeFromData(tourSnap.data() ?? {}) : null;
+  const data = tourSnap.data() ?? {};
+  const custody = tourSnap.exists ? custodyScopeFromData(data) : null;
   if (custody === null) throw new PermanentBakeFailure('original-missing');
+  // Άγνωστη θέση ⇒ πετά (deferred), ποτέ «μαντεύω κάδο» — ίδιος κανόνας με τον αναγνώστη εγγράφου.
+  const placement: unknown = data.mediaPlacement;
+  if (placement !== undefined && !isTourMediaPlacement(placement)) throw new Error(`Unknown tour media placement: ${String(placement)}`);
+  return { custody, tiles: tourMediaBucket(placement) };
+}
+
+/** Η διαδρομή αποθήκευσης του πρωτοτύπου — από το `FileRecord` του διαμερίσματος της περιήγησης. */
+async function originalStoragePath(db: Firestore, custody: CustodyScope, fileId: string): Promise<string> {
   const fileSnap = await db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]]).doc(fileId).get();
   const record = fileSnap.data();
   if (!isRecord(record) || typeof record.storagePath !== 'string') throw new PermanentBakeFailure('original-missing');
@@ -85,10 +101,10 @@ async function readOriginal(storagePath: string, contentHash: string): Promise<B
   return bytes;
 }
 
-async function uploadObject(tourId: string, object: TilesetObject): Promise<void> {
+async function uploadObject(tiles: Bucket, tourId: string, object: TilesetObject): Promise<void> {
   const path = tourMediaObjectPath(tourId, object.segments);
   if (path === null) throw new Error(`Tileset path rejected: ${object.segments.join('/')}`);
-  await getAdminBucket().file(path).save(object.body, {
+  await tiles.file(path).save(object.body, {
     contentType: TOUR_TILE_CONTENT_TYPE,
     resumable: false,
     metadata: { cacheControl: TILE_CACHE_CONTROL },
@@ -100,24 +116,28 @@ async function uploadObject(tourId: string, object: TilesetObject): Promise<void
  * προσώπων (ζ4) διαβάζουν από τον ΙΔΙΟ δρόμο. Πετά `PermanentBakeFailure` όταν λείπει ή δεν ταιριάζει.
  */
 export async function loadCaptureOriginal(db: Firestore, tourRef: DocumentReference, capture: TourCapture): Promise<Buffer> {
+  return loadOriginalOf(db, (await readTourStorage(tourRef)).custody, capture);
+}
+
+async function loadOriginalOf(db: Firestore, custody: CustodyScope, capture: TourCapture): Promise<Buffer> {
   const original = originalHashOf(capture);
   if (original === null) throw new PermanentBakeFailure('original-missing');
-  return readOriginal(await originalStoragePath(db, tourRef, capture.originalFileId), original);
+  return readOriginal(await originalStoragePath(db, custody, capture.originalFileId), original);
 }
 
 /** Ανεβάζει τη ροή σε δέσμες — ο υπολογισμός της επόμενης δέσμης περιμένει την προηγούμενη (φραγμένη μνήμη). */
-async function uploadAll(tourId: string, objects: AsyncIterable<TilesetObject>): Promise<number> {
+async function uploadAll(tiles: Bucket, tourId: string, objects: AsyncIterable<TilesetObject>): Promise<number> {
   let count = 0;
   let batch: TilesetObject[] = [];
   for await (const object of objects) {
     batch.push(object);
     if (batch.length === UPLOAD_CONCURRENCY) {
-      await Promise.all(batch.map((o) => uploadObject(tourId, o)));
+      await Promise.all(batch.map((o) => uploadObject(tiles, tourId, o)));
       count += batch.length;
       batch = [];
     }
   }
-  await Promise.all(batch.map((o) => uploadObject(tourId, o)));
+  await Promise.all(batch.map((o) => uploadObject(tiles, tourId, o)));
   return count + batch.length;
 }
 
@@ -155,27 +175,27 @@ async function scannedTarget(db: Firestore, captureRef: DocumentReference, captu
 }
 
 /** **Σβήσε όλα τα πλακίδια ενός κλειδιού** — ιδεμπότητο (ανύπαρκτο πρόθεμα = τίποτα). */
-async function deleteTilesetKey(tourId: string, key: string): Promise<void> {
+async function deleteTilesetKey(tiles: Bucket, tourId: string, key: string): Promise<void> {
   const prefix = tourMediaObjectPath(tourId, [key]);
   if (prefix === null) throw new Error(`Tileset key rejected: ${key}`);
-  await getAdminBucket().deleteFiles({ prefix: `${prefix}/` });
+  await tiles.deleteFiles({ prefix: `${prefix}/` });
 }
 
 /**
  * **Τα αποσυρμένα κλειδιά φεύγουν ΠΡΙΝ ψηθεί το νέο** (Φ2ζ): δείχνουν ό,τι ζητήθηκε να κρυφτεί. Σφάλμα εδώ ⇒ `deferred` — η
  * λήψη μένει `pending` με τη λίστα, και το δίχτυ ξαναδοκιμάζει· η λίστα αδειάζει **μόνο** με τη μετάβαση σε `ready`.
  */
-async function deleteRetired(tourId: string, tileset: TourCaptureTileset): Promise<void> {
+async function deleteRetired(tiles: Bucket, tourId: string, tileset: TourCaptureTileset): Promise<void> {
   const retired = (tileset.retiredKeys ?? []).filter((key) => key !== tileset.contentHash);
-  await Promise.all(retired.map((key) => deleteTilesetKey(tourId, key)));
+  await Promise.all(retired.map((key) => deleteTilesetKey(tiles, tourId, key)));
 }
 
 /**
  * Ψήθηκε κλειδί που **δεν είναι πια** το τρέχον (άλλαξε το θόλωμα ενώ έψηνε) ⇒ τα πλακίδια που μόλις ανέβηκαν είναι ορφανά και
  * ίσως δείχνουν ό,τι κρύφτηκε μετά ⇒ σβήνονται εδώ, όχι «κάποτε».
  */
-async function discardIfSuperseded(tourId: string, key: string, transition: TilesetTransitionOutcome): Promise<void> {
-  if (transition === 'hash-changed') await deleteTilesetKey(tourId, key);
+async function discardIfSuperseded(tiles: Bucket, tourId: string, key: string, transition: TilesetTransitionOutcome): Promise<void> {
+  if (transition === 'hash-changed') await deleteTilesetKey(tiles, tourId, key);
 }
 
 async function bakeNow(db: Firestore, captureRef: DocumentReference): Promise<TourTilesetBakeOutcome> {
@@ -188,16 +208,17 @@ async function bakeNow(db: Firestore, captureRef: DocumentReference): Promise<To
   if (tourRef === null) return { kind: 'skipped', reason: 'missing' };
   let key = hash;
   try {
-    await deleteRetired(tourRef.id, capture.tileset);
-    const bytes = await loadCaptureOriginal(db, tourRef, capture);
+    const storage = await readTourStorage(tourRef);
+    await deleteRetired(storage.tiles, tourRef.id, capture.tileset);
+    const bytes = await loadOriginalOf(db, storage.custody, capture);
     const decoded = await undecodableOnError(() => decodeEquirect(bytes));
     const target = await scannedTarget(db, captureRef, capture, hash, decoded);
     if (target === null) return { kind: 'skipped', reason: 'superseded' };
     key = target.key;
     const rendered = await undecodableOnError(() => renderTileset(decoded, target.key, target.regions));
-    const objects = await uploadAll(tourRef.id, rendered.objects);
+    const objects = await uploadAll(storage.tiles, tourRef.id, rendered.objects);
     const transition = await transitionTileset(db, captureRef, key, { to: 'ready', faceSize: rendered.faceSize });
-    await discardIfSuperseded(tourRef.id, key, transition);
+    await discardIfSuperseded(storage.tiles, tourRef.id, key, transition);
     logger.info('Tileset ψήθηκε', { captureId: captureRef.id, faceSize: rendered.faceSize, objects, transition });
     return { kind: 'baked', faceSize: rendered.faceSize, objects, transition };
   } catch (error: unknown) {

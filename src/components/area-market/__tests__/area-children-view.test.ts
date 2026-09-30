@@ -6,7 +6,8 @@
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { AdminOverviewFeature } from '@/lib/geo/admin-overview-file';
 import type { PriceMapAreas } from '@/lib/market/price-map';
-import { rankedSelectionsOf } from '@/lib/market/price-map-view';
+import { comparePriceMapLabelPriority, rankedSelectionsOf, type PriceMapSelection } from '@/lib/market/price-map-view';
+import { priceMapLabelLayout } from '@/components/market/choropleth/price-map-paint';
 
 import { childLabelsOf, childMapChoice, childPropertiesOf, childSegmentsOf, defaultChildSegment } from '../area-children-view';
 
@@ -57,7 +58,45 @@ describe('area-children-view', () => {
       (row) => `${row.id}:${row.resolution.kind}`,
     );
     expect(labels.features).toEqual([
-      { type: 'Feature', geometry: { type: 'Point', coordinates: [22.96, 40.6] }, properties: { id: 'municipal_unit:070101', text: 'municipal_unit:070101:own' } },
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [22.96, 40.6] }, properties: { id: 'municipal_unit:070101', text: 'municipal_unit:070101:own', rank: 0 } },
     ]);
+  });
+
+  describe('ADR-890 §17 — δηλωμένη προτεραιότητα ετικετών όταν δεν χωρούν όλες', () => {
+    const row = (id: string, resolution: PriceMapSelection['resolution']): PriceMapSelection => ({ id, name: id, parentName: null, resolution });
+
+    it('δική τιμή με μεγαλύτερο δείγμα → μικρότερο δείγμα → αναγωγή → λίγα· ισοπαλία κατά id', () => {
+      const rows = [
+        row('d', { kind: 'few', n: 900 }),
+        row('c', { kind: 'parent', n: 3, parentId: 'p', parentN: 1068, median: 1547, classIndex: 3 }),
+        row('b', { kind: 'own', n: 16, median: 1659, classIndex: 3 }),
+        row('a2', { kind: 'own', n: 1068, median: 1547, classIndex: 3 }),
+        row('a1', { kind: 'own', n: 1068, median: 900, classIndex: 1 }),
+      ];
+      expect([...rows].sort(comparePriceMapLabelPriority).map((item) => item.id)).toEqual(['a1', 'a2', 'b', 'c', 'd']);
+    });
+
+    it('το `rank` κάθε σημείου είναι η θέση του στην προτεραιότητα, ανεξάρτητα από τη σειρά του πίνακα (που είναι κατά τιμή)', () => {
+      const feature = (id: string): AdminOverviewFeature => ({
+        type: 'Feature',
+        geometry: { type: 'MultiPolygon', coordinates: [] },
+        properties: { id, name: id, parent: MUNICIPALITY.id, parentName: MUNICIPALITY.name, label: [22.9, 40.6] },
+      });
+      const rows = rankedSelectionsOf(properties, AREAS, childMapChoice('apartment'));
+      const labels = childLabelsOf(CHILDREN.map((child) => feature(child.id)), rows, () => '');
+      expect(Object.fromEntries(labels.features.map((point) => [point.properties?.id, point.properties?.rank]))).toEqual({
+        'municipal_unit:070101': 0,
+        'municipal_unit:070102': 1,
+        'municipal_unit:070103': 2,
+      });
+    });
+
+    it('η κοινή διάταξη διαβάζει ΑΚΡΙΒΩΣ τις ιδιότητες που γράφει το `childLabelsOf`, με εναλλακτικές άγκυρες', () => {
+      const layout = priceMapLabelLayout(['Noto Sans Regular']);
+      expect(layout['symbol-sort-key']).toEqual(['get', 'rank']);
+      expect(layout['text-field']).toEqual(['get', 'text']);
+      expect(layout['text-variable-anchor']).toContain('center');
+      expect(layout['text-allow-overlap']).toBeUndefined();
+    });
   });
 });

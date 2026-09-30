@@ -31,6 +31,8 @@
 
 import 'server-only';
 
+import type { Bucket } from '@google-cloud/storage';
+
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 
 export interface ResumableUploadRequest {
@@ -42,6 +44,8 @@ export interface ResumableUploadRequest {
   readonly contentLength: number;
   /** Το origin του φυλλομετρητή που θα στείλει — πρέπει να είναι στη λίστα CORS του bucket. */
   readonly origin: string;
+  /** Ο κάδος της καραντίνας — προεπιλογή ο κανονικός· η περιήγηση δίνει τον δικό της (ADR-884 Φ2ζ ζ5). */
+  readonly bucket?: Bucket;
 }
 
 export type ResumableUploadOutcome =
@@ -57,7 +61,7 @@ export async function openResumableUploadSession(request: ResumableUploadRequest
   }
   if (request.origin.trim().length === 0) return { outcome: 'rejected', why: 'origin-missing' };
 
-  const [sessionUri] = await getAdminBucket()
+  const [sessionUri] = await (request.bucket ?? getAdminBucket())
     .file(storagePath)
     .createResumableUpload({
       origin: request.origin,

@@ -46,7 +46,8 @@ describe('Κ — το κουπόνι', () => {
   it('Κ1 — εκδίδεται και διαβάζεται για την ίδια περιήγηση', () => {
     const token = issueTourViewGrant(GRANT, NOW);
     expect(token).not.toBeNull();
-    expect(readTourViewGrant(token!, 'stour_a', NOW + 1000)).toEqual(GRANT);
+    // Χωρίς δηλωμένη θέση ⇒ διαβάζεται ως ο κανονικός κάδος (ζ5).
+    expect(readTourViewGrant(token!, 'stour_a', NOW + 1000)).toEqual({ ...GRANT, mediaPlacement: 'legacy-default' });
   });
 
   it('Κ2 — άλλη περιήγηση ⇒ τίποτα', () => {
@@ -121,5 +122,22 @@ describe('Π — το cookie φτάνει εκεί που διαβάζεται',
   it('🔴 Π2 — άλλη περιήγηση (ακόμη και με κοινό πρόθεμα id) ΔΕΝ το λαμβάνει', () => {
     expect(pathMatches(routes.VIEW_SESSION(SUBJECT.kind, 'prop_10'), cookiePath)).toBe(false);
     expect(pathMatches(routes.MEDIA_ROOT('owner-property', SUBJECT.id), cookiePath)).toBe(false);
+  });
+});
+
+describe('Θ — η θέση μέσων μέσα στο κουπόνι (ADR-884 Φ2ζ ζ5)', () => {
+  it('Θ1 — η θέση ταξιδεύει ΥΠΟΓΕΓΡΑΜΜΕΝΗ: `tour-eu` βγαίνει όπως μπήκε', () => {
+    const token = issueTourViewGrant({ ...GRANT, mediaPlacement: 'tour-eu' }, NOW)!;
+    expect(readTourViewGrant(token, 'stour_a', NOW)).toEqual({ ...GRANT, mediaPlacement: 'tour-eu' });
+  });
+
+  it('🔴 Θ2 — κουπόνι ΠΡΙΝ το ζ5 (3 πεδία) ⇒ ισχύει ακόμη, στον κανονικό κάδο — κανένας ανοιχτός θεατής δεν χάνει πλακίδια στο deploy', () => {
+    const legacy = issueAccessGrant({ purpose: 'tour-view', subjectFieldCount: 3 }, ['stour_a', 'request', 'tacr_1'], NOW)!;
+    expect(readTourViewGrant(legacy, 'stour_a', NOW)).toEqual({ ...GRANT, mediaPlacement: 'legacy-default' });
+  });
+
+  it('🔴 Θ3 — υπογεγραμμένη αλλά ΑΓΝΩΣΤΗ θέση ⇒ τίποτα (ποτέ «μαντεύω κάδο»)', () => {
+    const odd = issueAccessGrant({ purpose: 'tour-view', subjectFieldCount: 4 }, ['stour_a', 'request', 'tacr_1', 'mars'], NOW)!;
+    expect(readTourViewGrant(odd, 'stour_a', NOW)).toBeNull();
   });
 });

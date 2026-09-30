@@ -21,6 +21,7 @@ import 'server-only';
 
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
+import { TOUR_MEDIA_PLACEMENT_FOR_NEW_TOURS } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
@@ -56,6 +57,8 @@ function newTourDocument(input: {
     ...custodyOnly(input.custody),
     subject: { kind: input.subject.kind, id: input.subject.id },
     ...TOUR_GENESIS_SETTINGS,
+    // Φ2ζ ζ5: κάθε νέα περιήγηση γεννιέται με τα μέσα της στον ιδιωτικό κάδο της ΕΕ (§12 Δ11.6).
+    mediaPlacement: TOUR_MEDIA_PLACEMENT_FOR_NEW_TOURS,
     levels: [],
     nodes: [],
     revision: 0,

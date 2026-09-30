@@ -14,25 +14,35 @@ jest.mock('server-only', () => ({}));
 
 type StoredObject = { bytes: Buffer };
 const objects = new Map<string, StoredObject>();
-const sessions: Array<{ path: string; origin: string; contentLength: number }> = [];
+/** Ποιος κάδος (ADR-884 Φ2ζ ζ5): ο κανονικός ή ο ιδιωτικός κάδος μέσων στην ΕΕ. Τα αντικείμενα κλειδώνονται `κάδος|διαδρομή`. */
+type FakeBucketName = 'default' | 'tour-eu';
+const sessions: Array<{ bucket: FakeBucketName; path: string; origin: string; contentLength: number }> = [];
+
+function fakeBucket(bucket: FakeBucketName) {
+  return {
+    file: (path: string) => {
+      const key = `${bucket}|${path}`;
+      return {
+        exists: async () => [objects.has(key)],
+        getMetadata: async () => [{ size: String(objects.get(key)?.bytes.byteLength ?? 0) }],
+        download: async () => [objects.get(key)?.bytes ?? Buffer.alloc(0)],
+        copy: async (target: { readonly key: string }) => { objects.set(target.key, { bytes: objects.get(key)!.bytes }); },
+        delete: async () => { objects.delete(key); },
+        createResumableUpload: async (options: { origin: string; metadata: { contentLength: number } }) => {
+          sessions.push({ bucket, path, origin: options.origin, contentLength: options.metadata.contentLength });
+          return [`https://storage.example/upload?session=${sessions.length}`];
+        },
+        key,
+      };
+    },
+  };
+}
 const audits: unknown[] = [];
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' },
-  getAdminBucket: () => ({
-    file: (path: string) => ({
-      exists: async () => [objects.has(path)],
-      getMetadata: async () => [{ size: String(objects.get(path)?.bytes.byteLength ?? 0) }],
-      download: async () => [objects.get(path)?.bytes ?? Buffer.alloc(0)],
-      copy: async (target: { readonly path: string }) => { objects.set(target.path, { bytes: objects.get(path)!.bytes }); },
-      delete: async () => { objects.delete(path); },
-      createResumableUpload: async (options: { origin: string; metadata: { contentLength: number } }) => {
-        sessions.push({ path, origin: options.origin, contentLength: options.metadata.contentLength });
-        return [`https://storage.example/upload?session=${sessions.length}`];
-      },
-      path,
-    }),
-  }),
+  getAdminBucket: () => fakeBucket('default'),
+  getTourMediaBucket: () => fakeBucket('tour-eu'),
 }));
 jest.mock('@/services/file-audit-admin.service', () => ({
   recordFileAudit: async (input: unknown) => { audits.push(input); return 'audit_1'; },
@@ -104,6 +114,14 @@ const grantPhotographer = (overrides: Record<string, unknown> = {}) => kit.seedC
   },
 });
 
+/** Το κλειδί της καραντίνας **εκεί όπου άνοιξε η συνεδρία** — ο κάδος τον αποφασίζει ο κώδικας, όχι το test. */
+function ingestKey(uploadId: string): string {
+  const path = tourIngestPath(TOUR_ID, uploadId);
+  const session = sessions.find((entry) => entry.path === path);
+  if (session === undefined) throw new Error(`καμία συνεδρία για ${path}`);
+  return `${session.bucket}|${path}`;
+}
+
 async function start(actor: TourActor, bytes: Buffer, contentType = 'image/jpeg') {
   return startTourCaptureUpload(db, { subject: SUBJECT, actor, contentType, contentLength: bytes.byteLength, origin: ORIGIN });
 }
@@ -112,7 +130,7 @@ async function start(actor: TourActor, bytes: Buffer, contentType = 'image/jpeg'
 async function startAndUpload(actor: TourActor, bytes: Buffer) {
   const started = await start(actor, bytes);
   if (started.kind !== 'started') throw new Error(`αναμενόταν έναρξη, ήρθε ${JSON.stringify(started)}`);
-  objects.set(tourIngestPath(TOUR_ID, started.uploadId), { bytes });
+  objects.set(ingestKey(started.uploadId), { bytes });
   return started;
 }
 
@@ -124,7 +142,11 @@ describe('Ε — η έναρξη', () => {
     const started = await start(MANAGER, panorama);
     if (started.kind !== 'started') throw new Error(JSON.stringify(started));
     expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ lifecycle: 'draft' });
-    expect(sessions).toEqual([{ path: tourIngestPath(TOUR_ID, started.uploadId), origin: ORIGIN, contentLength: panorama.byteLength }]);
+    // ζ5: νέα περιήγηση ⇒ γεννιέται στον κάδο της ΕΕ, και εκεί ανοίγει η καραντίνα.
+    expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ mediaPlacement: 'tour-eu' });
+    expect(sessions).toEqual([
+      { bucket: 'tour-eu', path: tourIngestPath(TOUR_ID, started.uploadId), origin: ORIGIN, contentLength: panorama.byteLength },
+    ]);
     expect(started.uploadId).toMatch(/^tupl_/);
   });
 
@@ -166,8 +188,10 @@ describe('Ο/Ι — η ολοκλήρωση', () => {
     // 🔴 Κ3β — ήταν «panoramas panorama» (ωμό `purpose` που ο διακομιστής δεν μεταφράζει). Τώρα: κατηγορία + ακίνητο.
     expect(file).not.toHaveProperty('purpose');
     expect(file?.displayName).toBe('panoramas - Διαμέρισμα Α2');
-    expect(objects.has(tourIngestPath(TOUR_ID, uploadId))).toBe(false);
-    expect(objects.has(String(file?.storagePath))).toBe(true);
+    expect(objects.has(ingestKey(uploadId))).toBe(false);
+    // ζ5: το πρωτότυπο είναι `FileRecord` ⇒ ο ΚΑΝΟΝΙΚΟΣ κάδος (ζ5β), όχι ο κάδος μέσων.
+    expect(objects.has(`default|${String(file?.storagePath)}`)).toBe(true);
+    expect(objects.has(`tour-eu|${String(file?.storagePath)}`)).toBe(false);
     expect(audits).toEqual([expect.objectContaining({ action: 'upload', fileId: outcome.capture.originalFileId, companyId: AGENCY })]);
   });
 
@@ -203,16 +227,16 @@ describe('Α — οι αρνήσεις', () => {
 
   it('🔴 Α3 — λιγότερα bytes από τα δηλωμένα ⇒ `upload-incomplete` · τίποτα στην καραντίνα ⇒ `upload-missing`', async () => {
     const { ticket, uploadId } = await startAndUpload(MANAGER, panorama);
-    objects.set(tourIngestPath(TOUR_ID, uploadId), { bytes: panorama.subarray(0, 100) });
+    objects.set(ingestKey(uploadId), { bytes: panorama.subarray(0, 100) });
     expect(await finalize(ticket)).toEqual({ kind: 'refused', reason: 'upload-incomplete' });
-    objects.delete(tourIngestPath(TOUR_ID, uploadId));
+    objects.delete(ingestKey(uploadId));
     expect(await finalize(ticket)).toEqual({ kind: 'refused', reason: 'upload-missing' });
   });
 
   it('🔴 Α4 — επίπεδη φωτογραφία ⇒ `not-equirect`, η καραντίνα ΣΒΗΝΕΤΑΙ, ΚΑΝΕΝΑ αρχείο', async () => {
     const started = await start(MANAGER, flat);
     if (started.kind !== 'started') throw new Error(JSON.stringify(started));
-    objects.set(tourIngestPath(TOUR_ID, started.uploadId), { bytes: flat });
+    objects.set(ingestKey(started.uploadId), { bytes: flat });
     expect(await finalize(started.ticket)).toEqual({ kind: 'refused', reason: 'not-equirect' });
     expect(objects.size).toBe(0);
     expect(kit.getAllDocs(COLLECTIONS.FILES)).toEqual({});
@@ -232,5 +256,31 @@ describe('Α — οι αρνήσεις', () => {
     expect(await finalize(ticket, MANAGER, otherCreator)).toEqual({ kind: 'refused', reason: 'declaration-invalid' });
     expect(await finalize(ticket, MANAGER, { ...DECLARATION, source: 'bim-render' })).toEqual({ kind: 'refused', reason: 'declaration-invalid' });
     expect(kit.getAllDocs(CAPTURES)).toEqual({});
+  });
+});
+
+describe('Θ — θέση μέσων (ADR-884 Φ2ζ ζ5)', () => {
+  /** Η περιήγηση όπως ήταν πριν το ζ5 — χωρίς `mediaPlacement`. */
+  function makeTourLegacy(): void {
+    const { mediaPlacement: _dropped, ...legacy } = kit.getData(TOURS, TOUR_ID) ?? {};
+    kit.seedCollection(TOURS, { [TOUR_ID]: legacy });
+  }
+
+  it('Θ1 — περιήγηση ΧΩΡΙΣ θέση (πριν το ζ5) ⇒ η καραντίνα ανοίγει στον κανονικό κάδο', async () => {
+    await start(MANAGER, panorama);
+    makeTourLegacy();
+    sessions.length = 0;
+    const started = await start(MANAGER, panorama);
+    if (started.kind !== 'started') throw new Error(JSON.stringify(started));
+    expect(sessions.map((entry) => entry.bucket)).toEqual(['default']);
+  });
+
+  it('🔴 Θ2 — η θέση άλλαξε ΑΝΑΜΕΣΑ σε έναρξη και ολοκλήρωση ⇒ η ολοκλήρωση διαβάζει εκεί που ΔΕΣΜΕΥΣΕ το εισιτήριο', async () => {
+    const { ticket, uploadId } = await startAndUpload(MANAGER, panorama);
+    expect(ingestKey(uploadId)).toMatch(/^tour-eu\|/);
+    makeTourLegacy();
+    const outcome = await finalize(ticket);
+    expect(outcome.kind).toBe('finalized');
+    expect(objects.has(ingestKey(uploadId))).toBe(false);
   });
 });

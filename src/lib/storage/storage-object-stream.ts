@@ -21,6 +21,8 @@ import 'server-only';
  * ο κωδικός ελέγχεται εκεί.
  */
 
+import type { Bucket } from '@google-cloud/storage';
+
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 
 export interface StorageObjectRange {
@@ -84,6 +86,11 @@ export interface OpenStorageObjectOptions {
    * Μόνο για καλούντες που στέλνουν δική τους πολιτική κρυφής μνήμης.
    */
   readonly singleRequest?: boolean;
+  /**
+   * Ο κάδος — προεπιλογή ο κανονικός (`getAdminBucket`). Τα μέσα της περιήγησης δίνουν τον δικό τους από τον ΕΝΑ επιλογέα
+   * (`server/spatial-tour/tour-media-store`, ADR-884 Φ2ζ ζ5) — ποτέ δεύτερη υλοποίηση ροής.
+   */
+  readonly bucket?: Bucket;
 }
 
 /** Τα πεδία της απάντησης `alt=media` που διαβάζουμε — ό,τι χρειάζεται, χωρίς να δεθούμε στον τύπο του `request`. */
@@ -147,7 +154,7 @@ export async function openStorageObject(
   rangeHeader: string | null = null,
   options: OpenStorageObjectOptions = {},
 ): Promise<StorageObjectStream> {
-  const file = getAdminBucket().file(path);
+  const file = (options.bucket ?? getAdminBucket()).file(path);
   if (options.singleRequest === true && rangeHeader === null) return openInOneRequest(file);
   let metadata: Awaited<ReturnType<typeof file.getMetadata>>[0];
   try {

@@ -2,7 +2,7 @@
  * IN-MEMORY FIRESTORE MOCK — Google-level deterministic testing
  *
  * Replaces `getAdminFirestore()` with a fully in-memory data store.
- * Supports: `collection().doc().get/set/update/delete`, `where().limit().get()`,
+ * Supports: `collection().doc().get/set/update/delete`, `where().orderBy().limit().get()`,
  * `count().get()`, `runTransaction(tx => …)` (σειριακό — βλ. `MockTransaction`),
  * `batch()` (αναβαλλόμενο ως το `commit` — βλ. `MockWriteBatch`).
  *
@@ -40,6 +40,23 @@ export interface MockWriteRecord {
   readonly data?: DocData;
 }
 
+/** Τιμή ταξινόμησης όπως τη συγκρίνει ο Firestore για τους τύπους που χρησιμοποιούν τα tests (αριθμός · κείμενο). */
+function compareOrderValues(a: unknown, b: unknown): number {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
+}
+
+/**
+ * `orderBy`: έγγραφα **χωρίς** το πεδίο εξαιρούνται (Firestore), τα υπόλοιπα ταξινομούνται· ισοπαλία κατά id **με την
+ * ίδια φορά** (ο Firestore προσθέτει σιωπηρά `__name__` με τη φορά του τελευταίου `orderBy`).
+ */
+function orderedEntries(entries: Array<[string, string, DocData]>, field: string, direction: 'asc' | 'desc'): Array<[string, string, DocData]> {
+  const sign = direction === 'asc' ? 1 : -1;
+  return entries
+    .filter(([, , data]) => readFieldPath(data, field) !== undefined)
+    .sort(([, idA, a], [, idB, b]) => sign * (compareOrderValues(readFieldPath(a, field), readFieldPath(b, field)) || compareOrderValues(idA, idB)));
+}
+
 // ============================================================================
 // QUERY BUILDER (chainable)
 // ============================================================================
@@ -61,8 +78,8 @@ function readFieldPath(data: DocData, field: string): unknown {
 class MockQuery {
   private clauses: WhereClause[] = [];
   private _limit = 100;
-  private _orderByField: string | null = null;
-  /** Δρομέας σελιδοποίησης — η σειρά είναι η σειρά εισαγωγής (ο mock δεν ταξινομεί). */
+  private _order: { readonly field: string; readonly direction: 'asc' | 'desc' } | null = null;
+  /** Δρομέας σελιδοποίησης — μετά την ταξινόμηση (αν υπάρχει `orderBy`), αλλιώς σειρά εισαγωγής. */
   private _startAfterId: string | null = null;
 
   constructor(
@@ -83,10 +100,14 @@ class MockQuery {
     return q;
   }
 
-  /** Η κατεύθυνση γίνεται δεκτή (υπογραφή Admin SDK) — ο mock **δεν** ταξινομεί. */
-  orderBy(field: string, _direction?: 'asc' | 'desc'): MockQuery {
+  /**
+   * **Πιστό στο Firestore** (ADR-890 §17): ταξινομεί **και εξαιρεί** τα έγγραφα που δεν έχουν το πεδίο. Η εξαίρεση
+   * είναι η παγίδα — ένα `orderBy` σε προαιρετικό πεδίο κρύβει σιωπηλά έγγραφα — και ένας mock που δεν την
+   * αναπαράγει κάνει κάθε test της τυφλό σε αυτήν. Ένα `orderBy` ανά ερώτημα (όσο χρειάζονται οι καλούντες).
+   */
+  orderBy(field: string, direction: 'asc' | 'desc' = 'asc'): MockQuery {
     const q = this.clone();
-    q._orderByField = field;
+    q._order = { field, direction };
     return q;
   }
 
@@ -136,6 +157,8 @@ class MockQuery {
       });
     }
 
+    if (this._order !== null) entries = orderedEntries(entries, this._order.field, this._order.direction);
+
     // Cursor
     if (this._startAfterId !== null) {
       const at = entries.findIndex(([, id]) => id === this._startAfterId);
@@ -164,7 +187,7 @@ class MockQuery {
     const q = new MockQuery(this.store, this.collectionName, this.journal);
     q.clauses = [...this.clauses];
     q._limit = this._limit;
-    q._orderByField = this._orderByField;
+    q._order = this._order;
     q._startAfterId = this._startAfterId;
     q.group = this.group;
     return q;

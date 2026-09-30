@@ -18,10 +18,11 @@
 
 import { readFullRamp, readThemeColor } from '@/components/market/map-ramp';
 import type { BasemapScheme } from '@/lib/maps/basemap-catalog';
-import type { FillLayerSpecification, LineLayerSpecification } from '@/lib/maps/maplibre';
+import type { FillLayerSpecification, LineLayerSpecification, SymbolLayerSpecification } from '@/lib/maps/maplibre';
 
 type FillPaint = NonNullable<FillLayerSpecification['paint']>;
 type LinePaint = NonNullable<LineLayerSpecification['paint']>;
+type SymbolLayout = NonNullable<SymbolLayerSpecification['layout']>;
 
 /** Το όνομα της εικόνας του μοτίβου — **ανά θέμα**: η γραμμή έχει το χρώμα κειμένου του θέματος. */
 export function priceMapHatchImage(scheme: BasemapScheme): string {
@@ -73,6 +74,29 @@ export function priceMapLinePaint(): LinePaint {
  */
 export function priceMapLabelPaint(): { readonly color: string; readonly halo: string } {
   return { color: readThemeColor('--foreground'), halo: readThemeColor('--background') };
+}
+
+/**
+ * **Η διάταξη της ετικέτας τιμής** (ADR-890 §17) — μία, για κάθε χάρτη που γράφει τιμή πάνω στην περιοχή. Διαβάζει τις
+ * ιδιότητες `text` και `rank` του σημείου (`childLabelsOf`).
+ *
+ * Μετρημένο ζωντανά (Π.Ε. Θεσσαλονίκης, zoom 7,5, 14 Δήμοι): σταθερή άγκυρα **8/14** ορατές · με εναλλακτικές άγκυρες
+ * **10/14** (Mapbox «variable label placement»). Η σύγκρουση ήταν **μόνο** ετικέτα-με-ετικέτα (ίδιο 8/14 χωρίς τα
+ * ονόματα του υποβάθρου). Το `symbol-sort-key` κάνει την προτεραιότητα **δηλωμένη** αντί για τη σειρά του πίνακα.
+ * ⛔ Όχι `text-allow-overlap`: 14 αριθμοί ο ένας πάνω στον άλλο δεν διαβάζονται — χειρότερο από το κρυμμένο, που
+ * μένει στον πίνακα και στο πέρασμα.
+ */
+export function priceMapLabelLayout(font: readonly string[]): SymbolLayout {
+  return {
+    'text-field': ['get', 'text'],
+    'text-font': [...font],
+    'text-size': 13,
+    'text-max-width': 8,
+    'text-variable-anchor': ['center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'],
+    'text-radial-offset': 0.5,
+    'text-justify': 'auto',
+    'symbol-sort-key': ['get', 'rank'],
+  } as SymbolLayout;
 }
 
 /** Ο ελάχιστος χάρτης που χρειάζεται η εικόνα — ώστε το module να μη δένεται με τον τύπο του MapLibre. */
