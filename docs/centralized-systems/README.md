@@ -144,6 +144,7 @@
 - **[🖼️ Overlays](ui-systems/overlays.md)** - Crosshairs, rulers, visual feedback
 - **[🎨 Canvas System](ui-systems/canvas-system.md)** - Coordinates, transforms, rendering
 - **[🔲 Fullscreen Container (ADR-241)](reference/adrs/ADR-241-fullscreen-container-centralization.md)** - Centralized useFullscreen hook + FullscreenContainer component (overlay/dialog modes)
+- **[↔️ Scroll Rail (ADR-896 §7Α.5)](reference/adrs/ADR-896-professionals-directory-map.md)** - `@/components/ui/scroll-rail`: μία γραμμή που κυλά οριζόντια (τσιπ, κατηγορίες), βελάκια ◀ ▶ μόνο με ποντίκι και μόνο προς κρυμμένο περιεχόμενο, σβήσιμο άκρης, snap. Συνθέτει `useScrollEdges` + `scroll-edge-fade` (ADR-777 §8.79) + `lib/a11y/reveal-in-scroll` (`revealInlineWithin`: κύλιση **μόνο** του δοχείου). ⛔ ΜΗΝ γράψεις νέο `overflow-x-auto` + βελάκια με το χέρι, ούτε carousel (Embla) για τσιπ
 
 ### ⚒️ **TOOLS**
 - **[📋 Overview](tools/index.md)** - Drawing tools, keyboard shortcuts, interactions

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 844 ADRs | Last Updated: 2026-09-30
+**📊 Stats**: 846 ADRs | Last Updated: 2026-10-01
 
 ---
 
@@ -25,10 +25,10 @@
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 12 | [View](#security-auth) |
-| 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
+| 🔧 **Backend Systems** | 4 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 592 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 593 | [View](#uncategorized) |
 
 ---
 
@@ -879,6 +879,8 @@
 | **ADR-894** | Ενεργές συνεδρίες: η τοποθεσία επιλύεται στον server, με τοπική GeoIP, και ο server είναι ο μόνος γραφέας | ✅ **IMPLEMENTED** — Φάση 1 + **Φάση 2 (§10)** 2026-09-29 (commit `80594406`, αναπτυγμένο· §10.4 εκτελέστηκε) · **§10.7 (Φ2-Ο1)** 2026-09-30 (uncommitted· ⏳ deploy κανόνων Firestore + Storage μετά το push) · ⏳ ζωντανός έλεγχος §9 σε εξέλιξη | 2026-09-29 | Uncategorized | [📄](./adrs/ADR-894-session-location-server-geoip.md) |
 | **ADR-895** | Τοποθεσία δεδομένων αρχείων (data residency): **θέση ανά `FileRecord`**, **ΕΝΑΣ** επιλογέας κάδου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-895-file-data-residency.md) |
 | **ADR-896** | Κατάλογος επαγγελματιών `/pro`: **κάρτες ‖ χάρτης**, με τη **δηλωμένη περιοχή δραστηριότητας στο hover** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-896-professionals-directory-map.md) |
+| **ADR-897** | Σημεία λήψης φωτογραφιών πάνω στις κατόψεις: θέση, κατεύθυνση και οπτικό πεδίο ανά φωτογραφία | ✅ ✅ IMPLEMENTED — Φ1–Φ5.2 υλοποιημένες 2026-10-01 · εκκρεμεί ζωντανός έλεγχος σε browser | 2026-10-01 | Uncategorized | [📄](./adrs/ADR-897-photo-capture-spots-on-floorplans.md) |
+| **ADR-898** | Υπολογισμός αντικειμενικής αξίας: **ΜΙΑ** μηχανή του νόμου για το κοινό, τις αγγελίες και τον εργολάβο | 📋 📋 PLANNING — Φ1 (μηχανή + άγκυρες) γραμμένη 2026-10-01 · Φ2–Φ5 σχεδιασμένες | 2026-10-01 | Backend Systems | [📄](./adrs/ADR-898-objective-value-calculator.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1090,6 +1092,7 @@
 | **ADR-059** | Separate /api/projects/bootstrap from /api/projects/list | ✅ ✅ Active | [View](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
+| **ADR-898** | Υπολογισμός αντικειμενικής αξίας: **ΜΙΑ** μηχανή του νόμου για το κοινό, τις αγγελίες και τον εργολάβο | 📋 📋 PLANNING — Φ1 (μηχανή + άγκυρες) γραμμένη 2026-10-01 · Φ2–Φ5 σχεδιασμένες | [View](./adrs/ADR-898-objective-value-calculator.md) |
 
 ---
 
@@ -1710,6 +1713,7 @@
 | **ADR-894** | Ενεργές συνεδρίες: η τοποθεσία επιλύεται στον server, με τοπική GeoIP, και ο server είναι ο μόνος γραφέας | ✅ **IMPLEMENTED** — Φάση 1 + **Φάση 2 (§10)** 2026-09-29 (commit `80594406`, αναπτυγμένο· §10.4 εκτελέστηκε) · **§10.7 (Φ2-Ο1)** 2026-09-30 (uncommitted· ⏳ deploy κανόνων Firestore + Storage μετά το push) · ⏳ ζωντανός έλεγχος §9 σε εξέλιξη | [View](./adrs/ADR-894-session-location-server-geoip.md) |
 | **ADR-895** | Τοποθεσία δεδομένων αρχείων (data residency): **θέση ανά `FileRecord`**, **ΕΝΑΣ** επιλογέας κάδου | ✅ APPROVED | [View](./adrs/ADR-895-file-data-residency.md) |
 | **ADR-896** | Κατάλογος επαγγελματιών `/pro`: **κάρτες ‖ χάρτης**, με τη **δηλωμένη περιοχή δραστηριότητας στο hover** | ✅ APPROVED | [View](./adrs/ADR-896-professionals-directory-map.md) |
+| **ADR-897** | Σημεία λήψης φωτογραφιών πάνω στις κατόψεις: θέση, κατεύθυνση και οπτικό πεδίο ανά φωτογραφία | ✅ ✅ IMPLEMENTED — Φ1–Φ5.2 υλοποιημένες 2026-10-01 · εκκρεμεί ζωντανός έλεγχος σε browser | [View](./adrs/ADR-897-photo-capture-spots-on-floorplans.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

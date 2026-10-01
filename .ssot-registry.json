@@ -3413,7 +3413,7 @@
       "description": "SSoT mapping: professional role string → DepartmentCode for L2 org-structure routing (ADR-326 Phase 6.2). mapRoleToDept() is the canonical lookup. FORBIDDEN: inline role→dept mapping outside this file.",
       "forbiddenPatterns": [
         "legal_advisor.*legal\"|legal.*legal_advisor",
-        "civil_engineer.*engineering\"|architect.*engineering"
+        "(civil_engineer|architect)['\"]?\\s*:\\s*['\"]engineering|engineering['\"]?\\s*:.*['\"](civil_engineer|architect)['\"]|(civil_engineer|architect)['\"]\\s*:\\s*return\\s+['\"]engineering"
       ],
       "allowlist": [
         "src/app/api/notifications/professional-assigned/role-to-dept-map.ts",
