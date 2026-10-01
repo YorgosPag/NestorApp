@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c2088df9c145f1a4b5c194df8ea217a02a0e7cd1a4f706df9a9efb74516216c8",
+  "inputsSha256": "282c2a8bb37a21a04a8fab165c2908b4531e58527464d3d6f76aadc353da3c4d",
   "languages": [
     "el"
   ],
@@ -1134,7 +1134,7 @@
     "src/services/profile/avatar-image.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/profile/avatar-render.ts": "a1fbb4a368bc6b8624ec723f78128f7d9d89080a747c64b0ac590cf35b386508",
     "src/services/profile/avatar-upload.service.ts": "040edb4f14b645e7628e7d1b08d4ace9d2494470a2c24a0741b704e2738f33f6",
-    "src/services/property-dossier/dossier-media-publication.ts": "36a33c27a3ebcaa58c3468d559c555d0c0242a17ab0c569b4cd38a8d6d0c1de7",
+    "src/services/property-dossier/dossier-media-publication.ts": "3ab9ee032695b66b3f5931abb64c83e5b0d792f7ce83c6aef4a298fcce2fd8e9",
     "src/services/property-dossier/dossier-media.reader.ts": "92d20ad8cfeca274f9d89024afe7f9f871ff0d746d6b5f74ef628775c8b4e3fe",
     "src/services/property-dossier/property-dossier-audit.ts": "d9abbf2381694e7ea676c016664b6f43150989f63aca718ef8d0648d8d5ff0e5",
     "src/services/property-dossier/property-dossier-write.service.ts": "7d532aa293f688b4623bff73eaf1fd0ecf546ce62d09bff427dd1db6368af6be",

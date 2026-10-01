@@ -334,21 +334,21 @@ describe('Φ6 — `agencyMediaDeclaration` ΔΙΑΒΑΖΕΙ ΚΑΙ ΤΑ ΔΥΟ',
         publishedMediaOrder: ['a', 'b'],
         publishedFloorplans: ['c'],
       }),
-    ).toEqual({ order: ['a', 'b'], floorplans: ['c'], focalPoints: new Map() });
+    ).toEqual({ order: ['a', 'b'], floorplans: ['c'], focalPoints: new Map(), captureSpots: new Map(), floorplanNorth: new Map() });
   });
 
   it('🔴 σκουπίδι σε ΟΠΟΙΟΔΗΠΟΤΕ από τα δύο ⇒ κενό ΕΚΕΙΝΟ, ποτέ και τα δύο', () => {
     expect(
       agencyMediaDeclaration({ publishedMediaOrder: 42, publishedFloorplans: ['c'] }),
-    ).toEqual({ order: [], floorplans: ['c'], focalPoints: new Map() });
+    ).toEqual({ order: [], floorplans: ['c'], focalPoints: new Map(), captureSpots: new Map(), floorplanNorth: new Map() });
 
     expect(
       agencyMediaDeclaration({ publishedMediaOrder: ['a'], publishedFloorplans: 'όχι' }),
-    ).toEqual({ order: ['a'], floorplans: [], focalPoints: new Map() });
+    ).toEqual({ order: ['a'], floorplans: [], focalPoints: new Map(), captureSpots: new Map(), floorplanNorth: new Map() });
   });
 
   it('🔴 ΚΕΝΟ έγγραφο ⇒ καμία δήλωση, καμία εξαίρεση', () => {
-    expect(agencyMediaDeclaration({})).toEqual({ order: [], floorplans: [], focalPoints: new Map() });
+    expect(agencyMediaDeclaration({})).toEqual({ order: [], floorplans: [], focalPoints: new Map(), captureSpots: new Map(), floorplanNorth: new Map() });
   });
 
   it('🎯 ADR-880 — τα σημεία εστίασης διαβάζονται από το ΙΔΙΟ έγγραφο, άκυρη γραμμή πέφτει μόνη της', () => {

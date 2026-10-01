@@ -64,7 +64,7 @@ describe('Α41.1 — η δήλωση ΕΙΝΑΙ η εξουσιοδότηση, �
 
   it('🎯 ADR-880 — το σημείο εστίασης δένεται στο ΑΡΧΕΙΟ, όχι στη θέση (και μέσω της αγγελίας)', () => {
     const points = new Map([['file_view', { x: 0.9, y: 0.1 }]]);
-    const sources = publishedDossierMediaSources(DOSSIER, [VIEW, PROGRESS], ['file_progress', 'file_view'], points);
+    const sources = publishedDossierMediaSources(DOSSIER, [VIEW, PROGRESS], ['file_progress', 'file_view'], { focalPoints: points });
     expect(sources.map((source) => source.focalPoint)).toEqual([null, { x: 0.9, y: 0.1 }]);
 
     const viaListing = ownerListingMediaSources(

@@ -34,6 +34,8 @@ import {
 } from '@/lib/listings/listing-file-deliverability';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import {
   PUBLISHED_MEDIA_LIMIT,
   type PublicShelfSource,
@@ -43,8 +45,19 @@ import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entrie
 import type { FileRecord } from '@/types/file-record';
 import type { PropertyDossier } from '@/types/property-dossier';
 
-/** Καμία δήλωση σημείων — μοιράζεται, αμετάβλητη και κενή. */
-const NO_DECLARED_FOCAL_POINTS: ReadonlyMap<string, PhotoFocalPoint> = new Map();
+/**
+ * **Ό,τι ΔΗΛΩΣΕ ο άνθρωπος για τα αρχεία που φεύγουν** — ονομασμένα πεδία, ποτέ ομόηχοι χάρτες σε σειρά ορισμάτων
+ * (μια αντιμετάθεση δύο `ReadonlyMap<string, …>` θα ήταν **σιωπηλή** — ίδιο δόγμα με το `AgencyMediaDeclaration`).
+ * Κάθε πεδίο προαιρετικό: απόν ⇒ καμία δήλωση. Καμία δεν **δημοσιεύει** τίποτα· λένε μόνο **πώς** φαίνεται ό,τι φεύγει.
+ */
+export interface DossierMediaDeclaration {
+  /** 🎯 ADR-880 — σημείο εστίασης ανά φωτογραφία. */
+  readonly focalPoints?: ReadonlyMap<string, PhotoFocalPoint>;
+  /** 📍 ADR-897 — σημείο λήψης ανά φωτογραφία. */
+  readonly captureSpots?: ReadonlyMap<string, PhotoCaptureSpot>;
+  /** 🧭 ADR-897 Φ5.2 — βορράς ανά κάτοψη. */
+  readonly floorplanNorth?: DeclaredFloorplanNorth;
+}
 
 /** Το `FileRecord` όσο το χρειάζεται η απόφαση: καταλληλότητα + εμβέλεια καρτέλας + κάτοχος. */
 export type DossierMediaCandidate = ListingFileCandidate &
@@ -139,7 +152,7 @@ export function publishedDossierMediaSources(
   dossier: DossierMediaOwner,
   files: readonly DossierMediaCandidate[],
   declared: DeclaredFileIds,
-  focalPoints: ReadonlyMap<string, PhotoFocalPoint> = NO_DECLARED_FOCAL_POINTS,
+  declaration: DossierMediaDeclaration = {},
 ): readonly PublicShelfSource[] {
   return publishedDossierFiles(dossier, files, declared).map(({ file, material }) => ({
     privateStoragePath: file.storagePath,
@@ -147,6 +160,11 @@ export function publishedDossierMediaSources(
     storagePlacement: file.storagePlacement,
     material,
     // 🎯 ADR-880 — δεμένο στο **αρχείο**, ποτέ στη θέση.
-    focalPoint: focalPoints.get(file.id) ?? null,
+    focalPoint: declaration.focalPoints?.get(file.id) ?? null,
+    // 📍 ADR-897 — ταυτότητα + σημείο λήψης, δεμένα στο **αρχείο** όπως το σημείο εστίασης.
+    sourceFileId: file.id,
+    captureSpot: declaration.captureSpots?.get(file.id) ?? null,
+    // 🧭 ADR-897 Φ5.2 — ο βορράς της **κάτοψης**· για φωτογραφία απλώς απών.
+    northRad: declaration.floorplanNorth?.get(file.id) ?? null,
   }));
 }

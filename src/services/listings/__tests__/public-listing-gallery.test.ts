@@ -55,6 +55,9 @@ function shelfImage(name: string, widths: readonly number[]): ProjectedShelfImag
     material: { kind: 'photo' },
     declaredFocalPoint: null,
     detectedFocalPoint: null,
+    sourceFileId: null,
+    declaredCaptureSpot: null,
+    declaredNorthRad: null,
   };
 }
 

@@ -92,6 +92,9 @@ function shelfReport(count: number): PublicShelfReport {
     //    είναι ό,τι ρωτά αυτή η σουίτα. Ο **διαχωρισμός** κάτοψης/φωτογραφίας έχει δική
     //    του άγκυρα (`lib/listings/__tests__/listing-floorplan-separation`).
     material: { kind: 'photo' as const },
+    sourceFileId: null,
+    declaredCaptureSpot: null,
+    declaredNorthRad: null,
   });
   return {
     outcome: 'reconciled',
