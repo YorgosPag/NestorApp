@@ -15,7 +15,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`, ποτέ σε Server Component).
 import routeSlice from '@/i18n/generated/routes/listing__id__floorplan.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
-import { ListingFloorplanImage } from '@/components/listing-detail/ListingFloorplanImage';
+import { ListingFloorplanWithSpots } from '@/components/listing-detail/ListingFloorplanWithSpots';
+import { floorplanSpotsByUrl, listingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { LISTING_FLOORPLAN_PROVENANCE_KEYS } from '@/lib/listings/listing-material';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
@@ -56,7 +57,7 @@ function FloorplanPageBody({ listing }: { readonly listing: PublicListing }) {
         aria-label={t('listing-detail:media.floorplanPage.heading', { count: shown.length })}
         className="p-4"
       >
-        <FloorplanStack shown={shown} authorship={listing.authorship} />
+        <FloorplanStack shown={shown} listing={listing} />
       </section>
     </>
   );
@@ -64,12 +65,15 @@ function FloorplanPageBody({ listing }: { readonly listing: PublicListing }) {
 
 function FloorplanStack({
   shown,
-  authorship,
+  listing,
 }: {
   readonly shown: readonly ListingFloorplan[];
-  readonly authorship: PublicListing['authorship'];
+  readonly listing: PublicListing;
 }) {
   const { t } = useTranslation(['search-results', 'listing-detail']);
+  // 📍 ADR-897 — τα σημεία λήψης, με τη σειρά που θα τα δει ο επισκέπτης στο lightbox.
+  const images = listingGalleryImages(listing);
+  const spotsByUrl = floorplanSpotsByUrl(listingFloorplanSpots(listing, images));
 
   if (shown.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('search-results:detail.media.absent')}</p>;
@@ -79,11 +83,12 @@ function FloorplanStack({
     <ul className="mx-auto flex max-w-4xl flex-col gap-6">
       {shown.map((floorplan) => (
         <li key={floorplan.value.url} className="flex flex-col gap-1">
-          <ListingFloorplanImage floorplan={floorplan} sizes={FLOORPLAN_PAGE_SIZES} />
+          <ListingFloorplanWithSpots listingId={listing.id} floorplan={floorplan}
+            spots={spotsByUrl.get(floorplan.value.url) ?? null} total={images.length} sizes={FLOORPLAN_PAGE_SIZES} />
           <p className="text-xs text-muted-foreground">{t(LISTING_FLOORPLAN_PROVENANCE_KEYS[floorplan.provenance])}</p>
         </li>
       ))}
-      <li className="text-xs text-muted-foreground">{t(LISTING_MATERIAL_KEYS[authorship].floorplanNote)}</li>
+      <li className="text-xs text-muted-foreground">{t(LISTING_MATERIAL_KEYS[listing.authorship].floorplanNote)}</li>
     </ul>
   );
 }

@@ -30,11 +30,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { LISTING_FLOORPLAN_PROVENANCE_KEYS } from '@/lib/listings/listing-material';
 import { listingFloorplanHref } from '@/lib/listings/listing-routes';
+import { floorplanSpotsByUrl, listingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
+import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import { Link } from '@/lib/workspace/navigation';
 import type { PublicListing } from '@/types/public-listing';
 
-import { ListingFloorplanImage } from './ListingFloorplanImage';
+import { ListingFloorplanWithSpots } from './ListingFloorplanWithSpots';
 
 /** Τα `sizes` μιας κάτοψης — δύο σε σειρά σε οθόνη, μία σε κινητό. */
 const FLOORPLAN_SIZES = '(min-width: 1024px) 31vw, 100vw';
@@ -50,6 +52,9 @@ export function ListingFloorplans({ listing }: { readonly listing: PublicListing
   const shown = listing.floorplans.filter(isPubliclyPresentable);
 
   if (shown.length === 0) return null;
+  // 📍 ADR-897 — τα σημεία λήψης, με τη σειρά που θα τα δει ο επισκέπτης στο lightbox.
+  const images = listingGalleryImages(listing);
+  const spotsByUrl = floorplanSpotsByUrl(listingFloorplanSpots(listing, images));
 
   return (
     <section
@@ -63,7 +68,8 @@ export function ListingFloorplans({ listing }: { readonly listing: PublicListing
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((floorplan) => (
           <li key={floorplan.value.url} className="flex flex-col gap-1">
-            <ListingFloorplanImage floorplan={floorplan} sizes={FLOORPLAN_SIZES} />
+            <ListingFloorplanWithSpots listingId={listing.id} floorplan={floorplan}
+              spots={spotsByUrl.get(floorplan.value.url) ?? null} total={images.length} sizes={FLOORPLAN_SIZES} />
             {/*
               🏆 **Η ΓΡΑΜΜΗ ΠΟΥ Η ZILLOW ΔΕΝ ΕΧΕΙ** *(Α17.3)*: εκείνη δείχνει κάτοψη χωρίς
               να λέει αν τη σχεδίασε άνθρωπος ή τη μέτρησε μηχανή. ⚠️ Το κλειδί έρχεται

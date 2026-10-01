@@ -5,6 +5,12 @@
     },
     "media": {
       "backToListing": "Πίσω στην αγγελία",
+      "capture": {
+        "markerLabel": "Φωτογραφία {index} από {total}",
+        "northGlyph": "Β",
+        "northLabel": "Βέλος βορρά: ο βορράς είναι {degrees}° δεξιόστροφα από το πάνω μέρος της κάτοψης",
+        "planLabel": "Κάτοψη {index} με τα σημεία λήψης"
+      },
       "floorplanPage": {
         "heading": "{count, plural, one {Κάτοψη} other {Κατόψεις}}"
       },
