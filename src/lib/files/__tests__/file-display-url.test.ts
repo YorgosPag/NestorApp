@@ -1,0 +1,64 @@
+/**
+ * 🖼️ Η ΑΓΚΥΡΑ ΤΟΥ ΑΝΑΓΝΩΣΤΗ «ΠΟΙΟ URL ΔΕΙΧΝΕΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ;» (2026-10-01).
+ *
+ * Μεταλλάξεις που πρέπει να πιάσει:
+ * - Υ2: ο αναγνώστης ξαναγίνεται `downloadUrl`-only ⇒ οι εγγραφές seed χωρίς `downloadUrl` κρύβονται πάλι.
+ * - Υ3: η θέση bytes αγνοείται ⇒ φωτογραφία ΕΕ ζητείται από τον κανονικό κάδο (σιωπηλό 404).
+ * - Υ4: άγνωστη θέση «μαντεύεται» ως legacy αντί να ονομαστεί.
+ * - Π1: η προεπισκόπηση δένεται στο `downloadUrl` αντί για το όνομα αντικειμένου (ADR-899).
+ * - Π2: τύπος που δεν προεπισκοπείται (svg/pdf) παίρνει `srcset` ⇒ 415 σε κάθε πλάτος.
+ * - Π3: η θέση bytes χάνεται από το `srcset`.
+ */
+
+import { buildProxyPreview, buildProxyUrl } from '@/lib/storage/storage-object-url';
+
+import { fileDisplayUrl, fileDisplayUrlOf } from '../file-display-url';
+
+const PATH = 'companies/c1/entities/property/p1/domains/sales/categories/photos/files/file_1.jpg';
+
+describe('fileDisplayUrlOf', () => {
+  test('Υ1 αποθηκευμένο downloadUrl ⇒ αυτούσιο, origin=stored', () => {
+    expect(fileDisplayUrlOf({ downloadUrl: 'https://x.test/a.jpg', storagePath: PATH }))
+      .toEqual({ kind: 'url', url: 'https://x.test/a.jpg', origin: 'stored', preview: null });
+  });
+
+  test('🔴 Υ2 χωρίς downloadUrl, με storagePath ⇒ το proxy URL του ΕΝΟΣ γραφέα, origin=derived', () => {
+    expect(fileDisplayUrlOf({ storagePath: PATH }))
+      .toEqual({ kind: 'url', url: buildProxyUrl(PATH), origin: 'derived', preview: null });
+    expect(fileDisplayUrlOf({ downloadUrl: '  ', storagePath: PATH }).kind).toBe('url');
+  });
+
+  test('🔴 Υ3 η θέση bytes ταξιδεύει στο παράγωγο URL', () => {
+    expect(fileDisplayUrlOf({ storagePath: PATH, storagePlacement: 'eu-originals' }))
+      .toEqual({ kind: 'url', url: buildProxyUrl(PATH, 'eu-originals'), origin: 'derived', preview: null });
+  });
+
+  test('🔴 Υ4 άγνωστη θέση ⇒ ονομασμένη απουσία, ποτέ μαντεψιά κάδου', () => {
+    expect(fileDisplayUrlOf({ storagePath: PATH, storagePlacement: 'mars-bucket' }))
+      .toEqual({ kind: 'unavailable', why: 'unknown-placement' });
+  });
+
+  test('Υ5 ούτε downloadUrl ούτε storagePath ⇒ no-storage-path', () => {
+    expect(fileDisplayUrlOf({ storagePath: '' })).toEqual({ kind: 'unavailable', why: 'no-storage-path' });
+    expect(fileDisplayUrl({ storagePath: null })).toBeNull();
+  });
+
+  test('🔴 Π1 προεπισκόπηση από το ΟΝΟΜΑ αντικειμένου — και όταν υπάρχει downloadUrl', () => {
+    const stored = fileDisplayUrlOf({ downloadUrl: 'https://x.test/a.jpg', storagePath: PATH, contentType: 'image/jpeg' });
+    expect(stored).toEqual({ kind: 'url', url: 'https://x.test/a.jpg', origin: 'stored', preview: buildProxyPreview(PATH) });
+  });
+
+  test('🔴 Π2 μόνο τύποι που αποκωδικοποιεί ο κωδικοποιητής', () => {
+    for (const contentType of ['image/svg+xml', 'application/pdf', 'image/gif', null, undefined]) {
+      const resolved = fileDisplayUrlOf({ storagePath: PATH, contentType });
+      expect(resolved.kind === 'url' && resolved.preview).toBeNull();
+    }
+    const upper = fileDisplayUrlOf({ storagePath: PATH, contentType: 'IMAGE/JPEG; q=1' });
+    expect(upper.kind === 'url' && upper.preview).toEqual(buildProxyPreview(PATH));
+  });
+
+  test('🔴 Π3 η θέση bytes ταξιδεύει και στο srcset', () => {
+    const resolved = fileDisplayUrlOf({ storagePath: PATH, storagePlacement: 'eu-originals', contentType: 'image/png' });
+    expect(resolved.kind === 'url' && resolved.preview).toEqual(buildProxyPreview(PATH, 'eu-originals'));
+  });
+});

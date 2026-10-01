@@ -30,7 +30,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔑 ΤΟ ΤΕΤΑΡΤΟ ΣΧΗΜΑ ΕΙΝΑΙ ΔΙΚΟ ΜΑΣ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΠΙΟ ΣΗΜΑΝΤΙΚΟ
  * ─────────────────────────────────────────────────────────────────────────────
- * Το `buildProxyUrl` (`services/storage-admin/public-upload.service.ts:152`)
+ * Το {@link buildProxyUrl} (σε αυτό το αρχείο, 2026-10-01 — πριν: `public-upload.service`)
  * παράγει `/api/storage/file/{encodedSegments}` — **same-origin**, και είναι η
  * μορφή που κουβαλούν τα νεότερα `downloadUrl`. Χωρίς αυτό το σχήμα, ο φρουρός θα
  * έλεγε «δεν αναγνωρίζω» για τα **δικά μας** URL.
@@ -42,10 +42,79 @@
  * @module lib/storage/storage-object-url
  * @see lib/storage/storage-path-custody — «ποιανού είναι;»
  * @see lib/security/path-sanitizer — «είναι ασφαλές να το ζητήσω;» (SSRF)
- * @see services/storage-admin/public-upload.service — ο **γραφέας** του proxy URL
+ * @see services/storage-admin/public-upload.service — επανεξάγει τον γραφέα για τον διακομιστή
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
+import {
+  FILE_STORAGE_PLACEMENT_LEGACY,
+  FILE_STORAGE_PLACEMENT_QUERY_PARAM,
+  type FileStoragePlacement,
+} from '@/lib/files/file-storage-placement';
+import {
+  FILE_PREVIEW_ENCODING,
+  FILE_PREVIEW_FALLBACK_WIDTH,
+  FILE_PREVIEW_WIDTH_QUERY_PARAM,
+} from '@/lib/files/file-preview-ladder';
+
+// =============================================================================
+// Ο ΓΡΑΦΕΑΣ — object name → same-origin proxy URL
+// =============================================================================
+
+/**
+ * **Το same-origin proxy URL ενός αντικειμένου** — ο ΕΝΑΣ γραφέας του σχήματος `internal-proxy`.
+ *
+ * 🔑 **Ζει ΕΔΩ, δίπλα στον αναγνώστη του** (2026-10-01): ήταν στο `public-upload.service`, που είναι
+ * `server-only` ⇒ ο πελάτης **δεν** μπορούσε να παραγάγει το URL εγγραφής χωρίς `downloadUrl` (seed/παλιές
+ * εγγραφές) και η κεφαλίδα ακινήτου έδειχνε εικονίδιο αντί για τις φωτογραφίες. Ένα module κατέχει πλέον το
+ * σχήμα **και προς τις δύο κατευθύνσεις** — η άγκυρα round-trip ελέγχει ότι δεν αποκλίνουν. Το
+ * `public-upload.service` το **επανεξάγει**: μηδενική αλλαγή στον διακομιστή.
+ *
+ * ADR-895: η θέση bytes (`storagePlacement`) μπαίνει στο URL **μόνο** όταν δεν είναι legacy — έτσι κάθε URL πριν το
+ * ADR-895 μένει έγκυρο αυτολεξεί, και ο proxy διαβάζει από τον σωστό κάδο χωρίς ανάγνωση βάσης.
+ */
+export function buildProxyUrl(storagePath: string, placement: FileStoragePlacement = FILE_STORAGE_PLACEMENT_LEGACY): string {
+  const encoded = storagePath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  const base = `${API_ROUTES.STORAGE_FILE}/${encoded}`;
+  return placement === FILE_STORAGE_PLACEMENT_LEGACY
+    ? base
+    : `${base}?${FILE_STORAGE_PLACEMENT_QUERY_PARAM}=${encodeURIComponent(placement)}`;
+}
+
+/** Ό,τι χρειάζεται ένα `<img>` για προεπισκόπηση: ένα `src` εφεδρείας και ολόκληρη η κλίμακα. */
+export interface ProxyImagePreview {
+  readonly src: string;
+  readonly srcSet: string;
+}
+
+/** Το URL ενός παραγώγου — πάνω στο {@link buildProxyUrl}, ποτέ δεύτερη συναρμολόγηση μονοπατιού. */
+function buildProxyPreviewUrl(storagePath: string, placement: FileStoragePlacement, width: number): string {
+  const original = buildProxyUrl(storagePath, placement);
+  const separator = original.includes('?') ? '&' : '?';
+  return `${original}${separator}${FILE_PREVIEW_WIDTH_QUERY_PARAM}=${width}`;
+}
+
+/**
+ * **Προεπισκόπηση ιδιωτικού αρχείου** ως `src` + `srcset` (ADR-899 §6). Ο browser διαλέγει πλάτος
+ * από τα `sizes` του `<img>`· ο proxy παράγει **μόνο** πλάτη της κλίμακας.
+ *
+ * 🔑 Το {@link storageObjectFromUrl} κόβει το query ⇒ ένα URL παραγώγου διαβάζεται πίσω στο
+ * **ίδιο** αντικείμενο με το πρωτότυπο (άγκυρα roundtrip).
+ */
+export function buildProxyPreview(
+  storagePath: string,
+  placement: FileStoragePlacement = FILE_STORAGE_PLACEMENT_LEGACY,
+): ProxyImagePreview {
+  return {
+    src: buildProxyPreviewUrl(storagePath, placement, FILE_PREVIEW_FALLBACK_WIDTH),
+    srcSet: FILE_PREVIEW_ENCODING.widths
+      .map((width) => `${buildProxyPreviewUrl(storagePath, placement, width)} ${width}w`)
+      .join(', '),
+  };
+}
 
 // =============================================================================
 // Η ΕΚΒΑΣΗ
@@ -165,7 +234,8 @@ function readGcsPath(pathname: string, scheme: StorageUrlScheme): StorageObjectR
  * λάθος για όνομα αρχείου που περιέχει `%2F`.
  */
 function readProxyPath(pathname: string): StorageObjectRef {
-  const rest = pathname.slice(PROXY_PREFIX.length);
+  // Η παράμετρος θέσης (`?placement=`) δεν είναι μέρος του object name — κόβεται πριν την ανάγνωση.
+  const rest = pathname.slice(PROXY_PREFIX.length).split('?')[0];
   if (rest.length === 0) return unreadable('malformed-for-scheme');
 
   return {

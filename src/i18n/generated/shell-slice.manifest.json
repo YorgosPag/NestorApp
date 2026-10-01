@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "734242685d4c782bb35254f28e3a0ae5e58cfbe1d183ae93d184060c3ca830ea",
+  "inputsSha256": "8ecc1fea5c8351e6dfd8faf833c8cdbd6b305799ba9a9a380d3824455b2afeef",
   "languages": [
     "el"
   ],
@@ -1013,6 +1013,7 @@
     "src/server/comms/email-texts.ts": "13d0118d8622d4a1b60e25c2abc3fa64fd26f6dafc375548eda46e672294c414",
     "src/server/comms/orchestrator.ts": "3c544030adad04ccf05d648eab10ca6e1e637de7e0fe0ee75cc4075f9f958ff6",
     "src/server/files/file-record-bucket.ts": "03da99a2a6e9cd05aa3787ad16eace260998883f4b5dff295bd4f1c8d420fddb",
+    "src/server/images/raster-encoder.ts": "ac3fe755293b75a61f0ebea5432485cf9b1980e341afc7289079507e6b653381",
     "src/server/invitations/invitation-guards.ts": "af95d4e93d16ba9f9fbdd229bb20330afc0746e3097f369bea227f0c787eba20",
     "src/server/invitations/invitation-lifecycle.ts": "a8f0d3ce5a858a78d232c91a05eda22f9a20d8220d04347f5b628a9d2700d15e",
     "src/server/invitations/invitation-notice.ts": "7a2b682de602a6c91c241bbbe9ff9031425cc3fc1ea20a9e3182578ae5b7119d",
@@ -1103,7 +1104,7 @@
     "src/services/listings/public-shelf-model-bake.ts": "24695713a9d8af37016eff6732e859df01975a689477b63dcc4668fcf587a54a",
     "src/services/listings/public-shelf-model.service.ts": "1da2166097aebf15c780643c6f93596b801e6bce39ca61240c6df8917f263829",
     "src/services/listings/public-shelf-plan.ts": "8b237815ea414f11c34defc8e07c63380e25fb2d2cc83de30e9212e540a6dded",
-    "src/services/listings/public-shelf-sanitise.ts": "e5532f332eb10ef1b17f3bcf037299babc2b2d3526384fa5896ffd5980246ac2",
+    "src/services/listings/public-shelf-sanitise.ts": "edc9c5d4f26b28e930658da00a0cc3638f27635a6a8a986b96cbd4c28f847b6e",
     "src/services/listings/public-shelf.service.ts": "6637a07dc6247cba1142a77ca9e752a49657fcfe5ab7bc8c2b422aa2ddb41729",
     "src/services/listings/publish-public-listing-shelf.ts": "a8098f98a569f34954dbd0c7eae908d4a70c6d336b732b22aa12c7b52734f99b",
     "src/services/listings/publish-public-listing.ts": "dd615c123731ac844126207ad0db7ae28e60441a090b06ec369ad6ad2dd4d909",

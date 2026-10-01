@@ -1157,3 +1157,10 @@ NIST AC-6(7) · ISO 27001 A.5.18). ⚠️ **Χωρίς αυτόματη αφαί
   **αμυντικός** (σπασμένη αλυσίδα · ιστορικά δεδομένα)· απόδειξη = **Α33**. ⛔ Απορρίφθηκε η εγγραφή ακινήτου χωρίς έργο
   μέσω MCP (δεδομένο που το προϊόν δεν γεννά). Η επαλήθευση μετατίθεται στην πρώτη πραγματική ροή εκτός έργου — βλ. §5.3.7.
   **Καμία εγγραφή στην παραγωγή.**
+- **2026-10-01** — 🔗 **Φ0 Β8 — ο builder του proxy URL μετακόμισε δίπλα στον αναγνώστη του, και απέκτησε προεπισκοπήσεις.**
+  (α) `buildProxyUrl` ζει πλέον στο `lib/storage/storage-object-url.ts` (το `public-upload.service` τον επανεξάγει — μηδενική αλλαγή
+  server)· 🐛 ο `readProxyPath` κόβει το `?placement=` (πριν: κάθε URL ΕΕ διαβαζόταν σε object name `…jpg?placement=eu-originals`).
+  (β) Νέος **ένας** αναγνώστης «ποιο URL δείχνει αυτό το αρχείο;» `lib/files/file-display-url.ts` (`downloadUrl` ή παράγωγο από
+  `storagePath`+`storagePlacement`, ονομασμένη απουσία). (γ) **ADR-899**: `buildProxyPreview` (`src` + `srcSet` πάνω στον ίδιο builder,
+  `?w=` κλειστής κλίμακας) και `fileDisplayUrlOf().preview`· ο αντίστροφος αναγνώστης διαβάζει κάθε URL παραγώγου στο **ίδιο**
+  αντικείμενο (άγκυρα `storage-proxy-url-roundtrip` Ρ3). Εκκρεμεί: ~32 αναγνώστες `downloadUrl` → `fileDisplayUrl` (ratchet).

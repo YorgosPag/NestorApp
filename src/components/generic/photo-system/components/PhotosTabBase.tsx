@@ -60,6 +60,7 @@ import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { companyReadCustodyOf } from '@/lib/files/file-custody';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 
 // =============================================================================
 // FILE RECORD → PHOTO MAPPER (ADR-293 Phase 5 Batch 29 cleanup)
@@ -72,11 +73,13 @@ function fileRecordToPhoto(
   file: FileRecord,
   fallbackLabel: string,
 ): Photo | null {
-  if (!file.id || !file.downloadUrl) return null;
+  // 🔑 Το URL από τον ΕΝΑ αναγνώστη: εγγραφή χωρίς `downloadUrl` αλλά με `storagePath` ΔΕΝ κρύβεται πια.
+  const src = fileDisplayUrl(file);
+  if (!file.id || src === null) return null;
   const displayName = file.displayName || file.originalFilename || file.id;
   return {
     id: file.id,
-    src: file.downloadUrl,
+    src,
     alt: `${fallbackLabel} — ${displayName}`,
     name: displayName,
   };

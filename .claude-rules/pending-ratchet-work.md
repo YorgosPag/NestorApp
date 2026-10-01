@@ -3913,6 +3913,19 @@
 
 ## Pending tasks (priority order)
 
+### 🖼️ `downloadUrl` → `fileDisplayUrl` / `preview` — οι υπόλοιποι αναγνώστες URL αρχείου (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-01, ADR-899 · ADR-862 Φ0 Β8)
+- **SSoT**: `lib/files/file-display-url.ts` (`fileDisplayUrlOf` → `url` + `preview` από την κλίμακα 320…2560). Πέρασαν ήδη:
+  `PhotosTabBase` · `MediaGallery` · `MediaCard` · `property-photos` · κεφαλίδα/κάρτα ακινήτου.
+- **Μένουν ~32 αρχεία / ~90 σημεία** (`grep -rn "downloadUrl" src/components src/features src/hooks`). Δύο είδη, χωριστή απόφαση ανά σημείο:
+  (α) **εμφάνιση εικόνας** ⇒ `preview.src`/`srcSet` (σταματά το κατέβασμα πρωτοτύπων MB για μικρογραφίες)·
+  (β) **λήψη/άνοιγμα αρχείου** ⇒ `fileDisplayUrl` (το `url`, όχι παράγωγο). ⚠️ Εγγραφές χωρίς `downloadUrl` (seed/παλιές ροές) σήμερα **κρύβονται**.
+
+### 🗑️ Το purge δεν σβήνει τα «συνοδευτικά» αντικείμενα ενός αρχείου (προτεραιότητα ΜΕΣΑΙΑ — GDPR, 2026-10-01, ADR-899 §2.1)
+- `services/file-record/file-purge-helpers.ts` σβήνει **μόνο** `storagePath`. Το `thumbnailStoragePath` του DXF (`{path}.thumbnail.png`)
+  **επιβιώνει για πάντα** μετά το purge, και το mark-and-sweep των ορφανών (`functions/src/storage/orphan-cleanup.ts`) τρέχει μόνο στο
+  `onFinalize` ⇒ δεν ξαναελέγχεται ποτέ. Διόρθωση: ο κριτής purge σβήνει **όλα** τα δηλωμένα συνοδευτικά (με τον ίδιο έλεγχο hold),
+  + άγκυρα. Τα παράγωγα του ADR-899 **δεν** έχουν αυτό το πρόβλημα (δεν αποθηκεύονται — επιλέχθηκε γι' αυτό).
+
 ### 🕐 `getRelativeTime` — τέσσερα τοπικά αντίγραφα του «πριν από Χ» έξω από το `intl-formatting` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-29, ADR-894)
 - **SSoT**: `formatRelativeTime` του `src/lib/intl-formatting.ts` (`Intl.RelativeTimeFormat` στη γλώσσα του αναγνώστη).
   Το `lib/obligations/utils.ts` ήδη αναθέτει σε αυτό ✅· το `session-helpers.ts` μεταφέρθηκε 2026-09-29 (ήταν **σκληρά ελληνικά**).

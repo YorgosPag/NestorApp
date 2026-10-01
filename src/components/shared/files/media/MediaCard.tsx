@@ -32,6 +32,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import type { FileRecord } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -124,6 +125,7 @@ export function MediaCard({
 
   const sizeConfig = CARD_SIZES[size];
   const isVideo = isVideoFile(file);
+  const imageUrl = fileDisplayUrl(file);
 
   // =========================================================================
   // HANDLERS
@@ -268,9 +270,9 @@ export function MediaCard({
             )}
 
             {/* Actual Image - Images Only */}
-            {file.downloadUrl && !imageError && (
+            {imageUrl !== null && !imageError && (
               <img
-                src={file.downloadUrl}
+                src={imageUrl}
                 alt={file.displayName}
                 loading="lazy"
                 onLoad={handleImageLoad}

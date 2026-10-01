@@ -47,16 +47,13 @@ import 'server-only';
 import type { Bucket } from '@google-cloud/storage';
 import { getAdminBucket, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-// 🔑 Το πρόθεμα του proxy ζούσε ως ωμό literal **μόνο εδώ** — δηλαδή ο παραγωγός το
-//    ήξερε και κανένας αναγνώστης δεν μπορούσε να το ζητήσει (ADR-862 Φ0 Β8).
-import { API_ROUTES } from '@/config/domain-constants';
-import {
-  FILE_STORAGE_PLACEMENT_LEGACY,
-  FILE_STORAGE_PLACEMENT_QUERY_PARAM,
-  type FileStoragePlacement,
-} from '@/lib/files/file-storage-placement';
+// 🔑 Ο γραφέας του proxy URL ζει στο `lib/storage/storage-object-url`, δίπλα στον αναγνώστη του — καθαρή
+//    συνάρτηση, προσιτή και στον πελάτη. Επανεξάγεται εδώ για τους υπάρχοντες καλούντες του διακομιστή.
+import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+
+export { buildProxyUrl };
 
 const logger = createModuleLogger('StoragePublicUpload');
 
@@ -203,25 +200,6 @@ export async function discardPublicCopy(storagePath: string): Promise<void> {
     return true;
   });
   if (discarded) await getAdminBucket().file(storagePath).delete({ ignoreNotFound: true });
-}
-
-/**
- * Build the same-origin proxy URL for a stored file. Exported so the proxy
- * route's tests and any URL-construction helpers stay aligned with the
- * canonical scheme.
- *
- * ADR-895: η θέση bytes (`storagePlacement`) μπαίνει στο URL **μόνο** όταν δεν είναι legacy — έτσι κάθε URL πριν το
- * ADR-895 μένει έγκυρο αυτολεξεί, και ο proxy διαβάζει από τον σωστό κάδο χωρίς ανάγνωση βάσης.
- */
-export function buildProxyUrl(storagePath: string, placement: FileStoragePlacement = FILE_STORAGE_PLACEMENT_LEGACY): string {
-  const encoded = storagePath
-    .split('/')
-    .map((segment) => encodeURIComponent(segment))
-    .join('/');
-  const base = `${API_ROUTES.STORAGE_FILE}/${encoded}`;
-  return placement === FILE_STORAGE_PLACEMENT_LEGACY
-    ? base
-    : `${base}?${FILE_STORAGE_PLACEMENT_QUERY_PARAM}=${encodeURIComponent(placement)}`;
 }
 
 /**

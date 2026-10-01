@@ -23,9 +23,14 @@
  * ⚠️ **SERVER-ONLY**: το `sharp` είναι εγγενές module. Καμία εισαγωγή από πελάτη.
  */
 
-import sharp from 'sharp';
+import type sharp from 'sharp';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  RASTER_DERIVATIVE_CONTENT_TYPE,
+  decodeOriented,
+  encodeRasterDerivative,
+} from '@/server/images/raster-encoder';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { detectFocalPoint } from '@/services/listings/public-shelf-focal-point';
 import type { PublicShelfExtension } from '@/services/upload/utils/storage-path-public-shelf';
@@ -44,7 +49,7 @@ const logger = createModuleLogger('public-shelf-sanitise');
 // ---------------------------------------------------------------------------
 
 /** Ο τύπος περιεχομένου που δηλώνει ο γραφέας στο αντικείμενο του ραφιού. */
-export const PUBLIC_SHELF_IMAGE_CONTENT_TYPE = 'image/webp';
+export const PUBLIC_SHELF_IMAGE_CONTENT_TYPE = RASTER_DERIVATIVE_CONTENT_TYPE;
 
 /**
  * **Πόσο σκληρά ψάχνει ο κωδικοποιητής** — 0 (γρήγορο) ως 6 (μικρότερο αρχείο).
@@ -292,7 +297,7 @@ async function decodableOrThrow<T>(
   }
 
   try {
-    return await produce(sharp(input, { failOn: 'error' }).rotate());
+    return await produce(decodeOriented(input));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.warn('Το αρχείο δεν είναι αποκωδικοποιήσιμη εικόνα — δεν δημοσιεύεται', {
@@ -306,6 +311,10 @@ async function decodableOrThrow<T>(
 /**
  * **Ένας αγωγός `sharp` → ένα δημοσιεύσιμο παράγωγο.** Ο κοινός πυρήνας των δύο εισόδων.
  *
+ * 🔑 Η μετάφραση σε `sharp` (κουτί, webp, preset) ζει στον **ΕΝΑ** κωδικοποιητή
+ * `server/images/raster-encoder` (ADR-899 §3) — εδώ μένει μόνο η **πολιτική** του ραφιού:
+ * κουτί «μέγιστη πλευρά» και effort 6.
+ *
  * ⚠️ **Δέχεται αγωγό ΗΔΗ στραμμένο** και δεν ξανακαλεί `.rotate()`: η στροφή είναι
  * απόφαση του **πρωτοτύπου**, όχι του παραγώγου, και πρέπει να συμβεί **μία** φορά πριν
  * τον κλώνο — αλλιώς κάθε παράγωγο θα την ξαναέπαιρνε από μεταδεδομένα που έχουν ήδη
@@ -316,54 +325,11 @@ async function encodeOne(
   maxEdgePx: number,
   encoding: RasterShelfEncoding,
 ): Promise<SanitisedShelfAsset> {
-  const { data, info } = await pipeline
-    .resize({
-      width: maxEdgePx,
-      height: maxEdgePx,
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .webp(webpOptions(encoding))
-    .toBuffer({ resolveWithObject: true });
-
-  return {
-    bytes: data,
-    ext: 'webp',
-    contentType: PUBLIC_SHELF_IMAGE_CONTENT_TYPE,
-    width: info.width,
-    height: info.height,
-  };
-}
-
-/**
- * **Η κωδικοποίηση, στη γλώσσα του `sharp`** — η **μία** μετάφραση.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΓΙΑΤΙ ΤΟ ΣΗΜΑ ΘΕΛΕΙ `lossless` ΚΑΙ ΟΧΙ ΑΠΛΩΣ «ΥΨΗΛΟΤΕΡΟ q»
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Το `cwebp` της Google δίνει **χωριστά preset** για `photo` και για `icon`/`drawing`
- * ακριβώς επειδή τα δύο υλικά έχουν αντίθετη στατιστική: μια φωτογραφία είναι **συνεχείς
- * βαθμίδες** *(όπου η lossy πετά ό,τι δεν βλέπει το μάτι)*, ενώ ένα λογότυπο είναι
- * **επίπεδες περιοχές + αιχμηρές ακμές** — δηλαδή **μόνο** οι μεταβάσεις που η lossy
- * θολώνει. Ένα `q95` θα ήταν «λιγότερο χάλια», όχι σωστό.
- *
- * 🔑 **Και σε 256px το lossless δεν έχει κόστος που να αξίζει συζήτηση** — το επιχείρημα
- * υπέρ της lossy ζει σε μεγέθη γκαλερί, όχι σε σήμα μεγέθους νυχιού.
- *
- * ⚠️ **Καμία ρύθμιση διαφάνειας εδώ, ΕΠΙΤΗΔΕΣ.** Το WebP κρατά το κανάλι alpha και στους
- * δύο τρόπους *(`alphaQuality` = 100 από προεπιλογή)*, οπότε ένα λογότυπο με διάφανο
- * φόντο **επιβιώνει αυτούσιο** και κάθεται σωστά σε **δύο θέματα**. Ψημένη πλάκα φόντου
- * θα ήταν απόφαση για **ένα** θέμα και **λάθος** στο άλλο.
- *
- * 🔑 **Το `exact` μένει στην προεπιλογή του (`false`) και είναι όφελος ΑΣΦΑΛΕΙΑΣ**: τα
- * RGB των **πλήρως διάφανων** pixel δεν διατηρούνται, άρα δεν υπάρχει πού να επιβιώσει
- * δεδομένο μέσα σε αόρατη περιοχή.
- */
-function webpOptions(encoding: RasterShelfEncoding): sharp.WebpOptions {
-  const base = { preset: encoding.preset, effort: PUBLIC_SHELF_ENCODER_EFFORT } as const;
-
-  return encoding.quality === 'lossless'
-    ? { ...base, lossless: true }
-    : { ...base, quality: encoding.quality };
+  const derivative = await encodeRasterDerivative(
+    pipeline,
+    { fit: 'max-edge', px: maxEdgePx },
+    encoding,
+    PUBLIC_SHELF_ENCODER_EFFORT,
+  );
+  return { ...derivative, ext: 'webp' };
 }

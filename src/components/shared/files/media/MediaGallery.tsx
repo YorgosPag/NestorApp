@@ -54,6 +54,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PhotoPreviewModal } from '@/core/modals/PhotoPreviewModal';
 import { usePhotoPreviewModal } from '@/core/modals/usePhotoPreviewModal';
 import type { FileRecord } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 
 import { MediaCard } from './MediaCard';
 import { VideoPlayer } from './VideoPlayer';
@@ -175,12 +176,13 @@ export function MediaGallery({
       // Open photo in lightbox using existing PhotoPreviewModal
       const photoUrls = gallery.sortedFiles
         .filter(f => !isVideoFile(f))
-        .map(f => f.downloadUrl ?? null);
+        .map(f => fileDisplayUrl(f));
 
-      const photoIndex = photoUrls.findIndex(url => url === file.downloadUrl);
+      const photoUrl = fileDisplayUrl(file);
+      const photoIndex = photoUrls.findIndex(url => url === photoUrl);
 
       photoModal.openModal({
-        photoUrl: file.downloadUrl,
+        photoUrl,
         photoType: 'gallery',
         photoTitle: file.displayName,
         photoIndex: photoIndex >= 0 ? photoIndex : 0,

@@ -178,3 +178,59 @@ export async function openStorageObject(
     storedCacheControl: (metadata.cacheControl as string | undefined) ?? null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Μεταδεδομένα + ανάγνωση ΚΑΡΦΩΜΕΝΗΣ γενιάς (ADR-899 §4 — παράγωγα κατ' απαίτηση)
+// ---------------------------------------------------------------------------
+
+/** «Υπάρχει; ποια γενιά; τι τύπος; πόσα bytes;» — **χωρίς** κατέβασμα. */
+export type StorageObjectStat =
+  | {
+      readonly kind: 'found';
+      /** Η γενιά GCS — αλλάζει σε κάθε εγγραφή του ίδιου ονόματος. */
+      readonly generation: string;
+      readonly contentType: string;
+      readonly size: number | null;
+    }
+  | { readonly kind: 'absent' };
+
+const isNotFound = (error: unknown): boolean => (error as { code?: number }).code === 404;
+
+/** **Μία κλήση μεταδεδομένων.** Πετά μόνο σε βλάβη (όχι σε απουσία). */
+export async function statStorageObject(path: string, options: { readonly bucket: Bucket }): Promise<StorageObjectStat> {
+  try {
+    const [metadata] = await options.bucket.file(path).getMetadata();
+    if (metadata.generation === undefined) return { kind: 'absent' };
+    return {
+      kind: 'found',
+      generation: String(metadata.generation),
+      contentType: (metadata.contentType as string | undefined) ?? 'application/octet-stream',
+      size: sizeOf(metadata.size),
+    };
+  } catch (error) {
+    if (isNotFound(error)) return { kind: 'absent' };
+    throw error;
+  }
+}
+
+/**
+ * **Τα bytes ΑΚΡΙΒΩΣ αυτής της γενιάς** — `null` αν δεν υπάρχει πια.
+ *
+ * 🔴 **Γιατί καρφωμένη γενιά**: ο καλών αποφάσισε ETag/κλειδί από το {@link statStorageObject}.
+ * Αν ανάμεσα στις δύο κλήσεις κάποιος ξαναγράψει το όνομα, μια ανάγνωση «του τρέχοντος» θα
+ * έδινε **νέα bytes κάτω από παλιό ETag** — παράγωγο που ο browser θα κρατούσε ως σωστό. Με
+ * καρφωμένη γενιά η ίδια σύγκρουση δίνει απουσία: ο συναγωνισμός γίνεται **αδύνατος**, όχι σπάνιος.
+ */
+export async function readStorageObjectGeneration(
+  path: string,
+  generation: string,
+  options: { readonly bucket: Bucket },
+): Promise<Buffer | null> {
+  try {
+    const [bytes] = await options.bucket.file(path, { generation }).download();
+    return bytes;
+  } catch (error) {
+    if (isNotFound(error)) return null;
+    throw error;
+  }
+}
