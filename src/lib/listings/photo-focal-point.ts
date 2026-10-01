@@ -28,6 +28,8 @@
 
 import { z } from 'zod';
 
+import { readDeclaredFileMap, sameDeclaredFileMap, withDeclaredFileEntry } from './declared-file-map';
+
 // ============================================================================
 // 1. ΤΟ ΣΗΜΕΙΟ
 // ============================================================================
@@ -71,14 +73,7 @@ export function readPhotoFocalPoint(value: unknown): PhotoFocalPoint | null {
  * ενός εγγράφου δεν είναι εγγυημένο. Άκυρη γραμμή πέφτει **μόνη της** — δεν ακυρώνει τις άλλες.
  */
 export function readDeclaredFocalPoints(value: unknown): ReadonlyMap<string, PhotoFocalPoint> {
-  const declared = new Map<string, PhotoFocalPoint>();
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return declared;
-
-  for (const [id, raw] of Object.entries(value)) {
-    const point = readPhotoFocalPoint(raw);
-    if (id.trim() !== '' && point !== null) declared.set(id, point);
-  }
-  return declared;
+  return readDeclaredFileMap(value, readPhotoFocalPoint);
 }
 
 /**
@@ -106,11 +101,7 @@ export function sameDeclaredFocalPoints(
   a: ReadonlyMap<string, PhotoFocalPoint>,
   b: ReadonlyMap<string, PhotoFocalPoint>,
 ): boolean {
-  if (a.size !== b.size) return false;
-  for (const [id, point] of a) {
-    if (!sameFocalPoint(point, b.get(id) ?? null)) return false;
-  }
-  return true;
+  return sameDeclaredFileMap(a, b, sameFocalPoint);
 }
 
 /**
@@ -122,10 +113,7 @@ export function withDeclaredFocalPoint(
   id: string,
   point: PhotoFocalPoint | null,
 ): ReadonlyMap<string, PhotoFocalPoint> {
-  const next = new Map(declared);
-  if (point === null) next.delete(id);
-  else next.set(id, point);
-  return next;
+  return withDeclaredFileEntry(declared, id, point);
 }
 
 // ============================================================================

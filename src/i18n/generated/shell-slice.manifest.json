@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8edbec2464a0dbfd4fc065c9fca7a948d5fd5f4d25fcbb8d1dcd1f836fb02969",
+  "inputsSha256": "fc0774163a429722c11f557fa076ca1bd665012f48bb22061afb51deee1f9776",
   "languages": [
     "el"
   ],
@@ -9629,6 +9629,7 @@
     "src/lib/legality/legality-offer-matrix.ts": "efd6ceb8a1a9a5847b97dad9da74f97019f27053fa9af604c49d556f36c2dff5",
     "src/lib/legality/legality-signal.ts": "14338e333b022ec6e3b0dd36791ecb5b97a4f4cc48e91a3ea2f1696c4952d6e2",
     "src/lib/legality/legality-tier.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/listings/declared-file-map.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-attribute-declared.ts": "79260f77f4f9323dc6a0659da1b9d00d69a96be0f02aac62076039bbfb2c2533",
     "src/lib/listings/listing-authorship.ts": "5575127cb24b51d7b77f900949ebf51c6ff239f8f4807864762df58b62ac87b2",
     "src/lib/listings/listing-coverage.ts": "8ae31dddc3a6e82a41a8105cbb9af5c98ef9932df25bdee0f504e434a13eb172",
@@ -9651,7 +9652,7 @@
     "src/lib/listings/listing-stay-url.ts": "3f1169046fa52a4332947b2871e5cd08a9c881e981284d8d95fae5f503adf0d8",
     "src/lib/listings/model-source-revisions.ts": "a8540dc94eaddf40b1a3815ccba4a0d374e096db2e9b4ea595593418be73aad1",
     "src/lib/listings/photo-capture-spot.ts": "b12a726dc4bfb148d87de8db00260f4a6a6315ee5d2bfdfb64ae59f62504834a",
-    "src/lib/listings/photo-focal-point.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
+    "src/lib/listings/photo-focal-point.ts": "b4c659d02993d3e43fa84abc5cdac555799d55d36ac627fc2a44d6ba62f6c232",
     "src/lib/listings/price-history.ts": "80b98e4a82b167abf8009da26a960fe51c4b2ba13929117e7057646b5f77ab95",
     "src/lib/listings/public-listing-from-document.ts": "e33b7e6e07bd55f364bbf3a6ae91981593417cd9a1d3dfea3b658bcb72b072f4",
     "src/lib/listings/public-listing-schema.ts": "7eb1b55d98f70a6520e8a4a599f08b1e7eae98ac42e23a32482c89c65c21226e",
@@ -10001,7 +10002,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 220,
     "routeBoundaries": 0,
-    "shellFiles": 888,
+    "shellFiles": 889,
     "sliceBytes": 631051
   },
   "unresolvableKeys": [
@@ -10518,7 +10519,6 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/trash.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/users.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/vendor-portal.json",
-    "src/lib/listings/photo-capture-spot.ts → ./declared-file-map",
     "src/lib/unicode/skeleton.ts → ./generated/confusable-skeleton.json",
     "src/lib/workspace/route-worlds.ts → @/types/app-routes"
   ],

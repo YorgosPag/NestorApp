@@ -90,10 +90,30 @@ export function listingDetailHref(id: string, query?: string | null) {
 export const LISTING_PHOTOS_SEGMENT = 'photos' as const;
 export const LISTING_FLOORPLAN_SEGMENT = 'floorplan' as const;
 
-/** Η πλήρης-παραθύρου όψη «όλες οι φωτογραφίες» μιας αγγελίας. */
-export function listingPhotosHref(id: string) {
+/**
+ * 📍 ADR-897 — **ποια φωτογραφία είναι ανοιχτή**, στη διεύθυνση: `?photo=N`, **1-based** (ό,τι λέει ο άνθρωπος:
+ * «η φωτογραφία 3»). Σημείο στην κάτοψη ⇒ σύνδεσμος κατευθείαν στη φωτογραφία· η ανοιχτή φωτογραφία ⇒ μοιράσιμη διεύθυνση.
+ */
+export const LISTING_PHOTO_PARAM = 'photo' as const;
+
+/** Η πλήρης-παραθύρου όψη «όλες οι φωτογραφίες» μιας αγγελίας — προαιρετικά με ανοιχτή τη φωτογραφία `photoIndex` (0-based). */
+export function listingPhotosHref(id: string, photoIndex?: number) {
   const path = `${LISTING_DETAIL_ROUTE_BASE}/${encodeURIComponent(id)}/${LISTING_PHOTOS_SEGMENT}` as const;
+  if (photoIndex !== undefined && Number.isInteger(photoIndex) && photoIndex >= 0) {
+    return typedHref(`${path}?${LISTING_PHOTO_PARAM}=${photoIndex + 1}`);
+  }
   return typedHref(path);
+}
+
+/**
+ * Η ανοιχτή φωτογραφία από το query string — **0-based**, ή `null` όταν λείπει, δεν είναι ακέραιος ή βγαίνει έξω από
+ * τις `total` φωτογραφίες (ένας παλιός σύνδεσμος σε αγγελία που έχασε φωτογραφίες ανοίγει απλώς τη συλλογή).
+ */
+export function readListingPhotoParam(query: string, total: number): number | null {
+  const raw = new URLSearchParams(query).get(LISTING_PHOTO_PARAM);
+  if (raw === null || !/^\d+$/u.test(raw)) return null;
+  const index = Number(raw) - 1;
+  return index >= 0 && index < total ? index : null;
 }
 
 /** Η πλήρης-παραθύρου όψη «κάτοψη» μιας αγγελίας. */
