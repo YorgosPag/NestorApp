@@ -84,7 +84,8 @@ export function MyPropertyFilter({ where, onPick }: MyPropertyFilterProps): Reac
           if (chosen?.where) onPick(chosen.where);
         }}
       >
-        <SelectTrigger id={fieldId} className="min-w-56">
+        {/* `size="md"` (36px): το ίδιο ύψος με το πεδίο «Περιοχή» δίπλα — ίδια σειρά, ίδια γραμμή βάσης. */}
+        <SelectTrigger id={fieldId} size="md" className="min-w-56">
           <SelectValue placeholder={t(DIRECTORY_MY_PROPERTY_KEYS.placeholder)} />
         </SelectTrigger>
         <SelectContent>

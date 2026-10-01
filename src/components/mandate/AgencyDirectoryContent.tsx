@@ -65,6 +65,7 @@ import {
   whereCenter,
   type ShowcaseFilters,
 } from '@/lib/agency/showcase-filter';
+import { occupationFamilyTallies } from '@/lib/agency/occupation-family-tallies';
 import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 // 🔴 **Ο ROUTER ΑΠΟ ΤΟ ΣΥΝΟΡΟ** (CHECK 3.61) — το `useSearchParams` δεν ζει εκεί
 //    και έρχεται ωμό, όπως και στην αδελφή δημόσια οθόνη `ListingDetailContent`.
@@ -198,6 +199,13 @@ export function AgencyDirectoryContent(): React.JSX.Element {
     [agencies, filters, areaPending, coverageResolvers],
   );
   const options = React.useMemo(() => occupationOptions(agencies, locale), [agencies, locale]);
+  // ADR-896 §8 — πλήθη των τσιπ με τον ΙΔΙΟ κριτή και την ΙΔΙΑ αναμονή με το `visible`:
+  // όσο η περιοχή δεν κρίνεται, `null` («δεν ξέρουμε»), ποτέ ψευδές «0» ή ψευδές «όλοι».
+  const familyTallies = React.useMemo(
+    () =>
+      loading || areaPending ? null : occupationFamilyTallies(agencies, filters, coverageResolvers),
+    [agencies, filters, loading, areaPending, coverageResolvers],
+  );
   const filtering = hasActiveFilters(filters);
 
   // 🏆 **ΤΟ ΣΗΜΕΙΟ ΑΠΟΚΤΑ ΟΝΟΜΑ — ΚΑΙ ΜΕΤΡΙΕΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ** *(ADR-846 §9 #12)*.
@@ -237,13 +245,18 @@ export function AgencyDirectoryContent(): React.JSX.Element {
 
         ⚠️ Τα χειριστήρια εμφανίζονται **μόνο όταν υπάρχει πληθυσμός**: επιλογές πάνω σε άδειο
         κατάλογο θα υπόσχονταν κόσμο που δεν υπάρχει — τότε ο ήρωας δείχνει **μόνο** τίτλο.
+
+        🔴 **ΚΑΙ ΗΔΗ ΑΠΟ ΤΟ ΠΡΩΤΟ ΚΑΡΕ, ΟΣΟ ΦΟΡΤΩΝΕΙ** (ADR-896 §7Α, μετρημένο 2026-10-01): ο ήρωας είναι
+        `justify-center`, και ο πίνακας που εμφανιζόταν **μετά** τη φόρτωση έσπρωχνε τον τίτλο 78 px ⇒ CLS
+        0,29 στο στενό. Όσο φορτώνει, ο πίνακας κρατά τον χώρο του σε κατάσταση «άγνωστο» (`pending`: τσιπ
+        χωρίς αριθμό, ο υπαινιγμός του πλήθους αόρατος). Αφαιρείται μόνο αν ο κατάλογος βγει **άδειος**.
       */}
       <LandingHero
         image={LANDING_HERO_IMAGES.pros}
         title={t(DIRECTORY_KEYS.title)}
         subtitle={t(DIRECTORY_KEYS.lead)}
       >
-        {!loading && error === null && agencies.length > 0 && (
+        {error === null && (loading || agencies.length > 0) && (
           <AgencyDirectoryFilters
             filters={filters}
             options={options}
@@ -251,6 +264,8 @@ export function AgencyDirectoryContent(): React.JSX.Element {
             onChange={apply}
             onClear={filtering ? () => apply(EMPTY_SHOWCASE_FILTERS) : null}
             whereVoice={whereVoice}
+            familyTallies={familyTallies}
+            pending={loading}
           />
         )}
       </LandingHero>

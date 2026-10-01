@@ -99,6 +99,7 @@ function renderFilters(filters: ShowcaseFilters, anchor: string | null): void {
       onChange={jest.fn()}
       onClear={null}
       whereVoice={showcaseWhereVoice(filters.where, anchor)}
+      familyTallies={null}
     />,
   );
 }
@@ -199,6 +200,7 @@ describe('ADR-846 §9 #12 — Γ: η ΟΛΙΚΟΤΗΤΑ, που ο μεταγλ�
           onChange={jest.fn()}
           onClear={null}
           whereVoice={voice}
+          familyTallies={null}
         />,
       );
 
@@ -208,4 +210,37 @@ describe('ADR-846 §9 #12 — Γ: η ΟΛΙΚΟΤΗΤΑ, που ο μεταγλ�
       expect(screen.queryByText(/\{km\}|\{area\}/)).not.toBeInTheDocument();
     },
   );
+});
+
+describe('ADR-896 §7Α — ο πίνακας κρατά τον χώρο του όσο φορτώνει (CLS), χωρίς ψευδείς αριθμούς', () => {
+  function renderPending(pending: boolean): void {
+    render(
+      <AgencyDirectoryFilters
+        filters={{ occupation: null, where: null }}
+        options={[]}
+        locale="el"
+        onChange={jest.fn()}
+        onClear={null}
+        whereVoice={showcaseWhereVoice(null, null)}
+        familyTallies={null}
+        pending={pending}
+      />,
+    );
+  }
+
+  it('Φ1: όσο φορτώνει, ο υπαινιγμός πλήθους υπάρχει (ίδιο ύψος) αλλά είναι αόρατος και σιωπηλός', () => {
+    renderPending(true);
+    const hint = screen.getByText(/^Ο κατάλογος δείχνει/);
+    expect(hint).toHaveClass('invisible');
+    expect(hint).toHaveAttribute('aria-hidden', 'true');
+    // τα τσιπ είναι ήδη εκεί — χωρίς αριθμό («άγνωστο ≠ μηδέν»)
+    expect(screen.getByRole('button', { name: 'Υδραυλικός' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('Φ2: μετά τη φόρτωση ο υπαινιγμός μιλά κανονικά', () => {
+    renderPending(false);
+    const hint = screen.getByText(/^Ο κατάλογος δείχνει/);
+    expect(hint).not.toHaveClass('invisible');
+    expect(hint).not.toHaveAttribute('aria-hidden');
+  });
 });

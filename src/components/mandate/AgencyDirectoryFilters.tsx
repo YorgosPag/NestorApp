@@ -49,7 +49,10 @@ import {
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { AreaCombobox } from './AreaCombobox';
 import { MyPropertyFilter } from './MyPropertyFilter';
+import { OccupationQuickFilters } from './OccupationQuickFilters';
 import { OccupationSelect } from './OccupationSelect';
+import { useOccupationFamilyChoices } from './useOccupationFamilyChoices';
+import type { OccupationFamilyTallies } from '@/lib/agency/occupation-family-tallies';
 import {
   isAdministrativeWhere,
   type OccupationOption,
@@ -57,6 +60,7 @@ import {
 } from '@/lib/agency/showcase-filter';
 import { whereVoiceParams, type ShowcaseWhereVoice } from '@/lib/agency/showcase-where-voice';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 /**
  * Οι ακτίνες που προσφέρονται.
@@ -86,6 +90,13 @@ export interface AgencyDirectoryFiltersProps {
    * να αποκλίνουν σε κάθε μελλοντική αλλαγή. Μία μέτρηση, δύο παρουσιάσεις.
    */
   readonly whereVoice: ShowcaseWhereVoice;
+  /** ADR-896 §8 — πόσα γραφεία ανά οικογένεια με τους ΑΛΛΟΥΣ άξονες· `null` = άγνωστο ακόμη. */
+  readonly familyTallies: OccupationFamilyTallies | null;
+  /**
+   * Ο κατάλογος φορτώνει ακόμη: ο πίνακας **κρατά τον χώρο του** (CLS, ADR-896 §7Α) αλλά δεν λέει
+   * αριθμούς που δεν ξέρει — ο υπαινιγμός πλήθους μένει αόρατος (όχι απών: ίδιο ύψος).
+   */
+  readonly pending?: boolean;
 }
 
 export function AgencyDirectoryFilters({
@@ -95,8 +106,13 @@ export function AgencyDirectoryFilters({
   onChange,
   onClear,
   whereVoice,
+  familyTallies,
+  pending = false,
 }: AgencyDirectoryFiltersProps): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const families = useOccupationFamilyChoices(familyTallies);
+  const scopeHintId = React.useId();
+  const setOccupation = (occupation: string | null): void => onChange({ ...filters, occupation });
 
   return (
     <section className="flex flex-wrap items-end gap-3">
@@ -108,11 +124,20 @@ export function AgencyDirectoryFilters({
         την απόρριψη του πεδίου, **όχι** την πρόβλεψη του κινδύνου.
         ⇒ **EXTRACT, ποτέ αντιγραφή** *(N.0.2)*. Δες {@link OccupationSelect}.
       */}
+      {/* ADR-896 §8 — γρήγορες ειδικότητες: ΙΔΙΑ τιμή, ΙΔΙΟ φίλτρο με το dropdown από κάτω. */}
+      <OccupationQuickFilters
+        value={filters.occupation}
+        choices={families}
+        emptyHintId={scopeHintId}
+        onChange={setOccupation}
+      />
+
       <OccupationSelect
         value={filters.occupation}
         options={options}
         locale={locale}
-        onChange={(occupation) => onChange({ ...filters, occupation })}
+        families={families}
+        onChange={setOccupation}
       />
 
       {/*
@@ -140,7 +165,11 @@ export function AgencyDirectoryFilters({
 
         ⚠️ **ICU με ΜΟΝΑ άγκιστρα** (CHECK 3.9) — `{count, plural, …}`, ποτέ `{{ }}`.
       */}
-      <p className="m-0 basis-full text-sm text-muted-foreground">
+      <p
+        id={scopeHintId}
+        aria-hidden={pending || undefined}
+        className={cn('m-0 basis-full text-sm text-muted-foreground', pending && 'invisible')}
+      >
         {t(DIRECTORY_KEYS.occupationScopeHint, { count: options.length })}
       </p>
 
@@ -205,7 +234,11 @@ function WhereControl({
     //    γίνεται shrink-to-fit, και το `w-full` της ετικέτας είναι 100% ενός ήδη στενού
     //    δοχείου *(πρώτη διόρθωση 2026-09-21: μηδέν ορατή αλλαγή)*. Στενό πεδίο ⇒ στενή λίστα
     //    *(`--radix-popover-trigger-width`)* ⇒ ονόματα περιφερειών σε τρεις γραμμές.
-    <div className="flex basis-full flex-wrap items-end gap-4">
+    // ⚠️ **`items-start`, ΟΧΙ `items-end`**: η στήλη «Περιοχή» φέρει από κάτω τον υπαινιγμό
+    //    (`WhereHint`), άρα το κάτω άκρο της ΔΕΝ είναι το κάτω άκρο του πεδίου — με `items-end`
+    //    τα γειτονικά πεδία ευθυγραμμίζονταν με τον υπαινιγμό και έπεφταν ~14px χαμηλότερα
+    //    (Giorgio 2026-10-01). Πάνω ευθυγράμμιση: ετικέτες σε μία γραμμή, πεδία σε μία γραμμή.
+    <div className="flex basis-full flex-wrap items-start gap-4">
       {/* Ρητό `htmlFor`, όχι `<label>` που περιτυλίγει: μέσα ζει και ο υπαινιγμός (`WhereHint`),
           και η περιτύλιξη τον έβαζε ΟΛΟΚΛΗΡΟ στο όνομα του πεδίου — μετρημένο στο
           `searchable-combobox-naming.test.tsx` (ADR-598 G11). */}
@@ -249,7 +282,7 @@ function WhereControl({
               })
             }
           >
-            <SelectTrigger className="min-w-40">
+            <SelectTrigger size="md" className="min-w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
