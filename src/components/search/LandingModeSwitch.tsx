@@ -49,6 +49,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { landingSwitchIsVisible, type LandingMode } from '@/lib/landing/landing-modes';
 import { useScrollEdges } from '@/hooks/useScrollEdges';
+import { revealInlineWithin } from '@/lib/a11y/reveal-in-scroll';
 // Σχετική διαδρομή, όπως κάθε CSS module του repo: το jest λύνει το `@/` ΠΡΙΝ το stub των `.css`.
 import fadeStyles from '../ui/scroll-edge-fade.module.css';
 
@@ -58,14 +59,13 @@ const ACTIVE_TAB_INSET_PX = 40;
 /**
  * Φέρνει την ενεργή καρτέλα μέσα στη λωρίδα — **μόνο οριζόντια**. ⛔ Όχι `scrollIntoView`:
  * κυλά και τους **προγόνους**, δηλαδή θα τίναζε τη σελίδα κάθετα όταν ο ήρωας είναι μισός.
+ * Η κρίση ζει στο κοινό `revealInlineWithin` (ADR-896 §7Α.5 — ίδια με το `ui/scroll-rail`).
  */
 function revealActiveTab(list: HTMLElement): void {
-  const active = list.querySelector<HTMLElement>('[data-state="active"]');
-  if (active === null) return;
-  const box = list.getBoundingClientRect();
-  const tab = active.getBoundingClientRect();
-  if (tab.left < box.left) list.scrollLeft -= box.left - tab.left + ACTIVE_TAB_INSET_PX;
-  else if (tab.right > box.right) list.scrollLeft += tab.right - box.right + ACTIVE_TAB_INSET_PX;
+  revealInlineWithin(list, list.querySelector('[data-state="active"]'), {
+    inset: ACTIVE_TAB_INSET_PX,
+    urgency: 'incidental',
+  });
 }
 
 /**

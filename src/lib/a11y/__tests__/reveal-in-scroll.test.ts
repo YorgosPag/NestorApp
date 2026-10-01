@@ -7,6 +7,7 @@
  */
 
 import {
+  revealInlineWithin,
   revealInScroll,
   visibilityWithinScroller,
 } from '../reveal-in-scroll';
@@ -212,5 +213,31 @@ describe('visibilityWithinScroller — η είσοδος του δείκτη ά�
       delete (html as { clientHeight?: number }).clientHeight;
     }
     expect(visibilityWithinScroller(node(820, 900), 'viewport')).toBe('unknown');
+  });
+});
+
+/**
+ * **Α18–Α19 — ΟΡΙΖΟΝΤΙΑ ΑΠΟΚΑΛΥΨΗ ΜΕΣΑ ΣΕ ΛΩΡΙΔΑ** (ADR-896 §7Α.5). Η κρίση κλειδώνεται στο
+ * `scroll-rail-geometry.test.ts`· εδώ η **ανθεκτικότητα**: ποτέ `scrollIntoView` (κουνά τη σελίδα),
+ * ποτέ σφάλμα σε jsdom/κενά ορίσματα, ποτέ κίνηση από κάδρο που δεν μετρήθηκε.
+ */
+describe('revealInlineWithin', () => {
+  it('Α18: null/undefined ή δοχείο χωρίς scrollTo ⇒ τίποτα, χωρίς σφάλμα', () => {
+    const el = document.createElement('div');
+    expect(() => revealInlineWithin(null, el)).not.toThrow();
+    expect(() => revealInlineWithin(el, undefined)).not.toThrow();
+  });
+
+  it('Α19: κάδρο χωρίς διάταξη (jsdom) ⇒ καμία κύλιση, και ΠΟΤΕ scrollIntoView', () => {
+    const scroller = document.createElement('div');
+    const item = document.createElement('span');
+    scroller.appendChild(item);
+    const scrollTo = jest.fn();
+    scroller.scrollTo = scrollTo as unknown as HTMLElement['scrollTo'];
+    const scrollIntoView = jest.fn();
+    item.scrollIntoView = scrollIntoView;
+    revealInlineWithin(scroller, item, { inset: 40 });
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

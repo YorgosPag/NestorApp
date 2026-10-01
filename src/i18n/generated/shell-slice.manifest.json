@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "14ceb11bc8d68d2f05eecefd30f3b8bc138309afc6eb294861e474b1e906b6ba",
+  "inputsSha256": "a747299bbad0633d514efce2db671d6357ce298318df3c5b88402395e4ee2eeb",
   "languages": [
     "el"
   ],
@@ -9201,7 +9201,7 @@
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/LandingDoors.tsx": "14a5ed15646e5c8ebc0272b47f6e860971c660ce561e69d178d5508f9d5e2a94",
-    "src/components/search/LandingModeSwitch.tsx": "e706f13f54865620e806e597826c3619e2cac7a7e2806e3e495a5c74cb6d5db1",
+    "src/components/search/LandingModeSwitch.tsx": "4582228108561873fc9870a372bc95bedfbfd137bd23ebd8e06387d224016c08",
     "src/components/search/LandingMySpaces.tsx": "0f8bf46e418fb301bc9ffdb1b3f711887173e5d1d2799d6cecdd59e328456915",
     "src/components/search/LandingProBand.tsx": "09be039cf7823cdf488319c18dc1c584b815246bdb1dff1a084f278a028c051f",
     "src/components/search/LandingShowcase.tsx": "de15a58d0dab6e06995018a170ca79ac118dd705a339adb6162aec90c897e65a",

@@ -1,6 +1,6 @@
 /**
  * @fileoverview **«Φέρε το μπροστά στα μάτια του»** — η ΜΙΑ πράξη αποκάλυψης.
- * @related WCAG 2.3.3 · ADR-777 §7 Α3 · lib/a11y/reduced-motion.ts
+ * @related WCAG 2.3.3 · ADR-777 §7 Α3 · ADR-896 §7Α.5 · lib/a11y/reduced-motion.ts · ui/scroll-rail
  * @module lib/a11y/reveal-in-scroll
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -140,4 +140,77 @@ export function visibilityWithinScroller(
   if (item.bottom <= frame.top) return 'above';
   if (item.top >= frame.bottom) return 'below';
   return 'visible';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ↔ ΟΡΙΖΟΝΤΙΑ ΑΠΟΚΑΛΥΨΗ ΜΕΣΑ ΣΕ ΛΩΡΙΔΑ (ADR-896 §7Α.5)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * **Θέση ενός στοιχείου στον άξονα κύλισης του δοχείου** — σε συντεταγμένες *περιεχομένου*
+ * (ανεξάρτητες από το πόσο έχει κυλήσει). LTR: τα locale του έργου είναι el/en.
+ */
+export interface InlineSpan {
+  readonly start: number;
+  readonly end: number;
+}
+
+/** Το κάδρο μιας οριζόντιας λωρίδας, όπως το δίνει ο browser. */
+export interface InlineView {
+  readonly scrollLeft: number;
+  readonly clientWidth: number;
+  readonly scrollWidth: number;
+}
+
+export function inlineViewOf(scroller: Element): InlineView {
+  return { scrollLeft: scroller.scrollLeft, clientWidth: scroller.clientWidth, scrollWidth: scroller.scrollWidth };
+}
+
+export function inlineSpanWithin(scroller: Element, element: Element): InlineSpan {
+  const frame = scroller.getBoundingClientRect();
+  const item = element.getBoundingClientRect();
+  const offset = scroller.scrollLeft - frame.left;
+  return { start: item.left + offset, end: item.right + offset };
+}
+
+/** Το επιτρεπτό εύρος του `scrollLeft` — καμία πράξη δεν ζητά κύλιση πέρα από τις άκρες. */
+export function clampInlineScroll(left: number, view: InlineView): number {
+  return Math.min(Math.max(0, left), Math.max(0, view.scrollWidth - view.clientWidth));
+}
+
+/**
+ * **Πού πρέπει να κυλήσει η λωρίδα ώστε το στοιχείο να φαίνεται ΕΞΩ από τη μάσκα της άκρης;**
+ *
+ * 🔑 `null` = **καμία κίνηση** — η ίδια σημασία με το `'nearest'`: ό,τι ήδη φαίνεται δεν σπρώχνεται.
+ * Το `inset` είναι η ζώνη σβησίματος (`scroll-padding-inline` του δοχείου)· τσιπ κάτω από τη
+ * μάσκα **δεν** φαίνεται, άρα μετρά ως κρυμμένο. Κάδρο πλάτους 0 (jsdom, `display:none`) ⇒ `null`:
+ * ό,τι δεν μετρήθηκε δεν κινεί τίποτα.
+ */
+export function revealInlineTargetOf(span: InlineSpan, view: InlineView, inset = 0): number | null {
+  if (view.clientWidth <= 0) return null;
+  let target: number;
+  if (span.start < view.scrollLeft + inset) target = span.start - inset;
+  else if (span.end > view.scrollLeft + view.clientWidth - inset) target = span.end + inset - view.clientWidth;
+  else return null;
+  const clamped = clampInlineScroll(target, view);
+  return Math.abs(clamped - view.scrollLeft) < 1 ? null : clamped;
+}
+
+/**
+ * Φέρε το στοιχείο σε θέα **κυλώντας ΜΟΝΟ τη λωρίδα** — ποτέ τη σελίδα.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΟΧΙ `revealInScroll`**: το `scrollIntoView` κυλά **κάθε** πρόγονο, άρα και το
+ * παράθυρο· στην πρώτη απόδοση αυτό είναι πήδημα σελίδας που ο άνθρωπος δεν ζήτησε. Και δεν
+ * ξέρει τη μάσκα της άκρης: αφήνει το στοιχείο **κάτω** από το σβήσιμο.
+ */
+export function revealInlineWithin(
+  scroller: Element | null | undefined,
+  element: Element | null | undefined,
+  options: { readonly inset?: number; readonly urgency?: RevealUrgency } = {}
+): void {
+  if (!scroller || !element || typeof scroller.scrollTo !== 'function') return;
+  const target = revealInlineTargetOf(inlineSpanWithin(scroller, element), inlineViewOf(scroller), options.inset);
+  if (target === null) return;
+  const behavior = options.urgency === 'incidental' ? 'auto' : motionSafeScrollBehavior();
+  scroller.scrollTo({ left: target, behavior });
 }
