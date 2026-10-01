@@ -44,13 +44,10 @@ export const TOPO_NORTH_GLYPH = 'Β' as const;
 /**
  * Unit arrow outline in the arrow's own frame: tip up (+Y = north), concave base — the classic
  * surveyor arrowhead. Scaled by the screen/world size at draw/bake time. Height spans y∈[-0.5, 0.5].
+ * ADR-897 Φ5.2: the ONE outline now lives in `@/lib/geometry/north-arrow` (listing floorplans draw the
+ * same symbol); re-exported here under its historical name so the DXF consumers stay untouched.
  */
-export const NORTH_ARROW_UNIT_OUTLINE: readonly { readonly x: number; readonly y: number }[] = [
-  { x: 0, y: 0.5 },      // tip (north)
-  { x: 0.2, y: -0.5 },   // right base
-  { x: 0, y: -0.28 },    // concave notch
-  { x: -0.2, y: -0.5 },  // left base
-] as const;
+export { NORTH_ARROW_UNIT_OUTLINE } from '@/lib/geometry/north-arrow';
 
 // ── Screen HUD sizing ─────────────────────────────────────────────────────────
 /** On-screen box side (px) of the HUD arrow (a square SVG at the top-right corner). */

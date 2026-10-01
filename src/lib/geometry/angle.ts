@@ -67,3 +67,34 @@ export function normalizeAngleDeg(degrees: number): number {
   if (normalized < 0) normalized += 360;
   return normalized;
 }
+
+/** Ο κυκλικός μέσος όρος γωνιών — η κατεύθυνση **και** πόσο συμφωνούν. */
+export interface CircularMean {
+  /** Η μέση κατεύθυνση, `[0, 2π)`. */
+  readonly meanRad: number;
+  /**
+   * Το μήκος του μέσου διανύσματος, `[0, 1]`: `1` = όλες ίδιες, `0` = καμία προτίμηση. Η κυκλική τυπική
+   * απόκλιση είναι `√(−2·ln R)` — δες {@link circularSpreadRad}.
+   */
+  readonly resultant: number;
+}
+
+/**
+ * **Ο κυκλικός μέσος** (ADR-897 Φ5.2) — μέσος όρος **μοναδιαίων διανυσμάτων**, ποτέ των αριθμών: ο αριθμητικός
+ * μέσος των 350° και 10° είναι 180°, δηλαδή η **αντίθετη** κατεύθυνση. `null` για κενή είσοδο ή όταν οι γωνίες
+ * αλληλοαναιρούνται (ο μέσος δεν ορίζεται — ποτέ επινοημένη κατεύθυνση).
+ */
+export function circularMeanRad(angles: readonly number[]): CircularMean | null {
+  if (angles.length === 0) return null;
+  let sin = 0;
+  let cos = 0;
+  for (const angle of angles) { sin += Math.sin(angle); cos += Math.cos(angle); }
+  const resultant = Math.hypot(sin, cos) / angles.length;
+  if (resultant < 1e-9) return null;
+  return { meanRad: normalizeAngleRad(Math.atan2(sin, cos)), resultant };
+}
+
+/** Η κυκλική τυπική απόκλιση από το μήκος του μέσου διανύσματος (Mardia & Jupp) — σε ακτίνια. */
+export function circularSpreadRad(resultant: number): number {
+  return Math.sqrt(-2 * Math.log(Math.min(1, Math.max(resultant, 1e-12))));
+}

@@ -6355,3 +6355,12 @@ via getter, όχι snapshot»), μία στάθμη πιο μέσα: το `useIm
 της λωρίδας)· MOD `ui/table-cell-editor/__tests__/{table-screen-point.ts,table-canvas-lockdown.test.tsx}`
 (5 νέα tests, 27/27)· MOD `rendering/entities/table/stamp-table-chrome.ts`,
 `ui/table-cell-editor/use-table-model-commit.ts` (συγχρονισμός ονόματος/τύπου, μηδέν συμπεριφορά).
+
+## 2026-10-01 — ADR-897 Φ5.2: το `NorthArrowLeaf` ζητά τη διαδρομή του βέλους από το **κοινό** `lib/geometry/north-arrow` (CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+Το περίγραμμα του βέλους βορρά (`NORTH_ARROW_UNIT_OUTLINE`) μετακόμισε στο `src/lib/geometry/north-arrow.ts`, γιατί
+απέκτησε καταναλωτή **έξω** από το DXF (κατόψεις αγγελίας, ADR-897). Το `north-arrow-config.ts` το επανεξάγει με το ίδιο
+όνομα. Το leaf αντικατέστησε τον δικό του χειρόγραφο χάρτη «περίγραμμα → SVG» με το `northArrowSvgPath(CENTER, CENTER,
+TOPO_NORTH_SVG_ARROW_SIZE)` — **ταυτόσημη** διαδρομή, μία φορά. Συνδρομές, υποστρώματα και ρυθμός απόδοσης **αμετάβλητα**.
+
+**Files**: MOD `components/dxf-layout/NorthArrowLeaf.tsx` · MOD `systems/topography/north-arrow-config.ts` (επανεξαγωγή).

@@ -20,19 +20,17 @@ import { getTopoPoints, getTopoState, subscribeTopo } from '../../systems/topogr
 import { getGeoReference, subscribeGeoReference } from '../../systems/geo-referencing/geo-reference-store';
 import { northAngleDeg, surveyCentroidEN, svgRotationDeg } from '../../systems/topography/north-arrow-model';
 import { getNorthArrowOptions, subscribeNorthArrow } from '../../systems/topography/north-arrow-store';
+import { northArrowSvgPath } from '@/lib/geometry/north-arrow';
 import {
-  NORTH_ARROW_UNIT_OUTLINE, TOPO_NORTH_GLYPH,
+  TOPO_NORTH_GLYPH,
   TOPO_NORTH_SCREEN_FILL, TOPO_NORTH_SCREEN_OUTLINE, TOPO_NORTH_SCREEN_OUTLINE_W,
   TOPO_NORTH_SCREEN_BOX_PX, TOPO_NORTH_SVG_VIEWBOX, TOPO_NORTH_SVG_ARROW_SIZE, TOPO_NORTH_SVG_GLYPH_SIZE,
 } from '../../systems/topography/north-arrow-config';
 
 const CENTER = TOPO_NORTH_SVG_VIEWBOX / 2;
 
-/** The arrowhead path in viewBox units (tip up), derived from the ONE config outline (Y-up → SVG Y-down). */
-const ARROW_PATH = `${NORTH_ARROW_UNIT_OUTLINE
-  .map((u, i) =>
-    `${i === 0 ? 'M' : 'L'} ${CENTER + u.x * TOPO_NORTH_SVG_ARROW_SIZE} ${CENTER - u.y * TOPO_NORTH_SVG_ARROW_SIZE}`)
-  .join(' ')} Z`;
+/** The arrowhead path in viewBox units (tip up) — the ONE outline→SVG mapping (ADR-897 Φ5.2 shared it with listings). */
+const ARROW_PATH = northArrowSvgPath(CENTER, CENTER, TOPO_NORTH_SVG_ARROW_SIZE);
 
 export interface NorthArrowLeafProps {
   /** Positioning classes from the Shell (absolute corner, z-index, pointer-events-none). */
