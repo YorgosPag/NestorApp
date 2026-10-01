@@ -96,6 +96,7 @@
 
 import { coverageMatches, type CoverageResolvers } from '@/lib/agency/coverage-match';
 import { presenceMatches } from '@/lib/agency/showcase-presence';
+import { readOccupationQuery, showcaseOffersOccupation } from '@/lib/agency/occupation-query';
 import {
   isAdministrativeWhere,
   type ShowcaseWhere,
@@ -193,8 +194,9 @@ const AREA_PARAM = 'area';
 export function parseShowcaseFilters(params: URLSearchParams): ShowcaseFilters {
   const raw = params.get(OCCUPATION_PARAM)?.trim() ?? '';
   return {
-    // ⚠️ Το sentinel μεταφράζεται ΕΔΩ, μία φορά, στο σύνορο.
-    occupation: raw === '' || raw === ALL_OCCUPATIONS ? null : raw,
+    // ⚠️ Το sentinel μεταφράζεται ΕΔΩ, μία φορά, στο σύνορο· και μια άγνωστη οικογένεια
+    //    (`family:<id>` που αποσύρθηκε) δεν φιλτράρει — ADR-896 §8.
+    occupation: raw === ALL_OCCUPATIONS || readOccupationQuery(raw) === null ? null : raw,
     where: readWhere(params),
   };
 }
@@ -271,13 +273,12 @@ function matchesFilters(
   filters: ShowcaseFilters,
   resolvers: CoverageResolvers,
 ): boolean {
-  if (filters.occupation !== null) {
+  const occupation = filters.occupation === null ? null : readOccupationQuery(filters.occupation);
+  if (occupation !== null) {
     // 🔑 **ΚΑΘΕ credential μετρά**: το μικτό γραφείο βρίσκεται ΚΑΙ ως μεσίτης ΚΑΙ
-    //    ως τεχνικό. Ένα `credentials[0]` θα έκρυβε τη μισή του ταυτότητα.
-    const offers = showcase.credentials.some(
-      (credential) => credential.occupation.escoUri === filters.occupation,
-    );
-    if (!offers) return false;
+    //    ως τεχνικό. Ένα `credentials[0]` θα έκρυβε τη μισή του ταυτότητα. Ακριβής
+    //    ειδικότητα ή οικογένεια (ADR-896 §8): **ένας** κριτής, και για τα πλήθη των τσιπ.
+    if (!showcaseOffersOccupation(showcase, occupation)) return false;
   }
 
   if (filters.where !== null) {

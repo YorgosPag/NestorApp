@@ -252,7 +252,7 @@
       "prefixes": [
         "search-results:detail.media"
       ],
-      "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ — ΔΥΟ δυναμικές κλήσεις, ΙΔΙΟ ιδίωμα με το `ListingGallery.tsx` (γρ. 125 πλέγμα, γρ. 163 lightbox): `t(image.altKey, {index, total})` πάνω στο ΙΔΙΟ πεδίο `ListingImage['altKey']`, πάνω στα ΙΔΙΑ αποτελέσματα του `listingGalleryImages()`. ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: ο ΜΟΝΟΣ παραγωγός παραμένει `public-listing-projection.ts` → `LISTING_MATERIAL_KEYS[listing.authorship].galleryAlt` ⇒ παρονομαστής `search-results:detail.media.galleryAlt.ownerDeclared|.agency`, ήδη δηλωμένος για το `ListingGallery.tsx`."
+      "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ — ΜΙΑ δυναμική κλήση (το πλέγμα· το lightbox εξήχθη στο `ListingPhotoLightbox.tsx` πίσω από όριο `next/dynamic`, ADR-897 Φ4 — άρα εκτός κλειστότητας), ΙΔΙΟ ιδίωμα με το `ListingGallery.tsx`: `t(image.altKey, {index, total})` πάνω στο ΙΔΙΟ πεδίο `ListingImage['altKey']`, πάνω στα ΙΔΙΑ αποτελέσματα του `listingGalleryImages()`. ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: ο ΜΟΝΟΣ παραγωγός παραμένει `public-listing-projection.ts` → `LISTING_MATERIAL_KEYS[listing.authorship].galleryAlt` ⇒ παρονομαστής `search-results:detail.media.galleryAlt.ownerDeclared|.agency`, ήδη δηλωμένος για το `ListingGallery.tsx`."
     },
     "src/components/listing-detail/ListingModels.tsx": {
       "prefixes": [
@@ -289,6 +289,13 @@
         "property-market:mandate.directory.whereChipCircleNamed"
       ],
       "reason": "ADR-846 §8.8.19 — ΜΕΤΡΗΜΕΝΟ 2026-09-10. Δύο θέσεις κλήσης (`label` και `removeLabel`), ΤΟ ΙΔΙΟ `chipKey`, που βγαίνει από το `WHERE_CHIP_KEYS`: `Record<ShowcaseWhereVoice['kind'], string | null>` — ΟΛΙΚΟΣ πίνακας πάνω σε κλειστή ένωση τεσσάρων σκελών, όπου τα ΔΥΟ σκέλη χωρίς σημάδι (`nationwide`, `administrative`) δηλώνουν ΡΗΤΑ `null` και φρουρούνται από `chipKey !== null` ΠΡΙΝ την κλήση. Άρα οι δυνατές τιμές είναι ΑΚΡΙΒΩΣ ΔΥΟ ΚΥΡΙΟΛΕΚΤΙΚΑ κλειδιά, και τα δύο εδώ. Το `whereChipRemove` ΔΕΝ απαριθμείται επίτηδες: είναι κυριολεκτικό (`t(DIRECTORY_KEYS.whereChipRemove, …)`) και ο resolver το βλέπει μόνος του — δήλωσή του εδώ θα ήταν δεύτερη αυθεντία για κλειδί που ήδη λύνεται. ⛔ ΟΧΙ πρόθεμα-σκούπα: το `property-market` ΔΕΝ είναι guaranteed. ⚠️ Ξαναεπαλήθευσέ το αν το `WHERE_CHIP_KEYS` πάψει να είναι ολικό ή αν φύγει ο φρουρός `!== null`."
+    },
+    "src/components/mandate/OccupationQuickFilters.tsx": {
+      "prefixes": [
+        "property-market:mandate.directory.occupationGroupEngineering",
+        "property-market:mandate.directory.occupationGroupTrades"
+      ],
+      "reason": "ADR-896 §8 (2026-10-01) — η ΜΟΝΗ δυναμική κλήση είναι `t(GROUP_KEYS[group])`, και το `GROUP_KEYS` είναι `Record<OccupationFamilyGroup, string>` — ΟΛΙΚΟΣ πίνακας πάνω στην ΚΛΕΙΣΤΗ ένωση `OCCUPATION_FAMILY_GROUPS` (`config/occupation-families.ts`, `as const`) δύο σκελών, με ΔΥΟ ΚΥΡΙΟΛΕΚΤΙΚΑ κλειδιά του `DIRECTORY_KEYS`, και τα δύο εδώ. Τρίτη ομάδα ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — ίδιο σκεπτικό με το `AgencyDirectoryFilters.tsx`. ⛔ ΟΧΙ πρόθεμα-σκούπα: το `property-market` ΔΕΝ είναι guaranteed. ⚠️ Ξαναεπαλήθευσέ το αν προστεθεί ομάδα."
     },
     "src/components/market/OpenDataAttribution.tsx": {
       "keys": [
@@ -1355,14 +1362,20 @@
       "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ. Η ΣΕΛΙΔΑ ΦΩΤΟΓΡΑΦΙΩΝ — ίδια οικογένεια με το `/listing/[id]/tour` (Κ3β): δημόσια, στο `(light)`, συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."
     },
     "src/app/(light)/listing/[id]/floorplan/page.tsx": {
-      "sealed": 889,
-      "sealedAt": "2026-09-27",
+      "sealed": 1202,
+      "sealedAt": "2026-10-01",
       "history": [
         {
           "from": 0,
           "to": 889,
           "at": "2026-09-27",
           "why": "ADR-884 Φ2στ · §4.12 Μέρος Δ — ΝΕΑ ΣΕΛΙΔΑ: η κάτοψη της αγγελίας, πλήρες παράθυρο (πρότυπο Zillow «Φωτογραφίες · Κάτοψη · 3D»). ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-09-27): 889 bytes, 1 ns [listing-detail] — τα κλειδιά `media.*` συν την πληθική μορφή του `floorplanPage.heading`."
+        },
+        {
+          "from": 889,
+          "to": 1202,
+          "at": "2026-10-01",
+          "why": "ADR-897 Φ4 + Φ5.2 — η κάτοψη της σελίδας ΔΕΙΧΝΕΙ στο πρώτο καρέ τα σημεία λήψης (`media.capture.planLabel`/`markerLabel`) και το βέλος βορρά (`media.capture.northGlyph`/`northLabel`): ορατό περιεχόμενο, όχι αλληλεπίδραση — ένα όριο `next/dynamic` θα το καθυστερούσε. Μετρημένο με `--measure` (2026-10-01): 1202 bytes, 1 ns [listing-detail], κανένα νέο namespace. Το lightbox μένει πίσω από όριο (`ListingPhotoLightbox`)."
         }
       ],
       "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ. Η ΣΕΛΙΔΑ ΚΑΤΟΨΗΣ — ίδια οικογένεια με το `/listing/[id]/tour` (Κ3β): δημόσια, στο `(light)`, συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."

@@ -42,3 +42,16 @@ export function escoDocIdOf(uri: string | null | undefined): string | null {
   const match = uri.trim().match(/\/([a-f0-9-]+)$/i);
   return match === null ? null : match[1];
 }
+
+/** Το πρόθεμα κάθε ESCO occupation URI (v1.x) — η μία γραφή του για τον κώδικα εφαρμογής. */
+export const ESCO_OCCUPATION_URI_PREFIX = 'http://data.europa.eu/esco/occupation/';
+
+/**
+ * Η **αντίστροφη** του {@link escoDocIdOf}: UUID εγγράφου → πλήρες URI.
+ *
+ * 🔑 Ζει εδώ ώστε ένα επιμελημένο μητρώο *(π.χ. `config/occupation-families`)* να γράφει
+ * **μόνο** το UUID που επαληθεύτηκε στη μνήμη ESCO, και όχι Ν αντίγραφα του προθέματος.
+ */
+export function escoOccupationUri(docId: string): string {
+  return `${ESCO_OCCUPATION_URI_PREFIX}${docId}`;
+}
