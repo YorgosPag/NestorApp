@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5eacc006a296d2d06b7b09c8ea9cfff1ac18a01bbc28d7533c8cba89c60e9c6c",
+  "inputsSha256": "1042e000ce8dcb4e5fe156701a0cbe6899654bf2af42c1f59df7424afafef057",
   "languages": [
     "el"
   ],
@@ -9415,16 +9415,18 @@
     "src/hooks/useVoiceCommand.ts": "fa2df132dd60e7b209fda0bdfe1691dd993ad2c0af1522c8ac8ab0641124e1c7",
     "src/hooks/useVoiceCommandSubscription.ts": "2c404e42d58b1d41487b8ef3ab7f4dd04cfacbcba89805b5632829b0dfd2ce98",
     "src/hooks/useVoiceRecorder.ts": "bae55aaae53faa71dc6d705e23fa66d427b8d834c5de738cfc246945bc6db1e1",
-    "src/i18n/bundle-registry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/i18n/bundle-registry.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
     "src/i18n/compat-translate.ts": "3dab4013f93a07d9f961602ec9f756f4d96ac8d437880a41c6226c607a07efdf",
     "src/i18n/config.ts": "8ee00904e9954f1a1201f0870876064b438f0ad71c615d9f64f2499528d4c76c",
+    "src/i18n/hooks/useBundlesComplete.ts": "9273c6b582963761fcab34e4474a67047da19efa507168e7556f69939a7e16e3",
     "src/i18n/hooks/useLanguagePreference.ts": "29fbfbea8502066472016543bb4c8449d0225922d2ad2893449b2fa9a51ccb13",
-    "src/i18n/hooks/useTranslation.ts": "2d879b473c2c3997c7ab929baa31c5b297512c69e77ea006184ede362e8154e5",
+    "src/i18n/hooks/useTranslation.ts": "ac768285c2f2ee392262a52cd59e83eab94d3a07d7a5041da7750cfe7e01cbd7",
     "src/i18n/language-switch-preload.ts": "00928eee2f1286a965fa94196c51293d5bb586b3fd63759fe196ff20b53224ba",
     "src/i18n/languages.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/i18n/lazy-config.ts": "13d72fde454f1386e7ca9b19d0d6864a0f895858dedefafb2c488f1986df93b6",
+    "src/i18n/lazy-config.ts": "b46680879e73ca9c158739084de2962224bf5271f27efa56ffa22f700b2d66b9",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
+    "src/i18n/namespace-load.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-loaders.ts": "c27be81d9691ca9088de7afe83cfe4a2edd57590c35bc58085d66c2d7eabf3f5",
     "src/i18n/pseudo-post-processor.ts": "36b77ab41d90b6545bac0a64f6a17336374a4cfa6fdde89b961b7bc48a5cd5e3",
     "src/i18n/unresolved-key.ts": "45d824a09cac8ce40aead2f90fe2405c9da4421e6b9766f1c55cbded0affb491",
@@ -9970,7 +9972,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 220,
     "routeBoundaries": 0,
-    "shellFiles": 889,
+    "shellFiles": 891,
     "sliceBytes": 632693
   },
   "unresolvableKeys": [

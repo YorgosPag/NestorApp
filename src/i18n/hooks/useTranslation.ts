@@ -7,6 +7,7 @@ import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 import { remapLegacyTranslationKey, getCompatNamespaces, getExplicitNamespace } from '../namespace-compat';
 import { getBundleState, isBundleComplete } from '../bundle-registry';
 import { isUnresolvedTranslation } from '../unresolved-key';
+import { useBundlesComplete } from './useBundlesComplete';
 
 import { createModuleLogger } from '@/lib/telemetry';
 // ⚠️ ADR-777 §8.29 (Π9): διαγράφοντας το `changeLanguage` έφυγε και ο **μοναδικός**
@@ -137,6 +138,12 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
     return allNamespacesToLoad.every((ns) => isBundleComplete(i18n.language, ns));
   });
 
+  // 🔴 ADR-744 §25 — το `namespaceLoaded` ξέρει μόνο τη ΔΙΚΗ μου φόρτωση. Αν τα
+  // bundles μου τα ολοκληρώσει άλλο μονοπάτι (boot preload, άλλο mount, ανάκτηση
+  // μετά από `failed`), αυτό το boolean αλλάζει και το `t` παίρνει νέα αναφορά ⇒
+  // ό,τι ζωγραφίστηκε ωμό ξαναζωγραφίζεται. ⚠️ ΜΗΝ το βγάλεις από τις εξαρτήσεις του `t`.
+  const bundlesComplete = useBundlesComplete(i18n.language, allNamespacesToLoad);
+
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
   const t = useMemo(() => {
     const rawTCall = rawT as unknown as RawTCall;
@@ -179,7 +186,7 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
       return result;
     };
     return wrapped as unknown as typeof rawT;
-  }, [rawT, primaryNs, namespaceLoaded, i18n, allNamespacesToLoad]);
+  }, [rawT, primaryNs, namespaceLoaded, bundlesComplete, i18n, allNamespacesToLoad]);
 
   // Lazy load namespace + its compat split namespaces (ADR-280)
   useEffect(() => {

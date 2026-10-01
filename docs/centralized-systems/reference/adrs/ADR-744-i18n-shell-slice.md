@@ -2296,3 +2296,97 @@ server υποδέντρο δεν ελέγχεται — εκεί μένει ο �
 ⚠️ **Για το commit**: το Π5 του `scripts/__tests__/i18n-route-slices.test.js` βρίσκει τα modules
 καταχώρησης με `git grep` (**μόνο tracked**) ⇒ είναι κόκκινο όσο τα δύο νέα αρχεία είναι untracked,
 πράσινο μόλις σταδιοποιηθούν (επαληθευμένο με `--untracked`).
+
+---
+
+## §25 — ΤΟ CHUNK ΠΟΥ ΑΠΕΤΥΧΕ ΚΑΙ ΚΑΝΕΙΣ ΔΕΝ ΞΑΝΑΖΗΤΗΣΕ (2026-10-01)
+
+### 25.1 Το σύμπτωμα — μετρημένο σε Chrome, dev server
+
+Καρτέλα ακινήτου (`/o/{company}/properties/{id}`): **184 ωμά κλειδιά** (37 στο κρυφό native
+`<select>` της Radix), **αθεράπευτα μετά από 75″**. Ασταθές από φόρτωση σε φόρτωση. Τα κλειδιά
+εμφανίζονταν **χωρίς** πρόθεμα namespace (`audience.label`, `tabs.labels.photos`), επειδή το
+i18next επιστρέφει το κλειδί χωρίς το `ns:` όταν το namespace δεν υπάρχει.
+
+### 25.2 Η ρίζα — τρία κενά, όχι ένα
+
+Η κονσόλα (το όργανο `warnUnresolvedKey` του §11) έλεγε:
+`Failed to load chunk …/src_i18n_locales_el_properties-detail_json…` και
+`properties=absent`. Στο ίδιο παράθυρο έπεφταν και **άσχετα** chunks (route preload) ⇒ η κλάση
+είναι **ChunkLoadError**, όχι λάθος locale.
+
+1. **Σιωπηλή αποτυχία.** Το `loadTranslations` έπιανε το σφάλμα και επέστρεφε `{}`. Το bundle
+   έμενε `absent`, ο hook έκανε `setNamespaceLoaded(true)`, **καμία** επανάληψη.
+2. **Κανείς δεν ξυπνούσε.** Ο hook ξαναζωγράφιζε **μόνο** όταν τελείωνε η **δική του** φόρτωση.
+   Bundle που ολοκληρωνόταν από άλλο μονοπάτι δεν ειδοποιούσε κανέναν.
+3. **Διπλές φορτώσεις.** Το ίδιο namespace ζητούνταν έως 4 φορές ταυτόχρονα (κάθε mount στο dev
+   κάνει `forceReload`), χωρίς αποδιπλασιασμό.
+
+⚠️ **Περιβάλλον, δηλωμένο**: ο runtime του **Turbopack dev** κρατά το απορριφθέν promise ανά URL
+chunk (`chunkResolvers`, `loadingStarted=true` — `.next/static/chunks/turbopack-*.js`, `doLoadChunk`)
+⇒ στο dev **κάθε** επανάληψη `import()` του ίδιου chunk αποτυγχάνει ακαριαία μέχρι το reload. Η
+**παραγωγή** χτίζεται με **webpack** (`next build` χωρίς `--turbopack`), που καθαρίζει το αποτυχημένο
+chunk ⇒ εκεί η επανάληψη θεραπεύει. Στην παραγωγή η ίδια κλάση προκύπτει από απώλεια δικτύου ή από
+αναντιστοιχία έκδοσης μετά από deploy.
+
+### 25.3 Η θεραπεία — δομική, σε ΕΝΑ σημείο
+
+| Κομμάτι | Αρχείο | Τι κάνει |
+|---|---|---|
+| Επανάληψη | `src/i18n/namespace-load.ts` → `importWithRetry` | 4 απόπειρες, αναμονή 300 → 900 → 2700 ms· εξάντληση ⇒ **πετά**, ποτέ `{}` |
+| Μία φόρτωση | `namespace-load.ts` → `singleFlight` | ένα promise ανά `γλώσσα:ns`· ελευθερώνεται μετά από αποτυχία |
+| Ρητή αποτυχία | `bundle-registry.ts` → κατάσταση `failed` + `recordLoaderFailure` | δεν υποβαθμίζει ποτέ `complete` |
+| Ειδοποίηση | `bundle-registry.ts` → `subscribeBundleRegistry` · `hooks/useBundlesComplete.ts` | `useSyncExternalStore` με **boolean** στιγμιότυπο ανά καταναλωτή |
+| Ανάκτηση | `namespace-load.ts` → `armBundleRecovery` · `lazy-config.ts` → `recoverFailedNamespaces` | σε `online` / ορατή καρτέλα ξαναζητά κάθε `failed` |
+| Κρυφό `<option>` | `components/ui/select.tsx` → `useResyncItemTextAfterCommit` | βλ. 25.4 |
+
+Το `loadNamespace` **δεν απορρίπτει ποτέ**: οι καλούντες (boot preload, `lazyRouteFactory`, αλλαγή
+γλώσσας) το βάζουν σε `Promise.all`, όπου ένα locale που λείπει δεν πρέπει να ρίχνει τη διαδρομή. Η
+αποτυχία ζει στο μητρώο.
+
+🏆 **Γιατί όχι `react.bindI18nStore: 'added'`** (η λύση του react-i18next): ξυπνά **κάθε**
+καταναλωτή σε **κάθε** `addResourceBundle` (~90 κύματα re-render στην εκκίνηση). Εδώ ο καταναλωτής
+ρωτά μόνο για τα **δικά του** namespaces και ξαναζωγραφίζει μόνο όταν αλλάξει η απάντηση. Η
+επανάληψη ακολουθεί το πρότυπο του `BackendConnector` του ίδιου του i18next (`maxRetries` /
+`retryTimeout`), που ο δικός μας loader παρέκαμπτε.
+
+### 25.4 Το δεύτερο ελάττωμα — η Radix καθυστερεί ένα render
+
+Ακόμα και σε φορτώσεις όπου **όλα** μεταφράζονταν, 4 κλειδιά έμεναν **μόνιμα** ωμά στο κρυφό native
+`<select>` (`audience.publicListing`, `audience.projectTeam`, `audience.unitOwner`,
+`upload.milestoneNone`). Το `SelectItemText` (`@radix-ui/react-select@2.2.6`, `dist/index.mjs:913-917`)
+χτίζει το `<option>` από `itemTextNode.textContent` διαβασμένο **κατά το render**, δηλαδή το κείμενο
+του **προηγούμενου** commit. Θεραπεία στο **SSoT** `ui/select.tsx` (249 καταναλωτές): μετά από
+commit όπου άλλαξε το κείμενο του DOM, **ένα** ακόμη render.
+
+⚠️ Αρχικά γράφτηκε ως remount (`key`) — **η μετάλλαξη έδειξε ότι είναι περιττό**: χωρίς `key` οι
+άγκυρες έμειναν πράσινες, χωρίς το render κοκκίνισαν. Κρατήθηκε το ελάχιστο.
+
+### 25.5 Απόδειξη
+
+- `src/i18n/__tests__/namespace-load-resilience.test.ts` — 11 tests. Ο loader **απορρίπτει
+  πραγματικά**· άγκυρες: εξάντληση ⇒ πετά · `failed` στο μητρώο χωρίς απόρριψη · ταυτόχρονα mounts ⇒
+  ένα import · από άκρη σε άκρη `failed → online → complete`. **Μεταλλάξεις**: χωρίς
+  `recordLoaderFailure` ⇒ 2 🔴 · χωρίς single-flight ⇒ 2 🔴.
+- `src/i18n/__tests__/use-translation-bundle-repaint.test.tsx` — 3 tests: η δική του φόρτωση
+  αποτυγχάνει, άλλο μονοπάτι ολοκληρώνει ⇒ η ετικέτα μεταφράζεται **χωρίς νέο mount**· άσχετο bundle
+  ⇒ **κανένα** render. **Μετάλλαξη**: χωρίς `useBundlesComplete` ⇒ 1 🔴.
+- `src/components/ui/__tests__/select-native-option-sync.test.tsx` — 4 tests πάνω στο **αποδοθέν**
+  native option. **Μετάλλαξη**: χωρίς το render ⇒ 2 🔴.
+- **Ζωντανά** (Chrome, dev, ίδια σελίδα): πριν — 184 ωμά, αθεράπευτα. Μετά — η σελίδα φόρτωσε με 43
+  ορατά + 16 κρυφά ωμά (`spatial-tour` σε εξέλιξη) και **θεραπεύτηκε μόνη της χωρίς reload**:
+  0 ωμά. Τα 4 κρυφά `<option>` λένε «Αγγελία (κοινό)», «Ομάδα έργου», «Ιδιοκτήτης μονάδας», «Καμία».
+  ⚠️ Η κονσόλα εκείνης της φόρτωσης **δεν** καταγράφηκε (αποσύνδεση επέκτασης), άρα **δεν** ξέρουμε
+  αν τη θεράπευσε η αργή πρώτη φόρτωση ή η ανάκτηση σε `online`. Αποδεδειγμένο είναι το
+  «ξαναζωγραφίζει χωρίς remount», που πριν **δεν** συνέβαινε ποτέ.
+
+### 25.6 ⚠️ Τι ΜΕΝΕΙ ανοιχτό
+
+- **Turbopack dev**: chunk που «δηλητηριάστηκε» θεραπεύεται μόνο με reload. Η αποτυχία πλέον
+  **λέγεται** (`logger.error … failed after 4 attempts … stays cached until reload`), δεν σωπαίνει.
+- **Αναντιστοιχία έκδοσης στην παραγωγή** (παλιό HTML, νέο deploy ⇒ το hashed chunk δεν υπάρχει
+  πια): καμία επανάληψη δεν θεραπεύει. Η λύση των μεγάλων είναι reload με σήμανση έκδοσης· δεν
+  υλοποιήθηκε εδώ.
+- **Αδελφή πύλη του CHECK 3.51**: το 3.51 ρωτά για ωμά κλειδιά στο **SSR** HTML. Η **client**
+  περίπτωση (αποτυχία chunk μετά το hydration) δεν μπορεί να ελεγχθεί στατικά. Φυλάσσεται από τις
+  τρεις άγκυρες του 25.5, όχι από πύλη.

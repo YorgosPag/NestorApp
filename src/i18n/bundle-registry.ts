@@ -51,6 +51,7 @@
  * | `absent`        | το i18next δεν έχει τίποτα γι' αυτό το namespace       |
  * | `shell-partial` | το bootstrap slice έγραψε **υποσύνολο** κλειδιών       |
  * | `complete`      | ο loader εγκατέστησε το **πλήρες** αρχείο locale       |
+ * | `failed`        | ο loader εξάντλησε τις επαναλήψεις (§25) — ανακτήσιμο  |
  *
  * Το `shell-partial` **δεν** είναι σφάλμα — είναι το σχέδιο του ADR-744. Είναι
  * σφάλμα μόνο όταν κάποιος το διαβάσει ως `complete`.
@@ -63,13 +64,52 @@
  * @see docs/centralized-systems/reference/adrs/ADR-744-i18n-shell-slice.md §9
  */
 
-/** Η πληρότητα ενός resource bundle μέσα στο i18next. */
-export type BundleState = 'absent' | 'shell-partial' | 'complete';
+import { createExternalStore } from '@/lib/state/createExternalStore';
+
+/**
+ * Η πληρότητα ενός resource bundle μέσα στο i18next.
+ *
+ * 🔴 ADR-744 §25 — `failed`: ο loader **εξάντλησε** τις επαναλήψεις του. Ήταν
+ * αόρατο: το `loadTranslations` επέστρεφε σιωπηλά `{}`, το bundle έμενε `absent`
+ * και **κανείς δεν ξαναπροσπαθούσε** — μετρημένο 2026-10-01, 184 ωμά κλειδιά στην
+ * καρτέλα ακινήτου, αθεράπευτα μετά από 75″. Ρητή κατάσταση ⇒ ρητή ανάκτηση.
+ */
+export type BundleState = 'absent' | 'shell-partial' | 'complete' | 'failed';
 
 /** `${language}:${namespace}` → κατάσταση. Ό,τι λείπει είναι `absent`. */
 const bundleStates = new Map<string, BundleState>();
 
 const bundleKey = (language: string, namespace: string): string => `${language}:${namespace}`;
+
+/**
+ * 🔴 ADR-744 §25 — ΟΙ ΚΑΤΑΝΑΛΩΤΕΣ ΑΚΟΥΝ ΤΟ ΜΗΤΡΩΟ, ΟΧΙ ΤΟ ΔΙΚΟ ΤΟΥΣ PROMISE.
+ *
+ * Κάθε `useTranslation` ξαναζωγράφιζε **μόνο** όταν τελείωνε η **δική του**
+ * φόρτωση. Ένα namespace που ολοκληρωνόταν από **άλλο** μονοπάτι (boot preload,
+ * άλλο mount, ανάκτηση) δεν ξυπνούσε κανέναν — και όποιος είχε ήδη ζωγραφίσει
+ * ωμό κλειδί έμενε έτσι. Η ειδοποίηση ζει εδώ, δίπλα στην αυθεντία της κατάστασης.
+ *
+ * ⚠️ ΜΗΝ το αντικαταστήσεις με `react.bindI18nStore: 'added'`: εκείνο ξυπνά **κάθε**
+ * καταναλωτή σε **κάθε** `addResourceBundle` (~90 κύματα στην εκκίνηση). Εδώ ο
+ * καταναλωτής ρωτά για τα **δικά του** namespaces και ξαναζωγραφίζει μόνο όταν
+ * αλλάξει η απάντηση (`useSyncExternalStore` συγκρίνει το boolean στιγμιότυπο).
+ */
+const registryVersion = createExternalStore<number>(0);
+
+function notifyRegistryChange(): void {
+  registryVersion.set(registryVersion.get() + 1);
+}
+
+function setBundleState(key: string, state: BundleState): void {
+  if (bundleStates.get(key) === state) return;
+  bundleStates.set(key, state);
+  notifyRegistryChange();
+}
+
+/** Εγγραφή σε κάθε αλλαγή κατάστασης bundle. Επιστρέφει την ακύρωση. */
+export function subscribeBundleRegistry(listener: () => void): () => void {
+  return registryVersion.subscribe(listener);
+}
 
 /**
  * Δηλώνει τι έγραψε ο **σύγχρονος bootstrap** (`src/i18n/config.ts`).
@@ -93,7 +133,7 @@ export function recordShellBootstrap(
   for (const namespace of namespaces) {
     const key = bundleKey(language, namespace);
     if (bundleStates.get(key) === 'complete') continue;
-    bundleStates.set(key, wholeSet.has(namespace) ? 'complete' : 'shell-partial');
+    setBundleState(key, wholeSet.has(namespace) ? 'complete' : 'shell-partial');
   }
 }
 
@@ -105,7 +145,36 @@ export function recordShellBootstrap(
  * και το να σημειωθεί ως `complete` θα έκλεινε τη μοναδική πόρτα επανάληψης.
  */
 export function recordLoaderInstall(language: string, namespace: string): void {
-  bundleStates.set(bundleKey(language, namespace), 'complete');
+  setBundleState(bundleKey(language, namespace), 'complete');
+}
+
+/**
+ * Δηλώνει ότι ο loader **εξάντλησε** τις επαναλήψεις (ADR-744 §25).
+ *
+ * Δεν υποβαθμίζει ποτέ ένα `complete`: αν ένα παράλληλο μονοπάτι πρόλαβε να
+ * εγκαταστήσει το πλήρες αρχείο, εκείνη η δήλωση είναι η αληθινή.
+ */
+export function recordLoaderFailure(language: string, namespace: string): void {
+  const key = bundleKey(language, namespace);
+  if (bundleStates.get(key) === 'complete') return;
+  setBundleState(key, 'failed');
+}
+
+/** Ένα bundle που ο loader εγκατέλειψε — ό,τι χρειάζεται η ανάκτηση για να το ξαναζητήσει. */
+export interface FailedBundle {
+  readonly language: string;
+  readonly namespace: string;
+}
+
+/** Κάθε bundle σε κατάσταση `failed`, ταξινομημένο (ντετερμινιστική σειρά ανάκτησης). */
+export function getFailedBundles(): readonly FailedBundle[] {
+  const failed: FailedBundle[] = [];
+  for (const [key, state] of bundleStates) {
+    if (state !== 'failed') continue;
+    const separator = key.indexOf(':');
+    failed.push({ language: key.slice(0, separator), namespace: key.slice(separator + 1) });
+  }
+  return failed.sort((a, b) => bundleKey(a.language, a.namespace).localeCompare(bundleKey(b.language, b.namespace)));
 }
 
 /** Η κατάσταση ενός bundle. Άγνωστο ⇒ `absent`. */
@@ -163,4 +232,5 @@ export function getRequestedNamespaces(): readonly string[] {
 /** Μηδενισμός — αποκλειστικά για tests που στήνουν καθαρό boot. */
 export function resetBundleRegistry(): void {
   bundleStates.clear();
+  notifyRegistryChange();
 }

@@ -3,7 +3,14 @@ import { initReactI18next } from 'react-i18next';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getNamespaceLoader, type TranslationData } from './namespace-loaders';
-import { isBundleComplete, recordLoaderInstall } from './bundle-registry';
+import { getFailedBundles, isBundleComplete, recordLoaderFailure, recordLoaderInstall } from './bundle-registry';
+import {
+  NAMESPACE_RETRY_POLICY,
+  armBundleRecovery,
+  importWithRetry,
+  singleFlight,
+  type RecoveryHost,
+} from './namespace-load';
 
 const logger = createModuleLogger('i18n-lazy-config');
 
@@ -177,35 +184,32 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
     return translationCache.get(cacheKey) as TranslationData;
   }
 
-  try {
-    const loader = getNamespaceLoader(language, namespace);
+  const loader = getNamespaceLoader(language, namespace);
 
-    if (!loader) {
-      if (language !== 'el') {
-        return loadTranslations('el', namespace, forceReload);
-      }
-      logger.warn(`Namespace ${namespace} not found for language ${language}`);
-      return {};
+  if (!loader) {
+    if (language !== 'el') {
+      return loadTranslations('el', namespace, forceReload);
     }
+    logger.warn(`Namespace ${namespace} not found for language ${language}`);
+    return {};
+  }
 
-    const translations = await loader();
+  // 🔴 ADR-744 §25 — εδώ ένα `catch` επέστρεφε `{}`: η αποτυχία του chunk γινόταν
+  // «κενό bundle», ο hook «φορτώθηκε», και τα ωμά κλειδιά έμεναν για πάντα.
+  // Τώρα: επανάληψη με αναμονή, και αν εξαντληθεί, το σφάλμα ΑΝΕΒΑΙΝΕΙ.
+  try {
+    const translations = await importWithRetry(loader);
     const data = translations.default || translations;
     if (!forceReload) {
       translationCache.set(cacheKey, data as TranslationData);
     }
     return data as TranslationData;
   } catch (error) {
-    logger.warn(`Failed to load translations for ${language}:${namespace}`, { error });
-
     if (language !== 'el') {
-      try {
-        return await loadTranslations('el', namespace, forceReload);
-      } catch (fallbackError) {
-        logger.error(`Fallback failed for ${namespace}`, { error: fallbackError });
-      }
+      logger.warn(`Failed to load translations for ${language}:${namespace}, falling back to el`, { error });
+      return loadTranslations('el', namespace, forceReload);
     }
-
-    return {};
+    throw error;
   }
 }
 
@@ -231,27 +235,73 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
  * **διαβάστηκε**, όχι αυτή που **γράφτηκε** — στο fallback μονοπάτι (γραμμή 153)
  * γράφει `el:ns` ενώ το bundle μπαίνει σε `en:ns`.
  */
-export async function loadNamespace(namespace: Namespace, language?: Language, forceReload = false) {
+export function loadNamespace(namespace: Namespace, language?: Language, forceReload = false): Promise<void> {
   // 🧹 ADR-777 §8.29: ήταν σκέτο `'el'` — δεύτερη προεπιλογή δίπλα στο
   // `DEFAULT_LANGUAGE`, ελεύθερη να αποκλίνει από αυτό χωρίς να το μάθει κανείς.
   const currentLanguage = (language || i18n.language || DEFAULT_LANGUAGE) as Language;
 
   if (!forceReload && isBundleComplete(currentLanguage, namespace)) {
+    return Promise.resolve();
+  }
+
+  // 🔴 ADR-744 §25 — μία φόρτωση ανά `γλώσσα:ns`. Μια φόρτωση που ήδη τρέχει
+  // ικανοποιεί και το `forceReload` (είναι κι αυτή φρέσκια).
+  return singleFlight(`${currentLanguage}:${namespace}`, () =>
+    installNamespace(namespace, currentLanguage, forceReload),
+  );
+}
+
+/**
+ * Φορτώνει και εγκαθιστά ένα namespace. **Δεν απορρίπτει ποτέ**: οι καλούντες
+ * (boot preload, route factory, αλλαγή γλώσσας) το βάζουν σε `Promise.all`, όπου
+ * ένα locale που λείπει δεν πρέπει να ρίχνει τη διαδρομή. Η αποτυχία δηλώνεται
+ * στο μητρώο (`failed`) — εκεί την ακούν ο hook και η ανάκτηση.
+ */
+async function installNamespace(namespace: Namespace, language: Language, forceReload: boolean): Promise<void> {
+  let translations: TranslationData;
+  try {
+    translations = await loadTranslations(language, namespace, forceReload);
+  } catch (error) {
+    recordLoaderFailure(language, namespace);
+    logger.error(
+      `i18n: namespace ${language}:${namespace} failed after ${NAMESPACE_RETRY_POLICY.attempts} attempts — `
+        + 'its keys stay raw until recovery (online / tab visible). In Turbopack dev a failed chunk '
+        + 'stays cached until reload (ADR-744 §25).',
+      { error },
+    );
+    armBundleRecovery(browserRecoveryHost(), recoverFailedNamespaces);
     return;
   }
 
-  const translations = await loadTranslations(currentLanguage, namespace, forceReload);
+  i18n.addResourceBundle(language, namespace, translations, true, true);
 
-  // Add to i18n instance
-  i18n.addResourceBundle(currentLanguage, namespace, translations, true, true);
-
-  // Άδειο bundle = αποτυχία import ή namespace χωρίς αρχείο (βλ. loadTranslations:
-  // επιστρέφει `{}` σε κάθε σφάλμα). Δεν είναι πληρότητα, και το να σημειωθεί ως
-  // `complete` θα έκλεινε τη μοναδική πόρτα επανάληψης — ακριβώς το σχήμα που
-  // αυτή η διόρθωση καταργεί.
+  // Άδειο bundle = namespace χωρίς αρχείο (βλ. loadTranslations). Δεν είναι
+  // πληρότητα, και το να σημειωθεί ως `complete` θα έκλεινε τη μοναδική πόρτα
+  // επανάληψης.
   if (Object.keys(translations).length > 0) {
-    recordLoaderInstall(currentLanguage, namespace);
+    recordLoaderInstall(language, namespace);
   }
+}
+
+/** Ξαναζητά κάθε `failed` bundle — ο `recover` της ανάκτησης (ADR-744 §25). */
+function recoverFailedNamespaces(): void {
+  for (const { language, namespace } of getFailedBundles()) {
+    void loadNamespace(namespace as Namespace, language as Language, true);
+  }
+}
+
+/** Ο browser ως `RecoveryHost`· στον server (χωρίς `window`) η ανάκτηση δεν οπλίζεται. */
+function browserRecoveryHost(): RecoveryHost {
+  if (typeof window === 'undefined') {
+    return { addEventListener: () => undefined, isVisible: () => false };
+  }
+  return {
+    addEventListener: (type, listener) => {
+      const target = type === 'visibilitychange' ? document : window;
+      target.addEventListener(type, listener);
+    },
+    isVisible: () => document.visibilityState === 'visible',
+  };
 }
 
 /**
