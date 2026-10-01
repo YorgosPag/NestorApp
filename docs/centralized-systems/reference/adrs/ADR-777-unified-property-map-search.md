@@ -15858,4 +15858,39 @@ inline style** (N.3): κβάντιση 5×5 σε 25 στατικές κλάσε�
 - `ListingMapCanvas.arrivalArea(id)` — ο καταναλωτής απαντά «πού φτάνω» στην άφιξη με `?selected=` (§8.77). Απών ⇒ `listingArrivalArea`, όπως πριν.
   Βρέθηκε ζωντανά: χωρίς αυτό, η άφιξη καδράριζε το κατάστημα σε ζουμ δρόμου και **ακύρωνε** το κάδρο της εμβέλειας (δύο ιδιοκτήτες κάμερας).
 
-⏳ Το split του `/search/results` (`SearchResultsContent`, bottom sheet) **δεν** μεταφέρθηκε — άλλο σχήμα· γραμμή στο `pending-ratchet-work.md`.
+✅ Το split του `/search/results` πέρασε κι αυτό στο SSoT — ως **δεύτερο σχήμα**, όχι με αντικατάσταση: δες **§8.84**.
+
+### 8.84 🗺️ **ΔΥΟ ΣΧΗΜΑΤΑ, ΜΙΑ ΑΥΘΕΝΤΙΑ ΓΕΩΜΕΤΡΙΑΣ — ΚΑΙ ΤΟ `/search/results` ΣΤΟ ΚΟΙΝΟ SSoT** *(2026-10-01, ADR-896 §4.5)*
+
+Το `/search/results` κρατούσε τη γεωμετρία λίστα ‖ χάρτης **inline** (`SearchResultsContent`). Η αφελής αντικατάσταση με
+`ListMapSplit` θα έσπαγε **δύο** μετρημένες αποφάσεις: CLS = 0 εκ κατασκευής (γεωμετρία μόνο σε CSS — κεφαλή `ResultsSheet.tsx`)
+και το φύλλο πυθμένα 3 στάσεων (SPEC-777D §26· το §26.1 απορρίπτει την εναλλαγή). Οι δύο διατάξεις **δεν είναι ίδιας φύσης**:
+
+| | **σελίδα** — `ListMapSplit` (`/offers`, `/pro`) | **οθόνη** — `ListMapScreen` (`/search/results`) |
+|---|---|---|
+| τι κυλά | η σελίδα· χάρτης `sticky` | τίποτα: κάδρο κλειδωμένο, η λίστα κυλά στη στήλη της |
+| ποιος κρίνει split | JS, πλάτος **περιέκτη** (`LIST_MAP_SPLIT_MIN_REM`) — ζει μέσα σε κέλυφος με πλαϊνή μπάρα | CSS, `md` = `MOBILE_BREAKPOINT` — επιφάνεια `bleed`, περιέκτης ≡ παράθυρο |
+| αναλογία | πρωτεύουσα η λίστα, ≤ 55% (Redfin) | πρωτεύων ο χάρτης, λίστα ≤ 45% (Zillow) |
+| στενό | καρτέλες (`?view=map`) | φύλλο πυθμένα 3 στάσεων |
+
+**Απόφαση (β): μία αυθεντία γεωμετρίας + δύο λεπτά κελύφη.**
+- `components/shared/list-map/list-map-layout.ts` κρατά **και τα δύο** σχήματα (`LIST_MAP_SCREEN_FRAME` · `LIST_MAP_SCREEN_MAP_PANE`,
+  μεταφερμένα **αυτούσια** ⇒ μηδέν οπτική αλλαγή) με τον πίνακα «γιατί δύο κατώφλια / δύο αναλογίες = δύο ερωτήματα» (ADR-749).
+- Νέο `components/shared/list-map/ListMapScreen.tsx`: κάδρο + `ResultsSheet` + `<section isolate>` χάρτη — **το ίδιο DOM** με πριν.
+  Το `viewport` οδηγεί μόνο συμπεριφορά μέσα στο φύλλο, ποτέ κλάση.
+- Ήταν **ήδη** κοινά και δεν ξαναγράφτηκαν: `ListingEdgeIndicator`, `useListingRevealTracking(focus, 'container' | 'viewport')`,
+  `ListingFocusController`, ο μηχανισμός του φύλλου (`lib/layout/bottom-sheet-stops` · `useSheetSnap` · `useSheetBackDismiss`).
+
+**Απορρίφθηκαν**: (α) ένα συστατικό με `presentation` — άλλα hooks, άλλο DOM, ένα `if` σε κάθε γραμμή· CSS container queries ως κοινός
+μηχανισμός — στο Tailwind 3.4 θέλουν νέο plugin και θα άλλαζαν τη μέτρηση των `/offers` / `/pro`.
+
+**Άγκυρες**: `ListMapScreen.test.tsx` (Σ1: **ίδιες κλάσεις σε όλο το υποδέντρο** για `measuring`/`narrow`/`wide` = CLS 0 · Σ2 αυθεντία
++ `isolate` · Σ3 λίστα πρώτη στο DOM) · `results-layout-authority` Α2 ρωτά πλέον την **αυθεντία**, Α2β: το `SearchResultsContent` δεν κρατά `grid-cols`.
+
+**🔴 Βρέθηκε στο ζωντανό περπάτημα (στενό, 728 CSS px): το «CLS 0 εκ κατασκευής» είχε διαρροή ΕΞΩ από το κάδρο.** Το
+`PrimaryFilterBar` έκρινε **γεωμετρία** από το JS `viewport` (`viewport === 'narrow' ? 'flex-nowrap…' : 'flex-wrap'`): όσο «μετρούσε»
+αναδίπλωνε σε δύο σειρές, μετά η κεφαλίδα κόνταινε 31px και ο χάρτης πηδούσε — **CLS 0,0346** (το 0,0326 από αυτό). Η ίδια κλάση
+σφάλματος που η κεφαλή του `ResultsSheet` απαγορεύει. Διόρθωση: `flex-nowrap overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0`
+⇒ **CLS 0,002** (υπόλοιπο: άφιξη δεδομένων στη λογιστική/χειριστήρια χάρτη, όχι γεωμετρία). Άγκυρα `results-layout-authority` Α2γ.
+Ευρύ (2400px): λίστα 736px ‖ χάρτης, CLS 0 · `/pro` και `/offers` split, ίδιες κλάσεις, CLS 0 · κονσόλα καθαρή.
+
