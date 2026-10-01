@@ -31,6 +31,7 @@ import type { PublicShowcase } from '@/types/agency-profile';
 import type { ShowcaseLocation } from '@/types/showcase-card';
 import { legalIdentityFixture, showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 const ALFA = 'comp_alfa';
 
@@ -108,6 +109,7 @@ function listingOf(id: string, title: string): PublicListing {
     projectedAt: '2026-09-01T09:28:43.769Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,

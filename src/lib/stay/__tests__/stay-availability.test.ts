@@ -29,6 +29,7 @@ import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
 import { STAY_RULES_NONE, type StayRulesInput } from '@/types/stay-rules';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 // =============================================================================
 // ΣΚΗΝΙΚΟ
@@ -63,6 +64,7 @@ function listingOf(
     projectedAt: '2026-08-01T00:00:00.000Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   } as PublicListing;
 }
 

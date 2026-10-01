@@ -54,6 +54,7 @@ import {
   type AttributeVocabulary,
 } from '@/lib/listings/listing-attribute-vocabulary';
 import { attributeValue } from '../listing-attribute-value';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 /**
  * **Κάθε λεξιλόγιο, και ο κατάλογος τιμών του** — χειρόγραφο επίτηδες, ως **δεύτερη
@@ -235,6 +236,7 @@ describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνετ�
     projectedAt: '2026-09-02T00:00:00.000Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   };
 
   it.each([...LISTING_ATTRIBUTE_KEYS])('«%s» δεν παράγει ποτέ `[object Object]`', (key) => {

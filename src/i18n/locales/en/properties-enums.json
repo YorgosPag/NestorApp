@@ -262,6 +262,12 @@
       "energy": "Energy-efficient"
     }
   },
+  "frontage": {
+    "single": "On one street",
+    "multiple": "On two or more streets or on a square",
+    "narrow": "Only on a street up to 6 m wide",
+    "rearOnly": "Only on a yard or a landlocked plot"
+  },
   "features": {
     "sectionTitle": "Features",
     "interior": {

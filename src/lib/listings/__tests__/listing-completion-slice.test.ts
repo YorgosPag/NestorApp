@@ -25,6 +25,7 @@ import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-l
 
 import { listingCompletionArgs } from '../listing-completion-slice';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 const AT = '2026-09-02T00:00:00.000Z';
 
@@ -55,6 +56,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     ...over,
   };
 }

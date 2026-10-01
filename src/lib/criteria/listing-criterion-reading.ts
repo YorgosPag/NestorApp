@@ -309,6 +309,7 @@ const VALUES_READERS: Record<ValueSetCriterionKey, ValuesReader> = {
   type: singleValue('type', (l) => l.type),
   energyClass: singleValue('energyClass', (l) => l.energyClass),
   condition: singleValue('condition', (l) => l.condition),
+  frontage: singleValue('frontage', (l) => l.frontage),
   heatingType: singleValue('heatingType', (l) => l.heatingType),
   heatingFuel: singleValue('heatingFuel', (l) => l.heatingFuel),
   coolingType: singleValue('coolingType', (l) => l.coolingType),

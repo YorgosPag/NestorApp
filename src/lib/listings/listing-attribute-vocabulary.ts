@@ -48,6 +48,7 @@
 
 import type { TFunction } from 'i18next';
 
+import { frontageLabel } from './frontage-label';
 import type { ListingFeatureSetKey } from './listing-disclosure';
 
 // ============================================================================
@@ -70,6 +71,8 @@ export type AttributeVocabulary =
   | 'waterHeating'
   | 'frames'
   | 'glazing'
+  /** ADR-898 Φ3β — το λεξιλόγιο του νόμου (ΠΟΛ.1149/1994 άρθ. 3 §3)· το ίδιο λέει και ο υπολογιστής. */
+  | 'frontage'
   | 'flooring'
   | 'orientation'
   | 'interiorFeature'
@@ -108,6 +111,9 @@ export function vocabularyLabel(
       return t(`properties-enums:finishes.frames.${value}`);
     case 'glazing':
       return t(`properties-enums:finishes.glazing.${value}`);
+    case 'frontage':
+      // ADR-898 Φ3β — η αντιστοίχιση ζει σε δικό της αρχείο, ώστε ο υπολογιστής να μην κουβαλά κάθε λεξιλόγιο.
+      return frontageLabel(t, value);
     case 'flooring':
       return t(`properties-enums:finishes.flooring.${value}`);
     case 'orientation':
@@ -151,6 +157,7 @@ export const ATTRIBUTE_VOCABULARY = {
   waterHeating: 'waterHeating',
   windowFrames: 'frames',
   glazing: 'glazing',
+  frontage: 'frontage',
 } as const satisfies Partial<Record<string, AttributeVocabulary>>;
 
 // ============================================================================

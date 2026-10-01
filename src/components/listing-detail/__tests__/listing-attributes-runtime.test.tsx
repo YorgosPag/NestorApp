@@ -40,6 +40,7 @@ import { LISTING_ATTRIBUTE_GROUPS } from '@/lib/listings/listing-attribute-group
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 import { ListingAttributeList } from '../ListingAttributeList';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 const AT = '2026-09-02T10:00:00.000Z';
 
@@ -82,6 +83,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floor: 0,
     bedrooms: 3,
     ...UNASKED_LISTING_ATTRIBUTES,
+    // ADR-898 Φ3β — η πρόσοψη ζει στα βασικά, δίπλα στον όροφο· δηλωμένη, ώστε τα βασικά να μένουν πλήρη.
+    frontage: 'multiple',
     // Δηλωμένα: ένα enum, ένα σύνολο με τιμές, ένα σύνολο δηλωμένο **άδειο**.
     condition: 'good',
     heatingType: 'autonomous',
@@ -92,6 +95,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     ...over,
   };
 }
@@ -127,9 +131,9 @@ describe('Ρ1 — η κάρτα ζωγραφίζει ελληνικά, όχι κ
   it('η επικεφαλίδα και η λογιστική είναι μεταφρασμένες', () => {
     renderCard();
     expect(screen.getByText('Στοιχεία ακινήτου')).toBeInTheDocument();
-    // 28 στοιχεία (ADR-890 Φ0: +`constructionYear`), 6 δηλωμένα: type · areaSqm · floor(0) ·
+    // 29 στοιχεία (ADR-890 Φ0: +`constructionYear` · ADR-898 Φ3β: +`frontage`), 7 δηλωμένα: type · areaSqm · floor(0) · frontage ·
     // bedrooms · condition · heatingType, συν 2 σύνολα (`interiorFeatures` με τιμή, `amenities` **άδειο**).
-    expect(screen.getByText('8 από 28 στοιχεία δηλωμένα')).toBeInTheDocument();
+    expect(screen.getByText('9 από 29 στοιχεία δηλωμένα')).toBeInTheDocument();
   });
 
   it('κάθε ομάδα έχει ελληνική κεφαλίδα — καμία δεν έμεινε ωμή', () => {

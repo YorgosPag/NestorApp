@@ -32,6 +32,7 @@ import { LEGALITY_CLAIM_KINDS } from '@/lib/legality/legality-claim';
 import { legalitySignalsFor } from '@/lib/legality/legality-signal';
 import type { PublicListing } from '@/types/public-listing';
 import type { PublicListingLookup } from '@/services/realtime/hooks/usePublicListings';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -113,6 +114,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     floor: 1,
+    frontage: 'single',
     bedrooms: 3,
     // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, **όλα δηλωμένα**. Το fixture είναι
     //    «πλήρης αγγελία» επίτηδες: η Ο3 μηδενίζει ρητά ό,τι θέλει να λείπει, ώστε
@@ -120,7 +122,9 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     energyClass: 'B',
     condition: 'good',
     renovationYear: 2015,
-    constructionYear: null,
+    // 🔴 Ήταν `null` από το ADR-890 Φ0, οπότε η «πλήρης αγγελία» **δεν ήταν πλήρης** και η Ο3 ήταν κόκκινη
+    //    (βρέθηκε στο ADR-898 Φ3β). Δηλωμένο, όπως λέει ο τίτλος του fixture.
+    constructionYear: { provenance: 'declared', value: 1978, at: '2026-09-02T00:00:00.000Z' },
     bathrooms: 1,
     wc: 1,
     totalRooms: 4,
@@ -160,6 +164,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     ...over,
   };
 }
@@ -265,7 +270,8 @@ describe('Ο3 — κανένα στοιχείο δεν σιωπά', () => {
    * επιβεβαίωνε τον εαυτό της. Έτσι, η μέρα που η οθόνη 3 μεγαλώνει είναι μέρα που
    * **κάποιος το βλέπει** — όπως όταν πήγε από 4 σε 27 (ADR-842 Φ3).
    */
-  const TOTAL_ELEMENTS = 27;
+  // ADR-890 Φ0: +`constructionYear` · ADR-898 Φ3β: +`frontage` (από 27).
+  const TOTAL_ELEMENTS = 29;
 
   it('κάθε στοιχείο έχει ετικέτα, ακόμη κι όταν λείπει', () => {
     renderWith({ state: 'found', listing: listing({ areaSqm: null, floor: null, bedrooms: null }) });

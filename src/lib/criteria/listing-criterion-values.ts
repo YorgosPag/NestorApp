@@ -30,6 +30,7 @@
 import { OFFER_KINDS } from '@/types/property-offers';
 import { LISTING_AUTHORSHIPS } from '@/types/public-listing';
 import { PROPERTY_TYPES } from '@/constants/property-types';
+import { RESIDENCE_FRONTAGES } from '@/lib/objective-value/objective-value-types';
 import {
   AMENITIES,
   CONDITIONS,
@@ -69,6 +70,7 @@ export const CRITERION_VALUES: Record<ValueSetCriterionKey, readonly string[]> =
   type: PROPERTY_TYPES,
   energyClass: ENERGY_CLASSES,
   condition: CONDITIONS,
+  frontage: RESIDENCE_FRONTAGES,
   heatingType: HEATING_TYPES,
   heatingFuel: FUEL_TYPES,
   coolingType: COOLING_TYPES,

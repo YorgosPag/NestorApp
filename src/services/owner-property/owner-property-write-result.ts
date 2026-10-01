@@ -19,6 +19,7 @@ import type { OwnerProperty } from '@/types/owner-property';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { MandateInvariant } from '@/types/owner-property-mandate';
 import type { MandateConflict } from '@/lib/mandate/mandate-conflict';
+import type { ObjectiveValuePatchViolation } from '@/lib/objective-value/objective-value-declarations';
 
 // =============================================================================
 // 1. ΤΟ ΑΠΟΤΕΛΕΣΜΑ — ρητές καταστάσεις, ποτέ εξαίρεση ως ροή ελέγχου
@@ -90,4 +91,15 @@ export type OwnerPropertyWriteResult =
    * Η διάκριση έχει **ήδη πληρωθεί μία φορά** (SPEC-777A §13.7.2, εύρημα #5).
    */
   | { readonly kind: 'place-link-unverified' }
+  /**
+   * **ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής δεν στέκουν**: ημερομηνία άδειας στο μέλλον, ή δρόμος που δεν
+   * είναι υποψήφιο μέτωπο στη θέση της αγγελίας. Χωριστό από το `invalid`: άλλη οθόνη, άλλα πεδία (ίδιο σκεπτικό με
+   * το `invalid-mandate`).
+   */
+  | { readonly kind: 'invalid-declarations'; readonly violations: readonly ObjectiveValuePatchViolation[] }
+  /**
+   * 🔴 **ΔΕΝ ΜΑΘΑΜΕ τη ζώνη** — ποτέ «άκυρο». Ίδιο σκεπτικό με το `place-link-unverified`: μια στιγμιαία αστοχία
+   * ανάγνωσης των ζωνών δεν επιτρέπεται να πει στον άνθρωπο ότι ο δρόμος του δεν είναι μέτωπο.
+   */
+  | { readonly kind: 'zone-unverified' }
   | { readonly kind: 'failed'; readonly message: string };

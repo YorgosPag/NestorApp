@@ -57,6 +57,7 @@ import { marketingAudienceOf } from '@/constants/marketing-audiences';
 import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { projectListingAttributes } from './public-listing-attributes';
+import { projectObjectiveValueDeclarations } from './public-listing-objective-value';
 import { reductionForListing } from '@/lib/listings/price-history';
 import type { PriceReduction } from '@/types/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
@@ -453,6 +454,8 @@ export function projectListingShape(
     //    ρωτηθεί κανένας άνθρωπος τίποτα**. Η κρίση «είναι ονομάσιμη αυτή η τιμή;»
     //    ζει στο `public-listing-attributes.ts` — δες εκεί γιατί δεν είναι `as`.
     ...projectListingAttributes(property, projectedAt),
+    // ADR-898 Φ3β — κρυμμένη ⇒ μόνο η απόκρυψη, κανένα στοιχείο από το οποίο ξαναβγαίνει το ποσό.
+    objectiveValueDeclarations: projectObjectiveValueDeclarations(property),
     title: (property.name ?? '').trim(),
     // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
     // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.

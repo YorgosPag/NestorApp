@@ -20,6 +20,7 @@
       "type": "Type",
       "areaSqm": "Area",
       "floor": "Floor",
+      "frontage": "Frontage",
       "bedrooms": "Bedrooms",
       "energyClass": "Energy class",
       "condition": "Condition",

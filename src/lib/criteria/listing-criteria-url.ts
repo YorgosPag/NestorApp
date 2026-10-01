@@ -93,6 +93,7 @@ export const CRITERION_PARAM: Record<CriterionKey, string> = {
   priceNightly: 'pnight',
   areaSqm: 'a',
   floor: 'fl',
+  frontage: 'front',
   bedrooms: 'beds',
   renovationYear: 'reno',
   constructionYear: 'built',

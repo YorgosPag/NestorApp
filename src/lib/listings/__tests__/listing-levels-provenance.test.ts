@@ -29,6 +29,7 @@ import {
   upgradeListingDocument,
   type StoredListingDocument,
 } from '../public-listing-schema';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 const AT = '2026-09-02T12:00:00.000Z';
 const BASE: ProjectableProperty = { id: 'prop_2d612992' };
@@ -196,6 +197,7 @@ function listingWith(levels: PublicListing['levels']): PublicListing {
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   };
 }
 

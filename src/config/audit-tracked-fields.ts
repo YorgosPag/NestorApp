@@ -1249,6 +1249,14 @@ const OWNER_PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   'place.label': 'place.label',
   lifecycle: 'lifecycle',
   marketingAudience: 'marketingAudience',
+  // ADR-898 Φ3β — οι δηλώσεις του αγγελιοδότη για την αντικειμενική, και η απόκρυψη (ποιος και πότε, CHECK 3.17).
+  'objectiveValueDeclarations.display': 'objectiveValueDeclarations.display',
+  'objectiveValueDeclarations.frontage': 'objectiveValueDeclarations.frontage',
+  'objectiveValueDeclarations.zoneFront': 'objectiveValueDeclarations.zoneFront',
+  'objectiveValueDeclarations.areaIncludesCommon': 'objectiveValueDeclarations.areaIncludesCommon',
+  'objectiveValueDeclarations.permitDate': 'objectiveValueDeclarations.permitDate',
+  'objectiveValueDeclarations.hasCentralHeating': 'objectiveValueDeclarations.hasCentralHeating',
+  'objectiveValueDeclarations.hasElevator': 'objectiveValueDeclarations.hasElevator',
 };
 
 const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {

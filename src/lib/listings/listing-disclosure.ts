@@ -214,7 +214,17 @@ export type DisclosureTreatment =
    * διάθεση, `null` χωρίς αυτήν), **άλλη** διάθεση — ένας κοινός ρόλος θα έλεγε ότι ζωγραφίζονται
    * μαζί, ενώ ζουν σε άλλα σημεία της σελίδας.
    */
-  | 'exchange-terms';
+  | 'exchange-terms'
+  /**
+   * **Τα στοιχεία της αντικειμενικής αξίας που δήλωσε ο αγγελιοδότης** (ADR-898 Φ3β) — ή μόνο ότι επέλεξε απόκρυψη.
+   * Δεν ζωγραφίζονται ως γραμμή: **τροφοδοτούν** τον υπολογισμό κατά την ανάγνωση (`listingObjectiveValue`), και
+   * η ενότητα της αντικειμενικής λέει δίπλα σε ό,τι μπήκε «δήλωση του αγγελιοδότη».
+   *
+   * ⛔ **ΔΕΝ είναι `'attribute'`**: θα έμπαινε στη λογιστική και στη λίστα χαρακτηριστικών — ένα «μικτά με
+   * κοινόχρηστους: ναι» ως γραμμή δεν λέει τίποτα στον αγοραστή χωρίς τον υπολογισμό. ⛔ **ΚΑΙ ΔΕΝ είναι
+   * `'price'`**: η αντικειμενική είναι φορολογικός κανόνας, όχι τιμή του ακινήτου (ADR-898 §6).
+   */
+  | 'valuation-basis';
 
 /**
  * **Κάθε πεδίο της δημόσιας προβολής, και πώς γίνεται ορατό.**
@@ -245,6 +255,9 @@ export const LISTING_DISCLOSURE = {
   type: 'attribute',
   areaSqm: 'attribute',
   floor: 'attribute',
+  // ✅ **ADR-898 Φ3β** — έβδομη φορά που το `satisfies Record<keyof PublicListing, …>` κοκκινίζει στην προσθήκη
+  //    πεδίου. Δίπλα στον όροφο, όπως το «3ª planta exterior» της idealista.
+  frontage: 'attribute',
   bedrooms: 'attribute',
   // ── ADR-842 Φ3 — ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ΠΟΥ Η ΕΤΑΙΡΕΙΑ ΗΔΗ ΚΑΤΕΙΧΕ ───────────────
   //
@@ -320,6 +333,7 @@ export const LISTING_DISCLOSURE = {
   // ✅ **ADR-777 §8.69** — και ο πίνακας **κοκκίνισε μόλις μπήκε το πεδίο**: πέμπτη φορά
   //    που το `satisfies Record<keyof PublicListing, …>` πιάνει προσθήκη σχήματος.
   priceReduction: 'price-reduction',
+  objectiveValueDeclarations: 'valuation-basis',
   projectedAt: 'provenance',
 } as const satisfies Record<keyof PublicListing, DisclosureTreatment>;
 

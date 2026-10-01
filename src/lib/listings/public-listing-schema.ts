@@ -61,6 +61,7 @@ import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { readPriceReduction } from '@/lib/listings/price-history';
 import type { ListedAt } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
+import { readListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
 
 // ============================================================================
 // Η ΕΚΔΟΣΗ
@@ -74,7 +75,7 @@ import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 14;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 15;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -723,6 +724,35 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
       ...doc,
       constructionYear: doc.constructionYear ?? null,
       adminArea: doc.adminArea ?? null,
+    }),
+  },
+  {
+    to: 15,
+    adr: 'ADR-898 Φ3β',
+    adds: [
+      'frontage',
+      'objectiveValueDeclarations.display',
+      'objectiveValueDeclarations.declared.zoneFront',
+      'objectiveValueDeclarations.declared.areaIncludesCommon',
+      'objectiveValueDeclarations.declared.permitDate',
+      'objectiveValueDeclarations.declared.hasCentralHeating',
+      'objectiveValueDeclarations.declared.hasElevator',
+    ],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΤΙΣ ΔΗΛΩΣΕΙΣ ΤΟΥ ΑΓΓΕΛΙΟΔΟΤΗ ΓΙΑ ΤΗΝ ΑΝΤΙΚΕΙΜΕΝΙΚΗ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΙΣ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΕ ΤΙΠΟΤΑ, ΕΜΦΑΝΙΣΗ ΕΞ ΟΡΙΣΜΟΥ»** — ακριβώς η συμπεριφορά
+     * της Φ3α. Ποτέ «κρυμμένη»: η απόκρυψη είναι **επιλογή** του αγγελιοδότη, όχι απουσία.
+     *
+     * 🔑 **Περνά από τον ΕΝΑ αναγνώστη** (`readListingObjectiveValueDeclarations`), όπως ο κρίκος 13 από το
+     * `readStayPetPolicy`: απουσία ή μισό κουτί ⇒ «τίποτα δηλωμένο», άκυρη τιμή ⇒ `null`, ποτέ μαντεψιά.
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο.
+     */
+    apply: (doc) => ({
+      ...doc,
+      frontage: doc.frontage ?? null,
+      objectiveValueDeclarations: readListingObjectiveValueDeclarations(doc.objectiveValueDeclarations),
     }),
   },
 ];

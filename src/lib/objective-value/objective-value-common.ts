@@ -83,7 +83,7 @@ export class InputCheck {
 
   /** Το αποτέλεσμα «δεν υπολογίζεται», ή `null` αν η είσοδος είναι πλήρης και έγκυρη. */
   blocked(form: ObjectiveValueForm): ObjectiveValueResult | null {
-    if (this.problems.length > 0) return { kind: 'invalid', form, problems: this.problems };
+    if (this.problems.length > 0) return { kind: 'invalid', form, problems: this.problems, missing: this.missing };
     if (this.missing.length > 0) return { kind: 'needsInput', form, missing: this.missing };
     return null;
   }

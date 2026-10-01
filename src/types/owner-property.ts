@@ -93,6 +93,10 @@ import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import {
+  UNDECLARED_OBJECTIVE_VALUE,
+  type ObjectiveValueDeclarations,
+} from '@/lib/objective-value/objective-value-declarations';
 
 // =============================================================================
 // 1. Η ΘΕΣΗ — «υποχρεωτικό ΕΡΩΤΗΜΑ, όχι υποχρεωτική ΑΠΑΝΤΗΣΗ»
@@ -486,6 +490,18 @@ export interface OwnerProperty {
    */
   readonly marketingAudience: MarketingAudience;
 
+  /**
+   * **Οι δηλώσεις του αγγελιοδότη για την αντικειμενική αξία** (ADR-898 Φ3β) — πρόσοψη, μικτά με κοινόχρηστους,
+   * ημερομηνία άδειας, θέρμανση/ανελκυστήρας όπου λείπει γενικό χαρακτηριστικό, και η **απόκρυψη**.
+   *
+   * ⚠️ **Υποχρεωτικό στον τύπο, απόν στη βάση για κάθε παλιό έγγραφο**: το σύνορο (`readStoredOwnerProperty`) το
+   * κανονικοποιεί με `readObjectiveValueDeclarations` ⇒ «τίποτα δηλωμένο, εμφάνιση εξ ορισμού».
+   *
+   * ⛔ **ΔΕΝ ανήκει στο {@link OwnerPropertyDraft}**: η `/offers/new` μένει **ακριβώς 8 πεδία** (ADR-842 Α2). Αλλάζει
+   * **μόνο** με ρητή πράξη (`setOwnerPropertyObjectiveValueDeclarations`), από την οθόνη «Βελτίωσε την αγγελία σου».
+   */
+  readonly objectiveValueDeclarations: ObjectiveValueDeclarations;
+
   // ── ΧΡΟΝΟΣ ────────────────────────────────────────────────────────────────
   /**
    * **Τι απέγινε η δημόσια προβολή στην τελευταία γραφή** — γεγονός, όχι πρόβλεψη.
@@ -800,6 +816,8 @@ export function newOwnerProperty(
     // 🔑 ADR-864 Α3 — η γέννηση είναι **δημόσια**, όπως ως τώρα. Το κοινό στενεύει μόνο
     //    με ρητή πράξη μετά, ποτέ από το προσχέδιο.
     marketingAudience: DEFAULT_MARKETING_AUDIENCE,
+    // ADR-898 Φ3β — τίποτα δηλωμένο, εμφάνιση εξ ορισμού. Οι δηλώσεις έρχονται μετά τη δημοσίευση.
+    objectiveValueDeclarations: UNDECLARED_OBJECTIVE_VALUE,
     createdAt: now,
     updatedAt: now,
   };

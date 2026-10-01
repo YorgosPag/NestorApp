@@ -42,6 +42,7 @@ import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { ListingLedgerBar } from '@/components/search-results/ListingLedgerBar';
 import { computeListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 registerRouteSlice(routeSlice);
 
@@ -90,6 +91,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   };
 }
 

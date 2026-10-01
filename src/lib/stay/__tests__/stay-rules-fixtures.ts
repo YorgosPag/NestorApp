@@ -17,6 +17,7 @@ import {
   type StayRules,
   type StayRulesInput,
 } from '@/types/stay-rules';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 export const PROPERTY = 'prop_stage_b';
 const STAMP = '2026-09-01T00:00:00.000Z';
@@ -52,6 +53,7 @@ export function listingOf(
     projectedAt: STAMP,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   } as PublicListing;
 }
 

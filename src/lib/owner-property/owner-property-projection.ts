@@ -132,6 +132,8 @@ export function projectableFromOwnerProperty(
     areas: { gross: property.areaSqm },
     floor: property.floor,
     layout: { bedrooms: property.bedrooms },
+    // ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής, αυτούσιες: η ΜΙΑ ερμηνεία ζει στην προβολή (ίδια με την εταιρεία).
+    objectiveValueDeclarations: property.objectiveValueDeclarations,
 
     /**
      * 🔴 **ΕΔΩ ΓΡΑΦΕΤΑΙ ΤΟ ΠΕΔΙΟ ΠΟΥ «ΚΑΝΕΝΑΣ ΓΡΑΦΕΑΣ ΔΕΝ ΕΙΧΕ».**

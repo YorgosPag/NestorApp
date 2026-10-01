@@ -49,8 +49,13 @@ interface ObjectiveValueCommonInput {
 // ΕΝΤΥΠΟ 1 — ΚΑΤΟΙΚΙΑ / ΔΙΑΜΕΡΙΣΜΑ
 // ============================================================================
 
-/** Άρθ. 3 §3: μία πρόσοψη · δύο+ ή σε πλατεία · δρόμος ≤ 6 μ. · μόνο σε ακάλυπτο / τυφλό οικόπεδο. */
-export type ResidenceFrontage = 'single' | 'multiple' | 'narrow' | 'rearOnly';
+/**
+ * Άρθ. 3 §3: μία πρόσοψη · δύο+ ή σε πλατεία · δρόμος ≤ 6 μ. · μόνο σε ακάλυπτο / τυφλό οικόπεδο.
+ * 🔑 **Η λίστα είναι η πηγή, ο τύπος παράγεται**: την απαριθμούν η φόρμα του υπολογιστή και τα όρια της αγγελίας
+ * (`objective-value-bounds.ts`) — ένα χειρόγραφο `ResidenceFrontage[]` θα δεχόταν σιωπηλά υποσύνολο.
+ */
+export const RESIDENCE_FRONTAGES = ['single', 'multiple', 'narrow', 'rearOnly'] as const;
+export type ResidenceFrontage = (typeof RESIDENCE_FRONTAGES)[number];
 
 /** Άρθ. 3 §9. */
 export type ResidenceCompletion = 'complete' | 'foundation' | 'frame' | 'masonry' | 'plaster' | 'flooring';
@@ -87,12 +92,14 @@ export interface ResidenceInput extends ObjectiveValueCommonInput {
 // ============================================================================
 
 /** Άρθ. 6 §4. Αποθήκη σε όροφο ή μετρημένη στον ΣΔ = χώρος κύριας χρήσης ⇒ έντυπο 1, όχι εδώ. */
-export type StoragePosition =
-  | 'groundNotCounted'
-  | 'basementStreetEntrance'
-  | 'basementYardEntrance'
-  | 'basementShopEntrance'
-  | 'basementInternalEntrance';
+export const STORAGE_POSITIONS = [
+  'groundNotCounted',
+  'basementStreetEntrance',
+  'basementYardEntrance',
+  'basementShopEntrance',
+  'basementInternalEntrance',
+] as const;
+export type StoragePosition = (typeof STORAGE_POSITIONS)[number];
 
 export interface StorageInput extends ObjectiveValueCommonInput {
   readonly form: 'storage';
@@ -102,7 +109,8 @@ export interface StorageInput extends ObjectiveValueCommonInput {
 }
 
 /** Άρθ. 7 §4. */
-export type ParkingPosition = 'closedBasement' | 'closedGround' | 'closedUpper' | 'yardOrRoof' | 'pilotis';
+export const PARKING_POSITIONS = ['closedBasement', 'closedGround', 'closedUpper', 'yardOrRoof', 'pilotis'] as const;
+export type ParkingPosition = (typeof PARKING_POSITIONS)[number];
 
 export interface ParkingInput extends ObjectiveValueCommonInput {
   readonly form: 'parking';
@@ -114,6 +122,8 @@ export interface ParkingInput extends ObjectiveValueCommonInput {
 
 export type ObjectiveValueInput = ResidenceInput | StorageInput | ParkingInput;
 export type ObjectiveValueForm = ObjectiveValueInput['form'];
+/** Τα έντυπα με τη σειρά της οθόνης — η ΜΙΑ λίστα (υπολογιστής · προσυμπλήρωση από αγγελία). */
+export const OBJECTIVE_VALUE_FORMS = ['residence', 'storage', 'parking'] as const satisfies readonly ObjectiveValueForm[];
 
 // ============================================================================
 // ΑΠΟΤΕΛΕΣΜΑ
@@ -180,4 +190,18 @@ export type ObjectiveValueResult =
       readonly factors: readonly AppliedFactor[];
     }
   | { readonly kind: 'needsInput'; readonly form: ObjectiveValueForm; readonly missing: readonly ObjectiveValueMissing[] }
-  | { readonly kind: 'invalid'; readonly form: ObjectiveValueForm; readonly problems: readonly ObjectiveValueInvalid[] };
+  | {
+      readonly kind: 'invalid';
+      readonly form: ObjectiveValueForm;
+      readonly problems: readonly ObjectiveValueInvalid[];
+      /**
+       * Ό,τι **επίσης** λείπει — ώστε η φόρμα να μην ξεχνά ερωτήσεις όσο ο άνθρωπος διορθώνει μια άκυρη τιμή
+       * (ADR-898 Φ2: η μηχανή είναι η ΜΟΝΗ που ξέρει «τι μετρά», και το λέει σε κάθε κατάσταση).
+       */
+      readonly missing: readonly ObjectiveValueMissing[];
+    };
+
+/** Το υπολογισμένο αποτέλεσμα (ποσό + ανάλυση). */
+export type ComputedObjectiveValue = Extract<ObjectiveValueResult, { kind: 'computed' }>;
+/** Αποτέλεσμα που δεν έφτασε σε ποσό: λείπει κάτι ή κάτι δεν επιτρέπεται. */
+export type PendingObjectiveValue = Exclude<ObjectiveValueResult, { kind: 'computed' }>;

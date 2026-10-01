@@ -343,6 +343,7 @@
     "notifications": "Notifications"
   },
   "tools": {
+    "objectiveValue": "Objective value calculator",
     "legal": "Legal Documents",
     "obligations": "Obligations Drafting",
     "dxf": "DXF Panel",

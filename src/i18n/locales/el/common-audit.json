@@ -605,6 +605,15 @@
         },
         "lifecycle": "Κατάσταση",
         "marketingAudience": "Ποιος βλέπει την αγγελία",
+        "objectiveValueDeclarations": {
+          "display": "Εμφάνιση αντικειμενικής αξίας",
+          "frontage": "Πρόσοψη",
+          "zoneFront": "Πρόσοψη σε μέτωπο",
+          "areaIncludesCommon": "Εμβαδόν με κοινόχρηστους",
+          "permitDate": "Ημερομηνία οικοδομικής άδειας",
+          "hasCentralHeating": "Κεντρική θέρμανση",
+          "hasElevator": "Ανελκυστήρας"
+        },
         "offers": "Διαθέσεις",
         "media": "Αρχεία"
       },

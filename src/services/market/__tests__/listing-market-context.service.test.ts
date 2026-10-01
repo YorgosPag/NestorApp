@@ -32,6 +32,8 @@ jest.mock('@/services/market/area-market-snapshot.reader', () => ({
   readLatestAreaMarket: (...args: unknown[]) => mockLatest(...args),
 }));
 
+import { listingObjectiveValue } from '@/lib/objective-value/listing-objective-value';
+
 import { loadListingMarketContext } from '../listing-market-context.service';
 
 const DB = {} as AdminFirestore;
@@ -84,14 +86,30 @@ beforeEach(() => {
 describe('loadListingMarketContext — ζώνη αντικειμενικής αξίας', () => {
   it('η ζώνη φτάνει και όταν η αγγελία δεν έχει περιοχή για συμβόλαια', async () => {
     const subject = listing({ id: 'prop_1', adminArea: null });
-    expect(await loadListingMarketContext(subject, DB, TODAY)).toEqual({ kind: 'no-area', valueZone: READY });
+    expect(await loadListingMarketContext(subject, DB, TODAY)).toMatchObject({ kind: 'no-area', valueZone: READY });
     expect(mockValueZone).toHaveBeenCalledWith(subject.position);
   });
 
   it('ζώνες μη διαθέσιμες ⇒ valueZone: unavailable — η απάντηση ΔΕΝ πέφτει', async () => {
     mockValueZone.mockResolvedValue({ kind: 'unavailable' });
     const context = await loadListingMarketContext(listing({ id: 'prop_2', adminArea: null }), DB, TODAY);
-    expect(context).toEqual({ kind: 'no-area', valueZone: { kind: 'unavailable' } });
+    expect(context).toEqual({ kind: 'no-area', valueZone: { kind: 'unavailable' }, objectiveValue: { kind: 'no-zone' } });
+  });
+});
+
+/** ADR-898 Φ3 — η αντικειμενική της αγγελίας υπολογίζεται εδώ, κατά την ανάγνωση, πάνω στη ζώνη που μόλις διαβάστηκε. */
+describe('loadListingMarketContext — αντικειμενική αξία της αγγελίας', () => {
+  it('ίδια ζώνη, ίδια μέρα αποτίμησης: η σύνθεση = `listingObjectiveValue` — καμία δεύτερη ανάγνωση', async () => {
+    const subject = listing({ id: 'prop_3', adminArea: null, heatingType: 'central', amenities: [] });
+    const context = await loadListingMarketContext(subject, DB, TODAY);
+    expect(context?.objectiveValue).toEqual(listingObjectiveValue(subject, READY, TODAY));
+    expect(context?.objectiveValue.kind).toBe('evaluated');
+    expect(mockValueZone).toHaveBeenCalledTimes(1);
+  });
+
+  it('είδος εκτός εντύπων 1/4 ⇒ `unsupported` — τα συμβόλαια και η ζώνη μένουν', async () => {
+    const context = await loadListingMarketContext(listing({ id: 'prop_4', adminArea: null, type: 'shop' }), DB, TODAY);
+    expect(context).toMatchObject({ valueZone: READY, objectiveValue: { kind: 'unsupported', reason: 'type' } });
   });
 });
 

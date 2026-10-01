@@ -605,6 +605,15 @@
         },
         "lifecycle": "Status",
         "marketingAudience": "Who sees the listing",
+        "objectiveValueDeclarations": {
+          "display": "Objective value display",
+          "frontage": "Frontage",
+          "zoneFront": "Frontage on a priced street",
+          "areaIncludesCommon": "Area includes common areas",
+          "permitDate": "Building permit date",
+          "hasCentralHeating": "Central heating",
+          "hasElevator": "Elevator"
+        },
         "offers": "Offers",
         "media": "Files"
       },

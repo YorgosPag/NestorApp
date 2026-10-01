@@ -21,6 +21,7 @@ import {
   nextMandateExpiry,
 } from '@/types/owner-property-mandate';
 import type { OfferKind, OfferLifecycle, PropertyOffer } from '@/types/property-offers';
+import { UNDECLARED_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 /** Μια διάθεση με ρητό ποσό — **μία** γεννήτρια για τα τέσσερα είδη. */
 export function offerOf(
@@ -97,6 +98,8 @@ export function validOwnerProperty(
     lifecycle: 'listed',
     // ADR-864 Α3 — η γέννηση είναι δημόσια· οι άγκυρες στενεύουν ρητά.
     marketingAudience: 'public',
+    // ADR-898 Φ3β — τίποτα δηλωμένο, εμφάνιση εξ ορισμού (ό,τι γράφει και το `newOwnerProperty`).
+    objectiveValueDeclarations: UNDECLARED_OBJECTIVE_VALUE,
     createdAt: '2026-08-11T09:00:00.000Z',
     updatedAt: '2026-08-11T09:00:00.000Z',
     ...overrides,

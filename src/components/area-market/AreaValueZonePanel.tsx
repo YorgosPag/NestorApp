@@ -11,6 +11,7 @@ import React, { useId } from 'react';
 
 import { MapRampLegend, type MapLegendItem } from '@/components/market/MapRampLegend';
 import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
+import { ObjectiveValueLink } from '@/components/objective-value/ObjectiveValueLink';
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { pricePerAreaLabel } from '@/lib/listings/listing-price-label';
@@ -78,6 +79,8 @@ export function AreaValueZonePanel({ status, visible, onVisibleChange, classes, 
             <SelectionLine selection={selection} />
           </output>
           <OpenDataAttribution source="valueZones" />
+          {/* ADR-898 Φ2 — η τιμή ζώνης είναι η βάση· η αντικειμενική αξία βγαίνει με τους συντελεστές του νόμου. */}
+          <ObjectiveValueLink className="text-sm" />
         </>
       )}
     </section>

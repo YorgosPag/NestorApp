@@ -30,6 +30,7 @@ import { createRealI18n } from '@/test-utils/real-i18n';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 import { OwnerListingCompletion } from '../OwnerListingCompletion';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 jest.mock('@/i18n/hooks/useTranslation', () => {
   const reactI18next = jest.requireActual('react-i18next');
@@ -67,6 +68,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     ...over,
   };
 }

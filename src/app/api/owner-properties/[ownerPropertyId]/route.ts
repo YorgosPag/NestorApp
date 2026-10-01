@@ -35,6 +35,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ownerPropertyDraftFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
 import { isOwnerPropertyLifecycle } from '@/types/owner-property';
 import { isMarketingAudience } from '@/constants/marketing-audiences';
+import { objectiveValueDeclarationsPatchSchema } from '@/lib/objective-value/objective-value-declarations';
+import { setOwnerPropertyObjectiveValueDeclarations } from '@/services/owner-property/owner-property-declarations.service';
 import {
   setOwnerPropertyAudience,
   setOwnerPropertyLifecycle,
@@ -100,6 +102,16 @@ async function handler(
     }
     return respondToWrite(
       await setOwnerPropertyAudience(adminDb, ownerPropertyId, marketingAudience, listingActorOf(actor)),
+    );
+  }
+
+  // ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής είναι **πράξη** μετά τη δημοσίευση, όχι πεδίο των 8 (ADR-842 Α2).
+  const objectiveValueDeclarations = (body as { objectiveValueDeclarations?: unknown } | null)?.objectiveValueDeclarations;
+  if (objectiveValueDeclarations !== undefined) {
+    const patch = objectiveValueDeclarationsPatchSchema.safeParse(objectiveValueDeclarations);
+    if (!patch.success) return respondToMalformed(['objectiveValueDeclarations']);
+    return respondToWrite(
+      await setOwnerPropertyObjectiveValueDeclarations(adminDb, ownerPropertyId, patch.data, listingActorOf(actor)),
     );
   }
 

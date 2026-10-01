@@ -14,6 +14,7 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 export type LandingOfferKind = PublicListing['offerKinds'][number];
 
@@ -42,5 +43,6 @@ export function landingListing(
     agencyName: null,
     agencyId: null,
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   } as unknown as PublicListing;
 }

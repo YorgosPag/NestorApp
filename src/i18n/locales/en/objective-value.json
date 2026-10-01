@@ -1,0 +1,245 @@
+{
+  "seo": {
+    "title": "Greek objective property value calculator",
+    "description": "Free indicative calculation of the objective (tax) value of a home, storage room or parking space in Greece: the zone price from the map position and the coefficients of POL.1149/1994, explained step by step.",
+    "breadcrumbHome": "Home",
+    "breadcrumbTools": "Tools"
+  },
+  "page": {
+    "title": "Objective value calculator",
+    "intro": "Find the zone price from the property's position and calculate the objective value with the statutory coefficients. We only ask what affects your property.",
+    "scope": "Covers homes and apartments (including multi-level), storage rooms and parking spaces within town plans. It does not cover business premises, plots, special buildings or properties outside town plans."
+  },
+  "location": {
+    "title": "1. Property location",
+    "addressLabel": "Address",
+    "addressPlaceholder": "e.g. Egnatias 147, Thessaloniki",
+    "resolve": "Find",
+    "resolving": "Searching…",
+    "notFound": "Address not found. Check it, or click on the map right on the property.",
+    "failed": "The address search did not respond. Try again or click on the map.",
+    "mapHint": "Or click on the map, right on the property.",
+    "imprecise": "The address was only found approximately. Click on the map right on the property to find its zone.",
+    "loadingZone": "Looking up the zone…",
+    "zoneFailed": "Zones are unavailable right now. Try again shortly or enter the zone price.",
+    "outside": "This point is not in an objective valuation zone. If you know the zone price, enter it.",
+    "manualLabel": "Zone price (€/m²)",
+    "manualHelp": "Fill in only if it was not found on the map or you know a different one.",
+    "frontQuestion": "Does the property have a frontage on {street}? (frontage price {price})",
+    "frontNo": "No, on none of these",
+    "usedPrice": "Zone price used: {price}"
+  },
+  "property": {
+    "title": "2. The property",
+    "formLabel": "Type",
+    "form": {
+      "residence": "Home / apartment",
+      "storage": "Storage room",
+      "parking": "Parking space"
+    },
+    "levelLegend": "Level {number}",
+    "floorLabel": "Floor",
+    "floorPlaceholder": "Choose floor",
+    "areaLabel": "Area (m²)",
+    "areaHelp": "Including external walls, as in the title deed.",
+    "parkingAreaHelp": "If the title deed states no area, leave it empty: 20 m² is assumed.",
+    "addLevel": "Add level (maisonette)",
+    "removeLevel": "Remove level {number}",
+    "floor": {
+      "basement": "Basement",
+      "ground": "Ground floor or semi-basement",
+      "first": "1st floor (or mezzanine)",
+      "second": "2nd floor",
+      "third": "3rd floor",
+      "fourth": "4th floor",
+      "fifth": "5th floor",
+      "sixthPlus": "6th floor or higher"
+    },
+    "positionLabel": "Position",
+    "positionPlaceholder": "Choose position",
+    "storagePosition": {
+      "groundNotCounted": "Ground floor, outside the building ratio",
+      "basementStreetEntrance": "Basement, entrance from the street",
+      "basementYardEntrance": "Basement, entrance from the yard",
+      "basementShopEntrance": "Basement, entrance from a shop",
+      "basementInternalEntrance": "Basement, entrance from inside the building"
+    },
+    "parkingPosition": {
+      "closedBasement": "Enclosed, in a basement",
+      "closedGround": "Enclosed, on the ground floor",
+      "closedUpper": "Enclosed, on an upper floor",
+      "yardOrRoof": "Open, in the yard or on an open roof",
+      "pilotis": "Under pilotis"
+    }
+  },
+  "questions": {
+    "title": "3. What affects your property",
+    "none": "Nothing else is needed for this property.",
+    "yes": "Yes",
+    "no": "No",
+    "frontage": { "label": "Frontage" },
+    "hasCentralHeating": { "label": "Does it have central heating?" },
+    "hasElevator": { "label": "Does the building have an elevator?" },
+    "commercialityFactor": {
+      "label": "Zone commerciality coefficient (SE)",
+      "help": "Listed next to the zone price in the Ministry's tables. On this floor it changes the floor coefficient.",
+      "unknown": "I don't know it — use 1.0",
+      "assumed": "An SE of 1.0 is used because none was given. If the zone's SE is higher, the amount changes."
+    },
+    "ageYears": {
+      "label": "Building permit date",
+      "help": "Of issue or last revision. Age counts from two years later."
+    },
+    "plotUtilisation": {
+      "label": "Plot utilisation ratio (SAO)",
+      "help": "As derived from the building permit, e.g. 0.8."
+    }
+  },
+  "adjustments": {
+    "title": "Special cases (optional)",
+    "help": "They apply only if documented. If they don't concern you, leave them as they are.",
+    "completionLabel": "Construction stage",
+    "completion": {
+      "complete": "Completed",
+      "foundation": "Unfinished — foundations",
+      "frame": "Unfinished — structural frame",
+      "masonry": "Unfinished — masonry",
+      "plaster": "Unfinished — plastering",
+      "flooring": "Unfinished — flooring"
+    },
+    "constructionLabel": "Construction type",
+    "construction": {
+      "frame": "Reinforced concrete or metal frame",
+      "masonry": "Load-bearing masonry",
+      "makeshift": "Makeshift construction"
+    },
+    "lightRoof": "Asbestos-cement or sheet-metal roof",
+    "thickWalls": "External walls 0.50 m thick or more",
+    "areaIncludesCommon": "The area includes common parts (gross)",
+    "coOwned": "Owned by several co-owners",
+    "encumbranceLabel": "Special status",
+    "encumbrance": {
+      "none": "None",
+      "listed": "Listed building",
+      "expropriated": "Subject to expropriation"
+    },
+    "ownershipPct": "Ownership share being valued (%)",
+    "ownershipPctHelp": "Empty = 100%.",
+    "damage": "Cost to repair earthquake, fire or flood damage (€)"
+  },
+  "result": {
+    "title": "4. Result",
+    "label": "Objective value (indicative)",
+    "pending": "To calculate, fill in: {fields}",
+    "invalid": "Check these values:",
+    "breakdown": "How it was calculated",
+    "base": "Zone price {price} × area {area} m²",
+    "factorColumn": "Coefficient",
+    "valueColumn": "Value",
+    "refColumn": "Law",
+    "levelSuffix": "(level {number})",
+    "disclaimer": "Indicative calculation. The taxable value is finalised in AADE's myPROPERTY. This is not a market value estimate.",
+    "myProperty": "Go to AADE myPROPERTY",
+    "missing": {
+      "zonePrice": "zone price",
+      "commercialityFactor": "commerciality coefficient",
+      "ageYears": "building permit date",
+      "area": "area",
+      "floor": "floor",
+      "frontage": "frontage",
+      "hasCentralHeating": "central heating",
+      "hasElevator": "elevator",
+      "plotUtilisation": "SAO",
+      "position": "position"
+    },
+    "problems": {
+      "nonPositiveZonePrice": "The zone price must be positive.",
+      "commercialityBelowOne": "The commerciality coefficient cannot be below 1.",
+      "nonPositiveArea": "The area must be positive.",
+      "negativeAge": "The permit date is not valid.",
+      "ownershipShareOutOfRange": "The ownership share must be above 0 and up to 100%.",
+      "foundationStageAboveGround": "The “foundations” stage applies only to a basement or ground floor.",
+      "noLevels": "Add at least one level."
+    },
+    "factors": {
+      "area": "Area",
+      "mixedArea": "Gross area",
+      "thickWalls": "Walls 0.50 m or thicker",
+      "frontage": "Frontage",
+      "floor": "Floor",
+      "age": "Age",
+      "completion": "Completion stage",
+      "construction": "Construction type",
+      "lightRoof": "Light roof",
+      "centralHeating": "No central heating",
+      "elevator": "No elevator",
+      "encumbrance": "Listed or expropriated",
+      "damage": "Damage",
+      "coOwnership": "Co-ownership",
+      "position": "Position",
+      "ownershipShare": "Ownership share"
+    }
+  },
+  "listing": {
+    "title": "Objective value of this property",
+    "range": "{low} to {high}",
+    "dependsOn": "The range depends on: {fields}.",
+    "open": {
+      "zoneFront": "frontage on a street with its own frontage price"
+    },
+    "assumptions": {
+      "age": {
+        "declared": "Age is approximated from the declared construction year {year}. The law counts it from the building permit date.",
+        "public-record": "Age is approximated from the public-record construction year {year}. The law counts it from the building permit date.",
+        "measured": "Age is approximated from the construction year {year}. The law counts it from the building permit date.",
+        "inferred": "Age is approximated from an estimated construction year {year}. The law counts it from the building permit date."
+      },
+      "areaWithoutCommon": "The area is taken without a share of common areas.",
+      "declaredByLister": "Declared by the lister: {fields}."
+    },
+    "declaredFields": {
+      "frontage": "frontage",
+      "zoneFront": "frontage on a priced street",
+      "areaIncludesCommon": "area with or without common areas",
+      "permitDate": "building permit date",
+      "hasCentralHeating": "central heating",
+      "hasElevator": "elevator"
+    },
+    "openCalculator": "View or adjust the calculation in the calculator",
+    "completeInCalculator": "Fill in what is missing in the calculator — the listing's details are already filled in",
+    "unsupported": {
+      "type": "The calculation currently covers homes and storage rooms.",
+      "multiLevel": "For a property on several levels the calculation needs the floor and area of each level, which are not published yet."
+    }
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "whatIs": {
+      "q": "What is the objective value?",
+      "a": "It is the value set by the objective valuation system (POL.1149/1994): zone price × area × coefficients for floor, age, frontage and more. It is the tax base for transfers and the ENFIA property tax. It is not the market value."
+    },
+    "zonePrice": {
+      "q": "Where do I find the zone price?",
+      "a": "The calculator finds it from the property's position, using the Ministry's open zone data. If the property fronts a street with its own frontage price, that one applies."
+    },
+    "commerciality": {
+      "q": "What is the commerciality coefficient?",
+      "a": "It is a per-zone coefficient that changes the floor coefficient from the ground floor up to the 3rd floor. It has no effect for basements or from the 4th floor up, so we don't ask for it there."
+    },
+    "age": {
+      "q": "How is age counted?",
+      "a": "From the date of issue or last revision of the building permit. The first two years don't count, and a remainder under six months is ignored."
+    },
+    "binding": {
+      "q": "Is the calculation binding?",
+      "a": "No. It is an indicative calculation from the details you enter. The taxable value is finalised in AADE's myPROPERTY."
+    }
+  },
+  "howTo": {
+    "name": "How to calculate the objective value of a property",
+    "location": "Locate the property by address or by clicking on the map, so its zone price is found.",
+    "property": "Choose the property type and enter floor and area.",
+    "questions": "Answer only the questions shown: they concern your property.",
+    "result": "See the objective value and each coefficient with its legal reference."
+  }
+}

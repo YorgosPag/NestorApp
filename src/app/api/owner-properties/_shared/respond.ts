@@ -21,6 +21,7 @@ import type { PublishOutcome } from '@/services/listings/publish-public-listing'
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
+import type { ObjectiveValuePatchViolation } from '@/lib/objective-value/objective-value-declarations';
 import type { MandateInvariant, MandateNotifyOutcome } from '@/types/owner-property-mandate';
 import type { PrivateMarketingRefusal } from '@/types/private-marketing-consent';
 import type { PrivateMarketingOutcome } from '@/services/mandate/private-marketing-consent.service';
@@ -43,7 +44,10 @@ export interface OwnerPropertyWriteResponse {
 export interface OwnerPropertyErrorResponse {
   readonly error: string;
   /** Οι κωδικοί γίνονται **κλειδιά i18n** στην οθόνη (N.11) — ποτέ ωμό κείμενο εδώ. */
-  readonly violations?: readonly OwnerPropertyInvariant[] | readonly MandateInvariant[];
+  readonly violations?:
+    | readonly OwnerPropertyInvariant[]
+    | readonly MandateInvariant[]
+    | readonly ObjectiveValuePatchViolation[];
   /** Μονοπάτια πεδίων που δεν διαβάστηκαν καν ως σχήμα. */
   readonly malformed?: readonly string[];
   /**
@@ -78,6 +82,8 @@ export type OwnerPropertyResponse =
  * | `invalid-mandate` | **422** | Ίδιος κωδικός, **άλλο σφάλμα**: το πρόβλημα είναι στην **εντολή** (πελάτης · λήξη · βεβαίωση), όχι στο ακίνητο. Η οθόνη το χρειάζεται ξεχωριστά για να δείξει το σωστό μέρος της φόρμας |
  * | `invalid-place-link` | **422** | Ο **δεσμός** δείχνει σε τόπο που δεν υπάρχει. Ίδιος κωδικός με το `invalid`, **τρίτο** σφάλμα: ούτε το ακίνητο ούτε η εντολή — **το «ποιο κτίριο;»**. Η ετυμηγορία ταξιδεύει για να δείξει η οθόνη το σωστό μήνυμα |
  * | `place-link-unverified` | **503** | 🔴 **ΠΟΤΕ 422.** *«Δεν μάθαμε»* ≠ *«δεν υπάρχει»*: ένα 422 εδώ λέει στον άνθρωπο ότι **το κτίριό του δεν υπάρχει** και τον στέλνει να φτιάξει **δεύτερη ταυτότητα** για φυσικό κτίριο που έχει ήδη μία — το ακριβές διπλότυπο που αποτρέπει όλο το επίπεδο Α. Το 503 λέει *«ξαναδοκίμασε, **μην αλλάξεις τίποτα**»*, όπως ήδη κάνουν το `/api/places/resolve` και η πόρτα του επαγγελματία |
+ * | `invalid-declarations` | **422** | ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής δεν στέκουν (άδεια στο μέλλον · δρόμος που δεν είναι μέτωπο). Τέταρτο σφάλμα, άλλη οθόνη |
+ * | `zone-unverified` | **503** | 🔴 **ΠΟΤΕ 422** — «δεν διαβάσαμε τις ζώνες» ≠ «ο δρόμος δεν είναι μέτωπο», ίδιο σκεπτικό με το `place-link-unverified` |
  * | `failed` | **500** | Δεν φτάσαμε στη βάση· ο άνθρωπος δεν έχει τι να διορθώσει |
  */
 export function respondToWrite(
@@ -105,6 +111,13 @@ export function respondToWrite(
       );
     case 'place-link-unverified':
       return NextResponse.json({ error: 'PLACE_LINK_UNVERIFIED' }, { status: 503 });
+    case 'invalid-declarations':
+      return NextResponse.json(
+        { error: 'INVALID_DECLARATIONS', violations: result.violations },
+        { status: 422 },
+      );
+    case 'zone-unverified':
+      return NextResponse.json({ error: 'ZONE_UNVERIFIED' }, { status: 503 });
     case 'failed':
       return NextResponse.json({ error: 'WRITE_FAILED' }, { status: 500 });
   }

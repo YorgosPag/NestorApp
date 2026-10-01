@@ -66,6 +66,8 @@ import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { ListingCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
+import type { ListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
+import type { ResidenceFrontage } from '@/lib/objective-value/objective-value-types';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
@@ -718,6 +720,12 @@ export interface PublicListing {
    * κάνει νεόδμητο ένα κτίριο του 1975. Το δένει ο **γραφέας** (`withPublicationFacts`).
    */
   readonly constructionYear: SourcedAttribute<number> | null;
+  /**
+   * **ΠΡΟΣΟΨΗ** (ADR-898 Φ3β) — δήλωση του αγγελιοδότη, με το λεξιλόγιο του νόμου (ΠΟΛ.1149/1994 άρθ. 3 §3): μία ·
+   * δύο+ ή σε πλατεία · σε δρόμο ≤ 6 μ. · μόνο σε ακάλυπτο/τυφλό. Ορατή όπως το «exterior/interior» της idealista.
+   * `null` = δεν δηλώθηκε, ή το είδος δεν είναι κατοικία.
+   */
+  readonly frontage: ResidenceFrontage | null;
 
   /** Μπάνια. `null` = δεν δηλώθηκε· `0` = **υπαρκτό μηδέν**. */
   readonly bathrooms: number | null;
@@ -941,6 +949,15 @@ export interface PublicListing {
    */
   readonly priceReduction: PriceReduction | null;
 
+  /**
+   * **Τα στοιχεία της αντικειμενικής αξίας που δήλωσε ο αγγελιοδότης** (ADR-898 Φ3β) — ή **μόνο** ότι επέλεξε
+   * απόκρυψη. Η αντικειμενική **δεν** αποθηκεύεται ποτέ (ADR-889 §10.2): υπολογίζεται κατά την ανάγνωση από αυτά.
+   *
+   * 🔑 **Κρυμμένη ⇒ κανένα στοιχείο** (ελαχιστοποίηση δεδομένων): αλλιώς το ποσό θα ξαναέβγαινε από το JSON. Το
+   * δικαίωμα είναι **ίδιο** για ιδιώτη και εταιρεία (μάθημα της αγωγής κατά της Zillow).
+   */
+  readonly objectiveValueDeclarations: ListingObjectiveValueDeclarations;
+
   // ── ΜΕΤΑΔΕΔΟΜΕΝΑ ΠΡΟΒΟΛΗΣ ─────────────────────────────────────────────────
   /** Τίτλος προς εμφάνιση. Κείμενο του κατόχου — **όχι** κλειδί i18n. */
   readonly title: string;
@@ -1032,7 +1049,8 @@ export const NO_AGENCY_IDENTITY: PublicAgencyIdentity = { id: null, name: null }
 // ============================================================================
 
 /**
- * Τα είκοσι τρία πεδία που άνοιξε η Φ3 — και το `constructionYear` της ADR-890 Φ0 (είκοσι τέσσερα).
+ * Τα είκοσι τρία πεδία που άνοιξε η Φ3 — το `constructionYear` της ADR-890 Φ0 και η `frontage` της ADR-898 Φ3β
+ * (είκοσι πέντε).
  *
  * 🔑 **`Pick` και όχι χειρόγραφη διεπαφή** — αν το σχήμα αποκτήσει ή χάσει πεδίο, ο
  * τύπος το μαθαίνει στην ίδια στιγμή. Μια χειρόγραφη λίστα εδώ θα ήταν *«χειρόγραφη
@@ -1045,6 +1063,7 @@ export type ListingAttributeFields = Pick<
   | 'condition'
   | 'renovationYear'
   | 'constructionYear'
+  | 'frontage'
   | 'bathrooms'
   | 'wc'
   | 'totalRooms'
@@ -1090,6 +1109,7 @@ export const UNASKED_LISTING_ATTRIBUTES: ListingAttributeFields = {
   condition: null,
   renovationYear: null,
   constructionYear: null,
+  frontage: null,
   bathrooms: null,
   wc: null,
   totalRooms: null,

@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **01/10 — ΧΑΜΕΝΗ ΕΝΗΜΕΡΩΣΗ ΣΤΟΥΣ ΓΡΑΦΕΙΣ ΤΟΥ `persist` ΤΗΣ ΑΓΓΕΛΙΑΣ ΙΔΙΩΤΗ** *(ADR-898 §12.5 · N.7 «zero race conditions»)*
+
+  Τα `updateOwnerProperty` · `setOwnerPropertyLifecycle` · `setOwnerPropertyAudience`
+  (`services/owner-property/owner-property-write.service.ts`) διαβάζουν (`loadAdministrable`) και μετά γράφουν **όλο**
+  το έγγραφο με `set` **χωρίς συναλλαγή**: δύο πράξεις που τρέχουν μαζί (π.χ. αλλαγή κοινού + επεξεργασία, ή δεύτερη
+  καρτέλα) ⇒ η δεύτερη σβήνει σιωπηλά την πρώτη. Οι γραφείς που ήδη το λύνουν: `setOwnerPropertyMandate` και
+  `owner-property-declarations.service.ts` (`runTransaction` πάνω στο φρέσκο έγγραφο). Θεραπεία: το `persist('overwrite')`
+  να δέχεται συνάρτηση `(fresh) => next` και να τρέχει μέσα σε `runTransaction`· άγκυρα με τον ανταγωνιστή του
+  `FakeFirestore` (`interfere`), όπως η Δ2 του `owner-property-declarations.test.ts`. 3 γραφείς, 1 αρχείο, < 1h.
+
 - 🟡 **30/09 — 76 INLINE STUBS FIRESTORE (`collection: jest.fn`) ΑΝΤΙ ΓΙΑ ΤΟ ΕΝΑ FAKE** *(ADR-742 §7sexdecies.1)*
 
   Δεν είναι fakes: επαληθεύουν **κλήσεις**, δεν προσομοιώνουν βάση. Γι' αυτό ο φρουρός δεν τα απαγορεύει. Είναι όμως

@@ -21,6 +21,7 @@ import { LandingShowcase } from '../LandingShowcase';
 import { LANDING_SHOWCASE_LIMIT } from '@/lib/listings/listing-coverage';
 import type { PublicListing } from '@/types/public-listing';
 import { showcaseProfile } from './showcase-profile-fixture';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -62,6 +63,7 @@ function listing(id: string, title: string): PublicListing {
     agencyName: null,
     agencyId: null,
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   } as unknown as PublicListing;
 }
 

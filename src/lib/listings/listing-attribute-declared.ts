@@ -81,6 +81,7 @@ const ATTRIBUTE_DECLARED: Record<ListingAttributeKey, AttributeDeclaredRule> = {
 
   areaSqm: 'value-present',
   floor: 'value-present',
+  frontage: 'value-present',
   bedrooms: 'value-present',
 
   // ── ADR-842 Φ3 ────────────────────────────────────────────────────────────

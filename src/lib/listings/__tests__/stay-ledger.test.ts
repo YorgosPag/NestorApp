@@ -27,6 +27,7 @@ import {
   type StayAvailabilityKind,
 } from '@/lib/stay/stay-availability-vocabulary';
 import { ledgerBalances, type PublicListing } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 // =============================================================================
 // ΣΚΗΝΙΚΟ
@@ -58,6 +59,7 @@ function listing(id: string, mapped: boolean): PublicListing {
     projectedAt: '2026-08-01T00:00:00.000Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   } as PublicListing;
 }
 

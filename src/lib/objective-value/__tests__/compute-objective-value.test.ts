@@ -85,7 +85,7 @@ describe('έντυπο 1 — κατοικία', () => {
 
   it('στάδιο θεμελίωσης σε όροφο: άκυρο (μόνο υπόγειο/ισόγειο)', () => {
     const result = computeObjectiveValue(flat({ completion: 'foundation', plotUtilisation: 0.8 }));
-    expect(result).toEqual({ kind: 'invalid', form: 'residence', problems: ['foundationStageAboveGround'] });
+    expect(result).toEqual({ kind: 'invalid', form: 'residence', problems: ['foundationStageAboveGround'], missing: [] });
   });
 
   it('συνιδιοκτησία 50%: × 0,90 × 0,50', () => {
@@ -117,9 +117,19 @@ describe('έντυπο 1 — κατοικία', () => {
     ]);
   });
 
+  it('άκυρη τιμή ΚΑΙ ελλείψεις: το `invalid` κρατά και το `missing` (η φόρμα δεν ξεχνά ερωτήσεις)', () => {
+    const result = computeObjectiveValue(flat({ commercialityFactor: 0.8, hasCentralHeating: null }));
+    expect(result).toEqual({
+      kind: 'invalid',
+      form: 'residence',
+      problems: ['commercialityBelowOne'],
+      missing: ['hasCentralHeating'],
+    });
+  });
+
   it('άκυρες τιμές: ΤΖ 0, ΣΕ < 1', () => {
     const result = computeObjectiveValue(flat({ zonePrice: 0, commercialityFactor: 0.8 }));
-    expect(result).toEqual({ kind: 'invalid', form: 'residence', problems: ['nonPositiveZonePrice', 'commercialityBelowOne'] });
+    expect(result).toEqual({ kind: 'invalid', form: 'residence', problems: ['nonPositiveZonePrice', 'commercialityBelowOne'], missing: [] });
   });
 });
 

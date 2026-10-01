@@ -58,6 +58,7 @@ import {
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingAttributeFields } from '@/types/public-listing';
 
+import { projectFrontage } from './public-listing-objective-value';
 import type { ProjectableProperty } from './public-listing-projection-types';
 
 // ============================================================================
@@ -292,5 +293,7 @@ export function projectListingAttributes(
     ...projectRoomsAndAreas(property, projectedAt),
     ...projectSystems(property),
     ...projectFeatureSets(property),
+    // ADR-898 Φ3β — δήλωση του αγγελιοδότη, ορατή όπως το «exterior/interior» της idealista.
+    ...projectFrontage(property),
   };
 }

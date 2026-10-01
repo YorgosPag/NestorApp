@@ -26,6 +26,7 @@ import { bucketOf, YEAR_BUILT_BUCKETS } from '@/lib/market/market-breakdowns';
 import { SEGMENT_METRIC, marketSegmentOfType, type MarketSegment } from '@/lib/market/market-segments';
 import { medianGapPct, type StatCell } from '@/lib/market/market-statistics';
 import type { SegmentSummary } from '@/lib/market/market-transactions-file';
+import { listingObjectiveValue } from '@/lib/objective-value/listing-objective-value';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readLatestAreaMarket } from '@/services/market/area-market-snapshot.reader';
 import { readAreaRows, readAreaSummary } from '@/services/market/market-transactions.reader';
@@ -150,10 +151,14 @@ async function loadContracts(listing: PublicListing, source: AskingSource): Prom
 }
 
 /**
- * **Οι τιμές συμβολαίων μιας αγγελίας, και η ζώνη αντικειμενικής αξίας της θέσης της** (ADR-889 Φ2 + Φ5).
+ * **Οι τιμές συμβολαίων μιας αγγελίας, η ζώνη αντικειμενικής αξίας της θέσης της** (ADR-889 Φ2 + Φ5) **και η
+ * αντικειμενική αξία της** (ADR-898 Φ3).
  *
  * 🔑 Η ζώνη **δεν** ρίχνει τα συμβόλαια: αποτυχία ανάγνωσης ζωνών ⇒ `valueZone: unavailable`, τα συμβόλαια μένουν. Το
  * αντίστροφο ισχύει ήδη (`null` ⇒ 503): χωρίς συμβόλαια η ενότητα δεν έχει κορμό.
+ *
+ * 🔑 **Η αντικειμενική υπολογίζεται εδώ, κατά την ανάγνωση** — ποτέ πεδίο της αγγελίας: οι τιμές ζωνών αναθεωρούνται
+ * (ADR-889 §10.2). Καθαρή συνάρτηση πάνω στη ζώνη που μόλις διαβάστηκε, χωρίς δεύτερη ανάγνωση.
  */
 export async function loadListingMarketContext(
   listing: PublicListing,
@@ -161,5 +166,6 @@ export async function loadListingMarketContext(
   today: string,
 ): Promise<ListingMarketContext | null> {
   const [contracts, valueZone] = await Promise.all([loadContracts(listing, { adminDb, today }), readValueZoneAt(listing.position)]);
-  return contracts === null ? null : { ...contracts, valueZone };
+  if (contracts === null) return null;
+  return { ...contracts, valueZone, objectiveValue: listingObjectiveValue(listing, valueZone, today) };
 }

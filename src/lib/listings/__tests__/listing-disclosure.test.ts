@@ -37,6 +37,7 @@ import { OFFER_KINDS } from '@/types/property-offers';
 import { LISTING_AUTHORSHIP_KEYS } from '../listing-authorship';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import type { PublicListing } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 const AT = '2026-08-10T10:00:00.000Z';
 
@@ -72,6 +73,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
     agencyId: null,
     floor: 1,
+    // ✅ **ADR-898 Φ3β** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει (έβδομη φορά).
+    frontage: 'single',
     bedrooms: 3,
     // ✅ **ADR-842 Φ3** — και η Κ1 κοκκίνισε ξανά, **πέμπτη** φορά: ο παρονομαστής
     //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
@@ -110,6 +113,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     ...over,
   };
 }

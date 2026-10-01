@@ -64,6 +64,7 @@ import { ListingMapPopup } from '../ListingMapPopup';
 import { listingLeadImage } from '@/lib/listings/listing-images';
 import { notePhotoPosition, forgetPhotoPosition } from '@/lib/listings/listing-photo-position';
 import type { PublicListing, ListingImage } from '@/types/public-listing';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 function image(n: number): ListingImage {
   return {
@@ -129,6 +130,7 @@ const LISTING: PublicListing = {
   projectedAt: '2026-09-06T00:00:00.000Z',
   listedAt: { kind: 'unknown', reason: 'predates-record' },
   priceReduction: null,
+  objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
 };
 
 function draw(listing: PublicListing = LISTING) {

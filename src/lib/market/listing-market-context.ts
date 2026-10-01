@@ -12,6 +12,8 @@
  * **με το όνομά του**, ποτέ ντυμένος ως η Δ.Ε. (ίδια αναγωγή με τη σελίδα περιοχής).
  */
 
+import type { ListingObjectiveValue } from '@/lib/objective-value/listing-objective-value';
+
 import type { ComparableSalesResult } from './comparable-sales';
 import type { MarketSegment } from './market-segments';
 import type { StatCell } from './market-statistics';
@@ -67,12 +69,16 @@ export type ListingContractsContext =
     };
 
 /**
- * **Η απάντηση της διαδρομής**: τα συμβόλαια **και** η ζώνη αντικειμενικής αξίας στη θέση της αγγελίας (ADR-889 Φ5).
+ * **Η απάντηση της διαδρομής**: τα συμβόλαια **και** η ζώνη αντικειμενικής αξίας στη θέση της αγγελίας (ADR-889 Φ5)
+ * **και** η αντικειμενική αξία της ίδιας της αγγελίας — ποσό, όρια ή τι λείπει (ADR-898 Φ3).
  *
- * 🔑 Η ζώνη είναι **σε κάθε** παραλλαγή: δεν εξαρτάται ούτε από διοικητική περιοχή ούτε από τμήμα αγοράς — μόνο από
- * το αν η θέση είναι η ίδια η διεύθυνση. Ένα οικόπεδο χωρίς συγκρίσιμα συμβόλαια έχει κι αυτό τιμή ζώνης.
+ * 🔑 Ζώνη και αντικειμενική είναι **σε κάθε** παραλλαγή: δεν εξαρτώνται ούτε από διοικητική περιοχή ούτε από τμήμα
+ * αγοράς — μόνο από τη θέση και τα στοιχεία της αγγελίας. Ένα οικόπεδο χωρίς συγκρίσιμα συμβόλαια έχει κι αυτό τιμή ζώνης.
  */
-export type ListingMarketContext = ListingContractsContext & { readonly valueZone: ValueZoneVerdict };
+export type ListingMarketContext = ListingContractsContext & {
+  readonly valueZone: ValueZoneVerdict;
+  readonly objectiveValue: ListingObjectiveValue;
+};
 
 /**
  * **Η ζητούμενη τιμή ως % της τιμής ζώνης** — στο ίδιο μέτρο με το `priceToZonePct` των συμβολαίων, ώστε τα δύο να

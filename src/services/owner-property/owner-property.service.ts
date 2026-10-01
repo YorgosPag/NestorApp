@@ -41,6 +41,11 @@ import {
 } from '@/types/owner-property-mandate';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
+import {
+  isObjectiveValuePatchViolation,
+  type ObjectiveValueDeclarationsPatch,
+  type ObjectiveValuePatchViolation,
+} from '@/lib/objective-value/objective-value-declarations';
 
 const logger = createModuleLogger('owner-property.service');
 
@@ -77,6 +82,9 @@ const API_BASE = '/api/owner-properties';
  * μάθει αν η αγγελία του έφτασε στον χάρτη — η **Α22** δεσμεύτηκε ότι *«δεν
  * δημοσιεύεται, **αλλά το λέμε καθαρά**»*.
  */
+/** Οι κωδικοί άρνησης που μπορεί να στείλει η πύλη γραφής — **τρία** λεξιλόγια, ένα πεδίο (ADR-898 Φ3β: +δηλώσεις). */
+export type ListingWriteViolation = OwnerPropertyInvariant | MandateInvariant | ObjectiveValuePatchViolation;
+
 export type OwnerListingResult =
   | { readonly kind: 'saved'; readonly property: OwnerProperty; readonly publish: PublishOutcome }
   /**
@@ -90,7 +98,7 @@ export type OwnerListingResult =
    */
   | {
       readonly kind: 'invalid';
-      readonly violations: readonly (OwnerPropertyInvariant | MandateInvariant)[];
+      readonly violations: readonly ListingWriteViolation[];
     }
   | { readonly kind: 'failed'; readonly message: string };
 
@@ -123,15 +131,13 @@ interface WriteResponse {
  * δρόμο** — δεν αλλάζει οθόνη σήμερα. Ο δρόμος χρειάζεται όταν οι δύο κριτές
  * **αποκλίνουν**, που είναι ακριβώς η στιγμή που ο άνθρωπος μένει χωρίς εξήγηση.
  */
-function violationsOf(
-  cause: unknown,
-): readonly (OwnerPropertyInvariant | MandateInvariant)[] | null {
+function violationsOf(cause: unknown): readonly ListingWriteViolation[] | null {
   const body = apiErrorBodyOf(cause);
   if (body === null || !Array.isArray(body.violations)) return null;
 
   const named = body.violations.filter(
-    (value): value is OwnerPropertyInvariant | MandateInvariant =>
-      isOwnerPropertyInvariant(value) || isMandateInvariant(value),
+    (value): value is ListingWriteViolation =>
+      isOwnerPropertyInvariant(value) || isMandateInvariant(value) || isObjectiveValuePatchViolation(value),
   );
 
   // ⚠️ **Κενή λίστα ⇒ `null`, ΟΧΙ «άκυρο χωρίς λόγους».** Το δεύτερο θα ζωγράφιζε
@@ -281,5 +287,24 @@ export async function setOwnerListingAudience(
     return { kind: 'saved', ...payload };
   } catch (cause) {
     return failureOf('Το κοινό της αγγελίας δεν άλλαξε', ownerPropertyId, cause);
+  }
+}
+
+/**
+ * **Οι δηλώσεις της αντικειμενικής** (ADR-898 Φ3β) — μερική διόρθωση: μόνο τα κλειδιά που στέλνονται αλλάζουν, ρητό
+ * `null` σβήνει την απάντηση. Ο διακομιστής τη γράφει **σε συναλλαγή**, άρα διαδοχικές απαντήσεις δεν χάνονται.
+ */
+export async function setOwnerListingObjectiveValue(
+  ownerPropertyId: string,
+  objectiveValueDeclarations: ObjectiveValueDeclarationsPatch,
+): Promise<OwnerListingResult> {
+  try {
+    const payload = await apiClient.patch<WriteResponse>(
+      `${API_BASE}/${encodeURIComponent(ownerPropertyId)}`,
+      { objectiveValueDeclarations },
+    );
+    return { kind: 'saved', ...payload };
+  } catch (cause) {
+    return failureOf('Οι δηλώσεις της αντικειμενικής δεν αποθηκεύτηκαν', ownerPropertyId, cause);
   }
 }

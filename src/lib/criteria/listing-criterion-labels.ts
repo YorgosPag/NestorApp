@@ -189,6 +189,7 @@ const CRITERION_VALUE_NAMING: Record<ValueSetCriterionKey, CriterionValueNaming>
   type: { kind: 'propertyType' },
   energyClass: { kind: 'verbatim' },
   condition: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.condition },
+  frontage: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.frontage },
   heatingType: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.heatingType },
   heatingFuel: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.heatingFuel },
   coolingType: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.coolingType },

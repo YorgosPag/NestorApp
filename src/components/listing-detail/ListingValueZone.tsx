@@ -4,7 +4,8 @@
  * **Η ζώνη αντικειμενικής αξίας στη θέση της αγγελίας** (ADR-889 Φ5) — μέσα στην ενότητα «Τιμές συμβολαίων».
  *
  * Με αυτή τη σειρά: η **τιμή ζώνης** της θέσης · η ζητούμενη ως **% της ζώνης**, δίπλα στο % που υπογράφουν τα
- * συμβόλαια της περιοχής (ίδιος παρονομαστής, άρα άμεσα συγκρίσιμα) · τα **μέτωπα υπό όρο** · η αναφορά CC-BY.
+ * συμβόλαια της περιοχής (ίδιος παρονομαστής, άρα άμεσα συγκρίσιμα) · τα **μέτωπα υπό όρο** · η **αντικειμενική αξία
+ * της αγγελίας** (ADR-898 Φ3: ποσό, όρια ή τι λείπει) · η αναφορά CC-BY.
  *
  * 🔑 **Ποτέ «η αντικειμενική αξία του ακινήτου»**: η τιμή ζώνης είναι η **βάση**, πριν από τους συντελεστές. Και ποτέ
  * «έχει πρόσοψη στη …»: η θέση δεν το αποδεικνύει — το μέτωπο λέγεται **υπό όρο**.
@@ -13,19 +14,17 @@
 import React from 'react';
 
 import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
+import { useZonePriceLabel, ValueZoneSummary, type ReadyValueZone } from '@/components/market/ValueZoneSummary';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCalendarDay } from '@/lib/intl-formatting';
-import { pricePerAreaLabel } from '@/lib/listings/listing-price-label';
 import { askingPctOfZone, type ListingMarketContext } from '@/lib/market/listing-market-context';
 import { isReportedStatCell } from '@/lib/market/market-statistics';
-import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
+
+import { ListingObjectiveValue } from './ListingObjectiveValue';
 
 const NS = 'market-contracts';
 const HEADING_ID = 'listing-value-zone';
 
-type ReadyZone = Extract<ValueZoneVerdict, { kind: 'ready' }>;
-
-function ZoneFronts({ fronts, price }: { readonly fronts: ReadyZone['fronts']; readonly price: (amount: number) => string }) {
+function ZoneFronts({ fronts, price }: { readonly fronts: ReadyValueZone['fronts']; readonly price: (amount: number) => string }) {
   const { t } = useTranslation([NS]);
   if (fronts.length === 0) return null;
   return (
@@ -52,19 +51,15 @@ function AskingVsZone({ context }: { readonly context: ListingMarketContext }) {
   );
 }
 
-function ReadyBody({ verdict, context }: { readonly verdict: ReadyZone; readonly context: ListingMarketContext }) {
-  const { t } = useTranslation([NS, 'common']);
-  const price = (amount: number): string => pricePerAreaLabel(t, { role: 'sale', amount });
-  const { zone } = verdict;
+function ReadyBody({ verdict, context }: { readonly verdict: ReadyValueZone; readonly context: ListingMarketContext }) {
+  const price = useZonePriceLabel();
   return (
     <>
-      <p className="m-0 text-base font-semibold text-foreground">{t(`${NS}:valueZone.price`, { price: price(zone.price) })}</p>
-      <p className="m-0 text-xs text-muted-foreground">
-        {t(`${NS}:valueZone.zone`, { name: zone.name, date: formatCalendarDay(zone.validFrom, true) })}
-      </p>
-      {verdict.nearEdge && <p className="m-0 text-xs text-muted-foreground">{t(`${NS}:valueZone.nearEdge`)}</p>}
+      <ValueZoneSummary verdict={verdict} />
       <AskingVsZone context={context} />
       <ZoneFronts fronts={verdict.fronts} price={price} />
+      {/* ADR-898 Φ3 — από τη βάση (τιμή ζώνης) στην αντικειμενική αξία ΑΥΤΗΣ της αγγελίας: ποσό, όρια ή τι λείπει. */}
+      <ListingObjectiveValue value={context.objectiveValue} />
     </>
   );
 }

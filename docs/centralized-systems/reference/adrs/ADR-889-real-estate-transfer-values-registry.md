@@ -488,7 +488,8 @@ Idealista όχι, γιατί η Ισπανία δεν έχει τέτοια πη
 | `src/lib/market/value-zones.ts` · `hooks/market/useValueZoneLayer.ts` | Browser: `LazyJsonSnapshot` ανά αρχείο· ποια αρχεία τα λέει ο server (`AreaMarketPageData.valueZoneFiles`) — το ευρετήριο (~90 KB) **δεν** κατεβαίνει |
 | `src/lib/market/value-zone-classes.ts` · `components/area-market/value-zone-paint.ts` | Κλάσεις τιμής · `step` του MapLibre από `--map-seq-1..5` (νέα διαδοχική κλίμακα στο `globals.css`, ίδια στα δύο θέματα γιατί ο χάρτης OSM είναι ανοιχτός και στα δύο) |
 | `components/area-market/AreaValueZoneLayer.tsx` · `AreaValueZonePanel.tsx` · `AreaBoundaryMap.tsx` | Στρώση ως **παιδί** του `PlaceMap` (νέα υποδοχή `children` + `shapeFill`) · υπόμνημα με αριθμούς · κλικ ⇒ κείμενο (`aria-live`) · διακόπτης · CC-BY |
-| `components/listing-detail/ListingValueZone.tsx` | Στη σελίδα αγγελίας: τιμή ζώνης, % ζητούμενης vs % συμβολαίων, μέτωπα υπό όρο — σε **κάθε** κατάσταση των συμβολαίων |
+| `components/listing-detail/ListingValueZone.tsx` | Στη σελίδα αγγελίας: τιμή ζώνης, % ζητούμενης vs % συμβολαίων, μέτωπα υπό όρο — σε **κάθε** κατάσταση των συμβολαίων · **ADR-898 Φ3α**: η αντικειμενική της αγγελίας (ποσό · όρια του νόμου · τι λείπει), υπολογισμένη στον server πάνω στην **ίδια** ζώνη (`listingObjectiveValue`, πεδίο `objectiveValue` του συμβολαίου) |
+| `GET /api/market/value-zone?lat=&lng=` · `lib/market/value-zone-request.ts` · `hooks/market/useValueZoneAt.ts` | **ADR-898 Φ2** — η ζώνη σε **ελεύθερο σημείο** (πινέζα του επισκέπτη), για τον δημόσιο υπολογιστή αντικειμενικής αξίας. Ίδιος `readValueZoneAt`, `provenance: 'manual'` (η ακρίβεια κρίνεται στον browser με το ίδιο `valueZonePointOf`) · `withStandardRateLimit` · CDN 15′ · `unavailable` ⇒ 503. Η περίληψη ζώνης εξήχθη σε `components/market/ValueZoneSummary.tsx` (αγγελία + υπολογιστής) |
 
 **Αναφορά CC-BY**: η γραμμή «αλλαγές» του `OpenDataAttribution` έγινε **ανά πηγή** (`market-contracts:source.<id>.changes`):
 η CC-BY απαιτεί δήλωση των αλλαγών **κάθε** πηγής, και οι ζώνες υπέστησαν άλλες (προβολή, απλοποίηση, κατανομή).
@@ -822,6 +823,8 @@ ADR-865, καμία αλλαγή στο `storage.rules`.
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-01 | **§10.3 — ADR-898 Φ3α**: το `GET /api/market/listing-context/[id]` επιστρέφει και `objectiveValue` — η αντικειμενική της αγγελίας υπολογίζεται κατά την ανάγνωση πάνω στη ζώνη που μόλις διαβάστηκε (ίδιος λόγος με §10.2: ποτέ αποθήκευση) |
+| 2026-10-01 | **§10.3 — ADR-898 Φ2**: νέο δημόσιο `GET /api/market/value-zone?lat=&lng=` (ζώνη σε ελεύθερο σημείο) για τον υπολογιστή αντικειμενικής αξίας· `ValueZoneSummary` κοινό με το `ListingValueZone` |
 | 2026-09-29 | **§9.5 — ADR-890 §16: άθροιση ανά πρόγονο**. `groupByAreaAncestry` αντί για `withMunicipalities`: η Π.Ε. και η Περιφέρεια παίρνουν τις **εγγραφές** των φύλλων τους (διάμεσος διαμέσων μετρημένα λάθος έως −70%). `rows/` μόνο για Δήμο/Δ.Ε. (`hasMarketRows`, ευρετήριο με `rowAreas`). 1.334 περιοχές, τα 2.494 υπάρχοντα αρχεία byte-ταυτόσημα, ντετερμινιστικό. SSoT βαθμίδων `ADMIN_LEVEL` |
 | 2026-09-29 | **§10.6 — ADR-890 §15**: στη σελίδα Δήμου οι ζώνες γίνονται δεύτερος τρόπος του χάρτη (μετά τον χωροπληθή των Δ.Ε.) και φορτώνονται κατ' επιλογή· σελίδα Δ.Ε. και αρχεία ζωνών αμετάβλητα |
 | 2026-09-29 | **§11.11 — επαληθεύτηκε ζωντανά**: run `36564075699` πράσινο — ⚠️ γεωφραγή ΜΑΜΑ (όχι 🔴) · Ε8 ✅ 28 ημέρες · ζώνες ίδιες · κανένα PR |

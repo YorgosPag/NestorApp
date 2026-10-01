@@ -102,6 +102,7 @@ export type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import { EMPTY_PRICE_TOTALS, type PriceTotalsByRole } from '@/lib/properties/price-totals';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
+import type { ObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)
@@ -597,6 +598,12 @@ export interface Property extends PropertySpecificationFields {
 
   /** Private unit amenities */
   propertyAmenities?: AmenityCodeType[];
+
+  /**
+   * Οι δηλώσεις για την αντικειμενική αξία (ADR-898 Φ3β) — **ίδιο** μπλοκ με τον ιδιώτη, ίδιο δικαίωμα απόκρυψης.
+   * Η προβολή το διαβάζει με `readObjectiveValueDeclarations`· η φόρμα της εταιρείας έρχεται στη Φ3β-3.
+   */
+  objectiveValueDeclarations?: ObjectiveValueDeclarations;
 
   // === OWNERSHIP TABLE ===
   /** Χιλιοστά ιδιοκτησίας — read-only, ενημερώνεται αυτόματα κατά την οριστικοποίηση πίνακα ποσοστών */

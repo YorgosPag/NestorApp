@@ -119,6 +119,7 @@ export const LISTING_ATTRIBUTE_GROUP: Record<
   type: 'essentials',
   areaSqm: 'essentials',
   floor: 'essentials',
+  frontage: 'essentials',
   bedrooms: 'essentials',
 
   energyClass: 'energyCondition',

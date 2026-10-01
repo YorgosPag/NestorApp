@@ -64,6 +64,7 @@ import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
 import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
+import { readObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
 
 /** Τι διαβάστηκε, **και τι χρειάστηκε για να διαβαστεί**. */
 export interface StoredOwnerPropertyRead {
@@ -136,6 +137,8 @@ export function readStoredOwnerProperty(
       // 🔴 ADR-864 Α3 — έγγραφο γραμμένο πριν τον άξονα **δεν έχει** το πεδίο· η απουσία
       //    ερμηνεύεται **εδώ, μία φορά**, ως `public` — ποτέ «κρυφό».
       marketingAudience: marketingAudienceOf(stored.marketingAudience),
+      // ADR-898 Φ3β — ίδιο σχήμα: απουσία ⇒ «τίποτα δηλωμένο, εμφάνιση εξ ορισμού», κάθε άκυρη τιμή ⇒ `null`.
+      objectiveValueDeclarations: readObjectiveValueDeclarations(stored.objectiveValueDeclarations),
       // ⚠️ Τα δύο υπάρχοντα φύλλα, καλεσμένα **εδώ αντί για παντού** — δες την κεφαλίδα.
       media: mediaOf(stored as { readonly media?: OwnerProperty['media'] }),
       mandates: mandatesOf(

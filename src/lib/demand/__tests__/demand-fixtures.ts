@@ -25,6 +25,7 @@ import {
 import type { OfferKind } from '@/types/property-offers';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import type { ListingMatchFacts } from '../demand-match-vocabulary';
+import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 /** Η σταθερή «σήμερα» όλων των σουιτών ζήτησης. */
 export const TODAY = '2026-08-11';
@@ -101,6 +102,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     projectedAt: NOW_ISO,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
+    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     ...overrides,
   };
 }

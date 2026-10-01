@@ -156,6 +156,12 @@ export interface ProjectableProperty {
   /** ⚠️ Το όνομα του `Property`· στη δημόσια αγγελία γίνεται `amenities`. */
   readonly propertyAmenities?: unknown;
   /**
+   * **Οι δηλώσεις του αγγελιοδότη για την αντικειμενική αξία** (ADR-898 Φ3β) — ωμές, όπως κάθονται στο έγγραφο
+   * (ιδιώτη **ή** εταιρείας). ⚠️ `unknown` για τον ίδιο λόγο με το `marketingAudience`: η **μία** ερμηνεία ζει στο
+   * `readObjectiveValueDeclarations`, που το ρωτά η προβολή — ποτέ ο καλών.
+   */
+  readonly objectiveValueDeclarations?: unknown;
+  /**
    * 🔶 **Ο ΚΑΤΟΧΟΣ ΑΡΝΗΘΗΚΕ να δηλώσει θέση** (Α5 §3).
    *
    * ⚠️ **Κανένας γραφέας δεν υπάρχει σήμερα, και το δηλώνω αντί να το υπονοώ:** το

@@ -175,3 +175,21 @@ export const SHORT_STAY_LANDING_ROUTE = '/stay' as const;
 export function shortStayLandingHref() {
   return typedHref(SHORT_STAY_LANDING_ROUTE);
 }
+
+/**
+ * 🧮 **Ο δημόσιος υπολογιστής αντικειμενικής αξίας** (ADR-898 Φ2, `app/(light)/ergaleia/antikeimeniki-axia`).
+ *
+ * 🔑 **Ελληνική διεύθυνση σε λατινικά, επίτηδες** (απόφαση Giorgio 2026-10-01): η σελίδα υπάρχει για την οργανική
+ *    αναζήτηση («αντικειμενική αξία υπολογισμός»). Το `/ergaleia` είναι **πρόθεμα για εργαλεία**, όχι μία σελίδα —
+ *    δηλωμένο στο `OUTSIDE_WORKSPACE`.
+ */
+export const OBJECTIVE_VALUE_ROUTE = '/ergaleia/antikeimeniki-axia' as const;
+
+/**
+ * `query` = προσυμπλήρωση από αγγελία (ADR-898 Φ3, `serializeObjectiveValuePrefill`) — ο υπολογιστής ανοίγει με ό,τι
+ * ξέρει η αγγελία και ρωτά μόνο τα υπόλοιπα. Χωρίς ερώτημα ⇒ σκέτη διεύθυνση (όχι κενό `?`).
+ */
+export function objectiveValueHref(query?: string | null) {
+  if (query && query.length > 0) return typedHref(`${OBJECTIVE_VALUE_ROUTE}?${query}`);
+  return typedHref(OBJECTIVE_VALUE_ROUTE);
+}

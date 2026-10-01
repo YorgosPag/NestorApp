@@ -130,6 +130,7 @@ const ATTRIBUTE_VALUE_KIND: {
   type: { kind: 'custom', render: renderType },
   areaSqm: { kind: 'sqm' },
   floor: { kind: 'custom', render: renderFloor },
+  frontage: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.frontage },
   bedrooms: { kind: 'custom', render: renderBedrooms },
 
   energyClass: { kind: 'verbatim' },

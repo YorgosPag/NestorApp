@@ -55,6 +55,7 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
+import { completeWrite, writeFailure } from '@/services/owner-property/owner-property-write-completion';
 import { placeLinkRefusal } from '@/services/owner-property/owner-property-place-link';
 import { createOwnerPropertyWithDossier } from '@/services/owner-property/owner-property-dossier-birth';
 import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
@@ -74,10 +75,7 @@ import {
 } from '@/types/owner-property-mandate';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
-import {
-  recordOwnerPropertyWrite,
-  type OwnerPropertyAuditContext,
-} from '@/services/owner-property/owner-property-audit';
+import type { OwnerPropertyAuditContext } from '@/services/owner-property/owner-property-audit';
 
 const logger = createModuleLogger('owner-property-write.service');
 
@@ -133,17 +131,6 @@ async function persist(
   return completeWrite(adminDb, property, audit);
 }
 
-/** Ίχνος → επαναπροβολή, **μετά** από γραφή που έγινε — η **μία** συνέχεια κάθε διαδρομής του {@link persist}. */
-async function completeWrite(
-  adminDb: AdminFirestore,
-  property: OwnerProperty,
-  audit: OwnerPropertyAuditContext,
-): Promise<OwnerPropertyWriteResult> {
-  await recordOwnerPropertyWrite(property, audit);
-
-  const republished = await republishOwnerProperty(adminDb, property);
-  return { kind: 'saved', property: republished.property, publish: republished.publish };
-}
 
 // =============================================================================
 // 3. ΔΗΜΙΟΥΡΓΙΑ
@@ -467,12 +454,6 @@ export async function setOwnerPropertyMandate(
 // 6. ΑΣΤΟΧΙΑ — μία διατύπωση
 // =============================================================================
 
-function failure(
-  what: string,
-  ownerPropertyId: string,
-  error: unknown,
-): { readonly kind: 'failed'; readonly message: string } {
-  const message = error instanceof Error ? error.message : String(error);
-  logger.error(what, { data: { ownerPropertyId }, error: message });
-  return { kind: 'failed', message };
+function failure(what: string, ownerPropertyId: string, error: unknown) {
+  return writeFailure(logger, what, ownerPropertyId, error);
 }
