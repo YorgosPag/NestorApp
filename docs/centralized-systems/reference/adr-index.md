@@ -881,7 +881,7 @@
 | **ADR-896** | Κατάλογος επαγγελματιών `/pro`: **κάρτες ‖ χάρτης**, με τη **δηλωμένη περιοχή δραστηριότητας στο hover** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-896-professionals-directory-map.md) |
 | **ADR-897** | Σημεία λήψης φωτογραφιών πάνω στις κατόψεις: θέση, κατεύθυνση και οπτικό πεδίο ανά φωτογραφία | ✅ ✅ IMPLEMENTED — Φ1–Φ5.2 υλοποιημένες 2026-10-01 · εκκρεμεί ζωντανός έλεγχος σε browser | 2026-10-01 | Uncategorized | [📄](./adrs/ADR-897-photo-capture-spots-on-floorplans.md) |
 | **ADR-898** | Υπολογισμός αντικειμενικής αξίας: **ΜΙΑ** μηχανή του νόμου για το κοινό, τις αγγελίες και τον εργολάβο | ✅ 🚧 IN PROGRESS — Φ1 (μηχανή + άγκυρες) ✅ · Φ2 (δημόσιος υπολογιστής) ✅ · Φ3α (αντικειμενική στην αγγελία, ανάγνωση) ✅ · **Φ3β-1 (δηλώσεις αγγελιοδότη: σχήμα · προβολή · γραφή) ✅ 2026-10-01** · Φ3β-2/3 · Φ4 · Φ5 σχεδιασμένες | 2026-10-01 | Backend Systems | [📄](./adrs/ADR-898-objective-value-calculator.md) |
-| **ADR-899** | Παράγωγα εσωτερικών εικόνων κατ' απαίτηση: **κλειστή κλίμακα**, ζωή **δεμένη με το πρωτότυπο**, και η γκαλερί της κεφαλίδας ακινήτου | ✅ ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ⏳ έλεγχος UI σε browser | 2026-10-01 | Backend Systems | [📄](./adrs/ADR-899-on-demand-internal-image-derivatives.md) |
+| **ADR-899** | Παράγωγα εσωτερικών εικόνων κατ' απαίτηση: **κλειστή κλίμακα**, ζωή **δεμένη με το πρωτότυπο**, και η γκαλερί της κεφαλίδας ακινήτου | ✅ ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 | 2026-10-01 | Backend Systems | [📄](./adrs/ADR-899-on-demand-internal-image-derivatives.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1094,7 +1094,7 @@
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
 | **ADR-898** | Υπολογισμός αντικειμενικής αξίας: **ΜΙΑ** μηχανή του νόμου για το κοινό, τις αγγελίες και τον εργολάβο | ✅ 🚧 IN PROGRESS — Φ1 (μηχανή + άγκυρες) ✅ · Φ2 (δημόσιος υπολογιστής) ✅ · Φ3α (αντικειμενική στην αγγελία, ανάγνωση) ✅ · **Φ3β-1 (δηλώσεις αγγελιοδότη: σχήμα · προβολή · γραφή) ✅ 2026-10-01** · Φ3β-2/3 · Φ4 · Φ5 σχεδιασμένες | [View](./adrs/ADR-898-objective-value-calculator.md) |
-| **ADR-899** | Παράγωγα εσωτερικών εικόνων κατ' απαίτηση: **κλειστή κλίμακα**, ζωή **δεμένη με το πρωτότυπο**, και η γκαλερί της κεφαλίδας ακινήτου | ✅ ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ⏳ έλεγχος UI σε browser | [View](./adrs/ADR-899-on-demand-internal-image-derivatives.md) |
+| **ADR-899** | Παράγωγα εσωτερικών εικόνων κατ' απαίτηση: **κλειστή κλίμακα**, ζωή **δεμένη με το πρωτότυπο**, και η γκαλερί της κεφαλίδας ακινήτου | ✅ ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 | [View](./adrs/ADR-899-on-demand-internal-image-derivatives.md) |
 
 ---
 

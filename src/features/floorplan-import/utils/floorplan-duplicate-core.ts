@@ -31,14 +31,17 @@ import {
   type FileCategory,
 } from '@/config/domain-constants';
 import { FLOORPLAN_PURPOSE_BY_TYPE } from '../hooks/floorplan-import-types';
+import { fileDisplayUrl, type FileDisplayUrlSubject } from '@/lib/files/file-display-url';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-/** Minimal slice of a FileRecord needed to rehydrate its bytes into a File. */
-export interface DownloadableFileRecord {
-  downloadUrl?: string;
+/**
+ * Minimal slice of a FileRecord needed to rehydrate its bytes into a File — the URL comes from the ONE display
+ * reader (ADR-899 §4.1): stored `downloadUrl` first (unchanged behaviour), else the proxy of `storagePath`.
+ */
+export interface DownloadableFileRecord extends FileDisplayUrlSubject {
   originalFilename?: string;
   ext?: string;
 }
@@ -76,9 +79,10 @@ const DEFAULT_DXF_MIME = 'application/dxf';
 export async function downloadFileRecordAsFile(
   record: DownloadableFileRecord,
 ): Promise<File> {
-  if (!record.downloadUrl) throw new Error('NO_DOWNLOAD_URL');
+  const url = fileDisplayUrl(record);
+  if (!url) throw new Error('NO_DOWNLOAD_URL');
 
-  const response = await fetch(record.downloadUrl);
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`DOWNLOAD_FAILED_${response.status}`);
 
   const blob = await response.blob();

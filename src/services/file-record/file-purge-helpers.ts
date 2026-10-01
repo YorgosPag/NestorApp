@@ -30,6 +30,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
+import { deleteFileCompanions, type FileCompanionSubject } from './file-companion-purge';
 
 const logger = createModuleLogger('FilePurgeHelpers');
 
@@ -83,13 +84,16 @@ export function isFileHeld(data: FileHoldSubject): boolean {
   return isHoldActive(data, Date.now());
 }
 
-/** Ό,τι χρειάζεται η διαγραφή — η εγγραφή (ή αντίγραφό της) που ξέρει ΠΟΥ ζουν τα bytes της (ADR-895 Α3). */
-export interface PurgeStorageSubject extends FileStoragePlacementSubject {
+/**
+ * Ό,τι χρειάζεται η διαγραφή — η εγγραφή (ή αντίγραφό της) που ξέρει ΠΟΥ ζουν τα bytes της (ADR-895 Α3)
+ * **και** ποια συνοδευτικά τη συνοδεύουν (`fileId` + δείκτες — `file-companion-purge`).
+ */
+export interface PurgeStorageSubject extends FileStoragePlacementSubject, FileCompanionSubject {
   readonly storagePath: string;
 }
 
 /**
- * **Σβήσε τα bytes — ή πες ΓΙΑΤΙ όχι.** 🔒 ADR-864 §21: με GCS `temporaryHold` η πλατφόρμα
+ * **Σβήσε τα bytes — πρωτότυπο ΚΑΙ συνοδευτικά — ή πες ΓΙΑΤΙ όχι.** 🔒 ADR-864 §21: με GCS `temporaryHold` η πλατφόρμα
  * **αρνείται** τη διαγραφή. Πριν, κάθε αποτυχία ήταν «non-blocking» και η εγγραφή γινόταν
  * `purged` ⇒ η βάση θα έλεγε «σβήστηκε» για bytes που **υπάρχουν**. Μόνο το 404 είναι αθώο
  * (τα bytes λείπουν ήδη)· κάθε άλλη αποτυχία αφήνει την εγγραφή όπως ήταν, για τον επόμενο γύρο.
@@ -110,13 +114,20 @@ export async function deleteStorageObjectForPurge(subject: PurgeStorageSubject):
     }
     throw error;
   }
+  const original = await deleteOriginal(bucket, subject.storagePath);
+  if (original === 'refused') return 'refused';
+  // 🧩 Τα συνοδευτικά ΜΕΤΑ το πρωτότυπο — δέσμευση εκεί τα κρατά όλα· άρνηση εδώ κρατά την εγγραφή για τον επόμενο γύρο.
+  return (await deleteFileCompanions(subject)) === 'refused' ? 'refused' : original;
+}
+
+async function deleteOriginal(bucket: ReturnType<typeof fileRecordBucket>, storagePath: string): Promise<StorageObjectDeletion> {
   try {
-    await bucket.file(subject.storagePath).delete();
+    await bucket.file(storagePath).delete();
     return 'deleted';
   } catch (error: unknown) {
     if ((error as { code?: unknown }).code === 404) return 'absent';
     logger.warn('Storage deletion refused — the record stays unpurged', {
-      storagePath: subject.storagePath, error: getErrorMessage(error),
+      storagePath, error: getErrorMessage(error),
     });
     return 'refused';
   }
@@ -143,7 +154,7 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
     // Bytes πρώτα — και άρνηση της πλατφόρμας (δέσμευση) ⇒ η εγγραφή ΔΕΝ γίνεται `purged`.
     // 🌍 ADR-895: ο κάδος έρχεται ΑΠΟ την ίδια την εγγραφή (`snapData.storagePlacement`) — ποτέ μαντεψιά.
     if (storagePath) {
-      const deletion = await deleteStorageObjectForPurge({ storagePath, storagePlacement: snapData.storagePlacement });
+      const deletion = await deleteStorageObjectForPurge({ ...snapData, fileId, storagePath });
       if (deletion === 'refused') {
         return { success: false, storageDeleted: false, error: 'storage-deletion-refused' };
       }

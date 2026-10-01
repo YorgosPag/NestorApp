@@ -2,9 +2,9 @@
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet, ανά αρχείο ΚΑΙ module)",
     "schema": 2,
-    "generated": "2026-08-04T13:24:38Z",
-    "totalViolations": 108,
-    "totalFiles": 86,
+    "generated": "2026-10-01T21:36:32Z",
+    "totalViolations": 118,
+    "totalFiles": 92,
     "rule": "Κανένα module δεν ανεβαίνει σε κανένα αρχείο. Νέο αρχείο = μηδενική ανοχή.",
     "registry": ".ssot-registry.json",
     "engine": "scripts/lib/ssot/scan.js (ΜΙΑ μηχανή — ADR-749)"
@@ -187,14 +187,29 @@
     "src/subapps/dxf-viewer/bim-3d/comments/bim-comments.service.ts": {
       "firestore-realtime": 1
     },
+    "src/subapps/dxf-viewer/bim-3d/lighting/HdriUploader.tsx": {
+      "file-display-url": 1
+    },
     "src/subapps/dxf-viewer/config/keyboard-shortcuts.ts": {
       "escape-command-bus": 1
     },
     "src/subapps/dxf-viewer/debug/enterprise-cursor-crosshair-test.ts": {
       "escape-command-bus": 1
     },
+    "src/subapps/dxf-viewer/floorplan-background/hooks/useFloorplanBackgroundForLevel.ts": {
+      "file-display-url": 1
+    },
+    "src/subapps/dxf-viewer/floorplan-background/hooks/useFloorplanBackgroundPersistence.ts": {
+      "file-display-url": 1
+    },
     "src/subapps/dxf-viewer/hooks/dimensions/useDimensionCreate.ts": {
       "escape-command-bus": 1
+    },
+    "src/subapps/dxf-viewer/io/mesh3d-material-import/foreign-texture-deps.ts": {
+      "file-display-url": 1
+    },
+    "src/subapps/dxf-viewer/services/dxf-firestore.types.ts": {
+      "file-display-url": 1
     },
     "src/subapps/dxf-viewer/snapping/engines/IntersectionSnapEngine.ts": {
       "point-hash-grid": 4
@@ -258,6 +273,9 @@
     },
     "src/subapps/geo-canvas/services/geo-transform/DxfGeoTransform.ts": {
       "entity-layer-id-canonical": 2
+    },
+    "src/subapps/procurement/components/QuoteOriginalDocumentPanel.tsx": {
+      "file-display-url": 5
     },
     "src/types/building/derived-foundation-depth.ts": {
       "module-rounding": 1

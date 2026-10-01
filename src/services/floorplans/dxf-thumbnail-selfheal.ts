@@ -47,10 +47,9 @@ import {
 } from '@/app/api/floorplans/process/floorplan-process.service';
 import type { FileRecordData } from '@/app/api/floorplans/process/floorplan-process.types';
 import { decodeProcessedJsonBytes } from '@/lib/dxf/decode-processed-json';
+import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 
 const logger = createModuleLogger('DxfThumbnailSelfheal');
-
-const THUMBNAIL_SUFFIX = '.thumbnail.png';
 
 export type EnsureThumbnailStatus =
   | 'already-present'
@@ -189,7 +188,7 @@ export async function rasterizeDxfThumbnail(args: {
 
   const raster = rasterizeDxfScene(scene);
   const pngBuffer = Buffer.from(raster.png);
-  const thumbnailPath = `${args.dxfStoragePath}${THUMBNAIL_SUFFIX}`;
+  const thumbnailPath = fileCompanionPath(args.dxfStoragePath, 'dxfRasterThumbnail');
   const downloadToken = generateOpaqueToken();
 
   await persistThumbnail({

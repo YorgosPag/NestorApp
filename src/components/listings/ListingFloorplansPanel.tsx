@@ -95,9 +95,7 @@ export function ListingFloorplansPanel({
         {rows.map(({ file, declared, published }) => (
           <ListingMaterialRow
             key={file.id}
-            contentType={file.contentType}
-            thumbnailUrl={file.thumbnailUrl}
-            downloadUrl={file.downloadUrl}
+            file={file}
             displayName={file.displayName}
           >
             {/*

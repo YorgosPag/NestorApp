@@ -33,9 +33,37 @@
 
 1. **Το purge σβήνει ΜΟΝΟ το πρωτότυπο** (`services/file-record/file-purge-helpers.ts` — `bucket.file(storagePath).delete()`), και το
    mark-and-sweep των ορφανών τρέχει **μόνο** στο `onFinalize` ⇒ ένα παράγωγο **επιβιώνει για πάντα** μετά τη διαγραφή = υπόλειμμα GDPR.
-   Το ίδιο κενό υπάρχει **ήδη** για το `thumbnailStoragePath` του DXF (καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`).
+   Το ίδιο κενό υπήρχε για **κάθε** συνοδευτικό αντικείμενο (μικρογραφίες, σκηνές) — ✅ **έκλεισε 2026-10-01**, §2.2.
 2. Ο **προεπιλεγμένος** κάδος **δεν** είναι στο `DECLARED_PRIVATE_BUCKETS` ⇒ δεν υπάρχει κανόνας λήξης ως κώδικας.
 3. Δίπλα στο πρωτότυπο (`companies/…/files/`) τα `storage.rules` επιτρέπουν στον client **εγγραφή/διαγραφή** ⇒ «δηλητηριασμένη» cache.
+
+### 2.2 ✅ Τα συνοδευτικά αντικείμενα στο purge / ΓΚΠΔ (2026-10-01)
+
+**Μέτρηση** (κάδος παραγωγής, φάκελος δοκιμαστικού ακινήτου): δίπλα σε κάθε πρωτότυπο ζουν **πέντε** είδη συνοδευτικών, όχι
+ένα — και το purge έσβηνε μόνο το `storagePath`:
+
+| είδος (μητρώο) | όνομα | γραφέας | κάδος | δείκτης στην εγγραφή |
+|---|---|---|---|---|
+| `uploadThumbnail` | `{στέλεχος}_thumb.webp` | client (ανέβασμα · CRM) | κανονικός | μόνο `thumbnailUrl` |
+| `floorplanThumbnail` | `{path}_thumb.png` | client (οδηγός κάτοψης) | κανονικός | μόνο `thumbnailUrl` |
+| `dxfRasterThumbnail` | `{path}.thumbnail.png` | Functions / self-heal | της εγγραφής | `thumbnailStoragePath` |
+| `dxfProcessedScene` | `{path}.processed.json` | `floorplan-process` | της εγγραφής | `processedDataPath` — **που το autosave του CAD γράφει από πάνω** |
+| `cadScene` | `{στέλεχος}.scene.json` | DXF Viewer autosave | κανονικός | `processedDataPath` · `downloadUrl` |
+
+⇒ Μία λύση «μόνο οι δείκτες της εγγραφής» θα άφηνε **μετρημένα** το `.dxf.processed.json` ορφανό· μία «σάρωση προθέματος»
+(όπως το `floor-wipe-storage`) θα έχανε τα `{στέλεχος}…` (όχι πρόθεμα του `storagePath`) και θα κόστιζε μια λίστα ανά αρχείο.
+
+**Η απόφαση** (πρότυπο GCS/S3/Drive: το παράγωγο έχει **ντετερμινιστικό** κλειδί από τον γονιό):
+- **Μητρώο** `lib/files/file-companion-objects.ts` (leaf, **προβάλλεται** στα Functions — ADR-874): κάθε είδος δηλώνει όνομα **και
+  κάδο του γραφέα του**· οι **πέντε** γραφείς χτίζουν πλέον το όνομα με `fileCompanionPath` (το ίδιο που διαβάζει ο κριτής).
+- **Κριτής** `services/file-record/file-companion-purge.ts`: υποψήφιοι = ονόματα μητρώου **∪** δείκτες εγγραφής (URL ⇒ ο κάδος
+  του URL· ξένος κάδος ⇒ ποτέ). 🔒 **Φρουρός** `isCompanionPathOf`: ίδιος φάκελος **και** όνομα που αρχίζει από ολόκληρο το όνομα
+  του πρωτοτύπου ή από το **`fileId` + `.`/`_`** (μοναδικό) — στέλεχος που δεν είναι id (`scan.pdf`) δεν δίνει τίποτα.
+- **Ένας γραφέας** `deleteStorageObjectForPurge` (cron · εργαλείο AI · ΓΚΠΔ): πρωτότυπο **πρώτα** — δέσμευση εκεί ⇒ δεν αγγίζεται
+  κανένα συνοδευτικό· μετά τα συνοδευτικά, 404 = αθώο, οποιαδήποτε άλλη άρνηση ⇒ `refused` ⇒ η εγγραφή **δεν** γίνεται `purged`
+  (ο επόμενος γύρος ξαναδοκιμάζει, ιδεμποτώς). Η ΓΚΠΔ μηδενίζει και τους δείκτες (`FILE_COMPANION_POINTER_FIELDS`).
+- **Ορφανά που υπάρχουν ήδη**: μετρημένα **0** — καμία εγγραφή `purged` σε `files` ή `files_personal` (2026-10-01) ⇒ καμία μετάπτωση.
+  Δίχτυ για το μέλλον: ο κριτής ξανατρέχει σε κάθε γύρο μέχρι να σβηστούν όλα.
 
 ## 3. 🏆 Η απόφαση — πιο έξυπνα από τους μεγάλους
 
@@ -106,6 +134,29 @@
 - Η κάρτα πλέγματος (`usePropertyThumbnail`) δείχνει πλέον το **παράγωγο** (w=1280), όχι το πρωτότυπο.
 - i18n: νέα κλειδιά μόνο `properties-detail:detailPage.photos.{loadFailed,captureSpot}` (el+en)· όλα τα άλλα υπήρχαν.
 
+### 4.1 Οι αναγνώστες `downloadUrl` → ο ΕΝΑΣ αναγνώστης εμφάνισης (Βήμα Γ, 2026-10-02)
+
+**Ταξινόμηση κάθε σημείου** (grep `downloadUrl` σε `src/components|features|hooks`, 34 αρχεία· τα 12 είχαν το όνομα μόνο σε σχόλιο):
+
+| Κατ. | Σημεία | Θεραπεία |
+|---|---|---|
+| **α** εμφάνιση (μικρογραφία) | `FileThumbnail` (κόμβος) ← `FileManagerPageContent` · `EntityFilesContent` · `FilesList` · `ListingMaterialRow` ← `ListingFloorplansPanel` · `ListingMediaOrderPanel` | Prop `file` (όχι `downloadUrl`)· πηγές από `file-thumbnail-sources.ts`: **παράγωγο** (`srcSet` + `sizes` = px του κουτιού, **ίδιο κελί** με την κλάση) → client `_thumb` (εφεδρεία) → πρωτότυπο **μόνο** για svg/gif → εικονίδιο / σελίδα PDF. Κάθε `onError` = ένα βήμα. |
+| **α** εμφάνιση (zoom) | `FilePreviewRenderer` → `ImagePreview` (από `FilePreviewPanel`) | Νέο προαιρετικό `preview`. `use-zoom-resolution.ts`: `sizes` = **μετρημένο** κουτί· στο zoom `κουτί × zoom × DPR` → `filePreviewWidthFor` = η **μικρότερη** επαρκής βαθμίδα, πρωτότυπο μόνο πάνω από 2560· φόρτωση στο παρασκήνιο + `decode()` πριν την αλλαγή· **μόνο προς τα πάνω**. Χωρίς `preview` (δημόσια κοινή χρήση, προσφορές) = ως πριν. |
+| **β** bytes / άνοιγμα / «υπάρχει;» | `file-manager-handlers` (διπλό κλικ → `openRemoteUrlInNewTab`) · `FilePreviewPanel` · `InboxView` · `FileInspector` · `FloorplanGallery` · `useFloorplanPdfLoader` · `VideoPlayer` · `useFileDownload` (εφεδρεία μετά το `id`) | `fileDisplayUrl(file)`. Εγγραφές χωρίς `downloadUrl` **δεν κρύβονται** πια. |
+| **β** ⚠️ πρωτότυπο | `useFloorplanImageLoader` · `FloorplanGallery.calibrationImageSrc` | `.url`, **ποτέ** `preview`: η βαθμονόμηση/μέτρηση δουλεύει στα pixel του πρωτοτύπου (`naturalWidth`). |
+| **β** server | `useFloorplanFiles` (φίλτρο αυτόματης επεξεργασίας) | Ρωτά `storagePath` — αυτό διαβάζει το `floorplan-process.service`. |
+| **δ** CAD | `useFloorplanSceneLoader` (PATH C/D) · `floorplan-duplicate-core` | `fileDisplayUrl`: **αποθηκευμένο `downloadUrl` πρώτα** ⇒ ταυτόσημη συμπεριφορά όπου υπάρχει (άγκυρα). Ο `floorplan-save-orchestrator` γράφει `downloadUrl` και `storagePath` στο **ίδιο** αντικείμενο· το `.scene.json` (`cadScene`, §2.2) ζει στο autosave του DXF Viewer. Το `DxfPreview` (συνθετική εγγραφή) δεν άλλαξε. |
+| μένει | `VersionHistory` | Εκεί το πεδίο = **ετοιμότητα** έκδοσης, όχι URL· η λήψη γίνεται ήδη με `id`. |
+| **γ** εκτός | `contracts-qr` · `useCrmAttachmentUpload` · `useFloorplanUpload` · `useFileUpload` · `read-only-media-types` | Γραφείς/τύποι — δεν διαβάζουν για εμφάνιση. |
+
+- **SSoT επεκτάσεις** (κανένας νέος builder): `filePreviewWidthFor` (κλίμακα) · `ProxyImagePreview.ladder` (το `srcSet` **παράγεται** από αυτό) ·
+  `sameOriginFetchUrlOf` — απορρόφησε το τοπικό `resolveStorageUrl` του `floorplan-pdf-renderer` (ωμό `/api/storage/file`, δικό του regex — N.0.2)·
+  το `internal-proxy` URL μένει αυτούσιο ώστε να μη χαθεί το `?placement=` (ADR-895).
+- **Ratchet** (CHECK 3.7, υπάρχουσα μηχανή): module `file-display-url` στο `.ssot-registry.json` — απαγορεύει **ανάγνωση** `x.downloadUrl` /
+  `x?.downloadUrl` (όχι ανάθεση, δήλωση τύπου, shorthand, κλειδί i18n). Allowlist: `app/api` · `services` · `server` (γραφείς) · `VersionHistory` ·
+  `useFloorplanUpload`. Baseline **χειρουργικά** μόνο για το module: 10 σημεία / 6 αρχεία στο `subapps` (dxf-viewer, procurement) — οι επόμενοι στόχοι.
+  Απόδειξη ζωής στο `pattern-proofs.js`.
+
 ## 5. N.7.2 — έλεγχος αρχιτεκτονικής
 
 | # | Ερώτηση | Απάντηση |
@@ -134,7 +185,7 @@
 - **Rate limit**: STANDARD (60/λεπτό) αρκεί για την κεφαλίδα· σε γκαλερί με δεκάδες φωτογραφίες + revalidation (`no-cache`) ίσως χρειαστεί
   ASSET (600/λεπτό, ήδη στη μεταδεικτική περιγραφή «binary assets μέσω authenticated proxy»). Να μετρηθεί σε πραγματική χρήση.
 - **Hit rate μνήμης / χρόνος κωδικοποίησης** στο Netcup (2 ταυτόχρονες κωδικοποιήσεις, 64 MB) — να μετρηθεί πριν αλλάξει οποιαδήποτε σταθερά.
-- Οι ~32 υπόλοιποι αναγνώστες `downloadUrl` (καρτέλα φωτογραφιών, media) να περάσουν στο `fileDisplayUrl`/`preview` — ratchet entry.
+- ✅ ~~Οι ~32 υπόλοιποι αναγνώστες `downloadUrl`~~ — **έκλεισε 2026-10-02 (§4.1)**· μένουν 10 σημεία στο `subapps`, φραγμένα από το ratchet `file-display-url`.
 - **`sizes` του lightbox σε κάθετη φωτογραφία** (Π1, μετρημένο στο §9): το `70vw` περιγράφει το **πλάτος** του κουτιού, αλλά μια κάθετη λήψη
   περιορίζεται από το **ύψος** — μετρημένο 803 px CSS ζωγραφισμένα έναντι 1.680 δηλωμένων ⇒ ο browser ζητά μία βαθμίδα πάνω απ' όσο
   χρειάζεται. Θεραπεία μόνο όταν το `LightboxPhoto` φέρει **μετρημένες** διαστάσεις (`width/height` — σήμερα `null` για το ακίνητο)·
@@ -142,6 +193,10 @@
 - **Βαθμίδες πάνω από το πρωτότυπο** (Π2, μετρημένο στο §9): πρωτότυπο 1.183 px ⇒ `w=1280` και `w=2560` δίνουν **ίδια** bytes με **δύο** κλειδιά cache
   και δύο κωδικοποιήσεις (ποτέ μεγέθυνση). Θεραπεία: κανονικοποίηση του κλειδιού σε `min(w, πλάτος πρωτοτύπου)` — απαιτεί το πλάτος
   **πριν** από την κωδικοποίηση (μεταδεδομένα, όχι αποκωδικοποίηση). Να μετρηθεί η συχνότητα πριν γραφτεί.
+- 📏 **Μέτρηση Π1/Π2 (2026-10-02, παραγωγή, ανάγνωση μόνο κεφαλίδας — Range 128 KB + `sharp().metadata()`, ~0,7 s/αρχείο)**:
+  24 εικόνες στη `files`· **καμία** δεν κρατά διαστάσεις. Δείγμα 6: `1200×1600` · `1600×739` · `1013×1800` · `1803×2225` · `3000×4000` · `1200×800`
+  (κάτοψη png). ⇒ **Π2: 5/6** κάτω από 2560 (το `w=2560` = ίδια bytes με τη μικρότερη επαρκή βαθμίδα), **3/6** κάτω από 1280· **Π1: 4/6 κάθετες**.
+  Η κεφαλίδα αρκεί (128 KB, χωρίς αποκωδικοποίηση) ⇒ ένα SSoT διαστάσεων είναι φθηνό. Σχέδιο προς έγκριση: §7 «Βήμα Δ».
 
 ## 8. Επαλήθευση
 
@@ -215,3 +270,18 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
   — άγκυρες Δ1–Δ4, μεταλλάξεις 4/4. Οι δείκτες `ADR-899 §N` στα σχόλια του κώδικα (~30 αρχεία) ακολουθούσαν **παλιά αρίθμηση**
   (§2 κλίμακα · §5 route · §8 lightbox · §9 γκαλερί) και έδειχναν σε λάθος ή ανύπαρκτες ενότητες — αντιστοιχίστηκαν ανά αρχείο
   (§3.1–§3.6 · §4). Νέα ανοιχτά: Π1 (`sizes` κάθετης φωτογραφίας) · Π2 (βαθμίδες πάνω από το πρωτότυπο).
+- **2026-10-01** — §2.2: το purge/ΓΚΠΔ σβήνει πλέον **και τα συνοδευτικά** κάθε αρχείου (5 είδη, μετρημένα στον κάδο της παραγωγής).
+  Μητρώο ονομάτων `lib/files/file-companion-objects.ts` (προβολή στα Functions) · κριτής `services/file-record/file-companion-purge.ts` ·
+  ο ένας γραφέας `deleteStorageObjectForPurge` (πρωτότυπο → συνοδευτικά). Οι γραφείς `generate-upload-thumbnail` ·
+  `floorplan-save-orchestrator` · `floorplan-process.service` · `dxf-thumbnail-selfheal` · `functions/dxf-thumbnail-onfinalize`
+  ονομάζουν από το μητρώο. Άγκυρες `file-companion-purge.test.ts` (Μ1–Μ3 · Φ · Σ1–Σ5 · Γ1–Γ2).
+- **2026-10-02** — **Βήμα Γ (§4.1)**: οι αναγνώστες `downloadUrl` στο `components|features|hooks` πέρασαν στον ΕΝΑ αναγνώστη εμφάνισης.
+  Μικρογραφίες = παράγωγο του server στο μέγεθος του κουτιού (`file-thumbnail-sources.ts`)· πάνελ προεπισκόπησης = ανάλυση που ακολουθεί
+  το zoom (`use-zoom-resolution.ts`, μικρότερη επαρκής βαθμίδα, αλλαγή μετά το `decode`, μόνο προς τα πάνω)· βαθμονόμηση κάτοψης = πρωτότυπο.
+  `sameOriginFetchUrlOf` απορρόφησε τοπικό διπλότυπο. Ratchet `file-display-url` (CHECK 3.7). Άγκυρες: `file-preview-ladder` Λ4 ·
+  `storage-proxy-url-roundtrip` Ρ5–Ρ6 · `FileThumbnail` Μ1–Μ6 · `use-zoom-resolution` Ζ1–Ζ6 · `floorplan-duplicate-core` (προτεραιότητα αναγνώστη) ·
+  golden proof του module — μεταλλάξεις **15/15** σκοτώθηκαν (μία ισοδύναμη, Z4, αφαιρέθηκε ως περιττός κλάδος). Βήμα Α (Ε1 ζωντανά) **εκκρεμεί**:
+  το `a703b238` δεν έχει γίνει push.
+- **2026-10-02** — Boy Scout (CHECK 3.28): όταν η γκαλερί του διαχειριστή αρχείων και των αρχείων οντότητας πέρασαν στον ίδιο
+  αναγνώστη, η περίληψη «μικρογραφία · όνομα · μέγεθος» έγινε κλώνος ⇒ `components/shared/files/FileTileSummary.tsx` (ένα
+  περιεχόμενο, το κέλυφος μένει στον καλούντα). Η δίδυμη κεφαλίδα φόρτωσης/άδειας κατάστασης του `InboxView` ⇒ τοπικό `InboxStateHeader`.

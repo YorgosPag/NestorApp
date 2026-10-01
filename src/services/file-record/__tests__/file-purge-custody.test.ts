@@ -78,7 +78,8 @@ describe('Γ — ο γραφέας εκκαθάρισης ανά διαμέρι�
     expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG_PERSONAL)).toEqual([
       expect.objectContaining({ fileId: 'file_p', action: 'delete', userId: OWNER, performedBy: 'system:cron-purge' }),
     ]);
-    expect(deletedObjects).toEqual([`people/${OWNER}/x.pdf`]);
+    // Πρώτα το πρωτότυπο — ακολουθούν τα συνοδευτικά του (ADR-899 §2.2 · `file-companion-purge.test.ts`).
+    expect(deletedObjects[0]).toBe(`people/${OWNER}/x.pdf`);
   });
 
   it('Γ2 — εταιρικό αρχείο: ό,τι ίσχυε — `purged` στο `files` ΚΑΙ γραμμή ίχνους', async () => {

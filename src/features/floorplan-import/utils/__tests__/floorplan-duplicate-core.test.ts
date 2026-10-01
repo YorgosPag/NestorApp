@@ -6,6 +6,7 @@ import {
   downloadFileRecordAsFile,
   buildFloorDuplicateConfig,
 } from '../floorplan-duplicate-core';
+import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 
 describe('buildFloorDuplicateConfig', () => {
   const base = {
@@ -85,5 +86,20 @@ describe('downloadFileRecordAsFile', () => {
     const file = await downloadFileRecordAsFile({ downloadUrl: 'https://x/y.dxf', ext: 'dxf' });
     expect(file.name).toBe('floorplan.dxf');
     expect(file.type).toBe('application/dxf');
+  });
+
+  // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης εμφάνισης.
+  it('🔴 stored `downloadUrl` WINS over `storagePath` (CAD trap: never silently re-point the bytes)', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(['x']) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await downloadFileRecordAsFile({ downloadUrl: 'https://x/y.scene.json', storagePath: 'a/b.dxf', ext: 'dxf' });
+    expect(fetchMock).toHaveBeenCalledWith('https://x/y.scene.json');
+  });
+
+  it('🔴 no `downloadUrl` but a `storagePath` ⇒ fetches the same-origin proxy (no longer NO_DOWNLOAD_URL)', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(['x']) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await downloadFileRecordAsFile({ storagePath: 'a/b.dxf', ext: 'dxf' });
+    expect(fetchMock).toHaveBeenCalledWith(buildProxyUrl('a/b.dxf'));
   });
 });

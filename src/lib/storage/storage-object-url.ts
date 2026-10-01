@@ -84,10 +84,21 @@ export function buildProxyUrl(storagePath: string, placement: FileStoragePlaceme
     : `${base}?${FILE_STORAGE_PLACEMENT_QUERY_PARAM}=${encodeURIComponent(placement)}`;
 }
 
+/** Μία βαθμίδα της κλίμακας με το URL της. */
+export interface ProxyImagePreviewRung {
+  readonly width: number;
+  readonly src: string;
+}
+
 /** Ό,τι χρειάζεται ένα `<img>` για προεπισκόπηση: ένα `src` εφεδρείας και ολόκληρη η κλίμακα. */
 export interface ProxyImagePreview {
   readonly src: string;
   readonly srcSet: string;
+  /**
+   * Η κλίμακα ως δεδομένα (αύξουσα) — για όποιον διαλέγει βαθμίδα **ο ίδιος** (zoom του πάνελ προεπισκόπησης,
+   * `filePreviewWidthFor`) αντί να το αφήσει στο `sizes` του browser. Το `srcSet` **παράγεται** από αυτήν.
+   */
+  readonly ladder: readonly ProxyImagePreviewRung[];
 }
 
 /** Το URL ενός παραγώγου — πάνω στο {@link buildProxyUrl}, ποτέ δεύτερη συναρμολόγηση μονοπατιού. */
@@ -108,11 +119,14 @@ export function buildProxyPreview(
   storagePath: string,
   placement: FileStoragePlacement = FILE_STORAGE_PLACEMENT_LEGACY,
 ): ProxyImagePreview {
+  const ladder = FILE_PREVIEW_ENCODING.widths.map((width) => ({
+    width,
+    src: buildProxyPreviewUrl(storagePath, placement, width),
+  }));
   return {
     src: buildProxyPreviewUrl(storagePath, placement, FILE_PREVIEW_FALLBACK_WIDTH),
-    srcSet: FILE_PREVIEW_ENCODING.widths
-      .map((width) => `${buildProxyPreviewUrl(storagePath, placement, width)} ${width}w`)
-      .join(', '),
+    srcSet: ladder.map((rung) => `${rung.src} ${rung.width}w`).join(', '),
+    ladder,
   };
 }
 
@@ -304,3 +318,16 @@ export function storageObjectFromUrl(rawUrl: string): StorageObjectRef {
  * {@link storageObjectFromUrl}.
  */
 export const STORAGE_URL_HOSTS = HOST_SCHEME;
+
+/**
+ * **Ένα URL αρχείου σε μορφή που ο browser μπορεί να κάνει `fetch()`** — παλιές εγγραφές κρατούν
+ * `firebasestorage…/v0/b/{b}/o/{enc}`, που αποτυγχάνει σε CORS· ξαναγράφεται στο same-origin proxy.
+ *
+ * 🔑 Ήταν τοπικό `resolveStorageUrl` στο `floorplan-pdf-renderer` με **ωμό** πρόθεμα διαδρομής και **δικό** του regex
+ * (N.0.2, 2026-10-02 — ADR-899 §4.1): τώρα ο αναγνώστης και ο γραφέας αυτού του module. Κάθε άλλο σχήμα μένει
+ * αυτούσιο — ιδίως το `internal-proxy`, που μπορεί να φέρει `?placement=` (ADR-895) και **δεν** ξαναχτίζεται.
+ */
+export function sameOriginFetchUrlOf(url: string): string {
+  const ref = storageObjectFromUrl(url);
+  return ref.outcome === 'object' && ref.scheme === 'firebase-download-token' ? buildProxyUrl(ref.storagePath) : url;
+}

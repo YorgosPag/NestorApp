@@ -12,6 +12,7 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 
 const logger = createModuleLogger('ThumbnailGen');
 
@@ -207,7 +208,6 @@ export async function generateUploadThumbnail(
  * // → 'companies/abc/files/xyz/document_thumb.webp'
  */
 export function buildThumbnailPath(originalStoragePath: string): string {
-  const lastDot = originalStoragePath.lastIndexOf('.');
-  const basePath = lastDot > 0 ? originalStoragePath.substring(0, lastDot) : originalStoragePath;
-  return `${basePath}_thumb.webp`;
+  // 🧩 Το όνομα ζει στο μητρώο συνοδευτικών — από εκεί το βρίσκει και το purge (ADR-899 §2.2).
+  return fileCompanionPath(originalStoragePath, 'uploadThumbnail');
 }

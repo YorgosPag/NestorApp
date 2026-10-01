@@ -91,9 +91,7 @@ function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }:
   const { t } = useTranslation([NS]);
   return (
     <ListingMaterialRow
-      contentType={file.contentType}
-      thumbnailUrl={file.thumbnailUrl}
-      downloadUrl={file.downloadUrl}
+      file={file}
       displayName={file.displayName}
     >
       {/*

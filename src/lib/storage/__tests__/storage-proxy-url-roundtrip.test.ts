@@ -14,7 +14,7 @@ import { FILE_STORAGE_PLACEMENTS } from '@/lib/files/file-storage-placement';
 
 import { FILE_PREVIEW_ENCODING, FILE_PREVIEW_FALLBACK_WIDTH } from '@/lib/files/file-preview-ladder';
 
-import { buildProxyPreview, buildProxyUrl, storageObjectFromUrl } from '../storage-object-url';
+import { buildProxyPreview, buildProxyUrl, sameOriginFetchUrlOf, storageObjectFromUrl } from '../storage-object-url';
 
 const PATH = 'companies/c1/entities/property/p1/domains/sales/categories/photos/files/file_1 εξωτερικό.jpg';
 
@@ -46,5 +46,21 @@ describe('proxy URL — round-trip γραφέα ⇄ αναγνώστη', () => {
     expect(srcSet.split(', ').map((entry) => entry.split(' ')[1])).toEqual(FILE_PREVIEW_ENCODING.widths.map((w) => `${w}w`));
     expect(src.endsWith(`&w=${FILE_PREVIEW_FALLBACK_WIDTH}`)).toBe(true);
     expect(buildProxyPreview(PATH).src.endsWith(`?w=${FILE_PREVIEW_FALLBACK_WIDTH}`)).toBe(true);
+  });
+
+  test('🔴 Ρ5 η κλίμακα-δεδομένα (`ladder`) και το `srcset` λένε ΤΟ ΙΔΙΟ — βαθμίδα ανά βαθμίδα', () => {
+    const { srcSet, ladder } = buildProxyPreview(PATH, 'eu-originals');
+    expect(ladder.map((rung) => rung.width)).toEqual([...FILE_PREVIEW_ENCODING.widths]);
+    expect(ladder.map((rung) => `${rung.src} ${rung.width}w`).join(', ')).toBe(srcSet);
+    for (const rung of ladder) expect(rung.src.endsWith(`&w=${rung.width}`)).toBe(true);
+  });
+
+  test('🔴 Ρ6 `sameOriginFetchUrlOf`: firebase ⇒ proxy · proxy με θέση ⇒ ΑΥΤΟΥΣΙΟ (η θέση δεν χάνεται) · ξένο ⇒ αυτούσιο', () => {
+    const encoded = encodeURIComponent(PATH);
+    const firebase = `https://firebasestorage.googleapis.com/v0/b/bucket-1/o/${encoded}?alt=media&token=t`;
+    expect(sameOriginFetchUrlOf(firebase)).toBe(buildProxyUrl(PATH));
+    const placed = buildProxyUrl(PATH, 'eu-originals');
+    expect(sameOriginFetchUrlOf(placed)).toBe(placed);
+    expect(sameOriginFetchUrlOf('https://example.test/a.pdf')).toBe('https://example.test/a.pdf');
   });
 });

@@ -23,6 +23,10 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
 import { deleteStorageObjectForPurge, isFileHeld } from '@/services/file-record/file-purge-helpers';
 import { findSubjectActivity, findSubjectFiles } from '@/services/file-record/file-subject-scan';
+import { FILE_COMPANION_POINTER_FIELDS } from '@/lib/files/file-companion-objects';
+
+/** Οι δείκτες προς συνοδευτικά (μικρογραφίες, σκηνές) μηδενίζονται μαζί με το `storagePath` — ίδιο μητρώο με τον γραφέα. */
+const COMPANION_POINTERS_ERASED = Object.fromEntries(FILE_COMPANION_POINTER_FIELDS.map((field) => [field, null]));
 
 /**
  * **Η δραστηριότητα του υποκειμένου μετά τη διαγραφή** (ADR-866 §2.6.11).
@@ -98,7 +102,8 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
       // Bytes πρώτα· άρνηση της πλατφόρμας (GCS hold) ⇒ η εγγραφή ΔΕΝ ανωνυμοποιείται ως «σβησμένη»
       // (ADR-864 §21 — ίδιος γραφέας με το purge). 🌍 ADR-895: ο κάδος έρχεται από την εγγραφή.
       const storagePath = data.storagePath as string | undefined;
-      if (storagePath && (await deleteStorageObjectForPurge({ storagePath, storagePlacement: data.storagePlacement })) === 'refused') {
+      // 🧩 Ο ίδιος γραφέας σβήνει και τα συνοδευτικά (μικρογραφίες = προσωπικά δεδομένα) — ADR-899 §2.2.
+      if (storagePath && (await deleteStorageObjectForPurge({ ...data, fileId: fileDoc.id, storagePath })) === 'refused') {
         results.filesSkippedHold++;
         retainedFileIds.add(fileDoc.id);
         continue;
@@ -114,6 +119,7 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
         description: null,
         downloadUrl: null,
         storagePath: null,
+        ...COMPANION_POINTERS_ERASED,
         isDeleted: true,
         purgedAt: nowISO(),
         purgedBy: 'gdpr-erasure',

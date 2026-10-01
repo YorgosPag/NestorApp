@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 
 const logger = createModuleLogger('useFloorplanImageLoader');
 
@@ -32,8 +33,12 @@ export function useFloorplanImageLoader(
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
+  // ADR-899 §4.1 — ⚠️ το **πρωτότυπο** (`url`), ΠΟΤΕ `preview`: η βαθμονόμηση και οι μετρήσεις δουλεύουν στα
+  //    pixel του πρωτοτύπου (`naturalWidth`) — παράγωγο 1280 px θα άλλαζε σιωπηλά την κλίμακα της κάτοψης.
+  const fileUrl = currentFile ? fileDisplayUrl(currentFile) : null;
+
   useEffect(() => {
-    if (!isImage || !currentFile?.downloadUrl) {
+    if (!isImage || !fileUrl) {
       setImageElement(null);
       setImageDimensions(null);
       setImageError(null);
@@ -55,16 +60,16 @@ export function useFloorplanImageLoader(
     };
     img.onerror = (err) => {
       if (cancelled) return;
-      logger.error('Image load failed', { url: currentFile.downloadUrl, err });
+      logger.error('Image load failed', { url: fileUrl, err });
       setImageError('Failed to load image');
       setIsImageLoading(false);
     };
-    img.src = currentFile.downloadUrl;
+    img.src = fileUrl;
 
     return () => {
       cancelled = true;
     };
-  }, [isImage, currentFile?.downloadUrl]);
+  }, [isImage, fileUrl]);
 
   return { imageElement, imageDimensions, isImageLoading, imageError };
 }

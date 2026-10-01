@@ -18,6 +18,7 @@
 import type { PanOffset } from '@/hooks/useZoomPan';
 import { computeFitTransform, rectBoundsToScene } from '@/lib/dxf-scene/scene-fit-transform';
 import { PdfRenderer } from '@/subapps/dxf-viewer/pdf-background/services/PdfRenderer';
+import { sameOriginFetchUrlOf } from '@/lib/storage/storage-object-url';
 
 /** Render scale for sharpness — image is rendered at this multiple of PDF points. */
 const PDF_RENDER_SCALE = 2;
@@ -36,26 +37,8 @@ export interface PdfPageInfo {
  * the bounds the DXF Viewer editor uses for fit-to-view, so polygon world
  * coords saved by the editor render at the same PDF position here.
  */
-/**
- * Old FileRecords stored direct Firebase Storage URLs which fail `fetch()` due
- * to CORS. Rewrite them to the same-origin proxy so the browser can fetch them.
- */
-function resolveStorageUrl(url: string): string {
-  if (!url.startsWith('https://firebasestorage.googleapis.com')) return url;
-  try {
-    const parsed = new URL(url);
-    const match = parsed.pathname.match(/^\/v0\/b\/[^/]+\/o\/(.+)$/);
-    if (match) {
-      const storagePath = decodeURIComponent(match[1]);
-      const encoded = storagePath.split('/').map(encodeURIComponent).join('/');
-      return `/api/storage/file/${encoded}`;
-    }
-  } catch { /* fall through to direct URL */ }
-  return url;
-}
-
 export async function loadPdfPage1(url: string): Promise<PdfPageInfo | null> {
-  const response = await fetch(resolveStorageUrl(url));
+  const response = await fetch(sameOriginFetchUrlOf(url));
   if (!response.ok) return null;
   const blob = await response.blob();
   const file = new File([blob], 'floorplan.pdf', { type: 'application/pdf' });

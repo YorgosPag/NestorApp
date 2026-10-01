@@ -24,6 +24,19 @@
 'use strict';
 
 module.exports = {
+  // ADR-899 §4.1 — ο πελάτης ΔΕΝ διαβάζει `record.downloadUrl` για να δείξει/ανοίξει/φέρει αρχείο: ρωτά τον ΕΝΑ
+  // αναγνώστη εμφάνισης. Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ μορφές: ανάθεση (γραφέας), δήλωση τύπου,
+  // object shorthand, κλειδί i18n με το ίδιο όνομα, ο ίδιος ο αναγνώστης.
+  'file-display-url': {
+    shouldMatch: `img.src = currentFile.downloadUrl;
+if (file?.downloadUrl) openRemoteUrlInNewTab(file.downloadUrl);
+const ready = rows[0].downloadUrl === expected;`,
+    shouldSkip: `record.downloadUrl = await getDownloadURL(ref);
+interface Row { downloadUrl?: string }
+const payload = { downloadUrl, displayName };
+const label = t('inspector.downloadUrl');
+const url = fileDisplayUrl(file);`,
+  },
   // ADR-876 §5 — «ένας σύνδεσμος = ένα διαπιστευτήριο». Η συλλογή των διαπιστευτηρίων έχει ΕΝΑΝ
   // αναγνώστη/γραφέα (store) και ΕΝΑΝ κατασκευαστή· ο client δεν βάζει ΠΟΤΕ σύνδεσμο σε διαδρομή API.
   // Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ χρήσεις: η σκέτη διαδρομή, το Bearer, η συλλογή προσκλήσεων.

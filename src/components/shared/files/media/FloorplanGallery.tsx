@@ -43,6 +43,7 @@ import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-sn
 import { Bim3DToggleButton } from '@/components/shared/files/media/Bim3DToggleButton';
 import { Bim3DReadOnlyOverlay } from '@/components/shared/files/media/Bim3DReadOnlyOverlay';
 import { FloorplanInkPicker } from '@/components/shared/files/media/FloorplanInkPicker';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -128,7 +129,9 @@ export function FloorplanGallery({
   const [calibrateOpen, setCalibrateOpen] = useState(false);
   // ADR-371: local 3D toggle (independent from global ViewMode3DStore — Q1 decision)
   const [show3D, setShow3D] = useState(false);
-  const calibrationImageSrc = isRaster ? (rasterImage?.src ?? currentFile?.downloadUrl ?? null) : null;
+  // ADR-899 §4.1 — το URL του αρχείου από τον ΕΝΑ αναγνώστη· ⚠️ πρωτότυπο, ποτέ preview (βαθμονόμηση = pixel πρωτοτύπου).
+  const currentFileUrl = currentFile ? fileDisplayUrl(currentFile) : null;
+  const calibrationImageSrc = isRaster ? (rasterImage?.src ?? currentFileUrl) : null;
   const canCalibrate = isRaster && !!backgroundId && !!calibrationImageSrc;
   // SPEC-237C: Canvas hover/click hit-testing (extracted hook — SRP + file-size SSoT)
   const {
@@ -422,7 +425,7 @@ export function FloorplanGallery({
             <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={handleDownload} disabled={!currentFile?.downloadUrl} aria-label={t('floorplan.download')}>
+                <Button variant="ghost" size="sm" onClick={handleDownload} disabled={!currentFileUrl} aria-label={t('floorplan.download')}>
                   <Download className={iconSizes.sm} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>

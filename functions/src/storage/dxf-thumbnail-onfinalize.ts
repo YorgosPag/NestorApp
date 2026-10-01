@@ -40,12 +40,12 @@ import {
   DXF_THUMBNAIL_HEIGHT,
 } from '../shared/dxf-raster-generator';
 import { decodeProcessedJsonBytes } from '../generated/lib/dxf/decode-processed-json';
+import { fileCompanionPath } from '../generated/lib/files/file-companion-objects';
 import { fileStorageBucketNames } from './file-record-bucket';
 import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
 import { FINALIZE_RUNTIME, gen1Memory } from './finalize-runtime';
 
 const PROCESSED_SUFFIX = '.dxf.processed.json';
-const THUMBNAIL_SUFFIX = '.thumbnail.png';
 
 interface RegenerateArgs {
   /** Storage path of the original `.dxf` (not the processed JSON). */
@@ -69,8 +69,9 @@ export async function regenerateDxfThumbnail(
   const db = admin.firestore();
   const bucket = args.bucketName ? admin.storage().bucket(args.bucketName) : admin.storage().bucket();
 
-  const processedPath = `${args.dxfStoragePath}.processed.json`;
-  const thumbnailPath = `${args.dxfStoragePath}${THUMBNAIL_SUFFIX}`;
+  // 🧩 Ονόματα από το μητρώο συνοδευτικών (προβολή ADR-874) — από εκεί τα βρίσκει και το purge (ADR-899 §2.2).
+  const processedPath = fileCompanionPath(args.dxfStoragePath, 'dxfProcessedScene');
+  const thumbnailPath = fileCompanionPath(args.dxfStoragePath, 'dxfRasterThumbnail');
 
   const [processedBuffer] = await bucket.file(processedPath).download();
   const processedText = decodeProcessedJsonBytes(processedBuffer);

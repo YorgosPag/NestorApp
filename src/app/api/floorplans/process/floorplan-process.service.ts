@@ -13,6 +13,7 @@ import type { FloorplanProcessedData, DxfSceneData } from '@/types/file-record';
 import { toDxfSceneData } from '@/services/floorplans/dxf-scene-data-projection';
 import { floorplanProcessKindOf, type FloorplanProcessKind } from '@/services/floorplans/floorplan-processability';
 import type { FileRecordData } from './floorplan-process.types';
+import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 
 const logger = createModuleLogger('FloorplanProcessService');
 
@@ -101,7 +102,7 @@ export async function processDxf(
   };
 
   // Save scene JSON to Storage (compressed)
-  const processedDataPath = `${fileData.storagePath}.processed.json`;
+  const processedDataPath = fileCompanionPath(fileData.storagePath, 'dxfProcessedScene');
   const processedJsonRaw = Buffer.from(JSON.stringify(dxfSceneData), 'utf-8');
   const processedJsonBuffer = gzipSync(processedJsonRaw);
 

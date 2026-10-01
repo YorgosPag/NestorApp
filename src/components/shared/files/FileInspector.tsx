@@ -38,6 +38,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
 import { formatFlexibleDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
@@ -93,6 +94,8 @@ export function FileInspector({
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const fileNotifications = useFilesNotifications();
+  // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης: εγγραφή χωρίς `downloadUrl` αλλά με `storagePath` έχει κι αυτή σύνδεσμο.
+  const fileUrl = fileDisplayUrl(file);
 
   /**
    * Handle copy storage path to clipboard
@@ -300,14 +303,14 @@ export function FileInspector({
               )}
 
               {/* Download URL */}
-              {file.downloadUrl && (
+              {fileUrl && (
                 <div>
                   <dt className={cn("text-sm font-medium mb-1", colors.text.muted)}>
                     {t('inspector.downloadUrl')}
                   </dt>
                   <dd>
                     <a
-                      href={file.downloadUrl}
+                      href={fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline break-all"

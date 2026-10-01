@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import { loadPdfPage1 } from '@/components/shared/files/media/floorplan-pdf-renderer';
 
 const logger = createModuleLogger('useFloorplanPdfLoader');
@@ -34,8 +35,11 @@ export function useFloorplanPdfLoader(
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
+  // ADR-899 §4.1 — τα bytes του PDF από τον ΕΝΑ αναγνώστη (και εγγραφή χωρίς `downloadUrl` φορτώνει).
+  const fileUrl = currentFile ? fileDisplayUrl(currentFile) : null;
+
   useEffect(() => {
-    if (!isPdf || !currentFile?.downloadUrl) {
+    if (!isPdf || !fileUrl) {
       setPdfImage(null);
       setPdfDimensions(null);
       setPdfError(null);
@@ -47,9 +51,7 @@ export function useFloorplanPdfLoader(
     setIsPdfLoading(true);
     setPdfError(null);
 
-    const url = currentFile.downloadUrl;
-
-    loadPdfPage1(url)
+    loadPdfPage1(fileUrl)
       .then((result) => {
         if (cancelled) return;
         if (!result) {
@@ -81,7 +83,7 @@ export function useFloorplanPdfLoader(
     return () => {
       cancelled = true;
     };
-  }, [isPdf, currentFile?.downloadUrl]);
+  }, [isPdf, fileUrl]);
 
   return { pdfImage, pdfDimensions, isPdfLoading, pdfError };
 }

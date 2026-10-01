@@ -24,6 +24,8 @@
 //    `shelfRecipe`/`FRAMING_AS_GIVEN`) ζει στον παραγωγό, `server/files/image-preview-recipe`.
 import type { RasterShelfEncoding } from '@/services/upload/utils/public-shelf-encoding';
 
+import { RASTER_IMAGE_TYPES, isRasterImageContentType } from '@/lib/images/image-dimensions';
+
 /** Η κωδικοποίηση των προεπισκοπήσεων — **ο ίδιος** τύπος με το δημόσιο ράφι. */
 export const FILE_PREVIEW_ENCODING: RasterShelfEncoding = {
   kind: 'raster',
@@ -48,26 +50,13 @@ export const FILE_PREVIEW_FALLBACK_WIDTH = 1280;
 export const FILE_PREVIEW_WIDTH_QUERY_PARAM = 'w';
 
 /**
- * **Τύποι που αποκωδικοποιεί ο κωδικοποιητής.** ⛔ Όχι `svg` (διανυσματικό — δεν έχει «πλάτος
- * pixel», και η ραστεροποίηση ξένου SVG στον server είναι επιφάνεια επίθεσης) · ⛔ όχι `gif`
- * (θα έχανε την κίνηση σιωπηλά) · ⛔ όχι `heic` (το prebuilt `sharp` δεν τον διαβάζει).
+ * **Τύποι που προεπισκοπούνται** = οι raster τύποι που αποκωδικοποιεί η πλατφόρμα — **ο ίδιος** κατάλογος με τη μέτρηση
+ * διαστάσεων (`lib/images/image-dimensions`, ADR-899 §3.7): ό,τι μετριέται προεπισκοπείται, και αντίστροφα.
  */
-export const PREVIEWABLE_IMAGE_TYPES: ReadonlySet<string> = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/avif',
-  'image/tiff',
-]);
-
-/** `image/JPEG; charset=…` ⇒ `image/jpeg`. */
-function mediaTypeOf(contentType: string): string {
-  return contentType.split(';')[0].trim().toLowerCase();
-}
+export const PREVIEWABLE_IMAGE_TYPES: ReadonlySet<string> = RASTER_IMAGE_TYPES;
 
 export function isPreviewableContentType(contentType: unknown): boolean {
-  return typeof contentType === 'string' && PREVIEWABLE_IMAGE_TYPES.has(mediaTypeOf(contentType));
+  return isRasterImageContentType(contentType);
 }
 
 export function isFilePreviewWidth(value: number): boolean {
@@ -79,4 +68,44 @@ export function filePreviewWidthOf(raw: string): number | null {
   if (!/^[1-9]\d{0,4}$/.test(raw)) return null;
   const width = Number(raw);
   return isFilePreviewWidth(width) ? width : null;
+}
+
+/** Η έκβαση της επιλογής βαθμίδας: πλάτος της κλίμακας, ή «μόνο το πρωτότυπο αρκεί». */
+export type FilePreviewChoice = number | 'original';
+
+/**
+ * **Η κλίμακα αυτού του αρχείου** — έως την **πρώτη** βαθμίδα που καλύπτει το πλάτος του πρωτοτύπου (ADR-899 §3.7, Π2).
+ *
+ * 🔑 Ο κωδικοποιητής **ποτέ** δεν μεγεθύνει: για πρωτότυπο 1.183 px τα `w=1280` και `w=2560` δίνουν **τα ίδια** bytes.
+ * Μια βαθμίδα πάνω από την πρώτη επαρκή είναι άρα αίτημα, κλειδί cache και κωδικοποίηση **για το τίποτα**.
+ * Χωρίς γνωστό πλάτος ⇒ ολόκληρη η κλίμακα (καμία επινοημένη διάσταση).
+ */
+export function previewWidthsFor(intrinsicWidth: number | null | undefined): readonly number[] {
+  const widths = FILE_PREVIEW_ENCODING.widths;
+  if (typeof intrinsicWidth !== 'number' || !(intrinsicWidth > 0)) return widths;
+  const covering = widths.findIndex((width) => width >= intrinsicWidth);
+  return covering === -1 ? widths : widths.slice(0, covering + 1);
+}
+
+/**
+ * **Το πλάτος που ΠΡΑΓΜΑΤΙΚΑ παράγεται** για αίτημα `requested` — η κανονική μορφή του κλειδιού στον server.
+ * `requested` πάνω από την πρώτη επαρκή βαθμίδα ⇒ εκείνη (ίδια bytes, **ένα** κλειδί, **μία** κωδικοποίηση).
+ */
+export function effectivePreviewWidth(requested: number, intrinsicWidth: number | null | undefined): number {
+  const widths = previewWidthsFor(intrinsicWidth);
+  return Math.min(requested, widths[widths.length - 1]);
+}
+
+/**
+ * **Ποια βαθμίδα αρκεί για `neededDevicePx` pixel συσκευής;** — η **μικρότερη** που τα καλύπτει.
+ *
+ * 🔑 Πιο έξυπνο από το «zoom ⇒ πρωτότυπο» των περισσότερων viewers (Immich, PhotoPrism): σε 2× zoom πάνελ
+ * 600 px με DPR 2 χρειάζονται 2.400 ⇒ αρκεί το `w=2560` (εκατοντάδες KB), όχι ένα πρωτότυπο 8 MB. Το πρωτότυπο
+ * ζητείται **μόνο** όταν η ανάγκη ξεπερνά την κορυφή της κλίμακας — ή, με γνωστό πλάτος, το **ίδιο το πρωτότυπο**: τότε
+ * κανένα παράγωγο δεν έχει περισσότερα pixel, και τα αληθινά έρχονται χωρίς ξανασυμπίεση (γραμμές κάτοψης png).
+ */
+export function filePreviewWidthFor(neededDevicePx: number, intrinsicWidth?: number | null): FilePreviewChoice {
+  const needed = Number.isFinite(neededDevicePx) ? neededDevicePx : Number.POSITIVE_INFINITY;
+  if (typeof intrinsicWidth === 'number' && intrinsicWidth > 0 && needed > intrinsicWidth) return 'original';
+  return previewWidthsFor(intrinsicWidth).find((width) => width >= needed) ?? 'original';
 }

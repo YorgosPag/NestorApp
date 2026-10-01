@@ -189,10 +189,7 @@ export function FilesList({
           {/* File info */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <FileThumbnail
-              ext={file.ext}
-              contentType={file.contentType}
-              thumbnailUrl={file.thumbnailUrl}
-              downloadUrl={file.downloadUrl}
+              file={file}
               displayName={translateDisplayName(file)}
               size="sm"
               borderRadius={quick.card}

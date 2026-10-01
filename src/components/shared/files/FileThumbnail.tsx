@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Universal file thumbnail component that handles:
- * - Images → direct preview from downloadUrl
+ * - Images → server-side derivative (`preview` srcset, ADR-899 §4.1) → client `_thumb` → icon
  * - PDFs → auto-generated page 1 preview (via pdfjs-dist)
  * - Other files → semantic file type icon
  *
@@ -14,27 +14,31 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import { cn } from '@/lib/utils';
 import { getFileIconInfo, isImageFile, isPdfFile } from './utils/file-icons';
 import { usePdfThumbnail } from './hooks/usePdfThumbnail';
+import {
+  THUMBNAIL_SIZE_CONFIG,
+  thumbnailCandidatesKey,
+  thumbnailCandidatesOf,
+  type FileThumbnailSubject,
+  type ThumbnailCandidate,
+  type ThumbnailSize,
+} from './file-thumbnail-sources';
 import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-type ThumbnailSize = 'xs' | 'sm' | 'md' | 'lg';
-
 interface FileThumbnailProps {
-  /** File extension (e.g., 'pdf', 'jpg') */
-  ext?: string;
-  /** MIME content type */
-  contentType?: string;
-  /** Pre-existing thumbnail URL (e.g., from upload-time generation) */
-  thumbnailUrl?: string;
-  /** File download URL (for images: shown directly, for PDFs: used for generation) */
-  downloadUrl?: string;
+  /**
+   * Η εγγραφή — **ολόκληρη**, όχι ένα `downloadUrl` (ADR-899 §4.1): η μικρογραφία ρωτά τον ΕΝΑ αναγνώστη
+   * (`fileDisplayUrlOf`) και παίρνει παράγωγο του server στο μέγεθος του κουτιού.
+   */
+  file: FileThumbnailSubject;
   /** Display name for alt text */
   displayName?: string;
   /** Size variant */
@@ -46,66 +50,47 @@ interface FileThumbnailProps {
 }
 
 // ============================================================================
-// SIZE CONFIG
-// ============================================================================
-
-const SIZE_CONFIG: Record<ThumbnailSize, { container: string; iconSize: string }> = {
-  xs: { container: 'w-8 h-8', iconSize: 'h-4 w-4' },
-  sm: { container: 'w-10 h-10', iconSize: 'h-5 w-5' },
-  md: { container: 'w-16 h-16', iconSize: 'h-8 w-8' },
-  lg: { container: 'w-24 h-24', iconSize: 'h-12 w-12' },
-};
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function FileThumbnail({
-  ext,
-  contentType,
-  thumbnailUrl,
-  downloadUrl,
+  file,
   displayName = '',
   size = 'sm',
   className,
   borderRadius = 'rounded-md',
 }: FileThumbnailProps) {
-  const sizeConfig = SIZE_CONFIG[size];
+  const sizeConfig = THUMBNAIL_SIZE_CONFIG[size];
+  const ext = file.ext ?? undefined;
+  const contentType = file.contentType ?? undefined;
   const isImage = isImageFile(ext, contentType);
   const isPdf = isPdfFile(ext, contentType);
 
-  // Pre-existing thumbnail takes priority
-  const hasPreExistingThumb = !!thumbnailUrl;
+  const candidates = useMemo(
+    () => thumbnailCandidatesOf(file, { isImage }, sizeConfig.px),
+    [file, isImage, sizeConfig.px],
+  );
+  const candidatesKey = thumbnailCandidatesKey(candidates);
 
-  // PDF thumbnail generation (only when no pre-existing thumb and file is PDF)
+  // Κλιμάκωση σφαλμάτων: κάθε `onError` προχωρά στην επόμενη πηγή. Δεμένη στην ταυτότητα της λίστας ⇒
+  // νέο αρχείο = ξανά από την αρχή, χωρίς effect.
+  const [failure, setFailure] = useState({ key: candidatesKey, index: 0 });
+  const index = failure.key === candidatesKey ? failure.index : 0;
+  const candidate = candidates[index] ?? null;
+  const handleImageError = useCallback(() => {
+    setFailure({ key: candidatesKey, index: index + 1 });
+  }, [candidatesKey, index]);
+
+  // PDF: σελίδα 1, μόνο όταν εξαντληθούν οι έτοιμες πηγές (π.χ. δεν υπάρχει `_thumb`).
   const { thumbnailUrl: pdfThumbUrl, loading: pdfLoading } = usePdfThumbnail(
-    downloadUrl,
-    isPdf && !hasPreExistingThumb,
+    fileDisplayUrl(file) ?? undefined,
+    isPdf && !candidate,
   );
 
-  // Two-phase error state: thumbnail → downloadUrl → icon fallback
-  const [thumbError, setThumbError] = useState(false);
-  const [downloadError, setDownloadError] = useState(false);
-
-  const handleImageError = useCallback(() => {
-    if (hasPreExistingThumb && !thumbError) {
-      setThumbError(true);
-    } else {
-      setDownloadError(true);
-    }
-  }, [hasPreExistingThumb, thumbError]);
-
-  // Determine what to show (cascade: thumbnailUrl → downloadUrl → icon)
-  const effectiveThumbUrl = hasPreExistingThumb && !thumbError
-    ? thumbnailUrl
-    : isPdf
-      ? pdfThumbUrl
-      : isImage && !downloadError
-        ? downloadUrl
-        : null;
+  const shown: ThumbnailCandidate | null = candidate ?? (isPdf && pdfThumbUrl ? { src: pdfThumbUrl } : null);
 
   // Show image/thumbnail preview
-  if (effectiveThumbUrl) {
+  if (shown) {
     return (
       <figure
         className={cn(
@@ -116,10 +101,13 @@ export function FileThumbnail({
         )}
       >
         <img
-          src={effectiveThumbUrl}
+          src={shown.src}
+          srcSet={shown.srcSet}
+          sizes={shown.sizes}
           alt={displayName}
           loading="lazy"
-          onError={handleImageError}
+          decoding="async"
+          onError={candidate ? handleImageError : undefined}
           className="w-full h-full object-cover"
         />
       </figure>

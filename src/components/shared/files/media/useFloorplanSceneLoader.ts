@@ -22,6 +22,7 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { API_ROUTES } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord, DxfSceneData } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import { toDxfSceneData } from '@/services/floorplans/dxf-scene-data-projection';
 
 // ============================================================================
@@ -84,6 +85,12 @@ export function useFloorplanSceneLoader(
     return unsub;
   }, [currentFile?.id, isDxf]);
 
+  // ADR-899 §4.1 — ⚠️ ΠΑΓΙΔΑ CAD: σε εγγραφές CAD το αποθηκευμένο `downloadUrl` δείχνει στο **`.scene.json`**
+  //    (μετρημένο στην παραγωγή, ADR-899 §2.2). Ο αναγνώστης επιστρέφει **πρώτα** το αποθηκευμένο `downloadUrl` ⇒
+  //    όπου υπάρχει, η συμπεριφορά μένει ΤΑΥΤΟΣΗΜΗ. Μόνο όπου λείπει παράγεται από το `storagePath` — το ίδιο
+  //    αντικείμενο από το οποίο βγαίνει το `fileExt` (json ⇒ PATH C, dxf ⇒ PATH D).
+  const fileUrl = currentFile ? fileDisplayUrl(currentFile) : null;
+
   useEffect(() => {
     // Guard: only DXF/JSON files
     if (!currentFile || !isDxf) {
@@ -136,15 +143,15 @@ export function useFloorplanSceneLoader(
         return;
       }
 
-      // From here: NO processedData — need to fetch + parse from downloadUrl
-      if (!currentFile.downloadUrl) return;
+      // From here: NO processedData — need to fetch + parse the file bytes
+      if (!fileUrl) return;
 
       // -- PATH C: JSON scene files (FloorplanSaveOrchestrator) --
       if (fileExt === 'json') {
         setIsLoading(true);
         setSceneError(null);
         try {
-          const response = await fetch(currentFile.downloadUrl);
+          const response = await fetch(fileUrl);
           if (cancelled) return;
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const sceneData: DxfSceneData = await response.json();
@@ -167,7 +174,7 @@ export function useFloorplanSceneLoader(
       setSceneError(null);
       try {
         logger.info('Client-side DXF parsing', { displayName: currentFile.displayName });
-        const resp = await fetch(currentFile.downloadUrl);
+        const resp = await fetch(fileUrl);
         if (cancelled) return;
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const blob = await resp.blob();
@@ -205,7 +212,7 @@ export function useFloorplanSceneLoader(
     return () => { cancelled = true; };
     // ADR-716 Φ5 — το `userDrawingUnits` ΕΙΝΑΙ είσοδος του parse: αν αλλάξει, η σκηνή
     // πρέπει να ξαναχτιστεί, αλλιώς η οθόνη δείχνει την παλιά κλίμακα.
-  }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl,
+  }, [currentFile?.id, currentFile?.processedData, fileUrl,
       currentFile?.status, currentFile?.originalFilename, currentFile?.userDrawingUnits,
       isDxf, fileExt, t, refetchToken]);
 

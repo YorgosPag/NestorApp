@@ -19,6 +19,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import { videoPlayerProgressStyles } from './VideoPlayer.styles';
 import '@/lib/design-system';
 
@@ -71,7 +72,7 @@ export function VideoPlayer({ file, autoPlay = false, showControls = true, onEnd
       className={cn('relative bg-black rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-ring', className)}
     >
       <video
-        ref={videoRef} src={file.downloadUrl ?? undefined} autoPlay={autoPlay} playsInline
+        ref={videoRef} src={fileDisplayUrl(file) ?? undefined} autoPlay={autoPlay} playsInline
         onClick={togglePlay} onLoadedMetadata={handleLoadedMetadata} onTimeUpdate={handleTimeUpdate}
         onProgress={handleProgress} onEnded={handleEnded} onError={handleError}
         onWaiting={handleWaiting} onCanPlay={handleCanPlay} className="w-full h-full object-contain"

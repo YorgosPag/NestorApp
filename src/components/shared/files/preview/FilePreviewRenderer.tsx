@@ -46,6 +46,8 @@ import { TxtPreview } from '@/components/file-manager/preview/TxtPreview';
 import { HtmlPreview } from '@/components/file-manager/preview/HtmlPreview';
 import { DxfPreview } from '@/components/file-manager/preview/DxfPreview';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
+import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
+import { useZoomResolution } from './use-zoom-resolution';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -69,6 +71,11 @@ export interface FilePreviewRendererProps {
   onDownload?: () => void;
   /** Optional class forwarded to the outer section */
   className?: string;
+  /**
+   * Παράγωγα κατ' απαίτηση της εικόνας (ADR-899 §4.1) — από τον `fileDisplayUrlOf`. Όταν δίνεται, η εικόνα ανοίγει
+   * σε βαθμίδα στο μέγεθος του κουτιού και **ανεβαίνει** βαθμίδα μόνο όταν το zoom το απαιτεί· χωρίς αυτό, το `url`.
+   */
+  preview?: ProxyImagePreview | null;
 }
 
 // ============================================================================
@@ -88,11 +95,12 @@ const IMG_MAX_ZOOM = 10;
 const IMG_WHEEL_FACTOR = 1.15;
 
 /** Image/SVG preview with cursor-centered wheel zoom + drag-to-pan */
-function ImagePreview({ url, title }: { url: string; title: string }) {
+function ImagePreview({ url, preview, title }: { url: string; preview?: ProxyImagePreview | null; title: string }) {
   const colors = useSemanticColors();
   const [displayZoom, setDisplayZoom] = useState(1);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const source = useZoomResolution(url, preview, containerRef, displayZoom);
   const imgRef = useRef<HTMLImageElement>(null);
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
@@ -202,10 +210,11 @@ function ImagePreview({ url, title }: { url: string; title: string }) {
         className="flex-1 overflow-hidden flex items-center justify-center p-4 bg-muted/20">
         <img
           ref={imgRef}
-          src={url}
+          src={source.src}
+          srcSet={source.srcSet}
+          sizes={source.sizes}
           alt={title}
-          className="max-w-full max-h-full object-contain"
-          style={{ transformOrigin: 'center', userSelect: 'none' }}
+          className="max-w-full max-h-full object-contain origin-center select-none"
           draggable={false}
           loading="lazy"
         />
@@ -297,6 +306,7 @@ export function FilePreviewRenderer({
   sizeBytes,
   onDownload,
   className,
+  preview,
 }: FilePreviewRendererProps) {
   const previewType: PreviewType = getPreviewType(contentType, fileName);
   const hasUrl = !!url;
@@ -318,7 +328,7 @@ export function FilePreviewRenderer({
   return (
     <section className={cn('flex flex-col flex-1 min-h-[400px]', className)}>
       {previewType === 'pdf' && <PdfPreview url={url!} fileId={fileId} title={displayName} />}
-      {previewType === 'image' && <ImagePreview url={url!} title={displayName} />}
+      {previewType === 'image' && <ImagePreview url={url!} preview={preview} title={displayName} />}
       {previewType === 'video' && <VideoPreview url={url!} title={displayName} />}
       {previewType === 'audio' && <AudioPreview url={url!} title={displayName} />}
       {previewType === 'docx' && <DocxPreview url={url!} title={displayName} />}

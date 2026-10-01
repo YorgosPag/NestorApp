@@ -33,6 +33,7 @@ import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 
 // =============================================================================
 // LOGGER
@@ -277,7 +278,7 @@ export class FloorplanSaveOrchestrator {
       }
 
       if (thumbnailBlob) {
-        const thumbPath = `${storagePath}_thumb.png`;
+        const thumbPath = fileCompanionPath(storagePath, 'floorplanThumbnail');
         const thumbRef = ref(storage, thumbPath);
         await uploadBytes(thumbRef, thumbnailBlob, { contentType: 'image/png' });
         return await getDownloadURL(thumbRef);

@@ -33,8 +33,7 @@ import { SearchInput } from '@/components/ui/search';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
 import { BatchActionsBar } from '@/components/file-manager/BatchActionsBar';
-import { FileThumbnail } from './FileThumbnail';
-import { formatFileSize } from '@/utils/file-validation';
+import { FileTileSummary } from './FileTileSummary';
 import type { EntityType, FileCategory } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import type { FileCustody } from '@/lib/files/file-custody';
@@ -463,20 +462,7 @@ function GalleryView(props: EntityFilesContentProps) {
           className="cursor-pointer rounded-lg border bg-card hover:bg-accent/50 transition-colors p-4 flex flex-col items-center text-center gap-3"
           onClick={() => props.onView(file)}
         >
-          <FileThumbnail
-            ext={file.ext}
-            contentType={file.contentType}
-            thumbnailUrl={file.thumbnailUrl}
-            downloadUrl={file.downloadUrl}
-            displayName={file.displayName || ''}
-            size="md"
-          />
-          <p className="text-sm font-medium truncate w-full">
-            {file.displayName || file.originalFilename}
-          </p>
-          <p className={cn("text-xs", colors.text.muted)}>
-            {formatFileSize(file.sizeBytes || 0)}
-          </p>
+          <FileTileSummary file={file} />
         </article>
       ))}
       {props.filteredFiles.length === 0 && (

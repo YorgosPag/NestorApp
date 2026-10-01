@@ -24,6 +24,7 @@ import {
   downloadFileFromProxyWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { fileCustodyKindOf } from '@/lib/files/file-custody';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
 // ============================================================================
@@ -137,8 +138,10 @@ function ensureFileExtension(
 
 export function useFileDownload(): UseFileDownloadReturn {
   const handleDownload = useCallback(async (file: DownloadableFile) => {
-    if (!file.id && !file.downloadUrl) {
-      logger.warn('Download requested but neither id nor downloadUrl available', {
+    // ADR-899 §4.1 — η εφεδρεία από τον ΕΝΑ αναγνώστη: `downloadUrl` ή, ελλείψει, το proxy του `storagePath`.
+    const fallbackUrl = file.id ? null : fileDisplayUrl(file);
+    if (!file.id && !fallbackUrl) {
+      logger.warn('Download requested but neither id nor a display URL available', {
         displayName: file.displayName,
       });
       return;
@@ -155,7 +158,7 @@ export function useFileDownload(): UseFileDownloadReturn {
       //    διεύρυνση· ποτέ «δοκίμασε και τα δύο».
       const blob = file.id
         ? await downloadFileByIdWithPolicy(file.id, file.custody ?? fileCustodyKindOf(file) ?? 'company')
-        : await downloadFileFromProxyWithPolicy(file.downloadUrl as string, file.displayName);
+        : await downloadFileFromProxyWithPolicy(fallbackUrl as string, file.displayName);
       const objectUrl = URL.createObjectURL(blob);
 
       const downloadName = ensureFileExtension(file.displayName, file.ext, file.originalFilename, blob.type);

@@ -28,6 +28,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
 import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
+import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted helpers + fetch hook
@@ -49,6 +50,29 @@ export interface InboxViewProps {
   companyId: string;
   currentUserId: string;
   onRefresh?: () => void;
+}
+
+// ============================================================================
+// HEADER — ίδια κεφαλίδα σε φόρτωση και άδεια κατάσταση (CHECK 3.28: ήταν δίδυμη)
+// ============================================================================
+
+function InboxStateHeader({ onRefresh }: { readonly onRefresh?: () => void }) {
+  const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { t } = useTranslation(['files', 'files-media']);
+  return (
+    <header className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Inbox className={cn(iconSizes.md, colors.text.muted)} />
+        <h2 className="text-lg font-semibold">{t('domains.ingestion')}</h2>
+      </div>
+      {onRefresh && (
+        <Button variant="ghost" size="sm" onClick={onRefresh} aria-label={t('manager.refresh')}>
+          <RefreshCw className={iconSizes.sm} />
+        </Button>
+      )}
+    </header>
+  );
 }
 
 // ============================================================================
@@ -80,18 +104,13 @@ export function InboxView({
   }, []);
 
   const handlePreview = useCallback((file: InboxFileRecord) => {
-    openRemoteUrlInNewTab(file.downloadUrl);
+    openRemoteUrlInNewTab(fileDisplayUrl(file));
   }, []);
 
   if (loading) {
     return (
       <section className="space-y-4 p-4" role="status" aria-label={t('list.loadingFiles')}>
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Inbox className={cn(iconSizes.md, colors.text.muted)} />
-            <h2 className="text-lg font-semibold">{t('domains.ingestion')}</h2>
-          </div>
-        </header>
+        <InboxStateHeader />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className={`p-4 bg-card ${quick.card} border animate-pulse`} aria-hidden="true">
@@ -114,15 +133,7 @@ export function InboxView({
   if (inboxFiles.length === 0) {
     return (
       <section className="space-y-4 p-4">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Inbox className={cn(iconSizes.md, colors.text.muted)} />
-            <h2 className="text-lg font-semibold">{t('domains.ingestion')}</h2>
-          </div>
-          <Button variant="ghost" size="sm" onClick={fetchInboxFiles} aria-label={t('manager.refresh')}>
-            <RefreshCw className={iconSizes.sm} />
-          </Button>
-        </header>
+        <InboxStateHeader onRefresh={fetchInboxFiles} />
         <div className={`p-8 text-center ${colors.bg.muted} ${quick.card}`} role="status">
           <Inbox className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
           <p className="text-sm font-medium">{t('inbox.empty')}</p>
@@ -208,11 +219,11 @@ export function InboxView({
                       </div>
                       <nav className="flex items-center gap-1" role="toolbar">
                         <Tooltip><TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" onClick={() => handlePreview(file)} disabled={!file.downloadUrl} aria-label={t('list.viewFile')}>
+                          <Button variant="ghost" size="sm" onClick={() => handlePreview(file)} disabled={!fileDisplayUrl(file)} aria-label={t('list.viewFile')}>
                             <Eye className={iconSizes.sm} />
                           </Button>
                         </TooltipTrigger><TooltipContent>{t('list.viewFile')}</TooltipContent></Tooltip>
-                        {file.downloadUrl && (
+                        {fileDisplayUrl(file) && (
                           <Tooltip><TooltipTrigger asChild>
                             <Button variant="ghost" size="sm" onClick={() => handlePreview(file)} aria-label={t('list.download')}>
                               <ExternalLink className={iconSizes.sm} />

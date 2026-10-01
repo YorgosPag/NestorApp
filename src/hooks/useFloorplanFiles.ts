@@ -128,8 +128,10 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
   const processUnprocessedFiles = useCallback(async (fileRecords: FileRecord[]) => {
     if (!autoProcess || !user) return;
 
+    // ADR-899 §4.1 — ο διακομιστής (`floorplan-process.service`) διαβάζει τα bytes από το **`storagePath`**, όχι από
+    //    το `downloadUrl` ⇒ αυτό ρωτάμε. Πριν: εγγραφή χωρίς `downloadUrl` δεν επεξεργαζόταν ποτέ.
     const unprocessed = fileRecords.filter(
-      f => !f.processedData && f.downloadUrl && f.status === 'ready'
+      f => !f.processedData && !!f.storagePath && f.status === 'ready'
     );
 
     if (unprocessed.length === 0) return;

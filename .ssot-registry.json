@@ -1077,6 +1077,24 @@
         "src/i18n/locales/"
       ]
     },
+    "file-display-url": {
+      "ssotFile": "src/lib/files/file-display-url.ts",
+      "description": "ADR-899 §4.1 — client code must NOT read `record.downloadUrl` to show/open/fetch a file: ask the ONE display reader `fileDisplayUrlOf()`/`fileDisplayUrl()` (stored URL first, else proxy of `storagePath`; `preview` = server derivatives). Records without `downloadUrl` stayed hidden and thumbnails downloaded full originals. Server trees (api/services/server) are writers, allowlisted.",
+      "forbiddenPatterns": [
+        "[\\w$)\\]]\\??\\.downloadUrl\\b(?!['\\\"`])(?!\\s*=(?!=))"
+      ],
+      "allowlist": [
+        "src/lib/files/file-display-url.ts",
+        "src/app/api/",
+        "src/services/",
+        "src/server/",
+        "src/components/shared/files/VersionHistory.tsx",
+        "src/hooks/useFloorplanUpload.ts"
+      ],
+      "tier": 3,
+      "addedDate": "2026-10-02",
+      "addedByAdr": "ADR-899"
+    },
     "file-download": {
       "ssotFile": "src/components/shared/files/hooks/useFileDownload.ts",
       "description": "User file downloads (FileRecord from Storage) must use useFileDownload hook — no window.open or inline anchor.download. Generated exports (PDF/CSV/Excel/ZIP/PNG/IFC/TXT) belong to the export-file module (Domain B).",

@@ -38,9 +38,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PageLoadingState } from '@/core/states';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { FileThumbnail } from '@/components/shared/files/FileThumbnail';
+import { FileTileSummary } from '@/components/shared/files/FileTileSummary';
 import { Badge } from '@/components/ui/badge';
-import { formatFileSize } from '@/utils/file-validation';
 
 // 🏢 ENTERPRISE: Error Boundary
 import {
@@ -98,7 +97,6 @@ interface FileCardProps {
 
 function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
   const { t } = useTranslation(['files', 'files-media']);
-  const colors = useSemanticColors();
 
   return (
     <Card
@@ -108,20 +106,7 @@ function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
     >
       <CardContent className="p-4">
         <article className="flex flex-col items-center text-center gap-3">
-          <FileThumbnail
-            ext={file.ext}
-            contentType={file.contentType}
-            thumbnailUrl={file.thumbnailUrl}
-            downloadUrl={file.downloadUrl}
-            displayName={file.displayName || ''}
-            size="md"
-          />
-          <p className="text-sm font-medium truncate w-full">
-            {file.displayName || file.originalFilename}
-          </p>
-          <p className={cn('text-xs', colors.text.muted)}>
-            {formatFileSize(file.sizeBytes || 0)}
-          </p>
+          <FileTileSummary file={file} />
           <Badge variant="secondary" className="text-xs">
             {t(`categories.${file.category}`) || file.category}
           </Badge>

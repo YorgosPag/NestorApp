@@ -54,6 +54,7 @@ import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload
 import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileRecord } from '@/types/file-record';
 import { fileCustodyOf } from '@/lib/files/file-custody';
+import { fileDisplayUrlOf } from '@/lib/files/file-display-url';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -118,7 +119,12 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   const { handleDownload: downloadFile } = useFileDownload();
 
   const handleDownload = () => { if (file) downloadFile(file); };
-  const handleOpenNewTab = () => openRemoteUrlInNewTab(file?.downloadUrl);
+  // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης: `url` = το αρχείο (άνοιγμα/PDF/βίντεο), `preview` = η εικόνα που δείχνεται.
+  //    Εγγραφή χωρίς `downloadUrl` αλλά με `storagePath` δεν χάνει πια ούτε προβολή ούτε ενέργειες.
+  const display = useMemo(() => (file ? fileDisplayUrlOf(file) : null), [file]);
+  const fileUrl = display?.kind === 'url' ? display.url : undefined;
+  const filePreview = display?.kind === 'url' ? display.preview : null;
+  const handleOpenNewTab = () => openRemoteUrlInNewTab(fileUrl);
 
   // Empty state
   if (!file) {
@@ -138,7 +144,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
 
   // 🔒 ADR-866 §2.6.8 Β6 — **το ίδιο το αρχείο** λέει σε ποιον ανήκει. Κοινοποίηση · σχόλια · έγκριση ·
   //    ISO 19650 είναι έννοιες/διαδρομές ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files` ⇒ **κρυμμένα** για προσωπικό
-  //    κάτοχο. Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν: διαβάζουν το `downloadUrl` (Storage `people/`).
+  //    κάτοχο. Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν: διαβάζουν τον `fileDisplayUrlOf` (Storage `people/`).
   //
   // ✅ **ΞΕΚΛΕΙΔΩΘΗΚΑΝ**: η **λήψη** (2β.3α), οι **εκδόσεις** (2β.3β) και η **δραστηριότητα** (2β.4) —
   //    ADR-866 Ε-Φ0-1/Ε-Φ0-3, όπως το Google Drive «Ο Δίσκος μου» (Manage versions · Activity).
@@ -162,7 +168,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
 
         {/* Actions */}
         <nav className="flex items-center gap-1 flex-shrink-0">
-          {file.downloadUrl && (
+          {fileUrl && (
             <>
               {/* ADR-866 §2.6.9 — η λήψη περνά από τον διακομιστή και για προσωπικό αρχείο
                   (`?custody=personal`): δεν είναι ενέργεια γραφείου. */}
@@ -387,7 +393,8 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
 
       {/* Preview area — SSoT renderer, shared with public share page */}
       <FilePreviewRenderer
-        url={file.downloadUrl}
+        url={fileUrl}
+        preview={filePreview}
         contentType={file.contentType}
         fileName={file.originalFilename}
         displayName={displayName}

@@ -23,6 +23,7 @@
 import React from 'react';
 
 import { FileThumbnail } from '@/components/shared/files/FileThumbnail';
+import type { FileThumbnailSubject } from '@/components/shared/files/file-thumbnail-sources';
 
 export interface ListingMaterialPanelProps {
   /** Σταθερό αναγνωριστικό για τον δεσμό `aria-labelledby` — μοναδικό ανά οθόνη. */
@@ -86,9 +87,8 @@ export function ListingMaterialPanel({
 }
 
 export interface ListingMaterialRowProps {
-  readonly contentType: string;
-  readonly thumbnailUrl?: string;
-  readonly downloadUrl?: string;
+  /** Η εγγραφή — η μικρογραφία ρωτά μόνη της τον αναγνώστη εμφάνισης (ADR-899 §4.1). */
+  readonly file: FileThumbnailSubject;
   readonly displayName: string;
   /** Η **πράξη** αυτής της γραμμής — το μόνο που διαφέρει ανάμεσα στις δύο οθόνες. */
   readonly children: React.ReactNode;
@@ -102,18 +102,14 @@ export interface ListingMaterialRowProps {
  * αποφασίσει **στα τυφλά** για το τι βλέπει ο κόσμος.
  */
 export function ListingMaterialRow({
-  contentType,
-  thumbnailUrl,
-  downloadUrl,
+  file,
   displayName,
   children,
 }: ListingMaterialRowProps) {
   return (
     <li className="flex items-center gap-3 rounded-md border border-border p-2">
       <FileThumbnail
-        contentType={contentType}
-        thumbnailUrl={thumbnailUrl}
-        downloadUrl={downloadUrl}
+        file={file}
         displayName={displayName}
         size="sm"
       />
