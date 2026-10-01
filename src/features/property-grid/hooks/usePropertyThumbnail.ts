@@ -1,31 +1,70 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FileRecordService } from '@/services/file-record.service';
-import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
-import { useCompanyId } from '@/hooks/useCompanyId';
+/**
+ * @fileoverview 📷 **Οι φωτογραφίες ενός ακινήτου του γραφείου** — κεφαλίδα, κάρτα πλέγματος (ADR-777 §8.30).
+ * @related lib/properties/property-photos (η σειρά + το URL) · hooks/useAsyncData (ADR-223)
+ * @module features/property-grid/hooks/usePropertyThumbnail
+ *
+ * 🔴 **Τρεις καταστάσεις, ποτέ σιωπή** (2026-10-01): το προηγούμενο hook έκανε `.catch(() => {})` και
+ *   `files.find(f => f.downloadUrl)` — ένα σφάλμα ανάγνωσης και μια εγγραφή χωρίς `downloadUrl` έβγαζαν **το ίδιο**
+ *   εικονίδιο-σπίτι, και κανείς δεν μπορούσε να καταλάβει ποιο από τα δύο συνέβη. Τώρα: `failed` + log για το
+ *   πρώτο, URL από τον έναν αναγνώστη για το δεύτερο, και log για ό,τι μένει αδύνατο να δειχτεί.
+ * 🔑 **Σειρά απαντήσεων και unmount ανήκουν στο `useAsyncData`** — κανένα δεύτερο `cancelled` flag.
+ */
 
-export function usePropertyThumbnail(propertyId: string): string | undefined {
-  const [url, setUrl] = useState<string | undefined>(undefined);
-  const { companyId } = useCompanyId() ?? {};
+import { useEffect, useMemo } from 'react';
 
+import { FILE_CATEGORIES } from '@/config/domain-constants';
+import {
+  propertyPhotosOf,
+  type PropertyPhoto,
+  type PropertyPhotoDeclarationSource,
+} from '@/lib/properties/property-photos';
+import { createModuleLogger } from '@/lib/telemetry';
+
+import { usePropertyFileRecords } from './usePropertyFileRecords';
+
+const logger = createModuleLogger('usePropertyPhotos');
+
+export type PropertyPhotosState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly photos: readonly PropertyPhoto[] }
+  | { readonly kind: 'failed' };
+
+/** Το ακίνητο όπως το χρειάζεται το hook: ταυτότητα + τα ωμά πεδία δήλωσης. */
+export interface PropertyPhotosSubject extends PropertyPhotoDeclarationSource {
+  readonly id: string;
+}
+
+const LOADING: PropertyPhotosState = { kind: 'loading' };
+const FAILED: PropertyPhotosState = { kind: 'failed' };
+
+/** **Οι φωτογραφίες του ακινήτου**, με τη δηλωμένη σειρά (εξώφυλλο πρώτο). */
+export function usePropertyPhotos(property: PropertyPhotosSubject): PropertyPhotosState {
+  const propertyId = property.id;
+  const files = usePropertyFileRecords({ propertyId, category: FILE_CATEGORIES.PHOTOS });
+
+  const { publishedMediaOrder, publishedPhotoCaptureSpots } = property;
+  const resolved = useMemo(
+    () => (files.data === null ? null : propertyPhotosOf(files.data, { publishedMediaOrder, publishedPhotoCaptureSpots })),
+    [files.data, publishedMediaOrder, publishedPhotoCaptureSpots],
+  );
+
+  const unavailable = resolved?.unavailable;
   useEffect(() => {
-    if (!companyId || !propertyId) return;
-    let cancelled = false;
+    if (unavailable !== undefined && unavailable.length > 0) {
+      logger.warn('Φωτογραφίες ακινήτου που δεν μπορούν να δειχτούν', { propertyId, unavailable });
+    }
+  }, [unavailable, propertyId]);
 
-    FileRecordService.getFilesByEntity(ENTITY_TYPES.PROPERTY, propertyId, {
-      custody: { companyId },
-      category: FILE_CATEGORIES.PHOTOS,
-    })
-      .then(files => {
-        if (cancelled) return;
-        const first = files.find(f => f.downloadUrl);
-        if (first?.downloadUrl) setUrl(first.downloadUrl);
-      })
-      .catch(() => {});
+  if (resolved !== null) return { kind: 'ready', photos: resolved.photos };
+  return files.error === null ? LOADING : FAILED;
+}
 
-    return () => { cancelled = true; };
-  }, [propertyId, companyId]);
-
-  return url;
+/** Η **πρώτη** φωτογραφία (το εξώφυλλο) — για την κάρτα πλέγματος. */
+export function usePropertyThumbnail(property: PropertyPhotosSubject): string | undefined {
+  const state = usePropertyPhotos(property);
+  const cover = state.kind === 'ready' ? state.photos[0] : undefined;
+  // Το παράγωγο, όχι το πρωτότυπο: μια κάρτα δεν κατεβάζει πια MB (ADR-899 §6).
+  return cover?.preview?.src ?? cover?.url;
 }

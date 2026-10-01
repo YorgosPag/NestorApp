@@ -2,8 +2,11 @@
 
 /**
  * @fileoverview 📍 **ΤΟ ΠΑΝΕΛ «ΠΟΥ ΤΡΑΒΗΧΤΗΚΕ»** — δίπλα στη φωτογραφία, όλες οι κατόψεις με σημεία (ADR-897 Φ4 · πρότυπο Zillow).
- * @related ListingPhotoLightbox.tsx (ο κάτοχος) · ListingFloorplanSpotsFigure.tsx (κάθε κάτοψη)
- * @module components/listing-detail/media/PhotoFloorplanPanel
+ * @related PhotoLightbox.tsx (ο κάτοχος) · FloorplanSpotsFigure.tsx (κάθε κάτοψη) · lib/media/photo-floorplan-spots
+ * @module components/shared/media/PhotoFloorplanPanel
+ *
+ * 🔑 **Ουδέτερο ως προς την πηγή** (ADR-899 §8): δημόσια αγγελία **και** ιδιωτικό ακίνητο δίνουν το ίδιο
+ *   `FloorplanSpotsEntry` μέσω δικού τους προσαρμογέα — ένα πάνελ, όχι δύο.
  *
  * 🔑 **Όλοι οι όροφοι μαζί, όχι καρτέλες** — όπως η Zillow («Floor 1» · «Basement»): ο επισκέπτης βλέπει **όλα** τα
  *   σημεία με μια ματιά και πηδά σε όποιον όροφο θέλει χωρίς να ψάξει σε ποια καρτέλα είναι.
@@ -12,12 +15,12 @@
  */
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { floorplanSpotsOf, type ListingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
+import { floorplanEntryOf, type FloorplanSpotsEntry } from '@/lib/media/photo-floorplan-spots';
 
-import { ListingFloorplanSpotsFigure } from './ListingFloorplanSpotsFigure';
+import { FloorplanSpotsFigure } from './FloorplanSpotsFigure';
 
 export interface PhotoFloorplanPanelProps {
-  readonly floorplans: readonly ListingFloorplanSpots[];
+  readonly floorplans: readonly FloorplanSpotsEntry[];
   readonly total: number;
   readonly currentIndex: number;
   readonly onGo: (imageIndex: number) => void;
@@ -25,7 +28,7 @@ export interface PhotoFloorplanPanelProps {
 
 export function PhotoFloorplanPanel({ floorplans, total, currentIndex, onGo }: PhotoFloorplanPanelProps) {
   const { t } = useTranslation(['listing-detail']);
-  const placed = floorplanSpotsOf(floorplans, currentIndex) !== null;
+  const placed = floorplanEntryOf(floorplans, currentIndex) !== null;
 
   return (
     <aside aria-labelledby="photo-floorplan-panel-title"
@@ -41,8 +44,8 @@ export function PhotoFloorplanPanel({ floorplans, total, currentIndex, onGo }: P
       </header>
       <ul aria-label={t('listing-detail:media.capture.floorplansLabel')} className="m-0 flex list-none flex-col gap-3 p-0">
         {floorplans.map((entry) => (
-          <li key={entry.floorplanIndex}>
-            <ListingFloorplanSpotsFigure entry={entry} total={total} currentImageIndex={currentIndex}
+          <li key={entry.key}>
+            <FloorplanSpotsFigure entry={entry} total={total} currentImageIndex={currentIndex}
               onActivate={onGo} sizes="(min-width: 1024px) 22rem, 90vw" />
           </li>
         ))}

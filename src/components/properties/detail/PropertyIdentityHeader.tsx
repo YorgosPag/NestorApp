@@ -38,18 +38,16 @@ import {
   buildCardPriceText,
   resolvePropertyBadge,
 } from '@/domain/cards/property/property-card-shared';
-import { usePropertyThumbnail } from '@/features/property-grid/hooks/usePropertyThumbnail';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 
-const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+import { PropertyHeaderGallery } from './PropertyHeaderGallery';
 
 /** Ένα γεγονός της ταυτότητας: ετικέτα + τιμή. `<dl>` γιατί **είναι** ορισμοί. */
 function IdentityFact({
@@ -80,7 +78,6 @@ export function PropertyIdentityHeader({
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'common']);
   const colors = useSemanticColors();
   const { radius, quick } = useBorderTokens();
-  const thumbnailUrl = usePropertyThumbnail(property.id);
 
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
   const price = resolveDisplayPrice(property);
@@ -97,21 +94,11 @@ export function PropertyIdentityHeader({
       className={`flex flex-col gap-4 sm:flex-row sm:items-start ${colors.bg.card} ${radius.xl} ring-1 ${colors.border.muted} p-4`}
     >
       {/*
-        Η φωτογραφία είναι **διακοσμητική** εδώ: ό,τι λέει το κάδρο το λένε ήδη ο
-        τίτλος και τα γεγονότα δίπλα. Γι' αυτό `alt=""` — ένας αναγνώστης οθόνης
-        που θα διάβαζε «φωτογραφία του Δ3» αμέσως πριν από το «Δ3» θα το έλεγε
-        δύο φορές. Και όταν λείπει, δεν κατεβαίνει εικόνα-κράτηση από τρίτο
-        διακομιστή: το εικονίδιο της οντότητας λέει την ίδια απουσία, δωρεάν.
+        Η φωτογραφία ήταν **διακοσμητική** (`alt=""`) όσο ήταν μία· πλέον είναι **γκαλερί** που ο
+        άνθρωπος πλοηγεί και ανοίγει σε πλήρη οθόνη ⇒ κάθε εικόνα έχει `alt` και κάθε slide είναι
+        κουμπί (ADR-899 §9). Το σταθερό κουτί και το εικονίδιο της απουσίας ζουν μέσα της.
       */}
-      <figure className={`m-0 shrink-0 overflow-hidden ${radius.lg} ${colors.bg.muted} h-32 w-full sm:w-48`}>
-        {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center">
-            <PropertyIcon className={`h-10 w-10 ${colors.text.muted}`} aria-hidden="true" />
-          </span>
-        )}
-      </figure>
+      <PropertyHeaderGallery property={property} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-2">

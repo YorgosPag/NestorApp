@@ -3,7 +3,7 @@
 /**
  * @fileoverview **ΠΩΣ ΚΥΛΑ Ο ΚΥΛΙΝΔΡΟΣ** — η μηχανική της γκαλερί, χωρίς καθόλου όψη.
  * @related ADR-777 §8.57 · §8.58.7 · ADR-040 (κανόνας 2: ανάγνωση τη στιγμή του συμβάντος)
- * @module components/search-results/use-gallery-scroller
+ * @module components/shared/gallery/use-gallery-scroller
  *
  * ════════════════════════════════════════════════════════════════════════════
  * 🔑 ΓΙΑΤΙ ΕΦΥΓΕ ΑΠΟ ΤΟ `ListingCardGallery` — ΚΑΙ ΓΙΑΤΙ **ΟΛΟΚΛΗΡΟ**

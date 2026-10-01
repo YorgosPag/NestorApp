@@ -13,6 +13,10 @@
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import type { ListingFloorplan, ListingImage, PublicListing } from '@/types/public-listing';
 
+import type { FloorplanFigureSource, FloorplanSpotsEntry } from '@/lib/media/photo-floorplan-spots';
+
+import { readListingNorthRad } from './floorplan-north';
+import { listingImageSrcSet } from './listing-images';
 import { readListingCaptureSpot, type ListingCaptureSpot } from './photo-capture-spot';
 
 /** Μια φωτογραφία πάνω σε κάτοψη — με τη θέση της στη σειρά του επισκέπτη. */
@@ -65,10 +69,28 @@ export function floorplanSpotsByUrl(entries: readonly ListingFloorplanSpots[]): 
   return new Map(entries.map((entry) => [entry.floorplan.value.url, entry]));
 }
 
-/** Σε ποια από τις κατόψεις-με-σημεία βρίσκεται η φωτογραφία `imageIndex` — `null` αν δεν έχει σημείο. */
-export function floorplanSpotsOf(
-  floorplans: readonly ListingFloorplanSpots[],
-  imageIndex: number,
-): ListingFloorplanSpots | null {
-  return floorplans.find((entry) => entry.photos.some((photo) => photo.imageIndex === imageIndex)) ?? null;
+/**
+ * **Δημόσια κάτοψη → ουδέτερη πηγή εικόνας** (ADR-899 §8). Οι διαστάσεις είναι **γνωστές** από το manifest του
+ * ραφιού (ADR-841 Α2.2), άρα καμία μέτρηση· το `alt` το δίνει ο καλών (μεταφρασμένο).
+ */
+export function listingFloorplanSource(floorplan: ListingFloorplan, alt: string): FloorplanFigureSource {
+  const image = floorplan.value;
+  return {
+    src: image.url,
+    srcSet: listingImageSrcSet(image),
+    alt,
+    width: image.width,
+    height: image.height,
+    northRad: readListingNorthRad(image.northRad),
+  };
+}
+
+/** **`ListingFloorplanSpots` → ουδέτερη γραμμή του πάνελ** — ο ΕΝΑΣ προσαρμογέας της αγγελίας. */
+export function toFloorplanSpotsEntry(entry: ListingFloorplanSpots, alt: string): FloorplanSpotsEntry {
+  return {
+    key: String(entry.floorplanIndex),
+    ordinal: entry.ordinal,
+    figure: listingFloorplanSource(entry.floorplan, alt),
+    photos: entry.photos,
+  };
 }

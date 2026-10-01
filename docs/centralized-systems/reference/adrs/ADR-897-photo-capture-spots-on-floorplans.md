@@ -201,3 +201,12 @@ isovist/χάρτης κάλυψης δωματίων (θέλει διανυσμ�
   (χωρίς όριο λαβής · χωρίς δακτύλιο · χωρίς περιγραφή) ⇒ κόκκινα, μετρημένο. **Εκτός ADR-897, μόνο αναφορά**: ωμά κλειδιά στην καρτέλα
   ακινήτου (`tabs.labels.*`, `panel.*`, `upload.*` — namespaces που άλλοτε φορτώνουν κι άλλοτε όχι)· 4 μένουν μόνιμα, αλλά μόνο στο **κρυφό**
   native `<select>` της Radix (`aria-hidden`). Η κάτοψη της σελίδας `/floorplan` είναι `loading="lazy"` ενώ είναι το κύριο θέμα της σελίδας.
+- **2026-10-01** — **Το πάνελ «πού τραβήχτηκε» έγινε ΟΥΔΕΤΕΡΟ ως προς την πηγή ([ADR-899](./ADR-899-on-demand-internal-image-derivatives.md) §4).**
+  `ListingPhotoLightbox` → κοινό `components/shared/media/PhotoLightbox` (στενός `LightboxPhoto`) · `PhotoFloorplanPanel` μετακόμισε στο
+  `shared/media` · νέα `FloorplanFigure` (εικόνα + βορράς + **μέτρηση** `naturalWidth/Height` όταν η πηγή δεν ξέρει διαστάσεις) και
+  `FloorplanSpotsFigure` πάνω στο σχήμα `lib/media/photo-floorplan-spots.ts`. Τα `ListingPhotoLightbox` / `ListingFloorplanFigure` /
+  `ListingFloorplanSpotsFigure` έμειναν ως προσαρμογείς **με τα ίδια props** (`toFloorplanSpotsEntry`, `listingFloorplanSource`)· το
+  `ListingFloorplanImage` απορροφήθηκε στο `FloorplanFigure` (με τα σχόλιά του)· το νεκρό πλέον `floorplanSpotsOf` αφαιρέθηκε
+  (`floorplanEntryOf`). Δεύτερος καταναλωτής: η γκαλερί της κεφαλίδας ακινήτου, με κατόψεις από `publishedFloorplans` +
+  `publishedPhotoCaptureSpots` + `publishedFloorplanNorth` (`lib/properties/property-floorplan-spots.ts`). `listing-photo-capture-spots.test.tsx`
+  πράσινο **χωρίς αλλαγή**.

@@ -31,7 +31,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
-  const thumbnailUrl = usePropertyThumbnail(property.id);
+  const thumbnailUrl = usePropertyThumbnail(property);
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
