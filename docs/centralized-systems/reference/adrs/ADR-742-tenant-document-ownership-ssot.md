@@ -2261,7 +2261,8 @@ network-messaging · app/api · υπόλοιπα · ai-pipeline · sharing · sp
 `places/__tests__/fake-firestore.ts` **διαγράφηκε** (0 καλούντες). ✅ **Και τα δύο τελευταία** (`share-gate-resolve` · `tour-tileset-baker`, με
 δεύτερη ρητή άδεια: import + `new FakeFirestore()` + `kit.instance`→`kit`) — **47/47 πριν και μετά, 0 διαφορές**. Το
 `test-utils/mock-firestore.ts` **διαγράφηκε**. 🏁 **Η μετάβαση έκλεισε: 141 καλούντες, ΕΝΑ fake.** Ο φρουρός έχασε τις
-λίστες εκκρεμοτήτων (`PENDING_CALLERS`/`LEGACY_FAKES`/Φ3) — άδειες λίστες θα ήταν νεκρός κώδικας.
+λίστες εκκρεμοτήτων (`PENDING_CALLERS`/`LEGACY_FAKES`/Φ3) — άδειες λίστες θα ήταν νεκρός κώδικας. 2026-10-01: σβήστηκε η γραμμή του
+παλιού fake από το allowlist `backend-unavailable` και προστέθηκαν τα scripts `test:firestore-contract(:emulator)`.
 
 **Πύλες**:
 - 3.28 `jscpd:diff`: 0 κλώνοι σε 16 αρχεία

@@ -757,7 +757,6 @@
       "allowlist": [
         "src/lib/errors/backend-unavailable.ts",
         "src/lib/workspace/alias-registry.ts",
-        "src/services/places/__tests__/fake-firestore.ts",
         "src/services/__tests__/file-audit-admin-anchor.test.ts"
       ],
       "tier": 3,
