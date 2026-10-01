@@ -21,9 +21,7 @@ import {
   isOwnerListingPublic,
   ownerMapPresence,
   ownerPortfolioGeoJson,
-  parseOwnerPortfolioView,
   partitionOwnerPortfolio,
-  writeOwnerPortfolioView,
 } from '../owner-portfolio-map';
 import { offerOf, validOwnerProperty } from './owner-property-fixtures';
 
@@ -135,24 +133,5 @@ describe('Κ4 — το όριο του διακόπτη', () => {
     const one = published('ownp_one', CITY_MARK);
     const many = Array.from({ length: 5 }, (_, i) => published(`ownp_none_${i}`, null));
     expect(hasOwnerPortfolioMap(partitionOwnerPortfolio([one, ...many], AT))).toBe(false);
-  });
-});
-
-describe('Κ5 — η προβολή στο URL', () => {
-  it.each([
-    ['', 'list'],
-    ['view=map', 'map'],
-    ['view=list', 'list'],
-    ['view=satellite', 'list'],
-  ])('«%s» ⇒ %s', (query, expected) => {
-    expect(parseOwnerPortfolioView(new URLSearchParams(query))).toBe(expected);
-  });
-
-  it('η γραφή κρατά τα άσχετα κλειδιά· η λίστα σβήνει το κλειδί', () => {
-    const params = new URLSearchParams('tab=x');
-    writeOwnerPortfolioView('map', params);
-    expect(params.toString()).toBe('tab=x&view=map');
-    writeOwnerPortfolioView('list', params);
-    expect(params.toString()).toBe('tab=x');
   });
 });

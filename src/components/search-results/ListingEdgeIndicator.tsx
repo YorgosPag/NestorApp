@@ -78,9 +78,11 @@ export function ListingEdgeIndicator({ entry, direction, onActivate }: ListingEd
         {entry.title}
       </span>
 
-      <span className="shrink-0 text-xs font-semibold text-foreground">
-        {displayPriceLabel(t, entry.price, stayTotal)}
-      </span>
+      {entry.price !== null && (
+        <span className="shrink-0 text-xs font-semibold text-foreground">
+          {displayPriceLabel(t, entry.price, stayTotal)}
+        </span>
+      )}
 
       {/*
         Η **οδηγία** για τον αναγνώστη οθόνης, αόρατη στα μάτια: το ορατό κείμενο λέει

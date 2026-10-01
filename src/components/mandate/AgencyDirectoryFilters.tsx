@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/select';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { AreaCombobox } from './AreaCombobox';
+import { MyPropertyFilter } from './MyPropertyFilter';
 import { OccupationSelect } from './OccupationSelect';
 import {
   isAdministrativeWhere,
@@ -232,6 +233,9 @@ function WhereControl({
         />
         <WhereHint voice={voice} />
       </div>
+
+      {/* ADR-896 §7.2 — τρίτη πηγή του ΙΔΙΟΥ άξονα: η περιοχή ενός ακινήτου του κατόχου (σιωπά για ανώνυμους). */}
+      <MyPropertyFilter where={where} onPick={(next) => onChange({ ...filters, where: next })} />
 
       {where !== null && !isAdministrativeWhere(where) && (
         <label className="flex flex-col gap-1 text-sm">

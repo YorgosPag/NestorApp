@@ -56,18 +56,25 @@ export const MAX_EMAILS_PER_LOCATION = 3;
  */
 export type ShowcaseStreetLine = Pick<PostalAddressFields, 'street' | 'number' | 'postalCode'>;
 
-/** **Ένα κατάστημα, όπως το βλέπει ο κόσμος.** */
-export interface ShowcaseLocation {
+/**
+ * **Η δημόσια περιοχή ενός καταστήματος «μόνο περιοχή»** (ADR-896 §6) — ο **Δήμος** (βαθμίδα 5, ADR-883)
+ * όπου πέφτει ο τόπος του, ως **ταυτότητα** (το όνομα ζει στο ευρετήριο, ένα SSoT).
+ *
+ * 🔑 **Δήμος, όχι κοινότητα**: μια αγροτική κοινότητα είναι συχνά **ένα χωριό**, δηλαδή σχεδόν η διεύθυνση
+ * της κατοικίας — ό,τι η λειτουργία «μόνο περιοχή» υπόσχεται να κρύψει. Ίδια κλίμακα με την πόλη που δείχνει
+ * το Google για ένα *service-area business*.
+ */
+export interface ShowcaseLocationArea {
+  readonly adminId: string;
+}
+
+/** Ό,τι μοιράζονται τα δύο είδη καταστήματος. */
+interface ShowcaseLocationBase {
   /** Enterprise ID `sloc_*` — σταθερό στις επεξεργασίες, ώστε το reveal να δείχνει στο σωστό. */
   readonly id: string;
   readonly role: ShowcaseLocationRole;
   /** Προαιρετική ονομασία («Υποκατάστημα Καλαμαριάς»). */
   readonly label: string | null;
-  /** 🔑 **Επαληθευμένος** δεσμός με τη γη — ίδιο δόγμα με το `PublicShowcase.place`. */
-  readonly place: PlaceRef;
-  /** Παράγεται **από τον διακομιστή** από τη γη· ποτέ από το σύρμα. */
-  readonly position: GeoPoint | null;
-  readonly street: ShowcaseStreetLine | null;
   /** `null` = δεν δήλωσε ωράριο — **ποτέ** «κλειστά». */
   readonly hours: WeeklyHours | null;
   /**
@@ -92,6 +99,35 @@ export interface ShowcaseLocation {
    */
   readonly emailConfirmedAt: string | null;
 }
+
+/** **Κατάστημα με δημοσιευμένη οδό** — δέχεται επισκέπτες· ο τόπος του είναι δημόσιος. */
+export interface ShowcaseStreetLocation extends ShowcaseLocationBase {
+  readonly street: ShowcaseStreetLine;
+  /** 🔑 **Επαληθευμένος** δεσμός με τη γη — ίδιο δόγμα με το `PublicShowcase.place`. */
+  readonly place: PlaceRef;
+  /** Παράγεται **από τον διακομιστή** από τη γη· ποτέ από το σύρμα. */
+  readonly position: GeoPoint | null;
+}
+
+/**
+ * **Κατάστημα «μόνο περιοχή»** (ADR-896 §6) — ο τόπος του **δεν υπάρχει** στο δημόσιο έγγραφο.
+ *
+ * 🔴 **Η ΥΠΟΣΧΕΣΗ ΕΙΝΑΙ ΤΥΠΟΣ, ΟΧΙ ΣΧΟΛΙΟ**: μέχρι τις 2026-10-01 το κατάστημα αυτό κρατούσε `place.landId`
+ * (→ `public_lands.displayAddress`, `read: if true`) και ακριβές `position`, ενώ η κάρτα έγραφε «η ακριβής
+ * διεύθυνση δεν δημοσιεύεται». Εδώ τα πεδία **δεν υπάρχουν** — ό,τι ζητά `location.place` πρέπει πρώτα να
+ * ρωτήσει `street !== null`. Ο δεσμός με τη γη ζει στο **ιδιωτικό** μισό ({@link ShowcaseCardPremises}).
+ */
+export interface ShowcaseAreaLocation extends ShowcaseLocationBase {
+  readonly street: null;
+  /** `null` = ο τόπος δεν έπεσε σε κανέναν δήμο — η κάρτα λέει μόνο «δεν δημοσιεύεται». */
+  readonly area: ShowcaseLocationArea | null;
+}
+
+/**
+ * **Ένα κατάστημα, όπως το βλέπει ο κόσμος** — διακριτή ένωση πάνω στο `street` (το `null` είναι
+ * μονάδα-τύπος: `location.street !== null` στενεύει σε {@link ShowcaseStreetLocation}).
+ */
+export type ShowcaseLocation = ShowcaseStreetLocation | ShowcaseAreaLocation;
 
 /** Ένα τηλέφωνο, **κανονικοποιημένο σε E.164** από τον διακομιστή. */
 export interface ShowcasePhone {
@@ -132,10 +168,16 @@ export interface ShowcaseLocationChannels {
   readonly emailConfirmations: readonly ShowcaseEmailConfirmation[];
 }
 
-/** Το έγγραφο `showcase_card_channels/{companyId}`. */
+/** Το μισό `locations` του εγγράφου `showcase_card_channels/{companyId}`. */
 export interface ShowcaseCardChannels {
   readonly locations: Readonly<Record<string, ShowcaseLocationChannels>>;
 }
+
+/**
+ * **Ο ιδιωτικός τόπος των καταστημάτων «μόνο περιοχή»** (ADR-896 §6) — το πεδίο `premises` του
+ * **ίδιου** `deny_all` εγγράφου. Μόνο ο ιδιοκτήτης το ξαναβλέπει, για να επεξεργαστεί.
+ */
+export type ShowcaseCardPremises = Readonly<Record<string, PlaceRef>>;
 
 /** **Ένα τηλέφωνο όπως το βλέπει ο επισκέπτης ΜΕΤΑ το κλικ** — έτοιμο, χωρίς βιβλιοθήκη στη σελίδα. */
 export interface RevealedPhone {
@@ -178,7 +220,13 @@ export interface ShowcaseCardWire {
   readonly website: string | null;
 }
 
-/** Ό,τι διαβάζει πίσω **ο ιδιοκτήτης** — δημόσιο + ιδιωτικό, για να επεξεργαστεί. */
-export interface OwnedShowcaseLocation extends ShowcaseLocation {
+/**
+ * Ό,τι διαβάζει πίσω **ο ιδιοκτήτης** — δημόσιο + ιδιωτικό, για να επεξεργαστεί.
+ *
+ * `premises` = ο δεσμός με τη γη **όπως τον δήλωσε** (δημόσιος για οδό, ιδιωτικός για «μόνο περιοχή»)·
+ * `null` = δεν βρέθηκε — η φόρμα ζητά τόπο ξανά, όπως για κάθε κατάστημα χωρίς τόπο.
+ */
+export type OwnedShowcaseLocation = ShowcaseLocation & {
   readonly channels: ShowcaseLocationChannels;
-}
+  readonly premises: PlaceRef | null;
+};

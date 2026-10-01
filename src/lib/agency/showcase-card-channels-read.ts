@@ -7,7 +7,8 @@
  * δέχεται `unknown` — ανάμεσα στον γραφέα και σε αυτόν υπάρχει χειροκίνητη επεξεργασία.
  */
 
-import { text } from '@/lib/agency/showcase-read-primitives';
+import { readPlace, text } from '@/lib/agency/showcase-read-primitives';
+import type { PlaceRef } from '@/types/geo/public-place';
 import { carryConfirmations } from '@/lib/agency/showcase-email-confirmation-rules';
 import type { ShowcaseEmailConfirmation, ShowcaseLocationChannels, ShowcasePhone } from '@/types/showcase-card';
 
@@ -37,6 +38,17 @@ function readPhones(raw: unknown): readonly ShowcasePhone[] {
     if (e164 !== null) phones.push({ e164, extension: text(row.extension) });
   }
   return phones;
+}
+
+/**
+ * **Ο ιδιωτικός τόπος ενός καταστήματος «μόνο περιοχή»** (ADR-896 §6) — το πεδίο `premises` του ίδιου
+ * εγγράφου. Απόν ⇒ `null` (η φόρμα του ιδιοκτήτη ζητά τόπο ξανά), **ποτέ** σφάλμα.
+ */
+export function readLocationPremises(raw: unknown, locationId: string): PlaceRef | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const premises = (raw as Record<string, unknown>).premises;
+  if (typeof premises !== 'object' || premises === null) return null;
+  return readPlace((premises as Record<string, unknown>)[locationId]);
 }
 
 /** **Τα κανάλια ενός καταστήματος** από το ωμό έγγραφο. */

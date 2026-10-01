@@ -52,7 +52,9 @@ function StackRow({ entry, onPick, onPeek }: StackRowProps) {
           ξεχωρίζει. Σε λίστα **διαλέγματος** η διαφορά είναι το περιεχόμενο.
         */}
         <span className="line-clamp-2">{entry.title}</span>
-        <span className="shrink-0 font-semibold">{displayPriceLabel(t, entry.price, stayTotal)}</span>
+        {entry.price !== null && (
+          <span className="shrink-0 font-semibold">{displayPriceLabel(t, entry.price, stayTotal)}</span>
+        )}
       </button>
     </li>
   );

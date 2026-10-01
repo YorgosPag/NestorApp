@@ -33,10 +33,10 @@
 import { mercatorScaleAt } from '@/lib/maps/metric-size';
 import type { PublicListing } from '@/types/public-listing';
 import { LISTING_UNCERTAINTY_KM, type ListingMapShape } from './listing-map-shape';
+import { METRES_PER_KM } from '@/lib/geo/geo-distance';
+
 import { listingMapMark, type ListingMapMark } from './listing-map-mark';
 
-/** Χιλιόμετρα → μέτρα. Γραμμένο μία φορά ώστε το `1000` να μη γίνει μαγικός αριθμός. */
-const METRES_PER_KM = 1000;
 
 /** Ό,τι χρειάζεται ο ζωγράφος από κάθε αγγελία — και τίποτα άλλο. */
 export interface ListingFeatureProperties {

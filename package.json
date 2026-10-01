@@ -49,6 +49,7 @@
     "bim:migrate:opening-tags": "npx ts-node scripts/bim/migrate-opening-tags.ts",
     "backfill:workspace-membership": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-workspace-membership.ts",
     "migrate:network-audience-private": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-network-audience-private.ts",
+    "migrate:showcase-area-only-premises": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-showcase-area-only-premises.ts",
     "migrate:network-inbox": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/reconcile-network-inbox.ts",
     "backfill:first-contact-offerer": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-first-contact-offerer.ts",
     "backfill:tour-face-scan": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-tour-face-scan.ts",

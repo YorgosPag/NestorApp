@@ -35,11 +35,7 @@
  * ταξιδεύει ξανά χωρίς έλεγχο.
  */
 
-import { useMemo } from 'react';
-
-import { useAdminFootprints } from '@/hooks/useAdminFootprints';
-import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
-import { containingEntityOfPoint } from '@/lib/agency/presence-admin-ids';
+import { useContainingArea } from '@/hooks/useContainingArea';
 import { isAdministrativeWhere, type ShowcaseWhere } from '@/types/agency-coverage';
 
 /**
@@ -56,28 +52,14 @@ import { isAdministrativeWhere, type ShowcaseWhere } from '@/types/agency-covera
  * `entries` αλλάζει ταυτότητα όταν φτάνουν τα αποτυπώματα· το `findById` όταν φτάνει η
  * ιεραρχία. ⛔ **ΜΗΝ** βγάλεις το `findById` από τη λίστα «επειδή η συνάρτηση δεν
  * αλλάζει λογική»: το `lineageIdsOf` είναι **module-level** και η ταυτότητά του **δεν**
- * αλλάζει ποτέ, άρα χωρίς το `findById` αυτό το `useMemo` θα **πάγωνε στο «δεν ξέρω»
+ * αλλάζει ποτέ, άρα χωρίς το `findById` το `useMemo` του `useContainingArea` θα **πάγωνε στο «δεν ξέρω»
  * για όλη τη ζωή της σελίδας** — ακριβώς το σφάλμα που άφησε τον επιλογέα περιοχής
  * άδειο σε κάθε κρύο φόρτωμα *(άγκυρα: `area-combobox-cold-load.test.tsx`)*.
  */
 export function useCircleAnchorName(where: ShowcaseWhere | null): string | null {
-  const { entries } = useAdminFootprints();
-  const { findById } = useAdministrativeHierarchy();
-
-  return useMemo(() => {
-    // Ο άξονας δεν είναι κύκλος ⇒ δεν υπάρχει σημείο να ονομαστεί. Σε διοικητική
-    // περιοχή το όνομα το δείχνει **το ίδιο το χειριστήριο** — δεύτερη αναφορά θα ήταν
-    // δεύτερη αυθεντία για το ίδιο πράγμα.
-    if (where === null || isAdministrativeWhere(where)) return null;
-
-    const adminId = containingEntityOfPoint(where.circle.center, entries, lineageIdsOf);
-    if (adminId === null) return null;
-
-    // 🔑 **Το `?? null` ΔΕΝ είναι αμυντικός θόρυβος**: το `adminId` βγήκε από τα
-    //    **αποτυπώματα**, που είναι άλλο αρχείο από την **ιεραρχία**. Τα δύο μπορούν να
-    //    αποκλίνουν κατά μία ανάπτυξη — και τότε η ταυτότητα υπάρχει χωρίς όνομα. Ένα
-    //    ωμό `municipality:0701` στην οθόνη δεν λέει τίποτα σε κανέναν *(ίδιο σκεπτικό
-    //    με το `CoverageLine`: «όσο η ιεραρχία δεν έχει φορτώσει, η γραμμή ΛΕΙΠΕΙ»)*.
-    return findById(adminId)?.name ?? null;
-  }, [where, entries, findById]);
+  // Ο άξονας δεν είναι κύκλος ⇒ δεν υπάρχει σημείο να ονομαστεί. Σε διοικητική περιοχή το όνομα το δείχνει
+  // **το ίδιο το χειριστήριο** — δεύτερη αναφορά θα ήταν δεύτερη αυθεντία για το ίδιο πράγμα.
+  // 🔑 ADR-896 §7.1 — η μέτρηση ζει πλέον στο `useContainingArea` (ίδια και για το «τι είναι εδώ;» του χάρτη).
+  const center = where === null || isAdministrativeWhere(where) ? null : where.circle.center;
+  return useContainingArea(center)?.name ?? null;
 }

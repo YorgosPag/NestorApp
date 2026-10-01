@@ -156,6 +156,46 @@ export const DIRECTORY_KEYS = {
   open: `${D}.open`,
 } as const;
 
+/**
+ * **Ο χάρτης του καταλόγου** (ADR-896).
+ *
+ * 🔑 **Το `{name}` σε ΠΑΡΑΘΕΣΗ** («Θερμοδομή · δεν έχει δηλώσει…») — ίδιος λόγος με τα
+ * `placeCircleHint*`: οι επωνυμίες δεν κλίνονται, και ένα «του {name}» θα ήταν αγράμματο σε
+ * κάθε επωνυμία που δεν είναι ουσιαστικό στη γενική.
+ * 🔑 **Τρεις απαντήσεις στο «πού δουλεύει;», τρία κλειδιά** — το «δεν δήλωσε» ≠ «παντού» (ADR-846).
+ */
+export const DIRECTORY_MAP_KEYS = {
+  label: `${D}.map.label`,
+  hint: `${D}.map.hint`,
+  loading: `${D}.map.loading`,
+  coverageNone: `${D}.map.coverageNone`,
+  coverageNationwide: `${D}.map.coverageNationwide`,
+  coverageShown: `${D}.map.coverageShown`,
+  /** Όσοι **επέλεξαν** να μη δείχνουν έδρα — λέγονται, δεν εξαφανίζονται (Α5 §4.1). */
+  areaOnly: `${D}.map.areaOnly`,
+  /** ADR-896 §7.3 — η απόδειξη (ενεργές αγγελίες) δίπλα στη δήλωση· **ποτέ** πλήθος. */
+  presenceShown: `${D}.map.presenceShown`,
+  /** ADR-896 §7.1 — η κάρτα σημείου μετά από κλικ σε κενό του χάρτη. */
+  coversHereLabel: `${D}.map.coversHereLabel`,
+  coversHereAction: `${D}.map.coversHereAction`,
+  coversHereOutside: `${D}.map.coversHereOutside`,
+} as const;
+
+/** ADR-896 §7.2 — «Το ακίνητό μου»: φίλτρο με την περιοχή ενός ακινήτου του συνδεδεμένου κατόχου. */
+export const DIRECTORY_MY_PROPERTY_KEYS = {
+  label: `${D}.myProperty.label`,
+  placeholder: `${D}.myProperty.placeholder`,
+  noArea: `${D}.myProperty.noArea`,
+  noPlace: `${D}.myProperty.noPlace`,
+} as const;
+
+/** Ο διακόπτης Λίστα | Χάρτης σε στενό πλάτος — δες `ListMapViewSwitch`. */
+export const DIRECTORY_VIEW_KEYS = {
+  label: `${D}.view.label`,
+  list: `${D}.view.list`,
+  map: `${D}.view.map`,
+} as const;
+
 // =============================================================================
 // Η ΑΞΙΟΠΙΣΤΙΑ — ΚΟΙΝΗ στην κάρτα και στη βιτρίνα (ADR-841 Φ6-Β)
 // =============================================================================
@@ -294,6 +334,8 @@ export const PROFILE_KEYS = {
   cardHeadquarters: `${P}.cardHeadquarters`,
   cardBranch: `${P}.cardBranch`,
   cardAreaOnly: `${P}.cardAreaOnly`,
+  /** ADR-896 §6 — «Περιοχή: {area}» για κατάστημα «μόνο περιοχή» (μόνο ο δήμος). */
+  cardAreaOnlyIn: `${P}.cardAreaOnlyIn`,
   cardDirections: `${P}.cardDirections`,
   cardShowPhone: `${P}.cardShowPhone`,
   cardShowEmail: `${P}.cardShowEmail`,

@@ -54,8 +54,8 @@ import {
   type ShowcaseMarkSize,
 } from '@/components/mandate/showcase-mark-box';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
-import type { ShowcaseLettermark } from '@/lib/agency/showcase-mark';
-import type { DeclaredShowcaseMark } from '@/types/agency-profile';
+import { lettermarkOf, type ShowcaseLettermark } from '@/lib/agency/showcase-mark';
+import type { DeclaredShowcaseMark, PublicShowcase } from '@/types/agency-profile';
 
 /**
  * 🔴 **ΣΤΑΤΙΚΗ ΟΚΤΑΔΑ, ΚΑΙ ΕΙΝΑΙ ΑΝΑΓΚΗ — ΟΧΙ ΠΡΟΤΙΜΗΣΗ.**
@@ -126,6 +126,18 @@ const MARK_SURFACES = [
 export type ShowcaseMarkSubject =
   | { readonly declared: DeclaredShowcaseMark }
   | { readonly lettermark: ShowcaseLettermark };
+
+/**
+ * **Το σήμα ενός επαγγελματία** — η εικόνα αν τη δήλωσε, τα αρχικά αν όχι. Η **μία** απάντηση για
+ * κάρτα, σελίδα προφίλ και χάρτη (ADR-896: ήταν δύο αντίγραφα της ίδιας τριαδικής έκφρασης).
+ */
+export function showcaseMarkSubjectOf(
+  profile: Pick<PublicShowcase, 'mark' | 'companyId' | 'displayName'>,
+): ShowcaseMarkSubject {
+  return profile.mark !== null
+    ? { declared: profile.mark }
+    : { lettermark: lettermarkOf(profile.companyId, profile.displayName) };
+}
 
 interface ShowcaseMarkViewProps {
   readonly mark: ShowcaseMarkSubject;

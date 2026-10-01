@@ -21,9 +21,35 @@ const OWNED: OwnedShowcaseLocation = {
   channelKinds: ['phone'],
   emailConfirmedAt: null,
   channels: { phones: [{ e164: '+302310123456', extension: '5' }], emails: [], emailConfirmations: [] },
+  premises: { landId: 'land_1', buildingId: null },
+};
+
+/** ADR-896 §6 — «μόνο περιοχή»: κανένας δημόσιος τόπος· ο ιδιοκτήτης τον παίρνει από το ιδιωτικό `premises`. */
+const OWNED_AREA_ONLY: OwnedShowcaseLocation = {
+  id: 'sloc_2',
+  role: 'branch',
+  label: null,
+  street: null,
+  area: { adminId: 'municipality:0501' },
+  hours: null,
+  specialHours: [],
+  channelKinds: [],
+  emailConfirmedAt: null,
+  channels: { phones: [], emails: [], emailConfirmations: [] },
+  premises: { landId: 'land_home', buildingId: null },
 };
 
 describe('showcase-card-draft', () => {
+  it('🔑 «μόνο περιοχή» ⇒ η φόρμα ξανανοίγει με τον ΙΔΙΩΤΙΚΟ τόπο (ADR-896 §6)', () => {
+    const draft = draftOfLocation(OWNED_AREA_ONLY);
+    expect(draft.place).toEqual({ landId: 'land_home', buildingId: null });
+    expect(draft.publishStreet).toBe(false);
+  });
+
+  it('ιδιωτικός τόπος που χάθηκε ⇒ η φόρμα τον ΖΗΤΑ (όχι σιωπηλή απώλεια)', () => {
+    expect(wireOfDrafts([draftOfLocation({ ...OWNED_AREA_ONLY, premises: null })], '')).toEqual({ missingPlaceIndex: 0 });
+  });
+
   it('αποθηκευμένο → πρόχειρο: τηλέφωνο ΜΟΡΦΟΠΟΙΗΜΕΝΟ, όχι ωμό E.164', () => {
     const draft = draftOfLocation(OWNED);
     expect(draft.phones).toEqual([{ number: '+30 231 012 3456', extension: '5' }]);

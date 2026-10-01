@@ -26,7 +26,7 @@ import { listingBounds } from '@/lib/listings/listing-map-bounds';
 import { NO_LISTING_FOCUS, type ListingFocus } from '@/lib/listings/listing-focus';
 import { POINT_SOURCE_ID, ResultsMapSources } from './ResultsMapSources';
 import { readListingMapPaint } from './listing-map-paint';
-import type { GeoBoundingBox } from '@/types/geo/coordinates';
+import type { GeoBoundingBox, GeoPoint } from '@/types/geo/coordinates';
 import { readMapArea, sameMapArea } from './results-map-area';
 import {
   fitMapToArea,
@@ -97,6 +97,11 @@ export interface ListingMapCanvasProps {
    */
   readonly onClear?: () => void;
   /**
+   * **«ΤΙ ΕΙΝΑΙ ΕΔΩ;»** — το ίδιο κλικ στο κενό, **με το σημείο**, μετά το `onClear` (ADR-896 §7.1).
+   * Απών ⇒ ο χάρτης συμπεριφέρεται όπως πάντα (το `/offers` δεν το δίνει).
+   */
+  readonly onEmptyPoint?: (point: GeoPoint) => void;
+  /**
    * **Ο ΧΑΡΤΗΣ ΑΝΑΦΕΡΕΙ ΠΟΥ ΚΟΙΤΑΕΙ** — μετά από κάθε σύρσιμο/ζουμ *(ADR-777 §8.63)*.
    *
    * 🔑 **Αναφέρει ΠΑΝΤΑ· ΔΕΝ αποφασίζει ποτέ.** Το αν το κάδρο θα γίνει φίλτρο είναι
@@ -152,12 +157,22 @@ export interface ListingMapCanvasProps {
    * αγγελία που αποσύρθηκε **φεύγει** από αυτήν αντί να μείνει «φάντασμα».
    */
   readonly describeListing?: (id: string) => ListingMapEntry | null;
+  /**
+   * **Πού φτάνει ο χάρτης για ένα επιλεγμένο id** (§8.77 άφιξη) — όταν η απάντηση δεν είναι η θέση
+   * του σημαδιού. `null` / απών ⇒ η θέση του σημαδιού (`listingArrivalArea`), όπως για τις αγγελίες.
+   *
+   * 🔑 **ADR-896**: για έναν επαγγελματία, ο σύνδεσμος `?selected=` πρέπει να δείξει **πού
+   * δουλεύει** (δηλωμένη εμβέλεια + καταστήματα), όχι το κατάστημά του σε ζουμ δρόμου. Χωρίς αυτή
+   * την είσοδο η κάμερα είχε **δύο** ιδιοκτήτες τη στιγμή της άφιξης, και νικούσε όποιος έτρεχε
+   * τελευταίος — μετρημένο ζωντανά: νικούσε ο λάθος.
+   */
+  readonly arrivalArea?: (id: string) => GeoBoundingBox | null;
   /** Επικαλύψεις του καταναλωτή (πινακίδες, φούσκα) — αποδίδονται **μέσα** στον χάρτη. */
   readonly children?: React.ReactNode;
 }
 
 /** Οι χειριστές, διαβασμένοι **τη στιγμή του συμβάντος** (κανόνας 2 του ADR-040). */
-type MapHandlers = Pick<ListingMapCanvasProps, 'onPeek' | 'onSelect' | 'onClear' | 'onAreaChange'> & {
+type MapHandlers = Pick<ListingMapCanvasProps, 'onPeek' | 'onSelect' | 'onClear' | 'onEmptyPoint' | 'onAreaChange'> & {
   readonly onStack?: (stack: ListingMapStack | null) => void;
 };
 interface HandlersRef { readonly current: MapHandlers }
@@ -229,9 +244,11 @@ export function ListingMapCanvas({
   onPeek,
   onSelect,
   onClear,
+  onEmptyPoint,
   onAreaChange,
   searchArea = null,
   describeListing,
+  arrivalArea,
   children,
 }: ListingMapCanvasProps) {
   /**
@@ -286,10 +303,10 @@ export function ListingMapCanvas({
    *    την ταυτότητα του `handleMapReady` — δηλαδή θα απειλούσε επαναρχικοποίηση του
    *    χάρτη στα 60fps. Το `useCallback([])` το κάνει **δομικά αδύνατο**.
    */
-  const handlersRef = useRef<MapHandlers>({ onPeek, onSelect, onClear, onAreaChange, onStack: setStack });
+  const handlersRef = useRef<MapHandlers>({ onPeek, onSelect, onClear, onEmptyPoint, onAreaChange, onStack: setStack });
   useEffect(() => {
-    handlersRef.current = { onPeek, onSelect, onClear, onAreaChange, onStack: setStack };
-  }, [onPeek, onSelect, onClear, onAreaChange]);
+    handlersRef.current = { onPeek, onSelect, onClear, onEmptyPoint, onAreaChange, onStack: setStack };
+  }, [onPeek, onSelect, onClear, onEmptyPoint, onAreaChange]);
 
   /**
    * 🔴 **ΚΑΙ ΤΑ `bounds` ΔΙΑΒΑΖΟΝΤΑΙ ΑΠΟ ΑΝΑΦΟΡΑ — ΜΕΤΡΗΜΕΝΟ ΛΑΘΟΣ, ΟΧΙ ΠΡΟΛΗΨΗ.**
@@ -307,7 +324,7 @@ export function ListingMapCanvas({
   const boundsRef = useRef(bounds);
   useEffect(() => { boundsRef.current = bounds; }, [bounds]);
   // 🔗 §8.77 — χάρτης που γεννιέται με επιλογή (`?selected=`) φτάνει **σε αυτήν**, μία φορά.
-  const frameData = useListingArrival(geojson, focus.selected, searchArea);
+  const frameData = useListingArrival(geojson, focus.selected, searchArea, arrivalArea);
 
   /**
    * ⚠️ **ΑΝΑΦΟΡΑ, ΟΧΙ ΕΞΑΡΤΗΣΗ** — για τον λόγο που γράφεται από πάνω για τα `bounds`:

@@ -96,7 +96,8 @@ function headquarters(id: string | null, emails: readonly string[] = ['office@va
       id, role: 'headquarters', label: null, place: { landId: 'land_thessaloniki', buildingId: null },
       street: null, hours: null, phones: [], emails,
     },
-    position: { lat: 40.63, lng: 22.94 },
+    // ADR-896 §6 — «μόνο περιοχή»: η πόρτα δίνει δήμο, ποτέ σημείο.
+    area: { adminId: 'municipality:0501' },
   };
 }
 

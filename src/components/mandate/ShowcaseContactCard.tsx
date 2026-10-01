@@ -24,7 +24,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import { googleMapsDirectionsUrl } from '@/lib/geo/map-links';
-import type { ShowcaseLocation } from '@/types/showcase-card';
+import { useAdminAreaName } from '@/hooks/geo/useAdminAreaName';
+import type { ShowcaseAreaLocation, ShowcaseLocation, ShowcaseStreetLocation } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS, PROFILE_ROLE_KEYS } from './agency-directory-labels';
 import { ChannelReveal } from './ChannelReveal';
 import { locationVCardPath } from './showcase-card-paths';
@@ -63,19 +64,38 @@ export function SaveContactLink({
   );
 }
 
-function LocationAddress({ location }: { readonly location: ShowcaseLocation }): React.ReactElement {
-  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+/** Κατάστημα με δημοσιευμένη οδό — η οδός, και από κάτω η περιοχή της γης (δημόσια, αφού η οδός είναι). */
+function StreetAddress({ location }: { readonly location: ShowcaseStreetLocation }): React.ReactElement {
   const place = usePublicPlace(location.place);
   const area = place.state === 'found' ? place.land.displayAddress : null;
-  const street = location.street === null ? null : formatContactAddressLine({ ...location.street, country: 'GR' });
 
   return (
     <address className="flex flex-col gap-0.5 text-sm not-italic text-foreground">
-      {street !== null ? <span>{street}</span> : null}
+      <span>{formatContactAddressLine({ ...location.street, country: 'GR' })}</span>
       {area !== null ? <span className="text-muted-foreground">{area}</span> : null}
-      {street === null ? <span className="text-xs text-muted-foreground">{t(PROFILE_KEYS.cardAreaOnly)}</span> : null}
     </address>
   );
+}
+
+/**
+ * 🔴 **«ΜΟΝΟ ΠΕΡΙΟΧΗ» — ΜΟΝΟ Ο ΔΗΜΟΣ** (ADR-896 §6). Μέχρι τις 2026-10-01 εδώ αποδιδόταν το `displayAddress` της γης
+ * («Στέφανου Δραγούμη, 8») **ακριβώς πάνω** από τη φράση «η ακριβής διεύθυνση δεν δημοσιεύεται». Πλέον ο τύπος
+ * **δεν έχει** τόπο να δώσει — μόνο ταυτότητα δήμου, που γίνεται όνομα από το ευρετήριο.
+ */
+function AreaAddress({ location }: { readonly location: ShowcaseAreaLocation }): React.ReactElement {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const areaName = useAdminAreaName(location.area?.adminId ?? null);
+
+  return (
+    <address className="flex flex-col gap-0.5 text-sm not-italic text-foreground">
+      {areaName !== null ? <span className="text-muted-foreground">{t(PROFILE_KEYS.cardAreaOnlyIn, { area: areaName })}</span> : null}
+      <span className="text-xs text-muted-foreground">{t(PROFILE_KEYS.cardAreaOnly)}</span>
+    </address>
+  );
+}
+
+function LocationAddress({ location }: { readonly location: ShowcaseLocation }): React.ReactElement {
+  return location.street !== null ? <StreetAddress location={location} /> : <AreaAddress location={location} />;
 }
 
 function LocationCard({

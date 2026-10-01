@@ -55,6 +55,7 @@ function handlers() {
     onSelect: jest.fn(),
     onClear: jest.fn(),
     onStack: (s) => { stacks.push(s); },
+    onEmptyPoint: jest.fn(),
   };
   return { ref: { current: h }, h, stacks };
 }
@@ -79,6 +80,26 @@ describe('bindMapPick', () => {
     map.fire();
     expect(h.onClear).toHaveBeenCalledTimes(1);
     expect(stacks).toEqual([null]);
+  });
+
+  it('🔑 κλικ στο κενό ⇒ το ΣΗΜΕΙΟ πάει στο onEmptyPoint, ΜΕΤΑ την αποεπιλογή (ADR-896 §7.1)', () => {
+    const map = fakeMap([]);
+    const { ref, h } = handlers();
+    const order: string[] = [];
+    (h.onClear as jest.Mock).mockImplementation(() => order.push('clear'));
+    (h.onEmptyPoint as jest.Mock).mockImplementation(() => order.push('point'));
+    bindMapPick(map.target, ref);
+    map.fire(23.72, 37.98);
+    expect(h.onEmptyPoint).toHaveBeenCalledWith({ lng: 23.72, lat: 37.98 });
+    expect(order).toEqual(['clear', 'point']);
+  });
+
+  it('κλικ σε πινέζα ⇒ ΚΑΝΕΝΑ onEmptyPoint (δεν είναι κενό)', () => {
+    const map = fakeMap([{ layer: { id: 'listing-pin' }, properties: { id: 'a' } }]);
+    const { ref, h } = handlers();
+    bindMapPick(map.target, ref);
+    map.fire();
+    expect(h.onEmptyPoint).not.toHaveBeenCalled();
   });
 
   it('πινέζα με δακτύλιο ⇒ ΜΙΑ επιλογή (όχι δύο, όπως με χειριστή ανά επίπεδο)', () => {

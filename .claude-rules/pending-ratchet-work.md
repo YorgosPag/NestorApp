@@ -2,6 +2,12 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **01/10 — ΤΡΙΤΗ ΔΙΑΤΑΞΗ ΛΙΣΤΑ ‖ ΧΑΡΤΗΣ ΕΚΤΟΣ SSoT** *(ADR-896 §4.5 · ADR-777 §8.83)* — το `/offers` και
+  το `/pro` μοιράζονται πλέον το `components/shared/list-map/ListMapSplit`· το `/search/results`
+  (`SearchResultsContent.tsx:363`, inline `md:grid-cols-[…45%]` + `ResultsSheet` σε κινητό) γράφει ακόμη **δική του**
+  διάταξη. Διόρθωση: να δεχτεί το `ListMapSplit` υποδοχή «στενής εκδοχής» (bottom sheet αντί για tabs) και να
+  μεταφερθεί η οθόνη 2. >1h (κινητό + δείκτης άκρης σε δοχείο κύλισης, όχι παράθυρο) ⇒ εδώ, όχι επί τόπου.
+
 - 🟡 **30/09 — ΕΝΑ ΨΕΥΤΙΚΟ FIRESTORE: η ουρά της μετάβασης** *(ADR-742 §7sexdecies · verified fake)*
 
   ✅ Το SSoT υπάρχει: `src/test-utils/fake-firestore/`, με σουίτα συμβολαίου που τρέχει και στον emulator

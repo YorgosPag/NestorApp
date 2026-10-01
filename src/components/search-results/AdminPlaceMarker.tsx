@@ -18,12 +18,12 @@ import { MapPin } from 'lucide-react';
 
 import { Marker } from '@/lib/maps/maplibre';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useAdminAreaIndex } from '@/hooks/geo/useAdminAreaIndex';
+import { useAdminAreaName } from '@/hooks/geo/useAdminAreaName';
 import type { AdminPlace } from '@/lib/geo/admin-boundaries';
 
 export function AdminPlaceMarker({ place }: { readonly place: AdminPlace }) {
   const { t, isNamespaceReady } = useTranslation(['search-region']);
-  const name = useAdminAreaIndex()?.areas.get(place.adminId)?.name ?? null;
+  const name = useAdminAreaName(place.adminId);
 
   return (
     <Marker latitude={place.point.lat} longitude={place.point.lng} anchor="bottom">

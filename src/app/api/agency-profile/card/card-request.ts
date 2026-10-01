@@ -16,9 +16,15 @@ import { z } from 'zod';
 
 import type { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
-import type { VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
+import { declaresAreaOnly, type VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
-import type { OwnedShowcaseLocation, ShowcaseCardWire, ShowcaseEmailReturn } from '@/types/showcase-card';
+import { showcaseLocationArea } from '@/services/places/showcase-location-area';
+import type {
+  OwnedShowcaseLocation,
+  ShowcaseCardWire,
+  ShowcaseEmailReturn,
+  ShowcaseLocationWire,
+} from '@/types/showcase-card';
 import { locatePlace, PLACE_ERROR_STATUS, type PlaceError } from '../showcase-request';
 
 const intervalSchema = z.object({ opens: z.string().max(5), closes: z.string().max(5) });
@@ -91,16 +97,31 @@ export async function verifyLocations(
 > {
   const declared: VerifiedLocationDeclaration[] = [];
   for (const [locationIndex, location] of wire.locations.entries()) {
-    const located = await locatePlace(adminDb, location.place);
-    if ('placeError' in located) {
+    const verified = await verifyLocation(adminDb, location);
+    if ('placeError' in verified) {
       return {
         rejected: NextResponse.json(
-          { error: located.placeError, locationIndex },
-          { status: PLACE_ERROR_STATUS[located.placeError] },
+          { error: verified.placeError, locationIndex },
+          { status: PLACE_ERROR_STATUS[verified.placeError] },
         ),
       };
     }
-    declared.push({ wire: location, position: located.position });
+    declared.push(verified);
   }
   return { declared };
+}
+
+/**
+ * **Ένα κατάστημα**: ο τόπος επαληθεύεται **πάντα** (ο ιδιοκτήτης θα τον ξαναδεί)· για «μόνο περιοχή» (ADR-896 §6)
+ * το σημείο **δεν** περνά παρακάτω — μόνο ο δήμος του. Ευρετήριο που δεν διαβάστηκε ⇒ «ξαναδοκίμασε», ποτέ `area: null`.
+ */
+async function verifyLocation(
+  adminDb: ReturnType<typeof getAdminFirestore>,
+  location: ShowcaseLocationWire,
+): Promise<VerifiedLocationDeclaration | { readonly placeError: PlaceError }> {
+  const located = await locatePlace(adminDb, location.place);
+  if ('placeError' in located) return located;
+  if (!declaresAreaOnly(location)) return { wire: location, position: located.position };
+  const area = await showcaseLocationArea(located.position);
+  return area === 'unavailable' ? { placeError: 'PLACE_UNVERIFIED' } : { wire: location, area: area.area };
 }

@@ -41,7 +41,7 @@
  * **Layering**: leaf module — καμία εξάρτηση πέρα από τύπους.
  */
 
-import type { GeoCircle, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
+import type { GeoBoundingBox, GeoCircle, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 // ⚠️ Η ισαπέχουσα προβολή σε τοπικά μέτρα ζει πλέον στο `geo-local-frame.ts` — ο
 // άξονας δρόμου (`geo-line.ts`) τη χρειάζεται με άλλο origin (αρχή, όχι κέντρο
 // βάρους) και η αντιγραφή θα έφτιαχνε δίδυμο (CHECK 3.28). Ο δακτύλιος περνά πάντα
@@ -337,6 +337,24 @@ export function geoRingsBoundingCircle(
   distanceMetres: (a: GeoPoint, b: GeoPoint) => number,
 ): GeoCircle | null {
   return geoOutlineBoundingCircle(rings.flat(), distanceMetres);
+}
+
+/**
+ * **ΤΟ ΟΡΘΟΓΩΝΙΟ ΠΟΥ ΠΕΡΙΚΛΕΙΕΙ ΤΟΥΣ ΔΑΚΤΥΛΙΟΥΣ** — το κάδρο της κάμερας για ένα σχήμα (ADR-896:
+ * «πέτα στην περιοχή όπου δουλεύει αυτός ο επαγγελματίας»).
+ *
+ * @returns `null` όταν δεν υπάρχει καμία κορυφή — ποτέ σιωπηλό `[0,0]`, που θα έστελνε τον χάρτη
+ *          στον κόλπο της Γουινέας χωρίς να το πει κανείς (ίδιο δόγμα με το `listingBounds`).
+ */
+export function geoRingsBoundingBox(rings: readonly GeoOutline[]): GeoBoundingBox | null {
+  let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
+  for (const { lat, lng } of rings.flat()) {
+    west = Math.min(west, lng);
+    east = Math.max(east, lng);
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+  }
+  return Number.isFinite(west) ? { south, west, north, east } : null;
 }
 
 /**

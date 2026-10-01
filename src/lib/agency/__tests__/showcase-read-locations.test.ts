@@ -4,7 +4,7 @@
 
 import { readShowcase } from '../showcase-read';
 import { readLocations, readStreetLine } from '../showcase-read-locations';
-import { readLocationChannels } from '../showcase-card-channels-read';
+import { readLocationChannels, readLocationPremises } from '../showcase-card-channels-read';
 import { showcaseFixture } from '../__fixtures__/showcase-fixture';
 import { toStoredShowcase } from '../showcase-read';
 
@@ -98,5 +98,38 @@ describe('readLocationChannels', () => {
       emails: ['a@b.gr'],
       emailConfirmations: [],
     });
+  });
+});
+
+describe('«μόνο περιοχή» στο σύνορο ανάγνωσης (ADR-896 §6)', () => {
+  /** Έγγραφο γραμμένο ΠΡΙΝ τη διόρθωση: χωρίς οδό, αλλά με τόπο και σημείο. */
+  const LEGACY_AREA_ONLY = { ...STORED_LOCATION, id: 'sloc_area', street: null };
+
+  it('🔴 παλιό έγγραφο με landId/position ⇒ ΔΕΝ διαβάζονται — ούτε σημείο ούτε γη', () => {
+    const [location] = readLocations([LEGACY_AREA_ONLY]);
+    expect(location).toMatchObject({ id: 'sloc_area', street: null, area: null });
+    expect(location).not.toHaveProperty('place');
+    expect(location).not.toHaveProperty('position');
+    expect(JSON.stringify(location)).not.toContain('land_1');
+  });
+
+  it('η περιοχή διαβάζεται μόνο ως αναγνωρίσιμη ταυτότητα ADR-883', () => {
+    const [valid, junk] = readLocations([
+      { ...LEGACY_AREA_ONLY, area: { adminId: 'municipality:0701' } },
+      { ...LEGACY_AREA_ONLY, id: 'sloc_junk', area: { adminId: '../../etc/passwd' } },
+    ]);
+    expect(valid).toMatchObject({ area: { adminId: 'municipality:0701' } });
+    expect(junk).toMatchObject({ area: null });
+  });
+
+  it('κατάστημα με οδό χωρίς τόπο παραλείπεται (η οδός χρειάζεται γη)', () => {
+    expect(readLocations([{ ...STORED_LOCATION, place: null }])).toEqual([]);
+  });
+
+  it('ο ιδιωτικός τόπος διαβάζεται ανά κατάστημα — απόν ⇒ null', () => {
+    const raw = { premises: { sloc_area: { landId: 'land_9', buildingId: null } } };
+    expect(readLocationPremises(raw, 'sloc_area')).toEqual({ landId: 'land_9', buildingId: null });
+    expect(readLocationPremises(raw, 'sloc_other')).toBeNull();
+    expect(readLocationPremises(undefined, 'sloc_area')).toBeNull();
   });
 });

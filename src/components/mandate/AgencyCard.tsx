@@ -52,8 +52,7 @@ import type { PublicShowcase } from '@/types/agency-profile';
 import { CredibilityStatement } from './CredibilityStatement';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
-import { lettermarkOf } from '@/lib/agency/showcase-mark';
-import { ShowcaseMarkView } from './ShowcaseMarkView';
+import { ShowcaseMarkView, showcaseMarkSubjectOf } from './ShowcaseMarkView';
 import { MARK_CARD_SLOT } from './showcase-mark-box';
 import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { coverageRelation, type CoverageRelation } from '@/lib/agency/coverage-match';
@@ -66,6 +65,12 @@ import {
 import { coverageOutlineAreaKm2 } from '@/lib/agency/coverage-outline';
 import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 import { presenceMatches, type PresenceEvidence } from '@/lib/agency/showcase-presence';
+import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
+import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
+import {
+  LISTING_CARD_FOCUS_VISIBLE_CLASS,
+  LISTING_FOCUS_CARD_CLASS,
+} from '@/components/search-results/listing-focus-card';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -101,18 +106,45 @@ interface AgencyCardProps {
    * **αόρατη** στη μισή οθόνη.
    */
   readonly where?: ShowcaseWhere | null;
+  /**
+   * 🗺️ ADR-896 — η ένταση της κάρτας όταν λίστα και χάρτης **συνυπάρχουν**: πινέζα κάτω από τον
+   * δείκτη ⇒ `peeked`, κλικ ⇒ `selected`. Οι **ίδιες** βαθμίδες με ακίνητα (`listing-focus-card`).
+   */
+  readonly focusStrength?: ListingFocusStrength;
+  /**
+   * «Ο άνθρωπος κοιτάζει αυτή την κάρτα» — δείκτης **ή** εστίαση πληκτρολογίου (ισοτιμία WCAG 2.1.1:
+   * όποιος πλοηγείται με Tab βλέπει κι αυτός την περιοχή δραστηριότητας στον χάρτη).
+   */
+  readonly onHover?: (companyId: string | null) => void;
 }
 
 export function AgencyCard({
   profile,
   headingLevel = 2,
   where = null,
+  focusStrength = 'none',
+  onHover,
 }: AgencyCardProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const Heading = (headingLevel === 3 ? 'h3' : 'h2') as 'h2' | 'h3';
+  const look = () => onHover?.(profile.companyId);
+  const lookAway = () => onHover?.(null);
 
   return (
-    <li className="rounded-lg border border-border bg-card p-4">
+    <li
+      {...{ [LISTING_CARD_ID_ATTRIBUTE]: profile.companyId }}
+      onMouseEnter={onHover && look}
+      onMouseLeave={onHover && lookAway}
+      onFocus={onHover && look}
+      onBlur={
+        onHover &&
+        ((event: React.FocusEvent<HTMLLIElement>) => {
+          // Η εστίαση πέρασε σε άλλο στοιχείο **της ίδιας** κάρτας ⇒ ο άνθρωπος κοιτάζει ακόμη εδώ.
+          if (!event.currentTarget.contains(event.relatedTarget)) lookAway();
+        })
+      }
+      className={`rounded-lg border bg-card p-4 transition-colors ${LISTING_CARD_FOCUS_VISIBLE_CLASS} ${LISTING_FOCUS_CARD_CLASS[focusStrength]}`}
+    >
       {/*
         🔴 ADR-841 Α21 — Η ΚΑΡΤΑ ΕΓΙΝΕ ΓΡΑΜΜΗ, ΚΑΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ ΣΤΗΛΗ.
         Το `flex-col gap-1` μετακόμισε **αυτούσιο** στο εσωτερικό `<div>`· η
@@ -141,11 +173,7 @@ export function AgencyCard({
         */}
         <span className={MARK_CARD_SLOT}>
           <ShowcaseMarkView
-            mark={
-              profile.mark !== null
-                ? { declared: profile.mark }
-                : { lettermark: lettermarkOf(profile.companyId, profile.displayName) }
-            }
+            mark={showcaseMarkSubjectOf(profile)}
             size="card"
           />
         </span>

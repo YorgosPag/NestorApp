@@ -1,5 +1,6 @@
 /**
- * **Η γεωμετρία του χαρτοφυλακίου**: ένα σημείο για τον χάρτη, την κράτηση θέσης όσο φορτώνει και
+ * **Η γεωμετρία κάθε οθόνης λίστα ‖ χάρτης** (χαρτοφυλάκιο κατόχου `/offers`, κατάλογος επαγγελματιών
+ * `/pro` — ADR-896· εξήχθη από το `owner-portfolio-layout.ts`): ένα σημείο για τον χάρτη, την κράτηση θέσης όσο φορτώνει και
  * τη διάταξη δίπλα-δίπλα (ADR-777 §8.71 · §8.75). Ξεχωριστό αρχείο **επίτηδες**: αν ζούσε στο
  * `OwnerPortfolioMap`, η κράτηση θέσης θα το εισήγαγε στατικά και θα κατέβαζε τη MapLibre πριν
  * ζητηθεί.
@@ -14,15 +15,15 @@
  * **Στοιβαγμένη διάταξη** (καρτέλα «Χάρτης»): αρκετό για να διαβάζονται σχέσεις μεταξύ σημαδιών,
  * ποτέ ολόκληρη η οθόνη — η σελίδα κυλά, και ένας χάρτης στο 100% θα «έπιανε» την κύλιση του τροχού.
  */
-export const OWNER_PORTFOLIO_MAP_HEIGHT = 'h-[min(70vh,40rem)] min-h-80';
+export const LIST_MAP_MAP_HEIGHT = 'h-[min(70vh,40rem)] min-h-80';
 
 /**
- * **Το κατώφλι της διάταξης δίπλα-δίπλα, σε rem** — λίστα ≥ 28rem (η κάρτα του κατόχου χωρά
+ * **Το κατώφλι της διάταξης δίπλα-δίπλα, σε rem** — λίστα ≥ 28rem (η κάρτα του κατόχου — η φαρδύτερη από τις δύο — χωρά
  * εξώφυλλο + κείμενο) · κενό 1,5rem · χάρτης ≥ 22rem (αρκετός για σχέσεις μεταξύ σημαδιών).
  * Σε **rem**, ώστε να ακολουθεί το μέγεθος γραμματοσειράς του χρήστη (WCAG 1.4.4), και μετριέται
  * στον **περιέκτη**, όχι στο παράθυρο (`useContainerClass`).
  */
-export const OWNER_PORTFOLIO_SPLIT_MIN_REM = 52;
+export const LIST_MAP_SPLIT_MIN_REM = 52;
 
 /**
  * **Λίστα ‖ χάρτης.** Η λίστα κρατά το **ίδιο** μέτρο με τη στοιβαγμένη εκδοχή (το token
@@ -30,7 +31,7 @@ export const OWNER_PORTFOLIO_SPLIT_MIN_REM = 52;
  * να μη στενεύει κάτω από το κατώφλι. Ο χάρτης παίρνει ό,τι περισσεύει (πρότυπο Redfin 55/45 ·
  * Airbnb ~50/50: λίστα αριστερά, χάρτης δεξιά).
  */
-export const OWNER_PORTFOLIO_SPLIT_GRID =
+export const LIST_MAP_SPLIT_GRID =
   'grid grid-cols-[minmax(0,min(calc(var(--spacing-layout-measure-wide)*1ch),55%))_minmax(0,1fr)] items-start gap-6';
 
 /**
@@ -42,7 +43,7 @@ export const OWNER_PORTFOLIO_SPLIT_GRID =
  * αναφέρεται στην **περιοχή κύλισης**, όπως ένα `fixed` αναφέρεται στο παράθυρο. Η απόσταση από
  * τις άκρες είναι ο **ίδιος** κατακόρυφος ρυθμός του κελύφους (`--shell-block`), όχι νέος αριθμός.
  */
-export const OWNER_PORTFOLIO_MAP_PANE =
+export const LIST_MAP_MAP_PANE =
   'sticky top-[var(--shell-block)] h-[calc(100svh_-_2_*_var(--shell-block))] min-h-80';
 
 /**
@@ -56,7 +57,7 @@ export const OWNER_PORTFOLIO_MAP_PANE =
  * κρατά **μέσα στη στήλη** — χωρίς `fixed`, χωρίς μέτρηση πλάτους σε JavaScript.
  * `z-10`: η ίδια τοπική στρώση με τον δείκτη της οθόνης 2 — πάνω από τις κάρτες που ακολουθούν.
  */
-export const OWNER_PORTFOLIO_EDGE_RAIL = {
+export const LIST_MAP_EDGE_RAIL = {
   above: 'sticky top-[var(--shell-block)] z-10 h-0',
   below: 'sticky bottom-[var(--shell-block)] z-10 h-0',
 } as const satisfies Record<'above' | 'below', string>;

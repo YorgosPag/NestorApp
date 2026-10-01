@@ -130,28 +130,3 @@ export function ownerPortfolioGeoJson(mapped: readonly MappedOwnerProperty[]): L
 export function hasOwnerPortfolioMap(partition: OwnerPortfolioPartition): boolean {
   return partition.mapped.length >= OWNER_PORTFOLIO_MAP_MIN_MARKED;
 }
-
-// ─── Η προβολή στο URL (`?view=map`) ────────────────────────────────────────────
-
-/** Οι προβολές της σελίδας. Η `list` είναι η προεπιλογή και **δεν** γράφεται στο URL. */
-export const OWNER_PORTFOLIO_VIEWS = ['list', 'map'] as const;
-export type OwnerPortfolioView = (typeof OWNER_PORTFOLIO_VIEWS)[number];
-
-/** Το κλειδί του query string: το ίδιο όνομα που χρησιμοποιούν τα portals (`view=map`). */
-export const OWNER_PORTFOLIO_VIEW_PARAM = 'view';
-
-export function isOwnerPortfolioView(value: unknown): value is OwnerPortfolioView {
-  return typeof value === 'string' && (OWNER_PORTFOLIO_VIEWS as readonly string[]).includes(value);
-}
-
-/** Ανάγνωση. Άγνωστη ή απούσα τιμή ⇒ `list`, ποτέ σφάλμα (ο σύνδεσμος μπορεί να είναι παλιός). */
-export function parseOwnerPortfolioView(params: URLSearchParams): OwnerPortfolioView {
-  const raw = params.get(OWNER_PORTFOLIO_VIEW_PARAM);
-  return isOwnerPortfolioView(raw) ? raw : 'list';
-}
-
-/** Γραφή. Η προεπιλογή **σβήνει** το κλειδί: ένα URL, μία μορφή για την ίδια οθόνη. */
-export function writeOwnerPortfolioView(view: OwnerPortfolioView, params: URLSearchParams): void {
-  if (view === 'list') params.delete(OWNER_PORTFOLIO_VIEW_PARAM);
-  else params.set(OWNER_PORTFOLIO_VIEW_PARAM, view);
-}

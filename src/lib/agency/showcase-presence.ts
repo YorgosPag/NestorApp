@@ -47,7 +47,7 @@
  */
 
 import { areaOverWhere, type CoverageResolvers } from '@/lib/agency/coverage-match';
-import { distanceMeters } from '@/lib/geo/geo-distance';
+import { distanceMeters, METRES_PER_KM } from '@/lib/geo/geo-distance';
 import { isBoundingBox } from '@/lib/geo/geo-area';
 import { listingSearchArea } from '@/lib/listings/listing-map-shape';
 import { MAX_PRESENCE_AREAS } from '@/types/agency-profile';
@@ -55,7 +55,6 @@ import { isAdministrativeWhere, type ShowcaseWhere } from '@/types/agency-covera
 import type { GeoCircle } from '@/types/geo/coordinates';
 import type { PublicListing } from '@/types/public-listing';
 
-const METRES_PER_KM = 1000;
 
 // ============================================================================
 // Ο ΠΑΡΑΓΩΓΟΣ — ΑΓΓΕΛΙΕΣ → ΣΥΝΟΛΟ ΠΕΡΙΟΧΩΝ

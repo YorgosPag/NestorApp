@@ -53,7 +53,7 @@
 import { coverageOverCircle, type CoverageResolvers } from '@/lib/agency/coverage-match';
 import { isBoundingBox } from '@/lib/geo/geo-area';
 import { listingSearchArea } from '@/lib/listings/listing-map-shape';
-import { distanceMeters } from '@/lib/geo/geo-distance';
+import { distanceMeters, METRES_PER_KM } from '@/lib/geo/geo-distance';
 import {
   COVERAGE_RADIUS_STEPS,
   isRadiusCoverage,
@@ -289,7 +289,6 @@ export function listingsOutsideCoverage(
 // Η ΠΡΟΤΑΣΗ — η ΜΟΝΗ αυτόματη επιδιόρθωση που είναι υπολογίσιμη
 // ============================================================================
 
-const METRES_PER_KM = 1000;
 
 /**
  * **Το επόμενο βήμα ακτίνας που καλύπτει ΟΛΑ τα ξεμείναντα** — ή `null`.

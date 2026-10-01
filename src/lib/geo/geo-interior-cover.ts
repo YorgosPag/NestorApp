@@ -87,11 +87,10 @@
  * ενός ψεύτικου ισχυρισμού το πληρώνει **ο επισκέπτης, και η εμπιστοσύνη**.
  */
 
-import { distanceMeters } from './geo-distance';
+import { distanceMeters, METRES_PER_KM } from './geo-distance';
 import { geoRingsInscribedRadius, isPointInGeoRings } from './geo-ring';
 import type { GeoCircle, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
-const METRES_PER_KM = 1000;
 
 /**
  * Πόσο πυκνά δειγματοληπτούμε το πλαίσιο του σχήματος, **ανά άξονα**.

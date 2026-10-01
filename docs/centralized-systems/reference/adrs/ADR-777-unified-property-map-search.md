@@ -15844,3 +15844,18 @@ inline style** (N.3): κβάντιση 5×5 σε 25 στατικές κλάσε�
 
 ⚠️ **Google-level: PARTIAL** — ένα συστατικό, δύο ακτίνες, έντιμη κάλυψη κλειδωμένη με μετάλλαξη, πύλες πράσινες· λείπουν οι
 εικόνες και ο έλεγχος σε browser.
+
+### 8.83 🗺️ **Η ΔΙΑΤΑΞΗ ΛΙΣΤΑ ‖ ΧΑΡΤΗΣ ΕΓΙΝΕ ΚΟΙΝΗ — `/offers` ΚΑΙ `/pro`** *(2026-10-01, ADR-896)*
+
+Το `/pro` απέκτησε κάρτες ‖ χάρτη (ADR-896). Η διάταξη της §8.75 **εξήχθη** από το `OwnerPortfolio` αντί να αντιγραφεί:
+- `components/shared/list-map/ListMapSplit.tsx` (split ↔ tabs κατά πλάτος **περιέκτη**, sticky πάνελ, δείκτης άκρης §8.77) ·
+  `list-map-layout.ts` (οι σταθερές `OWNER_PORTFOLIO_*` → `LIST_MAP_*`, ίδιες τιμές) · `ListMapViewSwitch.tsx` (ετικέτες από τον καταναλωτή).
+- `lib/list-map/list-map-view.ts` + `hooks/list-map/useListMapView.ts` (το `?view=map`· ήταν στο `owner-portfolio-map.ts` / `useOwnerPortfolioView`).
+- Το `/offers` είναι **οπτικά αμετάβλητο** (επαληθευμένο ζωντανά)· `owner-portfolio.test.tsx` πράσινο.
+
+Δύο επεκτάσεις του πυρήνα, και οι δύο **χωρίς** αλλαγή για τις αγγελίες:
+- `ListingMapEntry.price: DisplayPrice | null` — ο κατάλογος επαγγελματιών δεν έχει τιμές· στοίβα και δείκτης άκρης απλώς δεν δείχνουν στήλη.
+- `ListingMapCanvas.arrivalArea(id)` — ο καταναλωτής απαντά «πού φτάνω» στην άφιξη με `?selected=` (§8.77). Απών ⇒ `listingArrivalArea`, όπως πριν.
+  Βρέθηκε ζωντανά: χωρίς αυτό, η άφιξη καδράριζε το κατάστημα σε ζουμ δρόμου και **ακύρωνε** το κάδρο της εμβέλειας (δύο ιδιοκτήτες κάμερας).
+
+⏳ Το split του `/search/results` (`SearchResultsContent`, bottom sheet) **δεν** μεταφέρθηκε — άλλο σχήμα· γραμμή στο `pending-ratchet-work.md`.

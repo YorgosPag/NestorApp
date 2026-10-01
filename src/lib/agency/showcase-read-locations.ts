@@ -16,11 +16,15 @@ import { readSpecialDays } from '@/lib/calendar/special-hours';
 import { readWeeklyHours } from '@/lib/calendar/weekly-hours';
 import { readPosition } from '@/lib/agency/showcase-read-geo';
 import { readPlace, text } from '@/lib/agency/showcase-read-primitives';
+import { isAdminAreaId } from '@/lib/geo/admin-area-index-file';
 import {
   MAX_SHOWCASE_LOCATIONS,
   SHOWCASE_LOCATION_ROLES,
+  type ShowcaseAreaLocation,
   type ShowcaseChannelKind,
   type ShowcaseLocation,
+  type ShowcaseLocationArea,
+  type ShowcaseStreetLocation,
   type ShowcaseLocationRole,
   type ShowcaseStreetLine,
 } from '@/types/showcase-card';
@@ -55,21 +59,42 @@ function readEmailConfirmedAt(raw: unknown, kinds: readonly ShowcaseChannelKind[
   return at !== null && kinds.includes('email') && Number.isFinite(Date.parse(at)) ? at : null;
 }
 
+/** Η δημόσια περιοχή — μόνο ταυτότητα ADR-883 που **αναγνωρίζεται**· αλλιώς `null` («δεν δημοσιεύεται»). */
+function readArea(raw: unknown): ShowcaseLocationArea | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const adminId = text((raw as Record<string, unknown>).adminId);
+  return adminId !== null && isAdminAreaId(adminId) ? { adminId } : null;
+}
+
+/**
+ * 🔴 **«ΜΟΝΟ ΠΕΡΙΟΧΗ» ⇒ Ο ΤΟΠΟΣ ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ, ΑΚΟΜΗ ΚΙ ΑΝ ΥΠΑΡΧΕΙ** (ADR-896 §6). Έγγραφο γραμμένο πριν τη
+ * διόρθωση κρατά ακόμη `place`/`position` — η σελίδα **δεν** τα αποδίδει ποτέ, ώσπου η μετάπτωση να τα
+ * μεταφέρει στο ιδιωτικό μισό. Η οδός αντίθετα **χρειάζεται** τόπο: χωρίς αυτόν το κατάστημα παραλείπεται.
+ */
+type LocationSite =
+  | Pick<ShowcaseStreetLocation, 'street' | 'place' | 'position'>
+  | Pick<ShowcaseAreaLocation, 'street' | 'area'>;
+
+function readSite(source: Record<string, unknown>): LocationSite | null {
+  const street = readStreetLine(source.street);
+  if (street === null) return { street: null, area: readArea(source.area) };
+  const place = readPlace(source.place);
+  return place === null ? null : { street, place, position: readPosition(source.position) };
+}
+
 function readLocation(raw: unknown): ShowcaseLocation | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const source = raw as Record<string, unknown>;
   const id = text(source.id);
-  const place = readPlace(source.place);
-  if (id === null || place === null || !isRole(source.role)) return null;
+  const site = readSite(source);
+  if (id === null || site === null || !isRole(source.role)) return null;
   const channelKinds = readChannelKinds(source.channelKinds);
 
   return {
     id,
     role: source.role,
     label: text(source.label),
-    place,
-    position: readPosition(source.position),
-    street: readStreetLine(source.street),
+    ...site,
     hours: readWeeklyHours(source.hours),
     // Α21.21 — κάθε παλιό έγγραφο δεν έχει το πεδίο ⇒ `[]`, καμία μετανάστευση.
     specialHours: readSpecialDays(source.specialHours),

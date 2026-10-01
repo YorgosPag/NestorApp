@@ -2,7 +2,12 @@
  * ADR-841 §7 Α21.16 — ο κριτής της κάρτας: κάθε κανόνας εκτελείται χωρίς Firestore.
  */
 
-import { formCard, isCardRejection, type VerifiedLocationDeclaration } from '../showcase-card-form';
+import {
+  declaresAreaOnly,
+  formCard,
+  isCardRejection,
+  type VerifiedLocationDeclaration,
+} from '../showcase-card-form';
 import type { ShowcaseEmailConfirmation, ShowcaseLocationWire } from '@/types/showcase-card';
 
 const WIRE: ShowcaseLocationWire = {
@@ -25,9 +30,16 @@ const OFFICE = {
   4: [{ opens: '09:00', closes: '17:00' }], 5: [{ opens: '09:00', closes: '17:00' }], 6: [], 7: [],
 };
 
+const POINT = { lat: 40.63, lng: 22.94 };
+const AREA = { adminId: 'municipality:0701' };
+
+/** Το σκέλος διαλέγεται με τον **ίδιο** κανόνα που ρωτά η πόρτα (`verifyLocation`) — ADR-896 §6. */
 function declared(overrides: Partial<ShowcaseLocationWire> = {}): VerifiedLocationDeclaration {
-  return { wire: { ...WIRE, ...overrides }, position: { lat: 40.63, lng: 22.94 } };
+  const wire = { ...WIRE, ...overrides };
+  return declaresAreaOnly(wire) ? { wire, area: AREA } : { wire, position: POINT };
 }
+
+const STREET = { street: 'Τσιμισκή', number: '12', postalCode: '54624' };
 
 let counter = 0;
 const newId = () => `sloc_new_${(counter += 1)}`;
@@ -179,5 +191,46 @@ describe('formCard — οι ονομασμένες αρνήσεις', () => {
     const formed = formCard([declared({ street: { street: ' ', number: '', postalCode: '' } })], new Set(), newId, NONE, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
     expect(formed.locations[0].street).toBeNull();
+  });
+});
+
+describe('formCard — «μόνο περιοχή» ΔΕΝ δημοσιεύει τόπο (ADR-896 §6)', () => {
+  it('🔴 το δημόσιο κατάστημα δεν έχει ΚΑΝ πεδίο place/position — μόνο τον δήμο· ο τόπος πάει στο ιδιωτικό', () => {
+    const formed = formCard([declared()], new Set(), newId, NONE, TODAY);
+    if (isCardRejection(formed)) throw new Error(formed.reason);
+    const [location] = formed.locations;
+    expect(location).not.toHaveProperty('place');
+    expect(location).not.toHaveProperty('position');
+    expect(location).toMatchObject({ street: null, area: AREA });
+    expect(formed.premises).toEqual({ sloc_new_1: { landId: 'land_1', buildingId: null } });
+    // Το δημόσιο μισό, σειριοποιημένο, δεν αναφέρει πουθενά τη γη.
+    expect(JSON.stringify(formed.locations)).not.toContain('land_1');
+  });
+
+  it('κατάστημα με οδό: δημόσιος τόπος, ΚΑΝΕΝΑ ιδιωτικό αντίγραφο', () => {
+    const formed = formCard([declared({ street: STREET })], new Set(), newId, NONE, TODAY);
+    if (isCardRejection(formed)) throw new Error(formed.reason);
+    expect(formed.locations[0]).toMatchObject({ street: STREET, place: { landId: 'land_1' }, position: POINT });
+    expect(formed.premises).toEqual({});
+  });
+
+  it('δήμος που δεν αποδόθηκε ⇒ area: null — ποτέ εφεδρεία στο σημείο', () => {
+    const formed = formCard([{ wire: WIRE, area: null }], new Set(), newId, NONE, TODAY);
+    if (isCardRejection(formed)) throw new Error(formed.reason);
+    expect(formed.locations[0]).toMatchObject({ street: null, area: null });
+    expect(formed.locations[0]).not.toHaveProperty('position');
+  });
+
+  it('🔴 πόρτα και κριτής που διαφωνούν ⇒ ΑΡΝΗΣΗ, όχι δημοσίευση σημείου', () => {
+    expect(isCardRejection(formCard([{ wire: WIRE, position: POINT }], new Set(), newId, NONE, TODAY))).toBe(true);
+    expect(isCardRejection(formCard([{ wire: { ...WIRE, street: STREET }, area: AREA }], new Set(), newId, NONE, TODAY))).toBe(true);
+  });
+
+  it.each([
+    [null, true],
+    [{ street: ' ', number: '', postalCode: ' ' }, true],
+    [{ street: 'Τσιμισκή', number: '', postalCode: '' }, false],
+  ] as const)('declaresAreaOnly(%j) = %s — ο ΕΝΑΣ κανόνας πόρτας και κριτή', (street, areaOnly) => {
+    expect(declaresAreaOnly({ street })).toBe(areaOnly);
   });
 });

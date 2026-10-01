@@ -93,7 +93,8 @@ export function draftOfLocation(owned: OwnedShowcaseLocation): ShowcaseLocationD
     id: owned.id,
     role: owned.role,
     label: owned.label ?? '',
-    place: owned.place,
+    // ADR-896 §6 — για «μόνο περιοχή» ο τόπος έρχεται από το ιδιωτικό μισό· `null` ⇒ η φόρμα τον ζητά ξανά.
+    place: owned.premises,
     publishStreet: owned.street !== null,
     street: owned.street ?? { street: '', number: '', postalCode: '' },
     hoursEnabled: owned.hours !== null,

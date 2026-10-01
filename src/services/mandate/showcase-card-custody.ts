@@ -32,7 +32,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readShowcase } from '@/lib/agency/showcase-read';
 import { athensClockAt } from '@/lib/calendar/weekly-hours';
-import { readLocationChannels } from '@/lib/agency/showcase-card-channels-read';
+import { readLocationChannels, readLocationPremises } from '@/lib/agency/showcase-card-channels-read';
+import { areaOnlyResidue, stripAreaOnlyResidue } from '@/lib/agency/showcase-area-only-residue';
+import { showcaseLocationArea } from '@/services/places/showcase-location-area';
 import {
   formCard,
   formWebsite,
@@ -43,7 +45,13 @@ import { mailboxAbsentSince } from '@/lib/communications/email-delivery/recipien
 import { readRecipientStandings } from '@/server/comms/email-delivery/email-delivery-ledger';
 import { generateShowcaseLocationId } from '@/services/enterprise-id-convenience';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
-import type { OwnedShowcaseLocation, ShowcaseEmailReturn, ShowcaseLocation } from '@/types/showcase-card';
+import type {
+  OwnedShowcaseLocation,
+  ShowcaseEmailReturn,
+  ShowcaseLocation,
+  ShowcaseLocationArea,
+} from '@/types/showcase-card';
+import type { PlaceRef } from '@/types/geo/public-place';
 
 const logger = createModuleLogger('showcase-card-custody');
 
@@ -69,9 +77,18 @@ type CardWrite =
   | { readonly kind: 'saved'; readonly locations: readonly OwnedShowcaseLocation[]; readonly website: string | null }
   | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection };
 
-/** Δημόσιο μισό + ιδιωτικό μισό → ό,τι βλέπει **ο ιδιοκτήτης** για να επεξεργαστεί. */
-function ownedOf(locations: readonly ShowcaseLocation[], channelsRaw: unknown): OwnedShowcaseLocation[] {
-  return locations.map((location) => ({ ...location, channels: readLocationChannels(channelsRaw, location.id) }));
+/**
+ * Δημόσιο μισό + ιδιωτικό μισό → ό,τι βλέπει **ο ιδιοκτήτης** για να επεξεργαστεί.
+ *
+ * 🔑 ADR-896 §6 — ο τόπος του καταστήματος «μόνο περιοχή» **δεν** υπάρχει στο δημόσιο· έρχεται από το ιδιωτικό
+ * `premises`, ώστε η φόρμα να ξανανοίγει με τον ίδιο τόπο και μια αποθήκευση να μην τον «ξεχνά».
+ */
+function ownedOf(locations: readonly ShowcaseLocation[], privateRaw: unknown): OwnedShowcaseLocation[] {
+  return locations.map((location) => ({
+    ...location,
+    channels: readLocationChannels(privateRaw, location.id),
+    premises: location.street !== null ? location.place : readLocationPremises(privateRaw, location.id),
+  }));
 }
 
 /** Α21.20 — **ποια email της κάρτας επέστρεψαν οριστικά**, από το ημερολόγιο. Δεν πετά ποτέ. */
@@ -129,9 +146,11 @@ async function writeCard(
 
     // ⚠️ `update` στο δημόσιο (το έγγραφο ανήκει στον γραφέα της βιτρίνας) · `set` χωρίς
     //    `merge` στο ιδιωτικό (η κάρτα είναι ολόκληρη — ένα αφαιρεμένο τηλέφωνο **φεύγει**).
+    //    ADR-896 §6 — ο τόπος των «μόνο περιοχή» ζει **εδώ**, στο ιδιωτικό, στην **ίδια** συναλλαγή.
+    const privateHalf = { locations: formed.channels.locations, premises: formed.premises };
     transaction.update(profileRef, { locations: formed.locations, website });
-    transaction.set(channelsRef, { locations: formed.channels.locations });
-    return { kind: 'saved', locations: ownedOf(formed.locations, formed.channels), website };
+    transaction.set(channelsRef, privateHalf);
+    return { kind: 'saved', locations: ownedOf(formed.locations, privateHalf), website };
   });
 }
 
@@ -203,4 +222,40 @@ export async function readOwnedShowcaseCard(
     });
     return { kind: 'failed' };
   }
+}
+
+/** Η έκβαση της μετάπτωσης ενός εγγράφου — `unavailable` = δεν διαβάστηκε το ευρετήριο περιοχών, ξαναδοκίμασε. */
+export type AreaOnlyPremisesMove = 'moved' | 'clean' | 'absent' | 'unavailable';
+
+/**
+ * **Ο τόπος των καταστημάτων «μόνο περιοχή» φεύγει από το δημόσιο έγγραφο** (ADR-896 §6 — μετάπτωση).
+ *
+ * 🔑 **ΜΙΑ ΣΥΝΑΛΛΑΓΗ, ΔΥΟ ΕΓΓΡΑΦΑ** — όπως η αποθήκευση: ο τόπος γράφεται στο ιδιωτικό `premises` (`merge`: τα
+ * κανάλια μένουν) **και** αφαιρείται από το δημόσιο, με τον δήμο στη θέση του. Αλλιώς μια αποτυχία στη μέση θα
+ * άφηνε τον ιδιοκτήτη χωρίς τόπο στη φόρμα — ή τη διεύθυνση ακόμη δημόσια.
+ *
+ * 🔑 **Ιδεμποτική**: ο κριτής (`areaOnlyResidue`) διαβάζεται **μέσα** στη συναλλαγή· δεύτερο τρέξιμο ⇒ `clean`.
+ */
+export async function moveAreaOnlyPremises(adminDb: AdminFirestore, companyId: string): Promise<AreaOnlyPremisesMove> {
+  const profileRef = adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId);
+  const channelsRef = adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(companyId);
+  return adminDb.runTransaction(async (transaction): Promise<AreaOnlyPremisesMove> => {
+    const snapshot = await transaction.get(profileRef);
+    const rawLocations: unknown = snapshot.data()?.locations;
+    if (!snapshot.exists || !Array.isArray(rawLocations)) return 'absent';
+    const residue = areaOnlyResidue(rawLocations);
+    if (residue.length === 0) return 'clean';
+
+    const areas = new Map<string, ShowcaseLocationArea | null>();
+    const premises: Record<string, PlaceRef> = {};
+    for (const { locationId, place, position } of residue) {
+      const area = await showcaseLocationArea(position);
+      if (area === 'unavailable') return 'unavailable';
+      areas.set(locationId, area.area);
+      if (place !== null) premises[locationId] = place;
+    }
+    transaction.set(channelsRef, { premises }, { merge: true });
+    transaction.update(profileRef, { locations: stripAreaOnlyResidue(rawLocations, areas) });
+    return 'moved';
+  });
 }

@@ -57,6 +57,12 @@ import type { GeoPoint } from '@/types/geo/coordinates';
  */
 export const EARTH_RADIUS_METERS = 6_371_008.8;
 
+/**
+ * Χιλιόμετρα → μέτρα — **μία** δήλωση (ADR-896: ήταν τέσσερα ιδιωτικά `const METRES_PER_KM = 1000`,
+ * σε `listings-geojson` · `coverage-agreement` · `showcase-presence` · `geo-interior-cover`).
+ */
+export const METRES_PER_KM = 1000;
+
 function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }

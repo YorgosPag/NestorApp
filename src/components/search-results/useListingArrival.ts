@@ -38,19 +38,21 @@ export function useListingArrival(
   geojson: ListingGeoJson,
   selectedAtFirstData: string | null,
   searchAreaAtFirstData: GeoBoundingBox | null,
+  /** Η απάντηση του καταναλωτή στο «πού φτάνω;» (ADR-896) — `null` ⇒ η θέση του σημαδιού. */
+  arrivalArea?: (id: string) => GeoBoundingBox | null,
 ): FrameListingData {
   const consumedRef = useRef(false);
   // ⚠️ Αναφορές, όχι εξαρτήσεις: ο καλών (`handleMapReady`) έχει κενό πίνακα εξαρτήσεων ως συμβόλαιο.
   // Ενημερώνονται σε effect που δηλώνεται ΠΡΙΝ από το effect καδραρίσματος του καλούντος ⇒ τρέχει πρώτο.
-  const latestRef = useRef({ geojson, selected: selectedAtFirstData, searchArea: searchAreaAtFirstData });
+  const latestRef = useRef({ geojson, selected: selectedAtFirstData, searchArea: searchAreaAtFirstData, arrivalArea });
   useEffect(() => {
-    latestRef.current = { geojson, selected: selectedAtFirstData, searchArea: searchAreaAtFirstData };
-  }, [geojson, selectedAtFirstData, searchAreaAtFirstData]);
+    latestRef.current = { geojson, selected: selectedAtFirstData, searchArea: searchAreaAtFirstData, arrivalArea };
+  }, [geojson, selectedAtFirstData, searchAreaAtFirstData, arrivalArea]);
 
   return useCallback((target: MapEventTarget, bounds: ListingBounds) => {
-    const { geojson: data, selected, searchArea } = latestRef.current;
+    const { geojson: data, selected, searchArea, arrivalArea: arrivalOf } = latestRef.current;
     const pending = consumedRef.current || searchArea !== null ? null : selected;
-    const area = pending === null ? null : listingArrivalArea(data, pending);
+    const area = pending === null ? null : (arrivalOf?.(pending) ?? listingArrivalArea(data, pending));
     // Καταναλώνεται **με τα πρώτα δεδομένα**, είτε βρέθηκε είτε όχι: μια αγγελία που δεν
     // ζωγραφίζεται (αποσύρθηκε, λάθος id) δεν κρατά σε αναμονή ένα μελλοντικό τίναγμα.
     consumedRef.current = true;

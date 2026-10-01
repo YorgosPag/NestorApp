@@ -71,9 +71,8 @@ import {
 import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
-import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { contactableShowcase, mandateRefusalOf, registryClosureOf } from '@/lib/agency/showcase-registry-closure';
-import { ShowcaseMarkView } from './ShowcaseMarkView';
+import { ShowcaseMarkView, showcaseMarkSubjectOf } from './ShowcaseMarkView';
 import { ShowcaseContactCard } from './ShowcaseContactCard';
 import { ShowcaseShareDialog } from './ShowcaseShareDialog';
 import { ContactFact, PlaceFact } from './AgencyContactFacts';
@@ -338,7 +337,7 @@ function ShowcaseView({
     <ShellSurface as="main" measure="prose" className="gap-y-6">
       {/*
         🔴 ADR-841 Α21 — ΤΟ **ΙΔΙΟ** ΣΗΜΑ ΜΕ ΤΗΝ ΚΑΡΤΑ, ΣΕ ΑΛΛΟ ΜΕΓΕΘΟΣ.
-        Ίδια συνάρτηση (`lettermarkOf`), ίδιο component — άρα ο ίδιος επαγγελματίας
+        Ίδια συνάρτηση (`showcaseMarkSubjectOf` → `lettermarkOf`), ίδιο component — άρα ο ίδιος επαγγελματίας
         έχει **το ίδιο χρώμα** στη ρίζα, στο `/pro` και εδώ. Αν η σελίδα έφτιαχνε
         δικό της σήμα, ο άνθρωπος που πάτησε την κάρτα θα προσγειωνόταν σε **άλλη
         ταυτότητα** — και η αναγνωρισιμότητα είναι όλη η δουλειά του σήματος.
@@ -353,11 +352,7 @@ function ShowcaseView({
           **δεν μένουν ανώνυμοι**.
         */}
         <ShowcaseMarkView
-          mark={
-            profile.mark !== null
-              ? { declared: profile.mark }
-              : { lettermark: lettermarkOf(profile.companyId, profile.displayName) }
-          }
+          mark={showcaseMarkSubjectOf(profile)}
           size="page"
         />
         <div className="flex min-w-0 flex-col gap-1">

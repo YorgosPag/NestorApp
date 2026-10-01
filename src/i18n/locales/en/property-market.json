@@ -1725,7 +1725,31 @@
       "whereChipCircle": "Within {km} km of your point",
       "whereChipCircleNamed": "Within {km} km of: {area}",
       "whereChipRemove": "Remove place filter: {filter}",
-      "queryStateLabel": "What you are filtering now"
+      "queryStateLabel": "What you are filtering now",
+      "map": {
+        "label": "Professionals map",
+        "hint": "A pin marks a shop that receives customers. Hover over a card to see where that professional works.",
+        "loading": "Loading map",
+        "coverageNone": "{name} · has not declared a service area",
+        "coverageNationwide": "{name} · works across all of Greece",
+        "coverageShown": "{name} · service area shown on the map",
+        "presenceShown": "Dots show where they have active listings",
+        "coversHereLabel": "Point on the map",
+        "coversHereAction": "Who covers here?",
+        "coversHereOutside": "This point is not in a recognised area.",
+        "areaOnly": "{count, plural, one {# professional has no public address — hover over the card to see their service area.} other {# professionals have no public address — hover over their cards to see their service areas.}}"
+      },
+      "myProperty": {
+        "label": "My property",
+        "placeholder": "Professionals for my property",
+        "noArea": "its area cannot be established",
+        "noPlace": "no location declared"
+      },
+      "view": {
+        "label": "Professionals view",
+        "list": "List",
+        "map": "Map"
+      }
     },
     "credibility": {
       "occupationLabel": "Speciality",
@@ -1778,6 +1802,7 @@
       "cardHeadquarters": "Head office",
       "cardBranch": "Branch",
       "cardAreaOnly": "The exact address is not published.",
+      "cardAreaOnlyIn": "Area: {area}",
       "cardDirections": "Directions",
       "cardShowPhone": "Show phone number",
       "cardShowEmail": "Show email",

@@ -44,6 +44,11 @@ export interface MapPickHandlers {
   readonly onClear?: () => void;
   /** Άνοιγμα λίστας διαλέγματος — ή `null`: **κάθε** κλικ στον χάρτη κλείνει την προηγούμενη. */
   readonly onStack?: (stack: ListingMapStack | null) => void;
+  /**
+   * **Κλικ σε κενό σημείο, με το σημείο** (ADR-896 §7.1) — τρέχει **μετά** το `onClear`, ώστε ο καταναλωτής να
+   * ρωτήσει «τι είναι εδώ;» (κάρτα σημείου, Google Maps) χωρίς να χάσει το «κλικ έξω ⇒ αποεπιλογή».
+   */
+  readonly onEmptyPoint?: (point: GeoPoint) => void;
 }
 interface MapPickHandlersRef { readonly current: MapPickHandlers }
 
@@ -136,6 +141,12 @@ function emitStack(
   handlersRef.current.onStack?.({ ids: distinct, point: { lng: lngLat.lng, lat: lngLat.lat } });
 }
 
+/** Κλικ στο κενό: πρώτα αποεπιλογή (όπως πάντα), μετά το σημείο σε όποιον ρωτά «τι είναι εδώ;». */
+function emitEmpty(lngLat: { lng: number; lat: number } | undefined, handlersRef: MapPickHandlersRef): void {
+  handlersRef.current.onClear?.();
+  if (lngLat !== undefined) handlersRef.current.onEmptyPoint?.({ lng: lngLat.lng, lat: lngLat.lat });
+}
+
 function bindHover(target: MapEventTarget, handlersRef: MapPickHandlersRef): void {
   /*
     🔴 **`mousemove` ΚΑΙ ΟΧΙ ΜΟΝΟ `mouseenter`.** Δύο γειτονικές πινέζες ζουν στο **ίδιο**
@@ -179,7 +190,7 @@ export function bindMapPick(target: MapEventTarget, handlersRef: MapPickHandlers
       .filter((hit): hit is PickHit => hit !== null);
     const pick = resolveMapPick(hits);
 
-    if (pick.kind === 'none') handlersRef.current.onClear?.();
+    if (pick.kind === 'none') emitEmpty(event.lngLat, handlersRef);
     else if (pick.kind === 'listing') handlersRef.current.onSelect?.(pick.id);
     else if (pick.kind === 'stack') emitStack(pick.ids, event.lngLat, handlersRef);
     else void expandCluster(target, { ...pick, event }, handlersRef, () => seq === clickSeq);

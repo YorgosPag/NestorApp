@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 843 ADRs | Last Updated: 2026-09-30
+**📊 Stats**: 844 ADRs | Last Updated: 2026-09-30
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 591 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 592 | [View](#uncategorized) |
 
 ---
 
@@ -878,6 +878,7 @@
 | **ADR-893** | Ονόματα εμφάνισης της διοικητικής ιεραρχίας: «ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ» → «Δήμος Αθηναίων», με απόδειξη | ✅ **IMPLEMENTED** — 2026-09-27 · **Φ2 IMPLEMENTED** (§7): **1.384 / 1.384** ονόματα με απόδειξη · τρίτη αυτόματη πηγή **ekloges.ypes.gr** · τα 3 λάθη γραμμάτων της ΕΛΣΤΑΤ **διορθώθηκαν**, με το παλιό όνομα **ψαχνόμενο** | 2026-09-27 | Uncategorized | [📄](./adrs/ADR-893-admin-display-names.md) |
 | **ADR-894** | Ενεργές συνεδρίες: η τοποθεσία επιλύεται στον server, με τοπική GeoIP, και ο server είναι ο μόνος γραφέας | ✅ **IMPLEMENTED** — Φάση 1 + **Φάση 2 (§10)** 2026-09-29 (commit `80594406`, αναπτυγμένο· §10.4 εκτελέστηκε) · **§10.7 (Φ2-Ο1)** 2026-09-30 (uncommitted· ⏳ deploy κανόνων Firestore + Storage μετά το push) · ⏳ ζωντανός έλεγχος §9 σε εξέλιξη | 2026-09-29 | Uncategorized | [📄](./adrs/ADR-894-session-location-server-geoip.md) |
 | **ADR-895** | Τοποθεσία δεδομένων αρχείων (data residency): **θέση ανά `FileRecord`**, **ΕΝΑΣ** επιλογέας κάδου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-895-file-data-residency.md) |
+| **ADR-896** | Κατάλογος επαγγελματιών `/pro`: **κάρτες ‖ χάρτης**, με τη **δηλωμένη περιοχή δραστηριότητας στο hover** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-896-professionals-directory-map.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1708,6 +1709,7 @@
 | **ADR-893** | Ονόματα εμφάνισης της διοικητικής ιεραρχίας: «ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ» → «Δήμος Αθηναίων», με απόδειξη | ✅ **IMPLEMENTED** — 2026-09-27 · **Φ2 IMPLEMENTED** (§7): **1.384 / 1.384** ονόματα με απόδειξη · τρίτη αυτόματη πηγή **ekloges.ypes.gr** · τα 3 λάθη γραμμάτων της ΕΛΣΤΑΤ **διορθώθηκαν**, με το παλιό όνομα **ψαχνόμενο** | [View](./adrs/ADR-893-admin-display-names.md) |
 | **ADR-894** | Ενεργές συνεδρίες: η τοποθεσία επιλύεται στον server, με τοπική GeoIP, και ο server είναι ο μόνος γραφέας | ✅ **IMPLEMENTED** — Φάση 1 + **Φάση 2 (§10)** 2026-09-29 (commit `80594406`, αναπτυγμένο· §10.4 εκτελέστηκε) · **§10.7 (Φ2-Ο1)** 2026-09-30 (uncommitted· ⏳ deploy κανόνων Firestore + Storage μετά το push) · ⏳ ζωντανός έλεγχος §9 σε εξέλιξη | [View](./adrs/ADR-894-session-location-server-geoip.md) |
 | **ADR-895** | Τοποθεσία δεδομένων αρχείων (data residency): **θέση ανά `FileRecord`**, **ΕΝΑΣ** επιλογέας κάδου | ✅ APPROVED | [View](./adrs/ADR-895-file-data-residency.md) |
+| **ADR-896** | Κατάλογος επαγγελματιών `/pro`: **κάρτες ‖ χάρτης**, με τη **δηλωμένη περιοχή δραστηριότητας στο hover** | ✅ APPROVED | [View](./adrs/ADR-896-professionals-directory-map.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

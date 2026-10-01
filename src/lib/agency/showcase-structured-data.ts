@@ -46,7 +46,7 @@ import { END_OF_DAY, ISO_WEEKDAYS, type IsoWeekday, type WeeklyHours } from '@/l
 import type { JsonLdValue } from '@/lib/seo/json-ld';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import type { PublicShowcase } from '@/types/agency-profile';
-import type { ShowcaseLocation } from '@/types/showcase-card';
+import type { ShowcaseStreetLocation } from '@/types/showcase-card';
 import type { ShowcaseSeat } from '@/types/showcase-legal-identity';
 
 const SCHEMA_DAY: Readonly<Record<IsoWeekday, string>> = {
@@ -170,7 +170,7 @@ function organisationNode(showcase: PublicShowcase, organisationId: string, prof
 
 function locationNode(
   showcase: PublicShowcase,
-  location: ShowcaseLocation & { readonly street: NonNullable<ShowcaseLocation['street']> },
+  location: ShowcaseStreetLocation,
   organisationId: string,
   context: ShowcaseStructuredDataContext,
 ): JsonLdValue {
@@ -209,7 +209,7 @@ export function showcaseStructuredData(showcase: PublicShowcase, context: Showca
   const organisationId = `${context.profileUrl}#organization`;
   const operating = registryClosureOf(showcase) === null ? showcase.locations : [];
   const addressed = operating.filter(
-    (location): location is ShowcaseLocation & { readonly street: NonNullable<ShowcaseLocation['street']> } =>
+    (location): location is ShowcaseStreetLocation =>
       location.street !== null,
   );
   return {

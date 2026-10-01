@@ -49,7 +49,7 @@ import React from 'react';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicAgencies } from '@/services/realtime/hooks/usePublicAgencies';
-import { AgencyCard } from './AgencyCard';
+import { AgencyDirectoryResults } from './AgencyDirectoryResults';
 
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { AgencyDirectoryFilters } from './AgencyDirectoryFilters';
@@ -315,20 +315,15 @@ export function AgencyDirectoryContent(): React.JSX.Element {
           </p>
         </section>
       ) : (
-        <section className="flex flex-col gap-3">
-          {/* 🔑 **Ο ΜΕΤΡΗΤΗΣ ΕΦΥΓΕ ΣΤΟ {@link DirectoryQueryState}** *(§9 #12)* — μαζί με
-              το αφαιρούμενο σημάδι, γιατί λένε **τα δύο μισά της ίδιας πρότασης**. Εκεί
-              απέκτησε και `role="status"`: η αλλαγή πλήθους **ανακοινώνεται** πλέον, αντί
-              να τυπώνεται σιωπηλά για όποιον τη βλέπει. */}
-          <ul className="m-0 flex list-none flex-col gap-3 p-0">
-            {visible.map((profile) => (
-              <AgencyCard
-                key={profile.companyId}
-                profile={profile}
-                where={filters.where}
-              />
-            ))}
-          </ul>
+        // 🗺️ ADR-896 — ΚΑΡΤΕΣ ‖ ΧΑΡΤΗΣ. Η λίστα καρτών κρατούσε το μέτρο `wide` (80ch)· δίπλα της ο
+        //    χάρτης χρειάζεται όλο το πλάτος, άρα η ενότητα το **ζητά με όνομα** (`data-shell-span`),
+        //    όπως ο ήρωας — ποτέ με `-mx-*`. Ο μετρητής ζει στο `DirectoryQueryState` (§9 #12).
+        <section data-shell-span="full" className="flex flex-col gap-3">
+          <AgencyDirectoryResults
+            profiles={visible}
+            where={filters.where}
+            onPickArea={(adminId) => apply({ ...filters, where: { adminId } })}
+          />
         </section>
       )}
     </ShellSurface>

@@ -117,7 +117,7 @@ export function listingPriceMarkers(
   for (const { id, title, price } of entries) {
     const anchor = anchors.get(id);
     if (anchor === undefined) continue;              // κανόνας 1 — δεν ξέρουμε ΠΟΥ
-    if (price.kind !== 'priced') continue;           // κανόνας 2 — δεν ξέρουμε ΠΟΣΟ
+    if (price === null || price.kind !== 'priced') continue; // κανόνας 2 — δεν ξέρουμε ΠΟΣΟ
 
     candidates.push({
       id,

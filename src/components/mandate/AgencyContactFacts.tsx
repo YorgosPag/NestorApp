@@ -29,7 +29,8 @@ import { primaryChannelLocation } from '@/lib/agency/showcase-card-primary';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import type { PublicShowcase } from '@/types/agency-profile';
-import type { ShowcaseLocation } from '@/types/showcase-card';
+import { useAdminAreaName } from '@/hooks/geo/useAdminAreaName';
+import type { ShowcaseAreaLocation, ShowcaseLocation, ShowcaseStreetLocation } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { Fact } from './AgencyFact';
 import { ChannelReveal } from './ChannelReveal';
@@ -54,12 +55,30 @@ function websiteHost(website: string): string {
  * πληροφορία, όχι η απάντηση της σελίδας (N.12 δεν παραβιάζεται — η σελίδα απαντά «υπάρχει;»).
  */
 export function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX.Element {
-  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const headquarters = headquartersOf(profile);
+  // 🔴 ADR-896 §6 — έδρα «μόνο περιοχή» ⇒ **μόνο ο δήμος**. Ούτε εφεδρεία στο παλιό `place`: θα έδειχνε
+  //    διεύθυνση δίπλα σε κάρτα που υπόσχεται ότι δεν δημοσιεύεται.
+  if (headquarters !== null && headquarters.street === null) return <AreaPlaceFact location={headquarters} />;
+  return <StreetPlaceFact headquarters={headquarters} profile={profile} />;
+}
+
+function AreaPlaceFact({ location }: { readonly location: ShowcaseAreaLocation }): React.JSX.Element {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const areaName = useAdminAreaName(location.area?.adminId ?? null);
+  return <Fact label={t(PROFILE_KEYS.placeLabel)} value={areaName ?? t(PROFILE_KEYS.placeUnknown)} hint={t(PROFILE_KEYS.cardAreaOnly)} />;
+}
+
+function StreetPlaceFact({
+  headquarters,
+  profile,
+}: {
+  readonly headquarters: ShowcaseStreetLocation | null;
+  readonly profile: PublicShowcase;
+}): React.JSX.Element {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const place = usePublicPlace(headquarters?.place ?? profile.place);
   const area = place.state === 'found' ? place.land.displayAddress : null;
-  const street =
-    headquarters?.street != null ? formatContactAddressLine({ ...headquarters.street, country: 'GR' }) : null;
+  const street = headquarters === null ? null : formatContactAddressLine({ ...headquarters.street, country: 'GR' });
 
   return (
     <Fact
