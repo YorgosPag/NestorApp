@@ -47,6 +47,8 @@ import {
 } from '@/lib/listings/declared-file-ids';
 import type { FileRecord } from '@/types/file-record';
 import { readDeclaredFocalPoints, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import { readDeclaredCaptureSpots, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import { readDeclaredFloorplanNorth, type DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 
 /**
  * **Το `FileRecord` όσο το χρειάζεται η απόφαση** — και ούτε πεδίο παραπάνω.
@@ -274,6 +276,8 @@ export function compareAgencyMediaForPublication(
  * | `order` | *«με ποια σειρά;»* — **ποτέ** «ποια;» | `properties/{id}.publishedMediaOrder` |
  * | `floorplans` | *«ποιες κατόψεις είναι υλικό **ΑΥΤΗΣ** της αγγελίας;» | `properties/{id}.publishedFloorplans` |
  * | `focalPoints` | *«πού είναι το θέμα κάθε φωτογραφίας;»* (ADR-880) — **ποτέ** «ποια;» | `properties/{id}.publishedMediaFocalPoints` |
+ * | `captureSpots` | *«από πού τραβήχτηκε κάθε φωτογραφία;»* (ADR-897) | `properties/{id}.publishedPhotoCaptureSpots` |
+ * | `floorplanNorth` | *«πού είναι ο βορράς σε κάθε κάτοψη;»* (ADR-897 Φ5.2) | `properties/{id}.publishedFloorplanNorth` |
  *
  * 🔴 **ΟΙ ΔΥΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΕΙΔΟΣ ΔΗΛΩΣΗΣ, ΚΑΙ Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ Η ΑΣΦΑΛΕΙΑ.**
  * Η `order` **δεν μπορεί να δημοσιεύσει τίποτα** — μόνο να τακτοποιήσει ό,τι ήδη φεύγει *(Α14.7.2)*.
@@ -292,6 +296,13 @@ export interface AgencyMediaDeclaration {
    * μόνο λέει πώς κόβεται ό,τι ήδη φεύγει. Προαιρετικό: απόν ⇒ κανένα δηλωμένο (το αυτόματο μιλά).
    */
   readonly focalPoints?: ReadonlyMap<string, PhotoFocalPoint>;
+  /**
+   * 📍 Τα σημεία λήψης ανά `FileRecord.id` φωτογραφίας (ADR-897) — **δεν δημοσιεύουν τίποτα**· λένε
+   * μόνο πού στεκόταν η κάμερα για ό,τι ήδη φεύγει. Προαιρετικό: απόν ⇒ κανένα.
+   */
+  readonly captureSpots?: ReadonlyMap<string, PhotoCaptureSpot>;
+  /** 🧭 Ο βορράς ανά `FileRecord.id` **κάτοψης** (ADR-897 Φ5.2) — δεν δημοσιεύει τίποτα· λέει μόνο πού δείχνει το βέλος. */
+  readonly floorplanNorth?: DeclaredFloorplanNorth;
 }
 
 /** Καμία δήλωση — μοιράζεται, γιατί είναι αμετάβλητη και κενή. */
@@ -314,10 +325,14 @@ export function agencyMediaDeclaration(source: {
   readonly publishedMediaOrder?: unknown;
   readonly publishedFloorplans?: unknown;
   readonly publishedMediaFocalPoints?: unknown;
+  readonly publishedPhotoCaptureSpots?: unknown;
+  readonly publishedFloorplanNorth?: unknown;
 }): AgencyMediaDeclaration {
   return {
     order: declaredFileIds(source.publishedMediaOrder),
     floorplans: declaredFileIds(source.publishedFloorplans),
     focalPoints: readDeclaredFocalPoints(source.publishedMediaFocalPoints),
+    captureSpots: readDeclaredCaptureSpots(source.publishedPhotoCaptureSpots),
+    floorplanNorth: readDeclaredFloorplanNorth(source.publishedFloorplanNorth),
   };
 }

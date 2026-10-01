@@ -59,6 +59,7 @@
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { AnyPublicShelfKind } from './public-shelf-kinds';
 import type {
@@ -227,6 +228,22 @@ export interface PublicShelfSource<M = ListingMaterial> {
    * Και οι παραγωγοί που **δεν** κόβονται ποτέ (σήματα γραφείων) δεν έχουν τι να απαντήσουν.
    */
   readonly focalPoint?: PhotoFocalPoint | null;
+  /**
+   * 📍 **Η ταυτότητα της πηγής** (`FileRecord.id`) — ADR-897. Κουβαλιέται αδιαφανώς, για τον **ίδιο**
+   * λόγο με το {@link focalPoint}: το `published[i]` δεν είναι το `sources[i]`, άρα η μόνη σταθερή
+   * σύνδεση μιας φωτογραφίας με «την κάτοψη Χ» είναι η ταυτότητα, όχι η θέση.
+   *
+   * ⛔ **Δεν γράφεται ποτέ στο δημόσιο έγγραφο** — ο γραφέας την κάνει δείκτη (`floorplanIndex`).
+   * Απόν ⇒ η πηγή δεν μπορεί να γίνει στόχος σημείου λήψης (σήματα γραφείων, legacy `media[]`).
+   */
+  readonly sourceFileId?: string;
+  /** 📍 **Το σημείο λήψης που ΔΗΛΩΣΕ ο άνθρωπος** (ADR-897) — κουβαλιέται, δεν ερμηνεύεται από το ράφι. */
+  readonly captureSpot?: PhotoCaptureSpot | null;
+  /**
+   * 🧭 **Ο βορράς που ΔΗΛΩΣΕ ο άνθρωπος για ΑΥΤΗ την κάτοψη** (ADR-897 Φ5.2) — `[0, 2π)`, χώρος εικόνας.
+   * Κουβαλιέται, δεν ερμηνεύεται· το αν είναι κάτοψη το κρίνει **μόνο** το `withPublishedGallery`.
+   */
+  readonly northRad?: number | null;
   /**
    * **ADR-895 Α1** — σε ποιον κάδο ζει το πρωτότυπο *(`FileRecord.storagePlacement`)*, όταν η
    * πηγή είναι `FileRecord` και ο παραγωγός το ξέρει. Απόν ⇒ κανονικός κάδος

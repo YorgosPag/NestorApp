@@ -124,6 +124,10 @@ export type ListingSourceProperty = ProjectableProperty & {
    * ⚠️ Ωμό `unknown`, ίδια πειθαρχία: η ανάγνωση είναι **αποκλειστικά** το `agencyMediaDeclaration`.
    */
   readonly publishedMediaFocalPoints?: unknown;
+  /** 📍 Τα σημεία λήψης που ΔΗΛΩΣΕ το γραφείο (ADR-897) — ωμό `unknown`, η ανάγνωση είναι το `agencyMediaDeclaration`. */
+  readonly publishedPhotoCaptureSpots?: unknown;
+  /** 🧭 Ο βορράς ανά κάτοψη που ΔΗΛΩΣΕ το γραφείο (ADR-897 Φ5.2) — ωμό `unknown`, η ανάγνωση είναι το `agencyMediaDeclaration`. */
+  readonly publishedFloorplanNorth?: unknown;
 };
 
 /**

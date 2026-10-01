@@ -85,8 +85,20 @@ export function publishedAgencyMediaSources(
     if (material === null) return [];
     // 🎯 ADR-880 — η δήλωση ταξιδεύει δεμένη στο **αρχείο**, ποτέ στη θέση (το ράφι πετά απορρίψεις).
     const focalPoint = declaration.focalPoints?.get(file.id) ?? null;
+    // 📍 ADR-897 — ίδια πειθαρχία: ταυτότητα + σημείο λήψης δεμένα στο **αρχείο**.
+    const captureSpot = declaration.captureSpots?.get(file.id) ?? null;
+    // 🧭 ADR-897 Φ5.2 — ο βορράς ανήκει στην **κάτοψη**· για φωτογραφία η γραμμή είναι απλώς απούσα.
+    const northRad = declaration.floorplanNorth?.get(file.id) ?? null;
     // ADR-895 — η θέση ταξιδεύει ΜΑΖΙ με το μονοπάτι: μονοπάτι χωρίς κάδο = μαντεψιά.
-    return [{ privateStoragePath: file.storagePath, storagePlacement: file.storagePlacement, material, focalPoint }];
+    return [{
+      privateStoragePath: file.storagePath,
+      storagePlacement: file.storagePlacement,
+      material,
+      focalPoint,
+      sourceFileId: file.id,
+      captureSpot,
+      northRad,
+    }];
   });
 }
 

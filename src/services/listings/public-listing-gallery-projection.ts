@@ -23,6 +23,7 @@
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import { resolvePhotoFocalPoint, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import { toListingCaptureSpot, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type {
   ListingFloorplan,
   ListingImage,
@@ -59,6 +60,12 @@ export interface ProjectedShelfImage {
   readonly declaredFocalPoint: PhotoFocalPoint | null;
   /** 🎯 Ό,τι **βρήκε** το ράφι στα bytes — δες `PublicShelfImage.focalPoint` (ADR-880). */
   readonly detectedFocalPoint: PhotoFocalPoint | null;
+  /** 📍 Η ταυτότητα της πηγής — δες `PublicShelfImage.sourceFileId` (ADR-897). **Δεν** γράφεται στο έγγραφο. */
+  readonly sourceFileId: string | null;
+  /** 📍 Ό,τι **δήλωσε** ο άνθρωπος για τη θέση της κάμερας — δες `PublicShelfImage.declaredCaptureSpot`. */
+  readonly declaredCaptureSpot: PhotoCaptureSpot | null;
+  /** 🧭 Ο βορράς που **δήλωσε** ο άνθρωπος — δες `PublicShelfImage.declaredNorthRad` (ADR-897 Φ5.2). */
+  readonly declaredNorthRad: number | null;
 }
 
 /**
@@ -76,6 +83,15 @@ function toListingImage(image: ProjectedShelfImage, altKey: string): ListingImag
     altKey,
     sources: image.sources,
   };
+}
+
+/**
+ * 🧭 **Η κάτοψη, με τον βορρά της όταν δηλώθηκε** (ADR-897 Φ5.2) — μόνο στον κλάδο της **κάτοψης**: μια φωτογραφία δεν
+ * έχει βορρά, έχει κατεύθυνση (`captureSpot`). Χωρίς δήλωση το πεδίο **δεν** γράφεται (byte-προς-byte ίδια κάτοψη).
+ */
+function toListingFloorplanImage(image: ProjectedShelfImage, altKey: string): ListingImage {
+  const plain = toListingImage(image, altKey);
+  return image.declaredNorthRad === null ? plain : { ...plain, northRad: image.declaredNorthRad };
 }
 
 /**
@@ -164,6 +180,9 @@ export function withPublishedGallery(
   const keys = LISTING_MATERIAL_KEYS[listing.authorship];
   const gallery: ListingImage[] = [];
   const floorplans: ListingFloorplan[] = [];
+  /** 📍 ADR-897 — οι φωτογραφίες **μαζί** με τη δήλωσή τους, ώστε τα σημεία να δεθούν μετά το πέρασμα. */
+  const photoSources: ProjectedShelfImage[] = [];
+  const floorplanIndexOf = new Map<string, number>();
 
   for (const image of images) {
     const material = image.material;
@@ -171,14 +190,16 @@ export function withPublishedGallery(
     switch (material.kind) {
       case 'photo':
         gallery.push(toListingPhoto(image, keys.galleryAlt));
+        photoSources.push(image);
         break;
 
       case 'floorplan':
+        if (image.sourceFileId !== null) floorplanIndexOf.set(image.sourceFileId, floorplans.length);
         // ⚠️ Το `at` έρχεται από **το υλικό**, ποτέ από ρολόι εδώ: *«πότε το έμαθε η
         //    πηγή»*, όχι *«πότε το πρόβαλα»* (ADR-841 §7 Α17.3).
         floorplans.push({
           provenance: 'declared',
-          value: toListingImage(image, keys.floorplanAlt),
+          value: toListingFloorplanImage(image, keys.floorplanAlt),
           at: material.at,
         });
         break;
@@ -205,5 +226,28 @@ export function withPublishedGallery(
     }
   }
 
-  return { ...listing, gallery, floorplans };
+  return { ...listing, gallery: withCaptureSpots(gallery, photoSources, floorplanIndexOf), floorplans };
+}
+
+/**
+ * 📍 **Τα σημεία λήψης δεμένα στις κατόψεις του ΙΔΙΟΥ εγγράφου** (ADR-897).
+ *
+ * 🔑 **ΜΕΤΑ το πέρασμα, όχι μέσα του**: η σειρά των εικόνων είναι η σειρά του ανθρώπου, και μια
+ * φωτογραφία μπορεί να έρχεται **πριν** την κάτοψή της — μέσα στον βρόχο ο δείκτης θα ήταν ακόμη άγνωστος.
+ *
+ * ⛔ Κάτοψη που δεν βγήκε *(αποσύρθηκε, απορρίφθηκε από το ράφι)* ⇒ **κανένα** σημείο, ποτέ κρεμασμένος
+ * δείκτης. Και **καμία** ταυτότητα αρχείου δεν περνά στο έγγραφο — μόνο ο δείκτης.
+ *
+ * ⚠️ Το πεδίο γράφεται **μόνο όταν υπάρχει** σημείο: χωρίς δήλωση η φωτογραφία μένει byte-προς-byte
+ * ίδια με πριν, ώστε η επαναπροβολή να μη «βρίσκει αλλαγή» σε κάθε αγγελία.
+ */
+function withCaptureSpots(
+  gallery: readonly ListingImage[],
+  photoSources: readonly ProjectedShelfImage[],
+  floorplanIndexOf: ReadonlyMap<string, number>,
+): ListingImage[] {
+  return gallery.map((photo, index) => {
+    const captureSpot = toListingCaptureSpot(photoSources[index].declaredCaptureSpot, floorplanIndexOf);
+    return captureSpot === null ? photo : { ...photo, captureSpot };
+  });
 }

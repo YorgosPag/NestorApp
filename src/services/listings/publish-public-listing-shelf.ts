@@ -300,6 +300,10 @@ function toProjectedImage(image: PublicShelfImage<ListingMaterial>): ProjectedSh
     // 🎯 ADR-880 — και τα δύο ταξιδεύουν **αυτούσια**· η απόφαση ζει στο `withPublishedGallery`.
     declaredFocalPoint: image.declaredFocalPoint,
     detectedFocalPoint: image.focalPoint,
+    // 📍 ADR-897 — αυτούσια· η ταυτότητα γίνεται δείκτης **μόνο** στο `withPublishedGallery`.
+    sourceFileId: image.sourceFileId,
+    declaredCaptureSpot: image.declaredCaptureSpot,
+    declaredNorthRad: image.declaredNorthRad,
   };
 }
 

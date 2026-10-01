@@ -59,6 +59,7 @@ import type { File } from '@google-cloud/storage';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 import {
   isRasterShelfKind,
@@ -149,7 +150,22 @@ export interface PublicShelfImage<M> {
    * δεν το ερμηνεύει· η απόφαση *«ποιο κερδίζει»* ζει στο `resolvePhotoFocalPoint`.
    */
   readonly declaredFocalPoint: PhotoFocalPoint | null;
+  /** 📍 Η ταυτότητα της πηγής — δες `PublicShelfSource.sourceFileId` (ADR-897). `null` ⇒ ο παραγωγός δεν την έδωσε. */
+  readonly sourceFileId: string | null;
+  /** 📍 Το σημείο λήψης που **δήλωσε** ο άνθρωπος — κουβαλιέται αδιαφανώς, όπως το {@link declaredFocalPoint}. */
+  readonly declaredCaptureSpot: PhotoCaptureSpot | null;
+  /** 🧭 Ο βορράς που **δήλωσε** ο άνθρωπος για την κάτοψη — κουβαλιέται αδιαφανώς (ADR-897 Φ5.2). */
+  readonly declaredNorthRad: number | null;
 }
+
+/**
+ * **Ό,τι κουβαλιέται από την πηγή ΑΥΤΟΥΣΙΟ ως το δημοσιευμένο** — ένα δοχείο, ώστε κάθε νέα
+ * ανθρώπινη δήλωση να είναι **μία** γραμμή εδώ και όχι μία ανά στάδιο της μηχανής.
+ */
+type CarriedFacts<M> = Pick<
+  PublicShelfImage<M>,
+  'material' | 'declaredFocalPoint' | 'sourceFileId' | 'declaredCaptureSpot' | 'declaredNorthRad'
+>;
 
 /** Τι έκανε η συμφιλίωση — ρητά, ώστε ο καλών να **μετρήσει**. */
 export interface PublicShelfReport<M> {
@@ -163,16 +179,12 @@ export interface PublicShelfReport<M> {
 }
 
 
-/** Ό,τι έμαθε η συμφιλίωση για **μία** πηγή. */
-interface AddressedImage<M> {
+/** Ό,τι έμαθε η συμφιλίωση για **μία** πηγή — συν ό,τι κουβαλήθηκε ({@link CarriedFacts}). */
+interface AddressedImage<M> extends CarriedFacts<M> {
   readonly variants: readonly PublicShelfObject[];
   readonly uploads: readonly PendingUpload[];
-  /** Δες {@link PublicShelfImage.material} — κουβαλιέται, δεν ερμηνεύεται. */
-  readonly material: M;
   /** Δες {@link PublicShelfImage.focalPoint}. */
   readonly focalPoint: PhotoFocalPoint | null;
-  /** Δες {@link PublicShelfImage.declaredFocalPoint}. */
-  readonly declaredFocalPoint: PhotoFocalPoint | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,6 +199,20 @@ function toPublishedImage<M>(image: AddressedImage<M>): PublicShelfImage<M> {
     material: image.material,
     focalPoint: image.focalPoint,
     declaredFocalPoint: image.declaredFocalPoint,
+    sourceFileId: image.sourceFileId,
+    declaredCaptureSpot: image.declaredCaptureSpot,
+    declaredNorthRad: image.declaredNorthRad,
+  };
+}
+
+/** Ό,τι η πηγή δίνει **αυτούσιο** στο δημοσιευμένο — η μία μετάφραση πηγή → {@link CarriedFacts}. */
+function carriedFactsOf<M>(source: PublicShelfSource<M>): CarriedFacts<M> {
+  return {
+    material: source.material,
+    declaredFocalPoint: source.focalPoint ?? null,
+    sourceFileId: source.sourceFileId ?? null,
+    declaredCaptureSpot: source.captureSpot ?? null,
+    declaredNorthRad: source.northRad ?? null,
   };
 }
 
@@ -199,7 +225,7 @@ async function fromCache<M>(
   kind: RasterShelfKind<M>,
   existing: readonly File[],
   plan: Pick<ShelfPlanInputs, 'sourceRef' | 'recipe' | 'detects'>,
-): Promise<Omit<AddressedImage<M>, 'material' | 'declaredFocalPoint'> | null> {
+): Promise<Omit<AddressedImage<M>, keyof CarriedFacts<M>> | null> {
   const hit = fullCacheHit(kind, cachedVariants(existing, plan.sourceRef, plan.recipe));
   if (hit === null) return null;
   const variants = distinctByKey(hit);
@@ -246,7 +272,7 @@ async function addressOne<M>(
     const framing = kind.framingOf(source.material);
     const recipe = shelfRecipe(kind.encoding, framing);
     const detects = kind.detectsFocalPoint(source.material);
-    const carried = { material: source.material, declaredFocalPoint: source.focalPoint ?? null };
+    const carried = carriedFactsOf(source);
 
     const cached = await fromCache(kind, existing, { sourceRef, recipe, detects });
     if (cached !== null) return { ...cached, ...carried };
