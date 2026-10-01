@@ -8,19 +8,10 @@
   διάταξη. Διόρθωση: να δεχτεί το `ListMapSplit` υποδοχή «στενής εκδοχής» (bottom sheet αντί για tabs) και να
   μεταφερθεί η οθόνη 2. >1h (κινητό + δείκτης άκρης σε δοχείο κύλισης, όχι παράθυρο) ⇒ εδώ, όχι επί τόπου.
 
-- 🟡 **30/09 — ΕΝΑ ΨΕΥΤΙΚΟ FIRESTORE: η ουρά της μετάβασης** *(ADR-742 §7sexdecies · verified fake)*
-
-  ✅ Το SSoT υπάρχει: `src/test-utils/fake-firestore/`, με σουίτα συμβολαίου που τρέχει και στον emulator
-  (`firestore-contract.yml`). Ήταν **τρία** fakes, όχι δύο: του oauth διαγράφηκε ήδη. ⏳ Μένουν **5 καλούντες** που είχαν
-  ξένες αλλαγές στο κοινό δέντρο: `owned-file-bytes` · `file-hold-service` · `file-purge-custody` · `share-gate-resolve` ·
-  `tour-tileset-baker`. Θεραπεία, όταν καθαρίσουν:
-  1. μετάβαση των πέντε·
-  2. διαγραφή `test-utils/mock-firestore.ts` + `places/__tests__/fake-firestore.ts`·
-  3. σβήσιμο των γραμμών `PENDING_CALLERS`/`LEGACY_FAKES` στο `fake-firestore-singleton.anchor.test.ts` (το Φ3 το απαιτεί)·
-  4. γραμμή allowlist `backend-unavailable` στο `.ssot-registry.json`·
-  5. scripts `test:firestore-contract(:emulator)` στο `package.json`.
-
-  Μέτρα: `grep -rlE "test-utils/mock-firestore'|places/__tests__/fake-firestore'" src`.
+- 🟢 **30/09 — ΕΝΑ ΨΕΥΤΙΚΟ FIRESTORE: η μετάβαση ΕΚΛΕΙΣΕ** *(ADR-742 §7sexdecies)* — 141 καλούντες, τα 3 παλιά fakes
+  διαγραμμένα. Μένουν **μόνο** δύο γραμμές σε αρχεία με ξένες αλλαγές: σβήσιμο του `places/__tests__/fake-firestore.ts`
+  από το allowlist `backend-unavailable` (`.ssot-registry.json`) · scripts `test:firestore-contract(:emulator)` στο
+  `package.json` (προαιρετικά — το workflow καλεί την εντολή αυτούσια). Μετά: αφαίρεση αυτής της γραμμής.
 
 - 🟡 **30/09 — 76 INLINE STUBS FIRESTORE (`collection: jest.fn`) ΑΝΤΙ ΓΙΑ ΤΟ ΕΝΑ FAKE** *(ADR-742 §7sexdecies.1)*
 

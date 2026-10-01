@@ -2256,6 +2256,13 @@ network-messaging · app/api · υπόλοιπα · ai-pipeline · sharing · sp
   γραμμή, γιατί το `FAKE_FIRESTORE_UNAVAILABLE` είναι σταθερά και δεν πιάνεται από το pattern. Η γραμμή σβήνεται μαζί
   με το αρχείο.
 
+✅ **Ενημέρωση 2026-09-30 (με ρητή άδεια Giorgio: «μόνο η γραμμή import»)**: τα `owned-file-bytes` · `file-hold-service` ·
+`file-purge-custody` μεταφέρθηκαν (μία γραμμή το καθένα, **39/39 πριν και μετά, 0 διαφορές**), και το
+`places/__tests__/fake-firestore.ts` **διαγράφηκε** (0 καλούντες). ✅ **Και τα δύο τελευταία** (`share-gate-resolve` · `tour-tileset-baker`, με
+δεύτερη ρητή άδεια: import + `new FakeFirestore()` + `kit.instance`→`kit`) — **47/47 πριν και μετά, 0 διαφορές**. Το
+`test-utils/mock-firestore.ts` **διαγράφηκε**. 🏁 **Η μετάβαση έκλεισε: 141 καλούντες, ΕΝΑ fake.** Ο φρουρός έχασε τις
+λίστες εκκρεμοτήτων (`PENDING_CALLERS`/`LEGACY_FAKES`/Φ3) — άδειες λίστες θα ήταν νεκρός κώδικας.
+
 **Πύλες**:
 - 3.28 `jscpd:diff`: 0 κλώνοι σε 16 αρχεία
 - 3.37 tiers ✅

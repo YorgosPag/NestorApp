@@ -12,6 +12,7 @@
  * Τι απαγορεύεται έξω από `src/test-utils/fake-firestore/`:
  *   • **κλάση** in-memory Firestore (`class FakeXFirestore`, `MockFirestore…`, `InMemory…Firestore`)·
  *   • εισαγωγή των παλιών διαδρομών.
+ * Η μετάβαση ολοκληρώθηκε 2026-09-30: 141 καλούντες, 0 εκκρεμότητες — γι' αυτό καμία λίστα εξαιρέσεων.
  * Τι **δεν** απαγορεύεται: stubs `jest.fn()` ανά test (άλλο είδος test double — επαληθεύουν κλήσεις, δεν προσομοιώνουν
  * βάση). Μετρημένα 2026-09-30: 76 αρχεία, στο `pending-ratchet-work.md`.
  */
@@ -26,27 +27,6 @@ const SSOT_DIR = 'src/test-utils/fake-firestore/';
 const FAKE_CLASS = /\bclass\s+\w*(?:Fake|Mock|InMemory|Stub)\w*Firestore\w*\b/;
 /** Οι παλιές διαδρομές — όποιος τις ξαναζωντανέψει, ξαναγεννά δεύτερο fake. */
 const LEGACY_IMPORT = /['"](?:@\/test-utils\/mock-firestore|[^'"]*places\/__tests__\/fake-firestore|[^'"]*oauth\/__tests__\/fake-firestore)['"]/;
-
-/**
- * 🔴 **ΚΛΕΙΣΤΑ ΣΥΝΟΛΑ ΕΚΚΡΕΜΟΤΗΤΩΝ — ΜΟΝΟ ΜΙΚΡΑΙΝΟΥΝ.** Καλούντες που δεν μεταφέρθηκαν στις 2026-09-30 επειδή είχαν
- * **ξένες** αλλαγές σε κοινό working tree (κανόνας: δεν αγγίζεις αρχείο άλλου agent), και τα δύο παλιά fakes που
- * ζουν μόνο για αυτούς. Κάθε γραμμή που πάψει να χρειάζεται **πρέπει** να σβηστεί — το `Φ3` κοκκινίζει σε μπαγιάτικη.
- */
-const PENDING_CALLERS: readonly string[] = [
-  'src/app/api/files/_shared/__tests__/owned-file-bytes.test.ts',
-  'src/services/file-record/__tests__/file-hold-service.test.ts',
-  'src/services/file-record/__tests__/file-purge-custody.test.ts',
-  'src/server/sharing/__tests__/share-gate-resolve.test.ts',
-  'src/server/spatial-tour/__tests__/tour-tileset-baker.test.ts',
-];
-
-/** Παλιό fake → το κομμάτι της διαδρομής με το οποίο το εισάγουν οι εκκρεμείς καλούντες. */
-const LEGACY_FAKES: Readonly<Record<string, string>> = {
-  'src/test-utils/mock-firestore.ts': 'test-utils/mock-firestore',
-  'src/services/places/__tests__/fake-firestore.ts': 'places/__tests__/fake-firestore',
-};
-
-const EXEMPT = new Set([...PENDING_CALLERS, ...Object.keys(LEGACY_FAKES)]);
 
 function sourceFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -64,7 +44,7 @@ function relative(file: string): string {
 function offenders(): string[] {
   return sourceFiles(path.join(ROOT, 'src'))
     .map((file) => ({ rel: relative(file), text: fs.readFileSync(file, 'utf8') }))
-    .filter(({ rel }) => !rel.startsWith(SSOT_DIR) && !EXEMPT.has(rel))
+    .filter(({ rel }) => !rel.startsWith(SSOT_DIR))
     .flatMap(({ rel, text }) => [
       ...(FAKE_CLASS.test(text) ? [`${rel}: κλάση in-memory Firestore — χρησιμοποίησε το ${SSOT_DIR}fake-firestore.ts`] : []),
       ...(LEGACY_IMPORT.test(text) ? [`${rel}: εισαγωγή παλιού fake — πλέον @/test-utils/fake-firestore/fake-firestore`] : []),
@@ -89,14 +69,5 @@ describe('ΕΝΑ ψεύτικο Firestore (ADR-742 §7sexdecies)', () => {
     expect(FAKE_CLASS.test('class FirestoreQueryService {')).toBe(false);
     expect(LEGACY_IMPORT.test("import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';")).toBe(true);
     expect(LEGACY_IMPORT.test("import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';")).toBe(false);
-  });
-
-  it('🔴 Φ3 — οι εκκρεμότητες είναι ΖΩΝΤΑΝΕΣ: ο καλών εισάγει ακόμη παλιό fake· το παλιό fake έχει ακόμη καλούντα', () => {
-    const read = (rel: string): string | null => (fs.existsSync(path.join(ROOT, rel)) ? fs.readFileSync(path.join(ROOT, rel), 'utf8') : null);
-    const staleCallers = PENDING_CALLERS.filter((rel) => !LEGACY_IMPORT.test(read(rel) ?? ''));
-    const staleFakes = Object.entries(LEGACY_FAKES)
-      .filter(([rel, specifier]) => read(rel) === null || !PENDING_CALLERS.some((caller) => (read(caller) ?? '').includes(specifier)))
-      .map(([rel]) => rel);
-    expect([...staleCallers, ...staleFakes]).toEqual([]);
   });
 });
