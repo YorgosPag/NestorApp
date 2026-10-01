@@ -11,6 +11,13 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ScrollRail } from '../scroll-rail';
+import { useDismissOnRailScroll } from '../scroll-rail-context';
+
+/** Ένα «τσιπ» με αναδυόμενο: μόνο το hook, χωρίς Radix. */
+function DismissProbe({ open, onDismiss }: { readonly open: boolean; readonly onDismiss: () => void }) {
+  useDismissOnRailScroll(open, onDismiss);
+  return <button type="button">probe</button>;
+}
 
 const CLIENT = 250;
 const ITEMS = 5;
@@ -77,6 +84,19 @@ describe('ScrollRail — ADR-896 §7Α.5', () => {
     expect(scrollerOf().className).toMatch(/(^|\s)flex-nowrap(\s|$)/);
   });
 
+  it('Λ9: `frameClassName` πάει στο ΠΕΡΙΒΛΗΜΑ (θέση στη διάταξη), όχι στη λωρίδα (ADR-896 §7Α.6)', () => {
+    // `min-w-0 flex-1` δίπλα σε καρφωμένα κουμπιά: χωρίς αυτό ο καταναλωτής θα πρόσθετε `<div>` μόνο για πλάτος.
+    render(
+      <ScrollRail prevLabel="Προηγούμενα" nextLabel="Επόμενα" frameClassName="min-w-0 flex-1">
+        <button type="button">τσιπ</button>
+      </ScrollRail>,
+    );
+    const frame = screen.getByRole('button', { name: 'Επόμενα' }).parentElement;
+    expect(frame?.className).toMatch(/(^|\s)flex-1(\s|$)/);
+    const scroller = frame?.querySelector('[data-scroll-edges]');
+    expect(scroller?.className).not.toMatch(/(^|\s)flex-1(\s|$)/);
+  });
+
   it('Λ2: χωρίς μέτρηση (καμία υπερχείλιση) ⇒ `data-scroll-edges="none"` — κανένα βελάκι δεν ανάβει', () => {
     render(<Rail />);
     expect(scrollerOf()).toHaveAttribute('data-scroll-edges', 'none');
@@ -139,6 +159,60 @@ describe('ScrollRail — ADR-896 §7Α.5', () => {
     let scrollTo: jest.Mock | undefined;
     render(<Rail onMount={(ul) => { scrollTo = giveLayout(ul); }} />);
     // Πραγματική εστίαση (το React `onFocus` ακούει `focusin`, που το `.focus()` του jsdom εκπέμπει).
+    act(() => screen.getByRole('button', { name: 'τσιπ 3' }).focus());
+    expect(scrollTo).toHaveBeenCalledWith({ left: 180, behavior: 'auto' });
+  });
+
+  it('Λ10: εστίαση με ΔΕΙΚΤΗ ⇒ η λωρίδα ΔΕΝ κυλά πριν το `click` — αλλιώς το κλικ χάνεται (ADR-896 §7Α.6)', () => {
+    // Μετρημένο ζωντανά: κύλιση στο mousedown ⇒ το τσιπ φεύγει κάτω από τον δείκτη ⇒ το `click`
+    // πηγαίνει στον κοινό πρόγονο και το αναδυόμενο δεν ανοίγει.
+    let scrollTo: jest.Mock | undefined;
+    const onChip = jest.fn();
+    render(<Rail onMount={(ul) => { scrollTo = giveLayout(ul); }} />);
+    const chip = screen.getByRole('button', { name: 'τσιπ 3' });
+    chip.addEventListener('click', () => onChip(scrollTo?.mock.calls.length));
+    fireEvent.pointerDown(chip);
+    act(() => chip.focus());
+    expect(scrollTo).not.toHaveBeenCalled();
+    fireEvent.pointerUp(chip);
+    fireEvent.click(chip);
+    // Ο χειριστής του τσιπ έτρεξε ΠΡΙΝ από την κύλιση — και η κύλιση έγινε μετά.
+    expect(onChip).toHaveBeenCalledWith(0);
+    expect(scrollTo).toHaveBeenCalledWith({ left: 180, behavior: 'auto' });
+  });
+
+  it('Λ12: οριζόντιος τροχός στη λωρίδα ⇒ το ανοιχτό αναδυόμενο ενός παιδιού ΚΛΕΙΝΕΙ (όχι ορφανό)', () => {
+    const onDismiss = jest.fn();
+    render(
+      <ScrollRail prevLabel="Προηγούμενα" nextLabel="Επόμενα">
+        <DismissProbe open onDismiss={onDismiss} />
+      </ScrollRail>,
+    );
+    const scroller = screen.getByRole('button', { name: 'probe' }).parentElement as HTMLElement;
+    fireEvent.wheel(scroller, { deltaY: 40 });
+    expect(onDismiss).not.toHaveBeenCalled(); // κατακόρυφος τροχός = κυλά τη σελίδα, όχι τη λωρίδα
+    fireEvent.wheel(scroller, { deltaX: 40 });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('Λ13: έξω από λωρίδα (πάνελ) ή κλειστό ⇒ το hook δεν κάνει τίποτα', () => {
+    const onDismiss = jest.fn();
+    const { rerender } = render(<DismissProbe open onDismiss={onDismiss} />);
+    fireEvent.wheel(screen.getByRole('button', { name: 'probe' }), { deltaX: 40 });
+    rerender(
+      <ScrollRail prevLabel="Προηγούμενα" nextLabel="Επόμενα">
+        <DismissProbe open={false} onDismiss={onDismiss} />
+      </ScrollRail>,
+    );
+    fireEvent.wheel(screen.getByRole('button', { name: 'probe' }).parentElement as HTMLElement, { deltaX: 40 });
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('Λ11: δείκτης που αφέθηκε ΕΞΩ από τη λωρίδα δεν «κολλά» — το επόμενο Tab αποκαλύπτει αμέσως', () => {
+    let scrollTo: jest.Mock | undefined;
+    render(<Rail onMount={(ul) => { scrollTo = giveLayout(ul); }} />);
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'τσιπ 0' }));
+    fireEvent.pointerUp(window);
     act(() => screen.getByRole('button', { name: 'τσιπ 3' }).focus());
     expect(scrollTo).toHaveBeenCalledWith({ left: 180, behavior: 'auto' });
   });

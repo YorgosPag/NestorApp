@@ -21,7 +21,11 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { renderToString } from 'react-dom/server';
+import { hydrateRoot } from 'react-dom/client';
+import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { EMPTY_LISTING_FILTERS, type ListingFilters } from '@/lib/listings/listing-filters';
@@ -52,6 +56,7 @@ function bar(props: Partial<React.ComponentProps<typeof PrimaryFilterBar>> = {})
       listings={[]}
       visibleCount={7}
       viewport="wide"
+      retiredPrice={null}
       {...props}
     />
   );
@@ -88,7 +93,7 @@ describe('Β — δύο συμπεριφορές, ένα κατώφλι', () => 
     // Baymard: σε στενή οθόνη ο άνθρωπος **δεν βλέπει** τα αποτελέσματα πίσω από το
     // φύλλο, άρα χρειάζεται να ξέρει τι τον περιμένει **πριν** κλείσει.
     const { container } = render(
-      <PrimaryFilterBar filters={ASKING} listings={[]} visibleCount={7} viewport="narrow" />
+      <PrimaryFilterBar filters={ASKING} listings={[]} visibleCount={7} viewport="narrow" retiredPrice={null} />
     );
     // Το φύλλο είναι κλειστό· ο **σκελετός** του όμως ανήκει στο στενό μονοπάτι.
     expect(container.querySelector('[data-state]')).not.toBeNull();
@@ -187,5 +192,104 @@ describe('Ε — μία γραμμή, όπως η Zillow (§8.80)', () => {
   it('η σειρά ΔΕΝ είναι πια στη γραμμή — μετακόμισε στην κεφαλίδα της λίστας', () => {
     bar();
     expect(screen.queryByLabelText('search-filters:filters.sort.label')).not.toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Ζ — ΜΙΑ ΓΡΑΜΜΗ ΣΕ ΚΑΘΕ ΠΛΑΤΟΣ (ADR-896 §7Α.6 · `ui/scroll-rail`)
+// =============================================================================
+
+/** Η λωρίδα που κυλά — ο κόμβος με `data-scroll-edges` του κοινού `ScrollRail`. */
+function railOf(container: HTMLElement): HTMLElement {
+  const rail = container.querySelector<HTMLElement>('[data-scroll-edges]');
+  if (rail === null) throw new Error('καμία λωρίδα ScrollRail στη γραμμή');
+  return rail;
+}
+
+describe('Ζ — μία γραμμή σε κάθε πλάτος, με ◀ ▶ (ADR-896 §7Α.6)', () => {
+  it.each(['measuring', 'narrow', 'wide'] as const)(
+    '🔴 τα κριτήρια ζουν ΜΕΣΑ στη λωρίδα — ίδια δομή σε κάθε κατάσταση (%s)',
+    (viewport) => {
+      const { container } = bar({ viewport });
+      const rail = railOf(container);
+      expect(rail).toContainElement(screen.getByRole('button', { name: 'search-filters:filters.axis.offerKind' }));
+      expect(rail).toContainElement(screen.getByRole('button', { name: 'listing-detail:attributes.label.type' }));
+      // Καμία αναδίπλωση της λωρίδας, σε κανένα πλάτος.
+      expect(rail.className).toMatch(/\bflex-nowrap\b/);
+      expect(rail.className).not.toMatch(/\bmd:flex-wrap\b/);
+    },
+  );
+
+  it('🔴 «Καθαρισμός» και «Περισσότερα» είναι ΚΑΡΦΩΜΕΝΑ έξω από την κύλιση (Airbnb)', () => {
+    // Η έξοδος από το αδιέξοδο και η πόρτα προς όλους τους άξονες δεν επιτρέπεται να κυλήσουν εκτός κάδρου.
+    const { container } = bar();
+    const rail = railOf(container);
+    expect(rail).not.toContainElement(screen.getByRole('button', { name: 'search-filters:filters.clearAll' }));
+    expect(rail).not.toContainElement(screen.getByRole('button', { name: 'search-filters:filters.more' }));
+  });
+
+  it('τα βελάκια έχουν ΟΝΟΜΑ από i18n, είναι εκτός Tab και δείχνουν τη λωρίδα', () => {
+    const { container } = bar();
+    const rail = railOf(container);
+    for (const name of ['search-filters:filters.railPrev', 'search-filters:filters.railNext']) {
+      const arrow = screen.getByRole('button', { name });
+      expect(arrow).toHaveAttribute('tabindex', '-1');
+      expect(arrow).toHaveAttribute('aria-controls', rail.id);
+    }
+  });
+
+  it('η ενότητα κρατά το προσβάσιμο όνομά της — η λωρίδα δεν την αντικαθιστά', () => {
+    bar();
+    expect(screen.getByRole('region', { name: 'search-filters:filters.heading' })).toBeInTheDocument();
+  });
+
+  it('🔴 η ειδοποίηση παλιού συνδέσμου (`pmin`) ζει ΕΞΩ από τη λωρίδα — δική της σειρά', () => {
+    // `w-full` μέσα σε λωρίδα που κυλά θα έπιανε όλο το κάδρο και θα έσπρωχνε τα τσιπ εκτός.
+    // ADR-896 §7Α.7: το `pmin` έρχεται πλέον ως prop (από το `useSearchParams` του γονέα), όχι από το `window`.
+    const { container } = bar({ filters: EMPTY_LISTING_FILTERS, retiredPrice: { min: 100000, max: null } });
+    const notice = screen.getByRole('status');
+    expect(railOf(container)).not.toContainElement(notice);
+    expect(screen.getByRole('region', { name: 'search-filters:filters.heading' })).toContainElement(notice);
+  });
+});
+
+// =============================================================================
+// Η — 🔴 SERVER ΚΑΙ CLIENT ΖΩΓΡΑΦΙΖΟΥΝ ΤΟ ΙΔΙΟ, ΚΑΙ ΜΕ ΠΑΛΙΟ ΣΥΝΔΕΣΜΟ (ADR-896 §7Α.7)
+// =============================================================================
+
+describe('Η — καμία αναντιστοιχία hydration με `?pmin` (ADR-896 §7Α.7)', () => {
+  it('🔴 ο server δεν βλέπει το `window` — η μπάρα πρέπει να είναι καθαρή συνάρτηση των props', async () => {
+    // Μετρημένο 2026-10-01: το `window.location` στην απόδοση έδινε στον server τσιπ «Τιμή» και στον
+    // client όχι ⇒ `Hydration failed`, ξαναχτίσιμο ΟΛΟΥ του δέντρου. Η προσομοίωση: το HTML του
+    // «server» βγαίνει με διεύθυνση ΧΩΡΙΣ query (ο server δεν έχει `window`), η hydration με `?pmin`.
+    const element = (
+      <PrimaryFilterBar
+        filters={EMPTY_LISTING_FILTERS}
+        listings={[]}
+        visibleCount={7}
+        viewport="wide"
+        retiredPrice={{ min: 100000, max: null }}
+      />
+    );
+    const recoverable: unknown[] = [];
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    try {
+      window.history.replaceState(null, '', '/search/results');
+      container.innerHTML = renderToString(element);
+      window.history.replaceState(null, '', '/search/results?pmin=100000');
+      await act(async () => {
+        hydrateRoot(container, element, { onRecoverableError: (error) => recoverable.push(error) });
+      });
+      expect(recoverable).toEqual([]);
+    } finally {
+      window.history.replaceState(null, '', '/');
+      container.remove();
+    }
+  });
+
+  it('η πηγή δεν διαβάζει `window` (στατική φρουρά της ίδιας κλάσης)', () => {
+    const source = readFileSync(join(__dirname, '..', 'PrimaryFilterBar.tsx'), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+    expect(source).not.toMatch(/\bwindow\./);
   });
 });

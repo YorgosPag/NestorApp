@@ -7,6 +7,8 @@
   "filters": {
     "heading": "Filters",
     "more": "More filters",
+    "railPrev": "Previous filters",
+    "railNext": "Next filters",
     "moreActive": "{count, plural, one {More filters · # active} other {More filters · # active}}",
     "close": "Close filters",
     "clearAll": "Clear all",

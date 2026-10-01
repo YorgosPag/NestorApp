@@ -46,19 +46,16 @@ import {
 import type { OwnerProperty } from '@/types/owner-property';
 import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
 import { ListMapSplit } from '@/components/shared/list-map/ListMapSplit';
+import { ListMapMapPending } from '@/components/shared/list-map/ListMapPending';
 
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 
 const VIEW_K = 'property-market:offer.portfolio.view';
 
-/** Η κράτηση θέσης γεμίζει τον **ίδιο** περιέκτη με τον χάρτη ⇒ μηδέν μετατόπιση όταν φτάσει. */
+/** Η κράτηση θέσης του χάρτη — το κοινό `ListMapMapPending`, με τη δική μας ετικέτα. */
 function MapPending(): React.ReactElement {
   const { t } = useTranslation(['property-market']);
-  return (
-    <p aria-busy="true" className="m-0 flex h-full items-center justify-center rounded-md border border-border text-sm text-muted-foreground">
-      {t('property-market:offer.portfolio.map.loading')}
-    </p>
-  );
+  return <ListMapMapPending label={t('property-market:offer.portfolio.map.loading')} />;
 }
 
 const OwnerPortfolioMap = dynamic(() => import('./OwnerPortfolioMap'), { ssr: false, loading: MapPending });

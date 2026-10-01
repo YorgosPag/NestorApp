@@ -77,6 +77,12 @@ export interface DirectoryQueryStateProps {
   /** `true` όταν **οποιοσδήποτε** άξονας κόβει — ορίζει ποιο από τα δύο κείμενα ισχύει. */
   readonly filtering: boolean;
   /**
+   * `true` όσο φορτώνει ο κατάλογος (ADR-896 §7Α.7): η γραμμή **υπάρχει ήδη**, με τη φράση φόρτωσης
+   * στη θέση του αριθμού. 🔴 Μετρημένο: εμφανιζόμενη μόνο **μετά**, έσπρωχνε τη λίστα 36px κάτω
+   * (CLS 0,0170 στο `/pro`). Ίδιο στοιχείο, ίδια τυπογραφία ⇒ ίδιο ύψος, χωρίς κανέναν αριθμό σε px.
+   */
+  readonly pending?: boolean;
+  /**
    * Αφαιρεί **μόνο** τον άξονα του τόπου.
    *
    * ⛔ **ΠΟΤΕ «καθάρισε τα πάντα»**: ένα σημάδι που ονομάζει τον τόπο και σβήνει και την
@@ -90,6 +96,7 @@ export function DirectoryQueryState({
   shown,
   total,
   filtering,
+  pending = false,
   onClearWhere,
 }: DirectoryQueryStateProps): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
@@ -141,9 +148,11 @@ export function DirectoryQueryState({
         μέση **σε κάθε πάτημα** του επιλογέα.
       */}
       <p role="status" className="m-0 text-sm text-muted-foreground">
-        {filtering
-          ? t(DIRECTORY_KEYS.countFiltered, { shown, total })
-          : t(DIRECTORY_KEYS.count, { count: total })}
+        {pending
+          ? t(DIRECTORY_KEYS.loading)
+          : filtering
+            ? t(DIRECTORY_KEYS.countFiltered, { shown, total })
+            : t(DIRECTORY_KEYS.count, { count: total })}
       </p>
     </section>
   );

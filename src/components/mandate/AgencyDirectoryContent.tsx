@@ -87,6 +87,7 @@ import { useCircleAnchorName } from '@/hooks/useCircleAnchorName';
 import { showcaseWhereVoice } from '@/lib/agency/showcase-where-voice';
 import { DirectoryQueryState } from './DirectoryQueryState';
 import { LandingHero } from '@/components/shared/landing-hero/LandingHero';
+import { ListMapPending } from '@/components/shared/list-map/ListMapPending';
 import { LANDING_HERO_IMAGES } from '@/components/shared/landing-hero/landing-hero-images';
 
 registerRouteSlice(routeSlice);
@@ -281,8 +282,10 @@ export function AgencyDirectoryContent(): React.JSX.Element {
         🔑 **Και είναι η προϋπόθεση της εστίασης**: η περιοχή **επιβιώνει** της αφαίρεσης
         του σημαδιού, άρα υπάρχει γείτονας να δεχτεί την εστίαση. Δες `DirectoryQueryState`.
       */}
-      {!loading && error === null && agencies.length > 0 && (
+      {/* ADR-896 §7Α.7 — και όσο φορτώνει: η γραμμή κρατά τη θέση της (`pending`), αλλιώς η άφιξή της σπρώχνει τη λίστα. */}
+      {(loading || (error === null && agencies.length > 0)) && (
         <DirectoryQueryState
+          pending={loading}
           voice={whereVoice}
           shown={visible.length}
           total={agencies.length}
@@ -304,7 +307,12 @@ export function AgencyDirectoryContent(): React.JSX.Element {
       )}
 
       {loading ? (
-        <p className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.loading)}</p>
+        // 🔴 ADR-896 §7Α.7 — ΣΚΕΛΕΤΟΣ, ΟΧΙ ΓΡΑΜΜΗ: η γραμμή «Φόρτωση…» άφηνε τη σελίδα κοντή, το
+        //    υποσέλιδο έκατσε στην οθόνη και η άφιξη του καταλόγου το έσπρωξε εκτός (CLS 0,0891, μετρημένο).
+        //    Ίδια θέση με τα αποτελέσματα (`data-shell-span`), ύψος πρώτης οθόνης σε CSS.
+        <section data-shell-span="full" className="flex flex-col gap-3">
+          <ListMapPending label={t(DIRECTORY_KEYS.loading)} />
+        </section>
       ) : error !== null ? (
         // ⚠️ **Σφάλμα ≠ κενός κατάλογος.** Ένα «δεν υπάρχουν γραφεία» εδώ θα έλεγε
         //    ψέματα για ΟΛΟΥΣ όσοι δημοσίευσαν — «άγνωστο ≠ κενό» (N.12).

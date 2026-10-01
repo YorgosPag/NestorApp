@@ -181,3 +181,22 @@ describe('ADR-846 §9 #12 — Γ: ο αριθμός ανακοινώνεται, 
     expect(screen.getByRole('status')).toHaveTextContent('22');
   });
 });
+
+describe('ADR-896 §7Α.7 — η γραμμή υπάρχει ΚΑΙ όσο φορτώνει (καμία μετατόπιση στην άφιξη)', () => {
+  it('🔴 `pending` ⇒ ίδιο `status`, με τη φράση φόρτωσης στη θέση του αριθμού — και το σημάδι τόπου ήδη εκεί', () => {
+    // Μετρημένο στο `/pro`: η γραμμή εμφανιζόταν μόνο ΜΕΤΑ τη φόρτωση και έσπρωχνε τη λίστα 36px (CLS 0,0170).
+    render(
+      <DirectoryQueryState
+        voice={showcaseWhereVoice(CIRCLE, AREA)}
+        shown={0}
+        total={0}
+        filtering
+        pending
+        onClearWhere={jest.fn()}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(DIRECTORY.loading);
+    expect(screen.getByRole('status')).not.toHaveTextContent('0');
+    expect(screen.getByText(CHIP_TEXT)).toBeInTheDocument();
+  });
+});

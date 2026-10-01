@@ -24,18 +24,15 @@ import { hasDirectoryMap, showcaseMapEntry } from '@/lib/agency/showcase-map';
 import type { ShowcaseWhere } from '@/types/agency-coverage';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { ListMapSplit } from '@/components/shared/list-map/ListMapSplit';
+import { ListMapMapPending } from '@/components/shared/list-map/ListMapPending';
 
 import { AGENCY_PUBLIC_NS, DIRECTORY_MAP_KEYS, DIRECTORY_VIEW_KEYS } from './agency-directory-labels';
 import { AgencyCard } from './AgencyCard';
 
-/** Η κράτηση θέσης γεμίζει τον **ίδιο** περιέκτη με τον χάρτη ⇒ μηδέν μετατόπιση όταν φτάσει. */
+/** Η κράτηση θέσης του χάρτη — το κοινό `ListMapMapPending`, με τη δική μας ετικέτα. */
 function MapPending(): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
-  return (
-    <p aria-busy="true" className="m-0 flex h-full items-center justify-center rounded-md border border-border text-sm text-muted-foreground">
-      {t(DIRECTORY_MAP_KEYS.loading)}
-    </p>
-  );
+  return <ListMapMapPending label={t(DIRECTORY_MAP_KEYS.loading)} />;
 }
 
 const AgencyDirectoryMap = dynamic(() => import('./AgencyDirectoryMap'), { ssr: false, loading: MapPending });

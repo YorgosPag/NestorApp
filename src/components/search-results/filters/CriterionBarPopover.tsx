@@ -31,6 +31,7 @@ import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useDismissOnRailScroll } from '@/components/ui/scroll-rail-context';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 
@@ -65,6 +66,9 @@ export function CriterionBarPopover({
   // Εφήμερη κατάσταση χειρισμού — όχι τιμή φίλτρου (ίδιος κανόνας με το «Περισσότερα φίλτρα»).
   const [open, setOpen] = useState(false);
   const iconSizes = useIconSizes();
+  // Η γραμμή κυλά (ADR-896 §7Α.6): αν ο άνθρωπος την κυλήσει, το κουμπί φεύγει από το κάδρο και το
+  // αναδυόμενο θα έμενε ορφανό — μετρημένο. Έξω από λωρίδα (πάνελ) δεν κάνει τίποτα.
+  useDismissOnRailScroll(open, () => setOpen(false));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

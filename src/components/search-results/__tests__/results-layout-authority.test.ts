@@ -78,7 +78,10 @@ describe('Το κατώφλι είναι ΕΝΑΣ αριθμός, για δύο 
     // αναδίπλωνε σε δύο σειρές όσο «μετρούσε», μετά η κεφαλίδα κόνταινε 31px ⇒ CLS 0,0326 στα 728px.
     const bar = withoutComments(readFileSync(join(__dirname, '..', 'filters', 'PrimaryFilterBar.tsx'), 'utf8'));
     expect(bar).not.toMatch(/viewport\s*===\s*'narrow'\s*\?\s*'flex-/);
-    expect(bar).toMatch(/md:flex-wrap/);
+    // ADR-896 §7Α.6: ΜΙΑ γραμμή σε ΚΑΘΕ πλάτος — η κύλιση είναι το κοινό `ui/scroll-rail`, όχι
+    // χειρόγραφη λωρίδα, και καμία αναδίπλωση στο ευρύ (το ύψος κεφαλίδας δεν εξαρτάται από το πλήθος).
+    expect(bar).toMatch(/<ScrollRail\b/);
+    expect(bar).not.toMatch(/md:flex-wrap|md:overflow-visible|overflow-x-auto/);
   });
 });
 

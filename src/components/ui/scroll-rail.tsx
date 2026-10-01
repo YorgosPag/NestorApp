@@ -27,6 +27,7 @@ import { useScrollEdges } from '@/hooks/useScrollEdges';
 import { inlineViewOf, revealInlineWithin } from '@/lib/a11y/reveal-in-scroll';
 import { motionSafeScrollBehavior } from '@/lib/a11y/reduced-motion';
 import { cn } from '@/lib/utils';
+import { ScrollRailContext } from './scroll-rail-context';
 import { pageTargetOf, railInsetOf, railSpansOf, type RailDirection } from './scroll-rail-geometry';
 import fadeStyles from './scroll-edge-fade.module.css';
 import styles from './scroll-rail.module.css';
@@ -44,6 +45,12 @@ export interface ScrollRailProps {
   readonly revealKey?: unknown;
   /** Κλάσεις της λωρίδας (π.χ. `gap-2`). */
   readonly className?: string;
+  /**
+   * Κλάσεις του **περιβλήματος** — η θέση της λωρίδας μέσα στη διάταξη του καταναλωτή (π.χ.
+   * `min-w-0 flex-1` δίπλα σε καρφωμένα κουμπιά, ADR-896 §7Α.6). Χωρίς αυτό ο καταναλωτής θα
+   * χρειαζόταν ένα επιπλέον `<div>` μόνο για να δώσει πλάτος.
+   */
+  readonly frameClassName?: string;
   readonly children: React.ReactNode;
 }
 
@@ -54,6 +61,7 @@ export function ScrollRail({
   revealSelector,
   revealKey,
   className,
+  frameClassName,
   children,
 }: ScrollRailProps): React.ReactElement {
   const scrollerId = useId();
@@ -66,31 +74,100 @@ export function ScrollRail({
     node.scrollTo({ left: target, behavior: motionSafeScrollBehavior() });
   }, [node]);
 
-  // Εστίαση με Tab σε στοιχείο κάτω από τη μάσκα ή έξω από το κάδρο ⇒ ολόκληρο ορατό. Η εγγενής
-  // κύλιση εστίασης δεν ξέρει τη μάσκα· `incidental`: δέκα Tab δεν συσσωρεύουν ομαλές κινήσεις.
-  const onFocus = useCallback((event: React.FocusEvent<HTMLElement>) => {
-    if (node === null || event.target === node) return;
-    const item = Array.from(node.children).find((child) => child.contains(event.target));
-    revealInlineWithin(node, item, { inset: railInsetOf(node), urgency: 'incidental' });
-  }, [node]);
+  const focusReveal = useFocusReveal(node);
 
   return (
-    <div className={styles.rail}>
+    <div className={cn(styles.rail, frameClassName)}>
       <Scroller
         ref={setNode}
         id={scrollerId}
         data-scroll-edges={edges}
-        onFocus={onFocus}
+        {...focusReveal}
         // `flex flex-nowrap` ως ΔΗΛΩΣΗ κλάσης: το `shell-surface.css` κρίνει «λίστα διάταξης ή πρόζας;»
         // από το `[class*='flex']` — δες το σχόλιο στο `scroll-rail.module.css`.
         className={cn('flex flex-nowrap list-none', styles.scroller, fadeStyles.fade, className)}
       >
-        {children}
+        {/* Τα παιδιά ξέρουν τη λωρίδα τους — π.χ. ένα τσιπ κλείνει το αναδυόμενό του όταν κυλά. */}
+        <ScrollRailContext.Provider value={node}>{children}</ScrollRailContext.Provider>
       </Scroller>
       <RailArrow direction="prev" label={prevLabel} controls={scrollerId} onPage={page} />
       <RailArrow direction="next" label={nextLabel} controls={scrollerId} onPage={page} />
     </div>
   );
+}
+
+/**
+ * Εστίαση σε στοιχείο κάτω από τη μάσκα ή έξω από το κάδρο ⇒ ολόκληρο ορατό. Η εγγενής κύλιση
+ * εστίασης δεν ξέρει τη μάσκα· `incidental`: δέκα Tab δεν συσσωρεύουν ομαλές κινήσεις.
+ *
+ * 🔴 **ΜΕ ΔΕΙΚΤΗ, ΜΕΤΑ ΤΟ `click` — ΠΟΤΕ ΣΤΟ `mousedown`** (μετρημένο ζωντανά, `/search/results`,
+ * ADR-896 §7Α.6): ο Chrome εστιάζει το κουμπί στο mousedown. Αν η λωρίδα κυλήσει εκεί, το μισοκρυμμένο
+ * τσιπ φεύγει κάτω από τον δείκτη, το mouseup πέφτει σε άλλο στοιχείο και το `click` πηγαίνει στον
+ * κοινό πρόγονο (`DIV`): το κλικ **χάνεται** (το αναδυόμενο δεν άνοιξε, scrollLeft 0 → 74). ⇒ Με
+ * δείκτη η αποκάλυψη περιμένει το `click` και τρέχει μετά τον χειριστή του στοιχείου. Με Tab
+ * μένει άμεση.
+ *
+ * 🔑 **Μόνο εστίαση που ΦΑΙΝΕΤΑΙ** (`:focus-visible`): όταν ένα αναδυόμενο κλείνει επειδή ο άνθρωπος
+ * κύλησε τη λωρίδα (`useDismissOnRailScroll`), το Radix επιστρέφει την εστίαση στο κουμπί — που είναι
+ * πια εκτός κάδρου. Η αποκάλυψη εκεί θα **ακύρωνε** την κύλιση του ανθρώπου. Ο browser ξέρει αν η
+ * εστίαση έρχεται από πληκτρολόγιο· δεν το ξαναμαντεύουμε.
+ */
+function useFocusReveal(node: HTMLElement | null): {
+  readonly onFocus: (event: React.FocusEvent<HTMLElement>) => void;
+  readonly onPointerDown: () => void;
+  readonly onClick: () => void;
+} {
+  const pointerHeld = useRef(false);
+  const pendingItem = useRef<Element | undefined>(undefined);
+
+  const reveal = useCallback((item: Element | undefined) => {
+    if (node !== null) revealInlineWithin(node, item, { inset: railInsetOf(node), urgency: 'incidental' });
+  }, [node]);
+
+  const onFocus = useCallback((event: React.FocusEvent<HTMLElement>) => {
+    if (node === null || event.target === node) return;
+    const item = Array.from(node.children).find((child) => child.contains(event.target));
+    if (pointerHeld.current) pendingItem.current = item;
+    else if (isVisibleFocus(event.target)) reveal(item);
+  }, [node, reveal]);
+
+  const onPointerDown = useCallback(() => {
+    pointerHeld.current = true;
+    pendingItem.current = undefined;
+    onPointerRelease(() => { pointerHeld.current = false; });
+  }, []);
+
+  // Ο χειριστής του τσιπ έχει ήδη τρέξει (bubbling: παιδί πρώτα) — τώρα η λωρίδα μπορεί να κυλήσει.
+  const onClick = useCallback(() => {
+    const item = pendingItem.current;
+    pendingItem.current = undefined;
+    if (item !== undefined) reveal(item);
+  }, [reveal]);
+
+  return { onFocus, onPointerDown, onClick };
+}
+
+/**
+ * Μία φορά, όταν αφεθεί ο δείκτης. Ακούγεται στο `window`: ο δείκτης μπορεί να αφεθεί ΕΞΩ από τη
+ * λωρίδα, και τότε ένα κολλημένο «κρατιέται» θα έκανε το επόμενο Tab να μην αποκαλύπτει (Λ11).
+ */
+function onPointerRelease(callback: () => void): void {
+  const release = () => {
+    callback();
+    window.removeEventListener('pointerup', release, true);
+    window.removeEventListener('pointercancel', release, true);
+  };
+  window.addEventListener('pointerup', release, true);
+  window.addEventListener('pointercancel', release, true);
+}
+
+/** Ο browser κρίνει αν η εστίαση φαίνεται· παλιός browser χωρίς τον επιλογέα ⇒ «ναι» (η παλιά συμπεριφορά). */
+function isVisibleFocus(target: Element): boolean {
+  try {
+    return target.matches(':focus-visible');
+  } catch {
+    return true;
+  }
 }
 
 /** Ο κόμβος της λωρίδας, δεμένος και στο `useScrollEdges` — μία μέτρηση άκρων, όχι δεύτερη. */

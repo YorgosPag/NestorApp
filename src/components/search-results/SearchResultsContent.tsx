@@ -31,6 +31,7 @@ import {
   serializeListingFilters,
 } from '@/lib/listings/listing-filters';
 import { criterionLabel } from '@/lib/criteria/listing-criterion-labels';
+import { readRetiredPriceRange } from '@/lib/criteria/listing-criteria-url';
 import type { PublicListing } from '@/types/public-listing';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
@@ -92,6 +93,16 @@ export function SearchResultsContent() {
    */
   const search = useMemo(
     () => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')),
+    [searchParams]
+  );
+
+  /**
+   * Το εύρος ενός **παλιού** συνδέσμου (`pmin`/`pmax`) — από το **ΙΔΙΟ** `searchParams` με τα
+   * φίλτρα (ADR-896 §7Α.7). Το `window.location` στην απόδοση έδινε άλλη απάντηση στον server
+   * και άλλη στον client ⇒ `Hydration failed` και ξαναχτίσιμο όλου του δέντρου (μετρημένο).
+   */
+  const retiredPrice = useMemo(
+    () => readRetiredPriceRange(new URLSearchParams(searchParams?.toString() ?? '')),
     [searchParams]
   );
 
@@ -332,6 +343,7 @@ export function SearchResultsContent() {
           listings={withinScope}
           visibleCount={visible.length}
           viewport={viewport}
+          retiredPrice={retiredPrice}
         />
       </header>
 
