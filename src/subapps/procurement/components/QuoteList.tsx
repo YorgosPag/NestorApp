@@ -257,15 +257,30 @@ export function QuoteList({
         default: {
           const aTs = (a.q.createdAt as { seconds: number } | null)?.seconds ?? 0;
           const bTs = (b.q.createdAt as { seconds: number } | null)?.seconds ?? 0;
-          /**
-   * Η γραμμή εργαλείων αποδίδεται σε **δύο** θέσεις — σταθερή σε desktop,
-   * πτυσσόμενη σε mobile — με **ταυτόσημα** props. Ήταν γραμμένη δύο φορές, και
-   * το CHECK 3.28 τη μετρούσε ως αυτο-κλώνο 14 γραμμών / 66 tokens.
-   *
-   * ⚠️ Ένα React element είναι **αμετάβλητος περιγραφέας**, όχι στιγμιότυπο: η
-   * απόδοση του ίδιου element σε δύο θέσεις δίνει δύο ανεξάρτητα component
-   * instances, ακριβώς όπως πριν. Οι δύο θέσεις **δεν** μοιράζονται κατάσταση.
-   */
+          return (aTs - bTs) * dir;
+        }
+      }
+    });
+  }, [isRfqMode, quotes, actionRequired, selectedStatuses, searchTerm, sortBy, sortOrder]);
+
+  const displayCount = isRfqMode ? rfqSorted.length : standaloneSorted.length;
+  const effectiveSearch = isRfqMode ? urlSearch : searchTerm;
+  const handleSearchChange = isRfqMode ? handleUrlSearchChange : setSearchTerm;
+  const firstNonAction = isRfqMode ? -1 : standaloneSorted.findIndex((e) => !e.isActionRequired);
+  const actionRequiredVisible = isRfqMode ? 0 : standaloneSorted.filter((e) => e.isActionRequired).length;
+  const handleStandaloneSelect = useCallback(
+    (q: Quote) => { if (onSelectQuote) onSelectQuote(q); },
+    [onSelectQuote],
+  );
+
+  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
+      onSortChange(newSortBy, newSortOrder);
+    }
+  };
+  const handleNewItem = () => onCreateNew?.();
+  const handleEditItem = () => { if (selectedQuoteId && onEditQuote) onEditQuote(selectedQuoteId); };
+
   /**
    * Η κάρτα μιας προσφοράς μαζί με τις παλαιότερες εκδόσεις της.
    *
@@ -296,46 +311,36 @@ export function QuoteList({
     );
   };
 
+  /**
+   * Η γραμμή εργαλείων αποδίδεται σε **δύο** θέσεις — σταθερή σε desktop,
+   * πτυσσόμενη σε mobile — με **ταυτόσημα** props. Ήταν γραμμένη δύο φορές, και
+   * το CHECK 3.28 τη μετρούσε ως αυτο-κλώνο 14 γραμμών / 66 tokens.
+   *
+   * ⚠️ Ένα React element είναι **αμετάβλητος περιγραφέας**, όχι στιγμιότυπο: η
+   * απόδοση του ίδιου element σε δύο θέσεις δίνει δύο ανεξάρτητα component
+   * instances, ακριβώς όπως πριν. Οι δύο θέσεις **δεν** μοιράζονται κατάσταση.
+   *
+   * ⚠️ Πρέπει να δηλώνεται **στο σώμα του component, μετά** τα props που διαβάζει.
+   * Είχε καταλήξει κατά λάθος μέσα στον comparator του `sort`, οπότε το `{toolbar}`
+   * του JSX λυνόταν στο καθολικό `window.toolbar` (`BarProp`) → React #31 στην παραγωγή.
+   */
   const toolbar = (
     <CompactToolbar
-            config={quotesConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={effectiveSearch}
-            onSearchChange={handleSearchChange}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={renderSortChange}
-            hasSelectedContact={!!selectedQuoteId}
-            onNewItem={handleNewItem}
-            onEditItem={handleEditItem}
+      config={quotesConfig}
+      selectedItems={selectedItems}
+      onSelectionChange={setSelectedItems}
+      searchTerm={effectiveSearch}
+      onSearchChange={handleSearchChange}
+      activeFilters={activeFilters}
+      onFiltersChange={setActiveFilters}
+      sortBy={sortBy}
+      onSortChange={renderSortChange}
+      hasSelectedContact={!!selectedQuoteId}
+      onNewItem={handleNewItem}
+      onEditItem={handleEditItem}
     />
   );
 
-  return (aTs - bTs) * dir;
-        }
-      }
-    });
-  }, [isRfqMode, quotes, actionRequired, selectedStatuses, searchTerm, sortBy, sortOrder]);
-
-  const displayCount = isRfqMode ? rfqSorted.length : standaloneSorted.length;
-  const effectiveSearch = isRfqMode ? urlSearch : searchTerm;
-  const handleSearchChange = isRfqMode ? handleUrlSearchChange : setSearchTerm;
-  const firstNonAction = isRfqMode ? -1 : standaloneSorted.findIndex((e) => !e.isActionRequired);
-  const actionRequiredVisible = isRfqMode ? 0 : standaloneSorted.filter((e) => e.isActionRequired).length;
-  const handleStandaloneSelect = useCallback(
-    (q: Quote) => { if (onSelectQuote) onSelectQuote(q); },
-    [onSelectQuote],
-  );
-
-  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
-    if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
-      onSortChange(newSortBy, newSortOrder);
-    }
-  };
-  const handleNewItem = () => onCreateNew?.();
-  const handleEditItem = () => { if (selectedQuoteId && onEditQuote) onEditQuote(selectedQuoteId); };
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       {/* Header + CompactToolbar */}
