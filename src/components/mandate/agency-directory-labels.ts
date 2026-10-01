@@ -19,6 +19,7 @@ import type { CredibilityNote } from '@/lib/professional/professional-credibilit
 import type { GreekPublicHolidayId } from '@/lib/calendar/greek-public-holidays';
 import type { ShowcaseLocationRole } from '@/types/showcase-card';
 import type { ShowcaseLegalForm } from '@/types/showcase-legal-identity';
+import type { OccupationFamilyId } from '@/config/occupation-families';
 
 /** Το namespace — **`property-market`**, το ίδιο με τη βιτρίνα και τις αγγελίες. */
 export const AGENCY_PUBLIC_NS = 'property-market';
@@ -48,6 +49,17 @@ export const DIRECTORY_KEYS = {
    *  `occupationScopeHint`, και είναι **άλλη αλήθεια** *(Α4.4-Γ)*. */
   occupationSearchEmpty: `${D}.occupationSearchEmpty`,
   occupationScopeHint: `${D}.occupationScopeHint`,
+  // ── ΓΡΗΓΟΡΕΣ ΕΙΔΙΚΟΤΗΤΕΣ — τσιπ (ADR-896 §8) ─────────────────────────────
+  occupationQuickLabel: `${D}.occupationQuickLabel`,
+  occupationGroupEngineering: `${D}.occupationGroupEngineering`,
+  occupationGroupTrades: `${D}.occupationGroupTrades`,
+  /** Τα βελάκια της λωρίδας τσιπ (`ui/scroll-rail`, ADR-896 §7Α.5). */
+  occupationRailPrev: `${D}.occupationRailPrev`,
+  occupationRailNext: `${D}.occupationRailNext`,
+  occupationFamilyCount: `${D}.occupationFamilyCount`,
+  /** 🔑 Το μηδέν **λέγεται** («κανείς ακόμη»), και στο τσιπ και στο dropdown — ένα κείμενο.
+   *  Χωριστό κλειδί, όχι `=0`: τα locale μένουν `one`/`other` (CHECK 3.9 · `bundle-translate`). */
+  occupationFamilyNone: `${D}.occupationFamilyNone`,
   placeFilterLabel: `${D}.placeFilterLabel`,
   placeAll: `${D}.placeAll`,
   radiusLabel: `${D}.radiusLabel`,
@@ -422,4 +434,29 @@ export const PROFILE_HOLIDAY_KEYS: Record<GreekPublicHolidayId, string> = {
   'ochi-day': `${P}.holiday.ochi-day`,
   christmas: `${P}.holiday.christmas`,
   'boxing-day': `${P}.holiday.boxing-day`,
+};
+
+/**
+ * Η **λέξη** κάθε τσιπ γρήγορης ειδικότητας (ADR-896 §8) — σύντομη, όπως τη λέει ο κόσμος
+ * («Πλακάς», όχι «τοποθετητής πλακιδίων»). Η επίσημη ονομασία ESCO μένει στο dropdown.
+ * Εξαντλητικό πάνω στο `OccupationFamilyId`: νέα οικογένεια χωρίς λέξη = σφάλμα τύπου.
+ */
+export const OCCUPATION_FAMILY_KEYS: Record<OccupationFamilyId, string> = {
+  surveyor: `${D}.occupationFamily.surveyor`,
+  architect: `${D}.occupationFamily.architect`,
+  interiorDesigner: `${D}.occupationFamily.interiorDesigner`,
+  civilEngineer: `${D}.occupationFamily.civilEngineer`,
+  mechanicalEngineer: `${D}.occupationFamily.mechanicalEngineer`,
+  electricalEngineer: `${D}.occupationFamily.electricalEngineer`,
+  plumber: `${D}.occupationFamily.plumber`,
+  electrician: `${D}.occupationFamily.electrician`,
+  painter: `${D}.occupationFamily.painter`,
+  tiler: `${D}.occupationFamily.tiler`,
+  hvac: `${D}.occupationFamily.hvac`,
+  windows: `${D}.occupationFamily.windows`,
+  plasterer: `${D}.occupationFamily.plasterer`,
+  insulation: `${D}.occupationFamily.insulation`,
+  mason: `${D}.occupationFamily.mason`,
+  roofer: `${D}.occupationFamily.roofer`,
+  landscaper: `${D}.occupationFamily.landscaper`,
 };

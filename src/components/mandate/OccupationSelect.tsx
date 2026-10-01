@@ -74,6 +74,7 @@ import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ALL_OCCUPATIONS, type OccupationOption } from '@/lib/agency/showcase-filter';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
+import type { OccupationFamilyChoice } from './useOccupationFamilyChoices';
 
 /**
  * 🔴 **ΜΗΔΕΝ ΚΑΘΥΣΤΕΡΗΣΗ — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ** *(ADR-841 §7 Α19.4α)*.
@@ -90,6 +91,9 @@ import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
  * καταναλωτές κρατούν τα 150ms τους.
  */
 const IN_MEMORY_NO_DEBOUNCE_MS = 0;
+
+/** Σταθερή ταυτότητα για το «καμία οικογένεια» — ένα `= []` θα ξανάφτιαχνε τις επιλογές σε κάθε απόδοση. */
+const NO_FAMILIES: readonly OccupationFamilyChoice[] = [];
 
 export interface OccupationSelectProps {
   /**
@@ -110,6 +114,24 @@ export interface OccupationSelectProps {
   /** Η γλώσσα της ετικέτας — από το {@link showcaseLocale}, ποτέ γραμμένη στο χέρι. */
   readonly locale: 'el' | 'en';
   readonly onChange: (occupation: string | null) => void;
+  /**
+   * ADR-896 §8 — οι **οικογένειες** των γρήγορων τσιπ, πρώτες στη λίστα. Έτσι τσιπ και
+   * dropdown μοιράζονται **ένα** λεξιλόγιο τιμών: πατημένο τσιπ ⇒ το πεδίο δείχνει την
+   * ίδια οικογένεια. Χωρίς αυτές (ρίζα) η λίστα μένει όπως ήταν.
+   */
+  readonly families?: readonly OccupationFamilyChoice[];
+}
+
+/** Οικογένεια → γραμμή του combobox. Μηδέν ⇒ ορατή αλλά ανενεργή, εκτός αν είναι η τρέχουσα. */
+function familyComboOption(family: OccupationFamilyChoice, current: string | null): ComboboxOption {
+  const unavailable = family.count === 0 && family.value !== current;
+  return {
+    value: family.value,
+    label: family.label,
+    secondaryLabel: unavailable || family.countText === null ? undefined : family.countText,
+    disabled: unavailable,
+    disabledHint: unavailable && family.countText !== null ? family.countText : undefined,
+  };
 }
 
 export function OccupationSelect({
@@ -117,6 +139,7 @@ export function OccupationSelect({
   options,
   locale,
   onChange,
+  families = NO_FAMILIES,
 }: OccupationSelectProps): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
 
@@ -139,9 +162,10 @@ export function OccupationSelect({
   const comboOptions = React.useMemo<ComboboxOption[]>(
     () => [
       { value: ALL_OCCUPATIONS, label: t(DIRECTORY_KEYS.occupationAll) },
+      ...families.map((family) => familyComboOption(family, value)),
       ...options.map((option) => ({ value: option.escoUri, label: option.label[locale] })),
     ],
-    [options, locale, t],
+    [options, families, value, locale, t],
   );
 
   /*
