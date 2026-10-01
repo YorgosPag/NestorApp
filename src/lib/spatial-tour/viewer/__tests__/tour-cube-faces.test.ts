@@ -13,7 +13,8 @@ import {
 import {
   TOUR_CUBE_FACES, cubeFaceUvToDirection, directionToCubeFace, directionToYawPitch, yawPitchToDirection,
 } from '../tour-cube-faces';
-import { PLAN_CONE_RADIUS_M, PLAN_MIN_SPAN_M, conePath, planFrame, toPlanSvg } from '../tour-viewer-plan';
+import { conePath } from '@/lib/geometry/view-cone';
+import { PLAN_CONE_RADIUS_M, PLAN_MIN_SPAN_M, planFrame, toPlanSvg } from '../tour-viewer-plan';
 
 const round = (n: number) => Math.round(n * 1e6) / 1e6;
 

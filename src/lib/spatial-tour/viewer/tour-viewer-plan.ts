@@ -63,12 +63,7 @@ export function imagePlanFrame(image: { readonly width: number; readonly height:
   return { minX: 0, minY: 0, width: image.width * unit, height: image.height * unit };
 }
 
-/** Ο κώνος θέασης ως διαδρομή SVG με κορυφή στο `(0, 0)`, ανοιχτός προς τα **πάνω** (βορράς), πριν την περιστροφή. */
-export function conePath(halfAngleRad: number, radius: number): string {
-  const dx = Math.sin(halfAngleRad) * radius;
-  const dy = -Math.cos(halfAngleRad) * radius;
-  return `M 0 0 L ${-dx} ${dy} A ${radius} ${radius} 0 0 1 ${dx} ${dy} Z`;
-}
+// ⚠️ Ο κώνος θέασης (`conePath`) μετακόμισε στο `lib/geometry/view-cone` (ADR-897) — κοινός με τα σημεία λήψης.
 
 /** Μια στάση του ορόφου **με θέση** στην κάτοψη. */
 export interface PlacedStop {

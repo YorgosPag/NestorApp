@@ -4,7 +4,7 @@
  * @fileoverview **Ο ΧΑΡΤΗΣ ΤΟΠΟΘΕΤΗΣΗΣ** — η κάτοψη του ορόφου με τα σημεία του· κλικ ⇒ το επιλεγμένο σημείο πάει εκεί
  * (ADR-884 Φ2στ-β · §4.13 · πρότυπο Kuula/3DVista/CloudPano: «κλικ πάνω στην εικόνα»).
  * @related `TourPlanPane.tsx` (ο κάτοχος) · `lib/spatial-tour/tour-plan-frame.ts` (pixel ⟷ μέτρα) ·
- *   `lib/spatial-tour/viewer/tour-viewer-plan.ts` (`conePath` — ο ΙΔΙΟΣ κώνος με τον θεατή)
+ *   `lib/geometry/view-cone.ts` (`conePath` — ο ΙΔΙΟΣ κώνος με τον θεατή)
  * @module components/spatial-tour/editor/TourPlanEditMap
  *
  * 📏 **Σε pixel της εικόνας** (`viewBox` = η εικόνα): το κλικ γυρίζει σε pixel με τον αντίστροφο πίνακα οθόνης του SVG —
@@ -23,7 +23,8 @@ import { radToDeg } from '@/lib/geometry/angle';
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 import { planToImagePixel } from '@/lib/spatial-tour/tour-plan-frame';
 import { handleInlineRenameKey } from '@/lib/ui/inline-rename-keyboard';
-import { PLAN_CONE_RADIUS_M, conePath } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
+import { conePath } from '@/lib/geometry/view-cone';
+import { PLAN_CONE_RADIUS_M } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
 import type { FloorPlanImage, TourNode } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';

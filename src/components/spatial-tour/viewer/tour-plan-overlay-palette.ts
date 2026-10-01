@@ -31,6 +31,12 @@ export const PLAN_DOT_CLASS = {
 
 export const PLAN_CONE_CLASS = 'fill-[hsl(var(--plan-here)/0.25)] stroke-[hsl(var(--plan-here))]';
 
+/**
+ * 🧭 **Το βέλος βορρά πάνω στην κάτοψη** (ADR-897 Φ5.2) — μελάνι με λευκή άλω, όπως οι ετικέτες: διαβάζεται πάνω σε κάθε
+ * γραμμή του σχεδίου (ίδια αρχή διπλής αντίθεσης με το HUD βορρά του DXF, ADR-656 v5).
+ */
+export const PLAN_NORTH_CLASS = 'fill-[hsl(var(--plan-ink))] stroke-white [paint-order:stroke]';
+
 /** Κείμενο ετικέτας χώρου με λευκή άλω (`paint-order: stroke` ⇒ το περίγραμμα ζωγραφίζεται **πριν** το γέμισμα). */
 export const SPACE_LABEL_CLASS = 'fill-[hsl(var(--plan-ink))] stroke-white [paint-order:stroke] font-medium';
 export const SPACE_LABEL_UNCAPTURED_CLASS = 'fill-[hsl(var(--plan-ink-muted))] stroke-white [paint-order:stroke]';

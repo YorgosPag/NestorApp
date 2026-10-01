@@ -27,7 +27,8 @@ import { cn } from '@/lib/utils';
 import { radToDeg } from '@/lib/geometry/angle';
 import { horizontalFov, viewBearing } from '@/lib/spatial-tour/viewer/tour-viewer-bearing';
 import type { TourViewerGraph, ViewerLevelEntry, ViewerStop } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
-import { conePath, toPlanSvg, type PlacedStop, type PlanFrame } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
+import { conePath } from '@/lib/geometry/view-cone';
+import { toPlanSvg, type PlacedStop, type PlanFrame } from '@/lib/spatial-tour/viewer/tour-viewer-plan';
 import { planMetresPerPixel, planViewBox } from '@/lib/spatial-tour/viewer/tour-plan-zoom';
 import type { ElementSize } from '@/hooks/media/useElementSize';
 
