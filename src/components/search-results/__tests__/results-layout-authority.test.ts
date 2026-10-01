@@ -16,6 +16,7 @@ import { join } from 'node:path';
 
 import { MOBILE_BREAKPOINT } from '@/constants/layout';
 import { BOTTOM_SHEET_STOPS } from '@/lib/layout/bottom-sheet-stops';
+import { LIST_MAP_SCREEN_FRAME } from '@/components/shared/list-map/list-map-layout';
 
 const SHEET_MODULE = readFileSync(join(__dirname, '..', 'ResultsSheet.module.css'), 'utf8');
 
@@ -60,9 +61,24 @@ describe('Το κατώφλι είναι ΕΝΑΣ αριθμός, για δύο 
   it('Α2: η οθόνη 2 ΔΕΝ στοιβάζει, και δεν κρατά δεύτερο κατώφλι', () => {
     // Το ελάττωμα που έκλεισε το §26.7: `grid-cols-1 … lg:grid-cols-[…]` έδινε δύο
     // στοιβαγμένα μισά στο στενό, και το `lg` (1024) ήταν αριθμός δίπλα στο 768.
-    expect(SCREEN_SOURCE).not.toMatch(/className="[^"]*\bgrid-cols-1\b/);
-    expect(SCREEN_SOURCE).not.toMatch(/\blg:grid-cols-/);
-    expect(SCREEN_SOURCE).toMatch(/md:grid-cols-\[minmax\(/);
+    // 🔑 ADR-777 §8.84: η γεωμετρία ζει πλέον στην **αυθεντία** `list-map-layout` — ρωτιέται εκείνη.
+    expect(LIST_MAP_SCREEN_FRAME).not.toMatch(/(^|\s)grid-cols-1\b/);
+    expect(LIST_MAP_SCREEN_FRAME).not.toMatch(/\blg:/);
+    expect(LIST_MAP_SCREEN_FRAME).toMatch(/\bmd:grid-cols-\[minmax\(/);
+  });
+
+  it('Α2β: η οθόνη ΔΕΝ κρατά δική της γεωμετρία πλέγματος — μόνο το κοινό κέλυφος', () => {
+    // Ένα `grid-cols` εδώ θα ήταν δεύτερη αλήθεια δίπλα στο `LIST_MAP_SCREEN_FRAME` (ADR-749).
+    expect(SCREEN_SOURCE).not.toMatch(/grid-cols-/);
+    expect(SCREEN_SOURCE).toMatch(/<ListMapScreen\b/);
+  });
+
+  it('Α2γ: η γραμμή φίλτρων ΔΕΝ κρίνει γεωμετρία από τη μέτρηση (CLS)', () => {
+    // Μετρημένο 2026-10-01 (ADR-777 §8.84): `viewport === 'narrow' ? 'flex-nowrap…' : 'flex-wrap'`
+    // αναδίπλωνε σε δύο σειρές όσο «μετρούσε», μετά η κεφαλίδα κόνταινε 31px ⇒ CLS 0,0326 στα 728px.
+    const bar = withoutComments(readFileSync(join(__dirname, '..', 'filters', 'PrimaryFilterBar.tsx'), 'utf8'));
+    expect(bar).not.toMatch(/viewport\s*===\s*'narrow'\s*\?\s*'flex-/);
+    expect(bar).toMatch(/md:flex-wrap/);
   });
 });
 

@@ -160,7 +160,10 @@ export function PrimaryFilterBar({
       className={cn(
         'flex items-center gap-2',
         // Στενή: μία σειρά που κυλά (τσιπ Airbnb/Zillow κινητού). Ευρεία: αναδίπλωση αν χρειαστεί.
-        viewport === 'narrow' ? 'flex-nowrap overflow-x-auto pb-1' : 'flex-wrap',
+        // 🔴 Στο `md:` του CSS, ΟΧΙ στο `viewport` (ADR-777 §8.84): όσο ήταν `viewport === 'narrow'`,
+        // το «μετράω ακόμη» αναδίπλωνε σε δύο σειρές και μετά η κεφαλίδα κόνταινε — ο χάρτης πηδούσε
+        // 31px (μετρημένο CLS 0,0326 σε 728px). Γεωμετρία μόνο σε CSS, όπως το `ResultsSheet`.
+        'flex-nowrap overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0',
         className,
       )}
     >

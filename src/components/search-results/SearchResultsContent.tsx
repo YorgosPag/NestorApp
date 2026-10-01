@@ -65,7 +65,7 @@ import { ResultsOrderControl, ResultsOrderNote } from './filters/ResultsOrderCon
 import { ResultsMap } from './ResultsMap';
 import { PriceMapProvider } from './price-map/PriceMapProvider';
 import { PriceMapMapLayer } from './price-map/price-map-entry';
-import { ResultsSheet } from './ResultsSheet';
+import { ListMapScreen } from '@/components/shared/list-map/ListMapScreen';
 import { StayTotalsProvider } from './StayTotalsContext';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
@@ -336,23 +336,10 @@ export function SearchResultsContent() {
       </header>
 
       {/*
-        ΔΥΟ ΔΙΑΤΑΞΕΙΣ ΑΠΟ ΕΝΑ ΔΕΝΤΡΟ — και τα δύο πλαίσια ζωντανά σε **αμφότερες**.
-
-        • **Ευρεία** (`md:`): πλέγμα δύο στηλών, λίστα ‖ χάρτης.
-        • **Στενή**: ο χάρτης καταλαμβάνει **ολόκληρο** το κουτί και η λίστα κάθεται
-          **από πάνω** ως μη-αποκλειστικό φύλλο (SPEC-777D §26.2).
-
-        🔴 Αυτό που ΕΦΥΓΕ ήταν `grid-cols-1 … lg:grid-cols-[…]`, και το ελάττωμα δεν ήταν
-        ότι «δεν ρωτούσε»: ρωτούσε με CSS και **απαντούσε λάθος**. Στο στενό στοίβαζε δύο
-        σειρές μέσα σε `overflow-hidden`, δηλαδή λίστα και χάρτης **μοιράζονταν το ύψος**
-        και κανένα δεν ήταν χρήσιμο — η **τρίτη** κακή επιλογή, δίπλα στην εναλλαγή που το
-        §26.1 απορρίπτει ονομαστικά. Έφυγε επίσης το `lg` (1024), που ήταν **δεύτερος**
-        αριθμός δίπλα στο `MOBILE_BREAKPOINT` (768): το κατώφλι είναι πλέον **ένα**.
-
-        ⚠️ Η λίστα μένει **πρώτη στη ροή ανάγνωσης** — είναι το μέσο που το 65%
-        χρησιμοποιεί πραγματικά (§25.3). Γι' αυτό το φύλλο ζητά σκαλί τοπικής στρώσης
-        (`z-10`): στο στενό είναι **δεύτερο** στο βάψιμο ενώ είναι **πρώτο** στην ανάγνωση,
-        και η σειρά του DOM μόνη της θα το έθαβε κάτω από τον χάρτη.
+        ΛΙΣΤΑ ‖ ΧΑΡΤΗΣ ΩΣ ΟΘΟΝΗ — το κοινό SSoT (ADR-777 §8.84 · ADR-896 §4.5). Η γεωμετρία
+        (πλέγμα στο `md:`, φύλλο πυθμένα στο στενό, `isolate` χάρτη) ζει στο `list-map-layout`
+        και το κέλυφος στο `ListMapScreen`· εδώ μένει μόνο **τι** δείχνει κάθε πλαίσιο.
+        ⛔ Κανένα `grid-cols` εδώ: θα ήταν δεύτερη αλήθεια (άγκυρα `results-layout-authority` Α2).
       */}
       {/* ADR-777 §8.60.12 — «150 € · 3 νύχτες» σε κάρτα, φούσκα, δείκτη άκρης και πινακίδα. */}
       {/* ❤️ ADR-777 §8.74 — ΕΝΑΣ πάροχος για όλες τις καρδιές της λίστας (ένα fetch, όχι N). */}
@@ -360,8 +347,10 @@ export function SearchResultsContent() {
       <ListingMapSnapshotProvider>
       <SavedListingsProvider>
       <StayTotalsProvider totals={stayTotals}>
-        <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,min(46rem,45%))_1fr]">
-          <ResultsSheet viewport={viewport}>
+        <ListMapScreen
+          viewport={viewport}
+          mapLabel={t('search-results:map.label')}
+          list={
             <ResultsList
               sections={listView.sections}
               unmapped={listView.unmapped}
@@ -399,20 +388,9 @@ export function SearchResultsContent() {
                 </ResultsListHeader>
               }
             />
-          </ResultsSheet>
-
-          {/*
-            `isolate`: ο χάρτης είναι **ξένος** κώδικας (Geo-Canvas/MapLibre) με δικά του
-            εσωτερικά επίπεδα. Ένα δικό του στρώμα δεν επιτρέπεται να αναρριχηθεί πάνω από
-            το φύλλο — και ο **περιορισμός** είναι το ανώτερο εργαλείο έναντι του δαμάσματος
-            με αριθμό (CHECK 3.50): δεν χρειάζεται να ξέρουμε τι γράφει η βιβλιοθήκη, ούτε
-            μετά από αναβάθμισή της.
-          */}
-          <section
-            aria-label={t('search-results:map.label')}
-            className="absolute inset-0 isolate md:static"
-          >
-            {/* ADR-890 §14 — ο χάρτης τιμών: ένα μοντέλο για τη στρώση (παιδί του χάρτη) και τον διακόπτη (στη στήλη χειριστηρίων). */}
+          }
+          map={
+            /* ADR-890 §14 — ο χάρτης τιμών: ένα μοντέλο για τη στρώση (παιδί του χάρτη) και τον διακόπτη (στη στήλη χειριστηρίων). */
             <PriceMapProvider criteria={filters.criteria}>
             {/*
               **Ο ΑΜΦΙΔΡΟΜΟΣ ΔΕΣΜΟΣ, ΟΛΟΚΛΗΡΟΣ** (Α3) — τέσσερα σύρματα, όχι δύο:
@@ -461,8 +439,8 @@ export function SearchResultsContent() {
               coverage={coverage}
             />
             </PriceMapProvider>
-          </section>
-        </div>
+          }
+        />
       </StayTotalsProvider>
       </SavedListingsProvider>
       </ListingMapSnapshotProvider>
