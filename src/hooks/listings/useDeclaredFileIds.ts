@@ -32,6 +32,8 @@ import { updateProperty } from '@/services/properties.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { declaredFileIds, type DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 
 const logger = createModuleLogger('useDeclaredFileIds');
 
@@ -46,9 +48,19 @@ export interface PropertyDeclarationValues {
   readonly publishedMediaOrder: DeclaredFileIds;
   readonly publishedFloorplans: DeclaredFileIds;
   readonly publishedMediaFocalPoints: ReadonlyMap<string, PhotoFocalPoint>;
+  /** ADR-897 — η τέταρτη δήλωση: ίδιος κύκλος ζωής, κανένα νέο hook-δίδυμο. */
+  readonly publishedPhotoCaptureSpots: ReadonlyMap<string, PhotoCaptureSpot>;
+  /** ADR-897 Φ5.2 — ο βορράς ανά κάτοψη· γράφεται **μαζί** με τα σημεία λήψης (ένα PATCH, `usePropertyDeclarationPatch`). */
+  readonly publishedFloorplanNorth: DeclaredFloorplanNorth;
 }
 
 export type PropertyDeclarationField = keyof PropertyDeclarationValues;
+
+/**
+ * **Ένα PATCH δήλωσης** — ένα ή περισσότερα πεδία, **μόνο** από το κλειστό σύνολο {@link PropertyDeclarationField}.
+ * Πολλά πεδία ⇒ **ένα** αίτημα, **ένα** κλείδωμα, **μία** επαναπροβολή — ποτέ δύο εγγραφές που αγωνίζονται.
+ */
+export type PropertyDeclarationPatch = Partial<Readonly<Record<PropertyDeclarationField, unknown>>>;
 
 /** Τα δύο πεδία **δήλωσης αρχείων** (ADR-841 §7 Α14.7 · Α17.7). */
 export type DeclarationField = 'publishedMediaOrder' | 'publishedFloorplans';
@@ -112,9 +124,30 @@ export function usePropertyDeclaration<F extends PropertyDeclarationField>(
   storedValue: unknown,
   codec: PropertyDeclarationCodec<PropertyDeclarationValues[F]>,
 ): PropertyDeclarationState<PropertyDeclarationValues[F]> {
-  type T = PropertyDeclarationValues[F];
   const { read, equals, toWire } = codec;
   const stored = useMemo(() => read(storedValue), [read, storedValue]);
+  const toPatch = useCallback(
+    (value: PropertyDeclarationValues[F]): PropertyDeclarationPatch => ({ [field]: toWire(value) }),
+    [field, toWire],
+  );
+  return usePropertyDeclarationPatch(propertyId, stored, equals, toPatch);
+}
+
+/**
+ * **Ο κύκλος ζωής, για δήλωση που πιάνει ΠΕΡΙΣΣΟΤΕΡΑ από ένα πεδία** (ADR-897 Φ5.2 — σημεία λήψης + βορράς).
+ *
+ * 🔴 **Η ατομικότητα είναι ο λόγος ύπαρξης**: δύο `usePropertyDeclaration` στο ίδιο έγγραφο θα ήταν δύο PATCH με δύο
+ * ανεξάρτητα κλειδώματα — ο χώρος εργασίας θα έγραφε το ένα, και αν το δεύτερο αποτύγχανε η αγγελία θα έμενε
+ * **μισοαποθηκευμένη** (σημεία με παλιό βορρά). Εδώ: **ένα** `updateProperty` με όλα τα πεδία, ή κανένα.
+ *
+ * ⚠️ Το `stored` πρέπει να είναι **σταθερό** (`useMemo` στον καλώντα) — αλλιώς η συμφιλίωση τρέχει σε κάθε απόδοση.
+ */
+export function usePropertyDeclarationPatch<T>(
+  propertyId: string,
+  stored: T,
+  equals: (a: T, b: T) => boolean,
+  toPatch: (value: T) => PropertyDeclarationPatch,
+): PropertyDeclarationState<T> {
   const [optimistic, setOptimistic] = useState<T | null>(null);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -131,21 +164,22 @@ export function usePropertyDeclaration<F extends PropertyDeclarationField>(
       setOptimistic(next);
       setSaving(true);
       setFailed(false);
+      const patch = toPatch(next);
       try {
-        await updateProperty(propertyId, { [field]: toWire(next) });
+        await updateProperty(propertyId, patch);
       } catch (error) {
         setOptimistic(null);
         setFailed(true);
         logger.warn('Η δήλωση δεν αποθηκεύτηκε', {
           propertyId,
-          field,
+          fields: Object.keys(patch),
           error: error instanceof Error ? error.message : String(error),
         });
       } finally {
         setSaving(false);
       }
     },
-    [field, propertyId, saving, toWire],
+    [propertyId, saving, toPatch],
   );
 
   return { declared: optimistic ?? stored, saving, failed, commit };

@@ -23,6 +23,8 @@ import {
   LISTING_PHOTO_FRAMES,
   renderedPhotoPosition,
 } from '@/components/search-results/listing-photo-position-class';
+import { cn } from '@/lib/utils';
+import { IMAGE_OVERLAY_FRAME_CLASS } from '@/components/listings/image-overlay-frame';
 import type { FocalPointSurfaceHandlers } from './use-focal-point-picker';
 
 export interface ImageSize {
@@ -98,8 +100,9 @@ export function FocalPointSurface(props: FocalPointSurfaceProps): React.ReactEle
   return (
     // ⚠️ `self-start`: ως grid item το figure τεντωνόταν στο ύψος της στήλης προεπισκόπησης όταν η φωτογραφία
     //    ήταν χαμηλή (μετρημένο 24/09, 889×365) — το SVG και το κουμπί κλικ (`inset-0`) κάλυπταν το ΤΕΝΤΩΜΕΝΟ κουτί
-    //    ⇒ ορθογώνιο κάτω από την εικόνα και κλικ σε λάθος y. Το κουτί πρέπει να είναι ΑΚΡΙΒΩΣ η εικόνα.
-    <figure className="relative m-0 mx-auto w-fit self-start touch-none select-none">
+    //    ⇒ ορθογώνιο κάτω από την εικόνα και κλικ σε λάθος y. Το κουτί πρέπει να είναι ΑΚΡΙΒΩΣ η εικόνα —
+    //    αναλλοίωτο που ζει πλέον στο `IMAGE_OVERLAY_FRAME_CLASS` (ξαναχάθηκε 01/10 στα σημεία λήψης, ADR-897).
+    <figure className={cn(IMAGE_OVERLAY_FRAME_CLASS, 'touch-none select-none')}>
       {/* eslint-disable-next-line @next/next/no-img-element -- ιδιωτικό πρωτότυπο, εκτός optimizer */}
       <img
         src={src}

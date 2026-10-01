@@ -39,6 +39,10 @@ import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { useListingMediaOrder } from '@/hooks/listings/useListingMediaOrder';
 import { useListingFocalPoints, type ListingFocalPoints } from '@/hooks/listings/useListingFocalPoints';
 import { PhotoFocalPointControl } from './focal-point/PhotoFocalPointControl';
+import { useListingCaptureSurvey } from '@/hooks/listings/useListingCaptureSpots';
+import { CaptureSpotControl } from './capture-spots/CaptureSpotControl';
+import { captureSpotMaterialOf } from './capture-spots/capture-spot-material';
+import { agencyMediaMaterial } from '@/services/listings/agency-media-publication';
 import { companyReadCustodyOf } from '@/lib/files/file-custody';
 import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
 import type { FileRecord } from '@/types/file-record';
@@ -67,6 +71,10 @@ export interface ListingMediaOrderPanelProps {
   readonly storedFloorplans: unknown;
   /** 🎯 ADR-880 — ωμό πεδίο εγγράφου· η μία ανάγνωση είναι το `readDeclaredFocalPoints`. */
   readonly storedFocalPoints: unknown;
+  /** 📍 ADR-897 — ωμό πεδίο εγγράφου· η μία ανάγνωση είναι το `readDeclaredCaptureSpots`. */
+  readonly storedCaptureSpots: unknown;
+  /** 🧭 ADR-897 Φ5.2 — ωμό πεδίο εγγράφου· η μία ανάγνωση είναι το `readDeclaredFloorplanNorth`. */
+  readonly storedFloorplanNorth: unknown;
 }
 
 interface ListingMediaOrderRowProps {
@@ -138,6 +146,8 @@ export function ListingMediaOrderPanel({
   storedOrder,
   storedFloorplans,
   storedFocalPoints,
+  storedCaptureSpots,
+  storedFloorplanNorth,
 }: ListingMediaOrderPanelProps) {
   const { t } = useTranslation([NS]);
 
@@ -161,6 +171,17 @@ export function ListingMediaOrderPanel({
   );
 
   const focalPoints = useListingFocalPoints(propertyId, storedFocalPoints);
+  // 🧭 ADR-897 Φ5.2 — σημεία λήψης **και** βορράς σε **ένα** PATCH (ποτέ δύο εγγραφές που αγωνίζονται για το κλείδωμα).
+  const captureSpots = useListingCaptureSurvey(propertyId, storedCaptureSpots, storedFloorplanNorth);
+  // 📍 ADR-897 — **μόνο ό,τι φεύγει** (`items`): σημείο σε φωτογραφία ή κάτοψη που δεν δημοσιεύεται δεν έχει νόημα.
+  //    Το είδος το δίνει ο **ίδιος** κριτής με το ράφι (`agencyMediaMaterial`) — ποτέ δεύτερη κρίση «φωτογραφία ή κάτοψη;».
+  const captureMaterial = React.useMemo(() => {
+    const declaredFloorplans = new Set(floorplans);
+    return captureSpotMaterialOf(items.flatMap((file) => {
+      const material = agencyMediaMaterial(file, declaredFloorplans);
+      return material === null ? [] : [{ file, kind: material.kind }];
+    }), 'company');
+  }, [items, floorplans]);
 
   return (
     <ListingMaterialPanel
@@ -168,9 +189,17 @@ export function ListingMediaOrderPanel({
       title={t(`${K}.title`)}
       help={t(`${K}.help`)}
       empty={t(`${K}.empty`)}
-      failure={failed || focalPoints.failed ? t(`${K}.saveFailed`) : null}
+      failure={failed || focalPoints.failed || captureSpots.failed ? t(`${K}.saveFailed`) : null}
       isEmpty={items.length === 0}
     >
+      <CaptureSpotControl
+        photos={captureMaterial.photos}
+        floorplans={captureMaterial.floorplans}
+        declared={captureSpots.declared}
+        onSave={(next) => void captureSpots.commit(next)}
+        custody="company"
+        disabled={captureSpots.saving}
+      />
       <ol className="flex flex-col gap-2">
         {items.map((file, index) => (
           <ListingMediaOrderRow
