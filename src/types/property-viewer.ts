@@ -119,6 +119,16 @@ export interface Property {
      * ⚠️ `unknown` για τον ίδιο λόγο — ωμό spread εγγράφου· η μία ανάγνωση είναι το `readDeclaredFocalPoints`.
      */
     publishedMediaFocalPoints?: unknown;
+    /**
+     * 📍 **Τα σημεία λήψης που ΔΗΛΩΣΕ το γραφείο** (ADR-897) — `FileRecord.id` φωτογραφίας → θέση στην κάτοψη.
+     * ⚠️ `unknown` για τον ίδιο λόγο — ωμό spread εγγράφου· η μία ανάγνωση είναι το `readDeclaredCaptureSpots`.
+     */
+    publishedPhotoCaptureSpots?: unknown;
+    /**
+     * 🧭 **Ο βορράς ανά κάτοψη που ΔΗΛΩΣΕ το γραφείο** (ADR-897 Φ5.2) — `FileRecord.id` κάτοψης → γωνία (χώρος εικόνας).
+     * ⚠️ `unknown` για τον ίδιο λόγο — η μία ανάγνωση είναι το `readDeclaredFloorplanNorth`.
+     */
+    publishedFloorplanNorth?: unknown;
     parentPropertyId?: string;
     features?: string[];
     attachments?: {

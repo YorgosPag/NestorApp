@@ -64,6 +64,7 @@
 
 import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { ListingCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
@@ -240,6 +241,21 @@ export interface ListingImage {
    * απουσία που ο αναγνώστης ήδη χειρίζεται.
    */
   readonly focalPoint?: PhotoFocalPoint | null;
+  /**
+   * 📍 **ΑΠΟ ΠΟΥ ΤΡΑΒΗΧΤΗΚΕ, ΠΡΟΣ ΤΑ ΠΟΥ ΚΟΙΤΑΖΕΙ** (ADR-897) — θέση, κατεύθυνση και οπτικό πεδίο πάνω
+   * στην κάτοψη `floorplans[floorplanIndex]` του **ίδιου** εγγράφου. Μόνο στις φωτογραφίες του `gallery`.
+   *
+   * ⚠️ **Προαιρετικό, ίδιο σκεπτικό με το {@link focalPoint}**: απόν ⇒ «δεν δηλώθηκε», και κανένας
+   * κρίκος μετανάστευσης. ⛔ Μην το διαβάσεις απευθείας — η μία ανάγνωση είναι το `readListingCaptureSpot`,
+   * που ελέγχει **και** ότι ο δείκτης δείχνει σε κάτοψη που υπάρχει.
+   */
+  readonly captureSpot?: ListingCaptureSpot | null;
+  /**
+   * 🧭 **ΠΟΥ ΕΙΝΑΙ Ο ΒΟΡΡΑΣ** (ADR-897 Φ5.2) — μόνο στις **κατόψεις** (`floorplans[].value`): γωνία στο `[0, 2π)`, χώρος
+   * εικόνας (0 = πάνω, δεξιόστροφα — μοντέλο Revit «Project → True North»). Απόν ⇒ «δεν δηλώθηκε» ⇒ **κανένα** βέλος.
+   * ⛔ Μην το διαβάσεις απευθείας — η μία ανάγνωση είναι το `readListingNorthRad`.
+   */
+  readonly northRad?: number | null;
 }
 
 /**

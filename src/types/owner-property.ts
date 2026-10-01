@@ -90,6 +90,7 @@ import type { ListedAt, ListingAuthorship, ListingImage } from '@/types/public-l
 import type { ListingMaterialKind } from '@/lib/listings/listing-material';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
@@ -454,6 +455,19 @@ export interface OwnerProperty {
    */
   readonly publishedFileFocalPoints?: Readonly<Record<string, PhotoFocalPoint>>;
 
+  /**
+   * 📍 **Από πού τραβήχτηκε κάθε δηλωμένη φωτογραφία του φακέλου** — `FileRecord.id` → θέση/κατεύθυνση/πεδίο
+   * πάνω σε δηλωμένη κάτοψη του **ίδιου** φακέλου (ADR-897). Ίδιο σκεπτικό με το {@link publishedFileFocalPoints}:
+   * ζει δίπλα στη δήλωση, δεν δημοσιεύει τίποτα. ⚠️ Μόνο με φάκελο — το legacy `media[]` δεν το έχει.
+   */
+  readonly publishedFileCaptureSpots?: Readonly<Record<string, PhotoCaptureSpot>>;
+
+  /**
+   * 🧭 **Πού είναι ο βορράς σε κάθε δηλωμένη κάτοψη του φακέλου** — `FileRecord.id` κάτοψης → `[0, 2π)`, χώρος εικόνας
+   * (ADR-897 Φ5.2). Ίδιο σκεπτικό με το {@link publishedFileCaptureSpots}, και ταξιδεύει **μαζί** του.
+   */
+  readonly publishedFileFloorplanNorth?: Readonly<Record<string, number>>;
+
   // ── ΤΙΤΛΟΣ ────────────────────────────────────────────────────────────────
   /** Κείμενο **του ανθρώπου** — όχι κλειδί i18n (N.11 εξαίρεση: δεδομένο, όχι διεπαφή). */
   readonly title: string;
@@ -721,7 +735,7 @@ export function ownerPropertyOfferKinds(
 export type OwnerPropertyDraft = Pick<
   OwnerProperty,
   | 'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'bedrooms' | 'media' | 'title' | 'publishedFileIds'
-  | 'publishedFileFocalPoints'
+  | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots' | 'publishedFileFloorplanNorth'
 >;
 
 // =============================================================================
