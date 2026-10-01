@@ -12,11 +12,11 @@
  * **Και οι τρεις έλεγχοι βγήκαν πράσινοι** πάνω σε συνάρτηση που θα πετούσε
  * `ReferenceError` στην πρώτη κλήση.
  *
- * ⚠️ ΥΠΕΡ-ΠΡΟΣΕΓΓΙΖΕΙ ΤΙΣ ΔΕΣΜΕΥΣΕΙΣ ΕΠΙΤΗΔΕΣ: μαζεύει ΚΑΘΕ δεσμευμένο όνομα του
- * αρχείου σε ΕΝΑ επίπεδο σύνολο, αγνοώντας εμβέλειες. Άρα μπορεί να ΧΑΣΕΙ σφάλμα
- * (ψευδώς αρνητικό), αλλά **δεν μπορεί να εφεύρει** (ψευδώς θετικό). Για εργαλείο που
- * θα μπλοκάρει commit, αυτή είναι η σωστή κατεύθυνση: ένα ψευδώς θετικό διδάσκει τον
- * επόμενο να το αγνοεί.
+ * ⚠️ ΤΟ ΕΠΙΠΕΔΟ ΣΥΝΟΛΟ ΔΕΣΜΕΥΣΕΩΝ ΕΙΝΑΙ ΤΟ ΠΡΩΤΟ ΠΕΡΑΣΜΑ, ΟΧΙ Η ΑΠΑΝΤΗΣΗ: μόνο του
+ * έχανε κάθε όνομα δηλωμένο σε **εσωτερική** εμβέλεια και διαβασμένο έξω της — μετρημένο
+ * ζωντανά στο `QuoteList.tsx` (`d2534967`, React #31 στην παραγωγή). Τα ονόματα που περνά
+ * ως «δεσμευμένα» ξαναρωτιούνται στον binder της TypeScript (`scope-resolution.js`,
+ * ADR-808 §11). Η κατεύθυνση μένει ίδια: ψευδώς θετικά μετρημένα **0** στο δέντρο.
  */
 'use strict';
 
@@ -24,6 +24,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const ts = require('typescript');
+const { outOfScopeReads, windowValueGlobals } = require('./scope-resolution');
 
 /**
  * 🔑 ΤΑ AMBIENT GLOBALS ΔΕΝ ΓΡΑΦΟΝΤΑΙ ΜΕ ΤΟ ΧΕΡΙ — ΤΑ ΡΩΤΑΜΕ, ΚΑΙ ΤΑ ΡΩΤΑΜΕ ΜΕ AST.
@@ -299,7 +300,7 @@ const SYNTACTIC_NOT_A_NAME = new Set([
   'default', // `export { default }` / `import default`
 ]);
 
-/** Κάθε όνομα που δεσμεύεται ΟΠΟΥΔΗΠΟΤΕ στο αρχείο (επίπεδο σύνολο, εσκεμμένα). */
+/** Κάθε όνομα που δεσμεύεται ΟΠΟΥΔΗΠΟΤΕ στο αρχείο — 1ο πέρασμα· την εμβέλεια την κρίνει το `scope-resolution.js`. */
 function collectBindings(sf) {
   const names = new Set();
   const addName = (node) => {
@@ -329,6 +330,8 @@ function collectBindings(sf) {
     if ((ts.isFunctionExpression(n) || ts.isClassExpression(n)) && n.name) names.add(n.name.text);
     if (ts.isTypeParameterDeclaration(n) && n.name) names.add(n.name.text);
     if (ts.isCatchClause(n) && n.variableDeclaration) addName(n.variableDeclaration.name);
+    // `enum E { A = 1, B = A + 1 }` — μέλος ορατό ΜΟΝΟ μέσα στο enum· την εμβέλεια την κρίνει το 2ο πέρασμα.
+    if (ts.isEnumMember(n) && ts.isIdentifier(n.name)) names.add(n.name.text);
     ts.forEachChild(n, visit);
   };
   ts.forEachChild(sf, visit);
@@ -403,17 +406,37 @@ function findUnbound(relPath, source, projectRoot) {
   return scanFile(relPath, source, projectRoot).unbound;
 }
 
+/**
+ * Δύο περάσματα, ΜΙΑ λίστα ευρημάτων:
+ *   1. το επίπεδο σύνολο — όνομα που δεν δηλώνεται **πουθενά** (`reason: 'undeclared'`)·
+ *   2. η εμβέλεια (ADR-808 §11) — όνομα δηλωμένο **κάπου** αλλά αόρατο από τη θέση του:
+ *      μη καθολικό ⇒ `ReferenceError` (`'out-of-scope'`)· ιδιότητα του `window` ⇒ λύνεται
+ *      **σιωπηλά** σε λάθος αντικείμενο (`'out-of-scope-window'`, το `toolbar` → `BarProp`).
+ */
 function collectUnbound(sf, relPath, projectRoot) {
   const bound = collectBindings(sf);
   const ambient = ambientGlobals(projectRoot || process.cwd());
   const out = [];
   const seen = new Set();
+  const report = (id, reason) => {
+    const line = sf.getLineAndCharacterOfPosition(id.getStart(sf)).line + 1;
+    const key = `${id.text}:${reason}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ file: relPath, name: id.text, line, reason });
+  };
+  const declaredSomewhere = [];
   for (const id of collectReads(sf)) {
     const name = id.text;
-    if (bound.has(name) || GLOBALS.has(name) || ambient.has(name)
-      || SYNTACTIC_NOT_A_NAME.has(name) || seen.has(name)) continue;
-    seen.add(name);
-    out.push({ file: relPath, name, line: sf.getLineAndCharacterOfPosition(id.getStart(sf)).line + 1 });
+    if (SYNTACTIC_NOT_A_NAME.has(name)) continue;
+    if (bound.has(name)) { declaredSomewhere.push(id); continue; }
+    if (GLOBALS.has(name) || ambient.has(name)) continue;
+    report(id, 'undeclared');
+  }
+  const windowValues = windowValueGlobals();
+  for (const id of outOfScopeReads(sf, declaredSomewhere)) {
+    if (windowValues.has(id.text)) report(id, 'out-of-scope-window');
+    else if (!GLOBALS.has(id.text) && !ambient.has(id.text)) report(id, 'out-of-scope');
   }
   return out;
 }

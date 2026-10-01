@@ -33,10 +33,11 @@
  * **κλιμακώνεται μόνο του σε πλήρη σάρωση** όταν σταδιοποιείται `.d.ts` ή το
  * `package.json`/lockfile, και το Layer 2 τρέχει `--all` **άνευ όρων**.
  *
- * ⚠️ **ΤΟ ΕΡΓΑΛΕΙΟ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΕΦΕΥΡΕΙ**: το σύνολο δεσμεύσεων είναι **επίπεδο**
- * (αγνοεί εμβέλειες) ⇒ μπορεί να **χάσει** σφάλμα, ποτέ να το επινοήσει. Για πύλη που
- * μπλοκάρει commit αυτή είναι η σωστή κατεύθυνση: ένα ψευδώς θετικό διδάσκει τον επόμενο
- * να την αγνοεί (πήχης <10% — εδώ μετρημένα **0**).
+ * ⚠️ **ΔΥΟ ΠΕΡΑΣΜΑΤΑ (ADR-808 §11)**: το **επίπεδο** σύνολο δεσμεύσεων πιάνει ό,τι δεν
+ * δηλώνεται πουθενά· ό,τι περνά ως «δεσμευμένο» ξαναρωτιέται στον **binder της TS** για
+ * το αν είναι ορατό **από τη θέση του**. Μόνο το πρώτο έχανε το `renderQuoteRow`/`toolbar`
+ * του `QuoteList.tsx` (δηλωμένα μέσα σε comparator ⇒ React #31 στην παραγωγή). Ψευδώς
+ * θετικά μετρημένα **0** στο δέντρο (πήχης <10%).
  *
  * CLI:
  *   node scripts/check-unbound-identifiers.js            # σταδιοποιημένα (Layer 1)
@@ -118,7 +119,7 @@ function measure(argv = []) {
     if (!parsed) { tally[STATES.UNPARSABLE]++; continue; }
     if (unbound.length) {
       tally[STATES.UNBOUND]++;
-      for (const h of unbound) violations.push({ file: rel, name: h.name, line: h.line });
+      for (const h of unbound) violations.push({ file: rel, name: h.name, line: h.line, reason: h.reason });
       continue;
     }
     tally[STATES.BOUND]++;
@@ -142,8 +143,18 @@ function printReport(m) {
   }
   if (m.violations.length) {
     console.log('');
-    for (const v of m.violations) console.log(`   ⛔ ${v.file}:${v.line} — «${v.name}»`);
+    for (const v of m.violations) console.log(`   ⛔ ${formatViolation(v)}`);
   }
+}
+
+/** Ο ΛΟΓΟΣ τυπώνεται πάντα: «δεν υπάρχει» και «υπάρχει, αλλά όχι εδώ» θεραπεύονται αλλιώς. */
+const REASON_LABEL = {
+  undeclared: 'δεν δηλώνεται πουθενά',
+  'out-of-scope': 'δηλώνεται σε ΑΛΛΗ εμβέλεια — εδώ είναι ReferenceError',
+  'out-of-scope-window': 'δηλώνεται σε ΑΛΛΗ εμβέλεια — εδώ λύνεται ΣΙΩΠΗΛΑ στο `window.<όνομα>`',
+};
+function formatViolation(v) {
+  return `${v.file}:${v.line} — «${v.name}» (${REASON_LABEL[v.reason] || v.reason || 'δεν δηλώνεται πουθενά'})`;
 }
 
 /**
@@ -159,8 +170,9 @@ function main(argv, measureFn = measure) {
   if (!m.blocking.length) return 0;
 
   console.error(`\n❌ CHECK 3.70 — ${m.blocking.length} αδέσμευτο(α) αναγνωριστικό(ά):\n`);
-  for (const v of m.violations) console.error(`  ⛔ ${v.file}:${v.line} — «${v.name}»`);
-  console.error('\n   Το όνομα δεν δηλώνεται, δεν εισάγεται και δεν είναι καθολικό.');
+  for (const v of m.violations) console.error(`  ⛔ ${formatViolation(v)}`);
+  console.error('\n   Το όνομα δεν είναι ορατό από το σημείο όπου διαβάζεται.');
+  console.error('   ⚠️ «ΑΛΛΗ εμβέλεια»: η δήλωση ξέφυγε μέσα σε callback/μπλοκ — μετάφερέ την, ΜΗΝ τη διπλασιάσεις.');
   console.error('   ⚠️ Ένα `export … from` ΕΠΑΝΕΞΑΓΕΙ — ΔΕΝ εισάγει. Χρειάζεσαι ΔΥΟ γραμμές.');
   console.error('   ⚠️ ΜΗΝ το «λύσεις» με `any` (N.2) ούτε σβήνοντας το export.');
   console.error('   Αναφορά: npm run unbound:report');

@@ -17,6 +17,7 @@ const path = require('node:path');
 
 const gate = require('../check-unbound-identifiers');
 const { scanFile, ambientGlobals, harvestGlobals } = require('../lib/module-graph/unbound-identifiers');
+const { windowValueGlobals } = require('../lib/module-graph/scope-resolution');
 const ts = require('typescript');
 
 const ROOT = gate.PROJECT_ROOT;
@@ -56,6 +57,54 @@ describe('Π — βαθμονόμηση σε πραγματικό ιστορικ
     // Χωρίς αυτό, ένα Π1 που περνά θα μπορούσε να σημαίνει «το git επέστρεψε σκουπίδια».
     const total = CASES.reduce((n, [rel]) => n + namesIn(rel, gitShow(PINNED, rel)).length, 0);
     expect(total).toBeGreaterThanOrEqual(CASES.length);
+  });
+});
+
+// ───────────────────────────────────────────────────────────── Ε — ΕΜΒΕΛΕΙΑ (ADR-808 §11)
+describe('Ε — όνομα δηλωμένο σε ΑΛΛΗ εμβέλεια (το κενό του επίπεδου συνόλου)', () => {
+  // Ο refactor `d2534967` έβαλε `renderQuoteRow` + `toolbar` ΜΕΣΑ στον comparator ενός `sort`
+  // ⇒ React #31 (`[object BarProp]`) στην παραγωγή, ενώ η πύλη απαντούσε `unbound: []`.
+  const QL = 'src/subapps/procurement/components/QuoteList.tsx';
+  const hitsIn = (src, rel = QL) => scanFile(rel, src, ROOT).unbound.map((h) => `${h.name}:${h.reason}`);
+
+  it('🔴 Ε1 — το ΖΩΝΤΑΝΟ σφάλμα ΠΙΑΝΕΤΑΙ, με τον ΣΩΣΤΟ λόγο για το καθένα', () => {
+    expect(hitsIn(gitShow('d2534967', QL)).sort())
+      .toEqual(['renderQuoteRow:out-of-scope', 'toolbar:out-of-scope-window']);
+  });
+
+  it('Ε2 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: ο γονέας του commit και η σημερινή εκδοχή είναι ΚΑΘΑΡΟΙ', () => {
+    const fs = require('node:fs');
+    expect(hitsIn(gitShow('d2534967^', QL))).toEqual([]);
+    expect(hitsIn(fs.readFileSync(path.join(ROOT, QL), 'utf8'))).toEqual([]);
+  });
+
+  it.each([
+    ['μπλοκ μέσα σε callback', 'export function f() { [1].map(() => { const inner = 1; return inner; }); return inner; }', 'inner:out-of-scope'],
+    ['ιδιότητα του window (σιωπηλή)', 'export function f() { if (1) { const status = 1; void status; } return status; }', 'status:out-of-scope-window'],
+    ['function μέσα σε μπλοκ (module = strict)', 'export function f() { { function hid() {} } return hid; }', 'hid:out-of-scope'],
+    ['μέλος enum έξω από το enum', 'enum E { A = 1 } export const z = A;', 'A:out-of-scope'],
+  ])('🔴 Ε3 — %s ⇒ ΠΙΑΝΕΤΑΙ', (_label, src, expected) => {
+    expect(hitsIn(src, 'x.ts')).toEqual([expected]);
+  });
+
+  it.each([
+    ['hoisting function', 'export function a() { return b(); } function b() { return 1; }'],
+    ['όνομα function expression', 'export const f = function self(n: number): number { return n ? self(n - 1) : 0; };'],
+    ['μέλη namespace', 'namespace N { export const x = 1; export const y = x + 1; } export const z = N.y;'],
+    ['μέλος enum ΜΕΣΑ στο enum', 'enum E { A = 1, B = A + 1 } export const e = E.B;'],
+    ['catch / παράμετροι τύπων', 'export function g<T>(v: T): T | string { try { return v; } catch (err) { return String(err); } }'],
+    ['var hoisting από μπλοκ', 'export function h() { if (1) { var late = 1; } return late; }'],
+    ['shorthand', 'export function k(a: number) { const o = { a }; return o; }'],
+    ['τοπικό `it` + καθολικό `it` του jest (ήταν 82 σημεία)', "it('x', () => { [1].find((it) => it === 1); });"],
+  ])('Ε4 — %s ⇒ ΚΑΘΑΡΟ (κανένα ψευδώς θετικό)', (_label, src) => {
+    expect(hitsIn(src, 'x.ts')).toEqual([]);
+  });
+
+  it('🔴 Ε5 — οι ιδιότητες του window ΠΑΡΑΓΟΝΤΑΙ από το lib.dom, χωρίς τα καθολικά του jest', () => {
+    const w = windowValueGlobals();
+    for (const n of ['toolbar', 'status', 'name', 'history', 'event']) expect(`${n}: ${w.has(n)}`).toBe(`${n}: true`);
+    for (const n of ['it', 'jest', 'describe', 'renderQuoteRow']) expect(`${n}: ${w.has(n)}`).toBe(`${n}: false`);
+    expect(w.size).toBeGreaterThan(300);
   });
 });
 
