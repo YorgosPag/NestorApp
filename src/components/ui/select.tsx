@@ -187,12 +187,44 @@ type SelectItemProps = Omit<React.ComponentPropsWithoutRef<typeof SelectPrimitiv
   value: string;
 };
 
+/**
+ * 🔴 ADR-001 (Native option sync, 2026-10-01) / ADR-744 §25 — ΤΟ ΚΡΥΦΟ `<option>` ΚΑΘΥΣΤΕΡΕΙ ΕΝΑ RENDER.
+ *
+ * Το `SelectItemText` του Radix *(`@radix-ui/react-select@2.2.6`, dist/index.mjs:913-917)*
+ * χτίζει το native `<option>` του κρυφού `<select>` από `itemTextNode.textContent`
+ * διαβασμένο **κατά το render** — δηλαδή το κείμενο του **προηγούμενου** commit.
+ * Όταν η ετικέτα αλλάζει (ωμό κλειδί → μετάφραση, αλλαγή γλώσσας), το option μένει
+ * με το παλιό κείμενο **για πάντα**: μετρημένο 2026-10-01, `audience.publicListing`
+ * κ.ά. ωμά στο κρυφό select ενώ η ορατή λίστα ήταν μεταφρασμένη.
+ *
+ * 🔑 Μετά από κάθε commit συγκρίνουμε το **κείμενο που έφτασε στο DOM** με το
+ * προηγούμενο· αν άλλαξε, ζητάμε **ένα** ακόμη render. Σε αυτό το `ItemText` διαβάζει
+ * το ήδη δεσμευμένο κείμενο ⇒ σωστό option. Κόστος: ένα render **μόνο** όταν αλλάζει
+ * το κείμενο. Ρωτά το DOM, όχι τα `children`: πιάνει και ετικέτες που δεν είναι string.
+ *
+ * ⚠️ Δεν χρειάζεται remount (`key`) — μετρημένο με μετάλλαξη: χωρίς `key` οι άγκυρες
+ * μένουν πράσινες, χωρίς το render κοκκινίζουν (`select-native-option-sync.test.tsx`).
+ */
+function useResyncItemTextAfterCommit(textBox: React.RefObject<HTMLSpanElement | null>): void {
+  const [, setGeneration] = React.useState(0);
+  const committedText = React.useRef<string | null>(null);
+  React.useLayoutEffect(() => {
+    const text = textBox.current?.textContent ?? null;
+    if (committedText.current !== null && text !== committedText.current) {
+      setGeneration((current) => current + 1);
+    }
+    committedText.current = text;
+  });
+}
+
 const SelectItem = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Item>,
   SelectItemProps
 >(({ className, children, value, ...props }, ref) => {
   const iconSizes = useIconSizes();
   const dropdown = useDropdownTokens();
+  const textBox = React.useRef<HTMLSpanElement>(null);
+  useResyncItemTextAfterCommit(textBox);
 
   // 🏢 ENTERPRISE: Dev-only guardrail - catch empty value early
   if (process.env.NODE_ENV !== 'production') {
@@ -245,7 +277,7 @@ const SelectItem = React.forwardRef<
         γράφτηκε στην πηγή.
       */}
       {/* eslint-disable-next-line custom/no-hardcoded-strings -- CSS classes, not i18n */}
-      <span className="min-w-0 flex-1 truncate">
+      <span ref={textBox} className="min-w-0 flex-1 truncate">
         <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
       </span>
     </SelectPrimitive.Item>

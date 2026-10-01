@@ -45,3 +45,18 @@ import { SelectItem } from '@/components/ui/select';
 - Για enum-typed fields, ο caller κάνει `value ? (value as EnumType) : undefined` στο update.
 
 **Σωστά use cases**: optional enum fields όπου η απουσία τιμής έχει σημασιολογία (missing data warnings, filters, soft-delete). **Λάθος use case**: required fields — χρησιμοποίησε plain Select με required validation αντί.
+
+## Native option sync (2026-10-01)
+
+**Πρόβλημα**: το `SelectItemText` της Radix (`@radix-ui/react-select@2.2.6`, `dist/index.mjs:913-917`)
+χτίζει το `<option>` του κρυφού native `<select>` από το `textContent` του DOM **κατά το render**,
+δηλαδή το κείμενο του προηγούμενου commit. Όταν μια ετικέτα αλλάζει (ωμό κλειδί → μετάφραση,
+αλλαγή γλώσσας), το option μένει με το παλιό κείμενο για πάντα. Μετρήθηκε στην καρτέλα ακινήτου
+(`audience.publicListing` κ.ά.).
+
+**Θεραπεία** (μόνο στο SSoT `src/components/ui/select.tsx`): το `useResyncItemTextAfterCommit`
+συγκρίνει το κείμενο που **έφτασε στο DOM** με το προηγούμενο commit και, αν άλλαξε, ζητά **ένα**
+ακόμη render. Ισχύει για όλους τους καταναλωτές του `SelectItem` χωρίς αλλαγή στο call site.
+
+**Άγκυρα**: `src/components/ui/__tests__/select-native-option-sync.test.tsx` (ρωτά το αποδοθέν native
+option· μετάλλαξη ⇒ 2 🔴). Πλήρες ιστορικό: ADR-744 §25.
