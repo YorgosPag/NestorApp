@@ -18,7 +18,7 @@
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "5c432087e2342dd3689beba7fc920e2cffae931230bd2609c2d432ecd1bc3baa",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "18908a4209b7ee10245e26917d3340e867c6d1efcd31a57208bbf7eca0b79f9e",
-    "src/i18n/generated/routes/listing__id__photos.el.json": "7cb0d9b5ef28c5242b10180fa75c36b09bbe64500be148cb663da723e058cda4",
+    "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
@@ -105,7 +105,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e61b3a58047c652d61e95a13bce2a03e8032c793e85cd74a2561b87e9b27e5f2",
+  "inputsSha256": "d772f86c021adf2a965c52f7c247cfd11c20bdef6ba01201794b1b703ac9ff79",
   "languages": [
     "el"
   ],
@@ -329,7 +329,7 @@
     "src/components/listing-detail/media/ListingFloorplanSpotsFigure.tsx": "54fd45e94cf7271e499c82560b5ded53b8b1c10b91053fb486f8998cb28768d1",
     "src/components/listing-detail/media/ListingMediaPageChrome.tsx": "10c7bd9fd5ee2a57024f842bd93c71b89399d77cc78afb0af5922549bb7f4185",
     "src/components/listing-detail/media/ListingMediaTabs.tsx": "66e1c19c63dce75ba69501230789c388fef6c3b728b187c58627de94823dc7e1",
-    "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "e6499a636517393af98e7d43c71b49b6e3cd7a8dd2f929f5e603a5fc77171b8e",
+    "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "02505058c9ad95f03efe65649a9342569700d1fbf4c1cc272c8ef7837adfaf91",
     "src/components/listings/MarketingAudienceControl.tsx": "48e95e8af02a03863fe19e20c55d5901462b6712c13e757a9a9262ce2390a480",
     "src/components/listings/MySavedListingsContent.tsx": "57b239c7f58430eb1b896b40cdd82bc83da4c79f49fa274e38a1aa584d2a0674",
     "src/components/listings/capture-spots/CaptureSpotLayer.tsx": "3994b88f84434549abd340b99f2d232dc42562f1c3df89a5fe84399272133f04",
@@ -680,6 +680,7 @@
     "src/hooks/list-map/useListMapView.ts": "6ca051b7eafc2a2b9e62978b51774377db2b907e01c44754136b63e1a8f8a7c4",
     "src/hooks/listings/useDrawAreaSession.ts": "d325e0a4dfd0ce351d8b553c7e26951ca38252d0391721aec1f86373e0684502",
     "src/hooks/listings/useListingFocus.ts": "27d2838cb13bf572a4ab313a22ac82ae88e7cd760e144bcb1679ecfaad9428e3",
+    "src/hooks/listings/useListingPhotoParam.ts": "ca5087b83ce301cf713580d2efd297a459c3a669dae94b945e862053b19d62f6",
     "src/hooks/listings/useListingViewBeacon.ts": "f00f272be10dfadad9181fcb40639977f781046db82f4060c01e8b8991211c83",
     "src/hooks/listings/useMapAreaSearch.ts": "13704424f9a161a340d7ef8a50004daddc5f47f3d3758698949a3020d49f1793",
     "src/hooks/listings/useResolvedListingSearch.ts": "283b0a96370f49ca6d5755d4d59c80703ecdcfaa2daf0ac2f0898e1e34282a41",
@@ -3428,81 +3429,10 @@
     "listing__id__photos": {
       "page": "src/app/(light)/listing/[id]/photos/page.tsx",
       "wants": {
-        "common": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-account": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-actions": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-empty-states": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-navigation": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-photos": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-sales": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-shared": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-status": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-validation": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "listing-detail": {
           "keys": [
             "media.backToListing",
             "media.photosPage.heading",
-            "media.photosPage.imageTitle",
             "media.photosPage.openLabel",
             "media.tabs.floorplan",
             "media.tabs.label",
@@ -10024,7 +9954,7 @@
     "matchedKeys": 220,
     "routeBoundaries": 0,
     "shellFiles": 889,
-    "sliceBytes": 631808
+    "sliceBytes": 631739
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

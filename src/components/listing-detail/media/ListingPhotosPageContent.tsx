@@ -11,9 +11,9 @@
  * ⛔ Σύνδεσμοι μόνο από `@/lib/workspace/navigation` (CHECK 3.61).
  */
 
-import { useState } from 'react';
+import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`, ποτέ σε Server Component).
 import routeSlice from '@/i18n/generated/routes/listing__id__photos.el.json';
@@ -21,11 +21,20 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 import { listingGalleryImages, listingImageSrcSet } from '@/lib/listings/listing-images';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import { useTourPresenceAvailable } from '@/lib/spatial-tour/useTourPresenceAvailable';
+import { useListingPhotoParam } from '@/hooks/listings/useListingPhotoParam';
+import { listingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
 import { ListingMediaPageBody, MediaPageHeader } from './ListingMediaPageChrome';
 
 registerRouteSlice(routeSlice);
+
+/**
+ * 🔴 **ΟΡΙΟ `next/dynamic` (CHECK 3.34 Κ2, ADR-744)** — ADR-897 Φ4: το lightbox (πλοήγηση + πάνελ «πού τραβήχτηκε»)
+ * ανοίγει **μόνο** με κλικ ή με `?photo=N`, άρα τα κλειδιά του δεν ταξιδεύουν στο slice της διαδρομής. Μετρημένο: χωρίς
+ * το όριο η διαδρομή πήγαινε 1.015 bytes > ταβάνι 521. Ίδιο σχήμα με το `PhotoFocalPointDialog`.
+ */
+const ListingPhotoLightbox = dynamic(() => import('./ListingPhotoLightbox').then((m) => m.ListingPhotoLightbox), { ssr: false });
 
 const GRID_SIZES = '(min-width: 1024px) 23vw, 45vw';
 
@@ -43,10 +52,12 @@ export function ListingPhotosPageContent({ listingId }: { readonly listingId: st
 
 function PhotosPageBody({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results', 'listing-detail']);
-  const images = listingGalleryImages(listing);
+  const images = useMemo(() => listingGalleryImages(listing), [listing]);
   const floorplanAvailable = listing.floorplans.some(isPubliclyPresentable);
   const tourAvailable = useTourPresenceAvailable(listing.id) ?? false;
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  // 📍 ADR-897 — η ανοιχτή φωτογραφία ζει στη διεύθυνση (`?photo=N`)· τα σημεία λήψης, ανά κάτοψη, με τη σειρά των εικόνων.
+  const [openIndex, setOpenIndex] = useListingPhotoParam(images.length);
+  const floorplanSpots = useMemo(() => listingFloorplanSpots(listing, images), [listing, images]);
 
   return (
     <>
@@ -59,7 +70,9 @@ function PhotosPageBody({ listing }: { readonly listing: PublicListing }) {
       <section aria-label={t('listing-detail:media.photosPage.heading')} className="p-4">
         <PhotosGrid images={images} onOpen={setOpenIndex} />
       </section>
-      <PhotoLightbox images={images} openIndex={openIndex} onClose={() => setOpenIndex(null)} />
+      {openIndex !== null && (
+        <ListingPhotoLightbox images={images} floorplans={floorplanSpots} openIndex={openIndex} onNavigate={setOpenIndex} />
+      )}
     </>
   );
 }
@@ -107,40 +120,5 @@ function PhotosGrid({
         </li>
       ))}
     </ul>
-  );
-}
-
-function PhotoLightbox({
-  images,
-  openIndex,
-  onClose,
-}: {
-  readonly images: readonly ListingImage[];
-  readonly openIndex: number | null;
-  readonly onClose: () => void;
-}) {
-  const { t } = useTranslation(['listing-detail']);
-  const image = openIndex !== null ? images[openIndex] : undefined;
-
-  return (
-    <Dialog open={image !== undefined} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent size="fullscreen" className="flex items-center justify-center bg-background/95 p-0">
-        <DialogTitle className="sr-only">
-          {t('listing-detail:media.photosPage.imageTitle', { index: (openIndex ?? 0) + 1, total: images.length })}
-        </DialogTitle>
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image.url}
-            srcSet={listingImageSrcSet(image)}
-            sizes="95vw"
-            width={image.width}
-            height={image.height}
-            alt={t(image.altKey, { index: (openIndex ?? 0) + 1, total: images.length })}
-            className="max-h-full max-w-full object-contain"
-          />
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }

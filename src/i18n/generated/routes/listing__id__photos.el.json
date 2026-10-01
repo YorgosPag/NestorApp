@@ -4,7 +4,6 @@
       "backToListing": "Πίσω στην αγγελία",
       "photosPage": {
         "heading": "Φωτογραφίες",
-        "imageTitle": "Φωτογραφία {index} από {total}",
         "openLabel": "Άνοιγμα φωτογραφίας {index} από {total}"
       },
       "tabs": {
