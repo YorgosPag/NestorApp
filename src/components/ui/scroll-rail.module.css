@@ -1,0 +1,67 @@
+/**
+ * **ScrollRail** — όλη η γεωμετρία σε CSS (ADR-777 §8.84 · ADR-896 §7Α.5).
+ *
+ * • Το σβήσιμο της άκρης ΔΕΝ ζει εδώ: είναι το `scroll-edge-fade.module.css` (ADR-777 §8.79), που
+ *   ορίζει και το `--scroll-edge-fade`. Το `scroll-padding-inline` το ξαναχρησιμοποιεί, ώστε snap,
+ *   Tab και αποκάλυψη να αφήνουν το στοιχείο ΕΞΩ από τη μάσκα — ένας αριθμός, μία πηγή.
+ * • Τα βελάκια είναι `absolute` ⇒ η εμφάνισή τους δεν αλλάζει ούτε ύψος ούτε πλάτος (CLS 0).
+ *   Χωρίς `z-index`: έρχονται μετά τη λωρίδα στο DOM, άρα ζωγραφίζονται από πάνω.
+ * • Ορατά μόνο (α) με συσκευή που αιωρείται με ακρίβεια (ποντίκι/trackpad — όχι αφή, ανεξάρτητα
+ *   από το πλάτος) και (β) προς πλευρά όπου η λωρίδα ΣΥΝΕΧΙΖΕΙ (`data-scroll-edges`).
+ */
+
+.rail {
+  position: relative;
+  min-width: 0;
+}
+
+/* ⚠️ Το `display:flex` + `flex-nowrap` ΔΕΝ ζουν εδώ αλλά ως κλάσεις Tailwind στο `scroll-rail.tsx`:
+   το `shell-surface.css` (ADR-797) αναγνωρίζει «λίστα διάταξης» από τη ΔΗΛΩΣΗ `[class*='flex']` και
+   δίνει σε κάθε άλλη `ul > li + li` περιθώριο πρόζας 36px. Μετρημένο ζωντανά: με `flex` μόνο εδώ
+   (όνομα κλάσης κατακερματισμένο), τα τσιπ κατέβηκαν σκαλωτά και η λωρίδα ψήλωσε 44 → 80px. */
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--scroll-edge-fade);
+  scrollbar-width: none;
+  /* Το `overflow` κόβει το δαχτυλίδι εστίασης των παιδιών (ring + offset = 4px): χώρος μέσα,
+     ίσο αρνητικό περιθώριο έξω ⇒ η λωρίδα πιάνει ακριβώς το κουτί που έπιανε χωρίς αυτό. */
+  padding: 0.25rem;
+  margin: -0.25rem;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.scroller > * {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+/* `.rail .arrow`: το `inline-flex` του Button έχει ίδια εξειδίκευση με μία κλάση — η σειρά φόρτωσης δεν είναι συμβόλαιο. */
+.rail .arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.rail .prev {
+  left: 0;
+}
+
+.rail .next {
+  right: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rail .scroller[data-scroll-edges='start'] ~ .prev,
+  .rail .scroller[data-scroll-edges='both'] ~ .prev,
+  .rail .scroller[data-scroll-edges='end'] ~ .next,
+  .rail .scroller[data-scroll-edges='both'] ~ .next {
+    display: inline-flex;
+  }
+}
