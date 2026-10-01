@@ -61,6 +61,7 @@ import {
 import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
 import { StayLedgerBar } from './StayLedgerBar';
 import { ResultsList } from './ResultsList';
+import { PublicSiteFooter, SHELL_FOOTER_HOSTED } from '@/components/public-site/PublicSiteFooter';
 import { ResultsListHeader } from './ResultsListHeader';
 import { ResultsOrderControl, ResultsOrderNote } from './filters/ResultsOrderControl';
 import { ResultsMap } from './ResultsMap';
@@ -304,6 +305,13 @@ export function SearchResultsContent() {
       // Φορτώνει ακόμη τα αρχικά δεδομένα; — ίδιο σήμα με το `ShellSurface.busy` (ADR-797 §Φ.Ρ.3).
       aria-busy={loading}
       /*
+        🏠 ADR-896 §7Α.8 — «το υποσέλιδο το φιλοξενώ εγώ», στο τέλος της λίστας (`footer` πιο κάτω,
+        Zillow). Το `shell-surface.css` κρύβει τότε το υποσέλιδο του κάδρου, και το φύλλο του
+        στενού φτάνει στην κάτω άκρη. Δήλωση και φιλοξενία ζουν στο ΙΔΙΟ αρχείο, επίτηδες.
+        ⚠️ ΠΑΝΩ από το `data-shell-viewport`: εκείνο κολλά στο `className` (μετάλλαξη Γ-Μ5 του CHECK 3.63).
+      */
+      {...SHELL_FOOTER_HOSTED}
+      /*
         📐 ΤΟ ΥΨΟΣ ΤΟΥ ΚΑΔΡΟΥ — Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ (ADR-797 ΦΑΣΗ Γ).
         ΔΕΥΤΕΡΗ, ΑΝΕΞΑΡΤΗΤΗ δήλωση από το `bleed`: εκείνο λέει «μηδέν οριζόντιο
         κενό», αυτό λέει «κλείδωσε το κάδρο στο παράθυρο». Δύο ερωτήματα, δύο
@@ -399,6 +407,7 @@ export function SearchResultsContent() {
                   <ResultsOrderNote order={order} listings={withinScope} />
                 </ResultsListHeader>
               }
+              footer={<PublicSiteFooter />}
             />
           }
           map={

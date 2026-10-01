@@ -12,6 +12,7 @@ import '@testing-library/jest-dom';
 
 import { EMPTY_LISTING_FILTERS, type ListingFilters } from '@/lib/listings/listing-filters';
 import { EMPTY_LISTING_CRITERIA, withValues } from '@/lib/criteria/listing-criteria';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 import { countHiddenAsked, MoreFiltersControl } from '../MoreFiltersControl';
 import type { FilterCommit } from '../use-filter-commit';
@@ -87,5 +88,48 @@ describe('Θ4 — §8.80: ο αριθμός μετρά ΜΟΝΟ τα κρυμμ�
     expect(countHiddenAsked(withHidden)).toBe(1);
     control({ filters: { ...ASKING, criteria: withHidden } });
     expect(screen.getByRole('button', { name: 'search-filters:filters.moreActive#{"count":1}' })).toHaveTextContent('1');
+  });
+});
+
+/**
+ * ADR-896 §7Α.8 — τα ευρήματα του στενού (στιγμιότυπα Giorgio): «Φίλτρα» δύο φορές στο φύλλο,
+ * και «Δείξε N» αόρατο στο σκοτεινό (`bg-primary` ≡ `--card`).
+ */
+describe('Θ5 — ΕΝΑΣ τίτλος στο φύλλο, και είναι το όνομα του διαλόγου', () => {
+  it('🔴 ακριβώς ένα «Φίλτρα», και το `aria-labelledby` του διαλόγου δείχνει σε αυτό', () => {
+    control({ viewport: 'narrow' });
+    fireEvent.click(screen.getByRole('button', MORE));
+    const titles = screen.getAllByText('search-filters:filters.heading');
+    expect(titles).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', titles[0].id);
+  });
+
+  it('🔴 το αναδυόμενο κρατά τον δικό του ορατό τίτλο (h2)', () => {
+    control({ viewport: 'wide' });
+    fireEvent.click(screen.getByRole('button', MORE));
+    expect(screen.getByRole('heading', { name: 'search-filters:filters.heading' })).toBeInTheDocument();
+  });
+});
+
+describe('Θ6 — καμία προειδοποίηση Radix για τίτλο/περιγραφή', () => {
+  it('🔴 το άνοιγμα του φύλλου δεν γράφει τίποτα στην κονσόλα', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    control({ viewport: 'narrow' });
+    fireEvent.click(screen.getByRole('button', MORE));
+    const said = [...warn.mock.calls, ...error.mock.calls].map((args) => String(args[0]));
+    warn.mockRestore();
+    error.mockRestore();
+    expect(said.filter((m) => /Description|DialogTitle|aria-describedby/.test(m))).toEqual([]);
+  });
+});
+
+describe('Θ7 — η κύρια ενέργεια από το SSoT, όχι `bg-primary`', () => {
+  it('🔴 το «Δείξε N» φέρει το `COLOR_BRIDGE.action.primary`', () => {
+    control({ viewport: 'narrow' });
+    fireEvent.click(screen.getByRole('button', MORE));
+    const apply = screen.getByRole('button', { name: 'search-filters:filters.apply#{"count":7}' });
+    for (const cls of COLOR_BRIDGE.action.primary.split(' ')) expect(apply).toHaveClass(cls);
+    expect(apply).not.toHaveClass('bg-primary');
   });
 });

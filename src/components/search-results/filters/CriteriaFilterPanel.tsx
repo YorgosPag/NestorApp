@@ -42,6 +42,7 @@ import { criteriaGroupLabel } from '@/lib/criteria/listing-criterion-labels';
 import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { PublicListing } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
+import { SheetTitle } from '@/components/ui/sheet';
 
 import { CRITERIA_FILTER_GROUPS } from './criteria-filter-groups';
 import { CriterionField } from './CriterionField';
@@ -53,6 +54,12 @@ interface CriteriaFilterPanelProps {
   readonly listings: readonly PublicListing[];
   readonly commit: FilterCommit;
   readonly className?: string;
+  /**
+   * **Πού ζει το πάνελ** (ADR-896 §7Α.8). Στο `sheet` (Radix Dialog) η κεφαλίδα **είναι** το
+   * `SheetTitle`, άρα ένας ορατός τίτλος που είναι και το όνομα του διαλόγου, όχι δύο «Φίλτρα».
+   * Η σειρά κρατά επίσης χώρο για το ✕ του φύλλου. Στο `popover` μένει απλό `<h2>`.
+   */
+  readonly container: 'sheet' | 'popover';
 }
 
 export function CriteriaFilterPanel({
@@ -60,10 +67,12 @@ export function CriteriaFilterPanel({
   listings,
   commit,
   className,
+  container,
 }: CriteriaFilterPanelProps) {
   const { t } = useTranslation(['search-filters', 'search-results', 'listing-detail', 'properties-enums']);
 
   const asked = askedCriterionKeys(filters.criteria);
+  const PanelHeading = container === 'sheet' ? SheetTitle : 'h2';
   const firstGroup = CRITERIA_FILTER_GROUPS[0]?.group;
 
   return (
@@ -71,10 +80,10 @@ export function CriteriaFilterPanel({
       aria-label={t('search-filters:filters.heading')}
       className={cn('flex min-h-0 flex-col', className)}
     >
-      <header className="flex items-center justify-between gap-2 pb-2">
-        <h2 className="text-sm font-semibold text-foreground">
+      <header className={cn('flex items-center justify-between gap-2 pb-2', container === 'sheet' && 'pe-8')}>
+        <PanelHeading className="text-sm font-semibold text-foreground">
           {t('search-filters:filters.heading')}
-        </h2>
+        </PanelHeading>
 
         {/*
           ⚠️ **Το «Καθαρισμός όλων» τυπώνεται ΜΟΝΟ όταν υπάρχει τι να καθαριστεί.**

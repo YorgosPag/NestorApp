@@ -106,7 +106,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c5952449706e3aed26981b054125aece4ea3ba06a59d45edea382c7a44bfada6",
+  "inputsSha256": "2c5eca311657b2b77c59d831efa7c8f540f798cd304dd8a22b3a78970d9954eb",
   "languages": [
     "el"
   ],
@@ -504,7 +504,7 @@
     "src/components/search-results/ResultsMapLayers.tsx": "2fe0c31ffa77d98e164ee170bc7aa9cfe6e839eb9e206b1f8dc1ba7a37fa4b09",
     "src/components/search-results/ResultsMapSources.tsx": "52653441d988fc528f70477971caebcf7149735f6ac0c2620c435757bdd45edf",
     "src/components/search-results/ResultsSheet.tsx": "4a98dea07a1dcf9a522a0d4841d27a63d5ad6d2c1335df9c72ad39385b56dc7d",
-    "src/components/search-results/SearchResultsContent.tsx": "e2d36b7280f341c52a0d4e5a8f0933cf56d398bec536d06ca7f3bd3a5cf80449",
+    "src/components/search-results/SearchResultsContent.tsx": "21eb1a1abf1062706d10eddad5a32da08ec3b7b9bf157702a3a67b13ca751a24",
     "src/components/search-results/StayFilterFields.tsx": "53a934c4e2463f0880f38897e35d432c06e001f9f2f9866a36700273b4e24988",
     "src/components/search-results/StayLedgerBar.tsx": "aeb01a80ba793116dcb123a2a2294e1f46f195f063bc1c6f6b4901fe56568a52",
     "src/components/search-results/UnmappedListingsRow.tsx": "fa2a7fe38e16c6c8f3febfe6f36ae1967596ba73e09bf4f9d82117addbae735b",
@@ -515,7 +515,7 @@
     "src/components/search-results/draw/DrawnAreaChip.tsx": "2d32518eac4730ddc8b84aad5c62bd09cc14f7ed531f54b26dc4f7216b45ea24",
     "src/components/search-results/draw/DrawnAreaLayer.tsx": "443a94c796ce5dd3b8435ccd1a9c30977c1f001fa5fdae035d3f56960b32ca3d",
     "src/components/search-results/draw/SearchAreaMapLayer.tsx": "a9e95e22d51f15bb6dc52fe1de96654b4dcfa50998e5ba17d5d108bbccd25555",
-    "src/components/search-results/filters/CriteriaFilterPanel.tsx": "bfcbd9101021e8c3c1488760e384b29f55552d612cd199bc8645dc9431e432b5",
+    "src/components/search-results/filters/CriteriaFilterPanel.tsx": "2f64ea97d6c2655b1b6a27533450c97c495f5d8778a44bf9fad9f1fc39314757",
     "src/components/search-results/filters/CriterionBarPopover.tsx": "b0ee628472894176c4ebe444116f474f1b7d42e4e73157c8607fe470d91dc73e",
     "src/components/search-results/filters/CriterionField.tsx": "116f1a3089f4bd5a5c0e0d9215fe455e66ce5482433771d0a7b7b04319d14882",
     "src/components/search-results/filters/CriterionFlagField.tsx": "31ed566fb85193b04c7ad69b4cbea3cd13e78de45d14ef5f50a4b572c94454b7",
@@ -523,7 +523,7 @@
     "src/components/search-results/filters/CriterionRangePopover.tsx": "c4a62e67f4be71f090f7b4dc3de4a5b001c2c3d07d16dbe7263bd3adc021498d",
     "src/components/search-results/filters/CriterionValueSetField.tsx": "13fde2d998094d5f9721612cc2a41653402924c0e892ff07ca16d64623ca0947",
     "src/components/search-results/filters/CriterionValueSetPopover.tsx": "5ccddb38a33eec83cbfeceb6d9376de4a3a75f33e88ed54b35a388e0c0636517",
-    "src/components/search-results/filters/MoreFiltersControl.tsx": "e4b4c61f2f2919713c05c1265b82ab29f0dc3f3eee8426a4702e2aba4dd134ff",
+    "src/components/search-results/filters/MoreFiltersControl.tsx": "e0b9843d019623c8eb8b0713bd39f8036ee9085e1871af48cdbedf7852025723",
     "src/components/search-results/filters/PrimaryFilterBar.tsx": "3bedc825c16e6722fa29f027a4f8f160dbbc66bc762e74467272ee882eafdf3a",
     "src/components/search-results/filters/ResultsOrderControl.tsx": "2812391c97a883c43f5a43839a132d2e697cfaf0f34e6dfdacbb7f2749732198",
     "src/components/search-results/filters/ResultsOrderSelect.tsx": "62d37ebca26203ba231ec1f1d6889c8454b119216881577cefc011f1a567803e",
@@ -8343,6 +8343,20 @@
           ],
           "whole": false
         },
+        "navigation": {
+          "keys": [
+            "legal.dataDeletion",
+            "legal.legalLinks",
+            "legal.legalNotice",
+            "legal.openSource",
+            "legal.privacyPolicy",
+            "legal.privateMarketingDisclosure",
+            "legal.termsOfService",
+            "tools.objectiveValue"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -9283,7 +9297,7 @@
     "src/app/(app)/shared/layout.tsx": "c6f00027985a180ac00aba8dbfdd611353bece13131b50f4a5f79f452e3d1af6",
     "src/app/(auth)/layout.tsx": "2516446e753d611e8cc8965dc85512d2fe627e355d2c8b7682d451181f006bed",
     "src/app/(bare)/layout.tsx": "d8d5e14aafe05d5f4e38db737cd7a168263b583637b6206dfb97e3b6ec286e52",
-    "src/app/(light)/layout.tsx": "ac372fe073b43a23de0c5bc02e03fd9758422a9e4e05886b2c0ae8bfc5fe5269",
+    "src/app/(light)/layout.tsx": "e4f3775b8316a2f792fa57f7bebfd71accb9f99424ed93afbb5c1438510eab1d",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "48a5d03c5579240d0884a774b2a328a2964f47f8ff33bd23e8ce694c419c3dac",
     "src/app/layout.tsx": "8f5a87b53789a29f43493b70722f162e974c60b4f179ff49aa4f4590370cbcf4",
@@ -9368,6 +9382,7 @@
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
+    "src/components/public-site/PublicSiteFooter.tsx": "770589d0ce0c837f041ba9f9a4085dd41039229b9a654627a0f2043ecbb19253",
     "src/components/public-site/PublicSiteHeader.tsx": "be4a67c5071e00c3f9444bad6713391642ae10e252566bbd289b17487525eaed",
     "src/components/public-site/PublicSiteMenu.tsx": "0db17ce982f15c246633026e8f6c10ce687612f752d6b8fb484f398f6deb27f8",
     "src/components/public-site/public-site-nav.ts": "4e831ecab41f94a41b04990cb6ed6f704a38c5d15e7fc57a796e54f234fd1e5e",
@@ -10190,7 +10205,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 220,
     "routeBoundaries": 0,
-    "shellFiles": 896,
+    "shellFiles": 897,
     "sliceBytes": 651111
   },
   "unresolvableKeys": [

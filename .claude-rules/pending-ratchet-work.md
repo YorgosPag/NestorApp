@@ -3923,6 +3923,15 @@
 
 ## Pending tasks (priority order)
 
+### 🎯 Κύρια ενέργεια = `bg-primary` ⇒ αόρατη στο σκοτεινό (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-01, ADR-770 §18 · ADR-896 §7Α.8)
+- **SSoT**: `COLOR_BRIDGE.action.primary` (`design-system/color-bridge.ts`, ανεστραμμένο μονόχρωμο, μετρημένο 16,66:1 σκοτ. / 14,76:1 φωτ.).
+  Το `.dark --primary` ≡ `--card`, οπότε κουμπί `bg-primary` σβήνει μέσα σε κάρτα/φύλλο. Έτσι βρέθηκε ζωντανά το «Δείξε N» του `/search/results`.
+- **Μένουν 45 αρχεία** με χειρόγραφο `bg-primary text-primary-foreground` (`grep -rln "bg-primary text-primary-foreground" src --include=*.tsx`).
+  🔴 **Η ρίζα είναι το `Button variant="default"`** (`components/ui/button.tsx:18`, ~690 αρχεία με `<Button`). ⛔ ΟΧΙ αλλαγή του `--primary`
+  (ADR-682 §5.5). Απόφαση Giorgio: (α) νέο variant `action` στο `Button` που διαβάζει το SSoT, με μετανάστευση ανά οθόνη μόνο για την
+  **κύρια** ενέργεια (μία ανά οθόνη, ADR-770 §18) ή (β) `default` → `action.primary` συνολικά (οπτική αλλαγή σε όλη την εφαρμογή).
+- **Πύλη**: καμία σήμερα δεν το πιάνει (το 3.38 κοιτά `text-primary`, όχι γέμισμα κουμπιού). Υποψήφιο ratchet: `bg-primary` σε στοιχείο-κουμπί.
+
 ### 🖼️ `downloadUrl` → `fileDisplayUrl` / `preview` — οι υπόλοιποι αναγνώστες URL αρχείου (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-01, ADR-899 · ADR-862 Φ0 Β8)
 - **SSoT**: `lib/files/file-display-url.ts` (`fileDisplayUrlOf` → `url` + `preview` από την κλίμακα 320…2560). Πέρασαν ήδη:
   `PhotosTabBase` · `MediaGallery` · `MediaCard` · `property-photos` · κεφαλίδα/κάρτα ακινήτου.

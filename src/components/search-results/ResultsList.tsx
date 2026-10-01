@@ -63,6 +63,11 @@ interface ResultsListProps {
    * που φαίνεται στη στάση `peek`.
    */
   readonly header?: React.ReactNode;
+  /**
+   * **Το υποσέλιδο της στήλης** (ADR-896 §7Α.8) — μπαίνει **τελευταίο** μέσα στο δοχείο κύλισης,
+   * όπως στη Zillow: στο φύλλο του στενού φαίνεται στη στάση «πλήρες», στο τέλος της λίστας.
+   */
+  readonly footer?: React.ReactNode;
 }
 
 export function ResultsList({
@@ -73,6 +78,7 @@ export function ResultsList({
   filterQuery,
   undeclaredLabelsFor,
   header,
+  footer,
 }: ResultsListProps) {
   const { t } = useTranslation(['search-results']);
 
@@ -157,6 +163,7 @@ export function ResultsList({
               />
             ))
           )}
+          {footer}
         </div>
       </div>
 

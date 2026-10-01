@@ -34,9 +34,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
-import { LegalLinksNav } from '@/components/legal/LegalLinksNav';
-import { ObjectiveValueLink } from '@/components/objective-value/ObjectiveValueLink';
-import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
+import { PublicSiteFooter } from '@/components/public-site/PublicSiteFooter';
 import { LandingHeroesProvider } from '@/components/shared/landing-hero/LandingHeroesProvider';
 import { readLandingHeroes } from '@/services/landing-hero/landing-hero-reader';
 
@@ -113,13 +111,12 @@ export default async function LightLayout({
         ⚠️ **ΜΕΣΑ στο κάδρο, ΕΞΩ από τον διάδρομο**: ο διάδρομος ανήκει στο **περιεχόμενο**
         (ADR-797) — ένα υποσέλιδο πλάτους οθόνης μέσα του θα ήταν δεύτερη αυθεντία κενού.
       */}
-      <footer className="flex w-full flex-col items-center gap-1 border-t border-border px-4 py-2">
-        {/* ADR-898 Φ2 — τα δημόσια εργαλεία, μία γραμμή πάνω από τα νομικά. */}
-        <p className="m-0 text-xs text-muted-foreground">
-          <ObjectiveValueLink className={`${TOUCH_TARGET_MIN} hover:text-foreground`} />
-        </p>
-        <LegalLinksNav variant="standalone" />
-      </footer>
+      {/*
+        🏠 ADR-896 §7Α.8 — επιφάνεια με `data-shell-footer="hosted"` (το `/search/results`) το
+        φιλοξενεί η ίδια στο τέλος της λίστας της (Zillow). Τότε το `shell-surface.css` κρύβει
+        αυτό εδώ, ώστε το φύλλο του στενού να φτάνει στην κάτω άκρη.
+      */}
+      <PublicSiteFooter />
     </TooltipProvider>
     </div>
   );

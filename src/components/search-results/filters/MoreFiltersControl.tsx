@@ -45,13 +45,14 @@ import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import type { ViewportClass } from '@/hooks/media/useViewportClass';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { askedCriterionKeys, type ListingCriteria } from '@/lib/criteria/listing-criteria';
 import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { PublicListing } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 import { PRIMARY_CRITERION_KEYS } from './criteria-filter-groups';
 import { CriteriaFilterPanel } from './CriteriaFilterPanel';
@@ -135,8 +136,12 @@ function MoreFiltersSheet({ open, onOpenChange, trigger, panel, visibleCount }: 
         αντίχειρας — η ίδια σύμβαση με το `ResultsSheet` της ίδιας οθόνης, όχι
         δεύτερη γλώσσα χειρονομιών στην ίδια σελίδα.
       */}
-      <SheetContent side="bottom" className="flex max-h-[85vh] flex-col">
-        <SheetTitle>{t('search-filters:filters.heading')}</SheetTitle>
+      {/*
+        🔑 ΕΝΑΣ τίτλος (ADR-896 §7Α.8): το όνομα του διαλόγου είναι η **ορατή** κεφαλίδα του πάνελ
+        (`container="sheet"` ⇒ `SheetTitle`). Δεν υπάρχει περιγραφή, και το `aria-describedby={undefined}`
+        το λέει ρητά στο Radix (τεκμηριωμένος τρόπος) αντί για ψεύτικο κείμενο.
+      */}
+      <SheetContent side="bottom" aria-describedby={undefined} className="flex max-h-[85vh] flex-col">
         {panel}
         {/*
           🔴 **ΡΗΤΟ ΚΛΕΙΣΙΜΟ ΜΕ ΤΟΝ ΑΡΙΘΜΟ ΜΕΣΑ** (Baymard, στενή οθόνη): ο άνθρωπος
@@ -148,7 +153,11 @@ function MoreFiltersSheet({ open, onOpenChange, trigger, panel, visibleCount }: 
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            /*
+              🎯 Η ΚΥΡΙΑ ενέργεια του φύλλου ⇒ `COLOR_BRIDGE.action.primary` (ADR-770 §18). Ήταν `bg-primary`,
+              και στο σκοτεινό `--primary` ≡ `--card`: το κουμπί έσβηνε μέσα στο φύλλο (ADR-896 §7Α.8).
+            */
+            className={cn('w-full rounded-md px-4 py-2 text-sm font-medium', COLOR_BRIDGE.action.primary)}
           >
             {t('search-filters:filters.apply', { count: visibleCount })}
           </button>
@@ -184,16 +193,18 @@ export function MoreFiltersControl({ filters, listings, commit, visibleCount, vi
    * αλλάζει το στυλ του θα ήταν η ημέρα που αλλάζει **σε μία από τις δύο οθόνες**.
    */
   const trigger = <MoreFiltersButton hiddenCount={countHiddenAsked(filters.criteria)} />;
-  const panel = <CriteriaFilterPanel filters={filters} listings={listings} commit={commit} className="min-h-0 flex-1" />;
+  const renderPanel = (container: 'sheet' | 'popover') => (
+    <CriteriaFilterPanel filters={filters} listings={listings} commit={commit} container={container} className="min-h-0 flex-1" />
+  );
 
   if (viewport === 'narrow') {
-    return <MoreFiltersSheet open={open} onOpenChange={setOpen} trigger={trigger} panel={panel} visibleCount={visibleCount} />;
+    return <MoreFiltersSheet open={open} onOpenChange={setOpen} trigger={trigger} panel={renderPanel('sheet')} visibleCount={visibleCount} />;
   }
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="end" className="flex max-h-[70vh] w-96 flex-col p-4">
-        {panel}
+        {renderPanel('popover')}
       </PopoverContent>
     </Popover>
   );
