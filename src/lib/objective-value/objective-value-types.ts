@@ -1,0 +1,183 @@
+/**
+ * @fileoverview **Το συμβόλαιο της μηχανής αντικειμενικής αξίας** — είσοδοι ανά έντυπο, αποτέλεσμα με ανάλυση.
+ * @related ADR-898 · `compute-objective-value.ts` (ο ΕΝΑΣ υπολογιστής) · `objective-value-tables.ts` (ο νόμος)
+ * @module lib/objective-value/objective-value-types
+ *
+ * 🔑 **`null` = «δεν το ξέρω» — ποτέ «όχι»**. Η μηχανή ζητά **μόνο** ό,τι επηρεάζει το συγκεκριμένο ακίνητο: ο ΣΕ
+ * δεν ζητείται σε Δ' όροφο (ίδιος συντελεστής σε όλα τα κλιμάκια), ο ανελκυστήρας δεν ζητείται σε Α' όροφο, ο ΣΑΟ
+ * μόνο σε ημιτελές. Ό,τι λείπει και χρειάζεται επιστρέφεται στο `missing` — **καμία σιωπηλή μαντεψιά**.
+ *
+ * 🔑 **Οι σημαίες που ΜΕΙΩΝΟΥΝ** (συνιδιοκτησία, διατηρητέο, πέτρινοι τοίχοι…) έχουν προεπιλογή την **κανονική**
+ * περίπτωση, όπως και στα ΦΥΑΑ της ΑΑΔΕ: αποδεικνύονται με έγγραφο, δεν τεκμαίρονται.
+ */
+
+// ============================================================================
+// ΚΟΙΝΑ
+// ============================================================================
+
+/** Τρόπος κατασκευής (άρθ. 3 §10 · 6 §9 · 7 §9). */
+export type ConstructionKind = 'frame' | 'masonry' | 'makeshift';
+
+/** Ειδική κατάσταση (άρθ. 2 §21-22): το διατηρητέο **υπερισχύει** του απαλλοτριωτέου. */
+export type LegalEncumbrance = 'none' | 'listed' | 'expropriated';
+
+/** Στάδιο αποπεράτωσης αποθήκης/θέσης στάθμευσης (άρθ. 6 §8 · 7 §8). */
+export type AncillaryCompletion = 'complete' | 'frame' | 'masonry' | 'plaster';
+
+interface ObjectiveValueCommonInput {
+  /** Τιμή ζώνης €/τ.μ. (ADR-889 §10: από τη θέση, ή χειροκίνητα). */
+  readonly zonePrice: number | null;
+  /** Συντελεστής εμπορικότητας (≥ 1). Ζητείται μόνο όπου επηρεάζει. */
+  readonly commercialityFactor?: number | null;
+  /** Ακέραια έτη παλαιότητας κατά άρθ. 2 §20 — βλ. `legalAgeYears`. */
+  readonly ageYears?: number | null;
+  /** Ποσοστό κυριότητας που αποτιμάται, (0, 1]. Προεπιλογή 1. */
+  readonly ownershipShare?: number;
+  /** Ανήκει κατά πλήρη κυριότητα σε περισσότερα πρόσωπα (άρθ. 2 §25). */
+  readonly coOwned?: boolean;
+  readonly encumbrance?: LegalEncumbrance;
+  /** Δαπάνη αποκατάστασης ζημιών σεισμού/πυρκαγιάς/πλημμύρας σε € (άρθ. 2 §23). */
+  readonly damageRestorationCost?: number;
+  readonly construction?: ConstructionKind;
+  /** Στέγη από αμιαντοτσιμέντο ή λαμαρίνα (πρόσθετος συντελεστής). */
+  readonly lightRoof?: boolean;
+  /** Εξωτερικοί τοίχοι πάχους ≥ 0,50 μ. */
+  readonly thickWalls?: boolean;
+}
+
+// ============================================================================
+// ΕΝΤΥΠΟ 1 — ΚΑΤΟΙΚΙΑ / ΔΙΑΜΕΡΙΣΜΑ
+// ============================================================================
+
+/** Άρθ. 3 §3: μία πρόσοψη · δύο+ ή σε πλατεία · δρόμος ≤ 6 μ. · μόνο σε ακάλυπτο / τυφλό οικόπεδο. */
+export type ResidenceFrontage = 'single' | 'multiple' | 'narrow' | 'rearOnly';
+
+/** Άρθ. 3 §9. */
+export type ResidenceCompletion = 'complete' | 'foundation' | 'frame' | 'masonry' | 'plaster' | 'flooring';
+
+/**
+ * Ένα επίπεδο της κατοικίας. **Όροφος**: `< 0` υπόγειο, `0` ισόγειο (και ημιυπόγειο, άρθ. 2 §6), `1` Α' (και
+ * ημιώροφος, άρθ. 2 §8), …
+ */
+export interface ResidenceLevelInput {
+  readonly floor: number | null;
+  /** τ.μ. μαζί με τους εξωτερικούς τοίχους (άρθ. 2 §17). */
+  readonly area: number | null;
+}
+
+export interface ResidenceInput extends ObjectiveValueCommonInput {
+  readonly form: 'residence';
+  /** Ένα ή περισσότερα επίπεδα με λειτουργική ενότητα (άρθ. 15 §1β): ενιαίος συντελεστής επιφάνειας. */
+  readonly levels: readonly ResidenceLevelInput[];
+  /** Η επιφάνεια περιλαμβάνει κοινόχρηστους (μικτή) ⇒ × 0,90. */
+  readonly areaIncludesCommon?: boolean;
+  readonly frontage: ResidenceFrontage | null;
+  /** Οι προσαυξήσεις/μειώσεις πρόσοψης β, γ δεν ισχύουν σε οικισμούς που μνημονεύονται στους πίνακες. */
+  readonly frontageExemptSettlement?: boolean;
+  readonly hasCentralHeating: boolean | null;
+  /** Ζητείται μόνο πάνω από τον Β' όροφο. */
+  readonly hasElevator?: boolean | null;
+  readonly completion?: ResidenceCompletion;
+  /** ΣΑΟ — ζητείται μόνο σε ημιτελές. */
+  readonly plotUtilisation?: number | null;
+}
+
+// ============================================================================
+// ΕΝΤΥΠΑ 4 + 5 — ΑΠΟΘΗΚΗ / ΘΕΣΗ ΣΤΑΘΜΕΥΣΗΣ
+// ============================================================================
+
+/** Άρθ. 6 §4. Αποθήκη σε όροφο ή μετρημένη στον ΣΔ = χώρος κύριας χρήσης ⇒ έντυπο 1, όχι εδώ. */
+export type StoragePosition =
+  | 'groundNotCounted'
+  | 'basementStreetEntrance'
+  | 'basementYardEntrance'
+  | 'basementShopEntrance'
+  | 'basementInternalEntrance';
+
+export interface StorageInput extends ObjectiveValueCommonInput {
+  readonly form: 'storage';
+  readonly area: number | null;
+  readonly position: StoragePosition | null;
+  readonly completion?: AncillaryCompletion;
+}
+
+/** Άρθ. 7 §4. */
+export type ParkingPosition = 'closedBasement' | 'closedGround' | 'closedUpper' | 'yardOrRoof' | 'pilotis';
+
+export interface ParkingInput extends ObjectiveValueCommonInput {
+  readonly form: 'parking';
+  /** Αν ο τίτλος δεν τη γράφει ⇒ 20 τ.μ. (άρθ. 7 §5) — `null` σημαίνει ακριβώς αυτό. */
+  readonly area: number | null;
+  readonly position: ParkingPosition | null;
+  readonly completion?: AncillaryCompletion;
+}
+
+export type ObjectiveValueInput = ResidenceInput | StorageInput | ParkingInput;
+export type ObjectiveValueForm = ObjectiveValueInput['form'];
+
+// ============================================================================
+// ΑΠΟΤΕΛΕΣΜΑ
+// ============================================================================
+
+/** Τι λείπει — ονόματα πεδίων εισόδου (η οθόνη τα μεταφράζει, η μηχανή δεν έχει κείμενα). */
+export type ObjectiveValueMissing =
+  | 'zonePrice'
+  | 'commercialityFactor'
+  | 'ageYears'
+  | 'area'
+  | 'floor'
+  | 'frontage'
+  | 'hasCentralHeating'
+  | 'hasElevator'
+  | 'plotUtilisation'
+  | 'position';
+
+/** Είσοδος που υπάρχει αλλά ο νόμος δεν την επιτρέπει. */
+export type ObjectiveValueInvalid =
+  | 'nonPositiveZonePrice'
+  | 'commercialityBelowOne'
+  | 'nonPositiveArea'
+  | 'negativeAge'
+  | 'ownershipShareOutOfRange'
+  | 'foundationStageAboveGround'
+  | 'noLevels';
+
+/** Ένας εφαρμοσμένος συντελεστής, για την ανάλυση «γιατί βγήκε αυτό το ποσό». */
+export interface AppliedFactor {
+  readonly key:
+    | 'area'
+    | 'mixedArea'
+    | 'thickWalls'
+    | 'frontage'
+    | 'floor'
+    | 'age'
+    | 'completion'
+    | 'construction'
+    | 'lightRoof'
+    | 'centralHeating'
+    | 'elevator'
+    | 'encumbrance'
+    | 'damage'
+    | 'coOwnership'
+    | 'position'
+    | 'ownershipShare';
+  readonly factor: number;
+  /** Παραπομπή στον νόμο, π.χ. `ΠΟΛ.1149/1994 άρθ.3 §4`. */
+  readonly ref: string;
+  /** Για πολυώροφη κατοικία: σε ποιο επίπεδο (δείκτης στο `levels`). */
+  readonly level?: number;
+}
+
+export type ObjectiveValueResult =
+  | {
+      readonly kind: 'computed';
+      readonly form: ObjectiveValueForm;
+      /** € με δύο δεκαδικά. */
+      readonly value: number;
+      readonly zonePrice: number;
+      /** Η επιφάνεια που μπήκε στον υπολογισμό (για στάθμευση χωρίς τίτλο: 20). */
+      readonly area: number;
+      readonly factors: readonly AppliedFactor[];
+    }
+  | { readonly kind: 'needsInput'; readonly form: ObjectiveValueForm; readonly missing: readonly ObjectiveValueMissing[] }
+  | { readonly kind: 'invalid'; readonly form: ObjectiveValueForm; readonly problems: readonly ObjectiveValueInvalid[] };
