@@ -91,10 +91,25 @@
       "heading": "Photos",
       "openLabel": "Open photo {index} of {total}",
       "imageTitle": "Photo {index} of {total}",
+      "keyboardHint": "Use the ← → arrow keys to change photo.",
       "closeLabel": "Close"
     },
     "floorplanPage": {
       "heading": "{count, plural, one {Floor plan} other {Floor plans}}"
+    },
+    "capture": {
+      "panelTitle": "Where it was taken",
+      "panelHint": "Tap a spot on the floor plan to see the photo.",
+      "floorplansLabel": "Floor plans with shot positions",
+      "floorplanTab": "Floor plan {index}",
+      "planLabel": "Floor plan {index} with shot positions",
+      "markerLabel": "Photo {index} of {total}",
+      "notPlaced": "This photo has no position on the floor plan.",
+      "previous": "Previous photo",
+      "next": "Next photo",
+      "counter": "{index} / {total}",
+      "northGlyph": "N",
+      "northLabel": "North arrow: north is {degrees}° clockwise from the top of the floor plan"
     }
   }
 }

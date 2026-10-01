@@ -91,10 +91,25 @@
       "heading": "Φωτογραφίες",
       "openLabel": "Άνοιγμα φωτογραφίας {index} από {total}",
       "imageTitle": "Φωτογραφία {index} από {total}",
+      "keyboardHint": "Με τα βέλη ← → αλλάζετε φωτογραφία.",
       "closeLabel": "Κλείσιμο"
     },
     "floorplanPage": {
       "heading": "{count, plural, one {Κάτοψη} other {Κατόψεις}}"
+    },
+    "capture": {
+      "panelTitle": "Πού τραβήχτηκε",
+      "panelHint": "Πατήστε ένα σημείο της κάτοψης για να δείτε τη φωτογραφία.",
+      "floorplansLabel": "Κατόψεις με σημεία λήψης",
+      "floorplanTab": "Κάτοψη {index}",
+      "planLabel": "Κάτοψη {index} με τα σημεία λήψης",
+      "markerLabel": "Φωτογραφία {index} από {total}",
+      "notPlaced": "Αυτή η φωτογραφία δεν έχει θέση στην κάτοψη.",
+      "previous": "Προηγούμενη φωτογραφία",
+      "next": "Επόμενη φωτογραφία",
+      "counter": "{index} / {total}",
+      "northGlyph": "Β",
+      "northLabel": "Βέλος βορρά: ο βορράς είναι {degrees}° δεξιόστροφα από το πάνω μέρος της κάτοψης"
     }
   }
 }
