@@ -244,6 +244,12 @@
         "label": "Πού βρίσκεται;"
       }
     },
+    "photoCaptureSpots": {
+      "needsFloorplan": "Δηλώστε πρώτα μια κάτοψη για την αγγελία.",
+      "needsPhotos": "Δεν υπάρχουν φωτογραφίες για τοποθέτηση.",
+      "progress": "{placed}/{total}",
+      "trigger": "Θέσεις λήψης"
+    },
     "photoFocalPoint": {
       "stateAuto": "Αυτόματη",
       "stateManual": "Δική σας",

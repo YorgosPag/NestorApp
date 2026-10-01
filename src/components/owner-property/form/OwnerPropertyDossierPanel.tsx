@@ -42,6 +42,7 @@ import {
 
 import { OwnerPropertyDossierItem } from './OwnerPropertyDossierItem';
 import { useDossierFocalPointSlot } from './use-dossier-focal-point-slot';
+import { OwnerPropertyDossierCaptureSpots } from './OwnerPropertyDossierCaptureSpots';
 
 const NS = 'property-market';
 const K = `${NS}:offer.media`;
@@ -200,6 +201,8 @@ export function OwnerPropertyDossierPanel({
               );
             })}
           </ul>
+          {/* 📍 ADR-897 — θέσεις λήψης πάνω στις κατόψεις, μόνο από ό,τι φεύγει (`published`). */}
+          <OwnerPropertyDossierCaptureSpots published={published} />
           <p aria-live="polite" className="text-xs text-muted-foreground">
             {/* 🔴 `published`, ΠΟΤΕ `count` — δεσμευμένο όνομα του i18next (δες το σκεπτικό στο `OwnerPropertyMediaField`). */}
             {t(`${K}.publishedCount`, { published: published.length, max: PUBLISHED_MEDIA_LIMIT })}
