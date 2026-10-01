@@ -15,6 +15,8 @@ import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
 import { photoFocalPointSchema, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import { declaredCaptureSpotsSchema, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -86,6 +88,19 @@ export const PropertyPatchSchema = z.object({
     .record(z.string().min(1).max(128), photoFocalPointSchema)
     .refine((points) => Object.keys(points).length <= PUBLISHED_MEDIA_LIMIT)
     .optional(),
+  /**
+   * 📍 **Τα σημεία λήψης του γραφείου** — `FileRecord.id` φωτογραφίας → θέση/κατεύθυνση/πεδίο πάνω σε
+   * δηλωμένη κάτοψη (ADR-897). Ρητό για τον ίδιο λόγο με το `publishedMediaFocalPoints`, με το **ίδιο**
+   * όριο. Η διασταύρωση *«είναι η κάτοψη δηλωμένη;»* γίνεται στην **προβολή**, όχι εδώ: η δήλωση
+   * κατόψεων αλλάζει ανεξάρτητα, και σημείο σε κάτοψη που αποσύρθηκε πρέπει να **επιβιώνει** ώστε να
+   * ξαναφανεί αν η κάτοψη επιστρέψει.
+   */
+  publishedPhotoCaptureSpots: declaredCaptureSpotsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
+  /**
+   * 🧭 **Ο βορράς ανά κάτοψη** — `FileRecord.id` κάτοψης → `[0, 2π)` (ADR-897 Φ5.2). Ίδιο όριο, ίδια λογική
+   * επιβίωσης με τα σημεία λήψης· ο χώρος εργασίας το στέλνει **στο ίδιο PATCH** με εκείνα (ατομικά).
+   */
+  publishedFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 
@@ -130,6 +145,10 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   publishedFloorplans?: string[];
   /** ADR-880 — τα δηλωμένα σημεία εστίασης των φωτογραφιών της αγγελίας. */
   publishedMediaFocalPoints?: Record<string, PhotoFocalPoint>;
+  /** ADR-897 — τα δηλωμένα σημεία λήψης των φωτογραφιών πάνω στις κατόψεις. */
+  publishedPhotoCaptureSpots?: Record<string, PhotoCaptureSpot>;
+  /** ADR-897 Φ5.2 — ο δηλωμένος βορράς ανά κάτοψη. */
+  publishedFloorplanNorth?: Record<string, number>;
 }
 
 // ============================================================================

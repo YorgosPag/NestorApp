@@ -54,6 +54,8 @@ import { z } from 'zod';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
+import { declaredCaptureSpotsSchema } from '@/lib/listings/photo-capture-spot';
+import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
 
 import { propertyTypeSchema } from '@/lib/property/property-type-schema';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
@@ -286,6 +288,13 @@ export const ownerPropertyDraftSchema = z.object({
     .record(z.string().trim().min(1), photoFocalPointSchema)
     .refine((points) => Object.keys(points).length <= PUBLISHED_MEDIA_LIMIT)
     .optional(),
+  /**
+   * 📍 **Τα σημεία λήψης των δηλωμένων φωτογραφιών του φακέλου** (ADR-897) — ίδιο όριο, ίδιο σκεπτικό. Το «είναι η
+   * κάτοψη δηλωμένη;» κρίνεται στην **προβολή**, ώστε σημείο σε κάτοψη που αποσύρθηκε να επιβιώνει.
+   */
+  publishedFileCaptureSpots: declaredCaptureSpotsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
+  /** 🧭 **Ο βορράς ανά δηλωμένη κάτοψη του φακέλου** (ADR-897 Φ5.2) — ίδιο όριο, ίδια επιβίωση με τα σημεία λήψης. */
+  publishedFileFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
 });
 
 /**

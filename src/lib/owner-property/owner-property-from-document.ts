@@ -60,6 +60,8 @@ import { readPropertyType } from '@/constants/property-type-aliases';
 import { mediaOf, type OwnerProperty } from '@/types/owner-property';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { readDeclaredFocalPoints } from '@/lib/listings/photo-focal-point';
+import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
+import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
 
@@ -119,6 +121,8 @@ export function readStoredOwnerProperty(
     dossierId: _rawDossierId,
     publishedFileIds: _rawPublishedFileIds,
     publishedFileFocalPoints: _rawFocalPoints,
+    publishedFileCaptureSpots: _rawCaptureSpots,
+    publishedFileFloorplanNorth: _rawFloorplanNorth,
     ...rest
   } = stored;
 
@@ -155,7 +159,10 @@ export function readStoredOwnerProperty(
  */
 function dossierLinkOf(
   stored: Readonly<Record<string, unknown>>,
-): Pick<OwnerProperty, 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints'> {
+): Pick<
+  OwnerProperty,
+  'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots' | 'publishedFileFloorplanNorth'
+> {
   // 🔴 **Κλειδί που ΛΕΙΠΕΙ, ποτέ `dossierId: undefined`**: το Admin SDK δεν έχει `ignoreUndefinedProperties`
   //    ⇒ το `set` της επόμενης αποθήκευσης θα έσκαγε (`lib/audit/tracked-field-def.ts`).
   const { dossierId } = stored;
@@ -167,6 +174,14 @@ function dossierLinkOf(
     // 🎯 ADR-880 — ίδια πειθαρχία: απόν μένει απόν, άκυρη γραμμή πέφτει μόνη της.
     ...(stored.publishedFileFocalPoints !== undefined
       ? { publishedFileFocalPoints: Object.fromEntries(readDeclaredFocalPoints(stored.publishedFileFocalPoints)) }
+      : {}),
+    // 📍 ADR-897 — ίδια πειθαρχία.
+    ...(stored.publishedFileCaptureSpots !== undefined
+      ? { publishedFileCaptureSpots: Object.fromEntries(readDeclaredCaptureSpots(stored.publishedFileCaptureSpots)) }
+      : {}),
+    // 🧭 ADR-897 Φ5.2 — ίδια πειθαρχία.
+    ...(stored.publishedFileFloorplanNorth !== undefined
+      ? { publishedFileFloorplanNorth: Object.fromEntries(readDeclaredFloorplanNorth(stored.publishedFileFloorplanNorth)) }
       : {}),
   };
 }

@@ -47,6 +47,7 @@ import { z } from 'zod';
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
+import { photoCaptureSpotSchema } from '@/lib/listings/photo-capture-spot';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { isLandProperty } from '@/constants/property-classification';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
@@ -205,6 +206,10 @@ export const ownerPropertyFormSchema = z.object({
   publishedFileIds: z.array(z.string()).nullable().optional(),
   /** 🎯 ADR-880 — ταξιδεύει **μαζί** με το `publishedFileIds` (μόνο φόρμα με φάκελο). */
   publishedFileFocalPoints: z.record(z.string(), photoFocalPointSchema).optional(),
+  /** 📍 ADR-897 — ίδιος διακόπτης με το σημείο εστίασης (μόνο φόρμα με φάκελο). */
+  publishedFileCaptureSpots: z.record(z.string(), photoCaptureSpotSchema).optional(),
+  /** 🧭 ADR-897 Φ5.2 — ίδιος διακόπτης· γράφεται από τον χώρο εργασίας **μαζί** με τα σημεία λήψης. */
+  publishedFileFloorplanNorth: z.record(z.string(), z.number()).optional(),
 });
 
 export type OwnerPropertyFormValues = z.input<typeof ownerPropertyFormSchema>;
@@ -384,6 +389,10 @@ export function ownerPropertyDraftFrom(
     // 🎯 ADR-880 — δεμένο στον **ίδιο** διακόπτη (ύπαρξη φακέλου). Κενό `{}` ταξιδεύει: είναι ο μόνος τρόπος
     //    να **αποσυρθεί** το τελευταίο σημείο, αφού το PATCH είναι `{...existing, ...draft}`.
     ...(values.publishedFileIds ? { publishedFileFocalPoints: { ...(values.publishedFileFocalPoints ?? {}) } } : {}),
+    // 📍 ADR-897 — ίδιος διακόπτης, ίδιο `{}` για απόσυρση του τελευταίου σημείου.
+    ...(values.publishedFileIds ? { publishedFileCaptureSpots: { ...(values.publishedFileCaptureSpots ?? {}) } } : {}),
+    // 🧭 Φ5.2 — ίδιος διακόπτης, ίδιο `{}` για απόσυρση του τελευταίου βορρά.
+    ...(values.publishedFileIds ? { publishedFileFloorplanNorth: { ...(values.publishedFileFloorplanNorth ?? {}) } } : {}),
   };
 }
 
@@ -451,6 +460,8 @@ export function ownerPropertyFormFrom(
      */
     publishedFileIds: property.dossierId === undefined ? null : [...(property.publishedFileIds ?? [])],
     publishedFileFocalPoints: { ...(property.publishedFileFocalPoints ?? {}) },
+    publishedFileCaptureSpots: { ...(property.publishedFileCaptureSpots ?? {}) },
+    publishedFileFloorplanNorth: { ...(property.publishedFileFloorplanNorth ?? {}) },
   };
 }
 

@@ -24,6 +24,8 @@
 import { mediaOf, type OwnerProperty, type OwnerPropertyMedia } from '@/types/owner-property';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { readDeclaredFocalPoints, readPhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
+import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import {
   publishedDossierMediaSources,
   type DossierMediaRead,
@@ -192,7 +194,11 @@ export function publishedOwnerMediaSources(
  * @param dossierMedia — ό,τι διάβασε ο διακομιστής (`readDossierMedia`)· `null` όταν ο καλών δεν ρωτά τη βιτρίνα.
  */
 export function ownerListingMediaSources(
-  listing: Pick<OwnerProperty, 'media' | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints'>,
+  listing: Pick<
+    OwnerProperty,
+    | 'media' | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots'
+    | 'publishedFileFloorplanNorth'
+  >,
   dossierMedia: DossierMediaRead | null,
 ): readonly PublicShelfSource[] {
   if (listing.dossierId === undefined) return publishedOwnerMediaSources(mediaOf(listing));
@@ -201,7 +207,13 @@ export function ownerListingMediaSources(
     dossierMedia.dossier,
     dossierMedia.files,
     declaredFileIds(listing.publishedFileIds),
-    readDeclaredFocalPoints(listing.publishedFileFocalPoints),
+    {
+      focalPoints: readDeclaredFocalPoints(listing.publishedFileFocalPoints),
+      // 📍 ADR-897 — μόνο με φάκελο: το legacy `media[]` δεν έχει σημεία λήψης (αποσύρεται, ADR-866 Φ1.6).
+      captureSpots: readDeclaredCaptureSpots(listing.publishedFileCaptureSpots),
+      // 🧭 Φ5.2 — ο βορράς ανά κάτοψη, ίδιος διακόπτης.
+      floorplanNorth: readDeclaredFloorplanNorth(listing.publishedFileFloorplanNorth),
+    },
   );
 }
 
