@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * @fileoverview **stat + ανάγνωση ΚΑΡΦΩΜΕΝΗΣ γενιάς** (ADR-899 §4).
+ * @fileoverview **stat + ανάγνωση ΚΑΡΦΩΜΕΝΗΣ γενιάς** (ADR-899 §3.3).
  *
  * Μεταλλάξεις που πρέπει να πιάσει:
  * - Γ1: η ανάγνωση ξεχνά τη γενιά (`bucket.file(path)`) ⇒ νέα bytes κάτω από παλιό ETag.

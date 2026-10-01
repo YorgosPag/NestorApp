@@ -5,7 +5,7 @@
  * @related PhotoLightbox.tsx (ο κάτοχος) · FloorplanSpotsFigure.tsx (κάθε κάτοψη) · lib/media/photo-floorplan-spots
  * @module components/shared/media/PhotoFloorplanPanel
  *
- * 🔑 **Ουδέτερο ως προς την πηγή** (ADR-899 §8): δημόσια αγγελία **και** ιδιωτικό ακίνητο δίνουν το ίδιο
+ * 🔑 **Ουδέτερο ως προς την πηγή** (ADR-899 §4): δημόσια αγγελία **και** ιδιωτικό ακίνητο δίνουν το ίδιο
  *   `FloorplanSpotsEntry` μέσω δικού τους προσαρμογέα — ένα πάνελ, όχι δύο.
  *
  * 🔑 **Όλοι οι όροφοι μαζί, όχι καρτέλες** — όπως η Zillow («Floor 1» · «Basement»): ο επισκέπτης βλέπει **όλα** τα

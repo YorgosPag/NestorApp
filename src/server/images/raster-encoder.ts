@@ -2,7 +2,7 @@ import 'server-only';
 
 /**
  * @fileoverview **Ο ΕΝΑΣ κωδικοποιητής raster του διακομιστή** — αποκωδικοποίηση με στροφή, μία
- * φορά· ένα παράγωγο webp ανά κουτί (ADR-899 §3 · ADR-841 Α2.2).
+ * φορά· ένα παράγωγο webp ανά κουτί (ADR-899 §3.2 · ADR-841 Α2.2).
  * @module server/images/raster-encoder
  * @related services/listings/public-shelf-sanitise (δημόσιο ράφι, effort 6) ·
  *          server/files/image-preview.service (προεπισκοπήσεις κατ' απαίτηση, effort 4) ·

@@ -1,5 +1,5 @@
 /**
- * @fileoverview **«Πού τραβήχτηκε αυτή η φωτογραφία;» — το ΟΥΔΕΤΕΡΟ σχήμα** του πάνελ κάτοψης (ADR-897 · ADR-899 §8).
+ * @fileoverview **«Πού τραβήχτηκε αυτή η φωτογραφία;» — το ΟΥΔΕΤΕΡΟ σχήμα** του πάνελ κάτοψης (ADR-897 · ADR-899 §4).
  * @module lib/media/photo-floorplan-spots
  * @related lib/listings/listing-capture-spots (προσαρμογέας δημόσιας αγγελίας) ·
  *          lib/properties/property-floorplan-spots (προσαρμογέας εσωτερικού ακινήτου) ·

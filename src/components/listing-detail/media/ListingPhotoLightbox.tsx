@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Το lightbox της δημόσιας συλλογής** — λεπτός προσαρμογέας της αγγελίας πάνω στο κοινό
- * `shared/media/PhotoLightbox` (ADR-897 Φ4 · ADR-899 §8).
+ * `shared/media/PhotoLightbox` (ADR-897 Φ4 · ADR-899 §4).
  * @related ListingPhotosPageContent.tsx (ο κάτοχος) · hooks/listings/useListingPhotoParam · lib/listings/listing-capture-spots
  * @module components/listing-detail/media/ListingPhotoLightbox
  *

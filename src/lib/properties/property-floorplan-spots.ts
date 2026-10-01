@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Οι κατόψεις ενός ακινήτου με τα σημεία λήψης των φωτογραφιών του** — ο προσαρμογέας της εσωτερικής
- * πλευράς προς το ουδέτερο σχήμα του πάνελ (ADR-897 · ADR-899 §8). Καθαρό: κανένα I/O, κανένα React.
+ * πλευράς προς το ουδέτερο σχήμα του πάνελ (ADR-897 · ADR-899 §4). Καθαρό: κανένα I/O, κανένα React.
  * @module lib/properties/property-floorplan-spots
  * @related lib/media/photo-floorplan-spots (το σχήμα) · lib/properties/property-photos (η σειρά της γκαλερί) ·
  *          lib/listings/listing-capture-spots (ο δίδυμος προσαρμογέας της δημόσιας αγγελίας)

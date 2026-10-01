@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview 📷 **Η ΓΚΑΛΕΡΙ ΤΗΣ ΚΕΦΑΛΙΔΑΣ ΑΚΙΝΗΤΟΥ** — όλες οι φωτογραφίες στο κουτί 12rem, κλικ ⇒ lightbox με το
- * πάνελ «πού τραβήχτηκε» (ADR-899 §9 · ADR-897 · ADR-777 §8.30).
+ * πάνελ «πού τραβήχτηκε» (ADR-899 §4 · ADR-897 · ADR-777 §8.30).
  * @module components/properties/detail/PropertyHeaderGallery
  * @related shared/gallery/SnapGallery (το κέλυφος) · shared/media/PhotoLightbox · hooks/usePropertyThumbnail (`usePropertyPhotos`) ·
  *          hooks/usePropertyFloorplanSpots · lib/files/file-display-url (`preview` = παράγωγα κατ' απαίτηση)

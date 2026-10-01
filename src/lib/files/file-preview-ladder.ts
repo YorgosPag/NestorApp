@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Η ΚΛΙΜΑΚΑ των προεπισκοπήσεων εσωτερικών εικόνων** — ποια πλάτη υπάρχουν, για
- * ποιους τύπους, με ποια συνταγή (ADR-899 §2). Καθαρά δεδομένα: client **και** server.
+ * ποιους τύπους, με ποια συνταγή (ADR-899 §3.1). Καθαρά δεδομένα: client **και** server.
  * @module lib/files/file-preview-ladder
  * @related lib/storage/storage-object-url (ο builder του `srcset`) ·
  *          server/files/image-preview.service (ο παραγωγός) ·

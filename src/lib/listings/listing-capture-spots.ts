@@ -70,7 +70,7 @@ export function floorplanSpotsByUrl(entries: readonly ListingFloorplanSpots[]): 
 }
 
 /**
- * **Δημόσια κάτοψη → ουδέτερη πηγή εικόνας** (ADR-899 §8). Οι διαστάσεις είναι **γνωστές** από το manifest του
+ * **Δημόσια κάτοψη → ουδέτερη πηγή εικόνας** (ADR-899 §4). Οι διαστάσεις είναι **γνωστές** από το manifest του
  * ραφιού (ADR-841 Α2.2), άρα καμία μέτρηση· το `alt` το δίνει ο καλών (μεταφρασμένο).
  */
 export function listingFloorplanSource(floorplan: ListingFloorplan, alt: string): FloorplanFigureSource {

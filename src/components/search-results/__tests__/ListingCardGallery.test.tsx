@@ -200,6 +200,60 @@ describe('Α — τα άκρα ΤΥΛΙΓΟΥΝ, δεν κλείνουν', () =>
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Δ — ΔΙΑΔΟΧΙΚΑ ΒΗΜΑΤΑ: ΤΟ ΚΛΙΚ ΠΟΥ ΧΑΝΟΤΑΝ (ADR-899 §9 Ε1)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// 🔴 Μετρημένο ζωντανά: δεύτερο «Επόμενη» 40ms μετά το πρώτο ζητούσε το ΙΔΙΟ slide,
+// γιατί το βήμα ξεκινούσε από τον `index` της τελευταίας απόδοσης — που αλλάζει μόνο
+// όταν ο παρατηρητής δει το νέο slide, στη μέση της κύλισης. Ο `jsdom` δεν κυλά ποτέ,
+// άρα εδώ η κίνηση είναι **μόνιμα σε εξέλιξη**: ακριβώς η συνθήκη του σφάλματος.
+
+/** Η θέση του κυλίνδρου **στο DOM** — ο `jsdom` δεν την αλλάζει μόνος του. */
+function placeAt(scroller: HTMLElement, left: number): void {
+  Object.defineProperty(scroller, 'scrollLeft', { value: left, configurable: true, writable: true });
+}
+
+describe('Δ — κάθε κλικ μετρά, ακόμη και πριν τελειώσει η κύλιση', () => {
+  it('🔴 Δ1: δύο γρήγορα «Επόμενη» ⇒ ΔΥΟ slides, όχι το ίδιο δύο φορές', () => {
+    render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
+    const { calls } = instrument(400);
+    const next = screen.getByRole('button', { name: /next/i });
+    fireEvent.click(next);
+    fireEvent.click(next);
+    expect(calls).toEqual([{ left: 400 }, { left: 800 }]);
+  });
+
+  it('🔴 Δ2: δύο γρήγορα «Προηγούμενη» από την πρώτη ⇒ τελευταία, ΜΕΤΑ προτελευταία', () => {
+    render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
+    const { calls } = instrument(400);
+    const previous = screen.getByRole('button', { name: /previous/i });
+    fireEvent.click(previous);
+    fireEvent.click(previous);
+    expect(calls).toEqual([{ left: 800 }, { left: 400 }]);
+  });
+
+  it('🔴 Δ3: χωρίς κίνηση σε εξέλιξη, το βήμα ξεκινά από τη θέση του DOM ΤΩΡΑ', () => {
+    // Ο άνθρωπος έσυρε ως την 3η· ο παρατηρητής δεν πρόλαβε να το πει στην απόδοση.
+    render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
+    const { scroller, calls } = instrument(400);
+    placeAt(scroller, 800);
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(calls).toEqual([{ left: 0 }]);
+  });
+
+  it('🔴 Δ4: ο άνθρωπος ΠΙΑΝΕΙ τον κύλινδρο ⇒ ο παλιός προορισμός ακυρώνεται', () => {
+    render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
+    const { scroller, calls } = instrument(400);
+    const next = screen.getByRole('button', { name: /next/i });
+    fireEvent.click(next);
+    fireEvent.pointerDown(scroller);
+    placeAt(scroller, 0);
+    fireEvent.click(next);
+    expect(calls).toEqual([{ left: 400 }, { left: 400 }]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Σ — ΤΟ ΣΥΜΒΟΛΑΙΟ ΠΡΟΣ ΤΗΝ ΚΑΡΤΑ ΚΑΙ ΠΡΟΣ ΤΗ ΒΟΗΘΗΤΙΚΗ ΤΕΧΝΟΛΟΓΙΑ
 // ═══════════════════════════════════════════════════════════════════════════
 

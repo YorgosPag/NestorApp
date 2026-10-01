@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Μία κάτοψη με τα σημεία λήψης της** — κάθε σημείο κουμπί προς τη φωτογραφία του (ADR-897 · ADR-899 §8).
+ * @fileoverview **Μία κάτοψη με τα σημεία λήψης της** — κάθε σημείο κουμπί προς τη φωτογραφία του (ADR-897 · ADR-899 §4).
  * @module components/shared/media/FloorplanSpotsFigure
  * @related FloorplanFigure (η εικόνα, με μετρημένες διαστάσεις) · CaptureSpotLayer (τα σημεία) ·
  *          PhotoFloorplanPanel (πάνελ του lightbox) · listing-detail/media/ListingFloorplanSpotsFigure (προσαρμογέας)

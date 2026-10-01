@@ -5,7 +5,7 @@
  * @related components/shared/media/FloorplanFigure (η ΜΙΑ απόδοση) · ListingFloorplanWithSpots.tsx · media/ListingFloorplanSpotsFigure.tsx
  * @module components/listing-detail/ListingFloorplanFigure
  *
- * 🔑 **Λεπτός προσαρμογέας** (ADR-899 §8): η εικόνα, το βέλος βορρά και η μέτρηση διαστάσεων ζουν στο κοινό
+ * 🔑 **Λεπτός προσαρμογέας** (ADR-899 §4): η εικόνα, το βέλος βορρά και η μέτρηση διαστάσεων ζουν στο κοινό
  *   `FloorplanFigure`· εδώ μένει μόνο η μετάφραση της δημόσιας κάτοψης (`ListingFloorplan`) σε ουδέτερη πηγή.
  * 🏆 Revit / ArchiCAD: στη γωνία του φύλλου, πάνω-δεξιά, χωρίς να στρίβει η κάτοψη (μοντέλο «Project → True North»).
  * ⚠️ Ο βορράς διαβάζεται **μόνο** με `readListingNorthRad` (μέσα στο `listingFloorplanSource`) — σκουπίδι ⇒ κανένα βέλος.

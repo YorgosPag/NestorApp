@@ -37,7 +37,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('STORAGE_FILE_PROXY');
 
-/** Τα παράγωγα: ιδιωτικά, και **πάντα** επαληθευμένα — το ETag κάνει την επαλήθευση `304` (ADR-899 §5). */
+/** Τα παράγωγα: ιδιωτικά, και **πάντα** επαληθευμένα — το ETag κάνει την επαλήθευση `304` (ADR-899 §3.5). */
 const PREVIEW_CACHE_CONTROL = 'private, no-cache';
 
 /** Η θέση που φέρει το URL — `null` ⇒ άγνωστη τιμή (το URL δεν το έφτιαξε το `buildProxyUrl`). */
@@ -114,7 +114,7 @@ async function handleGet(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      // 🔒 Ο μισθωτής ΠΡΩΤΑ — πριν από θέση, πλάτος ή οποιαδήποτε cache (ADR-899 §5).
+      // 🔒 Ο μισθωτής ΠΡΩΤΑ — πριν από θέση, πλάτος ή οποιαδήποτε cache (ADR-899 §3.5).
       if (segments[0] !== 'companies' || segments[1] !== ctx.companyId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }

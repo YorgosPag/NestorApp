@@ -98,7 +98,7 @@ function buildProxyPreviewUrl(storagePath: string, placement: FileStoragePlaceme
 }
 
 /**
- * **Προεπισκόπηση ιδιωτικού αρχείου** ως `src` + `srcset` (ADR-899 §6). Ο browser διαλέγει πλάτος
+ * **Προεπισκόπηση ιδιωτικού αρχείου** ως `src` + `srcset` (ADR-899 §3.6). Ο browser διαλέγει πλάτος
  * από τα `sizes` του `<img>`· ο proxy παράγει **μόνο** πλάτη της κλίμακας.
  *
  * 🔑 Το {@link storageObjectFromUrl} κόβει το query ⇒ ένα URL παραγώγου διαβάζεται πίσω στο

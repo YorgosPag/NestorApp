@@ -5,7 +5,7 @@
  * @related lib/listings/listing-capture-spots · components/listings/capture-spots/CaptureSpotLayer (τα σημεία)
  * @module components/listing-detail/media/ListingFloorplanSpotsFigure
  *
- * 🔑 **Λεπτός προσαρμογέας** (ADR-899 §8): η απόδοση ζει στο κοινό `shared/media/FloorplanSpotsFigure` — εδώ μόνο η
+ * 🔑 **Λεπτός προσαρμογέας** (ADR-899 §4): η απόδοση ζει στο κοινό `shared/media/FloorplanSpotsFigure` — εδώ μόνο η
  *   μετάφραση `ListingFloorplanSpots` → `FloorplanSpotsEntry` (`toFloorplanSpotsEntry`).
  * 🔑 **Η ΙΔΙΑ εικόνα με κάθε άλλη κάτοψη** (`ListingFloorplanFigure` — εικόνα + βέλος βορρά· `shared/media/FloorplanFigure` — `alt`, `srcSet`, `object-contain`, χωρίς `priority`)·
  *   εδώ προστίθεται **μόνο** το SVG των σημείων από πάνω, με `viewBox` στις διαστάσεις της εικόνας (μηδέν inline style).

@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Τα αρχεία ενός ακινήτου του γραφείου, μιας κατηγορίας** — η ΜΙΑ ανάγνωση που μοιράζονται οι
- * φωτογραφίες (`usePropertyPhotos`) και οι κατόψεις (`usePropertyFloorplanSpots`) της κεφαλίδας (ADR-899 §8).
+ * φωτογραφίες (`usePropertyPhotos`) και οι κατόψεις (`usePropertyFloorplanSpots`) της κεφαλίδας (ADR-899 §4).
  * @module features/property-grid/hooks/usePropertyFileRecords
  * @related hooks/useAsyncData (ADR-223 — σειρά απαντήσεων, unmount) · services/file-record.service
  *

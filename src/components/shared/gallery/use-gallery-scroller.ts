@@ -56,8 +56,59 @@ interface GalleryScroller {
   readonly scrollerRef: MutableRefObject<HTMLUListElement | null>;
   /** Ο δείκτης **για την οθόνη** (τελείες, `aria-current`) — παράγωγο, ποτέ εντολή. */
   readonly index: number;
-  /** Πήγαινε στο slide `next` — με **λούπα**, ποτέ ψαλίδισμα. */
-  readonly goTo: (next: number) => void;
+  /**
+   * Ένα βήμα (`-1` / `+1`) από το **πού πηγαίνει** ο κύλινδρος, όχι από το `index` της
+   * τελευταίας απόδοσης — με **λούπα**, ποτέ ψαλίδισμα. Δες `useStepOrigin`.
+   */
+  readonly step: (delta: number) => void;
+}
+
+/** Ό,τι σημαίνει «ο άνθρωπος έπιασε τον κύλινδρο» — η πρόθεση του κουμπιού παύει να ισχύει. */
+const USER_SCROLL_EVENTS = ['pointerdown', 'wheel', 'touchstart'] as const;
+
+/**
+ * 🔴 **ΑΠΟ ΠΟΥ ΞΕΚΙΝΑ ΕΝΑ ΒΗΜΑ — ΟΧΙ ΑΠΟ ΤΟ `index`, ΚΑΙ ΜΕΤΡΗΘΗΚΕ** (ADR-899 §9 Ε1).
+ *
+ * Τα βελάκια έγραφαν `goTo(index + 1)`: **στιγμιότυπο** της τελευταίας απόδοσης. Ο
+ * `index` όμως αλλάζει μόνο όταν ο παρατηρητής δει το νέο slide ορατό κατά 60%, δηλαδή
+ * **στη μέση** της ομαλής κύλισης. Μετρημένο ζωντανά (κεφαλίδα ακινήτου, 2 φωτογραφίες):
+ * δεύτερο «Επόμενη» **40ms** μετά το πρώτο ⇒ ξαναζητούσε το **ίδιο** slide και το κλικ
+ * **χανόταν**· στα 120ms και 250ms σωστό. Ο κανόνας 2 του ADR-040 (*«ανάγνωση τη στιγμή
+ * του συμβάντος, όχι στιγμιότυπο»*) ίσχυε για το **πλάτος** (Κ2) αλλά όχι για τη **θέση**.
+ *
+ * 🔑 Η απάντηση είναι το ζεύγος «προορισμός / θέση» των Embla/Swiper: όσο τρέχει κίνηση
+ * που ζήτησε το UI, το επόμενο βήμα ξεκινά από τον **προορισμό** της· αλλιώς από τη
+ * θέση του DOM **τώρα**. Ο `index` μένει αυτό που ήταν — **αντίγραφο για την οθόνη**.
+ *
+ * ⚠️ Η πρόθεση **σβήνει** σε δύο περιπτώσεις, και οι δύο αναγκαίες: (α) **άφιξη** — ο
+ * παρατηρητής ανέφερε τον προορισμό· (β) ο άνθρωπος **έπιασε** τον κύλινδρο (δάχτυλο,
+ * trackpad, ποντίκι) — μετά από swipe, ο παλιός προορισμός είναι ψέμα.
+ */
+function useStepOrigin(scrollerRef: MutableRefObject<HTMLUListElement | null>, total: number) {
+  const intentRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    intentRef.current = null;
+    const scroller = scrollerRef.current;
+    if (scroller === null || total < 2) return;
+    const release = () => { intentRef.current = null; };
+    for (const type of USER_SCROLL_EVENTS) scroller.addEventListener(type, release, { passive: true });
+    return () => {
+      for (const type of USER_SCROLL_EVENTS) scroller.removeEventListener(type, release);
+    };
+  }, [scrollerRef, total]);
+
+  const originOf = useCallback((scroller: HTMLUListElement): number => {
+    if (intentRef.current !== null) return intentRef.current;
+    const width = scroller.clientWidth;
+    return width > 0 ? Math.round(scroller.scrollLeft / width) : 0;
+  }, []);
+
+  const arrived = useCallback((position: number) => {
+    if (intentRef.current === position) intentRef.current = null;
+  }, []);
+
+  return { intentRef, originOf, arrived };
 }
 
 /**
@@ -79,6 +130,7 @@ export function useGalleryScroller({
    */
   const startAt = useRef(initialIndex).current;
   const [index, setIndex] = useState(startAt);
+  const { intentRef, originOf, arrived } = useStepOrigin(scrollerRef, total);
 
   /*
     🔑 **Ο ΔΕΙΚΤΗΣ ΠΑΡΑΓΕΤΑΙ, ΔΕΝ ΔΗΛΩΝΕΤΑΙ.** Το `useState` εδώ **δεν είναι** η θέση:
@@ -134,6 +186,7 @@ export function useGalleryScroller({
           const position = Number((entry.target as HTMLElement).dataset.slideIndex);
           if (!Number.isInteger(position)) continue;
           setIndex(position);
+          arrived(position);
           /*
             **Ο ΕΝΑΣ ΓΡΑΦΕΑΣ ΤΟΥ SSoT** (ADR-777 §8.58.7) — και ζει **εδώ**, μέσα στον
             παρατηρητή, όχι σε ξεχωριστό effect πάνω στο `index`.
@@ -153,7 +206,7 @@ export function useGalleryScroller({
 
     for (const slide of scroller.children) observer.observe(slide);
     return () => observer.disconnect();
-  }, [total, reportPositionAs]);
+  }, [total, reportPositionAs, arrived]);
 
   /**
    * ⚠️ **Η ΛΗΘΗ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ, ΚΑΙ ΞΕΧΩΡΙΣΤΗ ΑΠΟ ΤΟΝ ΠΑΡΑΤΗΡΗΤΗ.**
@@ -199,6 +252,7 @@ export function useGalleryScroller({
     */
     const slides = scroller.children.length;
     const wrapped = ((next % slides) + slides) % slides;
+    intentRef.current = wrapped;
     /*
       🔴 **ΚΑΝΕΝΑ `behavior` ΕΔΩ — ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.**
       Γράφτηκε πρώτα ως `scrollTo({ left, behavior: 'smooth' })` και **μετρήθηκε ζωντανά
@@ -264,7 +318,13 @@ export function useGalleryScroller({
       scroller.scrollLeft = target;
       scroller.style.scrollBehavior = previous;
     }, 120);
-  }, []);
+  }, [intentRef]);
 
-  return { scrollerRef, index, goTo };
+  /** Ένα βήμα από τον προορισμό ή, αν δεν τρέχει κίνηση, από τη θέση του DOM **τώρα**. */
+  const step = useCallback((delta: number) => {
+    const scroller = scrollerRef.current;
+    if (scroller !== null) goTo(originOf(scroller) + delta);
+  }, [goTo, originOf]);
+
+  return { scrollerRef, index, step };
 }

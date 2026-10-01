@@ -2,7 +2,7 @@
 
 /**
  * **ΤΟ ΚΕΛΥΦΟΣ ΤΗΣ ΓΚΑΛΕΡΙ** — κύλινδρος scroll-snap, βελάκια, βαθμίδωση, τελείες (ADR-777 §8.57 ·
- * ADR-899 §7). Δεν ξέρει **τι** δείχνει κάθε slide: το αποδίδει ο καλών (`renderSlide`).
+ * ADR-899 §4). Δεν ξέρει **τι** δείχνει κάθε slide: το αποδίδει ο καλών (`renderSlide`).
  *
  * 🔑 **ΕΞΑΓΩΓΗ, ΟΧΙ ΤΡΙΤΟ CAROUSEL** (N.0.2 · 2026-10-01): ζούσε μέσα στο `ListingCardGallery`. Η
  * κεφαλίδα ακινήτου χρειάστηκε **το ίδιο** κέλυφος πάνω σε άλλο είδος εικόνας (`PropertyPhoto`,
@@ -111,14 +111,14 @@ export function SnapGallery({
     φωτογραφιών, και το είχε ήδη σπίτι. Το ελάττωμα ήταν ότι δεν ρώτησα πρώτα (N.11).
   */
   const { t } = useTranslation(['common-photos']);
-  const { scrollerRef, index, goTo } = useGalleryScroller({ total, initialIndex, reportPositionAs });
+  const { scrollerRef, index, step } = useGalleryScroller({ total, initialIndex, reportPositionAs });
 
   if (total === 0) return null;
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    goTo(event.key === 'ArrowLeft' ? index - 1 : index + 1);
+    step(event.key === 'ArrowLeft' ? -1 : 1);
   };
 
   const slides = Array.from({ length: total }, (_, position) => (
@@ -202,7 +202,7 @@ export function SnapGallery({
               current: index === 0 ? total : index,
               total,
             })}
-            onActivate={() => goTo(index - 1)}
+            onActivate={() => step(-1)}
           />
           <GalleryArrow
             side="right"
@@ -210,7 +210,7 @@ export function SnapGallery({
               current: index === total - 1 ? 1 : index + 2,
               total,
             })}
-            onActivate={() => goTo(index + 1)}
+            onActivate={() => step(1)}
           />
 
           {/*

@@ -65,6 +65,6 @@ export function usePropertyPhotos(property: PropertyPhotosSubject): PropertyPhot
 export function usePropertyThumbnail(property: PropertyPhotosSubject): string | undefined {
   const state = usePropertyPhotos(property);
   const cover = state.kind === 'ready' ? state.photos[0] : undefined;
-  // Το παράγωγο, όχι το πρωτότυπο: μια κάρτα δεν κατεβάζει πια MB (ADR-899 §6).
+  // Το παράγωγο, όχι το πρωτότυπο: μια κάρτα δεν κατεβάζει πια MB (ADR-899 §4).
   return cover?.preview?.src ?? cover?.url;
 }

@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η κάτοψη ως εικόνα** — `<img>` + βέλος βορρά + ό,τι σχεδιάζεται πάνω της, με τις **πραγματικές**
- * διαστάσεις της (ADR-897 · ADR-899 §8).
+ * διαστάσεις της (ADR-897 · ADR-899 §4).
  * @module components/shared/media/FloorplanFigure
  * @related lib/media/photo-floorplan-spots (η πηγή) · FloorplanSpotsFigure (σημεία πάνω της) ·
  *          components/listing-detail/ListingFloorplanFigure (προσαρμογέας δημόσιας αγγελίας)

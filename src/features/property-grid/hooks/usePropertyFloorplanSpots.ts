@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Οι κατόψεις ενός ακινήτου με τα σημεία λήψης** — για το πάνελ «πού τραβήχτηκε» του lightbox της
- * κεφαλίδας (ADR-897 · ADR-899 §8).
+ * κεφαλίδας (ADR-897 · ADR-899 §4).
  * @module features/property-grid/hooks/usePropertyFloorplanSpots
  * @related lib/properties/property-floorplan-spots (ο καθαρός προσαρμογέας) · usePropertyFileRecords (η ανάγνωση)
  *
