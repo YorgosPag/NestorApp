@@ -3,7 +3,7 @@ import 'server-only';
 /**
  * @fileoverview 📐 **ΣΥΜΠΛΗΡΩΣΗ ΔΙΑΣΤΑΣΕΩΝ ΓΙΑ ΤΙΣ ΥΠΑΡΧΟΥΣΕΣ ΕΙΚΟΝΕΣ** — ό,τι ανέβηκε πριν από τον trigger (ADR-899 §3.7).
  * @module server/files/image-dimensions-backfill
- * @related app/api/admin/backfill-image-dimensions (ο ΜΟΝΟΣ καλών) · functions/storage/image-dimensions-onfinalize
+ * @related app/api/admin/backfill-image-dimensions (HTTP) · functions/storage/image-dimensions-onfinalize
  *          (ίδιος πυρήνας `lib/images/stored-image-dimensions`, ίδια ετυμηγορία — μόνο το I/O διαφέρει)
  *
  * 🔑 **Ιδεμπότητη, μόνο όπου λείπει**: εγγραφή με έγκυρες διαστάσεις δεν διαβάζεται καν. **`storagePlacement`-aware**:
@@ -16,6 +16,9 @@ import 'server-only';
 import type { Bucket } from '@google-cloud/storage';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { BATCH_SIZE_READ, processAdminBatch } from '@/lib/admin-batch-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   imageDimensionsOf,
   imageDimensionsToMetadata,
@@ -123,4 +126,49 @@ export async function backfillImageDimensions(
     if (write === 'generation-changed') return 'generation-changed';
   }
   return recordDimensions(db, ref, path, measured.dimensions);
+}
+
+/** Πόσα σφάλματα κρατά η αναφορά — τα υπόλοιπα μετριούνται μόνο. */
+const MAX_REPORTED_ERRORS = 50;
+
+/** Η αναφορά ανά συλλογή. */
+export interface ImageDimensionsBackfillTally {
+  readonly collection: string;
+  scanned: number;
+  candidates: number;
+  readonly outcomes: Partial<Record<ImageDimensionsBackfillOutcome, number>>;
+  failed: number;
+  readonly errors: string[];
+}
+
+async function backfillCollection(db: Firestore, collection: string, dryRun: boolean): Promise<ImageDimensionsBackfillTally> {
+  const tally: ImageDimensionsBackfillTally = { collection, scanned: 0, candidates: 0, outcomes: {}, failed: 0, errors: [] };
+  await processAdminBatch(db.collection(collection).orderBy('__name__'), BATCH_SIZE_READ, async (docs) => {
+    tally.scanned += docs.length;
+    // Σειριακά: λίγες δεκάδες εικόνες, και κάθε μία = 1 stat + 128 KiB — καμία πίεση στον κάδο ή στη μνήμη.
+    for (const doc of docs) {
+      const record = doc.data();
+      if (!needsImageDimensions(record)) continue;
+      tally.candidates += 1;
+      try {
+        const outcome = await backfillImageDimensions(db, doc.ref, record, dryRun);
+        tally.outcomes[outcome] = (tally.outcomes[outcome] ?? 0) + 1;
+      } catch (error) {
+        tally.failed += 1;
+        if (tally.errors.length < MAX_REPORTED_ERRORS) tally.errors.push(`${doc.id}: ${getErrorMessage(error)}`);
+      }
+    }
+  });
+  return tally;
+}
+
+/**
+ * **Όλη η συμπλήρωση** — τα δύο διαμερίσματα αρχείων (ADR-866 §5.2), ίδια λογική, ίδια ετυμηγορία. Ο ΕΝΑΣ βρόχος: τον
+ * καλούν το admin route (HTTP, super_admin) και ο τοπικός runner με Admin SDK — κανένα αντίγραφο.
+ */
+export async function runImageDimensionsBackfill(db: Firestore, dryRun: boolean): Promise<ImageDimensionsBackfillTally[]> {
+  return [
+    await backfillCollection(db, COLLECTIONS.FILES, dryRun),
+    await backfillCollection(db, COLLECTIONS.FILES_PERSONAL, dryRun),
+  ];
 }
