@@ -115,6 +115,7 @@ import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
 import { isDemandLabelTooLong } from '@/lib/demand/demand-title';
 import { demandAreaInvariants } from '@/lib/demand/demand-area';
 import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
+import type { PlaceRef } from '@/types/geo/public-place';
 
 // =============================================================================
 // 1. ΧΩΡΟΣ — ο πρώτος άξονας (Ζ1 · Ζ2 · Ζ3 · Ζ4 · Ζ5)
@@ -175,13 +176,10 @@ export type DemandPlace =
    * αντιπαροχή σε αυτό το τετράγωνο*» δεν έχει κτίριο, και **δεν πρέπει** να αναγκαστεί
    * να επινοήσει ένα.
    */
-  | {
-      readonly kind: 'place';
-      /** FK → `PublicLand` (`land_*`). **Υποχρεωτικό** — η γη κρατά τη θέση (Α1). */
-      readonly landId: string;
-      /** FK → `PublicBuilding` (`pbld_*`), όταν το αίτημα αφορά το κτίριο. */
-      readonly buildingId: string | null;
-    }
+  //
+  // 🔑 Το ζεύγος κλειδιών **είναι** το `PlaceRef` (ADR-749: ένα όνομα ανά ζεύγος) — ήταν γραμμένο
+  // εδώ inline, δεύτερη δήλωση της ίδιας σύγκρισης που **είναι** η μηχανή ταιριάσματος.
+  | ({ readonly kind: 'place' } & PlaceRef)
   /**
    * **Ζ4 δομημένη** — «*η νότια πλευρά της Μεγάλου Αλεξάνδρου, μόνο αυτά τα 200 μέτρα*».
    *

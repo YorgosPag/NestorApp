@@ -8,24 +8,16 @@
  * στο `auth-action-mail.ts`. Η επιβεβαίωση email της κάρτας ρωτά **την ίδια** ερώτηση — και ένα
  * αντίγραφο θα ήταν δεύτερη ευκαιρία να ξεχαστεί το **hash** του κλειδιού (email ωμό σε store ορίων).
  *
- * ⚠️ **Αποτυχία του store ⇒ επιτρέπει** — ίδια πολιτική με το `withRateLimit`: η διαθεσιμότητα
- * μιας αποστολής δεν εξαρτάται από το Redis. Το όριο ανά IP της διαδρομής μένει ως δεύτερος φρουρός.
+ * 🔑 **Ο πυρήνας ζει πλέον στο `subject-quota.ts`** (hash κλειδιού · «αποτυχία του store ⇒ επιτρέπει» ·
+ * σκιά): εδώ μένει **μόνο** ό,τι ξέρει για γραμματοκιβώτια — η κανονικοποίηση του email (κενά, πεζά).
  */
 
 import 'server-only';
 
-import { createHash } from 'crypto';
+import { withinSubjectQuota, type SubjectQuota } from '@/lib/middleware/subject-quota';
 
-import { getErrorMessage } from '@/lib/error-utils';
-import { checkQuota } from '@/lib/middleware/rate-limiter';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('RECIPIENT_QUOTA');
-
-export interface RecipientQuota {
-  readonly limit: number;
-  readonly windowMs: number;
-}
+/** Ποσόστωση ανά παραλήπτη — η **ίδια** δήλωση με κάθε άλλη ποσόστωση ανά υποκείμενο. */
+export type RecipientQuota = SubjectQuota;
 
 /**
  * @param scope Ποιο είδος μηνύματος μετράει (`auth-mail:reset` · `showcase-email-confirmation`) — δύο
@@ -36,11 +28,5 @@ export async function withinRecipientQuota(
   recipient: string,
   quota: RecipientQuota,
 ): Promise<boolean> {
-  const key = `${scope}:${createHash('sha256').update(recipient.trim().toLowerCase()).digest('hex')}`;
-  try {
-    return (await checkQuota(key, quota.limit, quota.windowMs)).allowed;
-  } catch (error: unknown) {
-    logger.warn('Ο έλεγχος ορίου παραλήπτη απέτυχε — επιτρέπεται', { scope, error: getErrorMessage(error) });
-    return true;
-  }
+  return withinSubjectQuota(scope, recipient.trim().toLowerCase(), quota);
 }

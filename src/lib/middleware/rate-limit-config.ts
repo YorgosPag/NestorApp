@@ -362,6 +362,19 @@ export const SHOWCASE_EMAIL_CONFIRMATION_RECIPIENT_QUOTA = { limit: 3, windowMs:
 export const VENDOR_LINK_RENEW_RECIPIENT_QUOTA = { limit: 3, windowMs: 24 * 60 * 60 * 1000 } as const;
 
 /**
+ * **«Ενδιαφέρεται κάποιος;» ανά ΚΑΛΟΥΝΤΑ ανά 24ω** (ADR-900 §6 · §8 #4) — σε **ΣΚΙΑ**, επίτηδες.
+ *
+ * 🔴 Ο κίνδυνος είναι η **σάρωση κτιρίων** για ανασύνθεση του θερμοχάρτη: το HEAVY (10/λεπτό) την
+ * **φρενάρει**, δεν την **κόβει** (14.400/ημέρα). Το όριο εδώ όμως **δεν μετρήθηκε** ποτέ — η διαδρομή
+ * γεννήθηκε 2026-10-02, σε προ-παραγωγή, χωρίς κίνηση. Άρα δηλώνεται, **μετρά** και **καταγράφει**
+ * την υπέρβαση (`SUBJECT_QUOTA`, hash του uid), αλλά **δεν αρνείται**. Ίχνη κατάχρησης ⇒ `'enforce'`.
+ *
+ * 🔑 **60**: ο ιδιοκτήτης ρωτά για το **δικό του** ακίνητο και ίσως δύο-τρεις παραλλαγές περιγραφής·
+ * εξήντα σε μία ημέρα δεν είναι άνθρωπος που ψάχνει το σπίτι του, είναι κατάλογος κτιρίων.
+ */
+export const PROSPECT_INTEREST_DAILY_QUOTA = { limit: 60, windowMs: 24 * 60 * 60 * 1000, enforcement: 'shadow' } as const;
+
+/**
  * Get category for an endpoint path.
  */
 export function getEndpointCategory(path: string): RateLimitCategory {

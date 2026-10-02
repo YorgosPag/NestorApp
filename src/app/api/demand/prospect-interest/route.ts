@@ -25,7 +25,9 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withPersonalOrOrgAuth } from '@/lib/auth/personal-scope-middleware';
+import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { PROSPECT_INTEREST_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
+import { withinSubjectQuota } from '@/lib/middleware/subject-quota';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { nowISO, todayLocalDate } from '@/lib/date-local';
@@ -42,12 +44,22 @@ interface ProspectInterestResponse {
   readonly interest: PlaceInterest;
 }
 
+/** Η ημερήσια ποσόστωση ανά καλούντα. ⚠️ Όχι `export`: το `route.ts` δέχεται μόνο εξαγωγές διαδρομής (Next). */
+const PROSPECT_INTEREST_QUOTA_SCOPE = 'demand:prospect-interest' as const;
+
 async function handler(
   request: NextRequest,
+  actor: ApiActor,
 ): Promise<NextResponse<ProspectInterestResponse | { error: string }>> {
   const parsed = parseProspectQuery(request.nextUrl.searchParams);
   if (parsed.kind === 'invalid') {
     return NextResponse.json({ error: `INVALID_QUERY:${parsed.defect}` }, { status: 400 });
+  }
+
+  // 🔑 ADR-900 §8 #4 — μετρούν μόνο **έγκυρα** ερωτήματα (το 400 δεν αγγίζει τη ζήτηση). Σε σκιά σήμερα
+  //    ⇒ πάντα `true`· η μέρα που η δήλωση γίνει `'enforce'`, αυτή η γραμμή αρνείται χωρίς άλλη αλλαγή.
+  if (!(await withinSubjectQuota(PROSPECT_INTEREST_QUOTA_SCOPE, actor.ctx.uid, PROSPECT_INTEREST_DAILY_QUOTA))) {
+    return NextResponse.json({ error: 'DAILY_QUOTA_EXCEEDED' }, { status: 429 });
   }
 
   const db = getAdminFirestore();
