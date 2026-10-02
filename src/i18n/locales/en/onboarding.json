@@ -26,7 +26,8 @@
       },
       "success": "Organization structure created successfully",
       "skipNote": "We will remind you if Accounting is not set up within 7 days",
-      "noPermission": "Administrator permissions required to configure"
+      "noPermission": "Administrator permissions required to configure",
+      "saveFailed": "Saving did not complete. Please try again."
     },
     "banner": {
       "title": "Set up your organization structure",

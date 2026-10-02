@@ -8,6 +8,7 @@ import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { LayoutDashboard } from 'lucide-react';
 import { PageLoadingState } from '@/core/states';
 import { AUTH_ROUTES, resolvePostLoginRoute } from '@/lib/routes';
+import { loginHrefForCurrentLocation } from '@/lib/routes/return-path';
 import { createStaleCache } from '@/lib/stale-cache';
 // 🔴 ADR-744 §15 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE.
 // Χωρίς αυτές τις δύο γραμμές το artifact υπάρχει, το manifest το υπογράφει, οι πύλες
@@ -34,7 +35,8 @@ const authCache = createStaleCache<boolean>('dashboard-auth');
  * `/dashboard` — **ο χώρος εργασίας** (ADR-179: Hybrid Navigation Dashboard).
  *
  * Συνδεδεμένος → Dashboard Home (πλακίδια πλοήγησης, ύφος SAP Fiori)
- * Ανώνυμος → `/login`
+ * Ανώνυμος → `/login?next=<εδώ>` (ADR-848 §9 #3: ο φρουρός διακομιστή του layout το κάνει ήδη·
+ * αυτός εδώ πιάνει τη συνεδρία που λήγει **πάνω** στη σελίδα — ίδια απάντηση, όχι δεύτερη)
  *
  * 🔴 **ΜΕΤΑΚΟΜΙΣΕ ΑΠΟ ΤΟ `/` (2026-08-11, ADR-777 §8.13).** Όσο ζούσε στη ρίζα, το
  * `router.replace('/login')` παρακάτω χτυπούσε **κάθε ανώνυμο επισκέπτη του
@@ -72,7 +74,7 @@ export default function DashboardPage() {
       authCache.set(!!user);
     }
     if (!loading && !user) {
-      router.replace(AUTH_ROUTES.login);
+      router.replace(loginHrefForCurrentLocation());
       return;
     }
     if (!loading && landing !== null && !belongsHere) {

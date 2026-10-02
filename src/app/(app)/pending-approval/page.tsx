@@ -41,9 +41,10 @@ import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { PageLoadingState } from '@/core/states';
-import { AUTH_ROUTES, PRIVATE_SPACE_HOME, resolvePostLoginRoute } from '@/lib/routes';
+import { PRIVATE_SPACE_HOME, resolvePostLoginRoute } from '@/lib/routes';
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { loginHrefForCurrentLocation } from '@/lib/routes/return-path';
 import type { OwnWorkspaceAccessState } from '@/types/workspace-access-request';
 
 export default function PendingApprovalPage() {
@@ -68,7 +69,10 @@ export default function PendingApprovalPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(AUTH_ROUTES.login);
+      // 🔑 ADR-848 §9 #3 — **με** επιστροφή. Η σελίδα αυτοδιορθώνεται (απαντημένο αίτημα ⇒ ο
+      // επιλυτής προσγείωσης, παρακάτω) και ο `landing.ts` **δεν** στέλνει κανέναν εδώ — άρα
+      // όποιος τη ζητά ανώνυμος ήρθε **επίτηδες**, για την κατάσταση του αιτήματός του.
+      router.replace(loginHrefForCurrentLocation());
       return;
     }
     if (user.companyId) {

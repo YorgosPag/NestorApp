@@ -56,6 +56,7 @@ import {
   type AuthorizationCodeGrant,
 } from '@/lib/oauth/oauth-authorization-code';
 import { findActiveConsent, recordConsent } from '@/lib/oauth/oauth-consent-store';
+import { loginHref } from '@/lib/routes/return-path';
 
 // ============================================================================
 // ΒΟΗΘΗΤΙΚΑ
@@ -69,11 +70,15 @@ function fatalErrorPage(error: string, description: string): NextResponse {
   return NextResponse.redirect(url, 303);
 }
 
-/** Ο χρήστης δεν είναι συνδεδεμένος — στείλ' τον στο login και πίσω. */
+/**
+ * Ο χρήστης δεν είναι συνδεδεμένος — στείλ' τον στο login και πίσω.
+ *
+ * 🔑 Μέσω του **ενός** `loginHref` (ADR-848): πριν, αυτό το σημείο έγραφε δικό του ωμό `'/login'` και
+ * δικό του `'next'` — δεύτερη υλοποίηση του συμβολαίου, χωρίς τον φρουρό `safeReturnPath`.
+ */
 function loginRedirect(request: NextRequest): NextResponse {
-  const url = new URL('/login', getPublicBaseUrl());
-  url.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`);
-  return NextResponse.redirect(url, 303);
+  const href = loginHref(`${request.nextUrl.pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(new URL(href, getPublicBaseUrl()), 303);
 }
 
 function coversRequestedScopes(

@@ -28,6 +28,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createStaleCache } from '@/lib/stale-cache';
+import { loginHrefForCurrentLocation } from '@/lib/routes/return-path';
 const logger = createModuleLogger('AdminSetupPage');
 
 // ADR-300: Module-level cache — admin setup config, survives re-navigation
@@ -191,7 +192,8 @@ export function AdminSetupPageContent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push('/login')}>
+            {/* ADR-848 §9 #3 — με επιστροφή: ο άνθρωπος ήρθε για ΑΥΤΗ τη σελίδα. Τιμή τη στιγμή του κλικ (`window`). */}
+            <Button onClick={() => router.push(loginHrefForCurrentLocation())}>
               {t('setup.loginButton')}
             </Button>
           </CardContent>

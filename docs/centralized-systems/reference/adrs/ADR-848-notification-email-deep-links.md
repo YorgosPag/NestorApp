@@ -207,9 +207,16 @@ notification-email-render, notification-email-envelope, email-subscription, user
 3. ✅ ~~**Το `o/[workspace]/layout.tsx` μένει σε σκέτο `/login`**~~ **Έκλεισε 2026-09-23 (ADR-875 §14.5)**:
    το middleware προωθεί πλέον τη διαδρομή ως κεφαλίδα αιτήματος (`lib/http/request-path.ts`) και οι φρουροί
    του διακομιστή ζητούν `loginHrefForRequest()` (`server/auth/login-return.ts`) — layout **και**
-   `procurement/analytics`. Τη μετρά ζωντανά ο δίδυμος του χρησμού (`guard-return-lost`). 🔶 Μένουν οι
-   φρουροί **πελάτη** (`router.replace(login)` σε 3 σελίδες) — `pending-ratchet-work.md`. ✅ **02/10 ο
+   `procurement/analytics`. Τη μετρά ζωντανά ο δίδυμος του χρησμού (`guard-return-lost`). ✅ **02/10 ο
    `ProtectedRoute` έκλεισε** (ADR-900 §3.7): χωρίς ρητό προορισμό ζητά `loginHrefForCurrentLocation()`.
+   ✅ **02/10 (β) έκλεισαν και οι τρεις φρουροί πελάτη** (`o/[workspace]/dashboard` · `pending-approval` ·
+   `onboarding/organization`) με τον **ίδιο** συνθέτη — κρίθηκε ανά σελίδα: το onboarding το ανοίγει email
+   του cron (`onboarding-reminder.job.ts`)· το pending-approval αυτοδιορθώνεται (απαντημένο αίτημα ⇒ επιλυτής
+   προσγείωσης), άρα η επιστροφή δεν είναι ποτέ αδιέξοδο. Το `oauth/authorize` έγραφε **δική του** εκδοχή του
+   `?next=` χωρίς τον φρουρό ⇒ πλέον `loginHref`. 🔒 Την **κλάση** κλειδώνει η άγκυρα **Ε** του
+   `return-path.test.ts`: κάθε πλοήγηση σε σκέτο `/login` σε όλο το `src/` είναι **δηλωμένη με λόγο**
+   (αποσύνδεση · αποχώρηση από χώρο · σύνδεσμος email μιας χρήσης · `/home`). 🔶 Μένουν οι **σύνδεσμοι**
+   «Σύνδεση» (`href={AUTH_ROUTES.login}`, 8 αρχεία) — άλλο σχέδιο, `pending-ratchet-work.md`.
 4. 🟡 **Σίγαση ανά τύπο** («όχι email για ταιριάσματα αγγελιών») → **[ADR-849](./ADR-849-notification-preferences-type-by-channel.md)**.
    Α1 (μοντέλο + πύλες server) · Α2 (token/κεφαλίδα/σελίδα, ADR-849 §6α) · Α3 (οθόνη, ADR-849 §6β) ✅ 2026-09-10.
 5. ✅ ~~**Ειδοποίηση άλλου χώρου από τον ενεργό**: ανοίγει στον χώρο της **ταυτότητας**.~~ **Έκλεισε
@@ -298,3 +305,7 @@ notification-email-render, notification-email-envelope, email-subscription, user
   επιλογέας · δύο καρτέλες · ταίριασμα ✅. 🔴 `/o/me/projects` δείχνει έργα — όριο (1) του ADR-787 §9, ζωντανά
   ορατό και **βαρύτερο** από όσο γράφτηκε (για super-admin καθολική όψη, όχι claim). 🔶 503 στο RSC του `/n/`
   · ωμά κλειδιά σε κρυφό τμήμα SSR. Ανοιχτά στο `pending-ratchet-work.md`.
+- **2026-10-02** — §9 #3 **ΕΚΛΕΙΣΕ για τους φρουρούς**: οι τρεις φρουροί πελάτη ζητούν `loginHrefForCurrentLocation()`·
+  το `oauth/authorize` πέρασε στον έναν `loginHref` (ήταν δεύτερη υλοποίηση χωρίς `safeReturnPath`)· κουμπί
+  «Σύνδεση» του `AdminSetupPageContent` με επιστροφή. Άγκυρα **Ε** (`return-path.test.ts`, Ε1–Ε3): κλειστό σύνολο
+  σκέτων συνδέσεων με λόγο, αμφίδρομο, μετάλλαξη ⇒ 2 κόκκινα. Οι **σύνδεσμοι** «Σύνδεση» μένουν ανοιχτοί.

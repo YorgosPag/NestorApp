@@ -8,6 +8,7 @@ import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { PageLoadingState } from '@/core/states';
 import { AUTH_ROUTES } from '@/lib/routes';
+import { loginHrefForCurrentLocation } from '@/lib/routes/return-path';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,7 +86,9 @@ export default function OnboardingOrganizationPage() {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.replace('/login');
+      // 🔑 ADR-848 §9 #3 — **με** επιστροφή: τη σελίδα την ανοίγει ο σύνδεσμος του email
+      // υπενθύμισης (`onboarding-reminder.job.ts`)· σκέτο `/login` θα ακύρωνε τον σύνδεσμο.
+      router.replace(loginHrefForCurrentLocation());
     }
   }, [loading, isAuthenticated, router]);
 
@@ -118,16 +121,17 @@ export default function OnboardingOrganizationPage() {
         body: JSON.stringify(body),
       });
 
+      // Boy Scout (N.11): ήταν ωμά «Σφάλμα» / «Σφάλμα σύνδεσης», και το `data.error` του API
+      // (κείμενο διακομιστή, όχι λέξη του ανθρώπου) έφτανε αυτούσιο στην οθόνη.
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        setError(data.error ?? 'Σφάλμα');
+        setError(t('onboarding.org.saveFailed'));
         return;
       }
 
       // SSoT: η αρχική του συνδεδεμένου μετακόμισε στο /dashboard (ADR-777 §8.13).
       router.replace(AUTH_ROUTES.home);
     } catch {
-      setError('Σφάλμα σύνδεσης');
+      setError(t('onboarding.org.saveFailed'));
     } finally {
       setSaving(false);
     }

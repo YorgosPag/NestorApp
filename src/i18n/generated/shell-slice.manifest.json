@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8d3fd609514fa6750f546bf23e12f235e01613b27f51fe2c0466464fe1066160",
+  "inputsSha256": "df480a87d810ca3dbe7af0cf766c81be8f9a7aa9fc14f4244f3ea4fa1a383ec6",
   "languages": [
     "el"
   ],
@@ -137,7 +137,7 @@
     "src/app/(app)/data-deletion/versions/[version]/page.tsx": "10eb74eea2c2d0b5f8158a60d054a65297130b12d88f4e58f7a5a76b5104bc33",
     "src/app/(app)/data-deletion/versions/page.tsx": "048123f1a9cfb293f9310c3843c1c0150e59c218172d4cd4a2f11a8216d3463f",
     "src/app/(app)/legal-notice/page.tsx": "290e13e377769dee782b9b4474827ad7504608bb31672900428fcb341b4446ed",
-    "src/app/(app)/o/[workspace]/dashboard/page.tsx": "caae0e68c4651ed51e33c634ff45d20da06a9dc9d56901809538950f152e6980",
+    "src/app/(app)/o/[workspace]/dashboard/page.tsx": "e611ca8cb0f43f40a995fb8544acc7b741b93ec2edae1fcb61d0e8f4d87b1811",
     "src/app/(app)/o/[workspace]/listings/mandates/[ownerPropertyId]/page.tsx": "464823b34f5a9c40f8e0827b118c9e4a923b143b15c9d8a58f70df45dc682179",
     "src/app/(app)/o/[workspace]/listings/mandates/new/page.tsx": "e678daf0d06fdd1bd4fe7ec0136db195ad9d89e300ee88f7841bd79a3da92a02",
     "src/app/(app)/o/[workspace]/listings/mandates/page.tsx": "b3c814fdfb96af29642fe4b0bbe0340b5c57f905fac8c46e230f2f2850a26220",

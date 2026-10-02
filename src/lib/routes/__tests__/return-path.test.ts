@@ -15,6 +15,7 @@
  */
 
 import { loginHref, loginHrefForCurrentLocation, RETURN_PATH_PARAM, safeReturnPath } from '@/lib/routes/return-path';
+import { listRepoSourceFiles, readRepoCode } from '@/test-utils/read-source';
 
 const BACKSLASH = String.fromCharCode(92);
 const TAB = String.fromCharCode(9);
@@ -134,5 +135,86 @@ describe('Δ — loginHrefForCurrentLocation: ο φρουρός ΠΕΛΑΤΗ ε�
     const back = new URL(next ?? '', 'https://example.invalid');
     expect(back.pathname).toBe('/interest-check');
     expect(back.searchParams.get('address')).toBe('Εγνατίας');
+  });
+});
+
+// ============================================================================
+// Ε — Η ΚΛΑΣΗ: κανένας φρουρός ΧΩΡΙΣ επιστροφή (ADR-848 §9 #3 · ADR-900 §3.7)
+// ============================================================================
+
+/**
+ * **ΤΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ**: ποιος επιτρέπεται να στείλει άνθρωπο σε **σκέτο** `/login` — και **γιατί**.
+ *
+ * Το κενό εμφανίστηκε **τέσσερις** φορές (το δίχτυ · το layout του χώρου · `ProtectedRoute` · οι τρεις
+ * σελίδες πελάτη του ADR-900), κάθε φορά επειδή ο επόμενος φρουρός αντέγραψε τον προηγούμενο. Εδώ η
+ * **κλάση** κλείνει: σκέτη σύνδεση σημαίνει «ο άνθρωπος **θέλει** να φύγει από ό,τι έβλεπε» — και αυτό
+ * το λέει κάποιος **γραπτά** (πρότυπο `WAITING_SCREEN_NAVIGATORS` του `landing.test.ts`). Νέα εγγραφή,
+ * ακόμα και σωστή, κοκκινίζει ώστε να τη δει άνθρωπος.
+ *
+ * ⚠️ **Εκτός εμβέλειας, επίτηδες**: οι σύνδεσμοι `href={AUTH_ROUTES.login}` (κουμπιά «Σύνδεση» σε σελίδες
+ * που αποδίδονται και στον διακομιστή). Εκεί η τρέχουσα διεύθυνση δεν υπάρχει στην απόδοση χωρίς
+ * `useSearchParams` (όριο Suspense, CHECK 3.55) — άλλο σχέδιο, καταγεγραμμένο στο
+ * `.claude-rules/pending-ratchet-work.md`.
+ */
+const BARE_LOGIN_NAVIGATORS: ReadonlyArray<{ file: string; why: string }> = [
+  { file: 'src/components/header/user-menu.tsx', why: 'αποσύνδεση: ο άνθρωπος ζήτησε να ΦΥΓΕΙ — επιστροφή θα τον έστελνε πίσω σε ό,τι μόλις έκλεισε' },
+  { file: 'src/components/workspace-membership/use-leave-workspace.ts', why: 'αποχώρηση από χώρο: η σελίδα όπου ήταν ανήκει στον χώρο που μόλις άφησε' },
+  { file: 'src/auth/components/AuthActionContent.tsx', why: 'σύνδεσμος email μιας χρήσης (επαλήθευση/επαναφορά): ο κωδικός καταναλώθηκε, η επιστροφή θα ήταν αδιέξοδο' },
+  { file: 'src/app/home/route.ts', why: '«πήγαινέ με σπίτι»: μετά τη σύνδεση αποφασίζει ο ΕΝΑΣ επιλυτής προσγείωσης (landing.ts), όχι το /home' },
+];
+
+/** Πλοήγηση **προς** σκέτη σύνδεση — όχι αναφορά, και όχι σύνδεση με επιστροφή (`loginHref(…)`). */
+const NAVIGATES_TO_BARE_LOGIN =
+  /(?:(?:router\s*\.\s*(?:push|replace)|\bredirect(?:To)?|location\s*\.\s*(?:assign|replace)|new\s+URL)\s*\(\s*|location(?:\s*\.\s*href)?\s*=\s*)(?:[\w.]*AUTH_ROUTES\s*\.\s*login(?!\w)|['"`]\/login['"`])\s*[,);]/;
+
+describe('Ε — η ΚΛΑΣΗ, όχι το δείγμα: κανένας φρουρός στέλνει σε σύνδεση ΧΩΡΙΣ επιστροφή', () => {
+  const files = listRepoSourceFiles('src').filter((file) => !file.includes('/__tests__/'));
+
+  it('Ε1: κάθε πλοήγηση σε σκέτο /login είναι ΔΗΛΩΜΕΝΗ, με λόγο — και κάθε δήλωση αντιστοιχεί σε κάτι', () => {
+    // Φράχτης ενάντια στο κενό σύμπαν: «0 παραβάσεις σε 0 αρχεία» δεν είναι απόδειξη.
+    expect(files.length).toBeGreaterThan(5000);
+    expect(files).toEqual(expect.arrayContaining(['src/auth/components/ProtectedRoute.tsx', ...BARE_LOGIN_NAVIGATORS.map((entry) => entry.file)]));
+
+    const found = files.filter((file) => NAVIGATES_TO_BARE_LOGIN.test(readRepoCode(file)));
+    const declared = new Set(BARE_LOGIN_NAVIGATORS.map((entry) => entry.file));
+
+    expect(found.filter((file) => !declared.has(file))).toEqual([]);
+    expect([...declared].filter((file) => !found.includes(file))).toEqual([]);
+    expect(BARE_LOGIN_NAVIGATORS.every((entry) => entry.why.trim().length > 20)).toBe(true);
+  });
+
+  it('Ε2: οι φρουροί ΠΕΛΑΤΗ ζητούν τον ΕΝΑ συνθέτη — ονομαστικά', () => {
+    for (const file of [
+      'src/auth/components/ProtectedRoute.tsx',
+      'src/app/(app)/o/[workspace]/dashboard/page.tsx',
+      'src/app/(app)/pending-approval/page.tsx',
+      'src/app/(app)/onboarding/organization/page.tsx',
+    ]) {
+      expect([file, /router\s*\.\s*(?:push|replace)\(\s*loginHrefForCurrentLocation\(\)\s*\)/.test(readRepoCode(file))]).toEqual([file, true]);
+    }
+  });
+
+  it('Ε3: …και το κριτήριο του Ε1 ΞΕΧΩΡΙΖΕΙ — σκέτη σύνδεση ≠ σύνδεση με επιστροφή ≠ αναφορά', () => {
+    // Χωρίς αυτό, ένα regex που δεν ταιριάζει ΤΙΠΟΤΑ θα έβγαζε το Ε1 μονίμως πράσινο.
+    for (const bare of [
+      'router.replace(AUTH_ROUTES.login);',
+      "router.push('/login')",
+      'redirect(AUTH_ROUTES.login, workspace)',
+      'return redirectTo(AUTH_ROUTES.login);',
+      "window.location.href = '/login';",
+      "new URL('/login', getPublicBaseUrl())",
+    ]) {
+      expect([bare, NAVIGATES_TO_BARE_LOGIN.test(bare)]).toEqual([bare, true]);
+    }
+    for (const fine of [
+      'router.replace(loginHrefForCurrentLocation());',
+      'redirect(loginHref(`${path}${query}`))',
+      "router.push(AUTH_ROUTES.loginHelp)",
+      "const LOOP_ROUTES = [AUTH_ROUTES.login];",
+      '<Link href={AUTH_ROUTES.login}>',
+      "router.push('/login-help')",
+    ]) {
+      expect([fine, NAVIGATES_TO_BARE_LOGIN.test(fine)]).toEqual([fine, false]);
+    }
   });
 });
