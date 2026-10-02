@@ -73,10 +73,29 @@ export type BuildingUnitObjectiveValue =
       readonly inherited: readonly BuildingInheritedFact[];
     });
 
-/** Από πού μπορεί να κληρονομήσει η μονάδα: τα γεγονότα του κτιρίου **και** το στάδιο (χρονοδιάγραμμα ή δήλωση). */
-export type BuildingInheritedFact = 'stage' | 'permitDate' | 'plotUtilisation' | 'hasElevator' | 'hasCentralHeating';
+/** Από πού μπορεί να κληρονομήσει ένα ακίνητο: τα γεγονότα του κτιρίου **και** το στάδιο (χρονοδιάγραμμα ή δήλωση). */
+export type BuildingInheritedFact =
+  | 'stage'
+  | 'permitDate'
+  | 'plotUtilisation'
+  | 'hasElevator'
+  | 'hasCentralHeating'
+  | 'basementStorageEntrance';
 
-const INHERITED_ORDER: readonly BuildingInheritedFact[] = ['stage', 'permitDate', 'plotUtilisation', 'hasElevator', 'hasCentralHeating'];
+const INHERITED_ORDER: readonly BuildingInheritedFact[] = [
+  'stage',
+  'permitDate',
+  'plotUtilisation',
+  'hasElevator',
+  'hasCentralHeating',
+  'basementStorageEntrance',
+];
+
+/** Η κληρονομιά με τη σειρά της λίστας-πηγής — ανεξάρτητα από τη σειρά που μαζεύτηκε. */
+export function orderedInherited(facts: Iterable<BuildingInheritedFact>): readonly BuildingInheritedFact[] {
+  const set = new Set(facts);
+  return INHERITED_ORDER.filter((fact) => set.has(fact));
+}
 
 type StagePatch = Pick<ObjectiveValueDraft, 'residenceCompletion' | 'ancillaryCompletion'>;
 
@@ -154,7 +173,7 @@ function overlayFacts(
   }
   if (context.facts.plotUtilisation !== null && usesPlotUtilisation(patch)) inherited.add('plotUtilisation');
   const resolution = { ...merged, draft: { ...merged.draft, ...patch, plotUtilisation: context.facts.plotUtilisation } };
-  return { resolution, inherited: INHERITED_ORDER.filter((fact) => inherited.has(fact)) };
+  return { resolution, inherited: orderedInherited(inherited) };
 }
 
 /**
@@ -167,13 +186,13 @@ export function buildingUnitObjectiveValue(
   today: string,
 ): BuildingUnitObjectiveValue {
   if (basis.kind !== 'ready') return basis;
-  const { form, zonePrices } = basis;
+  const { form, zonePrices, positions } = basis;
   const overlay = stageOverlay(context.stage, form);
   if (overlay.kind === 'beforeStage') return overlay;
   const { resolution, inherited } = overlayFacts(basis.resolution, context, form, overlay.patch);
   return {
     kind: 'evaluated',
-    bounds: objectiveValueBounds(resolution.draft, today, zonePrices),
+    bounds: objectiveValueBounds(resolution.draft, today, zonePrices, positions),
     levelBasis: resolution.levelBasis,
     assumptions: assumptionsOf(resolution, form),
     inherited,
@@ -181,20 +200,31 @@ export function buildingUnitObjectiveValue(
 }
 
 /**
- * **Το σύνολο του κτιρίου — μόνο όταν είναι ΑΛΗΘΙΝΟ**: κάθε μονάδα με έντυπο έχει **ένα** ποσό. Αλλιώς πόσες λείπουν
- * — ποτέ μερικό άθροισμα παρουσιασμένο ως σύνολο (θα έλεγε ψέματα με αριθμούς, ADR-898 §4.2).
+ * **Το σύνολο — μόνο όταν είναι ΑΛΗΘΙΝΟ**: κάθε ακίνητο με έντυπο (μονάδα **ή** χώρος) έχει **ένα** ποσό. Αλλιώς πόσα
+ * λείπουν — ποτέ μερικό άθροισμα παρουσιασμένο ως σύνολο (θα έλεγε ψέματα με αριθμούς, ADR-898 §4.2).
  */
 export type BuildingObjectiveValueTotal =
-  | { readonly kind: 'exact'; readonly value: number; readonly units: number }
-  | { readonly kind: 'incomplete'; readonly pending: number; readonly units: number };
+  | { readonly kind: 'exact'; readonly value: number; readonly items: number }
+  | { readonly kind: 'incomplete'; readonly pending: number; readonly items: number };
 
-/** Μονάδες εκτός εντύπων (κατάστημα, γραφείο, §7) δεν μετρούν ούτε ως εκκρεμείς. */
-export function buildingObjectiveValueTotal(results: readonly BuildingUnitObjectiveValue[]): BuildingObjectiveValueTotal {
-  const valued = results.filter((result) => result.kind !== 'unsupported');
-  const exact = valued.flatMap((result) =>
-    result.kind === 'evaluated' && result.bounds.kind === 'exact' ? [result.bounds.result.value] : [],
-  );
-  if (exact.length < valued.length) return { kind: 'incomplete', pending: valued.length - exact.length, units: valued.length };
+/** Ένα ακίνητο του αθροίσματος: η ταυτότητά του (ΜΙΑ μέτρηση ανά ταυτότητα) και η αποτίμησή του. */
+export interface BuildingObjectiveValueItem {
+  readonly id: string;
+  readonly value: BuildingUnitObjectiveValue;
+}
+
+/**
+ * Ακίνητα εκτός εντύπων (κατάστημα, γραφείο, αποθήκη σε όροφο — §7 · §19) δεν μετρούν ούτε ως εκκρεμή.
+ *
+ * 🔑 **Ποτέ διπλομέτρηση** (ADR-898 §19): το ίδιο ακίνητο μετρά **μία** φορά ανά ταυτότητα, όσες φορές κι αν φτάσει
+ * εδώ — ένα παρακολούθημα είναι **μία** γραμμή, και η «μονάδα μαζί με τα παρακολουθήματά της» είναι **προβολή** που
+ * καλεί αυτή τη συνάρτηση πάνω σε υποσύνολο, ποτέ δεύτερη μέτρηση μέσα στο σύνολο.
+ */
+export function buildingObjectiveValueTotal(items: readonly BuildingObjectiveValueItem[]): BuildingObjectiveValueTotal {
+  const unique = [...new Map(items.map((item) => [item.id, item.value])).values()];
+  const valued = unique.filter((value) => value.kind !== 'unsupported');
+  const exact = valued.flatMap((value) => (value.kind === 'evaluated' && value.bounds.kind === 'exact' ? [value.bounds.result.value] : []));
+  if (exact.length < valued.length) return { kind: 'incomplete', pending: valued.length - exact.length, items: valued.length };
   const cents = exact.reduce((sum, value) => sum + Math.round(value * 100), 0);
-  return { kind: 'exact', value: cents / 100, units: valued.length };
+  return { kind: 'exact', value: cents / 100, items: valued.length };
 }

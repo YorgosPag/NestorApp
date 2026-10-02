@@ -9,6 +9,7 @@ import {
   buildingQuestionsOf,
   clearedBuildingFactPatch,
   draftOfBuildingFacts,
+  type BuildingQuestionSubject,
 } from '../building-objective-value-questions';
 import type { ObjectiveValueMissing } from '../objective-value-types';
 import type { OpenQuestion } from '../objective-value-bounds';
@@ -27,29 +28,32 @@ const missing = (...gaps: ObjectiveValueMissing[]) =>
 const open = (...gaps: OpenQuestion[]) =>
   evaluated({ kind: 'range', low: 1, high: 2, open: gaps, commercialityAssumed: false });
 
+/** Μονάδες: η θέση δεν κλείνει από το κτίριο. */
+const subjects = (values: readonly BuildingUnitObjectiveValue[]): BuildingQuestionSubject[] => values.map((value) => ({ value, positionFact: null }));
+
 describe('buildingQuestionsOf', () => {
   it('μετρά μονάδες ανά γεγονός κτιρίου — από `missing` ΚΑΙ από `open`', () => {
-    expect(buildingQuestionsOf([missing('completion'), missing('completion', 'area'), open('hasElevator'), missing('hasElevator')])).toEqual([
-      { fact: 'declaredStage', units: 2 },
-      { fact: 'hasElevator', units: 2 },
+    expect(buildingQuestionsOf(subjects([missing('completion'), missing('completion', 'area'), open('hasElevator'), missing('hasElevator')]))).toEqual([
+      { fact: 'declaredStage', items: 2 },
+      { fact: 'hasElevator', items: 2 },
     ]);
   });
 
   it('η παλαιότητα κλείνει με την άδεια του κτιρίου · ο ΣΑΟ με τον ΣΑΟ', () => {
-    expect(buildingQuestionsOf([missing('ageYears'), missing('plotUtilisation')])).toEqual([
-      { fact: 'permitDate', units: 1 },
-      { fact: 'plotUtilisation', units: 1 },
+    expect(buildingQuestionsOf(subjects([missing('ageYears'), missing('plotUtilisation')]))).toEqual([
+      { fact: 'permitDate', items: 1 },
+      { fact: 'plotUtilisation', items: 1 },
     ]);
   });
 
   it('ερωτήσεις της ΜΟΝΑΔΑΣ (πρόσοψη, εμβαδόν, μέτωπο) δεν γίνονται ερωτήσεις του κτιρίου', () => {
-    expect(buildingQuestionsOf([missing('frontage', 'area', 'floor'), open('zoneFront', 'frontage')])).toEqual([]);
+    expect(buildingQuestionsOf(subjects([missing('frontage', 'area', 'floor'), open('zoneFront', 'frontage')]))).toEqual([]);
   });
 
   it('η θέρμανση ΕΙΝΑΙ πλέον ερώτηση του κτιρίου (ADR-898 §18.3) — μετά τον ανελκυστήρα', () => {
-    expect(buildingQuestionsOf([open('hasCentralHeating', 'hasElevator'), missing('hasCentralHeating')])).toEqual([
-      { fact: 'hasElevator', units: 1 },
-      { fact: 'hasCentralHeating', units: 2 },
+    expect(buildingQuestionsOf(subjects([open('hasCentralHeating', 'hasElevator'), missing('hasCentralHeating')]))).toEqual([
+      { fact: 'hasElevator', items: 1 },
+      { fact: 'hasCentralHeating', items: 2 },
     ]);
   });
 
@@ -59,18 +63,36 @@ describe('buildingQuestionsOf', () => {
       commercialityAssumed: false,
       result: { kind: 'computed', form: 'residence', value: 1, zonePrice: 1, area: 1, factors: [] },
     });
-    expect(buildingQuestionsOf([exact, { kind: 'beforeStage', stage: 'none' }, { kind: 'no-zone' }])).toEqual([]);
+    expect(buildingQuestionsOf(subjects([exact, { kind: 'beforeStage', stage: 'none' }, { kind: 'no-zone' }]))).toEqual([]);
   });
 
   it('η άκυρη είσοδος δεν κρύβει ό,τι ΕΠΙΣΗΣ λείπει', () => {
     const invalid = evaluated({ kind: 'unresolved', result: { kind: 'invalid', form: 'residence', problems: ['negativeAge'], missing: ['plotUtilisation'] } });
-    expect(buildingQuestionsOf([invalid])).toEqual([{ fact: 'plotUtilisation', units: 1 }]);
+    expect(buildingQuestionsOf(subjects([invalid]))).toEqual([{ fact: 'plotUtilisation', items: 1 }]);
+  });
+
+  it('ανοιχτή θέση ⇒ ερώτηση του κτιρίου ΜΟΝΟ όπου την κλείνει (αποθήκη υπογείου) — αλλιώς του χώρου (§19)', () => {
+    const position = open('position');
+    expect(
+      buildingQuestionsOf([
+        { value: position, positionFact: 'basementStorageEntrance' },
+        { value: position, positionFact: 'basementStorageEntrance' },
+        { value: position, positionFact: null },
+      ]),
+    ).toEqual([{ fact: 'basementStorageEntrance', items: 2 }]);
   });
 });
 
 describe('γεγονότα κτιρίου ↔ πρόχειρο του υπολογιστή (ίδια χειριστήρια, ίδια διατύπωση)', () => {
   it('το πρόχειρο δείχνει ΜΟΝΟ τα γεγονότα που ρωτά ο υπολογιστής', () => {
-    const facts = { permitDate: '2001-05-01', plotUtilisation: 0.8, declaredStage: 'frame' as const, hasElevator: true, hasCentralHeating: false };
+    const facts = {
+      permitDate: '2001-05-01',
+      plotUtilisation: 0.8,
+      declaredStage: 'frame' as const,
+      hasElevator: true,
+      hasCentralHeating: false,
+      basementStorageEntrance: null,
+    };
     expect(draftOfBuildingFacts(facts)).toMatchObject({ permitDate: '2001-05-01', plotUtilisation: 0.8, hasElevator: true, hasCentralHeating: false });
   });
 
@@ -85,5 +107,6 @@ describe('γεγονότα κτιρίου ↔ πρόχειρο του υπολο
     expect(clearedBuildingFactPatch('hasElevator')).toEqual({ hasElevator: null });
     expect(clearedBuildingFactPatch('hasCentralHeating')).toEqual({ hasCentralHeating: null });
     expect(clearedBuildingFactPatch('declaredStage')).toEqual({ declaredStage: null });
+    expect(clearedBuildingFactPatch('basementStorageEntrance')).toEqual({ basementStorageEntrance: null });
   });
 });

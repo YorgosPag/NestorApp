@@ -338,26 +338,29 @@
   },
   "building": {
     "assumptions": {
-      "declaredByUnit": "Declared on the unit: {fields}."
+      "declaredByUnit": "Declared on the unit: {fields}.",
+      "parkingDefaultArea": "The parking space has no area: 20 m² were used, as the law sets when the title does not state it (art. 7 §5).",
+      "storageNotCounted": "The ground-floor storage room was taken as outside the building ratio (art. 6 §4a). If it counts in the ratio, it is valued as main space.",
+      "quantityDeclared": "The link to the unit states {quantity} spaces, but the space is one record: it was valued once. If there are more spaces, register them separately."
     },
     "levelsMissing": "Unit on {count} levels: the law values each floor separately, so it needs the floor and area of each level — fill them in on the unit.",
-    "title": "Objective value of the units",
-    "intro": "Computed for every unit of the building under the law (POL.1149/1994) and today's zone prices. Nothing is stored: every visit recomputes.",
+    "title": "Objective value of units and spaces",
+    "intro": "Calculated for every unit, parking space and storage room of the building under the law (POL.1149/1994) with the zone prices of the day. Each space counts once. Nothing is stored: every opening recalculates.",
     "valuationDate": "Valuation date: {date}",
     "refreshing": "Recomputing…",
-    "loadFailed": "The units' objective value did not load.",
+    "loadFailed": "The building objective value did not load.",
     "retry": "Try again",
-    "empty": "The building has no units yet.",
+    "empty": "The building has no units or spaces yet.",
     "total": {
       "label": "Building total",
-      "units": "{count, plural, one {# unit} other {# units}}",
-      "incomplete": "{pending} of {units} missing — the total appears only when every unit has an amount.",
-      "none": "No unit falls under an objective-value form."
+      "incomplete": "{pending} of {items} missing — the total appears only when every property has an amount.",
+      "none": "No property falls under an objective-value form.",
+      "items": "{count, plural, one {# property} other {# properties}}"
     },
     "facts": {
       "title": "Building facts",
-      "help": "They apply to every unit. Where a unit has its own declaration, that one wins.",
-      "waiting": "{count, plural, one {# unit is waiting} other {# units are waiting}}",
+      "help": "They apply to every property of the building. Where a unit or a space has its own answer, that one wins.",
+      "waiting": "{count, plural, one {# property waiting} other {# properties waiting}}",
       "stage": "Completion stage",
       "stageFromSchedule": "From the schedule: {stage}",
       "stageScheduleHelp": "The stage comes from the completed phases tagged with a legal stage. Change it there, so there is one truth.",
@@ -370,7 +373,9 @@
       "plotUtilisationHelp": "Plot utilisation ratio — counts only for an unfinished building (art. 3 §9).",
       "hasElevator": "Elevator in the building",
       "hasCentralHeating": "Central heating in the building",
-      "clear": "Clear"
+      "clear": "Clear",
+      "basementStorageEntrance": "Entrance to the basement storage rooms",
+      "basementStorageEntranceHelp": "One answer for all basement storage rooms (art. 6 §4). A storage room that differs is corrected in its own breakdown."
     },
     "questions": {
       "title": "Answer once for the whole building",
@@ -381,16 +386,19 @@
         "permitDate": "Building permit date",
         "plotUtilisation": "Plot utilisation (SAO)",
         "hasElevator": "Elevator",
-        "hasCentralHeating": "Central heating"
+        "hasCentralHeating": "Central heating",
+        "basementStorageEntrance": "Basement storage entrance"
       }
     },
     "columns": {
-      "unit": "Unit",
+      "unit": "Property",
       "floor": "Floor",
       "value": "Objective value",
       "status": "Status",
       "details": "Breakdown",
-      "detailsFor": "Breakdown: {unit}"
+      "detailsFor": "Breakdown: {unit}",
+      "kind": "Kind",
+      "attachedTo": "Attached to"
     },
     "status": {
       "exact": "Exact amount",
@@ -399,12 +407,10 @@
       "invalid": "Inputs not accepted — see the breakdown",
       "beforeStage": "Before a valued stage ({stage})",
       "noZone": "The location gave no zone",
-      "unsupported": "Outside the forms (e.g. shop, office)"
+      "unsupported": "Outside the forms (e.g. shop, office)",
+      "mainUse": "Storage on an upper floor: the law treats it as main-use space (form 1 or 2, art. 6 §4)"
     },
     "noFloor": "No floor",
-    "floorGroup": "{floor} · {amount}",
-    "floorGroupIncomplete": "{floor} · {pending} of {units} missing",
-    "unnamed": "Unnamed unit",
     "inherited": {
       "title": "From the building",
       "facts": {
@@ -412,34 +418,36 @@
         "permitDate": "permit date",
         "plotUtilisation": "SAO",
         "hasElevator": "elevator",
-        "hasCentralHeating": "central heating"
+        "hasCentralHeating": "central heating",
+        "basementStorageEntrance": "basement storage entrance"
       }
     },
     "sheet": {
-      "description": "How this unit's objective value came out — every factor with its reference in the law."
+      "description": "How the objective value came out — every factor with its legal reference."
     },
     "export": {
       "filename": "Objective-value_{building}_{date}",
       "sheets": {
-        "units": "Units",
+        "units": "Properties",
         "floors": "Floors",
         "factors": "Factors",
-        "assumptions": "Assumptions"
+        "assumptions": "Assumptions",
+        "elsewhere": "In another building"
       },
       "columns": {
         "low": "Minimum (€)",
         "high": "Maximum (€)",
         "inherited": "From the building",
-        "units": "Units",
         "subtotal": "Subtotal (€)",
         "factor": "Factor",
         "factorValue": "Value",
         "reference": "Legal reference",
         "key": "Item",
-        "value": "Value"
+        "value": "Value",
+        "items": "Properties"
       },
       "floorComplete": "Complete",
-      "floorIncomplete": "{pending} of {units} missing",
+      "floorIncomplete": "{pending} of {items} missing",
       "zonePrice": "Zone price (€/m²)",
       "area": "Area (m²)",
       "assumptions": {
@@ -455,6 +463,50 @@
         "myProperty": "Finalised at (AADE myPROPERTY)",
         "software": "Software"
       }
+    },
+    "kinds": {
+      "unit": "Unit",
+      "parking": "Parking space",
+      "storage": "Storage room"
+    },
+    "group": "{group} · {amount}",
+    "groupIncomplete": "{group} · {pending} of {items} missing",
+    "unattached": "No unit",
+    "unnamed": {
+      "unit": "Unnamed unit",
+      "parking": "Unnumbered parking space",
+      "storage": "Unnamed storage room"
+    },
+    "space": {
+      "question": "Position under the law",
+      "placeholder": "Not answered",
+      "clear": "Clear answer",
+      "source": {
+        "declared": "Your answer applies: {position}.",
+        "building": "The building's answer applies: {position}. If this storage room differs, choose here.",
+        "zone": "From the space's location zone: {position}.",
+        "floor": "From the floor: {position}.",
+        "open": "Not known — the amount is given as a range across: {options}.",
+        "mainUse": "Storage on an upper floor: not valued with form 4. If it is on the ground floor or in the basement, choose its position."
+      }
+    },
+    "relations": {
+      "attachments": "Attached spaces",
+      "none": "The unit has no linked parking spaces or storage rooms.",
+      "bundle": "Unit with its attached spaces: {amount}",
+      "bundleIncomplete": "Unit with its attached spaces: {pending} of {items} missing",
+      "owner": "Attached to unit",
+      "unattached": "Not attached to a unit of the building — counts as a standalone property."
+    },
+    "elsewhere": {
+      "unnamedBuilding": "Another building",
+      "title": "In another building",
+      "owner": "{unit} · in another building ({building})",
+      "ownerNote": "The unit belongs to another building; the space counts here, where it is located.",
+      "locatedIn": "in another building ({building})",
+      "note": "Located in another building: their objective value counts there, not in this building's total.",
+      "bundleNote": "Excluding spaces in another building — they count there.",
+      "locatedColumn": "Located in building"
     }
   }
 }

@@ -35,13 +35,13 @@ function Total({ data, refreshing, labels }: Pick<SummaryProps, 'data' | 'refres
   const { t } = labels;
   const { total } = data;
   if (total.kind === 'incomplete') {
-    return <p className="m-0 text-sm text-foreground">{t(`${B}.total.incomplete`, { pending: total.pending, units: total.units })}</p>;
+    return <p className="m-0 text-sm text-foreground">{t(`${B}.total.incomplete`, { pending: total.pending, items: total.items })}</p>;
   }
-  if (total.units === 0) return <p className="m-0 text-sm text-muted-foreground">{t(`${B}.total.none`)}</p>;
+  if (total.items === 0) return <p className="m-0 text-sm text-muted-foreground">{t(`${B}.total.none`)}</p>;
   return (
     <p className="m-0 flex flex-wrap items-baseline gap-2">
       <span className={cn('text-2xl font-semibold tabular-nums text-foreground', refreshing && 'opacity-60')}>{formatCurrency(total.value)}</span>
-      <span className="text-sm text-muted-foreground">{t(`${B}.total.units`, { count: total.units })}</span>
+      <span className="text-sm text-muted-foreground">{t(`${B}.total.items`, { count: total.items })}</span>
     </p>
   );
 }
@@ -55,10 +55,10 @@ function Questions({ data, labels, onGoToFact }: Pick<SummaryProps, 'data' | 'la
       <h4 id={headingId} className="m-0 text-sm font-semibold text-foreground">{t(`${B}.questions.title`)}</h4>
       <p className="m-0 text-sm text-muted-foreground">{t(`${B}.questions.summary`, { count: data.questions.length })}</p>
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-        {data.questions.map(({ fact, units }) => (
+        {data.questions.map(({ fact, items }) => (
           <li key={fact}>
             <Button type="button" variant="outline" size="sm" onClick={() => onGoToFact(fact)}>
-              {t(`${B}.questions.facts.${fact}`)} · {t(`${B}.facts.waiting`, { count: units })}
+              {t(`${B}.questions.facts.${fact}`)} · {t(`${B}.facts.waiting`, { count: items })}
             </Button>
           </li>
         ))}

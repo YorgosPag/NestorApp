@@ -15,7 +15,13 @@ import { useObjectiveValueAmountText, useObjectiveValueOpenLabel } from '@/compo
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFloorLabel } from '@/lib/intl-domain';
 import type { BuildingInheritedFact, BuildingUnitObjectiveValue } from '@/lib/objective-value/building-objective-value';
-import type { BuildingUnitObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
+import type {
+  BuildingObjectiveValueRow,
+  BuildingObjectiveValueRowKind,
+  BuildingSpaceReference,
+  OtherBuildingRef,
+} from '@/lib/objective-value/building-objective-values-contract';
+import type { BuildingSpaceKind, SpaceLawPosition } from '@/lib/objective-value/building-space-objective-value';
 import type { BuildingStageReached } from '@/lib/objective-value/objective-value-stages';
 
 const NS = 'objective-value';
@@ -29,10 +35,19 @@ export interface BuildingObjectiveValueLabels {
   /** Το ποσό (ακριβές ή «Χ έως Υ») · `null` = κανένα ποσό — η κατάσταση εξηγεί γιατί. */
   readonly amount: (value: BuildingUnitObjectiveValue) => string | null;
   readonly status: (value: BuildingUnitObjectiveValue) => string;
-  readonly unitName: (row: BuildingUnitObjectiveValueRow) => string;
+  readonly rowName: (row: BuildingObjectiveValueRow) => string;
+  /** «Μονάδα» · «Θέση στάθμευσης» · «Αποθήκη». */
+  readonly kind: (kind: BuildingObjectiveValueRowKind) => string;
+  /** Η θέση κατά τον νόμο — οι ΙΔΙΕΣ λέξεις με τον υπολογιστή (`property.parkingPosition.*` / `storagePosition.*`). */
+  readonly position: (kind: BuildingSpaceKind, position: SpaceLawPosition) => string;
   readonly floor: (floor: number | null) => string;
   readonly stage: (stage: BuildingStageReached) => string;
   readonly inherited: (facts: readonly BuildingInheritedFact[]) => string;
+  /** Η ετικέτα ενός άλλου κτιρίου (`κωδικός — όνομα`) · «Άλλο κτίριο» όταν δεν διαβάστηκε. */
+  readonly otherBuilding: (ref: OtherBuildingRef) => string;
+  /** «Α3 · σε άλλο κτίριο (Β)» — η μονάδα-κάτοχος που ζει αλλού (ADR-898 §20). */
+  readonly ownerElsewhere: (unitName: string | null, ref: OtherBuildingRef) => string;
+  readonly referenceName: (reference: BuildingSpaceReference) => string;
 }
 
 export function useBuildingObjectiveValueLabels(): BuildingObjectiveValueLabels {
@@ -41,12 +56,13 @@ export function useBuildingObjectiveValueLabels(): BuildingObjectiveValueLabels 
   const openLabel = useObjectiveValueOpenLabel();
 
   const stage = useCallback((value: BuildingStageReached) => t(`${NS}:stages.${value}`), [t]);
+  const otherBuilding = useCallback((ref: OtherBuildingRef) => ref.label ?? t(`${B}.elsewhere.unnamedBuilding`), [t]);
 
   const status = useCallback(
     (value: BuildingUnitObjectiveValue): string => {
       switch (value.kind) {
         case 'unsupported':
-          return t(`${B}.status.unsupported`);
+          return t(value.reason === 'mainUse' ? `${B}.status.mainUse` : `${B}.status.unsupported`);
         case 'no-zone':
           return t(`${B}.status.noZone`);
         case 'beforeStage':
@@ -63,12 +79,17 @@ export function useBuildingObjectiveValueLabels(): BuildingObjectiveValueLabels 
       t,
       amount: (value) => (value.kind === 'evaluated' ? amountText(value.bounds) : null),
       status,
-      unitName: (row) => row.name ?? t(`${B}.unnamed`),
+      rowName: (row) => row.name ?? t(`${B}.unnamed.${row.kind}`),
+      kind: (kind) => t(`${B}.kinds.${kind}`),
+      position: (kind, position) => t(`${NS}:property.${kind === 'parking' ? 'parkingPosition' : 'storagePosition'}.${position}`),
       floor: (floor) => (floor === null ? t(`${B}.noFloor`) : formatFloorLabel(floor)),
       stage,
       inherited: (facts) => facts.map((fact) => t(`${B}.inherited.facts.${fact}`)).join(', '),
+      otherBuilding,
+      ownerElsewhere: (unitName, ref) => t(`${B}.elsewhere.owner`, { unit: unitName ?? t(`${B}.unnamed.unit`), building: otherBuilding(ref) }),
+      referenceName: (reference) => reference.name ?? t(`${B}.unnamed.${reference.kind}`),
     }),
-    [t, amountText, status, stage],
+    [t, amountText, status, stage, otherBuilding],
   );
 }
 

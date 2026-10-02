@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Η αντικειμενική αξία ΚΑΘΕ μονάδας ενός κτιρίου** — ο πίνακας του εργολάβου (ADR-898 Φ4), υπολογισμένος
+ * @fileoverview **Η αντικειμενική αξία ΚΑΘΕ μονάδας και ΚΑΘΕ χώρου ενός κτιρίου** — ο πίνακας του εργολάβου (ADR-898 Φ4), υπολογισμένος
  * στον server **κατά την ανάγνωση**.
  * @related `lib/objective-value/building-objective-value.ts` (ο καθαρός κανόνας) · `services/listings/owned-listing-projection.ts`
  *   (`ownedListingShape`: η ΙΔΙΑ προβολή με την προεπισκόπηση του κατόχου) · `app/api/buildings/[buildingId]/objective-values/route.ts`
@@ -20,7 +20,6 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { fetchConstructionPhases } from '@/lib/api/construction-doc-mappers';
 import { nowISO } from '@/lib/date-local';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
@@ -31,10 +30,8 @@ import {
   type BuildingObjectiveValueContext,
 } from '@/lib/objective-value/building-objective-value';
 import { buildingQuestionsOf } from '@/lib/objective-value/building-objective-value-questions';
-import type {
-  BuildingObjectiveValues,
-  BuildingUnitObjectiveValueRow,
-} from '@/lib/objective-value/building-objective-values-contract';
+import type { BuildingQuestionSubject } from '@/lib/objective-value/building-objective-value-questions';
+import type { BuildingObjectiveValueRow, BuildingObjectiveValues } from '@/lib/objective-value/building-objective-values-contract';
 import { readBuildingObjectiveValueFacts } from '@/lib/objective-value/building-objective-value-facts';
 import { objectiveValueBasisOf } from '@/lib/objective-value/listing-objective-value';
 import { declaredOf, readObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
@@ -46,10 +43,18 @@ import {
 import { ownedListingShape, type CompanyProjectableProperty } from '@/services/listings/owned-listing-projection';
 import type { PlaceKnowledge } from '@/services/listings/public-listing-projection';
 import { collectPlaceKnowledge } from '@/services/listings/publish-public-listing';
+import { resolveListingPosition } from '@/services/listings/public-listing-position';
 import { readValueZoneAt } from '@/services/market/value-zones.reader';
-import type { PublicListing } from '@/types/public-listing';
+import type { ListingPosition, PublicListing } from '@/types/public-listing';
 
-type UnitDocument = CompanyProjectableProperty & { readonly objectiveValueDeclarations?: unknown };
+import { readAdminBuildingSpaces, readBuildingLabels, readOwningUnits, spaceReferenceOf } from '@/services/building-spaces/building-space-admin-reader';
+
+import { spaceRow } from './building-space-objective-values';
+
+type UnitDocument = CompanyProjectableProperty & {
+  readonly objectiveValueDeclarations?: unknown;
+  readonly linkedSpaces?: unknown;
+};
 
 /** Ασύγχρονη τιμή ανά κλειδί, υπολογισμένη **μία** φορά — ταυτόχρονοι καλούντες μοιράζονται την υπόσχεση. */
 function memoizedBy<A, T>(keyOf: (arg: A) => string, compute: (arg: A) => Promise<T>): (arg: A) => Promise<T> {
@@ -65,14 +70,14 @@ function memoizedBy<A, T>(keyOf: (arg: A) => string, compute: (arg: A) => Promis
 }
 
 /** Το κλειδί μιας θέσης — ίδια θέση ⇒ ίδια ζώνη και ίδια γεγονότα δημοσίευσης. */
-function positionKey(listing: PublicListing): string {
-  return JSON.stringify(listing.position);
+function positionKey(position: ListingPosition): string {
+  return JSON.stringify(position);
 }
 
 /** Ό,τι μοιράζονται οι μονάδες ενός περάσματος. */
 interface SharedReaders {
   readonly placeOf: (projectId: string | null) => Promise<PlaceKnowledge>;
-  readonly zoneOf: (listing: PublicListing) => Promise<ValueZoneVerdict>;
+  readonly zoneOf: (position: ListingPosition) => Promise<ValueZoneVerdict>;
   readonly publicationFactsOf: (input: { readonly listing: PublicListing; readonly place: PlaceKnowledge }) => Promise<ListingPublicationFacts>;
 }
 
@@ -83,21 +88,12 @@ function sharedReaders(db: AdminFirestore, buildingId: string, at: string): Shar
       (projectId: string | null) => projectId ?? '',
       (projectId: string | null) => collectPlaceKnowledge(db, { buildingId, projectId }, at),
     ),
-    zoneOf: memoizedBy(positionKey, (listing: PublicListing) => readValueZoneAt(listing.position)),
+    zoneOf: memoizedBy(positionKey, (position: ListingPosition) => readValueZoneAt(position)),
     publicationFactsOf: memoizedBy(
-      ({ listing }: PublicationInput) => positionKey(listing),
+      ({ listing }: PublicationInput) => positionKey(listing.position),
       ({ listing, place }: PublicationInput) => resolvePublicationFacts(db, listing, place),
     ),
   };
-}
-
-/** Οι μονάδες του κτιρίου — το ίδιο σύνολο με την καρτέλα «Μονάδες» (`GET /api/properties?buildingId=`). */
-async function readUnits(db: AdminFirestore, buildingId: string): Promise<UnitDocument[]> {
-  // tenant-scope-exempt: ο γονέας επαληθεύτηκε πριν — η διαδρομή περνά από `requireBuildingInTenant`
-  // (buildingScopedRoute), και μια μονάδα μπορεί νόμιμα να φέρει άλλο `companyId` από το κτίριό της (ίδιο δόγμα με το
-  // `api/properties`). Ακυρώνεται αν ποτέ κληθεί χωρίς προηγούμενο έλεγχο ιδιοκτησίας του κτιρίου.
-  const snapshot = await db.collection(COLLECTIONS.PROPERTIES).where(FIELDS.BUILDING_ID, '==', buildingId).get();
-  return snapshot.docs.map((doc) => ({ ...(doc.data() as Omit<UnitDocument, 'id'>), id: doc.id }));
 }
 
 async function readBuilding(db: AdminFirestore, buildingId: string) {
@@ -117,24 +113,46 @@ interface UnitPass {
 }
 
 /** Μία μονάδα: προβολή → γεγονότα δημοσίευσης → πυρήνας με τις ΩΜΕΣ δηλώσεις → επικάλυψη κτιρίου. */
-async function unitRow(unit: UnitDocument, pass: UnitPass): Promise<BuildingUnitObjectiveValueRow> {
+async function unitRow(unit: UnitDocument, pass: UnitPass): Promise<BuildingObjectiveValueRow> {
   const { readers, context, today, at } = pass;
   const place = await readers.placeOf(unit.projectId ?? pass.buildingProjectId);
   const shape = ownedListingShape({ property: unit, place, at });
   const listing = withPublicationFacts(shape, await readers.publicationFactsOf({ listing: shape, place }));
   const declared = declaredOf(readObjectiveValueDeclarations(unit.objectiveValueDeclarations));
-  const basis = objectiveValueBasisOf(listing, declared, await readers.zoneOf(listing));
+  const basis = objectiveValueBasisOf(listing, declared, await readers.zoneOf(listing.position));
   return {
     id: unit.id,
+    kind: 'unit',
     name: typeof unit.name === 'string' ? unit.name : null,
     type: typeof unit.type === 'string' ? unit.type : null,
     floor: listing.floor,
     value: buildingUnitObjectiveValue(basis, context, today),
+    space: null,
   };
 }
 
+/**
+ * Οι χώροι του κτιρίου (ADR-898 §20, θέση ≠ ανάθεση): όσοι **μετρούν** εδώ ⇒ γραμμές· όσοι ανήκουν σε μονάδα του αλλά
+ * βρίσκονται αλλού ⇒ αναφορές χωρίς ποσό. Η θέση τους είναι η θέση του **κτιρίου** (η ίδια γνώση τόπου με τις μονάδες,
+ * χωρίς άρνηση αποκάλυψης — ο εργολάβος βλέπει πάντα) ⇒ μία ετυμηγορία ζώνης για όλους.
+ */
+async function spaceRows(db: AdminFirestore, buildingId: string, units: readonly UnitDocument[], pass: UnitPass) {
+  const { counted, references } = await readAdminBuildingSpaces(db, buildingId, units);
+  const others = [
+    ...counted.map((space) => space.owner?.unitBuildingId ?? buildingId),
+    ...references.map((space) => space.locatedInBuildingId),
+  ].filter((id) => id !== buildingId);
+  const buildingLabels = await readBuildingLabels(db, others);
+  const referenceRows = references.map((space) => spaceReferenceOf(space, buildingLabels));
+  if (counted.length === 0) return { rows: [], references: referenceRows };
+  const place = await pass.readers.placeOf(pass.buildingProjectId);
+  const verdict = await pass.readers.zoneOf(resolveListingPosition(place, null));
+  const rowPass = { buildingId, context: pass.context, verdict, today: pass.today, buildingLabels };
+  return { rows: counted.map((space) => spaceRow(space, rowPass)), references: referenceRows };
+}
+
 /** Κατά όροφο (άγνωστος στο τέλος), μετά κατά όνομα. */
-function byFloorThenName(a: BuildingUnitObjectiveValueRow, b: BuildingUnitObjectiveValueRow): number {
+function byFloorThenName(a: BuildingObjectiveValueRow, b: BuildingObjectiveValueRow): number {
   const floorA = a.floor ?? Number.POSITIVE_INFINITY;
   const floorB = b.floor ?? Number.POSITIVE_INFINITY;
   if (floorA !== floorB) return floorA < floorB ? -1 : 1;
@@ -151,20 +169,25 @@ export async function readBuildingObjectiveValues(
   today: string,
 ): Promise<BuildingObjectiveValues> {
   const at = nowISO();
-  const [building, phases, units] = await Promise.all([
-    readBuilding(db, buildingId),
-    fetchConstructionPhases(db, buildingId),
-    readUnits(db, buildingId),
-  ]);
+  const [building, phases] = await Promise.all([readBuilding(db, buildingId), fetchConstructionPhases(db, buildingId)]);
+  // Οι μονάδες όλου του έργου ορίζουν κατόχους (ADR-247)· γραμμές γίνονται μόνο του κτιρίου — το ίδιο σύνολο με την
+  // καρτέλα «Μονάδες» (`GET /api/properties?buildingId=`).
+  const owningUnits = await readOwningUnits<UnitDocument>(db, buildingId, building.projectId);
+  const units = owningUnits.filter((unit) => unit.buildingId === buildingId);
   const context: BuildingObjectiveValueContext = { stage: buildingStageOf(phases, building.facts), facts: building.facts };
   const pass: UnitPass = { readers: sharedReaders(db, buildingId, at), context, buildingProjectId: building.projectId, today, at };
-  const rows = (await Promise.all(units.map((unit) => unitRow(unit, pass)))).sort(byFloorThenName);
-  const values = rows.map((row) => row.value);
+  const [unitRows, spaces] = await Promise.all([Promise.all(units.map((unit) => unitRow(unit, pass))), spaceRows(db, buildingId, owningUnits, pass)]);
+  const rows = [...unitRows, ...spaces.rows.map((space) => space.row)].sort(byFloorThenName);
+  const subjects: BuildingQuestionSubject[] = [
+    ...unitRows.map((row) => ({ value: row.value, positionFact: null })),
+    ...spaces.rows.map((space) => space.subject),
+  ];
   return {
     valuationDate: today,
     ...context,
-    units: rows,
-    total: buildingObjectiveValueTotal(values),
-    questions: buildingQuestionsOf(values),
+    rows,
+    references: spaces.references,
+    total: buildingObjectiveValueTotal(rows),
+    questions: buildingQuestionsOf(subjects),
   };
 }

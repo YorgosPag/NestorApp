@@ -1,6 +1,7 @@
 /**
- * @fileoverview **Εξαγωγή XLSX της αντικειμενικής του κτιρίου** (ADR-898 Φ4β) — τέσσερα φύλλα: Μονάδες (ό,τι βλέπει ο
- * άνθρωπος, με την ίδια σειρά) · Όροφοι · Συντελεστές (κάθε συντελεστής με την παραπομπή του) · Παραδοχές.
+ * @fileoverview **Εξαγωγή XLSX της αντικειμενικής του κτιρίου** (ADR-898 Φ4β · §20) — Ακίνητα — μονάδες και χώροι (ό,τι βλέπει ο
+ * άνθρωπος, με την ίδια σειρά) · Σε άλλο κτίριο (αναφορές χωρίς ποσό, μόνο όταν υπάρχουν) · Όροφοι · Συντελεστές (κάθε
+ * συντελεστής με την παραπομπή του) · Παραδοχές.
  * @related `lib/export/excel-workbook.ts` (`addScheduleSheet` · `downloadWorkbook` — το SSoT) ·
  *   `shared/space-table-export.ts` (στήλες πίνακα → φύλλο)
  * @module components/building-management/tabs/ObjectiveValueTab/building-objective-value-xlsx
@@ -17,9 +18,9 @@ import { PRODUCT_NAME } from '@/constants/product-identity';
 import { compareSortValues } from '@/lib/array-utils';
 import { addKeyValueSheet, addScheduleSheet, exportWorkbook, type KeyValueRow, type ScheduleCell, type ScheduleFooterCell } from '@/lib/export/excel-workbook';
 import { buildingObjectiveValueTotal } from '@/lib/objective-value/building-objective-value';
-import type { BuildingObjectiveValues, BuildingUnitObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
+import type { BuildingObjectiveValues, BuildingObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
 import { AADE_MYPROPERTY_URL } from '@/lib/objective-value/objective-value-page-sections';
-import type { AppliedFactor } from '@/lib/objective-value/objective-value-types';
+import type { AppliedFactor, BasementStoragePosition } from '@/lib/objective-value/objective-value-types';
 
 import { spaceScheduleSpec } from '../../shared/space-table-export';
 import type { SortState } from '../../shared/space-table-sort';
@@ -33,7 +34,7 @@ const E = `${B}.export`;
 export interface BuildingObjectiveValueExport {
   readonly data: BuildingObjectiveValues;
   readonly buildingName: string;
-  readonly columns: readonly SpaceColumn<BuildingUnitObjectiveValueRow>[];
+  readonly columns: readonly SpaceColumn<BuildingObjectiveValueRow>[];
   readonly sort: SortState | null;
   readonly labels: BuildingObjectiveValueLabels;
   readonly factorLabel: (factor: AppliedFactor) => string;
@@ -46,24 +47,24 @@ function unitsFooter({ data, labels }: BuildingObjectiveValueExport): Readonly<R
   const { t } = labels;
   const { total } = data;
   const label = { unit: t(`${B}.total.label`) };
-  if (total.kind === 'incomplete') return { ...label, [STATUS_COLUMN_KEY]: t(`${B}.total.incomplete`, { pending: total.pending, units: total.units }) };
+  if (total.kind === 'incomplete') return { ...label, [STATUS_COLUMN_KEY]: t(`${B}.total.incomplete`, { pending: total.pending, items: total.items }) };
   return { ...label, [VALUE_COLUMN_KEY]: { sum: total.value } };
 }
 
 function addFloorsSheet(workbook: ExcelJS.Workbook, { data, labels }: BuildingObjectiveValueExport): void {
   const { t } = labels;
-  const floors = [...new Set(data.units.map((row) => row.floor))].sort((a, b) => compareSortValues(a, b, 'asc'));
+  const floors = [...new Set(data.rows.map((row) => row.floor))].sort((a, b) => compareSortValues(a, b, 'asc'));
   const rows = floors.map((floor): ScheduleCell[] => {
-    const total = buildingObjectiveValueTotal(data.units.filter((row) => row.floor === floor).map((row) => row.value));
+    const total = buildingObjectiveValueTotal(data.rows.filter((row) => row.floor === floor));
     const incomplete = total.kind === 'incomplete';
-    const status = incomplete ? t(`${E}.floorIncomplete`, { pending: total.pending, units: total.units }) : t(`${E}.floorComplete`);
-    return [labels.floor(floor), total.units, incomplete ? null : total.value, status];
+    const status = incomplete ? t(`${E}.floorIncomplete`, { pending: total.pending, items: total.items }) : t(`${E}.floorComplete`);
+    return [labels.floor(floor), total.items, incomplete ? null : total.value, status];
   });
   addScheduleSheet(workbook, {
     name: t(`${E}.sheets.floors`),
     columns: [
       { header: t(`${B}.columns.floor`), format: 'text' },
-      { header: t(`${E}.columns.units`), format: 'number' },
+      { header: t(`${E}.columns.items`), format: 'number' },
       { header: t(`${E}.columns.subtotal`), format: 'currency' },
       { header: t(`${B}.columns.status`), format: 'text', width: 40 },
     ],
@@ -72,12 +73,12 @@ function addFloorsSheet(workbook: ExcelJS.Workbook, { data, labels }: BuildingOb
 }
 
 /** Μία μονάδα με ακριβές ποσό → η βάση της (τιμή ζώνης · επιφάνεια) και κάθε συντελεστής με την παραπομπή του. */
-function factorRowsOf(row: BuildingUnitObjectiveValueRow, input: BuildingObjectiveValueExport): ScheduleCell[][] {
+function factorRowsOf(row: BuildingObjectiveValueRow, input: BuildingObjectiveValueExport): ScheduleCell[][] {
   const { value } = row;
   if (value.kind !== 'evaluated' || value.bounds.kind !== 'exact') return [];
   const { result } = value.bounds;
   const { labels, factorLabel } = input;
-  const name = labels.unitName(row);
+  const name = labels.rowName(row);
   return [
     [name, labels.t(`${E}.zonePrice`), result.zonePrice, null],
     [name, labels.t(`${E}.area`), result.area, null],
@@ -96,7 +97,32 @@ function addFactorsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiveVal
       { header: t(`${E}.columns.factorValue`), format: 'number' },
       { header: t(`${E}.columns.reference`), format: 'text', width: 32 },
     ],
-    rows: input.data.units.flatMap((row) => factorRowsOf(row, input)),
+    rows: input.data.rows.flatMap((row) => factorRowsOf(row, input)),
+  });
+}
+
+/**
+ * Χώροι μονάδων του κτιρίου σε **άλλο** κτίριο (ADR-898 §20) — φύλλο **χωρίς** στήλη ποσού: μετρούν στο κτίριο όπου
+ * βρίσκονται, ποτέ στο `SUM` του φύλλου «Ακίνητα». Μόνο όταν υπάρχουν.
+ */
+function addElsewhereSheet(workbook: ExcelJS.Workbook, { data, labels }: BuildingObjectiveValueExport): void {
+  if (data.references.length === 0) return;
+  const { t } = labels;
+  const unitName = new Map(data.rows.filter((row) => row.space === null).map((row) => [row.id, labels.rowName(row)]));
+  addScheduleSheet(workbook, {
+    name: t(`${E}.sheets.elsewhere`),
+    columns: [
+      { header: t(`${B}.columns.unit`), format: 'text' },
+      { header: t(`${B}.columns.kind`), format: 'text' },
+      { header: t(`${B}.columns.attachedTo`), format: 'text' },
+      { header: t(`${B}.elsewhere.locatedColumn`), format: 'text', width: 32 },
+    ],
+    rows: data.references.map((reference): ScheduleCell[] => [
+      labels.referenceName(reference),
+      labels.kind(reference.kind),
+      unitName.get(reference.ownerUnitId) ?? reference.ownerUnitName ?? t(`${B}.unnamed.unit`),
+      labels.otherBuilding(reference.locatedIn),
+    ]),
   });
 }
 
@@ -112,6 +138,7 @@ function addAssumptionsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiv
   // Οι ΙΔΙΕΣ λέξεις με το χειριστήριο `YesNo` (`useYesNoLabels('undeclared')`) — ένας κατάλογος, όχι δεύτερο «ναι/όχι».
   const notDeclared = t('objective-value:questions.unset.undeclared');
   const yesNo = (value: boolean | null) => (value === null ? notDeclared : t(`objective-value:questions.${value ? 'yes' : 'no'}`));
+  const entranceOf = (value: BasementStoragePosition | null) => (value === null ? notDeclared : labels.position('storage', value));
   const rows: KeyValueRow[] = [
     [t(`${E}.assumptions.building`), buildingName],
     [t(`${E}.assumptions.valuationDate`), data.valuationDate],
@@ -121,6 +148,7 @@ function addAssumptionsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiv
     [t(`${B}.facts.plotUtilisation`), data.facts.plotUtilisation ?? notDeclared],
     [t(`${B}.facts.hasElevator`), yesNo(data.facts.hasElevator)],
     [t(`${B}.facts.hasCentralHeating`), yesNo(data.facts.hasCentralHeating)],
+    [t(`${B}.facts.basementStorageEntrance`), entranceOf(data.facts.basementStorageEntrance)],
     [t(`${E}.assumptions.disclaimer`), t('objective-value:result.disclaimer')],
     [t(`${E}.assumptions.myProperty`), AADE_MYPROPERTY_URL],
     [t(`${E}.assumptions.software`), PRODUCT_NAME],
@@ -137,8 +165,9 @@ export function exportBuildingObjectiveValuesXlsx(input: BuildingObjectiveValueE
     build: (workbook) => {
       addScheduleSheet(
         workbook,
-        spaceScheduleSpec({ name: t(`${E}.sheets.units`), columns: input.columns, items: input.data.units, sort: input.sort, footer: unitsFooter(input) }),
+        spaceScheduleSpec({ name: t(`${E}.sheets.units`), columns: input.columns, items: input.data.rows, sort: input.sort, footer: unitsFooter(input) }),
       );
+      addElsewhereSheet(workbook, input);
       addFloorsSheet(workbook, input);
       addFactorsSheet(workbook, input);
       addAssumptionsSheet(workbook, input);

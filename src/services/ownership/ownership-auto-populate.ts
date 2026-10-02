@@ -10,7 +10,7 @@
  */
 
 import { getBuildingSpaces } from '@/services/building-spaces.service';
-import type { ResolvedSpaceDoc } from '@/services/building-spaces.service';
+import type { BuildingSpacesResult, ResolvedSpaceDoc } from '@/services/building-spaces.service';
 import type {
   MutableOwnershipTableRow,
   LinkedSpaceDetail,
@@ -19,6 +19,16 @@ import type {
 // ============================================================================
 // LINKED SPACE RESOLVER
 // ============================================================================
+
+/**
+ * Τα έγγραφα για την **περιγραφή** των παρακολουθημάτων: οι μετρούμενοι χώροι **και** όσοι βρίσκονται σε άλλο κτίριο
+ * (ADR-898 §20) — η μονάδα δείχνει όλους τους χώρους της. ⛔ Μόνο για αναζήτηση· αυτοτελείς γραμμές βγαίνουν
+ * **μόνο** από τους μετρούμενους.
+ */
+function withReferences(spaces: BuildingSpacesResult): { parking: ResolvedSpaceDoc[]; storage: ResolvedSpaceDoc[] } {
+  const refs = (kind: 'parking' | 'storage') => spaces.references.filter((ref) => ref.spaceType === kind);
+  return { parking: [...spaces.parking, ...refs('parking')], storage: [...spaces.storage, ...refs('storage')] };
+}
 
 /**
  * Resolve a LinkedSpaceDetail from a space document or fallback data.
@@ -56,6 +66,51 @@ function resolveLinkedSpaceDetail(
 }
 
 // ============================================================================
+// STANDALONE SPACE ROW
+// ============================================================================
+
+/**
+ * Ό,τι διαφέρει ανά είδος σε αυτοτελή γραμμή χώρου. ⚠️ Οι περιγραφές-εφεδρείες είναι **αποθηκευμένα δεδομένα** του
+ * πίνακα (όχι ετικέτα οθόνης) και έμειναν όπως ήταν — η μετάβασή τους σε i18n θέλει απόφαση για τους υπάρχοντες πίνακες.
+ */
+const STANDALONE_SPACE = {
+  parking: { collection: 'parking_spots', codePrefix: 'P', fallbackDescription: 'Θέση Στάθμευσης', participates: false },
+  storage: { collection: 'storage_units', codePrefix: 'S', fallbackDescription: 'Αποθήκη', participates: true },
+} as const;
+
+interface StandaloneContext {
+  readonly spaceLookup: ReadonlyMap<string, { entityCode: string }>;
+  readonly units: BuildingSpacesResult['units'];
+  readonly fallbackBuildingId: string;
+}
+
+/** Χώρος χωρίς μονάδα → αυτοτελής γραμμή (μία συνάρτηση για θέση και αποθήκη — ήταν δύο δίδυμα blocks). */
+function standaloneSpaceRow(
+  kind: keyof typeof STANDALONE_SPACE,
+  spaceDoc: ResolvedSpaceDoc,
+  ordinal: number,
+  ctx: StandaloneContext,
+): MutableOwnershipTableRow {
+  const spec = STANDALONE_SPACE[kind];
+  const { data } = spaceDoc;
+  const buildingId = (data.buildingId as string) ?? ctx.fallbackBuildingId;
+  return {
+    ordinal,
+    buildingId,
+    buildingName: ctx.units.find(u => u.buildingId === buildingId)?.buildingName ?? buildingId,
+    entityRef: { collection: spec.collection, id: spaceDoc.id },
+    entityCode: ctx.spaceLookup.get(spaceDoc.id)?.entityCode ?? `${spec.codePrefix}-${spaceDoc.id.slice(-4)}`,
+    description: (data.name as string) ?? spec.fallbackDescription,
+    category: 'auxiliary',
+    floor: String(data.floor ?? data.floorNumber ?? '—'),
+    areaNetSqm: (data.area as number) ?? 0,
+    areaSqm: (data.area as number) ?? 0,
+    participatesInCalculation: spec.participates,
+    ...defaultOwnershipFields(),
+  };
+}
+
+// ============================================================================
 // AUTO-POPULATE
 // ============================================================================
 
@@ -89,7 +144,9 @@ export async function autoPopulateRows(
   const rows: MutableOwnershipTableRow[] = [];
   let ordinal = 0;
 
-  const { parking, storage, units, spaceLookup } = await getBuildingSpaces(buildingIds);
+  const spaces = await getBuildingSpaces(buildingIds);
+  const { parking, storage, units, spaceLookup } = spaces;
+  const { parking: allParking, storage: allStorage } = withReferences(spaces);
 
   // Collect all spaceIds that are linked to units
   const linkedSpaceIds = new Set<string>();
@@ -100,46 +157,14 @@ export async function autoPopulateRows(
     }
   }
 
-  // Unlinked parking → standalone rows
-  for (const parkDoc of parking) {
-    if (linkedSpaceIds.has(parkDoc.id)) continue;
-    const lookup = spaceLookup.get(parkDoc.id);
-    const entityCode = lookup?.entityCode ?? `P-${parkDoc.id.slice(-4)}`;
-    const docBuildingId = (parkDoc.data.buildingId as string) ?? buildingIds[0] ?? '';
-    const docBuildingName = units.find(u => u.buildingId === docBuildingId)?.buildingName ?? docBuildingId;
-    ordinal++;
-    rows.push({
-      ordinal, buildingId: docBuildingId, buildingName: docBuildingName,
-      entityRef: { collection: 'parking_spots', id: parkDoc.id }, entityCode,
-      description: (parkDoc.data.name as string) ?? 'Θέση Στάθμευσης',
-      category: 'auxiliary',
-      floor: String(parkDoc.data.floor ?? parkDoc.data.floorNumber ?? '—'),
-      areaNetSqm: (parkDoc.data.area as number) ?? 0,
-      areaSqm: (parkDoc.data.area as number) ?? 0,
-      participatesInCalculation: false,
-      ...defaultOwnershipFields(),
-    });
-  }
-
-  // Unlinked storage → standalone rows
-  for (const storDoc of storage) {
-    if (linkedSpaceIds.has(storDoc.id)) continue;
-    const lookup = spaceLookup.get(storDoc.id);
-    const entityCode = lookup?.entityCode ?? `S-${storDoc.id.slice(-4)}`;
-    const docBuildingId = (storDoc.data.buildingId as string) ?? buildingIds[0] ?? '';
-    const docBuildingName = units.find(u => u.buildingId === docBuildingId)?.buildingName ?? docBuildingId;
-    ordinal++;
-    rows.push({
-      ordinal, buildingId: docBuildingId, buildingName: docBuildingName,
-      entityRef: { collection: 'storage_units', id: storDoc.id }, entityCode,
-      description: (storDoc.data.name as string) ?? 'Αποθήκη',
-      category: 'auxiliary',
-      floor: String(storDoc.data.floor ?? storDoc.data.floorNumber ?? '—'),
-      areaNetSqm: (storDoc.data.area as number) ?? 0,
-      areaSqm: (storDoc.data.area as number) ?? 0,
-      participatesInCalculation: true,
-      ...defaultOwnershipFields(),
-    });
+  // Unlinked parking/storage → standalone rows (parking first, then storage — η σειρά που είχαν)
+  const standalone = { spaceLookup, units, fallbackBuildingId: buildingIds[0] ?? '' };
+  for (const [kind, docs] of [['parking', parking], ['storage', storage]] as const) {
+    for (const spaceDoc of docs) {
+      if (linkedSpaceIds.has(spaceDoc.id)) continue;
+      ordinal++;
+      rows.push(standaloneSpaceRow(kind, spaceDoc, ordinal, standalone));
+    }
   }
 
   // Unit rows with fully resolved linkedSpacesSummary
@@ -154,7 +179,7 @@ export async function autoPopulateRows(
           resolveLinkedSpaceDetail(
             ls.spaceId,
             (ls.spaceType === 'parking' ? 'parking' : 'storage') as 'parking' | 'storage',
-            ls.allocationCode, spaceLookup, parking, storage,
+            ls.allocationCode, spaceLookup, allParking, allStorage,
           ),
         )
       : null;
@@ -198,7 +223,9 @@ export async function enrichRowsWithLinkedSpaces(
 
   if (!needsEnrichment || buildingIds.length === 0) return rows;
 
-  const { parking, storage, units, spaceLookup } = await getBuildingSpaces(buildingIds);
+  const spaces = await getBuildingSpaces(buildingIds);
+  const { units, spaceLookup } = spaces;
+  const { parking: allParking, storage: allStorage } = withReferences(spaces);
   const propertyDataMap = new Map(units.map(u => [u.id, u.data]));
 
   return rows.map(row => {
@@ -217,7 +244,7 @@ export async function enrichRowsWithLinkedSpaces(
       resolveLinkedSpaceDetail(
         ls.spaceId,
         (ls.spaceType === 'parking' ? 'parking' : 'storage') as 'parking' | 'storage',
-        ls.allocationCode, spaceLookup, parking, storage,
+        ls.allocationCode, spaceLookup, allParking, allStorage,
       ),
     );
 

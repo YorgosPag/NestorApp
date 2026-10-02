@@ -24,6 +24,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { createStorageWithPolicy, deleteStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { policyErrorMessageOf } from '@/lib/policy';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
@@ -312,7 +313,8 @@ export function useStorageTabState(building: Building) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('storageNotifications.unlinkError');
       logger.error('Unlink storage error', { error: msg });
-      notifyError(`${t('storageNotifications.failurePrefix')} ${msg}`);
+      // ADR-898 §20: παρακολούθημα μονάδας ⇒ 409 με κωδικό πολιτικής — το μεταφρασμένο «τι να κάνεις», όχι ωμό κείμενο.
+      notifyError(policyErrorMessageOf(err, t) ?? `${t('storageNotifications.failurePrefix')} ${msg}`);
     } finally {
       setUnlinkLoading(false);
       setConfirmUnlink(null);

@@ -237,6 +237,7 @@ describe('προέλευση — «από το κτίριο» ΜΟΝΟ όπου 
 });
 
 describe('buildingObjectiveValueTotal — σύνολο μόνο όταν είναι αληθινό', () => {
+  const items = (...values: BuildingUnitObjectiveValue[]) => values.map((value, index) => ({ id: `item_${index}`, value }));
   const exact = (value: number): BuildingUnitObjectiveValue => ({
     kind: 'evaluated',
     bounds: { kind: 'exact', commercialityAssumed: false, result: { kind: 'computed', form: 'residence', value, zonePrice: 1, area: 1, factors: [] } },
@@ -246,14 +247,19 @@ describe('buildingObjectiveValueTotal — σύνολο μόνο όταν είν�
   });
 
   it('όλα ακριβή ⇒ άθροισμα σε λεπτά (χωρίς σφάλμα κινητής υποδιαστολής)', () => {
-    expect(buildingObjectiveValueTotal([exact(0.1), exact(0.2), { kind: 'unsupported', reason: 'type' }])).toEqual({ kind: 'exact', value: 0.3, units: 2 });
+    expect(buildingObjectiveValueTotal(items(exact(0.1), exact(0.2), { kind: 'unsupported', reason: 'type' }))).toEqual({ kind: 'exact', value: 0.3, items: 2 });
   });
 
   it('έστω μία ελλιπής ⇒ ΚΑΝΕΝΑ ποσό, μόνο πόσες εκκρεμούν', () => {
-    expect(buildingObjectiveValueTotal([exact(100), { kind: 'beforeStage', stage: 'none' }, { kind: 'no-zone' }])).toEqual({
+    expect(buildingObjectiveValueTotal(items(exact(100), { kind: 'beforeStage', stage: 'none' }, { kind: 'no-zone' }))).toEqual({
       kind: 'incomplete',
       pending: 2,
-      units: 3,
+      items: 3,
     });
+  });
+
+  it('ΠΟΤΕ διπλομέτρηση: το ίδιο ακίνητο (ίδια ταυτότητα) μετρά μία φορά, όσες φορές κι αν φτάσει (§19)', () => {
+    const space = { id: 'park_1', value: exact(5000) };
+    expect(buildingObjectiveValueTotal([{ id: 'prop_1', value: exact(100000) }, space, space])).toEqual({ kind: 'exact', value: 105000, items: 2 });
   });
 });

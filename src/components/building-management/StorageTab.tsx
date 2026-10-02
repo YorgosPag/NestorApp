@@ -39,6 +39,7 @@ import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from './shared';
+import { BuildingSpaceRelationsPanel } from './shared/BuildingSpaceRelationsPanel';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
@@ -262,6 +263,9 @@ export function StorageTab({ building }: StorageTabProps) {
           </footer>
         </>
       )}
+
+      {/* ADR-898 §20 — παρακολουθήματα σε άλλο κτίριο (αναφορές) · χωρίς κτίριο (επιδιόρθωση ενός κλικ) */}
+      <BuildingSpaceRelationsPanel buildingId={building.id} kind="storage" onPlace={s.handleLinkStorage} />
 
       {/* Link Existing Dialog */}
       <BuildingSpaceLinkDialog

@@ -26,7 +26,9 @@ import {
   type ComputedObjectiveValue,
   type ObjectiveValueForm,
   type ObjectiveValueMissing,
+  type ParkingPosition,
   type PendingObjectiveValue,
+  type StoragePosition,
 } from './objective-value-types';
 
 /** Ο ΣΕ όταν δεν τον ξέρουμε: το κατώτατο του νόμου (≥ 1), πάντα σημασμένο. */
@@ -51,6 +53,16 @@ export type ObjectiveValueBounds =
 
 type Answers = readonly Partial<ObjectiveValueDraft>[];
 
+/**
+ * **Οι θέσεις που μένουν δυνατές** όταν η θέση είναι ανοιχτή (ADR-898 §19): ό,τι ξέρουμε για τον χώρο στενεύει την
+ * απαρίθμηση — αποθήκη σε υπόγειο ⇒ μόνο οι τέσσερις είσοδοι υπογείου · σκεπαστή εξωτερική θέση ⇒ ακάλυπτος ή πυλωτή.
+ * Απούσα ⇒ **όλες** οι θέσεις του νόμου (ο δημόσιος υπολογιστής, η αγγελία). Κενή λίστα δεν επιτρέπεται.
+ */
+export interface PositionCandidates {
+  readonly storage?: readonly StoragePosition[];
+  readonly parking?: readonly ParkingPosition[];
+}
+
 /** Τα κενά της μηχανής με πεπερασμένες απαντήσεις. */
 const ENUMERABLE = ['frontage', 'hasCentralHeating', 'hasElevator', 'position'] as const satisfies readonly ObjectiveValueMissing[] &
   readonly OpenQuestion[];
@@ -63,7 +75,7 @@ function isEnumerable(missing: ObjectiveValueMissing): missing is EnumerableMiss
 const YES_NO = [true, false] as const;
 
 /** Όλες οι απαντήσεις μιας ερώτησης που απαριθμείται. */
-function answersFor(missing: EnumerableMissing, form: ObjectiveValueForm): Answers {
+function answersFor(missing: EnumerableMissing, form: ObjectiveValueForm, positions: PositionCandidates): Answers {
   switch (missing) {
     case 'frontage':
       return RESIDENCE_FRONTAGES.map((frontage) => ({ frontage }));
@@ -73,12 +85,13 @@ function answersFor(missing: EnumerableMissing, form: ObjectiveValueForm): Answe
       return YES_NO.map((hasElevator) => ({ hasElevator }));
     case 'position':
       return form === 'parking'
-        ? PARKING_POSITIONS.map((parkingPosition) => ({ parkingPosition }))
-        : STORAGE_POSITIONS.map((storagePosition) => ({ storagePosition }));
+        ? (positions.parking ?? PARKING_POSITIONS).map((parkingPosition) => ({ parkingPosition }))
+        : (positions.storage ?? STORAGE_POSITIONS).map((storagePosition) => ({ storagePosition }));
   }
 }
 
 interface Exploration {
+  readonly positions: PositionCandidates;
   readonly results: ComputedObjectiveValue[];
   readonly open: OpenQuestion[];
   commercialityAssumed: boolean;
@@ -106,7 +119,7 @@ function explore(draft: ObjectiveValueDraft, todayIso: string, exploration: Expl
   const [next] = result.missing;
   if (next === undefined || !result.missing.every(isEnumerable) || !isEnumerable(next)) return result;
   markOpen(exploration, next);
-  for (const answer of answersFor(next, draft.form)) {
+  for (const answer of answersFor(next, draft.form, exploration.positions)) {
     const stopped = explore({ ...draft, ...answer }, todayIso, exploration);
     if (stopped !== null) return stopped;
   }
@@ -115,14 +128,16 @@ function explore(draft: ObjectiveValueDraft, todayIso: string, exploration: Expl
 
 /**
  * **Το ποσό ή τα όρια του νόμου** για ένα πρόχειρο. `zonePrices` = οι τιμές που μπορεί να ισχύουν (η ζώνη και τα
- * μέτωπα υπό όρο, `zonePriceCandidates`)· κενό ⇒ ισχύει όποια τιμή έχει το πρόχειρο.
+ * μέτωπα υπό όρο, `zonePriceCandidates`)· κενό ⇒ ισχύει όποια τιμή έχει το πρόχειρο. `positions` = οι θέσεις που μένουν
+ * δυνατές όταν η θέση είναι ανοιχτή ({@link PositionCandidates}).
  */
 export function objectiveValueBounds(
   draft: ObjectiveValueDraft,
   todayIso: string,
   zonePrices: readonly number[],
+  positions: PositionCandidates = {},
 ): ObjectiveValueBounds {
-  const exploration: Exploration = { results: [], open: [], commercialityAssumed: false };
+  const exploration: Exploration = { positions, results: [], open: [], commercialityAssumed: false };
   const prices = zonePrices.length === 0 ? [draft.zonePrice] : zonePrices;
   if (prices.length > 1) markOpen(exploration, 'zoneFront');
   for (const zonePrice of prices) {

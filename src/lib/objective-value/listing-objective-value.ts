@@ -32,7 +32,7 @@ import { valueZonePointOf, type ValueZoneVerdict } from '@/lib/market/value-zone
 import type { AttributeProvenance } from '@/lib/property/attribute-provenance';
 import type { PublicListing } from '@/types/public-listing';
 
-import { objectiveValueBounds, type ObjectiveValueBounds } from './objective-value-bounds';
+import { objectiveValueBounds, type ObjectiveValueBounds, type PositionCandidates } from './objective-value-bounds';
 import {
   OBJECTIVE_VALUE_DECLARED_FIELDS,
   type ListingObjectiveValueDeclared,
@@ -72,13 +72,22 @@ export type ListingObjectiveValueAssumption =
   /** Το μικτό εμβαδόν λογίστηκε **χωρίς** κοινόχρηστους (άρθ. 2 §17 — η κανονική περίπτωση· ADR-898 §8). */
   | { readonly kind: 'areaWithoutCommon' }
   /** Ό,τι μπήκε στον υπολογισμό **από δήλωση του αγγελιοδότη** (ADR-898 Φ3β) — η προέλευση φαίνεται. */
-  | { readonly kind: 'declaredByLister'; readonly fields: readonly ObjectiveValueDeclaredField[] };
+  | { readonly kind: 'declaredByLister'; readonly fields: readonly ObjectiveValueDeclaredField[] }
+  /** Θέση στάθμευσης χωρίς εμβαδόν ⇒ 20 τ.μ., όπως ορίζει ο νόμος όταν ο τίτλος δεν το γράφει (άρθ. 7 §5 · ADR-898 §19). */
+  | { readonly kind: 'parkingDefaultArea' }
+  /** Ισόγεια αποθήκη λογίστηκε **εκτός** συντελεστή δόμησης — αλλιώς είναι χώρος κύριας χρήσης (άρθ. 6 §4α). */
+  | { readonly kind: 'storageNotCounted' }
+  /** Η σύνδεση με τη μονάδα δηλώνει πλήθος > 1 για **ένα** έγγραφο χώρου ⇒ αποτιμάται μία φορά (απόφαση Giorgio, §19). */
+  | { readonly kind: 'quantityDeclared'; readonly quantity: number };
 
 export type ListingObjectiveValue =
   /** Ο αγγελιοδότης επέλεξε απόκρυψη (ADR-898 Φ3β · πρότυπο NAR IDX): **κανένας** υπολογισμός, κανένα ποσό. */
   | { readonly kind: 'hidden' }
-  /** Είδος εκτός εντύπων 1/4/5. (Το πολυεπίπεδο **δεν** είναι πια `unsupported` — ADR-898 Φ3β-3β.) */
-  | { readonly kind: 'unsupported'; readonly reason: 'type' }
+  /**
+   * Εκτός εντύπων 1/4/5: είδος (κατάστημα, γραφείο…) · ή αποθήκη σε **όροφο**, που ο νόμος λογίζει χώρο κύριας χρήσης
+   * (άρθ. 6 §4α ⇒ έντυπο 1 ή 2, ADR-898 §19). (Το πολυεπίπεδο **δεν** είναι πια `unsupported` — ADR-898 Φ3β-3β.)
+   */
+  | { readonly kind: 'unsupported'; readonly reason: 'type' | 'mainUse' }
   /** Η θέση δεν έδωσε ζώνη — το λέει ήδη η ενότητα της ζώνης. */
   | { readonly kind: 'no-zone' }
   | (ObjectiveValueEvaluated & { readonly prefill: ObjectiveValuePrefill });
@@ -249,6 +258,8 @@ export type ListingObjectiveValueBasis =
       readonly form: ObjectiveValueForm;
       readonly resolution: ListingObjectiveValueResolution;
       readonly zonePrices: readonly number[];
+      /** Οι θέσεις που μένουν δυνατές αν η θέση είναι ανοιχτή — μόνο για χώρο του κτιρίου (ADR-898 §19). */
+      readonly positions?: PositionCandidates;
     };
 
 export function listingObjectiveValueBasis(listing: PublicListing, valueZone: ValueZoneVerdict): ListingObjectiveValueBasis {

@@ -1,4 +1,4 @@
-import { withQuery } from '@/lib/workspace/route-worlds';
+import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { redirect } from '@/lib/workspace/server-navigation';
 
 interface BuildingDetailRedirectProps {
@@ -11,5 +11,5 @@ interface BuildingDetailRedirectProps {
  */
 export default async function BuildingDetailRedirect({ params }: BuildingDetailRedirectProps) {
   const { workspace, id } = await params;
-  redirect(withQuery('/buildings', `buildingId=${encodeURIComponent(id)}`), workspace);
+  redirect(ENTITY_ROUTES.buildings.withId(id), workspace);
 }

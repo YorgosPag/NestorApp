@@ -110,6 +110,18 @@ export const STORAGE_POSITIONS = [
 ] as const;
 export type StoragePosition = (typeof STORAGE_POSITIONS)[number];
 
+/**
+ * Οι θέσεις αποθήκης **υπογείου** (άρθ. 6 §4 β-ε): «από πού μπαίνεις;» — η απάντηση που δίνει **μία φορά** το κτίριο
+ * για όλες τις αποθήκες του υπογείου, με υπέρβαση ανά αποθήκη (ADR-898 §19).
+ */
+export const BASEMENT_STORAGE_POSITIONS = [
+  'basementStreetEntrance',
+  'basementYardEntrance',
+  'basementShopEntrance',
+  'basementInternalEntrance',
+] as const satisfies readonly StoragePosition[];
+export type BasementStoragePosition = (typeof BASEMENT_STORAGE_POSITIONS)[number];
+
 export interface StorageInput extends ObjectiveValueCommonInput {
   readonly form: 'storage';
   readonly area: number | null;

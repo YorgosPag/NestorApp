@@ -87,6 +87,13 @@
 2. Ελέγχει ότι κανένα requested spaceId δεν υπάρχει σε άλλο unit
 3. Αποτυγχάνει αν εντοπιστεί conflict (HTTP 409)
 
+**Εμβέλεια = ΕΡΓΟ (2026-10-02, ADR-898 §20)**: ο φρουρός (`validateLinkedSpacesUniqueness`, `lib/firestore/entity-linking.service.ts`)
+έψαχνε **μόνο** στο κτίριο της μονάδας. Με «θέση ≠ ανάθεση» ο χώρος μπορεί να βρίσκεται σε **άλλο** κτίριο από τη μονάδα
+που τον έχει ⇒ η Π-5 του Β δινόταν **και** στο Α3 **και** στο Β2 χωρίς 409. Πλέον ψάχνει στις μονάδες του **έργου**
+(χωρίς έργο ⇒ του κτιρίου, ό,τι ίσχυε). Η σάρωση `linkedSpaces` είναι **μία** (`linkedSpaceOwnersInScope`), κοινή με τον
+φρουρό αποσύνδεσης χώρου από κτίριο (`lib/api/space-attachment-guard.ts` ⇒ 409 `POLICY_SPACE_LINKED_TO_UNIT`). Υπάρχον
+διπλό **δεν** «περνά»: η τρέχουσα μονάδα εξαιρείται ρητά, ώστε οποιαδήποτε **άλλη** που τον έχει να δίνει 409.
+
 ---
 
 ### F-2: linkedCompanyId Orphaned References (CRITICAL)
@@ -313,3 +320,5 @@ query = query.where('companyId', '==', companyId);
 |------|--------|--------|
 | 2026-03-19 | Initial audit — 5 findings, 6 protected areas documented | Claude Code |
 | 2026-03-19 | Implementation: F-1 (uniqueness guard), F-2 (deletion guard), F-4 (cascade propagation), F-5 (warning log). F-3 marked N/A. | Claude Code |
+| 2026-10-02 | F-1: εμβέλεια **έργου** αντί κτιρίου (χώρος σε άλλο κτίριο από τη μονάδα, ADR-898 §20) · μία σάρωση `linkedSpaceOwnersInScope`, κοινή με τον φρουρό αποσύνδεσης (409 `POLICY_SPACE_LINKED_TO_UNIT`) · άγκυρα `linked-spaces-uniqueness.test.ts` (πριν: καμία) | Claude Code |
+| 2026-10-02 | F-1 (συνέχεια, ADR-898 §21): στο ίδιο PATCH μονάδας, **μετά** τη μοναδικότητα, ο συνδεδεμένος χώρος **χωρίς** κτίριο παίρνει το κτίριο της μονάδας στην **ίδια** συναλλαγή (`withVersionCheck` + `companion`) — η κατάσταση «παρακολούθημα χωρίς κτίριο» δεν γεννιέται πια · ADR-239: το κλείδωμα πωλημένου ισχύει μόνο όταν **υπήρχε** δεσμός (τοποθέτηση ≠ μετακίνηση) · `recordLinkChange` για τη μετάπτωση | Claude Code |

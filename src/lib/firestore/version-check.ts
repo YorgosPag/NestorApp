@@ -124,7 +124,7 @@ async function runVersionedUpdate(
   target: VersionedTarget,
   derive: (current: Readonly<Record<string, unknown>>) => Record<string, unknown>,
 ): Promise<VersionCheckOnCurrentResult> {
-  const { db, collection, docId, expectedVersion, userId } = target;
+  const { db, collection, docId, expectedVersion, userId, companion } = target;
   const docRef = db.collection(collection).doc(docId);
 
   return db.runTransaction(async (transaction) => {
@@ -140,9 +140,12 @@ async function runVersionedUpdate(
     }
 
     const applied = derive(before);
+    // Ο συνοδός διαβάζει ΠΡΙΝ από κάθε εγγραφή (κανόνας συναλλαγής Firestore) και γράφει ΜΑΖΙ με το κύριο έγγραφο.
+    const writeCompanion = companion ? await companion(transaction, before) : null;
     const newVersion = currentVersion + 1;
     // Write: updates + version bump + metadata
     transaction.update(docRef, { ...applied, [VERSION_FIELD]: newVersion, updatedAt: FieldValue.serverTimestamp(), updatedBy: userId });
+    writeCompanion?.(transaction);
     return { newVersion, docId, before, applied };
   });
 }

@@ -35,6 +35,7 @@ import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { resolveAllocationCodeChange } from '@/lib/api/space-entity-fields';
 import { planSpaceWrite, spaceAuditEntry } from '@/lib/api/space-entity-write';
+import { assertNotDetachingAttachedSpace } from '@/lib/api/space-attachment-guard';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type {
   SpaceEntityRouteConfig,
@@ -207,6 +208,8 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       // ADR-777 §8.60.18 — τα εμπορικά κρίνονται απέναντι στο αποθηκευμένο· άρνηση ΠΡΙΝ τη γραφή.
       const plan = planSpaceWrite(cfg, body, existing);
       if (plan.kind === 'rejected') throw new ApiError(plan.status, plan.message);
+      // ADR-898 §20 — παρακολούθημα μονάδας δεν αποσυνδέεται από κτίριο (θα «επέστρεφε» σιωπηλά)· άρνηση ΠΡΙΝ τη γραφή.
+      await assertNotDetachingAttachedSpace(adminDb, id, body, existing);
       // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
       const updateData = plan.updateData;
 

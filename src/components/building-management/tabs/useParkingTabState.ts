@@ -15,6 +15,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { policyErrorMessageOf } from '@/lib/policy';
 import { createParkingWithPolicy, deleteParkingWithPolicy, updateParkingWithPolicy } from '@/services/parking-mutation-gateway';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { Car, CheckCircle, Euro, Ruler } from 'lucide-react';
@@ -62,6 +64,7 @@ const buildingParkingCache = createStaleCache<ParkingSpot[]>('building-parking-t
 export function useParkingTabState({ buildingId, projectId }: UseParkingTabStateParams) {
   const { t } = useTranslation(['parking', 'properties-enums']);
   const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { error: notifyError } = useNotifications();
 
   // ---------------------------------------------------------------------------
   // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
@@ -344,13 +347,16 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       await fetchParkingSpots();
     } catch (err) {
       console.error(`[ParkingTab] ${type} error:`, err);
+      // ADR-898 §20: παρακολούθημα μονάδας ⇒ 409 με κωδικό πολιτικής — ως τώρα η αποτυχία ήταν σιωπηλή (μόνο console).
+      const policyMessage = policyErrorMessageOf(err, tBuilding);
+      if (policyMessage !== null || type === 'unlink') notifyError(policyMessage ?? t('messages.updateError'));
     } finally {
       setConfirmLoading(false);
       setConfirmAction(null);
       setDeletingId(null);
       setUnlinkingId(null);
     }
-  }, [confirmAction, fetchParkingSpots]);
+  }, [confirmAction, fetchParkingSpots, notifyError, t, tBuilding]);
 
   // ===========================================================================
   // LINK — Fetch unlinked parking spots + link to this building

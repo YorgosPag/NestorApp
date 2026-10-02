@@ -632,6 +632,14 @@ const SPACE_OPERATIONAL_TRACKED_FIELDS_RAW: Record<string, string> = {
   operationalStatus: 'operationalStatus',
 };
 
+/**
+ * ADR-898 §19 — η θέση του χώρου κατά την ΠΟΛ.1149/1994 (άρθ. 6 §4 · 7 §4), όταν τη δηλώνει ο άνθρωπος: ποιος είπε
+ * «αυτή η αποθήκη μπαίνει από τον δρόμο» αλλάζει ποσό — ίχνος, όπως κάθε δήλωση της αντικειμενικής.
+ */
+const SPACE_OBJECTIVE_VALUE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  objectiveValuePosition: 'objectiveValuePosition',
+};
+
 const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
   name: 'name',
   type: 'type',
@@ -643,6 +651,7 @@ const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
   code: 'code',
   projectId: 'projectId',
   ...SPACE_COMMERCIAL_TRACKED_FIELDS_RAW,
+  ...SPACE_OBJECTIVE_VALUE_TRACKED_FIELDS_RAW,
 };
 
 /** Storage audit registry — `field → TrackedFieldDef`. */
@@ -664,6 +673,7 @@ const PARKING_TRACKED_FIELDS_RAW: Record<string, string> = {
   projectId: 'projectId',
   area: 'area',
   ...SPACE_COMMERCIAL_TRACKED_FIELDS_RAW,
+  ...SPACE_OBJECTIVE_VALUE_TRACKED_FIELDS_RAW,
 };
 
 /** Parking audit registry — `field → TrackedFieldDef`. */

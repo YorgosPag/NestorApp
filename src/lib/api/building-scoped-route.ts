@@ -18,6 +18,7 @@ import type { NextRequest, NextResponse } from 'next/server';
 import { requireBuildingInTenant } from '@/lib/auth';
 import type { PermissionId } from '@/lib/auth';
 import { runGuarded, type AdminFirestore, type GuardedRouteArgs } from '@/lib/api/guarded-route';
+import type { RateLimitCategory } from '@/lib/middleware/with-rate-limit';
 
 export type { AdminFirestore };
 
@@ -33,6 +34,11 @@ export interface BuildingScopedParams<T> {
   readonly routePath: (buildingId: string) => string;
   readonly permissions: PermissionId;
   readonly handler: (args: BuildingScopedArgs) => Promise<NextResponse<T>>;
+  /**
+   * Η βαθμίδα ορίου, **δηλωμένη στο route** (ADR-855 · CHECK 3.78: ο αναγνώστης του `route.ts` βλέπει ποιο όριο
+   * ισχύει). Χωρίς δήλωση ⇒ `STANDARD` (ιστορική συμπεριφορά των υπαρχόντων).
+   */
+  readonly category?: RateLimitCategory;
 }
 
 /**
@@ -45,7 +51,7 @@ export interface BuildingScopedParams<T> {
 export function buildingScopedRoute<T>(
   params: BuildingScopedParams<T>,
 ): (request: NextRequest, segmentData: BuildingSegment) => Promise<Response> {
-  const { routePath, permissions, handler } = params;
+  const { routePath, permissions, handler, category } = params;
 
   return async (request: NextRequest, segmentData: BuildingSegment): Promise<Response> => {
     const { buildingId } = await segmentData.params;
@@ -53,6 +59,6 @@ export function buildingScopedRoute<T>(
     return runGuarded<T>(request, permissions, async ({ req, ctx, adminDb }) => {
       await requireBuildingInTenant({ ctx, buildingId, path: routePath(buildingId) });
       return handler({ req, ctx, adminDb, buildingId });
-    });
+    }, category);
   };
 }

@@ -13,6 +13,11 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
+import {
+  announceSpacePlacements,
+  spacePlacementCompanion,
+  type PlacedSpace,
+} from '@/services/building-spaces/space-placement.server';
 import { validatePropertyFieldLockingUnlessRevert } from '@/lib/firestore/property-field-locking';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
@@ -136,15 +141,27 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         );
 
         // 🛡️ ADR-247 F-1: Server-side uniqueness guard for linked spaces
+        // Εμβέλεια ΕΡΓΟΥ (ADR-898 §20): ο χώρος μπορεί να βρίσκεται σε άλλο κτίριο από τη μονάδα.
         if (Array.isArray(body.linkedSpaces)) {
-          const buildingId = (existing.buildingId as string) ?? null;
-          if (buildingId) {
-            await validateLinkedSpacesUniqueness(
-              adminDb, buildingId, id,
-              body.linkedSpaces as ReadonlyArray<{ spaceId: string }>,
-            );
-          }
+          const textOf = (raw: unknown) => (typeof raw === 'string' && raw !== '' ? raw : null);
+          await validateLinkedSpacesUniqueness(
+            adminDb,
+            { projectId: textOf(existing.projectId), buildingId: textOf(existing.buildingId) },
+            id,
+            body.linkedSpaces as ReadonlyArray<{ spaceId: string }>,
+          );
         }
+
+        // ADR-898 §21 — χώρος χωρίς κτίριο που δίνεται στη μονάδα παίρνει το κτίριό της στην ΙΔΙΑ συναλλαγή.
+        let placedSpaces: readonly PlacedSpace[] = [];
+        const companion = Array.isArray(body.linkedSpaces)
+          ? spacePlacementCompanion(
+              adminDb,
+              { id, name: existing.name, buildingId: 'buildingId' in body ? body.buildingId : existing.buildingId, linkedSpaces: body.linkedSpaces },
+              ctx.uid,
+              (placed) => { placedSpaces = placed; },
+            )
+          : undefined;
 
         // SPEC-256A: Version-checked write (injects updatedAt + updatedBy)
         const versionResult = await withVersionCheck({
@@ -154,7 +171,9 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
           expectedVersion,
           updates: updateData,
           userId: ctx.uid,
+          companion,
         });
+        announceSpacePlacements(ctx, placedSpaces, '/api/properties/[id] (PATCH)');
 
         // Resync payment plan when sale price changes (non-blocking)
         const newCommercial = updateData.commercial as Record<string, unknown> | undefined;

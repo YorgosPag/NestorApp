@@ -820,6 +820,8 @@ export const API_ROUTES = {
     MILESTONES: (buildingId: string) => `/api/buildings/${buildingId}/milestones` as const,
     /** ADR-898 Φ4 — η αντικειμενική κάθε μονάδας, υπολογισμένη κατά την ανάγνωση (τίποτα αποθηκευμένο) */
     OBJECTIVE_VALUES: (buildingId: string) => `/api/buildings/${buildingId}/objective-values` as const,
+    /** ADR-898 §20 — χώροι μονάδων του κτιρίου σε άλλο κτίριο (αναφορές) και χωρίς κτίριο, για τις καρτέλες χώρων */
+    SPACE_RELATIONS: (buildingId: string) => `/api/buildings/${buildingId}/space-relations` as const,
     /** ADR-284 §3.3 Phase 3b — atomic link to Project (orphan fix) */
     LINK_PROJECT: (buildingId: string) => `/api/buildings/${buildingId}/link-project` as const,
     /** ADR-308 pattern — Soft-delete trash view */
@@ -954,6 +956,12 @@ export const API_ROUTES = {
     BY_ID: (id: string) => `/api/contracts/${id}` as const,
     TRANSITION: (id: string) => `/api/contracts/${id}/transition` as const,
     PROFESSIONALS: (id: string) => `/api/contracts/${id}/professionals` as const,
+  },
+
+  /** ADR-901 Φ1 — υπόθεση μεταβίβασης: κατάλογος δικαιολογητικών (GET/POST ανά ακίνητο · PATCH εντολή) */
+  CONVEYANCE_CASES: {
+    LIST: '/api/conveyance-cases',
+    BY_ID: (id: string) => `/api/conveyance-cases/${id}` as const,
   },
 
   // ── Sales ─────────────────────────────────────────────────────────────

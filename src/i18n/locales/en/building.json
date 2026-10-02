@@ -259,7 +259,8 @@
     "multilevelFloorRequired": "Every level must have a floor.",
     "multilevelFloorMismatch": "All levels must share the same Building.",
     "standaloneWithBuilding": "Standalone units ({type}) cannot have a Building/Floor — they connect directly to the Project.",
-    "duplicateCode": "The code already exists. Please try again."
+    "duplicateCode": "The code already exists. Please try again.",
+    "spaceLinkedToUnit": "This space is attached to a unit. Remove it from the unit first (unit page → Attached spaces), then unlink it from the building."
   },
   "recoveries": {
     "createCompany": {
@@ -634,5 +635,13 @@
   },
   "notifications": {
     "created": "Building {buildingName} was created"
+  },
+  "spaceRelations": {
+    "item": "{space} · of unit {unit}",
+    "elsewhereNote": "Attached spaces of units in this building that are located in another building. They do not count here — nor in this tab's statistics; they count where they are located.",
+    "unplacedTitle": "No building",
+    "unplacedNote": "Attached spaces of units in this building with no building set: they count here, but do not appear in the list until they are linked.",
+    "place": "Link to this building",
+    "placeError": "Linking to the building failed."
   }
 }

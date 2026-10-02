@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * @fileoverview **«Γεγονότα κτιρίου»** (ADR-898 Φ4β) — στάδιο (με την πηγή του), άδεια, ΣΑΟ, ανελκυστήρας, θέρμανση: γραμμένα **μία
+ * @fileoverview **«Γεγονότα κτιρίου»** (ADR-898 Φ4β · §19) — στάδιο (με την πηγή του), άδεια, ΣΑΟ, ανελκυστήρας, θέρμανση, είσοδος
+ * αποθηκών υπογείου: γραμμένα **μία
  * φορά** για όλες τις μονάδες, με την ίδια ουρά αποθήκευσης και την ίδια ένδειξη με τη σελίδα βελτίωσης αγγελίας.
  * @module components/building-management/tabs/ObjectiveValueTab/BuildingObjectiveValueFacts
  *
@@ -33,6 +34,7 @@ import {
   type BuildingQuestion,
 } from '@/lib/objective-value/building-objective-value-questions';
 import { LEGAL_STAGES, type BuildingStageReached } from '@/lib/objective-value/objective-value-stages';
+import { BASEMENT_STORAGE_POSITIONS } from '@/lib/objective-value/objective-value-types';
 
 import type { BuildingFactsSave } from './useBuildingObjectiveValueTab';
 
@@ -61,14 +63,16 @@ interface FactsProps {
   readonly questions: readonly BuildingQuestion[];
   readonly save: BuildingFactsSave;
   readonly today: string;
+  /** Το κτίριο έχει αποθήκες (ή ήδη απάντηση) ⇒ ρωτά την είσοδο του υπογείου (§19). Αλλιώς η ερώτηση θα ήταν θόρυβος. */
+  readonly asksStorageEntrance: boolean;
   readonly onOpenSchedule?: () => void;
 }
 
 function Waiting({ fact, questions }: { readonly fact: BuildingFactQuestion; readonly questions: readonly BuildingQuestion[] }) {
   const { t } = useTranslation([NS]);
-  const units = questions.find((question) => question.fact === fact)?.units ?? 0;
-  if (units === 0) return null;
-  return <Badge variant="secondary" className="self-start">{t(`${F}.waiting`, { count: units })}</Badge>;
+  const items = questions.find((question) => question.fact === fact)?.items ?? 0;
+  if (items === 0) return null;
+  return <Badge variant="secondary" className="self-start">{t(`${F}.waiting`, { count: items })}</Badge>;
 }
 
 function ClearButton({ visible, onClear }: { readonly visible: boolean; readonly onClear: () => void }) {
@@ -116,6 +120,27 @@ function DeclaredStage({ facts, onAnswer }: { readonly facts: BuildingObjectiveV
   );
 }
 
+/** «Από πού μπαίνεις στις αποθήκες του υπογείου;» — μία απάντηση για όλες, η αποθήκη μπορεί να την υπερβεί (§19). */
+function StorageEntrance({ facts, onAnswer }: { readonly facts: BuildingObjectiveValueFacts; readonly onAnswer: (patch: BuildingObjectiveValuePatch) => void }) {
+  const { t } = useTranslation([NS]);
+  const id = buildingFactFieldId('basementStorageEntrance');
+  return (
+    <>
+      <Label htmlFor={id}>{t(`${F}.basementStorageEntrance`)}</Label>
+      <ChoiceSelect
+        id={id}
+        value={facts.basementStorageEntrance}
+        values={BASEMENT_STORAGE_POSITIONS}
+        getLabel={(position) => t(`${NS}:property.storagePosition.${position}`)}
+        placeholder={t(`${NS}:questions.unset.undeclared`)}
+        onChange={(basementStorageEntrance) => onAnswer({ basementStorageEntrance })}
+      />
+      <span className="text-xs text-muted-foreground">{t(`${F}.basementStorageEntranceHelp`)}</span>
+      <ClearButton visible={facts.basementStorageEntrance !== null} onClear={() => onAnswer(clearedBuildingFactPatch('basementStorageEntrance'))} />
+    </>
+  );
+}
+
 function EngineFact({ fact, facts, today, onAnswer }: {
   readonly fact: BuildingEngineFact;
   readonly facts: BuildingObjectiveValueFacts;
@@ -140,7 +165,7 @@ function EngineFact({ fact, facts, today, onAnswer }: {
   );
 }
 
-export function BuildingObjectiveValueFacts({ stage, facts, questions, save, today, onOpenSchedule }: FactsProps) {
+export function BuildingObjectiveValueFacts({ stage, facts, questions, save, today, asksStorageEntrance, onOpenSchedule }: FactsProps) {
   const { t } = useTranslation([NS]);
   const headingId = useId();
   const onAnswer = (patch: BuildingObjectiveValuePatch) => save.enqueue(patch);
@@ -166,6 +191,12 @@ export function BuildingObjectiveValueFacts({ stage, facts, questions, save, tod
             <Waiting fact={fact} questions={questions} />
           </li>
         ))}
+        {asksStorageEntrance && (
+          <li id={itemIdOf('basementStorageEntrance')} className="flex flex-col gap-1">
+            <StorageEntrance facts={facts} onAnswer={onAnswer} />
+            <Waiting fact="basementStorageEntrance" questions={questions} />
+          </li>
+        )}
       </ul>
     </section>
   );

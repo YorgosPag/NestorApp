@@ -43,7 +43,7 @@ function initialState(buildingId: string): BuildingObjectiveValuesState {
   return cached === null ? { kind: 'loading' } : { kind: 'ready', data: cached, refreshing: true };
 }
 
-/** Κάθε γεγονός που αλλάζει τις εισόδους: το κτίριο, ή οποιαδήποτε μονάδα (δεν ξέρουμε πάντα το κτίριό της). */
+/** Κάθε γεγονός που αλλάζει τις εισόδους: το κτίριο, ή οποιαδήποτε μονάδα/χώρος (δεν ξέρουμε πάντα το κτίριό τους). */
 function useInputChanges(buildingId: string, refresh: () => void): void {
   useEffect(() => {
     const unsubscribers = [
@@ -54,6 +54,10 @@ function useInputChanges(buildingId: string, refresh: () => void): void {
       RealtimeService.subscribe('UNIT_CREATED', refresh, { checkPendingOnMount: false }),
       RealtimeService.subscribe('UNIT_DELETED', refresh, { checkPendingOnMount: false }),
       RealtimeService.subscribe('PROPERTY_BUILDING_LINKED', refresh, { checkPendingOnMount: false }),
+      // ADR-898 §19 — οι χώροι (θέσεις · αποθήκες) είναι γραμμές του πίνακα: κάθε αλλαγή τους αλλάζει ποσό ή σύνολο.
+      ...(['PARKING_CREATED', 'PARKING_UPDATED', 'PARKING_DELETED', 'STORAGE_CREATED', 'STORAGE_UPDATED', 'STORAGE_DELETED'] as const).map(
+        (event) => RealtimeService.subscribe(event, refresh, { checkPendingOnMount: false }),
+      ),
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [buildingId, refresh]);

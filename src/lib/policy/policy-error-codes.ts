@@ -51,6 +51,9 @@ export const POLICY_ERROR_CODES = {
 
   // ----- Uniqueness -----
   DUPLICATE_CODE: 'POLICY_DUPLICATE_CODE',
+
+  /** ADR-898 §20: αποσύνδεση από κτίριο χώρου που είναι παρακολούθημα μονάδας. */
+  SPACE_LINKED_TO_UNIT: 'POLICY_SPACE_LINKED_TO_UNIT',
 } as const;
 
 export type PolicyErrorCode =

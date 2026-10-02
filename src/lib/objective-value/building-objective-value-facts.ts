@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Τα γεγονότα του κτιρίου για την αντικειμενική αξία** — ό,τι ισχύει για **όλες** τις μονάδες του και
- * το δηλώνει **μία φορά** ο εργολάβος (ADR-898 Φ4): ημερομηνία άδειας, ΣΑΟ, ανελκυστήρας, θέρμανση, και στάδιο όταν δεν
+ * το δηλώνει **μία φορά** ο εργολάβος (ADR-898 Φ4): ημερομηνία άδειας, ΣΑΟ, ανελκυστήρας, θέρμανση, είσοδος αποθηκών υπογείου, και στάδιο όταν δεν
  * υπάρχει χρονοδιάγραμμα με ετικέτες.
  * @related `objective-value-stages.ts` (το λεξιλόγιο σταδίων) · `building-objective-value.ts` (ποιος τα χρησιμοποιεί
  *   και με ποια ιεραρχία) · `app/api/buildings/building-objective-value-patch.ts` (ο γραφέας)
@@ -22,6 +22,7 @@ import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards';
 
 import { objectiveValuePatchViolations, type ObjectiveValuePatchViolation } from './objective-value-declarations';
 import { isBuildingStageReached, LEGAL_STAGES, type BuildingStageReached } from './objective-value-stages';
+import { BASEMENT_STORAGE_POSITIONS, type BasementStoragePosition } from './objective-value-types';
 
 export interface BuildingObjectiveValueFacts {
   /** `YYYY-MM-DD` — έκδοση ή τελευταία αναθεώρηση της οικοδομικής άδειας του κτιρίου (άρθ. 2 §20). */
@@ -43,6 +44,11 @@ export interface BuildingObjectiveValueFacts {
    * ⚠️ **Όχι** το `BUILDING_FEATURES.autonomousHeating` (δυαδική λίστα: απουσία = «δεν ρωτήθηκε», όχι «όχι»).
    */
   readonly hasCentralHeating: boolean | null;
+  /**
+   * **Από πού μπαίνεις στις αποθήκες του υπογείου** (άρθ. 6 §4 β-ε) — τύπος για όλες τις αποθήκες υπογείου του κτιρίου·
+   * η απάντηση της αποθήκης υπερισχύει (ADR-898 §19, απόφαση Giorgio «και τα δύο»). Ισόγεια αποθήκη **δεν** τη ρωτά.
+   */
+  readonly basementStorageEntrance: BasementStoragePosition | null;
 }
 
 /**
@@ -58,6 +64,7 @@ export const BUILDING_OBJECTIVE_VALUE_FIELDS = [
   'declaredStage',
   'hasElevator',
   'hasCentralHeating',
+  'basementStorageEntrance',
 ] as const satisfies readonly (keyof BuildingObjectiveValueFacts)[];
 
 function isPlotUtilisation(raw: unknown): raw is number {
@@ -73,6 +80,7 @@ export function readBuildingObjectiveValueFacts(raw: unknown): BuildingObjective
     declaredStage: isBuildingStageReached(record.declaredStage) ? record.declaredStage : null,
     hasElevator: typeof record.hasElevator === 'boolean' ? record.hasElevator : null,
     hasCentralHeating: typeof record.hasCentralHeating === 'boolean' ? record.hasCentralHeating : null,
+    basementStorageEntrance: BASEMENT_STORAGE_POSITIONS.find((position) => position === record.basementStorageEntrance) ?? null,
   };
 }
 
@@ -84,6 +92,7 @@ export const buildingObjectiveValuePatchSchema = z
     declaredStage: z.enum(['none', ...LEGAL_STAGES]).nullable(),
     hasElevator: z.boolean().nullable(),
     hasCentralHeating: z.boolean().nullable(),
+    basementStorageEntrance: z.enum(BASEMENT_STORAGE_POSITIONS).nullable(),
   })
   .partial()
   .strict()

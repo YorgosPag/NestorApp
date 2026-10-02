@@ -39,7 +39,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "a7455227b431ceef5abcf2c912f19932f8ca7c36c1d8fe4339d9e83c14a54f24",
     "src/i18n/generated/routes/offers__offerId.el.json": "d7490784bf0def65741e6d16f2126d5c6b9553980aa56663ad7dbd60a5e66a09",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
-    "src/i18n/generated/routes/offers__offerId__improve.el.json": "cdc09fd0f4081172c6d5351b2972409d05e272f974bb625db6af05c52b2235b7",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "321843e391008307091be65386dba76ef657429a6a5ed7ada25adf6ecd170066",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "cc9fe534c9f3031d87b6efeaaa2860da7abd9d6a5441e65def5751e349c57112",
+  "inputsSha256": "7f643f98670b2bbcbdedfa4fdab5959736e1fe679fa070fa41b35f9b5954d68b",
   "languages": [
     "el"
   ],
@@ -450,7 +450,7 @@
     "src/components/notifications/NotificationPermalinkUnavailable.tsx": "526e8252778b77f0e0681b5589f1a8b1c28535812fc5e3c47dc4c53587df6fe3",
     "src/components/objective-value/ObjectiveValueAdjustments.tsx": "9537f3ec5817dbaaa530315a05f3eef0f5dea920b27fd70dd6d07ae21001534b",
     "src/components/objective-value/ObjectiveValueContent.tsx": "0d1eb5dd6727539405f6d270370607b8154abf9882e3ee1f4b41e4da4882f4a7",
-    "src/components/objective-value/ObjectiveValueEvaluated.tsx": "bc0e53232eee9cfe7f3bb7d62f1174f564305e559794b65ec56f89c78db17c5a",
+    "src/components/objective-value/ObjectiveValueEvaluated.tsx": "4148479819d7ad4414280f7f70845e96ec8bd0be1ec72063817a3019e5830df8",
     "src/components/objective-value/ObjectiveValueFaq.tsx": "bd7d8c882abb78e4644b4f78d6c5de636712a6d94795e7188b7a4fe3ea79aa27",
     "src/components/objective-value/ObjectiveValueLocation.tsx": "013eca8a3b486525ef6dd83e4e10a4bc41322f94c4571bc278e5f836f19d1ee6",
     "src/components/objective-value/ObjectiveValueProperty.tsx": "612107a93133a53b3a3a1978505c7c94e1e947e3d1f665d36c00c7a16d14a0c2",
@@ -686,7 +686,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/audit-tracked-fields.ts": "af1db5f3fb8dc867bcd8c61fe4bb80f654258736e3a0370efe70de2129e4cea4",
+    "src/config/audit-tracked-fields.ts": "81a871aa352e019bf15e4e171324af7d326ce3ce8b3949e8ec6b500ba206eea9",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",
     "src/config/environment-contract.ts": "2ef0dd11f1e6e05676ef41ba5574cd8beddb587e99750d840d355c1b7f9a6cce",
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
@@ -7034,6 +7034,7 @@
         "objective-value": {
           "keys": [
             "building.assumptions.declaredByUnit",
+            "building.assumptions.quantityDeclared",
             "building.levelsMissing",
             "improve.absent",
             "improve.areaIncludesCommon.help",
@@ -7108,6 +7109,7 @@
             "result.valueColumn"
           ],
           "prefixes": [
+            "building.assumptions",
             "improve.rejected",
             "improve.sections",
             "improve.state",
@@ -9928,7 +9930,7 @@
     "src/config/audit-value-catalogs.ts": "df5be84486b544bf20d29d3305976c2d9cace463cae9de14c8ddeb8afa3c4ae0",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "402522f65e334aa7c4ae31e72aa7da098e98414f378c199851f09c48d5049d28",
+    "src/config/domain-constants.ts": "af5258753476af6c87de2d3d4be7342373c0ffd906a0232e73ae620e74ddc3cc",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/error-reporting.ts": "d3788019febf32f4a488395c75b897af501fe2a869bb82059d107dbcd076a74d",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
@@ -10306,7 +10308,7 @@
     "src/lib/notifications/notification-destination.ts": "fe48c0fe021fa12751e361088d38bf70700022cc2ee35559731f45037246b033",
     "src/lib/notifications/notification-permalink-route.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/notifications/notification-state.ts": "005eb8d31be17f3f3d7b9ff3b8a0e1a15afcf308b0a6345b7c87f98165e75818",
-    "src/lib/objective-value/building-objective-value-facts.ts": "a43f20b2418be40bcdcf4a73e35020873d9ca038dbfcf726499e9dc5d1aa5c54",
+    "src/lib/objective-value/building-objective-value-facts.ts": "14cb2f887c060c81cb5bfda1b05e34f64c49824b8b2ae3c31a2a5ded41dd3337",
     "src/lib/objective-value/objective-value-declarations.ts": "83b28113554b0ec35c6e9e20efc303c85a4fc4c2f34531b5ae59a904f2c24c59",
     "src/lib/objective-value/objective-value-stages.ts": "ade838bf0f73b92b2cfb2015fe327f4b268d9920fda6c84a830b3396531d6b64",
     "src/lib/objective-value/objective-value-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -10650,7 +10652,7 @@
     "matchedKeys": 226,
     "routeBoundaries": 0,
     "shellFiles": 918,
-    "sliceBytes": 670835
+    "sliceBytes": 671585
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -30,12 +30,29 @@ const FACT_OF: Partial<Record<ObjectiveValueMissing | OpenQuestion, BuildingFact
 };
 
 /** Σειρά εμφάνισης: πρώτα ό,τι ξεκλειδώνει τα υπόλοιπα (το στάδιο αποφασίζει αν ζητείται ΣΑΟ ή παλαιότητα). */
-const ORDER: readonly BuildingFactQuestion[] = ['declaredStage', 'permitDate', 'plotUtilisation', 'hasElevator', 'hasCentralHeating'];
+const ORDER: readonly BuildingFactQuestion[] = [
+  'declaredStage',
+  'permitDate',
+  'plotUtilisation',
+  'hasElevator',
+  'hasCentralHeating',
+  'basementStorageEntrance',
+];
 
 export interface BuildingQuestion {
   readonly fact: BuildingFactQuestion;
-  /** Πόσες μονάδες περιμένουν **αυτή** την απάντηση. */
-  readonly units: number;
+  /** Πόσα ακίνητα (μονάδες ή χώροι) περιμένουν **αυτή** την απάντηση. */
+  readonly items: number;
+}
+
+/**
+ * **Ένα ακίνητο του πίνακα, όπως το βλέπει η ερώτηση** — η αποτίμησή του, και ποιο γεγονός του κτιρίου κλείνει την
+ * ανοιχτή του **θέση** (ADR-898 §19). Η θέση δεν έχει ένα γεγονός για όλους: την κλείνει το κτίριο **μόνο** για αποθήκη
+ * υπογείου· θέση στάθμευσης ή αποθήκη με άγνωστο όροφο ⇒ `null` (ερώτηση του **χώρου**, όχι του κτιρίου).
+ */
+export interface BuildingQuestionSubject {
+  readonly value: BuildingUnitObjectiveValue;
+  readonly positionFact: BuildingFactQuestion | null;
 }
 
 /** Τα κενά μιας μονάδας, όπως τα είπε η μηχανή. */
@@ -47,24 +64,24 @@ function gapsOf(value: BuildingUnitObjectiveValue): readonly (ObjectiveValueMiss
   return [];
 }
 
-function factsOf(value: BuildingUnitObjectiveValue): ReadonlySet<BuildingFactQuestion> {
+function factsOf({ value, positionFact }: BuildingQuestionSubject): ReadonlySet<BuildingFactQuestion> {
   const facts = new Set<BuildingFactQuestion>();
   for (const gap of gapsOf(value)) {
-    const fact = FACT_OF[gap];
-    if (fact !== undefined) facts.add(fact);
+    const fact = gap === 'position' ? positionFact : FACT_OF[gap];
+    if (fact !== undefined && fact !== null) facts.add(fact);
   }
   return facts;
 }
 
-/** Οι ερωτήσεις του κτιρίου με τουλάχιστον μία μονάδα σε αναμονή — με τη σειρά που ξεκλειδώνουν. */
-export function buildingQuestionsOf(values: readonly BuildingUnitObjectiveValue[]): readonly BuildingQuestion[] {
+/** Οι ερωτήσεις του κτιρίου με τουλάχιστον ένα ακίνητο σε αναμονή — με τη σειρά που ξεκλειδώνουν. */
+export function buildingQuestionsOf(subjects: readonly BuildingQuestionSubject[]): readonly BuildingQuestion[] {
   const counts = new Map<BuildingFactQuestion, number>();
-  for (const value of values) {
-    for (const fact of factsOf(value)) counts.set(fact, (counts.get(fact) ?? 0) + 1);
+  for (const subject of subjects) {
+    for (const fact of factsOf(subject)) counts.set(fact, (counts.get(fact) ?? 0) + 1);
   }
   return ORDER.flatMap((fact) => {
-    const units = counts.get(fact) ?? 0;
-    return units > 0 ? [{ fact, units }] : [];
+    const items = counts.get(fact) ?? 0;
+    return items > 0 ? [{ fact, items }] : [];
   });
 }
 
@@ -108,6 +125,7 @@ const CLEARED: Readonly<Record<BuildingFactQuestion, BuildingObjectiveValuePatch
   plotUtilisation: { plotUtilisation: null },
   hasElevator: { hasElevator: null },
   hasCentralHeating: { hasCentralHeating: null },
+  basementStorageEntrance: { basementStorageEntrance: null },
 };
 
 export function clearedBuildingFactPatch(fact: BuildingFactQuestion): BuildingObjectiveValuePatch {

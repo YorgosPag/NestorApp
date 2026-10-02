@@ -42,6 +42,7 @@ import {
   LINK_REGISTRY,
   type LinkEntityParams,
   type LinkEntityResult,
+  type LinkRegistryEntry,
   type LinkCascadeType,
 } from './entity-linking.types';
 
@@ -61,7 +62,7 @@ function dispatchCascade(
   collection: string,
   entityId: string,
   newLinkValue: string | null
-): void {
+): Promise<void> {
   let cascadePromise: Promise<CascadeResult>;
 
   switch (cascadeType) {
@@ -81,17 +82,74 @@ function dispatchCascade(
       // TypeScript exhaustiveness guard
       const exhaustive: never = cascadeType;
       logger.warn('linkEntity: unhandled cascadeType, cascade skipped', { cascadeType: exhaustive });
-      return;
+      return Promise.resolve();
     }
   }
 
-  cascadePromise.catch((err) => {
-    logger.warn('linkEntity: cascade failed (non-blocking)', {
-      cascadeType,
-      entityId,
-      error: getErrorMessage(err),
-    });
-  });
+  // Ποτέ δεν απορρίπτεται: ο καλών αποφασίζει αν θα περιμένει (μετάπτωση) ή όχι (PATCH).
+  return cascadePromise.then(
+    () => undefined,
+    (err) => {
+      logger.warn('linkEntity: cascade failed (non-blocking)', {
+        cascadeType,
+        entityId,
+        error: getErrorMessage(err),
+      });
+    },
+  );
+}
+
+// =============================================================================
+// SHARED: the consequences of a link change that is ALREADY written
+// =============================================================================
+
+/** Μια αλλαγή δεσμού που **γράφτηκε ήδη** — ποιος, πού, από τι σε τι. */
+export interface WrittenLinkChange {
+  readonly entityId: string;
+  readonly existingDoc: Readonly<Record<string, unknown>>;
+  readonly oldValue: string | null;
+  readonly newValue: string | null;
+  readonly performedBy: string;
+  readonly performedByName: string | null;
+  readonly companyId: string;
+}
+
+/**
+ * Βήματα 4 + 5 του `linkEntity`: cascade + ίχνος οντότητας. Η υπόσχεση **ποτέ δεν απορρίπτεται** — το PATCH δεν την
+ * περιμένει (fire-and-forget, N.7.2 #6), η μετάπτωση την περιμένει (αλλιώς το `process.exit` θα έκοβε το ίχνος).
+ */
+async function applyLinkConsequences(entry: LinkRegistryEntry, change: WrittenLinkChange): Promise<void> {
+  const cascade = dispatchCascade(entry.cascadeType, entry.collection, change.entityId, change.newValue);
+  if (entry.skipAudit) return cascade;
+  const audit = EntityAuditService.recordChange({
+    entityType: entry.auditEntityType,
+    entityId: change.entityId,
+    entityName: (change.existingDoc.name as string) ?? (change.existingDoc.number as string) ?? null,
+    action: change.newValue !== null ? 'linked' : 'unlinked',
+    changes: [{ field: entry.linkField, oldValue: change.oldValue, newValue: change.newValue, label: entry.linkField }],
+    performedBy: change.performedBy,
+    performedByName: change.performedByName,
+    companyId: change.companyId,
+  }).then(
+    () => undefined,
+    () => {
+      /* audit failure never blocks the response */
+    },
+  );
+  await Promise.all([cascade, audit]);
+}
+
+/**
+ * **Οι συνέπειες μιας αλλαγής δεσμού που γράφτηκε ΕΚΤΟΣ αιτήματος χρήστη** (ADR-898 §21: η εφάπαξ μετάπτωση των
+ * χώρων χωρίς κτίριο) — ο ΙΔΙΟΣ cascade και το ΙΔΙΟ ίχνος με το `linkEntity`, χωρίς έλεγχο κλειδώματος και χωρίς
+ * `logAuditEvent` (δεν υπάρχει αίτημα API να καταγραφεί).
+ * @throws ApiError(404) if registryKey is not in LINK_REGISTRY
+ */
+export async function recordLinkChange(registryKey: string, change: WrittenLinkChange): Promise<void> {
+  const entry = LINK_REGISTRY[registryKey];
+  if (!entry) throw new ApiError(404, `recordLinkChange: unknown registry key '${registryKey}'`);
+  if (change.oldValue === change.newValue) return;
+  await applyLinkConsequences(entry, change);
 }
 
 // =============================================================================
@@ -154,7 +212,9 @@ export async function linkEntity(
   }
 
   // --- Step 3: Field locking check ---
-  if (entry.lockedStatuses !== null && entry.lockedStatusField !== null) {
+  // ADR-898 §21 — **τοποθέτηση ≠ μετακίνηση**: από το κενό (`oldValue === null`) ο χώρος δεν φεύγει από πουθενά, άρα
+  // ο πωλημένος χώρος χωρίς κτίριο ΤΟΠΟΘΕΤΕΙΤΑΙ (αλλιώς η επιδιόρθωση ενός κλικ δεν θα έβγαζε ποτέ cascade/ίχνος).
+  if (oldValue !== null && entry.lockedStatuses !== null && entry.lockedStatusField !== null) {
     const currentStatus = (existingDoc[entry.lockedStatusField] as string) ?? null;
     if (currentStatus !== null && entry.lockedStatuses.includes(currentStatus)) {
       const entityType = registryKey.split(':')[0];
@@ -196,35 +256,16 @@ export async function linkEntity(
     }
   }
 
-  // --- Step 4: Cascade dispatch (fire-and-forget) ---
-  dispatchCascade(entry.cascadeType, entry.collection, entityId, normalizedNew);
-
-  // --- Step 5: Entity audit (link-level change) ---
-  if (!entry.skipAudit) {
-    const action = normalizedNew !== null ? 'linked' : 'unlinked';
-    EntityAuditService.recordChange({
-      entityType: entry.auditEntityType,
-      entityId,
-      entityName:
-        (existingDoc.name as string) ??
-        (existingDoc.number as string) ??
-        null,
-      action,
-      changes: [
-        {
-          field: entry.linkField,
-          oldValue: oldValue ?? null,
-          newValue: normalizedNew ?? null,
-          label: entry.linkField,
-        },
-      ],
-      performedBy: auth.uid,
-      performedByName: auth.email ?? null,
-      companyId: auth.companyId,
-    }).catch(() => {
-      /* fire-and-forget — audit failure never blocks the response */
-    });
-  }
+  // --- Steps 4 + 5: Cascade dispatch + entity audit (fire-and-forget) ---
+  void applyLinkConsequences(entry, {
+    entityId,
+    existingDoc,
+    oldValue,
+    newValue: normalizedNew,
+    performedBy: auth.uid,
+    performedByName: auth.email ?? null,
+    companyId: auth.companyId,
+  });
 
   // --- Step 6: Auth audit (backward compat) ---
   const entityType = registryKey.split(':')[0];
@@ -259,42 +300,65 @@ export async function linkEntity(
 // PUBLIC: validateLinkedSpacesUniqueness() — ADR-247 F-1
 // =============================================================================
 
+/** Πού ψάχνει η μοναδικότητα: το **έργο** της μονάδας· χωρίς έργο, το κτίριό της. */
+export interface LinkedSpacesUniquenessScope {
+  readonly projectId: string | null;
+  readonly buildingId: string | null;
+}
+
 /**
  * ADR-247 F-1: Validates that no spaceId in linkedSpaces is already linked to another unit.
- * Building-scoped query — max ~50 units per building, safe performance.
+ *
+ * 🔑 **Εμβέλεια = ΕΡΓΟ** (ADR-898 §20, θέση ≠ ανάθεση): ένας χώρος μπορεί να βρίσκεται σε άλλο κτίριο από τη μονάδα
+ * που τον έχει. Με εμβέλεια κτιρίου η Π-5 του Β δινόταν **και** στο Α3 **και** στο Β2 χωρίς 409 — δύο κάτοχοι.
+ * Χωρίς έργο ⇒ εμβέλεια κτιρίου (ό,τι ίσχυε). Χωρίς κανένα από τα δύο ⇒ τίποτα να ελεγχθεί.
  *
  * @throws ApiError(409) if duplicate linkage detected
  */
 export async function validateLinkedSpacesUniqueness(
   db: FirebaseFirestore.Firestore,
-  buildingId: string,
+  scope: LinkedSpacesUniquenessScope,
   currentUnitId: string,
   proposedSpaces: ReadonlyArray<{ spaceId: string }>
 ): Promise<void> {
   const spaceIds = new Set(proposedSpaces.map((s) => s.spaceId));
   if (spaceIds.size === 0) return;
+  // Οποιαδήποτε ΑΛΛΗ μονάδα τον έχει ⇒ 409 — ακόμη κι αν η τρέχουσα τον έχει κι αυτή (υπάρχον διπλό δεν «περνά»).
+  const others = await linkedSpaceOwnersInScope(db, scope, spaceIds, currentUnitId);
+  const [conflict] = others;
+  if (conflict !== undefined) {
+    const [spaceId, unitId] = conflict;
+    throw new ApiError(409, `Space ${spaceId} is already linked to property ${unitId}`);
+  }
+}
 
-  // Query all units in the same building (typically ≤50)
-  const snapshot = await db
-    .collection(COLLECTIONS.PROPERTIES)
-    .where(FIELDS.BUILDING_ID, '==', buildingId)
-    .select('linkedSpaces')
-    .get();
+/**
+ * **Ποια μονάδα έχει αυτούς τους χώρους** στο έργο (ή στο κτίριο, χωρίς έργο) — η ΜΙΑ σάρωση των `linkedSpaces`, κοινή
+ * για τη μοναδικότητα (ADR-247) και τον φρουρό αποσύνδεσης χώρου από κτίριο (ADR-898 §20). Ντετερμινιστικά: σε
+ * (απαγορευμένη) διπλή σύνδεση νικά η μικρότερη ταυτότητα μονάδας — ίδιος κανόνας με το `spaceOwnersOf`.
+ */
+export async function linkedSpaceOwnersInScope(
+  db: FirebaseFirestore.Firestore,
+  scope: LinkedSpacesUniquenessScope,
+  spaceIds: ReadonlySet<string>,
+  /** Η μονάδα που δεν μετρά ως κάτοχος (αυτή που γράφει τώρα τους χώρους της). */
+  exceptUnitId?: string,
+): Promise<ReadonlyMap<string, string>> {
+  const owners = new Map<string, string>();
+  const field: string = scope.projectId ? FIELDS.PROJECT_ID : FIELDS.BUILDING_ID;
+  const value = scope.projectId ?? scope.buildingId;
+  if (!value || spaceIds.size === 0) return owners;
 
-  for (const propertyDoc of snapshot.docs) {
-    if (propertyDoc.id === currentUnitId) continue;
-
-    const linkedSpaces = propertyDoc.data().linkedSpaces as
-      | Array<{ spaceId: string }> | undefined;
+  const snapshot = await db.collection(COLLECTIONS.PROPERTIES).where(field, '==', value).select('linkedSpaces').get();
+  const docs = snapshot.docs.filter((doc) => doc.id !== exceptUnitId).sort((a, b) => a.id.localeCompare(b.id));
+  for (const propertyDoc of docs) {
+    const linkedSpaces: unknown = propertyDoc.data().linkedSpaces;
     if (!Array.isArray(linkedSpaces)) continue;
-
-    for (const space of linkedSpaces) {
-      if (spaceIds.has(space.spaceId)) {
-        throw new ApiError(
-          409,
-          `Space ${space.spaceId} is already linked to property ${propertyDoc.id}`
-        );
+    for (const space of linkedSpaces as ReadonlyArray<{ spaceId?: unknown }>) {
+      if (typeof space?.spaceId === 'string' && spaceIds.has(space.spaceId) && !owners.has(space.spaceId)) {
+        owners.set(space.spaceId, propertyDoc.id);
       }
     }
   }
+  return owners;
 }

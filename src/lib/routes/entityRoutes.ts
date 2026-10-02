@@ -60,6 +60,13 @@ export const ENTITY_ROUTES = {
      */
     create: withQuery('/spaces/properties', 'new=1'),
   },
+  /**
+   * Η καρτέλα ενός κτιρίου. Το `/buildings/:id` υπάρχει μόνο ως ανακατεύθυνση **προς αυτό** (ADR-875 §11) — ο
+   * σύνδεσμος πάει κατευθείαν, χωρίς δεύτερο ταξίδι. Χρήση: «Π-5 · σε άλλο κτίριο (Β)» (ADR-898 §20).
+   */
+  buildings: {
+    withId: (id: string) => withQuery('/buildings', `buildingId=${encodeURIComponent(id)}`),
+  },
   spaces: {
     parking: (id: string) => withQuery('/spaces/parking', `parkingId=${id}`),
     storage: (id: string) => withQuery('/spaces/storage', `storageId=${id}`),

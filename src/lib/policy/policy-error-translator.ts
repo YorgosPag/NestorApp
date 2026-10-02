@@ -47,6 +47,7 @@ const CODE_TO_I18N_KEY: Record<PolicyErrorCode, string> = {
   [POLICY_ERROR_CODES.MULTILEVEL_FLOOR_MISMATCH]: 'policyErrors.multilevelFloorMismatch',
   [POLICY_ERROR_CODES.STANDALONE_WITH_BUILDING]: 'policyErrors.standaloneWithBuilding',
   [POLICY_ERROR_CODES.DUPLICATE_CODE]: 'policyErrors.duplicateCode',
+  [POLICY_ERROR_CODES.SPACE_LINKED_TO_UNIT]: 'policyErrors.spaceLinkedToUnit',
 };
 
 /**
@@ -71,6 +72,18 @@ export function translatePolicyError(
   // i18n libraries sometimes return the key itself when missing — treat that
   // as "missing" and fall back to the raw server message.
   return translated && translated !== key ? translated : fallback;
+}
+
+/**
+ * Το μήνυμα ενός σφάλματος mutation **όταν** είναι γνωστή άρνηση πολιτικής (ο server έστειλε `errorCode` του μητρώου) —
+ * αλλιώς `null`, και ο καλών δείχνει το δικό του γενικό μήνυμα. Duck-typed στο `errorCode` ώστε το αρχείο να μένει
+ * ουδέτερο (κανένα import του HTTP client).
+ */
+export function policyErrorMessageOf(error: unknown, t: TranslatorFn): string | null {
+  const code = typeof error === 'object' && error !== null && 'errorCode' in error ? error.errorCode : undefined;
+  if (typeof code !== 'string' || !isKnownPolicyErrorCode(code)) return null;
+  const message = translatePolicyError(code, t, '');
+  return message === '' ? null : message;
 }
 
 /** Type guard: is this a known policy error code? */

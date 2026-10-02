@@ -73,6 +73,12 @@ function Assumptions({ value, voice }: { readonly value: Value; readonly voice: 
         });
       case 'areaWithoutCommon':
         return t(`${L}.assumptions.areaWithoutCommon`);
+      // Οι υποθέσεις του χώρου (θέση · αποθήκη) — μόνο στον πίνακα του κτιρίου (ADR-898 §19).
+      case 'parkingDefaultArea':
+      case 'storageNotCounted':
+        return t(`${NS}:building.assumptions.${assumption.kind}`);
+      case 'quantityDeclared':
+        return t(`${NS}:building.assumptions.quantityDeclared`, { quantity: assumption.quantity });
     }
   };
   return (

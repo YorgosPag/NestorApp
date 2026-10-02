@@ -28,6 +28,7 @@ import { useSpaceAvailabilityOptions } from '@/components/shared/unit-status/use
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceViewSwitch } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { BuildingSpaceRelationsPanel } from '../shared/BuildingSpaceRelationsPanel';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -220,6 +221,9 @@ export function ParkingTabContent({ building }: { building: Building }) {
           </footer>
         </>
       )}
+
+      {/* ADR-898 §20 — παρακολουθήματα σε άλλο κτίριο (αναφορές) · χωρίς κτίριο (επιδιόρθωση ενός κλικ) */}
+      <BuildingSpaceRelationsPanel buildingId={building.id} kind="parking" onPlace={state.handleLinkParking} />
 
       {/* Link Existing Dialog */}
       <BuildingSpaceLinkDialog

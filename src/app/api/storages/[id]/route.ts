@@ -19,6 +19,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { requireStorageInTenant } from '@/lib/auth/tenant-isolation';
 import { createSpaceEntityRoutes } from '@/lib/api/space-entity-route';
 import { SPACE_COMMON_UPDATE_FIELDS } from '@/lib/api/space-entity-fields';
+import { SPACE_OBJECTIVE_VALUE_POSITION_FIELD } from '@/lib/objective-value/building-space-objective-value';
+import { STORAGE_POSITIONS } from '@/lib/objective-value/objective-value-types';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -26,6 +28,8 @@ const logger = createModuleLogger('StoragesIdRoute');
 const UpdateStorageSchema = z.object({
   name: z.string().max(200).optional(),
   floorId: z.string().max(128).nullable().optional(),
+  /** ADR-898 §19 — η θέση κατά την ΠΟΛ.1149/1994 (άρθ. 6 §4), όταν τη δηλώνει ο άνθρωπος· `null` = «σβήσε». */
+  [SPACE_OBJECTIVE_VALUE_POSITION_FIELD]: z.enum(STORAGE_POSITIONS).nullable().optional(),
   ...SPACE_COMMON_UPDATE_FIELDS,
 }).passthrough();
 
@@ -42,10 +46,14 @@ export const { PATCH, DELETE, GET } = createSpaceEntityRoutes<UpdateStorageBody>
   requireInTenant: ({ ctx, id, path }) => requireStorageInTenant({ ctx, storageId: id, path }),
   updateSchema: UpdateStorageSchema,
 
-  /** Storage-only field — the shared mapper covers the rest. */
-  mapExtraFields: (body) => (
-    body.floorId !== undefined ? { floorId: body.floorId || null } : {}
-  ),
+  /** Storage-only fields — the shared mapper covers the rest. */
+  mapExtraFields: (body) => {
+    const extra: Record<string, unknown> = {};
+    if (body.floorId !== undefined) extra.floorId = body.floorId || null;
+    const position = body[SPACE_OBJECTIVE_VALUE_POSITION_FIELD];
+    if (position !== undefined) extra[SPACE_OBJECTIVE_VALUE_POSITION_FIELD] = position;
+    return extra;
+  },
 
   messages: {
     idRequired: 'Storage ID is required',

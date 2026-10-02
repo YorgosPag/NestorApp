@@ -14,7 +14,7 @@ import React, { useCallback, useId, useMemo, useState } from 'react';
 
 import { useObjectiveValueFactorLabel } from '@/components/objective-value/ObjectiveValueResult';
 import { marketDayOf } from '@/lib/listings/listing-stats';
-import type { BuildingObjectiveValues, BuildingUnitObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
+import type { BuildingObjectiveValues, BuildingObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
 
 import { BuildingSpaceTabError, BuildingSpaceTabLoading } from '../../shared/BuildingSpaceTabStatus';
 import { BuildingSpaceTable } from '../../shared/BuildingSpaceTable';
@@ -43,9 +43,9 @@ export interface BuildingObjectiveValueTabProps {
 
 /** Η επιλεγμένη μονάδα και αν είναι ανοιχτό το συρτάρι — χωριστά, ώστε το κλείσιμο να μην αδειάζει το περιεχόμενο. */
 function useUnitSheet() {
-  const [row, setRow] = useState<BuildingUnitObjectiveValueRow | null>(null);
+  const [row, setRow] = useState<BuildingObjectiveValueRow | null>(null);
   const [open, setOpen] = useState(false);
-  const show = useCallback((next: BuildingUnitObjectiveValueRow) => {
+  const show = useCallback((next: BuildingObjectiveValueRow) => {
     setRow(next);
     setOpen(true);
   }, []);
@@ -56,7 +56,7 @@ function useUnitSheet() {
 interface ExportInput {
   readonly data: BuildingObjectiveValues;
   readonly buildingName: string;
-  readonly columns: readonly SpaceColumn<BuildingUnitObjectiveValueRow>[];
+  readonly columns: readonly SpaceColumn<BuildingObjectiveValueRow>[];
   readonly sort: SortState | null;
   readonly labels: BuildingObjectiveValueLabels;
 }
@@ -80,7 +80,7 @@ interface ReadyProps {
 function Ready({ data, buildingName, refreshing, state, labels, onNavigateToTab }: ReadyProps) {
   const sheet = useUnitSheet();
   const [sort, setSort] = useState<SortState | null>(BY_FLOOR);
-  const columns = useMemo(() => buildingObjectiveValueColumns(labels, sheet.show), [labels, sheet.show]);
+  const columns = useMemo(() => buildingObjectiveValueColumns(labels, data.rows, sheet.show), [labels, data.rows, sheet.show]);
   const { t } = labels;
   const exportInput: ExportInput = { data, buildingName, columns, sort, labels };
   return (
@@ -99,16 +99,17 @@ function Ready({ data, buildingName, refreshing, state, labels, onNavigateToTab 
           questions={data.questions}
           save={state.save}
           today={data.valuationDate}
+          asksStorageEntrance={data.rows.some((row) => row.kind === 'storage') || state.facts.basementStorageEntrance !== null}
           onOpenSchedule={onNavigateToTab ? () => onNavigateToTab('timeline') : undefined}
         />
       )}
-      {data.units.length === 0 ? (
+      {data.rows.length === 0 ? (
         <p className="m-0 text-sm text-muted-foreground">{t(`${B}.empty`)}</p>
       ) : (
-        <BuildingSpaceTable items={[...data.units]} columns={columns} getKey={(row) => row.id} initialSort={BY_FLOOR} onSortChange={setSort} />
+        <BuildingSpaceTable items={[...data.rows]} columns={columns} getKey={(row) => row.id} initialSort={BY_FLOOR} onSortChange={setSort} />
       )}
       <p className="m-0 text-xs text-muted-foreground">{t('objective-value:result.disclaimer')}</p>
-      <BuildingUnitObjectiveValueSheet row={sheet.row} open={sheet.open} labels={labels} onClose={sheet.close} />
+      <BuildingUnitObjectiveValueSheet row={sheet.row} rows={data.rows} references={data.references} open={sheet.open} labels={labels} onOpen={sheet.show} onClose={sheet.close} />
     </>
   );
 }

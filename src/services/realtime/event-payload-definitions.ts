@@ -705,6 +705,8 @@ export interface ParkingUpdatedPayload {
     area?: number;
     price?: number;
     buildingId?: string | null;
+    /** ADR-898 §19 — η θέση κατά την αντικειμενική (`null` = σβήστηκε η απάντηση). */
+    objectiveValuePosition?: string | null;
   };
   timestamp: number;
 }
@@ -749,6 +751,8 @@ export interface StorageUpdatedPayload {
     floor?: string;
     area?: number;
     buildingId?: string | null;
+    /** ADR-898 §19 — η θέση κατά την αντικειμενική (`null` = σβήστηκε η απάντηση). */
+    objectiveValuePosition?: string | null;
   };
   timestamp: number;
 }

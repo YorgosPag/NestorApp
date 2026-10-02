@@ -12,7 +12,7 @@
  * @see src/components/shared/ConflictDialog.tsx (UI)
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 // ============================================
 // DOCUMENT MIXIN
@@ -79,7 +79,21 @@ export interface VersionCheckOptions {
   updates: Record<string, unknown>;
   /** Authenticated user ID */
   userId: string;
+  /**
+   * Εγγραφές **άλλων** εγγράφων που ανήκουν στην ΙΔΙΑ πράξη — στην ΙΔΙΑ συναλλαγή (ADR-898 §21: ο χώρος που δίνεται
+   * σε μονάδα παίρνει το κτίριό της μαζί με τη σύνδεση, ποτέ «μετά»). Ξανατρέχει σε κάθε επανάληψη της συναλλαγής.
+   */
+  companion?: VersionedCompanion;
 }
+
+/**
+ * Βήμα-συνοδός της συναλλαγής. Το Firestore θέλει **όλες τις αναγνώσεις πριν από κάθε εγγραφή**: το `read` διαβάζει
+ * (μετά τον έλεγχο έκδοσης, πριν την εγγραφή του κύριου εγγράφου) και επιστρέφει το `write`, που τρέχει αμέσως μετά.
+ */
+export type VersionedCompanion = (
+  transaction: Transaction,
+  before: Readonly<Record<string, unknown>>,
+) => Promise<(transaction: Transaction) => void>;
 
 /**
  * Successful result from `withVersionCheck()`.

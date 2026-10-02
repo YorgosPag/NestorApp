@@ -16,7 +16,7 @@
 import type { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionId } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { withRateLimit, type RateLimitCategory } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 
 /** Ο τύπος του Admin Firestore, χωρίς να σέρνει κανείς εξάρτηση από το firebase-admin. */
@@ -40,12 +40,15 @@ export function runGuarded<T>(
   request: NextRequest,
   permissions: PermissionId,
   handler: (args: GuardedRouteArgs) => Promise<NextResponse<T>>,
+  /** Η βαθμίδα ορίου (ADR-855): η προεπιλογή είναι η ιστορική `STANDARD` — ο καλών τη δηλώνει όταν θέλει να φαίνεται. */
+  category: RateLimitCategory = 'STANDARD',
 ): Promise<Response> | Response {
-  const guarded = withStandardRateLimit(
+  const guarded = withRateLimit(
     withAuth<T>(async (req: NextRequest, ctx: AuthContext) =>
       handler({ req, ctx, adminDb: requireAdminFirestore() }),
       { permissions },
     ),
+    { category },
   );
 
   return guarded(request);

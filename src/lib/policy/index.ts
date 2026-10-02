@@ -13,6 +13,7 @@ export {
 export {
   translatePolicyError,
   isKnownPolicyErrorCode,
+  policyErrorMessageOf,
   type TranslatorFn,
 } from './policy-error-translator';
 export {
