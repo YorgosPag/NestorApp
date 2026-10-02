@@ -13,10 +13,11 @@
  */
 
 import exifr from 'exifr';
-import sharp from 'sharp';
 
 import { degToRad } from '@/lib/geometry/angle';
+import { isPortraitDimensions } from '@/lib/images/image-dimensions';
 import { horizontalFovFromExif } from '@/lib/listings/photo-capture-spot';
+import { readImageDimensions } from '@/server/images/image-metadata';
 
 export type CompassReference = 'true' | 'magnetic';
 
@@ -29,18 +30,15 @@ export interface PhotoCaptureFacts {
 
 const NO_FACTS: PhotoCaptureFacts = { fovRad: null, compass: null };
 const EXIF_TAGS = ['FocalLengthIn35mmFormat', 'GPSImgDirection', 'GPSImgDirectionRef'];
-/** EXIF `Orientation` 5–8 = η εικόνα αποθηκεύτηκε **στραμμένη κατά 90°** — πλάτος και ύψος ανταλλάσσονται για τον θεατή. */
-const ROTATED_ORIENTATIONS = new Set([5, 6, 7, 8]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** Όρθια **όπως τη βλέπει ο θεατής** — οι διαστάσεις του αρχείου, ανταλλαγμένες όταν το EXIF λέει περιστροφή 90°. */
+/** Όρθια **όπως τη βλέπει ο θεατής** — από το ΕΝΑ SSoT διαστάσεων (μετά τον προσανατολισμό EXIF, ADR-899 §3.7). */
 async function isPortrait(bytes: Buffer): Promise<boolean | null> {
-  const { width, height, orientation } = await sharp(bytes).metadata();
-  if (width === undefined || height === undefined) return null;
-  return ROTATED_ORIENTATIONS.has(orientation ?? 1) ? width > height : height > width;
+  const dimensions = await readImageDimensions(bytes);
+  return dimensions === null ? null : isPortraitDimensions(dimensions);
 }
 
 function compassOf(tags: Record<string, unknown>): PhotoCaptureFacts['compass'] {

@@ -23,6 +23,7 @@ import 'server-only';
 
 import type { Bucket } from '@google-cloud/storage';
 
+import { imageDimensionsFromMetadata, type ImageDimensions } from '@/lib/images/image-dimensions';
 
 export interface StorageObjectRange {
   readonly start: number;
@@ -191,6 +192,11 @@ export type StorageObjectStat =
       readonly generation: string;
       readonly contentType: string;
       readonly size: number | null;
+      /**
+       * Οι διαστάσεις θεατή **αυτής** της γενιάς, από το custom metadata που γράφει ο trigger του ανεβάσματος
+       * (ADR-899 §3.7) — δωρεάν, έρχονται με την ίδια κλήση. `null` = δεν μετρήθηκε ακόμη.
+       */
+      readonly dimensions: ImageDimensions | null;
     }
   | { readonly kind: 'absent' };
 
@@ -206,6 +212,7 @@ export async function statStorageObject(path: string, options: { readonly bucket
       generation: String(metadata.generation),
       contentType: (metadata.contentType as string | undefined) ?? 'application/octet-stream',
       size: sizeOf(metadata.size),
+      dimensions: imageDimensionsFromMetadata(metadata.metadata),
     };
   } catch (error) {
     if (isNotFound(error)) return { kind: 'absent' };
@@ -220,17 +227,42 @@ export async function statStorageObject(path: string, options: { readonly bucket
  * Αν ανάμεσα στις δύο κλήσεις κάποιος ξαναγράψει το όνομα, μια ανάγνωση «του τρέχοντος» θα
  * έδινε **νέα bytes κάτω από παλιό ETag** — παράγωγο που ο browser θα κρατούσε ως σωστό. Με
  * καρφωμένη γενιά η ίδια σύγκρουση δίνει απουσία: ο συναγωνισμός γίνεται **αδύνατος**, όχι σπάνιος.
+ * 📐 `range` (ADR-899 §3.7): μόνο τα bytes `[start, end]` — η κεφαλίδα για μέτρηση διαστάσεων, όχι 8 MB φωτογραφίας.
  */
 export async function readStorageObjectGeneration(
   path: string,
   generation: string,
-  options: { readonly bucket: Bucket },
+  options: { readonly bucket: Bucket; readonly range?: StorageObjectRange },
 ): Promise<Buffer | null> {
   try {
-    const [bytes] = await options.bucket.file(path, { generation }).download();
+    const [bytes] = await options.bucket.file(path, { generation }).download(options.range ?? {});
     return bytes;
   } catch (error) {
     if (isNotFound(error)) return null;
+    throw error;
+  }
+}
+
+/** Η έκβαση μιας γραφής metadata δεμένης σε γενιά. */
+export type StorageMetadataWrite = 'written' | 'generation-changed';
+
+/**
+ * **Custom metadata ΜΟΝΟ αν η γενιά είναι ακόμη αυτή** (`ifGenerationMatch`, ADR-899 §3.7). Αλλαγή metadata = νέα
+ * *metageneration*, όχι γενιά ⇒ ETag παραγώγων άθικτο. Overwrite/διαγραφή στο μεταξύ ⇒ `generation-changed`: η μέτρηση
+ * περιγράφει bytes που δεν υπάρχουν πια, και **δεν** γράφεται.
+ */
+export async function writeStorageObjectMetadataIfGeneration(
+  path: string,
+  generation: string,
+  metadata: Readonly<Record<string, string>>,
+  options: { readonly bucket: Bucket },
+): Promise<StorageMetadataWrite> {
+  try {
+    await options.bucket.file(path).setMetadata({ metadata }, { ifGenerationMatch: generation });
+    return 'written';
+  } catch (error) {
+    const code = (error as { code?: number }).code;
+    if (code === 412 || code === 404) return 'generation-changed';
     throw error;
   }
 }

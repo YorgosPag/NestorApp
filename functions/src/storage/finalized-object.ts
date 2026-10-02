@@ -27,6 +27,10 @@ export interface RawFinalizedObject {
   readonly name?: string;
   readonly contentType?: string;
   readonly size?: string | number;
+  /** Η γενιά GCS — το gen1 τη δίνει string, το gen2 επίσης· κρατιέται **string** (19ψήφιες γενιές > 2^53). */
+  readonly generation?: string | number;
+  /** Custom metadata του αντικειμένου (π.χ. οι διαστάσεις του ADR-899 §3.7). */
+  readonly metadata?: Readonly<Record<string, string>> | null;
 }
 
 export interface FinalizedObject {
@@ -36,6 +40,9 @@ export interface FinalizedObject {
   readonly contentType: string | null;
   /** Bytes, αριθμός — ένα σχήμα στη βάση ανεξάρτητα από γενιά. */
   readonly size: number | null;
+  /** Η γενιά που **αυτό** το γεγονός περιγράφει — κάθε ανάγνωση/γραφή που αφορά τα bytes καρφώνεται σε αυτήν. */
+  readonly generation: string | null;
+  readonly metadata: Readonly<Record<string, string>>;
 }
 
 function sizeOf(raw: string | number | undefined): number | null {
@@ -59,5 +66,7 @@ export function finalizedObjectOf(raw: RawFinalizedObject, names: FileStorageBuc
     name: raw.name ?? null,
     contentType: raw.contentType ?? null,
     size: sizeOf(raw.size),
+    generation: raw.generation === undefined ? null : String(raw.generation),
+    metadata: raw.metadata ?? {},
   };
 }

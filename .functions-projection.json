@@ -9,12 +9,15 @@
     "lib/files/file-companion-objects.ts",
     "lib/files/file-storage-placement.ts",
     "lib/idempotency/event-claim.ts",
+    "lib/images/image-dimensions.ts",
+    "lib/images/stored-image-dimensions.ts",
     "lib/search/search-index-version.ts",
     "lib/search/search.ts",
     "services/enterprise-id-deterministic.ts",
     "types/search-core.ts"
   ],
   "constants": [
+    { "module": "config/domain-constants.ts", "export": "STORAGE_PATH_SEGMENTS" },
     { "module": "config/firestore-collections.ts", "export": "COLLECTIONS" },
     { "module": "services/enterprise-id-prefixes.ts", "export": "ENTERPRISE_ID_PREFIXES" }
   ]

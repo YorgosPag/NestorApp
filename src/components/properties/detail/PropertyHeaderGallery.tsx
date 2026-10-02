@@ -92,6 +92,9 @@ function useLightboxPhotos(photos: readonly PropertyPhoto[]): readonly LightboxP
     src: photo.preview?.src ?? photo.url,
     srcSet: photo.preview?.srcSet,
     alt: photoAlt(t, photo, index, photos.length),
+    // Μετρημένες μόνο (ADR-899 §3.7) — το lightbox υπολογίζει από αυτές πόσο φαρδιά ζωγραφίζεται μια κάθετη λήψη.
+    width: photo.dimensions?.width,
+    height: photo.dimensions?.height,
   })), [photos, t]);
 }
 

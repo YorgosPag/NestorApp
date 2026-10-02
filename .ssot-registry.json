@@ -1095,6 +1095,20 @@
       "addedDate": "2026-10-02",
       "addedByAdr": "ADR-899"
     },
+    "image-dimensions": {
+      "ssotFile": "src/lib/images/image-dimensions.ts",
+      "description": "ADR-899 §3.7 — the viewer's image dimensions (after EXIF Orientation 5–8 swaps width/height) are answered ONLY by `orientedDimensions`/`imageDimensionsOf`/`isPortraitDimensions`. Hand-written quarter-turn sets (`[5, 6, 7, 8]`) or `orientation >= 5` comparisons existed in 3 places (photo-capture-facts, panorama-facts without rotation, dxf ImageProvider) and disagreed.",
+      "forbiddenPatterns": [
+        "\\[\\s*5\\s*,\\s*6\\s*,\\s*7\\s*,\\s*8\\s*\\]",
+        "\\borientation\\s*>=?\\s*[45]\\b"
+      ],
+      "allowlist": [
+        "src/lib/images/image-dimensions.ts"
+      ],
+      "tier": 3,
+      "addedDate": "2026-10-02",
+      "addedByAdr": "ADR-899"
+    },
     "file-download": {
       "ssotFile": "src/components/shared/files/hooks/useFileDownload.ts",
       "description": "User file downloads (FileRecord from Storage) must use useFileDownload hook — no window.open or inline anchor.download. Generated exports (PDF/CSV/Excel/ZIP/PNG/IFC/TXT) belong to the export-file module (Domain B).",

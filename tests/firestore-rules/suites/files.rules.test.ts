@@ -465,6 +465,63 @@ describe('files.rules — tenant_state_machine pattern', () => {
     });
   });
 
+  // --- ADR-899 §3.7 — οι ΜΕΤΡΗΜΕΝΕΣ διαστάσεις δεν γράφονται από πελάτη ------
+  //
+  // Ίδιο ιδίωμα και ίδιο πρόσωπο (`same_tenant_admin`) με το πάγωμα της δέσμευσης: κάθε `expectDeny` αποδίδεται
+  // ΜΟΝΟ στη ρήτρα `measuredUnchanged`/`measuredBornAbsent`. 🔴 Η οριστικοποίηση (pending → ready) ήταν η ανοιχτή
+  // πόρτα: χωρίς allowlist κλειδιών, ο πελάτης έγραφε ό,τι ήθελε μαζί με το `status`.
+  describe('measured freeze — οι διαστάσεις τις μετρά ο κάδος (ADR-899 §3.7)', () => {
+    const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
+    const MEASURED = { imageDimensions: { width: 3000, height: 4000 } } as const;
+    const FORGED = { imageDimensions: { width: 9999, height: 1 } } as const;
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    const UPDATE_LEGS = [
+      { leg: 'κάδος', seed: {}, base: { isDeleted: true } },
+      { leg: 'επαναφορά', seed: { isDeleted: true }, base: { isDeleted: false } },
+      { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
+      { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
+    ] as const;
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: γραφή/αλλαγή διαστάσεων ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
+      await seedFile(env, `measured-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `measured-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...MEASURED } });
+      await expectDeny(fileDoc(`measured-add-${index}`).update({ ...base, ...FORGED }));
+      await expectDeny(fileDoc(`measured-change-${index}`).update({ ...base, ...FORGED }));
+      await expectAllow(fileDoc(`measured-change-${index}`).update(base));
+    });
+
+    it('⛔ ΑΦΑΙΡΕΣΗ των διαστάσεων (ολόκληρο `set` χωρίς το κλειδί): ΑΡΝΗΣΗ', async () => {
+      await seedFile(env, 'measured-removed', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...MEASURED } });
+      let stored: Record<string, unknown> = {};
+      await withSeedContext(env, async (seedCtx) => {
+        stored = (await seedCtx.firestore().collection('files').doc('measured-removed').get()).data() ?? {};
+      });
+      const { imageDimensions: _dropped, ...withoutDimensions } = stored;
+      await expectDeny(fileDoc('measured-removed').set({ ...withoutDimensions, isDeleted: true }));
+      await expectAllow(fileDoc('measured-removed').set({ ...stored, isDeleted: true }));
+    });
+
+    it('⛔ γέννηση με διαστάσεις «από κούνια»: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
+      const born = (docId: string, extra: Record<string, unknown>) => fileDoc(docId).set({
+        fileName: `${docId}.jpg`,
+        mimeType: 'image/jpeg',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}.jpg`,
+        createdBy: ADMIN_UID,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        ...extra,
+      });
+      await expectDeny(born('born-measured', { ...FORGED }));
+      await expectAllow(born('born-plain', {}));
+    });
+  });
+
   // --- ADR-862 Φ0 (Β11) — Η ΑΝΑΓΝΩΣΗ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΚΑΤΑΣΤΑΣΗ -----------------
   //
   // 🔑 Εκτός μήτρας για τον ίδιο λόγο με το πάγωμα: ρωτά «ποιο ΦΙΛΤΡΟ / ποια ΦΑΣΗ»,

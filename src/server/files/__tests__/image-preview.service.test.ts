@@ -10,6 +10,9 @@
  * - Υ4: η αποτυχία μένει «κρατημένη» ⇒ το κλειδί νεκρώνει για όλη τη ζωή της διεργασίας.
  * - Υ5: απουσία/τύπος/μέγεθος δεν ονομάζονται ⇒ 500 αντί για 404/415/413.
  * - Υ6: ουρά χωρίς όριο ⇒ καμία οπισθοπίεση (busy).
+ * - Υ7 (ADR-899 §3.7, Π2): βαθμίδες πάνω από το πρωτότυπο ⇒ ΔΥΟ κλειδιά/κωδικοποιήσεις για ίδια bytes.
+ * - Υ8: χωρίς metadata, η μέτρηση του πρωτοτύπου που κατέβηκε δεν κανονικοποιεί ούτε απομνημονεύεται.
+ * - Υ9: η μνήμη διαστάσεων χάνει τη γενιά ⇒ νέα bytes με παλιές διαστάσεις.
  */
 
 jest.mock('server-only', () => ({}));
@@ -19,6 +22,7 @@ import type { Bucket } from '@google-cloud/storage';
 import { createBoundedLru } from '@/lib/cache/bounded-lru';
 import { createPriorityTaskQueue } from '@/lib/async/priority-task-queue';
 import type { StorageObjectStat } from '@/lib/storage/storage-object-stream';
+import type { ImageDimensions } from '@/lib/images/image-dimensions';
 
 import {
   createImagePreviewService,
@@ -35,6 +39,7 @@ const found = (generation: string, overrides: Partial<StorageObjectStat & { kind
   generation,
   contentType: 'image/jpeg',
   size: 1000,
+  dimensions: null,
   ...overrides,
 });
 
@@ -43,7 +48,9 @@ function harness(overrides: Partial<ImagePreviewDeps> = {}) {
     stat: jest.fn().mockResolvedValue(found('7')),
     read: jest.fn().mockResolvedValue(Buffer.from('ORIGINAL')),
     encode: jest.fn().mockImplementation(async (_bytes: Buffer, width: number) => Buffer.from(`webp-${width}`)),
+    measure: jest.fn().mockResolvedValue(null),
     cache: createBoundedLru<Buffer>({ maxWeight: 1024, weigh: (bytes) => bytes.length }),
+    dimensions: createBoundedLru<ImageDimensions>({ maxWeight: 16, weigh: () => 1 }),
     queue: createPriorityTaskQueue(2),
     maxQueued: 8,
     maxOriginalBytes: 5000,
@@ -127,6 +134,41 @@ describe('createImagePreviewService', () => {
     await expect(serve(request({ width: 1280 }))).resolves.toEqual({ kind: 'busy' });
     release();
     await expect(Promise.all([running, queued])).resolves.toHaveLength(2);
+  });
+
+  it('🔴 Υ7 metadata 1183 px: w=2560 και w=1280 ⇒ ΕΝΑ κλειδί, ΜΙΑ κωδικοποίηση στο 1280 · w=640 ανέγγιχτο', async () => {
+    const stat = jest.fn().mockResolvedValue(found('7', { dimensions: { width: 1183, height: 1600 } }));
+    const { deps, serve } = harness({ stat });
+    const big = await serve(request({ width: 2560 }));
+    const exact = await serve(request({ width: 1280 }));
+    expect(big.kind === 'image' && exact.kind === 'image' && big.etag === exact.etag).toBe(true);
+    expect(deps.encode).toHaveBeenCalledTimes(1);
+    expect(deps.encode).toHaveBeenCalledWith(expect.anything(), 1280);
+    await serve(request({ width: 640 }));
+    expect(deps.encode).toHaveBeenLastCalledWith(expect.anything(), 640);
+    expect(deps.measure).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Υ8 χωρίς metadata: μέτρηση των bytes που κατέβηκαν ⇒ κανονικό κλειδί, και από εκεί και πέρα 304/μνήμη', async () => {
+    const { deps, serve } = harness({ measure: jest.fn().mockResolvedValue({ width: 1183, height: 1600 }) });
+    const first = await serve(request({ width: 2560 }));
+    expect(deps.encode).toHaveBeenCalledWith(expect.anything(), 1280);
+    if (first.kind !== 'image') throw new Error(first.kind);
+    expect(first.etag).toBe(imagePreviewEtag('files-eu', PATH, '7', 1280));
+    expect(await serve(request({ width: 2560, ifNoneMatch: first.etag }))).toEqual({ kind: 'not-modified', etag: first.etag });
+    expect(await serve(request({ width: 1280 }))).toMatchObject({ kind: 'image', etag: first.etag });
+    expect(deps.read).toHaveBeenCalledTimes(1);
+    expect(deps.measure).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔴 Υ9 η μνήμη διαστάσεων είναι ανά ΓΕΝΙΑ — νέα bytes ⇒ νέα μέτρηση', async () => {
+    const stat = jest.fn().mockResolvedValueOnce(found('7')).mockResolvedValueOnce(found('8'));
+    const measure = jest.fn().mockResolvedValueOnce({ width: 600, height: 400 }).mockResolvedValueOnce({ width: 3000, height: 2000 });
+    const { deps, serve } = harness({ stat, measure });
+    await serve(request({ width: 2560 }));
+    await serve(request({ width: 2560 }));
+    expect(deps.encode).toHaveBeenNthCalledWith(1, expect.anything(), 640);
+    expect(deps.encode).toHaveBeenNthCalledWith(2, expect.anything(), 2560);
   });
 
   it('το κλειδί περιέχει κάδο και πλάτος — ίδιο μονοπάτι αλλού ≠ ίδιο αρχείο', () => {

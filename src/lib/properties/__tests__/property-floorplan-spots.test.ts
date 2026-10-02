@@ -5,7 +5,7 @@
  * - Κ1: ο δείκτης φωτογραφίας παίρνεται από τη σειρά ανάγνωσης αντί για τη σειρά της γκαλερί ⇒ σημείο → λάθος φωτογραφία.
  * - Κ2: κάτοψη χωρίς σημεία «τρώει» τον αριθμό της ⇒ η «Κάτοψη 2» λέει άλλο πράγμα από τη σελίδα κατόψεων.
  * - Κ3: κάτοψη PDF μπαίνει στο πάνελ ⇒ `<img>` σε PDF.
- * - Κ4: επινοημένες διαστάσεις ⇒ κώνοι σε λάθος αναλογία.
+ * - Κ4: επινοημένες διαστάσεις ⇒ κώνοι σε λάθος αναλογία · μετρημένες (ADR-899 §3.7) χάνονται.
  * - Κ5: σημείο προς κάτοψη που δεν υπάρχει πια γίνεται πιστευτό.
  */
 
@@ -47,13 +47,23 @@ describe('propertyFloorplanSpotsOf', () => {
   it('🔴 Κ3 μόνο κατόψεις-εικόνες· 🔴 Κ4 διαστάσεις άγνωστες, URL από την κλίμακα', () => {
     const entries = entriesFor({ publishedPhotoCaptureSpots: { photo_a: spot('plan_pdf'), photo_b: spot('plan_ground') } });
     expect(entries.map((e) => e.key)).toEqual(['plan_ground']);
+    const { src, srcSet } = buildProxyPreview(pathOf('plan_ground'));
     expect(entries[0].figure).toEqual({
-      ...buildProxyPreview(pathOf('plan_ground')),
+      src,
+      srcSet,
       alt: 'plan_ground',
       width: null,
       height: null,
       northRad: null,
     });
+  });
+
+  it('🔴 Κ4 μετρημένες διαστάσεις (ADR-899 §3.7) ⇒ το σχήμα τις παίρνει, η κλίμακα κόβεται', () => {
+    const plans = [image('plan_ground', { imageDimensions: { width: 1200, height: 800 } })];
+    const { photos } = propertyPhotosOf(PHOTO_FILES, { publishedPhotoCaptureSpots: { photo_a: spot('plan_ground') } });
+    const [entry] = propertyFloorplanSpotsOf(photos, plans, { publishedPhotoCaptureSpots: { photo_a: spot('plan_ground') } });
+    expect(entry.figure).toMatchObject({ width: 1200, height: 800 });
+    expect(entry.figure.srcSet).toBe(buildProxyPreview(pathOf('plan_ground'), 'legacy-default', 1200).srcSet);
   });
 
   it('ο δηλωμένος βορράς ταξιδεύει', () => {

@@ -10,9 +10,11 @@ const PROJECT = 'proj-x';
 
 const markSpy = jest.fn().mockResolvedValue(undefined);
 const dxfSpy = jest.fn().mockResolvedValue(undefined);
+const dimensionsSpy = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('../orphan-cleanup', () => ({ markOrphanCandidateOnFinalize: (o: unknown) => markSpy(o) }));
 jest.mock('../dxf-thumbnail-onfinalize', () => ({ generateDxfThumbnailOnFinalize: (o: unknown) => dxfSpy(o) }));
+jest.mock('../image-dimensions-onfinalize', () => ({ recordImageDimensionsOnFinalize: (o: unknown) => dimensionsSpy(o) }));
 jest.mock('firebase-admin', () => ({
   app: () => ({ options: { projectId: 'proj-x' } }),
   storage: () => ({ bucket: () => ({ name: 'proj-x.appspot.com' }) }),
@@ -26,6 +28,7 @@ import {
   REGIONAL_FINALIZE_TRIGGERS,
   REGIONAL_TRIGGER_BUCKETS,
   onDxfProcessedFinalizeFilesEu,
+  onImageDimensionsFinalizeFilesEu,
   onStorageFinalizeFilesEu,
 } from '../regional-storage-triggers';
 import { FINALIZE_HANDLER_IDS, FINALIZE_RUNTIME } from '../finalize-runtime';
@@ -63,13 +66,15 @@ describe('πληρότητα — κάθε handler έχει binding σε κάθε
   it('τα ονομαστικά exports ΕΙΝΑΙ οι εγγραφές του καταλόγου (όχι δεύτερο binding)', () => {
     expect(onStorageFinalizeFilesEu).toBe(REGIONAL_FINALIZE_TRIGGERS['files-eu'].orphanMarker);
     expect(onDxfProcessedFinalizeFilesEu).toBe(REGIONAL_FINALIZE_TRIGGERS['files-eu'].dxfThumbnail);
+    expect(onImageDimensionsFinalizeFilesEu).toBe(REGIONAL_FINALIZE_TRIGGERS['files-eu'].imageDimensions);
   });
 
   it('το `index.ts` τα εξάγει (αλλιώς το Firebase δεν τα ανακαλύπτει ποτέ)', () => {
     const index = readFileSync(join(__dirname, '..', '..', 'index.ts'), 'utf8');
     expect(index).toMatch(
-      /export\s*\{\s*onStorageFinalizeFilesEu\s*,\s*onDxfProcessedFinalizeFilesEu\s*\}\s*from\s*'\.\/storage\/regional-storage-triggers'/,
+      /export\s*\{\s*onStorageFinalizeFilesEu\s*,\s*onDxfProcessedFinalizeFilesEu\s*,\s*onImageDimensionsFinalizeFilesEu\s*,?\s*\}\s*from\s*'\.\/storage\/regional-storage-triggers'/,
     );
+    expect(index).toMatch(/export\s*\{\s*onImageDimensionsFinalize\s*\}\s*from\s*'\.\/storage\/image-dimensions-onfinalize'/);
   });
 });
 

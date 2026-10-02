@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 |
+| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ⏳ deploy Functions + συμπλήρωση |
 | **Date** | 2026-10-01 |
 | **Category** | Backend Systems |
 | **Προέλευση** | handoff `HANDOFFS/2026-10-01_property-header-gallery_PHASE-D-G_handoff.md` · αίτημα Giorgio: γκαλερί κεφαλίδας επιπέδου Zillow/Idealista |
@@ -113,6 +113,50 @@
 `storageObjectFromUrl` κόβει το query ⇒ κάθε URL παραγώγου διαβάζεται πίσω στο **ίδιο** αντικείμενο. Ο `fileDisplayUrlOf` δίνει πλέον
 `preview` — από το **όνομα αντικειμένου**, ανεξάρτητα από το `downloadUrl`· το `url` μένει «το αρχείο» (λήψη/άνοιγμα).
 
+### 3.7 Το SSoT διαστάσεων εικόνας — `lib/images/image-dimensions.ts` (Βήμα Δ, 2026-10-02)
+
+**Το ερώτημα**: «πόσο πλάτος × ύψος βλέπει ο θεατής;» — **μετά** τον προσανατολισμό EXIF (5–8 ⇒ ανταλλαγή). Πριν: κανένα
+αρχείο δεν το ήξερε (24/24 στην παραγωγή), και η λογική προσανατολισμού ζούσε σε 3 σημεία που διαφωνούσαν.
+
+| Κομμάτι | Αρχείο | Ρόλος |
+|---|---|---|
+| SSoT (καθαρό, **προβάλλεται** στα Functions) | `lib/images/image-dimensions.ts` | `ImageDimensions` · `orientedDimensions` · `imageDimensionsOf` (φρουρός) · `isPortraitDimensions` · `containedWidth` · `RASTER_IMAGE_TYPES` (ο ΕΝΑΣ κατάλογος — `isPreviewableContentType` τον ρωτά) · κωδικοποίηση custom metadata (`imageWidth`/`imageHeight`) |
+| Πυρήνας γραφέα (καθαρός, προβάλλεται) | `lib/images/stored-image-dimensions.ts` | `probeImageDimensions` (κεφαλίδα 128 KiB → ολόκληρο μόνο αν χρειαστεί, ≤ 50 MB) · `dimensionsRecordVerdict` (`write` · `already-recorded` · `no-record` · `not-this-object`) · `imageDimensionsIn` |
+| **Ο ΕΝΑΣ γραφέας** (στο ανέβασμα) | `functions/storage/image-dimensions-onfinalize.ts` | gen1 `onImageDimensionsFinalize` (κανονικός κάδος) + gen2 `onImageDimensionsFinalizeFilesEu` (`europe-west3` — bytes ΕΕ μετριούνται στην ΕΕ). Γράφει (α) custom metadata **με `ifGenerationMatch`** (β) `imageDimensions` στην εγγραφή, σε transaction, **μόνο** αν η εγγραφή δείχνει **αυτό** το αντικείμενο στον **ίδιο** κάδο |
+| Συμπλήρωση | `server/files/image-dimensions-backfill.ts` + `app/api/admin/backfill-image-dimensions` | `createMigrationRoute` (ADR-704): GET = dry-run, POST = εκτέλεση · `files` + `files_personal` · ιδεμπότητη · πρώτα το metadata της γενιάς (αν ο trigger πρόλαβε) |
+| Αναγνώστης server | `server/images/image-metadata.ts` | `sharp().metadata()` δεμένο στον πυρήνα |
+| Κανόνες | `firestore.rules` `measuredKeys()` · `measuredUnchanged()` · `measuredBornAbsent()` | ο πελάτης **δεν** γράφει διαστάσεις — σε **κάθε** σκέλος create/update των `files` και `files_personal` (η οριστικοποίηση pending → ready ήταν ανοιχτή πόρτα) |
+
+**Γιατί γραφέας στον κάδο και όχι στο finalize της εγγραφής** (μετρημένο): η εγγραφή γίνεται `ready` **από τον browser**
+(`FileRecordService.finalizeFileRecord` → client `updateDoc`) — τα server post-finalize hooks **δεν** τρέχουν εκεί
+(`typeof window` guard)· υπάρχουν και Admin γραφείς (quote scan, CAD dual-write, συνημμένα AI). Όλοι όμως **ανεβάζουν bytes** ⇒ ο
+storage-finalize trigger είναι ο μόνος παρατηρητής που τους βλέπει όλους. Πρακτική Firebase «Resize Images» / Cloudinary (μέτρηση
+στην εισαγωγή). 🏆 **Πιο έξυπνα από το Cloudinary**, που επιστρέφει στο upload τις διαστάσεις **πριν** τη στροφή EXIF (γνωστή
+παγίδα): εδώ αποθηκεύεται **μόνο** η εκδοχή του θεατή, και η μέτρηση ζει **με τη γενιά** (custom metadata) ⇒ αντικατάσταση
+αρχείου = νέα γενιά **χωρίς** μέτρηση, ποτέ παλιές διαστάσεις για νέα bytes. Αλλαγή metadata = νέα *metageneration*, όχι γενιά ⇒
+ETag παραγώγων άθικτο, κανένα νέο finalize.
+
+**Οι καταναλωτές** (Π1 + Π2 της §7):
+- **Π2 client** — `buildProxyPreview(path, placement, intrinsicWidth)`: η κλίμακα σταματά στην **πρώτη** βαθμίδα ≥ πλάτους
+  (`previewWidthsFor`), η εφεδρεία `src` μέσα της (`effectivePreviewWidth`)· `ProxyImagePreview.intrinsicWidth` εκτίθεται.
+  `fileDisplayUrlOf` δίνει και `dimensions` (μόνο μετρημένες). Μικρογραφίες/zoom το κληρονομούν· το zoom
+  (`filePreviewWidthFor(needed, intrinsicWidth)`) ζητά το **πρωτότυπο** μόλις η ανάγκη ξεπεράσει τα pixel του — κανένα παράγωγο
+  δεν έχει περισσότερα, και τα αληθινά έρχονται χωρίς ξανασυμπίεση (γραμμές κάτοψης png).
+- **Π2 server** — `image-preview.service`: το πλάτος κανονικοποιείται **πριν** από ETag/304/μνήμη/ουρά. Πηγή: το metadata της γενιάς
+  (`statStorageObject` το φέρνει με την **ίδια** κλήση) → μνήμη διαστάσεων ανά (κάδος·μονοπάτι·**γενιά**), που γεμίζει από το
+  πρωτότυπο που κατεβαίνει **ούτως ή άλλως** — ποτέ ξεχωριστή ανάγνωση. Όταν το πλάτος μαθαίνεται μόλις τώρα, τα bytes μπαίνουν
+  στο **κανονικό** κλειδί και αυτό το ETag παίρνει ο browser ⇒ το επόμενο `If-None-Match` ταιριάζει.
+- **Π1** — `PhotoLightbox`: `sizes` = ό,τι **ζωγραφίζεται** (`containedWidth`: `object-contain`, χωρίς μεγέθυνση) στο μετρημένο κουτί
+  (`useElementSize`, σκαλοπάτι 16 px, άνω φράγμα +½ ⇒ ποτέ θόλωμα από στρογγύλευση). Χωρίς διαστάσεις ⇒ `VIEWPORT_SIZES`
+  (το σημερινό). Η κεφαλίδα ακινήτου (`property-photos` → `PropertyHeaderGallery`) και η κάτοψη (`property-floorplan-spots`,
+  όχι πια `null`) περνούν τις μετρημένες· η δημόσια αγγελία (manifest) κερδίζει το ίδιο χωρίς αλλαγή.
+
+**Διπλότυπα (N.0.2)**: `photo-capture-facts` (`ROTATED_ORIENTATIONS`) ⇒ `readImageDimensions` + `isPortraitDimensions`.
+⚠️ **`panorama-facts` ΜΕΝΕΙ στα ωμά pixel, επίτηδες** (το σχέδιο έλεγε «διόρθωση» — η μέτρηση το ανέτρεψε): ο tiler
+(`tour-tileset-render.ts:47`, `sharp(bytes)…raw()` χωρίς `.rotate()`) κόβει το **ωμό** πλέγμα· η κρίση «2:1;» πρέπει να ρωτά το
+ίδιο πλέγμα, αλλιώς δέχεται σφαίρα που ο tiler βλέπει 1:2. Σχόλιο-φράχτης στο αρχείο. **Ratchet** (CHECK 3.7): module
+`image-dimensions` απαγορεύει `[5, 6, 7, 8]` και `orientation >= 5` εκτός SSoT· baseline **χειρουργικά** 1 (το `ImageProvider`, §9).
+
 ## 4. Η γκαλερί της κεφαλίδας (Φ.Γ)
 
 - **Κέλυφος** `components/shared/gallery/SnapGallery.tsx` (+ `use-gallery-scroller.ts`, μετακόμισε): ul/li scroll-snap, βελάκια, βαθμίδωση,
@@ -186,6 +230,9 @@
   ASSET (600/λεπτό, ήδη στη μεταδεικτική περιγραφή «binary assets μέσω authenticated proxy»). Να μετρηθεί σε πραγματική χρήση.
 - **Hit rate μνήμης / χρόνος κωδικοποίησης** στο Netcup (2 ταυτόχρονες κωδικοποιήσεις, 64 MB) — να μετρηθεί πριν αλλάξει οποιαδήποτε σταθερά.
 - ✅ ~~Οι ~32 υπόλοιποι αναγνώστες `downloadUrl`~~ — **έκλεισε 2026-10-02 (§4.1)**· μένουν 10 σημεία στο `subapps`, φραγμένα από το ratchet `file-display-url`.
+- ✅ **Π1 + Π2 έκλεισαν 2026-10-02 (§3.7, Βήμα Δ)** — τα δύο παρακάτω μένουν ως ιστορικό της μέτρησης. ⏳ Ζωντανά μετά το push
+  **και** το deploy των Functions (`firebase deploy --only functions:onImageDimensionsFinalize,functions:onImageDimensionsFinalizeFilesEu`)
+  και τη συμπλήρωση (`POST /api/admin/backfill-image-dimensions`, **μόνο** με εντολή Giorgio — γράφει στην παραγωγή).
 - **`sizes` του lightbox σε κάθετη φωτογραφία** (Π1, μετρημένο στο §9): το `70vw` περιγράφει το **πλάτος** του κουτιού, αλλά μια κάθετη λήψη
   περιορίζεται από το **ύψος** — μετρημένο 803 px CSS ζωγραφισμένα έναντι 1.680 δηλωμένων ⇒ ο browser ζητά μία βαθμίδα πάνω απ' όσο
   χρειάζεται. Θεραπεία μόνο όταν το `LightboxPhoto` φέρει **μετρημένες** διαστάσεις (`width/height` — σήμερα `null` για το ακίνητο)·
@@ -216,6 +263,16 @@
 - ✅ UI σε browser — §9.
 - Ε1: `ListingCardGallery.test` **Δ1–Δ4** (διαδοχικά βήματα) · μεταλλάξεις: βήμα από το στιγμιότυπο `index` · αγνόηση προορισμού ·
   καμία ακύρωση στο «πιάσιμο» · θέση χωρίς ανάγνωση DOM ⇒ **4/4 κόκκινα**. Σουίτες γκαλερί/κεφαλίδας/θέσης **32/32**· `jscpd:diff` καθαρό.
+- §3.7 (Βήμα Δ): `image-dimensions` Δ1–Δ4 · `stored-image-dimensions` Π1–Π4 · `file-preview-ladder` Λ5–Λ6 · `image-preview.service`
+  Υ7–Υ9 · `storage-object-generation` (διαστάσεις από metadata · Γ4 εύρος + `ifGenerationMatch`) · `file-display-url` Π4 ·
+  `property-photos` Φ5 · `property-floorplan-spots` Κ4 · `photo-lightbox-sizes` Λ1–Λ4 · `use-zoom-resolution` Ζ7 ·
+  `image-dimensions-backfill` Σ1–Σ5 · Functions `image-dimensions-onfinalize` Η1–Η5 · `finalized-object` (γενιά string) ·
+  `regional-storage-triggers` (πληρότητα bindings) · σουίτες κανόνων `files` («measured freeze», 4 σκέλη + αφαίρεση + γέννηση) και
+  `files-personal`. Μεταλλάξεις (επαναφορά στο ίδιο tool call): Δ1 **8/8** · Δ2 **15/15** (μία επέζησε αρχικά — σύγκριση μόνο
+  πλάτους — η άγκυρα ενισχύθηκε) · Δ3 **7/7** · Δ4 + συμπλήρωση + Δ5 **18/18** · κανόνες στον emulator **4/4** (σουίτες
+  `files` + `files-personal` 116/116). Golden μητρώου 340/340 · `jscpd:diff` (18 αρχεία) καθαρό · CHECK 3.93 φρέσκο.
+- 🔴 Στην πορεία βρέθηκε **ήδη κόκκινο** `property-floorplan-spots.test` Κ3/Κ4 από το Βήμα Γ (το `...buildProxyPreview()` περίμενε
+  `ladder` που το σχήμα κάτοψης δεν έχει) — διορθώθηκε.
 
 ## 9. Ζωντανός έλεγχος παραγωγής (2026-10-01)
 
@@ -257,6 +314,14 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
 
 ### Παρατηρήσεις εκτός πεδίου (μετρημένες, όχι διορθωμένες)
 
+- 🔴 **DXF Viewer — διπλή στροφή EXIF στο υπόβαθρο κάτοψης** (βρέθηκε 2026-10-02 στο audit του §3.7, **δεν** διορθώθηκε —
+  domain ADR-340, αγγίζει αποθηκευμένες βαθμονομήσεις): `floorplan-background/providers/ImageProvider.ts` αποκωδικοποιεί με
+  `createImageBitmap(blob)` — του οποίου η προεπιλογή `imageOrientation: "from-image"` **ήδη** εφαρμόζει τον EXIF (HTML Standard ·
+  Chrome 52+, Firefox 93+, Safari 15+) — και **μετά** ξαναστρέφει με `_applyOrientation(orientation από exifr)`. Κάθετη λήψη κινητού
+  (`Orientation = 6`) ⇒ στρέφεται **δύο** φορές (πλαγιαστή, ανταλλαγμένες διαστάσεις). Θεραπεία προς απόφαση: είτε
+  `createImageBitmap(blob, { imageOrientation: 'none' })` (η «none» έχει αποσυρθεί από το πρότυπο — μέτρηση ανά browser) είτε κατάργηση
+  της χειροκίνητης στροφής για τον κλάδο του browser· **πριν** από αυτό, έλεγχος αν υπάρχουν βαθμονομήσεις πάνω σε στραμμένα JPEG.
+  Φραγμένο στο ratchet `image-dimensions` (baseline 1).
 - Η σελίδα ακινήτου στην παραγωγή φορτώνει **243** chunks `/_next/static` (γεμίζει το buffer χρονισμού των 250 εγγραφών).
 - 14 προειδοποιήσεις *«preloaded but not used»* από `<link preload>` του Next — η γκαλερί δεν κάνει preload.
 
@@ -282,6 +347,14 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
   `storage-proxy-url-roundtrip` Ρ5–Ρ6 · `FileThumbnail` Μ1–Μ6 · `use-zoom-resolution` Ζ1–Ζ6 · `floorplan-duplicate-core` (προτεραιότητα αναγνώστη) ·
   golden proof του module — μεταλλάξεις **15/15** σκοτώθηκαν (μία ισοδύναμη, Z4, αφαιρέθηκε ως περιττός κλάδος). Βήμα Α (Ε1 ζωντανά) **εκκρεμεί**:
   το `a703b238` δεν έχει γίνει push.
+- **2026-10-02** — **Βήμα Δ (§3.7) — ΕΝΑ SSoT διαστάσεων εικόνας**: διαστάσεις θεατή (μετά EXIF) μετρημένες **στο ανέβασμα** από
+  τον storage-finalize trigger (gen1 + gen2 ΕΕ) — custom metadata δεμένο στη γενιά + `imageDimensions` στην εγγραφή (CAS: ίδιο
+  αντικείμενο, ίδιος κάδος)· συμπλήρωση ως admin migration (ADR-704)· κανόνες: ο πελάτης δεν τις γράφει (`measuredKeys`). Π2: η
+  κλίμακα `srcset` σταματά στην πρώτη επαρκή βαθμίδα (client) και το κλειδί/ETag κανονικοποιείται πριν από κάθε cache (server, μηδέν
+  επιπλέον I/O). Π1: `sizes` του lightbox = πλάτος `object-contain` στο μετρημένο κουτί. `photo-capture-facts` απορροφήθηκε·
+  `panorama-facts` **μένει** στα ωμά pixel επίτηδες (ο tiler δεν στρέφει — μετρημένο). Ratchet `image-dimensions` (CHECK 3.7).
+  Εύρημα εκτός πεδίου: **διπλή στροφή EXIF** στο υπόβαθρο κάτοψης του DXF Viewer (§9). Νέα εξάρτηση Functions: `sharp` (Apache-2.0).
+  ⏳ Χρειάζεται deploy Functions (χωριστό από το push) και ρητή εντολή για τη συμπλήρωση.
 - **2026-10-02** — Boy Scout (CHECK 3.28): όταν η γκαλερί του διαχειριστή αρχείων και των αρχείων οντότητας πέρασαν στον ίδιο
   αναγνώστη, η περίληψη «μικρογραφία · όνομα · μέγεθος» έγινε κλώνος ⇒ `components/shared/files/FileTileSummary.tsx` (ένα
   περιεχόμενο, το κέλυφος μένει στον καλούντα). Η δίδυμη κεφαλίδα φόρτωσης/άδειας κατάστασης του `InboxView` ⇒ τοπικό `InboxStateHeader`.

@@ -60,6 +60,15 @@ describe('zoomUpgradeOf / zoomSourceOf — καθαρή απόφαση', () => {
     expect(zoomSourceOf(PREVIEW, ORIGINAL, 2560)).toBe(PREVIEW.ladder.find((rung) => rung.width === 2560)?.src);
     expect(zoomSourceOf(PREVIEW, ORIGINAL, 'original')).toBe(ORIGINAL);
   });
+
+  it('🔴 Ζ7 (ADR-899 §3.7) πρωτότυπο 1183 px: καμία βαθμίδα πάνω από αυτό — ανάγκη πέρα από τα pixel του ⇒ πρωτότυπο', () => {
+    expect(zoomUpgradeOf(640, 1000, 1183)).toBe(1280);
+    expect(zoomUpgradeOf(1280, 1500, 1183)).toBe('original');
+    expect(zoomUpgradeOf(1280, 2400, 1183)).toBe('original');
+    const capped = buildProxyPreview('a/photo.jpg', 'legacy-default', 1183);
+    expect(capped.ladder.map((rung) => rung.width)).toEqual([320, 640, 1280]);
+    expect(zoomSourceOf(capped, ORIGINAL, 'original')).toBe(ORIGINAL);
+  });
 });
 
 describe('useZoomResolution', () => {

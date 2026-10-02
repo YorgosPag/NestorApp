@@ -14,6 +14,7 @@
  * ⚠️ **Καθαρό module** — κανένα React, κανένα I/O.
  */
 
+import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
 import { fileDisplayUrlOf, type FileDisplayUrlGap, type FileDisplayUrlSubject } from '@/lib/files/file-display-url';
 import { orderByDeclaration } from '@/lib/ordering/declared-order';
@@ -41,6 +42,8 @@ export interface PropertyPhoto {
   readonly title: string;
   /** Έχει δηλωμένο σημείο λήψης σε κάτοψη (ADR-897). */
   readonly hasCaptureSpot: boolean;
+  /** Διαστάσεις θεατή, **μόνο** μετρημένες (ADR-899 §3.7) — το lightbox ξέρει έτσι αν τη φωτογραφία την κόβει το ύψος. */
+  readonly dimensions: ImageDimensions | null;
 }
 
 export interface UnavailablePropertyPhoto {
@@ -84,6 +87,7 @@ export function propertyPhotosOf(
       preview: resolved.preview,
       title: file.displayName || file.originalFilename || file.id,
       hasCaptureSpot: captureSpots?.has(file.id) ?? false,
+      dimensions: resolved.dimensions,
     });
   }
   return { photos, unavailable };

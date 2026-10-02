@@ -37,6 +37,17 @@ const payload = { downloadUrl, displayName };
 const label = t('inspector.downloadUrl');
 const url = fileDisplayUrl(file);`,
   },
+  // ADR-899 §3.7 — «διαστάσεις θεατή» (μετά τον EXIF) απαντά ΜΟΝΟ το `lib/images/image-dimensions`. Οι παγίδες του
+  // `shouldSkip` είναι οι ΝΟΜΙΜΕΣ μορφές: ο προσανατολισμός ως δεδομένο, το «καμία στροφή», η ερώτηση στο SSoT.
+  'image-dimensions': {
+    shouldMatch: `const ROTATED = new Set([5, 6, 7, 8]);
+const swapped = orientation >= 5 && orientation <= 8;
+if (orientation > 4) [w, h] = [h, w];`,
+    shouldSkip: `const { width, height, orientation } = await sharp(bytes).metadata();
+if (orientation === 1) return source;
+const oriented = orientedDimensions(width, height, orientation);
+const widths = [320, 640, 1280, 2560];`,
+  },
   // ADR-876 §5 — «ένας σύνδεσμος = ένα διαπιστευτήριο». Η συλλογή των διαπιστευτηρίων έχει ΕΝΑΝ
   // αναγνώστη/γραφέα (store) και ΕΝΑΝ κατασκευαστή· ο client δεν βάζει ΠΟΤΕ σύνδεσμο σε διαδρομή API.
   // Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ χρήσεις: η σκέτη διαδρομή, το Bearer, η συλλογή προσκλήσεων.

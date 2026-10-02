@@ -11,7 +11,7 @@
  * την τοποθεσία (ADR-895 §3.5). Άρα gen2 στην περιοχή του κάδου.
  *
  * **Εδώ ζουν ΜΟΝΟ λεπτά bindings** — κανένα σώμα. Τα σώματα (`markOrphanCandidateOnFinalize`,
- * `generateDxfThumbnailOnFinalize`) και οι επιλογές runtime (`FINALIZE_RUNTIME`) είναι τα ΙΔΙΑ με του gen1.
+ * `generateDxfThumbnailOnFinalize`, `recordImageDimensionsOnFinalize` — ADR-899 §3.7) και οι επιλογές runtime (`FINALIZE_RUNTIME`) είναι τα ΙΔΙΑ με του gen1.
  *
  * 🔑 **Όνομα κάδου χωρίς χειρόγραφο string**: `expr` + το ενσωματωμένο `projectID` — το CLI το επιλύει στο
  * deploy (`eventFilters` → `resolveString`), με την ΙΔΙΑ σύνθεση `{project}{FILES_EU_BUCKET_SUFFIX}` που
@@ -44,6 +44,7 @@ import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
 import { FINALIZE_RUNTIME, gen2Memory, type FinalizeHandlerId } from './finalize-runtime';
 import { markOrphanCandidateOnFinalize } from './orphan-cleanup';
 import { generateDxfThumbnailOnFinalize } from './dxf-thumbnail-onfinalize';
+import { recordImageDimensionsOnFinalize } from './image-dimensions-onfinalize';
 
 /** Ένας περιφερειακός κάδος πρωτοτύπων που ακούμε με gen2. */
 export interface RegionalTriggerBucket {
@@ -68,6 +69,7 @@ export type RegionalTriggerBucketId = keyof typeof REGIONAL_TRIGGER_BUCKETS;
 const FINALIZE_BODIES: Readonly<Record<FinalizeHandlerId, (object: FinalizedObject) => Promise<void>>> = {
   orphanMarker: markOrphanCandidateOnFinalize,
   dxfThumbnail: generateDxfThumbnailOnFinalize,
+  imageDimensions: recordImageDimensionsOnFinalize,
 };
 
 /** Ένα λεπτό gen2 binding: επιλογές από το `FINALIZE_RUNTIME`, κάδος/περιοχή από τον κατάλογο. */
@@ -96,8 +98,10 @@ export const REGIONAL_FINALIZE_TRIGGERS: Readonly<
   'files-eu': {
     orphanMarker: gen2FinalizeBinding('orphanMarker', REGIONAL_TRIGGER_BUCKETS['files-eu']),
     dxfThumbnail: gen2FinalizeBinding('dxfThumbnail', REGIONAL_TRIGGER_BUCKETS['files-eu']),
+    imageDimensions: gen2FinalizeBinding('imageDimensions', REGIONAL_TRIGGER_BUCKETS['files-eu']),
   },
 };
 
 export const onStorageFinalizeFilesEu = REGIONAL_FINALIZE_TRIGGERS['files-eu'].orphanMarker;
 export const onDxfProcessedFinalizeFilesEu = REGIONAL_FINALIZE_TRIGGERS['files-eu'].dxfThumbnail;
+export const onImageDimensionsFinalizeFilesEu = REGIONAL_FINALIZE_TRIGGERS['files-eu'].imageDimensions;

@@ -733,6 +733,8 @@ service cloud.firestore {
                          == (request.resource.data.keys().hasAny(['cdeState']) ? 'author' : 'tenant')
                     // 🔒 ADR-864 §21 — καμία δέσμευση «από κούνια» (ο builder δεν γράφει καμία).
                     && holdBornAbsent()
+                    // 📐 ADR-899 §3.7 — οι διαστάσεις τις μετρά ο κάδος, όχι ο πελάτης.
+                    && measuredBornAbsent()
                     && resource == null; // Ensure document doesn't exist
 
       // 📝 UPDATE: Only creator or company admin can finalize
@@ -765,7 +767,9 @@ service cloud.firestore {
                     // 🔒 ADR-862 Φ0 — η οριστικοποίηση (pending → ready) δεν αγγίζει CDE.
                     && cdeCustodyUnchanged()
                     // 🔒 ADR-864 §21 — ούτε δέσμευση.
-                    && holdCustodyUnchanged();
+                    && holdCustodyUnchanged()
+                    // 📐 ADR-899 §3.7 — ούτε οι μετρημένες διαστάσεις (η οριστικοποίηση ήταν η ανοιχτή πόρτα).
+                    && measuredUnchanged();
 
       // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -798,7 +802,8 @@ service cloud.firestore {
                     // 🔒 ADR-864 §21 Δ21.1 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ: ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ σε δεσμευμένο
                     //    αρχείο (Google Vault · Box · Purview)· αυτό που δεν επιτρέπεται είναι να
                     //    ΑΓΓΙΞΕΙ τη δέσμευση. ⛔ ΜΗΝ προσθέσεις «hold == 'none'» εδώ — απορρίφθηκε.
-                    && holdCustodyUnchanged();
+                    && holdCustodyUnchanged()
+                    && measuredUnchanged();
 
       // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -828,7 +833,8 @@ service cloud.firestore {
                     // «ξαναγεννιέται» σε άλλη κατάσταση από αυτή που είχε.
                     && cdeCustodyUnchanged()
                     // 🔒 ADR-864 §21 — η επαναφορά δεν «καθαρίζει» τη δέσμευση.
-                    && holdCustodyUnchanged();
+                    && holdCustodyUnchanged()
+                    && measuredUnchanged();
 
       // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
       // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
@@ -856,7 +862,8 @@ service cloud.firestore {
                     && cdeCustodyUnchanged()
                     // 🔒 ADR-864 §21 — ούτε η δέσμευση (ήταν το σκέλος με το χαλαρότερο πρόσωπο:
                     //    κάθε μέλος της εταιρείας, όχι μόνο δημιουργός/διαχειριστής).
-                    && holdCustodyUnchanged();
+                    && holdCustodyUnchanged()
+                    && measuredUnchanged();
 
       // 🗑️ HARD DELETE: Only creator or company admin
       // 🔒 ADR-864 §21 Δ21.1 — ΠΟΤΕ σε δεσμευμένο ή υπό διατήρηση αρχείο. Ο κάδος (update)
@@ -898,6 +905,8 @@ service cloud.firestore {
                     && !request.resource.data.keys().hasAny(cdeCustodyKeys())
                     // 🔒 ADR-864 §21 — ίδια λίστα δέσμευσης με το `match /files` (ADR-866 §5.2).
                     && holdBornAbsent()
+                    // 📐 ADR-899 §3.7 — ίδια λίστα μετρημένων πεδίων με το `match /files`.
+                    && measuredBornAbsent()
                     && request.resource.data.status == 'pending'
                     && resource == null;
 
@@ -921,6 +930,7 @@ service cloud.firestore {
                     // 🔒 ADR-864 §21 — ο κάτοχος δεν αυτο-δεσμεύει ούτε αποδεσμεύει (`retentionUntil`
                     //    θα έβγαζε το αρχείο από κάθε καθαρισμό· `hold` θα ακύρωνε δέσμευση διακομιστή).
                     && holdCustodyUnchanged()
+                    && measuredUnchanged()
                     // 📒 ADR-866 §2.6.11 — κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή τους.
                     && personalActivityPaired();
 
@@ -6059,6 +6069,26 @@ service cloud.firestore {
     //    ρωτά «άγγιξες τη δέσμευση;», ΠΟΤΕ «είναι δεσμευμένο;».
     function holdCustodyUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(holdCustodyKeys());
+    }
+
+    // =========================================================================
+    // 📐 ΤΑ ΜΕΤΡΗΜΕΝΑ ΠΕΔΙΑ ΑΡΧΕΙΟΥ — ADR-899 §3.7
+    // =========================================================================
+    // Γεγονότα για τα BYTES (διαστάσεις θεατή μετά τον EXIF), όχι δήλωση ανθρώπου. Τα γράφει ΜΟΝΟ ο ΕΝΑΣ
+    // γραφέας (`functions/storage/image-dimensions-onfinalize`, Admin SDK) και η συμπλήρωση (Admin SDK).
+    // Πελάτης που τα γράφει θα έκοβε την κλίμακα `srcset` σε ψεύτικο πλάτος (θολή εικόνα) ή θα έδινε στο
+    // lightbox επινοημένη αναλογία. Ίδιο ιδίωμα με τα CDE/δέσμευσης: `affectedKeys()` πιάνει προσθήκη,
+    // αλλαγή ΚΑΙ αφαίρεση· ένα σημείο για `files` και `files_personal`.
+    function measuredKeys() {
+      return ['imageDimensions'];
+    }
+
+    function measuredUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(measuredKeys());
+    }
+
+    function measuredBornAbsent() {
+      return !request.resource.data.keys().hasAny(measuredKeys());
     }
 
     // Γέννηση ΧΩΡΙΣ δέσμευση: κανένα κλειδί της, εκτός από ρητό `hold: 'none'` (= απουσία).

@@ -14,6 +14,8 @@ describe('finalizedObjectOf', () => {
       name: 'companies/a',
       contentType: 'x/y',
       size: 42,
+      generation: null,
+      metadata: {},
     });
   });
 
@@ -24,6 +26,8 @@ describe('finalizedObjectOf', () => {
       name: 'companies/a',
       contentType: null,
       size: 7,
+      generation: null,
+      metadata: {},
     });
   });
 
@@ -34,5 +38,14 @@ describe('finalizedObjectOf', () => {
   it('size απόν ή μη αριθμητικό ⇒ null', () => {
     expect(finalizedObjectOf({ bucket: 'eu-bucket' }, NAMES)?.size).toBeNull();
     expect(finalizedObjectOf({ bucket: 'eu-bucket', size: 'abc' }, NAMES)?.size).toBeNull();
+  });
+
+  it('🔴 ADR-899 §3.7 γενιά ως STRING (19 ψηφία > 2^53) · custom metadata αυτούσιο', () => {
+    const object = finalizedObjectOf(
+      { bucket: 'eu-bucket', name: 'companies/a', generation: '1727000000123456789', metadata: { imageWidth: '1200' } },
+      NAMES,
+    );
+    expect(object?.generation).toBe('1727000000123456789');
+    expect(object?.metadata).toEqual({ imageWidth: '1200' });
   });
 });

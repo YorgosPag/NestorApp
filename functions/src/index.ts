@@ -358,8 +358,14 @@ export { onStorageFinalize } from './storage/orphan-cleanup';
 export { orphanSweeper } from './storage/orphan-sweeper';
 export { onDxfProcessedFinalize } from './storage/dxf-thumbnail-onfinalize';
 export { orphanSpikeAlert } from './storage/orphan-spike-alert';
+//  - onImageDimensionsFinalize → ADR-899 §3.7: διαστάσεις εικόνας (μετά EXIF) στην εγγραφή + metadata αντικειμένου
+export { onImageDimensionsFinalize } from './storage/image-dimensions-onfinalize';
 
 // ADR-895 Φ2 — οι ΙΔΙΟΙ δύο handlers για τον κάδο πρωτοτύπων ΕΕ: gen2 στο `europe-west3`
 // (Eventarc: ίδια περιοχή με τον κάδο· bytes ΕΕ επεξεργάζονται μόνο στην ΕΕ). Λεπτά bindings,
 // κανένα αντίγραφο σώματος — `storage/regional-storage-triggers.ts`.
-export { onStorageFinalizeFilesEu, onDxfProcessedFinalizeFilesEu } from './storage/regional-storage-triggers';
+export {
+  onStorageFinalizeFilesEu,
+  onDxfProcessedFinalizeFilesEu,
+  onImageDimensionsFinalizeFilesEu,
+} from './storage/regional-storage-triggers';

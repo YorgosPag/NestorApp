@@ -17,6 +17,7 @@
  */
 
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
+import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type {
   EntityType,
   FileDomain,
@@ -398,6 +399,14 @@ export interface FileRecord {
    * χωρίς αυτόν, αντίγραφο στον παλιό κάδο θα έμενε για πάντα χωρίς κανέναν να το δείχνει.
    */
   placementTransition?: FilePlacementTransition;
+
+  /**
+   * **Διαστάσεις της εικόνας όπως τη βλέπει ο θεατής** — μετά τον προσανατολισμό EXIF (ADR-899 §3.7). Μόνο raster
+   * εικόνες. Ο ΕΝΑΣ γραφέας: ο storage-finalize trigger (`functions/storage/image-dimensions-onfinalize`, Admin SDK)·
+   * ο client **δεν** το γράφει (`firestore.rules`). Απόν ⇒ «δεν μετρήθηκε» — διαβάζεται **μόνο** μέσω
+   * `imageDimensionsOf` (`lib/images/image-dimensions`), ποτέ επινοημένη αναλογία.
+   */
+  imageDimensions?: ImageDimensions;
 
   /**
    * Download URL from Firebase Storage (populated after upload)

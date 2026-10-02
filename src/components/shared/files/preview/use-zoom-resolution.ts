@@ -34,8 +34,12 @@ function rankOf(choice: FilePreviewChoice): number {
  * **Χρειάζεται αναβάθμιση;** — η νέα επιλογή αν είναι **αυστηρά** πάνω από την τρέχουσα, αλλιώς `null`.
  * Καθαρή συνάρτηση: ό,τι αποφασίζει ελέγχεται χωρίς DOM.
  */
-export function zoomUpgradeOf(current: FilePreviewChoice, neededDevicePx: number): FilePreviewChoice | null {
-  const next = filePreviewWidthFor(neededDevicePx);
+export function zoomUpgradeOf(
+  current: FilePreviewChoice,
+  neededDevicePx: number,
+  intrinsicWidth: number | null = null,
+): FilePreviewChoice | null {
+  const next = filePreviewWidthFor(neededDevicePx, intrinsicWidth);
   return rankOf(next) > rankOf(current) ? next : null;
 }
 
@@ -102,8 +106,9 @@ ${preview?.src ?? ''}`;
     // Καμία ειδική περίπτωση για zoom ≤ 1: εκεί η ανάγκη ≤ τρέχουσας βαθμίδας ⇒ το `zoomUpgradeOf` απαντά `null`.
     if (!preview || boxPx === 0) return;
     const dpr = devicePixelRatioOf();
-    const current = upgrade?.choice ?? filePreviewWidthFor(boxPx * dpr);
-    const next = zoomUpgradeOf(current, boxPx * zoom * dpr);
+    // Με γνωστό πλάτος πρωτοτύπου (ADR-899 §3.7) καμία βαθμίδα πάνω από αυτό· ανάγκη πέρα από τα pixel του ⇒ το πρωτότυπο.
+    const current = upgrade?.choice ?? filePreviewWidthFor(boxPx * dpr, preview.intrinsicWidth);
+    const next = zoomUpgradeOf(current, boxPx * zoom * dpr, preview.intrinsicWidth);
     if (next === null) return;
 
     let cancelled = false;

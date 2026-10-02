@@ -1,3 +1,7 @@
+// ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/images/image-dimensions.ts (ADR-874 · CHECK 3.93).
+// Edit the source, then run: npm run generate:functions-projection
+// sha256:4a4d339805e31f5c438e5bb55670c38925702471a7213da3329a84a44d322e4b
+
 /**
  * @fileoverview 📐 **ΟΙ ΔΙΑΣΤΑΣΕΙΣ ΜΙΑΣ ΕΙΚΟΝΑΣ ΟΠΩΣ ΤΗ ΒΛΕΠΕΙ Ο ΘΕΑΤΗΣ** — το ΕΝΑ σημείο που ξέρει τι σημαίνει
  *   «πλάτος × ύψος» μετά τον προσανατολισμό EXIF (ADR-899 §3.7).

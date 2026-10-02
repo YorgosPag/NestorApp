@@ -7,7 +7,11 @@
  * @module components/shared/media/PhotoLightbox
  *
  * 🔑 **Στενός τύπος εικόνας** (ADR-899 §4): διαβάζει μόνο ό,τι πράγματι δείχνει (`src`, `srcSet`, `alt`, διαστάσεις αν
- *   υπάρχουν). Ένα ιδιωτικό αρχείο **δεν** ξέρει διαστάσεις — εδώ δεν χρειάζονται (`object-contain` σε σταθερό κουτί).
+ *   υπάρχουν).
+ * 📐 **`sizes` = ό,τι ΖΩΓΡΑΦΙΖΕΤΑΙ, όχι το κουτί** (ADR-899 §3.7, Π1): με **μετρημένες** διαστάσεις και μετρημένο κουτί, το
+ *   πλάτος είναι το `object-contain` (`containedWidth`) — μια κάθετη λήψη σε οριζόντιο κουτί περιορίζεται από το ύψος, άρα
+ *   ο browser παίρνει τη βαθμίδα που χρειάζεται και όχι μία παραπάνω. Χωρίς διαστάσεις ή πριν τη μέτρηση ⇒ το
+ *   {@link VIEWPORT_SIZES} (ποτέ επινοημένη αναλογία).
  *
  * 🔑 **Εξήχθη από το `ListingPhotosPageContent`** τη μέρα που απέκτησε πλοήγηση και πάνελ — ένα αρχείο, μία ευθύνη (N.7.1).
  * ⌨️ ← / → πλοηγούν (WCAG 2.1.1)· στην αφή, **σάρωση** οριζόντια (κατώφλι {@link SWIPE_THRESHOLD_PX}, ώστε ένα άγγιγμα να
@@ -16,12 +20,14 @@
  * ⚠️ Χωρίς κανένα σημείο λήψης ⇒ **κανένα** πάνελ, η φωτογραφία πιάνει όλο το πλάτος — ίδια με πριν.
  */
 
-import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, type RefObject, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { useElementSize } from '@/hooks/media/useElementSize';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { containedWidth } from '@/lib/images/image-dimensions';
 import type { FloorplanSpotsEntry } from '@/lib/media/photo-floorplan-spots';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +35,28 @@ import { PhotoFloorplanPanel } from './PhotoFloorplanPanel';
 
 /** Οριζόντια μετατόπιση (css px) πάνω από την οποία το άγγιγμα είναι σάρωση. */
 const SWIPE_THRESHOLD_PX = 48;
+
+/** Το `sizes` όταν δεν ξέρουμε τι ζωγραφίζεται — το κουτί της φωτογραφίας ως ποσοστό της οθόνης. */
+export const VIEWPORT_SIZES = '(min-width: 1024px) 70vw, 95vw';
+
+/** Σκαλοπάτι μέτρησης του κουτιού (css px): νέο `sizes` μόνο σε ουσιαστική αλλαγή, όχι σε κάθε pixel αλλαγής μεγέθους. */
+const STAGE_SIZE_STEP_PX = 16;
+
+/**
+ * **Το `sizes` μιας φωτογραφίας στο κουτί της** — καθαρή συνάρτηση. Το κουτί έρχεται στρογγυλεμένο σε σκαλοπάτι ⇒
+ * μετριέται ως το **άνω φράγμα** του (+½ σκαλοπατιού): υπερεκτίμηση λίγων pixel, ποτέ θόλωμα από στρογγύλευση προς τα κάτω.
+ */
+export function lightboxSizesOf(stage: { readonly width: number; readonly height: number }, photo: LightboxPhoto): string {
+  if (!photo.width || !photo.height || stage.width === 0 || stage.height === 0) return VIEWPORT_SIZES;
+  const half = STAGE_SIZE_STEP_PX / 2;
+  const painted = containedWidth({ width: stage.width + half, height: stage.height + half }, { width: photo.width, height: photo.height });
+  return `${Math.ceil(painted)}px`;
+}
+
+/** Το μετρημένο κουτί της φωτογραφίας ⇒ `sizes`. */
+function useLightboxSizes(stageRef: RefObject<HTMLElement | null>, photo: LightboxPhoto): string {
+  return lightboxSizesOf(useElementSize(stageRef, STAGE_SIZE_STEP_PX), photo);
+}
 
 /** Ό,τι χρειάζεται το lightbox για **μία** φωτογραφία — τίποτα περισσότερο. */
 export interface LightboxPhoto {
@@ -74,10 +102,12 @@ interface StageProps {
 function PhotoStage({ photo, index, total, onStep }: StageProps) {
   const { t } = useTranslation(['listing-detail']);
   const swipe = useSwipe(onStep);
+  const stageRef = useRef<HTMLElement>(null);
+  const sizes = useLightboxSizes(stageRef, photo);
   return (
-    <section className="relative flex min-h-0 flex-1 items-center justify-center p-2 touch-pan-y" {...swipe}>
+    <section ref={stageRef} className="relative flex min-h-0 flex-1 items-center justify-center p-2 touch-pan-y" {...swipe}>
       {/* eslint-disable-next-line @next/next/no-img-element -- ράφι ή proxy παραγώγων, εκτός optimizer (ADR-841 Α12 · ADR-899) */}
-      <img src={photo.src} srcSet={photo.srcSet} sizes="(min-width: 1024px) 70vw, 95vw"
+      <img src={photo.src} srcSet={photo.srcSet} sizes={sizes}
         width={photo.width} height={photo.height} alt={photo.alt}
         className="max-h-full max-w-full select-none object-contain" draggable={false} />
       <Button type="button" variant="secondary" size="icon" className="absolute left-3 top-1/2 -translate-y-1/2"

@@ -28,8 +28,14 @@ describe('propertyPhotosOf', () => {
 
   test('🔴 Φ2 εγγραφή χωρίς downloadUrl φαίνεται, με URL από το storagePath', () => {
     const { photos } = propertyPhotosOf(FILES, {});
-    expect(photos[0]).toEqual({ fileId: 'file_a', url: buildProxyUrl(pathOf('file_a')), preview: null, title: 'Εσωτερικό', hasCaptureSpot: false });
+    expect(photos[0]).toEqual({ fileId: 'file_a', url: buildProxyUrl(pathOf('file_a')), preview: null, title: 'Εσωτερικό', hasCaptureSpot: false, dimensions: null });
     expect(photos[1].url).toBe('https://x.test/b.jpg');
+  });
+
+  test('🔴 Φ5 (ADR-899 §3.7) μετρημένες διαστάσεις ταξιδεύουν στη φωτογραφία — ποτέ επινοημένες', () => {
+    const measured = { id: 'file_m', storagePath: pathOf('file_m'), contentType: 'image/jpeg', imageDimensions: { width: 1013, height: 1800 } };
+    const { photos } = propertyPhotosOf([measured, { ...measured, id: 'file_n', imageDimensions: { width: -1, height: 1 } }], {});
+    expect(photos.map((photo) => photo.dimensions)).toEqual([{ width: 1013, height: 1800 }, null]);
   });
 
   test('🔴 Φ3 ό,τι δεν δείχνεται ονομάζεται', () => {

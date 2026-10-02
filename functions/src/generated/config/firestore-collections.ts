@@ -1,8 +1,8 @@
 // ⚠️ GENERATED — DO NOT EDIT. Key projection of src/config/firestore-collections.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// Keys: 26 — computed from every `COLLECTIONS.KEY` read under functions/src.
-// 24 keys have an app-side env override that a Cloud Function cannot see — marked inline.
-// sha256:3e9a11c6c29f3e5e0ef0bf1981a89941825930e680b3b4f6ee5e49bde64945e6
+// Keys: 27 — computed from every `COLLECTIONS.KEY` read under functions/src.
+// 25 keys have an app-side env override that a Cloud Function cannot see — marked inline.
+// sha256:a863a4d37ae58da36ac60ae45e53df93618a2183a609a7634137abcf9da1f218
 
 export const COLLECTIONS = {
   CONTACTS: 'contacts', // app override: process.env.NEXT_PUBLIC_CONTACTS_COLLECTION
@@ -15,6 +15,7 @@ export const COLLECTIONS = {
   TASKS: 'tasks', // app override: process.env.NEXT_PUBLIC_TASKS_COLLECTION
   USERS: 'users', // app override: process.env.NEXT_PUBLIC_USERS_COLLECTION
   FILES: 'files', // app override: process.env.NEXT_PUBLIC_FILES_COLLECTION
+  FILES_PERSONAL: 'files_personal', // app override: process.env.NEXT_PUBLIC_FILES_PERSONAL_COLLECTION
   FLOORPLAN_BACKGROUNDS: 'floorplan_backgrounds', // app override: process.env.NEXT_PUBLIC_FLOORPLAN_BACKGROUNDS_COLLECTION
   PARKING_SPACES: 'parking_spots', // app override: process.env.NEXT_PUBLIC_PARKING_SPACES_COLLECTION
   STORAGE: 'storage_units', // app override: process.env.NEXT_PUBLIC_STORAGE_COLLECTION

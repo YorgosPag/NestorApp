@@ -210,6 +210,17 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       }));
     });
 
+    // 📐 ADR-899 §3.7 — ΙΔΙΑ λίστα μετρημένων πεδίων με το `match /files` (`measuredKeys()`).
+    it('🔑 ο κάτοχος δεν γράφει διαστάσεις: γέννηση · οριστικοποίηση · αλλαγή μετρημένης → deny', async () => {
+      const forged = { imageDimensions: { width: 9999, height: 1 } };
+      await assertFails(citizen().collection(COLLECTION).doc('measured').set({ ...personalFilePayload(CITIZEN_UID, 'measured'), ...forged }));
+      await seedPersonalFile(env, 'pending-measured', CITIZEN_UID, { status: 'pending' });
+      await assertFails(citizen().collection(COLLECTION).doc('pending-measured').update({ status: 'ready', ...forged }));
+      await assertSucceeds(citizen().collection(COLLECTION).doc('pending-measured').update({ status: 'ready' }));
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { imageDimensions: { width: 3000, height: 4000 } });
+      await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
+    });
+
     it('🔑 Δ21.1 δεσμευμένο από τον διακομιστή: κάδος ✅ · αποδέσμευση ✗ · οριστική διαγραφή ✗', async () => {
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { hold: 'legal', holdPlacedBy: 'uid_legal_manager' });
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);

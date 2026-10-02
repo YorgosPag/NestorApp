@@ -35,6 +35,8 @@
 
 import { buildProxyPreview, buildProxyUrl, type ProxyImagePreview } from '@/lib/storage/storage-object-url';
 
+import { imageDimensionsOf, type ImageDimensions } from '@/lib/images/image-dimensions';
+
 import { isPreviewableContentType } from './file-preview-ladder';
 
 import { fileStoragePlacementOf, isFileStoragePlacement } from './file-storage-placement';
@@ -46,6 +48,8 @@ export interface FileDisplayUrlSubject {
   readonly storagePlacement?: unknown;
   /** Ο τύπος των bytes — αποφασίζει αν υπάρχει προεπισκόπηση (ADR-899). */
   readonly contentType?: string | null;
+  /** Διαστάσεις θεατή από τον γραφέα του ανεβάσματος (ADR-899 §3.7) — ωμή τιμή, διαβάζεται με `imageDimensionsOf`. */
+  readonly imageDimensions?: unknown;
 }
 
 /** Γιατί δεν βγήκε URL. **Κλειστό σύνολο.** */
@@ -67,6 +71,8 @@ export type FileDisplayUrl =
        * Το `url` μένει **το αρχείο** (λήψη/άνοιγμα)· το `preview` είναι **η εικόνα που δείχνεται**.
        */
       readonly preview: ProxyImagePreview | null;
+      /** Διαστάσεις θεατή **μόνο** όταν μετρήθηκαν — ποτέ επινοημένη αναλογία (ADR-899 §3.7). */
+      readonly dimensions: ImageDimensions | null;
     }
   | { readonly kind: 'unavailable'; readonly why: FileDisplayUrlGap };
 
@@ -83,12 +89,13 @@ const nonEmpty = (value: string | null | undefined): value is string =>
 export function fileDisplayUrlOf(record: FileDisplayUrlSubject): FileDisplayUrl {
   const placement = record.storagePlacement;
   const knownPlacement = placement === undefined || placement === null || isFileStoragePlacement(placement);
+  const dimensions = imageDimensionsOf(record.imageDimensions);
   const preview =
     nonEmpty(record.storagePath) && knownPlacement && isPreviewableContentType(record.contentType)
-      ? buildProxyPreview(record.storagePath, fileStoragePlacementOf(record))
+      ? buildProxyPreview(record.storagePath, fileStoragePlacementOf(record), dimensions?.width ?? null)
       : null;
 
-  if (nonEmpty(record.downloadUrl)) return { kind: 'url', url: record.downloadUrl, origin: 'stored', preview };
+  if (nonEmpty(record.downloadUrl)) return { kind: 'url', url: record.downloadUrl, origin: 'stored', preview, dimensions };
   if (!nonEmpty(record.storagePath)) return { kind: 'unavailable', why: 'no-storage-path' };
   if (!knownPlacement) return { kind: 'unavailable', why: 'unknown-placement' };
   return {
@@ -96,6 +103,7 @@ export function fileDisplayUrlOf(record: FileDisplayUrlSubject): FileDisplayUrl 
     url: buildProxyUrl(record.storagePath, fileStoragePlacementOf(record)),
     origin: 'derived',
     preview,
+    dimensions,
   };
 }
 

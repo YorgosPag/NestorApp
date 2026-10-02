@@ -13,13 +13,14 @@
  * 🔴 `concurrency` αφορά **μόνο** το gen2 (το gen1 εξυπηρετεί πάντα ένα γεγονός ανά instance). Η προεπιλογή
  * του gen2 είναι **80** ταυτόχρονα γεγονότα ανά instance (https://firebase.google.com/docs/functions/2nd-gen-upgrade):
  * για τη ραστεροποίηση DXF (resvg, όλη η σκηνή στη μνήμη) αυτό σημαίνει 80 σκηνές σε 512MiB ⇒ OOM. Άρα `1`,
- * ρητά — ίδια σημασιολογία με το gen1. Ο marker ορφανών είναι μικρό I/O ⇒ προεπιλογή.
+ * ρητά — ίδια σημασιολογία με το gen1. Ο marker ορφανών είναι μικρό I/O ⇒ προεπιλογή. Η μέτρηση διαστάσεων (ADR-899
+ * §3.7) κρατά στη χειρότερη περίπτωση ολόκληρο αρχείο ως 50 MB ⇒ 4.
  *
  * @module functions/storage/finalize-runtime
  */
 
 /** Οι handlers «νέο αντικείμενο» — κλειστό σύνολο· καθένας έχει binding σε **κάθε** κάδο που ακούμε. */
-export const FINALIZE_HANDLER_IDS = ['orphanMarker', 'dxfThumbnail'] as const;
+export const FINALIZE_HANDLER_IDS = ['orphanMarker', 'dxfThumbnail', 'imageDimensions'] as const;
 export type FinalizeHandlerId = (typeof FINALIZE_HANDLER_IDS)[number];
 
 export interface FinalizeRuntime {
@@ -32,6 +33,9 @@ export interface FinalizeRuntime {
 export const FINALIZE_RUNTIME: Readonly<Record<FinalizeHandlerId, FinalizeRuntime>> = {
   orphanMarker: { timeoutSeconds: 60, memoryMiB: 256 },
   dxfThumbnail: { timeoutSeconds: 120, memoryMiB: 512, concurrency: 1 },
+  // ADR-899 §3.7 — συνήθως 128 KiB κεφαλίδας· η εφεδρεία «ολόκληρο» φτάνει τα 50 MB ⇒ 512MiB, και 4 ταυτόχρονα
+  // (μόνο μεταδεδομένα, καμία αποκωδικοποίηση pixel — 4 × 50 MB χωρούν).
+  imageDimensions: { timeoutSeconds: 60, memoryMiB: 512, concurrency: 4 },
 };
 
 /** Η ίδια μνήμη στο λεξιλόγιο του gen1 (`runWith`). */

@@ -52,9 +52,10 @@ import {
   type FileStoragePlacement,
 } from '@/lib/files/file-storage-placement';
 import {
-  FILE_PREVIEW_ENCODING,
   FILE_PREVIEW_FALLBACK_WIDTH,
   FILE_PREVIEW_WIDTH_QUERY_PARAM,
+  effectivePreviewWidth,
+  previewWidthsFor,
 } from '@/lib/files/file-preview-ladder';
 
 // =============================================================================
@@ -99,6 +100,11 @@ export interface ProxyImagePreview {
    * `filePreviewWidthFor`) αντί να το αφήσει στο `sizes` του browser. Το `srcSet` **παράγεται** από αυτήν.
    */
   readonly ladder: readonly ProxyImagePreviewRung[];
+  /**
+   * Το πλάτος του πρωτοτύπου (θεατή) που **έκοψε** την κλίμακα — `null` = άγνωστο ⇒ ολόκληρη η κλίμακα (ADR-899 §3.7).
+   * Όποιος διαλέγει βαθμίδα μόνος του (zoom) το περνά στο `filePreviewWidthFor`.
+   */
+  readonly intrinsicWidth: number | null;
 }
 
 /** Το URL ενός παραγώγου — πάνω στο {@link buildProxyUrl}, ποτέ δεύτερη συναρμολόγηση μονοπατιού. */
@@ -114,19 +120,24 @@ function buildProxyPreviewUrl(storagePath: string, placement: FileStoragePlaceme
  *
  * 🔑 Το {@link storageObjectFromUrl} κόβει το query ⇒ ένα URL παραγώγου διαβάζεται πίσω στο
  * **ίδιο** αντικείμενο με το πρωτότυπο (άγκυρα roundtrip).
+ * 📐 **Με γνωστό πλάτος πρωτοτύπου** (`intrinsicWidth`, ADR-899 §3.7) η κλίμακα σταματά στην **πρώτη** βαθμίδα που το
+ * καλύπτει: κανένα `srcset` δεν υπόσχεται pixel που δεν υπάρχουν, και ο browser δεν ζητά ποτέ δεύτερο κλειδί για ίδια bytes.
  */
 export function buildProxyPreview(
   storagePath: string,
   placement: FileStoragePlacement = FILE_STORAGE_PLACEMENT_LEGACY,
+  intrinsicWidth: number | null = null,
 ): ProxyImagePreview {
-  const ladder = FILE_PREVIEW_ENCODING.widths.map((width) => ({
+  const ladder = previewWidthsFor(intrinsicWidth).map((width) => ({
     width,
     src: buildProxyPreviewUrl(storagePath, placement, width),
   }));
+  const fallbackWidth = effectivePreviewWidth(FILE_PREVIEW_FALLBACK_WIDTH, intrinsicWidth);
   return {
-    src: buildProxyPreviewUrl(storagePath, placement, FILE_PREVIEW_FALLBACK_WIDTH),
+    src: buildProxyPreviewUrl(storagePath, placement, fallbackWidth),
     srcSet: ladder.map((rung) => `${rung.src} ${rung.width}w`).join(', '),
     ladder,
+    intrinsicWidth,
   };
 }
 
