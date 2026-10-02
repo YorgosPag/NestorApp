@@ -3960,6 +3960,12 @@
   `onFinalize` ⇒ δεν ξαναελέγχεται ποτέ. Διόρθωση: ο κριτής purge σβήνει **όλα** τα δηλωμένα συνοδευτικά (με τον ίδιο έλεγχο hold),
   + άγκυρα. Τα παράγωγα του ADR-899 **δεν** έχουν αυτό το πρόβλημα (δεν αποθηκεύονται — επιλέχθηκε γι' αυτό).
 
+### 📐 Εμβαδόν ακινήτου `areas?.gross || areas?.net || area` — αντίγραφα έξω από το `propertyDisplayArea` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02, ADR-898 Φ4β · ADR-184)
+- **SSoT**: `src/lib/properties/property-display-area.ts` (`propertyDisplayArea` — `null` για «δεν μετρήθηκε», ποτέ `0`). Το χρησιμοποιούν ήδη η καρτέλα Μονάδων κτιρίου (στήλη · κάρτα · στατιστικά).
+- **Πού μένουν** (grep `areas?.gross ||` 2026-10-02): `domain/cards/property/usePropertyCardModel.ts` (`displayAreaOf`) · `features/property-grid/components/PropertyCard.tsx` (×2) · `features/property-hover/components/PropertyQuickView.tsx` · `lib/social-platform-system/sharing-service.ts`.
+- **Θεραπεία**: ανάθεση στο SSoT· προσοχή ότι το SSoT επιστρέφει `null` αντί για `undefined` (`?? undefined` όπου ο καταναλωτής περιμένει `undefined`).
+- **Παρεμπιπτόντως** (ίδια συνεδρία): `tabs/FloorsTabContent.tsx:154` έχει σκληρό `retryLabel="Retry"` (N.11) — η Στάθμευση διορθώθηκε με το υπάρχον `unitStats.retry`.
+
 ### 🏷️ Κεφαλίδα σελίδας (τίτλος + εισαγωγή) — αντίγραφα έξω από το `PrivatePageHeader` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02, ADR-900 · CHECK 3.28)
 - **Τι**: το ίδιο `<header className="flex flex-col gap-2"><h1 className="text-2xl font-semibold text-foreground">…</h1><p className="text-sm text-muted-foreground">…</p></header>` είναι γραμμένο με το χέρι σε πολλές σελίδες.
 - **SSoT**: `src/components/private-space/PrivatePageHeader.tsx` (το ζήτησε η CHECK 3.28 στο commit του ADR-900· το χρησιμοποιούν ήδη `InterestCheckContent` + `MyOwnerPropertiesContent`).

@@ -15,7 +15,7 @@
     "src/i18n/generated/routes/email__preferences__token.el.json": "da634d51d68321bb26762d645b87d83d823019577fd7cc11704ed5a3ae51e6e1",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "4a474138eca3c5dc593ee70a4a18ea8241f9b6165bd0ae4dc3f820d70f917b14",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/interest-check.el.json": "a5305c3cc7bafe9b1efb94641d597fc2da0f451834d60b02aae024b6b97a3507",
+    "src/i18n/generated/routes/interest-check.el.json": "aa82ea9c760eba3d3f10f0b83e9dd764bf4a012bf0686ae151e43c91fa81e99a",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "1a9106d455de9ba199b2a7479f5882a4b134295baf069e0a92f75a1a98906675",
@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "635eb5ebf921a8000e149b1de21b71e3bf929988b71b723c140592f4067f4801",
+  "inputsSha256": "7c7e747c4f21c3b91c1d6dfb70a26afb644cb30d868d9488e34ef4427419f317",
   "languages": [
     "el"
   ],
@@ -288,11 +288,12 @@
     "src/components/demand/form/DemandStayTermsRow.tsx": "c0158243026b9a97e576b27b2894dd5a7ccfb4245caddb5e6ca5ea3e93a1e267",
     "src/components/demand/form/demand-field-primitives.tsx": "c957a677f8d4fb89a7cd32bccd1977b9dd817ae778fd70ed4d41fb0f074bd824",
     "src/components/demand/interest-check/InterestCheckContent.tsx": "34c69db3f122a310b3998792616b429fd0580e31eb709e1c3ab1c3cd803a36b8",
-    "src/components/demand/interest-check/InterestCheckForm.tsx": "993f99c84587544c7074cdd27d3dfaea8658485b995d10cb0094c3ff1ff6f411",
+    "src/components/demand/interest-check/InterestCheckForm.tsx": "1636d201600f121dbfee971362fef12f9da8d3b7e8660c68c404ec7f8f2d8b4f",
     "src/components/demand/interest-check/InterestCheckResult.tsx": "7231580abbd5b2ffa729e309a490fa681fd0cee13f82952b682bec415e3da125",
     "src/components/generic/UniversalTabsRenderer.tsx": "642c6f838b7371f45eb4c0cb21d50ecea437bd5640dcaa2bf3951a2bcbf3ea78",
     "src/components/generic/mappings/propertyDossierMappings.ts": "9d4366f31abd6e097cca3828d0eb1b120df9e8b9bedce45677294a2837587821",
     "src/components/generic/utils/IconMapping.ts": "44c88586d596b88bffe0e07aca5e4a2dc90a83cfe1123ee22a59e0073b05e4b0",
+    "src/components/geo/AddressFocusFinder.tsx": "90359ddb96e96cc6609c4ac3e7e1243ad504eb4fbf73edbbafaed3c3a4c51189",
     "src/components/geo/PlaceChooser.tsx": "ee774dd2f54819e8df3c00301287b35a9bc2ed6ae2461c27c4fb8febfb347627",
     "src/components/geo/PlaceChooserStatus.tsx": "3ac066c41b6c156c93cda7f4fa7c143fe851fff29ad6603b11ef3937a8908fb1",
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
@@ -3265,9 +3266,21 @@
             "interestCheck.place.help",
             "interestCheck.place.legend",
             "interestCheck.submit",
-            "interestCheck.title"
+            "interestCheck.title",
+            "offer.form.placeFailed",
+            "offer.form.placeHouseNumber.contradicted",
+            "offer.form.placeHouseNumber.unconfirmed",
+            "offer.form.placeNotFound",
+            "offer.form.placeQueryLabel",
+            "offer.form.placeQueryPlaceholder",
+            "offer.form.placeRefine",
+            "offer.form.placeResolve",
+            "offer.form.placeResolving"
           ],
-          "prefixes": [],
+          "prefixes": [
+            "offer.form.placeAccuracyNote",
+            "offer.form.placeRelaxed"
+          ],
           "whole": false
         },
         "search-results": {
@@ -10580,7 +10593,7 @@
     "matchedKeys": 220,
     "routeBoundaries": 0,
     "shellFiles": 908,
-    "sliceBytes": 671191
+    "sliceBytes": 673588
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -55,6 +55,9 @@ export function renderUnitStatusBadge(status: string, tUnits: TFn) {
 /**
  * Table columns for the units table — screen **and** XLSX export from ONE definition (ADR-898 Φ4β).
  *
+ * Headers are the units' own (`unitsTable.columns.*`): until 2026-10-02 they borrowed the Floors tab keys and read
+ * «Όνομα Στάθμης» / «Ιδιότητες» / «Λεπτομέρειες» — wrong on screen, and they would now be the Excel headers too.
+ *
  * `sortValue` may return `null` — the row then sorts to the END in both
  * directions rather than being ranked as the smallest (ADR-777 Α6).
  * The price pair (amount + export-only unit) comes from `buildPriceColumns`: the units table shows the
@@ -68,25 +71,25 @@ export function usePropertyTabColumns(
   return useMemo(() => [
     {
       key: 'name',
-      label: t('tabs.floors.name'),
+      label: t('unitsTable.columns.name'),
       sortValue: (u) => u.name,
       render: (u) => <span className="font-medium">{u.name}</span>,
       exportCell: (u) => u.name || null,
     },
     {
       key: 'type',
-      label: t('tabs.labels.properties'),
+      label: t('unitsTable.columns.type'),
       width: 'w-28',
       sortValue: (u) => u.type,
       render: (u) => <span className={mutedTextClass}>{getPropertyTypeLabel(u.type, tUnits)}</span>,
       exportCell: (u) => getPropertyTypeLabel(u.type, tUnits),
     },
-    buildFloorColumn<Property>(t('tabs.floors.number'), (u) => u.floor, mutedTextClass),
+    buildFloorColumn<Property>(t('storageTable.columns.floor'), (u) => u.floor, mutedTextClass),
     buildAreaColumn<Property>(t('spaceColumns.area'), propertyDisplayArea),
-    ...buildPriceColumns<Property>({ price: tUnits('table.price'), unit: t('spaceColumns.priceUnit') }, tUnits, (u) => u.name),
+    ...buildPriceColumns<Property>({ price: t('storageTable.columns.price'), unit: t('spaceColumns.priceUnit') }, tUnits, (u) => u.name),
     {
       key: 'status',
-      label: t('tabs.labels.details'),
+      label: t('unitsTable.columns.status'),
       width: 'w-28',
       sortValue: (u) => u.status,
       render: (u) => renderUnitStatusBadge(u.status, tUnits),
@@ -101,11 +104,13 @@ export function usePropertyTabColumns(
  * `buildPriceField` takes no price accessor: which field holds the price is the
  * `price-resolver` SSoT's decision, not this tab's (ADR-777 Α6).
  */
-export function usePropertyTabCardFields(tUnits: TFn): SpaceCardField<Property>[] {
+// `priceLabel` από τον καλούντα: το `table.price` που διάβαζε η κάρτα ζει ΜΟΝΟ στο namespace `price-map` — στην οθόνη
+// έβγαινε ωμό κλειδί (βρέθηκε στη ζωντανή επαλήθευση της εξαγωγής, ADR-898 Φ4β).
+export function usePropertyTabCardFields(tUnits: TFn, priceLabel: string): SpaceCardField<Property>[] {
   return useMemo(() => [
     buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
     buildFloorField(tUnits('card.stats.floor'), (u) => (u.floor != null ? String(u.floor) : undefined)),
     buildAreaField((u) => propertyDisplayArea(u) ?? undefined),
-    buildPriceField(tUnits('table.price'), tUnits),
-  ], [tUnits]);
+    buildPriceField(priceLabel, tUnits),
+  ], [tUnits, priceLabel]);
 }

@@ -2445,7 +2445,7 @@
     "submit": "See the interest",
     "place": {
       "legend": "Where is it?",
-      "help": "Pick the building on the map or type the address."
+      "help": "Type the address to move the map there, then tap the building. If it is missing from the map, drop a point or draw it."
     },
     "description": {
       "legend": "What kind of property is it?",

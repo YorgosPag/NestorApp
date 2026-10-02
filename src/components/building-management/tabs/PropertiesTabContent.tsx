@@ -267,7 +267,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   // Η παρουσίαση μιας γραμμής μονάδας ζει στο `property-tab-columns` (ADR-184),
   // όπως ήδη κάνει η αδελφή καρτέλα στάθμευσης με το `parking-tab-config`.
   const unitColumns = usePropertyTabColumns(t, tUnits, colors.text.muted);
-  const unitCardFields = usePropertyTabCardFields(tUnits);
+  const unitCardFields = usePropertyTabCardFields(tUnits, t('storageTable.columns.price'));
 
   // Μία περιγραφή φίλτρων για την μπάρα ΚΑΙ για τις «Παραδοχές» της εξαγωγής (ADR-898 Φ4β).
   const typeFilter = {

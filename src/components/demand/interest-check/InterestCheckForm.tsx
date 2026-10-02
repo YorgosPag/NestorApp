@@ -22,6 +22,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS, type PropertyTypeCanonical } from '@/constants/property-types';
 import { isLandProperty } from '@/constants/property-classification';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
+import { AddressFocusFinder, type AddressFocus } from '@/components/geo/AddressFocusFinder';
 import {
   FormFieldset,
   FormInputField,
@@ -42,9 +43,18 @@ export function InterestCheckPlaceStep({
   onPlace: (ref: PlaceRef) => void;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
+  // 🔑 Διεύθυνση ΠΡΩΤΑ, κτίριο ΜΕΤΑ — ίδια σειρά με τη φόρμα του κατόχου (και τη Zillow). Η εστίαση πάει στον
+  //    επιλογέα, που κεντράρει τον χάρτη και προσφέρει τη διεύθυνση ως τόπο· ο τόπος αποφασίζεται ΜΟΝΟ εκεί.
+  const [found, setFound] = React.useState<AddressFocus | null>(null);
   return (
     <FormFieldset legend={t(`${K}.place.legend`)} help={t(`${K}.place.help`)}>
-      <PlaceIdentityField chosen={place} onChosen={onPlace} />
+      <AddressFocusFinder onFocus={setFound} />
+      <PlaceIdentityField
+        chosen={place}
+        onChosen={onPlace}
+        focus={found?.focus ?? null}
+        addressQuery={found?.query ?? null}
+      />
     </FormFieldset>
   );
 }

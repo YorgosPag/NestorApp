@@ -443,6 +443,7 @@
     "noUnits": "No units registered for this building.",
     "loading": "Loading units...",
     "columns": {
+      "name": "Unit",
       "code": "Code",
       "type": "Type",
       "area": "Area",
