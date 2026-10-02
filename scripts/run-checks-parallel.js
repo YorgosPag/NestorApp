@@ -35,6 +35,7 @@
  *   SKIP_CI_TIER_COVERAGE          '1' = bypass CHECK 3.37 (CI gate tier coverage)
  *   SKIP_ADDRESS_VOCABULARY        '1' = bypass CHECK 3.44 (address vocabulary coverage)
  *   SKIP_ADR_IDENTITY              '1' = bypass CHECK 3.49 (ADR number identity)
+ *   SKIP_I18N_RAW_FALLBACK         '1' = bypass CHECK 3.97 (raw i18n defaultValue fallback)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -963,6 +964,14 @@ if (!process.env.SKIP_BASEMAP_SOURCES && allFiles.length > 0)
 // ⛔ ZERO-TOLERANCE, καμία baseline. Σκανδάλη: τα δύο αρχεία κανόνων · η πηγή του claim · η ίδια η πύλη.
 if (!process.env.SKIP_RULES_SIGN_IN_LIVENESS && allFiles.length > 0)
   addThread('3.96', 'Rules sign-in liveness', 'scripts/check-rules-sign-in-liveness.js', allFiles);
+
+// CHECK 3.97 — Η ΩΜΗ ΕΦΕΔΡΕΙΑ i18n (ADR-898 §18.2). «Δείχνει αυτή η κλήση `t(…)` την ΩΜΗ τιμή όταν λείψει
+// το κλειδί;» 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-10-02): η λίστα κτιρίων έδειχνε `mixed`/`commercial` — ο κώδικας ζητούσε
+// `category.` ενώ το locale είχε `categories.`, και το `defaultValue: category` το έκρυβε ΜΗΝΕΣ και από το 3.8.
+// 🔑 AST (TypeScript API), ΟΧΙ regex: Radix `defaultValue={x}` και hooks ρυθμίσεων ΔΕΝ είναι κλήσεις `t(…)`.
+// 🔴 RATCHET ανά αρχείο (`.i18n-raw-fallback-baseline.json`). Μόνο τα staged `src/` (~ms ανά αρχείο).
+if (!process.env.SKIP_I18N_RAW_FALLBACK && srcTsFiles.length > 0)
+  addThread('3.97', 'i18n raw fallback', 'scripts/check-i18n-raw-fallback.js', srcTsFiles);
 
 // CHECK 3.64 — ΠΥΛΗ ΤΗΣ ΒΑΘΜΙΔΑΣ ΜΕΤΡΗΣΗΣ ΚΕΙΜΕΝΟΥ (ADR-799 Φάση 2). «Μέτρησε αυτή η σουίτα
 // κείμενο σε βαθμίδα που ΔΕΝ ΒΛΕΠΕΙ ό,τι της ζητήθηκε — και αν ναι, το ξέρει κάποιος;»

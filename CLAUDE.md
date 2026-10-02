@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:8181ca0ae805dcc435f2ee62721e3abdb7d26499320d1aff33367dc5c8324f37 -->
+     fingerprint: sha256:7c54c392196f0e980a0c95807c82692eb613411d5a968f69d6b68965794a841f -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -388,6 +388,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.94** | **Πύλη αναδιάταξης δημόσιων σελίδων** (ADR-797) — «χωράει κάθε στοιχείο στην οθόνη — και ό,τι βλέπει ή πατά ο άνθρωπος στο ΔΙΚΟ του κουτί; (το `scrollWidth` ΜΕΤΡΗΘΗΚΕ ψευδές: 390 = «όλα καλά» με πέντε…» · `npm run test:public-reflow` · 📘 `docs/gates/3.94.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 | **3.95** | **Πύλη των πηγών υποβάθρου** (ADR-891) — «δηλώνεται κάθε πηγή πλακιδίων χάρτη **στο μητρώο, με τους όρους χρήσης της** — ή τη γράφει κάποιος αλλού, εκεί όπου κανείς δεν ρωτά αν επιτρέπεται;» · `npm run test:basemap-sources` · `SKIP_BASEMAP_SOURCES=1` · 📘 `docs/gates/3.95.md` | ⛔ ZERO TOL | — |
 | **3.96** | **Πύλη της ζωντανής σύνδεσης στους κανόνες** (ADR-894) — «περνά **κάθε** `allow` που δίνει πρόσβαση σε συνδεδεμένο άνθρωπο από το `signInIsLive()` — ή υπάρχει κλάδος όπου μια **ανακλημένη** συσκευή μπαίνει α…» · `npm run test:rules-liveness` · `SKIP_RULES_SIGN_IN_LIVENESS=1` · 📘 `docs/gates/3.96.md` | ⛔ ZERO TOL | — |
+| **3.97** | **Πύλη της ωμής εφεδρείας i18n** (ADR-898) — «δείχνει αυτή η κλήση `t(…)` την **ΩΜΗ** τιμή όταν λείψει το κλειδί — και κρύβει έτσι το κλειδί που λείπει από το CHECK 3.8;» · `npm run test:i18n-raw-fallback` · `SKIP_I18N_RAW_FALLBACK=1` · 📘 `docs/gates/3.97.md` | 🔴 RATCHET κατά ταυτότητα (ανά αρχείο) | `.i18n-raw-fallback-baseline.json` |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -401,8 +402,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **88** (εκτελεστής 80 + hook 21) ·
-γραμμές εδώ: **78** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **89** (εκτελεστής 81 + hook 21) ·
+γραμμές εδώ: **79** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

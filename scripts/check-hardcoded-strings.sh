@@ -19,7 +19,12 @@
 # ALLOWED:
 #   t('key')
 #   t('key', { defaultValue: '' })
-#   t('key', { defaultValue: `${var}` })
+#
+# ⚠️ NOT A FIX (CHECK 3.97, ADR-898 §18.2):
+#   t('key', { defaultValue: `${var}` }) / t('key', { defaultValue: var })
+#   → shows the RAW value (e.g. `in_progress`) when the key is missing and hides
+#     the missing key from CHECK 3.8. Use an SSoT label function with an explicit
+#     'unknown' key instead (src/lib/buildings/building-enum-labels.ts).
 #
 # BLOCKED (when new):
 #   t('key', { defaultValue: 'Προσθήκη Νέου Έργου' })
@@ -147,8 +152,10 @@ if [[ "$HAS_BLOCK" -eq 1 ]]; then
     echo ""
     echo -e "${YELLOW}  Fix options:${NC}"
     echo -e "    1) Add key to src/i18n/locales/{el,en}/*.json, then drop defaultValue"
-    echo -e "    2) Use empty string: defaultValue: ''"
-    echo -e "    3) Use template literal: defaultValue: \`\${var}\`"
+    echo -e "    2) Dynamic/enum values: SSoT label function with an explicit 'unknown' key"
+    echo -e "       (pattern: src/lib/buildings/building-enum-labels.ts)"
+    echo -e "    ⚠️ NOT defaultValue: \`\${var}\` / defaultValue: var — shows the RAW value and hides"
+    echo -e "       the missing key from CHECK 3.8; blocked by CHECK 3.97 (ADR-898 §18.2)"
     echo ""
     echo -e "${YELLOW}  Audit: npm run i18n:audit${NC}"
     echo ""
