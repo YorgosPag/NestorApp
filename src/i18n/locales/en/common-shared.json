@@ -764,7 +764,8 @@
     "charsRemaining": "{count} characters"
   },
   "demandInterest": {
-    "notificationTitle": "{count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”"
+    "notificationTitle": "{count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”",
+    "notificationTitleAtLeast": "At least {count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”"
   },
   "demandListingMatch": {
     "notificationTitle": "A new listing matches your demand: “{title}”",

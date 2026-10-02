@@ -1251,7 +1251,8 @@
       "operatorInbox": "Operator Inbox",
       "bimDiagnostics": "BIM Diagnostics",
       "publicSite": "Public site",
-      "landingHeroes": "Hero images"
+      "landingHeroes": "Hero images",
+      "ownershipVerifications": "Ownership verifications"
     }
   },
   "bimDiagnostics": {
@@ -1359,5 +1360,20 @@
       "noteFailed": "Failed to save note",
       "exportFailed": "Failed to export CSV"
     }
+  },
+  "ownershipVerifications": {
+    "title": "Ownership verifications",
+    "description": "Land Registry certificates that automatic verification could not confirm. Open the certificate, compare it with the account and decide.",
+    "loading": "Loading queue…",
+    "failed": "The queue did not load. Please try again.",
+    "empty": "There are no pending verifications.",
+    "kaek": "Land Registry code",
+    "signer": "Seal signer",
+    "unread": "Not read",
+    "sealInvalid": "Invalid seal",
+    "note": "Note (optional)",
+    "openCertificate": "Open certificate",
+    "approve": "Approve",
+    "reject": "Reject"
   }
 }

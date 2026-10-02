@@ -2451,5 +2451,50 @@
       "hint": "Type the address and see how many people are looking for a property like yours there — before you even decide to sell or rent it. No listing, no commitment.",
       "addressLabel": "Address of your property"
     }
+  },
+  "ownershipVerification": {
+    "heading": "Ownership verification",
+    "intro": "Prove the property is yours with the Land Registry certificate (ΠΚΑ) and you will see the exact number of people looking for it, instead of “at least”.",
+    "howTo": "The certificate is issued online at ktimatologio.gov.gr with your Taxisnet credentials and costs €5. Upload the PDF exactly as you downloaded it.",
+    "upload": "Upload certificate (PDF)",
+    "uploadAgain": "Upload a new certificate",
+    "submitting": "Checking the certificate…",
+    "loading": "Loading…",
+    "unavailable": "We could not load the verification status. Please try again shortly.",
+    "noDossier": "This listing has no property file, where the certificate is kept.",
+    "privacy": "Your tax ID is not stored with the verification; we keep only a cryptographic fingerprint for comparison. The certificate stays in your property file.",
+    "reasonsHeading": "What our team will check:",
+    "remedyProfile": "Add your full name and tax ID to your profile",
+    "status": {
+      "verified": "Verified owner",
+      "verifiedDetail": "Land Registry code {kaek}. You see the exact number of interested people.",
+      "pendingReview": "Our team is reviewing the certificate",
+      "pendingReviewDetail": "We could not confirm it automatically. You will see the result here once the review is done.",
+      "rejected": "The verification was not approved",
+      "rejectedDetail": "You can upload a new, recent certificate.",
+      "inactive": "The verification is no longer valid",
+      "inactiveDetail": "Upload a recent certificate to renew it."
+    },
+    "reasons": {
+      "sealInvalid": "The electronic seal is missing or the file changed after it was issued.",
+      "issuerUnconfirmed": "The seal is genuine; we are confirming it was issued by the Land Registry.",
+      "staleCertificate": "The certificate is older than 90 days.",
+      "kaekUnreadable": "We could not read the property’s Land Registry code with certainty.",
+      "beneficiariesUnreadable": "We could not read the registered owners.",
+      "taxIdAbsent": "The certificate shows no tax ID for an automatic comparison.",
+      "taxIdMismatch": "The tax ID in your profile is not among the registered owners.",
+      "nameMismatch": "The name in your profile differs from the registered owner’s name.",
+      "kaekClaimedElsewhere": "This property has already been verified by another account.",
+      "taxIdClaimedElsewhere": "Your tax ID is already used by another account."
+    },
+    "errors": {
+      "notYourProperty": "Verification is available only for properties you listed yourself as a private owner.",
+      "identityIncomplete": "Verification needs your full name and tax ID.",
+      "certificateTooLarge": "The file is too large for a certificate. Upload the PDF exactly as you downloaded it.",
+      "certificateMissing": "The file was not found in the property file. Please try again.",
+      "certificateNotReady": "The file has not finished uploading. Please try again shortly.",
+      "certificateNotPdf": "The certificate must be a PDF.",
+      "unavailable": "The check did not complete. Please try again shortly — you do not need to change anything."
+    }
   }
 }

@@ -764,7 +764,8 @@
     "charsRemaining": "{count} χαρακτήρες"
   },
   "demandInterest": {
-    "notificationTitle": "{count, plural, one {# άνθρωπος ψάχνει} other {# άνθρωποι ψάχνουν}} ακίνητο σαν το «{title}»"
+    "notificationTitle": "{count, plural, one {# άνθρωπος ψάχνει} other {# άνθρωποι ψάχνουν}} ακίνητο σαν το «{title}»",
+    "notificationTitleAtLeast": "Τουλάχιστον {count, plural, one {# άνθρωπος ψάχνει} other {# άνθρωποι ψάχνουν}} ακίνητο σαν το «{title}»"
   },
   "demandListingMatch": {
     "notificationTitle": "Νέα αγγελία ταιριάζει στη ζήτησή σας: «{title}»",
