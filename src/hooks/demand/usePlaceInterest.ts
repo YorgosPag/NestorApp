@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PlaceInterest } from '@/lib/demand/demand-interest';
+import { prospectInterestUrl, type ProspectQuery } from '@/lib/demand/prospect-interest';
 
 const logger = createModuleLogger('usePlaceInterest');
 
@@ -40,10 +41,30 @@ interface InterestResponse {
 
 /** **Ταυτότητα ακινήτου → πόσοι το ζητούν.** `null` όσο δεν ξέρουμε ταυτότητα. */
 export function usePlaceInterest(propertyId: string | null): PlaceInterestState {
+  const id = propertyId?.trim() ?? '';
+  return useInterestAt(id === '' ? null : `/api/demand/interest?propertyId=${encodeURIComponent(id)}`);
+}
+
+/**
+ * **ADR-900 — κτίριο + περιγραφή → πόσοι ψάχνουν κάτι σαν αυτό**, πριν την απόδειξη κατοχής.
+ *
+ * 🔑 Ίδια κατάσταση, ίδιο πάνελ, ίδιος μηχανισμός με το {@link usePlaceInterest}: το URL το γράφει ο
+ * **ένας** κάτοχος του συμβολαίου ({@link prospectInterestUrl}), που διαβάζει και η διαδρομή.
+ * `null` = ο άνθρωπος δεν έχει ρωτήσει ακόμη.
+ */
+export function useProspectInterest(query: ProspectQuery | null): PlaceInterestState {
+  return useInterestAt(query === null ? null : prospectInterestUrl(query));
+}
+
+/**
+ * **Ο ΕΝΑΣ μηχανισμός φόρτωσης** — εξήχθη όταν ήρθε δεύτερη πόρτα (ADR-900, N.0.2): δύο αντίγραφα του
+ * `useEffect` θα απέκλιναν στο πρώτο «η αποτυχία ΔΕΝ είναι μηδέν».
+ */
+function useInterestAt(url: string | null): PlaceInterestState {
   const [state, setState] = useState<PlaceInterestState>({ state: 'loading' });
 
   useEffect(() => {
-    if (propertyId === null || propertyId.trim() === '') {
+    if (url === null) {
       setState({ state: 'unavailable' });
       return;
     }
@@ -52,15 +73,13 @@ export function usePlaceInterest(propertyId: string | null): PlaceInterestState 
     setState({ state: 'loading' });
 
     apiClient
-      .get<InterestResponse>(
-        `/api/demand/interest?propertyId=${encodeURIComponent(propertyId)}`,
-      )
+      .get<InterestResponse>(url)
       .then((payload) => {
         if (alive) setState({ state: 'ready', interest: payload.interest });
       })
       .catch((cause: unknown) => {
         logger.warn('Το ενδιαφέρον δεν φορτώθηκε', {
-          data: { propertyId },
+          data: { url },
           error: cause instanceof Error ? cause.message : String(cause),
         });
         if (alive) setState({ state: 'unavailable' });
@@ -71,7 +90,7 @@ export function usePlaceInterest(propertyId: string | null): PlaceInterestState 
     return () => {
       alive = false;
     };
-  }, [propertyId]);
+  }, [url]);
 
   return state;
 }

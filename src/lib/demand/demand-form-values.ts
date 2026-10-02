@@ -57,6 +57,7 @@ import type { OfferKind } from '@/types/property-offers';
 import { OFFER_KINDS } from '@/types/property-offers';
 import {
   DEMAND_LIFE_CONTEXTS,
+  DEMAND_OWNER_SIGNALS,
   DEMAND_PROXIMITY_KINDS,
   FRONTAGE_SIDES,
   NO_AMOUNT_RANGE,
@@ -78,6 +79,7 @@ import type { GeoPoint, GeoPolyline } from '@/types/geo/coordinates';
 import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
 import { isGeoPolyline } from '@/lib/geo/geo-line';
 import { normalizeDemandLabel } from './demand-title';
+import { DEFAULT_DEMAND_OWNER_SIGNAL } from './demand-owner-signal';
 
 // =============================================================================
 // 1. ΟΙ ΜΟΡΦΕΣ ΧΩΡΟΥ ΠΟΥ Η ΦΟΡΜΑ ΜΠΟΡΕΙ ΝΑ ΕΚΦΡΑΣΕΙ **ΣΗΜΕΡΑ**
@@ -262,6 +264,9 @@ export const demandFormSchema = z.object({
   // ⚠️ Χωρίς `.max()` εδώ: το μήκος το κρίνει το invariant `title-too-long` (ίδιος κριτής με
   // την πύλη γραφής), ώστε το μήνυμα να είναι **το δικό του**, όχι ένα γενικό σφάλμα zod.
   title: z.string(),
+
+  // ── ADR-900 — αντίρρηση στην ανώνυμη καταμέτρηση προς ιδιοκτήτες ─────────
+  ownerSignal: z.enum(DEMAND_OWNER_SIGNALS),
 });
 
 export type DemandFormValues = z.input<typeof demandFormSchema>;
@@ -318,6 +323,7 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   proximity: [],
   lifeContext: null,
   title: '',
+  ownerSignal: DEFAULT_DEMAND_OWNER_SIGNAL,
 };
 
 // =============================================================================
@@ -334,7 +340,8 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
  */
 export type DemandDraft = Pick<
   PropertyDemand,
-  'seeks' | 'place' | 'timing' | 'features' | 'proximity' | 'lifeContext' | 'title' | 'placeLabel'
+  | 'seeks' | 'place' | 'timing' | 'features' | 'proximity' | 'lifeContext' | 'title' | 'placeLabel'
+  | 'ownerSignal'
 >;
 
 
@@ -442,6 +449,7 @@ export function demandDraftFrom(values: DemandFormParsed): DemandDraft {
     lifeContext: values.lifeContext,
     title: normalizeDemandLabel(values.title),
     placeLabel: placeLabelFrom(values),
+    ownerSignal: values.ownerSignal,
   };
 }
 

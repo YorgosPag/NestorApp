@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 847 ADRs | Last Updated: 2026-10-02
+**📊 Stats**: 848 ADRs | Last Updated: 2026-10-02
 
 ---
 
@@ -25,7 +25,7 @@
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 12 | [View](#security-auth) |
-| 🔧 **Backend Systems** | 5 | [View](#backend-systems) |
+| 🔧 **Backend Systems** | 6 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
 | 📄 **Uncategorized** | 593 | [View](#uncategorized) |
@@ -882,6 +882,7 @@
 | **ADR-897** | Σημεία λήψης φωτογραφιών πάνω στις κατόψεις: θέση, κατεύθυνση και οπτικό πεδίο ανά φωτογραφία | ✅ ✅ IMPLEMENTED — Φ1–Φ5.2 υλοποιημένες 2026-10-01 · εκκρεμεί ζωντανός έλεγχος σε browser | 2026-10-01 | Uncategorized | [📄](./adrs/ADR-897-photo-capture-spots-on-floorplans.md) |
 | **ADR-898** | Υπολογισμός αντικειμενικής αξίας: **ΜΙΑ** μηχανή του νόμου για το κοινό, τις αγγελίες και τον εργολάβο | ✅ 🚧 IN PROGRESS — Φ1 (μηχανή + άγκυρες) ✅ · Φ2 (δημόσιος υπολογιστής) ✅ · Φ3α (αντικειμενική στην αγγελία, ανάγνωση) ✅ · **Φ3β-1 (δηλώσεις αγγελιοδότη: σχήμα · προβολή · γραφή) ✅ 2026-10-01** · Φ3β-2/3 · Φ4 · Φ5 σχεδιασμένες | 2026-10-01 | Backend Systems | [📄](./adrs/ADR-898-objective-value-calculator.md) |
 | **ADR-899** | Παράγωγα εσωτερικών εικόνων κατ' απαίτηση: **κλειστή κλίμακα**, ζωή **δεμένη με το πρωτότυπο**, και η γκαλερί της κεφαλίδας ακινήτου | ✅ ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ⏳ συμπλήρωση | 2026-10-01 | Backend Systems | [📄](./adrs/ADR-899-on-demand-internal-image-derivatives.md) |
+| **ADR-900** | «Δες αν κάποιος ενδιαφέρεται για το ακίνητό σου»: η πόρτα του ιδιοκτήτη **πριν** την καταχώριση, και το δικαίωμα αντίρρησης του ζητούντος | ✅ ✅ IMPLEMENTED — Φ1 (σελίδα `/interest-check` · ακροατήριο `prospective-owner` · `ownerSignal` · προσυμπλήρωση `/offers/new`) 2026-10-02 · ⏳ Φ2+ (§8) | 2026-10-02 | Backend Systems | [📄](./adrs/ADR-900-owner-interest-check.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1095,6 +1096,7 @@
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
 | **ADR-898** | Υπολογισμός αντικειμενικής αξίας: **ΜΙΑ** μηχανή του νόμου για το κοινό, τις αγγελίες και τον εργολάβο | ✅ 🚧 IN PROGRESS — Φ1 (μηχανή + άγκυρες) ✅ · Φ2 (δημόσιος υπολογιστής) ✅ · Φ3α (αντικειμενική στην αγγελία, ανάγνωση) ✅ · **Φ3β-1 (δηλώσεις αγγελιοδότη: σχήμα · προβολή · γραφή) ✅ 2026-10-01** · Φ3β-2/3 · Φ4 · Φ5 σχεδιασμένες | [View](./adrs/ADR-898-objective-value-calculator.md) |
 | **ADR-899** | Παράγωγα εσωτερικών εικόνων κατ' απαίτηση: **κλειστή κλίμακα**, ζωή **δεμένη με το πρωτότυπο**, και η γκαλερί της κεφαλίδας ακινήτου | ✅ ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ⏳ συμπλήρωση | [View](./adrs/ADR-899-on-demand-internal-image-derivatives.md) |
+| **ADR-900** | «Δες αν κάποιος ενδιαφέρεται για το ακίνητό σου»: η πόρτα του ιδιοκτήτη **πριν** την καταχώριση, και το δικαίωμα αντίρρησης του ζητούντος | ✅ ✅ IMPLEMENTED — Φ1 (σελίδα `/interest-check` · ακροατήριο `prospective-owner` · `ownerSignal` · προσυμπλήρωση `/offers/new`) 2026-10-02 · ⏳ Φ2+ (§8) | [View](./adrs/ADR-900-owner-interest-check.md) |
 
 ---
 

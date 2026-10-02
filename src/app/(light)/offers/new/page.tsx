@@ -42,6 +42,7 @@
 import type { Metadata } from 'next';
 
 import { OwnerPropertyCreationGate } from '@/components/owner-property/OwnerPropertyCreationGate';
+import { ownerFormFromProspect } from '@/lib/owner-property/owner-property-prospect-prefill';
 
 /**
  * 🔴 **`noindex` ΑΝΑ ΣΕΛΙΔΑ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΑΛΛΟΣ ΑΠΟ ΤΟΥ `(me)`.**
@@ -67,6 +68,23 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function NewOfferPage() {
-  return <OwnerPropertyCreationGate />;
+interface NewOfferPageProps {
+  readonly searchParams: Promise<Readonly<Record<string, string | string[] | undefined>>>;
+}
+
+/**
+ * 🔑 **ADR-900 — η συνέχεια του «Δες αν κάποιος ενδιαφέρεται».** Ίδιο σχήμα με το `/demands/new?from=`:
+ * η σελίδα διαβάζει το ερώτημα και δίνει **αρχικές τιμές**· η πύλη και η φόρμα δεν αλλάζουν. Χωρίς
+ * έγκυρο ερώτημα ⇒ κενή φόρμα, όπως πάντα. ⚠️ Ένα **αποθηκευμένο προσχέδιο** του ανθρώπου νικά την
+ * προσυμπλήρωση (`memory.restored ?? initialValues`): δουλειά που έγραψε δεν χάνεται για ένα link.
+ */
+export default async function NewOfferPage({ searchParams }: NewOfferPageProps) {
+  const raw = await searchParams;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === 'string') params.set(key, value);
+  }
+
+  const prefill = ownerFormFromProspect(params);
+  return prefill === null ? <OwnerPropertyCreationGate /> : <OwnerPropertyCreationGate initialValues={prefill} />;
 }

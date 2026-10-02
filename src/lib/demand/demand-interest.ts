@@ -77,8 +77,10 @@ import {
   discloseDemand,
   demandExclusionReason,
   type DemandDisclosure,
+  type OwnerDemandAudience,
 } from './demand-aggregate';
 import { matchDemandAgainstListing } from './demand-matching';
+import { signalsOwners } from './demand-owner-signal';
 import type { DemandBlocker, ListingMatchFacts } from './demand-match-vocabulary';
 
 // =============================================================================
@@ -214,6 +216,9 @@ export function classifyDemandInterest(
 ): DemandInterestOutcome {
   // Πρώτα «μετράει καθόλου;», μετά «ταιριάζει;» — βλ. το συμβόλαιο σειράς παραπάνω.
   if (demandExclusionReason(demand, nowIso) !== null) return 'not-countable';
+  // 🔴 ADR-900 — ο ζητών αρνήθηκε να μετρήσει προς ιδιοκτήτες. **Εδώ και μόνο εδώ**: κάθε
+  //    ακροατήριο ιδιοκτήτη (πάνελ · cron · σελίδα ελέγχου) περνά από αυτή τη συνάρτηση.
+  if (!signalsOwners(demand)) return 'not-countable';
 
   const match = matchDemandAgainstListing(demand, facts, todayDate);
   if (match.verdict === 'match') return 'interested';
@@ -315,12 +320,16 @@ export type PlaceInterest =
  * @param demands — οι υποψήφιες ζητήσεις, ήδη επιλεγμένες από το ερώτημα του καλούντος
  * @param nowIso — η στιγμή αναφοράς· **ρητή παράμετρος**, κανείς δεν διαβάζει το ρολόι
  * @param todayDate — ISO `YYYY-MM-DD` για τον χρονικό άξονα
+ * @param audience — ADR-900: `place-owner` (αποδεδειγμένος κάτοχος, κατώφλι 1) ή `prospective-owner`
+ *   (σελίδα ελέγχου ενδιαφέροντος, **χωρίς** απόδειξη κατοχής, κατώφλι 5 + βήμα 5). Ο **ίδιος** κριτής,
+ *   η **ίδια** κρίση — αλλάζει μόνο το τι επιτρέπεται να ειπωθεί.
  */
 export function discloseInterest(
   facts: ListingMatchFacts,
   demands: readonly PropertyDemand[],
   nowIso: string,
   todayDate: string,
+  audience: OwnerDemandAudience = 'place-owner',
 ): { readonly interest: PlaceInterest; readonly census: PlaceInterestCensus } {
   const stance = stanceOfListing(facts.listing);
 
@@ -345,7 +354,7 @@ export function discloseInterest(
       // σκόπιμο: το κατώφλι έχει **έναν** τόπο. Η δεύτερη απογραφή είναι ταυτοτική
       // (τα `not-countable` έχουν ήδη φύγει), άρα δεν υπάρχει διπλομέτρηση — υπάρχει
       // **ένας** κριτής.
-      disclosure: discloseDemand(interested, 'place-owner', nowIso),
+      disclosure: discloseDemand(interested, audience, nowIso),
     },
     census,
   };

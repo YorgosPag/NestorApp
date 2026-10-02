@@ -61,6 +61,7 @@ import {
   DemandTimingField,
 } from './form/DemandAxisFields';
 import { DemandLifeContextField } from './form/DemandLifeContextField';
+import { DemandOwnerSignalField } from './form/DemandOwnerSignalField';
 
 /**
  * 🔑 **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ (CHECK 3.34, ADR-744 / ADR-886).** Το πεδίο ονόματος δείχνει ως placeholder το
@@ -155,6 +156,8 @@ export function DemandFormContent({
       <DemandFeaturesField />
       <DemandNeighbourhoodField />
       <DemandLifeContextField />
+      {/* ADR-900 — ενημέρωση + αντίρρηση στην ανώνυμη καταμέτρηση προς ιδιοκτήτες. */}
+      <DemandOwnerSignalField />
       {/* ADR-886 — ονομασία ΚΑΤΑ την αποθήκευση, δίπλα στο κουμπί· κενό = ζωντανό αυτόματο όνομα. */}
       <DemandTitleField />
     </DraftFormShell>

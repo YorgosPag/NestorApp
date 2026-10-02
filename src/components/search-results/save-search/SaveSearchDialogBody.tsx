@@ -20,6 +20,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { DemandSeeksField } from '@/components/demand/form/DemandAxisFields';
 import { DemandTitleField } from '@/components/demand/form/DemandTitleField';
+import { DemandOwnerSignalField } from '@/components/demand/form/DemandOwnerSignalField';
 import { useDemandFormText } from '@/components/demand/demand-form-labels';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -120,6 +121,8 @@ function SaveSearchForm({ initial, searchQuery, userId, onClose }: SaveSearchFor
       <form onSubmit={handleSubmit} className="space-y-4">
         {askSeeks && <DemandSeeksField />}
         <DemandTitleField />
+        {/* ADR-900 — η ίδια ενημέρωση/αντίρρηση με τη φόρμα: δύο πόρτες δημιουργίας, ένα πεδίο. */}
+        <DemandOwnerSignalField />
         <NotCarriedNotice notCarried={initial.notCarried} />
         {issues.length > 0 && (
           <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">

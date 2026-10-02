@@ -199,6 +199,12 @@
         "student": "Student",
         "filled": "{count, plural, one {# field was filled in} other {# fields were filled in}} — change them freely.",
         "filledNone": "Nothing changed: you had already filled them in."
+      },
+      "ownerSignal": {
+        "legend": "Let owners know?",
+        "help": "When an owner checks whether there is interest in their property, we count your search anonymously — only the number, never who you are, exactly what you want or your budget. You can opt out; alerts about new listings are not affected.",
+        "allowed": "Yes, count it anonymously",
+        "withheld": "No, do not count it"
       }
     },
     "lifeContextName": {
@@ -427,7 +433,8 @@
       "unavailable": "We could not read demand right now. Please try again shortly.",
       "settled": "The deal for this property is complete, so we no longer count demand for it.",
       "closedReach": "Private marketing: these people cannot see your listing.",
-      "privacy": "You never learn who they are or exactly what they want — only how many."
+      "privacy": "You never learn who they are or exactly what they want — only how many.",
+      "atLeast": "At least {count} people are looking for a property like yours, here."
     }
   },
   "offer": {
@@ -2431,5 +2438,28 @@
       "compassSuggestion": "The photo's compass suggests {degrees}°. Indoors it can drift — check it.",
       "compassNeedsNorth": "This photo has a compass: set the floor plan north to get a direction suggestion."
     }
+  },
+  "interestCheck": {
+    "title": "Is anyone interested in your property?",
+    "lead": "Point to the building and tell us what kind of property it is. You will see how many people are looking for something like it here — even if you have not thought of selling or renting it.",
+    "submit": "See the interest",
+    "place": {
+      "legend": "Where is it?",
+      "help": "Pick the building on the map or type the address."
+    },
+    "description": {
+      "legend": "What kind of property is it?",
+      "help": "Anything you leave empty is not compared.",
+      "typeLabel": "Property type",
+      "areaLabel": "Area (m²)",
+      "floorLabel": "Floor (0 = ground, −1 = basement)"
+    },
+    "claim": {
+      "title": "Is it yours? See whether people ask for it by name",
+      "body": "Some people declare that they want a specific building, \"whenever it comes up\". Register the property as yours to see how many want exactly this one — from the very first — and get notified when more join. Registering is not a listing: nothing is published unless you decide so.",
+      "desktopNote": "Registering currently works on a computer.",
+      "cta": "Register my property"
+    },
+    "door": "Is anyone interested in a property of yours? Check before you register it"
   }
 }

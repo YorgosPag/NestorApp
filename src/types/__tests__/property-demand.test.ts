@@ -76,6 +76,7 @@ function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
     lifeContext: null,
     title: null,
     placeLabel: null,
+    ownerSignal: 'allowed',
     lifecycle: 'active',
     affirmedAt: '2026-08-11T00:00:00.000Z',
     createdAt: '2026-08-11T00:00:00.000Z',

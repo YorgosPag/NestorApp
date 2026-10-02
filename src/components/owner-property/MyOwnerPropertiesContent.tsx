@@ -30,6 +30,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
+import { INTEREST_CHECK_ROUTE } from '@/lib/demand/demand-routes';
 // ADR-820 §5.3 — Ο ΕΝΑΣ κριτής του «ανήκω σε οργανισμό;», ποτέ ωμό `user?.companyId`.
 import { hasOrganization } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
@@ -45,6 +46,7 @@ import {
 } from '@/services/realtime/hooks/useMyOwnerProperties';
 
 import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
+import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader';
 import { OwnerPortfolio } from './OwnerPortfolio';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers` (ADR-777 §8.39).
@@ -154,10 +156,7 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
         κέρδος **δεν** είναι το πλάτος — είναι ότι η τιμή γράφεται **μία** φορά αντί
         για τέσσερις, και κλιμακώνεται με το zoom του χρήστη (WCAG 1.4.4).
       */}
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-foreground">{t(`${K}.title`)}</h1>
-        <p className="text-sm text-muted-foreground">{t(`${K}.lead`)}</p>
-      </header>
+      <PrivatePageHeader title={t(`${K}.title`)} lead={t(`${K}.lead`)} />
 
       {/*
         Η πόρτα δημιουργίας είναι **σύνδεσμος προς ξεχωριστή διαδρομή**, όχι κουμπί που
@@ -181,6 +180,17 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
           className="inline-block rounded-md px-4 py-2 font-medium text-foreground underline"
         >
           {t(`${NS}:dossier.list.fromOffers`)}
+        </Link>
+        {/*
+          ADR-900 — «ενδιαφέρεται κάποιος;» ΠΡΙΝ την καταχώριση: η πόρτα ζει εδώ και ΟΧΙ στη στήλη, γιατί
+          το `navigation` είναι σφραγισμένο στο κέλυφος (μετρημένο: +38 bytes πάνω από το ταβάνι του) — ο
+          κανόνας λέει μετακόμιση σε σωστό namespace, όχι μεγαλύτερος αριθμός.
+        */}
+        <Link
+          href={INTEREST_CHECK_ROUTE}
+          className="inline-block rounded-md px-4 py-2 font-medium text-foreground underline"
+        >
+          {t(`${NS}:interestCheck.door`)}
         </Link>
       </nav>
 

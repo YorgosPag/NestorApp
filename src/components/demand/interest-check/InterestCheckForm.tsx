@@ -1,0 +1,91 @@
+'use client';
+
+/**
+ * **Η ΦΟΡΜΑ ΤΟΥ «ΔΕΣ ΑΝ ΚΑΠΟΙΟΣ ΕΝΔΙΑΦΕΡΕΤΑΙ»** — ποιο κτίριο, τι ακίνητο.
+ *
+ * @related ADR-900 · lib/demand/prospect-interest.ts · components/geo/PlaceIdentityField
+ * @module components/demand/interest-check/InterestCheckForm
+ *
+ * 🔑 **Κανένα νέο πεδίο UI.** Το κτίριο το δείχνει ο **ίδιος** επιλογέας με τη ζήτηση και την
+ * καταχώριση (`PlaceIdentityField`)· τα είδη έρχονται από το **ίδιο** SSoT (`PROPERTY_TYPES` +
+ * `PROPERTY_TYPE_I18N_KEYS`)· τα πεδία είναι τα **κοινά** primitives της φόρμας του κατόχου. Ο άνθρωπος
+ * που θα πατήσει μετά «Καταχώριση» βλέπει τις ίδιες ερωτήσεις, με τις ίδιες λέξεις.
+ *
+ * ⚠️ **Τρία πεδία, όχι περισσότερα** — όσα κρίνει η μηχανή για ακίνητο **χωρίς** διάθεση (τι είναι,
+ * πόσο, ποιος όροφος). Τιμή και είδος συμφωνίας **δεν** ρωτιούνται: θα ήταν σκοπός πριν την απάντηση.
+ */
+
+import React from 'react';
+import type { Control } from 'react-hook-form';
+
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS, type PropertyTypeCanonical } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
+import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
+import {
+  FormFieldset,
+  FormInputField,
+  FormOptionsField,
+} from '@/components/shared/forms/form-field-primitives';
+import { PROSPECT_LIMITS, type ProspectFormValues } from '@/lib/demand/prospect-interest';
+import type { PlaceRef } from '@/types/geo/public-place';
+
+const NS = 'property-market';
+const K = `${NS}:interestCheck`;
+
+/** Βήμα 1 — **ποιο** κτίριο. */
+export function InterestCheckPlaceStep({
+  place,
+  onPlace,
+}: {
+  place: PlaceRef | null;
+  onPlace: (ref: PlaceRef) => void;
+}): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  return (
+    <FormFieldset legend={t(`${K}.place.legend`)} help={t(`${K}.place.help`)}>
+      <PlaceIdentityField chosen={place} onChosen={onPlace} />
+    </FormFieldset>
+  );
+}
+
+/** Βήμα 2 — **τι** ακίνητο. Ο όροφος αποσύρεται για γη (ADR-777 §8.32), όπως στη φόρμα του κατόχου. */
+export function InterestCheckDescriptionStep({
+  control,
+  type,
+}: {
+  control: Control<ProspectFormValues>;
+  type: ProspectFormValues['type'];
+}): React.ReactElement {
+  const { t } = useTranslation([NS, 'properties-enums']);
+  return (
+    <FormFieldset legend={t(`${K}.description.legend`)} help={t(`${K}.description.help`)}>
+      <p className="text-sm text-foreground">{t(`${K}.description.typeLabel`)}</p>
+      <FormOptionsField<ProspectFormValues, PropertyTypeCanonical>
+        control={control}
+        name="type"
+        mode="single"
+        options={PROPERTY_TYPES}
+        labelOf={(option) => t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[option]}`)}
+      />
+      <FormInputField<ProspectFormValues>
+        control={control}
+        name="areaSqm"
+        kind="number"
+        label={t(`${K}.description.areaLabel`)}
+        min={1}
+        max={PROSPECT_LIMITS.areaSqmMax}
+      />
+      {!isLandProperty(type) && (
+        <FormInputField<ProspectFormValues>
+          control={control}
+          name="floor"
+          kind="number"
+          label={t(`${K}.description.floorLabel`)}
+          min={PROSPECT_LIMITS.floorMin}
+          max={PROSPECT_LIMITS.floorMax}
+        />
+      )}
+    </FormFieldset>
+  );
+}

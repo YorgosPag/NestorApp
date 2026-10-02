@@ -58,6 +58,7 @@ export function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand 
     lifeContext: null,
     title: null,
     placeLabel: null,
+    ownerSignal: 'allowed',
     lifecycle: 'active',
     affirmedAt: NOW_ISO,
     createdAt: NOW_ISO,

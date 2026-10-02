@@ -105,7 +105,7 @@ export async function lookupOwnedPlace(
 ): Promise<PlaceLookup> {
   // Ο εντοπισμός με θεματοφυλακή ζει πλέον στο `owned-listing-projection` (ADR-898 Φ3β-3) — ίδια σειρά, ίδια άρνηση.
   const owned = await lookupOwnedProjection(db, propertyId, uid, companyId);
-  return owned.kind === 'absent' ? ABSENT : { kind: 'found', source: owned.source, facts: toFacts(owned) };
+  return owned.kind === 'absent' ? ABSENT : { kind: 'found', source: owned.source, facts: factsOfProjection(owned) };
 }
 
 /**
@@ -159,7 +159,7 @@ export function ownerPropertyFactsOf(
   property: OwnerProperty,
   at: string,
 ): ListingMatchFacts {
-  return toFacts(ownerPropertyProjectionOf(property, at));
+  return factsOfProjection(ownerPropertyProjectionOf(property, at));
 }
 
 /**
@@ -185,7 +185,7 @@ export async function companyPropertyFactsOf(
   property: CompanyProjectableProperty,
   at: string,
 ): Promise<ListingMatchFacts> {
-  return toFacts(await companyPropertyProjectionOf(db, property, at));
+  return factsOfProjection(await companyPropertyProjectionOf(db, property, at));
 }
 
 /**
@@ -205,7 +205,7 @@ export async function companyPropertyFactsOf(
  * Η μηχανή τα λέει **ονομαστικά** (`availability-unknown` / `proximity-unknown`) αντί
  * να υποθέσει — και γι' αυτό **δεν** γεμίζονται εδώ με εικασίες.
  */
-function toFacts({ property, place, at }: OwnedProjectionInput): ListingMatchFacts {
+export function factsOfProjection({ property, place, at }: OwnedProjectionInput): ListingMatchFacts {
   return {
     listing: projectListingShape(property, place, at),
     place: place.ref,

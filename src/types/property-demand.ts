@@ -702,6 +702,20 @@ export type DemandLifecycle = (typeof DEMAND_LIFECYCLES)[number];
  */
 export const LIVE_DEMAND_LIFECYCLES = ['active'] as const satisfies readonly DemandLifecycle[];
 
+/**
+ * **ADR-900 — μετράει αυτή η ζήτηση ΠΡΟΣ ΙΔΙΟΚΤΗΤΕΣ;** Το δικαίωμα αντίρρησης (GDPR άρθ. 21).
+ *
+ * - `allowed`  → μετράει (ανώνυμα) στο «πόσοι ζητούν» του ιδιοκτήτη και της σελίδας ελέγχου ενδιαφέροντος
+ * - `withheld` → **δεν** μετράει σε κανένα ακροατήριο ιδιοκτήτη· το ταίριασμα προς τον ίδιο τον ζητούντα
+ *   (ειδοποίηση όταν βγει αγγελία) **δεν** αλλάζει
+ *
+ * 🔑 **Απουσία πεδίου = `allowed`** (έγγραφα πριν το ADR-900). Κάθε **άλλη** τιμή διαβάζεται `withheld`:
+ * η αστοχία πέφτει προς την **ιδιωτικότητα**, ποτέ προς την αποκάλυψη (`demand-owner-signal.ts`).
+ */
+export const DEMAND_OWNER_SIGNALS = ['allowed', 'withheld'] as const;
+
+export type DemandOwnerSignal = (typeof DEMAND_OWNER_SIGNALS)[number];
+
 // =============================================================================
 // 8. Η ΟΝΤΟΤΗΤΑ
 // =============================================================================
@@ -780,6 +794,10 @@ export interface PropertyDemand {
    * δεν υπάρχει (οπουδήποτε · σχεδιασμένη περιοχή · έγγραφο πριν το ADR-886).
    */
   readonly placeLabel: string | null;
+
+  // ── ADR-900 — ΑΝΤΙΡΡΗΣΗ ΣΤΗΝ ΑΝΩΝΥΜΗ ΚΑΤΑΜΕΤΡΗΣΗ ΠΡΟΣ ΙΔΙΟΚΤΗΤΕΣ ─────────────
+  /** Βλ. {@link DEMAND_OWNER_SIGNALS}. Στη μνήμη **πάντα** ορισμένο — το σύνορο ανάγνωσης βάζει την προεπιλογή. */
+  readonly ownerSignal: DemandOwnerSignal;
 
   // ── ΚΑΤΑΣΤΑΣΗ ──────────────────────────────────────────────────────────────
   readonly lifecycle: DemandLifecycle;

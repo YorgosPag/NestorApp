@@ -45,6 +45,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { JudgedInterestStance, PlaceInterest } from '@/lib/demand/demand-interest';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 import type { PlaceInterestState } from '@/hooks/demand/usePlaceInterest';
+import { DEMAND_DISCLOSURE } from '@/lib/demand/demand-aggregate';
 
 /**
  * Ποια εξήγηση συνοδεύει κάθε στάση. **`Record` πάνω σε κλειστό σύνολο**: τέταρτη
@@ -157,6 +158,11 @@ function CountedInterest({
   const { stance, disclosure } = interest;
   const { count, minCount } = disclosure;
   const whyKey = WHY_KEY[stance];
+  // 🔑 ADR-900 — στρογγυλεμένος αριθμός (βήμα > 1) λέγεται «τουλάχιστον N», ποτέ «N»: το «5» θα
+  //    ισχυριζόταν ακρίβεια που η πολιτική **σκόπιμα** δεν δίνει. Το βήμα από την ΙΔΙΑ πολιτική.
+  const countKey = DEMAND_DISCLOSURE[disclosure.audience].granularity > 1
+    ? 'property-market:demand.interest.atLeast'
+    : COUNT_KEY[stance];
   // 🔒 Μόνο πάνω σε **ισχυρό** ισχυρισμό: στο `dormant`/`partial` η εξήγηση ήδη λέει ότι
   //    το ακίνητο δεν διατίθεται — δεύτερη γραμμή για το κοινό θα ήταν θόρυβος.
   const closedReach = audience !== 'public' && stance === 'offered' && count !== null && count > 0;
@@ -172,7 +178,7 @@ function CountedInterest({
           {t('property-market:demand.interest.none')}
         </p>
       ) : (
-        <p className="mt-2 text-sm text-foreground">{t(COUNT_KEY[stance], { count })}</p>
+        <p className="mt-2 text-sm text-foreground">{t(countKey, { count })}</p>
       )}
 
       {/* Η εξήγηση της αδυναμίας συνοδεύει **μόνο** τον ισχυρισμό που είναι αδύναμος:

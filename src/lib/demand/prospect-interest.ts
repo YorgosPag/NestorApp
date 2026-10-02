@@ -1,0 +1,196 @@
+/**
+ * @fileoverview **«ΔΕΣ ΑΝ ΚΑΠΟΙΟΣ ΕΝΔΙΑΦΕΡΕΤΑΙ ΓΙΑ ΤΟ ΑΚΙΝΗΤΟ ΣΟΥ»** — η περιγραφή, το συμβόλαιο URL, η προβολή.
+ * @related ADR-900 · lib/demand/demand-interest.ts (`discloseInterest`, ο ΕΝΑΣ κριτής) ·
+ *   lib/demand/demand-aggregate.ts (`prospective-owner`) · app/api/demand/prospect-interest/route.ts
+ * @module lib/demand/prospect-interest
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΚΑΜΙΑ ΔΕΥΤΕΡΗ ΜΗΧΑΝΗ — Η ΠΕΡΙΓΡΑΦΗ ΓΙΝΕΤΑΙ «ΑΚΙΝΗΤΟ ΧΩΡΙΣ ΔΙΑΘΕΣΗ» ΚΑΙ ΚΡΙΝΕΤΑΙ ΟΠΩΣ ΚΑΘΕ ΑΛΛΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο επισκέπτης δείχνει **κτίριο** και λέει **τι είναι** το ακίνητο (είδος · εμβαδόν · όροφος). Αυτό
+ * είναι ακριβώς ένα ακίνητο ιδιοκτήτη που **δεν έχει δηλώσει διάθεση** — η στάση `dormant` του
+ * `demand-interest.ts`, που υπάρχει ήδη, με τη δική της έντιμη εξήγηση («συγκρίναμε μόνο τι είναι
+ * και πού βρίσκεται»). Άρα δεν γράφεται δεύτερος κριτής: η περιγραφή γίνεται {@link ProjectableProperty}
+ * και περνά από **την ίδια** προβολή και **την ίδια** κρίση με το πάνελ του κατόχου.
+ *
+ * ⚠️ **Τίποτα δεν γράφεται.** Η προβολή είναι εφήμερη, στη μνήμη του διακομιστή — ίδιο συμβόλαιο
+ * με το `place-interest.service.ts` (`projectListingShape`, ποτέ `buildPublicListing`).
+ *
+ * **Layering**: leaf — καθαρές συναρτήσεις· καμία Firestore, κανένα ρολόι.
+ */
+
+import { isCanonicalPropertyType, type PropertyTypeCanonical } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
+import type { ProjectableProperty } from '@/services/listings/public-listing-projection-types';
+import type { PlaceRef } from '@/types/geo/public-place';
+
+// =============================================================================
+// 1. Η ΠΕΡΙΓΡΑΦΗ
+// =============================================================================
+
+/** Τι λέει ο επισκέπτης για το ακίνητο. Ό,τι αφήνει κενό **δεν** γίνεται κριτήριο (`null`). */
+export interface ProspectDescription {
+  readonly type: PropertyTypeCanonical;
+  /** Μικτό εμβαδόν σε m². */
+  readonly areaSqm: number | null;
+  /** Όροφος· `0` = ισόγειο, αρνητικός = υπόγειο. */
+  readonly floor: number | null;
+}
+
+/** Το ερώτημα ολόκληρο: **ποιο** κτίριο, **τι** ακίνητο. */
+export interface ProspectQuery {
+  readonly ref: PlaceRef;
+  readonly description: ProspectDescription;
+}
+
+/** Τα όρια που κάνουν μια τιμή **περιγραφή**, όχι θόρυβο. */
+export const PROSPECT_LIMITS = {
+  areaSqmMax: 100_000,
+  floorMin: -5,
+  floorMax: 200,
+} as const;
+
+/** Ο **ένας** κριτής εμβαδού — τον ρωτούν η φόρμα **και** ο parser της διαδρομής. */
+function isProspectArea(value: number): boolean {
+  return Number.isFinite(value) && value > 0 && value <= PROSPECT_LIMITS.areaSqmMax;
+}
+
+/** Ο **ένας** κριτής ορόφου — ακέραιος, υπόγεια ως αρνητικά. */
+function isProspectFloor(value: number): boolean {
+  return Number.isInteger(value) && value >= PROSPECT_LIMITS.floorMin && value <= PROSPECT_LIMITS.floorMax;
+}
+
+/** Ό,τι κρατά η φόρμα της σελίδας. `''` = δεν διάλεξε ακόμη είδος. */
+export interface ProspectFormValues {
+  readonly type: PropertyTypeCanonical | '';
+  readonly areaSqm: number | null;
+  readonly floor: number | null;
+}
+
+export const EMPTY_PROSPECT_FORM: ProspectFormValues = { type: '', areaSqm: null, floor: null };
+
+/**
+ * **Τόπος + φόρμα → ερώτημα**, ή `null` όσο λείπει κτίριο ή είδος (το κουμπί μένει ανενεργό).
+ *
+ * ⚠️ **Η γη δεν έχει όροφο** (ADR-777 §8.32) — ο όροφος πέφτει εδώ, στη μετάφραση, όπως στο
+ * `ownerPropertyDraftFrom`: η φόρμα κρύβει το πεδίο, αλλά η τιμή επιβιώνει στη μνήμη της.
+ */
+export function prospectQueryFrom(ref: PlaceRef | null, values: ProspectFormValues): ProspectQuery | null {
+  if (ref === null || values.type === '') return null;
+  if (values.areaSqm !== null && !isProspectArea(values.areaSqm)) return null;
+  const floor = isLandProperty(values.type) ? null : values.floor;
+  if (floor !== null && !isProspectFloor(floor)) return null;
+  return { ref, description: { type: values.type, areaSqm: values.areaSqm, floor } };
+}
+
+// =============================================================================
+// 2. ΤΟ ΣΥΜΒΟΛΑΙΟ URL — γραμμένο ΜΙΑ φορά, για τον πελάτη ΚΑΙ τη διαδρομή
+// =============================================================================
+
+/** Η διαδρομή του API. */
+export const PROSPECT_INTEREST_API = '/api/demand/prospect-interest' as const;
+
+/** Τα ονόματα των παραμέτρων. Δύο αντίγραφα (hook + route) θα απέκλιναν στην πρώτη μετονομασία. */
+const PARAM = {
+  landId: 'landId',
+  buildingId: 'buildingId',
+  type: 'type',
+  areaSqm: 'areaSqm',
+  floor: 'floor',
+} as const;
+
+/**
+ * **Ερώτημα → παράμετροι.** Ό,τι είναι `null` **λείπει** — δεν γράφεται ως «null». Τις διαβάζει ο
+ * {@link parseProspectQuery}, είτε στη διαδρομή του API είτε στο `/offers/new` (προσυμπλήρωση).
+ */
+export function prospectQueryParams(query: ProspectQuery): URLSearchParams {
+  const params = new URLSearchParams({ [PARAM.landId]: query.ref.landId, [PARAM.type]: query.description.type });
+  if (query.ref.buildingId !== null) params.set(PARAM.buildingId, query.ref.buildingId);
+  if (query.description.areaSqm !== null) params.set(PARAM.areaSqm, String(query.description.areaSqm));
+  if (query.description.floor !== null) params.set(PARAM.floor, String(query.description.floor));
+  return params;
+}
+
+/** **Ερώτημα → URL του API.** */
+export function prospectInterestUrl(query: ProspectQuery): string {
+  return `${PROSPECT_INTEREST_API}?${prospectQueryParams(query).toString()}`;
+}
+
+/** Γιατί απορρίφθηκε ένα ερώτημα. Κλειστό σύνολο. */
+export const PROSPECT_QUERY_DEFECTS = ['missing-land', 'bad-type', 'bad-area', 'bad-floor'] as const;
+
+export type ProspectQueryDefect = (typeof PROSPECT_QUERY_DEFECTS)[number];
+
+export type ProspectQueryParse =
+  | { readonly kind: 'ok'; readonly query: ProspectQuery }
+  | { readonly kind: 'invalid'; readonly defect: ProspectQueryDefect };
+
+/** Αριθμός ή `null` αν λείπει· `undefined` αν υπάρχει αλλά **δεν** είναι αριθμός. */
+function optionalNumber(raw: string | null): number | null | undefined {
+  if (raw === null || raw.trim() === '') return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function areaOf(raw: string | null): number | null | undefined {
+  const value = optionalNumber(raw);
+  if (value === null || value === undefined) return value;
+  return isProspectArea(value) ? value : undefined;
+}
+
+function floorOf(raw: string | null): number | null | undefined {
+  const value = optionalNumber(raw);
+  if (value === null || value === undefined) return value;
+  return isProspectFloor(value) ? value : undefined;
+}
+
+/**
+ * **URL → ερώτημα**, ή ο **πρώτος** ονομασμένος λόγος απόρριψης.
+ *
+ * ⚠️ Οι ταυτότητες τόπου ελέγχονται εδώ **μόνο** για παρουσία· το «είναι τόπος και υπάρχει;» το
+ * απαντά ο **ένας** κριτής του διακομιστή (`verifyPlaceRef`), ποτέ δεύτερο regex.
+ */
+export function parseProspectQuery(params: URLSearchParams): ProspectQueryParse {
+  const landId = params.get(PARAM.landId)?.trim() ?? '';
+  if (landId === '') return { kind: 'invalid', defect: 'missing-land' };
+
+  const type = params.get(PARAM.type);
+  if (!isCanonicalPropertyType(type)) return { kind: 'invalid', defect: 'bad-type' };
+
+  const areaSqm = areaOf(params.get(PARAM.areaSqm));
+  if (areaSqm === undefined) return { kind: 'invalid', defect: 'bad-area' };
+
+  const floor = floorOf(params.get(PARAM.floor));
+  if (floor === undefined) return { kind: 'invalid', defect: 'bad-floor' };
+
+  const buildingId = params.get(PARAM.buildingId)?.trim() || null;
+  return { kind: 'ok', query: { ref: { landId, buildingId }, description: { type, areaSqm, floor } } };
+}
+
+// =============================================================================
+// 3. Η ΠΡΟΒΟΛΗ — περιγραφή → «ακίνητο χωρίς διάθεση»
+// =============================================================================
+
+/** Η ταυτότητα της εφήμερης προβολής. Δεν γράφεται πουθενά — υπάρχει επειδή το σχήμα τη ζητά. */
+export const PROSPECT_LISTING_ID = 'prospect';
+
+/**
+ * **Περιγραφή → ακίνητο που ΔΕΝ διατίθεται.**
+ *
+ * 🔑 Καμία διάθεση, καμία τιμή ⇒ η στάση βγαίνει `dormant` από τον **υπάρχοντα** κριτή
+ * (`stanceOfListing`), και η κρίση συγχωρεί **ονομαστικά** είδος συμφωνίας και τιμή. Ποτέ
+ * εφευρημένη διάθεση «για να ταιριάξει κάτι»: θα έλεγε σε κάποιον ότι τον ζητούν αγοραστές για
+ * ακίνητο που δεν πουλά — ο ισχυρισμός θα ήταν ψευδής, και θα φαινόταν γενναιόδωρος.
+ */
+export function prospectProjectable(description: ProspectDescription): ProjectableProperty {
+  return {
+    id: PROSPECT_LISTING_ID,
+    type: description.type,
+    commercialStatus: 'unavailable',
+    offerKinds: [],
+    commercial: null,
+    areas: { gross: description.areaSqm },
+    floor: description.floor,
+  };
+}

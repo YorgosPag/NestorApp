@@ -52,6 +52,14 @@ export const MY_DEMANDS_ROUTE = '/demands' as const;
  */
 export const NEW_DEMAND_ROUTE = '/demands/new' as const;
 
+/**
+ * **ADR-900 — «Δες αν κάποιος ενδιαφέρεται για το ακίνητό σου».** Η πόρτα του ιδιοκτήτη που **δεν** έχει
+ * καταχωρίσει ακόμη τίποτα. Ζει εδώ, στις διαδρομές της **ζήτησης**, γιατί αυτό ρωτά: πόση ζήτηση υπάρχει.
+ * Στο `(me)` (ταυτότητα + `noindex` από το κέλυφος), και **λειτουργεί σε στενή οθόνη** — σε αντίθεση με
+ * το `/offers/new` (Α8), δεν έχει βαριά φόρμα.
+ */
+export const INTEREST_CHECK_ROUTE = '/interest-check' as const;
+
 /** Η βάση της **μίας** ζήτησης. Δυναμικό τμήμα: η ταυτότητα (`dmnd_*`). */
 export const DEMAND_DETAIL_ROUTE_BASE = '/demands';
 

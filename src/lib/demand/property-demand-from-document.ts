@@ -73,6 +73,7 @@ import {
 import { withAreaShapes } from './demand-area';
 import { featuresWithoutLegacyPrice, readStoredSeeks } from './demand-seeks-read';
 import { normalizeDemandLabel } from './demand-title';
+import { ownerSignalOf } from './demand-owner-signal';
 
 // =============================================================================
 // 1. ΤΙ ΔΙΑΒΑΣΤΗΚΕ
@@ -205,6 +206,8 @@ export function readStoredDemand(raw: unknown, id: string): StoredDemandRead | n
       // είναι string (χειρόγραφη εγγραφή στην κονσόλα) διαβάζεται επίσης ως «δεν δόθηκε».
       title: normalizeDemandLabel(stored.title),
       placeLabel: normalizeDemandLabel(stored.placeLabel),
+      // ADR-900 — απουσία = «δεν ρωτήθηκε» = `allowed`· άγνωστη τιμή = `withheld` (fail-closed).
+      ownerSignal: ownerSignalOf(stored.ownerSignal),
     },
   };
 }

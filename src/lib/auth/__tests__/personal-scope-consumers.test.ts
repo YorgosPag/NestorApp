@@ -64,6 +64,14 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       'κρίνεται από το ίδιο listing-custody μέσω lookupOwnedPlace.',
   },
   {
+    route: 'src/app/api/demand/prospect-interest/route.ts',
+    why:
+      'ADR-900 — «Δες αν κάποιος ενδιαφέρεται για το ακίνητό σου», ΠΡΙΝ την καταχώριση κατοχής. ' +
+      'Απευθύνεται στον ιδιώτη ιδιοκτήτη (Α14). GET, δεν γράφει, δεν διαβάζει τίποτα ανά χρήστη ' +
+      'ή εταιρεία· η ταυτότητα ζητείται για λογοδοσία και όριο ρυθμού. ΚΑΜΙΑ απόδειξη κατοχής, ' +
+      'γι\' αυτό το ακροατήριο είναι prospective-owner (κατώφλι 5, βήμα 5), ποτέ place-owner.',
+  },
+  {
     route: 'src/app/api/workspaces/route.ts',
     why:
       'Η ΠΟΡΤΑ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΣΥΝΟΡΟΥ (ADR-787 Κ-1 · Κ-2). Είναι η ΜΟΝΑΔΙΚΗ διαδρομή ' +

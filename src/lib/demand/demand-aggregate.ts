@@ -88,9 +88,16 @@ import {
  * μαζί με τη λειτουργία που το χρειαζόταν· χρειάστηκε **γραπτός λόγος**, και
  * γράφοντάς τον βρέθηκε το όριο (**μεγέθη, όχι άξονες**) που κανείς δεν είχε δει.
  */
-export const DEMAND_AUDIENCES = ['place-owner', 'area-market', 'approached-offerer'] as const;
+export const DEMAND_AUDIENCES = ['place-owner', 'area-market', 'approached-offerer', 'prospective-owner'] as const;
 
 export type DemandAudience = (typeof DEMAND_AUDIENCES)[number];
+
+/**
+ * **Τα ακροατήρια ιδιοκτήτη** (ADR-900) — όσα κρίνονται από το `discloseInterest` και σέβονται την
+ * αντίρρηση του ζητούντος (`ownerSignal`). Υποσύνολο **δεμένο** στη ρίζα: όνομα που δεν είναι
+ * ακροατήριο δεν μεταγλωττίζεται.
+ */
+export type OwnerDemandAudience = Extract<DemandAudience, 'place-owner' | 'prospective-owner'>;
 
 /** Τι επιτρέπεται να μάθει ένα ακροατήριο. */
 export interface DemandDisclosurePolicy {
@@ -102,6 +109,16 @@ export interface DemandDisclosurePolicy {
    * ακριβή αριθμό.
    */
   readonly minCount: number;
+  /**
+   * **ADR-900 — με ποιο βήμα στρογγυλεύεται προς τα κάτω ο αριθμός που λέγεται.** `1` = ακριβής.
+   *
+   * 🔑 Το κατώφλι κρύβει τον **μικρό** αριθμό· το βήμα κρύβει τη **διαφορά**. Όποιος μπορεί να
+   * ξαναρωτήσει με ελαφρώς άλλα κριτήρια (`6` → `5`) μαθαίνει ότι **ένας** άνθρωπος απαιτεί το
+   * κριτήριο που άλλαξε — με βήμα 5 και οι δύο απαντήσεις λένε «τουλάχιστον 5». Πρότυπο
+   * *rounding/banding* της στατιστικής απόκρυψης. Το βήμα **δεν ταξιδεύει** στην απάντηση: η
+   * οθόνη το διαβάζει από **αυτή** την πολιτική μέσω του `audience` — μία αλήθεια.
+   */
+  readonly granularity: number;
   /** Ο γραπτός λόγος. **Υποχρεωτικός** — ίδιο συμβόλαιο με το `unscopedReason`. */
   readonly why: string;
 }
@@ -113,6 +130,7 @@ export const DEMAND_DISCLOSURE: Readonly<Record<DemandAudience, DemandDisclosure
   'place-owner': {
     // 🔑 **Απόφαση Giorgio 2026-08-11: «από τον 1ο, χωρίς ταυτότητα».**
     minCount: 1,
+    granularity: 1,
     why:
       'Ο ιδιοκτήτης μαθαίνει για ΤΟ ΔΙΚΟ ΤΟΥ ακίνητο. Το υποκείμενο του k-anonymity ' +
       'είναι το ΠΡΟΣΩΠΟ που ζητά, όχι το ακίνητο — και εκείνο προστατεύεται με ' +
@@ -123,15 +141,31 @@ export const DEMAND_DISCLOSURE: Readonly<Record<DemandAudience, DemandDisclosure
   'area-market': {
     // Πρότυπο small-cell suppression. Τα καθιερωμένα κατώφλια είναι 5 / 10 / 11.
     minCount: 5,
+    granularity: 1,
     why:
       'Ο αγοραστής του Ε2 είναι ΤΡΙΤΟΣ και μαθαίνει για ανθρώπους που δεν τον ξέρουν. ' +
       'Εδώ ο αριθμός ΕΙΝΑΙ η αποκάλυψη: «1 άτομο ψάχνει σε αυτό το τετράγωνο, ' +
       'τριάρι, ως 250.000» περιγράφει ένα πρόσωπο. Το 5 είναι το χαμηλότερο ' +
       'καθιερωμένο κατώφλι στατιστικής απόκρυψης (5 / 10 / 11).',
   },
+  'prospective-owner': {
+    // 🔑 **ADR-900 — η σελίδα «Δες αν κάποιος ενδιαφέρεται για το ακίνητό σου».**
+    minCount: 5,
+    granularity: 5,
+    why:
+      'Όποιος ρωτά εδώ ΔΕΝ έχει αποδείξει ότι το ακίνητο είναι δικό του — δείχνει ένα κτίριο και ' +
+      'περιγράφει ένα ακίνητο. Για το σύστημα είναι ΤΡΙΤΟΣ, όπως ο αγοραστής του area-market, και ' +
+      'μαθαίνει για ανθρώπους που δεν τον ξέρουν: με κατώφλι 1, μια ερώτηση για τη μονοκατοικία του ' +
+      'γείτονα θα έλεγε «1 άτομο ζητά ΑΥΤΟ το κτίριο». Το 5 είναι το κατώφλι στατιστικής απόκρυψης. ' +
+      'Ο ακριβής αριθμός (κατώφλι 1) ανοίγει ΜΟΝΟ μετά την καταχώριση κατοχής, στο place-owner — το ' +
+      'ίδιο δίδυμο μοντέλο με Zoopla MyHome / Spekulantkollen (άθροισμα πριν) και Zillow (claim, μετά). ' +
+      'ΕΝΑ σύνολο μόνο, ποτέ ανά είδος συμφωνίας ή ζώνη τιμής: δύο αθροίσματα πάνω από το κατώφλι ' +
+      'μπορούν να διαφέρουν κατά 1, και η διαφορά τους είναι ένα πρόσωπο.',
+  },
   'approached-offerer': {
     // 🔑 **ADR-843 ΠΕ1/ΠΕ2 — ο ίδιος ο ζητών πάτησε το κουμπί.**
     minCount: 1,
+    granularity: 1,
     why:
       'Ο προσφέρων μαθαίνει για ΕΝΑΝ άνθρωπο που τον πλησίασε ΟΝΟΜΑΣΤΙΚΑ, με ρητή ' +
       'πράξη του ίδιου. Το k-κατώφλι προστατεύει το ΥΠΟΚΕΙΜΕΝΟ από αποκάλυψη που δεν ' +
@@ -301,12 +335,12 @@ export function discloseDemand(
   audience: DemandAudience,
   nowIso: string,
 ): DemandDisclosure {
-  const { minCount } = DEMAND_DISCLOSURE[audience];
+  const { minCount, granularity } = DEMAND_DISCLOSURE[audience];
   const { counted } = censusDemands(demands, nowIso);
 
   return {
     audience,
-    count: counted >= minCount ? counted : null,
+    count: counted >= minCount ? Math.floor(counted / granularity) * granularity : null,
     minCount,
   };
 }

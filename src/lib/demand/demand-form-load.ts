@@ -125,6 +125,7 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
       proximity: demand.proximity.map((p) => ({ ...p })),
       lifeContext: demand.lifeContext,
       title: demand.title ?? '',
+      ownerSignal: demand.ownerSignal,
     },
   };
 }

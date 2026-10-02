@@ -3960,6 +3960,12 @@
   `onFinalize` ⇒ δεν ξαναελέγχεται ποτέ. Διόρθωση: ο κριτής purge σβήνει **όλα** τα δηλωμένα συνοδευτικά (με τον ίδιο έλεγχο hold),
   + άγκυρα. Τα παράγωγα του ADR-899 **δεν** έχουν αυτό το πρόβλημα (δεν αποθηκεύονται — επιλέχθηκε γι' αυτό).
 
+### 🏷️ Κεφαλίδα σελίδας (τίτλος + εισαγωγή) — αντίγραφα έξω από το `PrivatePageHeader` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02, ADR-900 · CHECK 3.28)
+- **Τι**: το ίδιο `<header className="flex flex-col gap-2"><h1 className="text-2xl font-semibold text-foreground">…</h1><p className="text-sm text-muted-foreground">…</p></header>` είναι γραμμένο με το χέρι σε πολλές σελίδες.
+- **SSoT**: `src/components/private-space/PrivatePageHeader.tsx` (το ζήτησε η CHECK 3.28 στο commit του ADR-900· το χρησιμοποιούν ήδη `InterestCheckContent` + `MyOwnerPropertiesContent`).
+- **Πού μένουν**: `MyDemandsContent` · `MySavedListingsContent` · `MyContactsContent` (η κεφαλίδα έχει και τρίτη γραμμή) · `DraftFormShell` · `StayCalendarContent` · `ContactInboxContent` · `ListingDetailContent` · `construction/portfolio/page.tsx`. Μέτρα πρώτα: `grep -rln 'h1 className="text-2xl font-semibold text-foreground"' src`.
+- **Θεραπεία**: όπου η κεφαλίδα είναι ακριβώς τίτλος + εισαγωγή → `PrivatePageHeader`· όπου έχει επιπλέον περιεχόμενο, `children` στο ίδιο component — όχι δεύτερο.
+
 ### 🕐 `getRelativeTime` — τέσσερα τοπικά αντίγραφα του «πριν από Χ» έξω από το `intl-formatting` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-29, ADR-894)
 - **SSoT**: `formatRelativeTime` του `src/lib/intl-formatting.ts` (`Intl.RelativeTimeFormat` στη γλώσσα του αναγνώστη).
   Το `lib/obligations/utils.ts` ήδη αναθέτει σε αυτό ✅· το `session-helpers.ts` μεταφέρθηκε 2026-09-29 (ήταν **σκληρά ελληνικά**).
