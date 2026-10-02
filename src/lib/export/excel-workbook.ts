@@ -136,11 +136,26 @@ export function excelSheetName(raw: string): string {
 }
 
 /**
+ * Όνομα **μοναδικό** στο βιβλίο: η περικοπή στους 31 μπορεί να **γεννήσει** σύγκρουση από δύο διαφορετικούς τίτλους, και
+ * το `addWorksheet` πετά σε διπλό όνομα (ADR-833 §5.7.1). Σύγκρουση ⇒ « (2)», « (3)»… μέσα στο όριο.
+ */
+function uniqueSheetName(workbook: ExcelJS.Workbook, raw: string): string {
+  const base = excelSheetName(raw);
+  const taken = (name: string) => workbook.worksheets.some((sheet) => sheet.name.toLowerCase() === name.toLowerCase());
+  if (!taken(base)) return base;
+  for (let n = 2; ; n += 1) {
+    const suffix = ` (${n})`;
+    const candidate = `${base.slice(0, SHEET_NAME_MAX - suffix.length).trim()}${suffix}`;
+    if (!taken(candidate)) return candidate;
+  }
+}
+
+/**
  * **Ένα φύλλο-πίνακας με το ντύσιμο της εφαρμογής** — κεφαλίδα που μένει ορατή στην κύλιση, αυτόματο φίλτρο, μορφή
  * αριθμού ανά στήλη, και (προαιρετικά) γραμμή συνόλου. Ό,τι χρειάζεται ένα schedule που θα ανοίξει λογιστής.
  */
 export function addScheduleSheet(workbook: ExcelJS.Workbook, spec: ScheduleSheetSpec): ExcelJS.Worksheet {
-  const sheet = workbook.addWorksheet(excelSheetName(spec.name), { views: [{ state: 'frozen', ySplit: 1 }] });
+  const sheet = workbook.addWorksheet(uniqueSheetName(workbook, spec.name), { views: [{ state: 'frozen', ySplit: 1 }] });
   sheet.columns = spec.columns.map((column) => ({
     header: column.header,
     width: column.width ?? 18,

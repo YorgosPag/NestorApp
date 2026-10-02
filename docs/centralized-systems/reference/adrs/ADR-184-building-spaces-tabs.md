@@ -64,6 +64,16 @@
 
 ## Changelog
 
+- **2026-10-02** — **ADR-898 Φ4β**: νέα καρτέλα κτιρίου `objectiveValue` (`tabs/ObjectiveValueTab/*`) πάνω στο
+  κοινό `BuildingSpaceTable`, που απέκτησε: `initialSort` (ο πίνακας ανοίγει ομαδοποιημένος, Revit `Sort By`) ·
+  `onSortChange` · `renderFooter` (`<tfoot>` — ο καλών αποφασίζει **αν** υπάρχει αληθινό σύνολο) · επικεφαλίδες
+  ταξινόμησης ως **κουμπιά** με `aria-sort` (πριν: κλικ σε `<th>`, απρόσιτο από πληκτρολόγιο). Η λογική σειράς εξήχθη σε
+  καθαρό `shared/space-table-sort.ts` (`sortIntoGroups` · `nextSortState` · `ariaSortOf`) ώστε η εξαγωγή να έχει την
+  **ίδια** σειρά με την οθόνη. Νέο `SpaceColumn.exportCell`/`exportFormat` + `shared/space-table-export.ts`
+  (στήλες → φύλλο, πάνω στο `lib/export/excel-workbook` `addScheduleSheet`). ⏳ Οι Units/Parking/Storage δεν έχουν ακόμη
+  `exportCell` — το κουμπί «Εξαγωγή» του `BuildingSpaceFilterBar` μένει χωρίς `onClick` ως το επόμενο βήμα.
+  Tests: `shared/__tests__/BuildingSpaceTable.sort.test.tsx` (+3).
+
 - **2026-09-18** — **ONE filter bar** for the three space tabs: `shared/BuildingSpaceFilterBar.tsx`
   (search + type/status selects + export). Units (`PropertiesTabContent`), Parking
   (`ParkingTabContent`) and Storage (`StorageTab/StorageTabFilters`, now a thin label wrapper)

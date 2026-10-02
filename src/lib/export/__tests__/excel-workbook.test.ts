@@ -15,6 +15,14 @@ describe('excelSheetName', () => {
     expect(excelSheetName('  ')).toBe('Sheet');
   });
 
+  it('δύο τίτλοι που η περικοπή κάνει ΙΔΙΟΥΣ ⇒ δεύτερο φύλλο « (2)», όχι εξαίρεση', () => {
+    const workbook = new ExcelJS.Workbook();
+    const spec = (name: string) => ({ name, columns: [{ header: 'A', format: 'text' as const }], rows: [] });
+    addScheduleSheet(workbook, spec(`${'x'.repeat(31)}-α`));
+    const second = addScheduleSheet(workbook, spec(`${'x'.repeat(31)}-β`));
+    expect(second.name).toBe(`${'x'.repeat(27)} (2)`);
+  });
+
   it('ένα όνομα από μετάφραση με «:» ΔΕΝ ρίχνει την εξαγωγή', () => {
     const workbook = new ExcelJS.Workbook();
     expect(() => addScheduleSheet(workbook, { name: 'objective-value:sheet', columns: [{ header: 'A', format: 'text' }], rows: [] })).not.toThrow();

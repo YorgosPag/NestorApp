@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **02/10 — Ο ΤΥΠΟΣ ΤΟΥ `t` ΠΟΥ ΠΕΡΝΑ ΣΕ ΒΟΗΘΟΥΣ: ΔΕΚΑ+ ΤΟΠΙΚΑ ΑΝΤΙΓΡΑΦΑ** *(N.0.2 · ADR-898 §17)*
+
+  `(key: string, options?: Record<string, unknown>) => string` γράφεται ξανά και ξανά: `PriceLabelT`
+  (`lib/listings/listing-price-label.ts`) · `ShowcaseClientT` (`components/showcase-core/ShowcaseClient.tsx`) · inline σε
+  `property-tab-columns` · `BuildingShowcaseSpecs` · `ProjectShowcaseSpecs` · `contact-banking-descriptions` ·
+  `thread-view-helpers` · `unified-inbox-helpers` · `BudgetVarianceChart` · `DebtMaturityWall` · `useBatchFileOperations` ·
+  `ContactActivityTimeline` · (και ο τοπικός `Translate` του `useBuildingObjectiveValueLabels`, Φ4β). Θεραπεία: **ένας**
+  εξαγόμενος τύπος δίπλα στο `useTranslation` (`@/i18n`), τα αντίγραφα γίνονται `import type`. Μέτρα πρώτα:
+  `grep -rln "(key: string, options?: Record<string, unknown>) => string" src`.
+
 - 🟡 **01/10 — ΧΑΜΕΝΗ ΕΝΗΜΕΡΩΣΗ ΣΤΟΥΣ ΓΡΑΦΕΙΣ ΤΟΥ `persist` ΤΗΣ ΑΓΓΕΛΙΑΣ ΙΔΙΩΤΗ** *(ADR-898 §12.5 · N.7 «zero race conditions»)*
 
   Τα `updateOwnerProperty` · `setOwnerPropertyLifecycle` · `setOwnerPropertyAudience`
@@ -1823,6 +1833,11 @@
   `downloadXlsxBlob` από το ένα module. ⚠️ Πιθανή μετακόμιση της μηχανικής σε `src/lib/` όταν
   οι καταναλωτές πάψουν να είναι μόνο του subapp — **όχι πριν**: ένας φάκελος με καθολικό όνομα
   που οκτώ γραφείς δεν υπακούν είναι «`0` που σημαίνει *κανείς δεν κοίταξε*» (N.11/N.12).
+
+  🆕 **02/10 (ADR-898 Φ4β)**: το `lib/export/excel-workbook.ts` (ήδη SSoT για gantt/payment/milestone) απέκτησε
+  `addScheduleSheet` (παγωμένη κεφαλίδα · φίλτρο · `numFmt` · `SUM` με αποτέλεσμα) και `excelSheetName` + μοναδικό όνομα
+  (ο κίνδυνος των 31 χαρακτήρων παραπάνω, καλυμμένος με άγκυρα). Δίδυμο: `bim/schedule/exporters/xlsx-workbook.ts`
+  (`xlsxWorksheetNames`) — το `dxf-viewer` δεν εισάγεται απ' έξω (CHECK 3.62), άρα η σύγκλιση πάει **προς** το `lib/export`.
 
   **Μέγεθος**: 8 αρχεία, 5 τομείς (αναφορές / πληρωμές / gantt / λογιστική / analytics) ⇒
   **δεν** είναι «μικρό διπλότυπο» του N.0.2. Καμία λειτουργική αλλαγή δεν απαιτείται από τη
