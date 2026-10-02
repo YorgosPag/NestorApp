@@ -60,6 +60,9 @@ export const ENTERPRISE_ID_PREFIXES = {
                              // ο φάκελος όσο το ΣΠΙΤΙ — πολλές αγγελίες στον χρόνο δείχνουν στον
                              // ΙΔΙΟ φάκελο, και ο φάκελος ΑΛΛΑΖΕΙ ΧΕΡΙΑ (Φ4) ενώ η αγγελία όχι.
   PRIVATE_MARKETING_EVENT: 'pmev', // ADR-864 Φ3: γεγονός συναίνεσης κλειστής διάθεσης — στοιχείο πίνακα ΜΕΣΑ στην εντολή, όχι έγγραφο.
+  OWNERSHIP_VERIFICATION: 'ovr', // ADR-900 §3.8: ΜΙΑ προσπάθεια επαλήθευσης κατοχής (ΠΚΑ) — έγγραφο, server μόνο· επιβιώνει της απόρριψης.
+  OWNERSHIP_KAEK_CLAIM: 'okcl', // ADR-900 §3.8: κλειδαριά «ένας ΚΑΕΚ = ένας επαληθευμένος λογαριασμός» — ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ από τον ΚΑΕΚ.
+  TAX_IDENTITY_CLAIM: 'txic', // ADR-900 §3.8: κλειδαριά «ένας ΑΦΜ = ένας λογαριασμός» — ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ από HMAC του ΑΦΜ, ποτέ ο ΑΦΜ.
   MANDATE_EVIDENCE: 'mevd',  // ADR-864 §19: παγωμένο αποδεικτικό βεβαίωσης — όνομα αντικειμένου στη ρίζα `mandate-evidence/`, όχι έγγραφο.
   MANDATE_REQUEST: 'mreq',   // ADR-827 §8.7: ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ — «ανάλαβε την αγγελία μου».
                              // ⚠️ ΞΕΧΩΡΙΣΤΟ από την ΕΝΤΟΛΗ (`BrokeredListingMandate`), που ΔΕΝ έχει
@@ -438,10 +441,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   FUNCTION_EVENT: 'fevt',
   AI_USAGE: 'aiu',            // ADR-259A
   CONTRACT: 'lc',
+  CONVEYANCE_CASE: 'cvc',     // ADR-901 Φ1 — υπόθεση μεταβίβασης (`conveyance_cases`)
+  ENGAGEMENT: 'eng',          // ADR-862 Φ1 — συμμετοχή σε υπόθεση (`projects/{p}/engagements`)
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
   COMMISSION: 'com',
-  CONVEYANCE_CASE: 'cvc',     // ADR-901 Φ1 — υπόθεση μεταβίβασης (`conveyance_cases`)
   PAYMENT_PLAN: 'pp',
   PLAN_GROUP: 'ppg',
   PAYMENT_RECORD: 'pay',

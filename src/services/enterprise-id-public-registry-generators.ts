@@ -27,7 +27,7 @@
  * @version 1.0.0
  */
 
-import { ENTERPRISE_ID_PREFIXES } from './enterprise-id-prefixes';
+import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
 import { BimEntityIdGenerators } from './enterprise-id-bim-generators';
 
 // Alias for compact generator methods
@@ -35,6 +35,8 @@ const P = ENTERPRISE_ID_PREFIXES;
 
 export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   // `generateId` κληρονομείται ως protected abstract από τη βάση — η μηχανή μένει μία.
+  // ADR-900 §3.8 — η ντετερμινιστική μηχανή ζει στην `EnterpriseIdService`· εδώ μόνο δηλώνεται.
+  protected abstract mintDeterministicV4Id(prefix: EnterpriseIdPrefix, seed: string): string;
 
   /**
    * ADR-777 Α1 — id ενός κομματιού ΓΗΣ (`land_*`). Διακομιστής μόνο (§14.4 κανόνες 1-2).
@@ -115,6 +117,22 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
 
   /** ADR-864 §19 — ταυτότητα παγωμένου αποδεικτικού (`mevd_*`): η μόνη που ταξιδεύει στο σύρμα, ποτέ η διαδρομή (Α33). */
   generateMandateEvidenceId(): string { return this.generateId(P.MANDATE_EVIDENCE).id; }
+
+  /** ADR-900 §3.8 — μία προσπάθεια επαλήθευσης κατοχής (`ovr_*`). Server μόνο: τη γράφει ο ΕΝΑΣ κριτής. */
+  generateOwnershipVerificationId(): string { return this.generateId(P.OWNERSHIP_VERIFICATION).id; }
+
+  /**
+   * ADR-900 §3.8 — η κλειδαριά του ΚΑΕΚ (`okcl_*`), **ντετερμινιστική** από την κανονική μορφή του: ίδιος
+   * ΚΑΕΚ ⇒ ίδιο έγγραφο ⇒ η μοναδικότητα κρίνεται μέσα σε συναλλαγή, χωρίς ερώτημα.
+   */
+  generateDeterministicOwnershipKaekClaimId(canonicalKaek: string): string {
+    return this.mintDeterministicV4Id(P.OWNERSHIP_KAEK_CLAIM, canonicalKaek);
+  }
+
+  /** ADR-900 §3.8 — η κλειδαριά του ΑΦΜ (`txic_*`), ντετερμινιστική από το **HMAC** του — ο ΑΦΜ δεν γίνεται ποτέ id. */
+  generateDeterministicTaxIdentityClaimId(taxIdHmac: string): string {
+    return this.mintDeterministicV4Id(P.TAX_IDENTITY_CLAIM, taxIdHmac);
+  }
 
   /**
    * ADR-835 §6.1 — id μιας **ΚΡΑΤΗΣΗΣ ΒΡΑΧΥΧΡΟΝΙΑΣ ΔΙΑΜΟΝΗΣ** (`stay_*`).

@@ -139,6 +139,7 @@ export const generatePipelineAuditId = () => enterpriseIdService.generatePipelin
 export const generateEntityAuditId = () => enterpriseIdService.generateEntityAuditId();
 export const generateContractId = () => enterpriseIdService.generateContractId();
 export const generateConveyanceCaseId = () => enterpriseIdService.generateConveyanceCaseId();
+export const generateEngagementId = () => enterpriseIdService.generateEngagementId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();
 export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();
@@ -150,6 +151,12 @@ export const generateMandateRequestId = () => enterpriseIdService.generateMandat
 export const generatePrivateMarketingEventId = () => enterpriseIdService.generatePrivateMarketingEventId();
 // ADR-864 §19 — παγωμένο αποδεικτικό βεβαίωσης, εξαγόμενο μαζί με τη μέθοδο.
 export const generateMandateEvidenceId = () => enterpriseIdService.generateMandateEvidenceId();
+// ADR-900 §3.8 — επαλήθευση κατοχής + οι δύο κλειδαριές μοναδικότητας. Μαζί με τις μεθόδους (το μάθημα του `mreq`).
+export const generateOwnershipVerificationId = () => enterpriseIdService.generateOwnershipVerificationId();
+export const generateDeterministicOwnershipKaekClaimId = (canonicalKaek: string) =>
+  enterpriseIdService.generateDeterministicOwnershipKaekClaimId(canonicalKaek);
+export const generateDeterministicTaxIdentityClaimId = (taxIdHmac: string) =>
+  enterpriseIdService.generateDeterministicTaxIdentityClaimId(taxIdHmac);
 // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. Εξάγεται **μαζί** με τη μέθοδο, όχι αργότερα:
 // το `mreq` έμεινε άφταστο από το facade και η ΜΟΝΑΔΙΚΗ πηγή ταυτοτήτων (N.6) ήταν
 // απρόσιτη για τον γραφέα — δηλαδή ο επόμενος θα έγραφε χειρόγραφο id. Δεύτερη φορά
