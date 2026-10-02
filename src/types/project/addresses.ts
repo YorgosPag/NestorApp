@@ -131,7 +131,7 @@ export interface ProjectAddress extends StoredAddressPosition {
   blockSideDescription?: string;
 
   // 🇬🇷 Greek cadastral system
-  /** Κτηματολογικός Αναγνωριστικός Κωδικός (ΚΑΕΚ) */
+  /** Κωδικός Αριθμός Εθνικού Κτηματολογίου (ΚΑΕΚ) — ανάλυση/επικύρωση: `@/lib/geo/kaek` (ADR-900 §3.8). */
   cadastralCode?: string;
   /** Municipality (e.g., "Δήμος Καλαμαριάς") */
   municipality?: string;

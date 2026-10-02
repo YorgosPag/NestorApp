@@ -103,7 +103,8 @@ export interface AdjacentBuilding {
  */
 export interface PlotSite {
   // Identity
-  readonly kaek: string;          // Κτηματολογικός Αριθμός Εθνικού Κτηματολογίου
+  /** Κωδικός Αριθμός Εθνικού Κτηματολογίου — ανάλυση/επικύρωση: `@/lib/geo/kaek` (ADR-900 §3.8). */
+  readonly kaek: string;
   readonly address: string;
   readonly municipality: string;
   readonly prefecture?: string;   // Νομός — optional, informational

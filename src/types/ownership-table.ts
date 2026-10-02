@@ -354,7 +354,7 @@ export interface OwnershipPercentageTable {
   readonly deedNumber: string | null;
   /** Συμβολαιογράφος */
   readonly notary: string | null;
-  /** Κωδικοί ΚΑΕΚ (αν έχει γίνει κτηματογράφηση) */
+  /** Κωδικοί ΚΑΕΚ (αν έχει γίνει κτηματογράφηση) — κανονική μορφή/επικύρωση: `canonicalKaek` (`@/lib/geo/kaek`, ADR-900 §3.8). */
   readonly kaekCodes: ReadonlyArray<string> | null;
   /** Status */
   readonly status: OwnershipTableStatus;
