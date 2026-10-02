@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ⏳ deploy Functions + συμπλήρωση |
+| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ⏳ συμπλήρωση |
 | **Date** | 2026-10-01 |
 | **Category** | Backend Systems |
 | **Προέλευση** | handoff `HANDOFFS/2026-10-01_property-header-gallery_PHASE-D-G_handoff.md` · αίτημα Giorgio: γκαλερί κεφαλίδας επιπέδου Zillow/Idealista |
@@ -355,6 +355,8 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
   `panorama-facts` **μένει** στα ωμά pixel επίτηδες (ο tiler δεν στρέφει — μετρημένο). Ratchet `image-dimensions` (CHECK 3.7).
   Εύρημα εκτός πεδίου: **διπλή στροφή EXIF** στο υπόβαθρο κάτοψης του DXF Viewer (§9). Νέα εξάρτηση Functions: `sharp` (Apache-2.0).
   ⏳ Χρειάζεται deploy Functions (χωριστό από το push) και ρητή εντολή για τη συμπλήρωση.
+- **2026-10-02** — ✅ Deploy των δύο Functions (`pagonis-87766`). Η πρώτη απόπειρα απέτυχε στο predeploy `tsc`: το fixture του
+  `dxf-thumbnail-onfinalize.test.ts` δεν είχε τα νέα `generation`/`metadata` του `FinalizedObject` (το jest δεν ελέγχει τύπους) — διορθώθηκε.
 - **2026-10-02** — Boy Scout (CHECK 3.28): όταν η γκαλερί του διαχειριστή αρχείων και των αρχείων οντότητας πέρασαν στον ίδιο
   αναγνώστη, η περίληψη «μικρογραφία · όνομα · μέγεθος» έγινε κλώνος ⇒ `components/shared/files/FileTileSummary.tsx` (ένα
   περιεχόμενο, το κέλυφος μένει στον καλούντα). Η δίδυμη κεφαλίδα φόρτωσης/άδειας κατάστασης του `InboxView` ⇒ τοπικό `InboxStateHeader`.

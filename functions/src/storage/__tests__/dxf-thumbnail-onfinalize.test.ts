@@ -87,7 +87,7 @@ describe('generateDxfThumbnailOnFinalize — το ΚΟΙΝΟ σώμα gen1/gen2 
   beforeEach(() => jest.clearAllMocks());
 
   const euObject = (name: string) =>
-    ({ bucket: 'eu-bucket', placement: 'eu-originals', name, contentType: null, size: null }) as const;
+    ({ bucket: 'eu-bucket', placement: 'eu-originals', name, contentType: null, size: null, generation: null, metadata: {} }) as const;
 
   it('🔴 αντικείμενο ΕΕ ⇒ ανάγνωση + μικρογραφία στον κάδο ΕΕ', async () => {
     getSpy.mockResolvedValue({ exists: true, data: () => ({}) });
