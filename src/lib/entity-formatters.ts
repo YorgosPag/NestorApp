@@ -21,6 +21,10 @@ export function formatBuildingLabel(
   name?: string | null,
   fallback?: string,
 ): string {
-  if (code && name && name !== code) return `${code} — ${name}`;
-  return code || name || fallback || '';
+  // Τα πεδία έρχονται από φόρμες: «  ΝΕΟ» με κενό μπροστά έδινε «Κτίριο Α —  ΝΕΟ» — αόρατο στο HTML (σύμπτυξη κενών),
+  // ορατό σε όνομα αρχείου και κελί Excel (ADR-898 Φ4β).
+  const c = code?.trim();
+  const n = name?.trim();
+  if (c && n && n !== c) return `${c} — ${n}`;
+  return c || n || fallback || '';
 }

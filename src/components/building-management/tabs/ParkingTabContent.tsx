@@ -20,6 +20,7 @@ import { Car, Plus, Link2 } from 'lucide-react';
 import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 import type { ParkingSpot } from '@/types/parking';
 import { PARKING_TYPES } from '@/types/parking';
 import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
@@ -95,7 +96,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
   };
   const statusFilter = { value: state.filterStatus, onChange: state.setFilterStatus, options: availability.options, allLabel: availability.allLabel };
   const tableExport = useSpaceTableExport({
-    buildingName: building.name,
+    buildingName: formatBuildingLabel(building.code, building.name),
     tabLabel: tBuilding('tabs.labels.parking'),
     columns: parkingColumns,
     items: state.filteredSpots,

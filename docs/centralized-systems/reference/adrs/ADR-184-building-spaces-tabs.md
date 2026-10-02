@@ -103,6 +103,10 @@ Revit «Export Schedule»: κάθε πίνακας εξάγει **ό,τι βλέ
   namespace `price-map`· τώρα `storageTable.columns.price` («Τιμή»), όπως οι Αποθήκες. (β) Οι επικεφαλίδες των Μονάδων
   δανείζονταν κλειδιά των Ορόφων («Όνομα Στάθμης» · «Ιδιότητες» · «Αρ. Στάθμης» · «Λεπτομέρειες») και θα γίνονταν οι
   επικεφαλίδες του Excel· τώρα `unitsTable.columns.{name,type,status}` (νέο: `name` «Μονάδα») + `storageTable.columns.floor`.
+  (γ) Το **πραγματικό αρχείο** (διαβάστηκε πίσω με ExcelJS: στήλες = οθόνη · αριθμοί αριθμοί · `SUM` · Παραδοχές) έγραφε
+  κτίριο « ΝΕΟ» — σκέτο `building.name` με κενό από τη φόρμα, χωρίς τον κωδικό. Τώρα `formatBuildingLabel(code, name)`
+  (το SSoT της κεφαλίδας) και στις τρεις καρτέλες **και** στην Αντικειμενική (`buildingMappings`)· το SSoT κάνει πλέον
+  `trim` (άγκυρα `lib/__tests__/entity-formatters.test.ts`).
 
 - **2026-10-02** — **ADR-898 Φ4β**: νέα καρτέλα κτιρίου `objectiveValue` (`tabs/ObjectiveValueTab/*`) πάνω στο
   κοινό `BuildingSpaceTable`, που απέκτησε: `initialSort` (ο πίνακας ανοίγει ομαδοποιημένος, Revit `Sort By`) ·

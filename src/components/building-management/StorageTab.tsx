@@ -17,6 +17,7 @@ import type { StorageUnit, StorageType } from '@/types/storage';
 import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
 import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
 import type { Building } from '@/types/building/contracts';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ export function StorageTab({ building }: StorageTabProps) {
     onFilterStatusChange: s.setFilterStatus,
   });
   const tableExport = useSpaceTableExport({
-    buildingName: building.name,
+    buildingName: formatBuildingLabel(building.code, building.name),
     tabLabel: s.t('tabs.labels.storage'),
     columns: storageColumns,
     items: s.filteredUnits,

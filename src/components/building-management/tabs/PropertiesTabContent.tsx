@@ -21,6 +21,7 @@ import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, BuildingSpaceViewSwitch, useSpaceTableExport } from '../shared';
 import { propertyDisplayArea } from '@/lib/properties/property-display-area';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 import type { LinkableItem } from '../shared';
 import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -283,7 +284,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     allLabel: t('allStatuses', { ns: 'filters' }),
   };
   const tableExport = useSpaceTableExport({
-    buildingName: building.name,
+    buildingName: formatBuildingLabel(building.code, building.name),
     tabLabel: t('tabs.labels.units'),
     columns: unitColumns,
     items: filteredUnits,

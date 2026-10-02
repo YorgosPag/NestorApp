@@ -17,6 +17,7 @@
 
 import React, { type ComponentType } from 'react';
 import type { BuildingTabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 import type { AuditEntityType } from '@/types/audit-trail';
 
 import { GeneralTabContent } from '@/components/building-management/tabs/GeneralTabContent';
@@ -249,7 +250,7 @@ function BuildingObjectiveValueTabAdapter(props: BuildingTabComponentProps) {
   }
   return React.createElement(BuildingObjectiveValueTab, {
     buildingId: String(building.id),
-    buildingName: building.name ?? String(building.id),
+    buildingName: formatBuildingLabel(building.code, building.name, String(building.id)),
     onNavigateToTab: props.onNavigateToTab,
   });
 }
