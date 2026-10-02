@@ -74,3 +74,12 @@ export const SIGNED_LEGAL_PHASES = [
   'final_signed',
   'payoff_completed',
 ] as const satisfies readonly LegalPhase[];
+
+// =============================================================================
+// 3. TYPE GUARD — για τιμές που έρχονται από Firestore/δίκτυο (ADR-901 Φ1)
+// =============================================================================
+
+/** Είναι η τιμή κανονική `LegalPhase`; — ποτέ `as LegalPhase` σε μη επαληθευμένη είσοδο. */
+export function isLegalPhase(value: unknown): value is LegalPhase {
+  return typeof value === 'string' && (LEGAL_PHASES as readonly string[]).includes(value);
+}

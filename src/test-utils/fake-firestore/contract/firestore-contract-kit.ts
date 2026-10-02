@@ -16,7 +16,7 @@ export interface ContractSnapshot {
 }
 
 export interface ContractQuery {
-  where(field: string, op: '==' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'array-contains', value: unknown): ContractQuery;
+  where(field: string, op: '==' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'array-contains' | 'array-contains-any', value: unknown): ContractQuery;
   orderBy(field: string, direction?: 'asc' | 'desc'): ContractQuery;
   limit(n: number): ContractQuery;
   startAfter(snapshot: ContractSnapshot): ContractQuery;

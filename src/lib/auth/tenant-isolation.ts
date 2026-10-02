@@ -279,6 +279,8 @@ export interface TenantProperty {
   companyId: string;
   name?: string;
   buildingId?: string;
+  /** ADR-901 Φ1 — έλεγχος δικαιώματος ρόλου έργου (`hasPermission(…, { projectId })`) χωρίς δεύτερη ανάγνωση. */
+  projectId?: string;
 }
 
 /** @deprecated Use TenantProperty — kept for backward compatibility */

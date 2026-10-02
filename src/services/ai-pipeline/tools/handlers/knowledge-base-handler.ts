@@ -14,14 +14,66 @@
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import type { ChecklistItem, ConveyanceRole } from '@/config/conveyance-checklist/types';
+import type { DocumentSource, LegalProcedure } from '@/config/legal-procedures-kb';
+import { filesForMatchers } from '@/lib/conveyance/evidence-match';
+import {
+  collectEvidenceForTargets,
+  evidenceTargets,
+  type EvidenceTarget,
+} from '@/services/conveyance/conveyance-evidence.server';
+import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import {
   type AgenticContext,
   type ToolHandler,
   type ToolResult,
   logger,
 } from '../executor-shared';
+
+/** Πόσες διαδικασίες επιστρέφονται στον agent. */
+const TOP_PROCEDURES = 2;
+/** Όριο ακινήτων ανά επαφή για τον έλεγχο διαθεσιμότητας (κόστος ανάγνωσης). */
+const MAX_LINKED_PROPERTIES = 3;
+/** Ο agent μιλά σε πελάτη-αγοραστή — βλέπει ό,τι βλέπει ο αγοραστής (ADR-901 Ε-7). */
+const KB_VIEWER: ConveyanceRole = 'buyer';
+
+const NO_MATCH_RESULT: ToolResult = {
+  success: true,
+  data: {
+    message: 'Δεν βρέθηκε σχετική διαδικασία.',
+    suggestion: 'Δοκιμάστε: "συμβόλαιο", "δάνειο", "μεταβίβαση", "προσύμφωνο"',
+    procedures: [],
+  },
+  count: 0,
+};
+
+interface KbLabels {
+  readonly sources: Readonly<Record<DocumentSource, string>>;
+  readonly available: string;
+}
+
+/** Μία διαδικασία στο σχήμα που ξέρει ο agent — αμετάβλητο από το SPEC-257G. */
+function enrichProcedure(procedure: LegalProcedure, matchScore: number, availableItemIds: ReadonlySet<string>, labels: KbLabels) {
+  return {
+    id: procedure.id,
+    title: procedure.title,
+    category: procedure.category,
+    description: procedure.description,
+    matchScore,
+    requiredDocuments: procedure.requiredDocuments.map((doc) => {
+      const available = availableItemIds.has(doc.itemId);
+      return {
+        name: doc.name,
+        source: doc.source,
+        sourceLabel: available ? labels.available : labels.sources[doc.source],
+        availableInSystem: available,
+        canBeSent: available,
+      };
+    }),
+  };
+}
 
 // ============================================================================
 // HANDLER
@@ -54,107 +106,24 @@ export class KnowledgeBaseHandler implements ToolHandler {
       return { success: false, error: 'query is required' };
     }
 
-    const { searchProcedures, DOCUMENT_SOURCE_LABELS } = await import(
+    const { searchProcedures, DOCUMENT_SOURCE_LABELS, AVAILABLE_IN_SYSTEM_LABEL } = await import(
       '@/config/legal-procedures-kb'
     );
 
     const matches = searchProcedures(query);
+    if (matches.length === 0) return NO_MATCH_RESULT;
 
-    if (matches.length === 0) {
-      return {
-        success: true,
-        data: {
-          message: 'Δεν βρέθηκε σχετική διαδικασία.',
-          suggestion: 'Δοκιμάστε: "συμβόλαιο", "δάνειο", "μεταβίβαση", "προσύμφωνο"',
-          procedures: [],
-        },
-        count: 0,
-      };
-    }
-
-    const db = getAdminFirestore();
-    const linkedPropertyIds = ctx.contactMeta?.linkedPropertyIds ?? [];
-    const linkedProjectIds = [...new Set(
-      (ctx.contactMeta?.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
-    )];
-
-    const termToDocNames = new Map<string, Set<string>>();
-    for (const { procedure } of matches.slice(0, 2)) {
-      for (const doc of procedure.requiredDocuments) {
-        if (doc.source === 'system' && doc.searchTerms.length > 0) {
-          for (const term of doc.searchTerms) {
-            const existing = termToDocNames.get(term) ?? new Set();
-            existing.add(doc.name);
-            termToDocNames.set(term, existing);
-          }
-        }
-      }
-    }
-
-    const availableDocNames = new Set<string>();
-
-    if (termToDocNames.size > 0 && (linkedPropertyIds.length > 0 || linkedProjectIds.length > 0)) {
-      try {
-        const filesQuery = db.collection(COLLECTIONS.FILES)
-          .where('companyId', '==', ctx.companyId)
-          .where('status', '==', 'ready')
-          .limit(100);
-
-        const filesSnap = await filesQuery.get();
-
-        for (const fileDoc of filesSnap.docs) {
-          const data = fileDoc.data();
-          const purpose = String(data.purpose ?? '').toLowerCase();
-          const category = String(data.category ?? '').toLowerCase();
-          const displayName = String(data.displayName ?? '').toLowerCase();
-          const entityId = String(data.entityId ?? '');
-          const fileProjectId = String(data.projectId ?? '');
-
-          const isAccessible =
-            linkedPropertyIds.includes(entityId) ||
-            linkedProjectIds.includes(fileProjectId) ||
-            linkedProjectIds.includes(entityId);
-
-          if (!isAccessible) continue;
-
-          const searchableText = `${purpose} ${category} ${displayName}`;
-
-          for (const [term, docNames] of termToDocNames) {
-            if (searchableText.includes(term.toLowerCase())) {
-              for (const name of docNames) {
-                availableDocNames.add(name);
-              }
-            }
-          }
-        }
-      } catch (err) {
-        logger.warn('Failed to check document availability for KB', {
-          requestId: ctx.requestId,
-          error: getErrorMessage(err),
-        });
-      }
-    }
-
-    const enrichedProcedures = matches.slice(0, 2).map(({ procedure, matchScore }) => ({
-      id: procedure.id,
-      title: procedure.title,
-      category: procedure.category,
-      description: procedure.description,
-      matchScore,
-      requiredDocuments: procedure.requiredDocuments.map(doc => ({
-        name: doc.name,
-        source: doc.source,
-        sourceLabel: DOCUMENT_SOURCE_LABELS[doc.source],
-        availableInSystem: availableDocNames.has(doc.name),
-        canBeSent: availableDocNames.has(doc.name),
-      })),
-    }));
+    const topMatches = matches.slice(0, TOP_PROCEDURES);
+    const items = topMatches.flatMap(({ procedure }) => procedure.requiredDocuments.map((doc) => doc.item));
+    const availableItemIds = await this.availableItemIds(items, ctx);
+    const labels = { sources: DOCUMENT_SOURCE_LABELS, available: AVAILABLE_IN_SYSTEM_LABEL };
+    const enrichedProcedures = topMatches.map((match) => enrichProcedure(match.procedure, match.matchScore, availableItemIds, labels));
 
     logger.info('Knowledge base search completed', {
       query,
       matchCount: matches.length,
       topMatch: enrichedProcedures[0]?.id,
-      availableDocsCount: availableDocNames.size,
+      availableDocsCount: availableItemIds.size,
       requestId: ctx.requestId,
     });
 
@@ -163,5 +132,41 @@ export class KnowledgeBaseHandler implements ToolHandler {
       data: { procedures: enrichedProcedures },
       count: enrichedProcedures.length,
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // Διαθεσιμότητα — ο ΙΔΙΟΣ συλλέκτης/matcher με την υπόθεση μεταβίβασης (ADR-901 §2 Ε-Α)
+  // --------------------------------------------------------------------------
+
+  /** Τα (επίπεδο, οντότητα) που αφορούν την επαφή: τα ακίνητά της (με την ιεραρχία τους) + τα έργα της. */
+  private async targetsFor(ctx: AgenticContext): Promise<EvidenceTarget[]> {
+    const db = getAdminFirestore();
+    const propertyIds = (ctx.contactMeta?.linkedPropertyIds ?? []).slice(0, MAX_LINKED_PROPERTIES);
+    const subjects = await Promise.all(propertyIds.map((id) => loadConveyanceSubject(db, ctx.companyId, id)));
+    const targets = subjects.flatMap((s) => (s ? [...evidenceTargets(s.subject, s.parties)] : []));
+    const projectIds = new Set((ctx.contactMeta?.projectRoles ?? []).map((r) => r.projectId).filter(Boolean));
+    for (const projectId of projectIds) targets.push({ level: 'project', entityType: ENTITY_TYPES.PROJECT, entityId: projectId });
+    return targets;
+  }
+
+  /**
+   * Ποιες γραμμές έχουν αρχείο-τεκμήριο. Μόνο γραμμές **ορατές στον αγοραστή** (ADR-901 §5.10):
+   * ο agent μιλά σε πελάτη και δεν επιβεβαιώνει καν την ύπαρξη προσωπικών εγγράφων του πωλητή.
+   */
+  private async availableItemIds(items: readonly ChecklistItem[], ctx: AgenticContext): Promise<Set<string>> {
+    const available = new Set<string>();
+    const askable = items.filter((item) => item.visibleTo.includes(KB_VIEWER) && item.satisfaction.kind === 'files');
+    if (askable.length === 0) return available;
+    try {
+      const evidence = await collectEvidenceForTargets(getAdminFirestore(), ctx.companyId, await this.targetsFor(ctx));
+      for (const item of askable) {
+        if (item.satisfaction.kind === 'files' && filesForMatchers(item.satisfaction.matchers, evidence).length > 0) {
+          available.add(item.id);
+        }
+      }
+    } catch (err) {
+      logger.warn('Failed to check document availability for KB', { requestId: ctx.requestId, error: getErrorMessage(err) });
+    }
+    return available;
   }
 }

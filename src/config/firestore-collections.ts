@@ -940,6 +940,8 @@ export const COLLECTIONS = {
   SAVED_REPORTS: process.env.NEXT_PUBLIC_SAVED_REPORTS_COLLECTION || 'saved_reports',
 
   // 📋 QUOTES & RFQ (ADR-327: Quote Management & Comparison System)
+  // ADR-901 Φ1 — υπόθεση μεταβίβασης: η ΠΡΑΞΗ πάνω από τα συμβόλαια (server-only, deny-all στους κανόνες)
+  CONVEYANCE_CASES: process.env.NEXT_PUBLIC_CONVEYANCE_CASES_COLLECTION || 'conveyance_cases',
   RFQS: process.env.NEXT_PUBLIC_RFQS_COLLECTION || 'rfqs',
   QUOTES: process.env.NEXT_PUBLIC_QUOTES_COLLECTION || 'quotes',
   QUOTE_COUNTERS: process.env.NEXT_PUBLIC_QUOTE_COUNTERS_COLLECTION || 'quote_counters',

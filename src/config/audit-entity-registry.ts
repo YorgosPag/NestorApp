@@ -210,6 +210,13 @@ export const AUDIT_ENTITIES = {
   network_act_team: { collectionKey: 'NETWORK_ACT_TEAMS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
   /**
+   * 📑 ADR-901 Φ1 — **η υπόθεση μεταβίβασης**. Βιβλίο `'company'` = ο οικοδεσπότης (εργολάβος).
+   * Κάθε γραφή (άνοιγμα, απαντήσεις, έλεγχοι γραμμών, ακύρωση) περνά από το
+   * `conveyance-case.service.ts` και γράφει ίχνος. `renamePropagation: false` — δεν ονομάζει αρχεία.
+   */
+  conveyance_case: { collectionKey: 'CONVEYANCE_CASES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+
+  /**
    * ⚠️ `parking_spot` / `storage_unit`: **παλαιά συνώνυμα** των `parking`/`storage`
    * που δείχνουν στην **ίδια** συλλογή. Διατηρούνται επειδή υπάρχουν γραμμένες
    * εγγραφές με αυτά τα ονόματα — αφαίρεση θα έκανε το παλιό ιστορικό **αδιάβαστο**.

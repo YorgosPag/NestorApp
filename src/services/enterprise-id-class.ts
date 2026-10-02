@@ -354,6 +354,7 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
   generatePipelineAuditId(): string { return this.generateId(P.PIPELINE_AUDIT).id; }
   generateEntityAuditId(): string { return this.generateId(P.ENTITY_AUDIT).id; }
   generateContractId(): string { return this.generateId(P.CONTRACT).id; }
+  generateConveyanceCaseId(): string { return this.generateId(P.CONVEYANCE_CASE).id; }
   generatePipelineQueueId(): string { return this.generateId(P.PIPELINE_QUEUE).id; }
   generateBrokerageId(): string { return this.generateId(P.BROKERAGE).id; }
   generateCommissionId(): string { return this.generateId(P.COMMISSION).id; }

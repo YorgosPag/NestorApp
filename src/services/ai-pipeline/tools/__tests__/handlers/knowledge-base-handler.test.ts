@@ -1,73 +1,91 @@
 /**
  * KNOWLEDGE BASE HANDLER TESTS
  *
- * Tests search_knowledge_base: procedure matching, document availability,
- * empty query, Firestore error fallback.
+ * Tests search_knowledge_base πάνω στον ΠΡΑΓΜΑΤΙΚΟ κατάλογο δικαιολογητικών (ADR-901 §2 Ε-Α):
+ * αντιστοίχιση διαδικασιών, ονόματα από το i18n, διαθεσιμότητα μέσω του ίδιου συλλέκτη/matcher
+ * με την υπόθεση μεταβίβασης, ορατότητα αγοραστή, σφάλμα Firestore.
  *
- * @see ADR-171 (Autonomous AI Agent)
+ * Mock ΜΟΝΟ οι αναγνώσεις (υποκείμενο + αρχεία) — ο κατάλογος και ο matcher τρέχουν αληθινά.
+ *
+ * @see ADR-171 (Autonomous AI Agent) · ADR-901 (κατάλογος)
  * @module __tests__/handlers/knowledge-base-handler
  */
 
 import '../setup';
 
 import { KnowledgeBaseHandler } from '../../handlers/knowledge-base-handler';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
+import type { EvidenceFile } from '@/types/conveyance-case';
 
-// ── Mock legal-procedures-kb (dynamic import) ──
-jest.mock('@/config/legal-procedures-kb', () => ({
-  searchProcedures: jest.fn(() => []),
-  DOCUMENT_SOURCE_LABELS: {
-    system: 'Αρχείο στο σύστημα',
-    client: 'Από τον πελάτη',
-    authority: 'Από δημόσια αρχή',
-  },
+jest.mock('@/services/conveyance/conveyance-subject.server', () => ({
+  loadConveyanceSubject: jest.fn(async (_db: unknown, _companyId: string, propertyId: string) => ({
+    propertyName: 'Δ3',
+    projectId: 'proj_001',
+    subject: { kind: 'property', propertyId, buildingId: 'bld_001', projectId: 'proj_001', appurtenances: [] },
+    parties: { seller: { contactId: 'cont_seller', kind: 'legal_entity' }, buyers: [{ contactId: 'cont_001' }] },
+    factSources: { profile: 'new_build_company', propertyType: 'apartment', appurtenanceCount: 0, landownerCount: 0 },
+    legalPhase: null,
+  })),
 }));
 
+jest.mock('@/services/conveyance/conveyance-evidence.server', () => {
+  const actual = jest.requireActual('@/services/conveyance/conveyance-evidence.server');
+  return { ...actual, collectEvidenceForTargets: jest.fn(async () => []) };
+});
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { searchProcedures } = require('@/config/legal-procedures-kb') as {
-  searchProcedures: jest.Mock;
+const { collectEvidenceForTargets } = require('@/services/conveyance/conveyance-evidence.server') as {
+  collectEvidenceForTargets: jest.Mock;
 };
+
+type KbDoc = { name: string; source: string; sourceLabel: string; availableInSystem: boolean };
+type KbData = { procedures: Array<{ id: string; title: string; requiredDocuments: KbDoc[] }> };
+
+function evidence(overrides: Partial<EvidenceFile>): EvidenceFile {
+  return {
+    fileId: 'file_1', displayName: 'x.pdf', entityType: 'project', entityId: 'proj_001', purpose: 'permit',
+    level: 'project', fingerprint: 'file_1:0:', createdAt: '2026-09-01T00:00:00Z', ...overrides,
+  };
+}
+
+const buyerCtx = () => createCustomerContext({
+  contactMeta: {
+    contactId: 'cont_001',
+    displayName: 'Test User',
+    firstName: 'Test',
+    primaryPersona: 'tenant',
+    linkedPropertyIds: ['unit_001'],
+    projectRoles: [],
+  },
+});
+
+function docNamed(data: KbData, name: string): KbDoc | undefined {
+  return data.procedures.flatMap((p) => p.requiredDocuments).find((doc) => doc.name === name);
+}
 
 describe('KnowledgeBaseHandler', () => {
   let handler: KnowledgeBaseHandler;
 
   beforeEach(() => {
     handler = new KnowledgeBaseHandler();
-    jest.clearAllMocks();
-
-    // Default: no files in system
-    (getAdminFirestore as jest.Mock).mockReturnValue({
-      collection: jest.fn(() => ({
-        where: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        get: jest.fn(async () => ({ docs: [] })),
-      })),
-    });
+    collectEvidenceForTargets.mockReset();
+    collectEvidenceForTargets.mockResolvedValue([]);
   });
 
   it('returns error for empty query', async () => {
-    const ctx = createAdminContext();
-    const result = await handler.execute('search_knowledge_base', { query: '' }, ctx);
-
+    const result = await handler.execute('search_knowledge_base', { query: '' }, createAdminContext());
     expect(result.success).toBe(false);
     expect(result.error).toContain('required');
   });
 
   it('returns error for unknown tool name', async () => {
-    const ctx = createAdminContext();
-    const result = await handler.execute('unknown_tool', { query: 'test' }, ctx);
-
+    const result = await handler.execute('unknown_tool', { query: 'test' }, createAdminContext());
     expect(result.success).toBe(false);
     expect(result.error).toContain('Unknown');
   });
 
   it('returns suggestion when no procedures match', async () => {
-    searchProcedures.mockReturnValue([]);
-    const ctx = createAdminContext();
-
-    const result = await handler.execute('search_knowledge_base', { query: 'xyz' }, ctx);
-
+    const result = await handler.execute('search_knowledge_base', { query: 'xyz' }, createAdminContext());
     expect(result.success).toBe(true);
     expect(result.count).toBe(0);
     const data = result.data as Record<string, unknown>;
@@ -75,141 +93,48 @@ describe('KnowledgeBaseHandler', () => {
     expect(data.suggestion).toBeDefined();
   });
 
-  it('returns matched procedures with enriched documents', async () => {
-    searchProcedures.mockReturnValue([
-      {
-        matchScore: 0.9,
-        procedure: {
-          id: 'proc_001',
-          title: 'Μεταβίβαση Ακινήτου',
-          category: 'transfer',
-          description: 'Διαδικασία μεταβίβασης',
-          requiredDocuments: [
-            { name: 'Τίτλος Ιδιοκτησίας', source: 'client', searchTerms: [] },
-            { name: 'Κτηματολόγιο', source: 'system', searchTerms: ['ktim'] },
-          ],
-        },
-      },
-    ]);
-
-    const ctx = createCustomerContext();
-    const result = await handler.execute('search_knowledge_base', { query: 'μεταβίβαση' }, ctx);
-
-    expect(result.success).toBe(true);
-    expect(result.count).toBe(1);
-    const data = result.data as { procedures: Array<{ title: string; requiredDocuments: Array<{ name: string }> }> };
-    expect(data.procedures[0].title).toBe('Μεταβίβαση Ακινήτου');
-    expect(data.procedures[0].requiredDocuments).toHaveLength(2);
+  it('η διαδικασία και τα έγγραφά της έρχονται από τον κατάλογο + το i18n (όχι σκληροκωδικοποιημένα)', async () => {
+    const result = await handler.execute('search_knowledge_base', { query: 'συμβολαιογράφο' }, buyerCtx());
+    const data = result.data as KbData;
+    expect(data.procedures[0].id).toBe('final_contract');
+    expect(data.procedures[0].title).toBe('Οριστικό Συμβόλαιο Αγοραπωλησίας');
+    expect(docNamed(data, 'Οικοδομική άδεια και αναθεωρήσεις')).toBeDefined();
   });
 
   it('limits results to top 2 procedures', async () => {
-    searchProcedures.mockReturnValue([
-      { matchScore: 0.9, procedure: { id: 'p1', title: 'A', category: 'a', description: 'a', requiredDocuments: [] } },
-      { matchScore: 0.8, procedure: { id: 'p2', title: 'B', category: 'b', description: 'b', requiredDocuments: [] } },
-      { matchScore: 0.7, procedure: { id: 'p3', title: 'C', category: 'c', description: 'c', requiredDocuments: [] } },
-    ]);
-
-    const ctx = createAdminContext();
-    const result = await handler.execute('search_knowledge_base', { query: 'test' }, ctx);
-
+    const result = await handler.execute('search_knowledge_base', { query: 'συμβόλαιο μεταβίβαση δάνειο προσύμφωνο' }, createAdminContext());
     expect(result.count).toBe(2);
   });
 
-  it('marks document as available when file found in system', async () => {
-    searchProcedures.mockReturnValue([
-      {
-        matchScore: 0.9,
-        procedure: {
-          id: 'proc_001',
-          title: 'Test',
-          category: 'test',
-          description: 'test',
-          requiredDocuments: [
-            { name: 'Πιστοποιητικό', source: 'system', searchTerms: ['certificate'] },
-          ],
-        },
-      },
+  it('αρχείο έργου με purpose permit ⇒ η άδεια είναι «Διαθέσιμο στο σύστημα» (ο ίδιος matcher με την υπόθεση)', async () => {
+    collectEvidenceForTargets.mockResolvedValue([evidence({})]);
+    const result = await handler.execute('search_knowledge_base', { query: 'συμβολαιογράφο' }, buyerCtx());
+    const permit = docNamed(result.data as KbData, 'Οικοδομική άδεια και αναθεωρήσεις');
+    expect(permit?.availableInSystem).toBe(true);
+    expect(permit?.sourceLabel).toBe('Διαθέσιμο στο σύστημα');
+  });
+
+  it('🔒 προσωπικό έγγραφο ΠΩΛΗΤΗ δεν «επιβεβαιώνεται» στον πελάτη, ακόμη κι αν υπάρχει (ADR-901 §5.10)', async () => {
+    collectEvidenceForTargets.mockResolvedValue([
+      evidence({ level: 'seller_contact', entityType: 'contact', entityId: 'cont_seller', purpose: 'tax-clearance' }),
     ]);
+    const result = await handler.execute('search_knowledge_base', { query: 'συμβολαιογράφο' }, buyerCtx());
+    expect(docNamed(result.data as KbData, 'Φορολογική ενημερότητα πωλητή')?.availableInSystem).toBe(false);
+  });
 
-    // Mock files collection with matching file
-    (getAdminFirestore as jest.Mock).mockReturnValue({
-      collection: jest.fn(() => ({
-        where: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        get: jest.fn(async () => ({
-          docs: [{
-            data: () => ({
-              purpose: 'certificate',
-              category: 'legal',
-              displayName: 'Certificate.pdf',
-              entityId: 'unit_001',
-              projectId: 'proj_001',
-              status: 'ready',
-              companyId: 'test-company-001',
-            }),
-          }],
-        })),
-      })),
-    });
-
-    const ctx = createCustomerContext({
-      contactMeta: {
-        contactId: 'cont_001',
-        displayName: 'Test User',
-        firstName: 'Test',
-        primaryPersona: 'tenant',
-        linkedPropertyIds: ['unit_001'],
-        projectRoles: [{ projectId: 'proj_001', role: 'tenant', entityType: 'property', entityId: 'unit_001' }],
-      },
-    });
-
-    const result = await handler.execute('search_knowledge_base', { query: 'πιστοποιητικό' }, ctx);
-
-    expect(result.success).toBe(true);
-    const data = result.data as { procedures: Array<{ requiredDocuments: Array<{ availableInSystem: boolean }> }> };
-    expect(data.procedures[0].requiredDocuments[0].availableInSystem).toBe(true);
+  it('ψάχνει στην ιεραρχία του συνδεδεμένου ακινήτου (ακίνητο + κτίριο + έργο + επαφές)', async () => {
+    await handler.execute('search_knowledge_base', { query: 'συμβολαιογράφο' }, buyerCtx());
+    const targets = collectEvidenceForTargets.mock.calls[0][2] as Array<{ level: string; entityId: string }>;
+    expect(targets.map((t) => `${t.level}:${t.entityId}`)).toEqual(expect.arrayContaining([
+      'property:unit_001', 'building:bld_001', 'project:proj_001', 'buyer_contact:cont_001',
+    ]));
   });
 
   it('handles Firestore error gracefully in file availability check', async () => {
-    searchProcedures.mockReturnValue([
-      {
-        matchScore: 0.9,
-        procedure: {
-          id: 'proc_001',
-          title: 'Test',
-          category: 'test',
-          description: 'test',
-          requiredDocuments: [
-            { name: 'Doc', source: 'system', searchTerms: ['doc'] },
-          ],
-        },
-      },
-    ]);
-
-    (getAdminFirestore as jest.Mock).mockReturnValue({
-      collection: jest.fn(() => ({
-        where: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        get: jest.fn(async () => { throw new Error('Firestore down'); }),
-      })),
-    });
-
-    const ctx = createCustomerContext({
-      contactMeta: {
-        contactId: 'cont_001',
-        displayName: 'Test User',
-        firstName: 'Test',
-        primaryPersona: 'tenant',
-        linkedPropertyIds: ['unit_001'],
-        projectRoles: [],
-      },
-    });
-
-    const result = await handler.execute('search_knowledge_base', { query: 'test' }, ctx);
-
-    // Should still succeed, just without availability info
+    collectEvidenceForTargets.mockRejectedValue(new Error('Firestore down'));
+    const result = await handler.execute('search_knowledge_base', { query: 'συμβολαιογράφο' }, buyerCtx());
     expect(result.success).toBe(true);
-    const data = result.data as { procedures: Array<{ requiredDocuments: Array<{ availableInSystem: boolean }> }> };
-    expect(data.procedures[0].requiredDocuments[0].availableInSystem).toBe(false);
+    const docs = (result.data as KbData).procedures[0].requiredDocuments;
+    expect(docs.every((doc) => doc.availableInSystem === false)).toBe(true);
   });
 });

@@ -56,11 +56,12 @@ export const contractCasesQueries: readonly ContractCase[] = [
   },
   {
     id: 'Q6',
-    title: '`in` και `array-contains`',
+    title: '`in`, `array-contains` και `array-contains-any` (ADR-901: τα συνδεδεμένα αρχεία)',
     async run(db) {
       await seedDocs(db, 'q6', { a: { s: 'x', tags: ['p'] }, b: { s: 'y', tags: ['q'] }, c: { s: 'z' } });
       expect(await idsOf(db.collection('q6').where('s', 'in', ['x', 'z']))).toEqual(['a', 'c']);
       expect(await idsOf(db.collection('q6').where('tags', 'array-contains', 'q'))).toEqual(['b']);
+      expect(await idsOf(db.collection('q6').where('tags', 'array-contains-any', ['q', 'p']))).toEqual(['a', 'b']);
     },
   },
   {

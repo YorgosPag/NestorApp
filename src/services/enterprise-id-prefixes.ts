@@ -441,6 +441,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
   COMMISSION: 'com',
+  CONVEYANCE_CASE: 'cvc',     // ADR-901 Φ1 — υπόθεση μεταβίβασης (`conveyance_cases`)
   PAYMENT_PLAN: 'pp',
   PLAN_GROUP: 'ppg',
   PAYMENT_RECORD: 'pay',

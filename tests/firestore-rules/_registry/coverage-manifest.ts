@@ -266,6 +266,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // 📑 ADR-901 Φ1 — Η ΥΠΟΘΕΣΗ ΜΕΤΑΒΙΒΑΣΗΣ. `deny_all` επειδή (1) ο κατάλογος ΠΑΡΑΓΕΤΑΙ
+    // στον server από τα αρχεία — το ωμό έγγραφο κρατά μόνο αποκλίσεις, (2) κάθε εγγραφή
+    // περνά από CAS + πάγωμα + ίχνος που κανένας κανόνας δεν εκφράζει. Η Φ2 θα ανοίξει
+    // ανάγνωση ΜΟΝΟ μέσω συμμετοχής ADR-862 — ποτέ με `companyId` του οικοδεσπότη.
+    collection: 'conveyance_cases',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/conveyance-cases.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // 🏆 ADR-841 §7 Α21.12 — Η ΠΡΟΕΛΕΥΣΗ ΤΟΥ ΣΗΜΑΤΟΣ. **Τέταρτο `deny_all` της
     // οικογένειας, ΤΕΤΑΡΤΟΣ λόγος** — και δεν είναι ούτε ιδιωτικότητα προσώπου
     // (`mreq`), ούτε αυθεντία γραφέα (`fcon`), ούτε μυστικό εξαργύρωσης (`fcinv`).

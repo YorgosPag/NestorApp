@@ -173,6 +173,11 @@ export const PERMISSIONS = {
   // ADR-864 §21 — δέσμευση/αποδέσμευση αρχείου ΚΑΙ δικαστική δέσμευση αποδεικτικού: ΕΝΑ δικαίωμα
   // κρίνει και τα δύο (Google Vault «Manage Holds» — ένα προνόμιο, όχι ένα ανά πηγή).
   "legal:holds:manage": true,
+  // ADR-901 Φ1 — υπόθεση μεταβίβασης: `view` = κατάλογος δικαιολογητικών · `manage` = άνοιγμα,
+  // απαντήσεις, έλεγχος γραμμών, ακύρωση. Δικαιώματα του ΟΙΚΟΔΕΣΠΟΤΗ· οι εξωτερικοί επαγγελματίες
+  // παίρνουν πρόσβαση από τη ΣΥΜΜΕΤΟΧΗ (ADR-862), ποτέ από ρόλο (ADR-901 §9).
+  "legal:conveyance:view": true,
+  "legal:conveyance:manage": true,
 
   // Listings
   "listings:listings:publish": true,

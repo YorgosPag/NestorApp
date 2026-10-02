@@ -92,6 +92,9 @@ export const PERMISSION_SETS: Record<string, PermissionSetDefinition> = {
       'legal:grants:create',
       'legal:grants:revoke',
       'legal:contracts:view',
+      // ADR-901 Φ1 — υπόθεση μεταβίβασης: ο νομικός ρόλος ελέγχει τα δικαιολογητικά της πώλησης.
+      'legal:conveyance:view',
+      'legal:conveyance:manage',
       // ADR-864 §21 — δεσμεύσεις διατήρησης (αρχεία + αποδεικτικά): δουλειά του νομικού ρόλου,
       // όπως το «eDiscovery Manager» του Purview / «Manage Holds» του Vault.
       'legal:holds:manage'

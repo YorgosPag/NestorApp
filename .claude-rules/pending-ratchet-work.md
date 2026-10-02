@@ -2,13 +2,23 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **02/10 — ΑΝΑΓΝΩΣΗ ΚΛΕΙΔΙΟΥ `a.b.c` ΣΕ LOCALE BUNDLE: ~26 ΤΟΠΙΚΑ ΑΝΤΙΓΡΑΦΑ** *(N.0.2 · ADR-901 Φ1)*
+
+  Το ίδιο `key.split('.').reduce((node, part) => …, bundle)` είναι γραμμένο σε ~28 αρχεία (κυρίως άγκυρες i18n σε
+  tests, αλλά και `services/data-exchange/DataExportService.ts` · `components/reports/core/ReportTable.tsx` ·
+  `server/firebase-auth-config/auth-config-state.ts`). Το ADR-901 Φ1 δημιούργησε το SSoT
+  **`src/i18n/locale-key-lookup.ts` → `lookupLocaleString(bundle, key)`** και το χρησιμοποιεί σε 2 σημεία. Θεραπεία:
+  οι υπόλοιποι καταναλωτές γίνονται `import`. ⚠️ Τα `test-utils/fake-firestore/values.ts` ·
+  `DataExportService` διαβάζουν **έγγραφα**, όχι locales — αυτά ΔΕΝ μεταναστεύουν (άλλη ερώτηση, ίδιο σχήμα).
+  Μέτρα: `grep -rln "split('.').reduce" src`.
+
 - 🟡 **02/10 — Ο ΤΥΠΟΣ ΤΟΥ `t` ΠΟΥ ΠΕΡΝΑ ΣΕ ΒΟΗΘΟΥΣ: ΔΕΚΑ+ ΤΟΠΙΚΑ ΑΝΤΙΓΡΑΦΑ** *(N.0.2 · ADR-898 §17)*
 
   `(key: string, options?: Record<string, unknown>) => string` γράφεται ξανά και ξανά: `PriceLabelT`
   (`lib/listings/listing-price-label.ts`) · `ShowcaseClientT` (`components/showcase-core/ShowcaseClient.tsx`) · inline σε
   `property-tab-columns` · `BuildingShowcaseSpecs` · `ProjectShowcaseSpecs` · `contact-banking-descriptions` ·
   `thread-view-helpers` · `unified-inbox-helpers` · `BudgetVarianceChart` · `DebtMaturityWall` · `useBatchFileOperations` ·
-  `ContactActivityTimeline` · (και ο τοπικός `Translate` του `useBuildingObjectiveValueLabels`, Φ4β). Θεραπεία: **ένας**
+  `ContactActivityTimeline` · (και ο τοπικός `Translate` του `useBuildingObjectiveValueLabels`, Φ4β · και του `shared/BuildingSpaceRelationsPanel.tsx`, ADR-898 §20 — **ένα ακόμη**, γραμμένο εν γνώσει μέχρι να υπάρξει ο κοινός τύπος). Θεραπεία: **ένας**
   εξαγόμενος τύπος δίπλα στο `useTranslation` (`@/i18n`), τα αντίγραφα γίνονται `import type`. Μέτρα πρώτα:
   `grep -rln "(key: string, options?: Record<string, unknown>) => string" src`.
 
@@ -4113,15 +4123,21 @@
 `font-promise.test.js`) ώστε να οδηγούν το πραγματικό `runSetRatchetCli`, όπως η Φ8 του
 `i18n-ssr-guard-contract.test.js`. Μετά: grep για άλλες πύλες `runSetRatchetCli` με ⛔ εκτός συνόλων.
 
-### 🔐 Φρουροί ΠΕΛΑΤΗ στέλνουν σε σκέτο `/login` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-23)
+### 🔐 Σύνδεσμοι «Σύνδεση» χωρίς επιστροφή (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02)
 
-**Τι**: ο φρουρός του **διακομιστή** δίνει πλέον σύνδεση με επιστροφή (`loginHrefForRequest()`, ADR-875 §14.5).
-✅ **02/10 (ADR-900 §3.7): ο `ProtectedRoute` ΕΚΛΕΙΣΕ** — χωρίς ρητό `redirectTo` ζητά
-`loginHrefForCurrentLocation()` (`lib/routes/return-path.ts`, διαβάζει `window.location` τη στιγμή της
-ανακατεύθυνσης· **όχι** `useSearchParams`, που θα ζητούσε όριο Suspense — CHECK 3.55). Καλύπτει `(me)` · `buildings` ·
-`contacts`. **Μένουν** τρεις inline: `o/[workspace]/dashboard/page.tsx`, `pending-approval/page.tsx`,
-`onboarding/organization/page.tsx` (`router.replace(login)`). **Fix**: ο **ίδιος** `loginHrefForCurrentLocation()` —
-⚠️ κρίνε πρώτα ανά σελίδα αν η επιστροφή έχει νόημα (π.χ. `pending-approval` μετά τη σύνδεση). ADR-848 §9 #3.
+**Τι**: οι **φρουροί** (αυτόματες ανακατευθύνσεις) έκλεισαν όλοι και τους κλειδώνει η άγκυρα **Ε** του
+`return-path.test.ts`. Μένει η **άλλη** κλάση, ρητά εκτός εμβέλειας της άγκυρας: **σύνδεσμοι/κουμπιά**
+`href={AUTH_ROUTES.login}` σε σελίδες που ζητούν σύνδεση — ο άνθρωπος πατά «Σύνδεση» και μετά προσγειώνεται
+**αλλού**. Μετρημένα 2026-10-02: `unauthorized/page.tsx` · `admin/ai-inbox/AIInboxUnauthorized.tsx` ·
+`contact/GuestContactContent.tsx` · `owner-property/form/OwnerPropertyDossierField.tsx` ·
+`owner-property/form/OwnerPropertyMediaField.tsx` · `projects/projects-page-content.tsx` (**ωμό** `"/login"`) ·
+`public-site/PublicSiteHeader.tsx` · `workspace-invite/workspace-invite-labels.ts` (`EXIT_HREF['sign-in']`, ωμό).
+**Γιατί όχι επί τόπου**: σε απόδοση διακομιστή η τρέχουσα διεύθυνση **δεν** υπάρχει χωρίς `useSearchParams`
+(όριο Suspense, CHECK 3.55)· το `loginHrefForCurrentLocation()` στην απόδοση θα έδινε hydration mismatch.
+**Fix**: **ένα** `<SignInLink>` (σύνορο πλοήγησης) που αποδίδει `href={loginHref(pathname)}` και στο **κλικ**
+συμπληρώνει το ερώτημα από `window.location` (σχήμα Google `continue=` · Zillow: η σύνδεση σε κρατά στη σελίδα)·
+μετά επέκταση της άγκυρας **Ε** σε `href=` με κλειστό σύνολο εξαιρέσεων (π.χ. το «Σύνδεση» της αποσύνδεσης).
+⚠️ Κρίνε ανά σημείο: το `EXIT_HREF['sign-in']` της πρόσκλησης μάλλον **θέλει** επιστροφή στην πρόσκληση.
 
 ### 🔤 CHECK 3.28 — η λέξη «new» είναι ψευδής (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-22)
 
@@ -4713,6 +4729,8 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-10-02 | ✅ **«ΠΟΙΟΙ ΧΩΡΟΙ ΕΙΝΑΙ ΤΟΥ ΚΤΙΡΙΟΥ;» — ΕΚΛΕΙΣΕ (ADR-898 §20 · ADR-184 · ADR-247, Opus 5.5, απόφαση Giorgio «θέση ≠ ανάθεση»).** Δεν ήταν δύο κανόνες αλλά **τρεις** (πίνακας ποσοστών · αντικειμενική · καρτέλες `?buildingId=`) — η εγγραφή έλεγε ότι η καρτέλα χώρων καλεί το `getBuildingSpaces`, **ψευδές**: το καλεί μόνο ο πίνακας ποσοστών. Πλέον **ΕΝΑΣ** καθαρός επιλυτής (`lib/building-spaces/building-space-membership.ts`) με έγχυση αναγνώστη για client και Admin SDK· αναφορά χωρίς ποσό (τύπος χωρίς `value`)· μοναδικότητα σύνδεσης ανά **έργο**· αποσύνδεση παρακολουθήματος ⇒ 409. Μεταλλάξεις 8/8. |
+| 2026-10-02 | ✅ **ΦΡΟΥΡΟΙ ΠΕΛΑΤΗ ΣΕ ΣΚΕΤΟ `/login` — ΕΚΛΕΙΣΕ (ADR-848 §9 #3 · ADR-900 §3.7, Opus 5.5).** Οι τρεις (`o/[workspace]/dashboard` · `pending-approval` · `onboarding/organization`) ζητούν τον **ένα** `loginHrefForCurrentLocation()` — κρίθηκε ανά σελίδα: το onboarding το ανοίγει **email** του cron (`onboarding-reminder.job.ts`) ⇒ σκέτο `/login` ακύρωνε τον σύνδεσμο· το pending-approval αυτοδιορθώνεται ⇒ η επιστροφή δεν είναι ποτέ αδιέξοδο. Boy Scout: `oauth/authorize` είχε **δεύτερη υλοποίηση** του `?next=` (ωμά `'/login'`/`'next'`, χωρίς `safeReturnPath`) ⇒ `loginHref` · κουμπί του `AdminSetupPageContent` ⇒ με επιστροφή · ωμά «Σφάλμα» του onboarding ⇒ `onboarding.org.saveFailed`. 🔒 **Άγκυρα Ε** (`return-path.test.ts`): κλειστό σύνολο 4 δηλωμένων με λόγο (αποσύνδεση · αποχώρηση · σύνδεσμος μιας χρήσης · `/home`), αμφίδρομο, φράχτης σύμπαντος, μετάλλαξη 2 κόκκινα. Νέα εγγραφή για τους **συνδέσμους** «Σύνδεση». |
 | 2026-10-01 | ✅ **`PrimaryFilterBar` → `ui/scroll-rail` — ΕΚΛΕΙΣΕ (ADR-896 §7Α.6, Opus 5.5, απόφαση Giorgio «μία γραμμή με βελάκια»).** Κριτήρια μέσα στη λωρίδα, «Καθαρισμός» και «Περισσότερα» καρφωμένα έξω (Airbnb), καμία `md:` αναδίπλωση. Το ζωντανό περπάτημα βρήκε τρία σφάλματα στο **ίδιο** το `ScrollRail`, που αφορούσαν και το `/pro`: το κλικ σε μισοκρυμμένο τσιπ χανόταν, το ανοιχτό αναδυόμενο έμενε ορφανό στην κύλιση, και η επιστροφή εστίασης ακύρωνε την κύλιση του ανθρώπου. Διορθώθηκαν όλα, με άγκυρες Λ10–Λ13. Το στενό περπατήθηκε σε πραγματικό παράθυρο 735px (ελάχιστο του Chrome): CLS 0,0023, φύλλο φίλτρων εντάξει, και το κουμπί-εικονίδιο ισιώθηκε από 30px σε 34px (`self-stretch`). |
 | 2026-10-01 | ✅ **ΤΡΙΤΗ ΔΙΑΤΑΞΗ ΛΙΣΤΑ ‖ ΧΑΡΤΗΣ ΕΚΤΟΣ SSoT — ΕΚΛΕΙΣΕ (ADR-896 §4.5 · ADR-777 §8.84, Opus 5.5).** Όχι με «υποδοχή στενής εκδοχής» στο `ListMapSplit`: οι δύο διατάξεις είναι **διαφορετικής φύσης** (σελίδα: μέτρηση περιέκτη σε JS + καρτέλες · οθόνη: γεωμετρία μόνο CSS, CLS 0 + φύλλο 3 στάσεων). Μία αυθεντία γεωμετρίας (`list-map-layout.ts` → `LIST_MAP_SCREEN_*`) + δεύτερο λεπτό κέλυφος `ListMapScreen`. Άγκυρες `ListMapScreen.test.tsx` Σ1–Σ3, `results-layout-authority` Α2/Α2β. |
 | 2026-09-23 | ✅ **ΠΑΤΗΜΕΝΟ ΚΟΥΜΠΙ = `variant="default"` ⇒ ΑΟΡΑΤΗ ΕΠΙΛΟΓΗ — ΕΚΛΕΙΣΕ (ADR-770 §19, `5d26fab7`, Opus 5.5).** Η εγγραφή μετρούσε **42** σημεία με grep· ο σαρωτής AST μέτρησε **101 / 53 αρχεία** ⇒ θεραπεία της κλάσης: `ToggleButton` + `SegmentedControl` + ρόλος `COLOR_BRIDGE.selectionControl.pressed`/`pressedOn`, codemod 93 σημεία, άγκυρα **Ο5ε** (ratchet κατά ταυτότητα, 8 δηλωμένα σημεία έμφασης). Το ύποπτο `ui/toggle.tsx` μετρήθηκε και πέρασε στον ρόλο (βγήκε από το `DECLARED_OPEN_STATES`). `jscpd:diff` στα 57 αρχεία = **0**. **Browser (ζωντανά, μόνο ανάγνωση):** διακόπτης 30/90 — σκοτεινό γέμισμα/κάρτα **5,89:1**, μελάνι **6,92:1** · φωτεινό **4,54:1** / **4,76:1** · `role=radio` + `aria-checked`. ⚠️ **ΔΕΝ επαληθεύτηκαν σε browser** κτίριο (Κάρτες|Πίνακας, Χρονολόγιο), διαχείριση αρχείων, DXF/rich-text toolbars: ο Chrome τον οδηγούσε άλλη συνεδρία (2× επιστροφή σε `newtab`) — ADR-770 §19.5. Νέο ανοιχτό: βελάκι στο `SegmentedControl` = μόνο εστίαση, όχι επιλογή (ADR-770 §19.6 #5). |

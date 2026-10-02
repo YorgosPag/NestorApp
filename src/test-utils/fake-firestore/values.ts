@@ -78,7 +78,7 @@ function rangeMatches(op: '<' | '<=' | '>' | '>=', value: unknown, bound: unknow
   return order >= 0;
 }
 
-export type WhereOp = '==' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'array-contains';
+export type WhereOp = '==' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'array-contains' | 'array-contains-any';
 
 export interface WhereClause {
   readonly field: string;
@@ -97,6 +97,10 @@ export function matchesClause(doc: Doc, clause: WhereClause): boolean {
     case '!=': return raw !== undefined && !valuesEqual(raw, clause.value);
     case 'in': return Array.isArray(clause.value) && clause.value.some((candidate) => valuesEqual(raw, candidate));
     case 'array-contains': return Array.isArray(raw) && raw.some((item) => valuesEqual(item, clause.value));
+    case 'array-contains-any': {
+      const wanted = clause.value;
+      return Array.isArray(raw) && Array.isArray(wanted) && raw.some((item) => wanted.some((candidate) => valuesEqual(item, candidate)));
+    }
     default: return rangeMatches(clause.op, raw, clause.value);
   }
 }

@@ -1,168 +1,85 @@
 /**
  * =============================================================================
- * LEGAL PROCEDURES KNOWLEDGE BASE — SSoT for AI Pipeline
+ * LEGAL PROCEDURES KNOWLEDGE BASE — όψη του καταλόγου δικαιολογητικών (AI Pipeline)
  * =============================================================================
  *
- * Static knowledge base of real estate procedures and required documents.
- * Used by the AI agent to answer buyer questions like:
- * "Τι χρειάζομαι για τον συμβολαιογράφο;"
+ * Απαντά σε ερωτήσεις αγοραστή όπως «Τι χρειάζομαι για τον συμβολαιογράφο;».
  *
- * Each procedure includes:
- * - keywords for AI matching
- * - required documents with source attribution
- * - storageKey for cross-referencing with files collection
+ * 🔁 ADR-901 §2 Ε-Α (2026-10-02): εδώ ζούσε **δεύτερος** κατάλογος εγγράφων — ονόματα
+ *    σκληροκωδικοποιημένα στα ελληνικά και διαθεσιμότητα με ασαφή αναζήτηση κειμένου
+ *    (`searchTerms`) σε έως 100 αρχεία της εταιρείας. Πλέον είναι **λεπτή όψη**:
+ *    - οι διαδικασίες και οι γραμμές τους → `src/config/conveyance-checklist/` (ο ΕΝΑΣ κατάλογος)
+ *    - τα κείμενα → `locales/el/conveyance.json` (i18n SSoT)
+ *    - η διαθεσιμότητα → ο ίδιος συλλέκτης/matcher με την υπόθεση μεταβίβασης
+ *      (`knowledge-base-handler.ts`)
  *
  * @module config/legal-procedures-kb
  * @see SPEC-257G (Knowledge Base — Procedures & Documents)
  * @see ADR-257 (Customer AI Access Control)
+ * @see ADR-901 (υπόθεση μεταβίβασης — ο κατάλογος)
  */
+
+import elConveyance from '@/i18n/locales/el/conveyance.json';
+import { lookupLocaleString } from '@/i18n/locale-key-lookup';
+import { CONVEYANCE_PROCEDURES, itemsForProcedure } from '@/config/conveyance-checklist/catalog';
+import type { ChecklistItem, ChecklistProvider, ProcedureCategory } from '@/config/conveyance-checklist/types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-/** Source of a required document */
-export type DocumentSource =
-  | 'system'          // Available in our system (files collection)
-  | 'buyer'           // Buyer must provide
-  | 'seller'          // Seller/developer provides
-  | 'engineer'        // Engineer/architect provides
-  | 'bank'            // Bank provides
-  | 'municipality'    // Municipality/government provides
-  | 'cadastral_office'; // Κτηματολόγιο
+/** Ποιος παρέχει ένα έγγραφο — το λεξιλόγιο του καταλόγου. */
+export type DocumentSource = ChecklistProvider;
 
-/** A required document within a procedure */
-export interface RequiredDocument {
-  /** Human-readable name in Greek */
-  name: string;
-  /** Who provides this document */
-  source: DocumentSource;
-  /**
-   * Search terms to match against files collection (purpose, category, displayName).
-   * Used for availability check: if ANY term matches, the document is considered available.
-   * Empty array = document NOT in our system (source !== 'system').
-   *
-   * Values are matched case-insensitively against: file.purpose, file.category, file.displayName
-   */
-  searchTerms: readonly string[];
+/** Ένα απαιτούμενο έγγραφο μιας διαδικασίας (γραμμή του καταλόγου). */
+interface RequiredDocument {
+  readonly itemId: string;
+  /** Ελληνικό όνομα — από το `conveyance.json` (ο agent απαντά στα ελληνικά). */
+  readonly name: string;
+  readonly source: DocumentSource;
+  readonly item: ChecklistItem;
 }
 
-/** Procedure category */
-export const PROCEDURE_CATEGORIES = ['sale', 'finance', 'transfer'] as const;
-export type ProcedureCategory = typeof PROCEDURE_CATEGORIES[number];
-
-/** A legal/real estate procedure */
 export interface LegalProcedure {
-  /** Unique identifier */
-  id: string;
-  /** Greek title */
-  title: string;
-  /** Procedure category */
-  category: ProcedureCategory;
-  /** Search keywords (lowercase Greek) for AI matching */
-  keywords: readonly string[];
-  /** Required documents */
-  requiredDocuments: readonly RequiredDocument[];
-  /** Short description */
-  description: string;
+  readonly id: string;
+  readonly title: string;
+  readonly category: ProcedureCategory;
+  readonly keywords: readonly string[];
+  readonly requiredDocuments: readonly RequiredDocument[];
+  readonly description: string;
 }
 
 // ============================================================================
-// SOURCE LABELS — SSoT for display in AI responses
+// LABELS — από το i18n SSoT (καμία ελληνική λέξη σε κώδικα)
 // ============================================================================
 
-/** Human-readable labels for document sources (Greek) */
-export const DOCUMENT_SOURCE_LABELS: Readonly<Record<DocumentSource, string>> = {
-  system: 'Διαθέσιμο στο σύστημα',
-  buyer: 'Από εσάς (αγοραστής)',
-  seller: 'Από τον πωλητή/κατασκευαστή',
-  engineer: 'Από τον μηχανικό',
-  bank: 'Από την τράπεζα',
-  municipality: 'Από τον δήμο',
-  cadastral_office: 'Από το κτηματολόγιο',
-};
+function labelOf(key: string): string {
+  return lookupLocaleString(elConveyance, key) ?? key;
+}
+
+/** Ετικέτες πηγής εγγράφου για τις απαντήσεις του agent. */
+export const DOCUMENT_SOURCE_LABELS: Readonly<Record<DocumentSource, string>> = elConveyance.sources;
+
+/** «Διαθέσιμο στο σύστημα» — όταν βρέθηκε αρχείο-τεκμήριο. */
+export const AVAILABLE_IN_SYSTEM_LABEL: string = elConveyance.sources.available;
 
 // ============================================================================
-// KNOWLEDGE BASE — 4 Core Procedures
+// KNOWLEDGE BASE — όψη των διαδικασιών του καταλόγου
 // ============================================================================
 
-export const LEGAL_PROCEDURES: readonly LegalProcedure[] = [
-
-  // ── 1. Οριστικό Συμβόλαιο (Final Contract) ──
-  {
-    id: 'final_contract',
-    title: 'Οριστικό Συμβόλαιο Αγοραπωλησίας',
-    category: 'sale',
-    keywords: [
-      'συμβόλαιο', 'συμβολαιογράφος', 'συμβολαιογράφο', 'αγοραπωλησία',
-      'οριστικό', 'αγορά', 'υπογραφή', 'μεταβίβαση κυριότητας',
-    ],
-    requiredDocuments: [
-      { name: 'Τοπογραφικό διάγραμμα', source: 'system', searchTerms: ['topographic', 'study-topographic', 'τοπογραφικ'] },
-      { name: 'Οικοδομική άδεια', source: 'system', searchTerms: ['permit', 'οικοδομικ', 'άδεια'] },
-      { name: 'Βεβαίωση μηχανικού (Ν.4495/2017)', source: 'engineer', searchTerms: [] },
-      { name: 'Πιστοποιητικό Ενεργειακής Απόδοσης (ΠΕΑ)', source: 'system', searchTerms: ['energy', 'study-energy-cert', 'ενεργειακ', 'πεα'] },
-      { name: 'Φορολογική ενημερότητα', source: 'buyer', searchTerms: [] },
-      { name: 'Κτηματολογικό φύλλο', source: 'system', searchTerms: ['cadastral', 'study-cadastre', 'κτηματολογ'] },
-      { name: 'Βεβαίωση ΕΝΦΙΑ', source: 'seller', searchTerms: [] },
-      { name: 'Πιστοποιητικό μη οφειλής ΤΑΠ', source: 'municipality', searchTerms: [] },
-    ],
-    description: 'Υπογράφεται ενώπιον συμβολαιογράφου. Μεταβιβάζει κυριότητα ακινήτου.',
-  },
-
-  // ── 2. Προσύμφωνο (Preliminary Contract) ──
-  {
-    id: 'preliminary_contract',
-    title: 'Προσύμφωνο Αγοραπωλησίας',
-    category: 'sale',
-    keywords: [
-      'προσύμφωνο', 'κράτηση', 'δέσμευση', 'αρραβώνας', 'προκαταβολή',
-    ],
-    requiredDocuments: [
-      { name: 'Ταυτότητα / Διαβατήριο', source: 'buyer', searchTerms: [] },
-      { name: 'ΑΦΜ', source: 'buyer', searchTerms: [] },
-      { name: 'Εκκαθαριστικό εφορίας', source: 'buyer', searchTerms: [] },
-    ],
-    description: 'Δεσμευτική συμφωνία πριν το οριστικό συμβόλαιο. Συνήθως συνοδεύεται από προκαταβολή.',
-  },
-
-  // ── 3. Στεγαστικό Δάνειο (Bank Loan) ──
-  {
-    id: 'bank_loan',
-    title: 'Αίτηση Στεγαστικού Δανείου',
-    category: 'finance',
-    keywords: [
-      'δάνειο', 'τράπεζα', 'στεγαστικό', 'δανεισμός', 'χρηματοδότηση', 'mortgage',
-    ],
-    requiredDocuments: [
-      { name: 'Εκκαθαριστικό εφορίας (2 τελευταία)', source: 'buyer', searchTerms: [] },
-      { name: 'Βεβαίωση εργοδότη / εισοδήματος', source: 'buyer', searchTerms: [] },
-      { name: 'Μισθοδοτικές καταστάσεις (6 μηνών)', source: 'buyer', searchTerms: [] },
-      { name: 'Εκτίμηση ακινήτου', source: 'bank', searchTerms: [] },
-      { name: 'Προσύμφωνο αγοραπωλησίας', source: 'system', searchTerms: ['προσύμφωνο', 'preliminary', 'contracts'] },
-      { name: 'Τοπογραφικό', source: 'system', searchTerms: ['topographic', 'study-topographic', 'τοπογραφικ'] },
-      { name: 'Οικοδομική άδεια', source: 'system', searchTerms: ['permit', 'οικοδομικ', 'άδεια'] },
-    ],
-    description: 'Αίτηση σε τράπεζα για στεγαστικό δάνειο. Η τράπεζα ζητά εκτίμηση ακινήτου.',
-  },
-
-  // ── 4. Μεταβίβαση μετά Εξόφληση (Property Transfer) ──
-  {
-    id: 'property_transfer',
-    title: 'Μεταβίβαση Ακινήτου (μετά εξόφληση)',
-    category: 'transfer',
-    keywords: [
-      'μεταβίβαση', 'εξόφληση', 'εξοφλητήριο', 'κτηματολόγιο', 'τελική μεταβίβαση',
-    ],
-    requiredDocuments: [
-      { name: 'Εξοφλητήριο', source: 'system', searchTerms: ['εξοφλητήριο', 'payment', 'receipt'] },
-      { name: 'Οριστικό συμβόλαιο', source: 'system', searchTerms: ['συμβόλαιο', 'contracts', 'final'] },
-      { name: 'Πιστοποιητικό κτηματολογίου', source: 'cadastral_office', searchTerms: [] },
-      { name: 'Πιστοποιητικό μη οφειλής ΤΑΠ', source: 'municipality', searchTerms: [] },
-    ],
-    description: 'Τελική μεταβίβαση μετά την πλήρη εξόφληση. Καταχωρείται στο κτηματολόγιο.',
-  },
-] as const;
+const LEGAL_PROCEDURES: readonly LegalProcedure[] = CONVEYANCE_PROCEDURES.map((procedure) => ({
+  id: procedure.id,
+  title: labelOf(`procedures.${procedure.id}.title`),
+  description: labelOf(`procedures.${procedure.id}.description`),
+  category: procedure.category,
+  keywords: procedure.keywords,
+  requiredDocuments: itemsForProcedure(procedure).map((item) => ({
+    itemId: item.id,
+    name: labelOf(item.labelKey),
+    source: item.provider,
+    item,
+  })),
+}));
 
 // ============================================================================
 // SEARCH HELPER — Keyword matching
@@ -191,17 +108,14 @@ export function searchProcedures(
     let matchScore = 0;
 
     for (const queryWord of queryWords) {
-      // Check keywords
       for (const keyword of procedure.keywords) {
         if (keyword.includes(queryWord) || queryWord.includes(keyword)) {
           matchScore += 2;
         }
       }
-      // Check title
       if (procedure.title.toLowerCase().includes(queryWord)) {
         matchScore += 1;
       }
-      // Check description
       if (procedure.description.toLowerCase().includes(queryWord)) {
         matchScore += 0.5;
       }
@@ -212,6 +126,5 @@ export function searchProcedures(
     }
   }
 
-  // Sort by relevance (highest first)
   return results.sort((a, b) => b.matchScore - a.matchScore);
 }

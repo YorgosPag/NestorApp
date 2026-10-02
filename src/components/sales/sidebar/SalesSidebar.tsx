@@ -23,6 +23,7 @@ const ChangePriceDialog = dynamic(() => import('@/components/sales/dialogs/Chang
 const ReserveDialog = dynamic(() => import('@/components/sales/dialogs/ReserveDialog').then(m => ({ default: m.ReserveDialog })), { ssr: false });
 const SellDialog = dynamic(() => import('@/components/sales/dialogs/SellDialog').then(m => ({ default: m.SellDialog })), { ssr: false });
 const RevertDialog = dynamic(() => import('@/components/sales/dialogs/RevertDialog').then(m => ({ default: m.RevertDialog })), { ssr: false });
+const ConveyanceTab = dynamic(() => import('@/components/sales/conveyance/ConveyanceTab').then(m => ({ default: m.ConveyanceTab })), { ssr: false });
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -41,9 +42,12 @@ import {
   Clock,
   Scale,
   CreditCard,
+  ClipboardCheck,
 } from 'lucide-react';
 import { LegalTabContent } from '@/components/sales/legal/LegalTabContent';
 import { PaymentTabContent } from '@/components/sales/payments/PaymentTabContent';
+import { useCapability } from '@/auth/hooks/useCapability';
+import { isGranted } from '@/types/capability-authority';
 import type { Property } from '@/types/property';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -112,31 +116,24 @@ const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.t
 /** Payment tab — conditional, visible ONLY for reserved/sold units (ADR-234) */
 const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments', color: 'text-[hsl(var(--hue-teal))]' };
 
-/** Check if unit has reserved/sold status → show legal tab */
-function shouldShowLegalTab(unit: Property | null): boolean {
+/** Conveyance documents tab — conditional, reserved/sold units + `legal:conveyance:view` (ADR-901 Φ1) */
+const CONVEYANCE_TAB: SalesTabConfig = { id: 'conveyance', icon: ClipboardCheck, labelKey: 'sales.tabs.conveyance', color: 'text-[hsl(var(--hue-indigo))]' };
+
+/**
+ * Η μονάδα βρίσκεται σε διαδικασία πώλησης (κράτηση/πώληση) ⇒ νομικά, πληρωμές, δικαιολογητικά.
+ * Ήταν ΔΥΟ ίδιες συναρτήσεις (`shouldShowLegalTab` / `shouldShowPaymentTab`) — μία ερώτηση, ένα σημείο.
+ */
+function isInSaleProcess(unit: Property | null): boolean {
   if (!unit) return false;
   return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
 }
 
-/** Check if unit has reserved/sold status → show payment tab */
-function shouldShowPaymentTab(unit: Property | null): boolean {
-  if (!unit) return false;
-  return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
-}
-
-/** Build dynamic tabs array */
-function buildTabs(unit: Property | null): SalesTabConfig[] {
-  const tabs = [...BASE_SALES_TABS];
-  if (shouldShowLegalTab(unit)) {
-    // Insert legal tab after sale-info (position 1)
-    tabs.splice(1, 0, LEGAL_TAB);
-  }
-  if (shouldShowPaymentTab(unit)) {
-    // Insert payment tab after legal (or after sale-info if no legal)
-    const insertIdx = tabs.findIndex((t) => t.id === 'legal');
-    tabs.splice(insertIdx >= 0 ? insertIdx + 1 : 1, 0, PAYMENT_TAB);
-  }
-  return tabs;
+/** Build dynamic tabs array: sale-info → legal → payments → conveyance → … */
+function buildTabs(unit: Property | null, canViewConveyance: boolean): SalesTabConfig[] {
+  if (!isInSaleProcess(unit)) return [...BASE_SALES_TABS];
+  const extra = canViewConveyance ? [LEGAL_TAB, PAYMENT_TAB, CONVEYANCE_TAB] : [LEGAL_TAB, PAYMENT_TAB];
+  const [saleInfo, ...rest] = BASE_SALES_TABS;
+  return [saleInfo, ...extra, ...rest];
 }
 
 // =============================================================================
@@ -160,6 +157,9 @@ export function SalesSidebar({
   const { t } = useTranslation(COMMON_NAMESPACES);
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
+  // ADR-901 Φ1 — η καρτέλα φαίνεται ΜΟΝΟ σε όποιον τη δέχεται και ο server (μάθημα ADR-829).
+  const canViewConveyance = isGranted(useCapability('legal:conveyance:view').verdict);
+  const inSaleProcess = isInSaleProcess(selectedProperty);
 
   // =========================================================================
   // Dialog State (ADR-197 §2.9 — 3 commercial actions)
@@ -192,7 +192,7 @@ export function SalesSidebar({
       tabsRenderer={
         <Tabs defaultValue="sale-info" className="flex flex-col">
           <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
-            {buildTabs(selectedProperty).map(tab => (
+            {buildTabs(selectedProperty, canViewConveyance).map(tab => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
@@ -215,16 +215,23 @@ export function SalesSidebar({
           </TabsContent>
 
           {/* Legal Tab — ADR-230 (conditional, reserved/sold only) */}
-          {shouldShowLegalTab(selectedProperty) && (
+          {inSaleProcess && (
             <TabsContent value="legal" className="flex-1">
               <LegalTabContent unit={selectedProperty} />
             </TabsContent>
           )}
 
           {/* Payments Tab — ADR-234 (conditional, reserved/sold only) */}
-          {shouldShowPaymentTab(selectedProperty) && (
+          {inSaleProcess && (
             <TabsContent value="payments" className="flex-1">
               <PaymentTabContent unit={selectedProperty} />
+            </TabsContent>
+          )}
+
+          {/* Conveyance documents — ADR-901 Φ1 (reserved/sold + legal:conveyance:view) */}
+          {inSaleProcess && canViewConveyance && (
+            <TabsContent value="conveyance" className="flex-1">
+              <ConveyanceTab unit={selectedProperty} />
             </TabsContent>
           )}
 

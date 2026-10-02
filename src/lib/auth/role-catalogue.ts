@@ -215,6 +215,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // ΜΟΝΟ ο διαχειριστής: η δέσμευση είναι πράξη συμμόρφωσης, όχι εργασίας — στο Google Vault
       // είναι το προνόμιο «Manage Holds» του διαχειριστή, και ο χρήστης δεν ειδοποιείται (σιωπηλή).
       "legal:holds:manage",
+      // ── Υπόθεση μεταβίβασης (ADR-901 Φ1) — ο εργολάβος ετοιμάζει τον φάκελο της πώλησης ──
+      "legal:conveyance:view",
+      "legal:conveyance:manage",
     ],
     level: 1,
     isProjectRole: false,
@@ -339,6 +342,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "iso19650:containers:release",
       "iso19650:containers:withdraw",
       "iso19650:containers:supersede", // ADR-862 Φ0 Β10 — νέα έκδοση ⇒ η παλιά αρχειοθετείται
+      // ── Υπόθεση μεταβίβασης (ADR-901 Φ1) — ο υπεύθυνος έργου συγκεντρώνει τα χαρτιά της πώλησης ──
+      "legal:conveyance:view",
+      "legal:conveyance:manage",
     ],
     level: 2,
     isProjectRole: true,
@@ -490,6 +496,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "crm:contacts:delete",
       "properties:properties:view",
       "units:units:view",
+      // ADR-901 Φ1 — ο πωλητής βλέπει την πρόοδο των δικαιολογητικών (ο έλεγχος μένει στον υπεύθυνο).
+      "legal:conveyance:view",
       "comm:conversations:list",
       "comm:conversations:view",
       "comm:messages:view",

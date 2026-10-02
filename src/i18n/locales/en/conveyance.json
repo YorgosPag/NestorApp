@@ -1,0 +1,207 @@
+{
+  "tab": {
+    "title": "Conveyance documents",
+    "subtitle": "What is in place, what is missing and what expires — from files already uploaded",
+    "openCase": "Open conveyance case",
+    "openCaseHint": "The checklist fills itself from the documents of the property, building, project and contacts. Nothing needs to be uploaded again.",
+    "opening": "Opening…",
+    "loadError": "The documents could not be loaded.",
+    "conflict": "Someone else changed the case in the meantime. The view was refreshed — please try again.",
+    "readOnly": "The case is read-only ({state}).",
+    "catalogUnverified": "The checklist is a draft (version {version}) and has not yet been verified by a notary."
+  },
+  "summary": {
+    "progress": "{complete} of {applicable} complete",
+    "awaitingReview": "{count, plural, one {# awaiting review} other {# awaiting review}}",
+    "missing": "{count, plural, one {# missing} other {# missing}}",
+    "rejected": "{count, plural, one {# returned} other {# returned}}",
+    "expiring": "{count, plural, one {# expiring soon} other {# expiring soon}}",
+    "expired": "{count, plural, one {# expired} other {# expired}}",
+    "questions": "{count, plural, one {# question completes the checklist} other {# questions complete the checklist}}"
+  },
+  "signing": {
+    "label": "Planned signing",
+    "notSet": "Not set",
+    "hint": "With a signing date, every certificate is checked for validity on that day.",
+    "clear": "Remove date"
+  },
+  "state": {
+    "open": "Open",
+    "signed": "Signed",
+    "registered": "Registered",
+    "closed": "Closed",
+    "cancelled": "Cancelled"
+  },
+  "cancel": {
+    "action": "Cancel case",
+    "title": "Cancel conveyance case",
+    "description": "The case will close without a completion binder. The property files are not touched.",
+    "reasonLabel": "Cancellation reason",
+    "confirm": "Cancel case"
+  },
+  "sections": {
+    "property": "Property documents",
+    "seller": "Seller documents",
+    "buyer": "Buyer documents",
+    "transaction": "Transaction documents"
+  },
+  "sectionHints": {
+    "property": "Visible to all legal professionals and the buyer",
+    "seller": "Personal — seller's lawyer and notary only",
+    "buyer": "Personal — buyer's lawyer and notary only",
+    "transaction": "Produced within the case"
+  },
+  "status": {
+    "needs_answer": "Needs an answer",
+    "missing": "Missing",
+    "uploaded": "To review",
+    "stale": "Changed after review",
+    "rejected": "Returned",
+    "accepted": "Reviewed",
+    "expiring": "Expiring soon",
+    "expired": "Expired",
+    "notary_side": "From the notary",
+    "not_applicable": "Not applicable"
+  },
+  "providers": {
+    "seller": "Seller",
+    "buyer": "Buyer",
+    "engineer": "Engineer",
+    "lawyer": "Lawyer",
+    "notary": "Notary",
+    "authority": "Public authority",
+    "bank": "Bank"
+  },
+  "sources": {
+    "available": "Available in the system",
+    "seller": "From the seller/developer",
+    "buyer": "From you (buyer)",
+    "engineer": "From the engineer",
+    "lawyer": "From the lawyer",
+    "notary": "From the notary",
+    "authority": "From a public authority",
+    "bank": "From the bank"
+  },
+  "row": {
+    "provider": "Provided by: {provider}",
+    "files": "{count, plural, one {# file} other {# files}}",
+    "openFile": "Open file",
+    "expiresOn": "Expires {date}",
+    "invalidOnSigning": "Will not be valid on the signing day",
+    "validityUnverified": "Limited validity — duration not yet verified",
+    "actDay": "Issued on the day of the deed",
+    "rejectedReason": "Returned because: {reason}",
+    "notApplicableReason": "Not applicable: {reason}",
+    "notApplicableByFact": "Does not apply to this conveyance",
+    "reviewedBy": "Reviewed {date}",
+    "offlineHint": "Cannot be uploaded to the platform yet — confirm you received it.",
+    "uploadHint": "Uploaded in the “Documents” tab of the {level}"
+  },
+  "levels": {
+    "property": "property",
+    "appurtenance": "appurtenance",
+    "building": "building",
+    "project": "project",
+    "seller_contact": "seller",
+    "buyer_contact": "buyer"
+  },
+  "actions": {
+    "menu": "Actions for {item}",
+    "accept": "Accept",
+    "confirmReceived": "Confirm received",
+    "reject": "Return with reason",
+    "markNotApplicable": "Not applicable",
+    "clear": "Reset",
+    "upload": "Go to upload",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "dialogs": {
+    "acceptTitle": "Accept document",
+    "acceptDescription": "Acceptance is bound to this version of the file; if a new version is uploaded, the document will ask for review again.",
+    "issuedOnLabel": "Issue date",
+    "issuedOnHint": "Validity is calculated from this date.",
+    "rejectTitle": "Return document",
+    "reasonLabel": "Reason",
+    "reasonRequired": "A reason is required.",
+    "notApplicableTitle": "Document not applicable",
+    "notApplicableDescription": "The reason will be visible to everyone working on the case."
+  },
+  "facts": {
+    "title": "Questions about the conveyance",
+    "hint": "The answers decide which documents are needed. Anything known from the data is not asked.",
+    "yes": "Yes",
+    "no": "No",
+    "derived": "From the data",
+    "is_new_build": { "question": "Is it a newly built property sold by the developer?" },
+    "seller_is_legal_entity": { "question": "Is the seller a legal entity (company)?" },
+    "has_antiparochi": { "question": "Was the property built under a land-for-flats (antiparochi) agreement?" },
+    "is_unit_in_multi_owner_building": { "question": "Is the property part of a building with several owners (horizontal ownership)?" },
+    "has_appurtenances": { "question": "Are a parking space or storage room sold with it?" },
+    "existing_building_with_manager": { "question": "Is there a building manager with shared expenses?" },
+    "has_unauthorized_works": { "question": "Are there unauthorized works or legalisations requiring an engineer's certificate?" },
+    "seller_by_proxy": { "question": "Will the seller be represented by power of attorney?" },
+    "buyer_has_mortgage": { "question": "Is the buyer financing with a mortgage?" },
+    "first_home_exemption": { "question": "Is the buyer claiming the first-home exemption?" },
+    "special_zone": { "question": "Is it in a forest, border or other special zone?" }
+  },
+  "items": {
+    "title_deed": { "label": "Title deed and transcription certificate" },
+    "antiparochi_contract": { "label": "Land-for-flats (antiparochi) contract" },
+    "cadastral_extract": { "label": "Cadastre: KAEK, registration certificate, plan extract" },
+    "encumbrance_certificate": { "label": "Certificate of encumbrances, seizures and claims" },
+    "building_permit": { "label": "Building permit and revisions" },
+    "topographic_plan": { "label": "Topographic plan" },
+    "unit_floor_plans": { "label": "Property floor plans" },
+    "appurtenance_floor_plans": { "label": "Appurtenance floor plans (parking, storage)" },
+    "section_drawings": { "label": "Sections" },
+    "horizontal_property_deed": { "label": "Horizontal ownership deed, share table and building regulation" },
+    "building_identity": { "label": "Electronic Building Identity and completeness certificate" },
+    "engineer_legality_certificate": { "label": "Engineer's certificate (art. 83 L.4495/2017) / legalisation of unauthorized works" },
+    "energy_certificate": { "label": "Energy Performance Certificate (EPC)" },
+    "building_manager_certificate": { "label": "Building manager's certificate of no shared-expense debt" },
+    "municipal_clearance": { "label": "Municipal property-tax (TAP) and electricity certificate" },
+    "special_zone_clearances": { "label": "Special-zone clearances (forest, border, land-improvement)" },
+    "seller_identity": { "label": "Seller ID and tax number" },
+    "seller_corporate_documents": { "label": "Articles of association, GEMI certificate and company representation" },
+    "seller_enfia_certificate": { "label": "Seller ENFIA certificate" },
+    "seller_e9": { "label": "Seller E9 property declaration" },
+    "seller_tax_clearance": { "label": "Seller tax clearance" },
+    "seller_insurance_clearance": { "label": "Seller social-security clearance (e-EFKA)" },
+    "seller_power_of_attorney": { "label": "Seller power of attorney" },
+    "buyer_identity": { "label": "Buyer ID and tax number" },
+    "buyer_income_statement": { "label": "E1 income statement (purchase justification)" },
+    "buyer_mortgage_approval": { "label": "Mortgage pre-approval or approval" },
+    "buyer_employment_certificate": { "label": "Employer / income certificate" },
+    "buyer_payslips": { "label": "Payslips (6 months)" },
+    "bank_property_valuation": { "label": "Bank property valuation" },
+    "buyer_first_home_exemption": { "label": "First-home exemption documents" },
+    "buyer_payment_proofs": { "label": "Proof of bank payment of price and deposit" },
+    "preliminary_agreement": { "label": "Reservation agreement / preliminary contract" },
+    "vat_or_suspension": { "label": "New-build VAT or VAT suspension declaration" },
+    "transfer_tax_proof": { "label": "Transfer-tax receipt (myPROPERTY)" },
+    "legal_due_diligence_report": { "label": "Legal due-diligence report" },
+    "contract_draft": { "label": "Draft contract" },
+    "final_contract": { "label": "Final contract" },
+    "payoff_receipt": { "label": "Payoff receipt" },
+    "cadastre_registration_proof": { "label": "Proof of cadastre registration" }
+  },
+  "procedures": {
+    "final_contract": {
+      "title": "Final Sale Contract",
+      "description": "Signed before a notary. Transfers ownership of the property."
+    },
+    "preliminary_contract": {
+      "title": "Preliminary Sale Contract",
+      "description": "Binding agreement before the final contract. Usually accompanied by a deposit."
+    },
+    "bank_loan": {
+      "title": "Mortgage Application",
+      "description": "Application to a bank for a mortgage. The bank requires a property valuation."
+    },
+    "property_transfer": {
+      "title": "Property Transfer (after payoff)",
+      "description": "Final transfer after full payment. Registered with the cadastre."
+    }
+  }
+}
