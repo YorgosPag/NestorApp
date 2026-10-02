@@ -8,7 +8,7 @@
  * | σχεδίαση σε εξέλιξη | η ζώνη σχεδίασης (οδηγία · μέτρηση · Αναίρεση/Ακύρωση/Εφαρμογή) |
  * | όριο δήμου | το chip του δήμου *(ADR-883)* |
  * | σχεδιασμένη περιοχή | το chip του σχεδίου (Επεξεργασία · Αφαίρεση ορίου) |
- * | καμία | «Αναζήτηση εδώ» · διακόπτης · **Σχεδίαση** |
+ * | καμία | χάπι «Αναζήτηση εδώ │ διακόπτης» + εργαλείο **Σχεδίαση** στην μπάρα (§8.85) |
  *
  * 🔑 **Ζει εδώ, όχι στο `SearchResultsContent`**: η σελίδα είναι ήδη στο όριο των 500
  * γραμμών (N.7.1), και η ερώτηση *«ποιο χειριστήριο πάνω από τον χάρτη;»* είναι **μία**
@@ -19,7 +19,6 @@
 import React, { useMemo } from 'react';
 import { Pencil } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { AdminBoundaryState } from '@/hooks/geo/useAdminBoundary';
@@ -35,8 +34,8 @@ import { MapAreaControl } from './MapAreaControl';
 import { RegionBoundaryChip } from './RegionBoundaryChip';
 import { DrawAreaToolbar } from './draw/DrawAreaToolbar';
 import { DrawnAreaChip } from './draw/DrawnAreaChip';
-import { SaveSearchButton } from './save-search/SaveSearchButton';
 import { LazyPriceMapControl } from './price-map/price-map-entry';
+import { MapToolbarButton } from '@/subapps/geo-canvas/components/map-overlays/MapToolbar';
 
 interface MapAreaChromeProps {
   readonly mapArea: MapAreaSearch;
@@ -49,22 +48,19 @@ interface MapAreaChromeProps {
   readonly coverage: ListingReadCoverage;
 }
 
-/** Το κουμπί «Σχεδίαση» — μόνο όταν έχει φορτώσει το namespace (ποτέ ωμά κλειδιά, CHECK 3.51). */
+/**
+ * Το εργαλείο «Σχεδίαση» στην μπάρα του χάρτη (ADR-777 §8.85) — μόνο όταν έχει φορτώσει το namespace
+ * (ποτέ ωμά κλειδιά, CHECK 3.51).
+ */
 function DrawAreaButton({ onStart }: { readonly onStart: () => void }) {
   const { t, isNamespaceReady } = useTranslation(['search-region']);
   const iconSizes = useIconSizes();
   return isNamespaceReady ? (
-    <Button
-      type="button"
-      size="sm"
-      variant="secondary"
+    <MapToolbarButton
+      label={t('search-region:draw.startLabel')}
+      icon={<Pencil className={iconSizes.md} aria-hidden="true" />}
       onClick={onStart}
-      aria-label={t('search-region:draw.startLabel')}
-      className="pointer-events-auto shadow-sm"
-    >
-      <Pencil className={iconSizes.sm} aria-hidden="true" />
-      {t('search-region:draw.start')}
-    </Button>
+    />
   ) : null;
 }
 
@@ -106,15 +102,17 @@ export function MapAreaChrome({ mapArea, region, session, filters, listings, cov
     [session.active, session.preview, listings, filters, coverage]
   );
 
+  const chip = areaChip({ session, region, drawn, mapArea, previewCount });
+
   return (
     <MapAreaControl
       followMap={mapArea.followMap}
       onFollowMapChange={mapArea.setFollowMap}
       hasPendingArea={mapArea.pendingArea !== null}
       onSearchHere={mapArea.applyPendingArea}
-      regionChip={areaChip({ session, region, drawn, mapArea, previewCount })}
-      drawButton={<DrawAreaButton onStart={() => session.start(null)} />}
-      saveButton={session.active ? null : <SaveSearchButton />}
+      regionChip={chip}
+      // Με chip η σχεδίαση ξανανοίγει ΑΠΟ το chip («Επεξεργασία») — δεύτερη πόρτα θα ήταν διπλή αλήθεια.
+      drawButton={chip === undefined ? <DrawAreaButton onStart={() => session.start(null)} /> : null}
       layerControl={session.active ? null : <LazyPriceMapControl />}
     />
   );

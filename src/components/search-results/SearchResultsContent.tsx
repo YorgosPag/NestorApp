@@ -59,6 +59,7 @@ import {
 } from '@/lib/listings/listing-price-sections';
 
 import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
+import { SaveSearchButton } from './save-search/SaveSearchButton';
 import { StayLedgerBar } from './StayLedgerBar';
 import { ResultsList } from './ResultsList';
 import { PublicSiteFooter, SHELL_FOOTER_HOSTED } from '@/components/public-site/PublicSiteFooter';
@@ -352,6 +353,7 @@ export function SearchResultsContent() {
           visibleCount={visible.length}
           viewport={viewport}
           retiredPrice={retiredPrice}
+          trailing={<SaveSearchButton />}
         />
       </header>
 

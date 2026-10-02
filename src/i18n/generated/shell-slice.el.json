@@ -3889,7 +3889,8 @@
       "moreUnknown": "Περισσότερες από {shown} εδώ — ζουμάρετε για όλες.",
       "searchHere": "Αναζήτηση σε αυτή την περιοχή",
       "summary": "{inside} εδώ · {maybe} ίσως · {outside} εκτός περιοχής",
-      "summaryCapped": "{inside} εδώ · {maybe} ίσως"
+      "summaryCapped": "{inside} εδώ · {maybe} ίσως",
+      "tools": "Εργαλεία χάρτη"
     },
     "detail": {
       "absent": {

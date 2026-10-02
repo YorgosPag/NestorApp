@@ -51,7 +51,7 @@
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
-    "src/i18n/generated/routes/search__results.el.json": "8ad609231d47c448196ca219e3e30c1dd2ed1d8cda7dcc9351b8f7b22409fe9e",
+    "src/i18n/generated/routes/search__results.el.json": "583035f445fd2d29e0a495815c453404abfbe6c831567d864d8069aca07a0cfc",
     "src/i18n/generated/routes/stay.el.json": "3044270a27d1268903929dd44a0a20afa30e6ac91fa1d554ceeba748ba062886",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/terms__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -61,7 +61,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "a5645173a9a6aa84df20fc269144aa13738d7836f8929df2fc4b6368c36b0801",
+    "src/i18n/generated/shell-slice.el.json": "3cb717fd0ab71d314eea988f2889d226da0a0a7192662b2712d993351f957b50",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -107,7 +107,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "33d358c3a6c750fc9577579e95445d9aed7412f7ebfe15ee128d82e775746ef8",
+  "inputsSha256": "b1672517f02e82ab48a2dad4d5272a6d3c8dc9737f19ddb1ffdb701ae90dbcc9",
   "languages": [
     "el"
   ],
@@ -508,8 +508,8 @@
     "src/components/search-results/ListingMapPopupFrame.tsx": "dd74a4b2d985f4b7273094be747d3669ae78af4e1a54372ff480fc3d21b563ea",
     "src/components/search-results/ListingMapStackPopup.tsx": "e215cd4bd3f470dff8d6cf07fda6f9165898570c919b5a8a8a101897d7a70385",
     "src/components/search-results/ListingPriceMarkers.tsx": "d688857943a67100666e2b45e07c956a8c7d59cef3ba2fb68402ebab9daef6c9",
-    "src/components/search-results/MapAreaChrome.tsx": "6c3367a58ab134e647ec04fce62538c970cc43bba775ddac23ac8541b185647c",
-    "src/components/search-results/MapAreaControl.tsx": "74e3601f1490e3611ba009298341aea66fde03e9f91256cdb425069165ec4e2d",
+    "src/components/search-results/MapAreaChrome.tsx": "f0a9ed51da097c92493f19d59b2f18627bd5f5a62f31b0eb4fdbd528b9e4beea",
+    "src/components/search-results/MapAreaControl.tsx": "39f4bd543f549fc2d2befc0de393d905a6eecef85c36d725747ade3a0dc30b19",
     "src/components/search-results/RegionBoundaryChip.tsx": "5bf297c8c1845a4c05d392122b02c8fd31bd9c25c39a99e79a914526eaa776f6",
     "src/components/search-results/ResultsList.tsx": "57705ea2e5db8600f7b2b353fccc31998a7ff7bad9cbdc3ab30d3477f1e4f2db",
     "src/components/search-results/ResultsListHeader.tsx": "7136941f2d77bddab10e5d4ad911bf1ee19b7e17f382a62c738fc04032c65595",
@@ -518,7 +518,7 @@
     "src/components/search-results/ResultsMapLayers.tsx": "2fe0c31ffa77d98e164ee170bc7aa9cfe6e839eb9e206b1f8dc1ba7a37fa4b09",
     "src/components/search-results/ResultsMapSources.tsx": "52653441d988fc528f70477971caebcf7149735f6ac0c2620c435757bdd45edf",
     "src/components/search-results/ResultsSheet.tsx": "4a98dea07a1dcf9a522a0d4841d27a63d5ad6d2c1335df9c72ad39385b56dc7d",
-    "src/components/search-results/SearchResultsContent.tsx": "21eb1a1abf1062706d10eddad5a32da08ec3b7b9bf157702a3a67b13ca751a24",
+    "src/components/search-results/SearchResultsContent.tsx": "797573f367bddd3a4cafdcecb2b3262ad6c95a6ddb9245d6328e49fd20f0a7bb",
     "src/components/search-results/StayFilterFields.tsx": "53a934c4e2463f0880f38897e35d432c06e001f9f2f9866a36700273b4e24988",
     "src/components/search-results/StayLedgerBar.tsx": "aeb01a80ba793116dcb123a2a2294e1f46f195f063bc1c6f6b4901fe56568a52",
     "src/components/search-results/UnmappedListingsRow.tsx": "fa2a7fe38e16c6c8f3febfe6f36ae1967596ba73e09bf4f9d82117addbae735b",
@@ -1399,7 +1399,9 @@
     "src/subapps/geo-canvas/components/map-overlays/GeoCoordinateDisplay.tsx": "7d979fbedc008668e2fb7e3ff8e7bb881931e74f4dde80484b650d6d726be1b8",
     "src/subapps/geo-canvas/components/map-overlays/GeoMapControls.tsx": "0b2bbfb66d7f3f595893297cee79e1caea3d2a97d49e8576e856357cc83fcc20",
     "src/subapps/geo-canvas/components/map-overlays/GeoStatusBar.tsx": "98eb31fefba68d9374f1be11def93e6400110f9d88963c0e8cbf65f3b58e9e73",
+    "src/subapps/geo-canvas/components/map-overlays/MapToolbar.tsx": "1322d1f998f7ca5f04bcd53326b1d73fb28afa60bc2015dd32aa3ecb15f61dd4",
     "src/subapps/geo-canvas/components/map-overlays/accuracy-stats.ts": "56e99b2e753282c0f6c3b981708638cdc16aa8b6725538ce21106bddccaf727e",
+    "src/subapps/geo-canvas/components/map-overlays/map-overlay-slots.ts": "8dbcfe1ad172c882c422c8f117dca654622efc4cb22622db90ca0699c0368334",
     "src/subapps/geo-canvas/components/map-overlays/overlay-surface.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/geo-canvas/config/color-config.ts": "1c5d805a8ed23278237c7651258b202b8d506f39de8e0296f1b58ac6fd3fc451",
     "src/subapps/geo-canvas/config/index.ts": "90dac23f2674c761604d88d29d009d4094fc46b1502e4f881b02eed67540edee",
@@ -8700,7 +8702,6 @@
             "draw.rejected",
             "draw.removeShape",
             "draw.shapes",
-            "draw.start",
             "draw.startLabel",
             "draw.surface",
             "draw.toolbar",
@@ -8721,6 +8722,7 @@
             "area.searchHere",
             "area.summary",
             "area.summaryCapped",
+            "area.tools",
             "ledger.empty",
             "ledger.imbalanced",
             "ledger.summary",
@@ -10454,7 +10456,7 @@
     "matchedKeys": 220,
     "routeBoundaries": 0,
     "shellFiles": 906,
-    "sliceBytes": 665165
+    "sliceBytes": 665176
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

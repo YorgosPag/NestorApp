@@ -69,6 +69,11 @@ interface PrimaryFilterBarProps {
    * `useSearchParams()` με τα `filters`, ώστε server και client να ζωγραφίζουν το ίδιο.
    */
   readonly retiredPrice: CriterionRange | null;
+  /**
+   * ADR-777 §8.85 — **πράξεις πάνω στην αναζήτηση**, καρφωμένες δεξιά μετά το «Περισσότερα φίλτρα» (π.χ.
+   * «Αποθήκευση αναζήτησης», όπως Zillow / Redfin). Η μπάρα **δεν μαθαίνει** τι είναι: υποδοχή, όχι εξάρτηση.
+   */
+  readonly trailing?: React.ReactNode;
   readonly className?: string;
 }
 
@@ -145,7 +150,7 @@ function ClearAllButton({ filters, commit }: { readonly filters: ListingSearch; 
   );
 }
 
-export function PrimaryFilterBar({ filters, listings, visibleCount, viewport, retiredPrice, className }: PrimaryFilterBarProps) {
+export function PrimaryFilterBar({ filters, listings, visibleCount, viewport, retiredPrice, trailing, className }: PrimaryFilterBarProps) {
   const { t } = useTranslation(['search-filters', 'search-results', 'listing-detail', 'properties-enums', 'short-stay']);
   const commit = useFilterCommit(filters);
 
@@ -162,6 +167,7 @@ export function PrimaryFilterBar({ filters, listings, visibleCount, viewport, re
       <FilterRail filters={filters} listings={listings} commit={commit} retiredPrice={retiredPrice} />
       <ClearAllButton filters={filters} commit={commit} />
       <MoreFiltersControl filters={filters} listings={listings} commit={commit} visibleCount={visibleCount} viewport={viewport} />
+      {trailing}
       {/*
         ⚠️ **Η ΑΠΟΥΣΙΑ ΤΩΝ ΠΕΔΙΩΝ ΤΙΜΗΣ ΔΕΝ ΕΙΝΑΙ ΣΙΩΠΗΛΗ.** Το #1 φίλτρο (62% χρήση, Baymard) δεν
         επιτρέπεται να **λείπει χωρίς λόγο**. 📐 **ΕΞΩ από τη λωρίδα** (ADR-896 §7Α.6): είναι

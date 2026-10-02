@@ -23,6 +23,8 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { MAP_OVERLAY_SURFACE } from '@/subapps/geo-canvas/components/map-overlays/overlay-surface';
+// ADR-777 §8.85 — η θέση «υπόμνημα» (κάτω αριστερά), από τον ΕΝΑ κανόνα θέσεων.
+import { MAP_OVERLAY_SLOT } from '@/subapps/geo-canvas/components/map-overlays/map-overlay-slots';
 
 interface ClusterApproximationKeyProps {
   /** Ζωγραφίστηκε ομάδα με `≈`; — από το `DrawnListingSnapshot.approximateClusters`. */
@@ -36,7 +38,7 @@ export function ClusterApproximationKey({ visible }: ClusterApproximationKeyProp
   return (
     <aside
       aria-label={t('search-focus:clusterKey.label')}
-      className={cn(MAP_OVERLAY_SURFACE, 'pointer-events-none absolute bottom-2 left-2 z-10 max-w-64 px-2 py-1 text-xs')}
+      className={cn(MAP_OVERLAY_SURFACE, MAP_OVERLAY_SLOT.key, 'max-w-64 px-2 py-1 text-xs')}
     >
       <p>{t('search-focus:clusterKey.approximate')}</p>
     </aside>

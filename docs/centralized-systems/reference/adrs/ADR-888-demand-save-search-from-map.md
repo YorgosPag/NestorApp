@@ -74,7 +74,7 @@
 | Φόρμα: πολλά σχήματα | `components/demand/form/DemandAreaOutline.tsx` · `PlaceMap` (`shapes`) · `placeShapes` |
 | Split N.7.1 | `demand-form-blockers.ts` (από το `demand-form-values.ts`, 535 → 471 γρ.) |
 | Μία πόρτα δημιουργίας ιδιώτη | `createPersonalDemand` στο `services/demand/property-demand.service.ts` |
-| Κουμπί + παράθυρο | `components/search-results/save-search/{SaveSearchButton,SaveSearchDialogBody}.tsx` · `MapAreaControl.saveButton` |
+| Κουμπί + παράθυρο | `components/search-results/save-search/{SaveSearchButton,SaveSearchDialogBody}.tsx` · **γραμμή φίλτρων** (`PrimaryFilterBar.trailing`, από 2026-10-02 — ADR-777 §8.85· πριν: `MapAreaControl.saveButton`) |
 | Διαδρομές | `demand-routes.ts`: `newDemandFromSearchHref` (`?from=`) · `SAVE_SEARCH_INTENT_PARAM` (`?save=1`) |
 | Κωδικοποιητής Firestore (`{ring}`) | `demandPlaceForStorage` (γραφή) · `withAreaShapes` (ανάγνωση) στο `demand-area.ts` |
 | «✓ Αποθηκευμένη αναζήτηση» | `lib/demand/demand-saved-search.ts` (`savedDemandForSearch`) + `useMyDemands` στο `SaveSearchButton` |
@@ -112,3 +112,4 @@
 - **2026-09-25** — Δημιουργία. Απόφαση Giorgio: πολλά σχήματα · ανάγνωση + μετάπτωση.
 - **2026-09-25** — Υλοποίηση Βήματα 1–5 (§5). jest: `demand-area` (μετάλλαξη even-odd ⇒ κόκκινο) · `demand-form-from-filters` (round-trip) · `demand-listing-filters` · `property-demand` (invariants) · `demand-similarity` (συμμετρία με σχέδιο) · `migrate-demand-area-shapes`. ⏳ Ζωντανή επαλήθευση στον browser + εκτέλεση μετάπτωσης: εκκρεμούν (εντολή Giorgio).
 - **2026-09-25** — Ζωντανή επαλήθευση (§6): τρία σφάλματα βρέθηκαν και διορθώθηκαν (πίνακας-σε-πίνακα Firestore · `DialogTitle` · «✓ Αποθηκευμένη αναζήτηση»). jest: `demand-saved-search` · κωδικοποιητής στο `demand-area`.
+- **2026-10-02** — ADR-777 §8.85: το κουμπί **έφυγε από τον χάρτη** και μπήκε στη γραμμή φίλτρων, μετά το «Περισσότερα φίλτρα» (Zillow · Redfin: «Save search» πάνω δεξιά). Μορφή `outline` όπως τα φίλτρα· στο στενό μόνο εικονίδιο (`max-md:sr-only`). Η υποδοχή `saveButton` αφαιρέθηκε από το `MapAreaControl`.

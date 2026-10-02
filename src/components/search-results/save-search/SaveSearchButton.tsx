@@ -1,7 +1,11 @@
 'use client';
 
 /**
- * 🔖 **«Αποθήκευση αναζήτησης»** στον χάρτη αποτελεσμάτων (ADR-888) — Zillow / Redfin / Rightmove «Save search».
+ * 🔖 **«Αποθήκευση αναζήτησης»** (ADR-888) — Zillow / Redfin / Rightmove «Save search».
+ *
+ * 📐 **Στη γραμμή φίλτρων, ΟΧΙ πάνω στον χάρτη** (ADR-777 §8.85): είναι πράξη πάνω στην **αναζήτηση**, και
+ * η Zillow / Redfin τη βάζουν πάνω δεξιά, δίπλα στα φίλτρα. Ίδια μορφή με το «Περισσότερα φίλτρα»· στο
+ * στενό μένει το εικονίδιο και η ετικέτα γίνεται `sr-only` (το όνομα δεν χάνεται).
  *
  * 🔑 **Η αυθεντία είναι το URL**: ό,τι αποθηκεύεται είναι ακριβώς η αναζήτηση που γράφει η διεύθυνση
  * (φίλτρα + `?draw=`), μέσω του `parseListingFilters` — ποτέ ένα δεύτερο αντίγραφο κατάστασης.
@@ -31,6 +35,11 @@ import { useMyDemands } from '@/services/realtime/hooks/useMyDemands';
 // ⚠️ Μόνο το μικρό `search-region` εδώ: τα κείμενα του παραθύρου ζουν στο `property-market`, που το φέρνει
 //    το δυναμικό σώμα — ώστε η κλειστότητα i18n της δημόσιας σελίδας να μη μεγαλώσει (CHECK 3.34).
 const NS = 'search-region';
+
+/** Η μορφή του κουμπιού στη γραμμή φίλτρων — ΜΙΑ, για «Αποθήκευση» και «✓ Αποθηκευμένη». */
+const BAR_BUTTON = 'shrink-0 self-stretch';
+/** Η ετικέτα: ορατή στο ευρύ, μόνο για αναγνώστες οθόνης στο στενό (όπως το «Περισσότερα φίλτρα»). */
+const BAR_LABEL = 'max-md:sr-only';
 
 // ⚠️ Ο τύπος γράφεται ΕΔΩ και όχι `import type` από το σώμα: ο αναλυτής κλειστότητας θα ακολουθούσε την εισαγωγή.
 const SaveSearchDialogBody = dynamic<{ readonly searchQuery: string; readonly onClose: () => void }>(
@@ -86,10 +95,10 @@ function SavedSearchLink({ demandId }: { readonly demandId: string }): React.Rea
   const { t } = useTranslation([NS]);
   const iconSizes = useIconSizes();
   return (
-    <Button asChild size="sm" variant="secondary" className="pointer-events-auto shadow-sm">
+    <Button asChild size="sm" variant="outline" className={BAR_BUTTON}>
       <Link href={demandDetailHref(demandId)}>
         <BookmarkCheck className={iconSizes.sm} aria-hidden="true" />
-        {t(`${NS}:saveSearch.saved`)}
+        <span className={BAR_LABEL}>{t(`${NS}:saveSearch.saved`)}</span>
       </Link>
     </Button>
   );
@@ -111,12 +120,12 @@ export function SaveSearchButton(): React.ReactElement | null {
       <Button
         type="button"
         size="sm"
-        variant="secondary"
+        variant="outline"
         onClick={() => setOpen(true)}
-        className="pointer-events-auto shadow-sm"
+        className={BAR_BUTTON}
       >
         <BookmarkPlus className={iconSizes.sm} aria-hidden="true" />
-        {t(`${NS}:saveSearch.button`)}
+        <span className={BAR_LABEL}>{t(`${NS}:saveSearch.button`)}</span>
       </Button>
       <DialogContent>
         {/* 🔴 Ο ΤΙΤΛΟΣ ΕΙΝΑΙ ΣΤΑΤΙΚΟΣ, ΟΧΙ στο δυναμικό σώμα: το Radix απαιτεί `DialogTitle` από το ΠΡΩΤΟ καρέ
