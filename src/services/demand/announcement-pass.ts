@@ -27,7 +27,7 @@
  * @see ADR-777 §8.23
  */
 
-import { announcementBand } from '@/lib/demand/demand-announcement';
+import { announcementBand } from '@/lib/demand/demand-count-bands';
 import { discloseInterest } from '@/lib/demand/demand-interest';
 import {
   announceOnePlace,

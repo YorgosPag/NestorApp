@@ -6,11 +6,8 @@
  * μόνο ότι «στάλθηκε ειδοποίηση». Άρα ελέγχεται το αντίθετο: **τι ΔΕΝ στέλνεται**.
  */
 
-import {
-  ANNOUNCEMENT_BANDS,
-  announcementBand,
-  announcementEventId,
-} from '../demand-announcement';
+import { announcementEventId } from '../demand-announcement';
+import { ANNOUNCEMENT_BANDS, announcementBand } from '../demand-count-bands';
 
 describe('Ζ — οι ζώνες', () => {
   it('🔴 είναι γνησίως αύξουσες — η σειρά ΕΙΝΑΙ ο μηχανισμός', () => {
