@@ -605,15 +605,6 @@
         },
         "lifecycle": "Κατάσταση",
         "marketingAudience": "Ποιος βλέπει την αγγελία",
-        "objectiveValueDeclarations": {
-          "display": "Εμφάνιση αντικειμενικής αξίας",
-          "frontage": "Πρόσοψη",
-          "zoneFront": "Πρόσοψη σε μέτωπο",
-          "areaIncludesCommon": "Εμβαδόν με κοινόχρηστους",
-          "permitDate": "Ημερομηνία οικοδομικής άδειας",
-          "hasCentralHeating": "Κεντρική θέρμανση",
-          "hasElevator": "Ανελκυστήρας"
-        },
         "offers": "Διαθέσεις",
         "media": "Αρχεία"
       },
@@ -621,6 +612,15 @@
         "label": "Όνομα φακέλου",
         "type": "Είδος ακινήτου",
         "lifecycle": "Κατάσταση"
+      },
+      "objectiveValueDeclarations": {
+        "display": "Εμφάνιση αντικειμενικής αξίας",
+        "frontage": "Πρόσοψη",
+        "zoneFront": "Πρόσοψη σε μέτωπο",
+        "areaIncludesCommon": "Εμβαδόν με κοινόχρηστους",
+        "permitDate": "Ημερομηνία οικοδομικής άδειας",
+        "hasCentralHeating": "Κεντρική θέρμανση",
+        "hasElevator": "Ανελκυστήρας"
       }
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."

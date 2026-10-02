@@ -605,15 +605,6 @@
         },
         "lifecycle": "Status",
         "marketingAudience": "Who sees the listing",
-        "objectiveValueDeclarations": {
-          "display": "Objective value display",
-          "frontage": "Frontage",
-          "zoneFront": "Frontage on a priced street",
-          "areaIncludesCommon": "Area includes common areas",
-          "permitDate": "Building permit date",
-          "hasCentralHeating": "Central heating",
-          "hasElevator": "Elevator"
-        },
         "offers": "Offers",
         "media": "Files"
       },
@@ -621,6 +612,15 @@
         "label": "Dossier name",
         "type": "Property type",
         "lifecycle": "Status"
+      },
+      "objectiveValueDeclarations": {
+        "display": "Objective value display",
+        "frontage": "Frontage",
+        "zoneFront": "Frontage on a priced street",
+        "areaIncludesCommon": "Area includes common areas",
+        "permitDate": "Building permit date",
+        "hasCentralHeating": "Central heating",
+        "hasElevator": "Elevator"
       }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."

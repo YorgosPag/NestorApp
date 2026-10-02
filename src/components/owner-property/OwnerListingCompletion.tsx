@@ -54,6 +54,8 @@ import {
 } from '@/constants/field-completion-weights';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import { listingCompletionArgs } from '@/lib/listings/listing-completion-slice';
+import { offerImproveHref } from '@/lib/owner-property/owner-property-routes';
+import { Link } from '@/lib/workspace/navigation';
 import type { PublicListing } from '@/types/public-listing';
 
 import {
@@ -106,8 +108,14 @@ function Suggestion({
  */
 export function OwnerListingCompletion({
   listing,
+  improveOfferId = null,
 }: {
   readonly listing: PublicListing;
+  /**
+   * ADR-898 Φ3β-2 · ADR-842 Φ4 — η αγγελία που ανοίγει η οθόνη «Βελτίωσε την αγγελία σου». `null` πριν τη
+   * δημοσίευση: πρώτα δημοσίευση, μετά βελτίωση (Airbnb) — ο σύνδεσμος δεν εμφανίζεται.
+   */
+  readonly improveOfferId?: string | null;
 }): React.ReactElement | null {
   const { t } = useTranslation([NS]);
   const colors = useSemanticColors();
@@ -187,6 +195,12 @@ export function OwnerListingCompletion({
 
       {missing.length === 0 && (
         <p className="text-sm text-muted-foreground">{t(`${K}.breakdown.allComplete`)}</p>
+      )}
+
+      {improveOfferId !== null && (
+        <Link href={offerImproveHref(improveOfferId)} className="self-start text-sm font-medium underline">
+          {t(`${K}.improveLink`)}
+        </Link>
       )}
     </section>
   );

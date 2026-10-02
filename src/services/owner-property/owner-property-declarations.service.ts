@@ -32,13 +32,12 @@ import {
   objectiveValuePatchViolations,
   type ObjectiveValueDeclarationsPatch,
 } from '@/lib/objective-value/objective-value-declarations';
-import { streetFrontPrices } from '@/lib/objective-value/objective-value-zone';
 import { custodyOf, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { placeKnowledgeFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveListingPosition } from '@/services/listings/public-listing-position';
-import { readValueZoneAt } from '@/services/market/value-zones.reader';
+import { zoneFrontVerdict } from '@/services/market/zone-front-verdict';
 import { completeWrite, writeFailure } from '@/services/owner-property/owner-property-write-completion';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 import type { OwnerProperty } from '@/types/owner-property';
@@ -59,13 +58,14 @@ async function zoneFrontRefusal(
   property: OwnerProperty,
   at: string,
 ): Promise<OwnerPropertyWriteResult | null> {
-  const zoneFront = patch.zoneFront;
-  if (zoneFront == null || zoneFront.kind !== 'street') return null;
-  const verdict = await readValueZoneAt(publishedPositionOf(property, at));
-  if (verdict.kind === 'unavailable') return { kind: 'zone-unverified' };
-  return streetFrontPrices(verdict, zoneFront.street).length > 0
-    ? null
-    : { kind: 'invalid-declarations', violations: ['zoneFrontNotCandidate'] };
+  switch (await zoneFrontVerdict(patch, () => publishedPositionOf(property, at))) {
+    case 'accepted':
+      return null;
+    case 'zone-unverified':
+      return { kind: 'zone-unverified' };
+    case 'not-candidate':
+      return { kind: 'invalid-declarations', violations: ['zoneFrontNotCandidate'] };
+  }
 }
 
 /** Η συναλλαγή: φρέσκο έγγραφο → θεματοφυλακή → μέτωπο → διόρθωση → εγγραφή. */

@@ -13,7 +13,7 @@
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "da634d51d68321bb26762d645b87d83d823019577fd7cc11704ed5a3ae51e6e1",
-    "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "6dbc9858fdb2f20de47b2ac35cf309b2eb28535afc36074f1468e8a05e57dfb8",
+    "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "6010c29025b84e04eac07467393ddf24d0277ae1eca558d59445497608f026d0",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
@@ -36,8 +36,9 @@
     "src/i18n/generated/routes/offers.el.json": "3341e9d16ab25bce408f73b0be1eec279e555e12a0085f9b65a9124636b8ee93",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "c722c660df609913040dd7f9a3a37d80ea1b87fff6e1bcdcabdadc116264f071",
-    "src/i18n/generated/routes/offers__offerId.el.json": "442c9758ef4b73f7a770742e683180137b4a904e266a4c241d0ff39007e2bbd2",
+    "src/i18n/generated/routes/offers__offerId.el.json": "1d20e86cb1c4b796da03ae75a40cb790397c7f95e9995f2581049f309c953376",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "305e6bb57833e285035ea3495fe338f60156cd8345c3711081e24a2eecea9f2a",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -106,7 +107,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "acfa1c7f620bdcad34596a2a4e4b19634fd1dbf0d1e3baa259145384470b18e3",
+  "inputsSha256": "067eb6806f4bac64304dc11fcbe22150b4153c685a7dcff3031bafcc46ed1314",
   "languages": [
     "el"
   ],
@@ -191,6 +192,7 @@
     "src/app/(me)/dossiers/[dossierId]/page.tsx": "93b7f1d717adcd3217c491cf18e293a94fc39bbcd3162c7b8dbf08dcca4ab4a6",
     "src/app/(me)/dossiers/page.tsx": "980637548843fe8abcf506ecd1e86181778b22920dcac0a60de9b7532cd4c921",
     "src/app/(me)/offers/[offerId]/calendar/page.tsx": "7b767d21246d3290192293a3db8cae7ffa80143021038144ea99b5adf927f6d2",
+    "src/app/(me)/offers/[offerId]/improve/page.tsx": "eedcb8f654340a4b1406b1a6ac3f30b34ac16ae50d06cb85a487ad293ae9045e",
     "src/app/(me)/offers/[offerId]/page.tsx": "bb0ae409022aec1638424e4c03d71da4883d5aa9dc00ec2dd82cce144c144daf",
     "src/app/(me)/offers/[offerId]/tour/page.tsx": "f29c19e6883aedc4c22127748d646fdb5375ba84ab6be4475a57ee88f4cabfd4",
     "src/app/(me)/offers/mandate/new/page.tsx": "4c2f4a6921ae47789fdba7c3b851de1f5cf2ac76fb606183b88d6b890483514a",
@@ -317,6 +319,7 @@
     "src/components/listing-detail/ListingMarketContextPending.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/components/listing-detail/ListingModelStage.tsx": "217fd85fad4e415c0773622979dbd0807ca0a8a38898eb94a9f93d5c03412549",
     "src/components/listing-detail/ListingModels.tsx": "683ea555e0aa5a647134437420ef69ffdea88d97c74090ed9d865619e2326c99",
+    "src/components/listing-detail/ListingObjectiveValue.tsx": "be166729577b04608fa4ed9dfcd0d3b92c64db3f7b15a708d82efc4c5bf27467",
     "src/components/listing-detail/ListingOpenSubjects.tsx": "a3b7c8d88d803bef8649b5ef87716f03fb5b6ac18bf225bd1d76121dc18c71ca",
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
     "src/components/listing-detail/ListingPriceBlock.tsx": "c924ae8d7b1901fba95e65cb68d6e719cc27d7ee361b4c9bba615a12cac68246",
@@ -436,19 +439,19 @@
     "src/components/notifications/EmailPreferencesPanel.tsx": "304ec64e3b5972b5a0d60e6ed5ac1f4800c0034ad2092c667a33a623c1a2a259",
     "src/components/notifications/EmailTypePreferences.tsx": "f6bb7acf05ddecd0224061b23606ae9e698944fbb9a4521f7bf92059ae49286c",
     "src/components/notifications/NotificationPermalinkUnavailable.tsx": "526e8252778b77f0e0681b5589f1a8b1c28535812fc5e3c47dc4c53587df6fe3",
-    "src/components/objective-value/ObjectiveValueAdjustments.tsx": "c57622c7b71c71fc233874881e585c22b0c87af9eeecc82de5c43df85cdb373c",
+    "src/components/objective-value/ObjectiveValueAdjustments.tsx": "9537f3ec5817dbaaa530315a05f3eef0f5dea920b27fd70dd6d07ae21001534b",
     "src/components/objective-value/ObjectiveValueContent.tsx": "0d1eb5dd6727539405f6d270370607b8154abf9882e3ee1f4b41e4da4882f4a7",
     "src/components/objective-value/ObjectiveValueFaq.tsx": "bd7d8c882abb78e4644b4f78d6c5de636712a6d94795e7188b7a4fe3ea79aa27",
     "src/components/objective-value/ObjectiveValueLocation.tsx": "013eca8a3b486525ef6dd83e4e10a4bc41322f94c4571bc278e5f836f19d1ee6",
     "src/components/objective-value/ObjectiveValueProperty.tsx": "612107a93133a53b3a3a1978505c7c94e1e947e3d1f665d36c00c7a16d14a0c2",
-    "src/components/objective-value/ObjectiveValueQuestions.tsx": "3f046c328896acf4a9363be4fe8f152c8f87b19760fe6614777de50a1c7c54af",
+    "src/components/objective-value/ObjectiveValueQuestions.tsx": "33a78b7168f8255e1c230525fe2589625aca1f7bc26422cd5f4858f851ff520e",
     "src/components/objective-value/ObjectiveValueResult.tsx": "8ea3e07915a8f8107e2bc620cbf285912946a1bc990d7829564c78d288d4c9ce",
     "src/components/objective-value/objective-value-inputs.tsx": "224b8ad4a0653b99324f8b79e53fcc359a8bca651121a97ac5c89b1d5f1f902c",
     "src/components/objective-value/objective-value-zone.ts": "9350ec390fccb225f5d7a544997eef324c10f4c543f78c4a9ce740876141fc61",
     "src/components/objective-value/useObjectiveValueLocation.ts": "393e61b627f6b31990756d16ad45feb742681a2cf5ed3bc2144cba79e8516c3b",
     "src/components/objective-value/useObjectiveValuePrefill.ts": "9101f77d1f3a8ed3a0e030a0301e41cae493b7b69038a060f26cde98a4595e12",
     "src/components/owner-property/MyOwnerPropertiesContent.tsx": "f306b48530edbe98ecc8569b3deceac4b4679219b34b4ac771d4075da440be0a",
-    "src/components/owner-property/OwnerListingCompletion.tsx": "68f35f90e0a22585ca8064754c9c9f8665bbf60a76987b28b5b2c96c8f2b5a67",
+    "src/components/owner-property/OwnerListingCompletion.tsx": "6f9e7abe68700d726c3e1186ce7a8491d2d36528e1ee16f56d26dbf26b955ca7",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
     "src/components/owner-property/OwnerPortfolio.tsx": "d001e163f9951e324e787ced253000befe423c2290aee8651d87a54ddc80bc60",
     "src/components/owner-property/OwnerPropertyCard.tsx": "ce910003165f8e3cc40fc1754922b4ffe2f1a6c0911c1dddb921946f4d16a74f",
@@ -469,6 +472,16 @@
     "src/components/owner-property/form/OwnerStayPetsField.tsx": "92d8a8b54770005a12b840a97ffaac3dadedf05a51037e112a3663c0a9bd623d",
     "src/components/owner-property/form/RestoredDraftNotice.tsx": "038ffb591ff383874adb1ac6d782daddf1182e16925845ba73ee608aff2a1388",
     "src/components/owner-property/form/use-dossier-focal-point-slot.tsx": "b20983463d3405a8298a4bbc48c132b8d5b80e41b0383c521bfc3acaba2ed4ba",
+    "src/components/owner-property/improve/ImproveSaveStatus.tsx": "0a280deae6128de3ddbe8635e1837d43ea0b41bbe88fade7e1ee0e5d8e563ade",
+    "src/components/owner-property/improve/ObjectiveValueBeforeAfter.tsx": "6c6f7a9481f81f8e441abe6fa6dac932130a03febbbec6df1870a61bb90469ef",
+    "src/components/owner-property/improve/ObjectiveValueImproveQuestion.tsx": "a217e137bab947025ad07c1aee72cda864eef2468d3a5a4ec9b460038eb0596d",
+    "src/components/owner-property/improve/ObjectiveValueImproveQuestions.tsx": "ff55b9ebd62d95a3de64c6fdb2162712002dfb0bd33b6e180273f18b60aed304",
+    "src/components/owner-property/improve/ObjectiveValueImproveSection.tsx": "04d6dc285bb118b6988d4e1c08e0f11b2eb69e45fa6869e0acfb47575d34b255",
+    "src/components/owner-property/improve/ObjectiveValueVisibility.tsx": "db7a64eeb0621dbc7216551ba16f45c93e0ddd912519122c91faf05f854b313d",
+    "src/components/owner-property/improve/OwnerListingImproveContent.tsx": "8a77d5cc9bfb52250fe199096c5304a92ad63f403d9d50556d4d00705cda4081",
+    "src/components/owner-property/improve/improve-sections.ts": "fb76ec4e803d7ad5e2dc3dc8d28772777719553b914e0151b0aa801e18f3bbfd",
+    "src/components/owner-property/improve/owner-improve-subject.ts": "8a540c62516b67e62273717512018d716ed8b729f2c93483d152b04fe76271f7",
+    "src/components/owner-property/improve/useObjectiveValueImprove.ts": "30d48ed126d610f0389e581374f2816db7c83af8a51ca675346f7f16834abee0",
     "src/components/owner-property/offer-form-labels.ts": "5d660c2140c814421ac75adb4bdde7719b3d2ebae7e6654e2d1619b1663d317e",
     "src/components/owner-property/owner-mandate-labels.ts": "adcfbdb334735a6e95e59baa8a884cb44a94b6b6121d3f6bace70d87f91785c2",
     "src/components/owner-property/owner-property-stats-pending.tsx": "673617de4c5602ae44fb8f82ac1d9deeb35ff74401973a933f99e4f59336ba6d",
@@ -546,6 +559,7 @@
     "src/components/seo/JsonLdScript.tsx": "d6ebc0f4bf11cef68cb9d797ffad5990afb1ec76a3dc6930530cfdee4cd9a02e",
     "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "aa1808664667184ceefe125da8582961127baca3862487aace3b4e08d54bd56b",
     "src/components/settings/brokerage/brokerage-capability-labels.ts": "de45edd5494b39681ff5ffd92cd31524dce3ff8192210feef1342608140e90aa",
+    "src/components/shared/AutoSaveStatusIndicator.tsx": "b3925c2bbefde75c32696abc6cd6d0226f843c7a3ec1c7a74f08bc2f204bc831",
     "src/components/shared/DesktopOnlyGate.tsx": "3840ff9783e8af05bfd4ec59afdb3277bfb9b361ec15de588ad1acdfb2b1f1cc",
     "src/components/shared/EscoOccupationPicker.tsx": "f9bd5d8cb67e53ca851e09ab9f8ea8fe1f2bcf3c62688408ce8510c234c00a3e",
     "src/components/shared/PersonalCustodyNotice.tsx": "213f160eb7e400492e3d3c3baf08f5baf9771305b6dd9772fb900dfcfeda3d14",
@@ -664,7 +678,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/audit-tracked-fields.ts": "57ab788bdfa91e2b5c7cd6e5ef0e12e961d7292195fb9c5233fc10af6975f632",
+    "src/config/audit-tracked-fields.ts": "e4560cbe49257a98dd68582992779f09acca339a351097e10569718fafd0e632",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",
     "src/config/environment-contract.ts": "2ef0dd11f1e6e05676ef41ba5574cd8beddb587e99750d840d355c1b7f9a6cce",
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
@@ -708,6 +722,7 @@
     "src/hooks/listings/useDrawAreaSession.ts": "d325e0a4dfd0ce351d8b553c7e26951ca38252d0391721aec1f86373e0684502",
     "src/hooks/listings/useListingFocus.ts": "27d2838cb13bf572a4ab313a22ac82ae88e7cd760e144bcb1679ecfaad9428e3",
     "src/hooks/listings/useListingPhotoParam.ts": "ca5087b83ce301cf713580d2efd297a459c3a669dae94b945e862053b19d62f6",
+    "src/hooks/listings/useListingPreview.ts": "ebc27195621653dd6062771912b7d4f634ad7b7233a4fcbd2d5bb50fae278b13",
     "src/hooks/listings/useListingViewBeacon.ts": "f00f272be10dfadad9181fcb40639977f781046db82f4060c01e8b8991211c83",
     "src/hooks/listings/useMapAreaSearch.ts": "13704424f9a161a340d7ef8a50004daddc5f47f3d3758698949a3020d49f1793",
     "src/hooks/listings/useResolvedListingSearch.ts": "283b0a96370f49ca6d5755d4d59c80703ecdcfaa2daf0ac2f0898e1e34282a41",
@@ -743,6 +758,7 @@
     "src/hooks/useCircleAnchorName.ts": "875b9e930abd4b510a5bbd9a96be1893ae5378d73c2438e9ec9d8ba1899eac4f",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useContainingArea.ts": "0eeb133d3c28307c9d4660807d42fef029c5f415cecd2bbdae27fe27f102804c",
+    "src/hooks/useFieldPatchQueue.ts": "4b71b561fda8e4fddab22b78cdac0ff63b0a75c3212e47d31fff509a83a83300",
     "src/hooks/useIdentityGatedResource.ts": "d8480fc3b8a36ca7256b30090f93ae814391c74076f4793f062e79f2a842047a",
     "src/hooks/useInFlightAction.ts": "bd28e03e2bb93e6863313640400e34804caa6570d4d7c5e84b3cd9c37cf46e43",
     "src/hooks/useMountedRef.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
@@ -779,6 +795,7 @@
     "src/lib/agency/showcase-wire.ts": "b0b717a4b0a050898dfff39745b5c4141129b694c32464cedbf7a7718cc6b261",
     "src/lib/api/admin-db.ts": "2ef3d2a30545ca7a2e8766c2555ed68daeb4ed7f2d30f3a922a964571b27ebb9",
     "src/lib/api/guarded-route.ts": "fb0e93872520cb173fd2c6a97fcb05b789328d0190b16233d803623a33f6afff",
+    "src/lib/async/field-patch-queue.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
     "src/lib/auth/brokerage-authority.ts": "147a6776dcc3e020043fb913dd34d48af38c33afaa7b66243b779e4eea412c5c",
     "src/lib/auth/claim-payload.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/claims-mirror-fields.ts": "26d42fce23921970419d501a19d49ece4b94eade9495bf5d735449643c584fe3",
@@ -888,6 +905,7 @@
     "src/lib/listings/listing-material.ts": "34c6b01dafce2726b512e8ee28dbef27d87592e0412094db450027ea41fd5753",
     "src/lib/listings/listing-model-declaration.ts": "d856750e0071e40eaa77cb707f19a19d535a11da432fc0b691a4fe908c4342e9",
     "src/lib/listings/listing-notice-title.ts": "f7fe53e90c20060d8f29e98427556f6a8e4aecbfe20be70225413c1d238bb0c9",
+    "src/lib/listings/listing-preview-request.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
     "src/lib/listings/listing-price-markers.ts": "523c69ccf79e7d722fad5e8e680c770244bafb13f884f2e5b0efa204c56823fd",
     "src/lib/listings/listing-results-order.ts": "cc71dba5fbd77df6afc22f063469c6725700fc1524821fc4685f154c68668fd7",
     "src/lib/listings/listing-shape-keys.ts": "4434106cb898c44d3c147ffb8252babda539af9f1776f5244566cb73c7963126",
@@ -947,10 +965,14 @@
     "src/lib/number/greek-decimal.ts": "4bb450ca8b2ae47705402418d43f2738a6f23a0472fa877e38468c82fb6be622",
     "src/lib/number/locale-number.ts": "b12a282bc38633cd73154cab35404d4af4457feb59406f7943af9194172a29ad",
     "src/lib/objective-value/compute-objective-value.ts": "46979932ee07029f333da7b95949f55ba4510be6c37a48c5131661378e0bf6d0",
+    "src/lib/objective-value/listing-objective-value.ts": "a4ca295dd90b355aba42a937a9b8819860e184fb366d970676c33b3fa1e08e4c",
     "src/lib/objective-value/objective-value-ancillary.ts": "30c401fdee47133770e6035b2ab6d0e045e4fb4e6f42f936798c92a29b2fbac0",
+    "src/lib/objective-value/objective-value-bounds.ts": "172e703a6e7100a7015738ef3899e455d62d0604131dec92d09b07bf99b11a27",
     "src/lib/objective-value/objective-value-common.ts": "837c84ea05c7436ab82734d622edff59054c4f19e019772394936a3d32fc45a6",
     "src/lib/objective-value/objective-value-draft.ts": "38f93a44a2ce910444f3d2cd27990e198f1d71ff76ee550234a4629a292052ef",
-    "src/lib/objective-value/objective-value-form-of-type.ts": "1495dcddb0b69a0d437ce74718d38becc601c8b87aa8c32d1da6ff4969201563",
+    "src/lib/objective-value/objective-value-form-of-type.ts": "4c06e221ba3fb9ab832e0f638d7c29bbe7142e1b350f537d377c23bfd4d0d8d9",
+    "src/lib/objective-value/objective-value-improve-subject.ts": "a82bc151ba233e696401cf2a35f9b03a45c46b3af47a201e1ea740047e055d0b",
+    "src/lib/objective-value/objective-value-improve.ts": "02cde0562c04e750def65e25aea2751e9c01c57899a077ae09990f5c8c8c87c1",
     "src/lib/objective-value/objective-value-page-sections.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/objective-value/objective-value-prefill.ts": "4d6c1f428fbe26a381ac51a81a820665f4a350ee2c5482a6cb501e542fe0f08b",
     "src/lib/objective-value/objective-value-residence.ts": "30c401fdee47133770e6035b2ab6d0e045e4fb4e6f42f936798c92a29b2fbac0",
@@ -1128,7 +1150,7 @@
     "src/services/listings/public-listing-attributes.ts": "f53d81fd3cd6aeb344dbc7a1ab1201092b8f964005cedbf6e72ab4afea3a5d8b",
     "src/services/listings/public-listing-gallery-projection.ts": "06dd276e323fac362a7fbee5d4a9a03676647b660ab56d25aefa7a45401c8ae4",
     "src/services/listings/public-listing-model-projection.ts": "483f8fd4947297a2d10a7ce0055bd203e61c8094a1d4317588e1597480b7c09a",
-    "src/services/listings/public-listing-objective-value.ts": "f4fe4ad89f8ddfc6a08461dda85f94f539bc03c87cb829f3dba9fd4708f892a4",
+    "src/services/listings/public-listing-objective-value.ts": "223226d29f29cdd44d94bd31751c9cc6d82238a112165c40e026c1c0a1468837",
     "src/services/listings/public-listing-position.ts": "5c0bf072f03972c3cb4d3ed6bbdd54b5aa43335f2741a9d8e19a7b8f4996bc9e",
     "src/services/listings/public-listing-projection-types.ts": "38a4eea96f44f73010765e93a8521eb5fb4f7d1c4e171d4f246a1c4e18491bce",
     "src/services/listings/public-listing-projection.ts": "d3f5b9b57aa073f3609874077388ada4e995e249b2c634b9749bf9646805015a",
@@ -1407,6 +1429,7 @@
     "src/subapps/procurement/types/vendor-invite.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/subapps/procurement/utils/vendor-invite-status.ts": "01321ecfa0c611986cb2536ff0196113bdce5a7ab9fbb6330f6bcb5c76f6d406",
     "src/types/area-market.ts": "dfd12b43e088b5360a7abf74b5dcc6f60f044391f22e02abed2a26b3ee675d17",
+    "src/types/auto-save.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/boq/units.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/communications.ts": "ab607dae93f4f9fa45c1f8321402d47ba279eaf2bf7f8c780c71193627dbf73d",
     "src/types/dxf-text-justification.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -3063,6 +3086,7 @@
             "property.title",
             "questions.ageYears.help",
             "questions.ageYears.label",
+            "questions.choose",
             "questions.commercialityFactor.assumed",
             "questions.commercialityFactor.help",
             "questions.commercialityFactor.label",
@@ -6218,6 +6242,7 @@
             "completion.bucket.amber",
             "completion.bucket.green",
             "completion.bucket.red",
+            "completion.improveLink",
             "completion.title"
           ],
           "prefixes": [
@@ -6721,6 +6746,212 @@
             "offer.stayCalendar.warnings.preparation"
           ],
           "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "offers__offerId__improve": {
+      "page": "src/app/(me)/offers/[offerId]/improve/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "autoSave.error",
+            "autoSave.retry",
+            "autoSave.saved",
+            "autoSave.saving"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "navigation": {
+          "keys": [
+            "tools.objectiveValue"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "objective-value": {
+          "keys": [
+            "improve.absent",
+            "improve.areaIncludesCommon.help",
+            "improve.areaIncludesCommon.label",
+            "improve.back",
+            "improve.beforeAfter.before",
+            "improve.beforeAfter.now",
+            "improve.beforeAfter.title",
+            "improve.clear",
+            "improve.dismiss",
+            "improve.error",
+            "improve.failed",
+            "improve.impact.narrows",
+            "improve.impact.unblocks",
+            "improve.intro",
+            "improve.known",
+            "improve.loading",
+            "improve.more",
+            "improve.notPublished",
+            "improve.nothingOpen",
+            "improve.pageTitle",
+            "improve.retry",
+            "improve.sections.objectiveValue.lead",
+            "improve.signInNeeded",
+            "improve.suggested",
+            "improve.visibility.frontageStays",
+            "improve.visibility.help",
+            "improve.visibility.hiddenPreview",
+            "improve.visibility.label",
+            "improve.visibility.previewTitle",
+            "improve.zone.failed",
+            "improve.zone.loading",
+            "improve.zone.none",
+            "improve.zoneFront.help",
+            "improve.zoneFront.label",
+            "improve.zoneFront.none",
+            "listing.assumptions.areaWithoutCommon",
+            "listing.assumptions.declaredByLister",
+            "listing.completeInCalculator",
+            "listing.dependsOn",
+            "listing.open.zoneFront",
+            "listing.openCalculator",
+            "listing.range",
+            "listing.title",
+            "questions.ageYears.help",
+            "questions.ageYears.label",
+            "questions.choose",
+            "questions.commercialityFactor.assumed",
+            "questions.commercialityFactor.help",
+            "questions.commercialityFactor.label",
+            "questions.commercialityFactor.unknown",
+            "questions.frontage.label",
+            "questions.no",
+            "questions.none",
+            "questions.plotUtilisation.help",
+            "questions.plotUtilisation.label",
+            "questions.title",
+            "questions.yes",
+            "result.base",
+            "result.breakdown",
+            "result.disclaimer",
+            "result.factorColumn",
+            "result.invalid",
+            "result.label",
+            "result.levelSuffix",
+            "result.myProperty",
+            "result.pending",
+            "result.refColumn",
+            "result.title",
+            "result.valueColumn"
+          ],
+          "prefixes": [
+            "improve.rejected",
+            "improve.sections",
+            "improve.state",
+            "improve.state.assumed",
+            "listing.assumptions.age",
+            "listing.declaredFields",
+            "listing.unsupported",
+            "questions",
+            "result.factors",
+            "result.missing",
+            "result.problems"
+          ],
+          "whole": false
+        },
+        "properties-enums": {
+          "keys": [],
+          "prefixes": [
+            "frontage"
+          ],
           "whole": false
         }
       }
@@ -10211,7 +10442,7 @@
     "matchedKeys": 220,
     "routeBoundaries": 0,
     "shellFiles": 902,
-    "sliceBytes": 651111
+    "sliceBytes": 664701
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

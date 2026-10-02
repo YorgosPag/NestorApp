@@ -99,3 +99,11 @@ export function offerStayCalendarHref(ownerPropertyId: string) {
 export function offerTourHref(ownerPropertyId: string) {
   return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}/tour`);
 }
+
+/**
+ * ADR-898 Φ3β-2 · ADR-842 Φ4 — η οθόνη **«Βελτίωσε την αγγελία σου»**: ερωτήσεις **μετά** τη δημοσίευση (Airbnb
+ * «publish first, then improve»), ποτέ στη `/offers/new` (ADR-842 Α2). Χωριστή σελίδα, ίδιο δόγμα με το ημερολόγιο.
+ */
+export function offerImproveHref(ownerPropertyId: string) {
+  return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}/improve`);
+}

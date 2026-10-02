@@ -19,38 +19,8 @@ import {
   isTransactionOwnedCommercialStatus,
   normalizeCommercialStatus,
 } from '@/constants/commercial-statuses';
-
-// ============================================================================
-// LOCKED FIELD DEFINITIONS
-// ============================================================================
-
-/**
- * Fields locked when a property is sold or rented.
- * These fields are referenced in contracts, cadastre, and tax office documents.
- */
-const SOLD_LOCKED_FIELDS = [
-  'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
-  'commercialStatus', 'buildingId', 'linkedSpaces',
-  'orientations', 'condition', 'energy', 'systemsOverride',
-  'finishes', 'interiorFeatures', 'securityFeatures',
-  'levels', 'isMultiLevel', 'levelData',
-] as const;
-
-/**
- * Fields locked when a property is reserved.
- * Subset of sold-locked fields — only identity fields are immutable.
- */
-const RESERVED_LOCKED_FIELDS = ['code', 'type', 'name'] as const;
-
-/**
- * Top-level fields legitimately mutated by the sale-revert flow
- * (reserved/sold → for-sale). Mirrors REVERT_ALLOWED_FIELDS in
- * `services/property/property-mutation-gateway.ts` — keep both in sync.
- */
-const REVERT_ALLOWED_FIELDS: ReadonlySet<string> = new Set([
-  'commercialStatus',
-  'commercial',
-]);
+// Η ΜΙΑ λίστα κλειδωμάτων — κοινή με τον πελάτη (ADR-898 Φ3β-3: ήταν δύο αντίγραφα «keep both in sync»).
+import { lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
 
 // ============================================================================
 // PUBLIC API
@@ -67,24 +37,9 @@ export function validatePropertyFieldLocking(
   commercialStatus: string | null | undefined,
   updateKeys: readonly string[]
 ): void {
-  if (!commercialStatus) return;
-
-  if (commercialStatus === 'sold' || commercialStatus === 'rented') {
-    const attempted = SOLD_LOCKED_FIELDS.filter(f => updateKeys.includes(f));
-    if (attempted.length > 0) {
-      throw new ApiError(
-        403,
-        `Cannot modify locked fields on a ${commercialStatus} property: ${attempted.join(', ')}`
-      );
-    }
-  } else if (commercialStatus === 'reserved') {
-    const attempted = RESERVED_LOCKED_FIELDS.filter(f => updateKeys.includes(f));
-    if (attempted.length > 0) {
-      throw new ApiError(
-        403,
-        `Cannot modify locked fields on a reserved property: ${attempted.join(', ')}`
-      );
-    }
+  const attempted = lockedFieldsAttempted(commercialStatus, updateKeys);
+  if (attempted.length > 0) {
+    throw new ApiError(403, `Cannot modify locked fields on a ${commercialStatus} property: ${attempted.join(', ')}`);
   }
 }
 

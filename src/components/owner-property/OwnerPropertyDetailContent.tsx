@@ -263,7 +263,7 @@ function OwnerPropertyView({
 
         🔑 **Και πριν το κουμπί επεξεργασίας**, γιατί είναι ο λόγος να το πατήσει.
       */}
-      <OwnerListingCompletion listing={projectedListing} />
+      <OwnerListingCompletion listing={projectedListing} improveOfferId={onMap ? property.id : null} />
 
       {/*
         🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η

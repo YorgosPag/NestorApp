@@ -66,6 +66,13 @@ export interface ObjectiveValueDraft {
   readonly damageRestorationCost: number | null;
 }
 
+/**
+ * Μια αλλαγή στο πρόχειρο — το συμβόλαιο κάθε χειριστηρίου ερώτησης. Ζει εδώ, δίπλα στο πρόχειρο, και όχι σε
+ * component: η εισαγωγή του από component έσερνε τα κείμενα εκείνου του component στο slice i18n κάθε καταναλωτή
+ * (μετρημένο στη Φ3β-2: +1,3 KB `property.*` στο `/offers/[offerId]/improve`).
+ */
+export type UpdateDraft = (patch: Partial<ObjectiveValueDraft>) => void;
+
 export const INITIAL_DRAFT: ObjectiveValueDraft = {
   form: 'residence',
   zonePrice: null,

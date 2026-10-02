@@ -15,6 +15,7 @@ import {
   type TrackedFieldDef,
   legacyLabelMap,
 } from '@/lib/audit/audit-diff';
+import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 
 // Re-export the SSoT type so consumers that already import from this file
 // (the historical home of `*_TRACKED_FIELDS`) can keep their imports.
@@ -47,6 +48,18 @@ function mergeDefs(
 // ============================================================================
 // PROPERTY TRACKED FIELDS (Centralized — previously in properties/[id]/route.ts)
 // ============================================================================
+
+/**
+ * **Οι δηλώσεις της αντικειμενικής** (ADR-898 Φ3β) — ΕΝΑ μπλοκ για ιδιώτη ΚΑΙ εταιρεία, όπως ο τύπος. Παράγεται από τη
+ * λίστα-πηγή των πεδίων: νέο δηλώσιμο πεδίο ⇒ ίχνος χωρίς δεύτερη γραμμή εδώ. Ετικέτες: `audit.fields.objectiveValueDeclarations.*`
+ * (γενικό επίπεδο — ίδιες λέξεις και για τις δύο οντότητες).
+ */
+const OBJECTIVE_VALUE_TRACKED_FIELDS_RAW: Record<string, string> = Object.fromEntries(
+  (['display', ...OBJECTIVE_VALUE_DECLARED_FIELDS] as const).map((field) => {
+    const path = `objectiveValueDeclarations.${field}`;
+    return [path, path];
+  }),
+);
 
 /**
  * Fields tracked for property audit trail (raw field → **field identifier**).
@@ -90,6 +103,8 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   commercialStatus: 'commercialStatus',
   // ADR-864 §5.1 — ποιος βλέπει την αγγελία (αλλαγή κοινού = πράξη με ίχνος, Ε-3)
   marketingAudience: 'marketingAudience',
+  // ADR-898 Φ3β-3 — οι δηλώσεις της αντικειμενικής: ίδιο μπλοκ, ίδιο ίχνος με τον ιδιώτη (CHECK 3.17).
+  ...OBJECTIVE_VALUE_TRACKED_FIELDS_RAW,
   // Commercial sub-fields (dot-notation — human-readable, no internal IDs)
   'commercial.askingPrice': 'commercial.askingPrice',
   // ADR-777 §8.60.18 — το ενοίκιο ήταν το ΜΟΝΟ ποσό της φόρμας χωρίς ίχνος στο ιστορικό.
@@ -1249,14 +1264,8 @@ const OWNER_PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   'place.label': 'place.label',
   lifecycle: 'lifecycle',
   marketingAudience: 'marketingAudience',
-  // ADR-898 Φ3β — οι δηλώσεις του αγγελιοδότη για την αντικειμενική, και η απόκρυψη (ποιος και πότε, CHECK 3.17).
-  'objectiveValueDeclarations.display': 'objectiveValueDeclarations.display',
-  'objectiveValueDeclarations.frontage': 'objectiveValueDeclarations.frontage',
-  'objectiveValueDeclarations.zoneFront': 'objectiveValueDeclarations.zoneFront',
-  'objectiveValueDeclarations.areaIncludesCommon': 'objectiveValueDeclarations.areaIncludesCommon',
-  'objectiveValueDeclarations.permitDate': 'objectiveValueDeclarations.permitDate',
-  'objectiveValueDeclarations.hasCentralHeating': 'objectiveValueDeclarations.hasCentralHeating',
-  'objectiveValueDeclarations.hasElevator': 'objectiveValueDeclarations.hasElevator',
+  // ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής και η απόκρυψη (ποιος και πότε, CHECK 3.17) — ΚΟΙΝΕΣ με την εταιρεία.
+  ...OBJECTIVE_VALUE_TRACKED_FIELDS_RAW,
 };
 
 const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {

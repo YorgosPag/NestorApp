@@ -36,6 +36,9 @@ import {
   type PropertyMutationResult,
   type PropertyPatchPayload,
 } from './property-patch-helpers';
+import { OBJECTIVE_VALUE_BODY_KEY, patchPropertyObjectiveValue } from './property-objective-value-patch';
+
+import { isPlainRecord } from '@/lib/type-guards';
 
 const logger = createModuleLogger('PropertyIdRoute');
 
@@ -76,7 +79,13 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
       try {
         const { docRef, existing } = await requirePropertyInScope(adminDb, id, ctx);
 
-        const parsed = safeParseBody(PropertyPatchSchema, await request.json());
+        const raw: unknown = await request.json();
+        // ADR-898 Φ3β-3 — οι δηλώσεις της αντικειμενικής: μερική διόρθωση σε συναλλαγή, ΟΧΙ `update(body)` (σβήνει αδέλφια).
+        if (isPlainRecord(raw) && OBJECTIVE_VALUE_BODY_KEY in raw) {
+          return await patchPropertyObjectiveValue({ adminDb, id, existing, body: raw, ctx });
+        }
+
+        const parsed = safeParseBody(PropertyPatchSchema, raw);
         if (parsed.error) throw new ApiError(400, 'Validation failed');
         const { _v: expectedVersion, ...body } = parsed.data as PropertyPatchPayload & { _v?: number };
 

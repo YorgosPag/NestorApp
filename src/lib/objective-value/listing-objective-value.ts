@@ -40,7 +40,7 @@ import {
 } from './objective-value-declarations';
 import { INITIAL_DRAFT, type ObjectiveValueDraft } from './objective-value-draft';
 import type { ObjectiveValuePrefill } from './objective-value-prefill';
-import { OBJECTIVE_VALUE_FORM_OF_TYPE } from './objective-value-form-of-type';
+import { OBJECTIVE_VALUE_FORM_OF_TYPE, objectiveValueFormOf } from './objective-value-form-of-type';
 import type { ObjectiveValueForm } from './objective-value-types';
 import { declaredZonePriceCandidates, streetFrontPrices } from './objective-value-zone';
 
@@ -89,7 +89,7 @@ export type ListingObjectiveValue =
     };
 
 /** Το πρόχειρο της μηχανής **και** ποιες δηλώσεις μπήκαν πράγματι σε αυτό (όχι όσες νίκησε ένα χαρακτηριστικό). */
-interface Resolution {
+export interface ListingObjectiveValueResolution {
   readonly draft: ObjectiveValueDraft;
   readonly used: readonly ObjectiveValueDeclaredField[];
   /** Το έτος κατασκευής που έγινε άδεια με προσέγγιση — `null` όταν η άδεια δηλώθηκε ή δεν υπάρχει. */
@@ -135,7 +135,7 @@ function residenceFields(listing: PublicListing, declared: ListingObjectiveValue
   };
 }
 
-function resolve(listing: PublicListing, form: ObjectiveValueForm, declared: ListingObjectiveValueDeclared): Resolution {
+function resolve(listing: PublicListing, form: ObjectiveValueForm, declared: ListingObjectiveValueDeclared): ListingObjectiveValueResolution {
   const used: ObjectiveValueDeclaredField[] = [];
   const residence = form === 'residence' ? residenceFields(listing, declared, used) : {};
   const { permitDate, approximatedFrom } = permitOf(listing, declared, used);
@@ -157,7 +157,7 @@ function zoneFrontUsed(declared: ListingObjectiveValueDeclared, valueZone: Value
   return zoneFront.kind === 'none' || streetFrontPrices(valueZone, zoneFront.street).length > 0;
 }
 
-function assumptionsOf(resolution: Resolution, form: ObjectiveValueForm): readonly ListingObjectiveValueAssumption[] {
+function assumptionsOf(resolution: ListingObjectiveValueResolution, form: ObjectiveValueForm): readonly ListingObjectiveValueAssumption[] {
   const out: ListingObjectiveValueAssumption[] = [];
   const year = resolution.approximatedFrom;
   if (year !== null) out.push({ kind: 'ageFromConstructionYear', year: year.value, provenance: year.provenance });
@@ -168,7 +168,7 @@ function assumptionsOf(resolution: Resolution, form: ObjectiveValueForm): readon
   return out;
 }
 
-function prefillOf(listing: PublicListing, resolution: Resolution): ObjectiveValuePrefill {
+function prefillOf(listing: PublicListing, resolution: ListingObjectiveValueResolution): ObjectiveValuePrefill {
   const { draft, used } = resolution;
   return {
     point: valueZonePointOf(listing.position),
@@ -191,22 +191,45 @@ function declarationsOf(listing: PublicListing): ListingObjectiveValueDeclared |
 }
 
 /**
+ * **Η βάση του υπολογισμού** — ό,τι βλέπει η μηχανή για την αγγελία, πριν από τα όρια: το πρόχειρο, ποιες δηλώσεις
+ * μπήκαν, και οι τιμές ζώνης που μπορεί να ισχύουν. Ή γιατί δεν υπάρχει βάση.
+ *
+ * 🔑 **Μία αντιστοίχιση για όλους** (ADR-898 Φ3β-2): την καλούν η αγγελία ({@link listingObjectiveValue}) **και** η
+ * οθόνη «Βελτίωσε την αγγελία σου» (`objective-value-improve.ts`) — ποτέ δεύτερο χτίσιμο πρόχειρου.
+ */
+export type ListingObjectiveValueBasis =
+  | Exclude<ListingObjectiveValue, { readonly kind: 'evaluated' }>
+  | {
+      readonly kind: 'ready';
+      readonly form: ObjectiveValueForm;
+      readonly resolution: ListingObjectiveValueResolution;
+      readonly zonePrices: readonly number[];
+    };
+
+export function listingObjectiveValueBasis(listing: PublicListing, valueZone: ValueZoneVerdict): ListingObjectiveValueBasis {
+  const declared = declarationsOf(listing);
+  if (declared === null) return { kind: 'hidden' };
+  const form = objectiveValueFormOf(listing.type);
+  if (form === null) return { kind: 'unsupported', reason: 'type' };
+  if (form === 'residence' && (listing.levels?.value ?? 1) > 1) return { kind: 'unsupported', reason: 'multiLevel' };
+  const zonePrices = declaredZonePriceCandidates(valueZone, declared.zoneFront);
+  if (zonePrices.length === 0) return { kind: 'no-zone' };
+  const base = resolve(listing, form, declared);
+  const resolution = zoneFrontUsed(declared, valueZone) ? { ...base, used: [...base.used, 'zoneFront' as const] } : base;
+  return { kind: 'ready', form, resolution, zonePrices };
+}
+
+/**
  * **Η αντικειμενική αξία της αγγελίας**, ή γιατί δεν βγαίνει. `today` = ημέρα αγοράς (`YYYY-MM-DD`), η ημερομηνία
  * αποτίμησης για την παλαιότητα.
  */
 export function listingObjectiveValue(listing: PublicListing, valueZone: ValueZoneVerdict, today: string): ListingObjectiveValue {
-  const declared = declarationsOf(listing);
-  if (declared === null) return { kind: 'hidden' };
-  const form = listing.type === null ? null : OBJECTIVE_VALUE_FORM_OF_TYPE[listing.type];
-  if (form === null) return { kind: 'unsupported', reason: 'type' };
-  if (form === 'residence' && (listing.levels?.value ?? 1) > 1) return { kind: 'unsupported', reason: 'multiLevel' };
-  const prices = declaredZonePriceCandidates(valueZone, declared.zoneFront);
-  if (prices.length === 0) return { kind: 'no-zone' };
-  const base = resolve(listing, form, declared);
-  const resolution = zoneFrontUsed(declared, valueZone) ? { ...base, used: [...base.used, 'zoneFront' as const] } : base;
+  const basis = listingObjectiveValueBasis(listing, valueZone);
+  if (basis.kind !== 'ready') return basis;
+  const { form, resolution, zonePrices } = basis;
   return {
     kind: 'evaluated',
-    bounds: objectiveValueBounds(resolution.draft, today, prices),
+    bounds: objectiveValueBounds(resolution.draft, today, zonePrices),
     assumptions: assumptionsOf(resolution, form),
     prefill: prefillOf(listing, resolution),
   };

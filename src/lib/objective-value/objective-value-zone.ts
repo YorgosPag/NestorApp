@@ -44,6 +44,16 @@ export function streetFrontPrices(verdict: ValueZoneVerdict, street: string): re
 }
 
 /**
+ * **Οι πιθανές απαντήσεις στο «έχει πρόσοψη σε μέτωπο;»** (ADR-898 Φ3β-2): «κανένα», και κάθε υποψήφιος δρόμος μία
+ * φορά, πλησιέστερος πρώτος. Η μία λίστα για την επιλογή της οθόνης **και** για το κέρδος κάθε ερώτησης.
+ */
+export function zoneFrontAnswers(verdict: ValueZoneVerdict): readonly ZoneFrontDeclaration[] {
+  if (verdict.kind !== 'ready') return [];
+  const streets = [...new Set(verdict.fronts.map((front) => front.street))];
+  return [{ kind: 'none' }, ...streets.map((street) => ({ kind: 'street' as const, street }))];
+}
+
+/**
  * **Οι τιμές που μπορεί να ισχύουν, με τη δήλωση του αγγελιοδότη** (ADR-898 Φ3β): «καμία πρόσοψη σε μέτωπο» ⇒ η ζώνη ·
  * δρόμος που είναι ακόμη υποψήφιο μέτωπο ⇒ η τιμή του. Χωρίς δήλωση, ή με δρόμο που μια αναθεώρηση ζωνών έβγαλε από
  * τα μέτωπα ⇒ **όλες** οι υποψήφιες (ανοιχτό ⇒ όρια) — ποτέ μαντεψιά.

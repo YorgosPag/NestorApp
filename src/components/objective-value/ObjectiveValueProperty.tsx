@@ -12,14 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { LevelDraft, ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
+import type { LevelDraft, ObjectiveValueDraft, UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { OBJECTIVE_VALUE_FORMS, PARKING_POSITIONS, STORAGE_POSITIONS } from '@/lib/objective-value/objective-value-types';
 
 import { CalculatorStep, ChoiceSelect, LabelledNumber } from './objective-value-inputs';
 
 const NS = 'objective-value';
-
-export type UpdateDraft = (patch: Partial<ObjectiveValueDraft>) => void;
 
 /** Όροφος → γραμμή του πίνακα του άρθ. 3 §4 (`< 0` υπόγειο · `0` ισόγειο · … · ΣΤ' και πάνω ίδια στήλη). */
 const FLOORS = {

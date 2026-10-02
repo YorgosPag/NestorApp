@@ -90,3 +90,19 @@ export interface VersionCheckResult {
   /** Document ID (echoed back for convenience) */
   docId: string;
 }
+
+/**
+ * Options for `withVersionCheckOnCurrent()` — οι ενημερώσεις **παράγονται από το φρέσκο έγγραφο** μέσα στη συναλλαγή
+ * (ADR-898 Φ3β-3). Για μερική διόρθωση εμφωλευμένου πεδίου: ένα σκέτο `update({ map: {...} })` αντικαθιστά ολόκληρο
+ * το αντικείμενο, και «ανάγνωση έξω, εγγραφή μέσα» χάνει την απάντηση που γράφτηκε στο μεταξύ.
+ */
+export interface VersionCheckOnCurrentOptions extends Omit<VersionCheckOptions, 'updates'> {
+  /** Φρέσκο έγγραφο → τα πεδία προς εγγραφή. Ξανατρέχει σε κάθε επανάληψη της συναλλαγής· μπορεί να ρίξει (άρνηση). */
+  derive: (current: Readonly<Record<string, unknown>>) => Record<string, unknown>;
+}
+
+/** Το αποτέλεσμα του `withVersionCheckOnCurrent()` — μαζί με ό,τι διάβασε και ό,τι έγραψε η **νικήτρια** εκτέλεση. */
+export interface VersionCheckOnCurrentResult extends VersionCheckResult {
+  readonly before: Readonly<Record<string, unknown>>;
+  readonly applied: Readonly<Record<string, unknown>>;
+}

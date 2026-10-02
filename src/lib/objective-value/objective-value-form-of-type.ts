@@ -8,6 +8,7 @@
  * αν ρωτούσε τον πίνακα από το `listing-objective-value.ts`, θα κουβαλούσε όλη τη μηχανή και τα όρια.
  */
 
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 
 import type { ObjectiveValueForm } from './objective-value-types';
@@ -32,3 +33,12 @@ export const OBJECTIVE_VALUE_FORM_OF_TYPE: Readonly<Record<PropertyTypeCanonical
   plot: null,
   parcel: null,
 };
+
+/**
+ * **Το έντυπο ενός είδους, όπως κι αν είναι γραμμένο** — ωμό ή κανονικό (ADR-898 Φ3β-3). `null` = δεν αποτιμάται με τα
+ * έντυπα 1/4 (ή άγνωστο είδος). Η ΜΙΑ ερώτηση «αποτιμάται;» — την κάνουν η προβολή, η αγγελία και οι οθόνες.
+ */
+export function objectiveValueFormOf(type: unknown): ObjectiveValueForm | null {
+  const canonical = normalizePropertyType(type);
+  return canonical === null ? null : OBJECTIVE_VALUE_FORM_OF_TYPE[canonical];
+}

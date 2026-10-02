@@ -37,19 +37,15 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { nowISO } from '@/lib/date-local';
-import { custodyOf, mayAdminister } from '@/lib/owner-property/listing-custody';
 import { companyPropertyHolder } from '@/lib/places/place-detail-route';
+import { projectListingShape } from '@/services/listings/public-listing-projection';
 import {
-  projectListingShape,
-  type PlaceKnowledge,
-  type ProjectableProperty,
-} from '@/services/listings/public-listing-projection';
-import { collectPlaceKnowledge } from '@/services/listings/publish-public-listing';
-import {
-  placeKnowledgeFromOwnerProperty,
-  projectableFromOwnerProperty,
-} from '@/lib/owner-property/owner-property-projection';
+  companyPropertyProjectionOf,
+  lookupOwnedProjection,
+  ownerPropertyProjectionOf,
+  type CompanyProjectableProperty,
+  type OwnedProjectionInput,
+} from '@/services/listings/owned-listing-projection';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
@@ -87,13 +83,13 @@ const ABSENT: PlaceLookup = { kind: 'absent' };
  * αστοχίες.
  *
  * 🔴 **ADR-817 — ΤΟ `companyId` ΕΓΙΝΕ `string | null`, ΚΑΙ Ο ΕΣΩΤΕΡΙΚΟΣ ΤΟ ΔΕΧΟΤΑΝ ΗΔΗ.**
- * Ο ιδιώτης δεν έχει εταιρεία. Το `readOwnerProperty` από κάτω δηλώνει **ήδη**
+ * Ο ιδιώτης δεν έχει εταιρεία. Ο αναγνώστης ιδιώτη (`owned-listing-projection`) δηλώνει **ήδη**
  * `companyId: string | null` (το απαιτεί το `ListingActor` του `listing-custody`) —
  * η **μόνη** υπογραφή που το στένευε ήταν αυτή εδώ, και ήταν σωστή όσο ο πολίτης
  * έπαιρνε `401` στο σύνορο και δεν έφτανε ποτέ.
  *
  * ⚠️ **ΧΩΡΙΣ ΕΤΑΙΡΕΙΑ, Η ΔΕΥΤΕΡΗ ΑΝΑΓΝΩΣΗ ΔΕΝ ΓΙΝΕΤΑΙ ΚΑΘΟΛΟΥ** — και δεν είναι
- * βελτιστοποίηση: το `readCompanyProperty` φιλτράρει **κατά μισθωτή**, οπότε μια κλήση
+ * βελτιστοποίηση: ο αναγνώστης γραφείου φιλτράρει **κατά μισθωτή**, οπότε μια κλήση
  * με κενό/απόν `companyId` είναι ακριβώς το ερώτημα «δώσε μου ό,τι δεν ανήκει σε
  * κανέναν» που κυνηγά το **CHECK 3.35**. Ο ιδιώτης **δεν έχει** εταιρικά ακίνητα:
  * `absent` είναι η **σωστή** απάντηση, όχι υποβαθμισμένη.
@@ -107,17 +103,9 @@ export async function lookupOwnedPlace(
   uid: string,
   companyId: string | null,
 ): Promise<PlaceLookup> {
-  const personal = await readOwnerProperty(db, propertyId, { uid, companyId });
-  if (personal !== null) {
-    return { kind: 'found', source: 'owner-property', facts: personal };
-  }
-
-  if (companyId === null) return ABSENT;
-
-  const company = await readCompanyProperty(db, propertyId, companyId);
-  return company === null
-    ? ABSENT
-    : { kind: 'found', source: 'company-property', facts: company };
+  // Ο εντοπισμός με θεματοφυλακή ζει πλέον στο `owned-listing-projection` (ADR-898 Φ3β-3) — ίδια σειρά, ίδια άρνηση.
+  const owned = await lookupOwnedProjection(db, propertyId, uid, companyId);
+  return owned.kind === 'absent' ? ABSENT : { kind: 'found', source: owned.source, facts: toFacts(owned) };
 }
 
 /**
@@ -154,37 +142,6 @@ export async function locatePlace(db: AdminFirestore, propertyId: string): Promi
     : { kind: 'found', source: 'company-property', holderId };
 }
 
-/** Το ακίνητο του **ιδιώτη** — η δήλωσή του **είναι** η γνώση του τόπου (Α14). */
-async function readOwnerProperty(
-  db: AdminFirestore,
-  propertyId: string,
-  actor: { readonly uid: string; readonly companyId: string | null },
-): Promise<ListingMatchFacts | null> {
-  const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
-  // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — και εδώ η ταυτότητα δένεται **μία** φορά, όχι
-  //    ξανά στην επιστροφή: το `{ ...property, id: propertyId }` που έγραφε αυτή η
-  //    συνάρτηση ήταν το ίδιο χειροκίνητο μπάλωμα σε **έξι** από τους δεκαεννιά
-  //    καταναλωτές, και οι υπόλοιποι δεκατρείς **δεν** το θυμούνταν.
-  const property = ownerPropertyFromDocument(snap.data(), propertyId);
-  // 🔴 ΗΤΑΝ `property.authorUserId !== uid` — ΤΡΙΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ §8.39 (ADR-777 §8.42).
-  //
-  // Η ερώτηση εδώ είναι «**επιτρέπεται σε αυτόν τον άνθρωπο**;», δηλαδή ΑΚΡΙΒΩΣ αυτή
-  // που κατέχει το `listing-custody.ts` — και απαντιόταν με κριτήριο **κατά χρήστη**
-  // πάνω σε πόρο που μπορεί να ζει σε **εταιρικό** χώρο (`authorCompanyId !== null`).
-  // Συνέπεια: αγγελία που διαχειρίζεται το γραφείο ήταν `absent` για **κάθε** άλλον
-  // υπάλληλό του, ενώ το `readCompanyProperty` διαβάζει **άλλη συλλογή** και δεν
-  // μπορούσε να τη βρει ποτέ.
-  //
-  // ⚠️ Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΔΙΕΥΡΥΝΕΤΑΙ: για `kind: 'personal'` το `mayAdminister`
-  // κρίνει `userId === uid`, δηλαδή **ταυτόσημα** με πριν. Προστίθεται μόνο ο
-  // εταιρικός κλάδος, και εκείνος απαιτεί `hasTenant` και στις δύο πλευρές — άρα
-  // είναι **αυστηρότερος** από μια ωμή `===` που θα ταίριαζε δύο κενές τιμές.
-  if (property === null) return null;
-  if (!mayAdminister(custodyOf(property), actor)) return null;
-
-  return ownerPropertyFactsOf(property, nowISO());
-}
-
 /**
  * **Ακίνητο ιδιώτη → τα γεγονότα που κρίνει η μηχανή.**
  *
@@ -202,38 +159,7 @@ export function ownerPropertyFactsOf(
   property: OwnerProperty,
   at: string,
 ): ListingMatchFacts {
-  return toFacts(
-    // ⚠️ Χωρίς επωνυμία **επίτηδες**: εδώ παράγονται γεγονότα **ταιριάσματος**, όχι
-    // δημόσια αγγελία. Η υπογραφή του γραφείου δεν είναι κριτήριο για το αν ένα
-    // ακίνητο ταιριάζει σε μια ζήτηση — και μια ανάγνωση εταιρείας ανά ακίνητο μέσα
-    // σε βρόχο ταιριάσματος θα ήταν κόστος χωρίς καταναλωτή.
-    { ...projectableFromOwnerProperty(property, at), id: property.id },
-    placeKnowledgeFromOwnerProperty(property, at),
-    at,
-  );
-}
-
-/** Το ακίνητο του **γραφείου** — ο τόπος λύνεται ανεβαίνοντας την αλυσίδα της Α1. */
-async function readCompanyProperty(
-  db: AdminFirestore,
-  propertyId: string,
-  companyId: string,
-): Promise<ListingMatchFacts | null> {
-  const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
-  const property = snap.data() as
-    | (ProjectableProperty & {
-        companyId?: string | null;
-        buildingId?: string | null;
-        projectId?: string | null;
-      })
-    | undefined;
-
-  // ⚠️ Ο έλεγχος μισθωτή γίνεται **εδώ, σε ανάγνωση κατ' ευθείαν σε έγγραφο**: ένα
-  // `.doc(id).get()` δεν περνά από `where`, άρα καμία πύλη ερωτήματος δεν θα τον
-  // επέβαλλε για λογαριασμό μας (CHECK 3.35 κρίνει ερωτήματα, όχι αναγνώσεις εγγράφου).
-  if (property === undefined || property.companyId !== companyId) return null;
-
-  return companyPropertyFactsOf(db, { ...property, id: propertyId }, nowISO());
+  return toFacts(ownerPropertyProjectionOf(property, at));
 }
 
 /**
@@ -256,13 +182,10 @@ async function readCompanyProperty(
  */
 export async function companyPropertyFactsOf(
   db: AdminFirestore,
-  property: ProjectableProperty & {
-    buildingId?: string | null;
-    projectId?: string | null;
-  },
+  property: CompanyProjectableProperty,
   at: string,
 ): Promise<ListingMatchFacts> {
-  return toFacts(property, await collectPlaceKnowledge(db, property, at), at);
+  return toFacts(await companyPropertyProjectionOf(db, property, at));
 }
 
 /**
@@ -282,11 +205,7 @@ export async function companyPropertyFactsOf(
  * Η μηχανή τα λέει **ονομαστικά** (`availability-unknown` / `proximity-unknown`) αντί
  * να υποθέσει — και γι' αυτό **δεν** γεμίζονται εδώ με εικασίες.
  */
-function toFacts(
-  property: ProjectableProperty,
-  place: PlaceKnowledge,
-  at: string,
-): ListingMatchFacts {
+function toFacts({ property, place, at }: OwnedProjectionInput): ListingMatchFacts {
   return {
     listing: projectListingShape(property, place, at),
     place: place.ref,

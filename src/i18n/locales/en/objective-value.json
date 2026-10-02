@@ -77,9 +77,16 @@
     "none": "Nothing else is needed for this property.",
     "yes": "Yes",
     "no": "No",
-    "frontage": { "label": "Frontage" },
-    "hasCentralHeating": { "label": "Does it have central heating?" },
-    "hasElevator": { "label": "Does the building have an elevator?" },
+    "choose": "Choose",
+    "frontage": {
+      "label": "Frontage"
+    },
+    "hasCentralHeating": {
+      "label": "Does it have central heating?"
+    },
+    "hasElevator": {
+      "label": "Does the building have an elevator?"
+    },
     "commercialityFactor": {
       "label": "Zone commerciality coefficient (SE)",
       "help": "Listed next to the zone price in the Ministry's tables. On this floor it changes the floor coefficient.",
@@ -241,5 +248,74 @@
     "property": "Choose the property type and enter floor and area.",
     "questions": "Answer only the questions shown: they concern your property.",
     "result": "See the objective value and each coefficient with its legal reference."
+  },
+  "improve": {
+    "pageTitle": "Improve your listing",
+    "intro": "A few answers make your listing more accurate for buyers. Every answer is saved immediately.",
+    "back": "Back to the listing",
+    "loading": "Loading the listing…",
+    "absent": "The listing was not found or is not yours.",
+    "error": "The listing could not be loaded. Please try again.",
+    "signInNeeded": "Sign in to improve your listing.",
+    "notPublished": "Improving opens after the listing is published: publish first, then add the details.",
+    "sections": {
+      "objectiveValue": {
+        "title": "Objective value",
+        "lead": "Buyers see the objective value as the law defines it. Every answer here narrows it, from a range to a single amount."
+      }
+    },
+    "zone": {
+      "loading": "Looking up the objective value zone…",
+      "failed": "The calculation did not load (listing or objective value zone). Please try again later.",
+      "none": "The listing location has no objective value zone, so there is nothing to ask."
+    },
+    "suggested": "Suggested questions",
+    "nothingOpen": "No questions left: the calculation gives a single amount.",
+    "more": "{count, plural, one {Show # more question} other {Show # more questions}}",
+    "known": "What the calculation already knows",
+    "impact": {
+      "unblocks": "Without this answer there is neither an amount nor a range.",
+      "narrows": "Narrows the range by at least {amount}, whatever the answer."
+    },
+    "state": {
+      "answered": "Your answer counts in the calculation.",
+      "byAttribute": "Your listing details already decide this.",
+      "assumed": {
+        "permitDate": "Currently approximated from the construction year.",
+        "areaIncludesCommon": "Currently counted without common areas, the usual case."
+      }
+    },
+    "clear": "Clear answer",
+    "zoneFront": {
+      "label": "Does the property front any of these streets?",
+      "help": "These streets have their own zone price. It counts only if the property fronts them.",
+      "none": "None of them"
+    },
+    "areaIncludesCommon": {
+      "label": "Does the listing area include a share of common areas?",
+      "help": "If so, the law reduces it by 10%."
+    },
+    "beforeAfter": {
+      "title": "Since the start of this visit",
+      "before": "Before",
+      "now": "Now"
+    },
+    "visibility": {
+      "label": "Show the objective value on the listing",
+      "help": "Shown by default. If you hide it, the section does not exist on the listing at all: no amount and no calculation inputs. Every lister has the same right.",
+      "frontageStays": "Frontage stays visible as a property attribute.",
+      "previewTitle": "What buyers see",
+      "hiddenPreview": "Buyers see no objective value section."
+    },
+    "rejected": {
+      "permitDateInFuture": "The permit date cannot be in the future.",
+      "zoneFrontNotCandidate": "This street is no longer a candidate front at this location.",
+      "locked": "The property has been sold or rented and its details are locked.",
+      "other": "The answer was not saved."
+    },
+    "failed": "The answer was not saved because of a connection problem.",
+    "retry": "Try again",
+    "dismiss": "Close",
+    "locked": "The property has been sold or rented: its details are locked (contracts, land registry) and the objective value cannot be changed here."
   }
 }

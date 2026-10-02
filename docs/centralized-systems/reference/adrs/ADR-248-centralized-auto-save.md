@@ -147,6 +147,24 @@ Uses semantic `<output>` tag with `aria-live="polite"`.
 - `ContactDetails.tsx` — Unify optimistic state tracking
 - DXF hooks evaluation (optional)
 
+### Αδελφός: σειριακή ουρά μερικών διορθώσεων (ADR-898 Φ3β-2, 2026-10-01)
+
+Το `useAutoSave` αποθηκεύει **ολόκληρο** αντικείμενο με debounce (`saveFn(data): Promise<void>`). Δεν ταιριάζει όπου ο
+server δέχεται **μερική διόρθωση ανά πεδίο** σε συναλλαγή και απαντά τριμερώς (`saved` · `invalid` με κωδικούς ·
+`failed`): ολόκληρο αντικείμενο θα ξανάγραφε και πεδία που ο άνθρωπος δεν άγγιξε (ό,τι άλλαξε άλλη καρτέλα).
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `src/lib/async/field-patch-queue.ts` | Η ουρά (χωρίς React): **ένα** αίτημα στον αέρα · συγχώνευση ανά πεδίο στο μεταξύ · αισιόδοξη επικάλυψη σε τρία στρώματα (`acknowledged` · `inflight` · `queued`) πάνω από τον ζωντανό αναγνώστη · αποτυχία ⇒ επαναφορά + `failure` (επανάληψη μόνο για `failed`) |
+| `src/hooks/useFieldPatchQueue.ts` | Ο δέτης: `useSyncExternalStore` · `sourceVersion` (νέα αλήθεια του listener ⇒ σβήνει το `acknowledged`) · όσο κάτι δεν έφυγε ⇒ `markUnsavedWork` στο μητρώο του ADR-860 §Ε3γ (ο ΕΝΑΣ `beforeunload`) |
+
+**Κοινά με το ADR-248**: η ένδειξη (`AutoSaveStatusIndicator`) και το λεξιλόγιο κατάστασης (`idle · saving · success · error`).
+**Κανόνας επιλογής**: έγγραφο-φόρμα που αποθηκεύεται ολόκληρο ⇒ `useAutoSave`· απαντήσεις ανά πεδίο σε έγγραφο με
+ζωντανό listener ⇒ `useFieldPatchQueue`. Πρώτος καταναλωτής: `/offers/[offerId]/improve`.
+
+⚠️ **Γνωστό χρέος (δεν διορθώθηκε εδώ)**: το `formatSaveAge` του `AutoSaveStatusIndicator` επιστρέφει **αγγλικά**
+χωρίς i18n («just now», «5s ago»). Ο νέος καταναλωτής το παρακάμπτει με `showTimestamp={false}`.
+
 ---
 
 ## 4. i18n Keys
@@ -168,3 +186,4 @@ Added to `common.json` under `autoSave` namespace:
 | Date | Change |
 |------|--------|
 | 2026-03-19 | Initial implementation: Phase 1 (foundation) + Phase 2 (first migration) |
+| 2026-10-01 | Αδελφός μηχανισμός για **μερικές διορθώσεις ανά πεδίο**: `lib/async/field-patch-queue.ts` + `hooks/useFieldPatchQueue.ts` (ADR-898 Φ3β-2) — ίδια ένδειξη και κατάσταση, άλλο συμβόλαιο αποθήκευσης. Καταγράφηκε το χρέος i18n του `formatSaveAge` |

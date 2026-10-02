@@ -48,6 +48,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 import { PropertyIdentityHeader } from './PropertyIdentityHeader';
+import { PropertyObjectiveValuePanel } from './PropertyObjectiveValuePanel';
 import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
 import { SpatialTourPanel } from '@/components/spatial-tour/SpatialTourPanel';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
@@ -212,6 +213,9 @@ export function PropertyDetailPageContent({
             audience={marketingAudienceOf(state.property.marketingAudience)}
             onChange={(next) => changePropertyAudience(state.property, next)}
           />
+
+          {/* ADR-898 Φ3β-3 — η αντικειμενική: ΙΔΙΑ ενότητα με τον ιδιώτη, ίδιο δικαίωμα απόκρυψης· πράξη της καρτέλας. */}
+          <PropertyObjectiveValuePanel property={state.property} />
 
           {/*
             🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6 ΓΙΑ ΤΗΝ ΠΛΕΥΡΑ ΕΤΑΙΡΕΙΑΣ.** Το ίδιο πάνελ, ο

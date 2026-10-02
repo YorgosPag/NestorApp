@@ -17,22 +17,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { frontageLabel } from '@/lib/listings/frontage-label';
-import type { ConditionalQuestion, ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
+import type { ConditionalQuestion, ObjectiveValueDraft, UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { RESIDENCE_FRONTAGES } from '@/lib/objective-value/objective-value-types';
 
 import { CalculatorStep, ChoiceSelect, LabelledNumber, YesNo } from './objective-value-inputs';
-import type { UpdateDraft } from './ObjectiveValueProperty';
 
 const NS = 'objective-value';
 
-interface QuestionProps {
+export interface ObjectiveValueQuestionProps {
   readonly draft: ObjectiveValueDraft;
   readonly update: UpdateDraft;
   readonly today: string;
 }
 
 /** Οι τιμές ονομάζονται από το **ένα** λεξιλόγιο ακινήτου — ίδιες λέξεις με την αγγελία και τα φίλτρα (ADR-898 Φ3β). */
-function FrontageQuestion({ draft, update }: QuestionProps) {
+function FrontageQuestion({ draft, update }: ObjectiveValueQuestionProps) {
   const { t } = useTranslation([NS, 'properties-enums']);
   const id = useId();
   return (
@@ -43,14 +42,14 @@ function FrontageQuestion({ draft, update }: QuestionProps) {
         value={draft.frontage}
         values={RESIDENCE_FRONTAGES}
         getLabel={(value) => frontageLabel(t, value)}
-        placeholder={t(`${NS}:questions.frontage.label`)}
+        placeholder={t(`${NS}:questions.choose`)}
         onChange={(frontage) => update({ frontage })}
       />
     </>
   );
 }
 
-function YesNoQuestion({ draft, update, field }: QuestionProps & { readonly field: 'hasCentralHeating' | 'hasElevator' }) {
+function YesNoQuestion({ draft, update, field }: ObjectiveValueQuestionProps & { readonly field: 'hasCentralHeating' | 'hasElevator' }) {
   const { t } = useTranslation([NS]);
   const labelId = useId();
   return (
@@ -67,7 +66,7 @@ function YesNoQuestion({ draft, update, field }: QuestionProps & { readonly fiel
   );
 }
 
-function CommercialityQuestion({ draft, update }: QuestionProps) {
+function CommercialityQuestion({ draft, update }: ObjectiveValueQuestionProps) {
   const { t } = useTranslation([NS]);
   return (
     <>
@@ -91,7 +90,7 @@ function CommercialityQuestion({ draft, update }: QuestionProps) {
   );
 }
 
-function PermitDateQuestion({ draft, update, today }: QuestionProps) {
+function PermitDateQuestion({ draft, update, today }: ObjectiveValueQuestionProps) {
   const { t } = useTranslation([NS]);
   const id = useId();
   const helpId = useId();
@@ -112,7 +111,7 @@ function PermitDateQuestion({ draft, update, today }: QuestionProps) {
   );
 }
 
-function PlotUtilisationQuestion({ draft, update }: QuestionProps) {
+function PlotUtilisationQuestion({ draft, update }: ObjectiveValueQuestionProps) {
   const { t } = useTranslation([NS]);
   return (
     <LabelledNumber
@@ -125,7 +124,11 @@ function PlotUtilisationQuestion({ draft, update }: QuestionProps) {
   );
 }
 
-function Question({ question, ...props }: QuestionProps & { readonly question: ConditionalQuestion }) {
+/**
+ * **Μία ερώτηση**, με το χειριστήριό της — η ίδια στον υπολογιστή και στην οθόνη «Βελτίωσε την αγγελία σου»
+ * (ADR-898 Φ3β-2), ώστε ο κάτοχος και ο αγοραστής να βλέπουν την ίδια διατύπωση.
+ */
+export function ObjectiveValueQuestion({ question, ...props }: ObjectiveValueQuestionProps & { readonly question: ConditionalQuestion }) {
   switch (question) {
     case 'frontage':
       return <FrontageQuestion {...props} />;
@@ -141,7 +144,7 @@ function Question({ question, ...props }: QuestionProps & { readonly question: C
   }
 }
 
-export function ObjectiveValueQuestions({ questions, ...props }: QuestionProps & { readonly questions: readonly ConditionalQuestion[] }) {
+export function ObjectiveValueQuestions({ questions, ...props }: ObjectiveValueQuestionProps & { readonly questions: readonly ConditionalQuestion[] }) {
   const { t } = useTranslation([NS]);
   return (
     <CalculatorStep title={t(`${NS}:questions.title`)}>
@@ -151,7 +154,7 @@ export function ObjectiveValueQuestions({ questions, ...props }: QuestionProps &
         <ul className="m-0 flex list-none flex-col gap-4 p-0">
           {questions.map((question) => (
             <li key={question} className="flex flex-col gap-1">
-              <Question question={question} {...props} />
+              <ObjectiveValueQuestion question={question} {...props} />
             </li>
           ))}
         </ul>

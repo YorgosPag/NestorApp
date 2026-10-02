@@ -14,7 +14,7 @@ import React, { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
+import type { ObjectiveValueDraft, UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import type {
   AncillaryCompletion,
   ConstructionKind,
@@ -23,7 +23,6 @@ import type {
 } from '@/lib/objective-value/objective-value-types';
 
 import { ChoiceSelect, LabelledNumber } from './objective-value-inputs';
-import type { UpdateDraft } from './ObjectiveValueProperty';
 
 const NS = 'objective-value';
 const A = `${NS}:adjustments`;

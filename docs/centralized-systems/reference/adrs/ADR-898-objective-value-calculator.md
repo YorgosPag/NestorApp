@@ -371,10 +371,148 @@ Giorgio 2026-10-01.
   χωρίς συναλλαγή. Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
 - **Καμία ανακατασκευή προβολών από πράκτορα** (ADR-839 §7): τα ζωντανά έγγραφα ανεβαίνουν στο σχήμα 15 **κατά την ανάγνωση**.
 
+## 13. Φ3β-2 — η οθόνη «Βελτίωσε την αγγελία σου» (ADR-842 Φ4, υλοποίηση, 2026-10-01)
+
+Πρώτη έκδοση της οθόνης του ADR-842 Φ4, με **μία** ενότητα (αντικειμενική) πάνω σε **καταχωρητή ενοτήτων**. Η
+`/offers/new` **δεν άλλαξε** (ADR-842 Α2). Αποφάσεις Giorgio (δεσμευτικές): Plan Mode Φ3β-2 → Φ3β-3 · μόνο οι ερωτήσεις
+της αντικειμενικής, σε καταχωρητή · εμφάνιση εξ ορισμού με δικαίωμα απόκρυψης ίδιο για όλους · τίποτα στη `/offers/new`.
+
+### 13.1 Έρευνα: τι κάνουν οι μεγάλοι, και πού τους ξεπερνάμε
+
+| Παίκτης | Πρακτική | Τι πήραμε |
+|---|---|---|
+| **Zillow «Edit facts»** | Ο ιδιοκτήτης αλλάζει στοιχεία και το Zestimate ενημερώνεται **αμέσως** (πριν: εβδομάδες) | «Πριν → Τώρα» ζωντανά στον browser, από την **ίδια** μηχανή με τον server |
+| **Airbnb listing editor (2025)** | Ενότητες («Your space» · «Arrival guide»), προεπισκόπηση «όπως το βλέπει ο επισκέπτης», **publish first, then improve** | Καταχωρητής ενοτήτων · προεπισκόπηση = το **ίδιο** component της αγγελίας · είσοδος μόνο μετά τη δημοσίευση |
+| **Google Docs** | Αποθήκευση σε κάθε αλλαγή, «Αποθήκευση… / Αποθηκεύτηκε», προειδοποίηση πριν κλείσει η σελίδα | Σειριακή ουρά ανά απάντηση · κοινή ένδειξη ADR-248 · `beforeunload` |
+
+**Πού τους ξεπερνάμε**:
+1. **Σειρά ερωτήσεων κατά εγγυημένο κέρδος** (minimax): για κάθε ανοιχτή ερώτηση η μηχανή υπολογίζει τα όρια μετά από
+   **κάθε** πιθανή απάντηση· κέρδος = «πλάτος τώρα − το χειρότερο πλάτος μετά». Καμία πιθανότητα, καμία εφευρεμένη
+   κατανομή: «στενεύει το εύρος κατά τουλάχιστον Χ €, όποια κι αν είναι η απάντηση». Η Zillow απλώς απαριθμεί πεδία.
+2. **Η ερώτηση που ξεκλειδώνει** (χωρίς αυτήν δεν βγαίνει ούτε εύρος — η άδεια) έρχεται **πρώτη**.
+3. **Νόμος, όχι AVM**: τα όρια είναι ακριβώς ό,τι επιτρέπει ο νόμος.
+
+### 13.2 Αποφάσεις
+
+| Ερώτημα | Απόφαση | Γιατί |
+|---|---|---|
+| Χτίσιμο πρόχειρου | `listingObjectiveValueBasis(listing, verdict)` **εξήχθη** από το `listingObjectiveValue` (το `resolve` έμεινε ένα) | Οθόνη και server βλέπουν **την ίδια** βάση· καμία δεύτερη αντιστοίχιση |
+| Ποιες ερωτήσεις | `relevantQuestions` πάνω σε πρόχειρο **χωρίς** δηλώσεις · `zoneFront` όταν υπάρχουν υποψήφια μέτωπα · `areaIncludesCommon` σε έντυπο 1 | Η μηχανή κρίνει· απαντημένη ερώτηση μένει ορατή και διορθώσιμη |
+| Καταστάσεις | `open` · `answered` (η δήλωση μπήκε) · `byAttribute` (το κρίνει χαρακτηριστικό — χωρίς χειριστήριο) · `assumed` (άδεια από έτος · χωρίς κοινόχρηστους) | Η ιεραρχία του §12.2 φαίνεται· δήλωση που δεν θα μετρούσε δεν ζητιέται |
+| «Ξεκλειδώνει» | **Μόνο** ό,τι λείπει και **δεν** απαριθμείται (η άδεια) | Μετρημένο στα tests: στο `unresolved` η μηχανή απαριθμεί **όλα** τα κενά — η πρόσοψη θα έβγαινε ψευδώς «ξεκλειδώνει» |
+| Coaching | `IMPROVE_QUESTIONS_AT_A_TIME = 3` · «Δείτε Ν ακόμη» · χωριστή ομάδα «Τι ξέρει ήδη ο υπολογισμός» | ADR-842 §6 #7 · NN/g information scent |
+| Χειριστήρια | Τα **ίδια** με τον υπολογιστή (`ObjectiveValueQuestion` εξήχθη) μέσω `draftOfDeclarations` / `patchOfDraft`· δικά τους μόνο μέτωπο (`zoneFrontAnswers`) και κοινόχρηστοι | Κάτοχος και αγοραστής διαβάζουν την ίδια διατύπωση |
+| Αποθήκευση | Σειριακή ουρά (`lib/async/field-patch-queue.ts`), **όχι** `useAutoSave` | Μερική διόρθωση ανά πεδίο σε συναλλαγή (§12.2)· ολόκληρο αντικείμενο θα ξανάγραφε πεδία άλλης καρτέλας. Αδελφός στο ADR-248 |
+| Πηγή αλήθειας | Ο listener (`useMyOwnerProperty`)· η οθόνη = `applyObjectiveValuePatch(αλήθεια, επικάλυψη)` | Η ίδια συνάρτηση με τον server· κανένα τοπικό αντίγραφο εγγράφου |
+| Έλεγχος στον browser | `objectiveValuePatchViolations` πριν την αποστολή | Ίδιος κανόνας με τον server (ζώνη και τιράντες) |
+| Προεπισκόπηση | `ListingObjectiveValue` πάνω στη **νέα** προβολή (`projectListingShape`) | Δεν μπορεί να αποκλίνει από την αγγελία· κρυμμένη ⇒ «ο αγοραστής δεν βλέπει ενότητα» |
+| «Πριν» | Η πρώτη απάντηση της μηχανής **σε αυτή την επίσκεψη** | Μετά από κάθε αποθήκευση το «πριν» θα γινόταν ίσο με το «τώρα» |
+| Πρόσβαση | Σύνδεσμος στο `OwnerListingCompletion` όταν `ownerListingVisibility === 'published'`· η σελίδα εξηγεί όταν δεν είναι | Airbnb «publish first, then improve» |
+| Κενή επιλογή | **Ένα** κλειδί `questions.choose` («Επιλέξτε») για πρόσοψη (υπολογιστής **και** οθόνη) και μέτωπο | Zillow / idealista: ετικέτα **πάνω** από το πεδίο, ουδέτερο placeholder μέσα. Ως τώρα η πρόσοψη έγραφε «Πρόσοψη» δύο φορές (ετικέτα + placeholder) — βρέθηκε στη ζωντανή επαλήθευση· το `improve.zoneFront.placeholder` έφυγε (μία λέξη, ένα κλειδί) |
+| Ζωντανή επαλήθευση (Chrome, dev, 2026-10-02) | `/offers/ownp_ec5bf55a…/improve`: άδεια πρώτη («χωρίς αυτή δεν βγαίνει ούτε ποσό ούτε εύρος») · πρόσοψη · θέρμανση · «Δείτε 1 ακόμη» (ανελκυστήρας, Γ' όροφος) · κοινόχρηστοι στο «Τι ξέρει ήδη» · διακόπτης ενεργός · κανένα σφάλμα κονσόλας. Η προεπισκόπηση **ταυτίζεται** με ό,τι υπολογίζει ο server για τη δημόσια αγγελία (`/api/market/listing-context`: ζώνη Β 1.200 €/m², `unresolved` με τα **ίδια** τέσσερα κενά). **Αποθήκευση (με άδεια Giorgio)**: «κεντρική θέρμανση = Ναι» ⇒ η απάντηση φάνηκε **αμέσως**, πέρασε στο «Τι ξέρει ήδη» με «Η απάντησή σας μετρά», ο ανελκυστήρας ανέβηκε στις προτεινόμενες, «Αποθηκεύτηκε» · στη βάση `hasCentralHeating: true` + νέα δημοσίευση. «Καθαρισμός απάντησης» ⇒ `null` + νέα δημοσίευση (το μπλοκ μένει ρητό, ισοδύναμο με το `UNDECLARED_OBJECTIVE_VALUE`). Το «Πριν → Τώρα» **σωστά** δεν φάνηκε: χωρίς άδεια τα όρια μένουν `unresolved` | Καμία εγγραφή χωρίς άδεια |
+| Slice i18n | Νέα διαδρομή, **11.613 bytes** (μετρημένο)· `/offers/[offerId]` 30.706 → 30.768 (μόνο ο σύνδεσμος) | Οι ερωτήσεις δεν χωρούν στην καρτέλα (ταβάνι 31.056) |
+
+### 13.3 Κώδικας
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `lib/objective-value/listing-objective-value.ts` | **Εξαγωγή** `listingObjectiveValueBasis` + `ListingObjectiveValueResolution` — το `listingObjectiveValue` αμετάβλητο στη συμπεριφορά |
+| `lib/objective-value/objective-value-improve.ts` | **Νέο**: `objectiveValueImprovement` (ερωτήσεις · καταστάσεις · minimax κέρδος) · `boundsWidth` · `draftOfDeclarations` / `patchOfDraft` · `clearedPatchOf` |
+| `lib/objective-value/objective-value-zone.ts` | `zoneFrontAnswers` — η μία λίστα απαντήσεων μετώπου (επιλογή **και** κέρδος) |
+| `lib/objective-value/objective-value-draft.ts` | `UpdateDraft` **μετακόμισε** εδώ από το `ObjectiveValueProperty.tsx` (Boy Scout: η εισαγωγή από component έσερνε `property.*` στο slice, **−1.880 bytes** μετρημένα) |
+| `lib/async/field-patch-queue.ts` · `hooks/useFieldPatchQueue.ts` | **Νέα**: η σειριακή ουρά και ο δέτης της |
+| `components/objective-value/ObjectiveValueQuestions.tsx` | Εξάγει `ObjectiveValueQuestion` + `ObjectiveValueQuestionProps` |
+| `components/owner-property/improve/` | **Νέο**: `improve-sections.ts` (καταχωρητής) · `OwnerListingImproveContent` · `ObjectiveValueImproveSection` · `useObjectiveValueImprove` · `ObjectiveValueImproveQuestion(s)` · `ObjectiveValueVisibility` · `ObjectiveValueBeforeAfter` · `ImproveSaveStatus` |
+| `app/(me)/offers/[offerId]/improve/page.tsx` · `lib/owner-property/owner-property-routes.ts` | Διαδρομή + `offerImproveHref` |
+| `components/owner-property/OwnerListingCompletion.tsx` · `OwnerPropertyDetailContent.tsx` | Σύνδεσμος εισόδου (`improveOfferId` — μία γραμμή στην καρτέλα) |
+
+**i18n**: `objective-value:improve.*` · `properties:completion.improveLink`. Slice: `.i18n-shell-slice.json` (σφράγιση 11.613, με λόγο).
+
+### 13.4 Άγκυρες
+
+- `lib/objective-value/__tests__/objective-value-improve.test.ts` (**16**): η μηχανή κρίνει τις ερωτήσεις (ανελκυστήρας σε Α' δεν ρωτιέται) · καταστάσεις · δήλωση που νικήθηκε ≠ `answered` · ίδια βάση με την αγγελία · minimax κέρδος = ανεξάρτητος υπολογισμός από τα όρια της **αγγελίας** · μέτωπο από τη λίστα απαντήσεων · σειρά · «ξεκλειδώνει» μόνο η άδεια · πρόχειρο ⇄ δηλώσεις · καθαρισμός ακριβώς ενός πεδίου.
+- `lib/async/__tests__/field-patch-queue.test.ts` (**8**): ένα αίτημα στον αέρα + συγχώνευση · επικάλυψη ως τη νέα αλήθεια · αποτυχία ⇒ επαναφορά + επανάληψη · άρνηση χωρίς επανάληψη · νεότερη απάντηση αποσύρει την αποτυχία · `send` που ρίχνει · σταθερό στιγμιότυπο.
+- `components/owner-property/improve/__tests__/objective-value-improve-section.test.tsx`: από άκρη σε άκρη πάνω στις πραγματικές μηχανές (στελέχη μόνο ο server και η ζώνη).
+
+### 13.5 Δηλωμένα ανοιχτά (→ Φ3β-3 και μετά)
+
+- ✅ **Εταιρεία** → §14 (Φ3β-3α): η ίδια ενότητα · έλεγχος σχήματος και συναλλαγή στο `PATCH /api/properties/[id]` · κλειδώματα · ίχνος.
+- **Πολυεπίπεδα**: `unsupported: multiLevel` μένει.
+- **Υπόλοιπες οικογένειες του ADR-842** (ενέργεια, εμβαδά, συστήματα, παροχές): νέες ενότητες στον καταχωρητή.
+- **Χρέος ADR-248**: το `formatSaveAge` γράφει αγγλικά (εδώ παρακάμπτεται με `showTimestamp={false}`).
+
+## 14. Φ3β-3α — η ίδια ενότητα στο γραφείο · η βάση από τον server (υλοποίηση, 2026-10-02)
+
+Αποφάσεις Giorgio (δεσμευτικές): Plan Mode σε δύο υποφάσεις (**α** γραφείο → **β** πολυεπίπεδα) · η βάση της αγγελίας
+από **διαδρομή του server** (δουλεύει και πριν τη δημοσίευση) · η ενότητα **δίπλα στο κοινό αγγελίας** στο
+`/properties/[id]` (πράξη της καρτέλας, όχι πεδίο φόρμας) · εμβαδόν ανά επίπεδο **μόνο** ως βάση υπολογισμού (→ Φ3β-3β).
+
+### 14.1 Ευρήματα του audit (ο κώδικας είναι η αυθεντία)
+
+| Εύρημα | Συνέπεια |
+|---|---|
+| 🔴 Το `PATCH /api/properties/[id]` γράφει με `withVersionCheck` → `transaction.update(body)` | Το Firestore **αντικαθιστά ολόκληρο** το εμφωλευμένο αντικείμενο: μία απάντηση (`{frontage}`) θα έσβηνε όλες τις άλλες. Δεν αρκούσε «να μπει το σχήμα» — χρειαζόταν **κλάδος** με εφαρμογή της διόρθωσης στο φρέσκο έγγραφο |
+| 🔴 **Σφάλμα της Φ3β-2** (χωρίς commit ακόμη): η οθόνη έχτιζε τη βάση με `projectListingShape`, που γράφει `constructionYear: null` (το δένει μόνο ο γραφέας, `withPublicationFacts`) | Όπου η δημόσια αγγελία έχει έτος (δήλωση κτιρίου / δημόσια εγγραφή), η οθόνη έχανε την προσέγγιση της άδειας και έλεγε «ξεκλειδώνει» αντί για εύρος. Η ζωντανή επαλήθευση της Φ3β-2 ταίριαξε **μόνο** επειδή η αγγελία δεν είχε έτος. Για το γραφείο ο τόπος (κτίριο → έργο) διαβάζεται μόνο στον server |
+| Διπλότυπο: `SOLD_LOCKED_FIELDS` · `RESERVED_LOCKED_FIELDS` · `REVERT_ALLOWED_FIELDS` σε server **και** πελάτη, με σχόλιο «keep both in sync» | N.0.2 — ένα αρχείο |
+| Διπλότυπο: «είδος → έντυπο» γραμμένο με το χέρι σε **4** σημεία | `objectiveValueFormOf` |
+| Ο εντοπισμός «ακίνητο του αιτούντος, με θεματοφυλακή» ζούσε στο `place-interest.service` (ζήτηση) | Είναι ερώτημα **αγγελίας**· απέκτησε δεύτερο καταναλωτή ⇒ εξαγωγή |
+
+### 14.2 Αποφάσεις
+
+| Ερώτημα | Απόφαση | Γιατί |
+|---|---|---|
+| Γενίκευση της πηγής | `ObjectiveValueImproveSubject` = `{id, declarations (ωμές), revision, write}` (`lib/objective-value/objective-value-improve-subject.ts`) — ιδιώτης: `useOwnerImproveSubject` · γραφείο: `PropertyObjectiveValuePanel` | Πρότυπο `MarketingAudienceControl`: **ένα** component, η πράξη απ' έξω. Ο τύπος στο `lib/` (μάθημα slice Φ3β-2) |
+| Η βάση | `GET /api/listings/preview?propertyId=` → `readOwnedListingPreview` = `projectListingShape` + `withPublicationFacts(resolvePublicationFacts)` — ο **ίδιος** δέτης με τον γραφέα | Καμία δεύτερη προβολή, καμία απόκλιση από τη δημόσια αγγελία. Θεματοφυλακή: «δεν υπάρχει» = «δεν είναι δικό σου» = 404. `private, no-store` |
+| Αισιόδοξη κατάσταση πάνω στη βάση | `withObjectiveValueDeclarations(listing, declarations)` — καλεί τις **ίδιες** `projectFrontage` / `projectObjectiveValueDeclarations` | Η επικάλυψη αλλάζει μόνο τα δύο πεδία που εξαρτώνται από τις δηλώσεις· ιδιοδύναμη |
+| Πότε ξαναζητιέται η βάση | Σε κάθε νέα `revision` (ιδιώτης: στιγμιότυπο listener · γραφείο: `_v` + `updatedAt`), **stale-while-revalidate**, νικά η τελευταία αίτηση | Ο listener του γραφείου ξαναφτιάχνει αντικείμενα για αλλαγή **οποιουδήποτε** ακινήτου — η ταυτότητα αντικειμένου θα ξαναζητούσε χωρίς λόγο |
+| Γραφή γραφείου | Κλάδος στο `PATCH` (`property-objective-value-patch.ts`): σχήμα `.strict()` · **μόνο του** (αλλιώς 400) · κλείδωμα **πριν και μέσα** στη συναλλαγή · κανόνες με ρολόι (422) · μέτωπο (422/503) · `withVersionCheckOnCurrent` · ίχνος · επαναπροβολή | Ίδιες εγγυήσεις με τον ιδιώτη (§12.2). Το `_v` ανεβαίνει όπως σε κάθε εγγραφή της διαδρομής |
+| Συναλλαγή | `withVersionCheckOnCurrent({ derive })` — το `withVersionCheck` απέκτησε παραλλαγή όπου οι ενημερώσεις **παράγονται από το φρέσκο έγγραφο** (ίδιο `_v`/`updatedAt`/`updatedBy`, ίδιο σώμα σύγκρουσης) | Όχι δεύτερη μηχανή συναλλαγής. Το Firestore ξανατρέχει το `derive` σε σύγκρουση ⇒ καμία απάντηση δεν χάνεται |
+| Έλεγχος μετώπου | `services/market/zone-front-verdict.ts` — κοινός· η θέση ζητείται **τεμπέλικα** (για το γραφείο κοστίζει αναγνώσεις) | Ήταν ιδιωτικός στον γραφέα του ιδιώτη |
+| Κλείδωμα | `objectiveValueDeclarations` ∈ `SOLD_LOCKED_FIELDS` (πώληση/μίσθωση, όχι κράτηση) · `lib/property/property-locked-fields.ts` | Φυσικά στοιχεία (πρόσοψη, άδεια) — ίδια μεταχείριση με `orientations` |
+| Πόρτα γραφής γραφείου | `updatePropertyObjectiveValueWithPolicy` στη **μία** πύλη μεταλλάξεων· δεν πετά ποτέ (422 ⇒ κωδικοί · 403 ⇒ `locked` · 4xx ⇒ `other` · 5xx ⇒ `failed`) | Η ουρά θέλει αποτέλεσμα, όχι εξαίρεση |
+| Λεξιλόγιο αρνήσεων | `OBJECTIVE_VALUE_WRITE_REJECTIONS` = κωδικοί δήλωσης + `locked` + `other` — κλειδί i18n το καθένα | Άγνωστος κωδικός ⇒ `other`, ποτέ ωμό κλειδί |
+| Ίχνος | Οι 7 γραμμές παράγονται από `OBJECTIVE_VALUE_DECLARED_FIELDS` (+`display`), κοινές για `property` και `owner_property`· ετικέτες στο **γενικό** `audit.fields.objectiveValueDeclarations.*` | Ήταν χειρόγραφες μόνο στον ιδιώτη |
+| Ορατότητα στο γραφείο | Μόνο για είδη με έντυπο (`objectiveValueFormOf`)· σε πώληση/μίσθωση εξήγηση αντί για ερωτήσεις | Κατάστημα/γραφείο/γη: καμία ενότητα (§7) |
+
+### 14.3 Κώδικας
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `lib/property/property-locked-fields.ts` | **Νέο**: η ΜΙΑ λίστα κλειδωμάτων + `lockedFieldsAttempted` · `isFieldLocked` (server και πελάτης) |
+| `lib/firestore/version-check.ts` · `types/versioning.ts` | `withVersionCheckOnCurrent` (+ `before`/`applied`)· `withVersionCheck` αμετάβλητο στη συμπεριφορά |
+| `services/market/zone-front-verdict.ts` | **Νέο** (εξαγωγή): ο έλεγχος μετώπου |
+| `app/api/properties/[id]/property-objective-value-patch.ts` · `route.ts` | **Νέο**: ο κλάδος· η διαδρομή τον καλεί πριν από το γενικό σχήμα |
+| `services/listings/owned-listing-projection.ts` | **Νέο** (εξαγωγή από `place-interest.service`): εντοπισμός με θεματοφυλακή · `readOwnedListingPreview` |
+| `app/api/listings/preview/route.ts` · `lib/listings/listing-preview-request.ts` · `hooks/listings/useListingPreview.ts` | **Νέα**: η προεπισκόπηση |
+| `services/listings/public-listing-objective-value.ts` | `withObjectiveValueDeclarations` |
+| `lib/objective-value/objective-value-improve-subject.ts` | **Νέο**: το συμβόλαιο του κατόχου + λεξιλόγιο αρνήσεων |
+| `lib/objective-value/objective-value-form-of-type.ts` | `objectiveValueFormOf` (4 καταναλωτές) |
+| `components/owner-property/improve/*` | Ενότητα · hook · καταχωρητής πάνω στο `subject`· `owner-improve-subject.ts` (**νέο**) |
+| `components/properties/detail/PropertyObjectiveValuePanel.tsx` | **Νέο**: η ενότητα στην καρτέλα του γραφείου |
+| `services/property/property-mutation-gateway.ts` | `updatePropertyObjectiveValueWithPolicy` · λίστες από το SSoT |
+| `config/audit-tracked-fields.ts` · locales `common-audit` · `objective-value` (`improve.locked`, `improve.rejected.locked`, γενικότερο `improve.zone.failed`) | Ίχνος · κείμενα |
+
+### 14.4 Άγκυρες
+
+- `app/api/properties/[id]/__tests__/property-objective-value-patch.test.ts` (**8**): απάντηση γραμμένη **μετά** την ανάγνωση επιβιώνει · `_v` · ένα ίχνος με ένα πεδίο · μία επαναπροβολή · μοναξιά · σχήμα · κλείδωμα πριν **και μέσα** · 422 · 503/422 μετώπου.
+- `services/listings/__tests__/owned-listing-projection.test.ts` (**3**): γεγονότα δημοσίευσης δεμένα · ξένο = `null` χωρίς εταιρική ανάγνωση · μισθωτής.
+- `services/property/__tests__/property-objective-value-gateway.test.ts` · `lib/property/__tests__/property-locked-fields.test.ts` · `public-listing-objective-value.test.ts` (+3).
+- `components/owner-property/improve/__tests__/objective-value-improve-section.test.tsx` (+3): **η βάση του server με έτος ⇒ καμία «ξεκλειδώνει»** · φόρτωση/αποτυχία · γραφείο με άρνηση `locked`.
+- **Μεταλλάξεις 5/5 κόκκινες**: διόρθωση πάνω στο μπαγιάτικο `existing` · χωρίς κλείδωμα μέσα στη συναλλαγή · χωρίς μοναξιά κλειδιού · βάση χωρίς επικάλυψη δηλώσεων · βάση χωρίς έτος (η καθαρή προβολή). Όλες επανήλθαν στην ίδια εντολή.
+- Πύλες: 3.8 · 3.17 · 3.34 · 3.35 · 3.56 · 3.58 · 3.61 · 3.62 · 3.68 · 3.70 · 3.73 · 3.78 · 3.79 · 3.80 · 3.90 · 3.92 ✅.
+
+### 14.5 Δηλωμένα ανοιχτά (→ Φ3β-3β)
+
+- **Πολυεπίπεδα**: `unsupported: multiLevel` μένει — `{floor, gross}` ανά επίπεδο, σχήμα 15 → 16, προσυμπλήρωση πολλών επιπέδων.
+- **Ζωντανή επαλήθευση** της Φ3β-3α (Chrome) στο `/properties/[id]` και στο `/offers/[offerId]/improve` — εγγραφή μόνο με άδεια Giorgio.
+
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-02 | **SSoT (CHECK 3.7)** — η ουρά διορθώσεων δημοσιεύει μέσω του `createExternalStore` (όχι δικό της σύνολο listeners)· ο δέτης `useFieldPatchQueue` δεν βάζει δικό του `beforeunload` — δηλώνει «υπάρχει δουλειά» στο `unsaved-work-registry` (`markUnsavedWork`/`clearUnsavedWork`) και προειδοποιεί ο ΕΝΑΣ listener του ADR-860 §Ε3γ. |
+| 2026-10-02 | **Φ3β-3α ✅** — η ίδια ενότητα στην καρτέλα ακινήτου του γραφείου (§14): `ObjectiveValueImproveSubject` (ένα component, η πράξη απ' έξω) · βάση **από τον server** (`GET /api/listings/preview`, ίδιος δέτης γεγονότων με τον γραφέα) — διορθώνει σφάλμα της Φ3β-2 (η καθαρή προβολή έχανε το έτος κατασκευής) · κλάδος `PATCH /api/properties/[id]` με μερική διόρθωση **σε συναλλαγή** (`withVersionCheckOnCurrent`) — το `update(body)` θα αντικαθιστούσε όλο το αντικείμενο · κλείδωμα πώλησης/μίσθωσης · ίχνος. Boy Scout: μία λίστα κλειδωμάτων (ήταν δύο «keep both in sync») · `objectiveValueFormOf` (4 χειρόγραφα) · έλεγχος μετώπου κοινός · εντοπισμός με θεματοφυλακή εξήχθη από το `place-interest` |
+| 2026-10-01 | **Φ3β-2 ✅** — η οθόνη «Βελτίωσε την αγγελία σου» (§13): `/offers/[offerId]/improve` μετά τη δημοσίευση · καταχωρητής ενοτήτων · ερωτήσεις από τη μηχανή, **κατά εγγυημένο κέρδος** (minimax), τρεις τη φορά · αποθήκευση ανά απάντηση με σειριακή ουρά και αισιόδοξη επικάλυψη πάνω στον listener · απόκρυψη με προεπισκόπηση = το component της αγγελίας · «πριν → τώρα». `listingObjectiveValueBasis` εξήχθη (μία βάση). Boy Scout: `UpdateDraft` στη μηχανή (−1.880 bytes slice) · `ObjectiveValueQuestion` εξήχθη |
 | 2026-10-01 | **Φ3β-1 ✅** — οι δηλώσεις του αγγελιοδότη (§12): ένα μπλοκ `ObjectiveValueDeclarations` για ιδιώτη και εταιρεία · απόκρυψη ίδια για όλους (μάθημα αγωγής Zillow) και **χωρίς στοιχεία υπολογισμού** στη δημόσια αγγελία (NAR + ελαχιστοποίηση) · ιεραρχία χαρακτηριστικό > δήλωση > προσέγγιση · πρόσοψη ορατή + κριτήριο (idealista) · μέτωπο με όνομα δρόμου, επαληθευμένο στον server · σχήμα 14 → 15 · γραφή σε **συναλλαγή** (καμία απάντηση δεν χάνεται). Boy Scout: `completeWrite`/`writeFailure` εξήχθησαν · `OBJECTIVE_VALUE_FORM_OF_TYPE` σε δικό του αρχείο · ετικέτες πρόσοψης μετακόμισαν στο `properties-enums` · fixture `ListingDetailContent` |
 | 2026-10-01 | **Φ3α ✅** — η αντικειμενική μέσα στην αγγελία (§11): υπολογισμός στον server κατά την ανάγνωση · **όρια του νόμου** όπου η αγγελία δεν ξέρει πρόσοψη/μέτωπο/θέρμανση/ανελκυστήρα · δηλωμένες υποθέσεις · υπολογιστής προσυμπληρωμένος από την αγγελία. Ανελκυστήρας από `amenities` (μία από τρεις πηγές)· θέρμανση κατά άρθ. 3 §11. Έρευνα Zillow/NAR/Rightmove ⇒ εμφάνιση εξ ορισμού + απόκρυψη (Φ3β). Η Φ3 χωρίστηκε σε Φ3α/Φ3β λόγω ADR-842 Α2. Μετακόμιση πρόχειρου/κανόνα ζώνης σε `lib/`· Boy Scout: λίστες εντύπων/προσόψεων/θέσεων ως πηγή |
 | 2026-10-01 | **Φ2 ✅** — δημόσιος υπολογιστής `/ergaleia/antikeimeniki-axia` (§10): νέο `GET /api/market/value-zone`, πρόχειρο με τη μηχανή ως κριτή των ερωτήσεων, SEO με `FAQPage`/`HowTo`, σύνδεσμοι από αγγελία/περιοχή/υποσέλιδο. Συμβόλαιο μηχανής: το `invalid` κρατά και `missing[]`. Boy Scout: `area` στο `OUTSIDE_WORKSPACE` · `ValueZoneSummary` |

@@ -39,26 +39,15 @@ import {
   loadPropertyContext,
   restoreProperty,
 } from './property-deletion-guard';
-
-const SOLD_LOCKED_FIELDS: ReadonlySet<string> = new Set([
-  'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
-  'commercialStatus', 'buildingId', 'linkedSpaces',
-  'orientations', 'condition', 'energy', 'systemsOverride',
-  'finishes', 'interiorFeatures', 'securityFeatures',
-  'levels', 'isMultiLevel', 'levelData',
-]);
-
-const RESERVED_LOCKED_FIELDS: ReadonlySet<string> = new Set(['code', 'type', 'name']);
-
-/**
- * Top-level fields legitimately mutated by the sale-revert flow
- * (reserved/sold → for-sale). Keeps the transition surgical — everything
- * else in SOLD_LOCKED_FIELDS stays protected against accidental edits.
- */
-const REVERT_ALLOWED_FIELDS: ReadonlySet<string> = new Set([
-  'commercialStatus',
-  'commercial',
-]);
+// Η ΜΙΑ λίστα κλειδωμάτων — κοινή με τον server (ADR-898 Φ3β-3: ήταν δύο αντίγραφα «keep both in sync»).
+import { isFieldLocked, lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
+import { apiErrorBodyOf } from '@/lib/api/api-client-types';
+import { ApiClientError } from '@/lib/api/enterprise-api-client';
+import type { ObjectiveValueDeclarationsPatch } from '@/lib/objective-value/objective-value-declarations';
+import {
+  objectiveValueRejectionOf,
+  type ObjectiveValueWriteOutcome,
+} from '@/lib/objective-value/objective-value-improve-subject';
 
 type PropertyMutationIntent =
   | 'create'
@@ -200,22 +189,10 @@ function assertFieldLocking(
   commercialStatus: CommercialStatus | null,
   updateKeys: readonly string[],
 ): void {
-  if (!commercialStatus) {
-    return;
-  }
-
-  const attemptedReservedFields = updateKeys.filter((key) => RESERVED_LOCKED_FIELDS.has(key));
-  const attemptedSoldFields = updateKeys.filter((key) => SOLD_LOCKED_FIELDS.has(key));
-
-  if (commercialStatus === 'reserved' && attemptedReservedFields.length > 0) {
+  const attempted = lockedFieldsAttempted(commercialStatus, updateKeys);
+  if (attempted.length > 0) {
     throw new PropertyMutationPolicyError(
-      `Cannot modify locked fields on a reserved property: ${attemptedReservedFields.join(', ')}`,
-    );
-  }
-
-  if ((commercialStatus === 'sold' || commercialStatus === 'rented') && attemptedSoldFields.length > 0) {
-    throw new PropertyMutationPolicyError(
-      `Cannot modify locked fields on a ${commercialStatus} property: ${attemptedSoldFields.join(', ')}`,
+      `Cannot modify locked fields on a ${commercialStatus} property: ${attempted.join(', ')}`,
     );
   }
 }
@@ -466,3 +443,44 @@ export async function updatePropertyCoverageWithPolicy({
   return updatePropertyCoverageRecord(propertyId, coverage);
 }
 
+
+// ============================================================================
+// ADR-898 Φ3β-3 — ΟΙ ΔΗΛΩΣΕΙΣ ΤΗΣ ΑΝΤΙΚΕΙΜΕΝΙΚΗΣ (η πόρτα γραφής του γραφείου)
+// ============================================================================
+
+/** Άρνηση του server → λόγος της οθόνης. 422 = κανόνας δήλωσης · 403 = κλείδωμα συναλλαγής · 4xx = άλλη άρνηση. */
+function objectiveValueFailureOf(cause: unknown): ObjectiveValueWriteOutcome {
+  if (!ApiClientError.isApiClientError(cause) || cause.statusCode >= 500) return { kind: 'failed' };
+  if (cause.statusCode === 403) return { kind: 'rejected', reasons: ['locked'] };
+  const violations = apiErrorBodyOf(cause)?.violations;
+  const reasons = Array.isArray(violations) && violations.length > 0 ? violations.map(objectiveValueRejectionOf) : ['other' as const];
+  return { kind: 'rejected', reasons };
+}
+
+/**
+ * **Μία απάντηση της ενότητας «Αντικειμενική αξία»** σε ακίνητο γραφείου — μερική διόρθωση, που ο server εφαρμόζει σε
+ * συναλλαγή πάνω στο φρέσκο έγγραφο. Ίδιο κλείδωμα συναλλαγής με κάθε άλλη αλλαγή (η ΜΙΑ λίστα, ADR-249).
+ *
+ * ⚠️ Δεν πετά ποτέ: η ουρά της οθόνης θέλει **αποτέλεσμα** (`saved` · `rejected` με λόγο · `failed` = ξαναδοκίμασε).
+ */
+export async function updatePropertyObjectiveValueWithPolicy({
+  propertyId,
+  currentProperty,
+  patch,
+}: {
+  readonly propertyId: string;
+  readonly currentProperty: PropertyMutationCurrentState;
+  readonly patch: ObjectiveValueDeclarationsPatch;
+}): Promise<ObjectiveValueWriteOutcome> {
+  if (isFieldLocked(currentProperty.commercialStatus, 'objectiveValueDeclarations')) {
+    return { kind: 'rejected', reasons: ['locked'] };
+  }
+  const updates = { objectiveValueDeclarations: patch };
+  assertPropertyMutationPolicy({ intent: 'update', propertyId, currentProperty, updates });
+  try {
+    await updatePropertyRecord(propertyId, updates as Partial<Property>);
+    return { kind: 'saved' };
+  } catch (cause) {
+    return objectiveValueFailureOf(cause);
+  }
+}

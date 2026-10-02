@@ -15,20 +15,19 @@
  * JSON της αγγελίας. Η πρόσοψη μένει, γιατί είναι χαρακτηριστικό του ακινήτου, όχι του υπολογισμού.
  */
 
-import { normalizePropertyType } from '@/constants/property-type-aliases';
-import { OBJECTIVE_VALUE_FORM_OF_TYPE } from '@/lib/objective-value/objective-value-form-of-type';
+import { objectiveValueFormOf } from '@/lib/objective-value/objective-value-form-of-type';
 import {
   listingObjectiveValueDeclarationsOf,
   readObjectiveValueDeclarations,
   type ListingObjectiveValueDeclarations,
+  type ObjectiveValueDeclarations,
 } from '@/lib/objective-value/objective-value-declarations';
-import type { ListingAttributeFields } from '@/types/public-listing';
+import type { ListingAttributeFields, PublicListing } from '@/types/public-listing';
 
 import type { ProjectableProperty } from './public-listing-projection-types';
 
 function isResidence(property: ProjectableProperty): boolean {
-  const type = normalizePropertyType(property.type);
-  return type !== null && OBJECTIVE_VALUE_FORM_OF_TYPE[type] === 'residence';
+  return objectiveValueFormOf(property.type) === 'residence';
 }
 
 /** Η πρόσοψη ως χαρακτηριστικό της αγγελίας — `null` αν δεν δηλώθηκε ή αν το είδος δεν είναι κατοικία. */
@@ -40,4 +39,20 @@ export function projectFrontage(property: ProjectableProperty): Pick<ListingAttr
 /** Τα στοιχεία υπολογισμού της αντικειμενικής — ή μόνο η απόκρυψη. */
 export function projectObjectiveValueDeclarations(property: ProjectableProperty): ListingObjectiveValueDeclarations {
   return listingObjectiveValueDeclarationsOf(readObjectiveValueDeclarations(property.objectiveValueDeclarations));
+}
+
+/**
+ * **Η αγγελία με ΑΛΛΕΣ δηλώσεις** — ό,τι θα έβγαζε η προβολή αν το έγγραφο είχε αυτές τις δηλώσεις (ADR-898 Φ3β-3).
+ *
+ * 🔑 Η οθόνη «Βελτίωσε την αγγελία σου» παίρνει τη βάση από τον server (σχήμα + γεγονότα δημοσίευσης) και απλώνει από
+ * πάνω την **αισιόδοξη** κατάσταση των δηλώσεων. Τα δύο πεδία που εξαρτώνται από τις δηλώσεις τα παράγουν οι **ίδιες**
+ * συναρτήσεις με την προβολή — καμία δεύτερη αντιστοίχιση. Καθαρή, ιδιοδύναμη.
+ */
+export function withObjectiveValueDeclarations(listing: PublicListing, declarations: ObjectiveValueDeclarations): PublicListing {
+  const source: ProjectableProperty = { id: listing.id, type: listing.type, objectiveValueDeclarations: declarations };
+  return {
+    ...listing,
+    ...projectFrontage(source),
+    objectiveValueDeclarations: projectObjectiveValueDeclarations(source),
+  };
 }

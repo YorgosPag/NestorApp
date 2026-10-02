@@ -1081,7 +1081,8 @@
         "floorplan": "Survey plan",
         "photos": "Photos"
       }
-    }
+    },
+    "improveLink": "Improve your listing"
   },
   "warningNoBuildingUnits": {
     "title": "Buildings Without Units",
