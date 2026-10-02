@@ -10,14 +10,14 @@
  * 🔑 **Ποτέ μόνο χρώμα** (CHECK 3.41 / WCAG 1.4.1): το υπόμνημα γράφει τα όρια, η διαγράμμιση έχει δική της γραμμή.
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import { unitPriceLabel } from '@/components/area-market/area-market-format';
 import { MapRampLegend, type MapLegendItem } from '@/components/market/MapRampLegend';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
 import { PRICE_MAP_BREAKS, priceMapLegend, type PriceMapSource } from '@/lib/market/price-map';
-import type { PriceMapChoice, PriceMapSelection } from '@/lib/market/price-map-view';
+import type { PriceMapChoice, PriceMapLabelText, PriceMapSelection } from '@/lib/market/price-map-view';
 
 const NS = 'price-map';
 
@@ -80,4 +80,36 @@ export function priceMapRowPrice(t: T, choice: PriceMapChoice, row: PriceMapSele
   if (resolution.kind === 'few') return t(`${NS}:table.few`);
   const price = priceMapPriceOf(t, choice, resolution.median);
   return resolution.kind === 'parent' ? `${price} (${inherited ?? t(`${NS}:table.inherited`)})` : price;
+}
+
+/**
+ * **Το κείμενο της ετικέτας τιμής πάνω σε μια περιοχή** (ADR-890 §15 · §18) — **ίδιοι** κανόνες με το υπόμνημα και τον
+ * πίνακα: δική τιμή ⇒ ο αριθμός · τιμή γονέα ⇒ «<βαθμίδα γονέα>: αριθμός» · λίγα ⇒ **ποτέ** αριθμός (`few`, ή `null` =
+ * καμία ετικέτα).
+ * @param parentLabel η τιμή του γονέα με το όνομα της βαθμίδας του (`childMapWordsOf(...).parentLabel`)
+ */
+export function priceMapLabelOf(
+  t: T,
+  choice: PriceMapChoice,
+  row: PriceMapSelection,
+  parentLabel: (price: string) => string,
+  few: string | null,
+): string | null {
+  const { resolution } = row;
+  if (resolution.kind === 'few') return few;
+  const price = priceMapPriceOf(t, choice, resolution.median);
+  return resolution.kind === 'own' ? price : parentLabel(price);
+}
+
+/** Σταθερή συνάρτηση κειμένου για το `priceMapLabelPointsOf` — αλλάζει μόνο όταν αλλάξουν επιλογή, λέξεις ή γλώσσα. */
+export function usePriceMapLabelText(
+  choice: PriceMapChoice | null,
+  parentLabel: ((price: string) => string) | null,
+  few: string | null,
+): PriceMapLabelText {
+  const { t } = useTranslation([...PRICE_MAP_WORD_NAMESPACES]);
+  return useCallback(
+    (row: PriceMapSelection) => (choice === null || parentLabel === null ? null : priceMapLabelOf(t, choice, row, parentLabel, few)),
+    [choice, few, parentLabel, t],
+  );
 }

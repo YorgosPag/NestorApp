@@ -27,12 +27,37 @@ import { BELOW_LISTINGS, LOWEST_BOUNDARY_LAYER } from '../boundary-paint';
 const PRICE_MAP_TIERS = ['municipality', 'municipal_unit'] as const satisfies readonly AdminOverviewTier[];
 export type PriceMapTier = (typeof PRICE_MAP_TIERS)[number];
 
-export const PRICE_MAP_TIER_IDS: Readonly<Record<PriceMapTier, { source: string; fill: string; hatch: string; line: string }>> = {
-  municipality: { source: 'price-map-municipality', fill: 'price-map-municipality-fill', hatch: 'price-map-municipality-hatch', line: 'price-map-municipality-line' },
-  municipal_unit: { source: 'price-map-unit', fill: 'price-map-unit-fill', hatch: 'price-map-unit-hatch', line: 'price-map-unit-line' },
+interface PriceMapTierIds {
+  readonly source: string;
+  readonly fill: string;
+  readonly hatch: string;
+  readonly line: string;
+  /** Οι ετικέτες τιμής (ADR-890 §18) — δική τους πηγή σημείων, όχι τα πολύγωνα. */
+  readonly labelSource: string;
+  readonly labels: string;
+}
+
+export const PRICE_MAP_TIER_IDS: Readonly<Record<PriceMapTier, PriceMapTierIds>> = {
+  municipality: {
+    source: 'price-map-municipality',
+    fill: 'price-map-municipality-fill',
+    hatch: 'price-map-municipality-hatch',
+    line: 'price-map-municipality-line',
+    labelSource: 'price-map-municipality-label-points',
+    labels: 'price-map-municipality-labels',
+  },
+  municipal_unit: {
+    source: 'price-map-unit',
+    fill: 'price-map-unit-fill',
+    hatch: 'price-map-unit-hatch',
+    line: 'price-map-unit-line',
+    labelSource: 'price-map-unit-label-points',
+    labels: 'price-map-unit-labels',
+  },
 };
 const FILL_LAYERS = [PRICE_MAP_TIER_IDS.municipality.fill, PRICE_MAP_TIER_IDS.municipal_unit.fill];
-const OWN_LAYERS = Object.values(PRICE_MAP_TIER_IDS).flatMap(({ fill, hatch, line }) => [fill, hatch, line]);
+/** Και οι ετικέτες κάτω από τις αγγελίες: η αγγελία μένει πάντα πάνω από τον αριθμό της περιοχής. */
+const OWN_LAYERS = Object.values(PRICE_MAP_TIER_IDS).flatMap(({ fill, hatch, line, labels }) => [fill, hatch, line, labels]);
 /** Κάτω από το όριο περιοχής (αν υπάρχει) και πάντα κάτω από τις αγγελίες. */
 const BELOW = [LOWEST_BOUNDARY_LAYER, BELOW_LISTINGS];
 

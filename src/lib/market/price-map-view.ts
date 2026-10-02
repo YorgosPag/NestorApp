@@ -15,7 +15,7 @@ import {
   type PriceMapResolution,
   type PriceMapSource,
 } from '@/lib/market/price-map';
-import type { AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
+import type { AdminOverviewFeature, AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
 import type { AskingOffer } from '@/types/area-market';
 
 /** Από αυτό το zoom και πάνω φαίνονται οι Δ.Ε.· κάτω οι Δήμοι (≈ 240 m/pixel στο πλάτος της Ελλάδας). */
@@ -146,6 +146,41 @@ export function comparePriceMapLabelPriority(a: PriceMapSelection, b: PriceMapSe
   const bySample = b.resolution.n - a.resolution.n;
   if (bySample !== 0) return bySample;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
+ * Το κείμενο της ετικέτας μιας περιοχής πάνω στον χάρτη — ο καλών το φτιάχνει από τις λέξεις του (i18n).
+ * `null` = **καμία** ετικέτα: ο χάρτης της αναζήτησης δεν γράφει «λίγα» πάνω σε ~100 περιοχές (ADR-890 §18).
+ */
+export type PriceMapLabelText = (row: PriceMapSelection) => string | null;
+
+/**
+ * **Οι ετικέτες τιμής ενός χωροπληθούς** (ADR-890 §15 · §17 · §18) — ένα σημείο ανά περιοχή, στο προϋπολογισμένο
+ * `label` του γεννήτορα. **Ένας** μηχανισμός για κάθε χάρτη τιμών (σελίδες περιοχής + αναζήτηση).
+ * - Το κείμενο ζει σε **ιδιότητα**, όχι σε `feature-state`: η MapLibre δεν διαβάζει κατάσταση σε `layout` (`text-field`).
+ * - Το `rank` (0 = πρώτη) είναι η δηλωμένη προτεραιότητα (`comparePriceMapLabelPriority`) και το διαβάζει το
+ *   `symbol-sort-key` της κοινής διάταξης (`priceMapLabelLayout`).
+ * - 🏆 Η **επιλεγμένη** περιοχή (κλικ · πέρασμα · γραμμή πίνακα) παίρνει `rank` −1: ο αριθμός που ζήτησε ο άνθρωπος
+ *   **δεν** κρύβεται ποτέ από σύγκρουση, όσο πυκνός κι αν είναι ο χάρτης.
+ */
+export function priceMapLabelPointsOf(
+  features: readonly AdminOverviewFeature[],
+  rows: readonly PriceMapSelection[],
+  text: PriceMapLabelText,
+  selectedId: string | null = null,
+): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const rankOf = new Map([...rows].sort(comparePriceMapLabelPriority).map((row, rank) => [row.id, rank]));
+  const points: GeoJSON.Feature<GeoJSON.Point>[] = [];
+  for (const feature of features) {
+    const { id, label } = feature.properties;
+    const row = byId.get(id);
+    const content = row === undefined ? null : text(row);
+    if (label === undefined || content === null) continue;
+    const rank = id === selectedId ? -1 : rankOf.get(id);
+    points.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [...label] }, properties: { id, text: content, rank } });
+  }
+  return { type: 'FeatureCollection', features: points };
 }
 
 /**

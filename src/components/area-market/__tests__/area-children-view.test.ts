@@ -6,10 +6,10 @@
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { AdminOverviewFeature } from '@/lib/geo/admin-overview-file';
 import type { PriceMapAreas } from '@/lib/market/price-map';
-import { comparePriceMapLabelPriority, rankedSelectionsOf, type PriceMapSelection } from '@/lib/market/price-map-view';
+import { comparePriceMapLabelPriority, priceMapLabelPointsOf, rankedSelectionsOf, type PriceMapSelection } from '@/lib/market/price-map-view';
 import { priceMapLabelLayout } from '@/components/market/choropleth/price-map-paint';
 
-import { childLabelsOf, childMapChoice, childPropertiesOf, childSegmentsOf, defaultChildSegment } from '../area-children-view';
+import { childMapChoice, childPropertiesOf, childSegmentsOf, defaultChildSegment } from '../area-children-view';
 
 const MUNICIPALITY: AdminArea = { id: 'municipality:0701', name: 'Δήμος Θεσσαλονίκης', level: 5, parentId: 'regional_unit:07' };
 const unit = (code: string, name: string): AdminArea => ({ id: `municipal_unit:${code}`, name, level: 6, parentId: MUNICIPALITY.id });
@@ -52,7 +52,7 @@ describe('area-children-view', () => {
       properties: { id, name: id, parent: MUNICIPALITY.id, parentName: MUNICIPALITY.name, ...(label === undefined ? {} : { label }) },
     });
     const rows = rankedSelectionsOf(properties, AREAS, childMapChoice('apartment'));
-    const labels = childLabelsOf(
+    const labels = priceMapLabelPointsOf(
       [feature('municipal_unit:070101', [22.96, 40.6]), feature('municipal_unit:070102'), feature('municipal_unit:999999', [1, 1])],
       rows,
       (row) => `${row.id}:${row.resolution.kind}`,
@@ -83,7 +83,7 @@ describe('area-children-view', () => {
         properties: { id, name: id, parent: MUNICIPALITY.id, parentName: MUNICIPALITY.name, label: [22.9, 40.6] },
       });
       const rows = rankedSelectionsOf(properties, AREAS, childMapChoice('apartment'));
-      const labels = childLabelsOf(CHILDREN.map((child) => feature(child.id)), rows, () => '');
+      const labels = priceMapLabelPointsOf(CHILDREN.map((child) => feature(child.id)), rows, () => '');
       expect(Object.fromEntries(labels.features.map((point) => [point.properties?.id, point.properties?.rank]))).toEqual({
         'municipal_unit:070101': 0,
         'municipal_unit:070102': 1,
@@ -91,7 +91,7 @@ describe('area-children-view', () => {
       });
     });
 
-    it('η κοινή διάταξη διαβάζει ΑΚΡΙΒΩΣ τις ιδιότητες που γράφει το `childLabelsOf`, με εναλλακτικές άγκυρες', () => {
+    it('η κοινή διάταξη διαβάζει ΑΚΡΙΒΩΣ τις ιδιότητες που γράφει το `priceMapLabelPointsOf`, με εναλλακτικές άγκυρες', () => {
       const layout = priceMapLabelLayout(['Noto Sans Regular']);
       expect(layout['symbol-sort-key']).toEqual(['get', 'rank']);
       expect(layout['text-field']).toEqual(['get', 'text']);

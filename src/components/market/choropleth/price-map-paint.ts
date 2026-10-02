@@ -78,7 +78,7 @@ export function priceMapLabelPaint(): { readonly color: string; readonly halo: s
 
 /**
  * **Η διάταξη της ετικέτας τιμής** (ADR-890 §17) — μία, για κάθε χάρτη που γράφει τιμή πάνω στην περιοχή. Διαβάζει τις
- * ιδιότητες `text` και `rank` του σημείου (`childLabelsOf`).
+ * ιδιότητες `text` και `rank` του σημείου (`priceMapLabelPointsOf`, ADR-890 §18) — απόδοση: `PriceMapLabelLayer`.
  *
  * Μετρημένο ζωντανά (Π.Ε. Θεσσαλονίκης, zoom 7,5, 14 Δήμοι): σταθερή άγκυρα **8/14** ορατές · με εναλλακτικές άγκυρες
  * **10/14** (Mapbox «variable label placement»). Η σύγκρουση ήταν **μόνο** ετικέτα-με-ετικέτα (ίδιο 8/14 χωρίς τα

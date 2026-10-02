@@ -12,11 +12,10 @@
  *   σύνδεσμοι στο τέλος της σελίδας (`AreaMarketContent`).
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
-import { PRICE_MAP_WORD_NAMESPACES, priceMapPriceOf } from '@/components/market/choropleth/price-map-words';
+import { PRICE_MAP_WORD_NAMESPACES, usePriceMapLabelText } from '@/components/market/choropleth/price-map-words';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { PriceMapSelection } from '@/lib/market/price-map-view';
 import type { AreaMarketPageData } from '@/types/area-market';
 
 import type { AreaMapMode } from './area-children-view';
@@ -26,20 +25,14 @@ import { AreaChildPricePanel } from './AreaChildPricePanel';
 import { AreaChildrenTable } from './AreaChildrenTable';
 import { useAreaChildMap, type AreaChildMapModel } from './useAreaChildMap';
 
-/** Το κείμενο της ετικέτας πάνω σε ένα παιδί: η τιμή του · «<γονέας>: τιμή» · «λίγα συμβόλαια». */
+/**
+ * Το κείμενο της ετικέτας πάνω σε ένα παιδί: η τιμή του · «<γονέας>: τιμή» · «λίγα συμβόλαια» (κοινοί κανόνες:
+ * `usePriceMapLabelText`). Λίγα παιδιά ⇒ το «λίγα» γράφεται: λέει κάτι, και δεν πνίγει τον χάρτη (ADR-890 §18).
+ */
 function useLabelText(model: AreaChildMapModel | null) {
   const { t } = useTranslation([...PRICE_MAP_WORD_NAMESPACES]);
   // Σταθερές εξαρτήσεις (`choice`/`words` είναι memo του μοντέλου) — το ίδιο το μοντέλο είναι νέο σε κάθε απόδοση.
-  const choice = model?.choice ?? null;
-  const words = model?.words ?? null;
-  return useCallback(
-    (row: PriceMapSelection): string => {
-      if (choice === null || words === null || row.resolution.kind === 'few') return t('area-market:childMap.fewLabel');
-      const price = priceMapPriceOf(t, choice, row.resolution.median);
-      return row.resolution.kind === 'own' ? price : words.parentLabel(price);
-    },
-    [choice, words, t],
-  );
+  return usePriceMapLabelText(model?.choice ?? null, model?.words.parentLabel ?? null, t('area-market:childMap.fewLabel'));
 }
 
 function usePriceSlot(model: AreaChildMapModel | null): AreaPriceMapSlot | null {

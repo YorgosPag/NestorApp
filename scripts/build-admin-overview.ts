@@ -8,9 +8,10 @@
  *                                   ──→ απλοποίηση ανά ΚΟΙΝΟ ΤΟΞΟ, ανά βαθμίδα
  * WFS «perifereiakes_enotites» (CC-BY) ──→ Π.Ε. (ίδια τοπολογία με τα φύλλα: 100% κοινές ακμές, §16)
  *                                   ──→ απλοποίηση ανά ΚΟΙΝΟ ΤΟΞΟ, ανά βαθμίδα
+ *                                   ──→ σημείο ετικέτας ανά περιοχή, ΜΙΑ φορά (ADR-890 §15.2 · §18)
  *                                   ──→ public/data/admin-overview/{regional_unit,municipality,municipal_unit}.json
- *                                   ──→ public/data/admin-overview/children/<γονέας>.json — τα παιδιά ΕΝΟΣ γονέα + σημείο
- *                                       ετικέτας, για τη σελίδα του (ADR-890 §15 Δήμος→Δ.Ε. · §16 Π.Ε.→Δήμοι, Περιφέρεια→Π.Ε.)
+ *                                   ──→ public/data/admin-overview/children/<γονέας>.json — τα παιδιά ΕΝΟΣ γονέα, για τη
+ *                                       σελίδα του (ADR-890 §15 Δήμος→Δ.Ε. · §16 Π.Ε.→Δήμοι, Περιφέρεια→Π.Ε.)
  * ```
  * **Εκτέλεση**: `npm run build:admin-overview` (η cache της πηγής είναι κοινή με το `build:admin-boundaries`).
  *
@@ -144,7 +145,10 @@ function overviewFeatures(
         intact += 1;
         geometry = simplifySharedArcs([area], 0, DECIMALS).geometries.get(area.id) ?? area.geometry;
       }
-      return { type: 'Feature', properties: propertiesOf(area, nameOf), geometry };
+      // Σημείο ετικέτας ΜΙΑ φορά, από την απλοποιημένη γεωμετρία — τα αρχεία παιδιών το κληρονομούν (ADR-890 §18).
+      const label = geoLabelPoint(geometry);
+      const properties = { ...propertiesOf(area, nameOf), ...(label === null ? {} : { label }) };
+      return { type: 'Feature', properties, geometry };
     });
   console.log(`   ${tier}: ${stats.vertices} → ${stats.kept} κορυφές · ${stats.junctions} κόμβοι · ${stats.arcs} τόξα · ${intact} αυτούσιες`);
   return features;
@@ -177,15 +181,17 @@ const CHILD_TIERS: readonly { readonly tier: AdminOverviewTier; readonly level: 
 
 type Hierarchy = ReadonlyMap<string, HierarchyRow>;
 
-/** Τα παιδιά μιας βαθμίδας ανά γονέα της ιεραρχίας — με γονέα και σημείο ετικέτας, στη σειρά της βαθμίδας. */
+/**
+ * Τα παιδιά μιας βαθμίδας ανά γονέα της ιεραρχίας — με γονέα, στη σειρά της βαθμίδας. Το σημείο ετικέτας έρχεται
+ * **αυτούσιο** από τη βαθμίδα (`overviewFeatures`): ίδια γεωμετρία ⇒ ίδιο σημείο, υπολογισμένο μία φορά.
+ */
 function childrenByParent(features: readonly AdminOverviewFeature[], level: number, hierarchy: Hierarchy): Map<string, AdminOverviewFeature[]> {
   const byParent = new Map<string, AdminOverviewFeature[]>();
   for (const feature of features) {
     const row = hierarchy.get(feature.properties.id);
     if (row === undefined || row.l !== level || row.p === null) continue;
     const parentName = hierarchy.get(row.p)?.n ?? null;
-    const label = geoLabelPoint(feature.geometry);
-    const properties = { ...feature.properties, parent: row.p, parentName, ...(label === null ? {} : { label }) };
+    const properties = { ...feature.properties, parent: row.p, parentName };
     byParent.set(row.p, [...(byParent.get(row.p) ?? []), { ...feature, properties }]);
   }
   return byParent;

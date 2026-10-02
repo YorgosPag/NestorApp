@@ -137,6 +137,8 @@ describe('ADR-890 §15 · §16 — αρχεία παιδιών ανά γονέα
         expect(feature.properties.parent).toBe(parentId);
         expect(areaIndex.get(feature.properties.id)?.parentId).toBe(parentId);
         expect(feature.geometry).toEqual(national?.get(feature.properties.id)?.geometry);
+        // §18: ΕΝΑ σημείο ανά περιοχή — το παιδί το κληρονομεί από τη βαθμίδα, ποτέ δεύτερος υπολογισμός.
+        expect(feature.properties.label).toEqual(national?.get(feature.properties.id)?.properties.label);
         const ring = feature.geometry.coordinates.flat(2);
         const [lon, lat] = feature.properties.label ?? [NaN, NaN];
         expect(lon).toBeGreaterThanOrEqual(Math.min(...ring.map((p) => p[0])));
@@ -157,5 +159,21 @@ describe('ADR-890 §15 · §16 — αρχεία παιδιών ανά γονέα
       for (const kid of kids) if (!drawn.has(kid.id)) gaps.push(`${area.id} ⇒ ${kid.id}`);
     }
     expect(gaps).toEqual([]);
+  });
+});
+
+describe('ADR-890 §18 — σημείο ετικέτας σε ΚΑΘΕ περιοχή των αρχείων της αναζήτησης (πραγματικά)', () => {
+  it.each(['municipality', 'municipal_unit'])('%s: κάθε περιοχή έχει `label` μέσα στο bbox της — αλλιώς η τιμή της δεν γράφεται ποτέ', (tier) => {
+    const missing: string[] = [];
+    for (const { properties, geometry } of overview(tier)?.features ?? []) {
+      const ring = geometry.coordinates.flat(2);
+      const [lon, lat] = properties.label ?? [NaN, NaN];
+      const inside =
+        lon >= Math.min(...ring.map((p) => p[0])) && lon <= Math.max(...ring.map((p) => p[0])) &&
+        lat >= Math.min(...ring.map((p) => p[1])) && lat <= Math.max(...ring.map((p) => p[1]));
+      if (!inside) missing.push(properties.id);
+    }
+    expect(overview(tier)?.features.length).toBeGreaterThan(300);
+    expect(missing).toEqual([]);
   });
 });

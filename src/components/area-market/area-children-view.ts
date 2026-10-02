@@ -1,6 +1,7 @@
 /**
  * @fileoverview **Η όψη του χάρτη σύγκρισης μιας σελίδας περιοχής** (ADR-890 §15 · §16) — καθαρές συναρτήσεις: ποια
- * τμήματα έχουν νόημα, η κατάταξη των παιδιών, οι ετικέτες πάνω στον χάρτη, οι τρόποι του χάρτη. Καμία εξάρτηση
+ * τμήματα έχουν νόημα, η κατάταξη των παιδιών, οι τρόποι του χάρτη. Οι ετικέτες τιμής ζουν στο κοινό
+ * `priceMapLabelPointsOf` (ADR-890 §18) — ένας μηχανισμός και για τον χάρτη της αναζήτησης. Καμία εξάρτηση
  * React/MapLibre. Ίδια για κάθε βαθμίδα: Περιφέρεια → Π.Ε. · Π.Ε. → Δήμοι · Δήμος → Δ.Ε.
  * @related `lib/market/price-map-view.ts` (η κατάταξη και οι καταστάσεις — ΙΔΙΕΣ με τον χάρτη της αναζήτησης) ·
  *   `AreaChildPriceLayer.tsx` · `AreaChildrenTable.tsx`
@@ -13,16 +14,10 @@
  */
 
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
-import type { AdminOverviewFeature, AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
+import type { AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
 import type { MarketSegment } from '@/lib/market/market-segments';
 import type { PriceMapAreas } from '@/lib/market/price-map';
-import {
-  comparePriceMapLabelPriority,
-  rankedSelectionsOf,
-  segmentsFor,
-  type PriceMapChoice,
-  type PriceMapSelection,
-} from '@/lib/market/price-map-view';
+import { rankedSelectionsOf, segmentsFor, type PriceMapChoice } from '@/lib/market/price-map-view';
 
 /** Το τμήμα με το οποίο ανοίγει ο χάρτης, όταν έχει νόημα — ίδια αφετηρία με τον χάρτη της αναζήτησης. */
 const DEFAULT_SEGMENT: MarketSegment = 'apartment';
@@ -55,29 +50,3 @@ export function defaultChildSegment(segments: readonly MarketSegment[]): MarketS
 /** Οι τρόποι του χάρτη μιας σελίδας: σύγκριση παιδιών (όπου υπάρχουν τιμές τους) και ζώνες (μόνο Δήμος/Δ.Ε., `hasValueZoneMap`). */
 export const AREA_MAP_MODES = ['prices', 'zones'] as const;
 export type AreaMapMode = (typeof AREA_MAP_MODES)[number];
-
-/** Το κείμενο της ετικέτας ενός παιδιού πάνω στον χάρτη — ο καλών το φτιάχνει από τις λέξεις του (i18n). */
-export type ChildLabelText = (row: PriceMapSelection) => string;
-
-/**
- * **Οι ετικέτες τιμής**, ένα σημείο ανά παιδί (το προϋπολογισμένο `label` του γεννήτορα). Το κείμενο ζει σε
- * **ιδιότητα**, όχι σε `feature-state`: η MapLibre δεν διαβάζει κατάσταση σε `layout` (`text-field`).
- * Το `rank` (0 = πρώτη) είναι η δηλωμένη προτεραιότητα τοποθέτησης (`comparePriceMapLabelPriority`, ADR-890 §17) και
- * το διαβάζει το `symbol-sort-key` της κοινής διάταξης (`priceMapLabelLayout`).
- */
-export function childLabelsOf(
-  features: readonly AdminOverviewFeature[],
-  rows: readonly PriceMapSelection[],
-  text: ChildLabelText,
-): GeoJSON.FeatureCollection<GeoJSON.Point> {
-  const byId = new Map(rows.map((row) => [row.id, row]));
-  const rankOf = new Map([...rows].sort(comparePriceMapLabelPriority).map((row, rank) => [row.id, rank]));
-  const points: GeoJSON.Feature<GeoJSON.Point>[] = [];
-  for (const feature of features) {
-    const { id, label } = feature.properties;
-    const row = byId.get(id);
-    if (label === undefined || row === undefined) continue;
-    points.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [...label] }, properties: { id, text: text(row), rank: rankOf.get(id) } });
-  }
-  return { type: 'FeatureCollection', features: points };
-}

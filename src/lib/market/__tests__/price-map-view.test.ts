@@ -3,17 +3,19 @@
  * ανά περιοχή (`feature-state`), ο πίνακας «Περιοχές στην οθόνη» (η εναλλακτική του κλικ για πληκτρολόγιο).
  */
 
-import type { AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
+import type { AdminOverviewFeature, AdminOverviewProperties } from '@/lib/geo/admin-overview-file';
 import type { PriceMapAreas } from '@/lib/market/price-map';
 import {
   VISIBLE_ROWS_LIMIT,
   defaultPriceMapChoice,
   featureStatesOf,
   normalizeChoice,
+  priceMapLabelPointsOf,
   segmentsFor,
   sourcesFor,
   visibleRowsOf,
   type PriceMapChoice,
+  type PriceMapSelection,
 } from '@/lib/market/price-map-view';
 
 const CHOICE: PriceMapChoice = { offer: 'sale', source: 'contracts', segment: 'apartment' };
@@ -65,5 +67,33 @@ describe('price-map-view — κατάσταση ανά περιοχή', () => {
     expect(rows.map((row) => row.id)).toEqual(['municipal_unit:12', 'municipal_unit:11', 'municipal_unit:99']);
     const many = Array.from({ length: 30 }, (_, index) => area(`municipal_unit:${index}`, `Π${index}`));
     expect(visibleRowsOf(many, AREAS, CHOICE)).toHaveLength(VISIBLE_ROWS_LIMIT);
+  });
+});
+
+describe('ADR-890 §18 — `priceMapLabelPointsOf`: ΕΝΑΣ μηχανισμός ετικετών για κάθε χάρτη τιμών', () => {
+  const feature = (id: string): AdminOverviewFeature => ({
+    type: 'Feature',
+    geometry: { type: 'MultiPolygon', coordinates: [] },
+    properties: { id, name: id, parent: null, parentName: null, label: [22.9, 40.6] },
+  });
+  const row = (id: string, resolution: PriceMapSelection['resolution']): PriceMapSelection => ({ id, name: id, parentName: null, resolution });
+  const ROWS = [
+    row('big', { kind: 'own', n: 900, median: 1500, classIndex: 3 }),
+    row('small', { kind: 'own', n: 6, median: 2400, classIndex: 4 }),
+    row('few', { kind: 'few', n: 2 }),
+  ];
+  const FEATURES = ROWS.map((item) => feature(item.id));
+  const ranks = (points: GeoJSON.FeatureCollection<GeoJSON.Point>) =>
+    Object.fromEntries(points.features.map((point) => [point.properties?.id, point.properties?.rank]));
+
+  it('η ΕΠΙΛΕΓΜΕΝΗ περιοχή παίρνει rank −1: ο αριθμός που ζήτησε ο άνθρωπος δεν κρύβεται ποτέ από σύγκρουση', () => {
+    expect(ranks(priceMapLabelPointsOf(FEATURES, ROWS, () => 'x'))).toEqual({ big: 0, small: 1, few: 2 });
+    expect(ranks(priceMapLabelPointsOf(FEATURES, ROWS, () => 'x', 'few'))).toEqual({ big: 0, small: 1, few: -1 });
+  });
+
+  it('κείμενο `null` ⇒ ΚΑΜΙΑ ετικέτα (ο χάρτης της αναζήτησης δεν γράφει «λίγα»)· οι υπόλοιπες κρατούν την προτεραιότητά τους', () => {
+    const points = priceMapLabelPointsOf(FEATURES, ROWS, (item) => (item.resolution.kind === 'few' ? null : item.id));
+    expect(points.features.map((point) => point.properties?.text)).toEqual(['big', 'small']);
+    expect(ranks(points)).toEqual({ big: 0, small: 1 });
   });
 });

@@ -19,23 +19,16 @@ import type { Map as MapInstance } from 'maplibre-gl';
 import React, { useEffect, useMemo, useRef } from 'react';
 
 import { useFeatureStateSync, useHatchImage, useLayerOrderBelow } from '@/components/market/choropleth/choropleth-sync';
-import {
-  priceMapFillPaint,
-  priceMapHatchPaint,
-  priceMapLabelLayout,
-  priceMapLabelPaint,
-  priceMapLinePaint,
-} from '@/components/market/choropleth/price-map-paint';
+import { priceMapFillPaint, priceMapHatchPaint, priceMapLinePaint } from '@/components/market/choropleth/price-map-paint';
+import { PriceMapLabelLayer } from '@/components/market/choropleth/PriceMapLabelLayer';
 import { PLACE_SHAPE_LINE_LAYER } from '@/components/geo/PlaceMap';
 import type { AdminOverviewFile } from '@/lib/geo/admin-overview-file';
 import { areaMarketHref } from '@/lib/listings/listing-routes';
-import { BASEMAP_OVERLAY_TEXT_FONT } from '@/lib/maps/basemap-catalog';
 import { Layer, Source, useMap, type MapLayerMouseEvent } from '@/lib/maps/maplibre';
 import { useBasemapScheme } from '@/lib/maps/use-basemap-scheme';
-import { featureStatesOf } from '@/lib/market/price-map-view';
+import { featureStatesOf, priceMapLabelPointsOf, type PriceMapLabelText } from '@/lib/market/price-map-view';
 import { useRouter } from '@/lib/workspace/navigation';
 
-import { childLabelsOf, type ChildLabelText } from './area-children-view';
 import type { AreaChildMapModel } from './useAreaChildMap';
 
 const IDS = {
@@ -48,13 +41,11 @@ const IDS = {
 } as const;
 const OWN_LAYERS = [IDS.fill, IDS.hatch, IDS.line];
 const BELOW = [PLACE_SHAPE_LINE_LAYER];
-/** Η κοινή διάταξη ετικετών. Στο JSX ξαναδηλώνονται ρητά `text-field` + `text-font` (CHECK 3.95 διαβάζει μόνο κυριολεκτικό `layout`)· το react-map-gl διαφοροποιεί το `layout` ανά κλειδί (deepEqual) ⇒ νέο αντικείμενο ανά απόδοση δεν ξαναστέλνει τίποτα. */
-const LABEL_LAYOUT = priceMapLabelLayout(BASEMAP_OVERLAY_TEXT_FONT);
 
 interface AreaChildPriceLayerProps {
   readonly model: AreaChildMapModel;
   readonly file: AdminOverviewFile;
-  readonly labelText: ChildLabelText;
+  readonly labelText: PriceMapLabelText;
 }
 
 function useChildMapInstance(): MapInstance | undefined {
@@ -120,16 +111,17 @@ export function AreaChildPriceLayer({ model, file, labelText }: AreaChildPriceLa
   const map = useChildMapInstance();
   const scheme = useBasemapScheme();
   const states = useMemo(() => featureStatesOf(file.features, model.areas, model.choice), [file, model.areas, model.choice]);
-  const labels = useMemo(() => childLabelsOf(file.features, model.rows, labelText), [file, labelText, model.rows]);
+  const activeId = model.active?.id ?? null;
+  const labels = useMemo(() => priceMapLabelPointsOf(file.features, model.rows, labelText, activeId), [activeId, file, labelText, model.rows]);
   // Το θέμα στις εξαρτήσεις: αλλαγή θέματος ⇒ νέα χρώματα από τα tokens + νέα διαφάνεια για το νέο υπόβαθρο.
   const paint = useMemo(
-    () => ({ fill: priceMapFillPaint(scheme), hatch: priceMapHatchPaint(scheme), line: priceMapLinePaint(), label: priceMapLabelPaint() }),
+    () => ({ fill: priceMapFillPaint(scheme), hatch: priceMapHatchPaint(scheme), line: priceMapLinePaint() }),
     [scheme],
   );
 
   useHatchImage(map, scheme);
   useLayerOrderBelow(map, OWN_LAYERS, BELOW);
-  useFeatureStateSync(map, IDS.source, states, model.active?.id ?? null);
+  useFeatureStateSync(map, IDS.source, states, activeId);
   useChildInteraction(map, model);
 
   if (map === undefined) return null;
@@ -140,14 +132,7 @@ export function AreaChildPriceLayer({ model, file, labelText }: AreaChildPriceLa
         <Layer id={IDS.hatch} type="fill" paint={paint.hatch} />
         <Layer id={IDS.line} type="line" paint={paint.line} />
       </Source>
-      <Source id={IDS.labelSource} type="geojson" data={labels}>
-        <Layer
-          id={IDS.labels}
-          type="symbol"
-          layout={{ ...LABEL_LAYOUT, 'text-field': ['get', 'text'], 'text-font': BASEMAP_OVERLAY_TEXT_FONT }}
-          paint={{ 'text-color': paint.label.color, 'text-halo-color': paint.label.halo, 'text-halo-width': 1.5 }}
-        />
-      </Source>
+      <PriceMapLabelLayer sourceId={IDS.labelSource} layerId={IDS.labels} points={labels} />
     </>
   );
 }
