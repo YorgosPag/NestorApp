@@ -20,7 +20,9 @@ export type { LinkableItem } from './BuildingSpaceLinkDialog';
 export type { SpaceFilterOption, SpaceSelectFilter } from './BuildingSpaceFilterBar';
 
 export { buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './buildingSpaceCardFields';
-export { buildPriceColumn } from './buildingSpacePriceColumn';
+export { buildPriceColumns } from './buildingSpacePriceColumn';
+export { buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn } from './buildingSpaceColumns';
+export { useSpaceTableExport } from './useSpaceTableExport';
 
 export type {
   SpaceColumn,

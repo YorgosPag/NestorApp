@@ -3,6 +3,9 @@
 /**
  * Building Space Filter Bar — search + type/status selects + export action.
  *
+ * ADR-898 Φ4β: το κουμπί εξαγωγής ζωγραφίζεται **μόνο** με `exportAction` — ως τότε ήταν ετικέτα χωρίς `onClick` και
+ * στις τρεις καρτέλες (κουμπί που δεν έκανε τίποτα). Ο τύπος το εγγυάται: χωρίς ενέργεια, κανένα κουμπί.
+ *
  * ONE filter bar for every building space tab (Units, Parking, Storage): the three tabs
  * carried the same markup as parallel twins (CHECK 3.28). Labels come from the caller, so
  * each tab keeps its own i18n namespace; the value narrowing is membership-based — the
@@ -12,7 +15,6 @@
  */
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -21,9 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, BarChart3 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { SpaceExportButton } from './SpaceExportButton';
+import type { ExportAction } from './useExportAction';
 
 export interface SpaceFilterOption<V extends string> {
   readonly value: V;
@@ -44,7 +48,8 @@ interface BuildingSpaceFilterBarProps<T extends string, S extends string> {
   readonly onSearchChange: (value: string) => void;
   readonly typeFilter: SpaceSelectFilter<T>;
   readonly statusFilter: SpaceSelectFilter<S>;
-  readonly exportLabel: string;
+  /** Η εξαγωγή XLSX του πίνακα (`useSpaceTableExport`) — χωρίς αυτήν **δεν** υπάρχει κουμπί. */
+  readonly exportAction?: ExportAction;
 }
 
 /** `'all'`, a listed option, or `null` for anything else — narrowing by membership, never a cast. */
@@ -83,7 +88,7 @@ export function BuildingSpaceFilterBar<T extends string, S extends string>({
   onSearchChange,
   typeFilter,
   statusFilter,
-  exportLabel,
+  exportAction,
 }: BuildingSpaceFilterBarProps<T, S>) {
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
@@ -105,10 +110,7 @@ export function BuildingSpaceFilterBar<T extends string, S extends string>({
           <SpaceSelect filter={typeFilter} />
           <SpaceSelect filter={statusFilter} />
 
-          <Button variant="outline" className="flex items-center gap-2">
-            <BarChart3 className={iconSizes.sm} />
-            {exportLabel}
-          </Button>
+          {exportAction && <SpaceExportButton action={exportAction} />}
         </fieldset>
       </CardContent>
     </Card>

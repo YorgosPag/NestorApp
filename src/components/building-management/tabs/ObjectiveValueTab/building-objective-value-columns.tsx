@@ -67,28 +67,22 @@ function boundsOf(value: BuildingUnitObjectiveValue): { readonly low: number; re
 
 /**
  * Στήλες **μόνο για την εξαγωγή** (η οθόνη δείχνει το εύρος ως κείμενο στη στήλη αξίας): ελάχιστο · μέγιστο · τι ήρθε
- * από το κτίριο. Ο πίνακας τις φιλτράρει (`isScreenColumn`) — η εξαγωγή τις παίρνει με τη σειρά τους.
+ * από το κτίριο. Σημαία `exportOnly`: ο πίνακας δεν τις ζωγραφίζει — η εξαγωγή τις παίρνει με τη σειρά τους.
  */
 function exportOnlyBoundsColumns(labels: BuildingObjectiveValueLabels): SpaceColumn<BuildingUnitObjectiveValueRow>[] {
   const { t } = labels;
   const none = () => null;
   return [
-    { key: 'low', label: t(`${B}.export.columns.low`), render: none, exportCell: (row) => boundsOf(row.value)?.low ?? null, exportFormat: 'currency' },
-    { key: 'high', label: t(`${B}.export.columns.high`), render: none, exportCell: (row) => boundsOf(row.value)?.high ?? null, exportFormat: 'currency' },
+    { key: 'low', label: t(`${B}.export.columns.low`), exportOnly: true, render: none, exportCell: (row) => boundsOf(row.value)?.low ?? null, exportFormat: 'currency' },
+    { key: 'high', label: t(`${B}.export.columns.high`), exportOnly: true, render: none, exportCell: (row) => boundsOf(row.value)?.high ?? null, exportFormat: 'currency' },
     {
       key: 'inherited',
       label: t(`${B}.export.columns.inherited`),
+      exportOnly: true,
       render: none,
       exportCell: (row) => (row.value.kind === 'evaluated' ? labels.inherited(row.value.inherited) : null),
     },
   ];
-}
-
-const EXPORT_ONLY_KEYS: ReadonlySet<string> = new Set(['low', 'high', 'inherited']);
-
-/** Στήλη που ζωγραφίζεται στην οθόνη (οι υπόλοιπες υπάρχουν μόνο στο αρχείο). */
-export function isScreenColumn(column: SpaceColumn<BuildingUnitObjectiveValueRow>): boolean {
-  return !EXPORT_ONLY_KEYS.has(column.key);
 }
 
 export function buildingObjectiveValueColumns(

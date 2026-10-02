@@ -13,7 +13,6 @@
  */
 
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import {
@@ -21,7 +20,11 @@ import {
   buildFloorField,
   buildAreaField,
   buildPriceField,
+  buildAreaColumn,
+  buildFloorColumn,
+  buildPriceColumns,
 } from '../shared';
+import { propertyDisplayArea } from '@/lib/properties/property-display-area';
 import {
   UNIT_STATUS_COLOR_MAP,
   getPropertyTypeLabel,
@@ -50,10 +53,12 @@ export function renderUnitStatusBadge(status: string, tUnits: TFn) {
 }
 
 /**
- * Table columns for the units table.
+ * Table columns for the units table — screen **and** XLSX export from ONE definition (ADR-898 Φ4β).
  *
  * `sortValue` may return `null` — the row then sorts to the END in both
  * directions rather than being ranked as the smallest (ADR-777 Α6).
+ * The price pair (amount + export-only unit) comes from `buildPriceColumns`: the units table shows the
+ * price like its Parking/Storage siblings, never three axes in one numeric column.
  */
 export function usePropertyTabColumns(
   t: TFn,
@@ -66,6 +71,7 @@ export function usePropertyTabColumns(
       label: t('tabs.floors.name'),
       sortValue: (u) => u.name,
       render: (u) => <span className="font-medium">{u.name}</span>,
+      exportCell: (u) => u.name || null,
     },
     {
       key: 'type',
@@ -73,30 +79,18 @@ export function usePropertyTabColumns(
       width: 'w-28',
       sortValue: (u) => u.type,
       render: (u) => <span className={mutedTextClass}>{getPropertyTypeLabel(u.type, tUnits)}</span>,
+      exportCell: (u) => getPropertyTypeLabel(u.type, tUnits),
     },
-    {
-      key: 'floor',
-      label: t('tabs.floors.number'),
-      width: 'w-20',
-      sortValue: (u) => u.floor || '',
-      render: (u) => <span className={cn('font-mono text-sm', mutedTextClass)}>{u.floor}</span>,
-    },
-    {
-      key: 'area',
-      label: 'm²',
-      width: 'w-20',
-      sortValue: (u) => u.areas?.gross || u.areas?.net || u.area || 0,
-      render: (u) => {
-        const a = u.areas?.gross || u.areas?.net || u.area;
-        return <span className="font-mono text-xs">{a ? `${a}` : '—'}</span>;
-      },
-    },
+    buildFloorColumn<Property>(t('tabs.floors.number'), (u) => u.floor, mutedTextClass),
+    buildAreaColumn<Property>(t('spaceColumns.area'), propertyDisplayArea),
+    ...buildPriceColumns<Property>({ price: tUnits('table.price'), unit: t('spaceColumns.priceUnit') }, tUnits, (u) => u.name),
     {
       key: 'status',
       label: t('tabs.labels.details'),
       width: 'w-28',
       sortValue: (u) => u.status,
       render: (u) => renderUnitStatusBadge(u.status, tUnits),
+      exportCell: (u) => getPropertyStatusLabel(u.status, tUnits),
     },
   ], [t, tUnits, mutedTextClass]);
 }
@@ -111,7 +105,7 @@ export function usePropertyTabCardFields(tUnits: TFn): SpaceCardField<Property>[
   return useMemo(() => [
     buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
     buildFloorField(tUnits('card.stats.floor'), (u) => (u.floor != null ? String(u.floor) : undefined)),
-    buildAreaField((u) => u.areas?.gross || u.areas?.net || u.area),
+    buildAreaField((u) => propertyDisplayArea(u) ?? undefined),
     buildPriceField(tUnits('table.price'), tUnits),
   ], [tUnits]);
 }

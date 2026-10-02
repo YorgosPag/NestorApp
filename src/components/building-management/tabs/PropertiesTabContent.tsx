@@ -19,7 +19,8 @@ import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, BuildingSpaceViewSwitch, useSpaceTableExport } from '../shared';
+import { propertyDisplayArea } from '@/lib/properties/property-display-area';
 import type { LinkableItem } from '../shared';
 import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -145,7 +146,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     available: units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length,
     // ADR-777 Α5/Α6 + §8.60.14.13 — the price SSoT, PER ROLE (never one sum across units).
     priceTotals: totalPriceByRole(units),
-    totalArea: units.reduce((sum, u) => sum + (u.areas?.gross || u.areas?.net || u.area || 0), 0),
+    totalArea: units.reduce((sum, u) => sum + (propertyDisplayArea(u) ?? 0), 0),
   }), [units]);
 
   const filteredUnits = useMemo(() => {
@@ -267,6 +268,31 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   // όπως ήδη κάνει η αδελφή καρτέλα στάθμευσης με το `parking-tab-config`.
   const unitColumns = usePropertyTabColumns(t, tUnits, colors.text.muted);
   const unitCardFields = usePropertyTabCardFields(tUnits);
+
+  // Μία περιγραφή φίλτρων για την μπάρα ΚΑΙ για τις «Παραδοχές» της εξαγωγής (ADR-898 Φ4β).
+  const typeFilter = {
+    value: filterType,
+    onChange: setFilterType,
+    options: UNIT_TYPES_FOR_FILTER.map((ut) => ({ value: ut, label: getPropertyTypeLabel(ut, tUnits) })),
+    allLabel: t('allTypes', { ns: 'filters' }),
+  };
+  const statusFilter = {
+    value: filterStatus,
+    onChange: setFilterStatus,
+    options: UNIT_STATUSES_FOR_FILTER.map((us) => ({ value: us, label: getPropertyStatusLabel(us, tUnits) })),
+    allLabel: t('allStatuses', { ns: 'filters' }),
+  };
+  const tableExport = useSpaceTableExport({
+    buildingName: building.name,
+    tabLabel: t('tabs.labels.units'),
+    columns: unitColumns,
+    items: filteredUnits,
+    totalCount: units.length,
+    viewMode,
+    searchTerm,
+    typeFilter,
+    statusFilter,
+  });
   const getStatusBadge = (status: string) => renderUnitStatusBadge(status, tUnits);
 
   // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
@@ -319,19 +345,9 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
         searchPlaceholder={t('unitStats.searchPlaceholder')}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        typeFilter={{
-          value: filterType,
-          onChange: setFilterType,
-          options: UNIT_TYPES_FOR_FILTER.map((ut) => ({ value: ut, label: getPropertyTypeLabel(ut, tUnits) })),
-          allLabel: t('allTypes', { ns: 'filters' }),
-        }}
-        statusFilter={{
-          value: filterStatus,
-          onChange: setFilterStatus,
-          options: UNIT_STATUSES_FOR_FILTER.map((us) => ({ value: us, label: getPropertyStatusLabel(us, tUnits) })),
-          allLabel: t('allStatuses', { ns: 'filters' }),
-        }}
-        exportLabel={t('unitStats.exportReport')}
+        typeFilter={typeFilter}
+        statusFilter={statusFilter}
+        exportAction={tableExport.exportAction}
       />
 
       <UnitQuickCreateSheet
@@ -387,10 +403,11 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
             items={filteredUnits}
             columns={unitColumns}
             getKey={(u) => u.id}
+            {...tableExport.tableSort}
             actions={spaceActions}
             actionState={spaceActionState}
             editingId={edit.editingId}
-            renderEditRow={() => <PropertyInlineEditRow edit={edit} tUnits={tUnits} />}
+            renderEditRow={(u) => <PropertyInlineEditRow edit={edit} tUnits={tUnits} unit={u} />}
           />
           <footer className={cn("text-xs", colors.text.muted)}>
             {filteredUnits.length} {t('tabs.labels.units')}

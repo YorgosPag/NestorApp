@@ -24,8 +24,7 @@ import type { ParkingSpot } from '@/types/parking';
 import { PARKING_TYPES } from '@/types/parking';
 import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
 import { useSpaceAvailabilityOptions } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
-import { spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn, BuildingSpaceViewSwitch } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceViewSwitch } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -56,16 +55,18 @@ export function ParkingTabContent({ building }: { building: Building }) {
   const hasAnyParking = useHasAnyParking();
   const availability = useSpaceAvailabilityOptions();
 
+  // Ένας ορισμός στηλών για οθόνη ΚΑΙ εξαγωγή XLSX (ADR-898 Φ4β) — όροφος/επιφάνεια/τιμή/διάθεση από τα κοινά.
+  const availabilityColumn = useSpaceAvailabilityColumn<ParkingSpot>();
   const parkingColumns: SpaceColumn<ParkingSpot>[] = useMemo(() => [
-    { key: 'number', label: t('general.fields.spotCode'), sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span> },
-    { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className={colors.text.muted}>{t(`types.${s.type || 'standard'}`)}</span> },
-    { key: 'floor', label: t('general.fields.floor'), width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className={colors.text.muted}>{s.floor || '—'}</span> },
-    { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
-    // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης).
-    buildPriceColumn<ParkingSpot>(t('general.fields.price'), t, (s) => s.number),
+    { key: 'number', label: t('general.fields.spotCode'), sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span>, exportCell: (s) => s.number || null },
+    { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className={colors.text.muted}>{t(`types.${s.type || 'standard'}`)}</span>, exportCell: (s) => t(`types.${s.type || 'standard'}`) },
+    buildFloorColumn<ParkingSpot>(t('general.fields.floor'), (s) => s.floor, colors.text.muted),
+    buildAreaColumn<ParkingSpot>(tBuilding('spaceColumns.area'), (s) => s.area || null),
+    // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης)· στο αρχείο ποσό + μονάδα.
+    ...buildPriceColumns<ParkingSpot>({ price: t('general.fields.price'), unit: tBuilding('spaceColumns.priceUnit') }, t, (s) => s.number),
     // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση· ποτέ το παλιό `status`.
-    { key: 'status', label: t('properties-enums:unitStatus.availability'), width: 'w-36', sortValue: (s) => spaceAvailabilityBucket(s), render: (s) => <SpaceStatusBadges space={s} /> },
-  ], [t, colors.text.muted]);
+    availabilityColumn,
+  ], [t, tBuilding, colors.text.muted, availabilityColumn]);
 
   const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
     buildTypeCodeField(t('general.fields.type'), (s) => t(`types.${s.type || 'standard'}`), (s) => s.code),
@@ -85,13 +86,32 @@ export function ParkingTabContent({ building }: { building: Building }) {
 
   const spaceActionState = { unlinkingId: state.unlinkingId, deletingId: state.deletingId };
 
+  // Μία περιγραφή φίλτρων για την μπάρα ΚΑΙ για τις «Παραδοχές» της εξαγωγής (ADR-898 Φ4β).
+  const typeFilter = {
+    value: state.filterType,
+    onChange: state.setFilterType,
+    options: PARKING_TYPES.map((pt) => ({ value: pt, label: t(`types.${pt}`) })),
+    allLabel: t('allTypes', { ns: 'filters' }),
+  };
+  const statusFilter = { value: state.filterStatus, onChange: state.setFilterStatus, options: availability.options, allLabel: availability.allLabel };
+  const tableExport = useSpaceTableExport({
+    buildingName: building.name,
+    tabLabel: tBuilding('tabs.labels.parking'),
+    columns: parkingColumns,
+    items: state.filteredSpots,
+    totalCount: state.parkingSpots.length,
+    viewMode: state.viewMode,
+    searchTerm: state.searchTerm,
+    typeFilter,
+    statusFilter,
+  });
+
   if (state.loading) {
     return <BuildingSpaceTabLoading />;
   }
 
   if (state.error) {
-    // eslint-disable-next-line custom/no-hardcoded-strings
-    return <BuildingSpaceTabError message={state.error} retryLabel="Retry" onRetry={state.fetchParkingSpots} />;
+    return <BuildingSpaceTabError message={state.error} retryLabel={tBuilding('unitStats.retry')} onRetry={state.fetchParkingSpots} />;
   }
 
   return (
@@ -123,19 +143,9 @@ export function ParkingTabContent({ building }: { building: Building }) {
         searchPlaceholder={tBuilding('parkingStats.searchPlaceholder')}
         searchTerm={state.searchTerm}
         onSearchChange={state.setSearchTerm}
-        typeFilter={{
-          value: state.filterType,
-          onChange: state.setFilterType,
-          options: PARKING_TYPES.map((pt) => ({ value: pt, label: t(`types.${pt}`) })),
-          allLabel: t('allTypes', { ns: 'filters' }),
-        }}
-        statusFilter={{
-          value: state.filterStatus,
-          onChange: state.setFilterStatus,
-          options: availability.options,
-          allLabel: availability.allLabel,
-        }}
-        exportLabel={tBuilding('parkingStats.exportReport')}
+        typeFilter={typeFilter}
+        statusFilter={statusFilter}
+        exportAction={tableExport.exportAction}
       />
 
       <ParkingQuickCreateSheet
@@ -192,6 +202,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
           <BuildingSpaceTable<ParkingSpot>
             items={state.filteredSpots}
             columns={parkingColumns}
+            {...tableExport.tableSort}
             getKey={(s) => s.id}
             actions={spaceActions}
             actionState={spaceActionState}

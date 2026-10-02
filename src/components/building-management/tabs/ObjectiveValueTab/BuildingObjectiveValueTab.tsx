@@ -13,16 +13,16 @@
 import React, { useCallback, useId, useMemo, useState } from 'react';
 
 import { useObjectiveValueFactorLabel } from '@/components/objective-value/ObjectiveValueResult';
-import { Button } from '@/components/ui/button';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import type { BuildingObjectiveValues, BuildingUnitObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
-import { createModuleLogger } from '@/lib/telemetry';
 
 import { BuildingSpaceTabError, BuildingSpaceTabLoading } from '../../shared/BuildingSpaceTabStatus';
 import { BuildingSpaceTable } from '../../shared/BuildingSpaceTable';
+import { SpaceExportButton } from '../../shared/SpaceExportButton';
 import type { SortState } from '../../shared/space-table-sort';
 import type { SpaceColumn } from '../../shared/types';
-import { buildingObjectiveValueColumns, FLOOR_COLUMN_KEY, isScreenColumn } from './building-objective-value-columns';
+import { useExportAction } from '../../shared/useExportAction';
+import { buildingObjectiveValueColumns, FLOOR_COLUMN_KEY } from './building-objective-value-columns';
 import { exportBuildingObjectiveValuesXlsx } from './building-objective-value-xlsx';
 import { BuildingObjectiveValueFacts, focusBuildingFact } from './BuildingObjectiveValueFacts';
 import { BuildingObjectiveValueSummary } from './BuildingObjectiveValueSummary';
@@ -32,7 +32,6 @@ import { useBuildingObjectiveValueTab, type BuildingObjectiveValueTabState } fro
 
 const B = 'objective-value:building';
 const BY_FLOOR: SortState = { key: FLOOR_COLUMN_KEY, direction: 'asc' };
-const logger = createModuleLogger('BuildingObjectiveValueTab');
 
 export interface BuildingObjectiveValueTabProps {
   readonly buildingId: string;
@@ -62,28 +61,11 @@ interface ExportInput {
   readonly labels: BuildingObjectiveValueLabels;
 }
 
-/** Το κουμπί εξαγωγής: «Εξαγωγή…» όσο γράφεται το αρχείο, και **λόγος** σε αποτυχία — ποτέ σιωπηλό κλικ. */
+/** Η εξαγωγή διαβάζει ό,τι δείχνει η οθόνη **τη στιγμή του κλικ** (δεδομένα · στήλες · σειρά) — κοινό κουμπί και κατάσταση. */
 function ExportButton({ input }: { readonly input: ExportInput }) {
   const factorLabel = useObjectiveValueFactorLabel();
-  const [status, setStatus] = useState<'idle' | 'busy' | 'failed'>('idle');
-  const { t } = input.labels;
-  const run = () => {
-    setStatus('busy');
-    exportBuildingObjectiveValuesXlsx({ ...input, factorLabel, exportedOn: marketDayOf(Date.now()) })
-      .then(() => setStatus('idle'))
-      .catch((cause: unknown) => {
-        logger.warn('Η εξαγωγή XLSX απέτυχε', { error: cause instanceof Error ? cause.message : String(cause) });
-        setStatus('failed');
-      });
-  };
-  return (
-    <span className="flex flex-col items-end gap-1">
-      <Button type="button" variant="outline" size="sm" disabled={status === 'busy'} onClick={run}>
-        {t(status === 'busy' ? `${B}.export.busy` : `${B}.export.button`)}
-      </Button>
-      {status === 'failed' && <span role="alert" className="text-xs text-destructive">{t(`${B}.export.failed`)}</span>}
-    </span>
-  );
+  const action = useExportAction(() => exportBuildingObjectiveValuesXlsx({ ...input, factorLabel, exportedOn: marketDayOf(Date.now()) }));
+  return <SpaceExportButton action={action} />;
 }
 
 interface ReadyProps {
@@ -99,7 +81,6 @@ function Ready({ data, buildingName, refreshing, state, labels, onNavigateToTab 
   const sheet = useUnitSheet();
   const [sort, setSort] = useState<SortState | null>(BY_FLOOR);
   const columns = useMemo(() => buildingObjectiveValueColumns(labels, sheet.show), [labels, sheet.show]);
-  const screenColumns = useMemo(() => columns.filter(isScreenColumn), [columns]);
   const { t } = labels;
   const exportInput: ExportInput = { data, buildingName, columns, sort, labels };
   return (
@@ -124,7 +105,7 @@ function Ready({ data, buildingName, refreshing, state, labels, onNavigateToTab 
       {data.units.length === 0 ? (
         <p className="m-0 text-sm text-muted-foreground">{t(`${B}.empty`)}</p>
       ) : (
-        <BuildingSpaceTable items={[...data.units]} columns={screenColumns} getKey={(row) => row.id} initialSort={BY_FLOOR} onSortChange={setSort} />
+        <BuildingSpaceTable items={[...data.units]} columns={columns} getKey={(row) => row.id} initialSort={BY_FLOOR} onSortChange={setSort} />
       )}
       <p className="m-0 text-xs text-muted-foreground">{t('objective-value:result.disclaimer')}</p>
       <BuildingUnitObjectiveValueSheet row={sheet.row} open={sheet.open} labels={labels} onClose={sheet.close} />

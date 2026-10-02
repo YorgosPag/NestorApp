@@ -10,11 +10,11 @@
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { BuildingSpaceTable } from '../BuildingSpaceTable';
-import { buildPriceColumn } from '../buildingSpacePriceColumn';
+import { buildPriceColumns } from '../buildingSpacePriceColumn';
 import { buildPriceField } from '../buildingSpaceCardFields';
 import type { SpaceColumn } from '../types';
 import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
-import { PRICE_AMOUNT_KEY, PRICE_SECTION_KEY } from '@/lib/listings/listing-price-keys';
+import { PRICE_AMOUNT_KEY, PRICE_RANGE_ROLE_KEY, PRICE_SECTION_KEY } from '@/lib/listings/listing-price-keys';
 import type { PriceLabelT } from '@/lib/listings/listing-price-label';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -43,7 +43,7 @@ const unpriced = (number: string): Spot => ({ id: number, number, commercialStat
 
 const COLUMNS: SpaceColumn<Spot>[] = [
   { key: 'number', label: 'number', sortValue: (s) => s.number, render: (s) => <span>{s.number}</span> },
-  buildPriceColumn<Spot>('price', t, (s) => s.number),
+  ...buildPriceColumns<Spot>({ price: 'price', unit: 'priceUnit' }, t, (s) => s.number),
 ];
 
 const MIXED = [sale('P3', 18_000), rent('P1', 60), unpriced('P4'), sale('P2', 12_000), rent('P5', 90)];
@@ -94,7 +94,8 @@ describe('Α. ΣΕΙΡΑ ΚΑΤΑ ΤΙΜΗ = ΟΜΑΔΑ (μονάδα) → ΑΡ�
     fireEvent.click(screen.getByText('price'));
     const header = document.querySelector('th[scope="rowgroup"]');
     expect(header?.textContent).toBe(`${PRICE_SECTION_KEY.sale}|{"count":2}`);
-    expect(header?.getAttribute('colspan')).toBe(String(COLUMNS.length));
+    // Μόνο οι στήλες της οθόνης — η «Μονάδα τιμής» (`exportOnly`) ζει μόνο στο αρχείο.
+    expect(header?.getAttribute('colspan')).toBe(String(COLUMNS.filter((c) => !c.exportOnly).length));
   });
 
   it('Α4 — ΜΙΑ μονάδα ⇒ ΚΑΜΙΑ γραμμή-επικεφαλίδα (ο πίνακας μένει ο σημερινός)', () => {
@@ -127,8 +128,26 @@ describe('Β. ΤΟ ΚΕΛΙ ΓΡΑΦΕΙ ΤΗ ΜΟΝΑΔΑ', () => {
   });
 
   it('Β3 — η στήλη τιμής ΔΕΝ έχει επίπεδο κλειδί (`sortValue`): η επίπεδη σειρά δεν εκφράζεται', () => {
-    const column = buildPriceColumn<Spot>('price', t, (s) => s.number);
+    const [column] = buildPriceColumns<Spot>({ price: 'price', unit: 'priceUnit' }, t, (s) => s.number);
     expect(column.sortValue).toBeUndefined();
     expect(column.sortGroups).toBeDefined();
+  });
+
+  it('Γ1 — στο αρχείο: ποσό ΩΣ ΑΡΙΘΜΟΣ + «Μονάδα τιμής» δίπλα· η μονάδα ΔΕΝ ζωγραφίζεται στην οθόνη', () => {
+    const [price, unit] = buildPriceColumns<Spot>({ price: 'price', unit: 'priceUnit' }, t, (s) => s.number);
+    expect(price.exportFormat).toBe('currency');
+    expect(price.exportCell?.(rent('P1', 60))).toBe(60);
+    expect(unit.exportCell?.(rent('P1', 60))).toBe(PRICE_RANGE_ROLE_KEY.rent);
+    expect(unit.exportCell?.(sale('P2', 12_000))).toBe(PRICE_RANGE_ROLE_KEY.sale);
+    expect(unit.exportOnly).toBe(true);
+    draw(MIXED);
+    expect(screen.queryByText('priceUnit')).toBeNull();
+  });
+
+  it('Γ2 — χωρίς τιμή: κενό κελί και στις δύο στήλες (ποτέ 0)· η τιμή δεν αθροίζεται ποτέ', () => {
+    const [price, unit] = buildPriceColumns<Spot>({ price: 'price', unit: 'priceUnit' }, t, (s) => s.number);
+    expect(price.exportCell?.(unpriced('P4'))).toBeNull();
+    expect(unit.exportCell?.(unpriced('P4'))).toBeNull();
+    expect(price.exportTotal).toBeUndefined();
   });
 });

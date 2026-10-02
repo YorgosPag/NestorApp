@@ -415,9 +415,6 @@
       "description": "How this unit's objective value came out — every factor with its reference in the law."
     },
     "export": {
-      "button": "Export XLSX",
-      "busy": "Exporting…",
-      "failed": "The export did not complete. Try again.",
       "filename": "Objective-value_{building}_{date}",
       "sheets": {
         "units": "Units",

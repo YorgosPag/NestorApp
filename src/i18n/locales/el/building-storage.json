@@ -243,7 +243,6 @@
     "totalValue": "Συνολική Αξία",
     "totalArea": "Συν. Εμβαδόν",
     "searchPlaceholder": "Αναζήτηση κωδικού ή περιγραφής...",
-    "exportReport": "Εξαγωγή Αναφοράς",
     "results": "αποτελέσματα",
     "cards": "Κάρτες",
     "table": "Πίνακας",
@@ -257,7 +256,6 @@
     "totalValue": "Συνολική Αξία",
     "totalArea": "Συν. Εμβαδόν",
     "searchPlaceholder": "Αναζήτηση ονόματος ή τύπου...",
-    "exportReport": "Εξαγωγή Αναφοράς",
     "results": "αποτελέσματα",
     "cards": "Κάρτες",
     "table": "Πίνακας",
@@ -356,5 +354,42 @@
         "emergencyExits": "Έξοδοι Κινδύνου"
       }
     }
+  },
+  "spaceExport": {
+    "button": "Εξαγωγή XLSX",
+    "busy": "Εξαγωγή…",
+    "failed": "Η εξαγωγή δεν ολοκληρώθηκε. Δοκιμάστε ξανά.",
+    "filename": "{tab}_{building}_{date}",
+    "totalRow": "Σύνολο · {rows, plural, one {# γραμμή} other {# γραμμές}}",
+    "missing": "Λείπουν {pending} από {rows}",
+    "sheets": {
+      "assumptions": "Παραδοχές"
+    },
+    "columns": {
+      "key": "Στοιχείο",
+      "value": "Τιμή"
+    },
+    "assumptions": {
+      "building": "Κτίριο",
+      "exportedOn": "Ημερομηνία εξαγωγής",
+      "view": "Προβολή",
+      "viewTable": "Πίνακας",
+      "viewCards": "Κάρτες",
+      "sort": "Σειρά",
+      "sortAsc": "{column} — αύξουσα",
+      "sortDesc": "{column} — φθίνουσα",
+      "sortNone": "Σειρά δεδομένων",
+      "rows": "Γραμμές",
+      "rowsOf": "{shown} από {total}",
+      "search": "Αναζήτηση",
+      "searchNone": "Καμία",
+      "type": "Είδος",
+      "status": "Κατάσταση",
+      "software": "Λογισμικό"
+    }
+  },
+  "spaceColumns": {
+    "area": "Επιφάνεια (m²)",
+    "priceUnit": "Μονάδα τιμής"
   }
 }

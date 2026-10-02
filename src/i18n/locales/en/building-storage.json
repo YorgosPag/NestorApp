@@ -243,7 +243,6 @@
     "totalValue": "Total Value",
     "totalArea": "Total Area",
     "searchPlaceholder": "Search by code or description...",
-    "exportReport": "Export Report",
     "results": "results",
     "cards": "Cards",
     "table": "Table",
@@ -257,7 +256,6 @@
     "totalValue": "Total Value",
     "totalArea": "Total Area",
     "searchPlaceholder": "Search by name or type...",
-    "exportReport": "Export Report",
     "results": "results",
     "cards": "Cards",
     "table": "Table",
@@ -356,5 +354,42 @@
         "emergencyExits": "Emergency Exits"
       }
     }
+  },
+  "spaceExport": {
+    "button": "Export XLSX",
+    "busy": "Exporting…",
+    "failed": "The export did not complete. Please try again.",
+    "filename": "{tab}_{building}_{date}",
+    "totalRow": "Total · {rows, plural, one {# row} other {# rows}}",
+    "missing": "{pending} of {rows} missing",
+    "sheets": {
+      "assumptions": "Assumptions"
+    },
+    "columns": {
+      "key": "Item",
+      "value": "Value"
+    },
+    "assumptions": {
+      "building": "Building",
+      "exportedOn": "Export date",
+      "view": "View",
+      "viewTable": "Table",
+      "viewCards": "Cards",
+      "sort": "Order",
+      "sortAsc": "{column} — ascending",
+      "sortDesc": "{column} — descending",
+      "sortNone": "Data order",
+      "rows": "Rows",
+      "rowsOf": "{shown} of {total}",
+      "search": "Search",
+      "searchNone": "None",
+      "type": "Type",
+      "status": "Status",
+      "software": "Software"
+    }
+  },
+  "spaceColumns": {
+    "area": "Area (m²)",
+    "priceUnit": "Price unit"
   }
 }

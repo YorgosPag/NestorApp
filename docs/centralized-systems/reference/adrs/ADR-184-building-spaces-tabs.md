@@ -35,9 +35,26 @@
 ### Tab Components
 | Tab | Component | File |
 |-----|-----------|------|
-| Αποθήκες | `StorageTab` | `src/components/building-management/StorageTab/index.tsx` |
-| Θ. Στάθμευσης | `ParkingTabContent` | `src/components/building-management/tabs/ParkingTabContent.tsx` |
-| Μονάδες | `UnitsTabContent` | `src/components/building-management/tabs/UnitsTabContent.tsx` |
+| Αποθήκες | `StorageTab` | `src/components/building-management/StorageTab.tsx` (+ `StorageTab/useStorageTabState.ts` · `StorageTab/StorageTabFilters.tsx`) |
+| Θ. Στάθμευσης | `ParkingTabContent` | `src/components/building-management/tabs/ParkingTabContent.tsx` (+ `useParkingTabState.ts`) |
+| Μονάδες | `PropertiesTabContent` | `src/components/building-management/tabs/PropertiesTabContent.tsx` (+ `property-tab-columns.tsx`) |
+
+> 2026-10-02: οι γραμμές έγραφαν `StorageTab/index.tsx` και `UnitsTabContent.tsx` — **δεν υπάρχουν**· διορθώθηκαν από τον κώδικα.
+
+### Εξαγωγή XLSX (ADR-898 Φ4β, 2026-10-02)
+Revit «Export Schedule»: κάθε πίνακας εξάγει **ό,τι βλέπει ο άνθρωπος** — φιλτραρισμένες γραμμές, σειρά της οθόνης,
+**ίδιος** ορισμός στηλών.
+
+| Κομμάτι | Αρχείο |
+|---|---|
+| Στήλη → κελί αρχείου: `exportCell` · `exportFormat` · `exportOnly` (μόνο στο αρχείο) · `exportTotal: 'sum'` | `shared/types.ts` |
+| Κοινές στήλες (όροφος · επιφάνεια · διάθεση) — μία φορά για τις τρεις καρτέλες | `shared/buildingSpaceColumns.tsx` |
+| Τιμή = **ζευγάρι** (ποσό νόμισμα + «Μονάδα τιμής» `exportOnly`) — ποτέ πώληση/€ μήνα/€ νύχτα σε μία αριθμητική στήλη | `shared/buildingSpacePriceColumn.tsx` (`buildPriceColumns` · `SpacePriceCell`) |
+| Πίνακας → φύλλο · γραμμή συνόλου (`SUM` **μόνο** πλήρες, αλλιώς «λείπουν Ν από Μ») · βιβλίο πίνακας + «Παραδοχές» | `shared/space-table-export.ts` |
+| ΕΝΑ hook για τις τρεις καρτέλες: κρατά τη σειρά (επιστρέφει ως `initialSort` μετά τις κάρτες) · κάρτες ⇒ σειρά δεδομένων · Παραδοχές (κτίριο · ημερομηνία · προβολή · σειρά · «Ν από Μ» · φίλτρα) | `shared/useSpaceTableExport.ts` |
+| Κατάσταση κουμπιού (busy · failed με λόγο · φρένο διπλού κλικ) + το ΕΝΑ κουμπί (και της Αντικειμενικής) | `shared/useExportAction.ts` · `shared/SpaceExportButton.tsx` |
+| Μπάρα φίλτρων: `exportAction?` — χωρίς αυτό **κανένα** κουμπί | `shared/BuildingSpaceFilterBar.tsx` |
+| Σκελετός βιβλίου (`exceljs` δυναμικά · ιδιότητες · κατέβασμα) · φύλλο «κλειδί → τιμή» | `lib/export/excel-workbook.ts` (`exportWorkbook` · `addKeyValueSheet`) |
 
 ### Tab Factory Integration
 - `unified-tabs-factory.ts`: 2 νέα tabs (parking order:7, units order:8)
@@ -63,6 +80,24 @@
 - No new npm packages required
 
 ## Changelog
+
+- **2026-10-02** — **ADR-898 Φ4β βήμα 6: εξαγωγή XLSX στις Μονάδες / Αποθήκες / Στάθμευση** (§Εξαγωγή XLSX). Το κουμπί
+  της `BuildingSpaceFilterBar` ήταν ετικέτα **χωρίς `onClick`** και στις τρεις καρτέλες· τώρα ζωγραφίζεται **μόνο** με
+  `exportAction` (ο τύπος το εγγυάται). ΕΝΑ hook (`useSpaceTableExport`) για τις τρεις — φιλτραρισμένες γραμμές, σειρά
+  της οθόνης, ίδιος ορισμός στηλών, φύλλο «Παραδοχές». Ο πίνακας Μονάδων απέκτησε στήλη **Τιμή** (όπως Στάθμευση/Αποθήκες·
+  απόφαση Giorgio) και η γραμμή επεξεργασίας επί τόπου το κελί της (μόνο ανάγνωση), ώστε τα κελιά να μένουν κάτω από τις
+  στήλες τους. Γραμμή συνόλου: πλήθος + `SUM` επιφάνειας **μόνο** όταν όλες έχουν· η τιμή **δεν** αθροίζεται ποτέ.
+  **Boy Scout (N.0.2)**: όροφος/επιφάνεια ×3 και διάθεση ×2 → `buildingSpaceColumns.tsx` · `EXPORT_ONLY_KEYS`/`isScreenColumn`
+  της Αντικειμενικής → σημαία `exportOnly` (τη φιλτράρει ο πίνακας) · `ExportButton` της Αντικειμενικής → κοινό ·
+  σκελετός βιβλίου και φύλλο Παραδοχών → `lib/export/excel-workbook` · `propertyDisplayArea` (`lib/properties`) αντί για
+  `gross || net || area` ×4 · `StorageTabFilters` έγινε hook (η ίδια περιγραφή φίλτρων τροφοδοτεί μπάρα **και** αρχείο) ·
+  σκληρό `retryLabel="Retry"` στη Στάθμευση (N.11) · επικεφαλίδα σκέτο «m²» → «Επιφάνεια (m²)». Συμπεριφορά: ισόγειο `0`
+  δεν ταξινομείται πια ως «χωρίς όροφο», και θέση/αποθήκη χωρίς επιφάνεια πάει τελευταία (ήταν `|| 0` = «η μικρότερη»).
+  Κλειδιά i18n που έμειναν νεκρά (`unitStats`/`parkingStats`/`tabs.storageTab` `.exportReport` · `objective-value`
+  `building.export.button/busy/failed`) αφαιρέθηκαν. Tests: `space-table-export` (+6) · `space-export-action` (+5) ·
+  `use-space-table-export` (+3) · `building-space-price-column` (+2) · `BuildingSpaceTable.sort` (+1) · `excel-workbook` (+2)·
+  μεταλλάξεις **7/7** (μερικό σύνολο · στήλη αρχείου στην οθόνη · νεκρό κουμπί · τιμή χωρίς μονάδα · σειρά πίνακα στις κάρτες
+  · σιωπηλή αποτυχία · φρένο διπλού κλικ).
 
 - **2026-10-02** — **ADR-898 Φ4β**: νέα καρτέλα κτιρίου `objectiveValue` (`tabs/ObjectiveValueTab/*`) πάνω στο
   κοινό `BuildingSpaceTable`, που απέκτησε: `initialSort` (ο πίνακας ανοίγει ομαδοποιημένος, Revit `Sort By`) ·

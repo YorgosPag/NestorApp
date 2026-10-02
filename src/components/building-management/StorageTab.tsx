@@ -15,7 +15,6 @@ import { useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
-import { spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
 import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
 import type { Building } from '@/types/building/contracts';
 import { cn } from '@/lib/utils';
@@ -33,12 +32,12 @@ import { TableCell } from '@/components/ui/table';
 import { Warehouse, Plus, Link2, Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
-import { StorageTabFilters } from './StorageTab/StorageTabFilters';
+import { useStorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn, BuildingSpaceViewSwitch } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
@@ -57,16 +56,37 @@ export function StorageTab({ building }: StorageTabProps) {
 
   // ── Column & card definitions ──
 
+  // Ένας ορισμός στηλών για οθόνη ΚΑΙ εξαγωγή XLSX (ADR-898 Φ4β) — όροφος/επιφάνεια/τιμή/διάθεση από τα κοινά.
+  const availabilityColumn = useSpaceAvailabilityColumn<StorageUnit>();
   const storageColumns: SpaceColumn<StorageUnit>[] = useMemo(() => [
-    { key: 'code', label: s.t('storageTable.columns.code'), sortValue: (u) => u.code, render: (u) => <span className="font-medium">{u.code}</span> },
-    { key: 'type', label: s.t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{s.translatedGetTypeLabel(u.type)}</span> },
-    { key: 'floor', label: s.t('storageTable.columns.floor'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={colors.text.muted}>{u.floor || '—'}</span> },
-    { key: 'area', label: s.t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
-    // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης).
-    buildPriceColumn<StorageUnit>(s.t('storageTable.columns.price'), s.t, (u) => u.code),
+    { key: 'code', label: s.t('storageTable.columns.code'), sortValue: (u) => u.code, render: (u) => <span className="font-medium">{u.code}</span>, exportCell: (u) => u.code || null },
+    { key: 'type', label: s.t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{s.translatedGetTypeLabel(u.type)}</span>, exportCell: (u) => s.translatedGetTypeLabel(u.type) },
+    buildFloorColumn<StorageUnit>(s.t('storageTable.columns.floor'), (u) => u.floor, colors.text.muted),
+    buildAreaColumn<StorageUnit>(s.t('spaceColumns.area'), (u) => u.area || null),
+    // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης)· στο αρχείο ποσό + μονάδα.
+    ...buildPriceColumns<StorageUnit>({ price: s.t('storageTable.columns.price'), unit: s.t('spaceColumns.priceUnit') }, s.t, (u) => u.code),
     // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση· ποτέ το παλιό `status`.
-    { key: 'status', label: s.t('properties-enums:unitStatus.availability'), width: 'w-36', sortValue: (u) => spaceAvailabilityBucket(u), render: (u) => <SpaceStatusBadges space={u} /> },
-  ], [s.t, s.translatedGetTypeLabel, colors.text.muted]);
+    availabilityColumn,
+  ], [s.t, s.translatedGetTypeLabel, colors.text.muted, availabilityColumn]);
+
+  // Μία περιγραφή φίλτρων για την μπάρα ΚΑΙ για τις «Παραδοχές» της εξαγωγής (ADR-898 Φ4β).
+  const filters = useStorageTabFilters({
+    filterType: s.filterType,
+    onFilterTypeChange: s.setFilterType,
+    filterStatus: s.filterStatus,
+    onFilterStatusChange: s.setFilterStatus,
+  });
+  const tableExport = useSpaceTableExport({
+    buildingName: building.name,
+    tabLabel: s.t('tabs.labels.storage'),
+    columns: storageColumns,
+    items: s.filteredUnits,
+    totalCount: s.units.length,
+    viewMode: s.viewMode,
+    searchTerm: s.searchTerm,
+    typeFilter: filters.typeFilter,
+    statusFilter: filters.statusFilter,
+  });
 
   const storageCardFields: SpaceCardField<StorageUnit>[] = useMemo(() => [
     buildTypeCodeField(s.t('storageTable.columns.type'), (u) => s.translatedGetTypeLabel(u.type), (u) => u.code),
@@ -131,13 +151,13 @@ export function StorageTab({ building }: StorageTabProps) {
       />
 
       {/* Filters */}
-      <StorageTabFilters
+      <BuildingSpaceFilterBar
+        searchPlaceholder={filters.searchPlaceholder}
         searchTerm={s.searchTerm}
         onSearchChange={s.setSearchTerm}
-        filterType={s.filterType}
-        onFilterTypeChange={s.setFilterType}
-        filterStatus={s.filterStatus}
-        onFilterStatusChange={s.setFilterStatus}
+        typeFilter={filters.typeFilter}
+        statusFilter={filters.statusFilter}
+        exportAction={tableExport.exportAction}
       />
 
       <StorageQuickCreateSheet
@@ -188,6 +208,7 @@ export function StorageTab({ building }: StorageTabProps) {
           <BuildingSpaceTable<StorageUnit>
             items={s.filteredUnits}
             columns={storageColumns}
+            {...tableExport.tableSort}
             getKey={(u) => u.id}
             actions={spaceActions}
             actionState={spaceActionState}

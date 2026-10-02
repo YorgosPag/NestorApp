@@ -9,7 +9,7 @@
  * that toggles A→Z / Z→A sorting. Columns with `sortGroups` sort in GROUPS
  * (Revit `Sort By` group → `Then By` value) — ADR-777 §8.60.14.14.
  *
- * ADR-898 Φ4β: `initialSort` (το schedule ανοίγει ήδη ομαδοποιημένο, όπως το `Sort By` του Revit) και
+ * ADR-898 Φ4β: στήλες `exportOnly` (μόνο στο αρχείο) **δεν** ζωγραφίζονται· `initialSort` (το schedule ανοίγει ήδη ομαδοποιημένο, όπως το `Sort By` του Revit) και
  * `renderFooter` (`<tfoot>` — η γραμμή «Grand total» του schedule· ο καλών αποφασίζει αν **υπάρχει** σύνολο).
  * Οι επικεφαλίδες ταξινόμησης είναι **κουμπιά** με `aria-sort` — προσβάσιμες από πληκτρολόγιο.
  *
@@ -98,6 +98,9 @@ export function BuildingSpaceTable<T>({
 
   const sortedGroups = useMemo(() => sortIntoGroups(items, columns, sort), [items, sort, columns]);
 
+  /** Οι στήλες της ΟΘΟΝΗΣ — οι `exportOnly` υπάρχουν μόνο στο αρχείο (ADR-898 Φ4β). */
+  const screenColumns = useMemo(() => columns.filter((col) => !col.exportOnly), [columns]);
+
   // ============================================================================
   // SORT ICON HELPER
   // ============================================================================
@@ -111,7 +114,7 @@ export function BuildingSpaceTable<T>({
     return <ArrowUpDown className={`${iconSizes.xs} ml-1 inline-block opacity-40`} />;
   };
 
-  const columnCount = columns.length + (hasActions ? 1 : 0);
+  const columnCount = screenColumns.length + (hasActions ? 1 : 0);
 
   const renderRow = (item: T) => {
     const key = getKey(item);
@@ -123,7 +126,7 @@ export function BuildingSpaceTable<T>({
 
     return (
       <TableRow key={key}>
-        {columns.map((col) => (
+        {screenColumns.map((col) => (
           <TableCell key={col.key} className={col.alignRight ? 'text-right' : ''}>
             {col.render(item)}
           </TableCell>
@@ -152,7 +155,7 @@ export function BuildingSpaceTable<T>({
     <Table>
       <TableHeader>
         <TableRow>
-          {columns.map((col) => {
+          {screenColumns.map((col) => {
             const isSortable = !!col.sortValue || !!col.sortGroups;
 
             return (

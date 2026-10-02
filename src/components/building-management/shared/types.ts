@@ -58,6 +58,16 @@ export interface SpaceColumn<T> {
   exportCell?: (item: T) => ScheduleCell;
   /** Πώς διαβάζει το Excel τη στήλη — προεπιλογή `text`. */
   exportFormat?: ScheduleCellFormat;
+  /**
+   * Στήλη **μόνο του αρχείου** — ο πίνακας (`BuildingSpaceTable`) **δεν** τη ζωγραφίζει, η εξαγωγή την παίρνει στη θέση
+   * της. Π.χ. «Μονάδα τιμής» δίπλα στο ποσό: η οθόνη τη γράφει μέσα στο κελί, το Excel θέλει αριθμό **και** μονάδα.
+   */
+  exportOnly?: true;
+  /**
+   * **Άθροισμα στη γραμμή συνόλου του αρχείου** (Revit «Calculate totals»). Μόνο όταν **κάθε** γραμμή έχει αριθμό· αλλιώς
+   * το κελί γράφει πόσα λείπουν — **ποτέ** μερικό άθροισμα ως σύνολο (`spaceScheduleTotals`).
+   */
+  exportTotal?: 'sum';
 }
 
 /**

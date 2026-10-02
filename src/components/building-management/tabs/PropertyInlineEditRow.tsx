@@ -31,6 +31,8 @@ import {
   getPropertyTypeLabel,
   getPropertyStatusLabel,
 } from './property-tab-constants';
+import type { Property } from '@/types/property';
+import { SpacePriceCell } from '../shared/buildingSpacePriceColumn';
 import type { usePropertyInlineEdit } from './usePropertyInlineEdit';
 
 interface PropertyInlineEditRowProps {
@@ -38,9 +40,11 @@ interface PropertyInlineEditRowProps {
   edit: ReturnType<typeof usePropertyInlineEdit>;
   /** Translation function scoped to 'properties' namespace */
   tUnits: TFunction;
+  /** Η μονάδα της γραμμής — για τα κελιά που δεν επεξεργάζονται επί τόπου (τιμή). */
+  unit: Property;
 }
 
-export function PropertyInlineEditRow({ edit, tUnits }: PropertyInlineEditRowProps) {
+export function PropertyInlineEditRow({ edit, tUnits, unit }: PropertyInlineEditRowProps) {
   return (
     <>
       <TableCell>
@@ -92,6 +96,10 @@ export function PropertyInlineEditRow({ edit, tUnits }: PropertyInlineEditRowPro
           className="h-8 w-16"
           disabled={edit.saving}
         />
+      </TableCell>
+      {/* Η τιμή δεν αλλάζει επί τόπου — φαίνεται στη θέση της, ώστε κάθε κελί να μένει κάτω από τη στήλη του. */}
+      <TableCell>
+        <SpacePriceCell item={unit} t={tUnits} />
       </TableCell>
       <TableCell>
         <Select value={edit.editStatus} onValueChange={edit.setEditStatus} disabled={edit.saving}>

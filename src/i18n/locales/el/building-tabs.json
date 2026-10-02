@@ -605,7 +605,6 @@
     },
     "storageTab": {
       "searchPlaceholder": "Αναζήτηση κωδικού ή περιγραφής...",
-      "exportReport": "Εξαγωγή Αναφοράς",
       "loading": "Φόρτωση αποθηκευτικών χώρων..."
     },
     "parkingFloorplan": {

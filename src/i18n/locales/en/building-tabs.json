@@ -605,7 +605,6 @@
     },
     "storageTab": {
       "searchPlaceholder": "Search code or description...",
-      "exportReport": "Export Report",
       "loading": "Loading storage units..."
     },
     "parkingFloorplan": {

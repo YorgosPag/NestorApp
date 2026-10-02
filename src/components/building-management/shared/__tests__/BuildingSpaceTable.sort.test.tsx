@@ -132,4 +132,17 @@ describe('BuildingSpaceTable — ADR-898 Φ4β: αρχική ταξινόμησ�
     );
     expect(container.querySelector('tfoot td')).toHaveAttribute('colspan', '2');
   });
+
+  it('στήλη `exportOnly` ΔΕΝ ζωγραφίζεται (ούτε επικεφαλίδα ούτε κελί) και δεν μετρά στο `colSpan`', () => {
+    const withExportOnly: SpaceColumn<Row>[] = [
+      ...COLUMNS,
+      { key: 'unit', label: 'export-only-unit', exportOnly: true, render: () => <span>κελί-αρχείου</span>, exportCell: () => 'x' },
+    ];
+    const { container } = render(
+      <BuildingSpaceTable items={ROWS} columns={withExportOnly} getKey={(r) => r.id} renderFooter={({ columnCount }) => <tr><td colSpan={columnCount} /></tr>} />,
+    );
+    expect(screen.queryByText('export-only-unit')).toBeNull();
+    expect(screen.queryByText('κελί-αρχείου')).toBeNull();
+    expect(container.querySelector('tfoot td')).toHaveAttribute('colspan', '2');
+  });
 });
