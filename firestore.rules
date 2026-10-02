@@ -7095,5 +7095,22 @@ service cloud.firestore {
       allow read, write: if false; // Server-side only via Admin SDK
     }
 
+    // ─── ADR-900 §3.8: ΕΠΑΛΗΘΕΥΣΗ ΚΑΤΟΧΗΣ (ΠΚΑ Κτηματολογίου) ─────────────────────────
+    // ✍️ WRITE: ΚΑΝΕΝΑΣ πελάτης. Όποιος γράφει εδώ ΑΥΤΟ-ΕΠΑΛΗΘΕΥΕΤΑΙ: ένα `status: 'verified'`
+    //    ανοίγει τον ακριβή αριθμό ζήτησης (DEMAND_DISCLOSURE['verified-owner']) χωρίς ΠΚΑ. Οι
+    //    κλειδαριές (ΚΑΕΚ · ΑΦΜ) θα μπορούσαν να «κρατηθούν» από τρίτο και να κλειδώσουν έξω τον
+    //    πραγματικό ιδιοκτήτη. Γράφει ΜΟΝΟ ο κριτής του διακομιστή, μέσα σε συναλλαγή.
+    // 📖 READ: ΚΑΝΕΝΑΣ. Η κατάσταση φτάνει στον ιδιοκτήτη από τη διαδρομή του διακομιστή (κλειστό
+    //    σχήμα, χωρίς HMAC ΑΦΜ / ονόματα δικαιούχων)· οι κλειδαριές αποκαλύπτουν ΠΟΙΟΣ κατέχει ΤΙ.
+    match /ownership_verifications/{verificationId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+    match /ownership_kaek_claims/{claimId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+    match /tax_identity_claims/{claimId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
   }
 }

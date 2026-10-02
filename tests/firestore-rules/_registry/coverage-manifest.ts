@@ -1731,6 +1731,27 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/mandate-evidence.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ─── ΕΠΑΛΗΘΕΥΣΗ ΚΑΤΟΧΗΣ (ADR-900 §3.8) ─────────────────────────────────────
+  // Γραφή εδώ = αυτο-επαλήθευση (ακριβής αριθμός ζήτησης χωρίς ΠΚΑ) ή κατάληψη κλειδαριάς
+  // ΚΑΕΚ/ΑΦΜ που κλειδώνει έξω τον πραγματικό ιδιοκτήτη. Ανάγνωση = ποιος κατέχει τι.
+  {
+    collection: 'ownership_verifications',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/ownership-verifications.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'ownership_kaek_claims',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/ownership-kaek-claims.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'tax_identity_claims',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/tax-identity-claims.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   // ─── Ο ΔΕΙΚΤΗΣ «ΑΥΤΗ Η ΑΛΛΑΓΗ ΕΓΙΝΕ ΗΔΗ» ΤΩΝ CLOUD FUNCTIONS (ADR-873 Φ1 §9.1) ──
   // Γραφή = ψεύτικο «έγινε ήδη» που ΑΚΥΡΩΝΕΙ σιωπηλά μια πραγματική ενημέρωση, ή μόνιμο
   // `in-flight` που κλειδώνει την πράξη μέχρι τη λήξη του lease. Ανάγνωση = το ίδιο το

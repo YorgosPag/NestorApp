@@ -171,6 +171,15 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // ακινήτου») δηλώνονται στο σημείο κλήσης με `tenant-scope-exempt` + λόγο.
   MANDATE_EVIDENCE: { mode: 'companyId', fieldName: 'agencyCompanyId' },
 
+  // --- ADR-900 §3.8: ΕΠΑΛΗΘΕΥΣΗ ΚΑΤΟΧΗΣ (ΠΚΑ) -----------------------------------
+  // 🔴 ΔΕΝ διαβάζεται από πελάτη ΚΑΘΟΛΟΥ (read:false + write:false). Ο άξονας είναι ο ΑΝΘΡΩΠΟΣ που
+  // ισχυρίζεται (`uid`) — ίδιο σκεπτικό με OWNER_PROPERTIES. Οι δύο αναγνώσεις χωρίς άξονα (η ουρά του
+  // διαχειριστή · «οι επαληθευμένες ΑΥΤΩΝ των ακινήτων» του cron) δηλώνονται στο σημείο κλήσης.
+  OWNERSHIP_VERIFICATIONS: { mode: 'userId', fieldName: 'uid' },
+  // Κλειδαριές μοναδικότητας: μόνο `doc(ντετερμινιστικό id)` μέσα σε συναλλαγή — κανένα ερώτημα.
+  OWNERSHIP_KAEK_CLAIMS: { mode: 'none', fieldName: '', unscopedCategory: 'system-index', unscopedReason: 'ADR-900 §3.8 — κλειδαριά «ένας ΚΑΕΚ = ένας επαληθευμένος λογαριασμός». Ο ΚΑΕΚ είναι ΔΗΜΟΣΙΑ ταυτότητα του κόσμου, όχι μισθωτή· προσπελάζεται μόνο με ντετερμινιστικό doc id μέσα στη συναλλαγή του κριτή. Server μόνο.' },
+  TAX_IDENTITY_CLAIMS: { mode: 'none', fieldName: '', unscopedCategory: 'system-index', unscopedReason: 'ADR-900 §3.8 — κλειδαριά «ένας ΑΦΜ = ένας λογαριασμός». Ο ΑΦΜ ανήκει σε ΠΡΟΣΩΠΟ, όχι μισθωτή· ντετερμινιστικό doc id από HMAC, μόνο μέσα στη συναλλαγή του κριτή. Server μόνο.' },
+
   // --- ADR-843: Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ -----------------------------------
   // 🔴 ΔΕΝ διαβάζεται από πελάτη ΚΑΘΟΛΟΥ (`firestore.rules`: read:false + write:false).
   // Η δήλωση αφορά τα ΕΡΩΤΗΜΑΤΑ ΤΟΥ ΔΙΑΚΟΜΙΣΤΗ, που το CHECK 3.35 κρίνει με R2.

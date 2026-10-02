@@ -303,6 +303,27 @@ export const COLLECTIONS = {
    */
   MANDATE_EVIDENCE: process.env.NEXT_PUBLIC_MANDATE_EVIDENCE_COLLECTION || 'mandate_evidence',
   /**
+   * ADR-900 §3.8 — **ΕΠΑΛΗΘΕΥΣΕΙΣ ΚΑΤΟΧΗΣ** (`ovr_*`): μία ανά προσπάθεια (ΠΚΑ Κτηματολογίου), με τη
+   * σφραγίδα, ό,τι διαβάστηκε, την κρίση και τον λόγο. Επιβιώνει της απόρριψης (ίχνος για την ουρά).
+   *
+   * ⛔ **ΚΛΕΙΣΤΗ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** — ο ιδιοκτήτης βλέπει την κατάσταση από τη διαδρομή του
+   * διακομιστή, ποτέ από τον πελάτη. Άξονας μισθωτή **`uid`** (ο άνθρωπος που ισχυρίζεται).
+   */
+  OWNERSHIP_VERIFICATIONS:
+    process.env.NEXT_PUBLIC_OWNERSHIP_VERIFICATIONS_COLLECTION || 'ownership_verifications',
+  /**
+   * ADR-900 §3.8 — **ΚΛΕΙΔΑΡΙΑ ΚΑΕΚ** (`okcl_*`, ντετερμινιστικό): «ένας ΚΑΕΚ = ένας επαληθευμένος
+   * λογαριασμός». Διαβάζεται/γράφεται **μόνο** με `doc(id)` μέσα στη συναλλαγή του κριτή. ⛔ Server μόνο.
+   */
+  OWNERSHIP_KAEK_CLAIMS:
+    process.env.NEXT_PUBLIC_OWNERSHIP_KAEK_CLAIMS_COLLECTION || 'ownership_kaek_claims',
+  /**
+   * ADR-900 §3.8 — **ΚΛΕΙΔΑΡΙΑ ΑΦΜ** (`txic_*`, ντετερμινιστικό από HMAC): «ένας ΑΦΜ = ένας λογαριασμός».
+   * Ο ΑΦΜ **δεν** αποθηκεύεται καθαρός — HMAC + 3 τελευταία ψηφία. ⛔ Server μόνο.
+   */
+  TAX_IDENTITY_CLAIMS:
+    process.env.NEXT_PUBLIC_TAX_IDENTITY_CLAIMS_COLLECTION || 'tax_identity_claims',
+  /**
    * ADR-843 — **Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ** (`fcon_*`): ο ζητών κάνει την κίνηση και
    * φέρνει **τα δικά του** στοιχεία στον προσφέροντα.
    *
@@ -919,6 +940,8 @@ export const COLLECTIONS = {
 
   // ⚖️ LEGAL CONTRACTS & BROKERAGE (ADR-230: Contract Workflow & Legal Process)
   LEGAL_CONTRACTS: process.env.NEXT_PUBLIC_LEGAL_CONTRACTS_COLLECTION || 'legal_contracts',
+  // ADR-901 Φ1 — υπόθεση μεταβίβασης: η ΠΡΑΞΗ πάνω από τα συμβόλαια (server-only, deny-all στους κανόνες)
+  CONVEYANCE_CASES: process.env.NEXT_PUBLIC_CONVEYANCE_CASES_COLLECTION || 'conveyance_cases',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
 
@@ -940,8 +963,6 @@ export const COLLECTIONS = {
   SAVED_REPORTS: process.env.NEXT_PUBLIC_SAVED_REPORTS_COLLECTION || 'saved_reports',
 
   // 📋 QUOTES & RFQ (ADR-327: Quote Management & Comparison System)
-  // ADR-901 Φ1 — υπόθεση μεταβίβασης: η ΠΡΑΞΗ πάνω από τα συμβόλαια (server-only, deny-all στους κανόνες)
-  CONVEYANCE_CASES: process.env.NEXT_PUBLIC_CONVEYANCE_CASES_COLLECTION || 'conveyance_cases',
   RFQS: process.env.NEXT_PUBLIC_RFQS_COLLECTION || 'rfqs',
   QUOTES: process.env.NEXT_PUBLIC_QUOTES_COLLECTION || 'quotes',
   QUOTE_COUNTERS: process.env.NEXT_PUBLIC_QUOTE_COUNTERS_COLLECTION || 'quote_counters',
