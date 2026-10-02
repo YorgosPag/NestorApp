@@ -21,8 +21,12 @@ export type ConstructionKind = 'frame' | 'masonry' | 'makeshift';
 /** Ειδική κατάσταση (άρθ. 2 §21-22): το διατηρητέο **υπερισχύει** του απαλλοτριωτέου. */
 export type LegalEncumbrance = 'none' | 'listed' | 'expropriated';
 
-/** Στάδιο αποπεράτωσης αποθήκης/θέσης στάθμευσης (άρθ. 6 §8 · 7 §8). */
-export type AncillaryCompletion = 'complete' | 'frame' | 'masonry' | 'plaster';
+/**
+ * Στάδιο αποπεράτωσης αποθήκης/θέσης στάθμευσης (άρθ. 6 §8 · 7 §8) — **χωρίς** θεμελίωση και δάπεδα (επαληθευμένο
+ * στο κείμενο, ADR-898 Φ4). Η λίστα είναι η πηγή (υπολογιστής · `objective-value-stages.ts`), ο τύπος παράγεται.
+ */
+export const ANCILLARY_COMPLETIONS = ['complete', 'frame', 'masonry', 'plaster'] as const;
+export type AncillaryCompletion = (typeof ANCILLARY_COMPLETIONS)[number];
 
 interface ObjectiveValueCommonInput {
   /** Τιμή ζώνης €/τ.μ. (ADR-889 §10: από τη θέση, ή χειροκίνητα). */
@@ -57,8 +61,9 @@ interface ObjectiveValueCommonInput {
 export const RESIDENCE_FRONTAGES = ['single', 'multiple', 'narrow', 'rearOnly'] as const;
 export type ResidenceFrontage = (typeof RESIDENCE_FRONTAGES)[number];
 
-/** Άρθ. 3 §9. */
-export type ResidenceCompletion = 'complete' | 'foundation' | 'frame' | 'masonry' | 'plaster' | 'flooring';
+/** Άρθ. 3 §9 — η λίστα είναι η πηγή, ο τύπος παράγεται. */
+export const RESIDENCE_COMPLETIONS = ['complete', 'foundation', 'frame', 'masonry', 'plaster', 'flooring'] as const;
+export type ResidenceCompletion = (typeof RESIDENCE_COMPLETIONS)[number];
 
 /**
  * Ένα επίπεδο της κατοικίας. **Όροφος**: `< 0` υπόγειο, `0` ισόγειο (και ημιυπόγειο, άρθ. 2 §6), `1` Α' (και
@@ -82,7 +87,11 @@ export interface ResidenceInput extends ObjectiveValueCommonInput {
   readonly hasCentralHeating: boolean | null;
   /** Ζητείται μόνο πάνω από τον Β' όροφο. */
   readonly hasElevator?: boolean | null;
-  readonly completion?: ResidenceCompletion;
+  /**
+   * Απούσα ⇒ πλήρως αποπερατωμένη (η κανονική περίπτωση του υπολογιστή). **`null` = «δεν το ξέρουμε»** ⇒
+   * `missing: completion` — ο εργολάβος (ADR-898 Φ4) δεν τεκμαίρει ποτέ αποπεράτωση.
+   */
+  readonly completion?: ResidenceCompletion | null;
   /** ΣΑΟ — ζητείται μόνο σε ημιτελές. */
   readonly plotUtilisation?: number | null;
 }
@@ -105,7 +114,8 @@ export interface StorageInput extends ObjectiveValueCommonInput {
   readonly form: 'storage';
   readonly area: number | null;
   readonly position: StoragePosition | null;
-  readonly completion?: AncillaryCompletion;
+  /** Όπως στην κατοικία: απούσα ⇒ πλήρης · `null` ⇒ `missing: completion`. */
+  readonly completion?: AncillaryCompletion | null;
 }
 
 /** Άρθ. 7 §4. */
@@ -117,7 +127,8 @@ export interface ParkingInput extends ObjectiveValueCommonInput {
   /** Αν ο τίτλος δεν τη γράφει ⇒ 20 τ.μ. (άρθ. 7 §5) — `null` σημαίνει ακριβώς αυτό. */
   readonly area: number | null;
   readonly position: ParkingPosition | null;
-  readonly completion?: AncillaryCompletion;
+  /** Όπως στην κατοικία· ζητείται **μόνο** σε κλειστή θέση (άρθ. 7 §8). */
+  readonly completion?: AncillaryCompletion | null;
 }
 
 export type ObjectiveValueInput = ResidenceInput | StorageInput | ParkingInput;
@@ -140,7 +151,9 @@ export type ObjectiveValueMissing =
   | 'hasCentralHeating'
   | 'hasElevator'
   | 'plotUtilisation'
-  | 'position';
+  | 'position'
+  /** Στάδιο αποπεράτωσης άγνωστο (ADR-898 Φ4: χωρίς φάση Gantt με ετικέτα ούτε δήλωση κτιρίου). */
+  | 'completion';
 
 /** Είσοδος που υπάρχει αλλά ο νόμος δεν την επιτρέπει. */
 export type ObjectiveValueInvalid =

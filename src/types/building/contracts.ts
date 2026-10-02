@@ -1,5 +1,7 @@
 // 🏢 ENTERPRISE: Import centralized building features registry
 import type { BuildingFeatureKey } from './features';
+// ADR-898 Φ4 — τα γεγονότα της αντικειμενικής αξίας του κτιρίου
+import type { BuildingObjectiveValueFacts } from '@/lib/objective-value/building-objective-value-facts';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
 import type { PropertyType } from '@/types/property';
@@ -130,6 +132,12 @@ export type {
     totalProperties?: number;
     /** Year of construction */
     constructionYear?: number;
+    /**
+     * Τα γεγονότα της αντικειμενικής αξίας για **όλες** τις μονάδες (ADR-898 Φ4): άδεια · ΣΑΟ · δηλωμένο στάδιο.
+     * Δηλώσεις, ποτέ ποσά. Γράφεται **μόνο** από τον κλάδο `building-objective-value-patch.ts` (μερική διόρθωση σε
+     * συναλλαγή) — διαβάζεται **μόνο** μέσω `readBuildingObjectiveValueFacts`.
+     */
+    objectiveValueFacts?: BuildingObjectiveValueFacts;
 
     // 🏢 ENTERPRISE: Boolean amenity flags for filtering
     /** Has parking facilities */

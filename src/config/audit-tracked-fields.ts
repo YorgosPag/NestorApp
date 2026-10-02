@@ -15,6 +15,7 @@ import {
   type TrackedFieldDef,
   legacyLabelMap,
 } from '@/lib/audit/audit-diff';
+import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 
 // Re-export the SSoT type so consumers that already import from this file
@@ -564,6 +565,13 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Company links
   company: 'company',
   linkedCompanyId: 'linkedCompanyId',
+  // ADR-898 Φ4 — τα γεγονότα της αντικειμενικής, από τη λίστα-πηγή (ετικέτες: `audit.fields.objectiveValueFacts.*`)
+  ...Object.fromEntries(
+    BUILDING_OBJECTIVE_VALUE_FIELDS.map((field) => {
+      const path = `objectiveValueFacts.${field}`;
+      return [path, path];
+    }),
+  ),
 };
 
 const BUILDING_COLLECTION_DEFS: Record<string, CollectionDef> = {

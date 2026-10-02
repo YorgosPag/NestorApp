@@ -10,6 +10,7 @@ import type {
   ConstructionPhaseStatus,
   ConstructionTaskStatus,
 } from '@/types/building/construction';
+import type { LegalStage } from '@/lib/objective-value/objective-value-stages';
 
 // ─── Dialog Mode ────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ export interface PhaseFormData {
   plannedEndDate: string;
   progress: number;
   description: string;
+  /** ADR-898 Φ4 — το στάδιο του νόμου που κλείνει η φάση (`null` = κανένα). */
+  legalStage: LegalStage | null;
 }
 
 export interface TaskFormData {

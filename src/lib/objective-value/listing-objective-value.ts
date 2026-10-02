@@ -81,14 +81,19 @@ export type ListingObjectiveValue =
   | { readonly kind: 'unsupported'; readonly reason: 'type' }
   /** Η θέση δεν έδωσε ζώνη — το λέει ήδη η ενότητα της ζώνης. */
   | { readonly kind: 'no-zone' }
-  | {
-      readonly kind: 'evaluated';
-      readonly bounds: ObjectiveValueBounds;
-      /** Από πού ήρθαν τα επίπεδα — `missing` ⇒ η ενότητα εξηγεί γιατί λείπουν όροφος και επιφάνεια. */
-      readonly levelBasis: ListingLevelBasis;
-      readonly assumptions: readonly ListingObjectiveValueAssumption[];
-      readonly prefill: ObjectiveValuePrefill;
-    };
+  | (ObjectiveValueEvaluated & { readonly prefill: ObjectiveValuePrefill });
+
+/**
+ * **Η αποτίμηση μιας μονάδας** — το κοινό σώμα αγγελίας (`ListingObjectiveValue`) **και** πίνακα κτιρίου
+ * (`BuildingUnitObjectiveValue`, ADR-898 Φ4β): ένας τύπος, ένα συστατικό (`ObjectiveValueEvaluated`).
+ */
+export interface ObjectiveValueEvaluated {
+  readonly kind: 'evaluated';
+  readonly bounds: ObjectiveValueBounds;
+  /** Από πού ήρθαν τα επίπεδα — `missing` ⇒ η ενότητα εξηγεί γιατί λείπουν όροφος και επιφάνεια. */
+  readonly levelBasis: ListingLevelBasis;
+  readonly assumptions: readonly ListingObjectiveValueAssumption[];
+}
 
 /**
  * **Από πού ήρθαν τα επίπεδα του προχείρου** (ADR-898 Φ3β-3β): `single` = όροφος + μικτό της αγγελίας · `perLevel` =
@@ -179,7 +184,11 @@ function zoneFrontUsed(declared: ListingObjectiveValueDeclared, valueZone: Value
   return zoneFront.kind === 'none' || streetFrontPrices(valueZone, zoneFront.street).length > 0;
 }
 
-function assumptionsOf(resolution: ListingObjectiveValueResolution, form: ObjectiveValueForm): readonly ListingObjectiveValueAssumption[] {
+/** Οι δηλωμένες υποθέσεις μιας επίλυσης — κοινές σε αγγελία και εργολάβο (ADR-898 Φ4: μία αντιστοίχιση). */
+export function assumptionsOf(
+  resolution: ListingObjectiveValueResolution,
+  form: ObjectiveValueForm,
+): readonly ListingObjectiveValueAssumption[] {
   const out: ListingObjectiveValueAssumption[] = [];
   const year = resolution.approximatedFrom;
   if (year !== null) out.push({ kind: 'ageFromConstructionYear', year: year.value, provenance: year.provenance });
@@ -244,7 +253,24 @@ export type ListingObjectiveValueBasis =
 
 export function listingObjectiveValueBasis(listing: PublicListing, valueZone: ValueZoneVerdict): ListingObjectiveValueBasis {
   const declared = declarationsOf(listing);
-  if (declared === null) return { kind: 'hidden' };
+  return declared === null ? { kind: 'hidden' } : objectiveValueBasisOf(listing, declared, valueZone);
+}
+
+/** Η βάση χωρίς την απόκρυψη — το κοινό δεν μετρά εκεί όπου μετρά ο κατασκευαστής. */
+export type ObjectiveValueBasis = Exclude<ListingObjectiveValueBasis, { readonly kind: 'hidden' }>;
+
+/**
+ * **Ο πυρήνας της βάσης** — σχήμα αγγελίας + δηλώσεις → πρόχειρο, χωρίς την πύλη απόκρυψης.
+ *
+ * 🔑 **Δύο καλούντες, ΜΙΑ αντιστοίχιση** (ADR-898 Φ4): η αγγελία ({@link listingObjectiveValueBasis}, αφού κρίνει
+ * την απόκρυψη) **και** ο πίνακας του εργολάβου (`building-objective-value.ts`), που βλέπει τις **ωμές** δηλώσεις
+ * της μονάδας — η απόκρυψη είναι επιλογή προς το κοινό, όχι προς τον κατασκευαστή.
+ */
+export function objectiveValueBasisOf(
+  listing: PublicListing,
+  declared: ListingObjectiveValueDeclared,
+  valueZone: ValueZoneVerdict,
+): ObjectiveValueBasis {
   const form = objectiveValueFormOf(listing.type);
   if (form === null) return { kind: 'unsupported', reason: 'type' };
   const zonePrices = declaredZonePriceCandidates(valueZone, declared.zoneFront);

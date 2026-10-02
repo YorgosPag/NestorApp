@@ -1,8 +1,10 @@
 'use client';
 
 /**
- * **Η κατάσταση αποθήκευσης μιας ενότητας** (ADR-898 Φ3β-2): «Αποθήκευση… / Αποθηκεύτηκε» όπως το Google Docs, με την
- * **κοινή** ένδειξη του ADR-248 (`AutoSaveStatusIndicator`) — και, σε αποτυχία, **τι** δεν αποθηκεύτηκε και γιατί.
+ * **Η κατάσταση αποθήκευσης μιας ενότητας αντικειμενικής** (ADR-898 Φ3β-2 · Φ4β): «Αποθήκευση… / Αποθηκεύτηκε» όπως το
+ * Google Docs, με την **κοινή** ένδειξη του ADR-248 (`AutoSaveStatusIndicator`) — και, σε αποτυχία, **τι** δεν
+ * αποθηκεύτηκε και γιατί. Μία για δηλώσεις αγγελίας **και** γεγονότα κτιρίου: γενική ως προς τη διόρθωση `P`, κοινό
+ * το λεξιλόγιο αρνήσεων.
  *
  * 🔑 Η τιμή στην οθόνη έχει ήδη γυρίσει στην αλήθεια (η ουρά αφαίρεσε την αποτυχημένη διόρθωση)· εδώ μόνο εξηγούμε.
  * Δίκτυο ⇒ «Δοκιμάστε ξανά» · άρνηση του server ⇒ ο λόγος, χωρίς επανάληψη (δεν θα βοηθούσε).
@@ -13,14 +15,15 @@ import React from 'react';
 import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { FieldPatchQueueHandle } from '@/hooks/useFieldPatchQueue';
 import type { ObjectiveValueWriteRejection } from '@/lib/objective-value/objective-value-improve-subject';
 
-import type { ImproveSave } from './useObjectiveValueImprove';
+type ObjectiveValueSave<P extends object> = FieldPatchQueueHandle<P, ObjectiveValueWriteRejection>;
 
 const NS = 'objective-value';
 const I = `${NS}:improve`;
 
-function useFailureText(): (failure: NonNullable<ImproveSave['failure']>) => string {
+function useFailureText<P extends object>(): (failure: NonNullable<ObjectiveValueSave<P>['failure']>) => string {
   const { t } = useTranslation([NS]);
   // Κλειστό λεξιλόγιο (`OBJECTIVE_VALUE_WRITE_REJECTIONS`) — κάθε λόγος έχει κλειδί· το `other` καλύπτει τα υπόλοιπα.
   const reasonText = (reason: ObjectiveValueWriteRejection) => t(`${I}.rejected.${reason}`);
@@ -30,9 +33,9 @@ function useFailureText(): (failure: NonNullable<ImproveSave['failure']>) => str
       : [...new Set(failure.outcome.reasons.map(reasonText))].join(' ');
 }
 
-export function ImproveSaveStatus({ save }: { readonly save: ImproveSave }) {
+export function ObjectiveValueSaveStatus<P extends object>({ save }: { readonly save: ObjectiveValueSave<P> }) {
   const { t } = useTranslation([NS]);
-  const failureText = useFailureText();
+  const failureText = useFailureText<P>();
   const { status, lastSavedAt, failure } = save;
   return (
     <>

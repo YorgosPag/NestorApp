@@ -157,7 +157,8 @@
       "hasCentralHeating": "central heating",
       "hasElevator": "elevator",
       "plotUtilisation": "SAO",
-      "position": "position"
+      "position": "position",
+      "completion": "completion stage"
     },
     "problems": {
       "nonPositiveZonePrice": "The zone price must be positive.",
@@ -318,5 +319,141 @@
     "retry": "Try again",
     "dismiss": "Close",
     "locked": "The property has been sold or rented: its details are locked (contracts, land registry) and the objective value cannot be changed here."
+  },
+  "stages": {
+    "fieldLabel": "Stage under POL.1149/1994 (optional)",
+    "fieldHelp": "Once this phase is completed, the objective value of the building's units is computed at this stage. Only a completed stage counts (art. 3 §9).",
+    "noStage": "None",
+    "none": "Foundation not yet completed",
+    "foundation": "Foundation and columns",
+    "frame": "Load-bearing frame",
+    "masonry": "Masonry",
+    "plaster": "Plastering",
+    "flooring": "Flooring",
+    "electricity": "Electricity connected — completed (art. 2 §24)"
+  },
+  "building": {
+    "assumptions": {
+      "declaredByUnit": "Declared on the unit: {fields}."
+    },
+    "levelsMissing": "Unit on {count} levels: the law values each floor separately, so it needs the floor and area of each level — fill them in on the unit.",
+    "title": "Objective value of the units",
+    "intro": "Computed for every unit of the building under the law (POL.1149/1994) and today's zone prices. Nothing is stored: every visit recomputes.",
+    "valuationDate": "Valuation date: {date}",
+    "refreshing": "Recomputing…",
+    "loadFailed": "The units' objective value did not load.",
+    "retry": "Try again",
+    "empty": "The building has no units yet.",
+    "total": {
+      "label": "Building total",
+      "units": "{count, plural, one {# unit} other {# units}}",
+      "incomplete": "{pending} of {units} missing — the total appears only when every unit has an amount.",
+      "none": "No unit falls under an objective-value form."
+    },
+    "facts": {
+      "title": "Building facts",
+      "help": "They apply to every unit. Where a unit has its own declaration, that one wins.",
+      "waiting": "{count, plural, one {# unit is waiting} other {# units are waiting}}",
+      "stage": "Completion stage",
+      "stageFromSchedule": "From the schedule: {stage}",
+      "stageScheduleHelp": "The stage comes from the completed phases tagged with a legal stage. Change it there, so there is one truth.",
+      "openSchedule": "Open schedule",
+      "stagePlaceholder": "Not declared",
+      "stageDeclaredHelp": "With no schedule phases tagged with a legal stage, declare the completed stage here.",
+      "permitDate": "Building permit date (or latest revision)",
+      "permitDateHelp": "Age is counted from it (art. 2 §20).",
+      "plotUtilisation": "Plot utilisation (SAO)",
+      "plotUtilisationHelp": "Plot utilisation ratio — counts only for an unfinished building (art. 3 §9).",
+      "hasElevator": "Elevator in the building",
+      "yes": "Yes",
+      "no": "No",
+      "unset": "Not declared",
+      "clear": "Clear"
+    },
+    "questions": {
+      "title": "Answer once for the whole building",
+      "summary": "{count, plural, one {One building answer unlocks units.} other {# building answers unlock units.}}",
+      "go": "Go to field",
+      "facts": {
+        "declaredStage": "Completion stage",
+        "permitDate": "Building permit date",
+        "plotUtilisation": "Plot utilisation (SAO)",
+        "hasElevator": "Elevator"
+      }
+    },
+    "columns": {
+      "unit": "Unit",
+      "floor": "Floor",
+      "value": "Objective value",
+      "status": "Status",
+      "details": "Breakdown",
+      "detailsFor": "Breakdown: {unit}"
+    },
+    "status": {
+      "exact": "Exact amount",
+      "range": "Range — depends on: {fields}",
+      "unresolved": "Missing: {fields}",
+      "invalid": "Inputs not accepted — see the breakdown",
+      "beforeStage": "Before a valued stage ({stage})",
+      "noZone": "The location gave no zone",
+      "unsupported": "Outside the forms (e.g. shop, office)"
+    },
+    "noFloor": "No floor",
+    "floorGroup": "{floor} · {amount}",
+    "floorGroupIncomplete": "{floor} · {pending} of {units} missing",
+    "unnamed": "Unnamed unit",
+    "inherited": {
+      "title": "From the building",
+      "facts": {
+        "stage": "completion stage",
+        "permitDate": "permit date",
+        "plotUtilisation": "SAO",
+        "hasElevator": "elevator"
+      }
+    },
+    "sheet": {
+      "description": "How this unit's objective value came out — every factor with its reference in the law."
+    },
+    "export": {
+      "button": "Export XLSX",
+      "busy": "Exporting…",
+      "failed": "The export did not complete. Try again.",
+      "filename": "Objective-value_{building}_{date}",
+      "sheets": {
+        "units": "Units",
+        "floors": "Floors",
+        "factors": "Factors",
+        "assumptions": "Assumptions"
+      },
+      "columns": {
+        "low": "Minimum (€)",
+        "high": "Maximum (€)",
+        "inherited": "From the building",
+        "units": "Units",
+        "subtotal": "Subtotal (€)",
+        "factor": "Factor",
+        "factorValue": "Value",
+        "reference": "Legal reference",
+        "key": "Item",
+        "value": "Value"
+      },
+      "floorComplete": "Complete",
+      "floorIncomplete": "{pending} of {units} missing",
+      "zonePrice": "Zone price (€/m²)",
+      "area": "Area (m²)",
+      "assumptions": {
+        "building": "Building",
+        "valuationDate": "Valuation date",
+        "exportedOn": "Export date",
+        "stageFrom": {
+          "schedule": "{stage} (from the schedule)",
+          "declared": "{stage} (declared)"
+        },
+        "stageUnknown": "Unknown — no phase tagged with a legal stage and no declaration",
+        "disclaimer": "Disclaimer",
+        "myProperty": "Finalised at (AADE myPROPERTY)",
+        "software": "Software"
+      }
+    }
   }
 }

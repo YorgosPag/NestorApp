@@ -12,6 +12,7 @@
 
 import React, { useState } from 'react';
 
+import { ObjectiveValueSaveStatus } from '@/components/objective-value/ObjectiveValueSaveStatus';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   objectiveValuePatchViolations,
@@ -20,7 +21,6 @@ import {
 } from '@/lib/objective-value/objective-value-declarations';
 import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
 
-import { ImproveSaveStatus } from './ImproveSaveStatus';
 import { ObjectiveValueBeforeAfter } from './ObjectiveValueBeforeAfter';
 import { ObjectiveValueImproveQuestions } from './ObjectiveValueImproveQuestions';
 import { ObjectiveValueVisibility } from './ObjectiveValueVisibility';
@@ -84,7 +84,7 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
     <>
       <header className="flex flex-wrap items-center justify-between gap-2">
         <p className="m-0 text-sm text-muted-foreground">{t(`${I}.sections.objectiveValue.lead`)}</p>
-        <ImproveSaveStatus save={save} />
+        <ObjectiveValueSaveStatus save={save} />
       </header>
       {localRejection.map((violation) => (
         <p key={violation} role="alert" className="m-0 text-sm text-destructive">{t(`${I}.rejected.${violation}`)}</p>

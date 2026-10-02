@@ -31,6 +31,8 @@ export interface BuildingTabLabelsConfig {
   readonly contacts: string;
   readonly videos: string;
   readonly measurements: string;
+  /** ADR-898 Φ4β */
+  readonly objectiveValue: string;
 
   // Legacy Backward Compatibility
   readonly details: string;
@@ -173,6 +175,7 @@ export const VOCAB_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   contacts: "tabs.labels.buildingContacts",
   videos: "tabs.labels.videos",
   measurements: "tabs.labels.measurements",
+  objectiveValue: "tabs.labels.objectiveValue",
 
   // 🔧 LEGACY: i18n keys for backward compatibility
   details: "tabs.labels.details",

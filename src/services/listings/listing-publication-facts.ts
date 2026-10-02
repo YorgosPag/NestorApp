@@ -34,7 +34,7 @@ import type { PlaceKnowledge } from './public-listing-projection-types';
 const logger = createModuleLogger('listing-publication-facts');
 
 /** Ό,τι δένει ο γραφέας στην αγγελία, πάνω από την καθαρή προβολή. */
-interface ListingPublicationFacts {
+export interface ListingPublicationFacts {
   readonly adminArea: AdminAreaAssignment | null;
   readonly constructionYear: SourcedAttribute<number> | null;
 }

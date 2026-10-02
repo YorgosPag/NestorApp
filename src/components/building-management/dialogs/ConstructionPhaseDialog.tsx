@@ -13,13 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NameComboboxField } from './NameComboboxField';
 import { SaveButton, CancelButton, DeleteButton } from '@/components/ui/form/ActionButtons';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
@@ -32,9 +26,11 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { DIALOG_SIZES } from '@/styles/design-tokens';
 import type { ConstructionPhaseStatus, ConstructionTaskStatus, DelayReason } from '@/types/building/construction';
+import type { LegalStage } from '@/lib/objective-value/objective-value-stages';
 import { usePhaseNameCombobox } from './usePhaseNameCombobox';
 import { ResourceAssignmentSection } from './ResourceAssignmentSection';
 import { DelayFieldsSection } from './DelayFieldsSection';
+import { LegalStageField } from './LegalStageField';
 import { PHASE_STATUSES, TASK_STATUSES } from './construction-dialog.types';
 import type { ConstructionPhaseDialogProps } from './construction-dialog.types';
 
@@ -82,6 +78,7 @@ export function ConstructionPhaseDialog({
   const [delayReason, setDelayReason] = useState<DelayReason | ''>('');
   const [delayNote, setDelayNote] = useState('');
   const [dependencies, setDependencies] = useState<string[]>([]);
+  const [legalStage, setLegalStage] = useState<LegalStage | null>(null);
 
   const showDelayFields = status === 'delayed' || status === 'blocked';
 
@@ -126,6 +123,7 @@ export function ConstructionPhaseDialog({
       setDescription(phase.description ?? '');
       setDelayReason(phase.delayReason ?? '');
       setDelayNote(phase.delayNote ?? '');
+      setLegalStage(phase.legalStage ?? null);
     } else if (mode === 'editTask' && task) {
       setName(task.name);
       setCode(task.code);
@@ -150,6 +148,7 @@ export function ConstructionPhaseDialog({
       setDelayReason('');
       setDelayNote('');
       setDependencies([]);
+      setLegalStage(null);
       // Default to passed phaseId or first available phase
       setSelectedPhaseId(phaseId ?? phases[0]?.id ?? '');
     }
@@ -193,6 +192,7 @@ export function ConstructionPhaseDialog({
           plannedEndDate,
           progress,
           description: description.trim(),
+          legalStage,
         });
       } else if (mode === 'editPhase' && phase) {
         success = await onUpdatePhase(phase.id, {
@@ -203,6 +203,7 @@ export function ConstructionPhaseDialog({
           plannedEndDate,
           progress,
           description: description.trim(),
+          legalStage,
           ...delayFields,
         });
       } else if (mode === 'createTask') {
@@ -239,7 +240,7 @@ export function ConstructionPhaseDialog({
     }
   }, [
     mode, name, code, status, plannedStartDate, plannedEndDate, progress, description,
-    delayReason, delayNote, showDelayFields, dependencies,
+    delayReason, delayNote, showDelayFields, dependencies, legalStage,
     phase, task, selectedPhaseId, validate, onSavePhase, onUpdatePhase, onSaveTask, onUpdateTask, onClose,
   ]);
 
@@ -262,15 +263,8 @@ export function ConstructionPhaseDialog({
     }
   }, [mode, phase, task, onDeletePhase, onDeleteTask, onClose]);
 
-  const dialogTitle = useMemo(() => {
-    switch (mode) {
-      case 'createPhase': return t('tabs.timeline.gantt.dialog.createPhase');
-      case 'editPhase': return t('tabs.timeline.gantt.dialog.editPhase');
-      case 'createTask': return t('tabs.timeline.gantt.dialog.createTask');
-      case 'editTask': return t('tabs.timeline.gantt.dialog.editTask');
-      default: return '';
-    }
-  }, [mode, t]);
+  // Τα κλειδιά τίτλου ταυτίζονται με τα `DialogMode` (createPhase · editPhase · createTask · editTask).
+  const dialogTitle = t(`tabs.timeline.gantt.dialog.${mode}`);
 
   const statusOptions = isPhaseMode ? PHASE_STATUSES : TASK_STATUSES;
   const dependencyOptions = useMemo(() => tasks.filter((t) => t.id !== task?.id).map((t) => ({ value: t.id, label: `${t.code} — ${t.name}` })), [tasks, task?.id]);
@@ -383,6 +377,9 @@ export function ConstructionPhaseDialog({
               </Select>
             </FormInput>
           </FormField>
+
+          {/* ADR-898 Φ4 — το στάδιο του νόμου που κλείνει η φάση (μόνο φάσεις) */}
+          {isPhaseMode && <LegalStageField value={legalStage} onChange={setLegalStage} />}
 
           {/* Delay fields — visible only when delayed/blocked (extracted ADR-266) */}
           {showDelayFields && (

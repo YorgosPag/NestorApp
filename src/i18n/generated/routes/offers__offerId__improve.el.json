@@ -1,5 +1,11 @@
 {
   "objective-value": {
+    "building": {
+      "assumptions": {
+        "declaredByUnit": "Δηλωμένα στη μονάδα: {fields}."
+      },
+      "levelsMissing": "Μονάδα σε {count} επίπεδα: ο νόμος αποτιμά κάθε όροφο χωριστά, άρα χρειάζεται όροφο και εμβαδόν για κάθε επίπεδο — συμπλήρωσέ τα στη μονάδα."
+    },
     "improve": {
       "absent": "Η αγγελία δεν βρέθηκε ή δεν είναι δική σας.",
       "areaIncludesCommon": {
@@ -161,6 +167,7 @@
         "ageYears": "ημερομηνία οικοδομικής άδειας",
         "area": "επιφάνεια",
         "commercialityFactor": "συντελεστής εμπορικότητας",
+        "completion": "στάδιο αποπεράτωσης",
         "floor": "όροφος",
         "frontage": "πρόσοψη",
         "hasCentralHeating": "κεντρική θέρμανση",

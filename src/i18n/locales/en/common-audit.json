@@ -613,6 +613,12 @@
         "type": "Property type",
         "lifecycle": "Status"
       },
+      "objectiveValueFacts": {
+        "permitDate": "Building permit date",
+        "plotUtilisation": "Plot utilisation (SAO)",
+        "declaredStage": "Declared completion stage",
+        "hasElevator": "Building elevator"
+      },
       "objectiveValueDeclarations": {
         "display": "Objective value display",
         "frontage": "Frontage",

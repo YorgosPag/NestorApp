@@ -13,6 +13,7 @@ import type { AuthContext } from '@/lib/auth';
 import type { AdminFirestore } from '@/lib/api/building-scoped-route';
 import { requireDocOfBuilding } from '@/lib/api/firestore-doc-guards';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { isLegalStage, type LegalStage } from '@/lib/objective-value/objective-value-stages';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateConstructionPhaseId, generateConstructionTaskId } from '@/services/enterprise-id.service';
@@ -47,12 +48,27 @@ export interface CreatePayload {
   description?: string;
   phaseId?: string;
   dependencies?: string[];
+  /** Μόνο φάση (ADR-898 Φ4) — επικυρώνεται με {@link legalStageInput}. */
+  legalStage?: unknown;
 }
 
 export interface UpdatePayload {
   type: 'phase' | 'task';
   id: string;
   updates: Record<string, unknown>;
+}
+
+// ─── Ετικέτα νόμου (ADR-898 Φ4) ────────────────────────────────────────
+
+/**
+ * **Η ετικέτα νόμου όπως έρχεται από τον πελάτη**: `undefined` = δεν στάλθηκε · `null` = «καμία» · αλλιώς ΜΟΝΟ στάδιο
+ * του λεξιλογίου (`LEGAL_STAGES`). Άγνωστη τιμή ⇒ 400 — το `buildAllowedUpdates` περνά τιμές ανέλεγκτες, και ένα
+ * άκυρο στάδιο θα άλλαζε σιωπηλά την αντικειμενική αξία κάθε μονάδας του κτιρίου.
+ */
+export function legalStageInput(value: unknown): LegalStage | null | undefined {
+  if (value === undefined || value === null) return value;
+  if (isLegalStage(value)) return value;
+  throw new ApiError(400, 'legalStage must be one of LEGAL_STAGES or null');
 }
 
 // ─── POST Logic — Create Phase or Task ──────────────────────────────────
@@ -105,6 +121,8 @@ export async function handleCreate(
   if (type === 'task') {
     docData.phaseId = body.phaseId;
     docData.dependencies = body.dependencies ?? [];
+  } else {
+    docData.legalStage = legalStageInput(body.legalStage) ?? null;
   }
 
   const enterpriseId = type === 'task' ? generateConstructionTaskId() : generateConstructionPhaseId();

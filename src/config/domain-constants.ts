@@ -818,6 +818,8 @@ export const API_ROUTES = {
     CONSTRUCTION_RESOURCE_ASSIGNMENTS: (buildingId: string) => `/api/buildings/${buildingId}/construction-resource-assignments` as const,
     CUSTOMERS: (buildingId: string) => `/api/buildings/${buildingId}/customers` as const,
     MILESTONES: (buildingId: string) => `/api/buildings/${buildingId}/milestones` as const,
+    /** ADR-898 Φ4 — η αντικειμενική κάθε μονάδας, υπολογισμένη κατά την ανάγνωση (τίποτα αποθηκευμένο) */
+    OBJECTIVE_VALUES: (buildingId: string) => `/api/buildings/${buildingId}/objective-values` as const,
     /** ADR-284 §3.3 Phase 3b — atomic link to Project (orphan fix) */
     LINK_PROJECT: (buildingId: string) => `/api/buildings/${buildingId}/link-project` as const,
     /** ADR-308 pattern — Soft-delete trash view */

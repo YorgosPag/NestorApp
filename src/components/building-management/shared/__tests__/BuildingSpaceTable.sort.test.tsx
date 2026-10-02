@@ -24,6 +24,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { BuildingSpaceTable } from '../BuildingSpaceTable';
 import type { SpaceColumn } from '../types';
 
@@ -102,5 +103,33 @@ describe('BuildingSpaceTable — existing behaviour is unchanged', () => {
 
     fireEvent.click(screen.getByText('price'));
     expect(renderedOrder()).toEqual(['expensive', 'cheap']);
+  });
+});
+
+describe('BuildingSpaceTable — ADR-898 Φ4β: αρχική ταξινόμηση, `<tfoot>`, προσβάσιμες επικεφαλίδες', () => {
+  it('ανοίγει ήδη ταξινομημένος (`initialSort`) και το `aria-sort` το λέει', () => {
+    render(<BuildingSpaceTable items={ROWS} columns={COLUMNS} getKey={(r) => r.id} initialSort={{ key: 'price', direction: 'desc' }} />);
+    expect(renderedOrder()).toEqual(['expensive', 'cheap', 'no-price']);
+    expect(screen.getByRole('columnheader', { name: /price/ })).toHaveAttribute('aria-sort', 'descending');
+  });
+
+  it('η ταξινόμηση είναι ΚΟΥΜΠΙ (πληκτρολόγιο), όχι κλικ σε κελί', () => {
+    render(<BuildingSpaceTable items={ROWS} columns={COLUMNS} getKey={(r) => r.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'price' }));
+    expect(screen.getByRole('columnheader', { name: /price/ })).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  it('`renderFooter` ⇒ `<tfoot>` με το πλήθος στηλών · χωρίς αυτό ⇒ κανένα `<tfoot>`', () => {
+    const { container, rerender } = render(<BuildingSpaceTable items={ROWS} columns={COLUMNS} getKey={(r) => r.id} />);
+    expect(container.querySelector('tfoot')).toBeNull();
+    rerender(
+      <BuildingSpaceTable
+        items={ROWS}
+        columns={COLUMNS}
+        getKey={(r) => r.id}
+        renderFooter={({ columnCount }) => <tr><td colSpan={columnCount}>total</td></tr>}
+      />,
+    );
+    expect(container.querySelector('tfoot td')).toHaveAttribute('colspan', '2');
   });
 });

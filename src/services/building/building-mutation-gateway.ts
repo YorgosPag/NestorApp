@@ -9,8 +9,19 @@ import {
   type BuildingUpdatePayload,
   type BuildingUpdateClientResult,
 } from '@/components/building-management/building-services';
+import { API_ROUTES } from '@/config/domain-constants';
 import { suggestNextBuildingCode } from '@/config/entity-code-config';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import {
+  applyBuildingObjectiveValuePatch,
+  BUILDING_OBJECTIVE_VALUE_BODY_KEY,
+  type BuildingObjectiveValueFacts,
+  type BuildingObjectiveValuePatch,
+} from '@/lib/objective-value/building-objective-value-facts';
+import type { ObjectiveValueWriteOutcome } from '@/lib/objective-value/objective-value-improve-subject';
+import { objectiveValueWriteFailureOf } from '@/lib/objective-value/objective-value-write-failure';
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 
 const logger = createModuleLogger('BuildingMutationGateway');
 
@@ -54,4 +65,36 @@ export async function deleteBuildingWithPolicy({
   buildingId,
 }: GuardedBuildingDeleteInput): Promise<{ success: boolean; error?: string }> {
   return deleteBuilding(buildingId);
+}
+
+/**
+ * **Ένα γεγονός της αντικειμενικής του κτιρίου** (ADR-898 Φ4β) — μερική διόρθωση που ο server εφαρμόζει σε συναλλαγή
+ * πάνω στο φρέσκο έγγραφο (`building-objective-value-patch.ts`). Το σώμα στέλνεται **μόνο του**: ο κλάδος αρνείται
+ * μείξη με άλλα πεδία.
+ *
+ * 🔑 Το `BUILDING_UPDATED` φέρει την **ολόκληρη** μετά-κατάσταση, υπολογισμένη με την **ίδια** συνάρτηση με τον server
+ *   (`applyBuildingObjectiveValuePatch`) — ποτέ μισό αντικείμενο που ένας ακροατής θα συγχώνευε λάθος.
+ * ⚠️ Δεν πετά ποτέ: η ουρά της οθόνης θέλει **αποτέλεσμα** (`saved` · `rejected` με λόγο · `failed` = ξαναδοκίμασε).
+ */
+export async function updateBuildingObjectiveValueFactsWithPolicy({
+  buildingId,
+  current,
+  patch,
+}: {
+  readonly buildingId: string;
+  readonly current: BuildingObjectiveValueFacts;
+  readonly patch: BuildingObjectiveValuePatch;
+}): Promise<ObjectiveValueWriteOutcome> {
+  try {
+    await apiClient.patch(API_ROUTES.BUILDINGS.LIST, { buildingId, [BUILDING_OBJECTIVE_VALUE_BODY_KEY]: patch });
+  } catch (cause) {
+    logger.warn('Building objective-value facts were not saved', { data: { buildingId }, error: cause instanceof Error ? cause.message : String(cause) });
+    return objectiveValueWriteFailureOf(cause);
+  }
+  RealtimeService.dispatch('BUILDING_UPDATED', {
+    buildingId,
+    updates: { objectiveValueFacts: applyBuildingObjectiveValuePatch(current, patch) },
+    timestamp: Date.now(),
+  });
+  return { kind: 'saved' };
 }

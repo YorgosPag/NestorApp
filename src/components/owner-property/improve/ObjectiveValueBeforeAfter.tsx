@@ -10,26 +10,17 @@
 
 import React, { useState } from 'react';
 
+import { useObjectiveValueAmountText } from '@/components/objective-value/ObjectiveValueEvaluated';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
 import type { ObjectiveValueBounds } from '@/lib/objective-value/objective-value-bounds';
 
 const NS = 'objective-value';
 const I = `${NS}:improve.beforeAfter`;
 
-function useBoundsLabel(): (bounds: ObjectiveValueBounds) => string | null {
-  const { t } = useTranslation([NS]);
-  return (bounds) => {
-    if (bounds.kind === 'exact') return formatCurrency(bounds.result.value);
-    if (bounds.kind === 'range') return t(`${NS}:listing.range`, { low: formatCurrency(bounds.low), high: formatCurrency(bounds.high) });
-    return null;
-  };
-}
-
 export function ObjectiveValueBeforeAfter({ bounds }: { readonly bounds: ObjectiveValueBounds }) {
   const { t } = useTranslation([NS]);
   const [baseline] = useState(bounds);
-  const labelOf = useBoundsLabel();
+  const labelOf = useObjectiveValueAmountText();
   const before = labelOf(baseline);
   const now = labelOf(bounds);
   if (now === null || before === now) return null;

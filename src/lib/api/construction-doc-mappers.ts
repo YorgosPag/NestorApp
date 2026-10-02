@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { normalizeToISO } from '@/lib/date-local';
 import type { AdminFirestore } from '@/lib/api/building-scoped-route';
+import { isLegalStage } from '@/lib/objective-value/objective-value-stages';
 import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
 
 /** Δομικός τύπος — χρειάζονται μόνο `id` + `data()`, καμία εξάρτηση από firebase-admin. */
@@ -55,9 +56,10 @@ function mapCommonConstructionFields(doc: ConstructionDocLike): ConstructionComm
   };
 }
 
+/** Η ετικέτα νόμου (ADR-898 Φ4) διαβάζεται **αυστηρά**: άγνωστη τιμή ⇒ `null`, ποτέ στάδιο που δεν δηλώθηκε. */
 export function mapConstructionPhaseDoc(doc: ConstructionDocLike): ConstructionPhase {
-  const { status } = doc.data() as Pick<ConstructionPhase, 'status'>;
-  return { ...mapCommonConstructionFields(doc), status };
+  const { status, legalStage } = doc.data() as Pick<ConstructionPhase, 'status'> & { readonly legalStage?: unknown };
+  return { ...mapCommonConstructionFields(doc), status, legalStage: isLegalStage(legalStage) ? legalStage : null };
 }
 
 export function mapConstructionTaskDoc(doc: ConstructionDocLike): ConstructionTask {
@@ -76,6 +78,19 @@ export interface PhasesAndTasks {
 }
 
 /**
+ * Οι φάσεις ενός κτηρίου, ταξινομημένες κατά `order` — **μόνες τους** (ADR-898 Φ4: το στάδιο του νόμου διαβάζει
+ * μόνο φάσεις· οι εργασίες θα ήταν άσκοπη ανάγνωση). Το ίδιο ερώτημα με το {@link fetchPhasesAndTasks}, που το καλεί.
+ */
+export async function fetchConstructionPhases(adminDb: AdminFirestore, buildingId: string): Promise<ConstructionPhase[]> {
+  const snapshot = await adminDb
+    .collection(COLLECTIONS.CONSTRUCTION_PHASES)
+    .where(FIELDS.BUILDING_ID, '==', buildingId)
+    .orderBy('order', 'asc')
+    .get();
+  return snapshot.docs.map(mapConstructionPhaseDoc);
+}
+
+/**
  * Παράλληλη ανάγνωση φάσεων + εργασιών ενός κτηρίου, ταξινομημένων κατά `order`.
  * Η ταξινόμηση είναι μέρος του συμβολαίου: το Gantt την εμπιστεύεται και δεν
  * ξανα-ταξινομεί στον πελάτη.
@@ -84,12 +99,8 @@ export async function fetchPhasesAndTasks(
   adminDb: AdminFirestore,
   buildingId: string,
 ): Promise<PhasesAndTasks> {
-  const [phasesSnapshot, tasksSnapshot] = await Promise.all([
-    adminDb
-      .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-      .where(FIELDS.BUILDING_ID, '==', buildingId)
-      .orderBy('order', 'asc')
-      .get(),
+  const [phases, tasksSnapshot] = await Promise.all([
+    fetchConstructionPhases(adminDb, buildingId),
     adminDb
       .collection(COLLECTIONS.CONSTRUCTION_TASKS)
       .where(FIELDS.BUILDING_ID, '==', buildingId)
@@ -97,8 +108,5 @@ export async function fetchPhasesAndTasks(
       .get(),
   ]);
 
-  return {
-    phases: phasesSnapshot.docs.map(mapConstructionPhaseDoc),
-    tasks: tasksSnapshot.docs.map(mapConstructionTaskDoc),
-  };
+  return { phases, tasks: tasksSnapshot.docs.map(mapConstructionTaskDoc) };
 }

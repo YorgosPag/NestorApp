@@ -113,6 +113,7 @@
     "buildingScopedRoute::/api/buildings/[buildingId]/construction-baselines",
     "buildingScopedRoute::/api/buildings/[buildingId]/construction-phases",
     "buildingScopedRoute::/api/buildings/[buildingId]/construction-resource-assignments",
+    "buildingScopedRoute::/api/buildings/[buildingId]/objective-values",
     "createMetaWebhookRoute::/api/communications/webhooks/instagram",
     "createMetaWebhookRoute::/api/communications/webhooks/messenger",
     "createMetaWebhookRoute::/api/communications/webhooks/whatsapp",

@@ -7,6 +7,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-034-gantt-chart-construction-tracking.md
  */
 
+import type { LegalStage } from '@/lib/objective-value/objective-value-stages';
+
 // ─── Status Types ────────────────────────────────────────────────────────
 
 export type ConstructionPhaseStatus =
@@ -58,6 +60,12 @@ export interface ConstructionPhase {
   delayReason?: DelayReason | null;
   /** Free-text notes about the delay/block */
   delayNote?: string | null;
+  /**
+   * Το στάδιο αποπεράτωσης του νόμου (ΠΟΛ.1149/1994 άρθ. 3 §9) που **κλείνει** αυτή η φάση — προαιρετικό. Η
+   * ολοκλήρωσή της (`status: 'completed'`) είναι το γεγονός από το οποίο η αντικειμενική αξία ξέρει ότι το κτίριο
+   * έφτασε στο στάδιο (ADR-898 Φ4 · `stageReached`). `null`/απούσα = η φάση δεν αντιστοιχεί σε στάδιο του νόμου.
+   */
+  legalStage?: LegalStage | null;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -101,6 +109,8 @@ export interface ConstructionPhaseCreatePayload {
   plannedStartDate: string;
   plannedEndDate: string;
   description?: string;
+  /** ADR-898 Φ4 — βλ. {@link ConstructionPhase.legalStage}. */
+  legalStage?: LegalStage | null;
 }
 
 export interface ConstructionPhaseUpdatePayload {
@@ -117,6 +127,7 @@ export interface ConstructionPhaseUpdatePayload {
   description?: string;
   delayReason?: DelayReason | null;
   delayNote?: string | null;
+  legalStage?: LegalStage | null;
 }
 
 export interface ConstructionTaskCreatePayload {

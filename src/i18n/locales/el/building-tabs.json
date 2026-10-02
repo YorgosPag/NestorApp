@@ -55,7 +55,8 @@
       "locations": "Διευθύνσεις",
       "procurement": "Προμήθειες",
       "buildingCode": "Όροι Δόμησης",
-      "surveyData": "Στοιχεία Τοπογραφικού"
+      "surveyData": "Στοιχεία Τοπογραφικού",
+      "objectiveValue": "Αντικειμενική"
     },
     "descriptions": {
       "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",

@@ -36,6 +36,7 @@ import { FloorsTabContent } from '@/components/building-management/tabs/FloorsTa
 import { ParkingTabContent } from '@/components/building-management/tabs/ParkingTabContent';
 import { PropertiesTabContent } from '@/components/building-management/tabs/PropertiesTabContent';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+import { BuildingObjectiveValueTab } from '@/components/building-management/tabs/ObjectiveValueTab/BuildingObjectiveValueTab';
 
 function resolveBuilding(props: BuildingTabComponentProps): BuildingTabComponentProps['building'] | undefined {
   return props.building ?? props.data;
@@ -241,6 +242,18 @@ function PropertiesTabContentAdapter(props: BuildingTabComponentProps) {
   return React.createElement(PropertiesTabContent, componentProps);
 }
 
+function BuildingObjectiveValueTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+  return React.createElement(BuildingObjectiveValueTab, {
+    buildingId: String(building.id),
+    buildingName: building.name ?? String(building.id),
+    onNavigateToTab: props.onNavigateToTab,
+  });
+}
+
 function ActivityTabAdapter(props: BuildingTabComponentProps) {
   const building = resolveNormalizedBuilding(props);
   return React.createElement(ActivityTab, {
@@ -265,6 +278,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<BuildingTa
   BuildingContactsTab: BuildingContactsTabAdapter,
   BuildingLocationsTab: BuildingLocationsTabAdapter,
   MeasurementsTabContent: MeasurementsTabContentAdapter,
+  BuildingObjectiveValueTab: BuildingObjectiveValueTabAdapter,
   FloorsTabContent: FloorsTabContentAdapter,
   ParkingTabContent: ParkingTabContentAdapter,
   PropertiesTabContent: PropertiesTabContentAdapter,

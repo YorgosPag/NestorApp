@@ -46,6 +46,15 @@ import type {
 const ART6 = `${POL_1149} άρθ.6`;
 const ART7 = `${POL_1149} άρθ.7`;
 
+/**
+ * Το στάδιο προς έλεγχο, και ζητά την παλαιότητα αν είναι πλήρες — κοινό στα έντυπα 4 και 5. Απούσα ⇒ πλήρες·
+ * `null` ⇒ `missing: completion` (ADR-898 Φ4: ο εργολάβος δεν τεκμαίρει αποπεράτωση).
+ */
+function checkStage(check: InputCheck, input: StorageInput | ParkingInput): void {
+  const completion = input.completion === undefined ? 'complete' : check.need(input.completion, 'completion');
+  if (completion === 'complete') check.need(input.ageYears, 'ageYears');
+}
+
 /** Παλαιότητα σε πλήρως αποπερατωμένο, αλλιώς συντελεστής σταδίου — κοινό στα έντυπα 4 και 5. */
 function stageFactor(completion: AncillaryCompletion, ageYears: number, article: string): AppliedFactor[] {
   if (completion === 'complete') {
@@ -65,7 +74,7 @@ function checkStorage(check: InputCheck, input: StorageInput): void {
   check.invalidIf(area !== null && !(area > 0), 'nonPositiveArea');
   const position = check.need(input.position, 'position');
   if (position !== null && STORAGE_POSITION[position].perSe) check.need(input.commercialityFactor, 'commercialityFactor');
-  if ((input.completion ?? 'complete') === 'complete') check.need(input.ageYears, 'ageYears');
+  checkStage(check, input);
 }
 
 export function computeStorage(input: StorageInput): ObjectiveValueResult {
@@ -110,7 +119,7 @@ function checkParking(check: InputCheck, input: ParkingInput): void {
   const position = check.need(input.position, 'position');
   if (position === null || !isClosed(position)) return;
   check.need(input.commercialityFactor, 'commercialityFactor');
-  if ((input.completion ?? 'complete') === 'complete') check.need(input.ageYears, 'ageYears');
+  checkStage(check, input);
 }
 
 /** Παλαιότητα, αποπεράτωση, κατασκευή: **μόνο** σε κλειστή θέση (άρθ. 7 §6, §8, §9). */

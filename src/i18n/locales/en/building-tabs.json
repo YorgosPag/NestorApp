@@ -55,7 +55,8 @@
       "locations": "Addresses",
       "procurement": "Procurement",
       "buildingCode": "Building Code",
-      "surveyData": "Survey Data"
+      "surveyData": "Survey Data",
+      "objectiveValue": "Objective value"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",

@@ -23,12 +23,20 @@ const NS = 'objective-value';
 const R = `${NS}:result`;
 
 
-function FactorRow({ factor }: { readonly factor: AppliedFactor }) {
+/** Το όνομα ενός συντελεστή («Όροφος (επίπεδο 2)») — το ΕΝΑ, για την ανάλυση **και** την εξαγωγή XLSX (ADR-898 Φ4β). */
+export function useObjectiveValueFactorLabel(): (factor: AppliedFactor) => string {
   const { t } = useTranslation([NS]);
-  const level = factor.level === undefined ? '' : ` ${t(`${R}.levelSuffix`, { number: factor.level + 1 })}`;
+  return (factor) => {
+    const level = factor.level === undefined ? '' : ` ${t(`${R}.levelSuffix`, { number: factor.level + 1 })}`;
+    return `${t(`${R}.factors.${factor.key}`)}${level}`;
+  };
+}
+
+function FactorRow({ factor }: { readonly factor: AppliedFactor }) {
+  const labelOf = useObjectiveValueFactorLabel();
   return (
     <tr className="border-t border-border">
-      <th scope="row" className="py-1 pr-3 text-left font-normal">{`${t(`${R}.factors.${factor.key}`)}${level}`}</th>
+      <th scope="row" className="py-1 pr-3 text-left font-normal">{labelOf(factor)}</th>
       <td className="py-1 pr-3 tabular-nums">{formatNumber(factor.factor, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
       <td className="py-1 text-xs text-muted-foreground">{factor.ref}</td>
     </tr>

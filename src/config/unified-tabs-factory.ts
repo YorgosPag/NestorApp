@@ -489,6 +489,16 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'AnalyticsTabContent'
           },
+          // ADR-898 Φ4β — η αντικειμενική κάθε μονάδας (υπολογισμένη στον server), γεγονότα κτιρίου, εξαγωγή XLSX.
+          // Χωρίς `description`: οι ετικέτες ζουν στο i18n (N.11), όχι εδώ.
+          {
+            id: 'objectiveValue',
+            value: 'objectiveValue',
+            icon: 'landmark',
+            order: 9.5,
+            enabled: true,
+            component: 'BuildingObjectiveValueTab'
+          },
           {
             id: 'measurements',
             value: 'measurements',

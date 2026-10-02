@@ -81,9 +81,10 @@ function checkResidence(check: InputCheck, input: ResidenceInput): ResolvedLevel
 function checkUnitWide(check: InputCheck, input: ResidenceInput): void {
   check.need(input.frontage, 'frontage');
   check.need(input.hasCentralHeating, 'hasCentralHeating');
-  const complete = (input.completion ?? 'complete') === 'complete';
-  if (complete) check.need(input.ageYears, 'ageYears');
-  else check.need(input.plotUtilisation, 'plotUtilisation');
+  // `null` = στάδιο άγνωστο (ADR-898 Φ4): ζητείται το ίδιο — παλαιότητα και ΣΑΟ εξαρτώνται από αυτό.
+  const completion = input.completion === undefined ? 'complete' : check.need(input.completion, 'completion');
+  if (completion === 'complete') check.need(input.ageYears, 'ageYears');
+  else if (completion !== null) check.need(input.plotUtilisation, 'plotUtilisation');
 }
 
 /** Πρόσοψη (§3): οι περιπτώσεις β, γ δεν ισχύουν σε μνημονευόμενους οικισμούς ούτε σε απαλλοτριωτέα. */
@@ -97,7 +98,7 @@ function frontageFactor(input: ResidenceInput): AppliedFactor[] {
 
 /** Παλαιότητα μόνο σε πλήρως αποπερατωμένο (άρθ. 2 §20)· αλλιώς συντελεστής αποπεράτωσης ανά ΣΑΟ (§9). */
 function stageFactor(input: ResidenceInput): AppliedFactor[] {
-  const completion = input.completion ?? 'complete';
+  const completion = input.completion ?? 'complete'; // `null` δεν φτάνει εδώ: το έκοψε ο έλεγχος
   if (completion === 'complete') {
     const age = bandFactor(RESIDENCE_AGE_BANDS, input.ageYears ?? 0);
     return age === 1 ? [] : [factor('age', age, `${ART3} §7`)];

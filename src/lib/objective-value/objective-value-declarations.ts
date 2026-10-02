@@ -21,6 +21,7 @@
 import { z } from 'zod';
 
 import { isDateKey } from '@/lib/calendar/date-key';
+import { isPlainRecord } from '@/lib/type-guards';
 
 import { RESIDENCE_FRONTAGES, type ResidenceFrontage } from './objective-value-types';
 
@@ -76,7 +77,7 @@ export const UNDECLARED_OBJECTIVE_VALUE: ObjectiveValueDeclarations = {
 // ============================================================================
 
 function recordOf(raw: unknown): Readonly<Record<string, unknown>> {
-  return typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  return isPlainRecord(raw) ? raw : {};
 }
 
 function booleanOrNull(raw: unknown): boolean | null {
@@ -177,9 +178,16 @@ export type ListingObjectiveValueDeclarations =
 export function listingObjectiveValueDeclarationsOf(
   declarations: ObjectiveValueDeclarations,
 ): ListingObjectiveValueDeclarations {
-  if (declarations.display === 'hidden') return { display: 'hidden' };
+  return declarations.display === 'hidden' ? { display: 'hidden' } : { display: 'shown', declared: declaredOf(declarations) };
+}
+
+/**
+ * **Τα στοιχεία υπολογισμού, ανεξάρτητα από την εμφάνιση** — ό,τι μπαίνει στη μηχανή. Η αγγελία τα δείχνει μόνο αν
+ * δεν είναι κρυμμένη· ο εργολάβος (ADR-898 Φ4) τα βλέπει **πάντα**: η απόκρυψη είναι επιλογή προς το κοινό.
+ */
+export function declaredOf(declarations: ObjectiveValueDeclarations): ListingObjectiveValueDeclared {
   const { zoneFront, areaIncludesCommon, permitDate, hasCentralHeating, hasElevator } = declarations;
-  return { display: 'shown', declared: { zoneFront, areaIncludesCommon, permitDate, hasCentralHeating, hasElevator } };
+  return { zoneFront, areaIncludesCommon, permitDate, hasCentralHeating, hasElevator };
 }
 
 /**

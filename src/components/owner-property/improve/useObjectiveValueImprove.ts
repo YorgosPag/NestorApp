@@ -40,7 +40,7 @@ import type {
 import { withObjectiveValueDeclarations } from '@/services/listings/public-listing-objective-value';
 import type { PublicListing } from '@/types/public-listing';
 
-export type ImproveSave = FieldPatchQueueHandle<ObjectiveValueDeclarationsPatch, ObjectiveValueWriteRejection>;
+type ImproveSave = FieldPatchQueueHandle<ObjectiveValueDeclarationsPatch, ObjectiveValueWriteRejection>;
 
 export type ImproveZone =
   | Exclude<ValueZoneLookup, { readonly kind: 'answered' }>

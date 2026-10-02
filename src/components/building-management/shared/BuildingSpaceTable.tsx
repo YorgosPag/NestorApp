@@ -9,6 +9,10 @@
  * that toggles A→Z / Z→A sorting. Columns with `sortGroups` sort in GROUPS
  * (Revit `Sort By` group → `Then By` value) — ADR-777 §8.60.14.14.
  *
+ * ADR-898 Φ4β: `initialSort` (το schedule ανοίγει ήδη ομαδοποιημένο, όπως το `Sort By` του Revit) και
+ * `renderFooter` (`<tfoot>` — η γραμμή «Grand total» του schedule· ο καλών αποφασίζει αν **υπάρχει** σύνολο).
+ * Οι επικεφαλίδες ταξινόμησης είναι **κουμπιά** με `aria-sort` — προσβάσιμες από πληκτρολόγιο.
+ *
  * @module components/building-management/shared/BuildingSpaceTable
  */
 
@@ -19,6 +23,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -27,18 +32,9 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
-import type { SpaceColumn, SpaceActions, SpaceActionState, SpaceSortGroup, SortDirection } from './types';
-import { compareSortValues } from '@/lib/array-utils';
+import type { SpaceColumn, SpaceActions, SpaceActionState } from './types';
+import { ariaSortOf, nextSortState, sortIntoGroups, type SortState } from './space-table-sort';
 import '@/lib/design-system';
-
-// ============================================================================
-// SORT STATE
-// ============================================================================
-
-interface SortState {
-  key: string;
-  direction: SortDirection;
-}
 
 // ============================================================================
 // TYPES
@@ -59,35 +55,12 @@ interface BuildingSpaceTableProps<T> {
   renderEditRow?: (item: T) => React.ReactNode;
   /** ID of the item currently being edited inline */
   editingId?: string | null;
-}
-
-// ============================================================================
-// SORT → GROUPS
-// ============================================================================
-
-/**
- * Οι γραμμές του πίνακα ως **ομάδες**, ταξινομημένες.
- *
- * - Στήλη με `sortGroups` ⇒ **εκείνη** διαμερίζει (Revit `Sort By` ομάδα → `Then By` τιμή):
- *   στοιχεία δύο ομάδων **δεν συγκρίνονται ποτέ** (ADR-777 §8.60.14.14 — τιμή πώλησης, €/μήνα
- *   και €/νύχτα δεν είναι ένας άξονας).
- * - Στήλη με `sortValue` ⇒ **μία** ομάδα χωρίς επιγραφή, με τον ΕΝΑ συγκριτή της εφαρμογής
- *   (κενά τελευταία και στις δύο κατευθύνσεις, ελληνική σειρά — `lib/array-utils`).
- */
-function sortIntoGroups<T>(
-  items: readonly T[],
-  columns: readonly SpaceColumn<T>[],
-  sort: SortState | null,
-): readonly SpaceSortGroup<T>[] {
-  const column = sort ? columns.find((c) => c.key === sort.key) : undefined;
-  if (!sort || !column) return [{ key: 'all', label: null, items }];
-
-  if (column.sortGroups) return column.sortGroups(items, sort.direction);
-
-  const extractor = column.sortValue;
-  if (!extractor) return [{ key: 'all', label: null, items }];
-  const sorted = [...items].sort((a, b) => compareSortValues(extractor(a), extractor(b), sort.direction));
-  return [{ key: 'all', label: null, items: sorted }];
+  /** Η ταξινόμηση με την οποία ανοίγει ο πίνακας (π.χ. ομάδες ανά όροφο). Ο άνθρωπος την αλλάζει κανονικά. */
+  initialSort?: SortState;
+  /** Ειδοποίηση σε κάθε αλλαγή ταξινόμησης — ώστε η εξαγωγή να βγάζει **ό,τι βλέπει** ο άνθρωπος, με την ίδια σειρά. */
+  onSortChange?: (sort: SortState | null) => void;
+  /** Γραμμή(ές) του `<tfoot>` — δέχεται το πλήθος στηλών για `colSpan`. Χωρίς αυτό: κανένα `<tfoot>`. */
+  renderFooter?: (layout: { readonly columnCount: number }) => React.ReactNode;
 }
 
 // ============================================================================
@@ -102,6 +75,9 @@ export function BuildingSpaceTable<T>({
   actionState,
   renderEditRow,
   editingId,
+  initialSort,
+  onSortChange,
+  renderFooter,
 }: BuildingSpaceTableProps<T>) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const iconSizes = useIconSizes();
@@ -112,16 +88,13 @@ export function BuildingSpaceTable<T>({
   // SORT STATE & LOGIC
   // ============================================================================
 
-  const [sort, setSort] = useState<SortState | null>(null);
+  const [sort, setSort] = useState<SortState | null>(initialSort ?? null);
 
   const handleSort = useCallback((columnKey: string) => {
-    setSort((prev) => {
-      if (prev?.key === columnKey) {
-        return { key: columnKey, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key: columnKey, direction: 'asc' };
-    });
-  }, []);
+    const next = nextSortState(sort, columnKey);
+    setSort(next);
+    onSortChange?.(next);
+  }, [sort, onSortChange]);
 
   const sortedGroups = useMemo(() => sortIntoGroups(items, columns, sort), [items, sort, columns]);
 
@@ -185,11 +158,21 @@ export function BuildingSpaceTable<T>({
             return (
               <TableHead
                 key={col.key}
-                className={`${col.width || ''} ${col.alignRight ? 'text-right' : ''} ${isSortable ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
-                onClick={isSortable ? () => handleSort(col.key) : undefined}
+                className={`${col.width || ''} ${col.alignRight ? 'text-right' : ''}`}
+                aria-sort={isSortable ? ariaSortOf(sort, col.key) : undefined}
               >
-                {col.label}
-                {isSortable && renderSortIcon(col.key)}
+                {isSortable ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center select-none hover:text-foreground"
+                    onClick={() => handleSort(col.key)}
+                  >
+                    {col.label}
+                    {renderSortIcon(col.key)}
+                  </button>
+                ) : (
+                  col.label
+                )}
               </TableHead>
             );
           })}
@@ -214,6 +197,7 @@ export function BuildingSpaceTable<T>({
           {group.items.map(renderRow)}
         </TableBody>
       ))}
+      {renderFooter && <TableFooter>{renderFooter({ columnCount })}</TableFooter>}
     </Table>
   );
 }

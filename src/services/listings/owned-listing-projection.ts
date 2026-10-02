@@ -144,7 +144,16 @@ export async function readOwnedListingPreview(
 ): Promise<PublicListing | null> {
   const owned = await lookupOwnedProjection(db, propertyId, uid, companyId);
   if (owned.kind === 'absent') return null;
-  const shape = projectListingShape(owned.property, owned.place, owned.at);
-  const listing = { ...shape, levelAreas: projectLevelAreas(owned.property, shape.areaSqm) };
+  const listing = ownedListingShape(owned);
   return withPublicationFacts(listing, await resolvePublicationFacts(db, listing, owned.place));
+}
+
+/**
+ * **Το εφήμερο σχήμα του κατόχου** — η προβολή **με** το μικτό ανά όροφο **χωρίς** πύλη απόκρυψης, πριν από τα
+ * γεγονότα δημοσίευσης. Σύγχρονο επίτηδες: ο πίνακας του εργολάβου (ADR-898 Φ4) προβάλλει Ν μονάδες και λύνει τα
+ * γεγονότα **μία φορά ανά θέση**, όχι Ν φορές. Ένα σημείο για τη μορφή — δύο καλούντες.
+ */
+export function ownedListingShape(owned: OwnedProjectionInput): PublicListing {
+  const shape = projectListingShape(owned.property, owned.place, owned.at);
+  return { ...shape, levelAreas: projectLevelAreas(owned.property, shape.areaSqm) };
 }

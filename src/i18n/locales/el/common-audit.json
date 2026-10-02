@@ -613,6 +613,12 @@
         "type": "Είδος ακινήτου",
         "lifecycle": "Κατάσταση"
       },
+      "objectiveValueFacts": {
+        "permitDate": "Ημερομηνία οικοδομικής άδειας κτιρίου",
+        "plotUtilisation": "ΣΑΟ οικοπέδου",
+        "declaredStage": "Δηλωμένο στάδιο αποπεράτωσης",
+        "hasElevator": "Ανελκυστήρας κτιρίου"
+      },
       "objectiveValueDeclarations": {
         "display": "Εμφάνιση αντικειμενικής αξίας",
         "frontage": "Πρόσοψη",

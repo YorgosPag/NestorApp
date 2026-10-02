@@ -17,6 +17,7 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { loadOwnedBuilding } from './_shared/building-owned-doc';
+import { BUILDING_OBJECTIVE_VALUE_BODY_KEY, patchBuildingObjectiveValue } from './building-objective-value-patch';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
@@ -167,6 +168,11 @@ export const PATCH = withStandardRateLimit(
         action: 'update',
         db: adminDb,
       });
+
+      // ADR-898 Φ4 — τα γεγονότα της αντικειμενικής: μερική διόρθωση σε συναλλαγή, ΟΧΙ `update(body)` (σβήνει αδέλφια).
+      if (BUILDING_OBJECTIVE_VALUE_BODY_KEY in body) {
+        return await patchBuildingObjectiveValue({ adminDb, buildingId, body, ctx });
+      }
 
       // ADR-890 Φ0 — η φόρμα κρίνει το έτος με την ΙΔΙΑ σταθερά· εδώ η πόρτα για όποιον την παρακάμψει.
       const year = updates.constructionYear;

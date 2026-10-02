@@ -52,8 +52,9 @@ export interface ObjectiveValueDraft {
   readonly commercialityAssumed: boolean;
   /** `YYYY-MM-DD` — έκδοση ή τελευταία αναθεώρηση της οικοδομικής άδειας. */
   readonly permitDate: string | null;
-  readonly residenceCompletion: ResidenceCompletion;
-  readonly ancillaryCompletion: AncillaryCompletion;
+  /** `null` = άγνωστο (ADR-898 Φ4: κτίριο χωρίς στάδιο) ⇒ η μηχανή το ζητά· ο υπολογιστής ξεκινά από «πλήρως». */
+  readonly residenceCompletion: ResidenceCompletion | null;
+  readonly ancillaryCompletion: AncillaryCompletion | null;
   readonly plotUtilisation: number | null;
   readonly construction: ConstructionKind;
   readonly lightRoof: boolean;

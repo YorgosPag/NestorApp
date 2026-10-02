@@ -8,6 +8,7 @@
 
 import type { ReactNode } from 'react';
 import type { SortableValue, SortDirection } from '@/lib/array-utils';
+import type { ScheduleCell, ScheduleCellFormat } from '@/lib/export/excel-workbook';
 
 // ============================================================================
 // TABLE COLUMN DEFINITION
@@ -50,6 +51,13 @@ export interface SpaceColumn<T> {
    * Ο πίνακας δεν ξέρει τι είναι «τιμή» — μόνο ότι κάποιες στήλες διαμερίζουν.
    */
   sortGroups?: (items: readonly T[], direction: SortDirection) => readonly SpaceSortGroup<T>[];
+  /**
+   * **Η τιμή του κελιού στην εξαγωγή XLSX** (ADR-898 Φ4β) — από τον ΙΔΙΟ ορισμό στήλης που ζωγραφίζει τον πίνακα (το
+   * schedule export του Revit). Αριθμός μένει αριθμός. Χωρίς αυτό η στήλη **δεν** εξάγεται (π.χ. κουμπιά).
+   */
+  exportCell?: (item: T) => ScheduleCell;
+  /** Πώς διαβάζει το Excel τη στήλη — προεπιλογή `text`. */
+  exportFormat?: ScheduleCellFormat;
 }
 
 /**

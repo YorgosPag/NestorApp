@@ -41,13 +41,9 @@ import {
 } from './property-deletion-guard';
 // Η ΜΙΑ λίστα κλειδωμάτων — κοινή με τον server (ADR-898 Φ3β-3: ήταν δύο αντίγραφα «keep both in sync»).
 import { isFieldLocked, lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
-import { apiErrorBodyOf } from '@/lib/api/api-client-types';
-import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import type { ObjectiveValueDeclarationsPatch } from '@/lib/objective-value/objective-value-declarations';
-import {
-  objectiveValueRejectionOf,
-  type ObjectiveValueWriteOutcome,
-} from '@/lib/objective-value/objective-value-improve-subject';
+import type { ObjectiveValueWriteOutcome } from '@/lib/objective-value/objective-value-improve-subject';
+import { objectiveValueWriteFailureOf } from '@/lib/objective-value/objective-value-write-failure';
 
 type PropertyMutationIntent =
   | 'create'
@@ -448,15 +444,6 @@ export async function updatePropertyCoverageWithPolicy({
 // ADR-898 Φ3β-3 — ΟΙ ΔΗΛΩΣΕΙΣ ΤΗΣ ΑΝΤΙΚΕΙΜΕΝΙΚΗΣ (η πόρτα γραφής του γραφείου)
 // ============================================================================
 
-/** Άρνηση του server → λόγος της οθόνης. 422 = κανόνας δήλωσης · 403 = κλείδωμα συναλλαγής · 4xx = άλλη άρνηση. */
-function objectiveValueFailureOf(cause: unknown): ObjectiveValueWriteOutcome {
-  if (!ApiClientError.isApiClientError(cause) || cause.statusCode >= 500) return { kind: 'failed' };
-  if (cause.statusCode === 403) return { kind: 'rejected', reasons: ['locked'] };
-  const violations = apiErrorBodyOf(cause)?.violations;
-  const reasons = Array.isArray(violations) && violations.length > 0 ? violations.map(objectiveValueRejectionOf) : ['other' as const];
-  return { kind: 'rejected', reasons };
-}
-
 /**
  * **Μία απάντηση της ενότητας «Αντικειμενική αξία»** σε ακίνητο γραφείου — μερική διόρθωση, που ο server εφαρμόζει σε
  * συναλλαγή πάνω στο φρέσκο έγγραφο. Ίδιο κλείδωμα συναλλαγής με κάθε άλλη αλλαγή (η ΜΙΑ λίστα, ADR-249).
@@ -481,6 +468,6 @@ export async function updatePropertyObjectiveValueWithPolicy({
     await updatePropertyRecord(propertyId, updates as Partial<Property>);
     return { kind: 'saved' };
   } catch (cause) {
-    return objectiveValueFailureOf(cause);
+    return objectiveValueWriteFailureOf(cause);
   }
 }

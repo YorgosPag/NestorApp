@@ -9,6 +9,7 @@ import { fetchPhasesAndTasks } from '@/lib/api/construction-doc-mappers';
 import {
   handleCreate,
   handleDelete,
+  legalStageInput,
   type ConstructionPhasesGetResponse,
   type ConstructionMutationResponse,
   type CreatePayload,
@@ -31,7 +32,7 @@ const TASK_PATCHABLE_FIELDS = [
 const PHASE_PATCHABLE_FIELDS = [
   'name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate',
   'actualStartDate', 'actualEndDate', 'progress', 'barColor', 'description',
-  'delayReason', 'delayNote',
+  'delayReason', 'delayNote', 'legalStage',
 ] as const;
 
 // =============================================================================
@@ -82,6 +83,8 @@ export const PATCH = buildingScopedRoute<ConstructionMutationResponse>({
       adminDb, collection, id, buildingId, label: type, ownerLabel: 'Document',
     });
 
+    // ADR-898 Φ4 — η ετικέτα νόμου επικυρώνεται ΠΡΙΝ τη γραφή (το `buildAllowedUpdates` δεν κρίνει τιμές).
+    if (type === 'phase') legalStageInput(updates.legalStage);
     const allowed = type === 'task' ? TASK_PATCHABLE_FIELDS : PHASE_PATCHABLE_FIELDS;
     const cleanUpdates = buildAllowedUpdates(updates, allowed, ctx.uid);
     await ref.update(cleanUpdates);
