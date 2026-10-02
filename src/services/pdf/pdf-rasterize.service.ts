@@ -10,6 +10,10 @@
  *
  * Browser-side equivalent: `src/services/thumbnail-generator.ts::generatePdfThumbnail`.
  * This module is the server-side SSoT — DO NOT inline pdfjs in route handlers.
+ *
+ * ADR-900 §3.8 — also the server-side **text** extraction ({@link extractPdfText}), through
+ * the SAME loader: a second `import('pdfjs-dist/...')` elsewhere would be a second place
+ * where the globals-before-load contract below can be forgotten.
  */
 
 import 'server-only';
@@ -74,7 +78,10 @@ interface PdfjsDoc {
   destroy(): Promise<void>;
 }
 interface PdfjsViewport { width: number; height: number; }
+/** Ένα κομμάτι κειμένου της σελίδας — `hasEOL` = αλλαγή γραμμής μετά από αυτό. */
+interface PdfjsTextItem { str?: string; hasEOL?: boolean; }
 interface PdfjsPage {
+  getTextContent(): Promise<{ items: ReadonlyArray<PdfjsTextItem> }>;
   getViewport(opts: { scale: number }): PdfjsViewport;
   render(opts: { canvasContext: CanvasContextLike; viewport: PdfjsViewport }): { promise: Promise<void> };
   cleanup(): void;
@@ -214,5 +221,34 @@ export async function rasterizePdfPages(
     await doc.destroy();
   }
 
+  return pages;
+}
+
+/**
+ * **Το κείμενο του PDF, ανά σελίδα** (ADR-900 §3.8 — ανάγνωση ΠΚΑ). Γραμμές ενωμένες με αλλαγή γραμμής
+ * όπου το pdf.js σημειώνει τέλος γραμμής· κανένα OCR (σαρωμένο PDF ⇒ κενό κείμενο, και ο
+ * καλών το κρίνει ως «δεν διαβάστηκε», ποτέ ως «δεν υπάρχει»).
+ */
+export async function extractPdfText(
+  pdfBuffer: Buffer,
+  options: { readonly maxPages?: number } = {},
+): Promise<string[]> {
+  const pdfjs = await loadPdfjs();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false }).promise;
+  const pageCount = Math.min(doc.numPages, options.maxPages ?? DEFAULT_MAX_PAGES);
+  const pages: string[] = [];
+  try {
+    for (let pageNum = 1; pageNum <= pageCount; pageNum += 1) {
+      const page = await doc.getPage(pageNum);
+      try {
+        const { items } = await page.getTextContent();
+        pages.push(items.map((item) => (item.str ?? '') + (item.hasEOL ? '\n' : ' ')).join(''));
+      } finally {
+        page.cleanup();
+      }
+    }
+  } finally {
+    await doc.destroy();
+  }
   return pages;
 }
