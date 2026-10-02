@@ -32,6 +32,9 @@ import { SHORT_STAY_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
 
 import { PublicSiteMenuSheet } from '../PublicSiteMenuSheet';
+import { PUBLIC_SITE_DOORS, PUBLIC_SITE_PRIMARY_ACTION, PUBLIC_SITE_SPOKES } from '../public-site-nav';
+
+const ALL_DESTINATIONS = [...PUBLIC_SITE_SPOKES, ...PUBLIC_SITE_DOORS, PUBLIC_SITE_PRIMARY_ACTION];
 
 function renderOpen() {
   const onOpenChange = jest.fn();
@@ -45,6 +48,10 @@ describe('PublicSiteMenuSheet — ό,τι έφυγε από τη μπάρα, φ�
     const dialog = screen.getByRole('dialog');
     for (const route of [AGENCY_DIRECTORY_ROUTE, SHORT_STAY_LANDING_ROUTE, MY_DEMANDS_ROUTE, MY_OFFERS_ROUTE, NEW_OFFER_ROUTE]) {
       expect(dialog.querySelector(`a[href="${route}"]`)).not.toBeNull();
+    }
+    // 🔑 …και ό,τι προσθέσει η ΛΙΣΤΑ αύριο (π.χ. «Ιδιοκτήτες», ADR-900 §3.7) — όχι μόνο οι πέντε που ήξερε ο συντάκτης.
+    for (const destination of ALL_DESTINATIONS) {
+      expect(dialog.querySelector(`a[href="${destination.href}"]`)).not.toBeNull();
     }
   });
 
@@ -75,7 +82,8 @@ describe('PublicSiteMenuSheet — ό,τι έφυγε από τη μπάρα, φ�
   it('Σ6: κάθε γραμμή είναι στόχος αφής ≥ 44 px (min-h-11)', () => {
     renderOpen();
     const links = Array.from(screen.getByRole('dialog').querySelectorAll('a'));
-    expect(links.length).toBe(5);
+    // Ο αριθμός ΒΓΑΙΝΕΙ από τη λίστα (SSoT): ήταν γραμμένο «5» και κοκκίνισε όταν μπήκε η ακτίνα «Ιδιοκτήτες».
+    expect(links.length).toBe(ALL_DESTINATIONS.length);
     for (const link of links) expect(link.className).toContain('min-h-11');
   });
 });

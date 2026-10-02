@@ -45,7 +45,6 @@ function ClaimCard({ query }: { query: ProspectQuery }): React.ReactElement {
     <aside className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
       <h2 className="text-base font-semibold text-foreground">{t(`${K}.claim.title`)}</h2>
       <p className="text-sm text-muted-foreground">{t(`${K}.claim.body`)}</p>
-      <p className="text-xs text-muted-foreground">{t(`${K}.claim.desktopNote`)}</p>
       <Link
         href={newOfferFromProspectHref(query)}
         className="self-start rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"

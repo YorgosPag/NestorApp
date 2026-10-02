@@ -440,7 +440,7 @@
     "src/components/shared/space-info/DescriptionNotesCard.tsx": {
       "theme-surface": 1
     },
-    "src/components/shared/__tests__/desktop-only-exit.test.tsx": {
+    "src/components/public-site/__tests__/public-site-primary-action.test.tsx": {
       "file-light-bg": 1
     },
     "src/components/sidebar/sidebar-menu-item.tsx": {

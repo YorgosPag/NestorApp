@@ -346,14 +346,6 @@
       "hidden": "We do not give a number when it describes fewer than {minCount} people.",
       "hiddenWhy": "A small number describes individuals. Anonymity is not a hope — it is a threshold."
     },
-    "desktopOnly": {
-      "title": "Creating a request happens on a computer",
-      "body": "The form asks four axes at once — place, time, features and neighbourhood. On a narrow screen it would be half a form, and half a request meets nothing.",
-      "what": "From here you can view and manage the ones you already have.",
-      "back": "My requests",
-      "whatAnonymous": "You can browse what is already on the market, and post your request when you are at a computer.",
-      "backAnonymous": "Browse the market"
-    },
     "detail": {
       "createdAt": "Created",
       "updatedAt": "Updated",
@@ -434,7 +426,8 @@
       "settled": "The deal for this property is complete, so we no longer count demand for it.",
       "closedReach": "Private marketing: these people cannot see your listing.",
       "privacy": "You never learn who they are or exactly what they want — only how many.",
-      "atLeast": "At least {count} people are looking for a property like yours, here."
+      "atLeast": "At least {count, plural, one {# person is looking} other {# people are looking}} for a property like yours, here.",
+      "atLeastOffered": "At least {count, plural, one {# person wants} other {# people want}} exactly this property."
     }
   },
   "offer": {
@@ -586,14 +579,6 @@
           "hint": "We got no answer. Check your connection and try again."
         }
       }
-    },
-    "desktopOnly": {
-      "title": "Listing a property is done on a computer",
-      "body": "The form asks about type, area, location and what you want to do with the property, all together. On a narrow screen it would be half a form — and a property without fields is found by no one.",
-      "what": "From here you can view and manage what you have already listed.",
-      "back": "My properties",
-      "whatAnonymous": "You can browse what is already on the market, and list your property when you are at a computer.",
-      "backAnonymous": "Browse the market"
     },
     "offerKind": {
       "label": "What do you want to do with the property?",
@@ -2457,7 +2442,6 @@
     "claim": {
       "title": "Is it yours? See whether people ask for it by name",
       "body": "Some people declare that they want a specific building, \"whenever it comes up\". Register the property as yours to see how many want exactly this one — from the very first — and get notified when more join. Registering is not a listing: nothing is published unless you decide so.",
-      "desktopNote": "Registering currently works on a computer.",
       "cta": "Register my property"
     },
     "door": "Is anyone interested in a property of yours? Check before you register it",

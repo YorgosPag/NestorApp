@@ -39,6 +39,7 @@ import {
 import { MapPin } from 'lucide-react';
 
 import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
+import { useCooperativeGestures } from '@/lib/maps/use-cooperative-gestures';
 import { Spinner } from '@/components/ui/spinner/Spinner';
 import { cameraBirthView, useCameraFrame } from '@/components/geo/use-camera-frame';
 import { useFocusCamera } from '@/components/geo/use-focus-camera';
@@ -354,6 +355,8 @@ export function PlaceMap({
   const interactive = onPick !== undefined && !disabled;
   const mapRef = useRef<MapRef | null>(null);
   const basemap = useDefaultBasemap();
+  // 📱 ADR-900 §8 #3 — χάρτης ΜΕΣΑ σε σελίδα: ένα δάχτυλο κυλά τη σελίδα, δύο τον χάρτη (Google `cooperative`).
+  const gestures = useCooperativeGestures();
 
   /**
    * ⚠️ **Ο ΧΑΡΤΗΣ ΔΕΝ ΔΕΧΕΤΑΙ ΕΝΤΟΛΕΣ ΠΡΙΝ ΦΟΡΤΩΣΕΙ.** Μια απάντηση που φτάνει όσο το
@@ -394,6 +397,7 @@ export function PlaceMap({
         }
         style={{ width: '100%', height: '100%' }}
         {...basemap}
+        {...gestures}
         onLoad={() => setReady(true)}
         onClick={handleClick}
         cursor={interactive ? 'crosshair' : 'default'}

@@ -160,9 +160,8 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
 
       {/*
         Η πόρτα δημιουργίας είναι **σύνδεσμος προς ξεχωριστή διαδρομή**, όχι κουμπί που
-        ανοίγει πάνελ — και είναι η μισή απάντηση στην **Α8**: το route-level code
-        splitting σημαίνει ότι το βάρος της φόρμας **δεν ταξιδεύει καν** προς όποιον
-        δεν την άνοιξε. Δες `owner-property-routes.ts`.
+        ανοίγει πάνελ: το route-level code splitting σημαίνει ότι το βάρος της φόρμας
+        **δεν ταξιδεύει καν** προς όποιον δεν την άνοιξε (σε κάθε πλάτος, ADR-900 §8 #3). Δες `owner-property-routes.ts`.
       */}
       <nav className="flex flex-wrap gap-3">
         <Link

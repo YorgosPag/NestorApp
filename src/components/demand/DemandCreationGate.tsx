@@ -1,27 +1,23 @@
 'use client';
 
 /**
- * **Η πύλη της Α8 για τη ΖΗΤΗΣΗ** — το κείμενο, πάνω στον κοινό μηχανισμό.
+ * **Η σελίδα δημιουργίας ΖΗΤΗΣΗΣ** — η φόρμα, σε **κάθε** πλάτος, πάνω στο κοινό κέλυφος.
  *
- * @related ADR-777 §7 (Α8 · Α19) · components/shared/DesktopOnlyGate
+ * @related ADR-900 §8 #3 · ADR-777 §7 (Α8 · Α9) · components/shared/CreationPageShell
  * @module components/demand/DemandCreationGate
  *
- * 🔴 **Ο μηχανισμός εξήχθη (ADR-777 Α14, 2026-08-11)** στο
- * `components/shared/DesktopOnlyGate.tsx`: η φόρμα **προσφοράς** υπακούει στην **ίδια**
- * Α8 με **ταυτόσημα** τρία στρώματα — δεύτερη γραφή θα ήταν κλώνος που μπλοκάρει το
- * **CHECK 3.28**. Εδώ μένουν τα **δύο** πράγματα που είναι πραγματικά της ζήτησης: η
- * δυναμική εισαγωγή **της δικής της** φόρμας, και το κείμενο.
+ * 📱 **2026-10-02 — ανοίγει και στο κινητό** (ADR-900 §8 #3): ο αγοραστής ψάχνει κυρίως από κινητό, και η
+ * ζήτησή του ήταν η **μόνη** πράξη που του αρνιόμασταν εκεί (η idealista αποθηκεύει αναζήτηση από το app).
+ * Το κοινό κέλυφος αντικατέστησε το `DesktopOnlyGate`· εδώ μένει η δυναμική εισαγωγή **της δικής της** φόρμας.
  *
- * ⚠️ **Το `ssr: false` δεν είναι βελτιστοποίηση — είναι ορθότητα.** Στον διακομιστή
- * δεν υπάρχει παράθυρο, άρα δεν υπάρχει απάντηση στο «πόσο πλατύ;»· ένα SSR της
- * φόρμας θα έστελνε **σε όλους** ακριβώς ό,τι αυτό το αρχείο υπάρχει για να μη σταλεί.
+ * ⚠️ **Το `ssr: false` μένει, με άλλο λόγο**: η φόρμα κρίνεται από την ταυτότητα του πελάτη (`useAuth`) και
+ * ζωγραφίζει χάρτες MapLibre, που ζητούν `window` — ένα SSR θα αποδιδόταν μισό και θα ξαναγινόταν.
  */
 
 import React from 'react';
 import dynamic from 'next/dynamic';
 
-import { DesktopOnlyGate, DesktopOnlyNotice } from '@/components/shared/DesktopOnlyGate';
-import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
+import { CreationFormLoading, CreationPageShell } from '@/components/shared/CreationPageShell';
 import type { DemandFormContentProps } from './DemandFormContent';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ `/demands/new` (ADR-777 §8.36).
@@ -55,14 +51,13 @@ registerRouteSlice(routeSlice);
 
 const DemandFormContent = dynamic<DemandFormContentProps>(
   () => import('./DemandFormContent').then((module) => module.DemandFormContent),
-  { ssr: false },
+  { ssr: false, loading: CreationFormLoading },
 );
 
 export function DemandCreationGate(props: DemandFormContentProps): React.ReactElement {
   return (
-    <DesktopOnlyGate
-      wide={() => <DemandFormContent {...props} />}
-      narrow={<DesktopOnlyNotice keyBase="demand" privateHref={MY_DEMANDS_ROUTE} />}
-    />
+    <CreationPageShell>
+      <DemandFormContent {...props} />
+    </CreationPageShell>
   );
 }

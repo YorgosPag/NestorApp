@@ -9,13 +9,13 @@
     "src/i18n/generated/routes/data-deletion__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/demands.el.json": "3c41547e2fe76dd07a2d8df26d28a52173cfbf1092d0bc182c78c567bd2dc8a7",
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
-    "src/i18n/generated/routes/demands__new.el.json": "d7b41191482741c913eace69018335550e084b5111d5f2a04560644c6ee41475",
+    "src/i18n/generated/routes/demands__new.el.json": "811f0e7be5a026573a724989ba6147f1e6b6e8615405945c64ecc750236ee0e1",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "da634d51d68321bb26762d645b87d83d823019577fd7cc11704ed5a3ae51e6e1",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/interest-check.el.json": "00e19ff875c37238072d1f37863c3d128b8958f3fbba6d1660b862663f517018",
+    "src/i18n/generated/routes/interest-check.el.json": "5e25b27d52887bdf86a2a26e68037243709d1101508a29f549f057831b03c91e",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "1a9106d455de9ba199b2a7479f5882a4b134295baf069e0a92f75a1a98906675",
@@ -36,8 +36,8 @@
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "3341e9d16ab25bce408f73b0be1eec279e555e12a0085f9b65a9124636b8ee93",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
-    "src/i18n/generated/routes/offers__new.el.json": "39b798b423bdb863b1e72197f3421313d959869299542d85ef4295f258fff090",
-    "src/i18n/generated/routes/offers__offerId.el.json": "bf822ace9cf75bd0cbe9ad352b04b9be35f0783c626cc5a5ec249bf3d614e908",
+    "src/i18n/generated/routes/offers__new.el.json": "a7455227b431ceef5abcf2c912f19932f8ca7c36c1d8fe4339d9e83c14a54f24",
+    "src/i18n/generated/routes/offers__offerId.el.json": "d7490784bf0def65741e6d16f2126d5c6b9553980aa56663ad7dbd60a5e66a09",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "cdc09fd0f4081172c6d5351b2972409d05e272f974bb625db6af05c52b2235b7",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -62,7 +62,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "4b3989af3de47b4298cda4e64453955cc11a725d373c91a6d2b3376292213288",
+    "src/i18n/generated/shell-slice.el.json": "9b542baf5ff5249728520bf57a2c9515b5dc3dce406233dc0ad4adb22d249036",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "df480a87d810ca3dbe7af0cf766c81be8f9a7aa9fc14f4244f3ea4fa1a383ec6",
+  "inputsSha256": "cc9fe534c9f3031d87b6efeaaa2860da7abd9d6a5441e65def5751e349c57112",
   "languages": [
     "el"
   ],
@@ -267,7 +267,7 @@
     "src/components/demand/DemandCard.tsx": "dfe4d97449d65593a7564d409e7369c6eee6026e88208cc88038895e8321fcf1",
     "src/components/demand/DemandCompetitionPanel.tsx": "83c95450dc15b5968f2dba0d9a19f1c91ef6b38a670b11ab314f0785d3ba8e87",
     "src/components/demand/DemandConcessionList.tsx": "4bc8ca2b8b1410ab38ac70d64523e01b4cb9015f5448afc1300c33441b64d8bd",
-    "src/components/demand/DemandCreationGate.tsx": "3e68205e47a064620c15d95e13aded79d504ec8b010510b45bd3df523341937c",
+    "src/components/demand/DemandCreationGate.tsx": "ae1b14e654b66fbdecba9d8e84e8502953530d67bfc818d9da725863011b48bd",
     "src/components/demand/DemandDetailContent.tsx": "2be6e366ec8f90d9cc17227686b2027e775151adca9c10b8480ba76f90482a1b",
     "src/components/demand/DemandFormContent.tsx": "de5d05fd344177b49dd364e083bc41e7fb1dc6b3b33c4e33e85910e63e1e3c3e",
     "src/components/demand/DemandLifecycleActions.tsx": "eee80cc2d5d9ae75233e9b0f3ffceeba5165b7d653b8dd56c8eea8b8aedb5358",
@@ -290,7 +290,7 @@
     "src/components/demand/interest-check/InterestCheckContent.tsx": "34c69db3f122a310b3998792616b429fd0580e31eb709e1c3ab1c3cd803a36b8",
     "src/components/demand/interest-check/InterestCheckForm.tsx": "1636d201600f121dbfee971362fef12f9da8d3b7e8660c68c404ec7f8f2d8b4f",
     "src/components/demand/interest-check/InterestCheckNudge.tsx": "64f033c65be61249b8ed0d867542d3ecf1e4ee2557af0e19440b5e5fbc05c73a",
-    "src/components/demand/interest-check/InterestCheckResult.tsx": "7231580abbd5b2ffa729e309a490fa681fd0cee13f82952b682bec415e3da125",
+    "src/components/demand/interest-check/InterestCheckResult.tsx": "b3084f66fc7c5c4cafc5b694c55fd4e496dff1c29c73feaa52671082285e400c",
     "src/components/generic/UniversalTabsRenderer.tsx": "642c6f838b7371f45eb4c0cb21d50ecea437bd5640dcaa2bf3951a2bcbf3ea78",
     "src/components/generic/mappings/propertyDossierMappings.ts": "9d4366f31abd6e097cca3828d0eb1b120df9e8b9bedce45677294a2837587821",
     "src/components/generic/utils/IconMapping.ts": "44c88586d596b88bffe0e07aca5e4a2dc90a83cfe1123ee22a59e0073b05e4b0",
@@ -298,7 +298,7 @@
     "src/components/geo/PlaceChooser.tsx": "ee774dd2f54819e8df3c00301287b35a9bc2ed6ae2461c27c4fb8febfb347627",
     "src/components/geo/PlaceChooserStatus.tsx": "3ac066c41b6c156c93cda7f4fa7c143fe851fff29ad6603b11ef3937a8908fb1",
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
-    "src/components/geo/PlaceMap.tsx": "5d6fb5b84101fde436b0a3f13d361eb15e6d6f24728bbc714f6a89b07ce49c6d",
+    "src/components/geo/PlaceMap.tsx": "5e552ecd3558b7bb37eeffd573f46ad59d43268e24187720525ba0b981f8ae38",
     "src/components/geo/PlaceSummary.tsx": "aa56dd24e0b0a56689c3077bfe62a9deeb0415c3e43330c622f686e080724bb4",
     "src/components/geo/ResolvedPlaceConfirmation.tsx": "05bb80545972f34c99e8bd175b48e5ba148768c26e9c1f222851bf630bf3cd92",
     "src/components/geo/outline-draft.tsx": "522cf963ac96817fb386c275e724d2e3d2a6a12800749249759b7aa114bfc33e",
@@ -467,7 +467,7 @@
     "src/components/owner-property/OwnerPortfolio.tsx": "d001e163f9951e324e787ced253000befe423c2290aee8651d87a54ddc80bc60",
     "src/components/owner-property/OwnerPropertyCard.tsx": "ce910003165f8e3cc40fc1754922b4ffe2f1a6c0911c1dddb921946f4d16a74f",
     "src/components/owner-property/OwnerPropertyCardCover.tsx": "5bb5942d4c818f4064e2aa1f61a19a60d14b8bbb1454d0cd4e445f56438655cb",
-    "src/components/owner-property/OwnerPropertyCreationGate.tsx": "f40d62a151ff661a3f31b4fc62adbab73def0dbe8ac55eaf4af4bb90fe0c8b69",
+    "src/components/owner-property/OwnerPropertyCreationGate.tsx": "ea3369a217c00bbc9bccf658b4ae656e2610b99a030a9fed4be471742b0353f3",
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "0c824d3d051979168d7408d584f56e3223ff82959195fe4ad247db6aba135dd0",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "852eaf0d7a110ef720c66602470b58aac6f699b9a2227ddd3112f978e4532724",
     "src/components/owner-property/OwnerPropertyHistory.tsx": "82d2eb220476a9775fe52c195c13db6dd6ccdfd28c59cf5bf1c076cdd064b862",
@@ -571,7 +571,7 @@
     "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "aa1808664667184ceefe125da8582961127baca3862487aace3b4e08d54bd56b",
     "src/components/settings/brokerage/brokerage-capability-labels.ts": "de45edd5494b39681ff5ffd92cd31524dce3ff8192210feef1342608140e90aa",
     "src/components/shared/AutoSaveStatusIndicator.tsx": "b3925c2bbefde75c32696abc6cd6d0226f843c7a3ec1c7a74f08bc2f204bc831",
-    "src/components/shared/DesktopOnlyGate.tsx": "3840ff9783e8af05bfd4ec59afdb3277bfb9b361ec15de588ad1acdfb2b1f1cc",
+    "src/components/shared/CreationPageShell.tsx": "1e28843d37a03c1ebba07b54447b11b4807333ea5d27f8533391d6fc67f02f85",
     "src/components/shared/EscoOccupationPicker.tsx": "f9bd5d8cb67e53ca851e09ab9f8ea8fe1f2bcf3c62688408ce8510c234c00a3e",
     "src/components/shared/PersonalCustodyNotice.tsx": "213f160eb7e400492e3d3c3baf08f5baf9771305b6dd9772fb900dfcfeda3d14",
     "src/components/shared/esco/esco-label.ts": "3d5d221d7f3a62d4f5e6826ce50eb4cf784c35b66ac74d11e6af990f5d2cc4aa",
@@ -944,6 +944,7 @@
     "src/lib/maps/pmtiles-protocol.ts": "5f5390ed1aa471e4193e2ede9deaee40ed1b66778d12c89712dede10cd8d6e0f",
     "src/lib/maps/protomaps-style.ts": "23321a4a4650dd632c922a93c9c0fc90c74828d033b778d28e5279a7fadf5b31",
     "src/lib/maps/use-basemap-scheme.ts": "3565422952c258b0bb0ab0d68af07ce20c53ee99b535677d1b9950f78d19c5fd",
+    "src/lib/maps/use-cooperative-gestures.ts": "a67bc9cbfe2df60eb81b24ceb61fc96030eed0e8947885491a53cb7215168bf8",
     "src/lib/maps/use-default-basemap.ts": "4044cf4ed01ee782446776f9d1e92de7d5c141639d5d26aca31a4b65962cdb03",
     "src/lib/market/area-market-document.ts": "dbf09c314a6cd01cbd202e5b31461298bebf7f7b54f0ffecfb20a66a896d10be",
     "src/lib/market/market-breakdowns.ts": "941d5e06a2f0eee5d62ec455cd440f6122d9473a7f9a3c92f44ed56ad1918bdd",
@@ -1144,7 +1145,7 @@
     "src/services/esco-skill.service.ts": "60240828f5dd730470fda03be1874048792e14fe8fbc35392bd77e4b7fb265c5",
     "src/services/esco.service.ts": "73010dc0374302cdc1dbce078ecf567b9a6918ee67847cdf20b399111fea8655",
     "src/services/filesystem/focal-point-suggestion.client.ts": "c235199d54c8769cfcd413167a5213433f32b11f2a27dafb6820894a0e1fbf8b",
-    "src/services/filesystem/upload-entity-file.ts": "8a210061b55ffb9dc04450b7b7dc1f7085d610cf137b8033ef829e59bdd6b7c4",
+    "src/services/filesystem/upload-entity-file.ts": "110fb0f44a03faf526c14528984a9e106dc33c34f1424e9444056c598f327f9f",
     "src/services/floorplans/BuildingFloorplanService.ts": "abeec07bffeea36417a0334c1b54d0d11db024b0cf7bc97056bc09e236e34e1e",
     "src/services/floorplans/floorplan-save-orchestrator.ts": "1aeb504cc9d37e5589ca372b4642a7ab22b17057e8d3ada9108e0295e8be4494",
     "src/services/listings/agency-media-publication.ts": "82528ebf8e1fdf5c0323a9c0f211246f537c7e72d41620221967885dfb276853",
@@ -1551,6 +1552,9 @@
         "common": {
           "keys": [
             "common.loading",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -2162,6 +2166,16 @@
     "demands__new": {
       "page": "src/app/(me)/demands/new/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "loading.form",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -2289,7 +2303,6 @@
             "demand.invariant.window-inverted"
           ],
           "prefixes": [
-            "demand.desktopOnly",
             "demand.form.lifeContext",
             "demand.form.ownerSignal",
             "demand.form.place",
@@ -2297,8 +2310,7 @@
             "demand.form.seeks",
             "demand.form.stayTerms",
             "demand.form.timing",
-            "demand.proximityKind",
-            "offer.desktopOnly"
+            "demand.proximityKind"
           ],
           "whole": false
         },
@@ -3004,6 +3016,9 @@
       "wants": {
         "common": {
           "keys": [
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -3214,6 +3229,15 @@
     "interest-check": {
       "page": "src/app/(me)/interest-check/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -3251,7 +3275,6 @@
             "demand.interest.unavailable",
             "interestCheck.claim.body",
             "interestCheck.claim.cta",
-            "interestCheck.claim.desktopNote",
             "interestCheck.claim.title",
             "interestCheck.description.areaLabel",
             "interestCheck.description.floorLabel",
@@ -4732,6 +4755,9 @@
             "dropdown.addNewOption",
             "dropdown.clearSelection",
             "dropdown.toggleOptions",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows",
             "placeholders.noResults"
           ],
           "prefixes": [],
@@ -5153,6 +5179,9 @@
             "dropdown.addNewOption",
             "dropdown.clearSelection",
             "dropdown.toggleOptions",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows",
             "placeholders.noResults"
           ],
           "prefixes": [],
@@ -5378,7 +5407,10 @@
       "wants": {
         "common": {
           "keys": [
-            "a11y.chooseDate"
+            "a11y.chooseDate",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows"
           ],
           "prefixes": [],
           "whole": false
@@ -6029,7 +6061,11 @@
             "countries.spain",
             "countries.turkey",
             "countries.uk",
-            "countries.usa"
+            "countries.usa",
+            "loading.form",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows"
           ],
           "prefixes": [],
           "whole": false
@@ -6191,8 +6227,6 @@
             "photoFocalPoint.triggerAria"
           ],
           "prefixes": [
-            "demand.desktopOnly",
-            "offer.desktopOnly",
             "offer.form.placeAccuracyNote",
             "offer.form.placeRelaxed",
             "offer.offerKind",
@@ -6272,7 +6306,10 @@
             "countries.spain",
             "countries.turkey",
             "countries.uk",
-            "countries.usa"
+            "countries.usa",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows"
           ],
           "prefixes": [],
           "whole": false
@@ -7707,6 +7744,9 @@
           "keys": [
             "buttons.close",
             "common.loading",
+            "map.gestures.mac",
+            "map.gestures.mobile",
+            "map.gestures.windows",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -10610,7 +10650,7 @@
     "matchedKeys": 226,
     "routeBoundaries": 0,
     "shellFiles": 918,
-    "sliceBytes": 674202
+    "sliceBytes": 670835
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

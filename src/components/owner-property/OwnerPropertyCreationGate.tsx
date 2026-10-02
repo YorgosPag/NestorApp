@@ -1,24 +1,17 @@
 'use client';
 
 /**
- * **Η πύλη της Α8 για την ΠΡΟΣΦΟΡΑ** — το κείμενο, πάνω στον κοινό μηχανισμό.
+ * **Η σελίδα δημιουργίας ΠΡΟΣΦΟΡΑΣ** — η φόρμα, σε **κάθε** πλάτος, πάνω στο κοινό κέλυφος.
  *
- * @related ADR-777 §7 (Α8 · Α14 · Α19) · components/shared/DesktopOnlyGate
+ * @related ADR-900 §8 #3 · ADR-777 §7 (Α8 · Α14) · components/shared/CreationPageShell
  * @module components/owner-property/OwnerPropertyCreationGate
  *
- * 🔑 **Ο μηχανισμός είναι ο ΙΔΙΟΣ με τη ζήτηση** (`components/shared/DesktopOnlyGate`):
- * τρία στρώματα, και κανένα δεν είναι `hidden`. Εδώ μένουν τα **δύο** πράγματα που
- * είναι πραγματικά της προσφοράς — η δυναμική εισαγωγή **της δικής της** φόρμας, και
- * το κείμενο.
+ * 📱 **2026-10-02 — ανοίγει και στο κινητό** (ADR-900 §8 #3, απόφαση Giorgio «όπως οι μεγάλοι»: idealista ·
+ * Zillow καταχωρίζουν από το app). Η Α8 ισχύει πλέον μόνο για τη **σύνταξη σχεδίου**. Το όνομα «Gate» μένει:
+ * εδώ αποφασίζεται **πότε** κατεβαίνει η φόρμα (δυναμική εισαγωγή), όχι πια **σε ποια οθόνη**.
  *
- * ⚠️ **Το κείμενο ΔΕΝ είναι μετάφραση του κειμένου της ζήτησης.** Ο λόγος που η φόρμα
- * δεν χωράει σε στενή οθόνη είναι **άλλος**: εκεί είναι οι τέσσερις άξονες μαζί, εδώ
- * είναι ότι *«ένα ακίνητο χωρίς πεδία δεν το βρίσκει κανείς»* (§17.1). Ένα κοινό
- * κείμενο θα ήταν σωστό και **κενό**.
- *
- * ⚠️ **Το `ssr: false` δεν είναι βελτιστοποίηση — είναι ορθότητα.** Στον διακομιστή
- * δεν υπάρχει παράθυρο, άρα δεν υπάρχει απάντηση στο «πόσο πλατύ;»· ένα SSR της
- * φόρμας θα έστελνε **σε όλους** ακριβώς ό,τι αυτό το αρχείο υπάρχει για να μη σταλεί.
+ * ⚠️ **Το `ssr: false` μένει, με άλλο λόγο**: η φόρμα διαβάζει προσχέδιο από `localStorage` και ταυτότητα
+ * από τον πελάτη — ένα SSR της θα αποδιδόταν **κενό** και θα ξαναγινόταν, ορατό τρεμόπαιγμα στο κινητό.
  */
 
 import React from 'react';
@@ -41,9 +34,8 @@ import dynamic from 'next/dynamic';
 import routeSlice from '@/i18n/generated/routes/offers__new.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
-import { DesktopOnlyGate, DesktopOnlyNotice } from '@/components/shared/DesktopOnlyGate';
+import { CreationFormLoading, CreationPageShell } from '@/components/shared/CreationPageShell';
 import { InterestCheckNudge } from '@/components/demand/interest-check/InterestCheckNudge';
-import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import type { OwnerPropertyFormContentProps } from './OwnerPropertyFormContent';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί οτιδήποτε.
@@ -62,7 +54,7 @@ registerRouteSlice(routeSlice);
 const OwnerPropertyFormContent = dynamic<OwnerPropertyFormContentProps>(
   () =>
     import('./OwnerPropertyFormContent').then((module) => module.OwnerPropertyFormContent),
-  { ssr: false },
+  { ssr: false, loading: CreationFormLoading },
 );
 
 export function OwnerPropertyCreationGate({
@@ -73,10 +65,8 @@ export function OwnerPropertyCreationGate({
   readonly interestNudge?: boolean;
 }): React.ReactElement {
   return (
-    <DesktopOnlyGate
-      lead={interestNudge ? <InterestCheckNudge /> : null}
-      wide={() => <OwnerPropertyFormContent {...props} />}
-      narrow={<DesktopOnlyNotice keyBase="offer" privateHref={MY_OFFERS_ROUTE} />}
-    />
+    <CreationPageShell lead={interestNudge ? <InterestCheckNudge /> : null}>
+      <OwnerPropertyFormContent {...props} />
+    </CreationPageShell>
   );
 }

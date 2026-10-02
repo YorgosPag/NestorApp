@@ -817,7 +817,8 @@
       "vendor_invite": "Vendor invite",
       "owner_property": "Listing",
       "network_act_team": "Act team",
-      "property_dossier": "Property dossier"
+      "property_dossier": "Property dossier",
+      "conveyance_case": "Conveyance case"
     },
     "values": {
       "active": "Active",
@@ -1127,6 +1128,13 @@
       "failed": "The change was not saved — please try again.",
       "own-listing": "This is your own listing — it cannot be saved to your favourites.",
       "not-in-market": "This listing is no longer on the market."
+    }
+  },
+  "map": {
+    "gestures": {
+      "windows": "Use Ctrl + scroll to zoom the map",
+      "mac": "Use ⌘ + scroll to zoom the map",
+      "mobile": "Use two fingers to move the map"
     }
   }
 }

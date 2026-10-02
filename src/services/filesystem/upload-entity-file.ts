@@ -32,6 +32,7 @@ import {
   finalizeFileRecordWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload';
+import { uploadResumableToUrl } from '@/services/upload/utils/resumable-upload';
 
 const logger = createModuleLogger('upload-entity-file');
 
@@ -94,9 +95,11 @@ export async function uploadEntityFile(spec: EntityFileUploadSpec, file: File): 
 
   await new Promise((resolve) => setTimeout(resolve, FIRESTORE_PROPAGATION_MS));
 
+  // 📱 ADR-900 §8 #3 — **resumable**, μέσω του ΕΝΟΣ βοηθού: ήταν σκέτο `uploadBytes` (ένα αίτημα, όλα ή τίποτα),
+  //    δηλαδή σε δίκτυο κινητού ένα κόψιμο έριχνε ολόκληρη τη φωτογραφία του φακέλου. Η μικρογραφία μένει
+  //    `uploadBytes`: λίγα KB, ένα αίτημα είναι η σωστή μονάδα.
   const storageRef = ref(storage, storagePath);
-  await uploadBytes(storageRef, file);
-  const downloadUrl = await getDownloadURL(storageRef);
+  const downloadUrl = await uploadResumableToUrl(storageRef, file);
   const thumbnailUrl = await uploadThumbnail(file, storagePath);
 
   await finalizeFileRecordWithPolicy({
