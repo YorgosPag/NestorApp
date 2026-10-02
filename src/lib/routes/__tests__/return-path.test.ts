@@ -14,7 +14,7 @@
  * @see lib/routes/return-path
  */
 
-import { loginHref, RETURN_PATH_PARAM, safeReturnPath } from '@/lib/routes/return-path';
+import { loginHref, loginHrefForCurrentLocation, RETURN_PATH_PARAM, safeReturnPath } from '@/lib/routes/return-path';
 
 const BACKSLASH = String.fromCharCode(92);
 const TAB = String.fromCharCode(9);
@@ -113,5 +113,26 @@ describe('Γ — loginHref: η σελίδα σύνδεσης, με επιστρ�
 
   it('στρογγυλή διαδρομή: ό,τι γράφει το loginHref, το ξαναδέχεται ο φρουρός', () => {
     expect(safeReturnPath(nextOf(loginHref('/n/x%3Ay')))).toBe('/n/x%3Ay');
+  });
+});
+
+describe('Δ — loginHrefForCurrentLocation: ο φρουρός ΠΕΛΑΤΗ επιστρέφει εκεί που ήταν ο άνθρωπος (ADR-900 §3.7)', () => {
+  const globals = globalThis as { window?: { location: { pathname: string; search: string } } };
+  afterEach(() => {
+    delete globals.window;
+  });
+
+  it('χωρίς φυλλομετρητή ⇒ σκέτο /login (ποτέ σφάλμα)', () => {
+    expect(loginHrefForCurrentLocation()).toBe('/login');
+  });
+
+  it('κρατά διαδρομή ΚΑΙ ερώτημα — η διεύθυνση της αρχικής επιβιώνει τη σύνδεση', () => {
+    globals.window = { location: { pathname: '/interest-check', search: '?address=%CE%95%CE%B3%CE%BD%CE%B1%CF%84%CE%AF%CE%B1%CF%82' } };
+    const href: string = loginHrefForCurrentLocation();
+    const next = new URL(href, 'https://example.invalid').searchParams.get(RETURN_PATH_PARAM);
+    expect(next).not.toBeNull();
+    const back = new URL(next ?? '', 'https://example.invalid');
+    expect(back.pathname).toBe('/interest-check');
+    expect(back.searchParams.get('address')).toBe('Εγνατίας');
   });
 });

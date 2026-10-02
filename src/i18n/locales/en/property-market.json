@@ -2460,6 +2460,12 @@
       "desktopNote": "Registering currently works on a computer.",
       "cta": "Register my property"
     },
-    "door": "Is anyone interested in a property of yours? Check before you register it"
+    "door": "Is anyone interested in a property of yours? Check before you register it",
+    "nav": "Owners",
+    "entry": {
+      "label": "Own a property? See if anyone is looking for one like it",
+      "hint": "Type the address and see how many people are looking for a property like yours there — before you even decide to sell or rent it. No listing, no commitment.",
+      "addressLabel": "Address of your property"
+    }
   }
 }

@@ -1,6 +1,7 @@
 export const maxDuration = 30;
 
 import { z } from 'zod';
+import { BUILDING_CATEGORIES } from '@/constants/building-categories';
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -39,7 +40,7 @@ const CreateBuildingSchema = z.object({
   companyId: z.string().max(128).optional(),
   company: z.string().max(200).optional(),
   addresses: z.array(z.record(z.unknown())).optional(),
-  category: z.enum(['mixed', 'residential', 'commercial', 'industrial']).optional(),
+  category: z.enum(BUILDING_CATEGORIES).optional(),
 }).passthrough();
 
 const logger = createModuleLogger('BuildingsRoute');

@@ -617,7 +617,8 @@
         "permitDate": "Ημερομηνία οικοδομικής άδειας κτιρίου",
         "plotUtilisation": "ΣΑΟ οικοπέδου",
         "declaredStage": "Δηλωμένο στάδιο αποπεράτωσης",
-        "hasElevator": "Ανελκυστήρας κτιρίου"
+        "hasElevator": "Ανελκυστήρας κτιρίου",
+        "hasCentralHeating": "Κεντρική θέρμανση κτιρίου"
       },
       "objectiveValueDeclarations": {
         "display": "Εμφάνιση αντικειμενικής αξίας",

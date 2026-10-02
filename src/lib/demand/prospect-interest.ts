@@ -24,6 +24,8 @@ import { isCanonicalPropertyType, type PropertyTypeCanonical } from '@/constants
 import { isLandProperty } from '@/constants/property-classification';
 import type { ProjectableProperty } from '@/services/listings/public-listing-projection-types';
 import type { PlaceRef } from '@/types/geo/public-place';
+import { INTEREST_CHECK_ROUTE } from '@/lib/demand/demand-routes';
+import { typedHref } from '@/lib/workspace/route-worlds';
 
 // =============================================================================
 // 1. Η ΠΕΡΙΓΡΑΦΗ
@@ -98,7 +100,40 @@ const PARAM = {
   type: 'type',
   areaSqm: 'areaSqm',
   floor: 'floor',
+  /**
+   * Η διεύθυνση που έγραψε ο άνθρωπος **σε άλλη πόρτα** (αρχική) — ταξιδεύει ως **κείμενο**, ποτέ ως
+   * σημείο: ο γεωκωδικοποιητής τρέχει στη σελίδα, όπου ο άνθρωπος βλέπει **τι** βρέθηκε. Δεν είναι μέρος
+   * του {@link ProspectQuery} — το API κρίνει **κτίριο**, όχι κείμενο.
+   */
+  address: 'address',
 } as const;
+
+/** Το όνομα της παραμέτρου διεύθυνσης — το χρειάζεται το `name=` της φόρμας GET (λειτουργεί και χωρίς JS). */
+export const PROSPECT_ADDRESS_PARAM = PARAM.address;
+
+/** Πάνω από αυτό δεν είναι διεύθυνση, είναι φορτίο (ίδιο σκεπτικό με το `MAX_RETURN_PATH_LENGTH`). */
+export const PROSPECT_ADDRESS_MAX_LENGTH = 200;
+
+/** **Κείμενο → διεύθυνση**, ή `null` αν είναι κενό. Ο **ένας** κριτής για τον σύνδεσμο **και** τη σελίδα. */
+function normalizedAddress(raw: string | null | undefined): string | null {
+  const address = (raw ?? '').replace(/\s+/g, ' ').trim().slice(0, PROSPECT_ADDRESS_MAX_LENGTH);
+  return address === '' ? null : address;
+}
+
+/** **URL → διεύθυνση** για την αρχική τιμή του πεδίου, ή `null`. */
+export function prospectAddressOf(params: URLSearchParams): string | null {
+  return normalizedAddress(params.get(PARAM.address));
+}
+
+/**
+ * **Η πόρτα προς τον έλεγχο ενδιαφέροντος**, με ή χωρίς διεύθυνση. Τη ζητούν η αρχική και ο κατάλογος
+ * ακινήτων — ποτέ χειρόγραφο `?address=`.
+ */
+export function interestCheckHref(address?: string | null) {
+  const value = normalizedAddress(address);
+  if (value === null) return typedHref(INTEREST_CHECK_ROUTE);
+  return typedHref(`${INTEREST_CHECK_ROUTE}?${new URLSearchParams({ [PARAM.address]: value }).toString()}`);
+}
 
 /**
  * **Ερώτημα → παράμετροι.** Ό,τι είναι `null` **λείπει** — δεν γράφεται ως «null». Τις διαβάζει ο

@@ -19,12 +19,17 @@
  *    Ο `(me)/layout.tsx` ζητά ταυτότητα, οπότε ο ανώνυμος περνά από τη σύνδεση **μία**
  *    φορά και προσγειώνεται εκεί που θέλει.
  *
+ * ➕ **Η ΤΡΙΤΗ ΠΟΡΤΑ (ADR-900 §3.7) ΕΙΝΑΙ ΦΟΡΜΑ, ΚΑΙ ΔΕΝ ΣΠΑΕΙ ΤΟΝ ΚΑΝΟΝΑ**: το Α8 απαγορεύει τη
+ *    **βαριά** φόρμα καταχώρισης σε στενή οθόνη· εδώ υπάρχει ένα πεδίο διεύθυνσης, και ο προορισμός
+ *    (`/interest-check`) δουλεύει σε κάθε συσκευή. Πιάνει όλο το πλάτος της λίστας (`sm:col-span-2`).
  */
 
 import React from 'react';
 import { HandHelping, KeyRound, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
+import { OwnerInterestEntry } from '@/components/demand/interest-check/OwnerInterestEntry';
+import { PROSE_MEASURE_CLASS } from '@/components/shared/prose-measure';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
@@ -49,16 +54,9 @@ interface DoorCardProps {
   readonly density?: 'regular' | 'compact';
 }
 
-/**
- * ⚠️ **Η ΚΑΡΤΑ ΑΠΛΩΝΕΙ, Η ΓΡΑΜΜΗ ΟΧΙ** (ADR-820 §5.4.1): οι πόρτες πιάνουν πλέον το πλάτος
- * του ήρωα, άρα μια κάρτα φτάνει ~1150px. Το κείμενο βοήθειας κρατά το μέτρο **πρόζας**
- * από το `design-tokens.json` (`--spacing-layout-measure-prose`, σε `ch` της δικής του
- * γραμματοσειράς) — WCAG 1.4.8 / Bringhurst. Ποτέ δεύτερος χειρόγραφος αριθμός.
- */
-const DOOR_HINT_MEASURE = 'max-w-[calc(var(--spacing-layout-measure-prose)*1ch)]';
-
+/** Το κείμενο βοήθειας κρατά το μέτρο πρόζας (`PROSE_MEASURE_CLASS`, ADR-820 §5.4.1) — η κάρτα απλώνει, η γραμμή όχι. */
 const DOOR_DENSITY = {
-  regular: { link: 'items-start gap-4 p-5', icon: 'mt-0.5 size-6', label: 'text-lg', hint: DOOR_HINT_MEASURE },
+  regular: { link: 'items-start gap-4 p-5', icon: 'mt-0.5 size-6', label: 'text-lg', hint: PROSE_MEASURE_CLASS },
   compact: { link: 'items-center gap-3 px-4 py-3', icon: 'size-5', label: 'text-base', hint: 'truncate' },
 } as const;
 
@@ -83,6 +81,18 @@ export function DoorCard({ href, icon: Icon, label, hint, signal, density = 'reg
           <span className={cn('text-sm text-muted-foreground', d.hint)}>{hint}</span>
         </span>
       </Link>
+    </li>
+  );
+}
+
+/**
+ * ADR-900 §3.7 — η πόρτα του ιδιοκτήτη (πεδίο διεύθυνσης). Η κάρτα ζει στο **ένα** `OwnerInterestEntry`·
+ * εδώ μόνο τοποθετείται, σε όλο το πλάτος της λίστας.
+ */
+function OwnerInterestDoor(): React.ReactElement {
+  return (
+    <li className="min-w-0 sm:col-span-2">
+      <OwnerInterestEntry />
     </li>
   );
 }
@@ -114,6 +124,7 @@ export function LandingDoors() {
           label={t('property-market:offer.door.label')}
           hint={t('property-market:offer.door.hint')}
         />
+        <OwnerInterestDoor />
       </ul>
     </nav>
   );

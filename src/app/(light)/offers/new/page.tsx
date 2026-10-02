@@ -43,6 +43,7 @@ import type { Metadata } from 'next';
 
 import { OwnerPropertyCreationGate } from '@/components/owner-property/OwnerPropertyCreationGate';
 import { ownerFormFromProspect } from '@/lib/owner-property/owner-property-prospect-prefill';
+import { urlSearchParamsOf, type PageSearchParams } from '@/lib/routes/page-search-params';
 
 /**
  * 🔴 **`noindex` ΑΝΑ ΣΕΛΙΔΑ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΑΛΛΟΣ ΑΠΟ ΤΟΥ `(me)`.**
@@ -69,7 +70,7 @@ export const metadata: Metadata = {
 };
 
 interface NewOfferPageProps {
-  readonly searchParams: Promise<Readonly<Record<string, string | string[] | undefined>>>;
+  readonly searchParams: Promise<PageSearchParams>;
 }
 
 /**
@@ -79,12 +80,10 @@ interface NewOfferPageProps {
  * προσυμπλήρωση (`memory.restored ?? initialValues`): δουλειά που έγραψε δεν χάνεται για ένα link.
  */
 export default async function NewOfferPage({ searchParams }: NewOfferPageProps) {
-  const raw = await searchParams;
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(raw)) {
-    if (typeof value === 'string') params.set(key, value);
-  }
-
-  const prefill = ownerFormFromProspect(params);
-  return prefill === null ? <OwnerPropertyCreationGate /> : <OwnerPropertyCreationGate initialValues={prefill} />;
+  const prefill = ownerFormFromProspect(urlSearchParamsOf(await searchParams));
+  // ADR-900 §3.7 — όποιος έρχεται ΧΩΡΙΣ ερώτημα ελέγχου (CTA κεφαλίδας · στήλη · αρχική) βλέπει την ήπια
+  // υπενθύμιση «δείτε πρώτα αν υπάρχει ενδιαφέρον»· όποιος έρχεται ΑΠΟ τον έλεγχο, την έχει ήδη κάνει.
+  return prefill === null
+    ? <OwnerPropertyCreationGate interestNudge />
+    : <OwnerPropertyCreationGate initialValues={prefill} />;
 }

@@ -53,14 +53,14 @@ describe('patchBuildingObjectiveValue — μερική διόρθωση σε σ�
     const { db, doc } = fakeDb({ name: 'Κ1', _v: 2, objectiveValueFacts: { plotUtilisation: 0.8, declaredStage: 'frame' } });
     const response = await run(db, { objectiveValueFacts: { permitDate: '2024-05-01' }, _v: 1 });
     expect(response.status).toBe(200);
-    expect(doc.data.objectiveValueFacts).toEqual({ permitDate: '2024-05-01', plotUtilisation: 0.8, declaredStage: 'frame', hasElevator: null });
+    expect(doc.data.objectiveValueFacts).toEqual({ permitDate: '2024-05-01', plotUtilisation: 0.8, declaredStage: 'frame', hasElevator: null, hasCentralHeating: null });
     expect(doc.data._v).toBe(3);
   });
 
   it('ρητό `null` σβήνει ΜΟΝΟ αυτό το γεγονός · ένα ίχνος με ΜΟΝΟ το πεδίο που άλλαξε', async () => {
     const { db, doc } = fakeDb({ name: 'Κ1', objectiveValueFacts: { plotUtilisation: 0.8, declaredStage: 'frame' } });
     await run(db, { objectiveValueFacts: { declaredStage: null } });
-    expect(doc.data.objectiveValueFacts).toEqual({ permitDate: null, plotUtilisation: 0.8, declaredStage: null, hasElevator: null });
+    expect(doc.data.objectiveValueFacts).toEqual({ permitDate: null, plotUtilisation: 0.8, declaredStage: null, hasElevator: null, hasCentralHeating: null });
     expect(recordChange).toHaveBeenCalledTimes(1);
     const [entry] = recordChange.mock.calls[0] as unknown as [{ entityType: string; changes: { field: string }[] }];
     expect(entry.entityType).toBe('building');

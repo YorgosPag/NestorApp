@@ -5,6 +5,7 @@ import React from 'react';
 import { BuildingCard } from '../BuildingCard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { buildingCategoryLabel, buildingStatusLabel } from '@/lib/buildings/building-enum-labels';
 import type { Building } from '../BuildingsPageContent';
 import { groupByKey } from '@/utils/collection-utils';
 import { gridPatterns } from '@/styles/design-tokens';
@@ -82,7 +83,7 @@ export function BuildingsGroupedView({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
-  const groupedByType = groupByKey(filteredBuildings, building => building.category || 'mixed');
+  const groupedByType = groupByKey(filteredBuildings, building => building.category ?? 'unknown'); // χωρίς κατηγορία ≠ «Μικτή Χρήση» (ADR-898 §18.2)
   const groupedByStatus = groupByKey(filteredBuildings, building => building.status);
 
   if (viewMode === 'grid') {
@@ -101,7 +102,7 @@ export function BuildingsGroupedView({
     return (
       <BuildingsGroups
         groups={groupedByType}
-        labelOf={(type) => t(`category.${type}`, { defaultValue: type })}
+        labelOf={(category) => buildingCategoryLabel(t, category)}
         selectedBuilding={selectedBuilding}
         setSelectedBuilding={setSelectedBuilding}
       />
@@ -112,7 +113,7 @@ export function BuildingsGroupedView({
     return (
       <BuildingsGroups
         groups={groupedByStatus}
-        labelOf={(status) => t(`status.${status}`, { defaultValue: status })}
+        labelOf={(status) => buildingStatusLabel(t, status)}
         selectedBuilding={selectedBuilding}
         setSelectedBuilding={setSelectedBuilding}
       />

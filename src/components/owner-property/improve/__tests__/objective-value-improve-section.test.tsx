@@ -109,7 +109,12 @@ describe('ObjectiveValueImproveSection — ADR-898 Φ3β-2', () => {
     const heating = screen.getByRole('radiogroup', { name: 'objective-value:questions.hasCentralHeating.label' });
     fireEvent.click(within(heating).getByRole('radio', { name: 'objective-value:questions.yes' }));
     await answer({ kind: 'failed', message: 'δίκτυο' });
-    expect(within(heating).queryByRole('radio', { checked: true })).toBeNull();
+    // Η αλήθεια μετά την επαναφορά: ΡΗΤΑ «δεν δηλώθηκε» (ADR-898 §18.1 — η ομάδα έχει πάντα επιλογή), όχι το αισιόδοξο «ναι».
+    // ⚠️ Ξανα-ερώτημα στο ΖΩΝΤΑΝΟ έγγραφο: η ερώτηση ξαναστήνεται, και η παλιά αναφορά δείχνει σε αποσπασμένο δέντρο —
+    // εκεί ο παλιός έλεγχος «καμία επιλογή» περνούσε χωρίς να κοιτά την οθόνη.
+    const settled = within(screen.getByRole('radiogroup', { name: 'objective-value:questions.hasCentralHeating.label' }));
+    expect(settled.getByRole('radio', { name: 'objective-value:questions.unset.undeclared' })).toBeChecked();
+    expect(settled.getByRole('radio', { name: 'objective-value:questions.yes' })).not.toBeChecked();
     expect(screen.getByRole('alert')).toHaveTextContent('objective-value:improve.failed');
     fireEvent.click(screen.getByRole('button', { name: 'objective-value:improve.retry' }));
     expect(pending.map((call) => call.patch)).toEqual([{ hasCentralHeating: true }, { hasCentralHeating: true }]);

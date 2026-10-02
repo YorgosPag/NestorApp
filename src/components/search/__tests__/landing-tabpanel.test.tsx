@@ -252,7 +252,16 @@ describe('Π2 — 🔴 ΤΟ ΠΑΝΕΛ ΕΙΝΑΙ Η ΒΙΤΡΙΝΑ, ΚΑΙ ΚΑ
     const doors = container.querySelector('nav[data-shell-span="full"]');
     expect(doors).not.toBeNull();
     expect(doors?.parentElement).toBe(measure);
-    expect(doors?.querySelectorAll('li')).toHaveLength(2);
+    // ADR-900 §3.7 — τρίτη πόρτα: «Έχετε ακίνητο;» με πεδίο διεύθυνσης, στον ΙΔΙΟ άξονα.
+    expect(doors?.querySelectorAll('li')).toHaveLength(3);
+  });
+
+  it('🔑 ADR-900 — η πόρτα του ιδιοκτήτη είναι αληθινή φόρμα GET (δουλεύει και χωρίς JS) με το όνομα που διαβάζει η σελίδα', () => {
+    const container = renderScreen(THREE_MODES, PROS);
+    const form = container.querySelector('nav[data-shell-span="full"] form');
+    expect(form?.getAttribute('action')).toBe('/interest-check');
+    expect(form?.getAttribute('method')).toBe('get');
+    expect(form?.querySelector('input[name="address"]')).not.toBeNull();
   });
 });
 

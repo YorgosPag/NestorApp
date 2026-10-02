@@ -185,7 +185,9 @@
     "planned": "Σχεδιασμένο",
     "completed": "Ολοκληρωμένο",
     "maintenance": "Συντήρηση",
-    "planning": "Σχεδιασμός"
+    "planning": "Σχεδιασμός",
+    "unknown": "Μη ορισμένη",
+    "deleted": "Στον κάδο"
   },
   "accessibility": {
     "buildingCard": "Κτίριο {name}",

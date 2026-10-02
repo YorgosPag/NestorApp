@@ -71,6 +71,13 @@ async function renderTab(onNavigateToTab = jest.fn()) {
   return onNavigateToTab;
 }
 
+/** Η γραμμή ενός γεγονότος στην ενότητα «Γεγονότα κτιρίου» — δύο ομάδες Ναι/Όχι πλέον (ανελκυστήρας · θέρμανση). */
+function factItem(fact: string): HTMLElement {
+  const item = document.getElementById(`building-objective-value-fact-${fact}-item`);
+  if (item === null) throw new Error(`fact ${fact} not rendered`);
+  return item;
+}
+
 beforeEach(() => {
   writes.length = 0;
   get.mockClear();
@@ -99,10 +106,38 @@ describe('BuildingObjectiveValueTab', () => {
   it('απάντηση σε γεγονός ⇒ φαίνεται ΑΜΕΣΩΣ και φεύγει ΜΙΑ διόρθωση', async () => {
     response = values([row('A1', 4, range)], { total: { kind: 'incomplete', pending: 1, units: 1 }, questions: [{ fact: 'hasElevator', units: 1 }] });
     await renderTab();
-    const yes = screen.getAllByRole('radio')[0];
+    const elevator = within(factItem('hasElevator'));
+    expect(elevator.getByRole('radio', { name: 'objective-value:questions.unset.undeclared' })).toBeChecked();
+    const yes = elevator.getByRole('radio', { name: 'objective-value:questions.yes' });
     fireEvent.click(yes);
     expect(yes).toBeChecked();
     expect(writes.map((write) => write.patch)).toEqual([{ hasElevator: true }]);
+    await act(async () => { writes[0].settle({ kind: 'saved' }); });
+  });
+
+  it('ανελκυστήρας = τρεις ΡΗΤΕΣ επιλογές · «δεν δηλώθηκε» αναιρεί ΑΠΟ ΤΟ ΙΔΙΟ χειριστήριο (ADR-898 §18.1)', async () => {
+    const facts = readBuildingObjectiveValueFacts({ declaredStage: 'electricity', hasElevator: true });
+    response = values([row('A1', 4, exact(10, ['hasElevator']))], { facts, total: { kind: 'exact', value: 10, units: 1 } });
+    await renderTab();
+    const unset = within(factItem('hasElevator')).getByRole('radio', { name: 'objective-value:questions.unset.undeclared' });
+    expect(unset).not.toBeChecked();
+    // Ένα «καθαρισμός» μόνο — του σταδίου· ο ανελκυστήρας δεν έχει δεύτερο δρόμο για την ίδια πράξη.
+    expect(screen.getAllByRole('button', { name: 'objective-value:building.facts.clear' })).toHaveLength(1);
+    fireEvent.click(unset);
+    expect(unset).toBeChecked();
+    expect(writes.map((write) => write.patch)).toEqual([{ hasElevator: null }]);
+    await act(async () => { writes[0].settle({ kind: 'saved' }); });
+  });
+
+  it('κεντρική θέρμανση = γεγονός κτιρίου με το ΙΔΙΟ χειριστήριο · «Όχι» ⇒ ΜΙΑ διόρθωση (ADR-898 §18.3)', async () => {
+    response = values([row('A1', 2, range)], { total: { kind: 'incomplete', pending: 1, units: 1 }, questions: [{ fact: 'hasCentralHeating', units: 1 }] });
+    await renderTab();
+    const heating = within(factItem('hasCentralHeating'));
+    expect(heating.getByText('objective-value:building.facts.waiting::{"count":1}')).toBeInTheDocument();
+    const no = heating.getByRole('radio', { name: 'objective-value:questions.no' });
+    fireEvent.click(no);
+    expect(no).toBeChecked();
+    expect(writes.map((write) => write.patch)).toEqual([{ hasCentralHeating: false }]);
     await act(async () => { writes[0].settle({ kind: 'saved' }); });
   });
 

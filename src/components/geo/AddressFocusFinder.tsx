@@ -37,13 +37,20 @@ export interface AddressFocus {
 
 export function AddressFocusFinder({
   onFocus,
+  initialQuery = null,
 }: {
   /** `null` = η διεύθυνση άλλαξε ή καθαρίστηκε· η προηγούμενη εστίαση δεν ισχύει πια. */
   onFocus: (found: AddressFocus | null) => void;
+  /**
+   * ADR-900 §3.7 — διεύθυνση που ο άνθρωπος **ήδη** έγραψε σε άλλη πόρτα (αρχική). Το πεδίο ξεκινά γεμάτο
+   * και εντοπίζεται **μία** φορά αυτόματα: να του ζητήσουμε να ξαναπατήσει «Εντοπισμός» για κάτι που μόλις
+   * έγραψε θα ήταν δεύτερο βήμα χωρίς πληροφορία (Zillow «Sell»: η διεύθυνση της αρχικής ανοίγει έτοιμη).
+   */
+  initialQuery?: string | null;
 }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   const inputId = React.useId();
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState(initialQuery ?? '');
   const [found, setFound] = React.useState<ResolvedPlace | null>(null);
 
   const { state, resolve, reset } = usePlaceResolver({
@@ -56,6 +63,15 @@ export function AddressFocusFinder({
       onFocus(null);
     }, [onFocus]),
   });
+
+  // Μία φορά ανά τοποθέτηση — ο ref επιβιώνει τη διπλή εκτέλεση του StrictMode, άρα κανένα δεύτερο αίτημα
+  // στο όριο ρυθμού του γεωκωδικοποιητή.
+  const autoResolved = React.useRef(false);
+  React.useEffect(() => {
+    if (autoResolved.current || initialQuery === null || initialQuery.trim() === '') return;
+    autoResolved.current = true;
+    void resolve(initialQuery);
+  }, [initialQuery, resolve]);
 
   const busy = state === 'resolving';
   const canResolve = !busy && query.trim() !== '';

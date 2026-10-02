@@ -100,6 +100,10 @@
     "plotUtilisation": {
       "label": "Plot utilisation ratio (SAO)",
       "help": "As derived from the building permit, e.g. 0.8."
+    },
+    "unset": {
+      "unknown": "I don't know",
+      "undeclared": "Not declared"
     }
   },
   "adjustments": {
@@ -365,9 +369,7 @@
       "plotUtilisation": "Plot utilisation (SAO)",
       "plotUtilisationHelp": "Plot utilisation ratio — counts only for an unfinished building (art. 3 §9).",
       "hasElevator": "Elevator in the building",
-      "yes": "Yes",
-      "no": "No",
-      "unset": "Not declared",
+      "hasCentralHeating": "Central heating in the building",
       "clear": "Clear"
     },
     "questions": {
@@ -378,7 +380,8 @@
         "declaredStage": "Completion stage",
         "permitDate": "Building permit date",
         "plotUtilisation": "Plot utilisation (SAO)",
-        "hasElevator": "Elevator"
+        "hasElevator": "Elevator",
+        "hasCentralHeating": "Central heating"
       }
     },
     "columns": {
@@ -408,7 +411,8 @@
         "stage": "completion stage",
         "permitDate": "permit date",
         "plotUtilisation": "SAO",
-        "hasElevator": "elevator"
+        "hasElevator": "elevator",
+        "hasCentralHeating": "central heating"
       }
     },
     "sheet": {

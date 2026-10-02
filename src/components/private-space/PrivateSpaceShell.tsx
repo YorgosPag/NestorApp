@@ -39,7 +39,6 @@ import { PersonalSidebar } from '@/components/private-space/PersonalSidebar';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { AUTH_ROUTES } from '@/lib/routes';
 
 /**
  * Η αναμονή ταυτότητας, **στη ροή του κελύφους**.
@@ -95,7 +94,7 @@ export function PrivateSpaceShell({ children }: Readonly<{ children: React.React
         η πόρτα επιστροφής προς την αναζήτηση.
       */}
       <PublicSiteHeader />
-      <ProtectedRoute redirectTo={AUTH_ROUTES.login} fallback={<IdentityPending />}>
+      <ProtectedRoute fallback={<IdentityPending />}>
         {/*
           🏛️ Ο ΔΙΑΔΡΟΜΟΣ ΚΑΙ ΤΟ ΜΕΤΡΟ (ADR-797 ΦΑΣΗ Β).
 

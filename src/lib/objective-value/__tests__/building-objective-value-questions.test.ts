@@ -43,7 +43,14 @@ describe('buildingQuestionsOf', () => {
   });
 
   it('ερωτήσεις της ΜΟΝΑΔΑΣ (πρόσοψη, εμβαδόν, μέτωπο) δεν γίνονται ερωτήσεις του κτιρίου', () => {
-    expect(buildingQuestionsOf([missing('frontage', 'area', 'floor'), open('zoneFront', 'hasCentralHeating')])).toEqual([]);
+    expect(buildingQuestionsOf([missing('frontage', 'area', 'floor'), open('zoneFront', 'frontage')])).toEqual([]);
+  });
+
+  it('η θέρμανση ΕΙΝΑΙ πλέον ερώτηση του κτιρίου (ADR-898 §18.3) — μετά τον ανελκυστήρα', () => {
+    expect(buildingQuestionsOf([open('hasCentralHeating', 'hasElevator'), missing('hasCentralHeating')])).toEqual([
+      { fact: 'hasElevator', units: 1 },
+      { fact: 'hasCentralHeating', units: 2 },
+    ]);
   });
 
   it('ακριβές ποσό, «πριν από στάδιο», χωρίς ζώνη ⇒ τίποτα να ρωτηθεί', () => {
@@ -63,18 +70,20 @@ describe('buildingQuestionsOf', () => {
 
 describe('γεγονότα κτιρίου ↔ πρόχειρο του υπολογιστή (ίδια χειριστήρια, ίδια διατύπωση)', () => {
   it('το πρόχειρο δείχνει ΜΟΝΟ τα γεγονότα που ρωτά ο υπολογιστής', () => {
-    const facts = { permitDate: '2001-05-01', plotUtilisation: 0.8, declaredStage: 'frame' as const, hasElevator: true };
-    expect(draftOfBuildingFacts(facts)).toMatchObject({ permitDate: '2001-05-01', plotUtilisation: 0.8, hasElevator: true });
+    const facts = { permitDate: '2001-05-01', plotUtilisation: 0.8, declaredStage: 'frame' as const, hasElevator: true, hasCentralHeating: false };
+    expect(draftOfBuildingFacts(facts)).toMatchObject({ permitDate: '2001-05-01', plotUtilisation: 0.8, hasElevator: true, hasCentralHeating: false });
   });
 
   it('αλλαγή προχείρου ⇒ διόρθωση ΜΟΝΟ με τα πεδία του κτιρίου · ξένα πεδία ⇒ τίποτα', () => {
     expect(buildingPatchOfDraft({ hasElevator: false })).toEqual({ hasElevator: false });
+    expect(buildingPatchOfDraft({ hasCentralHeating: null })).toEqual({ hasCentralHeating: null });
     expect(buildingPatchOfDraft({ permitDate: null, frontage: 'single' })).toEqual({ permitDate: null });
     expect(buildingPatchOfDraft({ frontage: 'single' })).toBeNull();
   });
 
   it('καθαρισμός ⇒ ρητό `null` μόνο στο γεγονός', () => {
     expect(clearedBuildingFactPatch('hasElevator')).toEqual({ hasElevator: null });
+    expect(clearedBuildingFactPatch('hasCentralHeating')).toEqual({ hasCentralHeating: null });
     expect(clearedBuildingFactPatch('declaredStage')).toEqual({ declaredStage: null });
   });
 });

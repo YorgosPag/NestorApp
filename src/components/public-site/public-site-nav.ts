@@ -17,7 +17,7 @@
 import { typedHref, type WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { SHORT_STAY_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
-import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
+import { INTEREST_CHECK_ROUTE, MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 
 export interface PublicSiteDestination {
@@ -31,6 +31,11 @@ export interface PublicSiteDestination {
 export const PUBLIC_SITE_SPOKES: readonly PublicSiteDestination[] = [
   { id: 'pros', href: typedHref(AGENCY_DIRECTORY_ROUTE), labelKey: 'search-results:landing.modes.pros' },
   { id: 'stay', href: typedHref(SHORT_STAY_LANDING_ROUTE), labelKey: 'search-results:landing.modes.stay' },
+  // ADR-900 §3.7 — «Ιδιοκτήτες» (Zillow «Sell» · idealista «Propietarios»): ο έλεγχος ενδιαφέροντος ΠΡΙΝ
+  // την καταχώριση. Ακτίνα, όχι πόρτα: δεν είναι κατάλογος «δικών μου» πραγμάτων — είναι ερώτηση προς την
+  // αγορά. ⚠️ Το κλειδί ζει στο `property-market` (κομμένο ανά κλειδί στο κέλυφος), ΟΧΙ στο
+  // `search-results`, που ταξιδεύει ολόκληρο και είναι στο ταβάνι του (ADR-744).
+  { id: 'owners', href: typedHref(INTEREST_CHECK_ROUTE), labelKey: 'property-market:interestCheck.nav' },
 ];
 
 /** Οι πόρτες του ιδιώτη — **κατάλογοι**, που ανοίγουν σε κάθε συσκευή (Α8 · Α14). */

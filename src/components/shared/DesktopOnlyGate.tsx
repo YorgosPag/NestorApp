@@ -142,14 +142,22 @@ export function DesktopOnlyNotice({
 export function DesktopOnlyGate({
   wide,
   narrow,
+  lead,
 }: {
   wide: () => React.ReactNode;
   narrow: React.ReactNode;
+  /**
+   * ADR-900 §3.7 — ό,τι ισχύει **σε κάθε πλάτος**, πάνω από τη φόρμα **και** πάνω από την ειδοποίηση
+   * (π.χ. «δείτε πρώτα αν υπάρχει ενδιαφέρον»). Ζει **μέσα** στο ίδιο `<main>` — δεύτερο `main` δίπλα
+   * θα έσπαγε τα ορόσημα. Δεν εξαρτάται από τη μέτρηση: δεν ισχυρίζεται τίποτα για την οθόνη.
+   */
+  lead?: React.ReactNode;
 }): React.ReactElement {
   const viewport = useViewportClass();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-6">
+      {lead}
       {/*
         🔴 Το `measuring` ζωγραφίζει **τίποτα**, όχι τη φόρμα και όχι την ειδοποίηση.
         Και τα δύο θα ήταν ισχυρισμός για κάτι που ακόμη δεν ξέρουμε: το πρώτο στέλνει

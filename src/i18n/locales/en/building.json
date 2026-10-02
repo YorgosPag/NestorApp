@@ -185,7 +185,9 @@
     "planned": "Planned",
     "completed": "Completed",
     "maintenance": "Maintenance",
-    "planning": "Planning"
+    "planning": "Planning",
+    "unknown": "Unspecified",
+    "deleted": "In trash"
   },
   "accessibility": {
     "buildingCard": "Building {name}",

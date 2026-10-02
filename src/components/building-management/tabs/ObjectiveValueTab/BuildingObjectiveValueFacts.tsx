@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **«Γεγονότα κτιρίου»** (ADR-898 Φ4β) — στάδιο (με την πηγή του), άδεια, ΣΑΟ, ανελκυστήρας: γραμμένα **μία
+ * @fileoverview **«Γεγονότα κτιρίου»** (ADR-898 Φ4β) — στάδιο (με την πηγή του), άδεια, ΣΑΟ, ανελκυστήρας, θέρμανση: γραμμένα **μία
  * φορά** για όλες τις μονάδες, με την ίδια ουρά αποθήκευσης και την ίδια ένδειξη με τη σελίδα βελτίωσης αγγελίας.
  * @module components/building-management/tabs/ObjectiveValueTab/BuildingObjectiveValueFacts
  *
@@ -13,7 +13,7 @@
 
 import React, { useId } from 'react';
 
-import { ObjectiveValueQuestion } from '@/components/objective-value/ObjectiveValueQuestions';
+import { ObjectiveValueQuestion, questionClearsItself } from '@/components/objective-value/ObjectiveValueQuestions';
 import { ObjectiveValueSaveStatus } from '@/components/objective-value/ObjectiveValueSaveStatus';
 import { ChoiceSelect } from '@/components/objective-value/objective-value-inputs';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { BuildingStage } from '@/lib/objective-value/building-objective-value';
 import type { BuildingObjectiveValueFacts, BuildingObjectiveValuePatch } from '@/lib/objective-value/building-objective-value-facts';
 import {
+  BUILDING_ENGINE_FACTS,
   BUILDING_ENGINE_QUESTION_OF,
   buildingPatchOfDraft,
   clearedBuildingFactPatch,
@@ -121,23 +122,23 @@ function EngineFact({ fact, facts, today, onAnswer }: {
   readonly today: string;
   readonly onAnswer: (patch: BuildingObjectiveValuePatch) => void;
 }) {
+  const question = BUILDING_ENGINE_QUESTION_OF[fact];
   return (
     <>
       <ObjectiveValueQuestion
-        question={BUILDING_ENGINE_QUESTION_OF[fact]}
+        question={question}
         draft={draftOfBuildingFacts(facts)}
         today={today}
+        unsetVoice="undeclared"
         update={(change) => {
           const patch = buildingPatchOfDraft(change);
           if (patch !== null) onAnswer(patch);
         }}
       />
-      <ClearButton visible={facts[fact] !== null} onClear={() => onAnswer(clearedBuildingFactPatch(fact))} />
+      <ClearButton visible={facts[fact] !== null && !questionClearsItself(question)} onClear={() => onAnswer(clearedBuildingFactPatch(fact))} />
     </>
   );
 }
-
-const ENGINE_FACTS: readonly BuildingEngineFact[] = ['permitDate', 'plotUtilisation', 'hasElevator'];
 
 export function BuildingObjectiveValueFacts({ stage, facts, questions, save, today, onOpenSchedule }: FactsProps) {
   const { t } = useTranslation([NS]);
@@ -159,7 +160,7 @@ export function BuildingObjectiveValueFacts({ stage, facts, questions, save, tod
           )}
           <Waiting fact="declaredStage" questions={questions} />
         </li>
-        {ENGINE_FACTS.map((fact) => (
+        {BUILDING_ENGINE_FACTS.map((fact) => (
           <li key={fact} id={itemIdOf(fact)} className="flex flex-col gap-1">
             <EngineFact fact={fact} facts={facts} today={today} onAnswer={onAnswer} />
             <Waiting fact={fact} questions={questions} />

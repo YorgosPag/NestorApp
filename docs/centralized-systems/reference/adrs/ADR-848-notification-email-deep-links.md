@@ -208,7 +208,8 @@ notification-email-render, notification-email-envelope, email-subscription, user
    το middleware προωθεί πλέον τη διαδρομή ως κεφαλίδα αιτήματος (`lib/http/request-path.ts`) και οι φρουροί
    του διακομιστή ζητούν `loginHrefForRequest()` (`server/auth/login-return.ts`) — layout **και**
    `procurement/analytics`. Τη μετρά ζωντανά ο δίδυμος του χρησμού (`guard-return-lost`). 🔶 Μένουν οι
-   φρουροί **πελάτη** (`ProtectedRoute` κ.ά., `router.replace(login)`) — `pending-ratchet-work.md`.
+   φρουροί **πελάτη** (`router.replace(login)` σε 3 σελίδες) — `pending-ratchet-work.md`. ✅ **02/10 ο
+   `ProtectedRoute` έκλεισε** (ADR-900 §3.7): χωρίς ρητό προορισμό ζητά `loginHrefForCurrentLocation()`.
 4. 🟡 **Σίγαση ανά τύπο** («όχι email για ταιριάσματα αγγελιών») → **[ADR-849](./ADR-849-notification-preferences-type-by-channel.md)**.
    Α1 (μοντέλο + πύλες server) · Α2 (token/κεφαλίδα/σελίδα, ADR-849 §6α) · Α3 (οθόνη, ADR-849 §6β) ✅ 2026-09-10.
 5. ✅ ~~**Ειδοποίηση άλλου χώρου από τον ενεργό**: ανοίγει στον χώρο της **ταυτότητας**.~~ **Έκλεισε

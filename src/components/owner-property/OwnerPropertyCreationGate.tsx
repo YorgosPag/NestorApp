@@ -42,6 +42,7 @@ import routeSlice from '@/i18n/generated/routes/offers__new.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 import { DesktopOnlyGate, DesktopOnlyNotice } from '@/components/shared/DesktopOnlyGate';
+import { InterestCheckNudge } from '@/components/demand/interest-check/InterestCheckNudge';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import type { OwnerPropertyFormContentProps } from './OwnerPropertyFormContent';
 
@@ -64,11 +65,16 @@ const OwnerPropertyFormContent = dynamic<OwnerPropertyFormContentProps>(
   { ssr: false },
 );
 
-export function OwnerPropertyCreationGate(
-  props: OwnerPropertyFormContentProps,
-): React.ReactElement {
+export function OwnerPropertyCreationGate({
+  interestNudge = false,
+  ...props
+}: OwnerPropertyFormContentProps & {
+  /** ADR-900 §3.7 — «δείτε πρώτα αν υπάρχει ενδιαφέρον», όταν ο άνθρωπος **δεν** έρχεται ήδη από τον έλεγχο. */
+  readonly interestNudge?: boolean;
+}): React.ReactElement {
   return (
     <DesktopOnlyGate
+      lead={interestNudge ? <InterestCheckNudge /> : null}
       wide={() => <OwnerPropertyFormContent {...props} />}
       narrow={<DesktopOnlyNotice keyBase="offer" privateHref={MY_OFFERS_ROUTE} />}
     />

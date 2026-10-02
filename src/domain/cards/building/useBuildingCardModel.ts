@@ -19,6 +19,8 @@ import { formatNumber } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '@/types/building/contracts';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
+import { buildingCategoryLabel, buildingStatusLabel } from '@/lib/buildings/building-enum-labels';
+import { parseBuildingStatus, type BuildingStatus } from '@/constants/building-statuses';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
@@ -28,11 +30,12 @@ import type { CardViewModel } from '../shared/card-model.types';
 // 🏢 STATUS TO BADGE VARIANT MAPPING (Centralized)
 // =============================================================================
 
-const STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
+const STATUS_BADGE_VARIANTS: Readonly<Record<BuildingStatus, GridCardBadgeVariant>> = {
   planning: 'warning',
   construction: 'info',
   completed: 'success',
   active: 'success',
+  deleted: 'default',
 };
 
 /**
@@ -80,18 +83,13 @@ export function useBuildingCardModel(building: Building): CardViewModel {
 
   /** Build badges from status - 🏢 ENTERPRISE: Using centralized i18n */
   const badges = useMemo(() => {
-    const status = building.status || 'planning';
-    const statusLabel = t(`status.${status}`, { defaultValue: status });
-    const variant = STATUS_BADGE_VARIANTS[status] || 'default';
-
-    return [{ label: statusLabel, variant }];
+    const status = parseBuildingStatus(building.status);
+    const variant: GridCardBadgeVariant = status === null ? 'default' : STATUS_BADGE_VARIANTS[status];
+    return [{ label: buildingStatusLabel(t, building.status), variant }];
   }, [building.status, t]);
 
   /** Get category label for subtitle - 🏢 ENTERPRISE: Using centralized i18n */
-  const categoryLabel = useMemo(() => {
-    const category = building.category || 'mixed';
-    return t(`category.${category}`, { defaultValue: category });
-  }, [building.category, t]);
+  const categoryLabel = useMemo(() => buildingCategoryLabel(t, building.category), [building.category, t]);
 
   return {
     entityType: ENTITY_TYPES.BUILDING,

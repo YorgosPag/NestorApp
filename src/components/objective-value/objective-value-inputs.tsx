@@ -76,24 +76,39 @@ export function OptionalNumber({ id, value, onChange, step = 1, describedBy }: O
   );
 }
 
+const YES_NO_OPTIONS = ['yes', 'no', 'unset'] as const;
+type YesNoOption = (typeof YES_NO_OPTIONS)[number];
+
+const OPTION_OF = (value: boolean | null): YesNoOption => (value === null ? 'unset' : value ? 'yes' : 'no');
+const VALUE_OF: Readonly<Record<YesNoOption, boolean | null>> = { yes: true, no: false, unset: null };
+
 interface YesNoProps {
   readonly name: string;
   readonly value: boolean | null;
-  readonly onChange: (value: boolean) => void;
-  readonly labels: { readonly yes: string; readonly no: string };
+  readonly onChange: (value: boolean | null) => void;
+  /** `unset` = η ετικέτα του `null` — ο καλών τη διαλέγει, γιατί η ίδια κατάσταση λέγεται αλλιώς ανά πλαίσιο. */
+  readonly labels: { readonly yes: string; readonly no: string; readonly unset: string };
   readonly labelledBy: string;
 }
 
+/**
+ * **Ναι / Όχι / «δεν απαντήθηκε» — τρεις ΡΗΤΕΣ επιλογές** (ADR-898 §18.1). Το `null` είναι επιλογή της ομάδας, όχι
+ * κενό: η ομάδα έχει **πάντα** επιλεγμένο στοιχείο (Tab/βελάκια, «3 από 3, επιλεγμένο» στον αναγνώστη οθόνης), και η
+ * απάντηση **αναιρείται από το ίδιο χειριστήριο** — όπως η ακαθόριστη παράμετρος Yes/No της Revit και η ρητή τρίτη
+ * επιλογή του GOV.UK. Κανένα εξωτερικό κουμπί «καθαρισμός» γι' αυτό (δες `questionClearsItself`).
+ */
 export function YesNo({ name, value, onChange, labels, labelledBy }: YesNoProps) {
-  const current = value === null ? '' : value ? 'yes' : 'no';
   return (
     <RadioGroup
       aria-labelledby={labelledBy}
-      value={current}
-      onValueChange={(next) => onChange(next === 'yes')}
+      value={OPTION_OF(value)}
+      onValueChange={(next) => {
+        const option = YES_NO_OPTIONS.find((candidate) => candidate === next);
+        if (option !== undefined) onChange(VALUE_OF[option]);
+      }}
       className="flex flex-wrap gap-4"
     >
-      {(['yes', 'no'] as const).map((option) => (
+      {YES_NO_OPTIONS.map((option) => (
         <Label key={option} htmlFor={`${name}-${option}`} className="flex items-center gap-2 font-normal">
           <RadioGroupItem id={`${name}-${option}`} value={option} />
           {labels[option]}
@@ -110,6 +125,12 @@ interface LabelledNumberProps {
   readonly onChange: (value: number | null) => void;
   readonly step?: number;
 }
+
+/**
+ * Πώς λέγεται το `null` ενός Ναι/Όχι: `unknown` = ο ιδιώτης του υπολογιστή «δεν το γνωρίζει» · `undeclared` = σε
+ * καταχωρισμένο στοιχείο (αγγελία, κτίριο) «δεν δηλώθηκε». Ίδια τιμή, άλλη πρόταση — ένας τύπος για όλους.
+ */
+export type YesNoUnsetVoice = 'unknown' | 'undeclared';
 
 /** Ετικέτα + αριθμός + (προαιρετική) βοήθεια, δεμένα με `htmlFor` / `aria-describedby` — το ίδιο μοτίβο σε όλα τα βήματα. */
 export function LabelledNumber({ label, help, value, onChange, step }: LabelledNumberProps) {

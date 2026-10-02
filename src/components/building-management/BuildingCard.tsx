@@ -11,6 +11,7 @@ import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { buildingStatusLabel } from '@/lib/buildings/building-enum-labels';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -64,9 +65,7 @@ export function BuildingCard({
           {
             type: 'status',
             // 🏢 ENTERPRISE: Using centralized i18n translations with namespace readiness
-            value: isNamespaceReady
-              ? t(`status.${building.status}`, { defaultValue: building.status })
-              : building.status,
+            value: isNamespaceReady ? buildingStatusLabel(t, building.status) : '',
             size: 'sm'
           },
           {

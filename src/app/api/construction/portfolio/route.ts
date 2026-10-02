@@ -22,6 +22,7 @@ import type { ConstructionPhase, ConstructionTask } from '@/types/building/const
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type { BOQItem } from '@/types/boq';
 import type { Building } from '@/types/building/contracts';
+import { withCanonicalBuildingStatus } from '@/lib/buildings/canonical-building-enums';
 
 export const maxDuration = 30;
 
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest) {
           .get();
 
         const activeBuildings = buildingsSnap.docs
-          .map(d => ({ ...(d.data() as Building), id: d.id }))
+          .map(d => withCanonicalBuildingStatus({ ...(d.data() as Building), id: d.id }))
           .filter(b => b.status !== 'completed');
 
         const items = await Promise.all(

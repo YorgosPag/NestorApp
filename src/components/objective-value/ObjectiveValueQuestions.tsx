@@ -20,7 +20,7 @@ import { frontageLabel } from '@/lib/listings/frontage-label';
 import type { ConditionalQuestion, ObjectiveValueDraft, UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { RESIDENCE_FRONTAGES } from '@/lib/objective-value/objective-value-types';
 
-import { CalculatorStep, ChoiceSelect, LabelledNumber, YesNo } from './objective-value-inputs';
+import { CalculatorStep, ChoiceSelect, LabelledNumber, YesNo, type YesNoUnsetVoice } from './objective-value-inputs';
 
 const NS = 'objective-value';
 
@@ -28,6 +28,26 @@ export interface ObjectiveValueQuestionProps {
   readonly draft: ObjectiveValueDraft;
   readonly update: UpdateDraft;
   readonly today: string;
+  /** Πώς λέγεται το «δεν απαντήθηκε» στα Ναι/Όχι — προεπιλογή ο υπολογιστή (`unknown`). */
+  readonly unsetVoice?: YesNoUnsetVoice;
+}
+
+/** Οι ερωτήσεις που απαντώνται με `YesNo` — αυτές **αναιρούνται από το χειριστήριό τους** (ADR-898 §18.1). */
+const YES_NO_QUESTIONS = ['hasCentralHeating', 'hasElevator'] as const satisfies readonly ConditionalQuestion[];
+type YesNoField = (typeof YES_NO_QUESTIONS)[number];
+
+/**
+ * «Έχει αυτή η ερώτηση **δική της** επιλογή αναίρεσης;» — αν ναι, εξωτερικό κουμπί «καθαρισμός» θα ήταν **δεύτερος**
+ * δρόμος για την ίδια πράξη. Μία πηγή, δίπλα στο `switch` που αποφασίζει το χειριστήριο.
+ */
+export function questionClearsItself(question: ConditionalQuestion): boolean {
+  return YES_NO_QUESTIONS.some((candidate) => candidate === question);
+}
+
+/** Οι τρεις ετικέτες του `YesNo` — ίδια διατύπωση σε υπολογιστή, αγγελία και κτίριο· μόνο το `null` αλλάζει φωνή. */
+export function useYesNoLabels(voice: YesNoUnsetVoice = 'unknown'): { readonly yes: string; readonly no: string; readonly unset: string } {
+  const { t } = useTranslation([NS]);
+  return { yes: t(`${NS}:questions.yes`), no: t(`${NS}:questions.no`), unset: t(`${NS}:questions.unset.${voice}`) };
 }
 
 /** Οι τιμές ονομάζονται από το **ένα** λεξιλόγιο ακινήτου — ίδιες λέξεις με την αγγελία και τα φίλτρα (ADR-898 Φ3β). */
@@ -49,8 +69,9 @@ function FrontageQuestion({ draft, update }: ObjectiveValueQuestionProps) {
   );
 }
 
-function YesNoQuestion({ draft, update, field }: ObjectiveValueQuestionProps & { readonly field: 'hasCentralHeating' | 'hasElevator' }) {
+function YesNoQuestion({ draft, update, field, unsetVoice }: ObjectiveValueQuestionProps & { readonly field: YesNoField }) {
   const { t } = useTranslation([NS]);
+  const labels = useYesNoLabels(unsetVoice);
   const labelId = useId();
   return (
     <>
@@ -59,7 +80,7 @@ function YesNoQuestion({ draft, update, field }: ObjectiveValueQuestionProps & {
         name={labelId}
         labelledBy={labelId}
         value={draft[field]}
-        labels={{ yes: t(`${NS}:questions.yes`), no: t(`${NS}:questions.no`) }}
+        labels={labels}
         onChange={(value) => update(field === 'hasElevator' ? { hasElevator: value } : { hasCentralHeating: value })}
       />
     </>

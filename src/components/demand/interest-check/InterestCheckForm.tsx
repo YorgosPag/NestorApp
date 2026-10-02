@@ -38,9 +38,12 @@ const K = `${NS}:interestCheck`;
 export function InterestCheckPlaceStep({
   place,
   onPlace,
+  initialAddress,
 }: {
   place: PlaceRef | null;
   onPlace: (ref: PlaceRef) => void;
+  /** Από δημόσια πόρτα (ADR-900 §3.7): το πεδίο ξεκινά γεμάτο και ο χάρτης πάει ήδη εκεί. */
+  initialAddress: string | null;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
   // 🔑 Διεύθυνση ΠΡΩΤΑ, κτίριο ΜΕΤΑ — ίδια σειρά με τη φόρμα του κατόχου (και τη Zillow). Η εστίαση πάει στον
@@ -48,7 +51,7 @@ export function InterestCheckPlaceStep({
   const [found, setFound] = React.useState<AddressFocus | null>(null);
   return (
     <FormFieldset legend={t(`${K}.place.legend`)} help={t(`${K}.place.help`)}>
-      <AddressFocusFinder onFocus={setFound} />
+      <AddressFocusFinder onFocus={setFound} initialQuery={initialAddress} />
       <PlaceIdentityField
         chosen={place}
         onChosen={onPlace}

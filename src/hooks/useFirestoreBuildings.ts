@@ -36,6 +36,7 @@ import { compareInstantsDesc } from '@/lib/date-local';
 import { createStaleCache } from '@/lib/stale-cache';
 // SSoT pub/sub primitive (WAVE 3) — replaces the hand-rolled listener Set + emit()
 import { createExternalStore } from '@/lib/state/createExternalStore';
+import { withCanonicalBuildingStatus } from '@/lib/buildings/canonical-building-enums';
 
 const logger = createModuleLogger('useFirestoreBuildings');
 
@@ -91,7 +92,8 @@ function startFirestoreSubscription(): void {
         .filter(doc => doc.status !== 'deleted')
         // Mirror server-side sort: createdAt desc
         .sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt))
-        .map(doc => doc as unknown as Building);
+        // ADR-898 §18.2: ψευδώνυμα κατάστασης (π.χ. `in_progress`) → κανονική, μία φορά στο σύνορο ανάγνωσης
+        .map(doc => withCanonicalBuildingStatus(doc) as unknown as Building);
 
       logger.debug('Buildings updated via real-time subscription', { count: mapped.length });
       // ADR-300: Write to module-level cache so next remount skips spinner

@@ -13,6 +13,7 @@ import type { PriorityLevel } from '@/constants/priority-levels';
 // επιπρόσθετα των κάτωθι `export type {X}` re-exports για backward-compat).
 import type { BuildingStatus } from '@/constants/building-statuses';
 import type { BuildingType } from '@/constants/building-types';
+import type { BuildingCategory } from '@/constants/building-categories';
 import type { EnergyClass } from '@/constants/energy-classes';
 import type { RenovationStatus } from '@/constants/renovation-statuses';
 
@@ -113,7 +114,7 @@ export type {
     linkedCompanyId?: string;
     linkedCompanyName?: string;
     project?: string;
-    category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
+    category?: BuildingCategory;
     // 🏢 ENTERPRISE: Type-safe building features (keys, not strings)
     features?: BuildingFeatureKey[];
 

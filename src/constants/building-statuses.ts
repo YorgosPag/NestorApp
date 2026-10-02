@@ -41,8 +41,28 @@ export const BUILDING_STATUSES = [
 export type BuildingStatus = (typeof BUILDING_STATUSES)[number];
 
 // =============================================================================
-// 2. RUNTIME TYPE GUARD
+// 2. RUNTIME TYPE GUARD + LEGACY ALIASES (ADR-898 §18.2)
 // =============================================================================
+
+export function isBuildingStatus(value: unknown): value is BuildingStatus {
+  return BUILDING_STATUSES.some((status) => status === value);
+}
+
+/**
+ * Τιμές που **γράφτηκαν** σε κτίρια από άλλο λεξιλόγιο και σημαίνουν κανονική κατάσταση. Το `in_progress` είναι
+ * κατάσταση **έργου** (`ProjectStatus`)· σε κτίριο σημαίνει «υπό κατασκευή». Μετρημένο 2026-10-02: 4 κτίρια παλιού
+ * seed (χωρίς `createdAt`/`_v`)· κανένας γραφέας του κώδικα δεν το παράγει.
+ */
+const LEGACY_BUILDING_STATUS_ALIASES: ReadonlyMap<string, BuildingStatus> = new Map([['in_progress', 'construction']]);
+
+/**
+ * Η αποθηκευμένη τιμή → κανονική κατάσταση, ή `null` όταν δεν αναγνωρίζεται (ποτέ μαντεψιά — όπως το `UNSPECIFIED`
+ * του Protobuf για άγνωστη τιμή enum). Ο ΕΝΑΣ τόπος όπου ζουν τα ψευδώνυμα.
+ */
+export function parseBuildingStatus(raw: unknown): BuildingStatus | null {
+  if (isBuildingStatus(raw)) return raw;
+  return typeof raw === 'string' ? LEGACY_BUILDING_STATUS_ALIASES.get(raw) ?? null : null;
+}
 
 // =============================================================================
 // 3. DERIVED SUBSETS

@@ -124,3 +124,17 @@ export function loginHref(returnPath?: string | null): WorkspaceHref {
   const query = new URLSearchParams({ [RETURN_PATH_PARAM]: safe }).toString();
   return withQuery(AUTH_ROUTES.login, query);
 }
+
+/**
+ * **Σύνδεση με επιστροφή ΕΔΩ — για φρουρό ΠΕΛΑΤΗ** (ADR-848 §9 #3 · ADR-900 §3.7).
+ *
+ * Ο φρουρός του διακομιστή ζητά `loginHrefForRequest()`· ο φρουρός πελάτη (`ProtectedRoute`) δεν βλέπει
+ * κεφαλίδες, βλέπει όμως το `location`. Καλείται **τη στιγμή της ανακατεύθυνσης** (μέσα σε effect), όχι
+ * στην απόδοση: εκεί υπάρχει `window`, και η διαδρομή είναι η τρέχουσα — όχι στιγμιότυπο.
+ *
+ * ⚠️ Το `#hash` **δεν** περνά (δες {@link safeReturnPath}). Έξω από φυλλομετρητή ⇒ σκέτο `/login`.
+ */
+export function loginHrefForCurrentLocation(): WorkspaceHref {
+  if (typeof window === 'undefined') return loginHref(null);
+  return loginHref(`${window.location.pathname}${window.location.search}`);
+}

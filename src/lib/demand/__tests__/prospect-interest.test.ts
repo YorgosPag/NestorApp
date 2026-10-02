@@ -7,9 +7,13 @@
 
 import {
   EMPTY_PROSPECT_FORM,
+  PROSPECT_ADDRESS_MAX_LENGTH,
+  PROSPECT_ADDRESS_PARAM,
   PROSPECT_INTEREST_API,
   PROSPECT_LIMITS,
+  interestCheckHref,
   parseProspectQuery,
+  prospectAddressOf,
   prospectInterestUrl,
   prospectProjectable,
   prospectQueryFrom,
@@ -98,5 +102,46 @@ describe('Κ — προσυμπλήρωση του `/offers/new` από το ί�
 
   it('χαλασμένο URL ⇒ `null` (η φόρμα ανοίγει κενή, η καταχώριση δεν μπλοκάρει)', () => {
     expect(ownerFormFromProspect(new URLSearchParams('type=apartment'))).toBeNull();
+  });
+});
+
+describe('Δ — η διεύθυνση από τις δημόσιες πόρτες (ADR-900 §3.7)', () => {
+  /** Ό,τι γράφει η πόρτα, το διαβάζει η σελίδα — μέσα από το ΠΡΑΓΜΑΤΙΚΟ URL, όχι από σταθερά του test. */
+  function addressThrough(raw: string | null): string | null {
+    const href: string = interestCheckHref(raw);
+    return prospectAddressOf(new URL(href, 'https://example.invalid').searchParams);
+  }
+
+  it('round-trip: ελληνικά, κόμμα, αριθμός', () => {
+    expect(addressThrough('Εγνατίας 147, Θεσσαλονίκη')).toBe('Εγνατίας 147, Θεσσαλονίκη');
+  });
+
+  it('κενό ή μόνο κενά ⇒ σκέτη διαδρομή, χωρίς `?address=`', () => {
+    expect(interestCheckHref('   ')).toBe('/interest-check');
+    expect(interestCheckHref(null)).toBe('/interest-check');
+    expect(interestCheckHref()).toBe('/interest-check');
+  });
+
+  it('κανονικοποίηση κενών — ίδια διεύθυνση, ένα κείμενο', () => {
+    expect(addressThrough('  Εγνατίας	 147  ')).toBe('Εγνατίας 147');
+  });
+
+  it('φορτίο ⇒ κόβεται στο όριο, και από τις δύο πλευρές', () => {
+    const long = 'α'.repeat(PROSPECT_ADDRESS_MAX_LENGTH + 50);
+    expect(addressThrough(long)).toHaveLength(PROSPECT_ADDRESS_MAX_LENGTH);
+    const forged = new URLSearchParams({ [PROSPECT_ADDRESS_PARAM]: long });
+    expect(prospectAddressOf(forged)).toHaveLength(PROSPECT_ADDRESS_MAX_LENGTH);
+  });
+
+  it('η φόρμα GET της αρχικής (χωρίς JS) γράφει το ΙΔΙΟ όνομα που διαβάζει η σελίδα', () => {
+    const nativeSubmit = new URLSearchParams({ [PROSPECT_ADDRESS_PARAM]: 'Σαμοθράκης 16' });
+    expect(prospectAddressOf(nativeSubmit)).toBe('Σαμοθράκης 16');
+  });
+
+  it('η διεύθυνση ΔΕΝ μολύνει το ερώτημα του API — το API κρίνει κτίριο, όχι κείμενο', () => {
+    const params = prospectQueryParams(FULL);
+    expect(params.has(PROSPECT_ADDRESS_PARAM)).toBe(false);
+    params.set(PROSPECT_ADDRESS_PARAM, 'Εγνατίας 147');
+    expect(parseProspectQuery(params)).toEqual({ kind: 'ok', query: FULL });
   });
 });

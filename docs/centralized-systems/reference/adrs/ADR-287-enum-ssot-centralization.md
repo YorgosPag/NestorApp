@@ -72,6 +72,11 @@
 
 ## Changelog
 
+- **2026-10-02 (ADR-898 §18.2)**: `BuildingCategory` centralization + building status aliases.
+  - **Created**: `src/constants/building-categories.ts` — `BUILDING_CATEGORIES` (4), `BuildingCategory`, `isBuildingCategory()`. ⚠️ ≠ `BuildingType` (6 τιμές, άλλο πεδίο).
+  - **Filled** the empty «RUNTIME TYPE GUARD» section of `building-statuses.ts`: `isBuildingStatus()` + `parseBuildingStatus()` με **έναν** πίνακα ψευδωνύμων (`in_progress` → `construction` — λεξιλόγιο έργου γραμμένο σε κτίρια παλιού seed).
+  - **Migrated**: `types/building/contracts.ts` + `mutation-payloads.ts` (inline union) · `POST /api/buildings` (`z.enum([...])`) · `BasicInfoCard` (τοπική λίστα) · `GeneralTabContent` (3 `as` casts → `isBuildingCategory`).
+  - Ετικέτες: `src/lib/buildings/building-enum-labels.ts` · σύνορο ανάγνωσης + συμπλήρωση: `src/lib/buildings/canonical-building-enums.ts` (πρότυπο Batch 13/14).
 - **2026-04-05 (Batch 9A)**: `CommercialStatus` centralization.
   - **Created**: `src/constants/commercial-statuses.ts` — `COMMERCIAL_STATUSES` (7), `CommercialStatus` union, `isCommercialStatus()` guard, derived subsets `LISTED_COMMERCIAL_STATUSES` (3) + `FINALIZED_COMMERCIAL_STATUSES` (2) + αντίστοιχα guards.
   - **Migrated**:

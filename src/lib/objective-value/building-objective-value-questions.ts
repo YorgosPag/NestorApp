@@ -26,10 +26,11 @@ const FACT_OF: Partial<Record<ObjectiveValueMissing | OpenQuestion, BuildingFact
   ageYears: 'permitDate',
   plotUtilisation: 'plotUtilisation',
   hasElevator: 'hasElevator',
+  hasCentralHeating: 'hasCentralHeating',
 };
 
 /** Σειρά εμφάνισης: πρώτα ό,τι ξεκλειδώνει τα υπόλοιπα (το στάδιο αποφασίζει αν ζητείται ΣΑΟ ή παλαιότητα). */
-const ORDER: readonly BuildingFactQuestion[] = ['declaredStage', 'permitDate', 'plotUtilisation', 'hasElevator'];
+const ORDER: readonly BuildingFactQuestion[] = ['declaredStage', 'permitDate', 'plotUtilisation', 'hasElevator', 'hasCentralHeating'];
 
 export interface BuildingQuestion {
   readonly fact: BuildingFactQuestion;
@@ -76,17 +77,19 @@ export const BUILDING_ENGINE_QUESTION_OF = {
   permitDate: 'ageYears',
   plotUtilisation: 'plotUtilisation',
   hasElevator: 'hasElevator',
+  hasCentralHeating: 'hasCentralHeating',
 } as const satisfies Readonly<Partial<Record<BuildingFactQuestion, ConditionalQuestion>>>;
 
 export type BuildingEngineFact = keyof typeof BUILDING_ENGINE_QUESTION_OF;
 
 /** Τα γεγονότα ως πρόχειρο του υπολογιστή — ώστε τα χειριστήριά του να τα δείχνουν χωρίς δεύτερο λεξιλόγιο. */
 export function draftOfBuildingFacts(facts: BuildingObjectiveValueFacts): ObjectiveValueDraft {
-  const { permitDate, plotUtilisation, hasElevator } = facts;
-  return { ...INITIAL_DRAFT, permitDate, plotUtilisation, hasElevator };
+  const { permitDate, plotUtilisation, hasElevator, hasCentralHeating } = facts;
+  return { ...INITIAL_DRAFT, permitDate, plotUtilisation, hasElevator, hasCentralHeating };
 }
 
-const ENGINE_FACTS = Object.keys(BUILDING_ENGINE_QUESTION_OF) as readonly BuildingEngineFact[];
+/** Τα γεγονότα με χειριστήριο του υπολογιστή, με τη σειρά του πίνακα — η ΜΙΑ λίστα (και της οθόνης «Γεγονότα κτιρίου»). */
+export const BUILDING_ENGINE_FACTS = Object.keys(BUILDING_ENGINE_QUESTION_OF) as readonly BuildingEngineFact[];
 
 /** Αλλαγή του προχείρου → διόρθωση γεγονότων, **μόνο** με τα πεδία του κτιρίου που άλλαξαν· `null` αν δεν μένει τίποτα. */
 export function buildingPatchOfDraft(change: Partial<ObjectiveValueDraft>): BuildingObjectiveValuePatch | null {
@@ -94,7 +97,8 @@ export function buildingPatchOfDraft(change: Partial<ObjectiveValueDraft>): Buil
   if ('permitDate' in change) patch.permitDate = change.permitDate ?? null;
   if ('plotUtilisation' in change) patch.plotUtilisation = change.plotUtilisation ?? null;
   if ('hasElevator' in change) patch.hasElevator = change.hasElevator ?? null;
-  return ENGINE_FACTS.some((fact) => fact in patch) ? patch : null;
+  if ('hasCentralHeating' in change) patch.hasCentralHeating = change.hasCentralHeating ?? null;
+  return BUILDING_ENGINE_FACTS.some((fact) => fact in patch) ? patch : null;
 }
 
 /** «Σβήσε την απάντηση» ανά γεγονός — ολικός πίνακας: νέο γεγονός ⇒ ο μεταγλωττιστής ρωτά. */
@@ -103,6 +107,7 @@ const CLEARED: Readonly<Record<BuildingFactQuestion, BuildingObjectiveValuePatch
   permitDate: { permitDate: null },
   plotUtilisation: { plotUtilisation: null },
   hasElevator: { hasElevator: null },
+  hasCentralHeating: { hasCentralHeating: null },
 };
 
 export function clearedBuildingFactPatch(fact: BuildingFactQuestion): BuildingObjectiveValuePatch {

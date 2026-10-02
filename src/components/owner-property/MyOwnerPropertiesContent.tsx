@@ -30,7 +30,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
-import { INTEREST_CHECK_ROUTE } from '@/lib/demand/demand-routes';
+import { OwnerInterestEntry } from '@/components/demand/interest-check/OwnerInterestEntry';
 // ADR-820 §5.3 — Ο ΕΝΑΣ κριτής του «ανήκω σε οργανισμό;», ποτέ ωμό `user?.companyId`.
 import { hasOrganization } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
@@ -181,20 +181,18 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
         >
           {t(`${NS}:dossier.list.fromOffers`)}
         </Link>
-        {/*
-          ADR-900 — «ενδιαφέρεται κάποιος;» ΠΡΙΝ την καταχώριση: η πόρτα ζει εδώ και ΟΧΙ στη στήλη, γιατί
-          το `navigation` είναι σφραγισμένο στο κέλυφος (μετρημένο: +38 bytes πάνω από το ταβάνι του) — ο
-          κανόνας λέει μετακόμιση σε σωστό namespace, όχι μεγαλύτερος αριθμός.
-        */}
-        <Link
-          href={INTEREST_CHECK_ROUTE}
-          className="inline-block rounded-md px-4 py-2 font-medium text-foreground underline"
-        >
-          {t(`${NS}:interestCheck.door`)}
-        </Link>
       </nav>
 
       <OwnerPropertiesBody state={state} partition={partition} />
+
+      {/*
+        ADR-900 §3.7 — «ενδιαφέρεται κάποιος;» για το ΕΠΟΜΕΝΟ ακίνητο: το «Claim your home» του Owner Dashboard
+        της Zillow, με πεδίο διεύθυνσης (η ΙΔΙΑ κάρτα με την αρχική). ΚΑΤΩ από τη λίστα, επίτηδες: όποιος έχει
+        ακίνητα ήρθε για αυτά· όποιος δεν έχει, βλέπει την κάρτα αμέσως κάτω από την κενή κατάσταση.
+        ⚠️ ΟΧΙ εγγραφή στη στήλη: το μενού λογαριασμού της Zillow δείχνει «Your Home» (τα δικά σου), όχι το
+        εργαλείο πριν την ιδιοκτησία — εκείνο ζει στη δημόσια μπάρα («Sell» ⇒ εδώ «Ιδιοκτήτες»).
+      */}
+      <OwnerInterestEntry />
 
       <WorkspaceInvitation />
     </main>

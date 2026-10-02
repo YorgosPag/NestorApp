@@ -11,7 +11,7 @@
 
 import React, { useId } from 'react';
 
-import { ObjectiveValueQuestion } from '@/components/objective-value/ObjectiveValueQuestions';
+import { ObjectiveValueQuestion, questionClearsItself, useYesNoLabels } from '@/components/objective-value/ObjectiveValueQuestions';
 import { ChoiceSelect, YesNo } from '@/components/objective-value/objective-value-inputs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -73,6 +73,7 @@ function ZoneFrontControl({ declarations, verdict, onAnswer }: ImproveQuestionPr
 
 function AreaIncludesCommonControl({ declarations, onAnswer }: ImproveQuestionProps) {
   const { t } = useTranslation([NS]);
+  const labels = useYesNoLabels('undeclared');
   const labelId = useId();
   return (
     <>
@@ -81,7 +82,7 @@ function AreaIncludesCommonControl({ declarations, onAnswer }: ImproveQuestionPr
         name={labelId}
         labelledBy={labelId}
         value={declarations.areaIncludesCommon}
-        labels={{ yes: t(`${NS}:questions.yes`), no: t(`${NS}:questions.no`) }}
+        labels={labels}
         onChange={(areaIncludesCommon) => onAnswer({ areaIncludesCommon })}
       />
       <span className="text-xs text-muted-foreground">{t(`${I}.areaIncludesCommon.help`)}</span>
@@ -105,6 +106,7 @@ function Control(props: ImproveQuestionProps) {
       question={engineQuestion}
       draft={draftOfDeclarations(declarations)}
       today={today}
+      unsetVoice="undeclared"
       update={(change) => {
         const patch = patchOfDraft(change);
         if (patch !== null) onAnswer(patch);
@@ -137,6 +139,12 @@ function Notes({ question }: { readonly question: ImproveQuestion }) {
   );
 }
 
+/** Το πεδίο αναιρείται από το ίδιο του το χειριστήριο (`YesNo`) ⇒ κανένα δεύτερο κουμπί «καθαρισμός» (ADR-898 §18.1). */
+function clearsItself(field: ImproveQuestion['field']): boolean {
+  const engineQuestion = ENGINE_QUESTION_OF[field];
+  return field === 'areaIncludesCommon' || (engineQuestion !== undefined && questionClearsItself(engineQuestion));
+}
+
 export function ObjectiveValueImproveQuestion(props: ImproveQuestionProps) {
   const { t } = useTranslation([NS]);
   const { question, declarations, onAnswer } = props;
@@ -145,7 +153,7 @@ export function ObjectiveValueImproveQuestion(props: ImproveQuestionProps) {
     <li className="flex flex-col gap-1">
       <Control {...props} />
       <Notes question={question} />
-      {declared && question.state !== 'byAttribute' && (
+      {declared && question.state !== 'byAttribute' && !clearsItself(question.field) && (
         <Button
           type="button"
           variant="link"

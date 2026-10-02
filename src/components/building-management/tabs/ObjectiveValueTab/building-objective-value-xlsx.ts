@@ -109,8 +109,9 @@ function stageText({ data, labels }: BuildingObjectiveValueExport): string {
 function addAssumptionsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiveValueExport): void {
   const { data, labels, buildingName, exportedOn } = input;
   const { t } = labels;
-  const notDeclared = t(`${B}.facts.unset`);
-  const elevator = data.facts.hasElevator === null ? notDeclared : t(`${B}.facts.${data.facts.hasElevator ? 'yes' : 'no'}`);
+  // Οι ΙΔΙΕΣ λέξεις με το χειριστήριο `YesNo` (`useYesNoLabels('undeclared')`) — ένας κατάλογος, όχι δεύτερο «ναι/όχι».
+  const notDeclared = t('objective-value:questions.unset.undeclared');
+  const yesNo = (value: boolean | null) => (value === null ? notDeclared : t(`objective-value:questions.${value ? 'yes' : 'no'}`));
   const rows: KeyValueRow[] = [
     [t(`${E}.assumptions.building`), buildingName],
     [t(`${E}.assumptions.valuationDate`), data.valuationDate],
@@ -118,7 +119,8 @@ function addAssumptionsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiv
     [t(`${B}.facts.stage`), stageText(input)],
     [t(`${B}.facts.permitDate`), data.facts.permitDate ?? notDeclared],
     [t(`${B}.facts.plotUtilisation`), data.facts.plotUtilisation ?? notDeclared],
-    [t(`${B}.facts.hasElevator`), elevator],
+    [t(`${B}.facts.hasElevator`), yesNo(data.facts.hasElevator)],
+    [t(`${B}.facts.hasCentralHeating`), yesNo(data.facts.hasCentralHeating)],
     [t(`${E}.assumptions.disclaimer`), t('objective-value:result.disclaimer')],
     [t(`${E}.assumptions.myProperty`), AADE_MYPROPERTY_URL],
     [t(`${E}.assumptions.software`), PRODUCT_NAME],

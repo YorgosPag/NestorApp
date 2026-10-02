@@ -10,6 +10,7 @@
 // =============================================================================
 import { useRouter } from '@/lib/workspace/navigation';
 import { useEffect } from 'react';
+import { loginHrefForCurrentLocation } from '@/lib/routes/return-path';
 import { useUserRole } from '../contexts/UserRoleContext';
 import { Spinner } from '@/components/ui/spinner';
 import type { ProtectedRouteProps, UserRole } from '../types/auth.types';
@@ -28,7 +29,7 @@ export function ProtectedRoute({
   children,
   fallback,
   requiredRole,
-  redirectTo = '/login'
+  redirectTo
 }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated, isAdmin: _isAdmin } = useUserRole();
   const router = useRouter();
@@ -41,8 +42,11 @@ export function ProtectedRoute({
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      logger.info('[ProtectedRoute] User not authenticated, redirecting to', { redirectTo });
-      router.push(redirectTo);
+      // ADR-848 §9 #3 · ADR-900 §3.7 — χωρίς ρητό προορισμό, σύνδεση ΜΕ ΕΠΙΣΤΡΟΦΗ στη διαδρομή που ζήτησε ο
+      // άνθρωπος (μαζί με το ερώτημά της): η δημόσια πόρτα «γράψε διεύθυνση» δεν χάνει ούτε σελίδα ούτε κείμενο.
+      logger.info('[ProtectedRoute] User not authenticated, redirecting to login', { redirectTo });
+      if (redirectTo !== undefined) router.push(redirectTo);
+      else router.push(loginHrefForCurrentLocation());
     }
   }, [isAuthenticated, isLoading, router, redirectTo]);
 

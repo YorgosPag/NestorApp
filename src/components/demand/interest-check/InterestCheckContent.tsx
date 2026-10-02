@@ -49,7 +49,12 @@ registerRouteSlice(routeSlice);
 const NS = 'property-market';
 const K = `${NS}:interestCheck`;
 
-export function InterestCheckContent(): React.ReactElement {
+export function InterestCheckContent({
+  initialAddress = null,
+}: {
+  /** ADR-900 §3.7 — η διεύθυνση που έγραψε ο άνθρωπος σε δημόσια πόρτα (αρχική), αν ήρθε από εκεί. */
+  readonly initialAddress?: string | null;
+}): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [place, setPlace] = React.useState<PlaceRef | null>(null);
   const [asked, setAsked] = React.useState<ProspectQuery | null>(null);
@@ -67,7 +72,7 @@ export function InterestCheckContent(): React.ReactElement {
       <PrivatePageHeader title={t(`${K}.title`)} lead={t(`${K}.lead`)} />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <InterestCheckPlaceStep place={place} onPlace={setPlace} />
+        <InterestCheckPlaceStep place={place} onPlace={setPlace} initialAddress={initialAddress} />
         <InterestCheckDescriptionStep control={form.control} type={values.type} />
         <Button type="submit" disabled={draft === null} className="self-start">
           {t(`${K}.submit`)}

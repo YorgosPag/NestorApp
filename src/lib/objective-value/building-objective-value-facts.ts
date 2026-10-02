@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Τα γεγονότα του κτιρίου για την αντικειμενική αξία** — ό,τι ισχύει για **όλες** τις μονάδες του και
- * το δηλώνει **μία φορά** ο εργολάβος (ADR-898 Φ4): ημερομηνία άδειας, ΣΑΟ, ανελκυστήρας, και στάδιο όταν δεν
+ * το δηλώνει **μία φορά** ο εργολάβος (ADR-898 Φ4): ημερομηνία άδειας, ΣΑΟ, ανελκυστήρας, θέρμανση, και στάδιο όταν δεν
  * υπάρχει χρονοδιάγραμμα με ετικέτες.
  * @related `objective-value-stages.ts` (το λεξιλόγιο σταδίων) · `building-objective-value.ts` (ποιος τα χρησιμοποιεί
  *   και με ποια ιεραρχία) · `app/api/buildings/building-objective-value-patch.ts` (ο γραφέας)
@@ -36,6 +36,13 @@ export interface BuildingObjectiveValueFacts {
    * (δυαδικό φίλτρο που κανείς δεν γράφει — το `false` του θα έλεγε «όχι» εκεί που ισχύει «δεν ρωτήθηκε»).
    */
   readonly hasElevator: boolean | null;
+  /**
+   * **Εγκατάσταση** κεντρικής θέρμανσης στο κτίριο (άρθ. 3 §11 — καλοριφέρ/θερμοσυσσωρευτές/δαπέδου) — ίδιο σχήμα με τον
+   * ανελκυστήρα: τύπος για όλες τις μονάδες, το `heatingType`/η δήλωση της μονάδας υπερισχύει (ADR-898 §18.3). ⚠️ Η
+   * **αυτόνομη** μετρά κι αυτή ως εγκατάσταση (`CENTRAL_HEATING_OF`): «όχι» εδώ δεν μειώνει μονάδα με δική της θέρμανση.
+   * ⚠️ **Όχι** το `BUILDING_FEATURES.autonomousHeating` (δυαδική λίστα: απουσία = «δεν ρωτήθηκε», όχι «όχι»).
+   */
+  readonly hasCentralHeating: boolean | null;
 }
 
 /**
@@ -50,6 +57,7 @@ export const BUILDING_OBJECTIVE_VALUE_FIELDS = [
   'plotUtilisation',
   'declaredStage',
   'hasElevator',
+  'hasCentralHeating',
 ] as const satisfies readonly (keyof BuildingObjectiveValueFacts)[];
 
 function isPlotUtilisation(raw: unknown): raw is number {
@@ -64,6 +72,7 @@ export function readBuildingObjectiveValueFacts(raw: unknown): BuildingObjective
     plotUtilisation: isPlotUtilisation(record.plotUtilisation) ? record.plotUtilisation : null,
     declaredStage: isBuildingStageReached(record.declaredStage) ? record.declaredStage : null,
     hasElevator: typeof record.hasElevator === 'boolean' ? record.hasElevator : null,
+    hasCentralHeating: typeof record.hasCentralHeating === 'boolean' ? record.hasCentralHeating : null,
   };
 }
 
@@ -74,6 +83,7 @@ export const buildingObjectiveValuePatchSchema = z
     plotUtilisation: z.number().refine(isPlotUtilisation).nullable(),
     declaredStage: z.enum(['none', ...LEGAL_STAGES]).nullable(),
     hasElevator: z.boolean().nullable(),
+    hasCentralHeating: z.boolean().nullable(),
   })
   .partial()
   .strict()

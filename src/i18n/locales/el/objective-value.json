@@ -100,6 +100,10 @@
     "plotUtilisation": {
       "label": "Συντελεστής αξιοποίησης οικοπέδου (ΣΑΟ)",
       "help": "Όπως προκύπτει από την οικοδομική άδεια, π.χ. 0,8."
+    },
+    "unset": {
+      "unknown": "Δεν το γνωρίζω",
+      "undeclared": "Δεν δηλώθηκε"
     }
   },
   "adjustments": {
@@ -365,9 +369,7 @@
       "plotUtilisation": "ΣΑΟ οικοπέδου",
       "plotUtilisationHelp": "Συντελεστής αξιοποίησης οικοπέδου — μετρά μόνο σε ημιτελές κτίριο (άρθ. 3 §9).",
       "hasElevator": "Ανελκυστήρας στο κτίριο",
-      "yes": "Ναι",
-      "no": "Όχι",
-      "unset": "Δεν δηλώθηκε",
+      "hasCentralHeating": "Κεντρική θέρμανση στο κτίριο",
       "clear": "Καθαρισμός"
     },
     "questions": {
@@ -378,7 +380,8 @@
         "declaredStage": "Στάδιο αποπεράτωσης",
         "permitDate": "Ημερομηνία οικοδομικής άδειας",
         "plotUtilisation": "ΣΑΟ οικοπέδου",
-        "hasElevator": "Ανελκυστήρας"
+        "hasElevator": "Ανελκυστήρας",
+        "hasCentralHeating": "Κεντρική θέρμανση"
       }
     },
     "columns": {
@@ -408,7 +411,8 @@
         "stage": "στάδιο αποπεράτωσης",
         "permitDate": "ημερομηνία άδειας",
         "plotUtilisation": "ΣΑΟ",
-        "hasElevator": "ανελκυστήρας"
+        "hasElevator": "ανελκυστήρας",
+        "hasCentralHeating": "κεντρική θέρμανση"
       }
     },
     "sheet": {

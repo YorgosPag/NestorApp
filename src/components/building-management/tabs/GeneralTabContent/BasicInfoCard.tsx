@@ -22,9 +22,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CONSTRUCTION_YEAR_BOUNDS, maxConstructionYear } from '@/lib/listings/construction-year';
+import { BUILDING_CATEGORIES } from '@/constants/building-categories';
 import '@/lib/design-system';
 
-const BUILDING_CATEGORIES = ['residential', 'commercial', 'mixed', 'industrial'] as const;
 
 interface BasicInfoCardProps {
     /** ADR-233 §3.4: `code` is the locked building identifier ("Κτήριο Α"). Read-only. */

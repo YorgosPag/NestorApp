@@ -37,6 +37,7 @@ import {
   readConstructionYearInput,
 } from '@/lib/listings/construction-year';
 import '@/lib/design-system';
+import { isBuildingCategory } from '@/constants/building-categories';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -53,7 +54,7 @@ function buildFormData(building: Building) {
     constructionYear: building.constructionYear != null ? String(building.constructionYear) : '',
     address: building.address || '',
     city: building.city || '',
-    category: (building.category as 'mixed' | 'residential' | 'commercial' | 'industrial' | '') || '',
+    category: building.category ?? '',
   };
 }
 
@@ -258,7 +259,7 @@ export function GeneralTabContent({
         address: data.address,
         city: data.city,
         _v: data._v,
-        ...(data.category ? { category: data.category as 'mixed' | 'residential' | 'commercial' | 'industrial' } : {}),
+        ...(isBuildingCategory(data.category) ? { category: data.category } : {}),
       },
     });
     return result;
@@ -334,7 +335,7 @@ export function GeneralTabContent({
         ...constructionYearUpdate(formData.constructionYear, new Date().getFullYear()),
         address: formData.address,
         city: formData.city,
-        ...(formData.category ? { category: formData.category as 'mixed' | 'residential' | 'commercial' | 'industrial' } : {}),
+        ...(isBuildingCategory(formData.category) ? { category: formData.category } : {}),
       };
 
       if (isCreateMode) {

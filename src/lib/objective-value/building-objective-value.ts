@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Η αντικειμενική αξία μιας μονάδας ΜΕΣΑ στο κτίριό της** — ο πίνακας του εργολάβου (ADR-898 Φ4):
- * η **ίδια** βάση με την αγγελία, με επικάλυψη των γεγονότων του κτιρίου (στάδιο · άδεια · ΣΑΟ · ανελκυστήρας).
+ * η **ίδια** βάση με την αγγελία, με επικάλυψη των γεγονότων του κτιρίου (στάδιο · άδεια · ΣΑΟ · ανελκυστήρας · θέρμανση).
  * @related `listing-objective-value.ts` (`objectiveValueBasisOf`: η ΜΙΑ αντιστοίχιση μονάδα → πρόχειρο) ·
  *   `objective-value-stages.ts` (στάδιο κτιρίου → στάδιο εντύπου) · `building-objective-value-facts.ts` ·
  *   `services/objective-value/building-objective-values.service.ts` (ο καλών, στον server)
@@ -15,6 +15,7 @@
  *
  * 🔑 **Ιεραρχία ανελκυστήρα: χαρακτηριστικό μονάδας > δήλωση μονάδας > γεγονός κτιρίου > «τι λείπει»** — η παράμετρος
  * **τύπου** του Revit με **υπέρβαση** ανά αντίγραφο (ADR-898 §17). Μόνο στην κατοικία: τα έντυπα 4/5 δεν τον ρωτούν.
+ * Η **θέρμανση** ακολουθεί **την ίδια** ιεραρχία (`heatingType` > δήλωση > κτίριο, ADR-898 §18.3) — ένας κανόνας για τα δύο.
  *
  * 🔑 **Προέλευση ανά μονάδα** (`inherited`): ποια γεγονότα του κτιρίου μπήκαν **πράγματι** στο πρόχειρο της μονάδας.
  * Ό,τι νίκησε η μονάδα **δεν** αναφέρεται — η οθόνη λέει «από το κτίριο» μόνο όπου είναι αλήθεια.
@@ -73,9 +74,9 @@ export type BuildingUnitObjectiveValue =
     });
 
 /** Από πού μπορεί να κληρονομήσει η μονάδα: τα γεγονότα του κτιρίου **και** το στάδιο (χρονοδιάγραμμα ή δήλωση). */
-export type BuildingInheritedFact = 'stage' | 'permitDate' | 'plotUtilisation' | 'hasElevator';
+export type BuildingInheritedFact = 'stage' | 'permitDate' | 'plotUtilisation' | 'hasElevator' | 'hasCentralHeating';
 
-const INHERITED_ORDER: readonly BuildingInheritedFact[] = ['stage', 'permitDate', 'plotUtilisation', 'hasElevator'];
+const INHERITED_ORDER: readonly BuildingInheritedFact[] = ['stage', 'permitDate', 'plotUtilisation', 'hasElevator', 'hasCentralHeating'];
 
 type StagePatch = Pick<ObjectiveValueDraft, 'residenceCompletion' | 'ancillaryCompletion'>;
 
@@ -105,14 +106,27 @@ function withBuildingPermit(
   return { ...resolution, draft: { ...resolution.draft, permitDate: facts.permitDate }, approximatedFrom: null };
 }
 
-/** Ο ανελκυστήρας του κτιρίου καλύπτει **μόνο** το κενό της μονάδας (χαρακτηριστικό ή δήλωση νικούν) — κατοικία μόνο. */
-function withBuildingElevator(
+/** Τα ναι/όχι συστήματα του κτιρίου — **τύπος** με υπέρβαση ανά μονάδα (ADR-898 §17 · §18.3). */
+const BUILDING_SYSTEMS = ['hasElevator', 'hasCentralHeating'] as const satisfies readonly (keyof BuildingObjectiveValueFacts &
+  keyof ObjectiveValueDraft & BuildingInheritedFact)[];
+type BuildingSystem = (typeof BUILDING_SYSTEMS)[number];
+
+/**
+ * Ένα σύστημα του κτιρίου καλύπτει **μόνο** το κενό της μονάδας (χαρακτηριστικό ή δήλωση νικούν) — κατοικία μόνο:
+ * τα έντυπα 4/5 δεν ρωτούν ούτε ανελκυστήρα ούτε θέρμανση. **Ένας** κανόνας για όλα τα συστήματα.
+ */
+function withBuildingSystem(
   resolution: ListingObjectiveValueResolution,
   facts: BuildingObjectiveValueFacts,
   form: ObjectiveValueForm,
+  system: BuildingSystem,
 ): ListingObjectiveValueResolution | null {
-  if (form !== 'residence' || resolution.draft.hasElevator !== null || facts.hasElevator === null) return null;
-  return { ...resolution, draft: { ...resolution.draft, hasElevator: facts.hasElevator } };
+  if (form !== 'residence' || resolution.draft[system] !== null || facts[system] === null) return null;
+  const draft =
+    system === 'hasElevator'
+      ? { ...resolution.draft, hasElevator: facts.hasElevator }
+      : { ...resolution.draft, hasCentralHeating: facts.hasCentralHeating };
+  return { ...resolution, draft };
 }
 
 /** Ο ΣΑΟ μετρά **μόνο** σε ημιτελή κατοικία (άρθ. 3 §9 — `objective-value-residence.ts`). */
@@ -131,10 +145,14 @@ function overlayFacts(
   if (context.stage.source !== 'unknown') inherited.add('stage');
   const permitted = withBuildingPermit(base, context.facts);
   if (permitted !== null) inherited.add('permitDate');
-  const elevated = withBuildingElevator(permitted ?? base, context.facts, form);
-  if (elevated !== null) inherited.add('hasElevator');
+  let merged = permitted ?? base;
+  for (const system of BUILDING_SYSTEMS) {
+    const overlaid = withBuildingSystem(merged, context.facts, form, system);
+    if (overlaid === null) continue;
+    inherited.add(system);
+    merged = overlaid;
+  }
   if (context.facts.plotUtilisation !== null && usesPlotUtilisation(patch)) inherited.add('plotUtilisation');
-  const merged = elevated ?? permitted ?? base;
   const resolution = { ...merged, draft: { ...merged.draft, ...patch, plotUtilisation: context.facts.plotUtilisation } };
   return { resolution, inherited: INHERITED_ORDER.filter((fact) => inherited.has(fact)) };
 }

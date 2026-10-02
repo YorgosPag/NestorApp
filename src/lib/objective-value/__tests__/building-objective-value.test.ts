@@ -179,6 +179,49 @@ describe('ανελκυστήρας — παράμετρος ΤΥΠΟΥ με υπ
   });
 });
 
+describe('κεντρική θέρμανση — ΙΔΙΟ σχήμα με τον ανελκυστήρα (ADR-898 §18.3)', () => {
+  const COMPLETE = { source: 'declared' as const, stage: 'electricity' as const };
+  const COMPLETE_DRAFT = { ...BASE_DRAFT, residenceCompletion: 'complete' as const, permitDate: '1998-07-01' };
+  /** Χωρίς `heatingType` ⇒ η μονάδα δεν ξέρει αν έχει εγκατάσταση θέρμανσης. */
+  const silent = { heatingType: null };
+  const heatingFactorOf = (value: BuildingUnitObjectiveValue) =>
+    value.kind === 'evaluated' && value.bounds.kind === 'exact'
+      ? value.bounds.result.factors.find((factor) => factor.key === 'centralHeating')
+      : undefined;
+
+  it('ούτε μονάδα ούτε κτίριο ⇒ όρια με ανοιχτή ερώτηση — ΠΟΤΕ «όχι» από σιωπή', () => {
+    expect(valueOf(context(COMPLETE), silent)).toMatchObject({ bounds: { kind: 'range', open: ['hasCentralHeating'] }, inherited: ['stage'] });
+  });
+
+  it('το κτίριο λέει «όχι» ⇒ ο συντελεστής του νόμου (×0,95, άρθ. 3 §11α), «από το κτίριο»', () => {
+    const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), silent);
+    const expected = objectiveValueBounds({ ...COMPLETE_DRAFT, hasCentralHeating: false }, TODAY, [2000]);
+    expect(value).toMatchObject({ kind: 'evaluated', bounds: expected, inherited: ['stage', 'hasCentralHeating'] });
+    expect(heatingFactorOf(value)).toMatchObject({ factor: 0.95, ref: expect.stringContaining('§11α') });
+  });
+
+  it('αυτόνομη θέρμανση της μονάδας νικά το «όχι» του κτιρίου — η αυτόνομη ΕΙΝΑΙ εγκατάσταση, καμία μείωση', () => {
+    const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), { heatingType: 'autonomous' });
+    expect(value).toMatchObject({ bounds: objectiveValueBounds(COMPLETE_DRAFT, TODAY, [2000]), inherited: ['stage'] });
+    expect(heatingFactorOf(value)).toBeUndefined();
+  });
+
+  it('η δήλωση της μονάδας νικά το κτίριο', () => {
+    const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), silent, declared({ hasCentralHeating: true }));
+    expect(value).toMatchObject({ bounds: objectiveValueBounds(COMPLETE_DRAFT, TODAY, [2000]), inherited: ['stage'] });
+  });
+
+  it('αποθήκη: η θέρμανση του κτιρίου ΔΕΝ μπαίνει (τα έντυπα 4/5 δεν τη ρωτούν)', () => {
+    const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), { ...silent, type: 'storage', areaSqm: 10 });
+    expect(value).toMatchObject({ kind: 'evaluated', inherited: ['stage'] });
+  });
+
+  it('ανελκυστήρας ΚΑΙ θέρμανση από το κτίριο ⇒ και τα δύο, με τη σειρά της πηγής', () => {
+    const value = valueOf(context(COMPLETE, { hasElevator: true, hasCentralHeating: true }), { floor: 4, amenities: null, heatingType: null });
+    expect(value).toMatchObject({ kind: 'evaluated', inherited: ['stage', 'hasElevator', 'hasCentralHeating'] });
+  });
+});
+
 describe('προέλευση — «από το κτίριο» ΜΟΝΟ όπου είναι αλήθεια', () => {
   it('ΣΑΟ μόνο σε ημιτελή κατοικία · άδεια μόνο όταν η μονάδα δεν έχει δική της', () => {
     const sao = { plotUtilisation: 0.8, permitDate: '2025-03-01' };

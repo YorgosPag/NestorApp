@@ -617,7 +617,8 @@
         "permitDate": "Building permit date",
         "plotUtilisation": "Plot utilisation (SAO)",
         "declaredStage": "Declared completion stage",
-        "hasElevator": "Building elevator"
+        "hasElevator": "Building elevator",
+        "hasCentralHeating": "Building central heating"
       },
       "objectiveValueDeclarations": {
         "display": "Objective value display",

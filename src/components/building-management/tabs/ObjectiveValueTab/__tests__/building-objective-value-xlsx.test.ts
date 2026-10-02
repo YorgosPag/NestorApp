@@ -111,6 +111,9 @@ describe('exportBuildingObjectiveValuesXlsx', () => {
     expect(rowsOf(factors)).toContainEqual(['A1', 'factor:floor', 1.1, 'ΠΟΛ.1149/1994 άρθ.2 §8']);
     const facts = rowsOf(assumptions);
     expect(facts).toContainEqual(['objective-value:building.export.assumptions.valuationDate', '2026-10-02']);
+    // Ναι/Όχι/«δεν δηλώθηκε» με τις ΙΔΙΕΣ λέξεις του χειριστηρίου `YesNo` (ADR-898 §18.1 · §18.3) — όχι δεύτερος κατάλογος.
+    expect(facts).toContainEqual(['objective-value:building.facts.hasCentralHeating', 'objective-value:questions.unset.undeclared']);
+    expect(facts).toContainEqual(['objective-value:building.facts.hasElevator', 'objective-value:questions.unset.undeclared']);
     expect(facts).toContainEqual(['objective-value:building.facts.stage', 'objective-value:building.export.assumptions.stageFrom.schedule::{"stage":"stage:frame"}']);
   });
 });

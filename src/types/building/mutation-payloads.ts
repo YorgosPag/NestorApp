@@ -24,6 +24,7 @@
 
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { BuildingCategory } from '@/constants/building-categories';
 
 /**
  * **Τι επιτρέπεται να αλλάξει σε ένα κτίριο.**
@@ -67,7 +68,7 @@ export interface BuildingUpdatePayload {
    * διευθύνσεων στη θέση της διεύθυνσής τους». Ο διακομιστής το αφαιρεί πριν τη γραφή.
    */
   relocateAddressIds?: string[];
-  category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
+  category?: BuildingCategory;
   /**
    * **ADR-777 §14.5** — ο δεσμός προς το **κοινό** κτίριο (επίπεδο Α).
    *

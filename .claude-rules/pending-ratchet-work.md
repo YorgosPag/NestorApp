@@ -4116,10 +4116,12 @@
 ### 🔐 Φρουροί ΠΕΛΑΤΗ στέλνουν σε σκέτο `/login` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-23)
 
 **Τι**: ο φρουρός του **διακομιστή** δίνει πλέον σύνδεση με επιστροφή (`loginHrefForRequest()`, ADR-875 §14.5).
-Οι φρουροί **πελάτη** όχι: `src/auth/components/ProtectedRoute.tsx` (`redirectTo = '/login'`),
-`o/[workspace]/dashboard/page.tsx`, `pending-approval/page.tsx`, `onboarding/organization/page.tsx`
-(`router.replace(login)`). **Fix**: ΕΝΑ hook πελάτη πάνω στο `loginHref(usePathname() + search)` — **όχι**
-τέσσερα inline. ADR-848 §9 #3.
+✅ **02/10 (ADR-900 §3.7): ο `ProtectedRoute` ΕΚΛΕΙΣΕ** — χωρίς ρητό `redirectTo` ζητά
+`loginHrefForCurrentLocation()` (`lib/routes/return-path.ts`, διαβάζει `window.location` τη στιγμή της
+ανακατεύθυνσης· **όχι** `useSearchParams`, που θα ζητούσε όριο Suspense — CHECK 3.55). Καλύπτει `(me)` · `buildings` ·
+`contacts`. **Μένουν** τρεις inline: `o/[workspace]/dashboard/page.tsx`, `pending-approval/page.tsx`,
+`onboarding/organization/page.tsx` (`router.replace(login)`). **Fix**: ο **ίδιος** `loginHrefForCurrentLocation()` —
+⚠️ κρίνε πρώτα ανά σελίδα αν η επιστροφή έχει νόημα (π.χ. `pending-approval` μετά τη σύνδεση). ADR-848 §9 #3.
 
 ### 🔤 CHECK 3.28 — η λέξη «new» είναι ψευδής (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-22)
 
