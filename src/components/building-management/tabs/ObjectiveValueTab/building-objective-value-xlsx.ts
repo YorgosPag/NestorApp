@@ -15,7 +15,7 @@ import type ExcelJS from 'exceljs';
 
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { compareSortValues } from '@/lib/array-utils';
-import { addScheduleSheet, downloadWorkbook, type ScheduleCell, type ScheduleFooterCell } from '@/lib/export/excel-workbook';
+import { addKeyValueSheet, addScheduleSheet, exportWorkbook, type KeyValueRow, type ScheduleCell, type ScheduleFooterCell } from '@/lib/export/excel-workbook';
 import { buildingObjectiveValueTotal } from '@/lib/objective-value/building-objective-value';
 import type { BuildingObjectiveValues, BuildingUnitObjectiveValueRow } from '@/lib/objective-value/building-objective-values-contract';
 import { AADE_MYPROPERTY_URL } from '@/lib/objective-value/objective-value-page-sections';
@@ -111,7 +111,7 @@ function addAssumptionsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiv
   const { t } = labels;
   const notDeclared = t(`${B}.facts.unset`);
   const elevator = data.facts.hasElevator === null ? notDeclared : t(`${B}.facts.${data.facts.hasElevator ? 'yes' : 'no'}`);
-  const rows: ScheduleCell[][] = [
+  const rows: KeyValueRow[] = [
     [t(`${E}.assumptions.building`), buildingName],
     [t(`${E}.assumptions.valuationDate`), data.valuationDate],
     [t(`${E}.assumptions.exportedOn`), exportedOn],
@@ -123,30 +123,23 @@ function addAssumptionsSheet(workbook: ExcelJS.Workbook, input: BuildingObjectiv
     [t(`${E}.assumptions.myProperty`), AADE_MYPROPERTY_URL],
     [t(`${E}.assumptions.software`), PRODUCT_NAME],
   ];
-  addScheduleSheet(workbook, {
-    name: t(`${E}.sheets.assumptions`),
-    columns: [
-      { header: t(`${E}.columns.key`), format: 'text', width: 36 },
-      { header: t(`${E}.columns.value`), format: 'text', width: 80 },
-    ],
-    rows,
-  });
+  addKeyValueSheet(workbook, { name: t(`${E}.sheets.assumptions`), keyHeader: t(`${E}.columns.key`), valueHeader: t(`${E}.columns.value`), rows });
 }
 
-/** Κατέβασμα του βιβλίου — `exceljs` φορτώνεται **μόνο** τη στιγμή της εξαγωγής (όπως οι υπόλοιποι εξαγωγείς). */
-export async function exportBuildingObjectiveValuesXlsx(input: BuildingObjectiveValueExport): Promise<void> {
+/** Κατέβασμα του βιβλίου — ο κοινός σκελετός (`exportWorkbook`: `exceljs` μόνο τη στιγμή της εξαγωγής). */
+export function exportBuildingObjectiveValuesXlsx(input: BuildingObjectiveValueExport): Promise<void> {
   const { t } = input.labels;
-  const ExcelJSLib = (await import('exceljs')).default;
-  const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = PRODUCT_NAME;
-  workbook.created = new Date();
-  workbook.title = t(`${B}.title`);
-  addScheduleSheet(
-    workbook,
-    spaceScheduleSpec({ name: t(`${E}.sheets.units`), columns: input.columns, items: input.data.units, sort: input.sort, footer: unitsFooter(input) }),
-  );
-  addFloorsSheet(workbook, input);
-  addFactorsSheet(workbook, input);
-  addAssumptionsSheet(workbook, input);
-  await downloadWorkbook(workbook, `${t(`${E}.filename`, { building: input.buildingName, date: input.data.valuationDate })}.xlsx`);
+  return exportWorkbook({
+    title: t(`${B}.title`),
+    fileBaseName: t(`${E}.filename`, { building: input.buildingName, date: input.data.valuationDate }),
+    build: (workbook) => {
+      addScheduleSheet(
+        workbook,
+        spaceScheduleSpec({ name: t(`${E}.sheets.units`), columns: input.columns, items: input.data.units, sort: input.sort, footer: unitsFooter(input) }),
+      );
+      addFloorsSheet(workbook, input);
+      addFactorsSheet(workbook, input);
+      addAssumptionsSheet(workbook, input);
+    },
+  });
 }

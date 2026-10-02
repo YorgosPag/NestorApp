@@ -30,6 +30,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { canonicalMimeForFilename } from '@/config/file-types/classification-registry';
@@ -174,4 +175,52 @@ export function addScheduleSheet(workbook: ExcelJS.Workbook, spec: ScheduleSheet
     footer.font = { bold: true };
   }
   return sheet;
+}
+
+/** Μία γραμμή φύλλου «κλειδί → τιμή» (π.χ. «Παραδοχές»): η ετικέτα και η τιμή της. */
+export type KeyValueRow = readonly [label: string, value: ScheduleCell];
+
+export interface KeyValueSheetSpec {
+  readonly name: string;
+  readonly keyHeader: string;
+  readonly valueHeader: string;
+  readonly rows: readonly KeyValueRow[];
+}
+
+/**
+ * **Φύλλο «κλειδί → τιμή»** — οι παραδοχές μιας εξαγωγής (κτίριο · ημερομηνία · φίλτρα): ό,τι χρειάζεται όποιος ανοίγει
+ * το αρχείο αύριο για να ξέρει **τι** κοιτάζει. Ένα ντύσιμο για κάθε εξαγωγή — όχι δύο στήλες γραμμένες ανά καλούντα.
+ */
+export function addKeyValueSheet(workbook: ExcelJS.Workbook, spec: KeyValueSheetSpec): ExcelJS.Worksheet {
+  return addScheduleSheet(workbook, {
+    name: spec.name,
+    columns: [
+      { header: spec.keyHeader, format: 'text', width: 36 },
+      { header: spec.valueHeader, format: 'text', width: 80 },
+    ],
+    rows: spec.rows.map(([label, value]) => [label, value]),
+  });
+}
+
+export interface WorkbookExport {
+  /** Τίτλος του βιβλίου (ιδιότητες εγγράφου). */
+  readonly title: string;
+  /** Όνομα αρχείου **χωρίς** προέκταση — το `.xlsx` (και άρα το MIME) το βάζει η συνάρτηση. */
+  readonly fileBaseName: string;
+  /** Γέμισμα των φύλλων — σύγχρονο: ό,τι χρειάζεται έχει ήδη υπολογιστεί. */
+  readonly build: (workbook: ExcelJS.Workbook) => void;
+}
+
+/**
+ * **Ένα βιβλίο από την αρχή ως τον δίσκο**: το `exceljs` φορτώνεται **μόνο** τη στιγμή της εξαγωγής (βαρύ πακέτο — ποτέ
+ * στο αρχικό bundle), ιδιότητες εγγράφου, γέμισμα, κατέβασμα. Ο ΕΝΑΣ σκελετός — κάθε εξαγωγέας γράφει μόνο τα φύλλα του.
+ */
+export async function exportWorkbook({ title, fileBaseName, build }: WorkbookExport): Promise<void> {
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
+  workbook.creator = PRODUCT_NAME;
+  workbook.created = new Date();
+  workbook.title = title;
+  build(workbook);
+  await downloadWorkbook(workbook, `${fileBaseName}.xlsx`);
 }

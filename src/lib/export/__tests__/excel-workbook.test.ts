@@ -5,7 +5,14 @@
 
 import ExcelJS from 'exceljs';
 
-import { addScheduleSheet, excelSheetName } from '../excel-workbook';
+import { PRODUCT_NAME } from '@/constants/product-identity';
+
+import { addKeyValueSheet, addScheduleSheet, excelSheetName, exportWorkbook } from '../excel-workbook';
+
+const downloads: { blob: Blob; filename: string }[] = [];
+jest.mock('@/lib/exports/trigger-export-download', () => ({
+  triggerExportDownload: (opts: { blob: Blob; filename: string }) => downloads.push(opts),
+}));
 
 describe('excelSheetName', () => {
   it('αφαιρεί ό,τι αρνείται το Excel και κόβει στους 31 χαρακτήρες', () => {
@@ -42,5 +49,29 @@ describe('addScheduleSheet', () => {
     expect(sheet.autoFilter).toEqual({ from: { row: 1, column: 1 }, to: { row: 3, column: 2 } });
     expect(sheet.getColumn(2).numFmt).toBe('#,##0.00 "€"');
     expect(sheet.getRow(5).getCell(2).value).toEqual({ formula: 'SUM(B2:B3)', result: 150.5 });
+  });
+});
+
+describe('addKeyValueSheet', () => {
+  it('δύο στήλες κειμένου «Στοιχείο → Τιμή», με το ντύσιμο του schedule', () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = addKeyValueSheet(workbook, { name: 'Παραδοχές', keyHeader: 'Στοιχείο', valueHeader: 'Τιμή', rows: [['Κτίριο', 'Α'], ['Γραμμές', 3]] });
+    expect(sheet.getRow(1).values).toEqual([undefined, 'Στοιχείο', 'Τιμή']);
+    expect(sheet.getRow(3).values).toEqual([undefined, 'Γραμμές', 3]);
+    expect(sheet.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
+  });
+});
+
+describe('exportWorkbook', () => {
+  it('γεμίζει ΕΝΑ βιβλίο με τις ιδιότητές του και το κατεβάζει ως `.xlsx` με το MIME του μητρώου', async () => {
+    const built: ExcelJS.Workbook[] = [];
+    await exportWorkbook({ title: 'Θέσεις', fileBaseName: 'Θέσεις_Α', build: (workbook) => { built.push(workbook); workbook.addWorksheet('x'); } });
+    expect(built).toHaveLength(1);
+    const [workbook] = built;
+    expect(workbook.creator).toBe(PRODUCT_NAME);
+    expect(workbook.title).toBe('Θέσεις');
+    const download = downloads[downloads.length - 1];
+    expect(download.filename).toBe('Θέσεις_Α.xlsx');
+    expect(download.blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   });
 });

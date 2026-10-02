@@ -20,8 +20,12 @@ jest.mock('@/lib/export/excel-workbook', () => {
   const actual = jest.requireActual('@/lib/export/excel-workbook');
   return {
     ...actual,
-    downloadWorkbook: async (workbook: ExcelJS.Workbook, filename: string) => {
-      downloaded.push({ workbook, filename });
+    // Ο σκελετός (`exportWorkbook`) ελέγχεται στο `lib/export` — εδώ κρατάμε το ΠΡΑΓΜΑΤΙΚΟ βιβλίο που γέμισε ο εξαγωγέας.
+    exportWorkbook: async ({ fileBaseName, build }: { fileBaseName: string; build: (workbook: ExcelJS.Workbook) => void }) => {
+      const RealExcelJS: typeof ExcelJS = jest.requireActual('exceljs');
+      const workbook = new RealExcelJS.Workbook();
+      build(workbook);
+      downloaded.push({ workbook, filename: `${fileBaseName}.xlsx` });
     },
   };
 });
