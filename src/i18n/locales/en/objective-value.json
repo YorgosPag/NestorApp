@@ -214,9 +214,9 @@
     },
     "openCalculator": "View or adjust the calculation in the calculator",
     "completeInCalculator": "Fill in what is missing in the calculator — the listing's details are already filled in",
+    "levelsMissing": "Property on {count} levels: the law values each floor separately, so it needs the floor and area of each level, which the listing does not publish yet.",
     "unsupported": {
-      "type": "The calculation currently covers homes and storage rooms.",
-      "multiLevel": "For a property on several levels the calculation needs the floor and area of each level, which are not published yet."
+      "type": "The calculation currently covers homes and storage rooms."
     }
   },
   "faq": {
@@ -257,6 +257,7 @@
     "absent": "The listing was not found or is not yours.",
     "error": "The listing could not be loaded. Please try again.",
     "signInNeeded": "Sign in to improve your listing.",
+    "levelsMissing": "Property on {count} levels: the law values each floor separately. Fill in the gross area of each level in the property details, so that they add up to the total gross area.",
     "notPublished": "Improving opens after the listing is published: publish first, then add the details.",
     "sections": {
       "objectiveValue": {

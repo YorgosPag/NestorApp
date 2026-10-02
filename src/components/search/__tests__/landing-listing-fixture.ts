@@ -44,5 +44,6 @@ export function landingListing(
     agencyId: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
   } as unknown as PublicListing;
 }

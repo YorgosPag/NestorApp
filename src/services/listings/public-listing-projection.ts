@@ -57,7 +57,7 @@ import { marketingAudienceOf } from '@/constants/marketing-audiences';
 import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { projectListingAttributes } from './public-listing-attributes';
-import { projectObjectiveValueDeclarations } from './public-listing-objective-value';
+import { projectObjectiveValueBasis } from './public-listing-objective-value';
 import { reductionForListing } from '@/lib/listings/price-history';
 import type { PriceReduction } from '@/types/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
@@ -378,6 +378,8 @@ export function projectListingShape(
   //    `leaseShort` αυτού **ακριβώς** του πίνακα — δεύτερη κλήση θα ήταν δεύτερη
   //    απάντηση στο «τι διατίθεται», ελεύθερη να αποκλίνει (δες `projectStay`).
   const offerKinds = projectedOfferKinds(property);
+  // Μία τιμή για το εμφανές εμβαδόν **και** τον έλεγχο αθροίσματος της βάσης ανά όροφο (ADR-898 Φ3β-3β).
+  const areaSqm = numberOrNull(property.areas?.gross) ?? numberOrNull(property.area);
 
   return {
     id: property.id,
@@ -432,7 +434,7 @@ export function projectListingShape(
     // ⚠️ Το `null` που μένει είναι **εφήμερο**: η {@link isPubliclyListed} το κόβει πριν
     //    γραφτεί οτιδήποτε: επιβιώνει μόνο στο δόλωμα του §12.6, που μιλά στον κάτοχο.
     type: normalizePropertyType(property.type),
-    areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
+    areaSqm,
     offerKinds,
     position: resolveListingPosition(place, property.locationDisclosure),
     // 🔑 **Ο δεσμός προς το επίπεδο Α ταξιδεύει ΑΥΤΟΥΣΙΟΣ** — καμία κρίση, καμία
@@ -454,8 +456,8 @@ export function projectListingShape(
     //    ρωτηθεί κανένας άνθρωπος τίποτα**. Η κρίση «είναι ονομάσιμη αυτή η τιμή;»
     //    ζει στο `public-listing-attributes.ts` — δες εκεί γιατί δεν είναι `as`.
     ...projectListingAttributes(property, projectedAt),
-    // ADR-898 Φ3β — κρυμμένη ⇒ μόνο η απόκρυψη, κανένα στοιχείο από το οποίο ξαναβγαίνει το ποσό.
-    objectiveValueDeclarations: projectObjectiveValueDeclarations(property),
+    // ADR-898 Φ3β — κρυμμένη ⇒ μόνο η απόκρυψη, κανένα στοιχείο από το οποίο ξαναβγαίνει το ποσό (ούτε `levelAreas`).
+    ...projectObjectiveValueBasis(property, areaSqm),
     title: (property.name ?? '').trim(),
     // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
     // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.

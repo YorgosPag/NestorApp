@@ -110,6 +110,7 @@ function listingOf(id: string, title: string): PublicListing {
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,

@@ -60,6 +60,7 @@ function listing(id: string, mapped: boolean): PublicListing {
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
   } as PublicListing;
 }
 

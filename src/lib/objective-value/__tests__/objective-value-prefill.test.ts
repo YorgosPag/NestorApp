@@ -10,6 +10,7 @@ const FULL: ObjectiveValuePrefill = {
   form: 'residence',
   floor: 3,
   area: 92.5,
+  levels: null,
   hasCentralHeating: false,
   hasElevator: true,
   frontage: null,
@@ -59,6 +60,29 @@ describe('objective-value prefill', () => {
       permitDate: '1998-03-15',
       areaIncludesCommon: true,
     });
+  });
+
+  it('ADR-898 Φ3β-3β — μεζονέτα: ένα επίπεδο ανά όροφο φτάνει αυτούσιο (και υπόγειο), χωρίς `floor`/`area`', () => {
+    const levels = [{ floor: -1, area: 35 }, { floor: 0, area: 60.5 }, { floor: 1, area: 48 }];
+    const query = serializeObjectiveValuePrefill({ ...FULL, point: null, floor: null, area: null, levels });
+    expect(query).toBe('form=residence&levels=-1%3A35%2C0%3A60.5%2C1%3A48&heating=0&elevator=1');
+    expect(parseObjectiveValuePrefill(query)?.draft).toEqual({ form: 'residence', levels, hasCentralHeating: false, hasElevator: true });
+  });
+
+  it('ADR-898 Φ3β-3β — ο παλιός σύνδεσμος ενός επιπέδου ανοίγει ακριβώς όπως πριν', () => {
+    expect(parseObjectiveValuePrefill('form=residence&floor=2&area=80')?.draft).toEqual({ form: 'residence', levels: [{ floor: 2, area: 80 }] });
+  });
+
+  it.each([
+    ['ένα μόνο ζεύγος', '0:60'],
+    ['διπλός όροφος', '0:60,0:40'],
+    ['εμβαδόν μηδέν', '0:60,1:0'],
+    ['μη ακέραιος όροφος', '0:60,1.5:40'],
+    ['τρίτο μέλος', '0:60:1,1:40'],
+    ['πάνω από 9 επίπεδα', Array.from({ length: 10 }, (_, floor) => `${floor}:10`).join(',')],
+  ])('ADR-898 Φ3β-3β — άκυρα επίπεδα (%s) ⇒ αγνοούνται ΟΛΑ, μένει το `floor`/`area`', (_, levels) => {
+    const query = new URLSearchParams({ form: 'residence', floor: '1', area: '100', levels }).toString();
+    expect(parseObjectiveValuePrefill(query)?.draft).toEqual({ form: 'residence', levels: [{ floor: 1, area: 100 }] });
   });
 
   it('ADR-898 Φ3β — άκυρες δηλώσεις αγνοούνται: άγνωστη πρόσοψη · ανύπαρκτη ημερομηνία · σημαία εκτός 0/1', () => {

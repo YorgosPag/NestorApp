@@ -48,11 +48,17 @@ function Body({ state, zone, onAnswer }: {
   readonly zone: Answered;
   readonly onAnswer: (patch: ObjectiveValueDeclarationsPatch) => void;
 }) {
+  const { t } = useTranslation([NS]);
   const { improvement } = zone;
   if (improvement.kind !== 'ready') return <ZoneMessage zone={zone} />;
+  const { levelBasis } = improvement;
   return (
     <>
       <ObjectiveValueBeforeAfter bounds={improvement.bounds} />
+      {/* ADR-898 Φ3β-3β — δεν απαντιέται εδώ: το εμβαδόν ανά επίπεδο ζει στα στοιχεία του ακινήτου (ADR-236). */}
+      {levelBasis.kind === 'missing' && (
+        <p className="m-0 text-sm text-foreground">{t(`${I}.levelsMissing`, { count: levelBasis.count })}</p>
+      )}
       <ObjectiveValueImproveQuestions
         questions={improvement.questions}
         declarations={state.declarations}

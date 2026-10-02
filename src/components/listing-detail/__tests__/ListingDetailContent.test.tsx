@@ -165,6 +165,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
     ...over,
   };
 }

@@ -35,6 +35,7 @@ import type { OwnerProperty } from '@/types/owner-property';
 import type { PublicListing } from '@/types/public-listing';
 
 import { resolvePublicationFacts, withPublicationFacts } from './listing-publication-facts';
+import { projectLevelAreas } from './public-listing-objective-value';
 import { projectListingShape, type PlaceKnowledge, type ProjectableProperty } from './public-listing-projection';
 import { collectPlaceKnowledge } from './publish-public-listing';
 
@@ -130,6 +131,10 @@ export async function lookupOwnedProjection(
  * 🔴 **Γιατί όχι σκέτο `projectListingShape` στον browser** (ADR-898 Φ3β-3): η καθαρή προβολή γράφει `constructionYear:
  * null` — το δένει μόνο ο γραφέας. Μια οθόνη που προβάλλει μόνη της θα έχανε την προσέγγιση της άδειας από το έτος
  * και θα έδειχνε «τι λείπει» εκεί όπου η δημόσια αγγελία δείχνει εύρος. Και για το γραφείο ο τόπος θέλει αναγνώσεις.
+ *
+ * 🔑 **Το μικτό ανά όροφο ΧΩΡΙΣ την πύλη απόκρυψης** (ADR-898 Φ3β-3β): αυτή είναι η ιδιωτική ματιά του **κατόχου**
+ * (`private, no-store`), που βελτιώνει την ενότητα και όταν την κρύβει. Ο browser ξαναπερνά την πύλη
+ * (`withObjectiveValueDeclarations`) για ό,τι θα δει ο αγοραστής.
  */
 export async function readOwnedListingPreview(
   db: AdminFirestore,
@@ -139,6 +144,7 @@ export async function readOwnedListingPreview(
 ): Promise<PublicListing | null> {
   const owned = await lookupOwnedProjection(db, propertyId, uid, companyId);
   if (owned.kind === 'absent') return null;
-  const listing = projectListingShape(owned.property, owned.place, owned.at);
+  const shape = projectListingShape(owned.property, owned.place, owned.at);
+  const listing = { ...shape, levelAreas: projectLevelAreas(owned.property, shape.areaSqm) };
   return withPublicationFacts(listing, await resolvePublicationFacts(db, listing, owned.place));
 }

@@ -255,6 +255,12 @@ Google contract: **αν A→B δημιουργεί N level cards, τότε B→A
 - Per-level finishes preservation σε flat (Phase 2 contract immutable)
 
 ## Changelog
+- **2026-10-02** (ADR-898 §15): **`levelData` → δημόσια βάση της αντικειμενικής.** Νέο `lib/properties/level-areas.ts`
+  — η ΜΙΑ ανάγνωση του `levelData[floorId].areas.gross` από ωμό έγγραφο (`levelGrossArea` · `readLevelAreas`: όλα ή
+  τίποτα· ο σπόρος `gross: 0` του `buildEmptyLevelData` = «δεν συμπληρώθηκε»). Το `propertyAreaOnFloor` (ADR-329) την
+  καλεί, με την ίδια συμπεριφορά. Η δημόσια αγγελία παίρνει `levelAreas` ({floor, grossSqm} ανά επίπεδο) μόνο όταν
+  επίπεδα, πλήθος και άθροισμα συμφωνούν με το συνολικό μικτό. Η αντικειμενική υπολογίζει κάθε όροφο χωριστά
+  (ΠΟΛ.1149/1994 άρθ. 3 §6.β) — **όχι** με τον κανόνα του Ε9 (μία γραμμή, ψηλότερος όροφος).
 - **2026-06-07** (Round 2 follow-up): **`levelData` partial-schema normalize.** Verification of a
   multi-level unit (`prop_1399cca9`) showed the primary level persisted `areas` WITHOUT the
   `garden` key (user never touched it), while seeded secondary levels carried the full schema —

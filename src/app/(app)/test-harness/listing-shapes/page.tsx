@@ -92,6 +92,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
   };
 }
 

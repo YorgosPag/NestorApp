@@ -64,6 +64,7 @@ function listing(id: string, title: string): PublicListing {
     agencyId: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
   } as unknown as PublicListing;
 }
 

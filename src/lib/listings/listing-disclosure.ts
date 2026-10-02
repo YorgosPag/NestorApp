@@ -216,8 +216,8 @@ export type DisclosureTreatment =
    */
   | 'exchange-terms'
   /**
-   * **Τα στοιχεία της αντικειμενικής αξίας που δήλωσε ο αγγελιοδότης** (ADR-898 Φ3β) — ή μόνο ότι επέλεξε απόκρυψη.
-   * Δεν ζωγραφίζονται ως γραμμή: **τροφοδοτούν** τον υπολογισμό κατά την ανάγνωση (`listingObjectiveValue`), και
+   * **Τα στοιχεία της αντικειμενικής αξίας που δήλωσε ο αγγελιοδότης** (ADR-898 Φ3β) — ή μόνο ότι επέλεξε απόκρυψη —
+   * και το **μικτό ανά όροφο** πολυεπίπεδης κατοικίας (`levelAreas`, Φ3β-3β). Δεν ζωγραφίζονται ως γραμμή: **τροφοδοτούν** τον υπολογισμό κατά την ανάγνωση (`listingObjectiveValue`), και
    * η ενότητα της αντικειμενικής λέει δίπλα σε ό,τι μπήκε «δήλωση του αγγελιοδότη».
    *
    * ⛔ **ΔΕΝ είναι `'attribute'`**: θα έμπαινε στη λογιστική και στη λίστα χαρακτηριστικών — ένα «μικτά με
@@ -334,6 +334,7 @@ export const LISTING_DISCLOSURE = {
   //    που το `satisfies Record<keyof PublicListing, …>` πιάνει προσθήκη σχήματος.
   priceReduction: 'price-reduction',
   objectiveValueDeclarations: 'valuation-basis',
+  levelAreas: 'valuation-basis',
   projectedAt: 'provenance',
 } as const satisfies Record<keyof PublicListing, DisclosureTreatment>;
 

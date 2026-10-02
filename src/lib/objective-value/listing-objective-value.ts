@@ -11,7 +11,7 @@
  * | Είσοδος | Πηγή στην αγγελία | Σημείωση |
  * |---|---|---|
  * | έντυπο | `type` → {@link OBJECTIVE_VALUE_FORM_OF_TYPE} | ολικός πίνακας: νέο είδος ⇒ ο μεταγλωττιστής ρωτά |
- * | όροφος · επιφάνεια | `floor` · `areaSqm` (μικτό) | πολυεπίπεδο ⇒ `unsupported` ως τη Φ3β (η προβολή δεν έχει όροφο/εμβαδόν ανά επίπεδο) |
+ * | όροφος · επιφάνεια | `floor` · `areaSqm` (μικτό) · πολυεπίπεδο: `levelAreas` | ένα επίπεδο ανά όροφο (ΠΟΛ.1149/1994 άρθ. 3 §6.β)· χωρίς βάση ⇒ «τι λείπει», ποτέ κατανομή του συνόλου |
  * | θέρμανση | `heatingType` → {@link CENTRAL_HEATING_OF} · αλλιώς **δήλωση** | άρθ. 3 §11: **εγκατάσταση** καλοριφέρ/θερμοσυσσωρευτών/δαπέδου |
  * | ανελκυστήρας | `amenities ∋ 'elevator'` · αλλιώς **δήλωση** | τρεις καταστάσεις: `null` = δεν ρωτήθηκε ⇒ ανοιχτό |
  * | παλαιότητα | **δήλωση** ημερομηνίας άδειας · αλλιώς `constructionYear` | το έτος είναι **προσέγγιση** — δηλωμένη υπόθεση |
@@ -38,7 +38,7 @@ import {
   type ListingObjectiveValueDeclared,
   type ObjectiveValueDeclaredField,
 } from './objective-value-declarations';
-import { INITIAL_DRAFT, type ObjectiveValueDraft } from './objective-value-draft';
+import { INITIAL_DRAFT, type LevelDraft, type ObjectiveValueDraft } from './objective-value-draft';
 import type { ObjectiveValuePrefill } from './objective-value-prefill';
 import { OBJECTIVE_VALUE_FORM_OF_TYPE, objectiveValueFormOf } from './objective-value-form-of-type';
 import type { ObjectiveValueForm } from './objective-value-types';
@@ -77,20 +77,33 @@ export type ListingObjectiveValueAssumption =
 export type ListingObjectiveValue =
   /** Ο αγγελιοδότης επέλεξε απόκρυψη (ADR-898 Φ3β · πρότυπο NAR IDX): **κανένας** υπολογισμός, κανένα ποσό. */
   | { readonly kind: 'hidden' }
-  /** `type` = είδος εκτός εντύπων 1/4 · `multiLevel` = λείπει όροφος/εμβαδόν ανά επίπεδο στη δημόσια προβολή. */
-  | { readonly kind: 'unsupported'; readonly reason: 'type' | 'multiLevel' }
+  /** Είδος εκτός εντύπων 1/4/5. (Το πολυεπίπεδο **δεν** είναι πια `unsupported` — ADR-898 Φ3β-3β.) */
+  | { readonly kind: 'unsupported'; readonly reason: 'type' }
   /** Η θέση δεν έδωσε ζώνη — το λέει ήδη η ενότητα της ζώνης. */
   | { readonly kind: 'no-zone' }
   | {
       readonly kind: 'evaluated';
       readonly bounds: ObjectiveValueBounds;
+      /** Από πού ήρθαν τα επίπεδα — `missing` ⇒ η ενότητα εξηγεί γιατί λείπουν όροφος και επιφάνεια. */
+      readonly levelBasis: ListingLevelBasis;
       readonly assumptions: readonly ListingObjectiveValueAssumption[];
       readonly prefill: ObjectiveValuePrefill;
     };
 
+/**
+ * **Από πού ήρθαν τα επίπεδα του προχείρου** (ADR-898 Φ3β-3β): `single` = όροφος + μικτό της αγγελίας · `perLevel` =
+ * `levelAreas` · `missing` = πολυεπίπεδη χωρίς (συνεπή) βάση ανά όροφο — το πρόχειρο έχει κενά επίπεδα και η μηχανή
+ * λέει «τι λείπει». Το UI το χρειάζεται για να εξηγήσει **γιατί** λείπουν όροφος και επιφάνεια.
+ */
+export type ListingLevelBasis =
+  | { readonly kind: 'single' }
+  | { readonly kind: 'perLevel' }
+  | { readonly kind: 'missing'; readonly count: number };
+
 /** Το πρόχειρο της μηχανής **και** ποιες δηλώσεις μπήκαν πράγματι σε αυτό (όχι όσες νίκησε ένα χαρακτηριστικό). */
 export interface ListingObjectiveValueResolution {
   readonly draft: ObjectiveValueDraft;
+  readonly levelBasis: ListingLevelBasis;
   readonly used: readonly ObjectiveValueDeclaredField[];
   /** Το έτος κατασκευής που έγινε άδεια με προσέγγιση — `null` όταν η άδεια δηλώθηκε ή δεν υπάρχει. */
   readonly approximatedFrom: PublicListing['constructionYear'];
@@ -135,19 +148,28 @@ function residenceFields(listing: PublicListing, declared: ListingObjectiveValue
   };
 }
 
+/**
+ * **Τα επίπεδα του προχείρου** — ένα ανά όροφο. Πολυεπίπεδη (`levels > 1`) ⇒ **μόνο** από το `levelAreas` με το ίδιο
+ * πλήθος· αλλιώς τόσα **κενά** επίπεδα όσα δηλώνει η αγγελία (η μηχανή ζητά όροφο + επιφάνεια), ποτέ το σύνολο στον
+ * όροφο εισόδου ούτε ο κανόνας του Ε9 (ψηλότερος όροφος) — άλλο έντυπο, άλλος νόμος (ADR-898 §15).
+ */
+function levelsOf(listing: PublicListing, form: ObjectiveValueForm): { readonly levels: readonly LevelDraft[]; readonly levelBasis: ListingLevelBasis } {
+  const count = form === 'residence' ? (listing.levels?.value ?? 1) : 1;
+  if (count <= 1) return { levels: [{ floor: listing.floor, area: listing.areaSqm }], levelBasis: { kind: 'single' } };
+  const areas = listing.levelAreas;
+  if (areas !== null && areas.length === count) {
+    return { levels: areas.map((level) => ({ floor: level.floor, area: level.grossSqm })), levelBasis: { kind: 'perLevel' } };
+  }
+  return { levels: Array.from({ length: count }, () => ({ floor: null, area: null })), levelBasis: { kind: 'missing', count } };
+}
+
 function resolve(listing: PublicListing, form: ObjectiveValueForm, declared: ListingObjectiveValueDeclared): ListingObjectiveValueResolution {
   const used: ObjectiveValueDeclaredField[] = [];
   const residence = form === 'residence' ? residenceFields(listing, declared, used) : {};
   const { permitDate, approximatedFrom } = permitOf(listing, declared, used);
-  const draft: ObjectiveValueDraft = {
-    ...INITIAL_DRAFT,
-    form,
-    levels: [{ floor: listing.floor, area: listing.areaSqm }],
-    area: listing.areaSqm,
-    ...residence,
-    permitDate,
-  };
-  return { draft, used, approximatedFrom };
+  const { levels, levelBasis } = levelsOf(listing, form);
+  const draft: ObjectiveValueDraft = { ...INITIAL_DRAFT, form, levels, area: listing.areaSqm, ...residence, permitDate };
+  return { draft, levelBasis, used, approximatedFrom };
 }
 
 /** Το μέτωπο μετρά ως δήλωση **μόνο** αν η ετυμηγορία το αναγνωρίζει ακόμη (αλλιώς η ερώτηση μένει ανοιχτή). */
@@ -168,13 +190,27 @@ function assumptionsOf(resolution: ListingObjectiveValueResolution, form: Object
   return out;
 }
 
+/**
+ * Όροφος/επιφάνεια/επίπεδα για τον υπολογιστή. Πολυεπίπεδη χωρίς βάση ⇒ **τίποτα**: αλλιώς ο υπολογιστής θα άνοιγε με
+ * όλο το εμβαδόν στον όροφο εισόδου — ακριβώς η εικασία που απαγορεύεται (ADR-898 Φ3β-3β).
+ */
+function prefillLevelsOf(listing: PublicListing, resolution: ListingObjectiveValueResolution) {
+  switch (resolution.levelBasis.kind) {
+    case 'single':
+      return { floor: listing.floor, area: listing.areaSqm, levels: null };
+    case 'perLevel':
+      return { floor: null, area: null, levels: resolution.draft.levels };
+    case 'missing':
+      return { floor: null, area: null, levels: null };
+  }
+}
+
 function prefillOf(listing: PublicListing, resolution: ListingObjectiveValueResolution): ObjectiveValuePrefill {
   const { draft, used } = resolution;
   return {
     point: valueZonePointOf(listing.position),
     form: draft.form,
-    floor: listing.floor,
-    area: listing.areaSqm,
+    ...prefillLevelsOf(listing, resolution),
     hasCentralHeating: draft.hasCentralHeating,
     hasElevator: draft.hasElevator,
     frontage: draft.frontage,
@@ -211,7 +247,6 @@ export function listingObjectiveValueBasis(listing: PublicListing, valueZone: Va
   if (declared === null) return { kind: 'hidden' };
   const form = objectiveValueFormOf(listing.type);
   if (form === null) return { kind: 'unsupported', reason: 'type' };
-  if (form === 'residence' && (listing.levels?.value ?? 1) > 1) return { kind: 'unsupported', reason: 'multiLevel' };
   const zonePrices = declaredZonePriceCandidates(valueZone, declared.zoneFront);
   if (zonePrices.length === 0) return { kind: 'no-zone' };
   const base = resolve(listing, form, declared);
@@ -230,6 +265,7 @@ export function listingObjectiveValue(listing: PublicListing, valueZone: ValueZo
   return {
     kind: 'evaluated',
     bounds: objectiveValueBounds(resolution.draft, today, zonePrices),
+    levelBasis: resolution.levelBasis,
     assumptions: assumptionsOf(resolution, form),
     prefill: prefillOf(listing, resolution),
   };

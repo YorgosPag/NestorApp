@@ -62,6 +62,7 @@ import { readPriceReduction } from '@/lib/listings/price-history';
 import type { ListedAt } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { readListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
+import { readStoredLevelAreas } from '@/lib/properties/level-areas';
 
 // ============================================================================
 // Η ΕΚΔΟΣΗ
@@ -75,7 +76,7 @@ import { readListingObjectiveValueDeclarations } from '@/lib/objective-value/obj
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 15;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 16;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -754,6 +755,21 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
       frontage: doc.frontage ?? null,
       objectiveValueDeclarations: readListingObjectiveValueDeclarations(doc.objectiveValueDeclarations),
     }),
+  },
+  {
+    to: 16,
+    adr: 'ADR-898 Φ3β-3β',
+    adds: ['levelAreas'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΤΟ ΜΙΚΤΟ ΑΝΑ ΟΡΟΦΟ ΠΟΛΥΕΠΙΠΕΔΗΣ ΚΑΤΟΙΚΙΑΣ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΟ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΜΟΣΙΕΥΤΗΚΕ»** (`null`), ποτέ κατανομή του συνόλου σε ορόφους:
+     * ο υπολογισμός λέει «τι λείπει» ώσπου η **επαναπροβολή** (`needsRebuild`) να γράψει την αλήθεια από το ακίνητο.
+     *
+     * 🔑 **Περνά από τον ΕΝΑ αυστηρό αναγνώστη** (`readStoredLevelAreas`): άκυρη ή μισή λίστα ⇒ `null`.
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο.
+     */
+    apply: (doc) => ({ ...doc, levelAreas: readStoredLevelAreas(doc.levelAreas) }),
   },
 ];
 

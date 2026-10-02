@@ -120,6 +120,11 @@ export interface ProjectableProperty {
   readonly levels?: readonly unknown[] | null;
   /** Δηλωμένη πολυεπίπεδη φύση. Δες {@link ProjectableProperty.levels}. */
   readonly isMultiLevel?: boolean | null;
+  /**
+   * `Property.levelData` (ADR-236) — ωμό, κλειδί `floorId`. Το διαβάζει **μόνο** το `readLevelAreas`
+   * (`lib/properties/level-areas.ts`) για τη βάση της αντικειμενικής (ADR-898 Φ3β-3β).
+   */
+  readonly levelData?: unknown;
 
   // ── ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ (ADR-842 Φ3) ─────────────────────────────────────────
   /**

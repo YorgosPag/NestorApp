@@ -11,6 +11,8 @@
 
 import type { Property } from '@/types/property';
 
+import { levelGrossArea } from './level-areas';
+
 /**
  * Returns properties that occupy the given floor, including multi-level
  * properties whose `levels[]` array contains the floor.
@@ -45,8 +47,8 @@ export function propertyAreaOnFloor(
   if (!onSingleLevel && !onMultiLevel) return null;
 
   if (onMultiLevel) {
-    const partial = property.levelData?.[floorId]?.areas?.gross;
-    if (typeof partial === 'number' && partial > 0) {
+    const partial = levelGrossArea(property.levelData, floorId);
+    if (partial !== null) {
       return { area: partial, isPartial: true, isFallback: false };
     }
     const total = property.areas?.gross ?? 0;

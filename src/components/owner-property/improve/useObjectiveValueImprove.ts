@@ -61,13 +61,20 @@ export interface ObjectiveValueImproveState {
   readonly today: string;
 }
 
-function zoneOf(lookup: ValueZoneLookup, listing: PublicListing, declarations: ObjectiveValueDeclarations, today: string): ImproveZone {
+/** Η αγγελία του αγοραστή (`listing`, πίσω από την πύλη) και η απύλωτη βάση του κατόχου (`basis`, από τον server). */
+interface ImproveListings {
+  readonly listing: PublicListing;
+  readonly basis: PublicListing;
+}
+
+function zoneOf(lookup: ValueZoneLookup, { listing, basis }: ImproveListings, declarations: ObjectiveValueDeclarations, today: string): ImproveZone {
   if (lookup.kind !== 'answered') return lookup;
   return {
     kind: 'answered',
     buyerView: listingObjectiveValue(listing, lookup.verdict, today),
-    // Ο κάτοχος βελτιώνει και όταν κρύβει ⇒ οι ερωτήσεις πάνω στην εμφανή εκδοχή.
-    improvement: objectiveValueImprovement(withObjectiveValueDeclarations(listing, { ...declarations, display: 'shown' }), lookup.verdict, today),
+    // Ο κάτοχος βελτιώνει και όταν κρύβει ⇒ οι ερωτήσεις πάνω στην εμφανή εκδοχή της **απύλωτης** βάσης: πάνω στην
+    // πυλωμένη αγγελία το μικτό ανά όροφο θα είχε ήδη χαθεί (ADR-898 Φ3β-3β).
+    improvement: objectiveValueImprovement(withObjectiveValueDeclarations(basis, { ...declarations, display: 'shown' }), lookup.verdict, today),
     verdict: lookup.verdict,
   };
 }
@@ -99,8 +106,8 @@ export function useObjectiveValueImprove(subject: ObjectiveValueImproveSubject):
   const zoneLookup = useValueZoneAt(listing === null ? null : valueZonePointOf(listing.position));
   const resolved = lookupOf(preview, listing, zoneLookup);
   const zone = useMemo(
-    () => (listing === null ? resolved : zoneOf(resolved, listing, declarations, today)),
-    [resolved, listing, declarations, today],
+    () => (listing === null || preview.kind !== 'ready' ? resolved : zoneOf(resolved, { listing, basis: preview.listing }, declarations, today)),
+    [resolved, listing, preview, declarations, today],
   );
   return { declarations, zone, save, today };
 }

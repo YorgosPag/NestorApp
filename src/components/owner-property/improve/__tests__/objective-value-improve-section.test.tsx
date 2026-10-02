@@ -174,3 +174,28 @@ describe('ObjectiveValueImproveSection — ADR-898 Φ3β-3 (βάση από το
     expect(screen.queryByRole('button', { name: 'objective-value:improve.retry' })).toBeNull();
   });
 });
+
+describe('ObjectiveValueImproveSection — ADR-898 Φ3β-3β (πολυεπίπεδο)', () => {
+  const twoLevels = { provenance: 'measured' as const, value: 2, at: AT };
+  const officeSubject = (display: 'shown' | 'hidden'): ObjectiveValueImproveSubject => ({
+    id: 'prop_m',
+    declarations: { display },
+    revision: 'r1',
+    write: async () => ({ kind: 'saved' }),
+  });
+  const maisonette = (levelAreas: PublicListing['levelAreas']) =>
+    serverListingOf(validOwnerProperty({ floor: 0, areaSqm: 100 }), { levels: twoLevels, levelAreas });
+
+  it('χωρίς εμβαδόν ανά όροφο ⇒ ο κάτοχος μαθαίνει ΓΙΑΤΙ και ΠΟΥ συμπληρώνεται (όχι ερώτηση εδώ)', () => {
+    preview = { kind: 'ready', listing: maisonette(null) };
+    render(<ObjectiveValueImproveSection subject={officeSubject('shown')} />);
+    expect(screen.getByText('objective-value:improve.levelsMissing::{"count":2}')).toBeInTheDocument();
+  });
+
+  it('🔴 κρυμμένη ενότητα ⇒ η βελτίωση υπολογίζει πάνω στην ΑΠΥΛΩΤΗ βάση του κατόχου, όχι στην πυλωμένη αγγελία', () => {
+    preview = { kind: 'ready', listing: maisonette([{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }]) };
+    render(<ObjectiveValueImproveSection subject={officeSubject('hidden')} />);
+    expect(screen.queryByText(/objective-value:improve\.levelsMissing/)).toBeNull();
+    expect(screen.getByText('objective-value:improve.visibility.hiddenPreview')).toBeInTheDocument();
+  });
+});

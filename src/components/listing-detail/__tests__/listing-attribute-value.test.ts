@@ -237,6 +237,7 @@ describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνετ�
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
   };
 
   it.each([...LISTING_ATTRIBUTE_KEYS])('«%s» δεν παράγει ποτέ `[object Object]`', (key) => {

@@ -32,6 +32,7 @@ import {
 import { INITIAL_DRAFT, relevantQuestions, type ConditionalQuestion, type ObjectiveValueDraft } from './objective-value-draft';
 import {
   listingObjectiveValueBasis,
+  type ListingLevelBasis,
   type ListingObjectiveValueBasis,
   type ListingObjectiveValueResolution,
 } from './listing-objective-value';
@@ -70,6 +71,8 @@ export type ObjectiveValueImprovement =
       readonly kind: 'ready';
       /** Τα όρια τώρα, με όσα ξέρουμε. */
       readonly bounds: ObjectiveValueBounds;
+      /** `missing` ⇒ πολυεπίπεδο χωρίς εμβαδόν ανά όροφο: δεν απαντιέται εδώ, αλλά στα στοιχεία του ακινήτου. */
+      readonly levelBasis: ListingLevelBasis;
       /** Πρώτες οι ανοιχτές (κατά κέρδος), μετά οι υπόλοιπες με τη σειρά της λίστας-πηγής. */
       readonly questions: readonly ImproveQuestion[];
     };
@@ -214,7 +217,7 @@ export function objectiveValueImprovement(
     impact: impactOf(field, context),
   }));
   // `sort` είναι σταθερή (ES2019): ίσα βάρη κρατούν τη σειρά της λίστας-πηγής.
-  return { kind: 'ready', bounds, questions: [...questions].sort(byPriority) };
+  return { kind: 'ready', bounds, levelBasis: resolution.levelBasis, questions: [...questions].sort(byPriority) };
 }
 
 // ============================================================================

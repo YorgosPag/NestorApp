@@ -198,6 +198,7 @@ function listingWith(levels: PublicListing['levels']): PublicListing {
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    levelAreas: null,
   };
 }
 

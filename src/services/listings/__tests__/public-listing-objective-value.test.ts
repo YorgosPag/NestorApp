@@ -11,6 +11,8 @@ import {
 
 import {
   projectFrontage,
+  projectLevelAreas,
+  projectObjectiveValueBasis,
   projectObjectiveValueDeclarations,
   withObjectiveValueDeclarations,
 } from '../public-listing-objective-value';
@@ -84,5 +86,56 @@ describe('withObjectiveValueDeclarations — η βάση του server με άλ
   it('ιδιοδύναμο', () => {
     const once = withObjectiveValueDeclarations(listing({ type: 'apartment' }), declarations);
     expect(withObjectiveValueDeclarations(once, declarations)).toEqual(once);
+  });
+});
+
+describe('ADR-898 Φ3β-3β — το μικτό ανά όροφο: βάση υπολογισμού, πίσω από ΜΙΑ πύλη απόκρυψης', () => {
+  const MAISONETTE = {
+    id: 'p1',
+    type: 'maisonette',
+    levels: [
+      { floorId: 'flr_0', floorNumber: 0 },
+      { floorId: 'flr_1', floorNumber: 1 },
+    ],
+    levelData: { flr_0: { areas: { gross: 60 } }, flr_1: { areas: { gross: 40 } } },
+    objectiveValueDeclarations: RAW,
+  };
+  const AREAS = [{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }];
+
+  it('κατοικία με συνεπή στοιχεία ⇒ ένα επίπεδο ανά όροφο', () => {
+    expect(projectLevelAreas(MAISONETTE, 100)).toEqual(AREAS);
+  });
+
+  it('το άθροισμα ελέγχεται απέναντι στο εμβαδόν που ΔΗΜΟΣΙΕΥΕΙ η αγγελία', () => {
+    expect(projectLevelAreas(MAISONETTE, 120)).toBeNull();
+  });
+
+  it('το δηλωμένο πλήθος (`layout.levels`) πρέπει να συμφωνεί', () => {
+    expect(projectLevelAreas({ ...MAISONETTE, layout: { levels: 3 } }, 100)).toBeNull();
+    expect(projectLevelAreas({ ...MAISONETTE, layout: { levels: 2 } }, 100)).toEqual(AREAS);
+  });
+
+  it.each(['storage', 'shop', null])('είδος %s ⇒ `null` (μόνο το έντυπο 1 υπολογίζει ανά όροφο)', (type) => {
+    expect(projectLevelAreas({ ...MAISONETTE, type }, 100)).toBeNull();
+  });
+
+  it('ιδιώτης (χωρίς επίπεδα στο έγγραφο) ⇒ `null`', () => {
+    expect(projectLevelAreas({ id: 'p1', type: 'apartment', objectiveValueDeclarations: RAW }, 100)).toBeNull();
+  });
+
+  it('εμφάνιση ⇒ οι δηλώσεις ΚΑΙ το μικτό ανά όροφο', () => {
+    expect(projectObjectiveValueBasis(MAISONETTE, 100)).toMatchObject({ objectiveValueDeclarations: { display: 'shown' }, levelAreas: AREAS });
+  });
+
+  it('🔴 απόκρυψη ⇒ ΟΥΤΕ το μικτό ανά όροφο (ελαχιστοποίηση δεδομένων)', () => {
+    const hidden = { ...MAISONETTE, objectiveValueDeclarations: { ...RAW, display: 'hidden' } };
+    expect(projectObjectiveValueBasis(hidden, 100)).toEqual({ objectiveValueDeclarations: { display: 'hidden' }, levelAreas: null });
+  });
+
+  it('🔴 η επικάλυψη περνά από την ΙΔΙΑ πύλη: κρυμμένη ⇒ `null`, εμφανής ⇒ η βάση μένει', () => {
+    const basis = listing({ type: 'maisonette', levelAreas: AREAS });
+    const hidden = readObjectiveValueDeclarations({ ...RAW, display: 'hidden' });
+    expect(withObjectiveValueDeclarations(basis, hidden).levelAreas).toBeNull();
+    expect(withObjectiveValueDeclarations(basis, readObjectiveValueDeclarations(RAW)).levelAreas).toEqual(AREAS);
   });
 });

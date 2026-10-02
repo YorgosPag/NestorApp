@@ -131,6 +131,7 @@ const LISTING: PublicListing = {
   listedAt: { kind: 'unknown', reason: 'predates-record' },
   priceReduction: null,
   objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+  levelAreas: null,
 };
 
 function draw(listing: PublicListing = LISTING) {

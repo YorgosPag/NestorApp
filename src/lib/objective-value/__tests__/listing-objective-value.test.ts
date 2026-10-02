@@ -5,6 +5,7 @@
 
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
+import type { PublicListing } from '@/types/public-listing';
 
 import { CENTRAL_HEATING_OF, listingObjectiveValue } from '../listing-objective-value';
 import { legalAgeYears } from '../objective-value-common';
@@ -95,9 +96,56 @@ describe('listingObjectiveValue', () => {
     expect(listingObjectiveValue(home({ type }), READY, TODAY)).toEqual({ kind: 'unsupported', reason: 'type' });
   });
 
-  it('πολυεπίπεδο ⇒ `multiLevel` — όχι όλο το εμβαδόν στον όροφο εισόδου', () => {
-    const levels = { provenance: 'declared' as const, value: 2, at: '2026-09-02T00:00:00.000Z' };
-    expect(listingObjectiveValue(home({ levels }), READY, TODAY)).toEqual({ kind: 'unsupported', reason: 'multiLevel' });
+  describe('ADR-898 Φ3β-3β — πολυεπίπεδο: ένα επίπεδο ανά όροφο (ΠΟΛ.1149/1994 άρθ. 3 §6.β), ποτέ εικασία', () => {
+    const twoLevels = { provenance: 'declared' as const, value: 2, at: '2026-09-02T00:00:00.000Z' };
+    const maisonette = (levelAreas: PublicListing['levelAreas']) =>
+      home({ floor: 0, areaSqm: 100, levels: twoLevels, levelAreas });
+    const perLevelDraft = {
+      ...INITIAL_DRAFT,
+      levels: [{ floor: 0, area: 60 }, { floor: 1, area: 40 }],
+      area: 100,
+      hasCentralHeating: true,
+      hasElevator: true,
+      permitDate: '1998-07-01',
+    };
+
+    it('με βάση ανά όροφο ⇒ ο υπολογισμός της μηχανής πάνω στα ΔΥΟ επίπεδα', () => {
+      const value = listingObjectiveValue(maisonette([{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }]), READY, TODAY);
+      expect(value).toMatchObject({ kind: 'evaluated', levelBasis: { kind: 'perLevel' }, bounds: objectiveValueBounds(perLevelDraft, TODAY, [2000]) });
+      expect(value).toMatchObject({ prefill: { floor: null, area: null, levels: perLevelDraft.levels } });
+    });
+
+    it('ΟΧΙ ο κανόνας του Ε9 ούτε όλο το εμβαδόν στον όροφο εισόδου: διαφορετικό ποσό από το «ένα επίπεδο»', () => {
+      const perLevel = listingObjectiveValue(maisonette([{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }]), READY, TODAY);
+      for (const floor of [0, 1]) {
+        const lumped = objectiveValueBounds({ ...perLevelDraft, levels: [{ floor, area: 100 }] }, TODAY, [2000]);
+        expect(perLevel).not.toMatchObject({ bounds: lumped });
+      }
+    });
+
+    it('χωρίς βάση ανά όροφο ⇒ «τι λείπει» (όροφος, επιφάνεια) — και ο υπολογιστής ΔΕΝ προσυμπληρώνεται με το σύνολο', () => {
+      const value = listingObjectiveValue(maisonette(null), READY, TODAY);
+      expect(value).toMatchObject({
+        kind: 'evaluated',
+        levelBasis: { kind: 'missing', count: 2 },
+        bounds: { kind: 'unresolved', result: { missing: expect.arrayContaining(['floor', 'area']) } },
+        prefill: { floor: null, area: null, levels: null },
+      });
+    });
+
+    it('πλήθος επιπέδων ≠ βάση ⇒ «τι λείπει», ποτέ μερικός υπολογισμός', () => {
+      const three = { ...twoLevels, value: 3 };
+      const value = listingObjectiveValue(
+        home({ areaSqm: 100, levels: three, levelAreas: [{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }] }),
+        READY,
+        TODAY,
+      );
+      expect(value).toMatchObject({ levelBasis: { kind: 'missing', count: 3 }, bounds: { kind: 'unresolved' } });
+    });
+
+    it('ένα επίπεδο ⇒ όροφος + μικτό της αγγελίας, όπως πάντα', () => {
+      expect(listingObjectiveValue(home(), READY, TODAY)).toMatchObject({ levelBasis: { kind: 'single' }, prefill: { floor: 4, area: 90, levels: null } });
+    });
   });
 
   it.each<ValueZoneVerdict>([{ kind: 'imprecise' }, { kind: 'outside' }, { kind: 'unavailable' }])('ζώνη $kind ⇒ no-zone', (verdict) => {

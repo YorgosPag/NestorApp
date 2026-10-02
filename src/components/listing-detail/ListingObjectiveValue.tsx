@@ -78,12 +78,16 @@ function Assumptions({ value }: { readonly value: Evaluated }) {
 
 function EvaluatedBody({ value }: { readonly value: Evaluated }) {
   const { t } = useTranslation([NS]);
-  const { bounds } = value;
+  const { bounds, levelBasis } = value;
   return (
     <>
       {/* `role="status"` όπως στον υπολογιστή: οι ελλείψεις είναι παράγραφοι και λίστα, που το `<output>` δεν δέχεται. */}
       <div role="status" className="flex flex-col gap-1">
         <Amount bounds={bounds} />
+        {/* ADR-898 Φ3β-3β — πολυεπίπεδο χωρίς εμβαδόν ανά όροφο: το «γιατί» πίσω από το «λείπουν όροφος, επιφάνεια». */}
+        {levelBasis.kind === 'missing' && (
+          <p className="m-0 text-sm text-muted-foreground">{t(`${L}.levelsMissing`, { count: levelBasis.count })}</p>
+        )}
       </div>
       {bounds.kind === 'exact' && <ObjectiveValueBreakdown result={bounds.result} />}
       <Assumptions value={value} />

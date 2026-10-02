@@ -68,6 +68,7 @@ import type { ListingCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
 import type { ResidenceFrontage } from '@/lib/objective-value/objective-value-types';
+import type { LevelArea } from '@/lib/properties/level-areas';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
@@ -957,6 +958,16 @@ export interface PublicListing {
    * δικαίωμα είναι **ίδιο** για ιδιώτη και εταιρεία (μάθημα της αγωγής κατά της Zillow).
    */
   readonly objectiveValueDeclarations: ListingObjectiveValueDeclarations;
+
+  /**
+   * **Μικτό εμβαδόν ανά όροφο** πολυεπίπεδης κατοικίας — **μόνο** βάση υπολογισμού της αντικειμενικής (ADR-898 Φ3β-3β,
+   * ρόλος `'valuation-basis'`), **όχι** ορατό χαρακτηριστικό. Ο νόμος υπολογίζει κάθε όροφο χωριστά
+   * (ΠΟΛ.1149/1994 άρθ. 3 §6.β).
+   *
+   * `null` = μονοεπίπεδο · ελλιπή/ασυνεπή στοιχεία (ποτέ μερική λίστα) · **ή κρυμμένη αντικειμενική** (ίδια
+   * ελαχιστοποίηση με το `objectiveValueDeclarations`).
+   */
+  readonly levelAreas: readonly LevelArea[] | null;
 
   // ── ΜΕΤΑΔΕΔΟΜΕΝΑ ΠΡΟΒΟΛΗΣ ─────────────────────────────────────────────────
   /** Τίτλος προς εμφάνιση. Κείμενο του κατόχου — **όχι** κλειδί i18n. */
