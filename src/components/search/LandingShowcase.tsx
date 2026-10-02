@@ -40,7 +40,7 @@
  *
  * Υπάρχουν ήδη δύο `<ul>` που αποδίδουν {@link ListingCard}: η `ResultsList` *(στήλη
  * **δεμένη σε χάρτη** — hover · highlight · φίλτρα που ταξιδεύουν)* και το
- * `AgencyProfileContent` *(στήλη **χωρίς** χάρτη)*. Εδώ η διάταξη είναι **πλέγμα
+ * `AgencyProfileContent` *(στήλη **χωρίς** χάρτη)*. Εδώ η διάταξη είναι **λωρίδα
  * πλήρους πλάτους**, και αυτό είναι **άλλη απόφαση**, όχι άλλη υλοποίηση: η **μηχανή**
  * *(κάρτα · σειρά · τιμή · εικόνες · LCP)* είναι **ολόκληρη κοινή** και δεν
  * ξαναγράφεται εδώ ούτε μία γραμμή της. Ίδιο σκεπτικό με το γιατί τα
@@ -55,11 +55,11 @@
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Η προεπιλογή της κάρτας *(`22rem` πάνω από 1024px)* περιγράφει τη **στήλη**. Εδώ οι
- * στήλες είναι **όσες χωρέσουν**, με κάθε κάρτα μεταξύ `17rem` (`LISTING_CARD_MIN_REM`) και ~`24rem` — άρα η
+ * κάρτες της λωρίδας είναι **όσες χωρέσουν ολόκληρες**, η καθεμία μεταξύ `17rem` (`LISTING_CARD_MIN_REM`) και ~`24rem` — άρα η
  * προεπιλογή θα ήταν **ψευδής**, και ο περιηγητής θα κατέβαζε λάθος παράγωγο **χωρίς
  * κανένα ορατό σφάλμα**: θολό ή σπάταλο, σιωπηλά, χωρίς πύλη να ρωτήσει.
  *
- * ⚠️ **Ο αριθμός συμφωνεί με το `minmax` από κάτω — και οφείλει να συνεχίσει.** Αν
+ * ⚠️ **Ο αριθμός συμφωνεί με το `LISTING_CARD_MIN_REM` — και οφείλει να συνεχίσει.** Αν
  * αλλάξει το ένα, αλλάζει και το άλλο· ο φρουρός Β4 τα δένει.
  */
 
@@ -76,12 +76,14 @@ import type { PublicListing } from '@/types/public-listing';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
-import { LISTING_CARD_GRID_CLASS, LISTING_GRID_CARD_IMAGE_SIZES } from '@/components/search-results/listing-card-frame';
+import { LISTING_GRID_CARD_IMAGE_SIZES } from '@/components/search-results/listing-card-frame';
+import { ScrollRail } from '@/components/ui/scroll-rail';
+import railStyles from './landing-showcase-rail.module.css';
 
 /**
  * Το πλάτος της κάρτας **σε αυτή τη διάταξη** — δες το docblock παραπάνω.
  *
- * ⚠️ Δεν υπάρχει σκέλος «πάνω από X px»: το πλέγμα κρατά την κάρτα **στο ίδιο μέγεθος**
+ * ⚠️ Δεν υπάρχει σκέλος «πάνω από X px»: η λωρίδα κρατά την κάρτα **στο ίδιο μέγεθος**
  * όσο κι αν μεγαλώσει το παράθυρο *(προσθέτει **στήλες**, δεν φουσκώνει κάρτες)*. Ένα
  * breakpoint εδώ θα περιέγραφε διάταξη που **δεν συμβαίνει ποτέ**.
  */
@@ -145,7 +147,7 @@ export function LandingShowcase({
   'aria-labelledby': labelledBy,
   ...panelProps
 }: LandingShowcaseProps) {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['search-results', 'common-actions']);
   const headingId = useId();
 
   // 🔴 **Η ΔΙΑΚΛΑΔΩΣΗ ΕΙΝΑΙ ΤΥΠΟΥ, ΟΧΙ ΣΥΝΘΗΚΗΣ** — ίδιο σχήμα με το `PlaceSearchBox`.
@@ -189,8 +191,21 @@ export function LandingShowcase({
       {/* 🗺️ §8.80 — κάρτα χωρίς φωτογραφία ⇒ χάρτης θέσης· ο πάροχος κατεβάζει τη MapLibre μόνο αν ζητηθεί. */}
       <ListingMapSnapshotProvider>
       <SavedListingsProvider>
-      {/* 🖼️ §8.80 — το ΕΝΑ πλέγμα καρτών (`listing-card-frame.ts`), ίδιο με αποτελέσματα και αποθηκευμένες. */}
-      <ul className={LISTING_CARD_GRID_CLASS}>
+      {/*
+        🖼️ **ΜΙΑ ΣΕΙΡΑ ΠΟΥ ΚΥΛΑ, ΠΑΝΤΑ ΓΕΜΑΤΗ** (αναθεώρηση 2026-10-02): το πλέγμα `auto-fill` με
+        σταθερό πλήθος άφηνε άδειες θέσεις στο zoom 90%/80%. Η λωρίδα είναι το **υπάρχον**
+        `ScrollRail` (βελάκια, snap, Tab-reveal)· οι στήλες έρχονται από container query —
+        δες `landing-showcase-rail.module.css`.
+      */}
+      <ScrollRail
+        as="ul"
+        frameClassName={railStyles.frame}
+        className={railStyles.track}
+        // Γενικά «Προηγούμενο/Επόμενο», όπως στα βελάκια καρουζέλ του Airbnb: το `aria-controls`
+        // δείχνει ήδη ΠΟΙΑ λίστα κυλά, και η επικεφαλίδα της ενότητας την ονομάζει.
+        prevLabel={t('common-actions:actions.previous')}
+        nextLabel={t('common-actions:actions.next')}
+      >
         {shownListings !== null
           ? /* Μόνο η πρώτη κάρτα είναι LCP (ADR-841 §7 Α2.4): πολλές «υψηλής
                προτεραιότητας» εικόνες **ακυρώνουν η μία την άλλη**. */
@@ -208,7 +223,7 @@ export function LandingShowcase({
             (shownAgencies ?? []).map((profile) => (
               <AgencyCard key={profile.companyId} profile={profile} headingLevel={3} />
             ))}
-      </ul>
+      </ScrollRail>
       </SavedListingsProvider>
       </ListingMapSnapshotProvider>
     </section>

@@ -36,6 +36,13 @@ export const LISTING_CARD_ASPECT_CLASS = 'aspect-[3/2]';
 export const LISTING_CARD_MIN_REM = 17;
 
 /**
+ * Το κενό ανάμεσα στις κάρτες (rem) — το `gap-3` του {@link LISTING_CARD_GRID_CLASS}. Ο αριθμός
+ * υπάρχει για τη σκάλα στηλών της βιτρίνας (`landing-showcase-rail.module.css`), που ο φρουρός της
+ * ξαναϋπολογίζει από αυτόν και από το {@link LISTING_CARD_MIN_REM}.
+ */
+export const LISTING_CARD_GAP_REM = 0.75;
+
+/**
  * **Το πλέγμα κάθε λίστας καρτών** (αποτελέσματα · βιτρίνα · αποθηκευμένες).
  *
  * 🏆 **Πέρα από τους μεγάλους**: η Zillow αλλάζει από 1 σε 2 στήλες με **σταθερό breakpoint** και

@@ -61,7 +61,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "682a7e5f59ab45ce4e717b2d00bf2d6f6c67a6306f6b9fe0cb5508740b3643c8",
+    "src/i18n/generated/shell-slice.el.json": "a5645173a9a6aa84df20fc269144aa13738d7836f8929df2fc4b6368c36b0801",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -107,7 +107,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "de0fbd1791686aef3196a4393d8e99020f254186c06b044dbb898acff740699f",
+  "inputsSha256": "33d358c3a6c750fc9577579e95445d9aed7412f7ebfe15ee128d82e775746ef8",
   "languages": [
     "el"
   ],
@@ -662,9 +662,6 @@
     "src/components/ui/numeric-field/use-numeric-field.ts": "6b1260fcb4c7419a51f04df502bff6327e3cba0a1a4e5a0a4b7f063380a83e23",
     "src/components/ui/progress.tsx": "d0b2cbbe25d477399af84079feb15b53426c01e901cbb3d84d768d97aa257a1d",
     "src/components/ui/radio-group.tsx": "92a4ef9ce95e7faf0100e18902b0c457134aa023e0e01f061089811da49f6e4c",
-    "src/components/ui/scroll-rail-context.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/components/ui/scroll-rail-geometry.ts": "643f874502358cf2c5a20e76ef85dc62cf3ee697a1ef01834079b013e4c5d721",
-    "src/components/ui/scroll-rail.tsx": "ee27a6e25b2da66f7028dc29e5a9327189347969c014b01bef83a765851380f8",
     "src/components/ui/skeleton.tsx": "29f3eaf1e36057c80858d1447f69593349e59abbc145333eb35be85a18c97f52",
     "src/components/ui/slider.tsx": "9b2f2ce6a4ffdd4f61ca1b4c19413fcfabf4437cdc2918e3e7e66dc97371c7e7",
     "src/components/ui/switch.tsx": "5bd418565b52c5c703b921e73bf7160391ea3ea016e5f1bce8c2f8e4a567d713",
@@ -8840,6 +8837,14 @@
           ],
           "whole": false
         },
+        "common-actions": {
+          "keys": [
+            "actions.next",
+            "actions.previous"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "common-photos": {
           "keys": [
             "photoPreview.navigation.nextAria",
@@ -9635,7 +9640,7 @@
     "src/components/search/LandingModeSwitch.tsx": "4582228108561873fc9870a372bc95bedfbfd137bd23ebd8e06387d224016c08",
     "src/components/search/LandingMySpaces.tsx": "0f8bf46e418fb301bc9ffdb1b3f711887173e5d1d2799d6cecdd59e328456915",
     "src/components/search/LandingProBand.tsx": "09be039cf7823cdf488319c18dc1c584b815246bdb1dff1a084f278a028c051f",
-    "src/components/search/LandingShowcase.tsx": "de15a58d0dab6e06995018a170ca79ac118dd705a339adb6162aec90c897e65a",
+    "src/components/search/LandingShowcase.tsx": "c6c9ea1f7fea4fe462da198a16897c760ce98edb11b5119f214c3ee38b021346",
     "src/components/search/PlaceSearchBox.tsx": "fe7369506cbcb580c41577e1bcf30d59a4e396301f08c9f66191ff3a0bf515ef",
     "src/components/search/SearchLandingContent.tsx": "4a4ce9fa3460d19ed29c975697d56f196b080b3ff5f4b22e25c0d23af66484e8",
     "src/components/search/SearchResultItem.tsx": "24dfb53fd88b80a36f48acfdb0b4b00ac2e3d3d63154e0ccd4e396246bff4595",
@@ -9698,6 +9703,9 @@
     "src/components/ui/popover.tsx": "f5f118afa2a1c900799e1c32fc893c471cd917b1c072928cd5282bb3b47c35d7",
     "src/components/ui/radix-escape-ownership.ts": "46132d46d8622dcdb40692a2d28bc39212fb3a5f960a79f359e58b1d60f4fbc9",
     "src/components/ui/scroll-area.tsx": "130899d1fac0b66d4e8b3ca5bdbfb166ff0881c6e20c7568e8b6a364ee2337c3",
+    "src/components/ui/scroll-rail-context.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/components/ui/scroll-rail-geometry.ts": "643f874502358cf2c5a20e76ef85dc62cf3ee697a1ef01834079b013e4c5d721",
+    "src/components/ui/scroll-rail.tsx": "ee27a6e25b2da66f7028dc29e5a9327189347969c014b01bef83a765851380f8",
     "src/components/ui/search/SearchInput.tsx": "19351614338849e83d7e8700698dab13f5efc341fdb5713d3361130fc7d0d9a0",
     "src/components/ui/search/constants.ts": "c4689eb977aadd752561ad0dd7108d9356530cee39ef4b8fb594b2539573620f",
     "src/components/ui/search/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -10445,8 +10453,8 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 220,
     "routeBoundaries": 0,
-    "shellFiles": 903,
-    "sliceBytes": 665121
+    "shellFiles": 906,
+    "sliceBytes": 665165
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -10721,7 +10729,10 @@
     "src/app/layout.tsx → ./globals.css",
     "src/components/search-results/ListingCard.tsx → ./ListingCard.module.css",
     "src/components/search/LandingModeSwitch.tsx → ../ui/scroll-edge-fade.module.css",
+    "src/components/search/LandingShowcase.tsx → ./landing-showcase-rail.module.css",
     "src/components/shared/landing-hero/LandingHero.tsx → ./landing-hero-focal.module.css",
+    "src/components/ui/scroll-rail.tsx → ./scroll-edge-fade.module.css",
+    "src/components/ui/scroll-rail.tsx → ./scroll-rail.module.css",
     "src/i18n/config.ts → ./generated/shell-slice.el.json",
     "src/i18n/config.ts → ./generated/shell-slice.whole.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/accounting-setup.json",
@@ -11902,6 +11913,7 @@
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/LandingShowcase.tsx",
         "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
@@ -11965,6 +11977,8 @@
         "accounting.setup",
         "accounting.vat",
         "actions.close",
+        "actions.next",
+        "actions.previous",
         "admin.aiInbox",
         "admin.auditLog",
         "admin.backup",

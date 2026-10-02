@@ -19,6 +19,13 @@ import '@testing-library/jest-dom';
 
 import { LandingShowcase } from '../LandingShowcase';
 import { LANDING_SHOWCASE_LIMIT } from '@/lib/listings/listing-coverage';
+import { LISTING_CARD_MIN_REM } from '@/components/search-results/listing-card-frame';
+
+/**
+ * **Η λωρίδα των καρτών** — ο scroller του `ScrollRail` (φορά πάντα `data-scroll-edges`).
+ * ⚠️ ΠΟΤΕ `getByRole('list')`: η ίδια η κάρτα αποδίδει δικό της `<ul>` για τα είδη προσφοράς.
+ */
+const TRACK = 'section ul[data-scroll-edges]';
 import type { PublicListing } from '@/types/public-listing';
 import { showcaseProfile } from './showcase-profile-fixture';
 import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
@@ -113,21 +120,19 @@ describe('Β3 — ΣΙΩΠΑ ΟΤΑΝ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΑΠΟΔΕΙΞΕ�
   });
 });
 
-describe('Β4 — ΤΟ ΠΛΕΓΜΑ ΚΑΙ Η ΥΠΟΣΧΕΣΗ ΤΟΥ `sizes`', () => {
-  it('🔴 το δηλωμένο πλάτος εικόνας ΣΥΜΦΩΝΕΙ με το `minmax` του πλέγματος', () => {
-    // 🔴 **Ο ΦΡΟΥΡΟΣ ΠΟΥ ΥΠΟΣΧΕΘΗΚΕ ΤΟ DOCBLOCK.** Το `sizes` και το `minmax` είναι
+describe('Β4 — Η ΛΩΡΙΔΑ ΚΑΙ Η ΥΠΟΣΧΕΣΗ ΤΟΥ `sizes`', () => {
+  it('🔴 το δηλωμένο πλάτος εικόνας ΣΥΜΦΩΝΕΙ με το ελάχιστο πλάτος κάρτας', () => {
+    // 🔴 **Ο ΦΡΟΥΡΟΣ ΠΟΥ ΥΠΟΣΧΕΘΗΚΕ ΤΟ DOCBLOCK.** Το `sizes` και το `LISTING_CARD_MIN_REM` είναι
     //    **δύο δηλώσεις του ίδιου αριθμού** σε δύο αρχεία-γραμμές. Αν αποκλίνουν, ο
     //    περιηγητής κατεβάζει λάθος παράγωγο **χωρίς κανένα ορατό σφάλμα**: θολό ή
     //    σπάταλο, σιωπηλά. Καμία άλλη πύλη δεν το ρωτά.
-    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: άλλαξε το `minmax(18rem,…)` σε `minmax(28rem,…)` ⇒ κοκκινίζει.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: άλλαξε το `LISTING_CARD_MIN_REM` σε 28 ⇒ κοκκινίζει.
     const { container } = render(<LandingShowcase listings={many(3)} {...READY} />);
 
-    // ⚠️ **`section > ul`, ΠΟΤΕ `getByRole('list')`**: η ίδια η κάρτα αποδίδει δικό της
-    //    `<ul>` για τα είδη προσφοράς ⇒ ο ρόλος βρίσκει **πολλές** λίστες και η δοκιμή
-    //    πετά. Το πλέγμα είναι **το άμεσο παιδί της ενότητας**, και μόνο αυτό.
-    const list = container.querySelector('section > ul');
-    // `minmax(min(17rem,100%),1fr)` — το πάτωμα που δεν νικά τον περιέκτη (ADR-797 §Φ.Ρ.3).
-    const declaredMin = /minmax\((?:min\()?(\d+)rem/.exec(list?.className ?? '')?.[1];
+    // `minmax`/σκάλα: το ελάχιστο πλάτος κάρτας ζει στο `LISTING_CARD_MIN_REM` — η σκάλα στηλών
+    //    της λωρίδας ξαναϋπολογίζεται από αυτό (`landing-showcase-rail.test.ts`).
+    const declaredMin = String(LISTING_CARD_MIN_REM);
+    expect(container.querySelector(TRACK)).not.toBeNull();
     // ⚠️ **ΜΕΤΑ την παρένθεση**: το `sizes` είναι `(min-width: 40rem) 20rem, 100vw` —
     //    ένα σκέτο `(\d+)rem` πιάνει το **κατώφλι** (40) αντί για το **πλάτος** (20),
     //    και η δοκιμή θα συνέκρινε λάθος αριθμό. Πιάστηκε στην πρώτη εκτέλεση.
@@ -135,7 +140,6 @@ describe('Β4 — ΤΟ ΠΛΕΓΜΑ ΚΑΙ Η ΥΠΟΣΧΕΣΗ ΤΟΥ `sizes`', 
       screen.getAllByRole('img')[0].getAttribute('sizes') ?? '',
     )?.[1];
 
-    expect(declaredMin).toBeDefined();
     expect(declaredSize).toBeDefined();
     // Το δηλωμένο πλάτος λήψης δεν επιτρέπεται να είναι **μικρότερο** από το ελάχιστο
     // πλάτος της κάρτας (⇒ θολό), ούτε δυσανάλογα μεγαλύτερο (⇒ σπατάλη bytes).
@@ -212,7 +216,7 @@ describe('Β5 — ΜΟΝΟ ΜΙΑ ΕΙΚΟΝΑ ΕΙΝΑΙ LCP', () => {
     );
     // ⚠️ Άμεσα παιδιά του πλέγματος — τα `<li>` των ειδών προσφοράς μέσα στην κάρτα
     //    **δεν** είναι κάρτες (δες Β4).
-    expect(container.querySelectorAll('section > ul > li')).toHaveLength(
+    expect(container.querySelectorAll(`${TRACK} > li`)).toHaveLength(
       LANDING_SHOWCASE_LIMIT,
     );
   });
@@ -270,7 +274,7 @@ describe('Β6 — 🔴 ΤΟ ΠΑΝΕΛ ΤΟΥ ΔΙΑΚΟΠΤΗ, ΣΤΗΝ ΟΘΟ�
     );
 
     expect(container.querySelectorAll('section')).toHaveLength(1);
-    expect(container.querySelectorAll('section > ul > li')).toHaveLength(PROS.length);
+    expect(container.querySelectorAll(`${TRACK} > li`)).toHaveLength(PROS.length);
     expect(container.querySelector('section')).toHaveAttribute('data-shell-span', 'full');
   });
 
@@ -289,6 +293,6 @@ describe('Β6 — 🔴 ΤΟ ΠΑΝΕΛ ΤΟΥ ΔΙΑΚΟΠΤΗ, ΣΤΗΝ ΟΘΟ�
     const { container } = render(
       <LandingShowcase mode={null} listings={many(3)} agencies={PROS} {...READY_STATE} />,
     );
-    expect(container.querySelectorAll('section > ul > li')).toHaveLength(3);
+    expect(container.querySelectorAll(`${TRACK} > li`)).toHaveLength(3);
   });
 });

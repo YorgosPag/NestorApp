@@ -1,0 +1,96 @@
+/**
+ * **Η λωρίδα της βιτρίνας** — μία σειρά, ΠΑΝΤΑ γεμάτη (ADR-777 §8.49 · αναθεώρηση 2026-10-02).
+ *
+ * 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ, ΜΕΤΡΗΜΕΝΟ ΣΕ ΣΤΙΓΜΙΟΤΥΠΟ**: πλέγμα `auto-fill` + **σταθερές 6 κάρτες**. Στα 1920px
+ * το πλέγμα έβγαζε 6 στήλες στο 100%, **7 στο 90%, 8 στο 80%** ⇒ μία και δύο **άδειες θέσεις**. Το
+ * παλιό σχόλιο υπέθετε «1 · 2 · 3 στήλες» — ψευδές: η βιτρίνα είναι πλήρους πλάτους.
+ *
+ * 📚 **Zillow «Homes for you» · Airbnb · Realtor.com**: η ενότητα της αρχικής είναι **ΜΙΑ σειρά που
+ * κυλά**, ποτέ πλέγμα με σταθερό πλήθος. Η σειρά γεμίζει όσο κι αν αλλάξει το πλάτος ή το zoom.
+ *
+ * 🏆 **ΠΕΡΑ ΑΠΟ ΤΟΥΣ ΜΕΓΑΛΟΥΣ**: ο Airbnb διαλέγει στήλες με **JavaScript** μετά το hydration. Εδώ
+ * τις διαλέγει **container query** ⇒ σωστό από το SSR, μηδέν CLS, μηδέν μέτρηση σε JS, και ο
+ * αριθμός στηλών ακολουθεί το **πλάτος της λωρίδας**, όχι του παραθύρου.
+ *
+ * 📐 **Η ΣΚΑΛΑ**: `k` στήλες χωράνε όταν `πλάτος ≥ k·17rem + (k−1)·0,75rem`
+ * (`LISTING_CARD_MIN_REM` · `LISTING_CARD_GAP_REM`). Κάθε κάρτα = `(100% − (k−1)·κενό) / k` ⇒
+ * ακριβώς `k` ολόκληρες κάρτες, καμία μισή, καμία άδεια θέση. Η τελευταία βαθμίδα είναι
+ * **ίση** με το `LANDING_SHOWCASE_LIMIT`: όσο υπάρχει απόθεμα, η σειρά είναι γεμάτη σε κάθε πλάτος.
+ * ⚠️ Ο φρουρός `landing-showcase-rail.test.ts` ΞΑΝΑΥΠΟΛΟΓΙΖΕΙ κάθε κατώφλι — μην τα αλλάξεις με το χέρι.
+ *
+ * 👆 **ΑΦΗ = «PEEK»** (αναθεώρηση 2026-10-02, στιγμιότυπο iPhone 12 Pro): με κάρτα 100% και μόνο
+ * σβήσιμο στην άκρη, η κύλιση ήταν **αόρατη** — μία κάρτα, καμία ένδειξη ότι υπάρχουν άλλες.
+ * Airbnb · Zillow · Booking στο κινητό: η κάρτα αφήνει χώρο ώστε η **επόμενη να προεξέχει** — η
+ * προεξοχή ΕΙΝΑΙ η οδηγία. Γι' αυτό σε αφή υπάρχει **δεύτερη σκάλα**, μετατοπισμένη κατά
+ * `--showcase-peek`: καμία κάρτα δεν πέφτει κάτω από 17rem. Το snap γίνεται `mandatory`: το
+ * σύρσιμο σταματά ΠΑΝΤΑ σε αρχή κάρτας. Καμία μάσκα: την ένδειξη τη δίνει η προεξοχή.
+ *
+ * 🔑 **ΓΙΑΤΙ container query ΕΔΩ, ενώ το `shell-surface.css` το απορρίπτει**: εκεί το container θα
+ * εγκλώβιζε σε stacking context **όλες** τις επιφάνειες του pane. Εδώ το περιέκτης είναι μόνο η
+ * λωρίδα, που **ήδη** κόβει τα παιδιά της (`overflow-x: auto`)· ό,τι αναδύεται από κάρτα πάει σε
+ * portal. Κανένα z-index δεν χρειάζεται να δραπετεύσει από αυτό το κουτί.
+ */
+
+/* 📐 Η προεξοχή της επόμενης κάρτας σε αφή — ο φρουρός διαβάζει τον αριθμό ΑΠΟ ΕΔΩ. */
+.frame {
+  container: showcase / inline-size;
+  --showcase-peek-touch: 3rem;
+}
+
+/* `.frame .track` (0,2,0) νικά το `.scroller`/`.fade` (0,1,0) του `ScrollRail` χωρίς εξάρτηση από σειρά φόρτωσης. */
+.frame .track {
+  --showcase-cols: 1;
+  --showcase-gap: 0.75rem;
+  --showcase-peek: 0rem;
+  /* Καμία μάσκα: με ποντίκι μιλούν τα βελάκια, με αφή η προεξοχή. */
+  --scroll-edge-fade: 0rem;
+  gap: var(--showcase-gap);
+}
+
+.track > * {
+  width: calc(
+    (100% - var(--showcase-peek) - (var(--showcase-cols) - 1) * var(--showcase-gap)) /
+      var(--showcase-cols)
+  );
+  min-width: 0;
+}
+
+/*
+ * ⚠️ ΔΥΟ ΣΚΑΛΕΣ ΣΕ ΔΥΟ **ΞΕΝΑ ΜΕΤΑΞΥ ΤΟΥΣ** media blocks (`X` και `not all and X`): καμία βαθμίδα δεν
+ * εξαρτάται από τη σειρά των κανόνων. Ο φρουρός ξαναϋπολογίζει κάθε κατώφλι — μην τα αλλάξεις με το χέρι.
+ */
+
+/* ── Ποντίκι / trackpad: k ολόκληρες κάρτες, το ▶ φέρνει την επόμενη ολόκληρη. ── */
+@media (hover: hover) and (pointer: fine) {
+  @container showcase (min-width: 34.75rem) { .frame .track { --showcase-cols: 2; } }
+  @container showcase (min-width: 52.5rem) { .frame .track { --showcase-cols: 3; } }
+  @container showcase (min-width: 70.25rem) { .frame .track { --showcase-cols: 4; } }
+  @container showcase (min-width: 88rem) { .frame .track { --showcase-cols: 5; } }
+  @container showcase (min-width: 105.75rem) { .frame .track { --showcase-cols: 6; } }
+  @container showcase (min-width: 123.5rem) { .frame .track { --showcase-cols: 7; } }
+  @container showcase (min-width: 141.25rem) { .frame .track { --showcase-cols: 8; } }
+  @container showcase (min-width: 159rem) { .frame .track { --showcase-cols: 9; } }
+  @container showcase (min-width: 176.75rem) { .frame .track { --showcase-cols: 10; } }
+  @container showcase (min-width: 194.5rem) { .frame .track { --showcase-cols: 11; } }
+  @container showcase (min-width: 212.25rem) { .frame .track { --showcase-cols: 12; } }
+}
+
+/* ── Αφή: k κάρτες + προεξοχή της επόμενης· κατώφλι = k·17 + (k−1)·0,75 + 3 (peek). ── */
+@media not all and (hover: hover) and (pointer: fine) {
+  .frame .track {
+    --showcase-peek: var(--showcase-peek-touch);
+    scroll-snap-type: x mandatory;
+  }
+
+  @container showcase (min-width: 37.75rem) { .frame .track { --showcase-cols: 2; } }
+  @container showcase (min-width: 55.5rem) { .frame .track { --showcase-cols: 3; } }
+  @container showcase (min-width: 73.25rem) { .frame .track { --showcase-cols: 4; } }
+  @container showcase (min-width: 91rem) { .frame .track { --showcase-cols: 5; } }
+  @container showcase (min-width: 108.75rem) { .frame .track { --showcase-cols: 6; } }
+  @container showcase (min-width: 126.5rem) { .frame .track { --showcase-cols: 7; } }
+  @container showcase (min-width: 144.25rem) { .frame .track { --showcase-cols: 8; } }
+  @container showcase (min-width: 162rem) { .frame .track { --showcase-cols: 9; } }
+  @container showcase (min-width: 179.75rem) { .frame .track { --showcase-cols: 10; } }
+  @container showcase (min-width: 197.5rem) { .frame .track { --showcase-cols: 11; } }
+  @container showcase (min-width: 215.25rem) { .frame .track { --showcase-cols: 12; } }
+}
