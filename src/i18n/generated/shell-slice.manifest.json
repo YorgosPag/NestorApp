@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b78d060af3f93d04a07803a6bb3ec402c46cbf9c1fe4ba2523043f518dec452a",
+  "inputsSha256": "aafe8ac5d6b076512eca92aab4ff6ca8333f11b9cb117a662a0f437773bf7789",
   "languages": [
     "el"
   ],
@@ -1069,7 +1069,7 @@
     "src/server/auth/account-identities.ts": "77829c42019acc57d7cc6df6fb7ba1ca2c1aba6f1878a96d0568765ff6c9569e",
     "src/server/auth/account-reprovision.ts": "a142d10a12689b53b9777d737c08eef25c96def45b19cd0e54efbbbae726923d",
     "src/server/auth/auth-action-link.ts": "3bd06c0b7b2da10a8a15f0a4d3fe6209afdba1d2189616dda5db872dda71e8c9",
-    "src/server/auth/citizen-identity.ts": "446401bcc8d6c967c2f663a43ebeb1eda963267cc75d90f48f48d49f9cf057a7",
+    "src/server/auth/citizen-identity.ts": "8557a5c5217a455f5b07b6c3df5f035d68e8e5aed171b45b0bcfcbba02b275ef",
     "src/server/auth/mailbox-proof-custody.ts": "55bf1192ee3817e8be339f62a35df64f17ac6cded51303f2482bd338fd26258c",
     "src/server/auth/workspace-invitation-preview.ts": "59bbe9d6ea9693ef1efa173ed94ec52750ca74b1db4105c79f3edf57b3c91899",
     "src/server/auth/workspace-invitation-redeem.ts": "2bc7d7711ab527fe06b19c2a514bb404f1fcceb0e2792c50b7bdcc19a94a6e9a",
@@ -10327,6 +10327,7 @@
     "src/lib/auth/authority.ts": "34b6343976b7450c8d8c9787ed76a32a8cb37b55504f276e96b526db6538a407",
     "src/lib/auth/claim-permissions.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/container-read-reach.ts": "8608979cf085af595c85c1389ac04b8c17409acda6f16e76c4fee2aa7f5e894d",
+    "src/lib/auth/firebase-auth-errors.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/auth/handler-execution.ts": "ca869789dae0d2470e0b9a7987b3fcd76c74af56b545ca61e7142adcc5cc8531",
     "src/lib/auth/identity-claims.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/identity-fabrication.ts": "c1f11595db5415f81c1334e9812669bd60d6355d279110707fd6928ff95797ea",
@@ -10831,7 +10832,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 922,
+    "shellFiles": 923,
     "sliceBytes": 663499
   },
   "unresolvableKeys": [
@@ -11359,7 +11360,6 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/trash.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/users.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/vendor-portal.json",
-    "src/lib/auth/revocation-watermark.ts → @/lib/auth/firebase-auth-errors",
     "src/lib/unicode/skeleton.ts → ./generated/confusable-skeleton.json",
     "src/lib/workspace/route-worlds.ts → @/types/app-routes"
   ],

@@ -28,6 +28,7 @@ import 'server-only';
 
 import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isAuthUserNotFound } from '@/lib/auth/firebase-auth-errors';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { AUTH_MAIL_RECIPIENT_QUOTA } from '@/lib/middleware/rate-limit-config';
 import { withinRecipientQuota } from '@/lib/middleware/recipient-quota';
@@ -60,9 +61,6 @@ function withinAuthMailQuota(kind: AuthActionEmailKind, recipient: string): Prom
   return withinRecipientQuota(`auth-mail:${kind}`, recipient, AUTH_MAIL_RECIPIENT_QUOTA);
 }
 
-function isUserNotFound(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'auth/user-not-found';
-}
 
 /**
  * **Σε ποια γλώσσα μιλάμε σε αυτόν τον άνθρωπο;** Η **δική του** δήλωση κερδίζει την οθόνη:
@@ -113,7 +111,7 @@ export async function sendPasswordResetMail(input: {
   try {
     account = await getAdminAuth().getUserByEmail(input.email);
   } catch (error: unknown) {
-    if (isUserNotFound(error)) return 'skipped';
+    if (isAuthUserNotFound(error)) return 'skipped';
     throw error;
   }
   if (account.disabled || !account.email) return 'skipped';

@@ -74,6 +74,7 @@ import {
   composeCitizenClaimPayload,
 } from '@/lib/auth/claim-payload';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
+import { isAuthUserNotFound } from '@/lib/auth/firebase-auth-errors';
 import { isValidGlobalRole } from '@/lib/auth/types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -165,13 +166,6 @@ interface ResolvedAccount extends ProvenMailboxAccount {
   readonly born: boolean;
 }
 
-function isUserNotFound(error: unknown): boolean {
-  return (
-    typeof error === 'object'
-    && error !== null
-    && (error as { code?: unknown }).code === 'auth/user-not-found'
-  );
-}
 
 /**
  * **Βρες τον λογαριασμό αυτού του email, αλλιώς γέννησέ τον.**
@@ -205,7 +199,7 @@ async function resolveAccount(input: CitizenIdentityInput): Promise<ResolvedAcco
   try {
     return fromRecord(await auth.getUserByEmail(input.email));
   } catch (error: unknown) {
-    if (!isUserNotFound(error)) throw error;
+    if (!isAuthUserNotFound(error)) throw error;
   }
 
   // 🔴 **«Δεν βρέθηκε» ΜΠΟΡΕΙ ΝΑ ΣΗΜΑΙΝΕΙ «ΕΙΝΑΙ ΣΤΗ ΜΕΣΗ ΤΗΣ ΕΠΑΝΑΔΗΜΙΟΥΡΓΙΑΣ»** (ADR-844 §13.8):
