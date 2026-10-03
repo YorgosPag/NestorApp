@@ -12,6 +12,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { fetchEngagedCaseActivity } from '@/services/conveyance/conveyance-engagement-gateway';
 import { formatDateTime } from '@/lib/intl-utils';
@@ -37,7 +38,18 @@ const ACTIVITY_KIND_KEY: Readonly<Record<CaseActivityItem['kind'], string>> = {
   viewed: 'engagement.case.activity.viewed',
   downloaded: 'engagement.case.activity.downloaded',
   answered: 'engagement.case.activity.answered',
+  transmitted: 'engagement.case.activity.transmitted',
+  withdrawn: 'engagement.case.activity.withdrawn',
+  requested: 'engagement.case.activity.requested',
+  'request-received': 'engagement.case.activity.request-received',
 };
+
+/** Το όνομα του εγγράφου: το αρχείο, ή — για αιτήματα (Φ4.5) — η γραμμή του καταλόγου στη γλώσσα του θεατή. */
+function documentLabel(item: CaseActivityItem, t: (key: string) => string): string {
+  if (item.documentName) return item.documentName;
+  const labelKey = item.itemId ? getChecklistItem(item.itemId)?.labelKey : undefined;
+  return labelKey ? t(labelKey) : t('engagement.case.activity.unnamed');
+}
 
 function ActivityLine({ item }: { readonly item: CaseActivityItem }) {
   const { t } = useTranslation(['conveyance']);
@@ -45,7 +57,8 @@ function ActivityLine({ item }: { readonly item: CaseActivityItem }) {
   const who = item.byViewer
     ? t('engagement.case.activity.you')
     : item.actorRole ? t(`engagement.roles.${item.actorRole}`) : t('engagement.case.activity.someone');
-  const what = t(ACTIVITY_KIND_KEY[item.kind], { name: item.documentName ?? t('engagement.case.activity.unnamed') });
+  const recipient = item.actorRole ? t(`engagement.roles.${item.actorRole}`) : '';
+  const what = t(ACTIVITY_KIND_KEY[item.kind], { name: documentLabel(item, t), recipient });
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-border py-2 text-sm last:border-b-0">
       <span className="text-foreground">{who} · {what}</span>

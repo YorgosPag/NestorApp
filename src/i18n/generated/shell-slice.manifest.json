@@ -5,7 +5,7 @@
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
     "src/i18n/generated/routes/case-invite__token.el.json": "db91072b146e6402625df224aa38cf9534622f13d2e9582b7ae89ed83dfb9758",
     "src/i18n/generated/routes/cases.el.json": "18ed15f75eafbe9ed226f3dd7a8e0b52924d302d97da573ca89a382a508054fc",
-    "src/i18n/generated/routes/cases__engagementId.el.json": "657aeaa08ff8d1e696c3d0f2e3f7870dcc3c88f968fce64b3710563a807f0a31",
+    "src/i18n/generated/routes/cases__engagementId.el.json": "b9dc640cc19461849866c6767914b9aa4bb9d0051d447928880e1593fd9bec7f",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9b273ecfc53ef282727d74ac115187f2fd797e81cdd41bdeab30b595096ca883",
+  "inputsSha256": "817b198170e805f782d32560a88e9b841714d811bc9bd8a4e4c9ec6425460cc4",
   "languages": [
     "el"
   ],
@@ -267,11 +267,13 @@
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
     "src/components/conveyance/my-cases/AcceptEngagementDialog.tsx": "6f69a0ccf940585c7975c75f451e8e4dd28af87ff0f5662b6bb5508e18d1cd43",
-    "src/components/conveyance/my-cases/EngagedCaseActivity.tsx": "0b1ab0f1ebc22c7771a4071a6b3b090eb1b398aa495c80c1e3fd3483eaecbbed",
-    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "83dbfa8651e0cac793e4407913b8e2b6d7b37733b14a5a08760adab1530e7d56",
+    "src/components/conveyance/my-cases/EngagedCaseActivity.tsx": "868ee6c8a40e644a5d61fff0a8ac5b93af9e67f7f90133d8b9fdd25ce34dd9f6",
+    "src/components/conveyance/my-cases/EngagedCaseChecklist.tsx": "56d49dd9de69eb1d9040e706ab99dd4e94eb82b80a5301783d3faddf9111e834",
+    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "bf127486d047abc85a0cd1f1c66ea86612e4d7346fa10990ac2297380f974566",
     "src/components/conveyance/my-cases/EngagedCaseParticipants.tsx": "f699d6a2e0f4f3ee750fb912423e5734d9e0949fca39ad2e0ed5a983cf8d0baa",
     "src/components/conveyance/my-cases/MyCaseCardView.tsx": "4317c5c4518be0b9f9dac3f597513096fa5ecc64058005a006a39ddfb0912a05",
     "src/components/conveyance/my-cases/MyCasesContent.tsx": "581ad1c18f05c95e6fd9c85deed38827662affc4db92a1d001570ab127dc941b",
+    "src/components/conveyance/shared/CaseFileOpening.tsx": "06045206d51d08ac7cd304c9f6c342e66d937d21955578e729eb27947ba9f9dd",
     "src/components/conveyance/shared/DeclaredCredentialLine.tsx": "e9616abf4f7959f808cf6a0f731de1e545c6ff74c04574a4337a71a84f53a6d5",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
@@ -526,6 +528,7 @@
     "src/components/property-dossier/usePropertyDossierLifecycle.ts": "ae58e9ec9a40c2e60ebf3a54da403d8ab377e4e5a66508c8321e57b6c8ffac50",
     "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "af952005d07f86b296cc3fbbb1fa01ccbdabeaf6d526cb38079b9ccbb9ef3672",
     "src/components/sales/conveyance/ConveyanceChecklistSection.tsx": "89cb2f7e0539e79b4d075f09e94285ddbad7a4e495ec8f6845dd100b1ba5914f",
+    "src/components/sales/conveyance/ConveyanceRequestAllBar.tsx": "fe511fca3510ec53e18d47ec0448fa8e64b9db2343022eccbc27420979d7dcaa",
     "src/components/sales/conveyance/ConveyanceRowRequest.tsx": "ff7747bc32242ba88df23a973165d6289a4f9bd68d6ed948fd5c8dca5e56a418",
     "src/components/sales/conveyance/ConveyanceRowTransmittal.tsx": "70610f990122293885eae330b52d412e5e60544d3fefc573f770c8b9d0c6475d",
     "src/components/sales/conveyance/conveyance-presentation.ts": "0b6354c5e8c13f02c8ef6e88b86cd84bc59238de2917152c52f823c6c3612e00",
@@ -797,10 +800,12 @@
     "src/hooks/owner-property/useStayCalendar.ts": "b83f56b6118d15908f693b8e278a2db98feb4c123885c071ae12f4ff5029ff48",
     "src/hooks/owner-property/useStayCalendarSelection.ts": "35fe5211cfb1fc96f528388a92d8361c874897c2c1d4694ae0844314c7788820",
     "src/hooks/useAsyncData.ts": "02e59fe71ba777bb647c1638a4e6f1e3033c3aecacf39cff8ae913afefea80db",
+    "src/hooks/useCaseContributions.ts": "cabc6698c6d982ecf08f60a2f0a8d067779770f2ebe5844b14795660dffa8841",
     "src/hooks/useCaseFileOpener.ts": "0aaa2061fe503eac0bb8af14a0111637fb0f47d907c9bdb31fd0300f9ea929a2",
     "src/hooks/useCircleAnchorName.ts": "875b9e930abd4b510a5bbd9a96be1893ae5378d73c2438e9ec9d8ba1899eac4f",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useContainingArea.ts": "0eeb133d3c28307c9d4660807d42fef029c5f415cecd2bbdae27fe27f102804c",
+    "src/hooks/useDocumentRequests.ts": "c386c24b591aac903fa2f83718e8f25f12b28519ae703c184de4996da2c9ee85",
     "src/hooks/useEngagedCase.ts": "efc66e4b38af87391707b590c28192ddb606c2cc9d625ce48cd2f51fbcddd8c8",
     "src/hooks/useFieldPatchQueue.ts": "4b71b561fda8e4fddab22b78cdac0ff63b0a75c3212e47d31fff509a83a83300",
     "src/hooks/useIdentityGatedResource.ts": "d8480fc3b8a36ca7256b30090f93ae814391c74076f4793f062e79f2a842047a",
@@ -1210,6 +1215,7 @@
     "src/services/conveyance/conveyance-case-participants.server.ts": "d16cd1ac4c9708b875b8f30da72493f8acf501d09367eb86c238a19e63b94daf",
     "src/services/conveyance/conveyance-contributed-file.ts": "0ca0bf4c491e7d3040e08e82e152f7a330864c40743f95a3730b1c7c7b1188af",
     "src/services/conveyance/conveyance-contribution-store.server.ts": "5648c6935f91b760776ec2e8497467f69ab4381f5f7e15e3489d0a6f9edc4b8b",
+    "src/services/conveyance/conveyance-document-request-gateway.ts": "a7db54c883d22bca202781ee90b48401aac1c9ce6670b76e17d093c8b5d7bb08",
     "src/services/conveyance/conveyance-document-request-panel.server.ts": "5d8fc56723a3f9ec360cd789042fd08e98b7a6dca16afe0b950fc52dce708b72",
     "src/services/conveyance/conveyance-document-request-store.server.ts": "4073004e8cab0969db723b41eeb89415d2c8275cd0905154a99dcf504df8318d",
     "src/services/conveyance/conveyance-engagement-access.service.ts": "9b642f86cb050daa85b6e255198840f31ba006348a2e9cbe4a170514a34c3f63",
@@ -2044,7 +2050,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2053,7 +2061,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2062,7 +2072,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2071,7 +2083,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2080,7 +2094,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2089,7 +2105,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2098,7 +2116,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2107,7 +2127,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2116,7 +2138,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2125,7 +2149,9 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -2143,10 +2169,14 @@
             "engagement.case.activity.empty",
             "engagement.case.activity.loadError",
             "engagement.case.activity.loading",
+            "engagement.case.activity.request-received",
+            "engagement.case.activity.requested",
             "engagement.case.activity.someone",
             "engagement.case.activity.title",
+            "engagement.case.activity.transmitted",
             "engagement.case.activity.unnamed",
             "engagement.case.activity.viewed",
+            "engagement.case.activity.withdrawn",
             "engagement.case.activity.you",
             "engagement.case.back",
             "engagement.case.loadError",
@@ -2164,11 +2194,43 @@
             "files.from",
             "files.unavailable",
             "files.view",
+            "items.antiparochi_contract.label",
+            "items.appurtenance_floor_plans.label",
+            "items.building_identity.label",
+            "items.building_manager_certificate.label",
+            "items.building_permit.label",
+            "items.cadastral_extract.label",
+            "items.cadastre_registration_proof.label",
+            "items.contract_draft.label",
+            "items.encumbrance_certificate.label",
+            "items.energy_certificate.label",
+            "items.engineer_legality_certificate.label",
+            "items.final_contract.label",
+            "items.horizontal_property_deed.label",
+            "items.legal_due_diligence_report.label",
+            "items.municipal_clearance.label",
+            "items.payoff_receipt.label",
+            "items.preliminary_agreement.label",
+            "items.section_drawings.label",
+            "items.special_zone_clearances.label",
+            "items.title_deed.label",
+            "items.topographic_plan.label",
+            "items.transfer_tax_proof.label",
+            "items.unit_floor_plans.label",
+            "items.vat_or_suspension.label",
             "requests.action",
+            "requests.all",
+            "requests.allConfirm.cancel",
+            "requests.allConfirm.confirm",
+            "requests.allConfirm.description",
+            "requests.allConfirm.title",
+            "requests.alreadyToday",
             "requests.noRecipient",
             "requests.pending",
+            "requests.recipientCount",
             "requests.requestedToday",
             "requests.requesting",
+            "requests.sent",
             "row.actDay",
             "row.expiresOn",
             "row.invalidOnSigning",
@@ -2185,8 +2247,15 @@
             "transmittal.dialog.sending",
             "transmittal.reissue",
             "transmittal.reissueHint",
+            "transmittal.reissued",
             "transmittal.revise.action",
-            "transmittal.withdraw"
+            "transmittal.sent",
+            "transmittal.withdraw",
+            "transmittal.withdrawConfirm.cancel",
+            "transmittal.withdrawConfirm.confirm",
+            "transmittal.withdrawConfirm.description",
+            "transmittal.withdrawConfirm.title",
+            "transmittal.withdrawn"
           ],
           "prefixes": [
             "engagement.roles",
@@ -2194,10 +2263,12 @@
             "items",
             "levels",
             "providers",
+            "requests.errors",
             "sectionHints",
             "sections",
             "state",
-            "status"
+            "status",
+            "transmittal.errors"
           ],
           "whole": false
         }
@@ -11497,7 +11568,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 930,
-    "sliceBytes": 686987
+    "sliceBytes": 689998
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

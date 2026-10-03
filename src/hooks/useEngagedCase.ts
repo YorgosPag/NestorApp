@@ -8,10 +8,13 @@
  * Τρεις εκβάσεις, ποτέ δύο: η όψη · η **δική μου** συμμετοχή χωρίς πρόσβαση τώρα (ονομασμένη ετυμηγορία) ·
  * «δεν βρέθηκε/δεν φορτώθηκε».
  *
+ * ADR-901 Φ4.4 — `reload()` μετά από αποστολή/απόσυρση: ανανέωση **στο παρασκήνιο** — η τρέχουσα όψη μένει ορατή
+ * ώσπου να έρθει η νέα (κανένα spinner που αδειάζει τη σελίδα). Αποτυχία ανανέωσης ⇒ κρατά την προηγούμενη όψη.
+ *
  * @module hooks/useEngagedCase
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { deniedVerdictOf, fetchEngagedCase } from '@/services/conveyance/conveyance-engagement-gateway';
 import type { EngagedCaseView } from '@/types/conveyance-case';
 import type { EngagementVerdict } from '@/types/engagement';
@@ -22,21 +25,30 @@ export type EngagedCaseState =
   | { readonly kind: 'denied'; readonly verdict: EngagementVerdict }
   | { readonly kind: 'failed' };
 
-export function useEngagedCase(engagementId: string): EngagedCaseState {
+export interface EngagedCaseHandle {
+  readonly state: EngagedCaseState;
+  /** Ξαναδιαβάζει την όψη στο παρασκήνιο (μετά από αποστολή/απόσυρση). */
+  readonly reload: () => void;
+}
+
+export function useEngagedCase(engagementId: string): EngagedCaseHandle {
   const [state, setState] = useState<EngagedCaseState>({ kind: 'loading' });
+  const [generation, setGeneration] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    setState({ kind: 'loading' });
+    if (generation === 0) setState({ kind: 'loading' });
     fetchEngagedCase(engagementId)
       .then((result) => { if (alive) setState({ kind: 'ready', view: result.view }); })
       .catch((error: unknown) => {
         if (!alive) return;
         const verdict = deniedVerdictOf(error);
-        setState(verdict ? { kind: 'denied', verdict } : { kind: 'failed' });
+        // Ανανέωση που απέτυχε για λόγο δικτύου ⇒ μένει η όψη που υπάρχει· ονομασμένη άρνηση ⇒ φαίνεται πάντα.
+        setState((current) => (verdict ? { kind: 'denied', verdict } : current.kind === 'ready' ? current : { kind: 'failed' }));
       });
     return () => { alive = false; };
-  }, [engagementId]);
+  }, [engagementId, generation]);
 
-  return state;
+  const reload = useCallback(() => setGeneration((g) => g + 1), []);
+  return { state, reload };
 }

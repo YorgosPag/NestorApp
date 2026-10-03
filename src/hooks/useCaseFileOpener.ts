@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * ADR-901 Φ4 — ο επαγγελματίας ανοίγει/κατεβάζει ένα τεκμήριο της υπόθεσης.
+ * ADR-901 Φ4 · Φ4.4 — ανοίγει/κατεβάζει ένα τεκμήριο της υπόθεσης: ο επαγγελματίας (μέσω της συμμετοχής του) **ή**
+ * ο οικοδεσπότης (μέσω της υπόθεσής του — και ό,τι του στάλθηκε). Ίδια συμπεριφορά, άλλη πόρτα.
  *
  * 🔑 Ο server δίνει σύνδεσμο 15′ και γράφει το ίχνος. Η **λήψη** πλοηγεί στον σύνδεσμο (`navigateDocument`):
  *    φέρει ήδη `Content-Disposition: attachment`, άρα η σελίδα **μένει** και το αρχείο κατεβαίνει, χωρίς blob
@@ -14,11 +15,22 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { navigateDocument } from '@/lib/browser/document-navigation';
-import { openEngagedCaseFile, type CaseFileLink } from '@/services/conveyance/conveyance-engagement-gateway';
+import { openEngagedCaseFile, openHostCaseFile, type CaseFileLink } from '@/services/conveyance/conveyance-engagement-gateway';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { EvidenceFile } from '@/types/conveyance-case';
 
 export type CaseFileOpenOutcome = 'opened' | 'unavailable';
+
+/** **Μέσω τίνος** ανοίγει: της δικής μου συμμετοχής ή της υπόθεσης του χώρου μου (οικοδεσπότης). */
+export type CaseFileTarget =
+  | { readonly kind: 'engagement'; readonly engagementId: string }
+  | { readonly kind: 'host'; readonly caseId: string };
+
+function requestLink(target: CaseFileTarget, fileId: string, mode: CaseFileMode): Promise<CaseFileLink> {
+  return target.kind === 'engagement'
+    ? openEngagedCaseFile(target.engagementId, fileId, mode)
+    : openHostCaseFile(target.caseId, fileId, mode);
+}
 
 /** Το τεκμήριο σε προεπισκόπηση **και** ο σύνδεσμός του: η «Λήψη» από τον διάλογο ξέρει ρητά ποιο αρχείο είναι. */
 export interface CaseFilePreview {
@@ -34,7 +46,8 @@ interface UseCaseFileOpenerReturn {
   readonly closePreview: () => void;
 }
 
-export function useCaseFileOpener(engagementId: string): UseCaseFileOpenerReturn {
+/** `target` πρέπει να είναι σταθερό ανάμεσα σε renders (`useMemo` στον καλούντα). */
+export function useCaseFileOpener(target: CaseFileTarget): UseCaseFileOpenerReturn {
   const [preview, setPreview] = useState<CaseFilePreview | null>(null);
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
   const inFlight = useRef<string | null>(null);
@@ -44,7 +57,7 @@ export function useCaseFileOpener(engagementId: string): UseCaseFileOpenerReturn
     inFlight.current = file.fileId;
     setBusyFileId(file.fileId);
     try {
-      const link = await openEngagedCaseFile(engagementId, file.fileId, mode);
+      const link = await requestLink(target, file.fileId, mode);
       if (mode === 'download') navigateDocument(link.url);
       else setPreview({ file, link });
       return 'opened';
@@ -54,7 +67,7 @@ export function useCaseFileOpener(engagementId: string): UseCaseFileOpenerReturn
       inFlight.current = null;
       setBusyFileId(null);
     }
-  }, [engagementId]);
+  }, [target]);
 
   const closePreview = useCallback(() => setPreview(null), []);
   return { preview, busyFileId, open, closePreview };
