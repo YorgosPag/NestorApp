@@ -33,7 +33,8 @@ import { deriveCaseChecklist } from '@/lib/conveyance/case-checklist';
 import { deriveFacts } from '@/lib/conveyance/derive-facts';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { ConveyanceCase, ConveyanceCaseView } from '@/types/conveyance-case';
-import { collectConveyanceEvidence } from './conveyance-evidence.server';
+import { collectCaseEvidence, HOST_EVIDENCE_VIEWER } from './conveyance-case-evidence.server';
+import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { closeCaseEngagements } from './conveyance-engagement-host.service';
 
@@ -54,12 +55,18 @@ type ConveyanceOutcome<T> = { readonly ok: true; readonly value: T } | { readonl
 
 const fail = <T>(failure: ConveyanceFailure): ConveyanceOutcome<T> => ({ ok: false, failure });
 
-/** Ο κατάλογος όπως τον βλέπει ο οικοδεσπότης — ο ΙΔΙΟΣ υπολογισμός με τον client. */
-async function buildView(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext): Promise<ConveyanceCaseView> {
-  const evidence = await collectConveyanceEvidence(db, record.companyId, record.subject, record.parties);
+/**
+ * Ο κατάλογος όπως τον βλέπει ο οικοδεσπότης — ο ΙΔΙΟΣ υπολογισμός με τον client. Φ4.5: μαζί η ενότητα «Ζήτησε
+ * έγγραφο» (παραλήπτες ανά γραμμή + τα αιτήματα της πλευράς του οικοδεσπότη), για **αυτόν** τον άνθρωπο του χώρου.
+ */
+async function buildView(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext, actor: ConveyanceActor): Promise<ConveyanceCaseView> {
+  const evidence = await collectCaseEvidence(db, record, HOST_EVIDENCE_VIEWER);
   const derivedFacts = deriveFacts(context.factSources);
   const checklist = deriveCaseChecklist({ record, derivedFacts, evidence, today: conveyanceToday(), viewer: 'host' });
-  return { conveyanceCase: record, state: effectiveCaseState(record.storedState, context.legalPhase), derivedFacts, evidence, checklist };
+  const state = effectiveCaseState(record.storedState, context.legalPhase);
+  const party = { role: 'host', uid: actor.uid } as const;
+  const documentRequests = await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs: Date.now() });
+  return { conveyanceCase: record, state, derivedFacts, evidence, checklist, documentRequests };
 }
 
 async function recordAudit(actor: ConveyanceActor, record: ConveyanceCase, action: AuditAction, changes: readonly AuditFieldChange[], name: string | null): Promise<void> {
@@ -91,7 +98,7 @@ export async function getConveyanceCaseView(
   const records = parsed.filter((record): record is ConveyanceCase => record !== null);
   if (records.length !== parsed.length) return fail({ kind: 'corrupt_case' });
   const latest = records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  return { ok: true, value: latest ? await buildView(db, latest, context) : null };
+  return { ok: true, value: latest ? await buildView(db, latest, context, actor) : null };
 }
 
 function newCase(actor: ConveyanceActor, context: ConveyanceSubjectContext, now: string): ConveyanceCase {
@@ -137,7 +144,7 @@ export async function openConveyanceCase(
   if (outcome.created) {
     await recordAudit(actor, outcome.record, 'created', [{ field: 'state', oldValue: null, newValue: 'open' }], context.propertyName);
   }
-  return { ok: true, value: { view: await buildView(db, outcome.record, context), created: outcome.created } };
+  return { ok: true, value: { view: await buildView(db, outcome.record, context, actor), created: outcome.created } };
 }
 
 /** Μία ανάγνωση υπόθεσης με σχήμα + ιδιοκτησία — ξένη ≡ ανύπαρκτη (ADR-742, καμία μαρτυρία ύπαρξης). */
@@ -164,7 +171,8 @@ export async function applyConveyanceCaseCommand(
   const ref = db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(initial.id);
   const context = await loadConveyanceSubject(db, actor.companyId, initial.subject.propertyId);
   if (!context) return fail({ kind: 'property_not_found' });
-  const evidence = await collectConveyanceEvidence(db, actor.companyId, initial.subject, initial.parties);
+  // Ίδιος δρόμος με την όψη ⇒ ο οικοδεσπότης ελέγχει (αποδέχεται/επιστρέφει) και ό,τι του **στάλθηκε** (Φ4.4).
+  const evidence = await collectCaseEvidence(db, initial, HOST_EVIDENCE_VIEWER);
 
   const result = await db.runTransaction(async (tx): Promise<ConveyanceOutcome<{ next: ConveyanceCase; changes: readonly AuditFieldChange[] }>> => {
     const current = ownedCase((await tx.get(ref)).data(), actor, initial.id);
@@ -186,5 +194,5 @@ export async function applyConveyanceCaseCommand(
   await recordAudit(actor, result.value.next, action, result.value.changes, context.propertyName);
   // ADR-862 §5.3.3 — η ΚΥΡΙΑ λήξη: κλείσιμο/ακύρωση ⇒ οι συμμετοχές επαγγελματιών παύουν (ιδεμποτές).
   await closeCaseEngagements(db, actor, result.value.next, context.propertyName, Date.now());
-  return { ok: true, value: await buildView(db, result.value.next, context) };
+  return { ok: true, value: await buildView(db, result.value.next, context, actor) };
 }

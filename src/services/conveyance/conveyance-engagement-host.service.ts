@@ -20,7 +20,7 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { planConsents, requiresAttestation } from '@/lib/conveyance/engagement-consent';
-import { effectiveCaseState } from '@/lib/conveyance/case-state';
+import { acceptsEngagements, effectiveCaseState } from '@/lib/conveyance/case-state';
 import { selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import { closeEngagementsForSubject, offerEngagement, transitionEngagement } from '@/lib/auth/engagement-write';
 import { LEGAL_ENGAGEMENT_ROLES, type ConsentBasis, type Engagement } from '@/types/engagement';
@@ -35,7 +35,6 @@ import { announceEngagementChanged } from './conveyance-engagement-notifier';
 import { nowISO } from '@/lib/date-local';
 import type { ConveyanceActor } from './conveyance-case.service';
 import {
-  acceptsEngagements,
   caseProjectId,
   caseSubject,
   engagementKeyOf,

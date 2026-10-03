@@ -14,6 +14,7 @@ import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { CaseActivityItem, CaseProfessionalSlot, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
+import type { ContributionSummary } from '@/types/conveyance-contribution';
 import { isEngagementVerdict, type ConsentBasis, type EngagementVerdict } from '@/types/engagement';
 import { isEngagementInvitationRefusal, type EngagementInvitationRefusal } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -48,6 +49,11 @@ export function revokeCaseInvitationRequest(caseId: string, role: LegalProfessio
   return apiClient.post(API_ROUTES.CONVEYANCE_CASES.INVITATION_REVOKE(caseId, role), {});
 }
 
+/** ADR-901 Φ4.4 — ο οικοδεσπότης ανοίγει τεκμήριο — και ό,τι του **στάλθηκε** (ζει στον χώρο του συντάκτη). */
+export function openHostCaseFile(caseId: string, fileId: string, mode: CaseFileMode): Promise<CaseFileLink> {
+  return apiClient.post(API_ROUTES.CONVEYANCE_CASES.CASE_FILE(caseId, fileId), { mode });
+}
+
 export function revokeCaseEngagementRequest(caseId: string, engagementId: string): Promise<{ readonly slots: readonly CaseProfessionalSlot[] }> {
   return apiClient.post(API_ROUTES.CONVEYANCE_CASES.ENGAGEMENT_REVOKE(caseId, engagementId), {});
 }
@@ -79,6 +85,31 @@ export interface CaseFileLink {
 
 export function openEngagedCaseFile(engagementId: string, fileId: string, mode: CaseFileMode): Promise<CaseFileLink> {
   return apiClient.post(API_ROUTES.ENGAGEMENTS.CASE_FILE(engagementId, fileId), { mode });
+}
+
+export interface ContributionRequest {
+  readonly checklistItemId: string;
+  readonly entryPointId: string;
+  readonly fileId: string;
+}
+
+export interface ContributionResponse {
+  readonly kind: 'issued' | 'already-issued' | 'withdrawn' | 'already-withdrawn';
+  readonly contribution: ContributionSummary;
+}
+
+/** ADR-901 Φ4.4 — στείλε μια έκδοση δικού μου αρχείου σε γραμμή της υπόθεσης (το ακροατήριο το ορίζει ο ρόλος). */
+export function issueContributionRequest(engagementId: string, request: ContributionRequest): Promise<ContributionResponse> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.CONTRIBUTIONS(engagementId), request);
+}
+
+export function withdrawContributionRequest(engagementId: string, contributionId: string): Promise<ContributionResponse> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.CONTRIBUTION_WITHDRAW(engagementId, contributionId), {});
+}
+
+/** ADR-901 Φ4.5 — «στείλε τη νέα έκδοση στους ίδιους»: ποια έκδοση φεύγει το αποφασίζει ο server (κεφαλή στοίβας). */
+export function reissueContributionRequest(engagementId: string, contributionId: string): Promise<ContributionResponse> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.CONTRIBUTION_REISSUE(engagementId, contributionId), {});
 }
 
 export function fetchEngagedCaseActivity(engagementId: string): Promise<{ readonly items: readonly CaseActivityItem[] }> {
@@ -117,6 +148,25 @@ export function offerRejectionOf(error: unknown): OfferRejection | null {
 
 export function respondRejectionOf(error: unknown): RespondRejection | null {
   return namedError(error, RESPOND_REJECTIONS);
+}
+
+/**
+ * Οι λόγοι που μια **αποστολή/απόσυρση/επανέκδοση** δεν έγινε — ίδιο λεξιλόγιο με τον κριτή (`ContributionRefusal`)
+ * και την επανέκδοση (`ReissueRefusal`, Φ4.5).
+ */
+export const CONTRIBUTION_REJECTIONS = [
+  'case-frozen',
+  'role-not-provider',
+  'not-contributable',
+  'entry-point-mismatch',
+  'not-found',
+  'superseded',
+  'no-newer-version',
+] as const;
+export type ContributionRejection = (typeof CONTRIBUTION_REJECTIONS)[number];
+
+export function contributionRejectionOf(error: unknown): ContributionRejection | null {
+  return namedError(error, CONTRIBUTION_REJECTIONS);
 }
 
 // =============================================================================

@@ -30,12 +30,12 @@ import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { declaredCredentialOf, latestOwnDeclaration, type CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import { deriveFacts } from '@/lib/conveyance/derive-facts';
-import type { ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type { ConveyanceCase, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { Engagement, EngagementDecision, EngagementVerdict } from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
-import { collectConveyanceEvidence, type EvidenceAudience } from './conveyance-evidence.server';
+import { collectCaseEvidence, HOST_EVIDENCE_VIEWER, type CaseEvidenceViewer } from './conveyance-case-evidence.server';
 import { contactCredentialHint } from './conveyance-professional.server';
+import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { listCaseParticipants } from './conveyance-case-participants.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { announceEngagementAnswered } from './conveyance-engagement-notifier';
@@ -63,18 +63,18 @@ function judge(engagement: Engagement, uid: string, nowMs: number): EngagementDe
   return decideEngagement({ engagement, uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs });
 }
 
-/** **Ποιος** κοιτά τον κατάλογο: ο ρόλος (`visibleTo`) και η εμβέλεια των τεκμηρίων που φτάνει. */
-export interface ChecklistViewer {
-  readonly role: ConveyanceRole | 'host';
-  readonly audience: EvidenceAudience;
-}
+/** **Ποιος** κοιτά τον κατάλογο — ο θεατής του ΕΝΟΣ συλλέκτη τεκμηρίων (`conveyance-case-evidence.server`). */
+export type ChecklistViewer = CaseEvidenceViewer;
 
-/** Ο οικοδεσπότης: όλες οι γραμμές, όλα τα ενεργά τεκμήρια. */
-export const HOST_CHECKLIST_VIEWER: ChecklistViewer = { role: 'host', audience: 'host' };
+/** Ο οικοδεσπότης: όλες οι γραμμές, όλα τα ενεργά τεκμήρια, και ό,τι του στάλθηκε. */
+export const HOST_CHECKLIST_VIEWER: ChecklistViewer = HOST_EVIDENCE_VIEWER;
 
-/** Ο επαγγελματίας μιας συμμετοχής: ο ρόλος της και το πρότυπό της. */
-export function engagementChecklistViewer(engagement: Pick<Engagement, 'role' | 'template'>): ChecklistViewer {
-  return { role: engagement.role, audience: engagement.template };
+/**
+ * Ο επαγγελματίας μιας συμμετοχής: ο ρόλος της, το πρότυπό της, και ποιος είναι (τα δικά του transmittals).
+ * Χωρίς `uid` (προεπισκόπηση πρόσκλησης — ο προσκεκλημένος δεν έχει ακόμη λογαριασμό) ⇒ τίποτα δεν είναι «δικό του».
+ */
+export function engagementChecklistViewer(engagement: Pick<Engagement, 'role' | 'template'> & { readonly uid?: string }): ChecklistViewer {
+  return { role: engagement.role, audience: engagement.template, uid: engagement.uid ?? null };
 }
 
 /**
@@ -87,7 +87,7 @@ export async function checklistForRole(
   context: ConveyanceSubjectContext,
   viewer: ChecklistViewer,
 ) {
-  const evidence = await collectConveyanceEvidence(db, record.companyId, record.subject, record.parties, viewer.audience);
+  const evidence = await collectCaseEvidence(db, record, viewer);
   return deriveCaseChecklist({
     record,
     derivedFacts: deriveFacts(context.factSources),
@@ -240,17 +240,22 @@ export async function getEngagedCaseView(db: Firestore, uid: string, engagementI
   const resolution = await resolveEngagedCase(db, uid, engagementId, nowMs);
   if (!resolution.ok) return resolution;
   const { engagement, record, context } = resolution.access;
+  const state = effectiveCaseState(record.storedState, context.legalPhase);
+  const checklist = await engagedChecklistOf(db, resolution.access);
+  const party = { role: engagement.role, uid } as const;
   return {
     ok: true,
     view: {
       engagementId: engagement.id,
       role: engagement.role,
       caseId: record.id,
-      state: effectiveCaseState(record.storedState, context.legalPhase),
+      state,
       propertyName: context.propertyName,
       targetSigningDate: record.targetSigningDate,
-      checklist: await engagedChecklistOf(db, resolution.access),
+      checklist,
       participants: await listCaseParticipants(db, engagement, nowMs),
+      // Φ4.5 — «Ζήτησε έγγραφο»: ο ΙΔΙΟΣ κριτής με τον γραφέα, πάνω στις γραμμές που ήδη βλέπει.
+      documentRequests: await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs }),
     },
   };
 }

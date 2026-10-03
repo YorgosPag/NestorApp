@@ -21,6 +21,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { projectCaseActivity } from '@/lib/conveyance/case-activity';
 import type { CaseActivityItem } from '@/types/conveyance-case';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { readCaseContributions } from './conveyance-contribution-store.server';
 import { resolveEngagedCase, type EngagedCaseResolution } from './conveyance-engagement-access.service';
 
 /** Πόσες πρόσφατες εγγραφές ανά οντότητα διαβάζονται — η σελίδα δείχνει τις νεότερες. */
@@ -35,12 +36,13 @@ export async function getCaseActivity(db: Firestore, uid: string, engagementId: 
   const resolution = await resolveEngagedCase(db, uid, engagementId, nowMs);
   if (!resolution.ok) return resolution;
   const { engagement, record } = resolution.access;
-  const [caseEntries, engagementEntries] = await Promise.all([
+  const [caseEntries, engagementEntries, contributions] = await Promise.all([
     EntityAuditService.readCompanyEntityEntries({ companyId: record.companyId, entityType: 'conveyance_case', entityId: record.id, limit: ACTIVITY_PAGE }),
     EntityAuditService.readCompanyEntityEntries({ companyId: record.companyId, entityType: 'engagement', entityId: engagement.id, limit: ACTIVITY_PAGE }),
+    readCaseContributions(db, record),
   ]);
-  if (caseEntries === null || engagementEntries === null) return { ok: false, rejection: 'unknown' };
-  // Φ4.4: τα αρχεία που **έγραψε** ο ίδιος (συνεισφορές) — ως τότε κανένα.
-  const ownFileIds = new Set<string>();
-  return { ok: true, items: projectCaseActivity([...caseEntries, ...engagementEntries], { uid, ownFileIds }) };
+  if (caseEntries === null || engagementEntries === null || contributions === null) return { ok: false, rejection: 'unknown' };
+  // Φ4.4: τα αρχεία που **έστειλε** ο ίδιος (και αποσυρμένα — παραμένουν δικά του) ⇒ «ποιος άνοιξε τα δικά μου».
+  const ownFiles = new Map(contributions.filter((c) => c.authorUid === uid).map((c) => [c.file.fileId, c.file.displayName]));
+  return { ok: true, items: projectCaseActivity([...caseEntries, ...engagementEntries], { uid, role: engagement.role, ownFiles }) };
 }
