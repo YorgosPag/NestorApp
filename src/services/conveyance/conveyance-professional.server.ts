@@ -22,8 +22,11 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { isAuthUserNotFound } from '@/lib/auth/firebase-auth-errors';
+import { legalRoleCredentialHint } from '@/lib/contacts/legal-professional-credentials';
 import { primaryEmailOf } from '@/lib/contacts/primary-email';
 import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
+import type { PersonaData } from '@/types/contacts/personas';
+import type { CredentialHint } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 export type CaseProfessional =
@@ -33,7 +36,13 @@ export type CaseProfessional =
   /** Η επαφή δεν έχει email — **καμία** σιωπηλή παράλειψη (κλείνει το Κ-2 του ADR-901 §2.2). */
   | { readonly outcome: 'no-email'; readonly contactId: string }
   /** Υπάρχει email, όχι λογαριασμός ⇒ η θέση χρειάζεται **πρόσκληση** (ADR-901 Φ3). */
-  | { readonly outcome: 'needs-invitation'; readonly contactId: string; readonly email: string };
+  | {
+      readonly outcome: 'needs-invitation';
+      readonly contactId: string;
+      readonly email: string;
+      /** Ό,τι ξέρει η επαφή για τον αριθμό μητρώου — **προσυμπλήρωση** της δήλωσης (Ε-4), ποτέ δήλωση. */
+      readonly credentialHint: CredentialHint;
+    };
 
 /** Η **ενεργή** σύνδεση επαφής του ρόλου στο ακίνητο — ο ορισμός του `ProfessionalsCard`. */
 async function appointedContactId(
@@ -51,12 +60,19 @@ async function appointedContactId(
   return link && typeof link.sourceContactId === 'string' ? link.sourceContactId : null;
 }
 
-/** Το κύριο email της επαφής — **μόνο** αν η επαφή ανήκει στον μισθωτή (ξένη ≡ ανύπαρκτη). */
-async function contactEmail(db: Firestore, companyId: string, contactId: string): Promise<string | null> {
+/** Το κύριο email και οι persona της επαφής — **μόνο** αν η επαφή ανήκει στον μισθωτή (ξένη ≡ ανύπαρκτη). */
+async function readContact(
+  db: Firestore,
+  companyId: string,
+  contactId: string,
+): Promise<{ readonly email: string | null; readonly personas: readonly PersonaData[] } | null> {
   const snapshot = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
   const data = snapshot.data();
   if (!data || data.companyId !== companyId) return null;
-  return primaryEmailOf(Array.isArray(data.emails) ? data.emails : undefined);
+  return {
+    email: primaryEmailOf(Array.isArray(data.emails) ? data.emails : undefined),
+    personas: Array.isArray(data.personas) ? (data.personas as PersonaData[]) : [],
+  };
 }
 
 /** Ο λογαριασμός με αυτό το email — `null` αν δεν υπάρχει ή είναι απενεργοποιημένος. */
@@ -79,8 +95,24 @@ export async function resolveCaseProfessional(
 ): Promise<CaseProfessional> {
   const contactId = await appointedContactId(db, companyId, propertyId, role);
   if (!contactId) return { outcome: 'not-appointed' };
-  const email = await contactEmail(db, companyId, contactId);
-  if (!email) return { outcome: 'no-email', contactId };
+  const contact = await readContact(db, companyId, contactId);
+  const email = contact?.email ?? null;
+  if (!contact || !email) return { outcome: 'no-email', contactId };
   const uid = await accountUid(email);
-  return uid ? { outcome: 'account', contactId, email, uid } : { outcome: 'needs-invitation', contactId, email };
+  if (uid) return { outcome: 'account', contactId, email, uid };
+  return { outcome: 'needs-invitation', contactId, email, credentialHint: legalRoleCredentialHint(role, contact.personas) };
+}
+
+/**
+ * Ό,τι ξέρει το βιβλίο του οικοδεσπότη για τον αριθμό μητρώου της επαφής του διορισμού. Είναι η **εφεδρεία**
+ * της προσυμπλήρωσης στο «Αναλαμβάνω» (ADR-901 Φ4), και ποτέ δήλωση.
+ */
+export async function contactCredentialHint(
+  db: Firestore,
+  companyId: string,
+  contactId: string,
+  role: LegalProfessionalRole,
+): Promise<CredentialHint | null> {
+  const contact = await readContact(db, companyId, contactId);
+  return contact ? legalRoleCredentialHint(role, contact.personas) : null;
 }

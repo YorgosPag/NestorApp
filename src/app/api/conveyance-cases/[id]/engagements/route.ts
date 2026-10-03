@@ -4,6 +4,8 @@
  * GET  /api/conveyance-cases/{id}/engagements  → οι τρεις θέσεις (ορισμός · λογαριασμός · συμμετοχή)
  * POST /api/conveyance-cases/{id}/engagements { role, attestedBasis? } → **πρόταση** πρόσβασης
  *      - ιδεμποτής: ίδιος άνθρωπος, ίδια θέση ⇒ 200 χωρίς νέα εγγραφή · νέα ⇒ 201
+ *      - ADR-901 Φ3: επαγγελματίας **χωρίς λογαριασμό** ⇒ **πρόσκληση με email** (201, `invited` = έκβαση αποστολής)·
+ *        ξανά POST = **επαναποστολή** (νέο token/λήξη, η παλιά ανακαλείται). Όριο ρυθμού **SENSITIVE**: στέλνει email.
  *      - ονομασμένες αρνήσεις ⇒ 409/422 με `rejection` (ποτέ σιωπή: «χρειάζεται πρόσκληση» ≠ «δεν ορίστηκε»)
  *
  * Δικαιώματα: `legal:conveyance:view` (GET) · `legal:conveyance:manage` (POST), με το έργο του ακινήτου.
@@ -16,7 +18,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -51,7 +53,6 @@ const REJECTION_STATUS: Readonly<Record<CaseOfferRejection, 409 | 422>> = {
   'no-project': 409,
   'not-appointed': 409,
   'no-email': 409,
-  'needs-invitation': 409,
   'slot-occupied': 409,
   'role-conflict': 409,
   unreadable: 409,
@@ -73,7 +74,7 @@ export const GET = withStandardRateLimit(
   }),
 );
 
-export const POST = withStandardRateLimit(
+export const POST = withSensitiveRateLimit(
   withAuth(async (request: NextRequest, ctx: AuthContext, cache: PermissionCache, segmentData?: Segment) => {
     const { id } = await segmentData!.params;
     const parsed = safeParseBody(offerSchema, await request.json());
@@ -89,6 +90,6 @@ export const POST = withStandardRateLimit(
       // Ίδιο σχήμα άρνησης με τα `/api/engagements/*`: ο πελάτης διαβάζει τον λόγο από το `error`.
       return NextResponse.json({ success: false, error: outcome.rejection }, { status: REJECTION_STATUS[outcome.rejection] });
     }
-    return apiSuccess({ slots: outcome.slots }, undefined, undefined, outcome.created ? 201 : 200);
+    return apiSuccess({ slots: outcome.slots, invited: outcome.invited }, undefined, undefined, outcome.created ? 201 : 200);
   }),
 );

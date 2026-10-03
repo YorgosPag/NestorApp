@@ -8,6 +8,10 @@
 
 import 'server-only';
 
+import type { Firestore } from 'firebase-admin/firestore';
+
+import { engagementsCollection, engagementsForSubjectQuery } from '@/lib/auth/engagement-ref';
+import { parseEngagement } from '@/lib/auth/engagement-schema';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { CaseEngagementSummary, ConveyanceCase, ConveyanceCaseState } from '@/types/conveyance-case';
@@ -21,6 +25,15 @@ export function caseSubject(caseId: string): EngagementSubject {
 /** Το έργο της υπόθεσης — **το** σημείο όπου ζουν οι συμμετοχές της (ADR-862 §5.3.1). */
 export function caseProjectId(record: ConveyanceCase): string | null {
   return record.subject.projectId;
+}
+
+/**
+ * **Όλες** οι συμμετοχές μιας υπόθεσης (κάθε κατάστασης). Οι μη αναγνώσιμες παραλείπονται, γιατί δεν δίνουν
+ * πρόσβαση. Είναι η ΜΙΑ ανάγνωση για τον οικοδεσπότη (θέσεις), τους «Συμμετέχοντες» και τις ειδοποιήσεις λήξεων.
+ */
+export async function listCaseEngagements(db: Firestore, hostCompanyId: string, projectId: string, caseId: string): Promise<Engagement[]> {
+  const snapshot = await engagementsForSubjectQuery(engagementsCollection(db, hostCompanyId, projectId), caseSubject(caseId)).get();
+  return snapshot.docs.map((doc) => parseEngagement(doc.data())).filter((e): e is Engagement => e !== null);
 }
 
 /** Το κλειδί μιας συμμετοχής **από την ίδια** — ποτέ από το αίτημα. */
@@ -48,6 +61,7 @@ export function toEngagementSummary(engagement: Engagement): CaseEngagementSumma
     closedAt: engagement.closedAt,
     expiresAt: engagement.expiresAt,
     consents: engagement.consents,
+    declaredCredential: engagement.declaredCredential ?? null,
   };
 }
 
@@ -78,4 +92,16 @@ export async function recordEngagementAudit(params: {
 /** Η αλλαγή κατάστασης ως πεδίο ίχνους. */
 export function stateChange(before: Engagement | null, after: Engagement): AuditFieldChange {
   return { field: 'state', oldValue: before?.state ?? null, newValue: after.state };
+}
+
+/**
+ * Οι αλλαγές μιας **απάντησης** (αποδοχή/άρνηση) ως πεδία ίχνους: η κατάσταση **και** η δήλωση ιδιότητας που
+ * δόθηκε μαζί της (Ε-4). Είναι **ένα** σημείο για τις δύο διαδρομές (πρόσκληση · πρόταση), ώστε το ίχνος να
+ * μη διαφέρει ανάλογα με το πώς ήρθε ο επαγγελματίας.
+ */
+export function answerChanges(before: Engagement | null, after: Engagement): AuditFieldChange[] {
+  const credential = after.declaredCredential;
+  if (!credential || before?.declaredCredential === credential) return [stateChange(before, after)];
+  const declared = credential.chapter ? `${credential.number} · ${credential.chapter}` : credential.number;
+  return [stateChange(before, after), { field: 'declaredCredential', oldValue: null, newValue: declared }];
 }

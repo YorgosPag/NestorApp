@@ -110,7 +110,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "201279151936402d713bef90763556a8cb7d895a70739339ff195ad50ba217f2",
+  "inputsSha256": "d3e5a4f23f372519c3980d6c455bf37df0462b0823d201db76409d56ec6836c4",
   "languages": [
     "el"
   ],
@@ -1463,9 +1463,10 @@
     "src/types/auto-save.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/boq/units.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/communications.ts": "ab607dae93f4f9fa45c1f8321402d47ba279eaf2bf7f8c780c71193627dbf73d",
-    "src/types/conveyance-case.ts": "7fb6ec215696308a92c08f4e0b776bac3e6f3e73aa2edcae802e993190ec8643",
+    "src/types/conveyance-case.ts": "96cafa8ba2a3bf7e472d3bee1419c561f2d9a46cb232351b6a22c63f2bfdd0f9",
     "src/types/dxf-text-justification.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/email-delivery.ts": "7ec55752b5db731d330f42fc2b86f9610d4a3a146cb36488d565cafa87b32cd6",
+    "src/types/engagement-invitation.ts": "db5a02afff37d0ab1030874c295e4c15771848a8d7853fecd5cab7122704a6b7",
     "src/types/engagement.ts": "4fd260c2cb639d1d9832f7a40be03014072defe7f635896abf40b82e2784bf41",
     "src/types/first-contact-invitation.ts": "c31f489a5c656b22862903d8133e2bb8c306177d38c31d7bc9f5c8eda1250356",
     "src/types/first-contact.ts": "4b13090991ed18e3ec7aa61c900107042849a0bec3b735746e5df7373a7b13be",
@@ -10309,7 +10310,7 @@
     "src/config/audit-value-catalogs.ts": "df5be84486b544bf20d29d3305976c2d9cace463cae9de14c8ddeb8afa3c4ae0",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "8ffd4c46afe51ba251106c7e980f144796942fb8ab8c603b96580e55a91663b8",
+    "src/config/domain-constants.ts": "77ddc5fc6afd556efd28833a7e79cdec489753b20c0fb6f7098ac1865ce4e9c3",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/error-reporting.ts": "d3788019febf32f4a488395c75b897af501fe2a869bb82059d107dbcd076a74d",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",

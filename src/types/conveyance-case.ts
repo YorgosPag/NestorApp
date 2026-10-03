@@ -16,7 +16,8 @@
  * @see ADR-901
  */
 
-import type { EngagementConsent, EngagementState, EngagementVerdict } from '@/types/engagement';
+import type { CaseInvitationSummary, CredentialHint } from '@/types/engagement-invitation';
+import type { DeclaredCredential, EngagementConsent, EngagementState, EngagementVerdict } from '@/types/engagement';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import type {
   ChecklistItem,
@@ -226,6 +227,8 @@ export interface CaseEngagementSummary {
   readonly closedAt: string | null;
   readonly expiresAt: string;
   readonly consents: readonly EngagementConsent[];
+  /** ADR-901 Ε-4 — η ιδιότητα όπως τη **δήλωσε** ο επαγγελματίας· εμφανίζεται ως «(δηλωμένο)». */
+  readonly declaredCredential: DeclaredCredential | null;
 }
 
 /** Μία **θέση** επαγγελματία στην υπόθεση — ο ορισμός, η συμμετοχή, και αν θέλει δηλωμένη συναίνεση. */
@@ -234,7 +237,22 @@ export interface CaseProfessionalSlot {
   readonly appointment: ProfessionalAppointment;
   /** Η τρέχουσα συμμετοχή της θέσης (ζωντανή, αλλιώς η πιο πρόσφατη) — `null` αν δεν προτάθηκε ποτέ. */
   readonly engagement: CaseEngagementSummary | null;
+  /** ADR-901 Φ3 — η πιο πρόσφατη πρόσκληση με email της θέσης — `null` αν δεν στάλθηκε ποτέ. */
+  readonly invitation: CaseInvitationSummary | null;
   readonly requiresAttestation: boolean;
+}
+
+/**
+ * ADR-901 Φ4 — ένας επαγγελματίας της υπόθεσης όπως τον βλέπουν οι **άλλοι**. ⛔ **Κανένα** email/uid/συναίνεση
+ * (ελαχιστοποίηση ΓΚΠΔ): μόνο ρόλος, όνομα και η ιδιότητα **όπως δηλώθηκε** (Ε-4, «(δηλωμένο)»).
+ */
+export interface CaseParticipantView {
+  readonly role: LegalProfessionalRole;
+  /** Το όνομα του λογαριασμού — `null` αν δεν έχει δηλωθεί (ποτέ εφεδρεία στο email). */
+  readonly displayName: string | null;
+  readonly declaredCredential: DeclaredCredential | null;
+  /** Είναι ο ίδιος ο θεατής. */
+  readonly isViewer: boolean;
 }
 
 /**
@@ -250,6 +268,23 @@ export interface EngagedCaseView {
   readonly propertyName: string | null;
   readonly targetSigningDate: string | null;
   readonly checklist: DerivedChecklist;
+  /** ADR-901 Φ4 — όσοι συμμετέχουν **τώρα** (μαζί με τον θεατή), με τη δηλωμένη ιδιότητά τους. */
+  readonly participants: readonly CaseParticipantView[];
+}
+
+/**
+ * ADR-901 Φ4 §5.9 — μία γραμμή του ίχνους όπως τη βλέπει ο **επαγγελματίας**. ⛔ Κανένα όνομα/email άλλου:
+ * ο άλλος φαίνεται **μόνο** με τον ρόλο του (`actorRole`).
+ */
+export interface CaseActivityItem {
+  readonly id: string;
+  readonly at: string;
+  readonly kind: 'viewed' | 'downloaded' | 'answered';
+  readonly documentName: string | null;
+  /** Την έκανε ο ίδιος ο θεατής. */
+  readonly byViewer: boolean;
+  /** Ο ρόλος όποιου άνοιξε το τεκμήριο — `null` για ενέργειες χωρίς τεκμήριο. */
+  readonly actorRole: LegalProfessionalRole | null;
 }
 
 /** Μία κάρτα στα «Οι υποθέσεις μου» (ADR-901 §5.4). */
@@ -265,5 +300,10 @@ export interface MyCaseCard {
   /** Μόνο για **ενεργή** συμμετοχή — πρόταση δεν βλέπει τίποτα από την υπόθεση (Entra). */
   readonly summary: ChecklistSummary | null;
   readonly targetSigningDate: string | null;
+  /**
+   * ADR-901 Φ4 — η **προσυμπλήρωση** της δήλωσης ιδιότητας για το «Αναλαμβάνω»: πρώτα η πιο πρόσφατη δήλωση
+   * του ίδιου, μετά το βιβλίο του οικοδεσπότη. Υπάρχει **μόνο** σε πρόταση `offered`.
+   */
+  readonly credentialHint: CredentialHint | null;
 }
 

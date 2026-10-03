@@ -23,18 +23,23 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engagement-read';
-import { transitionEngagement } from '@/lib/auth/engagement-write';
+import { transitionEngagement, type EngagementTransition } from '@/lib/auth/engagement-write';
 import { deriveCaseChecklist } from '@/lib/conveyance/case-checklist';
 import { effectiveCaseState } from '@/lib/conveyance/case-state';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
+import { declaredCredentialOf, latestOwnDeclaration, type CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import { deriveFacts } from '@/lib/conveyance/derive-facts';
+import type { ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type { ConveyanceCase, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { Engagement, EngagementDecision, EngagementVerdict } from '@/types/engagement';
-import { collectConveyanceEvidence } from './conveyance-evidence.server';
+import type { CredentialHint } from '@/types/engagement-invitation';
+import { collectConveyanceEvidence, type EvidenceAudience } from './conveyance-evidence.server';
+import { contactCredentialHint } from './conveyance-professional.server';
+import { listCaseParticipants } from './conveyance-case-participants.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { announceEngagementAnswered } from './conveyance-engagement-notifier';
-import { engagementKeyOf, recordEngagementAudit, stateChange } from './conveyance-engagement-support';
+import { answerChanges, engagementKeyOf, recordEngagementAudit } from './conveyance-engagement-support';
 
 // =============================================================================
 // ΚΟΙΝΑ
@@ -58,23 +63,59 @@ function judge(engagement: Engagement, uid: string, nowMs: number): EngagementDe
   return decideEngagement({ engagement, uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs });
 }
 
-/** Ο κατάλογος όπως τον βλέπει **αυτός ο ρόλος**, πάνω σε τεκμήρια που φτάνει **αυτό το πρότυπο**. */
-async function engagedChecklist(db: Firestore, engagement: Engagement, record: ConveyanceCase, context: ConveyanceSubjectContext) {
-  const evidence = await collectConveyanceEvidence(db, record.companyId, record.subject, record.parties, engagement.template);
+/** **Ποιος** κοιτά τον κατάλογο: ο ρόλος (`visibleTo`) και η εμβέλεια των τεκμηρίων που φτάνει. */
+export interface ChecklistViewer {
+  readonly role: ConveyanceRole | 'host';
+  readonly audience: EvidenceAudience;
+}
+
+/** Ο οικοδεσπότης: όλες οι γραμμές, όλα τα ενεργά τεκμήρια. */
+export const HOST_CHECKLIST_VIEWER: ChecklistViewer = { role: 'host', audience: 'host' };
+
+/** Ο επαγγελματίας μιας συμμετοχής: ο ρόλος της και το πρότυπό της. */
+export function engagementChecklistViewer(engagement: Pick<Engagement, 'role' | 'template'>): ChecklistViewer {
+  return { role: engagement.role, audience: engagement.template };
+}
+
+/**
+ * Ο κατάλογος όπως τον βλέπει **αυτός ο θεατής** — ο ΕΝΑΣ τρόπος server-side: τον ζητούν η υπόθεση του
+ * επαγγελματία, η πρόσκληση με email (μετρήσεις, ADR-901 Φ3 §5.6) **και** οι ειδοποιήσεις λήξεων (Φ4).
+ */
+export async function checklistForRole(
+  db: Firestore,
+  record: ConveyanceCase,
+  context: ConveyanceSubjectContext,
+  viewer: ChecklistViewer,
+) {
+  const evidence = await collectConveyanceEvidence(db, record.companyId, record.subject, record.parties, viewer.audience);
   return deriveCaseChecklist({
     record,
     derivedFacts: deriveFacts(context.factSources),
     evidence,
     today: conveyanceToday(),
-    viewer: engagement.role,
+    viewer: viewer.role,
   });
+}
+
+function engagedChecklist(db: Firestore, engagement: Engagement, record: ConveyanceCase, context: ConveyanceSubjectContext) {
+  return checklistForRole(db, record, context, engagementChecklistViewer(engagement));
 }
 
 // =============================================================================
 // «ΟΙ ΥΠΟΘΕΣΕΙΣ ΜΟΥ»
 // =============================================================================
 
-async function cardOf(db: Firestore, engagement: Engagement, verdict: EngagementVerdict): Promise<MyCaseCard> {
+/**
+ * Η προσυμπλήρωση της δήλωσης για **πρόταση** που περιμένει απάντηση: πρώτα η δική του πιο πρόσφατη δήλωση,
+ * μετά το βιβλίο του οικοδεσπότη. Για κάθε άλλη κατάσταση `null` (δεν υπάρχει τι να δηλωθεί).
+ */
+async function offerCredentialHint(db: Firestore, engagement: Engagement, history: readonly Engagement[]): Promise<CredentialHint | null> {
+  if (engagement.state !== 'offered') return null;
+  return latestOwnDeclaration(history, engagement.role)
+    ?? contactCredentialHint(db, engagement.hostCompanyId, engagement.origin.contactId, engagement.role);
+}
+
+async function cardOf(db: Firestore, engagement: Engagement, verdict: EngagementVerdict, history: readonly Engagement[]): Promise<MyCaseCard> {
   const record = await readCaseOf(db, engagement);
   const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId) : null;
   const engaged = isEngaged(verdict) && record !== null && context !== null;
@@ -90,6 +131,7 @@ async function cardOf(db: Firestore, engagement: Engagement, verdict: Engagement
     propertyName: context?.propertyName ?? null,
     caseState: record && context ? effectiveCaseState(record.storedState, context.legalPhase) : null,
     summary: checklist?.summary ?? null,
+    credentialHint: await offerCredentialHint(db, engagement, history),
     targetSigningDate: engaged ? record.targetSigningDate : null,
   };
 }
@@ -105,7 +147,7 @@ export async function listMyCases(db: Firestore, uid: string, nowMs: number): Pr
   const current = [...byCase.values()]
     .map((history) => selectCurrentEngagement(history).engagement)
     .filter((e): e is Engagement => e !== null);
-  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict)));
+  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, list.engagements)));
   return { ok: true, cards: [...cards].sort((a, b) => b.offeredAt.localeCompare(a.offeredAt)) };
 }
 
@@ -117,23 +159,29 @@ export type RespondOutcome =
   | { readonly ok: true; readonly card: MyCaseCard }
   | { readonly ok: false; readonly rejection: 'not-found' | 'unknown' | 'offer-expired' | 'not-allowed' };
 
+function transitionOf(own: Engagement, uid: string, answer: CaseEngagementAnswer, nowMs: number): EngagementTransition {
+  return answer.decision === 'accept'
+    ? { kind: 'accept', byUid: uid, declaredCredential: declaredCredentialOf(own.role, answer.credential, new Date(nowMs).toISOString()) }
+    : { kind: 'decline', byUid: uid };
+}
+
 /** «Αναλαμβάνω» / «Δεν αναλαμβάνω» — **μόνο** ο ίδιος, **μόνο** σε πρόταση. Ιδεμποτές. */
 export async function respondToCaseEngagement(
   db: Firestore,
   actor: { readonly uid: string; readonly email: string | null },
   engagementId: string,
-  accept: boolean,
+  answer: CaseEngagementAnswer,
   nowMs: number,
 ): Promise<RespondOutcome> {
   const own = await findOwnEngagement(db, actor.uid, engagementId);
   if (own === 'unknown') return { ok: false, rejection: 'unknown' };
   if (!own) return { ok: false, rejection: 'not-found' };
-  const outcome = await transitionEngagement(db, engagementKeyOf(own), { kind: accept ? 'accept' : 'decline', byUid: actor.uid }, nowMs);
+  const outcome = await transitionEngagement(db, engagementKeyOf(own), transitionOf(own, actor.uid, answer, nowMs), nowMs);
   if (outcome.outcome === 'not-found') return { ok: false, rejection: 'not-found' };
   if (outcome.outcome === 'not-allowed' || outcome.outcome === 'offer-expired') return { ok: false, rejection: outcome.outcome };
   const after = outcome.outcome === 'changed' ? outcome.after : outcome.engagement;
   if (outcome.outcome === 'changed') await recordAnswer(db, actor, outcome.before, after);
-  return { ok: true, card: await cardOf(db, after, judge(after, actor.uid, nowMs).verdict) };
+  return { ok: true, card: await cardOf(db, after, judge(after, actor.uid, nowMs).verdict, []) };
 }
 
 /** Ίχνος στο βιβλίο του οικοδεσπότη + ειδοποίηση όποιου πρότεινε. */
@@ -141,7 +189,7 @@ async function recordAnswer(db: Firestore, actor: { readonly uid: string; readon
   const record = await readCaseOf(db, after);
   const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId) : null;
   const name = context?.propertyName ?? null;
-  await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: [stateChange(before, after)], performedBy: actor.uid, performedByName: actor.email, entityName: name });
+  await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: answerChanges(before, after), performedBy: actor.uid, performedByName: actor.email, entityName: name });
   if (record) await announceEngagementAnswered(after, record.subject.propertyId, name);
 }
 
@@ -149,14 +197,24 @@ async function recordAnswer(db: Firestore, actor: { readonly uid: string; readon
 // Η ΥΠΟΘΕΣΗ
 // =============================================================================
 
-export type EngagedCaseOutcome =
-  | { readonly ok: true; readonly view: EngagedCaseView }
+/** Η υπόθεση **μέσω** της δικής μου, ενεργής **τώρα**, συμμετοχής: η συμμετοχή · η πράξη · το πλαίσιο του ακινήτου. */
+export interface EngagedCaseAccess {
+  readonly engagement: Engagement;
+  readonly record: ConveyanceCase;
+  readonly context: ConveyanceSubjectContext;
+}
+
+export type EngagedCaseResolution =
+  | { readonly ok: true; readonly access: EngagedCaseAccess }
   /** Η **δική του** συμμετοχή, χωρίς πρόσβαση τώρα — ονομασμένος λόγος (offered · revoked · expired · …). */
   | { readonly ok: false; readonly rejection: 'denied'; readonly verdict: EngagementVerdict }
   | { readonly ok: false; readonly rejection: 'not-found' | 'unknown' };
 
-/** Η υπόθεση μέσω της συμμετοχής — **ποτέ** το ωμό έγγραφο. */
-export async function getEngagedCaseView(db: Firestore, uid: string, engagementId: string, nowMs: number): Promise<EngagedCaseOutcome> {
+/**
+ * **Ο ΕΝΑΣ δρόμος** κάθε ανάγνωσης του επαγγελματία (όψη · αρχεία · ίχνος): δική μου συμμετοχή → κρίση **ανά
+ * αίτημα** (`decideEngagement`) → η υπόθεση **στον μισθωτή της συμμετοχής**. Δεύτερος δρόμος = δεύτερος κριτής.
+ */
+export async function resolveEngagedCase(db: Firestore, uid: string, engagementId: string, nowMs: number): Promise<EngagedCaseResolution> {
   const own = await findOwnEngagement(db, uid, engagementId);
   if (own === 'unknown') return { ok: false, rejection: 'unknown' };
   if (!own) return { ok: false, rejection: 'not-found' };
@@ -165,16 +223,34 @@ export async function getEngagedCaseView(db: Firestore, uid: string, engagementI
   const record = await readCaseOf(db, own);
   const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId) : null;
   if (!record || !context) return { ok: false, rejection: 'not-found' };
+  return { ok: true, access: { engagement: own, record, context } };
+}
+
+/** Ο κατάλογος της πρόσβασης — φιλτραρισμένος ανά ρόλο και εμβέλεια. */
+export function engagedChecklistOf(db: Firestore, access: EngagedCaseAccess) {
+  return engagedChecklist(db, access.engagement, access.record, access.context);
+}
+
+export type EngagedCaseOutcome =
+  | { readonly ok: true; readonly view: EngagedCaseView }
+  | Extract<EngagedCaseResolution, { ok: false }>;
+
+/** Η υπόθεση μέσω της συμμετοχής — **ποτέ** το ωμό έγγραφο. */
+export async function getEngagedCaseView(db: Firestore, uid: string, engagementId: string, nowMs: number): Promise<EngagedCaseOutcome> {
+  const resolution = await resolveEngagedCase(db, uid, engagementId, nowMs);
+  if (!resolution.ok) return resolution;
+  const { engagement, record, context } = resolution.access;
   return {
     ok: true,
     view: {
-      engagementId: own.id,
-      role: own.role,
+      engagementId: engagement.id,
+      role: engagement.role,
       caseId: record.id,
       state: effectiveCaseState(record.storedState, context.legalPhase),
       propertyName: context.propertyName,
       targetSigningDate: record.targetSigningDate,
-      checklist: await engagedChecklist(db, own, record, context),
+      checklist: await engagedChecklistOf(db, resolution.access),
+      participants: await listCaseParticipants(db, engagement, nowMs),
     },
   };
 }

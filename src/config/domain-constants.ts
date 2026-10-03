@@ -966,6 +966,8 @@ export const API_ROUTES = {
     ENGAGEMENTS: (id: string) => `/api/conveyance-cases/${id}/engagements` as const,
     ENGAGEMENT_REVOKE: (id: string, engagementId: string) =>
       `/api/conveyance-cases/${id}/engagements/${engagementId}/revoke` as const,
+    // ADR-901 Φ3 — ακύρωση της εκκρεμούς πρόσκλησης με email μιας θέσης.
+    INVITATION_REVOKE: (id: string, role: string) => `/api/conveyance-cases/${id}/invitations/${role}/revoke` as const,
   },
 
   // ── ADR-862 Φ1 · ADR-901 Φ2 — «Οι υποθέσεις μου» (ο επαγγελματίας, μέσω της συμμετοχής του) ──
@@ -973,6 +975,11 @@ export const API_ROUTES = {
     MINE: '/api/engagements',
     RESPOND: (engagementId: string) => `/api/engagements/${engagementId}/respond` as const,
     CASE: (engagementId: string) => `/api/engagements/${engagementId}/case` as const,
+    // ADR-901 Φ4 — άνοιγμα/λήψη τεκμηρίου (POST: γράφει ίχνος) · το ίχνος της υπόθεσης όπως το βλέπει ο επαγγελματίας.
+    CASE_FILE: (engagementId: string, fileId: string) => `/api/engagements/${engagementId}/files/${fileId}` as const,
+    CASE_ACTIVITY: (engagementId: string) => `/api/engagements/${engagementId}/activity` as const,
+    // ADR-901 Φ3 — η εξαργύρωση πρόσκλησης με email (ο επαγγελματίας, από `/case-invite/[token]`).
+    INVITATION_REDEEM: '/api/engagement-invitations/redeem',
   },
 
   // ── Sales ─────────────────────────────────────────────────────────────
