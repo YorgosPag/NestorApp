@@ -132,7 +132,7 @@ CloudPano τη στηρίζει μόνο σε iPhone, και η Zillow δεν δ
 | Κ5 | Μανιφέστο PWA / service worker λήψης: **κανένα** (`public/sw.js` είναι σκόπιμα κενό) | όχι (native — §2.3) |
 | Κ6 | React Native / Capacitor / Expo: **κανένα** ίχνος | — (Α1) |
 | Κ7 | 🔴 **«Τα ακίνητά μου» για τον φωτογράφο/υπεύθυνο**: **κανένα** endpoint δεν λέει *σε ποια ακίνητα* μπορεί να ανεβάσει ο συνδεδεμένος (μόνο ανά ρίζα: `…/{kind}/{subjectId}/capture-grants`). *Προστέθηκε 2026-10-03 στο Ε6 — το αρχικό audit το έχασε.* | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ 2026-10-03** — `GET /api/spatial-tours/capture-targets`, συμβόλαιο **1.1.0** (§10.6). Η πλευρά του φωτογράφου **υπήρχε ήδη** (`listMyTourCaptureGrants`, σελίδα web `(me)/tour-captures`) — το audit την είχε χάσει |
-| Κ8 | 🔴 **Όροφος + τύπος χώρου στη λήψη (Α8)**: η δήλωση του finalize έχει **μόνο** `source/audience/milestone/rights/originalFilename` — **κανένα** πεδίο για όροφο/χώρο. *Προστέθηκε 2026-10-03 στο Ε6.* | ✅ **ναι, στη Φ.Α** — προαιρετικό πεδίο «πρόταση θέσης» στη δήλωση (minor έκδοση συμβολαίου) |
+| Κ8 | 🔴 **Όροφος + τύπος χώρου στη λήψη (Α8)**: η δήλωση του finalize έχει **μόνο** `source/audience/milestone/rights/originalFilename` — **κανένα** πεδίο για όροφο/χώρο. *Προστέθηκε 2026-10-03 στο Ε6.* | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ 2026-10-03** — `placementHint` στη δήλωση, προβολή στα εισερχόμενα + στον επεξεργαστή, όροφοι στο `CaptureTarget` — συμβόλαιο **1.2.0** (§10.7) |
 
 ### 3.3 ADR ⟷ κώδικας
 
@@ -294,6 +294,22 @@ github.com/oasdiff/oasdiff · buf.build/docs/breaking · uber.com/blog/android-e
 rfc-editor.org/info/rfc9457 · blog.jetbrains.com/kotlin/2026/05/new-kmp-default-structure · github.com/gradle/gradle/issues/1989 ·
 cloud.google.com/storage/docs/performing-resumable-uploads
 
+**Κ8 (2026-10-03)**: support.matterport.com/hc/en-us/articles/210290227 (όροφοι στο Capture ≠ όροφοι της επεξεργασμένης Space) ·
+support.matterport.com/hc/en-us/community/posts/115007758648 (μετακίνηση σάρωσης σε όροφο) · support.matterport.com/s/article/Add-Labels-to-your-Space ·
+matterport.github.io/showcase-sdk/modelapi_pi_room_names.html (`classifications` ≠ `label`, πολλαπλοί τύποι) ·
+zillow.zendesk.com/hc/en-us/articles/360046189274 (επεξεργασία ορόφου/τίτλου μετά τη λήψη) ·
+help.ricoh360.com/hc/en-us/articles/360058178193 (ετικέτα στη λήψη, drag-and-drop στην κάτοψη). ⚠️ Κάποιες σελίδες Matterport
+απάντησαν 401 — τριγωνοποιήθηκαν από αποσπάσματα αναζήτησης.
+
+**Κ9 (2026-10-03)**: support.matterport.com/hc/en-us/articles/360016184514-FAQ-Matterport-Capture-3-0 · support.matterport.com/s/article/Realign-Scans ·
+matterport.com/matterport-academy/using-360-cameras/fix-scan-position-issues-360-cameras (η θέση 360° στο mini-map **σέρνεται** — η
+επεξεργασία την ξανακρίνει) · help.ricoh360.com/hc/en-us/articles/360058327853-Managing-Floor-Plans (drag-and-drop) ·
+help.holobuilder.com/en/articles/3376938 (tap στην κάτοψη) · help.holobuilder.com/en/articles/3238168 (αλλαγή φύλλου **κρατά** τα
+σημεία — αδιευκρίνιστο τι γίνεται με άλλες διαστάσεις) · openspace.ai/the-tech · openspace.ai/blog/openspace-quickcodes ·
+support.openspace.ai/hc/en-us/articles/41886423092115-Uploading-and-Editing-Sheets · support.cupix.works/hc/en-us/articles/42479775218587-TwinCapture
+(σημείο εκκίνησης + SLAM — αντιστοιχεί στη Φ.Ε) · docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html.
+⚠️ Κανένας προμηθευτής δεν δημοσιεύει το σχήμα συντεταγμένων του· «αβεβαιότητα του tap» **δεν** βρέθηκε πουθενά.
+
 ---
 
 ## 10. Ε6 — ΤΟ ΣΥΜΒΟΛΑΙΟ API ΓΙΑ ΤΟΝ ΠΕΛΑΤΗ KOTLIN (✅ υλοποιήθηκε 2026-10-03)
@@ -349,8 +365,13 @@ fixture αποκωδικοποιείται στο παραγόμενο μοντ�
 - ⏳ **Layer 2 `oasdiff breaking`** στο CI απέναντι στην τελευταία εξαγμένη έκδοση (Go binary — workflow + `.ci-gate-tiers.json`).
 - ⏳ **Λεξιλόγιο αρνήσεων ανά πράξη** (AIP-193, όπως ήδη τα `TOUR_VIEW_SESSION_REFUSALS`): σήμερα το `reason` δηλώνει **όλο** το
   `TOUR_REFUSALS` (αληθές υπερσύνολο). Στένεμα μόνο όταν οι υπηρεσίες επιστρέψουν στενότερο **τύπο** — αλλιώς θα ήταν ισχυρισμός.
-- ✅ Κ7 → **1.1.0** (§10.6). ⏳ Κ8 → **1.2.0**, ολόκληρο: πρόταση θέσης στη δήλωση **και** προβολή στα εισερχόμενα του υπευθύνου (πρόταση που δεν τη βλέπει κανείς = μισή λειτουργία) + οι όροφοι της περιήγησης στο `CaptureTarget`.
-- ⏳ **Κοινά λεξιλόγια ως ονομασμένα σχήματα** (π.χ. `TourCaptureAudience`): σήμερα το ίδιο λεξιλόγιο σε δύο σχήματα δίνει δύο enum Kotlin (`CaptureDeclarationAudience` · `CaptureReceiptAudience`). Θέλει `$ref` σε enum + `anyOf[$ref, null]` στον γεννήτορα Kotlin.
+- ✅ Κ7 → **1.1.0** (§10.6). ✅ Κ8 → **1.2.0** (§10.7).
+- ⏳ **Πρόταση θέσης από τη φόρμα web** (`TourCaptureUploadForm`): σκόπιμα **όχι** στο Κ8 — η πρόταση έχει νόημα **επί τόπου**· στο γραφείο ο υπεύθυνος τοποθετεί απευθείας.
+- ✅ **Σημείο πάνω στη βαθμονομημένη κάτοψη** (Α8, «πατά το σημείο του») → Κ9 **1.3.0** (§10.8).
+- ⏳ **Οθόνες της εφαρμογής για το σημείο** (κάτοψη με ζουμ, tap, `radiusPx` από το ζουμ, κρυφή μνήμη bytes ανά hash): με τον σκελετό
+  Android (απόφαση Giorgio 2026-10-03: **μετά** το Κ9 — χρειάζεται Android SDK).
+- ⏳ **Ονόματα ορόφων BIM** (`label` είναι πάντα `null`, όπως στον θεατή): έρχονται με τη σύνδεση στο μοντέλο (ADR-903), όχι επινοημένα.
+- ⏳ **Κοινά λεξιλόγια ως ονομασμένα σχήματα** (π.χ. `TourCaptureAudience`): σήμερα το ίδιο λεξιλόγιο σε δύο σχήματα δίνει δύο enum Kotlin (`CaptureDeclarationAudience` · `CaptureReceiptAudience`). Θέλει `$ref` σε enum (το `anyOf[$ref, null]` για **object** το υποστηρίζει πλέον ο γεννήτορας — Κ9, §10.8).
 - ⏳ Σειρά «πιο πρόσφατα πρώτα» στο `listCaptureTargets` — μη-σπαστική· θέλει σύνθετο δείκτη ανά πηγή (CHECK 3.91 + 3.86).
 
 ### 10.6 Κ7 — «Τα ακίνητά μου» (✅ 2026-10-03, συμβόλαιο 1.1.0)
@@ -372,6 +393,83 @@ fixture αποκωδικοποιείται στο παραγόμενο μοντ�
 
 **Tests**: `chained-pages` 17 · `query-params` 9 · `tour-capture-targets` 12 (μετάλλαξη 2/2) · fake Q12 (μετάλλαξη 1/1) · fixtures +10 · Kotlin `:shared:jvmTest` ✅ (`CaptureApiOperationsTest` + όλα τα fixtures 1.1.0).
 
+### 10.7 Κ8 — «Η λήψη ξέρει πού είναι» (✅ 2026-10-03, συμβόλαιο 1.2.0)
+
+**Έρευνα (2026-10-03, πηγές §9 «Κ8»)**: **Matterport Capture** — ο όροφος στη λήψη είναι **υπόδειξη**· η επεξεργασία τον
+ξανακρίνει από τη γεωμετρία, και η μετακίνηση σάρωσης σε άλλο όροφο στο Capture «δεν αλλάζει το τελικό αποτέλεσμα». Τύποι χώρου =
+κλειστό λεξιλόγιο (~21), **πολλαπλοί** για ενιαίο χώρο, `classifications` (μηχανή) **χωριστά** από `label` (άνθρωπος). **Zillow 3D
+Home** — όροφος + τίτλος στη λήψη, **επεξεργάσιμα** μετά στο γραφείο. **Ricoh360 Tours** — ετικέτα στη λήψη, τοποθέτηση **μετά**
+με drag-and-drop στην κάτοψη. CloudPano/Kuula/Giraffe360: καμία τεκμηριωμένη ταξινόμηση χώρου στη λήψη (μη επαληθευμένο).
+
+| Θέμα | Επιλογή | Γιατί |
+|---|---|---|
+| Σχήμα | `placementHint?: { level?: TourLevelKey, room?: { types[1..3], label } }` — προαιρετικό (minor) | ο χώρος έχει το σχήμα του `TourRoom` χωρίς προέλευση ⇒ η αποδοχή του είναι το **ίδιο** αντικείμενο (`TourRoomInput`) |
+| Αυθεντία | **πρόταση**, ποτέ τοποθέτηση (`nodeId: null` μένει) | Matterport/Zillow/Ricoh: ο όροφος της λήψης ξανακρίνεται στο γραφείο |
+| Όροφος που δεν υπάρχει | αποθηκεύεται **όπως δηλώθηκε**· η οθόνη λέει **υπάρχει · νέος τοπικός · εκτός περιήγησης** (`placementHintLevel`) | ο όροφος μπορεί να άλλαξε ανάμεσα σε λίστα και ανέβασμα· το Matterport Capture φτιάχνει όροφο επί τόπου ⇒ `local` με νέο αριθμό = «νέος όροφος». Όροφος BIM **δεν** επινοείται |
+| Άκυρη πρόταση | **άκυρη δήλωση** (`declaration-invalid`)· στο έγγραφο ⇒ όλη η λήψη `null` | ποτέ σιωπηλό πέταγμα του τι είπε ο άνθρωπος· το test ισοτιμίας αποδεικνύει ότι εδώ ο server **δεν** είναι ανεκτικότερος από το συμβόλαιο |
+| Όροφοι στη λίστα | `CaptureTarget.levels` (`key` · `ordinal` · `label`) — **μία** `getAll` ανά πηγή ανά σελίδα· οι άδειες τους έχουν ήδη | φραγμένη καθυστέρηση στο κινητό· **μόνο** υπεύθυνος ή ενεργή άδεια (η ανενεργή μαθαίνει *γιατί*, όχι τη δομή)· ξένος κάτοχος ⇒ κανένας |
+| Σειρά ορόφου | `tourLevelOrdinal` — ο **ένας** κανόνας (θεατής · εισερχόμενα · κινητό) | αλλιώς «Όροφος 2» σε δύο οθόνες = δύο όροφοι |
+
+**Πέρα από τους μεγάλους**: (1) **σήμα προέλευσης** «Πρόταση φωτογράφου» σε εισερχόμενα, φόρμα τοποθέτησης και φόρμα χώρου — κανείς
+από τους τρεις δεν ξεχωρίζει ορατά τον λόγο του φωτογράφου από την απόφαση του υπευθύνου· (2) **αποδοχή με ένα κλικ, ποτέ αυτόματα**:
+η φόρμα τοποθέτησης **προεπιλέγει** τον όροφο (και προσφέρει τον νέο τοπικό, π.χ. υπόγειο `-1`), η φόρμα χώρου δείχνει «Χρήση της
+πρότασης» — το δόγμα «κανένας τύπος δεν προεπιλέγεται σιωπηλά» μένει ακέραιο· (3) ο όροφος που **χάθηκε** λέγεται ρητά αντί να
+αντιστοιχιστεί σε άλλον.
+
+**SSoT** (N.0.2): `lib/spatial-tour/tour-capture-placement-hint.ts` (`readCapturePlacementHint` — ο **ένας** αναγνώστης για δήλωση
+**και** έγγραφο · `readTourLevelKey` μετακόμισε εδώ από το `spatial-tour-from-document` · `placementHintLevel`) · `tourLevelOrdinal` /
+`tourLevelChoices` (`spatial-tour-graph.ts`, ο κανόνας σειράς βγήκε από το `viewerLevelsOf`) · `tourPlacementOf` (`tour-locate.ts` —
+το Κ7 δεν ξαναγράφει τη θέση της περιήγησης) · `plainRoomDisplay` δέχεται χώρο χωρίς προέλευση · `useLevelLabel` σε δικό του module.
+
+**i18n slice (ADR-744)**: η σκέτη σταθερά `TOUR_ROOM_NUMBERED_KEY` έκανε κάθε σελίδα με το `roomDisplayText` να **αρνείται** slice ⇒
+έγινε `TOUR_ROOM_KEYS.numbered` (ο αναλυτής επιλύει `OBJ.prop`). Το `useLevelLabel` ζούσε στο `TourViewerNavigation` και έφερνε όλες
+τις λέξεις του θεατή. Η πρόταση στα εισερχόμενα φορτώνεται πίσω από `next/dynamic` (οι λήψεις έρχονται μετά το fetch ⇒ ποτέ πρώτο
+καρέ). Μετρημένο: `/tour-captures` 8657 → **7380** / 8216 · `/offers/[offerId]/tour` 13697 → **12420** / 12670 — **χωρίς** ξανασφράγιση.
+
+**Κινητό**: ο γεννήτορας Kotlin κάλυψε τα πάντα **χωρίς αλλαγή** (προαιρετικό `$ref` · πίνακας enum · ονομασμένη ένωση
+`TourLevelKey` ⇒ `sealed`).
+
+**Tests**: `tour-capture-placement-hint` 17 (μετάλλαξη 2/2) · `tour-capture-targets` +4 (Τ6, μετάλλαξη 2/2) · parity +10 (άκυρη
+πρόταση ⇒ άρνηση· αποθηκευμένη ⇒ ξανατηρεί το συμβόλαιο· μετάλλαξη 1/1) · `TourCapturePlacementHint` 5 · `TourRoomForm` +2 ·
+`TourPlacementForm` 4 (νέο) · μεταλλάξεις UI 3/3 · fixtures +13.
+
+### 10.8 Κ9 — «Πατώ το σημείο όπου στέκομαι» (✅ 2026-10-03, συμβόλαιο 1.3.0)
+
+**Έρευνα (πηγές §9 «Κ9»)**: **Matterport Capture** — τη θέση σάρωσης 360° στο mini-map τη **σέρνει** ο χρήστης· η επεξεργασία την
+ξανακρίνει ⇒ υπόδειξη. **Ricoh360** — drag-and-drop σε ανεβασμένη κάτοψη (κυρίως web). **HoloBuilder JobWalk** — πραγματικό «tap στη
+θέση»· η αλλαγή φύλλου **κρατά σιωπηλά** τα σημεία (παγίδα αν αλλάξουν διαστάσεις/προσανατολισμός). **OpenSpace / Cupix** — μόνο
+σημείο εκκίνησης + SLAM (≈ Φ.Ε). Κανείς δεν δένει ρητά το σημείο σε **έκδοση** κάτοψης, κανείς δεν δείχνει **αβεβαιότητα**.
+
+| Θέμα | Επιλογή | Γιατί |
+|---|---|---|
+| Πλαίσιο σημείου | **pixel της πρωτότυπης εικόνας** (`imagePixelToPlan`) | είναι ήδη το SSoT· ισοδύναμο με normalized (οι διαστάσεις δένονται στο hash)· **επιβιώνει επαναβαθμονόμηση** (δόγμα `rescalePoint`) |
+| Δέσιμο στην έκδοση | `point.planContentHash` | αλλαγή κάτοψης ⇒ «η κάτοψη άλλαξε μετά τη λήψη — το σημείο δεν μεταφέρεται», **ποτέ** σιωπηλή μεταφορά (η παγίδα του HoloBuilder) |
+| Σχήμα | `placementHint.point?: { planContentHash, x, y, radiusPx? }` — **απαιτεί** `level` (`refine` + `dependentRequired` στο JSON Schema) | σημείο χωρίς όροφο δεν έχει κάτοψη ⇒ `declaration-invalid` |
+| Κάτοψη στη λίστα | `CaptureLevel.calibratedPlan: { image: {width,height,contentHash}, metresPerPixel } \| null` — `captureLevelChoices` πάνω στο `tourLevelChoices` | **μόνο** ενεργή **και** βαθμονομημένη (σε αβαθμονόμητη σημείο δεν μπαίνει ούτε στον γραφέα)· ο θεατής **δεν** αλλάζει |
+| Τα bytes | `GET …/capture-plans/{contentHash}` (`getCapturePlan`) · κριτής **`judgeUploader`** (υπεύθυνος ή ενεργή άδεια) · μεγαλύτερο παράγωγο · `private, immutable` + `ETag` | το κουπόνι θέασης θα έδινε στον φωτογράφο **όλα** τα πανοράματα· υπογεγραμμένο URL ⇒ κουπόνι ανά στοιχείο λίστας + λήξη· μία εικόνα ανά όροφο, Bearer όπως όλο το συμβόλαιο· παλιό hash ⇒ `plan-absent` (409) |
+| Αποδοχή | `new-node.position` (μέτρα) — **μία** εντολή, **μία** συναλλαγή, κριμένη από τον **ίδιο** `positionNode` | όχι `place` + `position` που μένουν μισά· άρνηση θέσης ⇒ ούτε σημείο γεννιέται |
+| Προβολή | `placementHintPoint` ⇒ `on-plan` · `plan-changed` · `outside-plan` · `level-unknown` | ίδιο δόγμα με τον όροφο του Κ8 |
+
+**Πέρα από τους μεγάλους**: (1) **αβεβαιότητα του tap** (`radiusPx`, από το ζουμ της στιγμής) — διακεκομμένος κύκλος + «Ακρίβεια ±0,6 m»
+στον υπεύθυνο· (2) **δέσιμο στην έκδοση** της κάτοψης με ρητό μήνυμα αντί για σιωπηλή μεταφορά· (3) αποδοχή **ολόκληρη ή καθόλου** σε μία
+συναλλαγή· (4) **μία πόρτα** για web και κινητό (τα εισερχόμενα φέρνουν την κάτοψη από το ίδιο `getCapturePlan`).
+
+**SSoT** (N.0.2): `captureLevelChoices` · `captureLevelsOfViewer` · `placementHintPoint` (`tour-capture-placement-hint.ts`) ·
+`_shared/tour-media-response.ts` (`serveTourMedia` — η ροή `ETag`/`Range` βγήκε από το `media/[...path]`, ώστε η νέα πόρτα να **μην** είναι
+αντίγραφο) · `UploaderStanding.tour` (καμία δεύτερη ανάγνωση) · `BoundedLru.delete` · `PLAN_HINT_CLASS` · `TOUR_HINT_*_MAX_PX`.
+
+**Web**: εισερχόμενα — το `TourCapturePlacementHint` με `subject` δείχνει την κάτοψη με καρφίτσα (`TourHintPlanPreview`, bytes από
+`useCapturePlanImage`)· φόρμα τοποθέτησης — «Στη θέση που πρότεινε ο φωτογράφος» **προεπιλεγμένο** όταν το σημείο πέφτει στην ίδια
+κάτοψη (`TourHintSpotChoice`), εικόνα από την πηγή του επεξεργαστή. i18n slice **αμετάβλητο** (`/tour-captures` 7380 · `/offers/[offerId]/tour` 12420).
+
+**Tests**: `tour-capture-hint-point` 17 (μετάλλαξη 2/2) · `tour-capture-plan` 6 (1/1) · `tour-graph-edit` +3 (1/1) · `tour-capture-targets` Τ6 ·
+`TourPlacementForm` +3 · `TourCapturePlacementHint` +3 (UI 2/2) · `bounded-lru` +1 · fixtures +16 (parity: ο διακομιστής δέχεται/αρνείται ό,τι
+το συμβόλαιο). Πύλες 3.8 · 3.28 · 3.68 · 3.78 · 3.98 ✅.
+
+**Κινητό**: ο fail-closed γεννήτορας Kotlin **αρνήθηκε** το `calibratedPlan` (`anyOf[$ref, {type:null}]` — πρώτη nullable αναφορά σε
+ονομασμένο σχήμα) ⇒ επεκτάθηκε **ρητά** (`nullableRef`: ακριβώς ένα `$ref` + ένα `null`, οτιδήποτε άλλο ρίχνει ακόμη το build) ⇒
+`CaptureCalibratedPlan?` · `CaptureHintPoint`. Εξαγωγή 1.3.0 (`uncommitted: true`) + `:shared:jvmTest` ✅. Η τελική εξαγωγή γίνεται μετά το commit.
+
 ---
 
 ## Changelog
@@ -384,3 +482,5 @@ fixture αποκωδικοποιείται στο παραγόμενο μοντ�
 | 2026-10-03 | **Ε6 ΥΛΟΠΟΙΗΘΗΚΕ (§10)**: συμβόλαιο OpenAPI 3.1 παραγόμενο από σχήματα zod/v4 που κρίνουν και τις διαδρομές · CHECK 3.98 (φρεσκάδα, μετάλλαξη 2/2) · golden fixtures με απόδειξη «συμβόλαιο ⊆ διακομιστής» · εξαγωγή vendored + `PROVENANCE.json` · κοινός κριτής με το 3.93. **Διόρθωση ADR⟷κώδικα**: το «ο server δεν αλλάζει στη Φ.Α» ήταν λάθος — λείπουν «τα ακίνητά μου» (Κ7) και όροφος/χώρος στη δήλωση (Κ8). Ε1: αποθετήριο `C:\nestor-mobile` (Uber / JetBrains KMP 2026). |
 | 2026-10-03 | **Πρώτο build του κινητού — ✅ πράσινο (§10.5)**: Gradle 9.8.0 (wrapper με sha256) · `:shared:jvmTest` πράσινο · configuration cache · μηδέν deprecations. Ο fail-closed γεννήτορας Kotlin έπιασε **ανώνυμα εμφωλευμένα objects** ⇒ ονομάστηκαν `CaptureTileset`/`MediaLicense` (ίδιο σχήμα δικτύου, έκδοση 1.0.0 αμετάβλητη) **και** ο γεννήτορας του Νέστορα τα αρνείται πλέον (CHECK 3.98). Η εξαγωγή αρνείται στόχο σχετικό ή μέσα στο repo. **Διόρθωση ADR⟷κώδικα**: §10.1 έγραφε openapi-generator — ο κώδικας έχει δικό μας γεννήτορα· η διαδρομή του Ε1 είχε σπάσει σε δύο γραμμές. |
 | 2026-10-03 | **Κ7 ΥΛΟΠΟΙΗΘΗΚΕ — συμβόλαιο 1.1.0 (§10.6)**: `GET /api/spatial-tours/capture-targets` — υπεύθυνος (δικές μου · του γραφείου · εταιρικά) **και** φωτογράφος (άδειες, και οι ανενεργές με `standing`), κάθε στοιχείο κριμένο από τον **ίδιο** κριτή με το ανέβασμα · σελιδοποίηση AIP-158 σε αλυσίδα πηγών · νέα SSoT (`chained-pages`, `page-token`, `query-params`, `malformed-request`, `tourSubjectFromDocument`, `readMyTourCaptureGrants`, `TOUR_GRANT_STANDINGS`) · FakeFirestore κατά id εγγράφου (κοινός ισχυρισμός Q12). Κινητό: παράμετροι query/header στις πράξεις · **σταθερά ονόματα enum** (σχήμα + πεδίο — η αρίθμηση κατά σειρά μπορούσε να μετονομάσει τύπο σε minor έκδοση). **Διόρθωση audit**: η πλευρά του φωτογράφου υπήρχε ήδη (`listMyTourCaptureGrants`). Κ8 → 1.2.0. |
+| 2026-10-03 | **Κ8 ΥΛΟΠΟΙΗΘΗΚΕ — συμβόλαιο 1.2.0 (§10.7)**: προαιρετική πρόταση θέσης (όροφος + χώρος) στη δήλωση λήψης, **ποτέ** τοποθέτηση · αποθηκεύεται στο `TourCapture` όπως δηλώθηκε · προβολή με σήμα προέλευσης στα εισερχόμενα (υπάρχει · νέος · εκτός περιήγησης), προεπιλογή ορόφου στη φόρμα τοποθέτησης, «Χρήση της πρότασης» στη φόρμα χώρου · οι όροφοι της περιήγησης στο `CaptureTarget` (μία `getAll` ανά σελίδα, μόνο υπεύθυνος/ενεργή άδεια). Έρευνα Matterport/Zillow/Ricoh360 με πηγές. Νέα SSoT: `tour-capture-placement-hint`, `tourLevelChoices`, `tourPlacementOf`, `useLevelLabel`, `TOUR_ROOM_KEYS`. |
+| 2026-10-03 | **Κ9 ΥΛΟΠΟΙΗΘΗΚΕ — συμβόλαιο 1.3.0 (§10.8)**: σημείο πάνω στη βαθμονομημένη κάτοψη ως **πρόταση** (pixel πρωτότυπης εικόνας + `planContentHash` + προαιρετική αβεβαιότητα `radiusPx`, απαιτεί όροφο) · `CaptureLevel.calibratedPlan` · νέα πράξη `getCapturePlan` (ίδιος κριτής με το ανέβασμα, αμετάβλητο ανά hash) · αποδοχή με ένα κλικ = `new-node.position` σε μία συναλλαγή · εισερχόμενα με κάτοψη + καρφίτσα, φόρμα με «Στη θέση που πρότεινε ο φωτογράφος». Έρευνα Matterport/Ricoh360/HoloBuilder/OpenSpace/Cupix. Boy Scout: `serveTourMedia` (η ροή του `media/[...path]` κεντρικοποιήθηκε). **Κλείσιμο Κ8**: tests 1158/1160 (τα 2 = χρονικό όριο του `tour-face-scan` υπό φόρτο, άσχετο) · `:shared:jvmTest` 1.2.0 ✅ · i18n slice μπλοκαρισμένο από WIP άλλου agent (`agency-profile`), οι δικές μας σελίδες εντός ταβανιού. |

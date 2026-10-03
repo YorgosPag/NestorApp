@@ -18,7 +18,7 @@ import type { TourViewerGraph } from '@/lib/spatial-tour/viewer/tour-viewer-grap
 import type { TourNode } from '@/types/spatial-tour';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
-import { TOUR_ROOM_NUMBERED_KEY, TOUR_ROOM_TYPE_KEY, TOUR_VIEWER_KEYS } from './tour-viewer-labels';
+import { TOUR_ROOM_KEYS, TOUR_ROOM_TYPE_KEY, TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 
 const TYPE_JOINER = ' / ';
 
@@ -28,7 +28,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 export function roomDisplayText(t: Translate, display: TourRoomDisplay): string {
   if (display.kind === 'label') return display.text;
   const name = display.types.map((type) => t(TOUR_ROOM_TYPE_KEY[type])).join(TYPE_JOINER);
-  return display.ordinal === null ? name : t(TOUR_ROOM_NUMBERED_KEY, { name, ordinal: display.ordinal });
+  return display.ordinal === null ? name : t(TOUR_ROOM_KEYS.numbered, { name, ordinal: display.ordinal });
 }
 
 /** Τα σημεία κάθε ορόφου με τη σειρά τους — από εκεί η αρίθμηση όμοιων χώρων. */
