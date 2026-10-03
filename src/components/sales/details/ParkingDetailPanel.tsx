@@ -16,6 +16,8 @@ import {
   Layers,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { SalesSpaceFinancialCard } from './SalesSpaceFinancialCard';
 import { SalesSpaceEmptyPanel, SalesSpaceSection } from './sales-space-panel-parts';
 import { InfoRow } from '@/components/shared/InfoRow';
@@ -40,6 +42,7 @@ interface ParkingDetailPanelProps {
 export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(COMMON_NAMESPACES);
+  const floorLabel = useFloorLabel();
 
   if (!data) {
     return <SalesSpaceEmptyPanel message={t('salesParking.details.noSelection')} />;
@@ -53,7 +56,7 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
       <SalesSpaceSection icon={Car} title={t('parking:general.basicInfo')}>
         <InfoRow icon={Car} iconColor={SALES_ICON_COLORS.type} label={t('parking:general.fields.type')} value={t(`parking:types.${data.type ?? 'standard'}`, { defaultValue: data.type ?? 'standard' })} />
         <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.locationZone} label={t('parking:general.fields.locationZone')} value={data.locationZone ? t(`parking:locationZone.${data.locationZone}`, { defaultValue: data.locationZone }) : '—'} />
-        <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.floor} label={t('parking:general.fields.floor')} value={data.floor || '—'} />
+        <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.floor} label={t('parking:general.fields.floor')} value={floorLabel(hostedFloorRef(data)) || '—'} />
         {area > 0 && (
           <InfoRow icon={Maximize2} iconColor={SALES_ICON_COLORS.area} label={t('parking:general.fields.area')} value={`${area} m²`} />
         )}

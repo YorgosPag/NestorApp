@@ -127,7 +127,8 @@ export function usePropertyFilters(
       // propertiesByStatus uses operationalStatus (not sales status)
       propertiesByStatus: tallyBy(filtered, p => p.operationalStatus || 'draft'),
       propertiesByType: tallyBy(filtered, p => p.type),
-      propertiesByFloor: tallyBy(filtered, p => `Όροφος ${p.floor}`),
+      // ADR-903: κλειδί = ο ΑΡΙΘΜΟΣ (δεδομένο)· η ετικέτα αποδίδεται στο `DetailsCard` (`useFloorLabel`).
+      propertiesByFloor: tallyBy(filtered, p => String(p.floor ?? '—')),
       totalStorageUnits: 0, // storageUnits not available in this Property type
       availableStorageUnits: 0,
       uniqueBuildings: [...new Set(filtered.map(p => p.building))].length,

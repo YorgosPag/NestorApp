@@ -203,5 +203,112 @@
       "title": "Property Transfer (after payoff)",
       "description": "Final transfer after full payment. Registered with the cadastre."
     }
+  },
+  "engagement": {
+    "section": {
+      "title": "Professionals and access",
+      "hint": "A professional sees only the documents of their role, and only after pressing “I take it on”. Never draft drawings, never prices."
+    },
+    "roles": {
+      "seller_lawyer": "Seller's lawyer",
+      "buyer_lawyer": "Buyer's lawyer",
+      "notary": "Notary"
+    },
+    "appointment": {
+      "not-appointed": "Not appointed — appoint them in the “Legal” tab",
+      "no-email": "The contact has no email — add one to grant access",
+      "needs-invitation": "No account yet — email invitations are coming soon",
+      "account": "Has an account on the platform"
+    },
+    "states": {
+      "offered": "Awaiting acceptance",
+      "active": "Has access",
+      "declined": "Declined",
+      "withdrawn": "Offer withdrawn",
+      "revoked": "Access revoked",
+      "expired": "Expired",
+      "completed": "Completed"
+    },
+    "actions": {
+      "offer": "Offer access",
+      "offering": "Sending…",
+      "revoke": "Revoke access",
+      "withdraw": "Withdraw offer"
+    },
+    "consent": {
+      "title": "Consent of the buyer's side",
+      "description": "This role also sees the buyer's documents. State what the buyer's agreement is based on — it is recorded with your name and the time.",
+      "basisLabel": "Basis of consent",
+      "basisPlaceholder": "Select",
+      "bases": {
+        "preliminary_contract": "Preliminary / reservation contract",
+        "written_instruction": "Written instruction from the buyer",
+        "verbal_instruction": "Verbal instruction from the buyer"
+      },
+      "confirm": "Offer access",
+      "cancel": "Cancel"
+    },
+    "endConfirm": {
+      "revokeTitle": "Revoke access?",
+      "withdrawTitle": "Withdraw the offer?",
+      "description": "It takes effect immediately and the professional is notified. The access history stays on record.",
+      "confirm": "Yes, continue",
+      "cancel": "Cancel"
+    },
+    "consentSources": {
+      "own_side": "your own side",
+      "host_attested": "attested: {basis}",
+      "in_app": "consent given in the app"
+    },
+    "offeredOn": "Offered {date}",
+    "rejections": {
+      "case-closed": "The case is closed — it does not accept new professionals.",
+      "no-project": "The property does not belong to a project — access is granted within a project.",
+      "not-appointed": "No professional has been appointed to this role.",
+      "no-email": "The professional's contact has no email.",
+      "needs-invitation": "The professional does not have an account yet.",
+      "consent-basis-required": "State the basis of the buyer's consent.",
+      "slot-occupied": "This role already has another professional — revoke their access first.",
+      "role-conflict": "This person already has another role in this case.",
+      "unreadable": "The access history of this role cannot be read — please contact support.",
+      "generic": "The action did not complete. Please try again."
+    },
+    "myCases": {
+      "title": "My cases",
+      "subtitle": "Conveyance cases where you were appointed as lawyer or notary.",
+      "empty": "No case has been offered to you yet.",
+      "loading": "Loading your cases…",
+      "loadError": "Your cases could not be loaded. Please try again.",
+      "accept": "I take it on",
+      "decline": "I decline",
+      "open": "Open case",
+      "offerExpires": "The offer expires {date}",
+      "signing": "Signing: {date}",
+      "untitled": "Property",
+      "respondRejections": {
+        "not-found": "The offer was not found.",
+        "unknown": "Your answer could not be sent. Please try again.",
+        "offer-expired": "The offer has expired — ask whoever appointed you for a new one.",
+        "not-allowed": "The offer is no longer open."
+      }
+    },
+    "verdicts": {
+      "engaged": "You have access.",
+      "offered": "Press “I take it on” to see the case.",
+      "declined": "You declined this case.",
+      "withdrawn": "The offer was withdrawn.",
+      "revoked": "Your access was revoked.",
+      "expired": "Your access has expired.",
+      "unreadable-expiry": "Your access cannot be verified — please contact whoever appointed you.",
+      "completed": "The case is complete.",
+      "scope-missing": "Your engagement does not cover viewing the case.",
+      "not-engaged": "You are not part of this case."
+    },
+    "case": {
+      "back": "My cases",
+      "readOnly": "View — you see only the documents of your role.",
+      "loadError": "The case could not be loaded.",
+      "notFound": "The case was not found."
+    }
   }
 }

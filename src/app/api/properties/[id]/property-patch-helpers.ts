@@ -17,6 +17,7 @@ import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
 import { photoFocalPointSchema, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { declaredCaptureSpotsSchema, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
+import { parseLegacyFloor } from '@/lib/floor/floor-ref';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -27,8 +28,18 @@ export const PropertyPatchSchema = z.object({
   name: z.string().max(500).optional(),
   type: z.string().max(50).optional(),
   status: z.string().max(50).optional(),
-  floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
+  // ADR-903 — `Property.floor` είναι ΑΚΕΡΑΙΟΣ. Κείμενο γίνεται δεκτό μόνο αν το λύνει ο ΕΝΑΣ parser
+  // σε αριθμό («2», «Ισόγειο»)· «Πυλωτή χωρίς αριθμό» ή άγνωστο ⇒ 400, ποτέ σιωπηλό 0.
+  floor: z.union([z.string().max(50), z.number().int()]).nullable().optional().superRefine((value, ctx) => {
+    if (typeof value !== 'string' || value.trim() === '') return;
+    if (typeof parseLegacyFloor(value)?.number !== 'number') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Unrecognised floor' });
+    }
+  }),
   floorId: z.string().max(128).nullable().optional(),
+  // ADR-903 §6 — το είδος ορόφου είναι **παράγωγο** του `floorId` (το γράφει ο server)· με
+  // `.passthrough()` θα περνούσε σιωπηλά ⇒ ρητό 400.
+  floorKind: z.undefined(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   price: z.number().min(0).max(999_999_999).nullable().optional(),
   description: z.string().max(5000).optional(),
@@ -214,7 +225,8 @@ export function buildUpdateData(
     updateData.name = (updateData.name as string).trim() || existing.name;
   }
   if (typeof updateData.floor === 'string') {
-    updateData.floor = (updateData.floor as string).trim() || null;
+    // ADR-903 — κανονικοποίηση σε ακέραιο από τον ΕΝΑ parser (το σχήμα έχει ήδη απορρίψει το άλυτο).
+    updateData.floor = parseLegacyFloor(updateData.floor)?.number ?? null;
   }
   if (typeof updateData.description === 'string') {
     updateData.description = (updateData.description as string).trim() || null;

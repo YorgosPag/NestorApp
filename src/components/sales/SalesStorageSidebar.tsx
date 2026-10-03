@@ -18,6 +18,8 @@ import {
 } from '@/components/sales/shared/SalesSpaceSidebar';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
 
@@ -44,10 +46,6 @@ function getStorageTitle(storage: Storage): string {
   return storage.name || storage.id;
 }
 
-function getStorageSubtitle(storage: Storage): string {
-  return `${storage.building ?? ''} · ${storage.floor ?? ''}`;
-}
-
 function storageSpacesHref(storage: Storage): string {
   return `/spaces/storage?storageId=${storage.id}`;
 }
@@ -67,6 +65,11 @@ export function SalesStorageSidebar({
   onTypeChange,
 }: SalesStorageSidebarProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
+  const floorLabel = useFloorLabel();
+  const getStorageSubtitle = React.useCallback(
+    (storage: Storage) => `${storage.building ?? ''} · ${floorLabel(hostedFloorRef(storage))}`,
+    [floorLabel],
+  );
 
   const redirectTabs = React.useMemo<readonly SalesSpaceRedirectTab[]>(
     () => [

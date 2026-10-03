@@ -66,15 +66,19 @@ const COMPANY = { companyName: 'Παγώνης ΑΕ', industry: 'Κατασκε�
 // ────────────────────────────────────────────────────────────────────────────
 
 describe('Π — ο παρονομαστής: γιατί χρειαζόταν το πρόθεμα namespace', () => {
-  it('Π1 — τα κλειδιά των badge ΔΕΝ υπάρχουν στο `navigation`, το ns που ζητά το hook', () => {
-    const navigation = readLocale('el', 'navigation');
+  it.each(['navigation', 'hierarchy-navigator'])(
+    'Π1 — τα κλειδιά των badge ΔΕΝ υπάρχουν στο `%s`, το ns που ζητά (ζητούσε) το hook',
+    (namespace) => {
+      const tree = readLocale('el', namespace);
 
-    // Και τα δύο component καλούσαν `useTranslation('navigation')`. Αν το κλειδί
-    // υπήρχε εδώ, το παλιό `t(key)` του Desktop θα δούλευε και δεν θα υπήρχε βλάβη.
-    expect(lookup(navigation, 'filters.companies.withoutProjects')).toBeUndefined();
-    expect(lookup(navigation, 'filters.projects.withoutBuildings')).toBeUndefined();
-    expect(lookup(navigation, 'filters.buildings.withoutProperties')).toBeUndefined();
-  });
+      // Τα δύο component καλούσαν `useTranslation('navigation')`· από το ADR-744 §26
+      // καλούν `'hierarchy-navigator'`. Αν το κλειδί υπήρχε σε όποιο από τα δύο, το
+      // σκέτο `t(key)` θα δούλευε και το πρόθεμα δεν θα χρειαζόταν.
+      expect(lookup(tree, 'filters.companies.withoutProjects')).toBeUndefined();
+      expect(lookup(tree, 'filters.projects.withoutBuildings')).toBeUndefined();
+      expect(lookup(tree, 'filters.buildings.withoutProperties')).toBeUndefined();
+    },
+  );
 
   it('Π2 — δεν ορίζεται `fallbackNS`, άρα η αστοχία καταλήγει ΣΤΗΝ ΟΘΟΝΗ', () => {
     const config = readFileSync(join(process.cwd(), 'src', 'i18n', 'config.ts'), 'utf8');

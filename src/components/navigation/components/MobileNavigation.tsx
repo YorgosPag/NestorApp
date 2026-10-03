@@ -10,12 +10,13 @@
  * @see navigation-entities.ts - Single Source of Truth για icons/colors
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { NavigationButton } from './NavigationButton';
 import { ChevronLeft } from 'lucide-react';
 // 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES } from '../config';
 import { useNavigation } from '../core/NavigationContext';
+import { useBuildingProperties, useProjectBuildings } from '../core/hooks/useSelectionCollections';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 // 🏢 ENTERPRISE: μία απάντηση για τις δύο οθόνες πλοήγησης — δες το ίδιο το module
 // για το τι έκρυβαν τα δύο αντίγραφα (ωμά κλειδιά i18n, λάθος κλειδί, δύο ΑΦΜ).
@@ -69,7 +70,6 @@ export function MobileNavigation({
     selectProperty,  // 🏢 ENTERPRISE: Centralized unit selection action
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
-    getBuildingsForProject,
     // 🏢 ENTERPRISE: Real-time unit functions
     getPropertyCount
   } = useNavigation();
@@ -80,34 +80,11 @@ export function MobileNavigation({
   // badge ζουν στο `navigation-entities`. Χωρίς αυτό, το `t('navigation-entities:…')`
   // αστοχεί — και επειδή το `config.ts` δεν ορίζει `fallbackNS`, η αστοχία
   // καταλήγει **ωμό κλειδί στην οθόνη** αντί για σφάλμα.
-  const { t } = useTranslation(['navigation', 'navigation-entities']);
+  const { t } = useTranslation(['hierarchy-navigator', 'navigation-entities']);
 
-  // ==========================================================================
-  // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
-  // ==========================================================================
-
-  const projectBuildings = useMemo(() => {
-    if (!selectedProject) return [];
-    return getBuildingsForProject(selectedProject.id);
-  }, [selectedProject, getBuildingsForProject]);
-
-  /**
-   * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
-   * Memoized units για το επιλεγμένο building.
-   * Συλλέγει ΟΛΕΣ τις units από:
-   * 1. ΟΛΟΥΣ τους ορόφους του building (αν υπάρχουν)
-   * 2. Απευθείας από το building (αν δεν έχει ορόφους)
-   * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
-   */
-  const buildingProperties = useMemo(() => {
-    if (!selectedBuilding) return [];
-
-    // 🏢 ENTERPRISE: Combine properties from floors AND direct building properties
-    const floorProperties = selectedBuilding.floors?.flatMap(floor => floor.properties) || [];
-    const directProperties = selectedBuilding.properties || [];
-
-    return [...floorProperties, ...directProperties];
-  }, [selectedBuilding]);
+  // 🏢 SSoT: οι συλλογές της επιλογής ζουν στο `useSelectionCollections` (ADR-744 §26).
+  const projectBuildings = useProjectBuildings();
+  const buildingProperties = useBuildingProperties();
 
   return (
     <div className="md:hidden">

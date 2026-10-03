@@ -71,6 +71,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'crm-inbox': return () => import('./locales/el/crm-inbox.json');
     case 'navigation': return () => import('./locales/el/navigation.json');
     case 'navigation-entities': return () => import('./locales/el/navigation-entities.json');
+    case 'hierarchy-navigator': return () => import('./locales/el/hierarchy-navigator.json');
     case 'auth': return () => import('./locales/el/auth.json');
     case 'dashboard': return () => import('./locales/el/dashboard.json');
     case 'projects': return () => import('./locales/el/projects.json');
@@ -101,6 +102,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'files': return () => import('./locales/el/files.json');
     case 'files-media': return () => import('./locales/el/files-media.json');
     case 'floorplan-overlays': return () => import('./locales/el/floorplan-overlays.json');
+    case 'floors': return () => import('./locales/el/floors.json');
     case 'storage': return () => import('./locales/el/storage.json');
     case 'parking': return () => import('./locales/el/parking.json');
     case 'admin': return () => import('./locales/el/admin.json');
@@ -203,6 +205,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'crm-inbox': return () => import('./locales/en/crm-inbox.json');
     case 'navigation': return () => import('./locales/en/navigation.json');
     case 'navigation-entities': return () => import('./locales/en/navigation-entities.json');
+    case 'hierarchy-navigator': return () => import('./locales/en/hierarchy-navigator.json');
     case 'auth': return () => import('./locales/en/auth.json');
     case 'dashboard': return () => import('./locales/en/dashboard.json');
     case 'projects': return () => import('./locales/en/projects.json');
@@ -233,6 +236,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'files': return () => import('./locales/en/files.json');
     case 'files-media': return () => import('./locales/en/files-media.json');
     case 'floorplan-overlays': return () => import('./locales/en/floorplan-overlays.json');
+    case 'floors': return () => import('./locales/en/floors.json');
     case 'storage': return () => import('./locales/en/storage.json');
     case 'parking': return () => import('./locales/en/parking.json');
     case 'admin': return () => import('./locales/en/admin.json');

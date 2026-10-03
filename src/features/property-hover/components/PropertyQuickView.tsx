@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PropertyHoverHeader } from './PropertyHoverHeader';
 import { getPropertyHoverStatusConfig } from '../constants';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { ORIENTATION_LABELS } from '@/constants/property-features-enterprise';
 import type { OrientationType } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
@@ -57,6 +57,7 @@ function QuickViewRow({ label, value }: { label: string; value: React.ReactNode 
 export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const statusConfig = getPropertyHoverStatusConfig();
   // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback
@@ -97,7 +98,7 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
 
       {/* 2-column grid: labels (left) + values (right) */}
       <div className="space-y-0.5">
-        <QuickViewRow label={formatFloorLabel(property.floor)} value="" />
+        <QuickViewRow label={floorLabel(property.floor)} value="" />
         {displayArea && (
           <QuickViewRow
             label={t('hoverInfo.gross')}

@@ -14,6 +14,9 @@ import { defaultStorageFilters, type StorageFilterState } from '@/components/cor
 import { resolveStorageById, isArchivedEntity } from './entity-deep-link-sources';
 import { matchesSpaceStatusFilters } from '@/lib/spaces/space-availability';
 import { matchesPriceRange } from '@/lib/properties/price-range';
+import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
+import { matchesFloorFilter } from '@/lib/floor/floor-filter';
 import {
   useEntityPageState,
   type EntityPageStateConfig,
@@ -24,7 +27,11 @@ import {
 // Filter function
 // ---------------------------------------------------------------------------
 
-function filterStorages(storages: Storage[], filters: StorageFilterState): Storage[] {
+function filterStorages(
+  storages: Storage[],
+  filters: StorageFilterState,
+  floorLabel: (value: FloorLabelInput) => string,
+): Storage[] {
   return storages.filter((storage) => {
     // Search filter
     if (filters.searchTerm) {
@@ -33,7 +40,7 @@ function filterStorages(storages: Storage[], filters: StorageFilterState): Stora
         storage.name.toLowerCase().includes(s) ||
         storage.description?.toLowerCase().includes(s) ||
         storage.building?.toLowerCase().includes(s) ||
-        storage.floor?.toLowerCase().includes(s) ||
+        floorLabel(hostedFloorRef(storage)).toLowerCase().includes(s) ||
         storage.type?.toLowerCase().includes(s);
       if (!matches) return false;
     }
@@ -48,8 +55,8 @@ function filterStorages(storages: Storage[], filters: StorageFilterState): Stora
     const buildingVal = filters.building?.[0];
     if (buildingVal && buildingVal !== 'all' && storage.building !== buildingVal) return false;
 
-    const floorVal = filters.floor?.[0];
-    if (floorVal && floorVal !== 'all' && storage.floor !== floorVal) return false;
+    // ADR-903 §6 — κλειδί αριθμός:είδος (`floor-filter`)· ήταν slug (`basement-1`) απέναντι σε κείμενο ⇒ ποτέ ταίριασμα.
+    if (!matchesFloorFilter(storage, filters.floor?.[0])) return false;
 
     const projectVal = filters.project?.[0];
     if (projectVal && projectVal !== 'all' && storage.projectId !== projectVal) return false;
@@ -85,7 +92,11 @@ export function useStoragesPageState(
   initialStorages: Storage[],
   options: EntityPageStateOptions<Storage>,
 ) {
-  const stableFilterFn = useCallback(filterStorages, []);
+  const floorLabel = useFloorLabel();
+  const stableFilterFn = useCallback(
+    (items: Storage[], filters: StorageFilterState) => filterStorages(items, filters, floorLabel),
+    [floorLabel],
+  );
 
   const config: EntityPageStateConfig<Storage, StorageFilterState> = {
     urlParamName: 'storageId',

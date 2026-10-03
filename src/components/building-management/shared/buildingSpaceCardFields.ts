@@ -17,6 +17,8 @@
 import { priceCellLabel, type PriceLabelT } from '@/lib/listings/listing-price-label';
 import { resolveDisplayPrice, type PricedPropertyLike } from '@/lib/properties/price-resolver';
 import type { SpaceCardField } from './types';
+import type { FloorLabelInput } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 
 // ============================================================================
 // FIELD FACTORIES
@@ -44,16 +46,16 @@ export function buildTypeCodeField<T>(
 }
 
 /**
- * Field 2: Floor identifier.
+ * Field 2: Floor — the ONE label (ADR-903) from the ONE read boundary (`hostedFloorRef`).
  * Falls back to em dash when floor is absent.
  */
-export function buildFloorField<T>(
+export function buildFloorField<T extends { readonly floor?: unknown; readonly floorKind?: unknown }>(
   label: string,
-  getFloor: (item: T) => string | undefined,
+  floorLabel: (value: FloorLabelInput) => string,
 ): SpaceCardField<T> {
   return {
     label,
-    render: (item) => getFloor(item) || '—',
+    render: (item) => floorLabel(hostedFloorRef(item)) || '—',
   };
 }
 

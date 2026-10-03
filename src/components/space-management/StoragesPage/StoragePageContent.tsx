@@ -35,6 +35,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/AdvancedFilters';
+import { useFloorFilterConfig } from '@/components/core/AdvancedFilters/hooks/useFloorFilterConfig';
 import { ListContainer, PageContainer, DetailsContainer } from '@/core/containers';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -64,7 +65,6 @@ const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
   type: 'storage',
   ...NEW_SPACE_STATUSES,
   building: '',
-  floor: '',
   area: 0,
 };
 
@@ -80,6 +80,8 @@ export function StoragePageContent() {
 
   // Firestore data connection - πραγματικά δεδομένα αντί για mock data
   const { storages, loading, error, refetch } = useFirestoreStorages();
+  // ADR-903 §6 — οι όροφοι του φίλτρου προκύπτουν από τις αποθήκες που υπάρχουν.
+  const filtersConfig = useFloorFilterConfig(storageFiltersConfig, storages);
 
   const {
     selectedStorage,
@@ -268,7 +270,7 @@ export function StoragePageContent() {
         {/* Desktop: Filters */}
         <aside className="hidden md:block" role="complementary" aria-label={t('pages.storage.filters.label')}>
           <AdvancedFiltersPanel
-            config={storageFiltersConfig}
+            config={filtersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
@@ -363,7 +365,7 @@ export function StoragePageContent() {
           title={t('pages.storage.filters.mobileTitle')}
         >
           <AdvancedFiltersPanel
-            config={storageFiltersConfig}
+            config={filtersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />

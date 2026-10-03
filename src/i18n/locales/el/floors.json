@@ -1,0 +1,19 @@
+{
+  "label": {
+    "foundation": "Θεμελίωση",
+    "basement": "{depth, plural, one {Υπόγειο} other {#ο Υπόγειο}}",
+    "semiBasement": "Ημιυπόγειο",
+    "ground": "Ισόγειο",
+    "raisedGround": "Υπερυψωμένο Ισόγειο",
+    "pilotis": "Πυλωτή",
+    "standard": "{n}ος Όροφος",
+    "mezzanine": "{index, plural, one {Μεσοπάτωμα} other {#ο Μεσοπάτωμα}}",
+    "attic": "Σοφίτα",
+    "roof": "Δώμα",
+    "stairPenthouse": "Απόληξη Κλιμακοστασίου"
+  },
+  "picker": {
+    "empty": "Το κτίριο δεν έχει ορόφους",
+    "loadError": "Οι όροφοι δεν φορτώθηκαν — δοκιμάστε ξανά"
+  }
+}

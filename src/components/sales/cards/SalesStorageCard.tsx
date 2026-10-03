@@ -11,6 +11,8 @@ import React, { useMemo } from 'react';
 import { DollarSign, Calculator, Layers } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
 import { salesCardPricing } from '@/components/sales/shared/sales-space-page';
 import { spaceStatusBadges } from '@/lib/units/unit-status-badges';
@@ -43,6 +45,7 @@ export function SalesStorageCard({
   const { t } = useTranslation(COMMON_NAMESPACES);
   // ADR-777 §8.60.20 — ξεχωριστό hook με ρητό namespace (ο CHECK 3.8 τα διαβάζει στατικά· πρότυπο ADR-744).
   const { t: tUnit } = useTranslation('properties-enums');
+  const floor = useFloorLabel()(hostedFloorRef(storage));
 
   // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση, από το ΕΝΑ SSoT
   // των μονάδων. Ως τις 2026-09-18 διάβαζε το παλιό `status`: θέση πωλημένη μαζί με ακίνητο
@@ -90,7 +93,7 @@ export function SalesStorageCard({
   return (
     <ListCard
       title={storage.name || storage.id}
-      subtitle={`${storage.building ?? ''} · ${storage.floor ?? ''}`}
+      subtitle={`${storage.building ?? ''} · ${floor}`}
       badges={badges}
       stats={stats}
       compact={compact}

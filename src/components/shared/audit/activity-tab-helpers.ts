@@ -166,21 +166,8 @@ export function formatStorageUrl(url: string): string {
 // ============================================================================
 // FIELD-SPECIFIC FORMATTING (floor numbers, area units)
 // ============================================================================
-
-/**
- * Floor number → human-readable label (Greek ordinal convention).
- *   0  → "Ισόγειο"
- *   1  → "1ος"
- *  -1  → "1ο υπόγειο"
- */
-function formatFloorNumber(value: string | number | boolean | null): string | undefined {
-  if (value === null || value === undefined) return undefined;
-  const num = typeof value === 'number' ? value : Number(value);
-  if (Number.isNaN(num)) return undefined;
-  if (num === 0) return 'Ισόγειο';
-  if (num > 0) return `${num}ος`;
-  return `${Math.abs(num)}ο υπόγειο`;
-}
+// ADR-903: ο όροφος ΔΕΝ μορφοποιείται πια εδώ (ήταν ελληνικά γραμμένα στον κώδικα, «1ος» χωρίς
+// «όροφος»). Ο καλών περνά τον ΕΝΑ μορφοποιητή (`useFloorLabel`) ως `floorLabel`.
 
 /**
  * Wrap a scalar area number with the m² unit label.
@@ -212,7 +199,7 @@ function formatAreasObject(raw: string): string | undefined {
  *
  * Applies special formatting for fields whose stored values carry implicit
  * semantics not covered by the generic renderer:
- *   - `floor`  — numeric ordinal → Greek label ("Ισόγειο", "1ος", "1ο υπόγειο")
+ *   - `floor`  — via the caller's `floorLabel` (ADR-903 `useFloorLabel`: «Ισόγειο» / «2nd Floor»)
  *   - `area`   — numeric scalar  → value + " τ.μ."
  *   - `areas`  — JSON object     → key labels with " τ.μ." on each value
  *
@@ -223,6 +210,7 @@ export function formatFieldAwareValue(
   value: string | number | boolean | null,
   translateValue?: (v: string) => string | undefined,
   quantity?: QuantitySpec,
+  floorLabel?: (value: string | number) => string,
 ): string {
   // 🏢 ADR-852 Φ2 — Η ΠΟΣΟΤΗΤΑ ΠΡΟΗΓΕΙΤΑΙ, ΚΑΙ ΜΟΝΟ ΟΤΑΝ ΕΙΝΑΙ ΔΗΛΩΜΕΝΗ.
   //
@@ -236,8 +224,8 @@ export function formatFieldAwareValue(
   const byQuantity = formatQuantityValue(quantity, value);
   if (byQuantity !== undefined) return byQuantity;
 
-  if (field === 'floor') {
-    return formatFloorNumber(value) ?? formatDisplayValue(value, translateValue);
+  if (field === 'floor' && floorLabel && (typeof value === 'number' || typeof value === 'string')) {
+    return floorLabel(value) || formatDisplayValue(value, translateValue);
   }
   if (field === 'area') {
     return formatAreaScalar(value) ?? formatDisplayValue(value, translateValue);

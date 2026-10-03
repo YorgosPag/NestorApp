@@ -17,6 +17,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorsByBuilding, type FloorOption } from './useFloorsByBuilding';
 import { usePropertiesByBuilding } from './usePropertiesByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { floorOptionLabel } from './floor-option-label';
 
 export interface FloorSelectByBuildingProps {
   buildingId: string | null | undefined;
@@ -34,6 +36,7 @@ export function FloorSelectByBuilding({
   id,
 }: FloorSelectByBuildingProps) {
   const { t } = useTranslation(['building-tabs']);
+  const floorLabel = useFloorLabel();
   const { floors, loading: floorsLoading } = useFloorsByBuilding(buildingId);
   const { properties, loading: propertiesLoading } = usePropertiesByBuilding(buildingId);
 
@@ -70,7 +73,7 @@ export function FloorSelectByBuilding({
             const count = propertyCountByFloor.get(f.id) ?? 0;
             return (
               <SelectItem key={f.id} value={f.id}>
-                {f.number} — {f.name} ({count})
+                {floorOptionLabel(f, floorLabel)} ({count})
               </SelectItem>
             );
           })}

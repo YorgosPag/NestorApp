@@ -47,6 +47,9 @@
     "projects": "Έργα",
     "buildings": "Κτίρια",
     "storages": "Αποθήκες",
-    "details": "Λεπτομέρειες"
+    "details": "Λεπτομέρειες",
+    "breadcrumb": {
+      "navigateTo": "Μετάβαση σε {name}"
+    }
   }
 }

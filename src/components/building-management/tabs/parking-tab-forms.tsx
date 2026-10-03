@@ -23,6 +23,7 @@ import {
   type OperationalStatusDraft,
 } from '@/lib/spaces/space-operational-draft';
 import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
+import { FloorSelect } from '@/components/shared/FloorSelectField';
 import { useParkingTabState } from './useParkingTabState';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { OptionSelectField, type SelectOption } from '@/components/shared/space-info/OptionSelectField';
@@ -93,11 +94,11 @@ export function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) 
           <span className={cn("text-xs font-medium", colors.text.muted)}>
             {t('general.fields.floor')}
           </span>
-          <Input
-            value={state.createFloor}
-            onChange={(e) => state.setCreateFloor(e.target.value)}
-            placeholder="-1"
-            className="h-9"
+          <FloorSelect
+            buildingId={state.buildingId}
+            value={state.createFloorId}
+            onChange={(selection) => state.setCreateFloorId(selection?.floorId ?? '')}
+            triggerClassName="h-9"
             disabled={state.creating}
           />
         </label>
@@ -161,7 +162,14 @@ export function ParkingEditRow({ state, t }: ParkingEditRowProps) {
         </Select>
       </TableCell>
       <TableCell>
-        <Input value={state.editFloor} onChange={(e) => state.setEditFloor(e.target.value)} className="h-8 w-16" disabled={state.saving} />
+        <FloorSelect
+          buildingId={state.buildingId}
+          value={state.editFloorId}
+          onChange={(selection) => state.setEditFloorId(selection?.floorId ?? '')}
+          fallbackFloor={state.editFloorId ? undefined : state.editLegacyFloor}
+          triggerClassName="h-8"
+          disabled={state.saving}
+        />
       </TableCell>
       <TableCell>
         <Input type="number" step="0.01" value={state.editArea} onChange={(e) => state.setEditArea(e.target.value)} className="h-8 w-16" disabled={state.saving} />

@@ -1,6 +1,7 @@
 
 import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { Timestamp } from 'firebase/firestore';
+import type { HostedOnFloor } from '@/lib/floor/hosted-floor';
 import type { LegalPhase } from '@/types/legal-contracts';
 import type { PaymentSummary } from '@/types/payment-plan';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
@@ -427,7 +428,10 @@ export interface Property extends PropertySpecificationFields {
    */
   type: PropertyType | null;
   building: string;
+  /** ADR-903 §6 — παράγωγο αντίγραφο του αριθμού του ορόφου `floorId` (το γράφει ο server). */
   floor: number;
+  /** ADR-903 §6 — παράγωγο αντίγραφο του είδους του ορόφου (πυλωτή ≠ ισόγειο)· `null`/απόν ⇒ από τον αριθμό. */
+  floorKind?: HostedOnFloor['floorKind'];
 
   /**
    * 🔑 **Ποιος καταχώρησε το ακίνητο** — η «υπογραφή στην καρτέλα» (ADR-777 §8.23).

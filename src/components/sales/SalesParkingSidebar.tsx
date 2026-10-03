@@ -18,6 +18,8 @@ import {
 } from '@/components/sales/shared/SalesSpaceSidebar';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type { ParkingSpot } from '@/types/parking';
 import '@/lib/design-system';
 
@@ -88,10 +90,13 @@ export function SalesParkingSidebar({
     [t]
   );
 
+  const floorLabel = useFloorLabel();
   const getSubtitle = React.useCallback(
-    (spot: ParkingSpot) =>
-      spot.floor ? `${t('parking:general.fields.floor')}: ${spot.floor}` : undefined,
-    [t]
+    (spot: ParkingSpot) => {
+      const floor = floorLabel(hostedFloorRef(spot));
+      return floor ? `${t('parking:general.fields.floor')}: ${floor}` : undefined;
+    },
+    [t, floorLabel]
   );
 
   const renderCard = React.useCallback(

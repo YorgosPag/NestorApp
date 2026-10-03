@@ -26,6 +26,14 @@ describe('createBundleTranslate', () => {
     expect(t('app:a')).toBe('app:a');
   });
 
+  it('🔑 ADR-903 selectordinal: η κατηγορία από το CLDR της γλώσσας του bundle', () => {
+    const ordinal = '{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}';
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101, 111].map((n) => formatBundleText(ordinal, { n }, 'en')))
+      .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st', '111th']);
+    expect(formatBundleText('{n, selectordinal, =2 {δεύτερος} other {#ος}}', { n: 2 }, 'el')).toBe('δεύτερος');
+    expect(formatBundleText('{n, selectordinal, one {#st} other {#th}}', { n: 2 }, 'en')).toBe('2th');
+  });
+
   it('παράμετρος που δεν δόθηκε μένει ορατή', () => {
     expect(formatBundleText('Γεια {name}')).toBe('Γεια {name}');
   });

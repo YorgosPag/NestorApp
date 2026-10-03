@@ -28,6 +28,7 @@ import type { OperationalStatus } from '@/constants/operational-statuses';
 import { resolveSpaceStatuses, type SpaceStatuses } from '@/lib/spaces/space-status-split';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { normalizeToDate } from '@/lib/date-local';
+import { readHostedFloor } from '@/lib/floor/hosted-floor';
 
 /**
  * **Τα πεδία παρακολουθήματος πώλησης** (ADR-199) — χιλιοστά, εμπορική κατάσταση, όροι.
@@ -96,8 +97,8 @@ export function mapStorageDoc(docId: string, data: Record<string, unknown>): Sto
     buildingId: data.buildingId as string | undefined,
     companyId: data.companyId as string | undefined,
     linkedCompanyId: (data.linkedCompanyId as string | null) ?? undefined,
-    floor: (data.floor as string) || '',
-    floorId: data.floorId as string | undefined,
+    // ADR-903 §6 — ο ένας αναγνώστης φιλοξενίας (παλιό κείμενο ⇒ parser, ποτέ σιωπηλό 0).
+    ...readHostedFloor(data),
     area: typeof data.area === 'number' ? data.area : 0,
     description: data.description as string | undefined,
     price: typeof data.price === 'number' ? data.price : undefined,
@@ -126,7 +127,7 @@ const VALID_LOCATION_ZONES: readonly string[] = [
  *
  * Covers every field declared in `ParkingSpot` (types/parking.ts).
  * Connection fields (buildingId, projectId, …) are always optional.
- * ADR-145: parking has no floorId — floor is a free string only.
+ * ADR-903 §6: parking is hosted on a floor (`floorId` + derived `floor`/`floorKind`).
  */
 export function mapParkingDoc(docId: string, data: Record<string, unknown>): ParkingSpot {
   const rawType = data.type as string | undefined;
@@ -144,7 +145,7 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
     type: rawType && VALID_PARKING_TYPES.includes(rawType)
       ? rawType as ParkingSpotType
       : undefined,
-    floor: data.floor as string | undefined,
+    ...readHostedFloor(data),
     location: data.location as string | undefined,
     area: typeof data.area === 'number' ? data.area : undefined,
     price: typeof data.price === 'number' ? data.price : undefined,
@@ -198,6 +199,7 @@ export function mapPropertyDoc(docId: string, data: Record<string, unknown>): Pr
     building: (data.building as string) || '',
     buildingId: (data.buildingId as string) || '',
     floor: typeof data.floor === 'number' ? data.floor : 0,
+    floorKind: readHostedFloor(data).floorKind,
     floorId: (data.floorId as string) || '',
     project: (data.project as string) || (data.projectId as string) || '',
     status: isValidPropertyStatus(rawStatus) ? rawStatus : 'unavailable',

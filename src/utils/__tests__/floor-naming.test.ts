@@ -4,7 +4,6 @@
 
 import {
   generateAutoShortName,
-  generateAutoLongName,
   inferKindFromNumber,
   isFloorKind,
   isBuildingStorey,
@@ -12,7 +11,9 @@ import {
   FLOOR_KIND_VALUES,
   SPECIAL_LEVEL_KINDS,
   type FloorKind,
+  isAboveGround,
 } from '../floor-naming';
+import { canonicalFloorLongName } from '@/lib/floor/floor-label-bundle';
 
 describe('floor-naming', () => {
   // ─── generateAutoShortName ────────────────────────────────────────────────
@@ -52,60 +53,60 @@ describe('floor-naming', () => {
     });
   });
 
-  // ─── generateAutoLongName (Greek canonical) ───────────────────────────────
+  // ─── canonicalFloorLongName (Greek canonical) ───────────────────────────────
 
-  describe('generateAutoLongName — fixed labels', () => {
+  describe('canonicalFloorLongName — fixed labels', () => {
     it('foundation → "Θεμελίωση"', () => {
-      expect(generateAutoLongName('foundation', 0)).toBe('Θεμελίωση');
+      expect(canonicalFloorLongName('foundation', 0)).toBe('Θεμελίωση');
     });
 
     it('roof → "Δώμα"', () => {
-      expect(generateAutoLongName('roof', 0)).toBe('Δώμα');
+      expect(canonicalFloorLongName('roof', 0)).toBe('Δώμα');
     });
 
     it('ground → "Ισόγειο"', () => {
-      expect(generateAutoLongName('ground', 0)).toBe('Ισόγειο');
+      expect(canonicalFloorLongName('ground', 0)).toBe('Ισόγειο');
     });
   });
 
-  describe('generateAutoLongName — standard ordinals 1-50', () => {
+  describe('canonicalFloorLongName — standard ordinals 1-50', () => {
     it.each(Array.from({ length: 50 }, (_, i) => i + 1))(
       'floor %i → "%iος Όροφος"',
       (n) => {
-        expect(generateAutoLongName('standard', n)).toBe(`${n}ος Όροφος`);
+        expect(canonicalFloorLongName('standard', n)).toBe(`${n}ος Όροφος`);
       },
     );
   });
 
-  describe('generateAutoLongName — basement', () => {
+  describe('canonicalFloorLongName — basement', () => {
     it('-1 → "Υπόγειο"', () => {
-      expect(generateAutoLongName('basement', -1)).toBe('Υπόγειο');
+      expect(canonicalFloorLongName('basement', -1)).toBe('Υπόγειο');
     });
 
     it('-2 → "2ο Υπόγειο"', () => {
-      expect(generateAutoLongName('basement', -2)).toBe('2ο Υπόγειο');
+      expect(canonicalFloorLongName('basement', -2)).toBe('2ο Υπόγειο');
     });
 
     it('-5 → "5ο Υπόγειο"', () => {
-      expect(generateAutoLongName('basement', -5)).toBe('5ο Υπόγειο');
+      expect(canonicalFloorLongName('basement', -5)).toBe('5ο Υπόγειο');
     });
 
     it('0 fallback → "Υπόγειο" (level 1)', () => {
-      expect(generateAutoLongName('basement', 0)).toBe('Υπόγειο');
+      expect(canonicalFloorLongName('basement', 0)).toBe('Υπόγειο');
     });
   });
 
-  describe('generateAutoLongName — mezzanine', () => {
+  describe('canonicalFloorLongName — mezzanine', () => {
     it('1 → "Μεσοπάτωμα"', () => {
-      expect(generateAutoLongName('mezzanine', 1)).toBe('Μεσοπάτωμα');
+      expect(canonicalFloorLongName('mezzanine', 1)).toBe('Μεσοπάτωμα');
     });
 
     it('2 → "2ο Μεσοπάτωμα"', () => {
-      expect(generateAutoLongName('mezzanine', 2)).toBe('2ο Μεσοπάτωμα');
+      expect(canonicalFloorLongName('mezzanine', 2)).toBe('2ο Μεσοπάτωμα');
     });
 
     it('0 fallback → "Μεσοπάτωμα"', () => {
-      expect(generateAutoLongName('mezzanine', 0)).toBe('Μεσοπάτωμα');
+      expect(canonicalFloorLongName('mezzanine', 0)).toBe('Μεσοπάτωμα');
     });
   });
 
@@ -154,7 +155,7 @@ describe('floor-naming', () => {
     it('is a recognised FloorKind with Greek auto-names', () => {
       expect(isFloorKind('stair-penthouse')).toBe(true);
       expect(generateAutoShortName('stair-penthouse', 3)).toBe('SP');
-      expect(generateAutoLongName('stair-penthouse', 3)).toBe('Απόληξη Κλιμακοστασίου');
+      expect(canonicalFloorLongName('stair-penthouse', 3)).toBe('Απόληξη Κλιμακοστασίου');
     });
   });
 
@@ -187,4 +188,31 @@ describe('floor-naming', () => {
       expect(countBuildingStoreys([{}, {}, { kind: 'roof' as const }])).toBe(2);
     });
   });
+
+  // ─── ADR-903 — ελληνικά είδη στάθμης ──────────────────────────────────────
+
+  describe('ADR-903 kinds (semi-basement · raised-ground · pilotis · attic)', () => {
+    it.each<[FloorKind, string]>([
+      ['semi-basement', 'SB'],
+      ['raised-ground', 'RG'],
+      ['pilotis', 'PL'],
+      ['attic', 'AT'],
+    ])('%s ⇒ short code %s', (kind, code) => {
+      expect(isFloorKind(kind)).toBe(true);
+      expect(generateAutoShortName(kind, 0)).toBe(code);
+    });
+
+    it('πυλωτή + σοφίτα ΔΕΝ μετρούν («Πυλωτή + 4 όροφοι»)· ημιυπόγειο + υπερυψωμένο μετρούν', () => {
+      expect(isBuildingStorey('pilotis')).toBe(false);
+      expect(isBuildingStorey('attic')).toBe(false);
+      expect(isBuildingStorey('semi-basement')).toBe(true);
+      expect(isBuildingStorey('raised-ground')).toBe(true);
+    });
+
+    it('isAboveGround (IFC AboveGround): μόνο θεμελίωση/υπόγειο/ημιυπόγειο κάτω από το έδαφος', () => {
+      const below = FLOOR_KIND_VALUES.filter((kind) => !isAboveGround(kind));
+      expect([...below].sort()).toEqual(['basement', 'foundation', 'semi-basement']);
+    });
+  });
 });
+

@@ -31,6 +31,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';
 import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
@@ -99,6 +100,7 @@ export function OwnerPropertyCard({
   onHover?: (id: string | null) => void;
 }): React.ReactElement {
   const { t } = useTranslation([NS, 'properties-enums']);
+  const floorLabel = useFloorLabel();
 
   // 🔴 Ο **ίδιος** κριτής με τον διακομιστή. Δες την επικεφαλίδα του αρχείου.
   // ⚠️ **Μία ανάγνωση ρολογιού ανά απόδοση** (§8.33): η λήξη της εντολής κρίνεται με
@@ -148,7 +150,7 @@ export function OwnerPropertyCard({
             ? t(`${K}.card.typeUnknown`)
             : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[property.type]}`)}
           {property.areaSqm !== null && ` · ${t(`${K}.card.area`, { area: property.areaSqm })}`}
-          {property.floor !== null && ` · ${t(`${K}.card.floor`, { floor: property.floor })}`}
+          {property.floor !== null && ` · ${floorLabel(property.floor)}`}
           {property.bedrooms !== null &&
             ` · ${t(`${K}.card.bedrooms`, { count: property.bedrooms })}`}
         </p>

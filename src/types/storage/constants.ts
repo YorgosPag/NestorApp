@@ -45,23 +45,8 @@ export const typeLabels: Record<StorageType, string> = {
   warehouse: 'storage.types.warehouse'
 };
 
-// Standard floor names (i18n keys)
-export const standardFloors: string[] = [
-  'storage.floors.basement3',
-  'storage.floors.basement2',
-  'storage.floors.basement1',
-  'storage.floors.basement',
-  'storage.floors.ground',
-  'storage.floors.floor1',
-  'storage.floors.floor2',
-  'storage.floors.floor3',
-  'storage.floors.floor4',
-  'storage.floors.floor5',
-  'storage.floors.floor6',
-  'storage.floors.floor7',
-  'storage.floors.floor8',
-  'storage.floors.floor9'
-];
+// ADR-903 §6 — εδώ ζούσε το `standardFloors` (κλειδιά `storage.floors.*` που δεν υπήρξαν ποτέ στα locales).
+// Ο όροφος αποθήκης είναι ο όροφος του κτιρίου (`floorId`)· η ετικέτα από το `useFloorLabel`.
 
 // 🗑️ REMOVED: STORAGE_FILTER_LABELS - Use @/constants/property-statuses-enterprise
 //

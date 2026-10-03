@@ -30,6 +30,7 @@ import type {
   EntityAuditEntry,
 } from "@/types/audit-trail";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
+import { useFloorLabel } from "@/hooks/useFloorLabel";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -165,6 +166,7 @@ export function AuditTimelineEntry({
 }: AuditTimelineEntryProps) {
   const entry = sanitizeEntry(rawEntry);
   const { t } = useTranslation(AUDIT_TIMELINE_NAMESPACES);
+  const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;
@@ -351,11 +353,11 @@ export function AuditTimelineEntry({
                                     "line-through",
                                   )}
                                 >
-                                  {formatFieldAwareValue(sub.subField, sub.oldValue, translateSubValue)}
+                                  {formatFieldAwareValue(sub.subField, sub.oldValue, translateSubValue, undefined, floorLabel)}
                                 </span>
                                 {" → "}
                                 <span className="font-medium text-foreground">
-                                  {formatFieldAwareValue(sub.subField, sub.newValue, translateSubValue)}
+                                  {formatFieldAwareValue(sub.subField, sub.newValue, translateSubValue, undefined, floorLabel)}
                                 </span>
                               </li>
                             );
@@ -399,13 +401,13 @@ export function AuditTimelineEntry({
                   >
                     {change.oldValueLabel
                       ? safeStr(change.oldValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue, quantity)}
+                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue, quantity, floorLabel)}
                   </span>
                   {" → "}
                   <span className="font-medium text-foreground">
                     {change.newValueLabel
                       ? safeStr(change.newValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue, quantity)}
+                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue, quantity, floorLabel)}
                   </span>
                 </li>
               );

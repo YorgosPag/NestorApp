@@ -13,6 +13,7 @@ import { publicUrl } from '@/lib/http/public-origin';
 import { formatEuro } from '@/lib/number/greek-decimal';
 import { formatOperatorDate } from '@/lib/operator-time-format';
 import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
+import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
 import { BRAND, escapeHtml } from '@/services/email-templates';
 import { resolveTenantNotificationEmail } from '@/services/org-structure/org-routing-resolver';
 import type { ResolveResult } from '@/services/org-structure/org-routing-resolver';
@@ -104,8 +105,9 @@ export function htmlCard(title: string, rows: string): string {
 
 /** Property hierarchy rows — shared across all notification types */
 export function buildPropertyRows(event: SalesAccountingEvent): string {
+  // ADR-903 — ο ΕΝΑΣ μορφοποιητής ορόφου (το παλιό `${n}ος όροφος` έγραφε «0ος όροφος»).
   const floorText = event.unitFloor !== null && event.unitFloor !== undefined
-    ? ` — ${event.unitFloor}ος όροφος` : '';
+    ? ` — ${floorLabelIn({ number: event.unitFloor, kind: null }, 'el')}` : '';
   return [
     htmlInfoRow('Μονάδα', `${escapeHtml(event.propertyName)}${floorText}`),
     event.buildingName ? htmlInfoRow('Κτίριο', escapeHtml(event.buildingName)) : '',

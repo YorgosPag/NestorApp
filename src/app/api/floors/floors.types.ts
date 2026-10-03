@@ -66,7 +66,14 @@ export interface FloorCreateResponse {
 }
 
 export type FloorUpdateResponse =
-  | { success: true; message: string; _v?: number; cascadeWarning?: string }
+  | {
+      success: true;
+      message: string;
+      _v?: number;
+      cascadeWarning?: string;
+      /** ADR-903 §6 — πόσα φιλοξενούμενα στοιχεία ακολούθησαν την αλλαγή αριθμού/είδους/ονόματος. */
+      hostedCascade?: import('./floor-ref-cascade.service').FloorRefCascadeResult;
+    }
   | { success: false; error: string; details?: string }
   | ConflictResponseBody;
 

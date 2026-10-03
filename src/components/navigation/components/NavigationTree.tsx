@@ -7,10 +7,11 @@
  * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
  * Floors αφαιρέθηκαν από navigation - Units συνδέονται απευθείας με Buildings
  */
-import React, { useMemo } from 'react';
+import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useNavigation } from '../core/NavigationContext';
+import { useBuildingProperties, useProjectBuildings } from '../core/hooks/useSelectionCollections';
 // 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES } from '../config';
 import { NavigationButton } from './NavigationButton';
@@ -44,12 +45,11 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     // 🏢 ENTERPRISE: selectFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     navigateToExistingPages,
     // 🏢 ENTERPRISE: Real-time building functions
-    getBuildingCount,
-    getBuildingsForProject
+    getBuildingCount
   } = useNavigation();
 
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
   const colors = useSemanticColors();
 
   /**
@@ -74,32 +74,9 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     }
   };
 
-  // ==========================================================================
-  // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
-  // ==========================================================================
-
-  const projectBuildings = useMemo(() => {
-    if (!selectedProject) return [];
-    return getBuildingsForProject(selectedProject.id);
-  }, [selectedProject, getBuildingsForProject]);
-
-  /**
-   * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
-   * Memoized units για το επιλεγμένο building.
-   * Συλλέγει ΟΛΕΣ τις units από:
-   * 1. ΟΛΟΥΣ τους ορόφους του building (αν υπάρχουν)
-   * 2. Απευθείας από το building (αν δεν έχει ορόφους)
-   * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
-   */
-  const buildingProperties = useMemo(() => {
-    if (!selectedBuilding) return [];
-
-    // 🏢 ENTERPRISE: Combine properties from floors AND direct building properties
-    const floorProperties = selectedBuilding.floors?.flatMap(floor => floor.properties) || [];
-    const directProperties = selectedBuilding.properties || [];
-
-    return [...floorProperties, ...directProperties];
-  }, [selectedBuilding]);
+  // 🏢 SSoT: οι συλλογές της επιλογής ζουν στο `useSelectionCollections` (ADR-744 §26).
+  const projectBuildings = useProjectBuildings();
+  const buildingProperties = useBuildingProperties();
 
   if (loading) {
     return (

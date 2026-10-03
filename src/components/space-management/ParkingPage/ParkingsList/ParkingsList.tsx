@@ -24,6 +24,7 @@ import '@/lib/design-system';
 import { SpaceListBody } from '@/components/space-management/shared/SpaceListBody';
 import { tieBreakByName, useSpaceListSections, type SpaceListRules } from '@/components/space-management/shared/useSpaceListSections';
 import type { SortableValue } from '@/lib/array-utils';
+import { hostedFloorNumber } from '@/lib/floor/hosted-floor';
 
 /** Ολική σειρά για ισοπαλίες και απουσία τιμής: αριθμός θέσης → `id`. */
 const byNumberThenId = tieBreakByName<ParkingSpot>((parking) => parking.number || '');
@@ -42,7 +43,8 @@ function parkingSortValue(p: ParkingSpot, field: SortField): SortableValue {
     case 'location':
       return (p.location || '').toLowerCase();
     case 'number':
-      return String(p.floor || '').toLowerCase();
+      // ADR-903 §6 — αριθμητικά κατά στάθμη (ήταν λεξικογραφικά σε κείμενο: «-1» μετά το «10»).
+      return hostedFloorNumber(p);
     case 'date':
       return p.updatedAt?.getTime() ?? p.createdAt?.getTime() ?? 0;
     case 'type':

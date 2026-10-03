@@ -222,6 +222,11 @@ These are 1.0x-1.5x over budget. Optional splits, can be deferred indefinitely.
 | reports (625) | Extract `crm` + `spaces` into `reports-extended` (~155). Residual: ~470 |
 | tool-hints (601) | 1 line over budget. Pure long-form-help data. Mark `budgetExempt: true`. No split. |
 
+> **2026-10-03 — δεύτερη διάσπαση του `navigation` (ADR-744 §26).** Οι ρίζες της σελίδας του ιεραρχικού
+> πλοηγητή (`dialogs` · `tree` · `columns` · `buildingSpaces` · `modals` · `page` · `mobile`) έφυγαν στο νέο
+> lazy `hierarchy-navigator`, **χωρίς** compat remap (απευθείας μετάβαση των 8 καταναλωτών· ADR-798 §13). Κριτήριο
+> εδώ δεν ήταν το όριο γραμμών αλλά το **byte budget του κελύφους**: το `navigation` ταξιδεύει ολόκληρο σε κάθε διαδρομή.
+
 ---
 
 ## 4. Infrastructure Changes

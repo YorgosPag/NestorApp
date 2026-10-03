@@ -9,6 +9,7 @@
 
 import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { RecordLifecycleStatus } from '@/lib/firestore/trashed-status';
+import type { HostedOnFloor } from '@/lib/floor/hosted-floor';
 
 // =============================================================================
 // ENUMS (string unions for Firestore compatibility)
@@ -66,8 +67,15 @@ export interface ParkingSpot {
   status?: RecordLifecycleStatus;
   /** Φυσική χρηστικότητα — ίδιο λεξιλόγιο με τα ακίνητα (ADR-777 §8.60.20). Απούσα = αδήλωτη. */
   operationalStatus?: OperationalStatus;
-  /** Floor/level identifier, e.g. "-1", "0", "pilotis" — canonical field (ADR-145) */
-  floor?: string;
+  /**
+   * ADR-903 §6 — ο όροφος που **φιλοξενεί** τη θέση (Revit `LevelId`): `floorId` = αυθεντία,
+   * `floor` + `floorKind` = παράγωγο αντίγραφο που γράφει μόνο ο server. Η πυλωτή ως **ζώνη**
+   * μένει `locationZone`. (Ως τις 2026-10-03 ήταν ελεύθερο κείμενο «-1» / «pilotis», με παραπομπή σε «ADR-145»
+   * που δεν περιέγραφε ποτέ το parking — ορφανή αναφορά· η απόφαση ζει πλέον στο ADR-903 §6.)
+   */
+  floorId?: HostedOnFloor['floorId'];
+  floor?: HostedOnFloor['floor'];
+  floorKind?: HostedOnFloor['floorKind'];
   /** Freeform location description */
   location?: string;
   /** Area in m^2 */

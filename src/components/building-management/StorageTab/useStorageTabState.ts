@@ -28,6 +28,8 @@ import { policyErrorMessageOf } from '@/lib/policy';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { getStorageTypeLabel, filterUnits, calculateStats } from './utils';
 import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
@@ -48,6 +50,7 @@ interface StorageMutationResult {
 export function useStorageTabState(building: Building) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'properties-enums']);
   const { success, error: notifyError } = useNotifications();
+  const floorLabel = useFloorLabel();
 
   // ── Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation ──
   const [units, setUnits] = useState<StorageUnit[]>(buildingStorageCache.get(building.id) ?? []);
@@ -57,7 +60,8 @@ export function useStorageTabState(building: Building) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createCode, setCreateCode] = useState('');
   const [createType, setCreateType] = useState<StorageType>('storage');
-  const [createFloor, setCreateFloor] = useState('');
+  // ADR-903 §6 — ο όροφος-φιλοξενών (`''` = κανένας)· αριθμός/είδος τα παράγει ο server.
+  const [createFloorId, setCreateFloorId] = useState('');
   const [createArea, setCreateArea] = useState('');
   const [createDescription, setCreateDescription] = useState('');
   const [creating, setCreating] = useState(false);
@@ -67,7 +71,7 @@ export function useStorageTabState(building: Building) {
   const [editCode, setEditCode] = useState('');
   const [editType, setEditType] = useState<StorageType>('storage');
   const [editStatus, setEditStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
-  const [editFloor, setEditFloor] = useState('');
+  const [editFloorId, setEditFloorId] = useState('');
   const [editArea, setEditArea] = useState('');
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο (ήταν `editPrice` → @deprecated `price`, πάντα «πώληση»).
   const commercial = useCommercialDraft();
@@ -93,7 +97,6 @@ export function useStorageTabState(building: Building) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<StorageType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<SpaceAvailabilityFilter>(ALL_SPACE_AVAILABILITY);
-  const filterFloor = 'all';
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // ── Label translators ──
@@ -121,7 +124,9 @@ export function useStorageTabState(building: Building) {
           // ADR-777 §8.60.20 — κάδος · λειτουργία (ο ΕΝΑΣ αναγνώστης τα έλυσε ήδη στον mapper).
           status: s.status,
           operationalStatus: s.operationalStatus,
-          floor: s.floor || '',
+          floorId: s.floorId ?? null,
+          floor: s.floor ?? null,
+          floorKind: s.floorKind ?? null,
           area: typeof s.area === 'number' ? s.area : 0,
           price: typeof s.price === 'number' ? s.price : 0,
           // ADR-777 §8.60.18 — χωρίς αυτά ο επιλυτής έβλεπε ΜΟΝΟ το @deprecated `price`:
@@ -174,8 +179,8 @@ export function useStorageTabState(building: Building) {
   // ── Derived data ──
 
   const filteredUnits = useMemo(
-    () => filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
-    [units, searchTerm, filterType, filterStatus, filterFloor],
+    () => filterUnits(units, searchTerm, filterType, filterStatus),
+    [units, searchTerm, filterType, filterStatus],
   );
 
   const stats = useMemo(() => calculateStats(filteredUnits), [filteredUnits]);
@@ -186,7 +191,7 @@ export function useStorageTabState(building: Building) {
     setShowCreateForm(false);
     setCreateCode('');
     setCreateType('storage');
-    setCreateFloor('');
+    setCreateFloorId('');
     setCreateArea('');
     setCreateDescription('');
   };
@@ -200,7 +205,7 @@ export function useStorageTabState(building: Building) {
         buildingId: building.id,
         projectId: building.projectId || null,
         type: createType,
-        floor: createFloor.trim() || null,
+        floorId: createFloorId || undefined,
         area: createArea ? parseFloat(createArea) : null,
         description: createDescription.trim() || null,
         building: building.name,
@@ -219,12 +224,18 @@ export function useStorageTabState(building: Building) {
 
   // ── Edit handlers ──
 
+  // Αποθήκη πριν τη μετανάστευση: ο παλιός όροφος δείχνεται ως ανενεργή επιλογή (ADR-903 §6).
+  const editLegacyFloor = useMemo(() => {
+    const unit = units.find((u) => u.id === editingId);
+    return unit ? hostedFloorRef(unit) : null;
+  }, [units, editingId]);
+
   const startEdit = (unit: StorageUnit) => {
     setEditingId(unit.id);
     setEditCode(unit.code || '');
     setEditType(unit.type || 'storage');
     setEditStatus(operationalDraftOf(unit));
-    setEditFloor(unit.floor || '');
+    setEditFloorId(unit.floorId || '');
     setEditArea(unit.area ? String(unit.area) : '');
     commercial.reset(unit);
   };
@@ -245,7 +256,8 @@ export function useStorageTabState(building: Building) {
       await updateStorageWithPolicy<StorageMutationResult>({ storageId: editingId, payload: {
         name: editCode.trim() || undefined,
         type: editType,
-        floor: editFloor.trim() || null,
+        // Μόνο αν άλλαξε: έγγραφο χωρίς `floorId` (πριν τη μετανάστευση) δεν χάνει σιωπηλά τον παλιό όροφο.
+        ...(editFloorId !== (units.find((u) => u.id === editingId)?.floorId ?? '') ? { floorId: editFloorId || null } : {}),
         area: editArea ? parseFloat(editArea) : null,
         // Η διάθεση ταξιδεύει ΜΟΝΟ όταν άλλαξε — κρίνεται απέναντι στην αποθηκευμένη αποθήκη.
         ...commercialPatchFor(editingId),
@@ -332,9 +344,9 @@ export function useStorageTabState(building: Building) {
       .map((s) => ({
         id: s.id,
         label: s.name || s.code || s.id,
-        sublabel: `${translatedGetTypeLabel(s.type)} · ${s.floor || '—'}`,
+        sublabel: `${translatedGetTypeLabel(s.type)} · ${floorLabel(hostedFloorRef(s)) || '—'}`,
       }));
-  }, [translatedGetTypeLabel]);
+  }, [translatedGetTypeLabel, floorLabel]);
 
   const handleLinkStorage = useCallback(async (itemId: string) => {
     await updateStorageWithPolicy({
@@ -347,20 +359,22 @@ export function useStorageTabState(building: Building) {
 
   return {
     t,
+    // ADR-903 §6 — το κτίριο της καρτέλας: ο επιλογέας ορόφου δείχνει τους ορόφους του.
+    buildingId: building.id,
     // Data
     units, loading, filteredUnits, stats,
     // Create
     showCreateForm, setShowCreateForm,
     createCode, setCreateCode,
     createType, setCreateType,
-    createFloor, setCreateFloor,
+    createFloorId, setCreateFloorId,
     createArea, setCreateArea,
     createDescription, setCreateDescription,
     creating, handleCreate, resetCreateForm,
     // Edit
     editingId, editCode, setEditCode,
     editType, setEditType, editStatus, setEditStatus,
-    editFloor, setEditFloor, editArea, setEditArea,
+    editFloorId, setEditFloorId, editLegacyFloor, editArea, setEditArea,
     commercial, saving,
     startEdit, cancelEdit, handleSaveEdit,
     // Delete

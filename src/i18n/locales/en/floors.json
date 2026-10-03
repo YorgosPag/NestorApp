@@ -1,0 +1,19 @@
+{
+  "label": {
+    "foundation": "Foundation",
+    "basement": "{depth, plural, one {Basement} other {Basement #}}",
+    "semiBasement": "Semi-basement",
+    "ground": "Ground Floor",
+    "raisedGround": "Raised Ground Floor",
+    "pilotis": "Pilotis",
+    "standard": "{n, selectordinal, one {#st Floor} two {#nd Floor} few {#rd Floor} other {#th Floor}}",
+    "mezzanine": "{index, plural, one {Mezzanine} other {Mezzanine #}}",
+    "attic": "Attic",
+    "roof": "Roof",
+    "stairPenthouse": "Stair Penthouse"
+  },
+  "picker": {
+    "empty": "This building has no floors",
+    "loadError": "Floors could not be loaded — try again"
+  }
+}

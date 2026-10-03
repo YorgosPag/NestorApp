@@ -112,7 +112,7 @@ describe('cancellation confirmation email', () => {
     expect(html).toContain('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ');
     expect(html).toContain('ΣΤΟΙΧΕΙΑ ΕΠΙΣΤΡΟΦΗΣ');
     expect(html).toContain('Α-101');
-    expect(html).toContain('2ος όροφος');
+    expect(html).toContain('2ος Όροφος'); // ADR-903 — ο ΕΝΑΣ μορφοποιητής ορόφου
     expect(text).toContain('═══ ΑΙΤΙΟΛΟΓΙΑ ═══');
     expect(text).toContain('═══ ΣΤΟΙΧΕΙΑ ΕΠΙΣΤΡΟΦΗΣ ═══');
   });

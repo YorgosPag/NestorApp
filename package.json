@@ -51,6 +51,7 @@
     "migrate:network-audience-private": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-network-audience-private.ts",
     "migrate:showcase-area-only-premises": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-showcase-area-only-premises.ts",
     "migrate:unplaced-linked-spaces": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-unplaced-linked-spaces.ts",
+    "migrate:hosted-floor-ref": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-hosted-floor-ref.ts",
     "migrate:network-inbox": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/reconcile-network-inbox.ts",
     "backfill:first-contact-offerer": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-first-contact-offerer.ts",
     "backfill:tour-face-scan": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-tour-face-scan.ts",

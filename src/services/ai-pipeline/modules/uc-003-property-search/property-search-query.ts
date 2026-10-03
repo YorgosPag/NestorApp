@@ -9,6 +9,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { arePropertyTypesEquivalent } from '@/constants/property-type-aliases';
+import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
 import type { PropertySearchCriteria } from '@/services/property-search.service';
 import type { ContactMatch } from '../../shared/contact-lookup';
 
@@ -204,7 +205,7 @@ export function buildDraftReply(
   const unitLines = units.slice(0, 5).map((unit, idx) => {
     const parts: string[] = [`${idx + 1}. ${unit.name}`];
     if (unit.area > 0) parts.push(`${unit.area} τ.μ.`);
-    if (unit.floor > 0) parts.push(`${unit.floor}ος όροφος`);
+    if (unit.floor > 0) parts.push(floorLabelIn({ number: unit.floor, kind: null }, 'el'));
     if (unit.building) parts.push(unit.building);
     if (unit.price !== null) parts.push(`${unit.price.toLocaleString('el-GR')}€`);
     return parts.join(' — ');

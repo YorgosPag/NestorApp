@@ -48,10 +48,11 @@ export const AUXILIARY_CLEAR_HEIGHT_UNDER_BEAM_MM = 2000;
 /**
  * Required ελάχιστο καθαρό ύψος κάτω από δοκό (mm) ανά είδος ορόφου:
  *   · ground / standard / mezzanine / `null` → 2200 (κατοικήσιμος, κούφωμα-driven).
- *   · basement / stair-penthouse / roof / foundation → 2000 (Άρθρο 8 απόλυτο).
+ *   · basement / semi-basement / stair-penthouse / roof / foundation → 2000 (Άρθρο 8 απόλυτο).
+ *     (ADR-903: το ημιυπόγειο είναι υπόγεια στάθμη — ίδιος κανόνας με το υπόγειο.)
  *
- * **Πυλωτή:** δεν υπάρχει διακριτό `FloorKind 'pilotis'` σήμερα (μοντελοποιείται ως
- * `ground` με χρήση στάθμευσης) → αντιμετωπίζεται **συντηρητικά** ως κατοικήσιμος (2200).
+ * **Πυλωτή:** από το ADR-903 υπάρχει `FloorKind 'pilotis'` — αλλά η τιμή του (1900;) **δεν**
+ * επαληθεύτηκε σε πηγή ΝΟΚ/ΚΠΝ, άρα παραμένει **συντηρητικά** κατοικήσιμος (2200).
  * Επειδή το warning είναι soft/opt-in, αυτό απλώς προειδοποιεί όπου δεν χρειάζεται — ο
  * μηχανικός το αγνοεί ελεύθερα στην πυλωτή. (Under-warning σε ισόγειο-κατοικία θα έχανε
  * πραγματική σύγκρουση πόρτας — γι' αυτό 2200 default.)
@@ -60,11 +61,12 @@ export const AUXILIARY_CLEAR_HEIGHT_UNDER_BEAM_MM = 2000;
 export function requiredClearHeightUnderBeamMm(kind: FloorKind | null): number {
   switch (kind) {
     case 'basement':
+    case 'semi-basement':
     case 'stair-penthouse':
     case 'roof':
     case 'foundation':
       return AUXILIARY_CLEAR_HEIGHT_UNDER_BEAM_MM;
-    default: // ground / standard / mezzanine / null → κατοικήσιμος
+    default: // ground / raised-ground / pilotis / standard / mezzanine / attic / null → κατοικήσιμος
       return LIVING_CLEAR_HEIGHT_UNDER_BEAM_MM;
   }
 }

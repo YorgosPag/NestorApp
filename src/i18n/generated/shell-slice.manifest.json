@@ -12,7 +12,7 @@
     "src/i18n/generated/routes/demands__new.el.json": "811f0e7be5a026573a724989ba6147f1e6b6e8615405945c64ecc750236ee0e1",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "da634d51d68321bb26762d645b87d83d823019577fd7cc11704ed5a3ae51e6e1",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "dabeb77e988e4922f1b1298d176c508bd89bb759643360782ef261e3f3f2548a",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "9d26be7eb5cb7d188169e06c99976235f03707da3842f626bfe01e4c3ddf8f06",
@@ -34,10 +34,10 @@
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
-    "src/i18n/generated/routes/offers.el.json": "3341e9d16ab25bce408f73b0be1eec279e555e12a0085f9b65a9124636b8ee93",
+    "src/i18n/generated/routes/offers.el.json": "dc5b7359e0ec0949002f01e1bcda23cd48f5d182a0bc57a114ab40166815421f",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "a7455227b431ceef5abcf2c912f19932f8ca7c36c1d8fe4339d9e83c14a54f24",
-    "src/i18n/generated/routes/offers__offerId.el.json": "b1aec1fe1b739e741e49284d7702d4648070aa2b4226c5a98879b17b79cb7c8f",
+    "src/i18n/generated/routes/offers__offerId.el.json": "31086bd3d69bb0cc9e97f91289a9c1595eb902ac870d0e7b888632697e0dd930",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "321843e391008307091be65386dba76ef657429a6a5ed7ada25adf6ecd170066",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -62,7 +62,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "bfefabab56a396c9433c95dfd2ff54e3477a2cb8d5c853861ed2c1173581e608",
+    "src/i18n/generated/shell-slice.el.json": "7f7fa93526048ab3e1c89b541b3b5abcfce498734d0ea87a7ecd36335eb2c6da",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5d7b0d11d63c28c186221beaf6be781ea50841812017a5a3c1fd0d3e67af5a1b",
+  "inputsSha256": "b78d060af3f93d04a07803a6bb3ec402c46cbf9c1fe4ba2523043f518dec452a",
   "languages": [
     "el"
   ],
@@ -125,6 +125,7 @@
     "common-status",
     "common-validation",
     "files",
+    "floors",
     "landing",
     "navigation",
     "projects",
@@ -465,7 +466,7 @@
     "src/components/owner-property/OwnerListingCompletion.tsx": "6f9e7abe68700d726c3e1186ce7a8491d2d36528e1ee16f56d26dbf26b955ca7",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
     "src/components/owner-property/OwnerPortfolio.tsx": "d001e163f9951e324e787ced253000befe423c2290aee8651d87a54ddc80bc60",
-    "src/components/owner-property/OwnerPropertyCard.tsx": "ce910003165f8e3cc40fc1754922b4ffe2f1a6c0911c1dddb921946f4d16a74f",
+    "src/components/owner-property/OwnerPropertyCard.tsx": "dfb45591668dd53e0fdb292347ee4abd963e199b774c15576c2951edd2a2769f",
     "src/components/owner-property/OwnerPropertyCardCover.tsx": "5bb5942d4c818f4064e2aa1f61a19a60d14b8bbb1454d0cd4e445f56438655cb",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "ea3369a217c00bbc9bccf658b4ae656e2610b99a030a9fed4be471742b0353f3",
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "a8ddacdcf9b786e2dd12c74cd5f2d3f6a7117b492dc08183a667fb6cadd4e504",
@@ -686,7 +687,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/audit-tracked-fields.ts": "81a871aa352e019bf15e4e171324af7d326ce3ce8b3949e8ec6b500ba206eea9",
+    "src/config/audit-tracked-fields.ts": "c36963ada29f1316198fdb163b295c324dd94ceef0ad41ee547bbd7a1803086d",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",
     "src/config/environment-contract.ts": "2ef0dd11f1e6e05676ef41ba5574cd8beddb587e99750d840d355c1b7f9a6cce",
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
@@ -863,6 +864,7 @@
     "src/lib/exports/trigger-export-download.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
     "src/lib/files/file-companion-objects.ts": "5c4e6c758758096373e73ae6351ffacaf5ee8ab001f88407c18b9b7249eb5dca",
     "src/lib/firestore/firestore-already-exists.ts": "215839de04a2ec2fda22f6412e002ffbc295fa938a795844c48c3bd8b3ea850d",
+    "src/lib/floor/floor-label-bundle.ts": "7b76d3b00a3dde8136b4567eb3744fc6eb67f62ca79c19d4a57fd515f1fdeb17",
     "src/lib/forms/draft-form-labels.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/forms/draft-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/forms/draft-validation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -1141,7 +1143,7 @@
     "src/services/email-templates/account-secured.ts": "8d721dc51ba94655eedac2243a82bc56bc31075dc10e6a926e65ddc38f2d8a29",
     "src/services/email-templates/base-email-template.ts": "3e519656e2542a33ac6d0b30b9054859bbb6ce8c99e716727f2f8f15b0f7ffbb",
     "src/services/email-templates/base-email-texts.ts": "2cd1bebbc42e0ec444c9c7121b29684b24054a63f35cd62ef1085c25abaa8556",
-    "src/services/email-templates/confirmation-email-shared.ts": "9f13f8748ff8bfa21b39b09a895a9a81e66f517a819591073b22efc644ec65a2",
+    "src/services/email-templates/confirmation-email-shared.ts": "4c82deaba2edc92b2421b1f1c06cf1cca9b3ae074606c24cfa5ee968cdd29a31",
     "src/services/email-templates/showcase-email-shared.ts": "9f13f8748ff8bfa21b39b09a895a9a81e66f517a819591073b22efc644ec65a2",
     "src/services/entity-audit-tracked-write.ts": "2bc038dc0d0d77484deecfa76736552ec163ecbb4471331c0f6d496d885583c9",
     "src/services/esco-skill.service.ts": "60240828f5dd730470fda03be1874048792e14fe8fbc35392bd77e4b7fb265c5",
@@ -1720,6 +1722,23 @@
     "contact__token": {
       "page": "src/app/(auth)/contact/[token]/page.tsx",
       "wants": {
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "contact.first.alreadyOpenLead",
@@ -3407,6 +3426,23 @@
           ],
           "prefixes": [],
           "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
         }
       }
     },
@@ -3774,6 +3810,23 @@
     "listing__id__floorplan": {
       "page": "src/app/(light)/listing/[id]/floorplan/page.tsx",
       "wants": {
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "listing-detail": {
           "keys": [
             "attributes.publicRecordSource",
@@ -3823,6 +3876,23 @@
     "listing__id__photos": {
       "page": "src/app/(light)/listing/[id]/photos/page.tsx",
       "wants": {
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "listing-detail": {
           "keys": [
             "media.backToListing",
@@ -3858,6 +3928,23 @@
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
           ],
           "prefixes": [],
           "whole": false
@@ -5865,6 +5952,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -5899,7 +6003,6 @@
             "offer.card.area",
             "offer.card.bedrooms",
             "offer.card.coverAlt",
-            "offer.card.floor",
             "offer.card.mapAlt",
             "offer.card.mapLoading",
             "offer.card.noCover",
@@ -6409,6 +6512,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties": {
           "keys": [
             "completion.aria",
@@ -6504,7 +6624,6 @@
             "offer.card.area",
             "offer.card.bedrooms",
             "offer.card.coverAlt",
-            "offer.card.floor",
             "offer.card.mapAlt",
             "offer.card.mapLoading",
             "offer.card.noCover",
@@ -7146,6 +7265,23 @@
         "common": {
           "keys": [
             "a11y.chooseDate"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
           ],
           "prefixes": [],
           "whole": false
@@ -9438,6 +9574,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "spatial-tour": {
           "keys": [
             "audience.projectTeam",
@@ -9549,6 +9702,23 @@
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
           ],
           "prefixes": [],
           "whole": false
@@ -9836,7 +10006,7 @@
     "src/components/search/LandingShowcase.tsx": "c6c9ea1f7fea4fe462da198a16897c760ce98edb11b5119f214c3ee38b021346",
     "src/components/search/PlaceSearchBox.tsx": "fe7369506cbcb580c41577e1bcf30d59a4e396301f08c9f66191ff3a0bf515ef",
     "src/components/search/SearchLandingContent.tsx": "4a4ce9fa3460d19ed29c975697d56f196b080b3ff5f4b22e25c0d23af66484e8",
-    "src/components/search/SearchResultItem.tsx": "24dfb53fd88b80a36f48acfdb0b4b00ac2e3d3d63154e0ccd4e396246bff4595",
+    "src/components/search/SearchResultItem.tsx": "f9782bb052363833b9ba381cc096e251313a32a924cbac68f8aa10f546867ee4",
     "src/components/search/global-search-config.ts": "098d196bbb7b3b2c493d3a6dbe47e0b818ba6ef06267665da1c90d88a561efb2",
     "src/components/search/place-recall/PlaceRecallListbox.tsx": "453e6ff05a1c4778b8111dc0521712bd9949d72b079f0d9a81410f1113607e27",
     "src/components/search/place-recall/place-recall-options.ts": "bc4ad0903954f03cedb6884ed40f2ebcb5124faa8737b927081ed9e5ca8ff1d0",
@@ -10004,7 +10174,7 @@
     "src/contexts/BuildingsNoUnitsContext.tsx": "c226f6efed3e8a2823f588dca64cfe55a7ffe29516884139c8cd332c7277d2f1",
     "src/contexts/CacheProvider.tsx": "4847518e77631ba85bba0ec00df12a3a3336c8cfb335369f6732c48b608246f0",
     "src/contexts/FloorplanContext.tsx": "d148b56564da04f304760a213a458de4cb84ccdd9be045ffcff751ea1749dc72",
-    "src/contexts/SharedPropertiesProvider.tsx": "181e19560fa7fbe56bb52004ad6df0e661a8888f74d3d75ee6bf5d861b9e32a5",
+    "src/contexts/SharedPropertiesProvider.tsx": "691d83c8e1ad891787d8350c094ba02a3aa35c37ae7337f9534964c0c1e07cc6",
     "src/contexts/SuperAdminCompanyContext.tsx": "66d872b362e19a2d030d151abaad8ea0e670b660affb203ce7e0205cff2fdf92",
     "src/contexts/WebSocketContext.tsx": "81d0d84f3c95cf98dba7c0a2cbcaed8e39f69f439ad1a692798a587a2ec50de7",
     "src/contexts/WorkspaceContext.tsx": "c40dbeb3540512babfe1cff26671f17a22fdccc3fd976e2d70432636384931f9",
@@ -10059,6 +10229,7 @@
     "src/hooks/useFileUploadState.ts": "8156a8798e236f6a10afa8b57f6efbaffa85359838354fe2d4e9db4e7daaae2f",
     "src/hooks/useFirestoreNotifications.ts": "9f11d8872a4c8f092e8de9adebbd3b26e527324da7819316884d5c609a255ef4",
     "src/hooks/useFirestoreStatus.ts": "37fb741666f67fbca2e365e4d99b149daa5c015911a9b7281c453cdbe93a6eb2",
+    "src/hooks/useFloorLabel.ts": "59a33a472c41b407b49076db8031994206f634c00ed75a34a72a3b0e6f4bfbc0",
     "src/hooks/useGlobalSearch.ts": "40ec720fa4e40804ecf12683976b2904bc4ef6c19ef8753062a63d3f0dc82237",
     "src/hooks/useHasBuildingsWithNoUnits.ts": "2cabeb87e1013037ccf8e73be1ff4060976ec6a8a0db8e77e9ff91b2fd3dde25",
     "src/hooks/useIconSizes.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
@@ -10094,7 +10265,7 @@
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
     "src/i18n/namespace-load.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/i18n/namespace-loaders.ts": "da1565bb072613313719bb3e1cace9ece29f22e335c8134debc34cc3b7c3a909",
+    "src/i18n/namespace-loaders.ts": "9b6d490c59cd2ff05870654f14b3192c4a56484dd3a47d633fedd15790b8555a",
     "src/i18n/pseudo-post-processor.ts": "36b77ab41d90b6545bac0a64f6a17336374a4cfa6fdde89b961b7bc48a5cd5e3",
     "src/i18n/unresolved-key.ts": "45d824a09cac8ce40aead2f90fe2405c9da4421e6b9766f1c55cbded0affb491",
     "src/lib/a11y/accessible-name.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -10222,6 +10393,9 @@
     "src/lib/firestore/converters/contact.converter.ts": "5460ed2389be30ed576545f1d1eee65569aeb77af54fb3c54084b640a8a16383",
     "src/lib/firestore/trashed-status.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/firestore/utils.ts": "af6d371b2ca638535e40bf36a5d686df2027d9a06f5415419d76de5b2fc84e33",
+    "src/lib/floor/floor-label.ts": "e16fa107c7b20fabbd6d540e0837b37c8b0d09982ad295c34aa96e0ced7ef919",
+    "src/lib/floor/floor-ref.ts": "1b45823592f769ad87eec1ce5c637c642372213f4665f89792d288138aa38935",
+    "src/lib/floor/hosted-floor.ts": "064b959e14f0d54c206ae3ee08cca071bebffa14d47a703bbb3026288235340c",
     "src/lib/geo/admin-area-index-file.ts": "cc2fb5d7d821bb6dc385e1106548193087dd7c62a2fd5fcaca5a5fb124f94b7b",
     "src/lib/geo/admin-area-of-point.ts": "ef78b0f9f80185390e676cc0786b09b10964971f094f77e5212380dcdb82edc6",
     "src/lib/geo/admin-area-search.ts": "41185ec70bc660f59d18599e3f016f2a5f529c1e8607917bd4cb8d32d80d1cab",
@@ -10583,7 +10757,7 @@
     "src/types/organization-capability.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/owner-property-mandate.ts": "aeba5ef3ec3cfdd100f5008682cd68f06f64166492b5a2ca7f1d83e1ab525c22",
     "src/types/ownership-table.ts": "b82f5606c32c665b580732264de62e0bc46098689fe03068d043728e2a398504",
-    "src/types/parking.ts": "0a06cb22779f7e05b973fed917f29574aef5ed6daf07ba3226b409b01b63483f",
+    "src/types/parking.ts": "c0df2234a582ef9cd0e8f445a92e0d0c22dab10dc490ce175e296f5f732fff87",
     "src/types/payment-plan.ts": "804bd4d5c8dac2e36c73b2439603dd9b7a964865b20911c4aaedaa5708fe4226",
     "src/types/price-history.ts": "b92075efc07889ca75be9d9f72a8c7dc2f3ccec04fc10e451814cbf82bbbcffa",
     "src/types/private-marketing-consent.ts": "9f71c6d7d08148520f7d7c45078ec02aa7c9d862f17a77cc7a818baf380293f6",
@@ -10597,7 +10771,7 @@
     "src/types/property-demand.ts": "ec3c9bb220fec7439fe0769f7844827f565ac380e4049c6fb9f0cf9c8915d7c3",
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/types/property-viewer.ts": "0573fee71a105abc63ba39b3d54a7ee754b79255ca5abd75adaba21d3fcab1b3",
-    "src/types/property.ts": "41453abea3fc7690ef474e067a232a2034413364d3c3cc9ea1f59e6e98d4b34d",
+    "src/types/property.ts": "103c064f1b27b4376191264fde661ef6e171586b65f23ba74ee167d903d3beeb",
     "src/types/public-listing.ts": "f15c066f1aee5162abd060c6423d6376e0efddf3bf64fd7b115f5dd891201a2d",
     "src/types/saved-listing.ts": "e22be679ba57f9a0604365d02de1eb9a8c96285b1d38440e8b57baac7ba3750d",
     "src/types/search-core.ts": "16866d35c5722806fcaa6857a5a39a4f616f22531da07ce25ea4a10e637d9ced",
@@ -10632,6 +10806,7 @@
     "src/utils/contacts/address-info-builder.ts": "35fb30f13919e7f7c4bb191d897ef68ec7b9bd6a0acd4cb113b526277eba4115",
     "src/utils/contacts/contact-addresses-reader.ts": "5e0760ab987db8809aaf2d3e93ae2b04712d9cf4fd94a8e9c1615e024d85e8c9",
     "src/utils/firestore-sanitize.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/utils/floor-naming.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/utils/greek-text.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/utils/preloadRoutes.ts": "abf75a95040cffe88cc0f8872ae323ec711810800a5c5bcc12eff3b7a936aec0"
   },
@@ -10654,10 +10829,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 25,
-    "matchedKeys": 226,
+    "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 917,
-    "sliceBytes": 673054
+    "shellFiles": 922,
+    "sliceBytes": 663499
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -10995,9 +11170,11 @@
     "src/i18n/namespace-loaders.ts → ./locales/el/files.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/filters.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/floorplan-overlays.json",
+    "src/i18n/namespace-loaders.ts → ./locales/el/floors.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/forms.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/geo-canvas-drawing.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/geo-canvas.json",
+    "src/i18n/namespace-loaders.ts → ./locales/el/hierarchy-navigator.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/iso19650.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/landing-heroes-admin.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/landing.json",
@@ -11116,9 +11293,11 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/files.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/filters.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/floorplan-overlays.json",
+    "src/i18n/namespace-loaders.ts → ./locales/en/floors.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/forms.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/geo-canvas-drawing.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/geo-canvas.json",
+    "src/i18n/namespace-loaders.ts → ./locales/en/hierarchy-navigator.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/iso19650.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/landing-heroes-admin.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/landing.json",
@@ -15465,6 +15644,26 @@
         "upload.errors.partialSuccess",
         "upload.success",
         "upload.toast.uploadSuccess"
+      ],
+      "prefixes": [],
+      "whole": false
+    },
+    "floors": {
+      "from": [
+        "src/lib/floor/floor-label.ts"
+      ],
+      "keys": [
+        "label.attic",
+        "label.basement",
+        "label.foundation",
+        "label.ground",
+        "label.mezzanine",
+        "label.pilotis",
+        "label.raisedGround",
+        "label.roof",
+        "label.semiBasement",
+        "label.stairPenthouse",
+        "label.standard"
       ],
       "prefixes": [],
       "whole": false

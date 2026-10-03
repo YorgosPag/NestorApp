@@ -1,5 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { buildFloorIndex, planHostedFloorBackfill, type FloorIndex } from '@/lib/floor/plan-hosted-floor-backfill';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { generateParkingId } from '@/services/enterprise-id.service';
@@ -66,10 +68,37 @@ export async function deleteAllParkingSpots(logEachDeletion = false): Promise<st
   return deletedIds;
 }
 
+/**
+ * ADR-903 §6 — οι όροφοι του κτιρίου-στόχου (με την εταιρεία του **κατόχου**, CHECK 3.35) ως ευρετήριο για
+ * τον **ίδιο** planner με τη μετανάστευση. Χωρίς κτίριο/εταιρεία ⇒ κενό ευρετήριο ⇒ οι θέσεις χωρίς όροφο.
+ */
+async function loadTargetFloors(): Promise<{ companyId: string | null; index: FloorIndex }> {
+  const db = getAdminFirestore();
+  const building = await db.collection(COLLECTIONS.BUILDINGS).doc(TARGET_BUILDING.id).get();
+  const companyId = typeof building.data()?.companyId === 'string' ? (building.data()?.companyId as string) : null;
+  if (!companyId) return { companyId: null, index: buildFloorIndex([]) };
+  const floors = await db.collection(COLLECTIONS.FLOORS)
+    .where(FIELDS.BUILDING_ID, '==', TARGET_BUILDING.id)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .get();
+  return { companyId, index: buildFloorIndex(floors.docs.map((d) => ({ id: d.id, data: d.data() }))) };
+}
+
+/** Τα πεδία φιλοξενίας μιας θέσης του seed — από τον planner· ό,τι δεν λύνεται καταγράφεται, ΔΕΝ γράφεται. */
+function hostedFieldsFor(template: (typeof PARKING_TEMPLATES)[number], companyId: string | null, index: FloorIndex) {
+  const plan = planHostedFloorBackfill({ floor: template.floor, buildingId: TARGET_BUILDING.id, companyId }, index);
+  if (plan.kind === 'write') return plan.fields;
+  if (plan.kind === 'unresolved') {
+    logger.warn('Seed parking floor not resolved — run seed-floors first', { number: template.number, reason: plan.reason });
+  }
+  return {};
+}
+
 export async function createSeedParkingSpots(): Promise<CreatedParkingSpotRecord[]> {
   const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
   const createdSpots: CreatedParkingSpotRecord[] = [];
   const now = FieldValue.serverTimestamp();
+  const { companyId, index } = await loadTargetFloors();
 
   for (const template of PARKING_TEMPLATES) {
     const parkingId = generateParkingId();
@@ -77,12 +106,14 @@ export async function createSeedParkingSpots(): Promise<CreatedParkingSpotRecord
       number: template.number,
       buildingId: TARGET_BUILDING.id,
       projectId: TARGET_BUILDING.projectId,
+      ...(companyId ? { companyId } : {}),
       type: template.type,
       // ADR-777 §8.60.20: κάδος · διάθεση · λειτουργία — τρία πεδία, όχι ένα ανάμεικτο.
       status: ACTIVE_RECORD_STATUS,
       commercialStatus: template.commercialStatus,
       operationalStatus: template.operationalStatus,
-      floor: template.floor,
+      // ADR-903 §6 — `floorId` + αντίγραφο από τον όροφο (ποτέ ελεύθερο κείμενο).
+      ...hostedFieldsFor(template, companyId, index),
       location: template.location,
       area: template.area,
       // ADR-777 §8.60.18: η τιμή ζει ανά ρόλο — το @deprecated `price` δεν γράφεται.

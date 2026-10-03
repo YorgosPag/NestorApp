@@ -1455,6 +1455,7 @@
         "company": "Εταιρεία",
         "contact": "Επαφή",
         "conveyance_case": "Υπόθεση μεταβίβασης",
+        "engagement": "Συμμετοχή σε υπόθεση",
         "floor": "Όροφος",
         "network_act_team": "Ομάδα πράξης",
         "owner_property": "Αγγελία",
@@ -2681,6 +2682,9 @@
         }
       },
       "admin": "Διαχείριση",
+      "breadcrumb": {
+        "navigateTo": "Μετάβαση σε {name}"
+      },
       "buildings": "Κτίρια",
       "contacts": "Επαφές",
       "crm": "CRM",
@@ -3093,6 +3097,21 @@
       }
     }
   },
+  "floors": {
+    "label": {
+      "attic": "Σοφίτα",
+      "basement": "{depth, plural, one {Υπόγειο} other {#ο Υπόγειο}}",
+      "foundation": "Θεμελίωση",
+      "ground": "Ισόγειο",
+      "mezzanine": "{index, plural, one {Μεσοπάτωμα} other {#ο Μεσοπάτωμα}}",
+      "pilotis": "Πυλωτή",
+      "raisedGround": "Υπερυψωμένο Ισόγειο",
+      "roof": "Δώμα",
+      "semiBasement": "Ημιυπόγειο",
+      "stairPenthouse": "Απόληξη Κλιμακοστασίου",
+      "standard": "{n}ος Όροφος"
+    }
+  },
   "landing": {
     "cta": {
       "ariaLabel": "Κλήση προς Δράση",
@@ -3258,73 +3277,6 @@
       "new": "Νέο",
       "pro": "PRO"
     },
-    "buildingSpaces": {
-      "parking": {
-        "defaultSubtitle": "Θέση Στάθμευσης",
-        "empty": "Δεν υπάρχουν θέσεις στάθμευσης",
-        "listLabel": "Λίστα Θέσεων Στάθμευσης",
-        "openTooltip": "Άνοιγμα στις Θέσεις Στάθμευσης",
-        "spotTitle": "Θέση {number}",
-        "title": "Θέσεις Στάθμευσης"
-      },
-      "properties": {
-        "defaultSubtitle": "Ακίνητο",
-        "empty": "Δεν υπάρχουν ακίνητα",
-        "listLabel": "Λίστα Ακινήτων",
-        "openTooltip": "Άνοιγμα στα Ακίνητα",
-        "title": "Ακίνητα"
-      },
-      "sectionLabel": "Χώροι Κτιρίου",
-      "storage": {
-        "defaultSubtitle": "Αποθήκη",
-        "empty": "Δεν υπάρχουν αποθήκες",
-        "listLabel": "Λίστα Αποθηκών",
-        "openTooltip": "Άνοιγμα στις Αποθήκες",
-        "title": "Αποθήκες"
-      },
-      "units": {
-        "defaultSubtitle": "Επιλέξτε κτίριο για προβολή μονάδων",
-        "empty": "Δεν βρέθηκαν στοιχεία",
-        "listLabel": "Λίστα μονάδων",
-        "openTooltip": "Άνοιγμα",
-        "title": "Μονάδες"
-      }
-    },
-    "columns": {
-      "actions": {
-        "buildingDetails": "Λεπτομέρειες Κτιρίου",
-        "listLabel": "Λίστα Ενεργειών",
-        "projectDetails": "Λεπτομέρειες Έργου",
-        "propertiesCount": "{count} ακίνητα",
-        "sectionLabel": "Ενέργειες",
-        "title": "Ενέργειες",
-        "viewProperties": "Προβολή Ακινήτων"
-      },
-      "buildings": {
-        "listLabel": "Λίστα Κτιρίων",
-        "openTooltip": "Άνοιγμα στα Κτίρια",
-        "propertyCount": "{count} ακίνητα",
-        "sectionLabel": "Κτίρια",
-        "title": "Κτίρια"
-      },
-      "companies": {
-        "addProjects": "Προσθέστε έργα για αυτή την εταιρεία",
-        "defaultSubtitle": "Εταιρεία",
-        "listLabel": "Λίστα Εταιρειών",
-        "noProjects": "Εταιρεία χωρίς έργα",
-        "openTooltip": "Άνοιγμα στις Επαφές",
-        "sectionLabel": "Εταιρείες",
-        "title": "Εταιρείες",
-        "vatNumber": "ΑΦΜ: {vatNumber}"
-      },
-      "projects": {
-        "buildingCount": "{count} κτίρια",
-        "listLabel": "Λίστα Έργων",
-        "openTooltip": "Άνοιγμα στα Έργα",
-        "sectionLabel": "Έργα",
-        "title": "Έργα"
-      }
-    },
     "crm": {
       "calendar": "Ημερολόγιο",
       "communications": "Επικοινωνίες",
@@ -3335,61 +3287,6 @@
       "pipeline": "Ροή Πωλήσεων",
       "tasks": "Εργασίες & Ραντεβού",
       "teams": "Ομάδες & Ρόλοι"
-    },
-    "dialogs": {
-      "building": {
-        "canLinkLater": "Μπορείτε να το συνδέσετε ξανά αργότερα",
-        "cancel": "Ακύρωση",
-        "confirm": "Αποσύνδεση",
-        "confirmation": "Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το κτίριο \"{buildingName}\" από το έργο;",
-        "errorMessage": "Αποτυχία αποσύνδεσης κτιρίου. Δοκιμάστε ξανά.",
-        "infoTitle": "Αυτή η ενέργεια:",
-        "successMessage": "Το κτίριο \"{buildingName}\" αποσυνδέθηκε επιτυχώς.",
-        "title": "Αποσύνδεση Κτιρίου από Έργο",
-        "willNotDelete": "ΔΕΝ θα διαγράψει το κτίριο από τη βάση δεδομένων",
-        "willUnlink": "Θα αποσυνδέσει το κτίριο από το έργο"
-      },
-      "company": {
-        "canAddLater": "Μπορείτε να την προσθέσετε ξανά αργότερα",
-        "cancel": "Ακύρωση",
-        "confirm": "Αφαίρεση",
-        "confirmation": "Είστε βέβαιοι ότι θέλετε να αφαιρέσετε την εταιρεία \"{companyName}\" από την πλοήγηση;",
-        "errorMessage": "Αποτυχία αφαίρεσης εταιρείας. Παρακαλούμε δοκιμάστε ξανά.",
-        "infoTitle": "Αυτή η ενέργεια:",
-        "successMessage": "Η εταιρεία \"{companyName}\" αφαιρέθηκε επιτυχώς από την πλοήγηση.",
-        "title": "Αφαίρεση Εταιρείας από Πλοήγηση",
-        "willNotDelete": "ΔΕΝ θα διαγράψει την εταιρεία από τη βάση δεδομένων",
-        "willRemove": "Θα αφαιρέσει την εταιρεία από τη λίστα πλοήγησης"
-      },
-      "dependencies": {
-        "cannotRemoveCompany": "Δεν μπορείτε να αφαιρέσετε αυτή την εταιρεία γιατί έχει {count} έργα. Παρακαλούμε αποσυνδέσετε πρώτα τα έργα.",
-        "cannotUnlinkBuilding": "Δεν μπορείτε να αποσυνδέσετε αυτό το κτίριο γιατί έχει {count} ακίνητα. Παρακαλούμε αποσυνδέσετε πρώτα τα ακίνητα.",
-        "cannotUnlinkProject": "Δεν μπορείτε να αποσυνδέσετε αυτό το έργο γιατί έχει {count} κτίρια. Παρακαλούμε αποσυνδέσετε πρώτα τα κτίρια."
-      },
-      "project": {
-        "canLinkLater": "Μπορείτε να το συνδέσετε ξανά αργότερα",
-        "cancel": "Ακύρωση",
-        "confirm": "Αποσύνδεση",
-        "confirmation": "Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το έργο \"{projectName}\" από την εταιρεία;",
-        "errorMessage": "Αποτυχία αποσύνδεσης έργου. Δοκιμάστε ξανά.",
-        "infoTitle": "Αυτή η ενέργεια:",
-        "successMessage": "Το έργο \"{projectName}\" αποσυνδέθηκε επιτυχώς.",
-        "title": "Αποσύνδεση Έργου από Εταιρεία",
-        "willNotDelete": "ΔΕΝ θα διαγράψει το έργο από τη βάση δεδομένων",
-        "willUnlink": "Θα αποσυνδέσει το έργο από την εταιρεία"
-      },
-      "property": {
-        "canLinkLater": "Μπορείτε να το συνδέσετε ξανά αργότερα",
-        "cancel": "Ακύρωση",
-        "confirm": "Αποσύνδεση",
-        "confirmation": "Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το ακίνητο \"{propertyName}\" από το κτίριο;",
-        "errorMessage": "Αποτυχία αποσύνδεσης ακινήτου. Δοκιμάστε ξανά.",
-        "infoTitle": "Αυτή η ενέργεια:",
-        "successMessage": "Το ακίνητο \"{propertyName}\" αποσυνδέθηκε επιτυχώς.",
-        "title": "Αποσύνδεση Ακινήτου από Κτίριο",
-        "willNotDelete": "ΔΕΝ θα διαγράψει το ακίνητο από τη βάση δεδομένων",
-        "willUnlink": "Θα αποσυνδέσει το ακίνητο από το κτίριο"
-      }
     },
     "icons": {
       "ctrlClickNewTab": "(Ctrl+Click για νέα καρτέλα)",
@@ -3477,29 +3374,6 @@
       "settings": "Ρυθμίσεις",
       "tools": "Εργαλεία"
     },
-    "mobile": {
-      "actionsLabel": "Ενέργειες Κτιρίου",
-      "back": "Πίσω"
-    },
-    "modals": {
-      "availableForLinking": "Διαθέσιμο για σύνδεση",
-      "linkBuilding": {
-        "description": "Επιλέξτε ένα κτίριο για σύνδεση με το έργο \"{projectName}\".",
-        "searchPlaceholder": "Αναζήτηση κτιρίου...",
-        "title": "Σύνδεση Κτιρίου"
-      },
-      "linkProject": {
-        "description": "Επιλέξτε ένα έργο για σύνδεση με την εταιρεία \"{companyName}\".",
-        "searchPlaceholder": "Αναζήτηση έργου...",
-        "title": "Σύνδεση Έργου"
-      },
-      "linkProperty": {
-        "description": "Επιλέξτε ένα ακίνητο για σύνδεση με το κτίριο \"{buildingName}\".",
-        "searchPlaceholder": "Αναζήτηση ακινήτου...",
-        "title": "Σύνδεση Ακινήτου"
-      },
-      "selectFirst": "Παρακαλούμε επιλέξτε πρώτα ένα έργο."
-    },
     "module": {
       "account": "Λογαριασμός",
       "accounting": "Λογιστικό",
@@ -3540,17 +3414,6 @@
       "teams": "Ομάδες",
       "vat": "ΦΠΑ"
     },
-    "page": {
-      "breadcrumb": {
-        "navigateTo": "Μετάβαση σε {name}"
-      },
-      "error": "Σφάλμα",
-      "hierarchyLabel": "Πλοήγηση Ιεραρχίας",
-      "mainAreaLabel": "Κεντρική Περιοχή Πλοήγησης",
-      "menuLabel": "Μενού Πλοήγησης",
-      "retry": "Ξαναδοκιμή",
-      "title": "Πλοήγηση Ακινήτων"
-    },
     "pages": {
       "buildings": "Κτίρια",
       "construction_portfolio": "Portfolio Κατασκευής",
@@ -3574,6 +3437,7 @@
       "items": {
         "account": "Λογαριασμός",
         "createWorkspace": "Δημιουργώ τον χώρο γραφείου μου",
+        "myCases": "Οι υποθέσεις μου",
         "myContacts": "Οι επαφές μου",
         "myDemands": "Οι ζητήσεις μου",
         "myDossiers": "Οι φάκελοί μου",
@@ -3727,40 +3591,6 @@
       "objectiveValue": "Υπολογισμός αντικειμενικής αξίας",
       "obligations": "Συγγραφή Υποχρεώσεων",
       "shortcuts": "Συντομεύσεις"
-    },
-    "tree": {
-      "buildingCount": "{count} κτίρια",
-      "descriptions": {
-        "buildings": "Επιλέξτε το κτίριο για να δείτε τα ακίνητα",
-        "companies": "Επιλέξτε την εταιρεία για να δείτε τα έργα της",
-        "default": "",
-        "projects": "Επιλέξτε το έργο για να δείτε τα κτίρια",
-        "properties": "Επιλέξτε τον τελικό προορισμό"
-      },
-      "destinations": {
-        "buildingDetails": "Λεπτομέρειες Κτιρίου",
-        "navigateTo": "Μετάβαση σε:",
-        "projectDetails": "Λεπτομέρειες Έργου",
-        "propertiesInBuilding": "{count} ακίνητα στο κτίριο",
-        "viewProperties": "Προβολή Ακινήτων"
-      },
-      "empty": {
-        "buildings": "Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.",
-        "companies": "Δεν βρέθηκαν εταιρείες στο σύστημα.",
-        "projects": "Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία."
-      },
-      "errorMessage": "Σφάλμα: {error}",
-      "loading": "Φόρτωση δεδομένων...",
-      "retry": "Ξαναδοκιμή",
-      "steps": {
-        "buildings": "Επιλέξτε Κτίριο",
-        "companies": "Επιλέξτε Εταιρεία",
-        "default": "Πλοήγηση",
-        "projects": "Επιλέξτε Έργο",
-        "properties": "Επιλέξτε Προορισμό",
-        "units": "Units"
-      },
-      "vatNumber": "ΑΦΜ: {vatNumber}"
     },
     "user": {
       "email": "user@example.com",

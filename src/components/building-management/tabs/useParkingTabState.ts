@@ -38,6 +38,8 @@ import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
 import type { LinkableItem } from '../shared';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type {
   ParkingApiData,
   ParkingCreateResult,
@@ -65,6 +67,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const { t } = useTranslation(['parking', 'properties-enums']);
   const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { error: notifyError } = useNotifications();
+  const floorLabel = useFloorLabel();
 
   // ---------------------------------------------------------------------------
   // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
@@ -83,7 +86,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [createNumber, setCreateNumber] = useState('');
   const [createType, setCreateType] = useState<ParkingSpotType>('standard');
   const [createStatus, setCreateStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
-  const [createFloor, setCreateFloor] = useState('');
+  // ADR-903 §6 — ο όροφος-φιλοξενών (`''` = κανένας)· αριθμός/είδος τα παράγει ο server.
+  const [createFloorId, setCreateFloorId] = useState('');
   const [createLocation, setCreateLocation] = useState('');
   const [createArea, setCreateArea] = useState('');
   const [createNotes, setCreateNotes] = useState('');
@@ -97,7 +101,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [editNumber, setEditNumber] = useState('');
   const [editType, setEditType] = useState<ParkingSpotType>('standard');
   const [editStatus, setEditStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
-  const [editFloor, setEditFloor] = useState('');
+  const [editFloorId, setEditFloorId] = useState('');
   const [editArea, setEditArea] = useState('');
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο (ήταν `editPrice` → @deprecated `price`, πάντα «πώληση»).
   const commercial = useCommercialDraft();
@@ -195,7 +199,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     createNameManuallyChanged.current = false;
     setCreateType('standard');
     setCreateStatus(NEW_SPACE_OPERATIONAL_STATUS);
-    setCreateFloor('');
+    setCreateFloorId('');
     setCreateLocation('');
     setCreateArea('');
     setCreateNotes('');
@@ -210,7 +214,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
         number: createNumber.trim(),
         type: createType,
         operationalStatus: createStatus || undefined,
-        floor: createFloor.trim() || undefined,
+        floorId: createFloorId || undefined,
         location: createLocation.trim() || undefined,
         area: createArea ? parseFloat(createArea) : undefined,
         notes: createNotes.trim() || undefined,
@@ -238,7 +242,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       setCreating(false);
     }
   }, [
-    createNumber, createType, createStatus, createFloor, createLocation,
+    createNumber, createType, createStatus, createFloorId, createLocation,
     createArea, createNotes, createLocationZone,
     buildingId, projectId, resetCreateForm, fetchParkingSpots,
   ]);
@@ -252,7 +256,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     setEditNumber(spot.number);
     setEditType(spot.type || 'standard');
     setEditStatus(operationalDraftOf(spot));
-    setEditFloor(spot.floor || '');
+    setEditFloorId(spot.floorId || '');
     setEditArea(spot.area ? String(spot.area) : '');
     resetCommercial(spot);
   }, [resetCommercial]);
@@ -260,6 +264,12 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const cancelEdit = useCallback(() => {
     setEditingId(null);
   }, []);
+
+  // Θέση πριν τη μετανάστευση: ο παλιός όροφος (κείμενο) δείχνεται ως ανενεργή επιλογή (ADR-903 §6).
+  const editLegacyFloor = useMemo(() => {
+    const spot = parkingSpots.find((s) => s.id === editingId);
+    return spot ? hostedFloorRef(spot) : null;
+  }, [parkingSpots, editingId]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editingId || !editNumber.trim()) return;
@@ -274,7 +284,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       number: editNumber.trim(),
       type: editType,
       ...(stored ? operationalPatchOf(editStatus, stored) : {}),
-      floor: editFloor.trim() || undefined,
+      // Μόνο αν άλλαξε: έγγραφο χωρίς `floorId` (πριν τη μετανάστευση) δεν χάνει σιωπηλά τον παλιό όροφο.
+      ...(editFloorId !== (stored?.floorId ?? '') ? { floorId: editFloorId || null } : {}),
       area: editArea ? parseFloat(editArea) : undefined,
     };
     const commercialPatch = stored ? commercial.patchAgainst(stored) : {};
@@ -298,7 +309,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     } finally {
       setSaving(false);
     }
-  }, [editingId, editNumber, editType, editStatus, editFloor, editArea, parkingSpots, commercial, fetchParkingSpots]);
+  }, [editingId, editNumber, editType, editStatus, editFloorId, editArea, parkingSpots, commercial, fetchParkingSpots]);
 
   // ===========================================================================
   // DELETE & UNLINK
@@ -370,9 +381,9 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       .map((s) => ({
         id: s.id,
         label: s.number,
-        sublabel: `${t(`types.${s.type || 'standard'}`)} · ${s.floor || '—'}`,
+        sublabel: `${t(`types.${s.type || 'standard'}`)} · ${floorLabel(hostedFloorRef(s)) || '—'}`,
       }));
-  }, [t]);
+  }, [t, floorLabel]);
 
   const handleLinkParking = useCallback(async (itemId: string) => {
     await updateParkingWithPolicy<ParkingMutationResult>({
@@ -424,6 +435,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // ===========================================================================
 
   return {
+    // ADR-903 §6 — το κτίριο της καρτέλας: ο επιλογέας ορόφου δείχνει τους ορόφους του.
+    buildingId,
     // Translation helpers
     t,
     tBuilding,
@@ -443,7 +456,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     handleCreateAreaChange,
     createType, setCreateType,
     createStatus, setCreateStatus,
-    createFloor, setCreateFloor,
+    createFloorId, setCreateFloorId,
     createLocation, setCreateLocation,
     createArea, setCreateArea,
     createNotes, setCreateNotes,
@@ -457,7 +470,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     editNumber, setEditNumber,
     editType, setEditType,
     editStatus, setEditStatus,
-    editFloor, setEditFloor,
+    editFloorId, setEditFloorId, editLegacyFloor,
     editArea, setEditArea,
     commercial,
     saving,

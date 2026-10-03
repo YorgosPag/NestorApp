@@ -91,7 +91,7 @@ export function DesktopMultiColumn({
   // badge ζουν στο `navigation-entities`. Χωρίς αυτό, το `t('navigation-entities:…')`
   // αστοχεί — και επειδή το `config.ts` δεν ορίζει `fallbackNS`, η αστοχία
   // καταλήγει **ωμό κλειδί στην οθόνη** αντί για σφάλμα.
-  const { t } = useTranslation(['navigation', 'navigation-entities']);
+  const { t } = useTranslation(['hierarchy-navigator', 'navigation-entities']);
 
   // ── Local UI state ──
   const [companiesSearch, setCompaniesSearch] = useState('');

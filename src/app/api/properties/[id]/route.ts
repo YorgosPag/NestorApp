@@ -33,6 +33,7 @@ import {
 import { validateCommercialTransaction } from './property-commercial-validation';
 import { republishPublicProjection, type ListingProperty } from './property-publish-projection';
 import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
+import { resolveHostedFloorPatch } from '@/lib/floor/host-floor.server';
 import {
   PropertyPatchSchema,
   applyMultiLevelDefaults,
@@ -125,6 +126,11 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
 
         // Build sanitised Firestore payload
         const updateData = buildUpdateData(body, existing);
+        // ADR-903 §6 — φιλοξενούμενο ⇒ `floor`/`floorKind` από το έγγραφο ορόφου (κερδίζει τον client).
+        // Αποσύνδεση από όροφο ⇒ ο αριθμός μένει μόνο αν τον έστειλε ρητά (αυτόνομη μονάδα).
+        const hostedFloor = await resolveHostedFloorPatch(adminDb, ctx, body, existing);
+        const unhostedNumber = hostedFloor.floorId === null && typeof updateData.floor === 'number' ? updateData.floor : undefined;
+        Object.assign(updateData, hostedFloor, unhostedNumber === undefined ? {} : { floor: unhostedNumber });
 
         // Compute field-level diffs BEFORE the write (with ID→name resolution)
         const auditChanges = await EntityAuditService.diffFieldsWithResolution(

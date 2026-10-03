@@ -7,6 +7,7 @@ export type StorageType = 'large' | 'small' | 'basement' | 'ground' | 'special' 
 // Εμπορικό → `commercialStatus` · φυσικό → `operationalStatus` · κάδος → `status`.
 type RecordLifecycleStatus = import('@/lib/firestore/trashed-status').RecordLifecycleStatus;
 type OperationalStatus = import('@/constants/operational-statuses').OperationalStatus;
+type HostedOnFloor = import('@/lib/floor/hosted-floor').HostedOnFloor;
 
 export interface Coordinates {
   x: number;
@@ -32,9 +33,13 @@ export interface Storage {
   companyId?: string;
   /** 🏢 ADR-232: Business entity link (inherited from project via cascade) */
   linkedCompanyId?: string | null;
-  floor: string;
-  /** Floor document ID (Firestore doc reference) */
-  floorId?: string;
+  /**
+   * ADR-903 §6 — ο όροφος που **φιλοξενεί** την αποθήκη (Revit `LevelId`): `floorId` = αυθεντία,
+   * `floor` + `floorKind` = παράγωγο αντίγραφο που γράφει μόνο ο server.
+   */
+  floorId?: HostedOnFloor['floorId'];
+  floor?: HostedOnFloor['floor'];
+  floorKind?: HostedOnFloor['floorKind'];
   area: number; // in square meters
   description?: string;
   price?: number; // in euros
@@ -62,7 +67,10 @@ export interface StorageUnit {
   id: string;
   code: string;
   type: StorageType;
-  floor: string;
+  /** ADR-903 §6 — βλ. `Storage`. */
+  floorId?: HostedOnFloor['floorId'];
+  floor?: HostedOnFloor['floor'];
+  floorKind?: HostedOnFloor['floorKind'];
   area: number; // in square meters
   /** @deprecated ADR-777 §8.60.18 — δεν γράφεται πια· η τιμή ζει στο `commercial`, ανά ρόλο. */
   price: number; // in euros

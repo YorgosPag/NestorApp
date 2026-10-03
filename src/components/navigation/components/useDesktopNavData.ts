@@ -10,6 +10,7 @@ import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { EntityLinkingService } from '@/services/entity-linking';
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useProjectBuildings } from '@/components/navigation/core/hooks/useSelectionCollections';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { NavigationProperty, NavigationParkingSpot } from '@/components/navigation/core/types';
@@ -60,11 +61,10 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
     selectedProject,
     selectedBuilding,
     selectProperty,
-    getBuildingsForProject,
     getPropertiesForBuilding,
   } = useNavigation();
 
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
 
   // Parking spots for selected building
   const { parkingSpots } = useFirestoreParkingSpots({
@@ -85,11 +85,8 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
   const [selectedBuildingSpace, setSelectedBuildingSpace] =
     useState<SelectedBuildingSpace | null>(null);
 
-  // ── Memoized buildings for the selected project ──
-  const projectBuildings = useMemo(() => {
-    if (!selectedProject) return [];
-    return getBuildingsForProject(selectedProject.id);
-  }, [selectedProject, getBuildingsForProject]);
+  // ── Buildings for the selected project (SSoT: useSelectionCollections, ADR-744 §26) ──
+  const projectBuildings = useProjectBuildings();
 
   // ── Load available buildings via EntityLinkingService ──
   const loadAvailableBuildings = useCallback(async () => {

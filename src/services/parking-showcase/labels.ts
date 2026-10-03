@@ -2,7 +2,7 @@
  * Parking Showcase labels — server-side i18n SSoT (ADR-315 + ADR-321 pattern).
  *
  * Reads `src/i18n/locales/{el,en}/showcase.json` → `parkingShowcase` namespace.
- * Enum label maps (type / status / locationZone) stay inline.
+ * Enum labels (type / locationZone) come from `parking.json` — the SAME keys as the UI (ADR-903 §6).
  * Chrome/email/header fallbacks delegate to `showcase-core/labels-shared`.
  *
  * @module services/parking-showcase/labels
@@ -17,59 +17,42 @@ import {
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
 import {
-  createEnumLabelTranslator,
   readShowcaseCatalogSections,
+  type ShowcaseEnumTranslator,
   resolveShowcaseEmailLabels,
   resolveShowcaseHeaderLabels,
   resolveShowcaseMediaTitles,
   resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
-import type { ParkingSpotType, ParkingLocationZone } from '@/types/parking';
+import { PARKING_LOCATION_ZONES, PARKING_TYPES } from '@/types/parking';
+import elParking from '@/i18n/locales/el/parking.json';
+import enParking from '@/i18n/locales/en/parking.json';
+import { createBundleTranslate, type BundleTranslate } from '@/i18n/bundle-translate';
 
 // ============================================================================
-// ENUM LABEL MAPS
+// ENUM LABELS
 // ============================================================================
 
-const PARKING_TYPE_LABELS: Record<EnumLocale, Record<ParkingSpotType, string>> = {
-  el: {
-    standard:    'Κανονική',
-    handicapped: 'ΑΜΕΑ',
-    motorcycle:  'Μοτοσυκλέτα',
-    electric:    'Ηλεκτρικό',
-    visitor:     'Επισκέπτης',
-  },
-  en: {
-    standard:    'Standard',
-    handicapped: 'Handicapped',
-    motorcycle:  'Motorcycle',
-    electric:    'Electric',
-    visitor:     'Visitor',
-  },
+/**
+ * ADR-903 §6 (N.0.2) — είδος θέσης και ζώνη από το **ίδιο** `parking.json` με την οθόνη, στη γλώσσα του
+ * παραλήπτη (`createBundleTranslate`, πρότυπο `floor-label-bundle`). Ως τις 2026-10-03 ζούσαν εδώ χειρόγραφοι
+ * πίνακες που **απέκλιναν** από την οθόνη («Πιλοτή»/«Ταράτσα» αντί για «Πυλωτή»/«Δώμα»).
+ * Άγνωστη τιμή ⇒ αυτούσια (ίδιο συμβόλαιο με το `createEnumLabelTranslator`).
+ */
+const PARKING_BUNDLES: Readonly<Record<EnumLocale, BundleTranslate>> = {
+  el: createBundleTranslate({ parking: elParking }, 'parking', 'el'),
+  en: createBundleTranslate({ parking: enParking }, 'parking', 'en'),
 };
 
-// 🧹 ADR-777 §8.60.20 — εδώ ζούσε χάρτης ετικετών πάνω στο παλιό ανάμεικτο `status`
-//    («Διαθέσιμη / Κατειλημμένη / Συντήρηση…»). Η ετικέτα κατάστασης του showcase βγαίνει πλέον
-//    από το `translateSpaceStatus` (διάθεση + λειτουργική εξαίρεση, μέσω του ΕΝΟΣ αναγνώστη).
+function parkingEnumTranslator(prefix: 'types' | 'locationZone', values: readonly string[]): ShowcaseEnumTranslator {
+  return (value, locale) => {
+    if (!value) return undefined;
+    return values.includes(value) ? PARKING_BUNDLES[locale](`${prefix}.${value}`) : value;
+  };
+}
 
-const PARKING_ZONE_LABELS: Record<EnumLocale, Record<ParkingLocationZone, string>> = {
-  el: {
-    pilotis:         'Πιλοτή',
-    underground:     'Υπόγειο',
-    open_space:      'Υπαίθριο',
-    rooftop:         'Ταράτσα',
-    covered_outdoor: 'Υπαίθριο σκεπαστό',
-  },
-  en: {
-    pilotis:         'Pilotis',
-    underground:     'Underground',
-    open_space:      'Open space',
-    rooftop:         'Rooftop',
-    covered_outdoor: 'Covered outdoor',
-  },
-};
-
-export const translateParkingType = createEnumLabelTranslator(PARKING_TYPE_LABELS);
-export const translateParkingZone = createEnumLabelTranslator(PARKING_ZONE_LABELS);
+export const translateParkingType = parkingEnumTranslator('types', PARKING_TYPES);
+export const translateParkingZone = parkingEnumTranslator('locationZone', PARKING_LOCATION_ZONES);
 
 // ============================================================================
 // LABEL TYPES

@@ -12,18 +12,20 @@
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
-import { formatFloorString } from '@/lib/intl-utils';
 import { resolveDisplayPrice, type PricedPropertyLike } from '@/lib/properties/price-resolver';
 import { priceCellLabel, type PriceLabelT } from '@/lib/listings/listing-price-label';
 
-/** Floor / level row (localized via `formatFloorString`). */
+/**
+ * Floor / level row. `value` is the ALREADY-localized label — callers render it with
+ * `useFloorLabel()` (ADR-903: one formatter, one parser; this builder only lays out the row).
+ */
 export function floorStat(value: string | undefined | null, label: string): StatItem | null {
   if (!value) return null;
   return {
     icon: NAVIGATION_ENTITIES.floor.icon,
     iconColor: NAVIGATION_ENTITIES.floor.color,
     label,
-    value: formatFloorString(value),
+    value,
   };
 }
 

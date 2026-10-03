@@ -17,6 +17,7 @@ import {
   mapCommonSpaceCreateFields,
 } from '@/lib/api/space-entity-fields';
 import { mapStorageDoc, isValidStorageType } from '@/lib/firestore-mappers';
+import { resolveHostedFloorForCreate } from '@/lib/floor/host-floor.server';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
@@ -26,7 +27,6 @@ import { isTrashed } from '@/lib/firestore/trashed-status';
 // «χώρων» ζουν πλέον στον SSoT. Ιδιαίτερα των storages: `floorId`, `building`.
 const CreateStorageSchema = z.object({
   name: z.string().min(1).max(200),
-  floorId: z.string().max(128).optional(),
   building: z.string().max(200).optional(),
   ...SPACE_COMMON_CREATE_FIELDS,
 });
@@ -222,8 +222,7 @@ interface StorageCreatePayload {
   buildingId?: string;
   type?: StorageType;
   operationalStatus?: Storage['operationalStatus'];
-  floor?: string;
-  /** Floor document ID (Firestore foreign key) */
+  /** ADR-903 §6 — ο όροφος που φιλοξενεί την αποθήκη· `floor`/`floorKind` τα παράγει ο server. */
   floorId?: string;
   area?: number;
   description?: string;
@@ -245,6 +244,8 @@ export const POST = withStandardRateLimit(
         const body = parsed.data;
 
         const buildingId = body.buildingId?.trim() || null;
+        // ADR-903 §6 — ο όροφος από το έγγραφό του (ίδιο κτίριο, ίδια εταιρεία)· μία πηγή.
+        const hosted = await resolveHostedFloorForCreate(getAdminFirestore(), ctx, body.floorId, buildingId);
 
         // Entity-specific fields (exclude common fields handled by createEntity)
         // Τα κοινά με τα `parking` (και η κατάσταση στη γέννηση, ADR-777 §8.60.20)
@@ -255,25 +256,25 @@ export const POST = withStandardRateLimit(
           buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           ...mapCommonSpaceCreateFields(body),
+          ...hosted,
         };
 
         // Ιδιαίτερα των storages — και το `projectId`, που εδώ διαβάζεται ωμό
         // από το σώμα (στα parking είναι ήδη επιλυμένο και ελεγμένο).
-        if (body.floorId?.trim()) entitySpecificFields.floorId = body.floorId.trim();
         if (body.projectId?.trim()) entitySpecificFields.projectId = body.projectId.trim();
         if (body.building?.trim()) entitySpecificFields.building = body.building.trim();
 
         logger.info('Creating storage unit', { name: body.name, buildingId, companyId: ctx.companyId });
 
         // 🏢 ADR-238: Centralized entity creation
-        const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
+        // ADR-233 — ο κωδικός από τον αριθμό του ορόφου-φιλοξενούντα (ήταν `parseInt` ελεύθερου κειμένου ⇒ «Ισόγειο»→0).
         const result = await createEntity('storage', {
           auth: ctx,
           parentId: buildingId,
           entitySpecificFields,
           codeOptions: {
             currentValue: body.code?.trim() || body.name.trim(),
-            floorLevel: isNaN(floorLevel) ? 0 : floorLevel,
+            floorLevel: hosted.floor ?? 0,
           },
           apiPath: '/api/storages (POST)',
         });

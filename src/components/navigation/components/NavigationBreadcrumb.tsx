@@ -56,7 +56,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     selectedProperty,  // 🏢 ENTERPRISE: Unit for breadcrumb display
   } = useNavigation();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('common-navigation');
 
   /**
    * 🏢 ENTERPRISE (ADR-016): Breadcrumb με clickable Links
@@ -197,7 +197,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
                     {renderItemContent(item)}
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent>{t('page.breadcrumb.navigateTo', { name: item.label })}</TooltipContent>
+                <TooltipContent>{t('navigation.breadcrumb.navigateTo', { name: item.label })}</TooltipContent>
               </Tooltip>
             )}
             {!isLastItem && (

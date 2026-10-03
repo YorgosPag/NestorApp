@@ -14,6 +14,9 @@ import { defaultParkingFilters, type ParkingFilterState } from '@/components/cor
 import { resolveParkingById, isArchivedEntity } from './entity-deep-link-sources';
 import { matchesSpaceStatusFilters } from '@/lib/spaces/space-availability';
 import { matchesPriceRange } from '@/lib/properties/price-range';
+import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
+import { matchesFloorFilter } from '@/lib/floor/floor-filter';
 import {
   useEntityPageState,
   type EntityPageStateConfig,
@@ -24,7 +27,11 @@ import {
 // Filter function
 // ---------------------------------------------------------------------------
 
-function filterParkingSpots(parkingSpots: ParkingSpot[], filters: ParkingFilterState): ParkingSpot[] {
+function filterParkingSpots(
+  parkingSpots: ParkingSpot[],
+  filters: ParkingFilterState,
+  floorLabel: (value: FloorLabelInput) => string,
+): ParkingSpot[] {
   return parkingSpots.filter((parking) => {
     // Search filter
     if (filters.searchTerm) {
@@ -32,7 +39,7 @@ function filterParkingSpots(parkingSpots: ParkingSpot[], filters: ParkingFilterS
       const matches =
         parking.number?.toLowerCase().includes(s) ||
         parking.location?.toLowerCase().includes(s) ||
-        parking.floor?.toLowerCase().includes(s) ||
+        floorLabel(hostedFloorRef(parking)).toLowerCase().includes(s) ||
         parking.notes?.toLowerCase().includes(s) ||
         parking.type?.toLowerCase().includes(s);
       if (!matches) return false;
@@ -48,8 +55,8 @@ function filterParkingSpots(parkingSpots: ParkingSpot[], filters: ParkingFilterS
     const buildingVal = filters.building?.[0];
     if (buildingVal && buildingVal !== 'all' && parking.buildingId !== buildingVal) return false;
 
-    const floorVal = filters.floor?.[0];
-    if (floorVal && floorVal !== 'all' && parking.floor !== floorVal) return false;
+    // ADR-903 §6 — κλειδί αριθμός:είδος (`floor-filter`)· ήταν slug (`basement-1`) απέναντι σε κείμενο ⇒ ποτέ ταίριασμα.
+    if (!matchesFloorFilter(parking, filters.floor?.[0])) return false;
 
     // Nested range filters
     const areaRange = filters.ranges?.areaRange;
@@ -72,7 +79,11 @@ export function useParkingPageState(
   initialParkingSpots: ParkingSpot[],
   options: EntityPageStateOptions<ParkingSpot>,
 ) {
-  const stableFilterFn = useCallback(filterParkingSpots, []);
+  const floorLabel = useFloorLabel();
+  const stableFilterFn = useCallback(
+    (items: ParkingSpot[], filters: ParkingFilterState) => filterParkingSpots(items, filters, floorLabel),
+    [floorLabel],
+  );
 
   const config: EntityPageStateConfig<ParkingSpot, ParkingFilterState> = {
     urlParamName: 'parkingId',

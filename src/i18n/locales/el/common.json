@@ -818,7 +818,8 @@
       "owner_property": "Αγγελία",
       "network_act_team": "Ομάδα πράξης",
       "property_dossier": "Φάκελος ακινήτου",
-      "conveyance_case": "Υπόθεση μεταβίβασης"
+      "conveyance_case": "Υπόθεση μεταβίβασης",
+      "engagement": "Συμμετοχή σε υπόθεση"
     },
     "values": {
       "active": "Ενεργό",

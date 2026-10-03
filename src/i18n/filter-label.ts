@@ -6,7 +6,7 @@
  * ## Η σύμβαση
  *
  * Οι σταθερές ετικετών των φίλτρων (`PARKING_STATUS_LABELS`,
- * `PARKING_TYPE_LABELS`, `PARKING_FLOOR_LABELS`, τα `shared.ts` …) γράφουν το
+ * `PARKING_TYPE_LABELS`, τα `shared.ts` …) γράφουν το
  * namespace με **τελεία**, όχι με άνω-κάτω τελεία:
  *
  * ```ts

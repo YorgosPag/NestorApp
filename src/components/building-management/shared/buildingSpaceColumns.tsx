@@ -20,27 +20,30 @@ import { spaceStatusBadges } from '@/lib/units/unit-status-badges';
 import { cn } from '@/lib/utils';
 
 import type { SpaceColumn } from './types';
+import type { FloorLabelInput } from '@/hooks/useFloorLabel';
+import { hostedFloorNumber, hostedFloorRef } from '@/lib/floor/hosted-floor';
 
-/** Ο όροφος **όπως φαίνεται** — στο αρχείο κείμενο, ίδιο με την οθόνη (κενό αντί για «—»). */
-export function buildFloorColumn<T>(
+/** Ό,τι κουβαλά όροφο — ακίνητο, θέση, αποθήκη (ADR-903 §6). */
+type FloorBearing = { readonly floor?: unknown; readonly floorKind?: unknown };
+
+/**
+ * Ο όροφος **όπως φαίνεται** (ADR-903) — η ετικέτα «2ο Υπόγειο» / «Πυλωτή» από το **ένα** σύνορο ανάγνωσης
+ * (`hostedFloorRef`: αριθμός + είδος, ή παλιό κείμενο μέσω parser) και τον **έναν** μορφοποιητή. Στο αρχείο το ίδιο
+ * κείμενο με την οθόνη (κενό αντί για «—»). Ταξινόμηση **αριθμητική** (ήταν λεξικογραφική πάνω σε κείμενο: «-1» > «10»).
+ */
+export function buildFloorColumn<T extends FloorBearing>(
   label: string,
-  floorOf: (item: T) => string | number | null | undefined,
   mutedTextClass: string,
+  floorLabel: (value: FloorLabelInput) => string,
 ): SpaceColumn<T> {
-  const shown = (item: T): string | null => {
-    const floor = floorOf(item);
-    return floor === null || floor === undefined || floor === '' ? null : String(floor);
-  };
+  const shown = (item: T): string | null => floorLabel(hostedFloorRef(item)) || null;
   return {
     key: 'floor',
     label,
-    width: 'w-20',
+    width: 'w-28',
     // Αριθμός μένει αριθμός (ισόγειο `0` ≠ «χωρίς όροφο»)· απουσία ⇒ `null` = τελευταία και προς τις δύο κατευθύνσεις.
-    sortValue: (item) => {
-      const floor = floorOf(item);
-      return floor === '' ? null : floor;
-    },
-    render: (item) => <span className={cn('font-mono text-sm', mutedTextClass)}>{shown(item) ?? '—'}</span>,
+    sortValue: (item) => hostedFloorNumber(item),
+    render: (item) => <span className={cn('text-sm', mutedTextClass)}>{shown(item) ?? '—'}</span>,
     exportCell: shown,
   };
 }

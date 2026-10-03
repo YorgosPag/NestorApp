@@ -47,6 +47,9 @@
     "projects": "Projects",
     "buildings": "Buildings",
     "storages": "Storages",
-    "details": "Details"
+    "details": "Details",
+    "breadcrumb": {
+      "navigateTo": "Navigate to {name}"
+    }
   }
 }

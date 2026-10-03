@@ -1,8 +1,9 @@
 import { FieldValue } from 'firebase-admin/firestore';
-import type { Firestore, QuerySnapshot, WriteBatch } from 'firebase-admin/firestore';
+import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { flushInBatches, type BatchUpdate } from '@/lib/admin-batch-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditEntityType, AuditFieldChange } from '@/types/audit-trail';
 
@@ -157,15 +158,16 @@ export async function cascadeFloorHeightToEntities(
       queryStoreyEntities(db, target.collection, companyId, floorId)),
   );
 
-  const batch = db.batch();
+  // Παρτίδες ≤ 450 (`flushInBatches`): ένα μόνο `WriteBatch` έσπαγε πάνω από 500 στοιχεία ορόφου.
+  const updates: BatchUpdate[] = [];
   const newHeightMm = newHeightMetres * 1000;
   const updatedAt = FieldValue.serverTimestamp();
   const perTarget = CASCADE_TARGETS.map((target, i) =>
-    collectCascade(snaps[i], target, newHeightMm, batch, updatedBy, updatedAt));
+    collectCascade(snaps[i], target, newHeightMm, updates, updatedBy, updatedAt));
 
-  const updated = perTarget.reduce((n, t) => n + t.entries.length, 0);
-  if (updated > 0) {
-    await batch.commit();
+  if (updates.length > 0) {
+    const flush = await flushInBatches(db, updates);
+    if (flush.errors.length > 0) throw new Error(`Floor height cascade partially failed: ${flush.errors.join('; ')}`);
     await recordCascadeAudit(perTarget, companyId, updatedBy);
   }
 
@@ -194,7 +196,7 @@ function collectCascade(
   snap: QuerySnapshot,
   target: CascadeTarget,
   newHeightMm: number,
-  batch: WriteBatch,
+  updates: BatchUpdate[],
   updatedBy: string,
   updatedAt: FieldValue,
 ): TargetResult {
@@ -207,7 +209,7 @@ function collectCascade(
     const oldValue = target.readValue(params);
     if (oldValue === newValue) { skipped++; continue; }
     const extra = target.extraUpdates?.(params, newValue) ?? {};
-    batch.update(doc.ref, { [target.field]: newValue, ...extra, updatedBy, updatedAt });
+    updates.push({ ref: doc.ref, data: { [target.field]: newValue, ...extra, updatedBy, updatedAt } });
     entries.push({ docId: doc.id, field: target.field, oldValue, newValue });
   }
   return { entityType: target.entityType, entries, skipped };

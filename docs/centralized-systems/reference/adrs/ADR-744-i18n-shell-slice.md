@@ -344,6 +344,7 @@ CHECK 3.33.
 | 2026-09-22 | **🔴 Τέταρτο εύρημα από αλλαγή κώδικα — η συγκομιδή ιδιοτήτων έσερνε ΟΛΟΚΛΗΡΟ namespace** *(ADR-871 §10.6)*. Ο νέος κατάλογος πλοήγησης έφερε στο κέλυφος το κυριολεκτικό `id: 'sales'` (ταυτότητα ομάδας)· η **συγκομιδή σε όλο το κέλυφος** το έδωσε ως υποψήφιο σε κάποιο `t(x.id)` με `COMMON_NAMESPACES`, και επειδή το `common-sales` έχει **υπο-δέντρο** `sales`, το `pruneNamespace` το αντέγραψε **ολόκληρο** ⇒ «common-sales ΜΠΗΚΕ ΣΤΟ ΚΕΛΥΦΟΣ» + η σφράγιση 8 → 9. **Ρίζα**: για **ακριβές** κλειδί που λύνεται σε αντικείμενο, το `pruneNamespace` το χειριζόταν σαν πρόθεμα — ενώ το `t()` **δεν επιστρέφει ποτέ** αντικείμενο· υπο-δέντρο εκφράζει **μόνο** το `prefixes`. **Θεραπεία**: ακριβές κλειδί = **μόνο φύλλο** (`slice-build.js`). **Μετρημένο πριν**: σε καθαρό worktree του `13d15291` η αλλαγή δίνει **0** διαφορετικά artifacts — αμιγώς προληπτική. Άγκυρα: `i18n-shell-slice.test.js` Group 7 («an exact key that lands on a SUBTREE takes nothing»), μετάλλαξη ⇒ κόκκινο. **Δεύτερη σύγκρουση, λυμένη στην πηγή της**: το πεδίο ετικέτας του μενού ονομάστηκε `titleKey` και η συγκομιδή το ένωνε με το `t(step.titleKey)` του product tour — μετονομάστηκε **`navLabelKey`** (μοναδικό όνομα). Οι δηλώσεις `dynamicKeyPolicy` των `sidebar-menu-item.tsx` και `user-menu.tsx` έγιναν **νεκρές** (η συγκομιδή τις λύνει ακριβώς, και το `navigation` είναι εγγυημένο ολόκληρο) και **αφαιρέθηκαν**. ⚠️ Η δήλωση του `product-tour-overlay.tsx` είναι **ήδη νεκρή στο HEAD** (μετρημένο) — προϋπάρχον, όχι αυτής της αλλαγής |
 | 2026-09-27 | **🔴 Το Layer 1 κρίνει πλέον το COMMIT, όχι τον δίσκο (`--index`).** Σε δέντρο με παράλληλους πράκτορες, commit που **δεν άγγιζε κανένα locale** (μετακόμιση `easing`, ADR-884 §4.8) μπλοκαρίστηκε από **ξένες αστάδιοποίητες** αλλαγές στο `admin.json` — και αντίστροφα, ένα commit με μπαγιάτικο slice θα περνούσε αν ο δίσκος τύχαινε φρέσκος. Νέο `scripts/lib/git-index-snapshot.js` (`git ls-files` + ΕΝΑ `checkout-index --stdin` σε προσωρινό φάκελο)· το hook καλεί `check-i18n-shell-slice.js --index`, και ΚΑΘΕ είσοδος του Layer 1 (config · `src/i18n/**` · key constants · σταδιοποιημένα modules) διαβάζεται από το ευρετήριο. Οι βιβλιοθήκες έμειναν αμετάβλητες — άλλαξε μόνο η **ρίζα** (`root` με προεπιλογή `PROJECT_ROOT`, άρα τα υπάρχοντα tests αμετάβλητα). **Μετρημένο**: working tree ⇒ ΚΟΚΚΙΝΟ, index ⇒ ΠΡΑΣΙΝΟ, 2,2s. Άγκυρα: `scripts/__tests__/git-index-snapshot.test.js` (σταδιοποιημένο > δίσκος · untracked λείπει · σταδιοποιημένη διαγραφή λείπει). |
 | 2026-09-27 | **Ο γεννήτορας στο ευρετήριο (`generate:i18n-shell-slice:index`).** Η πύλη κρίνει πλέον το index, αλλά η θεραπεία που ζητά (αναγέννηση) διάβαζε ακόμη τον δίσκο: με ξένο `admin.json` πάνω από το ταβάνι **αρνιόταν** — μετρημένο στο commit του `basemap-catalog.ts` (αλλαγμένες εισαγωγές σε module route slice). Νέο `scripts/generate-i18n-shell-slice-on-index.js`: ο **ίδιος** γεννήτορας, αυτούσιος, μέσα σε στιγμιότυπο του index (`src` · `scripts` · configs, `node_modules` ως junction που αποσυνδέεται ρητά πριν τον καθαρισμό)· επιστρέφουν **μόνο** τα `src/i18n/generated/`. Μετρημένο: δίσκος ⇒ άρνηση (admin 69142/67000) · index ⇒ πράσινο, 2′13″. Το μήνυμα του hook δείχνει πλέον αυτή τη θεραπεία. |
+| 2026-10-03 | **🔴 §26 — το μενού κουβαλούσε μια σελίδα.** Το `myCases` (ADR-901 Φ2) έβγαλε το `navigation` 22.808/22.800. Ρίζα: 7 ρίζες του ιεραρχικού πλοηγητή `/navigation` (8,8 KB) που το κέλυφος **δεν** ζητά ⇒ **μετακόμιση** στο νέο lazy `hierarchy-navigator` (ρίζες αμετάβλητες, 8 καταναλωτές)· `page.breadcrumb` → `common-navigation` (8 κεφαλίδες σελίδων). `navigation` **13.903**, ταβάνι **22.800 → 14.500**. Ξεκλείδωσαν: route slices `/cases` (2.731) + `/cases/[engagementId]` (8.122) · `dynamicKeyPolicy` `ConveyanceChecklistRow` (`conveyance:items`, ακριβές) · αφαίρεση νεκρής `DesktopOnlyGate` · SSoT `useSelectionCollections` (κλώνος 28 γρ. που έπιασε το 3.28). |
 
 ---
 
@@ -2390,3 +2391,92 @@ commit όπου άλλαξε το κείμενο του DOM, **ένα** ακόμ
 - **Αδελφή πύλη του CHECK 3.51**: το 3.51 ρωτά για ωμά κλειδιά στο **SSR** HTML. Η **client**
   περίπτωση (αποτυχία chunk μετά το hydration) δεν μπορεί να ελεγχθεί στατικά. Φυλάσσεται από τις
   τρεις άγκυρες του 25.5, όχι από πύλη.
+
+---
+
+## §26 — ΤΟ ΜΕΝΟΥ ΚΟΥΒΑΛΟΥΣΕ ΜΙΑ ΣΕΛΙΔΑ (2026-10-03)
+
+### 26.1 Το σύμπτωμα
+
+Το κλειδί `navigation:personal.items.myCases` («Οι υποθέσεις μου», ADR-901 Φ2) έβγαλε το
+`navigation` **22.808 / 22.800** bytes και ο γεννήτορας αρνήθηκε (`over-budget`). Οκτώ bytes.
+Η προφανής «διόρθωση» ήταν +50 στο ταβάνι — ακριβώς αυτό που απαγορεύει ρητά το
+`$guaranteedNamespaces`: *«μια εγγραφή που ξεπερνά το ταβάνι της λέει ότι κάτι μπήκε σε ΛΑΘΟΣ
+namespace, και η θεραπεία είναι μετακόμιση (ADR-777 §8.38), όχι μεγαλύτερος αριθμός»*.
+
+### 26.2 Η ρίζα — μετρημένη
+
+Το `shell-slice.manifest.json → wants.navigation` (τι **ζητά** το κέλυφος) περιέχει `sidebar` ·
+`personal` · `module` · `jobs` · `menu` κ.λπ. **Καμία** από τις ρίζες:
+
+| Ρίζα | bytes (el) | Καταναλωτής |
+|---|---:|---|
+| `dialogs` | 4.046 | `DesktopNavDialogs` · `desktop-nav-handlers` |
+| `tree` | 1.379 | `NavigationTree` |
+| `columns` | 1.093 | `DesktopMultiColumn` · `navigation-item-descriptors` |
+| `buildingSpaces` | 1.070 | `BuildingSpacesTabs` |
+| `modals` | 845 | `DesktopNavDialogs` · `useDesktopNavData` |
+| `page` | 326 | `NavigationPageContent` · `AdaptiveMultiColumnNavigation` · `NavigationBreadcrumb` |
+| `mobile` | 70 | `MobileNavigation` |
+
+Είναι το λεξιλόγιο **μιας σελίδας** — του ιεραρχικού πλοηγητή `/navigation` (Εταιρεία → Έργο →
+Κτίριο → Χώροι) — που ταξίδευε **ολόκληρο, σύγχρονα, σε κάθε διαδρομή**. Δεύτερη εμφάνιση της
+κλάσης του ADR-777 §8.38: namespace που ονομάστηκε από την **οθόνη** («πλοήγηση») τράβηξε μέσα ό,τι
+λεγόταν «πλοήγηση» — το μενού της εφαρμογής **και** τη σελίδα «Πλοήγηση».
+
+### 26.3 Η απόφαση — νέο namespace `hierarchy-navigator`, ρίζες αμετάβλητες
+
+Ονομάζει **τι είναι**, όχι **πού εμφανίζεται**. Αλλάζει μόνο το namespace στους 8 καταναλωτές
+(`useTranslation('hierarchy-navigator')`)· κανένα κλειδί δεν μετονομάστηκε.
+
+**Τι απορρίφθηκε, με λόγο:**
+
+| Εναλλακτική | Γιατί όχι |
+|---|---|
+| +50 στο ταβάνι | Το ίδιο το μητρώο το απαγορεύει (§20, ADR-777 §8.38)· θα έκρυβε 8,8 KB λάθος τοποθέτησης. |
+| Στο υπάρχον `navigation-entities` | Είναι λεξιλόγιο **οντοτήτων/φίλτρων** με 20+ καταναλωτές έξω από τον πλοηγητή — ίδιο λάθος ανάποδα. |
+| Μέσω `LEGACY_NAMESPACE_ROOT_MAP` (compat) | ADR-798 §13: «δεύτερη πόρτα» με ελάττωμα ρίζας/κλειδιού· και το `getCompatNamespaces('navigation')` θα φόρτωνε το νέο ns **μαζί με κάθε** `useTranslation('navigation')` του κελύφους ⇒ ένα fetch σε κάθε σελίδα. |
+| Στο `CRITICAL_NAMESPACES` | Κανόνας εισδοχής (`lazy-config.ts`): namespace με δική του διαδρομή μένει lazy. Η σελίδα φορτώνει με `createLazyRoute(…, { ssr: false })` ⇒ δικό της loading state, **χωρίς** route slice. |
+| Μετακόμιση και των `toolbar`/`actions`/`icons`/`badges` | Κοινά προθέματα (CompactToolbar · `COMMON_NAMESPACES` · vocabulary labels): χωρίς ανάλυση επίλυσης **ανά κλήση** = σιωπηλό σπάσιμο. Μένουν — υποψήφια για επόμενο κύκλο. |
+
+**Η μία εξαίρεση: `page.breadcrumb.navigateTo` → `common-navigation:navigation.breadcrumb.navigateTo`.**
+Το `NavigationBreadcrumb` το χρησιμοποιούν **8 κεφαλίδες σελίδων** (Κτίρια · Έργα · Ακίνητα ×2 ·
+Πωλήσεις · Αρχεία · `ListPageHeader` · `PropertyGridView`) — είναι λεξιλόγιο πλοήγησης **όλης** της
+εφαρμογής. Στο `hierarchy-navigator` θα έκανε 8 σελίδες να φορτώνουν το ns του πλοηγητή για ένα
+tooltip. Το `common-navigation` είναι ήδη στο κέλυφος (1.152 → 1.211 / 1.300).
+
+### 26.4 Μετρημένο αποτέλεσμα
+
+| Τι | Πριν | Μετά |
+|---|---:|---:|
+| `navigation` (el, σύγχρονο, κάθε διαδρομή) | 22.808 🔴 | **13.903** |
+| Ταβάνι `navigation` | 22.800 | **14.500** *(χαμήλωσε — ratchet)* |
+| `common-navigation` | 1.152 | 1.211 / 1.300 |
+| `hierarchy-navigator` (lazy, μόνο `/navigation`) | — | 8.847 |
+| Γεννήτορας | ❌ 1 ετυμηγορία | ✅ |
+
+🔑 **Το ταβάνι κατέβηκε, δεν έμεινε.** Ένα ταβάνι με 8,9 KB κενό θα ξανάνοιγε σιωπηλά την ίδια
+πόρτα· στα 14.500 (μέτρηση + ~4%), η επόμενη σελίδα που θα ριχτεί εδώ κοκκινίζει.
+
+### 26.5 Τα ξεκλειδώματα που ακολούθησαν
+
+1. **Route slices `/cases`** (ADR-901 Φ2): `/cases` **2.731** bytes (`conveyance` · `property-market`) ·
+   `/cases/[engagementId]` **8.122** (`conveyance`). Παράδοση στα `MyCasesContent` /
+   `EngagedCaseContent` (στατικό `import` + `registerRouteSlice`, ιδίωμα §18).
+2. **Νέα εγγραφή `dynamicKeyPolicy`**: `ConveyanceChecklistRow` — `t(row.item.labelKey)`. Πρόθεμα
+   `conveyance:items`, **ακριβές** και όχι σκούπα: 39 είδη, το καθένα **μόνο** με `label` (4.013 bytes).
+   Πριν από τη δήλωση η `/cases/[engagementId]` αρνιόταν (4.100 = κάτω φράγμα).
+3. **Νεκρή εγγραφή αφαιρέθηκε**: `DesktopOnlyGate.tsx` (το αρχείο διαγράφηκε στο `f5a61a19`) —
+   κοκκίνιζε το Δ5 του `i18n-shell-slice.test.js`.
+4. **Κλώνος που βγήκε στο φως (CHECK 3.28)**: αγγίζοντας `NavigationTree` + `MobileNavigation`,
+   το jscpd βρήκε **28 γραμμές αυτούσιες** (κτίρια έργου · ακίνητα κτιρίου) — και τρίτο αντίγραφο
+   του πρώτου στο `useDesktopNavData`. Νέο SSoT: `core/hooks/useSelectionCollections.ts`
+   (`useProjectBuildings` · `useBuildingProperties`). Το `buildingProperties` του desktop **δεν**
+   είναι ίδιο (realtime, χωρίς αποθήκες) και μένει δικό του.
+
+### 26.6 ⚠️ Τι ΜΕΝΕΙ
+
+- `toolbar` (3.361) · `actions` (856) · `icons` (248) · `badges` (54) στο `navigation`: θέλουν
+  χαρτογράφηση **ανά κλήση** (σε ποιο ns λύνεται κάθε `t('toolbar.…')`) πριν από οποιαδήποτε κίνηση.
+- Το Π5 του `i18n-route-slices.test.js` ρωτά με `git grep` (μόνο **tracked**): πρασινίζει για τις
+  `/cases` όταν τα `my-cases/*` γίνουν commit.

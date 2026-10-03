@@ -375,7 +375,7 @@ export function buildPropertyShowcaseSnapshot(
       systems: buildSystems(p, locale),
       finishes: buildFinishes(p, locale),
       features: buildFeatures(p, locale),
-      linkedSpaces: buildLinkedSpaces(p, storages, parkingSpots),
+      linkedSpaces: buildLinkedSpaces(p, storages, parkingSpots, locale),
     },
     company: branding,
   };

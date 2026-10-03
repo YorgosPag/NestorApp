@@ -30,7 +30,6 @@ const logger = createModuleLogger('PropertyDetailsContent');
 import { PropertyEntityLinks } from './components/PropertyEntityLinks';
 import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
-import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
 import { useAutoLevelCreation } from './hooks/useAutoLevelCreation';
 import { AutoLevelDialogs } from './components/AutoLevelDialogs';
@@ -333,17 +332,16 @@ export function PropertyDetailsContent({
                   buildingId={resolvedProperty?.buildingId ?? null}
                   value={resolvedProperty?.floorId ?? ''}
                   onBeforeChange={handleFloorBeforeChange}
-                  onChange={(v: string, payload?: FloorChangePayload) => {
-                    if (safeOnUpdateProperty && resolvedProperty?.id) {
-                      if (payload) {
-                        void safeOnUpdateProperty(resolvedProperty.id, {
-                          floor: payload.floor,
-                          floorId: payload.floorId,
-                        });
-                      } else {
-                        void safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: undefined });
-                      }
-                    }
+                  onChange={(selection) => {
+                    if (!safeOnUpdateProperty || !resolvedProperty?.id) return;
+                    // ADR-903 §6 — η αυθεντία είναι το `floorId`· ο server παράγει `floor`/`floorKind`.
+                    // Ο αριθμός πάει μόνο ως αισιόδοξη προβολή (ο server τον αντικαθιστά από τον όροφο).
+                    // `''` = αποσύνδεση (ο server ⇒ `floorId/floorKind: null`)· το παλιό `undefined` χανόταν
+                    // στο JSON, άρα η αποσύνδεση δεν αποθηκευόταν ποτέ.
+                    void safeOnUpdateProperty(
+                      resolvedProperty.id,
+                      selection ? { floor: selection.floor, floorId: selection.floorId } : { floorId: '' },
+                    );
                   }}
                   label={t('properties:fields.location.floor')}
                   noBuildingHint={t('properties:fields.location.noFloorHint')}

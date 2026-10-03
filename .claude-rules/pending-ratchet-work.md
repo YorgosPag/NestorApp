@@ -3948,6 +3948,20 @@
 
 ## Pending tasks (priority order)
 
+### 🔐 AI KB (θεατής αγοραστής) μετρά τεκμήρια ΧΩΡΙΣ φίλτρο εμβέλειας CDE (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-03, ADR-901 Φ2 §14.2 · ADR-257 · N.0.2)
+- **Τι**: το `knowledge-base-handler.ts` καλεί `collectEvidenceForTargets(…)` με την προεπιλογή `'host'` ⇒ ένα **WIP** αρχείο μηχανικού μετρά ως «υπάρχει» στην απάντηση του AI προς τον **αγοραστή** (εξωτερικό θεατή). Δεν διαρρέει περιεχόμενο — διαρρέει **ύπαρξη/κατάσταση**.
+- **Fix**: πέρασμα ακροατηρίου (`'client'`) στο 4ο όρισμα — το φίλτρο υπάρχει ήδη (`decideEngagedEvidenceReach`, ADR-901 Φ2). Άγγιγμα σε `services/ai-pipeline/` ⇒ **N.10** (σουίτα ai-pipeline) — γι' αυτό δεν έγινε μέσα στη Φ2.
+
+### 🏢 Όροφος: ✅ ετικέτα/parser/λεξιλόγιο (2β.1α) + φιλοξενία σε όροφο (2β.1β) — ADR-903, 2026-10-03 — ⏳ μένουν: μετανάστευση δεδομένων (εντολή Giorgio) · τύποι `Floor*` · αναζήτηση/φίλτρο ακινήτων (προτεραιότητα ΜΕΣΑΙΑ · N.0.2)
+- ✅ **Έγινε (2β.1α)**: `FloorRef` · `parseLegacyFloor` · `formatFloorRef` (`useFloorLabel` / `floorLabelIn`) · `FloorKind` +4 · καταργήθηκαν `formatFloorLabel`/`formatFloorString`/`generateAutoLongName` + 8 χειρόγραφα · φρουρός `lib/floor/__tests__/no-hand-floor-labels.test.ts`.
+- ✅ **Έγινε (2β.1β, ADR-903 §6)**: `floorId` αυθεντία + αντίγραφο `floor`/`floorKind` (server) σε ακίνητα/θέσεις/αποθήκες · cascade αναρίθμησης · ένας επιλογέας/μία πηγή · φίλτρο από τα δεδομένα · διαγράφηκαν `PARKING_FLOOR_LABELS`/`standardFloors`/`building.floors.*`/`parseFloorLevel` · seed σε αριθμούς · `parking-showcase/labels` στο `parking.json`.
+- ⏳ **Μετανάστευση δεδομένων**: `npm run migrate:hosted-floor-ref` (ξηρό) → αναφορά στον Giorgio → `--apply` **μόνο με εντολή του**· μετά `--verify` (exit 0 = κανένα αντίγραφο σε απόκλιση).
+- ⏳ **Ευρετήριο αναζήτησης**: το στατιστικό `floor` κρατά μόνο αριθμό ⇒ πυλωτή φαίνεται «Ισόγειο» (`search-index-config` → Cloud Functions, θέλει ανάπτυξη Functions).
+- ⏳ **Φίλτρο ορόφου ακινήτων** (`usePropertyFiltersConfig`: ετικέτα ωμός αριθμός «2» + matchers `Number(filters.floor)`) ⇒ `lib/floor/floor-filter` (κλειδί αριθμός:είδος).
+- **Τύποι-αντίγραφα** (~15): `Floor`/`FloorOption`/`FloorRecord`/`FloorData` σε `types/building/contracts.ts:226` · `usePropertyState.ts:9` · `useFloorsByBuilding.ts:32` (✅ πλέον η ΜΙΑ πηγή των επιλογέων — 2β.1β· το αντίγραφο του `FloorSelectField` διαγράφηκε) · `multi-level.service.ts:22` · `property-tab-constants.ts:104` · `useFloorsTabState.types.ts:12` · `features/*/types.ts` κ.ά. — αυθεντία `FloorDocument`.
+- **Νεκρό κλειδί** `property-market:offer.card.floor` («Όροφος {floor}») — το `OwnerPropertyCard` πέρασε στο `useFloorLabel`· σβήνεται **μετά** το commit του 2α (το αρχείο ανήκει στην ομάδα 2α).
+- **Πυλωτή — ελάχιστο ύψος κάτω από δοκό** (`clear-height-under-beam.ts`): σχόλιο λέει 1900 (ΚΠΝ) χωρίς επαληθευμένη πηγή· μένει 2200 μέχρι πηγή ΝΟΚ/ΚΠΝ.
+
 ### 🎯 Κύρια ενέργεια = `bg-primary` ⇒ αόρατη στο σκοτεινό (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-01, ADR-770 §18 · ADR-896 §7Α.8)
 - **SSoT**: `COLOR_BRIDGE.action.primary` (`design-system/color-bridge.ts`, ανεστραμμένο μονόχρωμο, μετρημένο 16,66:1 σκοτ. / 14,76:1 φωτ.).
   Το `.dark --primary` ≡ `--card`, οπότε κουμπί `bg-primary` σβήνει μέσα σε κάρτα/φύλλο. Έτσι βρέθηκε ζωντανά το «Δείξε N» του `/search/results`.

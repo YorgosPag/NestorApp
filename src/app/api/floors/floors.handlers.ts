@@ -19,10 +19,8 @@ import type {
   FloorsListResponse,
   FloorUpdateResponse,
 } from './floors.types';
-import { FLOORPLAN_PURPOSES, ENTITY_TYPES } from '@/config/domain-constants';
-import { isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import type { AuditFieldChange } from '@/types/audit-trail';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { isBuildingStorey, isFloorKind } from '@/utils/floor-naming';
 import {
   buildFloorsQuery,
   loadFloorInTenant,
@@ -30,7 +28,9 @@ import {
   sortFloors,
 } from './floors.shared';
 import { tenantScopeLabel } from '@/lib/auth/tenant-scope';
-import { reconcileFloorStackAfterEdit, reconcileSpecialLevelPlacement } from './floor-stack-reconcile.service';
+import { reconcileSpecialLevelPlacement } from './floor-stack-reconcile.service';
+import { assertFloorSlotFree } from './floor-slot';
+import { buildFloorUpdates, floorUpdateChanges, runFloorUpdateEffects } from './floor-update-effects';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -174,35 +174,11 @@ export async function handleCreateFloor(
     if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
     if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
-    // ADR-461 — kind-aware uniqueness (Revit «Building Story» OFF for special levels).
-    // Counted storeys must keep UNIQUE numbers among themselves; a special level
-    // (foundation/roof/stair-penthouse) may legitimately share a number with a
-    // counted storey (e.g. a foundation auto-numbered −1 co-existing with a manual
-    // basement −1). The only special-level constraint is at most ONE per kind.
-    // Read the building's floors by a single-field query (no new composite index)
-    // and decide in memory — buildings hold few floors.
-    const siblingsSnap = await db
-      .collection(COLLECTIONS.FLOORS)
-      .where(FIELDS.BUILDING_ID, '==', body.buildingId)
-      .select('number', 'kind')
-      .get();
-    const siblings = siblingsSnap.docs.map((d) => ({
-      number: d.data().number as number,
-      kind: d.data().kind as FloorKind | undefined,
-    }));
-
-    const newIsSpecial = body.kind !== undefined && !isBuildingStorey(body.kind);
-    if (newIsSpecial) {
-      if (siblings.some((s) => s.kind === body.kind)) {
-        throw new ApiError(409, `A ${body.kind} special level already exists in building ${body.buildingId}`);
-      }
-    } else {
-      const clashesCounted = siblings.some(
-        (s) => s.number === body.number && (s.kind === undefined || isBuildingStorey(s.kind)),
-      );
-      if (clashesCounted) {
-        throw new ApiError(409, `Floor number ${body.number} already exists in building ${body.buildingId}`);
-      }
+    // ADR-461 — kind-aware uniqueness, one rule shared with the update path (floor-slot.ts),
+    // scoped to the building OWNER's tenant. A missing building is refused by createEntity below.
+    const ownerCompanyId = buildingDoc.data()?.companyId;
+    if (typeof ownerCompanyId === 'string') {
+      await assertFloorSlotFree(db, { buildingId: body.buildingId, companyId: ownerCompanyId }, { number: body.number, kind: body.kind });
     }
 
     const result = await createEntity('floor', {
@@ -264,17 +240,13 @@ export async function handleUpdateFloor(
     if (loaded instanceof NextResponse) {
       return loaded as NextResponse<FloorUpdateResponse>;
     }
-    const { ref: floorRef, data: floorData } = loaded;
+    const before = loaded.data;
 
-    const updates: Record<string, unknown> = {};
-    if (body.name !== undefined) updates.name = body.name;
-    if (body.number !== undefined) updates.number = body.number;
-    if (body.elevation !== undefined) updates.elevation = body.elevation ?? null;
-    if (body.height !== undefined) updates.height = body.height ?? null;
-
+    const updates = buildFloorUpdates(body);
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
+    await assertSlotStillFree(db, body.floorId, before, updates);
 
     const versionResult = await withVersionCheck({
       db,
@@ -286,64 +258,21 @@ export async function handleUpdateFloor(
     });
     logger.info('[Floors/Update] Floor updated', { floorId: body.floorId, _v: versionResult.newVersion });
 
-    const trackedFields = ['name', 'number', 'elevation', 'height'] as const;
-    const changes: AuditFieldChange[] = trackedFields
-      .filter((field) => updates[field] !== undefined && updates[field] !== floorData?.[field])
-      .map((field) => ({
-        field,
-        oldValue: (floorData?.[field] as AuditFieldChange['oldValue']) ?? null,
-        newValue: updates[field] as AuditFieldChange['newValue'],
-        label: field,
-      }));
-    if (changes.length > 0) {
-      await EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.FLOOR,
-        entityId: body.floorId,
-        entityName: (floorData?.name as string) ?? body.floorId,
-        action: 'updated',
-        changes,
-        performedBy: ctx.uid,
-        performedByName: null,
-        companyId: ctx.companyId!,
-      });
-    }
-
-    // ADR-451 — Unified server-authoritative floor-stack reconcile. `elevation` is
-    // the SSoT (absolute Level truth), `height` its derived projection. Dispatch by
-    // which field the user actually changed (elevation wins when both):
-    //   - elevation edit → re-derive the two adjacent storey heights + re-stretch
-    //     only those storeys' entities (Revit «move a Level» — nobody else moves).
-    //   - height edit → ADR-450 §1 push: re-stretch this floor + shift upper FFLs.
-    let cascadeWarning: string | undefined;
-    const elevationChanged = changes.some((c) => c.field === 'elevation');
-    const heightChanged = changes.some((c) => c.field === 'height');
-    const buildingId = floorData?.buildingId as string | undefined;
-    if ((elevationChanged || heightChanged) && ctx.companyId && buildingId) {
-      try {
-        await reconcileFloorStackAfterEdit(db, buildingId, body.floorId, ctx.companyId, ctx.uid, {
-          elevationChanged,
-          heightChanged,
-          newHeightMetres: typeof updates.height === 'number' ? updates.height : null,
-        });
-      } catch (cascadeErr) {
-        logger.error('[Floors/Update] Reconcile failed — floor updated, stack not reconciled', {
-          floorId: body.floorId,
-          error: getErrorMessage(cascadeErr),
-        });
-        cascadeWarning = 'Floor updated but vertical-stack reconcile failed. Retry or manually adjust elevations/heights.';
-      }
-    }
+    const changes = floorUpdateChanges(updates, before);
+    const effects = await runFloorUpdateEffects({ db, ctx, floorId: body.floorId, before, updates, changes });
 
     return NextResponse.json({
       success: true,
       message: `Floor "${body.floorId}" updated`,
       _v: versionResult.newVersion,
-      ...(cascadeWarning ? { cascadeWarning } : {}),
+      ...(effects.warnings.length > 0 ? { cascadeWarning: effects.warnings.join(' ') } : {}),
+      ...(effects.hostedCascade ? { hostedCascade: effects.hostedCascade } : {}),
     });
   } catch (error) {
     if (error instanceof ConflictError) {
       return NextResponse.json(error.body, { status: error.statusCode });
     }
+    if (error instanceof ApiError) throw error;
     logger.error('[Floors/Update] Error', { error: getErrorMessage(error, 'Unknown') });
     return NextResponse.json({
       success: false,
@@ -351,6 +280,24 @@ export async function handleUpdateFloor(
       details: getErrorMessage(error, 'Unknown'),
     }, { status: 500 });
   }
+}
+
+/**
+ * ADR-461 / ADR-903 §6 — αλλαγή αριθμού ή είδους ⇒ ο ίδιος κανόνας μοναδικότητας με τη δημιουργία,
+ * **πριν** τη γραφή (αλλιώς δύο «1ος όροφος» και ο cascade θα τους μπέρδευε).
+ */
+async function assertSlotStillFree(
+  db: FirebaseFirestore.Firestore,
+  floorId: string,
+  before: Readonly<Record<string, unknown>>,
+  updates: Readonly<Record<string, unknown>>,
+): Promise<void> {
+  if (updates.number === undefined && updates.kind === undefined) return;
+  const { buildingId, companyId } = before;
+  const number = updates.number ?? before.number;
+  if (typeof buildingId !== 'string' || typeof companyId !== 'string' || typeof number !== 'number') return;
+  const kind = updates.kind ?? before.kind;
+  await assertFloorSlotFree(db, { buildingId, companyId }, { number, kind: isFloorKind(kind) ? kind : undefined }, floorId);
 }
 
 export async function handleDeleteFloor(

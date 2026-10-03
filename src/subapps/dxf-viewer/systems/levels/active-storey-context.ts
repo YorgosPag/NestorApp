@@ -137,6 +137,7 @@ export function buildActiveStoreyContext(
     floorElevationMm,
     nextFloorElevationMm,
     isLowestOccupiedStorey: resolveIsLowestOccupied(floors, active),
-    buildingHasBasement: floors.some((f) => f.number < 0 || f.kind === 'basement'),
+    // ADR-903 — το ημιυπόγειο είναι υπόγεια στάθμη (όχι όμως η θεμελίωση: δεν είναι χώρος).
+    buildingHasBasement: floors.some((f) => f.number < 0 || f.kind === 'basement' || f.kind === 'semi-basement'),
   };
 }

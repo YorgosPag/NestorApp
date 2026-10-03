@@ -76,13 +76,9 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'filters.storage.ariaLabels.floor',
           width: 1,
           options: [
+            // ADR-903 §6 — οι όροφοι ΠΡΟΚΥΠΤΟΥΝ από τα δεδομένα (`useFloorFilterConfig`)· οι σταθερές
+            // επιλογές (`basement-1`, `first`…) δεν ταίριαζαν ποτέ με το αποθηκευμένο κείμενο.
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS },
-            { value: 'basement-2', label: STORAGE_LABELS.BASEMENT_MINUS_2 },
-            { value: 'basement-1', label: STORAGE_LABELS.BASEMENT_MINUS_1 },
-            { value: 'ground', label: STORAGE_LABELS.GROUND_FLOOR },
-            { value: 'first', label: STORAGE_LABELS.FIRST_FLOOR },
-            { value: 'second', label: STORAGE_LABELS.SECOND_FLOOR },
-            { value: 'other', label: STORAGE_LABELS.OTHER_FLOORS }
           ]
         },
         {

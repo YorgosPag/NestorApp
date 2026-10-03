@@ -818,7 +818,8 @@
       "owner_property": "Listing",
       "network_act_team": "Act team",
       "property_dossier": "Property dossier",
-      "conveyance_case": "Conveyance case"
+      "conveyance_case": "Conveyance case",
+      "engagement": "Case engagement"
     },
     "values": {
       "active": "Active",

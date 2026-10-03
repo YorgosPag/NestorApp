@@ -13,7 +13,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized floor label formatting (Ισόγειο, Υπόγειο, κλπ.)
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 // 🏢 SSoT: WHICH price to show is decided once, in the resolver (ADR-777 Α6)
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 // 🏢 SSoT: το σήμα κατάστασης ανέβηκε στο shared module όταν απέκτησε δεύτερο
@@ -34,6 +34,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const thumbnailUrl = usePropertyThumbnail(property);
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const floorLabel = useFloorLabel();
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
   const price = resolveDisplayPrice(property);
   // ADR-777 Α21: η διατύπωση κάθε ποσού ζει δίπλα στον κανόνα που το επιλέγει.
@@ -67,7 +68,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
             <p className={`text-sm ${colors.text.muted} flex items-center gap-1 mt-1`}>
               {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
-              <span itemProp="location">{property.project} • {property.building} • {formatFloorLabel(property.floor)}</span>
+              <span itemProp="location">{property.project} • {property.building} • {floorLabel(property.floor)}</span>
             </p>
           </section>
           <CommonBadge

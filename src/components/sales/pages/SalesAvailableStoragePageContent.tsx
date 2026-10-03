@@ -26,6 +26,7 @@ import {
   salesSpaceSidebarProps,
   useSalesSpacePanelFilters,
 } from '@/components/sales/shared';
+import { useFloorFilterConfig } from '@/components/core/AdvancedFilters/hooks/useFloorFilterConfig';
 import '@/lib/design-system';
 
 function SalesStorageContent() {
@@ -36,6 +37,8 @@ function SalesStorageContent() {
 
   // Panel ⇄ σελίδα: ο ΚΟΙΝΟΣ μεταφραστής (εύρη τιμής ΜΕ μονάδα · εμβαδόν · κατάσταση).
   const { panelFilters, onPanelFiltersChange } = useSalesSpacePanelFilters(filters, handleFiltersChange);
+  // ADR-903 §6 — οι όροφοι του φίλτρου προκύπτουν από τα στοιχεία που υπάρχουν.
+  const filtersConfig = useFloorFilterConfig(storageFiltersConfig, storageState.allItems);
 
   const unifiedDashboardStats: DashboardStat[] = [
     {
@@ -81,7 +84,7 @@ function SalesStorageContent() {
       chrome={storageState}
       stats={unifiedDashboardStats}
       onSearchChange={searchTerm => handleFiltersChange({ searchTerm })}
-      filtersConfig={storageFiltersConfig}
+      filtersConfig={filtersConfig}
       filters={panelFilters as unknown as StorageFilterState}
       onFiltersChange={onPanelFiltersChange}
       renderList={() => <SalesStorageSidebar {...salesSpaceSidebarProps(storageState)} />}

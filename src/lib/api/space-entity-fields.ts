@@ -44,6 +44,16 @@ import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
  */
 const RECORD_STATUS_NOT_WRITABLE = z.undefined();
 
+/**
+ * 🔒 **Ο αριθμός ορόφου ΔΕΝ γράφεται από σώμα αιτήματος** (ADR-903 §6 — Revit `LevelId`).
+ *
+ * Ο χώρος **φιλοξενείται** σε όροφο: ο client στέλνει `floorId` και ο server παράγει
+ * `floor` + `floorKind` από το έγγραφο ορόφου (`host-floor.server.ts`). Ως τις 2026-10-03 ήταν
+ * ελεύθερο κείμενο («Υπόγειο -1», `basement-1`, «Ισόγειο») που κανείς δεν ενημέρωνε όταν ο
+ * όροφος αναριθμούνταν. Ίδιος λόγος με το `status`: ο παλιός πελάτης παίρνει **400**.
+ */
+const FLOOR_NUMBER_NOT_WRITABLE = z.undefined();
+
 /** Η λειτουργική κατάσταση — το **ίδιο** λεξιλόγιο με τα ακίνητα, ή `null` («δεν δηλώνεται»). */
 const OPERATIONAL_STATUS_FIELD = z.enum(OPERATIONAL_STATUSES);
 
@@ -57,7 +67,6 @@ export type SpaceDisplayField = 'number' | 'name';
  * ```ts
  * const UpdateStorageSchema = z.object({
  *   name: z.string().max(200).optional(),
- *   floorId: z.string().max(128).nullable().optional(),
  *   ...SPACE_COMMON_UPDATE_FIELDS,
  * }).passthrough();
  * ```
@@ -72,7 +81,9 @@ export const SPACE_COMMON_UPDATE_FIELDS = {
   type: z.string().max(50).optional(),
   status: RECORD_STATUS_NOT_WRITABLE,
   operationalStatus: OPERATIONAL_STATUS_FIELD.nullable().optional(),
-  floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
+  floor: FLOOR_NUMBER_NOT_WRITABLE,
+  /** ADR-903 §6 — η αυθεντία της φιλοξενίας· `null` = «φεύγει από όροφο». */
+  floorId: z.string().max(128).nullable().optional(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
@@ -113,7 +124,9 @@ export const SPACE_COMMON_CREATE_FIELDS = {
   type: z.string().max(50).optional(),
   status: RECORD_STATUS_NOT_WRITABLE,
   operationalStatus: OPERATIONAL_STATUS_FIELD.optional(),
-  floor: z.string().max(50).optional(),
+  floor: FLOOR_NUMBER_NOT_WRITABLE,
+  /** ADR-903 §6 — ο όροφος που φιλοξενεί τον χώρο· το αντίγραφο το παράγει ο server. */
+  floorId: z.string().max(128).optional(),
   area: z.number().min(0).max(999_999).optional(),
   description: z.string().max(2000).optional(),
   notes: z.string().max(5000).optional(),
@@ -130,7 +143,10 @@ export const SPACE_COMMON_CREATE_FIELDS = {
  *
  * | πεδίο | φρουρός | γιατί |
  * |---|---|---|
- * | `floor`, `description`, `notes`, `code` | κενό μετά από `trim()` ⇒ **παραλείπεται** | κενή συμβολοσειρά δεν είναι τιμή |
+ * | `description`, `notes`, `code` | κενό μετά από `trim()` ⇒ **παραλείπεται** | κενή συμβολοσειρά δεν είναι τιμή |
+ *
+ * ⚠️ Ο **όροφος** δεν είναι εδώ (ADR-903 §6): `floorId` → αντίγραφο το επιλύει ο route με
+ * `resolveHostedFloorForCreate`, γιατί χρειάζεται Firestore και τον φύλακα του πόρου.
  * | `area` | `> 0` | μηδενικό εμβαδόν δεν είναι δεδομένο, είναι κενή φόρμα |
  *
  * ⛔ **Το @deprecated `price` ΔΕΝ γράφεται πια** (ADR-777 §8.60.18): ο επιλυτής το
@@ -149,9 +165,6 @@ export function mapCommonSpaceCreateFields(
     status: NEW_SPACE_STATUSES.status,
     operationalStatus: normalizeOperationalStatus(body.operationalStatus) ?? NEW_SPACE_STATUSES.operationalStatus,
   };
-
-  const floor = trimmedOrNull(body.floor);
-  if (floor) fields.floor = floor;
 
   if (typeof body.area === 'number' && body.area > 0) fields.area = body.area;
 
@@ -179,8 +192,10 @@ function trimmedOrNull(value: unknown): string | null {
 
 /**
  * Map the PATCH fields BOTH space entities share.
- * Entity-specific extras (parking: `location` / `locationZone` / `projectId`;
- * storage: `floorId`) are merged on top by the route's `mapExtraFields`.
+ * Entity-specific extras (parking: `location` / `locationZone` / `projectId`)
+ * are merged on top by the route's `mapExtraFields`. The floor (`floorId` →
+ * `floor` + `floorKind`) is resolved by the PATCH handler against the floor
+ * document (ADR-903 §6) — it needs Firestore, so it cannot live in this pure module.
  */
 export function mapCommonSpaceFields(
   body: Record<string, unknown>,
@@ -195,11 +210,6 @@ export function mapCommonSpaceFields(
   if (body.type) updateData.type = body.type;
   if (isProvided(body.operationalStatus)) {
     updateData.operationalStatus = normalizeOperationalStatus(body.operationalStatus);
-  }
-  if (isProvided(body.floor)) {
-    updateData.floor = typeof body.floor === 'string'
-      ? body.floor.trim() || null
-      : body.floor ?? null;
   }
   if (isProvided(body.area)) updateData.area = typeof body.area === 'number' ? body.area : null;
   if (isProvided(body.description)) updateData.description = trimmedOrNull(body.description);

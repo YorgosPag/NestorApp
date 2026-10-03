@@ -15,7 +15,7 @@ import { deleteFloorWithPolicy, updateFloorWithPolicy } from '@/services/floor-m
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { formatFloorLabel } from '@/lib/intl-domain';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { RealtimeService } from '@/services/realtime';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import {
@@ -41,6 +41,7 @@ const floorsCache = createStaleCache<FloorRecord[]>('building-floors');
 
 export function useFloorsTabState(buildingId: string, projectId?: string, focusFloorId?: string | null) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const floorLabel = useFloorLabel();
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
   const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('floor');
@@ -132,12 +133,12 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     setEditNumber(value);
     const num = parseInt(value, 10);
     if (!editNameManuallyEdited) {
-      setEditName(isNaN(num) ? '' : formatFloorLabel(num));
+      setEditName(isNaN(num) ? '' : floorLabel(num));
     }
     if (!editElevationManuallyEdited) {
       setEditElevation(isNaN(num) ? '' : computeDefaultElevation(num));
     }
-  }, [editNameManuallyEdited, editElevationManuallyEdited, computeDefaultElevation]);
+  }, [editNameManuallyEdited, editElevationManuallyEdited, computeDefaultElevation, floorLabel]);
 
   /** Mark edit name as manually edited */
   const handleEditNameChange = useCallback((value: string) => {
@@ -163,8 +164,8 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     if (!editNameManuallyEdited || !editName.trim()) return false;
     const num = parseInt(editNumber, 10);
     if (isNaN(num)) return false;
-    return editName.trim() !== formatFloorLabel(num);
-  }, [editNumber, editName, editNameManuallyEdited]);
+    return editName.trim() !== floorLabel(num);
+  }, [editNumber, editName, editNameManuallyEdited, floorLabel]);
 
   /** Detect gaps in floor numbering sequence */
   const floorGaps = useMemo((): number[] => {

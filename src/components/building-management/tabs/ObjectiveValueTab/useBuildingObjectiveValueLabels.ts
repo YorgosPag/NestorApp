@@ -13,7 +13,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useObjectiveValueAmountText, useObjectiveValueOpenLabel } from '@/components/objective-value/ObjectiveValueEvaluated';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatFloorLabel } from '@/lib/intl-domain';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import type { BuildingInheritedFact, BuildingUnitObjectiveValue } from '@/lib/objective-value/building-objective-value';
 import type {
   BuildingObjectiveValueRow,
@@ -54,6 +54,7 @@ export function useBuildingObjectiveValueLabels(): BuildingObjectiveValueLabels 
   const { t } = useTranslation([NS]);
   const amountText = useObjectiveValueAmountText();
   const openLabel = useObjectiveValueOpenLabel();
+  const floorLabel = useFloorLabel();
 
   const stage = useCallback((value: BuildingStageReached) => t(`${NS}:stages.${value}`), [t]);
   const otherBuilding = useCallback((ref: OtherBuildingRef) => ref.label ?? t(`${B}.elsewhere.unnamedBuilding`), [t]);
@@ -82,14 +83,14 @@ export function useBuildingObjectiveValueLabels(): BuildingObjectiveValueLabels 
       rowName: (row) => row.name ?? t(`${B}.unnamed.${row.kind}`),
       kind: (kind) => t(`${B}.kinds.${kind}`),
       position: (kind, position) => t(`${NS}:property.${kind === 'parking' ? 'parkingPosition' : 'storagePosition'}.${position}`),
-      floor: (floor) => (floor === null ? t(`${B}.noFloor`) : formatFloorLabel(floor)),
+      floor: (floor) => (floor === null ? t(`${B}.noFloor`) : floorLabel(floor)),
       stage,
       inherited: (facts) => facts.map((fact) => t(`${B}.inherited.facts.${fact}`)).join(', '),
       otherBuilding,
       ownerElsewhere: (unitName, ref) => t(`${B}.elsewhere.owner`, { unit: unitName ?? t(`${B}.unnamed.unit`), building: otherBuilding(ref) }),
       referenceName: (reference) => reference.name ?? t(`${B}.unnamed.${reference.kind}`),
     }),
-    [t, amountText, status, stage, otherBuilding],
+    [t, amountText, status, stage, otherBuilding, floorLabel],
   );
 }
 

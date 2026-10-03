@@ -15,6 +15,8 @@ import { useMemo } from 'react';
 import type { StatItem } from '@/design-system';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { spaceStatusBadges, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import type { Storage } from '@/types/storage/contracts';
 
@@ -41,15 +43,17 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
  */
 export function useStorageCardModel(storage: Storage, view: 'grid' | 'list'): CardViewModel {
   const { t } = useTranslation(['storage', UNIT_STATUS_NAMESPACE]);
+  const floorLabel = useFloorLabel();
 
   /** Build stats — Grid: floor→area→price, List: area→price→floor */
   const stats = useMemo<StatItem[]>(() => {
-    const floor = floorStat(storage.floor, t('card.stats.floor'));
+    // ADR-903 §6 — αριθμός ΚΑΙ είδος από το ένα σύνορο ανάγνωσης (πυλωτή ≠ ισόγειο).
+    const floor = floorStat(floorLabel(hostedFloorRef(storage)), t('card.stats.floor'));
     const area = areaStat(storage.area, t('card.stats.area'));
     const price = priceStat(storage, t('card.stats.price'), t);
     const ordered = view === 'grid' ? [floor, area, price] : [area, price, floor];
     return ordered.filter((s): s is StatItem => s !== null);
-  }, [storage, view, t]);
+  }, [storage, view, t, floorLabel]);
 
   /** Διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση — ποτέ το παλιό ανάμεικτο πεδίο. */
   const badges = useMemo(() => spaceStatusBadges(storage, t), [storage, t]);

@@ -8,7 +8,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 // 🏢 ENTERPRISE: Dead exports REMOVED 2026-04-18 (ADR-314 Phase B)
-// - formatFloorLabel re-export → import from '@/lib/intl-utils'
+// - formatFloorLabel re-export → removed entirely (ADR-903: `useFloorLabel` / `@/lib/floor/*`)
 // - getCategoryLabel/getStatusLabel/getDaysUntilCompletion wrappers → '@/lib/intl-utils' or '@/lib/status-helpers'
 // - formatPricePerSqm/getProgressColor → were dead (zero callers)
 // - getStatusColor → '@/lib/status-helpers' getStatusColor('buildingProject', ...)

@@ -98,7 +98,7 @@ interface UnlinkDialogConfig {
 }
 
 function UnlinkDialog({ open, onOpenChange, pending, onClear, onConfirm, i18nPrefix, nameParam }: UnlinkDialogConfig) {
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
   const colors = useSemanticColors();
   const UnlinkIcon = NAVIGATION_ACTIONS.unlink.icon;
 
@@ -148,7 +148,7 @@ function UnlinkDialog({ open, onOpenChange, pending, onClear, onConfirm, i18nPre
 // ── Main component ──
 
 export function DesktopNavDialogs(props: DesktopNavDialogsProps) {
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
   const colors = useSemanticColors();
   const DeleteIcon = NAVIGATION_ACTIONS.delete.icon;
 

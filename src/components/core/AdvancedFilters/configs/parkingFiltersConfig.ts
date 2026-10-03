@@ -54,26 +54,8 @@ export const PARKING_TYPE_FILTER_OPTIONS = PARKING_TYPES.map((type) => ({
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 // =============================================================================
 
-// 🔴 ADR-823 §14 — ΤΡΙΑ ΚΛΕΙΔΙΑ ΠΟΥ ΔΕΝ ΥΠΗΡΞΑΝ ΠΟΤΕ (μετρημένο 2026-08-27)
-//
-// Τα `building.floors.pilotis` · `.first` · `.rooftop` **δεν υπάρχουν** στο
-// `building.json`, σε καμία από τις δύο γλώσσες. Έβγαιναν **ωμά** στην οθόνη.
-//
-// ⚠️ **ΔΕΝ προστέθηκαν νέα κλειδιά** — υπήρχαν ήδη, αλλού:
-//   • `pilotis` / `rooftop` → `parking:locationZone.*`  («Πυλωτή» · «Δώμα»)
-//     Σωστό και **σημασιολογικά**: για θέση στάθμευσης η πυλωτή και το δώμα είναι
-//     **ζώνες θέσης**, όχι όροφοι κτιρίου.
-//   • `first` → `building:floors.floor1`  («1ος Όροφος»)
-//
-// Νέο κλειδί εκεί που υπάρχει ήδη μετάφραση = διπλότυπο (N.12).
-export const PARKING_FLOOR_LABELS = {
-  'basement-2': 'building.floors.basementMinus2',
-  'basement-1': 'building.floors.basementMinus1',
-  ground: 'building.floors.ground',
-  pilotis: 'parking.locationZone.pilotis',
-  first: 'building.floors.floor1',
-  rooftop: 'parking.locationZone.rooftop'
-} as const;
+// ADR-903 §6 — ο πίνακας `PARKING_FLOOR_LABELS` (σταθερές επιλογές ορόφου) διαγράφηκε: οι όροφοι
+// προκύπτουν από τα δεδομένα (`useFloorFilterConfig`) με την ΕΝΑ ετικέτα (`useFloorLabel`).
 
 // =============================================================================
 // 🅿️ PARKING FILTERS CONFIGURATION
@@ -135,13 +117,9 @@ export const parkingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'filters.parking.ariaLabels.level',
           width: 1,
           options: [
+            // ADR-903 §6 — οι όροφοι ΠΡΟΚΥΠΤΟΥΝ από τα δεδομένα (`useFloorFilterConfig`)· η πυλωτή/το
+            // δώμα ως ΖΩΝΗ θέσης φιλτράρονται από το `locationZone`, όχι εδώ.
             { value: 'all', label: PARKING_FILTER_LABELS.ALL_LEVELS },
-            { value: 'basement-2', label: PARKING_FLOOR_LABELS['basement-2'] },
-            { value: 'basement-1', label: PARKING_FLOOR_LABELS['basement-1'] },
-            { value: 'ground', label: PARKING_FLOOR_LABELS.ground },
-            { value: 'pilotis', label: PARKING_FLOOR_LABELS.pilotis },
-            { value: 'first', label: PARKING_FLOOR_LABELS.first },
-            { value: 'rooftop', label: PARKING_FLOOR_LABELS.rooftop }
           ]
         },
         {

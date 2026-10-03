@@ -20,6 +20,8 @@ import {
 } from '@/lib/api/space-entity-fields';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { resolveHostedFloorForCreate } from '@/lib/floor/host-floor.server';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
 // Οι αναγνώστες Firestore ζουν δίπλα (N.7.1 — το route έφτασε το όριο των 300 γραμμών).
@@ -69,7 +71,8 @@ interface ParkingCreatePayload {
   type?: CanonicalParkingSpot['type'];
   operationalStatus?: CanonicalParkingSpot['operationalStatus'];
   locationZone?: CanonicalParkingSpot['locationZone'];
-  floor?: string;
+  /** ADR-903 §6 — ο όροφος που φιλοξενεί τη θέση· `floor`/`floorKind` τα παράγει ο server. */
+  floorId?: string;
   location?: string;
   area?: number;
   description?: string;
@@ -109,8 +112,11 @@ export const POST = withStandardRateLimit(
           }
         }
 
+        // ADR-903 §6 — ο όροφος από το έγγραφό του (ίδιο κτίριο, ίδια εταιρεία)· μία πηγή.
+        const hosted = await resolveHostedFloorForCreate(getAdminFirestore(), ctx, body.floorId, buildingId);
+
         // Entity-specific fields (everything NOT handled by centralized service).
-        // Τα πέντε κοινά με τα `storages` (floor/area/description/notes/code)
+        // Τα τέσσερα κοινά με τα `storages` (area/description/notes/code)
         // έρχονται από τον SSoT — η σημασιολογία τους περιγράφεται εκεί. Το
         // @deprecated `price` ΔΕΝ γράφεται πια (ADR-777 §8.60.18): νέα θέση =
         // εκτός αγοράς, η διάθεση δηλώνεται μετά, με τιμή ανά ρόλο.
@@ -119,6 +125,7 @@ export const POST = withStandardRateLimit(
           buildingId: buildingId,
           type: body.type || 'standard',
           ...mapCommonSpaceCreateFields(body),
+          ...hosted,
         };
 
         // ⚠️ ΟΧΙ από τον SSoT: εδώ το `projectId` είναι **ήδη επιλυμένο** και
@@ -140,7 +147,8 @@ export const POST = withStandardRateLimit(
           entitySpecificFields,
           codeOptions: {
             currentValue: body.code?.trim() || body.number.trim(),
-            floorLevel: body.floor ? parseInt(body.floor, 10) || 0 : 0,
+            // ADR-233 — από τον όροφο-φιλοξενούντα (ήταν `parseInt` ελεύθερου κειμένου ⇒ «Ισόγειο»→0).
+            floorLevel: hosted.floor ?? 0,
             locationZone: body.locationZone ?? undefined,
           },
           apiPath: '/api/parking (POST)',

@@ -37,6 +37,7 @@ import { useParkingTabState } from './useParkingTabState';
 import { ParkingQuickCreateSheet } from '../dialogs/ParkingQuickCreateSheet';
 import { ParkingEditRow } from './parking-tab-forms';
 import { useHasAnyParking } from '@/hooks/useHasAnyUnits';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 
 // Re-export types for backward compatibility
 export type { ParkingTabContentProps } from './parking-tab-config';
@@ -55,6 +56,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
 
   const { t, tBuilding } = state;
   const hasAnyParking = useHasAnyParking();
+  const floorLabel = useFloorLabel();
   const availability = useSpaceAvailabilityOptions();
 
   // Ένας ορισμός στηλών για οθόνη ΚΑΙ εξαγωγή XLSX (ADR-898 Φ4β) — όροφος/επιφάνεια/τιμή/διάθεση από τα κοινά.
@@ -62,20 +64,20 @@ export function ParkingTabContent({ building }: { building: Building }) {
   const parkingColumns: SpaceColumn<ParkingSpot>[] = useMemo(() => [
     { key: 'number', label: t('general.fields.spotCode'), sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span>, exportCell: (s) => s.number || null },
     { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className={colors.text.muted}>{t(`types.${s.type || 'standard'}`)}</span>, exportCell: (s) => t(`types.${s.type || 'standard'}`) },
-    buildFloorColumn<ParkingSpot>(t('general.fields.floor'), (s) => s.floor, colors.text.muted),
+    buildFloorColumn<ParkingSpot>(t('general.fields.floor'), colors.text.muted, floorLabel),
     buildAreaColumn<ParkingSpot>(tBuilding('spaceColumns.area'), (s) => s.area || null),
     // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης)· στο αρχείο ποσό + μονάδα.
     ...buildPriceColumns<ParkingSpot>({ price: t('general.fields.price'), unit: tBuilding('spaceColumns.priceUnit') }, t, (s) => s.number),
     // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση· ποτέ το παλιό `status`.
     availabilityColumn,
-  ], [t, tBuilding, colors.text.muted, availabilityColumn]);
+  ], [t, tBuilding, colors.text.muted, availabilityColumn, floorLabel]);
 
   const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
     buildTypeCodeField(t('general.fields.type'), (s) => t(`types.${s.type || 'standard'}`), (s) => s.code),
-    buildFloorField(t('general.fields.floor'), (s) => s.floor),
+    buildFloorField<ParkingSpot>(t('general.fields.floor'), floorLabel),
     buildAreaField((s) => s.area),
     buildPriceField(t('general.fields.price'), t),
-  ], [t]);
+  ], [t, floorLabel]);
 
   // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
   // της ίδιας καρτέλας να μη μπορούν να προσφέρουν διαφορετικές.

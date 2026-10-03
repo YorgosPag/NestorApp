@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -36,6 +37,7 @@ export function UnitStep({
   onUnitChange, onLoadFloorplan,
 }: UnitStepProps) {
   const { t, typography } = useWizardStepChrome();
+  const floorLabel = useFloorLabel();
 
   return (
     <>
@@ -83,7 +85,7 @@ export function UnitStep({
                     {unit.type && <span className={typography.body.sm}>({unit.type})</span>}
                     {unit.floor && (
                       <span className={typography.body.sm}>
-                        - {t('wizard.counts.floorOrdinal', { floor: unit.floor })}
+                        - {floorLabel(unit.floor)}
                       </span>
                     )}
                   </div>

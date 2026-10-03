@@ -14,7 +14,8 @@ export interface ParkingSpotTemplate {
   /** ADR-777 §8.60.20 — διάθεση και λειτουργία χωριστά (όχι το παλιό ανάμεικτο `status`). */
   commercialStatus: CommercialStatus;
   operationalStatus: OperationalStatus;
-  floor: string;
+  /** ADR-903 §6 — ο αριθμός του ορόφου· το seed τον δένει στον όροφο του κτιρίου (`floorId`). */
+  floor: number;
   location: string;
   area: number;
   price: number;

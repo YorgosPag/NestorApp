@@ -28,7 +28,7 @@ interface AdaptiveMultiColumnNavigationProps {
 export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumnNavigationProps) {
   const { loading, error, companies } = useNavigation();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
 
   // Navigation handlers hook
   const {

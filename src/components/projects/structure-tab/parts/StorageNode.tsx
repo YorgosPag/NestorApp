@@ -12,6 +12,8 @@
 import React from 'react';
 import type { StorageModel } from '../types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { SpaceNode } from './SpaceNode';
 
 interface StorageNodeProps {
@@ -20,6 +22,7 @@ interface StorageNodeProps {
 
 export const StorageNode = ({ storage }: StorageNodeProps) => {
   const { t } = useTranslation('storage');
+  const floor = useFloorLabel()(hostedFloorRef(storage));
 
   return (
     <SpaceNode
@@ -29,7 +32,7 @@ export const StorageNode = ({ storage }: StorageNodeProps) => {
       details={
         <>
           {storage.type && <span className="capitalize">{storage.type}</span>}
-          {storage.floor && <span> • {t('general.fields.floor')}: {storage.floor}</span>}
+          {floor && <span> • {t('general.fields.floor')}: {floor}</span>}
           {storage.area && <span> • {storage.area} m²</span>}
         </>
       }

@@ -17,6 +17,7 @@ import '@/lib/design-system';
 import { SpaceListBody } from '@/components/space-management/shared/SpaceListBody';
 import { tieBreakByName, useSpaceListSections, type SpaceListRules } from '@/components/space-management/shared/useSpaceListSections';
 import type { SortableValue } from '@/lib/array-utils';
+import { hostedFloorNumber } from '@/lib/floor/hosted-floor';
 
 /** Ολική σειρά για ισοπαλίες και απουσία τιμής: όνομα → `id`. */
 const byNameThenId = tieBreakByName<Storage>((storage) => storage.name);
@@ -34,7 +35,8 @@ function storageSortValue(x: Storage, field: SortField): SortableValue {
     case 'location':
       return x.building.toLowerCase();
     case 'number':
-      return x.floor.toLowerCase();
+      // ADR-903 §6 — αριθμητικά κατά στάθμη (ήταν λεξικογραφικά σε κείμενο: «-1» μετά το «10»).
+      return hostedFloorNumber(x);
     case 'date':
       return x.lastUpdated instanceof Date ? x.lastUpdated.getTime() : x.lastUpdated ? new Date(x.lastUpdated).getTime() : 0;
     case 'type':

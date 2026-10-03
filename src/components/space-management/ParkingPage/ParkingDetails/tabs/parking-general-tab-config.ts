@@ -37,7 +37,8 @@ export interface ParkingFormState {
   type: ParkingSpotType;
   /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`''` = αδήλωτη). */
   operationalStatus: OperationalStatusDraft;
-  floor: string;
+  /** ADR-903 §6 — ο όροφος-φιλοξενών (`''` = κανένας). */
+  floorId: string;
   location: string;
   area: string;
   description: string;
@@ -68,7 +69,7 @@ export function buildFormState(parking: ParkingSpot): ParkingFormState {
     code: parking.code || '',
     type: parking.type || DEFAULT_PARKING_TYPE,
     operationalStatus: operationalDraftOf(parking),
-    floor: parking.floor || '',
+    floorId: parking.floorId || '',
     location: parking.location || '',
     area: parking.area !== undefined ? String(parking.area) : '',
     description: parking.description || '',

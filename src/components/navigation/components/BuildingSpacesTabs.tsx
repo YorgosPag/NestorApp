@@ -118,7 +118,7 @@ export function BuildingSpacesTabs({
   // ==========================================================================
 
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
   const colors = useSemanticColors();
 
   // ==========================================================================

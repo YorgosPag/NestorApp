@@ -12,6 +12,8 @@
 import React from 'react';
 import type { ParkingModel } from '../types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { SpaceNode } from './SpaceNode';
 
 interface ParkingNodeProps {
@@ -20,6 +22,7 @@ interface ParkingNodeProps {
 
 export const ParkingNode = ({ parking }: ParkingNodeProps) => {
   const { t } = useTranslation('parking');
+  const floor = useFloorLabel()(hostedFloorRef(parking));
 
   return (
     <SpaceNode
@@ -29,7 +32,7 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
       details={
         <>
           {parking.type && <span>{t(`types.${parking.type}`, { defaultValue: parking.type })}</span>}
-          {parking.floor && <span> • {t('structure.level')}: {parking.floor}</span>}
+          {floor && <span> • {t('structure.level')}: {floor}</span>}
           {parking.area && <span> • {parking.area} m²</span>}
         </>
       }

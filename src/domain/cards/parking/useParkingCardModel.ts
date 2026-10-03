@@ -16,6 +16,8 @@ import { useMemo } from 'react';
 import type { StatItem } from '@/design-system';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { spaceStatusBadges, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 
 import { floorStat, areaStat, priceStat } from '../shared/spot-card-stats';
@@ -28,17 +30,19 @@ import type { ParkingSpotAdapter } from './parking-types';
  */
 export function useParkingCardModel(parking: ParkingSpotAdapter, view: 'grid' | 'list'): CardViewModel {
   const { t } = useTranslation(['parking', UNIT_STATUS_NAMESPACE]);
+  const floorLabel = useFloorLabel();
 
   const typePrefix = view === 'grid' ? 'general.types' : 'types';
 
   /** Build stats array (identical across views): level → area → price */
   const stats = useMemo<StatItem[]>(() => {
     return [
-      floorStat(parking.level || parking.floor, t('card.stats.level')),
+      // ADR-903 §6 — αριθμός ΚΑΙ είδος από το ένα σύνορο ανάγνωσης (πυλωτή ≠ ισόγειο).
+      floorStat(floorLabel(hostedFloorRef(parking)), t('card.stats.level')),
       areaStat(parking.area, t('card.stats.area')),
       priceStat(parking, t('card.stats.price'), t),
     ].filter((s): s is StatItem => s !== null);
-  }, [parking, t]);
+  }, [parking, t, floorLabel]);
 
   /** Διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση — ποτέ το παλιό ανάμεικτο πεδίο. */
   const badges = useMemo(() => spaceStatusBadges(parking, t), [parking, t]);

@@ -245,7 +245,8 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     draftProperties: safeProperties.filter((property) => property.operationalStatus === 'draft').length,
     propertiesByStatus: tallyBy(safeProperties, (property) => property.operationalStatus || 'draft'),
     propertiesByType: tallyBy(safeProperties, (property) => property.type),
-    propertiesByFloor: tallyBy(safeProperties, (property) => `Floor ${property.floor}`),
+    // ADR-903: κλειδί = ο ΑΡΙΘΜΟΣ (δεδομένο)· η ετικέτα αποδίδεται στο `DetailsCard` (`useFloorLabel`).
+    propertiesByFloor: tallyBy(safeProperties, (property) => String(property.floor ?? '—')),
     totalStorageUnits: 0,
     availableStorageUnits: 0,
     coverage: (() => {

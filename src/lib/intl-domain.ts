@@ -1,6 +1,6 @@
 /**
  * Domain-specific formatting and backward-compatibility aliases.
- * Covers: floor labels, category/status labels, and legacy date/currency helpers.
+ * Covers: category/status labels, and legacy date/currency helpers (floor labels → ADR-903).
  *
  * @module intl-domain
  * @see intl-utils.ts (barrel re-export)
@@ -11,115 +11,11 @@ import { getCurrentLocale } from './intl-utils';
 import { formatCurrency, formatDate, formatDateTime } from './intl-formatting';
 
 // ============================================================================
-// FLOOR FORMATTING
+// FLOOR FORMATTING — REMOVED (ADR-903)
 // ============================================================================
-
-/**
- * Format floor label according to locale conventions (for numeric floors)
- */
-export const formatFloorLabel = (floor: number): string => {
-  const locale = getCurrentLocale();
-
-  if (locale.startsWith('el')) {
-    if (floor === 0) return 'Ισόγειο';
-    if (floor === -1) return 'Υπόγειο';
-    if (floor < -1) return `${Math.abs(floor)}ο Υπόγειο`;
-    return `${floor}ος Όροφος`;
-  }
-
-  // English fallback
-  if (floor === 0) return 'Ground Floor';
-  if (floor === -1) return 'Basement';
-  if (floor < -1) return `${Math.abs(floor)} Basement`;
-  return `${floor} Floor`;
-};
-
-/**
- * Format floor string according to locale conventions
- * Handles string floor values from database (e.g., "-1", "Υπόγειο -1", "Ground Floor")
- *
- * @param floorValue - String floor value from database
- * @returns Localized floor label
- */
-export const formatFloorString = (floorValue: string | number | undefined | null): string => {
-  if (floorValue === undefined || floorValue === null || floorValue === '') {
-    return '';
-  }
-
-  // If it's a number, use formatFloorLabel directly
-  if (typeof floorValue === 'number') {
-    return formatFloorLabel(floorValue);
-  }
-
-  const locale = getCurrentLocale();
-  // 🏢 ENTERPRISE: Default to Greek if locale is not set (app default)
-  const isGreek = !locale || locale.startsWith('el');
-  const value = floorValue.toString().trim();
-
-  // Try to parse as pure number (e.g., "-1", "0", "1")
-  const numericMatch = value.match(/^-?\d+$/);
-  if (numericMatch) {
-    return formatFloorLabel(parseInt(value, 10));
-  }
-
-  // Handle already localized strings - normalize to current locale
-  // Greek patterns - check first for exact matches
-  if (value === 'Ισόγειο' || value.toLowerCase() === 'ground floor' || value.toLowerCase() === 'ground') {
-    return isGreek ? 'Ισόγειο' : 'Ground Floor';
-  }
-
-  // Handle simple "Υπόγειο" without number
-  if (value === 'Υπόγειο' || value.toLowerCase() === 'basement') {
-    return isGreek ? 'Υπόγειο' : 'Basement';
-  }
-
-  // 🔧 FIX: Handle "Υπόγειο -1", "Υπόγειο -2", "Υπόγειο 1", "Υπόγειο 2" etc.
-  // Using [\s\u00A0]* to match regular and non-breaking spaces
-  const greekBasementMatch = value.match(/Υπόγειο[\s\u00A0]*(-?\d+)/i);
-  if (greekBasementMatch) {
-    const level = Math.abs(parseInt(greekBasementMatch[1], 10));
-    if (level === 1) {
-      return isGreek ? 'Υπόγειο' : 'Basement';
-    }
-    return isGreek ? `${level}ο Υπόγειο` : `Basement ${level}`;
-  }
-
-  // Handle "2ο Υπόγειο", "3ο Υπόγειο", etc.
-  const greekOrdinalBasementMatch = value.match(/(\d+)ο?[\s\u00A0]*Υπόγειο/i);
-  if (greekOrdinalBasementMatch) {
-    const level = parseInt(greekOrdinalBasementMatch[1], 10);
-    if (level === 1) {
-      return isGreek ? 'Υπόγειο' : 'Basement';
-    }
-    return isGreek ? `${level}ο Υπόγειο` : `Basement ${level}`;
-  }
-
-  // Handle English basement patterns
-  const englishBasementMatch = value.match(/basement[\s\u00A0]*(-?\d+)?/i);
-  if (englishBasementMatch) {
-    const level = englishBasementMatch[1] ? Math.abs(parseInt(englishBasementMatch[1], 10)) : 1;
-    if (level === 1) {
-      return isGreek ? 'Υπόγειο' : 'Basement';
-    }
-    return isGreek ? `${level}ο Υπόγειο` : `Basement ${level}`;
-  }
-
-  // Handle "Xος Όροφος" / "X Floor" patterns
-  const greekFloorMatch = value.match(/(\d+)ος?[\s\u00A0]*[όο]ροφος/i);
-  if (greekFloorMatch) {
-    const floor = parseInt(greekFloorMatch[1], 10);
-    return isGreek ? `${floor}ος Όροφος` : `Floor ${floor}`;
-  }
-
-  const englishFloorMatch = value.match(/floor[\s\u00A0]*(\d+)|(\d+)[\s\u00A0]*floor/i);
-  if (englishFloorMatch) {
-    const floor = parseInt(englishFloorMatch[1] || englishFloorMatch[2], 10);
-    return isGreek ? `${floor}ος Όροφος` : `Floor ${floor}`;
-  }
-
-  // Fallback: return original value
-  return value;
-};
+// `formatFloorLabel` / `formatFloorString` ήταν ελληνικά γραμμένα στον κώδικα (N.11), αγνοούσαν το
+// είδος στάθμης και έβγαζαν «1 Floor». Ο ΕΝΑΣ μορφοποιητής: `@/lib/floor/floor-label` (UI μέσω
+// `useFloorLabel`, server μέσω `@/lib/floor/floor-label-bundle`)· ο ΕΝΑΣ parser: `@/lib/floor/floor-ref`.
 
 // ============================================================================
 // CATEGORY / STATUS LABELS

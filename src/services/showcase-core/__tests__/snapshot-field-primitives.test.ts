@@ -88,7 +88,7 @@ describe('picker contracts', () => {
 });
 
 // ============================================================================
-// Floor labels — pinned against the pre-ADR-701 parking/storage output
+// Floor labels — ADR-903: the ONE parser + formatter (el/en)
 // ============================================================================
 
 describe('formatShowcaseFloorLabel', () => {
@@ -110,8 +110,12 @@ describe('formatShowcaseFloorLabel', () => {
     expect(formatShowcaseFloorLabel('11', 'en')).toBe('11th Floor');
   });
 
-  it('keeps the inherited "3nd Basement" wording (ADR-701 §8 — known, deferred)', () => {
-    expect(formatShowcaseFloorLabel('-3', 'en')).toBe('3nd Basement');
+  it('ADR-903 closes ADR-701 §8: deep basements and named levels via the ONE formatter', () => {
+    expect(formatShowcaseFloorLabel('-3', 'en')).toBe('Basement 3');
+    expect(formatShowcaseFloorLabel('-3', 'el')).toBe('3ο Υπόγειο');
+    expect(formatShowcaseFloorLabel('Δώμα', 'en')).toBe('Roof');
+    expect(formatShowcaseFloorLabel('pilotis', 'el')).toBe('Πυλωτή');
+    expect(formatShowcaseFloorLabel(2, 'en')).toBe('2nd Floor');
   });
 
   it('passes free-text floors through trimmed', () => {

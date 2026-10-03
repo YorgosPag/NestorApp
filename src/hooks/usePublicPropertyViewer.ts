@@ -192,7 +192,8 @@ export function usePublicPropertyViewer() {
       // 🏢 ENTERPRISE: Group by effective status (market or operational)
       propertiesByStatus: tallyBy(availableProps, p => p.status || p.operationalStatus || 'unknown'),
       propertiesByType: tallyBy(availableProps, p => p.type),
-      propertiesByFloor: tallyBy(availableProps, p => `Όροφος ${p.floor}`),
+      // ADR-903: κλειδί = ο ΑΡΙΘΜΟΣ (δεδομένο)· η ετικέτα αποδίδεται στο `DetailsCard` (`useFloorLabel`).
+      propertiesByFloor: tallyBy(availableProps, p => String(p.floor ?? '—')),
       totalStorageUnits: availableProps.filter(p => p.type === 'Αποθήκη').length,
       // 🏢 ENTERPRISE: Storage availability considers both status systems
       availableStorageUnits: availableProps.filter(p =>

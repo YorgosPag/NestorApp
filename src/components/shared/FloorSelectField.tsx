@@ -1,15 +1,23 @@
 'use client';
 
 /**
- * FloorSelectField — Reusable floor dropdown (Radix Select — ADR-001 canonical)
+ * FloorSelectField / FloorSelect — ο ΕΝΑΣ επιλογέας ορόφου (Radix Select — ADR-001 canonical)
  *
- * Loads floors via API (Admin SDK) — consistent with every other entity in the app.
- * When no building is linked, shows a disabled state with a hint.
+ * ADR-903 §6 — όπως το Revit `LevelId`: η τιμή είναι **πάντα** το `floorId` (η αυθεντία). Ο αριθμός
+ * και το είδος του ορόφου **δεν** επιλέγονται — παράγονται από το έγγραφο ορόφου (εδώ για την
+ * οθόνη, στον server για την αποθήκευση).
+ *
+ * Δεδομένα: η **κοινή** realtime συνδρομή `useFloorsByBuilding` (μία ανά κτίριο, ADR-329/399) —
+ * ίδια πηγή με κάθε άλλο σημείο που δείχνει ορόφους, και ο νέος όροφος εμφανίζεται αμέσως.
+ * Ετικέτα: `floorOptionLabel` (όνομα ορόφου, αλλιώς `useFloorLabel`).
+ *
+ * - `FloorSelect` — σκέτος επιλογέας (κελί πίνακα, inline φόρμα).
+ * - `FloorSelectField` — ο ίδιος, με ετικέτα και υπόδειξη «χωρίς κτίριο» (κάρτες, φόρμες).
  *
  * @module components/shared/FloorSelectField
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React from 'react';
 import {
   Select,
   SelectContent,
@@ -19,9 +27,11 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
-import { formatFloorLabel, formatFloorString } from '@/lib/intl-utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
+import { useFloorsByBuilding, type FloorOption } from '@/components/properties/shared/useFloorsByBuilding';
+import { floorOptionLabel } from '@/components/properties/shared/floor-option-label';
+import type { FloorKind } from '@/utils/floor-naming';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -30,201 +40,135 @@ import '@/lib/design-system';
 // TYPES
 // =============================================================================
 
-interface FloorOption {
-  /** Floor document ID (Firestore doc ID) */
-  id: string;
-  /** Floor number as string (value for Select) */
-  value: string;
-  /** Human-readable label */
-  label: string;
+/** Ό,τι επιλέχθηκε — `floorId` είναι η αυθεντία· αριθμός/είδος για **αισιόδοξη** προβολή μόνο. */
+export interface FloorSelection {
+  readonly floorId: string;
+  readonly floor: number;
+  readonly floorKind: FloorKind | null;
 }
 
-export interface FloorChangePayload {
-  /** Floor number (persisted on unit document) */
-  floor: number;
-  /** Floor document ID (foreign key on unit document) */
-  floorId: string;
-}
-
-interface FloorsApiResponse {
-  floors: Array<{
-    id: string;
-    number: number;
-    name?: string;
-    buildingId: string;
-    [key: string]: unknown;
-  }>;
-}
-
-export interface FloorSelectFieldProps {
-  /** Building ID to fetch floors for — null/undefined = disabled */
+export interface FloorSelectProps {
+  /** Building ID to list floors for — null/undefined = disabled */
   buildingId: string | null | undefined;
-  /** Current floor document ID (Firestore doc ID) */
+  /** Current floor document ID (`''` = none) */
   value: string;
-  /** Callback when floor selection changes — returns both floor number and floorId */
-  onChange: (floorValue: string, payload?: FloorChangePayload) => void;
+  /** The new selection, or `null` when cleared. */
+  onChange: (selection: FloorSelection | null) => void;
   /**
    * Async guard called BEFORE committing a floor change.
    * Receives the floor number about to be set. Return `true` to allow,
    * `false` to cancel (e.g. user dismissed a warning dialog).
    */
   onBeforeChange?: (floor: number) => Promise<boolean>;
-  /** Field label */
-  label: string;
-  /** Hint shown when no building is linked */
-  noBuildingHint: string;
   /** Placeholder for the select */
   placeholder?: string;
   /** Disable the field (e.g. not in edit mode) */
   disabled?: boolean;
-  /** Fallback floor string (e.g. "0", "Ισόγειο") shown when floorId has no match in loaded options */
-  fallbackFloor?: string;
   /**
-   * Value binding mode (ADR-145 — parking floor schema simplification).
-   * - `'floorId'` (default): `value` is the floor document ID; emits both floor number string + floorId in payload.
-   * - `'floor'`: `value` is the floor number string ("0", "-1"); emits ONLY floor string, no payload.
-   *   Use this for entities that don't need a Firestore floor doc reference (e.g. parking).
+   * Παλιό έγγραφο πριν τη μετανάστευση (ADR-903 §6): όροφος χωρίς `floorId` («Υπόγειο -1»).
+   * Δείχνεται ως ανενεργή επιλογή μέχρι ο άνθρωπος να διαλέξει πραγματικό όροφο.
    */
-  valueMode?: 'floorId' | 'floor';
+  fallbackFloor?: FloorLabelInput;
+  /** Trigger sizing for dense contexts (table cells). */
+  triggerClassName?: string;
+}
+
+export interface FloorSelectFieldProps extends FloorSelectProps {
+  /** Field label */
+  label: string;
+  /** Hint shown when no building is linked */
+  noBuildingHint: string;
 }
 
 // =============================================================================
-// COMPONENT
+// COMPONENTS
 // =============================================================================
 
 const NONE_VALUE = '__none__';
 const FALLBACK_VALUE = '__fallback__';
 
-export function FloorSelectField({
+function selectionOf(floor: FloorOption): FloorSelection {
+  return { floorId: floor.id, floor: floor.number, floorKind: floor.kind ?? null };
+}
+
+/** Ο σκέτος επιλογέας — φόρτωση, κενό, σφάλμα και λίστα από την κοινή συνδρομή. */
+export function FloorSelect({
   buildingId,
   value,
   onChange,
   onBeforeChange,
-  label,
-  noBuildingHint,
   placeholder = '—',
   disabled = false,
   fallbackFloor,
-  valueMode = 'floorId',
-}: FloorSelectFieldProps) {
+  triggerClassName,
+}: FloorSelectProps) {
   const colors = useSemanticColors();
-  const [floors, setFloors] = useState<FloorOption[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { t } = useTranslation('floors');
+  const floorLabel = useFloorLabel();
+  const { floors, loading, error } = useFloorsByBuilding(buildingId);
 
-  // Keep floors ref for lookup in onChange
-  const floorsRef = useRef<FloorOption[]>([]);
-  floorsRef.current = floors;
-
-  // 🏢 GOOGLE-LEVEL: Load floors via API (Admin SDK) — same pattern as every other entity.
-  // No client-side Firestore dependency. Works regardless of security rules.
-  const loadFloors = useCallback(async (bId: string) => {
-    setLoading(true);
-    try {
-      const result = await apiClient.get<FloorsApiResponse>(`${API_ROUTES.FLOORS.LIST}?buildingId=${bId}`);
-      const options: FloorOption[] = (result?.floors ?? [])
-        .map((f) => ({
-          id: f.id,
-          value: String(typeof f.number === 'number' ? f.number : 0),
-          label: f.name || formatFloorLabel(typeof f.number === 'number' ? f.number : 0),
-        }))
-        .sort((a, b) => Number(a.value) - Number(b.value));
-
-      setFloors(options);
-    } catch {
-      setFloors([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!buildingId) {
-      setFloors([]);
-      return;
-    }
-    loadFloors(buildingId);
-  }, [buildingId, loadFloors]);
-
-  const isDisabled = disabled || !buildingId;
-
-  // Determine effective select value — match strategy depends on valueMode
-  const matchedFloor = !loading
-    ? floors.find((f) => valueMode === 'floor' ? f.value === value : f.id === value)
-    : null;
-  const fallbackLabel = !matchedFloor && !loading && fallbackFloor
-    ? formatFloorString(fallbackFloor)
-    : null;
-  const itemValueOf = (f: FloorOption): string => valueMode === 'floor' ? f.value : f.id;
-  const selectValue = value && matchedFloor
-    ? itemValueOf(matchedFloor)
-    : (fallbackLabel ? FALLBACK_VALUE : NONE_VALUE);
+  const matched = value ? floors.find((f) => f.id === value) ?? null : null;
+  const fallbackLabel = !matched && !loading ? floorLabel(fallbackFloor) || null : null;
+  const selectValue = matched ? matched.id : fallbackLabel ? FALLBACK_VALUE : NONE_VALUE;
 
   const handleValueChange = async (v: string) => {
     if (v === NONE_VALUE || v === FALLBACK_VALUE) {
-      onChange('');
+      onChange(null);
       return;
     }
-
-    // v = floor doc ID OR floor number string (per valueMode)
-    const selectedFloor = floorsRef.current.find((f) =>
-      valueMode === 'floor' ? f.value === v : f.id === v,
-    );
-    if (!selectedFloor) return;
-
-    const floorNumber = Number(selectedFloor.value);
-
+    const selected = floors.find((f) => f.id === v);
+    if (!selected) return;
     // Guard: let consumer veto the change (e.g. "basement for apartment?" warning)
-    if (onBeforeChange) {
-      const allowed = await onBeforeChange(floorNumber);
-      if (!allowed) return;
-    }
-
-    if (valueMode === 'floor') {
-      onChange(selectedFloor.value);
-      return;
-    }
-
-    onChange(selectedFloor.value, {
-      floor: floorNumber,
-      floorId: selectedFloor.id,
-    });
+    if (onBeforeChange && !(await onBeforeChange(selected.number))) return;
+    onChange(selectionOf(selected));
   };
 
+  if (loading) {
+    return (
+      <span className={cn('flex items-center gap-2 h-8', colors.text.muted)}>
+        <Spinner size="small" />
+      </span>
+    );
+  }
+  if (buildingId && (error || floors.length === 0)) {
+    return (
+      <p role={error ? 'alert' : undefined} className={cn('text-xs italic h-8 flex items-center', error ? colors.text.error : colors.text.muted)}>
+        {t(error ? 'picker.loadError' : 'picker.empty')}
+      </p>
+    );
+  }
+  return (
+    <Select value={selectValue} onValueChange={handleValueChange} disabled={disabled || !buildingId}>
+      <SelectTrigger size="sm" className={triggerClassName}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE_VALUE}>—</SelectItem>
+        {fallbackLabel && (
+          <SelectItem value={FALLBACK_VALUE} disabled>
+            {fallbackLabel}
+          </SelectItem>
+        )}
+        {floors.map((f) => (
+          <SelectItem key={f.id} value={f.id}>
+            {floorOptionLabel(f, floorLabel)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** Ο επιλογέας με ετικέτα — χωρίς κτίριο δείχνει την υπόδειξη αντί για ανενεργό πεδίο. */
+export function FloorSelectField({ label, noBuildingHint, ...selectProps }: FloorSelectFieldProps) {
+  const colors = useSemanticColors();
   return (
     <fieldset className="space-y-1.5">
-      <Label className={cn("text-xs", colors.text.muted)}>{label}</Label>
-
-      {!buildingId ? (
-        <p className={cn("text-xs italic h-8 flex items-center", colors.text.muted)}>
-          {noBuildingHint}
-        </p>
-      ) : loading ? (
-        <section className={cn("flex items-center gap-2 h-8", colors.text.muted)}>
-          <Spinner size="small" />
-        </section>
+      <Label className={cn('text-xs', colors.text.muted)}>{label}</Label>
+      {selectProps.buildingId ? (
+        <FloorSelect {...selectProps} />
       ) : (
-        <Select
-          value={selectValue}
-          onValueChange={handleValueChange}
-          disabled={isDisabled}
-        >
-          <SelectTrigger size="sm">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE_VALUE}>—</SelectItem>
-            {fallbackLabel && (
-              <SelectItem value={FALLBACK_VALUE} disabled>
-                {fallbackLabel}
-              </SelectItem>
-            )}
-            {floors.map((f) => (
-              <SelectItem key={f.id} value={itemValueOf(f)}>
-                {f.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <p className={cn('text-xs italic h-8 flex items-center', colors.text.muted)}>{noBuildingHint}</p>
       )}
     </fieldset>
   );

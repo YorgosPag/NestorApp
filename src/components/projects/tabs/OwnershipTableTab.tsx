@@ -55,6 +55,7 @@ import {
 } from '@/components/projects/tabs/ownership-table-config';
 import { useOwnershipTableHandlers } from '@/components/projects/tabs/useOwnershipTableHandlers';
 import { useOwnershipTableRowsView } from '@/components/projects/tabs/useOwnershipTableRowsView';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import {
   StatusBadge, ValidationIndicator,
   BartexSummary, CategorySummary, RevisionHistory, LinkedSpaceRows,
@@ -63,6 +64,8 @@ import {
 export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const resolvedProjectId = projectId ?? data.id;
   const { t } = useTranslation();
+  // ADR-903 — ο όροφος του στιγμιοτύπου («-1», «2») με την ΕΝΑ ετικέτα· άγνωστο κείμενο περνά αυτούσιο.
+  const floorLabel = useFloorLabel();
   const { success: showSuccess, error: showError } = useNotifications();
   const { user } = useAuth();
   const companyId = useCompanyId()?.companyId;
@@ -348,7 +351,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                             {categoryLabel(row.category, t, row.participatesInCalculation)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{row.floor}</TableCell>
+                        <TableCell>{floorLabel(row.floor)}</TableCell>
                         <TableCell className={cn('text-right', typography.special.codeId)}>{row.areaNetSqm > 0 ? row.areaNetSqm.toFixed(2) : '—'}</TableCell>
                         <TableCell className={cn('text-right', typography.special.codeId)}>{row.areaSqm > 0 ? row.areaSqm.toFixed(2) : '—'}</TableCell>
                         <TableCell className="text-right">

@@ -13,6 +13,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { matchesPriceRange } from '@/lib/properties/price-range';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { matchesSpaceAvailability } from '@/lib/spaces/space-availability';
+import { matchesFloorFilter } from '@/lib/floor/floor-filter';
 import type {
   SalesSpaceFilterState,
   SalesDashboardStats,
@@ -95,7 +96,7 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
     if (!matchesSpaceAvailability(item, filters.status)) return false;
     if (filters.type !== 'all' && item.type !== filters.type) return false;
     if (filters.building !== 'all' && !matchesBuilding(item, filters.building)) return false;
-    if (filters.floor !== 'all' && item.floor !== filters.floor) return false;
+    if (!matchesFloorFilter(item, filters.floor)) return false;
 
     // ADR-777 §8.60.14.14 — ποσό ΣΤΗ ΜΟΝΑΔΑ του εύρους, ποτέ η κύρια τιμή όποιου ρόλου.
     if (!matchesPriceRange(item, filters.priceRange)) return false;

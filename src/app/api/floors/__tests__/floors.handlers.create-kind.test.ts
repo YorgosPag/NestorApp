@@ -85,7 +85,7 @@ function makeDb(siblings: SiblingRow[] = []) {
         exists: true,
         get: async () => ({
           exists: true,
-          data: () => (name.includes('building') ? { name: 'Κτήριο Α' } : {}),
+          data: () => (name.includes('building') ? { name: 'Κτήριο Α', companyId: 'co_1' } : {}),
         }),
       }),
       where: () => floorsQuery,

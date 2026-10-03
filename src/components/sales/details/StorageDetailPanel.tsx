@@ -16,6 +16,8 @@ import {
   Hash,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { SalesSpaceFinancialCard } from './SalesSpaceFinancialCard';
 import { SalesSpaceEmptyPanel, SalesSpaceSection } from './sales-space-panel-parts';
 import { InfoRow } from '@/components/shared/InfoRow';
@@ -40,6 +42,7 @@ interface StorageDetailPanelProps {
 export function StorageDetailPanel({ data }: StorageDetailPanelProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(COMMON_NAMESPACES);
+  const floorLabel = useFloorLabel();
 
   if (!data) {
     return <SalesSpaceEmptyPanel message={t('salesStorage.details.noSelection')} />;
@@ -53,7 +56,7 @@ export function StorageDetailPanel({ data }: StorageDetailPanelProps) {
       <SalesSpaceSection icon={Layers} title={t('storage:general.basicInfo')}>
         <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.type} label={t('storage:general.fields.type')} value={t(`storage:types.${data.type}`, { defaultValue: data.type })} />
         <InfoRow icon={Building2} iconColor={SALES_ICON_COLORS.building} label={t('storage:general.fields.building')} value={data.building || '—'} />
-        <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.floor} label={t('storage:general.fields.floor')} value={data.floor || '—'} />
+        <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.floor} label={t('storage:general.fields.floor')} value={floorLabel(hostedFloorRef(data)) || '—'} />
         <InfoRow icon={Maximize2} iconColor={SALES_ICON_COLORS.area} label={t('storage:general.fields.area')} value={area > 0 ? `${area} m²` : '—'} />
         {data.millesimalShares != null && data.millesimalShares > 0 && (
           <InfoRow icon={Hash} iconColor={SALES_ICON_COLORS.millesimalShares} label={t('salesStorage.details.millesimalShares')} value={`${data.millesimalShares}‰`} />

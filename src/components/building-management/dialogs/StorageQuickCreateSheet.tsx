@@ -42,7 +42,6 @@ export function StorageQuickCreateSheet({
     ...NEW_SPACE_STATUSES,
     building: building.name || '',
     buildingId: building.id,
-    floor: '',
     area: 0,
     projectId: building.projectId ?? undefined,
   };

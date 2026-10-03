@@ -18,7 +18,7 @@ import type { OrientationType } from '@/constants/property-features-enterprise';
 // TYPES
 // =============================================================================
 
-/** Floor option from Firestore (used by FloorSelectField and FloorMultiSelectField) */
+/** Η προβολή ορόφου που χρειάζεται η σύνθεση `levels[]` (ADR-236) — από το `useFloorsByBuilding` (ADR-903 §6). */
 export interface FloorOption {
   /** Firestore floor document ID */
   id: string;

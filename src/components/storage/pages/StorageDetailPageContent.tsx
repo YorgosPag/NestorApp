@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
 import '@/lib/design-system';
@@ -56,6 +58,7 @@ export function StorageDetailPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation('storage');
+  const floorLabel = useFloorLabel();
   const [unit, setUnit] = useState<Storage | null>(
     params.id ? (storageDetailCache.get(params.id) ?? null) : null
   );
@@ -135,7 +138,7 @@ export function StorageDetailPageContent() {
                  <div className="space-y-3">
                      <InfoRow icon={Ruler} label={t('card.sections.area')} value={`${unit.area} m²`} />
                      <InfoRow icon={Euro} label={t('general.fields.price')} value={unit.price != null ? `${unit.price.toLocaleString('el-GR')} €` : null} />
-                     <InfoRow icon={MapPin} label={t('general.fields.floor')} value={unit.floor} />
+                     <InfoRow icon={MapPin} label={t('general.fields.floor')} value={floorLabel(hostedFloorRef(unit)) || null} />
                      <InfoRow icon={Building} label={t('general.fields.project')} value={unit.projectId} />
                  </div>
                  <div className="space-y-3">

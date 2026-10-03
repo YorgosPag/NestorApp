@@ -20,6 +20,7 @@
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import type { PriceTotalsByRole } from '@/lib/properties/price-totals';
 import type { RolePriceRange } from '@/lib/properties/price-range';
+import type { HostedOnFloor } from '@/lib/floor/hosted-floor';
 
 export interface SpaceCommercialData {
   /** Ζητούμενη τιμή **πώλησης** (€) — τη διαβάζει ο επιλυτής όταν η διάθεση είναι πώληση. */
@@ -47,6 +48,7 @@ export interface SalesSpaceFilterState {
   status: string;
   type: string;
   building: string;
+  /** ADR-903 §6 — κλειδί `floor-filter` (αριθμός:είδος) ή `'all'`. */
   floor: string;
   /** Εύρος τιμής **με μονάδα** (ADR-777 §8.60.14.14) — κρίνεται από το `matchesPriceRange`. */
   priceRange: RolePriceRange;
@@ -83,7 +85,9 @@ export interface SalesSpaceItem {
   /** ADR-777 §8.60.20 — φυσική χρηστικότητα (ίδιο λεξιλόγιο με τα ακίνητα). */
   operationalStatus?: string | null;
   type?: string;
-  floor?: string;
+  /** ADR-903 §6 — αντίγραφο του ορόφου-φιλοξενούντα (αριθμός + είδος). */
+  floor?: HostedOnFloor['floor'];
+  floorKind?: HostedOnFloor['floorKind'];
   area?: number | null;
   price?: number | null;
   /** Canonical building foreign key. */

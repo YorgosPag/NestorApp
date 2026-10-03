@@ -12,8 +12,10 @@
  * καταναλωτής του — ένας κανόνας ICU, όχι δύο που αποκλίνουν (N.0.2 · N.18).
  *
  * ⚠️ **ΔΕΝ ΕΙΝΑΙ i18next.** Καλύπτει **ρητά**: `ns:key` με τελείες · παρεμβολή `{name}` · σκέλος
- * `{name, plural, one {…} other {…}}` με `#`. Τα locale μας έχουν μόνο `one`/`other` (CHECK 3.9, μονά
- * άγκιστρα). Αν κείμενο που αποδίδεται εδώ αποκτήσει `select` ή ένθετο ICU, **επεκτείνεται αυτό το αρχείο**.
+ * `{name, plural, one {…} other {…}}` με `#` · σκέλος `{name, selectordinal, one {…} two {…} few {…}
+ * other {…}}` (ADR-903: «1st/2nd/3rd/11th Floor» — οι κατηγορίες από το `Intl.PluralRules` **της γλώσσας
+ * του bundle**, ποτέ γραμμένες εδώ). Αν κείμενο που αποδίδεται εδώ αποκτήσει `select` ή ένθετο ICU,
+ * **επεκτείνεται αυτό το αρχείο**.
  *
  * ⚠️ **Κλειδί που ΔΕΝ βρίσκεται επιστρέφει τον εαυτό του** (όπως το i18next): η απουσία γίνεται **ορατή**
  * αντί να γίνει σιωπηλό κενό.
@@ -37,6 +39,25 @@ function resolvePlural(text: string, params: Readonly<Record<string, unknown>>):
   });
 }
 
+const SELECT_ORDINAL = /\{(\w+),\s*selectordinal,\s*((?:[\w=]+\s*\{[^}]*\}\s*)+)\}/g;
+const ORDINAL_BRANCH = /([\w=]+)\s*\{([^}]*)\}/g;
+
+/**
+ * Επιλύει τα σκέλη `selectordinal` (ADR-903). Η κατηγορία έρχεται από το CLDR μέσω
+ * `Intl.PluralRules(locale, { type: 'ordinal' })` — η **ίδια** πηγή που ρωτά το `i18next-icu`
+ * στον browser, άρα server και client λένε το ίδιο «21st». Λείπουσα κατηγορία ⇒ `other`.
+ */
+function resolveSelectOrdinal(text: string, params: Readonly<Record<string, unknown>>, locale: string): string {
+  return text.replace(SELECT_ORDINAL, (_match, name: string, body: string) => {
+    const value = Number(params[name]);
+    const branches = new Map<string, string>();
+    for (const [, selector, content] of body.matchAll(ORDINAL_BRANCH)) branches.set(selector, content);
+    const category = new Intl.PluralRules(locale, { type: 'ordinal' }).select(value);
+    const chosen = branches.get(`=${value}`) ?? branches.get(category) ?? branches.get('other') ?? '';
+    return chosen.replaceAll('#', String(value));
+  });
+}
+
 /** Το κείμενο στη διαδρομή `a.b.c` — ή `undefined` αν δεν είναι φύλλο-κείμενο. */
 function textAt(bundle: unknown, path: string): string | undefined {
   let node: unknown = bundle;
@@ -46,24 +67,37 @@ function textAt(bundle: unknown, path: string): string | undefined {
   return typeof node === 'string' ? node : undefined;
 }
 
-/** Παρεμβολή + πληθυντικοί — ο **ένας** κανόνας απόδοσης ICU-lite. */
-export function formatBundleText(text: string, params?: Readonly<Record<string, unknown>>): string {
+/**
+ * Παρεμβολή + πληθυντικοί + τακτικά — ο **ένας** κανόνας απόδοσης ICU-lite.
+ * `locale` χρειάζεται **μόνο** για `selectordinal` (προεπιλογή `'en'`: τα ελληνικά τακτικά
+ * γράφονται απευθείας «{n}ος», χωρίς σκέλος).
+ */
+export function formatBundleText(
+  text: string,
+  params?: Readonly<Record<string, unknown>>,
+  locale = 'en',
+): string {
   const safe = params ?? {};
   return Object.entries(safe).reduce(
     (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
-    resolvePlural(text, safe),
+    resolvePlural(resolveSelectOrdinal(text, safe, locale), safe),
   );
 }
 
 /**
  * Φτιάχνει μεταφραστή πάνω σε bundles. Κλειδί χωρίς `ns:` διαβάζεται από το `defaultNamespace`.
+ * `locale` = η γλώσσα **των bundles** (για τα τακτικά· βλ. {@link formatBundleText}).
  */
-export function createBundleTranslate(bundles: LocaleBundles, defaultNamespace: string): BundleTranslate {
+export function createBundleTranslate(
+  bundles: LocaleBundles,
+  defaultNamespace: string,
+  locale = 'en',
+): BundleTranslate {
   return (key, params) => {
     const separator = key.indexOf(':');
     const namespace = separator === -1 ? defaultNamespace : key.slice(0, separator);
     const path = separator === -1 ? key : key.slice(separator + 1);
     const text = textAt(bundles[namespace], path);
-    return text === undefined ? key : formatBundleText(text, params);
+    return text === undefined ? key : formatBundleText(text, params, locale);
   };
 }

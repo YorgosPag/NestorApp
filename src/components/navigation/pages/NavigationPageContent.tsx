@@ -20,7 +20,7 @@ export function NavigationPageContent() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation('hierarchy-navigator');
 
   return (
     <main className={`min-h-screen ${colors.bg.primary}`}>

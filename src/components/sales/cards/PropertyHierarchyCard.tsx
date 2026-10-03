@@ -21,7 +21,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierarchy/route';
 import '@/lib/design-system';
@@ -46,6 +46,7 @@ interface PropertyHierarchyCardProps {
 export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(COMMON_NAMESPACES);
+  const floorLabel = useFloorLabel();
   const iconSizes = useIconSizes();
   const [hierarchy, setHierarchy] = useState<PropertyHierarchyResponse | null>(
     propertyHierarchyCache.get(propertyId) ?? null
@@ -163,7 +164,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
             icon={Home}
             iconColor="text-[hsl(var(--text-success))]"
             label={t('sales.hierarchy.unit')}
-            value={`${hierarchy.property.name} — ${formatFloorLabel(hierarchy.property.floor)}`}
+            value={`${hierarchy.property.name} — ${floorLabel(hierarchy.property.floor)}`}
             iconSizeClass={iconSizes.xs}
             isLast
           />

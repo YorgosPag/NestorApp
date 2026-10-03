@@ -20,10 +20,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { ChevronUp, ChevronDown, Plus } from 'lucide-react';
-import { where } from 'firebase/firestore';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { formatFloorLabel } from '@/lib/intl-utils';
-import { useAuth } from '@/auth/contexts/AuthContext';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+import { floorOptionLabel } from '@/components/properties/shared/floor-option-label';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { PropertyLevel } from '@/types/property';
@@ -62,39 +61,17 @@ export function FloorMultiSelectField({
   initiallyOpen = false,
 }: FloorMultiSelectFieldProps) {
   const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
-  const { user } = useAuth();
   const colors = useSemanticColors();
-
-  const [allFloors, setAllFloors] = useState<FloorOption[]>([]);
-  const [loading, setLoading] = useState(false);
+  const floorLabel = useFloorLabel();
+  // ADR-903 §6 — η ΚΟΙΝΗ συνδρομή ορόφων του κτιρίου (ήταν δεύτερη, ιδιωτική, με ίδιο ερώτημα).
+  const { floors, loading } = useFloorsByBuilding(buildingId);
+  const allFloors = useMemo<FloorOption[]>(
+    () => floors.map((f) => ({ id: f.id, number: f.number, name: floorOptionLabel(f, floorLabel) })),
+    [floors, floorLabel],
+  );
   const [showCreateForm, setShowCreateForm] = useState(initiallyOpen);
 
   useEffect(() => { if (initiallyOpen) setShowCreateForm(true); }, [initiallyOpen]);
-
-  // 🏢 ADR-214 (C.5.33): subscribe via firestoreQueryService SSoT.
-  // Tenant filter (companyId + super_admin bypass) auto-handled by buildTenantConstraints.
-  useEffect(() => {
-    if (!buildingId || !user) { setAllFloors([]); setLoading(false); return; }
-    setLoading(true);
-    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
-      'FLOORS',
-      (result) => {
-        const options: FloorOption[] = result.documents
-          .map((data) => {
-            const num = typeof data.number === 'number' ? data.number : 0;
-            return { id: data.id, number: num, name: (data.name as string) || formatFloorLabel(num) };
-          })
-          .sort((a, b) => a.number - b.number);
-        setAllFloors(options);
-        setLoading(false);
-      },
-      () => { setAllFloors([]); setLoading(false); },
-      {
-        constraints: [where('buildingId', '==', buildingId)],
-      }
-    );
-    return () => unsubscribe();
-  }, [buildingId, user]);
 
   const isDisabled = disabled || !buildingId;
   const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);

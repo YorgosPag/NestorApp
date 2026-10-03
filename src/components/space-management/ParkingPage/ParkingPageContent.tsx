@@ -38,6 +38,7 @@ import { parkingFiltersConfig } from '@/components/core/AdvancedFilters/configs/
 import { ListContainer, PageContainer, DetailsContainer } from '@/core/containers';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { PARKING_TYPE_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { useFloorFilterConfig } from '@/components/core/AdvancedFilters/hooks/useFloorFilterConfig';
 import { spaceAvailabilityLabelKey } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
 import { isSpaceAvailabilityBucket } from '@/lib/spaces/space-availability';
 import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
@@ -69,7 +70,6 @@ const EMPTY_PARKING: ParkingSpot = {
   number: '',
   type: 'standard',
   ...NEW_SPACE_STATUSES,
-  floor: '',
 };
 
 export function ParkingPageContent() {
@@ -82,6 +82,8 @@ export function ParkingPageContent() {
 
   // Firestore data connection
   const { parkingSpots, loading, error, refetch } = useFirestoreParkingSpots();
+  // ADR-903 §6 — οι όροφοι του φίλτρου προκύπτουν από τις θέσεις που υπάρχουν.
+  const filtersConfig = useFloorFilterConfig(parkingFiltersConfig, parkingSpots);
 
   const {
     selectedParking,
@@ -270,7 +272,7 @@ export function ParkingPageContent() {
         {/* Desktop: Filters */}
         <aside className="hidden md:block" role="complementary" aria-label={t('pages.parking.filters.label')}>
           <AdvancedFiltersPanel
-            config={parkingFiltersConfig}
+            config={filtersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
@@ -364,7 +366,7 @@ export function ParkingPageContent() {
           title={t('pages.parking.filters.mobileTitle')}
         >
           <AdvancedFiltersPanel
-            config={parkingFiltersConfig}
+            config={filtersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />

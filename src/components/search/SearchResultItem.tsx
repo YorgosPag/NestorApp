@@ -19,6 +19,7 @@ import React, { useCallback, useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { FileText } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -150,6 +151,7 @@ export function SearchResultItem({
   // (`properties-enums:commercialStatus.*`)· ως τότε ζούσαν στο `parking:status.*`, πάνω στο
   // παλιό ανάμεικτο `status`.
   const { t: tUnit } = useTranslation('properties-enums');
+  const floorLabel = useFloorLabel();
 
   // === Computed Values ===
   const navigationEntityType = SEARCH_TO_NAVIGATION_ENTITY[result.entityType];
@@ -186,10 +188,11 @@ export function SearchResultItem({
         icon: entityConfig?.icon ?? fallbackConfig.icon,
         iconColor: entityConfig?.color ?? fallbackConfig.color,
         label: stat.label,
-        value: stat.value,
+        // ADR-903 — το ευρετήριο κρατά τον όροφο ωμό· η ετικέτα εδώ, από τον ΕΝΑ μορφοποιητή.
+        value: stat.iconKey === 'floor' ? floorLabel(stat.value) || stat.value : stat.value,
       };
     });
-  }, [result.stats]);
+  }, [result.stats, floorLabel]);
 
   // === Event Handlers ===
 

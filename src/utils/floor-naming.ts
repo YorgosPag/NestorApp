@@ -1,14 +1,16 @@
 /**
- * Floor Naming SSoT (ADR-369 §9 Q9) — Phase A1
+ * Floor Naming SSoT (ADR-369 §9 Q9) — Phase A1 · ADR-903 (λεξιλόγιο ορόφου)
  *
- * Auto-generation `Floor.name` (short) + `Floor.longName` (Greek canonical)
- * για όλα τα floor kinds.
+ * Το **λεξιλόγιο** της στάθμης (Revit Level · ArchiCAD Story · IfcBuildingStorey): είδη,
+ * ποια μετρούν ως όροφοι, short engineering code. **Καμία ανθρώπινη ετικέτα εδώ** — αυτή
+ * ζει σε i18n (`floors:label.*`) και αποδίδεται από τον **έναν** μορφοποιητή
+ * `@/lib/floor/floor-label` (client + server). Η Ελληνική canonical `longName` που
+ * αποθηκεύεται: `canonicalFloorLongName` στο `@/lib/floor/floor-label-bundle`.
  *
  * Storage convention (ADR-369 §9 Q9 + user decision 2026-05-20):
  *   - `Floor.longName` αποθηκεύεται **πάντα ως Ελληνικό canonical** στη Firestore
  *     (π.χ. "1ος Όροφος", "Ισόγειο", "Υπόγειο").
- *   - English rendering για την UI παράγεται at render time μέσω
- *     {@link import('@/lib/intl-domain').formatFloorLabel}.
+ *   - Η ετικέτα UI παράγεται at render time από το `FloorRef` (ADR-903).
  *
  * Mezzanine convention (ADR-369 §9 Q6 + user decision 2026-05-20):
  *   - `Floor.number` παραμένει `z.number().int()` ακέραιος.
@@ -29,16 +31,25 @@ export type FloorKind =
   | 'mezzanine'
   // ADR-461 — απόληξη κλιμακοστασίου (κλειστός χώρος πάνω από το δώμα: stair head /
   // μηχανοστάσιο). Special level (Revit «Building Story» OFF), διακριτό από 'roof'.
-  | 'stair-penthouse';
+  | 'stair-penthouse'
+  // ADR-903 — ελληνική πρακτική (ΝΟΚ · Spitogatos/xe φίλτρα · idealista «semisótano»):
+  | 'semi-basement' // ημιυπόγειο — κάτω από το έδαφος, μετρά ως όροφος (όπως το υπόγειο)
+  | 'raised-ground' // υπερυψωμένο ισόγειο — αριθμός 0, μετρά ως όροφος
+  | 'pilotis' // πυλωτή — ανοιχτή στάθμη με υποστυλώματα· «Πυλωτή + 4 όροφοι» ⇒ ΔΕΝ μετρά
+  | 'attic'; // σοφίτα ως στάθμη — ΔΕΝ μετρά (το «ρετιρέ» είναι ΕΙΔΟΣ ΑΚΙΝΗΤΟΥ, όχι στάθμη)
 
 export const FLOOR_KIND_VALUES: readonly FloorKind[] = [
   'foundation',
   'basement',
+  'semi-basement',
   'ground',
+  'raised-ground',
+  'pilotis',
   'standard',
   'roof',
   'mezzanine',
   'stair-penthouse',
+  'attic',
 ] as const;
 
 export function isFloorKind(value: unknown): value is FloorKind {
@@ -49,13 +60,27 @@ export function isFloorKind(value: unknown): value is FloorKind {
 
 /**
  * Στάθμες που ΔΕΝ μετρώνται ως όροφοι («Όροφοι: N»): θεμελίωση, δώμα, απόληξη
- * κλιμακοστασίου. Έχουν δικό τους DXF Level (σχεδιάσιμες) αλλά είναι εκτός count.
+ * κλιμακοστασίου, πυλωτή, σοφίτα (ADR-903, απόφαση Giorgio 2026-10-03: «Πυλωτή + 4
+ * όροφοι»). Έχουν δικό τους DXF Level (σχεδιάσιμες) αλλά είναι εκτός count.
  */
 export const SPECIAL_LEVEL_KINDS: readonly FloorKind[] = [
   'foundation',
   'roof',
   'stair-penthouse',
+  'pilotis',
+  'attic',
 ] as const;
+
+/** Στάθμες κάτω από το έδαφος — IFC `Pset_BuildingStoreyCommon.AboveGround = false`. */
+const BELOW_GROUND_KINDS: readonly FloorKind[] = ['foundation', 'basement', 'semi-basement'] as const;
+
+/**
+ * IFC `AboveGround` (ADR-903). SSoT για κάθε ερώτηση «υπόγεια στάθμη;» — π.χ. το ημιυπόγειο
+ * συμπεριφέρεται όπως το υπόγειο (θεμελίωση, ελάχιστο ύψος) χωρίς κάθε καταναλωτής να το ξέρει.
+ */
+export function isAboveGround(kind: FloorKind): boolean {
+  return !(BELOW_GROUND_KINDS as readonly string[]).includes(kind);
+}
 
 /**
  * True όταν ο όροφος αυτού του είδους μετράει ως «Building Story» (counted storey).
@@ -83,6 +108,7 @@ export function countBuildingStoreys(floors: ReadonlyArray<{ kind?: FloorKind }>
  *   basement   → "B1", "B2", "B3", ... (|number| or 1 αν number=0)
  *   mezzanine  → "M1", "M2", ... (number or 1 αν number=0)
  *   standard   → "L1", "L2", ... (number)
+ *   semi-basement → "SB" · raised-ground → "RG" · pilotis → "PL" · attic → "AT" (ADR-903)
  */
 export function generateAutoShortName(kind: FloorKind, number: number): string {
   switch (kind) {
@@ -104,44 +130,21 @@ export function generateAutoShortName(kind: FloorKind, number: number): string {
       return `L${number}`;
     case 'stair-penthouse':
       return 'SP';
+    case 'semi-basement':
+      return 'SB';
+    case 'raised-ground':
+      return 'RG';
+    case 'pilotis':
+      return 'PL';
+    case 'attic':
+      return 'AT';
   }
 }
 
-// ─── Long name (Greek canonical) ─────────────────────────────────────────────
-
-/**
- * Παράγει Greek canonical long name για floor.
- * Αποθηκεύεται as-is στη Firestore (`Floor.longName`).
- *
- *   foundation → "Θεμελίωση"
- *   roof       → "Δώμα"
- *   ground     → "Ισόγειο"
- *   basement   → "Υπόγειο" (|n|=1) | "{n}ο Υπόγειο" (|n|>1)
- *   mezzanine  → "Μεσοπάτωμα" (1) | "{n}ο Μεσοπάτωμα" (n>1)
- *   standard   → "{n}ος Όροφος"
- */
-export function generateAutoLongName(kind: FloorKind, number: number): string {
-  switch (kind) {
-    case 'foundation':
-      return 'Θεμελίωση';
-    case 'roof':
-      return 'Δώμα';
-    case 'ground':
-      return 'Ισόγειο';
-    case 'basement': {
-      const level = Math.abs(number) || 1;
-      return level === 1 ? 'Υπόγειο' : `${level}ο Υπόγειο`;
-    }
-    case 'mezzanine': {
-      const idx = Math.abs(number) || 1;
-      return idx === 1 ? 'Μεσοπάτωμα' : `${idx}ο Μεσοπάτωμα`;
-    }
-    case 'standard':
-      return `${number}ος Όροφος`;
-    case 'stair-penthouse':
-      return 'Απόληξη Κλιμακοστασίου';
-  }
-}
+// ─── Long name ────────────────────────────────────────────────────────────────
+// ADR-903: η Ελληνική canonical longName ΜΕΤΑΚΟΜΙΣΕ στο `canonicalFloorLongName`
+// (`@/lib/floor/floor-label-bundle`) — αποδίδεται από τα ΙΔΙΑ κλειδιά i18n με την UI,
+// αντί για δεύτερο ελληνικό κείμενο γραμμένο εδώ.
 
 // ─── Kind inference (Revit-style auto-classification) ────────────────────────
 
@@ -151,7 +154,8 @@ export function generateAutoLongName(kind: FloorKind, number: number): string {
  *   number  >  0  → 'standard'
  *   number  <  0  → 'basement'
  *
- * Σημείωση: 'foundation' / 'roof' / 'mezzanine' / 'stair-penthouse' είναι
+ * Σημείωση: 'foundation' / 'roof' / 'mezzanine' / 'stair-penthouse' / 'semi-basement' /
+ * 'raised-ground' / 'pilotis' / 'attic' (ADR-903) είναι
  * user-explicit kinds — δεν προκύπτουν από το νούμερο. Ο caller τα ορίζει ρητά.
  */
 export function inferKindFromNumber(number: number): FloorKind {

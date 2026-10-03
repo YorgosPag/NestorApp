@@ -14,7 +14,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { isFloorKind, type FloorKind } from '@/utils/floor-naming';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -79,6 +80,7 @@ export function useAutoLevelCreation({
   const { t } = useTranslation(['properties-detail']);
   const { info, warning } = useNotifications();
   const { user } = useAuth();
+  const floorLabel = useFloorLabel();
 
   const [buildingFloors, setBuildingFloors] = useState<FloorOption[]>([]);
   const [dialogState, setDialogState] = useState<AutoLevelDialogState>({
@@ -102,6 +104,7 @@ export function useAutoLevelCreation({
       id: string;
       number: number;
       name: string;
+      kind?: FloorKind;
     }>(
       'FLOORS',
       (result) => {
@@ -111,7 +114,7 @@ export function useAutoLevelCreation({
             return {
               id: doc.id,
               number: num,
-              name: doc.name || formatFloorLabel(num),
+              name: doc.name || floorLabel({ number: num, kind: isFloorKind(doc.kind) ? doc.kind : null }),
             };
           })
           .sort((a, b) => a.number - b.number);
@@ -125,7 +128,7 @@ export function useAutoLevelCreation({
     );
 
     return () => unsubscribe();
-  }, [buildingId, user]);
+  }, [buildingId, user, floorLabel]);
 
   // ── Core: create levels from current + next floor ──
   // Accepts optional fresh overrides to avoid stale closure issues during creation.

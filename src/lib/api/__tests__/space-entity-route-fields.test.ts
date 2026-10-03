@@ -11,10 +11,13 @@
  * pure, so it needs none of the `server-only` / Firebase Admin module graph.
  */
 
+import { z } from 'zod';
 import {
   mapCommonSpaceCreateFields,
   mapCommonSpaceFields,
   resolveAllocationCodeChange,
+  SPACE_COMMON_CREATE_FIELDS,
+  SPACE_COMMON_UPDATE_FIELDS,
 } from '../space-entity-fields';
 
 /**
@@ -39,7 +42,7 @@ describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟ
     expect(mapCommonSpaceCreateFields({})).toEqual(BIRTH);
   });
 
-  it('περνά τα πέντε κοινά πεδία, με trim — και ΠΕΤΑ το `price`', () => {
+  it('περνά τα τέσσερα κοινά πεδία, με trim — και ΠΕΤΑ το `price` και τον `floor`', () => {
     expect(
       mapCommonSpaceCreateFields({
         floor: ' 2 ',
@@ -51,7 +54,6 @@ describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟ
       }),
     ).toEqual({
       ...BIRTH,
-      floor: '2',
       area: 12.5,
       description: 'περιγραφή',
       notes: 'σημ',
@@ -128,19 +130,26 @@ describe('mapCommonSpaceFields — string fields collapse blank to null', () => 
   });
 });
 
-describe('mapCommonSpaceFields — floor accepts string or number', () => {
-  it('keeps a numeric floor as a number', () => {
-    expect(mapCommonSpaceFields({ floor: 0 }, 'number')).toEqual({ floor: 0 });
-    expect(mapCommonSpaceFields({ floor: 3 }, 'number')).toEqual({ floor: 3 });
+/**
+ * ADR-903 §6 — ο όροφος **δεν** περνά από τους καθαρούς mappers: `floorId` → αντίγραφο το
+ * επιλύει ο server απέναντι στο έγγραφο ορόφου (`host-floor.server.ts`), και το zod απορρίπτει
+ * ωμό `floor` με 400. Αν ένας mapper ξαναγράψει `floor` ή `floorId`, θα υπήρχαν **δύο** συγγραφείς.
+ */
+describe('mappers — ο όροφος ΔΕΝ γράφεται εδώ (ADR-903 §6)', () => {
+  it.each([0, 3, ' B1 ', null])('PATCH αγνοεί `floor: %p`', (floor) => {
+    expect(mapCommonSpaceFields({ floor }, 'number')).toEqual({});
   });
 
-  it('trims a string floor and collapses blank to null', () => {
-    expect(mapCommonSpaceFields({ floor: ' B1 ' }, 'number')).toEqual({ floor: 'B1' });
-    expect(mapCommonSpaceFields({ floor: '  ' }, 'number')).toEqual({ floor: null });
+  it('PATCH/POST αγνοούν `floorId` (το επιλύει ο handler)', () => {
+    expect(mapCommonSpaceFields({ floorId: 'flr_1' }, 'number')).toEqual({});
+    expect(mapCommonSpaceCreateFields({ floorId: 'flr_1' })).toEqual(BIRTH);
   });
 
-  it('maps an explicit null floor to null', () => {
-    expect(mapCommonSpaceFields({ floor: null }, 'number')).toEqual({ floor: null });
+  it('το σχήμα απορρίπτει ωμό `floor` και στη δημιουργία και στην ενημέρωση', () => {
+    expect(z.object(SPACE_COMMON_UPDATE_FIELDS).safeParse({ floor: 2 }).success).toBe(false);
+    expect(z.object(SPACE_COMMON_CREATE_FIELDS).safeParse({ floor: 'Ισόγειο' }).success).toBe(false);
+    expect(z.object(SPACE_COMMON_UPDATE_FIELDS).safeParse({ floorId: null }).success).toBe(true);
+    expect(z.object(SPACE_COMMON_CREATE_FIELDS).safeParse({ floorId: 'flr_1' }).success).toBe(true);
   });
 });
 

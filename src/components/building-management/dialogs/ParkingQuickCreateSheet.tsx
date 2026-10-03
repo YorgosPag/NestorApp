@@ -39,7 +39,6 @@ export function ParkingQuickCreateSheet({
     type: 'standard',
     // ADR-777 §8.60.20 — νέα εγγραφή: ζωντανή, λειτουργικά «πρόχειρο» (ίδιος κανόνας με τα ακίνητα).
     ...NEW_SPACE_STATUSES,
-    floor: '',
     buildingId,
     projectId: projectId || undefined,
   };

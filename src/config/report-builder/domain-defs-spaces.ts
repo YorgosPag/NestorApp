@@ -110,7 +110,9 @@ export const PARKING_DEFINITION: DomainDefinition = {
     {
       key: 'floor',
       labelKey: 'domains.parking.fields.floor',
-      type: 'text',
+      // ADR-903 §6 — αριθμός (παράγωγο του `floorId`), όπως στα ακίνητα.
+      type: 'number',
+      format: 'number',
       filterable: true,
       sortable: true,
       defaultVisible: true,
@@ -210,7 +212,9 @@ export const STORAGE_DEFINITION: DomainDefinition = {
     {
       key: 'floor',
       labelKey: 'domains.storage.fields.floor',
-      type: 'text',
+      // ADR-903 §6 — αριθμός (παράγωγο του `floorId`), όπως στα ακίνητα.
+      type: 'number',
+      format: 'number',
       filterable: true,
       sortable: true,
       defaultVisible: true,

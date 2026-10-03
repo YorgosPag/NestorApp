@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { Building2, Folder, Building as BuildingIcon, Layers, Info } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -233,6 +234,7 @@ interface FloorSectionProps {
 
 function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan }: FloorSectionProps) {
   const { t, typography, getBorder } = useWizardStepChrome();
+  const floorLabel = useFloorLabel();
 
   return (
     <ProjectModalContainer
@@ -254,7 +256,7 @@ function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan 
                   <SelectItem key={floor.id} value={floor.id}>
                     <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                       <Layers className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
-                      <span>{floor.name || t('wizard.counts.floorOrdinal', { floor: floor.number })}</span>
+                      <span>{floor.name || floorLabel(floor.number)}</span>
                     </div>
                   </SelectItem>
                 ))}

@@ -19,7 +19,7 @@
  * 🔑 **ΚΑΜΙΑ ΤΙΜΗ ΔΕΝ ΜΕΤΑΦΡΑΖΕΤΑΙ ΔΕΥΤΕΡΗ ΦΟΡΑ.** Ό,τι *σημαίνει* κάτι έρχεται
  * από το ίδιο SSoT με την κάρτα πλέγματος: `resolveDisplayPrice` (ποια τιμή) ·
  * `buildCardPriceText` (πώς λέγεται) · `MISSING_PRICE_LABEL_KEYS` (πώς λέγεται η
- * **απουσία** της) · `resolvePropertyBadge` (ποια κατάσταση) · `formatFloorLabel`.
+ * **απουσία** της) · `resolvePropertyBadge` (ποια κατάσταση) · `useFloorLabel` (ADR-903).
  * Εδώ ζει **μόνο** η διάταξη.
  *
  * ⚠️ **Η ΑΠΟΥΣΙΑ ΤΙΜΗΣ ΟΝΟΜΑΖΕΤΑΙ, ΔΕΝ ΣΒΗΝΕΤΑΙ** (ADR-777 Α6, κανόνας 9). Ένα
@@ -40,7 +40,7 @@ import {
 } from '@/domain/cards/property/property-card-shared';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
@@ -76,6 +76,7 @@ export function PropertyIdentityHeader({
   // δηλώσει και δουλεύει **επειδή κάποιος άλλος** το έχει φορτώσει — εξάρτηση από
   // τη σειρά φόρτωσης, όχι από δήλωση (CHECK 3.36 §8.1).
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'common']);
+  const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const { radius, quick } = useBorderTokens();
 
@@ -85,7 +86,7 @@ export function PropertyIdentityHeader({
   const displayArea = property.areas?.gross ?? property.areas?.net ?? property.area;
   const translatedType = t(`filters.types.${property.type}`, { defaultValue: property.type });
 
-  const place = [property.building, property.project, formatFloorLabel(property.floor)]
+  const place = [property.building, property.project, floorLabel(property.floor)]
     .filter((part): part is string => typeof part === 'string' && part.length > 0)
     .join(' · ');
 

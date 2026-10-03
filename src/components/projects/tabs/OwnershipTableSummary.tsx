@@ -26,6 +26,7 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { TOTAL_SHARES_TARGET } from '@/types/ownership-table';
 import type { MutableOwnershipTableRow, MutableOwnershipPercentageTable, OwnershipTableRevision } from '@/types/ownership-table';
 import { ownerLabel } from '@/components/projects/tabs/ownership-table-config';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 
 // ============================================================================
 // TYPES
@@ -247,6 +248,7 @@ export function LinkedSpaceRows({
   typography, spacing, colors, iconSizes,
   onNavigate, updateLinkedSpace,
 }: LinkedSpaceRowsProps) {
+  const floorLabel = useFloorLabel();
   if (!row.linkedSpacesSummary || row.linkedSpacesSummary.length === 0) return null;
 
   return (
@@ -276,7 +278,7 @@ export function LinkedSpaceRows({
                 <Badge variant="outline" className={cn(typography.body.xs, COLOR_BRIDGE.border.info, COLOR_BRIDGE.text.info)}>{t('common:ownership.categoryAuxiliary')}</Badge>
               )}
             </TableCell>
-            <TableCell className={typography.body.xs}>{ls.floor}</TableCell>
+            <TableCell className={typography.body.xs}>{floorLabel(ls.floor)}</TableCell>
             <TableCell className={cn('text-right', typography.special.codeId)}>{ls.areaNetSqm > 0 ? ls.areaNetSqm.toFixed(2) : '—'}</TableCell>
             <TableCell className={cn('text-right', typography.special.codeId)}>{ls.areaSqm > 0 ? ls.areaSqm.toFixed(2) : '—'}</TableCell>
             <TableCell className="text-right">

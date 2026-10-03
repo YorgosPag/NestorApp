@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-448-storey-aware-dxf-viewer.md §6 Phase 2
  */
 
-import type { FloorKind } from '@/utils/floor-naming';
+import { isAboveGround, type FloorKind } from '@/utils/floor-naming';
 import { useActiveStoreyStore } from './active-storey-store';
 import type { ActiveStoreyContext } from './active-storey-context';
 
@@ -126,14 +126,15 @@ export function isFoundationDisciplineInContext(
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): boolean {
   if (storey === null) return true;
+  // ADR-903 — θεμελίωση / υπόγειο / ημιυπόγειο: το IFC `AboveGround = false`, από το ΕΝΑ SSoT.
+  if (storey.storeyKind !== null && !isAboveGround(storey.storeyKind)) return true;
   switch (storey.storeyKind) {
-    case 'foundation':
-    case 'basement':
-      return true;
     case 'ground':
+    case 'raised-ground': // ADR-903 — στάθμη ισογείου
+    case 'pilotis':
       return storey.isLowestOccupiedStorey !== false;
     default:
-      return false; // standard / mezzanine / roof / stair-penthouse / null kind
+      return false; // standard / mezzanine / attic / roof / stair-penthouse / null kind
   }
 }
 

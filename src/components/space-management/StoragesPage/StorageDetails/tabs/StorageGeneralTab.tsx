@@ -34,7 +34,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { LabeledInputField } from '@/components/shared/space-info/LabeledInputField';
-import { SpaceFloorCard } from '@/components/shared/space-info/SpaceFloorCard';
 import { SpaceCoreFields } from '@/components/shared/space-info/SpaceCoreFields';
 import { useSpaceFormState } from '@/components/shared/space-info/useSpaceFormState';
 import {
@@ -45,12 +44,10 @@ import {
 } from '@/components/shared/space-info/space-payload-builder';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/properties.service';
-import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
-import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
+import { useSpaceLocation } from '@/components/shared/space-info/useSpaceLocation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { useSpaceGeneralSave } from '@/hooks/useSpaceGeneralSave';
@@ -69,7 +66,7 @@ const logger = createModuleLogger('StorageGeneralTab');
 // ============================================================================
 
 /**
- * POST body: the shared space fields plus storage's own identity and floor doc.
+ * POST body: the shared space fields (incl. the floor, ADR-903 §6) plus storage's own identity.
  * ⛔ Καμία τιμή (ADR-777 §8.60.18/§8.60.20): το πεδίο «Τιμή» εδώ έστελνε το @deprecated `price`, που ο
  * server **πετούσε σιωπηλά** — πεδίο στην οθόνη που δεν αποθηκευόταν. Η τιμή ζει στην κάρτα «Διάθεση & τιμή».
  */
@@ -79,7 +76,6 @@ function buildStorageDraft(form: StorageFormState, buildingId: string | null): S
     form,
     buildingId,
   );
-  draft.optionalText('floorId', form.floorId);
   return draft;
 }
 
@@ -92,7 +88,6 @@ function buildStoragePatch(
   const patch = createSpacePatch(form, storage, linkPayload);
   patch.textChanged('name', form.name, storage.name);
   patch.valueChanged('type', form.type, storage.type || DEFAULT_STORAGE_TYPE);
-  patch.nullableTextChanged('floorId', form.floorId, storage.floorId);
   return patch;
 }
 
@@ -158,7 +153,7 @@ export function StorageGeneralTab({
     initialParentId: storage.buildingId ?? null,
     loadOptions: loadBuildings,
     saveMode: 'form',
-    cascadingResets: [{ resetField: 'floor' }],
+    cascadingResets: [{ resetField: 'floorId' }],
     onCascadingReset: (resets) => resets.forEach(r => updateField(r.field as keyof StorageFormState, r.value)),
     icon: NAVIGATION_ENTITIES.building.icon,
     iconColor: NAVIGATION_ENTITIES.building.color,
@@ -256,6 +251,12 @@ export function StorageGeneralTab({
     return true;
   }, [form, storage, onEditingChange, buildingLink, versioned.save, commercial]);
 
+  // ADR-903 §6 — κτίριο + όροφος (ο όροφος του κωδικού παράγεται από το `floorId`).
+  const location = useSpaceLocation({
+    buildingLink, entity: storage, floorId: form.floorId, onFloorIdChange: (id) => updateField('floorId', id),
+    t, disabled: !isEditing, gridClassName: 'grid grid-cols-1 md:grid-cols-2 gap-2',
+  });
+
   useSpaceGeneralSave({ createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, logger });
 
   return (
@@ -264,20 +265,7 @@ export function StorageGeneralTab({
         <p className="text-sm text-destructive px-1">{createError}</p>
       )}
       {/* Building Link + Floor — side by side at the top */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
-        <SpaceFloorCard
-          buildingId={buildingLink.linkedId}
-          value={form.floorId}
-          onChange={(v: string, payload?: FloorChangePayload) => {
-            updateField('floor', v);
-            updateField('floorId', payload ? payload.floorId : '');
-          }}
-          label={t('general.fields.floor')}
-          noBuildingHint={t('entityLinks.building.noFloorHint')}
-          disabled={!isEditing}
-        />
-      </div>
+      {location.section}
 
       {/* Basic Information Card */}
       <Card>
@@ -295,7 +283,7 @@ export function StorageGeneralTab({
               onChange={(v) => updateField('code', v)}
               entityType="storage"
               buildingId={buildingLink.linkedId || ''}
-              floorLevel={parseFloorLevel(form.floor ?? '')}
+              floorLevel={location.hostFloor?.number ?? ''}
               label={t('general.fields.code')}
               placeholderFallback="A-AP-Y1.01"
               infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"

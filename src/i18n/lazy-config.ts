@@ -141,7 +141,9 @@ export const SUPPORTED_NAMESPACES = [
   'accounting-setup',       // 🏢 Accounting setup/reconciliation (split from accounting — ADR-280)
   'files-media',            // 🏢 Files floorplan/media/capture (split from files — ADR-280)
   'floorplan-overlays',     // 🏢 Multi-kind overlay roles + geometry labels (ADR-340 Phase 9)
+  'floors',                 // 🏢 Floor/level labels — ONE formatter for every FloorRef (ADR-903)
   'navigation-entities',    // 🏢 Navigation entities/filters (split from navigation — ADR-280)
+  'hierarchy-navigator',    // 🏢 Ιεραρχικός πλοηγητής /navigation (split from navigation — ADR-744 §26)
   'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
   'trash',                  // 🗑️ Centralized trash/soft-delete strings (ADR-281)
   'showcase',               // 🏢 Property showcase public page (ADR-312)
@@ -356,6 +358,7 @@ export const CRITICAL_NAMESPACES: readonly Namespace[] = [
   'building-timeline',
   'building-tabs',
   'buildingCode',
+  'floors',             // ⬅️ ADR-903: η ΜΙΑ ετικέτα ορόφου — κάρτες/λίστες/πωλήσεις σε κάθε οθόνη (~0,6 KB)
   'showcase',           // ⬅️ 2026-07-25: BuildingDetailsHeader action + storage/parking details
 
   // Projects & obligations

@@ -7,6 +7,9 @@
  * Exempt from file-size limits (config/data file).
  */
 
+// ADR-903 — η ελληνική canonical longName από τα ΙΔΙΑ κλειδιά με την UI (ποτέ χειρόγραφη).
+import { canonicalFloorLongName } from '@/lib/floor/floor-label-bundle';
+
 /**
  * Target building για τα νέα floors — ΚΤΙΡΙΟ Α - Παλαιολόγου.
  *
@@ -44,37 +47,37 @@ export interface FloorTemplate {
 export const FLOOR_TEMPLATES: FloorTemplate[] = [
   {
     number: -1,
-    name: 'Υπόγειο',
+    name: canonicalFloorLongName('basement', -1),
     units: 0,
     description: 'Αποθήκες και parking',
   },
   {
     number: 0,
-    name: 'Ισόγειο',
+    name: canonicalFloorLongName('ground', 0),
     units: 2,
     description: 'Καταστήματα και είσοδος',
   },
   {
     number: 1,
-    name: '1ος Όροφος',
+    name: canonicalFloorLongName('standard', 1),
     units: 2,
     description: 'Διαμερίσματα Α1, Β1',
   },
   {
     number: 2,
-    name: '2ος Όροφος',
+    name: canonicalFloorLongName('standard', 2),
     units: 2,
     description: 'Διαμερίσματα Α2, Β2',
   },
   {
     number: 3,
-    name: '3ος Όροφος',
+    name: canonicalFloorLongName('standard', 3),
     units: 2,
     description: 'Διαμερίσματα Α3, Β3',
   },
   {
     number: 4,
-    name: '4ος Όροφος',
+    name: canonicalFloorLongName('standard', 4),
     units: 1,
     description: 'Ρετιρέ',
   },

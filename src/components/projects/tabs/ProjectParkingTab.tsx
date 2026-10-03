@@ -14,6 +14,8 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
@@ -125,6 +127,7 @@ interface ParkingSpotsListProps {
 }
 
 function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, iconSizes, spacing }: ParkingSpotsListProps) {
+  const floorLabel = useFloorLabel();
   const typography = useTypography();
 
   if (loading) {
@@ -212,7 +215,7 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
                 <td className="p-2">
                   <SpaceStatusBadges space={spot} />
                 </td>
-                <td className="p-2">{spot.floor || '—'}</td>
+                <td className="p-2">{floorLabel(hostedFloorRef(spot)) || '—'}</td>
                 <td className="p-2">
                   {spot.locationZone ? PARKING_LOCATION_ZONE_LABELS[spot.locationZone] : '—'}
                 </td>

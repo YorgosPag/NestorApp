@@ -42,7 +42,6 @@
     "counts": {
       "buildings": "{count} κτίρια",
       "floors": "{count} όροφοι",
-      "floorOrdinal": "{floor}ος όροφος",
       "companiesFound": "Βρέθηκαν {count} διαθέσιμες εταιρείες",
       "projectsFound": "Βρέθηκαν {count} έργα για την επιλεγμένη εταιρεία",
       "buildingsFound": "Βρέθηκαν {count} κτίρια για το επιλεγμένο έργο",

@@ -5,7 +5,7 @@
  *  - visibility gating (buildingId required — any building-bound level, ADR-399 §3.4 rev. 2026-06-16)
  *  - floor↔level mapping (linked level vs virtual tab)
  *  - hasFloorplan flag (sceneFileId / scene entities)
- *  - label fallback via generateAutoLongName (no longName/name)
+ *  - label fallback via canonicalFloorLongName (no longName/name)
  *  - ascending order preserved from useFloorsByBuilding
  *  - onSelectTab: switch (existing) vs lazy-provision (virtual)
  *  - double-click guard (single addLevel for two rapid virtual clicks)
@@ -127,7 +127,7 @@ describe('useFloorTabs — mapping & labels', () => {
     expect(virtual.hasFloorplan).toBe(false);
   });
 
-  it('falls back to generateAutoLongName when longName/name are absent', () => {
+  it('falls back to canonicalFloorLongName when longName/name are absent', () => {
     mockUseLevelsContext.mockReturnValue(visibleCtx());
     mockUseFloorsByBuilding.mockReturnValue({
       floors: [floor('f0', 0), floor('f1', 1)],

@@ -30,7 +30,6 @@ export function useStorageStats(storages: Storage[]) {
 
     // Distributions
     const uniqueBuildings = new Set(storages.map(s => s.building).filter(Boolean)).size;
-    const storagesByFloor = groupBy(storages, s => s.floor || 'Άγνωστος');
     const storagesByBuilding = groupBy(storages, s => s.building || 'Άγνωστο');
 
     return {
@@ -49,7 +48,6 @@ export function useStorageStats(storages: Storage[]) {
       uniqueBuildings,
       storagesByType: base.byType,
       storagesByAvailability: counts.byAvailability,
-      storagesByFloor,
       storagesByBuilding,
 
       utilizationRate: counts.utilizationRate,

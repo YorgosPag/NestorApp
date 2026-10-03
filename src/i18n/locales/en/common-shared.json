@@ -826,6 +826,25 @@
     "approvedTitle": "You can view the tour of “{title}” until {until}",
     "declinedTitle": "Your viewing request for “{title}” was not approved"
   },
+  "caseEngagementChanged": {
+    "offeredTitle": {
+      "seller_lawyer": "You have been offered the conveyance case “{title}” as the seller's lawyer",
+      "buyer_lawyer": "You have been offered the conveyance case “{title}” as the buyer's lawyer",
+      "notary": "You have been offered the conveyance case “{title}” as the notary"
+    },
+    "offeredBody": "Open the case and press “I take it on” to get access to the documents. The offer expires in 14 days.",
+    "revokedTitle": "Your access to the case “{title}” was revoked",
+    "withdrawnTitle": "The offer for the case “{title}” was withdrawn",
+    "completedTitle": "The case “{title}” is complete — your access has closed"
+  },
+  "caseEngagementAnswered": {
+    "acceptedTitle": {
+      "seller_lawyer": "{who} took on the case “{title}” as the seller's lawyer",
+      "buyer_lawyer": "{who} took on the case “{title}” as the buyer's lawyer",
+      "notary": "{who} took on the case “{title}” as the notary"
+    },
+    "declinedTitle": "{who} declined the case “{title}”"
+  },
   "workspaceMembershipEnded": {
     "removedTitle": "The workspace “{office}” removed you from its members",
     "removedBody": "Your account, your personal space and your other workspaces are not affected. To return you need a new invitation from the workspace.",

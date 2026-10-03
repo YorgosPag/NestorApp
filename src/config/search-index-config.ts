@@ -135,7 +135,8 @@ export function extractStats(
 
       switch (statConfig.formatter) {
         case 'floor':
-          // Format floor number (e.g., "0" → "Ισόγειο", "-1" → "Υπόγειο 1")
+          // ADR-903 — ΑΠΟΘΗΚΕΥΕΤΑΙ ΩΜΟ (το ευρετήριο είναι δεδομένο, όχι γλώσσα). Η ετικέτα
+          // αποδίδεται στην οθόνη από τον ΕΝΑ μορφοποιητή (`SearchResultItem` → `useFloorLabel`).
           formattedValue = String(rawValue);
           break;
         case 'area':

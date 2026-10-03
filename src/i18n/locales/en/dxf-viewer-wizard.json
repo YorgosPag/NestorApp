@@ -42,7 +42,6 @@
     "counts": {
       "buildings": "{count} buildings",
       "floors": "{count} floors",
-      "floorOrdinal": "{floor}th floor",
       "companiesFound": "Found {count} available companies",
       "projectsFound": "Found {count} projects for the selected company",
       "buildingsFound": "Found {count} buildings for the selected project",

@@ -17,7 +17,7 @@
  *
  * **1. 🔴 ΩΜΑ ΚΛΕΙΔΙΑ i18n — ΚΑΙ ΣΤΙΣ ΔΥΟ ΟΘΟΝΕΣ, ΤΡΙΑ ΤΟ ΚΑΘΕΝΑ.**
  *    Οι ετικέτες των badge ζουν στο namespace **`navigation-entities`**, ενώ
- *    **και τα δύο** component καλούν `useTranslation('navigation')`. Το Desktop
+ *    **και τα δύο** component καλούσαν `useTranslation('navigation')` (σήμερα `'hierarchy-navigator'`, ADR-744 §26). Το Desktop
  *    έγραφε `t(key)` — αστοχία, γιατί ρωτούσε **λάθος namespace**· το Mobile δεν
  *    καλούσε **καθόλου** `t()`. Το `src/i18n/config.ts` **δεν ορίζει
  *    `fallbackNS`**, οπότε και οι δύο δρόμοι κατέληγαν στο ίδιο αποτέλεσμα: το
@@ -90,7 +90,7 @@ export type NavigationTranslate = ReturnType<typeof useTranslation>['t'];
 /**
  * Το namespace όπου **ΟΝΤΩΣ** ζουν οι ετικέτες των badge.
  *
- * ⚠️ Και τα δύο component καλούν `useTranslation('navigation')`, ΟΧΙ αυτό. Το
+ * ⚠️ Και τα δύο component καλούν `useTranslation(['hierarchy-navigator', …])` (ADR-744 §26), ΟΧΙ αυτό. Το
  * πρόθεμα είναι ο **μόνος** λόγος που οι ετικέτες λύνονται.
  */
 const BADGE_NAMESPACE = 'navigation-entities';

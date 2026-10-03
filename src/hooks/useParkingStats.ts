@@ -46,7 +46,6 @@ export interface ParkingStats {
   parkingByType: Record<string, number>;
   /** Κατανομή ανά κουβά διάθεσης (`lib/spaces/space-availability`). */
   parkingByAvailability: Readonly<Record<SpaceAvailabilityBucket, number>>;
-  parkingByFloor: Record<string, number>;
   parkingByBuilding: Record<string, number>;
 
   // Rates
@@ -74,7 +73,6 @@ export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
 
     // Distributions
     const uniqueBuildings = new Set(parkingSpots.map(p => p.buildingId).filter(Boolean)).size;
-    const parkingByFloor = groupBy(parkingSpots, p => p.floor || 'Άγνωστος');
     const parkingByBuilding = groupBy(parkingSpots, p => p.buildingId || 'Άγνωστο');
 
     return {
@@ -93,7 +91,6 @@ export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
       uniqueBuildings,
       parkingByType: base.byType,
       parkingByAvailability: counts.byAvailability,
-      parkingByFloor,
       parkingByBuilding,
 
       utilizationRate: counts.utilizationRate,

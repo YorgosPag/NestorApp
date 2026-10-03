@@ -32,7 +32,7 @@ export interface StorageFormState {
   type: StorageType;
   /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`''` = αδήλωτη). */
   operationalStatus: OperationalStatusDraft;
-  floor: string;
+  /** ADR-903 §6 — ο όροφος-φιλοξενών (`''` = κανένας). */
   floorId: string;
   area: string;
   description: string;
@@ -66,7 +66,6 @@ export function buildFormState(storage: Storage): StorageFormState {
     code: storage.code || '',
     type: storage.type || DEFAULT_STORAGE_TYPE,
     operationalStatus: operationalDraftOf(storage),
-    floor: storage.floor || '',
     floorId: storage.floorId || '',
     area: storage.area !== undefined ? String(storage.area) : '',
     description: storage.description || '',

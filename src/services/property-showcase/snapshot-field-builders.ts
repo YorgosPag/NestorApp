@@ -25,6 +25,7 @@ import {
   type EnumLocale,
 } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
+  formatShowcaseHostedFloor,
   pickShowcaseNumberOrUndefined,
   pickShowcaseStringOrUndefined,
 } from '@/services/showcase-core/snapshot-field-primitives';
@@ -259,6 +260,7 @@ export function buildLinkedSpaces(
   p: Record<string, unknown>,
   storages: Map<string, Record<string, unknown>>,
   parkingSpots: Map<string, Record<string, unknown>>,
+  locale: EnumLocale,
 ): ShowcaseLinkedSpace[] | undefined {
   if (!Array.isArray(p.linkedSpaces) || p.linkedSpaces.length === 0) return undefined;
   const spaces: ShowcaseLinkedSpace[] = [];
@@ -279,7 +281,9 @@ export function buildLinkedSpaces(
         pickString(doc?.number) ||
         pickString(doc?.code),
       area: pickNumber(doc?.area),
-      floor: pickString(doc?.floor),
+      // ADR-903 §6 — αριθμός + είδος → ετικέτα στη γλώσσα του παραλήπτη (ήταν `pickString`: με αριθμητικό
+      // όροφο ο όροφος του παρακολουθήματος θα εξαφανιζόταν από την αγγελία).
+      floor: (doc ? formatShowcaseHostedFloor(doc, locale) : null) ?? undefined,
       type: pickString(doc?.type),
       inclusion: pickString(ls.inclusion),
       quantity: pickNumber(ls.quantity),

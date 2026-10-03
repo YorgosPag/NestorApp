@@ -9,6 +9,7 @@ import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-no
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { republishListing } from '@/services/listings/publish-public-listing';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { resolveHostedFloorForCreate } from '@/lib/floor/host-floor.server';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -152,6 +153,10 @@ export const POST = withStandardRateLimit(
           body.floorId = derived.floorId;
           body.isMultiLevel = derived.isMultiLevel;
         }
+
+        // ADR-903 §6 — φιλοξενούμενο σε όροφο ⇒ `floor` + `floorKind` από το έγγραφο ορόφου (ο
+        // αριθμός του client αγνοείται: μία πηγή). Χωρίς `floorId` (αυτόνομη μονάδα) μένει ο αριθμός.
+        Object.assign(body, await resolveHostedFloorForCreate(adminDb, ctx, body.floorId, body.buildingId?.trim() || null));
 
         // Entity-specific fields (exclude common fields handled by createEntity)
         const COMMON_FIELD_KEYS = new Set(['companyId', 'linkedCompanyId', 'createdAt', 'updatedAt', 'createdBy']);

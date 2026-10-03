@@ -252,7 +252,11 @@ create-public-pdf` 50t · `pdf-renderer-base` self-clone 54t). **Μηδέν** σ
 μαζικό batch). Ο N.0.1 Φάση 1 έγινε **αποκλειστικά από τον κώδικα**. Ανασύνθεση ή ρητή
 απόσυρση με redirect στα 698/699/700;
 
-### 8.2 «3nd Basement» + οι δύο formatters ορόφων
+### 8.2 «3nd Basement» + οι δύο formatters ορόφων — ✅ ΕΚΛΕΙΣΕ 2026-10-03 (ADR-903)
+
+> **Λύση**: οι formatters **συνέκλιναν** σε **έναν** (`lib/floor/floor-label.ts`)· το `formatShowcaseFloorLabel`
+> = `parseLegacyFloor` + `floorLabelIn(ref, locale)`. Η **μία** σωστή EN μορφή: «Basement 3» · «21st Floor»
+> (`selectordinal`). Το test που κάρφωνε το «3nd» αντικαταστάθηκε. Το παρακάτω μένει ως ιστορικό.
 
 Το EN κλαδί γράφει `3nd Basement` για βάθη πέρα από 2 — λάθος τακτικό, κληρονομημένο
 verbatim. **Διατηρήθηκε** ώστε το refactor να μείνει output-identical, με σχόλιο στον κώδικα
@@ -291,3 +295,4 @@ import υπήρχε ήδη.
 |---|---|
 | 2026-07-25 | Δημιουργία. Κύκλος #6: `snapshot-field-primitives` + `labels-catalog`· μετάβαση `project-showcase` στο factory· `entityId` στο `BrandingResolutionParams`· 5 labels + 4 snapshot builders μεταφέρθηκαν· 35 νέα tests· 2 registry modules. |
 | 2026-07-27 | **Το §5.2 ήταν ισχυρισμός, όχι κατάσταση.** Ο κύκλος #6 διέγραψε το τοπικό `CATALOGS` από το `property-showcase/labels.ts` και πρόσθεσε το `import { getShowcaseCatalog }`, αλλά **ξέχασε το μοναδικό call site** (γρ. 172) → `CATALOGS[locale]` έμεινε να δείχνει σε ανύπαρκτο σύμβολο, με το `getShowcaseCatalog` εισηγμένο-και-αχρησιμοποίητο από πάνω. TS2304 στο καθαρό `main`. Διορθώθηκε: `getShowcaseCatalog(locale)`. Το §5.2 περιγράφει πλέον τον πραγματικό κώδικα. **Μάθημα (N.0.1):** ημιτελής μετανάστευση που αφήνει ορφανό import περνά αόρατη από τα tests — το `loadShowcasePdfLabels` καλύπτεται μόνο από το `PropertyShowcaseRenderer.test.ts`, που είναι κόκκινο για άσχετο λόγο (§8.3) και δεν έφτασε ποτέ στη γραμμή. |
+| 2026-10-03 | **§8.2 έκλεισε (ADR-903)**: `formatShowcaseFloorLabel` = ο ένας parser + η μία ετικέτα στη γλώσσα του παραλήπτη· «3nd Basement» → «Basement 3», «Δώμα» → «Roof» στα αγγλικά. Το test ενημερώθηκε. |

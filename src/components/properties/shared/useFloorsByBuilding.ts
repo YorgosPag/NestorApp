@@ -19,7 +19,7 @@
  * @see ADR-329 §3.4 (Floor Select)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/contexts/AuthContext';
@@ -62,12 +62,17 @@ export interface FloorOption {
 export interface UseFloorsByBuildingResult {
   floors: FloorOption[];
   loading: boolean;
+  /** Η συνδρομή απέτυχε — ο επιλογέας το λέει, αντί να δείξει σιωπηλά κενή λίστα (ADR-903 §6). */
+  error: boolean;
 }
 
 interface FloorsSnapshot {
   readonly floors: FloorOption[];
   readonly loading: boolean;
+  readonly error: boolean;
 }
+
+const IDLE: FloorsSnapshot = { floors: [], loading: false, error: false };
 
 type FloorsListener = (snapshot: FloorsSnapshot) => void;
 
@@ -115,7 +120,7 @@ function subscribeShared(userId: string, buildingId: string, listener: FloorsLis
 
   if (!entry) {
     const created: FloorsCacheEntry = {
-      store: createExternalStore<FloorsSnapshot>({ floors: [], loading: true }),
+      store: createExternalStore<FloorsSnapshot>({ floors: [], loading: true, error: false }),
       subscriberCount: 0,
       unsubscribe: () => {},
     };
@@ -123,11 +128,11 @@ function subscribeShared(userId: string, buildingId: string, listener: FloorsLis
     created.unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
       'FLOORS',
       (result) => {
-        created.store.set({ floors: mapFloorsResult(result.documents), loading: false });
+        created.store.set({ floors: mapFloorsResult(result.documents), loading: false, error: false });
       },
       (err) => {
         logger.error('Failed to subscribe to floors', { error: err.message, buildingId });
-        created.store.set({ floors: [], loading: false });
+        created.store.set({ floors: [], loading: false, error: true });
       },
       { constraints: [where('buildingId', '==', buildingId)] },
     );
@@ -157,17 +162,30 @@ export function useFloorsByBuilding(
 ): UseFloorsByBuildingResult {
   const { user } = useAuth();
   const userId = user?.uid ?? null;
-  const [snapshot, setSnapshot] = useState<FloorsSnapshot>({ floors: [], loading: false });
+  const [snapshot, setSnapshot] = useState<FloorsSnapshot>(IDLE);
 
   useEffect(() => {
     if (!enabled || !buildingId || !userId) {
-      setSnapshot({ floors: [], loading: false });
+      setSnapshot(IDLE);
       return;
     }
-    setSnapshot((prev) => (prev.loading ? prev : { floors: prev.floors, loading: true }));
+    setSnapshot((prev) => (prev.loading ? prev : { floors: prev.floors, loading: true, error: false }));
     const unsubscribe = subscribeShared(userId, buildingId, setSnapshot);
     return () => unsubscribe();
   }, [enabled, buildingId, userId]);
 
-  return { floors: snapshot.floors, loading: snapshot.loading };
+  return { floors: snapshot.floors, loading: snapshot.loading, error: snapshot.error };
+}
+
+/**
+ * ADR-903 §6 — ο όροφος που **φιλοξενεί** ένα στοιχείο, από την αυθεντία (`floorId`), μέσα από την
+ * ΙΔΙΑ κοινή συνδρομή του κτιρίου (καμία επιπλέον ανάγνωση). Revit: το στοιχείο δεν «ξέρει» τον
+ * αριθμό του ορόφου του — τον ρωτά από το Level. `null` όσο φορτώνει ή αν δεν βρεθεί.
+ */
+export function useBuildingFloor(
+  buildingId: string | null | undefined,
+  floorId: string | null | undefined,
+): FloorOption | null {
+  const { floors } = useFloorsByBuilding(buildingId, Boolean(floorId));
+  return useMemo(() => floors.find((f) => f.id === floorId) ?? null, [floors, floorId]);
 }

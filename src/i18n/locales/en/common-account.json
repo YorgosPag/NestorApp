@@ -157,7 +157,9 @@
           "firstContactReceived": "New interest in my listings or my office",
           "tourAccessRequested": "Viewing requests for my 360° tours",
           "tourAccessAnswered": "Answers to my tour viewing requests",
-          "tourLinkOpened": "Openings of the personal tour links I send"
+          "tourLinkOpened": "Openings of the personal tour links I send",
+          "caseEngagementChanged": "Offers and access changes for conveyance cases (required)",
+          "caseEngagementAnswered": "Professionals' answers on my conveyance cases"
         },
         "tasks": {
           "title": "Tasks",

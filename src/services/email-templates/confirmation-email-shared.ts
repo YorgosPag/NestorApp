@@ -15,6 +15,8 @@
 
 import 'server-only';
 
+import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
+
 import { BRAND, escapeHtml, wrapInBrandedTemplate } from './base-email-template';
 
 export { BRAND, escapeHtml } from './base-email-template';
@@ -184,9 +186,14 @@ export interface BuyerConfirmationFields extends UnitPropertyFields {
   buyerName: string;
 }
 
-/** Floor suffix for the unit line — ` — 2ος όροφος` or `''`. */
+/**
+ * Floor suffix for the unit line — ` — 2ος Όροφος` / ` — Ισόγειο` or `''`. ADR-903: ο ΕΝΑΣ
+ * μορφοποιητής (το παλιό `${n}ος όροφος` έγραφε «0ος όροφος» για το ισόγειο).
+ */
 export function floorSuffix(unitFloor: number | null): string {
-  return unitFloor !== null && unitFloor !== undefined ? ` — ${unitFloor}ος όροφος` : '';
+  return unitFloor !== null && unitFloor !== undefined
+    ? ` — ${floorLabelIn({ number: unitFloor, kind: null }, 'el')}`
+    : '';
 }
 
 /**

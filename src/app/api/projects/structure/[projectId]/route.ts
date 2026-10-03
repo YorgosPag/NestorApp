@@ -29,6 +29,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { resolveSpaceStatuses } from '@/lib/spaces/space-status-split';
+import { readHostedFloor } from '@/lib/floor/hosted-floor';
 import { checkProjectAccess, PROJECT_NOT_FOUND_MESSAGE } from '../../_shared/project-ownership';
 
 const logger = createModuleLogger('ProjectStructureRoute');
@@ -182,7 +183,8 @@ export const GET = withStandardRateLimit(async function GET(
               // ADR-777 §8.60.20 — κάδος · διάθεση · λειτουργία από τον ΕΝΑ αναγνώστη.
               ...resolveSpaceStatuses(data),
               area: data.area,
-              floor: data.floor
+              // ADR-903 §6 — ο ένας αναγνώστης φιλοξενίας (παλιό κείμενο ⇒ parser).
+              ...readHostedFloor(data),
             };
           });
 
@@ -200,7 +202,8 @@ export const GET = withStandardRateLimit(async function GET(
               code: data.code || data.number || `P${parkingDoc.id.slice(-4)}`,
               type: data.type,
               ...resolveSpaceStatuses(data),
-              level: data.level,
+              // ADR-903 §6 — ήταν `level`, πεδίο που κανείς δεν γράφει: ο κόμβος δεν έδειχνε ποτέ όροφο.
+              ...readHostedFloor(data),
               area: data.area
             };
           });

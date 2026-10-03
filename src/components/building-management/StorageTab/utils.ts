@@ -23,7 +23,6 @@ export const filterUnits = (
     searchTerm: string, 
     filterType: StorageType | 'all', 
     filterStatus: string,
-    filterFloor: string
   ) => {
     return units.filter(unit => {
         const matchesSearch = unit.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,9 +30,7 @@ export const filterUnits = (
         const matchesType = filterType === 'all' || unit.type === filterType;
         // ADR-777 §8.60.20 — διάθεση από το `commercialStatus`, όχι από το παλιό ανάμεικτο `status`.
         const matchesStatus = matchesSpaceAvailability(unit, filterStatus);
-        const matchesFloor = filterFloor === 'all' || unit.floor === filterFloor;
-        
-        return matchesSearch && matchesType && matchesStatus && matchesFloor;
+        return matchesSearch && matchesType && matchesStatus;
       });
 }
 

@@ -701,7 +701,8 @@ export interface ParkingUpdatedPayload {
     type?: string;
     /** ADR-777 §8.60.20 — λειτουργική κατάσταση (το `status` είναι πλέον μόνο κύκλος ζωής). */
     operationalStatus?: string;
-    floor?: string;
+    /** ADR-903 §6 — ο όροφος-φιλοξενών (αυθεντία). */
+    floorId?: string | null;
     area?: number;
     price?: number;
     buildingId?: string | null;
@@ -748,7 +749,8 @@ export interface StorageUpdatedPayload {
     type?: string;
     /** ADR-777 §8.60.20 — λειτουργική κατάσταση (το `status` είναι πλέον μόνο κύκλος ζωής). */
     operationalStatus?: string;
-    floor?: string;
+    /** ADR-903 §6 — ο όροφος-φιλοξενών (αυθεντία). */
+    floorId?: string | null;
     area?: number;
     buildingId?: string | null;
     /** ADR-898 §19 — η θέση κατά την αντικειμενική (`null` = σβήστηκε η απάντηση). */

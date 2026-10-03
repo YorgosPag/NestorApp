@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { CommonBadge } from '@/core/badges';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import '@/lib/design-system';
 
 interface DetailsCardProps {
@@ -20,6 +21,8 @@ interface DetailsCardProps {
 }
 
 export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorData = false, isThreeColumnGrid = false }: DetailsCardProps) {
+    // ADR-903 — τα κλειδιά ορόφου είναι αριθμοί· η ετικέτα από τον ΕΝΑ μορφοποιητή.
+    const floorLabel = useFloorLabel();
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const spacing = useSpacingTokens();
@@ -56,7 +59,7 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
                     {Object.entries(data).slice(0, isFloorData ? 5 : undefined).map(([key, count]) => (
                         isFloorData ? (
                              <div key={key} className="flex items-center justify-between">
-                                <span className="text-xs truncate flex-1">{key}</span>
+                                <span className="text-xs truncate flex-1">{floorLabel(key) || key}</span>
                                 <CommonBadge
                                   status="company"
                                   customLabel={count.toString()}

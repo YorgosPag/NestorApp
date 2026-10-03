@@ -25,6 +25,7 @@ import {
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Property } from '@/types/property-viewer';
 import { dequal } from 'dequal';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SharedPropertiesProvider');
@@ -36,6 +37,12 @@ interface Floor {
   buildingId: string;
   properties: Property[];
 }
+
+/**
+ * Ο όροφος όπως τον χτίζει ο ακροατής — **χωρίς** ετικέτα. Η ετικέτα παράγεται στην απόδοση
+ * (ADR-903 `useFloorLabel`), ώστε αλλαγή γλώσσας να μη χρειάζεται νέο στιγμιότυπο Firestore.
+ */
+type RawFloor = Omit<Floor, 'name'>;
 
 interface SharedPropertiesContextType {
   properties: Property[];
@@ -59,17 +66,15 @@ interface SharedPropertiesContextType {
 
 const SharedPropertiesContext = createContext<SharedPropertiesContextType | null>(null);
 
-const getFloorLabel = (floor?: number): string => {
-    const level = typeof floor === 'number' ? floor : 0;
-    if (level === -1) return 'Υπόγειο';
-    if (level === 0) return 'Ισόγειο';
-    return `${level}ος Όροφος`;
-};
-
 export function SharedPropertiesProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [properties, setPropertiesState] = useState<Property[]>([]);
-  const [floors, setFloors] = useState<Floor[]>([]);
+  const [rawFloors, setFloors] = useState<RawFloor[]>([]);
+  const floorLabel = useFloorLabel();
+  const floors = useMemo<Floor[]>(
+    () => rawFloors.map((floor) => ({ ...floor, name: floorLabel(floor.level) })),
+    [rawFloors, floorLabel],
+  );
   const [isLoading, setIsLoading] = useState(false); // 🏢 CHANGE: Start false (lazy)
   /**
    * 🔴 **«ΑΠΑΝΤΗΣΕ Ο ΚΑΤΑΛΟΓΟΣ;» — ΤΟ ΓΕΓΟΝΟΣ ΠΟΥ ΕΛΕΙΠΕ** (ADR-777 §8.30).
@@ -108,7 +113,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   // different full docs. Without guard here, unnecessary setState → loop.
   // Also guard isLoading/error to avoid context invalidation on every emission.
   const lastFilteredPropertiesRef = useRef<Property[] | null>(null);
-  const lastFilteredFloorsRef = useRef<Floor[] | null>(null);
+  const lastFilteredFloorsRef = useRef<RawFloor[] | null>(null);
   const lastIsLoadingRef = useRef<boolean>(false);
   const lastErrorRef = useRef<string | null>(null);
 
@@ -198,9 +203,9 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         );
 
         // Build next state
-        let floorsArray: Floor[] = [];
+        let floorsArray: RawFloor[] = [];
         if (propertiesData.length > 0) {
-          const floorsMap = new Map<string, Floor>();
+          const floorsMap = new Map<string, RawFloor>();
           propertiesData.forEach(property => {
             if (!property.floorId) return;
             const floorKey = property.floorId;
@@ -208,7 +213,6 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
               const level = typeof property.floor === 'number' ? property.floor : 0;
               floorsMap.set(floorKey, {
                 id: floorKey,
-                name: getFloorLabel(level),
                 level: level,
                 buildingId: property.buildingId,
                 properties: []

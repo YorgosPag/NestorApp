@@ -18,7 +18,8 @@ import { Bed, Bath, Wrench } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
-import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
+import { formatNumber } from '@/lib/intl-utils';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
@@ -83,6 +84,7 @@ function displayAreaOf(property: Property): number | undefined {
 
 export function usePropertyGridModel(property: Property, showCommercialPrices = false): CardViewModel {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const floorLabel = useFloorLabel();
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
@@ -96,7 +98,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
         label: t('card.stats.floor'),
-        value: formatFloorLabel(property.floor),
+        value: floorLabel(property.floor),
       });
     }
 
@@ -140,7 +142,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
     }
 
     return items;
-  }, [property, showCommercialPrices, t]);
+  }, [property, showCommercialPrices, t, floorLabel]);
 
   const badges = useMemo<GridCardBadge[]>(() => {
     // Αδήλωτη ⇒ «Έτοιμο», όπως πάντα έκανε η κάρτα ακινήτου (αμετάβλητη συμπεριφορά).
@@ -165,6 +167,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
 
 export function usePropertyListModel(property: Property): CardViewModel {
   const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
+  const floorLabel = useFloorLabel();
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
@@ -177,7 +180,7 @@ export function usePropertyListModel(property: Property): CardViewModel {
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
         label: t('card.stats.floor'),
-        value: formatFloorLabel(property.floor),
+        value: floorLabel(property.floor),
       });
     }
 
@@ -194,7 +197,7 @@ export function usePropertyListModel(property: Property): CardViewModel {
     items.push(...buildPropertyPriceStats(property, t));
 
     return items;
-  }, [property, t]);
+  }, [property, t, floorLabel]);
 
   const badges = useMemo<GridCardBadge[]>(() => {
     const status = property.operationalStatus || property.status || 'ready';

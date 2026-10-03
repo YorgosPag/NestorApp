@@ -112,7 +112,9 @@ export function useFloorEntitiesForLinking({
     }));
 
     const filteredParking = floorId
-      ? parkingSpots.filter(p => p.floor === floorId)
+      // ADR-903 §6 — η θέση φιλοξενείται σε όροφο μέσω `floorId` (ως τις 2026-10-03 συγκρινόταν το ελεύθερο
+      // κείμενο `floor` με ταυτότητα εγγράφου ⇒ καμία θέση δεν εμφανιζόταν ποτέ για σύνδεση σε κάτοψη ορόφου).
+      ? parkingSpots.filter(p => p.floorId === floorId)
       : parkingSpots;
     const parkingEntities: LinkableEntity[] = filteredParking.map(p => ({
       id: p.id,

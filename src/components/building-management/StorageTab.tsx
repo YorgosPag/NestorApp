@@ -16,6 +16,8 @@ import { useRouter } from '@/lib/workspace/navigation';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
 import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
+import { FloorSelect } from '@/components/shared/FloorSelectField';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import type { Building } from '@/types/building/contracts';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 import { cn } from '@/lib/utils';
@@ -54,6 +56,7 @@ export function StorageTab({ building }: StorageTabProps) {
   const colors = useSemanticColors();
   const router = useRouter();
   const s = useStorageTabState(building);
+  const floorLabel = useFloorLabel();
   const hasAnyStorages = useHasAnyStorages();
 
   // ── Column & card definitions ──
@@ -63,13 +66,13 @@ export function StorageTab({ building }: StorageTabProps) {
   const storageColumns: SpaceColumn<StorageUnit>[] = useMemo(() => [
     { key: 'code', label: s.t('storageTable.columns.code'), sortValue: (u) => u.code, render: (u) => <span className="font-medium">{u.code}</span>, exportCell: (u) => u.code || null },
     { key: 'type', label: s.t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{s.translatedGetTypeLabel(u.type)}</span>, exportCell: (u) => s.translatedGetTypeLabel(u.type) },
-    buildFloorColumn<StorageUnit>(s.t('storageTable.columns.floor'), (u) => u.floor, colors.text.muted),
+    buildFloorColumn<StorageUnit>(s.t('storageTable.columns.floor'), colors.text.muted, floorLabel),
     buildAreaColumn<StorageUnit>(s.t('spaceColumns.area'), (u) => u.area || null),
     // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης)· στο αρχείο ποσό + μονάδα.
     ...buildPriceColumns<StorageUnit>({ price: s.t('storageTable.columns.price'), unit: s.t('spaceColumns.priceUnit') }, s.t, (u) => u.code),
     // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση· ποτέ το παλιό `status`.
     availabilityColumn,
-  ], [s.t, s.translatedGetTypeLabel, colors.text.muted, availabilityColumn]);
+  ], [s.t, s.translatedGetTypeLabel, colors.text.muted, availabilityColumn, floorLabel]);
 
   // Μία περιγραφή φίλτρων για την μπάρα ΚΑΙ για τις «Παραδοχές» της εξαγωγής (ADR-898 Φ4β).
   const filters = useStorageTabFilters({
@@ -92,10 +95,10 @@ export function StorageTab({ building }: StorageTabProps) {
 
   const storageCardFields: SpaceCardField<StorageUnit>[] = useMemo(() => [
     buildTypeCodeField(s.t('storageTable.columns.type'), (u) => s.translatedGetTypeLabel(u.type), (u) => u.code),
-    buildFloorField(s.t('storageTable.columns.floor'), (u) => u.floor),
+    buildFloorField<StorageUnit>(s.t('storageTable.columns.floor'), floorLabel),
     buildAreaField((u) => u.area),
     buildPriceField(s.t('storageTable.columns.price'), s.t),
-  ], [s.t, s.translatedGetTypeLabel]);
+  ], [s.t, s.translatedGetTypeLabel, floorLabel]);
 
   // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
   // της ίδιας καρτέλας να μη μπορούν να προσφέρουν διαφορετικές.
@@ -229,7 +232,14 @@ export function StorageTab({ building }: StorageTabProps) {
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Input value={s.editFloor} onChange={(e) => s.setEditFloor(e.target.value)} className="h-8 w-16" disabled={s.saving} />
+                  <FloorSelect
+                    buildingId={s.buildingId}
+                    value={s.editFloorId}
+                    onChange={(selection) => s.setEditFloorId(selection?.floorId ?? '')}
+                    fallbackFloor={s.editFloorId ? undefined : s.editLegacyFloor}
+                    triggerClassName="h-8"
+                    disabled={s.saving}
+                  />
                 </TableCell>
                 <TableCell>
                   <Input type="number" step="0.01" value={s.editArea} onChange={(e) => s.setEditArea(e.target.value)} className="h-8 w-16" disabled={s.saving} />

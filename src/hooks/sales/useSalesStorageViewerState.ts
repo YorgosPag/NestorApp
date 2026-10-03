@@ -12,6 +12,11 @@ import type { Storage } from '@/types/storage/contracts';
 import type { SalesSpaceFilterState } from '@/types/sales-shared';
 import { useSalesSpaceViewerState } from './useSalesSpaceViewerState';
 import { EMPTY_PRICE_RANGE } from '@/lib/properties/price-range';
+import { useCallback } from 'react';
+import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
+
+type FloorLabelFn = (value: FloorLabelInput) => string;
 
 // =============================================================================
 // 🏢 DEFAULTS
@@ -33,12 +38,13 @@ const DEFAULT_FILTERS: SalesSpaceFilterState = {
 // Declared at module scope so their identity is stable across renders — the
 // shared hook memoizes filtering on them.
 
-function matchesStorageSearch(storage: Storage, term: string): boolean {
+function matchesStorageSearch(storage: Storage, term: string, floorLabel: FloorLabelFn): boolean {
   return Boolean(
     storage.name?.toLowerCase().includes(term) ||
     storage.building?.toLowerCase().includes(term) ||
     storage.type?.toLowerCase().includes(term) ||
-    storage.floor?.toLowerCase().includes(term) ||
+    // ADR-903 §6 — αναζήτηση στην ΕΤΙΚΕΤΑ («υπόγειο»), όχι στον ωμό αριθμό.
+    floorLabel(hostedFloorRef(storage)).toLowerCase().includes(term) ||
     storage.description?.toLowerCase().includes(term)
   );
 }
@@ -49,12 +55,17 @@ function matchesStorageSearch(storage: Storage, term: string): boolean {
 
 export function useSalesStorageViewerState() {
   const { storages, loading, refetch } = useFirestoreStorages();
+  const floorLabel = useFloorLabel();
+  const matchesSearch = useCallback(
+    (storage: Storage, term: string) => matchesStorageSearch(storage, term, floorLabel),
+    [floorLabel],
+  );
 
   return useSalesSpaceViewerState<Storage, SalesSpaceFilterState>({
     items: storages,
     loading,
     refetch,
     defaultFilters: DEFAULT_FILTERS,
-    matchesSearch: matchesStorageSearch,
+    matchesSearch,
   });
 }

@@ -12,6 +12,11 @@ import type { ParkingSpot } from '@/types/parking';
 import type { SalesSpaceFilterState } from '@/types/sales-shared';
 import { useSalesSpaceViewerState } from './useSalesSpaceViewerState';
 import { EMPTY_PRICE_RANGE } from '@/lib/properties/price-range';
+import { useCallback } from 'react';
+import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
+
+type FloorLabelFn = (value: FloorLabelInput) => string;
 
 // =============================================================================
 // 🏢 EXTENDED FILTER (parking has locationZone)
@@ -38,12 +43,13 @@ const DEFAULT_FILTERS: SalesParkingFilterState = {
 // Declared at module scope so their identity is stable across renders — the
 // shared hook memoizes filtering on them.
 
-function matchesParkingSearch(spot: ParkingSpot, term: string): boolean {
+function matchesParkingSearch(spot: ParkingSpot, term: string, floorLabel: FloorLabelFn): boolean {
   return Boolean(
     spot.number?.toLowerCase().includes(term) ||
     spot.location?.toLowerCase().includes(term) ||
     spot.notes?.toLowerCase().includes(term) ||
-    spot.floor?.toLowerCase().includes(term)
+    // ADR-903 §6 — αναζήτηση στην ΕΤΙΚΕΤΑ («υπόγειο»), όχι στον ωμό αριθμό.
+    floorLabel(hostedFloorRef(spot)).toLowerCase().includes(term)
   );
 }
 
@@ -57,13 +63,18 @@ function matchesParkingZone(spot: ParkingSpot, filters: SalesParkingFilterState)
 
 export function useSalesParkingViewerState() {
   const { parkingSpots, loading, refetch } = useFirestoreParkingSpots();
+  const floorLabel = useFloorLabel();
+  const matchesSearch = useCallback(
+    (spot: ParkingSpot, term: string) => matchesParkingSearch(spot, term, floorLabel),
+    [floorLabel],
+  );
 
   return useSalesSpaceViewerState<ParkingSpot, SalesParkingFilterState>({
     items: parkingSpots,
     loading,
     refetch,
     defaultFilters: DEFAULT_FILTERS,
-    matchesSearch: matchesParkingSearch,
+    matchesSearch,
     matchesExtraFilters: matchesParkingZone,
   });
 }

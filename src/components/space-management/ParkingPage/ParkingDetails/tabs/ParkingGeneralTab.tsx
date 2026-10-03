@@ -31,7 +31,6 @@ import {
 } from '@/services/parking-mutation-gateway';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LabeledInputField } from '@/components/shared/space-info/LabeledInputField';
-import { SpaceFloorCard } from '@/components/shared/space-info/SpaceFloorCard';
 import {
   createSpaceDraft,
   createSpacePatch,
@@ -43,11 +42,10 @@ import { useSpaceFormState } from '@/components/shared/space-info/useSpaceFormSt
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useParkingNotifications } from '@/hooks/notifications/useParkingNotifications';
-import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/properties.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
-import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
+import { useSpaceLocation } from '@/components/shared/space-info/useSpaceLocation';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { useSpaceGeneralSave } from '@/hooks/useSpaceGeneralSave';
 import { SpaceCommercialCard, useSpaceCommercial } from '@/components/shared/commercial';
@@ -146,7 +144,7 @@ export function ParkingGeneralTab({
     initialParentId: parking.buildingId ?? null,
     loadOptions: loadBuildings,
     saveMode: 'form',
-    cascadingResets: [{ resetField: 'floor' }],
+    cascadingResets: [{ resetField: 'floorId' }],
     onCascadingReset: (resets) => resets.forEach(r => updateField(r.field as keyof ParkingFormState, r.value)),
     icon: NAVIGATION_ENTITIES.building.icon,
     iconColor: NAVIGATION_ENTITIES.building.color,
@@ -223,24 +221,18 @@ export function ParkingGeneralTab({
     return true;
   }, [form, parking, onEditingChange, buildingLink, versioned.save, commercial]);
 
+  // ADR-903 §6 — κτίριο + όροφος (ο όροφος του κωδικού παράγεται από το `floorId`).
+  const location = useSpaceLocation({
+    buildingLink, entity: parking, floorId: form.floorId, onFloorIdChange: (id) => updateField('floorId', id),
+    t, disabled: !isEditing, gridClassName: 'grid grid-cols-1 md:grid-cols-2 gap-4',
+  });
+
   useSpaceGeneralSave({ createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, logger });
 
   return (
     <div className="p-4 space-y-4">
       {/* Building Link + Floor — side by side at the top */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
-        <SpaceFloorCard
-          buildingId={buildingLink.linkedId}
-          value={form.floor}
-          valueMode="floor"
-          fallbackFloor={form.floor}
-          onChange={(v: string) => updateField('floor', v)}
-          label={t('general.fields.floor')}
-          noBuildingHint={t('entityLinks.building.noFloorHint')}
-          disabled={!isEditing}
-        />
-      </div>
+      {location.section}
 
       {/* Basic Information Card */}
       <Card>
@@ -258,7 +250,7 @@ export function ParkingGeneralTab({
               onChange={(v) => updateField('code', v)}
               entityType="parking"
               buildingId={buildingLink.linkedId || ''}
-              floorLevel={parseFloorLevel(form.floor ?? '')}
+              floorLevel={location.hostFloor?.number ?? ''}
               locationZone={parking.locationZone || undefined}
               label={t('general.fields.code')}
               placeholderFallback="A-PK-Y1.01"

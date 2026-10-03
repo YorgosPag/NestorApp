@@ -15,8 +15,8 @@
       "reason": "70.689 bytes — the other big one, and the one this ADR originally set out to delete from the synchronous path. `src/app/admin/layout.tsx` IS a shell root, so the admin chrome is key-sliced correctly; the admin PAGES underneath it are not. Releases with per-route slices for /admin/*."
     },
     "navigation": {
-      "budget": 22800,
-      "reason": "21.321 bytes — sidebar/topbar labels plus per-page navigation copy."
+      "budget": 14500,
+      "reason": "13.903 bytes (2026-10-03) — ΜΟΝΟ το μενού της εφαρμογής: sidebar · personal · module · jobs · menu · toolbar/actions (κοινά προθέματα). 🔴 ADR-744 §26 — ΔΕΥΤΕΡΗ ΕΜΦΑΝΙΣΗ ΤΗΣ ΚΛΑΣΗΣ ΤΟΥ ADR-777 §8.38: το namespace κουβαλούσε και το λεξιλόγιο ΜΙΑΣ ΣΕΛΙΔΑΣ — του ιεραρχικού πλοηγητή `/navigation` (dialogs · tree · columns · buildingSpaces · modals · page · mobile, 8.847 bytes) — που το κέλυφος ΔΕΝ ζητά, σε κάθε διαδρομή. Το `personal.items.myCases` (ADR-901 Φ2) το έσπρωξε στα 22.808 / 22.800· θεραπεία ΜΕΤΑΚΟΜΙΣΗ στο `hierarchy-navigator` (lazy, `ssr: false`), όχι μεγαλύτερος αριθμός. Το ταβάνι ΧΑΜΗΛΩΣΕ 22.800 → 14.500 (μέτρηση + ~4%) ώστε η πρόοδος να κλειδώσει. ⚠️ Νέο κείμενο ΣΕΛΙΔΑΣ εδώ = λάθος σπίτι."
     },
     "common-actions": {
       "budget": 900,
@@ -75,6 +75,10 @@
       "dragger": "src/hooks/notifications/useFilesNotifications.ts",
       "reason": "ΕΝΑΣ καταναλωτης, και ειναι ο λογος που δεν φευγει: το hook ειδοποιησεων τρεχει στην κεφαλιδα, δηλαδη σε καθε σελιδα, και συνθετει κειμενο ειδοποιησης χωρις να ξερει σε ποια διαδρομη βρισκεται ο ανθρωπος."
     },
+    "floors": {
+      "dragger": "src/lib/floor/floor-label.ts",
+      "reason": "ADR-903 — Η ΜΙΑ ετικετα οροφου (11 κλειδια, ~0,6 KB). Τη ζητουν δυο επιφανειες του κελυφους που βαφουν οροφο: η καθολικη αναζητηση (extraShellRoot, βαφεται στον server μεσα στην κεφαλιδα — στατιστικο οροφου σε αποτελεσματα parking/αποθηκης) και ο SharedPropertiesProvider του layout (ονοματα οροφων). Η εναλλακτικη ηταν ΑΚΡΙΒΩΣ η κλαση που κλεινει το ADR-903: ωμο «-1» / «basement-2» στην οθονη, ή δευτερος χειρογραφος μορφοποιητης. Υποψηφιο για αποχωρηση αν ο provider σταματησει να βγαζει ετικετες (δεδομενα, οχι γλωσσα)."
+    },
     "projects": {
       "dragger": "src/components/projects/procurement/BackToProjectLink.tsx",
       "reason": "ΕΝΑΣ καταναλωτης, ενας συνδεσμος επιστροφης — και μπαινει στην κλειστοτητα μεσω αλυσιδας εισαγωγων του κελυφους, οχι επειδη το θελει καποια σελιδα. Υποψηφιο για αφαιρεση μολις σπασει η αλυσιδα."
@@ -89,9 +93,9 @@
     }
   },
   "shellNamespacesSeal": {
-    "count": 8,
-    "at": "2026-09-05",
-    "why": "Σφραγιση της πρωτης μετρησης: 18 namespaces στο κελυφος = 10 ολοκληρα (guaranteedNamespaces) + 8 key-sliced. Ο αριθμος 8 ΔΕΝ επιλεχθηκε — μετρηθηκε απο το shell-slice.el.json μειον το shell-slice.whole.json την ημερα που γραφτηκε η απογραφη. Στοχος το μηδεν, μαζι με τα per-route slices."
+    "count": 9,
+    "at": "2026-10-03",
+    "why": "ADR-903: +1 (floors) — η ΜΙΑ ετικετα οροφου, που αντικατεστησε 8 χειρογραφους μορφοποιητες με ελληνικα στον κωδικα. Σκοπιμη οικογενεια κειμενου: ο οροφος βαφεται απο δυο επιφανειες του κελυφους (καθολικη αναζητηση · SharedPropertiesProvider). 11 κλειδια ~0,6 KB. Η προηγουμενη σφραγιση (8, 2026-09-05) μετρηθηκε· αυτη ειναι 8 + 1 δηλωμενο με dragger, οχι νεα μετρηση. Στοχος παραμενει το μηδεν."
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {

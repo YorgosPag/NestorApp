@@ -25,6 +25,7 @@ import {
   buildPriceColumns,
 } from '../shared';
 import { propertyDisplayArea } from '@/lib/properties/property-display-area';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import {
   UNIT_STATUS_COLOR_MAP,
   getPropertyTypeLabel,
@@ -68,6 +69,7 @@ export function usePropertyTabColumns(
   tUnits: TFn,
   mutedTextClass: string,
 ): SpaceColumn<Property>[] {
+  const floorLabel = useFloorLabel();
   return useMemo(() => [
     {
       key: 'name',
@@ -84,7 +86,7 @@ export function usePropertyTabColumns(
       render: (u) => <span className={mutedTextClass}>{getPropertyTypeLabel(u.type, tUnits)}</span>,
       exportCell: (u) => getPropertyTypeLabel(u.type, tUnits),
     },
-    buildFloorColumn<Property>(t('storageTable.columns.floor'), (u) => u.floor, mutedTextClass),
+    buildFloorColumn<Property>(t('storageTable.columns.floor'), mutedTextClass, floorLabel),
     buildAreaColumn<Property>(t('spaceColumns.area'), propertyDisplayArea),
     ...buildPriceColumns<Property>({ price: t('storageTable.columns.price'), unit: t('spaceColumns.priceUnit') }, tUnits, (u) => u.name),
     {
@@ -95,7 +97,7 @@ export function usePropertyTabColumns(
       render: (u) => renderUnitStatusBadge(u.status, tUnits),
       exportCell: (u) => getPropertyStatusLabel(u.status, tUnits),
     },
-  ], [t, tUnits, mutedTextClass]);
+  ], [t, tUnits, mutedTextClass, floorLabel]);
 }
 
 /**
@@ -107,10 +109,11 @@ export function usePropertyTabColumns(
 // `priceLabel` από τον καλούντα: το `table.price` που διάβαζε η κάρτα ζει ΜΟΝΟ στο namespace `price-map` — στην οθόνη
 // έβγαινε ωμό κλειδί (βρέθηκε στη ζωντανή επαλήθευση της εξαγωγής, ADR-898 Φ4β).
 export function usePropertyTabCardFields(tUnits: TFn, priceLabel: string): SpaceCardField<Property>[] {
+  const floorLabel = useFloorLabel();
   return useMemo(() => [
     buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
-    buildFloorField(tUnits('card.stats.floor'), (u) => (u.floor != null ? String(u.floor) : undefined)),
+    buildFloorField<Property>(tUnits('card.stats.floor'), floorLabel),
     buildAreaField((u) => propertyDisplayArea(u) ?? undefined),
     buildPriceField(priceLabel, tUnits),
-  ], [tUnits, priceLabel]);
+  ], [tUnits, priceLabel, floorLabel]);
 }

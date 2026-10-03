@@ -33,6 +33,9 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
+import { parseLegacyFloor } from '@/lib/floor/floor-ref';
+import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 
 // =============================================================================
 // Raw value pickers
@@ -73,40 +76,22 @@ export function pickShowcaseNumberOrUndefined(value: unknown): number | undefine
 // Floor label
 // =============================================================================
 
-const FLOOR_ORDINAL_SUFFIX_EN: Record<number, string> = { 1: 'st', 2: 'nd', 3: 'rd' };
-
-function formatBasementLabel(num: number, locale: EnumLocale): string {
-  if (num === -1) return locale === 'el' ? 'Υπόγειο' : 'Basement';
-  const depth = Math.abs(num);
-  // NOTE (ADR-701 §8): the EN branch reads "3nd Basement" for depths past 2 —
-  // a wrong ordinal inherited verbatim from the parking/storage originals.
-  // Preserved so this refactor stays output-identical; see ADR-701 for the
-  // pending decision to correct it.
-  return locale === 'el' ? `${depth}ο Υπόγειο` : `${depth}nd Basement`;
-}
-
 /**
- * Human floor label for a raw Firestore `floor` field.
+ * Human floor label for a raw Firestore `floor` field (ADR-903).
  *
- * Numeric strings become locale-aware labels (`0` → Ισόγειο / Ground Floor,
- * negatives → basements, positives → ordinals). Anything non-numeric is passed
- * through trimmed, so free-text floors ("Δώμα", "Mezzanine") survive intact.
- * Returns `null` for empty input.
+ * The ONE parser (`parseLegacyFloor`: numbers, "-1", «Ισόγειο», «Δώμα», `basement-2`…) feeds the
+ * ONE formatter, in the RECIPIENT's language — so «Δώμα» now reads «Roof» in English and the
+ * inherited "3nd Basement" (ADR-701 §8) is gone. Unrecognised text passes through trimmed
+ * ("1A"). Returns `null` for empty input.
  */
 export function formatShowcaseFloorLabel(
   raw: unknown,
   locale: EnumLocale,
 ): string | null {
-  const text = pickShowcaseString(raw);
+  const text = typeof raw === 'number' ? String(raw) : pickShowcaseString(raw);
   if (text === null) return null;
-
-  const num = parseInt(text, 10);
-  if (Number.isNaN(num) || String(num) !== text) return text;
-
-  if (num < 0) return formatBasementLabel(num, locale);
-  if (num === 0) return locale === 'el' ? 'Ισόγειο' : 'Ground Floor';
-  if (locale === 'el') return `${num}ος Όροφος`;
-  return `${num}${FLOOR_ORDINAL_SUFFIX_EN[num] ?? 'th'} Floor`;
+  const ref = parseLegacyFloor(typeof raw === 'number' ? raw : text);
+  return ref === null ? text : floorLabelIn(ref, locale);
 }
 
 // =============================================================================
@@ -145,8 +130,15 @@ export function buildShowcaseMetricFields(
   return {
     area: pickShowcaseNumber(raw.area),
     price: pickShowcaseNumber(raw.price),
-    floor: formatShowcaseFloorLabel(raw.floor, locale),
+    // ADR-903 §6 — αριθμός ΚΑΙ είδος (πυλωτή ≠ ισόγειο)· παλιό κείμενο χωρίς parser περνά αυτούσιο.
+    floor: formatShowcaseHostedFloor(raw, locale),
   };
+}
+
+/** Ο όροφος ενός φιλοξενούμενου εγγράφου (`floor` + `floorKind`) στη γλώσσα του παραλήπτη. */
+export function formatShowcaseHostedFloor(raw: Record<string, unknown>, locale: EnumLocale): string | null {
+  const ref = hostedFloorRef(raw);
+  return ref === null ? formatShowcaseFloorLabel(raw.floor, locale) : floorLabelIn(ref, locale);
 }
 
 // =============================================================================

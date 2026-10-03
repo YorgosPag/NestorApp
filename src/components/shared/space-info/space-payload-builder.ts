@@ -77,7 +77,11 @@ export interface CommonSpaceFormSlice {
   code: string;
   /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`''` = αδήλωτη). Κοινή σε θέση και αποθήκη. */
   operationalStatus: OperationalStatusDraft;
-  floor: string;
+  /**
+   * ADR-903 §6 — ο όροφος που φιλοξενεί τον χώρο (`''` = κανένας). **Μόνο** η αυθεντία: ο αριθμός
+   * και το είδος παράγονται (`useBuildingFloor` στην οθόνη, ο server στην αποθήκευση).
+   */
+  floorId: string;
   /** Raw numeric input. */
   area: string;
   description: string;
@@ -87,7 +91,7 @@ export interface CommonSpaceFormSlice {
 /** The stored counterpart of {@link CommonSpaceFormSlice}. */
 export interface CommonSpaceEntitySlice extends SpaceStatusSource {
   code?: string | null;
-  floor?: string | null;
+  floorId?: string | null;
   area?: number | null;
   description?: string | null;
   notes?: string | null;
@@ -157,7 +161,7 @@ export function createSpaceDraft(
   // ADR-777 §8.60.20 — αδήλωτη ⇒ ο server βάζει την προεπιλογή (ίδια με τη γέννηση ακινήτου).
   draft.optionalText('operationalStatus', form.operationalStatus);
   draft.optionalText('buildingId', buildingId);
-  draft.optionalText('floor', form.floor);
+  draft.optionalText('floorId', form.floorId);
   draft.optionalNumber('area', form.area);
   draft.optionalText('description', form.description);
   draft.optionalText('notes', form.notes);
@@ -177,7 +181,7 @@ export function createSpacePatch(
   patch.nullableTextChanged('code', form.code, entity.code);
   // ADR-777 §8.60.20 — κρίνεται απέναντι στο αποθηκευμένο μέσω του ΕΝΟΣ αναγνώστη (και για παλιά έγγραφα).
   patch.merge(operationalPatchOf(form.operationalStatus, entity));
-  patch.textChanged('floor', form.floor, entity.floor);
+  patch.nullableTextChanged('floorId', form.floorId, entity.floorId);
   patch.nullableNumberChanged('area', form.area, entity.area);
   patch.textChanged('description', form.description, entity.description);
   patch.textChanged('notes', form.notes, entity.notes);
@@ -193,7 +197,8 @@ export function createSpacePatch(
 export interface SpaceRealtimeUpdates {
   type?: string;
   operationalStatus?: string;
-  floor?: string;
+  /** ADR-903 §6 — η αυθεντία· οι ακροατές ξαναδιαβάζουν το αντίγραφο από τον server. */
+  floorId?: string | null;
   area?: number;
   buildingId?: string | null;
 }
@@ -206,7 +211,7 @@ export function buildSpaceRealtimeUpdates(
   return {
     type: form.type,
     operationalStatus: form.operationalStatus || undefined,
-    floor: form.floor.trim() || undefined,
+    floorId: form.floorId.trim() || null,
     area: parseOptionalNumber(form.area),
     buildingId,
   };

@@ -22,7 +22,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useLevelsContext } from '../../systems/levels/LevelsSystem';
 import { useFloorsByBuilding, type FloorOption } from '@/components/properties/shared/useFloorsByBuilding';
-import { generateAutoLongName, inferKindFromNumber } from '@/utils/floor-naming';
+import { inferKindFromNumber } from '@/utils/floor-naming';
+import { canonicalFloorLongName } from '@/lib/floor/floor-label-bundle';
 import { useViewMode3DStore, type Floor3DScope } from '../../bim-3d/stores/ViewMode3DStore';
 import type { FloorVisMode } from '../../bim-3d/utils/floor-visibility-state';
 
@@ -58,11 +59,11 @@ export interface UseFloorTabsResult {
   readonly onToggleFloorVisible: (tab: FloorTab) => void;
 }
 
-/** Resolve the Greek label for a floor, reusing the ADR-369 naming SSoT. */
+/** Resolve the Greek label for a floor, reusing the ADR-369 naming SSoT (ADR-903 canonical long name). */
 function floorLabel(floor: FloorOption): string {
   if (floor.longName) return floor.longName;
   if (floor.name) return floor.name;
-  return generateAutoLongName(floor.kind ?? inferKindFromNumber(floor.number), floor.number);
+  return canonicalFloorLongName(floor.kind ?? inferKindFromNumber(floor.number), floor.number);
 }
 
 export function useFloorTabs(): UseFloorTabsResult {

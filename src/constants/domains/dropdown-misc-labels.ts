@@ -91,12 +91,7 @@ export const STORAGE_LABELS = {
   BUILDING_C: 'building.names.buildingC',
   BUILDING_D: 'building.names.buildingD',
   BUILDING_E: 'building.names.buildingE',
-  BASEMENT_MINUS_2: 'building.floors.basementMinus2',
-  BASEMENT_MINUS_1: 'building.floors.basementMinus1',
-  GROUND_FLOOR: 'building.floors.ground',
-  FIRST_FLOOR: 'building.floors.floor1',
-  SECOND_FLOOR: 'building.floors.floor2',
-  OTHER_FLOORS: 'building.floors.other'
+  // ADR-903 §6 — οι ετικέτες ορόφων ΔΕΝ ζουν εδώ: ένας μορφοποιητής (`useFloorLabel`, namespace `floors`).
 } as const;
 
 
