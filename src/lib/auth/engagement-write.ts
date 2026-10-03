@@ -29,6 +29,7 @@ import { parseEngagement } from './engagement-schema';
 import { engagementRef, engagementsCollection, engagementsForSubjectQuery } from './engagement-ref';
 import {
   LIVE_ENGAGEMENT_STATES,
+  type DeclaredCredential,
   type Engagement,
   type EngagementConsent,
   type EngagementKey,
@@ -133,12 +134,83 @@ export function offerEngagement(db: Firestore, request: EngagementOfferRequest):
 }
 
 // =============================================================================
+// ΕΞΑΡΓΥΡΩΣΗ ΠΡΟΣΚΛΗΣΗΣ (ADR-901 Φ3) — μέσα στη συναλλαγή της μηχανής ADR-853
+// =============================================================================
+
+/** Ό,τι γράφει η αποδοχή πρόσκλησης με email — η πρόταση **και** η απάντηση, σε ένα βήμα. */
+export interface EngagementInvitationAcceptance extends EngagementOfferRequest {
+  readonly invitationId: string;
+  readonly declaredCredential: DeclaredCredential;
+}
+
+export type EngagementInvitationStage =
+  | { readonly outcome: 'refused'; readonly reason: 'slot-occupied' | 'role-conflict' | 'unreadable' }
+  /** `write()` καλείται από τη μηχανή **μετά** τη σφράγιση της πρόσκλησης — επιστρέφει τη συμμετοχή. */
+  | { readonly outcome: 'commit'; write(): Engagement };
+
+/**
+ * **Αποδοχή του συνδέσμου = αποδοχή της συμμετοχής** (πρότυπο Figma/Google Docs: «Accept invite» ⇒ μέσα).
+ * Ο σύνδεσμος υπάρχει **ακριβώς επειδή** δεν υπήρχε λογαριασμός για πρόταση `offered`· η ρητή «ναι» του
+ * Entra B2B δίνεται με το ίδιο κλικ, μαζί με τη δήλωση ιδιότητας (Ε-4).
+ *
+ * 🔑 **Αναγνώσεις τώρα, γραφές στο `write()`** (κανόνας Firestore — βλ. `InvitationAcceptance`). Η ίδια κρίση
+ * `judgeOffer` με την πρόταση: δεύτερη αποδοχή ⇒ **η ίδια** συμμετοχή · πρόταση `offered` στον ίδιο (ο
+ * οικοδεσπότης πρόλαβε αφού φτιάχτηκε ο λογαριασμός) ⇒ γίνεται `active` · άλλος στη θέση ⇒ άρνηση.
+ */
+export async function stageEngagementByInvitation(
+  db: Firestore,
+  tx: Transaction,
+  request: EngagementInvitationAcceptance,
+): Promise<EngagementInvitationStage> {
+  const { live, unreadable } = await readLiveForSubject(db, tx, request, request.subject);
+  if (unreadable) return { outcome: 'refused', reason: 'unreadable' };
+  const existing = judgeOffer(live, request);
+  if (existing && existing.outcome !== 'already-live') return { outcome: 'refused', reason: existing.outcome };
+
+  const acceptance: EngagementTransition = { kind: 'accept', byUid: request.uid, declaredCredential: request.declaredCredential };
+  const accepted = existing === null ? null : planTransition(existing.engagement, acceptance, request.nowMs);
+  if (accepted?.outcome === 'noop') return { outcome: 'commit', write: () => accepted.engagement };
+  if (accepted?.outcome === 'changed') return { outcome: 'commit', write: () => setEngagement(db, tx, accepted.after) };
+  // Καμία ζωντανή — ή πρόταση που μόλις έληξε (γράφεται `expired`, ονομασμένα) — ⇒ νέα, **ήδη ενεργή**.
+  const fresh = activeByInvitation(request);
+  return {
+    outcome: 'commit',
+    write: () => {
+      if (accepted?.outcome === 'offer-expired') setEngagement(db, tx, accepted.engagement);
+      tx.create(engagementRef(db, { ...request, engagementId: fresh.id }), fresh);
+      return fresh;
+    },
+  };
+}
+
+function activeByInvitation(request: EngagementInvitationAcceptance): Engagement {
+  const offered = newEngagement(request);
+  return {
+    ...offered,
+    state: 'active',
+    expiresAt: activeExpiresAt(request.nowMs),
+    respondedAt: offered.offeredAt,
+    origin: { ...request.origin, invitationId: request.invitationId },
+    declaredCredential: request.declaredCredential,
+  };
+}
+
+function setEngagement(db: Firestore, tx: Transaction, engagement: Engagement): Engagement {
+  tx.set(engagementRef(db, { ...engagement, engagementId: engagement.id }), engagement);
+  return engagement;
+}
+
+// =============================================================================
 // ΜΕΤΑΒΑΣΕΙΣ ΕΝΟΣ ΕΓΓΡΑΦΟΥ
 // =============================================================================
 
 /** Η απόφαση του **καλεσμένου** ή του **οικοδεσπότη** πάνω σε μία συμμετοχή. */
 export type EngagementTransition =
-  | { readonly kind: 'accept'; readonly byUid: string }
+  /**
+   * ADR-901 Ε-4 · Φ4 — η αποδοχή **φέρει** τη δήλωση ιδιότητας: ενεργή συμμετοχή χωρίς δήλωση είναι
+   * **δομικά αδύνατη**, από όποια διαδρομή κι αν έρθει (πρόταση `offered` ή πρόσκληση με email).
+   */
+  | { readonly kind: 'accept'; readonly byUid: string; readonly declaredCredential: DeclaredCredential }
   | { readonly kind: 'decline'; readonly byUid: string }
   /** Οικοδεσπότης: `offered` ⇒ withdrawn · `active` ⇒ revoked (άμεσα, ADR-787 Ε-2 §5). */
   | { readonly kind: 'end'; readonly byUid: string };
@@ -160,7 +232,8 @@ function stamp(before: Engagement, nowMs: number, changes: Partial<Engagement>):
 }
 
 /** Η απάντηση του καλεσμένου — **μόνο** σε `offered`, **μόνο** ο ίδιος. */
-function planResponse(e: Engagement, accept: boolean, nowMs: number): Planned {
+function planResponse(e: Engagement, answer: Exclude<EngagementTransition, { kind: 'end' }>, nowMs: number): Planned {
+  const accept = answer.kind === 'accept';
   const target = accept ? 'active' : 'declined';
   if (e.state === target) return { outcome: 'noop', engagement: e };
   if (e.state !== 'offered') return { outcome: 'not-allowed', engagement: e };
@@ -171,8 +244,8 @@ function planResponse(e: Engagement, accept: boolean, nowMs: number): Planned {
   if (expiresAtMs === null || expiresAtMs <= nowMs) {
     return { outcome: 'offer-expired', engagement: { ...e, state: 'expired', closedAt: at, updatedAt: at } };
   }
-  return accept
-    ? stamp(e, nowMs, { state: 'active', respondedAt: at, expiresAt: activeExpiresAt(nowMs) })
+  return answer.kind === 'accept'
+    ? stamp(e, nowMs, { state: 'active', respondedAt: at, expiresAt: activeExpiresAt(nowMs), declaredCredential: answer.declaredCredential })
     : stamp(e, nowMs, { state: 'declined', respondedAt: at, closedAt: at });
 }
 
@@ -189,7 +262,7 @@ export function planTransition(e: Engagement, transition: EngagementTransition, 
   if (transition.kind === 'end') return planEnd(e, transition.byUid, nowMs);
   // Μόνο ο ίδιος ο καλεσμένος απαντά — ο οικοδεσπότης δεν «αποδέχεται για λογαριασμό του».
   if (e.uid !== transition.byUid) return { outcome: 'not-allowed', engagement: e };
-  return planResponse(e, transition.kind === 'accept', nowMs);
+  return planResponse(e, transition, nowMs);
 }
 
 /** Εφαρμογή μετάβασης σε **ένα** έγγραφο, μέσα σε συναλλαγή. */

@@ -20,15 +20,9 @@ import { listContactLinks } from './contact-link.service';
 import type {
   ProfessionalSnapshot,
   LegalProfessionalRole,
-  LawyerSnapshotData,
-  NotarySnapshotData,
 } from '@/types/legal-contracts';
 import type { PersonaData } from '@/types/contacts/personas';
-import {
-  findActivePersona,
-  isLawyerPersona,
-  isNotaryPersona,
-} from '@/types/contacts/personas';
+import { legalRoleRegistryData } from '@/lib/contacts/legal-professional-credentials';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ProfessionalSnapshotService');
@@ -72,7 +66,7 @@ export async function snapshotProfessionals(
       const role = link.role as LegalProfessionalRole;
       const personas: PersonaData[] = contactData.personas ?? [];
 
-      const roleSpecificData = buildRoleSpecificData(role, personas);
+      const roleSpecificData = legalRoleRegistryData(role, personas);
 
       snapshots.push({
         contactId: link.sourceContactId,
@@ -93,37 +87,4 @@ export async function snapshotProfessionals(
     logger.error('Failed to snapshot professionals:', error);
     return [];
   }
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function buildRoleSpecificData(
-  role: LegalProfessionalRole,
-  personas: PersonaData[]
-): LawyerSnapshotData | NotarySnapshotData {
-  if (role === 'notary') {
-    const notaryPersona = findActivePersona(personas, 'notary');
-    return {
-      type: 'notary',
-      notaryRegistryNumber: (notaryPersona && isNotaryPersona(notaryPersona))
-        ? notaryPersona.notaryRegistryNumber
-        : null,
-      notaryDistrict: (notaryPersona && isNotaryPersona(notaryPersona))
-        ? notaryPersona.notaryDistrict
-        : null,
-    };
-  }
-
-  const lawyerPersona = findActivePersona(personas, 'lawyer');
-  return {
-    type: 'lawyer',
-    barAssociationNumber: (lawyerPersona && isLawyerPersona(lawyerPersona))
-      ? lawyerPersona.barAssociationNumber
-      : null,
-    barAssociation: (lawyerPersona && isLawyerPersona(lawyerPersona))
-      ? lawyerPersona.barAssociation
-      : null,
-  };
 }

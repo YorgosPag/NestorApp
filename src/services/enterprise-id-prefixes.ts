@@ -443,6 +443,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   CONTRACT: 'lc',
   CONVEYANCE_CASE: 'cvc',     // ADR-901 Φ1 — υπόθεση μεταβίβασης (`conveyance_cases`)
   ENGAGEMENT: 'eng',          // ADR-862 Φ1 — συμμετοχή σε υπόθεση (`projects/{p}/engagements`)
+  ENGAGEMENT_INVITATION: 'einv', // ADR-901 Φ3 — πρόσκληση με email σε επαγγελματία χωρίς λογαριασμό· επαναποστολή = νέο id (ADR-853 §20)
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
   COMMISSION: 'com',

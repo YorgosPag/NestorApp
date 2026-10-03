@@ -23,6 +23,7 @@
  * @see lib/auth/engagement-write.ts — ο ΕΝΑΣ γραφέας
  */
 
+import type { ChapteredRegistryId } from '@/constants/professional-registries';
 import type { ScopedGrant } from '@/lib/auth/scoped-grant';
 import type { CdeAudience } from '@/types/container-access';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -58,6 +59,11 @@ export const LIVE_ENGAGEMENT_STATES: readonly EngagementState[] = ['offered', 'a
 
 /** Οι ρόλοι νομικών επαγγελματιών — **το ίδιο** λεξιλόγιο με το `ProfessionalsCard` (SSoT). */
 export const LEGAL_ENGAGEMENT_ROLES = ['seller_lawyer', 'buyer_lawyer', 'notary'] as const satisfies readonly LegalProfessionalRole[];
+
+/** Φρουρός για τιμή **από έξω** (τμήμα URL · σώμα) — ο ΕΝΑΣ, δίπλα στο λεξιλόγιο. */
+export function isLegalEngagementRole(value: unknown): value is LegalProfessionalRole {
+  return typeof value === 'string' && (LEGAL_ENGAGEMENT_ROLES as readonly string[]).includes(value);
+}
 
 /**
  * Τα εύρη μιας συμμετοχής — κρίνονται **μόνο** από το `evaluateScopedGrant` (ADR-884 Φ0.5).
@@ -103,6 +109,32 @@ export interface EngagementOrigin {
   readonly kind: 'professional_appointment';
   /** Η επαφή του επαγγελματία στο `ProfessionalsCard` — η ταυτότητα **στο βιβλίο** του οικοδεσπότη. */
   readonly contactId: string;
+  /** ADR-901 Φ3 — η πρόσκληση με email που **εξαργυρώθηκε** (`einv_…`)· απόν ⇒ πρόταση σε υπάρχοντα λογαριασμό. */
+  readonly invitationId?: string;
+}
+
+/**
+ * **Ποιο μητρώο** ρωτά κάθε ρόλος (ADR-798 λεξιλόγιο · ADR-901 Ε-4) — ο άνθρωπος **δεν** διαλέγει μητρώο,
+ * δηλώνει μόνο αριθμό και σύλλογο/περιφέρεια.
+ */
+export const ROLE_REGISTRY_AUTHORITY = {
+  seller_lawyer: 'bar-association',
+  buyer_lawyer: 'bar-association',
+  notary: 'notary-association',
+} as const satisfies Readonly<Record<LegalProfessionalRole, ChapteredRegistryId>>;
+
+/**
+ * **Δηλωμένη** επαγγελματική ιδιότητα (ADR-901 Ε-4) — στιγμιότυπο **ανά υπόθεση**, όπως τη δήλωσε ο ίδιος
+ * στην αποδοχή. 🔑 `assurance: 'declared'` — ποτέ «επαληθευμένο»: τα μέρη τη βλέπουν ως «(δηλωμένο)» μέχρι
+ * τη φάση επαλήθευσης μητρώου.
+ */
+export interface DeclaredCredential {
+  readonly authority: ChapteredRegistryId;
+  readonly number: string;
+  /** Σύλλογος (δικηγόροι) ή περιφέρεια (συμβολαιογράφοι) — ελεύθερο κείμενο, όπως στις persona. */
+  readonly chapter: string | null;
+  readonly assurance: 'declared';
+  readonly declaredAt: string;
 }
 
 /** Μία συναίνεση — αμετάβλητη, με όνομα και ώρα. */
@@ -140,6 +172,8 @@ export interface Engagement extends ScopedGrant<EngagementScope> {
   readonly expiresAt: string;
   readonly origin: EngagementOrigin;
   readonly consents: readonly EngagementConsent[];
+  /** ADR-901 Ε-4 — απόν ⇒ καμία δήλωση (π.χ. πρόταση σε υπάρχοντα λογαριασμό, πριν από τη Φ3). */
+  readonly declaredCredential?: DeclaredCredential;
   readonly offeredBy: string;
   readonly offeredAt: string;
   readonly respondedAt: string | null;

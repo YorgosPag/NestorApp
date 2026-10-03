@@ -57,7 +57,7 @@ export {
   generateMatchGroupId, generateMatchingRuleId, generateExpenseDocId,
   generateApyCertificateId, generateServicePresetId, generateCustomCategoryId, generateCustomerBalanceId,
   generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
-  generatePipelineAuditId, generateEntityAuditId, generateContractId, generateConveyanceCaseId, generateEngagementId,
+  generatePipelineAuditId, generateEntityAuditId, generateContractId, generateConveyanceCaseId, generateEngagementId, generateEngagementInvitationId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generatePrivateMarketingEventId,
   generateMandateEvidenceId,

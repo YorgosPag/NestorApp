@@ -942,6 +942,8 @@ export const COLLECTIONS = {
   LEGAL_CONTRACTS: process.env.NEXT_PUBLIC_LEGAL_CONTRACTS_COLLECTION || 'legal_contracts',
   // ADR-901 Φ1 — υπόθεση μεταβίβασης: η ΠΡΑΞΗ πάνω από τα συμβόλαια (server-only, deny-all στους κανόνες)
   CONVEYANCE_CASES: process.env.NEXT_PUBLIC_CONVEYANCE_CASES_COLLECTION || 'conveyance_cases',
+  // ADR-901 Φ3 — πρόσκληση με email σε επαγγελματία της υπόθεσης (μηχανή ADR-853 · server-only, deny-all)
+  ENGAGEMENT_INVITATIONS: process.env.NEXT_PUBLIC_ENGAGEMENT_INVITATIONS_COLLECTION || 'engagement_invitations',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
 

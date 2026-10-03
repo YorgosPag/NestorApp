@@ -231,6 +231,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/spatial-tour/tour-capture-invitation.ts',
   },
   {
+    name: 'ENGAGEMENT_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Πρόσκληση με email σε δικηγόρο/συμβολαιογράφο χωρίς λογαριασμό (ADR-901 Φ3)',
+    consequence:
+      'Ο οικοδεσπότης της υπόθεσης δεν μπορεί να προσκαλέσει επαγγελματία χωρίς λογαριασμό: η έκδοση '
+      + 'αποτυγχάνει και κάθε υπάρχων σύνδεσμος απαντά «δεν μπόρεσα». ⚠️ ΔΙΚΟ του μυστικό: με κοινό με '
+      + 'τις προσκλήσεις χώρου, σύνδεσμος υπόθεσης θα μπορούσε να διαβαστεί ως πρόσκληση σε γραφείο.',
+    consumer: 'src/server/engagement-invitations/engagement-invitation-issue.ts',
+  },
+  {
     name: 'TOUR_UPLOAD_SECRET',
     severity: 'feature',
     feature: 'Ανέβασμα λήψης 360° σε χωρική περιήγηση (ADR-884 Φ0.8 · Κ3α)',

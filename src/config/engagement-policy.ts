@@ -20,10 +20,26 @@ export const ENGAGEMENT_ACTIVE_CEILING_DAYS = 365;
 
 /** Η λήξη μιας **πρότασης** που γίνεται τη στιγμή `nowMs`. */
 export function offerExpiresAt(nowMs: number): string {
-  return new Date(nowMs + ENGAGEMENT_OFFER_TTL_DAYS * DAY_MS).toISOString();
+  return new Date(engagementInvitationExpiryMs(nowMs)).toISOString();
 }
 
 /** Το ταβάνι μιας **ενεργής** συμμετοχής που αποδέχτηκε κάποιος τη στιγμή `nowMs`. */
 export function activeExpiresAt(nowMs: number): string {
   return new Date(nowMs + ENGAGEMENT_ACTIVE_CEILING_DAYS * DAY_MS).toISOString();
+}
+
+/**
+ * ADR-901 Ε-5 — αν ο επαγγελματίας δεν απαντήσει σε **3** ημέρες, υπενθυμίζεται **ο προσκαλών** (όχι ο
+ * επαγγελματίας: ο οικοδεσπότης ξέρει αν πρέπει να τηλεφωνήσει, να ξαναστείλει ή να ορίσει άλλον).
+ */
+export const ENGAGEMENT_INVITATION_REMINDER_DAYS = 3;
+
+/** Η λήξη μιας **πρόσκλησης** με email — ο **ίδιος** αριθμός με την πρόταση (μία απόφαση, Ε-5). */
+export function engagementInvitationExpiryMs(nowMs: number): number {
+  return nowMs + ENGAGEMENT_OFFER_TTL_DAYS * DAY_MS;
+}
+
+/** Πότε οφείλεται η υπενθύμιση στον προσκαλούντα — γράφεται **στην έκδοση**, ποτέ υπολογίζεται στο sweep. */
+export function engagementInvitationReminderDueAt(nowMs: number): string {
+  return new Date(nowMs + ENGAGEMENT_INVITATION_REMINDER_DAYS * DAY_MS).toISOString();
 }

@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 
+import { isChapteredRegistry, type ChapteredRegistryId } from '@/constants/professional-registries';
 import { isCdeAudience, type CdeAudience } from '@/types/container-access';
 import {
   CONSENT_BASES,
@@ -25,6 +26,15 @@ import {
 
 const nonEmpty = z.string().min(1);
 
+/** Μία συναίνεση — το **ίδιο** σχήμα στη συμμετοχή και στην πρόσκληση που τη γεννά (ADR-901 Φ3). */
+export const engagementConsentSchema = z.object({
+  side: z.enum(ENGAGEMENT_SIDES),
+  source: z.enum(CONSENT_SOURCES),
+  basis: z.enum(CONSENT_BASES),
+  attestedBy: nonEmpty,
+  attestedAt: nonEmpty,
+});
+
 const engagementSchema = z.object({
   id: nonEmpty,
   hostCompanyId: nonEmpty,
@@ -37,14 +47,19 @@ const engagementSchema = z.object({
   scopes: z.array(z.enum(ENGAGEMENT_SCOPES)),
   state: z.enum(ENGAGEMENT_STATES),
   expiresAt: nonEmpty,
-  origin: z.object({ kind: z.literal('professional_appointment'), contactId: nonEmpty }),
-  consents: z.array(z.object({
-    side: z.enum(ENGAGEMENT_SIDES),
-    source: z.enum(CONSENT_SOURCES),
-    basis: z.enum(CONSENT_BASES),
-    attestedBy: nonEmpty,
-    attestedAt: nonEmpty,
-  })),
+  origin: z.object({
+    kind: z.literal('professional_appointment'),
+    contactId: nonEmpty,
+    invitationId: nonEmpty.optional(),
+  }),
+  consents: z.array(engagementConsentSchema),
+  declaredCredential: z.object({
+    authority: z.custom<ChapteredRegistryId>((v) => typeof v === 'string' && isChapteredRegistry(v)),
+    number: nonEmpty,
+    chapter: z.string().nullable(),
+    assurance: z.literal('declared'),
+    declaredAt: nonEmpty,
+  }).optional(),
   offeredBy: nonEmpty,
   offeredAt: nonEmpty,
   respondedAt: z.string().nullable(),
