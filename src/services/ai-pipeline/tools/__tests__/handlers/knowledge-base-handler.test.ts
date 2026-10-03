@@ -44,7 +44,7 @@ type KbData = { procedures: Array<{ id: string; title: string; requiredDocuments
 function evidence(overrides: Partial<EvidenceFile>): EvidenceFile {
   return {
     fileId: 'file_1', displayName: 'x.pdf', entityType: 'project', entityId: 'proj_001', purpose: 'permit',
-    level: 'project', fingerprint: 'file_1:0:', createdAt: '2026-09-01T00:00:00Z', ...overrides,
+    source: { kind: 'owned' }, level: 'project', fingerprint: 'file_1:0:', createdAt: '2026-09-01T00:00:00Z', ...overrides,
   };
 }
 

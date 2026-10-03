@@ -10,11 +10,13 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { engagementsCollection, engagementsForSubjectQuery } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
+import { activeWorkspaceAdministrators } from '@/lib/workspace/workspace-administrators';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
-import type { CaseEngagementSummary, ConveyanceCase, ConveyanceCaseState } from '@/types/conveyance-case';
+import type { CaseEngagementSummary, ConveyanceCase } from '@/types/conveyance-case';
 import type { Engagement, EngagementKey, EngagementSubject } from '@/types/engagement';
 
 /** Η υπόθεση ως αντικείμενο συμμετοχής. */
@@ -36,17 +38,27 @@ export async function listCaseEngagements(db: Firestore, hostCompanyId: string, 
   return snapshot.docs.map((doc) => parseEngagement(doc.data())).filter((e): e is Engagement => e !== null);
 }
 
+/** Ενεργή **τώρα**: `active` **και** δεκτή από τον ΕΝΑ κριτή (λήξη · ανάκληση · εύρος) — όχι μόνο το πεδίο `state`. */
+export function engagedNow(engagement: Engagement, nowMs: number): boolean {
+  if (engagement.state !== 'active') return false;
+  return isEngaged(decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs }).verdict);
+}
+
+/** Οι συμμετοχές της υπόθεσης που είναι ενεργές **τώρα** (λήξεις · συντάκτες transmittal · παραλήπτες). */
+export async function activeCaseEngagements(db: Firestore, record: ConveyanceCase, nowMs: number): Promise<Engagement[]> {
+  const projectId = caseProjectId(record);
+  if (!projectId) return [];
+  return (await listCaseEngagements(db, record.companyId, projectId, record.id)).filter((e) => engagedNow(e, nowMs));
+}
+
+/** Ο οικοδεσπότης ως **παραλήπτες**: ο δημιουργός της υπόθεσης **και** οι ενεργοί διαχειριστές του χώρου, χωρίς διπλά. */
+export async function caseHostRecipients(db: Firestore, record: ConveyanceCase): Promise<string[]> {
+  return [...new Set([record.createdBy, ...(await activeWorkspaceAdministrators(db, record.companyId))])];
+}
+
 /** Το κλειδί μιας συμμετοχής **από την ίδια** — ποτέ από το αίτημα. */
 export function engagementKeyOf(engagement: Engagement): EngagementKey {
   return { hostCompanyId: engagement.hostCompanyId, projectId: engagement.projectId, engagementId: engagement.id };
-}
-
-/**
- * Δέχεται η υπόθεση **νέες** προτάσεις; Μετά την υπογραφή **ναι** — ο συμβολαιογράφος δουλεύει ως τη
- * μεταγραφή· μετά το κλείσιμο/ακύρωση **όχι** (οι συμμετοχές έχουν ήδη τελειώσει).
- */
-export function acceptsEngagements(state: ConveyanceCaseState): boolean {
-  return state !== 'closed' && state !== 'cancelled';
 }
 
 /** Η προβολή για τον οικοδεσπότη — ρητά πεδία, ποτέ spread του εγγράφου. */

@@ -23,16 +23,13 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { effectiveCaseState } from '@/lib/conveyance/case-state';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { expiryAlertsOf } from '@/lib/conveyance/expiry-alerts';
 import { createModuleLogger } from '@/lib/telemetry';
-import { activeWorkspaceAdministrators } from '@/lib/workspace/workspace-administrators';
 import type { ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
 import { checklistForRole, engagementChecklistViewer, HOST_CHECKLIST_VIEWER } from './conveyance-engagement-access.service';
-import { listCaseEngagements } from './conveyance-engagement-support';
+import { activeCaseEngagements, caseHostRecipients } from './conveyance-engagement-support';
 import { announceExpiryToEngaged, announceExpiryToHost } from './conveyance-expiry-notifier';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 
@@ -49,28 +46,16 @@ export interface ExpirySweepReport {
   readonly truncated: boolean;
 }
 
-/** Ο οικοδεσπότης: ο δημιουργός της υπόθεσης **και** οι ενεργοί διαχειριστές του χώρου, χωρίς διπλά. */
-async function hostRecipients(db: Firestore, record: ConveyanceCase): Promise<string[]> {
-  return [...new Set([record.createdBy, ...(await activeWorkspaceAdministrators(db, record.companyId))])];
-}
-
-function engagedNow(engagement: Engagement, nowMs: number): boolean {
-  if (engagement.state !== 'active') return false;
-  return isEngaged(decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs }).verdict);
-}
-
 async function alertHost(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext): Promise<number> {
   const alerts = expiryAlertsOf((await checklistForRole(db, record, context, HOST_CHECKLIST_VIEWER)).rows);
   if (alerts.length === 0) return 0;
-  const recipients = await hostRecipients(db, record);
+  const recipients = await caseHostRecipients(db, record);
   const sent = await Promise.all(recipients.map((uid) => announceExpiryToHost({ record, propertyName: context.propertyName, recipientUid: uid, alerts })));
   return sent.filter(Boolean).length;
 }
 
 async function alertEngaged(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext, nowMs: number): Promise<number> {
-  const projectId = record.subject.projectId;
-  if (!projectId) return 0;
-  const engaged = (await listCaseEngagements(db, record.companyId, projectId, record.id)).filter((e) => engagedNow(e, nowMs));
+  const engaged = await activeCaseEngagements(db, record, nowMs);
   const sent = await Promise.all(engaged.map(async (engagement) => {
     const alerts = expiryAlertsOf((await checklistForRole(db, record, context, engagementChecklistViewer(engagement))).rows);
     return alerts.length > 0 && announceExpiryToEngaged({ record, propertyName: context.propertyName, engagement, alerts });

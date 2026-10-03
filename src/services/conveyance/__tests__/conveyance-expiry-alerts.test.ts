@@ -25,7 +25,14 @@ jest.mock('../conveyance-subject.server', () => ({
 jest.mock('@/lib/workspace/workspace-administrators', () => ({ activeWorkspaceAdministrators: async () => ['u_admin', 'u_host'] }));
 
 let engagements: Engagement[] = [];
-jest.mock('../conveyance-engagement-support', () => ({ listCaseEngagements: async () => engagements }));
+// Γνήσιοι: ο κριτής «ενεργή τώρα» (`engagedNow`) και οι παραλήπτες του οικοδεσπότη· ψεύτικη μόνο η ανάγνωση συμμετοχών.
+jest.mock('../conveyance-engagement-support', () => {
+  const actual = jest.requireActual<typeof import('../conveyance-engagement-support')>('../conveyance-engagement-support');
+  return {
+    ...actual,
+    activeCaseEngagements: async (_db: unknown, _record: unknown, nowMs: number) => engagements.filter((e) => actual.engagedNow(e, nowMs)),
+  };
+});
 
 /** Ο κατάλογος ανά θεατή: ο οικοδεσπότης βλέπει και τη γραμμή του αγοραστή, ο δικηγόρος πωλητή όχι. */
 const rows = (role: string): ChecklistRow[] => [

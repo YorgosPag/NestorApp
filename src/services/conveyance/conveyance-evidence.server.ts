@@ -75,6 +75,7 @@ function toEvidence(doc: QueryDocumentSnapshot, target: EvidenceTarget, audience
   if (!isActive(data) || typeof data.purpose !== 'string' || !reaches(data, audience)) return null;
   const revision = typeof data.revision === 'number' ? data.revision : null;
   return {
+    source: { kind: 'owned' },
     fileId: doc.id,
     displayName: typeof data.displayName === 'string' ? data.displayName : doc.id,
     entityType: target.entityType,
