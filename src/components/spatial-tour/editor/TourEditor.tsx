@@ -105,14 +105,15 @@ function usePointFooter(
     const stop = model.graph.stops.get(nodeId)?.stop;
     return (
       <>
-        <TourRoomForm key={nodeId} graph={model.graph} nodeId={nodeId} onSave={(room) => name(nodeId, room)} />
+        <TourRoomForm key={nodeId} graph={model.graph} nodeId={nodeId} onSave={(room) => name(nodeId, room)}
+          suggestion={stop === undefined ? undefined : data.captures.find((c) => c.id === stop.captureId)?.placementHint?.room} />
         <TourPlanPane key={`plan-${nodeId}`} subject={subject} source={source} actions={actions} nodes={data.nodes} levels={data.levels}
           nodeId={nodeId} capture={stop === undefined ? null : { id: stop.captureId, headingRad: stop.headingRad }} nameOf={nameOf}
           graph={model.graph} />
         <TourPointRemoval model={model} nodeId={nodeId} busy={actions.busy} onUnplace={actions.unplace} />
       </>
     );
-  }, [model, actions, name, subject, source, data.nodes, data.levels, nameOf]);
+  }, [model, actions, name, subject, source, data.nodes, data.levels, data.captures, nameOf]);
 }
 
 function LoadedEditor({ subject, data, actions, source, poll }: LoadedEditorProps) {
@@ -142,7 +143,7 @@ function LoadedEditor({ subject, data, actions, source, poll }: LoadedEditorProp
         {rebaking !== undefined && <TourRebakingNotice entry={rebaking} />}
         {entry !== undefined && preview !== null && (
           <TourPreviewWorkspace key={entry.capture.id} preview={preview} source={source} captureId={entry.capture.id} levels={data.levels}
-            tourGraph={model.graph} busy={actions.busy} onPlace={(target) => void place(entry.capture.id, target)} />
+            tourGraph={model.graph} busy={actions.busy} onPlace={(target) => void place(entry.capture.id, target)} hint={entry.capture.placementHint} />
         )}
         {entry !== undefined && preview === null && (
           <p role="status" className="text-sm text-muted-foreground">{t(entry.readiness === 'failed' ? TOUR_EDITOR_KEYS.failedHint : TOUR_EDITOR_KEYS.notReadyHint)}</p>

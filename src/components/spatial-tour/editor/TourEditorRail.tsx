@@ -20,7 +20,7 @@ import type { TourEditorModel, TourInboxEntry } from '@/lib/spatial-tour/tour-ed
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { PANEL_KEYS } from '../spatial-tour-labels';
-import { useLevelLabel } from '../viewer/TourViewerNavigation';
+import { useLevelLabel } from '../viewer/useLevelLabel';
 import { useOffGraphPointName, useStopNames } from '../viewer/useStopNames';
 import { TOUR_EDITOR_KEYS } from './tour-editor-labels';
 import { TOUR_REDACTION_KEYS } from './tour-redaction-labels';

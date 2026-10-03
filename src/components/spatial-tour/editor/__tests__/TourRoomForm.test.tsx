@@ -8,6 +8,8 @@
  * - **Α** — ό,τι αποθηκεύεται είναι κανονικοποιημένο· η προεπισκόπηση λέει ό,τι θα δουν οι επισκέπτες (και την αρίθμηση).
  * - **Ε** — ενιαίος χώρος: δεύτερος τύπος χωρίς τον ήδη επιλεγμένο.
  * - **Κ** — υπάρχων χώρος: αποθήκευση μόνο με αλλαγή· «χωρίς όνομα» ⇒ `null`.
+ * - **Φ** — πρόταση φωτογράφου (ADR-904 Κ8): προσφέρεται σε σημείο χωρίς χώρο, **δεν** προσυμπληρώνεται, αποδοχή με ρητό κλικ·
+ *   σημείο που ήδη έχει χώρο ⇒ καμία πρόταση (μιλά η απόφαση).
  */
 
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -90,5 +92,19 @@ describe('TourRoomForm', () => {
     expect(save()).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:editor.roomClear' }));
     expect(onSave).toHaveBeenCalledWith(null);
+  });
+
+  it('Φ — πρόταση σε σημείο χωρίς χώρο: φαίνεται, ΔΕΝ προσυμπληρώνει, αποδοχή με ένα κλικ', () => {
+    const onSave = jest.fn();
+    render(<TourRoomForm graph={graphWith({})} nodeId="g2" onSave={onSave} suggestion={{ types: ['kitchen', 'living-room'], label: null }} />);
+    expect(screen.getByText('spatial-tour:panel.hintFrom: spatial-tour:rooms.types.kitchen / spatial-tour:rooms.types.living-room')).toBeInTheDocument();
+    expect(typeSelect(0)).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:panel.hintApply' }));
+    expect(onSave).toHaveBeenCalledWith({ types: ['kitchen', 'living-room'], label: null });
+  });
+
+  it('Φ — σημείο που ΗΔΗ έχει χώρο ⇒ καμία πρόταση', () => {
+    render(<TourRoomForm graph={graphWith({ g2: room(['hallway']) })} nodeId="g2" onSave={jest.fn()} suggestion={{ types: ['kitchen'], label: null }} />);
+    expect(screen.queryByRole('button', { name: 'spatial-tour:panel.hintApply' })).toBeNull();
   });
 });

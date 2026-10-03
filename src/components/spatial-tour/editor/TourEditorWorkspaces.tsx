@@ -17,7 +17,7 @@ import { type ReactNode, useEffect, useMemo, useReducer, useState } from 'react'
 import type { TourPlacementTarget } from '@/lib/spatial-tour/tour-graph-edit';
 import { neighboursOf, type TourViewerGraph, type TourViewerLevel } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { initialViewerState, tourViewerReducer } from '@/lib/spatial-tour/viewer/tour-viewer-state';
-import type { TourCapture } from '@/types/spatial-tour';
+import type { TourCapture, TourCapturePlacementHint } from '@/types/spatial-tour';
 
 import { createTourCameraStore } from '../viewer/tour-camera-store';
 import type { TourPanoramaSource } from '../viewer/tour-panorama-source';
@@ -79,15 +79,17 @@ interface PreviewWorkspaceProps {
   readonly tourGraph: TourViewerGraph;
   readonly busy: boolean;
   readonly onPlace: (target: TourPlacementTarget) => void;
+  /** Η πρόταση θέσης του φωτογράφου (ADR-904 Κ8) — η φόρμα την προεπιλέγει, δεν την εφαρμόζει. */
+  readonly hint?: TourCapturePlacementHint;
 }
 
-export function TourPreviewWorkspace({ preview, source, captureId, levels, tourGraph, busy, onPlace }: PreviewWorkspaceProps) {
+export function TourPreviewWorkspace({ preview, source, captureId, levels, tourGraph, busy, onPlace, hint }: PreviewWorkspaceProps) {
   const [state, dispatch] = useReducer(tourViewerReducer, preview.nodeId, initialViewerState);
   const [camera] = useState(createTourCameraStore);
   return (
     <>
       <TourPanoramaStage graph={preview.graph} state={state} dispatch={dispatch} camera={camera} source={source} neighbours={[]} />
-      <TourPlacementForm captureId={captureId} levels={levels} graph={tourGraph} busy={busy} onPlace={onPlace} />
+      <TourPlacementForm captureId={captureId} levels={levels} graph={tourGraph} busy={busy} onPlace={onPlace} hint={hint} source={source} />
     </>
   );
 }
