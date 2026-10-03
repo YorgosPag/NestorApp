@@ -11,47 +11,17 @@
  * @module api/engagements/[engagementId]/files/[fileId]
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { withPersonalOrOrgAuth } from '@/lib/auth/personal-scope-middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { requireAdminFirestore } from '@/lib/api/admin-db';
-import { apiSuccess } from '@/lib/api/ApiErrorHandler';
-import { decodeRouteParam } from '@/lib/routes/route-param';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { CASE_FILE_MODES } from '@/lib/conveyance/case-activity';
-import { openCaseFile, type CaseFileOpening } from '@/services/conveyance/conveyance-case-file-access.service';
-
-type Segment = { params: Promise<{ engagementId: string; fileId: string }> };
+import { openCaseFile } from '@/services/conveyance/conveyance-case-file-access.service';
+import { caseFileResponse } from '../../../_shared/case-file-response';
+import { engagementPost } from '../../../_shared/engagement-post';
 
 const bodySchema = z.object({ mode: z.enum(CASE_FILE_MODES) });
 
-/** Η μία μετάφραση άρνησης → HTTP. */
-const STATUS: Readonly<Record<Exclude<Extract<CaseFileOpening, { ok: false }>['rejection'], 'denied'>, number>> = {
-  'not-found': 404,
-  unknown: 503,
-  failed: 503,
-};
-
-async function handler(request: NextRequest, actor: ApiActor, segmentData?: Segment) {
-  const params = await segmentData!.params;
-  const parsed = safeParseBody(bodySchema, await request.json());
-  if (parsed.error) return parsed.error;
-  const outcome = await openCaseFile(requireAdminFirestore(), {
-    uid: actor.ctx.uid,
-    email: actor.ctx.email ?? null,
-    engagementId: decodeRouteParam(params.engagementId),
-    fileId: decodeRouteParam(params.fileId),
-    mode: parsed.data.mode,
-    nowMs: Date.now(),
-  });
-  if (outcome.ok) {
-    return apiSuccess({ url: outcome.url, expiresAt: outcome.expiresAt, fileName: outcome.fileName, contentType: outcome.contentType });
-  }
-  if (outcome.rejection === 'denied') {
-    return NextResponse.json({ success: false, error: 'ENGAGEMENT_NOT_ACTIVE', verdict: outcome.verdict }, { status: 403 });
-  }
-  return NextResponse.json({ success: false, error: outcome.rejection }, { status: STATUS[outcome.rejection] });
-}
+const handler = engagementPost<{ fileId: string }, typeof bodySchema>(bodySchema, async ({ db, uid, email, engagementId, param, body }) =>
+  caseFileResponse(await openCaseFile(db, { uid, email, engagementId, fileId: param('fileId'), mode: body.mode, nowMs: Date.now() })));
 
 export const POST = withStandardRateLimit(withPersonalOrOrgAuth(handler));

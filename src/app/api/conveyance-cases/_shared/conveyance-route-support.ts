@@ -15,7 +15,11 @@ import { hasPermission } from '@/lib/auth/permissions';
 import type { PermissionId } from '@/lib/auth/types';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import type { Firestore } from 'firebase-admin/firestore';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
+import { readOwnedConveyanceCase } from '@/services/conveyance/conveyance-case.service';
 import type { ConveyanceActor, ConveyanceFailure } from '@/services/conveyance/conveyance-case.service';
+import type { ConveyanceCase } from '@/types/conveyance-case';
 
 export const CONVEYANCE_VIEW: PermissionId = 'legal:conveyance:view';
 export const CONVEYANCE_MANAGE: PermissionId = 'legal:conveyance:manage';
@@ -37,6 +41,26 @@ export async function authorizeForProperty(params: {
 
 export function actorOf(ctx: AuthContext): ConveyanceActor {
   return { uid: ctx.uid, email: ctx.email ?? null, companyId: ctx.companyId };
+}
+
+/**
+ * Η υπόθεση **του χώρου**, εξουσιοδοτημένη για το ακίνητό της — αλλιώς ρίχνει (404 ανύπαρκτη/ξένη · 403).
+ * Η **μία** σειρά «ανάγνωση με κάτοχο → δικαίωμα με το έργο του ακινήτου» για τα routes του οικοδεσπότη (Φ4.4/Φ4.5).
+ */
+export async function readAuthorizedCase(params: {
+  readonly ctx: AuthContext;
+  readonly cache: PermissionCache;
+  readonly caseId: string;
+  readonly permission: PermissionId;
+  readonly path: string;
+}): Promise<{ readonly db: Firestore; readonly actor: ConveyanceActor; readonly record: ConveyanceCase }> {
+  const db = requireAdminFirestore();
+  const actor = actorOf(params.ctx);
+  const record = await readOwnedConveyanceCase(db, actor, params.caseId);
+  if (!record) throw failureToApiError({ kind: 'case_not_found' });
+  const { ctx, cache, permission, path } = params;
+  await authorizeForProperty({ ctx, cache, propertyId: record.subject.propertyId, permission, path });
+  return { db, actor, record };
 }
 
 /** Η μία μετάφραση αποτυχίας → HTTP. */
