@@ -24,6 +24,8 @@ export interface PhotoPreviewImageProps {
   readonly url: string | null;
   readonly preview: ProxyImagePreview | null;
   readonly zoom: number;
+  /** Μοίρες (πολλαπλάσια των 90) — στροφή στο πλάι ⇒ άλλο ζωγραφισμένο πλάτος ⇒ ίσως μεγαλύτερη βαθμίδα (§9 Ε2β). */
+  readonly rotation: number;
   readonly alt: string;
   readonly className: string;
   readonly imageRef: RefObject<HTMLImageElement | null>;
@@ -34,9 +36,9 @@ export interface PhotoPreviewImageProps {
   readonly onError: React.ReactEventHandler<HTMLImageElement>;
 }
 
-export function PhotoPreviewImage({ url, preview, zoom, imageRef, ...img }: PhotoPreviewImageProps) {
+export function PhotoPreviewImage({ url, preview, zoom, rotation, imageRef, ...img }: PhotoPreviewImageProps) {
   const boxRef = useRef<HTMLElement | null>(null);
-  const source = useZoomResolution(url ?? '', url ? preview : null, boxRef, zoom);
+  const source = useZoomResolution(url ?? '', url ? preview : null, boxRef, zoom, rotation);
 
   return (
     <figure ref={boxRef} className="relative w-full h-full flex items-center justify-center select-none">

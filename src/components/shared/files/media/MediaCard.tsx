@@ -32,7 +32,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import type { FileRecord } from '@/types/file-record';
-import { useElementSize, type ElementSize } from '@/hooks/media/useElementSize';
+import { steppedUpperBound, useElementSize, type ElementSize } from '@/hooks/media/useElementSize';
 import { thumbnailCandidatesOf, type ThumbnailBox } from '../file-thumbnail-sources';
 import { useThumbnailCandidate } from '../use-thumbnail-candidate';
 import '@/lib/design-system';
@@ -94,12 +94,11 @@ const UNMEASURED_IMAGE_BOX: ThumbnailBox = { width: 320, height: 240 };
 
 /**
  * ADR-899 Ε2: το κουτί που ζωγραφίζει η εικόνα, ως **άνω φράγμα** του σκαλοπατιού (+½) — υπερεκτίμηση λίγων pixel,
- * ποτέ θόλωμα από στρογγύλευση προς τα κάτω (ίδιος κανόνας με το `lightboxSizesOf`).
+ * ποτέ θόλωμα από στρογγύλευση προς τα κάτω (`steppedUpperBound` — ο ίδιος κανόνας με το `lightboxSizesOf` και το zoom).
  */
 function imageBoxOf(measured: ElementSize): ThumbnailBox {
   if (measured.width === 0 || measured.height === 0) return UNMEASURED_IMAGE_BOX;
-  const half = IMAGE_BOX_STEP_PX / 2;
-  return { width: measured.width + half, height: measured.height + half };
+  return steppedUpperBound(measured, IMAGE_BOX_STEP_PX);
 }
 
 // ============================================================================

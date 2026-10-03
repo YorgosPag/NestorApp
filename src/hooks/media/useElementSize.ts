@@ -52,6 +52,17 @@ function toStep(value: number, step: number): number {
   return value > 0 ? Math.round(value / step) * step : 0;
 }
 
+/**
+ * **Το άνω φράγμα ενός μεγέθους σε σκαλοπάτια** (+½ σκαλοπατιού) — για όποιον ρωτά «πόσα pixel χρειάζεται η εικόνα»:
+ * υπερεκτίμηση λίγων pixel, ποτέ θόλωμα από στρογγύλευση προς τα κάτω (ADR-899 §4.1). Το «δεν μετρήθηκε» (`0 × 0`)
+ * μένει `0 × 0` — η ειλικρινής «άγνωστη» τιμή δεν γίνεται ποτέ μισό σκαλοπάτι.
+ */
+export function steppedUpperBound(size: ElementSize, step: number): ElementSize {
+  if (!(size.width > 0) || !(size.height > 0)) return UNMEASURED_SIZE;
+  const half = step / 2;
+  return { width: size.width + half, height: size.height + half };
+}
+
 /** Το μέγεθος του `ref` στρογγυλεμένο σε πολλαπλάσιο του `step` (css px) — νέα τιμή **μόνο** όταν αλλάζει σκαλοπάτι. */
 export function useElementSize(ref: RefObject<HTMLElement | null>, step: number): ElementSize {
   const [size, setSize] = useState<ElementSize>(UNMEASURED_SIZE);

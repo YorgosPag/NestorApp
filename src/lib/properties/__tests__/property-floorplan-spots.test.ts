@@ -63,7 +63,7 @@ describe('propertyFloorplanSpotsOf', () => {
     const { photos } = propertyPhotosOf(PHOTO_FILES, { publishedPhotoCaptureSpots: { photo_a: spot('plan_ground') } });
     const [entry] = propertyFloorplanSpotsOf(photos, plans, { publishedPhotoCaptureSpots: { photo_a: spot('plan_ground') } });
     expect(entry.figure).toMatchObject({ width: 1200, height: 800 });
-    expect(entry.figure.srcSet).toBe(buildProxyPreview(pathOf('plan_ground'), 'legacy-default', 1200).srcSet);
+    expect(entry.figure.srcSet).toBe(buildProxyPreview(pathOf('plan_ground'), 'legacy-default', { width: 1200, height: 800 }).srcSet);
   });
 
   it('ο δηλωμένος βορράς ταξιδεύει', () => {

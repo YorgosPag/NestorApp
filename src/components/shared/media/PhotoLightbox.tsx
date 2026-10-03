@@ -25,7 +25,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { useElementSize } from '@/hooks/media/useElementSize';
+import { steppedUpperBound, useElementSize } from '@/hooks/media/useElementSize';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { containedWidth } from '@/lib/images/image-dimensions';
 import type { FloorplanSpotsEntry } from '@/lib/media/photo-floorplan-spots';
@@ -48,8 +48,7 @@ const STAGE_SIZE_STEP_PX = 16;
  */
 export function lightboxSizesOf(stage: { readonly width: number; readonly height: number }, photo: LightboxPhoto): string {
   if (!photo.width || !photo.height || stage.width === 0 || stage.height === 0) return VIEWPORT_SIZES;
-  const half = STAGE_SIZE_STEP_PX / 2;
-  const painted = containedWidth({ width: stage.width + half, height: stage.height + half }, { width: photo.width, height: photo.height });
+  const painted = containedWidth(steppedUpperBound(stage, STAGE_SIZE_STEP_PX), { width: photo.width, height: photo.height });
   return `${Math.ceil(painted)}px`;
 }
 

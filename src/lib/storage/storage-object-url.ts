@@ -57,6 +57,7 @@ import {
   effectivePreviewWidth,
   previewWidthsFor,
 } from '@/lib/files/file-preview-ladder';
+import type { ImageDimensions } from '@/lib/images/image-dimensions';
 
 // =============================================================================
 // Ο ΓΡΑΦΕΑΣ — object name → same-origin proxy URL
@@ -101,10 +102,12 @@ export interface ProxyImagePreview {
    */
   readonly ladder: readonly ProxyImagePreviewRung[];
   /**
-   * Το πλάτος του πρωτοτύπου (θεατή) που **έκοψε** την κλίμακα — `null` = άγνωστο ⇒ ολόκληρη η κλίμακα (ADR-899 §3.7).
-   * Όποιος διαλέγει βαθμίδα μόνος του (zoom) το περνά στο `filePreviewWidthFor`.
+   * Οι διαστάσεις του πρωτοτύπου (θεατή) — `null` = άγνωστες ⇒ ολόκληρη η κλίμακα (ADR-899 §3.7). Το **πλάτος** έκοψε
+   * την κλίμακα· όποιος διαλέγει βαθμίδα μόνος του (zoom) το περνά στο `filePreviewWidthFor`, και με την **αναλογία**
+   * υπολογίζει τι **ζωγραφίζεται** στο κουτί (`containedWidth`) αντί να υποθέσει ολόκληρο το κουτί (§9 Ε2β).
+   * ⚠️ Ένα πεδίο, όχι `intrinsicWidth` + `intrinsicHeight`: δύο παράλληλα nullable μπορούν να διαφωνήσουν.
    */
-  readonly intrinsicWidth: number | null;
+  readonly dimensions: ImageDimensions | null;
 }
 
 /** Το URL ενός παραγώγου — πάνω στο {@link buildProxyUrl}, ποτέ δεύτερη συναρμολόγηση μονοπατιού. */
@@ -120,14 +123,15 @@ function buildProxyPreviewUrl(storagePath: string, placement: FileStoragePlaceme
  *
  * 🔑 Το {@link storageObjectFromUrl} κόβει το query ⇒ ένα URL παραγώγου διαβάζεται πίσω στο
  * **ίδιο** αντικείμενο με το πρωτότυπο (άγκυρα roundtrip).
- * 📐 **Με γνωστό πλάτος πρωτοτύπου** (`intrinsicWidth`, ADR-899 §3.7) η κλίμακα σταματά στην **πρώτη** βαθμίδα που το
+ * 📐 **Με γνωστές διαστάσεις πρωτοτύπου** (`dimensions`, ADR-899 §3.7) η κλίμακα σταματά στην **πρώτη** βαθμίδα που το
  * καλύπτει: κανένα `srcset` δεν υπόσχεται pixel που δεν υπάρχουν, και ο browser δεν ζητά ποτέ δεύτερο κλειδί για ίδια bytes.
  */
 export function buildProxyPreview(
   storagePath: string,
   placement: FileStoragePlacement = FILE_STORAGE_PLACEMENT_LEGACY,
-  intrinsicWidth: number | null = null,
+  dimensions: ImageDimensions | null = null,
 ): ProxyImagePreview {
+  const intrinsicWidth = dimensions?.width ?? null;
   const ladder = previewWidthsFor(intrinsicWidth).map((width) => ({
     width,
     src: buildProxyPreviewUrl(storagePath, placement, width),
@@ -137,7 +141,7 @@ export function buildProxyPreview(
     src: buildProxyPreviewUrl(storagePath, placement, fallbackWidth),
     srcSet: ladder.map((rung) => `${rung.src} ${rung.width}w`).join(', '),
     ladder,
-    intrinsicWidth,
+    dimensions,
   };
 }
 

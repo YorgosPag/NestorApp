@@ -92,7 +92,7 @@ export function fileDisplayUrlOf(record: FileDisplayUrlSubject): FileDisplayUrl 
   const dimensions = imageDimensionsOf(record.imageDimensions);
   const preview =
     nonEmpty(record.storagePath) && knownPlacement && isPreviewableContentType(record.contentType)
-      ? buildProxyPreview(record.storagePath, fileStoragePlacementOf(record), dimensions?.width ?? null)
+      ? buildProxyPreview(record.storagePath, fileStoragePlacementOf(record), dimensions)
       : null;
 
   if (nonEmpty(record.downloadUrl)) return { kind: 'url', url: record.downloadUrl, origin: 'stored', preview, dimensions };

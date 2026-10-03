@@ -140,6 +140,7 @@ export function PhotoPreviewModal({
             url={state.currentPhoto ?? null}
             preview={state.isGalleryMode ? galleryPreviews?.[state.currentIndex] ?? null : null}
             zoom={state.zoom}
+            rotation={state.rotation}
             alt={state.isGalleryMode
               ? t('photoPreview.alt.gallery', { title: state.title, current: state.currentIndex + 1, total: state.totalPhotos })
               : t('photoPreview.alt.single', { title: state.title })

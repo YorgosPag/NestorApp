@@ -8,17 +8,24 @@
  * - Ζ4: zoom 1 φορτώνει κάτι.
  * - Ζ5: χωρίς `preview` αλλάζει η σημερινή συμπεριφορά (`url` αυτούσιο).
  * - Ζ6: το `sizes` δεν είναι το μετρημένο κουτί.
+ * - Ζ8 (§9 Ε2β): το `sizes` είναι ολόκληρο το κουτί αντί για ό,τι **ζωγραφίζεται** (κάθετη σε οριζόντιο κουτί ⇒ `w=2560`
+ *   αντί για `w=640`, μετρημένο ζωντανά 2026-10-03).
+ * - Ζ9 (§9 Ε2β): η περιστροφή αγνοείται (στροφή 90° ⇒ ο άξονας πλάτους της εικόνας τρέχει κατά το ύψος του κουτιού).
  */
 
 import { act, renderHook } from '@testing-library/react';
 
 import { buildProxyPreview } from '@/lib/storage/storage-object-url';
 
-import { useZoomResolution, zoomSourceOf, zoomUpgradeOf } from '../use-zoom-resolution';
+import { paintedWidthOf, useZoomResolution, zoomSourceOf, zoomUpgradeOf } from '../use-zoom-resolution';
 
 const ORIGINAL = '/api/storage/file/a/photo.jpg';
 const PREVIEW = buildProxyPreview('a/photo.jpg');
+const PORTRAIT = buildProxyPreview('a/photo.jpg', 'legacy-default', { width: 3000, height: 4000 });
+/** Μετρημένο κουτί σε σκαλοπάτια των 16 ⇒ άνω φράγμα +8: 592×400 ⇒ **600×408**. */
+const BOX_RECT = { width: 592, height: 400 };
 const BOX = 600;
+const BOX_HEIGHT = 408;
 
 const decodes: Array<{ src: string; resolve: () => void }> = [];
 
@@ -31,6 +38,12 @@ beforeAll(() => {
     }
   }
   (globalThis as { Image: unknown }).Image = FakeImage;
+  // Το κουτί μετριέται από το SSoT `useElementSize` — χωρίς `ResizeObserver` (jsdom) μένει ειλικρινά «άγνωστο».
+  global.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  } as unknown as typeof ResizeObserver;
 });
 
 beforeEach(() => {
@@ -39,7 +52,7 @@ beforeEach(() => {
 
 function containerRef() {
   const element = document.createElement('div');
-  element.getBoundingClientRect = () => ({ width: BOX, height: 400 }) as DOMRect;
+  element.getBoundingClientRect = () => BOX_RECT as DOMRect;
   return { current: element };
 }
 
@@ -65,7 +78,7 @@ describe('zoomUpgradeOf / zoomSourceOf — καθαρή απόφαση', () => {
     expect(zoomUpgradeOf(640, 1000, 1183)).toBe(1280);
     expect(zoomUpgradeOf(1280, 1500, 1183)).toBe('original');
     expect(zoomUpgradeOf(1280, 2400, 1183)).toBe('original');
-    const capped = buildProxyPreview('a/photo.jpg', 'legacy-default', 1183);
+    const capped = buildProxyPreview('a/photo.jpg', 'legacy-default', { width: 1183, height: 887 });
     expect(capped.ladder.map((rung) => rung.width)).toEqual([320, 640, 1280]);
     expect(zoomSourceOf(capped, ORIGINAL, 'original')).toBe(ORIGINAL);
   });
@@ -103,5 +116,42 @@ describe('useZoomResolution', () => {
     rerender({ zoom: 1 });
     expect(result.current).toEqual({ src: zoomSourceOf(PREVIEW, ORIGINAL, 2560) });
     expect(decodes).toHaveLength(1);
+  });
+});
+
+describe('paintedWidthOf — ό,τι ζωγραφίζεται (ADR-899 §9 Ε2β)', () => {
+  const portrait = { width: 3000, height: 4000 };
+
+  it('🔴 Ζ8 η μετρημένη περίπτωση: κάθετη 3000×4000 σε κουτί 2352×928 ⇒ 696, όχι 2352', () => {
+    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 0)).toBe(696);
+    // χωρίς διαστάσεις: το πλάτος του κουτιού (ποτέ θόλωμα)
+    expect(paintedWidthOf({ width: 2352, height: 928 }, null, 0)).toBe(2352);
+    expect(paintedWidthOf({ width: 0, height: 0 }, portrait, 0)).toBe(0);
+  });
+
+  it('🔴 Ζ9 στροφή 90°/270° ⇒ ο άξονας πλάτους της εικόνας τρέχει κατά το ύψος του κουτιού · 180° = όρθια', () => {
+    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 90)).toBe(928);
+    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 270)).toBe(928);
+    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 180)).toBe(696);
+    expect(paintedWidthOf({ width: 2352, height: 928 }, null, 90)).toBe(928);
+  });
+});
+
+describe('useZoomResolution — ζωγραφισμένο πλάτος + περιστροφή (ADR-899 §9 Ε2β)', () => {
+  it('🔴 Ζ8 κάθετη με γνωστές διαστάσεις ⇒ `sizes` = ζωγραφισμένο (408 × ¾ = 306), όχι το κουτί', () => {
+    const { result } = renderHook(() => useZoomResolution(ORIGINAL, PORTRAIT, containerRef(), 1));
+    expect(result.current.sizes).toBe(`${Math.ceil((BOX_HEIGHT * 3) / 4)}px`);
+    expect(decodes).toHaveLength(0);
+  });
+
+  it('🔴 Ζ9 στροφή 90° ⇒ `sizes` από τον άλλο άξονα (min(408, 600 × ¾)) — χωρίς φόρτωση στο zoom 1', () => {
+    const { result } = renderHook(() => useZoomResolution(ORIGINAL, PORTRAIT, containerRef(), 1, 90));
+    expect(result.current.sizes).toBe(`${BOX_HEIGHT}px`);
+    expect(decodes).toHaveLength(0);
+  });
+
+  it('🔴 Ζ8 το zoom πολλαπλασιάζει το ζωγραφισμένο: 306 × 3 × DPR2 = 1836 ⇒ w=2560, όχι πρωτότυπο', () => {
+    renderHook(() => useZoomResolution(ORIGINAL, PORTRAIT, containerRef(), 3));
+    expect(decodes.map((entry) => entry.src)).toEqual([zoomSourceOf(PORTRAIT, ORIGINAL, 2560)]);
   });
 });

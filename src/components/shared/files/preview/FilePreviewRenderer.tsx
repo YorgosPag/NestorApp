@@ -98,9 +98,11 @@ const IMG_WHEEL_FACTOR = 1.15;
 function ImagePreview({ url, preview, title }: { url: string; preview?: ProxyImagePreview | null; title: string }) {
   const colors = useSemanticColors();
   const [displayZoom, setDisplayZoom] = useState(1);
+  // Όπως το `displayZoom`: το transform ζει στο ref (χωρίς render), η **ανάλυση** χρειάζεται την τιμή (ADR-899 §9 Ε2β).
+  const [displayRotation, setDisplayRotation] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const source = useZoomResolution(url, preview, containerRef, displayZoom);
+  const source = useZoomResolution(url, preview, containerRef, displayZoom, displayRotation);
   const imgRef = useRef<HTMLImageElement>(null);
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
@@ -186,6 +188,7 @@ function ImagePreview({ url, preview, title }: { url: string; preview?: ProxyIma
   function rotate() {
     rotRef.current = (rotRef.current + 90) % 360;
     applyTransform();
+    setDisplayRotation(rotRef.current);
   }
 
   return (

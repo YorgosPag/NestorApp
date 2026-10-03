@@ -11,8 +11,12 @@
  * `κουτί × zoom × DPR` (`filePreviewWidthFor`)· το πρωτότυπο μόνο όταν η ανάγκη ξεπερνά την κορυφή της κλίμακας.
  * Η ανάλυση **μόνο ανεβαίνει**: ό,τι φορτώθηκε είναι ήδη στη μνήμη, το ξεζούμ δεν ξανακατεβάζει τίποτα.
  *
- * ⚠️ Το κουτί μετριέται ως **max(πλάτος, ύψος)**: άνω φράγμα για κάθε περιστροφή (90° ανταλλάσσει τους άξονες) —
- * ποτέ θόλωμα· το κόστος είναι το πολύ μία βαθμίδα σε ακραία κουτιά.
+ * 📐 **Ό,τι ζωγραφίζεται, όχι ολόκληρο το κουτί** (ADR-899 §9 Ε2β, μετρημένο 2026-10-03): μέχρι τότε το κουτί μετριόταν ως
+ * **max(πλάτος, ύψος)** — «άνω φράγμα για κάθε περιστροφή». Σε κουτί 2352×928 μια κάθετη 3000×4000 ζωγραφίζεται **696** px
+ * (`object-contain`, φραγμένη από το ύψος) ⇒ δηλωνόταν 2352 ⇒ φορτωνόταν **`w=2560` (758 KB)** αντί για `w=640`, και το
+ * πρωτότυπο ήδη στο 150%. Τώρα: `containedWidth` (SSoT `image-dimensions`) για την **τρέχουσα** περιστροφή — η στροφή
+ * κατά 90° είναι απλώς άλλο κουτί για τον άξονα πλάτους της εικόνας, και όπως το zoom **ανεβάζει** βαθμίδα όταν χρειαστεί.
+ * Χωρίς γνωστές διαστάσεις: ο άξονας του κουτιού που αντιστοιχεί στο πλάτος της εικόνας (ποτέ θόλωμα, `object-contain`).
  *
  * @module components/shared/files/preview/use-zoom-resolution
  * @see lib/files/file-preview-ladder — `filePreviewWidthFor`
@@ -20,10 +24,15 @@
 
 'use client';
 
-import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 
+import { steppedUpperBound, useElementSize, type ElementSize } from '@/hooks/media/useElementSize';
 import { filePreviewWidthFor, type FilePreviewChoice } from '@/lib/files/file-preview-ladder';
+import { containedWidth, type ImageDimensions } from '@/lib/images/image-dimensions';
 import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
+
+/** Σκαλοπάτι μέτρησης του κουτιού (css px) — ίδιο με το lightbox: νέα απόφαση μόνο σε ουσιαστική αλλαγή μεγέθους. */
+const BOX_STEP_PX = 16;
 
 /** Η σειρά μιας επιλογής: το πρωτότυπο πάνω από κάθε βαθμίδα. */
 function rankOf(choice: FilePreviewChoice): number {
@@ -66,23 +75,36 @@ function devicePixelRatioOf(): number {
   return typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
 }
 
-/** Το μετρημένο κουτί (CSS px), ζωντανά με το `ResizeObserver`. `0` πριν τη μέτρηση. */
-function useBoxPx(containerRef: RefObject<HTMLElement | null>): number {
-  const [boxPx, setBoxPx] = useState(0);
-  useLayoutEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-    const measure = () => {
-      const rect = element.getBoundingClientRect();
-      setBoxPx(Math.round(Math.max(rect.width, rect.height)));
-    };
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [containerRef]);
-  return boxPx;
+/**
+ * **Πόσα css px πλάτους ζωγραφίζει η εικόνα στο zoom 1** — καθαρή συνάρτηση. Περιστροφή κατά περιττό αριθμό τετάρτων ⇒ ο
+ * άξονας πλάτους της εικόνας τρέχει κατά το **ύψος** του κουτιού. `0` = κουτί που δεν μετρήθηκε.
+ */
+export function paintedWidthOf(box: ElementSize, dimensions: ImageDimensions | null, rotationDeg: number): number {
+  const sideways = Math.abs(Math.round(rotationDeg / 90)) % 2 === 1;
+  const oriented = sideways ? { width: box.height, height: box.width } : box;
+  if (!(oriented.width > 0) || !(oriented.height > 0)) return 0;
+  return dimensions ? containedWidth(oriented, dimensions) : oriented.width;
+}
+
+/**
+ * Φορτώνει το `src` στο παρασκήνιο και καλεί το `onDecoded` **μόνο** όταν τα bytes είναι αποκωδικοποιημένα — αλλιώς ο
+ * άνθρωπος βλέπει κενό στη μέση του zoom. Επιστρέφει την ακύρωση (cleanup του effect).
+ */
+function loadDecoded(src: string, onDecoded: () => void): () => void {
+  let cancelled = false;
+  const loader = new Image();
+  loader.src = src;
+  loader
+    .decode()
+    .then(() => {
+      if (!cancelled) onDecoded();
+    })
+    .catch(() => {
+      // Η τρέχουσα εικόνα μένει: θόλωμα σε βαθύ zoom είναι καλύτερο από σπασμένη εικόνα.
+    });
+  return () => {
+    cancelled = true;
+  };
 }
 
 /**
@@ -94,8 +116,10 @@ export function useZoomResolution(
   preview: ProxyImagePreview | null | undefined,
   containerRef: RefObject<HTMLElement | null>,
   zoom: number,
+  rotationDeg = 0,
 ): ZoomResolutionSource {
-  const boxPx = useBoxPx(containerRef);
+  const box = steppedUpperBound(useElementSize(containerRef, BOX_STEP_PX), BOX_STEP_PX);
+  const paintedPx = Math.ceil(paintedWidthOf(box, preview?.dimensions ?? null, rotationDeg));
   // Ταυτότητα από **συμβολοσειρές**: ο καλών μπορεί να ξαναφτιάχνει το αντικείμενο `preview` σε κάθε render.
   const key = `${url}
 ${preview?.src ?? ''}`;
@@ -104,34 +128,21 @@ ${preview?.src ?? ''}`;
 
   useEffect(() => {
     // Καμία ειδική περίπτωση για zoom ≤ 1: εκεί η ανάγκη ≤ τρέχουσας βαθμίδας ⇒ το `zoomUpgradeOf` απαντά `null`.
-    if (!preview || boxPx === 0) return;
+    if (!preview || paintedPx === 0) return;
     const dpr = devicePixelRatioOf();
     // Με γνωστό πλάτος πρωτοτύπου (ADR-899 §3.7) καμία βαθμίδα πάνω από αυτό· ανάγκη πέρα από τα pixel του ⇒ το πρωτότυπο.
-    const current = upgrade?.choice ?? filePreviewWidthFor(boxPx * dpr, preview.intrinsicWidth);
-    const next = zoomUpgradeOf(current, boxPx * zoom * dpr, preview.intrinsicWidth);
+    const intrinsicWidth = preview.dimensions?.width ?? null;
+    const current = upgrade?.choice ?? filePreviewWidthFor(paintedPx * dpr, intrinsicWidth);
+    const next = zoomUpgradeOf(current, paintedPx * zoom * dpr, intrinsicWidth);
     if (next === null) return;
 
-    let cancelled = false;
     const src = zoomSourceOf(preview, url, next);
-    const loader = new Image();
-    loader.src = src;
-    // Αλλαγή ΜΟΝΟ όταν τα bytes είναι αποκωδικοποιημένα — αλλιώς ο άνθρωπος βλέπει κενό στη μέση του zoom.
-    loader
-      .decode()
-      .then(() => {
-        if (!cancelled) setStored({ key, choice: next, src });
-      })
-      .catch(() => {
-        // Η τρέχουσα εικόνα μένει: θόλωμα σε βαθύ zoom είναι καλύτερο από σπασμένη εικόνα.
-      });
-    return () => {
-      cancelled = true;
-    };
+    return loadDecoded(src, () => setStored({ key, choice: next, src }));
     // `preview` διαβάζεται μέσω `key` (ίδιο src ⇒ ίδια κλίμακα)· το αντικείμενο δεν μπαίνει στις εξαρτήσεις.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, url, boxPx, zoom, upgrade]);
+  }, [key, url, paintedPx, zoom, upgrade]);
 
   if (!preview) return { src: url };
   if (upgrade) return { src: upgrade.src };
-  return { src: preview.src, srcSet: preview.srcSet, sizes: boxPx > 0 ? `${boxPx}px` : undefined };
+  return { src: preview.src, srcSet: preview.srcSet, sizes: paintedPx > 0 ? `${paintedPx}px` : undefined };
 }

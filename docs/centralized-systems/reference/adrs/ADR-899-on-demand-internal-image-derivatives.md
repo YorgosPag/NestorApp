@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ✅ συμπλήρωση 34/34 |
+| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ✅ συμπλήρωση 34/34 · ✅ Ε2/Ε3 ζωντανά 2026-10-03 (deploy `88f7c42b`, §9) — Ε2β ⇒ **Ε4** διορθώθηκε στον κώδικα, ⏳ ζωντανά μετά το push |
 | **Date** | 2026-10-01 |
 | **Category** | Backend Systems |
 | **Προέλευση** | handoff `HANDOFFS/2026-10-01_property-header-gallery_PHASE-D-G_handoff.md` · αίτημα Giorgio: γκαλερί κεφαλίδας επιπέδου Zillow/Idealista |
@@ -112,6 +112,8 @@
 `buildProxyPreview(storagePath, placement)` → `{ src (w=1280), srcSet }` **πάνω** στο `buildProxyUrl` (καμία δεύτερη συναρμολόγηση). Ο
 `storageObjectFromUrl` κόβει το query ⇒ κάθε URL παραγώγου διαβάζεται πίσω στο **ίδιο** αντικείμενο. Ο `fileDisplayUrlOf` δίνει πλέον
 `preview` — από το **όνομα αντικειμένου**, ανεξάρτητα από το `downloadUrl`· το `url` μένει «το αρχείο» (λήψη/άνοιγμα).
+Η προεπισκόπηση κουβαλά τις **διαστάσεις** του πρωτοτύπου (`dimensions: ImageDimensions | null` — §9 Ε4, 2026-10-03): το πλάτος κόβει
+την κλίμακα, η αναλογία λέει στον μηχανισμό zoom τι **ζωγραφίζεται**.
 
 ### 3.7 Το SSoT διαστάσεων εικόνας — `lib/images/image-dimensions.ts` (Βήμα Δ, 2026-10-02)
 
@@ -185,7 +187,7 @@ ETag παραγώγων άθικτο, κανένα νέο finalize.
 | Κατ. | Σημεία | Θεραπεία |
 |---|---|---|
 | **α** εμφάνιση (μικρογραφία) | `FileThumbnail` (κόμβος) ← `FileManagerPageContent` · `EntityFilesContent` · `FilesList` · `ListingMaterialRow` ← `ListingFloorplansPanel` · `ListingMediaOrderPanel` | Prop `file` (όχι `downloadUrl`)· πηγές από `file-thumbnail-sources.ts`: **παράγωγο** (`srcSet` + `sizes` = px του κουτιού, **ίδιο κελί** με την κλάση) → client `_thumb` (εφεδρεία) → πρωτότυπο **μόνο** για svg/gif → εικονίδιο / σελίδα PDF. Κάθε `onError` = ένα βήμα. |
-| **α** εμφάνιση (zoom) | `FilePreviewRenderer` → `ImagePreview` (από `FilePreviewPanel`) | Νέο προαιρετικό `preview`. `use-zoom-resolution.ts`: `sizes` = **μετρημένο** κουτί· στο zoom `κουτί × zoom × DPR` → `filePreviewWidthFor` = η **μικρότερη** επαρκής βαθμίδα, πρωτότυπο μόνο πάνω από 2560· φόρτωση στο παρασκήνιο + `decode()` πριν την αλλαγή· **μόνο προς τα πάνω**. Χωρίς `preview` (δημόσια κοινή χρήση, προσφορές) = ως πριν. |
+| **α** εμφάνιση (zoom) | `FilePreviewRenderer` → `ImagePreview` (από `FilePreviewPanel`) | Νέο προαιρετικό `preview`. `use-zoom-resolution.ts`: `sizes` = ό,τι **ζωγραφίζεται** στο μετρημένο κουτί (`containedWidth` για την τρέχουσα περιστροφή — §9 Ε4· ως 2026-10-03 ολόκληρο το κουτί)· στο zoom `ζωγραφισμένο × zoom × DPR` → `filePreviewWidthFor` = η **μικρότερη** επαρκής βαθμίδα, πρωτότυπο μόνο πάνω από 2560· φόρτωση στο παρασκήνιο + `decode()` πριν την αλλαγή· **μόνο προς τα πάνω**. Χωρίς `preview` (δημόσια κοινή χρήση, προσφορές) = ως πριν. |
 | **α** εμφάνιση (γκαλερί) — *προστέθηκε 2026-10-03, §9 Ε2* | `MediaCard` + `PhotoPreviewModal` ← `MediaGallery` ← `EntityFilesContent` · `ReadOnlyMediaViewer` | Κάρτα: `thumbnailCandidatesOf` στο μετρημένο κουτί (`sizes` για `object-cover`) + `use-thumbnail-candidate`. Modal: `galleryPreviews` → `PhotoPreviewImage` → `useZoomResolution`· το URL μένει για λήψη/κοινή χρήση. |
 | **β** bytes / άνοιγμα / «υπάρχει;» | `file-manager-handlers` (διπλό κλικ → `openRemoteUrlInNewTab`) · `FilePreviewPanel` · `InboxView` · `FileInspector` · `FloorplanGallery` · `useFloorplanPdfLoader` · `VideoPlayer` · `useFileDownload` (εφεδρεία μετά το `id`) | `fileDisplayUrl(file)`. Εγγραφές χωρίς `downloadUrl` **δεν κρύβονται** πια. |
 | **β** ⚠️ πρωτότυπο | `useFloorplanImageLoader` · `FloorplanGallery.calibrationImageSrc` | `.url`, **ποτέ** `preview`: η βαθμονόμηση/μέτρηση δουλεύει στα pixel του πρωτοτύπου (`naturalWidth`). |
@@ -378,12 +380,72 @@ Deploy `89e3be47`: «T1 🚀 Build & Deploy Docker Image» ✅ (run 37109478085)
 
 #### Παρατηρήσεις (μετρημένες, όχι διορθωμένες)
 
-- Πάνελ προεπισκόπησης: `sizes="1227px"` = πλάτος **κουτιού**, ενώ η εικόνα ζωγραφίζεται 821×548 (`object-contain`, φραγμένη από
-  ύψος) — η ίδια υπερεκτίμηση με το Π1 του lightbox. Εδώ αθώα (821 × 0,8 = 657 > 640 ⇒ `w=1280` ούτως ή άλλως), όχι γενικά.
+- ~~Πάνελ προεπισκόπησης: `sizes="1227px"` = πλάτος **κουτιού**, ενώ η εικόνα ζωγραφίζεται 821×548 (`object-contain`, φραγμένη από
+  ύψος) — η ίδια υπερεκτίμηση με το Π1 του lightbox. Εδώ αθώα (821 × 0,8 = 657 > 640 ⇒ `w=1280` ούτως ή άλλως), όχι γενικά.~~
+  ⇒ **όχι γενικά αθώα**: στο modal της γκαλερί κόστισε `w=2560` αντί για `w=640` — διορθώθηκε ως **Ε4** (κάτω).
 - Το κουμπί μεγέθυνσης του πάνελ δεν έχει προσβάσιμο όνομα (`button` χωρίς `aria-label`).
 - Το log του trigger γράφει `message: "Image dimensions recorded"` **και** στο `verdict: no-record` (π.χ. `_thumb.webp`) — παραπλανητικό
   κείμενο· το `verdict` είναι η αλήθεια.
 - ~~«Στο τελευταίο slide το «Επόμενη» δεν είναι `disabled`»~~ — **σχεδιασμός**, όχι σφάλμα: λούπα (άγκυρα Α1, `use-gallery-scroller`).
+
+### Ε2/Ε3 ζωντανά (2026-10-03, deploy `88f7c42b`)
+
+Deploy `88f7c42b` (περιέχει το `5bf14f0e` — `git merge-base --is-ancestor` ✅): «T1 🚀 Build & Deploy Docker Image» ✅ (run
+37141174724, 14′53″) → Netcup → `nestorconstruct.gr`. Chrome, DPR **0,8**, viewport 2.400 px CSS. Χρόνοι με `performance.now()`.
+⚠️ **Δύο καθεστώτα καρέ, μετρημένα**: στο ακίνητο η καρτέλα ήταν **ζωντανή** (rAF 61 fps, `sleep(40)` = 44 ms)· στην αναζήτηση
+**στραγγαλισμένη** (`sleep(40)` = **561** ms — εκεί το διάστημα των 40 ms δόθηκε με busy-wait, όχι `setTimeout`). Ο φρουρός του Ε3
+ενεργεί μόνο όταν η ομαλή κύλιση **δεν** κινείται· για να εκτελεστεί ο κλάδος του και σε ζωντανή καρτέλα, το `scrollTo` (χωρίς
+`behavior: 'auto'`) **αυτού του `<ul>`** αντικαταστάθηκε προσωρινά με no-op — η ίδια συνθήκη με την άγκυρα Δ5 — και αποκαταστάθηκε στο
+`finally` (επαληθευμένο).
+
+| # | Έλεγχος | Μέτρηση | Αποτέλεσμα |
+|---|---|---|---|
+| Ε2α | Καρτέλα «Φωτογραφίες» → 3 κάρτες `article[role=button] figure img` | κουτί 160×120 · `srcset` 320/640/1280/2560 · `sizes="168px"` (160 + ½ σκαλοπατιού· κάθετες σε 4:3 cover ⇒ πλάτος = κουτί) · φορτώθηκε **`w=320`** και στις 3: webp **2.916 / 19.380 / 16.556 B** (πριν: πρωτότυπο **3,27 MB** / 1,97 MB) · `private, no-cache` · `loading="lazy"` | ✅ |
+| Ε2β | Κλικ στην κάρτα `file_c098b8d6` (3000×4000) → `PhotoPreviewModal` (2/3) | `srcset` 320…2560 · κουτί `<figure>` **2352×928**, εικόνα ζωγραφισμένη **696×928** · `sizes="2352px"` ⇒ φορτώθηκε **`w=2560` (758.317 B)**· αρκούσε `w=640` (696 × 0,8 = 557). zoom 125% ⇒ ίδιο · **150% ⇒ πρωτότυπο** (2352 × 1,5 × 0,8 = 2822 > 2560) | ⚠️ καλύτερα από πριν (όχι πρωτότυπο στο άνοιγμα), **όχι** η μικρότερη επαρκής ⇒ 🔴 **Ε4** (κάτω) — διορθώθηκε στον κώδικα, ζωντανά μετά το push |
+| Ε2β | Λήψη | `handleDownload` → `currentPhoto` = `galleryPhotos[i]` = **το αρχείο** (κώδικας — το κουμπί δεν πατήθηκε: θα κατέβαζε αρχείο) | ✅ |
+| Ε2γ | ←/→ στο modal | 1/3 ⇒ `file_3dc3c55b` · 2/3 ⇒ `file_c098b8d6` · 3/3 ⇒ `file_244732c7` — κάθε φωτογραφία με **το δικό της** παράγωγο (`galleryPreviews` ↔ `galleryPhotos` ευθυγραμμισμένα). Επιστροφή στο 2/3 μετά από zoom ⇒ το ήδη αποκωδικοποιημένο πρωτότυπο (η αναβάθμιση κρατιέται ανά κλειδί — bytes ήδη στη μνήμη, κανένα νέο κατέβασμα· **σχεδιασμός**) | ✅ |
+| Ε3 | Κεφαλίδα (3 slides), ζωντανή κύλιση | «Επόμενη» ×2 σε **42 ms** από 0 ⇒ **2** · 6 ms ⇒ **2** · «Προηγούμενη» ×2 σε 46 ms ⇒ **1** (λούπα 0→2→1) | ✅ |
+| Ε3 | Κεφαλίδα, **παγωμένη** κύλιση (κλάδος φρουρού) | Ε×2 σε 41 ms ⇒ **2** (πριν: 1) · Π×2 σε 42 ms ⇒ **1** · 4 κλήσεις `scrollTo` καταπιέστηκαν ⇒ τις μεταβάσεις τις έκανε ο φρουρός | ✅ |
+| Ε3β | `/search/results`, 6 κάρτες × 2 slides | Ε×2 σε **42 ms** ⇒ **0** (πριν: 1), ζωντανή **και** παγωμένη κύλιση, με στραγγαλισμένους timers | ✅ |
+| Γ3 | Κονσόλα (ακίνητο + modal · αναζήτηση) | κανένα σφάλμα της εφαρμογής / ωμό κλειδί i18n. Μόνο 3 × «A listener indicated an asynchronous response…» = μηνύματα **extension** του Chrome (όχι της σελίδας) | ✅ |
+
+#### Ε4 — 🔴 το `useZoomResolution` δήλωνε ολόκληρο το κουτί, όχι ό,τι ζωγραφίζεται
+
+**Ρίζα**: το κουτί μετριόταν ως **max(πλάτος, ύψος)** — «άνω φράγμα για κάθε περιστροφή». Στο modal το `<figure>` είναι όλο το
+πλάτος της οθόνης (2352) ενώ η κάθετη εικόνα, `object-contain`, περιορίζεται από το **ύψος** (928 × ¾ = 696). Η ίδια υπερεκτίμηση με
+την παρατήρηση του πάνελ (1227 έναντι 821) και με το Π1 του lightbox — το lightbox την είχε λύσει (`lightboxSizesOf` → `containedWidth`),
+ο **μηχανισμός zoom όχι**, και μετά το Ε2 τον μοιράζονται πάνελ **και** modal. Η τιμή ενός κουτιού δεν είναι απάντηση στο ερώτημα του
+hook (*«πόσα pixel χρειάζεται η εικόνα»*) — ήταν η ερώτηση της κλάσης, όχι του δείγματος.
+
+**Θεραπεία** — μόνο υπάρχοντα SSoT, κανένας νέος μηχανισμός:
+- **Οι διαστάσεις ταξιδεύουν με την προεπισκόπηση**: `ProxyImagePreview.intrinsicWidth` → **`dimensions: ImageDimensions | null`**
+  (`buildProxyPreview(path, placement, dimensions)`· ο `fileDisplayUrlOf` τις είχε ήδη μετρημένες). Ένα πεδίο, όχι πλάτος + ύψος:
+  δύο παράλληλα nullable μπορούν να διαφωνήσουν.
+- **`paintedWidthOf(box, dimensions, rotation)`** στο `use-zoom-resolution.ts`: `containedWidth` (SSoT `image-dimensions`) για την
+  **τρέχουσα** περιστροφή — στροφή κατά περιττό αριθμό τετάρτων ⇒ ο άξονας πλάτους της εικόνας τρέχει κατά το **ύψος** του κουτιού.
+  Η περιστροφή είναι πλέον είσοδος του hook (όπως το zoom): ανεβάζει βαθμίδα όταν χρειάζεται, μετά το `decode()`, ποτέ προς τα κάτω.
+  Χωρίς διαστάσεις: ο αντίστοιχος άξονας του κουτιού (ποτέ θόλωμα). Πρακτική Immich / Google Photos: η ανάλυση ακολουθεί ό,τι
+  **βλέπει** ο άνθρωπος, όχι το δοχείο.
+- **Μέτρηση από το SSoT `useElementSize`** (σκαλοπάτι 16) αντί για τοπικό `useBoxPx` με δικό του `ResizeObserver` (N.0.2).
+- **`steppedUpperBound`** (`hooks/media/useElementSize.ts`): ο κανόνας «σκαλοπάτι + ½ = άνω φράγμα» ήταν γραμμένος **δύο** φορές
+  (`lightboxSizesOf`, `MediaCard.imageBoxOf`) και θα γραφόταν τρίτη — έγινε ένα σημείο, τον καλούν και οι τρεις.
+- Καλούντες: `PhotoPreviewImage` (`rotation` από το `usePhotoPreviewState`, που πλέον το εκθέτει) · `FilePreviewRenderer.ImagePreview`
+  (`displayRotation` state δίπλα στο `rotRef`, όπως το `displayZoom` δίπλα στο `zoomRef`).
+- **Αναμενόμενο μετά το push** (ίδιο modal, ίδια οθόνη): `sizes="702px"` (κουτί 2360×936 μετά το +½ σκαλοπατιού ⇒ 936 × ¾) ⇒ **`w=640`** στο άνοιγμα· `w=2560` στο
+  ~250%· πρωτότυπο μόνο πάνω από 2560 / (702 × 0,8) ≈ **456%**. Πάνελ: `sizes` = ζωγραφισμένο (~821), όχι 1227.
+- ⚠️ Το πάνελ μετρά το **border-box** του δοχείου (`p-4`) — υπερεκτίμηση ≤ 32 px, αθώα (ποτέ θόλωμα).
+
+**Άγκυρες**: `use-zoom-resolution.test.tsx` **Ζ8** (η μετρημένη περίπτωση 2352×928 ⇒ 696 · `sizes` ζωγραφισμένο · zoom × ζωγραφισμένο) +
+**Ζ9** (90°/270° ⇒ άλλος άξονας · 180° όρθια)· Ζ1–Ζ7 αμετάβλητα (κουτί 592×400 ⇒ άνω φράγμα 600). Μεταλλάξεις **3/3** κόκκινες:
+ολόκληρο κουτί (5 κόκκινα) · αγνόηση περιστροφής (2) · χωρίς ½ σκαλοπατιού (5, και στο lightbox). 11 σχετικές σουίτες πράσινες ·
+`jscpd:diff` καθαρό στα 10 αρχεία.
+
+**Αρχεία για commit** (μόνο αυτά — το working tree μοιράζεται): `src/components/shared/files/preview/use-zoom-resolution.ts` ·
+`src/components/shared/files/preview/FilePreviewRenderer.tsx` · `src/components/shared/files/preview/__tests__/use-zoom-resolution.test.tsx` ·
+`src/hooks/media/useElementSize.ts` · `src/components/shared/media/PhotoLightbox.tsx` · `src/components/shared/files/media/MediaCard.tsx` ·
+`src/lib/storage/storage-object-url.ts` · `src/lib/files/file-display-url.ts` · `src/lib/files/__tests__/file-display-url.test.ts` ·
+`src/lib/properties/__tests__/property-floorplan-spots.test.ts` · `src/core/modals/PhotoPreviewImage.tsx` · `src/core/modals/PhotoPreviewModal.tsx` ·
+`src/core/modals/usePhotoPreviewState.ts` · αυτό το ADR.
 
 ## Changelog
 
@@ -438,3 +500,9 @@ Deploy `89e3be47`: «T1 🚀 Build & Deploy Docker Image» ✅ (run 37109478085)
   του ξεπερασμένου βήματος ακύρωνε το επόμενο με παγωμένα καρέ — ο φρουρός ενεργεί πλέον μόνο αν η πρόθεσή του ισχύει ακόμη
   (άγκυρα `ListingCardGallery` Δ5). Άγκυρες Ε2: `media-gallery-derivatives.test.tsx` (Ε1–Ε5)· μεταλλάξεις **6/6** κόκκινες·
   `jscpd:diff` καθαρό. ⏳ Ε2/Ε3 ζωντανά μετά το push.
+- **2026-10-03** — **Ε2/Ε3 ζωντανά** (§9 «Ε2/Ε3 ζωντανά», deploy `88f7c42b`): **Ε2α ✅** (κάρτες `w=320`, 19 KB αντί για 3,27 MB) ·
+  **Ε2γ ✅** · **Ε3 ✅** (2 / 1, ζωντανή **και** παγωμένη κύλιση) · **Ε3β ✅** (0, με στραγγαλισμένους timers) · **Γ3 ✅**. **Ε2β ⚠️** ⇒
+  🔴 **Ε4**: το `useZoomResolution` δήλωνε ολόκληρο το κουτί (2352) αντί για τα ζωγραφισμένα 696 ⇒ `w=2560` αντί για `w=640`. Θεραπεία:
+  `ProxyImagePreview.dimensions` (αντί για `intrinsicWidth`) · `paintedWidthOf` = `containedWidth` για την τρέχουσα περιστροφή
+  (νέα είσοδος του hook) · μέτρηση από `useElementSize` · `steppedUpperBound` = ο ένας κανόνας «σκαλοπάτι + ½» (ήταν δύο αντίγραφα).
+  Άγκυρες Ζ8 + Ζ9, μεταλλάξεις 3/3, `jscpd:diff` καθαρό. ⏳ Ε4 ζωντανά μετά το push.

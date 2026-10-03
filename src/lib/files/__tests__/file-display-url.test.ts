@@ -68,7 +68,8 @@ describe('fileDisplayUrlOf', () => {
     if (resolved.kind !== 'url' || resolved.preview === null) throw new Error('expected preview');
     expect(resolved.dimensions).toEqual({ width: 1013, height: 1800 });
     expect(resolved.preview.ladder.map((rung) => rung.width)).toEqual([320, 640, 1280]);
-    expect(resolved.preview.intrinsicWidth).toBe(1013);
+    // Οι διαστάσεις ταξιδεύουν **με** την προεπισκόπηση (§9 Ε2β): ο zoom υπολογίζει από αυτές τι ζωγραφίζεται.
+    expect(resolved.preview.dimensions).toEqual({ width: 1013, height: 1800 });
     expect(resolved.preview.srcSet).not.toContain('w=2560');
     const small = fileDisplayUrlOf({ storagePath: PATH, contentType: 'image/png', imageDimensions: { width: 600, height: 400 } });
     expect(small.kind === 'url' && small.preview?.src.endsWith('w=640')).toBe(true);
