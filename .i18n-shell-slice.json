@@ -103,6 +103,14 @@
       "prefixes": ["conveyance:items"],
       "reason": "ADR-901 Φ2 · ADR-744 §26 — έγινε ορατό στον generator όταν η σελίδα υπόθεσης του επαγγελματία (`/cases/[engagementId]` → `EngagedCaseContent`) απέκτησε route slice και έφτασε ΣΤΑΤΙΚΑ τη γραμμή λίστας. Οι δύο δυναμικές κλήσεις είναι `t(row.item.labelKey)` (γρ. 90, 123), και το `labelKey` έρχεται ΜΟΝΟ από τον κατάλογο `src/config/conveyance-checklist/items-*.ts` (`ChecklistItem.labelKey`, types.ts:126): 24 κυριολεκτικά `items.<id>.label` + 2 builders `items.${id}.label` (πωλητής/αγοραστής). ΜΕΤΡΗΜΕΝΟ 2026-10-03: το `conveyance:items` έχει 39 είδη και ΚΑΘΕ είδος έχει ΜΟΝΟ `label` (4.013 bytes) ⇒ το πρόθεμα είναι ΑΚΡΙΒΗΣ απάντηση, όχι σκούπα. ⚠️ Αν το `items.<id>` αποκτήσει δεύτερο πεδίο (περιγραφή/βοήθεια), στένεψε σε `keys` ανά είδος."
     },
+    "src/components/conveyance/my-cases/TransmitDocumentDialog.tsx": {
+      "prefixes": ["conveyance:items"],
+      "reason": "ADR-901 Φ4.4 — ο τίτλος του διαλόγου «Αποστολή εγγράφου» είναι η ετικέτα της ΙΔΙΑΣ γραμμής καταλόγου: `t(row.item.labelKey)`, με `labelKey` ΜΟΝΟ από τον κατάλογο `src/config/conveyance-checklist/items-*.ts` — ίδια πηγή και ίδιο ακριβές πρόθεμα με το `ConveyanceChecklistRow` από πάνω (κάθε είδος του `conveyance:items` έχει μόνο `label`). Καμία νέα κλειστότητα: τα bytes είναι ήδη στο slice της σελίδας από τη γραμμή."
+    },
+    "src/components/conveyance/my-cases/EngagedCaseActivity.tsx": {
+      "prefixes": ["conveyance:items"],
+      "reason": "ADR-901 Φ4.5 — στο ίχνος της υπόθεσης, ένα αίτημα εγγράφου δεν έχει όνομα αρχείου (Α31: ποτέ όνομα εγγράφου στο βιβλίο), οπότε το έγγραφο ονομάζεται με την ετικέτα της γραμμής: `t(labelKey)` με `labelKey = getChecklistItem(item.itemId)?.labelKey` — ΜΟΝΟ από τον κατάλογο `src/config/conveyance-checklist/items-*.ts`. Ίδια πηγή και ίδιο ακριβές πρόθεμα με το `ConveyanceChecklistRow` και το `TransmitDocumentDialog` (κάθε είδος του `conveyance:items` έχει μόνο `label`). Καμία νέα κλειστότητα: η ίδια σελίδα `/cases/[engagementId]` φέρνει ήδη τα bytes από τη γραμμή."
+    },
     "src/components/building-management/tabs/PlaceholderTab.tsx": {
       "keys": [
         "building:tabs.labels.protocols"
@@ -473,7 +481,7 @@
       "reason": "ADR-901 Φ2 §5.4 — «ΟΙ ΥΠΟΘΕΣΕΙΣ ΜΟΥ» (`/cases`): κατάλογος των υποθέσεων μεταβίβασης όπου ο επαγγελματίας (δικηγόρος/συμβολαιογράφος/μηχανικός) έχει ΑΝΑΛΑΒΕΙ ρόλο, με την πρόταση «Αναλαμβάνω» για όσες περιμένουν απάντηση. Ο `(me)` αποδίδεται στον διακομιστή· χωρίς slice το πρώτο καρέ θα έβαφε ωμά κλειδιά (CHECK 3.51)."
     },
     "src/app/(me)/cases/[engagementId]/page.tsx": {
-      "sealed": 8122,
+      "sealed": 10834,
       "sealedAt": "2026-10-03",
       "history": [
         {
@@ -481,6 +489,12 @@
           "to": 8122,
           "at": "2026-10-03",
           "why": "ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ (ADR-901 Φ2 · ADR-862 Φ1). Μετρημένο με `--measure`: 8122 bytes σε 1 namespace (`conveyance`). Τα 4013 από αυτά είναι οι ετικέτες του καταλόγου `conveyance:items` — η γραμμή λίστας `ConveyanceChecklistRow` τις ζητά δυναμικά (`dynamicKeyPolicy`, πρόθεμα ακριβές: κάθε είδος έχει μόνο `label`). Πριν από τη δήλωση η διαδρομή ΑΡΝΙΟΤΑΝ (4100 = κάτω φράγμα)."
+        },
+        {
+          "from": 8122,
+          "to": 10834,
+          "at": "2026-10-03",
+          "why": "ADR-901 Φ4 (4.1–4.4) — η σελίδα απέκτησε ό,τι υποσχέθηκε η §5.4: καρτέλες «Δικαιολογητικά» · «Συμμετέχοντες & ίχνος» (δηλωμένη ιδιότητα, είδη ίχνους, ρόλος `host`), Προβολή/Λήψη σε κάθε τεκμήριο, και Φ4.4 το transmittal ΣΤΙΣ ΓΡΑΜΜΕΣ του πρώτου καρέ: «Αποστολή εγγράφου» · «Απόσυρση» · «από: <ρόλος>» · υπόδειξη γραμμής επιπέδου `contribution` · μηνύματα αποτυχίας (`transmittal.errors.*`, ένα ανά άρνηση του κριτή). ΟΡΙΟ ΗΔΗ ΕΦΑΡΜΟΣΜΕΝΟ: ο διάλογος αποστολής (λίστα προχείρων + ροή ανεβάσματος) φορτώνεται με `next/dynamic` — μετρημένο 11741 → 10834 με το όριο. Δεν μετρήθηκε χωριστά το μερίδιο 4.1–4.3 έναντι 4.4 (κοινό δέντρο, χωρίς stash) — ΜΕΤΡΗΜΕΝΟ ΜΟΝΟ ΤΟ ΣΥΝΟΛΟ με `--measure`."
         }
       ],
       "reason": "ADR-901 Φ2 §5.4 · ADR-862 §5.3.8 — ΜΙΑ ΥΠΟΘΕΣΗ ΑΠΟ ΤΗ ΜΕΡΙΑ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ (`/cases/[engagementId]`): κεφαλίδα υπόθεσης + ΜΟΝΟ οι γραμμές λίστας του ρόλου του (`visibleTo`). Ο `(me)` αποδίδεται στον διακομιστή· χωρίς slice, το πρώτο καρέ θα έβαφε ωμά κλειδιά (CHECK 3.51) — και οι ετικέτες εγγράφων είναι το ΠΡΩΤΟ που διαβάζει ο νομικός."

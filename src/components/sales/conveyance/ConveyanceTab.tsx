@@ -10,19 +10,26 @@
  * δεν παράγεται, ελέγχει γραμμές (δεμένες στην έκδοση του αρχείου) και ορίζει ημέρα
  * υπογραφής ώστε να βλέπει τι **δεν** θα ισχύει τότε.
  *
+ * ADR-901 Φ4.4: ο οικοδεσπότης **ανοίγει** τεκμήρια από τον κατάλογο — και ό,τι του **στάλθηκε** από επαγγελματία
+ * (ζει στον χώρο του συντάκτη· ο server το κρίνει στον δικό του κατάλογο). Ίδιο άνοιγμα με τον επαγγελματία.
+ *
+ * ADR-901 Φ4.5: «Ζήτησε έγγραφο» από όποιον οφείλει μια γραμμή (συμβολαιογράφος · δικηγόροι) — ίδιο component με
+ * τον επαγγελματία· ο παραλήπτης παράγεται από τον πάροχο της γραμμής, ποτέ από επιλογή.
+ *
  * Δικαιώματα: `legal:conveyance:view` για να εμφανιστεί η καρτέλα (το ελέγχει ο
  * `SalesSidebar`) · `legal:conveyance:manage` για ενέργειες — ο server τα ξαναελέγχει.
  *
  * @module components/sales/conveyance/ConveyanceTab
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { useCapability } from '@/auth/hooks/useCapability';
 import { isGranted } from '@/types/capability-authority';
 import { useConveyanceCase, type ConveyanceCommandOutcome } from '@/hooks/useConveyanceCase';
+import { useDocumentRequests } from '@/hooks/useDocumentRequests';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -31,11 +38,13 @@ import { CHECKLIST_SECTIONS, type ConveyanceFactId } from '@/config/conveyance-c
 import type { ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
 import type { ChecklistRow, ConveyanceCaseView } from '@/types/conveyance-case';
 import type { Property } from '@/types/property';
+import { useCaseFileOpening } from '@/components/conveyance/shared/CaseFileOpening';
 import { ConveyanceCaseHeader } from './ConveyanceCaseHeader';
 import { ConveyanceChecklistSection } from './ConveyanceChecklistSection';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
 import { ConveyanceFactsPanel } from './ConveyanceFactsPanel';
 import { ConveyanceProfessionalsAccess } from './ConveyanceProfessionalsAccess';
+import { ConveyanceRequestAllBar } from './ConveyanceRequestAllBar';
 import { ConveyanceRowDialog } from './ConveyanceRowDialog';
 
 interface ConveyanceTabProps {
@@ -60,7 +69,21 @@ function EmptyState({ canManage, opening, onOpen }: { readonly canManage: boolea
   );
 }
 
-function CaseBody({ view, canManage, onCommand }: { readonly view: ConveyanceCaseView; readonly canManage: boolean; readonly onCommand: (command: ConveyanceCommand) => void }) {
+/** Φ4.5 — «Ζήτησε έγγραφο» του οικοδεσπότη: μόνο με δικαίωμα διαχείρισης (ενέργεια, όχι ανάγνωση — ο server το ξαναελέγχει). */
+function useHostRequests(view: ConveyanceCaseView, canManage: boolean, onChanged: () => void) {
+  const door = useMemo(() => ({ kind: 'host' as const, caseId: view.conveyanceCase.id }), [view.conveyanceCase.id]);
+  const requests = useDocumentRequests(door, view.documentRequests, view.checklist.rows, onChanged);
+  return canManage ? requests : null;
+}
+
+interface CaseBodyProps {
+  readonly view: ConveyanceCaseView;
+  readonly canManage: boolean;
+  readonly onCommand: (command: ConveyanceCommand) => void;
+  readonly onChanged: () => void;
+}
+
+function CaseBody({ view, canManage, onCommand, onChanged }: CaseBodyProps) {
   const [dialog, setDialog] = useState<{ row: ChecklistRow; mode: RowDialogMode } | null>(null);
   const editable = canManage && view.state === 'open';
   const onOpenDialog = useCallback((row: ChecklistRow, mode: RowDialogMode) => setDialog({ row, mode }), []);
@@ -69,11 +92,15 @@ function CaseBody({ view, canManage, onCommand }: { readonly view: ConveyanceCas
     (factId: ConveyanceFactId, value: boolean | null) => onCommand({ type: 'answer_fact', factId, value }),
     [onCommand],
   );
+  const fileTarget = useMemo(() => ({ kind: 'host' as const, caseId: view.conveyanceCase.id }), [view.conveyanceCase.id]);
+  const { openFile, previewDialog } = useCaseFileOpening(fileTarget);
+  const requests = useHostRequests(view, canManage, onChanged);
   return (
     <section className="space-y-3 p-3">
       <ConveyanceCaseHeader view={view} canEdit={canManage} onCommand={onCommand} />
       {/* ADR-901 Φ2 — οι επαγγελματίες μπαίνουν ΜΟΝΟ με συμμετοχή· η ενότητα ζει όσο υπάρχει υπόθεση. */}
       <ConveyanceProfessionalsAccess caseId={view.conveyanceCase.id} canManage={canManage} />
+      {requests && <ConveyanceRequestAllBar requestable={requests.requestable} targets={view.documentRequests.targets} onConfirm={requests.requestAll} />}
       <ConveyanceFactsPanel record={view.conveyanceCase} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
       {CHECKLIST_SECTIONS.map((section) => (
         <ConveyanceChecklistSection
@@ -83,9 +110,12 @@ function CaseBody({ view, canManage, onCommand }: { readonly view: ConveyanceCas
           canEdit={editable}
           onOpenDialog={onOpenDialog}
           onClear={onClear}
+          onOpenFile={openFile}
+          request={requests?.rowRequest}
         />
       ))}
       <ConveyanceRowDialog target={dialog} onClose={() => setDialog(null)} onSubmit={onCommand} />
+      {previewDialog}
     </section>
   );
 }
@@ -96,7 +126,8 @@ export function ConveyanceTab({ unit }: ConveyanceTabProps) {
   const iconSizes = useIconSizes();
   const { error: notifyError } = useNotifications();
   const canManage = isGranted(useCapability('legal:conveyance:manage').verdict);
-  const { view, loading, error, opening, openCase, run } = useConveyanceCase(unit.id);
+  const { view, loading, error, opening, openCase, run, reload } = useConveyanceCase(unit.id);
+  const onChanged = useCallback(() => { void reload(); }, [reload]);
 
   const report = useCallback((outcome: ConveyanceCommandOutcome) => {
     if (outcome.ok) return;
@@ -121,5 +152,5 @@ export function ConveyanceTab({ unit }: ConveyanceTabProps) {
       </section>
     );
   }
-  return <CaseBody view={view} canManage={canManage} onCommand={onCommand} />;
+  return <CaseBody view={view} canManage={canManage} onCommand={onCommand} onChanged={onChanged} />;
 }

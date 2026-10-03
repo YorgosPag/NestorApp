@@ -5,7 +5,7 @@
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
     "src/i18n/generated/routes/case-invite__token.el.json": "db91072b146e6402625df224aa38cf9534622f13d2e9582b7ae89ed83dfb9758",
     "src/i18n/generated/routes/cases.el.json": "18ed15f75eafbe9ed226f3dd7a8e0b52924d302d97da573ca89a382a508054fc",
-    "src/i18n/generated/routes/cases__engagementId.el.json": "33930138ad558a8c3275e5cb9e6e53ed15b0ecdd0a67468d01315539d1f1cc18",
+    "src/i18n/generated/routes/cases__engagementId.el.json": "657aeaa08ff8d1e696c3d0f2e3f7870dcc3c88f968fce64b3710563a807f0a31",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6d6839ae3418ba9394f1abbbee7c5df6c02ea37c4e685ba04f97cafee07b60a9",
+  "inputsSha256": "9b273ecfc53ef282727d74ac115187f2fd797e81cdd41bdeab30b595096ca883",
   "languages": [
     "el"
   ],
@@ -524,8 +524,10 @@
     "src/components/property-dossier/PropertyDossierTitle.tsx": "218515ae17720dc4443b05393dbc81017e722490ac4cd1647af3cd33bf27bc3f",
     "src/components/property-dossier/property-dossier-media.ts": "d875115ebbe334a5ba043d0043c11626d433af2a70a699c1bc5d9d5a7cf6da1d",
     "src/components/property-dossier/usePropertyDossierLifecycle.ts": "ae58e9ec9a40c2e60ebf3a54da403d8ab377e4e5a66508c8321e57b6c8ffac50",
-    "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "7fddbac9c2c23d7721f03804802b908100f9a6823b968b5ee4d92cbc61342bda",
+    "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "af952005d07f86b296cc3fbbb1fa01ccbdabeaf6d526cb38079b9ccbb9ef3672",
     "src/components/sales/conveyance/ConveyanceChecklistSection.tsx": "89cb2f7e0539e79b4d075f09e94285ddbad7a4e495ec8f6845dd100b1ba5914f",
+    "src/components/sales/conveyance/ConveyanceRowRequest.tsx": "ff7747bc32242ba88df23a973165d6289a4f9bd68d6ed948fd5c8dca5e56a418",
+    "src/components/sales/conveyance/ConveyanceRowTransmittal.tsx": "70610f990122293885eae330b52d412e5e60544d3fefc573f770c8b9d0c6475d",
     "src/components/sales/conveyance/conveyance-presentation.ts": "0b6354c5e8c13f02c8ef6e88b86cd84bc59238de2917152c52f823c6c3612e00",
     "src/components/search-results/AdminBoundaryLayer.tsx": "3b1a1d1a12cf92dbedf85e07577e3c1becf9d6efd41fd35f6b166a9a67d12058",
     "src/components/search-results/AdminPlaceMarker.tsx": "2e4b69635006d280fa33a9f4f2422412c6121e02e41420105304027ada134968",
@@ -2159,8 +2161,14 @@
             "engagement.myCases.signing",
             "engagement.myCases.untitled",
             "files.download",
+            "files.from",
             "files.unavailable",
             "files.view",
+            "requests.action",
+            "requests.noRecipient",
+            "requests.pending",
+            "requests.requestedToday",
+            "requests.requesting",
             "row.actDay",
             "row.expiresOn",
             "row.invalidOnSigning",
@@ -2169,9 +2177,16 @@
             "row.offlineHint",
             "row.provider",
             "row.rejectedReason",
+            "row.transmittalHint",
             "row.uploadHint",
             "row.validityUnverified",
-            "summary.progress"
+            "summary.progress",
+            "transmittal.action",
+            "transmittal.dialog.sending",
+            "transmittal.reissue",
+            "transmittal.reissueHint",
+            "transmittal.revise.action",
+            "transmittal.withdraw"
           ],
           "prefixes": [
             "engagement.roles",
@@ -11482,7 +11497,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 930,
-    "sliceBytes": 685895
+    "sliceBytes": 686987
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
