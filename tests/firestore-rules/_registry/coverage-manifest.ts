@@ -291,6 +291,24 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-901 Φ4.4 — το transmittal. `deny_all` επειδή το ακροατήριο = ρόλος συντάκτη ∩ `visibleTo` γραμμής
+    // (κανένα από τα δύο σε κανόνα — ανάγνωση θα έδινε την έκθεση του αγοραστή στον πωλητή, Α23), και η
+    // απόσυρση αποδεσμεύει τη σταλμένη έκδοση μόνο αν καμία άλλη αποστολή δεν την καρφώνει (Α26).
+    collection: 'conveyance_contributions',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/conveyance-contributions.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-901 Φ4.5 — «Ζήτησε έγγραφο». `deny_all` επειδή ο παραλήπτης = πάροχος γραμμής × ενεργοί ρόλοι ×
+    // `visibleTo` (τίποτα σε κανόνα — Α29), το αίτημα το βλέπουν ΜΟΝΟ αιτών και παραλήπτης (Α31), και η
+    // ταυτότητα ανά ημέρα είναι το anti-spam (εγγραφή από client θα την παρέκαμπτε).
+    collection: 'conveyance_document_requests',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/conveyance-document-requests.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // 🏆 ADR-841 §7 Α21.12 — Η ΠΡΟΕΛΕΥΣΗ ΤΟΥ ΣΗΜΑΤΟΣ. **Τέταρτο `deny_all` της
     // οικογένειας, ΤΕΤΑΡΤΟΣ λόγος** — και δεν είναι ούτε ιδιωτικότητα προσώπου
     // (`mreq`), ούτε αυθεντία γραφέα (`fcon`), ούτε μυστικό εξαργύρωσης (`fcinv`).
