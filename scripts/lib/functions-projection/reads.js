@@ -19,7 +19,7 @@ const { parse, moduleSpecifiers, importedBindings, memberReads, ts } = require('
 
 const BUILTINS = new Set(builtinModules);
 const isBuiltin = (spec) => BUILTINS.has(spec.replace(/^node:/, ''));
-const readLf = (abs) => fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n');
+const { readLf } = require('../generated-artifacts');
 
 /** Projected module path that a relative specifier resolves to, or null. */
 function resolveRelative(manifest, fromRel, spec) {

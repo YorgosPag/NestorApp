@@ -7,8 +7,7 @@
  * Αν τα δύο αποκλίνουν, μια άρνηση φτάνει στον άνθρωπο ως «κάτι πήγε στραβά» — αυτή η άγκυρα το κοκκινίζει.
  */
 
-import { STATUS_BY_TOUR_REFUSAL } from '@/app/api/spatial-tours/_shared/tour-route';
-
+import { STATUS_BY_TOUR_REFUSAL } from '../tour-refusal-status';
 import { TOUR_REFUSALS, isTourRefusalName } from '../tour-refusal-vocabulary';
 
 it('ίδιο σύνολο με τον πίνακα HTTP του διακομιστή — ούτε λόγος παραπάνω, ούτε λιγότερος', () => {

@@ -37,6 +37,7 @@ import 'server-only';
 
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { INVITATION_REDEEM_REFUSED_STATUS } from '@/contracts/invitation-redeem-body';
 import { readJsonBody } from '@/lib/api/json-body';
 import { checkClaimFits, composeClaimPayload } from '@/lib/auth/claim-payload';
 import {
@@ -204,7 +205,7 @@ export function respond(outcome: RedeemOutcome): NextResponse<RedeemResponse> {
       //    μέλος» στέλνουν τον άνθρωπο σε **διαφορετικές** ενέργειες.
       return NextResponse.json(
         { error: 'LINK_REFUSED', reason: outcome.reason } as const,
-        { status: 422 },
+        { status: INVITATION_REDEEM_REFUSED_STATUS },
       );
 
     case 'unavailable':

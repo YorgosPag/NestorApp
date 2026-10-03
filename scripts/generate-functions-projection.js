@@ -16,36 +16,15 @@
  * CLI: node scripts/generate-functions-projection.js
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 
-const { judge, STATES } = require('./lib/functions-projection/judge');
-
-function write(root, output) {
-  const abs = path.join(root, output.path);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, output.content, 'utf8');
-}
-
-function removeOrphan(root, rel) {
-  fs.unlinkSync(path.join(root, rel));
-  let dir = path.dirname(path.join(root, rel));
-  while (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) {
-    fs.rmdirSync(dir);
-    dir = path.dirname(dir);
-  }
-}
+const { applyJudgement } = require('./lib/generated-artifacts');
+const { judge } = require('./lib/functions-projection/judge');
 
 function generate(root) {
   const { results, plan } = judge(root);
   if (plan.errors.length > 0) return { ok: false, errors: plan.errors, written: [], removed: [] };
-  const byPath = new Map(plan.outputs.map((o) => [o.path, o]));
-  const written = [];
-  const removed = [];
-  for (const r of results) {
-    if (r.state === STATES.ORPHAN) { removeOrphan(root, r.path); removed.push(r.path); }
-    else if (r.state !== STATES.FRESH) { write(root, byPath.get(r.path)); written.push(r.path); }
-  }
+  const { written, removed } = applyJudgement(root, plan.outputs, results);
   return { ok: true, errors: [], written, removed, total: plan.outputs.length };
 }
 

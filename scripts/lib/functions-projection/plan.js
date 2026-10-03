@@ -27,7 +27,7 @@ const MANIFEST_FILE = '.functions-projection.json';
 const GENERATOR_VERSION = 'functions-projection/1';
 const REGENERATE = 'npm run generate:functions-projection';
 
-const readLf = (abs) => fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n');
+const { readLf } = require('../generated-artifacts');
 
 function loadManifest(root) {
   const raw = JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), 'utf8'));
@@ -132,4 +132,4 @@ function buildPlan(root) {
   return { manifest, outputs, errors };
 }
 
-module.exports = { buildPlan, readLf, REGENERATE };
+module.exports = { buildPlan, REGENERATE };

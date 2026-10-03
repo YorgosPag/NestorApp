@@ -13,6 +13,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { INVITATION_REDEEM_REFUSED_STATUS } from '@/contracts/invitation-redeem-body';
 import { readJsonBody } from '@/lib/api/json-body';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -49,7 +50,7 @@ function respond(outcome: TourCaptureRedeemOutcome): NextResponse<RedeemResponse
       return NextResponse.json({ status: outcome.kind } as const);
     case 'refused':
       // 🔑 **422**: το αίτημα ήταν κατανοητό· ο **κόσμος** δεν το επιτρέπει — και ο λόγος ταξιδεύει.
-      return NextResponse.json({ error: 'LINK_REFUSED', reason: outcome.reason } as const, { status: 422 });
+      return NextResponse.json({ error: 'LINK_REFUSED', reason: outcome.reason } as const, { status: INVITATION_REDEEM_REFUSED_STATUS });
     case 'unavailable':
       return NextResponse.json({ error: 'REDEEM_UNAVAILABLE' } as const, { status: 503 });
   }

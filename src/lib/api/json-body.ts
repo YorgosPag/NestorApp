@@ -31,6 +31,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { z } from 'zod';
+import type { z as z4 } from 'zod/v4';
 
 /**
  * Το σώμα, κριμένο: **ή** τα δεδομένα **ή** η έτοιμη απόρριψη — ποτέ και τα δύο,
@@ -51,17 +52,31 @@ export type JsonBody<T> =
 export async function readJsonBody<TSchema extends z.ZodTypeAny>(
   request: NextRequest,
   schema: TSchema,
-): Promise<JsonBody<z.infer<TSchema>>> {
+): Promise<JsonBody<z.infer<TSchema>>>;
+/**
+ * Το ίδιο βήμα για σχήμα **zod/v4** — τα σχήματα των συμβολαίων προς πελάτες εκτός εφαρμογής (`src/contracts/`,
+ * ADR-904 Ε6) γράφονται σε v4 επειδή μόνο αυτό εξάγει JSON Schema εγγενώς. Η διαδρομή κρίνει με το **ίδιο** σχήμα
+ * που δημοσιεύεται στο συμβόλαιο — ποτέ με δεύτερο αντίγραφο.
+ */
+export async function readJsonBody<TSchema extends z4.ZodType>(
+  request: NextRequest,
+  schema: TSchema,
+): Promise<JsonBody<z4.infer<TSchema>>>;
+export async function readJsonBody(
+  request: NextRequest,
+  schema: z.ZodTypeAny | z4.ZodType,
+): Promise<JsonBody<unknown>> {
   const body: unknown = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
 
-  if (parsed.success) return { data: parsed.data as z.infer<TSchema> };
+  if (parsed.success) return { data: parsed.data };
 
   return {
     rejected: NextResponse.json(
       {
         error: 'MALFORMED_BODY',
-        malformed: [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))],
+        // `String`: στο v4 το μονοπάτι είναι `PropertyKey[]` — ένα `symbol` θα έριχνε το `join`.
+        malformed: [...new Set(parsed.error.issues.map((issue) => issue.path.map(String).join('.')))],
       },
       { status: 400 },
     ),

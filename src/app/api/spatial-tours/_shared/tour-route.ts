@@ -17,6 +17,7 @@ import { actorWorkspace, listingActorOf, type ApiActor } from '@/lib/auth/person
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
+import { STATUS_BY_TOUR_REFUSAL } from '@/lib/spatial-tour/tour-refusal-status';
 import type { TourAccessRefused } from '@/server/spatial-tour/tour-access-shared';
 import type { TourUploadRefusal } from '@/server/spatial-tour/tour-capture-upload';
 import type { TourSubject } from '@/types/spatial-tour';
@@ -87,94 +88,10 @@ function isTourAccessRefused(value: { readonly kind: string }): value is TourAcc
 }
 
 /**
- * **Άρνηση → κωδικός HTTP** — `Record`: νέα άρνηση **δεν μεταγλωττίζεται** μέχρι να αποκτήσει σημασία στο δίκτυο.
- * Ο λόγος **ταξιδεύει** στο σώμα: κάθε άρνηση στέλνει τον άνθρωπο σε **άλλη** ενέργεια (ADR-853 §5 #7).
+ * 🔒 **Ο τύπος του διακομιστή δένεται στον πίνακα** (`lib/spatial-tour/tour-refusal-status.ts`): νέα `TourUploadRefusal`
+ * χωρίς γραμμή εκεί **δεν μεταγλωττίζεται**.
  */
-export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>> = {
-  'tour-absent': 404,
-  'not-requestable': 409,
-  'not-manager': 403,
-  'expiry-required': 422,
-  'expiry-past': 422,
-  'expiry-too-far': 422,
-  'request-absent': 404,
-  'not-pending': 409,
-  'not-active': 409,
-  'reason-required': 422,
-  'grant-absent': 404,
-  /** Η αγγελία άλλαξε χέρια — ο κόσμος άλλαξε, όχι το αίτημα. */
-  'tour-custody-mismatch': 409,
-  /** Έγγραφο που δεν καταλάβαμε — **δικό μας** πρόβλημα, όχι του ανθρώπου. */
-  'tour-unreadable': 503,
-  // ── Η πύλη θέασης και οι ρυθμίσεις (Κ3β) ───────────────────────────────────
-  /** Ανώνυμος μπροστά σε περιήγηση κατ' αίτηση — «συνδεθείτε», όχι «απαγορεύεται». */
-  'sign-in-required': 401,
-  'not-viewable': 403,
-  'publish-needs-capture': 409,
-  'visibility-unsupported': 409,
-  // ── Ο κριτής ανεβάσματος: ο φωτογράφος ξέρει αν ζητήσει ΝΕΑ πρόσκληση ──────
-  'no-capture-grant': 403,
-  'revoked': 403,
-  'expired': 403,
-  'unreadable-expiry': 403,
-  'scope-missing': 403,
-  // ── Τα bytes ─────────────────────────────────────────────────────────────
-  'not-jpeg': 415,
-  'too-large': 413,
-  'not-equirect': 422,
-  'too-small': 422,
-  'wrong-projection': 422,
-  // ── Η ροή ανεβάσματος ────────────────────────────────────────────────────
-  'ticket-invalid': 422,
-  'ticket-foreign': 403,
-  'upload-missing': 409,
-  'upload-incomplete': 409,
-  'declaration-invalid': 400,
-  // ── Ο γράφος (Φ2β) ─────────────────────────────────────────────────────────
-  'capture-absent': 404,
-  /** Ήδη σε σημείο — η μετακίνηση είναι ρητή (αφαίρεση → τοποθέτηση), ποτέ σιωπηλή. */
-  'capture-placed': 409,
-  'capture-unplaced': 409,
-  /** Χωρίς πλακίδια ακόμη — η τοποθέτηση θα έκρυβε ορατό σημείο (§4.10). */
-  'capture-not-ready': 409,
-  'node-absent': 404,
-  /** Όροφος BIM που η περιήγηση δεν γνωρίζει — δεν επινοείται. */
-  'level-absent': 422,
-  /** Άγνωστος τύπος χώρου · κανένας · πάνω από 3 · όνομα πολύ μακρύ (Φ2στ, `normalizeTourRoom`). */
-  'room-invalid': 422,
-  // ── Η κάτοψη (Φ2στ-β · §4.13) ──────────────────────────────────────────────
-  /** Βαθμονόμηση όροφου χωρίς εικόνα κάτοψης. */
-  'plan-absent': 409,
-  /** Θέση σε κάτοψη χωρίς κλίμακα — τα «μέτρα» θα ήταν μαντεψιά. */
-  'plan-uncalibrated': 409,
-  /** Το αρχείο δεν είναι κάτοψη αυτού του ακινήτου, ή δεν είναι εικόνα που διαβάζεται. */
-  'plan-not-eligible': 422,
-  'position-outside-plan': 422,
-  'scale-invalid': 422,
-  // ── Τα σχήματα των χώρων (Φ2στ-γ Γ3β · §4.14) ─────────────────────────────
-  /** Λίγες/πολλές κορυφές · αυτοτομή · εμβαδόν κάτω από το ελάχιστο · άγνωστη πηγή. */
-  'space-invalid': 422,
-  'space-outside-plan': 422,
-  /** Επικαλύπτει άλλον εγκεκριμένο χώρο του ορόφου (Revit «Room overlaps») — κατάσταση, όχι σχήμα ⇒ 409. */
-  'space-overlap': 409,
-  'space-absent': 404,
-  /** «Νέος» σε id που υπάρχει ήδη με άλλο περιεχόμενο (Γ3γ-2α — id του πελάτη) — σύγκρουση κατάστασης ⇒ 409. */
-  'space-exists': 409,
-  /** Δηλωμένο εμβαδόν μη θετικό, πάνω από το όριο, ή χωρίς γνωστή πηγή (Δ8.4). */
-  'area-invalid': 422,
-  'separation-invalid': 422,
-  'separation-absent': 404,
-  'separation-exists': 409,
-  // ── Η ιδιωτικότητα: θολωμένες περιοχές (Φ2ζ · §4.15) ─────────────────────────
-  /** Εκτός σφαίρας (πλάτος > ±90°) · ακτίνα εκτός ορίων · id που δεν είναι `tred_…`. */
-  'redaction-invalid': 422,
-  'redaction-absent': 404,
-  /** «Νέα» σε id που υπάρχει ήδη με άλλη γεωμετρία (id του πελάτη) — σύγκρουση κατάστασης. */
-  'redaction-exists': 409,
-  /** Περισσότερες από `MAX_TOUR_REDACTIONS` περιοχές σε μία λήψη — φράχτης εγγράφου. */
-  'redaction-limit': 409,
-  'graph-full': 409,
-};
+const STATUS_OF_UPLOAD_REFUSAL: Readonly<Record<TourUploadRefusal, number>> = STATUS_BY_TOUR_REFUSAL;
 
 export type TourRefusedBody = { readonly error: 'TOUR_REFUSED'; readonly reason: TourUploadRefusal };
 
@@ -182,7 +99,7 @@ export type TourRefusedBody = { readonly error: 'TOUR_REFUSED'; readonly reason:
 export type TourSubjectBody<B> = B | TourBadSubjectBody | TourRefusedBody;
 
 export function tourRefusedResponse(reason: TourUploadRefusal): NextResponse<TourRefusedBody> {
-  return NextResponse.json({ error: 'TOUR_REFUSED', reason } as const, { status: STATUS_BY_TOUR_REFUSAL[reason] });
+  return NextResponse.json({ error: 'TOUR_REFUSED', reason } as const, { status: STATUS_OF_UPLOAD_REFUSAL[reason] });
 }
 
 /** **«Δεν μπόρεσα»** — ποτέ ονομασμένη άρνηση (μυστικό που λείπει · αποθήκευση · Firestore). */

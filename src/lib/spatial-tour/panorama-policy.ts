@@ -27,8 +27,14 @@ export const PANORAMA_MAX_BYTES = 40 * 1024 * 1024;
  */
 export const PANORAMA_MIN_WIDTH_PX = 4096;
 
-/** Ανοχή στην αναλογία 2:1 — ένα pixel (οι στρογγυλέψεις της συρραφής δίνουν π.χ. 8192×4097). */
-const ASPECT_TOLERANCE_PX = 1;
+/**
+ * Ανοχή στην αναλογία 2:1 — ένα pixel (οι στρογγυλέψεις της συρραφής δίνουν π.χ. 8192×4097). Εξαγόμενη επειδή
+ * τη διαβάζει και το συμβόλαιο της εφαρμογής κινητού (ADR-904 Ε6) για τον έλεγχο **πριν** το ανέβασμα.
+ */
+export const PANORAMA_ASPECT_TOLERANCE_PX = 1;
+
+/** Η μόνη δεκτή **δηλωμένη** προβολή (XMP `GPano:ProjectionType`, σύγκριση χωρίς διάκριση πεζών/κεφαλαίων). */
+export const PANORAMA_PROJECTION = 'equirectangular';
 
 /** Τα γεγονότα που εξάγει ο διακομιστής από τα **bytes** — ποτέ από τη δήλωση του πελάτη. */
 export interface PanoramaFacts {
@@ -87,11 +93,11 @@ export function judgePanorama(facts: PanoramaFacts): PanoramaVerdict {
   if (facts.byteLength > PANORAMA_MAX_BYTES) return { ok: false, refusal: 'too-large' };
   const { widthPx, heightPx } = facts;
   // Η ανοχή μετριέται στο **ύψος**: 8192×4097 είναι στρογγύλεμα συρραφής (μισό πλάτος ±1), όχι άλλη προβολή.
-  if (widthPx === null || heightPx === null || Math.abs(widthPx / 2 - heightPx) > ASPECT_TOLERANCE_PX) {
+  if (widthPx === null || heightPx === null || Math.abs(widthPx / 2 - heightPx) > PANORAMA_ASPECT_TOLERANCE_PX) {
     return { ok: false, refusal: 'not-equirect' };
   }
   if (widthPx < PANORAMA_MIN_WIDTH_PX) return { ok: false, refusal: 'too-small' };
-  if (facts.projectionType !== null && facts.projectionType.toLowerCase() !== 'equirectangular') {
+  if (facts.projectionType !== null && facts.projectionType.toLowerCase() !== PANORAMA_PROJECTION) {
     return { ok: false, refusal: 'wrong-projection' };
   }
   return { ok: true, headingRad: headingRadOf(facts.poseHeadingDegrees) };

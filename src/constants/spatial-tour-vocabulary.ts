@@ -46,6 +46,13 @@ export type TourLinkVia = (typeof TOUR_LINK_VIAS)[number];
 /** Με τι έγινε η λήψη (§12 Δ2 · Φ3). Ο θεατής **δεν** διακλαδίζεται — ένα κανονικό πανόραμα. */
 export const TOUR_CAPTURE_SOURCES = ['camera-360', 'phone', 'bim-render'] as const;
 export type TourCaptureSource = (typeof TOUR_CAPTURE_SOURCES)[number];
+/**
+ * Οι πηγές που φτάνουν **με ανέβασμα** — η απόδοση BIM (`bim-render`) τη γεννά μόνο ο ψήστης της Φ3. Ζει **εδώ** (όχι
+ * ιδιωτικά στο finalize) επειδή το λέει και το συμβόλαιο της εφαρμογής κινητού (ADR-904 Ε6): ένας πελάτης εκτός
+ * repo πρέπει να ξέρει τι **επιτρέπεται** να δηλώσει, από την ίδια λίστα που κρίνει ο server.
+ */
+export const TOUR_UPLOAD_SOURCES = ['camera-360', 'phone'] as const satisfies readonly TourCaptureSource[];
+export type TourUploadSource = (typeof TOUR_UPLOAD_SOURCES)[number];
 
 /**
  * Τι **δείχνει** η λήψη (§12 Δ4 · ADR-841 Α11):

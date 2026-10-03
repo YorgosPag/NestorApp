@@ -11,8 +11,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
-
+import { StartUploadBodySchema } from '@/contracts/capture-api/capture-api-schemas';
 import { readJsonBody } from '@/lib/api/json-body';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -38,12 +37,6 @@ const logger = createModuleLogger('TOUR_CAPTURE_UPLOAD_START');
 
 export const dynamic = 'force-dynamic';
 
-const startBodySchema = z.object({
-  contentType: z.string().min(3).max(100),
-  /** Το δηλωμένο μέγεθος — το ταβάνι το κρίνει η πολιτική πανοράματος, και το GCS δεν δέχεται byte παραπάνω. */
-  contentLength: z.number().int().positive(),
-});
-
 type StartResponse =
   | { readonly uploadId: string; readonly ticket: string; readonly sessionUri: string; readonly expiresAt: string }
   | TourBadSubjectBody
@@ -53,7 +46,7 @@ type StartResponse =
 async function handler(request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<StartResponse>> {
   const subject = await readTourSubject(segment);
   if (subject === null) return tourBadSubjectResponse();
-  const parsed = await readJsonBody(request, startBodySchema);
+  const parsed = await readJsonBody(request, StartUploadBodySchema);
   if ('rejected' in parsed) return parsed.rejected;
   // Το origin του φυλλομετρητή (η συνεδρία δένεται σε αυτό — CORS, ADR-351)· χωρίς αυτό, το δημόσιο της εφαρμογής.
   const origin = request.headers.get('origin') ?? publicOrigin();

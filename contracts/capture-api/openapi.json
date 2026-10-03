@@ -1,0 +1,1397 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nestor App — Capture API",
+    "version": "1.0.0",
+    "description": "Παράγεται από τον κώδικα (ADR-904 Ε6) — **ποτέ** επεξεργασία με το χέρι: `npm run generate:capture-api-contract`."
+  },
+  "security": [
+    {
+      "firebaseIdToken": []
+    }
+  ],
+  "paths": {
+    "/api/spatial-tours/{kind}/{subjectId}/uploads": {
+      "parameters": [
+        {
+          "name": "kind",
+          "in": "path",
+          "required": true,
+          "description": "Το είδος του ακινήτου.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "owner-property",
+              "company-property"
+            ]
+          }
+        },
+        {
+          "name": "subjectId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ],
+      "post": {
+        "operationId": "startUpload",
+        "summary": "Έναρξη ανεβάσματος πανοράματος — εισιτήριο + resumable συνεδρία GCS.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "ADR-872 — **ίδιο** κλειδί σε κάθε επανάληψη της ίδιας πράξης (αποθηκεύεται μαζί με την εγγραφή της ουράς).",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartUploadBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Η συνεδρία άνοιξε.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartUploadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Λείπει ή έληξε το Firebase ID token — ανανέωση token και επανάληψη.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Όριο ρυθμού — επανάληψη μετά το `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ονομασμένη άρνηση (`TOUR_REFUSED` + `reason`, status ανά λόγο στο `x-nestor-rules.refusals.tour`) ή κακό σώμα/ρίζα.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TourRefusedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MalformedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TourSubjectInvalidBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "«Δεν μπόρεσα» — επαναλήψιμο με το ίδιο `Idempotency-Key`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TourUnavailableBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TourRefusedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spatial-tours/{kind}/{subjectId}/uploads/finalize": {
+      "parameters": [
+        {
+          "name": "kind",
+          "in": "path",
+          "required": true,
+          "description": "Το είδος του ακινήτου.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "owner-property",
+              "company-property"
+            ]
+          }
+        },
+        {
+          "name": "subjectId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ],
+      "post": {
+        "operationId": "finalizeUpload",
+        "summary": "Ολοκλήρωση ανεβάσματος — ο διακομιστής ξανακρίνει τα bytes και γράφει τη λήψη.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "ADR-872 — **ίδιο** κλειδί σε κάθε επανάληψη της ίδιας πράξης (αποθηκεύεται μαζί με την εγγραφή της ουράς).",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Η λήψη υπήρχε ήδη (ίδιο εισιτήριο) — επιτυχία.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinalizeResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Η λήψη γράφτηκε.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinalizeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Λείπει ή έληξε το Firebase ID token — ανανέωση token και επανάληψη.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Όριο ρυθμού — επανάληψη μετά το `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ονομασμένη άρνηση (`TOUR_REFUSED` + `reason`, status ανά λόγο στο `x-nestor-rules.refusals.tour`) ή κακό σώμα/ρίζα.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TourRefusedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MalformedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TourSubjectInvalidBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "«Δεν μπόρεσα» — επαναλήψιμο με το ίδιο `Idempotency-Key`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TourUnavailableBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TourRefusedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spatial-tours/capture-invitations/redeem": {
+      "post": {
+        "operationId": "redeemCaptureInvitation",
+        "summary": "Αποδοχή ή άρνηση πρόσκλησης φωτογράφου (σύνδεσμος `/tour-invite/{token}`).",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "ADR-872 — **ίδιο** κλειδί σε κάθε επανάληψη της ίδιας πράξης (αποθηκεύεται μαζί με την εγγραφή της ουράς).",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationRedeemBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Η πράξη έγινε.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationRedeemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Λείπει ή έληξε το Firebase ID token — ανανέωση token και επανάληψη.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Όριο ρυθμού — επανάληψη μετά το `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ονομασμένη άρνηση συνδέσμου ή κακό σώμα.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvitationLinkRefusedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MalformedBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "«Δεν μπόρεσα» — επαναλήψιμο.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvitationRedeemUnavailableBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "firebaseIdToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase Auth ID token."
+      }
+    },
+    "schemas": {
+      "BoundaryErrorBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "CaptureDeclaration": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "camera-360",
+              "phone"
+            ]
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "public-listing",
+              "project-team",
+              "unit-owner"
+            ]
+          },
+          "milestone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "structure",
+              "mep-rough-in",
+              "pre-closure",
+              "finishes",
+              "handover",
+              null
+            ]
+          },
+          "rights": {
+            "$ref": "#/components/schemas/MediaRights"
+          },
+          "originalFilename": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "audience",
+          "milestone",
+          "rights",
+          "originalFilename"
+        ]
+      },
+      "CaptureReceipt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "tourId": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "nodeId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "\\S"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "camera-360",
+              "phone",
+              "bim-render"
+            ]
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "public-listing",
+              "project-team",
+              "unit-owner"
+            ]
+          },
+          "milestone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "structure",
+              "mep-rough-in",
+              "pre-closure",
+              "finishes",
+              "handover",
+              null
+            ]
+          },
+          "tileset": {
+            "$ref": "#/components/schemas/CaptureTileset"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tourId",
+          "nodeId",
+          "capturedAt",
+          "source",
+          "audience",
+          "milestone",
+          "tileset",
+          "createdAt"
+        ]
+      },
+      "CaptureTileset": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "FinalizeBody": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 4096
+          },
+          "declaration": {
+            "$ref": "#/components/schemas/CaptureDeclaration"
+          }
+        },
+        "required": [
+          "ticket",
+          "declaration"
+        ]
+      },
+      "FinalizeResponse": {
+        "type": "object",
+        "properties": {
+          "capture": {
+            "$ref": "#/components/schemas/CaptureReceipt"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "capture",
+          "replayed"
+        ]
+      },
+      "InvitationLinkRefusedBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "LINK_REFUSED"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "link-invalid",
+              "link-foreign",
+              "invitation-unknown",
+              "expired",
+              "already-used",
+              "revoked",
+              "wrong-recipient"
+            ]
+          }
+        },
+        "required": [
+          "error",
+          "reason"
+        ]
+      },
+      "InvitationRedeemBody": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 4096
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "decline"
+            ]
+          }
+        },
+        "required": [
+          "token",
+          "action"
+        ]
+      },
+      "InvitationRedeemResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "declined"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "InvitationRedeemUnavailableBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "REDEEM_UNAVAILABLE"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "MalformedBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "MALFORMED_BODY"
+          },
+          "malformed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "error",
+          "malformed"
+        ]
+      },
+      "MediaLicense": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "listing-marketing",
+              "owner-reuse",
+              "unrestricted"
+            ]
+          },
+          "term": {
+            "$ref": "#/components/schemas/MediaLicenseTerm"
+          }
+        },
+        "required": [
+          "purpose",
+          "term"
+        ]
+      },
+      "MediaLicenseTerm": {
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "perpetual": "#/components/schemas/MediaLicenseTermPerpetual",
+            "mandate": "#/components/schemas/MediaLicenseTermMandate",
+            "date": "#/components/schemas/MediaLicenseTermDate"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MediaLicenseTermPerpetual"
+          },
+          {
+            "$ref": "#/components/schemas/MediaLicenseTermMandate"
+          },
+          {
+            "$ref": "#/components/schemas/MediaLicenseTermDate"
+          }
+        ]
+      },
+      "MediaLicenseTermDate": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "date"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "kind",
+          "until"
+        ]
+      },
+      "MediaLicenseTermMandate": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "mandate"
+          },
+          "mandateId": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "kind",
+          "mandateId"
+        ]
+      },
+      "MediaLicenseTermPerpetual": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "perpetual"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "MediaParty": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "\\S"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "name",
+          "userId",
+          "url"
+        ]
+      },
+      "MediaRights": {
+        "type": "object",
+        "properties": {
+          "creator": {
+            "$ref": "#/components/schemas/MediaParty"
+          },
+          "licensors": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaParty"
+            }
+          },
+          "copyrightNotice": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "webStatementOfRights": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "\\S"
+          },
+          "license": {
+            "$ref": "#/components/schemas/MediaLicense"
+          }
+        },
+        "required": [
+          "creator",
+          "licensors",
+          "copyrightNotice",
+          "webStatementOfRights",
+          "license"
+        ]
+      },
+      "StartUploadBody": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+          },
+          "contentLength": {
+            "format": "int64",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "contentType",
+          "contentLength"
+        ]
+      },
+      "StartUploadResponse": {
+        "type": "object",
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "ticket": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "sessionUri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uploadId",
+          "ticket",
+          "sessionUri",
+          "expiresAt"
+        ]
+      },
+      "TourRefusedBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "TOUR_REFUSED"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "tour-absent",
+              "not-requestable",
+              "not-manager",
+              "expiry-required",
+              "expiry-past",
+              "expiry-too-far",
+              "request-absent",
+              "not-pending",
+              "not-active",
+              "reason-required",
+              "grant-absent",
+              "tour-custody-mismatch",
+              "tour-unreadable",
+              "sign-in-required",
+              "not-viewable",
+              "publish-needs-capture",
+              "visibility-unsupported",
+              "no-capture-grant",
+              "revoked",
+              "expired",
+              "unreadable-expiry",
+              "scope-missing",
+              "not-jpeg",
+              "too-large",
+              "not-equirect",
+              "too-small",
+              "wrong-projection",
+              "ticket-invalid",
+              "ticket-foreign",
+              "upload-missing",
+              "upload-incomplete",
+              "declaration-invalid",
+              "capture-absent",
+              "capture-placed",
+              "capture-unplaced",
+              "capture-not-ready",
+              "node-absent",
+              "level-absent",
+              "graph-full",
+              "room-invalid",
+              "plan-absent",
+              "plan-uncalibrated",
+              "plan-not-eligible",
+              "position-outside-plan",
+              "scale-invalid",
+              "space-invalid",
+              "space-outside-plan",
+              "space-overlap",
+              "space-absent",
+              "space-exists",
+              "area-invalid",
+              "separation-invalid",
+              "separation-absent",
+              "separation-exists",
+              "redaction-invalid",
+              "redaction-absent",
+              "redaction-exists",
+              "redaction-limit"
+            ]
+          }
+        },
+        "required": [
+          "error",
+          "reason"
+        ]
+      },
+      "TourSubjectInvalidBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "TOUR_SUBJECT_INVALID"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "TourUnavailableBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "TOUR_UNAVAILABLE"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  },
+  "x-nestor-upload-protocol": {
+    "kind": "gcs-resumable",
+    "description": "PUT των bytes στο `StartUploadResponse.sessionUri` (Google Cloud Storage resumable upload) · επανάληψη από το επιβεβαιωμένο offset μετά από διακοπή · `Content-Type` = `x-nestor-rules.panorama.contentType`.",
+    "reference": "https://cloud.google.com/storage/docs/performing-resumable-uploads"
+  },
+  "x-nestor-rules": {
+    "product": {
+      "name": "Nestor App"
+    },
+    "panorama": {
+      "contentType": "image/jpeg",
+      "maxBytes": 41943040,
+      "minWidthPx": 4096,
+      "aspectRatio": 2,
+      "aspectTolerancePx": 1,
+      "projection": "equirectangular"
+    },
+    "idempotency": {
+      "header": "Idempotency-Key",
+      "replayedHeader": "Idempotent-Replayed",
+      "maxKeyLength": 255,
+      "ttlMs": 86400000,
+      "retryableCodes": [
+        "IDEMPOTENCY_IN_FLIGHT",
+        "IDEMPOTENCY_STORE_UNAVAILABLE"
+      ]
+    },
+    "vocabularies": {
+      "placeSources": [
+        "owner-property",
+        "company-property"
+      ],
+      "uploadSources": [
+        "camera-360",
+        "phone"
+      ],
+      "captureAudiences": [
+        "public-listing",
+        "project-team",
+        "unit-owner"
+      ],
+      "milestones": [
+        "structure",
+        "mep-rough-in",
+        "pre-closure",
+        "finishes",
+        "handover"
+      ],
+      "roomTypes": [
+        "living-room",
+        "kitchen",
+        "dining-room",
+        "bedroom",
+        "bathroom",
+        "wc",
+        "entrance",
+        "hallway",
+        "office",
+        "closet",
+        "storage",
+        "laundry",
+        "utility-room",
+        "balcony",
+        "terrace",
+        "patio",
+        "garage",
+        "basement",
+        "loft",
+        "staircase",
+        "pantry",
+        "family-room",
+        "game-room",
+        "exercise-room",
+        "other"
+      ],
+      "roomMaxTypes": 3,
+      "roomLabelMax": 60,
+      "headingSources": [
+        "device",
+        "manual"
+      ],
+      "mediaLicensePurposes": [
+        "listing-marketing",
+        "owner-reuse",
+        "unrestricted"
+      ],
+      "mediaLicenseTermKinds": [
+        "mandate",
+        "date",
+        "perpetual"
+      ],
+      "maxMediaLicensors": 3,
+      "invitationRedeemActions": [
+        "accept",
+        "decline"
+      ]
+    },
+    "refusals": {
+      "tour": [
+        {
+          "code": "tour-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "not-requestable",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "not-manager",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "expiry-required",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "expiry-past",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "expiry-too-far",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "request-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "not-pending",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "not-active",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "reason-required",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "grant-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "tour-custody-mismatch",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "tour-unreadable",
+          "status": 503,
+          "retryable": true
+        },
+        {
+          "code": "sign-in-required",
+          "status": 401,
+          "retryable": false
+        },
+        {
+          "code": "not-viewable",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "publish-needs-capture",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "visibility-unsupported",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "no-capture-grant",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "revoked",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "expired",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "unreadable-expiry",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "scope-missing",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "not-jpeg",
+          "status": 415,
+          "retryable": false
+        },
+        {
+          "code": "too-large",
+          "status": 413,
+          "retryable": false
+        },
+        {
+          "code": "not-equirect",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "too-small",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "wrong-projection",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "ticket-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "ticket-foreign",
+          "status": 403,
+          "retryable": false
+        },
+        {
+          "code": "upload-missing",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "upload-incomplete",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "declaration-invalid",
+          "status": 400,
+          "retryable": false
+        },
+        {
+          "code": "capture-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "capture-placed",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "capture-unplaced",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "capture-not-ready",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "node-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "level-absent",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "graph-full",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "room-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "plan-absent",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "plan-uncalibrated",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "plan-not-eligible",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "position-outside-plan",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "scale-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "space-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "space-outside-plan",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "space-overlap",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "space-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "space-exists",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "area-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "separation-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "separation-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "separation-exists",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "redaction-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "redaction-absent",
+          "status": 404,
+          "retryable": false
+        },
+        {
+          "code": "redaction-exists",
+          "status": 409,
+          "retryable": false
+        },
+        {
+          "code": "redaction-limit",
+          "status": 409,
+          "retryable": false
+        }
+      ],
+      "invitation": [
+        {
+          "code": "link-invalid",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "link-foreign",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "invitation-unknown",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "expired",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "already-used",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "revoked",
+          "status": 422,
+          "retryable": false
+        },
+        {
+          "code": "wrong-recipient",
+          "status": 422,
+          "retryable": false
+        }
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@ import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FILE_CATEGORIES, FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
-import { isTourCaptureAudience, isTourMilestone } from '@/constants/spatial-tour-vocabulary';
+import { TOUR_UPLOAD_SOURCES, isTourCaptureAudience, isTourMilestone } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { fileStoragePlacementOf } from '@/lib/files/file-storage-placement';
@@ -44,7 +44,7 @@ import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/ser
 import { buildProxyUrl } from '@/services/storage-admin/public-upload.service';
 import type { MediaRights } from '@/types/media-rights';
 import type { TourCapture } from '@/types/spatial-tour';
-import type { TourCaptureAudience, TourMilestone } from '@/constants/spatial-tour-vocabulary';
+import type { TourCaptureAudience, TourMilestone, TourUploadSource } from '@/constants/spatial-tour-vocabulary';
 
 import { readPanoramaFacts } from './panorama-facts';
 import {
@@ -59,14 +59,11 @@ import { readTourUploadTicket, type TourUploadTicket } from './tour-upload-ticke
 
 const logger = createModuleLogger('tour-capture-finalize');
 
-/** Οι πηγές που φτάνουν **με ανέβασμα** — η απόδοση BIM (`bim-render`) τη γεννά μόνο ο ψήστης της Φ3. */
-const UPLOAD_SOURCES = ['camera-360', 'phone'] as const;
-type UploadSource = (typeof UPLOAD_SOURCES)[number];
 const MAX_FILENAME = 255;
 
 /** Ό,τι δηλώνει ο άνθρωπος για τη λήψη — τα υπόλοιπα (κατεύθυνση · ημερομηνία) τα λένε τα **bytes**. */
 export interface TourCaptureDeclaration {
-  readonly source: UploadSource;
+  readonly source: TourUploadSource;
   readonly audience: TourCaptureAudience;
   readonly milestone: TourMilestone | null;
   readonly rights: MediaRights;
@@ -80,7 +77,7 @@ export interface TourCaptureDeclaration {
  */
 export function readCaptureDeclaration(raw: unknown, actorUid: string): TourCaptureDeclaration | null {
   if (!isRecord(raw)) return null;
-  const source = UPLOAD_SOURCES.find((s) => s === raw.source);
+  const source = TOUR_UPLOAD_SOURCES.find((s) => s === raw.source);
   const milestone = raw.milestone ?? null;
   const rights = readMediaRights(raw.rights);
   if (source === undefined || !isTourCaptureAudience(raw.audience) || rights === null) return null;

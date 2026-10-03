@@ -36,6 +36,7 @@
  *   SKIP_ADDRESS_VOCABULARY        '1' = bypass CHECK 3.44 (address vocabulary coverage)
  *   SKIP_ADR_IDENTITY              '1' = bypass CHECK 3.49 (ADR number identity)
  *   SKIP_I18N_RAW_FALLBACK         '1' = bypass CHECK 3.97 (raw i18n defaultValue fallback)
+ *   SKIP_CAPTURE_API_CONTRACT      '1' = bypass CHECK 3.98 (mobile capture API contract freshness)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -1146,6 +1147,14 @@ if (!process.env.SKIP_IDEMPOTENCY_BOUNDARY)
 // ένα νέο κλειδί σε οποιοδήποτε αρχείο αλλάζει την απάντηση. AST, ~0,5s, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_FUNCTIONS_PROJECTION)
   addThread('3.93', 'Functions projection', 'scripts/check-functions-projection.js');
+
+// CHECK 3.98 (ADR-904 Ε6) — το συμβόλαιο της εφαρμογής κινητού. «Είναι το `contracts/capture-api/` ΑΚΡΙΒΩΣ ό,τι
+// λέει σήμερα ο κώδικας του διακομιστή;» Η εφαρμογή λήψης ζει σε ΧΩΡΙΣΤΟ αποθετήριο και παίρνει σχήματα, όρια
+// πανοράματος, λεξιλόγια και αρνήσεις ως ΠΑΡΑΓΟΜΕΝΟ OpenAPI — το ίδιο σχήμα κινδύνου με το 3.93 (χειρόγραφο mirror),
+// σε άλλη γλώσσα. Ο γεννήτορας αρνείται fixture που διαφωνεί με το σχήμα του. 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: τα σχήματα
+// εισάγουν λεξιλόγια από όλη την εφαρμογή — μια νέα άρνηση οπουδήποτε αλλάζει την απάντηση. ~0,5s, ZERO-TOL.
+if (!process.env.SKIP_CAPTURE_API_CONTRACT)
+  addThread('3.98', 'Capture API contract', 'scripts/check-capture-api-contract.js');
 
 // ─── Runners ──────────────────────────────────────────────────────────────────
 

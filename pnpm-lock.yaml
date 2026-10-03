@@ -445,7 +445,7 @@ importers:
         specifier: 13.6.30
         version: 13.6.30
       zod:
-        specifier: ^3.24.2
+        specifier: ^3.25.76
         version: 3.25.76
       zustand:
         specifier: ^5.0.8

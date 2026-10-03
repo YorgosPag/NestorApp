@@ -12,6 +12,11 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import {
+  INVITATION_REDEEM_ACTIONS,
+  INVITATION_TOKEN_MAX_LENGTH,
+  INVITATION_TOKEN_MIN_LENGTH,
+} from '@/contracts/invitation-redeem-body';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { provenMailboxAccountOf } from '@/server/auth/mailbox-proof-custody';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
@@ -39,11 +44,12 @@ export const INVITATION_PREVIEW_STATUS: Readonly<Record<InvitationCoreRefusal, n
 
 /**
  * **Το σώμα κάθε εξαργύρωσης** — το token σε **σώμα**, ποτέ σε URL (RFC 6819 §5.1.5)· η πράξη **ρητή**, χωρίς
- * προεπιλογή («δέχομαι» ή «αρνούμαι» δεν μαντεύεται ποτέ).
+ * προεπιλογή («δέχομαι» ή «αρνούμαι» δεν μαντεύεται ποτέ). Οι **τιμές** ζουν στο `contracts/invitation-redeem-body.ts`
+ * — τις δημοσιεύει και το συμβόλαιο της εφαρμογής κινητού (ADR-904 Ε6).
  */
 export const INVITATION_REDEEM_BODY = z.object({
-  token: z.string().min(8).max(4096),
-  action: z.enum(['accept', 'decline']),
+  token: z.string().min(INVITATION_TOKEN_MIN_LENGTH).max(INVITATION_TOKEN_MAX_LENGTH),
+  action: z.enum(INVITATION_REDEEM_ACTIONS),
 });
 
 /** Ονομασμένη άρνηση εξαργύρωσης — κάθε λόγος στέλνει τον άνθρωπο σε **άλλη** ενέργεια (ADR-853 §5 #7). */

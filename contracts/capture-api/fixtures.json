@@ -1,0 +1,564 @@
+{
+  "contractVersion": "1.0.0",
+  "fixtures": [
+    {
+      "name": "declaration-camera-perpetual",
+      "component": "CaptureDeclaration",
+      "valid": true,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-phone-milestone",
+      "component": "CaptureDeclaration",
+      "valid": true,
+      "body": {
+        "source": "phone",
+        "audience": "project-team",
+        "milestone": "finishes",
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-external-photographer",
+      "component": "CaptureDeclaration",
+      "valid": true,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Studio 360 ΙΚΕ",
+            "userId": null,
+            "url": null
+          },
+          "licensors": [
+            {
+              "name": "Μεσιτικό Γραφείο Α",
+              "userId": null,
+              "url": null
+            }
+          ],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-term-mandate",
+      "component": "CaptureDeclaration",
+      "valid": true,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "owner-reuse",
+            "term": {
+              "kind": "mandate",
+              "mandateId": "mnd_01"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-term-date",
+      "component": "CaptureDeclaration",
+      "valid": true,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "unrestricted",
+            "term": {
+              "kind": "date",
+              "until": "2027-12-31T00:00:00.000Z"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-no-filename",
+      "component": "CaptureDeclaration",
+      "valid": true,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": null
+      }
+    },
+    {
+      "name": "declaration-bim-render-source",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "bim-render",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-unknown-audience",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "everyone",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-unknown-milestone",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": "roof",
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-blank-copyright",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "   ",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-too-many-licensors",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [
+            {
+              "name": "A",
+              "userId": null,
+              "url": null
+            },
+            {
+              "name": "B",
+              "userId": null,
+              "url": null
+            },
+            {
+              "name": "C",
+              "userId": null,
+              "url": null
+            },
+            {
+              "name": "D",
+              "userId": null,
+              "url": null
+            }
+          ],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "listing-marketing",
+            "term": {
+              "kind": "perpetual"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-term-date-not-iso",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "unrestricted",
+            "term": {
+              "kind": "date",
+              "until": "next year"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-term-unknown-kind",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "rights": {
+          "creator": {
+            "name": "Νίκος Παπαδόπουλος",
+            "userId": "fixture-actor-uid",
+            "url": null
+          },
+          "licensors": [],
+          "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+          "webStatementOfRights": null,
+          "license": {
+            "purpose": "unrestricted",
+            "term": {
+              "kind": "forever"
+            }
+          }
+        },
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "declaration-missing-rights",
+      "component": "CaptureDeclaration",
+      "valid": false,
+      "body": {
+        "source": "camera-360",
+        "audience": "public-listing",
+        "milestone": null,
+        "originalFilename": "R0010042.JPG"
+      }
+    },
+    {
+      "name": "start-jpeg-8k",
+      "component": "StartUploadBody",
+      "valid": true,
+      "body": {
+        "contentType": "image/jpeg",
+        "contentLength": 15728640
+      }
+    },
+    {
+      "name": "start-zero-length",
+      "component": "StartUploadBody",
+      "valid": false,
+      "body": {
+        "contentType": "image/jpeg",
+        "contentLength": 0
+      }
+    },
+    {
+      "name": "start-fractional-length",
+      "component": "StartUploadBody",
+      "valid": false,
+      "body": {
+        "contentType": "image/jpeg",
+        "contentLength": 1.5
+      }
+    },
+    {
+      "name": "finalize-complete",
+      "component": "FinalizeBody",
+      "valid": true,
+      "body": {
+        "ticket": "v1.eyJ1cGxvYWRJZCI6InR1cGxfMDEifQ.c2ln",
+        "declaration": {
+          "source": "camera-360",
+          "audience": "public-listing",
+          "milestone": null,
+          "rights": {
+            "creator": {
+              "name": "Νίκος Παπαδόπουλος",
+              "userId": "fixture-actor-uid",
+              "url": null
+            },
+            "licensors": [],
+            "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+            "webStatementOfRights": null,
+            "license": {
+              "purpose": "listing-marketing",
+              "term": {
+                "kind": "perpetual"
+              }
+            }
+          },
+          "originalFilename": "R0010042.JPG"
+        }
+      }
+    },
+    {
+      "name": "finalize-short-ticket",
+      "component": "FinalizeBody",
+      "valid": false,
+      "body": {
+        "ticket": "short",
+        "declaration": {
+          "source": "camera-360",
+          "audience": "public-listing",
+          "milestone": null,
+          "rights": {
+            "creator": {
+              "name": "Νίκος Παπαδόπουλος",
+              "userId": "fixture-actor-uid",
+              "url": null
+            },
+            "licensors": [],
+            "copyrightNotice": "© 2026 Νίκος Παπαδόπουλος",
+            "webStatementOfRights": null,
+            "license": {
+              "purpose": "listing-marketing",
+              "term": {
+                "kind": "perpetual"
+              }
+            }
+          },
+          "originalFilename": "R0010042.JPG"
+        }
+      }
+    },
+    {
+      "name": "redeem-accept",
+      "component": "InvitationRedeemBody",
+      "valid": true,
+      "body": {
+        "token": "tinv_0123456789abcdef",
+        "action": "accept"
+      }
+    },
+    {
+      "name": "redeem-implicit-action",
+      "component": "InvitationRedeemBody",
+      "valid": false,
+      "body": {
+        "token": "tinv_0123456789abcdef"
+      }
+    },
+    {
+      "name": "start-response",
+      "component": "StartUploadResponse",
+      "valid": true,
+      "body": {
+        "uploadId": "tupl_01",
+        "ticket": "v1.eyJ1cGxvYWRJZCI6InR1cGxfMDEifQ.c2ln",
+        "sessionUri": "https://storage.googleapis.com/upload/storage/v1/b/bucket/o?uploadType=resumable&upload_id=XYZ",
+        "expiresAt": "2026-10-03T18:00:00.000Z"
+      }
+    },
+    {
+      "name": "finalize-response-with-extra-fields",
+      "component": "FinalizeResponse",
+      "valid": true,
+      "body": {
+        "replayed": false,
+        "capture": {
+          "id": "tcap_01",
+          "tourId": "tour_01",
+          "nodeId": null,
+          "capturedAt": "2026-10-03T12:00:00.000Z",
+          "source": "camera-360",
+          "audience": "public-listing",
+          "milestone": null,
+          "tileset": {
+            "state": "pending",
+            "contentHash": null
+          },
+          "createdAt": "2026-10-03T12:05:00.000Z",
+          "headingRad": 0,
+          "provenance": "as-built",
+          "uploadedBy": "fixture-actor-uid"
+        }
+      }
+    },
+    {
+      "name": "refused-not-equirect",
+      "component": "TourRefusedBody",
+      "valid": true,
+      "body": {
+        "error": "TOUR_REFUSED",
+        "reason": "not-equirect"
+      }
+    },
+    {
+      "name": "refused-unknown-reason",
+      "component": "TourRefusedBody",
+      "valid": false,
+      "body": {
+        "error": "TOUR_REFUSED",
+        "reason": "drop-table"
+      }
+    },
+    {
+      "name": "link-refused-wrong-recipient",
+      "component": "InvitationLinkRefusedBody",
+      "valid": true,
+      "body": {
+        "error": "LINK_REFUSED",
+        "reason": "wrong-recipient"
+      }
+    }
+  ]
+}

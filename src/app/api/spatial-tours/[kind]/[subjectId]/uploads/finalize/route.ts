@@ -9,8 +9,7 @@
  */
 
 import { NextResponse, after, type NextRequest } from 'next/server';
-import { z } from 'zod';
-
+import { FinalizeEnvelopeSchema } from '@/contracts/capture-api/capture-api-schemas';
 import { readJsonBody } from '@/lib/api/json-body';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -38,12 +37,6 @@ const logger = createModuleLogger('TOUR_CAPTURE_UPLOAD_FINALIZE');
 
 export const dynamic = 'force-dynamic';
 
-const finalizeBodySchema = z.object({
-  ticket: z.string().min(16).max(4096),
-  /** Η δήλωση της λήψης — την κρίνει ο **ίδιος** αναγνώστης που διαβάζει τη λήψη (`readCaptureDeclaration`). */
-  declaration: z.unknown(),
-});
-
 type FinalizeResponse =
   | { readonly capture: TourCapture; readonly replayed: boolean }
   | TourBadSubjectBody
@@ -59,7 +52,7 @@ function ticketMatchesRoute(ticket: string, route: { readonly kind: string; read
 async function handler(request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<FinalizeResponse>> {
   const subject = await readTourSubject(segment);
   if (subject === null) return tourBadSubjectResponse();
-  const parsed = await readJsonBody(request, finalizeBodySchema);
+  const parsed = await readJsonBody(request, FinalizeEnvelopeSchema);
   if ('rejected' in parsed) return parsed.rejected;
   if (!ticketMatchesRoute(parsed.data.ticket, subject)) return tourRefusedResponse('ticket-foreign');
 
