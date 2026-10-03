@@ -13,6 +13,7 @@
  */
 
 import { floorRefKey, type FloorRef } from './floor-ref';
+import { compareFloorRefs } from './floor-level-range';
 import { hostedFloorRef } from './hosted-floor';
 
 type FloorBearing = { readonly floor?: unknown; readonly floorKind?: unknown };
@@ -41,6 +42,6 @@ export function floorFilterOptions(
     if (ref !== null && key !== null && !byKey.has(key)) byKey.set(key, ref);
   }
   return [...byKey.entries()]
-    .sort(([, a], [, b]) => (a.number ?? Number.MAX_SAFE_INTEGER) - (b.number ?? Number.MAX_SAFE_INTEGER))
+    .sort(([, a], [, b]) => compareFloorRefs(a, b))
     .map(([value, ref]) => ({ value, label: floorLabel(ref) }));
 }

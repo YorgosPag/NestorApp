@@ -78,6 +78,16 @@ function upperRank(bound: LevelBound): number {
 }
 
 /**
+ * Η **μία** σειρά ταξινόμησης στάθμεων (Spitogatos: Υπόγειο < Ημιυπόγειο < Ισόγειο < Υπερυψωμένο < Ημιώροφος < 1ος…).
+ * Στάθμη χωρίς αριθμό (δώμα/σοφίτα παλιού κειμένου) πηγαίνει **τελευταία** — η θέση της εξαρτάται από το ύψος.
+ */
+export function compareFloorRefs(a: FloorRef, b: FloorRef): number {
+  const rankOf = (ref: FloorRef): number =>
+    ref.number === null ? Number.MAX_SAFE_INTEGER : levelRank(ref.number, resolveFloorKind(ref));
+  return rankOf(a) - rankOf(b);
+}
+
+/**
  * Είναι η στάθμη μέσα στο εύρος; Στάθμη **χωρίς αριθμό** (δώμα/σοφίτα παλιού κειμένου) ⇒ `false`: η θέση της
  * εξαρτάται από το ύψος του κτιρίου — ίδια συμπεριφορά με το παλιό `withinRange(null, …)`.
  */

@@ -192,7 +192,7 @@ describe('Υ8 — η δημόσια μονάδα γεννιέται ΜΟΝΟ α�
       expect(written).not.toContain(secret);
     }
     expect(Object.keys(Object.values(units(fake))[0] as object).sort()).toEqual(
-      ['buildingId', 'createdAt', 'existence', 'landId', 'level', 'status', 'updatedAt'],
+      ['buildingId', 'createdAt', 'existence', 'id', 'landId', 'level', 'status', 'updatedAt'],
     );
   });
 
