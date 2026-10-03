@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟢 **Φ4.1–Φ4.3 IMPLEMENTED (2026-10-03, §14.4)** — δήλωση ιδιότητας και με λογαριασμό · συμμετέχοντες · προβολή/λήψη τεκμηρίων με ίχνος · ειδοποιήσεις λήξεων · 🟡 **Φ4.4 (ανεβάσματα επαγγελματιών) ⏳ — ✅ απόφαση Transmittal** (§5.8.1) · 🟢 **Φ3 IMPLEMENTED (2026-10-03, §14.3)** — πρόσκληση με email για επαγγελματία χωρίς λογαριασμό, τρίτο είδος της μηχανής ADR-853 · 🟢 **Φ2 IMPLEMENTED (2026-10-03, §14.2)** — συμμετοχή `legal` μέσω ADR-862 Φ1 · 🟢 **Φ1 IMPLEMENTED (2026-10-02)** — υπόθεση μεταβίβασης + κατάλογος ως δεδομένα + καρτέλα «Δικαιολογητικά» για τον εργολάβο + σύγκλιση AI knowledge base (§14) · ✅ αποφάσεις Ε-2…Ε-8 (Giorgio 2026-10-02) · Ε-1 τεχνική · ⏳ Φ0 (επαλήθευση καταλόγου από συμβολαιογράφο — ο κατάλογος κυκλοφορεί ως v0, `verifiedAt: null`, και το UI το δηλώνει) · ⏳ Φ2+ |
+| **Status** | 🟢 **Φ4.5 IMPLEMENTED (2026-10-03, §14.6)** — «Στείλε τη νέα έκδοση στους ίδιους» με ένα πάτημα, η έκδοση από τον server (Α27 · Α28) · «Ζήτησε έγγραφο» με παραλήπτη από τον πάροχο της γραμμής, «εκκρεμεί» παραγόμενο, μία ειδοποίηση ανά παραλήπτη (Α29–Α31) · 🟢 **Φ4.4 IMPLEMENTED (2026-10-03, §14.5)** — Transmittal: ο επαγγελματίας ανεβάζει στον **δικό του** χώρο και **στέλνει** την έκδοση· ακροατήριο από τον ρόλο (Α23) · πρόχειρο ≠ τεκμήριο (Α24) · πολιτική ρόλος × κατάσταση (Α25) · σιωπηλή δέσμευση της σταλμένης έκδοσης (Α26) · ο οικοδεσπότης ανοίγει πλέον τεκμήρια · 🟢 **Φ4.1–Φ4.3 IMPLEMENTED (2026-10-03, §14.4)** — δήλωση ιδιότητας και με λογαριασμό · συμμετέχοντες · προβολή/λήψη τεκμηρίων με ίχνος · ειδοποιήσεις λήξεων · 🟢 **Φ3 IMPLEMENTED (2026-10-03, §14.3)** — πρόσκληση με email για επαγγελματία χωρίς λογαριασμό, τρίτο είδος της μηχανής ADR-853 · 🟢 **Φ2 IMPLEMENTED (2026-10-03, §14.2)** — συμμετοχή `legal` μέσω ADR-862 Φ1 · 🟢 **Φ1 IMPLEMENTED (2026-10-02)** — υπόθεση μεταβίβασης + κατάλογος ως δεδομένα + καρτέλα «Δικαιολογητικά» για τον εργολάβο + σύγκλιση AI knowledge base (§14) · ✅ αποφάσεις Ε-2…Ε-8 (Giorgio 2026-10-02) · Ε-1 τεχνική · ⏳ Φ0 (επαλήθευση καταλόγου από συμβολαιογράφο — ο κατάλογος κυκλοφορεί ως v0, `verifiedAt: null`, και το UI το δηλώνει) · ⏳ Φ2+ |
 | **Date** | 2026-10-02 |
 | **Category** | Identity / Collaboration / Legal / Documents |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -460,9 +460,9 @@ Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ �
 |---|---|---|
 | Δικηγόρος | έκθεση νομικού ελέγχου · σημειώσεις | **WIP του** → ορατό **μόνο** στη δική του πλευρά (ADR-373) |
 | Συμβολαιογράφος | σχέδιο · οριστικό · myPROPERTY · καταχώριση | SHARED στην υπόθεση → στο τέλος **στον αγοραστή** (παράδοση φακέλου) |
-| Όλοι | «Ζήτησε έγγραφο» → γραμμή καταλόγου → **ειδοποίηση** στον πάροχο | — |
+| Όλοι (οικοδεσπότης με `manage` · επαγγελματίες) | «Ζήτησε έγγραφο» → γραμμή καταλόγου → **ειδοποίηση** στον λογαριασμό που εκπροσωπεί τον πάροχο (`REQUEST_RECIPIENT_BY_PROVIDER`) — ✅ Φ4.5 §14.6 | αμετάβλητο γεγονός `conveyance_document_requests` (ένα ανά γραμμή/αιτούντα/ημέρα) · «εκκρεμεί» παραγόμενο |
 
-#### 5.8.1 🟡 Όπως ΔΕΝ μπορεί να υλοποιηθεί — και η πρόταση που το αντικαθιστά *(μετρημένο 2026-10-03)*
+#### 5.8.1 🟢 Όπως ΔΕΝ μπορεί να υλοποιηθεί — και η λύση που το αντικατέστησε *(μετρημένο 2026-10-03 · ✅ υλοποιήθηκε, §14.5)*
 
 Το σχέδιο της Φ4 (κατοχή = συντάκτης, «κοινοποίηση» = `transitionContainer('share')`) **προσκρούει στον κώδικα**: τα αρχεία
 **προσωπικής** κατοχής (`files_personal`) έχουν καθεστώς **μόνο εκδόσεων** (`PERSONAL_REGIME = versions-only`, ADR-866 Ε-Φ0-1)·
@@ -554,8 +554,16 @@ Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ �
 | Α20 ✅ | Κάθε άνοιγμα ⇒ **ακριβώς ένα** `document_accessed` στο βιβλίο της υπόθεσης · ανακλημένη ⇒ καμία υπογραφή | — |
 | Α21 ✅ | Ίδιο σύνολο λήξεων ⇒ **ίδιο** `eventId` (καμία δεύτερη ειδοποίηση) · αλλαγή κατάστασης/λήξης ⇒ νέο | αποτύπωμα χωρίς `expiresOn` (μετάλλαξη: 1 κόκκινο) |
 | Α22 ✅ | Ο `seller_lawyer` ειδοποιείται **μόνο** για γραμμές του ρόλου του | κατάλογος οικοδεσπότη για όλους (μετάλλαξη: 1 κόκκινο) |
-| Α23 ⏳ | Έκθεση `buyer_lawyer` δεν φτάνει ποτέ στον οικοδεσπότη/`seller_lawyer` | Φ4.4 (§5.8.1) |
-| Α24 ⏳ | Πρόχειρο συντάκτη δεν γίνεται ποτέ τεκμήριο | Φ4.4 (§5.8.1) |
+| Α23 ✅ | Έκθεση `buyer_lawyer` δεν φτάνει ποτέ στον οικοδεσπότη/`seller_lawyer` — ούτε στον κατάλογο, ούτε στο άνοιγμα, ούτε ως **όνομα** στο βιβλίο, ούτε ως ειδοποίηση | ακροατήριο = όλοι (μετάλλαξη: 1 κόκκινο) · όνομα πάντα στο βιβλίο (1 κόκκινο) |
+| Α24 ✅ | Πρόχειρο συντάκτη δεν γίνεται ποτέ τεκμήριο (δομικά: η είσοδος του συλλέκτη είναι **μόνο** αποστολές) | αποσυρμένη μετρά (1 κόκκινο) |
+| Α25 ✅ | Δικηγόρος μετά το `signed` ⇒ άρνηση · συμβολαιογράφος ⇒ ναι (και `registered`) · `closed`/`cancelled` ⇒ κανείς · δικηγόρος σε γραμμή συμβολαιογράφου ⇒ άρνηση | πολιτική χωρίς κατάσταση (1 κόκκινο) |
+| Α26 ✅ | Σταλμένη έκδοση ⇒ σιωπηλή δέσμευση (βάση + bytes) στο **προσωπικό** διαμέρισμα · απόσυρση της τελευταίας ζωντανής ⇒ αποδέσμευση · άλλη ζωντανή αποστολή στη στοίβα ⇒ η δέσμευση μένει · ξένη δέσμευση ⇒ ανέγγιχτη | εγγραφή στο εταιρικό διαμέρισμα (2 κόκκινα) · αγνοημένο `stillPinned` (1) · αντικατάσταση ξένης (1) |
+| Α27 ✅ | «Νέα έκδοση στους ίδιους»: η έκδοση = **κεφαλή** της στοίβας του συντάκτη, κριμένη στον server· `supersedes` = η σταλμένη · ίδιο ακροατήριο · ξένη/αποσυρμένη ⇒ `not-found` · αντικαταστάθηκε στο μεταξύ ⇒ `superseded` (CAS) · καμία νεότερη/όχι έτοιμη ⇒ `no-newer-version` | χωρίς CAS (κόκκινο) |
+| Α28 ✅ | `newerVersion` φτάνει **μόνο** στον συντάκτη — οικοδεσπότης/άλλοι ρόλοι δεν έχουν καν το πεδίο (τύπος + άγκυρα) | `newerVersion` σε κάθε θεατή (κόκκινο) |
+| Α29 ✅ | Παραλήπτης **από τον πάροχο**, ποτέ από το αίτημα · ο αιτών **και** ο παραλήπτης πρέπει να βλέπουν τη γραμμή · ενεργός τώρα · δικηγόρος αγοραστή ⇏ γραμμή πωλητή (≡ ανύπαρκτη) | χωρίς ορατότητα παραλήπτη (κόκκινο, μετά την άγκυρα-δίχτυ) · χωρίς ορατότητα αιτούντος (κόκκινο) · `notary_side` πάντα αιτήσιμο (κόκκινο) |
+| Α30 ✅ | Ένα αίτημα ανά (γραμμή, αιτών, ημέρα) — ο οικοδεσπότης ως **χώρος** · δεύτερο πάτημα ⇒ καμία εγγραφή/ίχνος/ειδοποίηση · ειδοποίηση που απέτυχε ⇒ η επανάληψη στέλνει το **ίδιο** σύνολο και μετά σημαδεύει | σημάδεμα παρά την αποτυχία (κόκκινο) · uid στον σπόρο του οικοδεσπότη (κόκκινο) |
+| Α31 ✅ | «Εκκρεμεί» **παράγεται** (μετά το νεότερο τεκμήριο, όσο η γραμμή οφείλεται) · το αίτημα το βλέπουν μόνο αιτών και παραλήπτης — όψη **και** ίχνος του επαγγελματία | αιτήματα σε όλους (κόκκινο) · αγνόηση νεότερου τεκμηρίου (κόκκινο) · αιτήματα τρίτων στο ίχνος (κόκκινο) |
+| Α32 ✅ | «Πώς γεννιέται η v2» (§14.6 Γ): η νέα έκδοση ανεβαίνει από την πόρτα της γραμμής με τον **σκοπό του σταλμένου** (`revisionEntryPoint`) ⇒ ο **πραγματικός** `judgeSuccession` τη δέχεται ως το ίδιο δοχείο, για **κάθε** γραμμή transmittal του καταλόγου · άγνωστος σκοπός / γραμμή χωρίς transmittal ⇒ καμία πόρτα (ποτέ μαντεψιά). `lib/conveyance/__tests__/contribution-revision.test.ts` (13) · μεταλλάξεις 2/2 κόκκινες |
 
 **Κατάσταση Φ1**: Α4 ✅ (δεδομένα + πυρήνας, μετάλλαξη 1 κόκκινο) · Α7 ✅ (μετάλλαξη 1 κόκκινο) · Α12-Α16 ✅.
 Αρχεία: `config/conveyance-checklist/__tests__/conveyance-checklist-catalog.test.ts` · `lib/conveyance/__tests__/*` ·
@@ -572,7 +580,7 @@ Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ �
 | **Φ1** ✅ | `conveyance_cases` + πρόθεμα ID · κατάλογος config + παραγωγή κατάστασης · καρτέλα «Δικαιολογητικά» **για τον εργολάβο** (χωρίς εξωτερικούς ακόμη) · **+ σύγκλιση AI KB** (§14) | ~~Φ0~~ — κυκλοφόρησε ως v0 με δηλωμένο «μη επαληθευμένο» |
 | **Φ2** ✅ *(2026-10-03, §14.2)* | Πρότυπο `legal` στο ADR-862 · `engagements` · ετυμηγορία `engaged` · κανόνες Firestore/Storage | **ADR-862 Φ1** ✅ |
 | **Φ3** ✅ *(2026-10-03, §14.3)* | Πρόσκληση `engagement` στη μηχανή ADR-853 (**τρίτο είδος**) · σελίδα **`/case-invite/[token]`** (προεπισκόπηση/εγγραφή/δήλωση ιδιότητας) · νέο email §5.6 · υπενθύμιση 3 ημερών · ~~αναβάθμιση `ProfessionalsCard`~~ → **`ConveyanceProfessionalsAccess`** (η επιφάνεια πρόσβασης· το `ProfessionalsCard` μένει επιφάνεια **ορισμού**) | Φ2 ✅ · ADR-853 Φ6 UI ✅ |
-| **Φ4** 🟢 Φ4.1–4.3 *(2026-10-03, §14.4)* · 🟡 Φ4.4 | «Οι υποθέσεις μου» + σελίδα υπόθεσης · ίχνος · ~~ανεβάσματα επαγγελματιών~~ → **Φ4.4, επανασχεδιασμός §5.8.1** · ειδοποιήσεις λήξεων | Φ3 |
+| **Φ4** 🟢 Φ4.1–4.3 *(2026-10-03, §14.4)* · 🟢 Φ4.4 *(2026-10-03, §14.5)* · 🟢 Φ4.5 *(2026-10-03, §14.6)* | «Οι υποθέσεις μου» + σελίδα υπόθεσης · ίχνος · ειδοποιήσεις λήξεων · **Transmittal** (§5.8.1) · **Φ4.5**: «νέα έκδοση στους ίδιους» με ένα πάτημα (Aconex auto-transmit) · «Ζήτησε έγγραφο» από γραμμή `missing` (§5.8 γρ.3) | Φ3 |
 | **Φ5** | **Ιδιώτης**: υπόθεση από φάκελο/αγγελία · `resale_private` | **ADR-866 Φ3** (οικοδεσπότης προσωπικός χώρος) |
 | **Φ6** | **Πάγωμα** + **Φάκελος ολοκλήρωσης ανά ρόλο** (§5.7.1) · παράδοση φακέλου στον αγοραστή στο κλείσιμο | Φ4 · ADR-866 (παράδοση) |
 
@@ -657,6 +665,9 @@ Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ �
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-04 | 🟢 **Φ4.5 — «πώς γεννιέται η v2»** (§14.6 Γ · Α32). Μετρημένο στον κώδικα: ο επαγγελματίας **δεν** μπορούσε να φτιάξει νέα έκδοση αρχείου υπόθεσης — ο διάλογος ανέβαζε πάντα **ανεξάρτητο** πρόχειρο, άρα το «Στείλε τη νέα έκδοση» **δεν θα εμφανιζόταν ποτέ**. Ο server ήταν ήδη έτοιμος (`supersede` ζει και στο `versions-only` · εξουσία = ιδιοκτησία). Προστέθηκε **μόνο** ο δρόμος UI: «Νέα έκδοση» στο δικό μου σταλμένο ⇒ ανέβασμα → `supersedeFileRecord` (η **ΜΙΑ** πόρτα → `transitionContainer`) → `reissue`, με await. Boy-scout: `FileUploadButton` (ADR-054) αντί για δίδυμα κρυφά inputs (CHECK 3.28) · ο διάλογος αποστολής επέτρεπε **διπλή αποστολή** (`canSubmit` παρέκαμπτε το `isSubmitting`). |
+| 2026-10-03 | 🟢 **Φ4.5 υλοποιήθηκε** (§14.6). (Α) **«Στείλε τη νέα έκδοση στους ίδιους»** με ένα πάτημα πάνω στο δικό μου σταλμένο τεκμήριο — ο client δίνει μόνο την αποστολή, ο **server** βρίσκει την κεφαλή της στοίβας (`readStackHead`, νέο) και περνά από τον ΙΔΙΟ γραφέα με compare-and-set· το σήμα «υπάρχει νεότερη» φτάνει **μόνο** στον συντάκτη, και ο τύπος το εγγυάται (Α28). 🔎 Εύρημα: ο γραφέας δεν έλεγχε ότι το «νέο» αρχείο είναι **διάδοχος** — πλέον τον επιλέγει ο ίδιος. (Β) **«Ζήτησε έγγραφο»** (§5.8 γρ.3): παραλήπτης από τον πάροχο (`REQUEST_RECIPIENT_BY_PROVIDER`), κοινός καθαρός κριτής server + client, αμετάβλητο γεγονός `conveyance_document_requests` (`cdr`, ντετερμινιστικό ανά ημέρα — anti-spam χωρίς race), «εκκρεμεί» **παραγόμενο** (Procore «Ball in Court» χωρίς χειροκίνητο κλείσιμο), «Ζήτησε όλα» = μία ειδοποίηση ανά παραλήπτη, νέα ενέργεια ίχνους `document_requested` (Aconex/Procore έχουν διακριτό «Request sent»). 🔎 Εύρημα: οι γραμμές του συμβολαιογράφου που λείπουν είναι `notary_side`, όχι `missing` — το πιο συχνό αίτημα (σχέδιο συμβολαίου) θα ήταν αδύνατο με το σχέδιο «μόνο από `missing`» ⇒ `isRequestableRow`. Boy-scout: `conveyance-case-notice.ts` (οι δύο notifiers ήταν κλώνοι) · `acceptsEngagements` → καθαρό · `contributedFileOf` εξήχθη · `ChecklistRowHandlers`. |
+| 2026-10-03 | 🟢 **Φ4.4 υλοποιήθηκε — Transmittal** (§14.5). Ο επαγγελματίας ανεβάζει στον **δικό του** χώρο (`files_personal`, νέο `ENTITY_TYPES.CONVEYANCE_CASE`, 5 entry points) και **στέλνει** την έκδοση: αμετάβλητη πράξη `conveyance_contributions` (`ctb`, μόνο server, deny-all) με `supersedes`. 🔑 Αποφάσεις «όπως οι μεγάλοι»: (1) **δυνατότητα από τον ρόλο, όχι σφραγισμένο scope** (Autodesk Docs: δικαίωμα ανά ρόλο, το κληρονομούν και τα υπάρχοντα μέλη · Zanzibar: computed usersets) ⇒ `CONTRIBUTION_STATES_BY_ROLE`, κανένα backfill· (2) **ακροατήριο από τον ρόλο** (`contribution-audience.ts`), όχι λίστα παραληπτών — η έκθεση του αγοραστή δεν μπορεί δομικά να φτάσει στον πωλητή· (3) **σιωπηλή δέσμευση** της σταλμένης έκδοσης (Vault/Box) — ο γραφέας δέσμευσης ADR-864 §21 απέκτησε **προσωπικό διαμέρισμα** (§21.9)· κάδος ≠ απόσυρση. 🔎 Ευρήματα: (α) το `ownSideOnly` **δηλωνόταν αλλά δεν επιβαλλόταν πουθενά** — το επιβάλλει πλέον το ακροατήριο· (β) **τρεις** δρόμοι συλλογής τεκμηρίων (όψη οικοδεσπότη · εντολές ελέγχου · κατάλογος επαγγελματία) ⇒ **ένας** (`collectCaseEvidence`) — αλλιώς ο οικοδεσπότης δεν θα έβλεπε ούτε θα αποδεχόταν τα σταλμένα· (γ) το βιβλίο της υπόθεσης το βλέπει ο οικοδεσπότης ⇒ εγγραφή αποστολής **χωρίς όνομα αρχείου** όταν δεν ανήκει στο ακροατήριο. Ο οικοδεσπότης **ανοίγει** πλέον τεκμήρια από τον κατάλογο (`POST /api/conveyance-cases/{id}/files/{fileId}`, ίχνος με ρόλο `host`). Boy-scout: `engagedNow` / `activeCaseEngagements` / `caseHostRecipients` (ήταν ιδιωτικά στις λήξεις) → `conveyance-engagement-support` · `caseFileResponse` (ήταν μέσα στο route) · `useCaseFileOpening` (κοινό για τις δύο όψεις) · `useCaseFileOpener` με στόχο. |
 | 2026-10-03 | 🟢 **Φ4.1–Φ4.3 υλοποιήθηκαν** (§14.4). (1) Η αποδοχή **φέρει** τη δήλωση Ε-4 **στον τύπο** του ΕΝΟΣ γραφέα — πρόσκληση και «Αναλαμβάνω» περνούν από το ίδιο σχήμα (`declared-credential.ts`) και την ίδια φόρμα· προσυμπλήρωση «θυμήσου με». (2) Σελίδα υπόθεσης με καρτέλες: «Δικαιολογητικά» με **Προβολή/Λήψη** (σύνδεσμος 15′, POST με ιδεμποτία, ίχνος `document_accessed` στο βιβλίο της υπόθεσης) · «Συμμετέχοντες & ίχνος» (δηλωμένη ιδιότητα των άλλων, προβολή ίχνους χωρίς email). (3) Cron λήξεων με **ακμή, όχι στάθμη**. 🔎 **Εύρημα audit**: η Φ4.4 όπως σχεδιάστηκε (CDE `share` σε προσωπικό αρχείο) **αντιβαίνει** στο ADR-866 Ε-Φ0-1 ⇒ επανασχεδιασμός ως **Transmittal** (§5.8.1) — ✅ εγκρίθηκε («όπως οι μεγάλοι»). Boy-scout: `fileDownloadName` (εξήχθη) · `listCaseEngagements` (ήταν μέσα στην υπηρεσία οικοδεσπότη) · `DeclaredCredentialLine` σε κοινό + άκυρο `<p>`-σε-`<p>` · `checklistForRole` γενικεύτηκε σε `ChecklistViewer` (οικοδεσπότης + επαγγελματίας) · `CredentialHint` προσυμπλήρωση σε κοινό helper (ήταν inline στη σελίδα πρόσκλησης) · πίνακας κεφαλίδας κανόνων προορισμού (έλειπαν οι τύποι της Φ2). |
 | 2026-10-03 | 🟢 **Φ3 υλοποιήθηκε** (§14.3). Επαγγελματίας **χωρίς** λογαριασμό ⇒ η ίδια πράξη «Πρόταση» του οικοδεσπότη **εκδίδει πρόσκληση με email** (Procore «Save & Send Invitation») πάνω στη **ΜΙΑ** μηχανή ADR-853 ως **τρίτο είδος** (`einv` · `engagement_invitations` · `ENGAGEMENT_INVITE_SECRET`). Η μηχανή γενικεύτηκε σε **αποδοχή δύο φάσεων** μέσα στη συναλλαγή (`onAccept` → αναγνώσεις, μετά `write()` — ADR-853 §20.7), ώστε ο ΕΝΑΣ γραφέας (`stageEngagementByInvitation`) να κρίνει μοναδικότητα **ατομικά**. Δήλωση ιδιότητας Ε-4 ως **στιγμιότυπο ανά υπόθεση** (`declaredCredential`, προσυμπλήρωση από τις persona της επαφής). Ε-5: 14 ημέρες = **ίδια** σταθερά με την πρόταση · επαναποστολή = νέα έκδοση (supersede) · υπενθύμιση στον προσκαλούντα από cron (`engagement-invitation-reminder`, 09:13) με `reminderDueAt` γραμμένο **στην έκδοση** · άρνηση ⇒ ειδοποίηση. Αποκλίσεις από το σχέδιο (§5.3 · §5.6 · §8): σελίδα ανά είδος, κλειδί `eng_…`, κανένα όνομα μέρους στο email. Boy-scout: `CORE_REFUSAL_IS_NOT_FOUND` (ήταν 2 χάρτες) · `InvitationMessageCard` · `InvitationIdentityGate` · `readInvitationPageRequest` (δίδυμα με `/tour-invite`) · `legal-professional-credentials.ts` (ανάγνωση persona εκτός client-only service) · `checklistForRole` · `isLegalEngagementRole`. |
 | 2026-10-03 | 🧩 **Route slices `/cases` + CHECK 3.34 ξεκλείδωσε** (ADR-744 §26). Το `navigation:personal.items.myCases` έβγαλε το `navigation` 22.808/22.800· θεραπεία **μετακόμιση** του λεξιλογίου του ιεραρχικού πλοηγητή στο `hierarchy-navigator` (όχι +50 στο ταβάνι, που χαμήλωσε σε 14.500). Μετά: `/cases` **2.731** bytes · `/cases/[engagementId]` **8.122** (σφραγισμένα στο `.i18n-shell-slice.json`), παράδοση με `registerRouteSlice` στα `MyCasesContent`/`EngagedCaseContent`· `dynamicKeyPolicy` για το `t(row.item.labelKey)` του `ConveyanceChecklistRow` (`conveyance:items`). |
@@ -785,4 +796,123 @@ CHECK 3.86) → push.
   δικαιωμάτων ανά μέλος που δεν υπάρχει.
 - Το Excel **δεν** προεπισκοπείται για τον επαγγελματία (η προεπισκόπηση Excel φυλάει μισθωτή) — δείχνει «Λήψη».
 - Δυναμικό υδατογράφημα PDF (πρακτική αιθουσών δεδομένων) — όχι.
-- Φ4.4 ανεβάσματα + «Ζήτησε έγγραφο» — §5.8.1.
+- Φ4.4 ανεβάσματα + «Ζήτησε έγγραφο» — §5.8.1. → ✅ Φ4.4 §14.5 · «Ζήτησε έγγραφο» → Φ4.5.
+
+### 14.5 🗺️ Χάρτης υλοποίησης — Φ4.4 Transmittal *(2026-10-03)*
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Προσωπικός χώρος | `config/domain-constants.ts` (`ENTITY_TYPES.CONVEYANCE_CASE`) · `config/upload-entry-points/entries-conveyance-case.ts` (5 entry points, `purpose` = id γραμμής) · `hooks/useCaseDrafts.ts` | ανέβασμα με την **υπάρχουσα** ροή (`uploadEntityFile`, κάτοχος `{userId}`) — καμία αλλαγή σε κανόνες Storage/`files_personal` |
+| Πράξη | `types/conveyance-contribution.ts` · `lib/conveyance/contribution-schema.ts` · `COLLECTIONS.CONVEYANCE_CONTRIBUTIONS` · πρόθεμα `ctb` · `firestore.rules` deny-all · σουίτα `conveyance-contributions.rules.test.ts` | αμετάβλητη· νέα έκδοση = νέο έγγραφο με `supersedes`· το ακροατήριο **δεν** αποθηκεύεται |
+| Κριτής (καθαρός) | `config/engagement-policy.ts` (`CONTRIBUTION_STATES_BY_ROLE`) · `lib/conveyance/contribution-policy.ts` (`judgeContribution` · `contributableItemIds` · `contributorRolesOf`) | δυνατότητα **από τον ρόλο** × κατάσταση (εδώ ζει το πάγωμα Α9) — κανένα αποθηκευμένο scope, κανένα backfill |
+| Ακροατήριο | `lib/conveyance/contribution-audience.ts` · `lib/conveyance/contribution-evidence.ts` | Α23 · Α24 — μπαίνουν **μόνο** αποστολές· η νεότερη ζωντανή ανά (συντάκτης, γραμμή)· συντάκτης ενεργός **τώρα** |
+| Κατάλογος | `config/conveyance-checklist/{types,items-transaction}.ts` (επίπεδο `contribution` · 5 γραμμές · `CONVEYANCE_CATALOG_VERSION` 0.2.0) · `lib/conveyance/evidence-match.ts` | έκθεση δικηγόρου `offline` → transmittal · τα 4 του συμβολαιογράφου `notary_issued` → transmittal + `notaryFallback` |
+| Ο ΕΝΑΣ δρόμος τεκμηρίων | `services/conveyance/conveyance-case-evidence.server.ts` (`collectCaseEvidence`) ← `conveyance-case.service` (όψη **και** εντολές) · `checklistForRole` | ήταν **τρεις** κλήσεις του συλλέκτη· τώρα μία |
+| Γραφέας | `services/conveyance/conveyance-contribution.service.ts` (`issueContribution` · `withdrawContribution`) · `conveyance-contribution-store.server.ts` (ο ΕΝΑΣ αναγνώστης) · `conveyance-contribution-delivery.ts` (δέσμευση · ίχνος · ειδοποίηση) | συναλλαγή · ιδεμπότητα · κανένα μαντείο ύπαρξης · ίχνος **χωρίς όνομα** όταν ο οικοδεσπότης δεν είναι στο ακροατήριο |
+| Δέσμευση | `services/file-record/file-hold.service.ts` (κάτοχος `CustodyScope` — ADR-864 §21.9) · `services/conveyance/conveyance-transmittal-hold.ts` | Α26 — αιτιολογία ανά υπόθεση · ξανακάλυψη στοίβας για νέα έκδοση · ποτέ ξένη δέσμευση |
+| Routes | `api/engagements/[id]/contributions` · `…/[contributionId]/withdraw` · `api/conveyance-cases/[id]/files/[fileId]` (οικοδεσπότης) · `api/engagements/_shared/{engagement-post,contribution-response,case-file-response}.ts` | ένα στήσιμο POST συμμετοχής (CHECK 3.28) · μία μετάφραση → HTTP ανά είδος |
+| Άνοιγμα | `services/conveyance/conveyance-case-file-access.service.ts` (`openCaseFile` · `openHostCaseFile`, ένας πυρήνας) · `hooks/useCaseFileOpener.ts` (στόχος) · `components/conveyance/shared/CaseFileOpening.tsx` | η σταλμένη έκδοση διαβάζεται **μέσω του transmittal**, από τον χώρο του συντάκτη· κάδος ≠ απόσυρση |
+| Ίχνος | `lib/conveyance/case-activity.ts` (`transmitted` · `withdrawn` · ρόλος `host` · `ownFiles`) · `conveyance-case-activity.server.ts` | `document_added`/`document_removed` + πεδίο `transmittal` — κανένα νέο λεξιλόγιο ενεργειών (CHECK 3.14) |
+| Ειδοποιήσεις | `config/notification-events.ts` (`caseDocumentHost` · `caseDocumentEngaged`, μία προτίμηση `caseDocumentTransmitted`) · `notification-destination-rules.ts` · `conveyance-transmittal-notifier.ts` | μόνο στο ακροατήριο · `eventId` ντετερμινιστικό |
+| UI | `sales/conveyance/ConveyanceRowTransmittal.tsx` · `ConveyanceChecklistRow` (υπόδειξη `contribution`) · `my-cases/{EngagedCaseChecklist,TransmitDocumentDialog}.tsx` · `hooks/{useCaseContributions,useEngagedCase}.ts` · `ConveyanceTab` (ο οικοδεσπότης ανοίγει) | ο διάλογος **λέει** ποιος θα το δει (από τον ρόλο) · αισιόδοξη απόσυρση με επαναφορά · ανανέωση στο παρασκήνιο · διάλογος με `next/dynamic` (όριο slice) |
+
+**Άγκυρες**: `lib/conveyance/__tests__/contribution.test.ts` (Α23 · Α24 · Α25, μέσα από τον **πραγματικό** `deriveChecklist`) ·
+`services/conveyance/__tests__/conveyance-contribution-flow.test.ts` (12, άκρη σε άκρη) · `conveyance-transmittal-hold.test.ts` (Α26) ·
+`services/file-record/__tests__/file-hold-service.test.ts` (+3, προσωπικό διαμέρισμα). Μεταλλάξεις εκτελεσμένες: 9/10 κόκκινες. Η 10η
+(«η αποσυρμένη ανοίγει» στο `readTransmittedFile`) **επιβιώνει, και αυτό είναι αναμενόμενο**: ο κατάλογος του θεατή την έχει ήδη αποκλείσει. Ο
+δεύτερος έλεγχος πιάνει μόνο αγώνα δρόμου (απόσυρση ανάμεσα σε κρίση και ανάγνωση) και κρατιέται ως δεύτερη γραμμή άμυνας.
+
+**Δηλωμένα όρια της Φ4.4**:
+- ~~**Φ4.5**: «νέα έκδοση στους ίδιους» με ένα πάτημα · «Ζήτησε έγγραφο» από γραμμή `missing`.~~ → ✅ §14.6.
+- Το AI knowledge base (`collectEvidenceForTargets`) **δεν** βλέπει transmittals — δεν ρωτά ανά υπόθεση.
+- Στοίβα με **ξένη** δέσμευση: η νέα έκδοση δεν καλύπτεται (καταγράφεται ως `foreign-hold`, δεν παρακάμπτεται).
+- Αγοραστής/πωλητής ως **χρήστες** δεν ειδοποιούνται (είναι επαφές, όχι λογαριασμοί, ως τη Φ5).
+- Αντικατάσταση συμβολαιογράφου ⇒ τα τεκμήρια του προηγούμενου παύουν να μετρούν (απόφαση §5.8.1 «ενεργοί τώρα»)· ο νέος ξαναστέλνει.
+- Το route slice `/cases/[engagementId]` ξανασφραγίστηκε 8.122 → **10.834** (με όριο `next/dynamic` στον διάλογο)· τα παραγόμενα slices
+  **δεν** ξαναγράφτηκαν, γιατί ο γεννήτορας αρνείται όσο υπάρχουν ξένα κόκκινα (`spatial-tour` · `agency-profile` · `offers/[offerId]/tour`).
+
+### 14.6 🗺️ Χάρτης υλοποίησης — Φ4.5 «Νέα έκδοση στους ίδιους» + «Ζήτησε έγγραφο» *(2026-10-03)*
+
+**Τι έκαναν οι μεγάλοι — και πού πήγαμε παραπέρα** (έρευνα 2026-10-03):
+
+| Πρότυπο | Τι κάνει | Η δική μας παραλλαγή |
+|---|---|---|
+| Aconex «Auto Update Transmitted Documents» | νέα αναθεώρηση στους ίδιους οργανισμούς, μετά από επιλογή εγγράφων και παραληπτών | **ένα** πάτημα στο ίδιο το τεκμήριο· την έκδοση τη διαλέγει ο **server** (κεφαλή της στοίβας), το ακροατήριο ο **ρόλος** — καμία επιλογή, κανένα λάθος |
+| Procore «Ball in Court» / RFI | φαίνεται ποιος οφείλει την επόμενη κίνηση· το RFI το **κλείνει κάποιος με το χέρι** | «Εκκρεμεί από: …» **παράγεται** από την κατάσταση της γραμμής — κλείνει μόνο του όταν φτάσει το έγγραφο, δεν ξεχνιέται ποτέ ανοιχτό |
+| Box/Dropbox «File Request» · DocuSign Rooms tasks | αίτημα προς άτομο που διαλέγεις | παραλήπτης **από τον πάροχο της γραμμής** — ο δικηγόρος του αγοραστή δεν μπορεί δομικά να ζητήσει ή να μάθει για γραμμή του πωλητή |
+| Procore: ένα email ανά RFI | — | «Ζήτησε όλα τα ελλείποντα» ⇒ **μία** ειδοποίηση ανά παραλήπτη, με προεπισκόπηση «ποιοι και πόσα» πριν φύγει |
+
+**Α. «Στείλε τη νέα έκδοση στους ίδιους»** (Α27 · Α28)
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Στοίβα | `services/iso19650/version-stack.ts` (`readStackHead`) | **μόνο** η κεφαλή (βήμα 1 του `readVersionStack`, χωρίς ερώτημα ανά προκάτοχο) — κόστος = μήκος αλυσίδας προς τα εμπρός |
+| Μία κρίση αρχείου | `services/conveyance/conveyance-contributed-file.ts` (`contributedFileOf`) | εξήχθη από τον γραφέα: τη ρωτούν **και** ο γραφέας **και** ο συλλέκτης ⇒ κανένα κουμπί για έκδοση που μετά θα αρνηθεί ο server |
+| Γραφέας | `conveyance-contribution.service.ts` (`reissueContribution` · `issueWithAccess`) | ο client δίνει **μόνο** την αποστολή· ο server βρίσκει την κεφαλή και περνά από τον **ίδιο** δρόμο (κριτής Α25 · ακροατήριο Α23 · `supersedes` · δέσμευση Α26)· **compare-and-set** στην προηγούμενη μέσα στη συναλλαγή (`superseded`) |
+| Σήμα (μόνο συντάκτης) | `types/conveyance-case.ts` (`NewerVersion` · `TransmittalAuthorship`) · `lib/conveyance/contribution-evidence.ts` · `conveyance-case-evidence.server.ts` (`newerVersionsFor`) | Α28 **δομικά**: `newerVersion` υπάρχει μόνο στον κλάδο `own: true` του τύπου· η στοίβα διαβάζεται **μόνο** για τις τρέχουσες αποστολές του θεατή που έχουν διάδοχο |
+| Ειδοποίηση | `conveyance-transmittal-notifier.ts` | `supersedes ≠ null` ⇒ «Νέα έκδοση: …» (`caseDocument.revisionTitle`) |
+| Route · UI | `api/engagements/[id]/contributions/[contributionId]/reissue` · `ConveyanceRowTransmittal.tsx` (`ReissueFileButton`) · `hooks/useCaseContributions.ts` (`useReissue`) | 422 `no-newer-version` / `superseded` · ονομασμένες αρνήσεις στο `CONTRIBUTION_REJECTIONS` |
+
+**Β. «Ζήτησε έγγραφο»** (Α29 · Α30 · Α31)
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Δρομολόγηση (SSoT) | `config/engagement-policy.ts` (`REQUEST_RECIPIENT_BY_PROVIDER` · `DOCUMENT_REQUEST_BATCH_MAX`) | πάροχος → λογαριασμός: πωλητής/μηχανικός/αρχή ⇒ οικοδεσπότης · συμβολαιογράφος ⇒ συμβολαιογράφος · δικηγόρος ⇒ **της πλευράς του αιτούντος** · αγοραστής/τράπεζα ⇒ δικηγόρος αγοραστή (εκπρόσωπος) |
+| Κριτής (καθαρός, server + client) | `lib/conveyance/document-request-policy.ts` | `requestTargetOf` · `judgeDocumentRequest` · `isRequestableRow` (και `notary_side` **όταν** δέχεται transmittal) · `pendingRequestOf` · `requestableNow` · `documentRequestViewsFor` (Α31) · `documentRequestSeed` |
+| Πράξη | `types/conveyance-document-request.ts` · `lib/conveyance/document-request-schema.ts` · `COLLECTIONS.CONVEYANCE_DOCUMENT_REQUESTS` · πρόθεμα `cdr` (`generateDeterministicConveyanceDocumentRequestId`) · `firestore.rules` deny-all · σουίτα `conveyance-document-requests.rules.test.ts` | **ένα** έγγραφο ανά (υπόθεση, γραμμή, αιτών, ημέρα Ελλάδας)· ο οικοδεσπότης είναι **χώρος** (ένα αίτημα για όλους τους διαχειριστές)· καμία αποθηκευμένη κατάσταση «ανοιχτό/κλειστό» |
+| Γραφέας | `services/conveyance/conveyance-document-request.service.ts` (`requestCaseDocuments`) · `…-store.server.ts` · `…-panel.server.ts` | κατάλογος του αιτούντος ξαναπαραγμένος (αόρατη γραμμή ≡ ανύπαρκτη) → κριτής → `tx.create` (anti-spam χωρίς race) → **ένα** ίχνος ανά πάτημα (μόνο τα νέα) → **μία** ειδοποίηση ανά παραλήπτη για όσα δεν ειδοποιήθηκαν → σημάδεμα `notifiedAt` **μόνο** αν δεν απέτυχε καμία (συγκλίνει στην επανάληψη) |
+| Ειδοποιήσεις | `conveyance-case-notice.ts` (**νέο** — ο ΕΝΑΣ αποστολέας host/engaged) · `conveyance-document-request-notifier.ts` · `notification-events.ts` (`caseDocumentRequestHost` · `caseDocumentRequestEngaged`, προτίμηση `caseDocumentRequests`, WARNING) · κανόνες προορισμού + Λ3 | τίτλος **χωρίς** όνομα εγγράφου (μεταφράσιμη ετικέτα ⇒ θα ήταν ελληνικά σε αγγλόφωνο)· `eventId` από το αποτύπωμα των αιτημάτων |
+| Ίχνος | `types/audit-trail.ts` (**νέα** ενέργεια `document_requested`) · `activity-tab-config.ts` · `lib/conveyance/case-activity.ts` (`CASE_REQUEST_FIELD` · `encodeCaseRequest` · `requested` / `request-received`) | ρόλοι και id γραμμής, ποτέ όνομα εγγράφου· ο επαγγελματίας βλέπει μόνο ό,τι ζήτησε ή ζητήθηκε από τον **ρόλο** του |
+| Όψεις | `ConveyanceCaseView.documentRequests` · `EngagedCaseView.documentRequests` (`CaseDocumentRequests`: `today` · `targets` · `log`) | ο server δίνει παραλήπτη ανά γραμμή — ο οικοδεσπότης **δεν** χρειάζεται να ξέρει ποιοι συμμετέχουν για να δει «Θα ειδοποιηθεί: …» |
+| Routes | `api/engagements/[id]/document-requests` · `api/conveyance-cases/[id]/document-requests` (`legal:conveyance:manage`) · `api/engagements/_shared/document-request-response.ts` | **ένα** σχήμα σώματος (`checklistItemIds[1..50]`) · αποτέλεσμα **ανά γραμμή** (το «Ζήτησε όλα» δεν αποτυγχάνει ολόκληρο για μία γραμμή) |
+| UI | `ConveyanceRowRequest.tsx` · `ConveyanceRequestAllBar.tsx` · `hooks/useDocumentRequests.ts` · `services/conveyance/conveyance-document-request-gateway.ts` · `ConveyanceTab` · `EngagedCaseChecklist` · `EngagedCaseActivity` | ίδια components για οικοδεσπότη και επαγγελματία · αισιόδοξο «ζητήθηκε σήμερα» με συγχώνευση (ποτέ διπλό) · `ChecklistRowHandlers` (ενότητα + γραμμή — ήταν δίδυμα props, CHECK 3.28) |
+
+**Boy-scout**: `acceptsEngagements` → καθαρό `lib/conveyance/case-state.ts` (ήταν server-only, το χρειάζεται ο κοινός κριτής) · οι
+`conveyance-{transmittal,expiry}-notifier.ts` ήταν σχεδόν κλώνοι ⇒ `conveyance-case-notice.ts` (και το `skipped` δεν χάνεται πια) ·
+`CaseActorRole` αντί για δεύτερο τύπο «λογαριασμός υπόθεσης».
+
+**Άγκυρες** (Α27–Α31, §7): `lib/conveyance/__tests__/document-request-policy.test.ts` (23 — πάνω στον **πραγματικό** κατάλογο, μαζί με
+αμετάβλητο «ο παραλήπτης βλέπει πάντα τη γραμμή» × κάθε γραμμή × κάθε αιτών) · `contribution.test.ts` (+3, Α28) · `case-activity.test.ts`
+(+4) · `conveyance-contribution-flow.test.ts` (+12, άκρη σε άκρη πάνω στο fake Firestore) · `enterprise-id.service.test.ts` (χρυσό id).
+**Μεταλλάξεις εκτελεσμένες: 10/10 κόκκινες** — χωρίς CAS · `newerVersion` σε κάθε θεατή · χωρίς ορατότητα παραλήπτη · χωρίς ορατότητα
+αιτούντος · αιτήματα σε όλους · «εκκρεμεί» που αγνοεί νεότερο τεκμήριο · σημάδεμα παρά την αποτυχία · uid στον σπόρο του οικοδεσπότη ·
+αιτήματα τρίτων στο ίχνος · `notary_side` πάντα αιτήσιμο. 🔎 Η 3η **επέζησε** στην πρώτη εκτέλεση: στον σημερινό κατάλογο ο παραλήπτης
+βλέπει **πάντα** τη γραμμή, άρα ο έλεγχος ήταν δίχτυ που κανένα test δεν άγγιζε ⇒ προστέθηκε άγκυρα με τεχνητή `visibleTo` **και** το
+αμετάβλητο του καταλόγου.
+
+**Δηλωμένα όρια της Φ4.5**:
+- Αγοραστής χωρίς ενεργό δικηγόρο ⇒ `no-recipient` (η γραμμή το λέει: «ζητήστε το εκτός πλατφόρμας») — αγοραστής/πωλητής ως λογαριασμοί
+  στη Φ5.
+- Αίτημα ανάμεσα σε **δύο** επαγγελματίες (π.χ. συμβολαιογράφος → δικηγόρος αγοραστή) **υπάρχει** στο βιβλίο της υπόθεσης, που το διαβάζει ο
+  οικοδεσπότης ωμά στο `ActivityTab` (ρόλοι + id γραμμής — η γραμμή είναι ήδη ορατή στον οικοδεσπότη). Η **όψη** του δεν το δείχνει (Α31).
+- Το «ζητήθηκε σήμερα» ορίζεται ανά **ημέρα Ελλάδας** (`conveyanceToday`) — δεύτερο αίτημα την ίδια μέρα δεν ξαναειδοποιεί, ακόμη κι αν
+  στο μεταξύ ήρθε και απορρίφθηκε τεκμήριο.
+- Χωρίς ελεύθερο κείμενο στο αίτημα (σημείωση) — το Aconex/Procore το έχουν· εδώ θα ήθελε δικό του κανόνα ιδιωτικότητας στο βιβλίο.
+- Το route slice `/cases/[engagementId]` δεν ξανασφραγίστηκε (νέα κλειδιά `requests.*` · `transmittal.reissue*`) — ίδιος λόγος με §14.5.
+
+**Γ. «Πώς γεννιέται η v2»** (Α32 · 2026-10-04)
+
+🔴 **Το κενό, μετρημένο**: οι μόνοι καλούντες της διαδοχής ήταν το DXF (`useSceneState`) και η εισαγωγή κάτοψης (`StepUpload`), και οι δύο
+`'company'`. Ο διάλογος της υπόθεσης (`TransmitDocumentDialog` → `useCaseDrafts`) ανέβαζε **νέο ανεξάρτητο** αρχείο ⇒ κανένα
+`supersededByFileId` ⇒ το `newerVersionsFor` δεν έβρισκε ποτέ τίποτα ⇒ το Α27 ήταν **σωστό αλλά απρόσιτο**. Ο server **δεν** χρειάστηκε
+αλλαγή: `ACT_REGIMES.supersede` ζει και στο `versions-only` (ADR-866 Ε-Φ0-1), η εξουσία στο προσωπικό είναι η **ιδιοκτησία**, και η θέση
+(`succession-identity`: οντότητα · τομέας · κατηγορία · σκοπός) είναι ίδια για δύο ανεβάσματα από την ίδια πόρτα.
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Πόρτα | `lib/conveyance/contribution-revision.ts` (`revisionEntryPoint`) | entry point της γραμμής με τον **σκοπό του σταλμένου** — το αντίστροφο του `newerVersionOf`. Ξεχωριστό φύλλο ώστε το μητρώο entry points να μη μπει στο route slice |
+| Ανέβασμα + διαδοχή | `hooks/useCaseDrafts.ts` (`useCaseDraftUpload` · `uploadVersion`) | η **υπάρχουσα** ροή ανεβάσματος + `supersedeFileRecord(…,'personal')` = η **ΜΙΑ** πόρτα → `POST /cde` → `transitionContainer`. Ονομασμένη έκβαση `CaseVersionUpload` |
+| UI | `ConveyanceRowTransmittal.tsx` (`ReviseFileButton`, `RowTransmittal.onRevise`) · `my-cases/ReviseTransmittalDialog.tsx` (δυναμικός) · `EngagedCaseChecklist.tsx` | «Νέα έκδοση» στο **δικό μου** σταλμένο σε γραμμή που συμπληρώνω **τώρα**· κρύβεται όταν η στοίβα έχει ήδη νεότερη. Ένα βήμα: διάλεξε → «Ανέβασμα και αποστολή» |
+
+🌐 Autodesk Docs «Upload new version» + νέο transmittal · Aconex «Supersede» + «Transmit»: **δύο** ροές, δύο φορές η επιλογή παραληπτών.
+🏆 Εδώ **μία**, χωρίς πεδίο παραληπτών (τους ορίζει η προηγούμενη αποστολή), και η διαδοχή **αποδεικνύεται** από τον server.
+
+🛡️ **Σειρά + δίχτυ**: ανέβασμα → διαδοχή → αποστολή, **με await** (η αποστολή διαβάζει την κεφαλή). Αποτυχία ανεβάσματος ⇒ ο διάλογος μένει
+ανοιχτός. Άρνηση διαδοχής ⇒ ονομασμένη (`useSupersessionNotice`), το αρχείο μένει πρόχειρο, **τίποτα δεν στέλνεται**. Αποτυχία αποστολής ⇒ η
+στοίβα έχει ήδη νεότερη ⇒ η γραμμή δείχνει μόνη της το `ReissueFileButton` — καμία κατάσταση δεν χάνεται. Ιδεμποτία: η διαδοχή (`already-in-state`)
+και η αποστολή (CAS `superseded`).
+
+**Δηλωμένα όρια**: νέα έκδοση **πρόχειρου που δεν στάλθηκε** δεν προσφέρεται (δεν υπάρχει ανάγκη — στέλνεται το νέο)· drag-to-version δεν
+υπάρχει. Η άγκυρα κρίνει την **πόρτα** απέναντι στον πραγματικό κριτή· τη ροή UI την επαληθεύει η ζωντανή δοκιμή (handoff ΒΗΜΑ 3 α).
+
+**Route slice `/cases/[engagementId]`** (CHECK 3.34): νέα καταχώριση `dynamicKeyPolicy` για το `EngagedCaseActivity.tsx` (`t(labelKey)` του αιτήματος — ίδιο ακριβές πρόθεμα `conveyance:items`), που ήταν ο λόγος που η διαδρομή **αρνιόταν**. Μετρημένο `--dry-run`: **12.881 / 13.542** bytes, **1** namespace — εντός σφράγισης. 🔎 Πρώτη μέτρηση 15.418 με δεύτερο namespace `files`: ένα `import type` από τον **δυναμικό** διάλογο τον έσερνε στατικά στην κλειστότητα (→ `FileUploadButton`) ⇒ ο τύπος `RevisionTarget` μετακόμισε στο `ConveyanceRowTransmittal`. ⚠️ Τα slices **δεν** γράφτηκαν: ο γεννήτορας είναι όλα-ή-τίποτα και κόβεται από **ξένη** ετυμηγορία (`settings/agency-profile` 18.213 > 18.170).
