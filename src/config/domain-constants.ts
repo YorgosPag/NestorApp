@@ -126,6 +126,11 @@ export const ENTITY_TYPES = {
   OWNER_PROPERTY: 'owner_property',
   /** Property dossier (`property_dossiers`) — ό,τι αφορά το σπίτι, πέρα από κάθε αγγελία· προσωπικός κάτοχος (ADR-866 Ε-1 · Φ1.1) */
   PROPERTY_DOSSIER: 'property_dossier',
+  /**
+   * Conveyance case (`conveyance_cases`) — έγγραφα που ο επαγγελματίας ετοιμάζει για την υπόθεση, στον **δικό του**
+   * προσωπικό χώρο· φτάνουν στην υπόθεση **μόνο** με transmittal (ADR-901 §5.8.1 · Φ4.4)
+   */
+  CONVEYANCE_CASE: 'conveyance_case',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
@@ -776,6 +781,9 @@ export const API_ROUTES = {
     /** Η ρίζα των μέσων — κάθε πλακίδιο ελέγχει **μόνο** την υπογραφή του κουπονιού. */
     MEDIA_ROOT: (kind: string, subjectId: string) =>
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/media` as const,
+    /** ADR-904 Κ9 — η βαθμονομημένη κάτοψη `contentHash` για τη λήψη (ταυτότητα, ίδιος κριτής με το ανέβασμα). */
+    CAPTURE_PLAN: (kind: string, subjectId: string, contentHash: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/capture-plans/${encodeURIComponent(contentHash)}` as const,
     /** Δημόσιο: «έχει αυτή η αγγελία περιήγηση που φαίνεται, και πού βρίσκομαι εγώ;» */
     LISTING_PRESENCE: (listingId: string) =>
       `/api/spatial-tours/listings/${encodeURIComponent(listingId)}/presence` as const,
@@ -968,6 +976,10 @@ export const API_ROUTES = {
       `/api/conveyance-cases/${id}/engagements/${engagementId}/revoke` as const,
     // ADR-901 Φ3 — ακύρωση της εκκρεμούς πρόσκλησης με email μιας θέσης.
     INVITATION_REVOKE: (id: string, role: string) => `/api/conveyance-cases/${id}/invitations/${role}/revoke` as const,
+    // ADR-901 Φ4.4 — ο οικοδεσπότης ανοίγει τεκμήριο του καταλόγου (και ό,τι του στάλθηκε) — POST: γράφει ίχνος.
+    CASE_FILE: (id: string, fileId: string) => `/api/conveyance-cases/${id}/files/${fileId}` as const,
+    // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: ο οικοδεσπότης ζητά γραμμές του καταλόγου από όποιον τις οφείλει.
+    DOCUMENT_REQUESTS: (id: string) => `/api/conveyance-cases/${id}/document-requests` as const,
   },
 
   // ── ADR-862 Φ1 · ADR-901 Φ2 — «Οι υποθέσεις μου» (ο επαγγελματίας, μέσω της συμμετοχής του) ──
@@ -978,6 +990,14 @@ export const API_ROUTES = {
     // ADR-901 Φ4 — άνοιγμα/λήψη τεκμηρίου (POST: γράφει ίχνος) · το ίχνος της υπόθεσης όπως το βλέπει ο επαγγελματίας.
     CASE_FILE: (engagementId: string, fileId: string) => `/api/engagements/${engagementId}/files/${fileId}` as const,
     CASE_ACTIVITY: (engagementId: string) => `/api/engagements/${engagementId}/activity` as const,
+    // ADR-901 Φ4.4 — transmittal: αποστολή έκδοσης δικού μου αρχείου · απόσυρση.
+    CONTRIBUTIONS: (engagementId: string) => `/api/engagements/${engagementId}/contributions` as const,
+    CONTRIBUTION_WITHDRAW: (engagementId: string, contributionId: string) =>
+      `/api/engagements/${engagementId}/contributions/${contributionId}/withdraw` as const,
+    // ADR-901 Φ4.5 — «Στείλε τη νέα έκδοση στους ίδιους» (ο server διαλέγει την κεφαλή της στοίβας) · «Ζήτησε έγγραφο».
+    CONTRIBUTION_REISSUE: (engagementId: string, contributionId: string) =>
+      `/api/engagements/${engagementId}/contributions/${contributionId}/reissue` as const,
+    DOCUMENT_REQUESTS: (engagementId: string) => `/api/engagements/${engagementId}/document-requests` as const,
     // ADR-901 Φ3 — η εξαργύρωση πρόσκλησης με email (ο επαγγελματίας, από `/case-invite/[token]`).
     INVITATION_REDEEM: '/api/engagement-invitations/redeem',
   },

@@ -16,6 +16,7 @@
  * @see ADR-901
  */
 
+import type { CaseDocumentRequests } from '@/types/conveyance-document-request';
 import type { CaseInvitationSummary, CredentialHint } from '@/types/engagement-invitation';
 import type { DeclaredCredential, EngagementConsent, EngagementState, EngagementVerdict } from '@/types/engagement';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -132,7 +133,32 @@ export interface ConveyanceCase {
 // ============================================================================
 
 /** Αρχείο-τεκμήριο που βρέθηκε για μια γραμμή. */
+/**
+ * **Από πού** ήρθε ένα τεκμήριο (ADR-901 Φ4.4):
+ * - `owned`       — αρχείο του **μισθωτή-οικοδεσπότη** (`files`) — όπως από τη Φ1
+ * - `transmittal` — έκδοση προσωπικού αρχείου επαγγελματία που **στάλθηκε** (`conveyance_contributions`)· το
+ *                   uid του συντάκτη **δεν** ταξιδεύει (Α18) — ο server το ξαναβρίσκει από το `contributionId`.
+ *                   `own` = ο θεατής είναι ο συντάκτης (μόνο τότε προσφέρεται «Απόσυρση»).
+ *
+ * ADR-901 Φ4.5 (Α28) — `newerVersion` υπάρχει **μόνο** στον κλάδο `own: true`: η στοίβα εκδόσεων του συντάκτη έχει
+ * νεότερη, **έτοιμη** κεφαλή από τη σταλμένη. Ο τύπος το εγγυάται — θεατής που δεν είναι ο συντάκτης **δεν έχει πεδίο**
+ * να το λάβει (ούτε `false`: η ύπαρξη νέας έκδοσης σε ξένο χώρο είναι πληροφορία).
+ */
+export interface NewerVersion {
+  /** Το όνομα της κεφαλής της στοίβας — για το «Στείλε τη νέα έκδοση «X»». Το id της **δεν** ταξιδεύει: το αποφασίζει ο server. */
+  readonly displayName: string;
+}
+
+type TransmittalAuthorship =
+  | { readonly own: false }
+  | { readonly own: true; readonly newerVersion: NewerVersion | null };
+
+export type EvidenceSource =
+  | { readonly kind: 'owned' }
+  | ({ readonly kind: 'transmittal'; readonly contributionId: string; readonly authorRole: LegalProfessionalRole } & TransmittalAuthorship);
+
 export interface EvidenceFile {
+  readonly source: EvidenceSource;
   readonly fileId: string;
   readonly displayName: string;
   readonly entityType: string;
@@ -207,6 +233,8 @@ export interface ConveyanceCaseView {
   /** Όλα τα αρχεία-τεκμήρια — ο client ξανατρέχει τον ίδιο πυρήνα για optimistic updates. */
   readonly evidence: readonly EvidenceFile[];
   readonly checklist: DerivedChecklist;
+  /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα που αφορούν τον οικοδεσπότη. */
+  readonly documentRequests: CaseDocumentRequests;
 }
 
 // ============================================================================
@@ -270,6 +298,8 @@ export interface EngagedCaseView {
   readonly checklist: DerivedChecklist;
   /** ADR-901 Φ4 — όσοι συμμετέχουν **τώρα** (μαζί με τον θεατή), με τη δηλωμένη ιδιότητά τους. */
   readonly participants: readonly CaseParticipantView[];
+  /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα όπου ο θεατής είναι αιτών/παραλήπτης. */
+  readonly documentRequests: CaseDocumentRequests;
 }
 
 /**
@@ -279,13 +309,22 @@ export interface EngagedCaseView {
 export interface CaseActivityItem {
   readonly id: string;
   readonly at: string;
-  readonly kind: 'viewed' | 'downloaded' | 'answered';
+  /** Φ4.5: `requested` = ο θεατής ζήτησε έγγραφο · `request-received` = ζητήθηκε από τον ρόλο του. */
+  readonly kind: 'viewed' | 'downloaded' | 'answered' | 'transmitted' | 'withdrawn' | 'requested' | 'request-received';
   readonly documentName: string | null;
+  /** Φ4.5 — η γραμμή του καταλόγου (για αιτήματα): το όνομά της το αποδίδει ο client στη γλώσσα του θεατή. */
+  readonly itemId: string | null;
   /** Την έκανε ο ίδιος ο θεατής. */
   readonly byViewer: boolean;
-  /** Ο ρόλος όποιου άνοιξε το τεκμήριο — `null` για ενέργειες χωρίς τεκμήριο. */
-  readonly actorRole: LegalProfessionalRole | null;
+  /**
+   * Ο **άλλος** ρόλος της ενέργειας: όποιος άνοιξε το τεκμήριο · όποιος ζήτησε (`request-received`) · από ποιον
+   * ζητήθηκε (`requested`). `null` για ενέργειες χωρίς δεύτερο μέρος.
+   */
+  readonly actorRole: CaseActorRole | null;
 }
+
+/** Ποιος **ενεργεί** στην υπόθεση: ένας επαγγελματίας ή ο οικοδεσπότης (ADR-901 Φ4.4 — ανοίγει πια τεκμήρια). */
+export type CaseActorRole = LegalProfessionalRole | 'host';
 
 /** Μία κάρτα στα «Οι υποθέσεις μου» (ADR-901 §5.4). */
 export interface MyCaseCard {

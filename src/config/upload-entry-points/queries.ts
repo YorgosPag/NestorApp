@@ -26,6 +26,7 @@ import { STORAGE_ENTRY_POINTS } from './entries-storage';
 import { PROJECT_ENTRY_POINTS } from './entries-project';
 import { STUDY_ENTRIES } from './entries-studies';
 import { PROPERTY_DOSSIER_ENTRY_POINTS } from './entries-property-dossier';
+import { CONVEYANCE_CASE_ENTRY_POINTS } from './entries-conveyance-case';
 
 // ============================================================================
 // Study Entry Assembly (ADR-191 — shared visibility)
@@ -65,6 +66,8 @@ export const UPLOAD_ENTRY_POINTS: UploadEntryPointsConfig = {
   project: [...PROJECT_ENTRY_POINTS, ...getStudyEntriesForEntityLevel('project')],
   // ADR-866 §2.10 Β1 — όψη του ίδιου καταλόγου (ακίνητο + μελέτες), όχι αντίγραφο.
   property_dossier: PROPERTY_DOSSIER_ENTRY_POINTS,
+  // ADR-901 §5.8.1 — ο προσωπικός χώρος του επαγγελματία για την υπόθεση (πρόχειρα μέχρι το transmittal).
+  conveyance_case: CONVEYANCE_CASE_ENTRY_POINTS,
 };
 
 // ============================================================================
