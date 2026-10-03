@@ -13,7 +13,9 @@
 
 import { useCallback, useState } from 'react';
 
-import { OtherAccountNotice, SwitchAccountButton } from '@/components/workspace-invite/SwitchAccount';
+import { InvitationMessageCard } from '@/components/invitations/InvitationMessageCard';
+import { InvitationIdentityGate } from '@/components/invitations/InvitationIdentityGate';
+import { SwitchAccountButton } from '@/components/workspace-invite/SwitchAccount';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -113,25 +115,22 @@ function Preview({ view, pending, onRespond }: PreviewProps) {
 
 function RespondArea({ view, pending, onRespond }: PreviewProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
-  const { respond } = view;
-  if (respond.kind === 'other-account') return <OtherAccountNotice signedInAs={respond.signedInAs} href={view.switchAccountHref} />;
-  if (respond.kind === 'sign-in') {
-    return (
-      <section className="space-y-2">
-        <Button asChild className="w-full"><Link href={respond.href}>{t(INVITE_KEYS.signIn)}</Link></Button>
-        <p className="text-xs text-muted-foreground">{t(INVITE_KEYS.signInHint)}</p>
-      </section>
-    );
-  }
   return (
-    <section className="flex gap-2">
-      <Button className="flex-1" disabled={pending !== null} aria-busy={pending === 'accept'} onClick={() => onRespond('accept')}>
-        {t(INVITE_KEYS.accept)}
-      </Button>
-      <Button className="flex-1" variant="outline" disabled={pending !== null} aria-busy={pending === 'decline'} onClick={() => onRespond('decline')}>
-        {t(INVITE_KEYS.decline)}
-      </Button>
-    </section>
+    <InvitationIdentityGate
+      respond={view.respond}
+      switchAccountHref={view.switchAccountHref}
+      signInLabel={t(INVITE_KEYS.signIn)}
+      signInHint={t(INVITE_KEYS.signInHint)}
+    >
+      <section className="flex gap-2">
+        <Button className="flex-1" disabled={pending !== null} aria-busy={pending === 'accept'} onClick={() => onRespond('accept')}>
+          {t(INVITE_KEYS.accept)}
+        </Button>
+        <Button className="flex-1" variant="outline" disabled={pending !== null} aria-busy={pending === 'decline'} onClick={() => onRespond('decline')}>
+          {t(INVITE_KEYS.decline)}
+        </Button>
+      </section>
+    </InvitationIdentityGate>
   );
 }
 
@@ -144,23 +143,23 @@ function Outcome({ outcome, switchAccountHref, onRetry }: {
   switch (outcome.kind) {
     case 'accepted':
       return (
-        <Message title={t(INVITE_KEYS.accepted)} body={t(INVITE_KEYS.acceptedBody)}>
+        <InvitationMessageCard title={t(INVITE_KEYS.accepted)} body={t(INVITE_KEYS.acceptedBody)}>
           <Button asChild className="w-full"><Link href={myTourCapturesHref()}>{t(INVITE_KEYS.goToCaptures)}</Link></Button>
-        </Message>
+        </InvitationMessageCard>
       );
     case 'declined':
-      return <Message title={t(INVITE_KEYS.declined)} body={t(INVITE_KEYS.declinedBody)} />;
+      return <InvitationMessageCard title={t(INVITE_KEYS.declined)} body={t(INVITE_KEYS.declinedBody)} />;
     case 'refused':
       return (
-        <Message title={t(INVITE_KEYS.title)} body={t(INVITE_REFUSAL_KEY[outcome.reason])}>
+        <InvitationMessageCard title={t(INVITE_KEYS.title)} body={t(INVITE_REFUSAL_KEY[outcome.reason])}>
           {outcome.reason === 'wrong-recipient' && <SwitchAccountButton href={switchAccountHref} />}
-        </Message>
+        </InvitationMessageCard>
       );
     case 'failed':
       return (
-        <Message title={t(INVITE_KEYS.title)} body={t(INVITE_KEYS.unavailable)}>
+        <InvitationMessageCard title={t(INVITE_KEYS.title)} body={t(INVITE_KEYS.unavailable)}>
           <Button className="w-full" onClick={onRetry}>{t(INVITE_KEYS.retry)}</Button>
-        </Message>
+        </InvitationMessageCard>
       );
   }
 }
@@ -169,21 +168,8 @@ function Outcome({ outcome, switchAccountHref, onRetry }: {
 function Setback({ reason }: { readonly reason: InvitationCoreRefusal | null }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   return (
-    <Message title={t(INVITE_KEYS.title)} body={t(reason === null ? INVITE_KEYS.unavailable : INVITE_REFUSAL_KEY[reason])}>
+    <InvitationMessageCard title={t(INVITE_KEYS.title)} body={t(reason === null ? INVITE_KEYS.unavailable : INVITE_REFUSAL_KEY[reason])}>
       <Button asChild variant="outline" className="w-full"><Link href="/">{t(INVITE_KEYS.home)}</Link></Button>
-    </Message>
-  );
-}
-
-function Message({ title, body, children }: { readonly title: string; readonly body: string; readonly children?: React.ReactNode }) {
-  const layout = useLayoutClasses();
-  return (
-    <Card className={layout.cardAuthWidth}>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription role="status">{body}</CardDescription>
-      </CardHeader>
-      {children && <CardContent>{children}</CardContent>}
-    </Card>
+    </InvitationMessageCard>
   );
 }

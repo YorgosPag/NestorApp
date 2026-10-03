@@ -54,8 +54,9 @@ export interface InvitationResolution {
   readonly mailboxProvenAt: string | null;
 }
 
-export type InvitationRedeemOutcome<TRecord, TRefusal extends string, TUnavailable extends string> =
-  | { readonly kind: 'accepted'; readonly invitation: TRecord }
+export type InvitationRedeemOutcome<TRecord, TRefusal extends string, TUnavailable extends string, TAccepted = void> =
+  /** `effect` = ό,τι επέστρεψε το `write()` του είδους (π.χ. η συμμετοχή που γεννήθηκε) — `void` για όσα δεν λένε τίποτα. */
+  | { readonly kind: 'accepted'; readonly invitation: TRecord; readonly effect: TAccepted }
   | { readonly kind: 'declined'; readonly invitation: TRecord }
   | { readonly kind: 'refused'; readonly reason: InvitationCoreRefusal | TRefusal }
   /**
@@ -68,6 +69,17 @@ export type InvitationRedeemOutcome<TRecord, TRefusal extends string, TUnavailab
 export type InvitationPrecheck<TRefusal extends string, TUnavailable extends string> =
   | { readonly kind: 'refused'; readonly reason: TRefusal }
   | { readonly kind: 'unavailable'; readonly reason: TUnavailable };
+
+/**
+ * **Η αποδοχή σε δύο φάσεις, μέσα στη συναλλαγή** (ADR-901 Φ3 · ADR-853 §20.7).
+ *
+ * 🔴 Ο Firestore απαιτεί **όλες τις αναγνώσεις πριν από κάθε γραφή**. Ένα είδος που πρέπει να κρίνει
+ * μοναδικότητα (π.χ. «η θέση έχει ήδη άλλον;») **διαβάζει** εδώ, και είτε αρνείται — οπότε η πρόσκληση μένει
+ * `pending`, **καμία** γραφή — είτε επιστρέφει `write()`, που ο πυρήνας καλεί **μετά** το `pending → accepted`.
+ */
+export type InvitationAcceptance<TRefusal extends string, TUnavailable extends string, TAccepted = void> =
+  | InvitationPrecheck<TRefusal, TUnavailable>
+  | { readonly kind: 'commit'; write(): TAccepted };
 
 /**
  * **Πού ζει** μια πρόσκληση — και το κριτήριο «ανήκει όντως εκεί;».
@@ -98,6 +110,7 @@ export interface InvitationKind<
   TIdentity extends InvitationRedeemer,
   TRefusal extends string,
   TUnavailable extends string,
+  TAccepted = void,
 > extends InvitationLocator<TDoc> {
   /** Τι απαντά η εξαργύρωση όταν λείπει το μυστικό — ποτέ «πλαστός σύνδεσμος». */
   readonly secretMissing: TUnavailable;
@@ -105,8 +118,14 @@ export interface InvitationKind<
   prepareAcceptance?(identity: TIdentity, stored: TDoc): Promise<InvitationPrecheck<TRefusal, TUnavailable> | null>;
   /** Το έγγραφο **στο σχήμα του είδους**, με την επίλυση — `null` ⇒ `invitation-corrupt` (καμία γραφή). */
   recordOf(stored: TDoc, resolution: InvitationResolution): TRecord | null;
-  /** 🔑 **Το άγκιστρο «αποδοχή → γράψε»** — μέσα στην **ίδια** συναλλαγή με το `pending → accepted`. */
-  onAccept(tx: Transaction, accepted: { readonly ref: DocumentReference; readonly record: TRecord; readonly identity: TIdentity }): void;
+  /**
+   * 🔑 **Το άγκιστρο «αποδοχή → γράψε»** — μέσα στην **ίδια** συναλλαγή με το `pending → accepted`.
+   * Καλείται **πριν** από κάθε γραφή (αναγνώσεις εδώ)· το `write()` τρέχει **μετά** τη σφράγιση.
+   */
+  onAccept(
+    tx: Transaction,
+    accepted: { readonly ref: DocumentReference; readonly record: TRecord; readonly identity: TIdentity },
+  ): Promise<InvitationAcceptance<TRefusal, TUnavailable, TAccepted>>;
 }
 
 // =============================================================================
@@ -173,11 +192,12 @@ export async function redeemInvitation<
   TIdentity extends InvitationRedeemer,
   TRefusal extends string,
   TUnavailable extends string,
+  TAccepted = void,
 >(
   db: Firestore,
-  kind: InvitationKind<TDoc, TRecord, TIdentity, TRefusal, TUnavailable>,
+  kind: InvitationKind<TDoc, TRecord, TIdentity, TRefusal, TUnavailable, TAccepted>,
   input: RedeemInvitationInput<TIdentity>,
-): Promise<InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable>> {
+): Promise<InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable, TAccepted>> {
   const found = await readInvitationByToken(db, kind, {
     token: input.token,
     nowValue: input.nowValue,
@@ -211,11 +231,12 @@ async function readyForAcceptance<
   TIdentity extends InvitationRedeemer,
   TRefusal extends string,
   TUnavailable extends string,
+  TAccepted = void,
 >(
-  kind: InvitationKind<TDoc, TRecord, TIdentity, TRefusal, TUnavailable>,
+  kind: InvitationKind<TDoc, TRecord, TIdentity, TRefusal, TUnavailable, TAccepted>,
   stored: TDoc,
   input: RedeemInvitationInput<TIdentity>,
-): Promise<{ readonly kind: 'ready'; readonly mailboxProvenAt: string | null } | InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable>> {
+): Promise<{ readonly kind: 'ready'; readonly mailboxProvenAt: string | null } | InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable, TAccepted>> {
   const blocked = kind.prepareAcceptance ? await kind.prepareAcceptance(input.identity, stored) : null;
   if (blocked !== null) return blocked;
 
@@ -242,15 +263,16 @@ async function consume<
   TIdentity extends InvitationRedeemer,
   TRefusal extends string,
   TUnavailable extends string,
+  TAccepted = void,
 >(
   db: Firestore,
-  kind: InvitationKind<TDoc, TRecord, TIdentity, TRefusal, TUnavailable>,
+  kind: InvitationKind<TDoc, TRecord, TIdentity, TRefusal, TUnavailable, TAccepted>,
   found: { readonly location: InvitationLocation<TDoc>; readonly nonceHash: string },
   input: RedeemInvitationInput<TIdentity>,
   mailboxProvenAt: string | null,
-): Promise<InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable>> {
+): Promise<InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable, TAccepted>> {
   const { ref } = found.location;
-  return db.runTransaction<InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable>>(async (tx: Transaction) => {
+  return db.runTransaction<InvitationRedeemOutcome<TRecord, TRefusal, TUnavailable, TAccepted>>(async (tx: Transaction) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return { kind: 'refused', reason: 'invitation-unknown' };
 
@@ -270,8 +292,14 @@ async function consume<
     const record = kind.recordOf(stored, resolution);
     if (record === null) return { kind: 'unavailable', reason: 'invitation-corrupt' };
 
+    if (input.target === 'declined') {
+      tx.update(ref, { ...resolution });
+      return { kind: 'declined', invitation: record };
+    }
+    // 🔑 Αναγνώσεις του είδους **πριν** από τη σφράγιση· άρνηση ⇒ η πρόσκληση μένει `pending`, καμία γραφή.
+    const acceptance = await kind.onAccept(tx, { ref, record, identity: input.identity });
+    if (acceptance.kind !== 'commit') return acceptance;
     tx.update(ref, { ...resolution });
-    if (input.target === 'accepted') kind.onAccept(tx, { ref, record, identity: input.identity });
-    return { kind: input.target, invitation: record };
+    return { kind: 'accepted', invitation: record, effect: acceptance.write() };
   });
 }

@@ -36,6 +36,7 @@
 
 import type { InvitableRole, WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
 import { HOME_REDIRECT_ROUTE } from '@/lib/workspace/workspace-routes';
+import { CORE_REFUSAL_IS_NOT_FOUND } from '@/lib/invitations/invitation-respond';
 import type { WorkspaceInviteExitName } from '@/types/workspace-invitation-view';
 
 /**
@@ -194,17 +195,7 @@ export const EXIT_HREF = {
  * κάποιος να πει τι απαντά το δίκτυο γι' αυτήν.
  */
 export const REFUSAL_IS_NOT_FOUND: Readonly<Record<WorkspaceInvitationRefusal, boolean>> = {
-  /** Η υπογραφή δεν στέκει — δεν υπάρχει πρόσκληση πίσω από αυτόν τον σύνδεσμο. */
-  'link-invalid': true,
-  /** Υπογεγραμμένος για **άλλο** περιβάλλον: σε **αυτόν** τον host δεν υπάρχει. */
-  'link-foreign': true,
-  /** Έγκυρος σύνδεσμος, **κανένα έγγραφο** — η κλασική περίπτωση 404. */
-  'invitation-unknown': true,
-  /** Οι επόμενες **υπάρχουν όλες**: το σώμα λέει την κατάστασή τους. */
-  expired: false,
-  'already-used': false,
-  revoked: false,
-  'wrong-recipient': false,
+  ...CORE_REFUSAL_IS_NOT_FOUND,
   'already-member': false,
   'role-above-inviter': false,
 };

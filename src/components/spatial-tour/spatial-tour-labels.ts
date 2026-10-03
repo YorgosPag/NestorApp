@@ -102,17 +102,6 @@ export const INVITE_REFUSAL_KEY: Readonly<Record<InvitationCoreRefusal, string>>
   'wrong-recipient': 'spatial-tour:inviteRefusal.wrongRecipient',
 };
 
-/** Οι αρνήσεις που σημαίνουν «αυτός ο σύνδεσμος δεν δείχνει πουθενά» ⇒ **404** (ADR-853 §18 Ε-Η). */
-export const INVITE_REFUSAL_IS_NOT_FOUND: Readonly<Record<InvitationCoreRefusal, boolean>> = {
-  'link-invalid': true,
-  'link-foreign': true,
-  'invitation-unknown': true,
-  'expired': false,
-  'already-used': false,
-  'revoked': false,
-  'wrong-recipient': false,
-};
-
 export const INVITE_KEYS = {
   title: 'spatial-tour:invite.title',
   intro: 'spatial-tour:invite.intro',

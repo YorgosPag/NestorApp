@@ -136,12 +136,13 @@ const TOUR_CAPTURE_INVITATION_KIND: InvitationKind<
   ...TOUR_CAPTURE_INVITATION_LOCATOR,
   secretMissing: 'secret-missing',
   recordOf: tourCaptureInvitationRecord,
-  onAccept: (tx, { ref, record, identity }) => {
+  onAccept: async (tx, { ref, record, identity }) => {
     // Η άδεια ζει **δίπλα** στην πρόσκληση: ίδια περιήγηση, ίδιο διαμέρισμα — καμία δεύτερη αναζήτηση.
     // Ο γονέας μιας υποσυλλογής υπάρχει πάντα· το `null` του τύπου αφορά μόνο κορυφαίες συλλογές.
     const tourRef = ref.parent.parent;
     if (tourRef === null) throw new Error(`Tour capture invitation outside a tour: ${ref.path}`);
-    tx.set(tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURE_GRANTS).doc(identity.uid), grantOf(record, identity.uid));
+    const grantRef = tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURE_GRANTS).doc(identity.uid);
+    return { kind: 'commit', write: () => { tx.set(grantRef, grantOf(record, identity.uid)); } };
   },
 };
 

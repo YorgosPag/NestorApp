@@ -14,6 +14,7 @@
  */
 
 import { loginHref } from '@/lib/routes/return-path';
+import type { InvitationCoreRefusal } from '@/types/invitation-core';
 
 export type InvitationRespond =
   | { readonly kind: 'ready' }
@@ -63,3 +64,24 @@ export function invitationPreviewViewOf<P>(args: {
     switchAccountHref: returnHere,
   };
 }
+
+/**
+ * **Ποιες κοινές αρνήσεις σημαίνουν «αυτός ο σύνδεσμος δεν δείχνει πουθενά» ⇒ 404** (ADR-853 §18 Ε-Η) — ο ΕΝΑΣ
+ * χάρτης για **κάθε** σελίδα πρόσκλησης (χώρου · φωτογράφου · υπόθεσης). Κάθε είδος **απλώνει** αυτόν και προσθέτει
+ * τις δικές του αρνήσεις (όλες περιγράφουν υπαρκτή πρόσκληση ⇒ `false`). Εξήχθη 2026-10-03 (ADR-901 Φ3): ζούσε
+ * δύο φορές, στις ετικέτες του χώρου και του φωτογράφου.
+ * ⚠️ `Record` πάνω στο κλειστό σύνολο: νέα κοινή άρνηση δεν μεταγλωττίζεται μέχρι να ειπωθεί τι απαντά το δίκτυο.
+ */
+export const CORE_REFUSAL_IS_NOT_FOUND: Readonly<Record<InvitationCoreRefusal, boolean>> = {
+  /** Η υπογραφή δεν στέκει — δεν υπάρχει πρόσκληση πίσω από αυτόν τον σύνδεσμο. */
+  'link-invalid': true,
+  /** Υπογεγραμμένος για **άλλο** περιβάλλον: σε **αυτόν** τον host δεν υπάρχει. */
+  'link-foreign': true,
+  /** Έγκυρος σύνδεσμος, **κανένα έγγραφο** — η κλασική περίπτωση 404. */
+  'invitation-unknown': true,
+  /** Οι επόμενες **υπάρχουν όλες**: το σώμα λέει την κατάστασή τους. */
+  expired: false,
+  'already-used': false,
+  revoked: false,
+  'wrong-recipient': false,
+};

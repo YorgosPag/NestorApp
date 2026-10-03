@@ -16,13 +16,11 @@ import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 
 import { TourCaptureInviteContent, type TourCaptureInviteView } from '@/components/spatial-tour/TourCaptureInviteContent';
-import { INVITE_REFUSAL_IS_NOT_FOUND } from '@/components/spatial-tour/spatial-tour-labels';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
-import { decodeRouteParam } from '@/lib/routes/route-param';
+import { CORE_REFUSAL_IS_NOT_FOUND, invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
 import { tourCaptureInvitationHref } from '@/lib/spatial-tour/tour-routes';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
-import { readPageIdentity } from '@/server/auth/page-identity';
+import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
 import {
   previewTourCaptureInvitation,
   type TourCaptureInvitationPreviewOutcome,
@@ -51,16 +49,12 @@ function viewOf(outcome: TourCaptureInvitationPreviewOutcome, token: string, vie
 }
 
 export default async function TourCaptureInvitePage({ params }: { params: Promise<{ token: string }> }): Promise<React.ReactElement> {
-  // ⚠️ Ποτέ ωμό `decodeURIComponent` (URIError ⇒ 500): χαλασμένη τιμή την απορρίπτει ο κριτής της υπογραφής.
-  const token = decodeRouteParam((await params).token);
-  // Ανάγνωση cookie, ΟΧΙ φρουρός — αποφασίζει κουμπιά απάντησης / σύνδεση / «άλλος λογαριασμός».
-  const identity = await readPageIdentity();
-  const viewerEmail = identity.ok ? identity.ctx.email : null;
+  const { token, viewerEmail } = await readInvitationPageRequest(params);
 
   const outcome = await previewTourCaptureInvitation(getAdminFirestore(), { token, viewerEmail });
   // «Ανοίχτηκε» ΜΕΤΑ την απόκριση, μόνο την πρώτη φορά — ποτέ δεν πετά.
   if (outcome.kind === 'preview') after(outcome.markOpened);
-  if (outcome.kind === 'refused' && INVITE_REFUSAL_IS_NOT_FOUND[outcome.reason]) notFound();
+  if (outcome.kind === 'refused' && CORE_REFUSAL_IS_NOT_FOUND[outcome.reason]) notFound();
 
   return <TourCaptureInviteContent view={viewOf(outcome, token, viewerEmail)} />;
 }

@@ -202,18 +202,22 @@ const WORKSPACE_INVITATION_KIND: InvitationKind<
   secretMissing: 'membership-unknown',
   prepareAcceptance: (identity, stored) => refuseIfAlreadyMember(identity, stored.companyId),
   recordOf: workspaceInvitationRecord,
-  onAccept: (tx, { record, identity }) => {
-    // 🔑 **Ο ΕΝΑΣ ΓΡΑΦΕΑΣ** (άγκυρα Μ2) — ο ίδιος που καλεί η έγκριση αιτήματος.
-    grantWorkspaceMembershipInTx(tx, {
-      uid: identity.uid,
-      companyId: record.companyId,
-      globalRole: record.role,
-      // 🔴 ADR-853 Ε4 (ADR-867 Β9(β)): «ποιος τον έβαλε» = ο **προσκαλών** (Slack/GitHub «invited by»)·
-      //    ο προσκεκλημένος απλώς **δέχτηκε**, και αυτό το λέει ήδη η πρόσκληση (`resolvedByUid`).
-      grantedByUid: record.invitedByUid,
-      enrollment: 'invitation',
-    });
-  },
+  // Καμία ανάγνωση στη συναλλαγή: το «ήδη μέλος;» κρίνεται στον προέλεγχο — εδώ μόνο η γραφή.
+  onAccept: async (tx, { record, identity }) => ({
+    kind: 'commit',
+    write: () => {
+      // 🔑 **Ο ΕΝΑΣ ΓΡΑΦΕΑΣ** (άγκυρα Μ2) — ο ίδιος που καλεί η έγκριση αιτήματος.
+      grantWorkspaceMembershipInTx(tx, {
+        uid: identity.uid,
+        companyId: record.companyId,
+        globalRole: record.role,
+        // 🔴 ADR-853 Ε4 (ADR-867 Β9(β)): «ποιος τον έβαλε» = ο **προσκαλών** (Slack/GitHub «invited by»)·
+        //    ο προσκεκλημένος απλώς **δέχτηκε**, και αυτό το λέει ήδη η πρόσκληση (`resolvedByUid`).
+        grantedByUid: record.invitedByUid,
+        enrollment: 'invitation',
+      });
+    },
+  }),
 };
 
 // =============================================================================
