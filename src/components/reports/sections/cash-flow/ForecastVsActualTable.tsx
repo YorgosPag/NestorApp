@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
 import type { ActualVsForecast } from '@/services/cash-flow/cash-flow.types';
+import { formatCurrencyWhole as fmt } from '@/lib/intl-domain';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -32,14 +33,6 @@ interface ForecastVsActualTableProps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function fmt(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function fmtPct(value: number): string {
   const sign = value > 0 ? '+' : '';

@@ -195,6 +195,8 @@ function generatePDCAlerts(
       severity: 'warning',
       message: `${maturing.length} cheques (€${totalAmt.toLocaleString()}) maturing in the next ${thresholds.pdcMaturityDays} days`,
       value: totalAmt,
+      count: maturing.length,
+      days: thresholds.pdcMaturityDays,
     });
   }
 }

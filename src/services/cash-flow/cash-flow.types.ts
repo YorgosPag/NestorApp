@@ -162,10 +162,15 @@ export type CashFlowAlertSeverity = 'warning' | 'critical';
 export interface CashFlowAlert {
   type: CashFlowAlertType;
   severity: CashFlowAlertSeverity;
+  /** Αγγλικό διαγνωστικό κείμενο (logs). Η οθόνη ΔΕΝ το δείχνει — συνθέτει από τα πεδία παρακάτω. */
   message: string;
   month?: string;
   value?: number;
   threshold?: number;
+  /** `pdc-maturity`: πλήθος επιταγών που λήγουν. */
+  count?: number;
+  /** `pdc-maturity`: ορίζοντας σε ημέρες. */
+  days?: number;
 }
 
 // =============================================================================

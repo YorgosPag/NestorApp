@@ -113,12 +113,15 @@ export const lazyRoutesAdr294 = {
 
   ReportsBuilder: createLazyRoute(
     () => import('@/components/reports/pages/ReportsBuilderPageContent').then(mod => ({ default: mod.ReportsBuilderPageContent })),
-    { loadingType: 'dashboard', ssr: false }
+    // ADR-884 §9.1 Α4 — ο builder καλεί το ωμό `react-i18next` hook, που ΔΕΝ φορτώνει namespace· ίδια αιτία με το cash-flow.
+    { loadingType: 'dashboard', ssr: false, namespaces: ['report-builder', 'report-builder-domains'] }
   ),
 
   ReportsCashFlow: createLazyRoute(
     () => import('@/components/reports/pages/ReportsCashFlowPageContent').then(mod => ({ default: mod.ReportsCashFlowPageContent })),
-    { loadingType: 'dashboard', ssr: false }
+    // ADR-884 §9.1 Α4 — το `cash-flow` δεν είναι CRITICAL και η σελίδα καλεί το ωμό `react-i18next` hook, που ΔΕΝ
+    // φορτώνει namespace: ζωγράφιζε ωμά κλειδιά (`kpi.currentBalance`) και αγγλικές ενσωματωμένες εφεδρείες.
+    { loadingType: 'dashboard', ssr: false, namespaces: ['cash-flow'] }
   ),
 
   // =========================================================================

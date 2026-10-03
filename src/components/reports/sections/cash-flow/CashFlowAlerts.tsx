@@ -14,6 +14,8 @@ import { AlertTriangle, X, Banknote, FileText, TrendingDown } from 'lucide-react
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import type { CashFlowAlert, CashFlowAlertType } from '@/services/cash-flow/cash-flow.types';
+import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
+import { formatCalendarMonth } from '@/lib/intl-formatting';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -38,7 +40,7 @@ const ALERT_ICONS: Record<CashFlowAlertType, React.ElementType> = {
 // ---------------------------------------------------------------------------
 
 export function CashFlowAlerts({ alerts }: CashFlowAlertsProps) {
-  const { t } = useTranslation('cash-flow');
+  const { t, i18n } = useTranslation('cash-flow');
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   if (alerts.length === 0) return null;
@@ -66,7 +68,7 @@ export function CashFlowAlerts({ alerts }: CashFlowAlertsProps) {
               {getAlertTitle(alert.type, t)}
             </AlertTitle>
             <AlertDescription className="text-sm">
-              {alert.message}
+              {getAlertMessage(alert, t, i18n.language)}
             </AlertDescription>
             <Button
               variant="ghost"
@@ -84,6 +86,33 @@ export function CashFlowAlerts({ alerts }: CashFlowAlertsProps) {
       })}
     </section>
   );
+}
+
+/**
+ * Το κείμενο συντίθεται ΕΔΩ από τα δομημένα πεδία της ειδοποίησης: το `alert.message` του
+ * διακομιστή είναι αγγλικό και δεν περνά από i18n.
+ */
+function getAlertMessage(alert: CashFlowAlert, t: TFunction, language: string): string {
+  switch (alert.type) {
+    case 'low-cash':
+      return t('alerts.lowCashMessage', {
+        threshold: formatCurrency(alert.threshold ?? 0),
+        month: alert.month ? formatCalendarMonth(alert.month, language, 'short') : '',
+      });
+    case 'pdc-maturity':
+      return t('alerts.pdcMessage', {
+        count: alert.count ?? 0,
+        amount: formatCurrency(alert.value ?? 0),
+        days: alert.days ?? 0,
+      });
+    case 'collection-rate-drop':
+      return t('alerts.collectionMessage', {
+        rate: Math.round(alert.value ?? 0),
+        threshold: alert.threshold ?? 0,
+      });
+    default:
+      return alert.message;
+  }
 }
 
 function getAlertTitle(

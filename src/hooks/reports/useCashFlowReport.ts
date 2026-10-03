@@ -27,6 +27,15 @@ import { getErrorMessage } from '@/lib/error-utils';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
 import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
+import { formatCalendarMonth } from '@/lib/intl-formatting';
+
+/**
+ * Η ετικέτα μήνα είναι απόφαση ΠΑΡΟΥΣΙΑΣΗΣ: ο διακομιστής στέλνει το κλειδί `YYYY-MM` και ένα
+ * `label` κλειδωμένο στο `en-US` — εδώ ξαναγράφεται στη γλώσσα του ανθρώπου που κοιτάζει.
+ */
+function localizeMonth<T extends { month: string; label: string }>(row: T, language: string): T {
+  return { ...row, label: formatCalendarMonth(row.month, language, 'short') };
+}
 
 // ADR-300: Module-level cache survives React unmount/remount (navigation)
 // Keyed by filterKey (projectFilter_buildingFilter) so different filters don't collide
@@ -72,7 +81,8 @@ export interface UseCashFlowReportReturn {
 // ---------------------------------------------------------------------------
 
 export function useCashFlowReport(): UseCashFlowReportReturn {
-  const { t } = useTranslation('cash-flow');
+  const { t, i18n } = useTranslation('cash-flow');
+  const language = i18n.language;
 
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [buildingFilter, setBuildingFilter] = useState<string | undefined>();
@@ -126,34 +136,37 @@ export function useCashFlowReport(): UseCashFlowReportReturn {
     return data.scenarios.find((s) => s.scenario === activeScenario) ?? null;
   }, [data, activeScenario]);
 
+  // Table rows — month labels in the viewer's language
+  const tableRows = useMemo<CashFlowMonthRow[]>(() => {
+    return (activeProjection?.months ?? []).map((m) => localizeMonth(m, language));
+  }, [activeProjection, language]);
+
   // Transform to chart data
   const chartData = useMemo<CashFlowChartRow[]>(() => {
-    if (!activeProjection) return [];
-    return activeProjection.months.map((m) => ({
+    return tableRows.map((m) => ({
       month: m.month,
       label: m.label,
       inflow: m.totalInflow,
       outflow: m.totalOutflow,
       balance: m.closingBalance,
     }));
-  }, [activeProjection]);
+  }, [tableRows]);
 
-  // Table rows
-  const tableRows = useMemo<CashFlowMonthRow[]>(() => {
-    return activeProjection?.months ?? [];
-  }, [activeProjection]);
+  const actuals = useMemo<ActualVsForecast[]>(() => {
+    return (data?.actuals ?? []).map((row) => localizeMonth(row, language));
+  }, [data, language]);
 
   // KPIs
   const kpis = useMemo<ReportKPI[]>(() => {
     if (!activeProjection) return [];
-    return buildKPIs(activeProjection, t);
-  }, [activeProjection, t]);
+    return buildKPIs(activeProjection, t, language);
+  }, [activeProjection, t, language]);
 
   return {
     kpis,
     chartData,
     tableRows,
-    actuals: data?.actuals ?? [],
+    actuals,
     pdcCalendar: data?.pdcCalendar ?? [],
     alerts: data?.alerts ?? [],
     config: data?.config ?? null,
@@ -176,6 +189,7 @@ export function useCashFlowReport(): UseCashFlowReportReturn {
 function buildKPIs(
   projection: ScenarioProjection,
   t: (key: string, params?: Record<string, string>) => string,
+  language: string,
 ): ReportKPI[] {
   const lastMonth = projection.months[projection.months.length - 1];
   const firstMonth = projection.months[0];
@@ -203,7 +217,7 @@ function buildKPIs(
       title: t('kpi.lowestBalance'),
       value: formatCurrency(projection.lowestBalance),
       description: projection.lowestBalanceMonth
-        ? `${t('kpi.lowestBalanceMonth', { month: projection.lowestBalanceMonth })}`
+        ? t('kpi.lowestBalanceMonth', { month: formatCalendarMonth(projection.lowestBalanceMonth, language, 'short') })
         : undefined,
       icon: AlertTriangle,
       status: projection.lowestBalance < 0 ? 'red' : projection.lowestBalance < 10000 ? 'amber' : 'green',

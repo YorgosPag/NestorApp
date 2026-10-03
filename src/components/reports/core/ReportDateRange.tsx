@@ -212,7 +212,7 @@ export function ReportDateRange({
     <nav className={cn('flex flex-wrap items-center gap-3', className)} aria-label={t('dateRange.label')}>
       {/* Preset selector */}
       <Select value={value.preset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[220px]">
           <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
           <SelectValue>{dateLabel}</SelectValue>
         </SelectTrigger>
@@ -265,7 +265,7 @@ export function ReportDateRange({
               value={comparisonMode}
               onValueChange={(mode) => onComparisonModeChange?.(mode as ComparisonMode)}
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[220px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
