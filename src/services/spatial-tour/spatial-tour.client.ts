@@ -21,6 +21,7 @@ import {
   type TourRefusalName,
 } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { CORE_INVITATION_REFUSALS, type InvitationCoreRefusal } from '@/types/invitation-core';
+import type { CaptureLevelChoice } from '@/lib/spatial-tour/tour-capture-placement-hint';
 import type { TourCapture, TourSubject } from '@/types/spatial-tour';
 
 /**
@@ -134,10 +135,25 @@ export function revokeTourCaptureGrantFromScreen(subject: TourSubject, granteeUi
   });
 }
 
+/**
+ * Τα εισερχόμενα — με τους ορόφους της περιήγησης, ώστε η πρόταση θέσης να λέει αν ο όροφος υπάρχει (ADR-904 Κ8) και να δείχνει
+ * το σημείο πάνω στη βαθμονομημένη κάτοψη (Κ9).
+ */
+export interface TourCapturesListing {
+  readonly captures: readonly TourCapture[];
+  readonly asManager: boolean;
+  readonly levels: readonly CaptureLevelChoice[];
+}
+
+/** **Τα bytes μιας βαθμονομημένης κάτοψης** (ADR-904 Κ9) — η ίδια διαδρομή με την εφαρμογή κινητού, αμετάβλητη ανά hash. */
+export function fetchCapturePlanImageFromScreen(subject: TourSubject, contentHash: string): Promise<TourCallResult<Blob>> {
+  return tourCall(() => apiClient.get<Blob>(routes.CAPTURE_PLAN(subject.kind, subject.id, contentHash), { responseType: 'blob' }));
+}
+
 export function listTourCapturesFromScreen(
   subject: TourSubject,
-): Promise<TourCallResult<{ readonly captures: readonly TourCapture[]; readonly asManager: boolean }>> {
-  return tourCall(() => apiClient.get<{ captures: readonly TourCapture[]; asManager: boolean }>(routes.CAPTURES(subject.kind, subject.id)));
+): Promise<TourCallResult<TourCapturesListing>> {
+  return tourCall(() => apiClient.get<TourCapturesListing>(routes.CAPTURES(subject.kind, subject.id)));
 }
 
 // ── Το ανέβασμα (υπεύθυνος ΚΑΙ φωτογράφος) ─────────────────────────────────

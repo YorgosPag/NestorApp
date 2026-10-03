@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dd54f9b76017a173c001115691cf947f13bc081c401109319e1af5262054aea7",
+  "inputsSha256": "592c8a898670d98ad81cffa44ed27678c3ee27dc6b1e11b5e3d7fe83245e1f1c",
   "languages": [
     "el"
   ],
@@ -639,7 +639,7 @@
     "src/components/spatial-tour/SpatialTourPanel.tsx": "297b70edec00f070be5b6c56fbe0a9c38bd93238a6a267cb0b11049baee1deb5",
     "src/components/spatial-tour/TourAccessCard.tsx": "756c576bc449cbf28e9b064c4ef83d25c17cffc42cc41bcf0f98f64c9a6c0ccd",
     "src/components/spatial-tour/TourAccessRequestsSection.tsx": "e9a67e96a8fad7b4797d26d11dbce6e7df94f9afb545333af303bb08d572b7db",
-    "src/components/spatial-tour/TourCaptureInbox.tsx": "3a89b1456acbc256c51ae26161c2527863560af9827d4fd62b5fd377ff4c4a26",
+    "src/components/spatial-tour/TourCaptureInbox.tsx": "6a2d5010a9a1c7a410d728fbec5d34364646391fdc45cfd6563fde5ae35facca",
     "src/components/spatial-tour/TourCaptureInviteContent.tsx": "fb64bdee5b8dbeae30738d24a02ada29a3a922aed765b2974d3e3388e4b92116",
     "src/components/spatial-tour/TourCaptureUploadForm.tsx": "b08d6a42a8245cb6c7d3e360593566233b0ca7712cf19d7eeaee8c44050f6f3a",
     "src/components/spatial-tour/TourPhotographersSection.tsx": "ce6ff083c7d09cf19d00965a6a2cdbe6b5a622a20426555768b4a8cf8a8b08f0",
@@ -647,7 +647,7 @@
     "src/components/spatial-tour/TourViewPageContent.tsx": "1e8a28bf3827e9772673244289c20f8e9db3556e08b8bd58437c2b599add69ed",
     "src/components/spatial-tour/TourViewRefusal.tsx": "81f631c226ac043bfd37a2b1f77e056d2b5e3a3f9ad6eb4752f614eedcb8bfcd",
     "src/components/spatial-tour/TourViewSurface.tsx": "9de6104259f27ae0963cbfb9c63e1d8e1f630ba5626fdf6e87e5da3c7eb7af47",
-    "src/components/spatial-tour/spatial-tour-labels.ts": "4adb5ae444591dc1ef09160cbdc0e719b2307728a406dc76a41e7f32c0b733ae",
+    "src/components/spatial-tour/spatial-tour-labels.ts": "35dabd868fc4196a6a239d33e5ec53193b2c5aa388ab97a52d9508aa73816ec1",
     "src/components/spatial-tour/spatial-tour-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/spatial-tour/spatial-tour-viewing-labels.ts": "b0f5e67d9a763ac414b7e893ababf800557a8e7db34d07242438d0da3e5151e1",
     "src/components/spatial-tour/tour-access-labels.ts": "a2ae64c11ef5f37a0e394bec2183696f87cee9253b53bcefca3d50375f34edb9",
@@ -1330,7 +1330,7 @@
     "src/services/realtime/hooks/useOwnedDocuments.ts": "3aece721b2c3ed3aa7306dd9be4bb57b35cb2970a2a0fd650178cf34c650c53e",
     "src/services/realtime/hooks/usePublicPlace.ts": "c9c824b226fdf6d13ff620bbaf9113b1317c3967002f7e86e29485a243c08091",
     "src/services/spatial-tour/spatial-tour-viewing.client.ts": "2b37609b72e71e24c3ff3c2d80746f6e889ec07f9961069b3c5be7e004b1e3b1",
-    "src/services/spatial-tour/spatial-tour.client.ts": "b020e5d806d9cfe3fa5e1b78dc23dcbf16e58eebbe642c3d75b1d763bd9411fe",
+    "src/services/spatial-tour/spatial-tour.client.ts": "21902aa658b98bdd65db9f460822fc914425f27b97f587cdf8ee2f56006ff2ce",
     "src/services/stay-calendar/stay-calendar-write-result.ts": "2e1ff60dfb8e86a494d9dd8f6f0789da79ae096ec00761e3c7ef3751d4b0eaa1",
     "src/services/stay-calendar/stay-calendar.client.ts": "7d4c141f4daa574925e3cd09aeafd9b69124f0978447054211f2e41b03d6fc62",
     "src/services/stay-calendar/stay-public.client.ts": "041b5d0de43b557bdc465ed5a2148b47d776d8cfe484cfa10886ae33bb0adfad",
