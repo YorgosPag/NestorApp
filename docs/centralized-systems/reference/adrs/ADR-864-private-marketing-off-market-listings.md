@@ -1133,10 +1133,24 @@ tsc (N.17) · browser · **πραγματικό** bucket (temporary hold στο 
 
 **6/6 κόκκινες**, sha256 επαναφοράς ✅. Πύλες: **3.16** `--all` ✅ + completeness 18/18 · **3.28** ✅ (24 αρχεία, 0 κλώνοι) · **3.35** `--all` ✅ · **3.68** `--all` ✅ · **3.70** `--all` ✅ · **3.78** `--all` ✅ (83/96, baseline) · **3.87** `--all` ✅ + σουίτα · **3.86** ✅ `firestore:rules` μετά το deploy (§21.7 #7). jest: `file-hold` 20/20 · `file-record-core-custody` · `cde-authority-gate` (43/43 μαζί).
 
+### 21.9 ✅ Ο γραφέας σε **προσωπικό** διαμέρισμα *(2026-10-03 — ADR-901 Φ4.4)*
+
+Ο γραφέας (`file-hold.service.ts`) έγραφε **μόνο** στο εταιρικό διαμέρισμα (`heldVersionStack` με `{ companyId }`). Οι κανόνες του §21.8
+καλύπτουν **ήδη** το `files_personal` (`holdBornAbsent` · `holdAllowsHardDelete`), οπότε έλειπε μόνο ο γραφέας. Πρώτος καταναλωτής: το
+**transmittal** του ADR-901 §5.8.1. Ό,τι στάλθηκε σε υπόθεση μεταβίβασης δεν σβήνεται οριστικά όσο ζει η αποστολή (Vault «retains all versions»).
+
+- `FileHoldActor.owner: CustodyScope` αντί για `companyId` — διαλέγει διαμέρισμα σε ανάγνωση στοίβας, εγγραφή **και** συμφιλίωση bytes
+  (`COLLECTIONS[FILE_COLLECTION[kind]]` στο σημείο κλήσης, όπως ζητά το `file-custody.ts` για τις πύλες 3.15/3.35/3.87). Το ίχνος
+  πάει στο βιβλίο του κατόχου (`recordFileAudit` με `{ userId }`).
+- Η εταιρική διαδρομή `/api/files/[fileId]/hold` περνά `{ companyId }` — **καμία** αλλαγή συμπεριφοράς.
+- Άγκυρες: `file-hold-service.test.ts` +3 (δέσμευση/αποδέσμευση στο `files_personal` · άλλος άνθρωπος ή εταιρεία ⇒ `not-found`). Μετάλλαξη
+  «η εγγραφή γυρίζει στο εταιρικό διαμέρισμα» ⇒ 2 κόκκινα.
+
 ## §13. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-03 (§21.9) | ✅ **Ο γραφέας δέσμευσης απέκτησε προσωπικό διαμέρισμα** (κάτοχος `CustodyScope`) για το transmittal του ADR-901 Φ4.4· η εταιρική διαδρομή αμετάβλητη. ΟΧΙ commit. |
 | 2026-09-17 (§21.8) | ✅ **Κανόνες Firestore της δέσμευσης — αναπτυγμένοι στο `pagonis-87766` (εντολή Giorgio), ΟΧΙ commit.** Καθολικά `holdCustodyKeys()` (= `FILE_HOLD_FIELDS`) · `holdCustodyUnchanged()` στα 4 σκέλη update · `holdBornAbsent()` στο create · `holdAllowsHardDelete()` στο delete — **κάδος ανοιχτός** (Δ21.1). Επέκταση και στο `files_personal` (ADR-866 §5.2): ο κάτοχος έβγαζε αλλιώς αρχεία από τον καθαρισμό γράφοντας `retentionUntil`. `mandate_evidence` deny-all + manifest 3.16 + σουίτα. N.0.2: `rulesKeyListOf` στον κοινό αναγνώστη κανόνων (ο 3.87 ήταν καρφωμένος σε ένα όνομα). Άγκυρα **Α49** (ισότητα λίστας + φρουρά ανά σκέλος + καμία «άρνηση κάδου»). Emulator **116/116** σε πηγή **και** compiled· μεταλλάξεις **M75-M80 6/6** κόκκινες. Πύλες 3.16 · 3.28 · 3.35 · 3.68 · 3.70 · 3.78 · 3.87 ✅. |
 | 2026-09-17 (§21) | 🟡 **Επιβολή `FileRecord.hold`, ΟΧΙ commit.** Έρευνα (Google Vault · Box Governance · Purview · GCS object holds) **ανέτρεψε** το εγκεκριμένο «άρνηση κάδου» ⇒ απόφαση Giorgio: **σιωπηλή δέσμευση** (κάδος ✅, οριστική διαγραφή ❌). Καθαρός κριτής `lib/files/file-hold.ts` (fail-closed σε άκυρη διατήρηση) · **ένας** γραφέας `file-hold.service.ts` σε **όλη τη στοίβα εκδόσεων**, GCS `temporaryHold`, `reconcileBytes` · διαδρομές `files/[fileId]/hold` και `…/mandate-evidence/[evidenceId]/legal-hold` με **ένα** δικαίωμα `legal:holds:manage`. 🔴 **Ευρήματα**: τρεις διαδρομές έσβηναν bytes «non-blocking» (⇒ `purged` πάνω σε δεσμευμένα bytes) · η διαγραφή οντότητας έσβηνε δεσμευμένα FileRecords · legal hold αποδεικτικού χωρίς άξονα μισθωτή. Boy Scout: `/api/files/purge` → `purgeFileRecord` · νεκρά client `placeHold`/`releaseHold` · νεκρό `filesSkipped`. Άγκυρες **Α44-Α48**, **10/10** μεταλλάξεις κόκκινες. ⏸️ Κανόνες Firestore (§21.7) — ανοιχτό `firestore.rules` άλλου πράκτορα. |
 | 2026-09-17 (§20) | 🟡 **Διατήρηση και διάθεση αποδεικτικού, ΟΧΙ commit.** Έρευνα πρωτογενών πηγών (ΑΚ 250 αρ.5 · 253 · 937 · ν.4557/2018 άρθ.30 · ν.4308/2014 άρθ.7 · ΓΚΠΔ 5§1(ε)/17§3(ε) · GCS Object Retention Lock · Purview · Vault · DocuSign · Adobe Sign). Αποφάσεις Giorgio: γεγονός = λήξη **σχέσης** γραφείου–ακινήτου · 1/1/(έτος λήξης+6) ώρα Αθήνας · **Locked** στο αντικείμενο · legal hold χωριστό · ταφόπλακα. 🔴 **Εύρημα**: η αντικατάσταση εντολής ανά γραφείο χάνει το `proof.evidence` ⇒ **μητρώο** `mandate_evidence` με ιδεμποτητική γέννηση και **υιοθεσία** από σάρωση. Cron `mandate-evidence-retention` στο υπάρχον μητρώο · οθόνη «κλειδωμένο έως». Άγκυρες **Α37-Α43**, **14/14** μεταλλάξεις κόκκινες. Διορθώθηκαν μπαγιάτικα: «ΟΧΙ commit» σε κεφαλίδα/§17.6/§18/§18.8/§19/changelog · §19.7 «το 3.86 μετρά μόνο Firestore» (ψευδές — ο στόχος `storage` υπάρχει και αναπτύχθηκε). Ανοιχτά §20.7. |

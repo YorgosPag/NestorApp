@@ -33,7 +33,7 @@ import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { placeFileHold, releaseFileHold, type HoldableBucket, type HoldBucketResolver } from '../file-hold.service';
 
 const COMPANY = 'c_alpha';
-const actor = { uid: 'u_admin', companyId: COMPANY };
+const actor = { uid: 'u_admin', owner: { companyId: COMPANY } };
 const pathOf = (id: string): string => `companies/${COMPANY}/files/${id}.pdf`;
 
 function seed(id: string, extra: Record<string, unknown> = {}): void {
@@ -95,7 +95,7 @@ describe('🏆 Α44 — όλη η στοίβα, βάση ΚΑΙ bytes', () => {
 
   it('🔑 ξένος μισθωτής ⇒ `not-found`', async () => {
     const { bucket } = world();
-    expect(await placeFileHold({ actor: { ...actor, companyId: 'c_beta' }, fileId: 'file_v2', holdType: 'legal', reason: 'x' }, oneBucket(bucket)))
+    expect(await placeFileHold({ actor: { ...actor, owner: { companyId: 'c_beta' } }, fileId: 'file_v2', holdType: 'legal', reason: 'x' }, oneBucket(bucket)))
       .toEqual({ kind: 'not-found' });
   });
 });
@@ -174,5 +174,57 @@ describe('🏆 ADR-895 — στοίβα με εκδόσεις σε ΔΙΑΦΟΡ�
     expect(released).toEqual({ kind: 'released', fileIds: expect.arrayContaining(['file_v1', 'file_v2']) });
     expect(legacyBucket.objects.get(pathOf('file_v1'))?.hold).toBe(false);
     expect(euBucket.objects.get(pathOf('file_v2'))?.hold).toBe(false);
+  });
+});
+
+describe('🏆 ADR-864 §21.9 · ADR-901 Φ4.4 (Α26) — δέσμευση στο ΠΡΟΣΩΠΙΚΟ διαμέρισμα (σταλμένη έκδοση transmittal)', () => {
+  const AUTHOR = 'u_notary';
+  const personalPath = (id: string): string => `people/${AUTHOR}/files/${id}.pdf`;
+  const author = { uid: AUTHOR, owner: { userId: AUTHOR } };
+
+  function personalWorld(): FakeEvidenceBucket {
+    fake = new FakeFirestore();
+    fake.seed(COLLECTIONS.FILES_PERSONAL, 'pfile_1', {
+      id: 'pfile_1', userId: AUTHOR, createdBy: AUTHOR, status: 'ready', lifecycleState: 'active', isDeleted: false,
+      displayName: 'draft', originalFilename: 'draft.pdf', ext: 'pdf', contentType: 'application/pdf', sizeBytes: 100,
+      entityType: 'conveyance_case', entityId: 'cvc_1', domain: 'legal', category: 'contracts',
+      storagePath: personalPath('pfile_1'), createdAt: '2026-10-01T10:00:00.000Z',
+    });
+    const bucket = new FakeEvidenceBucket();
+    bucket.put(personalPath('pfile_1'), 'draft');
+    return bucket;
+  }
+
+  async function personalHoldOf(id: string): Promise<unknown> {
+    const snapshot = await (fake as unknown as AdminFirestore).collection(COLLECTIONS.FILES_PERSONAL).doc(id).get();
+    return snapshot.data()?.hold;
+  }
+
+  it('🔴 ο κάτοχος `{ userId }` δεσμεύει το ΔΙΚΟ του αρχείο — βάση στο `files_personal` ΚΑΙ bytes', async () => {
+    const bucket = personalWorld();
+
+    const outcome = await placeFileHold({ actor: author, fileId: 'pfile_1', holdType: 'admin', reason: 'transmittal ctb_1' }, oneBucket(bucket));
+
+    expect(outcome).toEqual({ kind: 'placed', fileIds: ['pfile_1'] });
+    expect(await personalHoldOf('pfile_1')).toBe('admin');
+    expect(bucket.objects.get(personalPath('pfile_1'))?.hold).toBe(true);
+    expect(recordFileAudit).toHaveBeenCalledWith(expect.objectContaining({ fileId: 'pfile_1', action: 'hold_place', userId: AUTHOR }));
+  });
+
+  it('🔑 άλλος άνθρωπος — ή εταιρεία — δεν βρίσκει το προσωπικό αρχείο ⇒ `not-found`', async () => {
+    const bucket = personalWorld();
+    expect(await placeFileHold({ actor: { uid: 'u_other', owner: { userId: 'u_other' } }, fileId: 'pfile_1', holdType: 'admin', reason: 'x' }, oneBucket(bucket)))
+      .toEqual({ kind: 'not-found' });
+    expect(await placeFileHold({ actor, fileId: 'pfile_1', holdType: 'admin', reason: 'x' }, oneBucket(bucket)))
+      .toEqual({ kind: 'not-found' });
+  });
+
+  it('🔴 αποδέσμευση: η βάση ελευθερώνεται ΚΑΙ τα bytes', async () => {
+    const bucket = personalWorld();
+    await placeFileHold({ actor: author, fileId: 'pfile_1', holdType: 'admin', reason: 'transmittal ctb_1' }, oneBucket(bucket));
+
+    expect(await releaseFileHold({ actor: author, fileId: 'pfile_1' }, oneBucket(bucket))).toEqual({ kind: 'released', fileIds: ['pfile_1'] });
+    expect(await personalHoldOf('pfile_1')).toBe('none');
+    expect(bucket.objects.get(personalPath('pfile_1'))?.hold).toBe(false);
   });
 });

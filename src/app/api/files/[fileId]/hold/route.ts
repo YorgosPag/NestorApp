@@ -82,7 +82,7 @@ async function handlePost(
     return NextResponse.json({ error: 'Invalid hold command' }, { status: 400 });
   }
 
-  const actor = { uid: ctx.uid, companyId: ctx.companyId };
+  const actor = { uid: ctx.uid, owner: { companyId: ctx.companyId } };
   const outcome = command.act === 'place'
     ? await placeFileHold({ actor, fileId: resolved.fileId, holdType: command.holdType, reason: command.reason })
     : await releaseFileHold({ actor, fileId: resolved.fileId });

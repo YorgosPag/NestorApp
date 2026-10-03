@@ -160,3 +160,14 @@ export async function readVersionStack(owner: CustodyScope, fileId: string): Pro
 
   return { kind: 'stack', headFileId: head.id, versions: orderVersionStack([...seen.values()], head.id) };
 }
+
+/**
+ * **Μόνο η κεφαλή** — το βήμα (1) χωρίς το (2): *«ποια έκδοση ισχύει τώρα για αυτό το αρχείο;»*.
+ * Για όποιον δεν χρειάζεται το ιστορικό (ADR-901 Φ4.5 «νέα έκδοση στους ίδιους»): κόστος = μήκος της αλυσίδας
+ * **προς τα εμπρός**, όχι ερώτημα ανά προκάτοχο. Ίδιοι κανόνες κατόχου με το {@link readVersionStack}.
+ */
+export async function readStackHead(owner: CustodyScope, fileId: string): Promise<FileRecord | null> {
+  const start = await readOwned(owner, fileId);
+  if (start === null) return null;
+  return walkToHead(owner, start, new Map<string, FileRecord>([[start.id, start]]));
+}
