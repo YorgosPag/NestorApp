@@ -6,6 +6,7 @@
  * 🔑 **Optimistic με επαναφορά** (Gmail): «Αναλαμβάνω» ⇒ η κάρτα γίνεται αμέσως «Έχει πρόσβαση»· η απάντηση
  *    του server την **αντικαθιστά** (φέρνει και την πρόοδο του καταλόγου, που υπάρχει μόνο μετά την αποδοχή)·
  *    αποτυχία ⇒ η κάρτα **επιστρέφει** όπως ήταν και ο λόγος λέγεται με όνομα.
+ * 🔑 Η αποδοχή **φέρει** τη δήλωση ιδιότητας (ADR-901 Φ4 · Ε-4) — ο τύπος δεν επιτρέπει «ναι» χωρίς αυτή.
  * 🔑 **Ανά κάρτα** «σε εξέλιξη» — δεύτερο κλικ στην ίδια κάρτα δεν στέλνει δεύτερο αίτημα.
  *
  * @module hooks/useMyCases
@@ -18,6 +19,7 @@ import {
   respondToEngagementRequest,
   type RespondRejection,
 } from '@/services/conveyance/conveyance-engagement-gateway';
+import type { CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import type { MyCaseCard } from '@/types/conveyance-case';
 
 export type RespondOutcome = { readonly ok: true } | { readonly ok: false; readonly rejection: RespondRejection };
@@ -31,13 +33,13 @@ export type MyCasesList =
 interface UseMyCasesReturn {
   readonly list: MyCasesList;
   readonly pending: ReadonlySet<string>;
-  readonly respond: (engagementId: string, decision: 'accept' | 'decline') => Promise<RespondOutcome>;
+  readonly respond: (engagementId: string, answer: CaseEngagementAnswer) => Promise<RespondOutcome>;
 }
 
 /** Η κάρτα όπως θα είναι μετά την απάντηση — μέχρι να έρθει η αλήθεια του server. */
-function optimisticCard(card: MyCaseCard, decision: 'accept' | 'decline'): MyCaseCard {
-  return decision === 'accept'
-    ? { ...card, engagementState: 'active', verdict: 'engaged' }
+function optimisticCard(card: MyCaseCard, answer: CaseEngagementAnswer): MyCaseCard {
+  return answer.decision === 'accept'
+    ? { ...card, engagementState: 'active', verdict: 'engaged', credentialHint: null }
     : { ...card, engagementState: 'declined', verdict: 'declined' };
 }
 
@@ -61,14 +63,14 @@ export function useMyCases(): UseMyCasesReturn {
     setCards((current) => current.map((card) => (card.engagementId === next.engagementId ? next : card)));
   }, []);
 
-  const respond = useCallback(async (engagementId: string, decision: 'accept' | 'decline'): Promise<RespondOutcome> => {
+  const respond = useCallback(async (engagementId: string, answer: CaseEngagementAnswer): Promise<RespondOutcome> => {
     const before = cards.find((card) => card.engagementId === engagementId);
     if (!before || inFlight.current.has(engagementId)) return { ok: true };
     inFlight.current.add(engagementId);
     setPending(new Set(inFlight.current));
-    replace(optimisticCard(before, decision));
+    replace(optimisticCard(before, answer));
     try {
-      replace((await respondToEngagementRequest(engagementId, decision)).card);
+      replace((await respondToEngagementRequest(engagementId, answer)).card);
       return { ok: true };
     } catch (error: unknown) {
       replace(before);

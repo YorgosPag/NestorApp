@@ -14,7 +14,7 @@
  * @module components/conveyance/my-cases/MyCasesContent
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`: κρύβει το ωμό κλειδί από το CHECK 3.51).
 import routeSlice from '@/i18n/generated/routes/cases.el.json';
@@ -24,6 +24,8 @@ import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader'
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useMyCases } from '@/hooks/useMyCases';
 import type { MyCaseCard } from '@/types/conveyance-case';
+import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
+import { AcceptEngagementDialog } from './AcceptEngagementDialog';
 import { MyCaseCardView } from './MyCaseCardView';
 
 registerRouteSlice(routeSlice);
@@ -52,12 +54,26 @@ export function MyCasesContent() {
   const { t } = useTranslation(['conveyance']);
   const { error: notifyError } = useNotifications();
   const { list, pending, respond } = useMyCases();
+  /** Η πρόταση που αναλαμβάνεται — ο διάλογος δήλωσης ανοίγει **πριν** φύγει οτιδήποτε (Ε-4). */
+  const [accepting, setAccepting] = useState<MyCaseCard | null>(null);
 
-  const onRespond = useCallback((engagementId: string, decision: 'accept' | 'decline') => {
-    void respond(engagementId, decision).then((outcome) => {
+  const send = useCallback((engagementId: string, answer: CaseEngagementAnswer) => {
+    void respond(engagementId, answer).then((outcome) => {
       if (!outcome.ok) notifyError(t(`engagement.myCases.respondRejections.${outcome.rejection}`));
     });
   }, [notifyError, respond, t]);
+
+  const onRespond = useCallback((engagementId: string, decision: 'accept' | 'decline') => {
+    if (decision === 'decline') { send(engagementId, { decision }); return; }
+    const card = list.state === 'ready' ? list.cards.find((c) => c.engagementId === engagementId) ?? null : null;
+    setAccepting(card);
+  }, [list, send]);
+
+  // Optimistic: ο διάλογος κλείνει αμέσως, η κάρτα γίνεται «Έχει πρόσβαση»· αποτυχία ⇒ επαναφορά + ονομασμένος λόγος.
+  const onConfirmAccept = useCallback((engagementId: string, credential: CredentialDeclarationInput) => {
+    setAccepting(null);
+    send(engagementId, { decision: 'accept', credential });
+  }, [send]);
 
   return (
     <main className="flex w-full flex-col gap-6">
@@ -67,6 +83,12 @@ export function MyCasesContent() {
         loadingText={t('engagement.myCases.loading')}
         errorText={t('engagement.myCases.loadError')}
         renderReady={(ready) => <CaseList cards={ready.cards} pending={pending} onRespond={onRespond} />}
+      />
+      <AcceptEngagementDialog
+        card={accepting}
+        busy={accepting !== null && pending.has(accepting.engagementId)}
+        onCancel={() => setAccepting(null)}
+        onConfirm={onConfirmAccept}
       />
     </main>
   );

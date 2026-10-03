@@ -19,7 +19,7 @@ import {
   transitionEngagement,
   type EngagementOfferRequest,
 } from '../engagement-write';
-import type { Engagement, EngagementSubject } from '@/types/engagement';
+import type { DeclaredCredential, Engagement, EngagementSubject } from '@/types/engagement';
 
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) }));
 
@@ -27,6 +27,7 @@ const NOW = Date.parse('2026-10-03T10:00:00.000Z');
 const DAY = 24 * 60 * 60 * 1000;
 const CASE_A: EngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_A' };
 const CASE_B: EngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_B' };
+const CREDENTIAL: DeclaredCredential = { authority: 'notary-association', number: '4321', chapter: 'Αθηνών', assurance: 'declared', declaredAt: new Date(NOW).toISOString() };
 
 function engagement(overrides: Partial<Engagement> = {}): Engagement {
   return {
@@ -78,23 +79,31 @@ describe('ADR-862 Φ1 — οι μεταβάσεις (`planTransition`, καθα�
   const offered = engagement({ state: 'offered', expiresAt: new Date(NOW + DAY).toISOString() });
 
   it('αποδέχεται ΜΟΝΟ ο ίδιος — ο οικοδεσπότης δεν «αναλαμβάνει» για λογαριασμό του', () => {
-    expect(planTransition(offered, { kind: 'accept', byUid: 'u_host' }, NOW).outcome).toBe('not-allowed');
+    expect(planTransition(offered, { kind: 'accept', byUid: 'u_host', declaredCredential: CREDENTIAL }, NOW).outcome).toBe('not-allowed');
   });
 
   it('αποδοχή ⇒ active με ΠΑΡΑΓΟΜΕΝΟ ταβάνι λήξης', () => {
-    const planned = planTransition(offered, { kind: 'accept', byUid: 'u_notary' }, NOW);
+    const planned = planTransition(offered, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
     expect(planned.outcome).toBe('changed');
     if (planned.outcome !== 'changed') return;
     expect(planned.after.state).toBe('active');
     expect(Date.parse(planned.after.expiresAt)).toBeGreaterThan(NOW + 300 * DAY);
   });
 
+  it('Α17 (ADR-901 Φ4) — η αποδοχή ΓΡΑΦΕΙ τη δήλωση ιδιότητας στη συμμετοχή· η άρνηση όχι', () => {
+    // Μετάλλαξη: ο γραφέας πετά το `declaredCredential` της αποδοχής ⇒ ενεργή συμμετοχή χωρίς δήλωση.
+    const planned = planTransition(offered, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
+    expect(planned.outcome === 'changed' && planned.after.declaredCredential).toEqual(CREDENTIAL);
+    const declined = planTransition(offered, { kind: 'decline', byUid: 'u_notary' }, NOW);
+    expect(declined.outcome === 'changed' && declined.after.declaredCredential).toBeUndefined();
+  });
+
   it('ληγμένη πρόταση ⇒ `offer-expired` και κατάσταση `expired` — ποτέ σιωπηλή αποδοχή', () => {
     const stale = engagement({ state: 'offered', expiresAt: new Date(NOW - 1).toISOString() });
-    const planned = planTransition(stale, { kind: 'accept', byUid: 'u_notary' }, NOW);
+    const planned = planTransition(stale, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
     expect(planned.outcome).toBe('offer-expired');
     const corrupt = engagement({ state: 'offered', expiresAt: 'garbage' });
-    expect(planTransition(corrupt, { kind: 'accept', byUid: 'u_notary' }, NOW).outcome).toBe('offer-expired');
+    expect(planTransition(corrupt, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW).outcome).toBe('offer-expired');
   });
 
   it('Α4/Α5 — ανάκληση ενεργής ⇒ `revoked` + `revokedAt` (κατάσταση, όχι διαγραφή)· πρόταση ⇒ `withdrawn`', () => {
@@ -106,7 +115,7 @@ describe('ADR-862 Φ1 — οι μεταβάσεις (`planTransition`, καθα�
   });
 
   it('ιδεμποτησία — αποδοχή ήδη ενεργής ⇒ noop', () => {
-    expect(planTransition(engagement(), { kind: 'accept', byUid: 'u_notary' }, NOW).outcome).toBe('noop');
+    expect(planTransition(engagement(), { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW).outcome).toBe('noop');
   });
 });
 
@@ -150,7 +159,7 @@ describe('ADR-862 Φ1 — ο γραφέας πάνω σε βάση (fake Firesto
     const first = await offerEngagement(db(), request());
     if (first.outcome !== 'offered') throw new Error('setup');
     const key = { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: first.engagement.id };
-    await transitionEngagement(db(), key, { kind: 'accept', byUid: 'u_notary' }, NOW);
+    await transitionEngagement(db(), key, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
     await transitionEngagement(db(), key, { kind: 'end', byUid: 'u_host' }, NOW + 1);
     expect((await offerEngagement(db(), request({ nowMs: NOW + 2 }))).outcome).toBe('offered');
     const states = (await docs()).docs.map((d) => d.data().state).sort();
@@ -161,7 +170,7 @@ describe('ADR-862 Φ1 — ο γραφέας πάνω σε βάση (fake Firesto
     const a = await offerEngagement(db(), request());
     await offerEngagement(db(), request({ uid: 'u_lawyer', role: 'seller_lawyer' }));
     if (a.outcome !== 'offered') throw new Error('setup');
-    await transitionEngagement(db(), { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: a.engagement.id }, { kind: 'accept', byUid: 'u_notary' }, NOW);
+    await transitionEngagement(db(), { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: a.engagement.id }, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
     const key = { hostCompanyId: 'comp_host', projectId: 'proj_1' };
     expect((await closeEngagementsForSubject(db(), key, CASE_A, 'u_host', NOW)).map((e) => e.state).sort()).toEqual(['completed', 'withdrawn']);
     expect(await closeEngagementsForSubject(db(), key, CASE_A, 'u_host', NOW)).toHaveLength(0);

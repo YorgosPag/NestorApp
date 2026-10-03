@@ -1,7 +1,8 @@
 /**
  * ADR-901 Φ2 · ADR-862 Φ1 — «Αναλαμβάνω» / «Δεν αναλαμβάνω» (ο ΕΠΑΓΓΕΛΜΑΤΙΑΣ).
  *
- * POST /api/engagements/{engagementId}/respond { decision: 'accept' | 'decline' } → `{ card }`
+ * POST /api/engagements/{engagementId}/respond { decision: 'accept', credential } | { decision: 'decline' } → `{ card }`
+ *   - **η αποδοχή φέρει τη δήλωση ιδιότητας** (ADR-901 Ε-4 · Φ4) — ίδιο σχήμα με την πρόσκληση με email
  *   - **μόνο** ο ίδιος (η συμμετοχή ψάχνεται **ανάμεσα στις δικές του** — ξένη ≡ ανύπαρκτη, 404)
  *   - **μόνο** σε πρόταση· ληγμένη πρόταση ⇒ 409 `offer-expired` (ποτέ σιωπηλή αποδοχή)
  *   - ιδεμποτές: δεύτερο «Αναλαμβάνω» ⇒ 200 χωρίς εγγραφή (+ το σύνορο `Idempotency-Key`)
@@ -16,11 +17,16 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { CREDENTIAL_DECLARATION_SCHEMA } from '@/lib/conveyance/declared-credential';
 import { respondToCaseEngagement, type RespondOutcome } from '@/services/conveyance/conveyance-engagement-access.service';
 
 type Segment = { params: Promise<{ engagementId: string }> };
 
-const respondSchema = z.object({ decision: z.enum(['accept', 'decline']) });
+/** Η αποδοχή **χωρίς** δήλωση ιδιότητας δεν περνά το σύνορο (Ε-4) — το ίδιο σχήμα με την πρόσκληση. */
+const respondSchema = z.discriminatedUnion('decision', [
+  z.object({ decision: z.literal('accept'), credential: CREDENTIAL_DECLARATION_SCHEMA }),
+  z.object({ decision: z.literal('decline') }),
+]);
 
 /** Η μία μετάφραση άρνησης → HTTP. */
 const STATUS: Readonly<Record<Extract<RespondOutcome, { ok: false }>['rejection'], number>> = {
@@ -38,7 +44,7 @@ async function handler(request: NextRequest, actor: ApiActor, segmentData?: Segm
     requireAdminFirestore(),
     { uid: actor.ctx.uid, email: actor.ctx.email ?? null },
     engagementId,
-    parsed.data.decision === 'accept',
+    parsed.data,
     Date.now(),
   );
   if (!outcome.ok) {
