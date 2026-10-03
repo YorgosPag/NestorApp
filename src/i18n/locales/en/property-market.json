@@ -2499,5 +2499,10 @@
       "certificateNotPdf": "The certificate must be a PDF.",
       "unavailable": "The check did not complete. Please try again shortly — you do not need to change anything."
     }
+  },
+  "publicUnits": {
+    "heading": "{count, plural, one {# unit verified with the Hellenic Cadastre} other {# units verified with the Hellenic Cadastre}}",
+    "level": "{level}: {count}",
+    "unknownLevel": "No declared floor: {count}"
   }
 }

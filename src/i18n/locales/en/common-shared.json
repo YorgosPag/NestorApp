@@ -924,5 +924,24 @@
     "title": "Documents expiring: {count} — «{title}»",
     "hostBody": "Some certificates expire soon or will not be valid on the signing day. Renew them in time so the contract is not postponed.",
     "engagedBody": "Some documents relevant to you expire soon or will not be valid on the signing day. Open the case to see which."
+  },
+  "caseDocument": {
+    "title": "New document: «{document}» — «{title}»",
+    "revisionTitle": "New version: «{document}» — «{title}»",
+    "body": {
+      "notary": "The notary sent a document to the conveyance case. Open the case to view it.",
+      "seller_lawyer": "The seller's lawyer sent a document to the conveyance case. Open the case to view it.",
+      "buyer_lawyer": "The buyer's lawyer sent a document to the conveyance case. Open the case to view it."
+    }
+  },
+  "caseDocumentRequest": {
+    "titleOne": "Document requested — «{title}»",
+    "titleMany": "{count} documents requested — «{title}»",
+    "body": {
+      "host": "The conveyance case owner is requesting documents that are pending from you. Open the case to see which.",
+      "notary": "The notary is requesting documents that are pending from you in the conveyance case. Open the case to see which.",
+      "seller_lawyer": "The seller's lawyer is requesting documents that are pending from you in the conveyance case. Open the case to see which.",
+      "buyer_lawyer": "The buyer's lawyer is requesting documents that are pending from you in the conveyance case. Open the case to see which."
+    }
   }
 }

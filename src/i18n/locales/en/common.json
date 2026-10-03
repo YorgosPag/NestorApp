@@ -774,7 +774,8 @@
       "internal_note_added": "Internal note",
       "document_accessed": "Evidence opened",
       "evidence_retention_scheduled": "Evidence retention locked",
-      "evidence_disposed": "Evidence disposed after retention period"
+      "evidence_disposed": "Evidence disposed after retention period",
+      "document_requested": "Document requested"
     },
     "filters": {
       "all": "All",

@@ -95,7 +95,8 @@
     "notApplicableByFact": "Does not apply to this conveyance",
     "reviewedBy": "Reviewed {date}",
     "offlineHint": "Cannot be uploaded to the platform yet — confirm you received it.",
-    "uploadHint": "Uploaded in the “Documents” tab of the {level}"
+    "uploadHint": "Uploaded in the “Documents” tab of the {level}",
+    "transmittalHint": "Sent through the case — {provider}"
   },
   "levels": {
     "property": "property",
@@ -103,7 +104,8 @@
     "building": "building",
     "project": "project",
     "seller_contact": "seller",
-    "buyer_contact": "buyer"
+    "buyer_contact": "buyer",
+    "contribution": "case"
   },
   "actions": {
     "menu": "Actions for {item}",
@@ -212,7 +214,8 @@
     "roles": {
       "seller_lawyer": "Seller's lawyer",
       "buyer_lawyer": "Buyer's lawyer",
-      "notary": "Notary"
+      "notary": "Notary",
+      "host": "Case owner"
     },
     "appointment": {
       "not-appointed": "Not appointed — appoint them in the “Legal” tab",
@@ -413,7 +416,11 @@
         "unnamed": "document",
         "viewed": "opened «{name}»",
         "downloaded": "downloaded «{name}»",
-        "answered": "answered the engagement offer"
+        "answered": "answered the engagement offer",
+        "transmitted": "sent «{name}» to the case",
+        "withdrawn": "withdrew «{name}» from the case",
+        "requested": "requested «{name}» from: {recipient}",
+        "request-received": "requested «{name}» from you"
       }
     }
   },
@@ -421,6 +428,80 @@
     "view": "View: {name}",
     "download": "Download: {name}",
     "unavailable": "The file is not available right now. Please try again.",
-    "previewNotice": "Opening is recorded in the case trail. The link is valid for 15 minutes."
+    "previewNotice": "Opening is recorded in the case trail. The link is valid for 15 minutes.",
+    "from": "from: {role}"
+  },
+  "transmittal": {
+    "action": "Send document",
+    "sent": "The document was sent to the case.",
+    "withdraw": "Withdraw: {name}",
+    "withdrawn": "The document was withdrawn from the case.",
+    "reissue": "Send the new version: {name}",
+    "reissueHint": "Your stack has a newer version — it goes to the same recipients, replacing the one you sent.",
+    "reissued": "The new version was sent to the same recipients.",
+    "revise": {
+      "action": "New version: {name}",
+      "title": "New version: {name}",
+      "description": "The file you choose joins the version stack of the sent document and goes to the same recipients; the previous one is archived, not deleted.",
+      "pick": "Choose file",
+      "picked": "Selected: “{name}”",
+      "confirm": "Upload and send",
+      "busy": "Uploading and sending…"
+    },
+    "audience": {
+      "notary": "Every party to the case will see it.",
+      "seller_lawyer": "Only the seller's side will see it.",
+      "buyer_lawyer": "Only the buyer's side will see it — never the seller or the seller's lawyer."
+    },
+    "dialog": {
+      "title": "Send: {item}",
+      "drafts": "Your files for this item",
+      "draftsHint": "They stay in your own space and nobody sees them until you send them.",
+      "noDrafts": "You have not uploaded a file for this item yet.",
+      "upload": "Upload a new file",
+      "uploading": "Uploading «{name}»…",
+      "uploadFailed": "«{name}» was not uploaded. Please try again.",
+      "send": "Send",
+      "sending": "Sending…",
+      "cancel": "Cancel"
+    },
+    "withdrawConfirm": {
+      "title": "Withdraw document",
+      "description": "«{name}» will no longer be visible in the case. Anyone who already opened it stays recorded in the trail.",
+      "confirm": "Withdraw",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "case-frozen": "The case has been signed — your role no longer sends documents.",
+      "role-not-provider": "This item is not provided by your role.",
+      "not-contributable": "This item does not accept documents.",
+      "entry-point-mismatch": "The file does not match this item.",
+      "not-found": "The file was not found in your space. Please refresh the page.",
+      "failed": "The action did not complete. Please try again.",
+      "superseded": "This transmittal was already replaced by a newer one. Refresh the page.",
+      "no-newer-version": "There is no newer version ready to send."
+    }
+  },
+  "requests": {
+    "action": "Request from: {recipient}",
+    "requesting": "Sending…",
+    "requestedToday": "Requested today",
+    "pending": "Waiting on: {recipient} · requested {date}",
+    "noRecipient": "No account provides this yet — request it outside the platform.",
+    "all": "Request all missing ({count})",
+    "allConfirm": {
+      "title": "Request documents",
+      "description": "Each recipient gets one notification listing what is pending from them: {recipients}.",
+      "confirm": "Send request",
+      "cancel": "Cancel"
+    },
+    "recipientCount": "{recipient} ({count})",
+    "sent": "{count, plural, one {# document requested.} other {# documents requested.}}",
+    "alreadyToday": "Already requested today — no second notification was sent.",
+    "errors": {
+      "case-closed": "The case is closed — documents can no longer be requested.",
+      "not-found": "The case was not found. Refresh the page.",
+      "failed": "The request was not sent. Try again."
+    }
   }
 }

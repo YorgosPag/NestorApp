@@ -100,7 +100,10 @@
     "lowCashTitle": "Low Cash Warning",
     "pdcTitle": "PDC Maturity",
     "collectionTitle": "Collection Rate",
-    "genericTitle": "Alert"
+    "genericTitle": "Alert",
+    "lowCashMessage": "Balance drops below {threshold} in {month}",
+    "pdcMessage": "{count} cheques ({amount}) maturing in the next {days} days",
+    "collectionMessage": "Collection rate ({rate}%) is below threshold ({threshold}%)"
   },
   "filter": {
     "allProjects": "All Projects (Consolidated)",
