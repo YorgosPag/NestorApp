@@ -17,7 +17,7 @@
  * σιωπηλό ισόγειο (το παλιό `parseFloorLevel` έκανε το «Πυλωτή» ⇒ 0 ⇒ λάθος κωδικό ακινήτου).
  */
 
-import { inferKindFromNumber, type FloorKind } from '@/utils/floor-naming';
+import { inferKindFromNumber, isFloorKind, type FloorKind } from '@/utils/floor-naming';
 
 /** Είδη που αποδίδονται χωρίς αριθμό (επώνυμες στάθμες). */
 export type NamedFloorKind = Exclude<FloorKind, 'standard'>;
@@ -37,6 +37,31 @@ export function resolveFloorKind(ref: FloorRef): FloorKind {
 export function floorRefOf(number: number | null | undefined, kind?: FloorKind | null): FloorRef | null {
   if (typeof number !== 'number' || !Number.isInteger(number)) return null;
   return { number, kind: kind ?? null };
+}
+
+// ─── Κλειδί στάθμης `αριθμός:είδος` ─────────────────────────────────────────
+
+/**
+ * Το **ένα** κλειδί μιας στάθμης: `αριθμός:είδος` (`'0:pilotis'`, `'-1:basement'`, `':roof'`).
+ *
+ * Πυλωτή και ισόγειο έχουν **και οι δύο** αριθμό 0 — το κλειδί τα κρατά χωριστά. Το είδος είναι το
+ * **επιλυμένο** (`resolveFloorKind`) ⇒ `{0, null}` ≡ `{0, 'ground'}`. Το μοιράζονται το φίλτρο ορόφου
+ * (`floor-filter`), ο επιλογέας δηλωμένης στάθμης και το κλειδί μονάδας (ADR-900 §8 #2, 2β.2).
+ */
+export function floorRefKey(ref: FloorRef): string {
+  return `${ref.number ?? ''}:${resolveFloorKind(ref)}`;
+}
+
+/** Το αντίστροφο του {@link floorRefKey}. Άκυρο κλειδί ⇒ `null`. */
+export function parseFloorRefKey(key: string): FloorRef | null {
+  const separator = key.indexOf(':');
+  if (separator < 0) return null;
+  const rawNumber = key.slice(0, separator);
+  const kind = key.slice(separator + 1);
+  if (!isFloorKind(kind)) return null;
+  if (rawNumber === '') return kind === 'standard' ? null : { number: null, kind };
+  if (!/^-?\d+$/.test(rawNumber)) return null;
+  return { number: Number.parseInt(rawNumber, 10), kind };
 }
 
 // ─── Parser παλιών κειμένων ──────────────────────────────────────────────────

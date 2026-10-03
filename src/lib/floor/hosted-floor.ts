@@ -84,6 +84,19 @@ export function hostedFloorNumber(doc: { readonly floor?: unknown; readonly floo
   return hostedFloorRef(doc)?.number ?? null;
 }
 
+/**
+ * Το **ζεύγος** `floor` + `floorKind` για ό,τι **δεν** έχει `floorId` — δήλωση ιδιοκτήτη, δημόσια αγγελία
+ * (ADR-900 §8 #2, 2β.2 · idealista/RESO: αριθμός + επώνυμη στάθμη, χωρίς join). Ποτέ είδος χωρίς αριθμό:
+ * επώνυμη στάθμη παλιού κειμένου χωρίς αριθμό («Δώμα») δεν ταιριάζει σε εύρος ⇒ `{ null, null }`.
+ */
+export function floorPairOf(
+  doc: { readonly floor?: unknown; readonly floorKind?: unknown },
+): Pick<HostedFloorCopy, 'floor' | 'floorKind'> {
+  const ref = hostedFloorRef(doc);
+  if (ref === null || ref.number === null) return { floor: null, floorKind: null };
+  return { floor: ref.number, floorKind: ref.kind };
+}
+
 const HOSTED_FIELDS = ['floorId', 'floor', 'floorKind'] as const;
 
 /**

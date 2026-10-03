@@ -99,3 +99,70 @@ describe('ADR-903 — καμία χειρόγραφη ετικέτα ορόφο�
     expect(stripComments("// '1ος Όροφος'\nconst x = 1;")).not.toMatch(/Όροφος/);
   });
 });
+
+// ============================================================================
+// ΔΕΥΤΕΡΗ ΟΙΚΟΓΕΝΕΙΑ — η ετικέτα ορόφου ΜΕΣΑ ΣΕ ΚΛΕΙΔΙ i18n (ADR-900 §8 #2, 2β.2)
+// ============================================================================
+//
+// 🔴 Ο σαρωτής κώδικα ήταν ΔΟΜΙΚΑ ΤΥΦΛΟΣ εδώ: `t('search-results:listing.floor', { value })` δεν περιέχει
+// καμία ελληνική λέξη — η ετικέτα («Όροφος {value}» ⇒ «Όροφος -1» για το υπόγειο, χωρίς είδος) ζούσε στο
+// locale. Βρέθηκαν ΤΡΙΑ τέτοια (κάρτα αποτελεσμάτων · χαρακτηριστικά αγγελίας · παρόμοιες πωλήσεις) + ένα νεκρό.
+// Το μοτίβο είναι ΟΛΗ η τιμή (όχι υποσυμβολοσειρά): «{count} όροφοι» είναι καταμέτρηση, όχι ετικέτα στάθμης.
+
+const LOCALES_DIR = path.join(SRC, 'i18n', 'locales');
+const FLOOR_SSOT_NAMESPACE = 'floors.json';
+
+/** Ολόκληρη τιμή που είναι ετικέτα ΜΙΑΣ στάθμης από αριθμό. */
+// Πρόθεμα μόνο με ΚΕΦΑΛΑΙΟ («Όροφος {n}» = ετικέτα)· «όροφος {delta}» / «floor {delta}» = διαφορά, όχι στάθμη.
+const LOCALE_FLOOR_LABEL = /^(?:Όροφος\s*\{\w+\}|\{\w+\}\s*(?:ος|ο)?\s*[Όό]ροφος|Floor\s*\{\w+\}|\{\w+\}\s*(?:st|nd|rd|th)?\s*[Ff]loor)$/u;
+
+/** Κλειστό σύνολο, `γλώσσα/ns:μονοπάτι` → λόγος. Η εξαίρεση που δεν πιάνει πια τίποτα είναι κόκκινη. */
+const LOCALE_ALLOWED: Readonly<Record<string, string>> = {
+  'el/bim3d:section.presets.floorN': 'Δείκτης προεπιλογής τομής, όχι στάθμη κτιρίου (ADR-903 §7).',
+  'en/bim3d:section.presets.floorN': 'Δείκτης προεπιλογής τομής, όχι στάθμη κτιρίου (ADR-903 §7).',
+  'el/bim3d:aria.announcements.floorChanged': 'Ανακοίνωση αναγνώστη οθόνης με ΟΝΟΜΑ ορόφου (κείμενο), όχι αριθμό.',
+  'en/bim3d:aria.announcements.floorChanged': 'Ανακοίνωση αναγνώστη οθόνης με ΟΝΟΜΑ ορόφου (κείμενο), όχι αριθμό.',
+  'el/spatial-tour:viewer.floorNumbered': 'Εφεδρικό όνομα στάθμης ξενάγησης (`level.label ?? …`), όχι όροφος κτιρίου.',
+  'en/spatial-tour:viewer.floorNumbered': 'Εφεδρικό όνομα στάθμης ξενάγησης (`level.label ?? …`), όχι όροφος κτιρίου.',
+};
+
+function localeFloorLabels(): string[] {
+  const found: string[] = [];
+  const walk = (node: unknown, where: string, trail: string): void => {
+    if (typeof node === 'string') {
+      if (LOCALE_FLOOR_LABEL.test(node.trim())) found.push(`${where}:${trail}`);
+      return;
+    }
+    if (node === null || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node)) walk(value, where, trail === '' ? key : `${trail}.${key}`);
+  };
+  for (const language of fs.readdirSync(LOCALES_DIR)) {
+    const dir = path.join(LOCALES_DIR, language);
+    if (!fs.statSync(dir).isDirectory()) continue;
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.json') && f !== FLOOR_SSOT_NAMESPACE)) {
+      walk(JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8')), `${language}/${file.replace(/\.json$/, '')}`, '');
+    }
+  }
+  return found;
+}
+
+describe('ADR-903 · 2β.2 — καμία ετικέτα ορόφου μέσα σε locale εκτός του namespace `floors`', () => {
+  const found = localeFloorLabels();
+
+  it('κάθε εύρημα είναι στο κλειστό σύνολο εξαιρέσεων', () => {
+    expect(found.filter((entry) => !(entry in LOCALE_ALLOWED))).toEqual([]);
+  });
+
+  it('καμία εξαίρεση δεν είναι μπαγιάτικη', () => {
+    expect(Object.keys(LOCALE_ALLOWED).filter((entry) => !found.includes(entry))).toEqual([]);
+  });
+
+  it('🔑 ο φρουρός ΒΛΕΠΕΙ — και ΔΕΝ πιάνει καταμετρήσεις', () => {
+    for (const sample of ['Όροφος {value}', '{n}ος Όροφος', 'Floor {value}', '{floor}th floor']) {
+      expect(LOCALE_FLOOR_LABEL.test(sample)).toBe(true);
+    }
+    for (const sample of ['{count} όροφοι', 'Show floor {floor} in the all-floors view', 'floor {delta}']) {
+      expect(LOCALE_FLOOR_LABEL.test(sample)).toBe(false);
+    }
+  });
+});

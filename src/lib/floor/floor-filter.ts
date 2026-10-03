@@ -12,7 +12,7 @@
  * - **Ετικέτα** = ο **ένας** μορφοποιητής (`useFloorLabel` περνιέται από τον καλούντα — καθαρό module).
  */
 
-import { resolveFloorKind, type FloorRef } from './floor-ref';
+import { floorRefKey, type FloorRef } from './floor-ref';
 import { hostedFloorRef } from './hosted-floor';
 
 type FloorBearing = { readonly floor?: unknown; readonly floorKind?: unknown };
@@ -20,7 +20,7 @@ type FloorBearing = { readonly floor?: unknown; readonly floorKind?: unknown };
 /** Το κλειδί σύγκρισης ενός ορόφου στο φίλτρο — `null` όταν το στοιχείο δεν έχει όροφο. */
 export function floorFilterKey(item: FloorBearing): string | null {
   const ref = hostedFloorRef(item);
-  return ref === null ? null : `${ref.number ?? ''}:${resolveFloorKind(ref)}`;
+  return ref === null ? null : floorRefKey(ref);
 }
 
 /** Ταιριάζει το στοιχείο με την επιλεγμένη τιμή φίλτρου (`'all'`/κενό ⇒ πάντα). */
