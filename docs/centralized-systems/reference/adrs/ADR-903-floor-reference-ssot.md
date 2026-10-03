@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — 2β.1α (SSoT + κατάργηση αντιγράφων) 2026-10-03 · ✅ 2β.1β (ακίνητα/parking/storage φιλοξενούνται σε όροφο: `floorId` + cascade + ένας επιλογέας + φίλτρο από δεδομένα) 2026-10-03 · ⏳ η μετανάστευση **δεδομένων** τρέχει μόνο με εντολή Giorgio |
+| **Status** | ✅ IMPLEMENTED — 2β.1α (SSoT + κατάργηση αντιγράφων) 2026-10-03 · ✅ 2β.1β (ακίνητα/parking/storage φιλοξενούνται σε όροφο: `floorId` + cascade + ένας επιλογέας + φίλτρο από δεδομένα) 2026-10-03 · ✅ 2β.2 (όροφος σε δήλωση ιδιοκτήτη + δημόσια αγγελία με είδος · η μονάδα, §8) 2026-10-03 · ✅ 2β.3 (εύρος στάθμης σε ζήτηση/αναζήτηση/`/interest-check`, §9) 2026-10-03 · ⏳ η μετανάστευση **δεδομένων** τρέχει μόνο με εντολή Giorgio |
 | **Date** | 2026-10-03 |
 | **Category** | Centralized Systems / Domain Vocabulary / i18n |
 | **Προέλευση** | ADR-900 §8 #2 (Φάση 2β.1) — η μονάδα (κτίριο + όροφος + πόρτα) χρειάζεται **έναν** όροφο πριν από την 2β.2 |
@@ -140,9 +140,125 @@ Firestore **δεν έχει join** ⇒ συνδυασμός: **αναφορά Re
 - Μέχρι να τρέξει η μετανάστευση, τα παλιά έγγραφα διαβάζονται σωστά (ο αναγνώστης περνά το κείμενο από τον parser), αλλά **δεν** ακολουθούν αναρίθμηση ορόφου (δεν έχουν `floorId`).
 - `bim3d section.presets.floorN` («Floor {n}» για δείκτη προεπιλογής τομής) — όχι ετικέτα στάθμης, εκτός εύρους.
 
+## 8. 2β.2 — ο όροφος σε δήλωση ιδιοκτήτη και δημόσια αγγελία · η μονάδα (✅ 2026-10-03)
+
+### 8.1 Απόφαση: **ένα** σχήμα αποθήκευσης — καμία 5η μορφή
+- Δήλωση ιδιοκτήτη (`OwnerProperty`) · κοινή προβολή (`ProjectableProperty`) · `PublicListing`: το **ίδιο** ζεύγος
+  `floor: number|null` + `floorKind: FloorKind|null` με το `HostedFloorCopy` (§6), **χωρίς** `floorId` — το κτίριο του
+  ιδιώτη είναι του επιπέδου Α (`pbld_*`) και δεν έχει ορόφους-οντότητες. idealista/RESO: αριθμός + επώνυμη στάθμη.
+- Ανάγνωση **μόνο** `hostedFloorRef` · νέο `floorPairOf(doc)` (`hosted-floor.ts`) = το ζεύγος για ό,τι δεν έχει `floorId`
+  (ποτέ είδος χωρίς αριθμό). Η εταιρική προβολή έγραφε `numberOrNull(property.floor)` ⇒ 🐞 το `floorKind` χανόταν και
+  ακίνητο σε **πυλωτή** δημοσιευόταν «Ισόγειο» — πλέον `...floorPairOf(property)`.
+- **Κάθε δηλωμένη στάθμη έχει αριθμό** (η ζήτηση ταιριάζει σε εύρος αριθμών): ημιυπόγειο −1 · υπερυψωμένο/πυλωτή/ημιώροφος 0.
+  Δώμα/σοφίτα **δεν** προσφέρονται στη δήλωση (ο αριθμός τους εξαρτάται από το ύψος· «ρετιρέ» = είδος ακινήτου).
+  Zod: είδος χωρίς αριθμό ⇒ 400 (`floorUnitRule`).
+- **Ζήτηση** (`floorMin/floorMax`): μένει εύρος αριθμών — ο αριθμός του `FloorRef` είναι η διάταξη. Επιλογέας στάθμης
+  στη φόρμα ζήτησης και στο prospect ⇒ 2β.3.
+
+### 8.2 Το ένα κλειδί στάθμης + ο επιλογέας δηλωμένης στάθμης
+- `floorRefKey` / `parseFloorRefKey` (`floor-ref.ts`) = `αριθμός:είδος` (επιλυμένο είδος) — εξήχθη από το `floor-filter`, που
+  πλέον το καλεί· το μοιράζονται φίλτρο, επιλογέας και κλειδί μονάδας.
+- `declared-floor-options.ts` + `components/shared/forms/DeclaredFloorSelectField.tsx`: **ένα** dropdown (idealista
+  «Planta» / Spitogatos «Όροφος»), Radix Select, ετικέτες από `useFloorLabel`, τιμή-φρουρός για «χωρίς όροφο» (CHECK 3.48),
+  η αποθηκευμένη τιμή εκτός λίστας **εμφανίζεται** (αλλιώς η επεξεργασία θα την έσβηνε).
+
+### 8.3 Η δημόσια αγγελία (απόφαση Giorgio Ε2)
+- `PublicListing.floorKind` · ρόλος αποκάλυψης **`attribute-qualifier`** (νέος): προσδιορίζει το `floor`, **δεν** είναι
+  δεύτερη γραμμή «είδος ορόφου» με δική του λογιστική «δηλωμένο;». Κρίκος σχήματος **17** (`floorKind` απόν ⇒ `null`).
+- Πόρτα και ΚΑΕΚ **δεν υπάρχουν** στο σχήμα. Φρουρός `place-unit-disclosure.test.ts`: σαρώνει το **σειριοποιημένο** JSON.
+- 🐞 **Τέταρτη οικογένεια χειρόγραφων ετικετών, αόρατη στον φρουρό κλάσης**: η ετικέτα ζούσε σε **locale**
+  (`search-results:listing.floor` «Όροφος {value}» ⇒ «Όροφος -1» · `listing.groundFloor` · `market-contracts:comparables.basement`
+  + το νεκρό `property-market:offer.card.floor`). Κάρτα αποτελεσμάτων · χαρακτηριστικά αγγελίας · παρόμοιες πωλήσεις ⇒
+  `formatFloorRef`/`useFloorLabel`· κλειδιά διαγράφηκαν. Ο φρουρός απέκτησε **δεύτερη σάρωση στα locale JSON** (ολόκληρη
+  τιμή = ετικέτα στάθμης από αριθμό· καταμετρήσεις «{count} όροφοι» δεν πιάνονται) με κλειστό σύνολο 3 εξαιρέσεων × 2 γλώσσες.
+
+### 8.4 Η μονάδα (ADR-900 §8 #2)
+- `lib/geo/place-unit.ts`: `PlaceUnitRef = PlaceRef & { floor, unitNumber, kaek }` — **σύνθεση**· `composePlaceUnitRef(δήλωση,
+  απόδειξη)`: ΚΑΕΚ **μόνο** `verified` **και** κωδικός ιδιοκτησίας (`/Κ/Ο`· ΚΑΕΚ γεωτεμαχίου ≠ μονάδα).
+- `lib/geo/unit-number.ts`: «πόρτα» = **`unitNumber`** (RESO `UnitNumber`, ≤25) — το «door» σημαίνει ήδη πόρτα εισόδου
+  (ADR-900 §3.7). Ένας κανονικοποιητής (εμφάνιση).
+- `lib/geo/place-unit-key.server.ts`: `cadastral` (ΚΑΕΚ, UPRN-παιδί) · `declared` (κτίριο + `floorRefKey` + **σκελετός UTS #39**
+  της πόρτας, `lib/unicode/skeleton.ts` — «Α1» ελληνικό ≡ «A1» λατινικό) · ελλιπής ⇒ `null`. Καταναλωτές: 2β.3/2β.4.
+- Φόρμα: `owner-property-unit-form.ts` (πρότυπο `pets-form`: θέση + στάθμη + πόρτα — εξαγωγή, το `form-values` έπεσε 501 → 472).
+  Ίχνος: `floorKind` + `unitNumber` στα `OWNER_PROPERTY_TRACKED_FIELDS`. Κάρτα κατόχου: «2ος Όροφος · Διαμ. Α1».
+- Route slices `/offers/[offerId]` (+222) και `mandates/new`: **νέα σφράγιση με γραμμένο `why`** (κείμενο πεδίων, όχι
+  κλειστότητα)· πριν τη σφράγιση διαγράφηκε το `offer.form.floorHelp` (άχρηστο με επιλογέα).
+
+### 8.5 Άγκυρες
+`unit-number.test` (κανονικοποίηση, ιδεμποτία) · `place-unit.test` (σύνθεση, ΚΑΕΚ μόνο verified, κλειδί/ομόγλυφα) ·
+`place-unit-disclosure.test` (Ε2 σε σειριοποιημένο JSON + πυλωτή) · `declared-floor-options.test` (κλειδί ⇄, λίστα, τιμή
+εκτός λίστας) · `listing-attributes-runtime` (+«Πυλωτή») · `owner-property-form-values` (+Σ2β/Σ2γ) · φρουρός locale.
+**Μεταλλάξεις 4/4 κόκκινες** (sha256 ίδιο μετά): σκελετός → ωμή πόρτα · πόρτα στον τίτλο της προβολής · `numberOrNull`
+αντί για `floorPairOf` · «Όροφος {value}» πίσω σε locale.
+
+## 9. 2β.3 — εύρος **στάθμης** στη ζήτηση, στην αναζήτηση και στο `/interest-check` (✅ 2026-10-03)
+
+### 9.1 Το εύρημα — ο κριτής μετρούσε ήδη ανά μονάδα· το λεξιλόγιο της ζήτησης όχι
+Από την 2β.2 η προβολή του ιδιοκτήτη φέρει `floor` + `floorKind`, άρα το πάνελ (`/api/demand/interest`) και ο σαρωτής
+ειδοποιήσεων κρίνουν **κτίριο + στάθμη + είδος** μέσω του **ενός** `matchDemandAgainstListing`. Το κενό ήταν **η
+ερώτηση**: `floorMin/floorMax` σκέτοι ακέραιοι, με αριθμητικά inputs σε **τρεις** πόρτες (φόρμα ζήτησης · φίλτρα
+αναζήτησης · `/interest-check`). Αποτέλεσμα: «όχι υπόγειο, ναι **ημιυπόγειο**» (και τα δύο −1) και «όχι ισόγειο, ναι
+**υπερυψωμένο**» (και τα δύο 0) ήταν **ανέκφραστα**· και το `/interest-check` έστελνε την πυλωτή ως «0» ⇒ «ισόγειο».
+
+### 9.2 Τι κάνουν οι μεγάλοι — και η απόφαση
+| | Πώς ρωτά τον όροφο |
+|---|---|
+| **Spitogatos / xe.gr** | «Όροφος από–έως» με **διατεταγμένες επώνυμες στάθμες** (Υπόγειο < Ημιυπόγειο < Ισόγειο < Υπερυψωμένο < Ημιώροφος < 1ος…) |
+| **idealista** | σημασιολογικές κλάσεις (bajos · plantas intermedias · última planta) |
+| **RESO / Revit / ArchiCAD** | στάθμη = αριθμός + είδος (Level / Story) |
+
+**Απόφαση: σειρά Spitogatos, πάνω στο ζεύγος του έργου** (§8.1 — καμία 5η μορφή): το **άκρο** του εύρους είναι
+`LevelBound = { number, kind }`. 🔑 Άκρο **χωρίς** είδος (`kind: null`) = **ολόκληρη η στάθμη** του αριθμού ⇒ κάθε ζήτηση
+και κάθε σύνδεσμος γραμμένα πριν την 2β.3 κρίνονται **ακριβώς όπως πριν**, **χωρίς** μετανάστευση.
+⏭️ Το «τελευταίος όροφος» της idealista θέλει πλήθος ορόφων του κτιρίου από το επίπεδο Α — μετά την 2β.4 (pending-ratchet).
+
+### 9.3 Η ΜΙΑ διάταξη — `lib/floor/floor-level-range.ts`
+- Βαθμίδα (ιδιωτική, **ποτέ** δεδομένο/URL): `αριθμός × 4 + στρώμα` — basement 0 · semi-basement 1 · ground/pilotis 0 ·
+  raised-ground 1 · mezzanine 2 · standard 0 · roof/attic/stair-penthouse 3. Πυλωτή ≡ ισόγειο: **εναλλακτικές, όχι στοιβαγμένες**.
+- `withinLevelRange` · `levelRangeInverted` · `levelRangeOf`/`levelRangePairs` (τα τέσσερα πεδία ⇄ εύρος) ·
+  `levelBoundKey`/`parseLevelBoundKey` (κλειδί `0:raised-ground`, ή **σκέτος ακέραιος** = ολόκληρη στάθμη) ·
+  `floorRangeOptions` (η λίστα του `declaredFloorRefs`, **μία** επιλογή ανά βαθμίδα) · `levelRangeSelectValues`
+  (άκρο ολόκληρης στάθμης ⇒ χαμηλότερο στρώμα για «από», υψηλότερο για «έως» — η ίδια κρίση με επώνυμη στάθμη).
+
+### 9.4 Οι τρεις πόρτες — ένας κριτής
+- **Ζήτηση**: `DemandFeatures.floorMinKind`/`floorMaxKind` (ζεύγος· ο αναγνώστης `readStoredDemand` κανονικοποιεί απόντα/άγνωστα
+  σε `null`) · `floorAxis` ⇒ `readLevelAnswer` + `withinLevelRange` · φόρμα: `floorMinLevel`/`floorMaxLevel` (κλειδιά)
+  με τον **ίδιο** `DeclaredFloorSelectField` (νέο prop `edge`) · `rangeInvariants` ⇒ `levelRangeInverted`.
+- **Αναζήτηση**: νέο σχήμα κριτηρίου **`'level-range'`** για τον άξονα `floor` (`withLevelRange`/`levelRangeIn` ·
+  `judgeLevelRange` · `readLevelAnswer` · URL `flmin`/`flmax` γράφει κλειδί, δέχεται παλιό ακέραιο) · UI
+  `CriterionLevelRangeField` με **νατίβ `<select>`** (μηδέν JS στην πιο δημόσια οθόνη, όπως το `CriterionRangeField`) +
+  τσιπ με `criterionLevelRangeSummary`. Ζήτηση ⇄ φίλτρα περνούν το εύρος **με** τα είδη.
+- **`/interest-check`**: `ProspectDescription.floor: FloorRef` · ο **ίδιος** επιλογέας δηλωμένης στάθμης με τη δήλωση
+  ιδιοκτήτη · παράμετρος `floor` = κλειδί (παλιός ακέραιος γίνεται δεκτός) · η προβολή γράφει `floor` + `floorKind` · το
+  prefill προς `/offers/new` κρατά το είδος (διαγράφηκε το `floorLevelOf`, που το έχανε).
+- **Ο ιδιοκτήτης**: `PlaceInterestPanel.unitIncomplete` (`isUnitLevelUndeclared`) — ακίνητο (όχι γη) χωρίς στάθμη ⇒
+  υπόδειξη «δηλώστε τον όροφο». Μόνο οθόνη· ο πελάτης ξέρει ήδη το δικό του ακίνητο ⇒ **καμία** διαρροή ζήτησης.
+
+### 9.5 Ίδια ευκαιρία (N.0.2) · τι διαγράφηκε
+- 🐞 **Άρνηση αντί για κατάλογο**: «σύνολο τιμών = όχι `range` και όχι `flag`» (`CriterionField` + test ονομάτων) κατέτασσε
+  σιωπηλά **κάθε νέο** σχήμα στα σύνολα ⇒ `TypeError` σε χρόνο εκτέλεσης. Νέος θετικός κριτής `isValueSetShape`.
+- Διαγράφηκαν: `withinRange` (`listing-filters`, μόνος καταναλωτής ο όροφος) · η εξαγωγή του `satisfiesRange` · `floorLevelOf` ·
+  κλειδιά `demand.form.features.floorHelp` («Το 0 είναι το ισόγειο») και `interestCheck.description.floorLabel` (το `/interest-check`
+  δανείζεται τις ετικέτες της δήλωσης ιδιοκτήτη).
+
+### 9.6 Αποδεκτός υπολειπόμενος κίνδυνος
+- Παλιά ζήτηση που **ανοίγει για επεξεργασία** και αποθηκεύεται ξαναγράφεται με επώνυμη στάθμη (π.χ. «έως 2» ⇒ «έως 2ος»): η
+  κρίση μένει ίδια για κάθε στάθμη που **προσφέρεται**· στενεύει μόνο για δώμα/σοφίτα με αριθμό (εκτός λίστας δηλωμένων).
+- Οι παλιοί σύνδεσμοι αναζήτησης (`flmin=1`) δεν ξαναγράφονται μέχρι ο άνθρωπος να αγγίξει το φίλτρο.
+
+### 9.7 Άγκυρες
+`floor-level-range.test` (σειρά Spitogatos · άκρο χωρίς είδος = ολόκληρη στάθμη · πυλωτή ≡ ισόγειο · δώμα εκτός · URL ·
+επιλογές) · `demand-matching` Α4β/Α4γ · `listing-criteria` (παλιός σύνδεσμος + `0%3Araised-ground`) · `prospect-interest`
+(πυλωτή round-trip · παλιός ακέραιος · ζεύγος στην προβολή) · `demand-form-values` (τέσσερα πεδία, κανένα μισό άκρο) ·
+`demand-form-from-filters` (round-trip με είδη) · `adr777-silence-measurement` (ο όροφος μετριέται με `readLevelAnswer`).
+**Μεταλλάξεις 3/3 κόκκινες** (sha256 ίδιο μετά): ολόκληρη στάθμη ⇒ ένα στρώμα (2 κόκκινα) · πυλωτή ≠ ισόγειο (2 κόκκινα) ·
+ο parser αρνείται τον σκέτο ακέραιο / παλιό σύνδεσμο (5 κόκκινα).
+
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-03 | **2β.3** — εύρος **στάθμης** (§9): `floor-level-range.ts` (μία διάταξη, σειρά Spitogatos) · `DemandFeatures.floorMinKind/floorMaxKind` · σχήμα κριτηρίου `'level-range'` + URL με κλειδί (παλιός ακέραιος = ολόκληρη στάθμη) · επιλογείς στάθμης στη φόρμα ζήτησης, στα φίλτρα (νατίβ `<select>`) και στο `/interest-check` · prefill με είδος · υπόδειξη `unitIncomplete` · `isValueSetShape` (άρνηση ⇒ κατάλογος) · διαγραφή `withinRange`/`floorLevelOf`/2 κλειδιών. jest σχετικές σουίτες 201/202 (3.455 tests· το 1 κόκκινο προϋπήρχε: `CriteriaLedgerBar`) · πύλες 67/67 · `jscpd:diff` 0 · μεταλλάξεις 3/3. |
+| 2026-10-03 | **2β.2** — ο όροφος στη δήλωση του ιδιοκτήτη και στη δημόσια αγγελία + η μονάδα (§8): ένα ζεύγος `floor`+`floorKind` παντού · `floorPairOf` · `floorRefKey` · επιλογέας δηλωμένης στάθμης · `PublicListing.floorKind` (`attribute-qualifier`, κρίκος 17) · διόρθωση απώλειας είδους στην εταιρική προβολή · 4η οικογένεια χειρόγραφων ετικετών (σε locale) κλείνει + φρουρός locale · `PlaceUnitRef`/`unitNumber`/κλειδί μονάδας. jest σχετικές σουίτες 5.368 πράσινες (1 κόκκινο προϋπήρχε: `CriteriaLedgerBar`) · πύλες 0 αποτυχίες · `jscpd:diff` 0. |
 | 2026-10-03 | **2β.1β** — φιλοξενία σε όροφο (§6): `HostedOnFloor` (`floorId` + `floor` + `floorKind`) σε ακίνητα/θέσεις/αποθήκες · ο server ο μόνος συγγραφέας του αντιγράφου (`host-floor.server`, φύλακας πόρου) · `floor` μη εγγράψιμο από client · cascade αναρίθμησης/είδους/ονόματος (+ μεζονέτες) · `floors PATCH` γράφει `kind` + μοναδικότητα στην επεξεργασία · ένας επιλογέας/μία πηγή ορόφων · ~20 προβολές στην ετικέτα · φίλτρο ορόφου από τα δεδομένα · μετανάστευση + `--verify` (ΔΕΝ έτρεξε σε δεδομένα) · seed σε αριθμούς + `floorId` · N.0.2 `parking-showcase/labels` στο `parking.json`. 5 υπαρκτά σφάλματα έκλεισαν (§6.4). jest: σχετικές σουίτες 5.600+ πράσινες (τα 3 κόκκινα προϋπήρχαν: `bundle-completeness` · `proximity-anchor-reach` · `project-place-wiring`) · πύλες 0 αποτυχίες σε 113 αρχεία · `jscpd:diff` 0 (μετά το `useSpaceLocation`). |
 | 2026-10-03 | **2β.1α** — δημιουργία. Λεξιλόγιο (+4 είδη, `isAboveGround`) · `FloorRef` · `parseLegacyFloor` · `formatFloorRef` + namespace `floors` (`selectordinal`) · `useFloorLabel` / `floorLabelIn` / `canonicalFloorLongName` · κατάργηση `formatFloorLabel`/`formatFloorString`/`generateAutoLongName` + 8 χειρόγραφων · φρουρός κλάσης. jest: floor 85 · ai-pipeline 1242/1242 · πύλες 66/66 · `jscpd:diff` 0 (μετά το `toFloorCreatePayload`). |

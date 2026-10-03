@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟢 **Φ2 IMPLEMENTED (2026-10-03, §14.2)** — συμμετοχή `legal` μέσω ADR-862 Φ1 · 🟢 **Φ1 IMPLEMENTED (2026-10-02)** — υπόθεση μεταβίβασης + κατάλογος ως δεδομένα + καρτέλα «Δικαιολογητικά» για τον εργολάβο + σύγκλιση AI knowledge base (§14) · ✅ αποφάσεις Ε-2…Ε-8 (Giorgio 2026-10-02) · Ε-1 τεχνική · ⏳ Φ0 (επαλήθευση καταλόγου από συμβολαιογράφο — ο κατάλογος κυκλοφορεί ως v0, `verifiedAt: null`, και το UI το δηλώνει) · ⏳ Φ2+ |
+| **Status** | 🟢 **Φ4.1–Φ4.3 IMPLEMENTED (2026-10-03, §14.4)** — δήλωση ιδιότητας και με λογαριασμό · συμμετέχοντες · προβολή/λήψη τεκμηρίων με ίχνος · ειδοποιήσεις λήξεων · 🟡 **Φ4.4 (ανεβάσματα επαγγελματιών) ΣΕ ΕΠΑΝΑΣΧΕΔΙΑΣΜΟ** (§5.8.1) · 🟢 **Φ3 IMPLEMENTED (2026-10-03, §14.3)** — πρόσκληση με email για επαγγελματία χωρίς λογαριασμό, τρίτο είδος της μηχανής ADR-853 · 🟢 **Φ2 IMPLEMENTED (2026-10-03, §14.2)** — συμμετοχή `legal` μέσω ADR-862 Φ1 · 🟢 **Φ1 IMPLEMENTED (2026-10-02)** — υπόθεση μεταβίβασης + κατάλογος ως δεδομένα + καρτέλα «Δικαιολογητικά» για τον εργολάβο + σύγκλιση AI knowledge base (§14) · ✅ αποφάσεις Ε-2…Ε-8 (Giorgio 2026-10-02) · Ε-1 τεχνική · ⏳ Φ0 (επαλήθευση καταλόγου από συμβολαιογράφο — ο κατάλογος κυκλοφορεί ως v0, `verifiedAt: null`, και το UI το δηλώνει) · ⏳ Φ2+ |
 | **Date** | 2026-10-02 |
 | **Category** | Identity / Collaboration / Legal / Documents |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -232,7 +232,7 @@ conveyance_cases/{caseId}                      ← ID από enterprise-id.servi
 Έκδοση πρόσκλησης — ΜΗΧΑΝΗ ADR-853 (signed token, sha256, ιδεμποτησία, ADR-855 ρυθμός)
    με νέο ΕΙΔΟΣ στόχου: engagement (όχι workspace)   ← μία μηχανή, δύο στόχοι
    ▼
-Email §5.6 → /invite/[token]
+Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ — το token δεν φέρει είδος· κώδικας = αλήθεια, §14.3)
    ▼
 Προεπισκόπηση ΧΩΡΙΣ σύνδεση: ακίνητο · ποιος καλεί · ρόλος · ΤΙ θα βρει (αριθμοί, όχι έγγραφα)
    ├── έχει λογαριασμό → σύνδεση
@@ -253,7 +253,10 @@ Email §5.6 → /invite/[token]
 | Το token δίνει **δικαίωμα να ζητήσεις** συμμετοχή, **όχι** πρόσβαση | η πρόσβαση ζει στη συμμετοχή· προωθημένο email σε τρίτον **δεν** ανοίγει τίποτα (κλείδωμα email) |
 | Λήξη πρόσκλησης **14 ημέρες**, επαναποστολή με ένα πάτημα · ειδοποίηση του προσκαλούντα στις **3 ημέρες** χωρίς απάντηση | ✅ Ε-5 (Giorgio 2026-10-02) — ο επαγγελματίας λείπει συχνά (δικαστήρια)· η υπενθύμιση πιάνει το «ξεχασμένο email» πριν τη λήξη |
 | **Απόρριψη** («δεν αναλαμβάνω») από την προεπισκόπηση | ο ορίσας **ειδοποιείται**· η θέση αδειάζει |
-| Δεύτερη αποδοχή = **ίδια** συμμετοχή | κλειδί `uid` (ADR-862 §5.3.1) — N.7.2 #3 |
+| Δεύτερη αποδοχή = **ίδια** συμμετοχή | ~~κλειδί `uid`~~ → κλειδί `eng_…` + μοναδικότητα `(uid, υπόθεση)` **μέσα στη συναλλαγή** του ΕΝΟΣ γραφέα (ADR-862 §5.3.8 Δ-2)· ο ίδιος σύνδεσμος δεύτερη φορά ⇒ `already-used` — N.7.2 #3 |
+| Αποδοχή του συνδέσμου = αποδοχή της συμμετοχής (**`active`** κατευθείαν) | πρότυπο Figma/Google Docs «Accept invite»· η ρητή «ναι» του Entra B2B δίνεται με το **ίδιο** κλικ, μαζί με τη δήλωση Ε-4. Αν στο μεταξύ ο οικοδεσπότης πρόλαβε πρόταση `offered` στον ίδιο λογαριασμό ⇒ αυτή γίνεται `active` (καμία δεύτερη) |
+| Θέση πιασμένη / υπόθεση κλειστή τη στιγμή της αποδοχής | ονομασμένη άρνηση (`slot-occupied` · `role-conflict` · `case-closed`) **χωρίς καμία γραφή** — η πρόσκληση μένει `pending`, αποφασίζει ο οικοδεσπότης |
+| Κλείσιμο/ακύρωση υπόθεσης | κάθε εκκρεμής πρόσκληση της υπόθεσης **ανακαλείται** — ο σύνδεσμος στο email σταματά να δίνει οτιδήποτε |
 
 ### 5.4 🗂️ «Οι υποθέσεις μου» — **φίλτρο**, όχι δεύτερη λίστα
 
@@ -407,6 +410,17 @@ Email §5.6 → /invite/[token]
    προωθείτε. Τα έγγραφα **δεν** επισυνάπτονται — είναι προσβάσιμα μόνο μέσα στην πλατφόρμα, με ίχνος».
 9. **Υπογραφή/αποστολέας** — όνομα προϊόντος (ADR-857) · «εκ μέρους {εταιρεία/όνομα}».
 
+> 🔶 **Όπως υλοποιήθηκε (Φ3, 2026-10-03) — δύο συνειδητές αποκλίσεις, ο κώδικας κερδίζει**:
+> - **Τα κείμενα ζουν inline στο template** (`Record<HumanLanguage, …>`), **όχι** στα `locales/*.json`: το i18next
+>   στον server είναι καθολική κατάσταση· αυτό είναι το δόγμα **όλων** των email της πλατφόρμας (`server/comms/email-texts.ts`).
+>   Ο τύπος `Record` (όχι `Partial`) αναγκάζει κάθε νέα γλώσσα να φέρει τα λόγια της· άγκυρα που **εκτελείται**.
+> - **Κανένα όνομα μέρους** (βήμα 3): το email και η όψη πριν από ταυτότητα δεν λένε σε **προωθημένο** παραλήπτη
+>   ποιος αγοράζει ποιο σπίτι (ADR-742 ελαχιστοποίηση). Τα μέρη τα βλέπει ο επαγγελματίας **μέσα** στην υπόθεση.
+> - Το βήμα 4 λέει **μετρήσεις του ρόλου** (`{εφαρμόζονται} — {έτοιμα} έτοιμα, {λείπουν} εκκρεμούν`) από τον **ίδιο**
+>   κατάλογο με το «Οι υποθέσεις μου» (`checklistForRole`)· αν δεν διαβαστεί, η γραμμή **παραλείπεται** (ποτέ «0»).
+> - Το «Δεν αναλαμβάνω» είναι στη **σελίδα** (απαιτεί σύνδεση — η άρνηση είναι κι αυτή πράξη με ταυτότητα, ADR-853 §7.5)·
+>   το email το λέει στο υποσημείωμα.
+
 ### 5.7 ⏳ Διάρκεια — **πάγωμα + Φάκελος ολοκλήρωσης** *(✅ Ε-6, Giorgio 2026-10-02)*
 
 **Πρότυπο των μεγάλων**: οι αίθουσες δεδομένων (Intralinks, Datasite) με το κλείσιμο **παγώνουν**,
@@ -447,6 +461,19 @@ Email §5.6 → /invite/[token]
 | Δικηγόρος | έκθεση νομικού ελέγχου · σημειώσεις | **WIP του** → ορατό **μόνο** στη δική του πλευρά (ADR-373) |
 | Συμβολαιογράφος | σχέδιο · οριστικό · myPROPERTY · καταχώριση | SHARED στην υπόθεση → στο τέλος **στον αγοραστή** (παράδοση φακέλου) |
 | Όλοι | «Ζήτησε έγγραφο» → γραμμή καταλόγου → **ειδοποίηση** στον πάροχο | — |
+
+#### 5.8.1 🟡 Όπως ΔΕΝ μπορεί να υλοποιηθεί — και η πρόταση που το αντικαθιστά *(μετρημένο 2026-10-03)*
+
+Το σχέδιο της Φ4 (κατοχή = συντάκτης, «κοινοποίηση» = `transitionContainer('share')`) **προσκρούει στον κώδικα**: τα αρχεία
+**προσωπικής** κατοχής (`files_personal`) έχουν καθεστώς **μόνο εκδόσεων** (`PERSONAL_REGIME = versions-only`, ADR-866 Ε-Φ0-1)·
+το `share` απορρίπτεται ονομαστικά (`no-project`) και οι κανόνες απαγορεύουν κάθε πεδίο CDE σε προσωπικό αρχείο. Η Φ4.4 **δεν**
+υλοποιήθηκε πάνω σε παράκαμψη αυτής της απόφασης.
+
+**Πρόταση (προς έγκριση Giorgio)** — το **Transmittal** των Aconex / Autodesk Construction Cloud: ο συντάκτης **κρατά** το αρχείο
+στη δική του κατοχή· ένα **αμετάβλητο** έγγραφο-πράξη (`conveyance_contributions`, μόνο server) καταγράφει **ποια έκδοση**
+(αποτύπωμα) στάλθηκε στην υπόθεση, **από ποιον ρόλο**, **πότε** — με ακροατήριο που **ορίζει ο ρόλος** (συμβολαιογράφος → όλοι ·
+δικηγόρος → μόνο η πλευρά του, Σ-3) και ανάκληση με ίχνος. Νέα έκδοση ⇒ νέα αποστολή (ό,τι διάβασε ο άλλος μένει αποδείξιμο).
+Καμία αλλαγή στο ADR-866.
 
 ### 5.9 📜 Ίχνος — και στις δύο πλευρές (ADR-862 §5.7 · ADR-195)
 
@@ -510,6 +537,15 @@ Email §5.6 → /invite/[token]
 | Α15 ✅ | Ο AI agent (θεατής αγοραστής) **δεν** επιβεβαιώνει ύπαρξη προσωπικών εγγράφων πωλητή | φίλτρο `visibleTo` στον KB αφαιρεμένο |
 | Α16 ✅ | Ο διαχειριστής του **ίδιου** μισθωτή **δεν** διαβάζει/γράφει `conveyance_cases` απευθείας | κανόνας «`companyId == δικό μου`» |
 
+| Α17 ✅ | «Αναλαμβάνω» **φέρει** δήλωση ιδιότητας· ο ΕΝΑΣ γραφέας τη γράφει (και από τις δύο διαδρομές) | ο γραφέας πετά το `declaredCredential` (μετάλλαξη: 4 κόκκινα) |
+| Α18 ✅ | Οι «Συμμετέχοντες» **δεν** περιέχουν email/uid άλλου | ωμή συμμετοχή στην όψη (μετάλλαξη: 1 κόκκινο) |
+| Α19 ✅ | Αρχείο εκτός των **ορατών** γραμμών του ρόλου ⇒ 404, **καμία** υπογραφή, **κανένα** ίχνος | λήψη χωρίς επαναπαραγωγή του καταλόγου (μετάλλαξη: 1 κόκκινο) |
+| Α20 ✅ | Κάθε άνοιγμα ⇒ **ακριβώς ένα** `document_accessed` στο βιβλίο της υπόθεσης · ανακλημένη ⇒ καμία υπογραφή | — |
+| Α21 ✅ | Ίδιο σύνολο λήξεων ⇒ **ίδιο** `eventId` (καμία δεύτερη ειδοποίηση) · αλλαγή κατάστασης/λήξης ⇒ νέο | αποτύπωμα χωρίς `expiresOn` (μετάλλαξη: 1 κόκκινο) |
+| Α22 ✅ | Ο `seller_lawyer` ειδοποιείται **μόνο** για γραμμές του ρόλου του | κατάλογος οικοδεσπότη για όλους (μετάλλαξη: 1 κόκκινο) |
+| Α23 ⏳ | Έκθεση `buyer_lawyer` δεν φτάνει ποτέ στον οικοδεσπότη/`seller_lawyer` | Φ4.4 (§5.8.1) |
+| Α24 ⏳ | Πρόχειρο συντάκτη δεν γίνεται ποτέ τεκμήριο | Φ4.4 (§5.8.1) |
+
 **Κατάσταση Φ1**: Α4 ✅ (δεδομένα + πυρήνας, μετάλλαξη 1 κόκκινο) · Α7 ✅ (μετάλλαξη 1 κόκκινο) · Α12-Α16 ✅.
 Αρχεία: `config/conveyance-checklist/__tests__/conveyance-checklist-catalog.test.ts` · `lib/conveyance/__tests__/*` ·
 `services/conveyance/__tests__/conveyance-case.service.test.ts` · `ai-pipeline/.../knowledge-base-handler.test.ts` ·
@@ -524,8 +560,8 @@ Email §5.6 → /invite/[token]
 | **Φ0** | Επαλήθευση καταλόγου v0 από **πραγματικό** συμβολαιογράφο + δικηγόρο (§11) · απαντήσεις §10 | — |
 | **Φ1** ✅ | `conveyance_cases` + πρόθεμα ID · κατάλογος config + παραγωγή κατάστασης · καρτέλα «Δικαιολογητικά» **για τον εργολάβο** (χωρίς εξωτερικούς ακόμη) · **+ σύγκλιση AI KB** (§14) | ~~Φ0~~ — κυκλοφόρησε ως v0 με δηλωμένο «μη επαληθευμένο» |
 | **Φ2** ✅ *(2026-10-03, §14.2)* | Πρότυπο `legal` στο ADR-862 · `engagements` · ετυμηγορία `engaged` · κανόνες Firestore/Storage | **ADR-862 Φ1** ✅ |
-| **Φ3** | Πρόσκληση `engagement` στη μηχανή ADR-853 · σελίδα `/invite/[token]` (προεπισκόπηση/εγγραφή/δήλωση ιδιότητας) · νέο email §5.6 · αναβάθμιση `ProfessionalsCard` | Φ2 · ADR-853 Φ6 UI |
-| **Φ4** | «Οι υποθέσεις μου» + σελίδα υπόθεσης · ίχνος · ανεβάσματα επαγγελματιών · ειδοποιήσεις λήξεων | Φ3 |
+| **Φ3** ✅ *(2026-10-03, §14.3)* | Πρόσκληση `engagement` στη μηχανή ADR-853 (**τρίτο είδος**) · σελίδα **`/case-invite/[token]`** (προεπισκόπηση/εγγραφή/δήλωση ιδιότητας) · νέο email §5.6 · υπενθύμιση 3 ημερών · ~~αναβάθμιση `ProfessionalsCard`~~ → **`ConveyanceProfessionalsAccess`** (η επιφάνεια πρόσβασης· το `ProfessionalsCard` μένει επιφάνεια **ορισμού**) | Φ2 ✅ · ADR-853 Φ6 UI ✅ |
+| **Φ4** 🟢 Φ4.1–4.3 *(2026-10-03, §14.4)* · 🟡 Φ4.4 | «Οι υποθέσεις μου» + σελίδα υπόθεσης · ίχνος · ~~ανεβάσματα επαγγελματιών~~ → **Φ4.4, επανασχεδιασμός §5.8.1** · ειδοποιήσεις λήξεων | Φ3 |
 | **Φ5** | **Ιδιώτης**: υπόθεση από φάκελο/αγγελία · `resale_private` | **ADR-866 Φ3** (οικοδεσπότης προσωπικός χώρος) |
 | **Φ6** | **Πάγωμα** + **Φάκελος ολοκλήρωσης ανά ρόλο** (§5.7.1) · παράδοση φακέλου στον αγοραστή στο κλείσιμο | Φ4 · ADR-866 (παράδοση) |
 
@@ -610,6 +646,8 @@ Email §5.6 → /invite/[token]
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-03 | 🟢 **Φ4.1–Φ4.3 υλοποιήθηκαν** (§14.4). (1) Η αποδοχή **φέρει** τη δήλωση Ε-4 **στον τύπο** του ΕΝΟΣ γραφέα — πρόσκληση και «Αναλαμβάνω» περνούν από το ίδιο σχήμα (`declared-credential.ts`) και την ίδια φόρμα· προσυμπλήρωση «θυμήσου με». (2) Σελίδα υπόθεσης με καρτέλες: «Δικαιολογητικά» με **Προβολή/Λήψη** (σύνδεσμος 15′, POST με ιδεμποτία, ίχνος `document_accessed` στο βιβλίο της υπόθεσης) · «Συμμετέχοντες & ίχνος» (δηλωμένη ιδιότητα των άλλων, προβολή ίχνους χωρίς email). (3) Cron λήξεων με **ακμή, όχι στάθμη**. 🔎 **Εύρημα audit**: η Φ4.4 όπως σχεδιάστηκε (CDE `share` σε προσωπικό αρχείο) **αντιβαίνει** στο ADR-866 Ε-Φ0-1 ⇒ επανασχεδιασμός ως **Transmittal** (§5.8.1), προς έγκριση. Boy-scout: `fileDownloadName` (εξήχθη) · `listCaseEngagements` (ήταν μέσα στην υπηρεσία οικοδεσπότη) · `DeclaredCredentialLine` σε κοινό + άκυρο `<p>`-σε-`<p>` · `checklistForRole` γενικεύτηκε σε `ChecklistViewer` (οικοδεσπότης + επαγγελματίας) · `CredentialHint` προσυμπλήρωση σε κοινό helper (ήταν inline στη σελίδα πρόσκλησης) · πίνακας κεφαλίδας κανόνων προορισμού (έλειπαν οι τύποι της Φ2). |
+| 2026-10-03 | 🟢 **Φ3 υλοποιήθηκε** (§14.3). Επαγγελματίας **χωρίς** λογαριασμό ⇒ η ίδια πράξη «Πρόταση» του οικοδεσπότη **εκδίδει πρόσκληση με email** (Procore «Save & Send Invitation») πάνω στη **ΜΙΑ** μηχανή ADR-853 ως **τρίτο είδος** (`einv` · `engagement_invitations` · `ENGAGEMENT_INVITE_SECRET`). Η μηχανή γενικεύτηκε σε **αποδοχή δύο φάσεων** μέσα στη συναλλαγή (`onAccept` → αναγνώσεις, μετά `write()` — ADR-853 §20.7), ώστε ο ΕΝΑΣ γραφέας (`stageEngagementByInvitation`) να κρίνει μοναδικότητα **ατομικά**. Δήλωση ιδιότητας Ε-4 ως **στιγμιότυπο ανά υπόθεση** (`declaredCredential`, προσυμπλήρωση από τις persona της επαφής). Ε-5: 14 ημέρες = **ίδια** σταθερά με την πρόταση · επαναποστολή = νέα έκδοση (supersede) · υπενθύμιση στον προσκαλούντα από cron (`engagement-invitation-reminder`, 09:13) με `reminderDueAt` γραμμένο **στην έκδοση** · άρνηση ⇒ ειδοποίηση. Αποκλίσεις από το σχέδιο (§5.3 · §5.6 · §8): σελίδα ανά είδος, κλειδί `eng_…`, κανένα όνομα μέρους στο email. Boy-scout: `CORE_REFUSAL_IS_NOT_FOUND` (ήταν 2 χάρτες) · `InvitationMessageCard` · `InvitationIdentityGate` · `readInvitationPageRequest` (δίδυμα με `/tour-invite`) · `legal-professional-credentials.ts` (ανάγνωση persona εκτός client-only service) · `checklistForRole` · `isLegalEngagementRole`. |
 | 2026-10-03 | 🧩 **Route slices `/cases` + CHECK 3.34 ξεκλείδωσε** (ADR-744 §26). Το `navigation:personal.items.myCases` έβγαλε το `navigation` 22.808/22.800· θεραπεία **μετακόμιση** του λεξιλογίου του ιεραρχικού πλοηγητή στο `hierarchy-navigator` (όχι +50 στο ταβάνι, που χαμήλωσε σε 14.500). Μετά: `/cases` **2.731** bytes · `/cases/[engagementId]` **8.122** (σφραγισμένα στο `.i18n-shell-slice.json`), παράδοση με `registerRouteSlice` στα `MyCasesContent`/`EngagedCaseContent`· `dynamicKeyPolicy` για το `t(row.item.labelKey)` του `ConveyanceChecklistRow` (`conveyance:items`). |
 | 2026-10-03 | 🟢 **Φ2 υλοποιήθηκε** (§14.2) μαζί με την **ADR-862 Φ1** (§5.3.8). Ροή: ορισμός στο `ProfessionalsCard` → **πρόταση** πρόσβασης από τον οικοδεσπότη (Procore «Save & Send Notification») → **«Αναλαμβάνω»** (Entra `PendingAcceptance`) → «Οι υποθέσεις μου» → υπόθεση φιλτραρισμένη ανά **ρόλο** και **εμβέλεια**. Ευρήματα Ε-Η…Ε-Κ (§2.3). Συναίνεση της άλλης πλευράς **δηλωμένη με πηγή + βάση** (Qualia/dotloop). Ειδοποιήσεις `caseEngagementChanged` (υποχρεωτική) · `caseEngagementAnswered`. Κλείσιμο/ακύρωση υπόθεσης ⇒ οι συμμετοχές γίνονται `completed`/`withdrawn` (κύρια λήξη). |
 | 2026-10-02 | 🟢 **Φ1 υλοποιήθηκε** (§14). SSoT audit πριν από κώδικα ⇒ 7 διαφωνίες κώδικα/σχεδίου (§2.3 Ε-Α…Ε-Ζ) — το σχέδιο ακολούθησε τον κώδικα. Κατάλογος 39 γραμμών ως δεδομένα με matchers **ανά επίπεδο**· πυρήνας παραγωγής 10 καταστάσεων με **έλεγχο δεμένο στην έκδοση** και **ισχύ ως προς την ημέρα υπογραφής** (§5.5.1)· πράξη `conveyance_cases` (πρόθεμα `cvc`, μόνο server, CAS, ιδεμποτές άνοιγμα, πάγωμα Ε-6, ίχνος `conveyance_case`)· δικαιώματα `legal:conveyance:view/manage`· καρτέλα «Δικαιολογητικά» στο `SalesSidebar` με optimistic updates· **σύγκλιση AI KB** (απόφαση Giorgio: τώρα). Άγκυρες Α4 · Α7 · Α12-Α16 (§7). Boy-scout: `shouldShowLegalTab`/`shouldShowPaymentTab` (δίδυμα) → `isInSaleProcess` · `isLegalPhase` type guard στο SSoT · `array-contains-any` στο επαληθευμένο fake (+ περίπτωση συμβολαίου Q6) · νέο SSoT `lookupLocaleString` (τα ~26 αντίγραφα → pending-ratchet). |
@@ -669,9 +707,71 @@ Email §5.6 → /invite/[token]
 κανόνες `companies.rules.test.ts` (emulator).
 
 **Δηλωμένα όρια της Φ2**:
-- Η **πρόσκληση με email** για επαγγελματία **χωρίς** λογαριασμό = Φ3 (σήμερα: ονομασμένη κατάσταση `needs-invitation`).
-- **Προβολή/λήψη αρχείων** από τον επαγγελματία, έλεγχος γραμμών από αυτόν, ίχνος «ποιος κατέβασε τι» = Φ4.
+- ~~Η **πρόσκληση με email** για επαγγελματία **χωρίς** λογαριασμό = Φ3~~ → ✅ **υλοποιήθηκε**, §14.3.
+- ~~**Προβολή/λήψη αρχείων** από τον επαγγελματία, ίχνος «ποιος κατέβασε τι» = Φ4~~ → ✅ **§14.4**. Ο **έλεγχος** γραμμών (αποδοχή/απόρριψη) από τον επαγγελματία μένει ανοιχτός.
 - Ο οικοδεσπότης της Φ2 είναι **μόνο** εργολάβος-πωλητής (`new_build_company`)· ο ιδιώτης = Φ5.
 - Η ειδοποίηση προς τον οικοδεσπότη ανοίγει την **καρτέλα του ακινήτου**: οι σελίδες πωλήσεων δεν έχουν διεύθυνση ανά ακίνητο.
 - Ο αναγνώστης τεκμηρίων του **AI KB** (θεατής αγοραστής, ADR-257) **δεν** περνά ακόμη από το φίλτρο εμβέλειας — καταγεγραμμένο στο `pending-ratchet-work`.
 
+### 14.3 🗺️ Χάρτης υλοποίησης — Φ3 *(2026-10-03)*
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Μηχανή (ADR-853 §20.7) | `server/invitations/invitation-redeem.ts` (`InvitationAcceptance`, `TAccepted`) · `server/auth/workspace-invitation-redeem.ts` · `server/spatial-tour/tour-capture-invitation-redeem.ts` | αποδοχή **δύο φάσεων** μέσα στη συναλλαγή: αναγνώσεις → άρνηση χωρίς γραφή **ή** `write()` μετά τη σφράγιση· τα δύο παλιά είδη μεταφέρθηκαν |
+| Γραφέας (ADR-862) | `lib/auth/engagement-write.ts` `stageEngagementByInvitation` · `types/engagement.ts` (`DeclaredCredential`, `ROLE_REGISTRY_AUTHORITY`, `origin.invitationId`, `isLegalEngagementRole`) · `engagement-schema.ts` | ο ΕΝΑΣ γραφέας γράφει **ενεργή** συμμετοχή· ίδια κρίση `judgeOffer` με την πρόταση |
+| Είδος `engagement` | `types/engagement-invitation.ts` · `lib/conveyance/engagement-invitation-schema.ts` · `server/engagement-invitations/engagement-invitation-{issue,redeem,preview,notice,reminder}.ts` | έκδοση/supersede/ανάκληση · εξαργύρωση + παρενέργειες · όψη (μετρήσεις, όχι έγγραφα) · email · υπενθύμιση |
+| Ταυτότητα / συλλογή / μυστικό | πρόθεμα `einv` (`generateEngagementInvitationId`) · `COLLECTIONS.ENGAGEMENT_INVITATIONS` · `ENGAGEMENT_INVITE_SECRET` (`environment-contract.ts`) | N.6 · δικό του μυστικό (ποτέ κοινό — Α1) |
+| Πολιτική | `config/engagement-policy.ts` (`engagementInvitationExpiryMs` = ίδια 14 ημέρες με την πρόταση · `ENGAGEMENT_INVITATION_REMINDER_DAYS = 3`) | Ε-5 |
+| Οικοδεσπότης (server) | `services/conveyance/conveyance-invitation-host.service.ts` · `conveyance-engagement-host.service.ts` (`needs-invitation` ⇒ πρόσκληση · `cancelCaseInvitation` · κλείσιμο ⇒ ανάκληση) · `conveyance-professional.server.ts` (`credentialHint`) · `lib/contacts/legal-professional-credentials.ts` | ίχνος στο βιβλίο **της υπόθεσης** (`invitation.<ρόλος>`), ποτέ το token |
+| API | `api/conveyance-cases/[id]/engagements` (POST → `invited`, **SENSITIVE**) · `…/invitations/[role]/revoke` · `api/engagement-invitations/redeem` (`withHeavyRateLimit(withPersonalOrOrgAuth)`, δήλωση υποχρεωτική στο accept) · `api/cron/engagement-invitation-reminder` | Idempotency-Key από το σύνορο ADR-872 |
+| Σελίδα | `app/(auth)/case-invite/[token]/{page,not-found}.tsx` · `components/case-invite/{CaseInviteContent,CredentialDeclarationForm,case-invite-labels}.tsx/ts` · κοινά `components/invitations/{InvitationMessageCard,InvitationIdentityGate}.tsx` · `server/invitations/invitation-page-request.ts` · `lib/invitations/invitation-respond.ts` (`CORE_REFUSAL_IS_NOT_FOUND`) | όψη πριν την ταυτότητα · σύνδεση/εγγραφή με επιστροφή (`next`) · «άλλος λογαριασμός» πριν το κλικ · 404 για σύνδεσμο που δεν δείχνει πουθενά |
+| UI οικοδεσπότη | `components/sales/conveyance/{ConveyanceProfessionalsAccess,ConveyanceProfessionalInvitation,conveyance-presentation}.tsx/ts` · `hooks/useCaseProfessionals.ts` · `conveyance-engagement-gateway.ts` | «Αποστολή πρόσκλησης» · κατάσταση (εστάλη/ανοίχτηκε/λήγει/υπενθύμιση) · **επαναποστολή με ένα πάτημα** · ακύρωση · έκβαση αποστολής **ονομαστικά** · «ΑΜ … (δηλωμένο)» |
+| Email | `services/email-templates/engagement-invitation-email.ts` | §5.6 στον κοινό σκελετό· καμία συνημμένη |
+| Ειδοποιήσεις | `conveyance-engagement-notifier.ts` (`announceInvitationDeclined` · `announceInvitationUnanswered`, κοινό `announceToInviter`) · `common-shared` `caseEngagementAnswered.invitationPending*` | **ίδια** προτίμηση «απαντήσεις επαγγελματιών» — η σιωπή είναι απάντηση· ντετερμινιστικό `eventId` |
+| Cron | `lib/cron/jobs/engagement-invitation-reminder.job.ts` · `config/cron-schedule.ts` (`13 9 * * *`) | πρώτα ειδοποίηση (dedupe), μετά CAS `reminderSentAt` ⇒ ακριβώς μία· ληγμένη ⇒ `expired` (φραγμένη σάρωση) |
+| Κανόνες · δείκτες | `firestore.rules` `match /engagement_invitations` deny-all · `coverage-manifest.ts` · σουίτα με σπόρο ίδιου μισθωτή · `firestore.indexes.json` `(state, reminderSentAt, reminderDueAt)` | CHECK 3.16 · 3.91 |
+| i18n | `conveyance.json` (`engagement.invitation.*` · `engagement.credential.*` · `engagement.invite.*`) · `.i18n-shell-slice.json` (`/case-invite/[token]` σφραγισμένο **4.190** bytes) · `i18n/generated/routes/case-invite__token.el.json` · `workspace-scope.ts` (`case-invite` εκτός χώρου) | CHECK 3.34/3.51/3.60 |
+
+**Άγκυρες**: `server/engagement-invitations/__tests__/engagement-invitation.test.ts` (14 — Α1 · Α2 · Α3 · ιδεμποτησία ·
+επαναποστολή · ακύρωση · **αγώνας** κλεισίματος ανάμεσα σε προέλεγχο και συναλλαγή (μετάλλαξη σκοτώθηκε) · άρνηση ·
+υπενθύμιση) · `email-templates/__tests__/engagement-invitation-email.test.ts` (Α5) · `conveyance-engagement-flow.test.ts`
+(«Save & Send Invitation») · επανεκτελέστηκαν `workspace-invitation` · `tour-capture-invitation(-preview)` (αλλαγή άγκιστρου).
+
+**Σειρά ανάπτυξης (του Giorgio)**: `ENGAGEMENT_INVITE_SECRET` στο Netcup → `npm run firestore:deploy` (δείκτης → κανόνες,
+CHECK 3.86) → push.
+
+**Δηλωμένα όρια της Φ3**:
+- ~~Η δήλωση Ε-4 γίνεται **μόνο** στη ροή πρόσκλησης~~ → ✅ **§14.4**: η αποδοχή **φέρει** τη δήλωση στον τύπο του γραφέα.
+- ~~Η δηλωμένη ιδιότητα στα **άλλα** μέρη = Φ4~~ → ✅ **§14.4** (καρτέλα «Συμμετέχοντες & ίχνος»).
+- Η πραγματική **παράδοση** του email (γεγονότα παρόχου) = ADR-853 Φ5-Β· σήμερα «έγινε δεκτό από τον πάροχο».
+- Η άρνηση πρόσκλησης **δεν** αδειάζει τον **ορισμό** (`contact_links`): η θέση δείχνει «Δεν ανέλαβε» και ο οικοδεσπότης
+  ορίζει άλλον στο `ProfessionalsCard` — ο ορισμός είναι δική του πράξη, όχι παρενέργεια.
+
+### 14.4 🗺️ Χάρτης υλοποίησης — Φ4.1–Φ4.3 *(2026-10-03)*
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Δήλωση (ένα σχήμα) | `lib/conveyance/declared-credential.ts` (`CREDENTIAL_DECLARATION_SCHEMA` · `declaredCredentialOf` · `CaseEngagementAnswer` · `latestOwnDeclaration`) | το **ίδιο** σχήμα για πρόσκληση **και** «Αναλαμβάνω»· ο ρόλος διαλέγει μητρώο |
+| Γραφέας (ADR-862) | `lib/auth/engagement-write.ts` (`accept` **φέρει** `declaredCredential` στον τύπο · `planResponse`) | ενεργή συμμετοχή χωρίς δήλωση = **δομικά αδύνατη** (Α17) |
+| Απάντηση | `api/engagements/[id]/respond` (discriminated union) · `conveyance-engagement-access.service.ts` (`respondToCaseEngagement` · `offerCredentialHint` · `resolveEngagedCase` · `engagedChecklistOf` · `ChecklistViewer`) · `conveyance-engagement-support.ts` (`answerChanges` · `listCaseEngagements`) · `conveyance-professional.server.ts` (`contactCredentialHint`) | προσυμπλήρωση «θυμήσου με» (η δική του τελευταία δήλωση → εφεδρεία: βιβλίο οικοδεσπότη) · **ένας** δρόμος ανάγνωσης για όψη/αρχεία/ίχνος |
+| UI «Αναλαμβάνω» | `components/conveyance/my-cases/{AcceptEngagementDialog,MyCasesContent}.tsx` · `hooks/useMyCases.ts` · `case-invite/CredentialDeclarationForm.tsx` (`credentialDraftOf` · `credentialFromDraft`) | **ίδια** φόρμα με την πρόσκληση · optimistic + επαναφορά |
+| Συμμετέχοντες | `services/conveyance/conveyance-case-participants.server.ts` · `components/conveyance/my-cases/EngagedCaseParticipants.tsx` · `components/conveyance/shared/DeclaredCredentialLine.tsx` (μεταφέρθηκε, `<span>`) | ρόλος · όνομα · «(δηλωμένο)» — **χωρίς** email/uid (Α18) |
+| Αρχεία | `services/conveyance/conveyance-case-file-access.service.ts` (`openCaseFile`) · `api/engagements/[id]/files/[fileId]` (**POST** — γράφει ίχνος, ADR-872) · `lib/files/file-download-name.ts` (εξήχθη από `owned-file-bytes`) · `hooks/useCaseFileOpener.ts` · `my-cases/CaseFilePreviewDialog.tsx` (δυναμικό, `FilePreviewRenderer`) · `ConveyanceChecklistRow/Section` (`onOpenFile`, προαιρετικό) | κρίνε → ξαναπαράγαγε → υπόγραψε (15′) → **ένα** `document_accessed` (Α19-Α20) |
+| Ίχνος επαγγελματία | `lib/conveyance/case-activity.ts` (`projectCaseActivity` · `encodeCaseAccess`) · `services/conveyance/conveyance-case-activity.server.ts` · `EntityAuditService.readCompanyEntityEntries` (νέος αναγνώστης **μέσα** στο SSoT του ίχνους) · `api/engagements/[id]/activity` · `my-cases/EngagedCaseActivity.tsx` | **προβολή**: οι δικές του ενέργειες + όποιος άνοιξε τα δικά του αρχεία (μόνο ρόλος) |
+| Λήξεις | `lib/conveyance/expiry-alerts.ts` · `services/conveyance/{conveyance-expiry-alerts.server,conveyance-expiry-notifier}.ts` · `lib/cron/jobs/conveyance-expiry-alerts.job.ts` · `api/cron/conveyance-expiry-alerts` · `config/cron-schedule.ts` (`19 8 * * *`) | **ακμή, όχι στάθμη**: `eventId` με αποτύπωμα συνόλου (Α21) · ανά ρόλο (Α22) · σιωπή μετά την υπογραφή |
+| Ειδοποιήσεις | `config/notification-events.ts` (`caseExpiryHost` · `caseExpiryEngaged`, **μία** προτίμηση `caseExpiryAlerts`) · `notification-preference-rows.ts` · `user-notification-settings.types.ts` · `notification-destination-rules.ts` (+ γραμμές πίνακα κεφαλίδας) · `common-shared`/`common-account` | ίδιοι προορισμοί με το ζεύγος της συμμετοχής |
+| i18n | `conveyance.json` (`files.*` · `engagement.case.{tabs,participants,activity}` · `engagement.myCases.acceptDialog`) · `.i18n-shell-slice.json` (`/cases` **3.730**, νέα σφράγιση με `why`) | καρτέλες §5.4 με `StateTabs` (ADR-328) |
+
+**Άγκυρες**: `lib/auth/__tests__/engagement-anchor.test.ts` (Α17) · `services/conveyance/__tests__/conveyance-engagement-flow.test.ts`
+(Α17-Α20 + «θυμήσου με») · `lib/conveyance/__tests__/{case-activity,expiry-alerts}.test.ts` (προβολή ίχνους · Α21) ·
+`services/conveyance/__tests__/conveyance-expiry-alerts.test.ts` (Α22 · παραλήπτες · σιωπή).
+
+**Δηλωμένα όρια της Φ4.1–4.3**:
+- Η καρτέλα **«Ακίνητο»** (§5.4 #2) δεν υλοποιήθηκε.
+- Ο **οικοδεσπότης** δεν ανοίγει ακόμη από τον κατάλογο τεκμήρια που δεν κατέχει (θα χρειαστεί με τη Φ4.4, όπου τα αρχεία
+  των επαγγελματιών ζουν σε δική τους κατοχή).
+- Παραλήπτες λήξεων οικοδεσπότη = δημιουργός + διαχειριστές χώρου· «όσοι έχουν `legal:conveyance:manage`» θέλει αναλυτή
+  δικαιωμάτων ανά μέλος που δεν υπάρχει.
+- Το Excel **δεν** προεπισκοπείται για τον επαγγελματία (η προεπισκόπηση Excel φυλάει μισθωτή) — δείχνει «Λήψη».
+- Δυναμικό υδατογράφημα PDF (πρακτική αιθουσών δεδομένων) — όχι.
+- Φ4.4 ανεβάσματα + «Ζήτησε έγγραφο» — §5.8.1.
