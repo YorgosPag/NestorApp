@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "797ef6a722dfbfcae2f7550374bd9db485a2f174b521a91bf25236289baa60e1",
+  "inputsSha256": "e0b908fc930fdca2a5e94013be2a53905971e4c44997ead77151eccfcf7a7e87",
   "languages": [
     "el"
   ],
@@ -715,7 +715,7 @@
     "src/config/conveyance-checklist/catalog.ts": "03dcd635ab30d203635823f663351506232295848b14630686deae8316d549e7",
     "src/config/conveyance-checklist/items-parties.ts": "046fadc07a8a862d862cfa5168371984a2e9cc9118ab5e30bd83cedca2acaf34",
     "src/config/conveyance-checklist/items-property.ts": "9d384edafac1e4a1262ca28c2c1b6df1640d21ffc2d5109bf7f646c5c78148f1",
-    "src/config/conveyance-checklist/items-transaction.ts": "fe0b551aa8f7f889760606dfd23971dec565b87044f08e4b1cd538eccd43540c",
+    "src/config/conveyance-checklist/items-transaction.ts": "cc5c4cf8664fef9a3b76ed6eaf529d49370d14b6987c6ff79168f414cad0ff1d",
     "src/config/conveyance-checklist/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/conveyance-checklist/visibility.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",

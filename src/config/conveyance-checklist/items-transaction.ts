@@ -4,13 +4,23 @@
  * Παράγονται μέσα στην υπόθεση. Τα συμβόλαια του εργολάβου (ADR-230) ανεβαίνουν ως
  * `unit-contract` στη μονάδα. Η έκθεση νομικού ελέγχου είναι `ownSideOnly` (Σ-3).
  *
+ * 📤 Φ4.4 (§5.8.1): ό,τι ετοιμάζει **επαγγελματίας** (έκθεση δικηγόρου · σχέδιο/οριστικό · αποδεικτικό φόρου ·
+ * καταχώριση του συμβολαιογράφου) ικανοποιείται με **transmittal** (επίπεδο `contribution`). Τα του
+ * συμβολαιογράφου κρατούν `notaryFallback`: όσο δεν έχει σταλεί τίποτα, η γραμμή είναι `notary_side`
+ * (υποχρέωση του συμβολαιογράφου), **όχι** `missing` (υποχρέωση του πολίτη).
+ *
  * ⚠️ v0 — `verifiedAt: null` μέχρι τον έλεγχο Φ0 (ADR-901 §11).
  *
  * @module config/conveyance-checklist/items-transaction
  */
 
-import type { ChecklistItem } from './types';
+import type { ChecklistItem, ChecklistSatisfaction } from './types';
 import { EVERYONE, LAWYERS_ONLY } from './visibility';
+
+/** Ικανοποίηση από transmittal επαγγελματία μέσω του entry point της υπόθεσης (`entries-conveyance-case.ts`). */
+function contributedBy(entryPointId: string, options: { readonly notaryFallback?: true } = {}): ChecklistSatisfaction {
+  return { kind: 'files', matchers: [{ level: 'contribution', entryPointIds: [entryPointId] }], ...options };
+}
 
 export const TRANSACTION_ITEMS: readonly ChecklistItem[] = [
   {
@@ -43,7 +53,7 @@ export const TRANSACTION_ITEMS: readonly ChecklistItem[] = [
     visibleTo: EVERYONE,
     requirement: { kind: 'when', fact: 'is_new_build', equals: false },
     validity: { kind: 'act_day' },
-    satisfaction: { kind: 'notary_issued' },
+    satisfaction: contributedBy('case-transfer-tax-proof', { notaryFallback: true }),
     verifiedAt: null,
   },
   {
@@ -55,7 +65,7 @@ export const TRANSACTION_ITEMS: readonly ChecklistItem[] = [
     ownSideOnly: true,
     requirement: { kind: 'mandatory' },
     validity: { kind: 'none' },
-    satisfaction: { kind: 'offline' },
+    satisfaction: contributedBy('case-legal-due-diligence'),
     verifiedAt: null,
   },
   {
@@ -66,7 +76,7 @@ export const TRANSACTION_ITEMS: readonly ChecklistItem[] = [
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
     validity: { kind: 'none' },
-    satisfaction: { kind: 'notary_issued' },
+    satisfaction: contributedBy('case-contract-draft', { notaryFallback: true }),
     verifiedAt: null,
   },
   {
@@ -77,7 +87,7 @@ export const TRANSACTION_ITEMS: readonly ChecklistItem[] = [
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
     validity: { kind: 'none' },
-    satisfaction: { kind: 'notary_issued' },
+    satisfaction: contributedBy('case-final-contract', { notaryFallback: true }),
     verifiedAt: null,
   },
   {
@@ -99,7 +109,7 @@ export const TRANSACTION_ITEMS: readonly ChecklistItem[] = [
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
     validity: { kind: 'none' },
-    satisfaction: { kind: 'notary_issued' },
+    satisfaction: contributedBy('case-cadastre-registration', { notaryFallback: true }),
     verifiedAt: null,
   },
 ];

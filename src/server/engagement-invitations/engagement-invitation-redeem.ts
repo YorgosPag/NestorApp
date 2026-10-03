@@ -20,7 +20,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { stageEngagementByInvitation } from '@/lib/auth/engagement-write';
-import { effectiveCaseState } from '@/lib/conveyance/case-state';
+import { acceptsEngagements, effectiveCaseState } from '@/lib/conveyance/case-state';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { declaredCredentialOf, type CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import { engagementInvitationFromDocument } from '@/lib/conveyance/engagement-invitation-schema';
@@ -37,7 +37,6 @@ import {
 } from '@/server/invitations/invitation-redeem';
 import { announceEngagementAnswered, announceInvitationDeclined } from '@/services/conveyance/conveyance-engagement-notifier';
 import {
-  acceptsEngagements,
   caseSubject,
   answerChanges,
   recordEngagementAudit,

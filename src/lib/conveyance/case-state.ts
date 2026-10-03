@@ -33,3 +33,13 @@ export function effectiveCaseState(
 export function isCaseEditable(state: ConveyanceCaseState): boolean {
   return state === 'open';
 }
+
+/**
+ * Δέχεται η υπόθεση **νέες** προτάσεις; Μετά την υπογραφή **ναι** — ο συμβολαιογράφος δουλεύει ως τη
+ * μεταγραφή· μετά το κλείσιμο/ακύρωση **όχι** (οι συμμετοχές έχουν ήδη τελειώσει).
+ *
+ * Καθαρό: το ρωτούν ο server (προτάσεις · προσκλήσεις) **και** ο κοινός κριτής του «Ζήτησε έγγραφο» (ADR-901 Φ4.5).
+ */
+export function acceptsEngagements(state: ConveyanceCaseState): boolean {
+  return state !== 'closed' && state !== 'cancelled';
+}

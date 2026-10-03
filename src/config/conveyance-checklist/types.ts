@@ -50,9 +50,12 @@ export type ChecklistProvider = (typeof CHECKLIST_PROVIDERS)[number];
  * - `project`        — το έργο (εκεί ζουν οι μελέτες και η οικοδομική άδεια)
  * - `seller_contact` — η επαφή του πωλητή (εταιρεία: `project.linkedCompanyId`)
  * - `buyer_contact`  — οι επαφές των αγοραστών (`commercial.owners`)
+ * - `contribution`   — ό,τι **έστειλε** επαγγελματίας με transmittal (ADR-901 §5.8.1 · Φ4.4): το αρχείο ζει στον
+ *                      **δικό του** χώρο (`entityType: 'conveyance_case'`) και γίνεται τεκμήριο **μόνο** μέσω
+ *                      `conveyance_contributions` — ποτέ «αρχεία του επαγγελματία κατά οντότητα» (Α24)
  */
 const EVIDENCE_LEVELS = [
-  'property', 'appurtenance', 'building', 'project', 'seller_contact', 'buyer_contact',
+  'property', 'appurtenance', 'building', 'project', 'seller_contact', 'buyer_contact', 'contribution',
 ] as const;
 export type EvidenceLevel = (typeof EVIDENCE_LEVELS)[number];
 
@@ -112,7 +115,7 @@ export interface EvidenceMatcher {
  * - `offline`       — **ρητή** δήλωση: δεν υπάρχει ακόμη entry point· παρακολουθείται με
  *                     χειροκίνητη επιβεβαίωση. Ποτέ σιωπηλό ορφανό (άγκυρα Α7).
  */
-type ChecklistSatisfaction =
+export type ChecklistSatisfaction =
   | { readonly kind: 'files'; readonly matchers: readonly EvidenceMatcher[]; readonly notaryFallback?: true }
   | { readonly kind: 'notary_issued' }
   | { readonly kind: 'offline' };

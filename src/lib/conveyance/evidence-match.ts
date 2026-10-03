@@ -30,6 +30,8 @@ export const LEVEL_ENTITY_TYPES: Readonly<Record<EvidenceLevel, readonly EntityT
   project: ['project'],
   seller_contact: ['contact'],
   buyer_contact: ['contact'],
+  // Φ4.4 — ο προσωπικός χώρος του επαγγελματία για την υπόθεση· φτάνει εδώ ΜΟΝΟ με transmittal (Α24).
+  contribution: ['conveyance_case'],
 };
 
 /** Το κλειδί αντιστοίχισης `level|entityType|purpose`. */
