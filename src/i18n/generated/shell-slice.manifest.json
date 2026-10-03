@@ -5,7 +5,7 @@
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
     "src/i18n/generated/routes/case-invite__token.el.json": "db91072b146e6402625df224aa38cf9534622f13d2e9582b7ae89ed83dfb9758",
     "src/i18n/generated/routes/cases.el.json": "4e446b8dba53b36fe70a29073bc25b3f1dffd5e64a967298d1de56d7fd7aef73",
-    "src/i18n/generated/routes/cases__engagementId.el.json": "e8a20e9c26f628a5a732e00243750f6bba2971839b8ca10c4d252621f279649c",
+    "src/i18n/generated/routes/cases__engagementId.el.json": "90ad1e0110c6d2efdb3017691163635bbf9f2694da039971ac40e6c2f1590cc5",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "77a8a3307dbd8951dded0ed1779d93b0f537f22515c7de0478dd502431c2844d",
+  "inputsSha256": "d14ead14b7c274ea263990540bf683fab7f120da7666347390985f530bdaf1a4",
   "languages": [
     "el"
   ],
@@ -267,9 +267,12 @@
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
     "src/components/conveyance/my-cases/AcceptEngagementDialog.tsx": "6f69a0ccf940585c7975c75f451e8e4dd28af87ff0f5662b6bb5508e18d1cd43",
-    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "288c4d28dcdb0d5d5120ce0ac645fff117bb3af866d444cbe0de3d0c2600d84c",
+    "src/components/conveyance/my-cases/EngagedCaseActivity.tsx": "0b1ab0f1ebc22c7771a4071a6b3b090eb1b398aa495c80c1e3fd3483eaecbbed",
+    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "83dbfa8651e0cac793e4407913b8e2b6d7b37733b14a5a08760adab1530e7d56",
+    "src/components/conveyance/my-cases/EngagedCaseParticipants.tsx": "f699d6a2e0f4f3ee750fb912423e5734d9e0949fca39ad2e0ed5a983cf8d0baa",
     "src/components/conveyance/my-cases/MyCaseCardView.tsx": "4317c5c4518be0b9f9dac3f597513096fa5ecc64058005a006a39ddfb0912a05",
     "src/components/conveyance/my-cases/MyCasesContent.tsx": "581ad1c18f05c95e6fd9c85deed38827662affc4db92a1d001570ab127dc941b",
+    "src/components/conveyance/shared/DeclaredCredentialLine.tsx": "e9616abf4f7959f808cf6a0f731de1e545c6ff74c04574a4337a71a84f53a6d5",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
     "src/components/dashboard/NavigationCard.tsx": "2f031deb932f093ae0ad57d5c814eb785092691e69f297cb5c4d562727b3983b",
@@ -521,7 +524,7 @@
     "src/components/property-dossier/PropertyDossierTitle.tsx": "218515ae17720dc4443b05393dbc81017e722490ac4cd1647af3cd33bf27bc3f",
     "src/components/property-dossier/property-dossier-media.ts": "d875115ebbe334a5ba043d0043c11626d433af2a70a699c1bc5d9d5a7cf6da1d",
     "src/components/property-dossier/usePropertyDossierLifecycle.ts": "ae58e9ec9a40c2e60ebf3a54da403d8ab377e4e5a66508c8321e57b6c8ffac50",
-    "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "82b7ca9aaada8860d96607a09ab68cfce63785c058e8e5159c03bbb498d61f0b",
+    "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "7fddbac9c2c23d7721f03804802b908100f9a6823b968b5ee4d92cbc61342bda",
     "src/components/sales/conveyance/ConveyanceChecklistSection.tsx": "89cb2f7e0539e79b4d075f09e94285ddbad7a4e495ec8f6845dd100b1ba5914f",
     "src/components/sales/conveyance/conveyance-presentation.ts": "0b6354c5e8c13f02c8ef6e88b86cd84bc59238de2917152c52f823c6c3612e00",
     "src/components/search-results/AdminBoundaryLayer.tsx": "3b1a1d1a12cf92dbedf85e07577e3c1becf9d6efd41fd35f6b166a9a67d12058",
@@ -792,6 +795,7 @@
     "src/hooks/owner-property/useStayCalendar.ts": "b83f56b6118d15908f693b8e278a2db98feb4c123885c071ae12f4ff5029ff48",
     "src/hooks/owner-property/useStayCalendarSelection.ts": "35fe5211cfb1fc96f528388a92d8361c874897c2c1d4694ae0844314c7788820",
     "src/hooks/useAsyncData.ts": "02e59fe71ba777bb647c1638a4e6f1e3033c3aecacf39cff8ae913afefea80db",
+    "src/hooks/useCaseFileOpener.ts": "0aaa2061fe503eac0bb8af14a0111637fb0f47d907c9bdb31fd0300f9ea929a2",
     "src/hooks/useCircleAnchorName.ts": "875b9e930abd4b510a5bbd9a96be1893ae5378d73c2438e9ec9d8ba1899eac4f",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useContainingArea.ts": "0eeb133d3c28307c9d4660807d42fef029c5f415cecd2bbdae27fe27f102804c",
@@ -864,6 +868,7 @@
     "src/lib/contact/first-contact-target-href.ts": "be395a4e52bcc15e90e16827c9b0072f602f45185a090157169cf4612ab245c1",
     "src/lib/contacts/legal-professional-credentials.ts": "2cf2ef5c109e30d2008e74ea97d8003bcc4d693f8a1a064a9e87a31a84b9f05b",
     "src/lib/contacts/primary-email.ts": "be062827144f613c7f73525068f4ec1de9bd81ff36b425dc69bc6b538c3a970c",
+    "src/lib/conveyance/case-activity.ts": "75b74a1ce44dbb899c0782650e8ac677a04c0be667427c57d398fc69719acb81",
     "src/lib/conveyance/case-checklist.ts": "c1984a9a06e5de85084fd410c8ca85f1b0fd1eadc8f620b3ca34c0f0c028be81",
     "src/lib/conveyance/case-state.ts": "2a07d3501bbedcc7f0a8494496b1f27d4a13b8f8ba7f307a6cad57067ba68970",
     "src/lib/conveyance/conveyance-calendar.ts": "e4b859b24dde8c41f9ce88dcfd9221f325d66a5e7eb96131ea3ecea35916a4c8",
@@ -2019,6 +2024,96 @@
     "cases__engagementId": {
       "page": "src/app/(me)/cases/[engagementId]/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "conveyance": {
           "keys": [
             "actions.accept",
@@ -2027,11 +2122,31 @@
             "actions.markNotApplicable",
             "actions.menu",
             "actions.reject",
+            "engagement.case.activity.answered",
+            "engagement.case.activity.downloaded",
+            "engagement.case.activity.empty",
+            "engagement.case.activity.loadError",
+            "engagement.case.activity.loading",
+            "engagement.case.activity.someone",
+            "engagement.case.activity.title",
+            "engagement.case.activity.unnamed",
+            "engagement.case.activity.viewed",
+            "engagement.case.activity.you",
             "engagement.case.back",
             "engagement.case.loadError",
+            "engagement.case.participants.noCredential",
+            "engagement.case.participants.title",
+            "engagement.case.participants.you",
             "engagement.case.readOnly",
+            "engagement.case.tabs.checklist",
+            "engagement.case.tabs.participants",
+            "engagement.credential.declared",
+            "engagement.credential.declaredNoChapter",
             "engagement.myCases.signing",
             "engagement.myCases.untitled",
+            "files.download",
+            "files.unavailable",
+            "files.view",
             "row.actDay",
             "row.expiresOn",
             "row.invalidOnSigning",
@@ -10828,6 +10943,7 @@
     "src/lib/array-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/async-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/audit/audit-diff.ts": "d27e5ee4ce6ec72ee6c52a2d123708a25c3e380b7f4509d95ca31644104d5ec2",
+    "src/lib/audit/audit-entry-from-document.ts": "be736973ef8a506a67d8234221b90c7049db44bf590653b2c09e8b7a5737b735",
     "src/lib/audit/audit-ledger.ts": "267bd0efa62af73a815e1e41251e46d6996d931ba7d9a9f52b7e9186c240cc39",
     "src/lib/audit/tracked-field-def.ts": "2cde4c9f813a861483b7ac2526178961936d718d422ca01e6d73367990fb54cb",
     "src/lib/auth/api-denial.ts": "5e89807b90820a71e86d297caec055b0f707e45469b7287a980f2e25557dda04",
@@ -11130,7 +11246,7 @@
     "src/services/enterprise-id-singleton.ts": "af633d79955de13a3b98f19e7145f0762dcf7eea2565a9d135054a12e59d5d42",
     "src/services/enterprise-id-spatial-tour-generators.ts": "c377fde93b2dd3be837b937cd8dcf792d1171de5029dfd2ab872205c01620a2e",
     "src/services/enterprise-id-types.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
-    "src/services/entity-audit.service.ts": "b5c41b8503de6c0fb410184a9abfd16b54838dd97d98bfa24a98a40f74daecc4",
+    "src/services/entity-audit.service.ts": "78a8b17272a804abe637b6f8ea9c048dc9b6a7e337e8afe5e0c1185eb73c5f3a",
     "src/services/error-tracker-integrations.ts": "406d24f8af7671bf872bc617d4db2ce2dfa0eaa8d7e56ed66396c9ac333ac54a",
     "src/services/error-tracker-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/file-approval.service.ts": "71ad3b0dbb0b80c20b6c172d48b78d2a70605e7b3f07a18a5035a6f2186eaf6e",
@@ -11347,8 +11463,8 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 928,
-    "sliceBytes": 683800
+    "shellFiles": 929,
+    "sliceBytes": 685198
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

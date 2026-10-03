@@ -58,6 +58,7 @@ import type { ProjectMemberRead } from '@/lib/auth/project-member-read';
 import type { AuthContext, PermissionId } from '@/lib/auth';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { storagePathCustody } from '@/lib/storage/storage-path-custody';
+import { fileDownloadName } from '@/lib/files/file-download-name';
 
 import type { FileCustodyCaller } from './file-custody-route';
 import { fileResource, personalFileResource } from './file-ownership';
@@ -123,13 +124,6 @@ const UNAVAILABLE = { outcome: 'unavailable' } as const satisfies OwnedFileBytes
  * που ταξιδεύει με το αίτημα είναι όνομα που ο αιτών **διαλέγει** για bytes που
  * **δεν διάλεξε** — και μπαίνει αυτούσιο σε κεφαλίδα `Content-Disposition`.
  */
-function ownedFileName(data: FileBytesRecord, fileId: string): string {
-  const base = data.displayName ?? data.originalFilename ?? fileId;
-  const ext = data.ext;
-  if (ext === undefined || ext.length === 0) return base;
-  return base.toLowerCase().endsWith(`.${ext.toLowerCase()}`) ? base : `${base}.${ext}`;
-}
-
 // =============================================================================
 // Η ΑΛΥΣΙΔΑ
 // =============================================================================
@@ -222,6 +216,6 @@ async function deliverRecordBytes(data: FileBytesRecord, fileId: string): Promis
     outcome: 'bytes',
     buffer,
     contentType: data.contentType ?? 'application/octet-stream',
-    filename: ownedFileName(data, fileId),
+    filename: fileDownloadName(data, fileId),
   };
 }

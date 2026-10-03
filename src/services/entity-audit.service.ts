@@ -25,7 +25,9 @@ import type {
   AuditEntityType,
   AuditAction,
   AuditFieldChange,
+  EntityAuditEntry,
 } from '@/types/audit-trail';
+import { entityAuditEntriesFromData } from '@/lib/audit/audit-entry-from-document';
 import {
   diffTrackedFields,
   type TrackedFieldDef,
@@ -307,6 +309,44 @@ export class EntityAuditService {
     );
 
     return resolved;
+  }
+
+  /**
+   * ADR-901 Φ4 — οι νεότερες εγγραφές **μιας** οντότητας στο εταιρικό βιβλίο, για αναγνώστες server που
+   * **έχουν ήδη κρίνει** την πρόσβαση (π.χ. ο επαγγελματίας μέσω της συμμετοχής του). Ζει εδώ ώστε το
+   * `entity_audit_trail` να ερωτάται **μόνο** από το SSoT του. Ο καλών **ποτέ** δεν επιστρέφει ωμές εγγραφές
+   * στο σύρμα, αλλά προβολή.
+   *
+   * @returns `null` = «δεν μπόρεσα να ρωτήσω» (ποτέ μεταμφιεσμένο σε «κανένα γεγονός»).
+   */
+  static async readCompanyEntityEntries(params: {
+    readonly companyId: string;
+    readonly entityType: AuditEntityType;
+    readonly entityId: string;
+    readonly limit: number;
+  }): Promise<EntityAuditEntry[] | null> {
+    try {
+      const db = getAdminFirestore();
+      if (!db) return null;
+      // Στατική συλλογή (το εταιρικό διαμέρισμα, `AUDIT_LEDGER_COLLECTION.company`), ώστε το CHECK 3.91 να
+      // **αποδεικνύει** τον δείκτη `(entityType, entityId, companyId, timestamp)` αντί να τον αφήνει μη αναλύσιμο.
+      const snapshot = await db
+        .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
+        .where('entityType', '==', params.entityType)
+        .where('entityId', '==', params.entityId)
+        .where('companyId', '==', params.companyId)
+        .orderBy('timestamp', 'desc')
+        .limit(params.limit)
+        .get();
+      return entityAuditEntriesFromData(snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() })));
+    } catch (err) {
+      logger.error('Failed to read entity audit entries', {
+        entityType: params.entityType,
+        entityId: params.entityId,
+        error: getErrorMessage(err),
+      });
+      return null;
+    }
   }
 
   /**

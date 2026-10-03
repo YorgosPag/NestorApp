@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { FileText, MoreHorizontal } from 'lucide-react';
+import { Download, Eye, FileText, MoreHorizontal } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,16 +22,21 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
-import type { ChecklistRow } from '@/types/conveyance-case';
+import type { CaseFileMode } from '@/lib/conveyance/case-activity';
+import type { ChecklistRow, EvidenceFile } from '@/types/conveyance-case';
 import { STATUS_PRESENTATION } from './conveyance-presentation';
 
 export type RowDialogMode = 'accept' | 'reject' | 'not_applicable';
+
+/** ADR-901 Φ4 — άνοιγμα/λήψη τεκμηρίου. Απόν ⇒ η γραμμή δείχνει μόνο ονόματα (η όψη του οικοδεσπότη). */
+export type OpenEvidenceFile = (file: EvidenceFile, mode: CaseFileMode) => void;
 
 interface ConveyanceChecklistRowProps {
   readonly row: ChecklistRow;
   readonly canEdit: boolean;
   readonly onOpenDialog: (row: ChecklistRow, mode: RowDialogMode) => void;
   readonly onClear: (row: ChecklistRow) => void;
+  readonly onOpenFile?: OpenEvidenceFile;
 }
 
 function RowValidity({ row }: { readonly row: ChecklistRow }) {
@@ -68,7 +73,22 @@ function RowNote({ row }: { readonly row: ChecklistRow }) {
   return null;
 }
 
-function RowFiles({ row }: { readonly row: ChecklistRow }) {
+function FileButtons({ file, onOpenFile }: { readonly file: EvidenceFile; readonly onOpenFile: OpenEvidenceFile }) {
+  const { t } = useTranslation(['conveyance']);
+  const iconSizes = useIconSizes();
+  return (
+    <>
+      <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('files.view', { name: file.displayName })} onClick={() => onOpenFile(file, 'view')}>
+        <Eye className={iconSizes.xs} aria-hidden="true" />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('files.download', { name: file.displayName })} onClick={() => onOpenFile(file, 'download')}>
+        <Download className={iconSizes.xs} aria-hidden="true" />
+      </Button>
+    </>
+  );
+}
+
+function RowFiles({ row, onOpenFile }: { readonly row: ChecklistRow; readonly onOpenFile?: OpenEvidenceFile }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   if (row.files.length === 0) return null;
@@ -78,13 +98,14 @@ function RowFiles({ row }: { readonly row: ChecklistRow }) {
         <li key={`${file.fileId}-${file.level}`} className={cn('flex items-center gap-1 text-xs', colors.text.secondary)}>
           <FileText className={cn(iconSizes.xs, 'shrink-0')} aria-hidden="true" />
           <span className="truncate">{file.displayName}</span>
+          {onOpenFile && <FileButtons file={file} onOpenFile={onOpenFile} />}
         </li>
       ))}
     </ul>
   );
 }
 
-function RowActions({ row, onOpenDialog, onClear }: Omit<ConveyanceChecklistRowProps, 'canEdit'>) {
+function RowActions({ row, onOpenDialog, onClear }: Omit<ConveyanceChecklistRowProps, 'canEdit' | 'onOpenFile'>) {
   const { t } = useTranslation(['conveyance']);
   const iconSizes = useIconSizes();
   const label = t(row.item.labelKey);
@@ -110,7 +131,7 @@ function RowActions({ row, onOpenDialog, onClear }: Omit<ConveyanceChecklistRowP
   );
 }
 
-export function ConveyanceChecklistRow({ row, canEdit, onOpenDialog, onClear }: ConveyanceChecklistRowProps) {
+export function ConveyanceChecklistRow({ row, canEdit, onOpenDialog, onClear, onOpenFile }: ConveyanceChecklistRowProps) {
   const { t } = useTranslation(['conveyance']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -127,7 +148,7 @@ export function ConveyanceChecklistRow({ row, canEdit, onOpenDialog, onClear }: 
           </Badge>
         </header>
         <p className={cn('text-xs', colors.text.muted)}>{t('row.provider', { provider: t(`providers.${row.provider}`) })}</p>
-        <RowFiles row={row} />
+        <RowFiles row={row} onOpenFile={onOpenFile} />
         <RowValidity row={row} />
         <RowNote row={row} />
       </section>

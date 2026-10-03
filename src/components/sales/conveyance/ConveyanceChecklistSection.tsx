@@ -14,7 +14,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { ChecklistSection } from '@/config/conveyance-checklist/types';
 import type { ChecklistRow } from '@/types/conveyance-case';
-import { ConveyanceChecklistRow, type RowDialogMode } from './ConveyanceChecklistRow';
+import { ConveyanceChecklistRow, type OpenEvidenceFile, type RowDialogMode } from './ConveyanceChecklistRow';
 import { STATUS_ORDER } from './conveyance-presentation';
 
 interface ConveyanceChecklistSectionProps {
@@ -23,13 +23,15 @@ interface ConveyanceChecklistSectionProps {
   readonly canEdit: boolean;
   readonly onOpenDialog: (row: ChecklistRow, mode: RowDialogMode) => void;
   readonly onClear: (row: ChecklistRow) => void;
+  /** ADR-901 Φ4 — ο επαγγελματίας ανοίγει/κατεβάζει τεκμήρια· ο οικοδεσπότης δεν το περνά. */
+  readonly onOpenFile?: OpenEvidenceFile;
 }
 
 function byPriority(a: ChecklistRow, b: ChecklistRow): number {
   return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
 }
 
-export function ConveyanceChecklistSection({ section, rows, canEdit, onOpenDialog, onClear }: ConveyanceChecklistSectionProps) {
+export function ConveyanceChecklistSection({ section, rows, canEdit, onOpenDialog, onClear, onOpenFile }: ConveyanceChecklistSectionProps) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   const [active, dormant] = useMemo(() => {
@@ -40,7 +42,7 @@ export function ConveyanceChecklistSection({ section, rows, canEdit, onOpenDialo
   if (rows.length === 0) return null;
   const renderRow = (row: ChecklistRow) => (
     <li key={row.itemId}>
-      <ConveyanceChecklistRow row={row} canEdit={canEdit} onOpenDialog={onOpenDialog} onClear={onClear} />
+      <ConveyanceChecklistRow row={row} canEdit={canEdit} onOpenDialog={onOpenDialog} onClear={onClear} onOpenFile={onOpenFile} />
     </li>
   );
 
