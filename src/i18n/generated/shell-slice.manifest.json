@@ -3,6 +3,7 @@
   "artifacts": {
     "src/i18n/generated/routes/area__id.el.json": "b2703db396fe6d2130995cb87b2105abcc2837fe84af8628649b5d95f9a94dfe",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
+    "src/i18n/generated/routes/case-invite__token.el.json": "db91072b146e6402625df224aa38cf9534622f13d2e9582b7ae89ed83dfb9758",
     "src/i18n/generated/routes/cases.el.json": "8cf66b987456b870389058bdf35883b3892639e24457c824ec24f736847111fd",
     "src/i18n/generated/routes/cases__engagementId.el.json": "e8a20e9c26f628a5a732e00243750f6bba2971839b8ca10c4d252621f279649c",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
@@ -11,13 +12,13 @@
     "src/i18n/generated/routes/data-deletion__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/demands.el.json": "3c41547e2fe76dd07a2d8df26d28a52173cfbf1092d0bc182c78c567bd2dc8a7",
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
-    "src/i18n/generated/routes/demands__new.el.json": "811f0e7be5a026573a724989ba6147f1e6b6e8615405945c64ecc750236ee0e1",
+    "src/i18n/generated/routes/demands__new.el.json": "96d40df02c9fa82ed40e0ec6f27e018cc11aadcbb1fc7368ab1b0e091e9fd7a7",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "dabeb77e988e4922f1b1298d176c508bd89bb759643360782ef261e3f3f2548a",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/interest-check.el.json": "9d26be7eb5cb7d188169e06c99976235f03707da3842f626bfe01e4c3ddf8f06",
+    "src/i18n/generated/routes/interest-check.el.json": "776ed6e3e2daab1b6701201fcbc130eccd4446c339c0407d55724025d1678dad",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "1a9106d455de9ba199b2a7479f5882a4b134295baf069e0a92f75a1a98906675",
@@ -29,17 +30,17 @@
     "src/i18n/generated/routes/n__notificationId.el.json": "54c30325c22b7621417b7afaddaee9ae92de5fc24ee61a784ca6ecfc66d74da5",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "792c7a73cab4b80bfea4b5c7cf33872eae5d82469359d19c423a5a615153533c",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "4dc3664a2345ff04af6724e2c707c8331a188c04299d44468946225700290e35",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
-    "src/i18n/generated/routes/offers.el.json": "dc5b7359e0ec0949002f01e1bcda23cd48f5d182a0bc57a114ab40166815421f",
+    "src/i18n/generated/routes/offers.el.json": "fff5726a46fa8f18c2420b20f2913b889a8a9aae332f36c10f0ba8ae27857847",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
-    "src/i18n/generated/routes/offers__new.el.json": "a7455227b431ceef5abcf2c912f19932f8ca7c36c1d8fe4339d9e83c14a54f24",
-    "src/i18n/generated/routes/offers__offerId.el.json": "31086bd3d69bb0cc9e97f91289a9c1595eb902ac870d0e7b888632697e0dd930",
+    "src/i18n/generated/routes/offers__new.el.json": "aa0b568ec96d2aabfb3a2a7268f8ea327ebcf93d020753305aa982999afd8132",
+    "src/i18n/generated/routes/offers__offerId.el.json": "0cd1c596556f7536415248449503a72ca0c67fbb9f9eec28e87b6252679c8b96",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "321843e391008307091be65386dba76ef657429a6a5ed7ada25adf6ecd170066",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -64,7 +65,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "7f7fa93526048ab3e1c89b541b3b5abcfce498734d0ea87a7ecd36335eb2c6da",
+    "src/i18n/generated/shell-slice.el.json": "6fc3b7e9a9af6fd7e316399a141ef9a8f82378d8f622af0739e59cfce0f81b14",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -110,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d3e5a4f23f372519c3980d6c455bf37df0462b0823d201db76409d56ec6836c4",
+  "inputsSha256": "1acc218ac226fb687d1155e2b6428a59c0b2eccc84eba38156748f43fbacfcc8",
   "languages": [
     "el"
   ],
@@ -161,6 +162,7 @@
     "src/app/(app)/terms/versions/page.tsx": "29391027cb456d01834f35cd8bdf0ad4f540f56e64610c76c843548a88eee648",
     "src/app/(app)/test-harness/listing-shapes/page.tsx": "56018da3ec9a0d90603b5e8d69ec2db5d803de4914d194dec9f8ae9d97cf99d5",
     "src/app/(auth)/card-email/[token]/page.tsx": "3dabac1763234648744cb59da386b8442d092c6f33cec32be728e53eff9bcb38",
+    "src/app/(auth)/case-invite/[token]/page.tsx": "7c8e9a22fcece0fe889c9804be530d1b357b617a795ac859c692e90c4a9836c1",
     "src/app/(auth)/contact/[token]/page.tsx": "d8451cb742c56023b7d16edc4ec8038c1fe644b837bff90f71c3aa7e43f081e7",
     "src/app/(auth)/email/preferences/[token]/page.tsx": "4aa9741510e06edf89f80807f5c76412f8fc243840e693b74d04aaf96abca0bb",
     "src/app/(auth)/hours-question/[token]/page.tsx": "ec2dbc48a477587f69a557a528db8f88a5c96c7fcbefb7398654f152d52e5ac9",
@@ -253,6 +255,9 @@
     "src/components/area-market/useAreaChildMap.ts": "c2c7477d6965ba139df6d8a0fc6bd1cedeb2dc8b9273afc05af9da5a4b5e3c30",
     "src/components/area-market/value-zone-paint.ts": "700a3cfb911064b738f1cc8fb0dc8e66d0a88c851e53de8ab7ed26a79549f880",
     "src/components/building-management/tabs/PlaceholderTab.tsx": "5ebf98188f47e4a6ee0c3360df6cad2ae47cb1ee12cf89e5e65115455b35f2e6",
+    "src/components/case-invite/CaseInviteContent.tsx": "cddffac5b98956a991e56164809a12aa5050ac88a6847d5f5de25a2bac67c174",
+    "src/components/case-invite/CredentialDeclarationForm.tsx": "f1021e6458c8b4c1cf8355b58b90e358075e01817740e93678b3985c3605f462",
+    "src/components/case-invite/case-invite-labels.ts": "2f20713a357c9424f447a090924d46112b35beff51eba9a0fa40812dc7058b2c",
     "src/components/completion/completion-bucket-classes.ts": "d046fc132098ac220f1084138d0b1f5ef9b1ce6f3f53070974a0b838ca3749e1",
     "src/components/contact/FirstContactAction.tsx": "78c9f06be3c3c5c1d85dbb3a47f69e46a96bcbe011c7e01f68cea70834eb09ba",
     "src/components/contact/FirstContactOutcomeNotice.tsx": "4a74c8b1f3bb40da4b4509ef99c16618b34bbe6a24a2d088964cf354db902282",
@@ -345,7 +350,7 @@
     "src/components/listing-detail/ListingStay.tsx": "0e23abb8292656f72546355dd7c6f0a3b474692e8184297607d1dac2c68d8aa0",
     "src/components/listing-detail/ListingStayPets.tsx": "8cba4c4651df6875b5dec93904fe98c9293df0b977669365326b29ca6313b836",
     "src/components/listing-detail/ListingTour.tsx": "0fe4cc12eced5b33843741e444166b1fd5632f9bdd619c66be213648c50360f8",
-    "src/components/listing-detail/listing-attribute-value.ts": "3c6ee56a212e705737d6f2ce65f546247ce79275ab915f148f52ae479efc55c2",
+    "src/components/listing-detail/listing-attribute-value.ts": "14309ad3fb1014249142673e64eeb9b1bad11a5f3bcb1bc6f1091f1ef0695ce2",
     "src/components/listing-detail/listing-model-stage-metrics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/listing-detail/media/ListingFloorplanPageContent.tsx": "bb734bd0d15ce4446a9affe999aa73f66f6d4633ec11e07e498d8b9c5195c7c5",
     "src/components/listing-detail/media/ListingFloorplanSpotsFigure.tsx": "d4fa183eb6f1600446a4e2d763266b78d565b56a1359a8e04029a623279943ab",
@@ -475,7 +480,7 @@
     "src/components/owner-property/OwnerListingCompletion.tsx": "6f9e7abe68700d726c3e1186ce7a8491d2d36528e1ee16f56d26dbf26b955ca7",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
     "src/components/owner-property/OwnerPortfolio.tsx": "d001e163f9951e324e787ced253000befe423c2290aee8651d87a54ddc80bc60",
-    "src/components/owner-property/OwnerPropertyCard.tsx": "dfb45591668dd53e0fdb292347ee4abd963e199b774c15576c2951edd2a2769f",
+    "src/components/owner-property/OwnerPropertyCard.tsx": "f9f9f13dec5731ffa9ee9cdc5d32a53323e89966235e7e8872715543f3d19aa9",
     "src/components/owner-property/OwnerPropertyCardCover.tsx": "5bb5942d4c818f4064e2aa1f61a19a60d14b8bbb1454d0cd4e445f56438655cb",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "ea3369a217c00bbc9bccf658b4ae656e2610b99a030a9fed4be471742b0353f3",
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "a8ddacdcf9b786e2dd12c74cd5f2d3f6a7117b492dc08183a667fb6cadd4e504",
@@ -486,7 +491,7 @@
     "src/components/owner-property/form/OwnerPropertyDossierField.tsx": "f5950780f1d7b2888432c58a5d85cce4625ba9522938996a21a3df0515b6d4e1",
     "src/components/owner-property/form/OwnerPropertyDossierItem.tsx": "192381cdab498427ce458d683d6f32eb38ee00bfdd5a65a094c86fa156d6b6e1",
     "src/components/owner-property/form/OwnerPropertyDossierPanel.tsx": "aa1d222e67800458dee84d340d5d6f0767109f0b5c277c74a746074ece649322",
-    "src/components/owner-property/form/OwnerPropertyFields.tsx": "dc2c8980cd9bb58131953a804559ef65ae80bd9edf4e67db7487abeecf889cd5",
+    "src/components/owner-property/form/OwnerPropertyFields.tsx": "98bd0256bb85cf02ce5bc0dd99ab85297fccb643878c7d24a170ffce5b183fa6",
     "src/components/owner-property/form/OwnerPropertyMediaField.tsx": "13b9b8617fdcc909d9d78770de93e7685fcfb0df266e4b48341c248383b8fc6d",
     "src/components/owner-property/form/OwnerPropertyMediaItem.tsx": "92aa744d0414f09eb40b83194f36a9a8395bc9fca17b6fc8d9ee1c48181116fc",
     "src/components/owner-property/form/OwnerPropertyPlaceField.tsx": "6fa00cc4a681bd2cdc3f8295e2490713e0be2b0c154c9bc2cfa505b0ae78953a",
@@ -517,7 +522,7 @@
     "src/components/property-dossier/usePropertyDossierLifecycle.ts": "ae58e9ec9a40c2e60ebf3a54da403d8ab377e4e5a66508c8321e57b6c8ffac50",
     "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "82b7ca9aaada8860d96607a09ab68cfce63785c058e8e5159c03bbb498d61f0b",
     "src/components/sales/conveyance/ConveyanceChecklistSection.tsx": "89cb2f7e0539e79b4d075f09e94285ddbad7a4e495ec8f6845dd100b1ba5914f",
-    "src/components/sales/conveyance/conveyance-presentation.ts": "726a4e91d522fd546afc044b7e6682e1dadee97f703e7ceed38e21d550737f05",
+    "src/components/sales/conveyance/conveyance-presentation.ts": "0b6354c5e8c13f02c8ef6e88b86cd84bc59238de2917152c52f823c6c3612e00",
     "src/components/search-results/AdminBoundaryLayer.tsx": "3b1a1d1a12cf92dbedf85e07577e3c1becf9d6efd41fd35f6b166a9a67d12058",
     "src/components/search-results/AdminPlaceMarker.tsx": "2e4b69635006d280fa33a9f4f2422412c6121e02e41420105304027ada134968",
     "src/components/search-results/AreaLedgerBar.tsx": "4ac67dee7d9e49bcac2d8195e37032fc7f9bf6e54b89664236c21cb77567c875",
@@ -594,6 +599,7 @@
     "src/components/shared/files/hooks/useStableFileCustody.ts": "a38e852873e807ae8134ef35febe267cf18d5b1207d81ba0cd717e5928ceef07",
     "src/components/shared/files/utils/generate-upload-thumbnail.ts": "078b06aad772f6babc3891ac31274beb57ebab8af3bec763b40fed5c50622b80",
     "src/components/shared/files/utils/upload-scope.ts": "d6a1ac01db6493a964bba5d6a88f546847d027c5fc3b5206fed72cb7c6310054",
+    "src/components/shared/forms/DeclaredFloorSelectField.tsx": "7a208cb95dd890cf581777390ef1edd509020088e4d5e88b767730041938de4c",
     "src/components/shared/forms/DraftFormShell.tsx": "15c0c80571f28627faa004a7e7637fd28b23c5bc076f0a50b51b8a841dba2f28",
     "src/components/shared/forms/FormIssues.tsx": "62135e64a814a9555343f00145599a2bf0a99de139ac1ae321f84af5fba35561",
     "src/components/shared/forms/form-field-primitives.tsx": "f191ab53625e31acda08c13bc070aae8abc0dbfc249009e9373200fa45ed350e",
@@ -700,8 +706,14 @@
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
     "src/config/audit-tracked-fields.ts": "a6e38e9cd81fdde8ceb26dd960c840e46bc805447e9637f50b6821a15aefb41d",
+    "src/config/conveyance-checklist/catalog.ts": "03dcd635ab30d203635823f663351506232295848b14630686deae8316d549e7",
+    "src/config/conveyance-checklist/items-parties.ts": "046fadc07a8a862d862cfa5168371984a2e9cc9118ab5e30bd83cedca2acaf34",
+    "src/config/conveyance-checklist/items-property.ts": "9d384edafac1e4a1262ca28c2c1b6df1640d21ffc2d5109bf7f646c5c78148f1",
+    "src/config/conveyance-checklist/items-transaction.ts": "fe0b551aa8f7f889760606dfd23971dec565b87044f08e4b1cd538eccd43540c",
     "src/config/conveyance-checklist/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/config/conveyance-checklist/visibility.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",
+    "src/config/engagement-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/environment-contract.ts": "a1bf913f6ecb5089efd233cdc0f1e1f6df40121a19c0217a747763566d5e38c6",
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
     "src/config/holiday-question-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -825,9 +837,16 @@
     "src/lib/auth/claims-mirror-fields.ts": "26d42fce23921970419d501a19d49ece4b94eade9495bf5d735449643c584fe3",
     "src/lib/auth/claims-seat.ts": "06bb65f5d3a2e60025c426eae720c10dfa6e4f8b53d5122b8e71e63e81e1831e",
     "src/lib/auth/claims-write-lease.ts": "200bb685ccbe6bc4891336bbf9295576dd8d1f0455f38014598b492abb5a1867",
+    "src/lib/auth/container-access.ts": "3b594642ee9f8252e7e01289c954c02b5fc3d2017841f560104dcfbf9bec70b7",
+    "src/lib/auth/engagement-judge.ts": "d7ca2f5565ceabb099e331eb0afc98b7aaeebc36c0da84681ae6a09b32aaf0d7",
+    "src/lib/auth/engagement-read.ts": "365774161a07c5099a4900830cb089c4150632355e603e2e8d6b969434778ef7",
+    "src/lib/auth/engagement-ref.ts": "780d9cdfb53ecbafcdb83d40d4c9810c9cc1425fcaac49bb0bde04524597b469",
+    "src/lib/auth/engagement-schema.ts": "fb24fd34671ea7fa5288bbedbbe3d0fd0c8352c3069c143258d5b4a36588524f",
+    "src/lib/auth/engagement-write.ts": "d8edac4fa8ef657bbd7efd88794dbe4687b331751e779660879099b201e464fa",
     "src/lib/auth/identity-materialisation.ts": "4662a06e6b480936dbb054045fb9f8fed9274e81517a8a4740d4aa457df7d50d",
     "src/lib/auth/scoped-grant.ts": "614c2dcf29dbd2769121b0eb84ba13d64cee9ea7c92f49d6cdbd8942e263505d",
     "src/lib/auth/set-claims-with-mirror.ts": "286e4b426dd10ab4a126d96ef2b18d887e167654a67acea6e31ba030aef1380a",
+    "src/lib/auth/tenant-scope.ts": "7304a6fc100e3f825365ae08d2611a5676e3d54d99fbeea63bb0b56dcc7f86e9",
     "src/lib/browser/document-navigation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/cache/bounded-lru.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/calendar/holiday-question.ts": "010e08d4d2d577529653efb949c0aee25c95b3a7a05e1f9a51d73d48c1adff8a",
@@ -840,7 +859,16 @@
     "src/lib/contact/first-contact-channel.ts": "bbe169e74e9e4e267bf00f58314196aab3a0904ddea6a10157a98835902b0516",
     "src/lib/contact/first-contact-form-values.ts": "a3137753e071b9b2b41729847c29a4b04f56c4f739cf57b71502b20dba3e862a",
     "src/lib/contact/first-contact-target-href.ts": "be395a4e52bcc15e90e16827c9b0072f602f45185a090157169cf4612ab245c1",
+    "src/lib/contacts/legal-professional-credentials.ts": "2cf2ef5c109e30d2008e74ea97d8003bcc4d693f8a1a064a9e87a31a84b9f05b",
     "src/lib/contacts/primary-email.ts": "be062827144f613c7f73525068f4ec1de9bd81ff36b425dc69bc6b538c3a970c",
+    "src/lib/conveyance/case-checklist.ts": "c1984a9a06e5de85084fd410c8ca85f1b0fd1eadc8f620b3ca34c0f0c028be81",
+    "src/lib/conveyance/case-state.ts": "2a07d3501bbedcc7f0a8494496b1f27d4a13b8f8ba7f307a6cad57067ba68970",
+    "src/lib/conveyance/conveyance-calendar.ts": "e4b859b24dde8c41f9ce88dcfd9221f325d66a5e7eb96131ea3ecea35916a4c8",
+    "src/lib/conveyance/conveyance-case-schema.ts": "4f89e7d9488883fa44acbd7a769be16c55252cccc24608dc7744a6b9e73a5ee8",
+    "src/lib/conveyance/derive-checklist.ts": "5df7e4eec3e32413253ee8203e549af040e2d83d4b88016df8c5761cddd075a0",
+    "src/lib/conveyance/derive-facts.ts": "59708ef5583b1425b431ee9d19a854b83c0c89ec6cfacc9c5978f955f4df7d35",
+    "src/lib/conveyance/engagement-invitation-schema.ts": "d3d75eb089e9a84ea81650920342767835bc86b90d460dea0e554089d45eabcc",
+    "src/lib/conveyance/evidence-match.ts": "7adcd3dc6705ca55b508f956e8be1c3d1bcd1eba0f8dd630ed2b5e8c10017281",
     "src/lib/criteria/criterion-option-counts.ts": "df08b34cd0375fa66e1519fc81c51f0fe380f70ea2720f3a4a6f3fcbaa7d93b8",
     "src/lib/criteria/listing-criterion-labels.ts": "7d0d183ca8bdabed599d16c9c8b2c252d0052703b4535e9ee74bc303b9fbffeb",
     "src/lib/data/json-shape.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -879,6 +907,8 @@
     "src/lib/exports/trigger-export-download.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
     "src/lib/files/file-companion-objects.ts": "5c4e6c758758096373e73ae6351ffacaf5ee8ab001f88407c18b9b7249eb5dca",
     "src/lib/firestore/firestore-already-exists.ts": "215839de04a2ec2fda22f6412e002ffbc295fa938a795844c48c3bd8b3ea850d",
+    "src/lib/firestore/tenant-scoped-query.ts": "d1bf43717a8aacd8e323d065ff7322b46ac8bf3afc72e851597ecb57812531a1",
+    "src/lib/floor/declared-floor-options.ts": "064b959e14f0d54c206ae3ee08cca071bebffa14d47a703bbb3026288235340c",
     "src/lib/floor/floor-label-bundle.ts": "7b76d3b00a3dde8136b4567eb3744fc6eb67f62ca79c19d4a57fd515f1fdeb17",
     "src/lib/forms/draft-form-labels.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/forms/draft-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -1099,6 +1129,9 @@
     "src/server/comms/email-provider-chain.ts": "a6940b3c20970ef349fb93d3a62f3110c4ef03232829a4b23129ab40d0aca674",
     "src/server/comms/email-texts.ts": "13d0118d8622d4a1b60e25c2abc3fa64fd26f6dafc375548eda46e672294c414",
     "src/server/comms/orchestrator.ts": "3c544030adad04ccf05d648eab10ca6e1e637de7e0fe0ee75cc4075f9f958ff6",
+    "src/server/engagement-invitations/engagement-invitation-issue.ts": "783534a364dfab3d40b5b269e4ba596b2d27626b849025a47c8e11fbb792bdd7",
+    "src/server/engagement-invitations/engagement-invitation-preview.ts": "d3cbb51a1a5c3c59119f66e6936a979c033f57a8a4b6208d2d2d3174d90d0c59",
+    "src/server/engagement-invitations/engagement-invitation-redeem.ts": "240d3402f4b5d4438cb0253aca572882c25932923cab07e0a1b64716cd2b0243",
     "src/server/files/file-record-bucket.ts": "03da99a2a6e9cd05aa3787ad16eace260998883f4b5dff295bd4f1c8d420fddb",
     "src/server/images/raster-encoder.ts": "ac3fe755293b75a61f0ebea5432485cf9b1980e341afc7289079507e6b653381",
     "src/server/invitations/invitation-guards.ts": "af95d4e93d16ba9f9fbdd229bb20330afc0746e3097f369bea227f0c787eba20",
@@ -1157,7 +1190,13 @@
     "src/services/contact/first-contact.client.ts": "4b0503374196b86dbb160369a56e79a807a42b7d5746dc06e4f3269c0c2bdc4f",
     "src/services/contact/first-contact.service.ts": "f64ae74a6a6e50712be0e2cadefe2042cc4643832939c32d03762b4a74467406",
     "src/services/contacts-query.service.ts": "e205fb92132590d84bbd946dfbd3c3d628cd46a6efd31cf52b35a3b372e99a0a",
-    "src/services/conveyance/conveyance-engagement-gateway.ts": "6d767fcfc0318b93baf7214b769a42ef3138298b95ef406b50e30acef44953b4",
+    "src/services/conveyance/conveyance-engagement-access.service.ts": "85ef07e6d6ddba5376ff3f2593c9cbfebce63ed5cd2e9c20364251a87e698e5e",
+    "src/services/conveyance/conveyance-engagement-gateway.ts": "4d9cf2a130d269b664a63b858e50c3e4683a166614a326e1cce3aad266d107f0",
+    "src/services/conveyance/conveyance-engagement-notifier.ts": "14be5cc193a11af5782b72d025d8e74f9f05189b9df33d8cd831526a93d77b67",
+    "src/services/conveyance/conveyance-engagement-support.ts": "3d4803583cd344552a80cdbeaa3a2f71d29e209da1bdac653e183d0966bcb2ca",
+    "src/services/conveyance/conveyance-evidence.server.ts": "4d01eb509fd27aefb6aae2724201bd3c9971bf4ee4d4d9c6c172609f069ce380",
+    "src/services/conveyance/conveyance-professional.server.ts": "433b93b5a36dd7f977d095c7a8a996425dd01a6de98fb890134342c908c3f58b",
+    "src/services/conveyance/conveyance-subject.server.ts": "3da9550b49b4c9d59eed0935ceb2250ea04fc2ce4d1c63d638782c6272b0f42b",
     "src/services/demand/property-demand.service.ts": "63e34bcddc5a889c50d303652f0a8f078db6d77b7e5a5e2dc680a5e20581df73",
     "src/services/email-templates/account-secured.ts": "8d721dc51ba94655eedac2243a82bc56bc31075dc10e6a926e65ddc38f2d8a29",
     "src/services/email-templates/base-email-template.ts": "3e519656e2542a33ac6d0b30b9054859bbb6ce8c99e716727f2f8f15b0f7ffbb",
@@ -1622,6 +1661,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "market-contracts": {
           "keys": [
             "card.median",
@@ -1705,8 +1761,6 @@
             "listing.authorship.agencyAnonymous",
             "listing.authorship.ownerDeclared",
             "listing.bedrooms",
-            "listing.floor",
-            "listing.groundFloor",
             "listing.priceMissing.nightlyRateMissing",
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
@@ -1738,6 +1792,85 @@
           "prefixes": [
             "mandate.cardEmail.reason"
           ],
+          "whole": false
+        }
+      }
+    },
+    "case-invite__token": {
+      "page": "src/app/(auth)/case-invite/[token]/page.tsx",
+      "wants": {
+        "auth": {
+          "keys": [
+            "workspaceInvite.otherAccount",
+            "workspaceInvite.switchAccount",
+            "workspaceInvite.switchingAccount"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "engagement.invite.accept",
+            "engagement.invite.accepted",
+            "engagement.invite.acceptedBody",
+            "engagement.invite.chapterLabel.bar-association",
+            "engagement.invite.chapterLabel.notary-association",
+            "engagement.invite.credentialHint",
+            "engagement.invite.credentialTitle",
+            "engagement.invite.decline",
+            "engagement.invite.declined",
+            "engagement.invite.declinedBody",
+            "engagement.invite.find",
+            "engagement.invite.findLabel",
+            "engagement.invite.home",
+            "engagement.invite.identityDeclared",
+            "engagement.invite.intro",
+            "engagement.invite.linkExpires",
+            "engagement.invite.numberLabel.bar-association",
+            "engagement.invite.numberLabel.notary-association",
+            "engagement.invite.numberRequired",
+            "engagement.invite.openCase",
+            "engagement.invite.refusals.already-used",
+            "engagement.invite.refusals.case-closed",
+            "engagement.invite.refusals.expired",
+            "engagement.invite.refusals.invitation-unknown",
+            "engagement.invite.refusals.link-foreign",
+            "engagement.invite.refusals.link-invalid",
+            "engagement.invite.refusals.revoked",
+            "engagement.invite.refusals.role-conflict",
+            "engagement.invite.refusals.slot-occupied",
+            "engagement.invite.refusals.wrong-recipient",
+            "engagement.invite.retry",
+            "engagement.invite.roleLabel",
+            "engagement.invite.scope",
+            "engagement.invite.signIn",
+            "engagement.invite.signInHint",
+            "engagement.invite.title",
+            "engagement.invite.unavailable",
+            "engagement.invite.unnamedHost",
+            "engagement.invite.unnamedProperty",
+            "engagement.roles.buyer_lawyer",
+            "engagement.roles.notary",
+            "engagement.roles.seller_lawyer"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
           "whole": false
         }
       }
@@ -3712,6 +3845,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "geo-canvas": {
           "keys": [
             "accuracy.controls.hideIndicators",
@@ -3946,8 +4096,6 @@
             "listing.authorship.agencyAnonymous",
             "listing.authorship.ownerDeclared",
             "listing.bedrooms",
-            "listing.floor",
-            "listing.groundFloor",
             "listing.priceMissing.nightlyRateMissing",
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
@@ -5065,6 +5213,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -5120,8 +5285,8 @@
             "offer.form.editTitle",
             "offer.form.exchangePercentageLabel",
             "offer.form.failed",
-            "offer.form.floorHelp",
             "offer.form.floorLabel",
+            "offer.form.floorPlaceholder",
             "offer.form.identity",
             "offer.form.landAreaLabel",
             "offer.form.lead",
@@ -5149,6 +5314,9 @@
             "offer.form.titleLabel",
             "offer.form.titlePlaceholder",
             "offer.form.typeLabel",
+            "offer.form.unitNumberHelp",
+            "offer.form.unitNumberLabel",
+            "offer.form.unitNumberPlaceholder",
             "offer.formBlocker.account-required",
             "offer.formBlocker.mandate-client-unset",
             "offer.formBlocker.mandate-expiry-unset",
@@ -6211,6 +6379,7 @@
             "offer.card.noCover",
             "offer.card.noPlace",
             "offer.card.typeUnknown",
+            "offer.card.unitNumber",
             "offer.form.placeQueryPlaceholder",
             "offer.list.create",
             "offer.list.empty",
@@ -6381,6 +6550,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -6420,8 +6606,8 @@
             "offer.form.editTitle",
             "offer.form.exchangePercentageLabel",
             "offer.form.failed",
-            "offer.form.floorHelp",
             "offer.form.floorLabel",
+            "offer.form.floorPlaceholder",
             "offer.form.identity",
             "offer.form.landAreaLabel",
             "offer.form.lead",
@@ -6449,6 +6635,9 @@
             "offer.form.titleLabel",
             "offer.form.titlePlaceholder",
             "offer.form.typeLabel",
+            "offer.form.unitNumberHelp",
+            "offer.form.unitNumberLabel",
+            "offer.form.unitNumberPlaceholder",
             "offer.formBlocker.account-required",
             "offer.formBlocker.mandate-client-unset",
             "offer.formBlocker.mandate-expiry-unset",
@@ -6832,6 +7021,7 @@
             "offer.card.noCover",
             "offer.card.noPlace",
             "offer.card.typeUnknown",
+            "offer.card.unitNumber",
             "offer.detail.absent",
             "offer.detail.back",
             "offer.detail.edit",
@@ -6850,8 +7040,8 @@
             "offer.form.editTitle",
             "offer.form.exchangePercentageLabel",
             "offer.form.failed",
-            "offer.form.floorHelp",
             "offer.form.floorLabel",
+            "offer.form.floorPlaceholder",
             "offer.form.identity",
             "offer.form.landAreaLabel",
             "offer.form.lead",
@@ -6879,6 +7069,9 @@
             "offer.form.titleLabel",
             "offer.form.titlePlaceholder",
             "offer.form.typeLabel",
+            "offer.form.unitNumberHelp",
+            "offer.form.unitNumberLabel",
+            "offer.form.unitNumberPlaceholder",
             "offer.formBlocker.account-required",
             "offer.formBlocker.mandate-client-unset",
             "offer.formBlocker.mandate-expiry-unset",
@@ -8182,6 +8375,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "contact.first.cta",
@@ -8305,8 +8515,6 @@
             "listing.authorship.agencyAnonymous",
             "listing.authorship.ownerDeclared",
             "listing.bedrooms",
-            "listing.floor",
-            "listing.groundFloor",
             "listing.priceMissing.nightlyRateMissing",
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
@@ -8892,6 +9100,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "demand.space.signInNeeded",
@@ -8918,8 +9143,6 @@
             "listing.authorship.agencyAnonymous",
             "listing.authorship.ownerDeclared",
             "listing.bedrooms",
-            "listing.floor",
-            "listing.groundFloor",
             "listing.priceMissing.nightlyRateMissing",
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
@@ -9025,6 +9248,23 @@
         "common-validation": {
           "keys": [
             "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
           ],
           "prefixes": [],
           "whole": false
@@ -9257,8 +9497,6 @@
             "listing.authorship.agencyAnonymous",
             "listing.authorship.ownerDeclared",
             "listing.bedrooms",
-            "listing.floor",
-            "listing.groundFloor",
             "listing.priceMissing.nightlyRateMissing",
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
@@ -9405,6 +9643,23 @@
           "prefixes": [],
           "whole": false
         },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "demand.door.hint",
@@ -9495,8 +9750,6 @@
             "listing.authorship.agencyAnonymous",
             "listing.authorship.ownerDeclared",
             "listing.bedrooms",
-            "listing.floor",
-            "listing.groundFloor",
             "listing.priceMissing.nightlyRateMissing",
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
@@ -10191,7 +10444,7 @@
     "src/components/public-site/PublicSiteHeader.tsx": "be4a67c5071e00c3f9444bad6713391642ae10e252566bbd289b17487525eaed",
     "src/components/public-site/PublicSiteMenu.tsx": "0db17ce982f15c246633026e8f6c10ce687612f752d6b8fb484f398f6deb27f8",
     "src/components/public-site/public-site-nav.ts": "10e834fd1f746bb3bba070aeb43ac19a364c527a3f1353304eb23813d1eefb01",
-    "src/components/search-results/ListingCard.tsx": "3c6d55e4a695f79e945261119520addee203bb755b3748bca251257bfdcf47dc",
+    "src/components/search-results/ListingCard.tsx": "3f3789b4a9dbaf94bfd70bfa1d382ce63a54fe2fe6773e0b38711c9e1abf9d69",
     "src/components/search-results/ListingCardGallery.tsx": "c6ed739855a5f8ccbc49ac510e0566b2b3a7137617d7f3ee7eb4e0cec6a3a152",
     "src/components/search-results/ListingCardNoPhotoCover.tsx": "081228bb20cfe31ab11a73892aa8366396aa461bd0807ea1308f6d73ae5303e9",
     "src/components/search-results/PriceReductionBadge.tsx": "916da9fa8d47dcfd292c7979fb88c0d8823d0b1fc7aa3f486a52d33c34e4b6e7",
@@ -10780,7 +11033,7 @@
     "src/lib/workspace/workspace-member-ref.ts": "90b0ff1eadd998a5ed0afdae0123e47ebd9409f657e309b2d51a75151e20876b",
     "src/lib/workspace/workspace-path.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/workspace/workspace-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/workspace/workspace-scope.ts": "e93cad598152807b6afbf474e03eca842e2a25d01f6c91dc24c0517c0dad2bc0",
+    "src/lib/workspace/workspace-scope.ts": "fb07083cd8528e9fb3eb365abf81747148a53c868b80c169b24fefbbab534b6d",
     "src/providers/NotificationProvider.tsx": "095961c05c0a550ad99e58c6946dc483a693481e8f31cc8d115a0634677ed24f",
     "src/providers/PhotoPreviewProvider.tsx": "2fa3c948bfb9fc4bb3053f198a169364300a1d76938cf23a990eb898948e08b0",
     "src/providers/notification-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -11039,7 +11292,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 926,
-    "sliceBytes": 676691
+    "sliceBytes": 682033
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -16455,8 +16708,6 @@
         "listing.authorship.agencyAnonymous",
         "listing.authorship.ownerDeclared",
         "listing.bedrooms",
-        "listing.floor",
-        "listing.groundFloor",
         "listing.priceMissing.nightlyRateMissing",
         "listing.priceMissing.notListed",
         "listing.priceMissing.rentPriceMissing",

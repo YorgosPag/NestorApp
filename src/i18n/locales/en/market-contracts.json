@@ -67,7 +67,6 @@
     "windowAll": "in {from}–{to}",
     "suppressed": "{count, plural, =0 {No comparable contract} one {# comparable contract} other {# comparable contracts}}: at least {min} are needed to show similar sales.",
     "size": "{size} m²",
-    "basement": "Basement",
     "deltaSize": "area {delta}%",
     "deltaYears": "year {delta}",
     "deltaFloors": "floor {delta}"

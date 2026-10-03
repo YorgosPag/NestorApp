@@ -180,7 +180,7 @@
         "floorLegend": "Floor",
         "floorMin": "From",
         "floorMax": "To",
-        "floorHelp": "0 is the ground floor — a real value, not “any”."
+        "floorAny": "Any"
       },
       "proximity": {
         "legend": "What do you want nearby?",
@@ -425,6 +425,7 @@
       "unavailable": "We could not read demand right now. Please try again shortly.",
       "settled": "The deal for this property is complete, so we no longer count demand for it.",
       "closedReach": "Private marketing: these people cannot see your listing.",
+      "unitIncomplete": "Add your property's floor so that demand for specific floors counts too.",
       "privacy": "You never learn who they are or exactly what they want — only how many.",
       "atLeast": "At least {count, plural, one {# person is looking} other {# people are looking}} for a property like yours, here.",
       "atLeastOffered": "At least {count, plural, one {# person wants} other {# people want}} exactly this property."
@@ -611,7 +612,10 @@
       "typeLabel": "Property type",
       "areaLabel": "Area (sqm)",
       "floorLabel": "Floor",
-      "floorHelp": "0 means ground floor.",
+      "floorPlaceholder": "Select floor",
+      "unitNumberLabel": "Unit / apartment number",
+      "unitNumberPlaceholder": "e.g. A1",
+      "unitNumberHelp": "Not published; the listing shows only the floor.",
       "bedroomsLabel": "Bedrooms",
       "bedroomsHelp": "0 means studio.",
       "askingPriceLabel": "Asking price (EUR)",
@@ -766,7 +770,7 @@
       "noPlace": "No stated location",
       "typeUnknown": "Unknown type — needs correction",
       "area": "{area} sqm",
-      "floor": "Floor {floor}",
+      "unitNumber": "Unit {unit}",
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
       "coverAlt": "Photo: {title}",
       "noCover": "No published photo",
@@ -2436,8 +2440,7 @@
       "legend": "What kind of property is it?",
       "help": "Anything you leave empty is not compared.",
       "typeLabel": "Property type",
-      "areaLabel": "Area (m²)",
-      "floorLabel": "Floor (0 = ground, −1 = basement)"
+      "areaLabel": "Area (m²)"
     },
     "claim": {
       "title": "Is it yours? See whether people ask for it by name",

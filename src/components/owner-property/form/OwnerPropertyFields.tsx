@@ -40,6 +40,7 @@ import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 
 import { OwnerStayPetsField } from './OwnerStayPetsField';
+import { DeclaredFloorSelectField } from '@/components/shared/forms/DeclaredFloorSelectField';
 
 const NS = 'property-market';
 const K = `${NS}:offer`;
@@ -130,13 +131,21 @@ export function OwnerBasicsFields(): React.ReactElement {
       />
       {!isLand && (
         <>
+          {/* ADR-900 §8 #2 (2β.2) — ΜΙΑ επιλογή στάθμης (πυλωτή ≠ ισόγειο) + αριθμός μονάδας, που ΔΕΝ δημοσιεύεται (Ε2). */}
+          <DeclaredFloorSelectField<OwnerPropertyFormValues>
+            control={control}
+            name="floorLevel"
+            label={t(`${K}.form.floorLabel`)}
+            placeholder={t(`${K}.form.floorPlaceholder`)}
+          />
           <FormInputField<OwnerPropertyFormValues>
             control={control}
-            name="floor"
-            kind="number"
-            label={t(`${K}.form.floorLabel`)}
+            name="unitNumber"
+            kind="text"
+            label={t(`${K}.form.unitNumberLabel`)}
+            placeholder={t(`${K}.form.unitNumberPlaceholder`)}
           />
-          <p className="text-sm text-muted-foreground">{t(`${K}.form.floorHelp`)}</p>
+          <p className="text-sm text-muted-foreground">{t(`${K}.form.unitNumberHelp`)}</p>
           <FormInputField<OwnerPropertyFormValues>
             control={control}
             name="bedrooms"

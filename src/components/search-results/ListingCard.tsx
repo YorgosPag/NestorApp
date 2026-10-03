@@ -31,6 +31,8 @@
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { displayPriceLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { useStayTotal } from './StayTotalsContext';
@@ -202,8 +204,10 @@ export function ListingCard({
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
   const stayTotal = useStayTotal(listing.id);
+  const floorLabel = useFloorLabel();
   const images = listingGalleryImages(listing);
   const href = listingDetailHref(listing.id, filterQuery);
+  const floorText = floorLabel(hostedFloorRef(listing));
 
   return (
     /*
@@ -354,15 +358,8 @@ export function ListingCard({
             {listing.areaSqm !== null && (
               <div><dd>{t('search-results:listing.areaSqm', { value: listing.areaSqm })}</dd></div>
             )}
-            {listing.floor !== null && (
-              <div>
-                <dd>
-                  {listing.floor === 0
-                    ? t('search-results:listing.groundFloor')
-                    : t('search-results:listing.floor', { value: listing.floor })}
-                </dd>
-              </div>
-            )}
+            {/* ADR-900 §8 #2 (2β.2) — η ΜΙΑ ετικέτα ορόφου, με το είδος (πυλωτή ≠ ισόγειο). */}
+            {floorText !== '' && <div><dd>{floorText}</dd></div>}
             {listing.bedrooms !== null && (
               <div><dd>{t('search-results:listing.bedrooms', { count: listing.bedrooms })}</dd></div>
             )}

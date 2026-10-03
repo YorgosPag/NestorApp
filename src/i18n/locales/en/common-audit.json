@@ -604,6 +604,8 @@
         "type": "Property type",
         "areaSqm": "Area (m²)",
         "floor": "Floor",
+        "floorKind": "Floor type",
+        "unitNumber": "Unit number",
         "bedrooms": "Bedrooms",
         "place": {
           "label": "Address"

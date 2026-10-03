@@ -20,6 +20,7 @@ import {
   LogOut,
   type LucideIcon,
   MailQuestion,
+  Send,
   ShieldCheck,
   ShieldOff,
   Undo2,
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import type { ChecklistRowStatus } from '@/types/conveyance-case';
 import type { EngagementState } from '@/types/engagement';
+import type { InvitationState } from '@/types/invitation-core';
 
 type ConveyanceBadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'muted' | 'outline';
 
@@ -66,4 +68,17 @@ export const ENGAGEMENT_STATE_PRESENTATION: Readonly<Record<EngagementState, Sta
   revoked: { icon: ShieldOff, variant: 'error' },
   expired: { icon: Hourglass, variant: 'warning' },
   completed: { icon: LogOut, variant: 'muted' },
+};
+
+/**
+ * ADR-901 Φ3 — η **πρόσκληση με email** της θέσης (πριν υπάρξει συμμετοχή). Πέντε καταστάσεις, πέντε εικονίδια —
+ * «ακυρώθηκε» (ο οικοδεσπότης) δεν μοιάζει με «έληξε» (ο χρόνος): άλλη θεραπεία, ίδιο δόγμα με τη συμμετοχή.
+ * Κείμενο: `conveyance.json` → `engagement.invitation.states.<κατάσταση>`.
+ */
+export const INVITATION_STATE_PRESENTATION: Readonly<Record<InvitationState, StatusPresentation>> = {
+  pending: { icon: Send, variant: 'info' },
+  accepted: { icon: ShieldCheck, variant: 'success' },
+  declined: { icon: XCircle, variant: 'muted' },
+  revoked: { icon: Undo2, variant: 'muted' },
+  expired: { icon: Hourglass, variant: 'warning' },
 };

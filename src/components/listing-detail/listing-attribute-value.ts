@@ -55,6 +55,8 @@
 import type { TFunction } from 'i18next';
 
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { formatFloorRef } from '@/lib/floor/floor-label';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type { ListingAttributeKey } from '@/lib/listings/listing-disclosure';
 import {
   ATTRIBUTE_VOCABULARY,
@@ -168,14 +170,13 @@ function renderType(t: TFunction, listing: PublicListing): string {
 }
 
 /**
- * ⚠️ **`floor: 0` είναι ΙΣΟΓΕΙΟ, όχι «όροφος 0»** — η ίδια διάκριση με την κάρτα των
- * αποτελεσμάτων, και ο λόγος που το `isAttributeDeclared` δεν κάνει ποτέ έλεγχο
- * αληθοφάνειας.
+ * ⚠️ **`floor: 0` είναι ΙΣΟΓΕΙΟ — ή ΠΥΛΩΤΗ, ή ΥΠΕΡΥΨΩΜΕΝΟ**: το λέει το `floorKind` (ADR-900 §8 #2, 2β.2). Η
+ * **μία** ετικέτα ορόφου (ADR-903, `formatFloorRef`) — ως τις 2026-10-03 εδώ ζούσε χειρόγραφο «Όροφος {value}»
+ * που έλεγε «Όροφος -1» για το υπόγειο και αγνοούσε το είδος.
  */
 function renderFloor(t: TFunction, listing: PublicListing): string {
-  return listing.floor === 0
-    ? t('search-results:listing.groundFloor')
-    : t('search-results:listing.floor', { value: listing.floor });
+  const ref = hostedFloorRef(listing);
+  return ref === null ? '' : formatFloorRef(ref, t);
 }
 
 /** Πληθυντικός ICU — `0` είναι **γκαρσονιέρα**, υπαρκτή τιμή. */

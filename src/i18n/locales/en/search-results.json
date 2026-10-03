@@ -89,8 +89,6 @@
   },
   "listing": {
     "areaSqm": "{value} m²",
-    "floor": "Floor {value}",
-    "groundFloor": "Ground floor",
     "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
     "priceMissing": {
       "notListed": "Not available",

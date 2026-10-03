@@ -3893,8 +3893,6 @@
         "ownerDeclared": "Δήλωση ιδιοκτήτη"
       },
       "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}",
-      "floor": "Όροφος {value}",
-      "groundFloor": "Ισόγειο",
       "offer": {
         "exchange": "Αντιπαροχή",
         "leaseOut": "Ενοικίαση",

@@ -32,6 +32,7 @@ import dynamic from 'next/dynamic';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';
 import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
@@ -150,7 +151,9 @@ export function OwnerPropertyCard({
             ? t(`${K}.card.typeUnknown`)
             : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[property.type]}`)}
           {property.areaSqm !== null && ` · ${t(`${K}.card.area`, { area: property.areaSqm })}`}
-          {property.floor !== null && ` · ${floorLabel(property.floor)}`}
+          {/* ADR-900 §8 #2 (2β.2) — στάθμη με είδος + πόρτα: η πόρτα φαίνεται ΜΟΝΟ στον κάτοχο (Ε2). */}
+          {property.floor !== null && ` · ${floorLabel(hostedFloorRef(property))}`}
+          {property.unitNumber !== null && ` · ${t(`${K}.card.unitNumber`, { unit: property.unitNumber })}`}
           {property.bedrooms !== null &&
             ` · ${t(`${K}.card.bedrooms`, { count: property.bedrooms })}`}
         </p>

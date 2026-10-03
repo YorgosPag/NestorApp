@@ -63,6 +63,7 @@ import { WORKSPACE_PATH_PREFIX, workspacePath } from './workspace-path';
 //    ⚠️ Καμία κυκλικότητα: το `workspace-routes.ts` **δεν εισάγει τίποτα** (μετρημένο).
 import { WORKSPACE_INVITE_SEGMENT } from './workspace-routes';
 import { TOUR_CAPTURES_SEGMENT, TOUR_INVITE_SEGMENT } from '@/lib/spatial-tour/tour-routes';
+import { CASE_INVITE_SEGMENT } from '@/lib/conveyance/conveyance-routes';
 
 /**
  * **Τα κορυφαία τμήματα που ΔΕΝ ζουν μέσα σε χώρο** — κλειστό σύνολο, με
@@ -136,6 +137,11 @@ export const OUTSIDE_WORKSPACE: Readonly<Record<string, string>> = {
     'φτάνει από EMAIL πριν από κάθε ταυτότητα — ΚΑΙ, αντίθετα με το `/invite`, ΔΕΝ θα ανήκει ΠΟΤΕ σε αυτόν τον ' +
     'χώρο: ο φωτογράφος παίρνει ΑΔΕΙΑ ΛΗΨΗΣ ανά περιήγηση, όχι ιδιότητα μέλους (Φ0.5). Πρόθεμα θα ονόμαζε χώρο ' +
     'στον οποίο δεν μπαίνει.',
+  // ── Ο ΕΠΑΓΓΕΛΜΑΤΙΑΣ ΤΗΣ ΥΠΟΘΕΣΗΣ ΜΕΤΑΒΙΒΑΣΗΣ (ADR-901 Φ3) ──────────────
+  [CASE_INVITE_SEGMENT]:
+    'Η ΣΕΛΙΔΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ ΥΠΟΘΕΣΗΣ (`/case-invite/<token>`). Ο δικηγόρος/συμβολαιογράφος φτάνει από EMAIL ' +
+    'πριν από κάθε ταυτότητα — και ΔΕΝ θα ανήκει ΠΟΤΕ στον χώρο του οικοδεσπότη: παίρνει ΣΥΜΜΕΤΟΧΗ σε μία ' +
+    'υπόθεση (ADR-862 §5.3), όχι ιδιότητα μέλους (ADR-901 Α1). Πρόθεμα θα ονόμαζε χώρο στον οποίο δεν μπαίνει.',
   [TOUR_CAPTURES_SEGMENT]:
     '«ΟΙ ΛΗΨΕΙΣ ΜΟΥ» ΤΟΥ ΦΩΤΟΓΡΑΦΟΥ (route group `(me)`). Οι άδειές του ζουν σε περιηγήσεις ΔΙΑΦΟΡΕΤΙΚΩΝ ' +
     'κατόχων — γραφείων ΚΑΙ ιδιωτών — άρα κανένα ψευδώνυμο χώρου δεν τις περιγράφει· ο διακομιστής τις βρίσκει ' +

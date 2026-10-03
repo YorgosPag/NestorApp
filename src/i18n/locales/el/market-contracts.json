@@ -67,7 +67,6 @@
     "windowAll": "των ετών {from}–{to}",
     "suppressed": "{count, plural, =0 {Κανένα συγκρίσιμο συμβόλαιο} one {# συγκρίσιμο συμβόλαιο} other {# συγκρίσιμα συμβόλαια}}: χρειάζονται τουλάχιστον {min} για να δείξουμε παρόμοιες πωλήσεις.",
     "size": "{size} τ.μ.",
-    "basement": "Υπόγειο",
     "deltaSize": "εμβαδόν {delta}%",
     "deltaYears": "έτος {delta}",
     "deltaFloors": "όροφος {delta}"

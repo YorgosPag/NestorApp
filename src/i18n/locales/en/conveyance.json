@@ -217,7 +217,7 @@
     "appointment": {
       "not-appointed": "Not appointed — appoint them in the “Legal” tab",
       "no-email": "The contact has no email — add one to grant access",
-      "needs-invitation": "No account yet — email invitations are coming soon",
+      "needs-invitation": "No account — send an email invitation",
       "account": "Has an account on the platform"
     },
     "states": {
@@ -261,12 +261,91 @@
       "in_app": "consent given in the app"
     },
     "offeredOn": "Offered {date}",
+    "invitation": {
+      "states": {
+        "pending": "Invitation sent",
+        "accepted": "Invitation accepted",
+        "declined": "Declined",
+        "revoked": "Invitation cancelled",
+        "expired": "Invitation expired"
+      },
+      "sentOn": "Sent {date}",
+      "openedOn": "Opened {date}",
+      "notOpened": "Not opened yet",
+      "expiresOn": "Expires {date}",
+      "remindedOn": "Reminder {date}",
+      "actions": {
+        "send": "Send invitation",
+        "resend": "Resend",
+        "sending": "Sending…",
+        "cancel": "Cancel invitation"
+      },
+      "delivery": {
+        "accepted": "The invitation was sent to the professional.",
+        "unaddressable": "The invitation was created, but no email was sent: the app's public address is missing.",
+        "failed": "The invitation was created, but the email did not go out — press “Resend”."
+      },
+      "cancelConfirm": {
+        "title": "Cancel the invitation?",
+        "description": "The link in the email stops working immediately. You can send a new invitation at any time."
+      }
+    },
+    "credential": {
+      "declared": "Reg. no. {number} · {chapter} (declared)",
+      "declaredNoChapter": "Reg. no. {number} (declared)"
+    },
+    "invite": {
+      "title": "Invitation to a conveyance case",
+      "intro": "{host} invites you to the conveyance case for the property {property}.",
+      "roleLabel": "Role",
+      "findLabel": "What you will find",
+      "find": "{applicable} documents for your role — {complete} ready, {missing} pending",
+      "linkExpires": "The link expires",
+      "scope": "Accepting gives access to this case only — not to the inviting office.",
+      "identityDeclared": "The office details are as the office declared them.",
+      "unnamedHost": "The case host",
+      "unnamedProperty": "in the case",
+      "signIn": "Sign in or sign up to answer",
+      "signInHint": "Use the email address the invitation was sent to. Signing up takes about 2 minutes.",
+      "credentialTitle": "Professional declaration",
+      "credentialHint": "Your number is shown to the parties of the case as “declared”.",
+      "numberLabel": {
+        "bar-association": "Bar association registry number",
+        "notary-association": "Notary registry number"
+      },
+      "chapterLabel": {
+        "bar-association": "Bar association",
+        "notary-association": "Notaries' association"
+      },
+      "numberRequired": "Enter your registry number to take on the case.",
+      "accept": "Accept and get access",
+      "decline": "I decline",
+      "accepted": "You took on the case",
+      "acceptedBody": "The case is now in “My cases”.",
+      "openCase": "Open the case",
+      "declined": "You declined the case",
+      "declinedBody": "The person who invited you has been told. Nothing else is needed.",
+      "unavailable": "The invitation could not be checked right now. Please try again shortly.",
+      "retry": "Try again",
+      "home": "Home",
+      "refusals": {
+        "link-invalid": "This link does not match an invitation.",
+        "link-foreign": "This link does not match an invitation.",
+        "invitation-unknown": "This link does not match an invitation.",
+        "expired": "The invitation has expired — ask the sender for a new one.",
+        "already-used": "The invitation has already been answered.",
+        "revoked": "The invitation was cancelled or replaced by a newer one — check your latest email.",
+        "wrong-recipient": "The invitation was sent to a different email address. Sign in with that one or ask for a new invitation.",
+        "slot-occupied": "The position was filled in the meantime by another professional.",
+        "role-conflict": "You already have another role in this case.",
+        "case-closed": "The case has closed — the invitation no longer applies."
+      }
+    },
     "rejections": {
       "case-closed": "The case is closed — it does not accept new professionals.",
       "no-project": "The property does not belong to a project — access is granted within a project.",
       "not-appointed": "No professional has been appointed to this role.",
       "no-email": "The professional's contact has no email.",
-      "needs-invitation": "The professional does not have an account yet.",
       "consent-basis-required": "State the basis of the buyer's consent.",
       "slot-occupied": "This role already has another professional — revoke their access first.",
       "role-conflict": "This person already has another role in this case.",
@@ -290,6 +369,12 @@
         "unknown": "Your answer could not be sent. Please try again.",
         "offer-expired": "The offer has expired — ask whoever appointed you for a new one.",
         "not-allowed": "The offer is no longer open."
+      },
+      "acceptDialog": {
+        "title": "Take on the case",
+        "description": "You are taking on «{property}» as {role}. The parties to the case will see the registration details you declare, marked as «declared».",
+        "cancel": "Cancel",
+        "accepting": "Sending…"
       }
     },
     "verdicts": {
@@ -308,7 +393,34 @@
       "back": "My cases",
       "readOnly": "View — you see only the documents of your role.",
       "loadError": "The case could not be loaded.",
-      "notFound": "The case was not found."
+      "notFound": "The case was not found.",
+      "tabs": {
+        "checklist": "Documents",
+        "participants": "Participants & trail"
+      },
+      "participants": {
+        "title": "Participants",
+        "you": "(you)",
+        "noCredential": "No declared registration details"
+      },
+      "activity": {
+        "title": "Trail",
+        "loading": "Loading the trail…",
+        "loadError": "The trail could not be loaded.",
+        "empty": "No recorded activity yet.",
+        "you": "You",
+        "someone": "Participant",
+        "unnamed": "document",
+        "viewed": "opened «{name}»",
+        "downloaded": "downloaded «{name}»",
+        "answered": "answered the engagement offer"
+      }
     }
+  },
+  "files": {
+    "view": "View: {name}",
+    "download": "Download: {name}",
+    "unavailable": "The file is not available right now. Please try again.",
+    "previewNotice": "Opening is recorded in the case trail. The link is valid for 15 minutes."
   }
 }

@@ -8,6 +8,8 @@
  * - **Ανά θέση** κατάσταση «σε εξέλιξη» (Gmail «Sending…»): δύο κλικ στην ίδια θέση ⇒ ένα αίτημα· άλλη θέση
  *   δεν μπλοκάρεται.
  * - Αρνήσεις **ονομασμένες** (`offerRejectionOf`) — η οθόνη λέει τι να κάνει ο άνθρωπος, όχι «απέτυχε».
+ * - ADR-901 Φ3: η ίδια `offer` στέλνει **πρόσκληση με email** όταν δεν υπάρχει λογαριασμός (και ξανά = επαναποστολή)·
+ *   η έκβαση της **αποστολής** (`invited`) επιστρέφει ονομασμένη — «δεν στάλθηκε» δεν είναι σιωπή.
  *
  * @module hooks/useCaseProfessionals
  */
@@ -18,6 +20,8 @@ import {
   offerCaseEngagementRequest,
   offerRejectionOf,
   revokeCaseEngagementRequest,
+  revokeCaseInvitationRequest,
+  type InvitationDelivery,
   type OfferRejection,
 } from '@/services/conveyance/conveyance-engagement-gateway';
 import type { CaseProfessionalSlot } from '@/types/conveyance-case';
@@ -25,7 +29,8 @@ import type { ConsentBasis } from '@/types/engagement';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 export type ProfessionalActionOutcome =
-  | { readonly ok: true }
+  /** `invited` — μόνο όταν η πράξη έστειλε πρόσκληση με email. */
+  | { readonly ok: true; readonly invited: InvitationDelivery | null }
   | { readonly ok: false; readonly rejection: OfferRejection | 'generic' };
 
 interface UseCaseProfessionalsReturn {
@@ -36,6 +41,7 @@ interface UseCaseProfessionalsReturn {
   readonly pending: ReadonlySet<LegalProfessionalRole>;
   readonly offer: (role: LegalProfessionalRole, basis: ConsentBasis | null) => Promise<ProfessionalActionOutcome>;
   readonly end: (role: LegalProfessionalRole, engagementId: string) => Promise<ProfessionalActionOutcome>;
+  readonly cancelInvitation: (role: LegalProfessionalRole) => Promise<ProfessionalActionOutcome>;
 }
 
 export function useCaseProfessionals(caseId: string): UseCaseProfessionalsReturn {
@@ -58,14 +64,15 @@ export function useCaseProfessionals(caseId: string): UseCaseProfessionalsReturn
 
   const act = useCallback(async (
     role: LegalProfessionalRole,
-    request: () => Promise<{ readonly slots: readonly CaseProfessionalSlot[] }>,
+    request: () => Promise<{ readonly slots: readonly CaseProfessionalSlot[]; readonly invited?: InvitationDelivery | null }>,
   ): Promise<ProfessionalActionOutcome> => {
-    if (inFlight.current.has(role)) return { ok: true };
+    if (inFlight.current.has(role)) return { ok: true, invited: null };
     inFlight.current.add(role);
     setPending(new Set(inFlight.current));
     try {
-      setSlots((await request()).slots);
-      return { ok: true };
+      const result = await request();
+      setSlots(result.slots);
+      return { ok: true, invited: result.invited ?? null };
     } catch (error: unknown) {
       return { ok: false, rejection: offerRejectionOf(error) ?? 'generic' };
     } finally {
@@ -83,5 +90,10 @@ export function useCaseProfessionals(caseId: string): UseCaseProfessionalsReturn
     [act, caseId],
   );
 
-  return { slots, loading, failed, pending, offer, end };
+  const cancelInvitation = useCallback(
+    (role: LegalProfessionalRole) => act(role, () => revokeCaseInvitationRequest(caseId, role)),
+    [act, caseId],
+  );
+
+  return { slots, loading, failed, pending, offer, end, cancelInvitation };
 }

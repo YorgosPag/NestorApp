@@ -23,3 +23,15 @@ export const MY_CASES_ROUTE = '/cases' as const;
 export function myCaseHref(engagementId: string) {
   return typedHref(`${MY_CASES_ROUTE}/${encodeURIComponent(engagementId)}`);
 }
+
+/** Ο φάκελος της σελίδας πρόσκλησης υπόθεσης (`app/(auth)/case-invite/[token]`) — ΕΝΑ όνομα. */
+export const CASE_INVITE_SEGMENT = 'case-invite' as const;
+
+/**
+ * **Ο σύνδεσμος του email πρόσκλησης υπόθεσης** (ADR-901 Φ3). Ίδιο δόγμα με τα `workspaceInvitationHref` /
+ * `tourCaptureInvitationHref`: το token είναι στη διεύθυνση **μόνο** εδώ (η πράξη το δέχεται σε σώμα), και η σελίδα
+ * ανοίγει **όψη** που δεν καταναλώνει. Μία σελίδα **ανά είδος**: το token δεν φέρει είδος — το κρίνει το μυστικό.
+ */
+export function caseInvitationHref(token: string): string {
+  return `/${CASE_INVITE_SEGMENT}/${encodeURIComponent(token)}`;
+}

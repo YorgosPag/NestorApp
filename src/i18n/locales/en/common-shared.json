@@ -843,7 +843,9 @@
       "buyer_lawyer": "{who} took on the case “{title}” as the buyer's lawyer",
       "notary": "{who} took on the case “{title}” as the notary"
     },
-    "declinedTitle": "{who} declined the case “{title}”"
+    "declinedTitle": "{who} declined the case “{title}”",
+    "invitationPendingTitle": "{who} has not yet answered the invitation for the case “{title}”",
+    "invitationPendingBody": "Three days have passed without an answer. You can resend the invitation with one click or appoint another professional."
   },
   "workspaceMembershipEnded": {
     "removedTitle": "The workspace “{office}” removed you from its members",
@@ -917,5 +919,10 @@
     "title": "New sign-in to your account",
     "body": "Your account was signed in from {device}, near {place}. If this was you, there is nothing to do. If not, sign that device out from “Account → Security” and change your password.",
     "bodyNoPlace": "Your account was signed in from {device}. If this was you, there is nothing to do. If not, sign that device out from “Account → Security” and change your password."
+  },
+  "caseExpiry": {
+    "title": "Documents expiring: {count} — «{title}»",
+    "hostBody": "Some certificates expire soon or will not be valid on the signing day. Renew them in time so the contract is not postponed.",
+    "engagedBody": "Some documents relevant to you expire soon or will not be valid on the signing day. Open the case to see which."
   }
 }

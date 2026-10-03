@@ -81,6 +81,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     agencyId: null,
     // 🔴 **ΙΣΟΓΕΙΟ** — `0` είναι ΤΙΜΗ, και η οθόνη οφείλει να το πει «Ισόγειο».
     floor: 0,
+    floorKind: null,
     bedrooms: 3,
     ...UNASKED_LISTING_ATTRIBUTES,
     // ADR-898 Φ3β — η πρόσοψη ζει στα βασικά, δίπλα στον όροφο· δηλωμένη, ώστε τα βασικά να μένουν πλήρη.
@@ -103,7 +104,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
 
 beforeAll(async () => {
   // 🔑 Πραγματικοί loaders + πραγματικό ICU: ο λόγος ζει στο `test-utils/real-i18n`.
-  instance = await createRealI18n(['listing-detail', 'search-results', 'properties-enums']);
+  // `floors` — η ΜΙΑ ετικέτα ορόφου (ADR-903) είναι κρίσιμο namespace (`lazy-config` CRITICAL), άρα φορτωμένο παντού.
+  instance = await createRealI18n(['listing-detail', 'search-results', 'properties-enums', 'floors']);
 });
 
 function renderCard(over: Partial<PublicListing> = {}) {
@@ -173,6 +175,12 @@ describe('Ρ2 — οι τιμές ονομάζονται από το υπάρχ�
     renderCard();
     expect(screen.getByText('Ισόγειο')).toBeInTheDocument();
     expect(screen.queryByText('Όροφος 0')).not.toBeInTheDocument();
+  });
+
+  it('🏢 `floor: 0` + `floorKind: pilotis` ζωγραφίζεται «Πυλωτή», ποτέ «Ισόγειο» (ADR-900 §8 #2, 2β.2)', () => {
+    renderCard({ floorKind: 'pilotis' });
+    expect(screen.getByText('Πυλωτή')).toBeInTheDocument();
+    expect(screen.queryByText('Ισόγειο')).not.toBeInTheDocument();
   });
 });
 

@@ -89,8 +89,6 @@
   },
   "listing": {
     "areaSqm": "{value} τ.μ.",
-    "floor": "Όροφος {value}",
-    "groundFloor": "Ισόγειο",
     "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}",
     "priceMissing": {
       "notListed": "Δεν διατίθεται",

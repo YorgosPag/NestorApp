@@ -14,6 +14,7 @@ import React from 'react';
 
 import { unitPriceLabel, askingAmountLabel } from '@/components/area-market/area-market-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { formatCalendarMonth, formatNumber } from '@/lib/intl-formatting';
 import type { ComparableSale } from '@/lib/market/comparable-sales';
 import { MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
@@ -26,11 +27,6 @@ type ReadyContext = Extract<ListingMarketContext, { kind: 'ready' }>;
 type Translate = ReturnType<typeof useTranslation>['t'];
 
 const signed = (value: number): string => formatNumber(value, { signDisplay: 'exceptZero', maximumFractionDigits: 0 });
-
-function floorText(t: Translate, floor: number): string {
-  if (floor < 0) return t(`${NS}:comparables.basement`);
-  return floor === 0 ? t('search-results:listing.groundFloor') : t('search-results:listing.floor', { value: floor });
-}
 
 /** Οι μη μηδενικές διαφορές από την αγγελία, όσες μπορούν να υπολογιστούν. */
 function deltas(t: Translate, sale: ComparableSale, target: ReadyContext['target']): readonly string[] {
@@ -49,12 +45,14 @@ function deltas(t: Translate, sale: ComparableSale, target: ReadyContext['target
 }
 
 function SaleFacts({ sale }: { readonly sale: ComparableSale }) {
-  const { t } = useTranslation([NS, 'search-results']);
+  const { t } = useTranslation([NS]);
+  // ADR-903 — η ΜΙΑ ετικέτα ορόφου (ήταν χειρόγραφη: κάθε υπόγειο «Υπόγειο», όσο βαθύ κι αν ήταν).
+  const floorLabel = useFloorLabel();
   const facts = [
     formatCalendarMonth(sale.month),
     sale.size === null ? null : t(`${NS}:comparables.size`, { size: formatNumber(sale.size, { maximumFractionDigits: 0 }) }),
     sale.yearBuilt === null ? null : String(sale.yearBuilt),
-    sale.floor === null ? null : floorText(t, sale.floor),
+    sale.floor === null ? null : floorLabel(sale.floor),
   ].filter((fact): fact is string => fact !== null);
   return <p className="m-0 text-xs text-muted-foreground">{facts.join(' · ')}</p>;
 }
