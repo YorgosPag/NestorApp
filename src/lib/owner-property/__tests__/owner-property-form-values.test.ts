@@ -26,7 +26,7 @@ function formValues(
     title: 'Διαμέρισμα 92 τ.μ.',
     type: 'apartment',
     areaSqm: 92,
-    floor: 3,
+    floorLevel: '3:standard',
     bedrooms: 2,
     offerKinds: ['sell'],
     askingPrice: 210_000,
@@ -67,16 +67,33 @@ function identitySource(previous: OfferIdentitySource['previous'] = []): {
 // =============================================================================
 
 describe('ownerPropertyFormSchema — κρίνει ΣΧΗΜΑ, ποτέ κανόνες', () => {
-  it('Σ1 — το κενό αριθμητικό πεδίο γίνεται `null`, ΠΟΤΕ `0`', () => {
-    const parsed = parse(formValues({ floor: '', bedrooms: '' } as never));
-    expect(parsed.floor).toBeNull();
+  it('Σ1 — το κενό αριθμητικό πεδίο γίνεται `null`, ΠΟΤΕ `0` (και η αναπάντητη στάθμη ⇒ κανένας όροφος)', () => {
+    const parsed = parse(formValues({ floorLevel: '', bedrooms: '' } as never));
     expect(parsed.bedrooms).toBeNull();
+    const draft = ownerPropertyDraftFrom(parsed, identitySource().source);
+    expect(draft.floor).toBeNull();
+    expect(draft.floorKind).toBeNull();
   });
 
   it('🔑 Σ2 — το ρητό `0` επιβιώνει (ισόγειο · γκαρσονιέρα)', () => {
-    const parsed = parse(formValues({ floor: 0, bedrooms: 0 }));
-    expect(parsed.floor).toBe(0);
+    const parsed = parse(formValues({ floorLevel: '0:ground', bedrooms: 0 }));
     expect(parsed.bedrooms).toBe(0);
+    expect(ownerPropertyDraftFrom(parsed, identitySource().source).floor).toBe(0);
+  });
+
+  it('🏢 Σ2β — πυλωτή και ισόγειο: ΙΔΙΟΣ αριθμός, ΑΛΛΟ είδος (ADR-900 §8 #2, 2β.2)', () => {
+    const draft = ownerPropertyDraftFrom(parse(formValues({ floorLevel: '0:pilotis' })), identitySource().source);
+    expect([draft.floor, draft.floorKind]).toEqual([0, 'pilotis']);
+  });
+
+  it('🚪 Σ2γ — ο αριθμός μονάδας κανονικοποιείται· η γη δεν έχει πόρτα', () => {
+    const built = ownerPropertyDraftFrom(parse(formValues({ unitNumber: ' α-1 ' })), identitySource().source);
+    expect(built.unitNumber).toBe('Α1');
+    const land = ownerPropertyDraftFrom(
+      parse(formValues({ type: 'plot', unitNumber: 'Α1', floorLevel: '2:standard' })),
+      identitySource().source,
+    );
+    expect([land.unitNumber, land.floor, land.floorKind]).toEqual([null, null, null]);
   });
 
   it('Σ3 — γράμματα σε αριθμητικό πεδίο δίνουν `null`, όχι `NaN`', () => {
@@ -121,7 +138,7 @@ describe('ownerPropertyDraftFrom — επίπεδη φόρμα → διακρι�
     // τιμές είναι ακόμη εκεί — και χωρίς αυτόν τον κανόνα θα αποθηκευόταν
     // **οικόπεδο στον 3ο όροφο**, σιωπηλά.
     const draft = ownerPropertyDraftFrom(
-      parse(formValues({ type: 'plot', floor: 3, bedrooms: 2, areaSqm: 480 })),
+      parse(formValues({ type: 'plot', floorLevel: '3:standard', bedrooms: 2, areaSqm: 480 })),
       source,
     );
 
@@ -159,7 +176,7 @@ describe('ownerPropertyDraftFrom — επίπεδη φόρμα → διακρι�
     // Αυτό το σκέλος είναι που αποδεικνύει ότι **δεν πειράζει πια**.
     const { source } = identitySource();
     const draft = ownerPropertyDraftFrom(
-      parse(formValues({ type: 'Οικόπεδο', floor: 3, bedrooms: 2, areaSqm: 480 })),
+      parse(formValues({ type: 'Οικόπεδο', floorLevel: '3:standard', bedrooms: 2, areaSqm: 480 })),
       source,
     );
 
@@ -199,7 +216,7 @@ describe('ownerPropertyDraftFrom — επίπεδη φόρμα → διακρι�
     // είχε σβήσει τον όροφο κάθε διαμερίσματος της εφαρμογής.
     const { source } = identitySource();
     const draft = ownerPropertyDraftFrom(
-      parse(formValues({ type: 'apartment', floor: 3, bedrooms: 2 })),
+      parse(formValues({ type: 'apartment', floorLevel: '3:standard', bedrooms: 2 })),
       source,
     );
     expect(draft.floor).toBe(3);
@@ -291,6 +308,8 @@ describe('ownerPropertyFormFrom — ολική, χωρίς ένωση αποτε
     expect(back.type).toBe(property.type);
     expect(back.areaSqm).toBe(property.areaSqm);
     expect(back.floor).toBe(property.floor);
+    expect(back.floorKind).toBe(property.floorKind);
+    expect(back.unitNumber).toBe(property.unitNumber);
     expect(back.bedrooms).toBe(property.bedrooms);
     expect(back.place).toEqual(property.place);
     expect(back.media).toEqual(property.media);

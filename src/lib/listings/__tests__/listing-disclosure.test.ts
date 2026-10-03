@@ -73,6 +73,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
     agencyId: null,
     floor: 1,
+    // ✅ **ADR-900 §8 #2 (2β.2)** — η Κ1 κοκκίνισε ξανά: το είδος της στάθμης, ρόλος `attribute-qualifier`.
+    floorKind: 'standard',
     // ✅ **ADR-898 Φ3β** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει (έβδομη φορά).
     frontage: 'single',
     bedrooms: 3,

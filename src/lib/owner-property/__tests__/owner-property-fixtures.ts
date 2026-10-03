@@ -66,6 +66,8 @@ export function validDraft(
     type: 'apartment',
     areaSqm: 92,
     floor: 3,
+    floorKind: 'standard',
+    unitNumber: 'Β2',
     bedrooms: 2,
     offers: [offerOf('sell', 210_000)],
     place: {
