@@ -35,6 +35,7 @@ import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { ConveyanceCase, ConveyanceCaseView } from '@/types/conveyance-case';
 import { collectConveyanceEvidence } from './conveyance-evidence.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
+import { closeCaseEngagements } from './conveyance-engagement-host.service';
 
 export interface ConveyanceActor {
   readonly uid: string;
@@ -183,5 +184,7 @@ export async function applyConveyanceCaseCommand(
 
   const action: AuditAction = request.command.type === 'cancel' ? 'status_changed' : 'updated';
   await recordAudit(actor, result.value.next, action, result.value.changes, context.propertyName);
+  // ADR-862 §5.3.3 — η ΚΥΡΙΑ λήξη: κλείσιμο/ακύρωση ⇒ οι συμμετοχές επαγγελματιών παύουν (ιδεμποτές).
+  await closeCaseEngagements(db, actor, result.value.next, context.propertyName, Date.now());
   return { ok: true, value: await buildView(db, result.value.next, context) };
 }

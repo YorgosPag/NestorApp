@@ -24,6 +24,9 @@ import type { EvidenceLevel } from '@/config/conveyance-checklist/types';
 import { normalizeToISO } from '@/lib/date-local';
 import { fileFingerprint } from '@/lib/conveyance/evidence-match';
 import type { ConveyanceCaseParties, ConveyanceCaseSubject, EvidenceFile } from '@/types/conveyance-case';
+import { decideEngagedEvidenceReach } from '@/lib/auth/container-access';
+import { readContainerState } from '@/lib/files/file-record-read';
+import { isContainerVisible, type CdeAudience } from '@/types/container-access';
 
 /** Όριο του Firestore για `in` / `array-contains-any`. */
 const FIRESTORE_DISJUNCTION_LIMIT = 30;
@@ -51,9 +54,25 @@ function isActive(data: DocumentData): boolean {
   return (data.lifecycleState ?? 'active') === 'active';
 }
 
-function toEvidence(doc: QueryDocumentSnapshot, target: EvidenceTarget): EvidenceFile | null {
+/**
+ * **Για ποιον** συλλέγονται τα τεκμήρια. `host` = ο οικοδεσπότης (όλα τα ενεργά, όπως στο UI του)·
+ * ένα πρότυπο συμμετοχής = ο εξωτερικός, που βλέπει **μόνο** ό,τι φτάνει η εμβέλειά του (ADR-901 Φ2).
+ */
+export type EvidenceAudience = 'host' | CdeAudience;
+
+/**
+ * 🔑 ADR-901 Φ2 — το φίλτρο εμβέλειας. Η φάση διαβάζεται από τον **θεματοφύλακα** (`readContainerState`,
+ * που ξαναπαράγει και συγκρίνει το `cdeReadReach`) και κρίνεται από τον **ΕΝΑ** κριτή CDE — ποτέ σύγκριση
+ * literal `cdeReadReach === 'author'` εδώ (δεύτερος κριτής, ADR-749).
+ */
+function reaches(data: DocumentData, audience: EvidenceAudience): boolean {
+  if (audience === 'host') return true;
+  return isContainerVisible(decideEngagedEvidenceReach(audience, readContainerState(data).phase));
+}
+
+function toEvidence(doc: QueryDocumentSnapshot, target: EvidenceTarget, audience: EvidenceAudience): EvidenceFile | null {
   const data = doc.data();
-  if (!isActive(data) || typeof data.purpose !== 'string') return null;
+  if (!isActive(data) || typeof data.purpose !== 'string' || !reaches(data, audience)) return null;
   const revision = typeof data.revision === 'number' ? data.revision : null;
   return {
     fileId: doc.id,
@@ -74,7 +93,7 @@ function chunk<T>(items: readonly T[]): T[][] {
 }
 
 /** Ιδιόκτητα αρχεία: ένα ερώτημα ανά τύπο οντότητας (`entityId in [...]`). */
-async function ownedFiles(db: Firestore, companyId: string, targets: readonly EvidenceTarget[]): Promise<EvidenceFile[]> {
+async function ownedFiles(db: Firestore, companyId: string, targets: readonly EvidenceTarget[], audience: EvidenceAudience): Promise<EvidenceFile[]> {
   const byType = new Map<string, EvidenceTarget[]>();
   for (const t of targets) byType.set(t.entityType, [...(byType.get(t.entityType) ?? []), t]);
   const queries = [...byType.entries()].flatMap(([entityType, refs]) =>
@@ -93,13 +112,13 @@ async function ownedFiles(db: Firestore, companyId: string, targets: readonly Ev
     // Η ίδια επαφή μπορεί να είναι και πωλητής και αγοραστής ⇒ ένα τεκμήριο ανά επίπεδο.
     return targets
       .filter((t) => t.entityType === data.entityType && t.entityId === data.entityId)
-      .map((t) => toEvidence(doc, t))
+      .map((t) => toEvidence(doc, t, audience))
       .filter((file): file is EvidenceFile => file !== null);
   }));
 }
 
 /** Συνδεδεμένα αρχεία (`linkedTo` = `'{entityType}:{entityId}'`) — τα δείχνει και το UI. */
-async function linkedFiles(db: Firestore, companyId: string, targets: readonly EvidenceTarget[]): Promise<EvidenceFile[]> {
+async function linkedFiles(db: Firestore, companyId: string, targets: readonly EvidenceTarget[], audience: EvidenceAudience): Promise<EvidenceFile[]> {
   const tagToTargets = new Map<string, EvidenceTarget[]>();
   for (const t of targets) {
     const tag = `${t.entityType}:${t.entityId}`;
@@ -116,7 +135,7 @@ async function linkedFiles(db: Firestore, companyId: string, targets: readonly E
     const linkedTo: unknown = doc.data().linkedTo;
     const tags = Array.isArray(linkedTo) ? linkedTo.filter((tag): tag is string => typeof tag === 'string') : [];
     return tags.flatMap((tag) => tagToTargets.get(tag) ?? [])
-      .map((t) => toEvidence(doc, t))
+      .map((t) => toEvidence(doc, t, audience))
       .filter((file): file is EvidenceFile => file !== null);
   }));
 }
@@ -129,9 +148,13 @@ export async function collectEvidenceForTargets(
   db: Firestore,
   companyId: string,
   targets: readonly EvidenceTarget[],
+  audience: EvidenceAudience = 'host',
 ): Promise<readonly EvidenceFile[]> {
   if (targets.length === 0) return [];
-  const [owned, linked] = await Promise.all([ownedFiles(db, companyId, targets), linkedFiles(db, companyId, targets)]);
+  const [owned, linked] = await Promise.all([
+    ownedFiles(db, companyId, targets, audience),
+    linkedFiles(db, companyId, targets, audience),
+  ]);
   const unique = new Map<string, EvidenceFile>();
   for (const file of [...owned, ...linked]) unique.set(`${file.fileId}|${file.level}|${file.entityId}`, file);
   return [...unique.values()];
@@ -143,6 +166,7 @@ export function collectConveyanceEvidence(
   companyId: string,
   subject: ConveyanceCaseSubject,
   parties: ConveyanceCaseParties,
+  audience: EvidenceAudience = 'host',
 ): Promise<readonly EvidenceFile[]> {
-  return collectEvidenceForTargets(db, companyId, evidenceTargets(subject, parties));
+  return collectEvidenceForTargets(db, companyId, evidenceTargets(subject, parties), audience);
 }

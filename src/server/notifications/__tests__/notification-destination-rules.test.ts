@@ -155,6 +155,10 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'network.teamJoined',
       'network.threadMessage',
       'properties.cardEmailReturned',
+      // ADR-901 Φ2 — ο οικοδεσπότης στο ακίνητο (χώρος = μισθωτής του ακινήτου) · ο επαγγελματίας στη
+      // σελίδα της υπόθεσης, στον ΔΙΚΟ του χώρο (καμία ανάγνωση).
+      'properties.caseEngagementAnswered',
+      'properties.caseEngagementChanged',
       'properties.demandInterest',
       'properties.demandListingMatch',
       // ADR-777 §8.69 — η μείωση οδηγεί στην ίδια δημόσια αγγελία, με τον ίδιο κανόνα.

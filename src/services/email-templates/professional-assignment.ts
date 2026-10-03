@@ -7,6 +7,8 @@
 
 import 'server-only';
 
+import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
+
 import {
   BRAND,
   escapeHtml,
@@ -60,11 +62,9 @@ export interface ProfessionalAssignmentEmailData {
 // HELPERS
 // ============================================================================
 
-/** Format floor number: 0 → "Ισόγειο", -1 → "Υπόγειο", 1 → "1ος όροφος" */
+/** Η ετικέτα ορόφου — ο ΕΝΑΣ μορφοποιητής (ADR-903)· το πρότυπο είναι μονόγλωσσο ελληνικό. */
 function formatFloor(floor: number): string {
-  if (floor === 0) return 'Ισόγειο';
-  if (floor < 0) return `${Math.abs(floor)}ο Υπόγειο`;
-  return `${floor}ος όροφος`;
+  return floorLabelIn({ number: floor, kind: null }, 'el');
 }
 
 /** Property info-card body — shared by the assignment & removal templates. */

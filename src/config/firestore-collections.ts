@@ -1220,6 +1220,10 @@ export const SUBCOLLECTIONS = {
 
   // Project subcollections (RBAC: /companies/{id}/projects/{id}/members)
   PROJECT_MEMBERS: process.env.NEXT_PUBLIC_PROJECT_MEMBERS_SUBCOL || 'members',
+  // 🤝 ADR-862 Φ1 — /companies/{host}/projects/{p}/engagements/{eng_…}: ΕΞΩΤΕΡΙΚΟΙ συνεργάτες σε ΜΙΑ υπόθεση.
+  //    ⚠️ Ξεχωριστό όνομα από το `members` (Ε-6): ένα collection-group σαρώνει ΚΑΤΑ ΟΝΟΜΑ, και ο εξωτερικός
+  //    ΔΕΝ είναι μέλος γραφείου. Ο ένας γραφέας: `lib/auth/engagement-write.ts`.
+  PROJECT_ENGAGEMENTS: process.env.NEXT_PUBLIC_PROJECT_ENGAGEMENTS_SUBCOL || 'engagements',
 
   // 🔴 ΜΕΛΟΣ ΧΩΡΟΥ — /companies/{id}/workspace_members/{uid}
   //    (ADR-244 Role Management · ADR-787 Κ-2 §5.1 γ)
@@ -1271,8 +1275,8 @@ export const SUBCOLLECTIONS = {
   // ADR-884 Κ2β — προσκλήσεις φωτογράφου (`tcin`)· η αποδοχή γεννά την άδεια λήψης στην ίδια συναλλαγή.
   TOUR_CAPTURE_INVITATIONS: process.env.NEXT_PUBLIC_TOUR_CAPTURE_INVITATIONS_SUBCOL || 'tour_capture_invitations',
 
-  // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
-  PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
+  // ⛔ `PROPERTY_GRANTS` ΑΦΑΙΡΕΘΗΚΕ (ADR-862 Φ1, 2026-10-02): νεκρό — 0 γραφείς, 0 κανόνες, και η ανάγνωση έψαχνε
+  //    στον χώρο του ΚΑΛΟΥΝΤΑ (δομικά ανίκανο για εξωτερικό). Απορροφήθηκε από τα `PROJECT_ENGAGEMENTS`.
 
   // ⛔ `FILE_VERSIONS` ΑΦΑΙΡΕΘΗΚΕ (ADR-862 Φ0, 2026-09-17): η υποσυλλογή `files/{id}/versions`
   //    ήταν νεκρή στην παραγωγή (κανένας κανόνας ⇒ deny-all, 0 έγγραφα). Οι εκδόσεις ζουν
@@ -1406,6 +1410,7 @@ export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly st
   PROJECT_DOCUMENTS: 'PROJECTS',
   PROJECT_TIMELINE: 'PROJECTS',
   PROJECT_MEMBERS: 'PROJECTS',
+  PROJECT_ENGAGEMENTS: 'PROJECTS',
 
   // Building subcollections → BUILDINGS
   BUILDING_FLOORS: 'BUILDINGS',
@@ -1418,7 +1423,6 @@ export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly st
   PROPERTY_HISTORY: 'PROPERTIES',
   PROPERTY_PAYMENT_PLANS: 'PROPERTIES',
   PROPERTY_PAYMENTS: 'PROPERTIES',
-  PROPERTY_GRANTS: 'PROPERTIES',
 
   // User subcollections → USERS
   USER_PREFERENCES: 'USERS',

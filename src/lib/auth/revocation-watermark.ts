@@ -39,6 +39,7 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { readRevokedSignIns } from '@/lib/auth/revoked-sign-ins';
+import { isAuthUserNotFound } from '@/lib/auth/firebase-auth-errors';
 import { SESSION_POLICY } from '@/lib/auth/security-policy';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -111,7 +112,7 @@ async function fetchRevocationState(uid: string): Promise<RevocationState> {
     const [user, revokedSignInsSec] = await Promise.all([getAdminAuth().getUser(uid), readRevokedSignIns(uid)]);
     return { validAfterMs: readValidAfterMs(user.tokensValidAfterTime), disabled: user.disabled, missing: false, revokedSignInsSec };
   } catch (error: unknown) {
-    if (isUserNotFound(error)) return { validAfterMs: 0, disabled: false, missing: true, revokedSignInsSec: NO_REVOKED_SIGN_INS };
+    if (isAuthUserNotFound(error)) return { validAfterMs: 0, disabled: false, missing: true, revokedSignInsSec: NO_REVOKED_SIGN_INS };
     throw error;
   }
 }
@@ -122,7 +123,3 @@ export function readValidAfterMs(tokensValidAfterTime: string | undefined): numb
   return Number.isNaN(validAfter) ? 0 : validAfter;
 }
 
-function isUserNotFound(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error
-    && (error as { readonly code: unknown }).code === 'auth/user-not-found';
-}

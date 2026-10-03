@@ -142,6 +142,7 @@ const REASON_BY_VERDICT: Record<ContainerAccessVerdict, string | null> = {
  * | `crew`     | ⛔ | ⛔ | ✅ | ⛔ |
  * | `client`   | ⛔ | ⛔ | ✅ | ⛔ |
  * | `supplier` | ⛔ | ⛔ | ⛔ | ⛔ |
+ * | `legal`    | ⛔ | ⛔ | ✅ | ⛔ |
  *
  * 🔴 **Η ΓΡΑΜΜΗ `supplier` ΕΙΝΑΙ ΟΛΟΚΛΗΡΗ `false`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Το
  * ADR-862 §5.4.1 του δίνει *«**ΜΟΝΟ** το πακέτο (§5.5)»* — μηχανισμός της **Φ3**,
@@ -161,6 +162,8 @@ const AUDIENCE_REACH: Readonly<Record<CdeAudience, Readonly<Record<CdeState, boo
   crew: { WIP: false, SHARED: false, PUBLISHED: true, SUPERSEDED: false },
   client: { WIP: false, SHARED: false, PUBLISHED: true, SUPERSEDED: false },
   supplier: { WIP: false, SHARED: false, PUBLISHED: false, SUPERSEDED: false },
+  // ADR-901 Φ2 — ίδια γραμμή με τον πελάτη: τελικό έγγραφο, ποτέ ημιτελής συνεννόηση μηχανικών.
+  legal: { WIP: false, SHARED: false, PUBLISHED: true, SUPERSEDED: false },
 };
 
 // =============================================================================
@@ -346,6 +349,35 @@ export function decideContainerAccess(query: ContainerAccessQuery): ContainerAcc
   // (8) Ο αδελφός κριτής — ο ΕΝΑΣ απαντητής του «επιτρέπεται;» (ADR-801).
   const capability = decideCapability({ subject, action });
   return decide(isGranted(capability.verdict) ? gate.grant : 'denied-capability');
+}
+
+// =============================================================================
+// ΤΕΚΜΗΡΙΟ ΥΠΟΘΕΣΗΣ ΓΙΑ ΣΥΜΜΕΤΕΧΟΝΤΑ (ADR-901 Φ2)
+// =============================================================================
+
+/**
+ * **«Φτάνει αυτό το πρότυπο συμμετοχής σε τεκμήριο αυτής της φάσης;»** — για τον εξωτερικό που
+ * μπήκε σε **υπόθεση** (όχι σε έργο) μέσω συμμετοχής που ο κριτής της ήδη έκρινε `engaged`.
+ *
+ * Τα βήματα (2)-(7) του {@link decideContainerAccess}, πάνω στους **ίδιους** πίνακες· το βήμα (8)
+ * (ικανότητα ρόλου **χώρου**) **αντικαθίσταται** από την ετυμηγορία της συμμετοχής, γιατί ο
+ * εξωτερικός **δεν έχει** ρόλο στον χώρο — και δεν πρέπει να αποκτήσει (ADR-862 §9).
+ *
+ * | φάση | ετυμηγορία |
+ * |---|---|
+ * | `unreadable` | ⛔ fail-closed |
+ * | `pre-cde` | ✅ η πράξη της υπόθεσης **είναι** το μοίρασμα (ο οικοδεσπότης την έδωσε, με συναίνεση) |
+ * | WIP/SHARED/… | πίνακας Α· φάση με επιπλέον απαίτηση (ομάδα · διακόπτης) ⇒ ⛔ — ο εξωτερικός δεν έχει ομάδα |
+ *
+ * ⚠️ Αυτό είναι το «φίλτρο `cdeReadReach`» της ADR-901 §5.5.1: το WIP ενός μηχανικού **δεν** γίνεται
+ *    τεκμήριο νομικού ελέγχου — ούτε μετρά στην πρόοδο του καταλόγου που βλέπει ο εξωτερικός.
+ */
+export function decideEngagedEvidenceReach(audience: CdeAudience, phase: ContainerPhase): ContainerAccessVerdict {
+  const gate = ACTION_BY_PHASE[phase];
+  if (gate.kind === 'closed') return gate.deny;
+  if (gate.kind === 'legacy') return gate.grant;
+  if (!AUDIENCE_REACH[audience][gate.state]) return 'denied-audience';
+  return gate.requires === 'none' ? gate.grant : 'denied-audience';
 }
 
 // =============================================================================

@@ -8,8 +8,7 @@ import 'server-only';
  * **Εξήχθη, δεν γράφτηκε** (Boy Scout, N.0.2): ο κώδικας είναι **αυτούσιος**
  * από το `lib/auth/permissions.ts`, μαζί με τα σχόλιά του.
  *
- * 🔑 **ΓΙΑΤΙ ΧΩΡΙΣΤΑ — ΔΥΟ ΕΥΘΥΝΕΣ**: το «**πού ψάχνω**» (συμμετοχή στο έργο ·
- * παραχώρηση σε ακίνητο · η σύνδεση με τη βάση) είναι άλλη ευθύνη από το «**τι
+ * 🔑 **ΓΙΑΤΙ ΧΩΡΙΣΤΑ — ΔΥΟ ΕΥΘΥΝΕΣ**: το «**πού ψάχνω**» (συμμετοχή στο έργο) είναι άλλη ευθύνη από το «**τι
  * αποφασίζω**» (`checkPermission`). Ο άμεσος λόγος ήταν το N.7.1: το
  * `permissions.ts` είχε φτάσει **494/500** γραμμές και η Φάση 3γ πρόσθετε το
  * βήμα του ρητού claim. **Εξαγωγή, ποτέ κόψιμο σχολίων.**
@@ -26,11 +25,7 @@ import 'server-only';
  * @see lib/auth/permissions.ts — ο κριτής που τις καταναλώνει
  */
 
-import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
-import type { Firestore } from 'firebase-admin/firestore';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-
-import type { AuthContext, ProjectMember, PropertyGrant } from '../types';
+import type { AuthContext, ProjectMember } from '../types';
 import { readProjectMember } from '../project-member-read';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -43,8 +38,6 @@ const logger = createModuleLogger('permissions');
 export interface PermissionCache {
   /** Cached project memberships by projectId */
   memberships: Map<string, ProjectMember | null>;
-  /** Cached property grants by propertyId */
-  grants: Map<string, PropertyGrant | null>;
 }
 
 // =============================================================================
@@ -67,22 +60,7 @@ export interface PermissionCache {
 export function createPermissionCache(): PermissionCache {
   return {
     memberships: new Map(),
-    grants: new Map(),
   };
-}
-
-// =============================================================================
-// FIRESTORE ACCESS
-// =============================================================================
-
-/**
- * Get Firestore instance (ADR-077: Centralized via @/lib/firebaseAdmin).
- */
-export function getDb(): Firestore | null {
-  if (!isFirebaseAdminAvailable()) {
-    return null;
-  }
-  return getAdminFirestore();
 }
 
 // =============================================================================
@@ -160,60 +138,3 @@ export async function getProjectMembership(
   cache.memberships.set(cacheKey, membership);
   return membership;
 }
-
-// =============================================================================
-// GRANT LOOKUP
-// =============================================================================
-
-/**
- * Get property grant for a user.
- *
- * @param ctx - Auth context
- * @param propertyId - Property ID
- * @param cache - Permission cache
- * @returns PropertyGrant or null
- */
-export async function getPropertyGrant(
-  ctx: AuthContext,
-  propertyId: string,
-  cache: PermissionCache
-): Promise<PropertyGrant | null> {
-  const cacheKey = `${propertyId}:${ctx.uid}`;
-
-  // Check cache first
-  if (cache.grants.has(cacheKey)) {
-    return cache.grants.get(cacheKey) ?? null;
-  }
-
-  const db = getDb();
-  if (!db) {
-    cache.grants.set(cacheKey, null);
-    return null;
-  }
-
-  try {
-    // Path: /companies/{companyId}/properties/{propertyId}/grants/{uid}
-    const grantDoc = await db
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(ctx.companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_PROPERTIES)
-      .doc(propertyId)
-      .collection(SUBCOLLECTIONS.PROPERTY_GRANTS)
-      .doc(ctx.uid)
-      .get();
-
-    if (!grantDoc.exists) {
-      cache.grants.set(cacheKey, null);
-      return null;
-    }
-
-    const grant = grantDoc.data() as PropertyGrant;
-    cache.grants.set(cacheKey, grant);
-    return grant;
-  } catch (error) {
-    logger.error('[PERMISSIONS] Failed to get property grant', { error });
-    cache.grants.set(cacheKey, null);
-    return null;
-  }
-}
-

@@ -5,7 +5,7 @@
  * @since 2026-01-14
  *
  * Server-side permission checker with request-scoped caching.
- * Handles global roles, project memberships, and unit grants.
+ * Handles global roles and project memberships (external users: `engagement-judge.ts`, ADR-862 Φ1).
  *
  * IMPORTANT: Uses request-scoped cache, NOT global Map (serverless-safe)
  *
@@ -14,16 +14,14 @@
 
 import 'server-only';
 
-import type { AuthContext, PermissionId, GrantScope } from './types';
-import { isValidPermission, isValidGrantScope } from './types';
+import type { AuthContext, PermissionId } from './types';
+import { isValidPermission } from './types';
 import { isRoleBypass, getRolePermissions } from './roles';
-import { evaluateScopedGrant, type ScopedGrantVerdict } from './scoped-grant';
 import { getPermissionSetPermissions, requiresMfaEnrollment } from './permission-sets';
 // ADR-801 §2.8 — το «πού ψάχνω» ζει χωριστά από το «τι αποφασίζω».
 import {
   createPermissionCache,
   getProjectMembership,
-  getPropertyGrant,
   type PermissionCache,
 } from './permissions/resource-lookups';
 
@@ -45,10 +43,6 @@ export { createPermissionCache, type PermissionCache };
 export interface PermissionCheckOptions {
   /** Project ID for project-scoped permissions */
   projectId?: string;
-  /** Property ID for property-scoped grants */
-  propertyId?: string;
-  /** @deprecated Use propertyId */
-  unitId?: string;
   /** Require MFA verification for this check */
   requireMfa?: boolean;
 }
@@ -70,10 +64,7 @@ export type PermissionDeniedReason =
   | 'invalid_permission'
   | 'no_project_membership'
   | 'permission_not_in_role'
-  | 'mfa_required'
-  | 'grant_expired'
-  | 'grant_revoked'
-  | 'grant_not_found';
+  | 'mfa_required';
 
 /**
  * Where permission was granted from.
@@ -90,8 +81,7 @@ export type PermissionSource =
   | 'company_scoped_claim'
   | 'global_role'
   | 'project_role'
-  | 'permission_set'
-  | 'unit_grant';
+  | 'permission_set';
 
 // =============================================================================
 // PERMISSION CHECKING
@@ -103,7 +93,6 @@ export type PermissionSource =
  * Check order:
  * 1. Global role bypass (super_admin)
  * 2. Project membership (if projectId provided)
- * 3. Unit grant (if unitId provided)
  *
  * @param ctx - Authenticated context
  * @param permission - Permission ID to check
@@ -176,21 +165,10 @@ export async function checkPermission(
     return { granted: false, reason: 'no_project_membership' };
   }
 
-  // Check 3: Property grant (for external users)
-  const effectivePropertyId = options.propertyId ?? options.unitId;
-  if (effectivePropertyId) {
-    const grant = await getPropertyGrant(ctx, effectivePropertyId, cache);
-
-    if (!grant) {
-      return { granted: false, reason: 'grant_not_found' };
-    }
-
-    // Ο ΕΝΑΣ έλεγχος «ανακλήθηκε; έληξε; καλύπτει το εύρος;» (ADR-884 Φ0.5) — διαβάζει
-    // Timestamp/ISO/Date και αρνείται ό,τι δεν διαβάζεται (πριν: `new Date(Timestamp)` ⇒ ποτέ λήξη).
-    const grantScope = permissionToGrantScope(permission);
-    if (!grantScope) return { granted: false, reason: 'permission_not_in_role' };
-    return grantVerdictToResult(evaluateScopedGrant(grant, grantScope, Date.now()));
-  }
+  // ⛔ Το παλιό «Check 3: Property grant (for external users)» ΑΦΑΙΡΕΘΗΚΕ (ADR-862 Φ1, 2026-10-02):
+  //    0 καλούντες με `propertyId`, 0 γραφείς grant, και η ανάγνωση έψαχνε στον χώρο ΤΟΥ ΚΑΛΟΥΝΤΑ — δηλαδή
+  //    δομικά ανίκανη να εξυπηρετήσει τον εξωτερικό για τον οποίο γράφτηκε. Ο εξωτερικός κρίνεται πλέον ΜΟΝΟ
+  //    ανά πόρο, από τη συμμετοχή του (`lib/auth/engagement-judge.ts`) — ποτέ μέσα από δικαιώματα χώρου.
 
   // ===========================================================================
   // ΤΟ ΕΡΩΤΗΜΑ ΧΩΡΙΣ ΠΟΡΟ — εδώ και μόνο εδώ οι δύο κριτές οφείλουν να συμφωνούν
@@ -204,7 +182,7 @@ export async function checkPermission(
   //
   // 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΨΗΛΟΤΕΡΑ, ΔΙΠΛΑ ΣΤΟ BYPASS**: αν το claim κρινόταν πριν
   //    από τα σκέλη με πόρο, μια παραχώρηση **εμβέλειας εταιρείας** θα
-  //    παρέκαμπτε την κρίση **του πόρου** (μέλος έργου · grant ακινήτου) —
+  //    παρέκαμπτε την κρίση **του πόρου** (μέλος έργου) —
   //    δηλαδή το ίδιο permission id θα συμπεριφερόταν διαφορετικά ανάλογα με τη
   //    διαδρομή παράδοσης. ADR-749 μέσα στη διόρθωσή του.
   //
@@ -235,39 +213,6 @@ export async function checkPermission(
   }
 
   return { granted: false, reason: 'permission_not_in_role' };
-}
-
-/**
- * Map permission ID to grant scope (for unit delegation).
- *
- * @param permission - Permission ID
- * @returns Grant scope or null
- */
-/** Ετυμηγορία άδειας → αποτέλεσμα ελέγχου. Η ανάκληση κρατά **δικό της** λόγο — δεν είναι λήξη. */
-const GRANT_VERDICT_RESULT: Readonly<Record<ScopedGrantVerdict, PermissionCheckResult>> = {
-  granted: { granted: true, reason: null, source: 'unit_grant' },
-  revoked: { granted: false, reason: 'grant_revoked' },
-  expired: { granted: false, reason: 'grant_expired' },
-  'unreadable-expiry': { granted: false, reason: 'grant_expired' },
-  'scope-missing': { granted: false, reason: 'permission_not_in_role' },
-};
-
-function grantVerdictToResult(verdict: ScopedGrantVerdict): PermissionCheckResult {
-  return { ...GRANT_VERDICT_RESULT[verdict] };
-}
-
-function permissionToGrantScope(permission: PermissionId): GrantScope | null {
-  // Map common permissions to grant scopes
-  const mapping: Partial<Record<PermissionId, GrantScope>> = {
-    'units:units:view': 'unit:read_basic',
-    'legal:documents:view': 'legal:documents:view',
-    'legal:contracts:view': 'legal:contracts:view',
-    'dxf:files:view': 'unit:dxf:view',
-    'comm:messages:view': 'unit:messages:view',
-  };
-
-  const scope = mapping[permission];
-  return scope && isValidGrantScope(scope) ? scope : null;
 }
 
 // =============================================================================

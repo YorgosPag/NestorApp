@@ -85,6 +85,9 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'tourAccessAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.tourAccessAnswered' },
       // ADR-884 §9.1 Α3′ — ανοίγματα προσωπικών συνδέσμων περιήγησης (πρώτο · νέα συσκευή).
       { key: 'tourLinkOpened', labelKey: 'common-account:account.notificationSettings.categories.properties.tourLinkOpened' },
+      // ADR-901 Φ2 — συμμετοχή σε υπόθεση μεταβίβασης (επαγγελματίας · οικοδεσπότης).
+      { key: 'caseEngagementChanged', labelKey: 'common-account:account.notificationSettings.categories.properties.caseEngagementChanged' },
+      { key: 'caseEngagementAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.caseEngagementAnswered' },
     ],
   },
   {

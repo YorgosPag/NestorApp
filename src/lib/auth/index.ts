@@ -30,7 +30,6 @@ export type {
   GlobalRole,
   ProjectRole,
   PermissionId,
-  GrantScope,
   AuditAction,
   AuditTargetType,
 
@@ -43,7 +42,6 @@ export type {
   // Document types
   ProjectMember,
   PropertyOwner,
-  PropertyGrant,
   AuditLogEntry,
   AuditChangeValue,
   AuditMetadata,
@@ -56,7 +54,6 @@ export type {
 export {
   isAuthenticated,
   isValidPermission,
-  isValidGrantScope,
   isValidGlobalRole,
 } from './types';
 
@@ -67,7 +64,6 @@ export {
 export {
   GLOBAL_ROLES,
   PERMISSIONS,
-  GRANT_SCOPES,
   AUDIT_ACTIONS,
   AUDIT_TARGET_TYPES,
 } from './types';

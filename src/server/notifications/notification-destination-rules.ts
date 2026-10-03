@@ -71,6 +71,10 @@ import {
 } from '@/server/spatial-tour/tour-access-notifier';
 import { readThreadTopic } from '@/services/network-messaging/thread-reader';
 import type { NetworkActTeam } from '@/types/network-thread';
+import {
+  caseEngagementAnsweredDestination,
+  caseEngagementChangedDestination,
+} from '@/services/conveyance/conveyance-engagement-notifier';
 
 import type {
   ExpectedDestination,
@@ -138,6 +142,16 @@ const networkTeamJoinedRule: DestinationRule = async (db, notification, entityId
   return expected(threadDestination(generateDeterministicNetworkActThreadId(team.actSeed), notification.userId));
 };
 
+/**
+ * ADR-901 Φ2 — «ανέλαβε / δεν ανέλαβε» προς τον οικοδεσπότη: ο χώρος είναι ο **μισθωτής του ακινήτου**
+ * (ίδια πηγή με τον παραγωγό — η υπόθεση ζει στον χώρο που κατέχει το ακίνητο).
+ */
+const caseEngagementAnsweredRule: DestinationRule = async (db, _notification, entityId) => {
+  const companyId: unknown = (await db.collection(COLLECTIONS.PROPERTIES).doc(entityId).get()).data()?.companyId;
+  if (typeof companyId !== 'string' || companyId === '') return unresolvable('entity-absent');
+  return expected(caseEngagementAnsweredDestination(entityId, companyId));
+};
+
 /** ADR-884 Κ3β — νέο αίτημα θέασης προς τον υπεύθυνο: ο χώρος είναι η θεματοφυλακή της **ρίζας**. */
 const tourAccessRequestedRule: DestinationRule = async (db, _notification, entityId) => {
   const subject = tourSubjectOfListing(entityId);
@@ -177,6 +191,11 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
     expected(tourAccessAnsweredDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE]: networkThreadMessageRule,
   [NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED]: networkTeamJoinedRule,
+  // ADR-901 Φ2 — η σελίδα της υπόθεσης στον ΙΔΙΩΤΙΚΟ χώρο του επαγγελματία (καμία ανάγνωση: η διαδρομή δεν
+  //    εξαρτάται από την κατάσταση — ανακλημένη συμμετοχή ανοίγει την ίδια σελίδα με ονομασμένη άρνηση).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_CHANGED]: async (_db, notification, entityId) =>
+    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_ANSWERED]: caseEngagementAnsweredRule,
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

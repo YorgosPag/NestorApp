@@ -221,6 +221,14 @@ describe('Ε — ποιο πρότυπο φτάνει πού', () => {
       expect(ask(supplier, state)).toBe('denied-audience');
     }
   });
+
+  it('Ε5 — νομικός (ADR-901 Φ2): ΜΟΝΟ PUBLISHED — ποτέ WIP, SHARED ή αποσυρμένο', () => {
+    const legal = person({ audience: 'legal', taskTeamId: null, historyRequested: true });
+    expect(ask(legal, PUBLISHED)).toBe('visible-published');
+    expect(ask(legal, SHARED)).toBe('denied-audience');
+    expect(ask(legal, WIP_OWN)).toBe('denied-audience');
+    expect(ask(legal, SUPERSEDED)).toBe('denied-audience');
+  });
 });
 
 // =============================================================================

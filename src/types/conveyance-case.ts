@@ -16,6 +16,8 @@
  * @see ADR-901
  */
 
+import type { EngagementConsent, EngagementState, EngagementVerdict } from '@/types/engagement';
+import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import type {
   ChecklistItem,
   ChecklistProvider,
@@ -205,3 +207,63 @@ export interface ConveyanceCaseView {
   readonly evidence: readonly EvidenceFile[];
   readonly checklist: DerivedChecklist;
 }
+
+// ============================================================================
+// ADR-901 Φ2 — ΟΙ ΟΨΕΙΣ ΤΗΣ ΣΥΜΜΕΤΟΧΗΣ (επαγγελματίες μέσω ADR-862 `engagements`)
+// ============================================================================
+
+/** Πού βρίσκεται η αλυσίδα «ορισμός → λογαριασμός» μιας θέσης (`conveyance-professional.server`). */
+export type ProfessionalAppointment = 'not-appointed' | 'no-email' | 'needs-invitation' | 'account';
+
+/** Μία συμμετοχή όπως τη βλέπει ο **οικοδεσπότης** — χωρίς τίποτα που δεν του ανήκει. */
+export interface CaseEngagementSummary {
+  readonly engagementId: string;
+  readonly role: LegalProfessionalRole;
+  readonly state: EngagementState;
+  readonly email: string;
+  readonly offeredAt: string;
+  readonly respondedAt: string | null;
+  readonly closedAt: string | null;
+  readonly expiresAt: string;
+  readonly consents: readonly EngagementConsent[];
+}
+
+/** Μία **θέση** επαγγελματία στην υπόθεση — ο ορισμός, η συμμετοχή, και αν θέλει δηλωμένη συναίνεση. */
+export interface CaseProfessionalSlot {
+  readonly role: LegalProfessionalRole;
+  readonly appointment: ProfessionalAppointment;
+  /** Η τρέχουσα συμμετοχή της θέσης (ζωντανή, αλλιώς η πιο πρόσφατη) — `null` αν δεν προτάθηκε ποτέ. */
+  readonly engagement: CaseEngagementSummary | null;
+  readonly requiresAttestation: boolean;
+}
+
+/**
+ * Η υπόθεση όπως τη βλέπει ο **επαγγελματίας**. ⛔ **ΟΧΙ** το ωμό `ConveyanceCase`: γεγονότα, εξαιρέσεις,
+ * μέρη και σημειώσεις άλλων πλευρών μένουν στον server — ο κατάλογος έρχεται **ήδη** φιλτραρισμένος
+ * ανά ρόλο (`visibleTo`) και εμβέλεια (`decideEngagedEvidenceReach`).
+ */
+export interface EngagedCaseView {
+  readonly engagementId: string;
+  readonly role: LegalProfessionalRole;
+  readonly caseId: string;
+  readonly state: ConveyanceCaseState;
+  readonly propertyName: string | null;
+  readonly targetSigningDate: string | null;
+  readonly checklist: DerivedChecklist;
+}
+
+/** Μία κάρτα στα «Οι υποθέσεις μου» (ADR-901 §5.4). */
+export interface MyCaseCard {
+  readonly engagementId: string;
+  readonly role: LegalProfessionalRole;
+  readonly engagementState: EngagementState;
+  readonly verdict: EngagementVerdict;
+  readonly offeredAt: string;
+  readonly expiresAt: string;
+  readonly propertyName: string | null;
+  readonly caseState: ConveyanceCaseState | null;
+  /** Μόνο για **ενεργή** συμμετοχή — πρόταση δεν βλέπει τίποτα από την υπόθεση (Entra). */
+  readonly summary: ChecklistSummary | null;
+  readonly targetSigningDate: string | null;
+}
+

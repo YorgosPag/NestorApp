@@ -144,6 +144,13 @@ export const NOTIFICATION_EVENT_TYPES = {
    * πρώτο άνοιγμα και από **νέα** συσκευή (όχι σε κάθε άνοιγμα = θόρυβος). Ταυτότητα = σύνδεσμος + συσκευή.
    */
   PROPERTIES_TOUR_LINK_OPENED: 'properties.tourLinkOpened',
+  /**
+   * ADR-901 Φ2 · ADR-862 Φ1 — **προς τον επαγγελματία**: «σας προτάθηκε / ανακλήθηκε / ολοκληρώθηκε η συμμετοχή
+   * στην υπόθεση». Ταυτότητα = συμμετοχή + κατάσταση. 🔴 Η ανάκληση είναι **ειπωμένη** (ADR-787 Ε-2 §5).
+   */
+  PROPERTIES_CASE_ENGAGEMENT_CHANGED: 'properties.caseEngagementChanged',
+  /** ADR-901 Φ2 — **προς τον οικοδεσπότη που πρότεινε**: «ο Χ ανέλαβε / δεν ανέλαβε την υπόθεση». */
+  PROPERTIES_CASE_ENGAGEMENT_ANSWERED: 'properties.caseEngagementAnswered',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -359,6 +366,19 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
+  // ADR-901 Φ2 — ΥΠΟΧΡΕΩΤΙΚΟ: η πρόσβαση σε νομική υπόθεση ΔΕΝ ανοίγει/κλείνει χωρίς να το μάθει ο άνθρωπος.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_CHANGED]: {
+    category: 'properties',
+    settingKey: 'caseEngagementChanged',
+    isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_ANSWERED]: {
+    category: 'properties',
+    settingKey: 'caseEngagementAnswered',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: {
     category: 'properties',
     settingKey: 'cardEmailReturned',
@@ -521,6 +541,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   NETWORK_THREAD: 'network_thread',
   /** ADR-867 Β6 — η ομάδα της πράξης (`network_act_teams/{id}`). */
   NETWORK_ACT_TEAM: 'network_act_team',
+  /** ADR-862 Φ1 · ADR-901 Φ2 — η συμμετοχή σε υπόθεση (`companies/{host}/projects/{p}/engagements/{id}`). */
+  ENGAGEMENT: 'engagement',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];

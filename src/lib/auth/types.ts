@@ -13,7 +13,6 @@ import type { MembershipVerdict, RequestedWorkspace } from "@/types/workspace-me
 //    ακριβώς τον κύκλο που **σκάει** σε αρχικοποίηση (μάθημα `role-catalogue.ts`).
 import type { CdeAudience } from "@/types/container-access";
 import type { ProjectMemberEnrollment } from "@/types/project-member-enrollment";
-import type { ScopedGrant } from "./scoped-grant";
 
 // =============================================================================
 // GLOBAL ROLES (Coarse-grained, stored in Custom Claims)
@@ -263,24 +262,6 @@ export const PERMISSIONS = {
 
 /** Permission ID derived from registry. */
 export type PermissionId = keyof typeof PERMISSIONS;
-
-// =============================================================================
-// GRANT SCOPES (For Property Delegation)
-// =============================================================================
-
-/** Grant Scopes — permissions delegated to external users via property grants. */
-export const GRANT_SCOPES = {
-  "unit:read_basic": true,
-  "unit:docs:view_basic": true,
-  "unit:dxf:view": true,
-  "unit:status:view": true,
-  "unit:messages:view": true,
-  "legal:documents:view": true,
-  "legal:contracts:view": true,
-} as const;
-
-/** Grant Scope ID for unit-level delegation. */
-export type GrantScope = keyof typeof GRANT_SCOPES;
 
 // =============================================================================
 // AUDIT TYPES → ./audit-types.ts (ADR-655: το types.ts έφτασε το όριο των 500 γραμμών, N.7.1)
@@ -584,29 +565,8 @@ export interface PropertyOwner {
   notes?: string;
 }
 
-/**
- * Property grant document (stored in /properties/{pid}/grants/{granteeUid}).
- * Λήξη/ανάκληση/εύρος τα κρίνει ΜΟΝΟ το `evaluateScopedGrant` (ADR-884 Φ0.5).
- */
-export interface PropertyGrant extends ScopedGrant<GrantScope> {
-  /** Duplicated for rules validation */
-  companyId: string;
-  /** Duplicated for rules validation */
-  projectId: string;
-  /** Duplicated for rules validation */
-  propertyId: string;
-  /** Delegated scopes */
-  scopes: GrantScope[];
-  /** Required expiration */
-  expiresAt: Date;
-  /** Audit fields */
-  createdAt: Date;
-  createdBy: string;
-  reason: string;
-  /** Revocation (if revoked) */
-  revokedAt?: Date;
-  revokedBy?: string;
-}
+// ⛔ `PropertyGrant` / `GRANT_SCOPES` ΑΦΑΙΡΕΘΗΚΑΝ (ADR-862 Φ1, 2026-10-02) — νεκρός μηχανισμός (0 γραφείς,
+//    0 κανόνες, ανάγνωση στον χώρο του καλούντα). Ο εξωτερικός χρήστης = συμμετοχή (`types/engagement.ts`).
 
 // =============================================================================
 // TYPE GUARDS
@@ -634,11 +594,6 @@ export function isValidPermission(
   permission: string,
 ): permission is PermissionId {
   return Object.hasOwn(PERMISSIONS, permission);
-}
-
-/** Type guard — is string a valid GrantScope? (ίδιος λόγος με το παραπάνω) */
-export function isValidGrantScope(scope: string): scope is GrantScope {
-  return Object.hasOwn(GRANT_SCOPES, scope);
 }
 
 /** Type guard — is string a valid GlobalRole? */

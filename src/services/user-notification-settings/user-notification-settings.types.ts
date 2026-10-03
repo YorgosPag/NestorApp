@@ -224,6 +224,13 @@ export interface PropertiesNotificationSettings {
    */
   tourLinkOpened: boolean;
   /**
+   * 🎯 ADR-901 Φ2 — «**σας προτάθηκε / ανακλήθηκε / ολοκληρώθηκε** η συμμετοχή σε υπόθεση μεταβίβασης» (προς τον
+   * επαγγελματία). ⚠️ **Υποχρεωτικό**: πρόσβαση σε νομική υπόθεση που ανοίγει ή κλείνει σιωπηλά δεν επιτρέπεται.
+   */
+  caseEngagementChanged: boolean;
+  /** 🎯 ADR-901 Φ2 — «**ο Χ ανέλαβε / δεν ανέλαβε** την υπόθεση» (προς τον οικοδεσπότη που πρότεινε). */
+  caseEngagementAnswered: boolean;
+  /**
    * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»** (ερώτηση + μία υπενθύμιση ανά περίοδο).
    *
    * ⚠️ **Προεπιλογή `true`**: χωρίς απάντηση η δημόσια κάρτα λέει «το ωράριο ίσως διαφέρει» σε κάθε αργία — ο
@@ -459,6 +466,8 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   tourAccessRequested: true,
   tourAccessAnswered: true,
   tourLinkOpened: true,
+  caseEngagementChanged: true,
+  caseEngagementAnswered: true,
 };
 
 /**

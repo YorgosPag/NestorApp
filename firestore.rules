@@ -1012,6 +1012,29 @@ service cloud.firestore {
       }
 
       // =========================================================================
+      // 🤝 ENGAGEMENTS — εξωτερικοί σε ΜΙΑ υπόθεση (ADR-862 Φ1 · ADR-901 Φ2)
+      // =========================================================================
+      // `companies/{W}/projects/{P}/engagements/{eng_…}` — ο ΕΝΑΣ γραφέας: `lib/auth/engagement-write.ts`.
+      //
+      // ✍️ WRITE: `false`. Όποιος γράφει εδώ, αυτο-προσκαλείται σε ξένη υπόθεση.
+      // 📖 READ: ΜΟΝΟ η ΔΙΚΗ σου συμμετοχή (`resource.data.uid`) · ο διαχειριστής του χώρου-οικοδεσπότη
+      //    (βλέπει ποιος έχει πρόσβαση στις υποθέσεις του) · super admin.
+      //    ⚠️ Η ανάγνωση του εγγράφου ΔΕΝ δίνει πρόσβαση στην υπόθεση: αυτή κρίνεται ΜΟΝΟ στον server
+      //    (`decideEngagement`) — το `conveyance_cases` μένει deny-all (βλ. το μπλοκ του).
+      // ⛔ ΚΑΝΕΝΑΣ κανόνας collection-group (`/{path=**}/engagements`): το «Κοινόχρηστα μαζί μου» απαντιέται
+      //    στον server (Admin SDK)· στον πελάτη θα άνοιγε απαρίθμηση όλων των γραφείων (ADR-787 Ε-5 §4 #1).
+      match /projects/{projectId}/engagements/{engagementId} {
+        allow read: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || resource.data.uid == request.auth.uid
+                         || isCompanyAdminOfCompany(companyId)
+                       );
+
+        allow write: if false;
+      }
+
+      // =========================================================================
       // 📋 AUDIT_LOGS SUBCOLLECTION - COMPANY-SCOPED AUDIT TRAIL
       // =========================================================================
       // 🏢 ENTERPRISE: Audit logs for company operations (ADR-029 Global Search)
@@ -1443,8 +1466,11 @@ service cloud.firestore {
     // δεν έχει τίποτα να δείξει που δεν το δείχνει καλύτερα το API. Οι εγγραφές
     // περνούν από CAS + πάγωμα (Ε-6) + ίχνος — τίποτα από αυτά δεν εκφράζεται σε κανόνα.
     //
-    // ⚠️ Η Φ2 θα ανοίξει ΑΝΑΓΝΩΣΗ στους επαγγελματίες ΜΟΝΟ μέσω συμμετοχής ADR-862
-    //    (`engagements`) — ποτέ με `companyId` (ADR-901 §4 #2: ποτέ πρόσβαση σε χώρο).
+    // 🔒 ADR-901 Φ2 (2026-10-03): οι επαγγελματίες διαβάζουν την υπόθεση ΜΟΝΟ μέσω API, με την ετυμηγορία
+    //    `engaged` (`decideEngagement`) — ΚΑΙ ΕΔΩ ΜΕΝΕΙ deny-all, επίτηδες: το ωμό έγγραφο έχει γεγονότα,
+    //    εξαιρέσεις και σημειώσεις ελέγχου ΚΑΙ ΤΩΝ ΔΥΟ πλευρών. Το φίλτρο `visibleTo` ανά ρόλο δεν
+    //    εκφράζεται σε κανόνα ⇒ ανάγνωση εδώ θα έδινε στον δικηγόρο του αγοραστή τα ιδιωτικά του πωλητή.
+    //    ⛔ ποτέ ανάγνωση με `companyId` από εξωτερικό (ADR-901 §4 #2: ποτέ πρόσβαση σε χώρο).
     match /conveyance_cases/{caseId} {
       allow read: if false;
       allow write: if false;

@@ -72,6 +72,13 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       'γι\' αυτό το ακροατήριο είναι prospective-owner (κατώφλι 5, βήμα 5), ποτέ place-owner.',
   },
   {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/ownership-verification/route.ts',
+    why:
+      'ADR-900 §3.8 — η επαλήθευση κατοχής με ΠΚΑ. Απευθύνεται ΜΟΝΟ στον ιδιώτη ιδιοκτήτη: η υπηρεσία ' +
+      'δέχεται αποκλειστικά ιδιωτική θεματοφυλακή (mayAdminister, το γραφείο μένει δηλωμένο). Η ταυτότητα ' +
+      'έρχεται από το users/{uid} (όνομα + ΑΦΜ), ποτέ από το σώμα· το GET διαβάζει πάντα με τον uid του καλούντος.',
+  },
+  {
     route: 'src/app/api/workspaces/route.ts',
     why:
       'Η ΠΟΡΤΑ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΣΥΝΟΡΟΥ (ADR-787 Κ-1 · Κ-2). Είναι η ΜΟΝΑΔΙΚΗ διαδρομή ' +
@@ -374,6 +381,27 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       'ΑΝΑΚΛΗΣΗ ΜΙΑΣ ΣΥΣΚΕΥΗΣ (ADR-894). Ίδιος πληθυσμός με την πόρτα των συσκευών. Το sessionId ψάχνεται '
       + 'ΜΟΝΟ κάτω από users/{actor.ctx.uid}/sessions ⇒ ξένη συνεδρία δεν εκφράζεται (ίδιο 404 με ανύπαρκτη)· '
       + 'επικυρώνεται ως sess_<uuid v4> ώστε κανένα «/» να μη φτιάξει άλλη διαδρομή εγγράφου.',
+  },
+  {
+    route: 'src/app/api/engagements/route.ts',
+    why:
+      'ΟΙ ΥΠΟΘΕΣΕΙΣ ΜΟΥ (ADR-901 Φ2 · ADR-862 Φ1). Ο δικηγόρος/συμβολαιογράφος μπορεί να είναι ιδιώτης ΧΩΡΙΣ '
+      + 'οργανισμό — το withAuth θα του απαντούσε 401 και η υπόθεση που του ανατέθηκε θα ήταν αόρατη. Η λίστα '
+      + 'είναι collection-group ΜΟΝΟ στο actor.ctx.uid· κανένα companyId δεν διαβάζεται, κανένα όρισμα από τον πελάτη.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/respond/route.ts',
+    why:
+      'ΑΠΟΔΟΧΗ / ΑΡΝΗΣΗ ΣΥΜΜΕΤΟΧΗΣ (ADR-862 Φ1 — Entra «PendingAcceptance»). Ίδιος πληθυσμός με τη λίστα. Η '
+      + 'συμμετοχή ψάχνεται ΜΟΝΟ ανάμεσα στις συμμετοχές του actor.ctx.uid ⇒ ξένη δεν εκφράζεται (404)· ο '
+      + 'γραφέας ξανακρίνει ότι αποκρίνεται ο ίδιος ο καλεσμένος (planTransition).',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/case/route.ts',
+    why:
+      'Η ΥΠΟΘΕΣΗ ΜΕΣΩ ΣΥΜΜΕΤΟΧΗΣ (ADR-901 Φ2). Ο μισθωτής της υπόθεσης έρχεται από τη ΣΥΜΜΕΤΟΧΗ (που βρέθηκε '
+      + 'στις δικές του), ποτέ από το αίτημα· η κρίση decideEngagement τρέχει ανά αίτημα και ο κατάλογος '
+      + 'φιλτράρεται ανά ρόλο και εμβέλεια — το ωμό έγγραφο δεν φεύγει ποτέ.',
   },
 ];
 
