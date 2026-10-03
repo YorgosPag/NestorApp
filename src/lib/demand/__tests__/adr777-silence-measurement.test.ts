@@ -12,7 +12,7 @@
  * ισχυρισμοί αυτού του αρχείου είναι **υπάρξεως**, ποτέ **αναλογίας**.
  */
 
-import { readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import { readLevelAnswer, readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
 import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import type { PublicListing } from '@/types/public-listing';
 import { LISTING_CORPUS_2026_09_05 } from './__fixtures__/public-listings-corpus';
@@ -20,14 +20,16 @@ import { LISTING_CORPUS_2026_09_05 } from './__fixtures__/public-listings-corpus
 // ⚠️ **Ο άξονας τιμής είναι ΤΡΕΙΣ** από το §8.60.14 (πώληση · ενοίκιο · διανυκτέρευση). Το σώμα
 //    μετριέται στον άξονα **πώλησης**: το ίδιο ερώτημα με πριν για τις αγγελίες πώλησης, και οι
 //    υπόλοιπες απαντούν πλέον `not-applicable` αντί να χρεώνονται σιωπή σε μονάδα που δεν τους τέθηκε.
-const AXES: readonly RangeCriterionKey[] = ['priceSale', 'areaSqm', 'bedrooms', 'floor'];
+// ADR-903 §9 — ο όροφος είναι **στάθμη** (`readLevelAnswer`), όχι αριθμός· ίδιοι τέσσερις κάδοι.
+type MeasuredAxis = RangeCriterionKey | 'floor';
+const AXES: readonly MeasuredAxis[] = ['priceSale', 'areaSqm', 'bedrooms', 'floor'];
 
 type Tally = { declared: number; neverAsked: number; declaredNone: number; notApplicable: number };
 
-function tally(listings: readonly PublicListing[], key: RangeCriterionKey): Tally {
+function tally(listings: readonly PublicListing[], key: MeasuredAxis): Tally {
   const out: Tally = { declared: 0, neverAsked: 0, declaredNone: 0, notApplicable: 0 };
   for (const listing of listings) {
-    const answer = readNumericAnswer(listing, key);
+    const answer = key === 'floor' ? readLevelAnswer(listing, key) : readNumericAnswer(listing, key);
     if (answer.state === 'declared') out.declared += 1;
     else if (answer.state === 'never-asked') out.neverAsked += 1;
     else if (answer.state === 'declared-none') out.declaredNone += 1;

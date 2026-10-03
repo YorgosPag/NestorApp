@@ -55,9 +55,11 @@ import {
   landCanAnswer,
   type CriterionKey,
   type FlagCriterionKey,
+  type LevelRangeCriterionKey,
   type RangeCriterionKey,
   type ValueSetCriterionKey,
 } from './listing-criterion-asking';
+import { floorRefOf, type FloorRef } from '@/lib/floor/floor-ref';
 
 // =============================================================================
 // 1. Ο ΦΡΟΥΡΟΣ ΤΗΣ ΕΦΑΡΜΟΣΙΜΟΤΗΤΑΣ — πριν από κάθε ανάγνωση
@@ -191,7 +193,6 @@ function amountInRole(role: PriceRole): NumericReader {
  */
 const NUMERIC_READERS: Record<RangeCriterionKey, NumericReader> = {
   areaSqm: plainNumber('areaSqm', (l) => l.areaSqm),
-  floor: plainNumber('floor', (l) => l.floor),
   bedrooms: plainNumber('bedrooms', (l) => l.bedrooms),
   renovationYear: plainNumber('renovationYear', (l) => l.renovationYear),
   /** Δοχείο με προέλευση, όπως το `levels` — την άδεια την κρίνει ο `ATTRIBUTE_DECLARED`. */
@@ -234,6 +235,20 @@ export function readNumericAnswer(
   if (!criterionAppliesTo(listing, key)) return NOT_APPLICABLE;
   const value = NUMERIC_READERS[key](listing);
   return value === null ? NEVER_ASKED : declaredAnswer(value);
+}
+
+/**
+ * Η απάντηση της αγγελίας σε άξονα **στάθμης** (ADR-903 §9, 2β.3): αριθμός **και** είδος — ο αριθμός μόνος
+ * θα έκανε την πυλωτή «ισόγειο» και το ημιυπόγειο «υπόγειο». Ο ίδιος κριτής «δηλωμένο;» με τους αριθμούς.
+ */
+export function readLevelAnswer(
+  listing: PublicListing,
+  key: LevelRangeCriterionKey
+): CriterionAnswer<FloorRef> {
+  if (!criterionAppliesTo(listing, key)) return NOT_APPLICABLE;
+  if (!isAttributeDeclared(listing, key)) return NEVER_ASKED;
+  const ref = floorRefOf(listing.floor, listing.floorKind);
+  return ref === null ? NEVER_ASKED : declaredAnswer(ref);
 }
 
 // =============================================================================

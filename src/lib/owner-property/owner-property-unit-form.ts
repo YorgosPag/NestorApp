@@ -28,11 +28,6 @@ export const unitFormShape = {
 
 export const EMPTY_UNIT_FORM = { floorLevel: '', unitNumber: '' } as const;
 
-/** Αριθμός ορόφου (π.χ. από το prospect URL) → κλειδί στάθμης· το είδος συνάγεται από τον αριθμό. */
-export function floorLevelOf(floor: number | null): string {
-  return floor === null ? '' : floorRefKey({ number: floor, kind: null });
-}
-
 /**
  * **Φόρμα → πεδία στάθμης/μονάδας της δήλωσης.** Η γη δεν έχει ούτε όροφο ούτε πόρτα (ADR-777 §8.32) — ο
  * κανόνας ζει εδώ, όχι στην οθόνη, όπως για τον όροφο και τα υπνοδωμάτια.
@@ -49,6 +44,18 @@ export function unitDraftOf(
     floorKind: floor === null ? null : level?.kind ?? null,
     unitNumber: land ? null : normalizeUnitNumber(values.unitNumber),
   };
+}
+
+/**
+ * ADR-900 §8 #2 (2β.3) — **λείπει η στάθμη της μονάδας;** Ακίνητο (όχι γη) χωρίς δηλωμένη στάθμη ⇒ κάθε ζήτηση
+ * με όρο ορόφου κρίνεται «δεν ταιριάζει», άρα ο αριθμός του πάνελ **δεν** είναι «ζήτηση για τη μονάδα σας».
+ * Ο κανόνας «η γη δεν έχει όροφο» ζει εδώ, όπως στο {@link unitDraftOf}.
+ */
+export function isUnitLevelUndeclared(
+  property: Pick<OwnerProperty, 'floor' | 'floorKind'>,
+  land: boolean,
+): boolean {
+  return !land && hostedFloorRef(property) === null;
 }
 
 /** **Δήλωση → φόρμα** (επεξεργασία). */

@@ -48,8 +48,8 @@ const FULL: DemandFormValues = {
   areaMin: 80,
   areaMax: 160,
   bedroomsMin: 2,
-  floorMin: 1,
-  floorMax: 4,
+  floorMinLevel: '-1:semi-basement',
+  floorMaxLevel: '4:standard',
   proximity: [{ kind: 'school', maxMetres: 800 }],
   lifeContext: 'family',
   // ADR-886 — όνομα του ανθρώπου + ετικέτα του geocoder: ταξιδεύουν και επιστρέφουν ακέραια.
@@ -187,19 +187,21 @@ describe('🔴 Ν — κενό πεδίο ⇒ `null`, ΠΟΤΕ `0`', () => {
       ...EMPTY_DEMAND_FORM,
       seekPrices: { ...EMPTY_DEMAND_FORM.seekPrices, sell: { min: '', max: '' } },
       areaMin: '',
-      floorMin: '',
     });
     expect(parsed.seekPrices.sell.max).toBeNull();
     expect(parsed.areaMin).toBeNull();
-    expect(parsed.floorMin).toBeNull();
   });
 
-  it('🔑 το `0` ΕΠΙΒΙΩΝΕΙ — αλλιώς καμία ζήτηση δεν θα μπορούσε να ζητήσει ΙΣΟΓΕΙΟ', () => {
-    const parsed = parse({ ...EMPTY_DEMAND_FORM, floorMin: 0, floorMax: 0, bedroomsMin: 0 });
-    expect(parsed.floorMin).toBe(0);
-    expect(parsed.floorMax).toBe(0);
+  it('🔑 το `0` ΕΠΙΒΙΩΝΕΙ — αλλιώς καμία ζήτηση δεν θα μπορούσε να ζητήσει ΙΣΟΓΕΙΟ ή studio', () => {
+    const parsed = parse({ ...EMPTY_DEMAND_FORM, floorMinLevel: '0:ground', floorMaxLevel: '0:ground', bedroomsMin: 0 });
     expect(parsed.bedroomsMin).toBe(0);
-    expect(demandDraftFrom(parsed).features.floorMin).toBe(0);
+    const { features } = demandDraftFrom(parsed);
+    expect(features).toMatchObject({ floorMin: 0, floorMinKind: 'ground', floorMax: 0, floorMaxKind: 'ground' });
+  });
+
+  it('ADR-903 §9 — κενή στάθμη ⇒ ΚΑΙ τα τέσσερα πεδία `null` (κανένα μισό άκρο)', () => {
+    const { features } = demandDraftFrom(parse({ ...EMPTY_DEMAND_FORM, floorMaxLevel: '2:standard' }));
+    expect(features).toMatchObject({ floorMin: null, floorMinKind: null, floorMax: 2, floorMaxKind: 'standard' });
   });
 
   it('σκουπίδια γίνονται `null`, όχι `NaN`', () => {

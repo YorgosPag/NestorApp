@@ -25,7 +25,10 @@ import { projectListingShape } from '@/services/listings/public-listing-projecti
 import { ownerFormFromProspect } from '@/lib/owner-property/owner-property-prospect-prefill';
 
 const REF = { landId: 'land_abc', buildingId: 'pbld_xyz' } as const;
-const FULL: ProspectQuery = { ref: REF, description: { type: 'apartment', areaSqm: 85, floor: 3 } };
+const FULL: ProspectQuery = {
+  ref: REF,
+  description: { type: 'apartment', areaSqm: 85, floor: { number: 3, kind: 'standard' } },
+};
 
 describe('U — συμβόλαιο URL: ό,τι γράφει ο ένας, το διαβάζει ο άλλος', () => {
   it('round-trip πλήρους ερωτήματος', () => {
@@ -60,6 +63,26 @@ describe('U — συμβόλαιο URL: ό,τι γράφει ο ένας, το �
       expect(parseProspectQuery(new URLSearchParams(`landId=land_abc&type=apartment&floor=${floor}`)).kind).toBe('ok');
     }
   });
+
+  it('🔑 ADR-903 §9 — η ΠΥΛΩΤΗ ταξιδεύει ως πυλωτή, όχι ως «0» (round-trip)', () => {
+    const pilotis: ProspectQuery = { ...FULL, description: { ...FULL.description, floor: { number: 0, kind: 'pilotis' } } };
+    expect(prospectQueryParams(pilotis).get('floor')).toBe('0:pilotis');
+    expect(parseProspectQuery(prospectQueryParams(pilotis))).toEqual({ kind: 'ok', query: pilotis });
+  });
+
+  it('σύνδεσμος πριν την 2β.3 (σκέτος ακέραιος) ⇒ στάθμη χωρίς είδος, που γράφεται ξανά ίδια', () => {
+    const parsed = parseProspectQuery(new URLSearchParams('landId=land_abc&type=apartment&floor=2'));
+    expect(parsed).toEqual({
+      kind: 'ok',
+      query: { ref: { landId: 'land_abc', buildingId: null }, description: { type: 'apartment', areaSqm: null, floor: { number: 2, kind: null } } },
+    });
+    if (parsed.kind === 'ok') expect(prospectQueryParams(parsed.query).get('floor')).toBe('2');
+  });
+
+  it('η προβολή κρατά ΚΑΙ το είδος — το ζεύγος floor + floorKind της κρίσης', () => {
+    expect(prospectProjectable({ type: 'apartment', areaSqm: null, floor: { number: 0, kind: 'pilotis' } }))
+      .toMatchObject({ floor: 0, floorKind: 'pilotis' });
+  });
 });
 
 describe('Φ — φόρμα → ερώτημα', () => {
@@ -69,16 +92,16 @@ describe('Φ — φόρμα → ερώτημα', () => {
   });
 
   it('🔴 η γη ΔΕΝ έχει όροφο — η τιμή που επέζησε στη φόρμα πέφτει στη μετάφραση', () => {
-    expect(prospectQueryFrom(REF, { type: 'plot', areaSqm: 400, floor: 3 })?.description.floor).toBeNull();
+    expect(prospectQueryFrom(REF, { type: 'plot', areaSqm: 400, floorLevel: '3:standard' })?.description.floor).toBeNull();
   });
 
   it('τιμή εκτός ορίων ⇒ `null` — ο πελάτης δεν στέλνει ό,τι ο διακομιστής θα απέρριπτε', () => {
-    expect(prospectQueryFrom(REF, { type: 'apartment', areaSqm: -5, floor: null })).toBeNull();
-    expect(prospectQueryFrom(REF, { type: 'apartment', areaSqm: 80, floor: 1.5 })).toBeNull();
+    expect(prospectQueryFrom(REF, { type: 'apartment', areaSqm: -5, floorLevel: '' })).toBeNull();
+    expect(prospectQueryFrom(REF, { type: 'apartment', areaSqm: 80, floorLevel: 'x' })).toBeNull();
   });
 
   it('έγκυρη φόρμα ⇒ ερώτημα που περνά τον parser της διαδρομής', () => {
-    const query = prospectQueryFrom(REF, { type: 'apartment', areaSqm: 85, floor: 3 });
+    const query = prospectQueryFrom(REF, { type: 'apartment', areaSqm: 85, floorLevel: '3:standard' });
     expect(query).toEqual(FULL);
     expect(parseProspectQuery(prospectQueryParams(FULL)).kind).toBe('ok');
   });
@@ -97,7 +120,7 @@ describe('Κ — προσυμπλήρωση του `/offers/new` από το ί�
   it('είδος, εμβαδόν, όροφος, κτίριο — και ΚΑΜΙΑ διεύθυνση/σημείο (Α5)', () => {
     const values = ownerFormFromProspect(prospectQueryParams(FULL));
     expect(values).not.toBeNull();
-    expect(values).toMatchObject({ type: 'apartment', areaSqm: 85, floor: 3, placeRef: REF, placePoint: null, placeQuery: '' });
+    expect(values).toMatchObject({ type: 'apartment', areaSqm: 85, floorLevel: '3:standard', placeRef: REF, placePoint: null, placeQuery: '' });
   });
 
   it('χαλασμένο URL ⇒ `null` (η φόρμα ανοίγει κενή, η καταχώριση δεν μπλοκάρει)', () => {

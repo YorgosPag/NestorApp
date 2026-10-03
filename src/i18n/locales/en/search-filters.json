@@ -23,7 +23,8 @@
       "summaryBoth": "{min} – {max}",
       "summaryMin": "from {min}",
       "summaryMax": "up to {max}",
-      "summaryAxis": "{axis}: {range}"
+      "summaryAxis": "{axis}: {range}",
+      "any": "Any"
     },
     "option": {
       "undeclared": "{count} undeclared"

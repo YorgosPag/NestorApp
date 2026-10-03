@@ -79,10 +79,17 @@ const COUNT_KEY: Readonly<Record<JudgedInterestStance, string>> = {
 export function PlaceInterestPanel({
   interest,
   audience,
+  unitIncomplete = false,
 }: {
   interest: PlaceInterestState;
   /** Το κοινό της καταχώρησης — **ήδη ερμηνευμένο** από το `marketingAudienceOf` (Α3). */
   audience: MarketingAudience;
+  /**
+   * ADR-900 §8 #2 (2β.3) — το ακίνητο (όχι γη) **δεν** έχει δηλωμένη στάθμη ⇒ κάθε ζήτηση με όρο ορόφου
+   * κρίνεται «δεν ταιριάζει» και ο αριθμός δεν είναι «για τη μονάδα σας». Το ξέρει ήδη ο πελάτης για το
+   * **δικό του** ακίνητο — καμία πληροφορία από τη ζήτηση, άρα μηδέν διαρροή.
+   */
+  unitIncomplete?: boolean;
 }): React.ReactElement | null {
   const { t, isNamespaceReady } = useTranslation(['property-market']);
 
@@ -138,7 +145,7 @@ export function PlaceInterestPanel({
     );
   }
 
-  return <CountedInterest interest={interest.interest} audience={audience} />;
+  return <CountedInterest interest={interest.interest} audience={audience} unitIncomplete={unitIncomplete} />;
 }
 
 /** Το πλαίσιο του πάνελ — **ένα** σημείο για επιφάνεια, ετικέτα και κεφαλίδα. */
@@ -161,9 +168,11 @@ function InterestFrame({ children }: { children: React.ReactNode }): React.React
 function CountedInterest({
   interest,
   audience,
+  unitIncomplete,
 }: {
   interest: Extract<PlaceInterest, { disclosure: unknown }>;
   audience: MarketingAudience;
+  unitIncomplete: boolean;
 }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   const { stance, disclosure } = interest;
@@ -201,6 +210,12 @@ function CountedInterest({
       {closedReach ? (
         <p className="mt-1 text-sm text-muted-foreground">
           {t('property-market:demand.interest.closedReach')}
+        </p>
+      ) : null}
+
+      {unitIncomplete ? (
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('property-market:demand.interest.unitIncomplete')}
         </p>
       ) : null}
 

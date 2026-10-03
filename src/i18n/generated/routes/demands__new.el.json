@@ -41,6 +41,7 @@
           "areaMin": "Από",
           "bedroomsHelp": "Το 0 σημαίνει «δέξου και γκαρσονιέρα».",
           "bedroomsMin": "Υπνοδωμάτια, τουλάχιστον",
+          "floorAny": "Αδιάφορο",
           "floorLegend": "Όροφος",
           "floorMax": "Έως",
           "floorMin": "Από",

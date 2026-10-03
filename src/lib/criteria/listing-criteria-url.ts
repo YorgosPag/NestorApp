@@ -42,16 +42,19 @@ import {
   LISTING_CRITERION_KEYS,
   type CriterionKey,
   type FlagCriterionKey,
+  type LevelRangeCriterionKey,
   type RangeCriterionKey,
   type ValueSetCriterionKey,
 } from './listing-criterion-asking';
 import { keepKnownValues } from './listing-criterion-values';
+import { levelBoundKey, parseLevelBoundKey, type LevelBound, type LevelRange } from '@/lib/floor/floor-level-range';
 import { LISTING_SELECTED_PARAM } from '@/lib/listings/listing-focus';
 import { SEARCH_REGION_PARAM } from '@/lib/listings/listing-search-area';
 import { SEARCH_DRAWN_PARAM } from '@/lib/listings/listing-drawn-area';
 import {
   EMPTY_LISTING_CRITERIA,
   withFlag,
+  withLevelRange,
   withRange,
   withValues,
   type ListingCriteria,
@@ -147,8 +150,10 @@ export const RESERVED_SEARCH_PARAMS = [
   'in', 'out', 'guests', 'pets', LISTING_SELECTED_PARAM,
 ] as const;
 
-/** Τα δύο άκρα ενός αριθμητικού άξονα στη διεύθυνση. */
-export function rangeParams(key: RangeCriterionKey): { readonly min: string; readonly max: string } {
+/** Τα δύο άκρα ενός άξονα εύρους (αριθμητικού ή στάθμης) στη διεύθυνση. */
+export function rangeParams(
+  key: RangeCriterionKey | LevelRangeCriterionKey,
+): { readonly min: string; readonly max: string } {
   const base = CRITERION_PARAM[key];
   return { min: `${base}min`, max: `${base}max` };
 }
@@ -229,6 +234,15 @@ function readBound(params: URLSearchParams, canonical: string): number | null {
 }
 
 /**
+ * Άκρο **στάθμης** (ADR-903 §9): κλειδί `0:raised-ground`, ή σκέτος ακέραιος — κάθε σύνδεσμος γραμμένος πριν
+ * την 2β.3 (`flmin=1`) διαβάζεται ως **ολόκληρη** η στάθμη, δηλαδή ακριβώς ό,τι σήμαινε. Άκυρο ⇒ `null`.
+ */
+function readLevelBound(params: URLSearchParams, name: string): LevelBound | null {
+  const raw = params.get(name);
+  return raw === null ? null : parseLevelBoundKey(raw);
+}
+
+/**
  * **Η σημαία διαβάζεται με ΤΡΕΙΣ καταστάσεις, όχι δύο.**
  *
  * ⚠️ Απουσία ⇒ `undefined` *(«δεν με νοιάζει»)*. Παρουσία ⇒ `true`/`false`. Ένα
@@ -264,6 +278,15 @@ export function parseListingCriteria(params: URLSearchParams): ListingCriteria {
         criteria = withRange(criteria, rangeKey, {
           min: readBound(params, min),
           max: readBound(params, max),
+        });
+        break;
+      }
+      case 'level-range': {
+        const levelKey = key as LevelRangeCriterionKey;
+        const { min, max } = rangeParams(levelKey);
+        criteria = withLevelRange(criteria, levelKey, {
+          min: readLevelBound(params, min),
+          max: readLevelBound(params, max),
         });
         break;
       }
@@ -317,6 +340,13 @@ export function writeListingCriteria(
         const range = value as CriterionRange;
         if (range.min !== null) params.set(min, String(range.min));
         if (range.max !== null) params.set(max, String(range.max));
+        break;
+      }
+      case 'level-range': {
+        const { min, max } = rangeParams(key as LevelRangeCriterionKey);
+        const range = value as LevelRange;
+        if (range.min !== null) params.set(min, levelBoundKey(range.min));
+        if (range.max !== null) params.set(max, levelBoundKey(range.max));
         break;
       }
       case 'flag':

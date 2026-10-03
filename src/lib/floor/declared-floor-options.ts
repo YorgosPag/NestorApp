@@ -31,8 +31,11 @@ export interface DeclaredFloorOption {
 
 const ref = (number: number, kind: FloorKind): FloorRef => ({ number, kind });
 
-/** Η κλειστή λίστα, **κατά στάθμη** (από κάτω προς τα πάνω). */
-function baseOptions(): FloorRef[] {
+/**
+ * Η κλειστή λίστα, **κατά στάθμη** (από κάτω προς τα πάνω). Τη μοιράζεται ο επιλογέας **εύρους** της ζήτησης
+ * και της αναζήτησης (`floor-level-range.ts`, 2β.3) — μία λίστα στάθμεων, όχι δύο.
+ */
+export function declaredFloorRefs(): FloorRef[] {
   const basements = Array.from({ length: DECLARED_BASEMENT_DEPTH }, (_, i) => ref(i - DECLARED_BASEMENT_DEPTH, 'basement'));
   const storeys = Array.from({ length: DECLARED_FLOOR_MAX }, (_, i) => ref(i + 1, 'standard'));
   return [
@@ -51,7 +54,7 @@ function baseOptions(): FloorRef[] {
  * επεξεργασίας που δεν μπορεί να δείξει την αποθηκευμένη τιμή θα την έσβηνε σιωπηλά στην πρώτη αποθήκευση.
  */
 export function declaredFloorOptions(current: FloorRef | null = null): readonly DeclaredFloorOption[] {
-  const refs = baseOptions();
+  const refs = declaredFloorRefs();
   if (current !== null && current.number !== null && !refs.some((r) => floorRefKey(r) === floorRefKey(current))) {
     refs.push(current);
     refs.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));

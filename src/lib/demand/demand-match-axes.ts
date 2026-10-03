@@ -15,7 +15,7 @@
  * αγγιχτεί κανένα κριτήριο.
  *
  * 🔑 **Τα κοινά πρωτόγονα έρχονται από τους υπάρχοντες SSoT, ποτέ ξαναγραμμένα:**
- * `readNumericAnswer` (`lib/criteria/`) · `withinRange` (`listing-filters.ts`) ·
+ * `readNumericAnswer` / `readLevelAnswer` (`lib/criteria/`) · `withinLevelRange` (`lib/floor/floor-level-range`) ·
  * `distanceMeters` (`lib/geo/geo-distance.ts`) · `isPointInDemandArea` (`lib/demand/demand-area.ts`, ADR-888).
  * Έτσι ο χάρτης, η λίστα και η μηχανή **δεν μπορούν** να διαφωνήσουν για το ίδιο ερώτημα.
  *
@@ -27,10 +27,10 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, καμία εξάρτηση από React/Firestore.
  */
 
-import { withinRange } from '@/lib/listings/listing-filters';
 // 🔑 ADR-777 §8.52 — Ο **ΕΝΑΣ** αναγνώστης. Η ζήτηση ΔΕΝ ρωτά πια μόνη της «τι απαντά
 // η αγγελία;» — ούτε για την τιμή (`getEffectivePrice` ζει ΜΕΣΑ του), ούτε για τη γη.
-import { readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import { readLevelAnswer, readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import { isAskedLevelRange, levelRangeOf, withinLevelRange } from '@/lib/floor/floor-level-range';
 import type { PriceRole } from '@/lib/properties/price-resolver';
 import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import { isPointInDemandArea } from '@/lib/demand/demand-area';
@@ -217,18 +217,25 @@ function bedroomsAxis(
   }
 }
 
-/** ⚠️ Ο **μόνος** άξονας χωρίς «πόσο»: ένας όροφος εκτός εύρους δεν έχει έλλειμμα. */
+/**
+ * ⚠️ Ο **μόνος** άξονας χωρίς «πόσο»: ένας όροφος εκτός εύρους δεν έχει έλλειμμα.
+ *
+ * 🔑 ADR-903 §9 (2β.3) — κρίνεται **στάθμη**, όχι αριθμός (σειρά Spitogatos): η ζήτηση «από ημιυπόγειο» δεν
+ * ταιριάζει σε υπόγειο, και η «έως ισόγειο» δεν ταιριάζει σε υπερυψωμένο. Η **ίδια** διάταξη με το φίλτρο της
+ * αναζήτησης (`withinLevelRange`)· ζήτηση πριν την 2β.3 (άκρα χωρίς είδος) = ολόκληρη η στάθμη, όπως πριν.
+ */
 function floorAxis(
   listing: PublicListing,
   f: PropertyDemand['features'],
   blockers: DemandBlocker[],
 ): void {
-  const floor = answerOrBlock(
-    listing, 'floor', 'floor-undeclared',
-    f.floorMin !== null || f.floorMax !== null, blockers,
-  );
-  if (floor === null) return;
-  if (!withinRange(floor, f.floorMin, f.floorMax)) blockers.push('floor-outside');
+  const range = levelRangeOf(f);
+  if (!isAskedLevelRange(range)) return;
+  const answer = readLevelAnswer(listing, 'floor');
+  // ⚠️ `not-applicable` ⇒ ΣΙΩΠΗ (οικόπεδο, §8.50) — ίδιο συμβόλαιο με το `answerOrBlock`.
+  if (answer.state === 'never-asked' || answer.state === 'declared-none') blockers.push('floor-undeclared');
+  if (answer.state !== 'declared') return;
+  if (!withinLevelRange(answer.value, range)) blockers.push('floor-outside');
 }
 
 /** Χωρικός άξονας — και η **μόνη** θέση που η θέση της αγγελίας κρίνεται. */

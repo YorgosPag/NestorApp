@@ -116,6 +116,8 @@ import { isDemandLabelTooLong } from '@/lib/demand/demand-title';
 import { demandAreaInvariants } from '@/lib/demand/demand-area';
 import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { FloorKind } from '@/utils/floor-naming';
+import { levelRangeInverted, levelRangeOf } from '@/lib/floor/floor-level-range';
 
 // =============================================================================
 // 1. ΧΩΡΟΣ — ο πρώτος άξονας (Ζ1 · Ζ2 · Ζ3 · Ζ4 · Ζ5)
@@ -342,8 +344,17 @@ export interface DemandFeatures {
   readonly bedroomsMin: number | null;
   /** **Ζ5** — ελάχιστος όροφος. `0` = ισόγειο, υπαρκτή τιμή. */
   readonly floorMin: number | null;
+  /**
+   * **Ζ5** — η επώνυμη στάθμη του κάτω άκρου (ADR-903 §9, 2β.3 — σειρά Spitogatos: «από **ημιυπόγειο**»
+   * αποκλείει το υπόγειο, ενώ και τα δύο είναι −1). `null` = **ολόκληρη** η στάθμη του αριθμού (κάθε ζήτηση
+   * πριν την 2β.3). Ζεύγος με το {@link floorMin}, όπως `floor` + `floorKind` παντού· κρίση **μόνο** μέσω
+   * `lib/floor/floor-level-range`.
+   */
+  readonly floorMinKind: FloorKind | null;
   /** **Ζ5** — μέγιστος όροφος. Το «θέλω ισόγειο» είναι `floorMin: 0, floorMax: 0`. */
   readonly floorMax: number | null;
+  /** **Ζ5** — η επώνυμη στάθμη του άνω άκρου («έως **ισόγειο**» αποκλείει το υπερυψωμένο). Βλ. {@link floorMinKind}. */
+  readonly floorMaxKind: FloorKind | null;
 }
 
 /** Κανένας όρος χαρακτηριστικών — η ουδέτερη τιμή, ώστε να μη γράφεται πουθενά αλλού. */
@@ -353,7 +364,9 @@ export const NO_DEMAND_FEATURES: DemandFeatures = {
   areaMax: null,
   bedroomsMin: null,
   floorMin: null,
+  floorMinKind: null,
   floorMax: null,
+  floorMaxKind: null,
 };
 
 // =============================================================================
@@ -1061,7 +1074,7 @@ function rangeInvariants(features: DemandFeatures, seeks: readonly DemandSeek[])
     seeks.filter(isPricedSeek).some((seek) => rangeInverted(seek.price.min, seek.price.max)) ||
     seeks.filter(isShortStaySeek).some((seek) => rangeInverted(seek.nights.min, seek.nights.max)) ||
     rangeInverted(features.areaMin, features.areaMax) ||
-    rangeInverted(features.floorMin, features.floorMax);
+    levelRangeInverted(levelRangeOf(features));
   return inverted ? ['range-inverted'] : [];
 }
 

@@ -773,6 +773,25 @@ describe('ADR-777 §8.52 — η ζήτηση ρωτά τον ΕΝΑΝ αναγν
     expect(result.blockers).not.toContain('floor-outside');
   });
 
+  it('Α4β — ADR-903 §9: «από ΗΜΙΥΠΟΓΕΙΟ» αποκλείει το υπόγειο (και τα δύο −1) — η κρίση είναι ΣΤΑΘΜΗ', () => {
+    const d = demand({
+      features: { ...NO_DEMAND_FEATURES, floorMin: -1, floorMinKind: 'semi-basement', floorMax: 2, floorMaxKind: 'standard' },
+    });
+    const at = (floor: number, floorKind: PublicListing['floorKind']) =>
+      matchDemandAgainstListing(d, facts({ listing: listing({ floor, floorKind }) }), TODAY).blockers;
+    expect(at(-1, 'basement')).toContain('floor-outside');
+    expect(at(-1, 'semi-basement')).not.toContain('floor-outside');
+    expect(at(3, 'standard')).toContain('floor-outside');
+  });
+
+  it('Α4γ — ζήτηση ΠΡΙΝ την 2β.3 (άκρα χωρίς είδος) = ολόκληρη η στάθμη: «έως 0» δέχεται πυλωτή ΚΑΙ υπερυψωμένο', () => {
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, floorMin: 0, floorMax: 0 } });
+    for (const floorKind of ['ground', 'pilotis', 'raised-ground'] as const) {
+      const blockers = matchDemandAgainstListing(d, facts({ listing: listing({ floor: 0, floorKind }) }), TODAY).blockers;
+      expect(blockers).not.toContain('floor-outside');
+    }
+  });
+
   // ── Β. Η ΣΙΩΠΗ ΔΕΝ ΜΙΛΑΕΙ ΟΤΑΝ ΚΑΝΕΙΣ ΔΕΝ ΡΩΤΗΣΕ ─────────────────────────
 
   it('Β1 — αγγελία χωρίς ΚΑΝΕΝΑ αριθμητικό στοιχείο ταιριάζει, αν η ζήτηση δεν ρωτά τίποτα', () => {

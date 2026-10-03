@@ -17,9 +17,9 @@ import {
 import {
   parseListingFilters,
   serializeListingFilters,
-  withinRange,
 } from '@/lib/listings/listing-filters';
-import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
+import { levelRangeIn, valuesOf } from '@/lib/criteria/listing-criteria';
+import { withinLevelRange } from '@/lib/floor/floor-level-range';
 import {
   NO_AMOUNT_RANGE,
   NO_DEMAND_FEATURES,
@@ -245,7 +245,11 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
     const filters = listingFiltersFromDemand(
       demand({ features: { ...NO_DEMAND_FEATURES, floorMin: 3, floorMax: 5 } }),
     );
-    expect(rangeOf(filters.criteria, 'floor')).toEqual({ min: 3, max: 5 });
+    // ADR-903 §9 (2β.3) — εύρος ΣΤΑΘΜΗΣ· άκρα χωρίς είδος (ζήτηση πριν την 2β.3) = ολόκληρη η στάθμη.
+    expect(levelRangeIn(filters.criteria, 'floor')).toEqual({
+      min: { number: 3, kind: null },
+      max: { number: 5, kind: null },
+    });
 
     // ⚠️ Και η **αντίστροφη** φορά: η λίστα απωλειών δεν επιτρέπεται να το λέει πια.
     expect([...DEMAND_AXES_LOST_IN_FILTERS]).not.toContain('floor-range');
@@ -256,9 +260,11 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
   it('🔴 ΤΟ ΣΥΜΒΟΛΑΙΟ «ΥΠΕΡΣΥΝΟΛΟ» ΕΠΙΒΙΩΝΕΙ ΤΗΣ ΣΤΕΝΩΣΗΣ', () => {
     // Η προσθήκη του ορόφου **στενεύει** την προβολή, άρα μοιάζει να σπάει το
     // συμβόλαιο. Δεν το σπάει: η μηχανή αποκλείει αγγελία **χωρίς** δηλωμένο όροφο
-    // (`withinRange(null, …) === false`), ενώ τα φίλτρα την **κρατούν** ως «δεν το
+    // (εμπόδιο `floor-undeclared`), ενώ τα φίλτρα την **κρατούν** ως «δεν το
     // δήλωσε». Τα φίλτρα παραμένουν χαλαρότερα — που είναι ό,τι απαιτεί το συμβόλαιο.
-    expect(withinRange(null, 3, null)).toBe(false);
+    // ADR-903 §9: στάθμη χωρίς αριθμό (δώμα παλιού κειμένου) δεν μπαίνει σε κανένα εύρος.
+    expect(withinLevelRange({ number: null, kind: 'roof' }, { min: { number: 3, kind: null }, max: null }))
+      .toBe(false);
   });
 });
 

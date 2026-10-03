@@ -46,6 +46,7 @@
 
 import { z } from 'zod';
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
+import { levelBoundOfSelect, levelRangePairs } from '@/lib/floor/floor-level-range';
 import {
   EMPTY_STAY_NIGHTS_FORM,
   EMPTY_STAY_PARTY_FORM,
@@ -136,7 +137,7 @@ export const PLACE_KINDS_NOT_IN_FORM = [] as const satisfies readonly DemandPlac
  * είναι κοινά με τη φόρμα της προσφοράς (Α14) και το CHECK 3.28 τα ονόμασε ως κλώνο
  * μέσα στο ίδιο commit. Ζουν στο `@/lib/forms/form-primitives`, όπου γράφεται **μία**
  * φορά η απόφαση *«το κενό πεδίο γίνεται `null`, ΠΟΤΕ `0`»* — εδώ ο μάρτυράς της
- * είναι το `floorMin: 0` = **ισόγειο** ({@link DemandFeatures}).
+ * είναι το `bedroomsMin: 0` = **δεκτό και studio** ({@link DemandFeatures}).
  */
 const optionalNumber = optionalNumberSchema;
 
@@ -246,8 +247,12 @@ export const demandFormSchema = z.object({
   areaMin: optionalNumber,
   areaMax: optionalNumber,
   bedroomsMin: optionalNumber,
-  floorMin: optionalNumber,
-  floorMax: optionalNumber,
+  /**
+   * ADR-903 §9 (2β.3) — **στάθμη**, όχι αριθμός (σειρά Spitogatos): το κλειδί `αριθμός:είδος` του επιλογέα
+   * («από ημιυπόγειο» ≠ «από υπόγειο»)· `''` = δεν το έθεσε. Γίνεται ζεύγος αριθμός + είδος στο `featuresFrom`.
+   */
+  floorMinLevel: z.string(),
+  floorMaxLevel: z.string(),
 
   // ── ΓΕΙΤΟΝΙΑ ────────────────────────────────────────────────────────────
   proximity: z.array(
@@ -318,8 +323,8 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   areaMin: null,
   areaMax: null,
   bedroomsMin: null,
-  floorMin: null,
-  floorMax: null,
+  floorMinLevel: '',
+  floorMaxLevel: '',
   proximity: [],
   lifeContext: null,
   title: '',
@@ -417,8 +422,10 @@ function featuresFrom(values: DemandFormParsed): DemandFeatures {
     areaMin: values.areaMin,
     areaMax: values.areaMax,
     bedroomsMin: values.bedroomsMin,
-    floorMin: values.floorMin,
-    floorMax: values.floorMax,
+    ...levelRangePairs({
+      min: levelBoundOfSelect(values.floorMinLevel),
+      max: levelBoundOfSelect(values.floorMaxLevel),
+    }),
   };
 }
 

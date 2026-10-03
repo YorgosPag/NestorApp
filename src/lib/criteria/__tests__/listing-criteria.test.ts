@@ -34,6 +34,7 @@ import {
   EMPTY_LISTING_CRITERIA,
   askedCriterionKeys,
   withFlag,
+  withLevelRange,
   withRange,
   withValues,
 } from '../listing-criteria';
@@ -174,7 +175,7 @@ describe('Δ — διεύθυνση ⇄ κριτήρια', () => {
   });
 
   it('🔴 ΙΔΕΜΠΟΤΕΝΤΙΚΟ — δεύτερο πέρασμα δεν αλλάζει τίποτα', () => {
-    let criteria = withRange(EMPTY_LISTING_CRITERIA, 'floor', { min: 0, max: 3 });
+    let criteria = withLevelRange(EMPTY_LISTING_CRITERIA, 'floor', { min: { number: -1, kind: 'semi-basement' }, max: { number: 3, kind: null } });
     criteria = withValues(criteria, 'heatingType', ['autonomous']);
     criteria = withFlag(criteria, 'hasPhotos', true);
 
@@ -186,8 +187,11 @@ describe('Δ — διεύθυνση ⇄ κριτήρια', () => {
   it('🔴 ΤΟ ΙΣΟΓΕΙΟ ΕΙΝΑΙ 0, ΚΑΙ ΤΟ 0 ΕΠΙΒΙΩΝΕΙ', () => {
     // Ένα `Number(raw) || null` θα το ισοπέδωνε σε «δεν ρωτήθηκε» — και κανένας
     // άνθρωπος δεν θα μπορούσε ποτέ να ζητήσει ισόγειο.
+    // ADR-903 §9 — ο παλιός σύνδεσμος (σκέτος ακέραιος) = ολόκληρη η στάθμη· η επώνυμη στάθμη ταξιδεύει ως κλειδί.
     const parsed = parseListingCriteria(new URLSearchParams('flmin=0&flmax=0'));
-    expect(parsed.floor).toEqual({ min: 0, max: 0 });
+    expect(parsed.floor).toEqual({ min: { number: 0, kind: null }, max: { number: 0, kind: null } });
+    const named = parseListingCriteria(new URLSearchParams('flmin=0%3Araised-ground'));
+    expect(named.floor).toEqual({ min: { number: 0, kind: 'raised-ground' }, max: null });
   });
 });
 
@@ -261,7 +265,7 @@ describe('Γ — 🔴 η τέταρτη κατάσταση: not-applicable (ADR-
   it('η γη ΕΠΙΒΙΩΝΕΙ φίλτρου ορόφου — και ΔΕΝ μετριέται ως «δεν το δήλωσε»', () => {
     // 🔑 Η διαφορά είναι ορατή στην οθόνη: κανείς δεν χρωστά στον κάτοχο γης δήλωση
     //    ορόφου, οπότε το οικόπεδο **δεν** ανήκει στον κάδο «3 δεν το δήλωσαν».
-    const wantsThirdFloor = withRange(EMPTY_LISTING_CRITERIA, 'floor', { min: 3, max: null });
+    const wantsThirdFloor = withLevelRange(EMPTY_LISTING_CRITERIA, 'floor', { min: { number: 3, kind: null }, max: null });
     expect(listingSurvivesCriteria(plot, wantsThirdFloor)).toBe(true);
     expect(matchListingCriteria(plot, wantsThirdFloor)).toEqual({
       verdict: 'matches',
@@ -273,7 +277,7 @@ describe('Γ — 🔴 η τέταρτη κατάσταση: not-applicable (ADR-
 
   it('🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: ΔΙΑΜΕΡΙΣΜΑ χωρίς όροφο ΕΙΝΑΙ άγνοια, όχι μη εφαρμοσιμότητα', () => {
     const flat = listing({ id: 'flat', floor: null });
-    const wantsThirdFloor = withRange(EMPTY_LISTING_CRITERIA, 'floor', { min: 3, max: null });
+    const wantsThirdFloor = withLevelRange(EMPTY_LISTING_CRITERIA, 'floor', { min: { number: 3, kind: null }, max: null });
     expect(judgeCriterion(flat, wantsThirdFloor, 'floor')).toBe('undeclared');
     expect(matchListingCriteria(flat, wantsThirdFloor).undeclaredOn).toEqual(['floor']);
   });

@@ -55,7 +55,7 @@ describe('demandFormFromListingFilters', () => {
   it('round-trip: τα μεταφερόμενα κριτήρια επιστρέφουν ίδια', () => {
     const original = listingFiltersFromDemand(
       demand({
-        features: { types: ['apartment'], areaMin: 60, areaMax: 120, bedroomsMin: 2, floorMin: 1, floorMax: 4 },
+        features: { types: ['apartment'], areaMin: 60, areaMax: 120, bedroomsMin: 2, floorMin: -1, floorMinKind: 'semi-basement', floorMax: 4, floorMaxKind: 'standard' },
         place: { kind: 'near', center: { lat: 40.64, lng: 22.94 }, radiusKm: 3 },
       }),
     );

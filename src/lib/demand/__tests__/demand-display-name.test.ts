@@ -32,7 +32,7 @@ describe('demandAutoName — όνομα από τα κριτήρια, ποτέ �
         seeks: [seek('sell', { max: 200000 })],
         place: { kind: 'near', center: { lat: 40.67, lng: 22.9 }, radiusKm: 3 },
         placeLabel: 'Κορδελιό, Θεσσαλονίκη 563 34',
-        features: { types: ['apartment'], areaMin: null, areaMax: null, bedroomsMin: 2, floorMin: null, floorMax: null },
+        features: { types: ['apartment'], areaMin: null, areaMax: null, bedroomsMin: 2, floorMin: null, floorMinKind: null, floorMax: null, floorMaxKind: null },
       }),
       tEl,
     );

@@ -62,7 +62,8 @@ const ATTRIBUTE_ASKING = {
   /** Είδος ακινήτου. Η αγγελία έχει **μία** τιμή· ο άνθρωπος δέχεται πολλές. */
   type: 'enum-any',
   areaSqm: 'range',
-  floor: 'range',
+  /** ADR-903 §9 (2β.3) — στάθμη, όχι αριθμός: «από ημιυπόγειο», «έως ισόγειο» (Spitogatos). */
+  floor: 'level-range',
   /** ADR-898 Φ3β — «θέλω πρόσοψη σε δύο δρόμους»: όπως το φίλτρο «exterior» της idealista. */
   frontage: 'enum-any',
   /**
@@ -227,6 +228,8 @@ type KeysWithShape<S extends CriterionShape> = {
 
 /** Άξονες με αριθμητικό εύρος. */
 export type RangeCriterionKey = KeysWithShape<'range'>;
+/** Άξονες εύρους **στάθμης** (σήμερα: `floor`). */
+export type LevelRangeCriterionKey = KeysWithShape<'level-range'>;
 /** Άξονες όπου η αγγελία έχει **μία** τιμή και ο άνθρωπος δέχεται πολλές. */
 export type EnumCriterionKey = KeysWithShape<'enum-any'>;
 /** Άξονες όπου αρκεί **τομή** των δύο συνόλων. */
@@ -256,6 +259,17 @@ export type ValueSetCriterionKey =
 export const LISTING_CRITERION_KEYS: readonly CriterionKey[] = Object.keys(
   LISTING_CRITERION_ASKING
 ) as readonly CriterionKey[];
+
+/** Τα τρία σχήματα **συνόλου συμβολοσειρών** — η θετική δήλωση του {@link ValueSetCriterionKey}. */
+const VALUE_SET_SHAPES: readonly CriterionShape[] = ['enum-any', 'set-any', 'set-all'];
+
+/**
+ * Κρατά αυτό το σχήμα **σύνολο τιμών**; 🔴 Θετικός κατάλογος, ποτέ «όχι εύρος και όχι σημαία»: η άρνηση
+ * κατέτασσε σιωπηλά κάθε **νέο** σχήμα (`'level-range'`, ADR-903 §9) στα σύνολα — και έπεφτε σε χρόνο εκτέλεσης.
+ */
+export function isValueSetShape(shape: CriterionShape): boolean {
+  return VALUE_SET_SHAPES.includes(shape);
+}
 
 /** Οι άξονες με το δεδομένο σχήμα, **στη σειρά του πίνακα**. */
 export function criterionKeysWithShape(shape: CriterionShape): readonly CriterionKey[] {

@@ -47,9 +47,11 @@ import {
   LISTING_CRITERION_KEYS,
   type CriterionKey,
   type FlagCriterionKey,
+  type LevelRangeCriterionKey,
   type RangeCriterionKey,
   type ValueSetCriterionKey,
 } from './listing-criterion-asking';
+import { isAskedLevelRange, type LevelRange } from '@/lib/floor/floor-level-range';
 
 // =============================================================================
 // 1. Ο ΤΥΠΟΣ
@@ -68,6 +70,8 @@ type ShapeOf<K extends CriterionKey> = (typeof LISTING_CRITERION_ASKING)[K];
  */
 export type CriterionValueOf<K extends CriterionKey> = ShapeOf<K> extends 'range'
   ? CriterionRange
+  : ShapeOf<K> extends 'level-range'
+    ? LevelRange
   : ShapeOf<K> extends 'flag'
     ? boolean
     : readonly string[];
@@ -101,6 +105,14 @@ export function rangeOf(
   criteria: ListingCriteria,
   key: RangeCriterionKey
 ): CriterionRange | undefined {
+  return criteria[key];
+}
+
+/** Το εύρος **στάθμης** που ζητήθηκε (ADR-903 §9), ή `undefined`. */
+export function levelRangeIn(
+  criteria: ListingCriteria,
+  key: LevelRangeCriterionKey
+): LevelRange | undefined {
   return criteria[key];
 }
 
@@ -163,6 +175,18 @@ export function withRange(
   range: CriterionRange
 ): ListingCriteria {
   if (!isAskedRange(range)) return without(criteria, key);
+  const next = draftOf(criteria);
+  next[key] = range;
+  return next;
+}
+
+/** Θέτει εύρος **στάθμης**. Κενό εύρος ⇒ ο άξονας φεύγει (ίδιο συμβόλαιο με το {@link withRange}). */
+export function withLevelRange(
+  criteria: ListingCriteria,
+  key: LevelRangeCriterionKey,
+  range: LevelRange
+): ListingCriteria {
+  if (!isAskedLevelRange(range)) return without(criteria, key);
   const next = draftOf(criteria);
   next[key] = range;
   return next;
@@ -236,6 +260,8 @@ function criterionAsksSomething(
   switch (LISTING_CRITERION_ASKING[key]) {
     case 'range':
       return isAskedRange(value as CriterionRange);
+    case 'level-range':
+      return isAskedLevelRange(value as LevelRange);
     case 'flag':
       return true;
     default:

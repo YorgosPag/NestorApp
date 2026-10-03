@@ -23,7 +23,8 @@
       "summaryBoth": "{min} – {max}",
       "summaryMin": "από {min}",
       "summaryMax": "έως {max}",
-      "summaryAxis": "{axis}: {range}"
+      "summaryAxis": "{axis}: {range}",
+      "any": "Αδιάφορο"
     },
     "option": {
       "undeclared": "{count} χωρίς δήλωση"

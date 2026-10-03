@@ -26,6 +26,7 @@ import type { TFunction } from 'i18next';
 import {
   LISTING_CRITERION_ASKING,
   LISTING_CRITERION_KEYS,
+  isValueSetShape,
   type ValueSetCriterionKey,
 } from '@/lib/criteria/listing-criterion-asking';
 import { CRITERION_VALUES } from '@/lib/criteria/listing-criterion-values';
@@ -159,8 +160,8 @@ describe('Β — οι 31 ετικέτες αξόνων', () => {
 // =============================================================================
 
 describe('Γ — οι ετικέτες των επιλογών', () => {
-  const valueSetKeys = LISTING_CRITERION_KEYS.filter(
-    (key) => LISTING_CRITERION_ASKING[key] !== 'range' && LISTING_CRITERION_ASKING[key] !== 'flag'
+  const valueSetKeys = LISTING_CRITERION_KEYS.filter((key) =>
+    isValueSetShape(LISTING_CRITERION_ASKING[key])
   ) as readonly ValueSetCriterionKey[];
 
   it.each([...LANGUAGES])(

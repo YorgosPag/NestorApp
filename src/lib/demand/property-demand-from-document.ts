@@ -74,6 +74,20 @@ import { withAreaShapes } from './demand-area';
 import { featuresWithoutLegacyPrice, readStoredSeeks } from './demand-seeks-read';
 import { normalizeDemandLabel } from './demand-title';
 import { ownerSignalOf } from './demand-owner-signal';
+import { isFloorKind } from '@/utils/floor-naming';
+
+/**
+ * ADR-903 §9 (2β.3) — τα είδη των άκρων ορόφου: απόντα (ζήτηση πριν την 2β.3) ή άγνωστα ⇒ `null` = **ολόκληρη**
+ * η στάθμη, δηλαδή ακριβώς η κρίση που είχε η ζήτηση όταν γράφτηκε. Ποτέ `undefined` στη μνήμη.
+ */
+function withLevelKinds(features: PropertyDemand['features']): PropertyDemand['features'] {
+  const { floorMinKind, floorMaxKind } = features as { floorMinKind?: unknown; floorMaxKind?: unknown };
+  return {
+    ...features,
+    floorMinKind: isFloorKind(floorMinKind) ? floorMinKind : null,
+    floorMaxKind: isFloorKind(floorMaxKind) ? floorMaxKind : null,
+  };
+}
 
 // =============================================================================
 // 1. ΤΙ ΔΙΑΒΑΣΤΗΚΕ
@@ -196,9 +210,10 @@ export function readStoredDemand(raw: unknown, id: string): StoredDemandRead | n
       // 🔑 ADR-888 — πάντα `area.shapes` στη μνήμη· το παλιό `area.outline` γίνεται `[outline]`.
       place: withAreaShapes(stored.place) as PropertyDemand['place'],
       // ── Οι ΔΗΛΩΜΕΝΕΣ ουδέτερες τιμές (Avro), ποτέ εφευρημένες ──────────────
-      features:
+      features: withLevelKinds(
         (featuresWithoutLegacyPrice(stored.features) as PropertyDemand['features'] | undefined) ??
-        NO_DEMAND_FEATURES,
+          NO_DEMAND_FEATURES,
+      ),
       proximity: (stored.proximity as PropertyDemand['proximity']) ?? [],
       // `lifeContext` είναι ήδη `| null` στον τύπο: η απουσία **είναι** η τιμή.
       lifeContext: (stored.lifeContext as PropertyDemand['lifeContext']) ?? null,

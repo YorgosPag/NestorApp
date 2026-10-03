@@ -20,7 +20,7 @@ import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { typedHref } from '@/lib/workspace/route-worlds';
 
 import { EMPTY_OWNER_PROPERTY_FORM, type OwnerPropertyFormValues } from './owner-property-form-values';
-import { floorLevelOf } from './owner-property-unit-form';
+import { floorRefKey } from '@/lib/floor/floor-ref';
 
 /** **Ερώτημα ελέγχου → σύνδεσμος καταχώρισης**, με το ερώτημα αυτούσιο. */
 export function newOfferFromProspectHref(query: ProspectQuery) {
@@ -40,7 +40,8 @@ export function ownerFormFromProspect(params: URLSearchParams): OwnerPropertyFor
     ...EMPTY_OWNER_PROPERTY_FORM,
     type: description.type,
     areaSqm: description.areaSqm,
-    floorLevel: floorLevelOf(description.floor),
+    // ADR-903 §9 — η στάθμη ταξιδεύει ΜΕ το είδος της (η πυλωτή μένει πυλωτή, όχι «ισόγειο»).
+    floorLevel: description.floor === null ? '' : floorRefKey(description.floor),
     placeRef: { landId: ref.landId, buildingId: ref.buildingId },
   };
 }

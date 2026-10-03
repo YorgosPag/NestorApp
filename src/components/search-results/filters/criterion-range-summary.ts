@@ -17,7 +17,9 @@
 import type { TFunction } from 'i18next';
 
 import { NO_RANGE, type CriterionRange } from '@/lib/criteria/criterion-vocabulary';
-import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
+import type { LevelRangeCriterionKey, RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
+import { levelRangeSelectValues, type LevelRange } from '@/lib/floor/floor-level-range';
+import { parseFloorRefKey, type FloorRef } from '@/lib/floor/floor-ref';
 import { criterionLabel } from '@/lib/criteria/listing-criterion-labels';
 import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
 
@@ -29,15 +31,21 @@ function formatBound(key: RangeCriterionKey, value: number): string {
     : formatNumber(value);
 }
 
+/** Δύο **ήδη μορφοποιημένα** άκρα ⇒ κείμενο εύρους — ή `null` όταν κανένα δεν ρωτά. Ο ένας συνθέτης. */
+function boundsText(t: TFunction, min: string | null, max: string | null): string | null {
+  if (min !== null && max !== null) return t('search-filters:filters.range.summaryBoth', { min, max });
+  if (min !== null) return t('search-filters:filters.range.summaryMin', { min });
+  if (max !== null) return t('search-filters:filters.range.summaryMax', { max });
+  return null;
+}
+
 /** Το εύρος χωρίς όνομα άξονα — ή `null` όταν ο άξονας δεν ρωτά. */
 function rangeText(t: TFunction, key: RangeCriterionKey, range: CriterionRange): string | null {
-  const { min, max } = range;
-  if (min !== null && max !== null) {
-    return t('search-filters:filters.range.summaryBoth', { min: formatBound(key, min), max: formatBound(key, max) });
-  }
-  if (min !== null) return t('search-filters:filters.range.summaryMin', { min: formatBound(key, min) });
-  if (max !== null) return t('search-filters:filters.range.summaryMax', { max: formatBound(key, max) });
-  return null;
+  return boundsText(
+    t,
+    range.min === null ? null : formatBound(key, range.min),
+    range.max === null ? null : formatBound(key, range.max),
+  );
 }
 
 /**
@@ -53,4 +61,24 @@ export function criterionRangeSummary(
   const text = rangeText(t, key, range);
   if (text === null) return axis;
   return isPriceCriterionKey(key) ? text : t('search-filters:filters.range.summaryAxis', { axis, range: text });
+}
+
+/**
+ * Η σύνοψη εύρους **στάθμης** (ADR-903 §9) — «Όροφος: Ημιυπόγειο – 3ος». Άκρο ολόκληρης στάθμης (παλιός
+ * σύνδεσμος) ⇒ η ετικέτα της επιλογής που κρίνει το ίδιο (`levelSelectValue`), ίδια με όσα δείχνει ο επιλογέας.
+ */
+export function criterionLevelRangeSummary(
+  t: TFunction,
+  key: LevelRangeCriterionKey,
+  range: LevelRange,
+  floorLabel: (ref: FloorRef) => string,
+): string {
+  const axis = criterionLabel(t, key);
+  const values = levelRangeSelectValues(range);
+  const labelOf = (value: string): string | null => {
+    const ref = value === '' ? null : parseFloorRefKey(value);
+    return ref === null ? null : floorLabel(ref);
+  };
+  const text = boundsText(t, labelOf(values.min), labelOf(values.max));
+  return text === null ? axis : t('search-filters:filters.range.summaryAxis', { axis, range: text });
 }

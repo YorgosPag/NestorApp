@@ -13,7 +13,8 @@
  * `listingFiltersFromDemand(ζήτηση(φόρμα(φίλτρα)))` δίνει τον **ίδιο** άξονα.
  */
 
-import { rangeOf, valuesOf, type ListingCriteria } from '@/lib/criteria/listing-criteria';
+import { levelRangeIn, rangeOf, valuesOf, type ListingCriteria } from '@/lib/criteria/listing-criteria';
+import { NO_LEVEL_RANGE, levelRangeSelectValues } from '@/lib/floor/floor-level-range';
 import { LISTING_CRITERION_KEYS, type CriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import { PRICE_AXIS_OF_OFFER_KIND } from '@/lib/criteria/listing-criterion-reading';
 import type { ListingSearch } from '@/lib/listings/listing-filters';
@@ -45,7 +46,8 @@ export function demandFormFromListingFilters(filters: ListingSearch): DemandForm
   const place = placeOf(filters.near);
   const bedrooms = rangeOf(filters.criteria, 'bedrooms');
   const area = rangeOf(filters.criteria, 'areaSqm');
-  const floor = rangeOf(filters.criteria, 'floor');
+  // ADR-903 §9 — ο όροφος ταξιδεύει ως **στάθμη**, με το είδος του (ίδια διάταξη στα δύο μέρη).
+  const floor = levelRangeSelectValues(levelRangeIn(filters.criteria, 'floor') ?? NO_LEVEL_RANGE);
 
   const values: DemandFormValues = {
     ...EMPTY_DEMAND_FORM,
@@ -57,8 +59,8 @@ export function demandFormFromListingFilters(filters: ListingSearch): DemandForm
     areaMin: area?.min ?? null,
     areaMax: area?.max ?? null,
     bedroomsMin: bedrooms?.min ?? null,
-    floorMin: floor?.min ?? null,
-    floorMax: floor?.max ?? null,
+    floorMinLevel: floor.min,
+    floorMaxLevel: floor.max,
   };
 
   const notCarried: FiltersNotCarried[] = LISTING_CRITERION_KEYS.filter(

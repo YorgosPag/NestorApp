@@ -28,6 +28,7 @@ import {
   FormInputField,
   FormOptionsField,
 } from '@/components/shared/forms/form-field-primitives';
+import { DeclaredFloorSelectField } from '@/components/shared/forms/DeclaredFloorSelectField';
 import { PROSPECT_LIMITS, type ProspectFormValues } from '@/lib/demand/prospect-interest';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -89,14 +90,13 @@ export function InterestCheckDescriptionStep({
         min={1}
         max={PROSPECT_LIMITS.areaSqmMax}
       />
+      {/* ADR-903 §9 (2β.3) — ο ΙΔΙΟΣ επιλογέας στάθμης με τη δήλωση ιδιοκτήτη: η πυλωτή δεν είναι «0». */}
       {!isLandProperty(type) && (
-        <FormInputField<ProspectFormValues>
+        <DeclaredFloorSelectField<ProspectFormValues>
           control={control}
-          name="floor"
-          kind="number"
-          label={t(`${K}.description.floorLabel`)}
-          min={PROSPECT_LIMITS.floorMin}
-          max={PROSPECT_LIMITS.floorMax}
+          name="floorLevel"
+          label={t(`${NS}:offer.form.floorLabel`)}
+          placeholder={t(`${NS}:offer.form.floorPlaceholder`)}
         />
       )}
     </FormFieldset>

@@ -48,21 +48,25 @@ import {
   LISTING_CRITERION_ASKING,
   type CriterionKey,
   type FlagCriterionKey,
+  type LevelRangeCriterionKey,
   type RangeCriterionKey,
   type ValueSetCriterionKey,
 } from './listing-criterion-asking';
 import {
   askedCriterionKeys,
   flagOf,
+  levelRangeIn,
   rangeOf,
   valuesOf,
   type ListingCriteria,
 } from './listing-criteria';
 import {
   readFlagAnswer,
+  readLevelAnswer,
   readNumericAnswer,
   readValuesAnswer,
 } from './listing-criterion-reading';
+import { withinLevelRange } from '@/lib/floor/floor-level-range';
 
 // =============================================================================
 // 1. ΤΑ ΠΡΩΤΟΓΟΝΑ ΤΗΣ ΚΡΙΣΗΣ
@@ -71,14 +75,14 @@ import {
 /**
  * Είναι ο **γνωστός** αριθμός μέσα στο εύρος;
  *
- * 🔑 **Δέχεται `number`, όχι `number | null` — και εκεί είναι όλη η διαφορά από τον
- * παλιό `withinRange`.** Η περίπτωση «δεν υπάρχει αριθμός» **δεν φτάνει ποτέ εδώ**:
- * την έχει ήδη ονομάσει ο αναγνώστης ως `never-asked`, και ο κριτής τη στέλνει στον
- * **δικό της κάδο** αντί να την ισοπεδώσει σε `false`. Ο παλιός `withinRange` κρατά
- * αυτή τη σημασιολογία για τη **ζήτηση**, που δεν έχει τρίτο κάδο — και **καλεί
- * αυτήν εδώ** για το κοινό μέρος, ώστε να μην υπάρχουν δύο απαντήσεις στο «μέσα;».
+ * 🔑 **Δέχεται `number`, όχι `number | null`.** Η περίπτωση «δεν υπάρχει αριθμός» **δεν
+ * φτάνει ποτέ εδώ**: την έχει ήδη ονομάσει ο αναγνώστης ως `never-asked`, και ο κριτής τη
+ * στέλνει στον **δικό της κάδο** αντί να την ισοπεδώσει σε `false`.
+ *
+ * ⚠️ ADR-903 §9 (2β.3): ο `withinRange` της ζήτησης **διαγράφηκε** — ο μόνος του καταναλωτής ήταν ο
+ * όροφος, που κρίνεται πλέον ως **στάθμη** (`withinLevelRange`) και από τους δύο κριτές.
  */
-export function satisfiesRange(value: number, range: CriterionRange): boolean {
+function satisfiesRange(value: number, range: CriterionRange): boolean {
   return (
     (range.min === null || value >= range.min) && (range.max === null || value <= range.max)
   );
@@ -114,6 +118,8 @@ export function judgeCriterion(
   switch (LISTING_CRITERION_ASKING[key]) {
     case 'range':
       return judgeRange(listing, criteria, key as RangeCriterionKey);
+    case 'level-range':
+      return judgeLevelRange(listing, criteria, key as LevelRangeCriterionKey);
     case 'flag':
       return judgeFlag(listing, criteria, key as FlagCriterionKey);
     default:
@@ -142,6 +148,27 @@ function judgeRange(
       return 'undeclared';
     case 'declared':
       return satisfiesRange(answer.value, range) ? 'satisfied' : 'excluded';
+  }
+}
+
+/** Ίδιοι κάδοι με το {@link judgeRange}· η διάταξη στάθμεων από το **ένα** `floor-level-range`. */
+function judgeLevelRange(
+  listing: PublicListing,
+  criteria: ListingCriteria,
+  key: LevelRangeCriterionKey
+): CriterionOutcome {
+  const range = levelRangeIn(criteria, key);
+  if (range === undefined) return 'satisfied';
+
+  const answer = readLevelAnswer(listing, key);
+  switch (answer.state) {
+    case 'not-applicable':
+      return 'not-applicable';
+    case 'never-asked':
+    case 'declared-none':
+      return 'undeclared';
+    case 'declared':
+      return withinLevelRange(answer.value, range) ? 'satisfied' : 'excluded';
   }
 }
 

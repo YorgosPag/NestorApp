@@ -54,10 +54,12 @@ import { EMPTY_LISTING_FILTERS } from '@/lib/listings/listing-filters';
 import { serializeListingFilters } from '@/lib/listings/listing-filters';
 import {
   EMPTY_LISTING_CRITERIA,
+  withLevelRange,
   withRange,
   withValues,
   type ListingCriteria,
 } from '@/lib/criteria/listing-criteria';
+import { levelRangeOf } from '@/lib/floor/floor-level-range';
 // 🔑 Η **μία** δήλωση «ποια εναλλακτική ρωτά ποιον άξονα τιμής» (ADR-777 §8.60.14 · §8.60.15).
 import { priceAxisOfSeek } from '@/lib/criteria/listing-criterion-reading';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
@@ -313,7 +315,7 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
   criteria = withPriceRanges(criteria, demand);
   criteria = withRange(criteria, 'areaSqm', { min: f.areaMin, max: f.areaMax });
   criteria = withRange(criteria, 'bedrooms', { min: f.bedroomsMin, max: null });
-  criteria = withRange(criteria, 'floor', { min: f.floorMin, max: f.floorMax });
+  criteria = withLevelRange(criteria, 'floor', levelRangeOf(f));
 
   return {
     ...EMPTY_LISTING_FILTERS,

@@ -48,15 +48,18 @@ import type { CriterionRange } from '@/lib/criteria/criterion-vocabulary';
 import type {
   CriterionKey,
   FlagCriterionKey,
+  LevelRangeCriterionKey,
   RangeCriterionKey,
   ValueSetCriterionKey,
 } from '@/lib/criteria/listing-criterion-asking';
 import {
   without,
   withFlag,
+  withLevelRange,
   withRange,
   withValues,
 } from '@/lib/criteria/listing-criteria';
+import type { LevelRange } from '@/lib/floor/floor-level-range';
 import { EMPTY_LISTING_CRITERIA } from '@/lib/criteria/listing-criteria';
 import {
   serializeListingFilters,
@@ -76,6 +79,8 @@ export interface FilterCommit {
   /** Γράψε **ολόκληρα** τα φίλτρα. Η χαμηλότερη βαθμίδα — τη χρειάζεται η διαμονή. */
   readonly commit: (next: ListingSearch) => void;
   readonly setRange: (key: RangeCriterionKey, range: CriterionRange) => void;
+  /** ADR-903 §9 — εύρος **στάθμης** (όροφος: «από ημιυπόγειο έως 3ο»). */
+  readonly setLevelRange: (key: LevelRangeCriterionKey, range: LevelRange) => void;
   readonly setValues: (key: ValueSetCriterionKey, values: readonly string[]) => void;
   readonly setFlag: (key: FlagCriterionKey, value: boolean | undefined) => void;
   /** Ξε-ρώτα **έναν** άξονα, όποιο κι αν είναι το σχήμα του. */
@@ -154,6 +159,7 @@ export function useFilterCommit(filters: ListingSearch): FilterCommit {
     return {
       commit,
       setRange: (key, range) => commitCriteria(withRange(filters.criteria, key, range)),
+      setLevelRange: (key, range) => commitCriteria(withLevelRange(filters.criteria, key, range)),
       setValues: (key, values) => commitCriteria(withValues(filters.criteria, key, values)),
       setFlag: (key, value) => commitCriteria(withFlag(filters.criteria, key, value)),
       clearAxis: (key) => commitCriteria(without(filters.criteria, key)),

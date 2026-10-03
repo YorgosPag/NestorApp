@@ -31,6 +31,7 @@ jest.mock('@/lib/workspace/navigation', () => ({
 const NOOP_COMMIT: FilterCommit = {
   commit: jest.fn(),
   setRange: jest.fn(),
+  setLevelRange: jest.fn(),
   setValues: jest.fn(),
   setFlag: jest.fn(),
   clearAxis: jest.fn(),

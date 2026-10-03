@@ -18,6 +18,7 @@ import {
   rangeOf,
   valuesOf,
   withFlag,
+  withLevelRange,
   withRange,
   withValues,
   type ListingCriteria,
@@ -81,7 +82,7 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
     criteria = withRange(criteria, 'priceSale', { min: 100000, max: 300000 });
     criteria = withRange(criteria, 'areaSqm', { min: 50, max: null });
     criteria = withRange(criteria, 'bedrooms', { min: 2, max: null });
-    criteria = withRange(criteria, 'floor', { min: 1, max: 4 });
+    criteria = withLevelRange(criteria, 'floor', { min: { number: 0, kind: 'raised-ground' }, max: { number: 4, kind: null } });
     criteria = withValues(criteria, 'energyClass', ['A', 'B']);
     criteria = withValues(criteria, 'amenities', ['elevator']);
     criteria = withFlag(criteria, 'hasPhotos', true);

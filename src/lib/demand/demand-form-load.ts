@@ -27,6 +27,7 @@ import {
   FORM_PLACE_KINDS,
 } from './demand-form-values';
 import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
+import { levelRangeOf, levelRangeSelectValues } from '@/lib/floor/floor-level-range';
 import type { DemandFormValues } from './demand-form-values';
 import { stayTermsFormOf } from './demand-form-stay';
 import {
@@ -84,6 +85,7 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
   const drawn = demand.place.kind === 'area' ? demand.place : null;
   const frontage = demand.place.kind === 'frontage' ? demand.place : null;
   const window = demand.timing.kind === 'window' ? demand.timing : null;
+  const floorLevels = levelRangeSelectValues(levelRangeOf(demand.features));
 
   return {
     kind: 'editable',
@@ -120,8 +122,9 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
       areaMin: demand.features.areaMin,
       areaMax: demand.features.areaMax,
       bedroomsMin: demand.features.bedroomsMin,
-      floorMin: demand.features.floorMin,
-      floorMax: demand.features.floorMax,
+      // ADR-903 §9 — άκρο χωρίς είδος (ζήτηση πριν την 2β.3) ⇒ η επιλογή που κρίνει το ίδιο.
+      floorMinLevel: floorLevels.min,
+      floorMaxLevel: floorLevels.max,
       proximity: demand.proximity.map((p) => ({ ...p })),
       lifeContext: demand.lifeContext,
       title: demand.title ?? '',

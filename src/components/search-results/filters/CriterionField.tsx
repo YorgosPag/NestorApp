@@ -28,10 +28,11 @@
 import React, { useMemo } from 'react';
 
 import { criterionOptionTallies } from '@/lib/criteria/criterion-option-counts';
-import { LISTING_CRITERION_ASKING } from '@/lib/criteria/listing-criterion-asking';
+import { LISTING_CRITERION_ASKING, isValueSetShape } from '@/lib/criteria/listing-criterion-asking';
 import type {
   CriterionKey,
   FlagCriterionKey,
+  LevelRangeCriterionKey,
   RangeCriterionKey,
   ValueSetCriterionKey,
 } from '@/lib/criteria/listing-criterion-asking';
@@ -39,6 +40,7 @@ import type { ListingCriteria } from '@/lib/criteria/listing-criteria';
 import type { PublicListing } from '@/types/public-listing';
 
 import { CriterionFlagField } from './CriterionFlagField';
+import { CriterionLevelRangeField, CriterionLevelRangePopover } from './CriterionLevelRangeField';
 import { CriterionRangeField } from './CriterionRangeField';
 import { CriterionRangePopover } from './CriterionRangePopover';
 import { CriterionValueSetField } from './CriterionValueSetField';
@@ -89,9 +91,9 @@ export function CriterionField({
 
   const tallies = useMemo(
     () =>
-      shape === 'range' || shape === 'flag'
-        ? []
-        : criterionOptionTallies(listings, criteria, criterionKey as ValueSetCriterionKey),
+      isValueSetShape(shape)
+        ? criterionOptionTallies(listings, criteria, criterionKey as ValueSetCriterionKey)
+        : [],
     [shape, listings, criteria, criterionKey]
   );
 
@@ -114,6 +116,17 @@ export function CriterionField({
           commit={commit}
         />
       );
+    case 'level-range': {
+      // ADR-903 §9 — στάθμη, όχι αριθμός· ίδια απόφαση πεδίο ⇄ τσιπ με τα εύρη.
+      const Container = space === 'bar' ? CriterionLevelRangePopover : CriterionLevelRangeField;
+      return (
+        <Container
+          criteria={criteria}
+          criterionKey={criterionKey as LevelRangeCriterionKey}
+          commit={commit}
+        />
+      );
+    }
     case 'flag':
       return (
         <CriterionFlagField

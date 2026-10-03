@@ -26,6 +26,8 @@ import type { ProjectableProperty } from '@/services/listings/public-listing-pro
 import type { PlaceRef } from '@/types/geo/public-place';
 import { INTEREST_CHECK_ROUTE } from '@/lib/demand/demand-routes';
 import { typedHref } from '@/lib/workspace/route-worlds';
+import type { FloorRef } from '@/lib/floor/floor-ref';
+import { levelBoundKey, parseLevelBoundKey } from '@/lib/floor/floor-level-range';
 
 // =============================================================================
 // 1. Η ΠΕΡΙΓΡΑΦΗ
@@ -36,8 +38,11 @@ export interface ProspectDescription {
   readonly type: PropertyTypeCanonical;
   /** Μικτό εμβαδόν σε m². */
   readonly areaSqm: number | null;
-  /** Όροφος· `0` = ισόγειο, αρνητικός = υπόγειο. */
-  readonly floor: number | null;
+  /**
+   * Η **στάθμη** — αριθμός **και** είδος (ADR-903 §9, 2β.3): η πυλωτή δεν είναι «ισόγειο», το ημιυπόγειο δεν
+   * είναι «υπόγειο». `kind: null` = μόνο αριθμός (σύνδεσμος πριν την 2β.3) ⇒ το είδος συνάγεται.
+   */
+  readonly floor: FloorRef | null;
 }
 
 /** Το ερώτημα ολόκληρο: **ποιο** κτίριο, **τι** ακίνητο. */
@@ -58,19 +63,27 @@ function isProspectArea(value: number): boolean {
   return Number.isFinite(value) && value > 0 && value <= PROSPECT_LIMITS.areaSqmMax;
 }
 
-/** Ο **ένας** κριτής ορόφου — ακέραιος, υπόγεια ως αρνητικά. */
-function isProspectFloor(value: number): boolean {
-  return Number.isInteger(value) && value >= PROSPECT_LIMITS.floorMin && value <= PROSPECT_LIMITS.floorMax;
+/**
+ * Ο **ένας** κριτής ορόφου — κλειδί στάθμης (`0:pilotis`) ή σκέτος ακέραιος (σύνδεσμος πριν την 2β.3), με αριθμό
+ * μέσα στα όρια θορύβου. `undefined` = άκυρο· `null` = δεν δόθηκε.
+ */
+function prospectFloorOf(raw: string | null): FloorRef | null | undefined {
+  if (raw === null || raw.trim() === '') return null;
+  const level = parseLevelBoundKey(raw);
+  if (level === null) return undefined;
+  const inBounds = level.number >= PROSPECT_LIMITS.floorMin && level.number <= PROSPECT_LIMITS.floorMax;
+  return inBounds ? level : undefined;
 }
 
-/** Ό,τι κρατά η φόρμα της σελίδας. `''` = δεν διάλεξε ακόμη είδος. */
+/** Ό,τι κρατά η φόρμα της σελίδας. `''` = δεν διάλεξε ακόμη είδος / στάθμη. */
 export interface ProspectFormValues {
   readonly type: PropertyTypeCanonical | '';
   readonly areaSqm: number | null;
-  readonly floor: number | null;
+  /** Το κλειδί στάθμης του `DeclaredFloorSelectField` (ίδιο με τη δήλωση ιδιοκτήτη), `''` = δεν δόθηκε. */
+  readonly floorLevel: string;
 }
 
-export const EMPTY_PROSPECT_FORM: ProspectFormValues = { type: '', areaSqm: null, floor: null };
+export const EMPTY_PROSPECT_FORM: ProspectFormValues = { type: '', areaSqm: null, floorLevel: '' };
 
 /**
  * **Τόπος + φόρμα → ερώτημα**, ή `null` όσο λείπει κτίριο ή είδος (το κουμπί μένει ανενεργό).
@@ -81,8 +94,8 @@ export const EMPTY_PROSPECT_FORM: ProspectFormValues = { type: '', areaSqm: null
 export function prospectQueryFrom(ref: PlaceRef | null, values: ProspectFormValues): ProspectQuery | null {
   if (ref === null || values.type === '') return null;
   if (values.areaSqm !== null && !isProspectArea(values.areaSqm)) return null;
-  const floor = isLandProperty(values.type) ? null : values.floor;
-  if (floor !== null && !isProspectFloor(floor)) return null;
+  const floor = isLandProperty(values.type) ? null : prospectFloorOf(values.floorLevel);
+  if (floor === undefined) return null;
   return { ref, description: { type: values.type, areaSqm: values.areaSqm, floor } };
 }
 
@@ -143,7 +156,11 @@ export function prospectQueryParams(query: ProspectQuery): URLSearchParams {
   const params = new URLSearchParams({ [PARAM.landId]: query.ref.landId, [PARAM.type]: query.description.type });
   if (query.ref.buildingId !== null) params.set(PARAM.buildingId, query.ref.buildingId);
   if (query.description.areaSqm !== null) params.set(PARAM.areaSqm, String(query.description.areaSqm));
-  if (query.description.floor !== null) params.set(PARAM.floor, String(query.description.floor));
+  // ADR-903 §9 — το κλειδί στάθμης (`0:pilotis`)· στάθμη χωρίς είδος γράφεται σκέτος ακέραιος, όπως πριν.
+  const floor = query.description.floor;
+  if (floor !== null && floor.number !== null) {
+    params.set(PARAM.floor, levelBoundKey({ number: floor.number, kind: floor.kind }));
+  }
   return params;
 }
 
@@ -174,12 +191,6 @@ function areaOf(raw: string | null): number | null | undefined {
   return isProspectArea(value) ? value : undefined;
 }
 
-function floorOf(raw: string | null): number | null | undefined {
-  const value = optionalNumber(raw);
-  if (value === null || value === undefined) return value;
-  return isProspectFloor(value) ? value : undefined;
-}
-
 /**
  * **URL → ερώτημα**, ή ο **πρώτος** ονομασμένος λόγος απόρριψης.
  *
@@ -196,7 +207,7 @@ export function parseProspectQuery(params: URLSearchParams): ProspectQueryParse 
   const areaSqm = areaOf(params.get(PARAM.areaSqm));
   if (areaSqm === undefined) return { kind: 'invalid', defect: 'bad-area' };
 
-  const floor = floorOf(params.get(PARAM.floor));
+  const floor = prospectFloorOf(params.get(PARAM.floor));
   if (floor === undefined) return { kind: 'invalid', defect: 'bad-floor' };
 
   const buildingId = params.get(PARAM.buildingId)?.trim() || null;
@@ -226,6 +237,8 @@ export function prospectProjectable(description: ProspectDescription): Projectab
     offerKinds: [],
     commercial: null,
     areas: { gross: description.areaSqm },
-    floor: description.floor,
+    // ADR-903 §8.1 — το ίδιο ζεύγος με κάθε προβολή (πυλωτή ≠ ισόγειο στην κρίση).
+    floor: description.floor?.number ?? null,
+    floorKind: description.floor?.kind ?? null,
   };
 }

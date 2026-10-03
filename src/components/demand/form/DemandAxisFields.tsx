@@ -42,6 +42,7 @@ import {
   DemandRangeRow,
 } from './demand-field-primitives';
 import { DemandStayTermsRow } from './DemandStayTermsRow';
+import { DeclaredFloorSelectField } from '@/components/shared/forms/DeclaredFloorSelectField';
 import { DemandPlaceResolver } from './DemandPlaceResolver';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { DemandAreaOutline } from './DemandAreaOutline';
@@ -273,6 +274,7 @@ function DemandDateField({
 /** **ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ** (Ζ8 + ο όροφος της Ζ5). */
 export function DemandFeaturesField(): React.ReactElement {
   const { t } = useTranslation([NS, 'properties-enums']);
+  const { control } = useFormContext<DemandFormValues>();
   const K = `${NS}:demand.form.features`;
 
   return (
@@ -294,14 +296,26 @@ export function DemandFeaturesField(): React.ReactElement {
         maxLabel={t(`${K}.areaMax`)}
         floor={0}
       />
-      <DemandRangeRow
-        legend={t(`${K}.floorLegend`)}
-        help={t(`${K}.floorHelp`)}
-        minName="floorMin"
-        maxName="floorMax"
-        minLabel={t(`${K}.floorMin`)}
-        maxLabel={t(`${K}.floorMax`)}
-      />
+      {/* ADR-903 §9 (2β.3) — «από–έως» σε ΣΤΑΘΜΕΣ (Spitogatos), όχι αριθμούς: ημιυπόγειο ≠ υπόγειο. */}
+      <fieldset className="flex flex-col gap-1">
+        <legend className="text-sm font-medium text-foreground">{t(`${K}.floorLegend`)}</legend>
+        <div className="flex flex-wrap gap-3">
+          <DeclaredFloorSelectField<DemandFormValues>
+            control={control}
+            name="floorMinLevel"
+            label={t(`${K}.floorMin`)}
+            placeholder={t(`${K}.floorAny`)}
+            edge="min"
+          />
+          <DeclaredFloorSelectField<DemandFormValues>
+            control={control}
+            name="floorMaxLevel"
+            label={t(`${K}.floorMax`)}
+            placeholder={t(`${K}.floorAny`)}
+            edge="max"
+          />
+        </div>
+      </fieldset>
 
       <div className="flex flex-col gap-1">
         <DemandNumberField name="bedroomsMin" label={t(`${K}.bedroomsMin`)} min={0} />

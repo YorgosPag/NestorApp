@@ -58,6 +58,8 @@ import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-prope
 import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
+import { isLandProperty } from '@/constants/property-classification';
+import { isUnitLevelUndeclared } from '@/lib/owner-property/owner-property-unit-form';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { listingStatsStateOf, useOwnerPortfolioStats } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import { OwnerListingCompletion } from './OwnerListingCompletion';
@@ -261,7 +263,11 @@ function OwnerPropertyView({
         <OwnerPropertyStatsPanel stats={stats} listedAt={property.listedAt} priceHistory={property.priceHistory} />
       )}
 
-      <PlaceInterestPanel interest={interest} audience={property.marketingAudience} />
+      <PlaceInterestPanel
+        interest={interest}
+        audience={property.marketingAudience}
+        unitIncomplete={isUnitLevelUndeclared(property, isLandProperty(property.type))}
+      />
 
       {/*
         🔑 **ADR-900 §3.8 — ΑΜΕΣΩΣ ΚΑΤΩ ΑΠΟ ΤΟΝ ΑΡΙΘΜΟ ΠΟΥ ΞΕΚΛΕΙΔΩΝΕΙ.** Ο δηλωμένος ιδιοκτήτης βλέπει
