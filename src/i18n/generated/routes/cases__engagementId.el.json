@@ -45,6 +45,7 @@
       },
       "roles": {
         "buyer_lawyer": "Δικηγόρος αγοραστή",
+        "host": "Υπεύθυνος υπόθεσης",
         "notary": "Συμβολαιογράφος",
         "seller_lawyer": "Δικηγόρος πωλητή"
       },
@@ -189,6 +190,7 @@
       "appurtenance": "παρακολουθήματος",
       "building": "κτιρίου",
       "buyer_contact": "αγοραστή",
+      "contribution": "υπόθεσης",
       "project": "έργου",
       "property": "ακινήτου",
       "seller_contact": "πωλητή"

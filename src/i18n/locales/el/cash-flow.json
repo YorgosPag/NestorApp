@@ -100,7 +100,10 @@
     "lowCashTitle": "Χαμηλό Ταμειακό Υπόλοιπο",
     "pdcTitle": "Λήξη Επιταγών",
     "collectionTitle": "Ποσοστό Είσπραξης",
-    "genericTitle": "Ειδοποίηση"
+    "genericTitle": "Ειδοποίηση",
+    "lowCashMessage": "Το υπόλοιπο πέφτει κάτω από {threshold} τον {month}",
+    "pdcMessage": "{count} επιταγές ({amount}) λήγουν τις επόμενες {days} ημέρες",
+    "collectionMessage": "Το ποσοστό είσπραξης ({rate}%) είναι κάτω από το όριο ({threshold}%)"
   },
   "filter": {
     "allProjects": "Όλα τα Έργα (Συγκεντρωτικά)",

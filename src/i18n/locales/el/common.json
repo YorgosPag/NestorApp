@@ -774,7 +774,8 @@
       "internal_note_added": "Εσωτερική σημείωση",
       "document_accessed": "Άνοιγμα αποδεικτικού",
       "evidence_retention_scheduled": "Κλείδωμα διατήρησης αποδεικτικού",
-      "evidence_disposed": "Διάθεση αποδεικτικού μετά την προθεσμία"
+      "evidence_disposed": "Διάθεση αποδεικτικού μετά την προθεσμία",
+      "document_requested": "Αίτημα εγγράφου"
     },
     "filters": {
       "all": "Όλα",
