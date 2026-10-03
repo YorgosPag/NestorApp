@@ -20,7 +20,7 @@ import type { FloorPlanSource, TourSpaceAreaDisplay } from '@/constants/spatial-
 import { TOUR_SPACE_AREA_DISPLAY_DEFAULT } from '@/constants/spatial-tour-vocabulary';
 import type { FloorPlanImage, TourLevel, TourLevelKey, TourNode, TourPoint } from '@/types/spatial-tour';
 
-import { levelKeyId } from '../spatial-tour-graph';
+import { levelKeyId, tourLevelChoices } from '../spatial-tour-graph';
 import { activeFloorPlan } from '../tour-plan-frame';
 import { bearingBetween } from './tour-viewer-bearing';
 import {
@@ -93,8 +93,9 @@ export function graphLevelsOfViewer(levels: readonly TourViewerLevel[]): TourLev
  * όποιον καλών την ξεχάσει. Ο διαχειριστής βλέπει πάντα όλα (φύλακας 15%, Δ8.4) — το αποφασίζει ο καλών, όχι εδώ.
  */
 export function viewerLevelsOf(levels: readonly TourLevel[], projection: ShapeProjection): TourViewerLevel[] {
+  const choices = tourLevelChoices(levels);
   return levels.map((level, index) => ({
-    key: level.key, label: null, ordinal: level.key.kind === 'local' ? level.key.ordinal : index, plan: viewerPlanOf(level),
+    ...choices[index], plan: viewerPlanOf(level),
     ...viewerShapesOf(level, projection),
   }));
 }

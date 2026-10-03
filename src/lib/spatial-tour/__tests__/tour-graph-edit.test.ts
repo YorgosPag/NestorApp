@@ -163,3 +163,32 @@ describe('Χ — ο χώρος ενός σημείου (Φ2στ · §4.12)', () 
     expect(nameNode(GRAPH, 'zz', { types: ['office'], label: null })).toEqual({ kind: 'refused', reason: 'node-absent' });
   });
 });
+
+/**
+ * **Κ — αποδοχή της πρότασης του φωτογράφου με θέση** (ADR-904 Κ9): νέο σημείο **και** θέση σε **μία** εντολή, κριμένη από τον
+ * ίδιο κριτή με την εντολή `position` — ολόκληρη ή καθόλου.
+ */
+describe('Κ — νέο σημείο με θέση (ADR-904 Κ9)', () => {
+  const CALIBRATED = {
+    source: 'engineer', state: 'active', fileId: 'f1', approvedBy: 'u1', approvedAt: '2026-10-01T00:00:00.000Z',
+    image: { width: 300, height: 200, contentHash: 'h' },
+    scale: { metresPerPixel: 0.02, calibratedBy: 'u1', calibratedAt: '2026-10-01T00:00:00.000Z' },
+  } as const;
+  const PLANNED: Graph = { levels: [{ key: L0, floorPlans: [CALIBRATED] }], nodes: [] };
+
+  it('πάνω στη βαθμονομημένη κάτοψη ⇒ σημείο με θέση, σε μία αλλαγή', () => {
+    const result = edited(placeCapture(PLANNED, UNPLACED, { kind: 'new-node', levelKey: L0, linkFrom: null, position: { x: 2.4, y: -1.6 } }, 'n1'));
+    expect(result.graph.nodes).toEqual([{ id: 'n1', levelKey: L0, position: { x: 2.4, y: -1.6, z: 0 }, links: [] }]);
+    expect(result.captureNodeId).toBe('n1');
+  });
+
+  it('έξω από την κάτοψη ⇒ άρνηση και ΚΑΝΕΝΑ νέο σημείο (καμία μισή αποδοχή)', () => {
+    expect(placeCapture(PLANNED, UNPLACED, { kind: 'new-node', levelKey: L0, linkFrom: null, position: { x: 99, y: -1 } }, 'n1'))
+      .toEqual({ kind: 'refused', reason: 'position-outside-plan' });
+  });
+
+  it('όροφος χωρίς βαθμονομημένη κάτοψη ⇒ plan-uncalibrated', () => {
+    expect(placeCapture(GRAPH, UNPLACED, { kind: 'new-node', levelKey: L0, linkFrom: null, position: { x: 1, y: -1 } }, 'n1'))
+      .toEqual({ kind: 'refused', reason: 'plan-uncalibrated' });
+  });
+});

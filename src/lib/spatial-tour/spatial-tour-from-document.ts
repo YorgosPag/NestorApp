@@ -48,6 +48,7 @@ import { readSignatory } from '@/lib/listings/model-declaration-metadata';
 import { readMediaRights } from '@/lib/media-rights/media-rights-read';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
 import { isRecord } from '@/lib/type-guards';
+import { readCapturePlacementHint, readTourLevelKey } from '@/lib/spatial-tour/tour-capture-placement-hint';
 import { normalizeTourRoom } from '@/lib/spatial-tour/tour-room';
 import { custodyOnly, custodyScopeFromData } from '@/lib/workspace/custody-scope';
 import { isInvitationState } from '@/types/invitation-core';
@@ -64,7 +65,6 @@ import type {
   TourCaptureTileset,
   TourDeclaredArea,
   TourLevel,
-  TourLevelKey,
   TourLink,
   TourNode,
   TourPoint,
@@ -89,16 +89,6 @@ function readSubject(raw: unknown): TourSubject | null {
   if (!isRecord(raw) || !isPlaceSource(raw.kind)) return null;
   const id = text(raw.id);
   return id === null ? null : { kind: raw.kind, id };
-}
-
-function readLevelKey(raw: unknown): TourLevelKey | null {
-  if (!isRecord(raw)) return null;
-  if (raw.kind === 'floor') {
-    const floorId = text(raw.floorId);
-    return floorId === null ? null : { kind: 'floor', floorId };
-  }
-  if (raw.kind === 'local' && Number.isInteger(raw.ordinal)) return { kind: 'local', ordinal: raw.ordinal as number };
-  return null;
 }
 
 const isPositiveNumber = (value: unknown): value is number => isFiniteNumber(value) && value > 0;
@@ -178,7 +168,7 @@ const readOptionalAll = <T>(raw: unknown, read: (item: unknown) => T | null): T[
 
 function readLevel(raw: unknown): TourLevel | null {
   if (!isRecord(raw)) return null;
-  const key = readLevelKey(raw.key);
+  const key = readTourLevelKey(raw.key);
   const floorPlans = readAll(raw.floorPlans, readFloorPlan);
   const spaces = readOptionalAll(raw.spaces, readSpace);
   const separations = readOptionalAll(raw.separations, readSeparation);
@@ -213,7 +203,7 @@ function readRoom(raw: unknown): TourRoom | null | undefined {
 function readNode(raw: unknown): TourNode | null {
   if (!isRecord(raw)) return null;
   const id = text(raw.id);
-  const levelKey = readLevelKey(raw.levelKey);
+  const levelKey = readTourLevelKey(raw.levelKey);
   // `undefined` ⇒ υπάρχει θέση αλλά δεν διαβάζεται· `null` ⇒ δηλωμένα χωρίς θέση (όροφος χωρίς κάτοψη).
   const position = readPoint(raw.position ?? null);
   const links = readAll(raw.links ?? [], readLink);
@@ -336,6 +326,7 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   const tileset = readTileset(raw.tileset);
   const redactions = readRedactions(raw.redactions);
   const faceScan = readFaceScan(raw.faceScan);
+  const placementHint = readCapturePlacementHint(raw.placementHint);
   const originalHash = raw.originalHash === undefined ? undefined : text(raw.originalHash);
   const nodeId = readPlacement(raw.nodeId);
   const [tourId, originalFileId, uploadedBy] = [raw.tourId, raw.originalFileId, raw.uploadedBy].map(text);
@@ -347,6 +338,8 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   if (raw.headingSource !== undefined && !isTourHeadingSource(raw.headingSource)) return null;
   // Θολώματα / hash πρωτοτύπου (Φ2ζ): παρόντα αλλά αδιάβαστα ⇒ έγγραφο που δεν καταλάβαμε (ποτέ ψήσιμο χωρίς αυτά).
   if (redactions === null || originalHash === null || faceScan === null) return null;
+  // Πρόταση θέσης (ADR-904 Κ8): παρούσα αλλά αδιάβαστη ⇒ έγγραφο που δεν καταλάβαμε — ποτέ σιωπηλή απώλεια του τι δηλώθηκε.
+  if (placementHint === undefined) return null;
   return {
     id, tourId, nodeId, capturedAt, createdAt, originalFileId, uploadedBy, rights, tileset, signatory,
     ...vocabulary,
@@ -355,6 +348,7 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
     ...(originalHash === undefined ? {} : { originalHash }),
     ...(redactions.length > 0 ? { redactions } : {}),
     ...(faceScan === undefined ? {} : { faceScan }),
+    ...(placementHint === null ? {} : { placementHint }),
     baseCaptureId: text(raw.baseCaptureId),
   };
 }

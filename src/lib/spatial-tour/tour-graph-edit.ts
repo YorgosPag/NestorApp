@@ -19,6 +19,7 @@ import type { SpatialTour, TourCapture, TourLevel, TourLevelKey, TourLink, TourN
 
 import { levelKeyId, removeTourNode } from './spatial-tour-graph';
 import { isCaptureViewable } from './tour-manifest-stop';
+import { positionNode } from './tour-plan-edit';
 import { normalizeTourRoom, sameTourRoom, type TourRoomInput } from './tour-room';
 
 type Graph = Pick<SpatialTour, 'levels' | 'nodes'>;
@@ -30,6 +31,11 @@ export type TourPlacementTarget =
       readonly levelKey: TourLevelKey;
       /** Σύνδεση με υπάρχον σημείο τη στιγμή της γέννησης (το «δίπλα στο…» των μεγάλων). */
       readonly linkFrom: string | null;
+      /**
+       * ADR-904 Κ9 — θέση στην κάτοψη τη στιγμή της γέννησης (μέτρα κάτοψης, όπως η εντολή `position`): η **αποδοχή** της πρότασης
+       * του φωτογράφου σε **μία** συναλλαγή. Κρίνεται από τον **ίδιο** κριτή (`positionNode`). Απούσα ⇒ χωρίς θέση.
+       */
+      readonly position?: { readonly x: number; readonly y: number };
     };
 
 /**
@@ -184,7 +190,10 @@ export function placeCapture(
   if (target.linkFrom !== null && !hasNode(graph, target.linkFrom)) return refused('node-absent');
   const node: TourNode = { id: newNodeId, levelKey: target.levelKey, position: null, links: [] };
   const nodes = target.linkFrom === null ? [...graph.nodes, node] : linkBoth([...graph.nodes, node], target.linkFrom, newNodeId, null);
-  return { kind: 'edited', graph: { levels, nodes }, captureNodeId: newNodeId };
+  if (target.position === undefined) return { kind: 'edited', graph: { levels, nodes }, captureNodeId: newNodeId };
+  // Ολόκληρη ή καθόλου: θέση που ο κριτής αρνείται ⇒ ούτε το σημείο γεννιέται (καμία μισή αποδοχή).
+  const placed = positionNode({ levels, nodes }, newNodeId, target.position);
+  return placed.kind === 'edited' ? { ...placed, captureNodeId: newNodeId } : placed;
 }
 
 /** **Βγάλε** μια λήψη από το σημείο της· αν ήταν η τελευταία του σημείου, φεύγει και το σημείο. */
