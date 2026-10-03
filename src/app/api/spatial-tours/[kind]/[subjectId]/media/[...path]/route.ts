@@ -17,40 +17,24 @@
  * ρυθμού `ASSET` (600/λεπτό) — το `STANDARD` θα έσπαγε μια κανονική προβολή.
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 
 import { isPlaceSource } from '@/constants/place-sources';
-import { getErrorMessage } from '@/lib/error-utils';
 import { withAssetRateLimit } from '@/lib/middleware/with-rate-limit';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { tourMediaObjectPath } from '@/lib/spatial-tour/tour-media-path';
-import { openStorageObject, type StorageObjectStream } from '@/lib/storage/storage-object-stream';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tourMediaBucket } from '@/server/spatial-tour/tour-media-store';
 import { requestTourViewGrant } from '@/server/spatial-tour/tour-view-grant';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+
+import { serveTourMedia, tourMediaStatus as status } from '../../../../_shared/tour-media-response';
 
 const logger = createModuleLogger('TOUR_MEDIA');
 
 export const dynamic = 'force-dynamic';
 
 type Segment = { params: Promise<{ kind: string; subjectId: string; path: string[] }> };
-
-const CACHE_CONTROL = 'private, max-age=86400, immutable';
-
-function status(code: number): NextResponse {
-  return new NextResponse(null, { status: code, headers: { 'Cache-Control': 'no-store' } });
-}
-
-function streamResponse(opened: Extract<StorageObjectStream, { kind: 'found' }>): NextResponse {
-  const headers = new Headers({ 'Content-Type': opened.contentType, 'Cache-Control': CACHE_CONTROL, 'Accept-Ranges': 'bytes' });
-  if (opened.etag !== null) headers.set('ETag', opened.etag);
-  if (opened.contentLength !== null) headers.set('Content-Length', String(opened.contentLength));
-  if (opened.range !== null && opened.totalSize !== null) {
-    headers.set('Content-Range', `bytes ${opened.range.start}-${opened.range.end}/${opened.totalSize}`);
-  }
-  return new NextResponse(opened.stream, { status: opened.range === null ? 200 : 206, headers });
-}
 
 async function handleGet(request: NextRequest, segment?: Segment): Promise<NextResponse> {
   const params = segment ? await segment.params : null;
@@ -63,25 +47,8 @@ async function handleGet(request: NextRequest, segment?: Segment): Promise<NextR
   if (grant === null) return status(401);
   const objectPath = tourMediaObjectPath(tourId, (params?.path ?? []).map(decodeRouteParam));
   if (objectPath === null) return status(400);
-
-  try {
-    // Ένα ταξίδι ως τον κάδο (Φ2ε · §4.11): η κρυφή μνήμη των μέσων είναι ΔΙΚΗ μας (`CACHE_CONTROL`), όχι η αποθηκευμένη.
-    // Ο κάδος από την υπογεγραμμένη άδεια (ζ5) — καμία ανάγνωση βάσης ανά πλακίδιο, κανένα «δοκίμασε και τον άλλον».
-    const bucket = tourMediaBucket(grant.mediaPlacement);
-    const opened = await openStorageObject(objectPath, request.headers.get('range'), { singleRequest: true, bucket });
-    if (opened.kind === 'absent') return status(404);
-    if (opened.kind === 'range-unsatisfiable') {
-      return new NextResponse(null, { status: 416, headers: { 'Content-Range': `bytes */${opened.totalSize}` } });
-    }
-    if (opened.etag !== null && request.headers.get('if-none-match') === opened.etag) {
-      void opened.stream.cancel();
-      return new NextResponse(null, { status: 304, headers: { ETag: opened.etag, 'Cache-Control': CACHE_CONTROL } });
-    }
-    return streamResponse(opened);
-  } catch (error: unknown) {
-    logger.error('Το μέσο περιήγησης δεν σερβιρίστηκε', { tourId, error: getErrorMessage(error) });
-    return status(503);
-  }
+  // Ο κάδος από την υπογεγραμμένη άδεια (ζ5) — καμία ανάγνωση βάσης ανά πλακίδιο, κανένα «δοκίμασε και τον άλλον».
+  return serveTourMedia(request, { objectPath, bucket: tourMediaBucket(grant.mediaPlacement), logContext: { tourId } }, logger);
 }
 
 export const GET = withAssetRateLimit<Segment>(handleGet);

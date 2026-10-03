@@ -79,7 +79,8 @@ const commandSchema = z.discriminatedUnion('op', [
     captureId: id,
     target: z.discriminatedUnion('kind', [
       z.object({ kind: z.literal('node'), nodeId: id }),
-      z.object({ kind: z.literal('new-node'), levelKey, linkFrom: id.nullable() }),
+      // ADR-904 Κ9: `position` = αποδοχή της πρότασης του φωτογράφου σε μία συναλλαγή — «πάνω στην κάτοψη;» το κρίνει ο γραφέας.
+      z.object({ kind: z.literal('new-node'), levelKey, linkFrom: id.nullable(), position: planXY.optional() }),
     ]),
   }),
   z.object({ op: z.literal('unplace'), captureId: id }),

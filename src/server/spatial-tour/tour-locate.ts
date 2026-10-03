@@ -73,16 +73,31 @@ async function readSubjectRecord(db: Firestore, subject: TourSubject): Promise<T
   return tourSubjectFromDocument(subject.kind, snap.data(), subject.id);
 }
 
+/**
+ * **Πού ζει η περιήγηση αυτής της ρίζας** — id ντετερμινιστικό ανά (είδος, ρίζα), διαμέρισμα από τον κάτοχο **τώρα**. `null` ⇒
+ * εταιρική ρίζα χωρίς μισθωτή (καμία περιήγηση). Η **μία** απάντηση: για ένα έγγραφο **και** για σελίδα της λίστας λήψης (Κ8).
+ */
+export function tourPlacementOf(
+  db: Firestore,
+  subject: TourSubject,
+  record: TourSubjectRecord,
+): { readonly custody: CustodyScope; readonly tourRef: DocumentReference } | null {
+  const custody = tourCustodyOf(record);
+  if (custody === null) return null;
+  const tourId = enterpriseIdService.generateDeterministicSpatialTourId(subject.kind, subject.id);
+  return { custody, tourRef: db.collection(COLLECTIONS[SPATIAL_TOUR_COLLECTION[custodyKindOfScope(custody)]]).doc(tourId) };
+}
+
 /** **Βρες την περιήγηση μιας αγγελίας** — και τον κάτοχό της, όπως τον λέει η ρίζα **τώρα**. */
 export async function locateSpatialTour(db: Firestore, subject: TourSubject): Promise<TourLocation> {
   const subjectRead = await readSubjectRecord(db, subject);
   if (subjectRead === null) return { kind: 'absent' };
   const { record, label } = subjectRead;
-  const custody = tourCustodyOf(record);
-  if (custody === null) return { kind: 'unscoped' };
+  const placement = tourPlacementOf(db, subject, record);
+  if (placement === null) return { kind: 'unscoped' };
 
-  const tourId = enterpriseIdService.generateDeterministicSpatialTourId(subject.kind, subject.id);
-  const tourRef = db.collection(COLLECTIONS[SPATIAL_TOUR_COLLECTION[custodyKindOfScope(custody)]]).doc(tourId);
+  const { custody, tourRef } = placement;
+  const tourId = tourRef.id;
   const snap = await tourRef.get();
   const tour = snap.exists ? spatialTourFromDocument(snap.data(), tourId) : null;
   return { kind: 'found', record, label, custody, tourRef, tour };

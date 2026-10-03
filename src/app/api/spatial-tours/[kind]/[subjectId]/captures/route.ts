@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 type ListResponse = TourSubjectBody<{ readonly captures: readonly TourCapture[]; readonly asManager: boolean }>;
 
 function handler(_request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<ListResponse>> {
-  return tourSubjectResponse(segment, actor, listTourCaptures, (listed) => ({ captures: listed.captures, asManager: listed.asManager }));
+  return tourSubjectResponse(segment, actor, listTourCaptures, (listed) => ({ captures: listed.captures, asManager: listed.asManager, levels: listed.levels }));
 }
 
 export const GET = withStandardRateLimit<TourSegment>(withPersonalOrOrgAuth<ListResponse, TourSegment>(handler));
