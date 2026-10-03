@@ -28,7 +28,12 @@ import {
   TOUR_CAPTURE_AUDIENCES,
   TOUR_CAPTURE_SOURCES,
   TOUR_GRANT_STANDINGS,
+  TOUR_HINT_POINT_MAX_PX,
+  TOUR_HINT_RADIUS_MAX_PX,
   TOUR_MILESTONES,
+  TOUR_ROOM_LABEL_MAX,
+  TOUR_ROOM_MAX_TYPES,
+  TOUR_ROOM_TYPES,
   TOUR_TILESET_STATES,
   TOUR_UPLOAD_SOURCES,
 } from '@/constants/spatial-tour-vocabulary';
@@ -110,6 +115,81 @@ export const StartUploadResponseSchema = z.object({
 
 const FinalizeTicket = z.string().min(16).max(4096);
 
+/**
+ * **Το κλειδί ενός ορόφου** (ADR-903 · `TourLevelKey`) — χωριστά ονομασμένα μέλη ⇒ `oneOf` + `discriminator` ⇒ `sealed` στον Kotlin.
+ * `floor` = σταθερό `floorId` του BIM · `local` = σειρά ορόφου ακινήτου χωρίς BIM (αρνητικό = υπόγειο).
+ */
+export const TourLevelFloorKeySchema = z.object({ kind: z.literal('floor'), floorId: NonBlankText });
+export const TourLevelLocalKeySchema = z.object({ kind: z.literal('local'), ordinal: z.number().int() });
+
+export const TourLevelKeySchema = z.discriminatedUnion('kind', [
+  TourLevelFloorKeySchema,
+  TourLevelLocalKeySchema,
+]).meta({ discriminator: { propertyName: 'kind' } });
+
+/**
+ * **Ο χώρος της πρότασης** — το σχήμα του `TourRoom` χωρίς προέλευση: 1–`TOUR_ROOM_MAX_TYPES` τύποι (ενιαίος χώρος, πρότυπο
+ * Matterport) + προαιρετικό ελεύθερο όνομα. Ο διακομιστής κάνει `trim` και αφαιρεί διπλότυπους τύπους (`normalizeTourRoom`).
+ */
+export const CaptureRoomHintSchema = z.object({
+  types: z.array(z.enum(TOUR_ROOM_TYPES)).min(1).max(TOUR_ROOM_MAX_TYPES),
+  label: z.string().max(TOUR_ROOM_LABEL_MAX).nullable(),
+});
+
+/**
+ * **Η πρόταση θέσης** (ADR-904 Κ8 · 1.2.0) — ό,τι λέει ο φωτογράφος **στεκόμενος εκεί**. **Ποτέ** τοποθέτηση: η λήψη μένει στα
+ * εισερχόμενα ως να την αποδεχτεί ο υπεύθυνος. Ο όροφος **δεν** χρειάζεται να υπάρχει στην περιήγηση: `local` με νέο αριθμό =
+ * «νέος όροφος» (πρότυπο Matterport Capture)· όροφος που σβήστηκε ανάμεσα ⇒ η οθόνη του υπευθύνου το λέει, δεν απορρίπτεται.
+ */
+/** Συντεταγμένη pixel της **πρωτότυπης** εικόνας κάτοψης (αρχή πάνω-αριστερά). */
+const PlanPixel = z.number().min(0).max(TOUR_HINT_POINT_MAX_PX);
+
+/**
+ * **Το σημείο όπου στεκόταν** (ADR-904 Κ9 · 1.3.0) — pixel της κάτοψης `planContentHash` (από το `CaptureLevel.calibratedPlan`).
+ * Δεμένο στην **έκδοση**: αν η κάτοψη αλλάξει ως την αποδοχή, ο υπεύθυνος το βλέπει ρητά — ποτέ σιωπηλή μεταφορά.
+ * `radiusPx` = αβεβαιότητα του δαχτύλου στο ζουμ της στιγμής (π.χ. 7 mm οθόνης ÷ κλίμακα προβολής)· απών ⇒ άγνωστη.
+ */
+export const CaptureHintPointSchema = z.object({
+  planContentHash: NonBlankText,
+  x: PlanPixel,
+  y: PlanPixel,
+  radiusPx: z.number().positive().max(TOUR_HINT_RADIUS_MAX_PX).optional(),
+});
+
+export const CapturePlacementHintSchema = z.object({
+  level: TourLevelKeySchema.optional(),
+  room: CaptureRoomHintSchema.optional(),
+  /** 1.3.0 — **απαιτεί** `level` (σημείο χωρίς όροφο δεν έχει κάτοψη ⇒ `declaration-invalid`). */
+  point: CaptureHintPointSchema.optional(),
+}).refine((hint) => hint.point === undefined || hint.level !== undefined, { message: 'point requires level', path: ['point'] })
+  // Το ίδιο, στη γλώσσα του JSON Schema 2020-12 — αλλιώς το `openapi.json` θα δεχόταν ό,τι ο διακομιστής αρνείται.
+  .meta({ dependentRequired: { point: ['level'] } });
+
+/** Η εικόνα μιας κάτοψης — διαστάσεις του πρωτότυπου (το πλαίσιο του σημείου) και το αποτύπωμα των bytes (η έκδοση). */
+export const CapturePlanImageSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  contentHash: NonBlankText,
+});
+
+/**
+ * **Η βαθμονομημένη κάτοψη ενός ορόφου** (1.3.0, `calibratedPlan`). Τα bytes: `getCapturePlan` με το `image.contentHash` —
+ * αμετάβλητα ανά hash, άρα η εφαρμογή τα κρατά για λήψη χωρίς σήμα. `metresPerPixel` για κλίμακα/αβεβαιότητα σε μέτρα.
+ */
+export const CaptureCalibratedPlanSchema = z.object({
+  image: CapturePlanImageSchema,
+  metresPerPixel: z.number().positive(),
+});
+
+/** Ένας όροφος της περιήγησης για επιλογή (`captureLevelChoices`). `label: null` ⇒ ο πελάτης λέει «Όροφος {ordinal}». */
+export const CaptureLevelSchema = z.object({
+  key: TourLevelKeySchema,
+  ordinal: z.number().int(),
+  label: z.string().nullable(),
+  /** 1.3.0 — `null` ⇒ ο όροφος δεν έχει βαθμονομημένη κάτοψη: η εφαρμογή **δεν** προσφέρει σημείο. */
+  calibratedPlan: CaptureCalibratedPlanSchema.nullable(),
+});
+
 /** Ό,τι δηλώνει ο άνθρωπος για τη λήψη — κατεύθυνση και ημερομηνία τα λένε τα **bytes**. */
 export const CaptureDeclarationSchema = z.object({
   source: z.enum(TOUR_UPLOAD_SOURCES),
@@ -118,6 +198,8 @@ export const CaptureDeclarationSchema = z.object({
   rights: MediaRightsSchema,
   /** Το όνομα του αρχείου στη συσκευή — ο διακομιστής κόβει στα 255. `null` ⇒ κανένα. */
   originalFilename: z.string().nullable(),
+  /** 1.2.0 — απούσα ⇒ καμία πρόταση (οι πελάτες 1.0/1.1 δεν τη στέλνουν). */
+  placementHint: CapturePlacementHintSchema.optional(),
 });
 
 /**
@@ -153,6 +235,8 @@ export const CaptureReceiptSchema = z.object({
   audience: z.enum(TOUR_CAPTURE_AUDIENCES),
   milestone: z.enum(TOUR_MILESTONES).nullable(),
   tileset: CaptureTilesetSchema,
+  /** 1.2.0 — η πρόταση **όπως αποθηκεύτηκε** (κανονικοποιημένη): η εφαρμογή βλέπει τι κράτησε ο διακομιστής. */
+  placementHint: CapturePlacementHintSchema.optional(),
   createdAt: IsoInstant,
 });
 
@@ -214,6 +298,11 @@ export const CaptureTargetSchema = z.object({
   /** Πώς λέγεται το ακίνητο (τίτλος αγγελίας · όνομα μονάδας) — `null` αν η ρίζα δεν έχει. */
   label: z.string().nullable(),
   access: CaptureAccessSchema,
+  /**
+   * 1.2.0 — οι όροφοι της περιήγησης, για την πρόταση θέσης. Κενό ⇒ δεν υπάρχει ακόμη περιήγηση **ή** η άδεια δεν ισχύει
+   * (η ανενεργή άδεια δεν βλέπει δομή). Ο πελάτης μπορεί πάντα να προτείνει **νέο** τοπικό όροφο.
+   */
+  levels: z.array(CaptureLevelSchema),
 });
 
 export const CaptureTargetsResponseSchema = z.object({

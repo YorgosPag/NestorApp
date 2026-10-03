@@ -27,7 +27,7 @@ import { InvitationRedeemBodySchema } from '../../invitation-redeem-body';
 import { CAPTURE_API_SCHEMAS, buildCaptureApiDocument } from '../capture-api-document';
 import { componentSchemasOf } from '../capture-api-json-schema';
 import { CAPTURE_API_FIXTURES, FIXTURE_ACTOR_UID } from '../capture-api-fixtures';
-import { MediaLicenseTermSchema } from '../capture-api-schemas';
+import { CapturePlacementHintSchema, MediaLicenseTermSchema } from '../capture-api-schemas';
 
 const fixturesOf = (component: string) => CAPTURE_API_FIXTURES.filter((f) => f.component === component);
 /** Όπως φτάνει στο δίκτυο — τα `undefined` κλειδιά φεύγουν. */
@@ -38,6 +38,25 @@ describe('Κ1 — συμβόλαιο ⊆ αναγνώστης του διακο�
     '%s: ο διακομιστής δέχεται ό,τι δέχεται το συμβόλαιο',
     (_name, body) => {
       expect(readCaptureDeclaration(wire(body), FIXTURE_ACTOR_UID)).not.toBeNull();
+    },
+  );
+
+  // ADR-904 Κ8 — η πρόταση θέσης δεν έχει «ανοχή» του διακομιστή: άκυρη στο συμβόλαιο ⇒ άκυρη και στον διακομιστή.
+  const hintFixtures = fixturesOf('CaptureDeclaration').filter((f) => f.name.startsWith('hint-'));
+
+  it.each(hintFixtures.filter((f) => !f.valid).map((f) => [f.name, f.body] as const))(
+    '%s: άκυρη πρόταση θέσης ⇒ ο διακομιστής αρνείται ΟΛΗ τη δήλωση (ποτέ σιωπηλό πέταγμα)',
+    (_name, body) => {
+      expect(readCaptureDeclaration(wire(body), FIXTURE_ACTOR_UID)).toBeNull();
+    },
+  );
+
+  it.each(hintFixtures.filter((f) => f.valid).map((f) => [f.name, f.body] as const))(
+    '%s: ό,τι αποθηκεύει ο διακομιστής (κανονικοποιημένο) ξανατηρεί το συμβόλαιο — επιστρέφει στην απόδειξη',
+    (_name, body) => {
+      const stored = readCaptureDeclaration(wire(body), FIXTURE_ACTOR_UID)?.placementHint;
+      expect(stored).not.toBeNull();
+      expect(CapturePlacementHintSchema.safeParse(stored).success).toBe(true);
     },
   );
 

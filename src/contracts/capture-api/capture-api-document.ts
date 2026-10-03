@@ -9,6 +9,8 @@
  *     δικό μας endpoint· γι' αυτό περιγράφεται στο `x-nestor-upload-protocol` και όχι στα `paths`·
  *  3. `finalizeUpload` → η λήψη (ιδεμπότητη από κατασκευή: ίδιο εισιτήριο ⇒ ίδια λήψη, `replayed: true`).
  *  0. `listCaptureTargets` (1.1.0, ADR-904 Κ7) → **σε ποια ακίνητα** μπορεί να ανεβάσει ο συνδεδεμένος — το σημείο εκκίνησης.
+ *     Από την 1.2.0 (Κ8) κάθε ακίνητο φέρει τους **ορόφους** του, και η δήλωση του βήματος 3 μια προαιρετική **πρόταση θέσης**.
+ *     Από την 1.3.0 (Κ9) ο όροφος φέρει τη **βαθμονομημένη κάτοψη** του (`getCapturePlan` = τα bytes) και η πρόταση το **σημείο**.
  *
  * 🔑 **Έκδοση συμβολαίου** ({@link CAPTURE_API_VERSION}, semver): εφαρμογή στο κατάστημα **δεν** ενημερώνεται μαζί με
  * τον διακομιστή. **Major** = σπάσιμο (το πιάνει το `oasdiff` στο CI) · **minor** = προσθήκη (νέο endpoint, νέο
@@ -30,7 +32,7 @@ import { captureApiRules } from './capture-api-rules';
 import * as S from './capture-api-schemas';
 
 /** Η έκδοση του συμβολαίου — δες τους κανόνες semver στην κεφαλίδα. */
-export const CAPTURE_API_VERSION = '1.1.0';
+export const CAPTURE_API_VERSION = '1.3.0';
 
 /** Τα ονομασμένα σχήματα — το όνομα είναι **δημόσιο API** (γίνεται όνομα κλάσης Kotlin): μετονομασία = major. */
 export const CAPTURE_API_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
@@ -43,6 +45,15 @@ export const CAPTURE_API_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
   MediaRights: S.MediaRightsSchema,
   StartUploadBody: S.StartUploadBodySchema,
   StartUploadResponse: S.StartUploadResponseSchema,
+  TourLevelFloorKey: S.TourLevelFloorKeySchema,
+  TourLevelLocalKey: S.TourLevelLocalKeySchema,
+  TourLevelKey: S.TourLevelKeySchema,
+  CaptureRoomHint: S.CaptureRoomHintSchema,
+  CaptureHintPoint: S.CaptureHintPointSchema,
+  CapturePlacementHint: S.CapturePlacementHintSchema,
+  CapturePlanImage: S.CapturePlanImageSchema,
+  CaptureCalibratedPlan: S.CaptureCalibratedPlanSchema,
+  CaptureLevel: S.CaptureLevelSchema,
   CaptureDeclaration: S.CaptureDeclarationSchema,
   FinalizeBody: S.FinalizeBodySchema,
   CaptureTileset: S.CaptureTilesetSchema,
@@ -168,6 +179,29 @@ function targetPaths() {
   };
 }
 
+/** ADR-904 Κ9 — η εικόνα της κάτοψης: δυαδική, αμετάβλητη ανά hash (η εφαρμογή την κρατά για λήψη χωρίς σήμα). */
+const PLAN_IMAGE_CONTENT = { 'image/webp': { schema: { type: 'string', contentMediaType: 'image/webp' } } } as const;
+
+function planPaths() {
+  return {
+    '/api/spatial-tours/{kind}/{subjectId}/capture-plans/{contentHash}': {
+      parameters: [
+        ...SUBJECT_PARAMETERS,
+        { name: 'contentHash', in: 'path', required: true, description: 'Το `CaptureLevel.calibratedPlan.image.contentHash`.', schema: { type: 'string', minLength: 1 } },
+      ],
+      get: {
+        operationId: 'getCapturePlan',
+        summary: 'Η εικόνα της βαθμονομημένης κάτοψης ενός ορόφου — για το σημείο της πρότασης θέσης (υπεύθυνος ή ενεργή άδεια).',
+        responses: {
+          '200': { description: 'Τα bytes (`ETag` · `Cache-Control: private, immutable`). Πλαίσιο σημείου = pixel του `image.width × image.height`.', content: PLAN_IMAGE_CONTENT },
+          '304': { description: 'Αμετάβλητο (`If-None-Match`).' },
+          ...tourErrorResponses(),
+        },
+      },
+    },
+  };
+}
+
 function invitationPaths() {
   return {
     '/api/spatial-tours/capture-invitations/redeem': {
@@ -197,7 +231,7 @@ export function buildCaptureApiDocument() {
       description: 'Παράγεται από τον κώδικα (ADR-904 Ε6) — **ποτέ** επεξεργασία με το χέρι: `npm run generate:capture-api-contract`.',
     },
     security: [{ firebaseIdToken: [] }],
-    paths: { ...targetPaths(), ...uploadPaths(), ...invitationPaths() },
+    paths: { ...targetPaths(), ...planPaths(), ...uploadPaths(), ...invitationPaths() },
     components: {
       securitySchemes: {
         firebaseIdToken: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'Firebase Auth ID token.' },
