@@ -202,3 +202,40 @@ export function shouldClearStaleSelection<T extends SelectableEntity>(
   if (selection.kind !== 'resolving' && selection.kind !== 'not-found') return false;
   return selectedId !== selection.requestedId;
 }
+
+/** Η ταυτότητα που ζητά η διεύθυνση, όποια κι αν είναι η έκβαση (`null` = καμία). */
+export function requestedIdOf<T extends SelectableEntity>(selection: EntitySelection<T>): string | null {
+  switch (selection.kind) {
+    case 'none':
+      return null;
+    case 'selected':
+    case 'archived':
+      return selection.item.id;
+    case 'resolving':
+    case 'not-found':
+      return selection.requestedId;
+  }
+}
+
+/**
+ * **Είναι αυτή η διεύθυνση η ΗΧΩ μιας επιλογής που μόλις έκανε ο άνθρωπος;**
+ * (ADR-777 §8.31.12 — εύρημα Ε5 του ADR-898 §21.6)
+ *
+ * Η χειροκίνητη επιλογή γράφει **πρώτα** τη διεύθυνση (σύγχρονα) και η τοπική
+ * κατάσταση ακολουθεί σε `startTransition` (INP). Στο ενδιάμεσο καρέ η διεύθυνση
+ * λέει ήδη «Β» ενώ η οθόνη δείχνει ακόμη «Α» — και ο κανόνας του
+ * {@link shouldClearStaleSelection} θα έσβηνε την επιλογή που **μόλις έγινε**.
+ *
+ * Ηχώ = η διεύθυνση ζητά **ακριβώς** ό,τι γράψαμε εμείς, και η οθόνη **δεν** το
+ * δείχνει ακόμη ⇒ καμία αντίδραση· η εκκρεμής μετάβαση θα το φέρει. Ό,τι άλλο
+ * (σύνδεσμος, πίσω/εμπρός) είναι **εξωτερική** πλοήγηση και κρίνεται κανονικά.
+ */
+export function isPendingOwnSelection<T extends SelectableEntity>(
+  selection: EntitySelection<T>,
+  ownWriteId: string | null | undefined,
+  selectedId: string | null | undefined,
+): boolean {
+  const requestedId = requestedIdOf(selection);
+  if (!requestedId || requestedId !== ownWriteId) return false;
+  return selectedId !== requestedId;
+}

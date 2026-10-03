@@ -39,6 +39,7 @@ import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
+import { DRAFT_ENTITY_ID, isDraftEntityId } from '@/lib/draft-entity-id';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 
 const logger = createModuleLogger('ProjectsPageContent');
@@ -93,13 +94,14 @@ export function ProjectsPageContent() {
 
   // 🏢 ENTERPRISE: "Fill then Create" pattern (Salesforce/Procore/SAP)
   // No API call on "New" — open empty form, create on Save
-  const TEMP_PROJECT_ID = '__new__';
-  const [startInEditMode, setStartInEditMode] = useState(false);
-  const isCreateMode = selectedProject?.id === TEMP_PROJECT_ID;
+  const isCreateMode = isDraftEntityId(selectedProject?.id);
+  // ADR-777 §8.31.12: «ξεκίνα σε επεξεργασία» ισχύει ΜΟΝΟ για το draft — παράγεται, δεν θυμάται.
+  // Ως χωριστό state ξεχνιόταν αναμμένο ⇒ «Ακύρωση» του Νέου άνοιγε την ΑΥΤΟΜΑΤΗ επιλογή σε επεξεργασία.
+  const startInEditMode = isCreateMode;
 
   const handleNewProject = useCallback(() => {
     const tempProject: Project = {
-      id: TEMP_PROJECT_ID,
+      id: DRAFT_ENTITY_ID,
       name: '',
       title: '',
       description: '',
@@ -119,15 +121,13 @@ export function ProjectsPageContent() {
       lastUpdate: nowISO(),
     };
     setSelectedProject(tempProject);
-    setStartInEditMode(true);
     logger.info('New project form opened (Fill then Create)');
   }, [companies, setSelectedProject]);
 
   // 🏢 ENTERPRISE: After successful creation, replace temp project with real one
   const handleProjectCreated = useCallback((realProjectId: string) => {
-    if (selectedProject && selectedProject.id === TEMP_PROJECT_ID) {
+    if (selectedProject && isDraftEntityId(selectedProject.id)) {
       setSelectedProject({ ...selectedProject, id: realProjectId });
-      setStartInEditMode(false);
     }
   }, [selectedProject, setSelectedProject]);
 
@@ -415,7 +415,6 @@ export function ProjectsPageContent() {
             selectedProject={selectedProject}
             onSelectProject={(project) => {
               setSelectedProject(project);
-              setStartInEditMode(false);
             }}
             companies={companies}
             viewMode={viewMode}

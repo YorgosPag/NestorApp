@@ -46,6 +46,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
+import { DRAFT_ENTITY_ID, isDraftEntityId } from '@/lib/draft-entity-id';
 
 const logger = createModuleLogger('BuildingsPageContent');
 
@@ -94,14 +95,15 @@ export function BuildingsPageContent() {
 
   // 🏢 ENTERPRISE: "Fill then Create" pattern (Salesforce/Procore/SAP)
   // No API call on "New" — open empty form, create on Save
-  const TEMP_BUILDING_ID = '__new__';
-  const [startInEditMode, setStartInEditMode] = useState(false);
-  const isCreateMode = selectedBuilding?.id === TEMP_BUILDING_ID;
+  const isCreateMode = isDraftEntityId(selectedBuilding?.id);
+  // ADR-777 §8.31.12: «ξεκίνα σε επεξεργασία» ισχύει ΜΟΝΟ για το draft — παράγεται, δεν θυμάται.
+  // Ως χωριστό state ξεχνιόταν αναμμένο ⇒ «Ακύρωση» του Νέου άνοιγε την ΑΥΤΟΜΑΤΗ επιλογή σε επεξεργασία.
+  const startInEditMode = isCreateMode;
 
   const handleNewBuilding = useCallback(() => {
     const defaultCompanyId = companies[0]?.id || '';
     const tempBuilding: BuildingType = {
-      id: TEMP_BUILDING_ID,
+      id: DRAFT_ENTITY_ID,
       name: '',
       description: '',
       status: 'planning',
@@ -120,7 +122,6 @@ export function BuildingsPageContent() {
       createdAt: nowISO(),
     };
     setSelectedBuilding(tempBuilding);
-    setStartInEditMode(true);
     logger.info('New building form opened (Fill then Create)');
   }, [companies, setSelectedBuilding]);
 
@@ -130,12 +131,11 @@ export function BuildingsPageContent() {
   // effect (deps: [items, selectedItem?.id]) will replace it with the full
   // Firestore document as soon as the onSnapshot callback fires.
   const handleBuildingCreated = useCallback((realBuildingId: string) => {
-    if (selectedBuilding && selectedBuilding.id === TEMP_BUILDING_ID) {
+    if (selectedBuilding && isDraftEntityId(selectedBuilding.id)) {
       const realBuilding = buildingsData.find(b => b.id === realBuildingId);
       setSelectedBuilding(
         (realBuilding ?? { ...selectedBuilding, id: realBuildingId }) as BuildingType,
       );
-      setStartInEditMode(false);
     }
     showSuccess(t('dialog.messages.success'));
   }, [selectedBuilding, setSelectedBuilding, buildingsData, showSuccess, t]);
@@ -320,7 +320,6 @@ export function BuildingsPageContent() {
       onSelectBuilding={(building) => {
         startTransition(() => {
           setSelectedBuilding(toggleSelect(selectedBuilding, building));
-          setStartInEditMode(false);
         });
       }}
       onNewBuilding={showTrash ? undefined : handleNewBuilding}

@@ -19,7 +19,9 @@
 
 import {
   deriveEntitySelection,
+  isPendingOwnSelection,
   mayAutoSelectFirst,
+  requestedIdOf,
   shouldClearStaleSelection,
   type EntitySelection,
 } from '../entity-selection-state';
@@ -253,5 +255,40 @@ describe('ADR-777 §8.31 — deriveEntitySelection: καμία σιωπηλή κ
       ['archived', 'none', 'not-found', 'resolving', 'selected'].filter((k) => kinds.has(k)),
     );
     expect(kinds.size).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('ADR-777 §8.31.12 — η ηχώ της δικής μας επιλογής (Ε5)', () => {
+  const selected: EntitySelection<Thing> = { kind: 'selected', item: B };
+  const resolving: EntitySelection<Thing> = { kind: 'resolving', requestedId: 'bld_B' };
+  const notFound: EntitySelection<Thing> = { kind: 'not-found', requestedId: 'bld_B' };
+
+  it('requestedIdOf: η ταυτότητα που ζητήθηκε, σε κάθε έκβαση', () => {
+    expect(requestedIdOf<Thing>({ kind: 'none' })).toBeNull();
+    expect(requestedIdOf(selected)).toBe('bld_B');
+    expect(requestedIdOf<Thing>({ kind: 'archived', item: GONE })).toBe('bld_G');
+    expect(requestedIdOf(resolving)).toBe('bld_B');
+    expect(requestedIdOf(notFound)).toBe('bld_B');
+  });
+
+  it('🔴 η διεύθυνση λέει ό,τι γράψαμε και η οθόνη δεν το έφτασε ακόμη ⇒ ηχώ, καμία αντίδραση', () => {
+    for (const selection of [selected, resolving, notFound]) {
+      expect(isPendingOwnSelection(selection, 'bld_B', 'bld_A')).toBe(true);
+      expect(isPendingOwnSelection(selection, 'bld_B', null)).toBe(true);
+    }
+  });
+
+  it('η οθόνη έφτασε την επιλογή ⇒ όχι ηχώ (κανονική κρίση, π.χ. ανανέωση αντικειμένου)', () => {
+    expect(isPendingOwnSelection(selected, 'bld_B', 'bld_B')).toBe(false);
+  });
+
+  it('🔴 εξωτερική πλοήγηση (άλλη ταυτότητα από τη δική μας) ⇒ ΠΟΤΕ ηχώ', () => {
+    expect(isPendingOwnSelection(selected, 'bld_A', 'bld_A')).toBe(false);
+    expect(isPendingOwnSelection(selected, undefined, 'bld_A')).toBe(false);
+    expect(isPendingOwnSelection(selected, null, 'bld_A')).toBe(false);
+  });
+
+  it('η διεύθυνση δεν ζητά τίποτα ⇒ ποτέ ηχώ', () => {
+    expect(isPendingOwnSelection<Thing>({ kind: 'none' }, null, 'bld_A')).toBe(false);
   });
 });

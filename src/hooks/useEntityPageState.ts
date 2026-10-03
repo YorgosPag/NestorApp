@@ -23,13 +23,17 @@ import {
   useEffect,
   useTransition,
   useCallback,
+  useRef,
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isDraftEntityId } from '@/lib/draft-entity-id';
+import { useUrlQuery } from '@/hooks/useUrlQuery';
+import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
 import {
   deriveEntitySelection,
+  isPendingOwnSelection,
   mayAutoSelectFirst,
   shouldClearStaleSelection,
   type EntitySelection,
@@ -171,16 +175,20 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
   const logger = createModuleLogger(loggerName);
 
   // ── URL parameters ──────────────────────────────────────────────────
-  const searchParams = useSearchParams();
-  const entityIdFromUrl = searchParams.get(urlParamName);
+  // ADR-777 §8.31.12: η διεύθυνση είναι η ΜΙΑ πηγή της επιλογής (ADR-332 D21).
+  // ⚠️ ΟΧΙ `useSearchParams()`: στον dev δεν βλέπει το `replaceState` (βλ. `useUrlQuery`).
+  const { selectedId: entityIdFromUrl, setSelectedId: writeUrlSelection } =
+    useSelectedEntityUrlState(urlParamName);
+  const urlQuery = useUrlQuery();
 
   const extraParams = useMemo(() => {
+    const params = new URLSearchParams(urlQuery);
     const result: Record<string, string | null> = {};
     for (const param of extraUrlParams) {
-      result[param] = searchParams.get(param);
+      result[param] = params.get(param);
     }
     return result;
-  }, [searchParams, extraUrlParams]);
+  }, [urlQuery, extraUrlParams]);
 
   // ── Core state ──────────────────────────────────────────────────────
   const [selectedItem, setSelectedItemRaw] = useState<T | null>(null);
@@ -188,15 +196,32 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<F>(defaultFilters);
 
+  // ── Η χειροκίνητη επιλογή ΓΡΑΦΕΙ τη διεύθυνση (ADR-777 §8.31.12, εύρημα Ε5) ──
+  //
+  // 🔴 Πριν: ο setter άλλαζε ΜΟΝΟ την τοπική κατάσταση, ενώ η διεύθυνση έλεγε
+  // ακόμη «Α» ⇒ το effect παρακάτω ξανάγραφε το «Α» σε κάθε αλλαγή επιλογής:
+  // κλικ σε άλλο κτίριο ⇒ έμενε το Α· «Νέο» ⇒ επεξεργασία του Α (overwrite).
+  // Τώρα: διεύθυνση = κατάσταση (Figma / Linear / Gmail). Το «Νέο» (draft) και
+  // το `null` ΣΒΗΝΟΥΝ την παράμετρο — η ψευδο-ταυτότητα δεν είναι εγγραφή.
+  const latestSelectedRef = useRef<T | null>(null);
+  const ownWriteRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    latestSelectedRef.current = selectedItem;
+  }, [selectedItem]);
+
   // INP optimization: defer heavy detail-panel re-render (from buildings pattern)
   const [, startTransition] = useTransition();
   const setSelectedItem = useCallback(
     (item: (T | null) | ((prev: T | null) => T | null)) => {
+      const next = typeof item === 'function' ? item(latestSelectedRef.current) : item;
+      const urlId = next && !isDraftEntityId(next.id) ? next.id : null;
+      ownWriteRef.current = urlId;
+      writeUrlSelection(urlId);
       startTransition(() => {
-        setSelectedItemRaw(item);
+        setSelectedItemRaw(next);
       });
     },
-    [startTransition],
+    [startTransition, writeUrlSelection],
   );
 
   // ── Η επιλογή της διεύθυνσης, ως ΡΗΤΗ κατάσταση (ADR-777 §8.31) ────
@@ -233,6 +258,9 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
   );
 
   useEffect(() => {
+    // Ηχώ της δικής μας γραφής: η εκκρεμής μετάβαση φέρνει την επιλογή — καμία αντίδραση.
+    if (isPendingOwnSelection(selection, ownWriteRef.current, selectedItem?.id)) return;
+
     if (selection.kind === 'selected' || selection.kind === 'archived') {
       logger.info('Auto-selecting entity from URL', { entityId: selection.item.id });
       setSelectedItemRaw(selection.item);
