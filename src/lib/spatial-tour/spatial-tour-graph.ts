@@ -33,6 +33,27 @@ export function levelKeyId(key: TourLevelKey): string {
   return key.kind === 'floor' ? `floor:${key.floorId}` : `local:${key.ordinal}`;
 }
 
+/**
+ * **Η σειρά ενός ορόφου** (κάτω → πάνω): τοπικός ⇒ ο αριθμός του· BIM ⇒ η θέση δήλωσης (το υψόμετρο ζει στο BIM — Φ3).
+ * Ο **ένας** κανόνας για θεατή, εισερχόμενα και την εφαρμογή λήψης (ADR-904 Κ8) — αλλιώς «Όροφος 2» σε δύο οθόνες = δύο όροφοι.
+ */
+export function tourLevelOrdinal(key: TourLevelKey, index: number): number {
+  return key.kind === 'local' ? key.ordinal : index;
+}
+
+/** Ένας όροφος όπως τον χρειάζεται όποιος **διαλέγει** όροφο — κλειδί, σειρά, ετικέτα (`null` ⇒ «Όροφος {n}»). */
+export interface TourLevelChoice {
+  readonly key: TourLevelKey;
+  readonly ordinal: number;
+  /** Το όνομα ορόφου BIM θα έρθει με τη σύνδεση στο μοντέλο — δεν επινοείται εδώ. */
+  readonly label: string | null;
+}
+
+/** **Οι όροφοι της περιήγησης ως επιλογές** — η ΜΙΑ προβολή (θεατής · εισερχόμενα · λίστα λήψης Κ7). */
+export function tourLevelChoices(levels: readonly Pick<TourLevel, 'key'>[]): TourLevelChoice[] {
+  return levels.map((level, index) => ({ key: level.key, ordinal: tourLevelOrdinal(level.key, index), label: null }));
+}
+
 /** **Ο όροφος με αυτό το κλειδί** — η μία αναζήτηση (ήταν αντίγραφο σε εντολές κάτοψης και αντίστροφες). */
 export function findTourLevel<L extends Pick<TourLevel, 'key'>>(levels: readonly L[] | undefined, key: TourLevelKey): L | undefined {
   const id = levelKeyId(key);

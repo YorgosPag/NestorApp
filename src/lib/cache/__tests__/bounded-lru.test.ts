@@ -45,4 +45,15 @@ describe('createBoundedLru', () => {
     expect(evicted.sort()).toEqual(['a', 'b']);
     expect(lru.weight()).toBe(0);
   });
+  it('delete βγάζει ΕΝΑ κλειδί μέσω onEvict και ελευθερώνει το βάρος του · άγνωστο κλειδί ⇒ τίποτα', () => {
+    const evicted: string[] = [];
+    const lru = make(10, evicted);
+    lru.set('a', 3);
+    lru.set('b', 4);
+    lru.delete('a');
+    lru.delete('zz');
+    expect(evicted).toEqual(['a']);
+    expect(lru.has('a')).toBe(false);
+    expect(lru.weight()).toBe(4);
+  });
 });

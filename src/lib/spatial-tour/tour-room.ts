@@ -67,8 +67,8 @@ export function tourRoomDisplay(node: TourNode, levelNodes: readonly TourNode[])
 
 /**
  * Το όνομα ενός **χώρου χωρίς σημείο λήψης** (ADR-884 Δ8.5 · Γ3γ-1) — το δικό του όνομα, χωρίς αρίθμηση: η αρίθμηση όμοιων
- * ανήκει στα σημεία, και ο χώρος χωρίς σημείο δεν μπαίνει στη σειρά τους.
+ * ανήκει στα σημεία, και ο χώρος χωρίς σημείο δεν μπαίνει στη σειρά τους. Το ίδιο για την **πρόταση** χώρου μιας λήψης (ADR-904 Κ8).
  */
-export function plainRoomDisplay(room: TourRoom): TourRoomDisplay {
+export function plainRoomDisplay(room: Pick<TourRoom, 'types' | 'label'>): TourRoomDisplay {
   return room.label !== null ? { kind: 'label', text: room.label } : { kind: 'types', types: room.types, ordinal: null };
 }

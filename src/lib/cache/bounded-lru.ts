@@ -13,6 +13,8 @@ export interface BoundedLru<V> {
   get(key: string): V | undefined;
   set(key: string, value: V): void;
   has(key: string): boolean;
+  /** Βγάζει ένα κλειδί (με `onEvict`) — π.χ. αποτυχημένη φόρτωση που δεν πρέπει να κρατηθεί (ADR-904 Κ9). */
+  delete(key: string): void;
   clear(): void;
   /** Τρέχον άθροισμα βαρών. */
   weight(): number;
@@ -56,6 +58,7 @@ export function createBoundedLru<V>({ maxWeight, weigh, onEvict }: BoundedLruOpt
       }
     },
     has: (key) => entries.has(key),
+    delete: remove,
     clear() {
       for (const key of [...entries.keys()]) remove(key);
     },

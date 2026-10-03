@@ -180,6 +180,31 @@ export interface TourRoom {
   readonly source: TourRoomSource;
 }
 
+/**
+ * **Η πρόταση θέσης του φωτογράφου** (ADR-904 Κ8 · Α8) — ό,τι είπε ο άνθρωπος **στεκόμενος εκεί**: όροφος και/ή χώρος.
+ * **Πρόταση, όχι απόφαση**: η λήψη μένει ατοποθέτητη (`nodeId: null`) ως να την αποδεχτεί ο υπεύθυνος (πρότυπο Matterport — ο
+ * όροφος του Capture είναι υπόδειξη). Αποθηκεύεται **όπως δηλώθηκε**: ο όροφος μπορεί να μην υπάρχει πια — το λέει η οθόνη, δεν
+ * διορθώνεται σιωπηλά. Ο χώρος έχει το σχήμα του {@link TourRoom} χωρίς προέλευση ⇒ η αποδοχή του είναι το ίδιο αντικείμενο.
+ */
+export interface TourCapturePlacementHint {
+  readonly level?: TourLevelKey;
+  readonly room?: Pick<TourRoom, 'types' | 'label'>;
+  /** ADR-904 Κ9 — το σημείο όπου στεκόταν, πάνω στην κάτοψη του `level` (απαιτεί `level`). */
+  readonly point?: TourCaptureHintPoint;
+}
+
+/**
+ * **Το σημείο της πρότασης** (ADR-904 Κ9): pixel της **πρωτότυπης** εικόνας κάτοψης (πλαίσιο `imagePixelToPlan`) — επιβιώνει
+ * επαναβαθμονόμηση, όπως οι θέσεις των σημείων. Δεμένο στην **έκδοση** της κάτοψης (`planContentHash`): αλλαγή κάτοψης ⇒ η οθόνη
+ * το λέει, **ποτέ** σιωπηλή μεταφορά. `radiusPx` = η αβεβαιότητα του δαχτύλου στο ζουμ της στιγμής (απών ⇒ άγνωστη).
+ */
+export interface TourCaptureHintPoint {
+  readonly planContentHash: string;
+  readonly x: number;
+  readonly y: number;
+  readonly radiusPx?: number;
+}
+
 /** Σημείο στον χώρο — σταθερό στον χρόνο. */
 export interface TourNode {
   readonly id: string;
@@ -329,6 +354,8 @@ export interface TourCapture {
    * **ίδια** συναλλαγή με τις `auto` περιοχές που βρήκε.
    */
   readonly faceScan?: TourFaceScan;
+  /** Η πρόταση θέσης του φωτογράφου (ADR-904 Κ8) — απούσα ⇒ δεν δηλώθηκε. Τη γράφει **μόνο** η ολοκλήρωση ανεβάσματος. */
+  readonly placementHint?: TourCapturePlacementHint;
   /** Ο **δράστης** — όχι ο κάτοχος (φωτογράφος με άδεια λήψης, Φ0.5). */
   readonly uploadedBy: string;
   readonly createdAt: string;
