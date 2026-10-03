@@ -201,6 +201,13 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
     color: "text-muted-foreground",
     bgColor: "bg-muted",
   },
+  // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: επικοινωνία (ίδια οικογένεια με το «email_sent»), όχι αλλαγή.
+  document_requested: {
+    icon: Send,
+    labelKey: "audit.actions.document_requested",
+    color: "text-[hsl(var(--text-info))]",
+    bgColor: "bg-[hsl(var(--bg-info))]/20",
+  },
 };
 
 /** i18n key under audit.filters.* — resolved at render time */

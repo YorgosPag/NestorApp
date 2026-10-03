@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8962b0f82bcdea88d134e53dc13242485b4cd3694f8f643899b2168b640d87be",
+  "inputsSha256": "2e6f9089e0556206970e5d3b8f0a0565be87377d31c69f3720c32fa7f9384e25",
   "languages": [
     "el"
   ],
@@ -11241,7 +11241,7 @@
     "src/services/enterprise-id-network-generators.ts": "92adc416b15204d0cd41e6243a54b141c50b590581119678e5ea2c8c372a8237",
     "src/services/enterprise-id-parse.ts": "d697167e26dbb3e9530c6ab084aa50f7e30e77bdb0ff4d1308dbec8aae785bf6",
     "src/services/enterprise-id-prefixes-dxf-bim.ts": "496be3e53096b30c9396c4d26e9048f0b7361951585b2401732cc3e3371898b7",
-    "src/services/enterprise-id-prefixes.ts": "5f7e13e410c895164057892da2e34ae687c65bc92c907a38c2422e7e3edadea0",
+    "src/services/enterprise-id-prefixes.ts": "9dac0a0361efc090bc549d26ad3422a919dd8c6c8f5e159790226a9c0e1786b0",
     "src/services/enterprise-id-public-registry-generators.ts": "693adeb4e52f0a5b3866fcdb8be26e2e2763e6f8638a69ede03e4caa40a97cf0",
     "src/services/enterprise-id-saved-listing-generators.ts": "2edc3b55e02563d4dd490167d02cb383c1f2ea5a3424da5142e0e299aeb9091a",
     "src/services/enterprise-id-singleton.ts": "af633d79955de13a3b98f19e7145f0762dcf7eea2565a9d135054a12e59d5d42",

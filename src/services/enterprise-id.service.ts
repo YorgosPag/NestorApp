@@ -58,6 +58,8 @@ export {
   generateApyCertificateId, generateServicePresetId, generateCustomCategoryId, generateCustomerBalanceId,
   generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
   generatePipelineAuditId, generateEntityAuditId, generateContractId, generateConveyanceCaseId, generateEngagementId, generateEngagementInvitationId,
+  generateConveyanceContributionId,
+  generateDeterministicConveyanceDocumentRequestId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generatePrivateMarketingEventId,
   generateMandateEvidenceId,
