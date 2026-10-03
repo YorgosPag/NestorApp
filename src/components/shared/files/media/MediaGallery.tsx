@@ -54,7 +54,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PhotoPreviewModal } from '@/core/modals/PhotoPreviewModal';
 import { usePhotoPreviewModal } from '@/core/modals/usePhotoPreviewModal';
 import type { FileRecord } from '@/types/file-record';
-import { fileDisplayUrl } from '@/lib/files/file-display-url';
+import { fileDisplayUrl, fileDisplayUrlOf } from '@/lib/files/file-display-url';
 
 import { MediaCard } from './MediaCard';
 import { VideoPlayer } from './VideoPlayer';
@@ -174,9 +174,12 @@ export function MediaGallery({
       setVideoPreviewFile(file);
     } else {
       // Open photo in lightbox using existing PhotoPreviewModal
-      const photoUrls = gallery.sortedFiles
+      const photos = gallery.sortedFiles
         .filter(f => !isVideoFile(f))
-        .map(f => fileDisplayUrl(f));
+        .map(f => fileDisplayUrlOf(f));
+      // `url` = το αρχείο (λήψη/κοινή χρήση) · `preview` = η εικόνα που δείχνεται (ADR-899 Ε2)
+      const photoUrls = photos.map(p => (p.kind === 'url' ? p.url : null));
+      const photoPreviews = photos.map(p => (p.kind === 'url' ? p.preview : null));
 
       const photoUrl = fileDisplayUrl(file);
       const photoIndex = photoUrls.findIndex(url => url === photoUrl);
@@ -187,6 +190,7 @@ export function MediaGallery({
         photoTitle: file.displayName,
         photoIndex: photoIndex >= 0 ? photoIndex : 0,
         galleryPhotos: photoUrls,
+        galleryPreviews: photoPreviews,
         currentGalleryIndex: photoIndex >= 0 ? photoIndex : 0,
       });
     }

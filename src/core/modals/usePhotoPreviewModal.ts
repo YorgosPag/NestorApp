@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { Contact } from '@/types/contacts';
 import type { PhotoPreviewModalProps } from './PhotoPreviewModal';
+import type { PhotoGalleryPreviews } from './photo-preview-helpers';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('usePhotoPreviewModal');
@@ -26,6 +27,8 @@ export interface PhotoPreviewState {
   photoIndex?: number;
   /** Array φωτογραφιών για gallery navigation */
   galleryPhotos?: (string | null)[];
+  /** Παράγωγα ανά θέση του `galleryPhotos` (ADR-899 Ε2) — η εικόνα που **δείχνεται**· το URL μένει για λήψη/κοινή χρήση */
+  galleryPreviews?: PhotoGalleryPreviews;
   /** Current index στο gallery array */
   currentGalleryIndex?: number;
 }
@@ -39,17 +42,10 @@ export interface UsePhotoPreviewModalReturn {
   closeModal: () => void;
   /** Toggle modal state */
   toggleModal: () => void;
-  /** Props για το PhotoPreviewModal component */
-  modalProps: {
+  /** Props για το PhotoPreviewModal component — **παράγονται** από το state (ένα πεδίο, ένα σημείο δήλωσης) */
+  modalProps: Omit<PhotoPreviewState, 'isOpen'> & {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    photoUrl: string | null;
-    photoTitle?: string;
-    contact?: Contact;
-    photoType: PhotoPreviewModalProps['photoType'];
-    photoIndex?: number;
-    galleryPhotos?: (string | null)[];
-    currentGalleryIndex?: number;
   };
 }
 
@@ -66,6 +62,8 @@ export interface OpenModalParams {
   photoIndex?: number;
   /** Array φωτογραφιών για gallery navigation (optional) */
   galleryPhotos?: (string | null)[];
+  /** Παράγωγα ανά θέση του `galleryPhotos` (ADR-899 Ε2) — η εικόνα που **δείχνεται**· το URL μένει για λήψη/κοινή χρήση */
+  galleryPreviews?: PhotoGalleryPreviews;
   /** Current index στο gallery array (optional) */
   currentGalleryIndex?: number;
 }
@@ -145,6 +143,7 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
       photoTitle,
       photoIndex,
       galleryPhotos,
+      galleryPreviews,
       currentGalleryIndex
     } = params;
 
@@ -162,6 +161,7 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
       photoTitle,
       photoIndex,
       galleryPhotos,
+      galleryPreviews,
       currentGalleryIndex
     });
   }, []);
@@ -200,6 +200,7 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
     photoType: state.photoType,
     photoIndex: state.photoIndex,
     galleryPhotos: state.galleryPhotos,
+    galleryPreviews: state.galleryPreviews,
     currentGalleryIndex: state.currentGalleryIndex
   };
 

@@ -186,6 +186,7 @@ ETag παραγώγων άθικτο, κανένα νέο finalize.
 |---|---|---|
 | **α** εμφάνιση (μικρογραφία) | `FileThumbnail` (κόμβος) ← `FileManagerPageContent` · `EntityFilesContent` · `FilesList` · `ListingMaterialRow` ← `ListingFloorplansPanel` · `ListingMediaOrderPanel` | Prop `file` (όχι `downloadUrl`)· πηγές από `file-thumbnail-sources.ts`: **παράγωγο** (`srcSet` + `sizes` = px του κουτιού, **ίδιο κελί** με την κλάση) → client `_thumb` (εφεδρεία) → πρωτότυπο **μόνο** για svg/gif → εικονίδιο / σελίδα PDF. Κάθε `onError` = ένα βήμα. |
 | **α** εμφάνιση (zoom) | `FilePreviewRenderer` → `ImagePreview` (από `FilePreviewPanel`) | Νέο προαιρετικό `preview`. `use-zoom-resolution.ts`: `sizes` = **μετρημένο** κουτί· στο zoom `κουτί × zoom × DPR` → `filePreviewWidthFor` = η **μικρότερη** επαρκής βαθμίδα, πρωτότυπο μόνο πάνω από 2560· φόρτωση στο παρασκήνιο + `decode()` πριν την αλλαγή· **μόνο προς τα πάνω**. Χωρίς `preview` (δημόσια κοινή χρήση, προσφορές) = ως πριν. |
+| **α** εμφάνιση (γκαλερί) — *προστέθηκε 2026-10-03, §9 Ε2* | `MediaCard` + `PhotoPreviewModal` ← `MediaGallery` ← `EntityFilesContent` · `ReadOnlyMediaViewer` | Κάρτα: `thumbnailCandidatesOf` στο μετρημένο κουτί (`sizes` για `object-cover`) + `use-thumbnail-candidate`. Modal: `galleryPreviews` → `PhotoPreviewImage` → `useZoomResolution`· το URL μένει για λήψη/κοινή χρήση. |
 | **β** bytes / άνοιγμα / «υπάρχει;» | `file-manager-handlers` (διπλό κλικ → `openRemoteUrlInNewTab`) · `FilePreviewPanel` · `InboxView` · `FileInspector` · `FloorplanGallery` · `useFloorplanPdfLoader` · `VideoPlayer` · `useFileDownload` (εφεδρεία μετά το `id`) | `fileDisplayUrl(file)`. Εγγραφές χωρίς `downloadUrl` **δεν κρύβονται** πια. |
 | **β** ⚠️ πρωτότυπο | `useFloorplanImageLoader` · `FloorplanGallery.calibrationImageSrc` | `.url`, **ποτέ** `preview`: η βαθμονόμηση/μέτρηση δουλεύει στα pixel του πρωτοτύπου (`naturalWidth`). |
 | **β** server | `useFloorplanFiles` (φίλτρο αυτόματης επεξεργασίας) | Ρωτά `storagePath` — αυτό διαβάζει το `floorplan-process.service`. |
@@ -325,6 +326,65 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
 - Η σελίδα ακινήτου στην παραγωγή φορτώνει **243** chunks `/_next/static` (γεμίζει το buffer χρονισμού των 250 εγγραφών).
 - 14 προειδοποιήσεις *«preloaded but not used»* από `<link preload>` του Next — η γκαλερί δεν κάνει preload.
 
+### Βήματα Α/Γ/Δ ζωντανά (2026-10-03)
+
+Deploy `89e3be47`: «T1 🚀 Build & Deploy Docker Image» ✅ (run 37109478085) → Netcup → `nestorconstruct.gr`. Chrome, DPR **0,8**
+(zoom 80%), viewport 2.400 px CSS. Δοκιμαστικό ακίνητο `prop_48a7caf6…`: `file_c098b8d6` 3000×4000 · `file_244732c7` 1803×2225 ·
+κάτοψη png `file_474b4d3c` 1200×800.
+
+| # | Έλεγχος | Μέτρηση | Αποτέλεσμα |
+|---|---|---|---|
+| Α1 | Δύο γρήγορα «Επόμενη» (40 ms) | Μετά το Δ4 η κεφαλίδα έχει **3** slides: Ε+Ε σε 40 ms ⇒ **1** (αναμενόταν 2) · σε 250 ms ⇒ 2. ⚠️ Η πρώτη ανάγνωση («με 2 slides αδιάκριτο λόγω clamp») ήταν **λάθος**: το `step` κάνει **λούπα**, άρα και το 0→1 της αναζήτησης (Ε+Ε σε 2 slides) ήταν ήδη το ίδιο σύμπτωμα. Ρίζα: **όχι** το `useStepOrigin` αλλά ο **φρουρός 120 ms** με παγωμένα καρέ | 🔴 **Ε3** (κάτω) — διορθώθηκε στον κώδικα, ζωντανά μετά το push |
+| Δ1 | `srcset` κεφαλίδας | 3000 px ⇒ 320/640/1280/**2560** · 1803 px ⇒ 320/640/1280/**2560** (η 2560 = πρώτη ≥ 1803) · κάτοψη 1200 px (πάνελ lightbox) ⇒ 320/640/**1280** — **καμία** βαθμίδα πάνω από την πρώτη επαρκή. `sizes` `(min-width: 640px) 12rem, 100vw` ⇒ φορτώθηκε `w=320` · μία εικόνα `fetchpriority="high"` | ✅ |
+| Δ2 | Lightbox κάθετης `file_c098b8d6` | `sizes="762px"` (όχι `70vw`)· κουτί ύψους 991 px ⇒ 991 × ¾ = 743 → σκαλοπάτι 16 + ½ ⇒ 762 · φορτώθηκε **`w=640`** (762 × 0,8 = 610 ≤ 640). Πριν (§9, 2026-10-01): `70vw` ⇒ `w=2560` | ✅ |
+| Δ3 | Κάτοψη 1200 px: `w=1280` · `w=2560` · `w=1280` | **ίδιο ETag** `"yw_y40b2…"` και ίδια bytes (16.322 B webp) και στα τρία· `If-None-Match`(ETag του 1280) στο `w=2560` ⇒ **304** · `private, no-cache` | ✅ |
+| Δ4 | Νέο ανέβασμα κάθετης (εντολή Giorgio): συνθετικό JPEG αποθηκευμένο **2400×1800** με EXIF `Orientation=6` → καρτέλα «Φωτογραφίες» | `file_3dc3c55b…`: αντικείμενο 09:38:14.7Z → log `{"verdict":"write","width":1800,"height":2400}` 09:38:20.3Z (**~5,6 s**) · εγγραφή `imageDimensions` **1800×2400** (θεατής — ανταλλαγή EXIF σωστή) · `metageneration` 2 (custom metadata). Το `_thumb.webp` του client ⇒ `verdict: no-record` (σωστά — δεν είναι εγγραφή) | ✅ |
+| Γ1 | File Manager (`/files`) | 15 μικρογραφίες φορτωμένες **`w=320`**, `sizes="40px"` (κουτί 38 px)· 9 ακόμη `loading="lazy"` εκτός οθόνης (δεν φορτώθηκαν — σωστό)· 2 = `*.dxf.thumbnail.png` (συνοδευτικό DXF, §2.2 — δεν είναι εικόνα-αρχείο) | ✅ |
+| Γ1 | Ακίνητο → καρτέλα **«Φωτογραφίες»** (`MediaGallery` → `MediaCard`) | κάρτα 160×120 φορτώνει το **πρωτότυπο** (`fileDisplayUrl`, χωρίς `srcset`): 3,27 MB και 1,97 MB για 160 px. Και το `PhotoPreviewModal` που ανοίγει από εκεί δείχνει το **πρωτότυπο** 3000×4000 σε κουτί 696×928 | 🔴 **Ε2** (κάτω) |
+| Γ2 | Πάνελ προεπισκόπησης + zoom, κάτοψη 1200 px | 100%: `w=1280`, βαθμίδες 320/640/**1280** · zoom **125%** ⇒ **πρωτότυπο** (`downloadUrl`, 55.790 B, αποκωδικοποιημένο 1200×800) — **ποτέ** `w=2560` | ✅ |
+| Γ3 | Κονσόλα (ακίνητο · `/files` · αναζήτηση) | κανένα σφάλμα / ωμό κλειδί i18n· μόνο προειδοποίηση MapLibre `Image "townhall" could not be loaded` στην αναζήτηση (εκτός πεδίου) | ✅ |
+
+#### Ε2 — 🔴 `MediaCard` + `PhotoPreviewModal`: εμφάνιση που ταξινομήθηκε ως «bytes»
+
+Η καρτέλα «Φωτογραφίες» του ακινήτου (`EntityFilesContent` → `MediaGallery` → `MediaCard`· επίσης `ReadOnlyMediaViewer`) δεν
+εμφανίζεται στον πίνακα του §4.1: πέρασε στο `fileDisplayUrl(file)` (= «το αρχείο») ενώ είναι **κατηγορία α** (εμφάνιση). Το ratchet
+`file-display-url` απαγορεύει την **ανάγνωση `downloadUrl`**, όχι την κλήση `fileDisplayUrl` σε θέση εμφάνισης ⇒ το σημείο είναι
+**αόρατο** στην πύλη.
+
+✅ **Θεραπεία (2026-10-03, εντολή Giorgio)** — κανένας νέος μηχανισμός, μόνο οι υπάρχοντες:
+- **Κάρτα** (`MediaCard`): `thumbnailCandidatesOf` στο **μετρημένο** κουτί (`useElementSize`, σκαλοπάτι 16 + ½ — ίδιος κανόνας με το
+  `lightboxSizesOf`)· πριν τη μέτρηση το άνω φράγμα της στήλης (`minmax(160px, 1fr)` ⇒ < 320 px, σε 4:3). Η κλιμάκωση σφαλμάτων
+  (παράγωγο → `_thumb` → ορατό σφάλμα) **εξήχθη** από το `FileThumbnail` στο `use-thumbnail-candidate.ts` και τη μοιράζονται (N.0.2).
+- **`sizes` για `object-cover`**: νέο `coveredWidth` στο SSoT (`lib/images/image-dimensions.ts`, δίδυμο του `containedWidth`) +
+  `thumbnailSizesOf` — πανοραμική σε τετράγωνο/4:3 κουτί χρειάζεται πλάτος **μεγαλύτερο** από του κουτιού (αλλιώς θολή), ποτέ πάνω
+  από τα pixel της. Ωφελεί και το `FileThumbnail` (αριθμός = τετράγωνο κουτί).
+- **Modal**: νέο προαιρετικό `galleryPreviews` (`PhotoGalleryPreviews`) από το `openModal` ως το `PhotoPreviewModal`· η εικόνα
+  (`core/modals/PhotoPreviewImage.tsx`) ρωτά τον **ίδιο** `useZoomResolution` του πάνελ: μικρότερη επαρκής βαθμίδα, πρωτότυπο
+  μόνο σε βαθύ zoom. Το `galleryPhotos` μένει **το αρχείο** (λήψη/κοινή χρήση). Χωρίς `galleryPreviews` (επαφές, λογότυπα) = ως πριν.
+  ⚠️ Δικό της `<figure>` με δικό της ref: το `<main>` του modal δένει το ref του **μετά** τα παιδιά (σειρά commit) ⇒ ένα παιδί που
+  ρωτούσε εκείνο θα έβλεπε `null` και δεν θα μετρούσε ποτέ.
+- Boy Scout (CHECK 3.28): ο τύπος `modalProps` του `usePhotoPreviewModal` επαναλάμβανε πεδίο-πεδίο το `PhotoPreviewState` ⇒
+  πλέον `Omit<PhotoPreviewState, 'isOpen'> & { open, onOpenChange }`.
+
+#### Ε3 — 🔴 ο φρουρός 120 ms του **ξεπερασμένου** βήματος ακύρωνε το επόμενο
+
+**Μέτρηση** (καρτέλα με στραγγαλισμένα καρέ — `sleep(40)` κράτησε 1.010 ms, `scrollLeft` ακίνητο 1 s μετά το κλικ): Ε+Ε σε 40 ms ⇒
+**1**. Ο `useStepOrigin` δούλεψε (το 2ο βήμα ζήτησε σωστά το 2). **Ρίζα**: κάθε `goTo` οπλίζει φρουρό *«αν σε 120 ms δεν κουνήθηκε,
+πήγαινε ακαριαία»*. Ο φρουρός του **1ου** βήματος πηδούσε στο **παλιό** του target (slide 1)· ο φρουρός του 2ου έβλεπε τότε
+«κουνήθηκε» (|400 − 0| ≥ 1) και παραιτούνταν. Σε ορατή καρτέλα με ζωντανό smooth scroll δεν εμφανίζεται (ο φρουρός μένει αδρανής) —
+γι' αυτό το §9 της 2026-10-01 μέτρησε σωστά 40/120/250 ms. **Θεραπεία** (`use-gallery-scroller.ts`): ο φρουρός ενεργεί **μόνο αν η
+πρόθεσή του ισχύει ακόμη** (`intentRef.current === wrapped`) — ξεπερασμένο βήμα, άφιξη ή άνθρωπος που έπιασε τον κύλινδρο ⇒ σιωπά.
+Ο φρουρός **δεν είχε καμία άγκυρα**· νέα `ListingCardGallery.test` **Δ5** (παγωμένη κύλιση + fake timers ⇒ 800, όχι 400).
+
+#### Παρατηρήσεις (μετρημένες, όχι διορθωμένες)
+
+- Πάνελ προεπισκόπησης: `sizes="1227px"` = πλάτος **κουτιού**, ενώ η εικόνα ζωγραφίζεται 821×548 (`object-contain`, φραγμένη από
+  ύψος) — η ίδια υπερεκτίμηση με το Π1 του lightbox. Εδώ αθώα (821 × 0,8 = 657 > 640 ⇒ `w=1280` ούτως ή άλλως), όχι γενικά.
+- Το κουμπί μεγέθυνσης του πάνελ δεν έχει προσβάσιμο όνομα (`button` χωρίς `aria-label`).
+- Το log του trigger γράφει `message: "Image dimensions recorded"` **και** στο `verdict: no-record` (π.χ. `_thumb.webp`) — παραπλανητικό
+  κείμενο· το `verdict` είναι η αλήθεια.
+- ~~«Στο τελευταίο slide το «Επόμενη» δεν είναι `disabled`»~~ — **σχεδιασμός**, όχι σφάλμα: λούπα (άγκυρα Α1, `use-gallery-scroller`).
+
 ## Changelog
 
 - **2026-10-01** — Δημιουργία. Φ.Δ (κλίμακα · κωδικοποιητής · stat/γενιά · υπηρεσία · route · builder) + Φ.Γ (κέλυφος γκαλερί · ουδέτερο
@@ -366,3 +426,15 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
 - **2026-10-02** — Boy Scout (CHECK 3.28): όταν η γκαλερί του διαχειριστή αρχείων και των αρχείων οντότητας πέρασαν στον ίδιο
   αναγνώστη, η περίληψη «μικρογραφία · όνομα · μέγεθος» έγινε κλώνος ⇒ `components/shared/files/FileTileSummary.tsx` (ένα
   περιεχόμενο, το κέλυφος μένει στον καλούντα). Η δίδυμη κεφαλίδα φόρτωσης/άδειας κατάστασης του `InboxView` ⇒ τοπικό `InboxStateHeader`.
+- **2026-10-03** — Ζωντανός έλεγχος Βημάτων Α/Γ/Δ στην παραγωγή (§9 «Βήματα Α/Γ/Δ ζωντανά», deploy `89e3be47`): **Δ1 · Δ2 · Δ3 ·
+  Γ2 · Γ3 ✅** (κλίμακα που σταματά στην πρώτη επαρκή βαθμίδα · `sizes="762px"` ⇒ `w=640` στην κάθετη αντί για `w=2560` · ίδιο ETag
+  `w=1280`/`w=2560` για πρωτότυπο 1200 px + 304 · zoom ⇒ πρωτότυπο, ποτέ `w=2560`). **Γ1 ✅** στον File Manager, 🔴 **Ε2** στην καρτέλα
+  «Φωτογραφίες» (`MediaCard` + `PhotoPreviewModal` φορτώνουν πρωτότυπα — εμφάνιση αόρατη στο ratchet `file-display-url`)·
+  **Α1 ⏳** μη μετρήσιμο (καμία γκαλερί ≥ 3 slides στην παραγωγή) · **Δ4 ⏳** (ανέβασμα — θέλει άδεια).
+- **2026-10-03** — **Ε2 διορθώθηκε** (§9, §4.1 νέα γραμμή): κάρτα `MediaCard` = μικρογραφία από την κλίμακα στο μετρημένο κουτί·
+  `PhotoPreviewModal` = `useZoomResolution` μέσω `galleryPreviews` / `PhotoPreviewImage`. Νέο `coveredWidth` (SSoT διαστάσεων) +
+  `thumbnailSizesOf`· κλιμάκωση σφαλμάτων εξήχθη σε `use-thumbnail-candidate.ts` (κοινή με το `FileThumbnail`). **Δ4 ✅** ζωντανά
+  (συνθετικό JPEG EXIF 6 ⇒ `imageDimensions` 1800×2400 σε ~5,6 s, `verdict: write`). **Α1** με 3 slides ⇒ 🔴 **Ε3**: ο φρουρός 120 ms
+  του ξεπερασμένου βήματος ακύρωνε το επόμενο με παγωμένα καρέ — ο φρουρός ενεργεί πλέον μόνο αν η πρόθεσή του ισχύει ακόμη
+  (άγκυρα `ListingCardGallery` Δ5). Άγκυρες Ε2: `media-gallery-derivatives.test.tsx` (Ε1–Ε5)· μεταλλάξεις **6/6** κόκκινες·
+  `jscpd:diff` καθαρό. ⏳ Ε2/Ε3 ζωντανά μετά το push.

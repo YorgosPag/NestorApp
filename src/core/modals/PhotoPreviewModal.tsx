@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 
 // Extracted modules — backward-compatible re-exports at bottom
 import { usePhotoPreviewState } from '@/core/modals/usePhotoPreviewState';
+import { PhotoPreviewImage } from '@/core/modals/PhotoPreviewImage';
 import {
   createGalleryCounterBadge,
   createContactTypeBadge,
@@ -61,6 +62,7 @@ export function PhotoPreviewModal({
   photoType = 'avatar',
   photoIndex,
   galleryPhotos,
+  galleryPreviews,
   currentGalleryIndex,
   className
 }: PhotoPreviewModalProps) {
@@ -134,23 +136,22 @@ export function PhotoPreviewModal({
           onMouseDown={state.handleMouseDown}
           onDoubleClick={state.handleDoubleClick}
         >
-          <figure className="relative w-full h-full flex items-center justify-center select-none">
-            <img
-              src={state.currentPhoto ?? undefined}
-              alt={state.isGalleryMode
-                ? t('photoPreview.alt.gallery', { title: state.title, current: state.currentIndex + 1, total: state.totalPhotos })
-                : t('photoPreview.alt.single', { title: state.title })
-              }
-              ref={state.imageRef}
-              className={`${photoPreviewLayout.image.base} ${TRANSITION_PRESETS.STANDARD_TRANSFORM}`}
-              draggable={false}
-              onTouchStart={state.handleTouchStart}
-              onTouchMove={state.handleTouchMove}
-              onTouchEnd={state.handleTouchEnd}
-              onLoad={state.handleImageLoad}
-              onError={state.handleImageError}
-            />
-          </figure>
+          <PhotoPreviewImage
+            url={state.currentPhoto ?? null}
+            preview={state.isGalleryMode ? galleryPreviews?.[state.currentIndex] ?? null : null}
+            zoom={state.zoom}
+            alt={state.isGalleryMode
+              ? t('photoPreview.alt.gallery', { title: state.title, current: state.currentIndex + 1, total: state.totalPhotos })
+              : t('photoPreview.alt.single', { title: state.title })
+            }
+            imageRef={state.imageRef}
+            className={`${photoPreviewLayout.image.base} ${TRANSITION_PRESETS.STANDARD_TRANSFORM}`}
+            onTouchStart={state.handleTouchStart}
+            onTouchMove={state.handleTouchMove}
+            onTouchEnd={state.handleTouchEnd}
+            onLoad={state.handleImageLoad}
+            onError={state.handleImageError}
+          />
         </main>
 
         {/* Footer */}

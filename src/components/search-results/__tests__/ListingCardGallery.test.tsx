@@ -251,6 +251,25 @@ describe('Δ — κάθε κλικ μετρά, ακόμη και πριν τελ
     fireEvent.click(next);
     expect(calls).toEqual([{ left: 400 }, { left: 400 }]);
   });
+
+  it('🔴 Δ5: παγωμένη ομαλή κύλιση + δύο γρήγορα «Επόμενη» ⇒ ο φρουρός φτάνει στο ΔΕΥΤΕΡΟ, όχι στο πρώτο (Ε3)', () => {
+    // Μετρημένο ζωντανά 2026-10-03: ο φρουρός του ξεπερασμένου βήματος πηδούσε στο 400 και
+    // ο φρουρός του νέου έβλεπε «κουνήθηκε» ⇒ η γκαλερί έμενε στο slide 1.
+    jest.useFakeTimers();
+    try {
+      render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
+      const { scroller } = instrument(400); // το `scrollTo` δεν κάνει τίποτα = παγωμένη κύλιση
+      placeAt(scroller, 0);
+      const next = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(next);
+      jest.advanceTimersByTime(40);
+      fireEvent.click(next);
+      jest.advanceTimersByTime(200);
+      expect(scroller.scrollLeft).toBe(800);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

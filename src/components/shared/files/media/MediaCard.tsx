@@ -20,7 +20,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { Play, Check, Image as ImageIcon, AlertCircle, Film } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import type { FileRecord } from '@/types/file-record';
-import { fileDisplayUrl } from '@/lib/files/file-display-url';
+import { useElementSize, type ElementSize } from '@/hooks/media/useElementSize';
+import { thumbnailCandidatesOf, type ThumbnailBox } from '../file-thumbnail-sources';
+import { useThumbnailCandidate } from '../use-thumbnail-candidate';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -81,6 +83,25 @@ const CARD_SIZES = {
   },
 } as const;
 
+/** Σκαλοπάτι μέτρησης του κουτιού της εικόνας (css px) — νέο `sizes` μόνο σε ουσιαστική αλλαγή μεγέθους. */
+const IMAGE_BOX_STEP_PX = 16;
+
+/**
+ * Το κουτί πριν από τη μέτρηση (SSR · jsdom · χωρίς `ResizeObserver`): **άνω φράγμα** της στήλης του πλέγματος —
+ * `auto-fill, minmax(160px, 1fr)` ⇒ η στήλη μένει κάτω από 2 × 160 px (αλλιώς θα χωρούσε δεύτερη) — σε `aspect-[4/3]`.
+ */
+const UNMEASURED_IMAGE_BOX: ThumbnailBox = { width: 320, height: 240 };
+
+/**
+ * ADR-899 Ε2: το κουτί που ζωγραφίζει η εικόνα, ως **άνω φράγμα** του σκαλοπατιού (+½) — υπερεκτίμηση λίγων pixel,
+ * ποτέ θόλωμα από στρογγύλευση προς τα κάτω (ίδιος κανόνας με το `lightboxSizesOf`).
+ */
+function imageBoxOf(measured: ElementSize): ThumbnailBox {
+  if (measured.width === 0 || measured.height === 0) return UNMEASURED_IMAGE_BOX;
+  const half = IMAGE_BOX_STEP_PX / 2;
+  return { width: measured.width + half, height: measured.height + half };
+}
+
 // ============================================================================
 // UTILITIES
 // ============================================================================
@@ -121,11 +142,20 @@ export function MediaCard({
   const { t } = useTranslation(['files', 'files-media']);
 
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   const sizeConfig = CARD_SIZES[size];
   const isVideo = isVideoFile(file);
-  const imageUrl = fileDisplayUrl(file);
+
+  // ADR-899 Ε2: η κάρτα είναι **μικρογραφία** — παράγωγο του server στο μετρημένο κουτί (`object-cover`), με την ίδια
+  // σειρά πηγών και κλιμάκωση σφαλμάτων με το `FileThumbnail`. Πριν: `fileDisplayUrl` ⇒ 3,27 MB πρωτότυπο για 160 px.
+  const imageBoxRef = useRef<HTMLElement | null>(null);
+  const measuredBox = useElementSize(imageBoxRef, IMAGE_BOX_STEP_PX);
+  const candidates = useMemo(
+    () => (isVideo ? [] : thumbnailCandidatesOf(file, { isImage: true }, imageBoxOf(measuredBox))),
+    [file, isVideo, measuredBox],
+  );
+  const { candidate, handleError: handleImageError } = useThumbnailCandidate(candidates);
+  const imageError = candidate === null && candidates.length > 0;
 
   // =========================================================================
   // HANDLERS
@@ -137,11 +167,6 @@ export function MediaCard({
   }, [file.id, onSelect]);
 
   const handleImageLoad = useCallback(() => {
-    setImageLoaded(true);
-  }, []);
-
-  const handleImageError = useCallback(() => {
-    setImageError(true);
     setImageLoaded(true);
   }, []);
 
@@ -204,7 +229,7 @@ export function MediaCard({
       )}
 
       {/* Thumbnail Container */}
-      <figure className={cn('relative w-full overflow-hidden bg-muted', sizeConfig.image)}>
+      <figure ref={imageBoxRef} className={cn('relative w-full overflow-hidden bg-muted', sizeConfig.image)}>
         {/* Video Placeholder - Videos don't have image thumbnails */}
         {isVideo ? (
           <div
@@ -270,9 +295,11 @@ export function MediaCard({
             )}
 
             {/* Actual Image - Images Only */}
-            {imageUrl !== null && !imageError && (
+            {candidate !== null && (
               <img
-                src={imageUrl}
+                src={candidate.src}
+                srcSet={candidate.srcSet}
+                sizes={candidate.sizes}
                 alt={file.displayName}
                 loading="lazy"
                 onLoad={handleImageLoad}

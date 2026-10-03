@@ -14,19 +14,19 @@
 
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { fileDisplayUrl } from '@/lib/files/file-display-url';
 import { cn } from '@/lib/utils';
 import { getFileIconInfo, isImageFile, isPdfFile } from './utils/file-icons';
 import { usePdfThumbnail } from './hooks/usePdfThumbnail';
 import {
   THUMBNAIL_SIZE_CONFIG,
-  thumbnailCandidatesKey,
   thumbnailCandidatesOf,
   type FileThumbnailSubject,
   type ThumbnailCandidate,
   type ThumbnailSize,
 } from './file-thumbnail-sources';
+import { useThumbnailCandidate } from './use-thumbnail-candidate';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -70,16 +70,8 @@ export function FileThumbnail({
     () => thumbnailCandidatesOf(file, { isImage }, sizeConfig.px),
     [file, isImage, sizeConfig.px],
   );
-  const candidatesKey = thumbnailCandidatesKey(candidates);
-
-  // Κλιμάκωση σφαλμάτων: κάθε `onError` προχωρά στην επόμενη πηγή. Δεμένη στην ταυτότητα της λίστας ⇒
-  // νέο αρχείο = ξανά από την αρχή, χωρίς effect.
-  const [failure, setFailure] = useState({ key: candidatesKey, index: 0 });
-  const index = failure.key === candidatesKey ? failure.index : 0;
-  const candidate = candidates[index] ?? null;
-  const handleImageError = useCallback(() => {
-    setFailure({ key: candidatesKey, index: index + 1 });
-  }, [candidatesKey, index]);
+  // Κλιμάκωση σφαλμάτων: κάθε `onError` προχωρά στην επόμενη πηγή (κοινή με την κάρτα της γκαλερί).
+  const { candidate, handleError: handleImageError } = useThumbnailCandidate(candidates);
 
   // PDF: σελίδα 1, μόνο όταν εξαντληθούν οι έτοιμες πηγές (π.χ. δεν υπάρχει `_thumb`).
   const { thumbnailUrl: pdfThumbUrl, loading: pdfLoading } = usePdfThumbnail(

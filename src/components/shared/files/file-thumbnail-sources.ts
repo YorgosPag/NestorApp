@@ -11,7 +11,8 @@
  *
  * 🏆 **Πρακτική Google Drive / Dropbox / Immich**: μικρογραφίες από **παράγωγα του server**, όχι από το πρωτότυπο
  * ούτε από ό,τι έφτιαξε ο browser του ανεβάσαντα. Η σειρά:
- *   1. `preview` (srcset + `sizes` = το **ίδιο** px με το κουτί) — ο browser διαλέγει `w=320` σε DPR 2·
+ *   1. `preview` (srcset + `sizes` = το **ίδιο** px με το κουτί, ή ό,τι ζωγραφίζει το `object-cover` όταν οι
+ *      διαστάσεις είναι μετρημένες) — ο browser διαλέγει `w=320` σε DPR 2·
  *   2. `thumbnailUrl` (client `_thumb.webp`, ADR-899 §1) — **εφεδρεία** για εγγραφές χωρίς μονοπάτι·
  *   3. το πρωτότυπο — **μόνο** για εικόνα που δεν προεπισκοπείται (svg/gif: ο κωδικοποιητής δεν τις αγγίζει).
  * Κάθε `onError` προχωρά στην επόμενη· στο τέλος, εικονίδιο (ή σελίδα 1 του PDF).
@@ -23,6 +24,7 @@
  */
 
 import { fileDisplayUrlOf, type FileDisplayUrlSubject } from '@/lib/files/file-display-url';
+import { coveredWidth, type ImageDimensions } from '@/lib/images/image-dimensions';
 
 export type ThumbnailSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -58,18 +60,31 @@ export interface ThumbnailKind {
 const nonEmpty = (value: string | null | undefined): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
+/** Το κουτί της μικρογραφίας (css px). Αριθμός = **τετράγωνο** κουτί (οι σταθερές κλάσεις `w-N h-N`). */
+export type ThumbnailBox = number | { readonly width: number; readonly height: number };
+
+/**
+ * **Το `sizes` μιας μικρογραφίας `object-cover`.** Με μετρημένες διαστάσεις (ADR-899 §3.7) = ό,τι **ζωγραφίζεται**
+ * (`coveredWidth`: πανοραμική σε τετράγωνο ⇒ πλατύτερη από το κουτί)· χωρίς αυτές = το πλάτος του κουτιού.
+ */
+export function thumbnailSizesOf(box: ThumbnailBox, dimensions: ImageDimensions | null): string {
+  const area = typeof box === 'number' ? { width: box, height: box } : box;
+  const painted = dimensions ? coveredWidth(area, dimensions) : area.width;
+  return `${Math.ceil(painted)}px`;
+}
+
 /** **Οι πηγές της μικρογραφίας, με σειρά προτίμησης.** Κενή λίστα ⇒ εικονίδιο (ή σελίδα PDF). */
 export function thumbnailCandidatesOf(
   file: FileThumbnailSubject,
   kind: ThumbnailKind,
-  boxPx: number,
+  box: ThumbnailBox,
 ): readonly ThumbnailCandidate[] {
   const resolved = fileDisplayUrlOf(file);
   const candidates: ThumbnailCandidate[] = [];
   const preview = resolved.kind === 'url' ? resolved.preview : null;
 
   if (kind.isImage && preview) {
-    candidates.push({ src: preview.src, srcSet: preview.srcSet, sizes: `${boxPx}px` });
+    candidates.push({ src: preview.src, srcSet: preview.srcSet, sizes: thumbnailSizesOf(box, resolved.dimensions) });
   }
   if (nonEmpty(file.thumbnailUrl)) candidates.push({ src: file.thumbnailUrl });
   if (kind.isImage && !preview && resolved.kind === 'url') candidates.push({ src: resolved.url });

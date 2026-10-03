@@ -301,6 +301,14 @@ export function useGalleryScroller({
       ώστε η διόρθωση να μη διαβάζεται ως καθυστέρηση.
     */
     window.setTimeout(() => {
+      /*
+        🔴 **ΜΟΝΟ ΑΝ Η ΠΡΟΘΕΣΗ ΤΟΥ ΙΣΧΥΕΙ ΑΚΟΜΗ** (ADR-899 §9 Ε3, μετρημένο ζωντανά 2026-10-03).
+        Δύο «Επόμενη» σε 40ms με παγωμένα καρέ: ο φρουρός του **πρώτου** βήματος πηδούσε
+        στο **παλιό** του target (slide 1) και ο φρουρός του δεύτερου έβλεπε «κουνήθηκε»
+        και παραιτούνταν ⇒ η γκαλερί έμενε στο 1 αντί για το 2. Ξεπερασμένο βήμα (νέα
+        πρόθεση), άφιξη (`arrived`) ή άνθρωπος που έπιασε τον κύλινδρο ⇒ ο φρουρός σιωπά.
+      */
+      if (intentRef.current !== wrapped) return;
       const moved = Math.abs(scroller.scrollLeft - startedAt) >= 1;
       const wanted = Math.abs(target - startedAt) >= 1;
       if (!wanted || moved) return;

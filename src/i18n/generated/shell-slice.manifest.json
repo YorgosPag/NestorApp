@@ -110,7 +110,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3c1a7f210b0751a5434d23ec895f6130bd764323a12e7520c1867cfcdfbde165",
+  "inputsSha256": "49d6e0e8741fb2411b7f3aecd9ce0f9264f4c561db66a7b6cbeafc1e98441f09",
   "languages": [
     "el"
   ],
@@ -10212,6 +10212,7 @@
     "src/components/shared/ModuleBreadcrumb.tsx": "82cdfb50f56799805355388e56fd9395f9c0f67a643946e9650f775f250f2f92",
     "src/components/shared/addresses/address-with-hierarchy-config.ts": "7f72a362f5c9afaab5c9fa179f39260494cc4891a945e932096dcdef702d3c62",
     "src/components/shared/files/hooks/useFileDownload.ts": "52a2dae2f094b046a7fe9a0e6ab0a271d2c590cc0b7609692fa9ce7f37661557",
+    "src/components/shared/files/preview/use-zoom-resolution.ts": "667571084b2905b16959ff3ae8077990f7c04c96acce66aeeffb6645a5dcb48e",
     "src/components/shared/gallery/SnapGallery.tsx": "e5d5836ed529c80bd0a748996db52365bcb63dfb51c6c93dc82b0b5883441c7d",
     "src/components/shared/gallery/use-gallery-scroller.ts": "9d193c05b10eb027cbb04b9766632d056b7342b0cb99b7e2a513e7c8c3ffbc81",
     "src/components/shared/landing-hero/LandingHero.tsx": "55e79036358e9348bd2a46b9a140f5302fcc51ae188167717a4e08c08884e18c",
@@ -10382,9 +10383,10 @@
     "src/core/containers/PageContainer.tsx": "86e6be0e84bbc0fb7ccc86167856ebcf5591b2d8f9dad105c8b2154dc66b04c8",
     "src/core/containers/ShellSurface.tsx": "f1da2f889d0e940653d7ce4c6fc81cd2572fc1bb518cb6b68eb919ceedae8a6b",
     "src/core/containers/ShellUtilities.tsx": "28bd922709b8a7cb626603cf76f563583fe107a6e245ddc51ee6618236043130",
-    "src/core/modals/PhotoPreviewModal.tsx": "b7b823297baabf2d117eb32658bfd288474f5366bfdee7b85d9fc7e14ddc7994",
-    "src/core/modals/photo-preview-helpers.ts": "01cc5afcf1fda44f44da434e8a9af4b6fd0821db6ba750aa3c057cf40f04a880",
-    "src/core/modals/usePhotoPreviewModal.ts": "901aa3520a09f56748db4acf095f4d36915baba81b2aa2b7749590363cd65273",
+    "src/core/modals/PhotoPreviewImage.tsx": "4d4b5bb513112242b8b0787429db7194305d2e123750634e0841884e3bc8f73c",
+    "src/core/modals/PhotoPreviewModal.tsx": "6d4de83c1001ed4d0eddf2b8fbed163755c9d3ec557ad6b86f9497f09924ea0b",
+    "src/core/modals/photo-preview-helpers.ts": "f35c78070d56ba09c843dbb6b7618acaa806101e9e83319ca6e29641f497a589",
+    "src/core/modals/usePhotoPreviewModal.ts": "6e33ee8ac599d73f39aea50c3719444f864ac87fee3eb15aad3b84b5652356a1",
     "src/core/modals/usePhotoPreviewState.ts": "62e90fceb2e573108d668257336ce0285a089354e85c182e420f141ec2e085b8",
     "src/core/status/StatusConstants.ts": "5d18b9d1bd6c3b93042acb7f212b731345122d5549b87ceecb1f2ea7840557c5",
     "src/core/types/BadgeTypes.ts": "402fbeac09ebadcc7a4ecc2a4d274a7a84f8487b52c494b615503b578a60d37c",
@@ -11030,7 +11032,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 924,
+    "shellFiles": 926,
     "sliceBytes": 676691
   },
   "unresolvableKeys": [

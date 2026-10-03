@@ -13,10 +13,14 @@ import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { BadgeFactory } from '@/core/badges/BadgeFactory';
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
+import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
+
+/** Παράγωγα ανά θέση της γκαλερί — `null` όπου ο τύπος δεν προεπισκοπείται (ADR-899 Ε2). */
+export type PhotoGalleryPreviews = readonly (ProxyImagePreview | null)[];
 
 export interface PhotoPreviewModalProps {
   /** Κατάσταση εμφάνισης του modal */
@@ -35,6 +39,12 @@ export interface PhotoPreviewModalProps {
   photoIndex?: number;
   /** Array φωτογραφιών για gallery navigation (optional) */
   galleryPhotos?: (string | null)[];
+  /**
+   * Παράγωγα κατ' απαίτηση ανά θέση του `galleryPhotos` (ADR-899 Ε2): η εικόνα που **δείχνεται** ακολουθεί το zoom
+   * (`useZoomResolution`) αντί να κατεβαίνει πάντα το πρωτότυπο. Το `galleryPhotos` μένει **το αρχείο** — λήψη και
+   * κοινή χρήση. Χωρίς αυτό (επαφές, λογότυπα) = η συμπεριφορά πριν.
+   */
+  galleryPreviews?: PhotoGalleryPreviews;
   /** Current index στο gallery array (optional) */
   currentGalleryIndex?: number;
   /** Custom CSS classes */

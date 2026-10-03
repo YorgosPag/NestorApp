@@ -69,6 +69,17 @@ export function containedWidth(box: { readonly width: number; readonly height: n
   return Math.min(box.width, (box.height * image.width) / image.height, image.width);
 }
 
+/**
+ * **Πόσο φαρδιά ζωγραφίζεται** μια εικόνα σε κουτί με `object-cover` (μικρογραφίες) — ο δίδυμος του `containedWidth`.
+ * 🔑 Το cover **γεμίζει** το κουτί: μια πανοραμική λήψη σε τετράγωνο κουτί κλιμακώνεται στο **ύψος** και ξεχειλίζει
+ * πλάγια ⇒ χρειάζεται πλάτος **μεγαλύτερο** από του κουτιού, αλλιώς θολώνει. Ποτέ πάνω από τα pixel της εικόνας
+ * (κανένα παράγωγο δεν έχει περισσότερα). `0` για άκυρο κουτί.
+ */
+export function coveredWidth(box: { readonly width: number; readonly height: number }, image: ImageDimensions): number {
+  if (!(box.width > 0) || !(box.height > 0)) return 0;
+  return Math.min(Math.max(box.width, (box.height * image.width) / image.height), image.width);
+}
+
 // ---------------------------------------------------------------------------
 // Τύποι που μετριούνται — ο ΕΝΑΣ κατάλογος (και της κλίμακας προεπισκοπήσεων)
 // ---------------------------------------------------------------------------
