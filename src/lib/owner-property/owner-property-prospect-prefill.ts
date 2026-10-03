@@ -20,6 +20,7 @@ import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { typedHref } from '@/lib/workspace/route-worlds';
 
 import { EMPTY_OWNER_PROPERTY_FORM, type OwnerPropertyFormValues } from './owner-property-form-values';
+import { floorLevelOf } from './owner-property-unit-form';
 
 /** **Ερώτημα ελέγχου → σύνδεσμος καταχώρισης**, με το ερώτημα αυτούσιο. */
 export function newOfferFromProspectHref(query: ProspectQuery) {
@@ -39,7 +40,7 @@ export function ownerFormFromProspect(params: URLSearchParams): OwnerPropertyFor
     ...EMPTY_OWNER_PROPERTY_FORM,
     type: description.type,
     areaSqm: description.areaSqm,
-    floor: description.floor,
+    floorLevel: floorLevelOf(description.floor),
     placeRef: { landId: ref.landId, buildingId: ref.buildingId },
   };
 }

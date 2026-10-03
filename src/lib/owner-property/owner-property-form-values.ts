@@ -54,11 +54,11 @@ import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind, type PropertyOffer } from '@/types/property-offers';
 import { EMPTY_PET_FORM, petFormOf, petFormShape, petPolicyFromForm } from './owner-property-pets-form';
+import { EMPTY_UNIT_FORM, ownerPlaceFrom, unitDraftOf, unitFormOf, unitFormShape } from './owner-property-unit-form';
 import type {
   OwnerProperty,
   OwnerPropertyDraft,
   OwnerPropertyMedia,
-  OwnerPropertyPlace,
 } from '@/types/owner-property';
 
 // =============================================================================
@@ -108,7 +108,7 @@ export const ownerPropertyFormSchema = z.object({
   areaSqm: optionalNumber,
 
   // ── §25.6: +2 ΕΙΔΙΚΑ ────────────────────────────────────────────────────
-  floor: optionalNumber,
+  ...unitFormShape,
   bedrooms: optionalNumber,
 
   // ── §25.6: ΔΙΑΘΕΣΕΙΣ + ΤΙΜΗ (Α20 · Α22) ─────────────────────────────────
@@ -132,7 +132,7 @@ export const ownerPropertyFormSchema = z.object({
 
   // ── §25.6: ΘΕΣΗ ─────────────────────────────────────────────────────────
   placeAnswer: z.enum(PLACE_ANSWERS),
-  /** Το κείμενο που πληκτρολόγησε. **Αποθηκεύεται** ως `label` — δες {@link placeFrom}. */
+  /** Το κείμενο που πληκτρολόγησε. **Αποθηκεύεται** ως `label` — δες `ownerPlaceFrom` (`owner-property-unit-form`). */
   placeQuery: z.string(),
   /** Το λυμένο σημείο. `null` = δεν έχει γεωκωδικοποιηθεί **ακόμη**. */
   placePoint: geoPoint,
@@ -232,7 +232,7 @@ export const EMPTY_OWNER_PROPERTY_FORM: OwnerPropertyFormValues = {
   title: '',
   type: '',
   areaSqm: null,
-  floor: null,
+  ...EMPTY_UNIT_FORM,
   bedrooms: null,
   offerKinds: [],
   askingPrice: null,
@@ -322,36 +322,6 @@ function offerFrom(
   }
 }
 
-/**
- * Ο χωρικός άξονας — επίπεδα πεδία → **διακριτή ένωση**.
- *
- * 🔑 **`declared` χωρίς λυμένο σημείο πέφτει σε `declined`**, και **δεν είναι σιωπηλή
- * απώλεια**: το κουμπί υποβολής είναι απενεργοποιημένο όσο η περιοχή δεν έχει λυθεί
- * (δες {@link ownerPropertyFormBlockers}). Εδώ η επιστροφή είναι απλώς **ολική** —
- * μια συνάρτηση που πετούσε θα μετέτρεπε κατάσταση οθόνης σε εξαίρεση.
- *
- * ⚠️ **Το κείμενο ΑΠΟΘΗΚΕΥΕΤΑΙ εδώ (`label`), σε αντίθεση με τη ζήτηση.** Και ο λόγος
- * είναι ότι το ερώτημα είναι **άλλο**: η ζήτηση λέει *«ψάχνω γύρω από εκεί»* — το
- * κείμενο είναι **αναζήτηση**, και ξαναλυμένο αύριο μπορεί να δώσει άλλο σημείο. Η
- * προσφορά λέει *«το ακίνητό μου **είναι** εκεί»* — το κείμενο είναι **η δήλωση του
- * ανθρώπου** για το δικό του πράγμα, και ο κάτοχος οφείλει να τη βλέπει αυτούσια
- * στην οθόνη του. ⛔ **Δεν ταξιδεύει στη δημόσια προβολή** (κλειστό σχήμα).
- */
-function placeFrom(values: OwnerPropertyFormParsed): OwnerPropertyPlace {
-  if (values.placeAnswer === 'declared' && values.placePoint !== null) {
-    return {
-      kind: 'declared',
-      point: values.placePoint,
-      label: values.placeQuery.trim(),
-      accuracy: values.placeAccuracy,
-      // ⛔ Ο δεσμός ζει **μόνο** στον κλάδο `declared`: το `declined` δεν μπορεί να
-      // τον κουβαλήσει, γιατί το να δείξεις δημόσιο κτίριο **είναι** αποκάλυψη θέσης.
-      link: values.placeRef,
-    };
-  }
-  return { kind: 'declined' };
-}
-
 /** **Φόρμα → προσχέδιο προσφοράς.** Ολική· ντετερμινιστική δεδομένης της πηγής ταυτοτήτων. */
 export function ownerPropertyDraftFrom(
   values: OwnerPropertyFormParsed,
@@ -374,13 +344,13 @@ export function ownerPropertyDraftFrom(
     // ονομαστικά — ποτέ σιωπηλό `'apartment'`.
     type: normalizePropertyType(values.type),
     areaSqm: values.areaSqm,
-    floor: land ? null : values.floor,
+    ...unitDraftOf(values, land),
     bedrooms: land ? null : values.bedrooms,
     // ⚠️ Ταξινομημένα, όπως και το `deriveOfferKinds`: δύο ταυτόσημες αγγελίες με
     // άλλη σειρά τσεκαρίσματος πρέπει να δίνουν **ταυτόσημο** έγγραφο, αλλιώς κάθε
     // αποθήκευση φαίνεται αλλαγή και οι συγκρίσεις ταυτότητας σπάνε.
     offers: [...values.offerKinds].sort().map((kind) => offerFrom(kind, values, source)),
-    place: placeFrom(values),
+    place: ownerPlaceFrom(values),
     media: values.media as readonly OwnerPropertyMedia[],
     // 🔑 **Απόν μένει απόν** (ADR-866 §2.11.3): μόνο φόρμα **με φάκελο** κουβαλά δήλωση. Ένα `publishedFileIds: []`
     //    σε αγγελία χωρίς φάκελο θα έγραφε πεδίο που κανείς δεν διαβάζει — ο διακόπτης dual-read είναι η **ύπαρξη
@@ -433,7 +403,7 @@ export function ownerPropertyFormFrom(
     // ακριβώς η σωστή πράξη για ένα έγγραφο με αγνώριστο είδος.
     type: property.type ?? '',
     areaSqm: property.areaSqm,
-    floor: property.floor,
+    ...unitFormOf(property),
     bedrooms: property.bedrooms,
     offerKinds: property.offers.map((offer) => offer.kind),
     askingPrice: sell?.kind === 'sell' ? sell.askingPrice : null,

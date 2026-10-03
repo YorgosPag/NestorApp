@@ -62,6 +62,8 @@ import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { readDeclaredFocalPoints } from '@/lib/listings/photo-focal-point';
 import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
 import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
+import { normalizeUnitNumber } from '@/lib/geo/unit-number';
+import { isFloorKind } from '@/utils/floor-naming';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
 import { readObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
@@ -139,6 +141,10 @@ export function readStoredOwnerProperty(
       marketingAudience: marketingAudienceOf(stored.marketingAudience),
       // ADR-898 Φ3β — ίδιο σχήμα: απουσία ⇒ «τίποτα δηλωμένο, εμφάνιση εξ ορισμού», κάθε άκυρη τιμή ⇒ `null`.
       objectiveValueDeclarations: readObjectiveValueDeclarations(stored.objectiveValueDeclarations),
+      // ADR-900 §8 #2 (2β.2) — ίδιο σχήμα απουσίας: έγγραφο πριν τη μονάδα ⇒ `null` (είδος συνάγεται από τον αριθμό ·
+      //    καμία πόρτα). Είδος χωρίς αριθμό δεν στέκει (`floorUnitRule`) ⇒ `null`, ποτέ ορφανό είδος.
+      floorKind: typeof stored.floor === 'number' && isFloorKind(stored.floorKind) ? stored.floorKind : null,
+      unitNumber: normalizeUnitNumber(stored.unitNumber),
       // ⚠️ Τα δύο υπάρχοντα φύλλα, καλεσμένα **εδώ αντί για παντού** — δες την κεφαλίδα.
       media: mediaOf(stored as { readonly media?: OwnerProperty['media'] }),
       mandates: mandatesOf(

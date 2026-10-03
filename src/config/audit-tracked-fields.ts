@@ -1281,6 +1281,9 @@ const OWNER_PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   type: 'type',
   areaSqm: 'areaSqm',
   floor: 'floor',
+  // ADR-900 §8 #2 (2β.2) — η στάθμη είναι αριθμός + είδος· η πόρτα είναι δήλωση του κατόχου (ιδιωτική, ορατή σε αυτόν).
+  floorKind: 'floorKind',
+  unitNumber: 'unitNumber',
   bedrooms: 'bedrooms',
   'place.label': 'place.label',
   lifecycle: 'lifecycle',

@@ -52,6 +52,8 @@
 import { z } from 'zod';
 
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
+import { normalizeUnitNumber, UNIT_NUMBER_MAX_LENGTH } from '@/lib/geo/unit-number';
+import { FloorKindSchema } from '@/app/api/floors/floors.schemas';
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
 import { declaredCaptureSpotsSchema } from '@/lib/listings/photo-capture-spot';
@@ -262,6 +264,18 @@ export const ownerPropertyDraftSchema = z.object({
   type: propertyTypeSchema,
   areaSqm: nullableNumber,
   floor: nullableNumber,
+  /**
+   * 🏢 **Το είδος της στάθμης** (ADR-900 §8 #2, 2β.2) — πυλωτή/ημιώροφος/υπερυψωμένο έχουν αριθμό, αλλά ο
+   * αριθμός μόνος λέει «Ισόγειο». Το λεξιλόγιο του `FloorDocument` (ADR-903), ποτέ δεύτερο.
+   * ⚠️ `default(null)`: προσχέδιο σωσμένο πριν την 2β.2 (μνήμη φόρμας) δεν το έχει — απουσία ⇒ «συνάγεται από
+   * τον αριθμό», **όχι** 400. Είδος **χωρίς** αριθμό ⇒ άκυρο (`floorUnitRule`).
+   */
+  floorKind: FloorKindSchema.nullable().default(null),
+  /**
+   * 🚪 **Αριθμός μονάδας** (RESO `UnitNumber`) — κανονικοποιείται **στο σύνορο** από τον έναν κανονικοποιητή.
+   * Μένει στη δήλωση του κατόχου· η δημόσια προβολή **δεν** τον διαβάζει (Ε2).
+   */
+  unitNumber: z.string().max(UNIT_NUMBER_MAX_LENGTH * 2).nullable().default(null).transform(normalizeUnitNumber),
   bedrooms: nullableNumber,
   offers: z.array(offer),
   place,
@@ -295,7 +309,20 @@ export const ownerPropertyDraftSchema = z.object({
   publishedFileCaptureSpots: declaredCaptureSpotsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
   /** 🧭 **Ο βορράς ανά δηλωμένη κάτοψη του φακέλου** (ADR-897 Φ5.2) — ίδιο όριο, ίδια επιβίωση με τα σημεία λήψης. */
   publishedFileFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
-});
+}).superRefine(floorUnitRule);
+
+/**
+ * 🏢 Η στάθμη είναι **αριθμός + είδος** (IFC: κάθε storey έχει elevation· η ζήτηση ταιριάζει σε **εύρος
+ * αριθμών**). Είδος χωρίς αριθμό δεν μπορεί να ταιριάξει πουθενά ⇒ άκυρο στο σύνορο, όχι σιωπηλό ισόγειο.
+ */
+function floorUnitRule(
+  draft: { readonly floor: number | null; readonly floorKind: unknown },
+  ctx: z.RefinementCtx,
+): void {
+  if (draft.floorKind !== null && draft.floor === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['floorKind'], message: 'floor-kind-without-number' });
+  }
+}
 
 /**
  * Ό,τι δέχεται ο διακομιστής → {@link OwnerPropertyDraft}.

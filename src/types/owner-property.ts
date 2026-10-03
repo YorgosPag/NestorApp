@@ -69,6 +69,7 @@
 import { nowISO } from '@/lib/date-local';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { FloorKind } from '@/utils/floor-naming';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import {
@@ -422,6 +423,19 @@ export interface OwnerProperty {
   // ── §25.6: +2 ΕΙΔΙΚΑ ──────────────────────────────────────────────────────
   /** Όροφος. `null` = δεν καταχωρήθηκε· **`0` είναι ισόγειο**, υπαρκτή τιμή. */
   readonly floor: number | null;
+  /**
+   * 🏢 **Το είδος της στάθμης** (ADR-900 §8 #2, 2β.2) — το **ίδιο** ζεύγος `floor` + `floorKind` με τα εταιρικά
+   * ακίνητα (`HostedFloorCopy`, ADR-903 §6), χωρίς `floorId`: το κτίριο του ιδιώτη είναι του επιπέδου Α και **δεν**
+   * έχει ορόφους-οντότητες. Ανάγνωση **μόνο** με `hostedFloorRef`. `null` ⇒ συνάγεται από τον αριθμό.
+   * Έγγραφο πριν την 2β.2 ⇒ `null` (`readStoredOwnerProperty`).
+   */
+  readonly floorKind: FloorKind | null;
+  /**
+   * 🚪 **Αριθμός μονάδας** (RESO `UnitNumber`: «Α1», «12») — κανονικοποιημένος (`normalizeUnitNumber`).
+   * 🔒 **Ιδιωτικός**: η δημόσια αγγελία **δεν** τον δείχνει (απόφαση Giorgio Ε2, idealista κρύβει την `puerta`)·
+   * τον χρησιμοποιεί η μονάδα (`composePlaceUnitRef`) για το κλειδί της.
+   */
+  readonly unitNumber: string | null;
   /** Υπνοδωμάτια. `null` = δεν καταχωρήθηκε· **`0` = γκαρσονιέρα**, υπαρκτή τιμή. */
   readonly bedrooms: number | null;
 
@@ -750,7 +764,8 @@ export function ownerPropertyOfferKinds(
 /** Τα πεδία που η φόρμα συντάσσει — **χωρίς** ταυτότητα, κάτοχο, ή χρόνο. */
 export type OwnerPropertyDraft = Pick<
   OwnerProperty,
-  | 'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'bedrooms' | 'media' | 'title' | 'publishedFileIds'
+  | 'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'floorKind' | 'unitNumber' | 'bedrooms' | 'media' | 'title'
+  | 'publishedFileIds'
   | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots' | 'publishedFileFloorplanNorth'
 >;
 
