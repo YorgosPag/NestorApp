@@ -42,6 +42,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { discloseInterest, type PlaceInterest } from '@/lib/demand/demand-interest';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { lookupOwnedPlace } from '@/services/demand/place-interest.service';
+import { isVerifiedOwner } from '@/services/ownership/verified-ownership.reader';
 
 const logger = createModuleLogger('api/demand/interest');
 
@@ -75,6 +76,11 @@ async function handler(
       return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
     }
 
+    // 🔑 ADR-900 §3.8 — ΤΙ επιτρέπεται να μάθει: ο ΑΠΟΔΕΔΕΙΓΜΕΝΟΣ κάτοχος (ΠΚΑ) τον ακριβή αριθμό, ο
+    //    δηλωμένος ζώνες. Μόνο ο ιδιώτης έχει απόδειξη· το γραφείο (εντολή = βεβαίωση του ΓΡΑΦΕΙΟΥ, όχι
+    //    του Κτηματολογίου) μένει δηλωμένο. Ο ΕΝΑΣ αναγνώστης — τον ρωτά και ο σαρωτής ειδοποιήσεων.
+    const verified =
+      place.source === 'owner-property' && (await isVerifiedOwner(db, propertyId, actor.ctx.uid));
     const { demands } = await readLiveDemands(db, 'demand/interest');
     const { interest } = discloseInterest(
       place.facts,
@@ -83,6 +89,7 @@ async function handler(
       // (CHECK 3.7) — η μηχανή μένει καθαρή και δοκιμάσιμη.
       nowISO(),
       todayLocalDate(),
+      verified ? 'verified-owner' : 'place-owner',
     );
 
     return NextResponse.json({ interest });

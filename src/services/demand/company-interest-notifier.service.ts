@@ -216,6 +216,9 @@ async function tallyCompanyAnnouncements(
         //    δηλαδή **αυτό ακριβώς** που του ανακοίνωσε η ειδοποίηση.
         source: 'company-property',
         facts: await companyPropertyFactsOf(db, { ...property }, nowIso),
+        // ADR-900 §3.8 — το γραφείο είναι ΔΗΛΩΜΕΝΟ: η εντολή είναι βεβαίωση του γραφείου, όχι του
+        // Κτηματολογίου (απόφαση Giorgio 2026-10-02). Ίδιο με το `/api/demand/interest`.
+        audience: 'place-owner',
       },
       demands,
       moment,

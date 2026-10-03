@@ -57,10 +57,8 @@ import { dispatchNotification } from '@/server/notifications/notification-orches
 //    ADR-849 Β1: ο helper δίνει πλέον την πόρτα **ΚΑΙ τον χώρο της** μαζί (`placeDestination`).
 import { placeDestination } from '@/lib/places/place-detail-route';
 import type { PlaceSource } from './place-interest.service';
-import {
-  announcementEventId,
-  type AnnouncementBand,
-} from '@/lib/demand/demand-announcement';
+import { announcementEventId } from '@/lib/demand/demand-announcement';
+import type { AnnouncementBand } from '@/lib/demand/demand-count-bands';
 import {
   announceIfNewsworthy,
   createAnnouncementTally,
@@ -68,6 +66,7 @@ import {
 } from '@/services/demand/announcement-pass';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { ownerPropertyFactsOf } from './place-interest.service';
+import { verifiedOwnerPropertyIds } from '@/services/ownership/verified-ownership.reader';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PropertyDemand } from '@/types/property-demand';
@@ -123,7 +122,13 @@ export async function announceInterestToOwners(
     .map((doc) => ownerPropertyFromDocument(doc.data(), doc.id))
     .filter((property): property is OwnerProperty => property !== null);
 
-  const report = await tallyAnnouncements(properties, demands);
+  // 🔑 ADR-900 §3.8 — ΜΙΑ μαζική ανάγνωση ανά πέρασμα, από τον ΙΔΙΟ αναγνώστη με το πάνελ: ο
+  //    επαληθευμένος λαμβάνει ακριβή αριθμό, ο δηλωμένος «τουλάχιστον» — ίδια απάντηση σε οθόνη και email.
+  const verified = await verifiedOwnerPropertyIds(
+    db,
+    new Map(properties.map((property) => [property.id, property.authorUserId])),
+  );
+  const report = await tallyAnnouncements(properties, demands, verified);
 
   // 🔴 Άγνωστη κατάσταση ⇒ σφάλμα **με όνομα**, ποτέ σιωπηλή απώλεια κάδου.
   if (!announcementReportBalances(report)) {
@@ -152,6 +157,7 @@ export async function announceInterestToOwners(
 async function tallyAnnouncements(
   properties: readonly OwnerProperty[],
   demands: readonly PropertyDemand[],
+  verified: ReadonlySet<string>,
 ): Promise<AnnouncementReport> {
   const nowIso = nowISO();
   const todayDate = todayLocalDate();
@@ -176,6 +182,7 @@ async function tallyAnnouncements(
         // 🔑 ADR-849 Β1 — ο χώρος της πόρτας είναι ο **ιδιωτικός** χώρος του κατόχου.
         holderId: property.authorUserId,
         facts: ownerPropertyFactsOf(property, nowIso),
+        audience: verified.has(property.id) ? 'verified-owner' : 'place-owner',
       },
       demands,
       moment,
@@ -213,6 +220,11 @@ export interface PlaceAnnouncement {
   readonly holderId: string;
   readonly band: AnnouncementBand;
   readonly count: number;
+  /**
+   * **Ο αριθμός είναι στρογγυλεμένος** (ζώνη του δηλωμένου ιδιοκτήτη, ADR-900 §3.8) ⇒ λέγεται
+   * «τουλάχιστον N», όπως στο πάνελ. Ακριβής μόνο για τον επαληθευμένο.
+   */
+  readonly rounded: boolean;
 }
 
 /**
@@ -223,7 +235,7 @@ export interface PlaceAnnouncement {
  * μελλοντικός αποδότης να το αντικαταστήσει με μία γραμμή** αντί να το κυνηγήσει μέσα
  * σε κλήση 12 ορισμάτων.
  */
-const EMAIL_SUBJECT = (count: number): string =>
+const EMAIL_SUBJECT = (count: number, rounded: boolean): string =>
   // 🔴 **ΗΤΑΝ `${count} άτομα ψάχνουν`** — και η οθόνη έλεγε το σωστό για το ίδιο
   //    γεγονός (`demandInterest.notificationTitle`, ICU). Ζωντανή μέτρηση στα
   //    εισερχόμενα του ανθρώπου 2026-09-05: **«1 άτομα ψάχνουν»**. Και δεν είναι
@@ -238,6 +250,10 @@ const EMAIL_SUBJECT = (count: number): string =>
   //    ελληνικό — ο αποδότης i18n διακομιστή παραμένει ανοιχτό κενό (ADR-777 §8.22
   //    #2), **κοινό** και με τους τρεις άλλους παραγωγούς. Όταν κλείσει, αλλάζει
   //    **αυτό το όρισμα**, όχι η δομή.
+  //
+  // 🔑 ADR-900 §3.8 — ο **δηλωμένος** ιδιοκτήτης λαμβάνει ζώνη: «τουλάχιστον», ίδιες λέξεις με το
+  //    `notificationTitleAtLeast` (και με το `atLeast` του πάνελ).
+  (rounded ? 'Τουλάχιστον ' : '') +
   pluralize('el', count, {
     one: '# άνθρωπος ψάχνει ακίνητο σαν το δικό σας',
     other: '# άνθρωποι ψάχνουν ακίνητο σαν το δικό σας',
@@ -267,6 +283,7 @@ export async function announceOnePlace(
     holderId,
     band,
     count,
+    rounded,
   } = announcement;
 
   const result = await dispatchNotification({
@@ -282,12 +299,12 @@ export async function announceOnePlace(
     // ιδίωμα που ήδη χρησιμοποιεί ο `channels/email-channel.ts` για τις προσκλήσεις
     // προμηθευτών. 🔶 Ο **αποδότης i18n διακομιστή** είναι υπαρκτό, ονομασμένο κενό
     // (ADR-777 §8.22 ανοιχτό #2) — **κοινό** με το ADR-327, όχι δικό μας.
-    title: EMAIL_SUBJECT(count),
+    title: EMAIL_SUBJECT(count, rounded),
     // ⚠️ **Χωρίς πρόθεμα namespace, και είναι μετρημένο**: ο `NotificationDrawer`
     // αποδίδει με `useTranslation(COMMON_NAMESPACES)`, οπότε το κλειδί ζει στο
     // `common-shared` — ένα `search-results:` πρόθεμα εδώ **δεν θα έλυνε**, γιατί
     // εκείνο το namespace δεν είναι φορτωμένο στον drawer.
-    titleKey: 'demandInterest.notificationTitle',
+    titleKey: rounded ? 'demandInterest.notificationTitleAtLeast' : 'demandInterest.notificationTitle',
     titleParams: { count: String(count), title: propertyTitle },
     // 🔑 **Η ΖΩΝΗ, ποτέ το ωμό πλήθος** — αυτό, και μόνο αυτό, κάνει την επανάληψη
     // δομικά αδύνατη. Δες `lib/demand/demand-announcement.ts`.

@@ -28,6 +28,7 @@
  */
 
 import { announcementBand } from '@/lib/demand/demand-count-bands';
+import { DEMAND_DISCLOSURE, type OwnerDemandAudience } from '@/lib/demand/demand-aggregate';
 import { discloseInterest } from '@/lib/demand/demand-interest';
 import {
   announceOnePlace,
@@ -106,6 +107,12 @@ export interface AnnouncementCandidate {
   readonly holderId: string;
   /** Τα γεγονότα, **ήδη χτισμένα** από το μονοπάτι που ξέρει πώς. */
   readonly facts: ListingMatchFacts;
+  /**
+   * **Τι επιτρέπεται να μάθει ο παραλήπτης** (ADR-900 §3.8) — `verified-owner` μόνο όταν ο σαρωτής
+   * ρώτησε τον **έναν** κριτή επαλήθευσης (`verified-ownership.reader`)· αλλιώς `place-owner`
+   * (ζώνες). Δηλώνεται από τον σαρωτή, όπως η κατοχή — ποτέ δεν συνάγεται εδώ.
+   */
+  readonly audience: Extract<OwnerDemandAudience, 'place-owner' | 'verified-owner'>;
 }
 
 /** Η στιγμή του περάσματος — **μία** για όλα τα ακίνητα. */
@@ -134,6 +141,7 @@ export async function announceIfNewsworthy(
     demands,
     moment.nowIso,
     moment.todayDate,
+    candidate.audience,
   );
   // 🔑 **Η στάση στενεύεται ΠΡΙΝ από κάθε αριθμό** — ο τύπος δεν δίνει `disclosure` σε
   //    ολοκληρωμένο ακίνητο, άρα «0» ή «κάτω από κατώφλι» είναι αμεταγλώττιστα εδώ.
@@ -159,6 +167,8 @@ export async function announceIfNewsworthy(
       holderId: candidate.holderId,
       band,
       count: interest.disclosure.count ?? 0,
+      // 🔑 Η ΙΔΙΑ πολιτική με το πάνελ: στρογγυλεμένος αριθμός λέγεται «τουλάχιστον N» και στο email.
+      rounded: DEMAND_DISCLOSURE[candidate.audience].rounding.kind !== 'exact',
     }),
   );
 }

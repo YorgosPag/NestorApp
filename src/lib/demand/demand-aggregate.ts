@@ -69,6 +69,7 @@ import {
   isLiveDemand,
   type PropertyDemand,
 } from '@/types/property-demand';
+import { announcementBand } from './demand-count-bands';
 
 // =============================================================================
 // 1. ΤΑ ΑΚΡΟΑΤΗΡΙΑ
@@ -88,7 +89,13 @@ import {
  * μαζί με τη λειτουργία που το χρειαζόταν· χρειάστηκε **γραπτός λόγος**, και
  * γράφοντάς τον βρέθηκε το όριο (**μεγέθη, όχι άξονες**) που κανείς δεν είχε δει.
  */
-export const DEMAND_AUDIENCES = ['place-owner', 'area-market', 'approached-offerer', 'prospective-owner'] as const;
+export const DEMAND_AUDIENCES = [
+  'place-owner',
+  'verified-owner',
+  'area-market',
+  'approached-offerer',
+  'prospective-owner',
+] as const;
 
 export type DemandAudience = (typeof DEMAND_AUDIENCES)[number];
 
@@ -97,7 +104,26 @@ export type DemandAudience = (typeof DEMAND_AUDIENCES)[number];
  * αντίρρηση του ζητούντος (`ownerSignal`). Υποσύνολο **δεμένο** στη ρίζα: όνομα που δεν είναι
  * ακροατήριο δεν μεταγλωττίζεται.
  */
-export type OwnerDemandAudience = Extract<DemandAudience, 'place-owner' | 'prospective-owner'>;
+export type OwnerDemandAudience = Extract<DemandAudience, 'place-owner' | 'verified-owner' | 'prospective-owner'>;
+
+/**
+ * **ADR-900 §3.8 — πώς στρογγυλεύεται προς τα κάτω ο αριθμός που λέγεται.**
+ *
+ * - `exact` — ο αριθμός όπως είναι.
+ * - `step` — πολλαπλάσιο του βήματος (`7` → `5` με βήμα 5).
+ * - `bands` — η **μία** κλίμακα πλήθους ζήτησης (`demand-count-bands.ts`, 1·3·8·20·50) — η ίδια
+ *   που κρίνει πότε αξίζει ειδοποίηση, ώστε email και πάνελ να λένε **το ίδιο** «τουλάχιστον».
+ *
+ * 🔑 Το κατώφλι κρύβει τον **μικρό** αριθμό· η στρογγύλευση κρύβει τη **διαφορά**. Όποιος μπορεί να
+ * ξαναρωτήσει με ελαφρώς άλλα κριτήρια (`6` → `5`) μαθαίνει ότι **ένας** άνθρωπος απαιτεί το
+ * κριτήριο που άλλαξε — με βήμα ή ζώνη οι δύο απαντήσεις λένε το ίδιο. Πρότυπο *rounding/banding*
+ * της στατιστικής απόκρυψης. Η στρογγύλευση **δεν ταξιδεύει** στην απάντηση: η οθόνη τη διαβάζει
+ * από **αυτή** την πολιτική μέσω του `audience` — μία αλήθεια.
+ */
+export type DisclosureRounding =
+  | { readonly kind: 'exact' }
+  | { readonly kind: 'step'; readonly step: number }
+  | { readonly kind: 'bands' };
 
 /** Τι επιτρέπεται να μάθει ένα ακροατήριο. */
 export interface DemandDisclosurePolicy {
@@ -109,16 +135,8 @@ export interface DemandDisclosurePolicy {
    * ακριβή αριθμό.
    */
   readonly minCount: number;
-  /**
-   * **ADR-900 — με ποιο βήμα στρογγυλεύεται προς τα κάτω ο αριθμός που λέγεται.** `1` = ακριβής.
-   *
-   * 🔑 Το κατώφλι κρύβει τον **μικρό** αριθμό· το βήμα κρύβει τη **διαφορά**. Όποιος μπορεί να
-   * ξαναρωτήσει με ελαφρώς άλλα κριτήρια (`6` → `5`) μαθαίνει ότι **ένας** άνθρωπος απαιτεί το
-   * κριτήριο που άλλαξε — με βήμα 5 και οι δύο απαντήσεις λένε «τουλάχιστον 5». Πρότυπο
-   * *rounding/banding* της στατιστικής απόκρυψης. Το βήμα **δεν ταξιδεύει** στην απάντηση: η
-   * οθόνη το διαβάζει από **αυτή** την πολιτική μέσω του `audience` — μία αλήθεια.
-   */
-  readonly granularity: number;
+  /** Πώς στρογγυλεύεται ο αριθμός που λέγεται — {@link DisclosureRounding}. */
+  readonly rounding: DisclosureRounding;
   /** Ο γραπτός λόγος. **Υποχρεωτικός** — ίδιο συμβόλαιο με το `unscopedReason`. */
   readonly why: string;
 }
@@ -129,19 +147,35 @@ export interface DemandDisclosurePolicy {
 export const DEMAND_DISCLOSURE: Readonly<Record<DemandAudience, DemandDisclosurePolicy>> = {
   'place-owner': {
     // 🔑 **Απόφαση Giorgio 2026-08-11: «από τον 1ο, χωρίς ταυτότητα».**
+    // 🔑 **Απόφαση Giorgio 2026-10-02 (ADR-900 §3.8): ο ΔΗΛΩΜΕΝΟΣ βλέπει ΖΩΝΕΣ.**
     minCount: 1,
-    granularity: 1,
+    rounding: { kind: 'bands' },
     why:
-      'Ο ιδιοκτήτης μαθαίνει για ΤΟ ΔΙΚΟ ΤΟΥ ακίνητο. Το υποκείμενο του k-anonymity ' +
-      'είναι το ΠΡΟΣΩΠΟ που ζητά, όχι το ακίνητο — και εκείνο προστατεύεται με ' +
-      'απόκρυψη ταυτότητας, που ισχύει και στο 1 και στα 100. Κατώφλι 5 εδώ θα ' +
-      'σκότωνε τη Ζ3 («όποτε κι αν βγει»): για ΕΝΑ κατάστημα σπάνια μαζεύονται πέντε, ' +
-      'και τότε το δόλωμα του §12.6 δεν υπάρχει.',
+      'Ο ιδιοκτήτης μαθαίνει για ΤΟ ΔΙΚΟ ΤΟΥ ακίνητο — αλλά εδώ το «δικό του» είναι ΔΗΛΩΣΗ, ' +
+      'όχι απόδειξη: όποιος δηλώσει το διαμέρισμα του γείτονα στέκεται σε αυτό το ακροατήριο. ' +
+      'Το κατώφλι μένει 1, γιατί κατώφλι 5 θα σκότωνε τη Ζ3 («όποτε κι αν βγει»: για ΕΝΑ ' +
+      'κατάστημα σπάνια μαζεύονται πέντε). Ο αριθμός όμως λέγεται σε ΖΩΝΕΣ (1·3·8·20·50, η ίδια ' +
+      'κλίμακα με τις ειδοποιήσεις): «υπάρχει κιόλας κάποιος» φτάνει για το δόλωμα του §12.6, ' +
+      'ενώ ο ακριβής αριθμός — που με δύο ερωτήματα απομονώνει ένα πρόσωπο — ανοίγει ΜΟΝΟ στο ' +
+      'verified-owner, μετά την απόδειξη του Κτηματολογίου. Σχήμα Zoopla (tracker = ζώνες) / ' +
+      'Zillow (claim = αριθμοί).',
+  },
+  'verified-owner': {
+    // 🔑 **ADR-900 §3.8 — ο ΕΠΑΛΗΘΕΥΜΕΝΟΣ ιδιοκτήτης (ΠΚΑ Κτηματολογίου).**
+    minCount: 1,
+    rounding: { kind: 'exact' },
+    why:
+      'Ο ιδιοκτήτης ΑΠΕΔΕΙΞΕ ότι το ακίνητο είναι δικό του: ΠΚΑ με εγκεκριμένη σφραγίδα του ' +
+      'Κτηματολογίου, δικαιούχος με ίδιο ΑΦΜ και όνομα, ένας ΚΑΕΚ = ένας λογαριασμός. Μαθαίνει ' +
+      'για ΤΟ ΔΙΚΟ ΤΟΥ ακίνητο· το υποκείμενο του k-anonymity είναι το ΠΡΟΣΩΠΟ που ζητά, και ' +
+      'εκείνο προστατεύεται με απόκρυψη ταυτότητας, που ισχύει και στο 1 και στα 100. Η επίθεση ' +
+      'διαφοράς απαιτεί πλέον να είσαι ο ΑΠΟΔΕΔΕΙΓΜΕΝΟΣ κάτοχος — δηλαδή ο άνθρωπος στον οποίο ' +
+      'απευθύνεται η ζήτηση εξ αρχής.',
   },
   'area-market': {
     // Πρότυπο small-cell suppression. Τα καθιερωμένα κατώφλια είναι 5 / 10 / 11.
     minCount: 5,
-    granularity: 1,
+    rounding: { kind: 'exact' },
     why:
       'Ο αγοραστής του Ε2 είναι ΤΡΙΤΟΣ και μαθαίνει για ανθρώπους που δεν τον ξέρουν. ' +
       'Εδώ ο αριθμός ΕΙΝΑΙ η αποκάλυψη: «1 άτομο ψάχνει σε αυτό το τετράγωνο, ' +
@@ -151,21 +185,22 @@ export const DEMAND_DISCLOSURE: Readonly<Record<DemandAudience, DemandDisclosure
   'prospective-owner': {
     // 🔑 **ADR-900 — η σελίδα «Δες αν κάποιος ενδιαφέρεται για το ακίνητό σου».**
     minCount: 5,
-    granularity: 5,
+    rounding: { kind: 'step', step: 5 },
     why:
       'Όποιος ρωτά εδώ ΔΕΝ έχει αποδείξει ότι το ακίνητο είναι δικό του — δείχνει ένα κτίριο και ' +
       'περιγράφει ένα ακίνητο. Για το σύστημα είναι ΤΡΙΤΟΣ, όπως ο αγοραστής του area-market, και ' +
       'μαθαίνει για ανθρώπους που δεν τον ξέρουν: με κατώφλι 1, μια ερώτηση για τη μονοκατοικία του ' +
       'γείτονα θα έλεγε «1 άτομο ζητά ΑΥΤΟ το κτίριο». Το 5 είναι το κατώφλι στατιστικής απόκρυψης. ' +
-      'Ο ακριβής αριθμός (κατώφλι 1) ανοίγει ΜΟΝΟ μετά την καταχώριση κατοχής, στο place-owner — το ' +
-      'ίδιο δίδυμο μοντέλο με Zoopla MyHome / Spekulantkollen (άθροισμα πριν) και Zillow (claim, μετά). ' +
+      'Κατώφλι 1 ανοίγει ΜΟΝΟ μετά την καταχώριση κατοχής (place-owner, σε ζώνες) και ο ακριβής ' +
+      'αριθμός μετά την ΑΠΟΔΕΙΞΗ της (verified-owner) — το ίδιο μοντέλο με Zoopla MyHome / ' +
+      'Spekulantkollen (άθροισμα πριν) και Zillow (claim, μετά). ' +
       'ΕΝΑ σύνολο μόνο, ποτέ ανά είδος συμφωνίας ή ζώνη τιμής: δύο αθροίσματα πάνω από το κατώφλι ' +
       'μπορούν να διαφέρουν κατά 1, και η διαφορά τους είναι ένα πρόσωπο.',
   },
   'approached-offerer': {
     // 🔑 **ADR-843 ΠΕ1/ΠΕ2 — ο ίδιος ο ζητών πάτησε το κουμπί.**
     minCount: 1,
-    granularity: 1,
+    rounding: { kind: 'exact' },
     why:
       'Ο προσφέρων μαθαίνει για ΕΝΑΝ άνθρωπο που τον πλησίασε ΟΝΟΜΑΣΤΙΚΑ, με ρητή ' +
       'πράξη του ίδιου. Το k-κατώφλι προστατεύει το ΥΠΟΚΕΙΜΕΝΟ από αποκάλυψη που δεν ' +
@@ -316,6 +351,27 @@ export interface DemandDisclosure {
 }
 
 /**
+ * Η στρογγύλευση προς τα κάτω — **η μόνη** υλοποίηση του {@link DisclosureRounding}.
+ *
+ * ⚠️ Καλείται **μόνο** πάνω από το κατώφλι. Με `minCount ≥ 1` και πρώτη ζώνη `1` η ζώνη δεν
+ * είναι ποτέ `null` εδώ. Αν γίνει (π.χ. κατώφλι 0), **ρίχνει**: το `0` θα έλεγε ψέματα
+ * («κανείς») και το ωμό πλήθος θα αποκάλυπτε ό,τι η ζώνη κρύβει.
+ */
+export function roundDisclosedCount(counted: number, rounding: DisclosureRounding): number {
+  switch (rounding.kind) {
+    case 'exact':
+      return counted;
+    case 'step':
+      return Math.floor(counted / rounding.step) * rounding.step;
+    case 'bands': {
+      const band = announcementBand(counted);
+      if (band === null) throw new Error(`roundDisclosedCount: count ${counted} is below the first band`);
+      return band;
+    }
+  }
+}
+
+/**
  * Σύνολο ζητήσεων → **τι μαθαίνει αυτό το ακροατήριο**.
  *
  * 🔴 **Η ΜΟΝΗ επιτρεπτή έξοδος από το επίπεδο Β προς οποιονδήποτε τρίτο.** Κάθε άλλη
@@ -335,12 +391,12 @@ export function discloseDemand(
   audience: DemandAudience,
   nowIso: string,
 ): DemandDisclosure {
-  const { minCount, granularity } = DEMAND_DISCLOSURE[audience];
+  const { minCount, rounding } = DEMAND_DISCLOSURE[audience];
   const { counted } = censusDemands(demands, nowIso);
 
   return {
     audience,
-    count: counted >= minCount ? Math.floor(counted / granularity) * granularity : null,
+    count: counted >= minCount ? roundDisclosedCount(counted, rounding) : null,
     minCount,
   };
 }

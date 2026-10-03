@@ -276,6 +276,12 @@ export const lazyRoutesAdr294 = {
     { loadingType: 'form', ssr: false }
   ),
 
+  // ADR-900 §3.8 — η ουρά ελέγχου επαληθεύσεων κατοχής (εργαλείο παρόχου, μόνο super_admin).
+  AdminOwnershipVerifications: createLazyRoute(
+    () => import('@/components/admin/pages/OwnershipVerificationsPageContent').then(mod => ({ default: mod.OwnershipVerificationsPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
   AdminDatabaseUpdate: createLazyRoute(
     () => import('@/components/admin/pages/DatabaseUpdatePageContent').then(mod => ({ default: mod.DatabaseUpdatePageContent })),
     { loadingType: 'form', ssr: false }

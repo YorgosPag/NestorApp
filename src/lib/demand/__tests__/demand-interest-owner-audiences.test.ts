@@ -11,7 +11,8 @@ import {
   discloseInterest,
   placeInterestCensusBalances,
 } from '../demand-interest';
-import { DEMAND_AUDIENCES, DEMAND_DISCLOSURE } from '../demand-aggregate';
+import { DEMAND_AUDIENCES, DEMAND_DISCLOSURE, type OwnerDemandAudience } from '../demand-aggregate';
+import { ANNOUNCEMENT_BANDS } from '../demand-count-bands';
 import { ownerSignalOf, signalsOwners } from '../demand-owner-signal';
 import type { PropertyDemand } from '@/types/property-demand';
 import { NOW_ISO, TODAY, demand, facts, listing } from './demand-fixtures';
@@ -29,7 +30,7 @@ function seekers(count: number, overrides: Partial<PropertyDemand> = {}): Proper
   return Array.from({ length: count }, (_, index) => demand({ id: `dmnd_${index}`, ...overrides }));
 }
 
-function countFor(pool: readonly PropertyDemand[], audience: 'place-owner' | 'prospective-owner') {
+function countFor(pool: readonly PropertyDemand[], audience: OwnerDemandAudience) {
   const { interest } = discloseInterest(DORMANT, pool, NOW_ISO, TODAY, audience);
   if (interest.stance === 'settled') throw new Error('αδύνατο: ακίνητο χωρίς διάθεση δεν είναι settled');
   return interest.disclosure;
@@ -77,9 +78,9 @@ describe('🔴 Π — `prospective-owner`: κατώφλι 5 + βήμα 5, χωρ
     expect(disclosure.minCount).toBe(5);
   });
 
-  it('🔑 ΤΟ ΙΔΙΟ ακίνητο, ΟΙ ΙΔΙΕΣ ζητήσεις, στον κάτοχο ⇒ ακριβής αριθμός από τον 1ο', () => {
-    expect(countFor(seekers(1), 'place-owner').count).toBe(1);
-    expect(countFor(seekers(7), 'place-owner').count).toBe(7);
+  it('🔑 ΤΟ ΙΔΙΟ ακίνητο, ΟΙ ΙΔΙΕΣ ζητήσεις, στον ΕΠΑΛΗΘΕΥΜΕΝΟ κάτοχο ⇒ ακριβής αριθμός από τον 1ο', () => {
+    expect(countFor(seekers(1), 'verified-owner').count).toBe(1);
+    expect(countFor(seekers(7), 'verified-owner').count).toBe(7);
   });
 
   it('🔴 το βήμα κρύβει τη ΔΙΑΦΟΡΑ: 6 και 5 δίνουν την ίδια απάντηση', () => {
@@ -92,19 +93,51 @@ describe('🔴 Π — `prospective-owner`: κατώφλι 5 + βήμα 5, χωρ
   });
 });
 
-describe('Β — το βήμα είναι ΔΗΛΩΜΕΝΗ πολιτική κάθε ακροατηρίου', () => {
-  it('κάθε ακροατήριο έχει ακέραιο βήμα ≥ 1, και ΜΟΝΟ το `prospective-owner` στρογγυλεύει', () => {
-    for (const audience of DEMAND_AUDIENCES) {
-      const { granularity } = DEMAND_DISCLOSURE[audience];
-      expect(Number.isInteger(granularity) && granularity >= 1).toBe(true);
-      expect(granularity > 1).toBe(audience === 'prospective-owner');
-    }
+describe('🔴 Δ — `place-owner` (ΔΗΛΩΜΕΝΟΣ): κατώφλι 1, ζώνες 1·3·8·20·50 (ADR-900 §3.8)', () => {
+  it.each([
+    [1, 1],
+    [2, 1],
+    [3, 3],
+    [7, 3],
+    [8, 8],
+    [25, 20],
+    [60, 50],
+  ])('%i ενδιαφερόμενοι ⇒ λέγεται «τουλάχιστον %i»', (interested, expected) => {
+    const disclosure = countFor(seekers(interested), 'place-owner');
+    expect(disclosure.count).toBe(expected);
+    expect(disclosure.minCount).toBe(1);
   });
 
-  it('🔑 βήμα ≤ κατώφλι — αλλιώς ένας αριθμός πάνω από το κατώφλι θα στρογγυλευόταν σε 0', () => {
+  it('🔑 η Ζ3 ζει: ο ΕΝΑΣ λέγεται στον δηλωμένο — μόνο η ακρίβεια περιμένει την απόδειξη', () => {
+    expect(countFor(seekers(1), 'place-owner').count).toBe(1);
+    expect(countFor(seekers(4), 'place-owner').count).not.toBe(countFor(seekers(4), 'verified-owner').count);
+  });
+
+  it('🔴 η ζώνη κρύβει τη ΔΙΑΦΟΡΑ: 4 και 7 δίνουν την ίδια απάντηση', () => {
+    expect(countFor(seekers(4), 'place-owner').count).toBe(countFor(seekers(7), 'place-owner').count);
+  });
+});
+
+describe('Β — η στρογγύλευση είναι ΔΗΛΩΜΕΝΗ πολιτική κάθε ακροατηρίου', () => {
+  it('ΜΟΝΟ ο ΕΠΑΛΗΘΕΥΜΕΝΟΣ ιδιοκτήτης βλέπει ακριβή αριθμό από τον 1ο', () => {
+    const exactFromOne = DEMAND_AUDIENCES.filter(
+      (audience) =>
+        DEMAND_DISCLOSURE[audience].rounding.kind === 'exact' && DEMAND_DISCLOSURE[audience].minCount === 1,
+    );
+    // `approached-offerer`: το υποκείμενο ΕΙΝΑΙ ο αποκαλύπτων (ADR-843) — δες το `why` του.
+    expect(exactFromOne.sort()).toEqual(['approached-offerer', 'verified-owner']);
+  });
+
+  it('ο δηλωμένος ζώνες · ο μελλοντικός βήμα 5', () => {
+    expect(DEMAND_DISCLOSURE['place-owner'].rounding).toEqual({ kind: 'bands' });
+    expect(DEMAND_DISCLOSURE['prospective-owner'].rounding).toEqual({ kind: 'step', step: 5 });
+  });
+
+  it('🔑 η στρογγύλευση δεν φτάνει ποτέ στο 0 πάνω από το κατώφλι — αλλιώς θα έλεγε «κανείς»', () => {
     for (const audience of DEMAND_AUDIENCES) {
-      const { granularity, minCount } = DEMAND_DISCLOSURE[audience];
-      expect(granularity).toBeLessThanOrEqual(Math.max(minCount, 1));
+      const { rounding, minCount } = DEMAND_DISCLOSURE[audience];
+      const floor = rounding.kind === 'step' ? rounding.step : rounding.kind === 'bands' ? ANNOUNCEMENT_BANDS[0] : 1;
+      expect(floor).toBeLessThanOrEqual(Math.max(minCount, 1));
     }
   });
 });

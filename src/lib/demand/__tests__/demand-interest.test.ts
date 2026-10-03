@@ -85,7 +85,8 @@ describe('🔴 Μ0 — ο αφελής βρόχος απαντά ΠΑΝΤΑ 0 σ
   });
 
   it('🔑 και ΓΙ΄ ΑΥΤΟ η στάση υπάρχει: το ίδιο ακίνητο, ίδιες ζητήσεις ⇒ 5', () => {
-    const { interest } = discloseInterest(DORMANT, seekers(5), NOW_ISO, TODAY);
+    // Μετράμε τη ΜΕΤΡΗΣΗ, όχι τη στρογγύλευση (ADR-900 §3.8): ακριβές ακροατήριο.
+    const { interest } = discloseInterest(DORMANT, seekers(5), NOW_ISO, TODAY, 'verified-owner');
     expect(interest.stance).toBe('dormant');
     expect(interest.disclosure.count).toBe(5);
   });
@@ -231,7 +232,9 @@ describe('🔴 Π — εφαρμόζεται το κατώφλι του `place-o
 
   it('⚠️ με το κατώφλι του `area-market` (5) ο ΕΝΑΣ θα σιωπούσε — η διαφορά ΕΙΝΑΙ η Ζ3', () => {
     expect(DEMAND_DISCLOSURE['area-market'].minCount).toBeGreaterThan(1);
-    const { interest } = discloseInterest(DORMANT, seekers(4), NOW_ISO, TODAY);
+    // ADR-900 §3.8: ο ΔΗΛΩΜΕΝΟΣ βλέπει ζώνη (4 ⇒ «τουλάχιστον 3»), ο ΕΠΑΛΗΘΕΥΜΕΝΟΣ τον αριθμό.
+    expect(discloseInterest(DORMANT, seekers(4), NOW_ISO, TODAY).interest.disclosure.count).toBe(3);
+    const { interest } = discloseInterest(DORMANT, seekers(4), NOW_ISO, TODAY, 'verified-owner');
     expect(interest.disclosure.count).toBe(4);
   });
 

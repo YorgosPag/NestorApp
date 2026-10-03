@@ -58,6 +58,17 @@ const WHY_KEY: Readonly<Record<JudgedInterestStance, string | null>> = {
   dormant: 'property-market:demand.interest.dormantWhy',
 };
 
+/**
+ * Η ίδια πρόταση για **στρογγυλεμένο** αριθμό (βήμα ή ζώνη, ADR-900 §3.8) — «τουλάχιστον N».
+ * Ανά στάση, όπως το {@link COUNT_KEY}: ο δηλωμένος ιδιοκτήτης με αγγελία βλέπει ζώνες **και**
+ * «αυτό ακριβώς», όχι «κάτι σαν αυτό».
+ */
+const AT_LEAST_KEY: Readonly<Record<JudgedInterestStance, string>> = {
+  offered: 'property-market:demand.interest.atLeastOffered',
+  partial: 'property-market:demand.interest.atLeast',
+  dormant: 'property-market:demand.interest.atLeast',
+};
+
 /** Ποια πρόταση λέει το πλήθος — «αυτό ακριβώς» ή «κάτι σαν αυτό». */
 const COUNT_KEY: Readonly<Record<JudgedInterestStance, string>> = {
   offered: 'property-market:demand.interest.offered',
@@ -158,11 +169,11 @@ function CountedInterest({
   const { stance, disclosure } = interest;
   const { count, minCount } = disclosure;
   const whyKey = WHY_KEY[stance];
-  // 🔑 ADR-900 — στρογγυλεμένος αριθμός (βήμα > 1) λέγεται «τουλάχιστον N», ποτέ «N»: το «5» θα
-  //    ισχυριζόταν ακρίβεια που η πολιτική **σκόπιμα** δεν δίνει. Το βήμα από την ΙΔΙΑ πολιτική.
-  const countKey = DEMAND_DISCLOSURE[disclosure.audience].granularity > 1
-    ? 'property-market:demand.interest.atLeast'
-    : COUNT_KEY[stance];
+  // 🔑 ADR-900 — στρογγυλεμένος αριθμός (βήμα ή ζώνη) λέγεται «τουλάχιστον N», ποτέ «N»: το «5» θα
+  //    ισχυριζόταν ακρίβεια που η πολιτική **σκόπιμα** δεν δίνει. Η στρογγύλευση από την ΙΔΙΑ πολιτική.
+  const countKey = DEMAND_DISCLOSURE[disclosure.audience].rounding.kind === 'exact'
+    ? COUNT_KEY[stance]
+    : AT_LEAST_KEY[stance];
   // 🔒 Μόνο πάνω σε **ισχυρό** ισχυρισμό: στο `dormant`/`partial` η εξήγηση ήδη λέει ότι
   //    το ακίνητο δεν διατίθεται — δεύτερη γραμμή για το κοινό θα ήταν θόρυβος.
   const closedReach = audience !== 'public' && stance === 'offered' && count !== null && count > 0;

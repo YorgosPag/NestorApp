@@ -15,7 +15,7 @@
     "src/i18n/generated/routes/email__preferences__token.el.json": "da634d51d68321bb26762d645b87d83d823019577fd7cc11704ed5a3ae51e6e1",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/interest-check.el.json": "5e25b27d52887bdf86a2a26e68037243709d1101508a29f549f057831b03c91e",
+    "src/i18n/generated/routes/interest-check.el.json": "9d26be7eb5cb7d188169e06c99976235f03707da3842f626bfe01e4c3ddf8f06",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "1a9106d455de9ba199b2a7479f5882a4b134295baf069e0a92f75a1a98906675",
@@ -37,7 +37,7 @@
     "src/i18n/generated/routes/offers.el.json": "3341e9d16ab25bce408f73b0be1eec279e555e12a0085f9b65a9124636b8ee93",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "a7455227b431ceef5abcf2c912f19932f8ca7c36c1d8fe4339d9e83c14a54f24",
-    "src/i18n/generated/routes/offers__offerId.el.json": "d7490784bf0def65741e6d16f2126d5c6b9553980aa56663ad7dbd60a5e66a09",
+    "src/i18n/generated/routes/offers__offerId.el.json": "b1aec1fe1b739e741e49284d7702d4648070aa2b4226c5a98879b17b79cb7c8f",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "321843e391008307091be65386dba76ef657429a6a5ed7ada25adf6ecd170066",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -108,7 +108,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7a910666cc15c8e13d4c04792f0a6ee00c585cc39f8728cfb690ac01b9f0b013",
+  "inputsSha256": "6dfbe95596401ec7a521d2b986c5f4ac925e92c9b302f95de0f202cad9d263f5",
   "languages": [
     "el"
   ],
@@ -276,7 +276,7 @@
     "src/components/demand/DemandSummary.tsx": "e5bd4dda274df9b9a49119b110208f9c58f094bb55e999fbf30ca861820f08ef",
     "src/components/demand/DemandTitleEditor.tsx": "46d38940a1bc45a26824364974f0965c3899c5681319fdcd0c0144fe4cff08f0",
     "src/components/demand/MyDemandsContent.tsx": "fb73ba7a033bfdd54410c9fe941106fa4dd184e640ac6dfcc7c6cb0f77c1403f",
-    "src/components/demand/PlaceInterestPanel.tsx": "8611a6e357c9377e9cd4c4537937db7d9103c7c84efdb4590ed36fda596a39f3",
+    "src/components/demand/PlaceInterestPanel.tsx": "9b04dc2c8011c2bdb23147ff61ba25b7206234f50b527dbec6220e35e2f1308c",
     "src/components/demand/demand-form-labels.ts": "12e017248a07abe13048fa682e7089a885d4fe8f319d20b4fc22d499de9ad592",
     "src/components/demand/form/DemandAreaOutline.tsx": "930407cb588d6e8dc93858b919f1e719ccdfbd41be7ffe7a07bac6514b57df6d",
     "src/components/demand/form/DemandAxisFields.tsx": "ea790f6e61103e86c1f7a91e9866e084aed5f63b8588213a89b6d2a7282d81ea",
@@ -468,7 +468,7 @@
     "src/components/owner-property/OwnerPropertyCard.tsx": "ce910003165f8e3cc40fc1754922b4ffe2f1a6c0911c1dddb921946f4d16a74f",
     "src/components/owner-property/OwnerPropertyCardCover.tsx": "5bb5942d4c818f4064e2aa1f61a19a60d14b8bbb1454d0cd4e445f56438655cb",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "ea3369a217c00bbc9bccf658b4ae656e2610b99a030a9fed4be471742b0353f3",
-    "src/components/owner-property/OwnerPropertyDetailContent.tsx": "0c824d3d051979168d7408d584f56e3223ff82959195fe4ad247db6aba135dd0",
+    "src/components/owner-property/OwnerPropertyDetailContent.tsx": "a8ddacdcf9b786e2dd12c74cd5f2d3f6a7117b492dc08183a667fb6cadd4e504",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "852eaf0d7a110ef720c66602470b58aac6f699b9a2227ddd3112f978e4532724",
     "src/components/owner-property/OwnerPropertyHistory.tsx": "82d2eb220476a9775fe52c195c13db6dd6ccdfd28c59cf5bf1c076cdd064b862",
     "src/components/owner-property/PrivateMarketingOwnerSection.tsx": "42a2d672aff2d6477b6369bdd247670aa509e51aacfb61b3969bb774ad409d4f",
@@ -828,9 +828,10 @@
     "src/lib/criteria/listing-criterion-labels.ts": "7d0d183ca8bdabed599d16c9c8b2c252d0052703b4535e9ee74bc303b9fbffeb",
     "src/lib/data/json-shape.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/data/server-json-file.ts": "e56ad2b9289b01c2c96d66d7dc197878dfbaed2d4c204fa164dc9eaef2eec2c3",
-    "src/lib/demand/demand-aggregate.ts": "78e1df376b7bf05793d4ce7abf2e098af8c5c331921cca126c09fd0137eb8e90",
+    "src/lib/demand/demand-aggregate.ts": "7e3289774133eed42b56fa75fc88d3b239470e75cc692b7b140c44581ea3231b",
     "src/lib/demand/demand-answer.ts": "a1dbf044b4a62a3ecc051e7a90614ed78e7737a7bb8025855faf74dbc79bbff8",
     "src/lib/demand/demand-concessions.ts": "1c4c5e3aa829657b53e0f0a015ccafd12cfabaace26e684226c366d58b800781",
+    "src/lib/demand/demand-count-bands.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/demand-display-name.ts": "f3e4e379d4c0af31a28ecee822a2579947a475a22385a2f58de8377c8cb3cab7",
     "src/lib/demand/demand-form-blockers.ts": "16069f97dccee0c006cc979b64b2847402f0d6089b675d50c60210101414f69f",
     "src/lib/demand/demand-form-from-filters.ts": "466fb5f37bcc4bcbeb8d13e9532214fce8bf93d75b20d1387bb442d71f0f119c",
@@ -3261,6 +3262,7 @@
         "property-market": {
           "keys": [
             "demand.interest.atLeast",
+            "demand.interest.atLeastOffered",
             "demand.interest.closedReach",
             "demand.interest.dormant",
             "demand.interest.dormantWhy",
@@ -6454,6 +6456,7 @@
             "custody.personal.brokered",
             "custody.personal.title",
             "demand.interest.atLeast",
+            "demand.interest.atLeastOffered",
             "demand.interest.closedReach",
             "demand.interest.dormant",
             "demand.interest.dormantWhy",
@@ -10652,7 +10655,7 @@
     "matchedKeys": 226,
     "routeBoundaries": 0,
     "shellFiles": 918,
-    "sliceBytes": 672678
+    "sliceBytes": 673054
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

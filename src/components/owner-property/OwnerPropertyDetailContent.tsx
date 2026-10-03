@@ -99,6 +99,14 @@ const OwnerMandateThreads = dynamic(() =>
  * 📊 ADR-777 §8.72 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): ο πίνακας γεμίζει **μόνο** στον πελάτη, άρα
  * δείκτες, γράφημα και εξέλιξη τιμής δεν ανήκουν στο route slice. ⚠️ Όχι `ssr: false` (ADR-744 §14.3).
  */
+/**
+ * ADR-900 §3.8 — η κάρτα επαλήθευσης ιδιοκτησίας, πίσω από **όριο**: τα κείμενά της (πώς εκδίδεται το ΠΚΑ,
+ * λόγοι ελέγχου, αρνήσεις) δεν χρειάζονται στην πρώτη απόδοση — ο route slice της σελίδας μένει στο ταβάνι του.
+ */
+const OwnershipVerificationPanel = dynamic(() =>
+  import('./OwnershipVerificationPanel').then((mod) => mod.OwnershipVerificationPanel),
+);
+
 const OwnerPropertyStatsPanel = dynamic(
   () => import('./OwnerPropertyStatsPanel').then((mod) => mod.OwnerPropertyStatsPanel),
   { loading: StatsPanelPending },
@@ -254,6 +262,22 @@ function OwnerPropertyView({
       )}
 
       <PlaceInterestPanel interest={interest} audience={property.marketingAudience} />
+
+      {/*
+        🔑 **ADR-900 §3.8 — ΑΜΕΣΩΣ ΚΑΤΩ ΑΠΟ ΤΟΝ ΑΡΙΘΜΟ ΠΟΥ ΞΕΚΛΕΙΔΩΝΕΙ.** Ο δηλωμένος ιδιοκτήτης βλέπει
+        «τουλάχιστον N»· η κάρτα λέει πώς γίνεται ακριβής (ΠΚΑ). Μόνο σε ιδιωτική αγγελία — το γραφείο
+        μένει δηλωμένο (απόφαση Giorgio 2026-10-02).
+      */}
+      {property.authorCompanyId === null && (
+        <OwnershipVerificationPanel
+          ownerPropertyId={property.id}
+          dossier={
+            property.dossierId === undefined
+              ? null
+              : { id: property.dossierId, userId: property.authorUserId, label: property.title }
+          }
+        />
+      )}
 
       {/*
         🎯 **ΤΟ ΚΙΝΗΤΡΟ, ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΕΠΙΘΥΜΙΑ (ADR-842 Φ5).** Η σειρά είναι

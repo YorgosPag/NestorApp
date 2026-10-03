@@ -71,6 +71,8 @@ function candidateOf(property: OwnerProperty): AnnouncementCandidate {
     source: 'owner-property',
     holderId: property.authorUserId,
     facts: ownerPropertyFactsOf(property, AT),
+    // ADR-900 §3.8 — εδώ κρίνεται η ΜΕΤΡΗΣΗ (κλειστή διάθεση), όχι η στρογγύλευση: ακριβής αριθμός.
+    audience: 'verified-owner',
   };
 }
 
@@ -95,7 +97,7 @@ describe('🏆 Α6 — το κοινό ΔΕΝ είναι άξονας ταιρι
     const open = validOwnerProperty();
     const closed = validOwnerProperty({ marketingAudience: audience });
     const judge = (property: OwnerProperty) =>
-      discloseInterest(ownerPropertyFactsOf(property, AT), SEEKERS, AT, MOMENT.todayDate);
+      discloseInterest(ownerPropertyFactsOf(property, AT), SEEKERS, AT, MOMENT.todayDate, 'verified-owner');
 
     expect(judge(closed)).toEqual(judge(open));
     expect(judge(closed).interest).toEqual({
@@ -138,7 +140,7 @@ describe('🏆 Γ1 — ο κάτοχος κλειστής διάθεσης λα�
     const report = await passOver(closed);
 
     expect(report.announced).toBe(1);
-    expect(announceOnePlace).toHaveBeenCalledWith(expect.objectContaining({ count: 5 }));
+    expect(announceOnePlace).toHaveBeenCalledWith(expect.objectContaining({ count: 5, rounded: false }));
   });
 
   it('⚠️ αποσυρμένη ⇒ `dormant` («κάτι σαν το δικό σας»), ΠΟΤΕ `offered`', () => {
@@ -187,7 +189,7 @@ describe('🏆 Γ3 — η ανακοίνωση δεν κουβαλά ταυτό�
     const [payload] = announceOnePlace.mock.calls[0] as [Record<string, unknown>];
 
     expect(Object.keys(payload).sort()).toEqual([
-      'band', 'count', 'holderId', 'propertyId', 'propertyTitle', 'recipientId', 'source', 'tenantId',
+      'band', 'count', 'holderId', 'propertyId', 'propertyTitle', 'recipientId', 'rounded', 'source', 'tenantId',
     ]);
     expect(JSON.stringify(payload)).not.toMatch(/seeker_|dmnd_/);
   });

@@ -27,8 +27,12 @@ function ready(interest: Extract<PlaceInterestState, { state: 'ready' }>['intere
   return { state: 'ready', interest };
 }
 
-function counted(stance: 'offered' | 'dormant', count: number | null): PlaceInterestState {
-  return ready({ stance, disclosure: { audience: 'place-owner', count, minCount: 1 } });
+function counted(
+  stance: 'offered' | 'dormant',
+  count: number | null,
+  audience: 'verified-owner' | 'place-owner' = 'verified-owner',
+): PlaceInterestState {
+  return ready({ stance, disclosure: { audience, count, minCount: 1 } });
 }
 
 function show(interest: PlaceInterestState, audience: MarketingAudience) {
@@ -56,6 +60,16 @@ describe('ADR-864 Φ2 — το πάνελ ζήτησης', () => {
     show(counted('offered', 7), 'public');
 
     expect(screen.queryByText(`${KEY}.closedReach`)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['offered', 'atLeastOffered'],
+    ['dormant', 'atLeast'],
+  ] as const)('Π5 — ΔΗΛΩΜΕΝΟΣ (ζώνες, ADR-900 §3.8), στάση «%s» ⇒ «τουλάχιστον» (%s), ποτέ ο σκέτος αριθμός', (stance, key) => {
+    show(counted(stance, 3, 'place-owner'), 'public');
+
+    expect(screen.getByText(`${KEY}.${key}`)).toBeInTheDocument();
+    expect(screen.queryByText(`${KEY}.${stance}`)).not.toBeInTheDocument();
   });
 
   it.each([
