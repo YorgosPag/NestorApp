@@ -118,6 +118,7 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // Ο πελάτης ΔΙΑΒΑΖΕΙ· γράφει ΜΟΝΟ ο διακομιστής (§14.4 κανόνες 1-2, firestore.rules).
   PUBLIC_LANDS:     { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α1/Α11 — η ΓΗ είναι φυσικό γεγονός, κοινό σε όλους· υπάρχει πριν τη διεκδικήσει οποιοσδήποτε και δεν ανήκει σε κανέναν. Read-only από τον πελάτη.' },
   PUBLIC_BUILDINGS: { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α11 — «το κτίριο του κόσμου». Κοινή ταυτότητα ώστε προσφορά και ζήτηση να δείχνουν στο ΙΔΙΟ πράγμα (§14.5). Read-only από τον πελάτη.' },
+  PUBLIC_UNITS:     { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-900 §8 #2 (2β.4) — η ΜΟΝΑΔΑ με επαληθευμένο ΚΑΕΚ (UPRN-παιδί του κτιρίου): φυσικό γεγονός, κανενός. Χωρίς κάτοχο, ΚΑΕΚ, πόρτα· γράφει μόνο ο κριτής κατοχής. Read-only από τον πελάτη.' },
 
   // --- ADR-835 §20: ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΤΟΥ ΚΑΤΑΛΥΜΑΤΟΣ -----------------------------
   // 🔴 ΙΔΙΟΣ ΑΞΟΝΑΣ ΜΕ ΤΟ `OWNER_PROPERTIES`, επίτηδες: το ημερολόγιο είναι κομμάτι της

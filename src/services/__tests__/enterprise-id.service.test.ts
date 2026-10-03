@@ -351,6 +351,8 @@ describe('EnterpriseIdService', () => {
       generateDeterministicAuthReprovisionJournalId: 'arj_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicOwnershipKaekClaimId: 'okcl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicTaxIdentityClaimId: 'txic_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-900 §8 #2 (2β.4) — ο σπόρος είναι ήδη HMAC (`public-unit-seed.ts`)· εδώ μόνο η μηχανή.
+      generateDeterministicPublicUnitId: 'punit_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicCompanyId: 'comp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».

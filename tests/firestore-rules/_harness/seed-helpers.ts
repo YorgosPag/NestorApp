@@ -670,6 +670,30 @@ export async function seedPublicBuilding(
 }
 
 /**
+ * ADR-900 §8 #2 (2β.4) — δημόσια ΜΟΝΑΔΑ (`public_units`). Το πλήρες σχήμα του `PublicUnit` — και
+ * **κανένα** πεδίο κατόχου, ΚΑΕΚ ή πόρτας (το seed είναι το συμβόλαιο).
+ */
+export async function seedPublicUnit(
+  env: RulesTestEnvironment,
+  unitId: string,
+  landId: string,
+  buildingId: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('public_units').doc(unitId).set({
+      landId,
+      buildingId,
+      level: { value: { number: 2, kind: null }, source: 'declared', attestedAt: '2026-10-03T00:00:00.000Z' },
+      existence: { source: 'cadastre', firstAttestedAt: '2026-10-03T00:00:00.000Z', lastAttestedAt: '2026-10-03T00:00:00.000Z' },
+      status: 'approved',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      // NOTE: κανένα companyId / uid / kaek / unitNumber — επίπεδο Α
+    });
+  });
+}
+
+/**
  * ADR-777 Α3/Α5 — δημοσιευμένη ΠΡΟΒΟΛΗ αγγελίας (`public_listings`).
  *
  * 🔴 **Το seed είναι ΤΟ ΙΔΙΟ ΤΟ ΣΥΜΒΟΛΑΙΟ, όχι δείγμα.** Είναι το πλήρες σχήμα του

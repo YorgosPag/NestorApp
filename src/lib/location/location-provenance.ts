@@ -207,18 +207,31 @@ export function locationKnowledgeStep(
  * πληκτρολόγησε άνθρωπος». Δεν αντιστοιχεί σε καμία **χειρονομία θέσης** (γι' αυτό
  * λείπει από τη {@link LocationProvenance}), αλλά είναι ο **συνηθέστερος** τρόπος να
  * μάθουμε ότι το κτίριο έχει τέσσερις ορόφους.
+ *
+ * Και **ένα** δεύτερο (ADR-900 §8 #2, 2β.4): το `'cadastre'` — «το λέει το Κτηματολόγιο», μέσα από
+ * **επαληθευμένο** ΠΚΑ (σφραγίδα + κριτής της 2α). Ούτε αυτό είναι χειρονομία θέσης· είναι το
+ * **επίσημο μητρώο** ιδιοκτησιών, η πηγή που κάνει μια οριζόντια ιδιοκτησία **γεγονός** και όχι ισχυρισμό.
  */
-export type PlaceFactSource = LocationProvenance | 'declared';
+export type PlaceFactSource = LocationProvenance | 'declared' | 'cadastre';
+
+/** Οι δύο πηγές γεγονότων που **δεν** είναι χειρονομίες θέσης — με τη βαθμίδα τους (§14.3). */
+const NON_LOCATION_FACT_RANK: Readonly<Record<Exclude<PlaceFactSource, LocationProvenance>, number>> = {
+  declared: 2,
+  cadastre: 4,
+};
 
 /**
  * Βαθμίδα αξιοπιστίας ενός γεγονότος.
  *
  * Το `'declared'` παίρνει τη βαθμίδα **«δηλωμένο από χρήστη»** του §14.3 — την ίδια
  * με τα `manual`/`drawn`, γιατί είναι **ακριβώς** αυτό. Ό,τι είναι μετρημένο ή
- * δημόσιο εξακολουθεί να το ξεπερνά.
+ * δημόσιο εξακολουθεί να το ξεπερνά. Το `'cadastre'` στέκεται **μαζί με το μετρημένο**
+ * (`survey`/`bim`): επίσημη εγγραφή, όχι γνώμη — άρα η δήλωση **δεν** το αντικαθιστά ποτέ.
  */
 export function placeFactRank(source: PlaceFactSource): number {
-  return source === 'declared' ? 2 : locationProvenanceRank(source);
+  return source === 'declared' || source === 'cadastre'
+    ? NON_LOCATION_FACT_RANK[source]
+    : locationProvenanceRank(source);
 }
 
 /**

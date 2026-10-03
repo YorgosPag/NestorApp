@@ -118,7 +118,7 @@ async function commitJudgement(
   const singleKaek = evidence.kaekCodes.length === 1 ? evidence.kaekCodes[0] : null;
 
   return db.runTransaction(async (tx: Transaction) => {
-    const locks = await readClaimLocks(db, tx, singleKaek, claimant.taxId.hmac);
+    const locks = await readClaimLocks(db, tx, singleKaek, claimant.taxId.hmac, input.ownerPropertyId);
     const verdict = judgeOwnershipVerification({
       seal: evidence.seal,
       kaekCodes: evidence.kaekCodes,

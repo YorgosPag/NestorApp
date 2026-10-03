@@ -210,4 +210,12 @@ describe('Κ6 — προέλευση γεγονότος (§14.3)', () => {
   it('πάνω στο άγνωστο, κάθε πηγή γεγονότος ανεβαίνει', () => {
     expect(outranksForFact('declared', null)).toBe(true);
   });
+
+  it("🏛️ το 'cadastre' (ΠΚΑ) στέκεται με το μετρημένο: ξεπερνά τη δήλωση, η δήλωση ΔΕΝ το σβήνει (2β.4)", () => {
+    expect(placeFactRank('cadastre')).toBe(placeFactRank('survey'));
+    expect(outranksForFact('cadastre', 'declared')).toBe(true);
+    expect(outranksForFact('cadastre', 'osm')).toBe(true);
+    expect(outranksForFact('declared', 'cadastre')).toBe(false);
+    expect(outranksForFact('cadastre', 'cadastre')).toBe(false);
+  });
 });

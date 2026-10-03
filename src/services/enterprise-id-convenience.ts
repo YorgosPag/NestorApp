@@ -158,6 +158,9 @@ export const generateDeterministicOwnershipKaekClaimId = (canonicalKaek: string)
   enterpriseIdService.generateDeterministicOwnershipKaekClaimId(canonicalKaek);
 export const generateDeterministicTaxIdentityClaimId = (taxIdHmac: string) =>
   enterpriseIdService.generateDeterministicTaxIdentityClaimId(taxIdHmac);
+// ADR-900 §8 #2 (2β.4) — η δημόσια μονάδα, από σπόρο HMAC (ποτέ τον ΚΑΕΚ).
+export const generateDeterministicPublicUnitId = (unitSeed: string) =>
+  enterpriseIdService.generateDeterministicPublicUnitId(unitSeed);
 // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. Εξάγεται **μαζί** με τη μέθοδο, όχι αργότερα:
 // το `mreq` έμεινε άφταστο από το facade και η ΜΟΝΑΔΙΚΗ πηγή ταυτοτήτων (N.6) ήταν
 // απρόσιτη για τον γραφέα — δηλαδή ο επόμενος θα έγραφε χειρόγραφο id. Δεύτερη φορά

@@ -33,7 +33,8 @@
  *    Ένα `outline` δίπλα σε `provenance: 'osm'` **δεν μεταγλωττίζεται**.
  */
 
-import type { LocationProvenance, Attested } from '@/lib/location/location-provenance';
+import type { LocationProvenance, Attested, PlaceFactSource } from '@/lib/location/location-provenance';
+import type { FloorRef } from '@/lib/floor/floor-ref';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { GeoPoint, GeoOutline } from './coordinates';
 
@@ -255,6 +256,48 @@ export interface PublicBuilding {
   readonly constructionYear: Attested<number> | null;
   /** Χρήση, ως κωδικός λεξιλογίου — **ποτέ** ελεύθερο κείμενο προς εμφάνιση (N.11). */
   readonly useCode: Attested<string> | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+// ============================================================================
+// ΜΟΝΑΔΑ — οριζόντια ιδιοκτησία με επαληθευμένο ΚΑΕΚ (ADR-900 §8 #2, 2β.4)
+// ============================================================================
+
+/**
+ * Ο κύκλος ζωής της μονάδας — του **UPRN**: η ταυτότητα δεν ξαναδίνεται ποτέ και ακολουθεί το σπίτι ως την
+ * κατεδάφιση· ό,τι πάψει να ισχύει γίνεται `historical`, **ποτέ** διαγραφή. Η αλλαγή κατόχου **δεν** αγγίζει
+ * τον κύκλο (η μονάδα είναι φυσικό γεγονός, η απόδειξη είναι ανά κάτοχο).
+ */
+export const PUBLIC_UNIT_STATUSES = ['approved', 'historical'] as const;
+
+export type PublicUnitStatus = (typeof PUBLIC_UNIT_STATUSES)[number];
+
+/**
+ * **ΜΟΝΑΔΑ του κόσμου** — UPRN-παιδί του {@link PublicBuilding}. Γεννιέται **μόνο** από επαληθευμένο ΚΑΕΚ
+ * ιδιοκτησίας (`/Κ/Ο`), μέσα στη συναλλαγή του κριτή κατοχής (απόφαση Giorgio Ε1).
+ *
+ * 🔴 **Δεν κουβαλά ΚΑΝΕΝΑ από αυτά — και η απουσία τους είναι το συμβόλαιο** (SPEC-777A §14.4 κανόνας 4):
+ * - **ΚΑΕΚ**: η αγγελία δείχνει κτίριο + όροφο (Ε2)· ΚΑΕΚ εδώ ⇒ η σύζευξη αποκαλύπτει τον ΚΑΕΚ της αγγελίας.
+ *   Η ταυτότητα `punit_*` είναι HMAC (αδιαφανής, όπως το `zpid`), άρα ούτε αυτή τον αποκαλύπτει.
+ * - **πόρτα** (`unitNumber`), **κάτοχος** (uid, όνομα, ΑΦΜ, `ovr_*`), **εμπορικό** οτιδήποτε.
+ */
+export interface PublicUnit {
+  /** `punit_*` — ντετερμινιστικό από HMAC του κλειδιού `cadastral` (N.6). */
+  readonly id: string;
+  /** FK → {@link PublicLand}. */
+  readonly landId: string;
+  /** FK → {@link PublicBuilding}. **Υποχρεωτικό**: οριζόντια ιδιοκτησία χωρίς κτίριο δεν υπάρχει. */
+  readonly buildingId: string;
+  /** Η στάθμη — με προέλευση (§14.3): σήμερα `declared` από τον επαληθευμένο κάτοχο, αύριο `cadastre`. */
+  readonly level: Attested<FloorRef> | null;
+  /** Γιατί υπάρχει: το Κτηματολόγιο (επαληθευμένο ΠΚΑ) — πρώτη και τελευταία βεβαίωση. */
+  readonly existence: {
+    readonly source: Extract<PlaceFactSource, 'cadastre'>;
+    readonly firstAttestedAt: string;
+    readonly lastAttestedAt: string;
+  };
+  readonly status: PublicUnitStatus;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

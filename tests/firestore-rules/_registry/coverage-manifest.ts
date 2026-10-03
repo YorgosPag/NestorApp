@@ -220,6 +220,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...publicWorldMatrix(),
   },
   {
+    // ADR-900 §8 #2 (2β.4) — Η ΜΟΝΑΔΑ του κόσμου (UPRN-παιδί). Γραφέας μόνο ο κριτής κατοχής.
+    collection: 'public_units',
+    pattern: 'public_world',
+    testFile: 'tests/firestore-rules/suites/public-units.rules.test.ts',
+    ...publicWorldMatrix(),
+  },
+  {
     // ADR-777 Α3/Α5/Α20 — Η ΠΡΟΒΟΛΗ της αγγελίας προς τον κόσμο.
     //
     // ⚠️ Ίδιο ΣΧΗΜΑ κανόνα με το `public_world` (read: true / write: false), αλλά

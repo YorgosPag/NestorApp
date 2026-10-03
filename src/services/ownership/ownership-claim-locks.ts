@@ -9,6 +9,10 @@
  *
  * Τις χρησιμοποιούν **δύο** γραφείς — η υποβολή (αυτόματη κρίση) και η ουρά ελέγχου (απόφαση ανθρώπου) —
  * και γράφουν **το ίδιο** σχήμα από **εδώ**.
+ *
+ * 🏢 **Και η δημόσια μονάδα γεννιέται ΕΔΩ** (ADR-900 §8 #2, 2β.4 · απόφαση Ε1): η κλειδαριά του ΚΑΕΚ και η
+ * μονάδα του ΚΑΕΚ είναι **η ίδια πράξη** — «αυτή η ιδιοκτησία αποδείχθηκε». Δεμένες στο ίδιο ζεύγος
+ * ανάγνωσης/εγγραφής, και οι δύο δρόμοι προς `verified` τη γεννούν ατομικά, χωρίς να το θυμάται κανείς.
  */
 
 import 'server-only';
@@ -20,6 +24,7 @@ import {
   generateDeterministicOwnershipKaekClaimId,
   generateDeterministicTaxIdentityClaimId,
 } from '@/services/enterprise-id.service';
+import { readPublicUnitSlot, writePublicUnit, type PublicUnitSlot } from '@/services/places/public-unit-write';
 import type { OwnershipVerification } from '@/types/ownership-verification';
 
 export interface ClaimLocks {
@@ -29,18 +34,21 @@ export interface ClaimLocks {
   /** Η επαλήθευση που κρατά σήμερα τον ΚΑΕΚ — για να γίνει `superseded` όταν αλλάξει χέρια. */
   readonly kaekVerificationId: string | null;
   readonly taxIdHolderUid: string | null;
+  /** Η θέση της δημόσιας μονάδας του ΚΑΕΚ — διαβασμένη **μαζί** με τις κλειδαριές, πριν από κάθε εγγραφή. */
+  readonly unitSlot: PublicUnitSlot;
 }
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-/** Διαβάζει τις δύο κλειδαριές **μέσα** στη συναλλαγή. */
+/** Διαβάζει τις δύο κλειδαριές (και τη θέση της μονάδας) **μέσα** στη συναλλαγή. */
 export async function readClaimLocks(
   db: AdminFirestore,
   tx: Transaction,
   kaek: string | null,
   taxIdHmac: string,
+  ownerPropertyId: string,
 ): Promise<ClaimLocks> {
   const kaekRef =
     kaek === null
@@ -49,7 +57,9 @@ export async function readClaimLocks(
   const taxRef = db.collection(COLLECTIONS.TAX_IDENTITY_CLAIMS).doc(generateDeterministicTaxIdentityClaimId(taxIdHmac));
   const kaekSnap = kaekRef === null ? null : await tx.get(kaekRef);
   const taxSnap = await tx.get(taxRef);
+  const unitSlot = await readPublicUnitSlot(db, tx, ownerPropertyId, kaek);
   return {
+    unitSlot,
     kaekRef,
     taxRef,
     kaekHolderUid: stringOrNull(kaekSnap?.get('uid')),
@@ -86,6 +96,8 @@ export function writeClaimLocks(
       verificationId: record.id,
       claimedAt: at,
     });
+    // Ίδια συνθήκη με την κλειδαριά: καμία μονάδα χωρίς απόδειξη, καμία απόδειξη χωρίς μονάδα.
+    writePublicUnit(tx, locks.unitSlot, at);
   }
   tx.set(locks.taxRef, { uid: record.uid, last3: taxIdLast3, claimedAt: at });
 }

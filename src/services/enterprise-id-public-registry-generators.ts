@@ -52,6 +52,18 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   generatePublicBuildingId(): string { return this.generateId(P.PUBLIC_BUILDING).id; }
 
   /**
+   * ADR-900 §8 #2 (2β.4) — id της δημόσιας ΜΟΝΑΔΑΣ (`punit_*`), **ντετερμινιστικό** από τον σπόρο του
+   * `server/places/public-unit-seed.ts` (HMAC του κλειδιού `cadastral`): ίδιος ΚΑΕΚ ⇒ ίδιο έγγραφο ⇒ η
+   * δεύτερη επαλήθευση (ή ο νέος κάτοχος) βρίσκει **την ίδια** μονάδα, όπως το UPRN που «δεν ξαναδίνεται ποτέ».
+   *
+   * 🔴 **Ποτέ ο ΚΑΕΚ ως σπόρος**: η μηχανή δεν έχει κλειδί και ο χώρος `/Κ/Ο` ενός γνωστού γεωτεμαχίου είναι
+   * μικρός ⇒ το id θα αντιστρεφόταν εξαντλητικά και θα δημοσίευε τον ΚΑΕΚ (απόφαση Ε2).
+   */
+  generateDeterministicPublicUnitId(unitSeed: string): string {
+    return this.mintDeterministicV4Id(P.PUBLIC_UNIT, unitSeed);
+  }
+
+  /**
    * ADR-777 Α20 — id μιας ΔΙΑΘΕΣΗΣ (`offr_*`).
    *
    * 🔴 Καλείται **μία φορά**, όταν γεννιέται η διάθεση, και ποτέ ξανά — ίδιο συμβόλαιο με

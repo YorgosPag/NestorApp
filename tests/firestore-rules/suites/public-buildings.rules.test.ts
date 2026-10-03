@@ -20,67 +20,40 @@
  * @since 2026-08-09 (ADR-777 Β1)
  */
 
-import {
-  initEmulator,
-  teardownEmulator,
-  resetData,
-} from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
-import { assertCell, type AssertTarget } from '../_harness/assertions';
-import { seedPublicLand, seedPublicBuilding } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import { useDenyAllEmulator } from '../_harness/deny-all-suite';
+import { definePublicWorldCell, type PublicWorldFixture } from '../_harness/public-world-suite';
+import { seedPublicLand, seedPublicBuilding } from '../_harness/seed-helpers';
 
-export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
-  (c) => c.collection === 'public_buildings',
-)!;
+export const COVERAGE = FIRESTORE_RULES_COVERAGE.find((c) => c.collection === 'public_buildings')!;
+
+const LAND_ID = 'land-public-1';
+
+const FIXTURE: PublicWorldFixture = {
+  collection: 'public_buildings',
+  docId: 'pbld-public-1',
+  // Η γη σπέρνεται πρώτη: το κτίριο ΚΛΗΡΟΝΟΜΕΙ τη θέση από εκεί (Α1), οπότε
+  // ένα κτίριο με `landId` που δεν δείχνει πουθενά δεν είναι ρεαλιστικό seed.
+  seed: async (env) => {
+    await seedPublicLand(env, LAND_ID);
+    await seedPublicBuilding(env, 'pbld-public-1', LAND_ID);
+  },
+  data: { useCode: null },
+  createData: {
+    landId: LAND_ID,
+    footprint: { kind: 'unknown' },
+    floorsAboveGround: null,
+    constructionYear: null,
+    useCode: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+};
 
 describe('public_buildings.rules — public_world (ADR-777 επίπεδο Α)', () => {
-  let env: RulesTestEnvironment;
-
-  beforeAll(async () => {
-    env = await initEmulator();
-  });
-
-  afterAll(async () => {
-    await teardownEmulator(env);
-  });
-
-  afterEach(async () => {
-    await resetData(env);
-  });
+  const env = useDenyAllEmulator();
 
   for (const cell of COVERAGE.matrix) {
-    describe(`${cell.persona} × ${cell.operation}`, () => {
-      it(`should ${cell.outcome}${cell.reason ? ` (${cell.reason})` : ''}`, async () => {
-        const landId = 'land-public-1';
-        const docId = 'pbld-public-1';
-
-        // Η γη σπέρνεται πρώτη: το κτίριο ΚΛΗΡΟΝΟΜΕΙ τη θέση από εκεί (Α1), οπότε
-        // ένα κτίριο με `landId` που δεν δείχνει πουθενά δεν είναι ρεαλιστικό seed.
-        await seedPublicLand(env, landId);
-        await seedPublicBuilding(env, docId, landId);
-
-        const ctx = getContext(env, cell.persona);
-
-        const target: AssertTarget = {
-          collection: 'public_buildings',
-          docId,
-          data: { useCode: null },
-          createData: {
-            landId,
-            footprint: { kind: 'unknown' },
-            floorsAboveGround: null,
-            constructionYear: null,
-            useCode: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          // ⚠️ ΚΑΝΕΝΑ listFilter — βλ. public-lands.rules.test.ts.
-        };
-
-        await assertCell(ctx, cell, target);
-      });
-    });
+    definePublicWorldCell(env, cell, FIXTURE);
   }
 });

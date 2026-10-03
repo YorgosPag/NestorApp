@@ -44,6 +44,13 @@ export const COLLECTIONS = {
   PUBLIC_BUILDINGS: process.env.NEXT_PUBLIC_PUBLIC_BUILDINGS_COLLECTION || 'public_buildings',
 
   /**
+   * 🌍 ADR-900 §8 #2 (2β.4) — **Η ΜΟΝΑΔΑ του κόσμου** (UPRN-παιδί του κτιρίου). IDs = `punit_*`, ντετερμινιστικά
+   * από HMAC του επαληθευμένου ΚΑΕΚ (αδιαφανή). Γεννιέται **μόνο** μέσα στη συναλλαγή του κριτή κατοχής·
+   * **χωρίς** κάτοχο, ΚΑΕΚ, πόρτα (SPEC-777A §14.4 κανόνας 4).
+   */
+  PUBLIC_UNITS: process.env.NEXT_PUBLIC_PUBLIC_UNITS_COLLECTION || 'public_units',
+
+  /**
    * 🌍 ADR-777 Α3/Α5/Α20 — **Η ΠΡΟΒΟΛΗ ΑΝΑΓΝΩΣΗΣ της αγγελίας.** IDs = **το ίδιο το
    * `propertyId`** (σχέση 1:1, ταυτότητα καθρεφτισμένη — **καμία νέα γεννήτρια**, N.6).
    *

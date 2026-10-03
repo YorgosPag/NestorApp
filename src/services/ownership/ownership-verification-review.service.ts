@@ -112,7 +112,7 @@ async function applyDecision(
   };
   if (input.decision === 'approve') {
     if (current.kaek === null) return refused('kaek-missing');
-    const locks = await readClaimLocks(db, tx, current.kaek, current.claimant.taxId.hmac);
+    const locks = await readClaimLocks(db, tx, current.kaek, current.claimant.taxId.hmac, current.ownerPropertyId);
     if (locks.taxIdHolderUid !== null && locks.taxIdHolderUid !== current.uid) return refused('tax-id-claimed-elsewhere');
     writeClaimLocks(db, tx, locks, decided, current.claimant.taxId.last3);
   }

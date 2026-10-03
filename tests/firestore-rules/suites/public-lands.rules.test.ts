@@ -24,64 +24,31 @@
  * @since 2026-08-09 (ADR-777 Β1)
  */
 
-import {
-  initEmulator,
-  teardownEmulator,
-  resetData,
-} from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
-import { assertCell, type AssertTarget } from '../_harness/assertions';
-import { seedPublicLand } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import { useDenyAllEmulator } from '../_harness/deny-all-suite';
+import { definePublicWorldCell, type PublicWorldFixture } from '../_harness/public-world-suite';
+import { seedPublicLand } from '../_harness/seed-helpers';
 
-export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
-  (c) => c.collection === 'public_lands',
-)!;
+export const COVERAGE = FIRESTORE_RULES_COVERAGE.find((c) => c.collection === 'public_lands')!;
+
+const FIXTURE: PublicWorldFixture = {
+  collection: 'public_lands',
+  docId: 'land-public-1',
+  seed: (env) => seedPublicLand(env, 'land-public-1'),
+  data: { displayAddress: 'ΟΔΟΣ ΔΟΚΙΜΗΣ 1' },
+  createData: {
+    position: { kind: 'unknown' },
+    displayAddress: null,
+    areaSqm: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+};
 
 describe('public_lands.rules — public_world (ADR-777 επίπεδο Α)', () => {
-  let env: RulesTestEnvironment;
-
-  beforeAll(async () => {
-    env = await initEmulator();
-  });
-
-  afterAll(async () => {
-    await teardownEmulator(env);
-  });
-
-  afterEach(async () => {
-    await resetData(env);
-  });
+  const env = useDenyAllEmulator();
 
   for (const cell of COVERAGE.matrix) {
-    describe(`${cell.persona} × ${cell.operation}`, () => {
-      it(`should ${cell.outcome}${cell.reason ? ` (${cell.reason})` : ''}`, async () => {
-        const docId = 'land-public-1';
-        await seedPublicLand(env, docId);
-
-        const ctx = getContext(env, cell.persona);
-
-        const target: AssertTarget = {
-          collection: 'public_lands',
-          docId,
-          // Το update payload είναι αδιάφορο (ο κανόνας είναι `if false`), αλλά
-          // μη κενό ώστε να μη χρησιμοποιηθεί placeholder fallback.
-          data: { displayAddress: 'ΟΔΟΣ ΔΟΚΙΜΗΣ 1' },
-          createData: {
-            position: { kind: 'unknown' },
-            displayAddress: null,
-            areaSqm: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          // ⚠️ ΚΑΝΕΝΑ listFilter: δεν υπάρχει `companyId` να φιλτράρει. Η ΑΦΙΛΤΡΑΡΙΣΤΗ
-          // λίστα είναι εδώ **νόμιμη** — και είναι ακριβώς αυτό που πρέπει να
-          // αποδειχθεί ότι επιτρέπεται.
-        };
-
-        await assertCell(ctx, cell, target);
-      });
-    });
+    definePublicWorldCell(env, cell, FIXTURE);
   }
 });

@@ -32,6 +32,8 @@ const PUBLIC_READS = Object.freeze({
     'Δημόσιο αντίγραφο οικοπέδου αγγελίας (ADR-777): γραφέας μόνο ο server, διαβάζεται από τον επισκέπτη χωρίς λογαριασμό.',
   'firestore.rules :: /public_buildings/{buildingId} :: read':
     'Δημόσιο αντίγραφο κτιρίου αγγελίας (ADR-777): γραφέας μόνο ο server, διαβάζεται από τον επισκέπτη χωρίς λογαριασμό.',
+  'firestore.rules :: /public_units/{unitId} :: read':
+    'Η δημόσια μονάδα με επαληθευμένο ΚΑΕΚ (ADR-900 §8 #2): γραφέας μόνο ο κριτής κατοχής, χωρίς κάτοχο/ΚΑΕΚ/πόρτα.',
   'firestore.rules :: /public_listings/{listingId} :: read':
     'Η δημόσια αγγελία (ADR-777): γραφέας μόνο ο server μέσω του συνόρου ανάγνωσης, για κάθε επισκέπτη χωρίς λογαριασμό.',
   'firestore.rules :: /agency_profiles/{companyId} :: read':

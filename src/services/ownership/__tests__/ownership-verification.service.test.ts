@@ -12,7 +12,9 @@
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import type { PdfSealVerdict } from '@/server/pdf-seal/pdf-seal.types';
+import type { OwnerProperty } from '@/types/owner-property';
 import { submitOwnershipVerification, type SubmitDeps } from '../ownership-verification.service';
+import { decideOwnershipReview } from '../ownership-verification-review.service';
 import { isVerifiedOwner } from '../verified-ownership.reader';
 
 jest.mock('server-only', () => ({}));
@@ -29,6 +31,7 @@ const TAX_B = '123535891';
 const KAEK = '050681726003/0/1';
 
 process.env.OWNERSHIP_TAX_ID_HMAC_SECRET = 'test-secret-for-hmac';
+process.env.PUBLIC_UNIT_ID_HMAC_SECRET = 'test-secret-for-public-unit';
 
 const asAdmin = (fake: FakeFirestore) => fake as unknown as Parameters<typeof submitOwnershipVerification>[0];
 
@@ -36,8 +39,8 @@ function seedAccount(fake: FakeFirestore, uid: string, givenName: string, family
   fake.seed('users', uid, { givenName, familyName, email: `${uid}@example.test`, vatNumber });
 }
 
-function seedListing(fake: FakeFirestore, id: string, uid: string) {
-  fake.seed('owner_properties', id, { ...validOwnerProperty({ id, authorUserId: uid }), dossierId: `pdos_${id}` });
+function seedListing(fake: FakeFirestore, id: string, uid: string, overrides: Partial<OwnerProperty> = {}) {
+  fake.seed('owner_properties', id, { ...validOwnerProperty({ id, authorUserId: uid, ...overrides }), dossierId: `pdos_${id}` });
   fake.seed('files_personal', `file_${id}`, {
     userId: uid, entityType: 'property_dossier', entityId: `pdos_${id}`,
     status: 'ready', contentType: 'application/pdf', storagePath: `x/${id}.pdf`,
@@ -142,5 +145,83 @@ describe('Υ7 — ελαχιστοποίηση', () => {
     ]);
     expect(written).not.toContain(TAX_A);
     expect(written).toContain('"last3":"709"');
+  });
+});
+
+// ── Υ8 — η ΔΗΜΟΣΙΑ ΜΟΝΑΔΑ (ADR-900 §8 #2, 2β.4 · απόφαση Ε1) ─────────────────────────────────────────────
+const linkedTo = (buildingId: string | null, floor = 3): Partial<OwnerProperty> => ({
+  floor,
+  place: {
+    kind: 'declared',
+    point: { lat: 40.63, lng: 22.95 },
+    label: 'Εγνατίας 147, Θεσσαλονίκη',
+    accuracy: 'exact',
+    link: { landId: 'land_1', buildingId },
+  },
+});
+
+function linkedWorld(buildingId: string | null = 'pbld_1'): FakeFirestore {
+  const fake = world();
+  seedListing(fake, 'ownp_a', 'user-1', linkedTo(buildingId));
+  seedListing(fake, 'ownp_b', 'user-2', linkedTo(buildingId, 5));
+  return fake;
+}
+
+const units = (fake: FakeFirestore) => fake.getAllDocs('public_units');
+
+describe('Υ8 — η δημόσια μονάδα γεννιέται ΜΟΝΟ από επαληθευμένο ΚΑΕΚ, μέσα στη συναλλαγή του κριτή', () => {
+  it('verified + δεσμός κτιρίου ⇒ ΜΙΑ `punit_*` με κτίριο + στάθμη (declared) + Κτηματολόγιο', async () => {
+    const fake = linkedWorld();
+    await submit(fake, 'user-1', 'ownp_a', deps(TRUSTED_SEAL, OWNER_LINE));
+    const [[id, unit]] = Object.entries(units(fake));
+    expect(id).toMatch(/^punit_/);
+    expect(unit).toMatchObject({
+      landId: 'land_1',
+      buildingId: 'pbld_1',
+      level: { value: { number: 3, kind: 'standard' }, source: 'declared', attestedAt: NOW },
+      existence: { source: 'cadastre', firstAttestedAt: NOW, lastAttestedAt: NOW },
+      status: 'approved',
+    });
+  });
+
+  it('🔒 ΚΑΝΕΝΑ στοιχείο κατόχου, ΚΑΕΚ ή πόρτας — ούτε στο σώμα, ούτε στο id (Ε2 · §14.4 κανόνας 4)', async () => {
+    const fake = linkedWorld();
+    await submit(fake, 'user-1', 'ownp_a', deps(TRUSTED_SEAL, OWNER_LINE));
+    const written = JSON.stringify(Object.entries(units(fake)));
+    for (const secret of ['050681726003', 'user-1', 'ownp_a', 'ovr_', 'Β2', TAX_A, 'Παπαδόπουλος']) {
+      expect(written).not.toContain(secret);
+    }
+    expect(Object.keys(Object.values(units(fake))[0] as object).sort()).toEqual(
+      ['buildingId', 'createdAt', 'existence', 'landId', 'level', 'status', 'updatedAt'],
+    );
+  });
+
+  it('καμία ψευδο-μονάδα: χωρίς κτίριο ⇒ τίποτα · χωρίς επαλήθευση (ουρά) ⇒ τίποτα', async () => {
+    const landOnly = linkedWorld(null);
+    await submit(landOnly, 'user-1', 'ownp_a', deps(TRUSTED_SEAL, OWNER_LINE));
+    expect(units(landOnly)).toEqual({});
+
+    const pending = linkedWorld();
+    await submit(pending, 'user-1', 'ownp_a', deps({ ...TRUSTED_SEAL, chainTrusted: false }, OWNER_LINE));
+    expect(units(pending)).toEqual({});
+  });
+
+  it('🔑 κύκλος UPRN: νέος κάτοχος (ουρά → έγκριση ⇒ superseded) = ΙΔΙΑ μονάδα· η ισόβαθμη δήλωση ΔΕΝ αλλάζει τη στάθμη', async () => {
+    const fake = linkedWorld();
+    await submit(fake, 'user-1', 'ownp_a', deps(TRUSTED_SEAL, OWNER_LINE));
+    const second = await submit(fake, 'user-2', 'ownp_b', deps(TRUSTED_SEAL, `ΔΙΚΑΙΟΥΧΟΣ: ΓΕΩΡΓΙΟΥ ΝΙΚΟΣ ΑΦΜ: ${TAX_B}`));
+    const pendingId = second.kind === 'judged' ? second.view.id : '';
+    const LATER = '2026-10-05T09:00:00.000Z';
+    await decideOwnershipReview(asAdmin(fake), {
+      verificationId: pendingId, reviewerUid: 'admin-1', decision: 'approve', note: null, nowIso: LATER,
+    });
+
+    const all = Object.values(units(fake));
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({
+      level: { value: { number: 3 }, source: 'declared', attestedAt: NOW },
+      existence: { firstAttestedAt: NOW, lastAttestedAt: LATER },
+      status: 'approved',
+    });
   });
 });
