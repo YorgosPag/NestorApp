@@ -15,6 +15,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Slider } from '@/components/ui/slider';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { MAX_TOUR_REDACTIONS, TOUR_REDACTION_MAX_RADIUS_RAD, TOUR_REDACTION_MIN_RADIUS_RAD } from '@/constants/spatial-tour-vocabulary';
@@ -94,8 +95,8 @@ export function TourRedactionTools({ tool, scene }: { readonly tool: RedactionTo
       <h3 id="tour-redaction-heading" className="text-sm font-semibold">{t(TOUR_REDACTION_KEYS.title)}</h3>
       <p className="text-sm text-muted-foreground">{t(TOUR_REDACTION_KEYS.hint)}</p>
       <p className="m-0 flex flex-wrap gap-2">
-        <Button type="button" variant={tool.brush ? 'default' : 'outline'} size="sm" aria-pressed={tool.brush}
-          onClick={() => tool.setBrush(!tool.brush)}>{t(TOUR_REDACTION_KEYS.brush)}</Button>
+        <ToggleButton type="button" size="sm" pressed={tool.brush}
+          onClick={() => tool.setBrush(!tool.brush)}>{t(TOUR_REDACTION_KEYS.brush)}</ToggleButton>
         <Button type="button" variant="secondary" size="sm" disabled={working.length >= MAX_TOUR_REDACTIONS} onClick={atReticle}>
           {t(TOUR_REDACTION_KEYS.atReticle)}
         </Button>

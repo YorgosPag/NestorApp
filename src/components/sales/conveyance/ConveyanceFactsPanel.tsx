@@ -11,7 +11,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { CONVEYANCE_FACT_IDS, type ConveyanceFactId } from '@/config/conveyance-checklist/types';
@@ -42,12 +42,12 @@ function FactRow({ factId, value, derived, canEdit, onAnswer }: FactRowProps) {
       <span className="text-sm">{t(`facts.${factId}.question`)}</span>
       <span className="flex items-center gap-1">
         {derived && <Badge variant="muted">{t('facts.derived')}</Badge>}
-        <Button size="sm" variant={value === true ? 'default' : 'outline'} disabled={!canEdit} aria-pressed={value === true} onClick={() => choose(true)}>
+        <ToggleButton size="sm" pressed={value === true} disabled={!canEdit} onClick={() => choose(true)}>
           {t('facts.yes')}
-        </Button>
-        <Button size="sm" variant={value === false ? 'default' : 'outline'} disabled={!canEdit} aria-pressed={value === false} onClick={() => choose(false)}>
+        </ToggleButton>
+        <ToggleButton size="sm" pressed={value === false} disabled={!canEdit} onClick={() => choose(false)}>
           {t('facts.no')}
-        </Button>
+        </ToggleButton>
       </span>
     </li>
   );

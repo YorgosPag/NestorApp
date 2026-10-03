@@ -138,8 +138,8 @@ export const INTERACTIVE_PATTERNS = {
   CARD_STANDARD: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_TINY} ${HOVER_SHADOWS.ENHANCED}`,
   /** Card με lift effect */
   CARD_PREMIUM: `transition-all duration-300 ${CORE_HOVER_TRANSFORMS.SCALE_AND_LIFT} ${HOVER_SHADOWS.DRAMATIC}`,
-  /** Link hover pattern */
-  LINK_STANDARD: 'transition-colors duration-150 hover:text-primary',
+  /** Link hover pattern — ρόλος συνδέσμου (ADR-770 §20) */
+  LINK_STANDARD: 'transition-colors duration-150 hover:text-link-hover',
   /** Icon hover pattern */
   ICON_STANDARD: `transition-transform duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL}`,
   /** Avatar hover pattern */
@@ -165,8 +165,8 @@ export const INTERACTIVE_PATTERNS = {
   ACCENT_HOVER: 'transition-colors duration-200 hover:bg-accent hover:text-accent-foreground',
   /** Subtle hover για minimal interactions */
   SUBTLE_HOVER: 'transition-colors duration-150 hover:bg-muted/50 hover:text-foreground',
-  /** Link primary color hover */
-  LINK_PRIMARY: 'transition-colors duration-150 hover:text-primary hover:underline',
+  /** Link hover — ο ΡΟΛΟΣ συνδέσμου (`--link-color-hover`), ΠΟΤΕ η επιφάνεια `--primary` (ADR-770 §20) */
+  LINK_PRIMARY: 'transition-colors duration-150 hover:text-link-hover hover:underline',
   /** Border subtle hover για cards */
   BORDER_SUBTLE: 'transition-colors duration-200 hover:border-border/80',
   /** Fade in/out effect για icons */

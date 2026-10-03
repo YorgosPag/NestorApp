@@ -192,6 +192,22 @@ export default {
           DEFAULT: 'hsl(var(--text-error) / <alpha-value>)',
           foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
         },
+
+        /**
+         * 🔗 **Ο ΡΟΛΟΣ ΣΥΝΔΕΣΜΟΥ** (ADR-770 §20, εύρημα Ε1 του ADR-898 §21.6).
+         *
+         * Το `<Button variant="link">` έβαφε με `text-primary` — δηλαδή με την
+         * **επιφάνεια** `--primary`, που στο σκοτεινό θέμα είναι ≈ το `--card` ⇒
+         * μετρημένο ζωντανά **1,18:1**: κάθε σύνδεσμος της εφαρμογής αόρατος.
+         * Η οικογένεια `--link-color*` (ADR-074) υπήρχε ήδη ως **μελάνι** συνδέσμου·
+         * εδώ γίνεται κλάση ⇒ `text-link` · `hover:text-link-hover` ·
+         * `visited:text-link-visited`. Ίδιο σχήμα με το `destructive` πιο πάνω.
+         */
+        link: {
+          DEFAULT: 'hsl(var(--link-color) / <alpha-value>)',
+          hover: 'hsl(var(--link-color-hover) / <alpha-value>)',
+          visited: 'hsl(var(--link-color-visited) / <alpha-value>)',
+        },
       },
       // 🏢 ENTERPRISE SPACING SYSTEM - CSS Variables Integration
       spacing: {

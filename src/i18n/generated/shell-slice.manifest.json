@@ -110,7 +110,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "49d6e0e8741fb2411b7f3aecd9ce0f9264f4c561db66a7b6cbeafc1e98441f09",
+  "inputsSha256": "66e7e7a1da0bf188f885ed7851181eb5c0954016bddacec2e0b631bdef7394ec",
   "languages": [
     "el"
   ],
@@ -10251,7 +10251,7 @@
     "src/components/ui/dialog.tsx": "5bb902d46036f10ef7f1c77205f3f3705d63bea609eb1b5c1f83e8fd970af507",
     "src/components/ui/dropdown-menu/parts.tsx": "822e6621a278993bc0f6bdeaedd2f8ae81d4eef23be514aac6e81fafa737a2a4",
     "src/components/ui/dropdown-menu/primitives.tsx": "863d44ba33b889249658c9993bf604cb67a931ed89cdb36745fb8a56808111b1",
-    "src/components/ui/effects/hover-effects.ts": "c906beed8375139a475333c633e680cd8ec44ccf9c5b59176a1afb4b12f262f5",
+    "src/components/ui/effects/hover-effects.ts": "c37af38e712c570a57716c2623434f00a50eef0c56feafb493aafc137cbb839b",
     "src/components/ui/effects/transitions.ts": "aa5dea95a1f7c675c7df5737f8dc7af24758e7c0453b71192fa7195b8b024bca",
     "src/components/ui/email-sharing/ContactEmailPicker.tsx": "2f5aced727463d24dafe4fb79f0cdae82ee16a091abe0b973c38cd2e866b42f5",
     "src/components/ui/email-sharing/EmailShareForm.tsx": "3797015f38f0023c7246117c55a82f771b280b74ad2a15559ed033b937f26c07",

@@ -43,11 +43,16 @@
        making hover look darker than base when it is lighter).
        Values below are conversions of the HSL triples, not aspirations.
        Reproduce: node scripts/lib/contrast/wcag-contrast.js consumers, or
-       `npm run measure:text-primary`. Raising these to AA is a token decision,
-       deliberately NOT taken here. */
-    --link-color: 221 83% 53%;           /* #2463eb ≈ Blue-600 · on --background 4.28:1 · on --card 4.54:1 */
-    --link-color-hover: 217 91% 60%;     /* #3c83f6 ≈ Blue-500 · on --background 3.01:1 · on --card 3.19:1 */
-    --link-color-visited: 271 81% 56%;   /* #9234ea ≈ Purple-600 · on --background 4.45:1 · on --card 4.72:1 */
+       `npm run measure:text-primary`.
+       ✅ RAISED TO AA 2026-10-03 (ADR-770 §20): this family is now THE link role —
+       `text-link` / `hover:text-link-hover` / `visited:text-link-visited`
+       (tailwind.config.ts → textColor.link), read by `<Button variant="link">` and
+       INTERACTIVE_PATTERNS.LINK_*. Was 4.28 / 3.01 / 4.45:1 on --background.
+       Hover goes DEEPER on light (and brighter on dark): more emphasis, never less.
+       Ratios on background / card / popover / muted: */
+    --link-color: 224 76% 48%;           /* #1d4fd7 ≈ Blue-700 · 5.51 / 5.84 / 6.18 / 5.72 :1 */
+    --link-color-hover: 226 71% 40%;     /* #1e3fae ≈ Blue-800 · 7.30 / 7.74 / 8.19 / 7.58 :1 */
+    --link-color-visited: 272 72% 47%;   /* #7e22ce ≈ Purple-700 · 5.77 / 6.12 / 6.48 / 6.00 :1 */
 
     --secondary: 213 88% 96%; /* ✅ ENTERPRISE: Refined blue secondary (was grey) */
     --secondary-foreground: 222.2 47.4% 11.2%;

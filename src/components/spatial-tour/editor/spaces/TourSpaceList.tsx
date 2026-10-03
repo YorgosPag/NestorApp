@@ -11,7 +11,7 @@
  *   (μετρήθηκε ζωντανά: λίστα ≈ 9, πάνελ ≈ 10 μετά από σύρσιμο γωνίας).
  */
 
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatNumber } from '@/lib/intl-formatting';
 import { pointInPolygon, polygonArea, type PlanarPoint } from '@/lib/geometry/planar-polygon';
@@ -84,12 +84,12 @@ export function TourSpaceList({ store, spaces, stops, nameOf }: TourSpaceListPro
           const key = selectionKey(row.selection);
           return (
             <li key={key}>
-              <Button type="button" variant={key === selected ? 'secondary' : 'ghost'} aria-pressed={key === selected}
+              <ToggleButton type="button" variant="ghost" pressed={key === selected}
                 className="h-auto w-full flex-col items-start gap-0 py-1 text-left"
                 onClick={() => updateSpaceEditor(store, (s) => selectTarget(s, row.selection))}>
                 <span className="text-sm font-medium">{row.title}</span>
                 <span className="text-xs text-muted-foreground">{row.detail}</span>
-              </Button>
+              </ToggleButton>
             </li>
           );
         })}

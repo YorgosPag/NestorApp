@@ -23,7 +23,7 @@ const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, 
         secondary:
           `${borderTokens.quick.button} bg-secondary text-secondary-foreground ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         ghost: `border-transparent ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
-        link: `text-primary underline-offset-4 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`,
+        link: `text-link underline-offset-4 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`,
       },
       size: {
         default: "h-10 px-4 py-2 rounded-md",
