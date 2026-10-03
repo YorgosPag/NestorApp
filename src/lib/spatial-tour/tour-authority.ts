@@ -22,7 +22,7 @@
  */
 
 import type { PlaceSource } from '@/constants/place-sources';
-import type { TourAccessStanding, TourGrantScope } from '@/constants/spatial-tour-vocabulary';
+import type { TourAccessStanding, TourGrantScope, TourGrantStanding } from '@/constants/spatial-tour-vocabulary';
 import { decideCapability } from '@/lib/auth/authority';
 import { evaluateScopedGrant, type ScopedGrant, type ScopedGrantVerdict } from '@/lib/auth/scoped-grant';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
@@ -139,8 +139,8 @@ export function mayUploadTourCapture(
 /** Το εύρος που δίνει ένα εγκεκριμένο αίτημα θέασης — σταθερό, άρα **δεν** αποθηκεύεται στο έγγραφο. */
 const VIEW_SCOPES = ['tour:view'] as const;
 
-/** Η θέση μιας **άδειας** — το υποσύνολο του λεξιλογίου που παράγει ο κριτής αδειών (όχι οι αποφάσεις ανθρώπου). */
-export type TourGrantStanding = Extract<TourAccessStanding, 'active' | 'revoked' | 'expired' | 'unreadable'>;
+/** Η θέση μιας **άδειας** — ζει στο λεξιλόγιο (`TOUR_GRANT_STANDINGS`)· επανεξάγεται για τους υπάρχοντες καλούντες. */
+export type { TourGrantStanding };
 
 const STANDING_OF_GRANT: Readonly<Record<ScopedGrantVerdict, TourGrantStanding>> = {
   granted: 'active',

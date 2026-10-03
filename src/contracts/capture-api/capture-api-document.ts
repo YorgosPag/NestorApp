@@ -8,6 +8,7 @@
  *  2. **PUT των bytes απευθείας στο `sessionUri`** — πρωτόκολλο της Google (Cloud Storage resumable uploads), **όχι**
  *     δικό μας endpoint· γι' αυτό περιγράφεται στο `x-nestor-upload-protocol` και όχι στα `paths`·
  *  3. `finalizeUpload` → η λήψη (ιδεμπότητη από κατασκευή: ίδιο εισιτήριο ⇒ ίδια λήψη, `replayed: true`).
+ *  0. `listCaptureTargets` (1.1.0, ADR-904 Κ7) → **σε ποια ακίνητα** μπορεί να ανεβάσει ο συνδεδεμένος — το σημείο εκκίνησης.
  *
  * 🔑 **Έκδοση συμβολαίου** ({@link CAPTURE_API_VERSION}, semver): εφαρμογή στο κατάστημα **δεν** ενημερώνεται μαζί με
  * τον διακομιστή. **Major** = σπάσιμο (το πιάνει το `oasdiff` στο CI) · **minor** = προσθήκη (νέο endpoint, νέο
@@ -20,6 +21,7 @@ import type { z } from 'zod/v4';
 
 import { InvitationRedeemBodySchema } from '@/contracts/invitation-redeem-body';
 import { PLACE_SOURCES } from '@/constants/place-sources';
+import { CAPTURE_TARGETS_PAGE_SIZE } from '@/constants/spatial-tour-vocabulary';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENCY_KEY_MAX_LENGTH } from '@/lib/api/idempotency/idempotency-contract';
 
@@ -28,7 +30,7 @@ import { captureApiRules } from './capture-api-rules';
 import * as S from './capture-api-schemas';
 
 /** Η έκδοση του συμβολαίου — δες τους κανόνες semver στην κεφαλίδα. */
-export const CAPTURE_API_VERSION = '1.0.0';
+export const CAPTURE_API_VERSION = '1.1.0';
 
 /** Τα ονομασμένα σχήματα — το όνομα είναι **δημόσιο API** (γίνεται όνομα κλάσης Kotlin): μετονομασία = major. */
 export const CAPTURE_API_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
@@ -46,12 +48,19 @@ export const CAPTURE_API_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
   CaptureTileset: S.CaptureTilesetSchema,
   CaptureReceipt: S.CaptureReceiptSchema,
   FinalizeResponse: S.FinalizeResponseSchema,
+  CaptureSubject: S.CaptureSubjectSchema,
+  CaptureAccessManager: S.CaptureAccessManagerSchema,
+  CaptureAccessGrant: S.CaptureAccessGrantSchema,
+  CaptureAccess: S.CaptureAccessSchema,
+  CaptureTarget: S.CaptureTargetSchema,
+  CaptureTargetsResponse: S.CaptureTargetsResponseSchema,
   InvitationRedeemBody: InvitationRedeemBodySchema,
   InvitationRedeemResponse: S.RedeemInvitationResponseSchema,
   TourRefusedBody: S.TourRefusedBodySchema,
   TourUnavailableBody: S.TourUnavailableBodySchema,
   TourSubjectInvalidBody: S.TourSubjectInvalidBodySchema,
   MalformedBody: S.MalformedBodySchema,
+  MalformedQueryBody: S.MalformedQueryBodySchema,
   InvitationLinkRefusedBody: S.InvitationLinkRefusedBodySchema,
   InvitationRedeemUnavailableBody: S.InvitationRedeemUnavailableBodySchema,
   BoundaryErrorBody: S.BoundaryErrorBodySchema,
@@ -127,6 +136,38 @@ function uploadPaths() {
   };
 }
 
+/** Οι παράμετροι σελίδας (AIP-158) — όρια από το λεξιλόγιο, **όχι** γραμμένα εδώ. */
+const PAGE_PARAMETERS = [
+  {
+    name: 'pageSize', in: 'query', required: false,
+    description: `Απών ή 0 ⇒ ${CAPTURE_TARGETS_PAGE_SIZE.default}· πάνω από ${CAPTURE_TARGETS_PAGE_SIZE.max} ⇒ μειώνεται στο ${CAPTURE_TARGETS_PAGE_SIZE.max}· αρνητικό ⇒ 400.`,
+    schema: { type: 'integer', minimum: 0, default: CAPTURE_TARGETS_PAGE_SIZE.default },
+  },
+  {
+    name: 'pageToken', in: 'query', required: false,
+    description: 'Το `nextPageToken` της προηγούμενης σελίδας, **αυτούσιο** (αδιαφανές). Απών ⇒ πρώτη σελίδα.',
+    schema: { type: 'string', minLength: 1 },
+  },
+] as const;
+
+function targetPaths() {
+  return {
+    '/api/spatial-tours/capture-targets': {
+      get: {
+        operationId: 'listCaptureTargets',
+        summary: 'Τα ακίνητα όπου ο συνδεδεμένος μπορεί να ανεβάσει λήψεις — ως υπεύθυνος ή με άδεια φωτογράφου.',
+        parameters: PAGE_PARAMETERS,
+        responses: {
+          '200': { description: 'Μία σελίδα. Κενό `nextPageToken` ⇒ τέλος.', content: json(ref('CaptureTargetsResponse')) },
+          ...BOUNDARY_RESPONSES,
+          '4XX': { description: 'Κακό query ή χαλασμένο `pageToken` (ξεκίνα από την αρχή).', content: json(anyOfRefs('MalformedQueryBody', 'BoundaryErrorBody')) },
+          '5XX': { description: '«Δεν μπόρεσα» — επαναλήψιμο.', content: json(anyOfRefs('TourUnavailableBody', 'BoundaryErrorBody')) },
+        },
+      },
+    },
+  };
+}
+
 function invitationPaths() {
   return {
     '/api/spatial-tours/capture-invitations/redeem': {
@@ -156,7 +197,7 @@ export function buildCaptureApiDocument() {
       description: 'Παράγεται από τον κώδικα (ADR-904 Ε6) — **ποτέ** επεξεργασία με το χέρι: `npm run generate:capture-api-contract`.',
     },
     security: [{ firebaseIdToken: [] }],
-    paths: { ...uploadPaths(), ...invitationPaths() },
+    paths: { ...targetPaths(), ...uploadPaths(), ...invitationPaths() },
     components: {
       securitySchemes: {
         firebaseIdToken: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'Firebase Auth ID token.' },

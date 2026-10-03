@@ -33,12 +33,16 @@ export interface QuerySpec {
 
 export const EMPTY_SPEC: QuerySpec = { clauses: [], order: null, cap: null, after: null };
 
+/** Το `FieldPath.documentId()` του Admin SDK, σειριοποιημένο — το id του εγγράφου, όχι πεδίο. */
+const DOCUMENT_ID = '__name__';
+
 /**
  * **`orderBy` πιστό στο Firestore** (ADR-890 §17): έγγραφα **χωρίς** το πεδίο **εξαιρούνται** — η παγίδα που κρύβει
  * σιωπηλά έγγραφα· ισοπαλία κατά id **με την ίδια φορά** (ο Firestore προσθέτει σιωπηρά `__name__`).
  */
 function ordered(rows: readonly ScannedDoc[], order: OrderSpec): ScannedDoc[] {
   const sign = order.direction === 'asc' ? 1 : -1;
+  if (order.field === DOCUMENT_ID) return [...rows].sort((a, b) => sign * compareValues(a.id, b.id));
   return rows
     .filter((row) => readPath(row.data, order.field) !== undefined)
     .sort((a, b) => sign * (compareValues(readPath(a.data, order.field), readPath(b.data, order.field)) || compareValues(a.id, b.id)));
@@ -49,6 +53,11 @@ function ordered(rows: readonly ScannedDoc[], order: OrderSpec): ScannedDoc[] {
  * ταξινομείται **αυστηρά μετά** (τιμή, id) — όπως ο Firestore, που θέτει τον δρομέα από τις **τιμές** του στιγμιότυπου.
  */
 function afterCursor(rows: ScannedDoc[], cursor: CursorSpec, order: OrderSpec | null): ScannedDoc[] {
+  // Κατά id: ο δρομέας είναι **θέση** — ό,τι ταξινομείται αυστηρά μετά, ακόμη κι αν εκείνο το έγγραφο σβήστηκε.
+  if (order?.field === DOCUMENT_ID) {
+    const sign = order.direction === 'asc' ? 1 : -1;
+    return rows.filter((row) => sign * compareValues(row.id, cursor.id) > 0);
+  }
   const at = rows.findIndex((row) => row.id === cursor.id);
   if (at !== -1) return rows.slice(at + 1);
   if (order === null || cursor.data === undefined) return [];

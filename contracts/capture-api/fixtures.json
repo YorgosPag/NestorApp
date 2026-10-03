@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.1.0",
   "fixtures": [
     {
       "name": "declaration-camera-perpetual",
@@ -558,6 +558,166 @@
       "body": {
         "error": "LINK_REFUSED",
         "reason": "wrong-recipient"
+      }
+    },
+    {
+      "name": "targets-page-with-next",
+      "component": "CaptureTargetsResponse",
+      "valid": true,
+      "body": {
+        "targets": [
+          {
+            "subject": {
+              "kind": "company-property",
+              "id": "prop_07"
+            },
+            "label": null,
+            "access": {
+              "kind": "capture-grant",
+              "standing": "active",
+              "expiresAt": "2026-10-10T00:00:00.000Z",
+              "reason": "Λήψη σαλονιού και κουζίνας"
+            }
+          },
+          {
+            "subject": {
+              "kind": "owner-property",
+              "id": "oprop_01"
+            },
+            "label": "Μεζονέτα στην Κηφισιά",
+            "access": {
+              "kind": "manager"
+            }
+          }
+        ],
+        "nextPageToken": "eyJzIjoib3duIiwiYSI6Im9wcm9wXzAxIn0"
+      }
+    },
+    {
+      "name": "targets-last-page",
+      "component": "CaptureTargetsResponse",
+      "valid": true,
+      "body": {
+        "targets": [],
+        "nextPageToken": ""
+      }
+    },
+    {
+      "name": "target-grant-expired",
+      "component": "CaptureTarget",
+      "valid": true,
+      "body": {
+        "subject": {
+          "kind": "company-property",
+          "id": "prop_07"
+        },
+        "label": null,
+        "access": {
+          "kind": "capture-grant",
+          "standing": "expired",
+          "expiresAt": "2026-09-01T00:00:00.000Z",
+          "reason": "Λήψη σαλονιού και κουζίνας"
+        }
+      }
+    },
+    {
+      "name": "target-manager-extra-fields",
+      "component": "CaptureTarget",
+      "valid": true,
+      "body": {
+        "subject": {
+          "kind": "owner-property",
+          "id": "oprop_01"
+        },
+        "label": "Μεζονέτα στην Κηφισιά",
+        "access": {
+          "kind": "manager"
+        },
+        "tourId": "tour_01"
+      }
+    },
+    {
+      "name": "target-unknown-kind",
+      "component": "CaptureTarget",
+      "valid": false,
+      "body": {
+        "subject": {
+          "kind": "building",
+          "id": "b_01"
+        },
+        "label": "Μεζονέτα στην Κηφισιά",
+        "access": {
+          "kind": "manager"
+        }
+      }
+    },
+    {
+      "name": "target-unknown-access",
+      "component": "CaptureTarget",
+      "valid": false,
+      "body": {
+        "subject": {
+          "kind": "owner-property",
+          "id": "oprop_01"
+        },
+        "label": "Μεζονέτα στην Κηφισιά",
+        "access": {
+          "kind": "viewer"
+        }
+      }
+    },
+    {
+      "name": "target-grant-unknown-standing",
+      "component": "CaptureTarget",
+      "valid": false,
+      "body": {
+        "subject": {
+          "kind": "company-property",
+          "id": "prop_07"
+        },
+        "label": null,
+        "access": {
+          "kind": "capture-grant",
+          "standing": "pending",
+          "expiresAt": "2026-10-10T00:00:00.000Z",
+          "reason": "Λήψη σαλονιού και κουζίνας"
+        }
+      }
+    },
+    {
+      "name": "target-grant-missing-expiry",
+      "component": "CaptureTarget",
+      "valid": false,
+      "body": {
+        "subject": {
+          "kind": "company-property",
+          "id": "prop_07"
+        },
+        "label": null,
+        "access": {
+          "kind": "capture-grant",
+          "standing": "active",
+          "reason": "Λήψη σαλονιού και κουζίνας"
+        }
+      }
+    },
+    {
+      "name": "targets-missing-next-token",
+      "component": "CaptureTargetsResponse",
+      "valid": false,
+      "body": {
+        "targets": []
+      }
+    },
+    {
+      "name": "malformed-page-token",
+      "component": "MalformedQueryBody",
+      "valid": true,
+      "body": {
+        "error": "MALFORMED_QUERY",
+        "malformed": [
+          "pageToken"
+        ]
       }
     }
   ]

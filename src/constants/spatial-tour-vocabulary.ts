@@ -112,6 +112,19 @@ export const TOUR_ACCESS_STANDINGS = [
 export type TourAccessStanding = (typeof TOUR_ACCESS_STANDINGS)[number];
 
 /**
+ * Η θέση μιας **άδειας** (θέασης ή λήψης) — το υποσύνολο που παράγει ο **κριτής αδειών** (`tourGrantStanding`), όχι οι
+ * αποφάσεις ανθρώπου. Τιμές και όχι μόνο τύπος, επειδή ταξιδεύει στο συμβόλαιο του κινητού (ADR-904 Κ7).
+ */
+export const TOUR_GRANT_STANDINGS = ['active', 'revoked', 'expired', 'unreadable'] as const satisfies readonly TourAccessStanding[];
+export type TourGrantStanding = (typeof TOUR_GRANT_STANDINGS)[number];
+
+/**
+ * **«Τα ακίνητά μου» σε σελίδες** (ADR-904 Κ7, Google AIP-158): `pageSize` απών ή `0` ⇒ `default`· πάνω από `max` ⇒
+ * **μειώνεται** στο `max` (όχι σφάλμα)· αρνητικό ⇒ 400. Δημοσιεύεται στο συμβόλαιο από **εδώ**.
+ */
+export const CAPTURE_TARGETS_PAGE_SIZE = { default: 50, max: 100 } as const;
+
+/**
  * **Με ποια βάση βλέπει κάποιος την περιήγηση** (ADR-884 Κ3β) — υπογράφεται μέσα στο κουπόνι θέασης και
  * οδηγεί το ίχνος (ποιος μετρητής αυξάνεται). Σειρά = προτεραιότητα της κρίσης (`judgeTourView`):
  * - `manager` — ο υπεύθυνος (καμία μέτρηση — δεν είναι ενδιαφέρον αγοραστή)

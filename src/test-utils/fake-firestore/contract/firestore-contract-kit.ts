@@ -5,7 +5,7 @@
  * @module test-utils/fake-firestore/contract/firestore-contract-kit
  */
 
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 /** Όσο από το Admin SDK χρησιμοποιεί το συμβόλαιο — κοινό σχήμα του `Firestore` και του `FakeFirestore`. */
 export interface ContractSnapshot {
@@ -17,9 +17,11 @@ export interface ContractSnapshot {
 
 export interface ContractQuery {
   where(field: string, op: '==' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'array-contains' | 'array-contains-any', value: unknown): ContractQuery;
-  orderBy(field: string, direction?: 'asc' | 'desc'): ContractQuery;
+  /** `FieldPath` μόνο για το `FieldPath.documentId()` — σελιδοποίηση κατά id εγγράφου. */
+  orderBy(field: string | FieldPath, direction?: 'asc' | 'desc'): ContractQuery;
   limit(n: number): ContractQuery;
-  startAfter(snapshot: ContractSnapshot): ContractQuery;
+  /** Κείμενο = το id, όταν η ταξινόμηση είναι `FieldPath.documentId()` (δρομέας-θέση). */
+  startAfter(snapshot: ContractSnapshot | string): ContractQuery;
   get(): Promise<{ readonly docs: readonly ContractSnapshot[]; readonly size: number; readonly empty: boolean }>;
   count(): { get(): Promise<{ data(): { count: number } }> };
 }
@@ -78,7 +80,7 @@ export interface ContractCase {
 }
 
 /** Κοινά υλικά των περιπτώσεων — ζουν εδώ ώστε οι δύο κατάλογοι να μη γράψουν δεύτερο αντίγραφο. */
-export const contractValues = { FieldValue, Timestamp } as const;
+export const contractValues = { FieldPath, FieldValue, Timestamp } as const;
 
 export async function seedDocs(db: ContractDb, path: string, docs: Record<string, Record<string, unknown>>): Promise<void> {
   for (const [id, doc] of Object.entries(docs)) await db.collection(path).doc(id).set(doc);

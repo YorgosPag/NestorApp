@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nestor App — Capture API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Παράγεται από τον κώδικα (ADR-904 Ε6) — **ποτέ** επεξεργασία με το χέρι: `npm run generate:capture-api-contract`."
   },
   "security": [
@@ -11,6 +11,101 @@
     }
   ],
   "paths": {
+    "/api/spatial-tours/capture-targets": {
+      "get": {
+        "operationId": "listCaptureTargets",
+        "summary": "Τα ακίνητα όπου ο συνδεδεμένος μπορεί να ανεβάσει λήψεις — ως υπεύθυνος ή με άδεια φωτογράφου.",
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Απών ή 0 ⇒ 50· πάνω από 100 ⇒ μειώνεται στο 100· αρνητικό ⇒ 400.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 50
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "description": "Το `nextPageToken` της προηγούμενης σελίδας, **αυτούσιο** (αδιαφανές). Απών ⇒ πρώτη σελίδα.",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Μία σελίδα. Κενό `nextPageToken` ⇒ τέλος.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureTargetsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Λείπει ή έληξε το Firebase ID token — ανανέωση token και επανάληψη.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Όριο ρυθμού — επανάληψη μετά το `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoundaryErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Κακό query ή χαλασμένο `pageToken` (ξεκίνα από την αρχή).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MalformedQueryBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "«Δεν μπόρεσα» — επαναλήψιμο.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TourUnavailableBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BoundaryErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/spatial-tours/{kind}/{subjectId}/uploads": {
       "parameters": [
         {
@@ -403,6 +498,66 @@
           "error"
         ]
       },
+      "CaptureAccess": {
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "manager": "#/components/schemas/CaptureAccessManager",
+            "capture-grant": "#/components/schemas/CaptureAccessGrant"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CaptureAccessManager"
+          },
+          {
+            "$ref": "#/components/schemas/CaptureAccessGrant"
+          }
+        ]
+      },
+      "CaptureAccessGrant": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "capture-grant"
+          },
+          "standing": {
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked",
+              "expired",
+              "unreadable"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "standing",
+          "expiresAt",
+          "reason"
+        ]
+      },
+      "CaptureAccessManager": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "manager"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "CaptureDeclaration": {
         "type": "object",
         "properties": {
@@ -523,6 +678,66 @@
           "milestone",
           "tileset",
           "createdAt"
+        ]
+      },
+      "CaptureSubject": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "owner-property",
+              "company-property"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ]
+      },
+      "CaptureTarget": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "$ref": "#/components/schemas/CaptureSubject"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "access": {
+            "$ref": "#/components/schemas/CaptureAccess"
+          }
+        },
+        "required": [
+          "subject",
+          "label",
+          "access"
+        ]
+      },
+      "CaptureTargetsResponse": {
+        "type": "object",
+        "properties": {
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaptureTarget"
+            }
+          },
+          "nextPageToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "targets",
+          "nextPageToken"
         ]
       },
       "CaptureTileset": {
@@ -652,6 +867,25 @@
           "error": {
             "type": "string",
             "const": "MALFORMED_BODY"
+          },
+          "malformed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "error",
+          "malformed"
+        ]
+      },
+      "MalformedQueryBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "MALFORMED_QUERY"
           },
           "malformed": {
             "type": "array",

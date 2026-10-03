@@ -23,9 +23,11 @@
 import { z } from 'zod/v4';
 
 import { MAX_MEDIA_LICENSORS, MEDIA_LICENSE_PURPOSES } from '@/constants/media-rights-vocabulary';
+import { PLACE_SOURCES } from '@/constants/place-sources';
 import {
   TOUR_CAPTURE_AUDIENCES,
   TOUR_CAPTURE_SOURCES,
+  TOUR_GRANT_STANDINGS,
   TOUR_MILESTONES,
   TOUR_TILESET_STATES,
   TOUR_UPLOAD_SOURCES,
@@ -169,6 +171,58 @@ export const RedeemInvitationResponseSchema = z.object({
 });
 
 // =============================================================================
+// 5α. «ΤΑ ΑΚΙΝΗΤΑ ΜΟΥ» — GET /api/spatial-tours/capture-targets (ADR-904 Κ7 · έκδοση 1.1.0)
+// =============================================================================
+
+/**
+ * Το query — κείμενο στο σύρμα, άρα `coerce`. **Χωρίς** `max` στο `pageSize`, επίτηδες: το AIP-158 λέει «μεγαλύτερο από
+ * το όριο ⇒ **μείωσε**», όχι «απόρριψε» (`CAPTURE_TARGETS_PAGE_SIZE`). Αρνητικό ⇒ 400.
+ */
+export const CaptureTargetsQuerySchema = z.object({
+  pageSize: z.coerce.number().int().min(0).optional(),
+  pageToken: z.string().min(1).optional(),
+});
+
+/** Το ακίνητο — το ίδιο ζεύγος (είδος, id) που μπαίνει στο `/api/spatial-tours/{kind}/{subjectId}/uploads`. */
+export const CaptureSubjectSchema = z.object({
+  kind: z.enum(PLACE_SOURCES),
+  id: NonBlankText,
+});
+
+/** Ο υπεύθυνος της περιήγησης (`mayManageTour`) — ανεβάζει χωρίς άδεια, χωρίς λήξη. */
+export const CaptureAccessManagerSchema = z.object({ kind: z.literal('manager') });
+
+/**
+ * Ο φωτογράφος με άδεια λήψης (`TourCaptureGrant`). **Δηλώνεται και η άδεια που δεν ισχύει πια** (`standing`): ο άνθρωπος
+ * μαθαίνει **γιατί** δεν μπορεί να ανεβάσει (έληξε ⇒ ζήτα νέα πρόσκληση · ανακλήθηκε ⇒ όχι), αντί να εξαφανιστεί η δουλειά.
+ */
+export const CaptureAccessGrantSchema = z.object({
+  kind: z.literal('capture-grant'),
+  standing: z.enum(TOUR_GRANT_STANDINGS),
+  expiresAt: IsoInstant,
+  /** Ο λόγος που έγραψε ο υπεύθυνος στην πρόσκληση — η «εντολή εργασίας» του φωτογράφου. */
+  reason: z.string(),
+});
+
+export const CaptureAccessSchema = z.discriminatedUnion('kind', [
+  CaptureAccessManagerSchema,
+  CaptureAccessGrantSchema,
+]).meta({ discriminator: { propertyName: 'kind' } });
+
+export const CaptureTargetSchema = z.object({
+  subject: CaptureSubjectSchema,
+  /** Πώς λέγεται το ακίνητο (τίτλος αγγελίας · όνομα μονάδας) — `null` αν η ρίζα δεν έχει. */
+  label: z.string().nullable(),
+  access: CaptureAccessSchema,
+});
+
+export const CaptureTargetsResponseSchema = z.object({
+  targets: z.array(CaptureTargetSchema),
+  /** Κενό ⇒ **τέλος** της λίστας (AIP-158: ο μόνος τρόπος να ειπωθεί). Μικρότερη σελίδα **δεν** σημαίνει τέλος. */
+  nextPageToken: z.string(),
+});
+
+// =============================================================================
 // 6. ΟΙ ΑΡΝΗΣΕΙΣ — κάθε λόγος στέλνει τον άνθρωπο σε ΑΛΛΗ ενέργεια (ADR-853 §5 #7)
 // =============================================================================
 
@@ -181,9 +235,15 @@ export const TourUnavailableBodySchema = z.object({ error: z.literal('TOUR_UNAVA
 
 export const TourSubjectInvalidBodySchema = z.object({ error: z.literal('TOUR_SUBJECT_INVALID') });
 
-/** Το σώμα δεν ήταν σχήμα — τα **ονόματα** των πεδίων, ποτέ το μήνυμα της βιβλιοθήκης (`lib/api/json-body.ts`). */
+/** Το σώμα δεν ήταν σχήμα — τα **ονόματα** των πεδίων, ποτέ το μήνυμα της βιβλιοθήκης (`lib/api/malformed-request.ts`). */
 export const MalformedBodySchema = z.object({
   error: z.literal('MALFORMED_BODY'),
+  malformed: z.array(z.string()),
+});
+
+/** Το query δεν ήταν σχήμα (ή χαλασμένο `pageToken`) — ίδια μορφή με το σώμα, άλλος κωδικός: ο πελάτης διορθώνει άλλο πράγμα. */
+export const MalformedQueryBodySchema = z.object({
+  error: z.literal('MALFORMED_QUERY'),
   malformed: z.array(z.string()),
 });
 

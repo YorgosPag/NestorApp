@@ -42,20 +42,35 @@ export type TourLocation =
   /** Εταιρική ρίζα **χωρίς** μισθωτή — δεν έχει χώρο, άρα ούτε περιήγηση. */
   | { readonly kind: 'unscoped' };
 
-/** Η ρίζα, φορτωμένη **μέσα από το σύνορό της** — ποτέ ωμό `data()` για ιδιώτη (CHECK 3.74). */
-async function readSubjectRecord(
-  db: Firestore,
-  subject: TourSubject,
-): Promise<{ readonly record: TourSubjectRecord; readonly label: string | null } | null> {
-  if (subject.kind === 'owner-property') {
-    const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(subject.id).get();
-    const property = ownerPropertyFromDocument(snap.data(), subject.id);
+/** Η ρίζα, κριμένη, και πώς λέγεται το ακίνητο (τίτλος αγγελίας ιδιώτη · όνομα μονάδας γραφείου) — `null` αν λείπει. */
+export interface TourSubjectReading {
+  readonly record: TourSubjectRecord;
+  readonly label: string | null;
+}
+
+/** Πού ζει η ρίζα κάθε είδους — **μία** απάντηση για όποιον τη φορτώνει ή τη σαρώνει. */
+export const TOUR_SUBJECT_COLLECTION = {
+  'owner-property': COLLECTIONS.OWNER_PROPERTIES,
+  'company-property': COLLECTIONS.PROPERTIES,
+} as const satisfies Readonly<Record<TourSubject['kind'], string>>;
+
+/**
+ * **Έγγραφο ρίζας → ρίζα + τίτλος**, μέσα από το σύνορό της — ποτέ ωμό `data()` για ιδιώτη (CHECK 3.74). Η **μία**
+ * ανάγνωση: την καλεί το `locateSpatialTour` (ένα έγγραφο) **και** ο κατάλογος «τα ακίνητά μου» (ερώτημα, ADR-904 Κ7).
+ */
+export function tourSubjectFromDocument(kind: TourSubject['kind'], data: unknown, id: string): TourSubjectReading | null {
+  if (kind === 'owner-property') {
+    const property = ownerPropertyFromDocument(data, id);
     return property === null ? null : { record: { kind: 'owner-property', property }, label: text(property.title) };
   }
-  const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(subject.id).get();
-  const data = snap.data();
-  if (data === undefined) return null;
-  return { record: { kind: 'company-property', property: { companyId: data.companyId } }, label: text(data.name) };
+  if (typeof data !== 'object' || data === null) return null;
+  const { companyId, name } = data as { readonly companyId?: unknown; readonly name?: unknown };
+  return { record: { kind: 'company-property', property: { companyId } }, label: text(name) };
+}
+
+async function readSubjectRecord(db: Firestore, subject: TourSubject): Promise<TourSubjectReading | null> {
+  const snap = await db.collection(TOUR_SUBJECT_COLLECTION[subject.kind]).doc(subject.id).get();
+  return tourSubjectFromDocument(subject.kind, snap.data(), subject.id);
 }
 
 /** **Βρες την περιήγηση μιας αγγελίας** — και τον κάτοχό της, όπως τον λέει η ρίζα **τώρα**. */

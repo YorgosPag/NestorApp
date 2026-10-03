@@ -21,7 +21,13 @@ import {
   tourCaptureFromDocument,
   tourCaptureGrantFromDocument,
 } from '@/lib/spatial-tour/spatial-tour-from-document';
-import { mayManageTour, tourGrantStanding, type TourActor, type TourGrantStanding } from '@/lib/spatial-tour/tour-authority';
+import {
+  mayManageTour,
+  tourGrantStanding,
+  type TourActor,
+  type TourGrantStanding,
+  type TourSubjectRecord,
+} from '@/lib/spatial-tour/tour-authority';
 import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
 import type { TourCapture, TourCaptureInvitationPreview, TourSubject } from '@/types/spatial-tour';
 
@@ -71,16 +77,27 @@ export interface MyTourCaptureGrant {
   readonly standing: TourGrantStanding;
 }
 
+/** Μια άδεια **μαζί με τη ρίζα της** — για όποιον πρέπει να ξανακρίνει (π.χ. «είναι και υπεύθυνος;», ADR-904 Κ7). */
+export interface MyTourCaptureGrantEntry {
+  readonly grant: MyTourCaptureGrant;
+  readonly record: TourSubjectRecord;
+}
+
 /**
  * **«Οι λήψεις μου»** — οι άδειες λήψης **αυτού** του ανθρώπου, σε όποιον χώρο κι αν ανήκουν (ο φωτογράφος δεν είναι
  * μέλος κανενός, Φ0.5). Άδεια σε περιήγηση που **άλλαξε κάτοχο** παραλείπεται: δεν ανεβάζει πια εκεί (§4.4).
  */
 export async function listMyTourCaptureGrants(db: Firestore, uid: string): Promise<readonly MyTourCaptureGrant[]> {
+  return (await readMyTourCaptureGrants(db, uid)).map((entry) => entry.grant);
+}
+
+/** Η **μία** ανάγνωση των αδειών ενός ανθρώπου — ο κατάλογος web και το API του κινητού (ADR-904 Κ7) την μοιράζονται. */
+export async function readMyTourCaptureGrants(db: Firestore, uid: string): Promise<readonly MyTourCaptureGrantEntry[]> {
   // tenant-scope-exempt: οι άδειες ΤΟΥ ΙΔΙΟΥ του αιτούντος (`granteeUid` == uid του συνόρου) — ο φωτογράφος δεν ανήκει
   //   σε κανέναν μισθωτή· ο κάτοχος κάθε περιήγησης ξανακρίνεται από τη ρίζα της παρακάτω.
   const snap = await db.collectionGroup(SUBCOLLECTIONS.TOUR_CAPTURE_GRANTS).where('granteeUid', '==', uid).limit(MY_GRANTS_LIMIT).get();
   const nowMs = Date.now();
-  const listed = await Promise.all(snap.docs.map(async (doc): Promise<MyTourCaptureGrant | null> => {
+  const listed = await Promise.all(snap.docs.map(async (doc): Promise<MyTourCaptureGrantEntry | null> => {
     const grant = tourCaptureGrantFromDocument(doc.data(), uid);
     const tourRef = doc.ref.parent.parent;
     if (grant === null || tourRef === null) return null;
@@ -88,10 +105,11 @@ export async function listMyTourCaptureGrants(db: Firestore, uid: string): Promi
     if (tour === null) return null;
     const location = await locateSpatialTour(db, tour.subject);
     if (location.kind !== 'found' || !isOwnedByCustody(tour.custody, location.custody)) return null;
-    return {
+    const item: MyTourCaptureGrant = {
       subject: tour.subject, propertyLabel: location.label, reason: grant.reason, expiresAt: grant.expiresAt,
       standing: tourGrantStanding(grant, 'tour:capture:upload', nowMs),
     };
+    return { grant: item, record: location.record };
   }));
-  return listed.filter((item): item is MyTourCaptureGrant => item !== null);
+  return listed.filter((entry): entry is MyTourCaptureGrantEntry => entry !== null);
 }

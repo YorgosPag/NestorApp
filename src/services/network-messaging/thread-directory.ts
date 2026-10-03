@@ -23,6 +23,7 @@ import 'server-only';
 
 import { FieldPath, type Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
+import { decodePageToken, encodePageToken } from '@/lib/api/page-token';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { NetworkAudienceEntry, NetworkAudienceSeat, NetworkThread } from '@/types/network-thread';
 import type { NetworkThreadDirectoryResult, NetworkThreadListItem } from '@/types/network-wire';
@@ -57,22 +58,15 @@ export interface ThreadDirectoryCursor {
 // ΚΑΘΑΡΑ ΚΟΜΜΑΤΙΑ — ελέγχονται χωρίς Firestore
 // =============================================================================
 
-/** Ο δρομέας σε μορφή σύρματος — base64url, ώστε να μη γίνει «συμβόλαιο» το εσωτερικό του. */
+/** Ο δρομέας σε μορφή σύρματος — το κοινό αδιαφανές token (`lib/api/page-token`, AIP-158). */
 export function encodeDirectoryCursor(cursor: ThreadDirectoryCursor): string {
-  return Buffer.from(JSON.stringify({ a: cursor.activityAt, t: cursor.threadId }), 'utf8').toString('base64url');
+  return encodePageToken({ a: cursor.activityAt, t: cursor.threadId });
 }
 
 /** `null` ⇒ **χαλασμένος** δρομέας: η πόρτα απαντά 400, ποτέ «πρώτη σελίδα» σιωπηλά. */
 export function decodeDirectoryCursor(raw: string): ThreadDirectoryCursor | null {
-  try {
-    const parsed: unknown = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
-    if (typeof parsed !== 'object' || parsed === null) return null;
-    const { a, t } = parsed as { readonly a?: unknown; readonly t?: unknown };
-    if (typeof a !== 'string' || typeof t !== 'string' || a.length === 0 || t.length === 0) return null;
-    return { activityAt: a, threadId: t };
-  } catch {
-    return null;
-  }
+  const fields = decodePageToken(raw, ['a', 't']);
+  return fields === null ? null : { activityAt: fields.a, threadId: fields.t };
 }
 
 /**

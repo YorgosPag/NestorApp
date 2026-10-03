@@ -6,7 +6,7 @@
 
 import { contractValues, idsOf, seedDocs, type ContractCase } from './firestore-contract-kit';
 
-const { Timestamp } = contractValues;
+const { FieldPath, Timestamp } = contractValues;
 
 export const contractCasesQueries: readonly ContractCase[] = [
   {
@@ -112,6 +112,17 @@ export const contractCasesQueries: readonly ContractCase[] = [
     async run(db) {
       await seedDocs(db, 'q11', { z: { n: 1 }, a: { n: 2 }, m: { n: 3 } });
       expect(await idsOf(db.collection('q11'))).toEqual(['a', 'm', 'z']);
+    },
+  },
+  {
+    id: 'Q12',
+    title: 'σελιδοποίηση κατά `FieldPath.documentId()`: ο δρομέας-id είναι ΘΕΣΗ — ισχύει και αν το έγγραφο σβήστηκε (ADR-904 Κ7)',
+    async run(db) {
+      await seedDocs(db, 'q12', { a: { o: 'x' }, b: { o: 'x' }, c: { o: 'y' }, d: { o: 'x' }, e: { o: 'x' } });
+      const page = () => db.collection('q12').where('o', '==', 'x').orderBy(FieldPath.documentId());
+      expect(await idsOf(page().limit(2))).toEqual(['a', 'b']);
+      await db.collection('q12').doc('b').delete();
+      expect(await idsOf(page().startAfter('b').limit(2))).toEqual(['d', 'e']);
     },
   },
 ];

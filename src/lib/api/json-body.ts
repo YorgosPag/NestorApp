@@ -28,10 +28,11 @@
 
 import 'server-only';
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import type { z } from 'zod';
 import type { z as z4 } from 'zod/v4';
+
+import { malformedResponse } from './malformed-request';
 
 /**
  * Το σώμα, κριμένο: **ή** τα δεδομένα **ή** η έτοιμη απόρριψη — ποτέ και τα δύο,
@@ -70,15 +71,5 @@ export async function readJsonBody(
   const parsed = schema.safeParse(body);
 
   if (parsed.success) return { data: parsed.data };
-
-  return {
-    rejected: NextResponse.json(
-      {
-        error: 'MALFORMED_BODY',
-        // `String`: στο v4 το μονοπάτι είναι `PropertyKey[]` — ένα `symbol` θα έριχνε το `join`.
-        malformed: [...new Set(parsed.error.issues.map((issue) => issue.path.map(String).join('.')))],
-      },
-      { status: 400 },
-    ),
-  };
+  return { rejected: malformedResponse('MALFORMED_BODY', parsed.error.issues) };
 }

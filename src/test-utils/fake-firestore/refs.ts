@@ -122,17 +122,24 @@ export class FakeQuery {
     return this.with({ clauses: [...this.spec.clauses, { field, op, value }] });
   }
 
-  /** Ένα `orderBy` ανά ερώτημα (όσο χρειάζονται οι καλούντες)· προεπιλογή αύξουσα. */
-  orderBy(field: string, direction: 'asc' | 'desc' = 'asc'): FakeQuery {
-    return this.with({ order: { field, direction } });
+  /**
+   * Ένα `orderBy` ανά ερώτημα (όσο χρειάζονται οι καλούντες)· προεπιλογή αύξουσα. Δέχεται και το `FieldPath.documentId()`
+   * του Admin SDK, που σειριοποιείται ως `__name__` — ταξινόμηση **κατά id εγγράφου**.
+   */
+  orderBy(field: string | { toString(): string }, direction: 'asc' | 'desc' = 'asc'): FakeQuery {
+    return this.with({ order: { field: String(field), direction } });
   }
 
   limit(n: number): FakeQuery {
     return this.with({ cap: n });
   }
 
-  /** Σελιδοποίηση με δρομέα-έγγραφο (υπογραφή Admin SDK). */
-  startAfter(snapshot: { readonly id: string; data?: () => Doc | undefined }): FakeQuery {
+  /**
+   * Σελιδοποίηση με δρομέα-έγγραφο (υπογραφή Admin SDK) — ή με **id** ως κείμενο, όταν το ερώτημα ταξινομείται κατά
+   * `FieldPath.documentId()` (τότε ο δρομέας είναι **θέση**, και το έγγραφο μπορεί να μην υπάρχει πια).
+   */
+  startAfter(snapshot: string | { readonly id: string; data?: () => Doc | undefined }): FakeQuery {
+    if (typeof snapshot === 'string') return this.with({ after: { id: snapshot } });
     return this.with({ after: { id: snapshot.id, data: snapshot.data?.() } });
   }
 

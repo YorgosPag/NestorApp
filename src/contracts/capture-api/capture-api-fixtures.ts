@@ -95,9 +95,29 @@ const RESPONSE_FIXTURES: readonly CaptureApiFixture[] = [
   { name: 'link-refused-wrong-recipient', component: 'InvitationLinkRefusedBody', valid: true, body: { error: 'LINK_REFUSED', reason: 'wrong-recipient' } },
 ];
 
+/** «Τα ακίνητά μου» (ADR-904 Κ7, 1.1.0) — υπεύθυνος, φωτογράφος με ενεργή **και** με ληγμένη άδεια, σελίδα και τέλος. */
+const MANAGED_TARGET = { subject: { kind: 'owner-property', id: 'oprop_01' }, label: 'Μεζονέτα στην Κηφισιά', access: { kind: 'manager' } } as const;
+const GRANT_ACCESS = { kind: 'capture-grant', standing: 'active', expiresAt: '2026-10-10T00:00:00.000Z', reason: 'Λήψη σαλονιού και κουζίνας' } as const;
+const GRANTED_TARGET = { subject: { kind: 'company-property', id: 'prop_07' }, label: null, access: GRANT_ACCESS } as const;
+const grantTarget = (access: Readonly<Record<string, unknown>>) => ({ ...GRANTED_TARGET, access: { ...GRANT_ACCESS, ...access } });
+
+const TARGET_FIXTURES: readonly CaptureApiFixture[] = [
+  { name: 'targets-page-with-next', component: 'CaptureTargetsResponse', valid: true, body: { targets: [GRANTED_TARGET, MANAGED_TARGET], nextPageToken: 'eyJzIjoib3duIiwiYSI6Im9wcm9wXzAxIn0' } },
+  { name: 'targets-last-page', component: 'CaptureTargetsResponse', valid: true, body: { targets: [], nextPageToken: '' } },
+  { name: 'target-grant-expired', component: 'CaptureTarget', valid: true, body: grantTarget({ standing: 'expired', expiresAt: '2026-09-01T00:00:00.000Z' }) },
+  { name: 'target-manager-extra-fields', component: 'CaptureTarget', valid: true, body: { ...MANAGED_TARGET, tourId: 'tour_01' } },
+  { name: 'target-unknown-kind', component: 'CaptureTarget', valid: false, body: { ...MANAGED_TARGET, subject: { kind: 'building', id: 'b_01' } } },
+  { name: 'target-unknown-access', component: 'CaptureTarget', valid: false, body: { ...MANAGED_TARGET, access: { kind: 'viewer' } } },
+  { name: 'target-grant-unknown-standing', component: 'CaptureTarget', valid: false, body: grantTarget({ standing: 'pending' }) },
+  { name: 'target-grant-missing-expiry', component: 'CaptureTarget', valid: false, body: grantTarget({ expiresAt: undefined }) },
+  { name: 'targets-missing-next-token', component: 'CaptureTargetsResponse', valid: false, body: { targets: [] } },
+  { name: 'malformed-page-token', component: 'MalformedQueryBody', valid: true, body: { error: 'MALFORMED_QUERY', malformed: ['pageToken'] } },
+];
+
 /** **Όλα τα παραδείγματα**, σε σταθερή σειρά — η σειρά είναι μέρος του παραγόμενου αρχείου. */
 export const CAPTURE_API_FIXTURES: readonly CaptureApiFixture[] = [
   ...DECLARATION_FIXTURES,
   ...REQUEST_FIXTURES,
   ...RESPONSE_FIXTURES,
+  ...TARGET_FIXTURES,
 ];
