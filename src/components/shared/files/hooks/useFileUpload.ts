@@ -31,6 +31,7 @@ import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
 import type { FileCustody } from '@/lib/files/file-custody';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
+import { entryPointUploadTitle } from '@/config/upload-entry-points/entry-point-title';
 import { isAIClassifiable } from './useFileClassification';
 import { resolveUploadScope, type PurposeAuthority } from '../utils/upload-scope';
 import { RealtimeService } from '@/services/realtime';
@@ -213,9 +214,7 @@ export function useFileUpload({
               levelFloorId,
               createdBy: currentUserId,
               uploaderName: currentUserName,
-              customTitle: selectedEntryPoint?.requiresCustomTitle
-                ? customTitle
-                : selectedEntryPoint?.label?.el,
+              customTitle: entryPointUploadTitle(selectedEntryPoint, customTitle),
             },
             file,
           );
