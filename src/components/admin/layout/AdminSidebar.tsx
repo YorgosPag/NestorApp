@@ -26,6 +26,7 @@ import {
   Shield,
   Activity,
   ImageIcon,
+  ShieldCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -108,6 +109,8 @@ const NAV_GROUPS: NavGroup[] = [
     groupKey: 'publicSite',
     items: [
       { href: '/admin/landing-heroes', labelKey: 'landingHeroes', icon: ImageIcon, superAdminOnly: true },
+      // ADR-900 §3.8 — ποιος αποδεδειγμένα κατέχει τι: της πλατφόρμας, ποτέ ενός χώρου.
+      { href: '/admin/ownership-verifications', labelKey: 'ownershipVerifications', icon: ShieldCheck, superAdminOnly: true },
     ],
   },
   {

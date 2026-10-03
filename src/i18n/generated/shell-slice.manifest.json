@@ -3,6 +3,8 @@
   "artifacts": {
     "src/i18n/generated/routes/area__id.el.json": "b2703db396fe6d2130995cb87b2105abcc2837fe84af8628649b5d95f9a94dfe",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
+    "src/i18n/generated/routes/cases.el.json": "8cf66b987456b870389058bdf35883b3892639e24457c824ec24f736847111fd",
+    "src/i18n/generated/routes/cases__engagementId.el.json": "e8a20e9c26f628a5a732e00243750f6bba2971839b8ca10c4d252621f279649c",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -108,7 +110,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "aafe8ac5d6b076512eca92aab4ff6ca8333f11b9cb117a662a0f437773bf7789",
+  "inputsSha256": "3c1a7f210b0751a5434d23ec895f6130bd764323a12e7520c1867cfcdfbde165",
   "languages": [
     "el"
   ],
@@ -188,6 +190,8 @@
     "src/app/(light)/pro/page.tsx": "baf1cf13f22281fcb429539f76fb0b81f096e35a027952473b502335b38d6c45",
     "src/app/(light)/search/results/page.tsx": "2d39f5895fc2a017e0bdd2d50a35b9b8262a8e6ead53ac1e2659954457010afe",
     "src/app/(light)/stay/page.tsx": "024ccbde8d21966d8e8e4307f1c4885306bb9fec4b9ccd2929857257f5b98564",
+    "src/app/(me)/cases/[engagementId]/page.tsx": "16a770ef0179dab673fefe9c0f959f8769228997ca60a59a2052d07961a79146",
+    "src/app/(me)/cases/page.tsx": "b3f94f82984c0a11bc49e2e4bafc4274be6d0479072becea42ba7cc15599b93c",
     "src/app/(me)/demands/[demandId]/page.tsx": "b8d9a14612acf5605cb72382aa9e2decc225343d3a52d9f6a0585b46f05dd435",
     "src/app/(me)/demands/new/page.tsx": "4edb613e4ca1f692ff5a42714c29c4097642d2d3e1e1efc2449e918c3e5398d7",
     "src/app/(me)/demands/page.tsx": "9c964a75057ab30ffb3d77d6ab2c1982ce4dcf450ee896337f56128414afc05e",
@@ -257,6 +261,9 @@
     "src/components/contact/first-contact-labels.ts": "b4078af99283f39a68952fa2530293d258ffb72101638acc8393944b02de48d9",
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
+    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "288c4d28dcdb0d5d5120ce0ac645fff117bb3af866d444cbe0de3d0c2600d84c",
+    "src/components/conveyance/my-cases/MyCaseCardView.tsx": "4317c5c4518be0b9f9dac3f597513096fa5ecc64058005a006a39ddfb0912a05",
+    "src/components/conveyance/my-cases/MyCasesContent.tsx": "efcebb3d7447b9b932db2e244c0f93c3670fb453be4ea87190c282389891da61",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
     "src/components/dashboard/NavigationCard.tsx": "2f031deb932f093ae0ad57d5c814eb785092691e69f297cb5c4d562727b3983b",
@@ -506,6 +513,9 @@
     "src/components/property-dossier/PropertyDossierTitle.tsx": "218515ae17720dc4443b05393dbc81017e722490ac4cd1647af3cd33bf27bc3f",
     "src/components/property-dossier/property-dossier-media.ts": "d875115ebbe334a5ba043d0043c11626d433af2a70a699c1bc5d9d5a7cf6da1d",
     "src/components/property-dossier/usePropertyDossierLifecycle.ts": "ae58e9ec9a40c2e60ebf3a54da403d8ab377e4e5a66508c8321e57b6c8ffac50",
+    "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": "82b7ca9aaada8860d96607a09ab68cfce63785c058e8e5159c03bbb498d61f0b",
+    "src/components/sales/conveyance/ConveyanceChecklistSection.tsx": "89cb2f7e0539e79b4d075f09e94285ddbad7a4e495ec8f6845dd100b1ba5914f",
+    "src/components/sales/conveyance/conveyance-presentation.ts": "726a4e91d522fd546afc044b7e6682e1dadee97f703e7ceed38e21d550737f05",
     "src/components/search-results/AdminBoundaryLayer.tsx": "3b1a1d1a12cf92dbedf85e07577e3c1becf9d6efd41fd35f6b166a9a67d12058",
     "src/components/search-results/AdminPlaceMarker.tsx": "2e4b69635006d280fa33a9f4f2422412c6121e02e41420105304027ada134968",
     "src/components/search-results/AreaLedgerBar.tsx": "4ac67dee7d9e49bcac2d8195e37032fc7f9bf6e54b89664236c21cb77567c875",
@@ -688,6 +698,7 @@
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
     "src/config/audit-tracked-fields.ts": "c36963ada29f1316198fdb163b295c324dd94ceef0ad41ee547bbd7a1803086d",
+    "src/config/conveyance-checklist/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",
     "src/config/environment-contract.ts": "2ef0dd11f1e6e05676ef41ba5574cd8beddb587e99750d840d355c1b7f9a6cce",
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
@@ -767,10 +778,12 @@
     "src/hooks/useCircleAnchorName.ts": "875b9e930abd4b510a5bbd9a96be1893ae5378d73c2438e9ec9d8ba1899eac4f",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useContainingArea.ts": "0eeb133d3c28307c9d4660807d42fef029c5f415cecd2bbdae27fe27f102804c",
+    "src/hooks/useEngagedCase.ts": "efc66e4b38af87391707b590c28192ddb606c2cc9d625ce48cd2f51fbcddd8c8",
     "src/hooks/useFieldPatchQueue.ts": "4b71b561fda8e4fddab22b78cdac0ff63b0a75c3212e47d31fff509a83a83300",
     "src/hooks/useIdentityGatedResource.ts": "d8480fc3b8a36ca7256b30090f93ae814391c74076f4793f062e79f2a842047a",
     "src/hooks/useInFlightAction.ts": "bd28e03e2bb93e6863313640400e34804caa6570d4d7c5e84b3cd9c37cf46e43",
     "src/hooks/useMountedRef.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/hooks/useMyCases.ts": "095097060c6f01a82dfdc4e10043c61f9ea62e397ed6608e2ea8e3725fef23a7",
     "src/hooks/useReconciledResource.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useSelectedEntityUrlState.ts": "4317e4151b6fdd55558167d4d6c23562d242a0a43621ad92479a9caf78f72ec7",
     "src/hooks/useSingleFlight.ts": "8fd88dd2917d08f7ed7b0b3f9d32d24d363c8f54d3839c408e0b8383990d5ece",
@@ -1139,6 +1152,7 @@
     "src/services/contact/first-contact.client.ts": "4b0503374196b86dbb160369a56e79a807a42b7d5746dc06e4f3269c0c2bdc4f",
     "src/services/contact/first-contact.service.ts": "f64ae74a6a6e50712be0e2cadefe2042cc4643832939c32d03762b4a74467406",
     "src/services/contacts-query.service.ts": "e205fb92132590d84bbd946dfbd3c3d628cd46a6efd31cf52b35a3b372e99a0a",
+    "src/services/conveyance/conveyance-engagement-gateway.ts": "6d767fcfc0318b93baf7214b769a42ef3138298b95ef406b50e30acef44953b4",
     "src/services/demand/property-demand.service.ts": "63e34bcddc5a889c50d303652f0a8f078db6d77b7e5a5e2dc680a5e20581df73",
     "src/services/email-templates/account-secured.ts": "8d721dc51ba94655eedac2243a82bc56bc31075dc10e6a926e65ddc38f2d8a29",
     "src/services/email-templates/base-email-template.ts": "3e519656e2542a33ac6d0b30b9054859bbb6ce8c99e716727f2f8f15b0f7ffbb",
@@ -1444,13 +1458,16 @@
     "src/types/auto-save.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/boq/units.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/communications.ts": "ab607dae93f4f9fa45c1f8321402d47ba279eaf2bf7f8c780c71193627dbf73d",
+    "src/types/conveyance-case.ts": "7fb6ec215696308a92c08f4e0b776bac3e6f3e73aa2edcae802e993190ec8643",
     "src/types/dxf-text-justification.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/email-delivery.ts": "7ec55752b5db731d330f42fc2b86f9610d4a3a146cb36488d565cafa87b32cd6",
+    "src/types/engagement.ts": "187bf106803d9510fb6548892b6a64c800e30afbd03c96c270f98019f073e3c4",
     "src/types/first-contact-invitation.ts": "c31f489a5c656b22862903d8133e2bb8c306177d38c31d7bc9f5c8eda1250356",
     "src/types/first-contact.ts": "4b13090991ed18e3ec7aa61c900107042849a0bec3b735746e5df7373a7b13be",
     "src/types/geo/camera-frame.ts": "bdf5291766d39aa3be9e97f0ba2003aca52a85be41680eba15e174c2a28b7bce",
     "src/types/holiday-hours-question.ts": "48d3c4feafb0156071228c7dc26ce5e37a4d4a25387cd32764c9c669155822bf",
     "src/types/invitation-core.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/types/legal-contracts.ts": "f3eca80a80d46246711ee4a3c429e24ae6634b2fec6ae6ef17a4136771284869",
     "src/types/mandate-evidence-record.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/media-rights.ts": "4ae8cb5967e431cabfd028fca6469d3c9b42ece3e975fa63ba6b11f62b322623",
     "src/types/network-thread.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -1714,6 +1731,175 @@
           ],
           "prefixes": [
             "mandate.cardEmail.reason"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "cases": {
+      "page": "src/app/(me)/cases/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "engagement.myCases.accept",
+            "engagement.myCases.decline",
+            "engagement.myCases.empty",
+            "engagement.myCases.loadError",
+            "engagement.myCases.loading",
+            "engagement.myCases.offerExpires",
+            "engagement.myCases.open",
+            "engagement.myCases.signing",
+            "engagement.myCases.subtitle",
+            "engagement.myCases.title",
+            "engagement.myCases.untitled",
+            "summary.progress"
+          ],
+          "prefixes": [
+            "engagement.myCases.respondRejections",
+            "engagement.roles",
+            "engagement.states",
+            "engagement.verdicts",
+            "state"
+          ],
+          "whole": false
+        },
+        "property-market": {
+          "keys": [
+            "demand.space.signInNeeded"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "cases__engagementId": {
+      "page": "src/app/(me)/cases/[engagementId]/page.tsx",
+      "wants": {
+        "conveyance": {
+          "keys": [
+            "actions.accept",
+            "actions.clear",
+            "actions.confirmReceived",
+            "actions.markNotApplicable",
+            "actions.menu",
+            "actions.reject",
+            "engagement.case.back",
+            "engagement.case.loadError",
+            "engagement.case.readOnly",
+            "engagement.myCases.signing",
+            "engagement.myCases.untitled",
+            "row.actDay",
+            "row.expiresOn",
+            "row.invalidOnSigning",
+            "row.notApplicableByFact",
+            "row.notApplicableReason",
+            "row.offlineHint",
+            "row.provider",
+            "row.rejectedReason",
+            "row.uploadHint",
+            "row.validityUnverified",
+            "summary.progress"
+          ],
+          "prefixes": [
+            "engagement.roles",
+            "engagement.verdicts",
+            "items",
+            "levels",
+            "providers",
+            "sectionHints",
+            "sections",
+            "state",
+            "status"
           ],
           "whole": false
         }
@@ -4084,6 +4270,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4130,6 +4317,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4181,6 +4369,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4227,6 +4416,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4273,6 +4463,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4319,6 +4510,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4365,6 +4557,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4412,6 +4605,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4458,6 +4652,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4504,6 +4699,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -4558,6 +4754,7 @@
             "personal.groups.organization",
             "personal.items.account",
             "personal.items.createWorkspace",
+            "personal.items.myCases",
             "personal.items.myContacts",
             "personal.items.myDemands",
             "personal.items.myDossiers",
@@ -9924,7 +10121,7 @@
     "src/components/NotificationBell.enterprise.tsx": "75aa26f5741014fea4796391b62c24fee558e81aef0f7664ca895ba26702de87",
     "src/components/NotificationDrawer.enterprise.tsx": "db204cfcbe3780fabaa3c05f50859022364d2bbb31fec4dc04742bd7a704dad1",
     "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx": "0e290ffff352296dd64c982569feb49c4a05bff0c000b327d34b9c7396c0a2c2",
-    "src/components/admin/layout/AdminSidebar.tsx": "4d9b941265cd451246ceec5d2b134b615b1ae978958d8018b4a0b6458ed1f77c",
+    "src/components/admin/layout/AdminSidebar.tsx": "8cef639a22a58730083d7bfc16797c4cbfc6daa3f87227f8bc726e819852354d",
     "src/components/app-header.tsx": "1abb939fae15d2449e1eff5e981aa2e208e959e919d6617847030fb1a3e1b62e",
     "src/components/app-sidebar.tsx": "8fd20217bab727ff6e049ced185207aa62dba82d7a307879c78e59ae08c3d4fb",
     "src/components/app-update/AppUpdateBanner.tsx": "2db2e15e6bc38ccaedcb167c2a14cb08e3ca24c2d86d52893386c0c4bd7a06dc",
@@ -10106,7 +10303,7 @@
     "src/config/audit-value-catalogs.ts": "df5be84486b544bf20d29d3305976c2d9cace463cae9de14c8ddeb8afa3c4ae0",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "af5258753476af6c87de2d3d4be7342373c0ffd906a0232e73ae620e74ddc3cc",
+    "src/config/domain-constants.ts": "8ffd4c46afe51ba251106c7e980f144796942fb8ab8c603b96580e55a91663b8",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/error-reporting.ts": "d3788019febf32f4a488395c75b897af501fe2a869bb82059d107dbcd076a74d",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
@@ -10136,7 +10333,7 @@
     "src/config/office-navigation/catalog-types.ts": "068b18abfa24a2a94e2c06d1dad720fc16f87233c4092586befd0629ecc2b118",
     "src/config/office-navigation/resolve-office-navigation.ts": "8a18336f91eda82e2ab9cb9a96bfdc7ad08c775147dfcbfdf795efde0b594dc7",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",
-    "src/config/personal-navigation.ts": "bc84955b76f5f1d8516fbb80adb0f84524c6d3de981b27cb4ffb1d0a52c27978",
+    "src/config/personal-navigation.ts": "bb6d8c1f918e406597fd9924830a27794ea07cc46ee3cf7f520d4273f11cccac",
     "src/config/profession-bridge.config.ts": "7823e2f47a7888a67336aae3eab60628d7facf6fb109e05346357a9bf18b528e",
     "src/config/study-groups-config.ts": "41192820acc6d25d54956ba341ce18882fe953806049ef129e8c08674404baef",
     "src/config/upload-entry-points/entries-studies.ts": "cedfad81cd497f6cd1a557ae8a648765d20ca9f96c3f46c292e45986d13e866c",
@@ -10360,6 +10557,7 @@
     "src/lib/contact/first-contact-limits.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/first-contact-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contacts/contact-name-review.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/conveyance/conveyance-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/criteria/criterion-vocabulary.ts": "fa71c8ecb83e12afbfc91234df5f2949108d7d55559ede9061d58dfbfaec34ca",
     "src/lib/criteria/listing-criteria-judge.ts": "3695da5cfd8a6867299fbfe1bf072ab178834679243921e4578f55e1414c1f84",
     "src/lib/criteria/listing-criteria-url.ts": "f660ecb292d5cc0d7cff5f458ec08cd7d6c8915caeaecb28bfef4fd00b1b9e5b",
@@ -10832,8 +11030,8 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 923,
-    "sliceBytes": 663499
+    "shellFiles": 924,
+    "sliceBytes": 676691
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -11019,6 +11217,7 @@
     "notifications.retry",
     "notifications.title",
     "operatorInbox",
+    "ownershipVerifications",
     "pages.buildings",
     "pages.construction_portfolio",
     "pages.contacts",
@@ -11034,6 +11233,7 @@
     "personal.groups.organization",
     "personal.items.account",
     "personal.items.createWorkspace",
+    "personal.items.myCases",
     "personal.items.myContacts",
     "personal.items.myDemands",
     "personal.items.myDossiers",
@@ -11667,6 +11867,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -11682,6 +11883,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -12097,6 +12299,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -12112,6 +12315,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -12521,6 +12725,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -12536,6 +12741,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -12932,6 +13138,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -12947,6 +13154,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -13343,6 +13551,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -13358,6 +13567,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -13756,6 +13966,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -13771,6 +13982,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -14173,6 +14385,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -14188,6 +14401,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -14593,6 +14807,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -14608,6 +14823,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -15027,6 +15243,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -15042,6 +15259,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -15438,6 +15656,7 @@
         "notifications.retry",
         "notifications.title",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -15453,6 +15672,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -15815,6 +16035,7 @@
         "module.teams",
         "module.vat",
         "operatorInbox",
+        "ownershipVerifications",
         "pages.buildings",
         "pages.construction_portfolio",
         "pages.contacts",
@@ -15830,6 +16051,7 @@
         "personal.groups.organization",
         "personal.items.account",
         "personal.items.createWorkspace",
+        "personal.items.myCases",
         "personal.items.myContacts",
         "personal.items.myDemands",
         "personal.items.myDossiers",
@@ -15972,6 +16194,7 @@
         "operationalStatus.ready",
         "operationalStatus.under-construction",
         "operatorInbox",
+        "ownershipVerifications",
         "personal.groups.account",
         "personal.groups.communication",
         "personal.groups.discovery",
@@ -16119,6 +16342,7 @@
         "offer.door.label",
         "offer.form.placeQueryPlaceholder",
         "operatorInbox",
+        "ownershipVerifications",
         "personal.groups.account",
         "personal.groups.communication",
         "personal.groups.discovery",
@@ -16267,6 +16491,7 @@
         "module.teams",
         "module.vat",
         "operatorInbox",
+        "ownershipVerifications",
         "personal.groups.account",
         "personal.groups.communication",
         "personal.groups.discovery",

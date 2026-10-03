@@ -15,11 +15,18 @@ import {
   FileQuestion,
   FileWarning,
   HelpCircle,
+  Hourglass,
   Landmark,
+  LogOut,
   type LucideIcon,
+  MailQuestion,
+  ShieldCheck,
+  ShieldOff,
+  Undo2,
   XCircle,
 } from 'lucide-react';
 import type { ChecklistRowStatus } from '@/types/conveyance-case';
+import type { EngagementState } from '@/types/engagement';
 
 type ConveyanceBadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'muted' | 'outline';
 
@@ -45,3 +52,18 @@ export const STATUS_PRESENTATION: Readonly<Record<ChecklistRowStatus, StatusPres
 export const STATUS_ORDER: readonly ChecklistRowStatus[] = [
   'expired', 'rejected', 'missing', 'stale', 'expiring', 'uploaded', 'needs_answer', 'notary_side', 'accepted', 'not_applicable',
 ];
+
+/**
+ * ADR-901 Φ2 — η κατάσταση **συμμετοχής** επαγγελματία: ίδιο δόγμα (σχήμα + κείμενο + χρώμα). Επτά καταστάσεις,
+ * **επτά διαφορετικά εικονίδια** — το «ανακλήθηκε» δεν μοιάζει με το «έληξε», γιατί έχουν άλλη θεραπεία (ADR-862 Α4).
+ * Κείμενο: `conveyance.json` → `engagement.states.<κατάσταση>`.
+ */
+export const ENGAGEMENT_STATE_PRESENTATION: Readonly<Record<EngagementState, StatusPresentation>> = {
+  offered: { icon: MailQuestion, variant: 'info' },
+  active: { icon: ShieldCheck, variant: 'success' },
+  declined: { icon: XCircle, variant: 'muted' },
+  withdrawn: { icon: Undo2, variant: 'muted' },
+  revoked: { icon: ShieldOff, variant: 'error' },
+  expired: { icon: Hourglass, variant: 'warning' },
+  completed: { icon: LogOut, variant: 'muted' },
+};

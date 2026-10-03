@@ -79,8 +79,8 @@ export type TourTilesetState = (typeof TOUR_TILESET_STATES)[number];
  * - `tour:view`           — θέαση περιήγησης `on-request`, από εγκεκριμένο αίτημα (Φ0.13)
  * - `tour:capture:upload` — ανέβασμα λήψεων από φωτογράφο, **χωρίς** διαχείριση (Φ0.5)
  *
- * Ξεχωριστά από το `GRANT_SCOPES` του ακινήτου (`lib/auth/types`): εκείνα δίνονται σε **μονάδα**, αυτά σε
- * **περιήγηση** — άλλος πόρος, άλλο έγγραφο, ίδιος κριτής.
+ * Ξεχωριστά από τα εύρη της **συμμετοχής σε υπόθεση** (`types/engagement`, ADR-862 Φ1): εκείνα δίνονται σε
+ * **υπόθεση**, αυτά σε **περιήγηση** — άλλος πόρος, άλλο έγγραφο, ίδιος κριτής (`evaluateScopedGrant`).
  */
 export const TOUR_GRANT_SCOPES = ['tour:view', 'tour:capture:upload'] as const;
 export type TourGrantScope = (typeof TOUR_GRANT_SCOPES)[number];

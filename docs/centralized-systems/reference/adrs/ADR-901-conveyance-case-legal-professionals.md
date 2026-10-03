@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟢 **Φ1 IMPLEMENTED (2026-10-02)** — υπόθεση μεταβίβασης + κατάλογος ως δεδομένα + καρτέλα «Δικαιολογητικά» για τον εργολάβο + σύγκλιση AI knowledge base (§14) · ✅ αποφάσεις Ε-2…Ε-8 (Giorgio 2026-10-02) · Ε-1 τεχνική · ⏳ Φ0 (επαλήθευση καταλόγου από συμβολαιογράφο — ο κατάλογος κυκλοφορεί ως v0, `verifiedAt: null`, και το UI το δηλώνει) · ⏳ Φ2+ |
+| **Status** | 🟢 **Φ2 IMPLEMENTED (2026-10-03, §14.2)** — συμμετοχή `legal` μέσω ADR-862 Φ1 · 🟢 **Φ1 IMPLEMENTED (2026-10-02)** — υπόθεση μεταβίβασης + κατάλογος ως δεδομένα + καρτέλα «Δικαιολογητικά» για τον εργολάβο + σύγκλιση AI knowledge base (§14) · ✅ αποφάσεις Ε-2…Ε-8 (Giorgio 2026-10-02) · Ε-1 τεχνική · ⏳ Φ0 (επαλήθευση καταλόγου από συμβολαιογράφο — ο κατάλογος κυκλοφορεί ως v0, `verifiedAt: null`, και το UI το δηλώνει) · ⏳ Φ2+ |
 | **Date** | 2026-10-02 |
 | **Category** | Identity / Collaboration / Legal / Documents |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -88,6 +88,10 @@
 | Ε-Ε | Το `LEGAL_PHASES` (ADR-230/287) σταματά στο `payoff_completed` — **δεν** έχει Κτηματολόγιο | `signed` **παράγεται** (`final_signed`+)· `registered`/`closed`/`cancelled` είναι **ρητές** πράξεις (`storedState`) |
 | Ε-ΣΤ | Ο μισθωτής **δεν** έχει self-contact· η νομική οντότητα-πωλητής είναι το `project.linkedCompanyId` (ADR-232)· οι οικοπεδούχοι (`landownerContactIds`) αποδεικνύουν αντιπαροχή | μέρη + **παραγόμενα γεγονότα** από τα δεδομένα |
 | Ε-Ζ | Το `legal_contracts` δεν έχει `companyId`, έλεγχο μισθωτή στο route, ούτε permission | **δεν** αντιγράφηκε· η υπόθεση ακολουθεί το σύγχρονο σχήμα (`ownedOrNull` · `requirePropertyInTenantScope` · permission με `projectId`) |
+| Ε-Η *(Φ2)* | Οι επαγγελματίες **ορίζονται ήδη** (`ProfessionalsCard` → `contact_links` ρόλων `seller_lawyer · buyer_lawyer · notary`) | η συμμετοχή **κρέμεται** στον ορισμό (`conveyance-professional.server.ts`: ορισμός → επαφή → κύριο email → λογαριασμός) — ⛔ καμία δεύτερη λίστα· οι θέσεις `professionals` της §5.1 **δεν** μπήκαν στο έγγραφο της υπόθεσης |
+| Ε-Θ *(Φ2)* | Το ωμό `conveyance_cases` έχει γεγονότα/εξαιρέσεις/σημειώσεις **και των δύο πλευρών** | κανόνες **deny-all και για τους επαγγελματίες** (το `visibleTo` δεν εκφράζεται σε κανόνα)· ανάγνωση **μόνο** `GET /api/engagements/{id}/case` με `EngagedCaseView` — **χωρίς** το ωμό έγγραφο |
+| Ε-Ι *(Φ2)* | Ο συλλέκτης της Φ1 δεν διάβαζε `cdeState`/`cdeReadReach` | φίλτρο εμβέλειας για συμμετέχοντα μέσω του **ΕΝΟΣ** κριτή CDE (`decideEngagedEvidenceReach`, θεματοφύλακας `readContainerState`) — ποτέ literal `cdeReadReach === 'author'` |
+| Ε-Κ *(Φ2)* | Στα νεόδμητα ο **αγοραστής** σπάνια έχει λογαριασμό ⇒ το «Συμφωνώ» της §5.2 δεν μπορεί να δοθεί μέσα στην εφαρμογή | πρακτική Qualia/dotloop (ο κάτοχος του φακέλου καλεί **όλα** τα μέρη) **+** δηλωμένη συναίνεση με **πηγή** (`host_attested`) και **βάση** από κλειστό σύνολο, με όνομα και ώρα — η ίδια γραμμή γίνεται `in_app` όταν ο αγοραστής αποκτήσει λογαριασμό (Φ5) |
 
 ---
 
@@ -519,7 +523,7 @@ Email §5.6 → /invite/[token]
 |---|---|---|
 | **Φ0** | Επαλήθευση καταλόγου v0 από **πραγματικό** συμβολαιογράφο + δικηγόρο (§11) · απαντήσεις §10 | — |
 | **Φ1** ✅ | `conveyance_cases` + πρόθεμα ID · κατάλογος config + παραγωγή κατάστασης · καρτέλα «Δικαιολογητικά» **για τον εργολάβο** (χωρίς εξωτερικούς ακόμη) · **+ σύγκλιση AI KB** (§14) | ~~Φ0~~ — κυκλοφόρησε ως v0 με δηλωμένο «μη επαληθευμένο» |
-| **Φ2** | Πρότυπο `legal` στο ADR-862 · `engagements` · ετυμηγορία `engaged` · κανόνες Firestore/Storage | **ADR-862 Φ1** |
+| **Φ2** ✅ *(2026-10-03, §14.2)* | Πρότυπο `legal` στο ADR-862 · `engagements` · ετυμηγορία `engaged` · κανόνες Firestore/Storage | **ADR-862 Φ1** ✅ |
 | **Φ3** | Πρόσκληση `engagement` στη μηχανή ADR-853 · σελίδα `/invite/[token]` (προεπισκόπηση/εγγραφή/δήλωση ιδιότητας) · νέο email §5.6 · αναβάθμιση `ProfessionalsCard` | Φ2 · ADR-853 Φ6 UI |
 | **Φ4** | «Οι υποθέσεις μου» + σελίδα υπόθεσης · ίχνος · ανεβάσματα επαγγελματιών · ειδοποιήσεις λήξεων | Φ3 |
 | **Φ5** | **Ιδιώτης**: υπόθεση από φάκελο/αγγελία · `resale_private` | **ADR-866 Φ3** (οικοδεσπότης προσωπικός χώρος) |
@@ -606,6 +610,8 @@ Email §5.6 → /invite/[token]
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-03 | 🧩 **Route slices `/cases` + CHECK 3.34 ξεκλείδωσε** (ADR-744 §26). Το `navigation:personal.items.myCases` έβγαλε το `navigation` 22.808/22.800· θεραπεία **μετακόμιση** του λεξιλογίου του ιεραρχικού πλοηγητή στο `hierarchy-navigator` (όχι +50 στο ταβάνι, που χαμήλωσε σε 14.500). Μετά: `/cases` **2.731** bytes · `/cases/[engagementId]` **8.122** (σφραγισμένα στο `.i18n-shell-slice.json`), παράδοση με `registerRouteSlice` στα `MyCasesContent`/`EngagedCaseContent`· `dynamicKeyPolicy` για το `t(row.item.labelKey)` του `ConveyanceChecklistRow` (`conveyance:items`). |
+| 2026-10-03 | 🟢 **Φ2 υλοποιήθηκε** (§14.2) μαζί με την **ADR-862 Φ1** (§5.3.8). Ροή: ορισμός στο `ProfessionalsCard` → **πρόταση** πρόσβασης από τον οικοδεσπότη (Procore «Save & Send Notification») → **«Αναλαμβάνω»** (Entra `PendingAcceptance`) → «Οι υποθέσεις μου» → υπόθεση φιλτραρισμένη ανά **ρόλο** και **εμβέλεια**. Ευρήματα Ε-Η…Ε-Κ (§2.3). Συναίνεση της άλλης πλευράς **δηλωμένη με πηγή + βάση** (Qualia/dotloop). Ειδοποιήσεις `caseEngagementChanged` (υποχρεωτική) · `caseEngagementAnswered`. Κλείσιμο/ακύρωση υπόθεσης ⇒ οι συμμετοχές γίνονται `completed`/`withdrawn` (κύρια λήξη). |
 | 2026-10-02 | 🟢 **Φ1 υλοποιήθηκε** (§14). SSoT audit πριν από κώδικα ⇒ 7 διαφωνίες κώδικα/σχεδίου (§2.3 Ε-Α…Ε-Ζ) — το σχέδιο ακολούθησε τον κώδικα. Κατάλογος 39 γραμμών ως δεδομένα με matchers **ανά επίπεδο**· πυρήνας παραγωγής 10 καταστάσεων με **έλεγχο δεμένο στην έκδοση** και **ισχύ ως προς την ημέρα υπογραφής** (§5.5.1)· πράξη `conveyance_cases` (πρόθεμα `cvc`, μόνο server, CAS, ιδεμποτές άνοιγμα, πάγωμα Ε-6, ίχνος `conveyance_case`)· δικαιώματα `legal:conveyance:view/manage`· καρτέλα «Δικαιολογητικά» στο `SalesSidebar` με optimistic updates· **σύγκλιση AI KB** (απόφαση Giorgio: τώρα). Άγκυρες Α4 · Α7 · Α12-Α16 (§7). Boy-scout: `shouldShowLegalTab`/`shouldShowPaymentTab` (δίδυμα) → `isInSaleProcess` · `isLegalPhase` type guard στο SSoT · `array-contains-any` στο επαληθευμένο fake (+ περίπτωση συμβολαίου Q6) · νέο SSoT `lookupLocaleString` (τα ~26 αντίγραφα → pending-ratchet). |
 | 2026-10-02 | 🌐 Έρευνα για Ε-6 (Intralinks/Datasite: πάγωμα + αρχείο κλεισίματος, διατήρηση 3-7 έτη · ΗΠΑ: closing binder) ⇒ ✅ **Ε-6 αποφασίστηκε (Giorgio, Δ)**: πάγωμα στην υπογραφή, λήξη στην καταχώριση, Φάκελος ολοκλήρωσης ανά ρόλο με σφραγίδα (§5.7 · §5.7.1 · Σ-6 · Α9-Α11). |
 | 2026-10-02 | ✅ **Ε-5 αποφασίστηκε (Giorgio, Β)**: πρόσκληση 14 ημερών + υπενθύμιση στις 3 (§5.3). |
@@ -641,3 +647,31 @@ Email §5.6 → /invite/[token]
 - Τα αρχεία-τεκμήρια εμφανίζονται με όνομα — η **προβολή** τους μέσα από την υπόθεση έρχεται με τη σελίδα υπόθεσης (Φ4).
 - Το «Ανέβασμα» από γραμμή που λείπει δείχνει **πού** ανεβαίνει (επίπεδο) — η απευθείας ροή ανεβάσματος με προεπιλεγμένο entry point έρχεται στη Φ4.
 - 12 γραμμές είναι `offline` (ΗΤΚ, βεβαίωση άρθρου 83, διαχειριστή, ΦΠΑ/αναστολή, έκθεση νομικού ελέγχου, εξοφλητήριο, αποδεικτικά καταβολής, στεγαστικό κ.ά.) — **δεν** υπάρχει entry point· παρακολουθούνται με επιβεβαίωση παραλαβής. Νέα entry points = απόφαση εκτός Φ1.
+
+### 14.2 🗺️ Χάρτης υλοποίησης — Φ2 *(2026-10-03)*
+
+| Στρώμα | Αρχείο | Ρόλος |
+|---|---|---|
+| Μηχανισμός (ADR-862 Φ1) | `types/engagement.ts` · `lib/auth/engagement-{ref,schema,read,write,judge}.ts` · `config/engagement-policy.ts` | συμμετοχή `eng_…` · ο ΕΝΑΣ γραφέας · ο κριτής ανά πόρο · λήξη που παράγεται |
+| Πρότυπο `legal` | `types/container-access.ts` (`CdeAudience`) · `lib/auth/container-access.ts` (`AUDIENCE_REACH` + `decideEngagedEvidenceReach`) | μόνο PUBLISHED · `pre-cde` ορατό (η υπόθεση **είναι** το μοίρασμα) · WIP/SHARED/SUPERSEDED ⛔ |
+| Συναίνεση | `lib/conveyance/engagement-consent.ts` | «δύο κλειδιά» ως δεδομένα: ποια πλευρά ανοίγει κάθε θέση, ποιες βάσεις δηλώνονται |
+| Server | `services/conveyance/conveyance-professional.server.ts` · `conveyance-engagement-{support,host.service,access.service,notifier}.ts` · `conveyance-evidence.server.ts` (φίλτρο εμβέλειας) · `conveyance-case.service.ts` (κλείσιμο ⇒ `closeCaseEngagements`) | ορισμός→λογαριασμός · πρόταση/ανάκληση · «Οι υποθέσεις μου» · όψη ανά ρόλο · ειδοποιήσεις |
+| API | `api/conveyance-cases/[id]/engagements` (GET θέσεις · POST πρόταση) · `…/[engagementId]/revoke` · `api/engagements` (GET) · `api/engagements/[engagementId]/{respond,case}` (`withPersonalOrOrgAuth`) | ονομασμένες αρνήσεις `{ error }` · 404 για ξένο · 403 με ετυμηγορία για δική μου ανενεργή |
+| Client | `services/conveyance/conveyance-engagement-gateway.ts` · `hooks/{useCaseProfessionals,useMyCases,useEngagedCase}.ts` | ανά θέση/κάρτα «σε εξέλιξη» · optimistic + επαναφορά στην απάντηση |
+| UI | `components/sales/conveyance/{ConveyanceProfessionalsAccess,ConveyanceEngagementConsentDialog}.tsx` · `components/conveyance/my-cases/{MyCasesContent,MyCaseCardView,EngagedCaseContent}.tsx` · `app/(me)/cases/{page,[engagementId]/page}.tsx` · `config/personal-navigation.ts` (`myCases`, μόνο στήλη) | οικοδεσπότης: «Επαγγελματίες και πρόσβαση» στην καρτέλα Δικαιολογητικά · επαγγελματίας: «Οι υποθέσεις μου» |
+| i18n πρώτου καρέ | `.i18n-shell-slice.json` (`routeSlices` × 2 · `dynamicKeyPolicy` `ConveyanceChecklistRow`) · `i18n/generated/routes/{cases,cases__engagementId}.el.json` | ο `(me)` αποδίδεται στον server ⇒ ετικέτες χωρίς ωμό κλειδί (CHECK 3.51)· ADR-744 §26 |
+| Ειδοποιήσεις | `config/notification-events.ts` · `notification-preference-rows.ts` · `user-notification-settings.types.ts` · `server/notifications/notification-destination-rules.ts` · `common-shared`/`common-account` | κλειδί **ανά ρόλο** (όχι παράμετρος) — καμία ελληνική λέξη σε αγγλική οθόνη |
+| Κανόνες · δείκτες | `firestore.rules` (`projects/{p}/engagements`, `conveyance_cases` εξήγηση deny-all) · `firestore.indexes.json` (`engagements.uid`, COLLECTION_GROUP) | ο ίδιος βλέπει τη δική του · διαχειριστής οικοδεσπότη · γραφή ⛔ |
+| Ίχνος | `audit-entity-registry.ts` → `engagement` (βιβλίο οικοδεσπότη) | πρόταση · αποδοχή · άρνηση · ανάκληση · ολοκλήρωση |
+
+**Άγκυρες**: `lib/auth/__tests__/engagement-anchor.test.ts` (21) · `lib/conveyance/__tests__/engagement-consent.test.ts` ·
+`services/conveyance/__tests__/conveyance-engagement-flow.test.ts` (ροή από άκρη σε άκρη) · `container-access-anchor` Ε5 ·
+κανόνες `companies.rules.test.ts` (emulator).
+
+**Δηλωμένα όρια της Φ2**:
+- Η **πρόσκληση με email** για επαγγελματία **χωρίς** λογαριασμό = Φ3 (σήμερα: ονομασμένη κατάσταση `needs-invitation`).
+- **Προβολή/λήψη αρχείων** από τον επαγγελματία, έλεγχος γραμμών από αυτόν, ίχνος «ποιος κατέβασε τι» = Φ4.
+- Ο οικοδεσπότης της Φ2 είναι **μόνο** εργολάβος-πωλητής (`new_build_company`)· ο ιδιώτης = Φ5.
+- Η ειδοποίηση προς τον οικοδεσπότη ανοίγει την **καρτέλα του ακινήτου**: οι σελίδες πωλήσεων δεν έχουν διεύθυνση ανά ακίνητο.
+- Ο αναγνώστης τεκμηρίων του **AI KB** (θεατής αγοραστής, ADR-257) **δεν** περνά ακόμη από το φίλτρο εμβέλειας — καταγεγραμμένο στο `pending-ratchet-work`.
+

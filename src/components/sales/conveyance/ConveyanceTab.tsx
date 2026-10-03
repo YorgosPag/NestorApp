@@ -35,6 +35,7 @@ import { ConveyanceCaseHeader } from './ConveyanceCaseHeader';
 import { ConveyanceChecklistSection } from './ConveyanceChecklistSection';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
 import { ConveyanceFactsPanel } from './ConveyanceFactsPanel';
+import { ConveyanceProfessionalsAccess } from './ConveyanceProfessionalsAccess';
 import { ConveyanceRowDialog } from './ConveyanceRowDialog';
 
 interface ConveyanceTabProps {
@@ -71,6 +72,8 @@ function CaseBody({ view, canManage, onCommand }: { readonly view: ConveyanceCas
   return (
     <section className="space-y-3 p-3">
       <ConveyanceCaseHeader view={view} canEdit={canManage} onCommand={onCommand} />
+      {/* ADR-901 Φ2 — οι επαγγελματίες μπαίνουν ΜΟΝΟ με συμμετοχή· η ενότητα ζει όσο υπάρχει υπόθεση. */}
+      <ConveyanceProfessionalsAccess caseId={view.conveyanceCase.id} canManage={canManage} />
       <ConveyanceFactsPanel record={view.conveyanceCase} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
       {CHECKLIST_SECTIONS.map((section) => (
         <ConveyanceChecklistSection

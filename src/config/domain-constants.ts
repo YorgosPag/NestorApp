@@ -962,6 +962,17 @@ export const API_ROUTES = {
   CONVEYANCE_CASES: {
     LIST: '/api/conveyance-cases',
     BY_ID: (id: string) => `/api/conveyance-cases/${id}` as const,
+    // ADR-901 Φ2 — οι θέσεις επαγγελματιών της υπόθεσης (οικοδεσπότης): λίστα + πρόταση · ανάκληση.
+    ENGAGEMENTS: (id: string) => `/api/conveyance-cases/${id}/engagements` as const,
+    ENGAGEMENT_REVOKE: (id: string, engagementId: string) =>
+      `/api/conveyance-cases/${id}/engagements/${engagementId}/revoke` as const,
+  },
+
+  // ── ADR-862 Φ1 · ADR-901 Φ2 — «Οι υποθέσεις μου» (ο επαγγελματίας, μέσω της συμμετοχής του) ──
+  ENGAGEMENTS: {
+    MINE: '/api/engagements',
+    RESPOND: (engagementId: string) => `/api/engagements/${engagementId}/respond` as const,
+    CASE: (engagementId: string) => `/api/engagements/${engagementId}/case` as const,
   },
 
   // ── Sales ─────────────────────────────────────────────────────────────
