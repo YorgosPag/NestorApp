@@ -22,7 +22,7 @@ function baseCase(overrides: Partial<ConveyanceCase> = {}): ConveyanceCase {
 
 const permitFile: EvidenceFile = {
   fileId: 'file_permit', displayName: 'permit.pdf', entityType: 'project', entityId: 'proj_1', purpose: 'permit',
-  level: 'project', fingerprint: 'file_permit:2:2026-09-01T00:00:00.000Z', createdAt: '2026-09-01T00:00:00Z',
+  source: { kind: 'owned' }, level: 'project', fingerprint: 'file_permit:2:2026-09-01T00:00:00.000Z', createdAt: '2026-09-01T00:00:00Z',
 };
 
 const ctx: CommandContext = { actorUid: 'u2', now: '2026-10-02T10:00:00Z', today: '2026-10-02', evidence: [permitFile] };

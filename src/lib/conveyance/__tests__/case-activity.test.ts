@@ -3,7 +3,7 @@
  * Κάθε `it` ονομάζει τη μετάλλαξη που πρέπει να πιάσει.
  */
 
-import { encodeCaseAccess, projectCaseActivity } from '../case-activity';
+import { CASE_REQUEST_FIELD, encodeCaseAccess, encodeCaseRequest, projectCaseActivity } from '../case-activity';
 import type { EntityAuditEntry } from '@/types/audit-trail';
 
 function access(id: string, by: string, fileId: string, mode: 'view' | 'download', role: 'seller_lawyer' | 'notary', at: string): EntityAuditEntry {
@@ -17,7 +17,7 @@ function access(id: string, by: string, fileId: string, mode: 'view' | 'download
   };
 }
 
-const ME = { uid: 'u_sl', ownFileIds: new Set(['file_mine']) };
+const ME = { uid: 'u_sl', role: 'seller_lawyer' as const, ownFiles: new Map([['file_mine', 'mine.pdf']]) };
 
 describe('projectCaseActivity', () => {
   it('οι ΔΙΚΕΣ μου ενέργειες φαίνονται, νεότερη πρώτη', () => {
@@ -53,5 +53,40 @@ describe('projectCaseActivity', () => {
     const broken = access('d1', 'u_sl', 'file_x', 'view', 'seller_lawyer', '2026-10-01T10:00:00.000Z');
     const corrupt: EntityAuditEntry = { ...broken, changes: [broken.changes[0], { field: 'access', oldValue: null, newValue: 'view:janitor' }] };
     expect(projectCaseActivity([corrupt], ME)).toEqual([]);
+  });
+});
+
+/** ADR-901 Φ4.5 (Α31) — τα αιτήματα εγγράφων στο ίχνος: μόνο ο αιτών και ο ρόλος-παραλήπτης. */
+describe('projectCaseActivity — «Ζήτησε έγγραφο»', () => {
+  function requested(id: string, by: string, pairs: ReadonlyArray<readonly [string, string]>): EntityAuditEntry {
+    return {
+      id, entityType: 'conveyance_case', entityId: 'cvc_1', entityName: 'Δ3', action: 'document_requested',
+      changes: pairs.map(([itemId, label]) => ({ field: CASE_REQUEST_FIELD, oldValue: null, newValue: itemId, label })),
+      performedBy: by, performedByName: null, timestamp: '2026-10-03T10:00:00.000Z', companyId: 'comp_a',
+    };
+  }
+
+  it('ένα πάτημα για δύο γραμμές ⇒ δύο αντικείμενα «ζητήσατε … από: Συμβολαιογράφο» (μετάλλαξη: μία γραμμή ανά εγγραφή)', () => {
+    const items = projectCaseActivity([requested('r1', 'u_sl', [
+      ['contract_draft', encodeCaseRequest('seller_lawyer', 'notary')],
+      ['transfer_tax_proof', encodeCaseRequest('seller_lawyer', 'notary')],
+    ])], ME);
+    expect(items.map((i) => [i.kind, i.itemId, i.actorRole, i.byViewer])).toEqual([
+      ['requested', 'contract_draft', 'notary', true],
+      ['requested', 'transfer_tax_proof', 'notary', true],
+    ]);
+  });
+
+  it('ζητήθηκε από τον ΡΟΛΟ μου ⇒ «σας ζήτησε», με τον αιτούντα μόνο ως ρόλο', () => {
+    const [item] = projectCaseActivity([requested('r2', 'u_host', [['legal_due_diligence_report', encodeCaseRequest('host', 'seller_lawyer')]])], ME);
+    expect(item).toMatchObject({ kind: 'request-received', actorRole: 'host', byViewer: false, itemId: 'legal_due_diligence_report' });
+  });
+
+  it('🔴 αίτημα ανάμεσα σε τρίτους (συμβολαιογράφος → δικηγόρος αγοραστή) ⇒ ΑΟΡΑΤΟ (μετάλλαξη: προβολή κάθε αιτήματος)', () => {
+    expect(projectCaseActivity([requested('r3', 'u_n', [['buyer_mortgage_approval', encodeCaseRequest('notary', 'buyer_lawyer')]])], ME)).toEqual([]);
+  });
+
+  it('κωδικοποίηση ρόλων που δεν αναγνωρίζεται ⇒ παραλείπεται (ποτέ μαντεψιά παραλήπτη)', () => {
+    expect(projectCaseActivity([requested('r4', 'u_host', [['contract_draft', 'host>janitor']])], ME)).toEqual([]);
   });
 });

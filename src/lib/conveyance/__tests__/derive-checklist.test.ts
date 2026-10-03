@@ -17,7 +17,7 @@ function item(id: string): ChecklistItem {
 function file(overrides: Partial<EvidenceFile> = {}): EvidenceFile {
   return {
     fileId: 'file_1', displayName: 'permit.pdf', entityType: 'project', entityId: 'proj_1',
-    purpose: 'permit', level: 'project', fingerprint: 'file_1:0:2026-09-01', createdAt: '2026-09-01T10:00:00Z',
+    purpose: 'permit', source: { kind: 'owned' }, level: 'project', fingerprint: 'file_1:0:2026-09-01', createdAt: '2026-09-01T10:00:00Z',
     ...overrides,
   };
 }
