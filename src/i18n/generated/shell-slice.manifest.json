@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b1230e434fbdd967fb81d5967a2130f8ce131e3d29de6d146293a222c7b0c94b",
+  "inputsSha256": "dd54f9b76017a173c001115691cf947f13bc081c401109319e1af5262054aea7",
   "languages": [
     "el"
   ],
@@ -1181,7 +1181,7 @@
     "src/server/spatial-tour/tour-capture-invitation-preview.ts": "8b38a1e8d3e791b963a0a4d201b7d9bbbcbc9dc1c7ae978608d39a70f261575f",
     "src/server/spatial-tour/tour-capture-invitation-redeem.ts": "c115019182beb34d88893165ab2dbd22f5733666a86ab52e248c70e6bc47bbe6",
     "src/server/spatial-tour/tour-capture-invitation.ts": "9c54faffdd29e16e91665eedd345687fe3f143c0f11ba4eeec2f001fa8d2778b",
-    "src/server/spatial-tour/tour-capture-list.ts": "926f047825c4e82cfb5ed26ce1e7ba9e228bbad269a2b1db35d1ce0f7f85dbe0",
+    "src/server/spatial-tour/tour-capture-list.ts": "fe3a2791ec20ff399e2b0558df709965d57e1f71e5c450bf5156ff19442bcaa0",
     "src/server/spatial-tour/tour-genesis.ts": "20de3e979839918645af47c85e4724374e15c7926f44954a5bab43e922b1a28f",
     "src/server/spatial-tour/tour-locate.ts": "bd516c6e596ea1adafbd803f7775f65aa0fcd68f2a5990418909f65719ff9304",
     "src/server/spatial-tour/tour-media-store.ts": "b7ea52fda89463fd722a226f2e6efc8cc1f156397ec2e6171432a527fee4cde0",

@@ -25,7 +25,7 @@ import { mayManageTour, mayUploadTourCapture, type TourActor, type TourUploadVer
 import { openResumableUploadSession } from '@/lib/storage/resumable-upload-session';
 import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import type { TourSubject } from '@/types/spatial-tour';
+import type { SpatialTour, TourSubject } from '@/types/spatial-tour';
 
 import { refuseTourAccess, type TourAccessRefusal } from './tour-access-shared';
 import { ensureManagedTour } from './tour-genesis';
@@ -72,6 +72,8 @@ export interface UploaderStanding {
   readonly label: string | null;
   /** Πού ζουν τα μέσα της περιήγησης (ADR-884 Φ2ζ ζ5) — εκεί ανοίγει η καραντίνα. */
   readonly mediaPlacement: TourMediaPlacement;
+  /** Η περιήγηση όπως κρίθηκε — ό,τι χρειάζεται ο καλών (π.χ. οι κατόψεις, ADR-904 Κ9) χωρίς δεύτερη ανάγνωση. */
+  readonly tour: SpatialTour;
 }
 
 /**
@@ -90,7 +92,7 @@ export async function judgeUploader(
     const ensured = await ensureManagedTour(db, subject, actor);
     if (ensured.kind === 'refused') return ensured;
     const mediaPlacement = effectiveMediaPlacement(ensured.tour.mediaPlacement);
-    return { tourRef: ensured.tourRef, custody: ensured.custody, label: location.label, mediaPlacement };
+    return { tourRef: ensured.tourRef, custody: ensured.custody, label: location.label, mediaPlacement, tour: ensured.tour };
   }
   if (location.tour === null) return refuseTourAccess('tour-absent');
   if (!isOwnedByCustody(location.tour.custody, location.custody)) return refuseTourAccess('tour-custody-mismatch');
@@ -100,7 +102,7 @@ export async function judgeUploader(
   const verdict = mayUploadTourCapture(location.record, actor, grant, Date.now());
   if (verdict === 'granted-as-manager' || verdict === 'granted-by-capture-grant') {
     const mediaPlacement = effectiveMediaPlacement(location.tour.mediaPlacement);
-    return { tourRef: location.tourRef, custody: location.custody, label: location.label, mediaPlacement };
+    return { tourRef: location.tourRef, custody: location.custody, label: location.label, mediaPlacement, tour: location.tour };
   }
   return refuse(verdict);
 }

@@ -27,11 +27,14 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { CAPTURE_TARGETS_PAGE_SIZE } from '@/constants/spatial-tour-vocabulary';
 import type { CaptureTargetSchema, CaptureTargetsResponseSchema } from '@/contracts/capture-api/capture-api-schemas';
 import { readChainedPage, type ChainPosition, type PageSource, type SourcePage } from '@/lib/api/chained-pages';
+import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
+import { captureLevelChoices } from '@/lib/spatial-tour/tour-capture-placement-hint';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
+import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { readMyTourCaptureGrants } from './tour-capture-list';
-import { TOUR_SUBJECT_COLLECTION, tourSubjectFromDocument } from './tour-locate';
+import { TOUR_SUBJECT_COLLECTION, tourPlacementOf, tourSubjectFromDocument } from './tour-locate';
 
 export type CaptureTarget = z.infer<typeof CaptureTargetSchema>;
 export type CaptureTargetsPage = z.infer<typeof CaptureTargetsResponseSchema>;
@@ -57,10 +60,12 @@ function grantSource(db: Firestore, actor: TourActor): PageSource<CaptureTarget>
     async read(after, limit) {
       const entries = (await readMyTourCaptureGrants(db, actor.listing.uid))
         .filter((entry) => mayManageTour(entry.record, actor) !== 'granted')
-        .map(({ grant }): CaptureTarget => ({
+        .map(({ grant, tour }): CaptureTarget => ({
           subject: grant.subject,
           label: grant.propertyLabel,
           access: { kind: 'capture-grant', standing: grant.standing, expiresAt: grant.expiresAt, reason: grant.reason },
+          // Η ανενεργή άδεια δεν βλέπει τη δομή του ακινήτου — βλέπει μόνο **γιατί** δεν ανεβάζει.
+          levels: grant.standing === 'active' ? captureLevelChoices(tour.levels) : [],
         }))
         .sort((a, b) => subjectKey(a.subject).localeCompare(subjectKey(b.subject)))
         .filter((target) => after === null || subjectKey(target.subject) > after);
@@ -71,11 +76,34 @@ function grantSource(db: Firestore, actor: TourActor): PageSource<CaptureTarget>
   };
 }
 
+/** Ακίνητο που διαχειρίζεται ο δράστης — πριν διαβαστούν οι όροφοι της περιήγησής του. */
+interface ManagedCandidate {
+  readonly subject: TourSubject;
+  readonly label: string | null;
+  readonly placement: ReturnType<typeof tourPlacementOf>;
+}
+
+/**
+ * **Οι όροφοι για μια σελίδα — ΜΙΑ ανάγνωση** (`getAll`), όχι μία ανά ακίνητο: φραγμένη καθυστέρηση στο κινητό (ADR-904 Κ8).
+ * Περιήγηση που λείπει ή ανήκει σε **άλλον** κάτοχο ⇒ κανένας όροφος (ίδιος έλεγχος με τη λίστα λήψεων) — ποτέ ξένη δομή.
+ */
+async function withTourLevels(db: Firestore, managed: readonly ManagedCandidate[]): Promise<CaptureTarget[]> {
+  const refs = managed.flatMap((c) => (c.placement === null ? [] : [c.placement.tourRef]));
+  const snaps = refs.length === 0 ? [] : await db.getAll(...refs);
+  const tours = new Map(snaps.map((snap) => [snap.ref.path, snap.exists ? spatialTourFromDocument(snap.data(), snap.id) : null]));
+  return managed.map(({ subject, label, placement }) => {
+    const tour = placement === null ? null : tours.get(placement.tourRef.path) ?? null;
+    const levels = tour !== null && placement !== null && isOwnedByCustody(tour.custody, placement.custody) ? captureLevelChoices(tour.levels) : [];
+    return { subject, label, access: { kind: 'manager' }, levels };
+  });
+}
+
 /**
  * Πηγές 2-4 — ένα ερώτημα ισότητας, σελίδα κατά id. Κάθε έγγραφο περνά από το **σύνορο** της ρίζας και τον **κριτή**·
  * `skip` = όσα ανήκουν ήδη σε προηγούμενη πηγή.
  */
 function querySource(
+  db: Firestore,
   id: Exclude<CaptureTargetSource, 'grants'>,
   kind: TourSubject['kind'],
   query: Query | null,
@@ -88,13 +116,13 @@ function querySource(
       if (query === null) return EXHAUSTED;
       const ordered = query.orderBy(FieldPath.documentId());
       const snap = await (after === null ? ordered : ordered.startAfter(after)).limit(limit).get();
-      const items = snap.docs.flatMap((doc): CaptureTarget[] => {
+      const managed = snap.docs.flatMap((doc): ManagedCandidate[] => {
         const reading = tourSubjectFromDocument(kind, doc.data(), doc.id);
         if (reading === null || skip(doc.data()) || mayManageTour(reading.record, actor) !== 'granted') return [];
-        return [{ subject: { kind, id: doc.id }, label: reading.label, access: { kind: 'manager' } }];
+        return [{ subject: { kind, id: doc.id }, label: reading.label, placement: tourPlacementOf(db, { kind, id: doc.id }, reading.record) }];
       });
       const last = snap.docs[snap.docs.length - 1];
-      return { items, after: snap.docs.length === limit && last !== undefined ? last.id : null };
+      return { items: await withTourLevels(db, managed), after: snap.docs.length === limit && last !== undefined ? last.id : null };
     },
   };
 }
@@ -116,9 +144,9 @@ function captureTargetSources(db: Firestore, actor: TourActor): readonly PageSou
   const authoredBySelf = (data: unknown) => (data as { readonly authorUserId?: unknown } | undefined)?.authorUserId === uid;
   return [
     grantSource(db, actor),
-    querySource('own', 'owner-property', listings.where(FIELDS.AUTHOR_USER_ID, '==', uid), actor),
-    querySource('agency', 'owner-property', tenant === null ? null : listings.where(FIELDS.AUTHOR_COMPANY_ID, '==', tenant), actor, authoredBySelf),
-    querySource('company', 'company-property', !managesCompanyTours
+    querySource(db, 'own', 'owner-property', listings.where(FIELDS.AUTHOR_USER_ID, '==', uid), actor),
+    querySource(db, 'agency', 'owner-property', tenant === null ? null : listings.where(FIELDS.AUTHOR_COMPANY_ID, '==', tenant), actor, authoredBySelf),
+    querySource(db, 'company', 'company-property', !managesCompanyTours
       ? null
       : db.collection(TOUR_SUBJECT_COLLECTION['company-property']).where(FIELDS.COMPANY_ID, '==', tenant), actor),
   ];

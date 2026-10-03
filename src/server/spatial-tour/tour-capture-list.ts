@@ -28,8 +28,9 @@ import {
   type TourGrantStanding,
   type TourSubjectRecord,
 } from '@/lib/spatial-tour/tour-authority';
+import { captureLevelChoices, type CaptureLevelChoice } from '@/lib/spatial-tour/tour-capture-placement-hint';
 import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
-import type { TourCapture, TourCaptureInvitationPreview, TourSubject } from '@/types/spatial-tour';
+import type { SpatialTour, TourCapture, TourCaptureInvitationPreview, TourSubject } from '@/types/spatial-tour';
 
 import { refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
 import { locateSpatialTour } from './tour-locate';
@@ -39,7 +40,13 @@ const LIST_LIMIT = 200;
 const MY_GRANTS_LIMIT = 50;
 
 export type TourCaptureListing =
-  | { readonly kind: 'listed'; readonly captures: readonly TourCapture[]; readonly asManager: boolean }
+  | {
+      readonly kind: 'listed';
+      readonly captures: readonly TourCapture[];
+      readonly asManager: boolean;
+      /** Οι όροφοι της περιήγησης — η οθόνη λέει αν η πρόταση θέσης μιας λήψης δείχνει όροφο που **υπάρχει** (ADR-904 Κ8). */
+      readonly levels: readonly CaptureLevelChoice[];
+    }
   | TourAccessRefused;
 
 /** **Οι λήψεις μιας περιήγησης, όπως τις βλέπει αυτός ο δράστης.** */
@@ -65,7 +72,7 @@ export async function listTourCaptures(
     const capture = tourCaptureFromDocument(doc.data(), doc.id);
     return capture === null ? [] : [capture];
   });
-  return { kind: 'listed', captures: listed, asManager };
+  return { kind: 'listed', captures: listed, asManager, levels: captureLevelChoices(location.tour.levels) };
 }
 
 /** Μια δουλειά του φωτογράφου — **ποιο** ακίνητο, **ως πότε**, **σε ποια κατάσταση** η άδειά του. */
@@ -81,6 +88,8 @@ export interface MyTourCaptureGrant {
 export interface MyTourCaptureGrantEntry {
   readonly grant: MyTourCaptureGrant;
   readonly record: TourSubjectRecord;
+  /** Η περιήγηση — ήδη διαβασμένη για τον έλεγχο κατόχου· από εδώ οι όροφοι της λίστας λήψης (ADR-904 Κ8), χωρίς 2η ανάγνωση. */
+  readonly tour: SpatialTour;
 }
 
 /**
@@ -109,7 +118,7 @@ export async function readMyTourCaptureGrants(db: Firestore, uid: string): Promi
       subject: tour.subject, propertyLabel: location.label, reason: grant.reason, expiresAt: grant.expiresAt,
       standing: tourGrantStanding(grant, 'tour:capture:upload', nowMs),
     };
-    return { grant: item, record: location.record };
+    return { grant: item, record: location.record, tour };
   }));
   return listed.filter((entry): entry is MyTourCaptureGrantEntry => entry !== null);
 }

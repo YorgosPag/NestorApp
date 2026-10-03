@@ -30,6 +30,7 @@ import { placementForNewFile } from '@/lib/files/new-file-placement';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { readMediaRights } from '@/lib/media-rights/media-rights-read';
+import { readCapturePlacementHint } from '@/lib/spatial-tour/tour-capture-placement-hint';
 import { PANORAMA_CONTENT_TYPE, judgePanorama } from '@/lib/spatial-tour/panorama-policy';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
@@ -43,7 +44,7 @@ import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/services/file-record';
 import { buildProxyUrl } from '@/services/storage-admin/public-upload.service';
 import type { MediaRights } from '@/types/media-rights';
-import type { TourCapture } from '@/types/spatial-tour';
+import type { TourCapture, TourCapturePlacementHint } from '@/types/spatial-tour';
 import type { TourCaptureAudience, TourMilestone, TourUploadSource } from '@/constants/spatial-tour-vocabulary';
 
 import { readPanoramaFacts } from './panorama-facts';
@@ -68,6 +69,8 @@ export interface TourCaptureDeclaration {
   readonly milestone: TourMilestone | null;
   readonly rights: MediaRights;
   readonly originalFilename: string | null;
+  /** Η πρόταση θέσης (ADR-904 Κ8) — `null` ⇒ δεν δηλώθηκε. **Ποτέ** τοποθέτηση: την αποδέχεται ο υπεύθυνος. */
+  readonly placementHint: TourCapturePlacementHint | null;
 }
 
 /**
@@ -80,11 +83,12 @@ export function readCaptureDeclaration(raw: unknown, actorUid: string): TourCapt
   const source = TOUR_UPLOAD_SOURCES.find((s) => s === raw.source);
   const milestone = raw.milestone ?? null;
   const rights = readMediaRights(raw.rights);
-  if (source === undefined || !isTourCaptureAudience(raw.audience) || rights === null) return null;
+  const placementHint = readCapturePlacementHint(raw.placementHint);
+  if (source === undefined || !isTourCaptureAudience(raw.audience) || rights === null || placementHint === undefined) return null;
   if (milestone !== null && !isTourMilestone(milestone)) return null;
   if (rights.creator.userId !== null && rights.creator.userId !== actorUid) return null;
   const name = typeof raw.originalFilename === 'string' ? raw.originalFilename.trim().slice(0, MAX_FILENAME) : '';
-  return { source, audience: raw.audience, milestone, rights, originalFilename: name.length > 0 ? name : null };
+  return { source, audience: raw.audience, milestone, rights, originalFilename: name.length > 0 ? name : null, placementHint };
 }
 
 export interface FinalizeTourCaptureUploadInput {
@@ -248,6 +252,8 @@ function captureDocument(
     milestone: ctx.declaration.milestone,
     originalFileId: from.fileId,
     rights: ctx.declaration.rights,
+    // Υπό συνθήκη: το Firestore δεν δέχεται `undefined`, και η απουσία = «δεν δηλώθηκε» (ADR-904 Κ8).
+    ...(ctx.declaration.placementHint === null ? {} : { placementHint: ctx.declaration.placementHint }),
     tileset: { state: 'pending', contentHash: from.contentHash, faceSize: null },
     uploadedBy: ctx.ticket.uploaderUid,
     createdAt: at,
