@@ -25,6 +25,10 @@
  * | `properties.caseEngagementAnswered` | ακίνητο + `caseEngagementAnsweredDestination` | `announceToInviter` |
  * | `properties.caseExpiryHost` | ακίνητο + `caseEngagementAnsweredDestination` | `announceExpiryToHost` |
  * | `properties.caseExpiryEngaged` | `caseEngagementChangedDestination` | `announceExpiryToEngaged` |
+ * | `properties.caseDocumentHost` | ακίνητο + `caseEngagementAnsweredDestination` | `announceDocumentToHost` |
+ * | `properties.caseDocumentEngaged` | `caseEngagementChangedDestination` | `announceDocumentToEngaged` |
+ * | `properties.caseDocumentRequestHost` | ακίνητο + `caseEngagementAnsweredDestination` | `announceDocumentRequest` (host) |
+ * | `properties.caseDocumentRequestEngaged` | `caseEngagementChangedDestination` | `announceDocumentRequest` (engaged) |
  *
  * 🔑 **Κανένας κανόνας δεν γράφει δική του διαδρομή ή δικό του χώρο.** Αν αύριο ο
  * παραγωγός αλλάξει πόρτα, ο ανιχνευτής την ξέρει την ίδια στιγμή — δεν υπάρχει δεύτερο
@@ -203,6 +207,14 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   // ADR-901 Φ4 — λήξεις δικαιολογητικών: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής (ακίνητο · σελίδα υπόθεσης).
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_HOST]: caseEngagementAnsweredRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: async (_db, notification, entityId) =>
+    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  // ADR-901 Φ4.4 — νέο έγγραφο: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_HOST]: caseEngagementAnsweredRule,
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_ENGAGED]: async (_db, notification, entityId) =>
+    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_HOST]: caseEngagementAnsweredRule,
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED]: async (_db, notification, entityId) =>
     expected(caseEngagementChangedDestination(entityId, notification.userId)),
 };
 

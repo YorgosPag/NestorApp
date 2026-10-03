@@ -155,6 +155,12 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'network.teamJoined',
       'network.threadMessage',
       'properties.cardEmailReturned',
+      // ADR-901 Φ4.4 — νέο έγγραφο (transmittal): ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
+      'properties.caseDocumentEngaged',
+      'properties.caseDocumentHost',
+      // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
+      'properties.caseDocumentRequestEngaged',
+      'properties.caseDocumentRequestHost',
       // ADR-901 Φ2 — ο οικοδεσπότης στο ακίνητο (χώρος = μισθωτής του ακινήτου) · ο επαγγελματίας στη
       // σελίδα της υπόθεσης, στον ΔΙΚΟ του χώρο (καμία ανάγνωση).
       'properties.caseEngagementAnswered',

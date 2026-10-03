@@ -236,6 +236,16 @@ export interface PropertiesNotificationSettings {
    */
   caseExpiryAlerts: boolean;
   /**
+   * 📤 ADR-901 Φ4.4 — «**νέο έγγραφο** στην υπόθεση» (transmittal επαγγελματία) — μόνο σε όσους ανήκουν στο
+   * ακροατήριο του ρόλου του συντάκτη (οικοδεσπότης · επαγγελματίες).
+   */
+  caseDocumentTransmitted: boolean;
+  /**
+   * 📨 ADR-901 Φ4.5 — «**σας ζητούν έγγραφο**» στην υπόθεση — ο παραλήπτης παράγεται από τον πάροχο της γραμμής
+   * (οικοδεσπότης · επαγγελματίες).
+   */
+  caseDocumentRequests: boolean;
+  /**
    * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»** (ερώτηση + μία υπενθύμιση ανά περίοδο).
    *
    * ⚠️ **Προεπιλογή `true`**: χωρίς απάντηση η δημόσια κάρτα λέει «το ωράριο ίσως διαφέρει» σε κάθε αργία — ο
@@ -474,6 +484,8 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   caseEngagementChanged: true,
   caseEngagementAnswered: true,
   caseExpiryAlerts: true,
+  caseDocumentTransmitted: true,
+  caseDocumentRequests: true,
 };
 
 /**

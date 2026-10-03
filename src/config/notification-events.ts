@@ -158,6 +158,19 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_CASE_EXPIRY_HOST: 'properties.caseExpiryHost',
   PROPERTIES_CASE_EXPIRY_ENGAGED: 'properties.caseExpiryEngaged',
+  /**
+   * ADR-901 Φ4.4 — **νέο έγγραφο στην υπόθεση** (transmittal επαγγελματία), **μόνο** σε όσους ανήκουν στο ακροατήριο του
+   * ρόλου του συντάκτη. Δύο τύποι για ντετερμινιστικό προορισμό· **μία** προτίμηση: `caseDocumentTransmitted`.
+   */
+  PROPERTIES_CASE_DOCUMENT_HOST: 'properties.caseDocumentHost',
+  PROPERTIES_CASE_DOCUMENT_ENGAGED: 'properties.caseDocumentEngaged',
+  /**
+   * ADR-901 Φ4.5 — **«Ζήτησε έγγραφο»**: κάποιος της υπόθεσης ζητά γραμμές του καταλόγου από όποιον τις οφείλει. Ο
+   * παραλήπτης παράγεται από τον πάροχο της γραμμής (ποτέ από το UI). Μία ειδοποίηση **ανά παραλήπτη ανά πάτημα**
+   * («Ζήτησε όλα» = μία σύνοψη). Δύο τύποι για ντετερμινιστικό προορισμό· **μία** προτίμηση: `caseDocumentRequests`.
+   */
+  PROPERTIES_CASE_DOCUMENT_REQUEST_HOST: 'properties.caseDocumentRequestHost',
+  PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED: 'properties.caseDocumentRequestEngaged',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -396,6 +409,32 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: {
     category: 'properties',
     settingKey: 'caseExpiryAlerts',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-901 Φ4.4 — νέο έγγραφο από επαγγελματία: ΠΛΗΡΟΦΟΡΙΑ (κάτι νέο να δεις, τίποτα δεν σπάει).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_HOST]: {
+    category: 'properties',
+    settingKey: 'caseDocumentTransmitted',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_ENGAGED]: {
+    category: 'properties',
+    settingKey: 'caseDocumentTransmitted',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-901 Φ4.5 — «σας ζητούν έγγραφο»: ΠΡΟΕΙΔΟΠΟΙΗΣΗ (εκκρεμεί κάτι από εσάς για να προχωρήσει η υπόθεση).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_HOST]: {
+    category: 'properties',
+    settingKey: 'caseDocumentRequests',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED]: {
+    category: 'properties',
+    settingKey: 'caseDocumentRequests',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },

@@ -90,6 +90,10 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'caseEngagementAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.caseEngagementAnswered' },
       // ADR-901 Φ4 — δικαιολογητικά που λήγουν (οικοδεσπότης · επαγγελματίας — μία προτίμηση).
       { key: 'caseExpiryAlerts', labelKey: 'common-account:account.notificationSettings.categories.properties.caseExpiryAlerts' },
+      // ADR-901 Φ4.4 — νέο έγγραφο από επαγγελματία στην υπόθεση (οικοδεσπότης · επαγγελματίας — μία προτίμηση).
+      { key: 'caseDocumentTransmitted', labelKey: 'common-account:account.notificationSettings.categories.properties.caseDocumentTransmitted' },
+      // ADR-901 Φ4.5 — «σας ζητούν έγγραφο» στην υπόθεση (οικοδεσπότης · επαγγελματίας — μία προτίμηση).
+      { key: 'caseDocumentRequests', labelKey: 'common-account:account.notificationSettings.categories.properties.caseDocumentRequests' },
     ],
   },
   {
