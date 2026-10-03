@@ -37,7 +37,8 @@ import { createTourPlanZoomStore, type TourPlanZoomStore } from './tour-plan-zoo
 import { TourPanoramaStage } from './TourPanoramaStage';
 import { TourSidePanel } from './TourSidePanel';
 import { TourViewerSplit } from './TourViewerSplit';
-import { TourStopList, useLevelLabel } from './TourViewerNavigation';
+import { TourStopList } from './TourViewerNavigation';
+import { useLevelLabel } from './useLevelLabel';
 import { useStopNames } from './useStopNames';
 
 export interface TourViewerProps {

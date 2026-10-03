@@ -80,5 +80,12 @@ export const TOUR_ROOM_TYPE_KEY: Readonly<Record<TourRoomType, string>> = {
   other: 'spatial-tour:rooms.types.other',
 };
 
-/** «Υπνοδωμάτιο 2» — η αρίθμηση όμοιων χώρων στον ίδιο όροφο (παράγεται στο `tourRoomDisplay`). */
-export const TOUR_ROOM_NUMBERED_KEY = 'spatial-tour:rooms.numbered';
+/**
+ * Τα κλειδιά του **ονόματος χώρου** εκτός από τους τύπους. Αντικείμενο και όχι σκέτη σταθερά, επίτηδες: ο αναλυτής του i18n
+ * slice (ADR-744) επιλύει `t(OBJ.prop)`, όχι `t(ΣΤΑΘΕΡΑ)` — η σκέτη σταθερά έκανε κάθε σελίδα που φέρνει το `roomDisplayText`
+ * (τα εισερχόμενα λήψεων, ADR-904 Κ8) να **αρνείται** slice.
+ */
+export const TOUR_ROOM_KEYS = {
+  /** «Υπνοδωμάτιο 2» — η αρίθμηση όμοιων χώρων στον ίδιο όροφο (παράγεται στο `tourRoomDisplay`). */
+  numbered: 'spatial-tour:rooms.numbered',
+} as const;

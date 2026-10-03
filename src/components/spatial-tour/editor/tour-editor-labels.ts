@@ -28,6 +28,7 @@ export const TOUR_EDITOR_KEYS = {
   newFloor: 'spatial-tour:editor.newFloor',
   mode: 'spatial-tour:editor.mode',
   modeNew: 'spatial-tour:editor.modeNew',
+  placeAtHint: 'spatial-tour:editor.placeAtHint',
   modeNextTo: 'spatial-tour:editor.modeNextTo',
   modeSameAs: 'spatial-tour:editor.modeSameAs',
   neighbour: 'spatial-tour:editor.neighbour',

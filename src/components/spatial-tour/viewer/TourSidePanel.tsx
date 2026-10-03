@@ -4,7 +4,7 @@
  * @fileoverview **Η ΣΤΗΛΗ ΤΗΣ ΠΕΡΙΗΓΗΣΗΣ** — όλοι οι όροφοι, ο ένας κάτω από τον άλλο: κάτοψη με «είστε εδώ» + κώνο, και
  * **πάντα** η λίστα των σημείων (ADR-884 Φ2στ · §4.12 · Φ2στ-β · §4.13).
  * @related `TourViewer.tsx` (κάτοχος: μόνιμη στήλη σε μεγάλη οθόνη, `Sheet` στο κινητό) · `TourPlanMap.tsx` ·
- *   `TourViewerNavigation.tsx` (`TourStopList`, `useLevelLabel`) · `tour-panorama-source.ts` (`planImageUrl`)
+ *   `TourViewerNavigation.tsx` (`TourStopList`) · `useLevelLabel.ts` · `tour-panorama-source.ts` (`planImageUrl`)
  * @module components/spatial-tour/viewer/TourSidePanel
  *
  * 🏆 **Όπως η Zillow 3D Home**: «Jump to a panorama by tapping on a blue dot» — **όλοι** οι όροφοι ορατοί μαζί (όχι
@@ -24,7 +24,8 @@ import type { TourPanoramaSource } from './tour-panorama-source';
 import type { TourPlanZoomStore } from './tour-plan-zoom-store';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 import { TourPlanCard } from './TourPlanCard';
-import { TourStopList, useLevelLabel } from './TourViewerNavigation';
+import { TourStopList } from './TourViewerNavigation';
+import { useLevelLabel } from './useLevelLabel';
 
 export interface TourSidePanelProps {
   readonly graph: TourViewerGraph;

@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "592c8a898670d98ad81cffa44ed27678c3ee27dc6b1e11b5e3d7fe83245e1f1c",
+  "inputsSha256": "f54ee34657bda08b816b57e9ba360c61502818c26e6dbb29e24c85ef29331c77",
   "languages": [
     "el"
   ],
@@ -658,7 +658,7 @@
     "src/components/spatial-tour/viewer/TourViewerLoader.tsx": "e19725f95bedbe7eda1fc66ff8ef79281a66ca7c100a41810651972e7ea473d1",
     "src/components/spatial-tour/viewer/tile-panorama-source.ts": "d097ddd2ef300b7a00bacd7ff34c52a293a49b39c22b56a2291ef7f82d96d7db",
     "src/components/spatial-tour/viewer/tour-panorama-source.ts": "030e7499686f923eb836873f77fcf47e2aac8144af28ab6b15a66e5536e08bdf",
-    "src/components/spatial-tour/viewer/tour-plan-overlay-palette.ts": "63248bf052271d4bc70b65ad6e05c0af5eae6fc4555b5f77badb77a992f57038",
+    "src/components/spatial-tour/viewer/tour-plan-overlay-palette.ts": "dc9868c3834f6f46185953d72d161a7319fba45188ba05e26b011100230abd60",
     "src/components/stay-calendar/StayCalendarChrome.tsx": "c4e1561b946c84e3d5081d5375bffb4385fc218a45475410b5f490decae83501",
     "src/components/stay-calendar/StayCalendarContent.tsx": "6acbc4d497c3443aa87984206e4d869dd13a7a4e97b4b1a5931d25e5cd683ed4",
     "src/components/stay-calendar/StayCalendarForms.tsx": "a4acede44e398790c1460e280fe7f72385bf7e5c888f5f932fe5658b7ed40253",

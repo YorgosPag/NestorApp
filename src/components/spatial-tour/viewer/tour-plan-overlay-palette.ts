@@ -32,6 +32,15 @@ export const PLAN_DOT_CLASS = {
 export const PLAN_CONE_CLASS = 'fill-[hsl(var(--plan-here)/0.25)] stroke-[hsl(var(--plan-here))]';
 
 /**
+ * **Η πρόταση του φωτογράφου πάνω στην κάτοψη** (ADR-904 Κ9): καρφίτσα στο χρώμα του «εδώ» (εκεί στεκόταν) + **διακεκομμένος**
+ * κύκλος αβεβαιότητας — η διακοπή λέει «πρόταση, όχι θέση» χωρίς να βασίζεται μόνο στο χρώμα (CHECK 3.41).
+ */
+export const PLAN_HINT_CLASS = {
+  pin: 'fill-[hsl(var(--plan-here))] stroke-white',
+  radius: 'fill-[hsl(var(--plan-here)/0.15)] stroke-[hsl(var(--plan-here))]',
+} as const;
+
+/**
  * 🧭 **Το βέλος βορρά πάνω στην κάτοψη** (ADR-897 Φ5.2) — μελάνι με λευκή άλω, όπως οι ετικέτες: διαβάζεται πάνω σε κάθε
  * γραμμή του σχεδίου (ίδια αρχή διπλής αντίθεσης με το HUD βορρά του DXF, ADR-656 v5).
  */

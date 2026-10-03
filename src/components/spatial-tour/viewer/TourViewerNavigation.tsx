@@ -19,13 +19,8 @@ import type { TourViewerGraph, ViewerLevelEntry, ViewerNeighbour } from '@/lib/s
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
+import { useLevelLabel } from './useLevelLabel';
 import { useStopNames } from './useStopNames';
-
-/** Η ετικέτα ορόφου — η δηλωμένη, αλλιώς «Όροφος {n}». Ένας κανόνας για στήλη, επεξεργαστή και λίστα χωρίς WebGL. */
-export function useLevelLabel(): (level: Pick<ViewerLevelEntry, 'label' | 'ordinal'>) => string {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
-  return (level) => level.label ?? t(TOUR_VIEWER_KEYS.floorNumbered, { ordinal: level.ordinal });
-}
 
 /**
  * Ετικέτα + `aria-label` ενός γείτονα — με τον όροφο όταν η σκάλα οδηγεί σε **άλλον** («Σοφίτα · Όροφος 1»).
