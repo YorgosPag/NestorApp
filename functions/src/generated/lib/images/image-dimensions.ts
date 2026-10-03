@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/images/image-dimensions.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:4a4d339805e31f5c438e5bb55670c38925702471a7213da3329a84a44d322e4b
+// sha256:80241a79a2e891d9d0db466e18d73840c21fa129153b9589ddf38a2426f3d29b
 
 /**
  * @fileoverview 📐 **ΟΙ ΔΙΑΣΤΑΣΕΙΣ ΜΙΑΣ ΕΙΚΟΝΑΣ ΟΠΩΣ ΤΗ ΒΛΕΠΕΙ Ο ΘΕΑΤΗΣ** — το ΕΝΑ σημείο που ξέρει τι σημαίνει
@@ -71,6 +71,17 @@ export function isPortraitDimensions(dimensions: ImageDimensions): boolean {
 export function containedWidth(box: { readonly width: number; readonly height: number }, image: ImageDimensions): number {
   if (!(box.width > 0) || !(box.height > 0)) return 0;
   return Math.min(box.width, (box.height * image.width) / image.height, image.width);
+}
+
+/**
+ * **Πόσο φαρδιά ζωγραφίζεται** μια εικόνα σε κουτί με `object-cover` (μικρογραφίες) — ο δίδυμος του `containedWidth`.
+ * 🔑 Το cover **γεμίζει** το κουτί: μια πανοραμική λήψη σε τετράγωνο κουτί κλιμακώνεται στο **ύψος** και ξεχειλίζει
+ * πλάγια ⇒ χρειάζεται πλάτος **μεγαλύτερο** από του κουτιού, αλλιώς θολώνει. Ποτέ πάνω από τα pixel της εικόνας
+ * (κανένα παράγωγο δεν έχει περισσότερα). `0` για άκυρο κουτί.
+ */
+export function coveredWidth(box: { readonly width: number; readonly height: number }, image: ImageDimensions): number {
+  if (!(box.width > 0) || !(box.height > 0)) return 0;
+  return Math.min(Math.max(box.width, (box.height * image.width) / image.height), image.width);
 }
 
 // ---------------------------------------------------------------------------
