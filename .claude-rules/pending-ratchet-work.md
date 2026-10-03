@@ -2,6 +2,15 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **03/10 — ΨΕΥΔΟ-ΤΑΥΤΟΤΗΤΑ «ΝΕΟΥ» `'__new__'`: ~18 ΣΚΕΤΑ LITERALS** *(N.0.2 · ADR-777 §8.31.12)*
+
+  Το ADR-777 §8.31.12 δημιούργησε το SSoT **`src/lib/draft-entity-id.ts` → `DRAFT_ENTITY_ID` / `isDraftEntityId(id)`** και
+  μετέφερε τους 2 καταναλωτές του `useEntityPageState` (`BuildingsPageContent` · `projects-page-content`). Μένουν: τα
+  `*QuickCreateSheet` (building/project/unit) · `UnitsPageContent` · `useProjectCustomers` · `useProjectStructure` ·
+  `PropertyDetailsContent` · `usePropertyMediaCounts` · `usePropertyMutationImpactGuard` · `property-mutation-gateway` (×5) ·
+  `app/api/properties/[id]/route.ts`. ⚠️ `MemberEditor` · `AddressMap` χρησιμοποιούν `'__new__'` με **άλλη** σημασία (κλειδί
+  test/σημείου, όχι εγγραφή) — να κριθούν, όχι να μεταναστεύσουν τυφλά. Μέτρα: `grep -rn "'__new__'" src`.
+
 - 🟡 **02/10 — ΑΝΑΓΝΩΣΗ ΚΛΕΙΔΙΟΥ `a.b.c` ΣΕ LOCALE BUNDLE: ~26 ΤΟΠΙΚΑ ΑΝΤΙΓΡΑΦΑ** *(N.0.2 · ADR-901 Φ1)*
 
   Το ίδιο `key.split('.').reduce((node, part) => …, bundle)` είναι γραμμένο σε ~28 αρχεία (κυρίως άγκυρες i18n σε
@@ -3952,14 +3961,17 @@
 - **Τι**: το `knowledge-base-handler.ts` καλεί `collectEvidenceForTargets(…)` με την προεπιλογή `'host'` ⇒ ένα **WIP** αρχείο μηχανικού μετρά ως «υπάρχει» στην απάντηση του AI προς τον **αγοραστή** (εξωτερικό θεατή). Δεν διαρρέει περιεχόμενο — διαρρέει **ύπαρξη/κατάσταση**.
 - **Fix**: πέρασμα ακροατηρίου (`'client'`) στο 4ο όρισμα — το φίλτρο υπάρχει ήδη (`decideEngagedEvidenceReach`, ADR-901 Φ2). Άγγιγμα σε `services/ai-pipeline/` ⇒ **N.10** (σουίτα ai-pipeline) — γι' αυτό δεν έγινε μέσα στη Φ2.
 
-### 🏢 Όροφος: ✅ ετικέτα/parser/λεξιλόγιο (2β.1α) + φιλοξενία σε όροφο (2β.1β) — ADR-903, 2026-10-03 — ⏳ μένουν: μετανάστευση δεδομένων (εντολή Giorgio) · τύποι `Floor*` · αναζήτηση/φίλτρο ακινήτων (προτεραιότητα ΜΕΣΑΙΑ · N.0.2)
+### 🏢 Όροφος: ✅ ετικέτα/parser/λεξιλόγιο (2β.1α) + φιλοξενία σε όροφο (2β.1β) + δήλωση/αγγελία/μονάδα (2β.2) + εύρος στάθμης στη ζήτηση (2β.3) — ADR-903, 2026-10-03 — ⏳ μένουν: μετανάστευση δεδομένων (εντολή Giorgio) · τύποι `Floor*` · αναζήτηση/φίλτρο ακινήτων (προτεραιότητα ΜΕΣΑΙΑ · N.0.2)
 - ✅ **Έγινε (2β.1α)**: `FloorRef` · `parseLegacyFloor` · `formatFloorRef` (`useFloorLabel` / `floorLabelIn`) · `FloorKind` +4 · καταργήθηκαν `formatFloorLabel`/`formatFloorString`/`generateAutoLongName` + 8 χειρόγραφα · φρουρός `lib/floor/__tests__/no-hand-floor-labels.test.ts`.
 - ✅ **Έγινε (2β.1β, ADR-903 §6)**: `floorId` αυθεντία + αντίγραφο `floor`/`floorKind` (server) σε ακίνητα/θέσεις/αποθήκες · cascade αναρίθμησης · ένας επιλογέας/μία πηγή · φίλτρο από τα δεδομένα · διαγράφηκαν `PARKING_FLOOR_LABELS`/`standardFloors`/`building.floors.*`/`parseFloorLevel` · seed σε αριθμούς · `parking-showcase/labels` στο `parking.json`.
 - ⏳ **Μετανάστευση δεδομένων**: `npm run migrate:hosted-floor-ref` (ξηρό) → αναφορά στον Giorgio → `--apply` **μόνο με εντολή του**· μετά `--verify` (exit 0 = κανένα αντίγραφο σε απόκλιση).
 - ⏳ **Ευρετήριο αναζήτησης**: το στατιστικό `floor` κρατά μόνο αριθμό ⇒ πυλωτή φαίνεται «Ισόγειο» (`search-index-config` → Cloud Functions, θέλει ανάπτυξη Functions).
 - ⏳ **Φίλτρο ορόφου ακινήτων** (`usePropertyFiltersConfig`: ετικέτα ωμός αριθμός «2» + matchers `Number(filters.floor)`) ⇒ `lib/floor/floor-filter` (κλειδί αριθμός:είδος).
 - **Τύποι-αντίγραφα** (~15): `Floor`/`FloorOption`/`FloorRecord`/`FloorData` σε `types/building/contracts.ts:226` · `usePropertyState.ts:9` · `useFloorsByBuilding.ts:32` (✅ πλέον η ΜΙΑ πηγή των επιλογέων — 2β.1β· το αντίγραφο του `FloorSelectField` διαγράφηκε) · `multi-level.service.ts:22` · `property-tab-constants.ts:104` · `useFloorsTabState.types.ts:12` · `features/*/types.ts` κ.ά. — αυθεντία `FloorDocument`.
-- **Νεκρό κλειδί** `property-market:offer.card.floor` («Όροφος {floor}») — το `OwnerPropertyCard` πέρασε στο `useFloorLabel`· σβήνεται **μετά** το commit του 2α (το αρχείο ανήκει στην ομάδα 2α).
+- ✅ **Έγινε (2β.2, ADR-903 §8)**: ζεύγος `floor`+`floorKind` σε δήλωση ιδιοκτήτη/προβολή/αγγελία · `floorPairOf` · `floorRefKey` · επιλογέας δηλωμένης στάθμης · `PublicListing.floorKind` (κρίκος 17) · `PlaceUnitRef`/`unitNumber`/κλειδί μονάδας · σβήστηκαν `offer.card.floor` + `search-results:listing.floor/groundFloor` + `comparables.basement` · φρουρός locale.
+- ✅ **Έγινε (2β.3, ADR-903 §9)**: `lib/floor/floor-level-range` (μία διάταξη, σειρά Spitogatos) σε φόρμα ζήτησης · φίλτρα αναζήτησης (σχήμα `'level-range'`) · `/interest-check` · `floorMinKind/floorMaxKind` · υπόδειξη `unitIncomplete` · `isValueSetShape`. ⚠️ Το `placeUnitKey` **δεν** χρειάστηκε στην 2β.3 (ο κριτής ήταν ήδη ανά μονάδα) — πρώτος καταναλωτής η 2β.4.
+- ⏳ **«Τελευταίος όροφος» / «ενδιάμεσοι»** (idealista «última planta / plantas intermedias»): θέλει πλήθος ορόφων του κτιρίου από το επίπεδο Α — μετά την 2β.4. (προτεραιότητα ΧΑΜΗΛΗ)
+- ⏳ **Ίχνος αλλαγών**: το `formatFieldAwareValue` αποδίδει μόνο το `floor` με την ετικέτα· το `floorKind` (ακίνητα/θέσεις/αποθήκες και πλέον αγγελίες ιδιώτη) εμφανίζεται ωμό (`pilotis`). Θεραπεία: κλάδος `floorKind` μέσω `FLOOR_LABEL_KEY` (το `standard` χωρίς αριθμό δεν έχει ετικέτα — χρειάζεται δική του λέξη).
 - **Πυλωτή — ελάχιστο ύψος κάτω από δοκό** (`clear-height-under-beam.ts`): σχόλιο λέει 1900 (ΚΠΝ) χωρίς επαληθευμένη πηγή· μένει 2200 μέχρι πηγή ΝΟΚ/ΚΠΝ.
 
 ### 🎯 Κύρια ενέργεια = `bg-primary` ⇒ αόρατη στο σκοτεινό (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-01, ADR-770 §18 · ADR-896 §7Α.8)
