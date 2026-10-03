@@ -159,6 +159,9 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       // σελίδα της υπόθεσης, στον ΔΙΚΟ του χώρο (καμία ανάγνωση).
       'properties.caseEngagementAnswered',
       'properties.caseEngagementChanged',
+      // ADR-901 Φ4 — λήξεις δικαιολογητικών: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
+      'properties.caseExpiryEngaged',
+      'properties.caseExpiryHost',
       'properties.demandInterest',
       'properties.demandListingMatch',
       // ADR-777 §8.69 — η μείωση οδηγεί στην ίδια δημόσια αγγελία, με τον ίδιο κανόνα.

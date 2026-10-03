@@ -151,6 +151,13 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROPERTIES_CASE_ENGAGEMENT_CHANGED: 'properties.caseEngagementChanged',
   /** ADR-901 Φ2 — **προς τον οικοδεσπότη που πρότεινε**: «ο Χ ανέλαβε / δεν ανέλαβε την υπόθεση». */
   PROPERTIES_CASE_ENGAGEMENT_ANSWERED: 'properties.caseEngagementAnswered',
+  /**
+   * ADR-901 Φ4 §6 Σ-5 — **δικαιολογητικά που λήγουν** ή δεν θα ισχύουν την ημέρα της υπογραφής. Ακμή, όχι στάθμη:
+   * μία σύνοψη ανά υπόθεση, **μόνο** όταν αλλάζει το σύνολο. Δύο τύποι, ώστε ο προορισμός να είναι ντετερμινιστικός:
+   * ο οικοδεσπότης (καρτέλα ακινήτου) · ο επαγγελματίας (σελίδα υπόθεσης). **Μία** προτίμηση: `caseExpiryAlerts`.
+   */
+  PROPERTIES_CASE_EXPIRY_HOST: 'properties.caseExpiryHost',
+  PROPERTIES_CASE_EXPIRY_ENGAGED: 'properties.caseExpiryEngaged',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -378,6 +385,19 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'caseEngagementAnswered',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-901 Φ4 — λήξεις δικαιολογητικών: ΠΡΟΕΙΔΟΠΟΙΗΣΗ (κάτι θα σπάσει την υπογραφή αν δεν γίνει ενέργεια).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_HOST]: {
+    category: 'properties',
+    settingKey: 'caseExpiryAlerts',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: {
+    category: 'properties',
+    settingKey: 'caseExpiryAlerts',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: {
     category: 'properties',

@@ -88,6 +88,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       // ADR-901 Φ2 — συμμετοχή σε υπόθεση μεταβίβασης (επαγγελματίας · οικοδεσπότης).
       { key: 'caseEngagementChanged', labelKey: 'common-account:account.notificationSettings.categories.properties.caseEngagementChanged' },
       { key: 'caseEngagementAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.caseEngagementAnswered' },
+      // ADR-901 Φ4 — δικαιολογητικά που λήγουν (οικοδεσπότης · επαγγελματίας — μία προτίμηση).
+      { key: 'caseExpiryAlerts', labelKey: 'common-account:account.notificationSettings.categories.properties.caseExpiryAlerts' },
     ],
   },
   {

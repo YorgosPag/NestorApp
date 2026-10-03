@@ -21,6 +21,10 @@
  * | `properties.tourLinkOpened` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourLinkOpened` |
  * | `network.threadMessage` | `readThreadTopic` + `threadDestination` | `announceNetworkMessage` |
  * | `network.teamJoined` | `actTeamRefById` + `threadDestination` | `announceTeamArrivals` |
+ * | `properties.caseEngagementChanged` | `caseEngagementChangedDestination` | `announceEngagementChanged` |
+ * | `properties.caseEngagementAnswered` | ακίνητο + `caseEngagementAnsweredDestination` | `announceToInviter` |
+ * | `properties.caseExpiryHost` | ακίνητο + `caseEngagementAnsweredDestination` | `announceExpiryToHost` |
+ * | `properties.caseExpiryEngaged` | `caseEngagementChangedDestination` | `announceExpiryToEngaged` |
  *
  * 🔑 **Κανένας κανόνας δεν γράφει δική του διαδρομή ή δικό του χώρο.** Αν αύριο ο
  * παραγωγός αλλάξει πόρτα, ο ανιχνευτής την ξέρει την ίδια στιγμή — δεν υπάρχει δεύτερο
@@ -196,6 +200,10 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_CHANGED]: async (_db, notification, entityId) =>
     expected(caseEngagementChangedDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_ANSWERED]: caseEngagementAnsweredRule,
+  // ADR-901 Φ4 — λήξεις δικαιολογητικών: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής (ακίνητο · σελίδα υπόθεσης).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_HOST]: caseEngagementAnsweredRule,
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: async (_db, notification, entityId) =>
+    expected(caseEngagementChangedDestination(entityId, notification.userId)),
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */
