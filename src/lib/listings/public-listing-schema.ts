@@ -63,6 +63,7 @@ import type { ListedAt } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { readListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
 import { readStoredLevelAreas } from '@/lib/properties/level-areas';
+import { isFloorKind } from '@/utils/floor-naming';
 
 // ============================================================================
 // Η ΕΚΔΟΣΗ
@@ -76,7 +77,7 @@ import { readStoredLevelAreas } from '@/lib/properties/level-areas';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 16;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 17;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -770,6 +771,23 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο.
      */
     apply: (doc) => ({ ...doc, levelAreas: readStoredLevelAreas(doc.levelAreas) }),
+  },
+  {
+    to: 17,
+    adr: 'ADR-900 §8 #2 (2β.2)',
+    adds: ['floorKind'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΤΟ ΕΙΔΟΣ ΤΗΣ ΣΤΑΘΜΗΣ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΟ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΣΥΝΑΓΕΤΑΙ ΑΠΟ ΤΟΝ ΑΡΙΘΜΟ»** (`null`) — ακριβώς ό,τι έδειχνε ως
+     * σήμερα. Την πυλωτή τη γράφει η **επαναπροβολή** από το ακίνητο (`floorPairOf`), ποτέ μαντεψιά εδώ.
+     * Είδος χωρίς αριθμό ή εκτός λεξιλογίου ⇒ `null` (ADR-903: ποτέ ορφανό είδος).
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο.
+     */
+    apply: (doc) => ({
+      ...doc,
+      floorKind: typeof doc.floor === 'number' && isFloorKind(doc.floorKind) ? doc.floorKind : null,
+    }),
   },
 ];
 

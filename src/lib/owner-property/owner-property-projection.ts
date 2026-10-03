@@ -131,6 +131,9 @@ export function projectableFromOwnerProperty(
     // ── §25.6: είδος + εμβαδόν, όροφος, υπνοδωμάτια ──────────────────────────
     areas: { gross: property.areaSqm },
     floor: property.floor,
+    // 🔒 ADR-900 §8 #2 (2β.2) · Ε2 — το ΕΙΔΟΣ της στάθμης φεύγει (πυλωτή ≠ ισόγειο)· ο `unitNumber` (πόρτα) **ΔΕΝ**
+    //    αντιγράφεται ποτέ εδώ. Φρουρός: `place-unit-disclosure.test.ts` σαρώνει το σειριοποιημένο αποτέλεσμα.
+    floorKind: property.floorKind,
     layout: { bedrooms: property.bedrooms },
     // ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής, αυτούσιες: η ΜΙΑ ερμηνεία ζει στην προβολή (ίδια με την εταιρεία).
     objectiveValueDeclarations: property.objectiveValueDeclarations,

@@ -63,6 +63,7 @@ import type { PriceReduction } from '@/types/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
 //    για το γιατί δεν ήταν απλώς «κόψιμο για να περάσει το όριο των 500 γραμμών».
 import { resolveListingPosition } from './public-listing-position';
+import { floorPairOf } from '@/lib/floor/hosted-floor';
 
 // ============================================================================
 // ΕΙΣΟΔΟΙ — το συμβόλαιο ζει στο -types.ts (N.7.1), η μηχανή εδώ
@@ -449,7 +450,7 @@ export function projectListingShape(
     // ADR-890 Φ0 — γεγονός της ΔΗΜΟΣΙΕΥΣΗΣ (όρια): το δένει ο γραφέας με το `withPublicationFacts`,
     // όπως τη συλλογή. Η καθαρή προβολή δεν ανοίγει αρχεία. Ίδιο για το `constructionYear`.
     adminArea: null,
-    floor: numberOrNull(property.floor),
+    ...floorPairOf(property), // 2β.2 — ζεύγος αριθμός + είδος (πυλωτή ≠ ισόγειο)· ΠΟΤΕ πόρτα/ΚΑΕΚ (Ε2)
     bedrooms: numberOrNull(property.layout?.bedrooms),
     // 🔴 **ADR-842 Φ3 — ΤΟ ΦΡΑΓΜΑ ΠΟΥ ΕΣΠΑΣΕ.** Η εταιρεία κατείχε ~60 πεδία και
     //    δημόσια έφευγαν **τέσσερα**· εδώ φεύγουν είκοσι τρία ακόμη, **χωρίς να

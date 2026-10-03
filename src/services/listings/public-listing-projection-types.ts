@@ -19,6 +19,7 @@
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { LegalityClaim } from '@/lib/legality/legality-claim';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { FloorKind } from '@/utils/floor-naming';
 import type {
   ListedAt,
   ListingAuthorship,
@@ -88,6 +89,11 @@ export interface ProjectableProperty {
   /** @deprecated επίπεδο πεδίο· διαβάζεται ως έσχατο εφεδρικό. */
   readonly area?: number | null;
   readonly floor?: number | null;
+  /**
+   * 🏢 Το είδος της στάθμης (ADR-900 §8 #2, 2β.2): εταιρεία ⇒ το αντίγραφο `HostedOnFloor` του server·
+   * ιδιώτης ⇒ η δήλωσή του. Χωρίς αυτό, ακίνητο σε **πυλωτή** δημοσιευόταν «Ισόγειο».
+   */
+  readonly floorKind?: FloorKind | null;
   readonly layout?: {
     readonly bedrooms?: number | null;
     /** ADR-842 Φ3 — `0` είναι **υπαρκτή τιμή** σε καθένα από αυτά. */

@@ -70,6 +70,7 @@ import type { ListingObjectiveValueDeclarations } from '@/lib/objective-value/ob
 import type { ResidenceFrontage } from '@/lib/objective-value/objective-value-types';
 import type { LevelArea } from '@/lib/properties/level-areas';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
+import type { FloorKind } from '@/utils/floor-naming';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
@@ -673,6 +674,15 @@ export interface PublicListing {
    * `null` = δεν καταχωρήθηκε· `0` είναι **ισόγειο**, υπαρκτή τιμή.
    */
   readonly floor: number | null;
+  /**
+   * 🏢 **Το είδος της στάθμης** (ADR-900 §8 #2, 2β.2 · απόφαση Giorgio Ε2) — πυλωτή / ημιώροφος / υπερυψωμένο /
+   * δώμα έχουν αριθμό, αλλά ο αριθμός μόνος λέει «Ισόγειο» ή «1ος». Ζεύγος με το {@link floor}, ανάγνωση **μόνο**
+   * με `hostedFloorRef` · ετικέτα `useFloorLabel` (ADR-903). `null` ⇒ συνάγεται από τον αριθμό.
+   *
+   * 🔒 **Ε2 — ό,τι ΔΕΝ υπάρχει εδώ, επίτηδες**: ο **αριθμός μονάδας** (πόρτα) και ο **ΚΑΕΚ** της μονάδας. Η
+   * idealista κρύβει την `puerta`· ο ΚΑΕΚ ταυτοποιεί το σπίτι. Φρουρός: `place-unit-disclosure.test.ts`.
+   */
+  readonly floorKind: FloorKind | null;
   /** Υπνοδωμάτια. `null` = δεν καταχωρήθηκε· `0` = studio, υπαρκτή τιμή. */
   readonly bedrooms: number | null;
 
