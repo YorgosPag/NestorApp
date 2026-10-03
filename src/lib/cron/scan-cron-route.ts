@@ -50,6 +50,12 @@ export interface ScanCronRouteOptions {
   readonly logger: ModuleLogger;
   /** Η εργασία. **Καθαρή συνάρτηση — καμία γνώση HTTP.** */
   readonly run: () => Promise<CronJobResult>;
+  /**
+   * ADR-855 · CHECK 3.78 — η βαθμίδα ρυθμού **ορατή στο route.ts**. Τύπος-κυριολεκτικό: η δήλωση **δεν μπορεί** να
+   * διαφωνήσει με ό,τι επιβάλλει το εργοστάσιο (`withSensitiveRateLimit` παρακάτω). Προαιρετικό μόνο για τις
+   * διαδρομές της baseline· κάθε **νέα** διαδρομή το δηλώνει (η πύλη μπλοκάρει την κρυμμένη βαθμίδα).
+   */
+  readonly category?: 'SENSITIVE';
 }
 
 export interface ScanCronRoute {

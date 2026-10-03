@@ -50,6 +50,8 @@ import { runDemandInterestAnnounce } from '@/lib/cron/jobs/demand-interest-annou
 import { runDemandListingMatchAnnounce } from '@/lib/cron/jobs/demand-listing-match-announce.job';
 import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
+import { runConveyanceExpiryAlerts } from '@/lib/cron/jobs/conveyance-expiry-alerts.job';
+import { runEngagementInvitationReminder } from '@/lib/cron/jobs/engagement-invitation-reminder.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
@@ -451,6 +453,41 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runHolidayHoursQuestion,
+  },
+  {
+    slug: 'engagement-invitation-reminder',
+    path: '/api/cron/engagement-invitation-reminder',
+    description: 'Υπενθύμιση στον προσκαλούντα: πρόσκληση επαγγελματία χωρίς απάντηση 3 ημερών (ADR-901 Ε-5)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί η μονάδα της πολιτικής είναι η ΗΜΕΡΑ** («3 ημέρες χωρίς απάντηση»). Η προθεσμία γράφεται
+    // στην έκδοση (`reminderDueAt`)· καθυστέρηση έως μία ημέρα είναι μέσα στο πνεύμα της απόφασης, και η επανάληψη
+    // είναι ακίνδυνη (ντετερμινιστικό `eventId` + CAS `reminderSentAt`).
+    //
+    // ⚠️ **Πρωί και όχι νύχτα**: θέλει **άνθρωπο** να ενεργήσει (τηλέφωνο · επαναποστολή). Λεπτό **13**: ελεύθερο από
+    // `*/10` · `2-59/5` · `4-59/10` · `8-59/15` και το `5` της ερώτησης αργιών.
+    schedule: '13 9 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runEngagementInvitationReminder,
+  },
+  {
+    slug: 'conveyance-expiry-alerts',
+    path: '/api/cron/conveyance-expiry-alerts',
+    description: 'Δικαιολογητικά υπόθεσης μεταβίβασης που λήγουν ή δεν θα ισχύουν στην υπογραφή (ADR-901 Φ4 · Σ-5)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί η μονάδα της ισχύος είναι η ΗΜΕΡΑ** (`expiresOn` = YYYY-MM-DD, ώρα Αθήνας). Η επανάληψη είναι
+    // ακίνδυνη: το `eventId` φέρει το αποτύπωμα του συνόλου, άρα ίδιο σύνολο σημαίνει καμία δεύτερη ειδοποίηση.
+    //
+    // ⚠️ **Πρωί, πριν το γραφείο**: θέλει άνθρωπο να ζητήσει νέο πιστοποιητικό. Λεπτό **19**: ελεύθερο από `*/10` ·
+    // `2-59/5` · `4-59/10` · `8-59/15` · `15` · `35`.
+    schedule: '19 8 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runConveyanceExpiryAlerts,
   },
   {
     slug: 'listing-stats-rollup',

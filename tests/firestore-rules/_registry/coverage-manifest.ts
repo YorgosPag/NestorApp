@@ -276,6 +276,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-901 Φ3 — η πρόσκληση υπόθεσης με email. Γραφή = αυτο-πρόσκληση με ήδη γραμμένες
+    // συναινέσεις (παράκαμψη Ε-3)· ανάγνωση = `nonceHash` + ποιος προσκλήθηκε σε ποια μεταβίβαση.
+    collection: 'engagement_invitations',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/engagement-invitations.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // 🏆 ADR-841 §7 Α21.12 — Η ΠΡΟΕΛΕΥΣΗ ΤΟΥ ΣΗΜΑΤΟΣ. **Τέταρτο `deny_all` της
     // οικογένειας, ΤΕΤΑΡΤΟΣ λόγος** — και δεν είναι ούτε ιδιωτικότητα προσώπου
     // (`mreq`), ούτε αυθεντία γραφέα (`fcon`), ούτε μυστικό εξαργύρωσης (`fcinv`).
