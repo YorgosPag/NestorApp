@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ✅ συμπλήρωση 34/34 · ✅ Ε2/Ε3 ζωντανά 2026-10-03 (deploy `88f7c42b`, §9) — Ε2β ⇒ **Ε4** · ✅ Ε4 ζωντανά 2026-10-04 (deploy `7402112f`, §9): Ε4α/β/δ/ζ + Γ3 ✅ · Ε4γ/Ε4ε ⇒ **Ε5** (στροφή) + **Ε6** (content-box) · ✅ Ε5/Ε6 ζωντανά 2026-10-04 (deploy `beca4af6`) ⇒ αποκάλυψαν **Ε7** (descriptor `srcset`) — διορθώθηκε στον κώδικα, ⏳ ζωντανά μετά το push |
+| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ✅ συμπλήρωση 34/34 · ✅ Ε2/Ε3 ζωντανά 2026-10-03 (deploy `88f7c42b`, §9) — Ε2β ⇒ **Ε4** · ✅ Ε4 ζωντανά 2026-10-04 (deploy `7402112f`, §9): Ε4α/β/δ/ζ + Γ3 ✅ · Ε4γ/Ε4ε ⇒ **Ε5** (στροφή) + **Ε6** (content-box) · ✅ Ε5/Ε6 ζωντανά 2026-10-04 (deploy `beca4af6`) ⇒ αποκάλυψαν **Ε7** (descriptor `srcset`) · ✅ Ε7 ζωντανά 2026-10-04 (deploy `3ba6028b`) — ο κύκλος Ε4–Ε7 έκλεισε |
 | **Date** | 2026-10-01 |
 | **Category** | Backend Systems |
 | **Προέλευση** | handoff `HANDOFFS/2026-10-01_property-header-gallery_PHASE-D-G_handoff.md` · αίτημα Giorgio: γκαλερί κεφαλίδας επιπέδου Zillow/Idealista |
@@ -325,6 +325,11 @@ Deploy `7da3dad8` (περιέχει `8521b68d` + `60f1aea7`): GitHub Actions «B
   `createImageBitmap(blob, { imageOrientation: 'none' })` (η «none» έχει αποσυρθεί από το πρότυπο — μέτρηση ανά browser) είτε κατάργηση
   της χειροκίνητης στροφής για τον κλάδο του browser· **πριν** από αυτό, έλεγχος αν υπάρχουν βαθμονομήσεις πάνω σε στραμμένα JPEG.
   Φραγμένο στο ratchet `image-dimensions` (baseline 1).
+  ✅ **ΛΥΘΗΚΕ 2026-10-04** (ADR-340 changelog). **Αναπαραγωγή** (Chrome 154, πραγματικό `file_3dc3c55b`): κωδικοποιημένο 2400×1800,
+  EXIF 6 · `createImageBitmap` προεπιλογή / `from-image` / **`none`** ⇒ **1800×2400 και στα τρία** · παλιός αγωγός ⇒ **2400×1800**.
+  Άρα η εκδοχή «`none` + χειροκίνητη» **δεν** είναι διαθέσιμη (ο Chrome αγνοεί το `none`) ⇒ μία αρχή = ο decoder (`from-image`),
+  η χειροκίνητη στροφή **διαγράφηκε**. **Βαθμονομήσεις**: `floorplan_backgrounds` = **0** έγγραφα στην παραγωγή ⇒ καμία μετάπτωση.
+  Ratchet `image-dimensions`: baseline **0**. Άγκυρα `ImageProvider.orientation.test.ts` (Ο1–Ο4), μεταλλάξεις 2/2.
 - Η σελίδα ακινήτου στην παραγωγή φορτώνει **243** chunks `/_next/static` (γεμίζει το buffer χρονισμού των 250 εγγραφών).
 - 14 προειδοποιήσεις *«preloaded but not used»* από `<link preload>` του Next — η γκαλερί δεν κάνει preload.
 
@@ -553,6 +558,117 @@ Commit `0b22c1d6` ⊂ deploy `beca4af6` (T1 `completed success`). Ίδια οθ�
 **Αρχεία για commit**: `src/lib/files/file-preview-ladder.ts` · `src/lib/storage/storage-object-url.ts` ·
 `src/lib/storage/__tests__/storage-proxy-url-roundtrip.test.ts` · αυτό το ADR.
 
+### Ε7 ζωντανά (2026-10-04, deploy `3ba6028b`)
+
+Commit `5ce566e3` ⊂ deploy `3ba6028b` (T1 `completed success`). ⚠️ Ο browser είχε πλέον **DPR 1** και παράθυρο 1920×897 (όχι 0,8 / 2400×1121):
+το πάνελ μετρήθηκε 907×349 content ⇒ `sizes="540px"` ⇒ `w=640`, οπότε η καλύπτουσα βαθμίδα **δεν** επιλεγόταν φυσικά. Για να ελεγχθεί
+**ακριβώς** η περίπτωση του Ε7, χρησιμοποιήθηκε στη σελίδα ένα προσωρινό `<img>` (offscreen, αφαιρέθηκε αμέσως) με το **πραγματικό**
+`srcset` του πάνελ, το `sizes="828px"` και τα όρια `max` του χθεσινού content-box (1195×548). Τα bytes ήταν πραγματικά (`w=1280`) και ο browser ο ίδιος.
+
+| # | Τι | Μετρημένο | Αποτέλεσμα |
+|---|---|---|---|
+| Ε7α | `srcset` του πάνελ `file_474b4d3c` | descriptors `320w 640w **1200w**` (πριν `1280w`) | ✅ |
+| Ε7β | Προσωρινό `<img>`, νέος descriptor | `naturalWidth` **828** (= `sizes`) ⇒ ζωγραφισμένη **822×548**: γεμίζει το content-box | ✅ |
+| Ε7γ | Ίδιο, με τον **παλιό** `1280w` (έλεγχος αντιπαραβολής) | `naturalWidth` 776 ⇒ **776×518**: ακριβώς το σφάλμα που μετρήθηκε | ✅ η ρίζα επιβεβαιώθηκε |
+| Ε7δ | Πάνελ στο τρέχον παράθυρο | `sizes` 540 ⇒ `w=640` (6.822 B), layout 523×349: γεμίζει το ύψος του content-box (349) | ✅ |
+| Γ3 | Κονσόλα | 0 σφάλματα | ✅ |
+
+### Θέμα 5α — στροφή οριζόντιας εικόνας (μέτρηση, 2026-10-04 · απόφαση Giorgio: **επαναπροσαρμογή**)
+
+Ανέβηκε δοκιμαστική οριζόντια `file_a0d3778e` (4000×3000, «adr899-landscape-4000x3000.jpg», τύπος «Εσωτερικό») στο ακίνητο δοκιμών.
+DPR 1, παράθυρο 1920×897.
+
+| # | Προβολέας | Κουτί | 0° | 90° | Αποτέλεσμα |
+|---|---|---|---|---|---|
+| Σ1 | Modal (`<main overflow-hidden>`) | 1872×704 | 939×704 | **704×939** | 🔴 κόβονται 117 px πάνω + 117 κάτω (25%) |
+| Σ2 | Πάνελ `/files` (content-box, `p-4`) | 907×349 | 465×349 | **349×465** | 🔴 κόβεται 18% |
+| Σ3 | Κάθετη 3:4 σε φαρδύ κουτί (υπολογισμός) | 1872×704 | 528×704 | 704×528 | ⚠️ δεν κόβεται, αλλά θα χωρούσε **939×704** (+33%) |
+
+**Απόφαση (Google Photos / Windows Photos / Lightroom):** μετά τη στροφή η εικόνα **ξαναχωρά**. Υλοποίηση στο **5β**, πάνω στο SSoT pan/zoom
+του θέματος 3: καθαρό `fitScaleForRotation(box, dims, angle)` στο `lib/images/image-dimensions.ts` · transform `scale(zoom × fit) · rotate` ·
+το «100%» = «χωρά» σε κάθε γωνία · στην ανάλυση περνά `zoom × fit` ως zoom ⇒ το `useZoomResolution` **δεν** αλλάζει υπογραφή και η γωνία
+**δεν** ξαναγίνεται είσοδος (Ε5 τηρείται): ό,τι ζωγραφίζεται μεγαλύτερο ζητά μεγαλύτερη βαθμίδα, ό,τι μικραίνει τίποτα.
+
+### Θέμα 4 — πλοήγηση προβολέων: στάση στο άκρο, εστίαση που δεν χάνεται (2026-10-04)
+
+**Μέτρηση** (4 φωτογραφίες, με συνθήκη αναμονής, όχι χρόνο):
+
+| # | Τι | Μετρημένο |
+|---|---|---|
+| Μ1 | Modal, «Επόμενη» στο 4/4 | `disabled` (opacity 0,5), μένει 4/4 — σταματά |
+| Μ2 | Modal, πλήκτρο → στο 4/4 | **1/4 — λούπα** ⇒ δύο κανάλια, δύο πολιτικές |
+| Μ3 | Modal, Enter στο «Επόμενη» στο 3/4 | 4/4 και εστίαση στο **`<body>`, έξω από το dialog** (WCAG 2.4.3) |
+| Μ4 | `PhotoLightbox` κεφαλίδας, Enter ×3 από 1/4 | **κόλλησε στο 2/4**: μετά το 1ο βήμα η εστίαση σε `DIV` |
+
+**Ρίζες**: (α) `usePhotoPreviewState` — πληκτρολόγιο **και** handlers έκαναν λούπα, το `PhotoPreviewModal` απενεργοποιούσε τα κουμπιά στα άκρα.
+(β) `disabled` σε εστιασμένο κουμπί ⇒ ο browser πετά την εστίαση (και στα όρια του zoom). (γ) `PhotoLightbox`: `key={photo.key}` σε **όλη** τη σκηνή
+⇒ ξαναστήνονταν τα κουμπιά **και** το `<output aria-live>`. (δ) Ανακοίνωση με **hardcoded ελληνικά** (N.11) μέσα σε setState updater, καμία από
+το πληκτρολόγιο. (ε) Το SSoT `announceToScreenReader` έφτιαχνε live region **γεμάτη ήδη** — συχνά δεν ανακοινώνεται· και το
+`NotificationProvider` κρατούσε **αντίγραφό** του (N.0.2).
+
+**Πρακτική**: Google Photos / Immich / το `PhotoLightbox` — **στάση στο άκρο σε κάθε κανάλι**· WAI-ARIA APG, μοτίβο Toolbar: τα ανενεργά
+στοιχεία **μένουν εστιάσιμα** (`aria-disabled`). Αυτό λύνει ακριβώς το ελάττωμα που ο `use-gallery-scroller` θεωρούσε άλυτο για το κρύψιμο του
+βέλους. Η καρουσέλ γκαλερί **μένει λούπα** (λίστα καρτών + τελείες θέσης, άγκυρα Α1).
+
+**Θεραπεία**:
+- **SSoT πολιτικής**: `indexWithin(target, total, 'clamp' | 'wrap')` στο `lib/array-utils.ts` — modal (`clamp`, **ένα** `stepPhoto` για κουμπιά
+  και πληκτρολόγιο) · lightbox (`clamp`) · γκαλερί (`wrap`, ο τύπος με το `+ total` ζει πλέον εκεί).
+- **Εστίαση**: `ToolbarButton` του modal και κουμπιά του lightbox με `aria-disabled` + φρουρό· βάση `buttonVariants` με `aria-disabled:` όψη
+  (ίδιο λεξιλόγιο με `tabs` / `sidebar-menu`)· στο lightbox το `key` μόνο στο `<img>`.
+- **Ανακοίνωση**: ένα effect στο `currentIndex` → `t('photoPreview.navigation.slide')` (υπάρχον κλειδί)· όχι στο άνοιγμα. Το SSoT
+  `announceToScreenReader`: **μόνιμη** region ανά προτεραιότητα, άδειασμα και μήνυμα μετά από 100 ms (μοτίβο LiveAnnouncer του React Aria),
+  ακύρωση εκκρεμούς ⇒ σε γρήγορη διαδοχή ακούγεται η τελευταία θέση. Το `NotificationProvider` το εισάγει.
+
+**Άγκυρες**: `lib/__tests__/array-utils-index-within.test.ts` · `core/modals/__tests__/photo-preview-navigation.test.tsx` (Μ1–Μ3, αποδίδει το
+πραγματικό modal) · `shared/media/__tests__/photo-lightbox-navigation.test.tsx` (Ν1–Ν3). Η Δ4 του `listing-photo-capture-spots.test.tsx`
+(ADR-897) **κλείδωνε** το `toBeDisabled()` — δηλαδή το σφάλμα εστίασης· ενημερώθηκε σε `aria-disabled="true"` + `not.toBeDisabled()`.
+Μεταλλάξεις **6/6 κόκκινες** με επαναφορά στο ίδιο script (πληκτρολόγιο σε wrap · `disabled` στο `ToolbarButton` · ανακοίνωση στο άνοιγμα ·
+`key` στη σκηνή · `disabled` στο lightbox · wrap χωρίς `+ total`). 45 σουίτες / 561 tests που αγγίζουν τα αλλαγμένα modules πράσινες ·
+`jscpd:diff` καθαρό (12 αρχεία).
+
+### Θέμα 3 — ΕΝΑ pan/zoom, και γραμμή εργαλείων πάνελ με ονόματα (2026-10-05)
+
+**Μέτρηση (grep, πριν από κώδικα)**: το SSoT **υπήρχε ήδη** — `hooks/useZoomPan.ts` + `lib/geometry/zoom-pan-math.ts` (ADR-187 · ADR-884,
+ο ένας τύπος `scaleAbout`), με καταναλωτές `FloorplanGallery` ×2 και `DetailSheetDialog`. **Τρία** σημεία το ξανάγραφαν με το χέρι:
+
+| | όρια | τροχός | κουμπιά | pan | εφαρμογή |
+|---|---|---|---|---|---|
+| πάνελ (`FilePreviewRenderer.ImagePreview`) | 0,1–10 | βήμα ×1,15 | ±0,25 | πάντα, `window` | imperative |
+| modal (`usePhotoPreviewState`) | 0,25–8 (και ξανά καρφωμένα στα κουμπιά) | βήμα ×1,1, listener σε **όλο το `document`** | ±0,25 | μόνο zoom>1, περιορισμένο | state → effect |
+| `DxfPreview` | 0,1–10 | βήμα ×1,15 | — | πάντα, `window` | καμβάς |
+
+Πάνελ: τα 3 κουμπιά **χωρίς προσβάσιμο όνομα**, χωρίς tooltip, με `disabled` (πετά την εστίαση — θέμα 4), χωρίς «Προσαρμογή».
+Το `contentStyle` του `useZoomPan` **δεν το εφάρμοζε κανείς** (νεκρό — και ως `style=` θα παραβίαζε το N.3).
+
+**Ρίζα**: ο τύπος βγήκε στο `zoom-pan-math`, αλλά στο hook έλειπαν όσα χρειάζεται ένας θεατής εικόνας — σύρση που συνεχίζει έξω από το κουτί
+(το hook σταματούσε στο `mouseleave`), περιορισμός pan, στροφή, διπλό κλικ, εφαρμογή σε `<img>` — άρα κάθε θεατής έφτιαξε το δικό του.
+Και το κουμπί με `aria-disabled` του θέματος 4 ήταν **ιδιωτικό** στο modal.
+
+**Πρακτική**: Google Photos / Apple Photos — ελάχιστο zoom = «χωρά», pan μόνο όσο η εικόνα ξεπερνά το κουτί και ως την άκρη της, διπλό κλικ =
+μεγέθυνση στο σημείο, pinch γύρω από τα δάχτυλα· Figma — τροχός συνεχής γύρω από τον δείκτη, κουμπιά πολλαπλασιαστικά γύρω από το κέντρο.
+
+**Θεραπεία** (καμία νέα μηχανή — επέκταση του υπάρχοντος SSoT, προαιρετικά πεδία ⇒ οι παλιοί καταναλωτές ίδιοι):
+- `zoom-pan-math`: `midpoint` · `confinePan` (περιθώριο `max(0, (ζωγραφισμένο − κουτί)/2)`, ακριβώς 0 όσο χωρά) · `quarterTurnExtent` ·
+  `viewTransformOf` (η **μία** συμβολοσειρά `translate · scale · rotate` — ζούσε σε 3 σημεία· το `scale` είναι εκεί όπου το 5β βάζει `zoom × fit`).
+- `useZoomPan` → σύνθεση υπο-hooks στο `hooks/zoom-pan/` (`use-view-state` · `use-wheel-zoom` · `use-drag-pan` · `zoom-pan-view`): **ένας** `commit`
+  περνά κάθε νέα όψη (τροχός · σύρση · pinch · κουμπιά) από τον περιορισμό, με αναγνώσεις τη στιγμή του γεγονότος (getter). Νέα: `confinePan` ·
+  `doubleClickZoom` · `rotation`/`rotateBy90` · `contentRef` (μετασχηματισμός **imperative**, κανένα `style=`) · `containerBox` (RefObject για
+  `useZoomResolution`) · `cursorClass` «χεράκι» μόνο όταν υπάρχει χώρος. Ο τροχός δένεται με callback ref ⇒ δουλεύει μέσα σε Portal χωρίς
+  listener σε όλο το document. Τα κουμπιά μεγεθύνουν γύρω από το **κέντρο** (η μετατόπιση κλιμακώνεται — πριν έμενε ίδια).
+- `shared/media/viewer/`: `ViewerToolbarButton` (**μετακίνηση** του `ToolbarButton` του modal) · `ImageViewControls` (σμίκρυνση · [ποσοστό] ·
+  μεγέθυνση · περιστροφή · προσαρμογή, όρια από την ίδια ρύθμιση) · `PHOTO_VIEW_ZOOM` (1–8, ×1,5, περιορισμός, διπλό κλικ 2,5).
+- Πάνελ: `ImagePreview.tsx` (βγήκε από το `FilePreviewRenderer`, 359 → 218 γρ.) μέσα σε `<nav role="toolbar" aria-label>`. Modal: `usePhotoPreviewState`
+  **495 → 303 γρ.**· νέα φωτογραφία / νέο άνοιγμα ⇒ «χωρά» (πριν κληρονομούσε το zoom). `DxfPreview`: `useZoomPan` + ξανασχεδίαση στο effect.
+
+**Άγκυρες**: `zoom-pan-math.test.ts` (+2) · `useZoomPan.test.tsx` (+6: σύρση έξω από το κουτί · περιορισμός & κέρσορας · περιορισμός με στροφή ·
+`contentRef` · pinch γύρω από το μέσο · διπλό κλικ) · `image-preview-rotation.test.tsx` (στροφή **με όνομα** αντί `getAllByRole('button')[2]` + 2:
+toolbar με ονόματα · ελάχιστο με `aria-disabled` που κρατά την εστίαση). Η υπόθεση «στροφή δεν αλλάζει `sizes`» **μένει** ως το 5β.
+Μεταλλάξεις **5/5 κόκκινες** με επαναφορά σε `finally` (`confinePan` χωρίς `max(0,…)` · pinch χωρίς άγκυρα · `aria-disabled` → `disabled` ·
+στροφή αγνοείται στον περιορισμό · σύρση χωρίς `window`). 8 σουίτες / 58 tests πράσινες · `jscpd:diff` καθαρό (15 αρχεία).
+
+**Εκτός πεδίου** (`.claude-rules/pending-ratchet-work.md`): `FloorplanGalleryZoomControls` + `DetailSheetDialog` — `disabled`, `title=`, `style=`
+⇒ `ViewerToolbarButton`. `PdfCanvasViewer` **σκόπιμα** εκτός: έγγραφο με κύλιση και re-render σελίδων, άλλο μοντέλο.
+
 ## Changelog
 
 - **2026-10-01** — Δημιουργία. Φ.Δ (κλίμακα · κωδικοποιητής · stat/γενιά · υπηρεσία · route · builder) + Φ.Γ (κέλυφος γκαλερί · ουδέτερο
@@ -623,3 +739,17 @@ Commit `0b22c1d6` ⊂ deploy `beca4af6` (T1 `completed success`). Ίδια οθ�
   zoom σε στραμμένη ⇒ `w=1280` κανονικά) · **Ε6 ✅** (`sizes` 828, όπως η πρόβλεψη). 🔴 **Ε7**: ζωγραφισμένη 776 αντί για 822, επειδή το
   `srcset` δήλωνε `1280w` για 1.200 παραδοσμένα pixel. Ως τώρα το έκρυβε η υπερεκτίμηση του border-box. Θεραπεία: `deliveredPreviewWidth`
   στην κλίμακα (SSoT) ⇒ descriptor = ό,τι παραδίδεται, το κλειδί του αιτήματος αμετάβλητο. Άγκυρα Ρ7. ⏳ Ε7 ζωντανά μετά το push.
+- **2026-10-04** — **Ε7 ζωντανά** (§9, deploy `3ba6028b` ⊃ `5ce566e3`): `srcset` `… 1200w` ✅. Ο έλεγχος έγινε με αντιπαραβολή στα ίδια
+  bytes: νέος descriptor ⇒ 822×548, γεμίζει το content-box· παλιός `1280w` ⇒ 776×518, το σφάλμα. Γ3 ✅. Ο κύκλος **Ε4–Ε7 έκλεισε**.
+- **2026-10-04** — **DXF υπόβαθρο: διπλή στροφή EXIF ✅** (§9 «Παρατηρήσεις εκτός πεδίου» · domain ADR-340). Αναπαράχθηκε ζωντανά
+  (EXIF 6 ⇒ 2400×1800 αντί 1800×2400)· το `imageOrientation: 'none'` αγνοείται από τον Chrome 154 ⇒ μία αρχή = ο decoder `from-image`,
+  η χειροκίνητη στροφή του `ImageProvider` διαγράφηκε. 0 αποθηκευμένα υπόβαθρα ⇒ καμία μετάπτωση. Ratchet `image-dimensions` → 0.
+- **2026-10-04** — **Θέμα 5α** (§9): μετρήθηκε η στροφή οριζόντιας (`file_a0d3778e`, 4000×3000): modal κόβει 25%, πάνελ 18%. Απόφαση Giorgio:
+  **επαναπροσαρμογή** (Google Photos) — υλοποίηση στο 5β μέσω `zoom × fit`, χωρίς τη γωνία στην ανάλυση.
+- **2026-10-04** — **Θέμα 4 ✅** (§9): modal → στο 4/4 πήγαινε 1/4 (κουμπιά σταματούσαν) · `disabled` πετούσε την εστίαση έξω από το dialog ·
+  lightbox κολλούσε στο 2/4 (`key` σε όλη τη σκηνή). Θεραπεία: SSoT `indexWithin` (clamp/wrap, 3 καταναλωτές) · `aria-disabled` (APG Toolbar)
+  + όψη στο `buttonVariants` · `key` μόνο στην εικόνα · ανακοίνωση με i18n από ένα effect · `announceToScreenReader` με μόνιμη region,
+  και το αντίγραφο του `NotificationProvider` καταργήθηκε.
+- **2026-10-05** — **Θέμα 3 ✅** (§9): το SSoT `useZoomPan` υπήρχε, αλλά πάνελ, modal και `DxfPreview` το ξανάγραφαν (3 όρια, 3 τροχοί, 3 σύρσεις)·
+  τα κουμπιά του πάνελ δεν είχαν όνομα. Το hook επεκτάθηκε (περιορισμός pan · στροφή · διπλό κλικ · `contentRef` · pinch γύρω από τα δάχτυλα ·
+  σύρση έξω από το κουτί) και οι τρεις μετέβησαν· κοινά `ViewerToolbarButton` + `ImageViewControls` + `PHOTO_VIEW_ZOOM`. Μεταλλάξεις 5/5.

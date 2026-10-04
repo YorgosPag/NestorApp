@@ -21,6 +21,8 @@ import type {
 } from '@/types/notifications';
 
 import { createModuleLogger } from '@/lib/telemetry';
+// ♿ Το ΕΝΑ σημείο ανακοινώσεων — εδώ ζούσε αντίγραφό του (N.0.2, ADR-899 §9).
+import { announceToScreenReader } from '@/utils/accessibility';
 import '@/lib/design-system';
 import { resolveToastDuration, toasterThemeOf } from './notification-policy';
 const logger = createModuleLogger('NotificationProvider');
@@ -76,22 +78,6 @@ export function NotificationProvider({
       }
     }
   }, 60_000);
-
-  // Accessibility: Announce to screen readers
-  const announceToScreenReader = useCallback((message: string, priority: 'polite' | 'assertive' = 'polite') => {
-    const announcement = document.createElement('div');
-    announcement.setAttribute('aria-live', priority);
-    announcement.setAttribute('aria-atomic', 'true');
-    announcement.className = 'sr-only';
-    announcement.textContent = message;
-    
-    document.body.appendChild(announcement);
-    
-    // Remove after announcement
-    setTimeout(() => {
-      document.body.removeChild(announcement);
-    }, 1000);
-  }, []);
 
   // Rate limiting check
   const canShowNotification = useCallback((message: string, timeWindow = 3000): boolean => {
@@ -245,7 +231,7 @@ export function NotificationProvider({
     // CSS handles all positioning and scrolling now (see `src/app/globals.css`)
 
     return notificationId;
-  }, [settings, canShowNotification, announceToScreenReader, getNotificationIcon, t]);
+  }, [settings, canShowNotification, getNotificationIcon, t]);
 
   // Convenience methods
   const success = useCallback((message: string, options?: Omit<NotificationOptions, 'type'>) => {

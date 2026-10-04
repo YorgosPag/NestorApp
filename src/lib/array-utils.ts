@@ -22,6 +22,33 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
+/** What happens when a step leaves the range: stop at the edge, or come round. */
+export type IndexEdgePolicy = 'clamp' | 'wrap';
+
+/**
+ * The index a step lands on — the ONE answer to «what comes after the last photo?».
+ *
+ * Every viewer that steps through a list asks it, and they used to answer it
+ * privately and differently: the photo modal's buttons stopped at the edge while
+ * its keyboard came round, so → on 4/4 went to 1/4 (measured, ADR-899 §9).
+ *
+ * - `clamp` — viewers (modal, lightbox): stop at the edge, like Google Photos.
+ * - `wrap` — the card carousel (`use-gallery-scroller`): come round, by design.
+ *   ⚠️ The `+ total` before the second `%` is mandatory: in JavaScript `-1 % 2` is
+ *   **-1**, not 1 — without it «previous» from the first slide lands nowhere.
+ *
+ * An empty list has no valid index; it answers `0` so callers never see `NaN`.
+ *
+ * @example
+ * indexWithin(current + 1, total, 'clamp') // 3 of 4 → 3 (stays on the last)
+ * indexWithin(-1, 4, 'wrap')               // 3
+ */
+export function indexWithin(target: number, total: number, policy: IndexEdgePolicy): number {
+  if (total <= 0) return 0;
+  if (policy === 'wrap') return ((target % total) + total) % total;
+  return Math.min(Math.max(target, 0), total - 1);
+}
+
 /**
  * Deterministic, locale-independent string comparator for `Array.prototype.sort`.
  *

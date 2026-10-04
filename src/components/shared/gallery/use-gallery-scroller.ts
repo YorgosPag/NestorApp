@@ -30,6 +30,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { MutableRefObject } from 'react';
 
 import { notePhotoPosition, forgetPhotoPosition } from '@/lib/listings/listing-photo-position';
+import { indexWithin } from '@/lib/array-utils';
 
 /** Πόσο ορατό πρέπει να είναι ένα slide για να θεωρηθεί «αυτό που βλέπω». */
 const VISIBLE_THRESHOLD = 0.6;
@@ -246,12 +247,11 @@ export function useGalleryScroller({
       **απαντιέται εδώ**: η βιβλιογραφία τη δέχεται ρητά *«εφόσον δείχνεις καθαρά την
       τρέχουσα θέση»*, και οι **τελείες** το κάνουν ακριβώς αυτό, μονίμως ορατές.
 
-      ⚠️ Το `+ total` πριν το δεύτερο `%` είναι υποχρεωτικό: στη JavaScript το `-1 % 2`
-      είναι **-1**, όχι 1 — χωρίς αυτό το «προηγούμενη» από την πρώτη θα έστελνε σε
-      αρνητική θέση, δηλαδή πουθενά.
+      ↔️ Οι **προβολείς** (modal, lightbox) αντίθετα **σταματούν** στο άκρο, όπως το Google
+      Photos — και λύνουν την απώλεια εστίασης με `aria-disabled` (WAI-ARIA APG Toolbar):
+      το κουμπί μένει εστιάσιμο. Η πολιτική ζει σε **ένα** σημείο, το `indexWithin` (ADR-899 §9).
     */
-    const slides = scroller.children.length;
-    const wrapped = ((next % slides) + slides) % slides;
+    const wrapped = indexWithin(next, scroller.children.length, 'wrap');
     intentRef.current = wrapped;
     /*
       🔴 **ΚΑΝΕΝΑ `behavior` ΕΔΩ — ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.**

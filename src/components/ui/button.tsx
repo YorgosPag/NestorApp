@@ -10,8 +10,10 @@ import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticCol
 import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Dynamic button variants using centralized border tokens
+// ♿ `aria-disabled:` = ανενεργό που ΜΕΝΕΙ εστιάσιμο (WAI-ARIA APG Toolbar) — ίδια όψη με το `disabled:`,
+//    για κουμπιά που κρατούν την εστίαση όταν φτάνουν σε όριο (ADR-899 §9). Λεξιλόγιο ίδιο με tabs/sidebar-menu.
 const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: UseSemanticColorsReturn) => cva(
-  `inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
+  `inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50`,
   {
     variants: {
       variant: {

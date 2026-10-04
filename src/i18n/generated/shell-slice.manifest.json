@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "152e4dc18ac4e91eb937b6bfc17e5a10f9df56960502a31d5a5f0f1a77ce3057",
+  "inputsSha256": "15a66b34ececde9b0ee440b19003b84c299b209e0a66d79e39a95fdaabbdf91b",
   "languages": [
     "el"
   ],
@@ -10770,7 +10770,7 @@
     "src/components/shared/files/hooks/useFileDownload.ts": "52a2dae2f094b046a7fe9a0e6ab0a271d2c590cc0b7609692fa9ce7f37661557",
     "src/components/shared/files/preview/use-zoom-resolution.ts": "ccb72cee1026e00917dd40c0ff6495692f3c2ffe00e216f2a5694dba87e311fc",
     "src/components/shared/gallery/SnapGallery.tsx": "e5d5836ed529c80bd0a748996db52365bcb63dfb51c6c93dc82b0b5883441c7d",
-    "src/components/shared/gallery/use-gallery-scroller.ts": "9d193c05b10eb027cbb04b9766632d056b7342b0cb99b7e2a513e7c8c3ffbc81",
+    "src/components/shared/gallery/use-gallery-scroller.ts": "064fcddae1f852feb05678d58c9117acf186b46d5b42abebda42e018af1fe50f",
     "src/components/shared/landing-hero/LandingHero.tsx": "55e79036358e9348bd2a46b9a140f5302fcc51ae188167717a4e08c08884e18c",
     "src/components/shared/landing-hero/LandingHeroesProvider.tsx": "a1d5e9ffd93aeca68231b0ff7e4d552f3c491c0b15bad80d2d075776e3a2621f",
     "src/components/shared/landing-hero/hero-focal-attributes.ts": "520f98b4b0be96dbc47cf6c0be42ec8e20f9f5ce434ca1367d043d188ea73c93",
@@ -11338,7 +11338,7 @@
     "src/lib/workspace/workspace-path.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/workspace/workspace-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/workspace/workspace-scope.ts": "fb07083cd8528e9fb3eb365abf81747148a53c868b80c169b24fefbbab534b6d",
-    "src/providers/NotificationProvider.tsx": "095961c05c0a550ad99e58c6946dc483a693481e8f31cc8d115a0634677ed24f",
+    "src/providers/NotificationProvider.tsx": "988be523f512a3a1aa0faec489bf465a4923c4f934e75c35681ce3600ec57313",
     "src/providers/PhotoPreviewProvider.tsx": "2fa3c948bfb9fc4bb3053f198a169364300a1d76938cf23a990eb898948e08b0",
     "src/providers/notification-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/schemas/ai-analysis.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",

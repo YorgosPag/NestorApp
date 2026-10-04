@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { steppedUpperBound, useElementSize } from '@/hooks/media/useElementSize';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { indexWithin } from '@/lib/array-utils';
 import { containedWidth } from '@/lib/images/image-dimensions';
 import type { FloorplanSpotsEntry } from '@/lib/media/photo-floorplan-spots';
 import { cn } from '@/lib/utils';
@@ -98,6 +99,12 @@ interface StageProps {
   readonly onStep: (step: -1 | 1) => void;
 }
 
+/**
+ * ♿ **Η σκηνή ΔΕΝ ξαναστήνεται ανά φωτογραφία — μόνο η εικόνα** (ADR-899 §9). Με `key` στη σκηνή, κάθε βήμα
+ * ξανάστηνε και τα κουμπιά (η εστίαση έπεφτε σε `DIV` — μετρημένο: Enter ×3 κόλλησε στο 2/4) και το
+ * `<output aria-live>` (μια live region που γεννιέται με το κείμενό της συνήθως δεν ανακοινώνεται).
+ * Τα κουμπιά στο άκρο: `aria-disabled`, ώστε να ΜΕΝΟΥΝ εστιάσιμα (WAI-ARIA APG).
+ */
 function PhotoStage({ photo, index, total, onStep }: StageProps) {
   const { t } = useTranslation(['listing-detail']);
   const swipe = useSwipe(onStep);
@@ -106,15 +113,15 @@ function PhotoStage({ photo, index, total, onStep }: StageProps) {
   return (
     <section ref={stageRef} className="relative flex min-h-0 flex-1 items-center justify-center p-2 touch-pan-y" {...swipe}>
       {/* eslint-disable-next-line @next/next/no-img-element -- ράφι ή proxy παραγώγων, εκτός optimizer (ADR-841 Α12 · ADR-899) */}
-      <img src={photo.src} srcSet={photo.srcSet} sizes={sizes}
+      <img key={photo.key} src={photo.src} srcSet={photo.srcSet} sizes={sizes}
         width={photo.width} height={photo.height} alt={photo.alt}
         className="max-h-full max-w-full select-none object-contain" draggable={false} />
       <Button type="button" variant="secondary" size="icon" className="absolute left-3 top-1/2 -translate-y-1/2"
-        disabled={index === 0} onClick={() => onStep(-1)} aria-label={t('listing-detail:media.capture.previous')}>
+        aria-disabled={index === 0 || undefined} onClick={() => onStep(-1)} aria-label={t('listing-detail:media.capture.previous')}>
         <ChevronLeft aria-hidden />
       </Button>
       <Button type="button" variant="secondary" size="icon" className="absolute right-3 top-1/2 -translate-y-1/2"
-        disabled={index === total - 1} onClick={() => onStep(1)} aria-label={t('listing-detail:media.capture.next')}>
+        aria-disabled={index === total - 1 || undefined} onClick={() => onStep(1)} aria-label={t('listing-detail:media.capture.next')}>
         <ChevronRight aria-hidden />
       </Button>
       <output aria-live="polite" className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded bg-background/80 px-2 py-0.5 text-xs tabular-nums">
@@ -130,8 +137,8 @@ export function PhotoLightbox({ photos, floorplans, openIndex, onNavigate }: Pho
   const total = photos.length;
   const step = (delta: -1 | 1) => {
     if (openIndex === null) return;
-    const next = openIndex + delta;
-    if (next >= 0 && next < total) onNavigate(next);
+    const next = indexWithin(openIndex + delta, total, 'clamp');
+    if (next !== openIndex) onNavigate(next);
   };
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'ArrowLeft') step(-1);
@@ -150,7 +157,7 @@ export function PhotoLightbox({ photos, floorplans, openIndex, onNavigate }: Pho
         <DialogDescription className="sr-only">{t('listing-detail:media.photosPage.keyboardHint')}</DialogDescription>
         {photo !== undefined && openIndex !== null && (
           <>
-            <PhotoStage key={photo.key} photo={photo} index={openIndex} total={total} onStep={step} />
+            <PhotoStage photo={photo} index={openIndex} total={total} onStep={step} />
             {withPanel && (
               <PhotoFloorplanPanel floorplans={floorplans} total={total} currentIndex={openIndex} onGo={onNavigate} />
             )}

@@ -110,7 +110,10 @@ describe('Δ4 — lightbox με πάνελ', () => {
     await userEvent.keyboard('{ArrowRight}');
     await userEvent.keyboard('{ArrowLeft}');
     expect(onNavigate.mock.calls).toEqual([[1]]);
-    expect(screen.getByRole('button', { name: 'listing-detail:media.capture.previous' })).toBeDisabled();
+    // Ανενεργό στο άκρο αλλά ΕΣΤΙΑΣΙΜΟ: `aria-disabled`, όχι `disabled` — το `disabled` πετούσε την εστίαση (ADR-899 §9 θέμα 4).
+    const previous = screen.getByRole('button', { name: 'listing-detail:media.capture.previous' });
+    expect(previous).toHaveAttribute('aria-disabled', 'true');
+    expect(previous).not.toBeDisabled();
   });
 
   it('φωτογραφία χωρίς θέση ⇒ το λέμε, χωρίς τονισμένο σημείο', () => {

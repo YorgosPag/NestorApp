@@ -342,26 +342,42 @@ function focusElementAtIndex(container: HTMLElement, index: number) {
 // SCREEN READER UTILITIES
 // ============================================================================
 
+type LivePriority = 'polite' | 'assertive';
+
+/** Καθυστέρηση ανάμεσα στο άδειασμα και στο γέμισμα — ίδια λογική με το LiveAnnouncer του React Aria. */
+const ANNOUNCE_DELAY_MS = 100;
+const liveRegions = new Map<LivePriority, HTMLElement>();
+const pendingAnnouncements = new Map<LivePriority, ReturnType<typeof setTimeout>>();
+
+/** Μία **μόνιμη** live region ανά προτεραιότητα, που ζει όσο η σελίδα. */
+function liveRegionFor(priority: LivePriority): HTMLElement {
+  const existing = liveRegions.get(priority);
+  if (existing?.isConnected) return existing;
+  const region = document.createElement('div');
+  region.setAttribute('aria-live', priority);
+  region.setAttribute('aria-atomic', 'true');
+  region.setAttribute('class', 'sr-only');
+  document.body.appendChild(region);
+  liveRegions.set(priority, region);
+  return region;
+}
+
 /**
- * ♿ Announce to Screen Readers
- * Δημιουργεί live region για screen reader announcements
+ * ♿ Announce to Screen Readers — το ΕΝΑ σημείο ανακοινώσεων (ADR-899 §9).
+ *
+ * ⚠️ Μια live region που **γεννιέται μαζί με το κείμενό της** συχνά δεν ανακοινώνεται
+ * (NVDA/JAWS παρακολουθούν **αλλαγές** σε region που ήδη υπάρχει). Γι' αυτό: μόνιμη region,
+ * άδειασμα, και το μήνυμα μετά από {@link ANNOUNCE_DELAY_MS} — έτσι ακούγεται και η ίδια
+ * φράση δύο φορές στη σειρά. Η προηγούμενη εκδοχή έφτιαχνε νέα region γεμάτη ήδη.
  */
-export function announceToScreenReader(
-  message: string,
-  priority: 'polite' | 'assertive' = 'polite'
-) {
-  const announcement = document.createElement('div');
-  announcement.setAttribute('aria-live', priority);
-  announcement.setAttribute('aria-atomic', 'true');
-  announcement.setAttribute('class', 'sr-only');
-  announcement.textContent = message;
-
-  document.body.appendChild(announcement);
-
-  // Remove after announcement
-  setTimeout(() => {
-    document.body.removeChild(announcement);
-  }, 1000);
+export function announceToScreenReader(message: string, priority: LivePriority = 'polite') {
+  const region = liveRegionFor(priority);
+  region.textContent = '';
+  // Γρήγορη διαδοχή (π.χ. τρία «Επόμενη») ⇒ ακούγεται μόνο η τελευταία θέση, όχι ουρά.
+  clearTimeout(pendingAnnouncements.get(priority));
+  pendingAnnouncements.set(priority, setTimeout(() => {
+    region.textContent = message;
+  }, ANNOUNCE_DELAY_MS));
 }
 
 /**
