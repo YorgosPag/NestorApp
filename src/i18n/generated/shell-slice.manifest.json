@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f54ee34657bda08b816b57e9ba360c61502818c26e6dbb29e24c85ef29331c77",
+  "inputsSha256": "78f76f9dc5e67bbed3750d7ebff002bdfa1c5fdd2144820cee4732d922257b4a",
   "languages": [
     "el"
   ],
@@ -318,7 +318,7 @@
     "src/components/geo/PlaceChooserStatus.tsx": "3ac066c41b6c156c93cda7f4fa7c143fe851fff29ad6603b11ef3937a8908fb1",
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
     "src/components/geo/PlaceMap.tsx": "5e552ecd3558b7bb37eeffd573f46ad59d43268e24187720525ba0b981f8ae38",
-    "src/components/geo/PlaceSummary.tsx": "aa56dd24e0b0a56689c3077bfe62a9deeb0415c3e43330c622f686e080724bb4",
+    "src/components/geo/PlaceSummary.tsx": "fa5d0d818ce068bf9c1bacf6585792a72057b629b71e38ce0478ead805671328",
     "src/components/geo/ResolvedPlaceConfirmation.tsx": "05bb80545972f34c99e8bd175b48e5ba148768c26e9c1f222851bf630bf3cd92",
     "src/components/geo/outline-draft.tsx": "522cf963ac96817fb386c275e724d2e3d2a6a12800749249759b7aa114bfc33e",
     "src/components/geo/use-camera-frame.ts": "c58e9dccb987085f872ea5eaaa2821a11d5c91ca452080e3315b58d90486580c",

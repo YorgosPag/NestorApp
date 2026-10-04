@@ -41,6 +41,7 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceOutline, type PlaceOutlineState } from '@/hooks/geo/usePlaceOutline';
@@ -53,6 +54,15 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef, PublicBuilding, PublicLand } from '@/types/geo/public-place';
 
 import { PlaceMap } from './PlaceMap';
+
+/**
+ * Όριο κλειστότητας (CHECK 3.34, ADR-900 §8 #2) — οι μονάδες ανά στάθμη **δεν** είναι πρώτο καρέ: σωπαίνουν ώσπου να
+ * απαντήσει το `public_units`, και χωρίς κτίριο δεν ζητούνται ποτέ. Μέσα στην κλειστότητα έβγαζαν τη βιτρίνα
+ * (`settings/agency-profile`) πάνω από το ταβάνι της (18.213 > 18.170). Ιδίωμα `PlaceChooser` → `PlaceAddressOffer`.
+ */
+const PlaceUnitLevels = dynamic(() => import('./PlaceUnitLevels').then((mod) => mod.PlaceUnitLevels), {
+  ssr: false,
+});
 
 const NS = 'search-results';
 
@@ -134,6 +144,8 @@ function PlaceFace({
         <div className="space-y-1">
           <AddressLine lookup={lookup} />
           <PlaceFacts land={lookup.land} building={lookup.building} />
+          {/* Με κτίριο, το `placeId` ΕΙΝΑΙ η ταυτότητα του δεσμού (`pbld_*`) — όχι πεδίο του αποθηκευμένου εγγράφου. */}
+          {lookup.building !== null && <PlaceUnitLevels buildingId={placeId} />}
           <IdentityLine placeId={placeId} />
         </div>
       );
