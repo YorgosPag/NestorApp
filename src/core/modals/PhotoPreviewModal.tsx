@@ -12,8 +12,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { getContactDisplayName } from '@/types/contacts';
@@ -22,7 +21,8 @@ import { photoPreviewLayout } from '@/styles/design-tokens';
 import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ViewerToolbarButton } from '@/components/shared/media/viewer/ViewerToolbarButton';
+import { ImageViewControls } from '@/components/shared/media/viewer/ImageViewControls';
 import { useTranslation } from 'react-i18next';
 
 // Extracted modules — backward-compatible re-exports at bottom
@@ -127,28 +127,22 @@ export function PhotoPreviewModal({
 
         {/* Photo Content */}
         <main
-          ref={state.containerRef}
-          className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none ${
-            state.isPanning ? 'cursor-grabbing' : state.zoom > 1 ? 'cursor-grab' : ''
-          }`}
+          ref={state.view.containerRef}
+          {...state.view.handlers}
+          className={`flex-1 flex items-center justify-center overflow-hidden touch-none ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none ${state.view.cursorClass}`}
           role="main"
           aria-label={t('photoPreview.aria.displayPhoto')}
-          onMouseDown={state.handleMouseDown}
-          onDoubleClick={state.handleDoubleClick}
         >
           <PhotoPreviewImage
             url={state.currentPhoto ?? null}
             preview={state.isGalleryMode ? galleryPreviews?.[state.currentIndex] ?? null : null}
-            zoom={state.zoom}
+            zoom={state.view.zoom}
             alt={state.isGalleryMode
               ? t('photoPreview.alt.gallery', { title: state.title, current: state.currentIndex + 1, total: state.totalPhotos })
               : t('photoPreview.alt.single', { title: state.title })
             }
-            imageRef={state.imageRef}
+            imageRef={state.view.contentRef}
             className={`${photoPreviewLayout.image.base} ${TRANSITION_PRESETS.STANDARD_TRANSFORM}`}
-            onTouchStart={state.handleTouchStart}
-            onTouchMove={state.handleTouchMove}
-            onTouchEnd={state.handleTouchEnd}
             onLoad={state.handleImageLoad}
             onError={state.handleImageError}
           />
@@ -171,7 +165,7 @@ export function PhotoPreviewModal({
             })()}
           </section>
           <aside className="text-xs" role="status" aria-label={t('photoPreview.aria.focusInfo')}>
-            {t('photoPreview.zoom.label')} {Math.round(state.zoom * 100)}%
+            {t('photoPreview.zoom.label')} {Math.round(state.view.zoom * 100)}%
           </aside>
         </footer>
       </DialogContent>
@@ -197,56 +191,15 @@ function ToolbarRow({ state, iconSizes, t, onClose }: ToolbarRowProps) {
       {/* Gallery Navigation */}
       {state.isGalleryMode && state.totalPhotos > 1 && (
         <>
-          <ToolbarButton
-            onClick={state.handlePreviousPhoto}
-            ariaLabel={t('photoPreview.navigation.previous')}
-            tooltip={t('photoPreview.navigation.previous')}
-            icon={<ChevronLeft className={iconSizes.sm} aria-hidden="true" />}
-            iconSizes={iconSizes}
-            disabled={state.currentIndex === 0}
-          />
-          <ToolbarButton
-            onClick={state.handleNextPhoto}
-            ariaLabel={t('photoPreview.navigation.next')}
-            tooltip={t('photoPreview.navigation.next')}
-            icon={<ChevronRight className={iconSizes.sm} aria-hidden="true" />}
-            iconSizes={iconSizes}
-            disabled={state.currentIndex === state.totalPhotos - 1}
-          />
+          <ViewerToolbarButton label={t('photoPreview.navigation.previous')} icon={ChevronLeft}
+            onClick={state.handlePreviousPhoto} disabled={state.currentIndex === 0} />
+          <ViewerToolbarButton label={t('photoPreview.navigation.next')} icon={ChevronRight}
+            onClick={state.handleNextPhoto} disabled={state.currentIndex === state.totalPhotos - 1} />
           <div className="w-px h-4 bg-border mx-1" />
         </>
       )}
 
-      <ToolbarButton
-        onClick={state.handleZoomOut}
-        ariaLabel={t('photoPreview.zoom.out')}
-        tooltip={t('photoPreview.zoom.out')}
-        icon={<ZoomOut className={iconSizes.sm} />}
-        iconSizes={iconSizes}
-        disabled={state.zoom <= 0.25}
-      />
-      <ToolbarButton
-        onClick={state.handleZoomIn}
-        ariaLabel={t('photoPreview.zoom.in')}
-        tooltip={t('photoPreview.zoom.in')}
-        icon={<ZoomIn className={iconSizes.sm} />}
-        iconSizes={iconSizes}
-        disabled={state.zoom >= 8}
-      />
-      <ToolbarButton
-        onClick={state.handleRotate}
-        ariaLabel={t('photoPreview.actions.rotate')}
-        tooltip={t('photoPreview.actions.rotate')}
-        icon={<RotateCw className={iconSizes.sm} />}
-        iconSizes={iconSizes}
-      />
-      <ToolbarButton
-        onClick={state.handleFitToView}
-        ariaLabel={t('photoPreview.zoom.fit')}
-        tooltip={t('photoPreview.zoom.fit')}
-        icon={<Maximize2 className={iconSizes.sm} />}
-        iconSizes={iconSizes}
-      />
+      <ImageViewControls view={state.view} />
 
       <ShareButton
         shareData={state.shareData}
@@ -256,54 +209,9 @@ function ToolbarRow({ state, iconSizes, t, onClose }: ToolbarRowProps) {
         className={`${iconSizes.xl} p-0`}
       />
 
-      <ToolbarButton
-        onClick={state.handleDownload}
-        ariaLabel={t('photoPreview.actions.download')}
-        tooltip={t('photoPreview.actions.download')}
-        icon={<Download className={iconSizes.sm} />}
-        iconSizes={iconSizes}
-      />
-      <ToolbarButton
-        onClick={onClose}
-        ariaLabel={t('photoPreview.actions.close')}
-        tooltip={t('photoPreview.actions.close')}
-        icon={<X className={iconSizes.sm} />}
-        iconSizes={iconSizes}
-      />
+      <ViewerToolbarButton label={t('photoPreview.actions.download')} icon={Download} onClick={state.handleDownload} />
+      <ViewerToolbarButton label={t('photoPreview.actions.close')} icon={X} onClick={onClose} />
     </nav>
-  );
-}
-
-// ============================================================================
-// TOOLBAR BUTTON (DRY helper)
-// ============================================================================
-
-interface ToolbarButtonProps {
-  onClick: () => void;
-  ariaLabel: string;
-  tooltip: string;
-  icon: React.ReactNode;
-  iconSizes: ReturnType<typeof useIconSizes>;
-  disabled?: boolean;
-}
-
-function ToolbarButton({ onClick, ariaLabel, tooltip, icon, iconSizes, disabled }: ToolbarButtonProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClick}
-          aria-label={ariaLabel}
-          className={`${iconSizes.xl} p-0`}
-          disabled={disabled}
-        >
-          {icon}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
-    </Tooltip>
   );
 }
 

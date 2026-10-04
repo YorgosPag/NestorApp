@@ -80,6 +80,14 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
 
 ## Changelog
 
+- **2026-10-05**: `useZoomPan` becomes the ONE image/canvas viewer pan-zoom (ADR-899 §9 θέμα 3)
+  - Three hand-rolled copies migrated: file-panel `ImagePreview` · `PhotoPreviewModal` (`usePhotoPreviewState` 495 → 303 lines) · `DxfPreview`
+  - Split into `src/hooks/zoom-pan/` sub-hooks (`use-view-state` · `use-wheel-zoom` · `use-drag-pan` · `zoom-pan-view`); one `commit` settles every channel
+  - New OPTIONAL config: `confinePan` (Google Photos edge confinement via `confinePan` in `zoom-pan-math`), `doubleClickZoom` (toggle at cursor)
+  - New return: `rotation`/`rotateBy90` · `contentRef` (imperative transform, no `style=`) · `containerBox` (RefObject for measuring) · `resetAll` also resets rotation
+  - Behaviour changes for `FloorplanGallery`/`DetailSheetDialog`: mouse drag continues outside the container (window listeners); pinch anchors at the fingers' midpoint; +/- buttons zoom around the box centre (pan scales with zoom)
+  - Removed: dead `contentStyle` (no consumer applied it); `onMouseMove/onMouseUp/onMouseLeave` handlers (now window-level during drag)
+  - Pending (N.0.2): `FloorplanGalleryZoomControls` + `DetailSheetDialog` toolbars → shared `ViewerToolbarButton` (`aria-disabled`, tooltip, no `title=`)
 - **2026-09-28**: `useZoomPan` math extracted to `src/lib/geometry/zoom-pan-math.ts` (ADR-884 Φ2στ-γ Γ2 · §4.14)
   - `clampZoom` · `stepZoom` (multiplicative `zoomFactor` / additive `zoomStep`) · `wheelZoom` · `scaleAbout` (the ONE "point under the cursor stays put" formula, previously hand-written inside the wheel handler) · `pointDistance` (pinch)
   - Second consumer: the 360° tour floor-plan card (`viewBox` zoom — same formula with the inverse ratio)

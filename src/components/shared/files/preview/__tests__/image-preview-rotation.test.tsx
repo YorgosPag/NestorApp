@@ -6,9 +6,14 @@
  * layout. Η υπόθεση «στροφή = άλλο κουτί» δήλωνε `sizes` 936 ⇒ `w=1280` (287 KB) χωρίς κέρδος ευκρίνειας.
  *
  * Μετάλλαξη που πρέπει να πιάσει: η γωνία ξαναμπαίνει στην ερώτηση ανάλυσης (`paintedWidthOf` / `useZoomResolution`).
+ *
+ * ADR-899 §9 θέμα 3 — η γραμμή εργαλείων του πάνελ: κουμπιά **με όνομα** (ήταν χωρίς), `role="toolbar"`, και όριο zoom με
+ * `aria-disabled` που **κρατά την εστίαση** (μάθημα θέματος 4). Μετάλλαξη: `aria-disabled` → `disabled` στο `ViewerToolbarButton`.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { buildProxyPreview } from '@/lib/storage/storage-object-url';
 
@@ -51,21 +56,52 @@ afterAll(() => {
   HTMLElement.prototype.getBoundingClientRect = realRect;
 });
 
+function renderPanel() {
+  return render(
+    <TooltipProvider>
+      <FilePreviewRenderer url={ORIGINAL} contentType="image/jpeg" fileName="photo.jpg" displayName="φ" preview={PORTRAIT} />
+    </TooltipProvider>,
+  );
+}
+
 describe('ADR-899 §9 Ε4γ — FilePreviewRenderer: στροφή χωρίς νέα ανάλυση', () => {
   it('🔴 στροφή 90° και 180° ⇒ ίδιο `sizes` (936 × ¾ = 702), καμία φόρτωση', () => {
-    render(
-      <FilePreviewRenderer url={ORIGINAL} contentType="image/jpeg" fileName="photo.jpg" displayName="φ" preview={PORTRAIT} />,
-    );
+    renderPanel();
     const image = screen.getByRole('img');
     expect(image.getAttribute('sizes')).toBe('702px');
 
-    // [σμίκρυνση, μεγέθυνση, στροφή] — η σειρά της γραμμής εργαλείων του πάνελ.
-    const rotate = screen.getAllByRole('button')[2];
+    const rotate = screen.getByRole('button', { name: 'photoPreview.actions.rotate' });
     fireEvent.click(rotate);
     expect(image.style.transform).toContain('rotate(90deg)');
     expect(image.getAttribute('sizes')).toBe('702px');
     fireEvent.click(rotate);
     expect(image.getAttribute('sizes')).toBe('702px');
     expect(decodes).toHaveLength(0);
+  });
+});
+
+describe('ADR-899 §9 θέμα 3 — γραμμή εργαλείων του πάνελ', () => {
+  it('🔴 toolbar με όνομα και τέσσερα κουμπιά με όνομα', () => {
+    renderPanel();
+    const toolbar = screen.getByRole('toolbar', { name: 'photoPreview.toolbar.ariaLabel' });
+    const names = within(toolbar).getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+    expect(names).toEqual(['photoPreview.zoom.out', 'photoPreview.zoom.in', 'photoPreview.actions.rotate', 'photoPreview.zoom.fit']);
+  });
+
+  it('🔴 στο ελάχιστο: `aria-disabled`, όχι `disabled` — η εστίαση μένει, το πάτημα είναι no-op', () => {
+    renderPanel();
+    const out = screen.getByRole('button', { name: 'photoPreview.zoom.out' });
+    expect(out).toHaveAttribute('aria-disabled', 'true');
+    expect(out).not.toBeDisabled();
+    out.focus();
+    fireEvent.click(out);
+    expect(document.activeElement).toBe(out);
+    expect(screen.getByText('100%')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'photoPreview.zoom.in' }));
+    expect(screen.getByText('150%')).toBeInTheDocument();
+    expect(out).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(screen.getByRole('button', { name: 'photoPreview.zoom.fit' }));
+    expect(screen.getByText('100%')).toBeInTheDocument();
   });
 });

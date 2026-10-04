@@ -7,36 +7,45 @@
  * for any zoomable/pannable container (images, canvases, floorplans, etc.).
  *
  * @module hooks/useZoomPan
- * @enterprise ADR-187 — Floorplan Viewer Enhancements
+ * @enterprise ADR-187 — Floorplan Viewer Enhancements · ADR-899 §9 θέμα 3
  *
  * Features:
- * - Mouse wheel zoom (smooth, non-passive for scroll prevention)
- * - Mouse drag to pan (left-click + drag when zoomed > 1)
- * - Pinch-to-zoom (mobile 2-finger gesture)
- * - Touch pan (mobile 1-finger when zoomed > 1)
- * - Button controls (zoomIn, zoomOut, resetAll)
- * - Configurable limits (minZoom, maxZoom, zoomStep)
- * - Cursor hints (grab/grabbing during pan)
+ * - Mouse wheel zoom around the cursor (continuous, non-passive for scroll prevention)
+ * - Mouse drag to pan — continues outside the container (window listeners while held)
+ * - Pinch-to-zoom around the fingers' midpoint (mobile 2-finger gesture) + touch pan
+ * - Button controls (zoomIn, zoomOut around the box centre, rotateBy90, resetAll)
+ * - Optional pan confinement (`confinePan`) and double-click zoom toggle (`doubleClickZoom`)
+ * - Cursor hints (grab/grabbing — grab only when there is room to pan)
  *
  * Used by:
- * - FloorplanGallery (inline + fullscreen modal)
+ * - FloorplanGallery (inline + fullscreen modal) · DetailSheetDialog · DxfPreview (καμβάς — διαβάζουν `zoom`/`panOffset`)
+ * - ImagePreview (πάνελ αρχείων) · PhotoPreviewModal (εικόνα — `contentRef` + `confinePan` + στροφή)
+ *
+ * 🔑 ADR-899 §9 θέμα 3: ήταν το SSoT, αλλά το πάνελ, το modal φωτογραφίας και το DXF preview το **ξανάγραφαν** με το χέρι
+ * (τρία όρια, τρεις τροχοί, τρεις σύρσεις). Του έλειπαν: σύρση έξω από το κουτί · περιορισμός pan · στροφή · διπλό κλικ ·
+ * pinch γύρω από τα δάχτυλα. Προστέθηκαν **εδώ**, προαιρετικά — οι παλιοί καταναλωτές βλέπουν την ίδια συμπεριφορά.
  *
  * @example
  * ```tsx
- * const zp = useZoomPan({ minZoom: 0.5, maxZoom: 8 });
+ * const zp = useZoomPan({ minZoom: 1, maxZoom: 8, confinePan: true });
  *
  * <figure ref={zp.containerRef} {...zp.handlers} className={zp.cursorClass}>
- *   <img src={url} style={zp.contentStyle} />
+ *   <img src={url} ref={zp.contentRef} />
  * </figure>
  * ```
  */
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties, MouseEvent, TouchEvent } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type { MouseEvent, RefObject } from 'react';
 
-import { clampZoom as clampZoomTo, pointDistance, scaleAbout, stepZoom, wheelZoom } from '@/lib/geometry/zoom-pan-math';
+import { scaleAbout, stepZoom, type Vec2, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
+
+import { useDragPan, type DragPanHandlers } from './zoom-pan/use-drag-pan';
+import { useApplyViewTransform, useViewState } from './zoom-pan/use-view-state';
+import { pointerFromCenter, useWheelZoom } from './zoom-pan/use-wheel-zoom';
+import { canPanIn, ZERO_PAN, type ViewCommit, type ViewGetter } from './zoom-pan/zoom-pan-view';
 
 // ============================================================================
 // TYPES
@@ -60,21 +69,19 @@ export interface ZoomPanConfig {
   defaultZoom?: number;
   /** Wheel zoom sensitivity — higher = faster (default: 0.001) */
   wheelSensitivity?: number;
+  /**
+   * Περιορισμός pan (Google Photos): η άκρη του περιεχομένου (`contentRef`) δεν μπαίνει μέσα στο κουτί — όσο χωρά, καμία
+   * μετατόπιση. Απαιτεί `contentRef`. Προεπιλογή `false` (ο καμβάς κάτοψης κινείται ελεύθερα).
+   */
+  confinePan?: boolean;
+  /** Διπλό κλικ = εναλλαγή «προεπιλογή ↔ αυτό το zoom γύρω από τον δείκτη» (Google/Apple Photos). Χωρίς τιμή: τίποτα. */
+  doubleClickZoom?: number;
 }
 
-export interface PanOffset {
-  readonly x: number;
-  readonly y: number;
-}
+export type PanOffset = Vec2;
 
-interface ZoomPanHandlers {
-  onMouseDown: (e: MouseEvent) => void;
-  onMouseMove: (e: MouseEvent) => void;
-  onMouseUp: () => void;
-  onMouseLeave: () => void;
-  onTouchStart: (e: TouchEvent) => void;
-  onTouchMove: (e: TouchEvent) => void;
-  onTouchEnd: (e: TouchEvent) => void;
+interface ZoomPanHandlers extends DragPanHandlers {
+  onDoubleClick: (e: MouseEvent) => void;
 }
 
 export interface UseZoomPanReturn {
@@ -82,20 +89,26 @@ export interface UseZoomPanReturn {
   zoom: number;
   /** Current pan offset in pixels */
   panOffset: PanOffset;
+  /** Στροφή σε μοίρες (πολλαπλάσιο του 90) */
+  rotation: number;
   /** Whether user is currently dragging to pan */
   isPanning: boolean;
-  /** Zoom in by one step */
+  /** Zoom in by one step (around the box centre) */
   zoomIn: () => void;
-  /** Zoom out by one step */
+  /** Zoom out by one step (around the box centre) */
   zoomOut: () => void;
-  /** Reset zoom and pan to defaults */
+  /** Στροφή κατά 90° δεξιόστροφα */
+  rotateBy90: () => void;
+  /** Reset zoom, pan and rotation to defaults */
   resetAll: () => void;
   /** Callback ref — attach to the zoomable container element */
   containerRef: (node: HTMLElement | null) => void;
+  /** Το κουτί ως `RefObject`, για μέτρηση (`useElementSize` / `useZoomResolution`) */
+  containerBox: RefObject<HTMLElement | null>;
+  /** Callback ref για το περιεχόμενο: ο μετασχηματισμός εφαρμόζεται imperative (κανένα `style=`, N.3) */
+  contentRef: (node: HTMLElement | null) => void;
   /** Mouse/touch event handlers to spread on the container */
   handlers: ZoomPanHandlers;
-  /** CSS transform style for image/content element (translate + scale) */
-  contentStyle: CSSProperties;
   /** Tailwind cursor class based on zoom/pan state */
   cursorClass: string;
 }
@@ -112,15 +125,51 @@ const DEFAULTS = {
   wheelSensitivity: 0.001,
 } as const;
 
-const ZERO_OFFSET: PanOffset = { x: 0, y: 0 };
-
 // ============================================================================
-// UTILITIES
+// BUTTONS · ROTATION · DOUBLE CLICK
 // ============================================================================
 
-/** Distance between two touch points — the math lives in `@/lib/geometry/zoom-pan-math` (ADR-884 Φ2στ-γ Γ2). */
-function touchDistance(t1: React.Touch, t2: React.Touch): number {
-  return pointDistance({ x: t1.clientX, y: t1.clientY }, { x: t2.clientX, y: t2.clientY });
+interface ActionDeps {
+  readonly getView: ViewGetter;
+  readonly commit: ViewCommit;
+  readonly limits: ZoomLimits;
+  readonly by: { readonly factor?: number; readonly step?: number };
+  readonly defaultZoom: number;
+}
+
+/** Τα κουμπιά μεγεθύνουν γύρω από το **κέντρο του κουτιού** (Figma) — η μετατόπιση κλιμακώνεται μαζί. */
+function useButtonActions({ getView, commit, limits, by, defaultZoom }: ActionDeps) {
+  const zoomBy = useCallback((direction: 1 | -1) => {
+    const view = getView();
+    const zoom = stepZoom(view.zoom, limits, direction, by);
+    // Σμίκρυνση ως το 1 ⇒ πίσω στο κέντρο (συμπεριφορά ADR-187).
+    const pan = direction < 0 && zoom <= 1 ? ZERO_PAN : scaleAbout(view.pan, ZERO_PAN, zoom / view.zoom);
+    commit({ ...view, zoom, pan });
+  }, [getView, commit, limits, by]);
+
+  const zoomIn = useCallback(() => zoomBy(1), [zoomBy]);
+  const zoomOut = useCallback(() => zoomBy(-1), [zoomBy]);
+  const rotateBy90 = useCallback(() => {
+    const view = getView();
+    commit({ ...view, rotation: (view.rotation + 90) % 360 });
+  }, [getView, commit]);
+  const resetAll = useCallback(() => commit({ zoom: defaultZoom, pan: ZERO_PAN, rotation: 0 }), [commit, defaultZoom]);
+  return { zoomIn, zoomOut, rotateBy90, resetAll };
+}
+
+/** Διπλό κλικ: μεγεθυσμένο ⇒ πίσω στην προεπιλογή· αλλιώς μεγέθυνση γύρω από τον δείκτη. Η στροφή μένει. */
+function useDoubleClickToggle(deps: ActionDeps, container: HTMLElement | null, target: number | undefined) {
+  const { getView, commit, defaultZoom } = deps;
+  return useCallback((e: MouseEvent) => {
+    if (target === undefined) return;
+    const view = getView();
+    if (view.zoom > defaultZoom) {
+      commit({ ...view, zoom: defaultZoom, pan: ZERO_PAN });
+      return;
+    }
+    const anchor = container ? pointerFromCenter(container, e.clientX, e.clientY) : ZERO_PAN;
+    commit({ ...view, zoom: target, pan: scaleAbout(view.pan, anchor, target / view.zoom) });
+  }, [getView, commit, defaultZoom, container, target]);
 }
 
 // ============================================================================
@@ -128,210 +177,27 @@ function touchDistance(t1: React.Touch, t2: React.Touch): number {
 // ============================================================================
 
 export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
-  const {
-    minZoom = DEFAULTS.minZoom,
-    maxZoom = DEFAULTS.maxZoom,
-    zoomStep = DEFAULTS.zoomStep,
-    zoomFactor,
-    defaultZoom = DEFAULTS.defaultZoom,
-    wheelSensitivity = DEFAULTS.wheelSensitivity,
-  } = config;
+  const { minZoom = DEFAULTS.minZoom, maxZoom = DEFAULTS.maxZoom, zoomStep = DEFAULTS.zoomStep, zoomFactor,
+    defaultZoom = DEFAULTS.defaultZoom, wheelSensitivity = DEFAULTS.wheelSensitivity, confinePan = false, doubleClickZoom } = config;
 
-  // ---- State ----
-  const [zoom, setZoomRaw] = useState(defaultZoom);
-  const [panOffset, setPanOffset] = useState<PanOffset>(ZERO_OFFSET);
+  const state = useViewState(defaultZoom, confinePan);
   const [isPanning, setIsPanning] = useState(false);
-  const [containerEl, setContainerEl] = useState<HTMLElement | null>(null);
+  const limits = useMemo(() => ({ min: minZoom, max: maxZoom }), [minZoom, maxZoom]);
+  const by = useMemo(() => ({ factor: zoomFactor, step: zoomStep }), [zoomFactor, zoomStep]);
+  const deps: ActionDeps = { getView: state.getView, commit: state.commit, limits, by, defaultZoom };
 
-  // ---- Refs (avoid stale closures in stable callbacks) ----
-  const zoomRef = useRef(defaultZoom);
-  const panRef = useRef<PanOffset>(ZERO_OFFSET);
-  const isPanningRef = useRef(false);
-  const panStartRef = useRef<PanOffset>(ZERO_OFFSET);
-  const initialPanRef = useRef<PanOffset>(ZERO_OFFSET);
-  const pinchDistRef = useRef<number | null>(null);
-  const pinchZoomRef = useRef(defaultZoom);
+  useWheelZoom(state.container, state.getView, state.commit, limits, wheelSensitivity);
+  useApplyViewTransform(state.content, state.view, isPanning);
+  const drag = useDragPan({ container: state.container, getView: state.getView, commit: state.commit, limits, setPanning: setIsPanning });
+  const actions = useButtonActions(deps);
+  const onDoubleClick = useDoubleClickToggle(deps, state.container, doubleClickZoom);
 
-  // Keep refs in sync with state
-  zoomRef.current = zoom;
-  panRef.current = panOffset;
-  isPanningRef.current = isPanning;
-
-  // ---- Clamp helper ----
-  const clampZoom = useCallback(
-    (value: number): number => clampZoomTo(value, { min: minZoom, max: maxZoom }),
-    [minZoom, maxZoom],
-  );
-
-  // ---- Callback ref for container element ----
-  const containerRef = useCallback((node: HTMLElement | null) => {
-    setContainerEl(node);
-  }, []);
-
-  // =========================================================================
-  // BUTTON CONTROLS
-  // =========================================================================
-
-  const zoomIn = useCallback(() => {
-    // Multiplicative (big-players) when zoomFactor is set, else additive zoomStep.
-    setZoomRaw(prev => stepZoom(prev, { min: minZoom, max: maxZoom }, 1, { factor: zoomFactor, step: zoomStep }));
-  }, [minZoom, maxZoom, zoomStep, zoomFactor]);
-
-  const zoomOut = useCallback(() => {
-    setZoomRaw(prev => {
-      const next = stepZoom(prev, { min: minZoom, max: maxZoom }, -1, { factor: zoomFactor, step: zoomStep });
-      if (next <= 1) setPanOffset(ZERO_OFFSET);
-      return next;
-    });
-  }, [minZoom, maxZoom, zoomStep, zoomFactor]);
-
-  const resetAll = useCallback(() => {
-    setZoomRaw(defaultZoom);
-    setPanOffset(ZERO_OFFSET);
-  }, [defaultZoom]);
-
-  // =========================================================================
-  // WHEEL ZOOM (non-passive, attached via ref)
-  // =========================================================================
-
-  useEffect(() => {
-    if (!containerEl) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const rect = containerEl.getBoundingClientRect();
-      // Cursor position relative to container center (the zoom origin)
-      const mouseX = e.clientX - rect.left - rect.width / 2;
-      const mouseY = e.clientY - rect.top - rect.height / 2;
-
-      const prevZoom = zoomRef.current;
-      const nextZoom = wheelZoom(prevZoom, e.deltaY, wheelSensitivity, { min: minZoom, max: maxZoom });
-
-      // Keep the world point under the cursor fixed after zoom (the ONE formula — zoom-pan-math)
-      const nextPan = scaleAbout(panRef.current, { x: mouseX, y: mouseY }, nextZoom / prevZoom);
-
-      setZoomRaw(nextZoom);
-      setPanOffset(nextPan);
-    };
-
-    containerEl.addEventListener('wheel', handleWheel, { passive: false });
-    return () => containerEl.removeEventListener('wheel', handleWheel);
-  }, [containerEl, minZoom, maxZoom, wheelSensitivity]);
-
-  // =========================================================================
-  // MOUSE PAN (stable callbacks using refs)
-  // =========================================================================
-
-  const handleMouseDown = useCallback((e: MouseEvent) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    isPanningRef.current = true;
-    setIsPanning(true);
-    panStartRef.current = { x: e.clientX, y: e.clientY };
-    initialPanRef.current = { x: panRef.current.x, y: panRef.current.y };
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isPanningRef.current) return;
-    setPanOffset({
-      x: initialPanRef.current.x + (e.clientX - panStartRef.current.x),
-      y: initialPanRef.current.y + (e.clientY - panStartRef.current.y),
-    });
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isPanningRef.current = false;
-    setIsPanning(false);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    isPanningRef.current = false;
-    setIsPanning(false);
-  }, []);
-
-  // =========================================================================
-  // TOUCH: PINCH-TO-ZOOM + PAN
-  // =========================================================================
-
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (e.touches.length === 2) {
-      // Pinch start
-      const dist = touchDistance(e.touches[0], e.touches[1]);
-      pinchDistRef.current = dist;
-      pinchZoomRef.current = zoomRef.current;
-      isPanningRef.current = false;
-      setIsPanning(false);
-    } else if (e.touches.length === 1) {
-      // Touch pan start
-      isPanningRef.current = true;
-      setIsPanning(true);
-      panStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      initialPanRef.current = { x: panRef.current.x, y: panRef.current.y };
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (e.touches.length === 2 && pinchDistRef.current !== null) {
-      // Pinch zoom
-      e.preventDefault();
-      const currentDist = touchDistance(e.touches[0], e.touches[1]);
-      const scale = currentDist / pinchDistRef.current;
-      setZoomRaw(clampZoom(pinchZoomRef.current * scale));
-    } else if (e.touches.length === 1 && isPanningRef.current) {
-      // Touch pan
-      e.preventDefault();
-      const touch = e.touches[0];
-      setPanOffset({
-        x: initialPanRef.current.x + (touch.clientX - panStartRef.current.x),
-        y: initialPanRef.current.y + (touch.clientY - panStartRef.current.y),
-      });
-    }
-  }, [clampZoom]);
-
-  const handleTouchEnd = useCallback((e: TouchEvent) => {
-    if (e.touches.length < 2) pinchDistRef.current = null;
-    if (e.touches.length === 0) {
-      isPanningRef.current = false;
-      setIsPanning(false);
-    }
-  }, []);
-
-  // =========================================================================
-  // COMPUTED VALUES
-  // =========================================================================
-
-  const contentStyle: CSSProperties = {
-    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
-    transformOrigin: 'center center',
-    transition: isPanning ? 'none' : 'transform 0.15s ease-out',
-  };
-
-  const cursorClass = isPanning ? 'cursor-grabbing' : 'cursor-grab';
-
-  // =========================================================================
-  // RETURN
-  // =========================================================================
+  const pannable = canPanIn(state.view, { container: state.container, content: state.content }, confinePan);
+  const cursorClass = isPanning ? 'cursor-grabbing' : pannable ? 'cursor-grab' : '';
 
   return {
-    zoom,
-    panOffset,
-    isPanning,
-    zoomIn,
-    zoomOut,
-    resetAll,
-    containerRef,
-    handlers: {
-      onMouseDown: handleMouseDown,
-      onMouseMove: handleMouseMove,
-      onMouseUp: handleMouseUp,
-      onMouseLeave: handleMouseLeave,
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
-      onTouchEnd: handleTouchEnd,
-    },
-    contentStyle,
-    cursorClass,
+    zoom: state.view.zoom, panOffset: state.view.pan, rotation: state.view.rotation, isPanning, ...actions,
+    containerRef: state.containerRef, containerBox: state.containerBox, contentRef: state.contentRef,
+    handlers: { ...drag, onDoubleClick }, cursorClass,
   };
 }

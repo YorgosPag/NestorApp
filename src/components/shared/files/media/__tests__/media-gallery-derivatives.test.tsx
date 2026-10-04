@@ -12,7 +12,7 @@
  * - Ε5: το `coveredWidth` γίνεται `containedWidth` (υποεκτίμηση) ή χάνει το φράγμα των pixel.
  */
 
-import React, { createRef } from 'react';
+import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 import { coveredWidth } from '@/lib/images/image-dimensions';
@@ -98,19 +98,19 @@ describe('ADR-899 Ε2 — `sizes` για `object-cover`', () => {
 
 describe('ADR-899 Ε2 — PhotoPreviewImage: η εικόνα του modal', () => {
   const handlers = {
-    onTouchStart: jest.fn(), onTouchMove: jest.fn(), onTouchEnd: jest.fn(), onLoad: jest.fn(), onError: jest.fn(),
+    onLoad: jest.fn(), onError: jest.fn(),
   };
 
   it('🔴 Ε4 με `preview` ⇒ το παράγωγο (`srcset`), όχι το πρωτότυπο', () => {
     const preview = buildProxyPreview(PATH);
-    render(<PhotoPreviewImage url="https://x.test/orig.jpg" preview={preview} zoom={1} alt="φ" className="c" imageRef={createRef()} {...handlers} />);
+    render(<PhotoPreviewImage url="https://x.test/orig.jpg" preview={preview} zoom={1} alt="φ" className="c" imageRef={jest.fn()} {...handlers} />);
     const img = screen.getByRole('img');
     expect(img.getAttribute('src')).toBe(preview.src);
     expect(img.getAttribute('srcset')).toBe(preview.srcSet);
   });
 
   it('🔴 Ε4 χωρίς `preview` (επαφές, λογότυπα) ⇒ το URL αυτούσιο — η συμπεριφορά πριν', () => {
-    render(<PhotoPreviewImage url="https://x.test/avatar.png" preview={null} zoom={1} alt="φ" className="c" imageRef={createRef()} {...handlers} />);
+    render(<PhotoPreviewImage url="https://x.test/avatar.png" preview={null} zoom={1} alt="φ" className="c" imageRef={jest.fn()} {...handlers} />);
     const img = screen.getByRole('img');
     expect(img.getAttribute('src')).toBe('https://x.test/avatar.png');
     expect(img.getAttribute('srcset')).toBeNull();

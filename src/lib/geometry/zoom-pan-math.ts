@@ -64,3 +64,40 @@ export function unitToZoom(unit: number, limits: ZoomLimits): number {
 export function pointDistance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
+
+/** Μέσο δύο σημείων — η άγκυρα του pinch (Apple/Google Photos: μεγεθύνει εκεί που είναι τα δάχτυλα, όχι στο κέντρο). */
+export function midpoint(a: Vec2, b: Vec2): Vec2 {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/** Πλάτος × ύψος σε css px. */
+export interface Extent {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * **Περιορισμός pan** (Google Photos): η μετατόπιση (από το κέντρο) δεν αφήνει την άκρη του ζωγραφισμένου να μπει μέσα στο
+ * κουτί. Περιθώριο ανά άξονα = `max(0, (ζωγραφισμένο − κουτί) / 2)` ⇒ όσο η εικόνα χωρά, η μετατόπιση είναι 0.
+ * Το `painted` είναι ό,τι **βλέπει** ο θεατής (μετά το zoom και τη στροφή) — ο καλών το ξέρει, εδώ μόνο η γεωμετρία.
+ */
+export function confinePan(pan: Vec2, painted: Extent, box: Extent): Vec2 {
+  return { x: confineAxis(pan.x, painted.width, box.width), y: confineAxis(pan.y, painted.height, box.height) };
+}
+
+/** Ένας άξονας του {@link confinePan}· όταν χωρά, **ακριβώς** 0 (όχι `-0` — ο θεατής δεν το βλέπει, οι άγκυρες ναι). */
+function confineAxis(value: number, painted: number, box: number): number {
+  const margin = Math.max(0, (painted - box) / 2);
+  return margin === 0 ? 0 : clamp(value, -margin, margin);
+}
+
+/** Η ΜΙΑ συμβολοσειρά του μετασχηματισμού όψης: `translate · scale · rotate` γύρω από το κέντρο. */
+export function viewTransformOf(view: { readonly pan: Vec2; readonly scale: number; readonly rotation: number }): string {
+  return `translate(${view.pan.x}px, ${view.pan.y}px) scale(${view.scale}) rotate(${view.rotation}deg)`;
+}
+
+/** Η έκταση μετά από στροφή κατά πολλαπλάσιο του 90°: στα 90°/270° πλάτος και ύψος ανταλλάσσονται. */
+export function quarterTurnExtent(extent: Extent, rotationDeg: number): Extent {
+  const quarter = ((Math.round(rotationDeg / 90) % 4) + 4) % 4;
+  return quarter % 2 === 1 ? { width: extent.height, height: extent.width } : extent;
+}

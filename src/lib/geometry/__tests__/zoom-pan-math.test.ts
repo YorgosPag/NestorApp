@@ -3,7 +3,8 @@
  */
 
 import {
-  clampZoom, pointDistance, scaleAbout, stepZoom, unitToZoom, wheelZoom, zoomToUnit,
+  clampZoom, confinePan, midpoint, pointDistance, quarterTurnExtent, scaleAbout, stepZoom, unitToZoom, viewTransformOf,
+  wheelZoom, zoomToUnit,
 } from '../zoom-pan-math';
 
 const LIMITS = { min: 1, max: 5 };
@@ -52,5 +53,27 @@ describe('zoom-pan-math', () => {
 
   it('pointDistance — Ευκλείδεια', () => {
     expect(pointDistance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
+  });
+
+  // ADR-899 §9 θέμα 3 — ό,τι χρειάστηκε για να γίνει το `useZoomPan` ο ΕΝΑΣ θεατής εικόνας
+  it('🔴 confinePan — όσο χωρά, ακριβώς 0· αλλιώς η άκρη δεν μπαίνει στο κουτί', () => {
+    const box = { width: 400, height: 300 };
+    expect(confinePan({ x: 50, y: -20 }, { width: 400, height: 300 }, box)).toEqual({ x: 0, y: 0 });
+    expect(confinePan({ x: -50, y: 20 }, { width: 200, height: 100 }, box)).toEqual({ x: 0, y: 0 });
+    // 800×300 σε 400×300 ⇒ περιθώριο x = 200, y = 0
+    expect(confinePan({ x: 500, y: 40 }, { width: 800, height: 300 }, box)).toEqual({ x: 200, y: 0 });
+    expect(confinePan({ x: -120, y: 0 }, { width: 800, height: 300 }, box)).toEqual({ x: -120, y: 0 });
+  });
+
+  it('midpoint · quarterTurnExtent · viewTransformOf', () => {
+    expect(midpoint({ x: 0, y: 0 }, { x: 60, y: 80 })).toEqual({ x: 30, y: 40 });
+    const e = { width: 4, height: 3 };
+    expect(quarterTurnExtent(e, 0)).toEqual(e);
+    expect(quarterTurnExtent(e, 90)).toEqual({ width: 3, height: 4 });
+    expect(quarterTurnExtent(e, 180)).toEqual(e);
+    expect(quarterTurnExtent(e, 270)).toEqual({ width: 3, height: 4 });
+    expect(quarterTurnExtent(e, -90)).toEqual({ width: 3, height: 4 });
+    expect(viewTransformOf({ pan: { x: 5, y: -2 }, scale: 1.5, rotation: 90 }))
+      .toBe('translate(5px, -2px) scale(1.5) rotate(90deg)');
   });
 });

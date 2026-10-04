@@ -4,12 +4,26 @@
  */
 
 import { act, renderHook } from '@testing-library/react';
-import type { TouchEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, TouchEvent } from 'react';
 
 import { useZoomPan } from '../useZoomPan';
 
 function touches(...points: ReadonlyArray<readonly [number, number]>): TouchEvent {
   return { touches: points.map(([clientX, clientY]) => ({ clientX, clientY })), preventDefault: () => undefined } as unknown as TouchEvent;
+}
+
+function mouse(clientX: number, clientY: number): ReactMouseEvent {
+  return { button: 0, clientX, clientY, preventDefault: () => undefined } as unknown as ReactMouseEvent;
+}
+
+/** Κουτί + περιεχόμενο με μετρήσιμες διαστάσεις (το jsdom δεν έχει διάταξη). */
+function frame(box: readonly [number, number], content: readonly [number, number]) {
+  const container = document.createElement('figure');
+  container.getBoundingClientRect = () => new DOMRect(0, 0, box[0], box[1]);
+  Object.defineProperties(container, { clientWidth: { value: box[0] }, clientHeight: { value: box[1] } });
+  const img = document.createElement('img');
+  Object.defineProperties(img, { offsetWidth: { value: content[0] }, offsetHeight: { value: content[1] } });
+  return { container, img };
 }
 
 describe('useZoomPan', () => {
@@ -60,4 +74,79 @@ describe('useZoomPan', () => {
     act(() => result.current.handlers.onTouchMove(touches([0, 0], [60, 80])));
     expect(result.current.zoom).toBeCloseTo(2);
   });
+
+  // ── ADR-899 §9 θέμα 3: ό,τι χρειάστηκε για να γίνει ο ΕΝΑΣ θεατής εικόνας ──────────────────────────────
+
+  it('🔴 σύρση: συνεχίζει έξω από το κουτί (window) και σταματά στο mouseup', () => {
+    const { result } = renderHook(() => useZoomPan());
+    act(() => result.current.handlers.onMouseDown(mouse(10, 10)));
+    expect(result.current.isPanning).toBe(true);
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 60, clientY: 30 })); });
+    expect(result.current.panOffset).toEqual({ x: 50, y: 20 });
+    act(() => { window.dispatchEvent(new MouseEvent('mouseup')); });
+    expect(result.current.isPanning).toBe(false);
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: 300 })); });
+    expect(result.current.panOffset).toEqual({ x: 50, y: 20 });
+  });
+
+  it('🔴 confinePan: στο «χωρά» καμία μετατόπιση ούτε «χεράκι»· μεγεθυσμένο ⇒ ως την άκρη', () => {
+    const { result } = renderHook(() => useZoomPan({ minZoom: 1, maxZoom: 8, zoomFactor: 2, confinePan: true }));
+    const { container, img } = frame([400, 300], [400, 300]);
+    act(() => { result.current.containerRef(container); result.current.contentRef(img); });
+    act(() => result.current.handlers.onMouseDown(mouse(0, 0)));
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 90, clientY: 90 })); });
+    act(() => { window.dispatchEvent(new MouseEvent('mouseup')); });
+    expect(result.current.panOffset).toEqual({ x: 0, y: 0 });
+    expect(result.current.cursorClass).toBe('');
+    act(() => result.current.zoomIn()); // 800×600 σε 400×300 ⇒ περιθώριο (200, 150)
+    expect(result.current.cursorClass).toBe('cursor-grab');
+    act(() => result.current.handlers.onMouseDown(mouse(0, 0)));
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: -500 })); });
+    expect(result.current.panOffset).toEqual({ x: 200, y: -150 });
+  });
+
+  it('🔴 confinePan + στροφή: στα 90° οι άξονες του περιθωρίου ανταλλάσσονται', () => {
+    const { result } = renderHook(() => useZoomPan({ minZoom: 1, maxZoom: 8, zoomFactor: 2, confinePan: true }));
+    const { container, img } = frame([400, 400], [400, 200]);
+    act(() => { result.current.containerRef(container); result.current.contentRef(img); });
+    act(() => { result.current.zoomIn(); result.current.rotateBy90(); }); // ζωγραφισμένο 400×800 ⇒ περιθώριο (0, 200)
+    act(() => result.current.handlers.onMouseDown(mouse(0, 0)));
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: 300 })); });
+    expect(result.current.panOffset).toEqual({ x: 0, y: 200 });
+  });
+
+  it('contentRef: ο μετασχηματισμός εφαρμόζεται imperative — translate · scale · rotate', () => {
+    const { result } = renderHook(() => useZoomPan({ zoomFactor: 2 }));
+    const { img } = frame([400, 300], [400, 300]);
+    act(() => result.current.contentRef(img));
+    act(() => { result.current.zoomIn(); result.current.rotateBy90(); });
+    expect(img.style.transform).toBe('translate(0px, 0px) scale(2) rotate(90deg)');
+    act(() => result.current.resetAll());
+    expect(result.current.rotation).toBe(0);
+    expect(img.style.transform).toBe('translate(0px, 0px) scale(1) rotate(0deg)');
+  });
+
+  it('🔴 pinch: μεγεθύνει γύρω από το μέσο των δαχτύλων, όχι γύρω από το κέντρο', () => {
+    const { result } = renderHook(() => useZoomPan({ maxZoom: 8 }));
+    const { container } = frame([200, 100], [200, 100]);
+    act(() => result.current.containerRef(container));
+    act(() => result.current.handlers.onTouchStart(touches([100, 50], [140, 50]))); // μέσο (120,50) ⇒ άγκυρα (20, 0)
+    act(() => result.current.handlers.onTouchMove(touches([80, 50], [160, 50])));
+    expect(result.current.zoom).toBeCloseTo(2);
+    expect(result.current.panOffset.x).toBeCloseTo(-20);
+    expect(result.current.panOffset.y).toBeCloseTo(0);
+  });
+
+  it('διπλό κλικ: εναλλαγή «χωρά» ↔ μεγέθυνση γύρω από τον δείκτη', () => {
+    const { result } = renderHook(() => useZoomPan({ maxZoom: 8, doubleClickZoom: 3 }));
+    const { container } = frame([200, 100], [200, 100]);
+    act(() => result.current.containerRef(container));
+    act(() => result.current.handlers.onDoubleClick(mouse(150, 70))); // άγκυρα (50, 20)
+    expect(result.current.zoom).toBe(3);
+    expect(result.current.panOffset).toEqual({ x: -100, y: -40 });
+    act(() => result.current.handlers.onDoubleClick(mouse(10, 10)));
+    expect(result.current.zoom).toBe(1);
+    expect(result.current.panOffset).toEqual({ x: 0, y: 0 });
+  });
 });
+

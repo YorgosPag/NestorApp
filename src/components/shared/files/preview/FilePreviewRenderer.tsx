@@ -13,7 +13,7 @@
  *
  * Supported preview strategies (see lib/file-types/preview-registry):
  *   - pdf         → PdfCanvasViewer (pdfjs-dist, theme-aware)
- *   - image       → Zoomable/rotatable <img>
+ *   - image       → ImagePreview (ΕΝΑ useZoomPan + ImageViewControls — ADR-899 §9 θέμα 3)
  *   - video       → HTML5 <video>
  *   - audio       → HTML5 <audio>
  *   - docx        → Client-side docx-preview rendering
@@ -25,14 +25,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  Download,
-  File,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-} from 'lucide-react';
+import { Download, File } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -47,7 +40,7 @@ import { HtmlPreview } from '@/components/file-manager/preview/HtmlPreview';
 import { DxfPreview } from '@/components/file-manager/preview/DxfPreview';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
-import { useZoomResolution } from './use-zoom-resolution';
+import { ImagePreview } from './ImagePreview';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -88,140 +81,6 @@ function PdfPreview({ url, fileId, title }: { url: string; fileId?: string; titl
   //    το Excel preview) και **δεν προωθούνταν** στον PDF viewer — μετρημένο
   //    2026-09-16. Το κενό ήταν **μία γραμμή**, όχι έλλειψη δεδομένου (ADR-862 Φ0 Β8).
   return <PdfCanvasViewer url={url} fileId={fileId} title={title} className="flex-1" />;
-}
-
-const IMG_MIN_ZOOM = 0.1;
-const IMG_MAX_ZOOM = 10;
-const IMG_WHEEL_FACTOR = 1.15;
-
-/** Image/SVG preview with cursor-centered wheel zoom + drag-to-pan */
-function ImagePreview({ url, preview, title }: { url: string; preview?: ProxyImagePreview | null; title: string }) {
-  const colors = useSemanticColors();
-  const [displayZoom, setDisplayZoom] = useState(1);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const source = useZoomResolution(url, preview, containerRef, displayZoom);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const zoomRef = useRef(1);
-  const panRef = useRef({ x: 0, y: 0 });
-  const rotRef = useRef(0);
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const panAtDragRef = useRef({ x: 0, y: 0 });
-
-  const applyTransform = useCallback(() => {
-    if (!imgRef.current) return;
-    const { x, y } = panRef.current;
-    imgRef.current.style.transform =
-      `translate(${x}px, ${y}px) scale(${zoomRef.current}) rotate(${rotRef.current}deg)`;
-  }, []);
-
-  // Wheel zoom — cursor-centered (same formula as DxfPreview)
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? IMG_WHEEL_FACTOR : 1 / IMG_WHEEL_FACTOR;
-      const oldZoom = zoomRef.current;
-      const newZoom = Math.min(IMG_MAX_ZOOM, Math.max(IMG_MIN_ZOOM, oldZoom * factor));
-      const rect = container!.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const ratio = newZoom / oldZoom;
-      panRef.current = {
-        x: (mx - rect.width / 2) * (1 - ratio) + panRef.current.x * ratio,
-        y: (my - rect.height / 2) * (1 - ratio) + panRef.current.y * ratio,
-      };
-      zoomRef.current = newZoom;
-      applyTransform();
-      setDisplayZoom(newZoom);
-    }
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
-  }, [applyTransform]);
-
-  // Drag-to-pan
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    function onMouseDown(e: MouseEvent) {
-      isDraggingRef.current = true;
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
-      panAtDragRef.current = { ...panRef.current };
-      container!.style.cursor = 'grabbing';
-    }
-    function onMouseMove(e: MouseEvent) {
-      if (!isDraggingRef.current) return;
-      panRef.current = {
-        x: panAtDragRef.current.x + (e.clientX - dragStartRef.current.x),
-        y: panAtDragRef.current.y + (e.clientY - dragStartRef.current.y),
-      };
-      applyTransform();
-    }
-    function onMouseUp() {
-      isDraggingRef.current = false;
-      container!.style.cursor = 'grab';
-    }
-    container.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    container.style.cursor = 'grab';
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [applyTransform]);
-
-  function zoomBy(delta: number) {
-    const newZoom = Math.min(IMG_MAX_ZOOM, Math.max(IMG_MIN_ZOOM, zoomRef.current + delta));
-    const ratio = newZoom / zoomRef.current;
-    panRef.current = { x: panRef.current.x * ratio, y: panRef.current.y * ratio };
-    zoomRef.current = newZoom;
-    applyTransform();
-    setDisplayZoom(newZoom);
-  }
-
-  function rotate() {
-    rotRef.current = (rotRef.current + 90) % 360;
-    // Χωρίς render: η στροφή δεν αλλάζει την ανάλυση (ADR-899 §9 Ε4γ — ισομετρία του transform).
-    applyTransform();
-  }
-
-  return (
-    <figure className="flex-1 flex flex-col overflow-hidden">
-      <nav className="flex items-center justify-center gap-1 py-2 border-b bg-muted/30">
-        <Button variant="ghost" size="sm" onClick={() => zoomBy(-0.25)}
-          disabled={displayZoom <= IMG_MIN_ZOOM} className="h-7 w-7 p-0">
-          <ZoomOut className="h-3.5 w-3.5" />
-        </Button>
-        <span className={cn('text-xs w-12 text-center', colors.text.muted)}>
-          {Math.round(displayZoom * 100)}%
-        </span>
-        <Button variant="ghost" size="sm" onClick={() => zoomBy(0.25)}
-          disabled={displayZoom >= IMG_MAX_ZOOM} className="h-7 w-7 p-0">
-          <ZoomIn className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={rotate} className="h-7 w-7 p-0 ml-2">
-          <RotateCw className="h-3.5 w-3.5" />
-        </Button>
-      </nav>
-      <div ref={containerRef}
-        className="flex-1 overflow-hidden flex items-center justify-center p-4 bg-muted/20">
-        <img
-          ref={imgRef}
-          src={source.src}
-          srcSet={source.srcSet}
-          sizes={source.sizes}
-          alt={title}
-          className="max-w-full max-h-full object-contain origin-center select-none"
-          draggable={false}
-          loading="lazy"
-        />
-      </div>
-    </figure>
-  );
 }
 
 /** Video preview with native player */

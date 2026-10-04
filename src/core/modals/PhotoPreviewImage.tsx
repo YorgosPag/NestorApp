@@ -14,7 +14,7 @@
  * @module core/modals/PhotoPreviewImage
  * @see components/shared/files/preview/use-zoom-resolution
  */
-import React, { useRef, type RefObject } from 'react';
+import React, { useRef } from 'react';
 
 import { useZoomResolution } from '@/components/shared/files/preview/use-zoom-resolution';
 import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
@@ -26,10 +26,8 @@ export interface PhotoPreviewImageProps {
   readonly zoom: number;
   readonly alt: string;
   readonly className: string;
-  readonly imageRef: RefObject<HTMLImageElement | null>;
-  readonly onTouchStart: React.TouchEventHandler<HTMLImageElement>;
-  readonly onTouchMove: React.TouchEventHandler<HTMLImageElement>;
-  readonly onTouchEnd: React.TouchEventHandler<HTMLImageElement>;
+  /** Το `contentRef` του `useZoomPan` — εκεί εφαρμόζεται ο μετασχηματισμός (οι χειρονομίες ζουν στο κουτί, ADR-899 §9 θέμα 3). */
+  readonly imageRef: (node: HTMLElement | null) => void;
   readonly onLoad: React.ReactEventHandler<HTMLImageElement>;
   readonly onError: React.ReactEventHandler<HTMLImageElement>;
 }
