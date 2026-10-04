@@ -73,6 +73,27 @@ if [[ -f "$TENANT_CONFIG" ]]; then
   done < <(grep -E "mode:[[:space:]]*'userId'" "$TENANT_CONFIG")
 fi
 
+# =============================================================================
+# ΚΟΙΝΟ ΦΥΣΙΚΟ ΓΕΓΟΝΟΣ (ADR-777 Α11 · ADR-900 §8 #2) — ΚΑΝΕΝΑΣ ΑΞΟΝΑΣ, ΡΗΤΑ
+# =============================================================================
+# Οι συλλογές που το `tenant-config.ts` δηλώνει `mode: 'none'` ΚΑΙ
+# `unscopedCategory: 'public-world'` (PUBLIC_LANDS · PUBLIC_BUILDINGS · PUBLIC_UNITS)
+# είναι `allow read: if true` — ανήκουν σε κανέναν. Φίλτρο companyId εκεί θα ήταν
+# ΛΑΘΟΣ, όχι ασφάλεια: θα έκρυβε το κοινό κτίριο από όλους εκτός ενός χώρου.
+#
+# ⚠️ ΣΤΕΝΟ, επίτηδες: ΜΟΝΟ `public-world`. Το `project-scoped` (CAD_FILES κ.λπ.) έχει
+# `mode: 'none'` αλλά ΕΙΝΑΙ απομονωμένο — μέσω του έργου — και μένει στην αυστηρή
+# διαδρομή. Η αυθεντία είναι το `tenant-config.ts`, η ίδια της CHECK 3.35.
+# =============================================================================
+declare -A PUBLIC_WORLD
+
+if [[ -f "$TENANT_CONFIG" ]]; then
+  while IFS= read -r line; do
+    key=$(echo "$line" | sed -n "s/^[[:space:]]*\([A-Z0-9_]*\):.*/\1/p")
+    [[ -n "$key" ]] && PUBLIC_WORLD["$key"]=1
+  done < <(grep -E "mode:[[:space:]]*'none'" "$TENANT_CONFIG" | grep -E "unscopedCategory:[[:space:]]*'public-world'")
+fi
+
 # Count violations per file
 declare -A FILE_VIOLATIONS
 TOTAL_VIOLATIONS=0
@@ -97,7 +118,14 @@ for file in $INPUT_FILES; do
       # πρέπει να ονομάζει ΚΑΙ τη συλλογή ΚΑΙ το πεδίο που δηλώνει το SSoT — αν
       # ονομάζει τη συλλογή χωρίς το πεδίο, είναι παραβίαση (αφιλτράριστη λίστα).
       scoped_ok=0
+      for public_key in "${!PUBLIC_WORLD[@]}"; do
+        if echo "$block" | grep -q "COLLECTIONS\.${public_key}\b"; then
+          scoped_ok=1
+          break
+        fi
+      done
       for scoped_key in "${!USER_SCOPED_FIELD[@]}"; do
+        [[ $scoped_ok -eq 1 ]] && break
         if echo "$block" | grep -q "COLLECTIONS\.${scoped_key}\b"; then
           if echo "$block" | grep -qE "${USER_SCOPED_FIELD[$scoped_key]}"; then
             scoped_ok=1
