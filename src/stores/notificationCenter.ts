@@ -30,6 +30,11 @@ const recalcUnread = (items: Map<string, Notification>) => {
   return c;
 };
 
+const createdAtMs = (n: Notification | undefined): number => {
+  const ms = n ? Date.parse(n.createdAt) : Number.NaN;
+  return Number.isNaN(ms) ? 0 : ms;
+};
+
 export const useNotificationCenter = create<CenterState>()(devtools((set, get) => ({
   items: new Map(),
   order: [],
@@ -47,8 +52,11 @@ export const useNotificationCenter = create<CenterState>()(devtools((set, get) =
         continue;
       }
       items.set(n.id, n);
-      if (!order.includes(n.id)) order.unshift(n.id);
+      if (!order.includes(n.id)) order.push(n.id);
     }
+    // Η σειρά είναι ΠΑΝΤΑ «νεότερη πρώτη», ανεξάρτητα από τη σειρά άφιξης: το `unshift` ανά στοιχείο αντέστρεφε τη
+    // σελίδα (το API επιστρέφει `createdAt desc`) ⇒ το κουδούνι έδειχνε την παλιότερη πρώτη (ADR-901 §14.6 Δ).
+    order.sort((a, b) => createdAtMs(items.get(b)) - createdAtMs(items.get(a)));
     return { items, order, unread: recalcUnread(items) };
   }),
 
