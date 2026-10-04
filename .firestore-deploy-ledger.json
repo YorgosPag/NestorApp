@@ -266,6 +266,13 @@
       "digest": "sha256:4f9bfaa7cf10c5aeb4dbaa77d4030edf1254e79e8d11a851ca092901ffd22208",
       "source": "firestore.rules",
       "target": "firestore:rules"
+    },
+    {
+      "at": "2026-10-04",
+      "commit": "beca4af6",
+      "digest": "sha256:0a42a923ea9223a768f5e2cd0d1324850e296e095fa97ebd506251dd8c5b8b37",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
     }
   ]
 }
