@@ -24,7 +24,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { createStorageWithPolicy, deleteStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { policyErrorMessageOf } from '@/lib/policy';
+import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
@@ -49,7 +49,12 @@ interface StorageMutationResult {
 
 export function useStorageTabState(building: Building) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'properties-enums']);
-  const { success, error: notifyError } = useNotifications();
+  const { success } = useNotifications();
+  // ADR-898 §21.6 Ε3 — ΕΝΑΣ βοηθός για κάθε αποτυχία: άρνηση πολιτικής ⇒ info + toast, άλλο ⇒ error + toast.
+  const reportFailure = useMutationFailureFeedback('StorageTab');
+  /** Το γενικό μήνυμα: «Αποτυχία: <ό,τι είπε ο server>», ή το μεταφρασμένο όνομα της πράξης. */
+  const failureText = (err: unknown, whatFailed: string) =>
+    `${t('storageNotifications.failurePrefix')} ${err instanceof Error ? err.message : whatFailed}`;
   const floorLabel = useFloorLabel();
 
   // ── Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation ──
@@ -214,9 +219,7 @@ export function useStorageTabState(building: Building) {
       resetCreateForm();
       await fetchStorageUnits();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('storageNotifications.createError');
-      logger.error('Create storage error', { error: msg });
-      notifyError(`${t('storageNotifications.failurePrefix')} ${msg}`);
+      reportFailure(err, 'create', failureText(err, t('storageNotifications.createError')));
     } finally {
       setCreating(false);
     }
@@ -266,9 +269,7 @@ export function useStorageTabState(building: Building) {
       setEditingId(null);
       await fetchStorageUnits();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('storageNotifications.updateError');
-      logger.error('Edit storage error', { error: msg });
-      notifyError(`${t('storageNotifications.failurePrefix')} ${msg}`);
+      reportFailure(err, 'update', failureText(err, t('storageNotifications.updateError')));
     } finally {
       setSaving(false);
     }
@@ -290,9 +291,7 @@ export function useStorageTabState(building: Building) {
       success(t('storageNotifications.deleted'));
       await fetchStorageUnits();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('storageNotifications.deleteError');
-      logger.error('Delete storage error', { error: msg });
-      notifyError(`${t('storageNotifications.failurePrefix')} ${msg}`);
+      reportFailure(err, 'delete', failureText(err, t('storageNotifications.deleteError')));
     } finally {
       setConfirmLoading(false);
       setConfirmDelete(null);
@@ -323,10 +322,8 @@ export function useStorageTabState(building: Building) {
       success(t('storageNotifications.unlinked'));
       await fetchStorageUnits();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('storageNotifications.unlinkError');
-      logger.error('Unlink storage error', { error: msg });
       // ADR-898 §20: παρακολούθημα μονάδας ⇒ 409 με κωδικό πολιτικής — το μεταφρασμένο «τι να κάνεις», όχι ωμό κείμενο.
-      notifyError(policyErrorMessageOf(err, t) ?? `${t('storageNotifications.failurePrefix')} ${msg}`);
+      reportFailure(err, 'unlink', failureText(err, t('storageNotifications.unlinkError')));
     } finally {
       setUnlinkLoading(false);
       setConfirmUnlink(null);

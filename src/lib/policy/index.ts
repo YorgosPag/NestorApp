@@ -14,8 +14,15 @@ export {
   translatePolicyError,
   isKnownPolicyErrorCode,
   policyErrorMessageOf,
+  policyErrorCodeOf,
+  POLICY_ERROR_NAMESPACES,
   type TranslatorFn,
 } from './policy-error-translator';
+export {
+  reportMutationFailure,
+  type MutationFailureLogger,
+  type MutationFailureSinks,
+} from './mutation-failure-feedback';
 export {
   registerPolicyRecovery,
   getPolicyRecovery,

@@ -30,7 +30,7 @@ export interface BuildingSpaceTabErrorProps {
 export function BuildingSpaceTabError({ message, retryLabel, onRetry }: BuildingSpaceTabErrorProps): React.ReactElement {
   return (
     <section className="flex flex-col items-center gap-2 py-2">
-      <p className="text-sm text-destructive">{message}</p>
+      <p role="alert" className="text-sm text-destructive">{message}</p>
       <Button variant="outline" size="sm" onClick={onRetry}>
         {retryLabel}
       </Button>

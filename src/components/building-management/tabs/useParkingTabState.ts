@@ -8,20 +8,18 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createStaleCache } from '@/lib/stale-cache';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
+import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { useNotifications } from '@/providers/NotificationProvider';
-import { policyErrorMessageOf } from '@/lib/policy';
-import { createParkingWithPolicy, deleteParkingWithPolicy, updateParkingWithPolicy } from '@/services/parking-mutation-gateway';
+import { deleteParkingWithPolicy, updateParkingWithPolicy } from '@/services/parking-mutation-gateway';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { Car, CheckCircle, Euro, Ruler } from 'lucide-react';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import type { ParkingSpot, ParkingSpotType, ParkingLocationZone } from '@/types/parking';
+import type { ParkingSpot, ParkingSpotType } from '@/types/parking';
 import {
   NEW_SPACE_OPERATIONAL_STATUS,
   operationalDraftOf,
@@ -42,10 +40,10 @@ import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type {
   ParkingApiData,
-  ParkingCreateResult,
   ParkingMutationResult,
   ParkingConfirmAction,
 } from './parking-tab-config';
+import { useParkingCreateForm } from './useParkingCreateForm';
 
 // ============================================================================
 // HOOK INTERFACE
@@ -66,7 +64,8 @@ const buildingParkingCache = createStaleCache<ParkingSpot[]>('building-parking-t
 export function useParkingTabState({ buildingId, projectId }: UseParkingTabStateParams) {
   const { t } = useTranslation(['parking', 'properties-enums']);
   const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-  const { error: notifyError } = useNotifications();
+  // ADR-898 §21.6 Ε3 — ΕΝΑΣ βοηθός για κάθε αποτυχία: άρνηση πολιτικής ⇒ info + toast, άλλο ⇒ error + toast.
+  const reportFailure = useMutationFailureFeedback('ParkingTab');
   const floorLabel = useFloorLabel();
 
   // ---------------------------------------------------------------------------
@@ -75,24 +74,6 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(buildingParkingCache.get(buildingId) ?? []);
   const [loading, setLoading] = useState(!buildingParkingCache.hasLoaded(buildingId));
   const [error, setError] = useState<string | null>(null);
-
-  // ---------------------------------------------------------------------------
-  // Create form state
-  // ---------------------------------------------------------------------------
-  const buildName = useEntityNameSuggestion();
-  const createNameManuallyChanged = useRef(false);
-
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createNumber, setCreateNumber] = useState('');
-  const [createType, setCreateType] = useState<ParkingSpotType>('standard');
-  const [createStatus, setCreateStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
-  // ADR-903 §6 — ο όροφος-φιλοξενών (`''` = κανένας)· αριθμός/είδος τα παράγει ο server.
-  const [createFloorId, setCreateFloorId] = useState('');
-  const [createLocation, setCreateLocation] = useState('');
-  const [createArea, setCreateArea] = useState('');
-  const [createNotes, setCreateNotes] = useState('');
-  const [createLocationZone, setCreateLocationZone] = useState<ParkingLocationZone | ''>('');
-  const [creating, setCreating] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Edit state
@@ -159,93 +140,10 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   }, [fetchParkingSpots]);
 
   // ===========================================================================
-  // CREATE
+  // CREATE — η φόρμα «νέα θέση» ζει στο δικό της hook (N.7.1)
   // ===========================================================================
 
-  // Set initial name when form opens; reset manual flag when form closes
-  useEffect(() => {
-    if (showCreateForm && !createNameManuallyChanged.current) {
-      setCreateNumber(buildName(t('types.standard'), 0));
-    }
-    if (!showCreateForm) {
-      createNameManuallyChanged.current = false;
-    }
-  // buildName is stable (useCallback inside hook); t changes only on locale switch
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreateForm]);
-
-  const handleCreateNumberChange = useCallback((value: string) => {
-    setCreateNumber(value);
-    createNameManuallyChanged.current = true;
-  }, []);
-
-  const handleCreateTypeChange = useCallback((v: ParkingSpotType) => {
-    setCreateType(v);
-    if (!createNameManuallyChanged.current) {
-      setCreateNumber(buildName(t(`types.${v}`), parseFloat(createArea) || 0));
-    }
-  }, [buildName, t, createArea]);
-
-  const handleCreateAreaChange = useCallback((value: string) => {
-    setCreateArea(value);
-    if (!createNameManuallyChanged.current) {
-      setCreateNumber(buildName(t(`types.${createType}`), parseFloat(value) || 0));
-    }
-  }, [buildName, t, createType]);
-
-  const resetCreateForm = useCallback(() => {
-    setShowCreateForm(false);
-    setCreateNumber('');
-    createNameManuallyChanged.current = false;
-    setCreateType('standard');
-    setCreateStatus(NEW_SPACE_OPERATIONAL_STATUS);
-    setCreateFloorId('');
-    setCreateLocation('');
-    setCreateArea('');
-    setCreateNotes('');
-    setCreateLocationZone('');
-  }, []);
-
-  const handleCreate = useCallback(async () => {
-    if (!createNumber.trim()) return;
-    setCreating(true);
-    try {
-      const result = await createParkingWithPolicy<ParkingCreateResult>({ payload: {
-        number: createNumber.trim(),
-        type: createType,
-        operationalStatus: createStatus || undefined,
-        floorId: createFloorId || undefined,
-        location: createLocation.trim() || undefined,
-        area: createArea ? parseFloat(createArea) : undefined,
-        notes: createNotes.trim() || undefined,
-        locationZone: createLocationZone || undefined,
-        buildingId,
-        projectId,
-      }});
-      if (result?.parkingSpotId) {
-        RealtimeService.dispatch('PARKING_CREATED', {
-          parkingSpotId: result.parkingSpotId,
-          parkingSpot: {
-            number: createNumber.trim(),
-            buildingId,
-            type: createType,
-            operationalStatus: createStatus || undefined,
-          },
-          timestamp: Date.now(),
-        });
-        resetCreateForm();
-        await fetchParkingSpots();
-      }
-    } catch (err) {
-      console.error('[ParkingTab] Create error:', err);
-    } finally {
-      setCreating(false);
-    }
-  }, [
-    createNumber, createType, createStatus, createFloorId, createLocation,
-    createArea, createNotes, createLocationZone,
-    buildingId, projectId, resetCreateForm, fetchParkingSpots,
-  ]);
+  const createForm = useParkingCreateForm({ buildingId, projectId, t, onCreated: fetchParkingSpots, reportFailure });
 
   // ===========================================================================
   // EDIT
@@ -305,11 +203,11 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
         await fetchParkingSpots();
       }
     } catch (err) {
-      console.error('[ParkingTab] Edit error:', err);
+      reportFailure(err, 'update', t('messages.updateError'));
     } finally {
       setSaving(false);
     }
-  }, [editingId, editNumber, editType, editStatus, editFloorId, editArea, parkingSpots, commercial, fetchParkingSpots]);
+  }, [editingId, editNumber, editType, editStatus, editFloorId, editArea, parkingSpots, commercial, fetchParkingSpots, reportFailure, t]);
 
   // ===========================================================================
   // DELETE & UNLINK
@@ -357,17 +255,15 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       }
       await fetchParkingSpots();
     } catch (err) {
-      console.error(`[ParkingTab] ${type} error:`, err);
-      // ADR-898 §20: παρακολούθημα μονάδας ⇒ 409 με κωδικό πολιτικής — ως τώρα η αποτυχία ήταν σιωπηλή (μόνο console).
-      const policyMessage = policyErrorMessageOf(err, tBuilding);
-      if (policyMessage !== null || type === 'unlink') notifyError(policyMessage ?? t('messages.updateError'));
+      // ADR-898 §20: παρακολούθημα μονάδας ⇒ 409 με κωδικό πολιτικής. Η διαγραφή δεν έχει πια σιωπηλή αποτυχία.
+      reportFailure(err, type, type === 'delete' ? t('messages.deleteError') : t('messages.updateError'));
     } finally {
       setConfirmLoading(false);
       setConfirmAction(null);
       setDeletingId(null);
       setUnlinkingId(null);
     }
-  }, [confirmAction, fetchParkingSpots, notifyError, t, tBuilding]);
+  }, [confirmAction, fetchParkingSpots, reportFailure, t]);
 
   // ===========================================================================
   // LINK — Fetch unlinked parking spots + link to this building
@@ -447,23 +343,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     error,
     fetchParkingSpots,
 
-    // Create form
-    showCreateForm,
-    setShowCreateForm,
-    createNumber, setCreateNumber,
-    handleCreateNumberChange,
-    handleCreateTypeChange,
-    handleCreateAreaChange,
-    createType, setCreateType,
-    createStatus, setCreateStatus,
-    createFloorId, setCreateFloorId,
-    createLocation, setCreateLocation,
-    createArea, setCreateArea,
-    createNotes, setCreateNotes,
-    createLocationZone, setCreateLocationZone,
-    creating,
-    resetCreateForm,
-    handleCreate,
+    // Create form (useParkingCreateForm)
+    ...createForm,
 
     // Edit
     editingId,

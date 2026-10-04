@@ -15,14 +15,14 @@
 import React, { useId, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { BuildingSpaceMention, BuildingSpaceReference } from '@/lib/building-spaces/building-space-contract';
 import type { BuildingSpaceKind } from '@/lib/building-spaces/building-space-membership';
-import { policyErrorMessageOf } from '@/lib/policy';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { Link } from '@/lib/workspace/navigation';
-import { useNotifications } from '@/providers/NotificationProvider';
 
+import { BuildingSpaceTabError } from './BuildingSpaceTabStatus';
 import { useBuildingSpaceRelations } from './useBuildingSpaceRelations';
 
 /** Οι γενικές λέξεις ζουν στο λεξιλόγιο της αντικειμενικής (ADR-898 §20) — ΜΙΑ πηγή, όχι δεύτερη μετάφραση. */
@@ -68,14 +68,14 @@ interface UnplacedProps {
 function Unplaced({ unplaced, t, onPlace }: UnplacedProps) {
   const headingId = useId();
   const [placing, setPlacing] = useState<string | null>(null);
-  const { error: notifyError } = useNotifications();
+  const reportFailure = useMutationFailureFeedback('BuildingSpaceRelationsPanel');
   if (unplaced.length === 0) return null;
   const place = async (spaceId: string) => {
     setPlacing(spaceId);
     try {
       await onPlace(spaceId);
     } catch (error) {
-      notifyError(policyErrorMessageOf(error, t) ?? t(`${R}.placeError`));
+      reportFailure(error, 'place', t(`${R}.placeError`));
     } finally {
       setPlacing(null);
     }
@@ -107,10 +107,13 @@ interface PanelProps {
 
 export function BuildingSpaceRelationsPanel({ buildingId, kind, onPlace }: PanelProps) {
   const { t } = useTranslation(['building', 'objective-value']);
-  const { references, unplaced } = useBuildingSpaceRelations(buildingId, kind);
-  if (references.length === 0 && unplaced.length === 0) return null;
+  const { status, references, unplaced, retry } = useBuildingSpaceRelations(buildingId, kind);
+  // ADR-898 §21.6 Ε2 — «δεν φόρτωσε» δεν είναι «τίποτα να δείξει»: το πάνελ σωπαίνει ΜΟΝΟ όταν ξέρει ότι είναι άδειο.
+  const failed = status === 'error';
+  if (!failed && references.length === 0 && unplaced.length === 0) return null;
   return (
     <aside className="flex flex-col gap-4 rounded-md border border-border p-3">
+      {failed && <BuildingSpaceTabError message={t(`${R}.loadError`)} retryLabel={t(`${OV}.retry`)} onRetry={retry} />}
       <Unplaced unplaced={unplaced} t={t} onPlace={onPlace} />
       <References references={references} t={t} />
     </aside>

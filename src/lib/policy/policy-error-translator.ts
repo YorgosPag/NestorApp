@@ -51,6 +51,27 @@ const CODE_TO_I18N_KEY: Record<PolicyErrorCode, string> = {
 };
 
 /**
+ * Τα namespaces που χρειάζεται ένα μήνυμα πολιτικής: τα ίδια τα μηνύματα (`building`) **και** οι ετικέτες UI που
+ * αναφέρουν ({@link CODE_TO_LABEL_KEYS}). Πρώτο το `building` — το `t` δένεται στο πρώτο namespace.
+ */
+export const POLICY_ERROR_NAMESPACES = ['building', 'properties'] as const;
+
+/**
+ * Ονόματα του UI που **αναφέρει** ένα μήνυμα («πήγαινε στην ενότητα Χ») — παράμετρος ICU → το κλειδί της ΙΔΙΑΣ της
+ * ετικέτας. Το μήνυμα διαβάζει το όνομα, δεν το αντιγράφει: μετονομασία της ενότητας = ένα σημείο (ADR-898 §21.6 Ε4 —
+ * το 409 έστελνε τον άνθρωπο σε «Παρακολουθήματα», ενώ η ενότητα λέγεται «Συνδεδεμένοι Χώροι»).
+ */
+const CODE_TO_LABEL_KEYS: Partial<Record<PolicyErrorCode, Readonly<Record<string, string>>>> = {
+  [POLICY_ERROR_CODES.SPACE_LINKED_TO_UNIT]: { section: 'properties:linkedSpaces.title' },
+};
+
+function labelParamsOf(code: PolicyErrorCode, t: TranslatorFn): Record<string, string> | undefined {
+  const labelKeys = CODE_TO_LABEL_KEYS[code];
+  if (!labelKeys) return undefined;
+  return Object.fromEntries(Object.entries(labelKeys).map(([param, key]) => [param, t(key)]));
+}
+
+/**
  * Translates a server-side policy error code to a localized message.
  *
  * @param errorCode - Stable code from server (may be undefined for non-policy errors)
@@ -80,10 +101,16 @@ export function translatePolicyError(
  * ουδέτερο (κανένα import του HTTP client).
  */
 export function policyErrorMessageOf(error: unknown, t: TranslatorFn): string | null {
-  const code = typeof error === 'object' && error !== null && 'errorCode' in error ? error.errorCode : undefined;
-  if (typeof code !== 'string' || !isKnownPolicyErrorCode(code)) return null;
-  const message = translatePolicyError(code, t, '');
+  const code = policyErrorCodeOf(error);
+  if (code === null) return null;
+  const message = translatePolicyError(code, t, '', labelParamsOf(code, t));
   return message === '' ? null : message;
+}
+
+/** Ο κωδικός πολιτικής ενός σφάλματος mutation, ή `null` όταν **δεν** είναι γνωστή άρνηση πολιτικής. */
+export function policyErrorCodeOf(error: unknown): PolicyErrorCode | null {
+  const code = typeof error === 'object' && error !== null && 'errorCode' in error ? error.errorCode : undefined;
+  return typeof code === 'string' && isKnownPolicyErrorCode(code) ? code : null;
 }
 
 /** Type guard: is this a known policy error code? */
