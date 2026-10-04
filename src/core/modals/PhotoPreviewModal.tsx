@@ -72,7 +72,7 @@ export function PhotoPreviewModal({
 
   const state = usePhotoPreviewState({
     open, onOpenChange, photoUrl, photoTitle, contact,
-    photoType, photoIndex, galleryPhotos, currentGalleryIndex, t
+    photoType, photoIndex, galleryPhotos, galleryPreviews, currentGalleryIndex, t
   });
 
   // Early return — no photo AND dialog closed
@@ -136,7 +136,7 @@ export function PhotoPreviewModal({
           <PhotoPreviewImage
             url={state.currentPhoto ?? null}
             preview={state.isGalleryMode ? galleryPreviews?.[state.currentIndex] ?? null : null}
-            zoom={state.view.zoom}
+            zoom={state.view.scale}
             alt={state.isGalleryMode
               ? t('photoPreview.alt.gallery', { title: state.title, current: state.currentIndex + 1, total: state.totalPhotos })
               : t('photoPreview.alt.single', { title: state.title })

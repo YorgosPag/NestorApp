@@ -40,12 +40,13 @@ import {
   DXF_THUMBNAIL_HEIGHT,
 } from '../shared/dxf-raster-generator';
 import { decodeProcessedJsonBytes } from '../generated/lib/dxf/decode-processed-json';
-import { fileCompanionPath } from '../generated/lib/files/file-companion-objects';
+import { FILE_COMPANION_KINDS, fileCompanionPath } from '../generated/lib/files/file-companion-objects';
 import { fileStorageBucketNames } from './file-record-bucket';
 import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
 import { FINALIZE_RUNTIME, gen1Memory } from './finalize-runtime';
 
-const PROCESSED_SUFFIX = '.dxf.processed.json';
+/** Η επεξεργασμένη σκηνή ενός `.dxf` — η κατάληξη από το μητρώο συνοδευτικών, όχι ξαναγραμμένη εδώ (ADR-899 §9 θέμα 6). */
+const PROCESSED_SUFFIX = `.dxf${FILE_COMPANION_KINDS.dxfProcessedScene.suffix}`;
 
 interface RegenerateArgs {
   /** Storage path of the original `.dxf` (not the processed JSON). */

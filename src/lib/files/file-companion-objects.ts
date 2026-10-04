@@ -79,6 +79,16 @@ export function fileCompanionPath(storagePath: string, kind: FileCompanionKind):
 }
 
 /**
+ * **Είναι αυτό το όνομα συνοδευτικό — οποιουδήποτε αρχείου;** Η ερώτηση όποιου βλέπει **μόνο** ένα όνομα αντικειμένου
+ * (storage trigger) και πρέπει να αποφασίσει **πριν από κάθε I/O** αν το αντικείμενο έχει δική του εγγραφή (ADR-899 §9
+ * θέμα 6). Τα πρωτότυπα ονομάζονται `{fileId}.{ext}` (μόνο IDs, ADR-031) ⇒ κανένα δεν τελειώνει σε κατάληξη του μητρώου.
+ * 🔑 Από το **μητρώο**, όχι καρφωμένο `_thumb`: νέο είδος συνοδευτικού αναγνωρίζεται χωρίς να το θυμηθεί κανείς.
+ */
+export function isFileCompanionObjectName(objectName: string): boolean {
+  return FILE_COMPANION_KIND_NAMES.some((kind) => objectName.endsWith(FILE_COMPANION_KINDS[kind].suffix));
+}
+
+/**
  * 🔒 **Ανήκει αυτό το αντικείμενο σε ΑΥΤΟ το αρχείο;** — ο φρουρός πριν από κάθε διαγραφή συνοδευτικού.
  *
  * Ναι μόνο αν ζει στον **ίδιο φάκελο** και το όνομά του ξεκινά με:

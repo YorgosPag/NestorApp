@@ -6,9 +6,11 @@
  * - Δ2: ο φρουρός δέχεται 0 / κλάσμα / NaN / string ⇒ επινοημένη διάσταση.
  * - Δ3: το custom metadata διαβάζεται χαλαρά (`'0640'`, `'1e3'`) ή δεν κάνει κύκλο γραφή→ανάγνωση.
  * - Δ4: ο κατάλογος raster τύπων διαφωνεί με την κλίμακα προεπισκοπήσεων.
+ * - Δ5 (§9 θέμα 5β): η στραμμένη δεν ξαναχωρά · το 180° μετριέται ως τέταρτο · μικρή εικόνα φουσκώνει στη στροφή.
  */
 
 import {
+  fitScaleForRotation,
   IMAGE_DIMENSIONS_METADATA_KEYS,
   imageDimensionsFromMetadata,
   imageDimensionsOf,
@@ -57,5 +59,26 @@ describe('image-dimensions', () => {
       expect(isRasterImageContentType(type)).toBe(isPreviewableContentType(type));
     }
     expect(isRasterImageContentType('image/svg+xml')).toBe(false);
+  });
+
+  it('🔴 Δ5 στροφή 90° ⇒ η εικόνα ξαναχωρά (μετρημένα Σ1–Σ3 του ADR-899 §9 θέμα 5α)', () => {
+    const modal = { width: 1872, height: 704 };
+    // Σ1: οριζόντια 939×704 → 704×939 έκοβε 25% ⇒ ×0,75 = 528×704.
+    expect(fitScaleForRotation(modal, { width: 4000, height: 3000 }, 90)).toBeCloseTo(0.75);
+    // Σ2: πάνελ 907×349, 465×349 → 349×465 έκοβε 18%.
+    expect(fitScaleForRotation({ width: 907, height: 349 }, { width: 4000, height: 3000 }, 270)).toBeCloseTo(0.75);
+    // Σ3: κάθετη 528×704 → 704×528 άφηνε 33% άδειο ⇒ ×1,333 = 939×704.
+    expect(fitScaleForRotation(modal, { width: 3000, height: 4000 }, 90)).toBeCloseTo(4 / 3);
+    expect(fitScaleForRotation(modal, { width: 3000, height: 4000 }, -90)).toBeCloseTo(4 / 3);
+  });
+
+  it('🔴 Δ5 άρτιο τέταρτο = 1 · μικρή εικόνα δεν φουσκώνει · άκυρο κουτί = 1', () => {
+    const modal = { width: 1872, height: 704 };
+    for (const angle of [0, 180, 360, -180]) expect(fitScaleForRotation(modal, { width: 4000, height: 3000 }, angle)).toBe(1);
+    // 300×400 χωρά ολόκληρη και όρθια και πλαγιαστή: τα pixel της είναι το φράγμα.
+    expect(fitScaleForRotation(modal, { width: 300, height: 400 }, 90)).toBe(1);
+    // 600×800 σε ύψος 704: όρθια 528×704 (φραγμένη από το κουτί), πλαγιαστή 800×600 χωρά ⇒ ως τα pixel της, όχι ως το κουτί.
+    expect(fitScaleForRotation(modal, { width: 600, height: 800 }, 90)).toBeCloseTo(800 / 704);
+    expect(fitScaleForRotation({ width: 0, height: 0 }, { width: 4000, height: 3000 }, 90)).toBe(1);
   });
 });

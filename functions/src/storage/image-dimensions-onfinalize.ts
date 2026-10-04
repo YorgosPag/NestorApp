@@ -30,6 +30,7 @@ import sharp from 'sharp';
 
 import { COLLECTIONS } from '../config/firestore-collections';
 import { STORAGE_PATH_SEGMENTS } from '../generated/config/domain-constants';
+import { isFileCompanionObjectName } from '../generated/lib/files/file-companion-objects';
 import { fileStorageBucketNameOf } from '../generated/lib/files/file-storage-placement';
 import {
   imageDimensionsFromMetadata,
@@ -63,10 +64,13 @@ const RECORD_COLLECTION_OF_ROOT: Readonly<Record<string, string>> = {
 
 /**
  * `{companies|people}/{owner}/…/files/{fileId}.{ext}` ⇒ εγγραφή υποψήφια. Τα μονοπάτια αρχείων είναι **μόνο IDs**
- * (ADR-031), άρα το όνομα ως την πρώτη τελεία είναι η ταυτότητα. Κάθε άλλο σχήμα (avatar, υφές, συνοδευτικά σε άλλο
- * φάκελο) ⇒ `null` — κανένα κατέβασμα για αντικείμενο που δεν έχει εγγραφή να ενημερώσει.
+ * (ADR-031), άρα το όνομα ως την πρώτη τελεία είναι η ταυτότητα. Κάθε άλλο σχήμα (avatar, υφές, συνοδευτικά) ⇒ `null` —
+ * κανένα κατέβασμα για αντικείμενο που δεν έχει εγγραφή να ενημερώσει.
+ * 🔴 Τα συνοδευτικά ζουν **στον ίδιο φάκελο** (`file_x_thumb.webp`): χωρίς το μητρώο, το «ως την πρώτη τελεία» έβγαζε
+ * εγγραφή-φάντασμα `file_x_thumb` ⇒ λήψη + `sharp` + metadata + transaction για **κάθε** μικρογραφία (ADR-899 §9 θέμα 6).
  */
 export function fileRecordRefOf(objectName: string): FileRecordRef | null {
+  if (isFileCompanionObjectName(objectName)) return null;
   const segments = objectName.split('/');
   const collection = RECORD_COLLECTION_OF_ROOT[segments[0]];
   if (collection === undefined || segments.length < 4) return null;
@@ -117,6 +121,18 @@ function recordLivesIn(record: Record<string, unknown>, bucketName: string): boo
   }
 }
 
+/**
+ * **Το μήνυμα λέει την έκβαση** (ADR-899 §9 θέμα 6): ως εδώ φτάνει μόνο ό,τι **μετρήθηκε** και γράφτηκε στο metadata του
+ * αντικειμένου· «recorded» λέγεται **μόνο** όταν γράφτηκε και η εγγραφή. Ήταν ένα σταθερό «recorded» και για `no-record`.
+ * `Record` πάνω στην ένωση ⇒ νέα έκβαση χωρίς μήνυμα δεν μεταγλωττίζεται. Το πεδίο `verdict` μένει, για φίλτρα/μετρικές.
+ */
+const RECORD_OUTCOME: Readonly<Record<DimensionsRecordVerdict, string>> = {
+  write: 'Image dimensions recorded',
+  'already-recorded': 'Image dimensions: measured, record already up to date',
+  'no-record': 'Image dimensions: measured, no file record yet',
+  'not-this-object': 'Image dimensions: measured, record points to another object',
+};
+
 /** Το σώμα — κοινό για gen1 (κανονικός κάδος) και gen2 (ΕΕ). */
 export async function recordImageDimensionsOnFinalize(object: FinalizedObject): Promise<void> {
   const { name, generation } = object;
@@ -148,7 +164,7 @@ export async function recordImageDimensionsOnFinalize(object: FinalizedObject): 
   }
 
   const verdict = await recordOnDocument(ref, { ...object, name }, measured);
-  functions.logger.info('Image dimensions recorded', { name, verdict, width: measured.width, height: measured.height });
+  functions.logger.info(RECORD_OUTCOME[verdict], { name, verdict, width: measured.width, height: measured.height });
 }
 
 /** gen1 — ο κανονικός κάδος. Το gen2 της ΕΕ ζει στο `regional-storage-triggers.ts` (ίδιο σώμα). */

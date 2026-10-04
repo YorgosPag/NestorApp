@@ -80,6 +80,11 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
 
 ## Changelog
 
+- **2026-10-05**: `useZoomPan` re-fits the content after rotation (ADR-899 §9 θέμα 5β)
+  - New OPTIONAL config: `refitOnRotate` + `contentDimensions`; new return `scale` (= `zoom × fit`, the painted scale — what resolution asks for). `zoom` stays the user's number («100%» = fits at every angle)
+  - `fit` is **derived, not state**: `viewScaleOf(view, frame)` in `zoom-pan-view.ts` is the one place — read by pan confinement (`paintedOf`), the transform (`useApplyViewTransform`) and consumers. The single `commit` is unchanged
+  - Pure maths: `fitScaleForRotation` in `lib/images/image-dimensions.ts` (next to `containedWidth`, projected to Functions)
+  - Canvas consumers (`FloorplanGallery` · `DetailSheetDialog` · `DxfPreview`) unaffected: flag off ⇒ no observer, `scale === zoom`
 - **2026-10-05**: `useZoomPan` becomes the ONE image/canvas viewer pan-zoom (ADR-899 §9 θέμα 3)
   - Three hand-rolled copies migrated: file-panel `ImagePreview` · `PhotoPreviewModal` (`usePhotoPreviewState` 495 → 303 lines) · `DxfPreview`
   - Split into `src/hooks/zoom-pan/` sub-hooks (`use-view-state` · `use-wheel-zoom` · `use-drag-pan` · `zoom-pan-view`); one `commit` settles every channel

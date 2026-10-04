@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/images/image-dimensions.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:80241a79a2e891d9d0db466e18d73840c21fa129153b9589ddf38a2426f3d29b
+// sha256:7f0c468cca1a10c5b3042a4a89a5a51e1cecda5ac4e20b90423f93372c7d8fe9
 
 /**
  * @fileoverview 📐 **ΟΙ ΔΙΑΣΤΑΣΕΙΣ ΜΙΑΣ ΕΙΚΟΝΑΣ ΟΠΩΣ ΤΗ ΒΛΕΠΕΙ Ο ΘΕΑΤΗΣ** — το ΕΝΑ σημείο που ξέρει τι σημαίνει
@@ -82,6 +82,24 @@ export function containedWidth(box: { readonly width: number; readonly height: n
 export function coveredWidth(box: { readonly width: number; readonly height: number }, image: ImageDimensions): number {
   if (!(box.width > 0) || !(box.height > 0)) return 0;
   return Math.min(Math.max(box.width, (box.height * image.width) / image.height), image.width);
+}
+
+/**
+ * **Πόσο πρέπει να κλιμακωθεί η εικόνα για να ξαναχωρέσει μετά τη στροφή** (ADR-899 §9 θέμα 5β) — ο λόγος «χωρά στη
+ * γωνία» / «χωρά στις 0°». Άρτιο τέταρτο (0°/180°) ⇒ `1`. Στα 90°/270° ο θεατής βλέπει `ύψος × πλάτος`: το νέο «χωρά»
+ * είναι το `containedWidth` της **στραμμένης**, και ο άξονας που το ζωγραφίζει είναι το **ύψος** της εικόνας.
+ * 🔑 Μετρημένο: οριζόντια 4:3 σε 1872×704 ⇒ `0,75` (αλλιώς κόβεται 25%)· κάθετη 3:4 ⇒ `1,333` (αλλιώς αφήνει 33% άδειο).
+ * Κληρονομεί το φράγμα pixel του `containedWidth`: μια μικρή εικόνα **δεν** φουσκώνει επειδή στράφηκε. Άκυρο κουτί ⇒ `1`.
+ */
+export function fitScaleForRotation(
+  box: { readonly width: number; readonly height: number },
+  image: ImageDimensions,
+  rotationDeg: number,
+): number {
+  if ((((Math.round(rotationDeg / 90) % 2) + 2) % 2) === 0) return 1;
+  const uprightHeight = (containedWidth(box, image) * image.height) / image.width;
+  const turnedWidth = containedWidth(box, { width: image.height, height: image.width });
+  return uprightHeight > 0 && turnedWidth > 0 ? turnedWidth / uprightHeight : 1;
 }
 
 // ---------------------------------------------------------------------------

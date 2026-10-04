@@ -32,6 +32,8 @@ interface UsePhotoPreviewStateParams {
   photoType: NonNullable<PhotoPreviewModalProps['photoType']>;
   photoIndex?: number;
   galleryPhotos?: (string | null)[];
+  /** Τα παράγωγα ανά φωτογραφία — από εδώ οι **διαστάσεις** για το «ξαναχωρά μετά τη στροφή» (ADR-899 §9 θέμα 5β). */
+  galleryPreviews?: PhotoPreviewModalProps['galleryPreviews'];
   currentGalleryIndex?: number;
   t: (key: string, params?: Record<string, unknown>) => string;
 }
@@ -39,15 +41,15 @@ interface UsePhotoPreviewStateParams {
 export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   const {
     open, onOpenChange, photoUrl, photoTitle, contact,
-    photoType, photoIndex, galleryPhotos, currentGalleryIndex, t
+    photoType, photoIndex, galleryPhotos, galleryPreviews, currentGalleryIndex, t
   } = params;
-
-  // --- Zoom / pan / στροφή: το ΕΝΑ useZoomPan (ADR-899 §9 θέμα 3 — εδώ ζούσε χειρόγραφο αντίγραφο ~150 γραμμών) ---
-  const view = useZoomPan(PHOTO_VIEW_ZOOM);
-  const { resetAll: resetView } = view;
 
   // --- Gallery navigation ---
   const [currentIndex, setCurrentIndex] = useState(currentGalleryIndex ?? 0);
+
+  // --- Zoom / pan / στροφή: το ΕΝΑ useZoomPan (ADR-899 §9 θέμα 3 — εδώ ζούσε χειρόγραφο αντίγραφο ~150 γραμμών) ---
+  const view = useZoomPan({ ...PHOTO_VIEW_ZOOM, contentDimensions: galleryPreviews?.[currentIndex]?.dimensions ?? null });
+  const { resetAll: resetView } = view;
 
   // --- Mobile detection ---
   const [isMobile, setIsMobile] = useState(false);

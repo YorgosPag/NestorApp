@@ -150,3 +150,52 @@ describe('useZoomPan', () => {
   });
 });
 
+describe('useZoomPan — refitOnRotate (ADR-899 §9 θέμα 5β)', () => {
+  const realObserver = global.ResizeObserver;
+  beforeAll(() => {
+    // Χωρίς `ResizeObserver` το `useElementSize` δεν μετρά ποτέ (jsdom) ⇒ το «ξαναχωρά» θα έμενε σβηστό.
+    global.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} } as unknown as typeof ResizeObserver;
+  });
+  afterAll(() => { global.ResizeObserver = realObserver; });
+
+  const REFIT = { minZoom: 1, maxZoom: 8, zoomFactor: 2, confinePan: true, refitOnRotate: true } as const;
+
+  it('🔴 Σ1 οριζόντια σε φαρδύ κουτί: στα 90° μικραίνει ×0,75 — «100%» μένει 100%, pan 0, χωρίς «χεράκι»', () => {
+    const { result } = renderHook(() => useZoomPan({ ...REFIT, contentDimensions: { width: 4000, height: 3000 } }));
+    const { container, img } = frame([1872, 704], [939, 704]);
+    act(() => { result.current.containerRef(container); result.current.contentRef(img); });
+    act(() => result.current.rotateBy90());
+    expect(result.current.zoom).toBe(1);
+    expect(result.current.scale).toBeCloseTo(0.75, 2);
+    expect(img.style.transform).toMatch(/^translate\(0px, 0px\) scale\(0\.7\d+\) rotate\(90deg\)$/);
+    expect(result.current.cursorClass).toBe('');
+    act(() => result.current.handlers.onMouseDown(mouse(0, 0)));
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: 300 })); });
+    act(() => { window.dispatchEvent(new MouseEvent('mouseup')); });
+    expect(result.current.panOffset).toEqual({ x: 0, y: 0 });
+    act(() => result.current.rotateBy90()); // 180° ⇒ πίσω στο layout
+    expect(result.current.scale).toBe(1);
+  });
+
+  it('🔴 Σ3 κάθετη σε φαρδύ κουτί: στα 90° μεγαλώνει ×1,333 και ο περιορισμός μετρά τη ΝΕΑ έκταση', () => {
+    const { result } = renderHook(() => useZoomPan({ ...REFIT, contentDimensions: { width: 3000, height: 4000 } }));
+    const { container, img } = frame([1872, 704], [528, 704]);
+    act(() => { result.current.containerRef(container); result.current.contentRef(img); });
+    act(() => result.current.rotateBy90());
+    expect(result.current.scale).toBeCloseTo(4 / 3, 2); // ζωγραφισμένο 939×704: γεμίζει το ύψος
+    expect(result.current.cursorClass).toBe('');
+    act(() => result.current.zoomIn()); // ×2 ⇒ 1877×1408 σε 1872×704 ⇒ περιθώριο y = 352 (χωρίς fit: 176)
+    act(() => result.current.handlers.onMouseDown(mouse(0, 0)));
+    act(() => { window.dispatchEvent(new MouseEvent('mousemove', { clientX: 0, clientY: 900 })); });
+    expect(result.current.panOffset.y).toBeCloseTo(352, 0);
+  });
+
+  it('χωρίς δηλωμένες διαστάσεις: το layout είναι το φράγμα — η στραμμένη μόνο μικραίνει', () => {
+    const { result } = renderHook(() => useZoomPan(REFIT));
+    const { container, img } = frame([1872, 704], [528, 704]);
+    act(() => { result.current.containerRef(container); result.current.contentRef(img); });
+    act(() => result.current.rotateBy90());
+    expect(result.current.scale).toBe(1); // 704×528 χωρά ήδη· καμία επινοημένη μεγέθυνση
+  });
+});
+

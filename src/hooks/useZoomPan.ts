@@ -15,6 +15,7 @@
  * - Pinch-to-zoom around the fingers' midpoint (mobile 2-finger gesture) + touch pan
  * - Button controls (zoomIn, zoomOut around the box centre, rotateBy90, resetAll)
  * - Optional pan confinement (`confinePan`) and double-click zoom toggle (`doubleClickZoom`)
+ * - Optional re-fit after rotation (`refitOnRotate`, ADR-899 §9 θέμα 5β): «100%» = «χωρά» σε κάθε γωνία — `scale = zoom × fit`
  * - Cursor hints (grab/grabbing — grab only when there is room to pan)
  *
  * Used by:
@@ -40,7 +41,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { MouseEvent, RefObject } from 'react';
 
-import { scaleAbout, stepZoom, type Vec2, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
+import { scaleAbout, stepZoom, type Extent, type Vec2, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
 
 import { useDragPan, type DragPanHandlers } from './zoom-pan/use-drag-pan';
 import { useApplyViewTransform, useViewState } from './zoom-pan/use-view-state';
@@ -76,6 +77,16 @@ export interface ZoomPanConfig {
   confinePan?: boolean;
   /** Διπλό κλικ = εναλλαγή «προεπιλογή ↔ αυτό το zoom γύρω από τον δείκτη» (Google/Apple Photos). Χωρίς τιμή: τίποτα. */
   doubleClickZoom?: number;
+  /**
+   * Μετά τη στροφή το περιεχόμενο **ξαναχωρά** στο κουτί (Google Photos · ADR-899 §9 θέμα 5β): ό,τι ζωγραφίζεται είναι
+   * `zoom × fit` (επιστροφή `scale`). Απαιτεί `contentRef`. Προεπιλογή `false`.
+   */
+  refitOnRotate?: boolean;
+  /**
+   * Οι πραγματικές διαστάσεις του περιεχομένου, για το `refitOnRotate`: πόσο **επιτρέπεται** να μεγαλώσει η στραμμένη
+   * (ποτέ πάνω από τα pixel της). Χωρίς τιμή: `naturalWidth/Height`, αλλιώς το layout (τότε μόνο σμίκρυνση).
+   */
+  contentDimensions?: Extent | null;
 }
 
 export type PanOffset = Vec2;
@@ -85,8 +96,10 @@ interface ZoomPanHandlers extends DragPanHandlers {
 }
 
 export interface UseZoomPanReturn {
-  /** Current zoom level */
+  /** Current zoom level — το νούμερο του χρήστη («100%» = «χωρά») */
   zoom: number;
+  /** Η κλίμακα που ζωγραφίζεται: `zoom × fit`. Ίδια με το `zoom` χωρίς `refitOnRotate`. Αυτήν ρωτά η ανάλυση. */
+  scale: number;
   /** Current pan offset in pixels */
   panOffset: PanOffset;
   /** Στροφή σε μοίρες (πολλαπλάσιο του 90) */
@@ -178,25 +191,26 @@ function useDoubleClickToggle(deps: ActionDeps, container: HTMLElement | null, t
 
 export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
   const { minZoom = DEFAULTS.minZoom, maxZoom = DEFAULTS.maxZoom, zoomStep = DEFAULTS.zoomStep, zoomFactor,
-    defaultZoom = DEFAULTS.defaultZoom, wheelSensitivity = DEFAULTS.wheelSensitivity, confinePan = false, doubleClickZoom } = config;
+    defaultZoom = DEFAULTS.defaultZoom, wheelSensitivity = DEFAULTS.wheelSensitivity, confinePan = false, doubleClickZoom,
+    refitOnRotate = false, contentDimensions = null } = config;
 
-  const state = useViewState(defaultZoom, confinePan);
+  const state = useViewState(defaultZoom, confinePan, refitOnRotate ? { dimensions: contentDimensions } : null);
   const [isPanning, setIsPanning] = useState(false);
   const limits = useMemo(() => ({ min: minZoom, max: maxZoom }), [minZoom, maxZoom]);
   const by = useMemo(() => ({ factor: zoomFactor, step: zoomStep }), [zoomFactor, zoomStep]);
   const deps: ActionDeps = { getView: state.getView, commit: state.commit, limits, by, defaultZoom };
 
   useWheelZoom(state.container, state.getView, state.commit, limits, wheelSensitivity);
-  useApplyViewTransform(state.content, state.view, isPanning);
+  useApplyViewTransform(state.content, state.view, state.scale, isPanning);
   const drag = useDragPan({ container: state.container, getView: state.getView, commit: state.commit, limits, setPanning: setIsPanning });
   const actions = useButtonActions(deps);
   const onDoubleClick = useDoubleClickToggle(deps, state.container, doubleClickZoom);
 
-  const pannable = canPanIn(state.view, { container: state.container, content: state.content }, confinePan);
+  const pannable = canPanIn(state.view, state.frame, confinePan);
   const cursorClass = isPanning ? 'cursor-grabbing' : pannable ? 'cursor-grab' : '';
 
   return {
-    zoom: state.view.zoom, panOffset: state.view.pan, rotation: state.view.rotation, isPanning, ...actions,
+    zoom: state.view.zoom, scale: state.scale, panOffset: state.view.pan, rotation: state.view.rotation, isPanning, ...actions,
     containerRef: state.containerRef, containerBox: state.containerBox, contentRef: state.contentRef,
     handlers: { ...drag, onDoubleClick }, cursorClass,
   };

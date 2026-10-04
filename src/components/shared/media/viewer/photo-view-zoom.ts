@@ -19,4 +19,6 @@ export const PHOTO_VIEW_ZOOM = {
   defaultZoom: 1,
   confinePan: true,
   doubleClickZoom: 2.5,
+  // ADR-899 §9 θέμα 5β: μετά τη στροφή η φωτογραφία ξαναχωρά — «100%» = «χωρά» σε κάθε γωνία.
+  refitOnRotate: true,
 } as const satisfies ZoomPanConfig;

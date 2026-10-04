@@ -1,11 +1,12 @@
 /**
- * ADR-899 §9 Ε4γ — **η στροφή δεν αλλάζει την ανάλυση** του πάνελ προεπισκόπησης.
+ * ADR-899 §9 θέμα 5β — **η στροφή ξαναχωρά την εικόνα, και η ανάλυση ακολουθεί ό,τι ζωγραφίζεται**.
  *
- * Μετρημένο ζωντανά 2026-10-04 (deploy `7402112f`): 3000×4000 σε κουτί 2352×928, στροφή 90° ⇒ layout του `<img>` **696×928**
- * (αμετάβλητο), ζωγραφισμένο 928×696 — ο άξονας πλάτους της εικόνας μένει **696** px. Το `scale(z) rotate(r)` δεν κάνει
- * layout. Η υπόθεση «στροφή = άλλο κουτί» δήλωνε `sizes` 936 ⇒ `w=1280` (287 KB) χωρίς κέρδος ευκρίνειας.
+ * Ιστορικό (Ε4γ, 2026-10-04): η στροφή **δεν** άλλαζε την ανάλυση, γιατί το `scale(z) rotate(r)` δεν έκανε layout και ο
+ * άξονας πλάτους έμενε ίδιος. Με το «ξαναχωρά» (Google Photos) η κλίμακα γίνεται `zoom × fit`: κάθετη σε φαρδύ κουτί
+ * ζωγραφίζεται ×1,333 ⇒ μεγαλύτερη βαθμίδα· οριζόντια μικραίνει ×0,75 ⇒ **καμία** λήψη. Η γωνία **δεν** είναι είσοδος της
+ * ερώτησης ανάλυσης — μπαίνει μόνο το `scale` ως zoom.
  *
- * Μετάλλαξη που πρέπει να πιάσει: η γωνία ξαναμπαίνει στην ερώτηση ανάλυσης (`paintedWidthOf` / `useZoomResolution`).
+ * Μεταλλάξεις που πρέπει να πιάσει: ο καταναλωτής περνά `zoom` αντί `scale` · το fit δεν φτάνει στον μετασχηματισμό.
  *
  * ADR-899 §9 θέμα 3 — η γραμμή εργαλείων του πάνελ: κουμπιά **με όνομα** (ήταν χωρίς), `role="toolbar"`, και όριο zoom με
  * `aria-disabled` που **κρατά την εστίαση** (μάθημα θέματος 4). Μετάλλαξη: `aria-disabled` → `disabled` στο `ViewerToolbarButton`.
@@ -30,6 +31,9 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({ useTranslation: () => ({ t: (k
 
 const ORIGINAL = '/api/storage/file/a/photo.jpg';
 const PORTRAIT = buildProxyPreview('a/photo.jpg', 'legacy-default', { width: 3000, height: 4000 });
+const LANDSCAPE = buildProxyPreview('a/photo.jpg', 'legacy-default', { width: 4000, height: 3000 });
+/** Το layout του `<img>` (το jsdom δεν έχει διάταξη) — `object-contain` στο κουτί 1600×800. */
+let imageLayout = { width: 600, height: 800 };
 const decodes: string[] = [];
 const realRect = HTMLElement.prototype.getBoundingClientRect;
 
@@ -48,34 +52,54 @@ beforeAll(() => {
     disconnect() {}
     unobserve() {}
   } as unknown as typeof ResizeObserver;
-  // Το κουτί του πάνελ όπως μετρήθηκε ζωντανά (σκαλοπάτι 16 ⇒ 2352×928 · άνω φράγμα +8 ⇒ 2360×936).
-  HTMLElement.prototype.getBoundingClientRect = () => new DOMRect(0, 0, 2352, 928);
+  // Φαρδύ κουτί 2:1 (σκαλοπάτι 16 ⇒ 1600×800 · άνω φράγμα +8 ⇒ 1608×808).
+  HTMLElement.prototype.getBoundingClientRect = () => new DOMRect(0, 0, 1600, 800);
+  Object.defineProperties(HTMLImageElement.prototype, {
+    offsetWidth: { configurable: true, get: () => imageLayout.width },
+    offsetHeight: { configurable: true, get: () => imageLayout.height },
+  });
+});
+
+beforeEach(() => {
+  decodes.length = 0;
 });
 
 afterAll(() => {
   HTMLElement.prototype.getBoundingClientRect = realRect;
 });
 
-function renderPanel() {
+function renderPanel(preview = PORTRAIT) {
   return render(
     <TooltipProvider>
-      <FilePreviewRenderer url={ORIGINAL} contentType="image/jpeg" fileName="photo.jpg" displayName="φ" preview={PORTRAIT} />
+      <FilePreviewRenderer url={ORIGINAL} contentType="image/jpeg" fileName="photo.jpg" displayName="φ" preview={preview} />
     </TooltipProvider>,
   );
 }
 
-describe('ADR-899 §9 Ε4γ — FilePreviewRenderer: στροφή χωρίς νέα ανάλυση', () => {
-  it('🔴 στροφή 90° και 180° ⇒ ίδιο `sizes` (936 × ¾ = 702), καμία φόρτωση', () => {
+describe('ADR-899 §9 θέμα 5β — FilePreviewRenderer: η στροφή ξαναχωρά', () => {
+  it('🔴 κάθετη σε φαρδύ κουτί: 90° ⇒ ×1,333 και ΜΙΑ λήψη μεγαλύτερης βαθμίδας· το `sizes` δεν αλλάζει', () => {
+    imageLayout = { width: 600, height: 800 };
     renderPanel();
     const image = screen.getByRole('img');
-    expect(image.getAttribute('sizes')).toBe('702px');
+    expect(image.getAttribute('sizes')).toBe('606px'); // 808 × ¾ ⇒ βαθμίδα 640
 
+    fireEvent.click(screen.getByRole('button', { name: 'photoPreview.actions.rotate' }));
+    expect(image.style.transform).toMatch(/scale\(1\.33\d*\) rotate\(90deg\)/);
+    expect(image.getAttribute('sizes')).toBe('606px');
+    expect(decodes).toHaveLength(1); // 606 × 1,333 = 808 > 640
+    expect(decodes[0]).toContain('w=1280');
+    expect(screen.getByText('100%')).toBeInTheDocument(); // «100%» = «χωρά» σε κάθε γωνία
+  });
+
+  it('🔴 οριζόντια: 90° ⇒ ×0,75, καμία λήψη· 180° ⇒ πίσω στο 1', () => {
+    imageLayout = { width: 1067, height: 800 };
+    renderPanel(LANDSCAPE);
+    const image = screen.getByRole('img');
     const rotate = screen.getByRole('button', { name: 'photoPreview.actions.rotate' });
     fireEvent.click(rotate);
-    expect(image.style.transform).toContain('rotate(90deg)');
-    expect(image.getAttribute('sizes')).toBe('702px');
+    expect(image.style.transform).toMatch(/scale\(0\.75\) rotate\(90deg\)/);
     fireEvent.click(rotate);
-    expect(image.getAttribute('sizes')).toBe('702px');
+    expect(image.style.transform).toContain('scale(1) rotate(180deg)');
     expect(decodes).toHaveLength(0);
   });
 });

@@ -61,6 +61,7 @@ import {
   FILE_COMPANION_KIND_NAMES,
   fileCompanionPath,
   isCompanionPathOf,
+  isFileCompanionObjectName,
 } from '@/lib/files/file-companion-objects';
 import { buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
 import { companionTargetsOf } from '../file-companion-purge';
@@ -113,7 +114,19 @@ describe('Μ — το μητρώο ονομάτων', () => {
     expect(source('src/services/floorplans/floorplan-save-orchestrator.ts')).not.toMatch(/`\$\{storagePath\}_thumb/);
     expect(source('src/app/api/floorplans/process/floorplan-process.service.ts')).not.toMatch(/\.processed\.json`/);
     expect(source('src/services/floorplans/dxf-thumbnail-selfheal.ts')).not.toMatch(/'\.thumbnail\.png'/);
-    expect(source('functions/src/storage/dxf-thumbnail-onfinalize.ts')).not.toMatch(/'\.thumbnail\.png'|\}\.processed\.json`/);
+    expect(source('functions/src/storage/dxf-thumbnail-onfinalize.ts')).not.toMatch(/'\.thumbnail\.png'|\}\.processed\.json`|=\s*['`][^'`\n]*\.processed\.json['`]/);
+  });
+
+  it('🔴 Μ4 — «είναι συνοδευτικό;» απαντιέται από το ΜΗΤΡΩΟ: κάθε είδος ναι, κανένα πρωτότυπο όχι (ADR-899 §9 θέμα 6)', () => {
+    // Βρόχος πάνω στο μητρώο ⇒ νέο είδος καλύπτεται χωρίς να το θυμηθεί κανείς.
+    for (const original of [DXF, PHOTO]) {
+      for (const kind of FILE_COMPANION_KIND_NAMES) {
+        expect(isFileCompanionObjectName(fileCompanionPath(original, kind))).toBe(true);
+      }
+    }
+    for (const original of [DXF, PHOTO, `${DIR}file_a.jpg`, `${DIR}file_b.webp`, `${DIR}file_c.json`, 'users/u_1/avatar.png']) {
+      expect(isFileCompanionObjectName(original)).toBe(false);
+    }
   });
 });
 

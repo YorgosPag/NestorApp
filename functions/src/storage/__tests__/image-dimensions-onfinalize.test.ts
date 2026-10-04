@@ -7,7 +7,10 @@
  * - Η3: ανάγνωση χωρίς καρφωμένη γενιά / όλο το αρχείο αντί για κεφαλίδα.
  * - Η4: metadata χωρίς `ifGenerationMatch` · εγγραφή παρότι η γενιά άλλαξε (412).
  * - Η5: εγγραφή για άλλο αντικείμενο ή σε άλλο κάδο.
+ * - Η6 (§9 θέμα 6): συνοδευτικό (`_thumb.webp`) μετριέται σαν πρωτότυπο · το log λέει «recorded» χωρίς να γράφτηκε εγγραφή.
  */
+
+import * as functionsV1 from 'firebase-functions/v1';
 
 jest.mock('firebase-functions/v1', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -93,6 +96,13 @@ describe('fileRecordRefOf', () => {
       expect(fileRecordRefOf(name)).toBeNull();
     }
   });
+
+  it('🔴 Η6 συνοδευτικό στον ΙΔΙΟ φάκελο ⇒ null (όχι εγγραφή-φάντασμα `file_a_thumb`)', () => {
+    const stem = NAME.replace(/\.jpg$/, '');
+    for (const name of [`${stem}_thumb.webp`, `${NAME}_thumb.png`, `${NAME}.thumbnail.png`]) {
+      expect(fileRecordRefOf(name)).toBeNull();
+    }
+  });
 });
 
 describe('recordImageDimensionsOnFinalize', () => {
@@ -116,6 +126,7 @@ describe('recordImageDimensionsOnFinalize', () => {
       { metadata: { imageWidth: '3000', imageHeight: '4000' } },
       { generation: null },
       { name: 'users/u_1/avatar.png' },
+      { name: NAME.replace(/\.jpg$/, '_thumb.webp'), contentType: 'image/webp' },
     ]) {
       await recordImageDimensionsOnFinalize(object(overrides));
     }
@@ -149,6 +160,30 @@ describe('recordImageDimensionsOnFinalize', () => {
     recordSnapshot({ storagePath: NAME, storagePlacement: 'eu-originals' });
     await recordImageDimensionsOnFinalize(object({ bucket: 'eu-bucket', placement: 'eu-originals' }));
     expect(txUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔴 Η6 το log λέει την ΕΚΒΑΣΗ: «recorded» μόνο όταν γράφτηκε η εγγραφή', async () => {
+    const info = functionsV1.logger.info as jest.Mock;
+    const cases: ReadonlyArray<readonly [Record<string, unknown> | null, string, boolean]> = [
+      [{ storagePath: NAME }, 'write', true],
+      [{ storagePath: NAME, imageDimensions: { width: 3000, height: 4000 } }, 'already-recorded', false],
+      [null, 'no-record', false],
+      [{ storagePath: `${NAME}.other` }, 'not-this-object', false],
+    ];
+    const messages = new Set<string>();
+    for (const [data, verdict, written] of cases) {
+      jest.clearAllMocks();
+      setMetadata.mockResolvedValue([{}]);
+      recordSnapshot(data);
+      await recordImageDimensionsOnFinalize(object());
+      expect(info).toHaveBeenCalledTimes(1);
+      const [message, fields] = info.mock.calls[0] as [string, { verdict: string }];
+      expect(fields.verdict).toBe(verdict);
+      expect(message === 'Image dimensions recorded').toBe(written);
+      expect(txUpdate).toHaveBeenCalledTimes(written ? 1 : 0);
+      messages.add(message);
+    }
+    expect(messages.size).toBe(cases.length); // κάθε έκβαση το δικό της μήνυμα
   });
 
   it('μη μετρήσιμο ⇒ τίποτα δεν γράφεται, καμία εξαίρεση', async () => {

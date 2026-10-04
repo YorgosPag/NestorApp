@@ -80,6 +80,24 @@ export function coveredWidth(box: { readonly width: number; readonly height: num
   return Math.min(Math.max(box.width, (box.height * image.width) / image.height), image.width);
 }
 
+/**
+ * **Πόσο πρέπει να κλιμακωθεί η εικόνα για να ξαναχωρέσει μετά τη στροφή** (ADR-899 §9 θέμα 5β) — ο λόγος «χωρά στη
+ * γωνία» / «χωρά στις 0°». Άρτιο τέταρτο (0°/180°) ⇒ `1`. Στα 90°/270° ο θεατής βλέπει `ύψος × πλάτος`: το νέο «χωρά»
+ * είναι το `containedWidth` της **στραμμένης**, και ο άξονας που το ζωγραφίζει είναι το **ύψος** της εικόνας.
+ * 🔑 Μετρημένο: οριζόντια 4:3 σε 1872×704 ⇒ `0,75` (αλλιώς κόβεται 25%)· κάθετη 3:4 ⇒ `1,333` (αλλιώς αφήνει 33% άδειο).
+ * Κληρονομεί το φράγμα pixel του `containedWidth`: μια μικρή εικόνα **δεν** φουσκώνει επειδή στράφηκε. Άκυρο κουτί ⇒ `1`.
+ */
+export function fitScaleForRotation(
+  box: { readonly width: number; readonly height: number },
+  image: ImageDimensions,
+  rotationDeg: number,
+): number {
+  if ((((Math.round(rotationDeg / 90) % 2) + 2) % 2) === 0) return 1;
+  const uprightHeight = (containedWidth(box, image) * image.height) / image.width;
+  const turnedWidth = containedWidth(box, { width: image.height, height: image.width });
+  return uprightHeight > 0 && turnedWidth > 0 ? turnedWidth / uprightHeight : 1;
+}
+
 // ---------------------------------------------------------------------------
 // Τύποι που μετριούνται — ο ΕΝΑΣ κατάλογος (και της κλίμακας προεπισκοπήσεων)
 // ---------------------------------------------------------------------------

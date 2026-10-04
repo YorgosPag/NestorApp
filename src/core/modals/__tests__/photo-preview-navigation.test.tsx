@@ -6,11 +6,14 @@
  * - Μ1: το πληκτρολόγιο κάνει λούπα στο άκρο.
  * - Μ2: το κουμπί στο άκρο γίνεται `disabled` (πετά την εστίαση) αντί για `aria-disabled`.
  * - Μ3: η θέση ανακοινώνεται με hardcoded κείμενο / στο πρώτο άνοιγμα / καθόλου από το πληκτρολόγιο.
+ * - Μ4 (θέμα 5β): η στροφή δεν ξαναχωρά τη φωτογραφία — οι διαστάσεις δεν φτάνουν στο `useZoomPan`, ή στην ανάλυση περνά
+ *   το `zoom` αντί για το `scale` (= zoom × fit).
  */
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { buildProxyPreview } from '@/lib/storage/storage-object-url';
 
 import { PhotoPreviewModal } from '../PhotoPreviewModal';
 
@@ -94,5 +97,53 @@ describe('PhotoPreviewModal — πλοήγηση', () => {
       'photoPreview.navigation.slide:2/3',
       'photoPreview.navigation.slide:3/3',
     ]);
+  });
+});
+
+describe('PhotoPreviewModal — η στροφή ξαναχωρά (ADR-899 §9 θέμα 5β)', () => {
+  const PORTRAIT = buildProxyPreview('a/photo.jpg', 'legacy-default', { width: 3000, height: 4000 });
+  const decodes: string[] = [];
+  const realRect = HTMLElement.prototype.getBoundingClientRect;
+  const RealImage = globalThis.Image;
+
+  beforeAll(() => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
+    class FakeImage {
+      src = '';
+      decode(): Promise<void> {
+        decodes.push(this.src);
+        return new Promise(() => undefined);
+      }
+    }
+    (globalThis as { Image: unknown }).Image = FakeImage;
+    // Φαρδύ κουτί 2:1· κάθετη 3:4 τοποθετείται 600×800 (το jsdom δεν έχει διάταξη).
+    HTMLElement.prototype.getBoundingClientRect = () => new DOMRect(0, 0, 1600, 800);
+    Object.defineProperties(HTMLImageElement.prototype, {
+      offsetWidth: { configurable: true, get: () => 600 },
+      offsetHeight: { configurable: true, get: () => 800 },
+    });
+  });
+
+  afterAll(() => {
+    HTMLElement.prototype.getBoundingClientRect = realRect;
+    (globalThis as { Image: unknown }).Image = RealImage;
+    delete (HTMLImageElement.prototype as { offsetWidth?: number }).offsetWidth;
+    delete (HTMLImageElement.prototype as { offsetHeight?: number }).offsetHeight;
+  });
+
+  it('🔴 Μ4 κάθετη σε φαρδύ κουτί: 90° ⇒ ×1,333 και λήψη μεγαλύτερης βαθμίδας', () => {
+    render(
+      <TooltipProvider>
+        <PhotoPreviewModal open onOpenChange={() => undefined} photoUrl="/api/storage/file/a/photo.jpg"
+          galleryPhotos={['/api/storage/file/a/photo.jpg']} galleryPreviews={[PORTRAIT]} currentGalleryIndex={0} />
+      </TooltipProvider>,
+    );
+    const image = screen.getByRole('dialog').querySelector<HTMLImageElement>('figure img');
+    expect(decodes).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'photoPreview.actions.rotate' }));
+    expect(image?.style.transform).toMatch(/scale\(1\.33\d*\) rotate\(90deg\)/);
+    expect(decodes).toHaveLength(1);
+    expect(decodes[0]).toContain('w=1280');
   });
 });

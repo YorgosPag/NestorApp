@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/files/file-companion-objects.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:6915f57b33be5fe4dbea569d69376c11a5ca289402acf34bbc15991b12ccf029
+// sha256:15c1f4f166282ec9703bfe2de1909996ce8414fc9c43cd35000211aaf7b9f4e2
 
 /**
  * 🧩 **ΤΑ ΣΥΝΟΔΕΥΤΙΚΑ ΑΝΤΙΚΕΙΜΕΝΑ ΕΝΟΣ ΑΡΧΕΙΟΥ** — το κλειστό μητρώο (ADR-899 §2.2 · ADR-191 document management).
@@ -80,6 +80,16 @@ export function storagePathStem(storagePath: string): string {
 export function fileCompanionPath(storagePath: string, kind: FileCompanionKind): string {
   const spec: FileCompanionKindSpec = FILE_COMPANION_KINDS[kind];
   return (spec.base === 'stem' ? storagePathStem(storagePath) : storagePath) + spec.suffix;
+}
+
+/**
+ * **Είναι αυτό το όνομα συνοδευτικό — οποιουδήποτε αρχείου;** Η ερώτηση όποιου βλέπει **μόνο** ένα όνομα αντικειμένου
+ * (storage trigger) και πρέπει να αποφασίσει **πριν από κάθε I/O** αν το αντικείμενο έχει δική του εγγραφή (ADR-899 §9
+ * θέμα 6). Τα πρωτότυπα ονομάζονται `{fileId}.{ext}` (μόνο IDs, ADR-031) ⇒ κανένα δεν τελειώνει σε κατάληξη του μητρώου.
+ * 🔑 Από το **μητρώο**, όχι καρφωμένο `_thumb`: νέο είδος συνοδευτικού αναγνωρίζεται χωρίς να το θυμηθεί κανείς.
+ */
+export function isFileCompanionObjectName(objectName: string): boolean {
+  return FILE_COMPANION_KIND_NAMES.some((kind) => objectName.endsWith(FILE_COMPANION_KINDS[kind].suffix));
 }
 
 /**
