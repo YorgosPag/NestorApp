@@ -73,6 +73,9 @@ coverage/
 .firebase/
 # env / logs
 .env.*
+# ADR-905 §6 — ΟΧΙ μυστικό: η διεύθυνση της εφαρμογής για τα Functions (defineString). Αγνοημένο, θα
+# έλειπε από καθαρό clone ⇒ το deploy θα αποτύγχανε (μάθημα ADR-873 Ε-873.12). Τα μυστικά ζουν στο Secret Manager.
+!functions/.env.pagonis-87766
 *.log
 # build & cache
 # env & misc
