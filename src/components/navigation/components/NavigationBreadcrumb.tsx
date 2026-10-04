@@ -73,7 +73,9 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     const items: BreadcrumbItemWithHref[] = [];
 
     // 🏢 ENTERPRISE: Icons/Colors από NAVIGATION_ENTITIES - Single Source of Truth
-    if (selectedCompany) {
+    // ADR-016: εταιρεία χωρίς γνωστό όνομα ΔΕΝ αποδίδεται — το κενό είναι «δεν ξέρω ακόμη», και ο
+    // κρίκος εμφανίζεται μόλις ο συγχρονισμός μάθει το όνομα (ποτέ η ωμή ταυτότητα στη θέση του).
+    if (selectedCompany?.companyName) {
       items.push({
         id: selectedCompany.id,
         label: selectedCompany.companyName,

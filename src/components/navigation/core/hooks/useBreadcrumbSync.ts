@@ -5,6 +5,7 @@ import { useNavigation } from '../NavigationContext';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierarchy/route';
+import { breadcrumbCompanyName, projectBreadcrumbTrail } from './breadcrumb-company-name';
 
 // ============================================================================
 // ENTITY DESCRIPTOR — discriminated union per entity type
@@ -82,8 +83,13 @@ export function useBreadcrumbSync(
   entity: BreadcrumbEntity | null,
   options?: UseBreadcrumbSyncOptions,
 ): void {
-  const { projects, syncBreadcrumb } = useNavigation();
+  const { projects, companies, syncBreadcrumb } = useNavigation();
   const buildings = options?.buildings;
+  // Όσα ΕΜΦΑΝΙΖΟΝΤΑΙ είναι και εξαρτήσεις: ένα έργο που μόλις γεννήθηκε κρατά την ίδια ταυτότητα
+  // όταν μάθει το όνομά του, και χωρίς αυτά το breadcrumb θα έμενε στην πρώτη (κενή) εκδοχή.
+  const entityName = entity && 'name' in entity ? entity.name : undefined;
+  const entityCompanyName = entity?.type === 'project' ? entity.company : undefined;
+  const entityCompanyId = entity?.type === 'project' ? (entity.linkedCompanyId || entity.companyId) : undefined;
 
   useEffect(() => {
     if (!entity?.id) return;
@@ -92,7 +98,11 @@ export function useBreadcrumbSync(
     if (entity.type === 'project') {
       const navProject = projects.find(p => p.id === entity.id);
       const companyId = navProject?.linkedCompanyId || entity.linkedCompanyId || entity.companyId || '';
-      const companyName = navProject?.company || entity.company || companyId;
+      const companyName = breadcrumbCompanyName({
+        companyId,
+        candidates: [navProject?.company, entity.company],
+        companies,
+      });
       syncBreadcrumb({
         company: { id: companyId, name: companyName },
         project: { id: entity.id, name: entity.name },
@@ -105,11 +115,8 @@ export function useBreadcrumbSync(
     if (entity.type === 'building') {
       const project = projects.find(p => p.id === entity.projectId);
       if (!project) return;
-      const companyId = project.linkedCompanyId || project.companyId;
-      const companyName = project.company || companyId;
       syncBreadcrumb({
-        company: { id: companyId, name: companyName },
-        project: { id: project.id, name: project.name },
+        ...projectBreadcrumbTrail(project, companies),
         building: { id: entity.id, name: entity.name },
         currentLevel: 'buildings',
       });
@@ -171,16 +178,13 @@ export function useBreadcrumbSync(
       const project = projects.find(p => p.id === building.projectId);
       if (!project) return;
 
-      const companyId = project.linkedCompanyId || project.companyId;
-      const companyName = project.company || companyId;
       syncBreadcrumb({
-        company: { id: companyId, name: companyName },
-        project: { id: project.id, name: project.name },
+        ...projectBreadcrumbTrail(project, companies),
         building: { id: building.id, name: building.name },
         space: { id: entity.id, name: entity.name, type: entity.spaceType },
         currentLevel: 'spaces',
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity?.id, entity?.type, projects, syncBreadcrumb, buildings]);
+  }, [entity?.id, entity?.type, entityName, entityCompanyName, entityCompanyId, projects, companies, syncBreadcrumb, buildings]);
 }
