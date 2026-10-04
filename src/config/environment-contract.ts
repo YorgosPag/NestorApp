@@ -199,6 +199,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/mandate/holiday-hours-question-token.ts',
   },
   {
+    name: 'INTERNAL_WEBHOOK_SECRET',
+    severity: 'feature',
+    feature: 'Εσωτερικά webhooks Cloud Functions → εφαρμογή: ζωντανή υπόθεση μεταβίβασης για αλλαγές αρχείων/ακινήτου/έργου (ADR-905 §6)',
+    consequence:
+      'Κάθε γεγονός απαντά 503 και ο trigger το ξαναδοκιμάζει ώσπου να ρυθμιστεί: ο κατάλογος της υπόθεσης ' +
+      'δεν ενημερώνεται ζωντανά όταν ανεβαίνει αρχείο ακινήτου ή αλλάζει η φάση του — μόνο με ορατότητα ' +
+      'καρτέλας ή F5. Η ΙΔΙΑ τιμή ζει στο Secret Manager του Firebase.',
+    consumer: 'src/server/internal-webhooks/signed-webhook-door.ts',
+  },
+  {
     name: 'MAILGUN_WEBHOOK_SIGNING_KEY',
     severity: 'feature',
     feature: 'Webhooks Mailgun: εισερχόμενα email και συμβάντα παράδοσης (ADR-071 · ADR-841 Α21.20)',

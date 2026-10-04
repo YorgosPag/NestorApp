@@ -44,6 +44,9 @@ const ROOTS = [
   // σύνδεσμός του. Καλεί το στρώμα απευθείας (principal = ο σύνδεσμος, όχι `anon`) — τρίτη ρίζα, όχι
   // παράκαμψη: το Κ2 επιβεβαιώνει ότι το καλεί ακόμη.
   { name: 'withVendorLinkDoor', file: 'src/server/vendor-portal/vendor-link-door.ts', calls: 1 },
+  // ADR-905 §6 — η πόρτα των ΕΣΩΤΕΡΙΚΩΝ webhooks (Cloud Functions → app): ο καλών αποδεικνύεται με HMAC,
+  // principal = `internal-webhook:<πηγή>`, `Idempotency-Key` = η ταυτότητα του γεγονότος (at-least-once ⇒ μία φορά).
+  { name: 'withSignedInternalWebhook', file: 'src/server/internal-webhooks/signed-webhook-door.ts', calls: 1 },
 ];
 const LAYER = 'runIdempotently';
 

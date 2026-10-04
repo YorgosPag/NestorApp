@@ -20,30 +20,24 @@ const rel = (f: string) => relative(process.cwd(), f).replace(/\\/g, '/');
 const ALL = files(SRC);
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
-const WRITER = 'src/services/conveyance/conveyance-view-signal.server.ts';
-const CLIENT_REF = 'src/lib/conveyance/view-signal-client-ref.ts';
-
-/** Κάθε γραφέας που αλλάζει όψη της υπόθεσης — και η κλήση σήματος που οφείλει να κάνει. */
-const CASE_WRITERS: Readonly<Record<string, RegExp>> = {
-  'src/services/conveyance/conveyance-case.service.ts': /signalCaseChangeInTx\(|signalViewsInTx\(/g,
-  'src/services/conveyance/conveyance-contribution.service.ts': /signalCaseChangeInTx\(/g,
-  'src/services/conveyance/conveyance-document-request.service.ts': /signalCaseChangeInTx\(/g,
-  'src/services/conveyance/conveyance-engagement-host.service.ts': /caseRosterSignal\(/g,
-  'src/services/conveyance/conveyance-engagement-access.service.ts': /caseRosterSignal\(/g,
-  'src/server/engagement-invitations/engagement-invitation-redeem.ts': /caseRosterSignal\(|invitationHostSignal\(/g,
-  'src/server/engagement-invitations/engagement-invitation-issue.ts': /invitationHostSignal\(/g,
-  'src/server/engagement-invitations/engagement-invitation-reminder.ts': /invitationHostSignal\(/g,
-  'src/server/engagement-invitations/engagement-invitation-preview.ts': /invitationHostSignal\(/g,
-};
-
-/** Πόσες κλήσεις οφείλει τουλάχιστον κάθε γραφέας (μία ανά συναλλαγή που αλλάζει όψη). */
-const MIN_CALLS: Readonly<Record<string, number>> = {
-  'src/services/conveyance/conveyance-case.service.ts': 2, // άνοιγμα + εντολή
-  'src/services/conveyance/conveyance-contribution.service.ts': 2, // αποστολή + απόσυρση
-  'src/services/conveyance/conveyance-engagement-host.service.ts': 3, // πρόταση + τέλος + κλείσιμο
-  'src/server/engagement-invitations/engagement-invitation-issue.ts': 2, // έκδοση + ανάκληση
-  'src/server/engagement-invitations/engagement-invitation-redeem.ts': 2, // αποδοχή + άρνηση
-};
+/**
+ * Η ΜΙΑ πηγή (`.view-signal-authority.json`) — την ίδια διαβάζει η πύλη pre-commit CHECK 3.99 (AST). Η άγκυρα μένει
+ * ως δεύτερο, ανεξάρτητο **μέσο** μέτρησης (κείμενο αντί για AST) πάνω στην ίδια δήλωση — όχι ως δεύτερη λίστα.
+ */
+interface CaseWriterSpec {
+  readonly calls: readonly string[];
+  readonly min: number;
+  readonly why: string;
+}
+interface ViewSignalAuthority {
+  readonly writer: string;
+  readonly clientRef: string;
+  readonly caseWriters: Readonly<Record<string, CaseWriterSpec>>;
+}
+const REGISTRY = JSON.parse(read('.view-signal-authority.json')) as ViewSignalAuthority;
+const WRITER = REGISTRY.writer;
+const CLIENT_REF = REGISTRY.clientRef;
+const callPattern = (spec: CaseWriterSpec) => new RegExp(spec.calls.map((name) => `\\b${name}\\(`).join('|'), 'g');
 
 describe('Α38 — ο ΕΝΑΣ γραφέας σημάτων όψεων', () => {
   it('η συλλογή σημάτων ονομάζεται ΜΟΝΟ από τον γραφέα και την (μόνο-ανάγνωσης) αναφορά του client', () => {
@@ -63,8 +57,8 @@ describe('Α38 — ο ΕΝΑΣ γραφέας σημάτων όψεων', () => 
 });
 
 describe('Α38 — ΚΑΘΕ γραφέας της υπόθεσης σημαίνει τις όψεις της', () => {
-  it.each(Object.entries(CASE_WRITERS))('%s', (path, call) => {
-    const calls = read(path).match(call)?.length ?? 0;
-    expect({ path, calls: Math.min(calls, MIN_CALLS[path] ?? 1) }).toEqual({ path, calls: MIN_CALLS[path] ?? 1 });
+  it.each(Object.entries(REGISTRY.caseWriters))('%s', (path, spec) => {
+    const calls = read(path).match(callPattern(spec))?.length ?? 0;
+    expect({ path, calls: Math.min(calls, spec.min) }).toEqual({ path, calls: spec.min });
   });
 });

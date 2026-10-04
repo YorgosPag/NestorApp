@@ -5,6 +5,7 @@
   "consumerRoot": "functions/src",
   "modules": [
     "config/search-index-core.ts",
+    "lib/conveyance/dependency-change-event.ts",
     "lib/dxf/decode-processed-json.ts",
     "lib/files/file-companion-objects.ts",
     "lib/files/file-storage-placement.ts",
@@ -13,6 +14,7 @@
     "lib/images/stored-image-dimensions.ts",
     "lib/search/search-index-version.ts",
     "lib/search/search.ts",
+    "lib/webhooks/internal-webhook-signature.ts",
     "services/enterprise-id-deterministic.ts",
     "types/search-core.ts"
   ],

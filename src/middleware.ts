@@ -259,7 +259,13 @@ export function middleware(request: NextRequest) {
   // Δεν χαλαρώνει τίποτα: η διαδρομή έχει **δική της** ταυτοποίηση (υπογραφή HMAC με
   // την εμβέλεια και τη γενιά μέσα της — πλαστό token απορρίπτεται χωρίς καμία
   // ανάγνωση βάσης) και **δικό της** όριο ρυθμού (`HIGH`).
+  //
+  // ADR-905 §6 — **ΚΑΙ ΤΑ ΕΣΩΤΕΡΙΚΑ WEBHOOKS** (`/api/internal/`): τα καλεί δικό μας Cloud
+  // Function. Ένα 403 εδώ ο αποστολέας το διαβάζει ως «οριστική άρνηση» και **δεν**
+  // ξαναδοκιμάζει ⇒ το γεγονός χάνεται σιωπηλά. Ταυτοποίηση: υπογραφή HMAC στην πόρτα
+  // (`server/internal-webhooks/signed-webhook-door`), όριο ρυθμού `WEBHOOK`.
   const isMachineEndpoint =
+    pathname.startsWith('/api/internal/') ||
     pathname.startsWith('/api/communications/webhooks') ||
     pathname.startsWith('/api/mcp') ||
     pathname.startsWith('/api/oauth') ||

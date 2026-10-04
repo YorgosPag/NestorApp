@@ -35,6 +35,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import { commitFileActivity } from '@/services/file-record/file-activity-commit';
 import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
+import { fileLinkTag } from '@/lib/files/file-link-tag';
 import { custodyScopeFromData, type CustodyKind } from '@/lib/workspace/custody-scope';
 // ADR-862 Φ0 Β3 — έφυγαν `CdeState`/`SuitabilityCode`: αυτό το module δεν γράφει πια
 // κατάσταση ούτε καταλληλότητα (δες `Iso19650MetadataUpdate`).
@@ -61,7 +62,7 @@ export async function linkFileToEntity(
   targetEntityType: EntityType,
   targetEntityId: string
 ): Promise<void> {
-  const linkTag = `${targetEntityType}:${targetEntityId}`;
+  const linkTag = fileLinkTag(targetEntityType, targetEntityId);
 
   logger.info('Linking file to entity', { fileId, linkTag });
 
@@ -92,7 +93,7 @@ export async function unlinkFileFromEntity(
   targetEntityType: EntityType,
   targetEntityId: string
 ): Promise<void> {
-  const linkTag = `${targetEntityType}:${targetEntityId}`;
+  const linkTag = fileLinkTag(targetEntityType, targetEntityId);
 
   logger.info('Unlinking file from entity', { fileId, linkTag });
 
@@ -121,7 +122,7 @@ export async function getLinkedFiles(
   targetEntityId: string,
   custody: FileCustody // Required for Firestore Security Rules (owner isolation — ADR-866 §5.2)
 ): Promise<FileRecord[]> {
-  const linkTag = `${targetEntityType}:${targetEntityId}`;
+  const linkTag = fileLinkTag(targetEntityType, targetEntityId);
 
   // 🔒 SECURITY: owner constraint is REQUIRED for Firestore Security Rules — for a company the
   // manual `companyId` covers the super admin without a selected company (ADR-866 §2.6.8 Β1).

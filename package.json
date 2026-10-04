@@ -261,6 +261,8 @@
     "cde-authority:report": "node scripts/check-cde-authority.js",
     "test:cde-authority": "jest scripts/__tests__/cde-authority-gate.test.js src/services/iso19650/__tests__/container-read-reach-anchor.test.ts src/services/firestore/__tests__/firestore-read-paths-anchor.test.ts",
     "project-member-authority:report": "node scripts/check-project-member-authority.js",
+    "view-signal-authority:report": "node scripts/check-view-signal-authority.js",
+    "test:view-signal-authority": "jest scripts/__tests__/view-signal-authority-gate.test.js src/services/conveyance/__tests__/view-signal-authority.test.ts",
     "test:project-member-authority": "jest scripts/__tests__/project-member-authority-gate.test.js src/lib/auth/__tests__/project-team-birth-anchor.test.ts",
     "network-thread-authority:report": "node scripts/check-network-thread-authority.js",
     "server-action-boundary:check": "node scripts/check-server-action-boundary.js",

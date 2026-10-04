@@ -80,18 +80,12 @@ async function readProject(db: Firestore, projectId: string | null, companyId: s
   return ownedOrNull(snap.data(), companyId, { resource: 'project', resourceId: projectId, path: 'conveyance' });
 }
 
-/** `null` ⇒ το ακίνητο δεν υπάρχει ή δεν ανήκει στον μισθωτή. */
-export async function loadConveyanceSubject(
-  db: Firestore,
-  companyId: string,
-  propertyId: string,
-): Promise<ConveyanceSubjectContext | null> {
-  const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
-  const property = ownedOrNull(snap.data(), companyId, { resource: 'property', resourceId: propertyId, path: 'conveyance' });
-  if (!property) return null;
-
+/**
+ * Η **καθαρή** παραγωγή του πλαισίου από τα δύο έγγραφα — ο ΙΔΙΟΣ μετασχηματισμός για τον loader και για τον
+ * αποδέκτη CDC (ADR-905 §6), που τη συγκρίνει πριν/μετά μιας αλλαγής ακινήτου ή έργου.
+ */
+export function subjectContextOf(propertyId: string, property: DocData, project: DocData | null): ConveyanceSubjectContext {
   const projectId = stringOrNull(property.projectId);
-  const project = await readProject(db, projectId, companyId);
   const appurtenances = appurtenancesOf(property);
   const landowners = project && Array.isArray(project.landownerContactIds) ? project.landownerContactIds.length : null;
   const rawPhase = asRecord(property.commercial).legalPhase;
@@ -113,4 +107,30 @@ export async function loadConveyanceSubject(
     },
     legalPhase,
   };
+}
+
+/**
+ * Ό,τι από το πλαίσιο **φαίνεται** σε μια ήδη ανοιχτή υπόθεση: όνομα · πηγές γεγονότων · νομική φάση. Το
+ * `subject`/`parties` της υπόθεσης είναι **στιγμιότυπο** του ανοίγματος (`newCase`) — η αλλαγή τους στο ακίνητο
+ * δεν αλλάζει την όψη, άρα δεν είναι λόγος σήματος.
+ */
+export function subjectViewFacts(context: ConveyanceSubjectContext): Pick<ConveyanceSubjectContext, 'propertyName' | 'factSources' | 'legalPhase'> {
+  return { propertyName: context.propertyName, factSources: context.factSources, legalPhase: context.legalPhase };
+}
+
+/** Το έργο του ακινήτου, αν ανήκει στον μισθωτή. */
+export function readSubjectProject(db: Firestore, property: DocData, companyId: string): Promise<DocData | null> {
+  return readProject(db, stringOrNull(property.projectId), companyId);
+}
+
+/** `null` ⇒ το ακίνητο δεν υπάρχει ή δεν ανήκει στον μισθωτή. */
+export async function loadConveyanceSubject(
+  db: Firestore,
+  companyId: string,
+  propertyId: string,
+): Promise<ConveyanceSubjectContext | null> {
+  const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+  const property = ownedOrNull(snap.data(), companyId, { resource: 'property', resourceId: propertyId, path: 'conveyance' });
+  if (!property) return null;
+  return subjectContextOf(propertyId, property, await readSubjectProject(db, property, companyId));
 }

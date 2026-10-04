@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:1344b4e180130cdb9cfeaea45d2e3eb453bb1c4b5bf7c4dfc24c5eb35ce87c34 -->
+     fingerprint: sha256:86728c7ed96c66ea209f6f9029480fb7f7f0a88897f539656b0a76e793e0f9c3 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -390,6 +390,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.96** | **Πύλη της ζωντανής σύνδεσης στους κανόνες** (ADR-894) — «περνά **κάθε** `allow` που δίνει πρόσβαση σε συνδεδεμένο άνθρωπο από το `signInIsLive()` — ή υπάρχει κλάδος όπου μια **ανακλημένη** συσκευή μπαίνει α…» · `npm run test:rules-liveness` · `SKIP_RULES_SIGN_IN_LIVENESS=1` · 📘 `docs/gates/3.96.md` | ⛔ ZERO TOL | — |
 | **3.97** | **Πύλη της ωμής εφεδρείας i18n** (ADR-898) — «δείχνει αυτή η κλήση `t(…)` την **ΩΜΗ** τιμή όταν λείψει το κλειδί — και κρύβει έτσι το κλειδί που λείπει από το CHECK 3.8;» · `npm run test:i18n-raw-fallback` · `SKIP_I18N_RAW_FALLBACK=1` · 📘 `docs/gates/3.97.md` | 🔴 RATCHET κατά ταυτότητα (ανά αρχείο) | `.i18n-raw-fallback-baseline.json` |
 | **3.98** | **Πύλη του συμβολαίου της εφαρμογής κινητού** (ADR-904) — «είναι το `contracts/capture-api/` **ΑΚΡΙΒΩΣ** ό,τι λέει σήμερα ο κώδικας του διακομιστή — ή ένα συμβόλαιο που κάποτε του έμοιαζε, πάνω στο οποίο χτίζ…» · `npm run test:capture-api-contract` · `SKIP_CAPTURE_API_CONTRACT=1` · 📘 `docs/gates/3.98.md` | ⛔ ZERO TOL | — |
+| **3.99** | **Πύλη του ενός γραφέα σημάτων όψεων** (ADR-905) — «γράφει κάποιος σήμα όψης **ΕΞΩ από τον ΕΝΑ γραφέα** — ή αλλάζει την υπόθεση **ΧΩΡΙΣ** να ζητήσει σήμα; (ο αριθμός είναι πληροφορία **χρονισμού** — οι…» · `npm run test:view-signal-authority` · `SKIP_VIEW_SIGNAL_AUTHORITY=1` · 📘 `docs/gates/3.99.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -403,8 +404,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **90** (εκτελεστής 82 + hook 21) ·
-γραμμές εδώ: **80** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **91** (εκτελεστής 83 + hook 21) ·
+γραμμές εδώ: **81** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

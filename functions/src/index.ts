@@ -24,6 +24,10 @@ export { onDeleteFloorplanBackground } from './floorplan-background/onDeleteFloo
 // 🏢 FLOOR · UNITS COUNTER (ADR-236) — maintain floors.units on property write.
 export { onPropertyWriteFloorUnits } from './aggregation/floorUnitsAggregation';
 
+// 📡 CONVEYANCE CDC RELAY (ADR-905 §6) — files/properties/projects writes → signed webhook → the app,
+// where the view's own judges decide which case views get a signal (the ONE signal writer).
+export { onConveyanceFileWrite, onConveyancePropertyWrite, onConveyanceProjectWrite } from './conveyance/dependency-relay';
+
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 

@@ -1122,6 +1122,14 @@ if (!process.env.SKIP_PROJECT_MEMBER_AUTHORITY)
 if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
   addThread('3.89', 'Network thread authority', 'scripts/check-network-thread-authority.js');
 
+// CHECK 3.99 (ADR-905 §8 Ε2 · Α38) — ο ΕΝΑΣ γραφέας σημάτων όψεων. «Γράφει κάποιος σήμα όψης ΕΞΩ από τον
+// ΕΝΑ γραφέα, ή αλλάζει την υπόθεση ΧΩΡΙΣ να ζητήσει σήμα;»
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: ο αριθμός είναι πληροφορία ΧΡΟΝΙΣΜΟΥ — δεύτερος γραφέας στον server σημαίνει όψη
+// έξω από το ακροατήριο· οι κανόνες κλείνουν τον ΠΕΛΑΤΗ, όχι το Admin SDK. Λίστα: `.view-signal-authority.json`
+// (η ΙΔΙΑ με την άγκυρα Α38). AST, ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_VIEW_SIGNAL_AUTHORITY)
+  addThread('3.99', 'View signal authority', 'scripts/check-view-signal-authority.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

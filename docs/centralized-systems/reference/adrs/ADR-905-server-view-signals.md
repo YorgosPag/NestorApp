@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | 🟢 **IMPLEMENTED — Στάδια 1+2 (2026-10-04)**: γραφέας μέσα στη συναλλαγή · κρίση «ποιες όψεις» με τους κριτές της όψης · κανόνες + σουίτα · `freshness` στις όψεις · ένα hook στον client · πρώτος καταναλωτής η υπόθεση μεταβίβασης (ADR-901 §14.8) · ⏳ **Στάδιο 3 (CDC για αλλαγές που δεν γράφει η υπόθεση — αρχεία-τεκμήρια, ακίνητο, έργο)**: σχέδιο §6, απόφαση Giorgio |
+| **Status** | 🟢 **IMPLEMENTED — Στάδια 1+2 (2026-10-04)**: γραφέας μέσα στη συναλλαγή · κρίση «ποιες όψεις» με τους κριτές της όψης · κανόνες + σουίτα · `freshness` στις όψεις · ένα hook στον client · πρώτος καταναλωτής η υπόθεση μεταβίβασης (ADR-901 §14.8) · ✅ κανόνες **ανεπτυγμένοι** (2026-10-04) · 🟢 **Στάδιο 3 (CDC) IMPLEMENTED σε κώδικα (2026-10-04, §6)** — trigger-αναμεταδότης → υπογεγραμμένο webhook → κρίση με τους κριτές της όψης · ⏳ deploy δείκτη + μυστικού + Functions (§7, απόφαση Giorgio) |
 | **Date** | 2026-10-04 |
 | **Category** | Data Access Layer / Real-Time Architecture |
-| **Canonical Location** | server: `src/services/conveyance/conveyance-view-signal.server.ts` · κρίση: `src/lib/conveyance/view-signal-audience.ts` · κλειδί: `src/lib/conveyance/view-signal-key.ts` · client: `src/services/realtime/hooks/use-server-view-signal.ts` + `src/services/realtime/server-view-refresh.ts` · τύπος: `src/types/server-view.ts` · κανόνας: `firestore.rules` (`conveyance_view_signals`) |
+| **Canonical Location** | CDC: `functions/src/conveyance/dependency-relay.ts` → `src/app/api/internal/conveyance/dependency-changed/route.ts` → `src/services/conveyance/conveyance-dependency-relay.server.ts` (πόρτα: `src/server/internal-webhooks/signed-webhook-door.ts` · υπογραφή: `src/lib/webhooks/internal-webhook-signature.ts` · συμβόλαιο: `src/lib/conveyance/dependency-change-event.ts`) · server: `src/services/conveyance/conveyance-view-signal.server.ts` · κρίση: `src/lib/conveyance/view-signal-audience.ts` · κλειδί: `src/lib/conveyance/view-signal-key.ts` · client: `src/services/realtime/hooks/use-server-view-signal.ts` + `src/services/realtime/server-view-refresh.ts` · τύπος: `src/types/server-view.ts` · κανόνας: `firestore.rules` (`conveyance_view_signals`) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | **ADR-901 §14.8** (ο πρώτος καταναλωτής) · ADR-355 (συνδρομές Firestore) · ADR-867 Β7 (`use-live-snapshot` — ζωντανή ανάγνωση χωρίς χώρο) · ADR-849 (`useCompanyId` = ίδια απάντηση με τον server) · ADR-874 (προβολή στα Functions) · ADR-865 (deploy κανόνων ≠ push) |
 
@@ -105,36 +105,91 @@
 | SSE / WebSocket από Netcup | δεύτερη υποδομή pub/sub· η Firestore είναι ήδη το ζωντανό κανάλι, με κανόνες |
 | polling | καθυστέρηση ή κόστος — το `freshUntil` καλύπτει το χρονικό, τα σήματα τα υπόλοιπα |
 | IVM (ενημέρωση της όψης κομμάτι-κομμάτι) | ό,τι εγκατέλειψε το Figma — η όψη είναι σύνθετη και ανά θεατή |
-| νέα πύλη pre-commit «ένας γραφέας» | ίδια εγγύηση από άγκυρα (Α38) + **δομική** (υποχρεωτική παράμετρος) χωρίς τέταρτο αντίγραφο του κώδικα AST των 3.87/3.88/3.89 — ανοιχτό προς απόφαση (§8) |
+| ~~νέα πύλη pre-commit «ένας γραφέας»~~ — **αναθεωρήθηκε** (§8 Ε2) | η ένσταση ήταν «τέταρτο αντίγραφο AST». Η πύλη 3.99 γράφτηκε **χωρίς** δεύτερη λίστα: η άγκυρα Α38 και η πύλη διαβάζουν την ίδια δήλωση. |
 
-## 6. ⏳ Στάδιο 3 — αλλαγές που **δεν** γράφει ο τομέας (CDC)
+## 6. 🟢 Στάδιο 3 — αλλαγές που **δεν** γράφει ο τομέας (CDC) *(κώδικας 2026-10-04 · deploy §7)*
 
 Η όψη της υπόθεσης εξαρτάται και από εγγραφές **άλλων** γραφέων: αρχεία-τεκμήρια (`files` — client **και** πολλές διαδρομές
 server), ακίνητο (`name` · `type` · `linkedSpaces` · `commercial.legalPhase` · `commercial.owners`), έργο
 (`landownerContactIds` · `linkedCompanyId`). Μόνο ένας **Firestore trigger** τα βλέπει όλα (Figma: invalidator πάνω στο log).
 
 🔴 **Μετρημένο εμπόδιο**: η κρίση «φτάνει αυτό το αρχείο στον επαγγελματία;» (`decideEngagedEvidenceReach` · `readContainerState`)
-κουβαλά κλειστότητα εισαγωγών (`authority` · `capability-authority` · `file-record`) που **δεν** προβάλλεται στα Functions
-(ADR-874) χωρίς να γίνει δεύτερη μηχανή. Πρόταση: **trigger ως αναμεταδότης** (υπογεγραμμένο HMAC webhook, μοτίβο
-Stripe/GitHub) προς εσωτερική διαδρομή του Next.js, όπου η κρίση τρέχει με τον **ίδιο** κώδικα· ευρετήριο εξαρτήσεων
-`conveyance_cases.dependencyKeys` (+ δείκτης, CHECK 3.91). Απαιτεί μυστικό σε Functions **και** Netcup και deploy Functions —
-**απόφαση Giorgio**. Μέχρι τότε: δίχτυ ορατότητας + `freshUntil`.
+κουβαλά κλειστότητα εισαγωγών που **δεν** προβάλλεται στα Functions (ADR-874) χωρίς δεύτερη μηχανή ⇒ ο trigger είναι
+**αναμεταδότης** και η κρίση τρέχει στο Next.js με τον **ίδιο** κώδικα.
+
+### 6.1 Η ροή
+
+```
+files / properties / projects ──onWrite──▶ functions/src/conveyance/dependency-relay.ts
+   { eventId, source, docId, before, after }  (μεταδεδομένα, ποτέ bytes · Timestamp → ISO)
+   X-Internal-Signature: t=<s>,v1=<HMAC-SHA256(t.σώμα)>  ·  Idempotency-Key: eventId
+        ──POST──▶ /api/internal/conveyance/dependency-changed
+                  withWebhookRateLimit → withSignedInternalWebhook (υπογραφή → ιδεμποτία → JSON)
+                  → relayDependencyChange: ευρετήριο → προβολή πριν/μετά ανά όψη → signalCaseChangeInTx (ο ΕΝΑΣ γραφέας)
+```
+
+### 6.2 Η αρχή, οξυμένη: σήμα ⇔ **η προβολή αυτής της όψης** άλλαξε
+
+Όχι «το έγγραφο άλλαξε». Η σύγκριση πριν/μετά γίνεται με τις **ίδιες** συναρτήσεις που παράγουν την όψη:
+
+| Πηγή | Προβολή | Ακροατήριο |
+|---|---|---|
+| αρχείο | `evidenceOfFile` (μισθωτής · `ready` · κάτοχος ∪ `linkedTo` · ενεργό · εμβέλεια CDE) ανά θεατή — ο συλλέκτης χρησιμοποιεί **τους ίδιους** βοηθούς | `scoped` (οικοδεσπότης αν άλλαξε η δική του) + **ρητά** οι συμμετοχές που άλλαξαν (`extra`) |
+| ακίνητο / έργο | `subjectContextOf` → `subjectViewFacts` (όνομα · πηγές γεγονότων · νομική φάση) — καθαρή, εξαγμένη από τον loader | `case-wide` |
+
+Συνέπειες: μικρογραφία/επεξεργασία χωρίς ορατή αλλαγή ⇒ **μηδέν** σήματα (κανένα κύμα επαναναγνώσεων)· αρχείο που πέρασε σε
+WIP ⇒ σήμα **μόνο** σε όποιον το **έχασε** (γι' αυτό ταξιδεύει και το «πριν»)· τιμή ακινήτου ⇒ τίποτα. Καμία δεύτερη λίστα
+«πεδίων που μετράνε» — ούτε στα Functions, ούτε εδώ.
+
+### 6.3 Ευρετήριο εξαρτήσεων
+
+`conveyance_cases.dependencyKeys` = `caseDependencyKeys(subject, parties)` — οι ετικέτες των στόχων τεκμηρίων στο **υπάρχον**
+λεξιλόγιο `linkedTo` (`fileLinkTag`), ώστε ένα αρχείο να απαντά με τις ετικέτες που **ήδη** κουβαλά. **Παράγωγο**, όχι πεδίο
+του τύπου: κάθε εγγραφή ολόκληρου εγγράφου περνά από `persistedCase` (create + CAS set)· παλιές υποθέσεις αποκτούν τα κλειδιά
+με **read-repair** στην ανάγνωση της όψης (ιδεμποτικό). Ερώτημα: `companyId ==` + `storedState == 'open'` +
+`dependencyKeys array-contains-any` — η Firestore το εξυπηρετεί και με συγχώνευση, αλλά **συνιστά** σύνθετο δείκτη για
+`array-contains-any` με ισότητες ⇒ δείκτης στο `firestore.indexes.json`.
+
+### 6.4 Υπογραφή, ιδεμποτία, επαναλήψεις
+
+- **Ένας** πυρήνας (`lib/webhooks/internal-webhook-signature.ts`, μόνο `crypto`) **προβάλλεται** στα Functions (CHECK 3.93):
+  ο ίδιος κώδικας υπογράφει εκεί και κρίνει εδώ. Σχήμα Stripe (`t=…,v1=…`, υπογεγραμμένη χρονοσφραγίδα, παράθυρο ±300s)·
+  **πολλά** `v1=` ⇒ περιστροφή κλειδιού χωρίς διακοπή (`INTERNAL_WEBHOOK_SECRET_PREVIOUS`). Καμία ανοχή χωρίς κλειδί.
+- **Ιδεμποτία χωρίς νέο μηχανισμό**: `Idempotency-Key` = `eventId` και η πόρτα περνά από το **υπάρχον** `runIdempotently`
+  (principal `internal-webhook:<πηγή>`) ⇒ η επανάληψη του trigger (at-least-once) **και** το replay μέσα στο παράθυρο εκτελούνται
+  **μία** φορά. (Η αρχική πρόταση ανεχόταν διπλή αύξηση· δεν χρειάζεται.)
+- **Κωδικοί → συμπεριφορά του trigger**: 2xx τέλος · 4xx τέλος + καταγραφή (λάθος υπογραφή/σώμα δεν διορθώνεται με επανάληψη) ·
+  5xx/δίκτυο ⇒ `throw` ⇒ επανάληψη (`failurePolicy`). Το «λείπει το μυστικό **στον αποδέκτη**» είναι **503**: ρύθμιση που θα
+  διορθωθεί, τα γεγονότα περιμένουν αντί να χαθούν.
+- **Middleware**: `/api/internal/` δηλώθηκε **μηχανικό endpoint** — αλλιώς το φίλτρο bot (user-agent) απαντά 403 από το Edge,
+  που ο trigger θα διάβαζε ως **οριστική** άρνηση: απώλεια χωρίς ίχνος.
+
+### 6.5 Δηλωμένα όρια
+
+- `files_personal` (αρχεία αποστολών) **εκτός**: δεν έχουν `companyId`, άρα δεν απαντούν «ποιες υποθέσεις του μισθωτή» (CHECK 3.35).
+  Τα αλλάζει ο **ίδιος** ο συντάκτης σε άλλη οθόνη· τα πιάνει το δίχτυ ορατότητας.
+- Μόνο **ανοιχτές** υποθέσεις (`storedState == 'open'`) — οι κλειστές/καταχωρισμένες είναι παγωμένες.
+- Αλλαγή του `subject`/`parties` στο ακίνητο **μετά** το άνοιγμα δεν σημαίνει: η υπόθεση κρατά στιγμιότυπο (`newCase`).
 
 ## 7. Deploy (ADR-865 — το push πάει στο Netcup, **ποτέ** στο Firebase)
 
-1. κανόνες: `npm run firestore:deploy` (CHECK 3.86 — ledger)
-2. κώδικας (push)
-3. (Στάδιο 3) Functions + μυστικά
+1. ✅ κανόνες: `npm run firestore:deploy -- --only firestore:rules` — **έγινε 2026-10-04** (release `68423dab`, ο πάροχος: «παραγωγή = δέντρο»· ledger ενημερωμένο)
+2. ⏳ δείκτης Στάδιο 3: `npm run firestore:deploy -- --only firestore:indexes` (`conveyance_cases`: `companyId` + `storedState` + `dependencyKeys[]`)
+3. ⏳ μυστικό: `firebase functions:secrets:set INTERNAL_WEBHOOK_SECRET` **και** η ίδια τιμή στο env του Netcup· `INTERNAL_WEBHOOK_BASE_URL` στο `functions/.env.<project>`
+4. ⏳ κώδικας (push) — ο αποδέκτης πρέπει να υπάρχει **πριν** από τον trigger (αλλιώς 404 = οριστική άρνηση, το γεγονός χάνεται)
+5. ⏳ `firebase deploy --only functions:onConveyanceFileWrite,functions:onConveyancePropertyWrite,functions:onConveyanceProjectWrite` — ⚠️ το **πρώτο** deploy Functions μετά τη Φάση 0 του ADR-873 (firebase-functions 7 / admin 13): ενημερώνονται **μόνο** αυτά τα τρία
 
 ## 8. Ανοιχτά
 
 | # | Ερώτημα | Κάτοχος |
 |---|---|---|
-| Ε1 | Στάδιο 3 (CDC) — webhook HMAC ή άλλη διαδρομή | Giorgio |
-| Ε2 | Πύλη pre-commit «ένας γραφέας σημάτων» ή αρκεί η άγκυρα Α38 | Giorgio |
+| Ε1 | ✅ **ΚΛΕΙΣΤΟ 2026-10-04** — webhook HMAC (§6), απόφαση Giorgio | — |
+| Ε2 | ✅ **ΚΛΕΙΣΤΟ 2026-10-04** — **CHECK 3.99** (AST, ZERO-TOL) **δίπλα** στην άγκυρα Α38, και οι δύο πάνω στη **ΜΙΑ** δήλωση `.view-signal-authority.json` (απόφαση Giorgio) | — |
 
 ## 9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-10-04 | Δημιουργία. Στάδια 1+2 υλοποιημένα με πρώτο καταναλωτή την υπόθεση μεταβίβασης (ADR-901 §14.8): κανόνες + σουίτα (39/39, μεταλλάξεις 4/4) · γραφέας + κρίση (μεταλλάξεις 8/8 + 5/5 προσκλήσεις) · ελεγκτής + μονοτονία (μεταλλάξεις 6/6). Στάδιο 3 τεκμηριωμένο ως πρόταση (§6). |
+| 2026-10-04 | **Κανόνες ανεπτυγμένοι** (`--only firestore:rules`, παραγωγή = HEAD + μόνο το μπλοκ `conveyance_view_signals`· επαληθευμένο από τον πάροχο). **Στάδιο 3 (CDC) σε κώδικα** (§6): trigger-αναμεταδότης σε `files`/`properties`/`projects` · **ένας** πυρήνας υπογραφής προβαλλόμενος (ADR-874) · πόρτα `withSignedInternalWebhook` (ρίζα CHECK 3.92 · ιδεμποτία ανά γεγονός) · σήμα ⇔ η **προβολή** της όψης άλλαξε (`evidenceOfFile` · `subjectViewFacts`) · ευρετήριο `dependencyKeys` (παράγωγο · read-repair · δείκτης) · middleware: `/api/internal/` = μηχανικό endpoint. Boy-scout: `fileLinkTag` (4 inline αντίγραφα). Tests 27 + 7 + 14 + 7 · **μεταλλάξεις 14/14** (μία επέζησε στην πρώτη εκτέλεση — αρχείο που αλλάζει μισθωτή — και απέκτησε άγκυρα). Ε1 κλειστό. |
+| 2026-10-04 | **Βήμα Γ — CHECK 3.99** «ένας γραφέας σημάτων» (Ε2 κλειστό): Κ1 η συλλογή μόνο σε γραφέα + αναφορά client · Κ2 κλειστό σύνολο καλούντων **προς τις δύο μεριές** (αδήλωτος καλών ⛔ · δηλωμένος γραφέας κάτω από `min` ⛔ — αρχείο που δεν περνά καν το προφίλτρο μετρά **0**) · Κ3 ο client δεν γράφει · Κ4 μία μορφή εγγραφής. Η λίστα `CASE_WRITERS` **βγήκε** από το test σε `.view-signal-authority.json` — τη διαβάζουν πύλη (AST) **και** Α38 (κείμενο). Πραγματικό δέντρο 0 παραβιάσεις, 10 γραφείς · self-test 9 · **μεταλλάξεις πύλης 8/8**. |

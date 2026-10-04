@@ -8530,6 +8530,15 @@
         { "fieldPath": "reminderSentAt", "order": "ASCENDING" },
         { "fieldPath": "reminderDueAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "conveyance_cases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "storedState", "order": "ASCENDING" },
+        { "fieldPath": "dependencyKeys", "arrayConfig": "CONTAINS" }
+      ]
     }
   ],
   "fieldOverrides": [

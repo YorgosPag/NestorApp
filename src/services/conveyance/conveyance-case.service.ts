@@ -17,7 +17,7 @@
 
 import 'server-only';
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { CONVEYANCE_CATALOG_VERSION } from '@/config/conveyance-checklist/catalog';
@@ -34,11 +34,16 @@ import { deriveFacts } from '@/lib/conveyance/derive-facts';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { ConveyanceCase, ConveyanceCaseView, EvidenceFile } from '@/types/conveyance-case';
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER } from './conveyance-case-evidence.server';
+import { caseDependencyKeys } from './conveyance-evidence.server';
 import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { closeCaseEngagements } from './conveyance-engagement-host.service';
 import { readCaseViewers, readViewRevision, readViewRevisionInTx, signalCaseChangeInTx, signalViewsInTx } from './conveyance-view-signal.server';
 import { changeOfCommand, type CaseViewers } from '@/lib/conveyance/view-signal-audience';
+import { getErrorMessage } from '@/lib/error-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CONVEYANCE_CASE');
 
 export interface ConveyanceActor {
   readonly uid: string;
@@ -72,6 +77,35 @@ async function buildView(db: Firestore, record: ConveyanceCase, context: Conveya
   return { conveyanceCase: record, state, derivedFacts, evidence, sealedDeliveries, checklist, documentRequests, freshness };
 }
 
+/**
+ * ADR-905 §6 — το έγγραφο **όπως γράφεται**: η υπόθεση + το ευρετήριο εξαρτήσεών της (`dependencyKeys`), που
+ * ρωτά ο αποδέκτης CDC «ποιες ανοιχτές υποθέσεις αφορά αυτό το αρχείο/ακίνητο/έργο;». **Παράγωγο** του
+ * `subject`/`parties` — δεν ζει στον τύπο, ώστε να μη μπορεί να αποκλίνει: κάθε εγγραφή ολόκληρου εγγράφου
+ * περνά από εδώ.
+ */
+function persistedCase(record: ConveyanceCase): ConveyanceCase & { readonly dependencyKeys: readonly string[] } {
+  return { ...record, dependencyKeys: caseDependencyKeys(record.subject, record.parties) };
+}
+
+function sameKeys(stored: unknown, expected: readonly string[]): boolean {
+  return Array.isArray(stored) && stored.length === expected.length && expected.every((key, i) => stored[i] === key);
+}
+
+/**
+ * Read-repair: υποθέσεις που γράφτηκαν **πριν** από το ευρετήριο (ή από παλιότερη μορφή του) αποκτούν τα κλειδιά
+ * τους στην πρώτη ανάγνωση. Ιδεμποτικό (ίδια κλειδιά ⇒ καμία εγγραφή)· αποτυχία ⇒ μόνο καταγραφή — η όψη δεν
+ * εξαρτάται από αυτό, μόνο η ζωντάνια της.
+ */
+async function repairDependencyKeys(db: Firestore, record: ConveyanceCase, stored: DocumentData): Promise<void> {
+  const expected = caseDependencyKeys(record.subject, record.parties);
+  if (sameKeys(stored.dependencyKeys, expected)) return;
+  try {
+    await db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.id).update({ dependencyKeys: expected });
+  } catch (error) {
+    logger.warn('dependencyKeys read-repair failed', { caseId: record.id, error: getErrorMessage(error, 'unknown') });
+  }
+}
+
 async function recordAudit(actor: ConveyanceActor, record: ConveyanceCase, action: AuditAction, changes: readonly AuditFieldChange[], name: string | null): Promise<void> {
   await EntityAuditService.recordChange({
     entityType: 'conveyance_case',
@@ -99,11 +133,12 @@ export async function getConveyanceCaseView(
     .where('companyId', '==', actor.companyId)
     .where('subject.propertyId', '==', propertyId)
     .get();
-  const parsed = snap.docs.map((doc) => parseConveyanceCase(doc.data()));
-  const records = parsed.filter((record): record is ConveyanceCase => record !== null);
-  if (records.length !== parsed.length) return fail({ kind: 'corrupt_case' });
-  const latest = records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  return { ok: true, value: latest ? await buildView(db, latest, context, actor, revision) : null };
+  const parsed = snap.docs.map((doc) => ({ record: parseConveyanceCase(doc.data()), stored: doc.data() }));
+  if (parsed.some((entry) => entry.record === null)) return fail({ kind: 'corrupt_case' });
+  const latest = parsed.sort((a, b) => (b.record?.createdAt ?? '').localeCompare(a.record?.createdAt ?? ''))[0];
+  if (!latest?.record) return { ok: true, value: null };
+  await repairDependencyKeys(db, latest.record, latest.stored);
+  return { ok: true, value: await buildView(db, latest.record, context, actor, revision) };
 }
 
 function newCase(actor: ConveyanceActor, context: ConveyanceSubjectContext, now: string): ConveyanceCase {
@@ -145,7 +180,7 @@ export async function openConveyanceCase(
     const found = existing.docs.map((doc) => parseConveyanceCase(doc.data())).find((c): c is ConveyanceCase => c !== null);
     if (found) return { record: found, created: false, revision };
     const record = newCase(actor, context, nowISO());
-    tx.create(db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.id), record);
+    tx.create(db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.id), persistedCase(record));
     // §14.8 — νέα υπόθεση: καμία συμμετοχή ακόμη ⇒ μόνο ο χώρος που κοιτά το ακίνητο.
     signalViewsInTx(tx, db, [hostView]);
     return { record, created: true, revision: revision + 1 };
@@ -191,7 +226,7 @@ function commitCommand(db: Firestore, input: CommandCommit): Promise<ConveyanceO
     const applied = applyConveyanceCommand(current, request.command, { actorUid: actor.uid, now, today: conveyanceToday(), evidence: input.evidence });
     if (!applied.ok) return fail({ kind: 'rejected', rejection: applied.rejection });
     const next: ConveyanceCase = { ...applied.next, version: current.version + 1, updatedAt: now };
-    tx.set(ref, next);
+    tx.set(ref, persistedCase(next));
     // Κάθε εντολή αλλάζει την όψη του οικοδεσπότη (τη βλέπει ολόκληρη) ⇒ η δική του όψη είναι η αναθεώρηση + 1.
     signalCaseChangeInTx(tx, db, changeOfCommand(request.command), input.viewers);
     return { ok: true, value: { next, changes: applied.changes, revision: revision + 1 } };

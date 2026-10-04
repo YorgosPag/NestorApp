@@ -1,0 +1,58 @@
+{
+  "$doc": "ADR-905 §8 Ε2 · CHECK 3.99 · άγκυρα Α38 (ADR-901 §7) — Η ΜΙΑ ΠΗΓΗ για το «ποιος γράφει σήματα όψεων και ποιος οφείλει να τα ζητά». Τη διαβάζουν ΚΑΙ η πύλη pre-commit (`scripts/check-view-signal-authority.js`, AST) ΚΑΙ η άγκυρα jest (`view-signal-authority.test.ts`) — ποτέ δύο λίστες που αποκλίνουν. Οι κανόνες Firestore κλείνουν τον ΠΕΛΑΤΗ (`create/update/delete: if false`), ΟΧΙ το Admin SDK: δεύτερος γραφέας στον server θα σήμαινε όψη ΕΞΩ από το ακροατήριο (διαρροή χρονισμού), και γραφέας της υπόθεσης χωρίς σήμα αφήνει την οθόνη μπαγιάτικη ως το F5.",
+  "writer": "src/services/conveyance/conveyance-view-signal.server.ts",
+  "clientRef": "src/lib/conveyance/view-signal-client-ref.ts",
+  "signalFunctions": ["signalViewsInTx", "signalCaseChangeInTx", "caseRosterSignal", "invitationHostSignal"],
+  "caseWriters": {
+    "src/services/conveyance/conveyance-case.service.ts": {
+      "calls": ["signalCaseChangeInTx", "signalViewsInTx"],
+      "min": 2,
+      "why": "άνοιγμα υπόθεσης + εντολή του οικοδεσπότη (CAS)"
+    },
+    "src/services/conveyance/conveyance-contribution.service.ts": {
+      "calls": ["signalCaseChangeInTx"],
+      "min": 2,
+      "why": "αποστολή transmittal + απόσυρση"
+    },
+    "src/services/conveyance/conveyance-document-request.service.ts": {
+      "calls": ["signalCaseChangeInTx"],
+      "min": 1,
+      "why": "αίτημα εγγράφου — μόνο αιτών + παραλήπτης"
+    },
+    "src/services/conveyance/conveyance-engagement-host.service.ts": {
+      "calls": ["caseRosterSignal"],
+      "min": 3,
+      "why": "πρόταση + τέλος + κλείσιμο συμμετοχών"
+    },
+    "src/services/conveyance/conveyance-engagement-access.service.ts": {
+      "calls": ["caseRosterSignal"],
+      "min": 1,
+      "why": "απάντηση του επαγγελματία στην πρόταση"
+    },
+    "src/services/conveyance/conveyance-dependency-relay.server.ts": {
+      "calls": ["signalCaseChangeInTx"],
+      "min": 1,
+      "why": "CDC (ADR-905 §6): αλλαγή αρχείου/ακινήτου/έργου που ΔΕΝ γράφει η υπόθεση"
+    },
+    "src/server/engagement-invitations/engagement-invitation-redeem.ts": {
+      "calls": ["caseRosterSignal", "invitationHostSignal"],
+      "min": 2,
+      "why": "αποδοχή + άρνηση πρόσκλησης"
+    },
+    "src/server/engagement-invitations/engagement-invitation-issue.ts": {
+      "calls": ["invitationHostSignal"],
+      "min": 2,
+      "why": "έκδοση + ανάκληση πρόσκλησης"
+    },
+    "src/server/engagement-invitations/engagement-invitation-reminder.ts": {
+      "calls": ["invitationHostSignal"],
+      "min": 1,
+      "why": "υπενθύμιση / λήξη πρόσκλησης"
+    },
+    "src/server/engagement-invitations/engagement-invitation-preview.ts": {
+      "calls": ["invitationHostSignal"],
+      "min": 1,
+      "why": "«ανοίχτηκε» — ο οικοδεσπότης βλέπει ότι η πρόσκληση διαβάστηκε"
+    }
+  }
+}
