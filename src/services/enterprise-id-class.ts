@@ -360,6 +360,8 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
   generateConveyanceContributionId(): string { return this.generateId(P.CONVEYANCE_CONTRIBUTION).id; }
   /** ADR-901 Φ4.5 — ΕΝΑ αίτημα εγγράφου ανά (υπόθεση, γραμμή, αιτών, ημέρα): το `create` του δεύτερου αποτυγχάνει (anti-spam). */
   generateDeterministicConveyanceDocumentRequestId(seed: string): string { return this.mintDeterministicV4Id(P.CONVEYANCE_DOCUMENT_REQUEST, seed); }
+  /** ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη: ο γραφέας και ο listener βρίσκουν το ίδιο έγγραφο χωρίς ερώτημα. */
+  generateDeterministicConveyanceViewSignalId(seed: string): string { return this.mintDeterministicV4Id(P.CONVEYANCE_VIEW_SIGNAL, seed); }
   generatePipelineQueueId(): string { return this.generateId(P.PIPELINE_QUEUE).id; }
   generateBrokerageId(): string { return this.generateId(P.BROKERAGE).id; }
   generateCommissionId(): string { return this.generateId(P.COMMISSION).id; }

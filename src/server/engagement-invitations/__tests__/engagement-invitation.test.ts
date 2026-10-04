@@ -60,6 +60,8 @@ import {
 import type { ConveyanceCase } from '@/types/conveyance-case';
 
 import { respondToEngagementInvitation } from '../engagement-invitation-redeem';
+import { readViewRevision } from '@/services/conveyance/conveyance-view-signal.server';
+import { previewEngagementInvitation } from '../engagement-invitation-preview';
 import { reminderVerdict, sweepEngagementInvitationReminders } from '../engagement-invitation-reminder';
 
 process.env.ENGAGEMENT_INVITE_SECRET ??= 'δοκιμαστικό-μυστικό-πρόσκλησης-υπόθεσης';
@@ -140,13 +142,14 @@ describe('Π — ο παρονομαστής', () => {
 });
 
 describe('Α — οι άγκυρες του ADR-901 §7', () => {
-  it('Α1 — η αποδοχή γράφει ΜΟΝΟ πρόσκληση + συμμετοχή: κανένα μέλος χώρου, κανένα claim', async () => {
+  it('Α1 — η αποδοχή γράφει ΜΟΝΟ πρόσκληση + συμμετοχή (+ σήμα όψεων): κανένα μέλος χώρου, κανένα claim', async () => {
     const record = await openCase();
     const token = await invite(record);
     const before = fake.writeLog().length;
     await accept(token);
     const touched = new Set(fake.writeLog().slice(before).map((w) => w.collection));
-    expect([...touched].sort()).toEqual([INVITATIONS, `companies/comp_a/projects/proj_1/engagements`].sort());
+    // §14.8 — το σήμα όψεων (αριθμός, χωρίς περιεχόμενο) γράφεται στην ΙΔΙΑ συναλλαγή· δεν δίνει πρόσβαση πουθενά.
+    expect([...touched].sort()).toEqual([INVITATIONS, `companies/comp_a/projects/proj_1/engagements`, COLLECTIONS.CONVEYANCE_VIEW_SIGNALS].sort());
   });
 
   it('Α2 — άλλο email στο Auth ⇒ `wrong-recipient`, ΚΑΜΙΑ συμμετοχή, η πρόσκληση μένει `pending`', async () => {
@@ -248,5 +251,47 @@ describe('Υ — υπενθύμιση 3 ημερών (Ε-5)', () => {
     expect(at('2026-10-07T00:00:00.000Z')).toBe('remind');
     expect(at('2026-10-18T00:00:00.000Z')).toBe('expire');
     expect(at('2026-10-07T00:00:00.000Z', { reminderSentAt: '2026-10-06T09:13:00.000Z' })).toBe('skip');
+  });
+});
+
+describe('§14.8 — κάθε αλλαγή πρόσκλησης ενημερώνει ΖΩΝΤΑΝΑ τις θέσεις του οικοδεσπότη (Α36)', () => {
+  const HOST_VIEW = { kind: 'host', propertyId: 'prop_1', companyId: 'comp_a' } as const;
+  const hostRevision = () => readViewRevision(db(), HOST_VIEW);
+
+  it('έκδοση · επαναποστολή · ακύρωση · άρνηση · υπενθύμιση ⇒ +1 στην όψη του οικοδεσπότη, η καθεμία', async () => {
+    const record = await openCase();
+    let last = await hostRevision();
+    const step = async (act: () => Promise<unknown>) => {
+      await act();
+      const now = await hostRevision();
+      const moved = now - last;
+      last = now;
+      return moved;
+    };
+
+    expect(await step(() => invite(record))).toBe(1);
+    expect(await step(() => invite(record))).toBe(1);
+    expect(await step(() => cancelCaseInvitation(db(), host, record, 'notary', Date.now()))).toBe(1);
+    const token = await invite(record);
+    last = await hostRevision();
+    expect(await step(() => respondToEngagementInvitation(db(), { action: 'decline', token, identity: notary() }))).toBe(1);
+    await invite(record);
+    last = await hostRevision();
+    const pending = invitationDocs().find((doc) => doc.data.state === 'pending');
+    fake.seed(INVITATIONS, pending!.id, { ...pending!.data, reminderDueAt: '2000-01-01T00:00:00.000Z' });
+    expect(await step(() => sweepEngagementInvitationReminders(db()))).toBe(1);
+    // Τίποτα δεν άλλαξε ⇒ κανένα σήμα (ιδεμποτία: δεύτερο πέρασμα, ακύρωση χωρίς εκκρεμή).
+    expect(await step(() => sweepEngagementInvitationReminders(db()))).toBe(0);
+  });
+
+  it('«ανοίχτηκε» ⇒ +1 στην πρώτη ανάγνωση του συνδέσμου, 0 στη δεύτερη (το «ανοίχτηκε» γράφεται μία φορά)', async () => {
+    const token = await invite(await openCase());
+    const preview = await previewEngagementInvitation(db(), { token, viewerEmail: null });
+    if (preview.kind !== 'preview') throw new Error(preview.kind);
+    const before = await hostRevision();
+    await preview.markOpened();
+    expect(await hostRevision()).toBe(before + 1);
+    await preview.markOpened();
+    expect(await hostRevision()).toBe(before + 1);
   });
 });

@@ -449,6 +449,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   ENGAGEMENT_INVITATION: 'einv', // ADR-901 Φ3 — πρόσκληση με email σε επαγγελματία χωρίς λογαριασμό· επαναποστολή = νέο id (ADR-853 §20)
   CONVEYANCE_CONTRIBUTION: 'ctb', // ADR-901 Φ4.4 — transmittal (`conveyance_contributions`)· νέα έκδοση = νέο id
   CONVEYANCE_DOCUMENT_REQUEST: 'cdr', // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»· ΕΝΑ ανά (υπόθεση, γραμμή, αιτών, ημέρα) — ντετερμινιστικό
+  CONVEYANCE_VIEW_SIGNAL: 'cvs', // ADR-901 §14.8 — σήμα αλλαγής ΜΙΑΣ όψης (οικοδεσπότης ή συμμετοχή) — ντετερμινιστικό
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
   COMMISSION: 'com',

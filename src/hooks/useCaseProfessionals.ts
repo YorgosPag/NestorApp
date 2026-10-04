@@ -10,6 +10,9 @@
  * - Αρνήσεις **ονομασμένες** (`offerRejectionOf`) — η οθόνη λέει τι να κάνει ο άνθρωπος, όχι «απέτυχε».
  * - ADR-901 Φ3: η ίδια `offer` στέλνει **πρόσκληση με email** όταν δεν υπάρχει λογαριασμός (και ξανά = επαναποστολή)·
  *   η έκβαση της **αποστολής** (`invited`) επιστρέφει ονομασμένη — «δεν στάλθηκε» δεν είναι σιωπή.
+ * - ADR-901 §14.8: **ζωντανές** — κάθε αλλαγή συμμετοχής/πρόσκλησης σημαίνει την όψη του οικοδεσπότη· όταν η
+ *   αναθεώρησή της (`viewRevision`) ανέβει, οι θέσεις ξαναδιαβάζονται **στο παρασκήνιο** (χωρίς spinner). Μια
+ *   ανάγνωση που ξεκίνησε **πριν** από πράξη του ίδιου ανθρώπου δεν «πατά» ποτέ τις θέσεις που επέστρεψε η πράξη.
  *
  * @module hooks/useCaseProfessionals
  */
@@ -44,23 +47,27 @@ interface UseCaseProfessionalsReturn {
   readonly cancelInvitation: (role: LegalProfessionalRole) => Promise<ProfessionalActionOutcome>;
 }
 
-export function useCaseProfessionals(caseId: string): UseCaseProfessionalsReturn {
+export function useCaseProfessionals(caseId: string, viewRevision: number): UseCaseProfessionalsReturn {
   const [slots, setSlots] = useState<readonly CaseProfessionalSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState<ReadonlySet<LegalProfessionalRole>>(new Set());
   /** Η αλήθεια «σε εξέλιξη» χωρίς να περιμένει render — δύο γρήγορα κλικ βλέπουν το ίδιο. */
   const inFlight = useRef(new Set<LegalProfessionalRole>());
+  /** Αυξάνει σε κάθε απάντηση πράξης — ανάγνωση που ξεκίνησε πριν από αυτήν είναι μπαγιάτικη. */
+  const epoch = useRef(0);
+
+  useEffect(() => { setLoading(true); }, [caseId]);
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    const startedAt = epoch.current;
     fetchCaseProfessionalSlots(caseId)
-      .then((result) => { if (alive) { setSlots(result.slots); setFailed(false); } })
+      .then((result) => { if (alive && epoch.current === startedAt) { setSlots(result.slots); setFailed(false); } })
       .catch(() => { if (alive) setFailed(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [caseId]);
+  }, [caseId, viewRevision]);
 
   const act = useCallback(async (
     role: LegalProfessionalRole,
@@ -71,6 +78,7 @@ export function useCaseProfessionals(caseId: string): UseCaseProfessionalsReturn
     setPending(new Set(inFlight.current));
     try {
       const result = await request();
+      epoch.current += 1;
       setSlots(result.slots);
       return { ok: true, invited: result.invited ?? null };
     } catch (error: unknown) {

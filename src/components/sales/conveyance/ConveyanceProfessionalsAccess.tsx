@@ -120,14 +120,16 @@ function useReport() {
 interface ConveyanceProfessionalsAccessProps {
   readonly caseId: string;
   readonly canManage: boolean;
+  /** ADR-901 §14.8 — η αναθεώρηση της όψης του οικοδεσπότη: ανεβαίνει ⇒ οι θέσεις ξαναδιαβάζονται (ζωντανές). */
+  readonly viewRevision: number;
 }
 
-export function ConveyanceProfessionalsAccess({ caseId, canManage }: ConveyanceProfessionalsAccessProps) {
+export function ConveyanceProfessionalsAccess({ caseId, canManage, viewRevision }: ConveyanceProfessionalsAccessProps) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const report = useReport();
-  const { slots, failed, pending, offer, end, cancelInvitation } = useCaseProfessionals(caseId);
+  const { slots, failed, pending, offer, end, cancelInvitation } = useCaseProfessionals(caseId, viewRevision);
   const [consentRole, setConsentRole] = useState<LegalProfessionalRole | null>(null);
   const [ending, setEnding] = useState<CaseProfessionalSlot | null>(null);
   const [cancelling, setCancelling] = useState<CaseProfessionalSlot | null>(null);

@@ -126,6 +126,8 @@ export interface InvitationKind<
     tx: Transaction,
     accepted: { readonly ref: DocumentReference; readonly record: TRecord; readonly identity: TIdentity },
   ): Promise<InvitationAcceptance<TRefusal, TUnavailable, TAccepted>>;
+  /** Το άγκιστρο της **άρνησης** — μέσα στη συναλλαγή, μετά τη σφράγιση (π.χ. σήμα όψεων, ADR-901 §14.8). */
+  onDecline?(tx: Transaction, record: TRecord): void;
 }
 
 // =============================================================================
@@ -294,6 +296,7 @@ async function consume<
 
     if (input.target === 'declined') {
       tx.update(ref, { ...resolution });
+      kind.onDecline?.(tx, record);
       return { kind: 'declined', invitation: record };
     }
     // 🔑 Αναγνώσεις του είδους **πριν** από τη σφράγιση· άρνηση ⇒ η πρόσκληση μένει `pending`, καμία γραφή.

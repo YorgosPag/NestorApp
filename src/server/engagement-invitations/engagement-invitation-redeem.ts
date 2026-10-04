@@ -42,6 +42,7 @@ import {
   recordEngagementAudit,
 } from '@/services/conveyance/conveyance-engagement-support';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
+import { caseRosterSignal, invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
 import type { Engagement } from '@/types/engagement';
 import type { EngagementInvitation, EngagementInvitationKindRefusal } from '@/types/engagement-invitation';
 import type { InvitationDocumentCore } from '@/types/invitation-core';
@@ -105,7 +106,7 @@ async function stageAcceptance(
     origin: { kind: 'professional_appointment', contactId: record.contactId },
     consents: record.consents, offeredBy: record.invitedByUid, nowMs,
     invitationId: record.id, declaredCredential: declaredCredentialOf(record.role, credential, new Date(nowMs).toISOString()),
-  });
+  }, caseRosterSignal(db, conveyanceCase));
   if (stage.outcome === 'commit') return { kind: 'commit', write: stage.write };
   return stage.reason === 'unreadable'
     ? { kind: 'unavailable', reason: 'engagements-unreadable' }
@@ -130,6 +131,8 @@ function engagementInvitationKind(
       if (credential === null) throw new Error('Engagement invitation accepted without a credential declaration');
       return stageAcceptance(db, tx, accepted, credential);
     },
+    // Η αποδοχή ενημερώνει τις όψεις μέσω του γραφέα συμμετοχών· η άρνηση αλλάζει μόνο τη θέση του οικοδεσπότη (§14.8).
+    onDecline: (tx, record) => invitationHostSignal(db, record)(tx),
   };
 }
 

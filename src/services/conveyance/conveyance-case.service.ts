@@ -24,7 +24,7 @@ import { CONVEYANCE_CATALOG_VERSION } from '@/config/conveyance-checklist/catalo
 import { generateConveyanceCaseId } from '@/services/enterprise-id.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { nowISO } from '@/lib/date-local';
-import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
+import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
 import { applyConveyanceCommand } from '@/lib/conveyance/apply-command';
 import { effectiveCaseState, isCaseEditable } from '@/lib/conveyance/case-state';
 import type { ConveyanceCommandRequest, CommandRejection } from '@/lib/conveyance/conveyance-commands';
@@ -32,11 +32,13 @@ import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { deriveCaseChecklist } from '@/lib/conveyance/case-checklist';
 import { deriveFacts } from '@/lib/conveyance/derive-facts';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
-import type { ConveyanceCase, ConveyanceCaseView } from '@/types/conveyance-case';
+import type { ConveyanceCase, ConveyanceCaseView, EvidenceFile } from '@/types/conveyance-case';
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER } from './conveyance-case-evidence.server';
 import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { closeCaseEngagements } from './conveyance-engagement-host.service';
+import { readCaseViewers, readViewRevision, readViewRevisionInTx, signalCaseChangeInTx, signalViewsInTx } from './conveyance-view-signal.server';
+import { changeOfCommand, type CaseViewers } from '@/lib/conveyance/view-signal-audience';
 
 export interface ConveyanceActor {
   readonly uid: string;
@@ -59,14 +61,15 @@ const fail = <T>(failure: ConveyanceFailure): ConveyanceOutcome<T> => ({ ok: fal
  * Ο κατάλογος όπως τον βλέπει ο οικοδεσπότης — ο ΙΔΙΟΣ υπολογισμός με τον client. Φ4.5: μαζί η ενότητα «Ζήτησε
  * έγγραφο» (παραλήπτες ανά γραμμή + τα αιτήματα της πλευράς του οικοδεσπότη), για **αυτόν** τον άνθρωπο του χώρου.
  */
-async function buildView(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext, actor: ConveyanceActor): Promise<ConveyanceCaseView> {
+async function buildView(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext, actor: ConveyanceActor, revision: number): Promise<ConveyanceCaseView> {
   const { files: evidence, sealed: sealedDeliveries } = await collectCaseEvidence(db, record, HOST_EVIDENCE_VIEWER);
   const derivedFacts = deriveFacts(context.factSources);
   const checklist = deriveCaseChecklist({ record, derivedFacts, evidence, sealed: sealedDeliveries, today: conveyanceToday(), viewer: 'host' });
   const state = effectiveCaseState(record.storedState, context.legalPhase);
   const party = { role: 'host', uid: actor.uid } as const;
   const documentRequests = await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs: Date.now() });
-  return { conveyanceCase: record, state, derivedFacts, evidence, sealedDeliveries, checklist, documentRequests };
+  const freshness = { revision, freshUntil: nextConveyanceDayStart().toISOString() };
+  return { conveyanceCase: record, state, derivedFacts, evidence, sealedDeliveries, checklist, documentRequests, freshness };
 }
 
 async function recordAudit(actor: ConveyanceActor, record: ConveyanceCase, action: AuditAction, changes: readonly AuditFieldChange[], name: string | null): Promise<void> {
@@ -90,6 +93,8 @@ export async function getConveyanceCaseView(
 ): Promise<ConveyanceOutcome<ConveyanceCaseView | null>> {
   const context = await loadConveyanceSubject(db, actor.companyId, propertyId);
   if (!context) return fail({ kind: 'property_not_found' });
+  // §14.8 — η αναθεώρηση ΠΡΙΝ από την υπόθεση: η όψη είναι πάντα τουλάχιστον τόσο φρέσκια όσο ο αριθμός της.
+  const revision = await readViewRevision(db, { kind: 'host', propertyId, companyId: actor.companyId });
   const snap = await db.collection(COLLECTIONS.CONVEYANCE_CASES)
     .where('companyId', '==', actor.companyId)
     .where('subject.propertyId', '==', propertyId)
@@ -98,7 +103,7 @@ export async function getConveyanceCaseView(
   const records = parsed.filter((record): record is ConveyanceCase => record !== null);
   if (records.length !== parsed.length) return fail({ kind: 'corrupt_case' });
   const latest = records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  return { ok: true, value: latest ? await buildView(db, latest, context, actor) : null };
+  return { ok: true, value: latest ? await buildView(db, latest, context, actor, revision) : null };
 }
 
 function newCase(actor: ConveyanceActor, context: ConveyanceSubjectContext, now: string): ConveyanceCase {
@@ -133,18 +138,22 @@ export async function openConveyanceCase(
     .where('companyId', '==', actor.companyId)
     .where('subject.propertyId', '==', propertyId)
     .where('storedState', '==', 'open');
+  const hostView = { kind: 'host', propertyId, companyId: actor.companyId } as const;
   const outcome = await db.runTransaction(async (tx) => {
     const existing = await tx.get(openQuery);
+    const revision = await readViewRevisionInTx(tx, db, hostView);
     const found = existing.docs.map((doc) => parseConveyanceCase(doc.data())).find((c): c is ConveyanceCase => c !== null);
-    if (found) return { record: found, created: false };
+    if (found) return { record: found, created: false, revision };
     const record = newCase(actor, context, nowISO());
     tx.create(db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.id), record);
-    return { record, created: true };
+    // §14.8 — νέα υπόθεση: καμία συμμετοχή ακόμη ⇒ μόνο ο χώρος που κοιτά το ακίνητο.
+    signalViewsInTx(tx, db, [hostView]);
+    return { record, created: true, revision: revision + 1 };
   });
   if (outcome.created) {
     await recordAudit(actor, outcome.record, 'created', [{ field: 'state', oldValue: null, newValue: 'open' }], context.propertyName);
   }
-  return { ok: true, value: { view: await buildView(db, outcome.record, context, actor), created: outcome.created } };
+  return { ok: true, value: { view: await buildView(db, outcome.record, context, actor, outcome.revision), created: outcome.created } };
 }
 
 /** Μία ανάγνωση υπόθεσης με σχήμα + ιδιοκτησία — ξένη ≡ ανύπαρκτη (ADR-742, καμία μαρτυρία ύπαρξης). */
@@ -155,6 +164,38 @@ function ownedCase(data: unknown, actor: ConveyanceActor, caseId: string): Conve
 /** Η υπόθεση, αν υπάρχει **και** ανήκει στον μισθωτή του δρώντα — αλλιώς `null`. */
 export async function readOwnedConveyanceCase(db: Firestore, actor: ConveyanceActor, caseId: string): Promise<ConveyanceCase | null> {
   return ownedCase((await db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(caseId).get()).data(), actor, caseId);
+}
+
+interface CommandCommit {
+  readonly actor: ConveyanceActor;
+  readonly initial: ConveyanceCase;
+  readonly request: ConveyanceCommandRequest;
+  readonly context: ConveyanceSubjectContext;
+  readonly evidence: readonly EvidenceFile[];
+  readonly viewers: CaseViewers;
+}
+
+/** Η συναλλαγή της εντολής: CAS → κρίση → εγγραφή **και** σήμα των όψεων που τη βλέπουν (§14.8), μαζί. */
+function commitCommand(db: Firestore, input: CommandCommit): Promise<ConveyanceOutcome<{ next: ConveyanceCase; changes: readonly AuditFieldChange[]; revision: number }>> {
+  const { actor, initial, request, context } = input;
+  const ref = db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(initial.id);
+  return db.runTransaction(async (tx) => {
+    const current = ownedCase((await tx.get(ref)).data(), actor, initial.id);
+    const revision = await readViewRevisionInTx(tx, db, input.viewers.host);
+    if (!current) return fail({ kind: 'case_not_found' });
+    if (current.version !== request.expectedVersion) return fail({ kind: 'version_conflict' });
+    if (!isCaseEditable(effectiveCaseState(current.storedState, context.legalPhase))) {
+      return fail({ kind: 'rejected', rejection: 'not_editable' });
+    }
+    const now = nowISO();
+    const applied = applyConveyanceCommand(current, request.command, { actorUid: actor.uid, now, today: conveyanceToday(), evidence: input.evidence });
+    if (!applied.ok) return fail({ kind: 'rejected', rejection: applied.rejection });
+    const next: ConveyanceCase = { ...applied.next, version: current.version + 1, updatedAt: now };
+    tx.set(ref, next);
+    // Κάθε εντολή αλλάζει την όψη του οικοδεσπότη (τη βλέπει ολόκληρη) ⇒ η δική του όψη είναι η αναθεώρηση + 1.
+    signalCaseChangeInTx(tx, db, changeOfCommand(request.command), input.viewers);
+    return { ok: true, value: { next, changes: applied.changes, revision: revision + 1 } };
+  });
 }
 
 /**
@@ -168,32 +209,20 @@ export async function applyConveyanceCaseCommand(
   initial: ConveyanceCase,
   request: ConveyanceCommandRequest,
 ): Promise<ConveyanceOutcome<ConveyanceCaseView>> {
-  const ref = db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(initial.id);
   const context = await loadConveyanceSubject(db, actor.companyId, initial.subject.propertyId);
   if (!context) return fail({ kind: 'property_not_found' });
   // Ίδιος δρόμος με την όψη ⇒ ο οικοδεσπότης ελέγχει (αποδέχεται/επιστρέφει) και ό,τι του **στάλθηκε** (Φ4.4).
   // Μόνο τα **τεκμήρια**: η σφραγισμένη παράδοση δεν ελέγχεται (Α35 — δεν έχει αρχείο να ελεγχθεί).
-  const { files: evidence } = await collectCaseEvidence(db, initial, HOST_EVIDENCE_VIEWER);
-
-  const result = await db.runTransaction(async (tx): Promise<ConveyanceOutcome<{ next: ConveyanceCase; changes: readonly AuditFieldChange[] }>> => {
-    const current = ownedCase((await tx.get(ref)).data(), actor, initial.id);
-    if (!current) return fail({ kind: 'case_not_found' });
-    if (current.version !== request.expectedVersion) return fail({ kind: 'version_conflict' });
-    if (!isCaseEditable(effectiveCaseState(current.storedState, context.legalPhase))) {
-      return fail({ kind: 'rejected', rejection: 'not_editable' });
-    }
-    const now = nowISO();
-    const applied = applyConveyanceCommand(current, request.command, { actorUid: actor.uid, now, today: conveyanceToday(), evidence });
-    if (!applied.ok) return fail({ kind: 'rejected', rejection: applied.rejection });
-    const next: ConveyanceCase = { ...applied.next, version: current.version + 1, updatedAt: now };
-    tx.set(ref, next);
-    return { ok: true, value: { next, changes: applied.changes } };
-  });
+  const [{ files: evidence }, viewers] = await Promise.all([
+    collectCaseEvidence(db, initial, HOST_EVIDENCE_VIEWER),
+    readCaseViewers(db, initial, Date.now()),
+  ]);
+  const result = await commitCommand(db, { actor, initial, request, context, evidence, viewers });
   if (!result.ok) return result;
 
   const action: AuditAction = request.command.type === 'cancel' ? 'status_changed' : 'updated';
   await recordAudit(actor, result.value.next, action, result.value.changes, context.propertyName);
   // ADR-862 §5.3.3 — η ΚΥΡΙΑ λήξη: κλείσιμο/ακύρωση ⇒ οι συμμετοχές επαγγελματιών παύουν (ιδεμποτές).
   await closeCaseEngagements(db, actor, result.value.next, context.propertyName, Date.now());
-  return { ok: true, value: await buildView(db, result.value.next, context, actor) };
+  return { ok: true, value: await buildView(db, result.value.next, context, actor, result.value.revision) };
 }

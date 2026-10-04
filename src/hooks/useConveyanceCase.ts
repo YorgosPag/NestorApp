@@ -13,11 +13,14 @@
  *   της προηγούμενης (CAS) — δύο γρήγορα κλικ δεν συγκρούονται μεταξύ τους.
  * - **Rollback**: αποτυχία ⇒ η οθόνη γυρνά στην τελευταία επιβεβαιωμένη εικόνα.
  * - **409**: κάποιος άλλος άλλαξε την υπόθεση ⇒ ξαναφόρτωση + μήνυμα (καμία σιωπηλή αντικατάσταση).
+ * - **Ζωντανή** (ADR-901 §14.8): σήμα της όψης ⇒ ανανέωση στο **παρασκήνιο** (`useServerViewSignal`), που **περιμένει**
+ *   όσο εκκρεμούν αισιόδοξες εντολές· και **μονοτονική**: όψη παλιότερη από την επιβεβαιωμένη (αναθεώρηση ή έκδοση)
+ *   απορρίπτεται — μια αργή ανάγνωση δεν γυρίζει ποτέ πίσω την οθόνη ή τη βάση του CAS.
  *
  * @module hooks/useConveyanceCase
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -32,6 +35,11 @@ import {
   sendConveyanceCommand,
 } from '@/services/conveyance/conveyance-case-gateway';
 import type { ConveyanceCaseView } from '@/types/conveyance-case';
+import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { clientViewSignalDoc, viewSignalId, viewSignalRevisionOf } from '@/lib/conveyance/view-signal-client-ref';
+import type { HostCaseView } from '@/lib/conveyance/view-signal-key';
+import { isOlderHostView } from '@/lib/conveyance/case-view-freshness';
 
 const HTTP_CONFLICT = 409;
 
@@ -76,13 +84,19 @@ function useCaseStore() {
     confirmed.current = next;
     show(next);
   }, [show]);
-  return { view, confirmed, shown, show, accept };
+  /** Ανανέωση από σήμα: δεκτή **μόνο** αν δεν είναι παλιότερη από την επιβεβαιωμένη. */
+  const acceptFresher = useCallback((next: ConveyanceCaseView | null) => {
+    if (isOlderHostView(next, confirmed.current)) return;
+    accept(next);
+  }, [accept]);
+  return { view, confirmed, shown, show, accept, acceptFresher };
 }
 
 type CaseStore = ReturnType<typeof useCaseStore>;
 
 function useCaseLoader(propertyId: string | null, accept: CaseStore['accept']) {
-  const [loading, setLoading] = useState(false);
+  // Αρχικά «φορτώνει» όταν υπάρχει ακίνητο: αλλιώς η πρώτη απόδοση θα άνοιγε συνδρομή σήματος πριν την αρχική φόρτωση.
+  const [loading, setLoading] = useState(propertyId !== null);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,8 +134,39 @@ function useCaseLoader(propertyId: string | null, accept: CaseStore['accept']) {
   return { loading, error, opening, reload, openCase };
 }
 
-/** Optimistic + σειριακή ουρά + rollback + 409 → ξαναφόρτωση. */
-function useCommandRunner(store: CaseStore, reload: () => Promise<void>) {
+/** Η όψη του οικοδεσπότη: ακίνητο × **ο ίδιος** χώρος που κρίνει ο server (ADR-849 — `useCompanyId`). */
+function useHostViewSource(propertyId: string | null): ServerViewSignalSource | null {
+  const { user } = useAuth();
+  const companyId = useCompanyId()?.companyId ?? null;
+  return useMemo(() => {
+    if (!propertyId || !companyId || !user) return null;
+    const view: HostCaseView = { kind: 'host', propertyId, companyId };
+    return { key: viewSignalId(view), ref: () => clientViewSignalDoc(view) };
+  }, [propertyId, companyId, user]);
+}
+
+/** Η ζωντανή όψη: σήμα → ανάγνωση στο παρασκήνιο (χωρίς spinner) → μονοτονική αποδοχή. */
+function useLiveCaseView(propertyId: string | null, store: CaseStore, loading: boolean, isHeld: () => boolean) {
+  const source = useHostViewSource(propertyId);
+  const { acceptFresher } = store;
+  const fetch = useCallback(async (): Promise<number | null> => {
+    if (!propertyId) return null;
+    const next = await fetchConveyanceCaseView(propertyId);
+    acceptFresher(next);
+    return next?.freshness.revision ?? null;
+  }, [propertyId, acceptFresher]);
+  return useServerViewSignal({
+    source,
+    revisionOf: viewSignalRevisionOf,
+    freshness: loading && !store.view ? 'pending' : (store.view?.freshness ?? null),
+    fetch,
+    isHeld,
+    label: 'conveyance-host-view-signal',
+  });
+}
+
+/** Optimistic + σειριακή ουρά + rollback + 409 → ξαναφόρτωση. `pending`: εντολές που δεν επιβεβαιώθηκαν ακόμη. */
+function useCommandRunner(store: CaseStore, reload: () => Promise<void>, pending: { current: number }, onIdle: () => void) {
   const { user } = useAuth();
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const { confirmed, shown, show, accept } = store;
@@ -148,15 +193,22 @@ function useCommandRunner(store: CaseStore, reload: () => Promise<void>) {
     const optimistic = optimisticView(current, command, user?.uid ?? '');
     if (typeof optimistic === 'string') return { ok: false, reason: 'rejected', rejection: optimistic };
     show(optimistic);
-    const result = queue.current.then(() => send(command));
+    pending.current += 1;
+    const result = queue.current.then(() => send(command)).finally(() => {
+      pending.current -= 1;
+      if (pending.current === 0) onIdle();
+    });
     queue.current = result;
     return result;
-  }, [shown, show, user?.uid, send]);
+  }, [shown, show, user?.uid, send, pending, onIdle]);
 }
 
 export function useConveyanceCase(propertyId: string | null): UseConveyanceCaseReturn {
   const store = useCaseStore();
   const { loading, error, opening, reload, openCase } = useCaseLoader(propertyId, store.accept);
-  const run = useCommandRunner(store, reload);
+  const pending = useRef(0);
+  const isHeld = useCallback(() => pending.current > 0, []);
+  const live = useLiveCaseView(propertyId, store, loading, isHeld);
+  const run = useCommandRunner(store, reload, pending, live.release);
   return { view: store.view, loading, error, opening, openCase, run, reload };
 }

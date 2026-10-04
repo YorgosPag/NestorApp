@@ -18,6 +18,7 @@
 
 import type { CaseDocumentRequests } from '@/types/conveyance-document-request';
 import type { CaseInvitationSummary, CredentialHint } from '@/types/engagement-invitation';
+import type { ViewFreshness } from '@/types/server-view';
 import type { DeclaredCredential, EngagementConsent, EngagementState, EngagementVerdict } from '@/types/engagement';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import type {
@@ -262,6 +263,8 @@ export interface ConveyanceCaseView {
   readonly checklist: DerivedChecklist;
   /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα που αφορούν τον οικοδεσπότη. */
   readonly documentRequests: CaseDocumentRequests;
+  /** ADR-901 §14.8 — αναθεώρηση του σήματος της όψης + πότε μπαγιατεύει μόνη της. */
+  readonly freshness: ViewFreshness;
 }
 
 // ============================================================================
@@ -327,6 +330,8 @@ export interface EngagedCaseView {
   readonly participants: readonly CaseParticipantView[];
   /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα όπου ο θεατής είναι αιτών/παραλήπτης. */
   readonly documentRequests: CaseDocumentRequests;
+  /** ADR-901 §14.8 — αναθεώρηση του σήματος της όψης + πότε μπαγιατεύει μόνη της (και η λήξη της συμμετοχής). */
+  readonly freshness: ViewFreshness;
 }
 
 /**

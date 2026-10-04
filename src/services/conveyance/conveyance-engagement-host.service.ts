@@ -34,6 +34,7 @@ import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-no
 import { announceEngagementChanged } from './conveyance-engagement-notifier';
 import { nowISO } from '@/lib/date-local';
 import type { ConveyanceActor } from './conveyance-case.service';
+import { caseRosterSignal } from './conveyance-view-signal.server';
 import {
   caseProjectId,
   caseSubject,
@@ -136,7 +137,7 @@ export async function offerCaseEngagement(
     template: 'legal', role: input.role, subject: caseSubject(record.id),
     origin: { kind: 'professional_appointment', contactId: professional.contactId },
     consents: consents.consents, offeredBy: actor.uid, nowMs: input.nowMs,
-  });
+  }, caseRosterSignal(db, record));
   if (outcome.outcome === 'slot-occupied' || outcome.outcome === 'role-conflict' || outcome.outcome === 'unreadable') {
     return { ok: false, rejection: outcome.outcome };
   }
@@ -169,7 +170,7 @@ export async function endCaseEngagement(
   const target = all.find((e) => e.id === engagementId);
   if (!target) return { ok: false, rejection: 'not-found' };
 
-  const outcome = await transitionEngagement(db, engagementKeyOf(target), { kind: 'end', byUid: actor.uid }, nowMs);
+  const outcome = await transitionEngagement(db, engagementKeyOf(target), { kind: 'end', byUid: actor.uid }, nowMs, caseRosterSignal(db, record));
   if (outcome.outcome === 'changed') {
     const context = await loadConveyanceSubject(db, actor.companyId, record.subject.propertyId);
     const name = context?.propertyName ?? null;
@@ -213,7 +214,7 @@ export async function closeCaseEngagements(
   if (!projectId || acceptsEngagements(record.storedState)) return;
   // Καμία εκκρεμής πρόσκληση δεν επιζεί της υπόθεσης — ο σύνδεσμος στο email σταματά να δίνει οτιδήποτε.
   await revokeCaseInvitation(db, actor, record, { role: null, propertyName, nowMs });
-  const closed = await closeEngagementsForSubject(db, { hostCompanyId: record.companyId, projectId }, caseSubject(record.id), actor.uid, nowMs);
+  const closed = await closeEngagementsForSubject(db, { hostCompanyId: record.companyId, projectId }, caseSubject(record.id), actor.uid, nowMs, caseRosterSignal(db, record));
   await Promise.all(closed.map(async (after) => {
     await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: [{ field: 'state', oldValue: after.state === 'completed' ? 'active' : 'offered', newValue: after.state }], performedBy: actor.uid, performedByName: actor.email, entityName: propertyName });
     await announceEngagementChanged(after, propertyName);

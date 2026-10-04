@@ -38,6 +38,7 @@ import { documentRequestsCollection } from './conveyance-document-request-store.
 import { checklistForRole, engagementChecklistViewer, HOST_CHECKLIST_VIEWER } from './conveyance-engagement-access.service';
 import { activeCaseEngagements, caseHostRecipients } from './conveyance-engagement-support';
 import type { ConveyanceSubjectContext } from './conveyance-subject.server';
+import { caseViewersOf, signalCaseChangeInTx } from './conveyance-view-signal.server';
 
 /** Ποιος ζητά: ο οικοδεσπότης (ως χώρος, με τον άνθρωπο που πάτησε) ή ένας επαγγελματίας μέσω της συμμετοχής του. */
 export type DocumentRequester =
@@ -91,7 +92,7 @@ function newRequest(input: RequestDocumentsInput, party: RequestParty, planned: 
 }
 
 /** (3) Η συναλλαγή: νέα έγγραφα για όσα δεν ζητήθηκαν σήμερα· τα υπάρχοντα επιστρέφονται ως έχουν. */
-async function writeRequests(db: Firestore, input: RequestDocumentsInput, party: RequestParty, accepted: readonly Accepted[]) {
+async function writeRequests(db: Firestore, input: RequestDocumentsInput, party: RequestParty, accepted: readonly Accepted[], engagements: readonly Engagement[]) {
   const dayKey = conveyanceToday(new Date(input.nowMs));
   const planned: Planned[] = accepted.map((a) => ({
     ...a,
@@ -99,13 +100,17 @@ async function writeRequests(db: Firestore, input: RequestDocumentsInput, party:
   }));
   return db.runTransaction(async (tx) => {
     const snapshots = await tx.getAll(...planned.map((p) => documentRequestsCollection(db).doc(p.id)));
-    return planned.map((p, index) => {
+    const written = planned.map((p, index) => {
       const existing = parseDocumentRequest(snapshots[index]?.data());
       if (existing) return { request: existing, fresh: false };
       const request = newRequest(input, party, p, dayKey);
       tx.create(documentRequestsCollection(db).doc(request.id), request);
       return { request, fresh: true };
     });
+    // §14.8 — το αίτημα το βλέπουν ΜΟΝΟ αιτών και παραλήπτης (Α31)· ό,τι ήδη ζητήθηκε σήμερα δεν αλλάζει καμία όψη.
+    const parties = [party.role, ...written.filter((w) => w.fresh).map((w) => w.request.recipient)];
+    if (parties.length > 1) signalCaseChangeInTx(tx, db, { kind: 'request', parties }, caseViewersOf(input.record, engagements));
+    return written;
   });
 }
 
@@ -168,7 +173,7 @@ export async function requestCaseDocuments(db: Firestore, input: RequestDocument
   const [{ rows }, engagements] = await Promise.all([rowsFor(db, input), activeCaseEngagements(db, input.record, input.nowMs)]);
   const judged = judgeAll(input, party, rows, new Set(engagements.map((e) => e.role)));
   const accepted = judged.filter((j): j is Accepted => !('kind' in j));
-  const written = accepted.length > 0 ? await writeRequests(db, input, party, accepted) : [];
+  const written = accepted.length > 0 ? await writeRequests(db, input, party, accepted, engagements) : [];
   await recordRequests(input, party, written.filter((w) => w.fresh).map((w) => w.request));
   await notifyPending(db, input, party, written.map((w) => w.request), engagements);
   const outcomes = new Map(written.map((w) => [w.request.checklistItemId, w]));

@@ -96,6 +96,7 @@ import {
   networkServerOnlyMatrix,
   networkThreadMatrix,
 } from './coverage-matrices-network';
+import { viewSignalMatrix } from './coverage-matrices-view-signals';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -307,6 +308,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/conveyance-document-requests.rules.test.ts',
     ...denyAllMatrix(),
+  },
+  {
+    // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (μόνο `revision`). `admin_write_only`: γράφει μόνο ο server (μέσα στη
+    // συναλλαγή της πράξης)· `get` ο ΚΑΤΟΧΟΣ — `companyId` (όψη οικοδεσπότη, ο πίνακας) ή `uid` (όψη συμμετοχής,
+    // άγκυρες της σουίτας)· `list` κανείς (ο χρονισμός ως πληροφορία).
+    collection: 'conveyance_view_signals',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/conveyance-view-signals.rules.test.ts',
+    ...viewSignalMatrix(),
   },
   {
     // 🏆 ADR-841 §7 Α21.12 — Η ΠΡΟΕΛΕΥΣΗ ΤΟΥ ΣΗΜΑΤΟΣ. **Τέταρτο `deny_all` της

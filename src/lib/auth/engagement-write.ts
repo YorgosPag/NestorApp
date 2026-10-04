@@ -40,6 +40,30 @@ import type { CdeAudience } from '@/types/container-access';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 // =============================================================================
+// ΣΗΜΑ ΟΨΕΩΝ (ADR-901 §14.8)
+// =============================================================================
+
+/** Οι συμμετοχές του αντικειμένου **μετά** την εγγραφή — και ποιες άλλαξαν. */
+export interface EngagementRoster {
+  readonly live: readonly Engagement[];
+  readonly changed: readonly Engagement[];
+}
+
+/**
+ * Ο γραφέας ενημερώνει, **μέσα** στη συναλλαγή του, όσους βλέπουν το αντικείμενο (transactional outbox). Το δίνει ο
+ * **κάτοχος** του αντικειμένου (π.χ. η υπόθεση μεταβίβασης) — εδώ μένει γενικό, χωρίς εξάρτηση από τον τομέα.
+ * 🔑 **Υποχρεωτική παράμετρος**, όχι προαιρετική: ένας καλών που «ξεχνά» το σήμα **δεν μεταγλωττίζεται** — η όψη του
+ *    κατόχου δεν μένει ποτέ σιωπηλά μπαγιάτικη μετά από αλλαγή συμμετοχής.
+ */
+export type EngagementRosterSignal = (tx: Transaction, roster: EngagementRoster) => void;
+
+/** Η λίστα ζωντανών μετά την αντικατάσταση/προσθήκη μιας συμμετοχής. */
+function withWritten(live: readonly Engagement[], written: Engagement): readonly Engagement[] {
+  const rest = live.filter((e) => e.id !== written.id);
+  return LIVE_ENGAGEMENT_STATES.includes(written.state) ? [...rest, written] : rest;
+}
+
+// =============================================================================
 // ΠΡΟΤΑΣΗ
 // =============================================================================
 
@@ -120,7 +144,7 @@ export function judgeOffer(
 }
 
 /** **Πρόταση** συμμετοχής — `offered`, χωρίς **καμία** πρόσβαση μέχρι την αποδοχή. */
-export function offerEngagement(db: Firestore, request: EngagementOfferRequest): Promise<EngagementOfferOutcome> {
+export function offerEngagement(db: Firestore, request: EngagementOfferRequest, signal: EngagementRosterSignal): Promise<EngagementOfferOutcome> {
   return db.runTransaction(async (tx): Promise<EngagementOfferOutcome> => {
     // Πρόταση πάνω σε ιστορία που δεν καταλαβαίνουμε ⇒ άρνηση: η μοναδικότητα δεν κρίνεται «περίπου».
     const { live, unreadable } = await readLiveForSubject(db, tx, request, request.subject);
@@ -129,6 +153,7 @@ export function offerEngagement(db: Firestore, request: EngagementOfferRequest):
     if (existing) return existing;
     const engagement = newEngagement(request);
     tx.create(engagementRef(db, { ...request, engagementId: engagement.id }), engagement);
+    signal(tx, { live: withWritten(live, engagement), changed: [engagement] });
     return { outcome: 'offered', engagement };
   });
 }
@@ -161,6 +186,7 @@ export async function stageEngagementByInvitation(
   db: Firestore,
   tx: Transaction,
   request: EngagementInvitationAcceptance,
+  signal: EngagementRosterSignal,
 ): Promise<EngagementInvitationStage> {
   const { live, unreadable } = await readLiveForSubject(db, tx, request, request.subject);
   if (unreadable) return { outcome: 'refused', reason: 'unreadable' };
@@ -170,7 +196,11 @@ export async function stageEngagementByInvitation(
   const acceptance: EngagementTransition = { kind: 'accept', byUid: request.uid, declaredCredential: request.declaredCredential };
   const accepted = existing === null ? null : planTransition(existing.engagement, acceptance, request.nowMs);
   if (accepted?.outcome === 'noop') return { outcome: 'commit', write: () => accepted.engagement };
-  if (accepted?.outcome === 'changed') return { outcome: 'commit', write: () => setEngagement(db, tx, accepted.after) };
+  const signalled = (written: Engagement, also: readonly Engagement[] = []): Engagement => {
+    signal(tx, { live: withWritten(live, written), changed: [...also, written] });
+    return written;
+  };
+  if (accepted?.outcome === 'changed') return { outcome: 'commit', write: () => signalled(setEngagement(db, tx, accepted.after)) };
   // Καμία ζωντανή — ή πρόταση που μόλις έληξε (γράφεται `expired`, ονομασμένα) — ⇒ νέα, **ήδη ενεργή**.
   const fresh = activeByInvitation(request);
   return {
@@ -178,7 +208,7 @@ export async function stageEngagementByInvitation(
     write: () => {
       if (accepted?.outcome === 'offer-expired') setEngagement(db, tx, accepted.engagement);
       tx.create(engagementRef(db, { ...request, engagementId: fresh.id }), fresh);
-      return fresh;
+      return signalled(fresh, accepted?.outcome === 'offer-expired' ? [accepted.engagement] : []);
     },
   };
 }
@@ -271,14 +301,19 @@ export function transitionEngagement(
   key: EngagementKey,
   transition: EngagementTransition,
   nowMs: number,
+  signal: EngagementRosterSignal,
 ): Promise<EngagementTransitionOutcome> {
   const ref = engagementRef(db, key);
   return db.runTransaction(async (tx): Promise<EngagementTransitionOutcome> => {
     const current = parseEngagement((await tx.get(ref)).data());
     if (!current) return { outcome: 'not-found' };
     const planned = planTransition(current, transition, nowMs);
-    if (planned.outcome === 'changed') tx.set(ref, planned.after);
-    if (planned.outcome === 'offer-expired') tx.set(ref, planned.engagement);
+    const written = planned.outcome === 'changed' ? planned.after : planned.outcome === 'offer-expired' ? planned.engagement : null;
+    if (!written) return planned;
+    // Αναγνώσεις πριν από εγγραφές (κανόνας συναλλαγής): οι ζωντανές του αντικειμένου για το σήμα των όψεων.
+    const { live } = await readLiveForSubject(db, tx, key, current.subject);
+    tx.set(ref, written);
+    signal(tx, { live: withWritten(live, written), changed: [written] });
     return planned;
   });
 }
@@ -298,18 +333,21 @@ export function closeEngagementsForSubject(
   subject: EngagementSubject,
   byUid: string,
   nowMs: number,
+  signal: EngagementRosterSignal,
 ): Promise<readonly Engagement[]> {
   return db.runTransaction(async (tx) => {
     // ⚠️ Το κλείσιμο ΔΕΝ σταματά σε χαλασμένο έγγραφο: όποια ζωντανή διαβάζεται, κλείνει (ο κριτής
     //    αρνείται ήδη ό,τι δεν διαβάζεται — η ανάκληση δεν επιτρέπεται να «κολλήσει» σε άλλο έγγραφο).
     const { live } = await readLiveForSubject(db, tx, key, subject);
     const at = new Date(nowMs).toISOString();
-    return live.map((e) => {
+    const closed = live.map((e) => {
       const after: Engagement = e.state === 'active'
         ? { ...e, state: 'completed', closedAt: at, updatedAt: at }
         : { ...e, state: 'withdrawn', revokedBy: byUid, closedAt: at, updatedAt: at };
       tx.set(engagementRef(db, { ...key, engagementId: e.id }), after);
       return after;
     });
+    if (closed.length > 0) signal(tx, { live: [], changed: closed });
+    return closed;
   });
 }

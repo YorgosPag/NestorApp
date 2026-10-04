@@ -28,6 +28,12 @@ import {
 
 const logger = createModuleLogger('invitation-lifecycle');
 
+/**
+ * Άγκιστρο **μέσα** στη συναλλαγή, μετά τις γραφές — για όποιο είδος πρόσκλησης έχει όψεις που πρέπει να μάθουν την
+ * αλλαγή (ADR-901 §14.8: σήμα όψης του οικοδεσπότη, transactional outbox). Καλείται **μόνο** όταν γράφτηκε κάτι.
+ */
+export type InvitationTxObserver = (tx: Transaction) => void;
+
 /** Πόσες ζωντανές προσκλήσεις διαβάζονται για supersede — ένας παραλήπτης δεν έχει ποτέ 20. */
 const LIVE_INVITATION_SCAN_LIMIT = 20;
 
@@ -53,6 +59,7 @@ export async function writeInvitationWithSupersede(
     readonly liveQuery: Query;
     readonly actorUid: string;
     readonly nowValue: string;
+    readonly observe?: InvitationTxObserver;
   },
 ): Promise<number> {
   return db.runTransaction(async (tx: Transaction) => {
@@ -73,6 +80,7 @@ export async function writeInvitationWithSupersede(
     }
 
     tx.set(input.collection.doc(input.invitation.id), input.invitation);
+    input.observe?.(tx);
     return stale.length;
   });
 }
@@ -102,6 +110,7 @@ export async function revokeInvitationAt(
     readonly isOwned: (stored: InvitationDocumentCore) => boolean;
     readonly revokedByUid: string;
     readonly nowValue: string;
+    readonly observe?: InvitationTxObserver;
   },
 ): Promise<RevokeInvitationOutcome> {
   return db.runTransaction(async (tx: Transaction): Promise<RevokeInvitationOutcome> => {
@@ -115,6 +124,7 @@ export async function revokeInvitationAt(
     if (state !== 'pending') return { kind: 'already', state };
 
     tx.update(ref, { state: 'revoked', resolvedAt: input.nowValue, resolvedByUid: input.revokedByUid });
+    input.observe?.(tx);
     return { kind: 'revoked' };
   });
 }
@@ -149,6 +159,7 @@ export async function markInvitationOpenedAt(
   db: Firestore,
   ref: DocumentReference,
   nowValue: string,
+  observe?: InvitationTxObserver,
 ): Promise<void> {
   try {
     await db.runTransaction(async (tx: Transaction) => {
@@ -157,6 +168,7 @@ export async function markInvitationOpenedAt(
       const stored = snap.data() as InvitationDocumentCore;
       if (readStoredInvitationState(stored.state) !== 'pending' || stored.openedAt !== null) return;
       tx.update(ref, { openedAt: nowValue });
+      observe?.(tx);
     });
   } catch (error: unknown) {
     logger.warn('Η σήμανση «ανοίχτηκε» απέτυχε (μη μπλοκάρον)', {

@@ -23,6 +23,7 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { announceInvitationUnanswered } from '@/services/conveyance/conveyance-engagement-notifier';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
+import { invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
 import type { EngagementInvitation } from '@/types/engagement-invitation';
 
 import { engagementInvitationsCollection } from './engagement-invitation-issue';
@@ -55,8 +56,10 @@ async function settle(db: Firestore, ref: DocumentReference, expected: Verdict, 
   return db.runTransaction(async (tx: Transaction) => {
     const snap = await tx.get(ref);
     const fresh = snap.exists ? engagementInvitationFromDocument(snap.data(), ref.id) : null;
-    if (reminderVerdict(fresh, nowValue) !== expected) return false;
+    if (fresh === null || reminderVerdict(fresh, nowValue) !== expected) return false;
     tx.update(ref, expected === 'expire' ? { state: 'expired', resolvedAt: nowValue } : { reminderSentAt: nowValue });
+    // Οι θέσεις του οικοδεσπότη δείχνουν «υπενθύμιση στάλθηκε» / «έληξε» — §14.8.
+    invitationHostSignal(db, fresh)(tx);
     return true;
   });
 }

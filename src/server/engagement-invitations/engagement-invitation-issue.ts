@@ -28,6 +28,7 @@ import {
 } from '@/server/invitations/invitation-lifecycle';
 import { mintInvitationToken } from '@/server/invitations/invitation-token';
 import { generateEngagementInvitationId } from '@/services/enterprise-id.service';
+import { invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
 import type { EngagementConsent } from '@/types/engagement';
 import type { CaseInvitationSummary, CredentialHint, EngagementInvitation } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -86,6 +87,7 @@ export async function issueEngagementInvitation(
     .where('state', '==', 'pending');
   const supersededCount = await writeInvitationWithSupersede(db, {
     collection, invitation, liveQuery, actorUid: input.actorUid, nowValue: invitation.createdAt,
+    observe: invitationHostSignal(db, invitation),
   });
   logger.info('Εκδόθηκε πρόσκληση υπόθεσης', { invitationId: invitation.id, caseId: input.caseId, role: input.role, supersededCount });
   return { invitation, token, supersededCount };
@@ -183,6 +185,7 @@ export async function revokePendingCaseInvitations(
     isOwned: (stored) => engagementInvitationFromDocument(stored, invitation.id)?.hostCompanyId === input.hostCompanyId,
     revokedByUid: input.actorUid,
     nowValue: input.nowValue,
+    observe: invitationHostSignal(db, invitation),
   })));
   return outcomes.filter((outcome) => outcome.kind === 'revoked').length;
 }

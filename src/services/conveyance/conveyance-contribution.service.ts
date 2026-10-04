@@ -42,6 +42,8 @@ import { contributedFileOf } from './conveyance-contributed-file';
 import { authorItemContributionsQuery, contributionsCollection, contributionsOf, latestLive, readCaseContributions } from './conveyance-contribution-store.server';
 import { deliverIssued, deliverWithdrawn } from './conveyance-contribution-delivery';
 import { resolveEngagedCase, type EngagedCaseAccess } from './conveyance-engagement-access.service';
+import { engagementViewOf, readCaseViewers, signalCaseChangeInTx, signalViewsInTx } from './conveyance-view-signal.server';
+import type { CaseViewers } from '@/lib/conveyance/view-signal-audience';
 
 interface ContributionActor {
   readonly uid: string;
@@ -119,18 +121,25 @@ function newContribution(access: EngagedCaseAccess, request: IssueContributionRe
   };
 }
 
+/** Ό,τι χρειάζεται το σήμα της όψης (§14.8): η γραμμή (ακροατήριο) και οι όψεις της υπόθεσης τώρα. */
+interface TransmittalSignal {
+  readonly item: ChecklistItem;
+  readonly viewers: CaseViewers;
+}
+
 /**
  * Η συναλλαγή της αποστολής: ίδια έκδοση ζωντανή ⇒ ιδεμπότητα · αλλιώς νέο έγγραφο που διαδέχεται το προηγούμενο.
  * `expectedPrevious` (Φ4.5): compare-and-set — η επανέκδοση γράφει **μόνο** αν η αποστολή που διαδέχεται είναι ακόμη
  * η τελευταία ζωντανή. Κρίνεται **μέσα** στη συναλλαγή: δύο παράλληλα πατήματα δεν γεννούν δύο διαδόχους.
  */
-async function writeIssue(db: Firestore, access: EngagedCaseAccess, request: IssueContributionRequest, file: ContributionFile, expectedPrevious: string | null) {
+async function writeIssue(db: Firestore, access: EngagedCaseAccess, request: IssueContributionRequest, file: ContributionFile, expectedPrevious: string | null, signal: TransmittalSignal) {
   return db.runTransaction(async (tx) => {
     const previous = latestLive(contributionsOf(await tx.get(authorItemContributionsQuery(db, access.record, request.uid, request.checklistItemId))));
     if (previous && previous.file.fileId === file.fileId) return { kind: 'already-issued' as const, contribution: previous };
     if (expectedPrevious !== null && previous?.id !== expectedPrevious) return null;
     const contribution = newContribution(access, request, file, previous?.id ?? null);
     tx.create(contributionsCollection(db).doc(contribution.id), contribution);
+    signalCaseChangeInTx(tx, db, { kind: 'transmittal', authorRole: contribution.authorRole, item: signal.item }, signal.viewers);
     return { kind: 'issued' as const, contribution };
   });
 }
@@ -148,7 +157,8 @@ async function issueWithAccess(
   if (!judgement.ok) return { ok: false, rejection: 'refused', refusal: judgement.refusal };
   const file = await readContributedFile(db, access, request);
   if (!file) return expectedPrevious === null ? { ok: false, rejection: 'not-found' } : { ok: false, rejection: 'refused', refusal: 'no-newer-version' };
-  const written = await writeIssue(db, access, request, file, expectedPrevious);
+  const viewers = await readCaseViewers(db, access.record, request.nowMs);
+  const written = await writeIssue(db, access, request, file, expectedPrevious, { item, viewers });
   if (!written) return { ok: false, rejection: 'refused', refusal: 'superseded' };
   // Και στην ιδεμπότητα: η παράδοση συγκλίνει (μισή αποτυχία προηγούμενου αιτήματος διορθώνεται εδώ).
   await deliverIssued(db, { access, item, contribution: written.contribution, fresh: written.kind === 'issued', nowMs: request.nowMs });
@@ -189,7 +199,7 @@ export async function reissueContribution(db: Firestore, request: ReissueContrib
 }
 
 /** Η συναλλαγή της απόσυρσης — μόνο του συντάκτη, μόνο αυτής της υπόθεσης. */
-async function writeWithdraw(db: Firestore, access: EngagedCaseAccess, request: WithdrawContributionRequest) {
+async function writeWithdraw(db: Firestore, access: EngagedCaseAccess, request: WithdrawContributionRequest, viewers: CaseViewers) {
   const ref = contributionsCollection(db).doc(request.contributionId);
   return db.runTransaction(async (tx) => {
     const current = parseContribution((await tx.get(ref)).data());
@@ -197,6 +207,10 @@ async function writeWithdraw(db: Firestore, access: EngagedCaseAccess, request: 
     if (current.withdrawnAt !== null) return { kind: 'already-withdrawn' as const, contribution: current };
     const withdrawn = { ...current, withdrawnAt: new Date(request.nowMs).toISOString(), withdrawnBy: request.uid };
     tx.update(ref, { withdrawnAt: withdrawn.withdrawnAt, withdrawnBy: withdrawn.withdrawnBy });
+    const item = getChecklistItem(current.checklistItemId);
+    // Γραμμή που δεν υπάρχει πια στον κατάλογο ⇒ μόνο ο συντάκτης (fail-closed, όπως το `audienceOfTransmittal`).
+    if (item) signalCaseChangeInTx(tx, db, { kind: 'transmittal', authorRole: current.authorRole, item }, viewers);
+    else signalViewsInTx(tx, db, [engagementViewOf(access.engagement)]);
     return { kind: 'withdrawn' as const, contribution: withdrawn };
   });
 }
@@ -207,7 +221,7 @@ export async function withdrawContribution(db: Firestore, request: WithdrawContr
   if (!resolution.ok) return resolution;
   const { access } = resolution;
   if (!roleContributesIn(access.engagement.role, caseStateOf(access))) return { ok: false, rejection: 'refused', refusal: 'case-frozen' };
-  const written = await writeWithdraw(db, access, request);
+  const written = await writeWithdraw(db, access, request, await readCaseViewers(db, access.record, request.nowMs));
   if (!written) return { ok: false, rejection: 'not-found' };
   if (written.kind === 'withdrawn') {
     const remaining = await readCaseContributions(db, access.record);

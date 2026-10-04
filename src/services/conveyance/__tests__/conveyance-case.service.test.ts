@@ -14,6 +14,7 @@ import {
   readOwnedConveyanceCase,
   type ConveyanceActor,
 } from '../conveyance-case.service';
+import { readViewRevision } from '../conveyance-view-signal.server';
 
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
@@ -119,6 +120,24 @@ describe('applyConveyanceCaseCommand', () => {
       expectedVersion: 0, command: { type: 'set_target_signing_date', date: '2026-12-01' },
     });
     expect(outcome).toEqual({ ok: false, failure: { kind: 'rejected', rejection: 'not_editable' } });
+  });
+
+  it('§14.8 — άνοιγμα και εντολή επιστρέφουν όψη με την ΑΚΡΙΒΗ αναθεώρηση της δικής τους εγγραφής (καμία διπλή ανάγνωση)', async () => {
+    seedWorld();
+    const hostView = { kind: 'host', propertyId: 'prop_1', companyId: 'comp_a' } as const;
+    const first = await openConveyanceCase(db(), actor, 'prop_1');
+    if (!first.ok) throw new Error('open failed');
+    expect(first.value.view.freshness.revision).toBe(await readViewRevision(db(), hostView));
+    expect(first.value.view.freshness.revision).toBe(1);
+    const record = await readOwnedConveyanceCase(db(), actor, first.value.view.conveyanceCase.id);
+    if (!record) throw new Error('read failed');
+    const outcome = await applyConveyanceCaseCommand(db(), actor, record, { expectedVersion: 0, command: { type: 'set_target_signing_date', date: '2026-12-01' } });
+    if (!outcome.ok) throw new Error(outcome.failure.kind);
+    expect(outcome.value.freshness.revision).toBe(await readViewRevision(db(), hostView));
+    expect(outcome.value.freshness.revision).toBe(2);
+    // Ιδεμποτές άνοιγμα ⇒ καμία εγγραφή ⇒ κανένα σήμα, και η όψη λέει την τρέχουσα.
+    const again = await openConveyanceCase(db(), actor, 'prop_1');
+    expect(again.ok && again.value.view.freshness.revision).toBe(2);
   });
 
   it('readOwnedConveyanceCase: ξένος μισθωτής ⇒ null', async () => {

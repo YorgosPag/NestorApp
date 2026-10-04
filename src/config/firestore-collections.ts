@@ -955,6 +955,8 @@ export const COLLECTIONS = {
   CONVEYANCE_CONTRIBUTIONS: process.env.NEXT_PUBLIC_CONVEYANCE_CONTRIBUTIONS_COLLECTION || 'conveyance_contributions',
   // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: αμετάβλητο γεγονός ανά (υπόθεση, γραμμή, αιτών, ημέρα)· deny-all, μόνο server.
   CONVEYANCE_DOCUMENT_REQUESTS: process.env.NEXT_PUBLIC_CONVEYANCE_DOCUMENT_REQUESTS_COLLECTION || 'conveyance_document_requests',
+  // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (αριθμός, κανένα περιεχόμενο)· get μόνο από το ακροατήριο της όψης, γράφει μόνο ο server.
+  CONVEYANCE_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CONVEYANCE_VIEW_SIGNALS_COLLECTION || 'conveyance_view_signals',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
 

@@ -15,7 +15,7 @@ import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getConveyanceCaseView, openConveyanceCase, type ConveyanceActor } from '../conveyance-case.service';
-import { listCaseProfessionalSlots, offerCaseEngagement } from '../conveyance-engagement-host.service';
+import { endCaseEngagement, listCaseProfessionalSlots, offerCaseEngagement } from '../conveyance-engagement-host.service';
 import { getEngagedCaseView, respondToCaseEngagement } from '../conveyance-engagement-access.service';
 import { openCaseFile, openHostCaseFile } from '../conveyance-case-file-access.service';
 import { issueContribution, reissueContribution, withdrawContribution } from '../conveyance-contribution.service';
@@ -23,6 +23,8 @@ import { requestCaseDocuments } from '../conveyance-document-request.service';
 import { onBehalfEntryPointId } from '@/config/upload-entry-points/entries-conveyance-case';
 import { listCaseEngagements } from '../conveyance-engagement-support';
 import { loadConveyanceSubject } from '../conveyance-subject.server';
+import { readViewRevision } from '../conveyance-view-signal.server';
+import type { CaseViewKey } from '@/lib/conveyance/view-signal-key';
 
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
@@ -506,5 +508,83 @@ describe('ADR-901 Φ4.5 — «Ζήτησε έγγραφο» (Α29 · Α30 · Α3
     expect(announceDocumentRequest).toHaveBeenCalledTimes(1);
     expect(announceDocumentRequest.mock.calls[0]?.[0].requestIds).toHaveLength(2);
     expect(requestAudits()).toHaveLength(1);
+  });
+});
+
+describe('ADR-901 §14.8 — σήματα όψεων άκρη σε άκρη (Α36)', () => {
+  const HOST_VIEW = { kind: 'host', propertyId: 'prop_1', companyId: 'comp_a' } as const;
+  const engagedView = (role: Role, engagementId: string) => ({ kind: 'engagement', engagementId, uid: UID[role] } as const);
+
+  /** Η αναθεώρηση κάθε όψης — όπως τη διαβάζει ο server πριν από την όψη. */
+  async function revisions(views: Readonly<Record<string, CaseViewKey>>): Promise<Record<string, number>> {
+    const entries = await Promise.all(Object.entries(views).map(async ([name, view]) => [name, await readViewRevision(db(), view)] as const));
+    return Object.fromEntries(entries);
+  }
+
+  async function delta(views: Readonly<Record<string, CaseViewKey>>, act: () => Promise<unknown>): Promise<Record<string, number>> {
+    const before = await revisions(views);
+    await act();
+    const after = await revisions(views);
+    return Object.fromEntries(Object.keys(views).map((name) => [name, (after[name] ?? 0) - (before[name] ?? 0)]));
+  }
+
+  it('Π5 — σφραγισμένη παράδοση ⇒ ο οικοδεσπότης ΠΑΙΡΝΕΙ σήμα ΧΩΡΙΣ ειδοποίηση · ο δικηγόρος πωλητή ΚΑΝΕΝΑ', async () => {
+    const record = await openCase();
+    const buyerLawyer = await engage(record, 'buyer_lawyer');
+    const notary = await engage(record, 'notary');
+    const sellerLawyer = await engage(record, 'seller_lawyer');
+    seedOwnFile('pf_buyer_id', 'u_bl', record.id, 'buyer_identity');
+    const views = { host: HOST_VIEW, bl: engagedView('buyer_lawyer', buyerLawyer), n: engagedView('notary', notary), sl: engagedView('seller_lawyer', sellerLawyer) };
+
+    const moved = await delta(views, () => issue('buyer_lawyer', buyerLawyer, 'buyer_identity', onBehalfEntryPointId('buyer_identity'), 'pf_buyer_id'));
+
+    expect(moved).toEqual({ host: 1, bl: 1, n: 1, sl: 0 });
+    expect(announceDocumentToHost).not.toHaveBeenCalled();
+  });
+
+  it('Α23 — η έκθεση του δικηγόρου αγοραστή ⇒ ούτε ο οικοδεσπότης ούτε ο δικηγόρος πωλητή μαθαίνουν ΠΟΤΕ δούλεψε', async () => {
+    const record = await openCase();
+    const buyerLawyer = await engage(record, 'buyer_lawyer');
+    const sellerLawyer = await engage(record, 'seller_lawyer');
+    seedOwnFile('pf_report', 'u_bl', record.id, 'legal_due_diligence_report');
+    const views = { host: HOST_VIEW, bl: engagedView('buyer_lawyer', buyerLawyer), sl: engagedView('seller_lawyer', sellerLawyer) };
+
+    expect(await delta(views, () => issue('buyer_lawyer', buyerLawyer, 'legal_due_diligence_report', 'case-legal-due-diligence', 'pf_report')))
+      .toEqual({ host: 0, bl: 1, sl: 0 });
+  });
+
+  it('Α31 — αίτημα συμβολαιογράφου → δικηγόρου αγοραστή ⇒ σήμα ΜΟΝΟ σε αυτούς τους δύο · ξανά σήμερα ⇒ κανένα', async () => {
+    const record = await openCase();
+    const notary = await engage(record, 'notary');
+    const buyerLawyer = await engage(record, 'buyer_lawyer');
+    const engagement = (await listCaseEngagements(db(), 'comp_a', 'proj_1', record.id)).find((e) => e.id === notary);
+    const context = await loadConveyanceSubject(db(), 'comp_a', 'prop_1');
+    if (!engagement || !context) throw new Error('setup');
+    const ask = () => requestCaseDocuments(db(), { requester: { kind: 'engaged', engagement }, record, context, itemIds: ['buyer_payment_proofs'], nowMs: NOW });
+    const views = { host: HOST_VIEW, n: engagedView('notary', notary), bl: engagedView('buyer_lawyer', buyerLawyer) };
+
+    expect(await delta(views, ask)).toEqual({ host: 0, n: 1, bl: 1 });
+    expect(await delta(views, ask)).toEqual({ host: 0, n: 0, bl: 0 });
+  });
+
+  it('ανάκληση συμμετοχής ⇒ σήμα ΚΑΙ στην ανακλημένη (μαθαίνει αμέσως ότι έχασε την πρόσβαση) · στον οικοδεσπότη · στους άλλους', async () => {
+    const record = await openCase();
+    const notary = await engage(record, 'notary');
+    const buyerLawyer = await engage(record, 'buyer_lawyer');
+    const views = { host: HOST_VIEW, n: engagedView('notary', notary), bl: engagedView('buyer_lawyer', buyerLawyer) };
+
+    expect(await delta(views, () => endCaseEngagement(db(), host, record, buyerLawyer, NOW))).toEqual({ host: 1, n: 1, bl: 1 });
+  });
+
+  it('η όψη ΚΟΥΒΑΛΑ την αναθεώρηση στην οποία παράχθηκε — ο client δεν ξαναρωτά για τη δική του πράξη', async () => {
+    const record = await openCase();
+    const notary = await engage(record, 'notary');
+    seedOwnFile('pf_draft', 'u_n', record.id, 'contract_draft');
+    await issue('notary', notary, 'contract_draft', 'case-contract-draft', 'pf_draft');
+
+    const hostView = await getConveyanceCaseView(db(), host, 'prop_1');
+    const engaged = await getEngagedCaseView(db(), 'u_n', notary, NOW);
+    expect(hostView.ok && hostView.value?.freshness.revision).toBe(await readViewRevision(db(), HOST_VIEW));
+    expect(engaged.ok && engaged.view.freshness.revision).toBe(await readViewRevision(db(), engagedView('notary', notary)));
   });
 });

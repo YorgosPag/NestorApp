@@ -26,7 +26,7 @@ import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engag
 import { transitionEngagement, type EngagementTransition } from '@/lib/auth/engagement-write';
 import { deriveCaseChecklist } from '@/lib/conveyance/case-checklist';
 import { effectiveCaseState } from '@/lib/conveyance/case-state';
-import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
+import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { declaredCredentialOf, latestOwnDeclaration, type CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import { deriveFacts } from '@/lib/conveyance/derive-facts';
@@ -40,6 +40,7 @@ import { listCaseParticipants } from './conveyance-case-participants.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { announceEngagementAnswered } from './conveyance-engagement-notifier';
 import { answerChanges, engagementKeyOf, recordEngagementAudit } from './conveyance-engagement-support';
+import { caseRosterSignal, readViewRevision } from './conveyance-view-signal.server';
 
 // =============================================================================
 // ΚΟΙΝΑ
@@ -177,21 +178,23 @@ export async function respondToCaseEngagement(
   const own = await findOwnEngagement(db, actor.uid, engagementId);
   if (own === 'unknown') return { ok: false, rejection: 'unknown' };
   if (!own) return { ok: false, rejection: 'not-found' };
-  const outcome = await transitionEngagement(db, engagementKeyOf(own), transitionOf(own, actor.uid, answer, nowMs), nowMs);
+  // Η υπόθεση διαβάζεται ΠΡΙΝ: η απάντηση αλλάζει τον κατάλογο συμμετεχόντων ⇒ σήμα στις όψεις της (§14.8).
+  const record = await readCaseOf(db, own);
+  if (!record) return { ok: false, rejection: 'not-found' };
+  const outcome = await transitionEngagement(db, engagementKeyOf(own), transitionOf(own, actor.uid, answer, nowMs), nowMs, caseRosterSignal(db, record));
   if (outcome.outcome === 'not-found') return { ok: false, rejection: 'not-found' };
   if (outcome.outcome === 'not-allowed' || outcome.outcome === 'offer-expired') return { ok: false, rejection: outcome.outcome };
   const after = outcome.outcome === 'changed' ? outcome.after : outcome.engagement;
-  if (outcome.outcome === 'changed') await recordAnswer(db, actor, outcome.before, after);
+  if (outcome.outcome === 'changed') await recordAnswer(db, actor, record, outcome.before, after);
   return { ok: true, card: await cardOf(db, after, judge(after, actor.uid, nowMs).verdict, []) };
 }
 
 /** Ίχνος στο βιβλίο του οικοδεσπότη + ειδοποίηση όποιου πρότεινε. */
-async function recordAnswer(db: Firestore, actor: { readonly uid: string; readonly email: string | null }, before: Engagement, after: Engagement): Promise<void> {
-  const record = await readCaseOf(db, after);
-  const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId) : null;
+async function recordAnswer(db: Firestore, actor: { readonly uid: string; readonly email: string | null }, record: ConveyanceCase, before: Engagement, after: Engagement): Promise<void> {
+  const context = await loadConveyanceSubject(db, record.companyId, record.subject.propertyId);
   const name = context?.propertyName ?? null;
   await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: answerChanges(before, after), performedBy: actor.uid, performedByName: actor.email, entityName: name });
-  if (record) await announceEngagementAnswered(after, record.subject.propertyId, name);
+  await announceEngagementAnswered(after, record.subject.propertyId, name);
 }
 
 // =============================================================================
@@ -232,12 +235,21 @@ export function engagedChecklistOf(db: Firestore, access: EngagedCaseAccess) {
   return engagedChecklist(db, access.engagement, access.record, access.context);
 }
 
+/** Η όψη μπαγιατεύει μόνη της στην αλλαγή ελληνικής ημέρας — ή νωρίτερα, όταν λήγει η ίδια η συμμετοχή. */
+function engagedFreshUntil(engagement: Engagement, nowMs: number): string {
+  const nextDay = nextConveyanceDayStart(new Date(nowMs)).getTime();
+  const expiresAt = Date.parse(engagement.expiresAt);
+  return new Date(Number.isFinite(expiresAt) && expiresAt > nowMs ? Math.min(nextDay, expiresAt) : nextDay).toISOString();
+}
+
 export type EngagedCaseOutcome =
   | { readonly ok: true; readonly view: EngagedCaseView }
   | Extract<EngagedCaseResolution, { ok: false }>;
 
 /** Η υπόθεση μέσω της συμμετοχής — **ποτέ** το ωμό έγγραφο. */
 export async function getEngagedCaseView(db: Firestore, uid: string, engagementId: string, nowMs: number): Promise<EngagedCaseOutcome> {
+  // §14.8 — η αναθεώρηση ΠΡΙΝ από κάθε ανάγνωση της υπόθεσης (το σήμα ανήκει στη συμμετοχή, όχι στην υπόθεση).
+  const revision = await readViewRevision(db, { kind: 'engagement', engagementId, uid });
   const resolution = await resolveEngagedCase(db, uid, engagementId, nowMs);
   if (!resolution.ok) return resolution;
   const { engagement, record, context } = resolution.access;
@@ -257,6 +269,7 @@ export async function getEngagedCaseView(db: Firestore, uid: string, engagementI
       participants: await listCaseParticipants(db, engagement, nowMs),
       // Φ4.5 — «Ζήτησε έγγραφο»: ο ΙΔΙΟΣ κριτής με τον γραφέα, πάνω στις γραμμές που ήδη βλέπει.
       documentRequests: await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs }),
+      freshness: { revision, freshUntil: engagedFreshUntil(engagement, nowMs) },
     },
   };
 }

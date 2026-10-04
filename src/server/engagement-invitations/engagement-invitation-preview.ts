@@ -27,6 +27,7 @@ import { markInvitationOpenedAt } from '@/server/invitations/invitation-lifecycl
 import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
 import { checklistForRole, engagementChecklistViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
+import { invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
 import type {
   EngagementInvitation,
   EngagementInvitationChecklist,
@@ -107,7 +108,7 @@ export async function previewEngagementInvitation(
   return {
     kind: 'preview',
     addressedToViewer: input.viewerEmail ? sameChannelEmail(input.viewerEmail, invitation.inviteeEmail) : null,
-    markOpened: () => markInvitationOpenedAt(db, ref, nowISO()),
+    markOpened: () => markInvitationOpenedAt(db, ref, nowISO(), invitationHostSignal(db, invitation)),
     preview: {
       ...(await describeEngagementInvitation(db, invitation)),
       role: invitation.role,

@@ -24,6 +24,8 @@ import type { DeclaredCredential, Engagement, EngagementSubject } from '@/types/
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) }));
 
 const NOW = Date.parse('2026-10-03T10:00:00.000Z');
+/** ADR-901 §14.8 — το σήμα όψεων είναι υποχρεωτικό· εδώ καταγράφεται (οι άγκυρες σήματος ζουν στο τέλος). */
+const signal = jest.fn();
 const DAY = 24 * 60 * 60 * 1000;
 const CASE_A: EngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_A' };
 const CASE_B: EngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_B' };
@@ -132,48 +134,71 @@ describe('ADR-862 Φ1 — ο γραφέας πάνω σε βάση (fake Firesto
   beforeEach(() => { fake = new FakeFirestore(); });
 
   it('N.7.2 #3 — δεύτερη πρόταση στον ίδιο = ίδιο έγγραφο (καμία δεύτερη εγγραφή)', async () => {
-    const first = await offerEngagement(db(), request());
-    const second = await offerEngagement(db(), request());
+    const first = await offerEngagement(db(), request(), signal);
+    const second = await offerEngagement(db(), request(), signal);
     expect(first.outcome).toBe('offered');
     expect(second.outcome).toBe('already-live');
     expect((await docs()).size).toBe(1);
   });
 
   it('ADR-901 §5.2 — η θέση έχει ΕΝΑΝ: δεύτερος συμβολαιογράφος ⇒ `slot-occupied`', async () => {
-    await offerEngagement(db(), request());
-    expect((await offerEngagement(db(), request({ uid: 'u_other' }))).outcome).toBe('slot-occupied');
+    await offerEngagement(db(), request(), signal);
+    expect((await offerEngagement(db(), request({ uid: 'u_other' }), signal)).outcome).toBe('slot-occupied');
   });
 
   it('ο ίδιος άνθρωπος δεν παίρνει δύο θέσεις (δικηγόρος ΚΑΙ συμβολαιογράφος) ⇒ `role-conflict`', async () => {
-    await offerEngagement(db(), request());
-    expect((await offerEngagement(db(), request({ role: 'buyer_lawyer' }))).outcome).toBe('role-conflict');
+    await offerEngagement(db(), request(), signal);
+    expect((await offerEngagement(db(), request({ role: 'buyer_lawyer' }), signal)).outcome).toBe('role-conflict');
   });
 
   it('Α1 — ο ίδιος συμβολαιογράφος σε ΔΥΟ υποθέσεις του ίδιου έργου = ΔΥΟ συμμετοχές (γι\' αυτό κλειδί ≠ uid)', async () => {
-    await offerEngagement(db(), request());
-    expect((await offerEngagement(db(), request({ subject: CASE_B }))).outcome).toBe('offered');
+    await offerEngagement(db(), request(), signal);
+    expect((await offerEngagement(db(), request({ subject: CASE_B }), signal)).outcome).toBe('offered');
     expect((await docs()).size).toBe(2);
   });
 
   it('Α5 — ανάκληση + νέα πρόταση ⇒ η ιστορία ΜΕΝΕΙ (δύο έγγραφα)', async () => {
-    const first = await offerEngagement(db(), request());
+    const first = await offerEngagement(db(), request(), signal);
     if (first.outcome !== 'offered') throw new Error('setup');
     const key = { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: first.engagement.id };
-    await transitionEngagement(db(), key, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
-    await transitionEngagement(db(), key, { kind: 'end', byUid: 'u_host' }, NOW + 1);
-    expect((await offerEngagement(db(), request({ nowMs: NOW + 2 }))).outcome).toBe('offered');
+    await transitionEngagement(db(), key, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW, signal);
+    await transitionEngagement(db(), key, { kind: 'end', byUid: 'u_host' }, NOW + 1, signal);
+    expect((await offerEngagement(db(), request({ nowMs: NOW + 2 }), signal)).outcome).toBe('offered');
     const states = (await docs()).docs.map((d) => d.data().state).sort();
     expect(states).toEqual(['offered', 'revoked']);
   });
 
   it('κλείσιμο υπόθεσης ⇒ ενεργή `completed`, πρόταση `withdrawn` — ιδεμποτές', async () => {
-    const a = await offerEngagement(db(), request());
-    await offerEngagement(db(), request({ uid: 'u_lawyer', role: 'seller_lawyer' }));
+    const a = await offerEngagement(db(), request(), signal);
+    await offerEngagement(db(), request({ uid: 'u_lawyer', role: 'seller_lawyer' }), signal);
     if (a.outcome !== 'offered') throw new Error('setup');
-    await transitionEngagement(db(), { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: a.engagement.id }, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW);
+    await transitionEngagement(db(), { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: a.engagement.id }, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW, signal);
     const key = { hostCompanyId: 'comp_host', projectId: 'proj_1' };
-    expect((await closeEngagementsForSubject(db(), key, CASE_A, 'u_host', NOW)).map((e) => e.state).sort()).toEqual(['completed', 'withdrawn']);
-    expect(await closeEngagementsForSubject(db(), key, CASE_A, 'u_host', NOW)).toHaveLength(0);
+    expect((await closeEngagementsForSubject(db(), key, CASE_A, 'u_host', NOW, signal)).map((e) => e.state).sort()).toEqual(['completed', 'withdrawn']);
+    expect(await closeEngagementsForSubject(db(), key, CASE_A, 'u_host', NOW, signal)).toHaveLength(0);
+  });
+
+  it('Α36 (§14.8) — ΚΑΘΕ γραφή σημαίνει τις όψεις με τη λίστα ΜΕΤΑ· κανένα no-op δεν σημαίνει', async () => {
+    signal.mockClear();
+    const offered = await offerEngagement(db(), request(), signal);
+    if (offered.outcome !== 'offered') throw new Error('setup');
+    expect(signal).toHaveBeenLastCalledWith(expect.anything(), { live: [offered.engagement], changed: [offered.engagement] });
+    await offerEngagement(db(), request(), signal); // already-live ⇒ καμία γραφή ⇒ κανένα σήμα
+    expect(signal).toHaveBeenCalledTimes(1);
+
+    const key = { hostCompanyId: 'comp_host', projectId: 'proj_1', engagementId: offered.engagement.id };
+    const accepted = await transitionEngagement(db(), key, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW, signal);
+    if (accepted.outcome !== 'changed') throw new Error('setup');
+    expect(signal).toHaveBeenLastCalledWith(expect.anything(), { live: [accepted.after], changed: [accepted.after] });
+    await transitionEngagement(db(), key, { kind: 'accept', byUid: 'u_notary', declaredCredential: CREDENTIAL }, NOW, signal); // noop
+    expect(signal).toHaveBeenCalledTimes(2);
+
+    const ended = await transitionEngagement(db(), key, { kind: 'end', byUid: 'u_host' }, NOW + 1, signal);
+    if (ended.outcome !== 'changed') throw new Error('setup');
+    // Η ανακληθείσα ΔΕΝ είναι πια ζωντανή — αλλά είναι στις αλλαγμένες (η δική της όψη πρέπει να μάθει την άρνηση).
+    expect(signal).toHaveBeenLastCalledWith(expect.anything(), { live: [], changed: [ended.after] });
+    await closeEngagementsForSubject(db(), { hostCompanyId: 'comp_host', projectId: 'proj_1' }, CASE_A, 'u_host', NOW, signal);
+    expect(signal).toHaveBeenCalledTimes(3);
   });
 
   it('αναγνώστης — δύο ζωντανές για το ίδιο ζεύγος ⇒ ΔΕΝ διαλέγουμε (fail-closed)', () => {
