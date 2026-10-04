@@ -88,6 +88,18 @@ export function previewWidthsFor(intrinsicWidth: number | null | undefined): rea
 }
 
 /**
+ * **Πόσα pixel πλάτους ΠΑΡΑΔΙΔΕΙ μια βαθμίδα** — ο descriptor `Nw` του `srcset`. Ο κωδικοποιητής δεν μεγεθύνει
+ * (`withoutEnlargement`): η βαθμίδα που καλύπτει ένα πρωτότυπο 1.200 px ζητείται ως `w=1280` αλλά φέρνει **1.200** px.
+ *
+ * 🔴 Γιατί μετρά (ADR-899 §9 Ε7, μετρημένο 2026-10-04): ο browser υπολογίζει το εγγενές css πλάτος ως
+ * `pixel × sizes / descriptor`. Με `1280w` για 1.200 px ⇒ 1.200 × 828 / 1.280 = **776** — και ένα `max-w-full` μόνο συρρικνώνει,
+ * οπότε η κάτοψη ζωγραφιζόταν 776 px αντί για τα 822 που χωρούσαν. Ο descriptor λέει την αλήθεια· το **κλειδί** του αιτήματος μένει η βαθμίδα.
+ */
+export function deliveredPreviewWidth(width: number, intrinsicWidth: number | null | undefined): number {
+  return typeof intrinsicWidth === 'number' && intrinsicWidth > 0 ? Math.min(width, intrinsicWidth) : width;
+}
+
+/**
  * **Το πλάτος που ΠΡΑΓΜΑΤΙΚΑ παράγεται** για αίτημα `requested` — η κανονική μορφή του κλειδιού στον server.
  * `requested` πάνω από την πρώτη επαρκή βαθμίδα ⇒ εκείνη (ίδια bytes, **ένα** κλειδί, **μία** κωδικοποίηση).
  */

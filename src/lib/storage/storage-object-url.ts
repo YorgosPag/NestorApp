@@ -54,6 +54,7 @@ import {
 import {
   FILE_PREVIEW_FALLBACK_WIDTH,
   FILE_PREVIEW_WIDTH_QUERY_PARAM,
+  deliveredPreviewWidth,
   effectivePreviewWidth,
   previewWidthsFor,
 } from '@/lib/files/file-preview-ladder';
@@ -125,6 +126,7 @@ function buildProxyPreviewUrl(storagePath: string, placement: FileStoragePlaceme
  * **ίδιο** αντικείμενο με το πρωτότυπο (άγκυρα roundtrip).
  * 📐 **Με γνωστές διαστάσεις πρωτοτύπου** (`dimensions`, ADR-899 §3.7) η κλίμακα σταματά στην **πρώτη** βαθμίδα που το
  * καλύπτει: κανένα `srcset` δεν υπόσχεται pixel που δεν υπάρχουν, και ο browser δεν ζητά ποτέ δεύτερο κλειδί για ίδια bytes.
+ * Ο descriptor της βαθμίδας αυτής είναι το **πλάτος του πρωτοτύπου** (`deliveredPreviewWidth`), όχι το `w` του αιτήματος.
  */
 export function buildProxyPreview(
   storagePath: string,
@@ -139,7 +141,8 @@ export function buildProxyPreview(
   const fallbackWidth = effectivePreviewWidth(FILE_PREVIEW_FALLBACK_WIDTH, intrinsicWidth);
   return {
     src: buildProxyPreviewUrl(storagePath, placement, fallbackWidth),
-    srcSet: ladder.map((rung) => `${rung.src} ${rung.width}w`).join(', '),
+    // Descriptor = ό,τι **παραδίδεται** (ποτέ μεγέθυνση), όχι ό,τι ζητείται — αλλιώς το `<img>` μικραίνει (§9 Ε7).
+    srcSet: ladder.map((rung) => `${rung.src} ${deliveredPreviewWidth(rung.width, intrinsicWidth)}w`).join(', '),
     ladder,
     dimensions,
   };

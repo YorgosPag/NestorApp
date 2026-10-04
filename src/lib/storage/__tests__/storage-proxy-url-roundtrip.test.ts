@@ -55,6 +55,15 @@ describe('proxy URL — round-trip γραφέα ⇄ αναγνώστη', () => {
     for (const rung of ladder) expect(rung.src.endsWith(`&w=${rung.width}`)).toBe(true);
   });
 
+  test('🔴 Ρ7 (ADR-899 §9 Ε7) descriptor = ό,τι ΠΑΡΑΔΙΔΕΤΑΙ: πρωτότυπο 1200 ⇒ `w=1280` ζητείται, `1200w` δηλώνεται', () => {
+    const { srcSet, ladder } = buildProxyPreview(PATH, 'eu-originals', { width: 1200, height: 800 });
+    expect(ladder.map((rung) => rung.width)).toEqual([320, 640, 1280]);
+    expect(srcSet.split(', ').map((entry) => entry.split(' ')[1])).toEqual(['320w', '640w', '1200w']);
+    expect(srcSet.split(', ')[2].split(' ')[0].endsWith('&w=1280')).toBe(true);
+    // Χωρίς διαστάσεις: καμία επινοημένη τιμή — ο descriptor είναι η βαθμίδα.
+    expect(buildProxyPreview(PATH).srcSet.endsWith('?w=2560 2560w')).toBe(true);
+  });
+
   test('🔴 Ρ6 `sameOriginFetchUrlOf`: firebase ⇒ proxy · proxy με θέση ⇒ ΑΥΤΟΥΣΙΟ (η θέση δεν χάνεται) · ξένο ⇒ αυτούσιο', () => {
     const encoded = encodeURIComponent(PATH);
     const firebase = `https://firebasestorage.googleapis.com/v0/b/bucket-1/o/${encoded}?alt=media&token=t`;
