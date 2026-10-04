@@ -24,6 +24,7 @@ import {
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
+import type { CreatedProjectFields } from './general-tab/created-project';
 // 🏢 ENTERPRISE: Centralized page states (ADR-229)
 import { PageLoadingState, PageErrorState } from '@/core/states';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -125,9 +126,11 @@ export function ProjectsPageContent() {
   }, [companies, setSelectedProject]);
 
   // 🏢 ENTERPRISE: After successful creation, replace temp project with real one
-  const handleProjectCreated = useCallback((realProjectId: string) => {
+  // Το πρόχειρο έχει `name: ''` και `company: ''`: με μόνη την ταυτότητα, ο breadcrumb και η κεφαλίδα
+  // έμεναν άδεια ως την ενυδάτωση. Η φόρμα παραδίδει ό,τι έγραψε ο άνθρωπος (`created`).
+  const handleProjectCreated = useCallback((realProjectId: string, created?: CreatedProjectFields) => {
     if (selectedProject && isDraftEntityId(selectedProject.id)) {
-      setSelectedProject({ ...selectedProject, id: realProjectId });
+      setSelectedProject({ ...selectedProject, ...created, id: realProjectId });
     }
   }, [selectedProject, setSelectedProject]);
 

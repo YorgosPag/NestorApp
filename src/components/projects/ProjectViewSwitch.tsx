@@ -7,6 +7,8 @@ import type { NavigationCompany } from '@/components/navigation/core/types';
 import { Trash2 } from 'lucide-react';
 import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
+import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
+import type { CreatedProjectFields } from './general-tab/created-project';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -41,7 +43,7 @@ interface ProjectViewSwitchProps {
   /** 🏢 ENTERPRISE: "Fill then Create" — form is in create mode */
   isCreateMode?: boolean;
   /** Callback after successful creation — receives real Firestore project ID */
-  onProjectCreated?: (projectId: string) => void;
+  onProjectCreated?: (projectId: string, created?: CreatedProjectFields) => void;
   /** Callback to cancel create mode */
   onCancelCreate?: () => void;
   /** ADR-300 §Addendum — draft-mode status pill persistence (Fill then Create) */
@@ -70,6 +72,32 @@ export function ProjectViewSwitch({
   React.useEffect(() => {
     setIsEditingProject(!!startInEditMode);
   }, [selectedProject?.id, startInEditMode]);
+
+  // ADR-742: το `ProjectDetails` στήνεται με `key` ανά ταυτότητα έργου (βλ. `detailsIdentity`). Ό,τι
+  // πρέπει να ΕΠΙΒΙΩΣΕΙ της αλλαγής ταυτότητας ζει εδώ: το πρόχειρο διευθύνσεων (μεταβιβάζεται από
+  // την ψευδο-ταυτότητα στην πραγματική) και η ενεργή καρτέλα (ο άνθρωπος που ξεφυλλίζει έργα στην
+  // «Κτίρια» δεν γυρίζει στη «Γενικά» σε κάθε κλικ).
+  const draftAddresses = useProjectDraftAddresses(selectedProject?.id);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  React.useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+  // Το «Νέο έργο» ανοίγει ΠΑΝΤΑ στη «Γενικά» — όχι στην καρτέλα του έργου που κοιτούσε ο άνθρωπος,
+  // η οποία στο πρόχειρο θα έλεγε μόνο «αποθηκεύστε πρώτα». Κατά την απόδοση και όχι σε effect:
+  // το `ProjectDetails` του πρόχειρου δεν πρέπει να στηθεί ούτε μία φορά με την παλιά καρτέλα.
+  const [wasCreateMode, setWasCreateMode] = useState(isCreateMode === true);
+  if (wasCreateMode !== (isCreateMode === true)) {
+    setWasCreateMode(isCreateMode === true);
+    if (isCreateMode) setActiveTab('general');
+  }
+
+  /**
+   * 🔑 **Μία ταυτότητα = ένα στήσιμο.** Χωρίς `key`, το πέρασμα πρόχειρο → πραγματικό έργο κρατούσε
+   * το ίδιο δέντρο: κάθε καρτέλα που είχε ανοίξει ως πρόχειρο (`forceMount`) έστηνε τότε το
+   * πραγματικό της component **κρυμμένη** και ρωτούσε τον διακομιστή (`structure`, `customers`,
+   * `buildings`, `parking`) χωρίς να τη δει κανείς (μετρημένο ζωντανά, 2026-10-04).
+   */
+  const detailsIdentity = selectedProject?.id ?? 'none';
 
   // 🏢 ENTERPRISE: Favorites state for grid view (PR: Projects Grid View)
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -115,8 +143,11 @@ export function ProjectViewSwitch({
     >
       {selectedProject && (
         <ProjectDetails
+          key={detailsIdentity}
           project={getProjectWithCompanyName(selectedProject)}
-          initialTab={initialTab}
+          initialTab={activeTab}
+          onActiveTabChange={setActiveTab}
+          draftAddresses={draftAddresses}
           onNewProject={onNewProject}
           onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
           isEditing={isEditingProject}
@@ -180,8 +211,11 @@ export function ProjectViewSwitch({
       <div className={cn("hidden md:flex flex-1 min-h-0", spacing.gap.sm)}>
         {projectsListPanel}
         <ProjectDetails
+          key={detailsIdentity}
           project={selectedProject ? getProjectWithCompanyName(selectedProject) : null}
-          initialTab={initialTab}
+          initialTab={activeTab}
+          onActiveTabChange={setActiveTab}
+          draftAddresses={draftAddresses}
           onNewProject={onNewProject}
           onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
           isEditing={isEditingProject}

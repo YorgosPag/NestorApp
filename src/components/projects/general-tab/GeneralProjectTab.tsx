@@ -26,6 +26,7 @@ import { useProjectCreate } from '@/hooks/useProjectCreate';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import type { ProjectDraftAddresses } from '@/components/projects/draft/useProjectDraftAddresses';
+import { createdProjectFields, type CreatedProjectFields } from './created-project';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralProjectTab');
@@ -35,7 +36,7 @@ interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
   onSetEditing?: (editing: boolean) => void;
   registerSaveCallback?: (saveFn: () => void) => void;
   isCreateMode?: boolean;
-  onProjectCreated?: (projectId: string) => void;
+  onProjectCreated?: (projectId: string, created?: CreatedProjectFields) => void;
   /**
    * 🏢 ADR-256 read-path: injected by `project-details.tsx` via `useProjectDetail`.
    * Called after a successful save so the hydrated Firestore document becomes
@@ -301,7 +302,7 @@ export function GeneralProjectTab({
         // 🏢 ADR-284 §3.0: Pre-flight company policy check — avoids API round-trip
         // and surfaces the same PolicyErrorBanner + recovery action immediately.
         if (!effectiveLinkedCompanyId) {
-          setSaveError('Company (linkedCompanyId) is required — every project must belong to a company.');
+          setSaveError(t('createValidation.companyRequired'));
           setSaveErrorCode('POLICY_COMPANY_REQUIRED');
           return;
         }
@@ -339,7 +340,12 @@ export function GeneralProjectTab({
         // ΠΡΙΝ ανακοινωθεί η δημιουργία, ώστε η «Διευθύνσεις» να το βρει όταν αλλάξει η ταυτότητα.
         draftAddresses?.commit(result.projectId, result.addresses ?? draftAddressList);
         setIsEditing(false);
-        onProjectCreated?.(result.projectId);
+        // Η φόρμα παραδίδει ό,τι ξέρει — και το ΟΝΟΜΑ της εταιρείας, από τις επιλογές του πεδίου:
+        // η σελίδα δεν μένει με το άδειο πρόχειρο ως την ενυδάτωση (breadcrumb με ωμό `cont_…`).
+        onProjectCreated?.(result.projectId, createdProjectFields(projectData, {
+          id: effectiveLinkedCompanyId,
+          name: companyLink.options.find((option) => option.id === effectiveLinkedCompanyId)?.name ?? '',
+        }));
         return;
       }
 
@@ -363,7 +369,7 @@ export function GeneralProjectTab({
       }));
     } catch (error) {
       logger.error('Error saving project:', { error });
-      setSaveError(error instanceof Error ? error.message : 'Failed to save project');
+      setSaveError(error instanceof Error ? error.message : t('createValidation.saveFailed'));
       setSaveErrorCode(null);
     } finally {
       setIsSaving(false);
@@ -414,6 +420,9 @@ export function GeneralProjectTab({
       <PolicyErrorBanner
         errorCode={saveErrorCode}
         rawMessage={saveError}
+        // ADR-284: η ανάκαμψη «δημιούργησε εταιρεία» ισχύει ΜΟΝΟ σε άδεια λίστα — το πλήθος το
+        // ξέρει το πεδίο. Όσο φορτώνει, δεν δηλώνεται: «κενή ακόμη» δεν είναι «δεν υπάρχουν».
+        context={companyLink.optionsLoading ? undefined : { existingCompanyCount: companyLink.options.length }}
         onRecovered={(payload) => {
           const newCompanyId = typeof payload?.companyId === 'string' ? payload.companyId : null;
           if (newCompanyId) {

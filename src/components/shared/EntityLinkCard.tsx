@@ -178,6 +178,11 @@ export function EntityLinkCard({
   useEffect(() => {
     if (hasError && cardRef.current) {
       revealInScroll(cardRef.current, { urgency: 'requested', block: 'center' });
+      // Η εστίαση πάει στο ίδιο το πεδίο (το trigger φέρει `aria-invalid` όσο ισχύει το σφάλμα):
+      // ο άνθρωπος διορθώνει με ένα πλήκτρο, χωρίς να ψάξει πού. `preventScroll` — την κύλιση την έκανε ήδη η αποκάλυψη.
+      cardRef.current
+        .querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus({ preventScroll: true });
     }
   }, [hasError]);
 

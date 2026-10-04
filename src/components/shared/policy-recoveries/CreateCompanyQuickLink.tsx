@@ -35,7 +35,20 @@ import type { PolicyRecoveryContext } from '@/lib/policy';
 
 const logger = createModuleLogger('CreateCompanyQuickLink');
 
+/**
+ * **Υπάρχουν ήδη εταιρείες;** — `null` όταν ο καλών δεν το δήλωσε.
+ *
+ * 🔴 Ως τις 2026-10-04 η κάρτα έγραφε «Δεν υπάρχουν εταιρείες ακόμη» **χωρίς να το ξέρει**:
+ * εμφανιζόταν σε κάθε `POLICY_COMPANY_REQUIRED`, και με τρεις εταιρείες στη λίστα (μετρημένο
+ * ζωντανά). Η πρόταση είναι ισχυρισμός· χωρίς το πλήθος δεν λέγεται.
+ */
+export function existingCompanyCount(context: PolicyRecoveryContext['context']): number | null {
+  const count = context?.['existingCompanyCount'];
+  return typeof count === 'number' ? count : null;
+}
+
 export function CreateCompanyQuickLink({
+  context,
   onRecovered,
 }: PolicyRecoveryContext) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
@@ -72,6 +85,11 @@ export function CreateCompanyQuickLink({
       onRecovered();
     }
   }, [onRecovered]);
+
+  // Μόνο σε **γνωστά άδεια** λίστα: αλλιώς η ανάκαμψη είναι «επίλεξε», και την κάνει το ίδιο το πεδίο.
+  // ⚠️ Όχι όσο ο διάλογος είναι ανοιχτός: η νέα εταιρεία ανεβάζει το πλήθος (realtime) ΠΡΙΝ
+  //    κλείσει ο διάλογος, και το ξεστήσιμο θα έχανε το `onContactAdded` — άρα και την αυτόματη επιλογή.
+  if (existingCompanyCount(context) !== 0 && !open) return null;
 
   return (
     <>

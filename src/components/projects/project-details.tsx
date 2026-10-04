@@ -32,7 +32,8 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useIkaTabWarnings } from './ika/hooks/useIkaTabWarnings';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { createShowcasePdfPreSubmit } from '@/components/sharing/showcase-pdf-pre-submit';
-import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
+import { useProjectDraftAddresses, type ProjectDraftAddresses } from './draft/useProjectDraftAddresses';
+import type { CreatedProjectFields } from './general-tab/created-project';
 import { DraftProjectTabPlaceholder } from './draft/DraftProjectTabPlaceholder';
 
 /**
@@ -61,7 +62,15 @@ interface ProjectDetailsProps {
   /** 🏢 ENTERPRISE: "Fill then Create" — project not yet in Firestore */
   isCreateMode?: boolean;
   /** Callback after successful creation — receives real Firestore project ID */
-  onProjectCreated?: (projectId: string) => void;
+  onProjectCreated?: (projectId: string, created?: CreatedProjectFields) => void;
+  /**
+   * Το πρόχειρο διευθύνσεων όταν το κρατά **ο γονέας**. Όποιος στήνει το `ProjectDetails` με
+   * `key` ανά ταυτότητα έργου ΠΡΕΠΕΙ να το δώσει: το πρόχειρο μεταβιβάζεται από την ψευδο-ταυτότητα
+   * στην πραγματική (`commit`), άρα οφείλει να **επιβιώσει** του ξαναστησίματος. Απόν ⇒ δικό του.
+   */
+  draftAddresses?: ProjectDraftAddresses;
+  /** Ενημερώνει τον γονέα για την ενεργή καρτέλα, ώστε να τη διατηρήσει όταν αλλάζει το έργο. */
+  onActiveTabChange?: (tabId: string) => void;
   /** Callback to cancel create mode */
   onCancelCreate?: () => void;
   /**
@@ -89,6 +98,8 @@ export function ProjectDetails({
   onSetEditing,
   isCreateMode,
   onProjectCreated,
+  draftAddresses: sharedDraftAddresses,
+  onActiveTabChange,
   onCancelCreate,
   onDraftStatusChange,
   isTrashMode = false,
@@ -173,15 +184,23 @@ export function ProjectDetails({
 
   // 🏢 «Fill then Create»: οι διευθύνσεις του πρόχειρου — τις γράφει η «Διευθύνσεις», τις
   // διαβάζει η «Γενικά» στη δημιουργία (βλ. `useProjectDraftAddresses`).
-  const draftAddresses = useProjectDraftAddresses(project?.id);
+  const ownDraftAddresses = useProjectDraftAddresses(project?.id);
+  const draftAddresses = sharedDraftAddresses ?? ownDraftAddresses;
+
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    onActiveTabChange?.(tabId);
+  }, [onActiveTabChange]);
 
   // Όσο το έργο δεν έχει ταυτότητα, οι καρτέλες που δείχνουν ΑΛΛΕΣ εγγραφές δεμένες σε αυτήν
   // δεν έχουν τι να ρωτήσουν — λένε τι λείπει αντί να ζητήσουν την ψευδο-ταυτότητα.
   const draftTabOverrides = useMemo(() => {
     if (!isCreateMode) return undefined;
+    // Οι καρτέλες-σύνδεσμοι δεν έχουν component: στο πρόχειρο φαίνονται ανενεργές (το `href` τους δίνει `null`).
     const locked = getSortedProjectTabs()
-      .filter((tab) => !DRAFT_CAPABLE_TAB_COMPONENTS.has(tab.component))
-      .map((tab) => [tab.component, DraftProjectTabPlaceholder] as const);
+      .flatMap((tab) => (tab.component ? [tab.component] : []))
+      .filter((component) => !DRAFT_CAPABLE_TAB_COMPONENTS.has(component))
+      .map((component) => [component, DraftProjectTabPlaceholder] as const);
     return Object.fromEntries(locked) as Record<string, React.ComponentType<TabComponentProps>>;
   }, [isCreateMode]);
 
@@ -245,7 +264,7 @@ export function ProjectDetails({
             theme="default"
             translationNamespace="building"
             globalProps={globalProps}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             tabWarnings={{ ika: hasWorkersWithoutClass }}
           />
         ) : null

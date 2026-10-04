@@ -88,6 +88,10 @@ export interface UseEntityLinkReturn {
   isDirty: boolean;
   /** Reset to initial state */
   reset: () => void;
+  /** Οι επιλογές που φόρτωσε το πεδίο — η ΜΙΑ λίστα, ίδια με αυτή που δείχνει η κάρτα. */
+  options: readonly EntityLinkOption[];
+  /** `true` ώσπου να απαντήσει η πρώτη φόρτωση: «κενή λίστα» τότε ΔΕΝ σημαίνει «δεν υπάρχουν». */
+  optionsLoading: boolean;
 }
 
 // =============================================================================
@@ -271,5 +275,7 @@ export function useEntityLink(
     getPayload,
     isDirty,
     reset,
+    options: cachedOptions,
+    optionsLoading,
   };
 }
