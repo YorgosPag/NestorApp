@@ -5,6 +5,8 @@
  * (ρόλος — ποτέ όνομα/email, Α18), η «Απόσυρση» του δικού μου, και η «Αποστολή εγγράφου» στις γραμμές του ρόλου μου.
  * Φ4.5: «Στείλε τη νέα έκδοση» στο δικό μου σταλμένο, **μόνο** όταν ο server λέει ότι η στοίβα μου έχει νεότερη (Α28).
  * Φ4.5 (§14.6): «Νέα έκδοση» — ο δρόμος που **γεννά** τη v2: ανέβασμα στη στοίβα του σταλμένου + αποστολή στους ίδιους.
+ * Π2 (§14.7): έγγραφο **εκ μέρους** του εντολέα — «από: Δικηγόρος αγοραστή, εκ μέρους του εντολέα» · «Αποστολή εκ μέρους
+ * του εντολέα» · και για όποιον **δεν** ανήκει στο ακροατήριο, η σφραγισμένη παράδοση (ότι ήρθε, ποτέ τι).
  *
  * Τα δικαιώματα **δεν** αποφασίζονται εδώ: ο server κρίνει (`judgeContribution`)· ο client απλώς δείχνει το κουμπί
  * όπου ο ίδιος κριτής (καθαρός, κοινός) λέει «ναι» — ώστε ο άνθρωπος να μη βλέπει ενέργεια που θα αρνηθεί ο server.
@@ -19,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/lib/intl-utils';
+import { sentOnBehalf } from '@/lib/conveyance/contribution-audience';
 import type { ChecklistRow, EvidenceFile } from '@/types/conveyance-case';
 
 /** Φ4.5 — τι αναθεωρείται: το δικό μου σταλμένο **και** η γραμμή του (για την πόρτα ανεβάσματος). */
@@ -51,7 +55,17 @@ export function TransmittalSource({ file }: { readonly file: EvidenceFile }) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   if (file.source.kind !== 'transmittal') return null;
-  return <span className={cn('shrink-0', colors.text.muted)}>{t('files.from', { role: t(`engagement.roles.${file.source.authorRole}`) })}</span>;
+  const role = t(`engagement.roles.${file.source.authorRole}`);
+  return <span className={cn('shrink-0', colors.text.muted)}>{file.source.onBehalf ? t('files.fromOnBehalf', { role }) : t('files.from', { role })}</span>;
+}
+
+/** 🔒 Π2 — «Παραδόθηκε 3/10 · από: Δικηγόρος αγοραστή, εκ μέρους του εντολέα» — χωρίς αρχείο, όνομα ή ενέργεια. */
+export function SealedDeliveryNote({ row }: { readonly row: ChecklistRow }) {
+  const { t } = useTranslation(['conveyance']);
+  const colors = useSemanticColors();
+  if (row.status !== 'delivered_sealed' || row.sealed === null) return null;
+  const role = t(`engagement.roles.${row.sealed.authorRole}`);
+  return <p className={cn('text-xs', colors.text.muted)}>{t('row.sealed', { role, date: formatDate(row.sealed.deliveredAt) })}</p>;
 }
 
 /** «Απόσυρση» — μόνο στο **δικό μου** σταλμένο τεκμήριο. */
@@ -115,7 +129,7 @@ export function TransmitRowAction({ row, transmittal }: { readonly row: Checklis
       {sending
         ? <Loader2 className={cn(iconSizes.xs, 'animate-spin')} aria-hidden="true" />
         : <Send className={iconSizes.xs} aria-hidden="true" />}
-      {sending ? t('transmittal.dialog.sending') : t('transmittal.action')}
+      {sending ? t('transmittal.dialog.sending') : sentOnBehalf(row.item) ? t('transmittal.actionOnBehalf') : t('transmittal.action')}
     </Button>
   );
 }

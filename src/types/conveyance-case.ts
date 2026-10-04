@@ -153,9 +153,30 @@ type TransmittalAuthorship =
   | { readonly own: false }
   | { readonly own: true; readonly newerVersion: NewerVersion | null };
 
+/**
+ * `onBehalf` (Π2) — ο συντάκτης έστειλε έγγραφο **του πελάτη** που εκπροσωπεί (π.χ. ταυτότητα αγοραστή από τον δικηγόρο
+ * του): «από: Δικηγόρος αγοραστή, εκ μέρους του αγοραστή». **Παράγεται** από τον πάροχο της γραμμής (`sentOnBehalf`).
+ */
 export type EvidenceSource =
   | { readonly kind: 'owned' }
-  | ({ readonly kind: 'transmittal'; readonly contributionId: string; readonly authorRole: LegalProfessionalRole } & TransmittalAuthorship);
+  | ({
+      readonly kind: 'transmittal';
+      readonly contributionId: string;
+      readonly authorRole: LegalProfessionalRole;
+      readonly onBehalf: boolean;
+    } & TransmittalAuthorship);
+
+/**
+ * 🔒 Π2 — **σφραγισμένη παράδοση**: έγγραφο που στάλθηκε **εκ μέρους** του πελάτη σε ακροατήριο όπου ο θεατής **δεν**
+ * ανήκει, ενώ **βλέπει** τη γραμμή (στην πράξη: ο οικοδεσπότης-πωλητής για την ταυτότητα/Ε1 του αγοραστή, §5.10).
+ * Μαθαίνει **ότι** παραδόθηκε — ποτέ **τι**. Ο τύπος δεν έχει `fileId`, όνομα ή `contributionId`: λήψη, έλεγχος
+ * (review) ή διαρροή ονόματος είναι **μη αναπαραστάσιμα** (το «!» του Aconex, συν την πρόοδο).
+ */
+export interface SealedDelivery {
+  readonly itemId: string;
+  readonly deliveredAt: string;
+  readonly authorRole: LegalProfessionalRole;
+}
 
 export interface EvidenceFile {
   readonly source: EvidenceSource;
@@ -180,6 +201,8 @@ const CHECKLIST_ROW_STATUSES = [
   'expiring',
   'expired',
   'notary_side',
+  /** Π2 — παραδόθηκε σε ακροατήριο όπου ο θεατής δεν ανήκει (`SealedDelivery`): η υποχρέωση πέρασε, το περιεχόμενο όχι. */
+  'delivered_sealed',
   'not_applicable',
 ] as const;
 export type ChecklistRowStatus = (typeof CHECKLIST_ROW_STATUSES)[number];
@@ -192,6 +215,8 @@ export interface ChecklistRow {
   readonly status: ChecklistRowStatus;
   /** Αρχεία-τεκμήρια, νεότερο πρώτο. */
   readonly files: readonly EvidenceFile[];
+  /** Π2 — η νεότερη σφραγισμένη παράδοση της γραμμής για αυτόν τον θεατή (μόνο ο οικοδεσπότης μπορεί να έχει). */
+  readonly sealed: SealedDelivery | null;
   readonly review: ChecklistItemReview | null;
   readonly notApplicable: ChecklistItemNotApplicable | null;
   /** Γιατί δεν εφαρμόζεται: απάντηση σε γεγονός ή ρητή σήμανση. */
@@ -207,7 +232,7 @@ export interface ChecklistRow {
 export interface ChecklistSummary {
   /** Γραμμές που εφαρμόζονται (χωρίς `not_applicable` και `needs_answer`). */
   readonly applicable: number;
-  /** Ολοκληρωμένες: `accepted` + `notary_side`. */
+  /** Ολοκληρωμένες: `accepted` + `notary_side` + `delivered_sealed` (η υποχρέωση βγήκε από τα χέρια του θεατή). */
   readonly complete: number;
   /** Αναμένουν έλεγχο: `uploaded` + `stale`. */
   readonly awaitingReview: number;
@@ -232,6 +257,8 @@ export interface ConveyanceCaseView {
   readonly derivedFacts: Readonly<Partial<Record<ConveyanceFactId, boolean>>>;
   /** Όλα τα αρχεία-τεκμήρια — ο client ξανατρέχει τον ίδιο πυρήνα για optimistic updates. */
   readonly evidence: readonly EvidenceFile[];
+  /** Π2 — οι σφραγισμένες παραδόσεις (ταξιδεύουν μαζί με τα τεκμήρια για τον **ίδιο** optimistic πυρήνα). */
+  readonly sealedDeliveries: readonly SealedDelivery[];
   readonly checklist: DerivedChecklist;
   /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα που αφορούν τον οικοδεσπότη. */
   readonly documentRequests: CaseDocumentRequests;

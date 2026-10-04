@@ -91,7 +91,8 @@ export async function checklistForRole(
   return deriveCaseChecklist({
     record,
     derivedFacts: deriveFacts(context.factSources),
-    evidence,
+    evidence: evidence.files,
+    sealed: evidence.sealed,
     today: conveyanceToday(),
     viewer: viewer.role,
   });

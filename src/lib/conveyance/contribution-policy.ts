@@ -15,19 +15,14 @@
  * @module lib/conveyance/contribution-policy
  */
 
-import { CONTRIBUTION_STATES_BY_ROLE } from '@/config/engagement-policy';
+import { CONTRIBUTION_STATES_BY_ROLE, fulfilmentOf } from '@/config/engagement-policy';
 import type { ChecklistItem, ChecklistProvider } from '@/config/conveyance-checklist/types';
 import type { ConveyanceCaseState } from '@/types/conveyance-case';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
-/** Ποιοι ρόλοι **παρέχουν** τα έγγραφα ενός παρόχου του καταλόγου — το ΕΝΑ σημείο της αντιστοίχισης. */
-const CONTRIBUTOR_ROLES: Readonly<Partial<Record<ChecklistProvider, readonly LegalProfessionalRole[]>>> = {
-  lawyer: ['seller_lawyer', 'buyer_lawyer'],
-  notary: ['notary'],
-};
-
+/** Ποιοι ρόλοι **παρέχουν** τα έγγραφα ενός παρόχου — από τον ΕΝΑ πίνακα εκπλήρωσης (`PROVIDER_FULFILMENT`, Π2). */
 function contributorRolesOf(provider: ChecklistProvider): readonly LegalProfessionalRole[] {
-  return CONTRIBUTOR_ROLES[provider] ?? [];
+  return fulfilmentOf(provider).contributors;
 }
 
 /** Τα entry points (της υπόθεσης) μέσω των οποίων ικανοποιείται η γραμμή με transmittal — κενό ⇒ δεν δέχεται. */

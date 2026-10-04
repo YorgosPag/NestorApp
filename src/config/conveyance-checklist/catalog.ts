@@ -21,7 +21,7 @@ import { TRANSACTION_ITEMS } from './items-transaction';
  * σημασιολογίας γραμμής (όχι σε διόρθωση κειμένου), ώστε να ξέρουμε με ποιον κατάλογο
  * ανοίχτηκε κάθε υπόθεση.
  */
-export const CONVEYANCE_CATALOG_VERSION = '0.2.0';
+export const CONVEYANCE_CATALOG_VERSION = '0.3.0';
 
 /** Ημέρες πριν τη λήξη (ή την ημέρα υπογραφής) που μια γραμμή γίνεται `expiring` (Σ-5). */
 export const EXPIRING_WINDOW_DAYS = 7;

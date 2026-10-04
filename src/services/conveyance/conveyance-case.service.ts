@@ -60,13 +60,13 @@ const fail = <T>(failure: ConveyanceFailure): ConveyanceOutcome<T> => ({ ok: fal
  * έγγραφο» (παραλήπτες ανά γραμμή + τα αιτήματα της πλευράς του οικοδεσπότη), για **αυτόν** τον άνθρωπο του χώρου.
  */
 async function buildView(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext, actor: ConveyanceActor): Promise<ConveyanceCaseView> {
-  const evidence = await collectCaseEvidence(db, record, HOST_EVIDENCE_VIEWER);
+  const { files: evidence, sealed: sealedDeliveries } = await collectCaseEvidence(db, record, HOST_EVIDENCE_VIEWER);
   const derivedFacts = deriveFacts(context.factSources);
-  const checklist = deriveCaseChecklist({ record, derivedFacts, evidence, today: conveyanceToday(), viewer: 'host' });
+  const checklist = deriveCaseChecklist({ record, derivedFacts, evidence, sealed: sealedDeliveries, today: conveyanceToday(), viewer: 'host' });
   const state = effectiveCaseState(record.storedState, context.legalPhase);
   const party = { role: 'host', uid: actor.uid } as const;
   const documentRequests = await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs: Date.now() });
-  return { conveyanceCase: record, state, derivedFacts, evidence, checklist, documentRequests };
+  return { conveyanceCase: record, state, derivedFacts, evidence, sealedDeliveries, checklist, documentRequests };
 }
 
 async function recordAudit(actor: ConveyanceActor, record: ConveyanceCase, action: AuditAction, changes: readonly AuditFieldChange[], name: string | null): Promise<void> {
@@ -172,7 +172,8 @@ export async function applyConveyanceCaseCommand(
   const context = await loadConveyanceSubject(db, actor.companyId, initial.subject.propertyId);
   if (!context) return fail({ kind: 'property_not_found' });
   // Ίδιος δρόμος με την όψη ⇒ ο οικοδεσπότης ελέγχει (αποδέχεται/επιστρέφει) και ό,τι του **στάλθηκε** (Φ4.4).
-  const evidence = await collectCaseEvidence(db, initial, HOST_EVIDENCE_VIEWER);
+  // Μόνο τα **τεκμήρια**: η σφραγισμένη παράδοση δεν ελέγχεται (Α35 — δεν έχει αρχείο να ελεγχθεί).
+  const { files: evidence } = await collectCaseEvidence(db, initial, HOST_EVIDENCE_VIEWER);
 
   const result = await db.runTransaction(async (tx): Promise<ConveyanceOutcome<{ next: ConveyanceCase; changes: readonly AuditFieldChange[] }>> => {
     const current = ownedCase((await tx.get(ref)).data(), actor, initial.id);

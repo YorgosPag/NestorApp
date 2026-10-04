@@ -13,7 +13,9 @@
  */
 
 import { getChecklistItem, itemsForProfile } from '@/config/conveyance-checklist/catalog';
-import { CONVEYANCE_PROFILES } from '@/config/conveyance-checklist/types';
+import { CONVEYANCE_PROFILES, type ChecklistItem } from '@/config/conveyance-checklist/types';
+import { contributionEntryPointIds, judgeContribution } from '../contribution-policy';
+import { deriveChecklist } from '../derive-checklist';
 import { DOCUMENT_REQUEST_BATCH_MAX } from '@/config/engagement-policy';
 import type { ChecklistRow, ChecklistRowStatus, ConveyanceCaseState, EvidenceFile } from '@/types/conveyance-case';
 import type { DocumentRequestView } from '@/types/conveyance-document-request';
@@ -34,7 +36,7 @@ function row(itemId: string, status: ChecklistRowStatus = 'missing', files: read
   const item = getChecklistItem(itemId);
   if (!item) throw new Error(`missing catalog item ${itemId}`);
   return {
-    itemId, item, section: item.section, provider: item.provider, status, files,
+    itemId, item, section: item.section, provider: item.provider, status, files, sealed: null,
     review: null, notApplicable: null, notApplicableBy: null, pendingFact: null, expiresOn: null, validOnSigning: null,
   };
 }
@@ -44,6 +46,25 @@ function file(createdAt: string): EvidenceFile {
     source: { kind: 'owned' }, fileId: 'f1', displayName: 'x.pdf', entityType: 'property', entityId: 'p1', purpose: 'x',
     level: 'property', fingerprint: 'f1:0:', createdAt,
   };
+}
+
+/**
+ * Α33 — έχει ο παραλήπτης **δρόμο** να ικανοποιήσει τη γραμμή; Επαγγελματίας ⇒ ο **ίδιος** κριτής αποστολής που τρέχει ο
+ * server. Οικοδεσπότης ⇒ ανεβάζει σε οντότητα του χώρου του (matcher εκτός `contribution`) ή επιβεβαιώνει παραλαβή
+ * (`offline` / `notary_issued` — δεν είναι αρχείο).
+ */
+function canFulfil(recipient: 'host' | LegalProfessionalRole, item: ChecklistItem): boolean {
+  if (recipient === 'host') {
+    return item.satisfaction.kind !== 'files' || item.satisfaction.matchers.some((m) => m.level !== 'contribution');
+  }
+  const [entryPointId] = contributionEntryPointIds(item);
+  return entryPointId !== undefined && judgeContribution({ role: recipient, state: 'open', item, entryPointId }).ok;
+}
+
+/** Η γραμμή όπως είναι όταν **ισχύει** και δεν έχει ακόμη τίποτα — κατάσταση από τον ΠΡΑΓΜΑΤΙΚΟ πυρήνα, όχι επινοημένη. */
+function owedRow(item: ChecklistItem): ChecklistRow {
+  const facts = item.requirement.kind === 'when' ? { [item.requirement.fact]: item.requirement.equals } : {};
+  return deriveChecklist({ items: [item], facts, overrides: {}, evidence: [], sealed: [], today: '2026-10-03', targetSigningDate: null, viewer: 'host' }).rows[0];
 }
 
 const judge = (itemId: string, requester: Parameters<typeof requestTargetOf>[0]['requester'], active = ALL_ROLES, state: ConveyanceCaseState = 'open') =>
@@ -92,6 +113,28 @@ describe('Α29 — ο παραλήπτης παράγεται από τον πά
           if (target.ok && target.recipient !== 'host') expect(item.visibleTo).toContain(target.recipient);
         }
       }
+    }
+  });
+
+  it('🔴 Α33 ΑΜΕΤΑΒΛΗΤΟ ΕΚΠΛΗΡΩΣΗΣ: όποιος παραλήπτης παράγεται, ΜΠΟΡΕΙ να το ικανοποιήσει — κάθε γραμμή × κάθε αιτούντα (μετάλλαξη: `buyer.contributors = []`, το Π2)', () => {
+    const requesters = ['host', 'seller_lawyer', 'buyer_lawyer', 'notary'] as const;
+    const unfulfillable: string[] = [];
+    for (const profile of CONVEYANCE_PROFILES) {
+      for (const item of itemsForProfile(profile)) {
+        const owed = owedRow(item);
+        for (const requester of requesters) {
+          const target = judgeDocumentRequest({ row: owed, requester, state: 'open', activeRoles: ALL_ROLES });
+          if (target.ok && !canFulfil(target.recipient, item)) unfulfillable.push(`${item.id} ← ${requester} → ${target.recipient}`);
+        }
+      }
+    }
+    expect(unfulfillable).toEqual([]);
+  });
+
+  it('Π2 — έγγραφα αγοραστή/τράπεζας: ο δικηγόρος αγοραστή τα στέλνει, όχι μόνο τα δέχεται ως αίτημα', () => {
+    for (const itemId of ['buyer_identity', 'buyer_payment_proofs', 'bank_property_valuation']) {
+      expect(judge(itemId, 'host')).toEqual({ ok: true, recipient: 'buyer_lawyer' });
+      expect(canFulfil('buyer_lawyer', row(itemId).item)).toBe(true);
     }
   });
 
@@ -144,12 +187,19 @@ describe('Α30 — η ταυτότητα του αιτήματος (anti-spam α
 });
 
 describe('Α31 — το «εκκρεμεί» παράγεται και το αίτημα το βλέπουν μόνο οι δύο', () => {
-  const asked = (requestedAt: string, byViewer = true, dayKey = '2026-10-03'): DocumentRequestView =>
-    ({ itemId: 'contract_draft', recipient: 'notary', requestedAt, dayKey, byViewer });
+  const asked = (requestedAt: string, byViewer = true, dayKey = '2026-10-03'): DocumentRequestView => {
+    const base = { itemId: 'contract_draft', recipient: 'notary', requestedAt, dayKey } as const;
+    return byViewer ? { ...base, byViewer: true } : { ...base, byViewer: false, requester: 'host' };
+  };
 
   it('αίτημα χωρίς τεκμήριο μετά ⇒ «εκκρεμεί από: συμβολαιογράφο» · ζητήθηκε σήμερα από μένα', () => {
     expect(pendingRequestOf(row('contract_draft'), [asked('2026-10-03T08:00:00.000Z')], '2026-10-03'))
-      .toEqual({ recipient: 'notary', lastRequestedAt: '2026-10-03T08:00:00.000Z', requestedTodayByViewer: true });
+      .toEqual({ recipient: 'notary', lastRequestedAt: '2026-10-03T08:00:00.000Z', requestedTodayByViewer: true, askedOfViewerBy: null });
+  });
+
+  it('🔴 Π1 — ζητήθηκε ΑΠΟ ΕΜΕΝΑ ⇒ «Σας ζητήθηκε από: <αιτών>», όχι «εκκρεμεί από: <εμένα>» (μετάλλαξη: αιτών που δεν ταξιδεύει)', () => {
+    expect(pendingRequestOf(row('contract_draft'), [asked('2026-10-03T08:00:00.000Z', false)], '2026-10-03'))
+      .toMatchObject({ askedOfViewerBy: 'host', requestedTodayByViewer: false });
   });
 
   it('🔴 ήρθε τεκμήριο μετά το αίτημα ⇒ κανένα «εκκρεμεί» — κλείνει μόνο του (μετάλλαξη: αγνόηση νεότερου τεκμηρίου)', () => {
@@ -181,7 +231,12 @@ describe('Α31 — το «εκκρεμεί» παράγεται και το αί
   it('αιτών και παραλήπτης το βλέπουν — ο αιτών ως «δικό μου»', () => {
     const notaryToBuyer = stored('notary', 'u_n', 'buyer_lawyer');
     expect(documentRequestViewsFor([notaryToBuyer], { role: 'notary', uid: 'u_n' })[0]?.byViewer).toBe(true);
-    expect(documentRequestViewsFor([notaryToBuyer], { role: 'buyer_lawyer', uid: 'u_bl' })[0]?.byViewer).toBe(false);
+    expect(documentRequestViewsFor([notaryToBuyer], { role: 'buyer_lawyer', uid: 'u_bl' })[0]).toMatchObject({ byViewer: false, requester: 'notary' });
+  });
+
+  it('ο αιτών ταξιδεύει ΜΟΝΟ προς τον παραλήπτη — στο «δικό μου» δεν υπάρχει πεδίο', () => {
+    const [own] = documentRequestViewsFor([stored('notary', 'u_n', 'buyer_lawyer')], { role: 'notary', uid: 'u_n' });
+    expect(own && 'requester' in own).toBe(false);
   });
 
   it('ο οικοδεσπότης είναι χώρος: αίτημα άλλου διαχειριστή = «δικό μας»', () => {

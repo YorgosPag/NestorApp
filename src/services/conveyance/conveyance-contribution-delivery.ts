@@ -21,7 +21,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
 import { CASE_DOCUMENT_FIELD, CASE_TRANSMITTAL_FIELD } from '@/lib/conveyance/case-activity';
-import { reachesViewer } from '@/lib/conveyance/contribution-audience';
+import { audienceOfTransmittal, reachesViewer, type AudienceQuestion } from '@/lib/conveyance/contribution-audience';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
@@ -34,7 +34,8 @@ const logger = createModuleLogger('conveyance-contribution-delivery');
 
 /** Η εγγραφή στο βιβλίο της υπόθεσης — με όνομα **μόνο** όταν ο οικοδεσπότης ανήκει στο ακροατήριο. */
 async function recordTransmittal(access: EngagedCaseAccess, contribution: ConveyanceContribution, action: 'document_added' | 'document_removed'): Promise<void> {
-  const label = reachesViewer(contribution.authorRole, 'host') ? contribution.file.displayName : undefined;
+  const audience = audienceOfTransmittal(contribution);
+  const label = audience !== null && reachesViewer(audience, 'host') ? contribution.file.displayName : undefined;
   await EntityAuditService.recordChange({
     entityType: 'conveyance_case',
     entityId: access.record.id,
@@ -55,9 +56,10 @@ async function notifyAudience(db: Firestore, access: EngagedCaseAccess, item: Ch
   const { record, context } = access;
   const author = contribution.authorUid;
   const notice = { record, propertyName: context.propertyName, contribution };
+  const audience: AudienceQuestion = { authorRole: contribution.authorRole, item };
   const engaged = (await activeCaseEngagements(db, record, nowMs))
-    .filter((e) => e.uid !== author && reachesViewer(contribution.authorRole, e.role) && item.visibleTo.includes(e.role));
-  const hosts = reachesViewer(contribution.authorRole, 'host')
+    .filter((e) => e.uid !== author && reachesViewer(audience, e.role) && item.visibleTo.includes(e.role));
+  const hosts = reachesViewer(audience, 'host')
     ? (await caseHostRecipients(db, record)).filter((uid) => uid !== author)
     : [];
   await Promise.all([

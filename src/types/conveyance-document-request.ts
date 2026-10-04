@@ -42,15 +42,21 @@ export interface ConveyanceDocumentRequest {
   readonly notifiedAt: string | null;
 }
 
-/** Ένα αίτημα όπως το βλέπει **αυτός** ο θεατής — μόνο αν είναι ο αιτών ή ο παραλήπτης (καμία πληροφορία για τρίτους). */
-export interface DocumentRequestView {
+/**
+ * Ένα αίτημα όπως το βλέπει **αυτός** ο θεατής — μόνο αν είναι ο αιτών ή ο παραλήπτης (καμία πληροφορία για τρίτους).
+ * Άρα «όχι από εμένα» ≡ «**προς** εμένα» (Π1): μόνο τότε ταξιδεύει ο αιτών — «Σας ζητήθηκε από: X» (Procore/Aconex).
+ */
+export type DocumentRequestView = {
   readonly itemId: string;
   readonly recipient: CaseActorRole;
   readonly requestedAt: string;
   readonly dayKey: string;
+} & (
   /** Το ζήτησε ο ίδιος ο θεατής. */
-  readonly byViewer: boolean;
-}
+  | { readonly byViewer: true }
+  /** Ζητήθηκε **από** τον θεατή — ο ρόλος του αιτούντος (ποτέ uid/όνομα). */
+  | { readonly byViewer: false; readonly requester: CaseActorRole }
+);
 
 /** Η ενότητα αιτημάτων της όψης — τη δίνει ο server· το «εκκρεμεί» το παράγει ο κοινός καθαρός πυρήνας. */
 export interface CaseDocumentRequests {
@@ -66,6 +72,8 @@ export interface PendingDocumentRequest {
   readonly recipient: CaseActorRole;
   readonly lastRequestedAt: string;
   readonly requestedTodayByViewer: boolean;
+  /** Π1 — το νεότερο ανοιχτό αίτημα ζητήθηκε **από εμένα**: ποιος ρόλος το ζήτησε. `null` ⇒ εκκρεμεί από κάποιον άλλο. */
+  readonly askedOfViewerBy: CaseActorRole | null;
 }
 
 /** Το αποτέλεσμα ανά γραμμή ενός αιτήματος («Ζήτησε» · «Ζήτησε όλα»). */

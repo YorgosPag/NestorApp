@@ -18,6 +18,7 @@
  */
 
 import type { ChecklistItem, ChecklistProvider, ConveyanceFactId } from './types';
+import { onBehalfEntryPointId } from '@/config/upload-entry-points/entries-conveyance-case';
 import { BUYER_PRIVATE, SELLER_PRIVATE } from './visibility';
 
 type Requirement = ChecklistItem['requirement'];
@@ -44,16 +45,21 @@ function sellerDocument(id: string, entryPointIds: readonly string[], requiremen
 }
 
 /**
- * Έγγραφο αγοραστή: ορατό μόνο στην πλευρά του + συμβολαιογράφο. Χωρίς `entryPointIds` ⇒ **ρητά**
- * `offline` (δεν υπάρχει entry point — άγκυρα Α7).
+ * Έγγραφο αγοραστή: ορατό μόνο στην πλευρά του + συμβολαιογράφο.
+ *
+ * 📤 Π2 — ικανοποιείται **πάντα** με αποστολή του δικηγόρου αγοραστή **εκ μέρους** του πελάτη (επίπεδο `contribution`,
+ * `PROVIDER_FULFILMENT.buyer/bank`)· όπου υπάρχει entry point επαφής, **και** από τα αρχεία της επαφής του αγοραστή στον
+ * χώρο του οικοδεσπότη (any-of — Σ-1: ο εργολάβος που τα έχει ήδη δεν τα ξανανεβάζει). Πριν το Π2 οι γραμμές χωρίς
+ * entry point επαφής ήταν `offline`: «ζητούμενες» χωρίς κανέναν δρόμο για κανέναν.
  */
 function buyerDocument(
   id: string,
   provider: ChecklistProvider,
   requirement: Requirement,
   validity: Validity,
-  entryPointIds?: readonly string[],
+  contactEntryPointIds?: readonly string[],
 ): ChecklistItem {
+  const onBehalf = { level: 'contribution', entryPointIds: [onBehalfEntryPointId(id)] } as const;
   return {
     id,
     section: 'buyer',
@@ -62,9 +68,10 @@ function buyerDocument(
     visibleTo: BUYER_PRIVATE,
     requirement,
     validity,
-    satisfaction: entryPointIds
-      ? { kind: 'files', matchers: [{ level: 'buyer_contact', entryPointIds }] }
-      : { kind: 'offline' },
+    satisfaction: {
+      kind: 'files',
+      matchers: contactEntryPointIds ? [{ level: 'buyer_contact', entryPointIds: contactEntryPointIds }, onBehalf] : [onBehalf],
+    },
     verifiedAt: null,
   };
 }

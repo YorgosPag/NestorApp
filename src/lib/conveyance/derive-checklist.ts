@@ -17,7 +17,8 @@
  *       ή `uploaded` (rejected — «revise & resubmit»)
  *     - `rejected` ⇒ `rejected`
  *     - `accepted` ⇒ ισχύς: `expired` · `expiring` (≤7 ημ. ή λήγει πριν την υπογραφή) · `accepted`
- *  4. χωρίς έλεγχο: αρχεία ⇒ `uploaded` · συμβολαιογράφος ⇒ `notary_side` · αλλιώς `missing`
+ *  4. χωρίς έλεγχο: αρχεία ⇒ `uploaded` · συμβολαιογράφος ⇒ `notary_side` · σφραγισμένη παράδοση (Π2) ⇒
+ *     `delivered_sealed` · αλλιώς `missing`
  *
  * **Layering**: leaf — καθαρές συναρτήσεις (το «σήμερα» το δίνει ο καλών).
  *
@@ -35,6 +36,7 @@ import type {
   ChecklistSummary,
   DerivedChecklist,
   EvidenceFile,
+  SealedDelivery,
 } from '@/types/conveyance-case';
 import { filesForMatchers } from './evidence-match';
 import type { FactValues } from './derive-facts';
@@ -44,6 +46,8 @@ export interface DeriveChecklistInput {
   readonly facts: FactValues;
   readonly overrides: Readonly<Record<string, ChecklistItemOverride>>;
   readonly evidence: readonly EvidenceFile[];
+  /** Π2 — παραδόσεις που ο θεατής **δεν** βλέπει, σε γραμμές που βλέπει (`sealedDeliveries`). */
+  readonly sealed: readonly SealedDelivery[];
   /** Σήμερα, `YYYY-MM-DD`. */
   readonly today: string;
   readonly targetSigningDate: string | null;
@@ -61,7 +65,11 @@ interface Validity {
 
 const NO_VALIDITY = { expiresOn: null, validOnSigning: null } as const;
 
-function isVisibleTo(item: ChecklistItem, viewer: DeriveChecklistInput['viewer']): boolean {
+/**
+ * Βλέπει ο θεατής τη γραμμή; Ο οικοδεσπότης βλέπει **όλο** τον κατάλογο· κάθε ρόλος μόνο το `visibleTo` (Α4). Η ΜΙΑ
+ * κρίση — τη ρωτούν και ο κριτής αιτημάτων (`document-request-policy`) και οι σφραγισμένες παραδόσεις (Π2).
+ */
+export function viewerSeesItem(viewer: ConveyanceRole | 'host', item: Pick<ChecklistItem, 'visibleTo'>): boolean {
   return viewer === 'host' || item.visibleTo.includes(viewer);
 }
 
@@ -91,21 +99,39 @@ function reviewIsCurrent(review: ChecklistItemReview, files: readonly EvidenceFi
   return newest !== undefined && newest.fileId === review.fileId && newest.fingerprint === review.fileFingerprint;
 }
 
-function reviewedStatus(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[], input: DeriveChecklistInput): Validity {
+/** Χωρίς ορατό αρχείο: παραδόθηκε σφραγισμένα (Π2) ή λείπει. */
+function absentStatus(sealed: SealedDelivery | null): ChecklistRowStatus {
+  return sealed ? 'delivered_sealed' : 'missing';
+}
+
+function reviewedStatus(item: ChecklistItem, review: ChecklistItemReview, evidence: RowEvidence, input: DeriveChecklistInput): Validity {
+  const { files, sealed } = evidence;
   if (!reviewIsCurrent(review, files)) {
     // Αποδεκτό που άλλαξε ⇒ ξανά έλεγχος· απορριφθέν που ξαναήρθε ⇒ «revise & resubmit».
-    return { status: review.verdict === 'accepted' ? 'stale' : files.length > 0 ? 'uploaded' : 'missing', ...NO_VALIDITY };
+    return { status: review.verdict === 'accepted' ? 'stale' : files.length > 0 ? 'uploaded' : absentStatus(sealed), ...NO_VALIDITY };
   }
   if (review.verdict === 'rejected') return { status: 'rejected', ...NO_VALIDITY };
   return validityOf(item, review, input);
 }
 
-function unreviewedStatus(item: ChecklistItem, files: readonly EvidenceFile[]): ChecklistRowStatus {
+function unreviewedStatus(item: ChecklistItem, { files, sealed }: RowEvidence): ChecklistRowStatus {
   if (files.length > 0) return 'uploaded';
   const satisfaction = item.satisfaction;
   if (satisfaction.kind === 'notary_issued') return 'notary_side';
   if (satisfaction.kind === 'files' && satisfaction.notaryFallback) return 'notary_side';
-  return 'missing';
+  return absentStatus(sealed);
+}
+
+/** Ό,τι ξέρει ο θεατής για τα έγγραφα μιας γραμμής: τα αρχεία που βλέπει + η νεότερη σφραγισμένη παράδοση. */
+interface RowEvidence {
+  readonly files: readonly EvidenceFile[];
+  readonly sealed: SealedDelivery | null;
+}
+
+function newestSealed(itemId: string, sealed: readonly SealedDelivery[]): SealedDelivery | null {
+  return sealed
+    .filter((delivery) => delivery.itemId === itemId)
+    .reduce<SealedDelivery | null>((newest, delivery) => (newest === null || delivery.deliveredAt > newest.deliveredAt ? delivery : newest), null);
 }
 
 /** Ισχύει η γραμμή; `'unknown'` ⇒ το γεγονός θέλει απάντηση. */
@@ -119,8 +145,9 @@ function applicability(item: ChecklistItem, facts: FactValues): boolean | 'unkno
 function deriveRow(item: ChecklistItem, input: DeriveChecklistInput): ChecklistRow {
   const override = input.overrides[item.id];
   const files = itemFiles(item, input.evidence);
+  const sealed = newestSealed(item.id, input.sealed);
   const base: Base = {
-    itemId: item.id, item, section: item.section, provider: item.provider, files,
+    itemId: item.id, item, section: item.section, provider: item.provider, files, sealed,
     review: override?.review ?? null, notApplicable: override?.notApplicable ?? null,
   };
   const applies = applicability(item, input.facts);
@@ -133,8 +160,8 @@ function deriveRow(item: ChecklistItem, input: DeriveChecklistInput): ChecklistR
     return { ...base, status: 'not_applicable', notApplicableBy: 'manual', pendingFact: null, ...NO_VALIDITY };
   }
   const outcome = override?.review
-    ? reviewedStatus(item, override.review, files, input)
-    : { status: unreviewedStatus(item, files), ...NO_VALIDITY };
+    ? reviewedStatus(item, override.review, { files, sealed }, input)
+    : { status: unreviewedStatus(item, { files, sealed }), ...NO_VALIDITY };
   return { ...base, ...outcome, notApplicableBy: null, pendingFact: null };
 }
 
@@ -149,7 +176,7 @@ export function summarizeChecklist(rows: readonly ChecklistRow[]): ChecklistSumm
   )];
   return {
     applicable: rows.length - countOf(rows, 'not_applicable', 'needs_answer'),
-    complete: countOf(rows, 'accepted', 'notary_side'),
+    complete: countOf(rows, 'accepted', 'notary_side', 'delivered_sealed'),
     awaitingReview: countOf(rows, 'uploaded', 'stale'),
     missing: countOf(rows, 'missing'),
     rejected: countOf(rows, 'rejected'),
@@ -161,7 +188,7 @@ export function summarizeChecklist(rows: readonly ChecklistRow[]): ChecklistSumm
 
 export function deriveChecklist(input: DeriveChecklistInput): DerivedChecklist {
   const rows = input.items
-    .filter((item) => isVisibleTo(item, input.viewer))
+    .filter((item) => viewerSeesItem(input.viewer, item))
     .map((item) => deriveRow(item, input));
   return { rows, summary: summarizeChecklist(rows) };
 }

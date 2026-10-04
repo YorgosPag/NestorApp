@@ -8,7 +8,7 @@
  * Τον τρέχουν **και** ο server (πριν γράψει/ειδοποιήσει) **και** ο client (για να δείξει *πριν* το πάτημα «θα
  * ειδοποιηθεί: Συμβολαιογράφος» ή γιατί το κουμπί είναι ανενεργό). Ίδιος κριτής ⇒ κανένα κουμπί που ψεύδεται.
  *
- * Σειρά: υπόθεση ζωντανή → γραμμή αιτήσιμη → ο αιτών τη βλέπει → πάροχος → παραλήπτης (`REQUEST_RECIPIENT_BY_PROVIDER`)
+ * Σειρά: υπόθεση ζωντανή → γραμμή αιτήσιμη → ο αιτών τη βλέπει → πάροχος → παραλήπτης (`PROVIDER_FULFILMENT`)
  * → όχι ο ίδιος → ο παραλήπτης **βλέπει** τη γραμμή → είναι **ενεργός τώρα**.
  *
  * 🔑 Α29 **δομικά**: ο παραλήπτης δεν έρχεται ποτέ από το αίτημα· και πρέπει να βλέπει τη γραμμή — δικηγόρος αγοραστή
@@ -22,7 +22,7 @@
  */
 
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
-import { REQUEST_RECIPIENT_BY_PROVIDER } from '@/config/engagement-policy';
+import { fulfilmentOf } from '@/config/engagement-policy';
 import type { CaseActorRole, ChecklistRow, ChecklistRowStatus, ConveyanceCaseState } from '@/types/conveyance-case';
 import type {
   DocumentRequestTarget,
@@ -32,6 +32,7 @@ import type {
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import { acceptsEngagements } from './case-state';
 import { contributionEntryPointIds } from './contribution-policy';
+import { viewerSeesItem } from './derive-checklist';
 
 /**
  * Οι καταστάσεις όπου κάτι **οφείλεται**: λείπει · επιστράφηκε · έληξε · λήγει (ζήτα την ανανέωση **πριν**) · άλλαξε
@@ -59,14 +60,10 @@ function lawyerOfSide(requester: CaseActorRole): LegalProfessionalRole | null {
 }
 
 function recipientOf(item: ChecklistItem, requester: CaseActorRole): CaseActorRole | null {
-  const route = REQUEST_RECIPIENT_BY_PROVIDER[item.provider];
+  const route = fulfilmentOf(item.provider).recipient;
   return route === 'own-side-lawyer' ? lawyerOfSide(requester) : route;
 }
 
-/** Βλέπει αυτός ο λογαριασμός τη γραμμή; Ο οικοδεσπότης βλέπει όλο τον κατάλογο (ίδιο με το `deriveChecklist`). */
-function sees(role: CaseActorRole, item: ChecklistItem): boolean {
-  return role === 'host' || item.visibleTo.includes(role);
-}
 
 interface TargetQuestion {
   readonly item: ChecklistItem;
@@ -80,11 +77,11 @@ interface TargetQuestion {
 export function requestTargetOf(question: TargetQuestion): DocumentRequestTarget {
   const { item, requester, state, activeRoles } = question;
   if (!acceptsEngagements(state)) return { ok: false, refusal: 'case-closed' };
-  if (!sees(requester, item)) return { ok: false, refusal: 'not-requestable' };
+  if (!viewerSeesItem(requester, item)) return { ok: false, refusal: 'not-requestable' };
   const recipient = recipientOf(item, requester);
   if (recipient === null) return { ok: false, refusal: 'no-recipient' };
   if (recipient === requester) return { ok: false, refusal: 'self-provider' };
-  if (!sees(recipient, item)) return { ok: false, refusal: 'no-recipient' };
+  if (!viewerSeesItem(recipient, item)) return { ok: false, refusal: 'no-recipient' };
   if (recipient !== 'host' && !activeRoles.has(recipient)) return { ok: false, refusal: 'no-recipient' };
   return { ok: true, recipient };
 }
@@ -115,6 +112,7 @@ export function pendingRequestOf(row: ChecklistRow, log: readonly DocumentReques
     recipient: latest.recipient,
     lastRequestedAt: latest.requestedAt,
     requestedTodayByViewer: mine.some((entry) => entry.byViewer && entry.dayKey === today),
+    askedOfViewerBy: latest.byViewer ? null : latest.requester,
   };
 }
 
@@ -157,13 +155,10 @@ function isRequester(entry: StoredRequestFields, viewer: RequestParty): boolean 
 export function documentRequestViewsFor(requests: readonly StoredRequestFields[], viewer: RequestParty): readonly DocumentRequestView[] {
   return requests
     .filter((entry) => isRequester(entry, viewer) || entry.recipient === viewer.role)
-    .map((entry) => ({
-      itemId: entry.checklistItemId,
-      recipient: entry.recipient,
-      requestedAt: entry.requestedAt,
-      dayKey: entry.dayKey,
-      byViewer: isRequester(entry, viewer),
-    }));
+    .map((entry): DocumentRequestView => {
+      const base = { itemId: entry.checklistItemId, recipient: entry.recipient, requestedAt: entry.requestedAt, dayKey: entry.dayKey };
+      return isRequester(entry, viewer) ? { ...base, byViewer: true } : { ...base, byViewer: false, requester: entry.requesterRole };
+    });
 }
 
 /** Οι γραμμές που **μπορεί** να ζητήσει τώρα με ένα πάτημα («Ζήτησε όλα τα ελλείποντα») — όχι όσες ζήτησε ήδη σήμερα. */

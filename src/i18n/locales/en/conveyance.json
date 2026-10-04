@@ -61,6 +61,7 @@
     "expiring": "Expiring soon",
     "expired": "Expired",
     "notary_side": "From the notary",
+    "delivered_sealed": "Delivered confidentially",
     "not_applicable": "Not applicable"
   },
   "providers": {
@@ -96,7 +97,10 @@
     "reviewedBy": "Reviewed {date}",
     "offlineHint": "Cannot be uploaded to the platform yet — confirm you received it.",
     "uploadHint": "Uploaded in the “Documents” tab of the {level}",
-    "transmittalHint": "Sent through the case — {provider}"
+    "transmittalHint": "Sent through the case — {provider}",
+    "onBehalfHint": "Sent through the case by: {role}, on behalf of the client",
+    "onBehalfOrUploadHint": "Sent through the case by: {role}, on behalf of the client — or uploaded in the “Documents” tab of the {level}",
+    "sealed": "Delivered {date} · by: {role}, on behalf of the client — confidential, not shown to you"
   },
   "levels": {
     "property": "property",
@@ -429,10 +433,12 @@
     "download": "Download: {name}",
     "unavailable": "The file is not available right now. Please try again.",
     "previewNotice": "Opening is recorded in the case trail. The link is valid for 15 minutes.",
-    "from": "from: {role}"
+    "from": "from: {role}",
+    "fromOnBehalf": "from: {role}, on behalf of the client"
   },
   "transmittal": {
     "action": "Send document",
+    "actionOnBehalf": "Send on behalf of the client",
     "sent": "The document was sent to the case.",
     "withdraw": "Withdraw: {name}",
     "withdrawn": "The document was withdrawn from the case.",
@@ -487,6 +493,8 @@
     "requesting": "Sending…",
     "requestedToday": "Requested today",
     "pending": "Waiting on: {recipient} · requested {date}",
+    "pendingToMe": "Requested of you by: {requester} · {date}",
+    "onBehalfHint": "Collect it from your client and send it on their behalf.",
     "noRecipient": "No account provides this yet — request it outside the platform.",
     "all": "Request all missing ({count})",
     "allConfirm": {

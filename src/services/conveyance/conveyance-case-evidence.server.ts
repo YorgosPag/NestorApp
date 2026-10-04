@@ -30,11 +30,12 @@ import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import {
   contributionEvidence,
   currentContributions,
+  sealedDeliveries,
   type ActiveContributor,
   type ContributedFileState,
 } from '@/lib/conveyance/contribution-evidence';
 import { readStackHead } from '@/services/iso19650/version-stack';
-import type { ConveyanceCase, EvidenceFile, NewerVersion } from '@/types/conveyance-case';
+import type { ConveyanceCase, EvidenceFile, NewerVersion, SealedDelivery } from '@/types/conveyance-case';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
 import { contributedFileOf } from './conveyance-contributed-file';
 import { readCaseContributions } from './conveyance-contribution-store.server';
@@ -102,33 +103,45 @@ async function newerVersionsFor(
   return new Map(found.filter((entry): entry is readonly [string, NewerVersion] => entry[1] !== null));
 }
 
+/**
+ * Ό,τι μαθαίνει ένας θεατής για τα έγγραφα της υπόθεσης: τα **τεκμήρια** που φτάνουν σε αυτόν, και (Π2) οι
+ * **σφραγισμένες** παραδόσεις — ότι κάτι παραδόθηκε σε γραμμή που βλέπει, χωρίς το ίδιο.
+ */
+export interface CaseEvidence {
+  readonly files: readonly EvidenceFile[];
+  readonly sealed: readonly SealedDelivery[];
+}
+
+const NO_CONTRIBUTIONS = { files: [], sealed: [] } as const satisfies CaseEvidence;
+
 /** Τα τεκμήρια από transmittals που φτάνουν στον θεατή. Ανάγνωση που απέτυχε ⇒ **κανένα** (fail-closed). */
-async function collectContributionEvidence(db: Firestore, record: ConveyanceCase, viewer: CaseEvidenceViewer, nowMs: number): Promise<readonly EvidenceFile[]> {
+async function collectContributionEvidence(db: Firestore, record: ConveyanceCase, viewer: CaseEvidenceViewer, nowMs: number): Promise<CaseEvidence> {
   const contributions = await readCaseContributions(db, record);
-  if (!contributions || contributions.length === 0) return [];
+  if (!contributions || contributions.length === 0) return NO_CONTRIBUTIONS;
   const [engagements, files] = await Promise.all([activeCaseEngagements(db, record, nowMs), contributedFiles(db, contributions)]);
   const activeContributors: readonly ActiveContributor[] = engagements.map((e) => ({ uid: e.uid, role: e.role }));
   const current = currentContributions(contributions, activeContributors);
-  return contributionEvidence({
-    contributions,
-    activeContributors,
-    files: files.states,
-    viewer: viewer.role,
-    viewerUid: viewer.uid,
-    newerVersions: await newerVersionsFor(record, viewer, current, files.superseded),
-  });
+  const delivery = { contributions, activeContributors, files: files.states, viewer: viewer.role };
+  return {
+    files: contributionEvidence({
+      ...delivery,
+      viewerUid: viewer.uid,
+      newerVersions: await newerVersionsFor(record, viewer, current, files.superseded),
+    }),
+    sealed: sealedDeliveries(delivery),
+  };
 }
 
-/** Όλα τα τεκμήρια της υπόθεσης για αυτόν τον θεατή. */
+/** Όλα τα τεκμήρια της υπόθεσης για αυτόν τον θεατή (+ οι σφραγισμένες παραδόσεις, Π2). */
 export async function collectCaseEvidence(
   db: Firestore,
   record: ConveyanceCase,
   viewer: CaseEvidenceViewer,
   nowMs: number = Date.now(),
-): Promise<readonly EvidenceFile[]> {
+): Promise<CaseEvidence> {
   const [owned, contributed] = await Promise.all([
     collectConveyanceEvidence(db, record.companyId, record.subject, record.parties, viewer.audience),
     collectContributionEvidence(db, record, viewer, nowMs),
   ]);
-  return [...owned, ...contributed];
+  return { files: [...owned, ...contributed.files], sealed: contributed.sealed };
 }

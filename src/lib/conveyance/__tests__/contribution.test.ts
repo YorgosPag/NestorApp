@@ -7,14 +7,24 @@
  * - **Α23** έκθεση του `buyer_lawyer` ⇒ ποτέ στον οικοδεσπότη ή στον `seller_lawyer`
  * - **Α24** πρόχειρο χωρίς αποστολή ⇒ κανένα τεκμήριο (δομικά: η είσοδος είναι μόνο αποστολές)
  * - **Α25** δικηγόρος μετά την υπογραφή ⇒ άρνηση · συμβολαιογράφος ⇒ ναι · κλείσιμο ⇒ κανείς
+ * - **Α34** (Π2) έγγραφο εντολέα από τον δικηγόρο αγοραστή ⇒ ακροατήριο = κλάση του εγγράφου (και ο συμβολαιογράφος) ·
+ *   ποτέ ο οικοδεσπότης ή ο δικηγόρος πωλητή
+ * - **Α35** (Π2) σφραγισμένη παράδοση: ο οικοδεσπότης μαθαίνει **ότι**, ποτέ **τι** — μόνο για έγγραφα εντολέα
  */
 
 import { getChecklistItem, itemsForProfile } from '@/config/conveyance-checklist/catalog';
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
+import { onBehalfEntryPointId } from '@/config/upload-entry-points/entries-conveyance-case';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import { reachesViewer, type CaseViewerRole } from '../contribution-audience';
-import { contributionEvidence, currentContributions, type ActiveContributor, type ContributedFileState } from '../contribution-evidence';
+import {
+  contributionEvidence,
+  currentContributions,
+  sealedDeliveries,
+  type ActiveContributor,
+  type ContributedFileState,
+} from '../contribution-evidence';
 import { contributableItemIds, judgeContribution } from '../contribution-policy';
 import { deriveChecklist } from '../derive-checklist';
 
@@ -51,7 +61,7 @@ const ALL = [SELLER_REPORT, BUYER_REPORT, NOTARY_DRAFT];
 function rowFileIds(viewer: CaseViewerRole, itemId: string, contributions: readonly ConveyanceContribution[] = ALL): readonly string[] {
   const evidence = contributionEvidence({ contributions, activeContributors: ALL_ACTIVE, files: filesOf(contributions), viewer, viewerUid: null });
   const checklist = deriveChecklist({
-    items: [item(itemId)], facts: {}, overrides: {}, evidence, today: '2026-10-03', targetSigningDate: null, viewer,
+    items: [item(itemId)], facts: {}, overrides: {}, evidence, sealed: [], today: '2026-10-03', targetSigningDate: null, viewer,
   });
   return checklist.rows[0]?.files.map((f) => f.fileId) ?? [];
 }
@@ -65,8 +75,9 @@ describe('Α23 — ακροατήριο από τον ρόλο του συντά
     expect(rowFileIds('buyer_lawyer', 'legal_due_diligence_report')).toEqual([BUYER_REPORT.file.fileId]);
   });
   it('η έκθεση του δικηγόρου του πωλητή δεν φτάνει στην πλευρά του αγοραστή', () => {
-    expect(reachesViewer('seller_lawyer', 'buyer')).toBe(false);
-    expect(reachesViewer('seller_lawyer', 'buyer_lawyer')).toBe(false);
+    const sellerReport = { authorRole: 'seller_lawyer', item: item('legal_due_diligence_report') } as const;
+    expect(reachesViewer(sellerReport, 'buyer')).toBe(false);
+    expect(reachesViewer(sellerReport, 'buyer_lawyer')).toBe(false);
   });
   it('το σχέδιο του συμβολαιογράφου φτάνει σε όλους, και στον οικοδεσπότη', () => {
     for (const viewer of ['host', 'seller', 'buyer', 'seller_lawyer', 'buyer_lawyer', 'notary'] as const) {
@@ -78,7 +89,7 @@ describe('Α23 — ακροατήριο από τον ρόλο του συντά
 describe('Α24 — πρόχειρο δεν γίνεται τεκμήριο', () => {
   it('χωρίς αποστολή: η γραμμή του συμβολαιογράφου μένει `notary_side`, όχι `uploaded`', () => {
     const checklist = deriveChecklist({
-      items: [item('contract_draft')], facts: {}, overrides: {}, today: '2026-10-03', targetSigningDate: null, viewer: 'host',
+      items: [item('contract_draft')], facts: {}, overrides: {}, sealed: [], today: '2026-10-03', targetSigningDate: null, viewer: 'host',
       evidence: contributionEvidence({ contributions: [], activeContributors: ALL_ACTIVE, files: new Map(), viewer: 'host', viewerUid: null }),
     });
     expect(checklist.rows[0].status).toBe('notary_side');
@@ -168,5 +179,86 @@ describe('Α28 — «υπάρχει νεότερη έκδοση» ΜΟΝΟ στ�
   it('χωρίς νεότερη έκδοση ⇒ `null`, όχι απουσία (ο συντάκτης ξέρει ότι ρωτήθηκε)', () => {
     const plain = contributionEvidence({ contributions: [report], activeContributors: ALL_ACTIVE, files: filesOf([report]), viewer: 'notary', viewerUid: UID.notary });
     expect(plain[0]?.source).toMatchObject({ own: true, newerVersion: null });
+  });
+});
+
+// ============================================================================
+// Π2 — έγγραφα εντολέα «εκ μέρους» (ADR-901 §14.7)
+// ============================================================================
+
+const BUYER_ID = contribution('buyer_lawyer', 'buyer_identity', onBehalfEntryPointId('buyer_identity'));
+
+/** Η γραμμή όπως τη βλέπει ο θεατής, μέσα από τον ΠΡΑΓΜΑΤΙΚΟ πυρήνα — τεκμήρια **και** σφραγισμένες παραδόσεις. */
+function rowFor(viewer: CaseViewerRole, itemId: string, contributions: readonly ConveyanceContribution[]) {
+  const delivery = { contributions, activeContributors: ALL_ACTIVE, files: filesOf(contributions), viewer };
+  const checklist = deriveChecklist({
+    items: [item(itemId)], facts: {}, overrides: {}, today: '2026-10-03', targetSigningDate: null, viewer,
+    evidence: contributionEvidence({ ...delivery, viewerUid: null }),
+    sealed: sealedDeliveries(delivery),
+  });
+  return checklist.rows[0];
+}
+
+describe('Α34 — έγγραφο εντολέα: ακροατήριο = η κλάση του ΕΓΓΡΑΦΟΥ', () => {
+  const entryPointId = onBehalfEntryPointId('buyer_identity');
+
+  it('ο δικηγόρος αγοραστή στέλνει την ταυτότητα του αγοραστή εκ μέρους του · πάγωμα στην υπογραφή · όχι ο δικηγόρος πωλητή', () => {
+    const buyerIdentity = item('buyer_identity');
+    expect(judgeContribution({ role: 'buyer_lawyer', state: 'open', item: buyerIdentity, entryPointId })).toEqual({ ok: true });
+    expect(judgeContribution({ role: 'buyer_lawyer', state: 'signed', item: buyerIdentity, entryPointId })).toEqual({ ok: false, refusal: 'case-frozen' });
+    expect(judgeContribution({ role: 'seller_lawyer', state: 'open', item: buyerIdentity, entryPointId })).toEqual({ ok: false, refusal: 'role-not-provider' });
+  });
+
+  it('🔴 ο ΣΥΜΒΟΛΑΙΟΓΡΑΦΟΣ τη λαμβάνει (μετάλλαξη: εκ μέρους = πλευρά του συντάκτη ⇒ κόκκινο)', () => {
+    const row = rowFor('notary', 'buyer_identity', [BUYER_ID]);
+    expect(row.files.map((f) => f.fileId)).toEqual([BUYER_ID.file.fileId]);
+    expect(row.status).toBe('uploaded');
+    expect(rowFor('buyer_lawyer', 'buyer_identity', [BUYER_ID]).files).toHaveLength(1);
+  });
+
+  it('🔴 ποτέ ο οικοδεσπότης-πωλητής ή ο δικηγόρος πωλητή (μετάλλαξη: + host στο ακροατήριο ⇒ κόκκινο)', () => {
+    const question = { authorRole: 'buyer_lawyer', item: item('buyer_identity') } as const;
+    expect(reachesViewer(question, 'host')).toBe(false);
+    expect(reachesViewer(question, 'seller_lawyer')).toBe(false);
+    expect(rowFor('host', 'buyer_identity', [BUYER_ID]).files).toEqual([]);
+  });
+
+  it('η πηγή λέει «εκ μέρους» — και μόνο για έγγραφο εντολέα', () => {
+    const evidenceOf = (c: ConveyanceContribution) =>
+      contributionEvidence({ contributions: [c], activeContributors: ALL_ACTIVE, files: filesOf([c]), viewer: 'notary', viewerUid: null })[0];
+    expect(evidenceOf(BUYER_ID)?.source).toMatchObject({ kind: 'transmittal', onBehalf: true });
+    expect(evidenceOf(NOTARY_DRAFT)?.source).toMatchObject({ kind: 'transmittal', onBehalf: false });
+  });
+
+  it('το δικό του έργο (έκθεση νομικού ελέγχου) μένει στην πλευρά του — Α23 αμετάβλητο', () => {
+    expect(reachesViewer({ authorRole: 'buyer_lawyer', item: item('legal_due_diligence_report') }, 'notary')).toBe(false);
+  });
+});
+
+describe('Α35 — σφραγισμένη παράδοση: ο οικοδεσπότης μαθαίνει ΟΤΙ, ποτέ ΤΙ', () => {
+  it('🔴 «Παραδόθηκε εμπιστευτικά», χωρίς αρχείο (μετάλλαξη: sealed μέσα στα `files` ⇒ κόκκινο)', () => {
+    const row = rowFor('host', 'buyer_identity', [BUYER_ID]);
+    expect(row.status).toBe('delivered_sealed');
+    expect(row.files).toEqual([]);
+    expect(row.sealed).toEqual({ itemId: 'buyer_identity', deliveredAt: BUYER_ID.issuedAt, authorRole: 'buyer_lawyer' });
+  });
+
+  it('🔴 το δικό του έργο ενός επαγγελματία ΔΕΝ σφραγίζεται (μετάλλαξη: σφράγιση και για `own` ⇒ κόκκινο)', () => {
+    const row = rowFor('host', 'legal_due_diligence_report', [BUYER_REPORT]);
+    expect(row.sealed).toBeNull();
+    expect(row.status).toBe('missing');
+  });
+
+  it('όσοι ανήκουν στο ακροατήριο παίρνουν τεκμήριο, όχι σφράγιση · όσοι δεν βλέπουν τη γραμμή τίποτα', () => {
+    const delivery = { contributions: [BUYER_ID], activeContributors: ALL_ACTIVE, files: filesOf([BUYER_ID]) };
+    expect(sealedDeliveries({ ...delivery, viewer: 'notary' })).toEqual([]);
+    expect(sealedDeliveries({ ...delivery, viewer: 'seller_lawyer' })).toEqual([]);
+  });
+
+  it('αποσυρμένη ή χωρίς bytes ⇒ ούτε σφράγιση (ίδιοι κανόνες ζωντάνιας με τα τεκμήρια)', () => {
+    const withdrawn = { ...BUYER_ID, withdrawnAt: '2026-10-02T00:00:00.000Z', withdrawnBy: UID.buyer_lawyer };
+    expect(rowFor('host', 'buyer_identity', [withdrawn]).status).toBe('missing');
+    const noBytes = new Map([[BUYER_ID.file.fileId, { fileId: BUYER_ID.file.fileId, ownerUid: UID.buyer_lawyer, hasBytes: false }]]);
+    expect(sealedDeliveries({ contributions: [BUYER_ID], activeContributors: ALL_ACTIVE, files: noBytes, viewer: 'host' })).toEqual([]);
   });
 });

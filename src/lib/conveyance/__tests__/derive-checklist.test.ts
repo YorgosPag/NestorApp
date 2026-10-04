@@ -5,6 +5,7 @@
 
 import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
+import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import type { ChecklistItemOverride, EvidenceFile } from '@/types/conveyance-case';
 import { deriveChecklist, type DeriveChecklistInput } from '../derive-checklist';
 
@@ -24,7 +25,7 @@ function file(overrides: Partial<EvidenceFile> = {}): EvidenceFile {
 
 function input(overrides: Partial<DeriveChecklistInput> = {}): DeriveChecklistInput {
   return {
-    items: [item('building_permit')], facts: {}, overrides: {}, evidence: [],
+    items: [item('building_permit')], facts: {}, overrides: {}, evidence: [], sealed: [],
     today: '2026-10-02', targetSigningDate: null, viewer: 'host', ...overrides,
   };
 }
@@ -154,5 +155,33 @@ describe('deriveChecklist — ορατότητα & σύνοψη', () => {
       applicable: 2, complete: 1, awaitingReview: 1, missing: 0, rejected: 0, expiring: 0, expired: 0,
       openQuestions: ['seller_by_proxy', 'buyer_has_mortgage'],
     });
+  });
+});
+
+describe('Α35 — σφραγισμένη παράδοση (Π2)', () => {
+  const sealed = { itemId: 'buyer_identity', deliveredAt: '2026-10-03T09:00:00Z', authorRole: 'buyer_lawyer' } as const;
+  const buyerRow = (overrides: Partial<DeriveChecklistInput> = {}) =>
+    deriveChecklist(input({ items: [item('buyer_identity')], sealed: [sealed], ...overrides })).rows[0];
+
+  it('χωρίς ορατό αρχείο ⇒ `delivered_sealed`, με την παράδοση στη γραμμή · μετρά στα ολοκληρωμένα', () => {
+    const row = buyerRow();
+    expect(row.status).toBe('delivered_sealed');
+    expect(row.sealed).toEqual(sealed);
+    expect(deriveChecklist(input({ items: [item('buyer_identity')], sealed: [sealed] })).summary.complete).toBe(1);
+  });
+
+  it('ορατό αρχείο (επαφή αγοραστή στον χώρο του εργολάβου) ⇒ υπερισχύει: `uploaded`', () => {
+    const purpose = findEntryPoint('contact', 'id-card')?.purpose ?? 'missing-entry-point';
+    const contactFile = file({ entityType: 'contact', entityId: 'cnt_1', purpose, level: 'buyer_contact' });
+    expect(buyerRow({ evidence: [contactFile] }).status).toBe('uploaded');
+  });
+
+  it('παλιός έλεγχος που δεν δένει πια με αρχείο ⇒ η παράδοση μετρά (όχι «λείπει»)', () => {
+    const overrides = { buyer_identity: { review: { ...accepted().building_permit.review!, verdict: 'rejected' as const, reason: 'x' } } };
+    expect(buyerRow({ overrides }).status).toBe('delivered_sealed');
+  });
+
+  it('σφράγιση άλλης γραμμής δεν αγγίζει αυτή', () => {
+    expect(buyerRow({ sealed: [{ ...sealed, itemId: 'buyer_payslips' }] }).status).toBe('missing');
   });
 });

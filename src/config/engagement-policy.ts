@@ -38,30 +38,59 @@ export const CONTRIBUTION_STATES_BY_ROLE: Readonly<Record<LegalProfessionalRole,
   notary: ['open', 'signed', 'registered'],
 };
 
+/** Πού δρομολογείται το «Ζήτησε έγγραφο»: ένας ρόλος, ο οικοδεσπότης, ή ο δικηγόρος της πλευράς του αιτούντος. */
+export type RequestRoute = LegalProfessionalRole | 'host' | 'own-side-lawyer';
+
 /**
- * 📨 ADR-901 Φ4.5 — **ΣΕ ΠΟΙΟΝ** πάει το «Ζήτησε έγγραφο»: ο πάροχος της γραμμής → ο **λογαριασμός** που τον εκπροσωπεί.
+ * Με ποια **ιδιότητα** στέλνει ο συντάκτης:
+ * - `own`       — δικό του έργο (έκθεση νομικού ελέγχου · σχέδιο συμβολαίου): ακροατήριο = ο ρόλος του (Σ-3)
+ * - `on_behalf` — έγγραφο **του πελάτη** που εκπροσωπεί (ταυτότητα · Ε1 · αποδείξεις πληρωμής): ακροατήριο = η κλάση
+ *                 ιδιωτικότητας **του εγγράφου** (`visibleTo`). Όπως το «share as agent» του dotloop και το «Received
+ *                 From» του Procore: ο εκπρόσωπος παραδίδει, το ίχνος ξέρει και τους δύο
+ */
+export type ContributionCapacity = 'own' | 'on_behalf';
+
+export interface ProviderFulfilment {
+  /** Σε ποιον πάει το αίτημα. */
+  readonly recipient: RequestRoute;
+  /** Ποιοι ρόλοι **στέλνουν** μέσα στην πλατφόρμα (transmittal). Κενό ⇒ τα ανεβάζει ο οικοδεσπότης. */
+  readonly contributors: readonly LegalProfessionalRole[];
+  /** `null` ⇒ κανείς δεν στέλνει (δρόμος μόνο του οικοδεσπότη). */
+  readonly capacity: ContributionCapacity | null;
+}
+
+/**
+ * 📨📤 ADR-901 Φ4.5 / Π2 — **Ο ΕΝΑΣ πίνακας εκπλήρωσης**: για κάθε πάροχο του καταλόγου, **σε ποιον** πάει το αίτημα
+ * **και** ποιος μπορεί να το **ικανοποιήσει**. Ήταν δύο πίνακες (`REQUEST_RECIPIENT_BY_PROVIDER` · `CONTRIBUTOR_ROLES`)
+ * που **διαφωνούσαν**: τα έγγραφα του αγοραστή ζητούνταν από τον δικηγόρο του, που δεν είχε δρόμο αποστολής (ζωντανή
+ * δοκιμή 2026-10-04, §14.6 Δ). Το αμετάβλητο «κάθε παραλήπτης έχει δρόμο» το κλειδώνει η άγκυρα Α33.
  *
  * Όπως το «Ball in Court» του Procore, αλλά ο παραλήπτης **δεν** διαλέγεται με το χέρι: τον ορίζει ο πάροχος της
  * γραμμής, και ο κριτής (`lib/conveyance/document-request-policy.ts`) τον κρίνει ως **ενεργό τώρα** και ως κάποιον
  * που **βλέπει** τη γραμμή. Λίστα διανομής από το UI **δεν** υπάρχει (Α29).
  *
- * - `host`           — η πλευρά του πωλητή είναι ο οικοδεσπότης· μηχανικός και αρχές δεν έχουν λογαριασμό — τα
- *                      φέρνει ο οικοδεσπότης (όπως σήμερα: ανεβαίνουν στην καρτέλα «Έγγραφα»)
- * - `own-side-lawyer`— ο δικηγόρος **της πλευράς του αιτούντος** (`ownSideOnly`): ο καθένας ζητά τη δική του έκθεση
- * - `buyer_lawyer`   — αγοραστής και τράπεζα **δεν** είναι λογαριασμοί ως τη Φ5· τους εκπροσωπεί ο δικηγόρος τους
- *                      (όπως ο agent στο Dotloop). Χωρίς ενεργό δικηγόρο αγοραστή ⇒ `no-recipient`, δηλωμένα
+ * - `host`            — η πλευρά του πωλητή είναι ο οικοδεσπότης· μηχανικός και αρχές δεν έχουν λογαριασμό — τα
+ *                       φέρνει ο οικοδεσπότης (ανεβαίνουν στην καρτέλα «Έγγραφα»)
+ * - `own-side-lawyer` — ο δικηγόρος **της πλευράς του αιτούντος** (`ownSideOnly`): ο καθένας ζητά τη δική του έκθεση
+ * - αγοραστής/τράπεζα — **δεν** είναι λογαριασμοί ως τη Φ5· τους εκπροσωπεί ο δικηγόρος τους, που στέλνει **εκ μέρους
+ *                       τους** (Φ5: προστίθεται `buyer` στους `contributors`). Χωρίς ενεργό δικηγόρο ⇒ `no-recipient`
  *
- * `Record` πάνω σε **όλους** τους παρόχους: νέος πάροχος χωρίς δρομολόγηση = σφάλμα μεταγλώττισης.
+ * `Record` πάνω σε **όλους** τους παρόχους: νέος πάροχος χωρίς εκπλήρωση = σφάλμα μεταγλώττισης.
  */
-export const REQUEST_RECIPIENT_BY_PROVIDER: Readonly<Record<ChecklistProvider, LegalProfessionalRole | 'host' | 'own-side-lawyer'>> = {
-  seller: 'host',
-  engineer: 'host',
-  authority: 'host',
-  notary: 'notary',
-  lawyer: 'own-side-lawyer',
-  buyer: 'buyer_lawyer',
-  bank: 'buyer_lawyer',
+export const PROVIDER_FULFILMENT: Readonly<Record<ChecklistProvider, ProviderFulfilment>> = {
+  seller: { recipient: 'host', contributors: [], capacity: null },
+  engineer: { recipient: 'host', contributors: [], capacity: null },
+  authority: { recipient: 'host', contributors: [], capacity: null },
+  notary: { recipient: 'notary', contributors: ['notary'], capacity: 'own' },
+  lawyer: { recipient: 'own-side-lawyer', contributors: ['seller_lawyer', 'buyer_lawyer'], capacity: 'own' },
+  buyer: { recipient: 'buyer_lawyer', contributors: ['buyer_lawyer'], capacity: 'on_behalf' },
+  bank: { recipient: 'buyer_lawyer', contributors: ['buyer_lawyer'], capacity: 'on_behalf' },
 };
+
+/** Η εκπλήρωση ενός παρόχου — καθαρό, για server **και** client. */
+export function fulfilmentOf(provider: ChecklistProvider): ProviderFulfilment {
+  return PROVIDER_FULFILMENT[provider];
+}
 
 /** ADR-901 Φ4.5 — πόσες γραμμές ζητούνται σε **ένα** πάτημα («Ζήτησε όλα τα ελλείποντα»): όριο αιτήματος, όχι UI. */
 export const DOCUMENT_REQUEST_BATCH_MAX = 50;

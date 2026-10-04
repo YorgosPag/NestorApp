@@ -7,6 +7,8 @@
  * Τίποτα δεν αποφασίζεται εδώ: ο παραλήπτης ή ο λόγος άρνησης έρχεται από τον **ίδιο** καθαρό κριτή που τρέχει ο
  * server (`document-request-policy.ts`) — ο άνθρωπος βλέπει **πριν** το πάτημα σε ποιον θα πάει, ή γιατί δεν γίνεται.
  * Το «Εκκρεμεί από» **παράγεται** (Α31): σβήνει μόνο του όταν φτάσει το έγγραφο.
+ * Π1: όταν ζητήθηκε **από εμένα**, η γραμμή λέει «Σας ζητήθηκε από: X» (όχι «Εκκρεμεί από: <ο ρόλος μου>»)· σε έγγραφο
+ * που στέλνω **εκ μέρους** του εντολέα μου (Π2), και το «πώς»: συλλέξτε το από τον εντολέα και στείλτε το.
  *
  * @module components/sales/conveyance/ConveyanceRowRequest
  */
@@ -19,6 +21,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { sentOnBehalf } from '@/lib/conveyance/contribution-audience';
 import type { ChecklistRow } from '@/types/conveyance-case';
 import type { DocumentRequestTarget, PendingDocumentRequest } from '@/types/conveyance-document-request';
 
@@ -31,15 +34,20 @@ export interface RowRequest {
   readonly onRequest: (row: ChecklistRow) => void;
 }
 
-/** «Εκκρεμεί από: Συμβολαιογράφος · ζητήθηκε 3/10». */
-function PendingLine({ pending }: { readonly pending: PendingDocumentRequest }) {
+/** «Εκκρεμεί από: Συμβολαιογράφος · ζητήθηκε 3/10» — ή, προς εμένα, «Σας ζητήθηκε από: Υπεύθυνος υπόθεσης · 3/10». */
+function PendingLine({ row, pending }: { readonly row: ChecklistRow; readonly pending: PendingDocumentRequest }) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
+  const date = formatDate(pending.lastRequestedAt);
+  const askedBy = pending.askedOfViewerBy;
   return (
-    <p className={cn('flex items-center gap-1 text-xs', colors.text.warning)}>
+    <p className={cn('flex flex-wrap items-center gap-1 text-xs', colors.text.warning)}>
       <Hourglass className={iconSizes.xs} aria-hidden="true" />
-      {t('requests.pending', { recipient: t(`engagement.roles.${pending.recipient}`), date: formatDate(pending.lastRequestedAt) })}
+      {askedBy === null
+        ? t('requests.pending', { recipient: t(`engagement.roles.${pending.recipient}`), date })
+        : t('requests.pendingToMe', { requester: t(`engagement.roles.${askedBy}`), date })}
+      {askedBy !== null && sentOnBehalf(row.item) && <span className={colors.text.muted}>{t('requests.onBehalfHint')}</span>}
     </p>
   );
 }
@@ -72,7 +80,7 @@ export function RowRequestAction({ row, request }: { readonly row: ChecklistRow;
   const pending = request.pendingOf(row);
   return (
     <>
-      {pending && <PendingLine pending={pending} />}
+      {pending && <PendingLine row={row} pending={pending} />}
       {target.ok && <RequestButton row={row} request={request} target={target} requestedToday={pending?.requestedTodayByViewer ?? false} />}
       {!target.ok && target.refusal === 'no-recipient' && <p className={cn('text-xs', colors.text.muted)}>{t('requests.noRecipient')}</p>}
     </>

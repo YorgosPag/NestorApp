@@ -20,6 +20,7 @@ import { getEngagedCaseView, respondToCaseEngagement } from '../conveyance-engag
 import { openCaseFile, openHostCaseFile } from '../conveyance-case-file-access.service';
 import { issueContribution, reissueContribution, withdrawContribution } from '../conveyance-contribution.service';
 import { requestCaseDocuments } from '../conveyance-document-request.service';
+import { onBehalfEntryPointId } from '@/config/upload-entry-points/entries-conveyance-case';
 import { listCaseEngagements } from '../conveyance-engagement-support';
 import { loadConveyanceSubject } from '../conveyance-subject.server';
 
@@ -180,6 +181,24 @@ describe('ADR-901 Φ4.4 — αποστολή (transmittal)', () => {
     expect(announceDocumentToEngaged).not.toHaveBeenCalled();
     // Ούτε με άνοιγμα από τον οικοδεσπότη: δεν είναι στον κατάλογό του ⇒ ίδιο με ανύπαρκτο.
     expect(await openHostCaseFile(db(), { uid: 'u_host', email: null, record, fileId: 'pf_report', mode: 'view' })).toEqual({ ok: false, rejection: 'not-found' });
+  });
+
+  it('Π2 (Α34 · Α35) — ταυτότητα αγοραστή εκ μέρους του: συμβολαιογράφος ✅ + ειδοποίηση · οικοδεσπότης μόνο «παραδόθηκε», χωρίς όνομα/άνοιγμα', async () => {
+    const record = await openCase();
+    const buyerLawyer = await engage(record, 'buyer_lawyer');
+    const notary = await engage(record, 'notary');
+    seedOwnFile('pf_buyer_id', 'u_bl', record.id, 'buyer_identity');
+
+    expect(await issue('buyer_lawyer', buyerLawyer, 'buyer_identity', onBehalfEntryPointId('buyer_identity'), 'pf_buyer_id')).toMatchObject({ ok: true });
+
+    expect(await engagedRowFiles('notary', notary, 'buyer_identity')).toEqual(['pf_buyer_id']);
+    expect(announceDocumentToEngaged.mock.calls.map(([n]) => n.engagement.uid)).toEqual(['u_n']);
+    const row = await hostRow('buyer_identity');
+    expect(row).toMatchObject({ status: 'delivered_sealed', files: [], sealed: { itemId: 'buyer_identity', authorRole: 'buyer_lawyer' } });
+    expect(announceDocumentToHost).not.toHaveBeenCalled();
+    const added = recordChange.mock.calls.map(([e]) => e).find((e) => e.action === 'document_added');
+    expect(JSON.stringify(added)).not.toContain('buyer_identity.pdf');
+    expect(await openHostCaseFile(db(), { uid: 'u_host', email: null, record, fileId: 'pf_buyer_id', mode: 'view' })).toEqual({ ok: false, rejection: 'not-found' });
   });
 
   it('ιδεμπότητα — ίδια έκδοση δύο φορές ⇒ ΕΝΑ έγγραφο, ΕΝΑ ίχνος, ΜΙΑ ειδοποίηση', async () => {

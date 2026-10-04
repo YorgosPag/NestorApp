@@ -12,6 +12,7 @@
  * | `notary`        | όλοι + ο οικοδεσπότης (ουδέτερος — εκδίδει για όλους)   |
  * | `seller_lawyer` | πλευρά πωλητή: οικοδεσπότης · πωλητής · `seller_lawyer` |
  * | `buyer_lawyer`  | πλευρά αγοραστή: αγοραστής · `buyer_lawyer`             |
+ * | **εκ μέρους** πελάτη (Π2) | η κλάση του **εγγράφου** (`visibleTo`) — π.χ. ταυτότητα αγοραστή ⇒ αγοραστής · `buyer_lawyer` · `notary` |
  *
  * Ο οικοδεσπότης είναι **η πλευρά του πωλητή** (εργολάβος ή ιδιώτης που πουλά, ADR-901 §5.11). Η τελική
  * ορατότητα = ακροατήριο ∩ `visibleTo` της γραμμής (ο πυρήνας `deriveChecklist` εφαρμόζει το δεύτερο).
@@ -23,7 +24,9 @@
  * @module lib/conveyance/contribution-audience
  */
 
-import type { ConveyanceRole } from '@/config/conveyance-checklist/types';
+import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { fulfilmentOf } from '@/config/engagement-policy';
+import type { ChecklistItem, ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 /** Ποιος κοιτά τον κατάλογο: ένας ρόλος της υπόθεσης ή ο οικοδεσπότης (ίδιο λεξιλόγιο με `ChecklistViewer`). */
@@ -39,12 +42,40 @@ const AUDIENCE_BY_AUTHOR: Readonly<Record<LegalProfessionalRole, readonly CaseVi
   buyer_lawyer: BUYER_SIDE,
 };
 
-/** Το ακροατήριο ενός transmittal αυτού του συντάκτη. */
-function contributionAudience(authorRole: LegalProfessionalRole): readonly CaseViewerRole[] {
-  return AUDIENCE_BY_AUTHOR[authorRole];
+/** Ό,τι χρειάζεται η κρίση ακροατηρίου από τη γραμμή: τον πάροχο (ιδιότητα) και την κλάση ιδιωτικότητας. */
+export type AudienceItem = Pick<ChecklistItem, 'provider' | 'visibleTo'>;
+
+/** Ένα transmittal όπως το βλέπει η κρίση ακροατηρίου: **ποιος** το έστειλε, για **ποια** γραμμή. */
+export interface AudienceQuestion {
+  readonly authorRole: LegalProfessionalRole;
+  readonly item: AudienceItem;
 }
 
-/** Φτάνει ένα transmittal αυτού του συντάκτη σε αυτόν τον θεατή; */
-export function reachesViewer(authorRole: LegalProfessionalRole, viewer: CaseViewerRole): boolean {
-  return contributionAudience(authorRole).includes(viewer);
+/** Στέλνει ο συντάκτης **εκ μέρους** του πελάτη του (Π2); — παράγεται από τον πάροχο, ποτέ αποθηκευμένο. */
+export function sentOnBehalf(item: AudienceItem): boolean {
+  return fulfilmentOf(item.provider).capacity === 'on_behalf';
+}
+
+/**
+ * Το ακροατήριο ενός transmittal. 🔑 Π2: έγγραφο **του πελάτη** (εκ μέρους) πηγαίνει όπου πηγαίνει το **έγγραφο**
+ * (`visibleTo`: αγοραστής · δικηγόρος του · συμβολαιογράφος) — ο συμβολαιογράφος **πρέπει** να βλέπει την ταυτότητα
+ * του αγοραστή, ενώ η πλευρά του δικηγόρου (`BUYER_SIDE`) δεν τον περιλαμβάνει. Ο οικοδεσπότης **ποτέ**: δεν υπάρχει
+ * στο λεξιλόγιο του `visibleTo` (μαθαίνει μόνο ότι παραδόθηκε — `sealedDeliveries`).
+ */
+function contributionAudience(question: AudienceQuestion): readonly CaseViewerRole[] {
+  return sentOnBehalf(question.item) ? question.item.visibleTo : AUDIENCE_BY_AUTHOR[question.authorRole];
+}
+
+/**
+ * Η ερώτηση ακροατηρίου μιας **αποθηκευμένης** αποστολής — η γραμμή από τον κατάλογο. Γραμμή που δεν υπάρχει πια
+ * ⇒ `null` και ο καλών κλείνει (fail-closed): κανένα όνομα, κανένα τεκμήριο.
+ */
+export function audienceOfTransmittal(transmittal: { readonly authorRole: LegalProfessionalRole; readonly checklistItemId: string }): AudienceQuestion | null {
+  const item = getChecklistItem(transmittal.checklistItemId);
+  return item ? { authorRole: transmittal.authorRole, item } : null;
+}
+
+/** Φτάνει αυτό το transmittal σε αυτόν τον θεατή; */
+export function reachesViewer(question: AudienceQuestion, viewer: CaseViewerRole): boolean {
+  return contributionAudience(question).includes(viewer);
 }

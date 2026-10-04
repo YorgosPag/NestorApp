@@ -5,6 +5,7 @@
  * πάροχος, αρχεία-τεκμήρια, ισχύς, λόγος επιστροφής/μη εφαρμογής, και ενέργειες ελέγχου.
  * Φ4.4: ποιος έστειλε κάθε τεκμήριο (ρόλος) · «Αποστολή εγγράφου» / «Απόσυρση» για τον επαγγελματία.
  * Φ4.5: «Στείλε τη νέα έκδοση» (επαγγελματίας) · «Εκκρεμεί από» + «Ζήτησε από: X» (οικοδεσπότης **και** επαγγελματίας).
+ * Π2: «εκ μέρους του εντολέα» · σφραγισμένη παράδοση (χωρίς έλεγχο — δεν υπάρχει αρχείο να ελεγχθεί, Α35).
  *
  * @module components/sales/conveyance/ConveyanceChecklistRow
  */
@@ -28,7 +29,18 @@ import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { ChecklistRow, EvidenceFile } from '@/types/conveyance-case';
 import { STATUS_PRESENTATION } from './conveyance-presentation';
 import { RowRequestAction, type RowRequest } from './ConveyanceRowRequest';
-import { isWithdrawing, ReissueFileButton, ReviseFileButton, TransmitRowAction, TransmittalSource, WithdrawFileButton, type RowTransmittal } from './ConveyanceRowTransmittal';
+import { fulfilmentOf } from '@/config/engagement-policy';
+import { sentOnBehalf } from '@/lib/conveyance/contribution-audience';
+import {
+  isWithdrawing,
+  ReissueFileButton,
+  ReviseFileButton,
+  SealedDeliveryNote,
+  TransmitRowAction,
+  TransmittalSource,
+  WithdrawFileButton,
+  type RowTransmittal,
+} from './ConveyanceRowTransmittal';
 
 export type RowDialogMode = 'accept' | 'reject' | 'not_applicable';
 
@@ -83,6 +95,7 @@ function RowNote({ row }: { readonly row: ChecklistRow }) {
   }
   if (row.status === 'missing' && row.item.satisfaction.kind === 'files') {
     const level = row.item.satisfaction.matchers[0]?.level;
+    if (sentOnBehalf(row.item)) return <OnBehalfHint row={row} level={level} />;
     // Φ4.4 — ό,τι στέλνει επαγγελματίας ΔΕΝ «ανεβαίνει στην καρτέλα Έγγραφα»: το στέλνει εκείνος από την υπόθεση.
     if (level === 'contribution') {
       return <p className={cn('text-xs', colors.text.muted)}>{t('row.transmittalHint', { provider: t(`providers.${row.provider}`) })}</p>;
@@ -90,6 +103,18 @@ function RowNote({ row }: { readonly row: ChecklistRow }) {
     return level ? <p className={cn('text-xs', colors.text.muted)}>{t('row.uploadHint', { level: t(`levels.${level}`) })}</p> : null;
   }
   return null;
+}
+
+/** Π2 — έγγραφο εντολέα: το στέλνει ο εκπρόσωπός του· όπου υπάρχει και επαφή, ανεβαίνει εναλλακτικά εκεί (Σ-1). */
+function OnBehalfHint({ row, level }: { readonly row: ChecklistRow; readonly level: string | undefined }) {
+  const { t } = useTranslation(['conveyance']);
+  const colors = useSemanticColors();
+  const [representative] = fulfilmentOf(row.provider).contributors;
+  const role = representative ? t(`engagement.roles.${representative}`) : t(`providers.${row.provider}`);
+  const text = level && level !== 'contribution'
+    ? t('row.onBehalfOrUploadHint', { role, level: t(`levels.${level}`) })
+    : t('row.onBehalfHint', { role });
+  return <p className={cn('text-xs', colors.text.muted)}>{text}</p>;
 }
 
 function FileButtons({ file, onOpenFile }: { readonly file: EvidenceFile; readonly onOpenFile: OpenEvidenceFile }) {
@@ -133,7 +158,7 @@ function RowActions({ row, onOpenDialog, onClear }: Pick<ConveyanceChecklistRowP
   const { t } = useTranslation(['conveyance']);
   const iconSizes = useIconSizes();
   const label = t(row.item.labelKey);
-  const reviewable = row.status !== 'not_applicable' && row.status !== 'needs_answer';
+  const reviewable = row.status !== 'not_applicable' && row.status !== 'needs_answer' && row.status !== 'delivered_sealed';
   const hasOverride = row.review !== null || row.notApplicable !== null;
   const acceptLabel = row.files.length > 0 ? t('actions.accept') : t('actions.confirmReceived');
   return (
@@ -173,6 +198,7 @@ export function ConveyanceChecklistRow({ row, canEdit, onOpenDialog, onClear, on
         </header>
         <p className={cn('text-xs', colors.text.muted)}>{t('row.provider', { provider: t(`providers.${row.provider}`) })}</p>
         <RowFiles row={row} onOpenFile={onOpenFile} transmittal={transmittal} />
+        <SealedDeliveryNote row={row} />
         <RowValidity row={row} />
         <RowNote row={row} />
         <TransmitRowAction row={row} transmittal={transmittal} />

@@ -38,7 +38,9 @@ function mergeLog(server: readonly DocumentRequestView[], local: readonly Docume
 
 function optimisticEntries(items: readonly DocumentRequestItemOutcome[], today: string): DocumentRequestView[] {
   const at = nowISO();
-  return items.flatMap((item) => (item.kind === 'refused' ? [] : [{ itemId: item.itemId, recipient: item.recipient, requestedAt: at, dayKey: today, byViewer: true }]));
+  return items.flatMap((item): DocumentRequestView[] => (
+    item.kind === 'refused' ? [] : [{ itemId: item.itemId, recipient: item.recipient, requestedAt: at, dayKey: today, byViewer: true }]
+  ));
 }
 
 /** Η αποστολή + τα μηνύματά της — ένα αίτημα για όσες γραμμές δοθούν. */

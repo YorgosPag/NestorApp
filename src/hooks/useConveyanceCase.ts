@@ -56,7 +56,7 @@ function optimisticView(view: ConveyanceCaseView, command: ConveyanceCommand, ac
   const applied = applyConveyanceCommand(view.conveyanceCase, command, { actorUid, now: nowISO(), today, evidence: view.evidence });
   if (!applied.ok) return applied.rejection;
   const record = applied.next;
-  const checklist = deriveCaseChecklist({ record, derivedFacts: view.derivedFacts, evidence: view.evidence, today, viewer: 'host' });
+  const checklist = deriveCaseChecklist({ record, derivedFacts: view.derivedFacts, evidence: view.evidence, sealed: view.sealedDeliveries, today, viewer: 'host' });
   const state = record.storedState === 'cancelled' ? 'cancelled' : view.state;
   return { ...view, conveyanceCase: record, checklist, state };
 }

@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Hourglass,
   Landmark,
+  Lock,
   LogOut,
   type LucideIcon,
   MailQuestion,
@@ -47,12 +48,13 @@ export const STATUS_PRESENTATION: Readonly<Record<ChecklistRowStatus, StatusPres
   expiring: { icon: Clock, variant: 'warning' },
   expired: { icon: AlertTriangle, variant: 'error' },
   notary_side: { icon: Landmark, variant: 'muted' },
+  delivered_sealed: { icon: Lock, variant: 'muted' },
   not_applicable: { icon: CircleSlash, variant: 'muted' },
 };
 
 /** Σειρά προτεραιότητας μέσα σε ενότητα: ό,τι θέλει ενέργεια πρώτο (σχήμα «inbox»). */
 export const STATUS_ORDER: readonly ChecklistRowStatus[] = [
-  'expired', 'rejected', 'missing', 'stale', 'expiring', 'uploaded', 'needs_answer', 'notary_side', 'accepted', 'not_applicable',
+  'expired', 'rejected', 'missing', 'stale', 'expiring', 'uploaded', 'needs_answer', 'notary_side', 'delivered_sealed', 'accepted', 'not_applicable',
 ];
 
 /**
