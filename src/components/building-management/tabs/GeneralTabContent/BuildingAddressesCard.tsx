@@ -54,6 +54,7 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
     positionAdvisories,
     relocateAddress,
     keepAddressPin,
+    pendingPositions,
   } = useBuildingAddressesCardState(props);
 
   const currentEditAddress = editorMode === 'edit' && editorIndex !== null
@@ -155,6 +156,7 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
                 onRelocate={(addressId) => { void relocateAddress(addressId); }}
                 onKeepPin={keepAddressPin}
                 isSaving={isSaving}
+                pendingPositions={pendingPositions}
               />
               <BuildingAddressesMapPane
                 addresses={localAddresses}

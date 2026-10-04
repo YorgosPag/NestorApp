@@ -65,7 +65,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "68ef4ca5b72657ecf1a8455cab4b8860b1a2805a20213a0d9dd76d8d571304e2",
+    "src/i18n/generated/shell-slice.el.json": "6925ae128000a752026e3b66e54ea76423a5fa2b293c29a55bf7e445ac6b748d",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f7ce0cbb59dc31669be6e073d5e36fde83991b820ade0beed7b913eef542920c",
+  "inputsSha256": "9248d632c90db2b9691918250bb4f9d4edb37e493a5bc9fb6a346d42bb500ed0",
   "languages": [
     "el"
   ],
@@ -718,7 +718,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/audit-tracked-fields.ts": "a6e38e9cd81fdde8ceb26dd960c840e46bc805447e9637f50b6821a15aefb41d",
+    "src/config/audit-tracked-fields.ts": "e119fd6cd0bc00f7f1fbab48d6838f759f944fb440c8459ce3dda695df821d19",
     "src/config/conveyance-checklist/catalog.ts": "03dcd635ab30d203635823f663351506232295848b14630686deae8316d549e7",
     "src/config/conveyance-checklist/items-parties.ts": "28e76f32f74aebabac3a4ff5107b36dfbe03eff8392ac3ad0550af430ab8762e",
     "src/config/conveyance-checklist/items-property.ts": "9d384edafac1e4a1262ca28c2c1b6df1640d21ffc2d5109bf7f646c5c78148f1",
@@ -849,6 +849,7 @@
     "src/lib/api/admin-db.ts": "2ef3d2a30545ca7a2e8766c2555ed68daeb4ed7f2d30f3a922a964571b27ebb9",
     "src/lib/api/guarded-route.ts": "fb0e93872520cb173fd2c6a97fcb05b789328d0190b16233d803623a33f6afff",
     "src/lib/async/field-patch-queue.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
+    "src/lib/audit/audit-coordinates.ts": "ccd3fc587a2f108037c32b825ae5c44ceb4ae842a5c854298055670c7f83f600",
     "src/lib/auth/brokerage-authority.ts": "147a6776dcc3e020043fb913dd34d48af38c33afaa7b66243b779e4eea412c5c",
     "src/lib/auth/claim-payload.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/claims-mirror-fields.ts": "26d42fce23921970419d501a19d49ece4b94eade9495bf5d735449643c584fe3",
@@ -10863,7 +10864,7 @@
     "src/config/audit-value-catalogs.ts": "df5be84486b544bf20d29d3305976c2d9cace463cae9de14c8ddeb8afa3c4ae0",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "7dcc5a6807190a01690fc06143549ac8755344d403042e6e2c40214c98f01e6c",
+    "src/config/domain-constants.ts": "a3aac353185e7716db80a590491979750a0bf3a0063afb14477e4d6937046857",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/error-reporting.ts": "d3788019febf32f4a488395c75b897af501fe2a869bb82059d107dbcd076a74d",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
@@ -11605,7 +11606,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 942,
-    "sliceBytes": 691223
+    "sliceBytes": 691665
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -19,8 +19,6 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 
-import { BUILDING_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { ApiError, apiSuccess } from '@/lib/api/ApiErrorHandler';
@@ -35,7 +33,7 @@ import {
   readBuildingObjectiveValueFacts,
   type BuildingObjectiveValuePatch,
 } from '@/lib/objective-value/building-objective-value-facts';
-import { EntityAuditService } from '@/services/entity-audit.service';
+import { recordBuildingUpdate } from './_shared/building-update-audit';
 
 /** Το κλειδί σώματος του κλάδου — δηλώνεται ΜΙΑ φορά στο `lib` (το στέλνει και ο πελάτης)· η διαδρομή ρωτά «υπάρχει;». */
 export { BUILDING_OBJECTIVE_VALUE_BODY_KEY };
@@ -61,26 +59,6 @@ function patchOf(body: Readonly<Record<string, unknown>>): BuildingObjectiveValu
   return parsed.data;
 }
 
-/** Ίχνος (fire-and-forget) — ποιος άλλαξε ποιο γεγονός. */
-async function recordAudit(
-  input: BuildingObjectiveValuePatchInput,
-  before: Readonly<Record<string, unknown>>,
-  applied: Readonly<Record<string, unknown>>,
-): Promise<void> {
-  const changes = await EntityAuditService.diffFieldsWithResolution(before, { ...applied }, BUILDING_TRACKED_FIELDS, {});
-  if (changes.length === 0) return;
-  EntityAuditService.recordChange({
-    entityType: ENTITY_TYPES.BUILDING,
-    entityId: input.buildingId,
-    entityName: (before.name as string) ?? null,
-    action: 'updated',
-    changes,
-    performedBy: input.ctx.uid,
-    performedByName: input.ctx.email ?? null,
-    companyId: input.ctx.companyId,
-  }).catch(() => { /* fire-and-forget */ });
-}
-
 /**
  * Ο κλάδος: σχήμα → κανόνες με ρολόι (422) → συναλλαγή πάνω στο φρέσκο έγγραφο → ίχνος. Η θεματοφυλακή (μισθωτής)
  * έχει κριθεί **ήδη** από τον καλούντα (`loadOwnedBuilding`).
@@ -99,6 +77,7 @@ export async function patchBuildingObjectiveValue(input: BuildingObjectiveValueP
     derive: (current) => ({ [FIELD]: applyBuildingObjectiveValuePatch(readBuildingObjectiveValueFacts(current[FIELD]), patch) }),
   });
 
-  await recordAudit(input, before, applied);
+  // Ίχνος — ποιος άλλαξε ποιο γεγονός. Ο **ίδιος** γραφέας με τη γενική διαδρομή του PATCH.
+  await recordBuildingUpdate({ buildingId, before, written: applied, ctx });
   return apiSuccess({ buildingId, updated: true, _v: newVersion }, 'Building updated');
 }

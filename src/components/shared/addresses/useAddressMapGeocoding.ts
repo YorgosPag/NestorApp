@@ -18,10 +18,8 @@ import { flushSync } from 'react-dom';
 import { LngLatBounds } from '@/lib/maps/maplibre';
 
 import type { ProjectAddress } from '@/types/project/addresses';
-import {
-  formatAddressForGeocoding,
-  getGeocodableAddresses,
-} from '@/types/project/address-helpers';
+import { getGeocodableAddresses } from '@/types/project/address-helpers';
+import { toGeocodingRequest } from '@/lib/geocoding/address-geocoding-query';
 import {
   geocodeAddress,
   type GeocodingServiceResult,
@@ -189,7 +187,7 @@ export function useAddressMapGeocoding({
                 successCount++;
                 continue;
               }
-              const query = formatAddressForGeocoding(addr);
+              const query = toGeocodingRequest(addr);
               const result = await geocodeAddress(query);
               if (result) {
                 geocodedMap.set(addr.id, result);

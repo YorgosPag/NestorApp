@@ -39,7 +39,8 @@ import { formatFieldAwareValue, formatStorageUrl } from "./activity-tab-helpers"
 import { resolveAuditValue } from "./audit-value-resolver";
 // 🏢 ADR-852 Φ2 — ο περιγραφέας του πεδίου: ζωντανή ετικέτα + τίμιο στιγμιότυπο.
 // Καθαρές συναρτήσεις, εκτός React ⇒ η άγκυρα της Φ7 τις καρφώνει χωρίς render.
-import { resolveTrackedFieldDef, resolveFieldLabel } from "./audit-field-descriptor";
+import { resolveTrackedFieldDef, resolveFieldLabel, resolveSubFieldLabel } from "./audit-field-descriptor";
+import { resolveActorName } from "./audit-actor";
 
 // ============================================================================
 // ENTITY LINK MAPPING (for global view)
@@ -158,11 +159,14 @@ function sanitizeEntry(raw: EntityAuditEntry): EntityAuditEntry {
 interface AuditTimelineEntryProps {
   entry: EntityAuditEntry;
   showEntityLink: boolean;
+  /** Ό,τι ακολουθεί τις αλλαγές μέσα στην ίδια γραμμή — π.χ. οι αποθηκεύσεις μιας συνεδρίας. */
+  children?: React.ReactNode;
 }
 
 export function AuditTimelineEntry({
   entry: rawEntry,
   showEntityLink,
+  children,
 }: AuditTimelineEntryProps) {
   const entry = sanitizeEntry(rawEntry);
   const { t } = useTranslation(AUDIT_TIMELINE_NAMESPACES);
@@ -170,6 +174,13 @@ export function AuditTimelineEntry({
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;
+
+  // Η μηχανή λύνεται από την ΤΑΥΤΟΤΗΤΑ της στη γλώσσα του θεατή· ο άνθρωπος έχει το όνομά του.
+  const actorName = resolveActorName({
+    performedBy: entry.performedBy,
+    performedByName: entry.performedByName,
+    translate: t,
+  });
 
   const timestamp = entry.timestamp ? new Date(entry.timestamp) : null;
   const relativeTime = timestamp ? formatRelativeTime(timestamp) : "";
@@ -259,9 +270,9 @@ export function AuditTimelineEntry({
           <span className={`text-sm font-medium ${config.color}`}>
             {t(config.labelKey)}
           </span>
-          {entry.performedByName && (
+          {actorName && (
             <span className={cn("text-xs", colors.text.muted)}>
-              {t("audit.byUser", { name: safeStr(entry.performedByName as unknown) })}
+              {t("audit.byUser", { name: actorName })}
             </span>
           )}
           {timestamp && (
@@ -335,11 +346,14 @@ export function AuditTimelineEntry({
                       change.subChanges.length > 0 && (
                         <ul className="mt-1 ml-3 space-y-0.5">
                           {change.subChanges.map((sub, si) => {
-                            const subKey = `audit.fields.${sub.subField}`;
-                            const resolvedSub = t(subKey);
-                            // safeStr + typeof guard: t() may return objects for non-leaf keys
-                            const subLabel: string = safeStr(sub.label
-                              ?? (typeof resolvedSub === 'string' && resolvedSub !== subKey ? resolvedSub : (sub.subField as unknown)));
+                            // Ζωντανά πρώτα, όπως η ετικέτα του πεδίου: θεραπεύει και τις παλιές
+                            // εγγραφές που κουβαλούν `label: 'street'` (ADR-195, 2026-10-05).
+                            const subLabel: string = resolveSubFieldLabel({
+                              subField: sub.subField,
+                              def,
+                              storedLabel: sub.label,
+                              translate: t,
+                            }).text;
                             const translateSubValue = makeFieldTranslator(sub.subField);
                             return (
                               <li key={`${sub.subField}-${si}`}>
@@ -414,6 +428,7 @@ export function AuditTimelineEntry({
             })}
           </ul>
         )}
+        {children}
       </article>
     </li>
   );

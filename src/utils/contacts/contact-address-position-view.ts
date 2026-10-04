@@ -27,7 +27,7 @@ import {
 import type { StoredAddressPosition } from '@/types/address-position';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { projectAddressVocabulary } from '@/utils/address/administrative-hierarchy';
-import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
+import { pickStoredAddressPosition, withStoredAddressPosition } from '@/utils/address/stored-address-position';
 
 type IdentityText = { [K in AddressIdentityField]?: string };
 
@@ -97,10 +97,5 @@ export function applyContactAddressPosition(
   address: CompanyAddress,
   decision: Readonly<StoredAddressPosition>,
 ): CompanyAddress {
-  const next: CompanyAddress = { ...address };
-  delete next.coordinates;
-  delete next.geocodingMetadata;
-  delete next.source;
-  delete next.verifiedAt;
-  return { ...next, ...pickStoredAddressPosition(decision) };
+  return withStoredAddressPosition(address, decision);
 }

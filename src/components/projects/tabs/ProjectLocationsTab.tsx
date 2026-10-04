@@ -7,6 +7,7 @@ import type { ProjectAddressType } from '@/types/project/addresses';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { AddressPublicShapeBadge } from '@/components/shared/addresses/AddressPublicShapeBadge';
 import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
+import { AddressPositionPendingNotice } from '@/components/shared/addresses/AddressPositionPendingNotice';
 import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './locations/address-constants';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressMapCandidateLayer } from '@/components/shared/addresses/AddressMapCandidateLayer';
@@ -376,6 +377,11 @@ export function ProjectLocationsTab({ data: project, draftAddresses }: ProjectLo
                               onRelocate={() => { void loc.handleRelocateAddress(address.id); }}
                               onKeep={() => loc.handleKeepAddressPin(address.id)}
                             />
+                          )}
+                          {/* ADR-332 D29 — η θέση εντοπίζεται μετά την αποθήκευση. Μετά την απόκλιση:
+                              η μετρημένη απόσταση είναι πιο συγκεκριμένη πληροφορία από το «εκκρεμεί». */}
+                          {!drift && loc.pendingPositions.ids.includes(address.id) && (
+                            <AddressPositionPendingNotice phase={loc.pendingPositions.phase} />
                           )}
                         </>
                       }

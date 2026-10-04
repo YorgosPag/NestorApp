@@ -17,7 +17,11 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Project, ProjectStatus } from '@/types/project';
 import type { LandownerEntry } from '@/types/ownership-table';
 import type { ProjectAddress } from '@/types/project/addresses';
-import { settleEntityUpdate, type ServerAddressEcho } from '@/services/address-mutation-echo';
+import {
+  publishServerAddressPending,
+  settleEntityUpdate,
+  type ServerAddressEcho,
+} from '@/services/address-mutation-echo';
 import type { ProjectBuildingCodePhase2 } from '@/types/project-building-code';
 import type { ProjectSurveyPoint, ProjectBasePoint } from '@/types/project-elevation.schemas';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -149,6 +153,7 @@ export async function createProject(
     interface ProjectCreateResult {
       projectId: string;
       project?: { addresses?: ProjectAddress[] };
+      positionsPending?: string[];
     }
     const result = await apiClient.post<ProjectCreateResult>(API_ROUTES.PROJECTS.LIST, data);
 
@@ -173,6 +178,9 @@ export async function createProject(
     });
 
     const written = result?.project?.addresses;
+    // ADR-332 D29 — η δημιουργία γίνεται από τη «Γενικά», η ένδειξη ανήκει στις «Διευθύνσεις»: η μνήμη
+    // των εκκρεμών τις ενώνει χωρίς props μέσα από καλούντες που δεν την ξέρουν.
+    if (projectId) publishServerAddressPending(projectId, Array.isArray(written), result);
     return { success: true, projectId, ...(Array.isArray(written) ? { addresses: written } : {}) };
 
   } catch (error) {
@@ -232,6 +240,8 @@ export async function updateProjectClient(
     );
 
     logger.info('Project updated successfully', { projectId });
+    // ADR-332 D29 — η καρτέλα διευθύνσεων μαθαίνει ποιες θέσεις εντοπίζονται ακόμη.
+    publishServerAddressPending(projectId, 'addresses' in updates, response);
 
     // 🏢 Cross-page sync + απήχηση του διακομιστή, από το ΕΝΑ σημείο (ADR-332 D27 Βήμα Β).
     return settleEntityUpdate(response, updates, (fields) => RealtimeService.dispatch('PROJECT_UPDATED', {

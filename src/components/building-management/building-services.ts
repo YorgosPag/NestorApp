@@ -15,7 +15,11 @@ import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
-import { settleEntityUpdate, type ServerAddressEcho } from '@/services/address-mutation-echo';
+import {
+  publishServerAddressPending,
+  settleEntityUpdate,
+  type ServerAddressEcho,
+} from '@/services/address-mutation-echo';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingServices');
@@ -110,6 +114,8 @@ export async function updateBuilding(
     );
 
     logger.info('Building updated successfully', { buildingId });
+    // ADR-332 D29 — η καρτέλα διευθύνσεων μαθαίνει ποιες θέσεις εντοπίζονται ακόμη.
+    publishServerAddressPending(buildingId, 'addresses' in updates, response);
 
     // 🏢 Cross-page sync + απήχηση του διακομιστή, από το ΕΝΑ σημείο (ADR-332 D27 Βήμα Β).
     return settleEntityUpdate(response, updates, (fields) => RealtimeService.dispatch('BUILDING_UPDATED', {
@@ -360,6 +366,20 @@ export async function getProjectAddresses(
   } catch (error) {
     logger.error('getProjectAddresses failed', { error });
     return { addresses: [] };
+  }
+}
+
+/**
+ * Οι διευθύνσεις ενός κτιρίου όπως είναι **τώρα** στον διακομιστή — για την υιοθέτηση θέσης που
+ * ολοκληρώθηκε μετά την αποθήκευση (ADR-332 D29). Αποτυχία ⇒ `[]`: ο καλών απλώς ξαναδοκιμάζει.
+ */
+export async function getBuildingAddresses(buildingId: string): Promise<ProjectAddress[]> {
+  try {
+    const building = await apiClient.get<{ addresses?: ProjectAddress[] }>(API_ROUTES.BUILDINGS.BY_ID(buildingId));
+    return building?.addresses ?? [];
+  } catch (error) {
+    logger.error('getBuildingAddresses failed', { error });
+    return [];
   }
 }
 

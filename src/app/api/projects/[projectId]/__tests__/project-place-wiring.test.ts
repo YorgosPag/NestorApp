@@ -151,11 +151,20 @@ describe('Χ — διεύθυνση → θέση → επαναπροβολή', 
     const saved = (written?.addresses as Array<Record<string, unknown>>)[0]!;
     expect(saved.coordinates).toEqual({ lat: 40.6401, lng: 22.9444 });
     // 🔴 Το πεδίο που μέχρι σήμερα είχε **12 αναγνώστες και 0 γραφείς**.
+    // ⚠️ Το `resolvedFor` (η απόδειξη «για ποιο κείμενο», ADR-332 D27 Ζ6) γράφεται από τις 2026-09-12·
+    //    αυτή η προσδοκία δεν το ήξερε και έμενε κόκκινη έκτοτε (βρέθηκε 2026-10-04).
     expect(saved.geocodingMetadata).toEqual({
       confidence: 0.93,
       accuracy: 'exact',
       variantUsed: 2,
       osmType: 'house',
+      resolvedFor: {
+        street: 'Εγνατίας',
+        number: '147',
+        city: 'Θεσσαλονίκη',
+        postalCode: '54635',
+        country: 'Ελλάδα',
+      },
     });
     expect(saved.source).toBe('geocoded');
   });

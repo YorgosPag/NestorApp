@@ -41,7 +41,8 @@ import {
   groupEntriesByDate,
   type Stats,
 } from "./activity-tab-helpers";
-import { AuditTimelineEntry } from "./audit-timeline-entry";
+import { coalesceEditSessions } from "@/services/audit/coalesce-edit-sessions";
+import { AuditSessionEntry } from "./AuditSessionEntry";
 
 // ============================================================================
 // MAIN VIEW
@@ -74,10 +75,20 @@ export function AuditTimelineView({
   const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
 
+  // Η σύμπτυξη τρέχει στις **αφιλτράριστες** εγγραφές: μια σύνδεση ή μια γραμμή της μηχανής
+  // ανάμεσα σε δύο επεξεργασίες κλείνει τη συνεδρία ακόμη κι όταν το φίλτρο την κρύβει.
+  const sessions = React.useMemo(() => coalesceEditSessions(entries), [entries]);
+
   const filteredEntries = React.useMemo(() => {
-    if (activeFilter === "all") return entries;
-    return entries.filter((e) => e.action === activeFilter);
-  }, [entries, activeFilter]);
+    const shown = sessions.map((session) => session.net);
+    if (activeFilter === "all") return shown;
+    return shown.filter((e) => e.action === activeFilter);
+  }, [sessions, activeFilter]);
+
+  const sessionOf = React.useMemo(
+    () => new Map(sessions.map((session) => [session.net, session])),
+    [sessions],
+  );
 
   const groupedEntries = React.useMemo(
     () => groupEntriesByDate(filteredEntries),
@@ -148,9 +159,9 @@ export function AuditTimelineView({
       {groupedEntries.map(({ dateLabel, dateKey, entries: dayEntries }) => (
         <DayGroup key={dateKey} dateLabel={dateLabel}>
           {dayEntries.map((entry) => (
-            <AuditTimelineEntry
+            <AuditSessionEntry
               key={entry.id}
-              entry={entry}
+              session={sessionOf.get(entry) ?? { net: entry, entries: [entry] }}
               showEntityLink={showEntityLink}
             />
           ))}

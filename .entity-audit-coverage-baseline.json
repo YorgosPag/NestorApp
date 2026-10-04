@@ -1,8 +1,9 @@
 {
   "description": "CHECK 3.17 — files with Firestore writes to audit-tracked collections that do not call EntityAuditService.recordChange(). Ratchet down only.",
-  "generatedAt": "2026-05-18T09:27:13.016Z",
-  "count": 1,
+  "generatedAt": "2026-10-04T21:31:44.495Z",
+  "count": 2,
   "files": [
+    "src/app/api/floors/floors.handlers.ts",
     "src/services/property/property-deletion-guard.ts"
   ]
 }

@@ -28,7 +28,7 @@
 // build, καμία νέα εξάρτηση χρόνου εκτέλεσης για τον Admin SDK.
 import type { AuditCatalogRef } from '@/config/audit-value-catalogs';
 import type { QuantitySpec } from '@/constants/quantity-specs';
-import type { AuditFieldChange } from '@/types/audit-trail';
+import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
 
 /**
  * ADR-852 §4 — **Ο ΠΕΡΙΓΡΑΦΕΑΣ**: ό,τι ξέρει το σύστημα για ένα tracked πεδίο, πέρα
@@ -127,9 +127,32 @@ export type TrackedFieldDef =
       readonly labelSeparator?: string;
       /** Sub-fields tracked for `op === 'modified'` entries. */
       readonly trackSubFields?: readonly string[];
-      /** Optional human-readable label overrides per sub-field (used instead of i18n fallback). */
-      readonly subFieldLabels?: Readonly<Record<string, string>>;
+      /**
+       * Προβολέας **τιμής** ανά υπο-πεδίο: όταν το υπο-πεδίο είναι αντικείμενο (π.χ. η θέση
+       * `coordinates: {lat, lng}`), η μηχανή συγκρίνει και γράφει **την προβολή**, όχι το
+       * `serializeScalar` — που θα έβγαζε ωμό JSON στο ιστορικό.
+       *
+       * 🔑 Δέχεται το **στοιχείο**, όχι την τιμή του υπο-πεδίου: η προβολή μπορεί να χρειάζεται
+       * περισσότερα από ένα πεδία του. `null` ⇒ «δεν υπάρχει», όπως παντού στη μηχανή.
+       *
+       * *(Αντικατέστησε το `subFieldLabels`, ADR-195 2026-10-05: ο μόνος χρήστης του ήταν ένας
+       * **ταυτοτικός** χάρτης `street → 'street'`, δηλαδή το «κενό» του ADR-852 §1.2 γραμμένο σε
+       * κάθε εγγραφή. Η ετικέτα υπο-πεδίου λύνεται **ζωντανά** στον αναγνώστη —
+       * `resolveSubFieldLabel`.)*
+       */
+      readonly subFieldValues?: Readonly<Record<string, AuditSubFieldProjector>>;
+      /**
+       * Η εμβέλεια i18n των ετικετών των υπο-πεδίων: `audit.fields.{εμβέλεια}.{υπο-πεδίο}`.
+       * Λύνεται **στην ανάγνωση** (`resolveSubFieldLabel`), πριν από τη γενική ετικέτα — ώστε
+       * ένα υπο-πεδίο με όνομα που είναι **και** οντότητα (`floor`) να βρίσκει τη δική του.
+       */
+      readonly subFieldLabelScope?: string;
     });
+
+/** Η προβολή ενός υπο-πεδίου σε τιμή ιστορικού — δες `subFieldValues`. */
+export type AuditSubFieldProjector = (
+  item: Readonly<Record<string, unknown>>,
+) => AuditSubChange['oldValue'];
 
 // =============================================================================
 // ΤΟ ΔΙΠΛΟ ΚΑΝΑΛΙ, ΣΤΗΝ ΠΛΕΥΡΑ ΤΗΣ ΕΓΓΡΑΦΗΣ — ADR-852 §3.1 · Φ3

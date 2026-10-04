@@ -68,9 +68,9 @@ export interface ResolvedFieldLabel {
  * επιστρέψει **αντικείμενο** όταν το κλειδί δείχνει σε μη-φύλλο κόμβο. Και τα δύο
  * ελέγχονται εδώ, **μία φορά**, αντί σε κάθε σημείο κλήσης.
  */
-type Translate = (key: string) => unknown;
+export type Translate = (key: string) => unknown;
 
-function translated(translate: Translate, key: string): string | undefined {
+export function translated(translate: Translate, key: string): string | undefined {
   const value = translate(key);
   return typeof value === 'string' && value !== '' && value !== key ? value : undefined;
 }
@@ -111,12 +111,61 @@ export function resolveFieldLabel({
     translated(translate, `audit.fields.${entityType}.${field}`) ??
     translated(translate, `audit.fields.${field}`);
 
+  return liveOrSnapshot(live, storedLabel, field);
+}
+
+/** Τα τρία τελευταία βήματα, **κοινά** σε πεδίο και υπο-πεδίο: ζωντανό → στιγμιότυπο → ωμό. */
+function liveOrSnapshot(
+  live: string | undefined,
+  storedLabel: string | undefined,
+  name: string,
+): ResolvedFieldLabel {
   if (live !== undefined) return { text: live, isSnapshot: false };
 
   // Το `label: 'width'` των BIM registries ΔΕΝ είναι στιγμιότυπο — είναι το κενό.
-  if (storedLabel !== undefined && storedLabel !== '' && storedLabel !== field) {
+  if (storedLabel !== undefined && storedLabel !== '' && storedLabel !== name) {
     return { text: storedLabel, isSnapshot: true };
   }
 
-  return { text: field, isSnapshot: false };
+  return { text: name, isSnapshot: false };
+}
+
+export interface ResolveSubFieldLabelParams {
+  readonly subField: string;
+  /** Ο περιγραφέας του **γονικού** πεδίου-συλλογής από το τρέχον μητρώο. */
+  readonly def: TrackedFieldDef | undefined;
+  /** Η ετικέτα του υπο-πεδίου όπως **γράφτηκε τότε** στο Firestore. */
+  readonly storedLabel: string | undefined;
+  readonly translate: Translate;
+}
+
+/**
+ * Η ετικέτα ενός **υπο-πεδίου** στοιχείου συλλογής (π.χ. η «Οδός» μιας διεύθυνσης) — το ίδιο
+ * διπλό κανάλι με το {@link resolveFieldLabel}, στην ίδια σειρά: **ζωντανά πρώτα**.
+ *
+ *  1. `audit.fields.{εμβέλεια}.{υπο-πεδίο}` — η εμβέλεια που δηλώνει το μητρώο
+ *     (`subFieldLabelScope`). Χωρίς αυτήν το `floor` μιας διεύθυνσης έπεφτε στο
+ *     `audit.fields.floor`, που είναι **κόμβος** (η οντότητα «όροφος») και όχι ετικέτα.
+ *  2. `audit.fields.{υπο-πεδίο}` — η γενική ετικέτα.
+ *  3. `storedLabel`, **μόνο** αν διαφέρει από το όνομα του υπο-πεδίου ⇒ **στιγμιότυπο**.
+ *  4. Το ωμό όνομα.
+ *
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ (2026-10-05, μετρημένο σε δεδομένα παραγωγής).** Οι γραφείς έργων και
+ * κτιρίων αποθήκευαν `label: 'street'` σε **κάθε** υπο-αλλαγή διεύθυνσης, και ο αναγνώστης
+ * προτιμούσε το αποθηκευμένο (`sub.label ?? t(…)`) ⇒ η οθόνη έγραφε «street» ενώ το
+ * `audit.fields.street` («Οδός») υπήρχε. Η διόρθωση είναι **εδώ** και όχι στον γραφέα, γιατί
+ * οι ήδη γραμμένες εγγραφές δεν ξαναγράφονται: το ιστορικό είναι αμετάβλητο.
+ */
+export function resolveSubFieldLabel({
+  subField,
+  def,
+  storedLabel,
+  translate,
+}: ResolveSubFieldLabelParams): ResolvedFieldLabel {
+  const scope = def?.kind === 'collection' ? def.subFieldLabelScope : undefined;
+  const live =
+    (scope ? translated(translate, `audit.fields.${scope}.${subField}`) : undefined) ??
+    translated(translate, `audit.fields.${subField}`);
+
+  return liveOrSnapshot(live, storedLabel, subField);
 }

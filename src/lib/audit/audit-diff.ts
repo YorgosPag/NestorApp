@@ -346,13 +346,8 @@ function keyFieldSet(keyBy: 'value' | string | readonly string[]): ReadonlySet<s
  * keys from both items. Primitives (e.g. `string[]` items) yield no
  * sub-changes.
  */
-function diffSubFields(
-  before: unknown,
-  after: unknown,
-  keyBy: 'value' | string | readonly string[],
-  trackSubFields: readonly string[] | undefined,
-  subFieldLabels?: Readonly<Record<string, string>>,
-): AuditSubChange[] {
+function diffSubFields(before: unknown, after: unknown, def: CollectionDef): AuditSubChange[] {
+  const { keyBy, trackSubFields, subFieldValues } = def;
   if (
     typeof before !== 'object' || before === null || Array.isArray(before) ||
     typeof after !== 'object' || after === null || Array.isArray(after)
@@ -369,12 +364,11 @@ function diffSubFields(
   const subs: AuditSubChange[] = [];
   for (const field of fields) {
     if (skip.has(field)) continue;
-    const oldValue = serializeScalar(b[field]);
-    const newValue = serializeScalar(a[field]);
-    if (oldValue !== newValue) {
-      const label = subFieldLabels?.[field];
-      subs.push({ subField: field, oldValue, newValue, ...(label ? { label } : {}) });
-    }
+    // Δηλωμένη προβολή (π.χ. θέση → «40.64030, 22.94440») αντί για ωμό JSON αντικειμένου.
+    const project = subFieldValues?.[field];
+    const oldValue = project ? project(b) : serializeScalar(b[field]);
+    const newValue = project ? project(a) : serializeScalar(a[field]);
+    if (oldValue !== newValue) subs.push({ subField: field, oldValue, newValue });
   }
   return subs;
 }
@@ -406,7 +400,7 @@ function diffCollection(
       op: 'added',
       itemKey: key,
       itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
-      subChanges: diffSubFields({}, item, def.keyBy, def.trackSubFields, def.subFieldLabels),
+      subChanges: diffSubFields({}, item, def),
     });
   }
 
@@ -421,14 +415,14 @@ function diffCollection(
       op: 'removed',
       itemKey: key,
       itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
-      subChanges: diffSubFields(item, {}, def.keyBy, def.trackSubFields, def.subFieldLabels),
+      subChanges: diffSubFields(item, {}, def),
     });
   }
 
   for (const [key, afterItem] of afterMap) {
     const beforeItem = beforeMap.get(key);
     if (beforeItem === undefined) continue;
-    const subChanges = diffSubFields(beforeItem, afterItem, def.keyBy, def.trackSubFields, def.subFieldLabels);
+    const subChanges = diffSubFields(beforeItem, afterItem, def);
     if (subChanges.length === 0) continue;
     out.push({
       field,

@@ -8,7 +8,9 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getProjectAddresses } from '../../../building-services';
+import { getBuildingAddresses, getProjectAddresses } from '../../../building-services';
+import { useAddressPositionSettlement } from '@/hooks/useAddressPositionSettlement';
+import type { AddressPositionsPending } from '@/services/addresses/address-positions-pending';
 import { updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 import type {
@@ -62,6 +64,8 @@ interface UseBuildingAddressesCardStateResult {
   positionAdvisories: readonly AddressPositionDrift[];
   relocateAddress: (addressId: string) => Promise<void>;
   keepAddressPin: (addressId: string) => void;
+  /** ADR-332 D29 — διευθύνσεις που η θέση τους εντοπίζεται ακόμη (ή αναβλήθηκε) μετά την αποθήκευση. */
+  pendingPositions: AddressPositionsPending;
 }
 
 export function useBuildingAddressesCardState({
@@ -92,6 +96,14 @@ export function useBuildingAddressesCardState({
   const placed = useFormPlacedPoint();
   const { reset: resetPlacedPoint } = placed;
   const [positionAdvisories, setPositionAdvisories] = useState<readonly AddressPositionDrift[]>([]);
+
+  // ADR-332 D29 — η θέση που ολοκληρώνεται μετά την αποθήκευση φτάνει εδώ μόλις γραφτεί.
+  const pendingPositions = useAddressPositionSettlement({
+    entityId: buildingId,
+    addresses: localAddresses,
+    read: getBuildingAddresses,
+    onSettled: setLocalAddresses,
+  });
 
   const hasProject = Boolean(projectId);
   const selectedCount = localAddresses.length;
@@ -335,7 +347,9 @@ export function useBuildingAddressesCardState({
     positionAdvisories,
     relocateAddress,
     keepAddressPin,
+    pendingPositions,
   }), [
+    pendingPositions,
     positionAdvisories,
     relocateAddress,
     keepAddressPin,

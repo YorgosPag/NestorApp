@@ -10,6 +10,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getBuildingAddressCardId } from './building-addresses-card-helpers';
 import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
+import { AddressPositionPendingNotice } from '@/components/shared/addresses/AddressPositionPendingNotice';
+import type { AddressPositionsPending } from '@/services/addresses/address-positions-pending';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 
 interface BuildingAddressesManualListProps {
@@ -22,6 +24,8 @@ interface BuildingAddressesManualListProps {
   onRelocate?: (addressId: string) => void;
   onKeepPin?: (addressId: string) => void;
   isSaving?: boolean;
+  /** ADR-332 D29 — διευθύνσεις που η θέση τους εντοπίζεται ακόμη μετά την αποθήκευση. */
+  pendingPositions?: AddressPositionsPending;
 }
 
 export function BuildingAddressesManualList({
@@ -33,6 +37,7 @@ export function BuildingAddressesManualList({
   onRelocate,
   onKeepPin,
   isSaving = false,
+  pendingPositions,
 }: BuildingAddressesManualListProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
@@ -49,14 +54,20 @@ export function BuildingAddressesManualList({
           <AddressCard address={address} />
           {(() => {
             const drift = positionAdvisories.find((advisory) => advisory.addressId === address.id);
-            return drift && onRelocate && onKeepPin ? (
-              <AddressPositionDriftNotice
-                distanceMetres={drift.distanceMetres}
-                busy={isSaving}
-                onRelocate={() => onRelocate(address.id)}
-                onKeep={() => onKeepPin(address.id)}
-              />
-            ) : null;
+            if (drift && onRelocate && onKeepPin) {
+              return (
+                <AddressPositionDriftNotice
+                  distanceMetres={drift.distanceMetres}
+                  busy={isSaving}
+                  onRelocate={() => onRelocate(address.id)}
+                  onKeep={() => onKeepPin(address.id)}
+                />
+              );
+            }
+            // ADR-332 D29 — μετά την απόκλιση: η μετρημένη απόσταση είναι πιο συγκεκριμένη πληροφορία.
+            return pendingPositions?.ids.includes(address.id)
+              ? <AddressPositionPendingNotice phase={pendingPositions.phase} />
+              : null;
           })()}
           <div className="absolute top-4 right-4 flex gap-2">
             {address.isPrimary ? (

@@ -42,10 +42,14 @@
 
 import { geocodeWithVerdict } from '@/app/api/geocoding/geocoding-engine';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createDeadline } from '@/lib/async-utils';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { toGeocodingRequest } from '@/lib/geocoding/address-geocoding-query';
 import {
   resolveAddressPositions,
   type AddressGeocoder,
   type AddressLike,
+  type AddressPositionDrift,
   type ResolveAddressPositionsOptions,
   type ResolvedAddressPositions,
 } from '@/lib/geocoding/address-position';
@@ -53,6 +57,7 @@ import { republishListingsForProject } from './publish-public-listing';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const logger = createModuleLogger('ProjectPlaceProjection');
+const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
 /** Μια διεύθυνση έργου, όπως τη βλέπει αυτό το αρχείο — **δομικά**, ίδιο ιδίωμα με τον προβολέα. */
 export type ProjectAddressLike = AddressLike & { readonly id?: string };
@@ -66,7 +71,9 @@ export type ProjectAddressLike = AddressLike & { readonly id?: string };
  * `attempts` της· εδώ απλώς **δεν χάνονται στη μεταφορά**.
  */
 const geocodeAddress: AddressGeocoder = async (query) => {
-  const verdict = await geocodeWithVerdict({ ...query, country: query.country ?? 'Greece' });
+  // ADR-332 D29 — το ΙΔΙΟ ερώτημα με τον συντάκτη και τον χάρτη (`toGeocodingRequest`): εδώ
+  // ζούσε ένα `country ?? 'Greece'` που έδινε στην αποθήκευση άλλο ερώτημα από την πληκτρολόγηση.
+  const verdict = await geocodeWithVerdict(toGeocodingRequest(query));
 
   switch (verdict.kind) {
     case 'hit':
@@ -107,6 +114,66 @@ export async function resolveProjectAddressPositions<T extends ProjectAddressLik
   options: ResolveAddressPositionsOptions = {},
 ): Promise<ResolvedAddressPositions<T>> {
   return resolveAddressPositions(storedAddresses, incomingAddresses, geocodeAddress, now, options);
+}
+
+/**
+ * **ΜΙΑ προθεσμία για όλη την επίλυση μιας αποθήκευσης** — ο ένας βοηθός (ADR-332 D27 Ζ5 · D29).
+ *
+ * 🔴 Το μπλοκ «φτιάξε προθεσμία → πέρνα προϋπολογισμό → κλείσε το χρονόμετρο» ήταν γραμμένο **δύο**
+ * φορές (επαφές · έργα) και τα κτίρια θα το έκαναν τρεις. Τρία αντίγραφα = τρία σημεία όπου κάποιος
+ * ξεχνά το `dispose` ή αλλάζει το απόθεμα συμβουλών μόνο στο ένα. Χωρίς προθεσμία μια διεύθυνση που
+ * δεν λύνεται κρατούσε την «Αποθήκευση» **8,4″** στα έργα και **61,4″** στις επαφές (μετρημένα ζωντανά).
+ *
+ * 🔑 Ό,τι δεν πρόλαβε επιστρέφει ονομαστικά στο `pendingIds` — ο καλών αποφασίζει τι θα γίνει
+ * (επαφές: ο πελάτης ξαναρωτά· έργα/κτίρια: ολοκλήρωση μετά την απάντηση).
+ */
+export async function resolveAddressPositionsWithinDeadline<T extends ProjectAddressLike>(
+  storedAddresses: readonly T[],
+  incomingAddresses: readonly T[],
+  relocateIds: ReadonlySet<string>,
+): Promise<ResolvedAddressPositions<T>> {
+  const deadline = createDeadline(GEOCODING.RESOLVER_TIMEOUT_MS);
+  try {
+    return await resolveProjectAddressPositions(storedAddresses, incomingAddresses, Date.now(), {
+      relocateIds,
+      budget: {
+        remainingMs: () => deadline.remainingMs(),
+        advisoryReserveMs: GEOCODING.ADVISORY_RESERVE_MS,
+      },
+    });
+  } finally {
+    // Το χρονόμετρο της προθεσμίας κρατά ζωντανή τη διεργασία ως τη λήξη αν δεν κλείσει.
+    deadline.dispose();
+  }
+}
+
+/** Ό,τι μαθαίνει ο πελάτης για τις διευθύνσεις μιας αποθήκευσης — το σχήμα που διαβάζει το `ServerAddressEcho`. */
+export interface AddressWriteEcho<T> {
+  /** Οι διευθύνσεις **όπως γράφτηκαν** (Β5) — απούσες όταν η αποθήκευση δεν άγγιξε διευθύνσεις. */
+  addresses?: T[];
+  /** Φ2β — κρατημένες ανθρώπινες πινέζες που **απέχουν** από τη νέα τους διεύθυνση. */
+  positionAdvisories?: AddressPositionDrift[];
+  /** D29 — διευθύνσεις που γράφτηκαν χωρίς νέα θέση· ολοκληρώνεται μετά την απάντηση. */
+  positionsPending?: string[];
+}
+
+/**
+ * **Η απήχηση μιας αποθήκευσης διευθύνσεων**, γραμμένη μία φορά για έργα και κτίρια (ADR-332 D27 Β5 · D29).
+ *
+ * 🔑 Κάθε κλειδί υπάρχει **μόνο όταν έχει κάτι να πει**: ο πελάτης διαβάζει την απουσία ως «δεν
+ * αφορά αυτή την αποθήκευση», όχι ως «κενό». Γραμμένη σε δύο χειριστές, ήταν κλώνος (CHECK 3.28) —
+ * δηλαδή δύο σημεία όπου το επόμενο κλειδί θα έμπαινε μόνο στο ένα.
+ */
+export function addressWriteEcho<T>(
+  written: unknown,
+  advisories: readonly AddressPositionDrift[],
+  pendingIds: readonly string[],
+): AddressWriteEcho<T> {
+  return {
+    ...(Array.isArray(written) ? { addresses: written as T[] } : {}),
+    ...(advisories.length > 0 ? { positionAdvisories: [...advisories] } : {}),
+    ...(pendingIds.length > 0 ? { positionsPending: [...pendingIds] } : {}),
+  };
 }
 
 /**

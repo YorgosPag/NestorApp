@@ -31,7 +31,10 @@ import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-au
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import { invalidateProjectCaches } from '../_shared/project-cache';
-import { resolveAddressesForWrite } from '../_shared/project-address-write';
+import {
+  resolveAddressesForWrite,
+  scheduleProjectAddressCompletion,
+} from '../_shared/project-address-write';
 import { projectAddressesSchema } from '@/types/project/address-schemas';
 import type { ProjectEnrollmentOutcome } from '@/lib/auth/project-member-write';
 import { writeProjectBirth } from './project-birth';
@@ -81,6 +84,8 @@ async function recordInitialTeamAudit(
 interface ProjectCreateResponse {
   projectId: string;
   project: ProjectCreatePayload & { id: string };
+  /** ADR-332 D29 — διευθύνσεις που γράφτηκαν χωρίς θέση· η θέση τους ολοκληρώνεται μετά την απάντηση. */
+  positionsPending?: string[];
 }
 
 /**
@@ -120,6 +125,9 @@ export const POST = withHighRateLimit(
         // Enforce name + linkedCompanyId BEFORE any Firestore writes.
         assertProjectCreatePolicy(body as unknown as Record<string, unknown>);
 
+        // ADR-332 D29: διευθύνσεις που η προθεσμία άφησε χωρίς θέση — ολοκληρώνονται μετά την απάντηση.
+        let pendingAddressIds: readonly string[] = [];
+
         // 🏢 «Fill then Create»: οι διευθύνσεις του πρόχειρου έρχονται ΜΑΖΙ με τη δημιουργία.
         // Ίδιο σχήμα και ίδιος γραφέας θέσης με το PATCH — αλλιώς το έργο θα γεννιόταν με
         // διεύθυνση ανεπικύρωτη, χωρίς θέση και χωρίς το κάτοπτρο `address`/`city`.
@@ -129,7 +137,7 @@ export const POST = withHighRateLimit(
             throw new ApiError(400, 'Validation failed', 'INVALID_ADDRESSES');
           }
           body.addresses = parsedAddresses.data;
-          await resolveAddressesForWrite(body, undefined);
+          pendingAddressIds = (await resolveAddressesForWrite(body, undefined)).pendingIds;
         }
 
         // 🏢 ENTERPRISE: companyId = tenant company (ctx.companyId), always.
@@ -263,12 +271,20 @@ export const POST = withHighRateLimit(
 
         // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 
-        // Το `body.addresses` είναι ήδη ό,τι ΓΡΑΦΤΗΚΕ (θέση λυμένη) — ο πελάτης το υιοθετεί
-        // αντί για το δικό του αντίγραφο (ADR-332 D27 Βήμα Β, Β5).
+        // ADR-332 D29 — μετά το commit: η ολοκλήρωση γράφει πάνω σε έγγραφο που υπάρχει ήδη.
+        // Στη δημιουργία δεν υπάρχει «μετακίνησε την πινέζα»: τίποτα αποθηκευμένο για να μετακινηθεί.
+        scheduleProjectAddressCompletion(projectId, resolvedCompanyId, {
+          pendingIds: pendingAddressIds,
+          pendingRelocateIds: [],
+        });
+
+        // Το `body.addresses` είναι ήδη ό,τι ΓΡΑΦΤΗΚΕ (θέση λυμένη ή εκκρεμής) — ο πελάτης το
+        // υιοθετεί αντί για το δικό του αντίγραφο (ADR-332 D27 Βήμα Β, Β5).
         return apiSuccess<ProjectCreateResponse>(
           {
             projectId,
-            project: { ...body, id: projectId }
+            project: { ...body, id: projectId },
+            ...(pendingAddressIds.length > 0 ? { positionsPending: [...pendingAddressIds] } : {}),
           },
           'Project created successfully'
         );

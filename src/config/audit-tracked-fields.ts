@@ -15,6 +15,7 @@ import {
   type TrackedFieldDef,
   legacyLabelMap,
 } from '@/lib/audit/audit-diff';
+import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 
@@ -361,40 +362,39 @@ const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
 // engine reconciles by `keyBy` and emits per-item entries. Everything else
 // falls through as scalar via `mergeDefs`.
 
-const ADDRESS_SUB_FIELD_LABELS: Readonly<Record<string, string>> = {
-  type: 'type',
-  isPrimary: 'isPrimary',
-  label: 'label',
-  street: 'street',
-  number: 'number',
-  city: 'city',
-  postalCode: 'postalCode',
-  region: 'region',
-  regionalUnit: 'regionalUnit',
-  country: 'country',
-  municipality: 'municipality',
-  neighborhood: 'neighborhood',
-  blockSide: 'blockSide',
-  floor: 'floor',
-};
-
 const ADDRESS_TRACK_SUB_FIELDS: readonly string[] = [
   'type', 'isPrimary', 'label',
   'street', 'number', 'city', 'postalCode',
   'region', 'regionalUnit', 'country',
   'municipality', 'neighborhood',
   'blockSide', 'floor',
+  // Η ΘΕΣΗ (ADR-332 D29): σύρσιμο πινέζας από άνθρωπο **και** ολοκλήρωση από τη μηχανή.
+  'coordinates',
 ];
 
+/**
+ * Οι διευθύνσεις έργου **και** κτιρίου στο ιστορικό — **ΕΝΑΣ** ορισμός.
+ *
+ * 🔑 Τον διαβάζουν και οι τρεις γραφείς: το PATCH του έργου, το PATCH του κτιρίου και η μηχανή
+ * ολοκλήρωσης θέσης (`address-position-completion.ts`). Άρα μια αλλαγή θέσης διατυπώνεται
+ * **ίδια** όποιος κι αν την έκανε — και η σύμπτυξη συνεδρίας μπορεί να τις συγκρίνει.
+ *
+ * ⚠️ Το `coordinates` είναι αντικείμενο `{lat, lng}`: χωρίς τον προβολέα, το `serializeScalar`
+ * θα το έγραφε ως **ωμό JSON**. Τα `source` / `verifiedAt` / `geocodingMetadata` **δεν**
+ * παρακολουθούνται: είναι προέλευση της θέσης, όχι η θέση — το ποιος την έβαλε το λέει ο δράστης.
+ */
+export const ADDRESS_COLLECTION_DEF: CollectionDef = {
+  kind: 'collection',
+  label: 'addresses',
+  keyBy: 'id',
+  labelFields: ['type', 'street', 'number'],
+  trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
+  subFieldValues: { coordinates: formatAuditCoordinates },
+  subFieldLabelScope: 'address',
+};
+
 const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
-  addresses: {
-    kind: 'collection',
-    label: 'addresses',
-    keyBy: 'id',
-    labelFields: ['type', 'street', 'number'],
-    trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
-    subFieldLabels: ADDRESS_SUB_FIELD_LABELS,
-  },
+  addresses: ADDRESS_COLLECTION_DEF,
   landowners: {
     kind: 'collection',
     label: 'landowners',
@@ -563,6 +563,7 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Timeline
   startDate: 'startDate',
   completionDate: 'completionDate',
+  constructionYear: 'constructionYear',
   // Company links
   company: 'company',
   linkedCompanyId: 'linkedCompanyId',
@@ -576,14 +577,7 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
 };
 
 const BUILDING_COLLECTION_DEFS: Record<string, CollectionDef> = {
-  addresses: {
-    kind: 'collection',
-    label: 'addresses',
-    keyBy: 'id',
-    labelFields: ['type', 'street', 'number'],
-    trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
-    subFieldLabels: ADDRESS_SUB_FIELD_LABELS,
-  },
+  addresses: ADDRESS_COLLECTION_DEF,
 };
 
 /** Building audit registry — `field → TrackedFieldDef`. */

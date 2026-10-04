@@ -25,8 +25,8 @@ import type { GeoBoundingBox } from '@/types/geo/coordinates';
 // =============================================================================
 
 /**
- * Structured geocoding query — used by `formatAddressForGeocoding()` helper
- * and the `/api/geocoding` endpoint. Mirrors the ELSTAT hierarchy plus
+ * Structured geocoding query — built by `toGeocodingRequest()` (`address-geocoding-query.ts`,
+ * the ONE builder) and consumed by the `/api/geocoding` endpoint. Mirrors the ELSTAT hierarchy plus
  * Nominatim-friendly fields.
  */
 export interface GeocodingRequestBody {

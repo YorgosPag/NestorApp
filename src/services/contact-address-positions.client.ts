@@ -37,10 +37,8 @@ import {
   type ContactAddressPositionsRequest,
   type ContactAddressPositionsResponse,
 } from '@/utils/contacts/contact-address-position-view';
-import {
-  publishContactAddressAdvisories,
-  publishContactAddressPending,
-} from './contacts/contact-address-advisories';
+import { publishContactAddressAdvisories } from './contacts/contact-address-advisories';
+import { publishAddressPositionsPending } from './addresses/address-positions-pending';
 
 const logger = createModuleLogger('ContactAddressPositionsClient');
 const { GEOCODING } = GEOGRAPHIC_CONFIG;
@@ -81,7 +79,9 @@ async function requestContactAddressPositions(
     publishContactAddressAdvisories(contactId, response.positionAdvisories);
     // ADR-332 D27 Ζ5 — δημοσιεύεται **πάντα**, ακόμη και κενό: έτσι η ένδειξη της προηγούμενης
     // αποθήκευσης σβήνει μόνη της όταν η επόμενη προλάβει να λύσει τη θέση.
-    publishContactAddressPending(contactId, response.positionsPending ?? []);
+    // `deferred`: η διαδρομή των επαφών μόνο **αποφασίζει** — κανείς δεν συνεχίζει μετά την απάντηση,
+    // άρα η θέση θα υπολογιστεί στην επόμενη αποθήκευση (σε αντίθεση με έργα/κτίρια, ADR-332 D29).
+    publishAddressPositionsPending(contactId, response.positionsPending ?? [], 'deferred');
   }
   return addresses.map((address) => {
     const decision = address.id ? decisions.get(address.id) : undefined;

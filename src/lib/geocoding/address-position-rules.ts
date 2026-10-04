@@ -8,7 +8,7 @@
 
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { focusPresentation } from '@/lib/geo/geocoding-focus';
-import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
+import { storedCountryCodeOrDefault } from '@/utils/address/country-codes';
 import { HUMAN_PIN_DRIFT_FLOOR_METRES } from './geocoding-thresholds';
 import {
   ADDRESS_IDENTITY_FIELDS,
@@ -66,7 +66,7 @@ function identityValue(address: AddressLike, field: AddressIdentityField): strin
  * χώρας ⇒ `'GR'` επειδή αυτό **δηλώνεται**· απουσία Τ.Κ. παραμένει απουσία.
  */
 const IDENTITY_CANONICAL: Partial<Record<AddressIdentityField, (raw: string) => string>> = {
-  country: (raw) => toStoredCountryCode(raw) ?? DEFAULT_STORED_COUNTRY_CODE,
+  country: storedCountryCodeOrDefault,
 };
 
 /**

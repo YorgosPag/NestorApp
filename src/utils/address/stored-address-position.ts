@@ -25,3 +25,34 @@ export function pickStoredAddressPosition(
   if (typeof source.verifiedAt === 'number') picked.verifiedAt = source.verifiedAt;
   return picked;
 }
+
+/** Τα πεδία που **είναι** η θέση — αντικαθίστανται ολόκληρα, ποτέ μερικώς. */
+const STORED_POSITION_FIELDS = ['coordinates', 'geocodingMetadata', 'source', 'verifiedAt'] as const;
+
+/**
+ * Γράφει τη θέση πάνω στη διεύθυνση, **ολόκληρη**: ό,τι λείπει από τη θέση **αφαιρείται**, δεν μένει
+ * μπαγιάτικο (ίδιος κανόνας με το `applyAddressPosition` του γραφέα).
+ *
+ * 🔑 Μία διατύπωση για τρεις καταναλωτές: τις επαφές (`applyContactAddressPosition`), την
+ * ολοκλήρωση μετά την αποθήκευση (διακομιστής) και την υιοθέτησή της από την οθόνη (ADR-332 D29).
+ */
+export function withStoredAddressPosition<T extends object>(
+  address: T,
+  position: Readonly<StoredAddressPosition>,
+): T {
+  const next = { ...address } as Record<string, unknown>;
+  for (const field of STORED_POSITION_FIELDS) delete next[field];
+  return { ...next, ...pickStoredAddressPosition(position) } as T;
+}
+
+/**
+ * Το αποτύπωμα μιας θέσης — **χωρίς** τη στιγμή επαλήθευσης.
+ *
+ * 🔴 Η στιγμή δεν είναι θέση· είναι το πότε τη μάθαμε. Με το `verifiedAt` μέσα, δύο αναγνώσεις της
+ * **ίδιας** θέσης διαφέρουν όποτε η μηχανή ξαναρωτήθηκε — δηλαδή «άλλαξε» κάτι που δεν άλλαξε.
+ */
+export function storedPositionSignature(source: Readonly<StoredAddressPosition> | undefined): string {
+  if (!source) return '{}';
+  const { verifiedAt: _when, ...where } = pickStoredAddressPosition(source);
+  return JSON.stringify(where);
+}

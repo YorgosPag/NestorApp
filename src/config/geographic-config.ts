@@ -33,6 +33,16 @@ interface GeocodingConfig {
    */
   readonly ADVISORY_RESERVE_MS: number;
   /**
+   * Πότε ξαναδιαβάζει η οθόνη μια οντότητα της οποίας η θέση **ολοκληρώνεται μετά την αποθήκευση**
+   * (ADR-332 D29) — χιλιοστά αναμονής **πριν από κάθε** ανάγνωση, με τη σειρά.
+   *
+   * 🔑 **Αυξανόμενα και φραγμένα** (πρότυπο long-running operations, Google AIP-151): η απάντηση του
+   * παρόχου έρχεται συνήθως μέσα σε λίγα δευτερόλεπτα από τη λήξη της προθεσμίας, άρα οι πρώτες
+   * αναγνώσεις είναι πυκνές· ό,τι δεν ήρθε ως το τέλος δεν θα έρθει (η διεύθυνση δεν υπάρχει ή ο
+   * πάροχος δεν απαντά) και η οθόνη το λέει, αντί να ρωτά για πάντα. Άθροισμα ≈ 50″.
+   */
+  readonly COMPLETION_POLL_DELAYS_MS: readonly number[];
+  /**
    * Διάρκεια μνήμης για **επιτυχημένη** γεωκωδικοποίηση. Η πολιτική του Nominatim **απαιτεί** μνήμη
    * (*«Results must be cached on your side»*)· η θέση μιας διεύθυνσης είναι πρακτικά στατική.
    */
@@ -126,6 +136,7 @@ function getGeographicConfig(): GeographicConfig {
       RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '9000', 10),
       RESOLVER_CLIENT_GRACE_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_CLIENT_GRACE_MS || '3000', 10),
       ADVISORY_RESERVE_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_ADVISORY_RESERVE_MS || '3000', 10),
+      COMPLETION_POLL_DELAYS_MS: [1500, 2500, 4000, 7000, 12000, 22000],
       CACHE_TTL_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_CACHE_TTL_MS || '86400000', 10),
       CACHE_ABSENT_TTL_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_CACHE_ABSENT_TTL_MS || '600000', 10),
       REVERSE_BUDGET_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_REVERSE_BUDGET_MS || '9000', 10),

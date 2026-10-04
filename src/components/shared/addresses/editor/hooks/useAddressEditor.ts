@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
 import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
+import { toGeocodingRequest } from '@/lib/geocoding/address-geocoding-query';
 import {
   DEFAULT_CONFIG,
   INITIAL_STATE,
@@ -78,19 +79,12 @@ export interface UseAddressEditorResult {
   reset: () => void;
 }
 
+/**
+ * Το ερώτημα του συντάκτη = το ερώτημα της αποθήκευσης (ADR-332 D29): ό,τι λύσει η μηχανή όσο
+ * πληκτρολογεί ο άνθρωπος, η αποθήκευση το βρίσκει στη μνήμη της — αρκεί να ρωτούν **το ίδιο**.
+ */
 function toQuery(input: ResolvedAddressFields): StructuredGeocodingQuery {
-  return {
-    street: input.street,
-    // The editor collects the house number in its own input; forwarding it is
-    // the only way a query can resolve past the street centreline.
-    number: input.number,
-    city: input.city,
-    neighborhood: input.neighborhood,
-    postalCode: input.postalCode,
-    county: input.county,
-    region: input.region,
-    country: input.country,
-  };
+  return toGeocodingRequest(input);
 }
 
 function hasAnyValue(input: ResolvedAddressFields): boolean {

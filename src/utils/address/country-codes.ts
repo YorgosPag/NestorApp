@@ -140,6 +140,17 @@ export function toStoredCountryCode(country: string | undefined | null): string 
 export const DEFAULT_STORED_COUNTRY_CODE = GREECE_COUNTRY_CODE.toUpperCase();
 
 /**
+ * **Η χώρα όπως ΣΗΜΑΙΝΕΙ** — ο κωδικός της, και η δηλωμένη προεπιλογή όταν λείπει.
+ *
+ * 🔑 Η **μία** γραφή του `toStoredCountryCode(x) ?? DEFAULT_STORED_COUNTRY_CODE`: τη χρειάζονται
+ * μαζί ο κριτής ταυτότητας διεύθυνσης και το ερώτημα προς τη μηχανή γεωκωδικοποίησης — αν οι δύο
+ * απαντούσαν διαφορετικά στο «ποια χώρα;», η ίδια διεύθυνση θα ρωτιόταν με δύο ερωτήματα.
+ */
+export function storedCountryCodeOrDefault(country: string | undefined | null): string {
+  return toStoredCountryCode(country) ?? DEFAULT_STORED_COUNTRY_CODE;
+}
+
+/**
  * Το i18n κλειδί για την **εμφάνιση** μιας αποθηκευμένης χώρας, ή `null` για άγνωστη.
  *
  * `null` σημαίνει «δεν έχω μετάφραση γι' αυτό» — ο καλών δείχνει **την ίδια την τιμή**, που

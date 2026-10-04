@@ -29,8 +29,11 @@ import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { loadOwnedProject } from '../_shared/project-owned-doc';
 import { invalidateProjectCaches } from '../_shared/project-cache';
 import { ProjectUpdateSchema } from './project-mutations.types';
-import { republishProjectListings } from '@/services/listings/address-place-writeback';
-import { resolveAddressesForWrite } from '../_shared/project-address-write';
+import { addressWriteEcho, republishProjectListings } from '@/services/listings/address-place-writeback';
+import {
+  resolveAddressesForWrite,
+  scheduleProjectAddressCompletion,
+} from '../_shared/project-address-write';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
@@ -64,7 +67,8 @@ export async function handleUpdateProject(
   const { data: projectData } = await loadOwnedProject({ projectId, caller: ctx, action: 'update' });
 
   // 3β. **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — δες `resolveAddressesForWrite`.
-  const positionAdvisories = await resolveAddressesForWrite(body as Record<string, unknown>, projectData);
+  const addressOutcome = await resolveAddressesForWrite(body as Record<string, unknown>, projectData);
+  const { advisories: positionAdvisories, pendingIds: pendingAddressIds } = addressOutcome;
 
   // 4. Build update payload (companyId is IMMUTABLE — ADR-232)
   const { companyId: _immutableCompanyId, ...safeBody } = body;
@@ -98,6 +102,12 @@ export async function handleUpdateProject(
   if ('addresses' in body) {
     await republishProjectListings(getAdminFirestore(), projectId);
   }
+  // ADR-332 D29 — ό,τι άφησε εκκρεμές η προθεσμία ολοκληρώνεται μετά την απάντηση (και ξαναπροβάλλει).
+  scheduleProjectAddressCompletion(
+    projectId,
+    (projectData?.companyId as string | undefined) ?? ctx.companyId,
+    addressOutcome,
+  );
 
   // 7. ADR-239: Centralized linking
   if ('linkedCompanyId' in body) {
@@ -160,18 +170,13 @@ export async function handleUpdateProject(
 
   // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 
-  // ADR-332 D27 Βήμα Β (Β5): επιστρέφεται ό,τι ΓΡΑΦΤΗΚΕ — ο πελάτης το υιοθετεί.
-  const writtenAddresses = Array.isArray(cleanData.addresses)
-    ? { addresses: cleanData.addresses as ProjectAddress[] }
-    : {};
-
   return apiSuccess<ProjectUpdateResponse>(
     {
       projectId,
       updated: true,
       _v: versionResult.newVersion,
-      ...writtenAddresses,
-      ...(positionAdvisories.length > 0 ? { positionAdvisories: [...positionAdvisories] } : {}),
+      // ADR-332 D27 Βήμα Β (Β5): επιστρέφεται ό,τι ΓΡΑΦΤΗΚΕ — ο πελάτης το υιοθετεί.
+      ...addressWriteEcho<ProjectAddress>(cleanData.addresses, positionAdvisories, pendingAddressIds),
     },
     `Project updated successfully in ${duration}ms`
   );

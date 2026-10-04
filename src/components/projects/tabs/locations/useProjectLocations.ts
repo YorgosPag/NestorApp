@@ -30,6 +30,14 @@ import { applyPinDrop, type DragApplyMode } from './location-converters';
 import { useLocationAddFlow, useLocationEditFlow, type AddressOp } from './useLocationFlows';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+import { useAddressPositionSettlement } from '@/hooks/useAddressPositionSettlement';
+import { getProjectAddresses } from '@/components/building-management/building-services';
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+
+/** Οι διευθύνσεις του έργου όπως είναι **τώρα** στον διακομιστή (ο ένας αναγνώστης, κοινός με τα κτίρια). */
+async function readProjectAddresses(projectId: string): Promise<ProjectAddress[]> {
+  return (await getProjectAddresses(projectId)).addresses;
+}
 
 function initialAddresses(project: Project): ProjectAddress[] {
   if (project.addresses) return project.addresses;
@@ -69,6 +77,32 @@ export function useProjectLocations(project: Project, draft?: ProjectDraftAddres
   const [deleteTargetIndex, setDeleteTargetIndex] = useState<number | null>(null);
   /** Φ2β — κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση (τελευταία αποθήκευση). */
   const [positionAdvisories, setPositionAdvisories] = useState<readonly AddressPositionDrift[]>([]);
+
+  // ---------------------------------------------------------------------------
+  // ΘΕΣΗ ΠΟΥ ΟΛΟΚΛΗΡΩΝΕΤΑΙ ΜΕΤΑ ΤΗΝ ΑΠΟΘΗΚΕΥΣΗ (ADR-332 D29)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Ο διακομιστής απάντησε μέσα στην προθεσμία και συνεχίζει να εντοπίζει τη θέση. Μόλις γραφτεί,
+   * υιοθετείται εδώ — και διαδίδεται, ώστε η μνήμη του έργου και οι άλλες σελίδες να συμφωνούν.
+   */
+  const adoptSettledAddresses = useCallback((settled: ProjectAddress[]) => {
+    setLocalAddresses(settled);
+    if (draft?.belongsTo(project.id)) draft.set(settled);
+    if (!project.id) return;
+    RealtimeService.dispatch('PROJECT_UPDATED', {
+      projectId: project.id,
+      updates: { addresses: settled } as ProjectUpdatedPayload['updates'],
+      timestamp: Date.now(),
+    });
+  }, [draft, project.id]);
+
+  const pendingPositions = useAddressPositionSettlement({
+    entityId: isDraft ? undefined : project.id,
+    addresses: localAddresses,
+    read: readProjectAddresses,
+    onSettled: adoptSettledAddresses,
+  });
 
   // ---------------------------------------------------------------------------
   // PERSISTENCE HELPER
@@ -321,6 +355,9 @@ export function useProjectLocations(project: Project, draft?: ProjectDraftAddres
     positionAdvisories,
     handleRelocateAddress,
     handleKeepAddressPin,
+
+    // ADR-332 D29 — θέσεις που εντοπίζονται ακόμη (ή αναβλήθηκαν) μετά την αποθήκευση
+    pendingPositions,
 
     // Delete dialog
     deleteDialogOpen,

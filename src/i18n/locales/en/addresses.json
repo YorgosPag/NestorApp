@@ -327,7 +327,8 @@
       "relocateFailed": "The pin was not moved — the address service did not respond. Please try again."
     },
     "positionPending": {
-      "message": "This address's position is pending — it will be computed on the next save."
+      "message": "This address's position is pending — it will be computed on the next save.",
+      "locating": "This address's position is being located… It will appear here as soon as it is ready."
     },
     "positionStale": {
       "message": "The map position was computed for a different address than the one written here.",

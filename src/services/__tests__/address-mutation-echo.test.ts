@@ -7,7 +7,14 @@
  */
 
 import type { ProjectAddress } from '@/types/project/addresses';
-import { realtimeUpdateFields, serverAddressEcho, settleEntityUpdate } from '../address-mutation-echo';
+import { renderHook, act } from '@testing-library/react';
+import {
+  publishServerAddressPending,
+  realtimeUpdateFields,
+  serverAddressEcho,
+  settleEntityUpdate,
+} from '../address-mutation-echo';
+import { useAddressPositionsPending } from '../addresses/address-positions-pending';
 
 const WRITTEN: ProjectAddress[] = [{
   id: 'addr-16',
@@ -72,5 +79,38 @@ describe('settleEntityUpdate — ΕΝΑ κλείσιμο για κάθε επι�
 
     expect(dispatch).toHaveBeenCalledWith({ addresses: WRITTEN });
     expect(result).toEqual({ success: true, _v: 7, addresses: WRITTEN });
+  });
+});
+
+describe('εκκρεμείς θέσεις — ο διακομιστής τις έστελνε και ο πελάτης τις ΠΕΤΟΥΣΕ (ADR-332 D29)', () => {
+  it('η απήχηση μεταφέρει το `positionsPending`', () => {
+    expect(serverAddressEcho({ addresses: WRITTEN, positionsPending: ['addr-16'] }))
+      .toEqual({ addresses: WRITTEN, positionsPending: ['addr-16'] });
+  });
+
+  it('μετάλλαξη που άγγιξε διευθύνσεις δημοσιεύει τις εκκρεμείς ως «εντοπίζεται»', () => {
+    const { result } = renderHook(() => useAddressPositionsPending('proj_echo_1'));
+
+    act(() => publishServerAddressPending('proj_echo_1', true, { positionsPending: ['addr-16'] }));
+
+    expect(result.current).toEqual({ ids: ['addr-16'], phase: 'locating' });
+  });
+
+  it('άγγιξε διευθύνσεις και ΟΛΕΣ λύθηκαν ⇒ η ένδειξη της προηγούμενης αποθήκευσης σβήνει', () => {
+    const { result } = renderHook(() => useAddressPositionsPending('proj_echo_2'));
+    act(() => publishServerAddressPending('proj_echo_2', true, { positionsPending: ['addr-16'] }));
+
+    act(() => publishServerAddressPending('proj_echo_2', true, { addresses: WRITTEN }));
+
+    expect(result.current.ids).toEqual([]);
+  });
+
+  it('μετάλλαξη που ΔΕΝ άγγιξε διευθύνσεις (π.χ. μόνο όνομα) δεν σβήνει ό,τι ακόμη εντοπίζεται', () => {
+    const { result } = renderHook(() => useAddressPositionsPending('proj_echo_3'));
+    act(() => publishServerAddressPending('proj_echo_3', true, { positionsPending: ['addr-16'] }));
+
+    act(() => publishServerAddressPending('proj_echo_3', false, {}));
+
+    expect(result.current.ids).toEqual(['addr-16']);
   });
 });

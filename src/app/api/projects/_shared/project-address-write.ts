@@ -24,14 +24,38 @@
 import 'server-only';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
-  resolveProjectAddressPositions,
+  republishProjectListings,
+  resolveAddressPositionsWithinDeadline,
   type ProjectAddressLike,
 } from '@/services/listings/address-place-writeback';
+import { scheduleAddressPositionCompletion } from '@/services/listings/address-position-completion-schedule';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import { extractLegacyFields } from '@/types/project/address-helpers';
+import { invalidateProjectCaches } from './project-cache';
 
 const logger = createModuleLogger('ProjectAddressWrite');
+
+/** Τι έκρινε ο γραφέας θέσης για μια αποθήκευση έργου. */
+export interface ProjectAddressWriteOutcome {
+  /** Κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση (Φ2β). */
+  readonly advisories: readonly AddressPositionDrift[];
+  /**
+   * Διευθύνσεις που **γράφτηκαν χωρίς νέα θέση** επειδή η προθεσμία έληξε πριν απαντήσει ο πάροχος
+   * (ADR-332 D29). Δεν είναι «άλυτες»: η μηχανή συνεχίζει, και η θέση γράφεται μετά την απάντηση
+   * — δες {@link scheduleProjectAddressCompletion}.
+   */
+  readonly pendingIds: readonly string[];
+  /**
+   * Όσες από τις εκκρεμείς ήταν ρητή **«μετακίνησε την πινέζα»**. Η δήλωση είναι αίτημα και δεν
+   * αποθηκεύεται· αν δεν ταξιδέψει ως την ολοκλήρωση, η μετακίνηση που έληξε **δεν γίνεται ποτέ**.
+   */
+  readonly pendingRelocateIds: readonly string[];
+}
+
+const NOTHING_RESOLVED: ProjectAddressWriteOutcome = { advisories: [], pendingIds: [], pendingRelocateIds: [] };
 
 /**
  * Αντικαθιστά **επί τόπου** τα `addresses` του σώματος με ό,τι θα γραφτεί (θέση λυμένη) και
@@ -39,29 +63,31 @@ const logger = createModuleLogger('ProjectAddressWrite');
  *
  * @param storedProjectData Το αποθηκευμένο έργο· `undefined` στη **δημιουργία** (τίποτα αποθηκευμένο
  *   ⇒ κάθε διεύθυνση είναι «νέα» για τον γραφέα θέσης).
- * @returns Οι κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση (Φ2β).
+ * @returns Οι αποκλίσεις των κρατημένων πινεζών **και** οι διευθύνσεις που έμειναν εκκρεμείς.
  */
 export async function resolveAddressesForWrite(
   body: Record<string, unknown>,
   storedProjectData: Record<string, unknown> | undefined,
-): Promise<readonly AddressPositionDrift[]> {
+): Promise<ProjectAddressWriteOutcome> {
   // ADR-332 D27 Βήμα Β (Φ2β): η δήλωση μετακίνησης είναι ΑΙΤΗΜΑ, όχι πεδίο του έργου —
   // φεύγει από το σώμα ΠΡΙΝ τη γραφή, αλλιώς θα γραφόταν στο έγγραφο.
   const relocateIds = new Set(
     Array.isArray(body['relocateAddressIds']) ? (body['relocateAddressIds'] as string[]) : [],
   );
   delete body['relocateAddressIds'];
-  if (!Array.isArray(body['addresses'])) return [];
+  if (!Array.isArray(body['addresses'])) return NOTHING_RESOLVED;
 
   const stored = Array.isArray(storedProjectData?.['addresses'])
     ? (storedProjectData['addresses'] as ProjectAddressLike[])
     : [];
 
-  const { addresses, tally, drifts } = await resolveProjectAddressPositions(
+  // ADR-332 D29 — **μία προθεσμία για όλη την επίλυση**, η ίδια με των επαφών και των κτιρίων (ο ένας
+  // βοηθός). Χωρίς αυτήν μια διεύθυνση που δεν λύνεται κρατούσε την «Αποθήκευση» **8,4″** (μετρημένο
+  // ζωντανά, 2026-10-04).
+  const { addresses, tally, drifts, pendingIds } = await resolveAddressPositionsWithinDeadline(
     stored,
     body['addresses'] as ProjectAddressLike[],
-    Date.now(),
-    { relocateIds },
+    relocateIds,
   );
 
   body['addresses'] = addresses;
@@ -70,6 +96,41 @@ export async function resolveAddressesForWrite(
   Object.assign(body, extractLegacyFields(addresses));
   // Η λογιστική τυπώνεται **πάντα**, ακόμη και όταν κάθε κάδος είναι μηδέν: ένα «0»
   // που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
-  logger.info('[Projects/AddressWrite] Θέσεις διευθύνσεων', { ...tally, drifts: drifts.length });
-  return drifts;
+  logger.info('[Projects/AddressWrite] Θέσεις διευθύνσεων', {
+    ...tally,
+    drifts: drifts.length,
+    pending: pendingIds.length,
+  });
+  return {
+    advisories: drifts,
+    pendingIds,
+    pendingRelocateIds: pendingIds.filter((id) => relocateIds.has(id)),
+  };
+}
+
+/**
+ * **Η ΘΕΣΗ ΠΟΥ ΔΕΝ ΠΡΟΛΑΒΕ, ΟΛΟΚΛΗΡΩΝΕΤΑΙ ΜΕΤΑ ΤΗΝ ΑΠΑΝΤΗΣΗ** (ADR-332 D29) — ώστε ο άνθρωπος να
+ * μην περιμένει τον πάροχο. Καμία εκκρεμότητα ⇒ καμία εργασία.
+ *
+ * 🔑 Η αγγελία διαβάζει τη θέση από το **έργο** (ADR-777 Α1): όταν η ολοκλήρωση γράψει έστω μία
+ * θέση, οι αγγελίες του έργου ξαναπροβάλλονται — αλλιώς θα έμεναν χωρίς σημείο, σιωπηλά.
+ */
+export function scheduleProjectAddressCompletion(
+  projectId: string,
+  companyId: Parameters<typeof invalidateProjectCaches>[0],
+  outcome: Pick<ProjectAddressWriteOutcome, 'pendingIds' | 'pendingRelocateIds'>,
+): void {
+  scheduleAddressPositionCompletion(
+    {
+      collection: COLLECTIONS.PROJECTS,
+      docId: projectId,
+      entityType: ENTITY_TYPES.PROJECT,
+      pendingIds: outcome.pendingIds,
+      relocateIds: outcome.pendingRelocateIds,
+    },
+    async (adminDb) => {
+      invalidateProjectCaches(companyId);
+      await republishProjectListings(adminDb, projectId);
+    },
+  );
 }

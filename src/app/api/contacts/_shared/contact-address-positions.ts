@@ -24,11 +24,9 @@ import 'server-only';
 
 import { z } from 'zod';
 import { createModuleLogger } from '@/lib/telemetry';
-import { createDeadline } from '@/lib/async-utils';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { GEOCODING_ACCURACIES } from '@/lib/geocoding/geocoding-types';
 import { WRITTEN_ADDRESS_SOURCES } from '@/lib/geocoding/address-position';
-import { resolveProjectAddressPositions } from '@/services/listings/address-place-writeback';
+import { resolveAddressPositionsWithinDeadline } from '@/services/listings/address-place-writeback';
 import { addressPositionFieldsSchema, geocodingMetadataSchema } from '@/types/project/address-schemas';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
@@ -38,7 +36,6 @@ import {
 } from '@/utils/contacts/contact-address-position-view';
 
 const logger = createModuleLogger('ContactAddressPositions');
-const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
 /** Πάνω όριο εγγραφών ανά αίτημα — η μηχανή ρωτιέται σειριακά (1 αίτημα/δευτ.). */
 export const CONTACT_ADDRESS_POSITIONS_LIMIT = 50;
@@ -98,35 +95,24 @@ export async function resolveContactAddressPositions(
   // ADR-332 D27 Ζ5 — **μία** προθεσμία για όλη την επίλυση (deadline propagation, όπως το Β13 στο
   // αντίστροφο): κάθε διεύθυνση ρωτά το **υπόλοιπο** πριν ρωτήσει τη μηχανή. Χωρίς αυτό, ένας
   // **μη κρίσιμος** γραφέας κρατούσε την «Αποθήκευση» **61,4″** (μετρημένο ζωντανά).
-  const deadline = createDeadline(GEOCODING.RESOLVER_TIMEOUT_MS);
-  try {
-    const { addresses, tally, drifts, pendingIds } = await resolveProjectAddressPositions(
-      contactAddressPositionViews(storedAddresses),
-      body.addresses,
-      Date.now(),
-      {
-        relocateIds: new Set(body.relocateAddressIds ?? []),
-        budget: {
-          remainingMs: () => deadline.remainingMs(),
-          advisoryReserveMs: GEOCODING.ADVISORY_RESERVE_MS,
-        },
-      },
-    );
+  //
+  // Η προθεσμία ζει στον **έναν** βοηθό (`resolveAddressPositionsWithinDeadline`) — ίδια για έργα και κτίρια.
+  const { addresses, tally, drifts, pendingIds } = await resolveAddressPositionsWithinDeadline(
+    contactAddressPositionViews(storedAddresses),
+    body.addresses,
+    new Set(body.relocateAddressIds ?? []),
+  );
 
-    // Η λογιστική τυπώνεται **πάντα** — ένα «0» που δεν τυπώνεται διαβάζεται ως «δεν ελέγχθηκε».
-    logger.info('[Contacts/AddressPositions] Θέσεις διευθύνσεων', {
-      ...tally,
-      drifts: drifts.length,
-      pending: pendingIds.length,
-    });
+  // Η λογιστική τυπώνεται **πάντα** — ένα «0» που δεν τυπώνεται διαβάζεται ως «δεν ελέγχθηκε».
+  logger.info('[Contacts/AddressPositions] Θέσεις διευθύνσεων', {
+    ...tally,
+    drifts: drifts.length,
+    pending: pendingIds.length,
+  });
 
-    return {
-      positions: addresses.map((address) => ({ id: address.id, ...pickStoredAddressPosition(address) })),
-      positionAdvisories: [...drifts],
-      ...(pendingIds.length > 0 ? { positionsPending: [...pendingIds] } : {}),
-    };
-  } finally {
-    // Το χρονόμετρο της προθεσμίας κρατά ζωντανή τη διεργασία ως τη λήξη αν δεν κλείσει.
-    deadline.dispose();
-  }
+  return {
+    positions: addresses.map((address) => ({ id: address.id, ...pickStoredAddressPosition(address) })),
+    positionAdvisories: [...drifts],
+    ...(pendingIds.length > 0 ? { positionsPending: [...pendingIds] } : {}),
+  };
 }

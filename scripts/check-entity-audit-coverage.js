@@ -205,6 +205,35 @@ const CHAIN_DIRECT_RE =
 const CHAIN_VAR_RE =
   /\b(?:\w*Ref|\w*Doc|ref|doc|batch|transaction|tx|writeBatch)\s*\.\s*(?:set|update|delete|create)\s*\(/g;
 const MODULE_WRITE_RE = /\b(?:setDoc|updateDoc|deleteDoc|addDoc)\s*\(/g;
+/**
+ * Versioned writes (2026-10-05): `withVersionCheck({ collection: COLLECTIONS.X, … })` and
+ * `withVersionCheckOnCurrent(…)` — the write happens inside `lib/firestore/version-check.ts`,
+ * so NONE of the shapes above appears at the call site.
+ *
+ * Why this exists: `PATCH /api/buildings` wrote every human edit through `withVersionCheck`
+ * and never recorded an audit entry. The gate could not see it — the file had a tracked
+ * `COLLECTIONS.BUILDINGS` but no write shape — so it was "clean" by blindness, not by coverage.
+ *
+ * Measured before widening: 9 production call sites, 2 newly flagged, both true positives.
+ *
+ * ⚠️ DECLARED BLIND SPOT (not fixed here): writes whose collection is a VARIABLE
+ * (`db.collection(name).doc(id).update()`). A static scan cannot resolve the variable; flagging
+ * every such write measured ~80–90% false positives (admin migrations, backups, system stamps).
+ * Tracked in `.claude-rules/pending-ratchet-work.md`.
+ */
+const VERSIONED_WRITE_RE = /\bwithVersionCheck(?:OnCurrent)?\s*\(/g;
+/**
+ * Named recorders that a writer may delegate to instead of calling
+ * `EntityAuditService.recordChange(` in its own file. CLOSED list, and each entry is
+ * VERIFIED on every run: the declared file must itself contain the `recordChange(` call and
+ * export the function — a delegate that stops recording stops counting as coverage.
+ *
+ * Add an entry only when two or more writers share ONE recorder (SSoT); a single writer
+ * should call `recordChange` directly.
+ */
+const AUDIT_RECORDER_DELEGATES = [
+  { fn: 'recordBuildingUpdate', file: 'src/app/api/buildings/_shared/building-update-audit.ts' },
+];
 // ---------------------------------------------------------------------------
 // ANSI colours (no-op on non-TTY)
 // ---------------------------------------------------------------------------
@@ -380,6 +409,13 @@ function detectTrackedWrites(src) {
     if (key) found.add(key);
   }
 
+  // Phase 1b: versioned writes — `collection: COLLECTIONS.KEY` lives inside the call args.
+  VERSIONED_WRITE_RE.lastIndex = 0;
+  while ((m = VERSIONED_WRITE_RE.exec(src)) !== null) {
+    const key = forwardTrackedKey(m.index, 400);
+    if (key) found.add(key);
+  }
+
   // Phase 2a: direct chain writes — `.doc(id).set(` — scan backward tight window.
   CHAIN_DIRECT_RE.lastIndex = 0;
   while ((m = CHAIN_DIRECT_RE.exec(src)) !== null) {
@@ -397,16 +433,40 @@ function detectTrackedWrites(src) {
   return { hasWrite: found.size > 0, keys: found };
 }
 
-/** @param {string} src @returns {boolean} */
-function hasRecordChangeCall(src) {
-  return /EntityAuditService\s*\.\s*recordChange\s*\(/.test(src);
+const RECORD_CHANGE_RE = /EntityAuditService\s*\.\s*recordChange\s*\(/;
+
+/**
+ * The delegates that are LIVE: declared file exists, exports the function, and records.
+ * Computed once per run. A stale declaration yields no coverage (and says so on stderr).
+ * @param {string} root
+ * @returns {string[]} function names
+ */
+function liveRecorderDelegates(root) {
+  return AUDIT_RECORDER_DELEGATES.filter(({ fn, file }) => {
+    const abs = path.join(root, file);
+    const src = fs.existsSync(abs) ? stripCommentsAndStrings(fs.readFileSync(abs, 'utf8')) : '';
+    const live = RECORD_CHANGE_RE.test(src) && new RegExp(`export\\s+(?:async\\s+)?function\\s+${fn}\\b`).test(src);
+    if (!live) console.error(c.red(`CHECK 3.17: stale audit delegate "${fn}" (${file}) — no longer counts as coverage`));
+    return live;
+  }).map(({ fn }) => fn);
+}
+
+/**
+ * @param {string} src
+ * @param {readonly string[]} delegates live recorder function names
+ * @returns {boolean}
+ */
+function hasRecordChangeCall(src, delegates) {
+  if (RECORD_CHANGE_RE.test(src)) return true;
+  return delegates.some((fn) => new RegExp(`\\b${fn}\\s*\\(`).test(src));
 }
 
 /**
  * @param {string} abs
+ * @param {readonly string[]} delegates live recorder function names
  * @returns {{relPath: string, status: 'clean'|'violation'|'covered'|'skipped', keys: string[]}}
  */
-function analyzeFile(abs) {
+function analyzeFile(abs, delegates) {
   const relPath = relPosix(abs);
   if (isExempt(abs)) {
     return { relPath, status: 'skipped', keys: [] };
@@ -417,7 +477,7 @@ function analyzeFile(abs) {
 
   if (!hasWrite) return { relPath, status: 'clean', keys: [] };
 
-  if (hasRecordChangeCall(src)) {
+  if (hasRecordChangeCall(src, delegates)) {
     return { relPath, status: 'covered', keys: [...keys] };
   }
   return { relPath, status: 'violation', keys: [...keys] };
@@ -479,13 +539,14 @@ function main() {
   }
 
   const baseline = loadBaseline();
+  const delegates = liveRecorderDelegates(PROJECT_ROOT);
   /** @type {Array<{relPath: string, keys: string[]}>} */
   const violations = [];
   /** @type {string[]} */
   const covered = [];
 
   for (const abs of targets) {
-    const result = analyzeFile(abs);
+    const result = analyzeFile(abs, delegates);
     if (result.status === 'violation') violations.push({ relPath: result.relPath, keys: result.keys });
     else if (result.status === 'covered') covered.push(result.relPath);
   }
@@ -511,7 +572,7 @@ function main() {
   const fixed = [...baseline].filter((f) => {
     const abs = path.join(PROJECT_ROOT, f);
     if (!fs.existsSync(abs)) return false;
-    const result = analyzeFile(abs);
+    const result = analyzeFile(abs, delegates);
     return result.status !== 'violation';
   });
 
@@ -550,4 +611,13 @@ function main() {
   return 1;
 }
 
-process.exit(main());
+if (require.main === module) {
+  process.exit(main());
+}
+
+module.exports = {
+  detectTrackedWrites,
+  hasRecordChangeCall,
+  liveRecorderDelegates,
+  stripCommentsAndStrings,
+};

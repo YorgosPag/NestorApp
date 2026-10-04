@@ -35,11 +35,23 @@ export const SYSTEM_IDENTITY = {
   ID: 'system',
   /** Identifier for automated ingestion processes */
   INGESTION_ID: 'system:ingestion',
+  /** Η ολοκλήρωση εκκρεμών θέσεων διευθύνσεων μετά την αποθήκευση (ADR-332 D29) */
+  ADDRESS_POSITION_ID: 'system:address-position',
   /** Display name for system messages */
   DISPLAY_NAME: 'System',
   /** System type identifier */
   TYPE: 'system',
 } as const;
+
+/**
+ * Είναι αυτός ο δράστης η **μηχανή**; — `system` ή οποιοδήποτε `system:<διεργασία>`.
+ *
+ * 🔑 Η απόφαση παίρνεται από την **ταυτότητα**, ποτέ από το εμφανιζόμενο όνομα: το όνομα είναι
+ * στιγμιότυπο γραμμένο σε μία γλώσσα, η ταυτότητα είναι σταθερή.
+ */
+export function isSystemActorId(actorId: string | null | undefined): boolean {
+  return actorId === SYSTEM_IDENTITY.ID || (actorId?.startsWith(`${SYSTEM_IDENTITY.ID}:`) ?? false);
+}
 
 // ============================================================================
 // PARTICIPANT ROLES

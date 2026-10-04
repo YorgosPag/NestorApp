@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Project } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
@@ -60,6 +60,15 @@ jest.mock('@/components/shared/addresses/AddressMap', () => ({
  */
 jest.mock('@/components/shared/addresses/AddressMapCandidateLayer', () => ({
   AddressMapCandidateLayer: () => null,
+}));
+
+/**
+ * Η κάρτα διεύθυνσης (προβολή, όχι φόρμα) — αποδίδεται **μόνο** στην ενότητα D29 παρακάτω, και από
+ * αυτήν ενδιαφέρει το `footer`, όπου η οθόνη βάζει τις ειδοποιήσεις θέσης. Το κέλυφός της ζητά
+ * βοηθούς του `editor`, που εδώ είναι ήδη αντικαταστάτης-καταγραφέας.
+ */
+jest.mock('@/components/shared/addresses/SharedAddressActionCard', () => ({
+  SharedAddressActionCard: ({ footer }: { footer?: React.ReactNode }) => <article>{footer}</article>,
 }));
 
 jest.mock('../locations/useProjectLocations');
@@ -253,5 +262,67 @@ describe('ProjectLocationsTab — η πινέζα του ανθρώπου νικ
     const captured = renderTab([address({ coordinates: SITE_POINT })], 'edit', DRAGGED_POINT);
 
     expect(captured[0]?.proximityAnchor).toEqual(SITE_POINT);
+  });
+});
+
+// =============================================================================
+// «Η ΘΕΣΗ ΕΝΤΟΠΙΖΕΤΑΙ…» — ADR-332 D29 (η ΑΠΟΔΟΣΗ· το hook και η μνήμη έχουν δικές τους άγκυρες)
+// =============================================================================
+
+/**
+ * Η ένδειξη ζει στην **προβολή καρτών**, όχι στις φόρμες — γι' αυτό εδώ η φόρμα είναι κλειστή.
+ * Το ίδιο harness με παραπάνω (ίδια οθόνη, ίδιοι αντικαταστάτες)· αλλάζει μόνο η κατάσταση.
+ */
+describe('ProjectLocationsTab — η εκκρεμής θέση ΛΕΓΕΤΑΙ στην κάρτα της διεύθυνσης (D29)', () => {
+  const PENDING_ID = 'addr-pending';
+
+  function renderCards(extra: Record<string, unknown>) {
+    const addresses = [
+      address({ id: 'addr-settled', coordinates: SITE_POINT }),
+      address({ id: PENDING_ID, isPrimary: false, type: 'entrance', coordinates: undefined }),
+    ];
+    mockedLocations.mockReturnValue({
+      ...locationsState(addresses, 'edit'),
+      editingIndex: null,
+      isInlineFormActive: false,
+      pendingPositions: { ids: [], phase: 'locating' },
+      ...extra,
+    } as unknown as ReturnType<typeof useProjectLocations>);
+    render(
+      <TooltipProvider>
+        <ProjectLocationsTab data={{ id: 'p-1' } as Project} />
+      </TooltipProvider>,
+    );
+  }
+
+  it('εντοπίζεται ⇒ ΜΙΑ ένδειξη «locating», ζωντανή περιοχή που δηλώνει απασχόληση', () => {
+    renderCards({ pendingPositions: { ids: [PENDING_ID], phase: 'locating' } });
+
+    const notices = screen.getAllByRole('status').filter((node) => node.textContent === 'editor.positionPending.locating');
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('ο εντοπισμός δεν ολοκληρώθηκε εγκαίρως ⇒ η διατύπωση αλλάζει σε «θα υπολογιστεί στην επόμενη αποθήκευση»', () => {
+    renderCards({ pendingPositions: { ids: [PENDING_ID], phase: 'deferred' } });
+
+    expect(screen.queryByText('editor.positionPending.locating')).toBeNull();
+    expect(screen.getByText('editor.positionPending.message')).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('καμία εκκρεμότητα ⇒ καμία ένδειξη', () => {
+    renderCards({});
+
+    expect(screen.queryByText('editor.positionPending.locating')).toBeNull();
+    expect(screen.queryByText('editor.positionPending.message')).toBeNull();
+  });
+
+  it('🔴 απόκλιση πινέζας στην ΙΔΙΑ διεύθυνση ⇒ μιλά η απόκλιση, όχι το «εκκρεμεί»', () => {
+    renderCards({
+      pendingPositions: { ids: [PENDING_ID], phase: 'locating' },
+      positionAdvisories: [{ addressId: PENDING_ID, distanceMetres: 420 }],
+    });
+
+    expect(screen.queryByText('editor.positionPending.locating')).toBeNull();
   });
 });

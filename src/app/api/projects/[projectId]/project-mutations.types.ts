@@ -87,6 +87,11 @@ export interface ProjectUpdateResponse {
    * (μετρημένα μέτρα + όριο αβεβαιότητας). Ο άνθρωπος αποφασίζει· ο διακομιστής μόνο μετρά.
    */
   positionAdvisories?: AddressPositionDrift[];
+  /**
+   * ADR-332 D29 — διευθύνσεις που γράφτηκαν **χωρίς νέα θέση** επειδή ο πάροχος δεν απάντησε
+   * μέσα στην προθεσμία. Η θέση τους ολοκληρώνεται μετά την απάντηση· η οθόνη λέει «εντοπίζεται».
+   */
+  positionsPending?: string[];
 }
 
 export interface ProjectDeleteResponse {

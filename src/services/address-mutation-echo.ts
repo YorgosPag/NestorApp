@@ -11,12 +11,18 @@
 
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
+import { publishAddressPositionsPending } from './addresses/address-positions-pending';
 
 /** Ό,τι επιστρέφει ο διακομιστής για τις διευθύνσεις — **όπως γράφτηκαν**. */
 export interface ServerAddressEcho {
   addresses?: ProjectAddress[];
   /** Κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση. */
   positionAdvisories?: AddressPositionDrift[];
+  /**
+   * Διευθύνσεις που γράφτηκαν **χωρίς νέα θέση** επειδή έληξε η προθεσμία (ADR-332 D29) — η θέση τους
+   * ολοκληρώνεται στον διακομιστή μετά την απάντηση. 🔴 Ο διακομιστής το έστελνε και εδώ **πετιόταν**.
+   */
+  positionsPending?: string[];
 }
 
 /** Κρατά **μόνο** ό,τι έστειλε ο διακομιστής — ώστε ο καλών να το απλώσει στο αποτέλεσμά του. */
@@ -24,7 +30,24 @@ export function serverAddressEcho(response: ServerAddressEcho | null | undefined
   return {
     ...(response?.addresses ? { addresses: response.addresses } : {}),
     ...(response?.positionAdvisories ? { positionAdvisories: response.positionAdvisories } : {}),
+    ...(response?.positionsPending ? { positionsPending: response.positionsPending } : {}),
   };
+}
+
+/**
+ * Δημοσιεύει τις εκκρεμείς θέσεις μιας μετάλλαξης στη μνήμη που διαβάζει η καρτέλα διευθύνσεων.
+ *
+ * 🔑 **Μόνο όταν η μετάλλαξη άγγιξε διευθύνσεις.** Μια αποθήκευση που αλλάζει μόνο το όνομα δεν λέει
+ * τίποτα για θέσεις — αν δημοσίευε κενή λίστα, θα έσβηνε την ένδειξη μιας διεύθυνσης που ακόμη εντοπίζεται.
+ * Όταν **άγγιξε**, δημοσιεύεται **πάντα** (και κενή): έτσι η ένδειξη της προηγούμενης αποθήκευσης σβήνει.
+ */
+export function publishServerAddressPending(
+  entityId: string,
+  touchedAddresses: boolean,
+  response: ServerAddressEcho | null | undefined,
+): void {
+  if (!touchedAddresses) return;
+  publishAddressPositionsPending(entityId, response?.positionsPending ?? [], 'locating');
 }
 
 /**

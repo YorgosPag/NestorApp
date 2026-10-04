@@ -23,7 +23,7 @@ import { sleep } from '@/lib/async-utils';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { countryNameToCode } from '@/utils/address/country-codes';
-import { cachedGeocode } from './geocoding-cache';
+import { cachedGeocode, cachedNominatimStep } from './geocoding-cache';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
@@ -34,7 +34,7 @@ import {
   formatTopResult,
   type NominatimResult,
 } from './geocoding-engine-helpers';
-import { fetchNominatim, skippedAttempt } from './geocoding-nominatim-client';
+import { fetchNominatim, makeAttempt, skippedAttempt } from './geocoding-nominatim-client';
 import { buildGeocodingLadder, type LadderStep } from './geocoding-ladder';
 
 const logger = createModuleLogger('geocoding-api');
@@ -236,13 +236,21 @@ async function runStep(
     attempts.push(skippedAttempt(step.variant));
     return [];
   }
-  if (index > 0) await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-  logger.info('Geocoding attempt', { data: { variant: step.variant } });
-
-  const out = await fetchNominatim(step.url, step.variant);
-  const accepted = step.accept ? out.results.filter(step.accept) : out.results;
-  const rejectedAll = out.results.length > 0 && accepted.length === 0;
-  attempts.push(rejectedAll ? { ...out.attempt, status: 'no-results' } : out.attempt);
+  const url = step.url;
+  // ADR-332 D29 — **η ευγένεια αφορά ΑΙΤΗΜΑΤΑ, όχι βαθμίδες.** Η αναμονή ζει μέσα στην κλήση, και
+  // η κλήση τρέχει μόνο αν το ίδιο URL δεν έχει ήδη απαντηθεί· μια βαθμίδα από τη μνήμη δεν
+  // στέλνει τίποτα στον πάροχο, άρα δεν έχει και τι να περιμένει.
+  const answer = await cachedNominatimStep(url, async () => {
+    if (index > 0) await sleep(GEOCODING.NOMINATIM_DELAY_MS);
+    logger.info('Geocoding attempt', { data: { variant: step.variant } });
+    return fetchNominatim(url, step.variant);
+  });
+  // Το ίδιο URL μπορεί να το είχε ρωτήσει **άλλη** βαθμίδα άλλου ερωτήματος: η καταγραφή φέρει
+  // την ταυτότητα της βαθμίδας που ρωτά τώρα, όχι εκείνης που γέμισε τη μνήμη.
+  const attempt = makeAttempt(step.variant, answer.attempt.status, answer.attempt.durationMs);
+  const accepted = step.accept ? answer.results.filter(step.accept) : answer.results;
+  const rejectedAll = answer.results.length > 0 && accepted.length === 0;
+  attempts.push(rejectedAll ? { ...attempt, status: 'no-results' } : attempt);
   return accepted;
 }
 

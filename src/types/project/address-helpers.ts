@@ -22,17 +22,14 @@ import type {
   BlockSideDirection,
   ProjectAddressType
 } from './addresses';
-import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
 import {
   DEFAULT_STORED_COUNTRY_CODE,
   isGreekAddressCountry,
   toStoredCountryCode,
 } from '@/utils/address/country-codes';
-import { stripGreekAdminPrefix } from '@/utils/address/place-name';
 import {
   formatGreekPostalCode,
   isValidGreekPostalCode,
-  toCanonicalGreekPostalCode,
 } from '@/utils/address/postal-code';
 import { generateAddressId } from '@/services/enterprise-id.service';
 import { primaryOrFirst, type PrimaryFlagged } from '@/lib/primary-entry';
@@ -586,38 +583,9 @@ export function hasCoordinates(address: ProjectAddress): boolean {
   );
 }
 
-/**
- * Format address for geocoding API — structured query object.
- * Uses Nominatim structured search fields for accurate results.
- *
- * @param address - Address to format
- * @returns Structured geocoding query for /api/geocoding
- */
-/**
- * Strip Greek administrative prefixes for geocoding.
- * Nominatim doesn't understand "ΔΗΜΟΣ ΛΑΓΚΑΔΑ" — it needs just "ΛΑΓΚΑΔΑ".
- */
-export function stripAdminPrefix(name: string | undefined): string | undefined {
-  if (!name) return undefined;
-  // ADR-332 D27 Βήμα Β (Β7): ο ΕΝΑΣ κανόνας, χωρίς τόνους. Η παλιά `/i` ταίριαζε το «ΔΗΜΟΣ»
-  // αλλά όχι το «Δήμος» με τόνο — και το δίδυμο του reverse route έκανε το αντίθετο.
-  return stripGreekAdminPrefix(name) || undefined;
-}
-
-export function formatAddressForGeocoding(address: ProjectAddress): StructuredGeocodingQuery {
-  const streetParts = [address.street, address.number].filter(Boolean);
-
-  return {
-    street: streetParts.length > 0 ? streetParts.join(' ') : undefined,
-    city: address.city || undefined,
-    neighborhood: address.neighborhood || undefined,
-    postalCode: toCanonicalGreekPostalCode(address.postalCode) || undefined,
-    county: stripAdminPrefix(address.regionalUnit),
-    municipality: stripAdminPrefix(address.municipality),
-    region: stripAdminPrefix(address.region),
-    country: address.country || undefined,
-  };
-}
+// Το ερώτημα προς τη μηχανή γεωκωδικοποίησης ΔΕΝ γράφεται πια εδώ (`formatAddressForGeocoding`):
+// ήταν ένας από ΤΡΕΙΣ κατασκευαστές που ρωτούσαν την ίδια διεύθυνση με τρία ερωτήματα. Ο ένας
+// ζει στο `@/lib/geocoding/address-geocoding-query` (`toGeocodingRequest`, ADR-332 D29).
 
 /**
  * Filter addresses that can be geocoded

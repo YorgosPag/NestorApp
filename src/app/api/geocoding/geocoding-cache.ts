@@ -120,6 +120,54 @@ export async function cachedGeocode(
   return cache.lookup(geocodingCacheKey(params), fetcher);
 }
 
+// =============================================================================
+// ΜΝΗΜΗ ΒΑΘΜΙΔΑΣ — το κλειδί είναι ΤΟ ΙΔΙΟ ΤΟ ΑΙΤΗΜΑ (ADR-332 D29)
+// =============================================================================
+
+/**
+ * **Η απάντηση του παρόχου σε ΕΝΑ αίτημα** — κλειδωμένη στο URL του, όχι στη διεύθυνση.
+ *
+ * 🔴 **Η μνήμη ετυμηγορίας από πάνω δεν αρκούσε — μετρημένο ζωντανά 2026-10-04 (8,4″ σε μία
+ * δημιουργία έργου).** Το κλειδί της είναι **ολόκληρη η διεύθυνση**, άρα δύο καλούντες που
+ * διαφέρουν σε πεδίο που **δεν συμμετέχει** στο αίτημα (δήμος, περιφερειακή ενότητα — ο συντάκτης
+ * δεν τα στέλνει, η αποθήκευση ναι) παίρνουν άλλο κλειδί και ξαναρωτούν **κατά γράμμα το ίδιο
+ * URL**. Η πολιτική του Nominatim μιλά για αιτήματα, όχι για διευθύνσεις: *«Clients sending
+ * repeatedly the same query may be classified as faulty»*. Το URL **είναι** το αίτημα.
+ *
+ * 🔑 Γι' αυτό η ισότητα των δύο πλευρών δεν κρέμεται πια από την πειθαρχία των καλούντων: όποια
+ * βαθμίδα έχει ρωτηθεί, από οποιονδήποτε, δεν ξαναρωτιέται — και **δεν περιμένει** το 1,1″ της
+ * ευγένειας, που υπάρχει μόνο για πραγματικά αιτήματα.
+ */
+export interface CachedStepAnswer<R> {
+  readonly results: R;
+  /** `error` ⇒ **δεν αποθηκεύεται ποτέ** (άγνοια)· `no-results` ⇒ σύντομη αρνητική μνήμη. */
+  readonly attempt: { readonly status: string };
+}
+
+function stepTtlFor(answer: CachedStepAnswer<unknown>): number | null {
+  if (answer.attempt.status === 'success') return GEOCODING.CACHE_TTL_MS;
+  if (answer.attempt.status === 'no-results') return GEOCODING.CACHE_ABSENT_TTL_MS;
+  return null; // error — ο πάροχος δεν απάντησε· δεν μάθαμε τίποτα
+}
+
+const stepCache = createVerdictCache<CachedStepAnswer<unknown>>({
+  prefix: `${KEY_PREFIX}:step`,
+  ttlFor: stepTtlFor,
+});
+
+/**
+ * Κάνει το αίτημα **μόνο αν δεν έχει ήδη απαντηθεί**.
+ *
+ * @param fetcher Η πραγματική κλήση — **μαζί με την αναμονή ευγένειας της**: τρέχει μόνο σε αστοχία,
+ *   άρα μια βαθμίδα που βρέθηκε στη μνήμη δεν πληρώνει ούτε δίκτυο ούτε καθυστέρηση.
+ */
+export async function cachedNominatimStep<A extends CachedStepAnswer<unknown>>(
+  url: string,
+  fetcher: () => Promise<A>,
+): Promise<A> {
+  return stepCache.lookup(`${KEY_PREFIX}:step|${url}`, fetcher) as Promise<A>;
+}
+
 /**
  * Αδειάζει τη μνήμη γεωκωδικοποίησης — **και μόνο αυτήν** (το `EnterpriseAPICache` είναι κοινό).
  *
@@ -129,5 +177,7 @@ export async function cachedGeocode(
  * @returns πόσες εγγραφές αφαιρέθηκαν.
  */
 export function clearGeocodingCache(): number {
-  return cache.clear();
+  // Και οι δύο μνήμες: το πρόθεμα της βαθμίδας **περιέχει** της ετυμηγορίας, αλλά κάθε μνήμη
+  // κρατά δικές της εκκρεμείς υποσχέσεις — αυτές φεύγουν μόνο από το δικό της `clear()`.
+  return stepCache.clear() + cache.clear();
 }

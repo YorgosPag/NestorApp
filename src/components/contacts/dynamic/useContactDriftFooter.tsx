@@ -18,6 +18,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
+import { AddressPositionPendingNotice } from '@/components/shared/addresses/AddressPositionPendingNotice';
 import { AddressPositionStaleNotice } from '@/components/shared/addresses/AddressPositionStaleNotice';
 import { positionTextVerdict } from '@/lib/geocoding/address-position';
 import { contactAddressPositionView } from '@/utils/contacts/contact-address-position-view';
@@ -25,14 +26,14 @@ import { ContactsService } from '@/services/contacts.service';
 import {
   dismissContactAddressAdvisory,
   useContactAddressAdvisories,
-  useContactAddressPending,
 } from '@/services/contacts/contact-address-advisories';
+import { useAddressPositionsPending } from '@/services/addresses/address-positions-pending';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 
 /** Επιστρέφει τον αποδότη του υποσέλιδου κάρτας — `null` όταν δεν υπάρχει τίποτα να ειπωθεί. */
 export function useContactDriftFooter(contactId: string | undefined, enabled: boolean) {
   const advisories = useContactAddressAdvisories(contactId);
-  const pendingIds = useContactAddressPending(contactId);
+  const pending = useAddressPositionsPending(contactId);
   const { t } = useTranslation('addresses');
   const { notify } = useNotifications();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -110,13 +111,7 @@ export function useContactDriftFooter(contactId: string | undefined, enabled: bo
       κατάσταση αφήνει τη συντεταγμένη κενή ή παλιά **χωρίς να πει τίποτα**.
       Χωρίς ενέργειες: δεν υπάρχει τίποτα να αποφασίσει — μόνο να ξέρει.
     */
-    if (pendingIds.includes(addressId)) {
-      return (
-        <p role="status" className="mt-2 border-t pt-2 text-sm text-muted-foreground">
-          {t('editor.positionPending.message')}
-        </p>
-      );
-    }
+    if (pending.ids.includes(addressId)) return <AddressPositionPendingNotice phase={pending.phase} />;
     return null;
-  }, [enabled, driftById, pendingIds, contactId, busyId, relocate, t]);
+  }, [enabled, driftById, pending, contactId, busyId, relocate]);
 }

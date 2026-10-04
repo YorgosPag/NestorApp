@@ -805,6 +805,15 @@
     "userRef": "User",
     "loadMore": "Load more",
     "byUser": "by {name}",
+    "actors": {
+      "system": "System",
+      "addressPosition": "System · position lookup",
+      "ingestion": "System · file ingestion"
+    },
+    "session": {
+      "saves": "{count} saves · {from}–{to}",
+      "noNetChange": "No net change — the values returned to their originals."
+    },
     "entityTypes": {
       "contact": "Contact",
       "company": "Company",
