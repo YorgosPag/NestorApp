@@ -215,3 +215,46 @@ describe('BaseTabs — accessibility', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('BaseTabs — link tabs (ADR-328 · ADR-330)', () => {
+  const linkTabs: TabDefinition[] = [
+    fixtureTabs[0],
+    { id: 'procurement', label: 'Προμήθειες', icon: Settings, content: null, href: '/projects/p1/procurement/overview' },
+  ];
+
+  it('renders a link tab as a link that never becomes the active value', async () => {
+    const handle = jest.fn();
+    const user = userEvent.setup();
+    render(<BaseTabs tabs={linkTabs} value="actions" onValueChange={handle} />);
+
+    const link = screen.getByRole('tab', { name: /Προμήθειες/ });
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/projects/p1/procurement/overview');
+    expect(link).toHaveAttribute('aria-selected', 'false');
+
+    await user.click(link);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it('renders no panel for a link tab', () => {
+    const { container } = render(<BaseTabs tabs={linkTabs} value="actions" onValueChange={jest.fn()} />);
+    expect(container.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
+  });
+
+  it('a disabled link tab has no href, so it cannot navigate', () => {
+    const tabs: TabDefinition[] = [fixtureTabs[0], { ...linkTabs[1], href: '', disabled: true }];
+    render(<BaseTabs tabs={tabs} value="actions" onValueChange={jest.fn()} />);
+
+    const disabled = screen.getByRole('tab', { name: /Προμήθειες/ });
+    expect(disabled.tagName).toBe('SPAN');
+    expect(disabled).not.toHaveAttribute('href');
+    expect(disabled).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('has no jest-axe violations with a link tab in the strip', async () => {
+    const { container } = render(
+      <BaseTabs tabs={linkTabs} value="actions" onValueChange={jest.fn()} ariaLabel="Test tabs" />,
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});

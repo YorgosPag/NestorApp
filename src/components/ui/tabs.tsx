@@ -33,20 +33,26 @@ const TabsList = React.forwardRef<
 })
 TabsList.displayName = TabsPrimitive.List.displayName
 
+/**
+ * Η όψη ενός trigger — **μία** δήλωση για το `TabsTrigger` και για την καρτέλα-σύνδεσμο του
+ * `BaseTabs` (ADR-328): δύο αντίγραφα θα απέκλιναν στην πρώτη αλλαγή θέματος.
+ */
+function useTabsTriggerClassName(): string {
+  const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  return `inline-flex flex-shrink-0 items-center justify-center whitespace-nowrap rounded-sm ${spacing.padding.sm} text-sm font-medium ring-offset-background ${TRANSITION_PRESETS.STANDARD_COLORS} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[state=active]:${colors.bg.primary} data-[state=active]:text-foreground data-[state=active]:shadow-sm`;
+}
+
 const TabsTrigger = React.forwardRef<
   React.ComponentRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => {
-  const colors = useSemanticColors();
-  const spacing = useSpacingTokens();
+  const triggerClassName = useTabsTriggerClassName();
 
   return (
     <TabsPrimitive.Trigger
       ref={ref}
-      className={cn(
-        `inline-flex flex-shrink-0 items-center justify-center whitespace-nowrap rounded-sm ${spacing.padding.sm} text-sm font-medium ring-offset-background ${TRANSITION_PRESETS.STANDARD_COLORS} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:${colors.bg.primary} data-[state=active]:text-foreground data-[state=active]:shadow-sm`,
-        className
-      )}
+      className={cn(triggerClassName, className)}
       {...props}
     />
   );
@@ -93,4 +99,4 @@ TabsContent.displayName = TabsPrimitive.Content.displayName
  * ```
  */
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent, useTabsTriggerClassName }

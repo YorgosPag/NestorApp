@@ -10,6 +10,17 @@
 
 import { typedHref } from '@/lib/workspace/route-worlds';
 
+/** Οι τέσσερις όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2). */
+export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po';
+
+/** Η ενότητα προμηθειών ενός έργου — προεπιλογή η επισκόπηση, όπου προσγειώνεται η καρτέλα του έργου. */
+export function getProjectProcurementUrl(
+  projectId: string,
+  section: ProjectProcurementSection = 'overview',
+) {
+  return typedHref(`/projects/${projectId}/procurement/${section}`);
+}
+
 export function getPoDetailUrl(projectId: string, poId: string) {
   return typedHref(`/projects/${projectId}/procurement/po/${poId}`);
 }

@@ -46,8 +46,6 @@ import { ProjectBrokersTab } from '@/components/projects/tabs/ProjectBrokersTab'
 import { OwnershipTableTab } from '@/components/projects/tabs/OwnershipTableTab';
 // 🏢 ENTERPRISE: Landowners management tab (ADR-244 / SPEC-244A)
 import { ProjectLandownersTab } from '@/components/projects/tabs/ProjectLandownersTab';
-// 🏢 ENTERPRISE: Procurement RFQ tab (ADR-327)
-import { ProcurementProjectTab } from '@/components/projects/tabs/ProcurementProjectTab';
 // 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code CRUD form
 import { BuildingCodeTab } from '@/components/projects/building-code/BuildingCodeTab';
 import { SurveyDataTab } from '@/components/projects/survey-data/SurveyDataTab';
@@ -88,8 +86,7 @@ export const PROJECT_COMPONENT_MAPPING = {
   'OwnershipTableTab': OwnershipTableTab,
   // 🏢 ENTERPRISE: Landowners management tab (ADR-244 / SPEC-244A)
   'ProjectLandownersTab': ProjectLandownersTab,
-  // 🏢 ENTERPRISE: Procurement RFQ tab (ADR-327)
-  'ProcurementProjectTab': ProcurementProjectTab,
+  // Οι «Προμήθειες» ΔΕΝ έχουν component: είναι καρτέλα-σύνδεσμος (`href` στο project-tabs-config, ADR-330).
   // 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code form (parallel to legacy BuildingDataTab)
   'BuildingCodeTab': BuildingCodeTab,
   // 📐 ADR-759 Φ2: «Στοιχεία Τοπογραφικού» — what the surveyor declared, and when.

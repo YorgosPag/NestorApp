@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a71062eadbdddcc59ccf218f03d246101cf708300d3c1870f13dec6cf38701bb",
+  "inputsSha256": "f7557ef3f8dbb98219a585f6e1de8792b112dd64d796eb79a1ee98fa4c167339",
   "languages": [
     "el"
   ],
@@ -310,8 +310,10 @@
     "src/components/demand/interest-check/InterestCheckForm.tsx": "0aaaa8d4c89af2dd9514694028e932d4c4b1fd5fe31de564af740abb3628cae0",
     "src/components/demand/interest-check/InterestCheckNudge.tsx": "64f033c65be61249b8ed0d867542d3ecf1e4ee2557af0e19440b5e5fbc05c73a",
     "src/components/demand/interest-check/InterestCheckResult.tsx": "b3084f66fc7c5c4cafc5b694c55fd4e496dff1c29c73feaa52671082285e400c",
-    "src/components/generic/UniversalTabsRenderer.tsx": "642c6f838b7371f45eb4c0cb21d50ecea437bd5640dcaa2bf3951a2bcbf3ea78",
+    "src/components/generic/UniversalTabsRenderer.tsx": "35d4625330b5800ce2ed22b4e990d7f2e6ce4cd4f5fc47761eae4a45ab42c311",
+    "src/components/generic/floorplan-viewer-tab-props.ts": "52e08cd165db2aa818965142b10f56ae99540e3aefbef58bfe857210667fabf3",
     "src/components/generic/mappings/propertyDossierMappings.ts": "9d4366f31abd6e097cca3828d0eb1b120df9e8b9bedce45677294a2837587821",
+    "src/components/generic/universal-tabs-config.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/generic/utils/IconMapping.ts": "44c88586d596b88bffe0e07aca5e4a2dc90a83cfe1123ee22a59e0073b05e4b0",
     "src/components/geo/AddressFocusFinder.tsx": "90359ddb96e96cc6609c4ac3e7e1243ad504eb4fbf73edbbafaed3c3a4c51189",
     "src/components/geo/PlaceChooser.tsx": "ee774dd2f54819e8df3c00301287b35a9bc2ed6ae2461c27c4fb8febfb347627",
@@ -10730,7 +10732,7 @@
     "src/components/projects/ika/contracts-defaults.ts": "72acc11a1ec0cd49e03ca1efb478002f5560e6e48532e1f04bdbba464822b2f2",
     "src/components/projects/ika/contracts.ts": "f1facec65b1974a3e949e578b725cd630ef6ac5bde747417c5010a7ae5041db3",
     "src/components/projects/procurement/BackToProjectLink.tsx": "2012f36705409211e8fc1d84cef2e556aedc82f44e13c0c16b2285dd14a45cc8",
-    "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
+    "src/components/projects/procurement/ProjectProcurementTabs.tsx": "1c1b013287cc95935339f9f08d57aae55b479563161ca9beadcb1eb35d228f70",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
     "src/components/public-site/PublicSiteFooter.tsx": "770589d0ce0c837f041ba9f9a4085dd41039229b9a654627a0f2043ecbb19253",
@@ -10811,7 +10813,7 @@
     "src/components/ui/input.tsx": "4950c27575d480d3c9d74b67f7c9ace2962a83715fd6db48cef2a7d96ea64d82",
     "src/components/ui/label.tsx": "cabf5967a8b0427eec637edd08fde237dcd0cc6c90e60b7c299280bb930c2cad",
     "src/components/ui/multiple-photos/photo-slot-types.ts": "97632404f0a15d82584d55b66536aa7aa9c7f9a46dbf831938d33b470be68b38",
-    "src/components/ui/navigation/base-tabs.tsx": "7fe71d7a816b8857b79a3ef8572753f4f3d6b6c15fe8291a819918122c2c9c79",
+    "src/components/ui/navigation/base-tabs.tsx": "de00a8bea7b87f13e5059c06c4c714c0a86c6c7d8e500e5f25fc1b4aebe331ae",
     "src/components/ui/navigation/route-tabs.tsx": "b5a7e9f453d52367a0ac07241248a8710fbf546d33c7253eba76c22bf96bbc6f",
     "src/components/ui/navigation/tabs-types.ts": "a9317bb904ca8f972f42b65c3ef76850bc793b5523b7109340960a90198e3c2c",
     "src/components/ui/popover.tsx": "f5f118afa2a1c900799e1c32fc893c471cd917b1c072928cd5282bb3b47c35d7",
@@ -11240,6 +11242,7 @@
     "src/lib/maps/map-snapshot-store.ts": "cc8756579dade3bb441e3fdced01c1c67fa94c9ae13bbc7c9f641631c1554bd3",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/money/money.ts": "21731d773372e01a474b0c7fa8081fdac26d14b37e625efd88ad0be20848b75b",
+    "src/lib/navigation/procurement-urls.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/network-messaging/network-messaging-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/network-messaging/network-thread-client-ref.ts": "962146bfe8443364e2c28ea3c07cdb9614515f5f95a32a5bc6e3692d36b9c6ba",
     "src/lib/network-messaging/thread-anchor.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -11590,7 +11593,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 932,
+    "shellFiles": 933,
     "sliceBytes": 691000
   },
   "unresolvableKeys": [

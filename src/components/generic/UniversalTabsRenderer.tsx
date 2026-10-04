@@ -9,6 +9,8 @@ import type { BuildingFloorplanData } from '@/services/floorplans/BuildingFloorp
 import type { FloorData, ViewerPassthroughProps, ViewerPassthroughPropsWithFloors } from '@/features/properties-sidebar/types';
 import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import { getIconComponent } from './utils/IconMapping';
+import { entityIdOf, type UniversalTabConfig } from './universal-tabs-config';
+import { floorplanViewerTabProps } from './floorplan-viewer-tab-props';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
 
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -54,32 +56,12 @@ function LazyTabContent({ tabId, activeTab, children }: LazyTabContentProps) {
   return <>{children}</>;
 }
 
-// ============================================================================
-// UNIVERSAL TAB CONFIG INTERFACE
-// ============================================================================
-
-/**
- * Universal tab configuration interface
- * Compatible με όλους τους existing tab configs (Project, Building, Storage, Units, κτλ.)
- */
-export interface UniversalTabConfig {
-  /** Unique tab identifier */
-  id: string;
-  /** Tab value for routing/state */
-  value: string;
-  /** Display label */
-  label: string;
-  /** Icon name (από lucide-react) */
-  icon?: string;
-  /** Component name για το mapping */
-  component: string;
-  /** Αν το tab είναι ενεργό */
-  enabled: boolean;
-  /** Sort order */
-  order?: number;
-  /** Props να περάσουν στο component */
-  componentProps?: Record<string, unknown>;
-}
+// Το σχήμα ρύθμισης ζει στο `universal-tabs-config` (N.7.1)· επανεξάγεται για τα υπάρχοντα imports.
+export {
+  convertToUniversalConfig,
+  isUniversalTabConfig,
+} from './universal-tabs-config';
+export type { TabLinkResolver, UniversalTabConfig } from './universal-tabs-config';
 
 // ============================================================================
 // UNIVERSAL RENDERER PROPS
@@ -165,13 +147,16 @@ export interface BuildingTabComponentProps extends TabComponentProps, Partial<Bu
   title?: string;
 }
 
-export interface StorageTabGlobalProps {
+/** Τα κοινά props των καρτελών ενός **χώρου** (αποθήκη · θέση στάθμευσης) — μία δήλωση. */
+interface SpaceTabGlobalProps {
   isEditing?: boolean;
   onEditingChange?: (editing: boolean) => void;
   onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
   createMode?: boolean;
   onCreated?: (id: string) => void;
 }
+
+export type StorageTabGlobalProps = SpaceTabGlobalProps;
 
 export interface StorageTabComponentProps extends TabComponentProps, Partial<StorageTabGlobalProps> {
   data?: Storage;
@@ -179,13 +164,7 @@ export interface StorageTabComponentProps extends TabComponentProps, Partial<Sto
   title?: string;
 }
 
-export interface ParkingTabGlobalProps {
-  isEditing?: boolean;
-  onEditingChange?: (editing: boolean) => void;
-  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
-  createMode?: boolean;
-  onCreated?: (id: string) => void;
-}
+export type ParkingTabGlobalProps = SpaceTabGlobalProps;
 
 export interface ParkingTabComponentProps extends TabComponentProps, Partial<ParkingTabGlobalProps> {
   data?: ParkingSpot;
@@ -281,19 +260,26 @@ export function UniversalTabsRenderer<
       .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
   }, [tabs]);
 
+  // Ενεργή γίνεται μόνο καρτέλα **με περιεχόμενο**: ένας deep link προς καρτέλα-σύνδεσμο
+  // (ή προς καρτέλα που δεν υπάρχει) πέφτει στην πρώτη, αντί να αφήσει κενή οθόνη.
+  const selectableDefaultTab = useMemo(() => {
+    const selectable = sortedTabs.filter(tab => !tab.href);
+    const wanted = selectable.find(tab => tab.value === defaultTab);
+    return (wanted ?? selectable[0])?.value;
+  }, [sortedTabs, defaultTab]);
+
   // 🏢 ENTERPRISE: Track active tab for lazy rendering
-  const computedDefaultTab = defaultTab || sortedTabs[0]?.value;
-  const [activeTab, setActiveTab] = useState(computedDefaultTab);
+  const [activeTab, setActiveTab] = useState(selectableDefaultTab);
 
   // 🏢 ENTERPRISE: Sync activeTab when defaultTab prop changes (deep-link navigation)
   // Only triggers when defaultTab actually changes value, NOT on user tab clicks
-  const prevDefaultTabRef = useRef(computedDefaultTab);
+  const prevDefaultTabRef = useRef(selectableDefaultTab);
   useEffect(() => {
-    if (defaultTab && defaultTab !== prevDefaultTabRef.current) {
-      prevDefaultTabRef.current = defaultTab;
-      setActiveTab(defaultTab);
+    if (defaultTab && selectableDefaultTab && selectableDefaultTab !== prevDefaultTabRef.current) {
+      prevDefaultTabRef.current = selectableDefaultTab;
+      setActiveTab(selectableDefaultTab);
     }
-  }, [defaultTab]);
+  }, [defaultTab, selectableDefaultTab]);
 
   // 🏢 ENTERPRISE: Memoize tab definitions
   const tabDefinitions: TabDefinition[] = useMemo(() => sortedTabs.map(tabConfig => {
@@ -303,9 +289,21 @@ export function UniversalTabsRenderer<
       ? t(tabConfig.label)
       : tabConfig.label;
 
+    if (tabConfig.href) {
+      const href = tabConfig.href(entityIdOf(data));
+      return {
+        id: tabConfig.value,
+        label: displayLabel,
+        icon: getIconComponent(tabConfig.icon ?? ''),
+        content: null,
+        ...(href === null ? { href: '', disabled: true } : { href }),
+      };
+    }
+
     // Get component από custom components ή componentMapping
-    const ComponentToRender = (customComponents[tabConfig.component] ||
-                              componentMapping[tabConfig.component]) as React.ComponentType<TTabProps> | undefined;
+    const componentName = tabConfig.component ?? '';
+    const ComponentToRender = (customComponents[componentName] ||
+                              componentMapping[componentName]) as React.ComponentType<TTabProps> | undefined;
 
     if (!ComponentToRender) {
       logger.warn('Component not found in mapping for tab', { component: tabConfig.component, tabId: tabConfig.id, availableComponents: Object.keys(componentMapping) });
@@ -327,61 +325,8 @@ export function UniversalTabsRenderer<
       };
     }
 
-    // ✅ ENTERPRISE: Special handling για FloorplanViewerTab
-    // Περνάμε ΟΛΟΚΛΗΡΟ το FloorplanData object (υποστηρίζει DXF και PDF)
-    const getFloorplanProps = () => {
-      if (tabConfig.component === 'FloorplanViewerTab') {
-        const floorplanAdditionalData = additionalData as {
-          // 🏢 ENTERPRISE: Full FloorplanData type (supports DXF scene and PDF imageUrl)
-          projectFloorplan?: {
-            fileType?: 'dxf' | 'pdf';
-            scene?: unknown;
-            pdfImageUrl?: string | null;
-            pdfDimensions?: { width: number; height: number } | null;
-            fileName?: string;
-            timestamp?: number;
-          } | null;
-          parkingFloorplan?: {
-            fileType?: 'dxf' | 'pdf';
-            scene?: unknown;
-            pdfImageUrl?: string | null;
-            pdfDimensions?: { width: number; height: number } | null;
-            fileName?: string;
-            timestamp?: number;
-          } | null;
-          // ✅ ENTERPRISE: Callbacks from parent component
-          onAddProjectFloorplan?: () => void;
-          onAddParkingFloorplan?: () => void;
-          onEditProjectFloorplan?: () => void;
-          onEditParkingFloorplan?: () => void;
-        };
-
-        if (tabConfig.value === 'floorplan') {
-          return {
-            // 🏢 ENTERPRISE: Pass FULL FloorplanData object (not just .scene)
-            floorplanData: floorplanAdditionalData.projectFloorplan,
-            onAddFloorplan: floorplanAdditionalData.onAddProjectFloorplan ?? (() => {
-              logger.info('Add project floorplan for project', { projectId: (data as { id?: string })?.id });
-            }),
-            onEditFloorplan: floorplanAdditionalData.onEditProjectFloorplan ?? (() => {
-              logger.info('Edit project floorplan for project', { projectId: (data as { id?: string })?.id });
-            }),
-          };
-        } else if (tabConfig.value === 'parking-floorplan') {
-          return {
-            // 🏢 ENTERPRISE: Pass FULL FloorplanData object (not just .scene)
-            floorplanData: floorplanAdditionalData.parkingFloorplan,
-            onAddFloorplan: floorplanAdditionalData.onAddParkingFloorplan ?? (() => {
-              logger.info('Add parking floorplan for project', { projectId: (data as { id?: string })?.id });
-            }),
-            onEditFloorplan: floorplanAdditionalData.onEditParkingFloorplan ?? (() => {
-              logger.info('Edit parking floorplan for project', { projectId: (data as { id?: string })?.id });
-            }),
-          };
-        }
-      }
-      return {};
-    };
+    // Legacy `FloorplanViewerTab`: ολόκληρο το FloorplanData + οι ενέργειες του γονέα.
+    const floorplanProps = floorplanViewerTabProps(tabConfig, additionalData, entityIdOf(data));
 
     // Render actual component
     const renderedComponentProps = {
@@ -395,7 +340,7 @@ export function UniversalTabsRenderer<
       icon: getIconComponent(tabConfig.icon ?? ''),
       onNavigateToTab: setActiveTab,
       ...additionalData,
-      ...getFloorplanProps(),
+      ...floorplanProps,
       ...globalProps,
       ...tabConfig.componentProps,
     } as unknown as TTabProps;
@@ -428,7 +373,7 @@ export function UniversalTabsRenderer<
       {/* 🏢 ENTERPRISE: forceMount keeps tabs in DOM so local state persists across tab switches.
           LazyTabContent prevents premature rendering until first activation.
           data-[state=inactive]:hidden (from TabsContent) hides inactive tabs via CSS. */}
-      {tabDefinitions.map((tabDef) => (
+      {tabDefinitions.filter((tabDef) => tabDef.href === undefined).map((tabDef) => (
         <TabsContent key={tabDef.id} value={tabDef.id} forceMount>
           <LazyTabContent tabId={tabDef.id} activeTab={activeTab}>
             {tabDef.content}
@@ -437,56 +382,6 @@ export function UniversalTabsRenderer<
       ))}
     </TabsOnlyTriggers>
   );
-}
-
-// ============================================================================
-// UTILITY TYPE GUARDS
-// ============================================================================
-
-/**
- * Type guard για να ελέγξουμε αν το tabs config είναι compatible με Universal format
- */
-export function isUniversalTabConfig(tab: unknown): tab is UniversalTabConfig {
-  if (typeof tab !== 'object' || tab === null) {
-    return false;
-  }
-  const tabObj = tab as Record<string, unknown>;
-  return (
-    typeof tabObj.id === 'string' &&
-    typeof tabObj.value === 'string' &&
-    typeof tabObj.label === 'string' &&
-    typeof tabObj.component === 'string' &&
-    typeof tabObj.enabled === 'boolean'
-  );
-}
-
-/** Legacy tab config interface for backward compatibility */
-interface LegacyTabConfig {
-  id?: string;
-  value: string;
-  label: string;
-  icon?: string;
-  component: string;
-  enabled?: boolean;
-  order?: number;
-  componentProps?: Record<string, unknown>;
-}
-
-/**
- * Converter από legacy tab configs σε Universal format
- * Αυτό επιτρέπει backward compatibility με existing configs
- */
-export function convertToUniversalConfig(legacyTab: LegacyTabConfig): UniversalTabConfig {
-  return {
-    id: legacyTab.id || legacyTab.value,
-    value: legacyTab.value,
-    label: legacyTab.label,
-    icon: legacyTab.icon,
-    component: legacyTab.component,
-    enabled: legacyTab.enabled ?? true,
-    order: legacyTab.order,
-    componentProps: legacyTab.componentProps || {},
-  };
 }
 
 // ============================================================================

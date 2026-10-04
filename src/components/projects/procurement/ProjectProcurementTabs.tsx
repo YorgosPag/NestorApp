@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import { BarChart3, Send, FileText, Package } from 'lucide-react';
 import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
+import { getProjectProcurementUrl } from '@/lib/navigation/procurement-urls';
 
 export interface ProjectProcurementTabsProps {
   projectId: string;
@@ -25,25 +26,25 @@ export function ProjectProcurementTabs({
   const tabs = useMemo<readonly TabsNavTab[]>(
     () => [
       {
-        href: `/projects/${projectId}/procurement/overview`,
+        href: getProjectProcurementUrl(projectId, 'overview'),
         labelKey: 'tabs.subtabs.procurement.overview',
         icon: BarChart3,
         iconColor: 'text-primary',
       },
       {
-        href: `/projects/${projectId}/procurement/rfq`,
+        href: getProjectProcurementUrl(projectId, 'rfq'),
         labelKey: 'tabs.subtabs.procurement.rfq',
         icon: Send,
         iconColor: 'text-foreground',
       },
       {
-        href: `/projects/${projectId}/procurement/quote`,
+        href: getProjectProcurementUrl(projectId, 'quote'),
         labelKey: 'tabs.subtabs.procurement.quote',
         icon: FileText,
         iconColor: 'text-[hsl(var(--text-warning))]',
       },
       {
-        href: `/projects/${projectId}/procurement/po`,
+        href: getProjectProcurementUrl(projectId, 'po'),
         labelKey: 'tabs.subtabs.procurement.po',
         icon: Package,
         iconColor: 'text-[hsl(var(--text-warning))]',

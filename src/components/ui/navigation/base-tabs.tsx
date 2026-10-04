@@ -22,7 +22,9 @@
  */
 
 import React from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent, useTabsTriggerClassName } from '@/components/ui/tabs';
+import { Link } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { cn } from '@/lib/utils';
 import {
   getThemeVariant,
@@ -61,6 +63,37 @@ export interface BaseTabsProps {
   children?: React.ReactNode;
 }
 
+interface TabLinkProps {
+  href: string;
+  disabled?: boolean;
+  className: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Καρτέλα-σύνδεσμος (ADR-328 · ADR-330): μέλος της λωρίδας (`role="tab"`), αλλά **ποτέ**
+ * επιλεγμένη — η επιφάνειά της ζει σε άλλη διαδρομή. Ανενεργή ⇒ χωρίς `href`, άρα δεν πλοηγεί.
+ */
+function TabLink({ href, disabled, className, children }: TabLinkProps) {
+  if (disabled) {
+    return (
+      <span role="tab" aria-selected={false} aria-disabled className={className}>
+        {children}
+      </span>
+    );
+  }
+  return (
+    <Link
+      role="tab"
+      aria-selected={false}
+      href={declaredHref('BaseTabs είναι γενικό UI primitive · η τιμή προήλθε από tab.href.', href)}
+      className={className}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function BaseTabs({
   tabs,
   value,
@@ -73,6 +106,7 @@ export function BaseTabs({
   children,
 }: BaseTabsProps) {
   const iconSizes = useIconSizes();
+  const triggerClassName = useTabsTriggerClassName();
   const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
   // Use loose `!= null` so that a deliberately-passed `null` (e.g. triggers-only
@@ -98,31 +132,50 @@ export function BaseTabs({
       className={cn(TABS_STYLES.container, className)}
     >
       <TabsList className={cn(TABS_STYLES.list, listClassName)}>
-        {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.id}
-            value={tab.id}
-            disabled={tab.disabled}
-            className={themeConfig?.tabTrigger}
-          >
-            {tab.icon
-              ? React.createElement(tab.icon, {
-                  className: cn(iconSizes.sm, tab.iconColor),
-                })
-              : null}
-            <span className={alwaysShowLabels ? '' : 'hidden sm:inline'}>
-              {tab.label}
-            </span>
-            {tab.warningDot ? (
-              <span className="ml-1 h-2 w-2 rounded-full bg-[hsl(var(--status-warning))] shrink-0" />
-            ) : null}
-          </TabsTrigger>
-        ))}
+        {tabs.map((tab) => {
+          const face = (
+            <>
+              {tab.icon
+                ? React.createElement(tab.icon, {
+                    className: cn(iconSizes.sm, tab.iconColor),
+                  })
+                : null}
+              <span className={alwaysShowLabels ? '' : 'hidden sm:inline'}>
+                {tab.label}
+              </span>
+              {tab.warningDot ? (
+                <span className="ml-1 h-2 w-2 rounded-full bg-[hsl(var(--status-warning))] shrink-0" />
+              ) : null}
+            </>
+          );
+          if (tab.href !== undefined) {
+            return (
+              <TabLink
+                key={tab.id}
+                href={tab.href}
+                disabled={tab.disabled}
+                className={cn(triggerClassName, themeConfig?.tabTrigger)}
+              >
+                {face}
+              </TabLink>
+            );
+          }
+          return (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              disabled={tab.disabled}
+              className={themeConfig?.tabTrigger}
+            >
+              {face}
+            </TabsTrigger>
+          );
+        })}
       </TabsList>
 
       {children !== undefined
         ? children
-        : tabs.map((tab) => {
+        : tabs.filter((tab) => tab.href === undefined).map((tab) => {
             const content = (tab as { content?: React.ReactNode }).content;
             return (
               <TabsContent

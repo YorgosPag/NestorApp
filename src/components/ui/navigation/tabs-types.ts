@@ -19,6 +19,12 @@ export interface BaseTabDef {
   warningDot?: boolean;
   /** Optional inline content — rendered by BaseTabs when no children provided. */
   content?: React.ReactNode;
+  /**
+   * **Καρτέλα-σύνδεσμος**: η επιφάνεια ζει σε δική της διαδρομή (π.χ. οι προμήθειες έργου,
+   * ADR-330). Αποδίδεται ως σύνδεσμος με όψη trigger — **δεν** γίνεται ποτέ ενεργή τιμή και
+   * **δεν** έχει πάνελ. Η πλοήγηση είναι πράξη του ανθρώπου (κλικ), ποτέ παρενέργεια στησίματος.
+   */
+  href?: string;
 }
 
 export interface TabDefinition extends BaseTabDef {

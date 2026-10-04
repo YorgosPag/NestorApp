@@ -22,6 +22,8 @@ import {
   PROJECT_COMPONENT_LABELS
 } from '@/constants/property-statuses-enterprise';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { isDraftEntityId } from '@/lib/draft-entity-id';
+import { getProjectProcurementUrl } from '@/lib/navigation/procurement-urls';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -42,10 +44,12 @@ export interface ProjectTabConfig {
   order: number;
   /** Whether tab is enabled by default */
   enabled?: boolean;
-  /** Component to render for this tab */
-  component: string;
+  /** Component to render for this tab — απών **μόνο** σε καρτέλα-σύνδεσμο (`href`). */
+  component?: string;
   /** Any additional props for the component */
   componentProps?: Record<string, unknown>;
+  /** Καρτέλα-σύνδεσμος: πλοηγεί στο κλικ αντί να στήνει component. `null` ⇒ ανενεργή. */
+  href?: (projectId: string) => string | null;
 }
 
 // ============================================================================
@@ -278,7 +282,9 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     description: PROJECT_TAB_DESCRIPTIONS.PROCUREMENT,
     order: 12.5,
     enabled: true,
-    component: 'ProcurementProjectTab',
+    // ADR-330 §5.1 S2 (πρότυπο Procore «Commitments»): η ενότητα ζει στη δική της διαδρομή με
+    // δικό της φρουρό RBAC — η καρτέλα είναι ΣΥΝΔΕΣΜΟΣ. Έργο χωρίς ταυτότητα δεν έχει προορισμό.
+    href: (projectId) => (isDraftEntityId(projectId) ? null : getProjectProcurementUrl(projectId)),
   },
 
   // -------------------------------------------------------------------------
