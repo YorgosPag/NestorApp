@@ -205,3 +205,35 @@ describe('⚓ η δοσμένη σύνδεση χρησιμοποιείται �
     expect(outcome.doc).toBeDefined();
   });
 });
+
+// ============================================================================
+describe('⚓ ταυτότητα που ΔΕΝ ΜΠΟΡΕΙ να υπάρξει ⇒ απουσία, ΧΩΡΙΣ ανάγνωση (περιστατικό 2026-10-04)', () => {
+  // Το πραγματικό Firestore ΠΕΤΑ `INVALID_ARGUMENT` σε αυτές — το `.get()` δεν πρέπει να τρέξει.
+  const UNADDRESSABLE = ['__new__', '', '.', '..', 'a/b'];
+
+  it.each(UNADDRESSABLE)('🔴 «%s» ⇒ το ΙΔΙΟ «όχι» με την απουσία, και η βάση ΔΕΝ ρωτήθηκε', async (docId) => {
+    // Στημένο επίτηδες: αν ο φορτωτής διάβαζε, θα το έβρισκε.
+    store.set(`${COLLECTION}/${docId}`, { companyId: 'co-a' });
+
+    const outcome = await loadOwnedDocOrRefusal({
+      ...LOCATOR,
+      docId,
+      decide: () => 'owned',
+      refusal: () => 'ΟΧΙ',
+    });
+
+    expect(outcome.refusal).toBe('ΟΧΙ');
+    expect(reads).toEqual([]);
+  });
+
+  it('🔴 η μορφή που ρίχνει δίνει το «δεν βρέθηκε» του πεδίου ορισμού, όχι σφάλμα βάσης', async () => {
+    const assertOwned = jest.fn();
+
+    await expect(
+      loadOwnedDoc({ ...LOCATOR, docId: '__new__', notFound: () => new Error('ΔΕΝ ΒΡΕΘΗΚΕ'), assertOwned }),
+    ).rejects.toThrow('ΔΕΝ ΒΡΕΘΗΚΕ');
+
+    expect(assertOwned).not.toHaveBeenCalled();
+    expect(reads).toEqual([]);
+  });
+});

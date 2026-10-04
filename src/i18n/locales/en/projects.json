@@ -547,6 +547,11 @@
     "licensePlaceholder": "e.g. 567/2024",
     "authorityPlaceholder": "e.g. Athens Planning Authority"
   },
+  "draft": {
+    "addressesHint": "Addresses will be saved together with the project when you press “Save”.",
+    "tabLockedTitle": "Save the project first",
+    "tabLockedDescription": "This tab becomes available once the project is created. Fill in “General” and “Addresses”, then press “Save”."
+  },
   "createValidation": {
     "nameRequired": "Project title is required.",
     "statusRequired": "Project status is required."

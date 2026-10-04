@@ -26,16 +26,11 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import { projectNotFound, requireProjectAccess } from '../_shared/project-ownership';
+import { loadOwnedProject } from '../_shared/project-owned-doc';
 import { invalidateProjectCaches } from '../_shared/project-cache';
 import { ProjectUpdateSchema } from './project-mutations.types';
-import {
-  resolveProjectAddressPositions,
-  republishProjectListings,
-  type ProjectAddressLike,
-} from '@/services/listings/address-place-writeback';
-import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
-import { extractLegacyFields } from '@/types/project/address-helpers';
+import { republishProjectListings } from '@/services/listings/address-place-writeback';
+import { resolveAddressesForWrite } from '../_shared/project-address-write';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
@@ -43,53 +38,6 @@ import type {
 import type { ProjectAddress } from '@/types/project/addresses';
 
 const logger = createModuleLogger('ProjectRoute');
-
-/**
- * **Η θέση λύνεται ΠΡΙΝ τη γραφή** — αλλιώς η επαναπροβολή διαβάζει την παλιά διεύθυνση.
- *
- * 🔴 Μέχρι σήμερα ο επεξεργαστής διευθύνσεων γεωκωδικοποιούσε **για την οθόνη** και
- * πετούσε την απάντηση: το `coordinates` γραφόταν **μόνο** αν ο άνθρωπος έσερνε την
- * πινέζα, και το `geocodingMetadata` **ποτέ** (μετρημένο: 12 αναγνώστες, 0 γραφείς).
- * Άρα μια πλήρης διεύθυνση κατέληγε σε αγγελία `never-asked` — σιωπηλά.
- *
- * ⚠️ **Ο διακομιστής και όχι ο περιηγητής**, με τρεις λόγους: (α) η απάντηση είναι
- * **μία** για όλους αντί για μία ανά καρτέλα· (β) η πολιτική **1 αιτήματος/δευτ.** του
- * Nominatim είναι επιβλητή μόνο κεντρικά· (γ) το ίδιο μονοπάτι λύνει ήδη τη θέση για
- * τον προβολέα. Είναι και η πρακτική του Revit: η γεωκωδικοποίηση είναι **πράξη του
- * χρήστη**, εδώ η αποθήκευση, ποτέ παρενέργεια ανοίγματος.
- */
-async function resolveAddressesForWrite(
-  body: Record<string, unknown>,
-  projectData: Record<string, unknown> | undefined,
-): Promise<readonly AddressPositionDrift[]> {
-  // ADR-332 D27 Βήμα Β (Φ2β): η δήλωση μετακίνησης είναι ΑΙΤΗΜΑ, όχι πεδίο του έργου —
-  // φεύγει από το σώμα ΠΡΙΝ τη γραφή, αλλιώς θα γραφόταν στο έγγραφο.
-  const relocateIds = new Set(
-    Array.isArray(body['relocateAddressIds']) ? (body['relocateAddressIds'] as string[]) : [],
-  );
-  delete body['relocateAddressIds'];
-  if (!Array.isArray(body['addresses'])) return [];
-
-  const stored = Array.isArray(projectData?.['addresses'])
-    ? (projectData['addresses'] as ProjectAddressLike[])
-    : [];
-
-  const { addresses, tally, drifts } = await resolveProjectAddressPositions(
-    stored,
-    body['addresses'] as ProjectAddressLike[],
-    Date.now(),
-    { relocateIds },
-  );
-
-  body['addresses'] = addresses;
-  // ADR-332 D27 Β11: το κάτοπτρο παράγεται από ό,τι ΓΡΑΦΕΤΑΙ — ό,τι έστειλε ο πελάτης αγνοείται
-  // (το έφτιαχνε από τη γραφή πριν το `trim` του συνόρου).
-  Object.assign(body, extractLegacyFields(addresses));
-  // Η λογιστική τυπώνεται **πάντα**, ακόμη και όταν κάθε κάδος είναι μηδέν: ένα «0»
-  // που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
-  logger.info('[Projects/Update] Θέσεις διευθύνσεων', { ...tally, drifts: drifts.length });
-  return drifts;
-}
 
 export async function handleUpdateProject(
   request: NextRequest,
@@ -110,20 +58,10 @@ export async function handleUpdateProject(
   }
 
   // 2. Get project document and verify ownership (tenant isolation)
-  const projectRef = getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId);
-  const projectDoc = await projectRef.get();
-
-  if (!projectDoc.exists) {
-    logger.info('[Projects/Update] Project not found', { projectId });
-    throw projectNotFound();
-  }
-
-  const projectData = projectDoc.data();
-
-  // 3. Validate tenant isolation — ADR-742 §7sexies.
-  //    Ο φύλακας καταγράφει και την άρνηση και τη cross-tenant θέαση του
-  //    υπεργραφείου: ήταν η **ίδια** σύγκριση γραμμένη δύο φορές.
-  requireProjectAccess({ projectData, caller: ctx, projectId, action: 'update' });
+  //    ADR-742 §7sexies — φόρτωση + «υπάρχει;» + «δικό μου;» σε **μία** κλήση. Ήταν
+  //    χειρόγραφο αντίγραφο της αλυσίδας, και γι' αυτό **έχασε** τον έλεγχο ταυτότητας
+  //    που δεν μπορεί να υπάρξει (`__new__` ⇒ `INVALID_ARGUMENT` ⇒ 500, 2026-10-04).
+  const { data: projectData } = await loadOwnedProject({ projectId, caller: ctx, action: 'update' });
 
   // 3β. **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — δες `resolveAddressesForWrite`.
   const positionAdvisories = await resolveAddressesForWrite(body as Record<string, unknown>, projectData);
@@ -250,17 +188,8 @@ export async function handleDeleteProject(
   logger.info('[Projects/Delete] User deleting project (bottom-up BLOCK guard)', { email: ctx.email, projectId });
 
   // 1. Get project and verify ownership
-  const projectRef = db.collection(COLLECTIONS.PROJECTS).doc(projectId);
-  const projectDoc = await projectRef.get();
-
-  if (!projectDoc.exists) {
-    throw projectNotFound();
-  }
-
-  const projectData = projectDoc.data();
-
-  // 2. Tenant isolation — ADR-742 §7sexies (ίδιο εργοστάσιο με το «δεν υπάρχει»).
-  requireProjectAccess({ projectData, caller: ctx, projectId, action: 'delete' });
+  //    ADR-742 §7sexies — ο ένας φορτωτής (ίδιο εργοστάσιο για «δεν υπάρχει» και «όχι δικό σου»).
+  const { data: projectData } = await loadOwnedProject({ projectId, caller: ctx, action: 'delete', db });
 
   // Ξεχωριστή ερώτηση από την ιδιοκτησία: **προνόμιο**, όχι κυριότητα. Ρυθμίζει
   // τον έλεγχο εξαρτήσεων και τον φύλακα tenant της μηχανής διαγραφής — γι' αυτό

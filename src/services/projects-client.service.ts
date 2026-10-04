@@ -27,6 +27,7 @@ import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { invalidateProjectsList } from '@/hooks/useProjectsList';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isDraftEntityId } from '@/lib/draft-entity-id';
 
 const logger = createModuleLogger('ProjectsClientService');
 
@@ -132,7 +133,14 @@ export interface ProjectUpdatePayload extends ProjectPayloadSharedFields {
  */
 export async function createProject(
   data: ProjectCreatePayload
-): Promise<{ success: boolean; projectId?: string; error?: string; errorCode?: string }> {
+): Promise<{
+  success: boolean;
+  projectId?: string;
+  /** Οι διευθύνσεις **όπως τις έγραψε ο διακομιστής** — μόνο όταν η δημιουργία είχε `addresses`. */
+  addresses?: ProjectAddress[];
+  error?: string;
+  errorCode?: string;
+}> {
   try {
     logger.info('Creating new project via API');
 
@@ -140,6 +148,7 @@ export async function createProject(
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
     interface ProjectCreateResult {
       projectId: string;
+      project?: { addresses?: ProjectAddress[] };
     }
     const result = await apiClient.post<ProjectCreateResult>(API_ROUTES.PROJECTS.LIST, data);
 
@@ -163,7 +172,8 @@ export async function createProject(
       timestamp: Date.now()
     });
 
-    return { success: true, projectId };
+    const written = result?.project?.addresses;
+    return { success: true, projectId, ...(Array.isArray(written) ? { addresses: written } : {}) };
 
   } catch (error) {
     const message = getErrorMessage(error);
@@ -202,6 +212,14 @@ export async function updateProjectClient(
   projectId: string,
   updates: ProjectUpdatePayload
 ): Promise<ProjectUpdateClientResult> {
+  // Η ψευδο-ταυτότητα του «Fill then Create» δεν ζητείται ποτέ από τον server: το έργο
+  // δεν υπάρχει ακόμη, άρα δεν υπάρχει τι να ενημερωθεί. Ο ΕΝΑΣ γραφέας το κόβει εδώ,
+  // για κάθε καρτέλα — χωρίς δίκτυο και χωρίς τις τρεις επαναλήψεις (2026-10-04).
+  if (isDraftEntityId(projectId)) {
+    logger.warn('Refused to update a project that has not been created yet');
+    return { success: false };
+  }
+
   try {
     logger.info('Updating project via API', { projectId });
 

@@ -14,6 +14,8 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { isDraftEntityId } from '@/lib/draft-entity-id';
+import type { ProjectDraftAddresses } from '@/components/projects/draft/useProjectDraftAddresses';
 import type { Project } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
 import {
@@ -38,15 +40,27 @@ function initialAddresses(project: Project): ProjectAddress[] {
 // HOOK
 // =============================================================================
 
-export function useProjectLocations(project: Project) {
+/**
+ * @param draft Το πρόχειρο του «Fill then Create» (`useProjectDraftAddresses`). Όσο το έργο δεν
+ *   έχει αποθηκευτεί, κάθε πράξη γράφει **εκεί** και όχι στον διακομιστή — οι διευθύνσεις
+ *   φεύγουν μαζί με τη δημιουργία, σε μία πράξη.
+ */
+export function useProjectLocations(project: Project, draft?: ProjectDraftAddresses) {
   const projectNotifications = useProjectNotifications();
+  const isDraft = isDraftEntityId(project.id);
 
   // Derive addresses from project prop
-  const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() => initialAddresses(project));
+  // Το πρόχειρο προηγείται όσο ΑΝΗΚΕΙ σε αυτή την ταυτότητα: στο ίδιο το «Νέο», και αμέσως μετά
+  // τη δημιουργία (η «Γενικά» το μεταβιβάζει με ό,τι ΕΓΡΑΨΕ ο διακομιστής — η σύνοψη της λίστας
+  // δεν έχει ακόμη διευθύνσεις, και η καρτέλα θα άδειαζε τη στιγμή που το έργο αποθηκεύτηκε).
+  const readAddresses = () =>
+    draft?.belongsTo(project.id) ? draft.get() : initialAddresses(project);
+
+  const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(readAddresses);
 
   // Sync when project changes (forceMount keeps component alive)
   useEffect(() => {
-    setLocalAddresses(initialAddresses(project));
+    setLocalAddresses(readAddresses());
   }, [project.id]);
 
   // UI state
@@ -84,6 +98,14 @@ export function useProjectLocations(project: Project) {
           return projectNotifications.address.updateError(serverMessage);
       }
     };
+    // «Fill then Create»: το έργο δεν υπάρχει ακόμη ⇒ δεν υπάρχει τι να ενημερωθεί. Η πράξη
+    // γράφεται στο πρόχειρο και φεύγει ΜΑΖΙ με τη δημιουργία. Χωρίς ειδοποίηση «αποθηκεύτηκε»:
+    // δεν αποθηκεύτηκε — το λέει η μόνιμη σήμανση της καρτέλας.
+    if (isDraft) {
+      draft?.set(newAddresses);
+      setLocalAddresses(newAddresses);
+      return true;
+    }
     try {
       const result = await updateProjectWithPolicy({
         projectId: project.id!,
@@ -98,7 +120,11 @@ export function useProjectLocations(project: Project) {
         // 🔴 ADR-332 D27 Βήμα Β (Β5): υιοθετείται ό,τι ΕΓΡΑΨΕ ο διακομιστής (μοτίβο Apollo / Relay).
         // Με το αντίγραφο του πελάτη η κάρτα έμενε «Στον δρόμο» ως την επαναφόρτωση — ο γραφέας
         // θέσης είχε ήδη σβήσει το `geocodingMetadata` που κρατούσε εδώ το `{...addr}`.
-        setLocalAddresses(result.addresses ?? newAddresses);
+        const written = result.addresses ?? newAddresses;
+        setLocalAddresses(written);
+        // Αν το πρόχειρο κατέχει ακόμη αυτή την ταυτότητα (έργο που μόλις γεννήθηκε), μένει
+        // συγχρονισμένο — αλλιώς ένα remount της καρτέλας θα έδειχνε τη στιγμή της δημιουργίας.
+        if (draft?.belongsTo(project.id)) draft.set(written);
         setPositionAdvisories(result.positionAdvisories ?? []);
         fireSuccess();
         return true;
@@ -240,6 +266,8 @@ export function useProjectLocations(project: Project) {
 
   return {
     localAddresses,
+    /** Το έργο δεν αποθηκεύτηκε ακόμη — οι διευθύνσεις ζουν στο πρόχειρο. */
+    isDraft,
     isSaving,
     isInlineFormActive: add.isOpen || edit.editingIndex !== null,
 

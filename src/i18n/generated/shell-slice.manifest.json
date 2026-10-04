@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b984e49c2c715fcc4716b30c32a05df5b2fb1697fa0cc966304c16c27dd4097a",
+  "inputsSha256": "a71062eadbdddcc59ccf218f03d246101cf708300d3c1870f13dec6cf38701bb",
   "languages": [
     "el"
   ],
@@ -11097,7 +11097,7 @@
     "src/lib/auth/roles.ts": "1e61e55fd5628c54d6d3e0f9e6e1b7ad1b742105586c80d2afec7e6c53967ce8",
     "src/lib/auth/security-policy.ts": "873a3a4fce658cb1faa22e49e64cea7f0b9144e92941b2757bf8ee184cb55330",
     "src/lib/auth/tenant-isolation-error.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/auth/tenant-isolation.ts": "953bc81516d07feac3df5ecf3f76608871298976104886344f218bf810e6ac8f",
+    "src/lib/auth/tenant-isolation.ts": "9f0c6e67a9a512491d6d4329b697afeab2b7d8fa279a5d42d824cabda62637c0",
     "src/lib/auth/tenant-ownership.ts": "3b9368db13b61747ac925d374f708b77424bae24c8edb94192768be58b39db86",
     "src/lib/auth/token-credentials.ts": "bb93c51608a0072a932f8b7b441dd20e29ae615362d81201bdd30831c94f2422",
     "src/lib/auth/types.ts": "e161281d55b1d44f9ef2da584446a5ae48203f828b1dd8a61fbe8de720f03c05",
@@ -11147,6 +11147,7 @@
     "src/lib/firestore-now.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/lib/firestore-pending-writes.ts": "4d99cf9a4e81c954bf8c27762c514d24146db5f3b320776bfe4eabb10cd8ac4a",
     "src/lib/firestore/converters/contact.converter.ts": "5460ed2389be30ed576545f1d1eee65569aeb77af54fb3c54084b640a8a16383",
+    "src/lib/firestore/doc-id.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/firestore/trashed-status.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/firestore/utils.ts": "af6d371b2ca638535e40bf36a5d686df2027d9a06f5415419d76de5b2fc84e33",
     "src/lib/floor/declared-floor-options.ts": "064b959e14f0d54c206ae3ee08cca071bebffa14d47a703bbb3026288235340c",
@@ -11589,7 +11590,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 931,
+    "shellFiles": 932,
     "sliceBytes": 691000
   },
   "unresolvableKeys": [

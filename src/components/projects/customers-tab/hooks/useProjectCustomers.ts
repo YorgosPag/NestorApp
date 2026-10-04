@@ -1,5 +1,4 @@
 
-import { useEffect, useState, useCallback, useRef } from "react";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -7,6 +6,7 @@ import type { ProjectCustomer } from "@/types/project";
 import type { UseProjectCustomersState } from "../types";
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useLazyProjectResource } from '../../hooks/useLazyProjectResource';
 
 const logger = createModuleLogger('useProjectCustomers');
 
@@ -34,8 +34,29 @@ interface UseProjectCustomersReturn extends UseProjectCustomersState {
   isFetched: boolean;
 }
 
+// 🏢 ENTERPRISE: Type-safe API response with automatic authentication
+interface ProjectCustomersApiResponse {
+  customers?: ProjectCustomer[];
+}
+
+const NO_CUSTOMERS: ProjectCustomer[] = [];
+
+async function fetchProjectCustomers(projectId: string): Promise<ProjectCustomer[]> {
+  logger.info('Fetching project customers', { projectId });
+  try {
+    const result = await apiClient.get<ProjectCustomersApiResponse | ProjectCustomer[]>(API_ROUTES.PROJECTS.CUSTOMERS(projectId));
+    // 🎯 ENTERPRISE: Handle both old format (direct array) and new format (with customers property)
+    const customersData = Array.isArray(result) ? result : result?.customers || [];
+    logger.info('Project customers loaded', { count: customersData.length });
+    return customersData;
+  } catch (e) {
+    logger.error('Failed to fetch project customers', { error: e });
+    throw e;
+  }
+}
+
 // ============================================================================
-// 🏢 ENTERPRISE: Main Hook
+// 🏢 ENTERPRISE: Main Hook — lifecycle in useLazyProjectResource (SSoT)
 // ============================================================================
 
 export function useProjectCustomers(
@@ -45,96 +66,13 @@ export function useProjectCustomers(
   const { enabled = true } = options;
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
-  const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isFetched, setIsFetched] = useState(false);
+  const { data, loading, error, refetch, isFetched } = useLazyProjectResource({
+    projectId,
+    enabled,
+    empty: NO_CUSTOMERS,
+    fetcher: fetchProjectCustomers,
+    fallbackError: t("customers.errors.loadFailed"),
+  });
 
-  // Track mounted state to prevent state updates after unmount
-  const mountedRef = useRef(true);
-  // Track if we've already fetched once to avoid duplicate calls
-  const hasFetchedRef = useRef(false);
-
-  // 🏢 ENTERPRISE: Extracted fetch logic for reusability
-  const fetchCustomers = useCallback(async () => {
-    if (!projectId || projectId === '__new__') return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      logger.info('Fetching project customers', { projectId });
-
-      // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
-      interface ProjectCustomersApiResponse {
-        customers?: ProjectCustomer[];
-      }
-
-      const result = await apiClient.get<ProjectCustomersApiResponse | ProjectCustomer[]>(API_ROUTES.PROJECTS.CUSTOMERS(projectId));
-
-      // 🎯 ENTERPRISE: Handle both old format (direct array) and new format (with customers property)
-      const customersData = Array.isArray(result)
-        ? result
-        : (result as ProjectCustomersApiResponse)?.customers || [];
-
-      logger.info('Project customers loaded', { count: customersData.length });
-
-      if (mountedRef.current) {
-        setCustomers(customersData);
-        setIsFetched(true);
-        hasFetchedRef.current = true;
-      }
-
-    } catch (e) {
-      logger.error('Failed to fetch project customers', { error: e });
-      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
-      const errorMessage = e instanceof Error ? e.message : t("customers.errors.loadFailed");
-      if (mountedRef.current) {
-        setError(errorMessage);
-      }
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [projectId, t]);
-
-  // 🏢 ENTERPRISE: Manual refetch capability
-  const refetch = useCallback(async () => {
-    hasFetchedRef.current = false;
-    await fetchCustomers();
-  }, [fetchCustomers]);
-
-  // 🏢 ENTERPRISE: Effect with enabled flag support
-  useEffect(() => {
-    mountedRef.current = true;
-
-    // Only fetch if enabled AND we haven't fetched yet
-    if (enabled && !hasFetchedRef.current && projectId) {
-      fetchCustomers();
-    }
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [enabled, projectId, fetchCustomers]);
-
-  // 🏢 ENTERPRISE: Reset on projectId change
-  useEffect(() => {
-    if (projectId) {
-      // Reset state when projectId changes
-      hasFetchedRef.current = false;
-      setCustomers([]);
-      setError(null);
-      setIsFetched(false);
-    }
-  }, [projectId, t]);
-
-  return {
-    customers,
-    loading,
-    error,
-    refetch,
-    isFetched
-  };
+  return { customers: data, loading, error, refetch, isFetched };
 }

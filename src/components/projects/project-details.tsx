@@ -32,6 +32,17 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useIkaTabWarnings } from './ika/hooks/useIkaTabWarnings';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { createShowcasePdfPreSubmit } from '@/components/sharing/showcase-pdf-pre-submit';
+import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
+import { DraftProjectTabPlaceholder } from './draft/DraftProjectTabPlaceholder';
+
+/**
+ * Οι καρτέλες που περιγράφουν **το ίδιο το έργο** και άρα γεμίζουν ΠΡΙΝ υπάρξει: γράφουν στο
+ * πρόχειρο και αποθηκεύονται μαζί του. Κάθε άλλη δείχνει εγγραφές δεμένες στην ταυτότητά του.
+ */
+const DRAFT_CAPABLE_TAB_COMPONENTS: ReadonlySet<string> = new Set([
+  'GeneralProjectTab',
+  'ProjectLocationsTab',
+]);
 
 // ============================================================================
 // TYPES
@@ -160,6 +171,20 @@ export function ProjectDetails({
   // Get project tabs from centralized config
   const projectTabs = getSortedProjectTabs();
 
+  // 🏢 «Fill then Create»: οι διευθύνσεις του πρόχειρου — τις γράφει η «Διευθύνσεις», τις
+  // διαβάζει η «Γενικά» στη δημιουργία (βλ. `useProjectDraftAddresses`).
+  const draftAddresses = useProjectDraftAddresses(project?.id);
+
+  // Όσο το έργο δεν έχει ταυτότητα, οι καρτέλες που δείχνουν ΑΛΛΕΣ εγγραφές δεμένες σε αυτήν
+  // δεν έχουν τι να ρωτήσουν — λένε τι λείπει αντί να ζητήσουν την ψευδο-ταυτότητα.
+  const draftTabOverrides = useMemo(() => {
+    if (!isCreateMode) return undefined;
+    const locked = getSortedProjectTabs()
+      .filter((tab) => !DRAFT_CAPABLE_TAB_COMPONENTS.has(tab.component))
+      .map((tab) => [tab.component, DraftProjectTabPlaceholder] as const);
+    return Object.fromEntries(locked) as Record<string, React.ComponentType<TabComponentProps>>;
+  }, [isCreateMode]);
+
   // Memoize globalProps to prevent re-render cascade on ALL tabs.
   // `refetchProject` is additive and optional — only `GeneralProjectTab` uses
   // it today (post-save canonicalization), the other 16 tabs ignore it.
@@ -171,7 +196,8 @@ export function ProjectDetails({
     isCreateMode,
     onProjectCreated,
     refetchProject,
-  }), [effectiveProject?.id, project?.id, isEditing, setIsEditing, registerSaveCallback, isCreateMode, onProjectCreated, refetchProject]);
+    draftAddresses,
+  }), [effectiveProject?.id, project?.id, isEditing, setIsEditing, registerSaveCallback, isCreateMode, onProjectCreated, refetchProject, draftAddresses]);
 
   // 404 handling: if the hydrated GET returned "project not found" (deleted
   // mid-navigation), fall back to the empty state instead of rendering the
@@ -214,6 +240,7 @@ export function ProjectDetails({
             tabs={projectTabs.map(convertToUniversalConfig)}
             data={displayProject}
             componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
+            customComponents={draftTabOverrides}
             defaultTab={initialTab || "general"}
             theme="default"
             translationNamespace="building"

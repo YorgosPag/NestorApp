@@ -4689,6 +4689,30 @@ component ⇒ η προηγούμενη επιλογή **επιβιώνει**. �
 `useEntityPageState` (`BuildingsPageContent` · `projects-page-content`), οι υπόλοιποι στο
 `.claude-rules/pending-ratchet-work.md`.
 
+**Συνέχεια 2026-10-04 — η ψευδο-ταυτότητα έφτανε στον server (περιστατικό παραγωγής).** Σε «Νέο έργο» οι
+καρτέλες ζητούσαν το `__new__` ως πραγματικό id: `PATCH /api/projects/__new__` (×3, από την καρτέλα
+«Διευθύνσεις») και `GET /api/parking?projectId=__new__` ⇒ `INVALID_ARGUMENT` ⇒ 500 ⇒ **η διεύθυνση χανόταν**.
+Η πλευρά του server (404 αντί 500) είναι στο ADR-742 changelog 2026-10-04. Η πλευρά του προϊόντος:
+
+- **Πρότυπο**: SAP Fiori *draft handling* και AWS Cloudscape *sub-resource create* — τα εξαρτημένα ενός γονέα
+  που δεν υπάρχει ακόμη κρατιούνται στο πρόχειρο και γράφονται **μαζί** του, σε μία πράξη. Απορρίφθηκε το
+  «αποθήκευσε πρώτα» για ό,τι περιγράφει **το ίδιο το έργο**.
+- **`components/projects/draft/useProjectDraftAddresses`** — ένας ιδιοκτήτης (το `ProjectDetails`, κοινός γονέας
+  σελίδας **και** `ProjectQuickCreateSheet`): η «Διευθύνσεις» γράφει, η «Γενικά» διαβάζει στη δημιουργία. Ref,
+  όχι state. Το πρόχειρο **ανήκει σε μία ταυτότητα** (`belongsTo`)· στη δημιουργία μεταβιβάζεται στην πραγματική
+  (`commit`) με ό,τι **έγραψε** ο διακομιστής, και αδειάζει μόλις φανεί άλλο έργο.
+- **`POST /api/projects/list`** δέχεται πλέον `addresses` **με επικύρωση** (`projectAddressesSchema`) και μέσα από
+  τον **ίδιο** γραφέα θέσης με το PATCH — εξήχθη στο `_shared/project-address-write.ts`. Πριν, το σώμα γραφόταν
+  ωμό: διεύθυνση χωρίς θέση και χωρίς κάτοπτρο `address`/`city`. Διορθώθηκε και το `catch` που ξανατύλιγε κάθε
+  `ApiError` 400 σε 500.
+- **Οι υπόλοιπες 19 καρτέλες** δείχνουν εγγραφές δεμένες στην ταυτότητα του έργου ⇒ σε πρόχειρο αποδίδουν
+  `DraftProjectTabPlaceholder` («Αποθηκεύστε πρώτα το έργο») μέσω `customComponents`, αντί να ρωτήσουν τον server.
+  Η λίστα όσων γεμίζουν πριν τη δημιουργία είναι **μία** (`DRAFT_CAPABLE_TAB_COMPONENTS`).
+- Μετανάστευσαν στο `draft-entity-id` άλλοι τρεις καταναλωτές (`ProjectQuickCreateSheet` · `useProjectStructure` ·
+  `useProjectCustomers`) και φυλάχτηκαν `updateProjectClient` · `useFirestoreParkingSpots` · `ProjectMeasurementsTab`.
+- Tests: `useProjectLocations.draft.test.tsx` (5). ⏳ **Χωρίς test** ο χειριστής δημιουργίας (δεν είχε σουίτα)·
+  ⏳ το ίδιο σχήμα **δεν** εφαρμόστηκε στα κτίρια (`BuildingQuickCreateSheet` / `BuildingLocationsTab`).
+
 ---
 
 ### 8.32 ✅ **Η ΠΟΡΤΑ ΠΡΟΣ ΔΩΜΑΤΙΟ ΠΟΥ ΔΕΝ ΥΠΗΡΧΕ**: η αντιπαροχή χωρίς οικόπεδο *(2026-08-20)*

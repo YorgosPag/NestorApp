@@ -152,6 +152,18 @@ describe.each(GUARDS)('require*InTenant — $label', (guard) => {
     expect(logAuditEventMock).not.toHaveBeenCalled();
   });
 
+  it('🔴 ταυτότητα που δεν μπορεί να υπάρξει (`__new__`) ⇒ το ΙΔΙΟ 404, χωρίς ανάγνωση (2026-10-04)', async () => {
+    // Στημένο επίτηδες: αν ο φύλακας διάβαζε, θα το έβρισκε και θα το επέστρεφε.
+    // Το πραγματικό Firestore εδώ ΠΕΤΑ `INVALID_ARGUMENT` ⇒ 500 αντί για 404.
+    store.set(`${guard.collection}/__new__`, { companyId: OWNER });
+
+    await expect(guard.call(CALLER, '__new__')).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+      message: guard.notFound,
+    });
+  });
+
   it('ανύπαρκτο ⇒ 404 NOT_FOUND με το μήνυμα της οντότητας + audit', async () => {
     await expect(guard.call(CALLER, ID)).rejects.toThrow(TenantIsolationError);
 

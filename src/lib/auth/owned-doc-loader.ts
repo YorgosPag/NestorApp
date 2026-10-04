@@ -75,6 +75,7 @@ import 'server-only';
 import type { DocumentData, DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isAddressableDocId } from '@/lib/firestore/doc-id';
 import type { ResourceAccessVerdict } from './resource-ownership-guard';
 
 const logger = createModuleLogger('OwnedDocLoader');
@@ -177,7 +178,14 @@ export type OwnedDocOutcome<R> =
 async function fetchExistingDoc(spec: OwnedDocLocator): Promise<OwnedDoc | null> {
   const { collection, docId, action, resourceLabel } = spec;
 
-  const ref = (spec.db ?? getAdminFirestore()).collection(collection).doc(docId);
+  // Ταυτότητα που **δεν μπορεί** να υπάρξει (π.χ. η ψευδο-ταυτότητα `__new__`) είναι
+  // απουσία, όχι σφάλμα: το Firestore θα πετούσε `INVALID_ARGUMENT` ⇒ 500 αντί για 404.
+  if (!isAddressableDocId(docId)) {
+    logger.info(`${resourceLabel} not found (unaddressable id)`, { action, docId });
+    return null;
+  }
+
+  const ref =(spec.db ?? getAdminFirestore()).collection(collection).doc(docId);
   const snap = await ref.get();
 
   if (!snap.exists) {

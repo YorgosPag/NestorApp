@@ -31,8 +31,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Project } from '@/types/project';
 import { DIALOG_SCROLL } from '@/styles/design-tokens';
 import { nowISO } from '@/lib/date-local';
-
-const TEMP_PROJECT_ID = '__new__';
+import { DRAFT_ENTITY_ID } from '@/lib/draft-entity-id';
 
 export interface ProjectQuickCreateSheetProps {
   readonly open: boolean;
@@ -47,7 +46,7 @@ export interface ProjectQuickCreateSheetProps {
  */
 function buildTempProject(): Project & { companyName: string } {
   return {
-    id: TEMP_PROJECT_ID,
+    id: DRAFT_ENTITY_ID,
     name: '',
     title: '',
     description: '',

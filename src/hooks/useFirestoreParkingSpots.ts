@@ -18,6 +18,7 @@ import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
 import { normalizeOperationalStatus } from '@/constants/operational-statuses';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { createStaleCache } from '@/lib/stale-cache';
+import { isDraftEntityId } from '@/lib/draft-entity-id';
 import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
 
 // =============================================================================
@@ -85,7 +86,10 @@ export function useFirestoreParkingSpots(
       return fetchResult;
     },
     deps: [buildingId, projectId, user?.uid],
-    enabled: autoFetch && !authLoading && !!user,
+    // Γονέας που δεν αποθηκεύτηκε ακόμη («Fill then Create») δεν έχει θέσεις — και η
+    // ψευδο-ταυτότητά του δεν ζητείται ποτέ από τον server (`lib/draft-entity-id`).
+    enabled: autoFetch && !authLoading && !!user
+      && !isDraftEntityId(projectId) && !isDraftEntityId(buildingId),
     initialData: parkingCache.get(cacheKey) ?? undefined,
     silentInitialFetch: parkingCache.hasLoaded(cacheKey),
   });

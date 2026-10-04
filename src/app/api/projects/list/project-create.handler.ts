@@ -31,6 +31,8 @@ import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-au
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import { invalidateProjectCaches } from '../_shared/project-cache';
+import { resolveAddressesForWrite } from '../_shared/project-address-write';
+import { projectAddressesSchema } from '@/types/project/address-schemas';
 import type { ProjectEnrollmentOutcome } from '@/lib/auth/project-member-write';
 import { writeProjectBirth } from './project-birth';
 
@@ -117,6 +119,18 @@ export const POST = withHighRateLimit(
         // 🏢 ADR-284 §3.0: Layer 0 — Project Creation Policy
         // Enforce name + linkedCompanyId BEFORE any Firestore writes.
         assertProjectCreatePolicy(body as unknown as Record<string, unknown>);
+
+        // 🏢 «Fill then Create»: οι διευθύνσεις του πρόχειρου έρχονται ΜΑΖΙ με τη δημιουργία.
+        // Ίδιο σχήμα και ίδιος γραφέας θέσης με το PATCH — αλλιώς το έργο θα γεννιόταν με
+        // διεύθυνση ανεπικύρωτη, χωρίς θέση και χωρίς το κάτοπτρο `address`/`city`.
+        if (body.addresses !== undefined) {
+          const parsedAddresses = projectAddressesSchema.safeParse(body.addresses);
+          if (!parsedAddresses.success) {
+            throw new ApiError(400, 'Validation failed', 'INVALID_ADDRESSES');
+          }
+          body.addresses = parsedAddresses.data;
+          await resolveAddressesForWrite(body, undefined);
+        }
 
         // 🏢 ENTERPRISE: companyId = tenant company (ctx.companyId), always.
         // linkedCompanyId = CRM client company reference (separate concern).
@@ -249,6 +263,8 @@ export const POST = withHighRateLimit(
 
         // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 
+        // Το `body.addresses` είναι ήδη ό,τι ΓΡΑΦΤΗΚΕ (θέση λυμένη) — ο πελάτης το υιοθετεί
+        // αντί για το δικό του αντίγραφο (ADR-332 D27 Βήμα Β, Β5).
         return apiSuccess<ProjectCreateResponse>(
           {
             projectId,
@@ -258,6 +274,9 @@ export const POST = withHighRateLimit(
         );
 
       } catch (error) {
+        // Ό,τι ρίχτηκε ήδη ως `ApiError` (400 κενό σώμα / κακό JSON / άκυρες διευθύνσεις)
+        // κρατά τον κωδικό του — πριν, το γενικό `catch` το ξανατύλιγε σε 500.
+        if (error instanceof ApiError) throw error;
         // 🏢 ADR-284: Policy violations → 400 Bad Request (with stable code)
         if (error instanceof ProjectMutationPolicyError) {
           logger.warn('[Projects] Policy violation on create', { error: error.message, code: error.code });

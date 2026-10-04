@@ -10,7 +10,9 @@ import {
   // 🎭 ENTERPRISE: Persona System icons (ADR-121)
   HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag, Percent,
   // 🏢 Procurement icons (PO statuses)
-  FileEdit, Send, PackageOpen, PackageCheck, CircleCheck,
+  FileEdit, Send, PackageOpen, PackageCheck, CircleCheck, ShoppingCart,
+  // 🏢 Building structure (floors tab)
+  Layers,
   // 📁 Project participation icon (ADR-282)
   FolderKanban,
   LucideIcon
@@ -172,6 +174,9 @@ export const ICON_MAPPING = {
   'package-open': PackageOpen,
   'package-check': PackageCheck,
   'circle-check': CircleCheck,
+  // Procurement tab/section (ADR-327) + building floors tab
+  'shopping-cart': ShoppingCart,
+  'layers': Layers,
 
   // 🔧 Legacy emoji fallbacks για backward compatibility
   'handshake': UserCheck, // Alias

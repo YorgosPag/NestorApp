@@ -74,6 +74,7 @@ import { logAuditEvent } from './audit';
 import { isRoleBypass } from './roles';
 import { isPayloadOwnedByCompany } from './tenant-ownership';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { isAddressableDocId } from '@/lib/firestore/doc-id';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { TenantIsolationError } from './tenant-isolation-error';
 
@@ -143,9 +144,13 @@ async function requireDocInTenant<T extends TenantScopedDoc>(spec: {
    */
   const notFound = () => new TenantIsolationError(notFoundMessage, 404, 'NOT_FOUND');
 
-  const doc = await getAdminFirestore().collection(collection).doc(id).get();
+  // Ταυτότητα που **δεν μπορεί** να υπάρξει (π.χ. η ψευδο-ταυτότητα `__new__`) είναι
+  // απουσία: το Firestore θα πετούσε `INVALID_ARGUMENT` ⇒ 500 αντί για το ίδιο 404.
+  const doc = isAddressableDocId(id)
+    ? await getAdminFirestore().collection(collection).doc(id).get()
+    : null;
 
-  if (!doc.exists) {
+  if (!doc?.exists) {
     await logAuditEvent(ctx, 'access_denied', id, targetType, {
       metadata: { path, reason: notFoundMessage },
     });

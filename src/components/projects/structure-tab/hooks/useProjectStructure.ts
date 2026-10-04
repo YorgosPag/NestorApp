@@ -1,5 +1,4 @@
 
-import { useEffect, useState, useCallback, useRef } from "react";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -8,6 +7,7 @@ import type { UseProjectStructureState } from "../types";
 import type { ProjectStructure } from "@/services/projects/contracts";
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useLazyProjectResource } from '../../hooks/useLazyProjectResource';
 
 const logger = createModuleLogger('useProjectStructure');
 
@@ -35,8 +35,26 @@ interface UseProjectStructureReturn extends UseProjectStructureState {
   isFetched: boolean;
 }
 
+// 🏢 ENTERPRISE: Type-safe API response with automatic authentication
+interface ProjectStructureApiResponse {
+  structure: ProjectStructure;
+  summary?: Record<string, unknown>;
+}
+
+async function fetchProjectStructure(projectId: string): Promise<ProjectStructure | null> {
+  logger.info('Fetching project structure', { projectId });
+  try {
+    const result = await apiClient.get<ProjectStructureApiResponse>(API_ROUTES.PROJECTS.STRUCTURE(projectId));
+    logger.info('Project structure loaded', { summary: result?.summary });
+    return result?.structure || null;
+  } catch (e) {
+    logger.error('Failed to fetch project structure', { error: e });
+    throw e;
+  }
+}
+
 // ============================================================================
-// 🏢 ENTERPRISE: Main Hook
+// 🏢 ENTERPRISE: Main Hook — lifecycle in useLazyProjectResource (SSoT)
 // ============================================================================
 
 export function useProjectStructure(
@@ -46,92 +64,13 @@ export function useProjectStructure(
   const { enabled = true } = options;
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
-  const [structure, setStructure] = useState<ProjectStructure | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isFetched, setIsFetched] = useState(false);
+  const { data, loading, error, refetch, isFetched } = useLazyProjectResource<ProjectStructure | null>({
+    projectId,
+    enabled,
+    empty: null,
+    fetcher: fetchProjectStructure,
+    fallbackError: t("structure.errors.loadFailed"),
+  });
 
-  // Track mounted state to prevent state updates after unmount
-  const mountedRef = useRef(true);
-  // Track if we've already fetched once to avoid duplicate calls
-  const hasFetchedRef = useRef(false);
-
-  // 🏢 ENTERPRISE: Extracted fetch logic for reusability
-  const fetchStructure = useCallback(async () => {
-    if (!projectId || projectId === '__new__') return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      logger.info('Fetching project structure', { projectId });
-
-      // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
-      interface ProjectStructureApiResponse {
-        structure: ProjectStructure;
-        summary?: Record<string, unknown>;
-      }
-
-      const result = await apiClient.get<ProjectStructureApiResponse>(API_ROUTES.PROJECTS.STRUCTURE(projectId));
-
-      logger.info('Project structure loaded', { summary: result?.summary });
-
-      if (mountedRef.current) {
-        setStructure(result?.structure || null);
-        setIsFetched(true);
-        hasFetchedRef.current = true;
-      }
-
-    } catch (e) {
-      logger.error('Failed to fetch project structure', { error: e });
-      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
-      const errorMessage = e instanceof Error ? e.message : t("structure.errors.loadFailed");
-      if (mountedRef.current) {
-        setError(errorMessage);
-      }
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [projectId, t]);
-
-  // 🏢 ENTERPRISE: Manual refetch capability
-  const refetch = useCallback(async () => {
-    hasFetchedRef.current = false;
-    await fetchStructure();
-  }, [fetchStructure]);
-
-  // 🏢 ENTERPRISE: Effect with enabled flag support
-  useEffect(() => {
-    mountedRef.current = true;
-
-    // Only fetch if enabled AND we haven't fetched yet
-    if (enabled && !hasFetchedRef.current && projectId) {
-      fetchStructure();
-    }
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [enabled, projectId, fetchStructure]);
-
-  // 🏢 ENTERPRISE: Reset on projectId change
-  useEffect(() => {
-    if (projectId) {
-      // Reset state when projectId changes
-      hasFetchedRef.current = false;
-      setStructure(null);
-      setError(null);
-      setIsFetched(false);
-    }
-  }, [projectId, t]);
-
-  return {
-    structure,
-    loading,
-    error,
-    refetch,
-    isFetched
-  };
+  return { structure: data, loading, error, refetch, isFetched };
 }

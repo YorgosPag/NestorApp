@@ -25,6 +25,7 @@ import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { useProjectCreate } from '@/hooks/useProjectCreate';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
+import type { ProjectDraftAddresses } from '@/components/projects/draft/useProjectDraftAddresses';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralProjectTab');
@@ -42,6 +43,8 @@ interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
    * normalized timestamps and any field the API layer mutates on write).
    */
   refetchProject?: () => Promise<void>;
+  /** «Fill then Create» — οι διευθύνσεις του πρόχειρου, που φεύγουν μαζί με τη δημιουργία. */
+  draftAddresses?: ProjectDraftAddresses;
 }
 
 function normalizeGuardValue(value: string | number | null | undefined): string {
@@ -115,6 +118,7 @@ export function GeneralProjectTab({
   isCreateMode,
   onProjectCreated,
   refetchProject,
+  draftAddresses,
 }: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { createProject } = useProjectCreate();
@@ -311,12 +315,16 @@ export function GeneralProjectTab({
         // this branch only forwarded 6 fields and silently dropped the rest,
         // leaving both the "Άδειες" container and the audit trail incomplete.
         const updatePayload = buildUpdatePayload(projectData);
+        // 🏢 «Fill then Create»: ό,τι δήλωσε ο άνθρωπος στην καρτέλα «Διευθύνσεις» φεύγει ΜΑΖΙ με
+        // τη δημιουργία, σε μία πράξη. Κενό πρόχειρο ⇒ το πεδίο λείπει (το σχήμα θέλει μία κύρια).
+        const draftAddressList = draftAddresses?.get() ?? [];
         const result = await createProject({
           ...updatePayload,
           name: trimmedName,
           status: projectData.status,
           companyId: fallbackCompanyId,
           linkedCompanyId: effectiveLinkedCompanyId,
+          ...(draftAddressList.length > 0 ? { addresses: draftAddressList } : {}),
         });
 
         if (!result.success) {
@@ -327,6 +335,9 @@ export function GeneralProjectTab({
         }
 
         logger.info('Project created successfully', { projectId: result.projectId });
+        // Το πρόχειρο περνά στην πραγματική ταυτότητα με ό,τι ΕΓΡΑΨΕ ο διακομιστής (θέση λυμένη) —
+        // ΠΡΙΝ ανακοινωθεί η δημιουργία, ώστε η «Διευθύνσεις» να το βρει όταν αλλάξει η ταυτότητα.
+        draftAddresses?.commit(result.projectId, result.addresses ?? draftAddressList);
         setIsEditing(false);
         onProjectCreated?.(result.projectId);
         return;
@@ -361,6 +372,7 @@ export function GeneralProjectTab({
     buildUpdatePayload,
     companyLink,
     createProject,
+    draftAddresses,
     fallbackCompanyId,
     isCreateMode,
     onProjectCreated,

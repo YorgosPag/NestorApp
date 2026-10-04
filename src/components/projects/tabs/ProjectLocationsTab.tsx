@@ -30,6 +30,7 @@ import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/Ful
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
 import { useProjectLocations } from './locations/useProjectLocations';
+import type { ProjectDraftAddresses } from '@/components/projects/draft/useProjectDraftAddresses';
 import type { DragApplyMode } from './locations/location-converters';
 import { ProjectViewDragConfirm } from './locations/ProjectViewDragConfirm';
 import { useLocationsDragRouting, useLocationsMapModel } from './locations/useLocationsMap';
@@ -44,13 +45,15 @@ interface ProjectLocationsTabProps {
   projectId?: string;
   /** Ignored — this tab uses always-on inline editing (no global edit toggle). */
   isEditing?: boolean;
+  /** «Fill then Create» — το πρόχειρο διευθύνσεων του έργου που δεν αποθηκεύτηκε ακόμη. */
+  draftAddresses?: ProjectDraftAddresses;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
+export function ProjectLocationsTab({ data: project, draftAddresses }: ProjectLocationsTabProps) {
   // Inline-only editing: New Address button and per-card actions are always
   // available. The header Edit toggle is hidden for this tab (project-details).
   const isEditing = true;
@@ -62,7 +65,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const colors = useSemanticColors();
   const fullscreen = useFullscreen();
 
-  const loc = useProjectLocations(project);
+  const loc = useProjectLocations(project, draftAddresses);
   const _primary = getPrimaryAddress(loc.localAddresses);
 
   // ADR-332 Phase 7: editor refs for drag → confirm dialog
@@ -243,6 +246,13 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           )}
         </div>
+
+        {/* «Fill then Create»: τίποτα εδώ δεν έχει αποθηκευτεί ακόμη — το λέμε μόνιμα, όχι με toast. */}
+        {loc.isDraft && (
+          <p role="status" className={cn(typography.body.sm, colors.text.muted)}>
+            {tProjects('draft.addressesHint')}
+          </p>
+        )}
 
         {/* Inline Add Form — ref routes map drag to confirm dialog */}
         {isEditing && loc.isAddFormOpen && (

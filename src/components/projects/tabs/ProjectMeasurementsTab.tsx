@@ -22,6 +22,7 @@ import type { MasterBOQCategory } from '@/config/boq-categories';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { boqService, computeBuildingSummary } from '@/services/measurements';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { isDraftEntityId } from '@/lib/draft-entity-id';
 import { API_ROUTES } from '@/config/domain-constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -111,7 +112,11 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   // ==========================================================================
 
   const fetchData = useCallback(async () => {
-    if (!project.id) return;
+    // Έργο που δεν αποθηκεύτηκε ακόμη δεν έχει κτίρια ούτε επιμετρήσεις — τίποτα να ζητηθεί.
+    if (!project.id || isDraftEntityId(project.id)) {
+      setLoading(false);
+      return;
+    }
 
     if (!projectMeasurementsCache.hasLoaded(cacheKey)) setLoading(true);
     setError(null);

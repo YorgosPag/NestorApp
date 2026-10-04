@@ -7,6 +7,7 @@ import {
   type ProjectUpdatePayload,
   type ProjectUpdateClientResult,
 } from '@/services/projects-client.service';
+import type { ProjectAddress } from '@/types/project/addresses';
 
 interface GuardedProjectCreateInput {
   readonly payload: ProjectCreatePayload;
@@ -20,6 +21,8 @@ interface GuardedProjectUpdateInput {
 export type CreateProjectSuccess = {
   readonly success: true;
   readonly projectId: string;
+  /** Οι διευθύνσεις όπως τις έγραψε ο διακομιστής — μόνο όταν η δημιουργία είχε `addresses`. */
+  readonly addresses?: ProjectAddress[];
 };
 
 export type CreateProjectFailure = {
@@ -35,7 +38,11 @@ export async function createProjectWithPolicy({
 }: GuardedProjectCreateInput): Promise<CreateProjectResult> {
   const result = await createProject(payload);
   if (result.success && result.projectId) {
-    return { success: true, projectId: result.projectId };
+    return {
+      success: true,
+      projectId: result.projectId,
+      ...(result.addresses ? { addresses: result.addresses } : {}),
+    };
   }
   return {
     success: false,
