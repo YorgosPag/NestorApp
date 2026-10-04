@@ -14,9 +14,13 @@
  * 📐 **Ό,τι ζωγραφίζεται, όχι ολόκληρο το κουτί** (ADR-899 §9 Ε2β, μετρημένο 2026-10-03): μέχρι τότε το κουτί μετριόταν ως
  * **max(πλάτος, ύψος)** — «άνω φράγμα για κάθε περιστροφή». Σε κουτί 2352×928 μια κάθετη 3000×4000 ζωγραφίζεται **696** px
  * (`object-contain`, φραγμένη από το ύψος) ⇒ δηλωνόταν 2352 ⇒ φορτωνόταν **`w=2560` (758 KB)** αντί για `w=640`, και το
- * πρωτότυπο ήδη στο 150%. Τώρα: `containedWidth` (SSoT `image-dimensions`) για την **τρέχουσα** περιστροφή — η στροφή
- * κατά 90° είναι απλώς άλλο κουτί για τον άξονα πλάτους της εικόνας, και όπως το zoom **ανεβάζει** βαθμίδα όταν χρειαστεί.
- * Χωρίς γνωστές διαστάσεις: ο άξονας του κουτιού που αντιστοιχεί στο πλάτος της εικόνας (ποτέ θόλωμα, `object-contain`).
+ * πρωτότυπο ήδη στο 150%. Τώρα: `containedWidth` (SSoT `image-dimensions`) μέσα στο **content-box** του κουτιού (§9 Ε4ε:
+ * το border-box μετρούσε και το `p-4` του πάνελ ⇒ +55 px). Χωρίς γνωστές διαστάσεις: το πλάτος του κουτιού (ποτέ θόλωμα).
+ * 🔄 **Η περιστροφή ΔΕΝ μπαίνει στην ερώτηση** (§9 Ε4γ, μετρημένο 2026-10-04): και οι δύο καταναλωτές εφαρμόζουν
+ * `scale(zoom) rotate(r)` στο ήδη τοποθετημένο `<img>` — ο μετασχηματισμός δεν ξανακάνει layout, άρα ο άξονας πλάτους της
+ * εικόνας ζωγραφίζεται στο **ίδιο** μήκος σε κάθε γωνία (ισομετρία). Η παλιά υπόθεση «στροφή = άλλο κουτί» ζητούσε 936 αντί
+ * για 702 ⇒ `w=1280` (287 KB) χωρίς κανένα κέρδος ευκρίνειας. Αν ποτέ η στροφή **ξαναχωρέσει** την εικόνα στο κουτί (σαν
+ * το Google Photos), τότε αλλάζει το layout του `<img>` — και η ερώτηση πρέπει να ξαναγραφτεί μαζί του, όχι πριν.
  *
  * @module components/shared/files/preview/use-zoom-resolution
  * @see lib/files/file-preview-ladder — `filePreviewWidthFor`
@@ -76,14 +80,12 @@ function devicePixelRatioOf(): number {
 }
 
 /**
- * **Πόσα css px πλάτους ζωγραφίζει η εικόνα στο zoom 1** — καθαρή συνάρτηση. Περιστροφή κατά περιττό αριθμό τετάρτων ⇒ ο
- * άξονας πλάτους της εικόνας τρέχει κατά το **ύψος** του κουτιού. `0` = κουτί που δεν μετρήθηκε.
+ * **Πόσα css px πλάτους ζωγραφίζει η εικόνα στο zoom 1** — καθαρή συνάρτηση, ανεξάρτητη της περιστροφής (βλ. κεφαλίδα).
+ * `0` = κουτί που δεν μετρήθηκε.
  */
-export function paintedWidthOf(box: ElementSize, dimensions: ImageDimensions | null, rotationDeg: number): number {
-  const sideways = Math.abs(Math.round(rotationDeg / 90)) % 2 === 1;
-  const oriented = sideways ? { width: box.height, height: box.width } : box;
-  if (!(oriented.width > 0) || !(oriented.height > 0)) return 0;
-  return dimensions ? containedWidth(oriented, dimensions) : oriented.width;
+export function paintedWidthOf(box: ElementSize, dimensions: ImageDimensions | null): number {
+  if (!(box.width > 0) || !(box.height > 0)) return 0;
+  return dimensions ? containedWidth(box, dimensions) : box.width;
 }
 
 /**
@@ -116,10 +118,10 @@ export function useZoomResolution(
   preview: ProxyImagePreview | null | undefined,
   containerRef: RefObject<HTMLElement | null>,
   zoom: number,
-  rotationDeg = 0,
 ): ZoomResolutionSource {
-  const box = steppedUpperBound(useElementSize(containerRef, BOX_STEP_PX), BOX_STEP_PX);
-  const paintedPx = Math.ceil(paintedWidthOf(box, preview?.dimensions ?? null, rotationDeg));
+  // Content-box: εκεί χωρά η εικόνα (`max-w-full max-h-full`) — το padding του κουτιού δεν ζωγραφίζεται ποτέ.
+  const box = steppedUpperBound(useElementSize(containerRef, BOX_STEP_PX, 'content-box'), BOX_STEP_PX);
+  const paintedPx = Math.ceil(paintedWidthOf(box, preview?.dimensions ?? null));
   // Ταυτότητα από **συμβολοσειρές**: ο καλών μπορεί να ξαναφτιάχνει το αντικείμενο `preview` σε κάθε render.
   const key = `${url}
 ${preview?.src ?? ''}`;

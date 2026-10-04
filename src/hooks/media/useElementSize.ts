@@ -22,30 +22,62 @@ export interface ElementSize {
 const UNMEASURED_SIZE: ElementSize = { width: 0, height: 0 };
 
 /**
+ * **Ποιο κουτί μετριέται** — το λεξιλόγιο του ίδιου του `ResizeObserver.observe(el, { box })`. `border-box` (προεπιλογή) =
+ * ό,τι πιάνει το στοιχείο στη σελίδα· `content-box` = ό,τι μένει για τα **παιδιά** του, χωρίς padding/border — η σωστή
+ * ερώτηση για «σε πόσο χώρο χωρά η εικόνα» (ADR-899 §9 Ε4ε: το `p-4` του πάνελ, ×1,5 από τον λόγο πλευρών, έδινε +55 px).
+ */
+export type MeasuredBox = 'border-box' | 'content-box';
+
+function px(value: string): number {
+  return Number.parseFloat(value) || 0;
+}
+
+/** Η πρώτη μέτρηση, σύμφωνη με το κουτί που θα αναφέρει μετά ο παρατηρητής — δύο μετρήσεις, ΕΝΑ κουτί. */
+function initialSizeOf(element: HTMLElement, box: MeasuredBox): ElementSize {
+  const rect = element.getBoundingClientRect();
+  if (box === 'border-box') return { width: rect.width, height: rect.height };
+  const s = getComputedStyle(element);
+  return {
+    width: rect.width - px(s.paddingLeft) - px(s.paddingRight) - px(s.borderLeftWidth) - px(s.borderRightWidth),
+    height: rect.height - px(s.paddingTop) - px(s.paddingBottom) - px(s.borderTopWidth) - px(s.borderBottomWidth),
+  };
+}
+
+/** Το μέγεθος μιας αναφοράς του παρατηρητή στο ζητούμενο κουτί (`contentRect` = content-box, εφεδρεία παλιών browser). */
+function observedSizeOf(entry: ResizeObserverEntry, box: MeasuredBox): ElementSize {
+  const size = (box === 'border-box' ? entry.borderBoxSize : entry.contentBoxSize)?.[0];
+  return size
+    ? { width: size.inlineSize, height: size.blockSize }
+    : { width: entry.contentRect.width, height: entry.contentRect.height };
+}
+
+/**
  * Καλεί το `onSize` με το μέγεθος του `ref` — μία φορά πριν το πρώτο βάψιμο και σε κάθε αλλαγή. Χωρίς `ResizeObserver`
  * (jsdom · πολύ παλιός browser) δεν καλείται **ποτέ**: ο καταναλωτής κρατά την ειλικρινή «άγνωστη» τιμή του.
  * ⚠️ Το `onSize` πρέπει να είναι σταθερό (`useCallback`) — αλλιώς ο παρατηρητής ξαναστήνεται σε κάθε render.
  */
-export function useSizeObserver(ref: RefObject<HTMLElement | null>, onSize: (width: number, height: number) => void): void {
+export function useSizeObserver(
+  ref: RefObject<HTMLElement | null>,
+  onSize: (width: number, height: number) => void,
+  box: MeasuredBox = 'border-box',
+): void {
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
 
-    const rect = element.getBoundingClientRect();
-    onSize(rect.width, rect.height);
+    const initial = initialSizeOf(element, box);
+    onSize(initial.width, initial.height);
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[entries.length - 1];
       if (!entry) return;
-      // Border-box και εδώ, ίδια με την πρώτη μέτρηση (`getBoundingClientRect`) — το `contentRect` αφαιρεί το padding, και
-      // δύο μετρήσεις του ίδιου στοιχείου θα διαφωνούσαν κατά το padding.
-      const box = entry.borderBoxSize?.[0];
-      if (box) onSize(box.inlineSize, box.blockSize);
-      else onSize(entry.contentRect.width, entry.contentRect.height);
+      // Το ΙΔΙΟ κουτί με την πρώτη μέτρηση — αλλιώς δύο μετρήσεις του ίδιου στοιχείου διαφωνούν κατά το padding.
+      const size = observedSizeOf(entry, box);
+      onSize(size.width, size.height);
     });
-    observer.observe(element);
+    observer.observe(element, { box });
     return () => observer.disconnect();
-  }, [ref, onSize]);
+  }, [ref, onSize, box]);
 }
 
 function toStep(value: number, step: number): number {
@@ -64,12 +96,16 @@ export function steppedUpperBound(size: ElementSize, step: number): ElementSize 
 }
 
 /** Το μέγεθος του `ref` στρογγυλεμένο σε πολλαπλάσιο του `step` (css px) — νέα τιμή **μόνο** όταν αλλάζει σκαλοπάτι. */
-export function useElementSize(ref: RefObject<HTMLElement | null>, step: number): ElementSize {
+export function useElementSize(
+  ref: RefObject<HTMLElement | null>,
+  step: number,
+  box: MeasuredBox = 'border-box',
+): ElementSize {
   const [size, setSize] = useState<ElementSize>(UNMEASURED_SIZE);
   const sync = useCallback((width: number, height: number) => {
     const next = { width: toStep(width, step), height: toStep(height, step) };
     setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next));
   }, [step]);
-  useSizeObserver(ref, sync);
+  useSizeObserver(ref, sync, box);
   return size;
 }

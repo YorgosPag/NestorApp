@@ -10,7 +10,10 @@
  * - Ζ6: το `sizes` δεν είναι το μετρημένο κουτί.
  * - Ζ8 (§9 Ε2β): το `sizes` είναι ολόκληρο το κουτί αντί για ό,τι **ζωγραφίζεται** (κάθετη σε οριζόντιο κουτί ⇒ `w=2560`
  *   αντί για `w=640`, μετρημένο ζωντανά 2026-10-03).
- * - Ζ9 (§9 Ε2β): η περιστροφή αγνοείται (στροφή 90° ⇒ ο άξονας πλάτους της εικόνας τρέχει κατά το ύψος του κουτιού).
+ * - Ζ9 (§9 Ε4γ, αντιστράφηκε 2026-10-04): η περιστροφή **ξαναμπαίνει** στην ερώτηση. Το `scale(z) rotate(r)` δεν κάνει
+ *   layout — ο άξονας πλάτους της εικόνας ζωγραφίζεται στο ίδιο μήκος σε κάθε γωνία· η παλιά «στροφή = άλλο κουτί» ζητούσε
+ *   936 αντί για 702 ⇒ `w=1280` (287 KB) χωρίς κέρδος. Η άγκυρα συμπεριφοράς ζει στο `image-preview-rotation.test.tsx`.
+ * - Ζ10 (§9 Ε4ε): το κουτί μετριέται border-box ⇒ το padding (`p-4`) μετρά ως χώρος της εικόνας (+55 px μετρημένα).
  */
 
 import { act, renderHook } from '@testing-library/react';
@@ -50,9 +53,10 @@ beforeEach(() => {
   decodes.length = 0;
 });
 
-function containerRef() {
+function containerRef(padding = 0) {
   const element = document.createElement('div');
   element.getBoundingClientRect = () => BOX_RECT as DOMRect;
+  if (padding > 0) element.style.padding = `${padding}px`;
   return { current: element };
 }
 
@@ -123,30 +127,25 @@ describe('paintedWidthOf — ό,τι ζωγραφίζεται (ADR-899 §9 Ε2β
   const portrait = { width: 3000, height: 4000 };
 
   it('🔴 Ζ8 η μετρημένη περίπτωση: κάθετη 3000×4000 σε κουτί 2352×928 ⇒ 696, όχι 2352', () => {
-    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 0)).toBe(696);
+    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait)).toBe(696);
     // χωρίς διαστάσεις: το πλάτος του κουτιού (ποτέ θόλωμα)
-    expect(paintedWidthOf({ width: 2352, height: 928 }, null, 0)).toBe(2352);
-    expect(paintedWidthOf({ width: 0, height: 0 }, portrait, 0)).toBe(0);
-  });
-
-  it('🔴 Ζ9 στροφή 90°/270° ⇒ ο άξονας πλάτους της εικόνας τρέχει κατά το ύψος του κουτιού · 180° = όρθια', () => {
-    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 90)).toBe(928);
-    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 270)).toBe(928);
-    expect(paintedWidthOf({ width: 2352, height: 928 }, portrait, 180)).toBe(696);
-    expect(paintedWidthOf({ width: 2352, height: 928 }, null, 90)).toBe(928);
+    expect(paintedWidthOf({ width: 2352, height: 928 }, null)).toBe(2352);
+    expect(paintedWidthOf({ width: 0, height: 0 }, portrait)).toBe(0);
   });
 });
 
-describe('useZoomResolution — ζωγραφισμένο πλάτος + περιστροφή (ADR-899 §9 Ε2β)', () => {
+describe('useZoomResolution — ζωγραφισμένο πλάτος (ADR-899 §9 Ε2β · Ε4ε)', () => {
   it('🔴 Ζ8 κάθετη με γνωστές διαστάσεις ⇒ `sizes` = ζωγραφισμένο (408 × ¾ = 306), όχι το κουτί', () => {
     const { result } = renderHook(() => useZoomResolution(ORIGINAL, PORTRAIT, containerRef(), 1));
     expect(result.current.sizes).toBe(`${Math.ceil((BOX_HEIGHT * 3) / 4)}px`);
     expect(decodes).toHaveLength(0);
   });
 
-  it('🔴 Ζ9 στροφή 90° ⇒ `sizes` από τον άλλο άξονα (min(408, 600 × ¾)) — χωρίς φόρτωση στο zoom 1', () => {
-    const { result } = renderHook(() => useZoomResolution(ORIGINAL, PORTRAIT, containerRef(), 1, 90));
-    expect(result.current.sizes).toBe(`${BOX_HEIGHT}px`);
+  it('🔴 Ζ10 (Ε4ε) padding 16 ⇒ content-box 560×368 ⇒ άνω φράγμα 568×376 ⇒ κάθετη 376 × ¾ = 282, όχι 306', () => {
+    const { result } = renderHook(() => useZoomResolution(ORIGINAL, PORTRAIT, containerRef(16), 1));
+    expect(result.current.sizes).toBe('282px');
+    const free = renderHook(() => useZoomResolution(ORIGINAL, PREVIEW, containerRef(16), 1));
+    expect(free.result.current.sizes).toBe('568px');
     expect(decodes).toHaveLength(0);
   });
 

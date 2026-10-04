@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ✅ συμπλήρωση 34/34 · ✅ Ε2/Ε3 ζωντανά 2026-10-03 (deploy `88f7c42b`, §9) — Ε2β ⇒ **Ε4** διορθώθηκε στον κώδικα, ⏳ ζωντανά μετά το push |
+| **Status** | ✅ IMPLEMENTED — Φ.Δ (παράγωγα, ✅ ζωντανά στον proxy) + Φ.Γ (γκαλερί + lightbox + πάνελ κάτοψης) 2026-10-01 · ✅ ζωντανός έλεγχος παραγωγής (nestorconstruct.gr) 2026-10-01 — §9 · Βήμα Δ: SSoT διαστάσεων εικόνας (§3.7) 2026-10-02 — ✅ Functions deployed (`onImageDimensionsFinalize` us-central1 · `onImageDimensionsFinalizeFilesEu` europe-west3) · ✅ συμπλήρωση 34/34 · ✅ Ε2/Ε3 ζωντανά 2026-10-03 (deploy `88f7c42b`, §9) — Ε2β ⇒ **Ε4** · ✅ Ε4 ζωντανά 2026-10-04 (deploy `7402112f`, §9): Ε4α/β/δ/ζ + Γ3 ✅ · Ε4γ/Ε4ε ⇒ **Ε5** (στροφή) + **Ε6** (content-box) διορθώθηκαν στον κώδικα, ⏳ ζωντανά μετά το push |
 | **Date** | 2026-10-01 |
 | **Category** | Backend Systems |
 | **Προέλευση** | handoff `HANDOFFS/2026-10-01_property-header-gallery_PHASE-D-G_handoff.md` · αίτημα Giorgio: γκαλερί κεφαλίδας επιπέδου Zillow/Idealista |
@@ -187,7 +187,7 @@ ETag παραγώγων άθικτο, κανένα νέο finalize.
 | Κατ. | Σημεία | Θεραπεία |
 |---|---|---|
 | **α** εμφάνιση (μικρογραφία) | `FileThumbnail` (κόμβος) ← `FileManagerPageContent` · `EntityFilesContent` · `FilesList` · `ListingMaterialRow` ← `ListingFloorplansPanel` · `ListingMediaOrderPanel` | Prop `file` (όχι `downloadUrl`)· πηγές από `file-thumbnail-sources.ts`: **παράγωγο** (`srcSet` + `sizes` = px του κουτιού, **ίδιο κελί** με την κλάση) → client `_thumb` (εφεδρεία) → πρωτότυπο **μόνο** για svg/gif → εικονίδιο / σελίδα PDF. Κάθε `onError` = ένα βήμα. |
-| **α** εμφάνιση (zoom) | `FilePreviewRenderer` → `ImagePreview` (από `FilePreviewPanel`) | Νέο προαιρετικό `preview`. `use-zoom-resolution.ts`: `sizes` = ό,τι **ζωγραφίζεται** στο μετρημένο κουτί (`containedWidth` για την τρέχουσα περιστροφή — §9 Ε4· ως 2026-10-03 ολόκληρο το κουτί)· στο zoom `ζωγραφισμένο × zoom × DPR` → `filePreviewWidthFor` = η **μικρότερη** επαρκής βαθμίδα, πρωτότυπο μόνο πάνω από 2560· φόρτωση στο παρασκήνιο + `decode()` πριν την αλλαγή· **μόνο προς τα πάνω**. Χωρίς `preview` (δημόσια κοινή χρήση, προσφορές) = ως πριν. |
+| **α** εμφάνιση (zoom) | `FilePreviewRenderer` → `ImagePreview` (από `FilePreviewPanel`) | Νέο προαιρετικό `preview`. `use-zoom-resolution.ts`: `sizes` = ό,τι **ζωγραφίζεται** στο **content-box** του κουτιού (`containedWidth` — §9 Ε4/Ε6· ως 2026-10-03 ολόκληρο το κουτί)· η **περιστροφή δεν μπαίνει** στην ερώτηση (`scale·rotate` = ισομετρία, §9 Ε5)· στο zoom `ζωγραφισμένο × zoom × DPR` → `filePreviewWidthFor` = η **μικρότερη** επαρκής βαθμίδα, πρωτότυπο μόνο πάνω από 2560· φόρτωση στο παρασκήνιο + `decode()` πριν την αλλαγή· **μόνο προς τα πάνω**. Χωρίς `preview` (δημόσια κοινή χρήση, προσφορές) = ως πριν. |
 | **α** εμφάνιση (γκαλερί) — *προστέθηκε 2026-10-03, §9 Ε2* | `MediaCard` + `PhotoPreviewModal` ← `MediaGallery` ← `EntityFilesContent` · `ReadOnlyMediaViewer` | Κάρτα: `thumbnailCandidatesOf` στο μετρημένο κουτί (`sizes` για `object-cover`) + `use-thumbnail-candidate`. Modal: `galleryPreviews` → `PhotoPreviewImage` → `useZoomResolution`· το URL μένει για λήψη/κοινή χρήση. |
 | **β** bytes / άνοιγμα / «υπάρχει;» | `file-manager-handlers` (διπλό κλικ → `openRemoteUrlInNewTab`) · `FilePreviewPanel` · `InboxView` · `FileInspector` · `FloorplanGallery` · `useFloorplanPdfLoader` · `VideoPlayer` · `useFileDownload` (εφεδρεία μετά το `id`) | `fileDisplayUrl(file)`. Εγγραφές χωρίς `downloadUrl` **δεν κρύβονται** πια. |
 | **β** ⚠️ πρωτότυπο | `useFloorplanImageLoader` · `FloorplanGallery.calibrationImageSrc` | `.url`, **ποτέ** `preview`: η βαθμονόμηση/μέτρηση δουλεύει στα pixel του πρωτοτύπου (`naturalWidth`). |
@@ -424,6 +424,7 @@ hook (*«πόσα pixel χρειάζεται η εικόνα»*) — ήταν η
 - **`paintedWidthOf(box, dimensions, rotation)`** στο `use-zoom-resolution.ts`: `containedWidth` (SSoT `image-dimensions`) για την
   **τρέχουσα** περιστροφή — στροφή κατά περιττό αριθμό τετάρτων ⇒ ο άξονας πλάτους της εικόνας τρέχει κατά το **ύψος** του κουτιού.
   Η περιστροφή είναι πλέον είσοδος του hook (όπως το zoom): ανεβάζει βαθμίδα όταν χρειάζεται, μετά το `decode()`, ποτέ προς τα κάτω.
+  ❌ **Διαψεύστηκε ζωντανά 2026-10-04 ⇒ Ε5** (κάτω): το `rotate` του transform δεν ξανακάνει layout — η στροφή **αφαιρέθηκε** από την ερώτηση.
   Χωρίς διαστάσεις: ο αντίστοιχος άξονας του κουτιού (ποτέ θόλωμα). Πρακτική Immich / Google Photos: η ανάλυση ακολουθεί ό,τι
   **βλέπει** ο άνθρωπος, όχι το δοχείο.
 - **Μέτρηση από το SSoT `useElementSize`** (σκαλοπάτι 16) αντί για τοπικό `useBoxPx` με δικό του `ResizeObserver` (N.0.2).
@@ -434,6 +435,7 @@ hook (*«πόσα pixel χρειάζεται η εικόνα»*) — ήταν η
 - **Αναμενόμενο μετά το push** (ίδιο modal, ίδια οθόνη): `sizes="702px"` (κουτί 2360×936 μετά το +½ σκαλοπατιού ⇒ 936 × ¾) ⇒ **`w=640`** στο άνοιγμα· `w=2560` στο
   ~250%· πρωτότυπο μόνο πάνω από 2560 / (702 × 0,8) ≈ **456%**. Πάνελ: `sizes` = ζωγραφισμένο (~821), όχι 1227.
 - ⚠️ Το πάνελ μετρά το **border-box** του δοχείου (`p-4`) — υπερεκτίμηση ≤ 32 px, αθώα (ποτέ θόλωμα).
+  ❌ **Διαψεύστηκε ζωντανά 2026-10-04 ⇒ Ε6** (κάτω): μετρήθηκαν **+55** px — τα 32 px του **ύψους** πολλαπλασιάζονται με τον λόγο πλευρών.
 
 **Άγκυρες**: `use-zoom-resolution.test.tsx` **Ζ8** (η μετρημένη περίπτωση 2352×928 ⇒ 696 · `sizes` ζωγραφισμένο · zoom × ζωγραφισμένο) +
 **Ζ9** (90°/270° ⇒ άλλος άξονας · 180° όρθια)· Ζ1–Ζ7 αμετάβλητα (κουτί 592×400 ⇒ άνω φράγμα 600). Μεταλλάξεις **3/3** κόκκινες:
@@ -446,6 +448,72 @@ hook (*«πόσα pixel χρειάζεται η εικόνα»*) — ήταν η
 `src/lib/storage/storage-object-url.ts` · `src/lib/files/file-display-url.ts` · `src/lib/files/__tests__/file-display-url.test.ts` ·
 `src/lib/properties/__tests__/property-floorplan-spots.test.ts` · `src/core/modals/PhotoPreviewImage.tsx` · `src/core/modals/PhotoPreviewModal.tsx` ·
 `src/core/modals/usePhotoPreviewState.ts` · αυτό το ADR.
+
+### Ε4 ζωντανά (2026-10-04, deploy `7402112f`)
+
+Commit `184d3c3d` ⊂ deploy `7402112f` (`git merge-base --is-ancestor` ✅, T1 `completed success`). Ίδια οθόνη με το Ε2β: DPR **0,8**,
+παράθυρο 2400×1121, `sleep(40)` = **408 ms** (στραγγαλισμένοι timers ⇒ χρόνοι από `performance` resource timing, όχι από timers).
+
+| # | Τι | Μετρημένο | Αποτέλεσμα |
+|---|---|---|---|
+| Ε4α | Modal `file_c098b8d6` (2/3), zoom 100%, μετά από reload | κουτί `<figure>` 2352×928, ζωγραφισμένη **696×928** · `sizes="702px"` ⇒ **`w=640`, 79.046 B** (πριν `w=2560`, 758.317 B ⇒ **−89,6%**) · λήψη 1.647 ms | ✅ |
+| Ε4β | «Μεγαλύτερο» βήμα-βήμα (+25%) ως 500% | 125% ⇒ `w=1280` (287.657 B) · 150–225% ίδιο · **250%** ⇒ `w=2560` (758.317 B) · 275–450% ίδιο · **475%** ⇒ πρωτότυπο (3.423.049 B) — θεωρία 114% / 228% / **456%** | ✅ |
+| Ε4γ | «Περιστροφή» 90° στο 100%, μετά από reload | `sizes` 702 → **936px** ⇒ φορτώθηκε **`w=1280` (287.657 B)** · layout του `<img>` **696×928 αμετάβλητο**, ζωγραφισμένο 928×696 ⇒ ο άξονας πλάτους της εικόνας μένει **696** px ⇒ αρκούσε το ήδη φορτωμένο `w=640` (696 × 0,8 = 557) | 🔴 υπερ-λήψη (ποτέ θόλωμα) ⇒ **Ε5** |
+| Ε4δ | Επόμενη/Προηγούμενη στις 3 | 1/3 `702px` · 2/3 `702px` · 3/3 (1803×2225) **`759px`** (ζωγραφισμένη 752×928) — όλες `w=640` (7.134 / 79.046 / 73.230 B) | ✅ |
+| Ε4ε | Πάνελ `/files` → κάτοψη `file_474b4d3c` (1200×800) | δοχείο 1227×580 με `padding: 16px`, ζωγραφισμένη **821×548** · `sizes="876px"` (+55) · `w=1280` | ⚠️ ίδια βαθμίδα εδώ, αλλά το «≤ +32 αθώο» διαψεύστηκε ⇒ **Ε6** |
+| Ε4ζ | Κάρτες «Φωτογραφίες» + lightbox κεφαλίδας | κάρτες `sizes="168px"`, `w=320` (×3) · lightbox `sizes="726px"`, **`w=640`** (7.134 B), κουτί 1710×940 | ✅ (βαθμίδα αμετάβλητη· το `726` έναντι `762` του handoff δεν συγκρίθηκε στο ίδιο παράθυρο) |
+| Γ3 | Κονσόλα (καταγραφή από reload: καρτέλα → modal → zoom → στροφή → επόμενη) | **0** σφάλματα / προειδοποιήσεις · **0** ωμά κλειδιά στο DOM | ✅ |
+
+#### Ε5 — 🔴 «στροφή = άλλο κουτί» ήταν υπόθεση, όχι μέτρηση
+
+**Ρίζα**: το Ε4 έδωσε στο `paintedWidthOf` τη γωνία και αντέστρεφε τους άξονες του κουτιού στις 90°/270°, σαν η στροφή να **ξαναχωρά**
+την εικόνα στο κουτί. Και οι δύο καταναλωτές όμως εφαρμόζουν `translate · scale(zoom) · rotate(r)` (`usePhotoPreviewState`,
+`FilePreviewRenderer.applyTransform`) στο **ήδη τοποθετημένο** `<img>`: ο μετασχηματισμός **δεν κάνει layout**, άρα το `object-contain`
+λύνεται στο αστρέφωτο κουτί και η στροφή είναι **ισομετρία** — ο άξονας πλάτους της εικόνας ζωγραφίζεται στο ίδιο μήκος σε κάθε γωνία.
+Η ανάγκη σε pixel εξαρτάται μόνο από `ζωγραφισμένο × zoom × DPR`.
+
+**Θεραπεία** — αφαίρεση, όχι προσθήκη: `paintedWidthOf(box, dimensions)` χωρίς γωνία · `useZoomResolution(url, preview, ref, zoom)` ·
+αφαιρέθηκαν το `displayRotation` state του πάνελ (η στροφή ξανάγινε **χωρίς render**, όπως πριν το Ε4), το prop `rotation` του
+`PhotoPreviewImage` και η έκθεσή του από το `usePhotoPreviewState`. Η κεφαλίδα του hook γράφει **πότε** η γωνία θα ξαναγίνει είσοδος:
+μόνο αν η στροφή αρχίσει να **ξαναχωρά** την εικόνα (layout, σαν το Google Photos) — μαζί με εκείνη την αλλαγή, όχι πριν.
+
+#### Ε6 — 🔴 το κουτί της εικόνας είναι το content-box
+
+**Ρίζα**: το SSoT `useElementSize` μετρούσε **μόνο** border-box. Η εικόνα (`max-w-full max-h-full object-contain`) χωρά στο
+**content-box** του δοχείου· το `p-4` του πάνελ μετρούσε ως χώρος της. Και το σφάλμα **δεν** φράσσεται από το padding: στο ύψος
+πολλαπλασιάζεται με τον λόγο πλευρών (32 × 1,5 = 48, +7 από τα σκαλοπάτια = **+55**). Σε κάθετη εικόνα σε χαμηλό κουτί περνά βαθμίδα.
+
+**Θεραπεία στο SSoT, με το λεξιλόγιο της πλατφόρμας**: `useSizeObserver` / `useElementSize` δέχονται προαιρετικό
+`box: MeasuredBox = 'border-box' | 'content-box'` — ακριβώς το `ResizeObserver.observe(el, { box })`. Η πρώτη μέτρηση (`initialSizeOf`:
+`getBoundingClientRect` − padding − border) και ο παρατηρητής (`observedSizeOf`: `contentBoxSize`, εφεδρεία `contentRect`) μετρούν το
+**ίδιο** κουτί — η εγγύηση που είχε η border-box εκδοχή. Προεπιλογή border-box ⇒ κανένας άλλος καταναλωτής (`useContainerClass`,
+περιήγηση, `MediaCard`, lightbox) δεν αλλάζει. Το `useZoomResolution` ζητά `content-box`· στο modal (`<figure>` χωρίς padding) ίδιο αποτέλεσμα.
+
+**Αναμενόμενο μετά το push**: Ε4γ `sizes` μένει **702px** μετά τη στροφή, καμία νέα λήψη · Ε4ε `sizes` = **828px** (content 1195×548 ⇒
+σκαλοπάτι 1200×544 ⇒ +8 ⇒ 552 × 1,5 = 828) — ακόμα `w=1280`.
+
+**Άγκυρες**: `image-preview-rotation.test.tsx` (**νέο** — αποδίδει το πραγματικό `FilePreviewRenderer`, πατά τη στροφή 90°/180°:
+`sizes` 702 σταθερό, 0 φορτώσεις) · `use-zoom-resolution.test.tsx` **Ζ9 αντιστράφηκε** (η γωνία δεν είναι πια είσοδος), **Ζ10** (padding 16
+⇒ 282 αντί 306 · 568 χωρίς διαστάσεις) · `useElementSize.test.tsx` **Ε4ε** (content-box: πρώτη μέτρηση **και** παρατηρητής αφαιρούν το
+padding). Μεταλλάξεις **4/4** κόκκινες, με επαναφορά στο ίδιο script: γωνία πίσω στην ερώτηση · hook σε border-box · πρώτη μέτρηση με
+padding · παρατηρητής σε border-box. 6 σουίτες ADR-899 (40 tests) + όλες του `hooks/media` και `spatial-tour` (209) πράσινες ·
+`jscpd:diff` καθαρό.
+
+**Αρχεία για commit** (μόνο αυτά — το working tree μοιράζεται): `src/hooks/media/useElementSize.ts` ·
+`src/hooks/media/__tests__/useElementSize.test.tsx` · `src/components/shared/files/preview/use-zoom-resolution.ts` ·
+`src/components/shared/files/preview/__tests__/use-zoom-resolution.test.tsx` ·
+`src/components/shared/files/preview/__tests__/image-preview-rotation.test.tsx` (νέο) ·
+`src/components/shared/files/preview/FilePreviewRenderer.tsx` · `src/core/modals/PhotoPreviewImage.tsx` ·
+`src/core/modals/PhotoPreviewModal.tsx` · `src/core/modals/usePhotoPreviewState.ts` · αυτό το ADR.
+
+#### Παρατηρήσεις Ε4 ζωντανά (μετρημένες, όχι διορθωμένες)
+- `naturalWidth` = πλάτος × **1,097** σε **όλες** τις βαθμίδες (2560 ⇒ 2808, πρωτότυπο 3000 ⇒ 3290): ο Chrome εφαρμόζει τη «density-corrected»
+  διάσταση από την ανάλυση EXIF, και τα παράγωγα **την κρατούν**. Αθώο εδώ (το CSS ορίζει το κουτί)· θα μετρούσε μόνο σε `<img>` χωρίς
+  CSS μέγεθος.
+- Στο modal, το 4ο «Επόμενη» από το 3/3 **έμεινε** στο 3/3 (και το «Προηγούμενη» πήγε στο 2/3) μέσα σε 2,5 s με στραγγαλισμένους timers —
+  το «λούπα, σχεδιασμός» του handoff αφορά τα βελάκια της **γκαλερί**· δεν ερευνήθηκε.
+- Στροφή 90° **οριζόντιας** εικόνας σε φαρδύ κουτί θα ξεχείλιζε κάθετα (καμία προσαρμογή μετά τη στροφή)· δεν μετρήθηκε — όλες οι
+  δοκιμαστικές είναι κάθετες. Η προσαρμογή (Google Photos) είναι απόφαση UX, και τότε ισχύει η σημείωση του Ε5.
 
 ## Changelog
 
@@ -506,3 +574,10 @@ hook (*«πόσα pixel χρειάζεται η εικόνα»*) — ήταν η
   `ProxyImagePreview.dimensions` (αντί για `intrinsicWidth`) · `paintedWidthOf` = `containedWidth` για την τρέχουσα περιστροφή
   (νέα είσοδος του hook) · μέτρηση από `useElementSize` · `steppedUpperBound` = ο ένας κανόνας «σκαλοπάτι + ½» (ήταν δύο αντίγραφα).
   Άγκυρες Ζ8 + Ζ9, μεταλλάξεις 3/3, `jscpd:diff` καθαρό. ⏳ Ε4 ζωντανά μετά το push.
+- **2026-10-04** — **Ε4 ζωντανά** (§9 «Ε4 ζωντανά», deploy `7402112f` ⊃ `184d3c3d`): **Ε4α ✅** (`702px` ⇒ `w=640`, 79 KB αντί για
+  758 KB) · **Ε4β ✅** (`w=1280` στο 125%, `w=2560` στο 250%, πρωτότυπο μόνο στο **475%**) · **Ε4δ ✅** (702 / 702 / 759) · **Ε4ζ ✅** · **Γ3 ✅**.
+  **Ε4γ 🔴 ⇒ Ε5**: η στροφή ζητούσε 936 ⇒ `w=1280` (287 KB) ενώ το `rotate` δεν αλλάζει layout — η γωνία **αφαιρέθηκε** από την ερώτηση
+  (και το νήμα `rotation`/`displayRotation`). **Ε4ε ⚠️ ⇒ Ε6**: border-box +55 px (όχι ≤ 32) — `useElementSize`/`useSizeObserver`
+  δέχονται `box: 'content-box'` (λεξιλόγιο `ResizeObserver`), το `useZoomResolution` το ζητά. Άγκυρες: νέο
+  `image-preview-rotation.test.tsx` · Ζ9 αντιστράφηκε · Ζ10 · `useElementSize` Ε4ε. Μεταλλάξεις 4/4, `jscpd:diff` καθαρό.
+  ⏳ Ε5/Ε6 ζωντανά μετά το push.

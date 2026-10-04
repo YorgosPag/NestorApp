@@ -462,7 +462,6 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
     totalPhotos,
     currentIndex,
     zoom,
-    rotation,
     title,
     IconComponent,
     shareData,
