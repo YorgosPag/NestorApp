@@ -162,7 +162,8 @@
           "caseEngagementAnswered": "Professionals' answers on my conveyance cases",
           "caseExpiryAlerts": "Expiring documents in my conveyance cases",
           "caseDocumentTransmitted": "New documents from lawyers and the notary in my conveyance cases",
-          "caseDocumentRequests": "Document requests waiting on me in my conveyance cases"
+          "caseDocumentRequests": "Document requests waiting on me in my conveyance cases",
+          "ownershipVerificationDecided": "My ownership verification was decided"
         },
         "tasks": {
           "title": "Tasks",
@@ -179,7 +180,8 @@
           "passwordChange": "Password change",
           "twoFactorChange": "2FA change",
           "suspiciousActivity": "Suspicious activity",
-          "workspaceMembershipEnded": "Workspace access"
+          "workspaceMembershipEnded": "Workspace access",
+          "ownershipLost": "Loss of verified ownership"
         },
         "network": {
           "title": "Partner messages",

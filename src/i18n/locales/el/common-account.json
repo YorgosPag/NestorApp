@@ -162,7 +162,8 @@
           "caseEngagementAnswered": "Απαντήσεις επαγγελματιών στις υποθέσεις μεταβίβασής μου",
           "caseExpiryAlerts": "Δικαιολογητικά που λήγουν στις υποθέσεις μεταβίβασης",
           "caseDocumentTransmitted": "Νέα έγγραφα από δικηγόρους και συμβολαιογράφο στις υποθέσεις μεταβίβασης",
-          "caseDocumentRequests": "Αιτήματα εγγράφων που εκκρεμούν από εμένα στις υποθέσεις μεταβίβασης"
+          "caseDocumentRequests": "Αιτήματα εγγράφων που εκκρεμούν από εμένα στις υποθέσεις μεταβίβασης",
+          "ownershipVerificationDecided": "Αποφασίστηκε η επαλήθευση ιδιοκτησίας μου"
         },
         "tasks": {
           "title": "Εργασίες",
@@ -179,7 +180,8 @@
           "passwordChange": "Αλλαγή κωδικού",
           "twoFactorChange": "Αλλαγή 2FA",
           "suspiciousActivity": "Ύποπτη δραστηριότητα",
-          "workspaceMembershipEnded": "Πρόσβαση σε γραφεία"
+          "workspaceMembershipEnded": "Πρόσβαση σε γραφεία",
+          "ownershipLost": "Απώλεια επαληθευμένης ιδιοκτησίας"
         },
         "network": {
           "title": "Μηνύματα συνεργατών",

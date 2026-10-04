@@ -15,7 +15,7 @@
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "74c53ff254dac1accbb56ce6e5152013f47e6233a4720afbb548e84926d449c8",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "8d9d3febb16f44c73fcf5c6b05411d64a692f95178ef95680d8e766ec7a252c8",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f7557ef3f8dbb98219a585f6e1de8792b112dd64d796eb79a1ee98fa4c167339",
+  "inputsSha256": "152e4dc18ac4e91eb937b6bfc17e5a10f9df56960502a31d5a5f0f1a77ce3057",
   "languages": [
     "el"
   ],
@@ -731,7 +731,7 @@
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
     "src/config/holiday-question-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/legal-document-versions/index.generated.ts": "95a15a9d079144d3f6a8e7d5c66dd6751ee711d0b1436c4fad7d9d8b82cac84a",
-    "src/config/notification-preference-rows.ts": "fc67d8c7d901fc69985d261a1033e646410f7d9b18712a2b55ee34bfd3b31743",
+    "src/config/notification-preference-rows.ts": "e10bc71eaeaf5f989b8630e12c56f14fbf635a28a745d22fdafeb484fe107a67",
     "src/config/open-data-sources.ts": "2b76caba2309c3967fc7b278846a008c8930fb5058643db078aa300489d76366",
     "src/config/photo-compression-config.ts": "6deacd7da1ade634c8c523c551cb522ce2ff93441890ee0b833086e0f8cf1a0e",
     "src/config/unified-tabs-factory.ts": "65afb31a9a5ea0912cbfb2e1924ed05d8a24feb12f1217d2e60c9a762a8bca21",
@@ -3604,6 +3604,7 @@
             "account.notificationSettings.categories.properties.mandateRequestAnswered",
             "account.notificationSettings.categories.properties.newBuilding",
             "account.notificationSettings.categories.properties.newProperty",
+            "account.notificationSettings.categories.properties.ownershipVerificationDecided",
             "account.notificationSettings.categories.properties.statusChange",
             "account.notificationSettings.categories.properties.stayRequestAnswered",
             "account.notificationSettings.categories.properties.stayRequestReceived",
@@ -3613,6 +3614,7 @@
             "account.notificationSettings.categories.properties.tourLinkOpened",
             "account.notificationSettings.categories.properties.viewingScheduled",
             "account.notificationSettings.categories.security.newDeviceLogin",
+            "account.notificationSettings.categories.security.ownershipLost",
             "account.notificationSettings.categories.security.passwordChange",
             "account.notificationSettings.categories.security.suspiciousActivity",
             "account.notificationSettings.categories.security.title",
@@ -10879,7 +10881,7 @@
     "src/config/my-spaces.ts": "f556e18d61cdada7ceaa39739e76402751cdc424011ed9816d9e864ff948d3e4",
     "src/config/navigation-capability.ts": "888e30a6e4806bb725a96107de6ac62b21599489a0e08b52d912f30a2c0b4bb3",
     "src/config/navigation-node.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/config/notification-events.ts": "53484b709375f2e1ed1cc234a83e2eae7024864a27cb2ed40fa1fc517f5235be",
+    "src/config/notification-events.ts": "7e83a0bf8e293affd438760c8414e27b8634d3caa39d3a24e4a18420ead1bef1",
     "src/config/notification-keys.ts": "b950758c9cedf33936b9923ba41e908c5298e5e79da2eb3675c93ea4758976e9",
     "src/config/occupation-families.ts": "59606df82fbe0e1017966eb4ce97154e0bc51477622b594a76aed2a2c39d0029",
     "src/config/office-navigation/catalog-main.ts": "acbe44b485f051c98a435736edcc8fb6078814710e5b0b3c64fd4df98c7e1c72",
@@ -11594,7 +11596,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 933,
-    "sliceBytes": 691000
+    "sliceBytes": 691223
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

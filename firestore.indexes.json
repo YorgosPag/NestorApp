@@ -35,6 +35,22 @@
       ]
     },
     {
+      "collectionGroup": "ownership_verifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kaek", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ownership_verifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "tour_captures",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

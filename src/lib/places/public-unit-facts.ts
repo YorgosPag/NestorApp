@@ -58,6 +58,15 @@ export interface PublicUnitMerge {
   readonly linkDisagreement: boolean;
 }
 
+/**
+ * **Απόσυρση** (κύκλος UPRN, logical status 8): η μονάδα **δεν** διαγράφεται και το id της δεν ξαναδίνεται —
+ * γίνεται `historical`, κρατώντας ύπαρξη και στάθμη ως ιστορικό. Την καλεί **μόνο** η ανάκληση που ρίχνει την
+ * τελευταία έγκυρη βεβαίωση (ADR-900 §8 #2, Β3). Νέα βεβαίωση ⇒ {@link mergeIntoUnit} την ξαναφέρνει `approved`.
+ */
+export function retireUnit(existing: PublicUnit, at: string): PublicUnit {
+  return { ...existing, status: 'historical', updatedAt: at };
+}
+
 /** Νέα βεβαίωση της ίδιας μονάδας (§14.3 πεδίο προς πεδίο). */
 export function mergeIntoUnit(existing: PublicUnit, facts: PublicUnitFacts, at: string): PublicUnitMerge {
   const candidate = declaredLevel(facts.floor, at);

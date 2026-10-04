@@ -7,16 +7,25 @@
  * Ο άνθρωπος βλέπει ό,τι η μηχανή **δεν** απέδειξε: τους κλειστούς λόγους, τον υπογράφοντα της σφραγίδας, το
  * ονοματεπώνυμο του λογαριασμού και τα 3 τελευταία ψηφία του ΑΦΜ. Ανοίγει το ΠΚΑ (σύνδεσμος 15′ με ίχνος),
  * συγκρίνει, και εγκρίνει ή απορρίπτει με σημείωση. FIFO: όποιος περιμένει περισσότερο, κρίνεται πρώτος.
+ *
+ * Δεύτερη καρτέλα (ADR-900 §8 #2 Β3): **ανάκληση** επαληθευμένης κατοχής — {@link RevocableOwnershipSearch}.
  */
 
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { formatDate } from '@/lib/intl-formatting';
-import { REASON_KEYS } from '@/components/owner-property/ownership-verification-labels';
+import {
+  OWNERSHIP_NS,
+  REASON_KEYS,
+  REVOCATION_ADMIN_KEYS,
+} from '@/components/owner-property/ownership-verification-labels';
+import { ClaimantHeader, KaekTerm } from './OwnershipClaimParts';
+import { RevocableOwnershipSearch } from './RevocableOwnershipSearch';
 import type { OwnershipReviewItem } from '@/services/ownership/ownership-verification-review.service';
 
 const NS = 'admin';
@@ -62,13 +71,13 @@ function ReviewCard({ item, onDecided }: { readonly item: OwnershipReviewItem; r
 
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="m-0 text-base font-semibold text-foreground">{item.claimantName} · …{item.claimantTaxIdLast3}</h2>
-        <time dateTime={item.createdAt} className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</time>
-      </header>
+      <ClaimantHeader
+        item={item}
+        level="h2"
+        aside={<time dateTime={item.createdAt} className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</time>}
+      />
       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-muted-foreground">{t('admin:ownershipVerifications.kaek')}</dt>
-        <dd className="m-0 text-foreground">{item.kaek ?? t('admin:ownershipVerifications.unread')}</dd>
+        <KaekTerm kaek={item.kaek} />
         <dt className="text-muted-foreground">{t('admin:ownershipVerifications.signer')}</dt>
         <dd className="m-0 text-foreground">{item.sealValid ? (item.sealSigner ?? t('admin:ownershipVerifications.unread')) : t('admin:ownershipVerifications.sealInvalid')}</dd>
       </dl>
@@ -87,9 +96,23 @@ function ReviewCard({ item, onDecided }: { readonly item: OwnershipReviewItem; r
   );
 }
 
-export function OwnershipVerificationsPageContent(): React.ReactElement {
+function PendingQueue(): React.ReactElement {
   const { t } = useTranslation([NS]);
   const { queue, reload } = useReviewQueue();
+  return (
+    <section className="flex flex-col gap-4">
+      {queue.state === 'loading' && <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.loading')}</p>}
+      {queue.state === 'failed' && <p role="alert" className="m-0 text-sm text-foreground">{t('admin:ownershipVerifications.failed')}</p>}
+      {queue.state === 'ready' && queue.items.length === 0 && (
+        <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.empty')}</p>
+      )}
+      {queue.state === 'ready' && queue.items.map((item) => <ReviewCard key={item.id} item={item} onDecided={reload} />)}
+    </section>
+  );
+}
+
+export function OwnershipVerificationsPageContent(): React.ReactElement {
+  const { t } = useTranslation([NS, OWNERSHIP_NS]);
   return (
     <main className="container mx-auto flex max-w-4xl flex-col gap-4 px-4 py-8">
       <header className="flex flex-col gap-2">
@@ -99,12 +122,14 @@ export function OwnershipVerificationsPageContent(): React.ReactElement {
         </h1>
         <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.description')}</p>
       </header>
-      {queue.state === 'loading' && <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.loading')}</p>}
-      {queue.state === 'failed' && <p role="alert" className="m-0 text-sm text-foreground">{t('admin:ownershipVerifications.failed')}</p>}
-      {queue.state === 'ready' && queue.items.length === 0 && (
-        <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.empty')}</p>
-      )}
-      {queue.state === 'ready' && queue.items.map((item) => <ReviewCard key={item.id} item={item} onDecided={reload} />)}
+      <Tabs defaultValue="pending">
+        <TabsList>
+          <TabsTrigger value="pending">{t(REVOCATION_ADMIN_KEYS.tabPending)}</TabsTrigger>
+          <TabsTrigger value="verified">{t(REVOCATION_ADMIN_KEYS.tabVerified)}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending"><PendingQueue /></TabsContent>
+        <TabsContent value="verified"><RevocableOwnershipSearch /></TabsContent>
+      </Tabs>
     </main>
   );
 }

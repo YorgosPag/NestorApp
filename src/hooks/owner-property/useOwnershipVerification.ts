@@ -24,7 +24,12 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { validateCustodyUploadAuth } from '@/services/filesystem/file-mutation-gateway';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
 import type { OwnershipVerificationView } from '@/types/ownership-verification';
-import { submitErrorCodeOf, type SubmitErrorCode } from '@/components/owner-property/ownership-verification-labels';
+import {
+  revokeErrorCodeOf,
+  submitErrorCodeOf,
+  type RevokeErrorCode,
+  type SubmitErrorCode,
+} from '@/components/owner-property/ownership-verification-labels';
 
 const logger = createModuleLogger('useOwnershipVerification');
 
@@ -42,20 +47,31 @@ export type OwnershipSubmitState =
   /** Κλειστός κωδικός άρνησης του διακομιστή (π.χ. `identity-incomplete`) ή `UNAVAILABLE`. */
   | { readonly state: 'failed'; readonly code: SubmitErrorCode };
 
+/** Η αποδέσμευση (ADR-900 §8 #2 Β3, σχήμα Zillow «unclaim»). */
+export type OwnershipReleaseState =
+  | { readonly state: 'idle' }
+  | { readonly state: 'releasing' }
+  | { readonly state: 'failed'; readonly code: RevokeErrorCode };
+
 export interface OwnershipVerificationApi {
   readonly status: OwnershipVerificationState;
   readonly submit: OwnershipSubmitState;
   readonly submitCertificate: (file: File) => Promise<void>;
+  readonly release: OwnershipReleaseState;
+  readonly releaseOwnership: () => Promise<void>;
 }
 
 const urlOf = (ownerPropertyId: string) =>
   `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/ownership-verification`;
 
-function codeOf(error: unknown): SubmitErrorCode {
-  if (!(error instanceof ApiClientError)) return 'UNAVAILABLE';
+/** Ο κωδικός άρνησης από το σώμα του σφάλματος — `undefined` για βλάβη δικτύου/διακομιστή χωρίς σώμα. */
+function wireCodeOf(error: unknown): unknown {
+  if (!(error instanceof ApiClientError)) return undefined;
   const body = error.errorBody;
-  return submitErrorCodeOf(typeof body === 'object' && body !== null ? (body as { error?: unknown }).error : undefined);
+  return typeof body === 'object' && body !== null ? (body as { error?: unknown }).error : undefined;
 }
+
+const codeOf = (error: unknown): SubmitErrorCode => submitErrorCodeOf(wireCodeOf(error));
 
 export function useOwnershipVerification(
   ownerPropertyId: string,
@@ -63,6 +79,7 @@ export function useOwnershipVerification(
 ): OwnershipVerificationApi {
   const [status, setStatus] = useState<OwnershipVerificationState>({ state: 'loading' });
   const [submit, setSubmit] = useState<OwnershipSubmitState>({ state: 'idle' });
+  const [release, setRelease] = useState<OwnershipReleaseState>({ state: 'idle' });
 
   useEffect(() => {
     let alive = true;
@@ -103,5 +120,23 @@ export function useOwnershipVerification(
     [dossier, ownerPropertyId],
   );
 
-  return { status, submit, submitCertificate };
+  const releaseOwnership = useCallback(async (): Promise<void> => {
+    if (status.state !== 'ready' || status.verification?.status !== 'verified') return;
+    const before = status;
+    const verification = status.verification;
+    // Optimistic (σχήμα Gmail): η κάρτα λέει αμέσως «αποδεσμεύτηκε»· επαναφορά αν ο διακομιστής αρνηθεί.
+    setStatus({ state: 'ready', verification: { ...verification, status: 'revoked', revocationReason: 'owner-request' } });
+    setRelease({ state: 'releasing' });
+    try {
+      const body = await apiClient.delete<{ verification: OwnershipVerificationView | null }>(urlOf(ownerPropertyId));
+      setStatus({ state: 'ready', verification: body.verification });
+      setRelease({ state: 'idle' });
+    } catch (error) {
+      logger.warn('Η αποδέσμευση κατοχής δεν ολοκληρώθηκε', { ownerPropertyId, error: String(error) });
+      setStatus(before);
+      setRelease({ state: 'failed', code: revokeErrorCodeOf(wireCodeOf(error)) });
+    }
+  }, [ownerPropertyId, status]);
+
+  return { status, submit, submitCertificate, release, releaseOwnership };
 }

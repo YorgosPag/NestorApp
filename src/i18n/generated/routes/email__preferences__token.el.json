@@ -80,6 +80,7 @@
             "mandateRequestAnswered": "Το γραφείο απάντησε στο αίτημα ανάθεσης",
             "newBuilding": "Νέο κτίριο",
             "newProperty": "Νέο ακίνητο",
+            "ownershipVerificationDecided": "Αποφασίστηκε η επαλήθευση ιδιοκτησίας μου",
             "statusChange": "Αλλαγή κατάστασης ακινήτου",
             "stayRequestAnswered": "Απαντήσεις στα αιτήματα κράτησής μου (υποχρεωτικό)",
             "stayRequestReceived": "Αιτήματα κράτησης στα καταλύματά μου (υποχρεωτικό)",
@@ -91,6 +92,7 @@
           },
           "security": {
             "newDeviceLogin": "Σύνδεση από νέα συσκευή",
+            "ownershipLost": "Απώλεια επαληθευμένης ιδιοκτησίας",
             "passwordChange": "Αλλαγή κωδικού",
             "suspiciousActivity": "Ύποπτη δραστηριότητα",
             "title": "Ασφάλεια",

@@ -24,7 +24,13 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { composePlaceUnitRef } from '@/lib/geo/place-unit';
 import { placeUnitKey } from '@/lib/geo/place-unit-key.server';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
-import { mergeIntoUnit, newPublicUnit, publicUnitFactsOf, type PublicUnitFacts } from '@/lib/places/public-unit-facts';
+import {
+  mergeIntoUnit,
+  newPublicUnit,
+  publicUnitFactsOf,
+  retireUnit,
+  type PublicUnitFacts,
+} from '@/lib/places/public-unit-facts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { publicUnitSeed } from '@/server/places/public-unit-seed';
 import { generateDeterministicPublicUnitId } from '@/services/enterprise-id.service';
@@ -85,4 +91,15 @@ export function writePublicUnit(tx: Transaction, slot: PublicUnitSlot, at: strin
     logger.warn('unit-link-disagreement', { data: { unitId: slot.ref.id } });
   }
   tx.set(slot.ref, merged.unit);
+}
+
+/**
+ * Η απόσυρση — `historical`, **ποτέ** διαγραφή (κύκλος UPRN). Την καλεί **μόνο** η ανάκληση
+ * (`ownership-claim-locks.ts` → `releaseClaimLocks`), όταν έπεσε η **τελευταία** έγκυρη βεβαίωση του ΚΑΕΚ.
+ * Μονάδα που δεν γεννήθηκε ποτέ ή είναι ήδη ιστορική ⇒ τίποτα (ιδεμποτία). Επιστρέφει αν **όντως** αποσύρθηκε.
+ */
+export function retirePublicUnit(tx: Transaction, slot: PublicUnitSlot, at: string): boolean {
+  if (slot.kind === 'none' || slot.existing === null || slot.existing.status === 'historical') return false;
+  tx.set(slot.ref, retireUnit(slot.existing, at));
+  return true;
 }

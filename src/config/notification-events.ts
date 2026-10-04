@@ -97,6 +97,8 @@ export const NOTIFICATION_EVENT_TYPES = {
    * Το **ποια** απάντηση το λέει το κλειδί τίτλου.
    */
   PROPERTIES_MANDATE_DECIDED: 'properties.mandateDecided',
+  /** ADR-900 §8 #2 Β3 — «η ιδιοκτησία σας επαληθεύτηκε / δεν επαληθεύτηκε» (απόφαση ουράς ή αυτόματη κρίση). */
+  PROPERTIES_OWNERSHIP_VERIFICATION_DECIDED: 'properties.ownershipVerificationDecided',
   /**
    * ADR-827 §9.21 — **το γραφείο απάντησε στο αίτημα ανάθεσης**, ναι ή όχι.
    *
@@ -186,6 +188,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    * «ο προσωπικός σας χώρος και τα άλλα γραφεία σας δεν επηρεάζονται».
    */
   SECURITY_WORKSPACE_MEMBERSHIP_ENDED: 'security.workspaceMembershipEnded',
+  /**
+   * ADR-900 §8 #2 Β3 — **απώλεια δικαιώματος**: η επαλήθευση κατοχής ανακλήθηκε, ή άλλος επαλήθευσε τον ίδιο ΚΑΕΚ
+   * (σχήμα Google Business Profile: ο υπάρχων κάτοχος μαθαίνει πάντα).
+   */
+  SECURITY_OWNERSHIP_LOST: 'security.ownershipLost',
   // Procurement Events (ADR-267 Phase B)
   PROCUREMENT_APPROVAL_NEEDED: 'procurement.approvalNeeded',
   PROCUREMENT_PO_APPROVED: 'procurement.poApproved',
@@ -332,6 +339,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED]: {
     category: 'properties',
     settingKey: 'mandateDecided',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-900 §8 #2 Β3 — προεπιλογή `true`: ο κάτοχος δεν μπορεί να δει μόνος του πότε έκρινε ο άνθρωπος της ουράς.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_OWNERSHIP_VERIFICATION_DECIDED]: {
+    category: 'properties',
+    settingKey: 'ownershipVerificationDecided',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
@@ -507,6 +521,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.SECURITY_WORKSPACE_MEMBERSHIP_ENDED]: {
     category: 'security',
     settingKey: 'workspaceMembershipEnded',
+    isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-900 §8 #2 Β3 — ΥΠΟΧΡΕΩΤΙΚΟ: απώλεια δικαιώματος κατοχής (GBP: κανείς δεν μαθαίνει από άδεια οθόνη ότι έχασε το σπίτι του).
+  [NOTIFICATION_EVENT_TYPES.SECURITY_OWNERSHIP_LOST]: {
+    category: 'security',
+    settingKey: 'ownershipLost',
     isMandatory: true,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },

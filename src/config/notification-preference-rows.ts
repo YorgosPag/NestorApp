@@ -71,6 +71,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       // ADR-777 §8.34 — «ο πελάτης απάντησε στην εντολή».
       { key: 'mandateDecided', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateDecided' },
       // ADR-827 §9.21 — «το γραφείο απάντησε στο αίτημά σου».
+      // ADR-900 §8 #2 Β3 — «η ιδιοκτησία σας επαληθεύτηκε / δεν επαληθεύτηκε».
+      { key: 'ownershipVerificationDecided', labelKey: 'common-account:account.notificationSettings.categories.properties.ownershipVerificationDecided' },
       { key: 'mandateRequestAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateRequestAnswered' },
       // ADR-841 §7 Α21.20 — «το email της κάρτας σας επέστρεψε».
       { key: 'cardEmailReturned', labelKey: 'common-account:account.notificationSettings.categories.properties.cardEmailReturned' },
@@ -144,6 +146,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'suspiciousActivity', labelKey: 'common-account:account.notificationSettings.categories.security.suspiciousActivity' },
       // ADR-892 — έξοδος από γραφείο (υποχρεωτική: η γραμμή φαίνεται, ο διακόπτης κλειδωμένος όπως στα υπόλοιπα της ασφάλειας).
       { key: 'workspaceMembershipEnded', labelKey: 'common-account:account.notificationSettings.categories.security.workspaceMembershipEnded' },
+      // ADR-900 §8 #2 Β3 — απώλεια επαληθευμένης κατοχής (υποχρεωτική).
+      { key: 'ownershipLost', labelKey: 'common-account:account.notificationSettings.categories.security.ownershipLost' },
     ],
   },
 ];

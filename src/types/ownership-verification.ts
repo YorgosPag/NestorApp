@@ -27,6 +27,39 @@ export const OWNERSHIP_VERIFICATION_STATUSES = [
 export type OwnershipVerificationStatus = (typeof OWNERSHIP_VERIFICATION_STATUSES)[number];
 
 /**
+ * **Γιατί ανακλήθηκε** (ADR-900 §8 #2, Β3) — κλειστό σύνολο. Ο λόγος **κρίνει** τη δημόσια μονάδα:
+ * μόνο όσοι ρίχνουν την ίδια την απόδειξη ύπαρξης ({@link REVOCATION_REASONS_VOIDING_EVIDENCE}) μπορούν
+ * να την κάνουν `historical`· τα άλλα λένε «άλλαξε ο άνθρωπος», όχι «δεν υπάρχει το σπίτι» (Zillow unclaim).
+ */
+export const OWNERSHIP_REVOCATION_REASONS = [
+  /** Το ΠΚΑ αποδείχθηκε πλαστό ή αλλοιωμένο. */
+  'evidence-invalid',
+  /** Η επαλήθευση δόθηκε σε λάθος ακίνητο/ΚΑΕΚ. */
+  'claimed-in-error',
+  /** Ο άνθρωπος δεν είναι πια κάτοχος (μεταβίβαση) — το ακίνητο υπάρχει. */
+  'ownership-ended',
+  /** Ο ίδιος ο κάτοχος αποδεσμεύτηκε (σχήμα Zillow «unclaim»). */
+  'owner-request',
+] as const;
+
+export type OwnershipRevocationReason = (typeof OWNERSHIP_REVOCATION_REASONS)[number];
+
+/** Οι λόγοι που ρίχνουν την **απόδειξη** — όχι απλώς τον άνθρωπο. */
+export const REVOCATION_REASONS_VOIDING_EVIDENCE: ReadonlySet<OwnershipRevocationReason> = new Set([
+  'evidence-invalid',
+  'claimed-in-error',
+]);
+
+/** Ό,τι μπορεί να επιλέξει ο διαχειριστής — το `owner-request` το γράφει **μόνο** η πόρτα του κατόχου. */
+export const ADMIN_REVOCATION_REASONS = [
+  'evidence-invalid',
+  'claimed-in-error',
+  'ownership-ended',
+] as const satisfies ReadonlyArray<Exclude<OwnershipRevocationReason, 'owner-request'>>;
+
+export type AdminRevocationReason = (typeof ADMIN_REVOCATION_REASONS)[number];
+
+/**
  * **Γιατί δεν εγκρίθηκε αυτόματα** — κλειστό σύνολο, ένας λόγος ανά αποτυχημένο κριτήριο. Η ουρά
  * τα δείχνει στον άνθρωπο που κρίνει· ο ιδιοκτήτης βλέπει τη δική του διατύπωση ανά λόγο.
  */
@@ -98,6 +131,8 @@ export interface OwnershipVerification {
   readonly decidedBy: string | null;
   /** Σημείωση του ανθρώπου της ουράς (π.χ. λόγος απόρριψης). */
   readonly reviewNote: string | null;
+  /** Μόνο όταν `revoked` — παλιά έγγραφα δεν το έχουν (απουσία ⇔ `null`). */
+  readonly revocationReason?: OwnershipRevocationReason | null;
 }
 
 /** Ό,τι φεύγει προς τον ιδιοκτήτη — κλειστό σχήμα, χωρίς HMAC, χωρίς δικαιούχους. */
@@ -108,4 +143,5 @@ export interface OwnershipVerificationView {
   readonly kaek: string | null;
   readonly createdAt: string;
   readonly decidedAt: string | null;
+  readonly revocationReason: OwnershipRevocationReason | null;
 }

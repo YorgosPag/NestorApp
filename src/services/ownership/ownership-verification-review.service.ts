@@ -20,8 +20,13 @@ import type { DocumentReference, Firestore as AdminFirestore, Transaction } from
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { readClaimLocks, writeClaimLocks } from './ownership-claim-locks';
+import { announceOwnershipDecision, announceSupersededOwnership } from './ownership-decision-notifier.service';
 import { recordVerificationAudit } from './ownership-verification-record';
-import type { OwnershipReviewReason, OwnershipVerification } from '@/types/ownership-verification';
+import type {
+  OwnershipReviewReason,
+  OwnershipVerification,
+  OwnershipVerificationStatus,
+} from '@/types/ownership-verification';
 
 /** Πόσες εκκρεμείς φέρνει μία σελίδα της ουράς. */
 const REVIEW_PAGE_SIZE = 50;
@@ -70,6 +75,44 @@ export async function listPendingOwnershipReviews(db: AdminFirestore): Promise<O
   return snap.docs.map((doc) => reviewItemOf(doc.data() as OwnershipVerification));
 }
 
+/** Μια απόδειξη που **μπορεί** να ανακληθεί — η κάρτα της ουράς + η κατάσταση και η ώρα της απόφασης. */
+export interface RevocableOwnershipItem extends OwnershipReviewItem {
+  readonly status: Extract<OwnershipVerificationStatus, 'verified' | 'superseded'>;
+  readonly decidedAt: string | null;
+}
+
+/** Ανάκληση από `verified` **ή** `superseded` (ADR-900 §8 #2 Β3) — ό,τι βεβαιώνει ή βεβαίωσε ύπαρξη. */
+const REVOCABLE_STATUSES: ReadonlyArray<RevocableOwnershipItem['status']> = ['verified', 'superseded'];
+
+/** Πόσες αποδείξεις φέρνει μία αναζήτηση — ένας ΚΑΕΚ/μία αγγελία έχουν ελάχιστες στην πράξη. */
+const SEARCH_LIMIT = 20;
+
+/** Αναζήτηση της ουράς: **ακριβής** ΚΑΕΚ (κανονική μορφή) ή id αγγελίας — ποτέ ελεύθερο κείμενο. */
+export type RevocableSearch = { readonly kaek: string } | { readonly ownerPropertyId: string };
+
+/** Οι αποδείξεις που μπορεί να ανακαλέσει ο διαχειριστής, νεότερη απόφαση πρώτη. */
+export async function listRevocableOwnerships(
+  db: AdminFirestore,
+  search: RevocableSearch,
+): Promise<RevocableOwnershipItem[]> {
+  const verifications = db.collection(COLLECTIONS.OWNERSHIP_VERIFICATIONS);
+  // Ουρά ΔΙΑΧΕΙΡΙΣΤΗ της πλατφόρμας (μόνο `super_admin`) — αναζήτηση σε όλους εκ σχεδιασμού.
+  // ⚠️ Κυριολεκτικά ονόματα πεδίων (όχι μεταβλητή): οι πύλες δεικτών 3.15/3.91 τα διαβάζουν από τον κώδικα.
+  const byKey =
+    'kaek' in search
+      ? verifications.where('kaek', '==', search.kaek)
+      : verifications.where('ownerPropertyId', '==', search.ownerPropertyId);
+  const snap = await byKey.where('status', 'in', REVOCABLE_STATUSES).limit(SEARCH_LIMIT).get();
+  return snap.docs
+    .map((doc) => doc.data() as OwnershipVerification)
+    .map((record) => ({
+      ...reviewItemOf(record),
+      status: record.status as RevocableOwnershipItem['status'],
+      decidedAt: record.decidedAt,
+    }))
+    .sort((a, b) => (b.decidedAt ?? '').localeCompare(a.decidedAt ?? ''));
+}
+
 export type ReviewDecision = 'approve' | 'reject';
 
 export type ReviewOutcome =
@@ -84,11 +127,17 @@ export interface ReviewInput {
   readonly nowIso: string;
 }
 
-type DecisionResult = { readonly outcome: ReviewOutcome; readonly record: OwnershipVerification | null };
+type DecisionResult = {
+  readonly outcome: ReviewOutcome;
+  readonly record: OwnershipVerification | null;
+  /** Η απόδειξη που έχασε τον ΚΑΕΚ με αυτή την έγκριση — ο κάτοχός της ειδοποιείται (ADR-900 §8 #2 Β3). */
+  readonly supersededVerificationId: string | null;
+};
 
 const refused = (reason: Extract<ReviewOutcome, { kind: 'refused' }>['reason']): DecisionResult => ({
   outcome: { kind: 'refused', reason },
   record: null,
+  supersededVerificationId: null,
 });
 
 /** Το σώμα της συναλλαγής: κρίνει την κατάσταση, ελέγχει τις κλειδαριές, γράφει. */
@@ -110,20 +159,29 @@ async function applyDecision(
     decidedBy: input.reviewerUid,
     reviewNote: input.note,
   };
+  let supersededVerificationId: string | null = null;
   if (input.decision === 'approve') {
     if (current.kaek === null) return refused('kaek-missing');
     const locks = await readClaimLocks(db, tx, current.kaek, current.claimant.taxId.hmac, current.ownerPropertyId);
     if (locks.taxIdHolderUid !== null && locks.taxIdHolderUid !== current.uid) return refused('tax-id-claimed-elsewhere');
-    writeClaimLocks(db, tx, locks, decided, current.claimant.taxId.last3);
+    ({ supersededVerificationId } = writeClaimLocks(db, tx, locks, decided, current.claimant.taxId.last3));
   }
   tx.set(ref, decided);
-  return { outcome: { kind: 'decided', status: input.decision === 'approve' ? 'verified' : 'rejected' }, record: decided };
+  return {
+    outcome: { kind: 'decided', status: input.decision === 'approve' ? 'verified' : 'rejected' },
+    record: decided,
+    supersededVerificationId,
+  };
 }
 
 /** Η απόφαση του ανθρώπου — ΜΙΑ συναλλαγή, πάνω στις ίδιες κλειδαριές με την αυτόματη κρίση. */
 export async function decideOwnershipReview(db: AdminFirestore, input: ReviewInput): Promise<ReviewOutcome> {
   const ref = db.collection(COLLECTIONS.OWNERSHIP_VERIFICATIONS).doc(input.verificationId);
   const result = await db.runTransaction((tx) => applyDecision(db, tx, ref, input));
-  if (result.record !== null) await recordVerificationAudit(result.record, 'pending-review');
+  if (result.record !== null) {
+    await recordVerificationAudit(result.record, 'pending-review');
+    await announceOwnershipDecision(db, result.record);
+    await announceSupersededOwnership(db, result.supersededVerificationId);
+  }
   return result.outcome;
 }

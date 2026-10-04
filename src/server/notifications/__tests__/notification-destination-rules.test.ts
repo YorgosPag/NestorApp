@@ -178,6 +178,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.holidayHoursQuestion',
       'properties.mandateDecided',
       'properties.mandateRequestAnswered',
+      // ADR-900 §8 #2 Β3 — απόφαση κατοχής: η σελίδα της αγγελίας, στον χώρο της θεματοφυλακής (ίδιος κανόνας για τα δύο).
+      'properties.ownershipVerificationDecided',
       // ADR-835 §23.6 (Στάδιο Δ) — ο οικοδεσπότης στο ημερολόγιο (χώρος = θεματοφυλακή),
       // ο επισκέπτης στη δημόσια αγγελία (ίδιος κανόνας με την αντιστοίχιση ζήτησης).
       'properties.stayRequestAnswered',
@@ -187,6 +189,7 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.tourAccessRequested',
       // ADR-884 §9.1 Α3′ — το άνοιγμα προσωπικού συνδέσμου οδηγεί στο ΙΔΙΟ πάνελ, με τον ΙΔΙΟ κανόνα.
       'properties.tourLinkOpened',
+      'security.ownershipLost',
     ]);
   });
 });

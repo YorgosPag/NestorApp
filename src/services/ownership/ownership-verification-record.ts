@@ -23,6 +23,7 @@ export function viewOfVerification(record: OwnershipVerification): OwnershipVeri
     kaek: record.kaek,
     createdAt: record.createdAt,
     decidedAt: record.decidedAt,
+    revocationReason: record.revocationReason ?? null,
   };
 }
 

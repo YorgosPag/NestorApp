@@ -14,6 +14,7 @@
  * | `properties.mandateRequestAnswered` | `mandateRequestDestination` | `announceMandateRequestAnswer` |
  * | `properties.mandateDecided` | `custodyOf` + `mandateDecisionDestination` | `announceMandateDecision` |
  * | `properties.stayRequestReceived` | `custodyOf` + `stayRequestReceivedDestination` | `announceStayBookingNotice` |
+ * | `properties.ownershipVerificationDecided` · `security.ownershipLost` | `custodyOf` + `ownershipDecisionDestination` | `announceOwnershipDecision` |
  * | `properties.stayRequestAnswered` | `stayRequestAnsweredDestination` | `announceStayBookingNotice` |
  * | `properties.firstContactReceived` | `firstContactReceivedDestination` | `announceFirstContactReceived` |
  * | `properties.tourAccessRequested` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourAccessRequested` |
@@ -61,6 +62,7 @@ import { firstContactReceivedDestination } from '@/services/contact/first-contac
 import { listingMatchDestination } from '@/services/demand/listing-match-notifier.service';
 import { locatePlace } from '@/services/demand/place-interest.service';
 import { mandateDecisionDestination } from '@/services/mandate/mandate-decision-notifier.service';
+import { ownershipDecisionDestination } from '@/services/ownership/ownership-decision-notifier.service';
 import { mandateRequestDestination } from '@/services/mandate/mandate-request-notifier.service';
 import { holidayHoursQuestionDestination } from '@/services/mandate/holiday-hours-question-notifier';
 import { cardEmailReturnedDestination } from '@/services/mandate/showcase-email-return.service';
@@ -115,21 +117,24 @@ const demandInterestRule: DestinationRule = async (db, _notification, entityId) 
   return expected(placeDestination(location.source, entityId, location.holderId));
 };
 
-/** Απόφαση εντολής: ο χώρος είναι η **θεματοφυλακή** της αγγελίας (το ίδιο SSoT με τον παραγωγό). */
-const mandateDecidedRule: DestinationRule = async (db, _notification, entityId) => {
-  const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(entityId).get();
-  const property = ownerPropertyFromDocument(snapshot.data(), entityId);
-  if (property === null) return unresolvable('entity-absent');
-  return expected(mandateDecisionDestination(entityId, custodyOf(property)));
-};
+/**
+ * Κανόνας για κάθε προορισμό που ορίζεται από τη **θεματοφυλακή** της αγγελίας (το ίδιο SSoT με τον παραγωγό):
+ * απόφαση εντολής · αίτημα κράτησης (ADR-835 §23.6) · απόφαση κατοχής (ADR-900 §8 #2 Β3). Ένα σώμα, όχι τρίδυμα.
+ */
+function custodyRule(
+  destinationOf: (ownerPropertyId: string, custody: ReturnType<typeof custodyOf>) => NotificationDestination,
+): DestinationRule {
+  return async (db, _notification, entityId) => {
+    const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(entityId).get();
+    const property = ownerPropertyFromDocument(snapshot.data(), entityId);
+    if (property === null) return unresolvable('entity-absent');
+    return expected(destinationOf(entityId, custodyOf(property)));
+  };
+}
 
-/** Αίτημα κράτησης προς τον οικοδεσπότη: ο χώρος είναι η **θεματοφυλακή** της αγγελίας (ADR-835 §23.6). */
-const stayRequestReceivedRule: DestinationRule = async (db, _notification, entityId) => {
-  const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(entityId).get();
-  const property = ownerPropertyFromDocument(snapshot.data(), entityId);
-  if (property === null) return unresolvable('entity-absent');
-  return expected(stayRequestReceivedDestination(entityId, custodyOf(property)));
-};
+const mandateDecidedRule = custodyRule(mandateDecisionDestination);
+const stayRequestReceivedRule = custodyRule(stayRequestReceivedDestination);
+const ownershipDecisionRule = custodyRule(ownershipDecisionDestination);
 
 /**
  * ADR-867 Β7 · §8 #9 · **Β9γ** — **νέο μήνυμα δικτύου**: η οντότητα είναι το νήμα, και το νήμα ανοίγει
@@ -179,6 +184,8 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(mandateRequestDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED]: mandateDecidedRule,
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_OWNERSHIP_VERIFICATION_DECIDED]: ownershipDecisionRule,
+  [NOTIFICATION_EVENT_TYPES.SECURITY_OWNERSHIP_LOST]: ownershipDecisionRule,
   // ADR-841 §7 Α21.20 — η οντότητα είναι το γραφείο· η πόρτα, η κάρτα του στον χώρο του.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: async (_db, _notification, entityId) =>
     expected(cardEmailReturnedDestination(entityId)),

@@ -176,6 +176,8 @@ export interface PropertiesNotificationSettings {
    * μια αγγελία που εξαφανίστηκε χωρίς να ξέρει γιατί.
    */
   mandateDecided: boolean;
+  /** ADR-900 §8 #2 Β3 — η απόφαση για την επαλήθευση κατοχής (προεπιλογή `true`: ο κάτοχος δεν τη βλέπει αλλιώς). */
+  ownershipVerificationDecided: boolean;
   /**
    * 🎯 ADR-827 §9.21 — «**το γραφείο δέχτηκε**» / «**σου ζητά να ξαναστείλεις**» /
    * «**αρνήθηκε**».
@@ -320,6 +322,8 @@ export interface SecurityNotificationSettings {
   suspiciousActivity: boolean;
   /** ADR-892 — removed from / left a workspace (mandatory) */
   workspaceMembershipEnded: boolean;
+  /** ADR-900 §8 #2 Β3 — verified ownership revoked or taken over (mandatory) */
+  ownershipLost: boolean;
 }
 
 /**
@@ -472,6 +476,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   demandListingMatch: true,
   demandPriceDrop: true,
   mandateDecided: true,
+  ownershipVerificationDecided: true,
   mandateRequestAnswered: true,
   cardEmailReturned: true,
   holidayHoursQuestion: true,
@@ -528,6 +533,7 @@ export const DEFAULT_SECURITY_SETTINGS: SecurityNotificationSettings = {
   twoFactorChange: true,
   suspiciousActivity: true,
   workspaceMembershipEnded: true,
+  ownershipLost: true,
 };
 
 /**

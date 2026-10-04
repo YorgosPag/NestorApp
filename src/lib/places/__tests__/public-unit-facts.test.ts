@@ -5,11 +5,11 @@
  *
  * Μ1 μόνο ΚΑΕΚ ιδιοκτησίας + κτίριο γεννούν μονάδα · Μ2 πόρτα/ΚΑΕΚ ΠΕΦΤΟΥΝ ρητά · Μ3 ισοβαθμία δεν αλλάζει στάθμη,
  * το Κτηματολόγιο την ξεπερνά · Μ4 κύκλος UPRN (historical ⇒ approved, πρώτη βεβαίωση σταθερή) · Μ5 διαφωνία
- * δεσμού = σήμα, όχι εγγραφή · Σ1 σπόρος: ίδιο κλειδί ⇒ ίδιος, άλλο μυστικό ⇒ άλλος, δήλωση ⇒ κανένας, ποτέ ο ΚΑΕΚ.
+ * δεσμού = σήμα, όχι εγγραφή · Μ6 απόσυρση = historical, ΠΟΤΕ απώλεια ιστορικού (ADR-900 §8 #2 Β3) · Σ1 σπόρος: ίδιο κλειδί ⇒ ίδιος, άλλο μυστικό ⇒ άλλος, δήλωση ⇒ κανένας, ποτέ ο ΚΑΕΚ.
  */
 import type { PlaceUnitRef } from '@/lib/geo/place-unit';
 import type { PublicUnit } from '@/types/geo/public-place';
-import { mergeIntoUnit, newPublicUnit, publicUnitFactsOf } from '../public-unit-facts';
+import { mergeIntoUnit, newPublicUnit, publicUnitFactsOf, retireUnit } from '../public-unit-facts';
 import { publicUnitSeed, PUBLIC_UNIT_SEED_SECRET_ENV } from '@/server/places/public-unit-seed';
 
 jest.mock('server-only', () => ({}));
@@ -64,6 +64,17 @@ describe('Μ3–Μ5 — νέα βεβαίωση της ίδιας μονάδας
     const merge = mergeIntoUnit(born(), publicUnitFactsOf(ref({ buildingId: 'pbld_2' }))!, T1);
     expect(merge.linkDisagreement).toBe(true);
     expect(merge.unit.buildingId).toBe('pbld_1');
+  });
+});
+
+describe('Μ6 — απόσυρση (κύκλος UPRN, logical status 8)', () => {
+  it('historical · ίδιο id · ύπαρξη και στάθμη ΜΕΝΟΥΝ ως ιστορικό · νέα βεβαίωση ⇒ approved', () => {
+    const facts = publicUnitFactsOf(ref());
+    if (facts === null) throw new Error('facts');
+    const born = newPublicUnit('punit_1', facts, T0);
+    const retired = retireUnit(born, T1);
+    expect(retired).toEqual({ ...born, status: 'historical', updatedAt: T1 });
+    expect(mergeIntoUnit(retired, facts, T1).unit.status).toBe('approved');
   });
 });
 

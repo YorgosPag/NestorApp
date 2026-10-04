@@ -2476,7 +2476,9 @@
       "rejected": "The verification was not approved",
       "rejectedDetail": "You can upload a new, recent certificate.",
       "inactive": "The verification is no longer valid",
-      "inactiveDetail": "Upload a recent certificate to renew it."
+      "inactiveDetail": "Upload a recent certificate to renew it.",
+      "revoked": "The verification was revoked",
+      "revokedDetail": "If you are the owner, you can upload a new, recent certificate."
     },
     "reasons": {
       "sealInvalid": "The electronic seal is missing or the file changed after it was issued.",
@@ -2498,6 +2500,38 @@
       "certificateNotReady": "The file has not finished uploading. Please try again shortly.",
       "certificateNotPdf": "The certificate must be a PDF.",
       "unavailable": "The check did not complete. Please try again shortly — you do not need to change anything."
+    },
+    "release": "Remove from my account",
+    "releasing": "Removing…",
+    "releaseConfirmTitle": "Remove your ownership claim?",
+    "releaseConfirmBody": "Your account will no longer show as the verified owner of this property, and you will see ranges instead of the exact number of interested people. Your listing does not change. You can verify again at any time with a new certificate.",
+    "revocation": {
+      "reasonLabel": "Reason: {reason}",
+      "reasons": {
+        "evidenceInvalid": "The certificate is not genuine or has been altered",
+        "claimedInError": "The verification concerned the wrong property",
+        "ownershipEnded": "Ownership has been transferred",
+        "ownerRequest": "Removed by the owner"
+      },
+      "errors": {
+        "notFound": "The verification was not found.",
+        "notRevocable": "The verification is no longer active — refresh the page.",
+        "reasonNotAllowed": "This reason is not allowed here."
+      },
+      "tabPending": "Pending",
+      "tabVerified": "Verified",
+      "searchLabel": "Find a verification",
+      "searchHint": "Exact KAEK or listing id (ownp_…).",
+      "search": "Search",
+      "searchMalformed": "The KAEK is not valid.",
+      "noResults": "No verification that can be revoked was found.",
+      "statusVerified": "Active",
+      "statusSuperseded": "Superseded by a newer one",
+      "revoke": "Revoke",
+      "confirmTitle": "Revoke the verification?",
+      "confirmBody": "Reason: {reason}. {unit} The holder will be notified and can submit a new certificate.",
+      "unitWillRetire": "If no other valid verification exists for the same KAEK, the public unit becomes historical.",
+      "unitStays": "The public unit stays — the property exists."
     }
   },
   "publicUnits": {

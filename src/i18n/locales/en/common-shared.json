@@ -943,5 +943,19 @@
       "seller_lawyer": "The seller's lawyer is requesting documents that are pending from you in the conveyance case. Open the case to see which.",
       "buyer_lawyer": "The buyer's lawyer is requesting documents that are pending from you in the conveyance case. Open the case to see which."
     }
+  },
+  "ownershipDecision": {
+    "verifiedTitle": "Your ownership of “{title}” was verified",
+    "verifiedBody": "You now see the exact number of people interested in your property.",
+    "rejectedTitle": "Ownership verification for “{title}” was not approved",
+    "rejectedBody": "Open the listing to see what is missing. You can upload a new, recent certificate.",
+    "revokedTitle": "Ownership verification for “{title}” was revoked",
+    "revokedBodyEvidenceInvalid": "The submitted certificate was not found to be genuine. If you are the owner, upload a new certificate from your listing.",
+    "revokedBodyClaimedInError": "The verification concerned the wrong property. If you are the owner, upload the correct certificate from your listing.",
+    "revokedBodyOwnershipEnded": "According to our records, ownership has been transferred. If this is not the case, upload a new certificate from your listing.",
+    "releasedTitle": "You removed your ownership claim for “{title}”",
+    "releasedBody": "Your account no longer shows as the verified owner. If this was not you, change your password immediately.",
+    "supersededTitle": "Another account verified ownership of “{title}”",
+    "supersededBody": "Your verification is no longer valid. If you are still the owner, upload a recent certificate from your listing."
   }
 }

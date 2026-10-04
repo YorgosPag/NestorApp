@@ -26,20 +26,33 @@ const VERIFIED: OwnershipVerificationStatus = 'verified';
 /** Όριο του τελεστή `in` του Firestore. */
 const IN_QUERY_LIMIT = 30;
 
+/** Οι αποδείξεις **του `uid`** για το `ownerPropertyId` — ο άξονας κατόχου σε κάθε ανάγνωση ανά αγγελία. */
+function ownVerifications(db: AdminFirestore, ownerPropertyId: string, uid: string) {
+  return db
+    .collection(COLLECTIONS.OWNERSHIP_VERIFICATIONS)
+    .where('uid', '==', uid)
+    .where('ownerPropertyId', '==', ownerPropertyId);
+}
+
+const firstOrNull = (snap: { readonly empty: boolean; readonly docs: ReadonlyArray<{ data(): unknown }> }) =>
+  snap.empty ? null : (snap.docs[0].data() as OwnershipVerification);
+
+/** Η **ενεργή** (`verified`) απόδειξη του `uid` για το `ownerPropertyId`, ή `null` — ό,τι ανακαλεί ο ίδιος (Β3). */
+export async function readActiveVerification(
+  db: AdminFirestore,
+  ownerPropertyId: string,
+  uid: string,
+): Promise<OwnershipVerification | null> {
+  return firstOrNull(await ownVerifications(db, ownerPropertyId, uid).where('status', '==', VERIFIED).limit(1).get());
+}
+
 /** Είναι ο `uid` αποδεδειγμένος κάτοχος του `ownerPropertyId`; */
 export async function isVerifiedOwner(
   db: AdminFirestore,
   ownerPropertyId: string,
   uid: string,
 ): Promise<boolean> {
-  const snap = await db
-    .collection(COLLECTIONS.OWNERSHIP_VERIFICATIONS)
-    .where('uid', '==', uid)
-    .where('ownerPropertyId', '==', ownerPropertyId)
-    .where('status', '==', VERIFIED)
-    .limit(1)
-    .get();
-  return !snap.empty;
+  return (await readActiveVerification(db, ownerPropertyId, uid)) !== null;
 }
 
 /** Η **τελευταία** προσπάθεια του `uid` για αυτή την αγγελία (ό,τι δείχνει η κάρτα του ιδιοκτήτη), ή `null`. */
@@ -48,14 +61,7 @@ export async function readLatestVerification(
   ownerPropertyId: string,
   uid: string,
 ): Promise<OwnershipVerification | null> {
-  const snap = await db
-    .collection(COLLECTIONS.OWNERSHIP_VERIFICATIONS)
-    .where('uid', '==', uid)
-    .where('ownerPropertyId', '==', ownerPropertyId)
-    .orderBy('createdAt', 'desc')
-    .limit(1)
-    .get();
-  return snap.empty ? null : (snap.docs[0].data() as OwnershipVerification);
+  return firstOrNull(await ownVerifications(db, ownerPropertyId, uid).orderBy('createdAt', 'desc').limit(1).get());
 }
 
 /**

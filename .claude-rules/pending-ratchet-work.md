@@ -2,6 +2,28 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **05/10 — ΤΟ `PATCH /api/floors` ΔΕΝ ΓΡΑΦΕΙ ΙΣΤΟΡΙΚΟ** *(CHECK 3.17 · ADR-195)*
+
+  Το βρήκε η διεύρυνση του CHECK 3.17 σε γραφές μέσω `withVersionCheck` (05/10): το `handleUpdateFloor` στο
+  `src/app/api/floors/floors.handlers.ts` γράφει στο `COLLECTIONS.FLOORS` χωρίς `EntityAuditService.recordChange` —
+  ίδιο κενό με αυτό που έκλεισε στα κτίρια (`api/buildings/_shared/building-update-audit.ts`). Μπήκε **ονομαστικά** στη
+  baseline (`.entity-audit-coverage-baseline.json`: 1 → 2). Θεραπεία: το πρότυπο των κτιρίων — διαφορά απέναντι στο
+  αποθηκευμένο έγγραφο με το υπάρχον `FLOOR_TRACKED_FIELDS`, **μετά** το commit. ⚠️ Ο χειριστής έχει αλυσίδες
+  (`floor-elevation-cascade` · `floor-height-cascade` · `floor-ref-cascade`): να αποφασιστεί αν οι **παράγωγες** γραφές
+  τους γράφουν δική τους γραμμή (μηχανή) ή όχι, πριν από τον κώδικα. Μετά: `npm run audit-coverage:baseline`.
+
+- 🟡 **05/10 — CHECK 3.17: ΤΥΦΛΟ ΣΕ ΓΡΑΦΗ ΜΕ ΜΕΤΑΒΛΗΤΗ ΣΥΛΛΟΓΗ** *(CHECK 3.17 · ADR-195 — δηλωμένο όριο, ΟΧΙ σφάλμα)*
+
+  Η πύλη αποδίδει γραφή σε συλλογή μόνο από κυριολεκτικό `COLLECTIONS.X` κοντά της ⇒ `db.collection(name).doc(id).update()`
+  είναι αόρατο. **Μετρήθηκε πριν από οποιαδήποτε διόρθωση**: ~45 αρχεία με `.collection(<μεταβλητή>)` + γραφή· σε δείγμα 10,
+  7 καλούν ήδη `recordChange` ⇒ ~12–16 νέα ευρήματα, από τα οποία εκτιμώνται 1–3 αληθή (πιθανότερο το
+  `buildings/[buildingId]/construction-phases/_helpers.ts`) και τα υπόλοιπα admin migrations · backups · sharing ·
+  σφραγίδες συστήματος · δάνεια/επιταγές ⇒ **~80–90% ψευδώς θετικά** (χαμηλή-μέτρια βεβαιότητα: δείγμα, όχι απογραφή) —
+  πολύ πάνω από τον πήχη ≤10%. **ΜΗΝ «διορθώσεις» την πύλη να τα σημαίνει όλα.** Σωστή θεραπεία: ο καλών **δηλώνει** τη
+  συλλογή σε σημείο που λύνεται στατικά (π.χ. τυποποιημένο όρισμα `collection: COLLECTIONS.X` όπως στο `withVersionCheck`),
+  ή απογραφή ανά αρχείο. Το όριο το καρφώνει το `scripts/__tests__/check-entity-audit-coverage.test.js` (Β7).
+  Μέτρα: `rg -l "\.collection\((?!COLLECTIONS)[a-zA-Z_.]+\)" src --pcre2 -g '!**/__tests__/**'`.
+
 - 🟡 **03/10 — ΨΕΥΔΟ-ΤΑΥΤΟΤΗΤΑ «ΝΕΟΥ» `'__new__'`: ~18 ΣΚΕΤΑ LITERALS** *(N.0.2 · ADR-777 §8.31.12)*
 
   Το ADR-777 §8.31.12 δημιούργησε το SSoT **`src/lib/draft-entity-id.ts` → `DRAFT_ENTITY_ID` / `isDraftEntityId(id)`** και
@@ -3957,6 +3979,12 @@
 
 ## Pending tasks (priority order)
 
+### 🔍 Γραμμές zoom κάτοψης/φύλλου λεπτομέρειας — `disabled`/`title=`/`style=` αντί του κοινού `ViewerToolbarButton` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-05, ADR-899 §9 θέμα 3 · ADR-187 · N.0.2)
+- **Τι**: το θέμα 3 έκανε το `useZoomPan` τον ΕΝΑ pan/zoom και έβγαλε κοινό κουμπί θεατή (`shared/media/viewer/ViewerToolbarButton`: tooltip, `aria-disabled` που κρατά την εστίαση). Δύο γραμμές zoom μένουν χειρόγραφες:
+  `FloorplanGalleryZoomControls.tsx` (`disabled` στα όρια ⇒ η εστίαση πετιέται στο `<body>`) · `DetailSheetDialog.tsx` (`disabled` + `title=` — CHECK 3.23 — + `style=` transform, N.3· ο `contentRef` του hook δεν ταιριάζει αυτούσιος γιατί κλιμακώνει `zoom / renderScale`).
+- **Fix**: `ViewerToolbarButton` στα κουμπιά· για το transform του φύλλου, `viewTransformOf` (`zoom-pan-math`) εφαρμοσμένο imperative.
+- **Σκόπιμα ΕΚΤΟΣ**: `PdfCanvasViewer` — έγγραφο με κύλιση και re-render σελίδων, άλλο μοντέλο από το `useZoomPan`.
+
 ### 🔐 AI KB (θεατής αγοραστής) μετρά τεκμήρια ΧΩΡΙΣ φίλτρο εμβέλειας CDE (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-03, ADR-901 Φ2 §14.2 · ADR-257 · N.0.2)
 - **Τι**: το `knowledge-base-handler.ts` καλεί `collectEvidenceForTargets(…)` με την προεπιλογή `'host'` ⇒ ένα **WIP** αρχείο μηχανικού μετρά ως «υπάρχει» στην απάντηση του AI προς τον **αγοραστή** (εξωτερικό θεατή). Δεν διαρρέει περιεχόμενο — διαρρέει **ύπαρξη/κατάσταση**.
 - **Fix**: πέρασμα ακροατηρίου (`'client'`) στο 4ο όρισμα — το φίλτρο υπάρχει ήδη (`decideEngagedEvidenceReach`, ADR-901 Φ2). Άγγιγμα σε `services/ai-pipeline/` ⇒ **N.10** (σουίτα ai-pipeline) — γι' αυτό δεν έγινε μέσα στη Φ2.
@@ -3971,7 +3999,6 @@
 - ✅ **Έγινε (2β.2, ADR-903 §8)**: ζεύγος `floor`+`floorKind` σε δήλωση ιδιοκτήτη/προβολή/αγγελία · `floorPairOf` · `floorRefKey` · επιλογέας δηλωμένης στάθμης · `PublicListing.floorKind` (κρίκος 17) · `PlaceUnitRef`/`unitNumber`/κλειδί μονάδας · σβήστηκαν `offer.card.floor` + `search-results:listing.floor/groundFloor` + `comparables.basement` · φρουρός locale.
 - ✅ **Έγινε (2β.3, ADR-903 §9)**: `lib/floor/floor-level-range` (μία διάταξη, σειρά Spitogatos) σε φόρμα ζήτησης · φίλτρα αναζήτησης (σχήμα `'level-range'`) · `/interest-check` · `floorMinKind/floorMaxKind` · υπόδειξη `unitIncomplete` · `isValueSetShape`. ⚠️ Το `placeUnitKey` **δεν** χρειάστηκε στην 2β.3 (ο κριτής ήταν ήδη ανά μονάδα) — πρώτος καταναλωτής η 2β.4.
 - ✅ **Έγινε (2β.4–2β.5, ADR-900 §8 #2)**: `public_units` (αδιαφανές `punit_*` = HMAC του ΚΑΕΚ · κύκλος UPRN · πηγή `cadastre`) γεννιέται στο `writeClaimLocks` · πρώτος καταναλωτής `PlaceSummary` → μονάδες ανά στάθμη · `compareFloorRefs` · SPEC-777A §14.2.1 + §14.4 κανόνας 5.
-- ⏳ **Γραφέας ανάκλησης κατοχής ⇒ μονάδα `historical`** (2β.4 Α2): το `revoked` υπάρχει στο λεξιλόγιο (`OWNERSHIP_VERIFICATION_STATUSES`) αλλά **κανείς δεν το γράφει**. Όταν γραφτεί, η μονάδα γίνεται `historical` **μόνο** αν δεν μένει άλλη ενεργή απόδειξη για τον ΚΑΕΚ — από το **ίδιο** module (`services/places/public-unit-write.ts`), μέσα στη συναλλαγή της ανάκλησης. (προτεραιότητα ΜΕΣΑΙΑ)
 - ⏳ **Deploy `public_units`**: κανόνες (`firestore.rules`) **και** μυστικό `PUBLIC_UNIT_ID_HMAC_SECRET` στο Netcup — **χωρίς** το μυστικό η επαλήθευση με δεσμό κτιρίου απαντά 503 (fail-closed). Μόνο με εντολή Giorgio. ⚠️ Το μυστικό **δεν** αλλάζει ποτέ χωρίς μετανάστευση (άλλο μυστικό ⇒ δεύτερη μονάδα για το ίδιο σπίτι).
 - ⏳ **«Τελευταίος όροφος» / «ενδιάμεσοι»** (idealista «última planta / plantas intermedias»): θέλει πλήθος ορόφων του κτιρίου από το επίπεδο Α. Οι μονάδες της 2β.4 δίνουν μόνο **κάτω φράγμα** ύψους ⇒ χρειάζεται `PublicBuilding.floorsAboveGround` με πηγή. (προτεραιότητα ΧΑΜΗΛΗ)
 - ⏳ **Ίχνος αλλαγών**: το `formatFieldAwareValue` αποδίδει μόνο το `floor` με την ετικέτα· το `floorKind` (ακίνητα/θέσεις/αποθήκες και πλέον αγγελίες ιδιώτη) εμφανίζεται ωμό (`pilotis`). Θεραπεία: κλάδος `floorKind` μέσω `FLOOR_LABEL_KEY` (το `standard` χωρίς αριθμό δεν έχει ετικέτα — χρειάζεται δική του λέξη).
@@ -4758,6 +4785,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-10-04 | ✅ **ΓΡΑΦΕΑΣ ΑΝΑΚΛΗΣΗΣ ΚΑΤΟΧΗΣ ⇒ ΜΟΝΑΔΑ `historical` — ΕΚΛΕΙΣΕ (ADR-900 §8 #2 Β3, Opus 5.5, απόφαση Giorgio «όπως οι μεγάλοι»).** Ένας γραφέας (`ownership-verification-revoke.service.ts`), δύο πόρτες (ουρά `super_admin` με κλειστό λόγο · αποδέσμευση του κατόχου, Zillow unclaim), μία συναλλαγή στις ίδιες κλειδαριές. 🔑 Η εγγραφή έλεγε «historical αν δεν μένει άλλη **ενεργή** απόδειξη» — η έρευνα (UPRN: `historical` = «δεν υπάρχει πια»· Zillow: η σελίδα μένει μετά το unclaim) το **στένεψε**: historical **μόνο** όταν ο λόγος ρίχνει την **απόδειξη ύπαρξης** **και** καμία άλλη `verified|superseded` δεν τη βεβαιώνει (ο Α έγκυρος → ο Β πλαστός ⇒ η μονάδα μένει). + ειδοποίηση κάθε απόφασης (σχήμα GBP: `security.ownershipLost` υποχρεωτικό, και προς τον προηγούμενο κάτοχο). |
 | 2026-10-02 | ✅ **«ΠΟΙΟΙ ΧΩΡΟΙ ΕΙΝΑΙ ΤΟΥ ΚΤΙΡΙΟΥ;» — ΕΚΛΕΙΣΕ (ADR-898 §20 · ADR-184 · ADR-247, Opus 5.5, απόφαση Giorgio «θέση ≠ ανάθεση»).** Δεν ήταν δύο κανόνες αλλά **τρεις** (πίνακας ποσοστών · αντικειμενική · καρτέλες `?buildingId=`) — η εγγραφή έλεγε ότι η καρτέλα χώρων καλεί το `getBuildingSpaces`, **ψευδές**: το καλεί μόνο ο πίνακας ποσοστών. Πλέον **ΕΝΑΣ** καθαρός επιλυτής (`lib/building-spaces/building-space-membership.ts`) με έγχυση αναγνώστη για client και Admin SDK· αναφορά χωρίς ποσό (τύπος χωρίς `value`)· μοναδικότητα σύνδεσης ανά **έργο**· αποσύνδεση παρακολουθήματος ⇒ 409. Μεταλλάξεις 8/8. |
 | 2026-10-02 | ✅ **ΦΡΟΥΡΟΙ ΠΕΛΑΤΗ ΣΕ ΣΚΕΤΟ `/login` — ΕΚΛΕΙΣΕ (ADR-848 §9 #3 · ADR-900 §3.7, Opus 5.5).** Οι τρεις (`o/[workspace]/dashboard` · `pending-approval` · `onboarding/organization`) ζητούν τον **ένα** `loginHrefForCurrentLocation()` — κρίθηκε ανά σελίδα: το onboarding το ανοίγει **email** του cron (`onboarding-reminder.job.ts`) ⇒ σκέτο `/login` ακύρωνε τον σύνδεσμο· το pending-approval αυτοδιορθώνεται ⇒ η επιστροφή δεν είναι ποτέ αδιέξοδο. Boy Scout: `oauth/authorize` είχε **δεύτερη υλοποίηση** του `?next=` (ωμά `'/login'`/`'next'`, χωρίς `safeReturnPath`) ⇒ `loginHref` · κουμπί του `AdminSetupPageContent` ⇒ με επιστροφή · ωμά «Σφάλμα» του onboarding ⇒ `onboarding.org.saveFailed`. 🔒 **Άγκυρα Ε** (`return-path.test.ts`): κλειστό σύνολο 4 δηλωμένων με λόγο (αποσύνδεση · αποχώρηση · σύνδεσμος μιας χρήσης · `/home`), αμφίδρομο, φράχτης σύμπαντος, μετάλλαξη 2 κόκκινα. Νέα εγγραφή για τους **συνδέσμους** «Σύνδεση». |
 | 2026-10-01 | ✅ **`PrimaryFilterBar` → `ui/scroll-rail` — ΕΚΛΕΙΣΕ (ADR-896 §7Α.6, Opus 5.5, απόφαση Giorgio «μία γραμμή με βελάκια»).** Κριτήρια μέσα στη λωρίδα, «Καθαρισμός» και «Περισσότερα» καρφωμένα έξω (Airbnb), καμία `md:` αναδίπλωση. Το ζωντανό περπάτημα βρήκε τρία σφάλματα στο **ίδιο** το `ScrollRail`, που αφορούσαν και το `/pro`: το κλικ σε μισοκρυμμένο τσιπ χανόταν, το ανοιχτό αναδυόμενο έμενε ορφανό στην κύλιση, και η επιστροφή εστίασης ακύρωνε την κύλιση του ανθρώπου. Διορθώθηκαν όλα, με άγκυρες Λ10–Λ13. Το στενό περπατήθηκε σε πραγματικό παράθυρο 735px (ελάχιστο του Chrome): CLS 0,0023, φύλλο φίλτρων εντάξει, και το κουμπί-εικονίδιο ισιώθηκε από 30px σε 34px (`self-stretch`). |

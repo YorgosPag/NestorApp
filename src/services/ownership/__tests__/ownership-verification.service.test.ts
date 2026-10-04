@@ -9,74 +9,22 @@
  * Υ7 ο ΑΦΜ δεν γράφεται ποτέ καθαρός.
  * Τα πρόσωπα και οι ΑΦΜ είναι συνθετικά.
  */
-import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
-import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import type { PdfSealVerdict } from '@/server/pdf-seal/pdf-seal.types';
-import type { OwnerProperty } from '@/types/owner-property';
-import { submitOwnershipVerification, type SubmitDeps } from '../ownership-verification.service';
+import {
+  asAdmin, deps, KAEK, linkedWorld, NOW, OWNER_B_LINE, OWNER_LINE, seedAccount, submit, TAX_A, TRUSTED_SEAL, units, world,
+} from './ownership-world.fixture';
 import { decideOwnershipReview } from '../ownership-verification-review.service';
 import { isVerifiedOwner } from '../verified-ownership.reader';
 
 jest.mock('server-only', () => ({}));
+jest.mock('@/server/notifications/notification-orchestrator', () => ({
+  dispatchNotification: jest.fn(async () => ({ success: true })),
+}));
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn(async () => 'audit') } }));
 jest.mock('@/config/trust/pdf-seal-trust', () => ({
   ...jest.requireActual('@/config/trust/pdf-seal-trust'),
   // Το μητρώο είναι κενό μέχρι το πρώτο πραγματικό ΠΚΑ· εδώ προσομοιώνεται η μέρα που θα γεμίσει.
   isExpectedSigner: (_kind: string, id: string | null) => id === 'VATEL-KTIMATOLOGIO-TEST',
 }));
-
-const NOW = '2026-10-02T12:00:00.000Z';
-const TAX_A = '123456709';
-const TAX_B = '123535891';
-const KAEK = '050681726003/0/1';
-
-process.env.OWNERSHIP_TAX_ID_HMAC_SECRET = 'test-secret-for-hmac';
-process.env.PUBLIC_UNIT_ID_HMAC_SECRET = 'test-secret-for-public-unit';
-
-const asAdmin = (fake: FakeFirestore) => fake as unknown as Parameters<typeof submitOwnershipVerification>[0];
-
-function seedAccount(fake: FakeFirestore, uid: string, givenName: string, familyName: string, vatNumber: string) {
-  fake.seed('users', uid, { givenName, familyName, email: `${uid}@example.test`, vatNumber });
-}
-
-function seedListing(fake: FakeFirestore, id: string, uid: string, overrides: Partial<OwnerProperty> = {}) {
-  fake.seed('owner_properties', id, { ...validOwnerProperty({ id, authorUserId: uid, ...overrides }), dossierId: `pdos_${id}` });
-  fake.seed('files_personal', `file_${id}`, {
-    userId: uid, entityType: 'property_dossier', entityId: `pdos_${id}`,
-    status: 'ready', contentType: 'application/pdf', storagePath: `x/${id}.pdf`,
-  });
-}
-
-const TRUSTED_SEAL: PdfSealVerdict = {
-  kind: 'valid',
-  signer: { commonName: 'TEST', organization: 'TEST', organizationIdentifier: 'VATEL-KTIMATOLOGIO-TEST', certificateSha256: 'aa' },
-  signedAt: '2026-09-30T08:00:00.000Z',
-  timestamped: true,
-  chainTrusted: true,
-};
-
-function deps(seal: PdfSealVerdict, beneficiaryLine: string): SubmitDeps {
-  return {
-    verifySeal: async () => seal,
-    readPdfText: async () => [`ΚΑΕΚ ${KAEK}\n${beneficiaryLine}`],
-    readBytes: async () => ({ size: 10, read: async () => Buffer.from('%PDF-synthetic') }),
-    nowIso: NOW,
-  };
-}
-
-const OWNER_LINE = `ΔΙΚΑΙΟΥΧΟΣ: ΠΑΠΑΔΟΠΟΥΛΟΣ ΚΩΝΣΤΑΝΤΙΝΟΣ ΑΦΜ: ${TAX_A}`;
-
-function world(): FakeFirestore {
-  const fake = new FakeFirestore();
-  seedAccount(fake, 'user-1', 'Κωνσταντίνος', 'Παπαδόπουλος', TAX_A);
-  seedAccount(fake, 'user-2', 'Νίκος', 'Γεωργίου', TAX_B);
-  seedListing(fake, 'ownp_a', 'user-1');
-  seedListing(fake, 'ownp_b', 'user-2');
-  return fake;
-}
-
-const submit = (fake: FakeFirestore, uid: string, ownerPropertyId: string, d: SubmitDeps) =>
-  submitOwnershipVerification(asAdmin(fake), { uid, ownerPropertyId, fileId: `file_${ownerPropertyId}` }, d);
 
 describe('Υ1 — ευτυχής δρόμος', () => {
   it('σφραγίδα επιβεβαιωμένη + ίδιος ΑΦΜ + ίδιο όνομα ⇒ verified, και οι δύο κλειδαριές γράφονται', async () => {
@@ -92,7 +40,7 @@ describe('Υ2 — ένας ΚΑΕΚ = ένας επαληθευμένος λογ
   it('🔴 ο ίδιος ΚΑΕΚ από δεύτερο λογαριασμό ⇒ pending-review [kaek-claimed-elsewhere], ΟΧΙ δεύτερος κάτοχος', async () => {
     const fake = world();
     await submit(fake, 'user-1', 'ownp_a', deps(TRUSTED_SEAL, OWNER_LINE));
-    const second = await submit(fake, 'user-2', 'ownp_b', deps(TRUSTED_SEAL, `ΔΙΚΑΙΟΥΧΟΣ: ΓΕΩΡΓΙΟΥ ΝΙΚΟΣ ΑΦΜ: ${TAX_B}`));
+    const second = await submit(fake, 'user-2', 'ownp_b', deps(TRUSTED_SEAL, OWNER_B_LINE));
     expect(second).toMatchObject({ kind: 'judged', view: { status: 'pending-review', reasons: ['kaek-claimed-elsewhere'] } });
     expect(Object.values(fake.getAllDocs('ownership_kaek_claims'))[0]).toMatchObject({ uid: 'user-1' });
   });
@@ -149,26 +97,6 @@ describe('Υ7 — ελαχιστοποίηση', () => {
 });
 
 // ── Υ8 — η ΔΗΜΟΣΙΑ ΜΟΝΑΔΑ (ADR-900 §8 #2, 2β.4 · απόφαση Ε1) ─────────────────────────────────────────────
-const linkedTo = (buildingId: string | null, floor = 3): Partial<OwnerProperty> => ({
-  floor,
-  place: {
-    kind: 'declared',
-    point: { lat: 40.63, lng: 22.95 },
-    label: 'Εγνατίας 147, Θεσσαλονίκη',
-    accuracy: 'exact',
-    link: { landId: 'land_1', buildingId },
-  },
-});
-
-function linkedWorld(buildingId: string | null = 'pbld_1'): FakeFirestore {
-  const fake = world();
-  seedListing(fake, 'ownp_a', 'user-1', linkedTo(buildingId));
-  seedListing(fake, 'ownp_b', 'user-2', linkedTo(buildingId, 5));
-  return fake;
-}
-
-const units = (fake: FakeFirestore) => fake.getAllDocs('public_units');
-
 describe('Υ8 — η δημόσια μονάδα γεννιέται ΜΟΝΟ από επαληθευμένο ΚΑΕΚ, μέσα στη συναλλαγή του κριτή', () => {
   it('verified + δεσμός κτιρίου ⇒ ΜΙΑ `punit_*` με κτίριο + στάθμη (declared) + Κτηματολόγιο', async () => {
     const fake = linkedWorld();
@@ -209,7 +137,7 @@ describe('Υ8 — η δημόσια μονάδα γεννιέται ΜΟΝΟ α�
   it('🔑 κύκλος UPRN: νέος κάτοχος (ουρά → έγκριση ⇒ superseded) = ΙΔΙΑ μονάδα· η ισόβαθμη δήλωση ΔΕΝ αλλάζει τη στάθμη', async () => {
     const fake = linkedWorld();
     await submit(fake, 'user-1', 'ownp_a', deps(TRUSTED_SEAL, OWNER_LINE));
-    const second = await submit(fake, 'user-2', 'ownp_b', deps(TRUSTED_SEAL, `ΔΙΚΑΙΟΥΧΟΣ: ΓΕΩΡΓΙΟΥ ΝΙΚΟΣ ΑΦΜ: ${TAX_B}`));
+    const second = await submit(fake, 'user-2', 'ownp_b', deps(TRUSTED_SEAL, OWNER_B_LINE));
     const pendingId = second.kind === 'judged' ? second.view.id : '';
     const LATER = '2026-10-05T09:00:00.000Z';
     await decideOwnershipReview(asAdmin(fake), {

@@ -36,6 +36,7 @@ import { readOwnerIdentity } from '@/services/mandate/mandate-owner-identity';
 import { protectTaxId, taxIdHmac } from '@/server/ownership/tax-id-protection';
 import { downloadPka, sealSummaryOf, type PkaBytesReader } from './ownership-verification-inputs';
 import { readClaimLocks, writeClaimLocks } from './ownership-claim-locks';
+import { announceOwnershipDecision, announceSupersededOwnership } from './ownership-decision-notifier.service';
 import { recordVerificationAudit, viewOfVerification } from './ownership-verification-record';
 import type { PdfSealVerifier } from '@/server/pdf-seal/pdf-seal.types';
 import type { OwnershipVerification, OwnershipVerificationView } from '@/types/ownership-verification';
@@ -106,6 +107,12 @@ function recordOf(
   };
 }
 
+/** Ό,τι γράφτηκε — και ποια απόδειξη έχασε τον ΚΑΕΚ (για να το μάθει ο κάτοχός της, ADR-900 §8 #2 Β3). */
+interface JudgedRecord {
+  readonly record: OwnershipVerification;
+  readonly supersededVerificationId: string | null;
+}
+
 /** Κρίση + κλειδαριές + εγγραφή — ΜΙΑ συναλλαγή. */
 async function commitJudgement(
   db: AdminFirestore,
@@ -113,7 +120,7 @@ async function commitJudgement(
   claimant: OwnershipVerification['claimant'],
   evidence: Evidence,
   nowIso: string,
-): Promise<OwnershipVerification> {
+): Promise<JudgedRecord> {
   const id = generateOwnershipVerificationId();
   const singleKaek = evidence.kaekCodes.length === 1 ? evidence.kaekCodes[0] : null;
 
@@ -131,8 +138,8 @@ async function commitJudgement(
     });
     const record = recordOf(id, input, claimant, evidence, verdict, nowIso);
     tx.set(db.collection(COLLECTIONS.OWNERSHIP_VERIFICATIONS).doc(id), record);
-    if (record.status === 'verified') writeClaimLocks(db, tx, locks, record, claimant.taxId.last3);
-    return record;
+    const written = record.status === 'verified' ? writeClaimLocks(db, tx, locks, record, claimant.taxId.last3) : null;
+    return { record, supersededVerificationId: written?.supersededVerificationId ?? null };
   });
 }
 
@@ -167,7 +174,7 @@ export async function submitOwnershipVerification(
 
     const [sealVerdict, pages] = await Promise.all([deps.verifySeal(pka.bytes), deps.readPdfText(pka.bytes)]);
     const reading = readPkaText(pages);
-    const record = await commitJudgement(db, input, claimant, {
+    const { record, supersededVerificationId } = await commitJudgement(db, input, claimant, {
       fileId: input.fileId,
       digest: pka.digest,
       kaekCodes: reading.kaekCodes,
@@ -176,6 +183,8 @@ export async function submitOwnershipVerification(
     }, deps.nowIso);
 
     await recordVerificationAudit(record, null);
+    await announceOwnershipDecision(db, record);
+    await announceSupersededOwnership(db, supersededVerificationId);
     return { kind: 'judged', view: viewOfVerification(record) };
   } catch (error) {
     logger.error('Η επαλήθευση κατοχής δεν ολοκληρώθηκε', {

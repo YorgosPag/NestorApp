@@ -13,11 +13,14 @@
 
 import React from 'react';
 
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PRIVATE_PROFILE_ROUTE } from '@/lib/routes/accountRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import {
   useOwnershipVerification,
+  type OwnershipReleaseState,
   type OwnershipSubmitState,
 } from '@/hooks/owner-property/useOwnershipVerification';
 import type { OwnershipVerificationView } from '@/types/ownership-verification';
@@ -25,6 +28,8 @@ import {
   OWNERSHIP_KEYS,
   OWNERSHIP_NS,
   REASON_KEYS,
+  REVOCATION_REASON_KEYS,
+  REVOKE_ERROR_KEYS,
   STATUS_KEYS,
   SUBMIT_ERROR_KEYS,
 } from './ownership-verification-labels';
@@ -74,6 +79,11 @@ function VerificationStatus({ verification }: { readonly verification: Ownership
       <p className="m-0 text-sm text-muted-foreground">
         {t(STATUS_KEYS[verification.status].detail, { kaek: verification.kaek ?? '' })}
       </p>
+      {verification.status === 'revoked' && verification.revocationReason !== null && (
+        <p className="m-0 text-sm text-muted-foreground">
+          {t(OWNERSHIP_KEYS.revocationReasonLabel, { reason: t(REVOCATION_REASON_KEYS[verification.revocationReason]) })}
+        </p>
+      )}
       {verification.status === 'pending-review' && verification.reasons.length > 0 && (
         <>
           <p className="m-0 text-sm text-muted-foreground">{t(OWNERSHIP_KEYS.reasonsHeading)}</p>
@@ -101,9 +111,45 @@ function SubmitFailure({ submit }: { readonly submit: OwnershipSubmitState }): R
   );
 }
 
+/**
+ * **Αποδέσμευση** (σχήμα Zillow «unclaim», ADR-900 §8 #2 Β3) — μόνο για ενεργή απόδειξη, με επιβεβαίωση από το
+ * κεντρικό `ConfirmDialog`. Η δημόσια μονάδα **μένει** (το σπίτι υπάρχει)· φεύγει μόνο ο δεσμός με τον λογαριασμό.
+ */
+function ReleaseOwnership({ release, onRelease }: {
+  readonly release: OwnershipReleaseState;
+  readonly onRelease: () => Promise<void>;
+}): React.ReactElement {
+  const { t } = useTranslation([OWNERSHIP_NS]);
+  const [open, setOpen] = React.useState(false);
+  const releasing = release.state === 'releasing';
+  return (
+    <>
+      <Button type="button" variant="outline" size="sm" disabled={releasing} onClick={() => setOpen(true)} className="self-start">
+        {t(releasing ? OWNERSHIP_KEYS.releasing : OWNERSHIP_KEYS.release)}
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        variant="destructive"
+        title={t(OWNERSHIP_KEYS.releaseConfirmTitle)}
+        description={t(OWNERSHIP_KEYS.releaseConfirmBody)}
+        confirmText={t(OWNERSHIP_KEYS.release)}
+        loading={releasing}
+        onConfirm={async () => {
+          setOpen(false);
+          await onRelease();
+        }}
+      />
+      {release.state === 'failed' && (
+        <p role="alert" className="m-0 text-sm text-foreground">{t(REVOKE_ERROR_KEYS[release.code])}</p>
+      )}
+    </>
+  );
+}
+
 export function OwnershipVerificationPanel({ ownerPropertyId, dossier }: OwnershipVerificationPanelProps): React.ReactElement {
   const { t } = useTranslation([OWNERSHIP_NS]);
-  const { status, submit, submitCertificate } = useOwnershipVerification(ownerPropertyId, dossier);
+  const { status, submit, submitCertificate, release, releaseOwnership } = useOwnershipVerification(ownerPropertyId, dossier);
   const headingId = React.useId();
   const verification = status.state === 'ready' ? status.verification : null;
   const canSubmit = dossier !== null && status.state === 'ready' && verification?.status !== 'verified'
@@ -130,6 +176,9 @@ export function OwnershipVerificationPanel({ ownerPropertyId, dossier }: Ownersh
         />
       )}
       <SubmitFailure submit={submit} />
+      {(verification?.status === 'verified' || release.state !== 'idle') && (
+        <ReleaseOwnership release={release} onRelease={releaseOwnership} />
+      )}
       <p className="m-0 text-xs text-muted-foreground">{t(OWNERSHIP_KEYS.privacy)}</p>
     </section>
   );
