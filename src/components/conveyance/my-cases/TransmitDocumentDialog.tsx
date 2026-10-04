@@ -10,7 +10,8 @@
  *
  * 🏆 Πού ξεπερνάμε το Aconex/ACC: **κανένα** πεδίο παραληπτών. Ο διάλογος **λέει** πριν την αποστολή ποιος θα το δει,
  *    και αυτό το κείμενο το παράγει ο **ρόλος** — ο ίδιος κανόνας που επιβάλλει ο server (Α23). Λάθος αποστολή της
- *    έκθεσης του αγοραστή στον πωλητή είναι δομικά αδύνατη, όχι απλώς απίθανη.
+ *    έκθεσης του αγοραστή στον πωλητή είναι δομικά αδύνατη, όχι απλώς απίθανη. Π2: έγγραφο **εκ μέρους** του εντολέα
+ *    ⇒ το κείμενο είναι η κλάση ιδιωτικότητας της ενότητας (`sectionHints`), όπως και το ακροατήριο (`sentOnBehalf`).
  *
  * Φορτώνεται **δυναμικά** (`next/dynamic`) από τον κατάλογο: χρειάζεται μόνο στο κλικ και φέρνει τη ροή ανεβάσματος —
  * όριο στην κλειστότητα του route slice (ADR-744 · CHECK 3.34), όχι μεγαλύτερο ταβάνι.
@@ -30,6 +31,7 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import type { UploadEntryPoint } from '@/config/upload-entry-points/types';
 import { useCaseDrafts } from '@/hooks/useCaseDrafts';
+import { sentOnBehalf } from '@/lib/conveyance/contribution-audience';
 import { contributionEntryPointIds } from '@/lib/conveyance/contribution-policy';
 import { formatDate } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
@@ -110,7 +112,10 @@ export default function TransmitDocumentDialog(props: TransmitDocumentDialogProp
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('transmittal.dialog.title', { item: t(row.item.labelKey) })}</DialogTitle>
-          <DialogDescription>{t(`transmittal.audience.${props.role}`)}</DialogDescription>
+          {/* Π2 — ίδια κρίση με τον server: έγγραφο εντολέα πηγαίνει στην κλάση της ενότητας (`visibleTo`), όχι στην πλευρά. */}
+          <DialogDescription>
+            {sentOnBehalf(row.item) ? t(`sectionHints.${row.section}`) : t(`transmittal.audience.${props.role}`)}
+          </DialogDescription>
         </DialogHeader>
         {/* `key` ⇒ άλλη γραμμή = νέα επιλογή, ποτέ η προηγούμενη. */}
         <TransmitForm key={row.itemId} {...props} row={row} uid={user.uid} entryPoint={entryPoint} />
