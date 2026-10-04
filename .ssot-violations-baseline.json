@@ -3,8 +3,8 @@
     "description": "SSoT centralized-module violations baseline (ratchet, ανά αρχείο ΚΑΙ module)",
     "schema": 2,
     "generated": "2026-10-01T21:36:32Z",
-    "totalViolations": 119,
-    "totalFiles": 93,
+    "totalViolations": 118,
+    "totalFiles": 92,
     "rule": "Κανένα module δεν ανεβαίνει σε κανένα αρχείο. Νέο αρχείο = μηδενική ανοχή.",
     "registry": ".ssot-registry.json",
     "engine": "scripts/lib/ssot/scan.js (ΜΙΑ μηχανή — ADR-749)"
@@ -201,9 +201,6 @@
     },
     "src/subapps/dxf-viewer/floorplan-background/hooks/useFloorplanBackgroundPersistence.ts": {
       "file-display-url": 1
-    },
-    "src/subapps/dxf-viewer/floorplan-background/providers/ImageProvider.ts": {
-      "image-dimensions": 1
     },
     "src/subapps/dxf-viewer/hooks/dimensions/useDimensionCreate.ts": {
       "escape-command-bus": 1
