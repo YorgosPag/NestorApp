@@ -248,4 +248,18 @@ describe('📧 Ε — ο πρόλογος συμπληρώνει το θέμα, 
     expect(preheaderOf(html)).not.toContain('<script>');
     expect(html).not.toContain('<script>alert(1)</script>');
   });
+
+  it('Ε6 🔴 — ο πρόλογος κρύβεται ΚΑΙ στο Outlook (μηχανή Word: αγνοεί το display:none)', () => {
+    // Χωρίς `mso-hide:all` το Outlook υπολογιστή δείχνει τον πρόλογο ορατό ⇒ στη σύνοψη
+    // κάθε τίτλος εμφανίζεται ΔΥΟ φορές (πρόλογος + λίστα). Ίδιο έγγραφο και στο μεμονωμένο.
+    const hiddenStyleOf = (html: string) => html.match(/<div style="(display:none;[^"]*)">/)?.[1] ?? '';
+
+    for (const html of [
+      renderDigestHtml([MATCH, INTEREST], 'el', 'x', LINKS),
+      renderSoloHtml(MATCH, 'el', 'x', LINKS),
+    ]) {
+      expect(hiddenStyleOf(html)).toContain('mso-hide:all');
+      expect(hiddenStyleOf(html)).toContain('max-height:0');
+    }
+  });
 });

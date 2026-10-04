@@ -208,6 +208,22 @@ function footerHtml(wording: EmailWording, manage: ManageLink | null): string {
   return parts.join('');
 }
 
+/**
+ * **Πώς κρύβεται ο πρόλογος — σε ΚΑΘΕ πρόγραμμα, όχι μόνο στο Gmail.**
+ *
+ * 🔴 Ως 2026-10-05 είχε μόνο `display:none;max-height:0;overflow:hidden;opacity:0`. Το
+ * Outlook για υπολογιστή αποδίδει με τη μηχανή του Word, που **αγνοεί** το `display:none`:
+ * ο πρόλογος εμφανιζόταν **ορατός** πάνω από την κάρτα — και αφού στη σύνοψη ο πρόλογος
+ * είναι οι τίτλοι (`digestPreheader`), ο αναγνώστης έβλεπε **κάθε τίτλο δύο φορές**.
+ *
+ * 🏆 Η στοίβα κανόνων είναι η καθιερωμένη (Litmus · Email on Acid): κάθε πρόγραμμα σέβεται
+ * άλλον κανόνα — `display:none` τα περισσότερα, `max-height:0;overflow:hidden` το Gmail,
+ * `mso-hide:all` το Outlook· `font-size/line-height:1px` + `max-width:0` ώστε ακόμη και όπου
+ * διαρρεύσει να μην πιάνει χώρο. ⚠️ Το `display:none` μένει **πρώτο**: το διαβάζει η άγκυρα.
+ */
+const PREHEADER_STYLE =
+  'display:none;mso-hide:all;visibility:hidden;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0;';
+
 /** Το έγγραφο: `lang`, `color-scheme`, κρυφό preheader, μία κάρτα, υποσέλιδο. */
 function documentHtml(parts: {
   readonly language: HumanLanguage;
@@ -222,7 +238,7 @@ function documentHtml(parts: {
     '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">',
     `<title>${escapeHtml(parts.title)}</title></head>`,
     `<body style="margin:0;padding:0;background-color:${BRAND.bgLight};">`,
-    `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(parts.preheader)}</div>`,
+    `<div style="${PREHEADER_STYLE}">${escapeHtml(parts.preheader)}</div>`,
     '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center" style="padding:24px 12px;">',
     `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:${BRAND.white};border:1px solid ${BRAND.border};border-radius:8px;">`,
     `<tr><td style="padding:24px;font-family:${FONT};font-size:15px;line-height:1.5;color:${BRAND.gray};">${parts.bodyHtml}</td></tr>`,

@@ -426,4 +426,13 @@ GitHub Notifications (`subject.url` = αναφορά οντότητας) · Slac
   `seen: true`, ενώ η καμπάνα διαβάζει `delivery.state` ⇒ ειδοποίηση ανοιγμένη από email μένει «αδιάβαστη» στην
   καμπάνα· και υπάρχουν **τρεις** ορισμοί `DeliveryState` (`config/notification-events.ts` με `pending/…/read`).
   Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
+- **2026-10-05** — **Ο πρόλογος (Β4, `c9ac4cb0`) κρύβεται και στο Outlook.** Το κρυφό `div` είχε μόνο
+  `display:none;max-height:0;overflow:hidden;opacity:0`· το Outlook υπολογιστή (μηχανή Word) **αγνοεί** το `display:none`
+  ⇒ ο πρόλογος φαινόταν πάνω από την κάρτα, και αφού στη σύνοψη ο πρόλογος **είναι οι τίτλοι**, κάθε τίτλος εμφανιζόταν
+  **δύο φορές**. Τώρα `PREHEADER_STYLE` στο `notification-email-render.ts` με την καθιερωμένη στοίβα (Litmus · Email on
+  Acid): `mso-hide:all` + `visibility:hidden` + `font-size/line-height:1px` + `max-width:0`. Άγκυρα **Ε6** (σύνοψη +
+  μεμονωμένο), μετάλλαξη «χωρίς `mso-hide:all`» ⇒ 1/1 κόκκινο. 🔶 **Εύρημα**: οι άγκυρες **Η1/Η3** του
+  `email-digest.test.ts` (ADR-777 §8.54, 2026-09-05) μετρούν τον τίτλο σε **όλο** το HTML· από το `c9ac4cb0` ο τίτλος
+  ζει **και** στον κρυφό πρόλογο, άρα είναι κόκκινες από τότε (το commit έτρεξε μόνο τη σουίτα απόδοσης). Ορατά ο τίτλος
+  εμφανίζεται **μία** φορά — η μέτρησή τους οφείλει να είναι το **ορατό** σώμα· εκκρεμεί απόφαση Giorgio.
 
