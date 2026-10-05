@@ -280,9 +280,11 @@ export const lazyRoutesAdr294 = {
   ),
 
   // ADR-900 §3.8 — η ουρά ελέγχου επαληθεύσεων κατοχής (εργαλείο παρόχου, μόνο super_admin).
+  // Οι καρτέλες βάφονται από το `property-market` στο πρώτο καρέ: μετρημένο ζωντανά 2026-10-05, ωμά κλειδιά
+  // 560ms → 2.586ms. Το `admin` ταξιδεύει ολόκληρο στο κέλυφος — δεν δηλώνεται.
   AdminOwnershipVerifications: createLazyRoute(
     () => import('@/components/admin/pages/OwnershipVerificationsPageContent').then(mod => ({ default: mod.OwnershipVerificationsPageContent })),
-    { loadingType: 'dashboard', ssr: false }
+    { loadingType: 'dashboard', ssr: false, namespaces: ['property-market'] }
   ),
 
   AdminDatabaseUpdate: createLazyRoute(
