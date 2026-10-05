@@ -33,6 +33,8 @@
         "deliveryDesc": "Final inspection and building handover"
       },
       "milestone": {
+        "edit": "Edit milestone",
+        "delete": "Delete milestone",
         "progressLabel": "Milestone progress",
         "nextSteps": "Next steps:",
         "completedAt": "Completed on {date}"

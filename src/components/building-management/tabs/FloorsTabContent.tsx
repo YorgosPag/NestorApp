@@ -13,10 +13,12 @@ import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { ToggleButton } from '@/components/ui/toggle-button';
+import { IconButton } from '@/components/ui/icon-button';
+import { BuildingSpaceEditActions } from '../shared/BuildingSpaceActions';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints, Building2 } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints, Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -258,18 +260,15 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                     >
                       <td className="px-2 py-2">
                         <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFloorExpand(floor.id)}>
-                                {isExpanded
-                                  ? <ChevronDown className="h-4 w-4 text-primary" />
-                                  : <ChevronRight className="h-4 w-4 text-primary/70" />}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">
-                              {isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.expandFloor')}
-                            </TooltipContent>
-                          </Tooltip>
+                          <IconButton
+                            label={isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.expandFloor')}
+                            tooltipSide="right"
+                            onClick={() => toggleFloorExpand(floor.id)}
+                          >
+                            {isExpanded
+                              ? <ChevronDown className="h-4 w-4 text-primary" />
+                              : <ChevronRight className="h-4 w-4 text-primary/70" />}
+                          </IconButton>
                         </TooltipProvider>
                       </td>
 
@@ -302,12 +301,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                           </td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
-                            <nav className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
-                                {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />}
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}><X className="h-3.5 w-3.5" /></Button>
-                            </nav>
+                            <BuildingSpaceEditActions onSave={handleSaveEdit} onCancel={cancelEdit} saving={saving} canSave={Boolean(editName.trim())} />
                           </td>
                         </>
                       ) : (
@@ -354,6 +348,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                                       variant="ghost"
                                       size="icon"
                                       className="h-7 w-7"
+                                      aria-label={t('tabs.floors.uploadFloorplan')}
                                       onClick={() => toggleFloorExpand(floor.id)}
                                     >
                                       <Map className="h-3.5 w-3.5" />
@@ -365,22 +360,17 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                                 </Tooltip>
                               </TooltipProvider>
                               <TooltipProvider delayDuration={300}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(floor)}><Pencil className="h-3.5 w-3.5" /></Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>{t('tabs.floors.editFloor')}</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider delayDuration={300}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(floor)} disabled={deletingId === floor.id}>
-                                      {deletingId === floor.id ? <Spinner size="small" color="inherit" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>{t('tabs.floors.deleteFloor')}</TooltipContent>
-                                </Tooltip>
+                                <IconButton label={t('tabs.floors.editFloor')} onClick={() => startEdit(floor)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </IconButton>
+                                <IconButton
+                                  label={t('tabs.floors.deleteFloor')}
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handleDelete(floor)}
+                                  busy={deletingId === floor.id}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </IconButton>
                               </TooltipProvider>
                             </nav>
                           </td>

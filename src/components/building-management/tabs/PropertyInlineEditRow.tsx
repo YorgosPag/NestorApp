@@ -11,9 +11,7 @@
  */
 'use client';
 
-import { Check, X } from 'lucide-react';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TableCell } from '@/components/ui/table';
 import {
@@ -23,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type { TFunction } from 'i18next';
 import {
   UNIT_TYPES_FOR_FILTER,
@@ -33,6 +30,7 @@ import {
 } from './property-tab-constants';
 import type { Property } from '@/types/property';
 import { SpacePriceCell } from '../shared/buildingSpacePriceColumn';
+import { BuildingSpaceEditActions } from '../shared/BuildingSpaceActions';
 import type { usePropertyInlineEdit } from './usePropertyInlineEdit';
 
 interface PropertyInlineEditRowProps {
@@ -116,30 +114,12 @@ export function PropertyInlineEditRow({ edit, tUnits, unit }: PropertyInlineEdit
         </Select>
       </TableCell>
       <TableCell>
-        <nav className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={edit.handleSaveEdit}
-            disabled={edit.saving || !edit.editName.trim()}
-          >
-            {edit.saving ? (
-              <Spinner size="small" color="inherit" />
-            ) : (
-              <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={edit.cancelEdit}
-            disabled={edit.saving}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </nav>
+        <BuildingSpaceEditActions
+          onSave={edit.handleSaveEdit}
+          onCancel={edit.cancelEdit}
+          saving={edit.saving}
+          canSave={Boolean(edit.editName.trim())}
+        />
       </TableCell>
     </>
   );

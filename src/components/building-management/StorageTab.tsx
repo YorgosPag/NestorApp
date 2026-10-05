@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Warehouse, Plus, Link2, Check, X } from 'lucide-react';
+import { Warehouse, Plus, Link2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { useStorageTabFilters } from './StorageTab/StorageTabFilters';
@@ -40,12 +40,11 @@ import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceEditActions, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from './shared';
 import { BuildingSpaceRelationsPanel } from './shared/BuildingSpaceRelationsPanel';
 import { BuildingSpaceTabError } from './shared/BuildingSpaceTabStatus';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { getStatusColor } from '@/lib/design-system';
 
 const STORAGE_TYPES: StorageType[] = ['storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse'];
 
@@ -267,14 +266,7 @@ export function StorageTab({ building }: StorageTabProps) {
                   <OperationalStatusSelect value={s.editStatus} onValueChange={s.setEditStatus} disabled={s.saving} />
                 </TableCell>
                 <TableCell>
-                  <nav className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={s.handleSaveEdit} disabled={s.saving}>
-                      {s.saving ? <Spinner size="small" color="inherit" /> : <Check className={`h-3.5 w-3.5 ${getStatusColor('available', 'text')}`} />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={s.cancelEdit} disabled={s.saving}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </nav>
+                  <BuildingSpaceEditActions onSave={s.handleSaveEdit} onCancel={s.cancelEdit} saving={s.saving} />
                 </TableCell>
               </>
             )}

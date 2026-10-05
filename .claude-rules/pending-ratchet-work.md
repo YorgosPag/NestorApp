@@ -2,6 +2,19 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **05/10 — ΚΟΥΜΠΙΑ-ΕΙΚΟΝΙΔΙΑ ΧΩΡΙΣ ΠΡΟΣΒΑΣΙΜΟ ΟΝΟΜΑ** *(WCAG 4.1.2 · ADR-898 §21.6 Ε10)*
+
+  `<Button size="icon">` με μόνο εικονίδιο (+ ίσως tooltip) = ανώνυμο κουμπί: το tooltip **δεν** είναι όνομα. Μετρημένο
+  05/10: 46 σε 22 αρχεία. Έκλεισε η οικογένεια `src/components/building-management` (άγκυρα Κ1 στο
+  `shared/__tests__/building-space-actions.a11y.test.tsx`). **Μένουν 21 σε 13 αρχεία**: `crm/calendar/CalendarSidebar` (2)
+  · `procurement/PurchaseOrderItemsTable` (2) · `reports/sections/cash-flow/CashFlowSettings` (2) ·
+  `sales/legal/ProfessionalsCard` (2) · `sales/payments/InstallmentSchedule` (1) · `settings/company/BOQCategoriesTab` (2)
+  · `shared/files/VersionHistory` (1) · `subapps/accounting/**` (9 σε 6 αρχεία) — και **8 στο `dxf-viewer`** (3 αρχεία).
+  Θεραπεία: `@/components/ui/icon-button` (`IconButton`, υποχρεωτικό `label` = όνομα + tooltip)· κλειδιά σε el + en.
+  Όταν μηδενίσουν: η άγκυρα Κ1 απλώνεται σε όλο το `src/` (αλλαγή του `SCOPE`) και το όνομα μπορεί να γίνει απαίτηση
+  **τύπου** στο `Button` για `size="icon" | "icon-sm"`. ⚠️ Ο ανιχνευτής είναι του test (opening tag, χωρίς `aria-label`
+  / `aria-labelledby`)· δεν βλέπει κουμπιά με `{...spread}` ούτε εγγενή `<button>`.
+
 - 🟡 **05/10 — ΤΟ `PATCH /api/floors` ΔΕΝ ΓΡΑΦΕΙ ΙΣΤΟΡΙΚΟ** *(CHECK 3.17 · ADR-195)*
 
   Το βρήκε η διεύρυνση του CHECK 3.17 σε γραφές μέσω `withVersionCheck` (05/10): το `handleUpdateFloor` στο

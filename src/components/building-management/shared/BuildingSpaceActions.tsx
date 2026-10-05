@@ -1,23 +1,29 @@
 /**
- * BuildingSpaceActions — Centralized 4-icon action bar
+ * BuildingSpaceActions — Centralized row action bars
  *
- * Used by all building space tabs (Units, Parking, Storage)
+ * Used by all building space tabs (Units, Parking, Storage, Floors)
  * in both Table and Card views.
  *
- * Icons: Eye (view), Pencil (edit), Unlink2 (unlink), Trash2 (delete)
+ * - `BuildingSpaceActions`: Eye (view), Pencil (edit), Unlink2 (unlink), Trash2 (delete)
+ * - `BuildingSpaceEditActions`: Check (save), X (cancel) — the inline-edit row
+ *
+ * ♿ Every button goes through `IconButton`: the accessible name is mandatory and is the
+ * same string as the tooltip (ADR-898 §21.6 Ε10, WCAG 4.1.2).
  *
  * @module components/building-management/shared/BuildingSpaceActions
  */
 
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Check, Eye, Pencil, Unlink2, Trash2, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+
+const TOOLTIP_GROUP_DELAY_MS = 300;
+const EDIT_ICON_CLASS = 'h-3.5 w-3.5';
 
 // ============================================================================
 // TYPES
@@ -38,8 +44,17 @@ interface BuildingSpaceActionsProps {
   isDeleting?: boolean;
 }
 
+interface BuildingSpaceEditActionsProps {
+  onSave: () => void;
+  onCancel: () => void;
+  /** The save is in flight: spinner on save, both buttons disabled */
+  saving: boolean;
+  /** `false` blocks the save (e.g. required field empty). Default `true`. */
+  canSave?: boolean;
+}
+
 // ============================================================================
-// COMPONENT
+// COMPONENTS
 // ============================================================================
 
 export function BuildingSpaceActions({
@@ -51,77 +66,67 @@ export function BuildingSpaceActions({
   isDeleting = false,
 }: BuildingSpaceActionsProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation(['building-storage']);
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <nav className="flex justify-end gap-1">
+    <TooltipProvider delayDuration={TOOLTIP_GROUP_DELAY_MS}>
+      <div role="group" className="flex justify-end gap-1" aria-label={t('spaceActions.actions')}>
         {onView && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={onView}
-              >
-                <Eye className={iconSizes.xs} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('spaceActions.view')}</TooltipContent>
-          </Tooltip>
+          <IconButton label={t('spaceActions.view')} onClick={onView}>
+            <Eye className={iconSizes.xs} />
+          </IconButton>
         )}
 
         {onEdit && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={onEdit}
-              >
-                <Pencil className={iconSizes.xs} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('spaceActions.edit')}</TooltipContent>
-          </Tooltip>
+          <IconButton label={t('spaceActions.edit')} onClick={onEdit}>
+            <Pencil className={iconSizes.xs} />
+          </IconButton>
         )}
 
         {onUnlink && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-[hsl(var(--text-warning))] hover:text-[hsl(var(--text-warning))]"
-                onClick={onUnlink}
-                disabled={isUnlinking}
-              >
-                {isUnlinking ? <Spinner size="small" color="inherit" /> : <Unlink2 className={iconSizes.xs} />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('spaceActions.unlink')}</TooltipContent>
-          </Tooltip>
+          <IconButton
+            label={t('spaceActions.unlink')}
+            className="text-[hsl(var(--text-warning))] hover:text-[hsl(var(--text-warning))]"
+            onClick={onUnlink}
+            busy={isUnlinking}
+          >
+            <Unlink2 className={iconSizes.xs} />
+          </IconButton>
         )}
 
         {onDelete && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
-                onClick={onDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? <Spinner size="small" color="inherit" /> : <Trash2 className={iconSizes.xs} />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('spaceActions.delete')}</TooltipContent>
-          </Tooltip>
+          <IconButton
+            label={t('spaceActions.delete')}
+            className="text-destructive hover:text-destructive"
+            onClick={onDelete}
+            busy={isDeleting}
+          >
+            <Trash2 className={iconSizes.xs} />
+          </IconButton>
         )}
-      </nav>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+export function BuildingSpaceEditActions({
+  onSave,
+  onCancel,
+  saving,
+  canSave = true,
+}: BuildingSpaceEditActionsProps) {
+  const { t } = useTranslation(['building-storage']);
+
+  return (
+    <TooltipProvider delayDuration={TOOLTIP_GROUP_DELAY_MS}>
+      <div role="group" className="flex justify-end gap-1" aria-label={t('spaceActions.actions')}>
+        <IconButton label={t('spaceActions.save')} onClick={onSave} busy={saving} disabled={!canSave}>
+          <Check className={`${EDIT_ICON_CLASS} text-[hsl(var(--text-success))]`} />
+        </IconButton>
+        <IconButton label={t('spaceActions.cancel')} onClick={onCancel} disabled={saving}>
+          <X className={EDIT_ICON_CLASS} />
+        </IconButton>
+      </div>
     </TooltipProvider>
   );
 }

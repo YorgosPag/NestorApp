@@ -25,6 +25,7 @@ import {
 import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
 import { FloorSelect } from '@/components/shared/FloorSelectField';
 import { useParkingTabState } from './useParkingTabState';
+import { BuildingSpaceEditActions } from '../shared/BuildingSpaceActions';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { OptionSelectField, type SelectOption } from '@/components/shared/space-info/OptionSelectField';
 
@@ -183,14 +184,12 @@ export function ParkingEditRow({ state, t }: ParkingEditRowProps) {
         <OperationalStatusSelect value={state.editStatus} onValueChange={state.setEditStatus} disabled={state.saving} />
       </TableCell>
       <TableCell>
-        <nav className="flex justify-end gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={state.handleSaveEdit} disabled={state.saving || !state.editNumber.trim()}>
-            {state.saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={state.cancelEdit} disabled={state.saving}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </nav>
+        <BuildingSpaceEditActions
+          onSave={state.handleSaveEdit}
+          onCancel={state.cancelEdit}
+          saving={state.saving}
+          canSave={Boolean(state.editNumber.trim())}
+        />
       </TableCell>
     </>
   );

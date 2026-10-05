@@ -147,6 +147,8 @@ export interface ParkingTabLabelsConfig {
   // Legacy keys for backward compatibility
   readonly general: string;
   readonly parkingFloorplan: string;
+  /** ADR-898 §21.6 Ε11 — έλειπε ⇒ η καρτέλα έδειχνε το ωμό `history`. */
+  readonly history: string;
 }
 
 // ====================================================================
@@ -301,7 +303,8 @@ export const VOCAB_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
   videos: "tabs.labels.videos",
   // 🔧 Legacy keys for backward compatibility
   general: "tabs.labels.basicInfo",
-  parkingFloorplan: "tabs.labels.parkingFloorplan"
+  parkingFloorplan: "tabs.labels.parkingFloorplan",
+  history: "tabs.labels.history"
 } as const;
 
 /** Οι καρτέλες του φακέλου ακινήτου (ADR-866 Φ1.2) — κλειδιά του `property-market` (ο κόσμος του ιδιώτη). */

@@ -4,7 +4,7 @@ import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Clock, Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -65,16 +65,16 @@ export function MilestoneItem({ milestone, getStatusColor: _getStatusColor, getS
                     </h4>
                     <div className="flex items-center gap-2">
                         {(onEdit || onDelete) && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                 {onEdit && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+                                    <IconButton label={t('tabs.timeline.milestone.edit')} onClick={onEdit}>
                                         <Pencil className={iconSizes.sm} />
-                                    </Button>
+                                    </IconButton>
                                 )}
                                 {onDelete && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDelete}>
+                                    <IconButton label={t('tabs.timeline.milestone.delete')} className="text-destructive hover:text-destructive" onClick={onDelete}>
                                         <Trash2 className={iconSizes.sm} />
-                                    </Button>
+                                    </IconButton>
                                 )}
                             </div>
                         )}

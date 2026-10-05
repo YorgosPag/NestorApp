@@ -9,7 +9,7 @@
 
 export { BuildingSpaceTable } from './BuildingSpaceTable';
 export { BuildingSpaceCardGrid } from './BuildingSpaceCardGrid';
-export { BuildingSpaceActions } from './BuildingSpaceActions';
+export { BuildingSpaceActions, BuildingSpaceEditActions } from './BuildingSpaceActions';
 export { BuildingSpaceConfirmDialog } from './BuildingSpaceConfirmDialog';
 export { BuildingSpaceLinkDialog } from './BuildingSpaceLinkDialog';
 export { SpaceFloorplanInline } from './SpaceFloorplanInline';

@@ -33,6 +33,8 @@
         "deliveryDesc": "Τελικός έλεγχος και παράδοση κτιρίου"
       },
       "milestone": {
+        "edit": "Επεξεργασία ορόσημου",
+        "delete": "Διαγραφή ορόσημου",
         "progressLabel": "Πρόοδος milestone",
         "nextSteps": "Επόμενα βήματα:",
         "completedAt": "Ολοκληρώθηκε στις {date}"

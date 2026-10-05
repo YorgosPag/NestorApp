@@ -149,6 +149,8 @@
     "edit": "Edit",
     "unlink": "Unlink",
     "delete": "Move to Trash",
+    "save": "Save",
+    "cancel": "Cancel",
     "actions": "Actions"
   },
   "spaceConfirm": {
