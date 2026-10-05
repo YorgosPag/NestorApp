@@ -37,7 +37,7 @@
  */
 
 import * as React from 'react';
-import { canRestoreFocusTo, captureFocusOpener } from './focus-return';
+import { captureFocusReturnTarget, returnFocus, type FocusReturnTarget } from './focus-return';
 
 /** Οι δύο handlers που πρέπει να περαστούν στο Radix `Content`. */
 export interface DialogAutoFocusHandlers {
@@ -55,7 +55,7 @@ export function useDialogFocusRestore(
   consumer: ConsumerAutoFocusHandlers = {},
 ): DialogAutoFocusHandlers {
   const { onOpenAutoFocus, onCloseAutoFocus } = consumer;
-  const openerRef = React.useRef<HTMLElement | null>(null);
+  const openerRef = React.useRef<FocusReturnTarget | null>(null);
 
   const handleOpenAutoFocus = React.useCallback(
     (event: Event) => {
@@ -63,7 +63,7 @@ export function useDialogFocusRestore(
       // εδώ το `activeElement` είναι ακόμη αυτός που άνοιξε τον διάλογο. Γι' αυτό η
       // καταγραφή γίνεται εδώ και ΟΧΙ σε render/effect του `Content`: η συνάρτηση του
       // `Content` τρέχει και με κλειστό διάλογο, οπότε θα κατέγραφε λάθος στοιχείο.
-      openerRef.current = captureFocusOpener();
+      openerRef.current = captureFocusReturnTarget();
       onOpenAutoFocus?.(event);
     },
     [onOpenAutoFocus],
@@ -75,14 +75,14 @@ export function useDialogFocusRestore(
       // Ο καταναλωτής έχει τον πρώτο λόγο: αν διεκδίκησε το focus, δεν τον ακυρώνουμε.
       if (event.defaultPrevented) return;
 
-      const opener = openerRef.current;
+      const target = openerRef.current;
       openerRef.current = null;
-      // Χάθηκε από το DOM (π.χ. ο διάλογος διέγραψε τη γραμμή που τον άνοιξε): δεν
-      // κάνουμε `preventDefault`, ώστε να τρέξει η προεπιλεγμένη διαδρομή του Radix.
-      if (!canRestoreFocusTo(opener)) return;
+      // Ο opener αν το ΠΑΡΕΙ, αλλιώς η περιοχή του (χάθηκε από το DOM · έγινε `disabled` όσο τρέχει η
+      // πράξη που επιβεβαιώθηκε). Αν ούτε αυτή υπάρχει, δεν κάνουμε `preventDefault`, ώστε να τρέξει η
+      // προεπιλεγμένη διαδρομή του Radix.
+      if (target === null || returnFocus(target) === null) return;
 
       event.preventDefault();
-      opener.focus();
     },
     [onCloseAutoFocus],
   );

@@ -132,3 +132,86 @@ describe('DialogContent — επαναφορά focus χωρίς DialogTrigger', 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
+
+/**
+ * 🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-05 (κάρτα «Επαλήθευση ιδιοκτησίας»): η επιβεβαίωση έκλεινε ενώ το κουμπί που την
+ * άνοιξε γινόταν `disabled` ⇒ `disabled.focus()` = no-op ⇒ `BODY`, για πάντα. WAI-ARIA APG: όταν ο opener δεν
+ * μπορεί, το focus πάει σε στοιχείο «logical work flow» — εδώ, στην **περιοχή** του opener.
+ *
+ * | # | Άγκυρα | Μετάλλαξη που τη ρίχνει |
+ * |---|---|---|
+ * | Π1 | opener `disabled` στο κλείσιμο ⇒ focus στην περιοχή του | κρίση `isConnected` αντί για `activeElement` |
+ * | Π2 | opener που έφυγε από το DOM ⇒ focus στην περιοχή του | `region: null` στη σύλληψη |
+ * | Π3 | το δανεικό `tabindex` επιστρέφεται στο `blur`· δικό του `tabindex` δεν αγγίζεται | αφαίρεση του `blur` listener |
+ */
+function PendingAction({ fate, regionTabIndex }: {
+  readonly fate: 'disabled' | 'removed';
+  readonly regionTabIndex?: number;
+}): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  const [acted, setActed] = React.useState(false);
+  return (
+    <main>
+      <section aria-label="κάρτα" tabIndex={regionTabIndex}>
+        {!(acted && fate === 'removed') && (
+          <button type="button" disabled={acted && fate === 'disabled'} onClick={() => setOpen(true)}>
+            opener
+          </button>
+        )}
+        <button type="button">επόμενο</button>
+      </section>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogTitle>τίτλος</DialogTitle>
+          <button
+            type="button"
+            onClick={() => {
+              setActed(true);
+              setOpen(false);
+            }}
+          >
+            confirm
+          </button>
+        </DialogContent>
+      </Dialog>
+    </main>
+  );
+}
+
+async function confirmFrom(fate: 'disabled' | 'removed', regionTabIndex?: number): Promise<HTMLElement> {
+  render(<PendingAction fate={fate} regionTabIndex={regionTabIndex} />);
+  const opener = screen.getByRole('button', { name: 'opener' });
+  opener.focus();
+  fireEvent.click(opener);
+  fireEvent.click(screen.getByRole('button', { name: 'confirm' }));
+  const region = screen.getByRole('region', { name: 'κάρτα' });
+  await waitFor(() => expect(document.activeElement).toBe(region));
+  return region;
+}
+
+describe('DialogContent — ο opener ΔΕΝ μπορεί να ξαναπάρει το focus ⇒ η περιοχή του', () => {
+  it('🔴 Π1 — opener `disabled` τη στιγμή του κλεισίματος ⇒ focus στην περιοχή, ποτέ στο body', async () => {
+    await confirmFrom('disabled');
+    expect(screen.getByRole('button', { name: 'opener' })).toBeDisabled();
+  });
+
+  it('🔴 Π2 — opener που έφυγε από το DOM ⇒ focus στην περιοχή όπου ζούσε', async () => {
+    await confirmFrom('removed');
+    expect(screen.queryByRole('button', { name: 'opener' })).not.toBeInTheDocument();
+  });
+
+  it('🔑 Π3 — το `tabindex` είναι ΔΑΝΕΙΚΟ: φεύγει στο blur, και η περιοχή δεν μπαίνει ποτέ στη σειρά Tab', async () => {
+    const region = await confirmFrom('disabled');
+    expect(region).toHaveAttribute('tabindex', '-1');
+
+    screen.getByRole('button', { name: 'επόμενο' }).focus();
+    expect(region).not.toHaveAttribute('tabindex');
+  });
+
+  it('🔑 Π3 — περιοχή με ΔΙΚΟ της `tabindex` δεν το χάνει', async () => {
+    const region = await confirmFrom('disabled', 0);
+
+    screen.getByRole('button', { name: 'επόμενο' }).focus();
+    expect(region).toHaveAttribute('tabindex', '0');
+  });
+});
