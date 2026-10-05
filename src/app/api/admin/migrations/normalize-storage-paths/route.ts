@@ -93,7 +93,7 @@ async function runNormalizeStoragePaths(
       },
     }));
 
-  const flush = await flushInBatches(db, updates, FIX_BATCH_SIZE);
+  const flush = await flushInBatches(db, updates, { collections: [COLLECTIONS.FILES], batchSize: FIX_BATCH_SIZE });
 
   return buildOutcome({
     legacy,

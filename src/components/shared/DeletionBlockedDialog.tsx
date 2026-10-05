@@ -2,7 +2,11 @@
  * 🛡️ DELETION BLOCKED DIALOG — Reusable UI for blocked deletions
  *
  * Shows when an entity cannot be deleted due to existing dependencies.
- * Single "Κατάλαβα" button — no destructive action available.
+ * "Κατάλαβα" κλείνει· καμία καταστροφική ενέργεια δεν προσφέρεται.
+ *
+ * Προαιρετική **έξοδος** (`escape`, ADR-329 §3.9): όταν η οντότητα έχει αρχείο και ο
+ * διακομιστής το προσφέρει, ο διάλογος δείχνει «Αρχειοθέτηση αντί για διαγραφή». Ο ίδιος
+ * διάλογος, όχι δεύτερος: ο άνθρωπος βλέπει ΤΙ το κρατά και ΠΩΣ φεύγει, στο ίδιο σημείο.
  *
  * @module components/shared/DeletionBlockedDialog
  * @enterprise ADR-226 — Deletion Guard (Phase 3)
@@ -20,7 +24,8 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { ShieldAlert } from 'lucide-react';
+import { Archive, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DependencyCheckResult } from '@/config/deletion-registry';
@@ -31,6 +36,15 @@ import '@/lib/design-system';
 // TYPES
 // ============================================================================
 
+/** Η μη καταστροφική έξοδος από ένα μπλοκάρισμα — κείμενα και πράξη τα δίνει ο καλών. */
+export interface DeletionBlockedEscape {
+  readonly label: string;
+  readonly hint: string;
+  /** True όσο η πράξη είναι σε πτήση — το κουμπί κλειδώνει, ο διάλογος μένει. */
+  readonly pending: boolean;
+  readonly onAction: () => void;
+}
+
 interface DeletionBlockedDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,6 +52,8 @@ interface DeletionBlockedDialogProps {
   message: string;
   /** Optional entity subtype for type-specific messaging (e.g., individual/company/service) */
   entitySubtype?: string;
+  /** Απόν ⇒ ο διάλογος είναι όπως πάντα: μόνο «Κατάλαβα». */
+  escape?: DeletionBlockedEscape;
 }
 
 // ============================================================================
@@ -50,6 +66,7 @@ export function DeletionBlockedDialog({
   dependencies,
   message,
   entitySubtype,
+  escape,
 }: DeletionBlockedDialogProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
@@ -101,10 +118,18 @@ export function DeletionBlockedDialog({
                   </ul>
                 </>
               )}
+
+              {escape && <p className="text-foreground">{escape.hint}</p>}
             </section>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
+          {escape && (
+            <Button variant="outline" onClick={escape.onAction} disabled={escape.pending}>
+              <Archive className={iconSizes.sm} />
+              {escape.label}
+            </Button>
+          )}
           <AlertDialogAction>{t('deletionGuard.understood')}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

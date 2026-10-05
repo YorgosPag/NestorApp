@@ -27,6 +27,7 @@ import type {
   NavigationSelectedProperty
 } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isRetired } from '@/lib/firestore/trashed-status';
 
 const logger = createModuleLogger('NavigationContext');
 
@@ -84,7 +85,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const hasBuildingsWithNoUnits = useMemo(() => {
     if (allBuildings.length === 0) return false;
-    const activeProperties = allProperties.filter((p) => p.status !== 'deleted');
+    const activeProperties = allProperties.filter((p) => !isRetired(p));
     const buildingIdsWithUnits = new Set(
       activeProperties.map((p) => p.buildingId).filter(Boolean)
     );
@@ -93,7 +94,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const getActivePropertyCount = useCallback(
     (buildingId: string): number =>
-      allProperties.filter((p) => p.buildingId === buildingId && p.status !== 'deleted').length,
+      allProperties.filter((p) => p.buildingId === buildingId && !isRetired(p)).length,
     [allProperties]
   );
 

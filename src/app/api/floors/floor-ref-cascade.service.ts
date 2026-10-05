@@ -74,7 +74,11 @@ export async function cascadeFloorRefToHosted(
     ref: p.doc.ref,
     data: { ...p.fields, updatedBy, updatedAt },
   }));
-  const flush = await flushInBatches(db, updates);
+  // Η δήλωση επαναλαμβάνει τις συλλογές του `HOSTED_TARGETS` ΚΥΡΙΟΛΕΚΤΙΚΑ, επίτηδες: από εδώ η CHECK 3.17
+  // βλέπει αυτό το αρχείο ως γραφέα. Νέος στόχος χωρίς γραμμή εδώ ⇒ το `flushInBatches` πετάει, δεν γράφει.
+  const flush = await flushInBatches(db, updates, {
+    collections: [COLLECTIONS.PROPERTIES, COLLECTIONS.PARKING_SPACES, COLLECTIONS.STORAGE],
+  });
   // Το ίχνος γράφεται μόνο για ό,τι **σίγουρα** γράφτηκε. Σε αποτυχία ο καλών προειδοποιεί·
   // η επανάληψη (ιδεμποτική) ξαναβρίσκει μόνο την απόκλιση που έμεινε και την καταγράφει τότε.
   if (flush.errors.length > 0) {

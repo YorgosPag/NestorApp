@@ -3,10 +3,10 @@
 /**
  * 📋 PropertyPageBody
  *
- * Renders the list/grid/trash variants of the properties page main body.
+ * Renders the list/grid/retired variants of the properties page main body.
  * Extracted from `UnitsPageContent` to keep the page component under the
  * Google 500-line limit (N.7.1) and to isolate the tri-state rendering
- * (trash vs list vs grid) into one SRP unit.
+ * (retired view — trash or archive — vs list vs grid) into one SRP unit.
  *
  * @module components/properties/page/PropertyPageBody
  */
@@ -19,10 +19,22 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData, ViewerPassthroughProps } from '@/features/properties-sidebar/types';
 
+/**
+ * Μια προβολή «αποσυρμένων» ακινήτων — ο κάδος ή το αρχείο (ADR-281 · ADR-329 §3.9).
+ *
+ * ΕΝΑ σχήμα αντί για τρία props ανά κάδο: το σώμα της σελίδας δεν χρειάζεται να ξέρει
+ * ΠΟΙΟΣ κάδος είναι ανοιχτός — μόνο ότι δείχνει άλλες γραμμές από τις ενεργές, και αν
+ * φορτώνουν ακόμη. Οι δύο προβολές είναι αμοιβαία αποκλειόμενες, άρα ένα πεδίο αρκεί
+ * και η κατάσταση «και οι δύο ανοιχτές» δεν μπορεί καν να εκφραστεί.
+ */
+export interface PropertyRetiredView {
+  loading: boolean;
+  properties: Property[];
+}
+
 interface PropertyPageBodyProps {
-  showTrash: boolean;
-  loadingTrash: boolean;
-  trashedProperties: Property[];
+  /** `null` ⇒ η κανονική λίστα/πλέγμα. */
+  retiredView: PropertyRetiredView | null;
   searchFilteredProperties: Property[];
   viewMode: 'list' | 'grid';
   selectedProperty: Property | null;
@@ -44,20 +56,20 @@ interface PropertyPageBodyProps {
 export function PropertyPageBody(props: PropertyPageBodyProps) {
   const { t } = useTranslation(['properties']);
   const {
-    showTrash, loadingTrash, trashedProperties, searchFilteredProperties,
+    retiredView, searchFilteredProperties,
     viewMode, selectedProperty, selectedPropertyIds, isCreatingNewUnit,
     newUnitTemplate, viewerProps, safeFloors, urlTab,
     onSelectProperty, setShowHistoryPanel, onAssignmentSuccess,
     onPropertyCreated, onCancelCreate, onNewProperty, onDeleteProperty,
   } = props;
 
-  if (showTrash) {
-    if (loadingTrash) {
+  if (retiredView) {
+    if (retiredView.loading) {
       return <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading')} layout="contained" />;
     }
     return (
       <PropertiesSidebar
-        units={trashedProperties}
+        units={retiredView.properties}
         selectedProperty={selectedProperty}
         onSelectProperty={onSelectProperty}
         selectedPropertyIds={selectedPropertyIds}

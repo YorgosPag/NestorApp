@@ -49,7 +49,7 @@ function makeDb(store: Record<string, SeedDoc[]>, updates: Update[]) {
     get: async () => ({
       docs: (store[col] ?? [])
         .filter((d) => matches(d.data, filters))
-        .map((d) => ({ id: d.id, ref: { id: d.id, __col: col }, data: () => d.data })),
+        .map((d) => ({ id: d.id, ref: { id: d.id, __col: col, parent: { id: col } }, data: () => d.data })),
     }),
   });
 

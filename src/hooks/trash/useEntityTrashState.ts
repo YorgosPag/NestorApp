@@ -43,6 +43,19 @@ export interface EntityTrashSpec<TItem> {
   selectItems: (response: TrashApiResponse<TItem>) => TItem[] | undefined;
   /** Realtime event that means "an item of this kind was soft-deleted elsewhere". */
   refreshOn?: keyof RealtimeEventMap;
+  /**
+   * How a row leaves THIS bin and returns to the active list. Defaults to
+   * `TrashService.bulkRestore(entityKind, ids)`.
+   *
+   * It exists because the lifecycle has a second retirement state next to the
+   * trash — the archive (ADR-329 §3.9): same view, same selection, same refresh,
+   * a different way back. One view engine, two bins — the bin names its own exit
+   * instead of the engine growing a second copy of itself.
+   *
+   * ⚠️ Keep it a stable reference (module-level const): it is a dependency of
+   * `handleRestore`.
+   */
+  restore?: (ids: string[]) => Promise<void>;
 }
 
 /** Every trash endpoint answers with the same envelope, under a per-entity key. */
@@ -104,7 +117,7 @@ export function useEntityTrashState<TItem extends { id?: string }>(
   spec: EntityTrashSpec<TItem>,
   options: EntityTrashOptions,
 ): EntityTrashState<TItem> {
-  const { entityKind, trashRoute, selectItems, refreshOn } = spec;
+  const { entityKind, trashRoute, selectItems, refreshOn, restore } = spec;
   const { forceDataRefresh, clearSelection, notifyRestored, notifyPermanentlyDeleted } = options;
 
   const { user, loading: authLoading } = useAuth();
@@ -148,13 +161,13 @@ export function useEntityTrashState<TItem extends { id?: string }>(
     if (ids.length === 0) return;
     logger.info('Restoring entities from trash', { entityKind, ids });
     try {
-      await TrashService.bulkRestore(entityKind, ids);
+      await (restore ? restore(ids) : TrashService.bulkRestore(entityKind, ids));
       handleTrashActionComplete();
       notifyRestored?.(ids.length);
     } catch (error) {
       logger.error('Failed to restore entities from trash', { entityKind, ids, error });
     }
-  }, [entityKind, handleTrashActionComplete, notifyRestored]);
+  }, [entityKind, restore, handleTrashActionComplete, notifyRestored]);
 
   const handlePermanentDelete = useCallback((ids: string[]) => {
     if (ids.length === 0) return;

@@ -153,7 +153,7 @@ export async function migrateAddressLabels(
       data: { addresses: write.addresses },
     }));
 
-    const { written, errors } = await flushInBatches(db, updates);
+    const { written, errors } = await flushInBatches(db, updates, { collections: [COLLECTIONS.CONTACTS] });
     batchErrors = errors.length > 0 ? errors : undefined;
 
     logger.info('Address labels migrated', {

@@ -4,10 +4,8 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
-import { usePropertiesTrashState } from '@/hooks/usePropertiesTrashState';
+import { usePropertyRetiredViews } from '@/components/properties/page/usePropertyRetiredViews';
 import { PropertiesHeader } from '@/components/properties/page/PropertiesHeader';
-import { PropertyTrashActionsBar } from '@/components/properties/trash/PropertyTrashActionsBar';
-import { PropertyTrashDialogs } from '@/components/properties/trash/PropertyTrashDialogs';
 import { ResponsiveFiltersPanel } from '@/components/core/AdvancedFilters';
 import { PropertyPageDashboard } from '@/components/properties/page/PropertyPageDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -25,7 +23,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 import { createStatusLabelGetter, createTypeLabelGetter } from './properties-page-helpers';
-import { useRealtimePropertiesTrashCount } from '@/services/realtime';
 
 /** @deprecated Alias — use PropertiesManagementContent (ADR-269) */
 export const UnitsPageContent = PropertiesManagementContent;
@@ -171,29 +168,14 @@ export function PropertiesManagementContent() {
     handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
   }, [handlePolygonSelect]);
 
-  // 🗑️ Real-time trash count for badge (always current, no click needed)
-  const { trashCount: realtimeTrashCount } = useRealtimePropertiesTrashCount();
-
-  // 🗑️ Trash state
-  const {
-    showTrash,
-    trashCount,
-    trashedProperties,
-    loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
-    isDeleting,
-    BlockedDialog: TrashBlockedDialog,
-    handleToggleTrash,
-    handleTrashActionComplete,
-    handleRestoreProperties: _handleRestoreProperties,
-    handlePermanentDeleteProperties,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
-  } = usePropertiesTrashState({
+  // 🗑️🗄️ Κάδος + Αρχείο (ADR-281 · ADR-329 §3.9): κατάσταση, αμοιβαίος αποκλεισμός, μπάρες, διάλογοι —
+  // όλα στο `usePropertyRetiredViews`. Η σελίδα μόνο τα τοποθετεί.
+  const retired = usePropertyRetiredViews({
     selectedPropertyIds,
     setSelectedProperties,
     forceDataRefresh,
+    activePropertyId: selectedProperty?.id ?? null,
+    activePropertyCount: properties.length,
   });
 
   // Search state (for header search)
@@ -406,9 +388,7 @@ export function PropertiesManagementContent() {
           setSearchTerm={setSearchTerm}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          showTrash={showTrash}
-          onToggleTrash={handleToggleTrash}
-          trashCount={realtimeTrashCount}
+          {...retired.headerProps}
         />
 
         {showDashboard && (
@@ -431,23 +411,12 @@ export function PropertiesManagementContent() {
           showMobile={showFilters}
         />
 
-        {/* 🗑️ Trash mode: ActionsBar + trash list */}
-        {showTrash && (
-          <PropertyTrashActionsBar
-            selectedIds={selectedPropertyIds}
-            onBack={handleToggleTrash}
-            onRefresh={handleTrashActionComplete}
-            onPermanentDelete={handlePermanentDeleteProperties}
-            trashCount={trashCount}
-            activePropertyId={selectedProperty?.id ?? null}
-          />
-        )}
+        {/* 🗑️🗄️ Κάδος ή Αρχείο: η μπάρα της ανοιχτής προβολής + οι γραμμές της */}
+        {retired.actionsBar}
 
         <ListContainer>
           <PropertyPageBody
-            showTrash={showTrash}
-            loadingTrash={loadingTrash}
-            trashedProperties={trashedProperties}
+            retiredView={retired.retiredView}
             searchFilteredProperties={searchFilteredProperties}
             viewMode={viewMode as 'list' | 'grid'}
             selectedProperty={selectedProperty || null}
@@ -474,14 +443,7 @@ export function PropertiesManagementContent() {
         )}
         {PropertyMutationImpactDialog}
         {PropertyDeletionDialogs}
-        <PropertyTrashDialogs
-          showPermanentDeleteDialog={showPermanentDeleteDialog}
-          pendingPermanentDeleteIds={pendingPermanentDeleteIds}
-          isDeleting={isDeleting}
-          onConfirmPermanentDelete={handleConfirmPermanentDelete}
-          onCancelPermanentDelete={handleCancelPermanentDelete}
-          blockedDialog={TrashBlockedDialog}
-        />
+        {retired.dialogs}
       </PageContainer>
   );
 }

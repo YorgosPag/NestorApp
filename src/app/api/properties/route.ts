@@ -27,6 +27,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
 import { mapPropertyDoc } from '@/lib/firestore-mappers';
+import { isRetired } from '@/lib/firestore/trashed-status';
 
 const logger = createModuleLogger('PropertiesRoute');
 
@@ -109,10 +110,10 @@ export const GET = withStandardRateLimit(
           mapPropertyDoc(doc.id, doc.data() as Record<string, unknown>)
         );
 
-        // ADR-281: When floorId path was used, filter deleted in JS (avoids composite index requirement)
-        const filteredDocs = floorId
-          ? mappedDocs.filter(p => p.status !== 'deleted')
-          : mappedDocs;
+        // ADR-281 · ADR-329 §3.9: ό,τι αποσύρθηκε (κάδος Ή αρχείο) δεν ανήκει στην καθημερινή
+        // λίστα. Κρίνεται ΠΑΝΤΑ εδώ, σε JS: το ερώτημα παραπάνω κόβει μόνο τον κάδο (και μόνο
+        // χωρίς floorId), και ένα `not-in` θα ζητούσε άλλον σύνθετο δείκτη για λίγες γραμμές.
+        const filteredDocs = mappedDocs.filter(p => !isRetired(p));
 
         filteredDocs.sort((a, b) => compareByLocale(a.name, b.name));
 

@@ -1,12 +1,23 @@
 /**
- * Soft-Delete Engine — SSOT for soft-delete, restore, permanent-delete
+ * Soft-Delete Engine — SSOT για τον κύκλο ζωής μιας εγγραφής: κάδος **και** αρχείο
  *
  * ONE mechanism for ALL entities. No copy-paste.
  *
- * Lifecycle:
- *   softDelete()      -> status='deleted', preserves previousStatus
- *   restoreFromTrash() -> restores previousStatus, clears delete fields
- *   permanentDelete()  -> guards status='deleted', then executeDeletion() (ADR-226)
+ * Δύο έννοιες, μία μηχανή (ADR-281 · ADR-329 §3.9):
+ *   ΚΑΔΟΣ  — «θέλω να φύγει»: αναστρέψιμο ως την προθεσμία, μετά οριστική διαγραφή.
+ *   ΑΡΧΕΙΟ — «αποσύρθηκε, αλλά το αναφέρουν άλλοι»: μένει για πάντα, εκτός καθημερινής λίστας.
+ *
+ * Μεταβάσεις (όλες εδώ, πουθενά αλλού):
+ *   softDelete()         ζωντανό | αρχείο → κάδος      (status='deleted')
+ *   restoreFromTrash()   κάδος → ό,τι ήταν πριν
+ *   archive()            ζωντανό → αρχείο              (status='archived')
+ *                        κάδος → αρχείο                ΜΟΝΟ με `fromTrash` (εκκαθάριση)
+ *   restoreFromArchive() αρχείο → ό,τι ήταν πριν       (ιστορικό: status_changed, όχι restored)
+ *   permanentDelete()    κάδος → οριστική διαγραφή     (executeDeletion, ADR-226)
+ *
+ * Και οι δύο αποσύρσεις γράφουν στο ΙΔΙΟ πεδίο (`status`) ⇒ μια εγγραφή δεν είναι ποτέ
+ * ταυτόχρονα στον κάδο και στο αρχείο. Το `previousStatus` κρατά πάντα την τελευταία
+ * **ζωντανή** κατάσταση, όσες αποσύρσεις κι αν μεσολαβήσουν.
  *
  * @module lib/firestore/soft-delete-engine
  * @enterprise ADR-281 — SSOT Soft-Delete System
@@ -15,19 +26,20 @@
 import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
-import { SOFT_DELETE_CONFIG, TRASHED_STATUS } from "./soft-delete-config";
-import type { SoftDeleteEntityConfig } from "./soft-delete-config";
+import { TRASHED_STATUS } from "./soft-delete-config";
 import { executeDeletion } from "./deletion-guard";
-import { FIELDS } from "@/config/firestore-field-constants";
-import { compareStrings } from "@/lib/array-utils";
+import { conditionalBlockMessage } from "./deletion-common";
+import { extractEntityName, loadLifecycleTarget, type LifecycleTarget } from "./lifecycle-target";
+import { ARCHIVE, RETIREMENTS, TRASH, type Retirement } from "./lifecycle-retirements";
+import { SYSTEM_IDENTITY, isSystemActorId } from "@/config/domain-constants";
 import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
 import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
 // Imported from its defining module rather than through `ApiErrorHandler`,
 // which re-exports it but pulls in the whole `next/server` surface with it.
 import { ApiError } from "@/lib/api/api-error-types";
-import { isPayloadOwnedByCompany } from "@/lib/auth/tenant-ownership";
 import { createModuleLogger } from "@/lib/telemetry";
 import { getErrorMessage } from "@/lib/error-utils";
+import type { AuditAction, AuditCause } from "@/types/audit-trail";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
 const logger = createModuleLogger("SoftDeleteEngine");
@@ -65,18 +77,183 @@ function recordLifecycleAudit(
   });
 }
 
+/** Ποιος εκτελεί: άνθρωπος ή διεργασία της μηχανής. */
+interface LifecycleActor {
+  readonly uid: string;
+  readonly name?: string | null;
+  /** Η ανθρώπινη πράξη πίσω από γραφή της μηχανής (ADR-195: εκτελεστής ≠ εμπνευστής). */
+  readonly cause?: AuditCause;
+}
+
+/** Το όνομα του δράστη όπως σφραγίζεται στο έγγραφο· η μηχανή δεν είναι χρήστης προς αναζήτηση. */
+async function resolveActorName(actor: LifecycleActor): Promise<string | null> {
+  if (isSystemActorId(actor.uid)) return SYSTEM_IDENTITY.DISPLAY_NAME;
+  return resolveUserDisplayName(actor.uid, actor.name ?? null);
+}
+
+/** Οι σφραγίδες `_lastModified*` — ο CDC αποδίδει τη γραφή στον πραγματικό δράστη (ADR-195 Phase 1). */
+function performerStamps(uid: string, resolvedName: string | null): Record<string, unknown> {
+  return {
+    updatedAt: FieldValue.serverTimestamp(),
+    _lastModifiedBy: uid,
+    _lastModifiedByName: resolvedName,
+    _lastModifiedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+/** Γράφει τη γραμμή ιστορικού μιας μετάβασης `status`. */
+function recordStatusTransition(
+  entityType: SoftDeletableEntityType,
+  entityId: string,
+  target: LifecycleTarget,
+  transition: { action: AuditAction; from: string; to: string },
+  actor: LifecycleActor,
+  companyId: string,
+): void {
+  recordLifecycleAudit({
+    entityType,
+    entityId,
+    entityName: extractEntityName(target.data),
+    action: transition.action,
+    changes: [
+      { field: "status", oldValue: transition.from, newValue: transition.to, label: "status" },
+    ],
+    performedBy: actor.uid,
+    performedByName: isSystemActorId(actor.uid) ? SYSTEM_IDENTITY.DISPLAY_NAME : (actor.name ?? null),
+    ...(actor.cause ? { cause: actor.cause } : {}),
+    companyId: (target.data?.companyId as string | undefined) ?? companyId,
+  });
+}
+
+/**
+ * Απόσυρση: μετακινεί την εγγραφή στον κάδο ή στο αρχείο.
+ *
+ * Ιδεμποτική: εγγραφή που είναι ήδη εκεί ⇒ επιτυχία, καμία γραφή, καμία γραμμή.
+ * Όταν η εγγραφή έρχεται από την **άλλη** απόσυρση, το `previousStatus` της μένει
+ * ανέγγιχτο (η τελευταία ζωντανή κατάσταση) και οι σφραγίδες της άλλης σβήνονται.
+ */
+async function retire(
+  target: LifecycleTarget,
+  into: Retirement,
+  entityType: SoftDeletableEntityType,
+  entityId: string,
+  actor: LifecycleActor,
+  companyId: string,
+): Promise<void> {
+  const current = target.data?.status as string | undefined;
+
+  if (current === into.status) {
+    logger.info(`Retire idempotent — ${entityType} already in ${into.place}`, { entityId });
+    return;
+  }
+
+  const comingFrom = RETIREMENTS.find((r) => r.status === current);
+  const previousStatus = comingFrom
+    ? ((target.data?.previousStatus as string | undefined) || target.config.defaultRestoreStatus)
+    : (current ?? target.config.defaultRestoreStatus);
+
+  logger.info(`Moving ${entityType} to ${into.place}`, { entityId, companyId, previousStatus });
+
+  await target.docRef.update({
+    status: into.status,
+    previousStatus,
+    [into.atField]: FieldValue.serverTimestamp(),
+    [into.byField]: actor.uid,
+    ...(comingFrom
+      ? { [comingFrom.atField]: FieldValue.delete(), [comingFrom.byField]: FieldValue.delete() }
+      : {}),
+    ...performerStamps(actor.uid, await resolveActorName(actor)),
+  });
+
+  recordStatusTransition(
+    entityType,
+    entityId,
+    target,
+    { action: into.action, from: current ?? previousStatus, to: into.status },
+    actor,
+    companyId,
+  );
+}
+
+/**
+ * Επαναφορά: φέρνει την εγγραφή πίσω στην τελευταία ζωντανή της κατάσταση.
+ *
+ * @throws ApiError(409) αν η εγγραφή δεν είναι εκεί από όπου ζητείται να επιστρέψει
+ */
+async function reinstate(
+  target: LifecycleTarget,
+  from: Retirement,
+  entityType: SoftDeletableEntityType,
+  entityId: string,
+  actor: LifecycleActor,
+  companyId: string,
+): Promise<string> {
+  if (target.data?.status !== from.status) {
+    throw new ApiError(409, `${target.config.labelEn} is not in ${from.place}`);
+  }
+
+  const restoredStatus =
+    (target.data.previousStatus as string) || target.config.defaultRestoreStatus;
+
+  logger.info(`Restoring ${entityType} from ${from.place}`, { entityId, restoredStatus });
+
+  await target.docRef.update({
+    status: restoredStatus,
+    previousStatus: FieldValue.delete(),
+    [from.atField]: FieldValue.delete(),
+    [from.byField]: FieldValue.delete(),
+    restoredAt: FieldValue.serverTimestamp(),
+    restoredBy: actor.uid,
+    ...performerStamps(actor.uid, await resolveActorName(actor)),
+  });
+
+  recordStatusTransition(
+    entityType,
+    entityId,
+    target,
+    { action: from.restoreAction, from: from.status, to: restoredStatus },
+    actor,
+    companyId,
+  );
+
+  return restoredStatus;
+}
+
+/** Η υπογραφή κάθε επαναφοράς — ίδια για κάδο και αρχείο, γιατί είναι η ίδια πράξη. */
+type RestoreOperation = (
+  db: FirebaseFirestore.Firestore,
+  entityType: SoftDeletableEntityType,
+  entityId: string,
+  restoredBy: string,
+  companyId: string,
+  performedByName?: string,
+) => Promise<{ success: true; entityId: string; restoredStatus: string }>;
+
+/** Η επαναφορά από μία απόσυρση. Οι δύο εξαγόμενες επαναφορές είναι αυτή, με άλλο όρισμα. */
+function restoreFrom(from: Retirement): RestoreOperation {
+  return async (db, entityType, entityId, restoredBy, companyId, performedByName) => {
+    const target = await loadLifecycleTarget(db, entityType, entityId, companyId);
+    const actor = { uid: restoredBy, name: performedByName };
+    const restoredStatus = await reinstate(target, from, entityType, entityId, actor, companyId);
+
+    return { success: true, entityId, restoredStatus };
+  };
+}
+
 // ============================================================================
-// SOFT DELETE — Move to trash
+// ΚΑΔΟΣ
 // ============================================================================
 
 /**
  * Soft-delete: moves entity to trash (status='deleted').
  * Does NOT delete data — only changes status.
  *
+ * ⚠️ Δεν ελέγχει εξαρτήσεις: αυτό είναι απόφαση της **διαδρομής** της κάθε οντότητας
+ * (π.χ. `DELETE /api/properties/[id]`, ADR-329 §3.9). Η οριστική διαγραφή τις ελέγχει πάντα.
+ *
  * @throws ApiError(404) if document not found
  * @throws ApiError(404) if it belongs to another company — **σκόπιμα ίδιο με το
  *   «δεν βρέθηκε»**: ξένο ≡ ανύπαρκτο στο σύρμα (ADR-742 §3.3 · §7decies.4)
- * @throws ApiError(409) if already in trash
  */
 export async function softDelete(
   db: FirebaseFirestore.Firestore,
@@ -88,72 +265,12 @@ export async function softDelete(
   isSuperAdmin: boolean = false,
 ): Promise<{ success: true; entityId: string }> {
   // Tenant isolation — bypassed for super admin (route-level guard already validated access)
-  const { config, docRef, data } = await loadLifecycleTarget(
-    db,
-    entityType,
-    entityId,
-    companyId,
-    isSuperAdmin,
-  );
+  const target = await loadLifecycleTarget(db, entityType, entityId, companyId, isSuperAdmin);
 
-  // Idempotency: entity already in trash → desired state achieved, return success
-  if (data?.status === TRASHED_STATUS) {
-    logger.info(`Soft-delete idempotent — ${entityType} already in trash`, { entityId });
-    return { success: true, entityId };
-  }
+  await retire(target, TRASH, entityType, entityId, { uid: deletedBy, name: performedByName }, companyId);
 
-  const previousStatus =
-    (data?.status as string) ?? config.defaultRestoreStatus;
-
-  logger.info(`Soft-deleting ${entityType}`, {
-    entityId,
-    companyId,
-    previousStatus,
-  });
-
-  const resolvedName = await resolveUserDisplayName(deletedBy, performedByName ?? null);
-
-  await docRef.update({
-    status: TRASHED_STATUS,
-    previousStatus,
-    deletedAt: FieldValue.serverTimestamp(),
-    deletedBy,
-    updatedAt: FieldValue.serverTimestamp(),
-    // ADR-195 Phase 1 CDC: refresh performer stamps so the Cloud Function
-    // audit trigger attributes this write to the actual actor (not the
-    // stale create-time stamp). Critical when an admin trashes another
-    // user's entity — without this the CDC entry would name the creator.
-    _lastModifiedBy: deletedBy,
-    _lastModifiedByName: resolvedName,
-    _lastModifiedAt: FieldValue.serverTimestamp(),
-  });
-
-  // Audit trail (fire-and-forget· σιγάζεται όταν το καλύπτει ήδη ο CDC)
-  recordLifecycleAudit({
-    entityType,
-    entityId,
-    entityName: extractEntityName(data),
-    action: "soft_deleted",
-    changes: [
-      {
-        field: "status",
-        oldValue: previousStatus,
-        newValue: TRASHED_STATUS,
-        label: "status",
-      },
-    ],
-    performedBy: deletedBy,
-    performedByName: performedByName ?? null,
-    companyId: (data?.companyId as string | undefined) ?? companyId,
-  });
-
-  logger.info(`${entityType} soft-deleted`, { entityId });
   return { success: true, entityId };
 }
-
-// ============================================================================
-// RESTORE — Bring back from trash
-// ============================================================================
 
 /**
  * Restore: brings entity back from trash to previous status.
@@ -162,74 +279,7 @@ export async function softDelete(
  * @throws ApiError(404) if it belongs to another company (ADR-742 §7decies.4)
  * @throws ApiError(409) if NOT in trash
  */
-export async function restoreFromTrash(
-  db: FirebaseFirestore.Firestore,
-  entityType: SoftDeletableEntityType,
-  entityId: string,
-  restoredBy: string,
-  companyId: string,
-  performedByName?: string,
-): Promise<{ success: true; entityId: string; restoredStatus: string }> {
-  const { config, docRef, data } = await loadLifecycleTarget(
-    db,
-    entityType,
-    entityId,
-    companyId,
-  );
-
-  if (data?.status !== TRASHED_STATUS) {
-    throw new ApiError(409, `${config.labelEn} is not in trash`);
-  }
-
-  const restoredStatus =
-    (data.previousStatus as string) || config.defaultRestoreStatus;
-
-  logger.info(`Restoring ${entityType} from trash`, {
-    entityId,
-    restoredStatus,
-  });
-
-  const resolvedName = await resolveUserDisplayName(restoredBy, performedByName ?? null);
-
-  await docRef.update({
-    status: restoredStatus,
-    previousStatus: FieldValue.delete(),
-    deletedAt: FieldValue.delete(),
-    deletedBy: FieldValue.delete(),
-    restoredAt: FieldValue.serverTimestamp(),
-    restoredBy,
-    updatedAt: FieldValue.serverTimestamp(),
-    // ADR-195 Phase 1 CDC: refresh performer stamps (see softDelete above).
-    _lastModifiedBy: restoredBy,
-    _lastModifiedByName: resolvedName,
-    _lastModifiedAt: FieldValue.serverTimestamp(),
-  });
-
-  // Audit trail (fire-and-forget· σιγάζεται όταν το καλύπτει ήδη ο CDC)
-  recordLifecycleAudit({
-    entityType,
-    entityId,
-    entityName: extractEntityName(data),
-    action: "restored",
-    changes: [
-      {
-        field: "status",
-        oldValue: TRASHED_STATUS,
-        newValue: restoredStatus,
-        label: "status",
-      },
-    ],
-    performedBy: restoredBy,
-    performedByName: performedByName ?? null,
-    companyId,
-  });
-
-  return { success: true, entityId, restoredStatus };
-}
-
-// ============================================================================
-// PERMANENT DELETE — Hard delete from trash only
-// ============================================================================
+export const restoreFromTrash: RestoreOperation = restoreFrom(TRASH);
 
 /**
  * Permanent delete: ONLY from trash (status='deleted').
@@ -264,155 +314,78 @@ export async function permanentDelete(
 }
 
 // ============================================================================
-// LIST TRASHED — Read the bin
+// ΑΡΧΕΙΟ
 // ============================================================================
 
-/**
- * Row as the trash endpoints have always emitted it: the raw document, with its
- * id folded in. Deliberately open-ended — the bin renders whatever the entity
- * happens to carry and no endpoint has ever projected a subset.
- */
-export type TrashedEntityRow = FirebaseFirestore.DocumentData & { id: string };
+/** Επιλογές αρχειοθέτησης που δεν έχει ο άνθρωπος στην οθόνη. */
+export interface ArchiveOptions {
+  /**
+   * Επιτρέπει τη μετάβαση κάδος → αρχείο. Μόνο η εκκαθάριση τη ζητά: εγγραφή του κάδου που
+   * **απέκτησε αναφορές** δεν σβήνεται ποτέ, άρα αλλιώς θα έμενε εκεί για πάντα.
+   */
+  readonly fromTrash?: boolean;
+  /** Η ανθρώπινη πράξη πίσω από αρχειοθέτηση που εκτελεί η μηχανή. */
+  readonly cause?: AuditCause;
+}
 
-/**
- * List an entity's trashed rows for one company.
- *
- * The fourth lifecycle operation, and the one ADR-281 never centralised: five
- * route files each carried their own copy of this query, differing only in the
- * collection and the sort field. Ordering is applied in memory rather than via
- * `orderBy` on purpose — a composite `companyId + status + name` index does not
- * exist, and adding `orderBy` to the query would make every bin start throwing
- * `FAILED_PRECONDITION` until the index is deployed.
- *
- * @param db         Admin Firestore instance
- * @param entityType Soft-deletable entity; must publish a trash-list contract
- * @param companyId  Effective company, already resolved via `resolveTenantScope`
- * @throws ApiError(500) if the entity publishes no trash-list contract
- */
-export async function listTrashed(
-  db: FirebaseFirestore.Firestore,
+/** Οι λόγοι για τους οποίους μια εγγραφή **δεν** μπαίνει στο αρχείο. */
+function assertArchivable(
+  target: LifecycleTarget,
   entityType: SoftDeletableEntityType,
-  companyId: string,
-): Promise<TrashedEntityRow[]> {
-  const config = SOFT_DELETE_CONFIG[entityType];
-  const trashList = config.trashList;
+  options: ArchiveOptions,
+): void {
+  const { config, data } = target;
 
-  if (!trashList) {
-    throw new ApiError(500, `${config.labelEn} does not publish a trash list`);
+  if (!config.archive) {
+    throw new ApiError(400, `${config.labelEn} cannot be archived`, "ARCHIVE_UNSUPPORTED");
+  }
+  if (data?.status === TRASHED_STATUS && !options.fromTrash) {
+    throw new ApiError(409, `${config.labelEn} is in trash`, "ARCHIVE_FROM_TRASH");
   }
 
-  const snapshot = await db
-    .collection(config.collection)
-    .where(FIELDS.COMPANY_ID, "==", companyId)
-    .where(FIELDS.STATUS, "==", TRASHED_STATUS)
-    .get();
-
-  // Deterministic, NOT locale-aware. This module is `server-only`, so there is no
-  // active UI language here to collate against: `compareByLocale` resolves
-  // through the i18n instance, which on the server always answers with the
-  // fallback regardless of who is asking — locale-aware in name only, while
-  // dragging the i18n surface into a server module. A bare `localeCompare()` was
-  // worse still: it sorted by the SERVER's ambient locale, so the same trash list
-  // could come back in a different order after a host change. Presentation-order
-  // by language belongs to the client that renders the rows.
-  return snapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => compareStrings(readSortKey(a, trashList.sortField), readSortKey(b, trashList.sortField)));
+  // Ό,τι δεσμεύεται από συναλλαγή (π.χ. αγοραστής) δεν αποσύρεται ούτε στο αρχείο.
+  const blocked = conditionalBlockMessage(entityType, data);
+  if (blocked !== null) {
+    throw new ApiError(409, blocked, "ARCHIVE_BLOCKED");
+  }
 }
 
 /**
- * Sort key for one row: the configured field when it is a string, otherwise the
- * empty string. Rows missing the field sort first — the behaviour every trash
- * route shipped, preserved rather than improved.
- */
-function readSortKey(row: FirebaseFirestore.DocumentData, field: string): string {
-  const value: unknown = row[field];
-  return typeof value === "string" ? value : "";
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/** An entity resolved and cleared for a lifecycle operation. */
-interface LifecycleTarget {
-  config: SoftDeleteEntityConfig;
-  docRef: FirebaseFirestore.DocumentReference;
-  data: FirebaseFirestore.DocumentData | undefined;
-}
-
-/**
- * Resolve the document a lifecycle operation is about, and enforce tenancy.
+ * Archive: αποσύρει την εγγραφή από την καθημερινή δουλειά **χωρίς** προθεσμία διαγραφής
+ * (status='archived'). Ό,τι την αναφέρει συνεχίζει να τη βρίσκει.
  *
- * All three mutations opened with the same twenty lines — collection lookup,
- * existence check, tenant guard — differing only in whether a super admin may
- * cross tenants. That difference is a parameter here, not three transcriptions.
- *
- * @param isSuperAdmin Only `softDelete` passes this: its route-level guard has
- *                     already validated cross-tenant access. Restore and
- *                     permanent-delete deliberately never bypass — preserved as
- *                     it shipped, not unified.
- * @throws ApiError(404) if the document does not exist
- * @throws ApiError(404) if it belongs to another company — **ίδιο** σφάλμα με το
- *   «δεν βρέθηκε» (ADR-742 §7.1)
+ * @throws ApiError(400) αν η οντότητα δεν έχει αρχείο (`SOFT_DELETE_CONFIG[…].archive`)
+ * @throws ApiError(404) αν δεν βρέθηκε ή ανήκει σε άλλη εταιρεία
+ * @throws ApiError(409) αν είναι στον κάδο, ή δεσμεύεται από συναλλαγή
  */
-async function loadLifecycleTarget(
+export async function archive(
   db: FirebaseFirestore.Firestore,
   entityType: SoftDeletableEntityType,
   entityId: string,
+  archivedBy: string,
   companyId: string,
-  isSuperAdmin: boolean = false,
-): Promise<LifecycleTarget> {
-  const config = SOFT_DELETE_CONFIG[entityType];
-  const docRef = db.collection(config.collection).doc(entityId);
-  const docSnap = await docRef.get();
+  performedByName?: string,
+  options: ArchiveOptions = {},
+): Promise<{ success: true; entityId: string }> {
+  const target = await loadLifecycleTarget(db, entityType, entityId, companyId);
+  assertArchivable(target, entityType, options);
 
-  /**
-   * 🔴 **ΕΝΑ** «δεν βρέθηκε» για **δύο** κλάδους (ADR-742 §7.1 · §7decies.4).
-   *
-   * Μέχρι τις 2026-08-01 η άρνηση ιδιοκτησίας εδώ ήταν
-   * `403 'Unauthorized: {X} belongs to different company'` — μήνυμα που
-   * **περιγράφει τον λόγο**, δηλαδή επιβεβαιώνει ότι το id υπάρχει. Ο engine
-   * εξυπηρετεί **έξι** οντότητες, ανάμεσά τους `contact`, `project` και
-   * `building`, που ήδη δηλώνονταν μεταμφιεσμένες: **μία** διαδρομή διαγραφής
-   * ακύρωνε τη μεταμφίεση **και των τριών** πόρων, με κάθε άλλο test πράσινο
-   * (§7septies: το μαντείο είναι ιδιότητα ΠΟΡΟΥ).
-   *
-   * Μηδέν ορίσματα ⇒ δεν υπάρχει τιμή που να ξεχωρίζει τους δύο κλάδους.
-   */
-  const notFound = (): ApiError => new ApiError(404, `${config.labelEn} not found`);
+  const actor = { uid: archivedBy, name: performedByName, cause: options.cause };
+  await retire(target, ARCHIVE, entityType, entityId, actor, companyId);
 
-  if (!docSnap.exists) {
-    throw notFound();
-  }
-
-  const data = docSnap.data();
-
-  // ⚠️ Δηλωμένη αυστηροποίηση: πριν, ο έλεγχος ήταν
-  // `data?.companyId && data.companyId !== companyId` ⇒ έγγραφο **χωρίς**
-  // `companyId` περνούσε για **οποιονδήποτε**. Το κενό δεν είναι tenant, είναι
-  // **απουσία** tenant (§4) — αυτολεξεί το σφάλμα που έκλεισε δύο φορές αλλού
-  // (§7quinquies στο `rfq-service`, §7octies στο `bank-accounts-server`).
-  if (!isSuperAdmin && !isPayloadOwnedByCompany(data, companyId)) {
-    throw notFound();
-  }
-
-  return { config, docRef, data };
+  return { success: true, entityId };
 }
 
-function extractEntityName(
-  data: FirebaseFirestore.DocumentData | undefined,
-): string {
-  if (!data) return "Unknown";
-  return (
-    data.name ??
-    data.title ??
-    (data.firstName
-      ? `${data.firstName} ${data.lastName ?? ""}`.trim()
-      : null) ??
-    data.companyName ??
-    data.number ??
-    data.code ??
-    "Unknown"
-  );
-}
+/**
+ * Restore from archive: φέρνει την εγγραφή πίσω στην τελευταία ζωντανή της κατάσταση.
+ *
+ * @throws ApiError(404) αν δεν βρέθηκε ή ανήκει σε άλλη εταιρεία
+ * @throws ApiError(409) αν ΔΕΝ είναι στο αρχείο
+ */
+export const restoreFromArchive: RestoreOperation = restoreFrom(ARCHIVE);
+
+// ============================================================================
+// LIST — η ανάγνωση κάδου και αρχείου ζει στο `lifecycle-list` (όριο μεγέθους αρχείου)·
+// ξαναεξάγεται εδώ ώστε η μηχανή να μένει η ΜΙΑ πόρτα του κύκλου ζωής.
+// ============================================================================
+export { listArchived, listTrashed, type TrashedEntityRow } from "./lifecycle-list";

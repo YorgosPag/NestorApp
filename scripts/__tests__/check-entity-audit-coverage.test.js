@@ -7,15 +7,21 @@
  * κανένα από τα σχήματα γραφής της δεν εμφανίζεται στο σημείο κλήσης. Πράσινο από τύφλωση.
  *
  * Τα παραδείγματα είναι το σχήμα των πραγματικών αρχείων — όχι συνθετικές συμβολοσειρές.
+ *
+ * 2026-10-06 — **δηλωμένο πεδίο γραφής** (Σ1–Σ6 · Π5 · Π6): οι τέσσερις αλυσίδες ορόφου ήταν ΑΟΡΑΤΕΣ στην πύλη
+ * (έγραφαν μέσω `flushInBatches` ή πάνω σε αναφορά από άλλο αρχείο) και την κάλυψή τους την κρατούσε μόνο το Π4.
+ * Τώρα ο γραφέας παρτίδων απαιτεί δήλωση συλλογών, την επαληθεύει την ώρα της γραφής, και η πύλη τη διαβάζει.
  */
 
 'use strict';
 
+const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
 const {
+  declaredWriteSites,
   detectTrackedWrites,
   hasRecordChangeCall,
   liveRecorderDelegates,
@@ -159,14 +165,15 @@ describe('τα πραγματικά αρχεία', () => {
     expect(handler.covered).toBe(true);
   });
 
-  const CASCADES = [
-    'floor-elevation-cascade.service.ts',
-    'floor-stack-reconcile.service.ts',
-    'floor-height-cascade.service.ts',
-    'floor-ref-cascade.service.ts',
-  ];
+  // Κάθε αλυσίδα του φακέλου, από τον ΔΙΣΚΟ — όχι από λίστα τεσσάρων ονομάτων: πέμπτη αλυσίδα μπαίνει μόνη της.
+  const CASCADES = fs.readdirSync(path.join(PROJECT_ROOT, 'src/app/api/floors'))
+    .filter((name) => /(?:cascade|reconcile).*\.service\.ts$/.test(name))
+    .sort();
 
-  it('Π4 — και οι τέσσερις αλυσίδες ορόφου καλύπτονται από τον ΕΝΑ παράγωγο γραφέα, καμία δεν γράφει μόνη της', () => {
+  it('Π4 — κάθε αλυσίδα ορόφου καλύπτεται από τον ΕΝΑ παράγωγο γραφέα, καμία δεν γράφει μόνη της', () => {
+    // Δεύτερη άγκυρα δίπλα στην πύλη (Π5): ως τις 2026-10-06 ήταν η ΜΟΝΗ που κρατούσε την κάλυψη.
+    expect(CASCADES.length).toBeGreaterThanOrEqual(4);
+
     for (const file of CASCADES) {
       const source = fs.readFileSync(path.join(PROJECT_ROOT, 'src/app/api/floors', file), 'utf8');
 
@@ -176,15 +183,101 @@ describe('τα πραγματικά αρχεία', () => {
     }
   });
 
-  it('Π5 — ΔΗΛΩΜΕΝΟ όριο: η πύλη ΔΕΝ ΒΛΕΠΕΙ καμία από τις τέσσερις αλυσίδες ως γραφέα', () => {
-    // Μετρημένο 2026-10-05. Όλες γράφουν με τρόπο που η στατική σάρωση δεν αποδίδει σε συλλογή:
-    // `flushInBatches(db, updates)` (καμία μορφή γραφής στο σημείο κλήσης), συλλογή σε ΜΕΤΑΒΛΗΤΗ
-    // (`target.collection` — το ίδιο όριο με το Β7), ή `batch.update(ref, …)` πάνω σε αναφορά που ήρθε από
-    // ανάγνωση σε ΑΛΛΟ αρχείο (`_shared/floor-stack-rows.ts` — εκεί ζει το `COLLECTIONS.FLOORS`).
-    // Άρα την κάλυψη του Π4 ΔΕΝ την επιβάλλει η πύλη· την επιβάλλει εκείνο το test.
-    // Αν κοκκινίσει, κάποιος στένεψε το τυφλό σημείο: ενημέρωσε το `docs/gates/3.17.md`.
-    const seen = CASCADES.filter((file) => analyse(`src/app/api/floors/${file}`).keys.length > 0);
+  it('Π5 — η πύλη ΒΛΕΠΕΙ πλέον κάθε αλυσίδα ως γραφέα, στις συλλογές που η ίδια ΔΗΛΩΝΕΙ', () => {
+    // Ως τις 2026-10-06 αυτό το test έλεγε το αντίθετο (`seen` = []): καμία αλυσίδα δεν φαινόταν, γιατί έγραφαν με
+    // `flushInBatches(db, updates)`, με `target.collection`, ή με `batch.update(ref, …)` πάνω σε αναφορά από ΑΛΛΟ
+    // αρχείο. Τώρα δηλώνουν το πεδίο γραφής τους (`lib/admin-batch-utils.ts`) και η πύλη το διαβάζει.
+    // Νέα αλυσίδα στον φάκελο ⇒ κοκκινίζει εδώ ώσπου να γραφτεί ΤΙ γράφει — επίτηδες.
+    const seen = Object.fromEntries(
+      CASCADES.map((file) => [file, analyse(`src/app/api/floors/${file}`).keys.sort()]),
+    );
 
-    expect(seen).toEqual([]);
+    expect(seen).toEqual({
+      'floor-elevation-cascade.service.ts': ['FLOORS'],
+      'floor-height-cascade.service.ts': ['FLOORPLAN_BEAMS', 'FLOORPLAN_COLUMNS', 'FLOORPLAN_SLABS', 'FLOORPLAN_WALLS'],
+      'floor-ref-cascade.service.ts': ['PARKING_SPACES', 'PROPERTIES', 'STORAGE'],
+      'floor-stack-reconcile.service.ts': ['FLOORS'],
+    });
+  });
+
+  it('Π6 — ΜΕΤΑΛΛΑΞΗ: αλυσίδα που χάνει την κλήση του γραφέα ιστορικού γίνεται ΠΑΡΑΒΙΑΣΗ', () => {
+    // Αυτό ακριβώς δεν μπορούσε να πιάσει η πύλη πριν: γραφή αόρατη ⇒ «καθαρό», με ή χωρίς ίχνος.
+    const delegates = liveRecorderDelegates(PROJECT_ROOT);
+
+    for (const file of CASCADES) {
+      const real = fs.readFileSync(path.join(PROJECT_ROOT, 'src/app/api/floors', file), 'utf8');
+      const mutated = stripCommentsAndStrings(real.replace(/\brecordDerivedWrites\s*\(/g, 'forgotToRecord('));
+
+      expect(detectTrackedWrites(mutated).hasWrite).toBe(true);
+      expect(hasRecordChangeCall(mutated, delegates)).toBe(false);
+    }
+  });
+});
+
+describe('δηλωμένο πεδίο γραφής — flushInBatches · openDeclaredBatch (2026-10-06)', () => {
+  it('Σ1 — flushInBatches: ΚΑΘΕ παρακολουθούμενη συλλογή της δήλωσης είναι γραφή (το σχήμα του floor-ref-cascade)', () => {
+    const source = `
+      const flush = await flushInBatches(db, updates, {
+        collections: [COLLECTIONS.PROPERTIES, COLLECTIONS.PARKING_SPACES, COLLECTIONS.STORAGE],
+      });`;
+
+    expect(keysOf(source)).toEqual(['PROPERTIES', 'PARKING_SPACES', 'STORAGE']);
+  });
+
+  it('Σ2 — openDeclaredBatch: η δήλωση αρκεί, ακόμη κι αν η γραφή γίνει αλλού (το σχήμα των δύο αλυσίδων στοίβας)', () => {
+    const source = `
+      const pending = openDeclaredBatch(db, [COLLECTIONS.FLOORS]);
+      apply(pending, refById);`;
+
+    expect(keysOf(source)).toEqual(['FLOORS']);
+  });
+
+  it('Σ3 — δηλωμένη ΜΗ παρακολουθούμενη συλλογή δεν είναι γραφή· μικτή δήλωση δίνει μόνο τις παρακολουθούμενες', () => {
+    expect(keysOf(`await flushInBatches(db, updates, { collections: [COLLECTIONS.FILES], batchSize: 400 });`)).toEqual([]);
+    expect(keysOf(`await flushInBatches(db, updates, { collections: [SUBCOLLECTIONS.USER_SESSIONS] });`)).toEqual([]);
+    expect(keysOf(`const b = openDeclaredBatch(db, [COLLECTIONS.FILE_COMMENTS]);`)).toEqual([]);
+    expect(keysOf(`await flushInBatches(db, updates, { collections: [COLLECTIONS.FILES, COLLECTIONS.BUILDINGS] });`))
+      .toEqual(['BUILDINGS']);
+  });
+
+  it('Σ4 — δηλωμένη παρακολουθούμενη γραφή ΧΩΡΙΣ γραφέα ιστορικού = παραβίαση· με γραφέα = καλυμμένη', () => {
+    const write = `await flushInBatches(db, updates, { collections: [COLLECTIONS.PROPERTIES] });`;
+    const bare = stripCommentsAndStrings(write);
+    const recorded = stripCommentsAndStrings(`${write}\nawait recordDerivedWrites(systemId, lines, actor, companyId);`);
+
+    expect(detectTrackedWrites(bare).hasWrite).toBe(true);
+    expect(hasRecordChangeCall(bare, ['recordDerivedWrites'])).toBe(false);
+    expect(hasRecordChangeCall(recorded, ['recordDerivedWrites'])).toBe(true);
+  });
+
+  it('Σ5 — ό,τι ΔΕΝ είναι δήλωση δεν μετρά: ορισμός, εισαγωγή, σχόλιο, συλλογή έξω από τη λίστα', () => {
+    expect(keysOf(`import { flushInBatches, openDeclaredBatch } from '@/lib/admin-batch-utils';`)).toEqual([]);
+    expect(keysOf(`export async function flushInBatches(db, updates, scope) { return scope; }`)).toEqual([]);
+    expect(keysOf(`// await flushInBatches(db, updates, { collections: [COLLECTIONS.FLOORS] });`)).toEqual([]);
+    // Η παρακολουθούμενη συλλογή είναι όρισμα ΑΝΑΓΝΩΣΗΣ, όχι μέλος της δηλωμένης λίστας.
+    expect(keysOf(`await flushInBatches(db, plan(COLLECTIONS.BUILDINGS), { collections: [COLLECTIONS.FILES] });`)).toEqual([]);
+  });
+
+  it('Σ6 — ΚΑΘΕ σημείο κλήσης στο src/ δηλώνει με ΚΥΡΙΟΛΕΚΤΙΚΑ — αλλιώς η πύλη διαβάζει κενή δήλωση', () => {
+    // Ο τύπος επιβάλλει ΟΤΙ υπάρχει δήλωση και ο έλεγχος εκτέλεσης ότι είναι ΑΛΗΘΗΣ· κανένας από τους δύο δεν
+    // επιβάλλει ότι είναι ΑΝΑΓΝΩΣΙΜΗ. Μια υπολογισμένη λίστα (`targets.map((t) => t.collection)`) τρέχει σωστά και
+    // ξανακάνει το αρχείο αόρατο — το ίδιο πράσινο από τύφλωση που έκλεισε αυτή η διεύρυνση.
+    // Χωρίς `--untracked` (μετρημένο: ~10s έναντι ~1s)· αρχείο που μόλις έγινε `git add` είναι ήδη στο ευρετήριο.
+    const listed = execSync('git grep -lE "flushInBatches|openDeclaredBatch" -- src', {
+      cwd: PROJECT_ROOT, encoding: 'utf8',
+    });
+    const files = listed.split('\n').map((line) => line.trim())
+      .filter((file) => file && !/__tests__|\.test\.|lib\/admin-batch-utils\.ts$/.test(file));
+    const literal = /^(?:SUB)?COLLECTIONS\.[A-Z0-9_]+$/;
+
+    const sites = files.flatMap((file) =>
+      declaredWriteSites(stripCommentsAndStrings(fs.readFileSync(path.join(PROJECT_ROOT, file), 'utf8')))
+        .map((site) => ({ file, fn: site.fn, items: site.items })));
+    const unreadable = sites.filter((site) =>
+      site.items === null || site.items.length === 0 || !site.items.every((item) => literal.test(item)));
+
+    // Μετρημένο 2026-10-06: 8 κλήσεις `flushInBatches` (2 αλυσίδες + 6 μεταπτώσεις) + 4 `openDeclaredBatch`.
+    expect(sites.length).toBeGreaterThanOrEqual(12);
+    expect(unreadable).toEqual([]);
   });
 });

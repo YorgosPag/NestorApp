@@ -40,14 +40,15 @@ const COMPANY = 'co_1';
 const BUILDING = 'bldg_1';
 
 function makeDb(floors: SeedDoc[], updates: Update[]) {
-  const makeQuery = () => ({
-    where: () => makeQuery(),
+  // Οι αναφορές κρατούν τη συλλογή τους (`parent.id`): η δηλωμένη παρτίδα αρνείται ό,τι δεν είναι όροφος.
+  const makeQuery = (col: string) => ({
+    where: () => makeQuery(col),
     get: async () => ({
-      docs: floors.map((d) => ({ id: d.id, ref: { id: d.id }, data: () => d.data })),
+      docs: floors.map((d) => ({ id: d.id, ref: { id: d.id, parent: { id: col } }, data: () => d.data })),
     }),
   });
   return {
-    collection: () => makeQuery(),
+    collection: (name: string) => makeQuery(name),
     batch: () => ({
       update: (ref: { id: string }, patch: Record<string, unknown>) => updates.push({ ref, patch }),
       commit: jest.fn().mockResolvedValue(undefined),

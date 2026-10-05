@@ -60,7 +60,7 @@ async function runFloorplanFix(db: Firestore, { dryRun }: { dryRun: boolean }): 
       },
     }));
 
-    const flush = await flushInBatches(db, updates, FIX_BATCH_SIZE);
+    const flush = await flushInBatches(db, updates, { collections: [COLLECTIONS.FILES], batchSize: FIX_BATCH_SIZE });
     updated = flush.written;
     flushErrors = flush.errors;
   }

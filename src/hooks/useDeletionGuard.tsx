@@ -5,6 +5,9 @@
  * Εδώ ζει μόνο ό,τι είναι ειδικό για τη διαγραφή entity: το route ανά
  * `entityType` και το μήνυμα «η διαγραφή μπλοκαρίστηκε».
  *
+ * Η έξοδος προς το αρχείο (ADR-329 §3.9) **δεν** ζει εδώ: τη φέρνει όποιος τη θέλει, μέσω
+ * `escapeFor` (βλ. `useArchiveEscape`). Έτσι οι οθόνες που δεν αρχειοθετούν δεν πληρώνουν τίποτα.
+ *
  * @module hooks/useDeletionGuard
  * @enterprise ADR-226 — Deletion Guard (Phase 3)
  */
@@ -13,12 +16,17 @@
 
 import type { ReactNode } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
-import { useDependencyGuard } from '@/hooks/guards/useDependencyGuard';
+import { useDependencyGuard, type DependencyGuardSpec } from '@/hooks/guards/useDependencyGuard';
 import type { EntityType, DependencyCheckResult } from '@/config/deletion-registry';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+interface UseDeletionGuardOptions {
+  /** Η μη καταστροφική έξοδος από το μπλοκάρισμα, αν η οθόνη προσφέρει μία. */
+  readonly escapeFor?: DependencyGuardSpec['escapeFor'];
+}
 
 interface UseDeletionGuardReturn {
   /** True while the pre-check API call is in flight */
@@ -39,12 +47,16 @@ interface UseDeletionGuardReturn {
 // HOOK
 // ============================================================================
 
-export function useDeletionGuard(entityType: EntityType): UseDeletionGuardReturn {
+export function useDeletionGuard(
+  entityType: EntityType,
+  options: UseDeletionGuardOptions = {},
+): UseDeletionGuardReturn {
   const { checking, blocked, checkResult, runCheck, resetCheck, BlockedDialog } = useDependencyGuard({
     checkRoute: (entityId) => API_ROUTES.DELETION_GUARD.CHECK(entityType, entityId),
     unavailableMessage:
       'Η διαγραφή μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
     logName: 'useDeletionGuard',
+    escapeFor: options.escapeFor,
   });
 
   return {

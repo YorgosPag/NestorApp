@@ -28,6 +28,7 @@ import { dequal } from 'dequal';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { isRetired } from '@/lib/firestore/trashed-status';
 const logger = createModuleLogger('SharedPropertiesProvider');
 
 interface Floor {
@@ -196,11 +197,9 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         // κατάπινε το γεγονός ακριβώς όταν η απάντηση είναι «τίποτα δεν άλλαξε».
         setHasAnswered(true);
 
-        // ADR-281: Exclude soft-deleted properties from the live SSoT snapshot.
-        // Trash view uses its own endpoint (/api/properties/trash) — never this provider.
-        const propertiesData: Property[] = result.documents.filter(
-          (p) => (p.status as string | undefined) !== 'deleted',
-        );
+        // ADR-281 · ADR-329 §3.9: ό,τι αποσύρθηκε (κάδος Ή αρχείο) μένει έξω από το ζωντανό
+        // SSoT snapshot. Κάδος και αρχείο έχουν δικά τους endpoints — ποτέ αυτόν τον provider.
+        const propertiesData: Property[] = result.documents.filter((p) => !isRetired(p));
 
         // Build next state
         let floorsArray: RawFloor[] = [];

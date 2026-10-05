@@ -188,7 +188,11 @@ export async function migratePostalCodes(
   let batchErrors: string[] | undefined;
 
   if (!dryRun && updates.length > 0) {
-    const { written, errors } = await flushInBatches(db, updates);
+    // Η δήλωση επαναλαμβάνει τις συλλογές του `TARGETS` ΚΥΡΙΟΛΕΚΤΙΚΑ (CHECK 3.17 — δηλωμένο πεδίο γραφής):
+    // νέος στόχος χωρίς γραμμή εδώ ⇒ το `flushInBatches` πετάει πριν γράψει.
+    const { written, errors } = await flushInBatches(db, updates, {
+      collections: [COLLECTIONS.CONTACTS, COLLECTIONS.PROJECTS, COLLECTIONS.BUILDINGS],
+    });
     batchErrors = errors.length > 0 ? errors : undefined;
 
     logger.info('Postal codes normalised', {

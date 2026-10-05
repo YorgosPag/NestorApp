@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
+import { useArchiveEscape } from '@/hooks/guards/useArchiveEscape';
 import { BuildingSpaceConfirmDialog } from '@/components/building-management/shared/BuildingSpaceConfirmDialog';
 
 interface PropertyDeletionTarget {
@@ -29,12 +30,22 @@ interface UsePropertyDeletionGuardReturn {
 
 export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  // ADR-329 §3.9: ακίνητο που αναφέρεται (επιμετρήσεις κ.λπ.) δεν διαγράφεται — ο ίδιος
+  // διάλογος μπλοκαρίσματος προσφέρει το αρχείο. Οι λίστες είναι ζωντανές συνδρομές, άρα μετά
+  // την αρχειοθέτηση αρκεί να κλείσει ο διάλογος.
+  const closeBlockedRef = useRef<() => void>(() => undefined);
+  const escapeFor = useArchiveEscape({
+    kind: 'property',
+    onArchived: () => closeBlockedRef.current(),
+  });
   const {
     checking,
     checkBeforeDelete,
     checkResult,
+    resetCheck,
     BlockedDialog,
-  } = useDeletionGuard('property');
+  } = useDeletionGuard('property', { escapeFor });
+  closeBlockedRef.current = resetCheck;
 
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);

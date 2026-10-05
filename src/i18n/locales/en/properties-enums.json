@@ -21,7 +21,9 @@
     "occupied": "Occupied",
     "maintenance": "Under Maintenance",
     "planned": "Planned",
-    "owner": "Owner"
+    "owner": "Owner",
+    "archived": "Archived",
+    "deleted": "In trash"
   },
   "saleStatus": {
     "notSold": "Not Sold",

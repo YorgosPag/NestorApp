@@ -29,8 +29,10 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { tenantScopedDependencyQuery } from './dependency-tenant-scope';
+import { getArchiveConfig, isSoftDeletableEntity } from './soft-delete-config';
 import {
   MAX_PREVIEW_IDS,
+  conditionalBlockMessage,
   summarizeDependencyCheck,
   toDependencyOutcome,
   unavailableDependencyOutcome,
@@ -71,23 +73,18 @@ export async function checkDeletionDependencies(
     const entityCollection = getEntityCollection(entityType);
     const entityDoc = await db.collection(entityCollection).doc(entityId).get();
 
-    if (entityDoc.exists) {
-      const data = entityDoc.data();
-      const fieldValue = getNestedField(data, config.conditionalBlock.field);
+    // Ο κανόνας ζει μία φορά (`deletion-common`): τον ρωτά και η αρχειοθέτηση.
+    const blockedMessage = entityDoc.exists
+      ? conditionalBlockMessage(entityType, entityDoc.data())
+      : null;
 
-      const isBlocked =
-        config.conditionalBlock.condition === 'exists'
-          ? fieldValue !== undefined
-          : fieldValue !== undefined && fieldValue !== null;
-
-      if (isBlocked) {
-        return {
-          allowed: false,
-          dependencies: [],
-          totalDependents: 0,
-          message: config.conditionalBlock.message,
-        };
-      }
+    if (blockedMessage !== null) {
+      return {
+        allowed: false,
+        dependencies: [],
+        totalDependents: 0,
+        message: blockedMessage,
+      };
     }
   }
 
@@ -106,6 +103,42 @@ export async function checkDeletionDependencies(
     unavailable: (labels) =>
       `Η διαγραφή αποκλείεται λόγω σφάλματος ελέγχου εξαρτήσεων: ${labels}. Δοκιμάστε ξανά.`,
   });
+}
+
+/**
+ * Προσφέρεται η αρχειοθέτηση ως έξοδος από αυτό το μπλοκάρισμα; (ADR-329 §3.9)
+ *
+ * Ναι **μόνο** όταν μπλοκάρουν μετρημένες αναφορές και η οντότητα έχει αρχείο. Όχι όταν:
+ * - ο αποκλεισμός είναι υπό όρο (π.χ. αγοραστής) — εκεί η έξοδος είναι να λυθεί η συναλλαγή·
+ * - ο έλεγχος **απέτυχε** (`count: -1`) — «δεν ξέρω» δεν είναι λόγος απόσυρσης.
+ */
+export function isArchiveOffered(entityType: EntityType, check: DependencyCheckResult): boolean {
+  if (check.allowed || check.totalDependents <= 0) return false;
+  return isSoftDeletableEntity(entityType) && getArchiveConfig(entityType) !== undefined;
+}
+
+/**
+ * Αρνείται τη διαγραφή όταν κάτι την μπλοκάρει — η **μία** άρνηση που βλέπει ο πελάτης.
+ *
+ * Την καλούν η οριστική διαγραφή **και** όποια διαδρομή αρνείται ήδη την είσοδο στον κάδο
+ * (π.χ. `DELETE /api/properties/[id]`): ίδιος κωδικός, ίδιο μήνυμα, και στο σώμα το αν
+ * προσφέρεται αρχειοθέτηση.
+ *
+ * @throws ApiError(409, 'DELETION_BLOCKED')
+ */
+export async function assertDeletionAllowed(
+  db: FirebaseFirestore.Firestore,
+  entityType: EntityType,
+  entityId: string,
+  companyId: string,
+): Promise<void> {
+  const check = await checkDeletionDependencies(db, entityType, entityId, companyId);
+
+  if (!check.allowed) {
+    throw new ApiError(409, check.message, 'DELETION_BLOCKED', {
+      archivable: isArchiveOffered(entityType, check),
+    });
+  }
 }
 
 // ============================================================================
@@ -259,11 +292,7 @@ export async function executeDeletion(
   const config = DELETION_REGISTRY[entityType];
 
   // ── Step 1: Check blocking dependencies ──
-  const check = await checkDeletionDependencies(db, entityType, entityId, companyId);
-
-  if (!check.allowed) {
-    throw new ApiError(409, check.message, 'DELETION_BLOCKED');
-  }
+  await assertDeletionAllowed(db, entityType, entityId, companyId);
 
   // ── Step 2: Read entity for audit snapshot ──
   const entityCollection = getEntityCollection(entityType);
@@ -394,25 +423,6 @@ async function checkSingleDependency(
     // On query failure → treat as blocking (safe default)
     return unavailableDependencyOutcome(dep);
   }
-}
-
-/**
- * Safely read a nested field path (e.g. 'commercial.ownerContactIds')
- */
-function getNestedField(data: Record<string, unknown> | undefined, path: string): unknown {
-  if (!data) return undefined;
-
-  const parts = path.split('.');
-  let current: unknown = data;
-
-  for (const part of parts) {
-    if (current === null || current === undefined || typeof current !== 'object') {
-      return undefined;
-    }
-    current = (current as Record<string, unknown>)[part];
-  }
-
-  return current;
 }
 
 /**

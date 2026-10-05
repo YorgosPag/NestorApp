@@ -98,3 +98,31 @@ describe('Κ — κείμενα', () => {
     expect(screen.getByRole('toolbar', { name: 'trashView' })).toBeInTheDocument();
   });
 });
+
+describe('Α — ο κάδος χωρίς εκκαθάριση (αρχείο, ADR-329 §3.9)', () => {
+  const ARCHIVE_TEXT: EntityTrashText = {
+    ...TEXT,
+    view: 'Αρχείο',
+    count: '3 στο αρχείο',
+    restore: 'Επαναφορά από το αρχείο',
+  };
+
+  it('Α1 — χωρίς `onPermanentDelete` το κουμπί οριστικής διαγραφής ΔΕΝ αποδίδεται (ούτε ανενεργό)', () => {
+    // ⛔ MUTATION: απόδωσε το κουμπί άνευ όρων ⇒ το αρχείο υπόσχεται εκκαθάριση που δεν έχει ⇒ κόκκινο.
+    renderBar({ onPermanentDelete: undefined, activeId: 'p1' });
+    expect(screen.queryByRole('button', { name: /permanentDelete/ })).not.toBeInTheDocument();
+    expect(restoreButton()).toBeEnabled();
+  });
+
+  it('Α2 — τα γενικά κείμενα υπερβαίνονται, και η επαναφορά τρέχει με την υπηρεσία του αρχείου', async () => {
+    const props = renderBar({ onPermanentDelete: undefined, activeId: 'p1', text: ARCHIVE_TEXT, noticeTone: 'info' });
+    expect(screen.getByRole('toolbar', { name: 'Αρχείο' })).toBeInTheDocument();
+    expect(screen.getByText('3 στο αρχείο')).toBeInTheDocument();
+    expect(screen.queryByText('trashCount')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Επαναφορά από το αρχείο/ }));
+    await waitFor(() => expect(props.onRefresh).toHaveBeenCalledTimes(1));
+    expect(props.restore).toHaveBeenCalledWith(['p1']);
+    expect(mockNotify).toHaveBeenCalledWith('restored:1', { type: 'success' });
+  });
+});

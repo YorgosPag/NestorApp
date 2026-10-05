@@ -26,6 +26,10 @@ export interface SoftDeletableFields {
   restoredAt?: FirestoreishTimestamp;
   /** UID of user who restored it */
   restoredBy?: string;
+  /** Πότε μπήκε στο αρχείο — παρόν μόνο όσο `status='archived'` (ADR-329 §3.9). */
+  archivedAt?: FirestoreishTimestamp | null;
+  /** Ποιος το αρχειοθέτησε (χρήστης ή `system:<διεργασία>`). */
+  archivedBy?: string | null;
 }
 
 /** Entity types that support soft-delete lifecycle */

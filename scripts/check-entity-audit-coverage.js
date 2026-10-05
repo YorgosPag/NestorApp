@@ -179,6 +179,15 @@ const HARD_EXEMPT_PATTERNS = [
   // `services/mandate/__tests__/mandate-decision.test.ts`.
   /[\\/]server[\\/]spatial-tour[\\/]tour-access-decision\.ts$/,
   /[\\/]services[\\/]mandate[\\/]mandate-acceptance\.service\.ts$/,
+  // 2026-10-06 — ΜΕΤΑΠΤΩΣΕΙΣ ΜΟΡΦΗΣ που έγιναν ορατές με το δηλωμένο πεδίο γραφής (`flushInBatches`). Ονομαστικά,
+  // με λόγο — ΠΟΤΕ σιωπηλή baseline. Καμία δεν είναι πράξη ανθρώπου· την ίδια την εκτέλεση την καταγράφει ο φάκελος
+  // της μετάπτωσης (`logMigrationExecuted`, ADR-704):
+  //   · address-labels: γράφει ΜΟΝΟ `contacts`, που έχουν CDC (`auditContactWrite`) — η γραμμή γράφεται από το
+  //     trigger· κλήση `recordChange` εδώ θα ήταν το διπλότυπο που αφαίρεσε η Φάση 3 του ADR-195
+  /[\\/]api[\\/]admin[\\/]migrate-address-labels[\\/]migration-operations\.ts$/,
+  //   · postal-codes: «546 24» ➜ «54624», ίδια τιμή σε κανονική μορφή. `contacts` ⇒ CDC όπως πάνω.
+  //     ⚠️ Δηλωμένο κενό: `projects` · `buildings` ΔΕΝ έχουν CDC ⇒ εκεί η αλλαγή δεν αφήνει γραμμή ανά οντότητα.
+  /[\\/]api[\\/]admin[\\/]migrate-postal-codes[\\/]migration-operations\.ts$/,
 ];
 /**
  * Write operations to detect.
@@ -222,6 +231,29 @@ const MODULE_WRITE_RE = /\b(?:setDoc|updateDoc|deleteDoc|addDoc)\s*\(/g;
  * Tracked in `.claude-rules/pending-ratchet-work.md`.
  */
 const VERSIONED_WRITE_RE = /\bwithVersionCheck(?:OnCurrent)?\s*\(/g;
+/**
+ * Declared write scope (2026-10-06): `flushInBatches(db, updates, { collections: [COLLECTIONS.X, …] })`
+ * and `openDeclaredBatch(db, [COLLECTIONS.X, …])` from `lib/admin-batch-utils.ts`. The writer takes
+ * ready-made refs, so no write shape and no collection literal appears at the call site — the four
+ * floor chains were invisible, covered only by a test with a hard-coded file list.
+ *
+ * This is the remedy the VARIABLE-collection blind spot above asked for: the caller DECLARES the
+ * collections at a statically resolvable point. The declaration cannot lie — the type requires it,
+ * and the primitive throws at write time if a ref falls outside it — so reading it here is sound.
+ * A file is a writer of every TRACKED key in the declared list (untracked keys are ignored).
+ *
+ * Measured before widening: 8 call sites of `flushInBatches` + 4 of `openDeclaredBatch`; 6 files
+ * newly seen as writers — 4 covered (the chains), 2 admin migrations (named exemptions above).
+ *
+ * ⚠️ Only an INLINE array of literals is readable. A computed list (`targets.map(…)`) runs, but
+ * yields no keys here — pinned by test Σ6, which requires every call site to be literal.
+ */
+const DECLARED_WRITE_RE = /\b(flushInBatches|openDeclaredBatch)\s*\(/g;
+/** Where the declared list starts inside the call args, per primitive. */
+const DECLARED_LIST_ANCHOR = {
+  flushInBatches: /\bcollections\s*:\s*\[/,
+  openDeclaredBatch: /,\s*\[/,
+};
 /**
  * Named recorders that a writer may delegate to instead of calling
  * `EntityAuditService.recordChange(` in its own file. CLOSED list, and each entry is
@@ -318,6 +350,59 @@ function stripCommentsAndStrings(src) {
     // Single-quoted strings
     .replace(/'(?:\\.|[^'\\])*'/g, "''");
 }
+
+const BRACKET_PAIRS = { '(': ')', '[': ']', '{': '}' };
+
+/**
+ * Offset of the bracket that closes the one at `open` (any of `(`, `[`, `{`), or -1.
+ * Runs on sanitized source, so brackets inside comments/strings are already gone.
+ * @param {string} src
+ * @param {number} open
+ * @returns {number}
+ */
+function matchingClose(src, open) {
+  /** @type {string[]} */
+  const expected = [];
+  for (let i = open; i < src.length; i++) {
+    const ch = src[i];
+    if (BRACKET_PAIRS[ch]) expected.push(BRACKET_PAIRS[ch]);
+    else if (ch === expected[expected.length - 1]) {
+      expected.pop();
+      if (expected.length === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Every declared-write call site in the sanitized source, with the items of its declared list.
+ * `items` is null when the declaration is not an inline array (a variable, a computed list) —
+ * such a site declares nothing this gate can read.
+ *
+ * @param {string} src
+ * @returns {Array<{fn: string, pos: number, items: string[]|null}>}
+ */
+function declaredWriteSites(src) {
+  /** @type {Array<{fn: string, pos: number, items: string[]|null}>} */
+  const sites = [];
+  DECLARED_WRITE_RE.lastIndex = 0;
+  /** @type {RegExpExecArray|null} */
+  let m;
+  while ((m = DECLARED_WRITE_RE.exec(src)) !== null) {
+    const openParen = m.index + m[0].length - 1;
+    const args = src.slice(openParen + 1, Math.max(openParen + 1, matchingClose(src, openParen)));
+    const anchor = DECLARED_LIST_ANCHOR[m[1]].exec(args);
+    const listOpen = anchor ? openParen + 1 + anchor.index + anchor[0].length - 1 : -1;
+    const listClose = listOpen < 0 ? -1 : matchingClose(src, listOpen);
+    const items = listClose < 0
+      ? null
+      : src.slice(listOpen + 1, listClose).split(',').map((s) => s.trim()).filter(Boolean);
+    sites.push({ fn: m[1], pos: m.index, items });
+  }
+  return sites;
+}
+
+const DECLARED_KEY_RE = /^COLLECTIONS\s*\.\s*([A-Z_]+)$/;
 
 /**
  * Look for writes to any tracked collection key in the sanitized source.
@@ -418,6 +503,15 @@ function detectTrackedWrites(src) {
   while ((m = VERSIONED_WRITE_RE.exec(src)) !== null) {
     const key = forwardTrackedKey(m.index, 400);
     if (key) found.add(key);
+  }
+
+  // Phase 1c: declared write scope — the caller lists the collections in the call args. Unlike the
+  // phases above this is not a nearest-ref heuristic: EVERY tracked key in the declared list counts.
+  for (const site of declaredWriteSites(src)) {
+    for (const item of site.items ?? []) {
+      const declared = DECLARED_KEY_RE.exec(item);
+      if (declared && TRACKED_COLLECTION_KEYS.has(declared[1])) found.add(declared[1]);
+    }
   }
 
   // Phase 2a: direct chain writes — `.doc(id).set(` — scan backward tight window.
@@ -620,6 +714,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  declaredWriteSites,
   detectTrackedWrites,
   hasRecordChangeCall,
   liveRecorderDelegates,

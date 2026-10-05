@@ -21,6 +21,8 @@ import { TRASH_RETENTION_MS } from '@/lib/cron-auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { SOFT_DELETE_CONFIG } from '@/lib/firestore/soft-delete-config';
+import { archive } from '@/lib/firestore/soft-delete-engine';
+import { asApiError } from '@/lib/api/api-error-types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { SoftDeletableEntityType } from '@/types/soft-deletable';
@@ -43,8 +45,13 @@ const PER_TYPE_LIMIT = 20;
 interface EntityPurgeTally {
   purged: number;
   skipped: number;
+  /** Όσα ο φύλακας αρνήθηκε να σβήσει και πέρασαν στο αρχείο (ADR-329 §3.9). */
+  archived: number;
   checked: number;
 }
+
+/** Ο εκτελεστής της εκκαθάρισης, όπως γράφεται στο ιστορικό. */
+const PURGE_ACTOR = 'system:cron-purge';
 
 /**
  * Σαρώνει έναν τύπο οντότητας και διαγράφει οριστικά ό,τι έληξε.
@@ -69,13 +76,18 @@ async function purgeEntityType(
     .limit(PER_TYPE_LIMIT)
     .get();
 
+  let archived = 0;
+
   for (const doc of snapshot.docs) {
+    const docCompanyId = (doc.data().companyId as string) ?? '';
     try {
-      const docData = doc.data();
-      const docCompanyId = (docData.companyId as string) ?? '';
-      await executeDeletion(db, entityType, doc.id, 'system:cron-purge', docCompanyId);
+      await executeDeletion(db, entityType, doc.id, PURGE_ACTOR, docCompanyId);
       purged++;
     } catch (error) {
+      if (await moveBlockedToArchive(db, entityType, doc.id, docCompanyId, error)) {
+        archived++;
+        continue;
+      }
       skipped++;
       logger.warn(`Skipped purge for ${entityType}`, {
         entityId: doc.id,
@@ -84,7 +96,41 @@ async function purgeEntityType(
     }
   }
 
-  return { purged, skipped, checked: snapshot.size };
+  return { purged, skipped, archived, checked: snapshot.size };
+}
+
+/**
+ * **Τίποτα δεν σαπίζει στον κάδο** (ADR-329 §3.9).
+ *
+ * Εγγραφή του κάδου που **απέκτησε αναφορές** (π.χ. ακίνητο με επιμετρήσεις) δεν σβήνεται
+ * ποτέ: ο φύλακας την αρνείται κάθε μέρα, για πάντα, και η προθεσμία του κάδου γίνεται ψέμα.
+ * Η θέση της είναι το αρχείο — εκεί όπου μένει ό,τι αναφέρεται. Η μετάβαση γράφει γραμμή
+ * ιστορικού με εκτελεστή τη μηχανή.
+ *
+ * Επιστρέφει `false` (⇒ μετριέται ως `skipped`, όπως πάντα) όταν η αποτυχία δεν ήταν
+ * αποκλεισμός, όταν η οντότητα δεν έχει αρχείο, ή όταν και η αρχειοθέτηση αρνήθηκε.
+ */
+async function moveBlockedToArchive(
+  db: FirebaseFirestore.Firestore,
+  entityType: SoftDeletableEntityType,
+  entityId: string,
+  companyId: string,
+  error: unknown,
+): Promise<boolean> {
+  const blocked = asApiError(error)?.errorCode === 'DELETION_BLOCKED';
+  if (!blocked || !SOFT_DELETE_CONFIG[entityType].archive) return false;
+
+  try {
+    await archive(db, entityType, entityId, PURGE_ACTOR, companyId, undefined, { fromTrash: true });
+    logger.info(`Moved blocked ${entityType} from trash to archive`, { entityId });
+    return true;
+  } catch (archiveError) {
+    logger.warn(`Could not archive blocked ${entityType}`, {
+      entityId,
+      error: getErrorMessage(archiveError),
+    });
+    return false;
+  }
 }
 
 /** Πλήρες αποτέλεσμα, ώστε το route να μπορεί να το επιστρέψει αυτούσιο. */
@@ -92,6 +138,7 @@ export interface PurgeDeletedEntitiesReport {
   readonly results: Readonly<Record<string, EntityPurgeTally>>;
   readonly totalPurged: number;
   readonly totalSkipped: number;
+  readonly totalArchived: number;
   readonly durationMs: number;
 }
 
@@ -110,25 +157,26 @@ export async function purgeDeletedEntities(): Promise<PurgeDeletedEntitiesReport
     } catch (error) {
       // Αποτυχία σε επίπεδο ερωτήματος (π.χ. λείπει index) — δεν σταματά τους άλλους τύπους.
       logger.error(`Failed to purge ${entityType}`, { error: getErrorMessage(error) });
-      results[entityType] = { purged: 0, skipped: 0, checked: 0 };
+      results[entityType] = { purged: 0, skipped: 0, archived: 0, checked: 0 };
     }
   }
 
   const tallies = Object.values(results);
   const totalPurged = tallies.reduce((sum, r) => sum + r.purged, 0);
   const totalSkipped = tallies.reduce((sum, r) => sum + r.skipped, 0);
+  const totalArchived = tallies.reduce((sum, r) => sum + r.archived, 0);
   const durationMs = Date.now() - startTime;
 
-  logger.info('Entity purge complete', { results, totalPurged, totalSkipped, durationMs });
+  logger.info('Entity purge complete', { results, totalPurged, totalSkipped, totalArchived, durationMs });
 
-  return { results, totalPurged, totalSkipped, durationMs };
+  return { results, totalPurged, totalSkipped, totalArchived, durationMs };
 }
 
 /** Προσαρμογέας για τον χρονοπρογραμματιστή. */
 export async function runPurgeDeletedEntities(): Promise<CronJobResult> {
   const report = await purgeDeletedEntities();
   return {
-    summary: `purged ${report.totalPurged}, skipped ${report.totalSkipped}`,
-    metrics: { purged: report.totalPurged, skipped: report.totalSkipped },
+    summary: `purged ${report.totalPurged}, skipped ${report.totalSkipped}, archived ${report.totalArchived}`,
+    metrics: { purged: report.totalPurged, skipped: report.totalSkipped, archived: report.totalArchived },
   };
 }

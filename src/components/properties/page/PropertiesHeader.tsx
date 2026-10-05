@@ -24,7 +24,7 @@ import { NavigationBreadcrumb } from '@/components/navigation/components/Navigat
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
-/** Λίστα/πλέγμα + κάδος — το κοινό contract, χωρίς επανάληψη. */
+/** Λίστα/πλέγμα + κάδος + αρχείο (ADR-329 §3.9) — το κοινό contract, χωρίς επανάληψη. */
 type PropertiesHeaderProps = ListPageHeaderProps<ListGridViewMode>;
 
 export function PropertiesHeader({
@@ -39,11 +39,16 @@ export function PropertiesHeader({
   showTrash,
   onToggleTrash,
   trashCount,
+  showArchive,
+  onToggleArchive,
+  archiveCount,
 }: PropertiesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { t: tViewer } = useTranslation('properties-viewer');
   const { t: tCommon } = useTranslation(COMMON_NAMESPACES);
+  // Το «Αρχείο» λέγεται ίδια σε κάθε οντότητα ⇒ γενικό namespace `trash`, όχι κλειδί ανά σελίδα.
+  const { t: tTrash } = useTranslation('trash');
 
   return (
     <PageHeader
@@ -76,6 +81,10 @@ export function PropertiesHeader({
           onToggleTrash,
           trashCount,
           trashAriaLabel: tViewer('trash.viewTrash'),
+          showArchive,
+          onToggleArchive,
+          archiveCount,
+          archiveAriaLabel: tTrash('archiveView'),
         }),
       }}
     />

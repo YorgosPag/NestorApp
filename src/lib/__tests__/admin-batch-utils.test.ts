@@ -18,7 +18,14 @@ import type {
   Firestore,
   UpdateData,
 } from 'firebase-admin/firestore';
-import { buildLookupCache, flushInBatches, type BatchUpdate } from '../admin-batch-utils';
+import {
+  buildLookupCache,
+  flushInBatches,
+  openDeclaredBatch,
+  type BatchUpdate,
+  type DeclaredCollections,
+  type DeclaredWriteScope,
+} from '../admin-batch-utils';
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -75,6 +82,12 @@ function fakeDb(failBatchIndexes = new Set<number>()) {
         update(ref: DocumentReference, data: UpdateData<DocumentData>) {
           ops.push({ ref, data } as BatchUpdate);
         },
+        set(ref: DocumentReference, data: DocumentData) {
+          ops.push({ ref, data } as BatchUpdate);
+        },
+        delete(ref: DocumentReference) {
+          ops.push({ ref, data: {} } as BatchUpdate);
+        },
         async commit() {
           if (failBatchIndexes.has(myIndex)) throw new Error(`batch ${myIndex} failed`);
           committed.push(ops);
@@ -86,9 +99,12 @@ function fakeDb(failBatchIndexes = new Set<number>()) {
   return { db: db as unknown as Firestore, committed };
 }
 
-function ref(id: string): DocumentReference<DocumentData> {
-  return { id } as unknown as DocumentReference<DocumentData>;
+/** Αναφορά που ξέρει τη συλλογή της — ό,τι διαβάζει ο έλεγχος δήλωσης (`ref.parent.id`). */
+function ref(id: string, collection = 'files', path = `${collection}/${id}`): DocumentReference<DocumentData> {
+  return { id, path, parent: { id: collection } } as unknown as DocumentReference<DocumentData>;
 }
+
+const FILES_SCOPE: DeclaredWriteScope = { collections: ['files'] };
 
 // ---------------------------------------------------------------------------
 // buildLookupCache
@@ -146,7 +162,7 @@ describe('flushInBatches', () => {
   it('commits everything in a single batch when under the limit', async () => {
     const { db, committed } = fakeDb();
 
-    const result = await flushInBatches(db, updates(['a', 'b', 'c']));
+    const result = await flushInBatches(db, updates(['a', 'b', 'c']), FILES_SCOPE);
 
     expect(result.written).toBe(3);
     expect(result.errors).toEqual([]);
@@ -157,7 +173,7 @@ describe('flushInBatches', () => {
   it('chunks into multiple batches at batchSize', async () => {
     const { db, committed } = fakeDb();
 
-    const result = await flushInBatches(db, updates(['a', 'b', 'c', 'd', 'e']), 2);
+    const result = await flushInBatches(db, updates(['a', 'b', 'c', 'd', 'e']), { ...FILES_SCOPE, batchSize: 2 });
 
     expect(result.written).toBe(5);
     expect(result.errors).toEqual([]);
@@ -167,7 +183,7 @@ describe('flushInBatches', () => {
   it('records a failing batch but still commits the others (resilience)', async () => {
     const { db, committed } = fakeDb(new Set([0])); // first chunk fails
 
-    const result = await flushInBatches(db, updates(['a', 'b', 'c']), 2);
+    const result = await flushInBatches(db, updates(['a', 'b', 'c']), { ...FILES_SCOPE, batchSize: 2 });
 
     expect(result.written).toBe(1);              // only the second chunk (['c'])
     expect(result.errors).toHaveLength(1);
@@ -179,10 +195,98 @@ describe('flushInBatches', () => {
   it('does nothing for an empty update list', async () => {
     const { db, committed } = fakeDb();
 
-    const result = await flushInBatches(db, []);
+    const result = await flushInBatches(db, [], FILES_SCOPE);
 
     expect(result.written).toBe(0);
     expect(result.errors).toEqual([]);
     expect(committed).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Δηλωμένο πεδίο γραφής — η δήλωση επαληθεύεται την ώρα της γραφής (CHECK 3.17)
+// ---------------------------------------------------------------------------
+
+describe('δηλωμένο πεδίο γραφής — flushInBatches', () => {
+  it('Δ1 — αναφορά ΕΞΩ από τη δήλωση ⇒ πετάει, και δεν γράφεται ΤΙΠΟΤΑ (ούτε οι σωστές)', async () => {
+    const { db, committed } = fakeDb();
+    const mixed: BatchUpdate[] = [
+      { ref: ref('a'), data: { x: 1 } },
+      { ref: ref('p1', 'properties'), data: { x: 1 } },
+    ];
+
+    await expect(flushInBatches(db, mixed, FILES_SCOPE)).rejects.toThrow(
+      'Undeclared write: "properties/p1" belongs to collection "properties", declared: [files]',
+    );
+    // Δεν είναι «αποτυχημένη παρτίδα» που προσπερνιέται: ο έλεγχος τρέχει πριν από το πρώτο commit.
+    expect(committed).toHaveLength(0);
+  });
+
+  it('Δ2 — πολλές δηλωμένες συλλογές: γράφει σε όποια από αυτές', async () => {
+    const { db, committed } = fakeDb();
+    const both: BatchUpdate[] = [
+      { ref: ref('w1', 'floorplan_walls'), data: { x: 1 } },
+      { ref: ref('c1', 'floorplan_columns'), data: { x: 1 } },
+    ];
+
+    const result = await flushInBatches(db, both, { collections: ['floorplan_walls', 'floorplan_columns'] });
+
+    expect(result.written).toBe(2);
+    expect(committed[0]).toHaveLength(2);
+  });
+
+  it('Δ3 — ΥΠΟσυλλογή: συγκρίνεται το αναγνωριστικό της συλλογής, όχι η διαδρομή', async () => {
+    const { db } = fakeDb();
+    const session = ref('s1', 'sessions', 'users/u1/sessions/s1');
+
+    const result = await flushInBatches(db, [{ ref: session, data: { x: 1 } }], { collections: ['sessions'] });
+    expect(result.written).toBe(1);
+
+    // Η μητρική συλλογή ΔΕΝ καλύπτει την υποσυλλογή της.
+    await expect(flushInBatches(db, [{ ref: session, data: { x: 1 } }], { collections: ['users'] }))
+      .rejects.toThrow('Undeclared write: "users/u1/sessions/s1"');
+  });
+
+  it('Δ4 — κενή δήλωση (που ο τύπος απαγορεύει) πετάει και την ώρα της εκτέλεσης', async () => {
+    const { db } = fakeDb();
+    const empty = [] as unknown as DeclaredCollections;
+
+    await expect(flushInBatches(db, [], { collections: empty })).rejects.toThrow('Declared write scope is empty');
+  });
+
+  it('Δ5 — αναφορά που δεν ξέρει τη συλλογή της δεν περνά «επειδή δεν ξέρουμε»', async () => {
+    const { db, committed } = fakeDb();
+    const orphan = { id: 'x' } as unknown as DocumentReference<DocumentData>;
+
+    await expect(flushInBatches(db, [{ ref: orphan, data: {} }], FILES_SCOPE)).rejects.toThrow('Undeclared write');
+    expect(committed).toHaveLength(0);
+  });
+});
+
+describe('δηλωμένο πεδίο γραφής — openDeclaredBatch', () => {
+  it('Δ6 — update · set · delete σε δηλωμένη συλλογή φτάνουν στο commit, σε ΜΙΑ παρτίδα', async () => {
+    const { db, committed } = fakeDb();
+
+    const batch = openDeclaredBatch(db, ['floors']);
+    batch.update(ref('f1', 'floors'), { elevation: 3 });
+    batch.set(ref('f2', 'floors'), { elevation: 6 });
+    batch.delete(ref('f3', 'floors'));
+    await batch.commit();
+
+    expect(committed).toHaveLength(1);
+    expect(committed[0].map((op) => op.ref.id)).toEqual(['f1', 'f2', 'f3']);
+  });
+
+  it('Δ7 — κάθε πράξη σε ΑΔΗΛΩΤΗ συλλογή πετάει ΠΡΙΝ μπει στην παρτίδα', async () => {
+    const { db, committed } = fakeDb();
+    const batch = openDeclaredBatch(db, ['floors']);
+    const foreign = ref('b1', 'buildings');
+
+    expect(() => batch.update(foreign, { x: 1 })).toThrow('Undeclared write: "buildings/b1"');
+    expect(() => batch.set(foreign, { x: 1 })).toThrow('Undeclared write');
+    expect(() => batch.delete(foreign)).toThrow('Undeclared write');
+
+    await batch.commit();
+    expect(committed).toEqual([[]]);
   });
 });

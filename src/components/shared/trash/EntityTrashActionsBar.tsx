@@ -9,10 +9,13 @@
  *
  * Γέννηση (ADR-867 2026-09-22 · N.0.2): οι επαφές και τα ακίνητα είχαν δίδυμη ολόκληρη τη μπάρα (διάταξη **και** ροή).
  *
+ * 🗄️ Η ίδια μπάρα υπηρετεί και το ΑΡΧΕΙΟ (ADR-329 §3.9): εκεί η «υπηρεσία» είναι το `unarchive`, τα γενικά κείμενα
+ * υπερβαίνονται (`view` / `count` / `restore`), και το `onPermanentDelete` **λείπει** — το αρχείο δεν έχει εκκαθάριση.
+ *
  * @enterprise ADR-281 — SSOT Soft-Delete System · ADR-584 — Anti-Duplication
  */
 
-import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { TrashActionsBar, type TrashNoticeTone } from '@/components/shared/trash/TrashActionsBar';
 import { useTrashBarRestore } from '@/components/shared/trash/useTrashBarRestore';
 
 /** Τα κείμενα ανά οντότητα — ήδη μεταφρασμένα, από το namespace της. */
@@ -21,6 +24,13 @@ export interface EntityTrashText {
   readonly warning: string;
   readonly restoreSuccess: (count: number) => string;
   readonly restoreFailed: string;
+  /**
+   * Υπέρβαση των ΓΕΝΙΚΩΝ κειμένων του namespace `trash` — μόνο όταν ο κάδος δεν είναι κάδος (αρχείο: «Αρχείο»,
+   * «3 στο αρχείο», «Επαναφορά από το αρχείο»). ⚠️ Παράλειψε το κλειδί, μην το δώσεις `undefined`: θα έσβηνε το γενικό.
+   */
+  readonly view?: string;
+  readonly count?: string;
+  readonly restore?: string;
 }
 
 export interface EntityTrashActionsBarProps {
@@ -30,7 +40,10 @@ export interface EntityTrashActionsBarProps {
   readonly onBack: () => void;
   /** Ανανέωση λίστας + καθαρισμός επιλογής — μετά από **κάθε** επαναφορά, και αποτυχημένη. */
   readonly onRefresh: () => void;
-  readonly onPermanentDelete: (ids?: string[]) => void;
+  /** Παράλειψη ⇒ κάδος χωρίς εκκαθάριση (αρχείο): το κουμπί οριστικής διαγραφής δεν αποδίδεται. */
+  readonly onPermanentDelete?: (ids?: string[]) => void;
+  /** Τόνος της ταινίας: `warning` (default, εκκαθάριση 30 ημερών) ή `info` (εξήγηση). */
+  readonly noticeTone?: TrashNoticeTone;
   readonly trashCount: number;
   readonly entity: string;
   readonly restore: (ids: string[]) => Promise<unknown>;
@@ -49,16 +62,19 @@ export function EntityTrashActionsBar({
   onBack,
   onRefresh,
   onPermanentDelete,
+  noticeTone,
   trashCount,
   entity,
   restore,
   text,
 }: EntityTrashActionsBarProps) {
+  // Ό,τι μένει μετά τα δύο μηνύματα ροής είναι ΑΚΡΙΒΩΣ οι ετικέτες της διάταξης (back/warning + τυχόν υπερβάσεις).
+  const { restoreSuccess, restoreFailed, ...labels } = text;
   const runRestore = useTrashBarRestore({
     entity,
     restore,
-    successMessage: text.restoreSuccess,
-    failureMessage: text.restoreFailed,
+    successMessage: restoreSuccess,
+    failureMessage: restoreFailed,
     onSettled: onRefresh,
   });
 
@@ -67,9 +83,10 @@ export function EntityTrashActionsBar({
       selectedIds={effectiveTrashIds(selectedIds, activeId)}
       onBack={onBack}
       onRestore={(ids) => void runRestore(ids)}
-      onPermanentDelete={(ids) => onPermanentDelete(ids)}
+      onPermanentDelete={onPermanentDelete ? (ids) => onPermanentDelete(ids) : undefined}
+      noticeTone={noticeTone}
       trashCount={trashCount}
-      labels={{ back: text.back, warning: text.warning }}
+      labels={labels}
     />
   );
 }

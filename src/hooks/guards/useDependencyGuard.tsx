@@ -21,7 +21,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
-import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
+import { DeletionBlockedDialog, type DeletionBlockedEscape } from '@/components/shared/DeletionBlockedDialog';
 import type { DependencyCheckResult } from '@/config/deletion-registry';
 
 // ============================================================================
@@ -39,6 +39,11 @@ export interface DependencyGuardSpec {
   readonly unavailableMessage: string;
   /** Πρόθεμα διαγνωστικών. */
   readonly logName: string;
+  /**
+   * Η μη καταστροφική έξοδος από αυτό το μπλοκάρισμα, αν υπάρχει (ADR-329 §3.9).
+   * Τη δίνει το binding για το συγκεκριμένο αποτέλεσμα και id· `undefined` ⇒ καμία.
+   */
+  readonly escapeFor?: (result: DependencyCheckResult, id: string) => DeletionBlockedEscape | undefined;
 }
 
 export interface DependencyGuardState {
@@ -64,6 +69,8 @@ export function useDependencyGuard(spec: DependencyGuardSpec): DependencyGuardSt
   const [checking, setChecking] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [checkResult, setCheckResult] = useState<DependencyCheckResult | null>(null);
+  /** Το id του τελευταίου ελέγχου — η έξοδος πρέπει να ξέρει ΠΟΙΑ εγγραφή αφορά. */
+  const [checkedId, setCheckedId] = useState<string | null>(null);
 
   // Ο spec έρχεται ως inline literal από τα bindings → νέο object κάθε render.
   // Ref αντί για dependency, ώστε το `runCheck` να κρατά ΣΤΑΘΕΡΗ ταυτότητα: οι
@@ -81,6 +88,7 @@ export function useDependencyGuard(spec: DependencyGuardSpec): DependencyGuardSt
     setChecking(true);
     setBlocked(false);
     setCheckResult(null);
+    setCheckedId(id);
 
     const { checkRoute, unavailableMessage, logName } = specRef.current;
 
@@ -119,14 +127,22 @@ export function useDependencyGuard(spec: DependencyGuardSpec): DependencyGuardSt
     }
   }, []);
 
+  // Διαβάζεται από το ref (όχι dep): ο spec είναι νέο object σε κάθε render. Το binding
+  // οφείλει να επιστρέφει ΣΤΑΘΕΡΗ ταυτότητα εξόδου όσο δεν αλλάζει κάτι (useMemo) — αλλιώς
+  // ο διάλογος ξαναχτίζεται σε κάθε render.
+  const escape = checkResult && checkedId
+    ? specRef.current.escapeFor?.(checkResult, checkedId)
+    : undefined;
+
   const BlockedDialog = useMemo(() => (
     <DeletionBlockedDialog
       open={blocked}
       onOpenChange={(open) => { if (!open) resetCheck(); }}
       dependencies={checkResult?.dependencies ?? []}
       message={checkResult?.message ?? ''}
+      escape={escape}
     />
-  ), [blocked, checkResult, resetCheck]);
+  ), [blocked, checkResult, resetCheck, escape]);
 
   return {
     checking,

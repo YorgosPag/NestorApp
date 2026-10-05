@@ -18,6 +18,7 @@ import { photoFocalPointSchema, type PhotoFocalPoint } from '@/lib/listings/phot
 import { declaredCaptureSpotsSchema, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
 import { parseLegacyFloor } from '@/lib/floor/floor-ref';
+import { RETIRED_STATUSES } from '@/lib/firestore/trashed-status';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -27,7 +28,16 @@ import { parseLegacyFloor } from '@/lib/floor/floor-ref';
 export const PropertyPatchSchema = z.object({
   name: z.string().max(500).optional(),
   type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
+  // 🛡️ ADR-281 · ADR-329 §3.9: κάδος και αρχείο ΔΕΝ γράφονται από εδώ. Οι μεταβάσεις κύκλου
+  //    ζωής ζουν στη μηχανή (`soft-delete-engine`): εκεί γίνονται ο έλεγχος αναφορών, το
+  //    `previousStatus` και η γραμμή ιστορικού. Ένα ωμό `status: 'deleted'` τα προσπερνούσε όλα.
+  status: z
+    .string()
+    .max(50)
+    .refine((value) => !RETIRED_STATUSES.includes(value), {
+      message: 'Lifecycle status is managed by the trash/archive endpoints',
+    })
+    .optional(),
   // ADR-903 — `Property.floor` είναι ΑΚΕΡΑΙΟΣ. Κείμενο γίνεται δεκτό μόνο αν το λύνει ο ΕΝΑΣ parser
   // σε αριθμό («2», «Ισόγειο»)· «Πυλωτή χωρίς αριθμό» ή άγνωστο ⇒ 400, ποτέ σιωπηλό 0.
   floor: z.union([z.string().max(50), z.number().int()]).nullable().optional().superRefine((value, ctx) => {

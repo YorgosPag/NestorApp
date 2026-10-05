@@ -197,6 +197,11 @@ export interface DependencyCheckResult {
   totalDependents: number;
   /** Human-readable Greek message */
   message: string;
+  /**
+   * Η διαγραφή μπλοκαρίστηκε από **αναφορές** και η οντότητα έχει αρχείο ⇒ η οθόνη προσφέρει
+   * «Αρχειοθέτηση αντί για διαγραφή» (ADR-329 §3.9). Το αποφασίζει ο διακομιστής· απόν ⇒ όχι.
+   */
+  archivable?: boolean;
 }
 
 // ============================================================================
@@ -355,11 +360,22 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Συνδέσεις με επαφές',
         queryType: 'equals',
       },
+      // 🔴 ADR-329 §3.9 — η επιμέτρηση δείχνει σε ακίνητο με **δύο** πεδία: `linkedUnitId`
+      //    (ένα) και `linkedUnitIds[]` (πολλά). Μέχρι τις 2026-10-06 εδώ έγραφε
+      //    `linkedPropertyId`, πεδίο που **καμία** επιμέτρηση δεν έχει ⇒ ο έλεγχος δεν έπιανε
+      //    ποτέ, και ακίνητο με επιμετρήσεις στον κάδο θα σβηνόταν οριστικά στην προθεσμία.
+      //    Άγκυρα: `__tests__/deletion-registry-boq.test.ts` δένει τα ονόματα στον τύπο `BOQItem`.
       {
         collection: COLLECTIONS.BOQ_ITEMS,
-        foreignKey: 'linkedPropertyId',
+        foreignKey: 'linkedUnitId',
         label: 'Επιμετρήσεις (BOQ)',
         queryType: 'equals',
+      },
+      {
+        collection: COLLECTIONS.BOQ_ITEMS,
+        foreignKey: 'linkedUnitIds',
+        label: 'Επιμετρήσεις (BOQ, πολλαπλά ακίνητα)',
+        queryType: 'array-contains',
       },
       {
         collection: COLLECTIONS.OBLIGATIONS,

@@ -9,6 +9,11 @@
  * Τα γενικά κείμενα (μετρητής, «Επαναφορά επιλεγμένων», «Οριστική διαγραφή») λέγονται ΙΔΙΑ σε κάθε οντότητα·
  * η οντότητα υπερβαίνει ΜΟΝΟ ό,τι έχει νόημα (`back`, `warning`) μέσω `labels`. Η επαναφορά μένει στον καλούντα.
  *
+ * 🗄️ ΔΥΟ κάδοι, ΜΙΑ μπάρα (ADR-329 §3.9): το ΑΡΧΕΙΟ είναι η δεύτερη κατάσταση απόσυρσης και έχει την ίδια
+ * διάταξη — με δύο διαφορές που εδώ είναι **προαιρετικές**, όχι δεύτερο component: (α) δεν έχει εκκαθάριση,
+ * άρα χωρίς `onPermanentDelete` το κουμπί **δεν αποδίδεται καν** (ανενεργό κουμπί θα υποσχόταν πράξη που δεν
+ * υπάρχει)· (β) το κείμενό του είναι εξήγηση, όχι προειδοποίηση ⇒ `noticeTone="info"`.
+ *
  * @component
  * @enterprise ADR-281 — SSOT Soft-Delete System
  */
@@ -16,7 +21,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RotateCcw, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trash2, AlertTriangle, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIconSizes } from "@/hooks/useIconSizes";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
@@ -28,8 +33,10 @@ interface TrashActionsBarProps {
   onBack: () => void;
   /** Restore selected items */
   onRestore: (ids: string[]) => void;
-  /** Permanently delete selected items */
-  onPermanentDelete: (ids: string[]) => void;
+  /** Permanently delete selected items. Παράλειψη ⇒ ο κάδος δεν έχει εκκαθάριση (αρχείο) και το κουμπί λείπει. */
+  onPermanentDelete?: (ids: string[]) => void;
+  /** Ο τόνος της ταινίας πάνω από τα κουμπιά. Default `warning` (η εκκαθάριση των 30 ημερών). */
+  noticeTone?: TrashNoticeTone;
   /** Total number of items in trash */
   trashCount: number;
   /** Entity type label for display (e.g., "Contacts", "Properties") */
@@ -47,11 +54,31 @@ export interface TrashActionsBarLabels {
   readonly permanentDelete: string;
 }
 
+export type TrashNoticeTone = "warning" | "info";
+
+/**
+ * Πλήρεις κλάσεις ανά τόνο — ΟΧΙ σύνθεση `--bg-${tone}`: το Tailwind βλέπει μόνο ό,τι γράφεται ολόκληρο.
+ * Και οι δύο τόνοι είναι ζεύγη token (`--bg-*` + `--text-*`) που ορίζονται και στα δύο θέματα.
+ */
+const NOTICE_TONES = {
+  warning: {
+    Icon: AlertTriangle,
+    box: "bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))]",
+    icon: "text-[hsl(var(--text-warning))]",
+  },
+  info: {
+    Icon: Info,
+    box: "bg-[hsl(var(--bg-info))]/40 border border-[hsl(var(--text-info))]",
+    icon: "text-[hsl(var(--text-info))]",
+  },
+} as const satisfies Record<TrashNoticeTone, { Icon: typeof AlertTriangle; box: string; icon: string }>;
+
 export function TrashActionsBar({
   selectedIds,
   onBack,
   onRestore,
   onPermanentDelete,
+  noticeTone = "warning",
   trashCount,
   labels,
 }: TrashActionsBarProps) {
@@ -67,6 +94,7 @@ export function TrashActionsBar({
     permanentDelete: t("permanentDelete"),
     ...labels,
   };
+  const notice = NOTICE_TONES[noticeTone];
 
   return (
     <section
@@ -74,11 +102,11 @@ export function TrashActionsBar({
       role="toolbar"
       aria-label={text.view}
     >
-      {/* Warning banner */}
+      {/* Ταινία: προειδοποίηση (κάδος) ή εξήγηση (αρχείο) */}
       <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))] text-sm ${colors.text.muted}`}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md ${notice.box} text-sm ${colors.text.muted}`}
       >
-        <AlertTriangle className={`${iconSizes.sm} text-[hsl(var(--text-warning))] shrink-0`} />
+        <notice.Icon className={`${iconSizes.sm} ${notice.icon} shrink-0`} />
         <p>{text.warning}</p>
       </div>
 
@@ -112,16 +140,18 @@ export function TrashActionsBar({
           {selectedIds.length > 0 && ` (${selectedIds.length})`}
         </Button>
 
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => onPermanentDelete(selectedIds)}
-          disabled={selectedIds.length === 0}
-          className="gap-1.5"
-        >
-          <Trash2 className={iconSizes.xs} />
-          {text.permanentDelete}
-        </Button>
+        {onPermanentDelete && (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onPermanentDelete(selectedIds)}
+            disabled={selectedIds.length === 0}
+            className="gap-1.5"
+          >
+            <Trash2 className={iconSizes.xs} />
+            {text.permanentDelete}
+          </Button>
+        )}
       </nav>
     </section>
   );

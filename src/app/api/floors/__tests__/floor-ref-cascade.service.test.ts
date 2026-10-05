@@ -41,7 +41,7 @@ function makeDb(store: Store, opts: { failCommits?: boolean } = {}) {
     get: async () => ({
       docs: (store[col] ?? []).filter((d) => matches(d.data, filters)).map((d) => ({
         id: d.id,
-        ref: { id: d.id, path: `${col}/${d.id}`, seed: d },
+        ref: { id: d.id, path: `${col}/${d.id}`, parent: { id: col }, seed: d },
         data: () => d.data,
       })),
     }),

@@ -12,6 +12,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
+import { assertDeletionAllowed } from '@/lib/firestore/deletion-guard';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import {
   announceSpacePlacements,
@@ -295,6 +296,11 @@ export const DELETE = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>(
   handler: async ({ ctx, adminDb, id }) => {
       try {
         const { existing } = await requirePropertyInScope(adminDb, id, ctx);
+
+        // 🛡️ ADR-329 §3.9: ό,τι αναφέρεται (επιμετρήσεις κ.λπ.) ΔΕΝ μπαίνει στον κάδο — ο
+        //    κάδος έχει προθεσμία οριστικής διαγραφής. Ο έλεγχος ζούσε μόνο στον browser·
+        //    απευθείας κλήση τον προσπερνούσε. Η έξοδος είναι το αρχείο.
+        await assertDeletionAllowed(adminDb, 'property', id, ctx.companyId);
 
         // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
         await softDelete(adminDb, 'property', id, ctx.uid, ctx.companyId, ctx.email ?? undefined);

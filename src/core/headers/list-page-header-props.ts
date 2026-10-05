@@ -78,10 +78,18 @@ export interface ListPageHeaderProps<TViewMode extends ViewMode = ViewMode> {
   showTrash?: boolean;
   onToggleTrash?: () => void;
   trashCount?: number;
+  /**
+   * Archive view toggle (ADR-329 §3.9) — η δεύτερη κατάσταση απόσυρσης, δίπλα στον
+   * κάδο. Προαιρετικό: το κουμπί αποδίδεται μόνο αν δοθεί handler ΚΑΙ ο header της
+   * σελίδας το προωθήσει στο `buildHeaderCustomActions` (σήμερα: μόνο τα ακίνητα).
+   */
+  showArchive?: boolean;
+  onToggleArchive?: () => void;
+  archiveCount?: number;
 }
 
-/** Το contract μιας σελίδας λίστας/πλέγματος χωρίς κάδο. */
+/** Το contract μιας σελίδας λίστας/πλέγματος χωρίς κάδο (άρα και χωρίς αρχείο). */
 export type ListGridHeaderProps = Omit<
   ListPageHeaderProps<ListGridViewMode>,
-  'showTrash' | 'onToggleTrash' | 'trashCount'
+  'showTrash' | 'onToggleTrash' | 'trashCount' | 'showArchive' | 'onToggleArchive' | 'archiveCount'
 >;

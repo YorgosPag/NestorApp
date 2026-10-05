@@ -10,10 +10,53 @@
 
 import 'server-only';
 
-import { DEPENDENCY_REMEDIATIONS, type DependencyCheckResult } from '@/config/deletion-registry';
+import {
+  DELETION_REGISTRY,
+  DEPENDENCY_REMEDIATIONS,
+  type DependencyCheckResult,
+  type EntityType,
+} from '@/config/deletion-registry';
 
 /** Maximum document IDs returned per dependency (for UI preview) */
 export const MAX_PREVIEW_IDS = 10;
+
+/**
+ * Ο **υπό όρο** αποκλεισμός μιας οντότητας (π.χ. ακίνητο με αγοραστή), κριμένος πάνω σε
+ * έγγραφο που **έχει ήδη διαβαστεί**. `null` όταν δεν ισχύει.
+ *
+ * Τον ρωτούν δύο: ο φύλακας διαγραφής, και η αρχειοθέτηση (ADR-329 §3.9) — εγγραφή που δεν
+ * σβήνεται επειδή **δεσμεύεται από συναλλαγή** δεν αποσύρεται ούτε στο αρχείο. Ένας κανόνας,
+ * ένα σημείο.
+ */
+export function conditionalBlockMessage(
+  entityType: EntityType,
+  data: Record<string, unknown> | undefined,
+): string | null {
+  const block = DELETION_REGISTRY[entityType].conditionalBlock;
+  if (!block || !data) return null;
+
+  const fieldValue = getNestedField(data, block.field);
+  const isBlocked =
+    block.condition === 'exists'
+      ? fieldValue !== undefined
+      : fieldValue !== undefined && fieldValue !== null;
+
+  return isBlocked ? block.message : null;
+}
+
+/** Safely read a nested field path (e.g. 'commercial.ownerContactIds') */
+function getNestedField(data: Record<string, unknown>, path: string): unknown {
+  let current: unknown = data;
+
+  for (const part of path.split('.')) {
+    if (current === null || current === undefined || typeof current !== 'object') {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return current;
+}
 
 /** One dependency's outcome, exactly as the two guards report it. */
 type DependencyOutcome = DependencyCheckResult['dependencies'][number];

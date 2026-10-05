@@ -42,3 +42,31 @@ export interface MaybeTrashed {
  */
 export const isTrashed = (entity: MaybeTrashed | null | undefined): boolean =>
   entity?.status === TRASHED_STATUS;
+
+/**
+ * Η **μοναδική** τιμή κατάστασης που σημαίνει «στο αρχείο» (ADR-281 · ADR-329 §3.9).
+ *
+ * Κάδος και αρχείο είναι **δύο έννοιες στο ΙΔΙΟ πεδίο**: ο κάδος σβήνεται οριστικά μετά την
+ * προθεσμία, το αρχείο μένει για πάντα επειδή το αναφέρουν άλλες εγγραφές. Ένα πεδίο ⇒ μια
+ * εγγραφή δεν μπορεί να είναι και στα δύο.
+ *
+ * ⚠️ Ποιες οντότητες **έχουν** αρχείο το λέει το `SOFT_DELETE_CONFIG[…].archive`, όχι αυτή η
+ * σταθερά. Το `RecordLifecycleStatus` των θέσεων/αποθηκών μένει σκόπιμα δίτιμο (ADR-777 §8.60.20).
+ */
+export const ARCHIVED_STATUS = 'archived';
+
+/** «Είναι στο αρχείο;» — ρώτα αυτό, μην συγκρίνεις συμβολοσειρά. */
+export const isArchived = (entity: MaybeTrashed | null | undefined): boolean =>
+  entity?.status === ARCHIVED_STATUS;
+
+/**
+ * «Έχει αποσυρθεί από την καθημερινή δουλειά;» — κάδος **ή** αρχείο.
+ *
+ * Αυτό ρωτά κάθε λίστα και κάθε επιλογέας. Όποιος ρωτά μόνο `isTrashed` για να αποφασίσει
+ * «το δείχνω;» θα δείξει τα αρχειοθετημένα.
+ */
+export const isRetired = (entity: MaybeTrashed | null | undefined): boolean =>
+  isTrashed(entity) || isArchived(entity);
+
+/** Οι τιμές `status` που σημαίνουν «αποσυρμένο» — για ερωτήματα `not-in` στον διακομιστή. */
+export const RETIRED_STATUSES: readonly string[] = [TRASHED_STATUS, ARCHIVED_STATUS];

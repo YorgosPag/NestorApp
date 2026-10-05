@@ -625,10 +625,11 @@ export interface Property extends PropertySpecificationFields {
   /** Per-level content data keyed by floorId — multi-level units only (ADR-236 Phase 2) */
   levelData?: Record<string, LevelData>;
 
-  // === SOFT ARCHIVE (ADR-329 §3.9) ===
-  /** Soft-delete timestamp — null = active, Timestamp = archived */
+  // === ΑΡΧΕΙΟ (ADR-329 §3.9 · ADR-281) ===
+  // ⚠️ Σφραγίδες, ΟΧΙ η κατάσταση: «είναι στο αρχείο;» το απαντά το `status` (`isArchived`).
+  /** Πότε μπήκε στο αρχείο — παρόν μόνο όσο `status === 'archived'` */
   archivedAt?: Timestamp | null;
-  /** UserId of who archived (null if not archived) */
+  /** Ποιος το αρχειοθέτησε (χρήστης ή `system:<διεργασία>`) */
   archivedBy?: string | null;
 }
 

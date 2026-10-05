@@ -5157,6 +5157,7 @@
       "allowlist": [
         "src/lib/api/trash-list-route.ts",
         "src/lib/firestore/soft-delete-engine.ts",
+        "src/lib/firestore/lifecycle-list.ts",
         "src/lib/firestore/__tests__/soft-delete-trash-list.test.ts",
         "src/lib/cron/jobs/purge-deleted-entities.job.ts",
         "src/lib/cron/jobs/purge-deleted-contacts.job.ts",

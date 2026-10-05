@@ -104,7 +104,10 @@ async function runScrub(db: Firestore, { dryRun }: { dryRun: boolean }): Promise
   const updates: BatchUpdate[] = [];
   for (const uid of uidPages.flat()) updates.push(...(await planUser(db, uid, startedAt, tally)));
 
-  const flushed = dryRun ? { written: 0, errors: [] as string[] } : await flushInBatches(db, updates);
+  // Κάθε αναφορά είναι `users/{uid}/sessions/*` (βλ. `planUser`) ⇒ η συλλογή της γραφής είναι η ΥΠΟσυλλογή.
+  const flushed = dryRun
+    ? { written: 0, errors: [] as string[] }
+    : await flushInBatches(db, updates, { collections: [SUBCOLLECTIONS.USER_SESSIONS] });
   return {
     body: { dryRun, ...tally, written: flushed.written, errors: flushed.errors, durationMs: Date.now() - startedAt },
     audit: { legacy: tally.legacy, written: flushed.written, usersWithLegacy: tally.usersWithLegacy },

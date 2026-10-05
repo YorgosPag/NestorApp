@@ -35,8 +35,12 @@ import { NextResponse } from 'next/server';
 import { defineRoute } from '@/lib/api/define-route';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { resolveTenantScopeFromUrl } from '@/lib/auth/tenant-scope';
-import { getTrashListConfig } from '@/lib/firestore/soft-delete-config';
-import { listTrashed } from '@/lib/firestore/soft-delete-engine';
+import {
+  getArchiveConfig,
+  getTrashListConfig,
+  type TrashListConfig,
+} from '@/lib/firestore/soft-delete-config';
+import { listArchived, listTrashed } from '@/lib/firestore/soft-delete-engine';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { SoftDeletableEntityType } from '@/types/soft-deletable';
@@ -63,8 +67,57 @@ export function createTrashListRoute(entityType: SoftDeletableEntityType) {
     );
   }
 
-  const logger = createModuleLogger(config.loggerName);
-  const { responseKey, labelPluralEn, viewPermission } = config;
+  return createRetiredListRoute(entityType, config, {
+    adjective: 'deleted',
+    loggerName: config.loggerName,
+    list: listTrashed,
+  });
+}
+
+/**
+ * Build the `GET` export for an entity's archive endpoint (ADR-329 §3.9).
+ *
+ * Το αρχείο είναι οι **ίδιες** γραμμές σε άλλη κατάσταση, άρα μοιράζεται το συμβόλαιο του
+ * κάδου (κλειδί απάντησης, ταξινόμηση, άδεια προβολής). Αποτυγχάνει στο build όταν η
+ * οντότητα δεν έχει αρχείο — ίδιος κανόνας με το {@link createTrashListRoute}.
+ *
+ * @example
+ * // src/app/api/properties/archived/route.ts
+ * export const GET = createArchiveListRoute('property');
+ */
+export function createArchiveListRoute(entityType: SoftDeletableEntityType) {
+  const config = getTrashListConfig(entityType);
+
+  if (!config || !getArchiveConfig(entityType)) {
+    throw new Error(
+      `createArchiveListRoute: '${entityType}' publishes no archive list. ` +
+        `It needs both 'archive' and 'trashList' blocks in SOFT_DELETE_CONFIG.`,
+    );
+  }
+
+  return createRetiredListRoute(entityType, config, {
+    adjective: 'archived',
+    loggerName: `${config.loggerName}:archive`,
+    list: listArchived,
+  });
+}
+
+/** Ό,τι διαφέρει ανάμεσα στη λίστα του κάδου και στη λίστα του αρχείου. */
+interface RetiredListKind {
+  /** Spliced into log lines and the 500 message (`Failed to fetch deleted buildings`). */
+  readonly adjective: string;
+  readonly loggerName: string;
+  readonly list: typeof listTrashed;
+}
+
+function createRetiredListRoute(
+  entityType: SoftDeletableEntityType,
+  config: TrashListConfig,
+  kind: RetiredListKind,
+) {
+  const logger = createModuleLogger(kind.loggerName);
+  const { responseKey, viewPermission } = config;
+  const labelPluralEn = `${kind.adjective} ${config.labelPluralEn}`;
 
   return defineRoute({
     rateLimit: 'standard',
@@ -73,14 +126,14 @@ export function createTrashListRoute(entityType: SoftDeletableEntityType) {
       try {
         const scope = resolveTenantScopeFromUrl(req.url, auth);
 
-        logger.info(`Fetching deleted ${labelPluralEn}`, {
+        logger.info(`Fetching ${labelPluralEn}`, {
           companyId: scope.companyId,
           userId: auth.uid,
         });
 
-        const rows = await listTrashed(getAdminFirestore(), entityType, scope.companyId);
+        const rows = await kind.list(getAdminFirestore(), entityType, scope.companyId);
 
-        logger.info(`Found deleted ${labelPluralEn}`, { count: rows.length });
+        logger.info(`Found ${labelPluralEn}`, { count: rows.length });
 
         return NextResponse.json({
           success: true,
@@ -90,13 +143,13 @@ export function createTrashListRoute(entityType: SoftDeletableEntityType) {
       } catch (error) {
         // Caught here rather than left to defineRoute so the 500 envelope stays
         // byte-identical to what these five endpoints have always returned.
-        logger.error(`Error fetching deleted ${labelPluralEn}`, {
+        logger.error(`Error fetching ${labelPluralEn}`, {
           error: getErrorMessage(error),
         });
         return NextResponse.json(
           {
             success: false,
-            error: `Failed to fetch deleted ${labelPluralEn}`,
+            error: `Failed to fetch ${labelPluralEn}`,
             details: getErrorMessage(error),
           },
           { status: 500 },

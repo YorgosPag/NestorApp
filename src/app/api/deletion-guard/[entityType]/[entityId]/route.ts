@@ -19,7 +19,7 @@ import { hasPermission } from '@/lib/auth/permissions';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { extractSegmentFromEnd } from '@/lib/api/route-helpers';
-import { checkDeletionDependencies } from '@/lib/firestore/deletion-guard';
+import { checkDeletionDependencies, isArchiveOffered } from '@/lib/firestore/deletion-guard';
 import {
   isDeletableEntityType,
   DELETION_REGISTRY,
@@ -99,7 +99,12 @@ export const GET = withStandardRateLimit(
         companyId,
       });
 
-      const result = await checkDeletionDependencies(db, entityType, entityId, companyId);
+      const check = await checkDeletionDependencies(db, entityType, entityId, companyId);
+      // ADR-329 §3.9: ο διακομιστής λέει αν υπάρχει έξοδος προς το αρχείο — η οθόνη δεν μαντεύει.
+      const result: DependencyCheckResult = {
+        ...check,
+        archivable: isArchiveOffered(entityType, check),
+      };
 
       return apiSuccess(result, result.message);
     }

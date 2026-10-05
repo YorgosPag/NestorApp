@@ -20,13 +20,15 @@ import { useBuildingsTrashState } from '../../useBuildingsTrashState';
 import { useParkingTrashState } from '../../useParkingTrashState';
 import { useProjectsTrashState } from '../../useProjectsTrashState';
 import { useStoragesTrashState } from '../../useStoragesTrashState';
+import { usePropertiesArchiveState } from '../../usePropertiesArchiveState';
+import { useEntityTrashState, type EntityTrashSpec } from '../useEntityTrashState';
 
 jest.mock('@/lib/api/enterprise-api-client', () => ({
   apiClient: { get: jest.fn(), post: jest.fn(), delete: jest.fn() },
 }));
 
 jest.mock('@/services/trash.service', () => ({
-  TrashService: { bulkRestore: jest.fn(), bulkPermanentDelete: jest.fn() },
+  TrashService: { bulkRestore: jest.fn(), bulkPermanentDelete: jest.fn(), bulkUnarchive: jest.fn() },
 }));
 
 jest.mock('@/lib/telemetry', () => ({
@@ -70,6 +72,7 @@ jest.mock('@/services/realtime', () => ({
 const mockedGet = apiClient.get as jest.Mock;
 const mockedBulkRestore = TrashService.bulkRestore as jest.Mock;
 const mockedBulkPermanentDelete = TrashService.bulkPermanentDelete as jest.Mock;
+const mockedBulkUnarchive = TrashService.bulkUnarchive as jest.Mock;
 
 /**
  * Each binding described by what actually differs between the four hooks: the
@@ -391,5 +394,78 @@ describe('per-entity divergences the merge must not flatten', () => {
     });
 
     expect(mockShowSuccess).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * One view engine, two bins (ADR-329 §3.9). The archive is the second retirement
+ * state: same list/selection/refresh, a different way back. What a careless
+ * generalisation gets silently wrong is exactly that way back — an archive view
+ * that calls `bulkRestore` still renders, still toasts, and the server refuses
+ * (the row is archived, not trashed). So the exit is asserted by name.
+ */
+describe('the bin names its own way back — spec.restore', () => {
+  beforeEach(() => {
+    mockedGet.mockResolvedValue({ success: true, count: 0 });
+    mockedBulkUnarchive.mockResolvedValue(undefined);
+  });
+
+  it('the engine calls the override INSTEAD of TrashService.bulkRestore, then refreshes both lists', async () => {
+    // ⛔ MUTATION: drop the `restore ?` branch in handleRestore ⇒ bulkRestore is called ⇒ red.
+    const restore = jest.fn().mockResolvedValue(undefined);
+    const spec: EntityTrashSpec<{ id?: string }> = {
+      entityKind: 'property',
+      trashRoute: '/api/any-bin',
+      selectItems: () => undefined,
+      restore,
+    };
+    const forceDataRefresh = jest.fn();
+    const { result } = renderHook(() => useEntityTrashState(spec, { forceDataRefresh }));
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await result.current.handleRestore(['a', 'b']);
+    });
+
+    expect(restore).toHaveBeenCalledWith(['a', 'b']);
+    expect(mockedBulkRestore).not.toHaveBeenCalled();
+    expect(forceDataRefresh).toHaveBeenCalledTimes(1);
+    expect(mockedGet).toHaveBeenCalledTimes(2);
+  });
+
+  it('a failing override is swallowed like a failing restore — no refresh, no throw', async () => {
+    const spec: EntityTrashSpec<{ id?: string }> = {
+      entityKind: 'property',
+      trashRoute: '/api/any-bin',
+      selectItems: () => undefined,
+      restore: jest.fn().mockRejectedValue(new Error('409')),
+    };
+    const forceDataRefresh = jest.fn();
+    const { result } = renderHook(() => useEntityTrashState(spec, { forceDataRefresh }));
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await result.current.handleRestore(['a']);
+    });
+
+    expect(forceDataRefresh).not.toHaveBeenCalled();
+    expect(mockedBulkRestore).not.toHaveBeenCalled();
+  });
+
+  it('the properties archive reads the ARCHIVED route and leaves through bulkUnarchive', async () => {
+    const item = { id: 'prop_1' };
+    mockedGet.mockResolvedValue({ success: true, properties: [item], count: 1 });
+    const { result } = renderHook(() => usePropertiesArchiveState({ forceDataRefresh: jest.fn() }));
+
+    await waitFor(() => expect(result.current.archivedProperties).toEqual([item]));
+    expect(mockedGet).toHaveBeenCalledWith(API_ROUTES.PROPERTIES.ARCHIVED);
+    expect(result.current.archiveCount).toBe(1);
+
+    await act(async () => {
+      await result.current.handleUnarchiveProperties(['prop_1']);
+    });
+
+    expect(mockedBulkUnarchive).toHaveBeenCalledWith('property', ['prop_1']);
+    expect(mockedBulkRestore).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@
  *
  * Returns properties belonging to the given building, including multi-level
  * data (`levels[]`, `levelData`) needed by ADR-329 cost allocation.
- * Filters out soft-archived properties (`archivedAt != null`) by default.
+ * Αφήνει έξω ό,τι έχει αποσυρθεί — κάδος ή αρχείο (`isRetired`, ADR-281 · ADR-329 §3.9).
  *
  * @module components/properties/shared/usePropertiesByBuilding
  * @see ADR-329 §3.4, §3.7 (multi-level), §3.9 (soft archive)
@@ -17,6 +17,7 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { createModuleLogger } from '@/lib/telemetry';
 import { mapPropertyDoc } from '@/lib/firestore-mappers';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import type { Property } from '@/types/property';
 
 const logger = createModuleLogger('usePropertiesByBuilding');
@@ -24,8 +25,8 @@ const logger = createModuleLogger('usePropertiesByBuilding');
 export interface UsePropertiesByBuildingOptions {
   /** Skip subscription when false. */
   enabled?: boolean;
-  /** Include soft-archived (archivedAt != null) properties. Default: false. */
-  includeArchived?: boolean;
+  /** Συμπεριλαμβάνει και τα αποσυρμένα (κάδος · αρχείο). Default: false. */
+  includeRetired?: boolean;
 }
 
 export interface UsePropertiesByBuildingResult {
@@ -37,7 +38,7 @@ export function usePropertiesByBuilding(
   buildingId: string | null | undefined,
   options: UsePropertiesByBuildingOptions = {},
 ): UsePropertiesByBuildingResult {
-  const { enabled = true, includeArchived = false } = options;
+  const { enabled = true, includeRetired = false } = options;
   const { user } = useAuth();
   const [raw, setRaw] = useState<Property[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -74,9 +75,9 @@ export function usePropertiesByBuilding(
   }, [enabled, buildingId, user]);
 
   const properties = useMemo(() => {
-    if (includeArchived) return raw;
-    return raw.filter((p) => p.archivedAt == null);
-  }, [raw, includeArchived]);
+    if (includeRetired) return raw;
+    return raw.filter((p) => !isRetired(p));
+  }, [raw, includeRetired]);
 
   return { properties, loading };
 }

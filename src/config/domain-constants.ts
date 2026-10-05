@@ -918,6 +918,8 @@ export const API_ROUTES = {
     /** ADR-845 Φ4.2β/Βήμα Γ — ανέβασμα 3D μοντέλου *(bytes + δήλωση, μία εγγραφή)*. */
     MODEL: (propertyId: string) => `/api/properties/${propertyId}/model` as const,
     TRASH: '/api/properties/trash',
+    /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
+    ARCHIVED: '/api/properties/archived',
   },
 
   // ── Parking ───────────────────────────────────────────────────────────
@@ -972,6 +974,12 @@ export const API_ROUTES = {
       `/api/trash/${entityType}/${entityId}/restore` as const,
     PERMANENT_DELETE: (entityType: string, entityId: string) =>
       `/api/trash/${entityType}/${entityId}/permanent-delete` as const,
+    /** ADR-329 §3.9 — αρχειοθέτηση (η έξοδος όταν η διαγραφή μπλοκάρεται από αναφορές) */
+    ARCHIVE: (entityType: string, entityId: string) =>
+      `/api/trash/${entityType}/${entityId}/archive` as const,
+    /** ADR-329 §3.9 — επαναφορά από το αρχείο */
+    UNARCHIVE: (entityType: string, entityId: string) =>
+      `/api/trash/${entityType}/${entityId}/unarchive` as const,
   },
 
   // ── Contracts ─────────────────────────────────────────────────────────

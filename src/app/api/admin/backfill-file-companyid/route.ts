@@ -202,7 +202,10 @@ async function backfillCollection(
       if (dryRun) {
         result.backfilled += updates.length;
       } else if (updates.length > 0) {
-        const flush = await flushInBatches(db, updates);
+        // Το `collectionName` είναι μεταβλητή· το πεδίο γραφής δηλώνεται κυριολεκτικά — οι δύο συλλογές του `runBackfill`.
+        const flush = await flushInBatches(db, updates, {
+          collections: [COLLECTIONS.FILE_COMMENTS, COLLECTIONS.FILE_AUDIT_LOG],
+        });
         result.backfilled += flush.written;
         result.errors.push(...flush.errors);
       }

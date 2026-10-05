@@ -1,7 +1,9 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { openDeclaredBatch } from '@/lib/admin-batch-utils';
 import { ENTITY_TYPES, SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { derivedChange, recordDerivedWrites, type FloorCascadeActor } from './_shared/floor-cascade-audit';
 import { isSpecialLevel, readFloorStack, type FloorStackRow } from './_shared/floor-stack-rows';
@@ -83,7 +85,9 @@ export async function cascadeFloorElevations(
     }
     const ref = refById.get(changedRow.id);
     if (ref) {
-      const batch = db.batch();
+      // Δηλωμένη παρτίδα: οι αναφορές έρχονται από το `readFloorStack` (άλλο αρχείο), άρα η συλλογή δηλώνεται ΕΔΩ —
+      // από εδώ η CHECK 3.17 βλέπει αυτό το αρχείο ως γραφέα ορόφων, και η παρτίδα αρνείται ό,τι δεν είναι όροφος.
+      const batch = openDeclaredBatch(db, [COLLECTIONS.FLOORS]);
       batch.update(ref, { elevation: derived, updatedBy, updatedAt: FieldValue.serverTimestamp() });
       await batch.commit();
       await recordCascadeAudit(
@@ -118,7 +122,7 @@ export async function cascadeFloorElevations(
   }
 
   if (shifts.length > 0) {
-    const batch = db.batch();
+    const batch = openDeclaredBatch(db, [COLLECTIONS.FLOORS]);
     const updatedAt = FieldValue.serverTimestamp();
     for (const s of shifts) {
       const ref = refById.get(s.id);

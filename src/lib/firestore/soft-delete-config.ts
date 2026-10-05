@@ -21,7 +21,19 @@ import { ACTIVE_RECORD_STATUS } from "./trashed-status";
  * `server-only`, οπότε ο πελάτης δεν μπορούσε να το δει και ξανάγραφε το
  * `'deleted'` ωμά σε επτά σημεία. Η μία αλήθεια ζει στο `./trashed-status`.
  */
-export { TRASHED_STATUS } from "./trashed-status";
+export { TRASHED_STATUS, ARCHIVED_STATUS } from "./trashed-status";
+
+/**
+ * Το αρχείο μιας οντότητας (ADR-281 · ADR-329 §3.9) — παρόν **μόνο** όπου η οντότητα το έχει.
+ *
+ * Η απουσία του είναι δήλωση: «αυτή η οντότητα δεν αρχειοθετείται». Η λίστα του αρχείου
+ * μοιράζεται το συμβόλαιο του `trashList` (κλειδί απάντησης, ταξινόμηση, άδεια προβολής),
+ * γιατί είναι οι **ίδιες** γραμμές σε άλλη κατάσταση.
+ */
+export interface ArchiveConfig {
+  /** Άδεια για αρχειοθέτηση **και** επαναφορά από το αρχείο. */
+  permission: string;
+}
 
 /**
  * What the `GET /api/{entity}/trash` endpoint needs on top of the lifecycle
@@ -62,6 +74,8 @@ export interface SoftDeleteEntityConfig {
    * such entity today, and its absence here is the assertion of that fact.
    */
   trashList?: TrashListConfig;
+  /** Αρχείο — απόν όπου η οντότητα δεν αρχειοθετείται. Δες {@link ArchiveConfig}. */
+  archive?: ArchiveConfig;
 }
 
 /**
@@ -102,6 +116,8 @@ export const SOFT_DELETE_CONFIG: Record<
       labelPluralEn: "properties",
       loggerName: "PropertiesTrashRoute",
     },
+    // ADR-329 §3.9: η έξοδος όταν η διαγραφή μπλοκάρεται από αναφορές (επιμετρήσεις κ.λπ.).
+    archive: { permission: "properties:properties:delete" },
   },
   building: {
     collection: COLLECTIONS.BUILDINGS,
@@ -180,6 +196,20 @@ export function getTrashListConfig(
 export function listTrashListableEntities(): SoftDeletableEntityType[] {
   return (Object.keys(SOFT_DELETE_CONFIG) as SoftDeletableEntityType[]).filter(
     entityType => SOFT_DELETE_CONFIG[entityType].trashList !== undefined,
+  );
+}
+
+/** Το αρχείο μιας οντότητας, ή `undefined` όταν δεν αρχειοθετείται. */
+export function getArchiveConfig(
+  entityType: SoftDeletableEntityType,
+): ArchiveConfig | undefined {
+  return SOFT_DELETE_CONFIG[entityType].archive;
+}
+
+/** Οι οντότητες που έχουν αρχείο **και** δημοσιεύουν τη λίστα του. */
+export function listArchiveListableEntities(): SoftDeletableEntityType[] {
+  return listTrashListableEntities().filter(
+    entityType => SOFT_DELETE_CONFIG[entityType].archive !== undefined,
   );
 }
 

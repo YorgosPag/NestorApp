@@ -50,6 +50,35 @@ export class TrashService {
     );
   }
 
+  /**
+   * Αρχειοθέτηση (ADR-329 §3.9): η εγγραφή φεύγει από την καθημερινή λίστα και μένει για πάντα.
+   * Διαθέσιμη μόνο για οντότητες με αρχείο· ο διακομιστής αρνείται τις υπόλοιπες.
+   */
+  static async archive(
+    entityType: SoftDeletableEntityType,
+    entityId: string,
+  ): Promise<void> {
+    await apiClient.post(API_ROUTES.TRASH.ARCHIVE(entityType, entityId));
+  }
+
+  /** Επαναφορά μίας εγγραφής από το αρχείο */
+  static async unarchive(
+    entityType: SoftDeletableEntityType,
+    entityId: string,
+  ): Promise<RestoreResponse> {
+    return apiClient.post<RestoreResponse>(
+      API_ROUTES.TRASH.UNARCHIVE(entityType, entityId),
+    );
+  }
+
+  /** Επαναφορά πολλών εγγραφών από το αρχείο */
+  static async bulkUnarchive(
+    entityType: SoftDeletableEntityType,
+    ids: string[],
+  ): Promise<void> {
+    await Promise.all(ids.map((id) => TrashService.unarchive(entityType, id)));
+  }
+
   /** Permanently delete multiple entities */
   static async bulkPermanentDelete(
     entityType: SoftDeletableEntityType,

@@ -169,14 +169,30 @@ export async function cascadeFloorHeightToEntities(
     collectCascade(snaps[i], target, newHeightMm, updates, updatedBy, updatedAt));
 
   if (updates.length > 0) {
-    const flush = await flushInBatches(db, updates);
-    if (flush.errors.length > 0) throw new Error(`Floor height cascade partially failed: ${flush.errors.join('; ')}`);
+    await flushCascade(db, updates);
     await recordCascadeAudit(perTarget, companyId, actor);
   }
 
   const result = summarise(perTarget);
   logger.info('[FloorHeightCascade] Complete', { floorId, newHeightMetres, ...result });
   return result;
+}
+
+/**
+ * Η γραφή της αλυσίδας. Η δήλωση επαναλαμβάνει τις συλλογές του `CASCADE_TARGETS` ΚΥΡΙΟΛΕΚΤΙΚΑ, επίτηδες:
+ * από εδώ η CHECK 3.17 βλέπει αυτό το αρχείο ως γραφέα (το `target.collection` είναι μεταβλητή, αόρατη σε
+ * στατική σάρωση). Νέος στόχος χωρίς γραμμή εδώ ⇒ το `flushInBatches` πετάει πριν γράψει, δεν γράφει σιωπηλά.
+ */
+async function flushCascade(db: Firestore, updates: BatchUpdate[]): Promise<void> {
+  const flush = await flushInBatches(db, updates, {
+    collections: [
+      COLLECTIONS.FLOORPLAN_WALLS,
+      COLLECTIONS.FLOORPLAN_COLUMNS,
+      COLLECTIONS.FLOORPLAN_BEAMS,
+      COLLECTIONS.FLOORPLAN_SLABS,
+    ],
+  });
+  if (flush.errors.length > 0) throw new Error(`Floor height cascade partially failed: ${flush.errors.join('; ')}`);
 }
 
 function queryStoreyEntities(
