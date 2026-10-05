@@ -33,7 +33,12 @@
  * @see lib/files/file-storage-placement — η θέση bytes (ADR-895)
  */
 
-import { buildProxyPreview, buildProxyUrl, type ProxyImagePreview } from '@/lib/storage/storage-object-url';
+import {
+  buildProxyPreview,
+  buildProxyUrl,
+  storageObjectFromUrl,
+  type ProxyImagePreview,
+} from '@/lib/storage/storage-object-url';
 
 import { imageDimensionsOf, type ImageDimensions } from '@/lib/images/image-dimensions';
 
@@ -63,8 +68,12 @@ export type FileDisplayUrl =
   | {
       readonly kind: 'url';
       readonly url: string;
-      /** `stored` = το `downloadUrl` της εγγραφής · `derived` = παράχθηκε από το `storagePath`. Για παρατηρησιμότητα. */
-      readonly origin: 'stored' | 'derived';
+      /**
+       * `stored` = το `downloadUrl` της εγγραφής · `derived` = παράχθηκε από το `storagePath` (δεν υπήρχε `downloadUrl`) ·
+       * `realigned` = υπήρχε `downloadUrl`, αλλά ονόμαζε **άλλο αντικείμενο** από το `storagePath` ⇒ παράχθηκε από
+       * το `storagePath` (ADR-899 §9 θέμα 9). Για παρατηρησιμότητα.
+       */
+      readonly origin: 'stored' | 'derived' | 'realigned';
       /**
        * Παράγωγα κατ' απαίτηση (`src` + `srcset`, ADR-899) — `null` όταν ο τύπος δεν προεπισκοπείται
        * ή δεν υπάρχει μονοπάτι. Ανεξάρτητο από το `downloadUrl`: ό,τι έχει όνομα αντικειμένου έχει κλίμακα.
@@ -80,10 +89,28 @@ const nonEmpty = (value: string | null | undefined): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
 /**
+ * **Ονομάζει το αποθηκευμένο URL άλλο αντικείμενο από το `storagePath`;**
+ *
+ * 🔴 ADR-899 §9 θέμα 9 — μετρημένο 2026-10-05: σε **13 από τις 14** εγγραφές CAD το `downloadUrl` δείχνει στο
+ * **παράγωγο** (`….scene.json`, το γράφει το autosave του DXF Viewer) ενώ το `storagePath` δείχνει στο **πρωτότυπο**
+ * (`….dxf`)· σε **0 από τις 22** υπόλοιπες. Η εγγραφή είναι **το αρχείο** — άρα την ταυτότητα των bytes τη λέει το
+ * `storagePath` (αυτό διαβάζει και ο διακομιστής στη λήψη), και ένα URL που ονομάζει κάτι άλλο είναι URL **συνοδευτικού**.
+ *
+ * ⚠️ Ρωτά **αντικείμενο**, ποτέ `ext === 'dxf'`: η κλάση είναι «δύο πεδία που διαφωνούν», όχι «ένας τύπος αρχείου».
+ * URL που ο **ένας** αντίστροφος αναγνώστης δεν καταλαβαίνει (παλιό URL τρίτου) **δεν** κρίνεται — μένει ως έχει.
+ */
+function storedUrlNamesAnotherObject(downloadUrl: string, storagePath: string): boolean {
+  const named = storageObjectFromUrl(downloadUrl);
+  return named.outcome === 'object' && named.storagePath !== storagePath;
+}
+
+/**
  * **Με ποιο URL δείχνεται αυτό το αρχείο;**
  *
- * 1. Αποθηκευμένο `downloadUrl` ⇒ αυτό, αυτούσιο (μπορεί να είναι και παλιό URL τρίτου — δεν ξαναγράφεται).
- * 2. Αλλιώς `storagePath` ⇒ το proxy URL του **ενός** γραφέα, με τη θέση bytes της εγγραφής.
+ * 1. Αποθηκευμένο `downloadUrl` που **δεν διαφωνεί** με το `storagePath` ⇒ αυτό, αυτούσιο (μπορεί να είναι και
+ *    παλιό URL τρίτου — δεν ξαναγράφεται).
+ * 2. Αλλιώς `storagePath` ⇒ το proxy URL του **ενός** γραφέα, με τη θέση bytes της εγγραφής (`derived` όταν δεν
+ *    υπήρχε `downloadUrl`, `realigned` όταν υπήρχε και ονόμαζε άλλο αντικείμενο).
  * 3. Αλλιώς ονομασμένη απουσία.
  */
 export function fileDisplayUrlOf(record: FileDisplayUrlSubject): FileDisplayUrl {
@@ -95,13 +122,16 @@ export function fileDisplayUrlOf(record: FileDisplayUrlSubject): FileDisplayUrl 
       ? buildProxyPreview(record.storagePath, fileStoragePlacementOf(record), dimensions)
       : null;
 
-  if (nonEmpty(record.downloadUrl)) return { kind: 'url', url: record.downloadUrl, origin: 'stored', preview, dimensions };
+  const stored = nonEmpty(record.downloadUrl) ? record.downloadUrl : null;
+  const disagrees =
+    stored !== null && nonEmpty(record.storagePath) && storedUrlNamesAnotherObject(stored, record.storagePath);
+  if (stored !== null && !disagrees) return { kind: 'url', url: stored, origin: 'stored', preview, dimensions };
   if (!nonEmpty(record.storagePath)) return { kind: 'unavailable', why: 'no-storage-path' };
   if (!knownPlacement) return { kind: 'unavailable', why: 'unknown-placement' };
   return {
     kind: 'url',
     url: buildProxyUrl(record.storagePath, fileStoragePlacementOf(record)),
-    origin: 'derived',
+    origin: disagrees ? 'realigned' : 'derived',
     preview,
     dimensions,
   };

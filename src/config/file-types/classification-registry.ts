@@ -503,6 +503,26 @@ export function getPreviewType(
   return prefixSpecFor(contentType)?.previewType ?? 'unsupported';
 }
 
+/**
+ * Preview types a **browser tab** renders by itself from the file's own bytes (ADR-899 §9 θέμα 9).
+ *
+ * Everything else needs an application viewer: a `.dxf` / `.docx` / `.xlsx` URL in a bare tab is a download or raw
+ * text, never a view. ⚠️ `html` is deliberately absent — stored HTML must not render on our own origin.
+ */
+const BROWSER_NATIVE_PREVIEW_TYPES: ReadonlySet<PreviewType> = new Set<PreviewType>([
+  'pdf',
+  'image',
+  'video',
+  'audio',
+  'text',
+  'xml',
+]);
+
+/** Does a bare browser tab **show** this preview type (as opposed to downloading it)? */
+export function isBrowserNativePreviewType(previewType: PreviewType): boolean {
+  return BROWSER_NATIVE_PREVIEW_TYPES.has(previewType);
+}
+
 /** Broad user-facing file category (drives the i18n label). */
 export function getFileCategory(
   contentType: string | undefined,

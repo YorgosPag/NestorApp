@@ -55,6 +55,7 @@ import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileRecord } from '@/types/file-record';
 import { fileCustodyOf } from '@/lib/files/file-custody';
 import { fileDisplayUrlOf } from '@/lib/files/file-display-url';
+import { fileOpenInTabUrl } from '@/lib/files/file-open-in-tab';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -124,7 +125,9 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   const display = useMemo(() => (file ? fileDisplayUrlOf(file) : null), [file]);
   const fileUrl = display?.kind === 'url' ? display.url : undefined;
   const filePreview = display?.kind === 'url' ? display.preview : null;
-  const handleOpenNewTab = () => openRemoteUrlInNewTab(fileUrl);
+  // ADR-899 §9 θέμα 9 — «άνοιγμα» = προβολή: προσφέρεται μόνο όπου η καρτέλα θα ΕΔΕΙΧΝΕ το αρχείο (όχι DXF/Office).
+  const openInTabUrl = useMemo(() => (file ? fileOpenInTabUrl(file) : null), [file]);
+  const handleOpenNewTab = () => openRemoteUrlInNewTab(openInTabUrl);
 
   // Empty state
   if (!file) {
@@ -180,14 +183,16 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </TooltipTrigger>
                 <TooltipContent>{t('list.download')}</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={handleOpenNewTab} className="h-7 w-7 p-0">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('list.openInNewTab')}</TooltipContent>
-              </Tooltip>
+              {openInTabUrl && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={handleOpenNewTab} className="h-7 w-7 p-0">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.openInNewTab')}</TooltipContent>
+                </Tooltip>
+              )}
             </>
           )}
           {/* Version history toggle — ADR-862 Φ0: η στοίβα είναι η αλυσίδα διαδοχής, την

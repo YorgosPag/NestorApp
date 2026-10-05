@@ -200,8 +200,14 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
       status: 'ready' as const,
       lifecycleState: 'active' as const,
       isDeleted: false,
-      sizeBytes,
-      downloadUrl,
+      // 🔴 ADR-899 §9 θέμα 9 — `downloadUrl` / `sizeBytes` του πάνω επιπέδου περιγράφουν **το αρχείο** (το
+      //    πρωτότυπο στο `storagePath`), όχι τη σκηνή. Ως 2026-10-05 γράφονταν άνευ όρων σε ΚΑΘΕ auto-save ⇒
+      //    μετρημένο στην παραγωγή: 13/14 εγγραφές CAD με `storagePath → ….dxf` (143.056 bytes) αλλά
+      //    `downloadUrl → ….scene.json` και `sizeBytes` 273.834 — το πάνελ έδειχνε το μέγεθος της σκηνής και η
+      //    αντιγραφή κάτοψης αντέγραφε το JSON. WRITE-ONCE όπως το `displayName`: μόνο στη γέννηση, όπου δεν
+      //    υπάρχει ακόμη πρωτότυπο και η σκηνή **είναι** ό,τι έχει η εγγραφή. Η σκηνή έχει τα δικά της πεδία,
+      //    μέσα στο `processedData`.
+      ...(isCreate ? { sizeBytes, downloadUrl } : {}),
       revision: version,
       hash: null,
       // 🛡️ createdAt is WRITE-ONCE — with `merge: true` an unconditional
@@ -221,6 +227,7 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
         },
         processedDataPath: scenePath,
         processedDataUrl: downloadUrl,
+        processedDataSizeBytes: sizeBytes,
         processedAt: Date.now(),
       },
     };

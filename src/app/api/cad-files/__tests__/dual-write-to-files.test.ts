@@ -111,6 +111,34 @@ describe('writeToFilesCollection — write-once entity identity', () => {
   });
 });
 
+// ADR-899 §9 θέμα 9 — το πάνω επίπεδο περιγράφει το ΑΡΧΕΙΟ (πρωτότυπο), η σκηνή ζει στο `processedData`.
+describe('writeToFilesCollection — top-level downloadUrl/sizeBytes describe the original, not the scene', () => {
+  beforeEach(() => { captured.length = 0; });
+
+  it('🔴 an auto-save (update) NEVER re-points the top-level downloadUrl / sizeBytes at the scene JSON', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: false, version: 4 });
+    const { payload } = captured[0];
+    expect('downloadUrl' in payload).toBe(false);
+    expect('sizeBytes' in payload).toBe(false);
+  });
+
+  it('🔴 the scene keeps its own url + size inside processedData on every save', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: false, version: 4 });
+    expect(captured[0].payload.processedData).toMatchObject({
+      processedDataPath: baseParams.context.canonicalScenePath,
+      processedDataUrl: baseParams.downloadUrl,
+      processedDataSizeBytes: baseParams.sizeBytes,
+    });
+  });
+
+  it('on CREATE (no original yet) the scene is all the record has ⇒ top-level fields are written once', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: true });
+    const { payload } = captured[0];
+    expect(payload.downloadUrl).toBe(baseParams.downloadUrl);
+    expect(payload.sizeBytes).toBe(baseParams.sizeBytes);
+  });
+});
+
 describe('writeToFilesCollection — write-once createdAt & displayName, real layerCount', () => {
   beforeEach(() => { captured.length = 0; });
 

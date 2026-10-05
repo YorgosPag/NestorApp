@@ -86,8 +86,139 @@ async function fetchSceneViaApi(fileId: string): Promise<SceneApiOutcome> {
 }
 
 // ============================================================================
-// HOOK
+// ΟΙ ΤΡΕΙΣ ΔΡΟΜΟΙ — καθαρή απόφαση, χωριστά από την εκτέλεση (ADR-899 §9 θέμα 9, χρέος GOL)
 // ============================================================================
+
+/**
+ * **Από ποιον δρόμο έρχεται η σκηνή;** — κλειστό σύνολο. Η απόφαση είναι καθαρή συνάρτηση της πηγής· το I/O
+ * και η κατάσταση του React ζουν αλλού.
+ */
+export type SceneLoadPlan =
+  /** PATH A — V1 Legacy: η σκηνή είναι ενσωματωμένη στο `processedData`. Καμία λήψη. */
+  | { readonly kind: 'embedded'; readonly scene: DxfSceneData }
+  /** PATH B — V3: `processedDataPath` ⇒ το scene API. */
+  | { readonly kind: 'api'; readonly fileId: string }
+  /** PATH C — bytes: JSON σκηνής **ή** πρωτότυπο DXF· το λέει το ίδιο το περιεχόμενο. */
+  | { readonly kind: 'bytes'; readonly url: string; readonly fileName: string; readonly userDrawingUnits: FileRecord['userDrawingUnits'] }
+  /** Τίποτα να φορτωθεί (χωρίς URL, ή το ανέβασμα δεν ολοκληρώθηκε). */
+  | { readonly kind: 'none' };
+
+const NO_PLAN = { kind: 'none' } as const satisfies SceneLoadPlan;
+
+/** Ο δρόμος μιας **εγγραφής**: ενσωματωμένη → API → bytes του πρωτοτύπου. */
+function planRecordSceneLoad(file: FileRecord, fileExt: string): SceneLoadPlan {
+  if (file.processedData?.scene) return { kind: 'embedded', scene: file.processedData.scene };
+  if (file.processedData?.processedDataPath && file.id) return { kind: 'api', fileId: file.id };
+
+  // ADR-899 §4.1 / §9 θέμα 9 — ο ΕΝΑΣ αναγνώστης: δίνει το αντικείμενο του `storagePath`, ακόμη κι όταν το
+  //    αποθηκευμένο `downloadUrl` ονομάζει το συνοδευτικό `.scene.json`. Η μορφή των bytes ΔΕΝ βγαίνει από το `ext`.
+  const url = fileDisplayUrl(file);
+  if (!url) return NO_PLAN;
+  // Πρωτότυπο DXF εγγραφής διαβάζεται μόνο όταν το ανέβασμα ολοκληρώθηκε· τα `.json` της
+  // FloorplanSaveOrchestrator δεν έχουν τέτοια φάση.
+  if (fileExt !== 'json' && file.status !== 'ready') return NO_PLAN;
+  return { kind: 'bytes', url, fileName: file.originalFilename ?? '', userDrawingUnits: file.userDrawingUnits };
+}
+
+/** **Ο δρόμος για αυτή την πηγή.** Οι πηγές «μόνο bytes» δεν έχουν ούτε `processedData` ούτε φάση ανεβάσματος. */
+export function planSceneLoad(source: FloorplanSceneSource, fileExt: string): SceneLoadPlan {
+  if (!isBytesSource(source)) return planRecordSceneLoad(source, fileExt);
+  if (!source.url) return NO_PLAN;
+  return { kind: 'bytes', url: source.url, fileName: source.fileName, userDrawingUnits: undefined };
+}
+
+/** Τι έφερε ένας δρόμος με I/O: τη σκηνή, ή «ακόμη επεξεργάζεται» (202 του scene API). */
+type SceneLoadResult = { readonly scene: DxfSceneData | null; readonly processing: boolean };
+
+/** Η **εκτέλεση** των δύο δρόμων με I/O — καμία κατάσταση React, τα σφάλματα ανεβαίνουν στον καλούντα. */
+async function executeSceneLoad(plan: Extract<SceneLoadPlan, { kind: 'api' | 'bytes' }>): Promise<SceneLoadResult> {
+  if (plan.kind === 'api') {
+    const outcome = await fetchSceneViaApi(plan.fileId);
+    return outcome.kind === 'scene' ? { scene: outcome.scene, processing: false } : { scene: null, processing: true };
+  }
+  const scene = await loadSceneFromBytes({
+    url: plan.url,
+    fileName: plan.fileName,
+    userDrawingUnits: plan.userDrawingUnits,
+  });
+  return { scene, processing: false };
+}
+
+const LOAD_FAILURE_LABEL: Readonly<Record<'api' | 'bytes', string>> = {
+  api: 'Failed to load scene via API',
+  bytes: 'Failed to load scene from bytes',
+};
+
+/** Το μήνυμα για τον άνθρωπο: «δεν διαβάζεται ως σχέδιο» έχει δικό του κείμενο, τα υπόλοιπα το μήνυμα του σφάλματος. */
+function sceneLoadErrorMessage(err: unknown, unreadableText: string): string {
+  if (err instanceof UnreadableScenePayloadError) return unreadableText;
+  return err instanceof Error ? err.message : 'Unknown error';
+}
+
+/** Πού γράφει μια φόρτωση με I/O — η κατάσταση του hook, και τα δύο κείμενα που χρειάζεται. */
+interface SceneLoadSink {
+  readonly setScene: (scene: DxfSceneData) => void;
+  readonly setError: (message: string | null) => void;
+  readonly setLoading: (loading: boolean) => void;
+  readonly processingText: string;
+  readonly unreadableText: string;
+}
+
+/**
+ * Κοινό περιτύλιγμα φόρτωσης: σημαία, σφάλμα, ακύρωση — **ένα** για όλους τους δρόμους με I/O.
+ * @returns ο ακυρωτής· μετά από αυτόν καμία εγγραφή στο sink (η πηγή άλλαξε ή το component έφυγε).
+ */
+function startSceneLoad(plan: Extract<SceneLoadPlan, { kind: 'api' | 'bytes' }>, sink: SceneLoadSink): () => void {
+  let cancelled = false;
+  sink.setLoading(true);
+  sink.setError(null);
+  executeSceneLoad(plan)
+    .then(({ scene, processing }) => {
+      if (cancelled) return;
+      if (processing) sink.setError(sink.processingText);
+      if (scene) sink.setScene(scene);
+    })
+    .catch((err: unknown) => {
+      if (cancelled) return;
+      logger.warn(LOAD_FAILURE_LABEL[plan.kind], { error: err });
+      sink.setError(sceneLoadErrorMessage(err, sink.unreadableText));
+    })
+    .finally(() => { if (!cancelled) sink.setLoading(false); });
+  return () => { cancelled = true; };
+}
+
+// ============================================================================
+// HOOKS
+// ============================================================================
+
+/**
+ * Live-sync: when the DXF auto-save updates files/{id} in Firestore (version bump), the token increments so
+ * the scene-load effect re-runs and fetches new content. The first snapshot is the current state, not a change.
+ */
+function useSceneRefetchToken(fileId: string | undefined, isDxf: boolean): number {
+  const [refetchToken, setRefetchToken] = useState(0);
+  const initialSnapshotSeenRef = useRef(false);
+
+  useEffect(() => {
+    if (!fileId || !isDxf) return;
+    initialSnapshotSeenRef.current = false;
+    const unsub = firestoreQueryService.subscribeDoc(
+      'FILES',
+      fileId,
+      () => {
+        if (!initialSnapshotSeenRef.current) {
+          initialSnapshotSeenRef.current = true;
+          return;
+        }
+        setRefetchToken((n) => n + 1);
+      },
+      () => { /* version-bump listener — errors are non-critical */ },
+    );
+    return unsub;
+  }, [fileId, isDxf]);
+
+  return refetchToken;
+}
 
 /**
  * Load DXF scene data for a floorplan file.
@@ -104,101 +235,24 @@ export function useFloorplanSceneLoader(
   const [sceneError, setSceneError] = useState<string | null>(null);
 
   const currentFile = source && !isBytesSource(source) ? source : null;
-  const bytesSource = source && isBytesSource(source) ? source : null;
-
-  // Live-sync: when the DXF auto-save updates files/{id} in Firestore (version bump),
-  // increment refetchToken so the scene-load effect re-runs and fetches new content.
-  const [refetchToken, setRefetchToken] = useState(0);
-  const initialSnapshotSeenRef = useRef(false);
-
-  useEffect(() => {
-    if (!currentFile?.id || !isDxf) return;
-    initialSnapshotSeenRef.current = false;
-    const unsub = firestoreQueryService.subscribeDoc(
-      'FILES',
-      currentFile.id,
-      () => {
-        if (!initialSnapshotSeenRef.current) {
-          initialSnapshotSeenRef.current = true;
-          return;
-        }
-        setRefetchToken((n) => n + 1);
-      },
-      () => { /* version-bump listener — errors are non-critical */ },
-    );
-    return unsub;
-  }, [currentFile?.id, isDxf]);
-
-  // ADR-899 §4.1 — ⚠️ ΠΑΓΙΔΑ CAD: σε εγγραφές CAD το αποθηκευμένο `downloadUrl` δείχνει στο **`.scene.json`**
-  //    (μετρημένο στην παραγωγή, ADR-899 §2.2) ενώ το `ext` λέει `dxf`. Γι' αυτό η μορφή των bytes ΔΕΝ βγαίνει
-  //    από το `ext`: τη λέει το ίδιο το περιεχόμενο (`loadSceneFromBytes`, §9 θέμα 8).
-  const bytesUrl = bytesSource?.url ?? (currentFile ? fileDisplayUrl(currentFile) : null);
-  const bytesFileName = bytesSource?.fileName ?? currentFile?.originalFilename ?? '';
+  const refetchToken = useSceneRefetchToken(currentFile?.id, isDxf);
+  const plan = source && isDxf ? planSceneLoad(source, fileExt) : null;
+  // Η ταυτότητα του δρόμου `bytes` είναι τα πεδία του, όχι το αντικείμενο (ξαναχτίζεται ανά render).
+  const bytesUrl = plan?.kind === 'bytes' ? plan.url : null;
+  const bytesFileName = plan?.kind === 'bytes' ? plan.fileName : '';
 
   useEffect(() => {
-    // Guard: only DXF/JSON files
-    if (!source || !isDxf) {
-      setLoadedScene(null);
-      return;
-    }
+    if (!plan) { setLoadedScene(null); return; } // Guard: only DXF/JSON files
+    if (plan.kind === 'none') return;
+    if (plan.kind === 'embedded') { setLoadedScene(plan.scene); return; }
 
-    let cancelled = false;
-
-    /** Κοινό περιτύλιγμα φόρτωσης: σημαία, σφάλμα, ακύρωση — ένα για όλα τα μονοπάτια με I/O. */
-    const run = async (label: string, load: () => Promise<DxfSceneData | null>) => {
-      setIsLoading(true);
-      setSceneError(null);
-      try {
-        const scene = await load();
-        if (!cancelled && scene) setLoadedScene(scene);
-      } catch (err) {
-        if (cancelled) return;
-        logger.warn(label, { error: err });
-        setSceneError(
-          err instanceof UnreadableScenePayloadError ? t('floorplan.sceneError')
-            : err instanceof Error ? err.message : 'Unknown error',
-        );
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    const loadScene = async () => {
-      // -- PATH A: V1 Legacy — embedded scene in processedData --
-      if (currentFile?.processedData?.scene) {
-        setLoadedScene(currentFile.processedData.scene);
-        return;
-      }
-
-      // -- PATH B: V3 — processedDataPath via API --
-      if (currentFile?.processedData?.processedDataPath && currentFile.id) {
-        const fileId = currentFile.id;
-        await run('Failed to load scene via API', async () => {
-          const outcome = await fetchSceneViaApi(fileId);
-          if (outcome.kind === 'scene') return outcome.scene;
-          if (!cancelled) setSceneError(t('floorplan.processingInProgress'));
-          return null;
-        });
-        return;
-      }
-
-      // -- PATH C: bytes (scene JSON or original DXF — the payload decides) --
-      if (!bytesUrl) return;
-      // Πρωτότυπο DXF εγγραφής διαβάζεται μόνο όταν το ανέβασμα ολοκληρώθηκε· τα `.json` της
-      // FloorplanSaveOrchestrator και οι πηγές «μόνο bytes» δεν έχουν τέτοια φάση.
-      if (currentFile && fileExt !== 'json' && currentFile.status !== 'ready') return;
-
-      await run('Failed to load scene from bytes', () =>
-        loadSceneFromBytes({
-          url: bytesUrl,
-          fileName: bytesFileName,
-          userDrawingUnits: currentFile?.userDrawingUnits,
-        }),
-      );
-    };
-
-    loadScene();
-    return () => { cancelled = true; };
+    return startSceneLoad(plan, {
+      setScene: setLoadedScene,
+      setError: setSceneError,
+      setLoading: setIsLoading,
+      processingText: t('floorplan.processingInProgress'),
+      unreadableText: t('floorplan.sceneError'),
+    });
     // ADR-716 Φ5 — το `userDrawingUnits` ΕΙΝΑΙ είσοδος του parse: αν αλλάξει, η σκηνή
     // πρέπει να ξαναχτιστεί, αλλιώς η οθόνη δείχνει την παλιά κλίμακα.
     // Η ταυτότητα της πηγής είναι τα πεδία της, όχι το αντικείμενο (ο καταναλωτής μπορεί να το ξαναχτίζει ανά render).

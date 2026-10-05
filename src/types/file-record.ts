@@ -146,6 +146,12 @@ export interface FloorplanProcessedData {
    */
   processedDataUrl?: string;
 
+  /**
+   * Μέγεθος του **επεξεργασμένου** JSON σε bytes — ποτέ στο `sizeBytes` του πάνω επιπέδου, που περιγράφει το
+   * πρωτότυπο του `storagePath` (ADR-899 §9 θέμα 9).
+   */
+  processedDataSizeBytes?: number;
+
   // =========================================================================
   // METADATA (stored in Firestore - small footprint)
   // =========================================================================

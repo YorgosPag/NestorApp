@@ -69,9 +69,10 @@ const DEFAULT_DXF_MIME = 'application/dxf';
  * Downloads a FileRecord's stored bytes and wraps them back into a `File`,
  * ready to be re-fed into `uploadSmart`.
  *
- * Uses the tokenized Firebase `downloadUrl` which is CORS-fetchable from the
- * browser (the same client-side `fetch(downloadUrl)` pattern already used by
- * `FloorFloorplanService` to load DXF scenes).
+ * The URL comes from the ONE reader (`fileDisplayUrl`): the object named by
+ * `storagePath` — the ORIGINAL. On CAD records the stored `downloadUrl` names
+ * the `.scene.json` companion (written by the DXF Viewer auto-save); copying
+ * that would re-upload scene JSON as "….dxf" (ADR-899 §9 θέμα 9).
  *
  * @throws Error('NO_DOWNLOAD_URL') when the record has no resolvable URL.
  * @throws Error('DOWNLOAD_FAILED_<status>') on a non-OK HTTP response.

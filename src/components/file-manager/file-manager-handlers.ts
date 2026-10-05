@@ -31,7 +31,7 @@ import {
 import { defaultFileFilters } from '@/components/core/AdvancedFilters';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
-import { fileDisplayUrl } from '@/lib/files/file-display-url';
+import { fileOpenInTabUrl } from '@/lib/files/file-open-in-tab';
 import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileClassification } from '@/config/domain-constants';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -68,7 +68,8 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
 
   const handleFileDoubleClick = useCallback((file: FileRecord) => {
     // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης + ο ΕΝΑΣ «άνοιξε σε νέα καρτέλα» (κενό URL ⇒ no-op με log).
-    openRemoteUrlInNewTab(fileDisplayUrl(file));
+    // §9 θέμα 9 — μόνο όπου η καρτέλα θα ΕΔΕΙΧΝΕ το αρχείο· αλλιώς το πρώτο κλικ το έχει ήδη ανοίξει στο πάνελ.
+    openRemoteUrlInNewTab(fileOpenInTabUrl(file));
   }, []);
 
   const handleRename = useCallback(async (fileId: string, newDisplayName: string) => {

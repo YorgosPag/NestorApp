@@ -89,11 +89,22 @@ describe('downloadFileRecordAsFile', () => {
   });
 
   // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης εμφάνισης.
-  it('🔴 stored `downloadUrl` WINS over `storagePath` (CAD trap: never silently re-point the bytes)', async () => {
+  it('stored `downloadUrl` of the SAME object is fetched as-is (foreign/legacy URLs are never re-pointed)', async () => {
     const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(['x']) });
     global.fetch = fetchMock as unknown as typeof fetch;
-    await downloadFileRecordAsFile({ downloadUrl: 'https://x/y.scene.json', storagePath: 'a/b.dxf', ext: 'dxf' });
-    expect(fetchMock).toHaveBeenCalledWith('https://x/y.scene.json');
+    await downloadFileRecordAsFile({ downloadUrl: 'https://x/y.dxf', storagePath: 'a/b.dxf', ext: 'dxf' });
+    expect(fetchMock).toHaveBeenCalledWith('https://x/y.dxf');
+  });
+
+  // ADR-899 §9 θέμα 9 — 🔴 ΑΝΤΙΣΤΡΟΦΗ. Ως 2026-10-05 αυτό το test κλείδωνε το ΛΑΘΟΣ: «το `downloadUrl` νικά»,
+  //    δηλαδή η αντιγραφή κατέβαζε το JSON της σκηνής και το ξανα-ανέβαζε ως «….dxf». Στις εγγραφές CAD της
+  //    παραγωγής (13/14) το `downloadUrl` ονομάζει το συνοδευτικό `.scene.json`· το πρωτότυπο το λέει το `storagePath`.
+  it('🔴 CAD record: `downloadUrl` names the scene companion ⇒ the ORIGINAL is copied, never the scene JSON', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(['x']) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const sceneUrl = `https://firebasestorage.googleapis.com/v0/b/bucket.test/o/${encodeURIComponent('a/b.scene.json')}?alt=media&token=t`;
+    await downloadFileRecordAsFile({ downloadUrl: sceneUrl, storagePath: 'a/b.dxf', ext: 'dxf' });
+    expect(fetchMock).toHaveBeenCalledWith(buildProxyUrl('a/b.dxf'));
   });
 
   it('🔴 no `downloadUrl` but a `storagePath` ⇒ fetches the same-origin proxy (no longer NO_DOWNLOAD_URL)', async () => {

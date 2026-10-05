@@ -23,6 +23,40 @@ describe('fileDisplayUrlOf', () => {
       .toEqual({ kind: 'url', url: 'https://x.test/a.jpg', origin: 'stored', preview: null, dimensions: null });
   });
 
+  // ADR-899 §9 θέμα 9 — μετρημένο στην παραγωγή: 13/14 εγγραφές CAD έχουν `downloadUrl → .scene.json`, `storagePath → .dxf`.
+  describe('🔴 Υ6 το αποθηκευμένο URL ονομάζει ΑΛΛΟ αντικείμενο από το storagePath', () => {
+    const DXF = 'companies/c1/entities/property/p1/domains/construction/categories/floorplans/files/file_9.dxf';
+    const SCENE = DXF.replace(/\.dxf$/, '.scene.json');
+    const tokenUrl = (objectPath: string) =>
+      `https://firebasestorage.googleapis.com/v0/b/bucket.test/o/${encodeURIComponent(objectPath)}?alt=media&token=t`;
+
+    test('συνοδευτικό (σκηνή) ⇒ το proxy του storagePath, origin=realigned — ποτέ το JSON της σκηνής', () => {
+      expect(fileDisplayUrlOf({ downloadUrl: tokenUrl(SCENE), storagePath: DXF, contentType: 'application/dxf' }))
+        .toEqual({ kind: 'url', url: buildProxyUrl(DXF), origin: 'realigned', preview: null, dimensions: null });
+      expect(fileDisplayUrlOf({ downloadUrl: buildProxyUrl(SCENE), storagePath: DXF }))
+        .toMatchObject({ url: buildProxyUrl(DXF), origin: 'realigned' });
+    });
+
+    test('ίδιο αντικείμενο ⇒ το αποθηκευμένο URL μένει ΑΥΤΟΥΣΙΟ (το token δεν πετιέται)', () => {
+      expect(fileDisplayUrlOf({ downloadUrl: tokenUrl(DXF), storagePath: DXF }))
+        .toMatchObject({ url: tokenUrl(DXF), origin: 'stored' });
+    });
+
+    test('URL που ο αντίστροφος αναγνώστης δεν καταλαβαίνει ⇒ δεν κρίνεται, μένει stored', () => {
+      expect(fileDisplayUrlOf({ downloadUrl: 'https://x.test/other.scene.json', storagePath: DXF }))
+        .toMatchObject({ url: 'https://x.test/other.scene.json', origin: 'stored' });
+    });
+
+    test('διαφωνία + άγνωστη θέση bytes ⇒ ονομασμένη απουσία — ούτε το συνοδευτικό, ούτε μαντεψιά κάδου', () => {
+      expect(fileDisplayUrlOf({ downloadUrl: tokenUrl(SCENE), storagePath: DXF, storagePlacement: 'mars-bucket' }))
+        .toEqual({ kind: 'unavailable', why: 'unknown-placement' });
+    });
+
+    test('χωρίς storagePath δεν υπάρχει με τι να διαφωνήσει ⇒ stored', () => {
+      expect(fileDisplayUrlOf({ downloadUrl: tokenUrl(SCENE) })).toMatchObject({ url: tokenUrl(SCENE), origin: 'stored' });
+    });
+  });
+
   test('🔴 Υ2 χωρίς downloadUrl, με storagePath ⇒ το proxy URL του ΕΝΟΣ γραφέα, origin=derived', () => {
     expect(fileDisplayUrlOf({ storagePath: PATH }))
       .toEqual({ kind: 'url', url: buildProxyUrl(PATH), origin: 'derived', preview: null, dimensions: null });
