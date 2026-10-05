@@ -114,7 +114,6 @@ export function renderDxfToCanvas(
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  if (!scene.entities || scene.entities.length === 0) return;
 
   // Size canvas to container
   const container = canvas.parentElement;
@@ -131,6 +130,11 @@ export function renderDxfToCanvas(
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = modeConfig.background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // ADR-899 §9 θέμα 8 — η έξοδος για άδεια σκηνή είναι ΜΕΤΑ το μέγεθος και το καθάρισμα: πριν, ο καμβάς έμενε στο
+  // προεπιλεγμένο 300×150 με ό,τι είχε ζωγραφίσει το προηγούμενο σχέδιο. Το «κενό σχέδιο» το λέει ο καταναλωτής
+  // (`isEmpty` του φορτωτή)· εδώ εξασφαλίζεται μόνο ότι ο καμβάς δεν ψεύδεται.
+  if (!scene.entities || scene.entities.length === 0) return;
 
   // Compute bounds from ALL entities — never trust scene.bounds (stale after DXF Viewer edits).
   const bounds = computeActualBounds(scene.entities);

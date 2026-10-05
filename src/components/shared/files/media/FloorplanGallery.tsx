@@ -87,7 +87,7 @@ export function FloorplanGallery({
   const isPdf = fileExt === 'pdf';
   const isImage = currentFile && !isDxf && !isPdf;
   // DXF scene loading (extracted hook)
-  const { loadedScene, isLoading, sceneError } = useFloorplanSceneLoader(currentFile, isDxf, fileExt);
+  const { loadedScene, isLoading, sceneError, isEmpty } = useFloorplanSceneLoader(currentFile, isDxf, fileExt);
   // PDF loading — for SPEC-237D overlay support on PDF backgrounds
   const { pdfImage, pdfDimensions, isPdfLoading, pdfError } = useFloorplanPdfLoader(currentFile, isPdf);
   // Raw image loading (PNG/JPEG/WEBP/TIFF) — same canvas+overlay path as PDF.
@@ -270,7 +270,7 @@ export function FloorplanGallery({
 
   const anyLoading = isLoading || isPdfLoading || isImageLoading;
   const anyError = sceneError || pdfError || imageError;
-  const showCanvas = (isDxf && loadedScene) || (isRaster && rasterImage && rasterBounds);
+  const showCanvas = (isDxf && loadedScene && !isEmpty) || (isRaster && rasterImage && rasterBounds);
 
   function renderViewerContent(
     zp: ReturnType<typeof useZoomPan>,
@@ -318,6 +318,12 @@ export function FloorplanGallery({
             unitsPerMeter={unitsPerMeter ?? null} scopeKey={floorplanId ?? currentFile?.id ?? null}
             findSnapPoint={(worldPt, screenScale) => snapFinder(worldPt, screenScale)}
           />
+        )}
+        {isDxf && isEmpty && !anyLoading && !anyError && (
+          <section className="absolute inset-0 flex flex-col items-center justify-center">
+            <Map className={cn(iconSizes.xl, 'mb-2', colors.text.muted)} aria-hidden="true" />
+            <span className={cn("text-sm", colors.text.muted)}>{t('preview.dxfEmpty')}</span>
+          </section>
         )}
         {isDxf && !anyLoading && !anyError && !loadedScene && currentFile?.processedData && (
           <section className="absolute inset-0 flex flex-col items-center justify-center">

@@ -487,7 +487,8 @@
     "htmlLoading": "Loading HTML file...",
     "htmlError": "Could not preview HTML file",
     "dxfLoading": "Parsing DXF drawing...",
-    "dxfError": "Could not preview DXF drawing"
+    "dxfError": "Could not preview DXF drawing",
+    "dxfEmpty": "The drawing has no entities to display"
   },
   "batch": {
     "toolbar": "Batch actions",

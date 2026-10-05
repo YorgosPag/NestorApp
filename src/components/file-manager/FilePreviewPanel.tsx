@@ -395,6 +395,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       <FilePreviewRenderer
         url={fileUrl}
         preview={filePreview}
+        record={file}
         contentType={file.contentType}
         fileName={file.originalFilename}
         displayName={displayName}

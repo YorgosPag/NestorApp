@@ -17,6 +17,7 @@
  *   - video       → HTML5 <video>
  *   - audio       → HTML5 <audio>
  *   - docx        → Client-side docx-preview rendering
+ *   - dxf         → DxfPreview (σκηνή από την εγγραφή όταν υπάρχει, αλλιώς από τα bytes — ADR-899 §9 θέμα 8)
  *   - unsupported → Friendly fallback with download prompt
  *
  * @module components/shared/files/preview/FilePreviewRenderer
@@ -40,6 +41,7 @@ import { HtmlPreview } from '@/components/file-manager/preview/HtmlPreview';
 import { DxfPreview } from '@/components/file-manager/preview/DxfPreview';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import type { ProxyImagePreview } from '@/lib/storage/storage-object-url';
+import type { FileRecord } from '@/types/file-record';
 import { ImagePreview } from './ImagePreview';
 import '@/lib/design-system';
 
@@ -69,6 +71,12 @@ export interface FilePreviewRendererProps {
    * σε βαθμίδα στο μέγεθος του κουτιού και **ανεβαίνει** βαθμίδα μόνο όταν το zoom το απαιτεί· χωρίς αυτό, το `url`.
    */
   preview?: ProxyImagePreview | null;
+  /**
+   * Η εγγραφή του αρχείου, **όταν ο οικοδεσπότης την έχει** (ADR-899 §9 θέμα 8). Τη χρειάζεται όποια προεπισκόπηση
+   * δεν είναι «τα bytes του `url`»: στις εγγραφές CAD η σκηνή ζει στο `processedData`, και το `url` δείχνει σε
+   * συνοδευτικό. Η σελίδα κοινοποίησης δεν έχει εγγραφή ⇒ την παραλείπει και το σχέδιο διαβάζεται από το `url`.
+   */
+  record?: FileRecord | null;
 }
 
 // ============================================================================
@@ -167,6 +175,7 @@ export function FilePreviewRenderer({
   onDownload,
   className,
   preview,
+  record,
 }: FilePreviewRendererProps) {
   const previewType: PreviewType = getPreviewType(contentType, fileName);
   const hasUrl = !!url;
@@ -204,7 +213,9 @@ export function FilePreviewRenderer({
       {previewType === 'xml' && <XmlPreview url={url!} title={displayName} />}
       {previewType === 'text' && <TxtPreview url={url!} title={displayName} />}
       {previewType === 'html' && <HtmlPreview url={url!} title={displayName} />}
-      {previewType === 'dxf' && <DxfPreview url={url!} fileName={fileName ?? displayName} title={displayName} />}
+      {previewType === 'dxf' && (
+        <DxfPreview url={url!} fileName={fileName ?? displayName} title={displayName} record={record} />
+      )}
       {previewType === 'unsupported' && (
         <UnsupportedPreview
           displayName={displayName}

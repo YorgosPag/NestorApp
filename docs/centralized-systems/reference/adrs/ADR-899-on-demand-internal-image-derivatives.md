@@ -192,7 +192,7 @@ ETag παραγώγων άθικτο, κανένα νέο finalize.
 | **β** bytes / άνοιγμα / «υπάρχει;» | `file-manager-handlers` (διπλό κλικ → `openRemoteUrlInNewTab`) · `FilePreviewPanel` · `InboxView` · `FileInspector` · `FloorplanGallery` · `useFloorplanPdfLoader` · `VideoPlayer` · `useFileDownload` (εφεδρεία μετά το `id`) | `fileDisplayUrl(file)`. Εγγραφές χωρίς `downloadUrl` **δεν κρύβονται** πια. |
 | **β** ⚠️ πρωτότυπο | `useFloorplanImageLoader` · `FloorplanGallery.calibrationImageSrc` | `.url`, **ποτέ** `preview`: η βαθμονόμηση/μέτρηση δουλεύει στα pixel του πρωτοτύπου (`naturalWidth`). |
 | **β** server | `useFloorplanFiles` (φίλτρο αυτόματης επεξεργασίας) | Ρωτά `storagePath` — αυτό διαβάζει το `floorplan-process.service`. |
-| **δ** CAD | `useFloorplanSceneLoader` (PATH C/D) · `floorplan-duplicate-core` | `fileDisplayUrl`: **αποθηκευμένο `downloadUrl` πρώτα** ⇒ ταυτόσημη συμπεριφορά όπου υπάρχει (άγκυρα). Ο `floorplan-save-orchestrator` γράφει `downloadUrl` και `storagePath` στο **ίδιο** αντικείμενο· το `.scene.json` (`cadScene`, §2.2) ζει στο autosave του DXF Viewer. Το `DxfPreview` (συνθετική εγγραφή) δεν άλλαξε. |
+| **δ** CAD | `useFloorplanSceneLoader` (PATH C/D) · `floorplan-duplicate-core` | `fileDisplayUrl`: **αποθηκευμένο `downloadUrl` πρώτα** ⇒ ταυτόσημη συμπεριφορά όπου υπάρχει (άγκυρα). Ο `floorplan-save-orchestrator` γράφει `downloadUrl` και `storagePath` στο **ίδιο** αντικείμενο· το `.scene.json` (`cadScene`, §2.2) ζει στο autosave του DXF Viewer. Το `DxfPreview` (συνθετική εγγραφή) δεν άλλαξε. ⚠️ **Ξεπεράστηκε 2026-10-05 (§9 θέμα 8)**: η συνθετική εγγραφή διαγράφηκε και η μορφή των bytes δεν βγαίνει πια από το `ext`. |
 | μένει | `VersionHistory` | Εκεί το πεδίο = **ετοιμότητα** έκδοσης, όχι URL· η λήψη γίνεται ήδη με `id`. |
 | **γ** εκτός | `contracts-qr` · `useCrmAttachmentUpload` · `useFloorplanUpload` · `useFileUpload` · `read-only-media-types` | Γραφείς/τύποι — δεν διαβάζουν για εμφάνιση. |
 
@@ -813,7 +813,87 @@ listeners, πετά το `<img>`) και από effect: η όψη είναι **�
 **Τι ΔΕΝ αποδείχθηκε**: (α) `DxfPreview`, `FloorplanGallery` και `DetailSheetDialog` **δεν έχουν δική τους άγκυρα** — καλύπτονται από τον
 μηχανισμό (σουίτα του hook) και από τον υποχρεωτικό τύπο, όχι από test του καταναλωτή· (β) ο ισχυρισμός «καμία λήψη με μπαγιάτικη κλίμακα»
 ελέγχεται στο πάνελ αλλά **δεν απομονώθηκε** με δική του μετάλλαξη (η μετάλλαξη του κλειδιού κοκκινίζει πρώτα στον μετασχηματισμό)·
-(γ) ζωντανός έλεγχος μετά το push — ⏳.
+(γ) ζωντανός έλεγχος μετά το push — ✅ εν μέρει, ακριβώς παρακάτω.
+
+### Θέμα 7 ζωντανά (2026-10-05, deploy `de8b07d7`, nestorconstruct.gr)
+
+| Καταναλωτής | Τι μετρήθηκε | Αποτέλεσμα |
+|---|---|---|
+| `ImagePreview` (πάνελ `/files`) | `file_047b124a…` στα 90° (`scale(1.33333) rotate(90deg)`) → κλικ στο `file_1c467ebd…` | ✅ αμέσως και στα +2 s `scale(1) rotate(0deg)`, `transition: none`, `w=640` |
+| `PhotoPreviewModal` — πλοήγηση | καρτέλα «Φωτογραφίες» του `prop_48a7caf6…`: `file_244732c7…` στα 90° + ένα βήμα zoom (`scale(1.85108) rotate(90deg)`, `w=1280`) → «Προηγούμενη» | ✅ στα 60 ms `file_c098b8d6…` με `scale(1) rotate(0deg)`, `transition: none` |
+| `PhotoPreviewModal` — κλείσιμο/άνοιγμα | `file_c098b8d6…` στα 90° (`scale(1.33333)`) → «Κλείσιμο» → άνοιγμα της **ίδιας** | ✅ `scale(1) rotate(0deg)` |
+| `FloorplanGallery` πλήρης οθόνη | καρτέλα «Κάτοψη» (2 κατόψεις): δύο «Μεγέθυνση» ⇒ **225%** → `→` | ✅ η επόμενη κάτοψη στο **100%** (η εγκεκριμένη αλλαγή συμπεριφοράς) |
+| `DxfPreview` (DXF → DXF) | — | ⏳ μπλοκαρισμένο από το θέμα 8· καλύπτεται πλέον από άγκυρα καταναλωτή (παρακάτω) |
+| `DetailSheetDialog` | — | ⏳ **δεν** ελέγχθηκε: ζει στον DXF Viewer, που κάνει autosave ⇒ το άνοιγμα σχεδίου στην παραγωγή είναι εγγραφή |
+
+**Επανάληψη Σ3 του 5β**: στο modal, κάθετη `file_244732c7…` (`sizes="759px"`, DPR 0,8) στα 90° ⇒ `scale(1.23405)` και η βαθμίδα ανέβηκε
+`w=640` → `w=1280` **στην πρώτη μέτρηση** (1,2 s). ⚠️ Το `document.visibilityState` ήταν `hidden` σε **όλες** τις μετρήσεις αυτής της
+συνεδρίας (το `document.hasFocus()` `true`) — «ορατό παράθυρο» **δεν** επιτεύχθηκε. Άρα η επιφύλαξη του 5β («η κρυφή καρτέλα καθυστερεί την
+αναβάθμιση») **δεν επιβεβαιώνεται**: σε κρυφή καρτέλα η αναβάθμιση ήρθε αμέσως. Η αργοπορία της πρώτης μέτρησης μένει **ανεξήγητη**.
+
+**Παρατήρηση, όχι εύρημα**: μετά την «Προηγούμενη» το `file_c098b8d6…` έδειξε `w=1280` σε `scale(1)`. Η ίδια εικόνα είχε ήδη ζητηθεί σε
+`w=1280` νωρίτερα στη συνεδρία (στροφή)· ο browser προτιμά υποψήφιο `srcset` που έχει ήδη στη μνήμη. Ότι **δεν** είναι διαρροή μπαγιάτικης
+κλίμακας στην ερώτηση ανάλυσης (σημείο (β) παραπάνω) είναι **πιθανό, όχι απομονωμένο**.
+
+### Θέμα 8 — το DXF preview του πάνελ ήταν λευκό: η σκηνή ζητιόταν από λάθος δρόμο (2026-10-05)
+
+**Μέτρηση** (παραγωγή, μόνο ανάγνωση):
+
+| Τι | Αποτέλεσμα |
+|---|---|
+| Firestore `files`, `ext == 'dxf'`, 10 εγγραφές | **10/10**: `storagePath → ….dxf`, αλλά `downloadUrl → ….scene.json`· όλες με `processedData.processedDataPath` |
+| Λήψη του πάνελ για `file_227cec18…` (fetch spy) | 200 · `application/json` · **273.834 bytes** (= `sizeBytes` της εγγραφής) · σώμα `{"entities":[{"id":"line_0",…` |
+| Ο καμβάς μετά τη λήψη | `300×150` σε κουτί 1227×625 |
+| `GET /api/floorplans/scene?fileId=…` (ο δρόμος του `FloorplanGallery`) | `file_227cec18…` ⇒ **1169** οντότητες · `file_35d233fc…` ⇒ **548** |
+| Το ίδιο αρχείο στην καρτέλα «Κάτοψη» του ακινήτου | ζωγραφίζεται κανονικά |
+
+**Ρίζα** — τρία στρώματα, και τα τρία έπρεπε να αστοχήσουν για να βγει **σιωπηλό** λευκό:
+
+1. Το `DxfPreview` έχτιζε «ελάχιστη εγγραφή» (`as unknown as FileRecord`, χωρίς `id`, χωρίς `processedData`) ⇒ ο
+   `useFloorplanSceneLoader` έπεφτε **πάντα** στο client-side parse. Το πραγματικό `FileRecord` — που το `FilePreviewPanel` **είχε στο χέρι** —
+   πηγαίνει στο scene API.
+2. Ο φορτωτής διάλεγε τη **μορφή** από το `ext` και το **URL** από το `downloadUrl`: δύο πηγές που στις εγγραφές CAD **διαφωνούν** (§2.2).
+3. Ο αναλυτής DXF δεν ρωτά «είναι αυτό DXF;»: σε JSON επιστρέφει `success: true` με 0 οντότητες (ανάγνωση κώδικα + το ζωντανό σύμπτωμα·
+   η κλήση του με JSON **δεν** εκτελέστηκε απομονωμένα). Και το `renderDxfToCanvas` έβγαινε **πριν** μετρήσει τον καμβά.
+
+**Πότε έσπασε**: σε κανένα commit της σειράς ADR-899. Το `downloadUrl → .scene.json` γράφεται από τις 2026-04-05 (`896cbfa4`, ADR-288)· το
+`DxfPreview` γεννήθηκε 2026-04-21 (`1d522810`) ήδη με την ψεύτικη εγγραφή. Τα `33aca635`, `de8b07d7`, `2e807681` δεν άλλαξαν ποιο URL
+διαβάζεται. Για επεξεργασμένες εγγραφές CAD ήταν λευκό **από τη γέννησή του** — συμπέρασμα από git + δεδομένα, κανείς δεν το είχε δει.
+
+**Πρακτική**: Revit / ArchiCAD / Autodesk Viewer / Figma — η προεπισκόπηση ενός σχεδίου διαβάζει το **επεξεργασμένο παράγωγο** που έγραψε το
+σύστημα, από **έναν** δρόμο, ποτέ ξανά-ανάλυση του πρωτοτύπου ανά επιφάνεια. libmagic / browsers / ODA: η μορφή είναι ιδιότητα των **bytes**
+(σφραγίδα), όχι της κατάληξης ή ενός πεδίου της βάσης. Και «κενό σχέδιο» είναι **κατάσταση με όνομα**, όχι άδειο φύλλο.
+
+**Θεραπεία**:
+- **Ένας δρόμος**: `FilePreviewRenderer.record?` → `DxfPreview.record?` → `useFloorplanSceneLoader(FileRecord | SceneBytesSource)`. Το
+  `FilePreviewPanel` δίνει την εγγραφή (καλύπτει και το split view του `EntityFilesContent`). Η ψεύτικη εγγραφή **διαγράφηκε**. Η σελίδα
+  κοινοποίησης δεν έχει εγγραφή — το υπογεγραμμένο URL της δείχνει στο πραγματικό `.dxf` — και δηλώνει ρητά `{ kind: 'bytes' }`.
+- **Η μορφή από τα bytes**: `classifyScenePayloadHead` (`lib/dxf-scene/scene-payload-kind.ts`, καθαρό) ⇒ `scene-json` · `dxf` · `unknown`.
+  Τα παλιά PATH C (JSON) και PATH D (DXF) έγιναν **ένα** `loadSceneFromBytes` (`floorplan-scene-bytes.ts`): JSON σκηνής δεν περνά ποτέ από τον
+  αναλυτή DXF, και `unknown` είναι `UnreadableScenePayloadError`, όχι άδεια σκηνή. Ζώνη-και-τιράντες: ακόμη κι αν ξανά κάποιος δώσει το
+  `downloadUrl` μιας εγγραφής CAD ως «DXF», θα διαβαστεί σωστά ως σκηνή.
+- **0 οντότητες**: ο φορτωτής επιστρέφει `isEmpty`· `DxfPreview` και `FloorplanGallery` δείχνουν `preview.dxfEmpty` αντί για καμβά. Το
+  `renderDxfToCanvas` μετρά και καθαρίζει τον καμβά **πριν** από την έξοδο.
+- `contentKey` του `DxfPreview`: `record.id`, αλλιώς το `url`.
+
+**Άγκυρες**: `scene-payload-kind.test.ts` (5) · `dxf-preview-source.test.tsx` (9 — τα **πραγματικά** `FilePreviewRenderer` → `DxfPreview` →
+φορτωτής → `loadSceneFromBytes`: εγγραφή CAD ⇒ μόνο το scene API· μόνο URL ⇒ αναλυτής· JSON σε URL ⇒ σκηνή· σκουπίδια ⇒ `preview.dxfError`·
+0 οντότητες ⇒ `preview.dxfEmpty` χωρίς καμβά· **DXF → DXF ⇒ zoom 1 / pan 0** — η άγκυρα καταναλωτή που έλειπε από το θέμα 7· τρεις ελέγχους
+πηγαίου κώδικα για την καλωδίωση `FilePreviewPanel` / `FloorplanGallery`) · `floorplan-dxf-renderer-empty.test.ts` (ο καμβάς παίρνει
+1227×625). Μεταλλάξεις **7/7 κόκκινες**, σε απομονωμένο `git worktree` (ο renderer δεν προωθεί το `record` · η ταξινόμηση λέει `dxf` για
+JSON · ο καταναλωτής αγνοεί το `isEmpty` · πρόωρο `return` στον renderer · σταθερό `contentKey` · `unknown` ⇒ αναλυτής · ο φορτωτής
+παραλείπει το scene API). `jscpd:diff` καθαρό (11 αρχεία).
+
+**Τι ΔΕΝ αποδείχθηκε / εκτός πεδίου**:
+- ⏳ **Ζωντανά μετά το deploy**: το πάνελ `/files` με DXF, και DXF → DXF. Μέχρι τότε η απόδειξη είναι οι άγκυρες + το ότι το scene API
+  επιστρέφει 1169 / 548 οντότητες για τα δύο αρχεία που έβγαιναν λευκά.
+- Η καλωδίωση του `FilePreviewPanel` και ο κλάδος κενού του `FloorplanGallery` έχουν άγκυρα **πηγαίου κώδικα**, όχι συμπεριφοράς.
+- Το `renderFloorplanScene` (`floorplan-scene-render.ts`) κρατά το δικό του πρόωρο `return` για άδεια σκηνή: καλείται **μόνο** με
+  `currentBounds`, δηλαδή ποτέ με 0 οντότητες — δεν αγγίχθηκε.
+- Το scene API ζητά `floorplans:floorplans:process`: χρήστης χωρίς αυτό θα δει `preview.dxfError` στο πάνελ (όπως ήδη στο
+  `FloorplanGallery`) — **δεν** ελέγχθηκε με τέτοιο ρόλο.
+- 🟡 **Ανοιχτό, δεν αγγίχθηκε**: το `downloadUrl → .scene.json` μένει στις εγγραφές CAD (γραφέας `dual-write-to-files.ts`). Άρα το «Άνοιγμα σε
+  νέα καρτέλα» του πάνελ για DXF ανοίγει το JSON της σκηνής, όχι το σχέδιο — από ανάγνωση κώδικα + δεδομένα, **όχι** πατημένο ζωντανά.
 
 ## Changelog
 
@@ -913,3 +993,11 @@ listeners, πετά το `<img>`) και από effect: η όψη είναι **�
 - **2026-10-05** — **Θέμα 7 ✅** (§9): η όψη ανήκει στο **περιεχόμενο**. Υποχρεωτικό `contentKey` στο `useZoomPan`· η όψη αποθηκεύεται με το
   κλειδί της, άρα νέο περιεχόμενο είναι ουδέτερο στο ίδιο render και ακαριαία (`transition: none`). Έκλεισε το πάνελ (εύρημα), το `DxfPreview`
   και η πλήρης οθόνη του `FloorplanGallery` (ίδια κλάση)· **τρία** χειρόγραφα effects μηδενισμού διαγράφηκαν. Μεταλλάξεις 7/7. ⏳ Ζωντανά.
+- **2026-10-05** — **Θέμα 7 ζωντανά** (§9, deploy `de8b07d7`): ✅ πάνελ εικόνα → εικόνα · ✅ `PhotoPreviewModal` πλοήγηση και κλείσιμο/άνοιγμα ·
+  ✅ πλήρης οθόνη `FloorplanGallery` (225% → 100% στο `→`). ⏳ `DetailSheetDialog` (ο DXF Viewer κάνει autosave) · ⏳ DXF → DXF. Επανάληψη Σ3:
+  αναβάθμιση `w=640` → `w=1280` σε 1,2 s **με κρυφή καρτέλα** ⇒ η επιφύλαξη του 5β δεν επιβεβαιώνεται, η αργοπορία μένει ανεξήγητη.
+- **2026-10-05** — **Θέμα 8** (§9): το DXF preview του πάνελ `/files` ήταν **λευκό από τη γέννησή του** (2026-04-21). Μετρημένο: το
+  `downloadUrl` των εγγραφών CAD δείχνει στο `.scene.json` (10/10) και το πάνελ, με ψεύτικη εγγραφή, το έδινε στον αναλυτή DXF ⇒ 0 οντότητες
+  ⇒ καμβάς 300×150. Θεραπεία: το πάνελ δίνει το **πραγματικό** `FileRecord` (scene API, ο δρόμος του `FloorplanGallery`)· η μορφή των bytes
+  αποφασίζεται από το **περιεχόμενο** (`scene-payload-kind`, ένα `loadSceneFromBytes` αντί PATH C/D)· άδεια σκηνή = ρητή κατάσταση
+  `preview.dxfEmpty`. Μεταλλάξεις 7/7 (σε worktree). ⏳ Ζωντανά μετά το deploy. 🟡 Ανοιχτό: «Άνοιγμα σε νέα καρτέλα» για DXF ανοίγει το JSON.
