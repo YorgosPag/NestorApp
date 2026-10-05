@@ -6,7 +6,8 @@
  * 🔑 **Ροή που περιγράφει** (ADR-904 Α2 — η ίδια με τον web πελάτη, καμία διακλάδωση):
  *  1. `startUpload` → εισιτήριο + resumable συνεδρία GCS·
  *  2. **PUT των bytes απευθείας στο `sessionUri`** — πρωτόκολλο της Google (Cloud Storage resumable uploads), **όχι**
- *     δικό μας endpoint· γι' αυτό περιγράφεται στο `x-nestor-upload-protocol` και όχι στα `paths`·
+ *     δικό μας endpoint· γι' αυτό περιγράφεται στο `x-nestor-upload-protocol` και όχι στα `paths`. Από την 1.4.0 οι
+ *     **αριθμοί** του (τμήμα · επαναλήψεις · αναμονή) δημοσιεύονται στο `x-nestor-rules.upload`·
  *  3. `finalizeUpload` → η λήψη (ιδεμπότητη από κατασκευή: ίδιο εισιτήριο ⇒ ίδια λήψη, `replayed: true`).
  *  0. `listCaptureTargets` (1.1.0, ADR-904 Κ7) → **σε ποια ακίνητα** μπορεί να ανεβάσει ο συνδεδεμένος — το σημείο εκκίνησης.
  *     Από την 1.2.0 (Κ8) κάθε ακίνητο φέρει τους **ορόφους** του, και η δήλωση του βήματος 3 μια προαιρετική **πρόταση θέσης**.
@@ -32,7 +33,7 @@ import { captureApiRules } from './capture-api-rules';
 import * as S from './capture-api-schemas';
 
 /** Η έκδοση του συμβολαίου — δες τους κανόνες semver στην κεφαλίδα. */
-export const CAPTURE_API_VERSION = '1.3.0';
+export const CAPTURE_API_VERSION = '1.4.0';
 
 /** Τα ονομασμένα σχήματα — το όνομα είναι **δημόσιο API** (γίνεται όνομα κλάσης Kotlin): μετονομασία = major. */
 export const CAPTURE_API_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
@@ -240,7 +241,7 @@ export function buildCaptureApiDocument() {
     },
     'x-nestor-upload-protocol': {
       kind: 'gcs-resumable',
-      description: 'PUT των bytes στο `StartUploadResponse.sessionUri` (Google Cloud Storage resumable upload) · επανάληψη από το επιβεβαιωμένο offset μετά από διακοπή · `Content-Type` = `x-nestor-rules.panorama.contentType`.',
+      description: 'PUT των bytes στο `StartUploadResponse.sessionUri` (Google Cloud Storage resumable upload) · επανάληψη από το επιβεβαιωμένο offset μετά από διακοπή · μέγεθος τμήματος και πολιτική επανάληψης = `x-nestor-rules.upload` · `Content-Type` = `x-nestor-rules.panorama.contentType`.',
       reference: 'https://cloud.google.com/storage/docs/performing-resumable-uploads',
     },
     'x-nestor-rules': captureApiRules(),

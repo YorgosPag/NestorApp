@@ -8,7 +8,8 @@
  * - **Σ3** μόνιμη αποτυχία ⇒ `failed` (όχι ατέρμονος βρόχος) · ακύρωση ⇒ `aborted`.
  */
 
-import { RESUMABLE_CHUNK_BYTES, committedBytesOf, transferResumable } from '../resumable-upload-client';
+import { committedBytesOf, transferResumable } from '../resumable-upload-client';
+import { RESUMABLE_CHUNK_BYTES } from '../resumable-upload-policy';
 
 /** Ένα «GCS»: κρατά πόσα bytes έχει, απαντά 308/200 όπως το πραγματικό. */
 function fakeGcs(total: number, options: { readonly failOnCall?: ReadonlySet<number> } = {}) {

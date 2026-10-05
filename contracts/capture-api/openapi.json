@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nestor App — Capture API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Παράγεται από τον κώδικα (ADR-904 Ε6) — **ποτέ** επεξεργασία με το χέρι: `npm run generate:capture-api-contract`."
   },
   "security": [
@@ -1559,7 +1559,7 @@
   },
   "x-nestor-upload-protocol": {
     "kind": "gcs-resumable",
-    "description": "PUT των bytes στο `StartUploadResponse.sessionUri` (Google Cloud Storage resumable upload) · επανάληψη από το επιβεβαιωμένο offset μετά από διακοπή · `Content-Type` = `x-nestor-rules.panorama.contentType`.",
+    "description": "PUT των bytes στο `StartUploadResponse.sessionUri` (Google Cloud Storage resumable upload) · επανάληψη από το επιβεβαιωμένο offset μετά από διακοπή · μέγεθος τμήματος και πολιτική επανάληψης = `x-nestor-rules.upload` · `Content-Type` = `x-nestor-rules.panorama.contentType`.",
     "reference": "https://cloud.google.com/storage/docs/performing-resumable-uploads"
   },
   "x-nestor-rules": {
@@ -1573,6 +1573,17 @@
       "aspectRatio": 2,
       "aspectTolerancePx": 1,
       "projection": "equirectangular"
+    },
+    "upload": {
+      "chunkBytes": 8388608,
+      "chunkQuantumBytes": 262144,
+      "maxConsecutiveFailures": 6,
+      "backoffBaseMs": 1000,
+      "backoffMaxMs": 30000
+    },
+    "placement": {
+      "pointMaxPx": 100000,
+      "radiusMaxPx": 10000
     },
     "idempotency": {
       "header": "Idempotency-Key",

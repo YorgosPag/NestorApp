@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f55822312de867d7cdd9394eeb0633b3bd274a1ed536cf86c685cb253c04d4f1",
+  "inputsSha256": "70ee06dfa2fd83f980edb4f5eb24d50039bb5e0a7ee1e3022256da795bf12358",
   "languages": [
     "el"
   ],
@@ -1136,7 +1136,8 @@
     "src/lib/stay/stay-day-restriction.ts": "a89eeb4f80ecb2796b541039881d5769b69fcdf4aad6dce1c1999c7fc6a131a8",
     "src/lib/stay/stay-day-rules-form.ts": "640bcfabba5ead616d6bc05b5d6ebec2929e7efd113f0b8cb2312a0615445bb8",
     "src/lib/stay/stay-nights-view.ts": "af3933bcc85952a115eeefb8c4ebace52513844e72b36f10fe40f23b244d0b07",
-    "src/lib/storage/resumable-upload-client.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/storage/resumable-upload-client.ts": "bb0ae43347f5ca6bede7b614f9204d2796b70f90a8e05d74bf18f60dfff72d45",
+    "src/lib/storage/resumable-upload-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/tokens/signed-token.ts": "c9f5a1fce3869194506ea66622febcc052b469949f7f0bef1009723f27a4e820",
     "src/lib/ui/inline-rename-keyboard.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/lib/validation/greek-vat-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",

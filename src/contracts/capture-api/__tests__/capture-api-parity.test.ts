@@ -93,6 +93,24 @@ describe('Κ4 — οι αρνήσεις', () => {
   });
 });
 
+describe('Κ6 — η πολιτική ανεβάσματος (1.4.0)', () => {
+  const { upload, panorama } = buildCaptureApiDocument()['x-nestor-rules'];
+
+  it('το τμήμα είναι πολλαπλάσιο του κβάντου του GCS — αλλιώς το GCS αρνείται κάθε ενδιάμεσο τμήμα', () => {
+    expect(upload.chunkBytes % upload.chunkQuantumBytes).toBe(0);
+    expect(upload.chunkBytes).toBeGreaterThan(0);
+  });
+
+  it('η αναμονή έχει ταβάνι πάνω από τη βάση, και οι επαναλήψεις είναι πεπερασμένες', () => {
+    expect(upload.backoffMaxMs).toBeGreaterThanOrEqual(upload.backoffBaseMs);
+    expect(upload.maxConsecutiveFailures).toBeGreaterThan(0);
+  });
+
+  it('ένα μέγιστο πανόραμα χωρά σε λογικό πλήθος τμημάτων', () => {
+    expect(Math.ceil(panorama.maxBytes / upload.chunkBytes)).toBeLessThanOrEqual(16);
+  });
+});
+
 describe('Κ5 — ο γεννήτορας', () => {
   it('ντετερμινιστικός: δύο κλήσεις ⇒ ίδια bytes', () => {
     expect(JSON.stringify(buildCaptureApiDocument())).toBe(JSON.stringify(buildCaptureApiDocument()));

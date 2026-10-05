@@ -15,16 +15,16 @@
  * διακοπή κοστίζει το πολύ **ένα** τμήμα.
  *
  * ⛔ Το URI της συνεδρίας είναι **κλειδί εγγραφής** — δεν καταγράφεται, δεν αποθηκεύεται.
- * **Layering**: leaf — μόνο `fetch` (εγχύσιμο για tests), κανένα React.
+ * **Layering**: leaf — μόνο `fetch` (εγχύσιμο για tests), κανένα React. Οι αριθμοί ζουν στο `resumable-upload-policy.ts`
+ * (τους δημοσιεύει και το συμβόλαιο της εφαρμογής κινητού — ADR-904 Ε6).
  */
 
-/** 8 MiB — πολλαπλάσιο των 256 KiB που απαιτεί το GCS, αρκετά μικρό ώστε μια διακοπή να κοστίζει λίγο. */
-export const RESUMABLE_CHUNK_BYTES = 8 * 1024 * 1024;
-
-/** Πόσες διαδοχικές αποτυχίες δικτύου αντέχει ένα ανέβασμα πριν τα παρατήσει. */
-const MAX_CONSECUTIVE_FAILURES = 6;
-const BACKOFF_BASE_MS = 1000;
-const BACKOFF_MAX_MS = 30_000;
+import {
+  RESUMABLE_BACKOFF_BASE_MS,
+  RESUMABLE_BACKOFF_MAX_MS,
+  RESUMABLE_CHUNK_BYTES,
+  RESUMABLE_MAX_CONSECUTIVE_FAILURES,
+} from './resumable-upload-policy';
 
 export interface ResumableTransfer {
   readonly sessionUri: string;
@@ -78,7 +78,7 @@ const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(r
 
 /**
  * **Στείλε όλα τα bytes στη συνεδρία.** Μετά από αποτυχία ξαναρωτά τη θέση και συνεχίζει, με εκθετική αναμονή.
- * `aborted` ⇒ ο άνθρωπος ακύρωσε· `failed` ⇒ ούτε μετά από {@link MAX_CONSECUTIVE_FAILURES} προσπάθειες.
+ * `aborted` ⇒ ο άνθρωπος ακύρωσε· `failed` ⇒ ούτε μετά από {@link RESUMABLE_MAX_CONSECUTIVE_FAILURES} προσπάθειες.
  */
 export async function transferResumable(t: ResumableTransfer): Promise<ResumableTransferOutcome> {
   const doFetch = t.fetchImpl ?? fetch;
@@ -98,10 +98,10 @@ export async function transferResumable(t: ResumableTransfer): Promise<Resumable
     } catch {
       if (t.signal?.aborted) return 'aborted';
       failures += 1;
-      if (failures > MAX_CONSECUTIVE_FAILURES) return 'failed';
+      if (failures > RESUMABLE_MAX_CONSECUTIVE_FAILURES) return 'failed';
       t.onInterrupted?.();
       resync = true;
-      await sleep(Math.min(BACKOFF_BASE_MS * 2 ** (failures - 1), BACKOFF_MAX_MS));
+      await sleep(Math.min(RESUMABLE_BACKOFF_BASE_MS * 2 ** (failures - 1), RESUMABLE_BACKOFF_MAX_MS));
     }
   }
   t.onProgress?.(1);
