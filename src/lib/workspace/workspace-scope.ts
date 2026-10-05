@@ -63,7 +63,7 @@ import { WORKSPACE_PATH_PREFIX, workspacePath } from './workspace-path';
 //    ⚠️ Καμία κυκλικότητα: το `workspace-routes.ts` **δεν εισάγει τίποτα** (μετρημένο).
 import { WORKSPACE_INVITE_SEGMENT } from './workspace-routes';
 import { TOUR_CAPTURES_SEGMENT, TOUR_INVITE_SEGMENT } from '@/lib/spatial-tour/tour-routes';
-import { CASE_INVITE_SEGMENT } from '@/lib/conveyance/conveyance-routes';
+import { CASE_INVITE_SEGMENT, PERSONAL_CASES_SEGMENT } from '@/lib/conveyance/conveyance-routes';
 
 /**
  * **Τα κορυφαία τμήματα που ΔΕΝ ζουν μέσα σε χώρο** — κλειστό σύνολο, με
@@ -305,13 +305,20 @@ export const OUTSIDE_WORKSPACE: Readonly<Record<string, string>> = {
     'Οι γραμμές που ΟΔΗΓΟΥΝ σε σελίδα γραφείου παίρνουν το πρόθεμά τους από τον ΔΙΑΚΟΜΙΣΤΗ ' +
     '(`thread-directory.ts`), που ξέρει τον χώρο κάθε νήματος. Το τμήμα είναι ελεύθερο κάτω από ' +
     'το `o/[workspace]` (Κ3).',
-  cases:
-    'ΟΙ ΥΠΟΘΕΣΕΙΣ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ ΣΕ ΞΕΝΟΥΣ ΧΩΡΟΥΣ (ADR-901 Φ2 «Οι υποθέσεις μου» · ADR-862 Φ1, route ' +
-    'group `(me)`) — ο δικηγόρος/συμβολαιογράφος ΔΕΝ είναι μέλος του γραφείου του εργολάβου (ADR-862 §9: ' +
-    'υπερ-παραχώρηση), άρα η υπόθεση ΔΕΝ μπορεί να ζει κάτω από το `/o/<γραφείο>`. Η λίστα είναι ' +
-    'collection-group στο `uid` του ΑΝΘΡΩΠΟΥ (`engagementsOfUserQuery`) — πρόθεμα χώρου θα υποσχόταν «οι ' +
-    'υποθέσεις ΑΥΤΟΥ του γραφείου» ενώ η μηχανή φιλτράρει ΜΟΝΟ κατά άνθρωπο. Το τμήμα είναι ελεύθερο ' +
-    'κάτω από το `o/[workspace]` (Κ3).',
+  [PERSONAL_CASES_SEGMENT]:
+    'ΟΙ ΥΠΟΘΕΣΕΙΣ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ ΠΟΥ ΔΕΝ ΕΧΕΙ ΑΚΟΜΗ ΓΡΑΦΕΙΟ (ADR-901 §15 Γ2 · Ε-9 = α, `/engagements`, ' +
+    'route group `(me)`) — το ΠΡΟΣΩΡΙΝΟ σπίτι (Α1): συμμετοχή με `actingFor` προσωπικό, ή συμμετοχή πριν από ' +
+    'το §15 (απόν πεδίο ≡ προσωπικός, `actingWorkspaceOf`). Ο κάτοχος είναι ο ΑΝΘΡΩΠΟΣ, καμία εταιρεία. ' +
+    '🔑 Ο ΠΡΩΤΟΣ ΛΟΓΟΣ ΤΗΣ ΠΑΛΙΑΣ ΓΡΑΜΜΗΣ ΜΕΝΕΙ: ο δικηγόρος/συμβολαιογράφος ΔΕΝ είναι μέλος του γραφείου ' +
+    'του ΟΙΚΟΔΕΣΠΟΤΗ (ADR-862 §9) — η υπόθεση δεν ζει ΠΟΤΕ κάτω από το `/o/<γραφείο του εργολάβου>`. ' +
+    '🔴 Ο ΔΕΥΤΕΡΟΣ ΕΠΑΨΕ ΜΕ ΤΟ §15: έλεγε «η μηχανή φιλτράρει ΜΟΝΟ κατά άνθρωπο, πρόθεμα χώρου θα έλεγε ' +
+    'ψέματα». Από τη Γ1 η συμμετοχή γράφει ΓΙΑ ΛΟΓΑΡΙΑΣΜΟ ΠΟΙΟΥ ΧΩΡΟΥ αναλήφθηκε, και η λίστα φιλτράρει με ' +
+    'αυτό (`isShownInWorkspace`) ⇒ η υπόθεση γραφείου ζει στο ΔΙΚΟ ΤΟΥ γραφείο, `/o/<γραφείο>/cases`. ' +
+    '⚠️ ΤΟ ΤΜΗΜΑ ΛΕΓΟΤΑΝ `cases` ΚΑΙ ΜΕΤΑΚΟΜΙΣΕ ΕΠΙΤΗΔΕΣ: ο κριτής απαντά ΑΝΑ ΤΜΗΜΑ, άρα το `cases` δεν ' +
+    'μπορεί να είναι ΚΑΙ μέσα ΚΑΙ έξω (Κ3 της CHECK 3.60 — η ζωντανή βλάβη του `contacts`). Το κανονικό ' +
+    'όνομα πήγε στο ΜΟΝΙΜΟ σπίτι· εδώ η λέξη είναι ΙΔΙΑ με το API (`/api/engagements`) και τη συλλογή. ' +
+    'Οι παλιοί σύνδεσμοι `/cases/…` του ιδιώτη φτάνουν εδώ από το προσωπικό δίδυμο του ' +
+    '`personal-workspace-surface.ts`.',
   dossiers:
     'ΟΙ ΦΑΚΕΛΟΙ ΑΚΙΝΗΤΟΥ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΑΝΘΡΩΠΟΥ (ADR-866 Φ1.2, route group `(me)`) — ίδιος λόγος με τα ' +
     'offers/demands, και ένας ΔΙΚΟΣ του: ο φάκελος είναι ΠΡΟΣΩΠΙΚΟΣ (κάτοχος `userId`, καμία εταιρεία) και ' +
@@ -422,7 +429,9 @@ export function isInsideWorkspace(href: string): boolean {
   const first = firstPathSegment(href);
   if (first === undefined) return false; // η ρίζα «/» (ή μη-εσωτερική) — ρητά εκτός
 
-  return !(first in OUTSIDE_WORKSPACE);
+  // ⚠️ `Object.hasOwn`, ΟΧΙ `in`: το `in` ρωτά και την αλυσίδα πρωτοτύπων ⇒ το `/toString` έβγαινε «εκτός χώρου» χωρίς
+  //    να το έχει δηλώσει κανείς (ίδια κλάση με το `personal-workspace-surface`, άγκυρα Δ2, 2026-10-05).
+  return !Object.hasOwn(OUTSIDE_WORKSPACE, first);
 }
 
 /**

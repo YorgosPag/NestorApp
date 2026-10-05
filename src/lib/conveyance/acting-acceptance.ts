@@ -12,6 +12,17 @@
 
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import type { AcceptancePreview, ActingForView } from '@/types/conveyance-case';
+import type { CaseHome } from './conveyance-routes';
+
+/**
+ * **Σε ποιο είδος χώρου ζει η υπόθεση αυτής της κάρτας** (§15 Γ2) — για τη διεύθυνσή της. `null` ⇒ η κάρτα δεν
+ * ξέρει (δεν έχει αναληφθεί, ή αισιόδοξη κάρτα χωρίς υπόσχεση): ο καλών αποφασίζει ρητά την εφεδρεία.
+ */
+export function caseHomeOf(actingFor: ActingForView | null): CaseHome | null {
+  if (actingFor === null) return null;
+  // §15.15 — `departed`: ανελήφθη για γραφείο όπου δεν ανήκει πια ⇒ η πόρτα του είναι ο προσωπικός χώρος.
+  return actingFor.kind === 'office' ? 'org' : 'personal';
+}
 
 export type ActingChoice =
   /** `actingRequest` απόν ⇒ η οθόνη δεν ζητά χώρο (0 ή 1 γραφείο). */

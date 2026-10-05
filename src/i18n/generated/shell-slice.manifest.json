@@ -4,9 +4,7 @@
     "src/i18n/generated/lazy-route-namespaces.json": "7c0dcaa00f1e6297f5d0e1269b784e2e7deaea27afcadd595798e0e7a13e193d",
     "src/i18n/generated/routes/area__id.el.json": "b2703db396fe6d2130995cb87b2105abcc2837fe84af8628649b5d95f9a94dfe",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
-    "src/i18n/generated/routes/case-invite__token.el.json": "395c7f5dfe5248214dca845710fc8e4a2c57955e671cb31684037d9641f7324d",
-    "src/i18n/generated/routes/cases.el.json": "ec8d399dbecc4410b935f883835e5b8058eb53df249e19363062fe5c17aaae58",
-    "src/i18n/generated/routes/cases__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
+    "src/i18n/generated/routes/case-invite__token.el.json": "1dffb689a03d1168af0c05055fde0233dcbc40501b3734c191b8f0e5a0844afb",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -17,6 +15,8 @@
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "8d9d3febb16f44c73fcf5c6b05411d64a692f95178ef95680d8e766ec7a252c8",
+    "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
+    "src/i18n/generated/routes/engagements__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
@@ -29,6 +29,8 @@
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
     "src/i18n/generated/routes/n__notificationId.el.json": "54c30325c22b7621417b7afaddaee9ae92de5fc24ee61a784ca6ecfc66d74da5",
+    "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
+    "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
@@ -112,7 +114,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1beea99db410b3d643dfc85f6801dd1f5b7d9cfc7234752dd86b1fd6ed40fe02",
+  "inputsSha256": "7bb0dc637a767d5c793f913290db0b4351ce36c747a70126e2d83c40b7ca5f97",
   "languages": [
     "el"
   ],
@@ -142,6 +144,8 @@
     "src/app/(app)/data-deletion/versions/[version]/page.tsx": "10eb74eea2c2d0b5f8158a60d054a65297130b12d88f4e58f7a5a76b5104bc33",
     "src/app/(app)/data-deletion/versions/page.tsx": "048123f1a9cfb293f9310c3843c1c0150e59c218172d4cd4a2f11a8216d3463f",
     "src/app/(app)/legal-notice/page.tsx": "290e13e377769dee782b9b4474827ad7504608bb31672900428fcb341b4446ed",
+    "src/app/(app)/o/[workspace]/cases/[engagementId]/page.tsx": "ecf7c8334dfe6bff1297aee0a0a6c2c78756ec3fd385c3f474e8ea81c4946247",
+    "src/app/(app)/o/[workspace]/cases/page.tsx": "7d027dc8bb722cf9724553c363bc31f4e9e4f166b5729c306daed5334de5c761",
     "src/app/(app)/o/[workspace]/dashboard/page.tsx": "e611ca8cb0f43f40a995fb8544acc7b741b93ec2edae1fcb61d0e8f4d87b1811",
     "src/app/(app)/o/[workspace]/listings/mandates/[ownerPropertyId]/page.tsx": "464823b34f5a9c40f8e0827b118c9e4a923b143b15c9d8a58f70df45dc682179",
     "src/app/(app)/o/[workspace]/listings/mandates/new/page.tsx": "e678daf0d06fdd1bd4fe7ec0136db195ad9d89e300ee88f7841bd79a3da92a02",
@@ -193,13 +197,13 @@
     "src/app/(light)/pro/page.tsx": "baf1cf13f22281fcb429539f76fb0b81f096e35a027952473b502335b38d6c45",
     "src/app/(light)/search/results/page.tsx": "2d39f5895fc2a017e0bdd2d50a35b9b8262a8e6ead53ac1e2659954457010afe",
     "src/app/(light)/stay/page.tsx": "024ccbde8d21966d8e8e4307f1c4885306bb9fec4b9ccd2929857257f5b98564",
-    "src/app/(me)/cases/[engagementId]/page.tsx": "16a770ef0179dab673fefe9c0f959f8769228997ca60a59a2052d07961a79146",
-    "src/app/(me)/cases/page.tsx": "b3f94f82984c0a11bc49e2e4bafc4274be6d0479072becea42ba7cc15599b93c",
     "src/app/(me)/demands/[demandId]/page.tsx": "b8d9a14612acf5605cb72382aa9e2decc225343d3a52d9f6a0585b46f05dd435",
     "src/app/(me)/demands/new/page.tsx": "4edb613e4ca1f692ff5a42714c29c4097642d2d3e1e1efc2449e918c3e5398d7",
     "src/app/(me)/demands/page.tsx": "9c964a75057ab30ffb3d77d6ab2c1982ce4dcf450ee896337f56128414afc05e",
     "src/app/(me)/dossiers/[dossierId]/page.tsx": "93b7f1d717adcd3217c491cf18e293a94fc39bbcd3162c7b8dbf08dcca4ab4a6",
     "src/app/(me)/dossiers/page.tsx": "980637548843fe8abcf506ecd1e86181778b22920dcac0a60de9b7532cd4c921",
+    "src/app/(me)/engagements/[engagementId]/page.tsx": "8d3dd6fb0ad262a102bc4e8a4bdc81b443eec381810cd6b0b48be2fca13e40a9",
+    "src/app/(me)/engagements/page.tsx": "660fc918a256f65bd096eb3880d5b2bfbef72ee65ed87f154b3bb2bfe6e14d2a",
     "src/app/(me)/interest-check/page.tsx": "912572f737c05f6e8df5c1c259c2eb9cccdd0aeb1cd03e7901aba3a23e506e20",
     "src/app/(me)/offers/[offerId]/calendar/page.tsx": "7b767d21246d3290192293a3db8cae7ffa80143021038144ea99b5adf927f6d2",
     "src/app/(me)/offers/[offerId]/improve/page.tsx": "eedcb8f654340a4b1406b1a6ac3f30b34ac16ae50d06cb85a487ad293ae9045e",
@@ -267,15 +271,15 @@
     "src/components/contact/first-contact-labels.ts": "b4078af99283f39a68952fa2530293d258ffb72101638acc8393944b02de48d9",
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
-    "src/components/conveyance/acting/ActingWorkspaceField.tsx": "e6f30515123b8bfdc2544d0c15db9d7e0b369720a116bb68f2159ef62ddf05d6",
-    "src/components/conveyance/acting/acting-workspace-labels.ts": "4092768a68411a68dbb2b785b1cca576316e872709b74b4a62522f0c0a51f414",
-    "src/components/conveyance/my-cases/AcceptEngagementDialog.tsx": "3c36a68de943d53b809ad0713ac4aee83def29b5b4d679b29ee8fc27ab07bce5",
+    "src/components/conveyance/acting/ActingWorkspaceField.tsx": "78052edfb11b372460b78a4d1d35d1f09ce9b27fddd93f10c63019772d215b08",
+    "src/components/conveyance/acting/acting-workspace-labels.ts": "130aae0a43e8f3d5ab971359d69bfc42461c68a4419ddcdd6c1aec7f0d9f1b10",
+    "src/components/conveyance/my-cases/AcceptEngagementDialog.tsx": "7e72e2f13951b361cf7bd19bf29eb12d92c05cc91a7bc24fd039809647f0d714",
     "src/components/conveyance/my-cases/EngagedCaseActivity.tsx": "868ee6c8a40e644a5d61fff0a8ac5b93af9e67f7f90133d8b9fdd25ce34dd9f6",
     "src/components/conveyance/my-cases/EngagedCaseChecklist.tsx": "56d49dd9de69eb1d9040e706ab99dd4e94eb82b80a5301783d3faddf9111e834",
-    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "bf127486d047abc85a0cd1f1c66ea86612e4d7346fa10990ac2297380f974566",
+    "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "e76326580eaa5be49b70a389e8699a4c9aea88a64be37073f0738cf524cb4f48",
     "src/components/conveyance/my-cases/EngagedCaseParticipants.tsx": "f699d6a2e0f4f3ee750fb912423e5734d9e0949fca39ad2e0ed5a983cf8d0baa",
-    "src/components/conveyance/my-cases/MyCaseCardView.tsx": "c522108edb65fc35ca40f0b435c429115ef53550edf4089050070112b2728c0f",
-    "src/components/conveyance/my-cases/MyCasesContent.tsx": "e790204a014d6596f170028bac3e63b9ff29d7e1d18f79a753bb422d1948c50b",
+    "src/components/conveyance/my-cases/MyCaseCardView.tsx": "e45272eaff2748ae5b9255c19e8efe68c2de450ad479de4b40754962af6210c8",
+    "src/components/conveyance/my-cases/MyCasesContent.tsx": "d0232aa762419b23e97b206c65bfda83499236382c9c0375ee8071a88e3f244d",
     "src/components/conveyance/shared/CaseFileOpening.tsx": "06045206d51d08ac7cd304c9f6c342e66d937d21955578e729eb27947ba9f9dd",
     "src/components/conveyance/shared/DeclaredCredentialLine.tsx": "e9616abf4f7959f808cf6a0f731de1e545c6ff74c04574a4337a71a84f53a6d5",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
@@ -394,7 +398,7 @@
     "src/components/mandate/CoverageAgreementNotice.tsx": "03639f093a5ba29b1c846b19e7949b2049620bfe14d1d6a7a1dc686b1413b3cb",
     "src/components/mandate/CoverageAreaPicker.tsx": "bce2e7fba716985f38b5290271743fb0caac2da72e4a92fdf44741f1687ff49c",
     "src/components/mandate/CoverageOutlineMap.tsx": "4d4794b3f39fa910eb4085617da26f7da90a67f4e529f902c4272fd303f9212d",
-    "src/components/mandate/CoverageOutlinePicker.tsx": "84f39f2cc8925dcb851d36fc46f2645b7dd528e97c57c14d05bd09d4b9e828ae",
+    "src/components/mandate/CoverageOutlinePicker.tsx": "d5a4588d12fd3a9c46a31d8531b3c6c14d2d7b1c5840dac13ed1de1559a257d0",
     "src/components/mandate/CoverageRadiusPicker.tsx": "e7980160f4bf016c9874b80a1c72da57895b36caf09d612294687682de8ff2f0",
     "src/components/mandate/DailyIntervalsEditor.tsx": "af004adbaf4cf96f966ff2886353f093bf279fc32dfe95dfddaf3bcbb358e935",
     "src/components/mandate/DirectoryQueryState.tsx": "7da21d22c77249b6ffb74eba2b9553fb2cf0f28bb7a394eda404daecdbf91e57",
@@ -469,14 +473,14 @@
     "src/components/market/choropleth/PriceMapLabelLayer.tsx": "391f61b1675c7b15430dd53b05726aac65cbcfe85471074b3afcc746a46f89ed",
     "src/components/market/choropleth/choropleth-sync.ts": "cf520728ef85ddf6cb925c96be889ee8856016833c3b65d2fd8daee43b6695b9",
     "src/components/market/choropleth/price-map-paint.ts": "e82319dd27abb8f9ba56ca30690cb307bd4d7be47c7c306b56d1fb8100bbcd7b",
-    "src/components/market/choropleth/price-map-words.tsx": "d7309a834f2a379aa30a720fab4bd02da7ceed676d9181c449c2476bb185c049",
+    "src/components/market/choropleth/price-map-words.tsx": "70f5a106df29983794825f484a70557db77ad6807f02e2f99e7f98a9aa892d66",
     "src/components/market/map-ramp.ts": "56bb90712e4ceaec533731b9cea343a44b52495b00ffe84dc63ac42fd13f7ddb",
     "src/components/notifications/EmailPreferencesPanel.tsx": "304ec64e3b5972b5a0d60e6ed5ac1f4800c0034ad2092c667a33a623c1a2a259",
     "src/components/notifications/EmailTypePreferences.tsx": "f6bb7acf05ddecd0224061b23606ae9e698944fbb9a4521f7bf92059ae49286c",
     "src/components/notifications/NotificationPermalinkUnavailable.tsx": "526e8252778b77f0e0681b5589f1a8b1c28535812fc5e3c47dc4c53587df6fe3",
     "src/components/objective-value/ObjectiveValueAdjustments.tsx": "9537f3ec5817dbaaa530315a05f3eef0f5dea920b27fd70dd6d07ae21001534b",
     "src/components/objective-value/ObjectiveValueContent.tsx": "0d1eb5dd6727539405f6d270370607b8154abf9882e3ee1f4b41e4da4882f4a7",
-    "src/components/objective-value/ObjectiveValueEvaluated.tsx": "4148479819d7ad4414280f7f70845e96ec8bd0be1ec72063817a3019e5830df8",
+    "src/components/objective-value/ObjectiveValueEvaluated.tsx": "116b62d627a7d49d314934f1d225faefa609d77f8d3eb7cc52c3abfd8bd9f375",
     "src/components/objective-value/ObjectiveValueFaq.tsx": "bd7d8c882abb78e4644b4f78d6c5de636712a6d94795e7188b7a4fe3ea79aa27",
     "src/components/objective-value/ObjectiveValueLocation.tsx": "013eca8a3b486525ef6dd83e4e10a4bc41322f94c4571bc278e5f836f19d1ee6",
     "src/components/objective-value/ObjectiveValueProperty.tsx": "612107a93133a53b3a3a1978505c7c94e1e947e3d1f665d36c00c7a16d14a0c2",
@@ -811,12 +815,12 @@
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useContainingArea.ts": "0eeb133d3c28307c9d4660807d42fef029c5f415cecd2bbdae27fe27f102804c",
     "src/hooks/useDocumentRequests.ts": "c386c24b591aac903fa2f83718e8f25f12b28519ae703c184de4996da2c9ee85",
-    "src/hooks/useEngagedCase.ts": "be0c2a7a8cc925cf5686f79d63541a965cbed652106a42acba8eb5030ea96c3a",
+    "src/hooks/useEngagedCase.ts": "eb06500aace6634e9b41c9000801d3253d8967161551f1e7b273fc18c2646bab",
     "src/hooks/useFieldPatchQueue.ts": "4b71b561fda8e4fddab22b78cdac0ff63b0a75c3212e47d31fff509a83a83300",
     "src/hooks/useIdentityGatedResource.ts": "d8480fc3b8a36ca7256b30090f93ae814391c74076f4793f062e79f2a842047a",
     "src/hooks/useInFlightAction.ts": "bd28e03e2bb93e6863313640400e34804caa6570d4d7c5e84b3cd9c37cf46e43",
     "src/hooks/useMountedRef.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/hooks/useMyCases.ts": "a291c6150e66f04d2bc9011511c419c2cbea82c9d0e56318c9f4d9802eeacc0f",
+    "src/hooks/useMyCases.ts": "032e883bc1372391ffe85aa39568b8e4745064b913de9478d66976c0c9a328e2",
     "src/hooks/useReconciledResource.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useSelectedEntityUrlState.ts": "4317e4151b6fdd55558167d4d6c23562d242a0a43621ad92479a9caf78f72ec7",
     "src/hooks/useSingleFlight.ts": "8fd88dd2917d08f7ed7b0b3f9d32d24d363c8f54d3839c408e0b8383990d5ece",
@@ -883,7 +887,7 @@
     "src/lib/contact/first-contact-target-href.ts": "be395a4e52bcc15e90e16827c9b0072f602f45185a090157169cf4612ab245c1",
     "src/lib/contacts/legal-professional-credentials.ts": "2cf2ef5c109e30d2008e74ea97d8003bcc4d693f8a1a064a9e87a31a84b9f05b",
     "src/lib/contacts/primary-email.ts": "be062827144f613c7f73525068f4ec1de9bd81ff36b425dc69bc6b538c3a970c",
-    "src/lib/conveyance/acting-acceptance.ts": "90c5522e96cc6ce339fe152070636740e113c0753f3efaeb14f60d7e8f9a247f",
+    "src/lib/conveyance/acting-acceptance.ts": "801f647ca1b08db5c67603f95605028646debd83306434591c71ada68a99b029",
     "src/lib/conveyance/case-activity.ts": "9c4203d23474f490ff557c388f1011a07ebe41e9b4768a4833436175568f35f8",
     "src/lib/conveyance/case-checklist.ts": "c1984a9a06e5de85084fd410c8ca85f1b0fd1eadc8f620b3ca34c0f0c028be81",
     "src/lib/conveyance/case-state.ts": "2a07d3501bbedcc7f0a8494496b1f27d4a13b8f8ba7f307a6cad57067ba68970",
@@ -1148,6 +1152,7 @@
     "src/lib/validation/greek-vat-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/validation/text-link-segments.ts": "5656aa0b6d472d37a73258f653418596cd520209dd0d3987d4401aa5f027c62e",
     "src/lib/workspace/grant-membership.ts": "7972efaed1674dffaeba9326dce523ef243aef0efa083df6fdbf2c66665387bd",
+    "src/lib/workspace/workspace-address.ts": "fa330e81d75ec85454e70fdf2ca836fb97c3ef2d7e0bceac0c741dd0e01796a1",
     "src/lib/workspace/workspace-administrators.ts": "035fc69bb645a6ee1d2d2fb5a0e302ae0b0f74f4eeb84d1085742dc7979ceb2c",
     "src/lib/workspace/workspace-catalog.ts": "e4d073d4da9a7dfc6caa23059951cdac7c598dff868a928f4cdac05acdaf5707",
     "src/lib/workspace/workspace-destination.ts": "54bd81f89fd6ba7f542d1e428ff40d2f10ba9ff392e6e9abdb81f4a8f2e3b0e3",
@@ -1185,7 +1190,7 @@
     "src/server/notifications/email-subscription.ts": "15ab670e8d7793906023044bb53a73ce678b6c30f153814cbf8586c66666b241",
     "src/server/notifications/notification-email-leg.ts": "7e50ffd662930c5a6c0ac38a0e69b32d32037b7f88da5e759a6ea46eda14ad5c",
     "src/server/notifications/notification-orchestrator.ts": "1b070d7443e2dec3c77c25cb4037ce583786df0d289dde217ec740f3b5efbf35",
-    "src/server/notifications/notification-permalink.ts": "3a7e2b42847a2135028a98eda8f04a95c15bc387b7709d679fa04c5cc01650d5",
+    "src/server/notifications/notification-permalink.ts": "872c4644d4b54da6ec953055f5aa35a04750c6f000e7cfc303a97128a0c54068",
     "src/server/notifications/notification-read.ts": "5b6e8481da86e760dd2c16617d29d21ae37ff1105f164f8b8c37de910093766b",
     "src/server/notifications/user-notification-settings-store.ts": "f7b44fcca73e4bef37fda2eb93e50924bc8ff636a0abace1855ad06f8eb30fbc",
     "src/server/sharing/share-token-lookup.ts": "ffd30be70472242da145f54afc565438cc0046f9f610ff2d58b27462ab20799c",
@@ -1230,7 +1235,7 @@
     "src/services/contact/first-contact.client.ts": "4b0503374196b86dbb160369a56e79a807a42b7d5746dc06e4f3269c0c2bdc4f",
     "src/services/contact/first-contact.service.ts": "f64ae74a6a6e50712be0e2cadefe2042cc4643832939c32d03762b4a74467406",
     "src/services/contacts-query.service.ts": "e205fb92132590d84bbd946dfbd3c3d628cd46a6efd31cf52b35a3b372e99a0a",
-    "src/services/conveyance/conveyance-acting-workspace.server.ts": "8f047fa1c2c53b0b7df6e17d700bf7dae16dcd00955ff9c5e49f18387a405aff",
+    "src/services/conveyance/conveyance-acting-workspace.server.ts": "82a393954eb9797d74731b3827a8ee198467488cfafd653a595060d223d39066",
     "src/services/conveyance/conveyance-case-evidence.server.ts": "a551950c3ac6e3d84c97933bb40514fa97b649ace7a76e216ee7899feba72f20",
     "src/services/conveyance/conveyance-case-participants.server.ts": "d16cd1ac4c9708b875b8f30da72493f8acf501d09367eb86c238a19e63b94daf",
     "src/services/conveyance/conveyance-contributed-file.ts": "0ca0bf4c491e7d3040e08e82e152f7a330864c40743f95a3730b1c7c7b1188af",
@@ -1238,9 +1243,9 @@
     "src/services/conveyance/conveyance-document-request-gateway.ts": "a7db54c883d22bca202781ee90b48401aac1c9ce6670b76e17d093c8b5d7bb08",
     "src/services/conveyance/conveyance-document-request-panel.server.ts": "5d8fc56723a3f9ec360cd789042fd08e98b7a6dca16afe0b950fc52dce708b72",
     "src/services/conveyance/conveyance-document-request-store.server.ts": "4073004e8cab0969db723b41eeb89415d2c8275cd0905154a99dcf504df8318d",
-    "src/services/conveyance/conveyance-engagement-access.service.ts": "f2da3ff7685b59c32a29bb7ed9ffb22063f7d855b8053da5a2fa84f44568cc88",
-    "src/services/conveyance/conveyance-engagement-gateway.ts": "dc41d5b38239a7d58056e3f64603207619e8c2ae9e82d1dac10c89a5dd6fcab3",
-    "src/services/conveyance/conveyance-engagement-notifier.ts": "e5f8ecd684db5b9e09597994f5db892291a33c15440f74170654c7bfdd18aa43",
+    "src/services/conveyance/conveyance-engagement-access.service.ts": "d946fe0a576428599c8c3e2dda4caf40c25f3a483be01cc621bdc6c490355200",
+    "src/services/conveyance/conveyance-engagement-gateway.ts": "68b04badca9827bdbbef61f9941df5d37dd40873a09a46d947d89e42b82de932",
+    "src/services/conveyance/conveyance-engagement-notifier.ts": "7d4f24adde6a8f28eb0f11ba889e16a1c6dbe86089b2ecb0e7da203c8cfd893b",
     "src/services/conveyance/conveyance-engagement-support.ts": "ef88dedc29fc0b7cfeea69acda948216e259f834c6473a6ef0b6d30566e22f84",
     "src/services/conveyance/conveyance-evidence.server.ts": "21b834e923f87e04cbc05470710b85b3d23a2c9e368cd25f33c5315c9faf4208",
     "src/services/conveyance/conveyance-professional.server.ts": "433b93b5a36dd7f977d095c7a8a996425dd01a6de98fb890134342c908c3f58b",
@@ -1865,6 +1870,7 @@
         },
         "conveyance": {
           "keys": [
+            "engagement.acting.cardDeparted",
             "engagement.acting.cardOffice",
             "engagement.acting.cardPersonal",
             "engagement.acting.chooseLabel",
@@ -1937,390 +1943,6 @@
             "label.standard"
           ],
           "prefixes": [],
-          "whole": false
-        }
-      }
-    },
-    "cases": {
-      "page": "src/app/(me)/cases/page.tsx",
-      "wants": {
-        "common": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-account": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-actions": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-empty-states": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-navigation": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-photos": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-sales": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-shared": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-status": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-validation": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "conveyance": {
-          "keys": [
-            "engagement.acting.cardOffice",
-            "engagement.acting.cardPersonal",
-            "engagement.acting.chooseLabel",
-            "engagement.acting.choosePlaceholder",
-            "engagement.acting.chooseRequired",
-            "engagement.acting.office",
-            "engagement.acting.personalProvisional",
-            "engagement.acting.unknown",
-            "engagement.acting.unnamedOffice",
-            "engagement.invite.chapterLabel.bar-association",
-            "engagement.invite.chapterLabel.notary-association",
-            "engagement.invite.credentialHint",
-            "engagement.invite.credentialTitle",
-            "engagement.invite.numberLabel.bar-association",
-            "engagement.invite.numberLabel.notary-association",
-            "engagement.invite.numberRequired",
-            "engagement.myCases.accept",
-            "engagement.myCases.acceptDialog.accepting",
-            "engagement.myCases.acceptDialog.cancel",
-            "engagement.myCases.acceptDialog.description",
-            "engagement.myCases.acceptDialog.title",
-            "engagement.myCases.decline",
-            "engagement.myCases.empty",
-            "engagement.myCases.loadError",
-            "engagement.myCases.loading",
-            "engagement.myCases.offerExpires",
-            "engagement.myCases.open",
-            "engagement.myCases.signing",
-            "engagement.myCases.subtitle",
-            "engagement.myCases.title",
-            "engagement.myCases.untitled",
-            "summary.progress"
-          ],
-          "prefixes": [
-            "engagement.myCases.respondRejections",
-            "engagement.roles",
-            "engagement.states",
-            "engagement.verdicts",
-            "state"
-          ],
-          "whole": false
-        },
-        "property-market": {
-          "keys": [
-            "demand.space.signInNeeded"
-          ],
-          "prefixes": [],
-          "whole": false
-        }
-      }
-    },
-    "cases__engagementId": {
-      "page": "src/app/(me)/cases/[engagementId]/page.tsx",
-      "wants": {
-        "common": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-account": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-actions": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-empty-states": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-navigation": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-photos": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-sales": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-shared": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-status": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-validation": {
-          "keys": [
-            "buttons.cancel",
-            "buttons.close",
-            "buttons.confirm",
-            "buttons.delete",
-            "buttons.moveToTrash"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "conveyance": {
-          "keys": [
-            "actions.accept",
-            "actions.clear",
-            "actions.confirmReceived",
-            "actions.markNotApplicable",
-            "actions.menu",
-            "actions.reject",
-            "engagement.case.activity.answered",
-            "engagement.case.activity.downloaded",
-            "engagement.case.activity.empty",
-            "engagement.case.activity.loadError",
-            "engagement.case.activity.loading",
-            "engagement.case.activity.request-received",
-            "engagement.case.activity.requested",
-            "engagement.case.activity.someone",
-            "engagement.case.activity.title",
-            "engagement.case.activity.transmitted",
-            "engagement.case.activity.unnamed",
-            "engagement.case.activity.viewed",
-            "engagement.case.activity.withdrawn",
-            "engagement.case.activity.you",
-            "engagement.case.back",
-            "engagement.case.loadError",
-            "engagement.case.participants.noCredential",
-            "engagement.case.participants.title",
-            "engagement.case.participants.you",
-            "engagement.case.readOnly",
-            "engagement.case.tabs.checklist",
-            "engagement.case.tabs.participants",
-            "engagement.credential.declared",
-            "engagement.credential.declaredNoChapter",
-            "engagement.myCases.signing",
-            "engagement.myCases.untitled",
-            "files.download",
-            "files.from",
-            "files.fromOnBehalf",
-            "files.unavailable",
-            "files.view",
-            "items.antiparochi_contract.label",
-            "items.appurtenance_floor_plans.label",
-            "items.building_identity.label",
-            "items.building_manager_certificate.label",
-            "items.building_permit.label",
-            "items.cadastral_extract.label",
-            "items.cadastre_registration_proof.label",
-            "items.contract_draft.label",
-            "items.encumbrance_certificate.label",
-            "items.energy_certificate.label",
-            "items.engineer_legality_certificate.label",
-            "items.final_contract.label",
-            "items.horizontal_property_deed.label",
-            "items.legal_due_diligence_report.label",
-            "items.municipal_clearance.label",
-            "items.payoff_receipt.label",
-            "items.preliminary_agreement.label",
-            "items.section_drawings.label",
-            "items.special_zone_clearances.label",
-            "items.title_deed.label",
-            "items.topographic_plan.label",
-            "items.transfer_tax_proof.label",
-            "items.unit_floor_plans.label",
-            "items.vat_or_suspension.label",
-            "requests.action",
-            "requests.all",
-            "requests.allConfirm.cancel",
-            "requests.allConfirm.confirm",
-            "requests.allConfirm.description",
-            "requests.allConfirm.title",
-            "requests.alreadyToday",
-            "requests.noRecipient",
-            "requests.onBehalfHint",
-            "requests.pending",
-            "requests.pendingToMe",
-            "requests.recipientCount",
-            "requests.requestedToday",
-            "requests.requesting",
-            "requests.sent",
-            "row.actDay",
-            "row.expiresOn",
-            "row.invalidOnSigning",
-            "row.notApplicableByFact",
-            "row.notApplicableReason",
-            "row.offlineHint",
-            "row.onBehalfHint",
-            "row.onBehalfOrUploadHint",
-            "row.provider",
-            "row.rejectedReason",
-            "row.sealed",
-            "row.transmittalHint",
-            "row.uploadHint",
-            "row.validityUnverified",
-            "summary.progress",
-            "transmittal.action",
-            "transmittal.actionOnBehalf",
-            "transmittal.dialog.sending",
-            "transmittal.reissue",
-            "transmittal.reissueHint",
-            "transmittal.reissued",
-            "transmittal.revise.action",
-            "transmittal.sent",
-            "transmittal.withdraw",
-            "transmittal.withdrawConfirm.cancel",
-            "transmittal.withdrawConfirm.confirm",
-            "transmittal.withdrawConfirm.description",
-            "transmittal.withdrawConfirm.title",
-            "transmittal.withdrawn"
-          ],
-          "prefixes": [
-            "engagement.roles",
-            "engagement.verdicts",
-            "items",
-            "levels",
-            "providers",
-            "requests.errors",
-            "sectionHints",
-            "sections",
-            "state",
-            "status",
-            "transmittal.errors"
-          ],
           "whole": false
         }
       }
@@ -3658,6 +3280,391 @@
             "account.notificationSettings.preferences.mandatoryNote"
           ],
           "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "engagements": {
+      "page": "src/app/(me)/engagements/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "engagement.acting.cardDeparted",
+            "engagement.acting.cardOffice",
+            "engagement.acting.cardPersonal",
+            "engagement.acting.chooseLabel",
+            "engagement.acting.choosePlaceholder",
+            "engagement.acting.chooseRequired",
+            "engagement.acting.office",
+            "engagement.acting.personalProvisional",
+            "engagement.acting.unknown",
+            "engagement.acting.unnamedOffice",
+            "engagement.invite.chapterLabel.bar-association",
+            "engagement.invite.chapterLabel.notary-association",
+            "engagement.invite.credentialHint",
+            "engagement.invite.credentialTitle",
+            "engagement.invite.numberLabel.bar-association",
+            "engagement.invite.numberLabel.notary-association",
+            "engagement.invite.numberRequired",
+            "engagement.myCases.accept",
+            "engagement.myCases.acceptDialog.accepting",
+            "engagement.myCases.acceptDialog.cancel",
+            "engagement.myCases.acceptDialog.description",
+            "engagement.myCases.acceptDialog.title",
+            "engagement.myCases.decline",
+            "engagement.myCases.empty",
+            "engagement.myCases.loadError",
+            "engagement.myCases.loading",
+            "engagement.myCases.offerExpires",
+            "engagement.myCases.open",
+            "engagement.myCases.signing",
+            "engagement.myCases.subtitle",
+            "engagement.myCases.title",
+            "engagement.myCases.untitled",
+            "summary.progress"
+          ],
+          "prefixes": [
+            "engagement.myCases.respondRejections",
+            "engagement.roles",
+            "engagement.states",
+            "engagement.verdicts",
+            "state"
+          ],
+          "whole": false
+        },
+        "property-market": {
+          "keys": [
+            "demand.space.signInNeeded"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "engagements__engagementId": {
+      "page": "src/app/(me)/engagements/[engagementId]/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "actions.accept",
+            "actions.clear",
+            "actions.confirmReceived",
+            "actions.markNotApplicable",
+            "actions.menu",
+            "actions.reject",
+            "engagement.case.activity.answered",
+            "engagement.case.activity.downloaded",
+            "engagement.case.activity.empty",
+            "engagement.case.activity.loadError",
+            "engagement.case.activity.loading",
+            "engagement.case.activity.request-received",
+            "engagement.case.activity.requested",
+            "engagement.case.activity.someone",
+            "engagement.case.activity.title",
+            "engagement.case.activity.transmitted",
+            "engagement.case.activity.unnamed",
+            "engagement.case.activity.viewed",
+            "engagement.case.activity.withdrawn",
+            "engagement.case.activity.you",
+            "engagement.case.back",
+            "engagement.case.loadError",
+            "engagement.case.participants.noCredential",
+            "engagement.case.participants.title",
+            "engagement.case.participants.you",
+            "engagement.case.readOnly",
+            "engagement.case.tabs.checklist",
+            "engagement.case.tabs.participants",
+            "engagement.credential.declared",
+            "engagement.credential.declaredNoChapter",
+            "engagement.myCases.signing",
+            "engagement.myCases.untitled",
+            "files.download",
+            "files.from",
+            "files.fromOnBehalf",
+            "files.unavailable",
+            "files.view",
+            "items.antiparochi_contract.label",
+            "items.appurtenance_floor_plans.label",
+            "items.building_identity.label",
+            "items.building_manager_certificate.label",
+            "items.building_permit.label",
+            "items.cadastral_extract.label",
+            "items.cadastre_registration_proof.label",
+            "items.contract_draft.label",
+            "items.encumbrance_certificate.label",
+            "items.energy_certificate.label",
+            "items.engineer_legality_certificate.label",
+            "items.final_contract.label",
+            "items.horizontal_property_deed.label",
+            "items.legal_due_diligence_report.label",
+            "items.municipal_clearance.label",
+            "items.payoff_receipt.label",
+            "items.preliminary_agreement.label",
+            "items.section_drawings.label",
+            "items.special_zone_clearances.label",
+            "items.title_deed.label",
+            "items.topographic_plan.label",
+            "items.transfer_tax_proof.label",
+            "items.unit_floor_plans.label",
+            "items.vat_or_suspension.label",
+            "requests.action",
+            "requests.all",
+            "requests.allConfirm.cancel",
+            "requests.allConfirm.confirm",
+            "requests.allConfirm.description",
+            "requests.allConfirm.title",
+            "requests.alreadyToday",
+            "requests.noRecipient",
+            "requests.onBehalfHint",
+            "requests.pending",
+            "requests.pendingToMe",
+            "requests.recipientCount",
+            "requests.requestedToday",
+            "requests.requesting",
+            "requests.sent",
+            "row.actDay",
+            "row.expiresOn",
+            "row.invalidOnSigning",
+            "row.notApplicableByFact",
+            "row.notApplicableReason",
+            "row.offlineHint",
+            "row.onBehalfHint",
+            "row.onBehalfOrUploadHint",
+            "row.provider",
+            "row.rejectedReason",
+            "row.sealed",
+            "row.transmittalHint",
+            "row.uploadHint",
+            "row.validityUnverified",
+            "summary.progress",
+            "transmittal.action",
+            "transmittal.actionOnBehalf",
+            "transmittal.dialog.sending",
+            "transmittal.reissue",
+            "transmittal.reissueHint",
+            "transmittal.reissued",
+            "transmittal.revise.action",
+            "transmittal.sent",
+            "transmittal.withdraw",
+            "transmittal.withdrawConfirm.cancel",
+            "transmittal.withdrawConfirm.confirm",
+            "transmittal.withdrawConfirm.description",
+            "transmittal.withdrawConfirm.title",
+            "transmittal.withdrawn"
+          ],
+          "prefixes": [
+            "engagement.roles",
+            "engagement.verdicts",
+            "items",
+            "levels",
+            "providers",
+            "requests.errors",
+            "sectionHints",
+            "sections",
+            "state",
+            "status",
+            "transmittal.errors"
+          ],
           "whole": false
         }
       }
@@ -5328,6 +5335,391 @@
             "emailLink.unavailable.title"
           ],
           "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__cases": {
+      "page": "src/app/(app)/o/[workspace]/cases/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "engagement.acting.cardDeparted",
+            "engagement.acting.cardOffice",
+            "engagement.acting.cardPersonal",
+            "engagement.acting.chooseLabel",
+            "engagement.acting.choosePlaceholder",
+            "engagement.acting.chooseRequired",
+            "engagement.acting.office",
+            "engagement.acting.personalProvisional",
+            "engagement.acting.unknown",
+            "engagement.acting.unnamedOffice",
+            "engagement.invite.chapterLabel.bar-association",
+            "engagement.invite.chapterLabel.notary-association",
+            "engagement.invite.credentialHint",
+            "engagement.invite.credentialTitle",
+            "engagement.invite.numberLabel.bar-association",
+            "engagement.invite.numberLabel.notary-association",
+            "engagement.invite.numberRequired",
+            "engagement.myCases.accept",
+            "engagement.myCases.acceptDialog.accepting",
+            "engagement.myCases.acceptDialog.cancel",
+            "engagement.myCases.acceptDialog.description",
+            "engagement.myCases.acceptDialog.title",
+            "engagement.myCases.decline",
+            "engagement.myCases.empty",
+            "engagement.myCases.loadError",
+            "engagement.myCases.loading",
+            "engagement.myCases.offerExpires",
+            "engagement.myCases.open",
+            "engagement.myCases.signing",
+            "engagement.myCases.subtitle",
+            "engagement.myCases.title",
+            "engagement.myCases.untitled",
+            "summary.progress"
+          ],
+          "prefixes": [
+            "engagement.myCases.respondRejections",
+            "engagement.roles",
+            "engagement.states",
+            "engagement.verdicts",
+            "state"
+          ],
+          "whole": false
+        },
+        "property-market": {
+          "keys": [
+            "demand.space.signInNeeded"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__cases__engagementId": {
+      "page": "src/app/(app)/o/[workspace]/cases/[engagementId]/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "actions.accept",
+            "actions.clear",
+            "actions.confirmReceived",
+            "actions.markNotApplicable",
+            "actions.menu",
+            "actions.reject",
+            "engagement.case.activity.answered",
+            "engagement.case.activity.downloaded",
+            "engagement.case.activity.empty",
+            "engagement.case.activity.loadError",
+            "engagement.case.activity.loading",
+            "engagement.case.activity.request-received",
+            "engagement.case.activity.requested",
+            "engagement.case.activity.someone",
+            "engagement.case.activity.title",
+            "engagement.case.activity.transmitted",
+            "engagement.case.activity.unnamed",
+            "engagement.case.activity.viewed",
+            "engagement.case.activity.withdrawn",
+            "engagement.case.activity.you",
+            "engagement.case.back",
+            "engagement.case.loadError",
+            "engagement.case.participants.noCredential",
+            "engagement.case.participants.title",
+            "engagement.case.participants.you",
+            "engagement.case.readOnly",
+            "engagement.case.tabs.checklist",
+            "engagement.case.tabs.participants",
+            "engagement.credential.declared",
+            "engagement.credential.declaredNoChapter",
+            "engagement.myCases.signing",
+            "engagement.myCases.untitled",
+            "files.download",
+            "files.from",
+            "files.fromOnBehalf",
+            "files.unavailable",
+            "files.view",
+            "items.antiparochi_contract.label",
+            "items.appurtenance_floor_plans.label",
+            "items.building_identity.label",
+            "items.building_manager_certificate.label",
+            "items.building_permit.label",
+            "items.cadastral_extract.label",
+            "items.cadastre_registration_proof.label",
+            "items.contract_draft.label",
+            "items.encumbrance_certificate.label",
+            "items.energy_certificate.label",
+            "items.engineer_legality_certificate.label",
+            "items.final_contract.label",
+            "items.horizontal_property_deed.label",
+            "items.legal_due_diligence_report.label",
+            "items.municipal_clearance.label",
+            "items.payoff_receipt.label",
+            "items.preliminary_agreement.label",
+            "items.section_drawings.label",
+            "items.special_zone_clearances.label",
+            "items.title_deed.label",
+            "items.topographic_plan.label",
+            "items.transfer_tax_proof.label",
+            "items.unit_floor_plans.label",
+            "items.vat_or_suspension.label",
+            "requests.action",
+            "requests.all",
+            "requests.allConfirm.cancel",
+            "requests.allConfirm.confirm",
+            "requests.allConfirm.description",
+            "requests.allConfirm.title",
+            "requests.alreadyToday",
+            "requests.noRecipient",
+            "requests.onBehalfHint",
+            "requests.pending",
+            "requests.pendingToMe",
+            "requests.recipientCount",
+            "requests.requestedToday",
+            "requests.requesting",
+            "requests.sent",
+            "row.actDay",
+            "row.expiresOn",
+            "row.invalidOnSigning",
+            "row.notApplicableByFact",
+            "row.notApplicableReason",
+            "row.offlineHint",
+            "row.onBehalfHint",
+            "row.onBehalfOrUploadHint",
+            "row.provider",
+            "row.rejectedReason",
+            "row.sealed",
+            "row.transmittalHint",
+            "row.uploadHint",
+            "row.validityUnverified",
+            "summary.progress",
+            "transmittal.action",
+            "transmittal.actionOnBehalf",
+            "transmittal.dialog.sending",
+            "transmittal.reissue",
+            "transmittal.reissueHint",
+            "transmittal.reissued",
+            "transmittal.revise.action",
+            "transmittal.sent",
+            "transmittal.withdraw",
+            "transmittal.withdrawConfirm.cancel",
+            "transmittal.withdrawConfirm.confirm",
+            "transmittal.withdrawConfirm.description",
+            "transmittal.withdrawConfirm.title",
+            "transmittal.withdrawn"
+          ],
+          "prefixes": [
+            "engagement.roles",
+            "engagement.verdicts",
+            "items",
+            "levels",
+            "providers",
+            "requests.errors",
+            "sectionHints",
+            "sections",
+            "state",
+            "status",
+            "transmittal.errors"
+          ],
           "whole": false
         }
       }
@@ -10917,7 +11309,7 @@
     "src/config/occupation-families.ts": "59606df82fbe0e1017966eb4ce97154e0bc51477622b594a76aed2a2c39d0029",
     "src/config/office-navigation/catalog-main.ts": "acbe44b485f051c98a435736edcc8fb6078814710e5b0b3c64fd4df98c7e1c72",
     "src/config/office-navigation/catalog-settings.ts": "b2fb014f573886831000ebbcf7d6140482ad07bd6b0d858b29f9b2135540ea13",
-    "src/config/office-navigation/catalog-tools.ts": "752c8037d34f94bdd564e704f24d055a44a1748bb18482c7e60a2ee849de6775",
+    "src/config/office-navigation/catalog-tools.ts": "55b3c74d77826dcede4f2e8ed3f10e5ae1ef20ef10069b337d2d75c154219828",
     "src/config/office-navigation/catalog-types.ts": "068b18abfa24a2a94e2c06d1dad720fc16f87233c4092586befd0629ecc2b118",
     "src/config/office-navigation/resolve-office-navigation.ts": "8a18336f91eda82e2ab9cb9a96bfdc7ad08c775147dfcbfdf795efde0b594dc7",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",
@@ -11153,7 +11545,7 @@
     "src/lib/contact/first-contact-limits.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/first-contact-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contacts/contact-name-review.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/conveyance/conveyance-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
+    "src/lib/conveyance/conveyance-routes.ts": "609af03a671600abda7a0878f2c51d4fdb5c4f478084befb637be24a63932887",
     "src/lib/criteria/criterion-vocabulary.ts": "fa71c8ecb83e12afbfc91234df5f2949108d7d55559ede9061d58dfbfaec34ca",
     "src/lib/criteria/listing-criteria-judge.ts": "db0330138947916e819990cd2fd1a833cf02d61200ae5d9d7ec758cb492b621f",
     "src/lib/criteria/listing-criteria-url.ts": "b7ec7d9749d96af685afe05dc4cc8b1499722f5612ed892ab1994a6bf94b70cf",
@@ -11633,7 +12025,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 942,
-    "sliceBytes": 695087
+    "sliceBytes": 718124
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

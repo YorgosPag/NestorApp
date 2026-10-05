@@ -378,9 +378,14 @@ export type AcceptancePreview =
   | { readonly kind: 'choice-required'; readonly offices: readonly ActingOffice[] }
   | { readonly kind: 'unknown' };
 
-/** **Για λογαριασμό ποιου** ενεργεί μια συμμετοχή που έχει αναληφθεί. */
+/**
+ * **Για λογαριασμό ποιου** ενεργεί μια συμμετοχή που έχει αναληφθεί.
+ * - `departed` (§15.15 · Γ2.1) — ανελήφθη για γραφείο όπου ο άνθρωπος **δεν ανήκει πια**. Η πρόσβαση **κρατά** (Ε-10)·
+ *   η υπόθεση φαίνεται στον **προσωπικό** του χώρο, και η κάρτα το λέει ρητά.
+ */
 export type ActingForView =
   | { readonly kind: 'office'; readonly office: ActingOffice }
+  | { readonly kind: 'departed'; readonly office: ActingOffice }
   | { readonly kind: 'personal' };
 
 /** Μία κάρτα στα «Οι υποθέσεις μου» (ADR-901 §5.4). */

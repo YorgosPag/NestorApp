@@ -169,7 +169,7 @@ function Outcome({ outcome, switchAccountHref, onRetry }: {
     case 'accepted':
       return (
         <InvitationMessageCard title={t(CASE_INVITE_KEYS.accepted)} body={t(CASE_INVITE_KEYS.acceptedBody)}>
-          <Button asChild className="w-full"><Link href={myCaseHref(outcome.engagementId)}>{t(CASE_INVITE_KEYS.openCase)}</Link></Button>
+          <Button asChild className="w-full"><Link href={myCaseHref(outcome.engagementId, outcome.home)}>{t(CASE_INVITE_KEYS.openCase)}</Link></Button>
         </InvitationMessageCard>
       );
     case 'declined':

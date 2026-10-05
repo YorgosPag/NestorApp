@@ -89,11 +89,13 @@ export function ActingWorkspaceField({ preview, ...chooser }: ActingWorkspaceFie
 export function ActingForLine({ actingFor }: { readonly actingFor: ActingForView }) {
   const { t } = useTranslation(ACTING_NS);
   const officeName = useOfficeName();
-  return (
-    <span>
-      {actingFor.kind === 'office'
-        ? t(ACTING_KEYS.cardOffice, { office: officeName(actingFor.office) })
-        : t(ACTING_KEYS.cardPersonal)}
-    </span>
-  );
+  switch (actingFor.kind) {
+    case 'office':
+      return <span>{t(ACTING_KEYS.cardOffice, { office: officeName(actingFor.office) })}</span>;
+    // §15.15 — η πρόσβαση κρατά (Ε-10)· η κάρτα λέει ΓΙΑΤΙ η υπόθεση βρίσκεται στον προσωπικό χώρο.
+    case 'departed':
+      return <span>{t(ACTING_KEYS.cardDeparted, { office: officeName(actingFor.office) })}</span>;
+    case 'personal':
+      return <span>{t(ACTING_KEYS.cardPersonal)}</span>;
+  }
 }

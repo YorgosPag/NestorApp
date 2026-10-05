@@ -14,9 +14,11 @@ import { readRepoFile, stripComments } from '@/test-utils/read-source';
 
 import {
   PERSONAL_WORKSPACE_SURFACE,
+  PERSONAL_WORKSPACE_TWINS,
   isOfferedInPersonalWorkspace,
   personalWorkspaceLanding,
 } from '../personal-workspace-surface';
+import { isInsideWorkspace } from '../workspace-scope';
 import { PRIVATE_SPACE_HOME } from '@/lib/routes/landing';
 
 describe('Κ1 — Η ΠΡΟΕΠΙΛΟΓΗ ΕΙΝΑΙ «ΔΕΝ ΠΡΟΣΦΕΡΕΤΑΙ» (fail-closed)', () => {
@@ -135,6 +137,46 @@ describe('Κ3 — ΤΟ ΣΥΝΟΛΟ ΕΙΝΑΙ ΚΕΝΟ ΣΗΜΕΡΑ, ΚΑΙ Κ�
   it('καμία εγγραφή χωρίς ουσιαστικό λόγο', () => {
     for (const [segment, why] of Object.entries(PERSONAL_WORKSPACE_SURFACE)) {
       expect(`${segment}: ${why}`.length).toBeGreaterThan(segment.length + 40);
+    }
+  });
+});
+
+describe('Δ — ΤΟ ΠΡΟΣΩΠΙΚΟ ΔΙΔΥΜΟ: τμήμα γραφείου με δική του σελίδα στον χώρο του ιδιώτη (ADR-901 §15 Γ2)', () => {
+  it('Δ1 🔴 ο παλιός σύνδεσμος υπόθεσης ΔΕΝ χάνει το αντικείμενό του — προσγειώνεται στο δίδυμο, με την ίδια ουρά', () => {
+    // Μετάλλαξη: η προσγείωση αγνοεί τα δίδυμα ⇒ `/o/me/cases/eng_1` καταλήγει στην αρχική και η υπόθεση «χάνεται».
+    expect(personalWorkspaceLanding('/o/me/cases/eng_1')).toBe('/engagements/eng_1');
+    expect(personalWorkspaceLanding('/o/me/cases')).toBe('/engagements');
+    expect(personalWorkspaceLanding('/o/ME/cases/eng_1')).toBe('/engagements/eng_1');
+  });
+
+  it('Δ2 — το δίδυμο κρίνεται ΑΝΑ ΤΜΗΜΑ: γειτονικό όνομα δεν το κλέβει', () => {
+    // Μετάλλαξη: σύγκριση με `startsWith('/cases')` ⇒ το `/o/me/cases-archive` θα γινόταν `/engagements-archive`.
+    expect(personalWorkspaceLanding('/o/me/cases-archive')).toBe(PRIVATE_SPACE_HOME);
+    expect(personalWorkspaceLanding('/o/me/toString')).toBe(PRIVATE_SPACE_HOME);
+  });
+
+  it('Δ2β 🔴 όνομα της αλυσίδας πρωτοτύπων ΔΕΝ είναι δήλωση — ούτε «προσφέρεται», ούτε «εκτός χώρου»', () => {
+    // Μετάλλαξη: `first in ΣΥΝΟΛΟ` αντί `Object.hasOwn` ⇒ το `toString`/`constructor` απαντά «ναι» χωρίς να το έγραψε κανείς.
+    for (const inherited of ['toString', 'constructor', 'hasOwnProperty']) {
+      expect(isOfferedInPersonalWorkspace(`/${inherited}`)).toBe(false);
+      expect(isInsideWorkspace(`/${inherited}`)).toBe(true);
+    }
+  });
+
+  it('Δ3 — το δίδυμο ΔΕΝ είναι προσφορά: η σελίδα γραφείου εξακολουθεί να μην ανοίγει στον ιδιωτικό χώρο', () => {
+    for (const segment of Object.keys(PERSONAL_WORKSPACE_TWINS)) {
+      expect(isOfferedInPersonalWorkspace(`/${segment}`)).toBe(false);
+    }
+  });
+
+  it('Δ4 — κάθε δίδυμο είναι ΥΠΑΡΚΤΗ σελίδα εκτός χώρου, ανοιχτή στον ιδιώτη, με γραμμένο λόγο', () => {
+    for (const [segment, twin] of Object.entries(PERSONAL_WORKSPACE_TWINS)) {
+      // Εκτός χώρου: αλλιώς το δίχτυ θα το ξανάστελνε στο `/o/me/…` ⇒ βρόχος.
+      expect(isInsideWorkspace(twin.route)).toBe(false);
+      expect(personalWorkspaceLanding(twin.route)).toBeNull();
+      // Το τμήμα γραφείου ζει ΜΕΣΑ σε χώρο — αλλιώς δεν θα έφτανε ποτέ εδώ.
+      expect(isInsideWorkspace(`/${segment}`)).toBe(true);
+      expect(twin.why.length).toBeGreaterThan(40);
     }
   });
 });

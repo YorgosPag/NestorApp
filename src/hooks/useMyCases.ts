@@ -20,6 +20,7 @@ import {
   type RespondRejection,
 } from '@/services/conveyance/conveyance-engagement-gateway';
 import { actingForAfterAccept } from '@/lib/conveyance/acting-acceptance';
+import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import type { MyCaseCard } from '@/types/conveyance-case';
 
@@ -48,7 +49,8 @@ function optimisticCard(card: MyCaseCard, answer: CaseEngagementAnswer): MyCaseC
     : { ...card, engagementState: 'declined', verdict: 'declined', acceptance: null };
 }
 
-export function useMyCases(): UseMyCasesReturn {
+/** @param home το είδος χώρου της σελίδας (§15 Γ2) — η λίστα έρχεται ήδη φιλτραρισμένη από τον server. */
+export function useMyCases(home: CaseHome): UseMyCasesReturn {
   const [cards, setCards] = useState<readonly MyCaseCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -57,12 +59,12 @@ export function useMyCases(): UseMyCasesReturn {
 
   useEffect(() => {
     let alive = true;
-    fetchMyCases()
+    fetchMyCases(home)
       .then((result) => { if (alive) { setCards(result.cards); setFailed(false); } })
       .catch(() => { if (alive) setFailed(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [home]);
 
   const replace = useCallback((next: MyCaseCard) => {
     setCards((current) => current.map((card) => (card.engagementId === next.engagementId ? next : card)));

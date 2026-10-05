@@ -44,10 +44,9 @@ import {
 import type { PermalinkChannel } from '@/lib/notifications/notification-permalink-route';
 import { safeReturnPath } from '@/lib/routes/return-path';
 import { createModuleLogger } from '@/lib/telemetry';
+import { addressInWorkspace } from '@/lib/workspace/workspace-address';
 import {
-  ownerOfWorkspace,
   workspaceDestinationFor,
-  workspaceDestinationOf,
   type SignedInPageIdentity,
 } from '@/lib/workspace/workspace-destination';
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
@@ -125,7 +124,8 @@ async function addressOf(
   if (destination.workspace === null) {
     return workspaceDestinationFor(identity, destination.path);
   }
-  return workspaceDestinationOf(ownerOfWorkspace(destination.workspace), destination.path);
+  // 🔑 ADR-901 §15 Γ2 — ο ΕΝΑΣ κανόνας «δηλωμένος χώρος → διεύθυνση» (κοινός με τη σελίδα υπόθεσης).
+  return addressInWorkspace(destination.workspace, destination.path);
 }
 
 /**

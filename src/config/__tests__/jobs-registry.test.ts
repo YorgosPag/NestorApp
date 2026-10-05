@@ -15,6 +15,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/auth/types';
+import { OFFICE_CASES_ROUTE } from '@/lib/conveyance/conveyance-routes';
 import {
   COMMON_DASHBOARD_TILES,
   COMMON_SIDEBAR_NODES,
@@ -200,6 +201,15 @@ describe('🔴 /legal-documents — νεκρή διαδρομή, ΕΚΤΟΣ μη
 
   it('το ζωντανό παιδί του («/obligations») είναι κοινό σε όλες', () => {
     expect(COMMON_SIDEBAR_NODES).toContain(LEGAL_DOCUMENTS_STATUS.livingChildRoute);
+  });
+
+  it('ADR-901 §15 Γ2 — «Οι υποθέσεις μου» (`/cases`) είναι ΚΟΙΝΕΣ σε όλες τις δουλειές, και καμία δεν τις διεκδικεί', () => {
+    // Η υπόθεση ανατίθεται στον ΑΝΘΡΩΠΟ, ό,τι κι αν δηλώνει ως δουλειά το γραφείο του. Μετάλλαξη: το `/cases`
+    // φεύγει από τα κοινά — σήμερα μένει ορατό (αταξινόμητο ⇒ ορατό, Ε14.ζ), αλλά η ΠΡΩΤΗ δουλειά που θα το
+    // διεκδικήσει το κρύβει από όλες τις άλλες. Η δήλωση «κοινό» είναι αυτή που το αποτρέπει (επιζώσα μετάλλαξη
+    // 2026-10-05: το «επιβιώνει σε κάθε δουλειά» περνούσε και χωρίς τη δήλωση — γι' αυτό κρίνεται η ΔΗΛΩΣΗ).
+    expect(COMMON_SIDEBAR_NODES).toContain(OFFICE_CASES_ROUTE);
+    expect(ALL_JOBS.filter((job) => (job.sidebar as readonly string[]).includes(OFFICE_CASES_ROUTE))).toEqual([]);
   });
 
   it('η στήλη το έχει ως ΟΜΑΔΑ χωρίς διαδρομή — το κενό επιβολής μένει ανοιχτό', () => {

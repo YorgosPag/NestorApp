@@ -3,7 +3,8 @@
  * Κανόνες: βλ. `catalog-main.ts` (σειρά δήλωσης · δηλωμένος τίτλος · ομάδα χωρίς διεύθυνση).
  */
 
-import { FileText, FolderTree, MapPin, PenTool } from 'lucide-react';
+import { FileText, FolderTree, MapPin, PenTool, Scale } from 'lucide-react';
+import { OFFICE_CASES_ROUTE } from '@/lib/conveyance/conveyance-routes';
 import type { CatalogEntry } from './catalog-types';
 
 export const TOOLS_CATALOG = [
@@ -17,6 +18,16 @@ export const TOOLS_CATALOG = [
     id: 'legal',
     navLabelKey: 'tools.legal',
     icon: FileText,
-    items: [{ kind: 'link', navLabelKey: 'tools.obligations', icon: PenTool, href: '/obligations' }],
+    items: [
+      { kind: 'link', navLabelKey: 'tools.obligations', icon: PenTool, href: '/obligations' },
+      // 🔑 ADR-901 §15 Γ2 — «Οι υποθέσεις μου», στον χώρο του ΓΡΑΦΕΙΟΥ: όσες ανέλαβε ο επαγγελματίας για λογαριασμό
+      //    αυτού του γραφείου. ΙΔΙΟ κλειδί τίτλου με την προσωπική γραμμή (`personal-navigation`): μία έννοια, δύο
+      //    σπίτια — και κανένα νέο κλειδί στο `navigation.json`.
+      // ⚠️ ΧΩΡΙΣ `policy`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ (Υ18: «ό,τι δηλώνεται επιβάλλεται»): η σελίδα δεν φυλάσσεται από
+      //    δικαίωμα γραφείου αλλά από τη ΣΥΜΜΕΤΟΧΗ του ανθρώπου (`decideEngagement`, `uid`). Μια πολιτική εδώ θα
+      //    έκρυβε το κουμπί από μέλος που ΕΧΕΙ υποθέσεις, ή θα υπονοούσε φρουρό που δεν υπάρχει (OWASP A01).
+      //    Όποιος δεν έχει υποθέσεις βλέπει την κενή κατάσταση — και εκεί θα φτάσει η πρώτη του πρόταση.
+      { kind: 'link', navLabelKey: 'personal.items.myCases', icon: Scale, href: OFFICE_CASES_ROUTE },
+    ],
   },
 ] as const satisfies readonly CatalogEntry[];

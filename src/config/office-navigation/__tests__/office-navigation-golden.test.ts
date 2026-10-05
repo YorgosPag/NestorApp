@@ -99,6 +99,12 @@ const DECLARED_CHANGES: ReadonlyArray<(tree: GoldenTree, s: Scenario) => void> =
     const settings = groupOf(tree, '/settings');
     if (settings?.children) settings.children = settings.children.filter((c) => c.href !== '/debug');
   },
+  // ADR-901 §15 Γ2 — «Οι υποθέσεις μου» μπήκαν στον χώρο του γραφείου (Ε-9 = α): νέο παιδί της ομάδας `legal`,
+  //                  με το ΙΔΙΟ κλειδί τίτλου της προσωπικής γραμμής. Χωρίς πολιτική ⇒ και στα τέσσερα σενάρια.
+  (tree, s) => {
+    if (s.menu !== 'tools') return;
+    groupOf(tree, '/legal-documents')?.children?.push({ title: 'personal.items.myCases', href: '/cases' });
+  },
 ];
 
 const RESOLVERS = { main: getMainMenuItems, tools: getToolsMenuItems, settings: getSettingsMenuItems } as const;

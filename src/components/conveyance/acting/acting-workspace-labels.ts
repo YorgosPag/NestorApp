@@ -19,4 +19,5 @@ export const ACTING_KEYS = {
   unnamedOffice: 'conveyance:engagement.acting.unnamedOffice',
   cardOffice: 'conveyance:engagement.acting.cardOffice',
   cardPersonal: 'conveyance:engagement.acting.cardPersonal',
+  cardDeparted: 'conveyance:engagement.acting.cardDeparted',
 } as const;

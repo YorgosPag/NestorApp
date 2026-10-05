@@ -176,7 +176,7 @@ const caseEngagedRule: DestinationRule = async (db, notification, entityId) => {
   const engagement = own.outcome === 'ok' ? own.engagements.find((e) => e.id === entityId) : undefined;
   // «Δεν μπόρεσα να ρωτήσω» ≡ «δεν τη βρήκα» εδώ: και τα δύο σημαίνουν **καμία** διόρθωση (ποτέ μαντεψιά).
   if (engagement === undefined) return unresolvable('entity-absent');
-  return expected(caseEngagementChangedDestination(engagement));
+  return expected(await caseEngagementChangedDestination(engagement));
 };
 
 /** ADR-884 Κ3β — νέο αίτημα θέασης προς τον υπεύθυνο: ο χώρος είναι η θεματοφυλακή της **ρίζας**. */

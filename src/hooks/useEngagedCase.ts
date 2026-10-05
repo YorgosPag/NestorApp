@@ -5,8 +5,8 @@
  * φιλτραρισμένος ανά ρόλο και εμβέλεια από τον server — ο client **δεν** τον ξαναπαράγει (δεν έχει, και δεν
  * πρέπει να έχει, το ωμό έγγραφο).
  *
- * Τρεις εκβάσεις, ποτέ δύο: η όψη · η **δική μου** συμμετοχή χωρίς πρόσβαση τώρα (ονομασμένη ετυμηγορία) ·
- * «δεν βρέθηκε/δεν φορτώθηκε».
+ * Τέσσερις εκβάσεις, ποτέ δύο: η όψη · η **δική μου** συμμετοχή χωρίς πρόσβαση τώρα (ονομασμένη ετυμηγορία) ·
+ * η δική μου υπόθεση σε **άλλο χώρο** (§15 Γ2 — η σελίδα πηγαίνει εκεί) · «δεν βρέθηκε/δεν φορτώθηκε».
  *
  * ADR-901 Φ4.4 — `reload()` μετά από αποστολή/απόσυρση: ανανέωση **στο παρασκήνιο** — η τρέχουσα όψη μένει ορατή
  * ώσπου να έρθει η νέα (κανένα spinner που αδειάζει τη σελίδα). Αποτυχία ανανέωσης ⇒ κρατά την προηγούμενη όψη.
@@ -23,7 +23,8 @@ import { clientViewSignalDoc, viewSignalId, viewSignalRevisionOf } from '@/lib/c
 import type { EngagementCaseView } from '@/lib/conveyance/view-signal-key';
 import { isOlderEngagedView } from '@/lib/conveyance/case-view-freshness';
 import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
-import { deniedVerdictOf, fetchEngagedCase } from '@/services/conveyance/conveyance-engagement-gateway';
+import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
+import { caseRelocationOf, deniedVerdictOf, fetchEngagedCase } from '@/services/conveyance/conveyance-engagement-gateway';
 import type { EngagedCaseView } from '@/types/conveyance-case';
 import type { EngagementVerdict } from '@/types/engagement';
 import type { ViewFreshness } from '@/types/server-view';
@@ -32,7 +33,18 @@ export type EngagedCaseState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'ready'; readonly view: EngagedCaseView }
   | { readonly kind: 'denied'; readonly verdict: EngagementVerdict }
+  /** §15 Γ2 — η **δική μου** υπόθεση ζει σε **άλλο** χώρο· `to` = η διεύθυνση του σπιτιού της (από τον server). */
+  | { readonly kind: 'moved'; readonly to: string }
   | { readonly kind: 'failed' };
+
+/** Η επόμενη κατάσταση μετά από αποτυχημένη ανάγνωση: ονομασμένη έκβαση ⇒ φαίνεται πάντα· δίκτυο ⇒ μένει η όψη που υπάρχει. */
+function stateAfterFailure(current: EngagedCaseState, error: unknown): EngagedCaseState {
+  const to = caseRelocationOf(error);
+  if (to !== null) return { kind: 'moved', to };
+  const verdict = deniedVerdictOf(error);
+  if (verdict) return { kind: 'denied', verdict };
+  return current.kind === 'ready' ? current : { kind: 'failed' };
+}
 
 export interface EngagedCaseHandle {
   readonly state: EngagedCaseState;
@@ -46,23 +58,21 @@ function nextState(current: EngagedCaseState, view: EngagedCaseView): EngagedCas
 }
 
 /** Ανάγνωση στο παρασκήνιο· επιστρέφει την αναθεώρηση της όψης που ήρθε, ή `null`. Αποτέλεσμα άλλης συμμετοχής ⇒ αγνοείται. */
-function useEngagedFetch(engagementId: string, setState: (update: (current: EngagedCaseState) => EngagedCaseState) => void) {
+function useEngagedFetch(engagementId: string, home: CaseHome, setState: (update: (current: EngagedCaseState) => EngagedCaseState) => void) {
   const latest = useRef(engagementId);
   latest.current = engagementId;
   return useCallback(async (): Promise<number | null> => {
     try {
-      const { view } = await fetchEngagedCase(engagementId);
+      const { view } = await fetchEngagedCase(engagementId, home);
       if (latest.current !== engagementId) return null;
       setState((current) => nextState(current, view));
       return view.freshness.revision;
     } catch (error: unknown) {
       if (latest.current !== engagementId) return null;
-      const verdict = deniedVerdictOf(error);
-      // Ανανέωση που απέτυχε για λόγο δικτύου ⇒ μένει η όψη που υπάρχει· ονομασμένη άρνηση ⇒ φαίνεται πάντα.
-      setState((current) => (verdict ? { kind: 'denied', verdict } : current.kind === 'ready' ? current : { kind: 'failed' }));
+      setState((current) => stateAfterFailure(current, error));
       return null;
     }
-  }, [engagementId, setState]);
+  }, [engagementId, home, setState]);
 }
 
 /** Το σήμα της **δικής μου** όψης — `uid` από τη σύνδεση, ποτέ από το αίτημα. */
@@ -81,9 +91,10 @@ function freshnessOf(state: EngagedCaseState): ViewFreshness | null | 'pending' 
   return state.kind === 'ready' ? state.view.freshness : null;
 }
 
-export function useEngagedCase(engagementId: string): EngagedCaseHandle {
+/** @param home το είδος χώρου της σελίδας (§15 Γ2) — ο server απαντά `moved` αν η υπόθεση ζει αλλού. */
+export function useEngagedCase(engagementId: string, home: CaseHome): EngagedCaseHandle {
   const [state, setState] = useState<EngagedCaseState>({ kind: 'loading' });
-  const fetchView = useEngagedFetch(engagementId, setState);
+  const fetchView = useEngagedFetch(engagementId, home, setState);
 
   useEffect(() => {
     setState({ kind: 'loading' });

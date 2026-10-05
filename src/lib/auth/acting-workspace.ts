@@ -36,6 +36,7 @@ import type { Engagement } from '@/types/engagement';
 import {
   orgWorkspace,
   personalWorkspace,
+  workspaceRefKey,
   type OrgWorkspaceRef,
   type PersonalWorkspaceRef,
   type RequestedWorkspace,
@@ -54,6 +55,64 @@ import {
  */
 export function actingWorkspaceOf(engagement: Pick<Engagement, 'uid' | 'actingFor'>): WorkspaceRef {
   return engagement.actingFor ?? personalWorkspace(engagement.uid);
+}
+
+/** Τα γραφεία όπου ο άνθρωπος **ανήκει** — ή «δεν μπόρεσα να ρωτήσω» (ποτέ κενή λίστα στη θέση του). */
+export type BelongingOffices =
+  | { readonly outcome: 'ok'; readonly companyIds: readonly string[] }
+  | { readonly outcome: 'unknown' };
+
+/**
+ * **Το σπίτι όπου ΦΑΙΝΕΤΑΙ μια συμμετοχή** — ή «δεν μπόρεσα να ρωτήσω» (ADR-901 §15.15 · Γ2.1).
+ * `departedFrom` ≠ `null` ⇒ ανελήφθη για γραφείο όπου ο άνθρωπος **δεν ανήκει πια**: η πόρτα του είναι ο προσωπικός.
+ */
+export type CasePlacement =
+  | { readonly outcome: 'placed'; readonly home: WorkspaceRef; readonly departedFrom: OrgWorkspaceRef | null }
+  | { readonly outcome: 'unknown' };
+
+/**
+ * **Πού ανοίγει ΤΩΡΑ αυτή η συμμετοχή, για ΑΥΤΟΝ τον άνθρωπο;** (ADR-901 §15.15 · Γ2.1 · Ε-10 «κρατά»)
+ *
+ * | Ενεργεί για ({@link actingWorkspaceOf}) | Ανήκει ακόμη εκεί; | Σπίτι |
+ * |---|---|---|
+ * | προσωπικό χώρο | — (δεν ρωτιέται) | ο προσωπικός |
+ * | γραφείο | ναι | το γραφείο |
+ * | γραφείο | **όχι** | ο **προσωπικός**, με `departedFrom` = το γραφείο |
+ * | γραφείο | «δεν μπόρεσα να ρωτήσω» | `unknown` — **ποτέ** σιωπηλά το ένα ή το άλλο |
+ *
+ * 🔑 **Υπολογίζεται, δεν γράφεται**: το `actingFor` μένει το **γεγονός** («ανελήφθη για το Γραφείο Α»)· το σπίτι
+ *    είναι **όψη** του, τώρα. Γι' αυτό η επιστροφή στο γραφείο φέρνει την υπόθεση πίσω **χωρίς** καμία πράξη και
+ *    χωρίς προθεσμία — και η διαδοχή (Γ6) βρίσκει το πεδίο ανέγγιχτο.
+ * ⛔ **Δεν αποφασίζει πρόσβαση** (Α39): η πρόσβαση μένει `engagement.uid === uid`. Εδώ κρίνεται μόνο η **πόρτα**.
+ * ⚠️ `offices` = όπου **ανήκει** (`belonging`), όχι όπου **περνά** (`reachable`).
+ */
+export function placementOf(engagement: Pick<Engagement, 'uid' | 'actingFor'>, offices: BelongingOffices): CasePlacement {
+  const acting = actingWorkspaceOf(engagement);
+  if (acting.kind === 'personal') return { outcome: 'placed', home: acting, departedFrom: null };
+  if (offices.outcome === 'unknown') return { outcome: 'unknown' };
+  return offices.companyIds.includes(acting.companyId)
+    ? { outcome: 'placed', home: acting, departedFrom: null }
+    : { outcome: 'placed', home: personalWorkspace(engagement.uid), departedFrom: acting };
+}
+
+/**
+ * **Φαίνεται αυτή η συμμετοχή στη λίστα αυτού του χώρου;** (ADR-901 §15.6.3 · Α6 · άγκυρα Α47)
+ *
+ * | Συμμετοχή | Πού φαίνεται |
+ * |---|---|
+ * | πρόταση που **περιμένει απάντηση** (`offered`) | **παντού** — δεν έχει ακόμη χώρο, ανήκει στον άνθρωπο |
+ * | κάθε άλλη | **μόνο** στο **σπίτι** της (`home` — {@link placementOf}) |
+ *
+ * 🔑 **Μία λίστα, φίλτρο ο χώρος** (Α6): ίδιο ερώτημα (`uid`), ίδιος κώδικας — κανένας νέος δείκτης.
+ * ⛔ **Δεν αποφασίζει πρόσβαση.** Ο χώρος εδώ είναι ο χώρος **της σελίδας**· το «ποιος βλέπει» μένει
+ *    `decideEngagement` (`engagement.uid === uid`). Διαχειριστής γραφείου **δεν** βλέπει υπόθεση συναδέλφου επειδή
+ *    κοιτά τη λίστα του γραφείου: η λίστα είναι ήδη **μόνο** οι δικές του συμμετοχές.
+ * ⚠️ Συμμετοχή που **δεν αναλήφθηκε ποτέ** και δεν περιμένει πια (`declined` · `expired` · `withdrawn`) δεν έχει
+ *    χώρο ⇒ διαβάζεται προσωπική, όπως κάθε απουσία (Α48). Δηλωμένο όριο — ADR-901 §15.14.
+ */
+export function isShownInWorkspace(engagement: Pick<Engagement, 'state'>, home: WorkspaceRef, viewed: WorkspaceRef): boolean {
+  if (engagement.state === 'offered') return true;
+  return workspaceRefKey(home) === workspaceRefKey(viewed);
 }
 
 /** Η δήλωση ανήκει **στον ίδιο**: γραφείο, ή ο **δικός του** προσωπικός χώρος — ποτέ ξένος (ζώνη του γραφέα). */
@@ -94,11 +153,6 @@ export type ActingWorkspaceDecision =
   | { readonly verdict: 'choice-required'; readonly offices: readonly string[] }
   | { readonly verdict: 'refused'; readonly reason: ActingWorkspaceRefusal }
   | { readonly verdict: 'unknown' };
-
-/** Τα γραφεία όπου ο άνθρωπος **ανήκει** — ή «δεν μπόρεσα να ρωτήσω» (ποτέ κενή λίστα στη θέση του). */
-export type BelongingOffices =
-  | { readonly outcome: 'ok'; readonly companyIds: readonly string[] }
-  | { readonly outcome: 'unknown' };
 
 export interface ActingWorkspaceQuery {
   /** Ο άνθρωπος, από το υπογεγραμμένο token. */

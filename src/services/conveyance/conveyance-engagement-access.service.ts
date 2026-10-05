@@ -3,7 +3,8 @@
  * «Οι υποθέσεις μου» — η πλευρά του ΕΠΑΓΓΕΛΜΑΤΙΑ (ADR-901 Φ2 §5.4 · ADR-862 Φ1)
  * =============================================================================
  *
- * - `listMyCases`            — κάθε συμμετοχή του ανθρώπου σε ξένη υπόθεση (collection-group στο `uid`)
+ * - `listMyCases`            — οι συμμετοχές του ανθρώπου σε ξένες υποθέσεις (collection-group στο `uid`), όπως
+ *                              φαίνονται **στον χώρο της σελίδας** (§15 Γ2 — φίλτρο στη μνήμη, κανένας νέος δείκτης)
  * - `respondToCaseEngagement` — «Αναλαμβάνω» / «Δεν αναλαμβάνω» (Entra: πρόσβαση ΜΟΝΟ μετά την αποδοχή)
  * - `getEngagedCaseView`     — η υπόθεση, φιλτραρισμένη ανά **ρόλο** (`visibleTo`) και **εμβέλεια** (WIP ⛔)
  *
@@ -21,6 +22,7 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isShownInWorkspace } from '@/lib/auth/acting-workspace';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import { transitionEngagement, type EngagementTransition } from '@/lib/auth/engagement-write';
@@ -33,6 +35,7 @@ import { deriveFacts } from '@/lib/conveyance/derive-facts';
 import type { ConveyanceCase, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { Engagement, EngagementDecision, EngagementVerdict } from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
+import type { WorkspaceRef } from '@/types/workspace-membership';
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER, type CaseEvidenceViewer } from './conveyance-case-evidence.server';
 import { actingViews, resolveActingFor, type ActingRejection, type ActingViewer, type ActingViews } from './conveyance-acting-workspace.server';
 import { contactCredentialHint } from './conveyance-professional.server';
@@ -144,17 +147,46 @@ async function cardOf(db: Firestore, engagement: Engagement, verdict: Engagement
 
 export type MyCasesOutcome = { readonly ok: true; readonly cards: readonly MyCaseCard[] } | { readonly ok: false };
 
-/** Μία κάρτα **ανά υπόθεση** (η τρέχουσα συμμετοχή), νεότερη πρώτη. */
-export async function listMyCases(db: Firestore, viewer: ActingViewer, nowMs: number): Promise<MyCasesOutcome> {
+/** Ποιος κοιτά τη λίστα, **και από ποιον χώρο** — ο χώρος της σελίδας (`viewedWorkspace`), όχι όπου ανήκει. */
+export interface CasesViewer extends ActingViewer {
+  readonly viewed: WorkspaceRef;
+}
+
+/**
+ * Όσες φαίνονται στον χώρο της σελίδας — καθεμία στο **σπίτι** της (`placement`, §15.15: το γραφείο όπου ανήκει
+ * ακόμη, αλλιώς ο προσωπικός του). `unknown` ⇒ τουλάχιστον μία δεν μπόρεσε να κριθεί.
+ */
+async function shownIn(engagements: readonly Engagement[], viewed: WorkspaceRef, acting: ActingViews): Promise<readonly Engagement[] | 'unknown'> {
+  const placed = await Promise.all(engagements.map(async (engagement) => ({ engagement, placement: await acting.placement(engagement) })));
+  const shown: Engagement[] = [];
+  for (const { engagement, placement } of placed) {
+    // Η πρόταση που περιμένει απάντηση φαίνεται παντού — και δεν έχει χώρο, άρα δεν ρωτά ποτέ το βιβλίο.
+    if (placement.outcome === 'unknown') return 'unknown';
+    if (isShownInWorkspace(engagement, placement.home, viewed)) shown.push(engagement);
+  }
+  return shown;
+}
+
+/**
+ * Μία κάρτα **ανά υπόθεση** (η τρέχουσα συμμετοχή), νεότερη πρώτη — **όσες φαίνονται στον χώρο της σελίδας**.
+ *
+ * 🔑 §15 Γ2 (Α6 · Α47): το **ίδιο** ερώτημα (`uid`) και φίλτρο στη μνήμη (`isShownInWorkspace`). Στον χώρο Χ ⇒ μόνο
+ *    όσες ενεργούν για τον Χ· οι προτάσεις που περιμένουν απάντηση ⇒ **παντού**. Το φίλτρο τρέχει **πριν** από την
+ *    κάρτα: υπόθεση άλλου χώρου δεν διαβάζεται καν.
+ */
+export async function listMyCases(db: Firestore, viewer: CasesViewer, nowMs: number): Promise<MyCasesOutcome> {
   const { uid } = viewer;
   const acting = actingViews(viewer);
   const list = await listEngagementsOfUser(db, uid);
   if (list.outcome === 'unknown') return { ok: false };
   const byCase = new Map<string, Engagement[]>();
   for (const e of list.engagements) byCase.set(e.subject.caseId, [...(byCase.get(e.subject.caseId) ?? []), e]);
-  const current = [...byCase.values()]
+  const candidates = [...byCase.values()]
     .map((history) => selectCurrentEngagement(history).engagement)
     .filter((e): e is Engagement => e !== null);
+  const current = await shownIn(candidates, viewer.viewed, acting);
+  // §15.15 — «δεν μπόρεσα να ρωτήσω αν ανήκει ακόμη» ⇒ «δεν φορτώθηκε», ποτέ λίστα που κρύβει σιωπηλά υπόθεση.
+  if (current === 'unknown') return { ok: false };
   const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, list.engagements, acting)));
   return { ok: true, cards: [...cards].sort((a, b) => b.offeredAt.localeCompare(a.offeredAt)) };
 }
@@ -268,15 +300,31 @@ function engagedFreshUntil(engagement: Engagement, nowMs: number): string {
 
 export type EngagedCaseOutcome =
   | { readonly ok: true; readonly view: EngagedCaseView }
+  /** §15 Γ2 — η **δική του** υπόθεση, ανοιγμένη σε **λάθος** χώρο: πού ζει (ποτέ 404, ποτέ κάτω από ξένο πρόθεμα). */
+  | { readonly ok: false; readonly rejection: 'elsewhere'; readonly home: WorkspaceRef }
   | Extract<EngagedCaseResolution, { ok: false }>;
 
-/** Η υπόθεση μέσω της συμμετοχής — **ποτέ** το ωμό έγγραφο. */
-export async function getEngagedCaseView(db: Firestore, uid: string, engagementId: string, nowMs: number): Promise<EngagedCaseOutcome> {
+/** Ποιος ανοίγει τη σελίδα της υπόθεσης, **και από ποιον χώρο** — ίδιος θεατής με τη λίστα (§15.15: το σπίτι ρωτά πού ανήκει). */
+export type CaseViewer = CasesViewer;
+
+/**
+ * Η υπόθεση μέσω της συμμετοχής — **ποτέ** το ωμό έγγραφο.
+ *
+ * 🔑 §15 Γ2 — η **θέση** κρίνεται **μετά** την πρόσβαση (`resolveEngagedCase`) και **μόνο εδώ**: είναι ερώτημα της
+ *    **σελίδας** («σε ποιο σπίτι ανοίγει;»), όχι του πόρου. Τα αρχεία και το ίχνος περνούν από τον ίδιο δρόμο
+ *    πρόσβασης χωρίς να ρωτούν χώρο — ο χώρος **δεν** είναι κριτής πρόσβασης (Α39).
+ */
+export async function getEngagedCaseView(db: Firestore, viewer: CaseViewer, engagementId: string, nowMs: number): Promise<EngagedCaseOutcome> {
+  const { uid } = viewer;
   // §14.8 — η αναθεώρηση ΠΡΙΝ από κάθε ανάγνωση της υπόθεσης (το σήμα ανήκει στη συμμετοχή, όχι στην υπόθεση).
   const revision = await readViewRevision(db, { kind: 'engagement', engagementId, uid });
   const resolution = await resolveEngagedCase(db, uid, engagementId, nowMs);
   if (!resolution.ok) return resolution;
   const { engagement, record, context } = resolution.access;
+  // §15.15 — το σπίτι είναι το γραφείο όπου ανήκει ΑΚΟΜΗ, αλλιώς ο προσωπικός του: ποτέ ανακατεύθυνση σε χώρο που θα απαντήσει 404.
+  const placement = await actingViews(viewer).placement(engagement);
+  if (placement.outcome === 'unknown') return { ok: false, rejection: 'unknown' };
+  if (!isShownInWorkspace(engagement, placement.home, viewer.viewed)) return { ok: false, rejection: 'elsewhere', home: placement.home };
   const state = effectiveCaseState(record.storedState, context.legalPhase);
   const checklist = await engagedChecklistOf(db, resolution.access);
   const party = { role: engagement.role, uid } as const;

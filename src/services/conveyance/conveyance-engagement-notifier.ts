@@ -32,6 +32,7 @@ import { actingWorkspaceOf } from '@/lib/auth/acting-workspace';
 import { myCaseHref } from '@/lib/conveyance/conveyance-routes';
 import { viewDestination, type NotificationDestination } from '@/lib/notifications/notification-destination';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
+import { placeEngagement } from './conveyance-acting-workspace.server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import type { Engagement, EngagementState } from '@/types/engagement';
@@ -61,11 +62,19 @@ function changedTitleKey(engagement: Engagement): string | null {
  * το **γραφείο για λογαριασμό του οποίου ανέλαβε**, αλλιώς ο προσωπικός του (ADR-901 §15 Γ1 — `actingWorkspaceOf`,
  * η ΜΙΑ ερμηνεία). Πρόταση που δεν απαντήθηκε δεν έχει ακόμη γραφείο ⇒ προσωπικός.
  *
- * ⚠️ Μέχρι τη Γ2 η διαδρομή `/cases` ζει **εκτός** προθέματος χώρου ⇒ ο χώρος εδώ είναι **ετικέτα** που ο
- *    μόνιμος σύνδεσμος δεν χρησιμοποιεί ακόμη (`notification-permalink` · `isInsideWorkspace`).
+ * 🔑 §15 Γ2 — ο χώρος **αποκτά αποτέλεσμα**: η διαδρομή ακολουθεί το **σπίτι** της συμμετοχής (`myCaseHref`). Για
+ *    γραφείο είναι `/cases/…`, που ζει **μέσα** σε χώρο ⇒ ο μόνιμος σύνδεσμος τη λύνει στο ψευδώνυμο του γραφείου
+ *    (`notification-permalink` · `addressInWorkspace`)· για προσωπικό είναι `/engagements/…`, αυτούσια.
+ * 🔑 §15.15 (Γ2.1) — το σπίτι είναι το γραφείο όπου ανήκει **ακόμη** (`placeEngagement`): όποιος έφυγε από το
+ *    γραφείο προσγειώνεται στον **προσωπικό** του, όχι σε χώρο που θα του απαντήσει 404. Ο ανιχνευτής απόκλισης
+ *    ρωτά τον **ίδιο** παραγωγό ⇒ μια ειδοποίηση γραμμένη **πριν** από την αποχώρηση φαίνεται ως απόκλιση.
+ * ⚠️ «Δεν μπόρεσα να ρωτήσω το βιβλίο μελών» ⇒ το **γεγονός** (`actingWorkspaceOf`): μια ειδοποίηση δεν χάνεται
+ *    επειδή απέτυχε μια ανάγνωση — στη χειρότερη, η σελίδα της υπόθεσης θα τον πάει η ίδια στο σωστό σπίτι.
  */
-export function caseEngagementChangedDestination(engagement: Pick<Engagement, 'id' | 'uid' | 'actingFor'>): NotificationDestination {
-  return viewDestination(myCaseHref(engagement.id), actingWorkspaceOf(engagement));
+export async function caseEngagementChangedDestination(engagement: Pick<Engagement, 'id' | 'uid' | 'actingFor'>): Promise<NotificationDestination> {
+  const placement = await placeEngagement(engagement);
+  const home = placement.outcome === 'placed' ? placement.home : actingWorkspaceOf(engagement);
+  return viewDestination(myCaseHref(engagement.id, home.kind), home);
 }
 
 /**
@@ -95,7 +104,7 @@ export async function announceEngagementChanged(engagement: Engagement, property
       eventId: `case-engagement:${engagement.id}:${engagement.state}`,
       entityId: engagement.id,
       entityType: NOTIFICATION_ENTITY_TYPES.ENGAGEMENT,
-      ...caseEngagementChangedDestination(engagement),
+      ...(await caseEngagementChangedDestination(engagement)),
       source: { service: SOURCE_SERVICES.PROPERTIES, feature: 'conveyance-engagement', env: getCurrentEnvironment() },
     });
   } catch (error) {

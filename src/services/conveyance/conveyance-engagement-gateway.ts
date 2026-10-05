@@ -12,6 +12,7 @@
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
+import { CASE_HOME_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { CaseActivityItem, CaseProfessionalSlot, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
@@ -63,8 +64,13 @@ export function revokeCaseEngagementRequest(caseId: string, engagementId: string
 // ΕΠΑΓΓΕΛΜΑΤΙΑΣ
 // =============================================================================
 
-export function fetchMyCases(): Promise<{ readonly cards: readonly MyCaseCard[] }> {
-  return apiClient.get(API_ROUTES.ENGAGEMENTS.MINE);
+/** Η σελίδα δηλώνει **το είδος της** (`home`) — ποτέ εταιρεία: ο χώρος του γραφείου έρχεται από το κριμένο αίτημα (§15 Γ2). */
+function fromHome(home: CaseHome) {
+  return { params: { [CASE_HOME_PARAM]: home } };
+}
+
+export function fetchMyCases(home: CaseHome): Promise<{ readonly cards: readonly MyCaseCard[] }> {
+  return apiClient.get(API_ROUTES.ENGAGEMENTS.MINE, fromHome(home));
 }
 
 /** «Αναλαμβάνω» (με δήλωση ιδιότητας, Ε-4) / «Δεν αναλαμβάνω». */
@@ -72,8 +78,8 @@ export function respondToEngagementRequest(engagementId: string, answer: CaseEng
   return apiClient.post(API_ROUTES.ENGAGEMENTS.RESPOND(engagementId), answer);
 }
 
-export function fetchEngagedCase(engagementId: string): Promise<{ readonly view: EngagedCaseView }> {
-  return apiClient.get(API_ROUTES.ENGAGEMENTS.CASE(engagementId));
+export function fetchEngagedCase(engagementId: string, home: CaseHome): Promise<{ readonly view: EngagedCaseView }> {
+  return apiClient.get(API_ROUTES.ENGAGEMENTS.CASE(engagementId), fromHome(home));
 }
 
 /** Ο σύνδεσμος 15′ προς ένα τεκμήριο της υπόθεσης — ο server γράφει το ίχνος (`document_accessed`). */
@@ -175,7 +181,7 @@ export function contributionRejectionOf(error: unknown): ContributionRejection |
 // =============================================================================
 
 export type CaseInvitationRedeemResult =
-  | { readonly kind: 'accepted'; readonly engagementId: string }
+  | { readonly kind: 'accepted'; readonly engagementId: string; readonly home: CaseHome }
   | { readonly kind: 'declined' }
   | { readonly kind: 'refused'; readonly reason: EngagementInvitationRefusal }
   | { readonly kind: 'failed' };
@@ -188,15 +194,26 @@ export async function redeemCaseInvitationFromScreen(
     | { readonly action: 'decline' },
 ): Promise<CaseInvitationRedeemResult> {
   try {
-    const body = await apiClient.post<{ status: 'accepted'; engagementId: string } | { status: 'declined' }>(
+    const body = await apiClient.post<{ status: 'accepted'; engagementId: string; home: CaseHome } | { status: 'declined' }>(
       API_ROUTES.ENGAGEMENTS.INVITATION_REDEEM, { token, ...answer },
     );
-    return body.status === 'accepted' ? { kind: 'accepted', engagementId: body.engagementId } : { kind: 'declined' };
+    return body.status === 'accepted' ? { kind: 'accepted', engagementId: body.engagementId, home: body.home } : { kind: 'declined' };
   } catch (cause: unknown) {
     const body = apiErrorBodyOf(cause);
     const reason = body?.error === 'LINK_REFUSED' ? body.reason : null;
     return isEngagementInvitationRefusal(reason) ? { kind: 'refused', reason } : { kind: 'failed' };
   }
+}
+
+/**
+ * Η διεύθυνση του **σπιτιού** της υπόθεσης όταν άνοιξε σε λάθος χώρο (409 `ENGAGEMENT_ELSEWHERE`, §15 Γ2) — ή `null`.
+ * ⚠️ Δεκτή **μόνο** εσωτερική διαδρομή (`/…`, όχι `//…`): η τιμή οδηγεί πλοήγηση, άρα κρίνεται όπως κάθε `?next=`.
+ */
+export function caseRelocationOf(error: unknown): string | null {
+  const body = apiErrorBodyOf(error);
+  if (body?.error !== 'ENGAGEMENT_ELSEWHERE') return null;
+  const location: unknown = body.location;
+  return typeof location === 'string' && location.startsWith('/') && !location.startsWith('//') ? location : null;
 }
 
 /** Η ετυμηγορία όταν η **δική μου** συμμετοχή δεν δίνει πρόσβαση τώρα (403 της σελίδας υπόθεσης). */

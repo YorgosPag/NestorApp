@@ -108,7 +108,7 @@ export function noticeToHost(notice: CaseNotice & { readonly recipientUid: strin
 /** Προς τον **επαγγελματία**: προσγείωση στη σελίδα της υπόθεσης, στον δικό του χώρο. */
 export function noticeToEngaged(notice: CaseNotice & { readonly engagement: Engagement }): Promise<CaseNoticeDelivery> {
   const { engagement } = notice;
-  return deliver(notice, () => dispatchNotification({
+  return deliver(notice, async () => dispatchNotification({
     eventType: notice.eventType,
     recipientId: engagement.uid,
     // 🔑 Ο επαγγελματίας είναι ο μισθωτής του εαυτού του (ίδιο ιδίωμα με το `caseEngagementChanged`).
@@ -117,7 +117,7 @@ export function noticeToEngaged(notice: CaseNotice & { readonly engagement: Enga
     eventId: notice.eventId,
     entityId: engagement.id,
     entityType: NOTIFICATION_ENTITY_TYPES.ENGAGEMENT,
-    ...caseEngagementChangedDestination(engagement),
+    ...(await caseEngagementChangedDestination(engagement)),
     source: sourceOf(notice),
   }));
 }

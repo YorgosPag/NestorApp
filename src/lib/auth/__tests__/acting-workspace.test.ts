@@ -13,6 +13,8 @@ import {
   ACTING_WORKSPACE_REQUEST_SCHEMA,
   actingWorkspaceOf,
   decideActingWorkspace,
+  isShownInWorkspace,
+  placementOf,
   type ActingWorkspaceRequest,
   type BelongingOffices,
 } from '../acting-workspace';
@@ -216,5 +218,88 @@ describe('ADR-901 §15.6.1 — το σχήμα του πεδίου (δίσκος
     const parsed = parseEngagement({ ...engagement({ actingFor: orgWorkspace(OFFICE) }), companyId: OFFICE });
     expect(parsed).not.toHaveProperty('companyId');
     expect(parsed?.hostCompanyId).toBe('comp_host');
+  });
+});
+
+describe('ADR-901 §15 (Γ2) — `isShownInWorkspace`: μία λίστα, φίλτρο ο χώρος (Α6 · Α47)', () => {
+  const inOffice = engagement({ actingFor: orgWorkspace(OFFICE) });
+  type Shown = Parameters<typeof placementOf>[0] & Parameters<typeof isShownInWorkspace>[0];
+  /** Το σπίτι για άνθρωπο που ανήκει στα `offices` — η λίστα ρωτά ΠΑΝΤΑ μέσω αυτού (§15.15). */
+  const homeOf = (subject: Shown, offices: readonly string[]): WorkspaceRef => {
+    const placement = placementOf(subject, { outcome: 'ok', companyIds: offices });
+    if (placement.outcome !== 'placed') throw new Error('το σπίτι δεν κρίθηκε');
+    return placement.home;
+  };
+  const shown = (subject: Shown, viewed: WorkspaceRef, offices: readonly string[] = [OFFICE, SECOND]) =>
+    isShownInWorkspace(subject, homeOf(subject, offices), viewed);
+
+  it('Α47 — ενεργή για το γραφείο Χ φαίνεται ΜΟΝΟ στο Χ', () => {
+    // Μετάλλαξη: `return true` ⇒ η υπόθεση εμφανίζεται σε κάθε χώρο του ανθρώπου.
+    expect(shown(inOffice, orgWorkspace(OFFICE))).toBe(true);
+    expect(shown(inOffice, orgWorkspace(SECOND))).toBe(false);
+    expect(shown(inOffice, personalWorkspace(UID))).toBe(false);
+  });
+
+  it('απόν `actingFor` ⇒ προσωπικός — από την ΙΔΙΑ ερμηνεία (Α48), όχι δεύτερη', () => {
+    const legacy = engagement();
+    expect(shown(legacy, personalWorkspace(UID))).toBe(true);
+    expect(shown(legacy, orgWorkspace(OFFICE))).toBe(false);
+  });
+
+  it('ο προσωπικός χώρος ΑΛΛΟΥ ανθρώπου δεν είναι ο δικός μου', () => {
+    // Μετάλλαξη: σύγκριση μόνο του είδους (`kind`) ⇒ κάθε προσωπικός χώρος ταυτίζεται με κάθε άλλον.
+    expect(shown(engagement(), personalWorkspace('u_other'))).toBe(false);
+  });
+
+  it('η πρόταση που περιμένει απάντηση φαίνεται παντού· μόλις απαντηθεί, μόνο στο σπίτι της', () => {
+    const offered = engagement({ state: 'offered' });
+    for (const viewed of [orgWorkspace(OFFICE), orgWorkspace(SECOND), personalWorkspace(UID)]) {
+      expect(shown(offered, viewed)).toBe(true);
+    }
+    // Όσες ΔΕΝ αναλήφθηκαν και δεν περιμένουν πια δεν έχουν χώρο ⇒ προσωπικές (δηλωμένο όριο, §15.14).
+    for (const state of ['declined', 'expired', 'withdrawn'] as const) {
+      expect(shown(engagement({ state }), personalWorkspace(UID))).toBe(true);
+      expect(shown(engagement({ state }), orgWorkspace(OFFICE))).toBe(false);
+    }
+  });
+});
+
+describe('ADR-901 §15.15 (Γ2.1) — `placementOf`: όποιος έφυγε από το γραφείο κρατά την ΠΟΡΤΑ (Ε-10 · Α49)', () => {
+  const forOffice = engagement({ actingFor: orgWorkspace(OFFICE) });
+  const belongs = (...companyIds: string[]) => ({ outcome: 'ok', companyIds } as const);
+
+  it('Α49 — ανήκει ακόμη ⇒ το γραφείο· ΔΕΝ ανήκει πια ⇒ ο προσωπικός του, με το γραφείο ως `departedFrom`', () => {
+    // Μετάλλαξη: `includes` ⇒ `true` — ο αποχωρήσας στέλνεται σε χώρο που το layout του απαντά 404.
+    expect(placementOf(forOffice, belongs(OFFICE))).toEqual({ outcome: 'placed', home: orgWorkspace(OFFICE), departedFrom: null });
+    expect(placementOf(forOffice, belongs())).toEqual({ outcome: 'placed', home: personalWorkspace(UID), departedFrom: orgWorkspace(OFFICE) });
+  });
+
+  it('μέλος ΑΛΛΟΥ γραφείου δεν «ανήκει» στο γραφείο της υπόθεσης — το σπίτι είναι ο προσωπικός, όχι το νέο γραφείο', () => {
+    // Μετάλλαξη: «έχει κάποιο γραφείο» αντί «έχει ΑΥΤΟ το γραφείο» ⇒ η υπόθεση του Α εμφανίζεται κάτω από το Β.
+    expect(placementOf(forOffice, belongs(SECOND))).toEqual({ outcome: 'placed', home: personalWorkspace(UID), departedFrom: orgWorkspace(OFFICE) });
+  });
+
+  it('«δεν μπόρεσα να ρωτήσω» ⇒ `unknown` — ποτέ σιωπηλά γραφείο, ποτέ σιωπηλά προσωπικός', () => {
+    // Μετάλλαξη: το άγνωστο διαβάζεται ως «κανένα γραφείο» ⇒ μια αποτυχία ανάγνωσης «αποχωρεί» κάθε μέλος.
+    expect(placementOf(forOffice, { outcome: 'unknown' })).toEqual({ outcome: 'unknown' });
+  });
+
+  it('προσωπική (ή χωρίς `actingFor`) ΔΕΝ ρωτά το βιβλίο: κρίνεται και με άγνωστα γραφεία', () => {
+    // Μετάλλαξη: ο έλεγχος «άγνωστο» προηγείται ⇒ ο ιδιώτης χάνει τη λίστα του όταν πέσει το βιβλίο μελών.
+    for (const subject of [engagement(), engagement({ actingFor: personalWorkspace(UID) })]) {
+      expect(placementOf(subject, { outcome: 'unknown' })).toEqual({ outcome: 'placed', home: personalWorkspace(UID), departedFrom: null });
+    }
+  });
+
+  it('ο αποχωρήσας τη βλέπει στον ΠΡΟΣΩΠΙΚΟ του — και ΟΧΙ πια στο γραφείο· αν επιστρέψει, γυρίζει μόνη της', () => {
+    const shownTo = (offices: readonly string[], viewed: WorkspaceRef) => {
+      const placement = placementOf(forOffice, { outcome: 'ok', companyIds: offices });
+      return placement.outcome === 'placed' && isShownInWorkspace(forOffice, placement.home, viewed);
+    };
+    expect(shownTo([], personalWorkspace(UID))).toBe(true);
+    expect(shownTo([], orgWorkspace(OFFICE))).toBe(false);
+    // Υπολογίζεται, δεν γράφεται: η ΙΔΙΑ συμμετοχή, με το μέλος πίσω στο γραφείο.
+    expect(shownTo([OFFICE], orgWorkspace(OFFICE))).toBe(true);
+    expect(shownTo([OFFICE], personalWorkspace(UID))).toBe(false);
   });
 });

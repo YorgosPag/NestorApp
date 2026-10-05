@@ -17,6 +17,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { getConveyanceCaseView, openConveyanceCase, type ConveyanceActor } from '../conveyance-case.service';
 import { endCaseEngagement, listCaseProfessionalSlots, offerCaseEngagement } from '../conveyance-engagement-host.service';
 import { getEngagedCaseView, respondToCaseEngagement } from '../conveyance-engagement-access.service';
+import { personalWorkspace } from '@/types/workspace-membership';
 import { openCaseFile, openHostCaseFile } from '../conveyance-case-file-access.service';
 import { issueContribution, reissueContribution, withdrawContribution } from '../conveyance-contribution.service';
 import { requestCaseDocuments } from '../conveyance-document-request.service';
@@ -143,7 +144,7 @@ async function hostRowFiles(itemId: string): Promise<string[]> {
 }
 
 async function engagedRowFiles(role: Role, engagementId: string, itemId: string): Promise<string[]> {
-  const outcome = await getEngagedCaseView(db(), UID[role], engagementId, NOW);
+  const outcome = await getEngagedCaseView(db(), personally(UID[role]), engagementId, NOW);
   if (!outcome.ok) throw new Error(outcome.rejection);
   return outcome.view.checklist.rows.find((r) => r.item.id === itemId)?.files.map((f) => f.fileId) ?? [];
 }
@@ -153,6 +154,9 @@ beforeEach(() => {
   seedWorld();
   jest.clearAllMocks();
 });
+
+/** §15 Γ2 — ο θεατής από τον ΠΡΟΣΩΠΙΚΟ του χώρο (εκεί ζει κάθε συμμετοχή αυτών των σεναρίων: κανένα γραφείο). */
+const personally = (uid: string) => ({ uid, viewed: personalWorkspace(uid) });
 
 describe('ADR-901 Φ4.4 — αποστολή (transmittal)', () => {
   it('ο συμβολαιογράφος στέλνει σχέδιο ⇒ το βλέπουν ο οικοδεσπότης ΚΑΙ ο δικηγόρος αγοραστή · ίχνος · δέσμευση · ειδοποίηση', async () => {
@@ -342,7 +346,7 @@ describe('ADR-901 Φ4.5 — «Στείλε τη νέα έκδοση στους �
     reissueContribution(db(), { uid, engagementId, contributionId, nowMs: at });
 
   async function draftSource(role: Role, engagementId: string) {
-    const outcome = await getEngagedCaseView(db(), UID[role], engagementId, NOW);
+    const outcome = await getEngagedCaseView(db(), personally(UID[role]), engagementId, NOW);
     if (!outcome.ok) throw new Error(outcome.rejection);
     return outcome.view.checklist.rows.find((r) => r.item.id === 'contract_draft')?.files[0]?.source;
   }
@@ -445,7 +449,7 @@ describe('ADR-901 Φ4.5 — «Ζήτησε έγγραφο» (Α29 · Α30 · Α3
     const hostView = await getConveyanceCaseView(db(), host, 'prop_1');
     const hostPanel = hostView.ok && hostView.value ? hostView.value.documentRequests : null;
     expect(hostPanel?.log).toEqual([expect.objectContaining({ itemId: 'contract_draft', recipient: 'notary', byViewer: true })]);
-    const engaged = await getEngagedCaseView(db(), 'u_n', notary, NOW);
+    const engaged = await getEngagedCaseView(db(), personally('u_n'), notary, NOW);
     expect(engaged.ok && engaged.view.documentRequests.log).toEqual([expect.objectContaining({ itemId: 'contract_draft', byViewer: false })]);
   });
 
@@ -496,7 +500,7 @@ describe('ADR-901 Φ4.5 — «Ζήτησε έγγραφο» (Α29 · Α30 · Α3
       .toMatchObject({ items: [{ kind: 'requested', recipient: 'buyer_lawyer' }] });
     const hostView = await getConveyanceCaseView(db(), host, 'prop_1');
     expect(hostView.ok && hostView.value?.documentRequests.log).toEqual([]);
-    const theirs = await getEngagedCaseView(db(), 'u_bl', buyerLawyer, NOW);
+    const theirs = await getEngagedCaseView(db(), personally('u_bl'), buyerLawyer, NOW);
     expect(theirs.ok && theirs.view.documentRequests.log).toEqual([expect.objectContaining({ itemId: 'buyer_payment_proofs', byViewer: false })]);
   });
 
@@ -589,7 +593,7 @@ describe('ADR-901 §14.8 — σήματα όψεων άκρη σε άκρη (Α3
     await issue('notary', notary, 'contract_draft', 'case-contract-draft', 'pf_draft');
 
     const hostView = await getConveyanceCaseView(db(), host, 'prop_1');
-    const engaged = await getEngagedCaseView(db(), 'u_n', notary, NOW);
+    const engaged = await getEngagedCaseView(db(), personally('u_n'), notary, NOW);
     expect(hostView.ok && hostView.value?.freshness.revision).toBe(await readViewRevision(db(), HOST_VIEW));
     expect(engaged.ok && engaged.view.freshness.revision).toBe(await readViewRevision(db(), engagedView('notary', notary)));
   });

@@ -46,7 +46,7 @@ import { MY_SAVED_LISTINGS_ROUTE } from '@/lib/listings/saved-listing-routes';
 import { MY_MESSAGES_ROUTE } from '@/lib/network-messaging/network-messaging-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
-import { MY_CASES_ROUTE } from '@/lib/conveyance/conveyance-routes';
+import { PERSONAL_CASES_ROUTE } from '@/lib/conveyance/conveyance-routes';
 import { hasOrganization, resolveAccountRoute, type LandingIdentity } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
@@ -117,7 +117,11 @@ export const PERSONAL_NAVIGATION: readonly PersonalNavigationGroup[] = [
     entries: [
       { id: 'myDossiers', navLabelKey: 'personal.items.myDossiers', icon: FolderArchive, href: MY_DOSSIERS_ROUTE, surfaces: BOTH },
       // ADR-901 Φ2 §5.4 — «Οι υποθέσεις μου»: ο δικηγόρος/συμβολαιογράφος βλέπει τις ΞΕΝΕΣ υποθέσεις όπου συμμετέχει.
-      { id: 'myCases', navLabelKey: 'personal.items.myCases', icon: Scale, href: MY_CASES_ROUTE, surfaces: SIDEBAR_ONLY },
+      // 🔑 §15 Γ2 — ΕΔΩ το ΠΡΟΣΩΡΙΝΟ σπίτι (`/engagements`): όσες ανέλαβε ΧΩΡΙΣ γραφείο, και κάθε πρόταση που
+      //    περιμένει απάντηση. Όσες ανέλαβε για γραφείο ζουν στη στήλη ΤΟΥ ΓΡΑΦΕΙΟΥ του (`office-navigation`,
+      //    ομάδα `legal`) — το ίδιο κλειδί τίτλου, δύο σπίτια. ⚠️ Ο πρώτος λόγος μένει: ποτέ στον χώρο του
+      //    ΟΙΚΟΔΕΣΠΟΤΗ (ADR-862 §9)· ο δεύτερος («η μηχανή φιλτράρει μόνο κατά άνθρωπο») έπαψε με το `actingFor`.
+      { id: 'myCases', navLabelKey: 'personal.items.myCases', icon: Scale, href: PERSONAL_CASES_ROUTE, surfaces: SIDEBAR_ONLY },
     ],
   },
   {

@@ -18,7 +18,8 @@ import { ActingForLine } from '@/components/conveyance/acting/ActingWorkspaceFie
 import { ENGAGEMENT_STATE_PRESENTATION } from '@/components/sales/conveyance/conveyance-presentation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { myCaseHref } from '@/lib/conveyance/conveyance-routes';
+import { caseHomeOf } from '@/lib/conveyance/acting-acceptance';
+import { myCaseHref, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { formatDate } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
@@ -26,6 +27,8 @@ import type { MyCaseCard } from '@/types/conveyance-case';
 
 interface MyCaseCardViewProps {
   readonly card: MyCaseCard;
+  /** Το είδος χώρου της λίστας (§15 Γ2) — εφεδρεία **μόνο** όταν η κάρτα δεν ξέρει ακόμη το σπίτι της. */
+  readonly home: CaseHome;
   readonly busy: boolean;
   readonly onRespond: (engagementId: string, decision: 'accept' | 'decline') => void;
 }
@@ -45,7 +48,7 @@ function CardFacts({ card }: { readonly card: MyCaseCard }) {
   );
 }
 
-function CardActions({ card, busy, onRespond }: MyCaseCardViewProps) {
+function CardActions({ card, home, busy, onRespond }: MyCaseCardViewProps) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   if (card.engagementState === 'offered') {
@@ -59,7 +62,8 @@ function CardActions({ card, busy, onRespond }: MyCaseCardViewProps) {
   if (card.verdict === 'engaged') {
     return (
       <footer>
-        <Link href={myCaseHref(card.engagementId)} className="text-sm font-medium text-foreground underline">{t('engagement.myCases.open')}</Link>
+        {/* §15 Γ2 — ο σύνδεσμος ακολουθεί το ΣΠΙΤΙ της συμμετοχής, όχι το πού βρίσκεται η λίστα. */}
+        <Link href={myCaseHref(card.engagementId, caseHomeOf(card.actingFor) ?? home)} className="text-sm font-medium text-foreground underline">{t('engagement.myCases.open')}</Link>
       </footer>
     );
   }

@@ -16,7 +16,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { readJsonBody } from '@/lib/api/json-body';
 import { CREDENTIAL_DECLARATION_SCHEMA } from '@/lib/conveyance/declared-credential';
-import { ACTING_WORKSPACE_REQUEST_SCHEMA } from '@/lib/auth/acting-workspace';
+import { ACTING_WORKSPACE_REQUEST_SCHEMA, actingWorkspaceOf } from '@/lib/auth/acting-workspace';
+import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { activeWorkspaceOf } from '@/lib/auth/workspace-membership';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -50,8 +51,11 @@ const BODY = INVITATION_REDEEM_BODY.extend({
 );
 
 type RedeemResponse =
-  /** Η συμμετοχή που γεννήθηκε — ο client χτίζει τη διεύθυνση με το typed `myCaseHref` (ADR-901 §5.4). */
-  | { readonly status: 'accepted'; readonly engagementId: string }
+  /**
+   * Η συμμετοχή που γεννήθηκε **και το σπίτι της** — ο client χτίζει τη διεύθυνση με το typed `myCaseHref`
+   * (ADR-901 §5.4 · §15 Γ2). Το `home` είναι **είδος** χώρου, όχι εταιρεία: ό,τι έγραψε ο κριτής στην αποδοχή.
+   */
+  | { readonly status: 'accepted'; readonly engagementId: string; readonly home: CaseHome }
   | { readonly status: 'declined' }
   | InvitationLinkRefusedBody<EngagementInvitationRefusal>
   | InvitationRedeemUnavailableBody;
@@ -60,7 +64,7 @@ type RedeemResponse =
 function respond(outcome: EngagementRedeemOutcome): NextResponse<RedeemResponse> {
   switch (outcome.kind) {
     case 'accepted':
-      return NextResponse.json({ status: 'accepted', engagementId: outcome.effect.id } as const);
+      return NextResponse.json({ status: 'accepted', engagementId: outcome.effect.id, home: actingWorkspaceOf(outcome.effect).kind } as const);
     case 'declined':
       return NextResponse.json({ status: 'declined' } as const);
     case 'refused':

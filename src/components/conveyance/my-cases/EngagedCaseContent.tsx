@@ -12,30 +12,31 @@
  * Φ4: καρτέλες §5.4 — «Δικαιολογητικά» · «Συμμετέχοντες & ίχνος» (η δηλωμένη ιδιότητα των άλλων μερών, Ε-4).
  * Φ4.4: ο κατάλογος (με αποστολή/απόσυρση εγγράφων) ζει στο `EngagedCaseChecklist`· εδώ η σελίδα και οι καρτέλες.
  *
+ * §15 Γ2 — **μία σελίδα-περιεχόμενο, δύο κελύφη** (γραφείο · προσωπικός): το κέλυφος δηλώνει το `home` του και
+ * κατέχει το ορόσημο `<main>` (στο `(app)` το δίνει ήδη ο `MainContentBridge` — δεύτερο θα ήταν εμφωλευμένο).
+ * Υπόθεση ανοιγμένη σε λάθος χώρο ⇒ η σελίδα **πηγαίνει** στο σπίτι της (ο server δίνει τη διεύθυνση).
+ *
  * @module components/conveyance/my-cases/EngagedCaseContent
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeft, ClipboardList, Loader2, Users } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`: κρύβει το ωμό κλειδί από το CHECK 3.51).
-import routeSlice from '@/i18n/generated/routes/cases__engagementId.el.json';
-import { registerRouteSlice } from '@/i18n/route-slice';
+// ⚠️ ΚΑΝΕΝΑ route slice εδώ (ADR-744 §15): η σελίδα υπηρετεί ΔΥΟ διαδρομές — το καταχωρεί το `page.tsx` κάθε κελύφους.
 import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader';
 import { StateTabs } from '@/components/ui/navigation/state-tabs';
-import { useEngagedCase } from '@/hooks/useEngagedCase';
+import { useEngagedCase, type EngagedCaseState } from '@/hooks/useEngagedCase';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { MY_CASES_ROUTE } from '@/lib/conveyance/conveyance-routes';
+import { myCasesRoute, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { formatDate } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
-import { Link } from '@/lib/workspace/navigation';
+import { Link, usePathname, useRouter, useWorkspaceHref } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import type { EngagedCaseView } from '@/types/conveyance-case';
 import { EngagedCaseChecklist } from './EngagedCaseChecklist';
 import { EngagedCaseActivity } from './EngagedCaseActivity';
 import { EngagedCaseParticipants } from './EngagedCaseParticipants';
-
-registerRouteSlice(routeSlice);
 
 function CaseParticipantsTab({ view }: { readonly view: EngagedCaseView }) {
   return (
@@ -67,12 +68,30 @@ function CaseView({ view, onChanged }: { readonly view: EngagedCaseView; readonl
   );
 }
 
-function CaseState({ engagementId }: { readonly engagementId: string }) {
+/**
+ * §15 Γ2 — η υπόθεση ζει σε **άλλο** χώρο ⇒ πήγαινε εκεί (`replace`: το «πίσω» δεν ξαναπέφτει στη λάθος διεύθυνση).
+ * Επιστρέφει `true` όσο η μετάβαση εκκρεμεί.
+ *
+ * ⚠️ **Ζώνη-και-τιράντες**: προορισμός ίδιος με την τρέχουσα διεύθυνση **δεν** ακολουθείται (θα ήταν βρόχος) — η
+ *    σελίδα δείχνει «δεν φορτώθηκε». Δεν το γεννά καμία γνωστή διαδρομή· αν συμβεί, φαίνεται αντί να γυρίζει.
+ */
+function useCaseRelocation(state: EngagedCaseState): boolean {
+  const router = useRouter();
+  const here = useWorkspaceHref()(usePathname());
+  const to = state.kind === 'moved' && state.to !== here ? state.to : null;
+  useEffect(() => {
+    if (to !== null) router.replace(declaredHref('ADR-901 §15 Γ2 — το σπίτι της υπόθεσης, χτισμένο από τον server (`addressInWorkspace`)', to));
+  }, [router, to]);
+  return to !== null;
+}
+
+function CaseState({ engagementId, home }: { readonly engagementId: string; readonly home: CaseHome }) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const { state, reload } = useEngagedCase(engagementId);
-  if (state.kind === 'loading') {
+  const { state, reload } = useEngagedCase(engagementId, home);
+  const relocating = useCaseRelocation(state);
+  if (state.kind === 'loading' || relocating) {
     return (
       <section className="flex justify-center p-8" aria-busy="true">
         <Loader2 className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} aria-hidden="true" />
@@ -80,22 +99,28 @@ function CaseState({ engagementId }: { readonly engagementId: string }) {
     );
   }
   if (state.kind === 'denied') return <p className="text-sm text-foreground">{t(`engagement.verdicts.${state.verdict}`)}</p>;
-  if (state.kind === 'failed') return <p className={cn('text-sm', colors.text.error)}>{t('engagement.case.loadError')}</p>;
+  if (state.kind === 'failed' || state.kind === 'moved') return <p className={cn('text-sm', colors.text.error)}>{t('engagement.case.loadError')}</p>;
   return <CaseView view={state.view} onChanged={reload} />;
 }
 
-export function EngagedCaseContent({ engagementId }: { readonly engagementId: string }) {
+interface EngagedCaseContentProps {
+  readonly engagementId: string;
+  /** Το είδος χώρου του κελύφους που την αποδίδει (§15 Γ2). */
+  readonly home: CaseHome;
+}
+
+export function EngagedCaseContent({ engagementId, home }: EngagedCaseContentProps) {
   const { t } = useTranslation(['conveyance']);
   const iconSizes = useIconSizes();
   return (
-    <main className="flex w-full flex-col gap-4">
+    <section className="flex w-full flex-col gap-4">
       <nav>
-        <Link href={MY_CASES_ROUTE} className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline">
+        <Link href={myCasesRoute(home)} className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline">
           <ArrowLeft className={iconSizes.sm} aria-hidden="true" />
           {t('engagement.case.back')}
         </Link>
       </nav>
-      <CaseState engagementId={engagementId} />
-    </main>
+      <CaseState engagementId={engagementId} home={home} />
+    </section>
   );
 }

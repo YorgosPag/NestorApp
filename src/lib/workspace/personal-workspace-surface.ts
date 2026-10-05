@@ -74,6 +74,7 @@
  */
 
 import { PERSONAL_WORKSPACE_ALIAS } from '@/types/workspace-alias';
+import { OFFICE_CASES_SEGMENT, PERSONAL_CASES_ROUTE } from '@/lib/conveyance/conveyance-routes';
 import { PRIVATE_SPACE_HOME } from '@/lib/routes/landing';
 import { WORKSPACE_PATH_PREFIX } from './workspace-path';
 import { firstPathSegment } from './workspace-scope';
@@ -86,6 +87,29 @@ import { firstPathSegment } from './workspace-scope';
  * **μία γραμμή με λόγο**, όχι νέος μηχανισμός.
  */
 export const PERSONAL_WORKSPACE_SURFACE: Readonly<Record<string, string>> = {};
+
+/**
+ * **Τα προσωπικά δίδυμα** — τμήμα γραφείου που έχει **δική του** σελίδα στον χώρο του ιδιώτη, σε **άλλο** τμήμα.
+ * Κλειδί = τμήμα γραφείου (χωρίς πρόθεμα χώρου) · τιμή = η διαδρομή του διδύμου **και ο λόγος**.
+ *
+ * 🔑 **ΔΕΝ είναι προσφορά** ({@link PERSONAL_WORKSPACE_SURFACE}): η σελίδα γραφείου εξακολουθεί να **μην** ανοίγει
+ * μέσα στον ιδιωτικό χώρο. Αλλάζει μόνο **πού** προσγειώνεται ο άνθρωπος: στο δίδυμο, με την **ίδια ουρά**
+ * διαδρομής, αντί για την αρχική του. Χωρίς αυτό, ο παλιός σύνδεσμος μιας ειδοποίησης έχανε το αντικείμενό του.
+ *
+ * ⚠️ Η ουρά μεταφέρεται **επειδή το αντικείμενο είναι το ίδιο** (η ίδια συμμετοχή, σε άλλο σπίτι) — σε αντίθεση
+ * με τη γενική προσγείωση, όπου αλλάζει η επιφάνεια και η ουρά δεν σημαίνει τίποτα.
+ */
+export const PERSONAL_WORKSPACE_TWINS: Readonly<Record<string, { readonly route: string; readonly why: string }>> = {
+  [OFFICE_CASES_SEGMENT]: {
+    route: PERSONAL_CASES_ROUTE,
+    why:
+      'ΟΙ ΥΠΟΘΕΣΕΙΣ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ (ADR-901 §15 Γ2 · Ε-9 = α). Το `cases` μπήκε στον χώρο του γραφείου· ο ' +
+      'άνθρωπος χωρίς γραφείο τις έχει στο `/engagements`. Οι σύνδεσμοι που γράφτηκαν ΠΡΙΝ (`/cases/<eng>` σε ' +
+      'ειδοποίηση ή email) λύνονται πλέον ως `/o/me/cases/<eng>` — από το δίχτυ `[...unprefixed]` για τον ιδιώτη ' +
+      'και από τον μόνιμο σύνδεσμο για ειδοποίηση με χώρο-στόχο τον προσωπικό. Χωρίς το δίδυμο θα κατέληγαν στην ' +
+      'αρχική, δηλαδή η υπόθεση θα «χανόταν» για τον άνθρωπο που του την ανέθεσαν.',
+  },
+};
 
 /**
  * Το πρόθεμα του **ιδιωτικού** χώρου στη διεύθυνση — `/o/me`.
@@ -105,7 +129,9 @@ export function isOfferedInPersonalWorkspace(path: string): boolean {
   const first = firstPathSegment(path);
   if (first === undefined) return false; // η ρίζα του χώρου — δεν έχει σελίδα ούτε σήμερα
 
-  return first in PERSONAL_WORKSPACE_SURFACE;
+  // ⚠️ `Object.hasOwn`, ΟΧΙ `in`: το `in` ρωτά και την αλυσίδα πρωτοτύπων ⇒ `/o/me/toString` έβγαινε «προσφέρεται»
+  //    (το έπιασε η άγκυρα Δ2, 2026-10-05). Ακίνδυνο σήμερα — δεν υπάρχει τέτοια σελίδα — αλλά ήταν ναι που κανείς δεν έδωσε.
+  return Object.hasOwn(PERSONAL_WORKSPACE_SURFACE, first);
 }
 
 /**
@@ -131,5 +157,18 @@ export function personalWorkspaceLanding(pathname: string): string | null {
   if (!isPersonal) return null;
 
   const withinWorkspace = pathname.slice(PERSONAL_WORKSPACE_PREFIX.length) || '/';
-  return isOfferedInPersonalWorkspace(withinWorkspace) ? null : PRIVATE_SPACE_HOME;
+  if (isOfferedInPersonalWorkspace(withinWorkspace)) return null;
+  return personalTwinOf(withinWorkspace) ?? PRIVATE_SPACE_HOME;
+}
+
+/**
+ * Η διεύθυνση του **προσωπικού διδύμου** αυτής της διαδρομής γραφείου — ή `null` αν δεν έχει.
+ *
+ * ⚠️ Δέχεται διαδρομή **χωρίς** το πρόθεμα χώρου. Το τμήμα κρίνεται από τον **ΕΝΑΝ** αναλυτή
+ * (`firstPathSegment`)· η ουρά είναι ό,τι ακολουθεί το τμήμα, αυτούσιο.
+ */
+function personalTwinOf(withinWorkspace: string): string | null {
+  const first = firstPathSegment(withinWorkspace);
+  if (first === undefined || !Object.hasOwn(PERSONAL_WORKSPACE_TWINS, first)) return null;
+  return `${PERSONAL_WORKSPACE_TWINS[first].route}${withinWorkspace.slice(first.length + 1)}`;
 }

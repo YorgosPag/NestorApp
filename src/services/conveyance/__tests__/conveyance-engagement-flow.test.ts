@@ -16,6 +16,7 @@ import { getEngagedCaseView, listMyCases, respondToCaseEngagement } from '../con
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { openCaseFile } from '../conveyance-case-file-access.service';
+import { orgWorkspace, personalWorkspace, type WorkspaceRef } from '@/types/workspace-membership';
 
 const NAMES: Record<string, string> = { u_sl: 'Ελένη Σ.', u_n: 'Νίκος Σ.' };
 /** ADR-901 §15 (Γ1) — τα γραφεία όπου ΑΝΗΚΕΙ ο αποδεχόμενος· προεπιλογή: κανένα ⇒ προσωρινά ο προσωπικός του χώρος. */
@@ -89,13 +90,16 @@ async function engagementIdOf(record: ConveyanceCase, role: string): Promise<str
 
 beforeEach(() => { fake = new FakeFirestore(); seedWorld(); });
 
+/** §15 Γ2 — ο θεατής από τον ΠΡΟΣΩΠΙΚΟ του χώρο (εκεί ζει κάθε συμμετοχή αυτών των σεναρίων: κανένα γραφείο). */
+const personally = (uid: string) => ({ uid, viewed: personalWorkspace(uid) });
+
 describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση', () => {
   it('Entra — πρόταση ΧΩΡΙΣ αποδοχή ⇒ ΚΑΜΙΑ όψη (`offered`), και η κάρτα δεν δείχνει πρόοδο', async () => {
     const record = await openCase();
     expect((await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW })).ok).toBe(true);
     const id = await engagementIdOf(record, 'seller_lawyer');
-    expect(await getEngagedCaseView(db(), 'u_sl', id, NOW)).toEqual({ ok: false, rejection: 'denied', verdict: 'offered' });
-    const cards = await listMyCases(db(), { uid: 'u_sl', active: null }, NOW);
+    expect(await getEngagedCaseView(db(), personally('u_sl'), id, NOW)).toEqual({ ok: false, rejection: 'denied', verdict: 'offered' });
+    const cards = await listMyCases(db(), { ...personally('u_sl'), active: null }, NOW);
     expect(cards.ok && cards.cards[0]).toMatchObject({ engagementState: 'offered', summary: null, propertyName: 'Δ3' });
   });
 
@@ -104,7 +108,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
     const id = await engagementIdOf(record, 'seller_lawyer');
     expect((await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW)).ok).toBe(true);
-    const outcome = await getEngagedCaseView(db(), 'u_sl', id, NOW);
+    const outcome = await getEngagedCaseView(db(), personally('u_sl'), id, NOW);
     if (!outcome.ok) throw new Error(outcome.rejection);
     const sections = new Set(outcome.view.checklist.rows.map((row) => row.section));
     expect(sections.has('buyer')).toBe(false);
@@ -119,7 +123,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     await offerCaseEngagement(db(), host, record, { role: 'buyer_lawyer', attestedBasis: 'preliminary_contract', nowMs: NOW });
     const id = await engagementIdOf(record, 'buyer_lawyer');
     await respondToCaseEngagement(db(), { uid: 'u_bl', email: null, active: null }, id, ACCEPT, NOW);
-    const outcome = await getEngagedCaseView(db(), 'u_bl', id, NOW);
+    const outcome = await getEngagedCaseView(db(), personally('u_bl'), id, NOW);
     if (!outcome.ok) throw new Error(outcome.rejection);
     expect(outcome.view.checklist.rows.some((row) => row.section === 'seller')).toBe(false);
   });
@@ -128,7 +132,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     const record = await openCase();
     await offerCaseEngagement(db(), host, record, { role: 'notary', attestedBasis: 'written_instruction', nowMs: NOW });
     const id = await engagementIdOf(record, 'notary');
-    expect(await getEngagedCaseView(db(), 'u_sl', id, NOW)).toEqual({ ok: false, rejection: 'not-found' });
+    expect(await getEngagedCaseView(db(), personally('u_sl'), id, NOW)).toEqual({ ok: false, rejection: 'not-found' });
     expect(await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW)).toEqual({ ok: false, rejection: 'not-found' });
   });
 
@@ -141,7 +145,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     // τη μετάλλαξη (μετρημένο: M7 επέζησε) — εδώ ΜΟΝΟ ο έλεγχος «υπόθεση ∈ μισθωτή της συμμετοχής» σώζει.
     fake.seed(COLLECTIONS.CONVEYANCE_CASES, record.id, { ...record, companyId: 'comp_b' });
     fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: 'comp_b', name: 'Δ3', type: 'apartment', buildingId: 'bld_1', projectId: 'proj_1' });
-    expect(await getEngagedCaseView(db(), 'u_sl', id, NOW)).toEqual({ ok: false, rejection: 'not-found' });
+    expect(await getEngagedCaseView(db(), personally('u_sl'), id, NOW)).toEqual({ ok: false, rejection: 'not-found' });
   });
 
   it('ανάκληση ⇒ ΑΜΕΣΗ άρνηση με το δικό της όνομα (`revoked`, ποτέ `expired`)', async () => {
@@ -150,7 +154,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     const id = await engagementIdOf(record, 'seller_lawyer');
     await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW);
     expect((await endCaseEngagement(db(), host, record, id, NOW + 1)).ok).toBe(true);
-    expect(await getEngagedCaseView(db(), 'u_sl', id, NOW + 2)).toEqual({ ok: false, rejection: 'denied', verdict: 'revoked' });
+    expect(await getEngagedCaseView(db(), personally('u_sl'), id, NOW + 2)).toEqual({ ok: false, rejection: 'denied', verdict: 'revoked' });
   });
 
   it('Procore «Save & Send Invitation» (ADR-901 Φ3) — χωρίς λογαριασμό ⇒ ΠΡΟΣΚΛΗΣΗ με email, όχι άρνηση', async () => {
@@ -170,7 +174,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW);
     const cancelled = await applyConveyanceCaseCommand(db(), host, record, { expectedVersion: record.version, command: { type: 'cancel', reason: 'ακύρωση' } });
     expect(cancelled.ok).toBe(true);
-    expect(await getEngagedCaseView(db(), 'u_sl', id, Date.now())).toEqual({ ok: false, rejection: 'denied', verdict: 'completed' });
+    expect(await getEngagedCaseView(db(), personally('u_sl'), id, Date.now())).toEqual({ ok: false, rejection: 'denied', verdict: 'completed' });
   });
 });
 
@@ -194,7 +198,7 @@ describe('ADR-901 Φ4.1 — δήλωση με λογαριασμό · συμμε
     const record = await openCase();
     const mine = await engage(record, 'seller_lawyer', 'u_sl', null);
     await engage(record, 'notary', 'u_n', 'written_instruction');
-    const outcome = await getEngagedCaseView(db(), 'u_sl', mine, NOW);
+    const outcome = await getEngagedCaseView(db(), personally('u_sl'), mine, NOW);
     if (!outcome.ok) throw new Error(outcome.rejection);
     expect(outcome.view.participants.map((p) => [p.role, p.displayName, p.isViewer])).toEqual([
       ['seller_lawyer', 'Ελένη Σ.', true],
@@ -209,7 +213,7 @@ describe('ADR-901 Φ4.1 — δήλωση με λογαριασμό · συμμε
     const record = await openCase();
     const mine = await engage(record, 'seller_lawyer', 'u_sl', null);
     await offerCaseEngagement(db(), host, record, { role: 'notary', attestedBasis: 'written_instruction', nowMs: NOW });
-    const outcome = await getEngagedCaseView(db(), 'u_sl', mine, NOW);
+    const outcome = await getEngagedCaseView(db(), personally('u_sl'), mine, NOW);
     expect(outcome.ok && outcome.view.participants.map((p) => p.role)).toEqual(['seller_lawyer']);
   });
 
@@ -227,7 +231,7 @@ describe('ADR-901 Φ4.1 — δήλωση με λογαριασμό · συμμε
     const opened = await openConveyanceCase(db(), host, 'prop_2');
     if (!opened.ok) throw new Error(opened.failure.kind);
     await offerCaseEngagement(db(), host, opened.value.view.conveyanceCase, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
-    const cards = await listMyCases(db(), { uid: 'u_sl', active: null }, NOW);
+    const cards = await listMyCases(db(), { ...personally('u_sl'), active: null }, NOW);
     const offered = cards.ok ? cards.cards.find((c) => c.engagementState === 'offered') : undefined;
     expect(offered?.credentialHint).toEqual({ number: '1234', chapter: 'ΔΣΑ' });
     const active = cards.ok ? cards.cards.find((c) => c.engagementState === 'active') : undefined;
@@ -324,7 +328,7 @@ describe('ADR-901 §15 (Γ1) — «Αναλαμβάνω» για λογαρια�
 
   it('κανένα γραφείο ⇒ προσωρινά ο προσωπικός χώρος — γραμμένο στη συμμετοχή, στην κάρτα και στο ίχνος', async () => {
     const id = await offeredToSellerLawyer();
-    const before = await listMyCases(db(), sl, NOW);
+    const before = await listMyCases(db(), { ...sl, viewed: personalWorkspace(sl.uid) }, NOW);
     expect(before.ok && before.cards[0]).toMatchObject({ acceptance: { kind: 'personal-provisional' }, actingFor: null });
     const outcome = await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
     expect(outcome.ok && outcome.card).toMatchObject({ acceptance: null, actingFor: { kind: 'personal' } });
@@ -335,7 +339,7 @@ describe('ADR-901 §15 (Γ1) — «Αναλαμβάνω» για λογαρια�
   it('Α1 — ένα γραφείο ⇒ εκεί, αυτόματα· ο πελάτης ΔΕΝ έστειλε τίποτα', async () => {
     belongsTo('comp_law');
     const id = await offeredToSellerLawyer();
-    const before = await listMyCases(db(), sl, NOW);
+    const before = await listMyCases(db(), { ...sl, viewed: personalWorkspace(sl.uid) }, NOW);
     expect(before.ok && before.cards[0]?.acceptance).toMatchObject({ kind: 'office', office: { companyId: 'comp_law' } });
     const outcome = await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
     expect(outcome.ok && outcome.card.actingFor).toMatchObject({ kind: 'office', office: { companyId: 'comp_law' } });
@@ -370,7 +374,7 @@ describe('ADR-901 §15 (Γ1) — «Αναλαμβάνω» για λογαρια�
   it('Α43 — «δεν μπόρεσα να ρωτήσω τα γραφεία» ⇒ `unknown` (503), ΠΟΤΕ σιωπηλά προσωπικός χώρος', async () => {
     mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'unknown', reason: 'query-failed' }));
     const id = await offeredToSellerLawyer();
-    const before = await listMyCases(db(), sl, NOW);
+    const before = await listMyCases(db(), { ...sl, viewed: personalWorkspace(sl.uid) }, NOW);
     expect(before.ok && before.cards[0]?.acceptance).toEqual({ kind: 'unknown' });
     expect(await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW)).toEqual({ ok: false, rejection: 'unknown' });
     expect(await stored(id)).toMatchObject({ state: 'offered' });
@@ -403,5 +407,159 @@ describe('ADR-901 §15 (Γ1) — «Αναλαμβάνω» για λογαρια�
     mockOwnWorkspaces.mockClear();
     await respondToCaseEngagement(db(), { ...sl, active }, id, ACCEPT, NOW);
     expect(mockOwnWorkspaces).toHaveBeenCalledWith('u_sl', active);
+  });
+});
+
+describe('ADR-901 §15 (Γ2) — η υπόθεση φαίνεται ΣΤΟ ΓΡΑΦΕΙΟ: φίλτρο χώρου στη λίστα, θέση της σελίδας', () => {
+  const sl = { uid: 'u_sl', email: 'seller-lawyer@x.gr', active: null } as const;
+  const LAW = orgWorkspace('comp_law');
+  const PARTNERS = orgWorkspace('comp_partners');
+  const ENGAGEMENTS = 'companies/comp_a/projects/proj_1/engagements';
+  const belongsTo = (...companyIds: string[]) =>
+    mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'ok', reachable: companyIds, belonging: companyIds }));
+  const shownIn = async (viewed: WorkspaceRef) => {
+    const list = await listMyCases(db(), { ...sl, viewed }, NOW);
+    if (!list.ok) throw new Error('η λίστα δεν απάντησε');
+    return list.cards.map((card) => card.engagementId);
+  };
+
+  async function offered(): Promise<string> {
+    const record = await openCase();
+    await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
+    return engagementIdOf(record, 'seller_lawyer');
+  }
+
+  /** Η κα Γεωργίου, μέλος ΔΥΟ γραφείων, αναλαμβάνει για το «comp_law». */
+  async function undertakenForLaw(): Promise<string> {
+    belongsTo('comp_law', 'comp_partners');
+    const id = await offered();
+    const accept = { ...ACCEPT, actingRequest: { kind: 'org', companyId: 'comp_law' } } as const;
+    expect((await respondToCaseEngagement(db(), sl, id, accept, NOW)).ok).toBe(true);
+    return id;
+  }
+
+  afterEach(() => { belongsTo(); });
+
+  it('Α47 — η λίστα του χώρου Χ ΔΕΝ δείχνει υπόθεση με `actingFor = Υ` του ίδιου ανθρώπου', async () => {
+    // Μετάλλαξη: αφαίρεση του φίλτρου χώρου ⇒ η ίδια υπόθεση εμφανίζεται σε κάθε χώρο του ανθρώπου.
+    const id = await undertakenForLaw();
+    expect(await shownIn(LAW)).toEqual([id]);
+    expect(await shownIn(PARTNERS)).toEqual([]);
+    expect(await shownIn(personalWorkspace('u_sl'))).toEqual([]);
+  });
+
+  it('η πρόταση που περιμένει απάντηση φαίνεται ΠΑΝΤΟΥ — δεν έχει ακόμη χώρο, ανήκει στον άνθρωπο', async () => {
+    // Μετάλλαξη: το φίλτρο κρίνει και τις προτάσεις ⇒ ο άνθρωπος με γραφείο δεν βλέπει ποτέ πρόταση στο γραφείο του.
+    belongsTo('comp_law', 'comp_partners');
+    const id = await offered();
+    for (const viewed of [LAW, PARTNERS, personalWorkspace('u_sl')]) expect(await shownIn(viewed)).toEqual([id]);
+  });
+
+  it('συμμετοχή ΠΡΙΝ από το §15 (χωρίς `actingFor`) ζει στον προσωπικό χώρο — ποτέ «πουθενά»', async () => {
+    // Μετάλλαξη: δεύτερη ερμηνεία της απουσίας στο φίλτρο ⇒ οι 2 υπάρχουσες συμμετοχές της παραγωγής εξαφανίζονται.
+    belongsTo('comp_law');
+    const id = await offered();
+    await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
+    const { actingFor: _dropped, ...legacy } = (await fake.collection(ENGAGEMENTS).doc(id).get()).data() ?? {};
+    fake.seed(ENGAGEMENTS, id, legacy);
+    expect(await shownIn(personalWorkspace('u_sl'))).toEqual([id]);
+    expect(await shownIn(LAW)).toEqual([]);
+  });
+
+  it('η σελίδα της υπόθεσης σε ΛΑΘΟΣ χώρο ⇒ `elsewhere` με το σπίτι της — ποτέ 404, ποτέ όψη κάτω από ξένο πρόθεμα', async () => {
+    // Μετάλλαξη: η όψη αγνοεί τη θέση ⇒ η υπόθεση του γραφείου Α ανοίγει κάτω από `/o/<γραφείο Β>` ή στον προσωπικό.
+    const id = await undertakenForLaw();
+    const here = await getEngagedCaseView(db(), { uid: 'u_sl', active: null, viewed: LAW }, id, NOW);
+    expect(here.ok && here.view.engagementId).toBe(id);
+    for (const viewed of [PARTNERS, personalWorkspace('u_sl')]) {
+      expect(await getEngagedCaseView(db(), { uid: 'u_sl', active: null, viewed }, id, NOW)).toEqual({ ok: false, rejection: 'elsewhere', home: LAW });
+    }
+  });
+
+  it('Α39 — το πρόθεμα χώρου ΔΕΝ ανοίγει ξένη υπόθεση: συνάδελφος στο ΙΔΙΟ γραφείο παίρνει `not-found`', async () => {
+    // Μετάλλαξη: η θέση κρίνεται ΠΡΙΝ από την πρόσβαση (ή αντί γι' αυτήν) ⇒ ο διαχειριστής του γραφείου βλέπει τον φάκελο.
+    const id = await undertakenForLaw();
+    expect(await getEngagedCaseView(db(), { uid: 'u_n', active: null, viewed: LAW }, id, NOW)).toEqual({ ok: false, rejection: 'not-found' });
+    const colleague = await listMyCases(db(), { uid: 'u_n', active: { companyId: 'comp_law', verdict: 'home' }, viewed: LAW }, NOW);
+    expect(colleague.ok && colleague.cards).toEqual([]);
+  });
+
+  it('η άρνηση πρόσβασης προηγείται της θέσης: ανακλημένη συμμετοχή λέει `revoked`, όχι «είναι αλλού»', async () => {
+    // Μετάλλαξη: η θέση κρίνεται πρώτη ⇒ ο ανακλημένος μαθαίνει «ζει στο γραφείο Α» και στέλνεται εκεί χωρίς λόγο.
+    const id = await undertakenForLaw();
+    const record = await openCase();
+    expect((await endCaseEngagement(db(), host, record, id, NOW + 1)).ok).toBe(true);
+    expect(await getEngagedCaseView(db(), { uid: 'u_sl', active: null, viewed: PARTNERS }, id, NOW + 2)).toEqual({ ok: false, rejection: 'denied', verdict: 'revoked' });
+  });
+
+  describe('§15.15 (Γ2.1) — αποχώρηση από το γραφείο: η πρόσβαση ΚΡΑΤΑ (Ε-10), και αποκτά ΠΟΡΤΑ', () => {
+    const ME = personalWorkspace('u_sl');
+    const viewFrom = (viewed: WorkspaceRef, id: string) => getEngagedCaseView(db(), { uid: 'u_sl', active: null, viewed }, id, NOW);
+
+    it('Α49 — έφυγε από το γραφείο ⇒ η υπόθεση φαίνεται στον ΠΡΟΣΩΠΙΚΟ του, με ρητή ένδειξη· όχι πια στο γραφείο', async () => {
+      // Μετάλλαξη: η λίστα φιλτράρει με το `actingFor` αντί για το σπίτι ⇒ ο αποχωρήσας έχει δικαίωμα και καμία σελίδα.
+      const id = await undertakenForLaw();
+      belongsTo('comp_partners');
+      expect(await shownIn(ME)).toEqual([id]);
+      expect(await shownIn(LAW)).toEqual([]);
+      expect(await shownIn(PARTNERS)).toEqual([]);
+      const list = await listMyCases(db(), { ...sl, viewed: ME }, NOW);
+      expect(list.ok && list.cards[0]?.actingFor).toMatchObject({ kind: 'departed', office: { companyId: 'comp_law' } });
+    });
+
+    it('η σελίδα της υπόθεσης ανοίγει στον προσωπικό· από το παλιό γραφείο ⇒ `elsewhere` προς τον ΠΡΟΣΩΠΙΚΟ, ποτέ προς 404', async () => {
+      // Μετάλλαξη: το `elsewhere` δείχνει το `actingFor` ⇒ βρόχος «πήγαινε στο γραφείο» → 404 του layout.
+      const id = await undertakenForLaw();
+      belongsTo();
+      const here = await viewFrom(ME, id);
+      expect(here.ok && here.view.engagementId).toBe(id);
+      expect(await viewFrom(LAW, id)).toEqual({ ok: false, rejection: 'elsewhere', home: ME });
+    });
+
+    it('το `actingFor` ΔΕΝ γράφεται: επιστρέφει στο γραφείο ⇒ η υπόθεση γυρίζει εκεί μόνη της', async () => {
+      // Μετάλλαξη: η αποχώρηση ξαναγράφει τη συμμετοχή (δεύτερος γραφέας) ⇒ χάνεται το «ανελήφθη για το Γραφείο Α».
+      const id = await undertakenForLaw();
+      belongsTo();
+      expect(await shownIn(ME)).toEqual([id]);
+      expect((await fake.collection(ENGAGEMENTS).doc(id).get()).data()?.actingFor).toEqual(LAW);
+      belongsTo('comp_law');
+      expect(await shownIn(LAW)).toEqual([id]);
+      expect(await shownIn(ME)).toEqual([]);
+    });
+
+    it('«δεν μπόρεσα να ρωτήσω αν ανήκει ακόμη» ⇒ «δεν φορτώθηκε» — ποτέ λίστα που κρύβει σιωπηλά την υπόθεση', async () => {
+      // Μετάλλαξη: το άγνωστο διαβάζεται «κανένα γραφείο» ⇒ μια αστοχία του βιβλίου μετακομίζει κάθε υπόθεση γραφείου.
+      const id = await undertakenForLaw();
+      mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'unknown', reason: 'query-failed' }));
+      expect(await listMyCases(db(), { ...sl, viewed: ME }, NOW)).toEqual({ ok: false });
+      expect(await listMyCases(db(), { ...sl, viewed: LAW }, NOW)).toEqual({ ok: false });
+      expect(await viewFrom(LAW, id)).toEqual({ ok: false, rejection: 'unknown' });
+    });
+
+    it('ο ιδιώτης ΔΕΝ ρωτά το βιβλίο μελών: προσωπική υπόθεση φορτώνει και με το βιβλίο κάτω', async () => {
+      // Μετάλλαξη: ανάγνωση βιβλίου για κάθε συμμετοχή ⇒ μια αστοχία του κλειδώνει και όσους δεν έχουν γραφείο.
+      belongsTo();
+      const id = await offered();
+      await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
+      mockOwnWorkspaces.mockClear();
+      mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'unknown', reason: 'query-failed' }));
+      expect(await shownIn(ME)).toEqual([id]);
+      expect(mockOwnWorkspaces).not.toHaveBeenCalled();
+    });
+
+    it('«περνά» από το γραφείο (super admin) ≠ «ανήκει»: κρίνει το `belonging`, όχι το `reachable`', async () => {
+      // Μετάλλαξη: ο κριτής ρωτά `reachable` ⇒ όποιος απλώς φτάνει σε ξένο γραφείο λογίζεται μέλος του.
+      const id = await undertakenForLaw();
+      mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'ok', reachable: ['comp_law'], belonging: [] }));
+      expect(await shownIn(ME)).toEqual([id]);
+      expect(await shownIn(LAW)).toEqual([]);
+    });
+
+    it('το βιβλίο διαβάζεται το πολύ ΜΙΑ φορά ανά λίστα, όσες υποθέσεις γραφείου κι αν έχει', async () => {
+      const id = await undertakenForLaw();
+      mockOwnWorkspaces.mockClear();
+      expect(await shownIn(LAW)).toEqual([id]);
+      expect(mockOwnWorkspaces).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -359,7 +359,8 @@
       "unknown": "Your offices could not be checked. Please try again shortly.",
       "unnamedOffice": "Unnamed office",
       "cardOffice": "For the office «{office}»",
-      "cardPersonal": "In your personal space for now"
+      "cardPersonal": "In your personal space for now",
+      "cardDeparted": "Undertaken for the office «{office}» — you are no longer a member. Your access to the case remains."
     },
     "rejections": {
       "case-closed": "The case is closed — it does not accept new professionals.",
