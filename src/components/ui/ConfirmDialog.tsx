@@ -140,10 +140,17 @@ export function ConfirmDialog({
   const resolvedConfirmText = confirmText || t('buttons.confirm');
   const resolvedCancelText = cancelText || t('buttons.cancel');
 
+  // While the action runs inside an open dialog the confirm button stays FOCUSABLE (`aria-disabled`,
+  // never `disabled`): measured live 2026-10-05, a natively disabled button drops focus to `<body>`,
+  // out of the focus scope, so a screen reader loses the dialog exactly while it reports progress.
+  // Same contract as React Aria `isPending` — focus kept, activation ignored, state announced.
+  const pendingInPlace = keepOpenWhilePending && loading;
+
   // Handle confirm with loading support
   const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
     // Radix composes its close handler after ours and skips it when the event is prevented.
     if (keepOpenWhilePending) event.preventDefault();
+    if (pendingInPlace) return;
     await onConfirm();
   };
 
@@ -181,8 +188,11 @@ export function ConfirmDialog({
           )}
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={disabled || loading}
-            className={cn(CONFIRM_BUTTON_CLASS[variant])}
+            disabled={disabled || (loading && !pendingInPlace)}
+            aria-disabled={pendingInPlace || undefined}
+            aria-busy={pendingInPlace || undefined}
+            aria-label={pendingInPlace ? resolvedConfirmText : undefined}
+            className={cn(CONFIRM_BUTTON_CLASS[variant], 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50')}
           >
             {loading ? (
               <Spinner size="small" color="inherit" />

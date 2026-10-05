@@ -3,7 +3,8 @@
  *
  * Ρ1 ο διάλογος **μένει** όσο τρέχει η ανάκληση (πριν: το Radix τον έκλεινε στο κλικ ⇒ καμία ένδειξη προόδου
  *    επί ~10″ επαναλήψεων, εστίαση στο `<body>`) · Ρ2 ο διάλογος λέει **ποιον** αφορά · Ρ3 αποτυχία ⇒ κλείνει και
- *    το λέει η κάρτα · Ρ4 άκυρος ΚΑΕΚ ⇒ το πεδίο δηλώνεται άκυρο και **δεμένο** με το μήνυμα.
+ *    το λέει η κάρτα · Ρ4 άκυρος ΚΑΕΚ ⇒ το πεδίο δηλώνεται άκυρο και **δεμένο** με το μήνυμα · Ρ5 (μέσα στο Ρ1) όσο
+ *    τρέχει, το κουμπί επιβεβαίωσης **κρατά την εστίαση** (`aria-disabled`, όχι `disabled`) και αγνοεί δεύτερο πάτημα.
  */
 import React from 'react';
 import '@testing-library/jest-dom';
@@ -68,13 +69,25 @@ describe('Ρ — ανάκληση επαληθευμένης κατοχής', ()
     post.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
     const dialog = await openDialog();
 
+    const [cancel, confirm] = within(dialog).getAllByRole('button');
+    confirm.focus();
     await act(async () => {
-      fireEvent.click(within(dialog).getAllByRole('button')[1]);
+      fireEvent.click(confirm);
     });
 
     // Το αίτημα εκκρεμεί: ο διάλογος είναι ακόμη εκεί, και κανένα κουμπί του δεν πατιέται δεύτερη φορά.
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-    for (const button of within(screen.getByRole('alertdialog')).getAllByRole('button')) expect(button).toBeDisabled();
+    expect(cancel).toBeDisabled();
+    // Ρ5 🔴 (ζωντανά 2026-10-05): `disabled` έριχνε την εστίαση στο `<body>`, ΕΞΩ από τον διάλογο, όσο αυτός
+    // έδειχνε πρόοδο. Το κουμπί μένει εστιάσιμο (`aria-disabled`), με όνομα, και αγνοεί δεύτερο πάτημα.
+    expect(confirm).not.toBeDisabled();
+    expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    expect(confirm).toHaveAttribute('aria-busy', 'true');
+    expect(confirm).toHaveAccessibleName(REVOCATION_ADMIN_KEYS.revoke);
+    expect(document.activeElement).toBe(confirm);
+    await act(async () => {
+      fireEvent.click(confirm);
+    });
     expect(post).toHaveBeenCalledTimes(1);
 
     await act(async () => { finish(); });

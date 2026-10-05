@@ -112,8 +112,8 @@ shouldGlobalShortcutYield(event): boolean     // η ΜΙΑ ερώτηση των
   AUTOFOCUS_ON_MOUNT **πριν** μετακινήσει το focus, άρα εκεί ο opener είναι ακόμη ενεργός.
   (Καταγραφή σε render/effect του `Content` θα ήταν **λάθος** — βλ. §3.2.)
 - `onCloseAutoFocus` → **πρώτα** ο handler του καταναλωτή· αν έκανε `preventDefault`, σεβόμαστε.
-  Αλλιώς, αν ο opener είναι `isConnected` → `preventDefault()` + `opener.focus()`.
-  Αν χάθηκε από το DOM → **δεν** κάνουμε `preventDefault` (αφήνουμε τη διαδρομή του Radix).
+  Αλλιώς `returnFocus(target)` (2026-10-05): ο opener αν το **πάρει**, αλλιώς η **περιοχή** του· όποιο εστιαστεί →
+  `preventDefault()`. Αν ούτε opener ούτε περιοχή → **δεν** κάνουμε `preventDefault` (διαδρομή του Radix).
 - Ο Radix συνθέτει `composeEventHandlers(props.onCloseAutoFocus, internal)` ⇒ ο δικός μας τρέχει
   **πρώτος** και παρακάμπτει το `triggerRef`. Όταν υπάρχει `<DialogTrigger>`, opener === trigger
   ⇒ **ταυτόσημο αποτέλεσμα, μηδέν παλινδρόμηση** στα 31 αρχεία.
@@ -682,6 +682,32 @@ dev overlay). Αυτό **ενισχύει** τη διόρθωση αντί να 
 ---
 ---
 ## 9. Changelog
+
+### 2026-10-05 — **«υπάρχει» ≠ «παίρνει focus»: η περιοχή του opener ως δεύτερος στόχος** (§3.3)
+
+- 🔴 **Μετρημένο ζωντανά** (κάρτα «Επαλήθευση ιδιοκτησίας», ADR-900 §8 #2 Β6): επιβεβαίωση που **απενεργοποιεί** το κουμπί
+  που την άνοιξε («σε εξέλιξη…») άφηνε το focus στο `<body>` — και εκεί έμενε όταν το κουμπί έφευγε. Η §3.3 έκρινε με
+  `isConnected`· ένα `disabled` κουμπί είναι συνδεδεμένο, **διεκδικούσαμε** την επαναφορά (`preventDefault`) και το
+  `focus()` του ήταν no-op. Το σχήμα το έχει **κάθε** ασύγχρονη επιβεβαίωση του δέντρου, όχι μία οθόνη.
+- **Απόφαση** (WAI-ARIA APG, Dialog Modal: *«unless the invoking element no longer exists — then another element that
+  provides logical work flow»*): `@/lib/a11y/focus-return` αποκτά `captureFocusReturnTarget()` (opener **+ η περιοχή του**,
+  τη στιγμή του ανοίγματος) και `returnFocus(target)`: opener αν το **πάρει** (κρίση = `activeElement`, όχι πρόβλεψη
+  `disabled`/`inert`/`display:none`), αλλιώς η περιοχή με **δανεικό** `tabindex="-1"` που επιστρέφεται στο `blur`· αλλιώς
+  `null` ⇒ προεπιλεγμένη διαδρομή Radix, όπως πριν. Περιοχή = `section · article · aside · form · region · group ·
+  tabpanel · dialog · alertdialog`. ⛔ **Όχι `main`/`nav`** («όλη η σελίδα» δεν είναι στόχος)· οι διάλογοι **μέσα**, ώστε
+  ένθετη επιβεβαίωση να γυρίζει στον γονικό διάλογο και όχι στο αδρανές περιεχόμενο πίσω του.
+- `useDialogFocusRestore` (dialog · alert-dialog · sheet) το χρησιμοποιεί· όταν ο opener παίρνει focus η συμπεριφορά είναι
+  **ταυτόσημη** με πριν. Η πλήρης οθόνη (`use-fullscreen-surface`) μένει στο `canRestoreFocusTo` — δεν απενεργοποιεί τον
+  opener της· μετανάστευση όταν αγγιχτεί.
+- **`ConfirmDialog` · `keepOpenWhilePending`** (το ίδιο σχήμα από μέσα): όσο η πράξη τρέχει σε **ανοιχτό** διάλογο, το
+  κουμπί επιβεβαίωσης μένει εστιάσιμο — `aria-disabled` + `aria-busy` + όνομα, ποτέ `disabled` (με `disabled` και τα δύο
+  κουμπιά, το focus έπεφτε στο `<body>`, **έξω** από το focus scope). Σχήμα React Aria `isPending`. Δεύτερο πάτημα αγνοείται.
+  ⚠️ Η κεφαλίδα του `ConfirmDialog` γράφει «ADR-003», αλλά το **ADR-003 είναι το Floating Panel** (0 αναφορές σε
+  «confirm»)· το στοιχείο **δεν έχει δικό του ADR** — η τεκμηρίωση του `keepOpenWhilePending` ζει εδώ ώσπου να αποφασιστεί.
+- **Άγκυρες**: `ui/__tests__/dialog-focus-restore.test.tsx` Π1 (opener `disabled`) · Π2 (opener εκτός DOM) · Π3 (δανεικό
+  `tabindex`, δικό της `tabindex` άθικτο) — 7/7· `revocable-ownership-search.test.tsx` Ρ5. **Μεταλλάξεις 9/9 κόκκινες.**
+- **Ζωντανά**: focus στο `SECTION[Επαλήθευση ιδιοκτησίας]` 206–225ms μετά το κλείσιμο, σε επιτυχία και αποτυχία· Tab
+  συνεχίζει στο επόμενο στοιχείο· `tabindex` αφαιρέθηκε στο blur (MutationObserver).
 
 ### 2026-09-12 — **η ζωντανή μέτρηση διόρθωσε δύο παραδοχές** (§10.11)
 
