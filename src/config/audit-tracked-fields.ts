@@ -536,9 +536,14 @@ const PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
 // EXPORTED REGISTRIES (TrackedFieldDef discriminated union)
 // ============================================================================
 
+const PROPERTY_FIELD_DEFS: Record<string, TrackedFieldDef> = {
+  // Το `status` ως όνομα πεδίου το κρατά ο κατάλογος του **έργου**· το ακίνητο έχει δικό του λεξιλόγιο.
+  status: { kind: 'scalar', label: 'status', enumCatalog: AUDIT_VALUE_CATALOGS.propertyStatus },
+};
+
 /** Property audit registry — `field → TrackedFieldDef`. */
 export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  mergeDefs(PROPERTY_TRACKED_FIELDS_RAW, PROPERTY_COLLECTION_DEFS);
+  mergeDefs(PROPERTY_TRACKED_FIELDS_RAW, { ...PROPERTY_COLLECTION_DEFS, ...PROPERTY_FIELD_DEFS });
 
 // ============================================================================
 // BUILDING TRACKED FIELDS (ADR-195 — creation diff for service-layer writes)

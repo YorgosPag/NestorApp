@@ -116,6 +116,12 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // ΙΔΙΑ εγγραφή μέσω `TrackedFieldDef.enumCatalog` (`FLOOR_TRACKED_FIELDS`) — το `kind` ως όνομα
   // πεδίου ανήκει και σε 15+ οντότητες BIM με άλλο λεξιλόγιο, γι' αυτό **δεν** μπαίνει εδώ.
   floorKind: { ns: 'floors', path: 'kind' },
+
+  // ── ADR-195: η `status` του **ακινήτου**. Το όνομα `status` το κρατά το έργο (παραπάνω), με άλλο
+  // λεξιλόγιο ⇒ το `unavailable` ενός ακινήτου έβγαινε ωμό. Το κλειδί αυτό **δεν** είναι όνομα πεδίου:
+  // είναι η εγγραφή στην οποία δείχνει το `PROPERTY_TRACKED_FIELDS.status.enumCatalog`, και ζει εδώ
+  // για να την ελέγχει η πύλη 3.14 (ύπαρξη · ισοτιμία el/en · μόνο camelCase).
+  propertyStatus: { ns: 'properties-enums', path: 'status' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */
