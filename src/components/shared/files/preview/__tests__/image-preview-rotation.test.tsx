@@ -104,6 +104,30 @@ describe('ADR-899 §9 θέμα 5β — FilePreviewRenderer: η στροφή ξα
   });
 });
 
+describe('ADR-899 §9 θέμα 7 — FilePreviewRenderer: το επόμενο αρχείο δεν κληρονομεί την όψη', () => {
+  const NEXT = '/api/storage/file/b/next.jpg';
+  const NEXT_PREVIEW = buildProxyPreview('b/next.jpg', 'legacy-default', { width: 3000, height: 4000 });
+
+  it('🔴 στροφή → άλλο αρχείο στο ΙΔΙΟ πάνελ ⇒ ουδέτερη όψη, ακαριαία, και καμία λήψη με την κλίμακα του προηγούμενου', () => {
+    imageLayout = { width: 600, height: 800 };
+    const { rerender } = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'photoPreview.actions.rotate' }));
+    expect(screen.getByRole('img').style.transform).toMatch(/scale\(1\.33\d*\) rotate\(90deg\)/);
+    expect(decodes).toHaveLength(1);
+
+    rerender(
+      <TooltipProvider>
+        <FilePreviewRenderer url={NEXT} contentType="image/jpeg" fileName="next.jpg" displayName="ν" preview={NEXT_PREVIEW} />
+      </TooltipProvider>,
+    );
+    const image = screen.getByRole('img');
+    expect(image.style.transform).toBe('translate(0px, 0px) scale(1) rotate(0deg)');
+    expect(image.style.transition).toBe('none');
+    expect(image.getAttribute('src')).toContain('b/next.jpg');
+    expect(decodes).toHaveLength(1); // το ×1,333 του προηγούμενου δεν έφτασε στην ερώτηση ανάλυσης του νέου
+  });
+});
+
 describe('ADR-899 §9 θέμα 3 — γραμμή εργαλείων του πάνελ', () => {
   it('🔴 toolbar με όνομα και τέσσερα κουμπιά με όνομα', () => {
     renderPanel();

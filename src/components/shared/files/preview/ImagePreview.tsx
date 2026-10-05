@@ -30,7 +30,8 @@ export interface ImagePreviewProps {
 /** Image/SVG preview: wheel zoom around the cursor, confined drag-to-pan, rotation, named toolbar. */
 export function ImagePreview({ url, preview, title }: ImagePreviewProps) {
   const { t } = useTranslation(['common-photos']);
-  const zp = useZoomPan({ ...PHOTO_VIEW_ZOOM, contentDimensions: preview?.dimensions ?? null });
+  // `contentKey: url` — η όψη ανήκει στο αρχείο: το επόμενο ανοίγει ουδέτερο, δεν κληρονομεί zoom/στροφή (§9 θέμα 7).
+  const zp = useZoomPan({ ...PHOTO_VIEW_ZOOM, contentKey: url, contentDimensions: preview?.dimensions ?? null });
   // `scale` = zoom × fit (§9 θέμα 5β): η στραμμένη που ζωγραφίζεται μεγαλύτερη ζητά μεγαλύτερη βαθμίδα· η γωνία δεν ρωτιέται.
   const source = useZoomResolution(url, preview, zp.containerBox, zp.scale);
 

@@ -48,8 +48,14 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   const [currentIndex, setCurrentIndex] = useState(currentGalleryIndex ?? 0);
 
   // --- Zoom / pan / στροφή: το ΕΝΑ useZoomPan (ADR-899 §9 θέμα 3 — εδώ ζούσε χειρόγραφο αντίγραφο ~150 γραμμών) ---
-  const view = useZoomPan({ ...PHOTO_VIEW_ZOOM, contentDimensions: galleryPreviews?.[currentIndex]?.dimensions ?? null });
-  const { resetAll: resetView } = view;
+  // Νέα φωτογραφία ή νέο άνοιγμα ⇒ «χωρά», χωρίς στροφή (Google Photos: η όψη δεν κληρονομείται) — από το `contentKey`
+  // του ΕΝΟΣ μηχανισμού (§9 θέμα 7· εδώ ζούσε effect + `resetAll`). Κλειστό ⇒ `null`: το ίδιο άνοιγμα ξανά είναι νέα όψη.
+  const shownPhoto = galleryPhotos && galleryPhotos.length > 0 ? galleryPhotos[currentIndex] : photoUrl;
+  const view = useZoomPan({
+    ...PHOTO_VIEW_ZOOM,
+    contentKey: open ? `${currentIndex}|${shownPhoto ?? ''}` : null,
+    contentDimensions: galleryPreviews?.[currentIndex]?.dimensions ?? null,
+  });
 
   // --- Mobile detection ---
   const [isMobile, setIsMobile] = useState(false);
@@ -70,7 +76,7 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
 
   // --- Derived gallery values ---
   const isGalleryMode = galleryPhotos && galleryPhotos.length > 0;
-  const currentPhoto = isGalleryMode ? galleryPhotos[currentIndex] : photoUrl;
+  const currentPhoto = shownPhoto;
   const validPhotos = galleryPhotos?.filter(photo => photo !== null) ?? [];
   const totalPhotos = validPhotos.length;
 
@@ -111,11 +117,6 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
       setCurrentIndex(currentGalleryIndex);
     }
   }, [currentGalleryIndex]);
-
-  // Νέα φωτογραφία ή νέο άνοιγμα ⇒ «χωρά», χωρίς στροφή (Google Photos: η όψη δεν κληρονομείται).
-  useEffect(() => {
-    resetView();
-  }, [open, currentIndex, resetView]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);

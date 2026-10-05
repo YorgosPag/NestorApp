@@ -22,6 +22,11 @@ export type ViewCommit = (next: ZoomPanView) => void;
 
 export const ZERO_PAN: Vec2 = { x: 0, y: 0 };
 
+/** Η **ουδέτερη** όψη: «χωρά», στο κέντρο, χωρίς στροφή — ό,τι βλέπει κάθε νέο περιεχόμενο και ό,τι δίνει το κουμπί «χωρά». */
+export function neutralViewOf(defaultZoom: number): ZoomPanView {
+  return { zoom: defaultZoom, pan: ZERO_PAN, rotation: 0 };
+}
+
 /** Τα στοιχεία που χρειάζεται ο περιορισμός: το κουτί (ορατή περιοχή) και το περιεχόμενο (χωρίς μετασχηματισμό). */
 export interface ViewFrame {
   readonly container: HTMLElement | null;

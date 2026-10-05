@@ -113,10 +113,11 @@ export function FloorplanGallery({
   // Giorgio Q (2026-07-19): null = «Έγχρωμο» (layer colours); a hex = force that single
   // ink (e.g. white lines on dark background). Applied via `applyMonochromeInk`.
   const [inkColor, setInkColor] = useState<string | null>(null);
-  // Zoom + Pan — inline view
-  const inlineZP = useZoomPan(ZOOM_CONFIG);
-  // Zoom + Pan — fullscreen modal (independent instance)
-  const modalZP = useZoomPan(ZOOM_CONFIG);
+  // Zoom + Pan — inline view. `contentKey`: άλλο αρχείο ⇒ ουδέτερη όψη (ADR-899 §9 θέμα 7· ήταν effect στο `currentIndex`).
+  const viewedFileId = currentFile?.id ?? null;
+  const inlineZP = useZoomPan({ ...ZOOM_CONFIG, contentKey: viewedFileId });
+  // Zoom + Pan — fullscreen modal (independent instance)· κλειστό ⇒ `null`: κάθε άνοιγμα και κάθε αρχείο ξεκινά ουδέτερο.
+  const modalZP = useZoomPan({ ...ZOOM_CONFIG, contentKey: fullscreen.isFullscreen ? viewedFileId : null });
   // SPEC-237C: AABB cache for DXF hit-testing (PDF uses dedicated hitTestPdfOverlays)
   const overlayAABBs = useMemo(
     () => isDxf && overlays ? computeOverlayAABBs(overlays) : [],
@@ -152,11 +153,6 @@ export function FloorplanGallery({
   const goToNext = useCallback(() => {
     setCurrentIndex(prev => (prev < floorplanFiles.length - 1 ? prev + 1 : 0));
   }, [floorplanFiles.length]);
-  // Reset zoom/pan when switching files
-  useEffect(() => {
-    inlineZP.resetAll();
-    // intentional: only reset on index change, not on inlineZP reference changes
-  }, [currentIndex]);
   // Keyboard navigation
   // ⚠️ ADR-241 (2026-09-11): ΚΑΝΕΝΑΣ κλάδος Escape εδώ. Την πλήρη οθόνη της γκαλερί την κατέχει ο Radix
   // `<Dialog>` (`onOpenChange` → `fullscreen.exit`). Ως τότε υπήρχαν ΤΡΕΙΣ ιδιοκτήτες για το ίδιο πάτημα —
@@ -178,9 +174,8 @@ export function FloorplanGallery({
   }, [goToPrevious, goToNext, floorplanFiles.length]);
   // FULLSCREEN
   const handleOpenFullscreen = useCallback(() => {
-    modalZP.resetAll();
     fullscreen.enter();
-  }, [modalZP, fullscreen]);
+  }, [fullscreen]);
   const handleCloseFullscreen = useCallback(() => {
     fullscreen.exit();
   }, [fullscreen]);

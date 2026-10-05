@@ -23,7 +23,8 @@ export function DxfPreview({ url, fileName, title }: DxfPreviewProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const zp = useZoomPan(DXF_PREVIEW_ZOOM);
+  // `contentKey: url` — άλλο σχέδιο ⇒ ουδέτερη όψη (ADR-899 §9 θέμα 7· το πάνελ κρατά το component ζωντανό ανάμεσα σε αρχεία).
+  const zp = useZoomPan({ ...DXF_PREVIEW_ZOOM, contentKey: url });
 
   // Build minimal FileRecord for the SSoT loader (PATH D: client-side parse)
   const minimalRecord: FileRecord = {

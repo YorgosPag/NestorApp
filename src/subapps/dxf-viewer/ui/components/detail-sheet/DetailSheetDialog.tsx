@@ -89,7 +89,8 @@ export function DetailSheetDialog({
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const rasterImagesRef = React.useRef<ReadonlyMap<string, CanvasImageSource>>(new Map());
 
-  const zp = useZoomPan({ minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, zoomStep: ZOOM_STEP, defaultZoom: 1 });
+  // `contentKey`: νέο φύλλο ή νέο άνοιγμα ⇒ ουδέτερη όψη (ADR-899 §9 θέμα 7· ήταν `zp.resetAll()` μέσα στο effect του decode).
+  const zp = useZoomPan({ minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, zoomStep: ZOOM_STEP, defaultZoom: 1, contentKey: open ? model : null });
   const renderScale = Math.min(zp.zoom, CRISP_CAP);
 
   const draw = React.useCallback((): void => {
@@ -110,11 +111,10 @@ export function DetailSheetDialog({
   const drawRef = React.useRef(draw);
   drawRef.current = draw;
 
-  // Reset zoom/pan + decode raster (3D) images whenever a new sheet opens.
+  // Decode raster (3D) images whenever a new sheet opens.
   React.useEffect(() => {
     if (!open || !model) return;
     let cancelled = false;
-    zp.resetAll();
     rasterImagesRef.current = new Map();
     void decodeModelRasters(model).then((images) => {
       if (cancelled) return;
@@ -124,7 +124,7 @@ export function DetailSheetDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, model, zp.resetAll]);
+  }, [open, model]);
 
   // Paint on open / model / render-scale change and on window resize.
   React.useLayoutEffect(() => {

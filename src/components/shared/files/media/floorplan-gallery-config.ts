@@ -12,6 +12,7 @@
 import React from 'react';
 import { Map, FileText, Image as ImageIcon } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
+import type { ZoomPanSettings } from '@/hooks/useZoomPan';
 
 // ============================================================================
 // TYPES
@@ -108,7 +109,7 @@ export const ZOOM_CONFIG = {
   zoomStep: 0.25,
   zoomFactor: 1.5,
   defaultZoom: 1,
-} as const;
+} as const satisfies ZoomPanSettings;
 
 // ============================================================================
 // UTILITIES

@@ -80,6 +80,10 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
 
 ## Changelog
 
+- **2026-10-05**: `useZoomPan` — the view belongs to the **content** (ADR-899 §9 θέμα 7)
+  - New REQUIRED config `contentKey` (`Object.is`; `null` = one content that never changes, or "closed"). A different key ⇒ neutral view in the same render, applied without transition. Settings constants are typed `ZoomPanSettings` (no identity)
+  - The three hand-written reset effects are gone (`usePhotoPreviewState` · `FloorplanGallery` inline · `DetailSheetDialog`); `ImagePreview` and `DxfPreview`, which never reset, now do. `resetAll` remains only as the user's "fit" action
+  - ⚠️ Behaviour change: in the `FloorplanGallery` fullscreen dialog, ←/→ now reset zoom/pan (the inline viewer already did)
 - **2026-10-05**: `useZoomPan` re-fits the content after rotation (ADR-899 §9 θέμα 5β)
   - New OPTIONAL config: `refitOnRotate` + `contentDimensions`; new return `scale` (= `zoom × fit`, the painted scale — what resolution asks for). `zoom` stays the user's number («100%» = fits at every angle)
   - `fit` is **derived, not state**: `viewScaleOf(view, frame)` in `zoom-pan-view.ts` is the one place — read by pan confinement (`paintedOf`), the transform (`useApplyViewTransform`) and consumers. The single `commit` is unchanged

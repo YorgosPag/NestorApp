@@ -10,7 +10,7 @@
  * (Figma/Revit): 1 → 8 σε ~5 κλικ.
  */
 
-import type { ZoomPanConfig } from '@/hooks/useZoomPan';
+import type { ZoomPanSettings } from '@/hooks/useZoomPan';
 
 export const PHOTO_VIEW_ZOOM = {
   minZoom: 1,
@@ -21,4 +21,4 @@ export const PHOTO_VIEW_ZOOM = {
   doubleClickZoom: 2.5,
   // ADR-899 §9 θέμα 5β: μετά τη στροφή η φωτογραφία ξαναχωρά — «100%» = «χωρά» σε κάθε γωνία.
   refitOnRotate: true,
-} as const satisfies ZoomPanConfig;
+} as const satisfies ZoomPanSettings;

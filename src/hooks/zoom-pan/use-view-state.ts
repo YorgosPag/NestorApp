@@ -12,7 +12,7 @@ import { useElementSize } from '@/hooks/media/useElementSize';
 import { viewTransformOf, type Extent } from '@/lib/geometry/zoom-pan-math';
 
 import {
-  settleView, viewScaleOf, ZERO_PAN, type ViewCommit, type ViewFit, type ViewFrame, type ViewGetter, type ZoomPanView,
+  neutralViewOf, settleView, viewScaleOf, type ViewCommit, type ViewFit, type ViewFrame, type ViewGetter, type ZoomPanView,
 } from './zoom-pan-view';
 
 /** Ρύθμιση του «ξαναχωρά μετά τη στροφή» (ADR-899 §9 θέμα 5β)· `null` = σβηστό. */
@@ -57,23 +57,49 @@ export interface ViewState {
   readonly contentRef: (node: HTMLElement | null) => void;
 }
 
-export function useViewState(defaultZoom: number, confine: boolean, refit: RefitConfig | null = null): ViewState {
-  const [view, setView] = useState<ZoomPanView>({ zoom: defaultZoom, pan: ZERO_PAN, rotation: 0 });
+/** Η όψη **μαζί με το περιεχόμενο στο οποίο ανήκει** (ADR-899 §9 θέμα 7). */
+interface KeyedView {
+  readonly key: unknown;
+  readonly view: ZoomPanView;
+}
+
+/**
+ * **Η όψη ανήκει στο περιεχόμενο, όχι στο κουτί** (ADR-899 §9 θέμα 7 · Google Photos: η όψη δεν κληρονομείται). Όψη
+ * αποθηκευμένη για **άλλο** `contentKey` δεν «μηδενίζεται» — απλώς δεν είναι η όψη αυτού του περιεχομένου: το ίδιο render
+ * βλέπει ήδη την ουδέτερη (κανένα effect, καμία ερώτηση ανάλυσης με μπαγιάτικη κλίμακα). Η εγγραφή στη φάση του render
+ * πετά την παλιά ώστε Α → `null` → Α να μην τη φέρει πίσω (κλείσιμο/άνοιγμα modal)· το ref ακολουθεί, για τους getters.
+ */
+function useKeyedView(defaultZoom: number, contentKey: unknown) {
+  const [stored, setStored] = useState<KeyedView>(() => ({ key: contentKey, view: neutralViewOf(defaultZoom) }));
+  const viewRef = useRef(stored.view);
+  const keyRef = useRef(contentKey);
+  let current = stored;
+  if (!Object.is(stored.key, contentKey)) {
+    current = { key: contentKey, view: neutralViewOf(defaultZoom) };
+    setStored(current);
+    viewRef.current = current.view;
+  }
+  keyRef.current = contentKey;
+
+  const store = useCallback((view: ZoomPanView) => {
+    viewRef.current = view;
+    setStored({ key: keyRef.current, view });
+  }, []);
+  return { view: current.view, viewRef, store };
+}
+
+export function useViewState(defaultZoom: number, confine: boolean, contentKey: unknown, refit: RefitConfig | null = null): ViewState {
+  const { view, viewRef, store } = useKeyedView(defaultZoom, contentKey);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [content, setContent] = useState<HTMLElement | null>(null);
-  const viewRef = useRef(view);
   const fit = useViewFit(container, refit);
   const frame: ViewFrame = { container, content, fit };
   const frameRef = useRef(frame);
   const containerBox = useRef<HTMLElement | null>(null);
   frameRef.current = frame;
 
-  const getView = useCallback(() => viewRef.current, []);
-  const commit = useCallback((next: ZoomPanView) => {
-    const settled = settleView(next, frameRef.current, confine);
-    viewRef.current = settled;
-    setView(settled);
-  }, [confine]);
+  const getView = useCallback(() => viewRef.current, [viewRef]);
+  const commit = useCallback((next: ZoomPanView) => store(settleView(next, frameRef.current, confine)), [confine, store]);
 
   const containerRef = useCallback((node: HTMLElement | null) => {
     containerBox.current = node;
@@ -86,12 +112,19 @@ export function useViewState(defaultZoom: number, confine: boolean, refit: Refit
 /**
  * **Εφαρμογή του μετασχηματισμού στο περιεχόμενο — imperative** (κανένα `style=` στο JSX, N.3). Η μετάβαση σβήνει όσο
  * κρατιέται η σύρση (άμεση απόκριση), αλλιώς ομαλή — η στροφή και η επαναπροσαρμογή της (`scale = zoom × fit`) κινούνται μαζί.
+ * Νέο περιεχόμενο (`contentKey`) εμφανίζεται ουδέτερο **ακαριαία**: η κίνηση θα «ξέστριβε» μπροστά στον άνθρωπο μια
+ * φωτογραφία που δεν στράφηκε ποτέ (ADR-899 §9 θέμα 7).
  */
-export function useApplyViewTransform(content: HTMLElement | null, view: ZoomPanView, scale: number, isPanning: boolean): void {
+export function useApplyViewTransform(
+  content: HTMLElement | null, view: ZoomPanView, scale: number, isPanning: boolean, contentKey: unknown,
+): void {
+  const appliedKey = useRef(contentKey);
   useLayoutEffect(() => {
     if (!content) return;
+    const swapped = !Object.is(appliedKey.current, contentKey);
+    appliedKey.current = contentKey;
     content.style.transform = viewTransformOf({ pan: view.pan, scale, rotation: view.rotation });
     content.style.transformOrigin = 'center center';
-    content.style.transition = isPanning ? 'none' : 'transform 0.15s ease-out';
-  }, [content, view, scale, isPanning]);
+    content.style.transition = isPanning || swapped ? 'none' : 'transform 0.15s ease-out';
+  }, [content, view, scale, isPanning, contentKey]);
 }

@@ -17,6 +17,7 @@
  * - Optional pan confinement (`confinePan`) and double-click zoom toggle (`doubleClickZoom`)
  * - Optional re-fit after rotation (`refitOnRotate`, ADR-899 §9 θέμα 5β): «100%» = «χωρά» σε κάθε γωνία — `scale = zoom × fit`
  * - Cursor hints (grab/grabbing — grab only when there is room to pan)
+ * - View belongs to the **content** (`contentKey`, ADR-899 §9 θέμα 7): νέο περιεχόμενο ⇒ ουδέτερη όψη, χωρίς effect στον καταναλωτή
  *
  * Used by:
  * - FloorplanGallery (inline + fullscreen modal) · DetailSheetDialog · DxfPreview (καμβάς — διαβάζουν `zoom`/`panOffset`)
@@ -28,7 +29,7 @@
  *
  * @example
  * ```tsx
- * const zp = useZoomPan({ minZoom: 1, maxZoom: 8, confinePan: true });
+ * const zp = useZoomPan({ minZoom: 1, maxZoom: 8, confinePan: true, contentKey: url });
  *
  * <figure ref={zp.containerRef} {...zp.handlers} className={zp.cursorClass}>
  *   <img src={url} ref={zp.contentRef} />
@@ -46,13 +47,20 @@ import { scaleAbout, stepZoom, type Extent, type Vec2, type ZoomLimits } from '@
 import { useDragPan, type DragPanHandlers } from './zoom-pan/use-drag-pan';
 import { useApplyViewTransform, useViewState } from './zoom-pan/use-view-state';
 import { pointerFromCenter, useWheelZoom } from './zoom-pan/use-wheel-zoom';
-import { canPanIn, ZERO_PAN, type ViewCommit, type ViewGetter } from './zoom-pan/zoom-pan-view';
+import { canPanIn, neutralViewOf, ZERO_PAN, type ViewCommit, type ViewGetter } from './zoom-pan/zoom-pan-view';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface ZoomPanConfig {
+  /**
+   * **Η ταυτότητα του περιεχομένου** (ADR-899 §9 θέμα 7): η όψη ανήκει σε αυτό, όχι στο κουτί. Όταν αλλάξει (`Object.is`),
+   * το νέο περιεχόμενο εμφανίζεται ουδέτερο — «χωρά», χωρίς μετατόπιση, χωρίς στροφή — **στο ίδιο render**, ακαριαία.
+   * Υποχρεωτικό επίτηδες: κάθε θεατής απαντά «ποιο είναι το περιεχόμενό μου;»· `null` = ένα περιεχόμενο που δεν αλλάζει
+   * (ή «κλειστό»). ⚠️ Μην μηδενίζεις με δικό σου effect + `resetAll` — αυτός ήταν ο μηχανισμός που ξεχνιόταν.
+   */
+  contentKey: unknown;
   /** Minimum zoom level (default: 0.25) */
   minZoom?: number;
   /** Maximum zoom level (default: 4) */
@@ -88,6 +96,9 @@ export interface ZoomPanConfig {
    */
   contentDimensions?: Extent | null;
 }
+
+/** Οι **ρυθμίσεις** ενός θεατή χωρίς την ταυτότητα του περιεχομένου — ό,τι χωρά σε σταθερά (π.χ. `PHOTO_VIEW_ZOOM`). */
+export type ZoomPanSettings = Omit<ZoomPanConfig, 'contentKey'>;
 
 export type PanOffset = Vec2;
 
@@ -166,7 +177,7 @@ function useButtonActions({ getView, commit, limits, by, defaultZoom }: ActionDe
     const view = getView();
     commit({ ...view, rotation: (view.rotation + 90) % 360 });
   }, [getView, commit]);
-  const resetAll = useCallback(() => commit({ zoom: defaultZoom, pan: ZERO_PAN, rotation: 0 }), [commit, defaultZoom]);
+  const resetAll = useCallback(() => commit(neutralViewOf(defaultZoom)), [commit, defaultZoom]);
   return { zoomIn, zoomOut, rotateBy90, resetAll };
 }
 
@@ -189,19 +200,19 @@ function useDoubleClickToggle(deps: ActionDeps, container: HTMLElement | null, t
 // HOOK
 // ============================================================================
 
-export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
+export function useZoomPan(config: ZoomPanConfig): UseZoomPanReturn {
   const { minZoom = DEFAULTS.minZoom, maxZoom = DEFAULTS.maxZoom, zoomStep = DEFAULTS.zoomStep, zoomFactor,
     defaultZoom = DEFAULTS.defaultZoom, wheelSensitivity = DEFAULTS.wheelSensitivity, confinePan = false, doubleClickZoom,
-    refitOnRotate = false, contentDimensions = null } = config;
+    refitOnRotate = false, contentDimensions = null, contentKey } = config;
 
-  const state = useViewState(defaultZoom, confinePan, refitOnRotate ? { dimensions: contentDimensions } : null);
+  const state = useViewState(defaultZoom, confinePan, contentKey, refitOnRotate ? { dimensions: contentDimensions } : null);
   const [isPanning, setIsPanning] = useState(false);
   const limits = useMemo(() => ({ min: minZoom, max: maxZoom }), [minZoom, maxZoom]);
   const by = useMemo(() => ({ factor: zoomFactor, step: zoomStep }), [zoomFactor, zoomStep]);
   const deps: ActionDeps = { getView: state.getView, commit: state.commit, limits, by, defaultZoom };
 
   useWheelZoom(state.container, state.getView, state.commit, limits, wheelSensitivity);
-  useApplyViewTransform(state.content, state.view, state.scale, isPanning);
+  useApplyViewTransform(state.content, state.view, state.scale, isPanning, contentKey);
   const drag = useDragPan({ container: state.container, getView: state.getView, commit: state.commit, limits, setPanning: setIsPanning });
   const actions = useButtonActions(deps);
   const onDoubleClick = useDoubleClickToggle(deps, state.container, doubleClickZoom);

@@ -8,6 +8,7 @@
  * - Μ3: η θέση ανακοινώνεται με hardcoded κείμενο / στο πρώτο άνοιγμα / καθόλου από το πληκτρολόγιο.
  * - Μ4 (θέμα 5β): η στροφή δεν ξαναχωρά τη φωτογραφία — οι διαστάσεις δεν φτάνουν στο `useZoomPan`, ή στην ανάλυση περνά
  *   το `zoom` αντί για το `scale` (= zoom × fit).
+ * - Μ5 (θέμα 7): η όψη κληρονομείται στην επόμενη φωτογραφία ή στο επόμενο άνοιγμα — το `contentKey` χωρίς το `open` ή σταθερό.
  */
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
@@ -97,6 +98,32 @@ describe('PhotoPreviewModal — πλοήγηση', () => {
       'photoPreview.navigation.slide:2/3',
       'photoPreview.navigation.slide:3/3',
     ]);
+  });
+});
+
+describe('PhotoPreviewModal — η όψη δεν κληρονομείται (ADR-899 §9 θέμα 7)', () => {
+  const ROTATE = 'photoPreview.actions.rotate';
+  const transform = () => screen.getByRole('dialog').querySelector<HTMLImageElement>('figure img')?.style.transform;
+  const modal = (open: boolean) => (
+    <TooltipProvider>
+      <PhotoPreviewModal open={open} onOpenChange={() => undefined} photoUrl={PHOTOS[0]} galleryPhotos={PHOTOS} currentGalleryIndex={0} />
+    </TooltipProvider>
+  );
+
+  it('🔴 Μ5 στροφή → «Επόμενη» ⇒ ουδέτερη· κλείσιμο/άνοιγμα στην ΙΔΙΑ φωτογραφία ⇒ ουδέτερη', () => {
+    const { rerender } = render(modal(true));
+    fireEvent.click(screen.getByRole('button', { name: ROTATE }));
+    expect(transform()).toContain('rotate(90deg)');
+    fireEvent.click(screen.getByRole('button', { name: NEXT }));
+    expect(imageSrc()).toContain('/b.jpg');
+    expect(transform()).toBe('translate(0px, 0px) scale(1) rotate(0deg)');
+
+    fireEvent.click(screen.getByRole('button', { name: ROTATE }));
+    expect(transform()).toContain('rotate(90deg)');
+    rerender(modal(false));
+    rerender(modal(true));
+    expect(imageSrc()).toContain('/b.jpg');
+    expect(transform()).toBe('translate(0px, 0px) scale(1) rotate(0deg)');
   });
 });
 
