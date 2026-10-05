@@ -17,11 +17,15 @@ import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 
 import { CaseInviteContent, type CaseInviteView } from '@/components/case-invite/CaseInviteContent';
+import { activeWorkspaceOf } from '@/lib/auth/workspace-membership';
 import { caseInvitationHref } from '@/lib/conveyance/conveyance-routes';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { CORE_REFUSAL_IS_NOT_FOUND, invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
+import type { PageIdentity } from '@/server/auth/page-identity';
 import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
+import { actingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
+import type { AcceptancePreview } from '@/types/conveyance-case';
 import {
   previewEngagementInvitation,
   type EngagementInvitationPreviewOutcome,
@@ -32,16 +36,24 @@ export const dynamic = 'force-dynamic';
 // ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT: ο σύνδεσμος φέρει διαπιστευτήριο στη διεύθυνση.
 export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
-function viewOf(outcome: EngagementInvitationPreviewOutcome, token: string, viewerEmail: string | null): CaseInviteView {
+function viewOf(
+  outcome: EngagementInvitationPreviewOutcome,
+  token: string,
+  viewerEmail: string | null,
+  acceptance: AcceptancePreview | null,
+): CaseInviteView {
   switch (outcome.kind) {
     case 'preview':
-      return invitationPreviewViewOf({
-        preview: outcome.preview,
-        addressedToViewer: outcome.addressedToViewer,
-        token,
-        viewerEmail,
-        invitationHref: caseInvitationHref(token),
-      });
+      return {
+        ...invitationPreviewViewOf({
+          preview: outcome.preview,
+          addressedToViewer: outcome.addressedToViewer,
+          token,
+          viewerEmail,
+          invitationHref: caseInvitationHref(token),
+        }),
+        acceptance,
+      };
     case 'refused':
       return { kind: 'refused', reason: outcome.reason };
     case 'unavailable':
@@ -49,13 +61,23 @@ function viewOf(outcome: EngagementInvitationPreviewOutcome, token: string, view
   }
 }
 
+/**
+ * ADR-901 §15 (Γ1) — **τι θα γίνει αν αποδεχτεί**: για λογαριασμό ποιου γραφείου. Μόνο για τον συνδεδεμένο στον
+ * οποίο **απευθύνεται** η πρόσκληση· για κάθε άλλον `null` (η οθόνη τον στέλνει πρώτα στη σύνδεση). Ο **ίδιος**
+ * κριτής με την εξαργύρωση — υπόδειξη εδώ, απόφαση εκεί.
+ */
+async function acceptanceFor(outcome: EngagementInvitationPreviewOutcome, viewer: PageIdentity): Promise<AcceptancePreview | null> {
+  if (outcome.kind !== 'preview' || outcome.addressedToViewer !== true || !viewer.ok) return null;
+  return actingViews({ uid: viewer.ctx.uid, active: activeWorkspaceOf(viewer) }).acceptance();
+}
+
 export default async function CaseInvitePage({ params }: { params: Promise<{ token: string }> }): Promise<React.ReactElement> {
-  const { token, viewerEmail } = await readInvitationPageRequest(params);
+  const { token, viewerEmail, viewer } = await readInvitationPageRequest(params);
 
   const outcome = await previewEngagementInvitation(getAdminFirestore(), { token, viewerEmail });
   // «Ανοίχτηκε» ΜΕΤΑ την απόκριση, μόνο την πρώτη φορά — ποτέ δεν πετά.
   if (outcome.kind === 'preview') after(outcome.markOpened);
   if (outcome.kind === 'refused' && CORE_REFUSAL_IS_NOT_FOUND[outcome.reason]) notFound();
 
-  return <CaseInviteContent view={viewOf(outcome, token, viewerEmail)} />;
+  return <CaseInviteContent view={viewOf(outcome, token, viewerEmail, await acceptanceFor(outcome, viewer))} />;
 }

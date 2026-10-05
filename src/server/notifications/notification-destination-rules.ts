@@ -54,6 +54,7 @@ import {
   isNotificationEventType,
   type NotificationEventType,
 } from '@/config/notification-events';
+import { listEngagementsOfUser } from '@/lib/auth/engagement-read';
 import type { NotificationDestination } from '@/lib/notifications/notification-destination';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
@@ -165,6 +166,19 @@ const caseEngagementAnsweredRule: DestinationRule = async (db, _notification, en
   return expected(caseEngagementAnsweredDestination(entityId, companyId));
 };
 
+/**
+ * ADR-901 Φ2 · §15 Γ1 — κάθε ειδοποίηση προς τον **επαγγελματία** (αλλαγή · λήξη · έγγραφο · αίτημα εγγράφου): η
+ * σελίδα της υπόθεσης, στον χώρο **για λογαριασμό του οποίου ανέλαβε**. Ο χώρος ζει πάνω στη **συμμετοχή** ⇒ ο
+ * κανόνας τη διαβάζει, ανάμεσα στις **δικές του** (ξένη ≡ ανύπαρκτη) — και ρωτά τον ίδιο τον παραγωγό.
+ */
+const caseEngagedRule: DestinationRule = async (db, notification, entityId) => {
+  const own = await listEngagementsOfUser(db, notification.userId);
+  const engagement = own.outcome === 'ok' ? own.engagements.find((e) => e.id === entityId) : undefined;
+  // «Δεν μπόρεσα να ρωτήσω» ≡ «δεν τη βρήκα» εδώ: και τα δύο σημαίνουν **καμία** διόρθωση (ποτέ μαντεψιά).
+  if (engagement === undefined) return unresolvable('entity-absent');
+  return expected(caseEngagementChangedDestination(engagement));
+};
+
 /** ADR-884 Κ3β — νέο αίτημα θέασης προς τον υπεύθυνο: ο χώρος είναι η θεματοφυλακή της **ρίζας**. */
 const tourAccessRequestedRule: DestinationRule = async (db, _notification, entityId) => {
   const subject = tourSubjectOfListing(entityId);
@@ -206,23 +220,19 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
     expected(tourAccessAnsweredDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE]: networkThreadMessageRule,
   [NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED]: networkTeamJoinedRule,
-  // ADR-901 Φ2 — η σελίδα της υπόθεσης στον ΙΔΙΩΤΙΚΟ χώρο του επαγγελματία (καμία ανάγνωση: η διαδρομή δεν
-  //    εξαρτάται από την κατάσταση — ανακλημένη συμμετοχή ανοίγει την ίδια σελίδα με ονομασμένη άρνηση).
-  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_CHANGED]: async (_db, notification, entityId) =>
-    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  // ADR-901 Φ2 · §15 Γ1 — η σελίδα της υπόθεσης στον χώρο για λογαριασμό του οποίου ανέλαβε (διαβάζει τη συμμετοχή·
+  //    ανακλημένη συμμετοχή ανοίγει την ίδια σελίδα με ονομασμένη άρνηση).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_CHANGED]: caseEngagedRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_ANSWERED]: caseEngagementAnsweredRule,
   // ADR-901 Φ4 — λήξεις δικαιολογητικών: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής (ακίνητο · σελίδα υπόθεσης).
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_HOST]: caseEngagementAnsweredRule,
-  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: async (_db, notification, entityId) =>
-    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: caseEngagedRule,
   // ADR-901 Φ4.4 — νέο έγγραφο: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_HOST]: caseEngagementAnsweredRule,
-  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_ENGAGED]: async (_db, notification, entityId) =>
-    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_ENGAGED]: caseEngagedRule,
   // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_HOST]: caseEngagementAnsweredRule,
-  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED]: async (_db, notification, entityId) =>
-    expected(caseEngagementChangedDestination(entityId, notification.userId)),
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED]: caseEngagedRule,
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

@@ -358,6 +358,31 @@ export interface CaseActivityItem {
 /** Ποιος **ενεργεί** στην υπόθεση: ένας επαγγελματίας ή ο οικοδεσπότης (ADR-901 Φ4.4 — ανοίγει πια τεκμήρια). */
 export type CaseActorRole = LegalProfessionalRole | 'host';
 
+/**
+ * ADR-901 §15 (Γ1) — ένα γραφείο του θεατή, **όπως λέγεται τώρα**. ⚠️ `name` κενό ⇒ **λείπει το όνομα**, όχι το
+ * γραφείο· τα λόγια τα διαλέγει η οθόνη (N.11). Το όνομα διαβάζεται **ζωντανά** — ποτέ αντίγραφο στη συμμετοχή.
+ */
+export interface ActingOffice {
+  readonly companyId: string;
+  readonly name: string;
+}
+
+/**
+ * **Τι θα γίνει αν πατήσω «Αναλαμβάνω»** — η ίδια ετυμηγορία που θα βγάλει ο διακομιστής στην αποδοχή
+ * (`decideActingWorkspace`), ειπωμένη **πριν** από το πάτημα.
+ * - `unknown` — δεν μπόρεσα να ρωτήσω τα γραφεία ⇒ η αποδοχή **δεν** προχωρά (ποτέ σιωπηλά προσωπικός χώρος).
+ */
+export type AcceptancePreview =
+  | { readonly kind: 'office'; readonly office: ActingOffice }
+  | { readonly kind: 'personal-provisional' }
+  | { readonly kind: 'choice-required'; readonly offices: readonly ActingOffice[] }
+  | { readonly kind: 'unknown' };
+
+/** **Για λογαριασμό ποιου** ενεργεί μια συμμετοχή που έχει αναληφθεί. */
+export type ActingForView =
+  | { readonly kind: 'office'; readonly office: ActingOffice }
+  | { readonly kind: 'personal' };
+
 /** Μία κάρτα στα «Οι υποθέσεις μου» (ADR-901 §5.4). */
 export interface MyCaseCard {
   readonly engagementId: string;
@@ -376,5 +401,9 @@ export interface MyCaseCard {
    * του ίδιου, μετά το βιβλίο του οικοδεσπότη. Υπάρχει **μόνο** σε πρόταση `offered`.
    */
   readonly credentialHint: CredentialHint | null;
+  /** ADR-901 §15 (Γ1) — τι θα γίνει στο «Αναλαμβάνω». Υπάρχει **μόνο** σε πρόταση `offered`. */
+  readonly acceptance: AcceptancePreview | null;
+  /** ADR-901 §15 (Γ1) — για λογαριασμό ποιου ενεργεί. `null` όσο δεν έχει αναληφθεί. */
+  readonly actingFor: ActingForView | null;
 }
 

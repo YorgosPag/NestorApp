@@ -24,6 +24,7 @@ import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader'
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useMyCases } from '@/hooks/useMyCases';
 import type { MyCaseCard } from '@/types/conveyance-case';
+import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import { AcceptEngagementDialog } from './AcceptEngagementDialog';
 import { MyCaseCardView } from './MyCaseCardView';
@@ -70,9 +71,10 @@ export function MyCasesContent() {
   }, [list, send]);
 
   // Optimistic: ο διάλογος κλείνει αμέσως, η κάρτα γίνεται «Έχει πρόσβαση»· αποτυχία ⇒ επαναφορά + ονομασμένος λόγος.
-  const onConfirmAccept = useCallback((engagementId: string, credential: CredentialDeclarationInput) => {
+  const onConfirmAccept = useCallback((engagementId: string, credential: CredentialDeclarationInput, actingRequest?: ActingWorkspaceRequest) => {
     setAccepting(null);
-    send(engagementId, { decision: 'accept', credential });
+    // §15 Γ1 — το αίτημα χώρου φεύγει **μόνο** όταν ο άνθρωπος διάλεξε (2+ γραφεία)· αλλιώς το πεδίο λείπει.
+    send(engagementId, { decision: 'accept', credential, ...(actingRequest ? { actingRequest } : {}) });
   }, [send]);
 
   return (

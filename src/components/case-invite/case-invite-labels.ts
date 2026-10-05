@@ -73,4 +73,6 @@ export const CASE_INVITE_REFUSAL_KEY: Readonly<Record<EngagementInvitationRefusa
   'slot-occupied': 'conveyance:engagement.invite.refusals.slot-occupied',
   'role-conflict': 'conveyance:engagement.invite.refusals.role-conflict',
   'case-closed': 'conveyance:engagement.invite.refusals.case-closed',
+  'acting-choice-required': 'conveyance:engagement.invite.refusals.acting-choice-required',
+  'acting-refused': 'conveyance:engagement.invite.refusals.acting-refused',
 };

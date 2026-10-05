@@ -6,13 +6,17 @@
  *   - **μόνο** ο ίδιος (η συμμετοχή ψάχνεται **ανάμεσα στις δικές του** — ξένη ≡ ανύπαρκτη, 404)
  *   - **μόνο** σε πρόταση· ληγμένη πρόταση ⇒ 409 `offer-expired` (ποτέ σιωπηλή αποδοχή)
  *   - ιδεμποτές: δεύτερο «Αναλαμβάνω» ⇒ 200 χωρίς εγγραφή (+ το σύνορο `Idempotency-Key`)
+ *   - **ADR-901 §15 (Γ1)**: η αποδοχή γράφει «για λογαριασμό ποιου γραφείου» — το κρίνει ο **διακομιστής**
+ *     (`actingRequest` = αίτημα, όχι άδεια): 2+ γραφεία χωρίς επιλογή ⇒ 409 · ξένο γραφείο ⇒ 403 · άγνωστο ⇒ 503
  *
  * @module api/engagements/[engagementId]/respond
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { ACTING_WORKSPACE_REQUEST_SCHEMA } from '@/lib/auth/acting-workspace';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { activeWorkspaceOf } from '@/lib/auth/workspace-membership';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
@@ -24,7 +28,8 @@ type Segment = { params: Promise<{ engagementId: string }> };
 
 /** Η αποδοχή **χωρίς** δήλωση ιδιότητας δεν περνά το σύνορο (Ε-4) — το ίδιο σχήμα με την πρόσκληση. */
 const respondSchema = z.discriminatedUnion('decision', [
-  z.object({ decision: z.literal('accept'), credential: CREDENTIAL_DECLARATION_SCHEMA }),
+  // §15 Γ1 — το πολύ ΕΝΑ αίτημα χώρου («για λογαριασμό ποιου γραφείου»)· το κρίνει ο διακομιστής, όχι το σχήμα.
+  z.object({ decision: z.literal('accept'), credential: CREDENTIAL_DECLARATION_SCHEMA, actingRequest: ACTING_WORKSPACE_REQUEST_SCHEMA.optional() }),
   z.object({ decision: z.literal('decline') }),
 ]);
 
@@ -34,6 +39,10 @@ const STATUS: Readonly<Record<Extract<RespondOutcome, { ok: false }>['rejection'
   unknown: 503,
   'offer-expired': 409,
   'not-allowed': 409,
+  // 2+ γραφεία χωρίς επιλογή: το αίτημα ήταν κατανοητό, λείπει μια απόφαση του ανθρώπου.
+  'acting-choice-required': 409,
+  // Γραφείο όπου δεν ανήκει · «προσωπικά» ενώ έχει γραφείο (Α1γ).
+  'acting-refused': 403,
 };
 
 async function handler(request: NextRequest, actor: ApiActor, segmentData?: Segment) {
@@ -42,7 +51,7 @@ async function handler(request: NextRequest, actor: ApiActor, segmentData?: Segm
   if (parsed.error) return parsed.error;
   const outcome = await respondToCaseEngagement(
     requireAdminFirestore(),
-    { uid: actor.ctx.uid, email: actor.ctx.email ?? null },
+    { uid: actor.ctx.uid, email: actor.ctx.email ?? null, active: activeWorkspaceOf(actor) },
     engagementId,
     parsed.data,
     Date.now(),

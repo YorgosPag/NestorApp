@@ -86,8 +86,10 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 }));
 
 import {
+  activeWorkspaceOf,
   decideMembership,
   listMemberWorkspaces,
+  listOwnWorkspaces,
   normalizeMembership,
   readsFor,
 } from '../workspace-membership';
@@ -301,6 +303,49 @@ describe('Δ. listMemberWorkspaces — η αντίστροφη ερώτηση', 
     const result = await listMemberWorkspaces(NIKOS);
 
     expect(result.outcome).toBe('unknown');
+  });
+});
+
+// =============================================================================
+// Ε — «ΟΙ ΧΩΡΟΙ ΜΟΥ»: ΕΝΕΡΓΩ ≠ ΑΝΗΚΩ (ADR-901 §15 Γ1 · άγκυρα Α42)
+// =============================================================================
+
+describe('Ε. listOwnWorkspaces — ο χώρος του αιτήματος ∪ το βιβλίο, με ΔΥΟ ονόματα', () => {
+  it('Ε1 — ο χώρος του token (`home`) μετρά και στα δύο, χωρίς εγγραφή στο βιβλίο', async () => {
+    const result = await listOwnWorkspaces(NIKOS, { companyId: HOME, verdict: 'home' });
+    expect(result).toEqual({ outcome: 'ok', reachable: [HOME], belonging: [HOME] });
+  });
+
+  it('Ε2 — 🔴 Α42: ο super admin που ΠΕΡΝΑ από ξένο γραφείο το βλέπει στον κατάλογο, αλλά ΔΕΝ ανήκει εκεί', async () => {
+    // Μετάλλαξη: `isAllowed` αντί `belongsHere` ⇒ το ξένο γραφείο μπαίνει στο `belonging` ⇒ αναλαμβάνει υπόθεση για λογαριασμό του.
+    store.set(memberPath(HOME, NIKOS), { uid: NIKOS, status: 'active' });
+    const result = await listOwnWorkspaces(NIKOS, { companyId: FOREIGN, verdict: 'platform-bypass' });
+    expect(result).toEqual({ outcome: 'ok', reachable: [FOREIGN, HOME], belonging: [HOME] });
+  });
+
+  it('Ε3 — μέλος σε δεύτερο γραφείο (`member`) ανήκει και στα δύο· κανένα διπλό', async () => {
+    store.set(memberPath(HOME, NIKOS), { uid: NIKOS, status: 'active' });
+    store.set(memberPath(FOREIGN, NIKOS), { uid: NIKOS, status: 'active' });
+    const result = await listOwnWorkspaces(NIKOS, { companyId: FOREIGN, verdict: 'member' });
+    expect(result.outcome === 'ok' && [...result.belonging].sort()).toEqual([FOREIGN, HOME].sort());
+    expect(result.outcome === 'ok' && result.belonging).toHaveLength(2);
+  });
+
+  it('Ε4 — άνθρωπος χωρίς οργανισμό: μόνο ό,τι λέει το βιβλίο (κανένα ⇒ κενό, όχι άγνωστο)', async () => {
+    expect(await listOwnWorkspaces(NIKOS, null)).toEqual({ outcome: 'ok', reachable: [], belonging: [] });
+  });
+
+  it('Ε5 — «δεν μπόρεσα να ρωτήσω το βιβλίο» ⇒ `unknown`, ΠΟΤΕ μόνο ο χώρος του token', async () => {
+    // Μετάλλαξη: αποτυχία βιβλίου ⇒ `ok` με μόνο το `home` ⇒ άνθρωπος με 2 γραφεία γράφεται σιωπηλά στο ένα.
+    failNextRead = true;
+    const result = await listOwnWorkspaces(NIKOS, { companyId: HOME, verdict: 'home' });
+    expect(result.outcome).toBe('unknown');
+  });
+
+  it('Ε6 — `activeWorkspaceOf`: η ετυμηγορία ταξιδεύει αυτούσια· χωρίς οργανισμό ⇒ `null`', () => {
+    expect(activeWorkspaceOf({ scope: 'organization', ctx: { companyId: FOREIGN, membershipVerdict: 'platform-bypass' } }))
+      .toEqual({ companyId: FOREIGN, verdict: 'platform-bypass' });
+    expect(activeWorkspaceOf({ scope: 'personal' })).toBeNull();
   });
 });
 

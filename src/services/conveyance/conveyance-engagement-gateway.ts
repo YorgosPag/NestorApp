@@ -11,6 +11,7 @@
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
+import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { CaseActivityItem, CaseProfessionalSlot, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
@@ -134,7 +135,7 @@ export const OFFER_REJECTIONS = [
 export type OfferRejection = (typeof OFFER_REJECTIONS)[number];
 
 /** Οι λόγοι που η **απάντηση** του επαγγελματία δεν έγινε. */
-export const RESPOND_REJECTIONS = ['not-found', 'unknown', 'offer-expired', 'not-allowed'] as const;
+export const RESPOND_REJECTIONS = ['not-found', 'unknown', 'offer-expired', 'not-allowed', 'acting-choice-required', 'acting-refused'] as const;
 export type RespondRejection = (typeof RESPOND_REJECTIONS)[number];
 
 function namedError<T extends string>(error: unknown, allowed: readonly T[]): T | null {
@@ -182,7 +183,9 @@ export type CaseInvitationRedeemResult =
 /** Η απάντηση από την οθόνη `/case-invite/[token]` — **ποτέ** δεν πετά· κάθε αποτυχία είναι ονομασμένη. */
 export async function redeemCaseInvitationFromScreen(
   token: string,
-  answer: { readonly action: 'accept'; readonly credential: CredentialDeclarationInput } | { readonly action: 'decline' },
+  answer:
+    | { readonly action: 'accept'; readonly credential: CredentialDeclarationInput; readonly actingRequest?: ActingWorkspaceRequest }
+    | { readonly action: 'decline' },
 ): Promise<CaseInvitationRedeemResult> {
   try {
     const body = await apiClient.post<{ status: 'accepted'; engagementId: string } | { status: 'declined' }>(

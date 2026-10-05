@@ -34,6 +34,7 @@ import type { ConveyanceCase, EngagedCaseView, MyCaseCard } from '@/types/convey
 import type { Engagement, EngagementDecision, EngagementVerdict } from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER, type CaseEvidenceViewer } from './conveyance-case-evidence.server';
+import { actingViews, resolveActingFor, type ActingRejection, type ActingViewer, type ActingViews } from './conveyance-acting-workspace.server';
 import { contactCredentialHint } from './conveyance-professional.server';
 import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { listCaseParticipants } from './conveyance-case-participants.server';
@@ -117,7 +118,7 @@ async function offerCredentialHint(db: Firestore, engagement: Engagement, histor
     ?? contactCredentialHint(db, engagement.hostCompanyId, engagement.origin.contactId, engagement.role);
 }
 
-async function cardOf(db: Firestore, engagement: Engagement, verdict: EngagementVerdict, history: readonly Engagement[]): Promise<MyCaseCard> {
+async function cardOf(db: Firestore, engagement: Engagement, verdict: EngagementVerdict, history: readonly Engagement[], acting: ActingViews): Promise<MyCaseCard> {
   const record = await readCaseOf(db, engagement);
   const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId) : null;
   const engaged = isEngaged(verdict) && record !== null && context !== null;
@@ -135,13 +136,18 @@ async function cardOf(db: Firestore, engagement: Engagement, verdict: Engagement
     summary: checklist?.summary ?? null,
     credentialHint: await offerCredentialHint(db, engagement, history),
     targetSigningDate: engaged ? record.targetSigningDate : null,
+    // §15 Γ1 — πριν από το πάτημα: τι θα γίνει· μετά: για ποιον ενεργεί. Ο ΙΔΙΟΣ κριτής με την αποδοχή.
+    acceptance: engagement.state === 'offered' ? await acting.acceptance() : null,
+    actingFor: await acting.actingFor(engagement),
   };
 }
 
 export type MyCasesOutcome = { readonly ok: true; readonly cards: readonly MyCaseCard[] } | { readonly ok: false };
 
 /** Μία κάρτα **ανά υπόθεση** (η τρέχουσα συμμετοχή), νεότερη πρώτη. */
-export async function listMyCases(db: Firestore, uid: string, nowMs: number): Promise<MyCasesOutcome> {
+export async function listMyCases(db: Firestore, viewer: ActingViewer, nowMs: number): Promise<MyCasesOutcome> {
+  const { uid } = viewer;
+  const acting = actingViews(viewer);
   const list = await listEngagementsOfUser(db, uid);
   if (list.outcome === 'unknown') return { ok: false };
   const byCase = new Map<string, Engagement[]>();
@@ -149,7 +155,7 @@ export async function listMyCases(db: Firestore, uid: string, nowMs: number): Pr
   const current = [...byCase.values()]
     .map((history) => selectCurrentEngagement(history).engagement)
     .filter((e): e is Engagement => e !== null);
-  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, list.engagements)));
+  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, list.engagements, acting)));
   return { ok: true, cards: [...cards].sort((a, b) => b.offeredAt.localeCompare(a.offeredAt)) };
 }
 
@@ -159,18 +165,34 @@ export async function listMyCases(db: Firestore, uid: string, nowMs: number): Pr
 
 export type RespondOutcome =
   | { readonly ok: true; readonly card: MyCaseCard }
-  | { readonly ok: false; readonly rejection: 'not-found' | 'unknown' | 'offer-expired' | 'not-allowed' };
+  | { readonly ok: false; readonly rejection: 'not-found' | 'unknown' | 'offer-expired' | 'not-allowed' | 'acting-choice-required' | 'acting-refused' };
 
-function transitionOf(own: Engagement, uid: string, answer: CaseEngagementAnswer, nowMs: number): EngagementTransition {
-  return answer.decision === 'accept'
-    ? { kind: 'accept', byUid: uid, declaredCredential: declaredCredentialOf(own.role, answer.credential, new Date(nowMs).toISOString()) }
-    : { kind: 'decline', byUid: uid };
+/** Ποιος απαντά: ο άνθρωπος (token) και ο χώρος γραφείου του αιτήματός του — για το «για λογαριασμό ποιου» (§15). */
+export interface RespondingActor extends ActingViewer {
+  readonly email: string | null;
+}
+
+type PlannedAnswer =
+  | { readonly ok: true; readonly transition: EngagementTransition }
+  | { readonly ok: false; readonly rejection: Exclude<ActingRejection, 'acting-unknown'> | 'unknown' };
+
+/**
+ * Η απάντηση ως μετάβαση. 🔑 §15 Γ1 — η αποδοχή περνά **πρώτα** από τον κριτή της ιδιότητας (`resolveActingFor`):
+ * χωρίς χώρο «για λογαριασμό ποιου» **δεν** φτάνει ποτέ στον γραφέα (2+ γραφεία χωρίς επιλογή · ξένο γραφείο ·
+ * «δεν μπόρεσα να ρωτήσω» ⇒ ονομασμένη άρνηση, καμία γραφή).
+ */
+async function planAnswer(own: Engagement, actor: RespondingActor, answer: CaseEngagementAnswer, nowMs: number): Promise<PlannedAnswer> {
+  if (answer.decision === 'decline') return { ok: true, transition: { kind: 'decline', byUid: actor.uid } };
+  const acting = await resolveActingFor(actor, answer.actingRequest ?? null);
+  if (!acting.ok) return { ok: false, rejection: acting.rejection === 'acting-unknown' ? 'unknown' : acting.rejection };
+  const declaredCredential = declaredCredentialOf(own.role, answer.credential, new Date(nowMs).toISOString());
+  return { ok: true, transition: { kind: 'accept', byUid: actor.uid, declaredCredential, actingFor: acting.actingFor } };
 }
 
 /** «Αναλαμβάνω» / «Δεν αναλαμβάνω» — **μόνο** ο ίδιος, **μόνο** σε πρόταση. Ιδεμποτές. */
 export async function respondToCaseEngagement(
   db: Firestore,
-  actor: { readonly uid: string; readonly email: string | null },
+  actor: RespondingActor,
   engagementId: string,
   answer: CaseEngagementAnswer,
   nowMs: number,
@@ -181,12 +203,14 @@ export async function respondToCaseEngagement(
   // Η υπόθεση διαβάζεται ΠΡΙΝ: η απάντηση αλλάζει τον κατάλογο συμμετεχόντων ⇒ σήμα στις όψεις της (§14.8).
   const record = await readCaseOf(db, own);
   if (!record) return { ok: false, rejection: 'not-found' };
-  const outcome = await transitionEngagement(db, engagementKeyOf(own), transitionOf(own, actor.uid, answer, nowMs), nowMs, caseRosterSignal(db, record));
+  const planned = await planAnswer(own, actor, answer, nowMs);
+  if (!planned.ok) return planned;
+  const outcome = await transitionEngagement(db, engagementKeyOf(own), planned.transition, nowMs, caseRosterSignal(db, record));
   if (outcome.outcome === 'not-found') return { ok: false, rejection: 'not-found' };
   if (outcome.outcome === 'not-allowed' || outcome.outcome === 'offer-expired') return { ok: false, rejection: outcome.outcome };
   const after = outcome.outcome === 'changed' ? outcome.after : outcome.engagement;
   if (outcome.outcome === 'changed') await recordAnswer(db, actor, record, outcome.before, after);
-  return { ok: true, card: await cardOf(db, after, judge(after, actor.uid, nowMs).verdict, []) };
+  return { ok: true, card: await cardOf(db, after, judge(after, actor.uid, nowMs).verdict, [], actingViews(actor)) };
 }
 
 /** Ίχνος στο βιβλίο του οικοδεσπότη + ειδοποίηση όποιου πρότεινε. */

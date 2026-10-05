@@ -19,7 +19,9 @@ import 'server-only';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { stageEngagementByInvitation } from '@/lib/auth/engagement-write';
+import type { ActiveWorkspace } from '@/lib/auth/workspace-membership';
 import { acceptsEngagements, effectiveCaseState } from '@/lib/conveyance/case-state';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { declaredCredentialOf, type CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
@@ -35,6 +37,7 @@ import {
   type InvitationRedeemOutcome,
   type InvitationResolution,
 } from '@/server/invitations/invitation-redeem';
+import { resolveActingFor } from '@/services/conveyance/conveyance-acting-workspace.server';
 import { announceEngagementAnswered, announceInvitationDeclined } from '@/services/conveyance/conveyance-engagement-notifier';
 import {
   caseSubject,
@@ -46,13 +49,23 @@ import { caseRosterSignal, invitationHostSignal } from '@/services/conveyance/co
 import type { Engagement } from '@/types/engagement';
 import type { EngagementInvitation, EngagementInvitationKindRefusal } from '@/types/engagement-invitation';
 import type { InvitationDocumentCore } from '@/types/invitation-core';
+import type { WorkspaceRef } from '@/types/workspace-membership';
 
 import { ENGAGEMENT_INVITE_SECRET_ENV, engagementInvitationsCollection } from './engagement-invitation-issue';
 
 const logger = createModuleLogger('engagement-invitation-redeem');
 
-/** «Δεν μπόρεσα»: λείπει το μυστικό **μας**, ή οι συμμετοχές της υπόθεσης δεν διαβάζονται (fail-closed). */
-export type EngagementInvitationUnavailable = 'secret-missing' | 'engagements-unreadable';
+/**
+ * «Δεν μπόρεσα»: λείπει το μυστικό **μας**, οι συμμετοχές της υπόθεσης δεν διαβάζονται, ή **δεν μπόρεσα να ρωτήσω
+ * τα γραφεία** του ανθρώπου (ADR-901 §15 Α43 — ποτέ σιωπηλά προσωπικός χώρος). Όλα fail-closed.
+ */
+export type EngagementInvitationUnavailable = 'secret-missing' | 'engagements-unreadable' | 'offices-unknown';
+
+/** Ό,τι **δηλώνει** ο άνθρωπος στην αποδοχή: η ιδιότητά του (Ε-4) και ο χώρος για λογαριασμό του οποίου αναλαμβάνει (§15). */
+interface AcceptanceDeclaration {
+  readonly credential: CredentialDeclarationInput;
+  readonly actingFor: WorkspaceRef;
+}
 
 export type EngagementRedeemOutcome = InvitationRedeemOutcome<
   EngagementInvitation,
@@ -90,7 +103,7 @@ async function stageAcceptance(
   db: Firestore,
   tx: Transaction,
   accepted: { readonly record: EngagementInvitation; readonly identity: InvitationRedeemer },
-  credential: CredentialDeclarationInput,
+  declaration: AcceptanceDeclaration,
 ): Promise<InvitationAcceptance<EngagementInvitationKindRefusal, EngagementInvitationUnavailable, Engagement>> {
   const { record, identity } = accepted;
   // 🔴 Η αποθηκευμένη κατάσταση ξαναρωτιέται **μέσα** στη συναλλαγή: κλείσιμο/ακύρωση είναι ρητές πράξεις.
@@ -105,7 +118,8 @@ async function stageAcceptance(
     template: 'legal', role: record.role, subject: caseSubject(record.caseId),
     origin: { kind: 'professional_appointment', contactId: record.contactId },
     consents: record.consents, offeredBy: record.invitedByUid, nowMs,
-    invitationId: record.id, declaredCredential: declaredCredentialOf(record.role, credential, new Date(nowMs).toISOString()),
+    invitationId: record.id, declaredCredential: declaredCredentialOf(record.role, declaration.credential, new Date(nowMs).toISOString()),
+    actingFor: declaration.actingFor,
   }, caseRosterSignal(db, conveyanceCase));
   if (stage.outcome === 'commit') return { kind: 'commit', write: stage.write };
   return stage.reason === 'unreadable'
@@ -116,7 +130,7 @@ async function stageAcceptance(
 /** Το είδος — ανά αίτημα, γιατί η αποδοχή κουβαλά τη **δήλωση** του ανθρώπου. */
 function engagementInvitationKind(
   db: Firestore,
-  credential: CredentialDeclarationInput | null,
+  declaration: AcceptanceDeclaration | null,
 ): InvitationKind<InvitationDocumentCore, EngagementInvitation, InvitationRedeemer, EngagementInvitationKindRefusal, EngagementInvitationUnavailable, Engagement> {
   return {
     ...ENGAGEMENT_INVITATION_LOCATOR,
@@ -128,8 +142,8 @@ function engagementInvitationKind(
     },
     onAccept: async (tx, accepted) => {
       // Η άρνηση δεν φτάνει ποτέ εδώ· η αποδοχή χωρίς δήλωση την έχει ήδη κόψει το σύνορο HTTP (zod).
-      if (credential === null) throw new Error('Engagement invitation accepted without a credential declaration');
-      return stageAcceptance(db, tx, accepted, credential);
+      if (declaration === null) throw new Error('Engagement invitation accepted without a credential declaration');
+      return stageAcceptance(db, tx, accepted, declaration);
     },
     // Η αποδοχή ενημερώνει τις όψεις μέσω του γραφέα συμμετοχών· η άρνηση αλλάζει μόνο τη θέση του οικοδεσπότη (§14.8).
     onDecline: (tx, record) => invitationHostSignal(db, record)(tx),
@@ -139,14 +153,31 @@ function engagementInvitationKind(
 /**
  * **Αποδοχή** — ατομική: `pending → accepted` **και** ενεργή συμμετοχή, αδιαίρετα. Δύο ταυτόχρονα κλικ ⇒ **μία**
  * συμμετοχή (η δεύτερη συναλλαγή βρίσκει `accepted` ⇒ `already-used`).
+ *
+ * 🔑 ADR-901 §15 (Γ1) — ο κριτής της ιδιότητας τρέχει **πριν** από τη συναλλαγή (δεν είναι ανάγνωση συναλλαγής) και
+ * το αποτέλεσμά του μπαίνει στο αίτημα του γραφέα. Ο **ίδιος** κριτής με το «Αναλαμβάνω»: ο νεογραμμένος δεν έχει
+ * γραφείο (⇒ προσωρινά προσωπικός χώρος), ο **υπάρχων** λογαριασμός που πατά σύνδεσμο email μπορεί να έχει.
  */
-export function acceptEngagementInvitation(
-  db: Firestore,
-  input: { readonly token: string; readonly identity: InvitationRedeemer; readonly credential: CredentialDeclarationInput },
-): Promise<EngagementRedeemOutcome> {
-  return redeemInvitation(db, engagementInvitationKind(db, input.credential), {
+export async function acceptEngagementInvitation(db: Firestore, input: EngagementInvitationAccept): Promise<EngagementRedeemOutcome> {
+  const acting = await resolveActingFor({ uid: input.identity.uid, active: input.acting.active }, input.acting.requested);
+  if (!acting.ok) {
+    return acting.rejection === 'acting-unknown'
+      ? { kind: 'unavailable', reason: 'offices-unknown' }
+      : { kind: 'refused', reason: acting.rejection };
+  }
+  const declaration: AcceptanceDeclaration = { credential: input.credential, actingFor: acting.actingFor };
+  return redeemInvitation(db, engagementInvitationKind(db, declaration), {
     token: input.token, identity: input.identity, target: 'accepted', nowValue: nowISO(),
   });
+}
+
+/** Η αποδοχή όπως φτάνει από το σύνορο: σύνδεσμος · λογαριασμός **του Auth** · δήλωση ιδιότητας · αίτημα χώρου. */
+export interface EngagementInvitationAccept {
+  readonly token: string;
+  readonly identity: InvitationRedeemer;
+  readonly credential: CredentialDeclarationInput;
+  /** §15 — ο χώρος γραφείου του αιτήματος (από το token) και ό,τι **ζήτησε** ο άνθρωπος (αναξιόπιστο). */
+  readonly acting: { readonly active: ActiveWorkspace | null; readonly requested: ActingWorkspaceRequest | null };
 }
 
 /** **Άρνηση** («Δεν αναλαμβάνω») — ίδια κλειδαριά, καμία συμμετοχή· ο οικοδεσπότης ειδοποιείται από τον καλούντα. */
@@ -170,7 +201,7 @@ export function declineEngagementInvitation(
 export async function respondToEngagementInvitation(
   db: Firestore,
   input:
-    | { readonly action: 'accept'; readonly token: string; readonly identity: InvitationRedeemer; readonly credential: CredentialDeclarationInput }
+    | ({ readonly action: 'accept' } & EngagementInvitationAccept)
     | { readonly action: 'decline'; readonly token: string; readonly identity: InvitationRedeemer },
 ): Promise<EngagementRedeemOutcome> {
   const outcome = input.action === 'accept'

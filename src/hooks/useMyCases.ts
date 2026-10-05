@@ -19,6 +19,7 @@ import {
   respondToEngagementRequest,
   type RespondRejection,
 } from '@/services/conveyance/conveyance-engagement-gateway';
+import { actingForAfterAccept } from '@/lib/conveyance/acting-acceptance';
 import type { CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import type { MyCaseCard } from '@/types/conveyance-case';
 
@@ -39,8 +40,12 @@ interface UseMyCasesReturn {
 /** Η κάρτα όπως θα είναι μετά την απάντηση — μέχρι να έρθει η αλήθεια του server. */
 function optimisticCard(card: MyCaseCard, answer: CaseEngagementAnswer): MyCaseCard {
   return answer.decision === 'accept'
-    ? { ...card, engagementState: 'active', verdict: 'engaged', credentialHint: null }
-    : { ...card, engagementState: 'declined', verdict: 'declined' };
+    ? {
+        ...card, engagementState: 'active', verdict: 'engaged', credentialHint: null, acceptance: null,
+        // §15 Γ1 — ό,τι υποσχέθηκε η προεπισκόπηση του διακομιστή· `null` αν δεν το ξέρουμε (καμία μαντεψιά).
+        actingFor: actingForAfterAccept(card.acceptance, answer.actingRequest),
+      }
+    : { ...card, engagementState: 'declined', verdict: 'declined', acceptance: null };
 }
 
 export function useMyCases(): UseMyCasesReturn {

@@ -70,8 +70,10 @@ import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { workspaceMemberRef, workspaceMembersCollection } from '@/lib/workspace/workspace-member-ref';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { isRoleBypass } from './roles';
+import type { AuthContext } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
+  belongsHere,
   isTenureEnded,
   isWorkspaceMemberEnrollment,
   isWorkspaceMembershipStatus,
@@ -376,6 +378,65 @@ export async function listMemberWorkspaces(uid: string): Promise<WorkspaceMember
     });
     return { outcome: 'unknown', reason: 'query-failed' };
   }
+}
+
+// =============================================================================
+// «ΟΙ ΧΩΡΟΙ ΜΟΥ» — Ο ΧΩΡΟΣ ΤΟΥ ΑΙΤΗΜΑΤΟΣ ∪ ΤΟ ΒΙΒΛΙΟ, ΜΙΑ ΦΟΡΑ
+// =============================================================================
+
+/** Ο χώρος γραφείου στον οποίο ενεργεί **αυτό το αίτημα**, μαζί με το **γιατί** επιτράπηκε. */
+export interface ActiveWorkspace {
+  readonly companyId: string;
+  /** Απόν ⇒ context χτισμένο από το υπογεγραμμένο claim (`home`) — η σύμβαση του `belongsHere`. */
+  readonly verdict: MembershipVerdict | undefined;
+}
+
+/** Μια ταυτότητα **με ή χωρίς** οργανισμό — το κοινό σχήμα του δρώντος του API και του θεατή μιας σελίδας. */
+type ScopedIdentity =
+  | { readonly scope: 'organization'; readonly ctx: Pick<AuthContext, 'companyId' | 'membershipVerdict'> }
+  | { readonly scope: 'personal' };
+
+/**
+ * **Ο χώρος γραφείου όπου ενεργεί αυτή η ταυτότητα, ΜΑΖΙ με το γιατί επιτράπηκε** — `null` χωρίς οργανισμό.
+ *
+ * 🔑 Η ετυμηγορία ταξιδεύει **αυτούσια**: το «ανήκει ή περνά;» το κρίνει ο {@link listOwnWorkspaces}, όχι αυτή η
+ *    μετάφραση. Μία, ώστε σύνορο API και σελίδα να μη γράψουν δύο (ADR-901 §15 Γ1).
+ */
+export function activeWorkspaceOf(identity: ScopedIdentity): ActiveWorkspace | null {
+  return identity.scope === 'organization'
+    ? { companyId: identity.ctx.companyId, verdict: identity.ctx.membershipVerdict }
+    : null;
+}
+
+/**
+ * Οι χώροι γραφείου ενός ανθρώπου — **δύο** ερωτήσεις πάνω στην **ίδια** ανάγνωση, με όνομα η καθεμία:
+ * - `reachable` — όπου **ενεργεί ή είναι μέλος** (ο κατάλογος χώρων)
+ * - `belonging` — όπου **ανήκει** (`belongsHere`): ό,τι δίνει **ιδιότητα μέσα** στον χώρο
+ *
+ * 🔴 Διαφέρουν **μόνο** στο `platform-bypass`: ο super admin που **περνά** από ξένο γραφείο το βλέπει στον
+ *    κατάλογό του, αλλά **δεν** ενεργεί για λογαριασμό του (ADR-867 Β5 · ADR-901 §15 άγκυρα Α42).
+ */
+export type OwnWorkspaces =
+  | { readonly outcome: 'ok'; readonly reachable: readonly string[]; readonly belonging: readonly string[] }
+  | { readonly outcome: 'unknown'; readonly reason: string };
+
+/**
+ * **Η ένωση «χώρος του αιτήματος ∪ βιβλίο μελών»** — ο ΕΝΑΣ τόπος της (ADR-901 §15 Γ1, N.0.2).
+ *
+ * Ζούσε **inline** στο `api/workspaces/route.ts`· η αποδοχή υπόθεσης χρειάστηκε την ίδια ένωση με **αυστηρότερο**
+ * κριτήριο, και δεύτερη γραφή θα ήταν δύο απαντήσεις στο «ποιοι είναι οι χώροι μου;».
+ *
+ * ⚠️ **Δηλωμένο όριο**: όταν το αίτημα περνά από **ξένο** γραφείο (`platform-bypass`), ο χώρος του token **δεν**
+ *    φτάνει εδώ (το `AuthContext` κρατά τον χώρο όπου ενεργεί, όχι το claim) ⇒ το «ανήκει» απαντιέται **μόνο**
+ *    από το βιβλίο. Ο χώρος του token λείπει από το βιβλίο μόνο για έγγραφα προ-ADR-867 Ε1 (`backfill`).
+ */
+export async function listOwnWorkspaces(uid: string, active: ActiveWorkspace | null): Promise<OwnWorkspaces> {
+  const book = await listMemberWorkspaces(uid);
+  if (book.outcome === 'unknown') return book;
+  const withActive = (include: boolean): string[] => [
+    ...new Set([...(active !== null && include ? [active.companyId] : []), ...book.companyIds]),
+  ];
+  return { outcome: 'ok', reachable: withActive(true), belonging: withActive(belongsHere(active?.verdict)) };
 }
 
 // =============================================================================

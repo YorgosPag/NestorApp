@@ -25,6 +25,8 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { activeExpiresAt, offerExpiresAt } from '@/config/engagement-policy';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { generateEngagementId } from '@/services/enterprise-id.service';
+import type { WorkspaceRef } from '@/types/workspace-membership';
+import { isOwnActingWorkspace } from './acting-workspace';
 import { parseEngagement } from './engagement-schema';
 import { engagementRef, engagementsCollection, engagementsForSubjectQuery } from './engagement-ref';
 import {
@@ -166,6 +168,8 @@ export function offerEngagement(db: Firestore, request: EngagementOfferRequest, 
 export interface EngagementInvitationAcceptance extends EngagementOfferRequest {
   readonly invitationId: string;
   readonly declaredCredential: DeclaredCredential;
+  /** ADR-901 §15 — για λογαριασμό ποιου χώρου· κρίθηκε **πριν** από τη συναλλαγή (`decideActingWorkspace`). */
+  readonly actingFor: WorkspaceRef;
 }
 
 export type EngagementInvitationStage =
@@ -193,7 +197,11 @@ export async function stageEngagementByInvitation(
   const existing = judgeOffer(live, request);
   if (existing && existing.outcome !== 'already-live') return { outcome: 'refused', reason: existing.outcome };
 
-  const acceptance: EngagementTransition = { kind: 'accept', byUid: request.uid, declaredCredential: request.declaredCredential };
+  // Ζώνη: ο καλών κατασκευάζει τη δήλωση από τον κριτή — ξένος προσωπικός χώρος εδώ είναι σφάλμα κώδικα, όχι ανθρώπου.
+  if (!isOwnActingWorkspace(request.uid, request.actingFor)) throw new Error('Engagement accepted for a foreign personal workspace');
+  const acceptance: EngagementTransition = {
+    kind: 'accept', byUid: request.uid, declaredCredential: request.declaredCredential, actingFor: request.actingFor,
+  };
   const accepted = existing === null ? null : planTransition(existing.engagement, acceptance, request.nowMs);
   if (accepted?.outcome === 'noop') return { outcome: 'commit', write: () => accepted.engagement };
   const signalled = (written: Engagement, also: readonly Engagement[] = []): Engagement => {
@@ -222,6 +230,7 @@ function activeByInvitation(request: EngagementInvitationAcceptance): Engagement
     respondedAt: offered.offeredAt,
     origin: { ...request.origin, invitationId: request.invitationId },
     declaredCredential: request.declaredCredential,
+    actingFor: request.actingFor,
   };
 }
 
@@ -239,8 +248,11 @@ export type EngagementTransition =
   /**
    * ADR-901 Ε-4 · Φ4 — η αποδοχή **φέρει** τη δήλωση ιδιότητας: ενεργή συμμετοχή χωρίς δήλωση είναι
    * **δομικά αδύνατη**, από όποια διαδρομή κι αν έρθει (πρόταση `offered` ή πρόσκληση με email).
+   *
+   * ADR-901 §15 (Γ1) — και τον **χώρο για λογαριασμό του οποίου** αναλαμβάνει (`actingFor`): γράφεται **μαζί** με το
+   * `active`, **μόνο** εδώ. Δεύτερη αποδοχή είναι `noop` ⇒ το πεδίο **δεν ξαναγράφεται** (Α1δ · άγκυρα Α44).
    */
-  | { readonly kind: 'accept'; readonly byUid: string; readonly declaredCredential: DeclaredCredential }
+  | { readonly kind: 'accept'; readonly byUid: string; readonly declaredCredential: DeclaredCredential; readonly actingFor: WorkspaceRef }
   | { readonly kind: 'decline'; readonly byUid: string }
   /** Οικοδεσπότης: `offered` ⇒ withdrawn · `active` ⇒ revoked (άμεσα, ADR-787 Ε-2 §5). */
   | { readonly kind: 'end'; readonly byUid: string };
@@ -274,9 +286,13 @@ function planResponse(e: Engagement, answer: Exclude<EngagementTransition, { kin
   if (expiresAtMs === null || expiresAtMs <= nowMs) {
     return { outcome: 'offer-expired', engagement: { ...e, state: 'expired', closedAt: at, updatedAt: at } };
   }
-  return answer.kind === 'accept'
-    ? stamp(e, nowMs, { state: 'active', respondedAt: at, expiresAt: activeExpiresAt(nowMs), declaredCredential: answer.declaredCredential })
-    : stamp(e, nowMs, { state: 'declined', respondedAt: at, closedAt: at });
+  if (answer.kind === 'decline') return stamp(e, nowMs, { state: 'declined', respondedAt: at, closedAt: at });
+  // Ζώνη του γραφέα: «για λογαριασμό» ξένου προσωπικού χώρου δεν γράφεται, όποιος κι αν το ζήτησε.
+  if (!isOwnActingWorkspace(e.uid, answer.actingFor)) return { outcome: 'not-allowed', engagement: e };
+  return stamp(e, nowMs, {
+    state: 'active', respondedAt: at, expiresAt: activeExpiresAt(nowMs),
+    declaredCredential: answer.declaredCredential, actingFor: answer.actingFor,
+  });
 }
 
 /** Το τέλος από τον οικοδεσπότη — απόσυρση πρότασης ή ανάκληση ενεργής. */

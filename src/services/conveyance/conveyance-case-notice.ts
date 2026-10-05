@@ -117,7 +117,7 @@ export function noticeToEngaged(notice: CaseNotice & { readonly engagement: Enga
     eventId: notice.eventId,
     entityId: engagement.id,
     entityType: NOTIFICATION_ENTITY_TYPES.ENGAGEMENT,
-    ...caseEngagementChangedDestination(engagement.id, engagement.uid),
+    ...caseEngagementChangedDestination(engagement),
     source: sourceOf(notice),
   }));
 }

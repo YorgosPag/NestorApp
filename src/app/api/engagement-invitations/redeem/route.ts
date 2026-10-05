@@ -16,7 +16,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { readJsonBody } from '@/lib/api/json-body';
 import { CREDENTIAL_DECLARATION_SCHEMA } from '@/lib/conveyance/declared-credential';
+import { ACTING_WORKSPACE_REQUEST_SCHEMA } from '@/lib/auth/acting-workspace';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { activeWorkspaceOf } from '@/lib/auth/workspace-membership';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -38,7 +40,11 @@ const logger = createModuleLogger('ENGAGEMENT_INVITATION_REDEEM');
 export const dynamic = 'force-dynamic';
 
 /** Η αποδοχή **χωρίς** δήλωση δεν περνά το σύνορο — η άρνηση δεν τη ζητά. */
-const BODY = INVITATION_REDEEM_BODY.extend({ credential: CREDENTIAL_DECLARATION_SCHEMA.optional() }).refine(
+const BODY = INVITATION_REDEEM_BODY.extend({
+  credential: CREDENTIAL_DECLARATION_SCHEMA.optional(),
+  // ADR-901 §15 (Γ1) — το πολύ ΕΝΑ αίτημα χώρου· **αίτημα, όχι άδεια** (το κρίνει ο `decideActingWorkspace`).
+  actingRequest: ACTING_WORKSPACE_REQUEST_SCHEMA.optional(),
+}).refine(
   (body) => body.action === 'decline' || body.credential !== undefined,
   { message: 'credential required to accept', path: ['credential'] },
 );
@@ -72,9 +78,11 @@ async function handler(request: NextRequest, actor: ApiActor): Promise<NextRespo
   try {
     // 🔴 §15 — ο λογαριασμός **από το Auth**, ποτέ από το token.
     const identity = await readInvitationRedeemer(actor.ctx.uid);
-    const { token, action, credential } = parsed.data;
+    const { token, action, credential, actingRequest } = parsed.data;
+    // §15 — ο χώρος γραφείου έρχεται από το **token** του αιτήματος· ό,τι ζήτησε ο άνθρωπος ταξιδεύει ως αίτημα.
+    const acting = { active: activeWorkspaceOf(actor), requested: actingRequest ?? null };
     const outcome = action === 'accept' && credential
-      ? await respondToEngagementInvitation(getAdminFirestore(), { action, token, identity, credential })
+      ? await respondToEngagementInvitation(getAdminFirestore(), { action, token, identity, credential, acting })
       : await respondToEngagementInvitation(getAdminFirestore(), { action: 'decline', token, identity });
     return respond(outcome);
   } catch (error: unknown) {

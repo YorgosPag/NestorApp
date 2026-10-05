@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 
+import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { ROLE_REGISTRY_AUTHORITY, type DeclaredCredential, type Engagement } from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -28,9 +29,14 @@ export const CREDENTIAL_DECLARATION_SCHEMA = z.object({
 /** Η δήλωση όπως την πληκτρολόγησε ο επαγγελματίας. */
 export type CredentialDeclarationInput = z.infer<typeof CREDENTIAL_DECLARATION_SCHEMA>;
 
-/** Η απάντηση σε πρόταση συμμετοχής — η αποδοχή **φέρει** τη δήλωση, η άρνηση όχι (client **και** server). */
+/**
+ * Η απάντηση σε πρόταση συμμετοχής — η αποδοχή **φέρει** τη δήλωση, η άρνηση όχι (client **και** server).
+ *
+ * ADR-901 §15 (Γ1) — `actingRequest`: **το πολύ ένα** αίτημα χώρου («για λογαριασμό ποιου γραφείου»), **μόνο** όταν ο
+ * άνθρωπος έχει 2+ γραφεία και διάλεξε. Με 0 ή 1 γραφείο **δεν στέλνεται τίποτα** — αποφασίζει ο διακομιστής.
+ */
 export type CaseEngagementAnswer =
-  | { readonly decision: 'accept'; readonly credential: CredentialDeclarationInput }
+  | { readonly decision: 'accept'; readonly credential: CredentialDeclarationInput; readonly actingRequest?: ActingWorkspaceRequest }
   | { readonly decision: 'decline' };
 
 /** Η αποθηκευμένη μορφή — **πάντα** `declared`, με το μητρώο του ρόλου. */

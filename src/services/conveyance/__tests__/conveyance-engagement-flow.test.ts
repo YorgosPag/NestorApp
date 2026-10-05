@@ -18,6 +18,12 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { openCaseFile } from '../conveyance-case-file-access.service';
 
 const NAMES: Record<string, string> = { u_sl: 'Ελένη Σ.', u_n: 'Νίκος Σ.' };
+/** ADR-901 §15 (Γ1) — τα γραφεία όπου ΑΝΗΚΕΙ ο αποδεχόμενος· προεπιλογή: κανένα ⇒ προσωρινά ο προσωπικός του χώρος. */
+const mockOwnWorkspaces = jest.fn(async (_uid: string, _active: unknown): Promise<unknown> => ({ outcome: 'ok', reachable: [], belonging: [] }));
+jest.mock('@/lib/auth/workspace-membership', () => ({
+  ...jest.requireActual('@/lib/auth/workspace-membership'),
+  listOwnWorkspaces: (uid: string, active: unknown) => mockOwnWorkspaces(uid, active),
+}));
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
   resolveUserDisplayName: jest.fn(async (uid: string, fallback: string | null) => NAMES[uid] ?? fallback),
@@ -89,7 +95,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     expect((await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW })).ok).toBe(true);
     const id = await engagementIdOf(record, 'seller_lawyer');
     expect(await getEngagedCaseView(db(), 'u_sl', id, NOW)).toEqual({ ok: false, rejection: 'denied', verdict: 'offered' });
-    const cards = await listMyCases(db(), 'u_sl', NOW);
+    const cards = await listMyCases(db(), { uid: 'u_sl', active: null }, NOW);
     expect(cards.ok && cards.cards[0]).toMatchObject({ engagementState: 'offered', summary: null, propertyName: 'Δ3' });
   });
 
@@ -97,7 +103,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     const record = await openCase();
     await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
     const id = await engagementIdOf(record, 'seller_lawyer');
-    expect((await respondToCaseEngagement(db(), { uid: 'u_sl', email: null }, id, ACCEPT, NOW)).ok).toBe(true);
+    expect((await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW)).ok).toBe(true);
     const outcome = await getEngagedCaseView(db(), 'u_sl', id, NOW);
     if (!outcome.ok) throw new Error(outcome.rejection);
     const sections = new Set(outcome.view.checklist.rows.map((row) => row.section));
@@ -112,7 +118,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
       .toEqual({ ok: false, rejection: 'consent-basis-required' });
     await offerCaseEngagement(db(), host, record, { role: 'buyer_lawyer', attestedBasis: 'preliminary_contract', nowMs: NOW });
     const id = await engagementIdOf(record, 'buyer_lawyer');
-    await respondToCaseEngagement(db(), { uid: 'u_bl', email: null }, id, ACCEPT, NOW);
+    await respondToCaseEngagement(db(), { uid: 'u_bl', email: null, active: null }, id, ACCEPT, NOW);
     const outcome = await getEngagedCaseView(db(), 'u_bl', id, NOW);
     if (!outcome.ok) throw new Error(outcome.rejection);
     expect(outcome.view.checklist.rows.some((row) => row.section === 'seller')).toBe(false);
@@ -123,14 +129,14 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     await offerCaseEngagement(db(), host, record, { role: 'notary', attestedBasis: 'written_instruction', nowMs: NOW });
     const id = await engagementIdOf(record, 'notary');
     expect(await getEngagedCaseView(db(), 'u_sl', id, NOW)).toEqual({ ok: false, rejection: 'not-found' });
-    expect(await respondToCaseEngagement(db(), { uid: 'u_sl', email: null }, id, ACCEPT, NOW)).toEqual({ ok: false, rejection: 'not-found' });
+    expect(await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW)).toEqual({ ok: false, rejection: 'not-found' });
   });
 
   it('ζώνη-και-τιράντες — συμμετοχή που δείχνει σε υπόθεση ΑΛΛΟΥ μισθωτή ⇒ `not-found` (ο μισθωτής ξανακρίνεται στο έγγραφο)', async () => {
     const record = await openCase();
     await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
     const id = await engagementIdOf(record, 'seller_lawyer');
-    await respondToCaseEngagement(db(), { uid: 'u_sl', email: null }, id, ACCEPT, NOW);
+    await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW);
     // ΚΑΙ το ακίνητο στον ξένο μισθωτή: αλλιώς ο έλεγχος μισθωτή του `loadConveyanceSubject` θα έκρυβε
     // τη μετάλλαξη (μετρημένο: M7 επέζησε) — εδώ ΜΟΝΟ ο έλεγχος «υπόθεση ∈ μισθωτή της συμμετοχής» σώζει.
     fake.seed(COLLECTIONS.CONVEYANCE_CASES, record.id, { ...record, companyId: 'comp_b' });
@@ -142,7 +148,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     const record = await openCase();
     await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
     const id = await engagementIdOf(record, 'seller_lawyer');
-    await respondToCaseEngagement(db(), { uid: 'u_sl', email: null }, id, ACCEPT, NOW);
+    await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW);
     expect((await endCaseEngagement(db(), host, record, id, NOW + 1)).ok).toBe(true);
     expect(await getEngagedCaseView(db(), 'u_sl', id, NOW + 2)).toEqual({ ok: false, rejection: 'denied', verdict: 'revoked' });
   });
@@ -161,7 +167,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     const record = await openCase();
     await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
     const id = await engagementIdOf(record, 'seller_lawyer');
-    await respondToCaseEngagement(db(), { uid: 'u_sl', email: null }, id, ACCEPT, NOW);
+    await respondToCaseEngagement(db(), { uid: 'u_sl', email: null, active: null }, id, ACCEPT, NOW);
     const cancelled = await applyConveyanceCaseCommand(db(), host, record, { expectedVersion: record.version, command: { type: 'cancel', reason: 'ακύρωση' } });
     expect(cancelled.ok).toBe(true);
     expect(await getEngagedCaseView(db(), 'u_sl', id, Date.now())).toEqual({ ok: false, rejection: 'denied', verdict: 'completed' });
@@ -172,7 +178,7 @@ describe('ADR-901 Φ4.1 — δήλωση με λογαριασμό · συμμε
   async function engage(record: ConveyanceCase, role: 'seller_lawyer' | 'notary', uid: string, basis: 'written_instruction' | null) {
     await offerCaseEngagement(db(), host, record, { role, attestedBasis: basis, nowMs: NOW });
     const id = await engagementIdOf(record, role);
-    await respondToCaseEngagement(db(), { uid, email: null }, id, ACCEPT, NOW);
+    await respondToCaseEngagement(db(), { uid, email: null, active: null }, id, ACCEPT, NOW);
     return id;
   }
 
@@ -221,7 +227,7 @@ describe('ADR-901 Φ4.1 — δήλωση με λογαριασμό · συμμε
     const opened = await openConveyanceCase(db(), host, 'prop_2');
     if (!opened.ok) throw new Error(opened.failure.kind);
     await offerCaseEngagement(db(), host, opened.value.view.conveyanceCase, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
-    const cards = await listMyCases(db(), 'u_sl', NOW);
+    const cards = await listMyCases(db(), { uid: 'u_sl', active: null }, NOW);
     const offered = cards.ok ? cards.cards.find((c) => c.engagementState === 'offered') : undefined;
     expect(offered?.credentialHint).toEqual({ number: '1234', chapter: 'ΔΣΑ' });
     const active = cards.ok ? cards.cards.find((c) => c.engagementState === 'active') : undefined;
@@ -250,7 +256,7 @@ describe('ADR-901 Φ4.2 — ο επαγγελματίας ανοίγει τεκ�
     const record = await openCase();
     await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
     const id = await engagementIdOf(record, 'seller_lawyer');
-    await respondToCaseEngagement(db(), { uid: 'u_sl', email: 'seller-lawyer@x.gr' }, id, ACCEPT, NOW);
+    await respondToCaseEngagement(db(), { uid: 'u_sl', email: 'seller-lawyer@x.gr', active: null }, id, ACCEPT, NOW);
     return id;
   }
 
@@ -296,5 +302,106 @@ describe('ADR-901 Φ4.2 — ο επαγγελματίας ανοίγει τεκ�
     const id = await engagedSellerLawyer();
     expect(await openCaseFile(db(), { uid: 'u_n', email: null, engagementId: id, fileId: PERMIT, mode: 'view', nowMs: NOW }))
       .toEqual({ ok: false, rejection: 'not-found' });
+  });
+});
+
+describe('ADR-901 §15 (Γ1) — «Αναλαμβάνω» για λογαριασμό ποιου γραφείου', () => {
+  const recordChange = EntityAuditService.recordChange as jest.Mock;
+  const sl = { uid: 'u_sl', email: 'seller-lawyer@x.gr', active: null } as const;
+  /** Τα γραφεία όπου ΑΝΗΚΕΙ ο αποδεχόμενος — ό,τι θα απαντούσε ο `listOwnWorkspaces`. */
+  const belongsTo = (...companyIds: string[]) =>
+    mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'ok', reachable: companyIds, belonging: companyIds }));
+  const stored = async (id: string) => (await fake.collection('companies/comp_a/projects/proj_1/engagements').doc(id).get()).data();
+
+  async function offeredToSellerLawyer(): Promise<string> {
+    const record = await openCase();
+    await offerCaseEngagement(db(), host, record, { role: 'seller_lawyer', attestedBasis: null, nowMs: NOW });
+    return engagementIdOf(record, 'seller_lawyer');
+  }
+
+  beforeEach(() => { recordChange.mockClear(); belongsTo(); });
+  afterAll(() => { belongsTo(); });
+
+  it('κανένα γραφείο ⇒ προσωρινά ο προσωπικός χώρος — γραμμένο στη συμμετοχή, στην κάρτα και στο ίχνος', async () => {
+    const id = await offeredToSellerLawyer();
+    const before = await listMyCases(db(), sl, NOW);
+    expect(before.ok && before.cards[0]).toMatchObject({ acceptance: { kind: 'personal-provisional' }, actingFor: null });
+    const outcome = await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
+    expect(outcome.ok && outcome.card).toMatchObject({ acceptance: null, actingFor: { kind: 'personal' } });
+    expect((await stored(id))?.actingFor).toEqual({ kind: 'personal', userId: 'u_sl' });
+    expect(recordChange.mock.calls.at(-1)?.[0].changes).toEqual(expect.arrayContaining([{ field: 'actingFor', oldValue: null, newValue: 'personal' }]));
+  });
+
+  it('Α1 — ένα γραφείο ⇒ εκεί, αυτόματα· ο πελάτης ΔΕΝ έστειλε τίποτα', async () => {
+    belongsTo('comp_law');
+    const id = await offeredToSellerLawyer();
+    const before = await listMyCases(db(), sl, NOW);
+    expect(before.ok && before.cards[0]?.acceptance).toMatchObject({ kind: 'office', office: { companyId: 'comp_law' } });
+    const outcome = await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
+    expect(outcome.ok && outcome.card.actingFor).toMatchObject({ kind: 'office', office: { companyId: 'comp_law' } });
+    expect((await stored(id))?.actingFor).toEqual({ kind: 'org', companyId: 'comp_law' });
+    // ⛔ Εμφωλευμένο: κανένα επίπεδο `companyId` πάνω στη συμμετοχή (θα διαβαζόταν ως μισθωτής του εγγράφου).
+    expect(await stored(id)).not.toHaveProperty('companyId');
+    expect(recordChange.mock.calls.at(-1)?.[0]).toMatchObject({ companyId: 'comp_a' });
+    expect(recordChange.mock.calls.at(-1)?.[0].changes).toEqual(expect.arrayContaining([{ field: 'actingFor', oldValue: null, newValue: 'comp_law' }]));
+  });
+
+  it('Α41 — 2 γραφεία χωρίς επιλογή ⇒ `acting-choice-required`, ΚΑΜΙΑ γραφή· με επιλογή ⇒ εκείνο', async () => {
+    // Μετάλλαξη: η πόρτα καλεί τον γραφέα πριν από τον κριτή ⇒ η συμμετοχή γίνεται `active` χωρίς χώρο.
+    belongsTo('comp_law', 'comp_partners');
+    const id = await offeredToSellerLawyer();
+    expect(await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW)).toEqual({ ok: false, rejection: 'acting-choice-required' });
+    expect(await stored(id)).toMatchObject({ state: 'offered' });
+    expect(await stored(id)).not.toHaveProperty('actingFor');
+    const chosen = { ...ACCEPT, actingRequest: { kind: 'org', companyId: 'comp_partners' } } as const;
+    expect((await respondToCaseEngagement(db(), sl, id, chosen, NOW)).ok).toBe(true);
+    expect((await stored(id))?.actingFor).toEqual({ kind: 'org', companyId: 'comp_partners' });
+  });
+
+  it('Α40 · Α42 — «προσωπικά» ενώ έχει γραφείο, ή ξένο γραφείο ⇒ `acting-refused`, καμία γραφή', async () => {
+    belongsTo('comp_law');
+    const id = await offeredToSellerLawyer();
+    for (const actingRequest of [{ kind: 'personal' }, { kind: 'org', companyId: 'comp_a' }] as const) {
+      expect(await respondToCaseEngagement(db(), sl, id, { ...ACCEPT, actingRequest }, NOW)).toEqual({ ok: false, rejection: 'acting-refused' });
+    }
+    expect(await stored(id)).toMatchObject({ state: 'offered' });
+  });
+
+  it('Α43 — «δεν μπόρεσα να ρωτήσω τα γραφεία» ⇒ `unknown` (503), ΠΟΤΕ σιωπηλά προσωπικός χώρος', async () => {
+    mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'unknown', reason: 'query-failed' }));
+    const id = await offeredToSellerLawyer();
+    const before = await listMyCases(db(), sl, NOW);
+    expect(before.ok && before.cards[0]?.acceptance).toEqual({ kind: 'unknown' });
+    expect(await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW)).toEqual({ ok: false, rejection: 'unknown' });
+    expect(await stored(id)).toMatchObject({ state: 'offered' });
+  });
+
+  it('Α44 — δεύτερο «Αναλαμβάνω» (άλλο γραφείο στο μεταξύ) ⇒ 200 χωρίς εγγραφή: ο χώρος ΔΕΝ αλλάζει σιωπηλά', async () => {
+    belongsTo('comp_law');
+    const id = await offeredToSellerLawyer();
+    await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW);
+    belongsTo('comp_partners');
+    recordChange.mockClear();
+    const again = await respondToCaseEngagement(db(), sl, id, ACCEPT, NOW + 1);
+    expect(again.ok).toBe(true);
+    expect((await stored(id))?.actingFor).toEqual({ kind: 'org', companyId: 'comp_law' });
+    expect(recordChange).not.toHaveBeenCalled();
+  });
+
+  it('η άρνηση ΔΕΝ ρωτά γραφεία και ΔΕΝ γράφει χώρο', async () => {
+    mockOwnWorkspaces.mockClear();
+    const id = await offeredToSellerLawyer();
+    const outcome = await respondToCaseEngagement(db(), sl, id, { decision: 'decline' }, NOW);
+    expect(outcome.ok && outcome.card).toMatchObject({ engagementState: 'declined', acceptance: null, actingFor: null });
+    expect(await stored(id)).not.toHaveProperty('actingFor');
+  });
+
+  it('το «ανήκει» ρωτιέται με τον χώρο ΤΟΥ ΑΙΤΗΜΑΤΟΣ — η πόρτα δεν τον πετά', async () => {
+    // Μετάλλαξη: η υπηρεσία περνά `null` αντί για `actor.active` ⇒ ο χώρος του token δεν μετρά ποτέ ως γραφείο.
+    const id = await offeredToSellerLawyer();
+    const active = { companyId: 'comp_law', verdict: 'home' } as const;
+    mockOwnWorkspaces.mockClear();
+    await respondToCaseEngagement(db(), { ...sl, active }, id, ACCEPT, NOW);
+    expect(mockOwnWorkspaces).toHaveBeenCalledWith('u_sl', active);
   });
 });

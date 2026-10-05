@@ -14,6 +14,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ActingForLine } from '@/components/conveyance/acting/ActingWorkspaceField';
 import { ENGAGEMENT_STATE_PRESENTATION } from '@/components/sales/conveyance/conveyance-presentation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -38,6 +39,8 @@ function CardFacts({ card }: { readonly card: MyCaseCard }) {
       {card.summary && <span>{t('summary.progress', { complete: card.summary.complete, applicable: card.summary.applicable })}</span>}
       {card.targetSigningDate && <span>{t('engagement.myCases.signing', { date: formatDate(card.targetSigningDate) })}</span>}
       {card.engagementState === 'offered' && <span>{t('engagement.myCases.offerExpires', { date: formatDate(card.expiresAt) })}</span>}
+      {/* ADR-901 §15 (Γ1) — για λογαριασμό ποιου ενεργώ: γραφείο, ή προσωρινά ο προσωπικός μου χώρος. */}
+      {card.actingFor && <ActingForLine actingFor={card.actingFor} />}
     </p>
   );
 }

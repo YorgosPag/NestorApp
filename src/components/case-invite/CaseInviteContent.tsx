@@ -15,6 +15,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { ActingWorkspaceField } from '@/components/conveyance/acting/ActingWorkspaceField';
 import { InvitationMessageCard } from '@/components/invitations/InvitationMessageCard';
 import { InvitationIdentityGate } from '@/components/invitations/InvitationIdentityGate';
 import { SwitchAccountButton } from '@/components/workspace-invite/SwitchAccount';
@@ -22,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { actingChoiceOf } from '@/lib/conveyance/acting-acceptance';
 import { myCaseHref } from '@/lib/conveyance/conveyance-routes';
 import type { InvitationPreviewView } from '@/lib/invitations/invitation-respond';
 import { formatDateTime } from '@/lib/intl-formatting';
@@ -30,6 +32,7 @@ import {
   redeemCaseInvitationFromScreen,
   type CaseInvitationRedeemResult,
 } from '@/services/conveyance/conveyance-engagement-gateway';
+import type { AcceptancePreview } from '@/types/conveyance-case';
 import type { EngagementInvitationPreview } from '@/types/engagement-invitation';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
 
@@ -43,12 +46,18 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 registerRouteSlice(routeSlice);
 
 export type CaseInviteView =
-  | InvitationPreviewView<EngagementInvitationPreview>
+  /**
+   * ADR-901 §15 (Γ1) — `acceptance`: για λογαριασμό ποιου γραφείου θα αναλάβει ο **συνδεδεμένος παραλήπτης**.
+   * `null` ⇒ κανείς συνδεδεμένος, ή άλλος λογαριασμός (η πύλη ταυτότητας δεν δείχνει τότε την απάντηση).
+   */
+  | (InvitationPreviewView<EngagementInvitationPreview> & { readonly acceptance: AcceptancePreview | null })
   | { readonly kind: 'refused'; readonly reason: InvitationCoreRefusal }
   | { readonly kind: 'unavailable' };
 
 type PreviewView = Extract<CaseInviteView, { kind: 'preview' }>;
 type InviteAction = 'accept' | 'decline';
+
+const UNCHECKED: AcceptancePreview = { kind: 'unknown' };
 
 export function CaseInviteContent({ view }: { readonly view: CaseInviteView }) {
   const [outcome, setOutcome] = useState<CaseInvitationRedeemResult | null>(null);
@@ -111,19 +120,32 @@ function RespondArea({ view, onOutcome }: { readonly view: PreviewView; readonly
 function Answer({ view, onOutcome }: { readonly view: PreviewView; readonly onOutcome: (outcome: CaseInvitationRedeemResult) => void }) {
   const { t } = useTranslation(CASE_INVITE_NS);
   const [draft, setDraft] = useState<CredentialDraft>(() => credentialDraftOf(view.preview.credentialHint));
+  const [officeId, setOfficeId] = useState<string | null>(null);
   const [showMissing, setShowMissing] = useState(false);
   const [pending, setPending] = useState<InviteAction | null>(null);
+  // Η απάντηση αποδίδεται μόνο για τον συνδεδεμένο παραλήπτη· χωρίς προεπισκόπηση ⇒ «δεν ελέγχθηκε», ποτέ σιωπηλά.
+  const acceptance = view.acceptance ?? UNCHECKED;
 
   const answer = useCallback(async (action: InviteAction) => {
+    if (action === 'decline') {
+      setPending(action);
+      onOutcome(await redeemCaseInvitationFromScreen(view.token, { action }));
+      setPending(null);
+      return;
+    }
     const credential = credentialFromDraft(draft);
-    if (action === 'accept' && credential === null) { setShowMissing(true); return; }
+    const acting = actingChoiceOf(acceptance, officeId);
+    if (credential === null || !acting.ok) { setShowMissing(true); return; }
     setPending(action);
-    onOutcome(await redeemCaseInvitationFromScreen(view.token, action === 'accept' && credential ? { action, credential } : { action: 'decline' }));
+    onOutcome(await redeemCaseInvitationFromScreen(view.token, {
+      action, credential, ...(acting.actingRequest ? { actingRequest: acting.actingRequest } : {}),
+    }));
     setPending(null);
-  }, [draft, onOutcome, view.token]);
+  }, [acceptance, draft, officeId, onOutcome, view.token]);
 
   return (
     <section className="space-y-3">
+      <ActingWorkspaceField preview={acceptance} selectedCompanyId={officeId} onSelect={setOfficeId} showMissing={showMissing} disabled={pending !== null} />
       <CredentialDeclarationForm role={view.preview.role} draft={draft} onChange={setDraft} showMissing={showMissing} disabled={pending !== null} />
       <section className="flex gap-2">
         <Button className="flex-1" disabled={pending !== null} aria-busy={pending === 'accept'} onClick={() => void answer('accept')}>

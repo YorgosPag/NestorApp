@@ -18,6 +18,13 @@
 jest.mock('server-only', () => ({}));
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') } }));
 
+/** ADR-901 §15 (Γ1) — τα γραφεία όπου ΑΝΗΚΕΙ ο αποδεχόμενος· προεπιλογή: κανένα (ο νεογραμμένος δεν έχει γραφείο). */
+const mockOwnWorkspaces = jest.fn(async (_uid: string, _active: unknown): Promise<unknown> => ({ outcome: 'ok', reachable: [], belonging: [] }));
+jest.mock('@/lib/auth/workspace-membership', () => ({
+  ...jest.requireActual('@/lib/auth/workspace-membership'),
+  listOwnWorkspaces: (uid: string, active: unknown) => mockOwnWorkspaces(uid, active),
+}));
+
 const settleMock = jest.fn();
 jest.mock('@/server/auth/mailbox-proof-custody', () => ({
   settleProvenMailbox: (...args: unknown[]) => settleMock(...args),
@@ -107,8 +114,11 @@ async function invite(record: ConveyanceCase): Promise<string> {
   return token;
 }
 
-const accept = (token: string, identity = notary()) =>
-  respondToEngagementInvitation(db(), { action: 'accept', token, identity, credential: CREDENTIAL });
+/** ADR-901 §15 (Γ1) — το αίτημα χώρου μιας αποδοχής· προεπιλογή: κανένα (ο νεογραμμένος δεν ζητά τίποτα). */
+type ActingInput = { readonly active: null; readonly requested: { kind: 'org'; companyId: string } | { kind: 'personal' } | null };
+const NO_ACTING: ActingInput = { active: null, requested: null };
+const accept = (token: string, identity = notary(), acting: ActingInput = NO_ACTING) =>
+  respondToEngagementInvitation(db(), { action: 'accept', token, identity, credential: CREDENTIAL, acting });
 
 const engagementWrites = () => fake.writeLog().filter((w) => w.collection.endsWith('/engagements'));
 const invitationDocs = () => Object.entries(fake.getAllDocs(INVITATIONS)).map(([id, data]) => ({ id, data }));
@@ -293,5 +303,61 @@ describe('§14.8 — κάθε αλλαγή πρόσκλησης ενημερών
     expect(await hostRevision()).toBe(before + 1);
     await preview.markOpened();
     expect(await hostRevision()).toBe(before + 1);
+  });
+});
+
+describe('ADR-901 §15 (Γ1) — η αποδοχή από email γράφει «για λογαριασμό ποιου γραφείου»', () => {
+  /** Τα γραφεία όπου ΑΝΗΚΕΙ ο αποδεχόμενος — ό,τι θα απαντούσε ο `listOwnWorkspaces`. */
+  const belongsTo = (...companyIds: string[]) =>
+    mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'ok', reachable: companyIds, belonging: companyIds }));
+
+  beforeEach(() => { belongsTo(); });
+  afterAll(() => { belongsTo(); });
+
+  it('ο νεογραμμένος δεν έχει γραφείο ⇒ προσωρινά ο ΔΙΚΟΣ του προσωπικός χώρος', async () => {
+    const outcome = await accept(await invite(await openCase()));
+    expect(outcome.kind === 'accepted' && outcome.effect.actingFor).toEqual({ kind: 'personal', userId: 'u_notary' });
+  });
+
+  it('ο ΥΠΑΡΧΩΝ λογαριασμός με ένα γραφείο ⇒ εκεί, αυτόματα — ίδιος κριτής με το «Αναλαμβάνω»', async () => {
+    // Μετάλλαξη: η πόρτα του email γράφει πάντα προσωπικό χώρο ⇒ δύο πόρτες, δύο απαντήσεις.
+    belongsTo('comp_notary');
+    const outcome = await accept(await invite(await openCase()));
+    expect(outcome.kind === 'accepted' && outcome.effect.actingFor).toEqual({ kind: 'org', companyId: 'comp_notary' });
+    expect(mockOwnWorkspaces).toHaveBeenCalledWith('u_notary', null);
+  });
+
+  it('Α41 — 2 γραφεία χωρίς επιλογή ⇒ άρνηση, η πρόσκληση ΜΕΝΕΙ `pending`, καμία συμμετοχή· με επιλογή περνά', async () => {
+    belongsTo('comp_notary', 'comp_partners');
+    const token = await invite(await openCase());
+    expect(await accept(token)).toEqual({ kind: 'refused', reason: 'acting-choice-required' });
+    expect(invitationStates()).toEqual(['pending']);
+    expect(engagementWrites()).toHaveLength(0);
+    const outcome = await accept(token, notary(), { active: null, requested: { kind: 'org', companyId: 'comp_partners' } });
+    expect(outcome.kind === 'accepted' && outcome.effect.actingFor).toEqual({ kind: 'org', companyId: 'comp_partners' });
+  });
+
+  it('Α40 · Α42 — «προσωπικά» ενώ έχει γραφείο, ή ξένο γραφείο ⇒ `acting-refused`, η πρόσκληση μένει `pending`', async () => {
+    belongsTo('comp_notary');
+    const token = await invite(await openCase());
+    expect(await accept(token, notary(), { active: null, requested: { kind: 'personal' } })).toEqual({ kind: 'refused', reason: 'acting-refused' });
+    expect(await accept(token, notary(), { active: null, requested: { kind: 'org', companyId: 'comp_a' } })).toEqual({ kind: 'refused', reason: 'acting-refused' });
+    expect(invitationStates()).toEqual(['pending']);
+    expect(engagementWrites()).toHaveLength(0);
+  });
+
+  it('Α43 — «δεν μπόρεσα να ρωτήσω τα γραφεία» ⇒ `unavailable`, ΠΟΤΕ σιωπηλά προσωπικός χώρος', async () => {
+    mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'unknown', reason: 'query-failed' }));
+    const token = await invite(await openCase());
+    expect(await accept(token)).toEqual({ kind: 'unavailable', reason: 'offices-unknown' });
+    expect(invitationStates()).toEqual(['pending']);
+    expect(engagementWrites()).toHaveLength(0);
+  });
+
+  it('η άρνηση της πρόσκλησης ΔΕΝ ρωτά γραφεία', async () => {
+    const token = await invite(await openCase());
+    mockOwnWorkspaces.mockClear();
+    await respondToEngagementInvitation(db(), { action: 'decline', token, identity: notary() });
+    expect(mockOwnWorkspaces).not.toHaveBeenCalled();
   });
 });

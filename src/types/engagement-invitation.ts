@@ -23,8 +23,15 @@ import type { LegalProfessionalRole } from '@/types/legal-contracts';
  * - `slot-occupied` — η θέση έχει πια **άλλον** ζωντανό επαγγελματία.
  * - `role-conflict` — ο ίδιος άνθρωπος έχει ήδη **άλλη** θέση στην υπόθεση.
  * - `case-closed`   — η υπόθεση έκλεισε/ακυρώθηκε μετά την έκδοση.
+ *
+ * ADR-901 §15 (Γ1) — «για λογαριασμό ποιου γραφείου»: κρίνονται **πριν** από τη συναλλαγή (ίδιος κριτής με το
+ * «Αναλαμβάνω»)· η πρόσκληση μένει `pending`, ο άνθρωπος διορθώνει και ξαναπατά.
+ * - `acting-choice-required` — ανήκει σε 2+ γραφεία και δεν διάλεξε.
+ * - `acting-refused`         — ζήτησε γραφείο όπου δεν ανήκει, ή «προσωπικά» ενώ έχει γραφείο.
  */
-export const ENGAGEMENT_INVITATION_KIND_REFUSALS = ['slot-occupied', 'role-conflict', 'case-closed'] as const;
+export const ENGAGEMENT_INVITATION_KIND_REFUSALS = [
+  'slot-occupied', 'role-conflict', 'case-closed', 'acting-choice-required', 'acting-refused',
+] as const;
 export type EngagementInvitationKindRefusal = (typeof ENGAGEMENT_INVITATION_KIND_REFUSALS)[number];
 
 export const ENGAGEMENT_INVITATION_REFUSALS = [...CORE_INVITATION_REFUSALS, ...ENGAGEMENT_INVITATION_KIND_REFUSALS] as const;

@@ -10,6 +10,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { actingWorkspaceOf } from '@/lib/auth/acting-workspace';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { engagementsCollection, engagementsForSubjectQuery } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
@@ -115,5 +116,20 @@ export function answerChanges(before: Engagement | null, after: Engagement): Aud
   const credential = after.declaredCredential;
   if (!credential || before?.declaredCredential === credential) return [stateChange(before, after)];
   const declared = credential.chapter ? `${credential.number} · ${credential.chapter}` : credential.number;
-  return [stateChange(before, after), { field: 'declaredCredential', oldValue: null, newValue: declared }];
+  return [
+    stateChange(before, after),
+    { field: 'declaredCredential', oldValue: null, newValue: declared },
+    actingForChange(after),
+  ];
+}
+
+/**
+ * ADR-901 §15 (Γ1) — **για λογαριασμό ποιου χώρου** ανέλαβε, ως πεδίο ίχνους στο βιβλίο του οικοδεσπότη. Γράφεται
+ * **μαζί** με τη δήλωση ιδιότητας (η αποδοχή φέρει και τα δύο)· η τιμή είναι το **αναγνωριστικό** του γραφείου, ή
+ * `personal` για τον προσωπικό χώρο **του ίδιου** — σταθερή, ποτέ όνομα που θα πάλιωνε (το λύνει η οθόνη).
+ * ⛔ Όχι `workspaceRefKey`: εκείνο είναι κλειδί προβολής και απαγορεύεται ρητά σε έγγραφο.
+ */
+function actingForChange(after: Engagement): AuditFieldChange {
+  const workspace = actingWorkspaceOf(after);
+  return { field: 'actingFor', oldValue: null, newValue: workspace.kind === 'org' ? workspace.companyId : workspace.kind };
 }

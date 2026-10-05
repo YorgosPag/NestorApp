@@ -193,3 +193,45 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
     ]);
   });
 });
+
+describe('ADR-901 §15 (Γ1) — ο επαγγελματίας προσγειώνεται στον χώρο για λογαριασμό του οποίου ανέλαβε', () => {
+  const ENGAGED_TYPES = [
+    'properties.caseEngagementChanged',
+    'properties.caseExpiryEngaged',
+    'properties.caseDocumentEngaged',
+    'properties.caseDocumentRequestEngaged',
+  ] as const;
+
+  /** Μία συμμετοχή του `u_lawyer`, όπως τη γράφει ο ΕΝΑΣ γραφέας. */
+  function withEngagement(actingFor?: Record<string, unknown>): AdminFirestore {
+    const fake = new FakeFirestore();
+    fake.seed('companies/comp_host/projects/proj_1/engagements', 'eng_1', {
+      id: 'eng_1', hostCompanyId: 'comp_host', projectId: 'proj_1', uid: 'u_lawyer', email: 'l@x.gr', template: 'legal',
+      role: 'buyer_lawyer', subject: { kind: 'conveyance_case', caseId: 'cvc_1' }, scopes: ['conveyance:case:view'],
+      state: 'active', expiresAt: '2027-10-05T10:00:00.000Z', origin: { kind: 'professional_appointment', contactId: 'cont_1' },
+      consents: [], offeredBy: 'u_host', offeredAt: '2026-10-04T10:00:00.000Z', respondedAt: '2026-10-05T10:00:00.000Z',
+      revokedBy: null, closedAt: null, updatedAt: '2026-10-05T10:00:00.000Z',
+      ...(actingFor ? { actingFor } : {}),
+    });
+    return fake as unknown as AdminFirestore;
+  }
+
+  const workspaceOf = async (db: AdminFirestore, eventType: string, userId = 'u_lawyer') => {
+    const expected = await expectedDestinationOf(db, notification(eventType, 'eng_1', userId));
+    return expected.kind === 'expected' ? expected.destination.workspace : expected.reason;
+  };
+
+  it.each(ENGAGED_TYPES)('%s — ανέλαβε για ΓΡΑΦΕΙΟ ⇒ ο χώρος του γραφείου (όχι σταθερά ο προσωπικός)', async (eventType) => {
+    // Μετάλλαξη: ο παραγωγός γράφει ξανά σταθερά `personalWorkspace(uid)` ⇒ ο ανιχνευτής «διορθώνει» προς τα πίσω.
+    expect(await workspaceOf(withEngagement({ kind: 'org', companyId: 'comp_law' }), eventType)).toEqual({ kind: 'org', companyId: 'comp_law' });
+  });
+
+  it('Α48 — συμμετοχή ΧΩΡΙΣ `actingFor` (οι υπάρχουσες) ⇒ ο προσωπικός χώρος του ίδιου, όπως πριν', async () => {
+    expect(await workspaceOf(withEngagement(), 'properties.caseEngagementChanged')).toEqual({ kind: 'personal', userId: 'u_lawyer' });
+  });
+
+  it('συμμετοχή ΑΛΛΟΥ ανθρώπου (ή ανύπαρκτη) ⇒ `entity-absent` — καμία διόρθωση, καμία μαντεψιά', async () => {
+    const db = withEngagement({ kind: 'org', companyId: 'comp_law' });
+    expect(await workspaceOf(db, 'properties.caseEngagementChanged', 'u_other')).toBe('entity-absent');
+  });
+});

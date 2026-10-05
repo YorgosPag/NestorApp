@@ -26,6 +26,12 @@ import { loadConveyanceSubject } from '../conveyance-subject.server';
 import { readViewRevision } from '../conveyance-view-signal.server';
 import type { CaseViewKey } from '@/lib/conveyance/view-signal-key';
 
+/** ADR-901 §15 (Γ1) — τα γραφεία όπου ΑΝΗΚΕΙ ο αποδεχόμενος· προεπιλογή: κανένα ⇒ προσωρινά ο προσωπικός του χώρος. */
+const mockOwnWorkspaces = jest.fn(async (_uid: string, _active: unknown): Promise<unknown> => ({ outcome: 'ok', reachable: [], belonging: [] }));
+jest.mock('@/lib/auth/workspace-membership', () => ({
+  ...jest.requireActual('@/lib/auth/workspace-membership'),
+  listOwnWorkspaces: (uid: string, active: unknown) => mockOwnWorkspaces(uid, active),
+}));
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
   resolveUserDisplayName: jest.fn(async (_uid: string, fallback: string | null) => fallback),
@@ -119,7 +125,7 @@ async function engage(record: ConveyanceCase, role: Role): Promise<string> {
   await offerCaseEngagement(db(), host, record, { role, attestedBasis: BASIS[role], nowMs: NOW });
   const slot = (await listCaseProfessionalSlots(db(), record)).find((s) => s.role === role);
   if (!slot?.engagement) throw new Error(`no engagement for ${role}`);
-  await respondToCaseEngagement(db(), { uid: UID[role], email: null }, slot.engagement.engagementId, ACCEPT, NOW);
+  await respondToCaseEngagement(db(), { uid: UID[role], email: null, active: null }, slot.engagement.engagementId, ACCEPT, NOW);
   return slot.engagement.engagementId;
 }
 

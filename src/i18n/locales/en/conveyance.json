@@ -345,8 +345,21 @@
         "wrong-recipient": "The invitation was sent to a different email address. Sign in with that one or ask for a new invitation.",
         "slot-occupied": "The position was filled in the meantime by another professional.",
         "role-conflict": "You already have another role in this case.",
-        "case-closed": "The case has closed — the invitation no longer applies."
+        "case-closed": "The case has closed — the invitation no longer applies.",
+        "acting-choice-required": "You belong to more than one office — choose which one you are taking the case on for.",
+        "acting-refused": "You cannot take the case on for this workspace. Refresh the page and try again."
       }
+    },
+    "acting": {
+      "office": "You are taking this on for the office «{office}».",
+      "personalProvisional": "You do not have an office in the app yet — the case will stay in your personal space for now.",
+      "chooseLabel": "Which office are you taking this on for?",
+      "choosePlaceholder": "Choose an office",
+      "chooseRequired": "Choose an office to take on the case.",
+      "unknown": "Your offices could not be checked. Please try again shortly.",
+      "unnamedOffice": "Unnamed office",
+      "cardOffice": "For the office «{office}»",
+      "cardPersonal": "In your personal space for now"
     },
     "rejections": {
       "case-closed": "The case is closed — it does not accept new professionals.",
@@ -375,7 +388,9 @@
         "not-found": "The offer was not found.",
         "unknown": "Your answer could not be sent. Please try again.",
         "offer-expired": "The offer has expired — ask whoever appointed you for a new one.",
-        "not-allowed": "The offer is no longer open."
+        "not-allowed": "The offer is no longer open.",
+        "acting-choice-required": "You belong to more than one office — choose which one you are taking the case on for.",
+        "acting-refused": "You cannot take the case on for this workspace. Refresh the page and try again."
       },
       "acceptDialog": {
         "title": "Take on the case",

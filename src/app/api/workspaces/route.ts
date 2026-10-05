@@ -110,7 +110,7 @@ import {
   withStandardRateLimit,
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
-import { listMemberWorkspaces } from '@/lib/auth/workspace-membership';
+import { activeWorkspaceOf, listOwnWorkspaces } from '@/lib/auth/workspace-membership';
 import { provisionWorkspace } from '@/lib/workspace/workspace-provisioning';
 import {
   buildPersonalWorkspace,
@@ -130,7 +130,8 @@ const logger = createModuleLogger('api:workspaces');
 
 async function handleGet(_request: NextRequest, actor: ApiActor): Promise<NextResponse> {
   const uid = actor.ctx.uid;
-  const membership = await listMemberWorkspaces(uid);
+  // Ο χώρος του αιτήματος ∪ το βιβλίο μελών — η ένωση ζει **μία** φορά, στον απαντητή (ADR-901 §15 Γ1).
+  const membership = await listOwnWorkspaces(uid, activeWorkspaceOf(actor));
 
   // ⛔ ΑΓΝΩΣΤΟ ≠ ΚΕΝΟ (N.12 · ADR-787 Ε-5 §4 #3).
   // Μια κενή λίστα εδώ θα έλεγε στον άνθρωπο «δεν έχεις χώρους» ενώ η αλήθεια
@@ -150,8 +151,9 @@ async function handleGet(_request: NextRequest, actor: ApiActor): Promise<NextRe
   // Ο χώρος του token μπαίνει **πάντα** (ετυμηγορία `home`, μηδέν αναγνώσεις) —
   // **όταν υπάρχει**. Ο πολίτης δεν έχει, και αυτό είναι **κανονική** κατάσταση:
   // ο κατάλογός του είναι νόμιμα «μόνο ο ιδιωτικός μου χώρος».
-  const home = actorWorkspace(actor);
-  const orgIds = new Set<string>([...(home ? [home] : []), ...membership.companyIds]);
+  // ⚠️ `reachable`, ΟΧΙ `belonging`: ο κατάλογος δείχνει **πού μπορώ να βρεθώ**· το «για λογαριασμό ποιου
+  //    ενεργώ» είναι αυστηρότερη ερώτηση, με δικό της όνομα στο ίδιο αποτέλεσμα.
+  const orgIds = new Set<string>(membership.reachable);
 
   try {
     const workspaces: Workspace[] = [

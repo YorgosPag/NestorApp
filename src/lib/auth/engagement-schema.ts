@@ -35,6 +35,15 @@ export const engagementConsentSchema = z.object({
   attestedAt: nonEmpty,
 });
 
+/**
+ * ADR-901 §15 (Γ1) — ο χώρος «για λογαριασμό ποιου». `strict`: ένας προσωπικός κλάδος **με** `companyId` δεν
+ * διαβάζεται (ADR-787 Ε-3 §3) — δεν «καθαρίζεται» σιωπηλά.
+ */
+const actingForSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('org'), companyId: nonEmpty }).strict(),
+  z.object({ kind: z.literal('personal'), userId: nonEmpty }).strict(),
+]);
+
 const engagementSchema = z.object({
   id: nonEmpty,
   hostCompanyId: nonEmpty,
@@ -60,6 +69,7 @@ const engagementSchema = z.object({
     assurance: z.literal('declared'),
     declaredAt: nonEmpty,
   }).optional(),
+  actingFor: actingForSchema.optional(),
   offeredBy: nonEmpty,
   offeredAt: nonEmpty,
   respondedAt: z.string().nullable(),
@@ -67,7 +77,8 @@ const engagementSchema = z.object({
   revokedBy: z.string().nullable(),
   closedAt: z.string().nullable(),
   updatedAt: nonEmpty,
-});
+  // Προσωπικός χώρος **άλλου** ανθρώπου πάνω στη συμμετοχή δεν υπάρχει ως νόμιμη κατάσταση ⇒ μη αναγνώσιμο.
+}).refine((e) => e.actingFor?.kind !== 'personal' || e.actingFor.userId === e.uid);
 
 /** Ωμό έγγραφο → `Engagement`, ή `null` αν δεν είναι συμμετοχή που καταλαβαίνουμε. */
 export function parseEngagement(raw: unknown): Engagement | null {

@@ -28,6 +28,7 @@ import {
 } from '@/config/notification-events';
 import { createBundleTranslate } from '@/i18n/bundle-translate';
 import elShared from '@/i18n/locales/el/common-shared.json';
+import { actingWorkspaceOf } from '@/lib/auth/acting-workspace';
 import { myCaseHref } from '@/lib/conveyance/conveyance-routes';
 import { viewDestination, type NotificationDestination } from '@/lib/notifications/notification-destination';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
@@ -35,7 +36,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import type { Engagement, EngagementState } from '@/types/engagement';
 import type { EngagementInvitation } from '@/types/engagement-invitation';
-import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
+import { orgWorkspace } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('conveyance-engagement-notifier');
 
@@ -55,9 +56,16 @@ function changedTitleKey(engagement: Engagement): string | null {
   return byState[engagement.state];
 }
 
-/** **Ο επαγγελματίας** προσγειώνεται στη σελίδα της υπόθεσης, στον **δικό** του χώρο (ποτέ στον ξένο). */
-export function caseEngagementChangedDestination(engagementId: string, recipientUid: string): NotificationDestination {
-  return viewDestination(myCaseHref(engagementId), personalWorkspace(recipientUid));
+/**
+ * **Ο επαγγελματίας** προσγειώνεται στη σελίδα της υπόθεσης, στον **δικό** του χώρο (ποτέ στου οικοδεσπότη):
+ * το **γραφείο για λογαριασμό του οποίου ανέλαβε**, αλλιώς ο προσωπικός του (ADR-901 §15 Γ1 — `actingWorkspaceOf`,
+ * η ΜΙΑ ερμηνεία). Πρόταση που δεν απαντήθηκε δεν έχει ακόμη γραφείο ⇒ προσωπικός.
+ *
+ * ⚠️ Μέχρι τη Γ2 η διαδρομή `/cases` ζει **εκτός** προθέματος χώρου ⇒ ο χώρος εδώ είναι **ετικέτα** που ο
+ *    μόνιμος σύνδεσμος δεν χρησιμοποιεί ακόμη (`notification-permalink` · `isInsideWorkspace`).
+ */
+export function caseEngagementChangedDestination(engagement: Pick<Engagement, 'id' | 'uid' | 'actingFor'>): NotificationDestination {
+  return viewDestination(myCaseHref(engagement.id), actingWorkspaceOf(engagement));
 }
 
 /**
@@ -87,7 +95,7 @@ export async function announceEngagementChanged(engagement: Engagement, property
       eventId: `case-engagement:${engagement.id}:${engagement.state}`,
       entityId: engagement.id,
       entityType: NOTIFICATION_ENTITY_TYPES.ENGAGEMENT,
-      ...caseEngagementChangedDestination(engagement.id, engagement.uid),
+      ...caseEngagementChangedDestination(engagement),
       source: { service: SOURCE_SERVICES.PROPERTIES, feature: 'conveyance-engagement', env: getCurrentEnvironment() },
     });
   } catch (error) {

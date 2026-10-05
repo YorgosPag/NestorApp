@@ -12,12 +12,20 @@ import 'server-only';
  */
 
 import { decodeRouteParam } from '@/lib/routes/route-param';
-import { readPageIdentity } from '@/server/auth/page-identity';
+import { readPageIdentity, type PageIdentity } from '@/server/auth/page-identity';
 
-export async function readInvitationPageRequest(
-  params: Promise<{ readonly token: string }>,
-): Promise<{ readonly token: string; readonly viewerEmail: string | null }> {
+export interface InvitationPageRequest {
+  readonly token: string;
+  readonly viewerEmail: string | null;
+  /**
+   * Ο θεατής **ολόκληρος** — για το είδος που πρέπει να πει κάτι **δικό του** πριν από το κλικ (ADR-901 §15 Γ1:
+   * «για λογαριασμό ποιου γραφείου θα αναλάβετε»). Διαβάζεται **μία** φορά εδώ· η σελίδα δεν ξαναρωτά το cookie.
+   */
+  readonly viewer: PageIdentity;
+}
+
+export async function readInvitationPageRequest(params: Promise<{ readonly token: string }>): Promise<InvitationPageRequest> {
   const token = decodeRouteParam((await params).token);
-  const identity = await readPageIdentity();
-  return { token, viewerEmail: identity.ok ? identity.ctx.email : null };
+  const viewer = await readPageIdentity();
+  return { token, viewerEmail: viewer.ok ? viewer.ctx.email : null, viewer };
 }

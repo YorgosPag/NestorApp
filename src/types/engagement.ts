@@ -27,6 +27,7 @@ import type { ChapteredRegistryId } from '@/constants/professional-registries';
 import type { ScopedGrant } from '@/lib/auth/scoped-grant';
 import type { CdeAudience } from '@/types/container-access';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
+import type { WorkspaceRef } from '@/types/workspace-membership';
 
 // =============================================================================
 // ΛΕΞΙΛΟΓΙΑ — κλειστά σύνολα, ως δεδομένα (έλεγχος σε χρόνο εκτέλεσης)
@@ -174,6 +175,16 @@ export interface Engagement extends ScopedGrant<EngagementScope> {
   readonly consents: readonly EngagementConsent[];
   /** ADR-901 Ε-4 — απόν ⇒ καμία δήλωση (π.χ. πρόταση σε υπάρχοντα λογαριασμό, πριν από τη Φ3). */
   readonly declaredCredential?: DeclaredCredential;
+  /**
+   * ADR-901 §15 (Γ1) — **για λογαριασμό ποιου χώρου** ανέλαβε: το γραφείο του ή, προσωρινά, ο προσωπικός του χώρος.
+   * Γράφεται **μία φορά, στην αποδοχή**, μόνο από τον ΕΝΑ γραφέα. Απόν όσο η συμμετοχή είναι `offered`.
+   *
+   * ⛔ **Εμφωλευμένο, ποτέ επίπεδο `companyId`**: η συμμετοχή ζει στον χώρο του **οικοδεσπότη** — ένα επίπεδο
+   *    `companyId` θα διαβαζόταν από κάθε πύλη μισθωτή (3.10 · 3.35) ως «ο μισθωτής του εγγράφου».
+   * ⛔ **Ο κριτής πρόσβασης ΔΕΝ το διαβάζει** (`decideEngagement` = `uid`): απαντά «πού φαίνεται», ποτέ «ποιος βλέπει».
+   * ⚠️ **ΜΗΝ το διαβάσεις απευθείας**: η απουσία έχει **μία** ερμηνεία, στο `actingWorkspaceOf` (άγκυρα Α48).
+   */
+  readonly actingFor?: WorkspaceRef;
   readonly offeredBy: string;
   readonly offeredAt: string;
   readonly respondedAt: string | null;
