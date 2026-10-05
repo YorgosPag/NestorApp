@@ -111,7 +111,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "70ee06dfa2fd83f980edb4f5eb24d50039bb5e0a7ee1e3022256da795bf12358",
+  "inputsSha256": "052fff05310475d36107db4535504464075326efe1dd3b13128df4630603f8eb",
   "languages": [
     "el"
   ],
@@ -686,7 +686,7 @@
     "src/components/ui/alert-dialog/parts/Overlay.tsx": "9233732f31d09b87ef6048035f453a90b28e6024b84fb8174dd4ec621092df83",
     "src/components/ui/alert-dialog/parts/Title.tsx": "9233732f31d09b87ef6048035f453a90b28e6024b84fb8174dd4ec621092df83",
     "src/components/ui/alert-dialog/primitives.tsx": "13299d7cac927b888cc748a23a382b6a20063002b43d5af1c7d843756962faee",
-    "src/components/ui/alert.tsx": "97d4eb92aaed18eb820484c17385e7f8346c0e34ef0e7ee21b75c0e43c34ad13",
+    "src/components/ui/alert.tsx": "0d59fdf3b6461559f24eaf1c6b3404bc71ec644199ed14a99e371aa5d08be374",
     "src/components/ui/auth-card-section.tsx": "f4f0dc247ab35023363c3e9938a7f0865589b3712d799e7de73796e8b3c3e4fc",
     "src/components/ui/calendar.tsx": "8bd3055c49e6b284ce7ab44c13b603c08e1f2df965c633f9b1947bb9dec4465b",
     "src/components/ui/chart-card/ChartBandPending.tsx": "0889cfb387ba74c1c77f10cdc482ccb9489551d8b0e89a744ee36969a301de03",

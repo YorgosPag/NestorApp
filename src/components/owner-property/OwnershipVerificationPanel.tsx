@@ -13,6 +13,7 @@
 
 import React from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -100,14 +101,17 @@ function SubmitFailure({ submit }: { readonly submit: OwnershipSubmitState }): R
   const { t } = useTranslation([OWNERSHIP_NS]);
   if (submit.state !== 'failed') return null;
   return (
-    <aside role="alert" className="flex flex-col items-start gap-2 rounded-md border border-border bg-card p-3 text-sm text-foreground">
-      <p className="m-0">{t(SUBMIT_ERROR_KEYS[submit.code])}</p>
-      {submit.code === 'identity-incomplete' && (
-        <Link href={PRIVATE_PROFILE_ROUTE} className="font-medium text-foreground underline underline-offset-4">
-          {t(OWNERSHIP_KEYS.remedyProfile)}
-        </Link>
-      )}
-    </aside>
+    // `role="alert"` στο δοχείο (το δίνει το `Alert`): η διέξοδος ανακοινώνεται ΜΑΖΙ με τον λόγο.
+    <Alert variant="destructive" withIcon>
+      <AlertDescription className="flex flex-col items-start gap-2">
+        <p className="m-0">{t(SUBMIT_ERROR_KEYS[submit.code])}</p>
+        {submit.code === 'identity-incomplete' && (
+          <Link href={PRIVATE_PROFILE_ROUTE} className="font-medium text-foreground underline underline-offset-4">
+            {t(OWNERSHIP_KEYS.remedyProfile)}
+          </Link>
+        )}
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -141,7 +145,7 @@ function ReleaseOwnership({ release, onRelease }: {
         }}
       />
       {release.state === 'failed' && (
-        <p role="alert" className="m-0 text-sm text-foreground">{t(REVOKE_ERROR_KEYS[release.code])}</p>
+        <Alert variant="destructive" withIcon><AlertDescription>{t(REVOKE_ERROR_KEYS[release.code])}</AlertDescription></Alert>
       )}
     </>
   );

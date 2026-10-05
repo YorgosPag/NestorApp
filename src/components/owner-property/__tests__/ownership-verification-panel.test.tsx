@@ -7,7 +7,7 @@
  */
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 import el from '@/i18n/locales/el/property-market.json';
 import en from '@/i18n/locales/en/property-market.json';
@@ -88,8 +88,11 @@ describe('Κ4 — διέξοδος', () => {
       submitCertificate: jest.fn(),
       ...releaseIdle,
     });
-    expect(screen.getByRole('alert')).toHaveTextContent(SUBMIT_ERROR_KEYS['identity-incomplete']);
-    expect(screen.getByRole('link', { name: OWNERSHIP_KEYS.remedyProfile })).toHaveAttribute('href', '/profile');
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(SUBMIT_ERROR_KEYS['identity-incomplete']);
+    // Η διέξοδος ζει ΜΕΣΑ στην ειδοποίηση (ανακοινώνεται μαζί με τον λόγο) — και η αποτυχία φαίνεται (εικονίδιο).
+    expect(within(alert).getByRole('link', { name: OWNERSHIP_KEYS.remedyProfile })).toHaveAttribute('href', '/profile');
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 });
 
@@ -124,7 +127,9 @@ describe('Κ6 — αποδέσμευση (σχήμα Zillow «unclaim»)', () =>
       release: { state: 'failed', code: 'not-revocable' },
       releaseOwnership: jest.fn(),
     });
-    expect(screen.getByRole('alert')).toHaveTextContent(REVOKE_ERROR_KEYS['not-revocable']);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(REVOKE_ERROR_KEYS['not-revocable']);
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 });
 

@@ -192,12 +192,15 @@ export function ConfirmDialog({
             aria-disabled={pendingInPlace || undefined}
             aria-busy={pendingInPlace || undefined}
             aria-label={pendingInPlace ? resolvedConfirmText : undefined}
-            className={cn(CONFIRM_BUTTON_CLASS[variant], 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50')}
+            className={cn(CONFIRM_BUTTON_CLASS[variant], 'relative aria-disabled:cursor-not-allowed aria-disabled:opacity-50')}
           >
-            {loading ? (
-              <Spinner size="small" color="inherit" />
-            ) : (
-              resolvedConfirmText
+            {/* The label keeps its box while loading (`invisible`, not removed): measured live 2026-10-05 the
+                button collapsed 94px → 50px the moment the action started. Spectrum/React Aria pending pattern. */}
+            <span className={cn(loading && 'invisible')}>{resolvedConfirmText}</span>
+            {loading && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <Spinner size="small" color="inherit" />
+              </span>
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

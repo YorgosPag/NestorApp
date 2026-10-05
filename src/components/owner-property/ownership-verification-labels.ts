@@ -89,6 +89,8 @@ export const REVOCATION_ADMIN_KEYS = {
   statusVerified: `${R}.statusVerified`,
   statusSuperseded: `${R}.statusSuperseded`,
   revoke: `${R}.revoke`,
+  /** Η ετικέτα του επιλογέα λόγου — ΟΧΙ το `revoke`: εκείνο είναι το όνομα της πράξης (κουμπί). */
+  reasonFieldLabel: `${R}.reasonFieldLabel`,
   confirmTitle: `${R}.confirmTitle`,
   confirmBody: `${R}.confirmBody`,
   unitWillRetire: `${R}.unitWillRetire`,

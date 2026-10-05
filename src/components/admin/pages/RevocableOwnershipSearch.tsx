@@ -13,6 +13,7 @@
 
 import React from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EnumSelect } from '@/components/ui/enum-select';
@@ -104,7 +105,8 @@ function RevocableCard({ item, onRevoked }: {
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
       <ClaimantHeader
         item={item}
-        level="h3"
+        // `h2`: η κάρτα κρέμεται κατευθείαν από το `h1` της σελίδας — η καρτέλα δεν έχει δική της κεφαλίδα (WCAG 1.3.1).
+        level="h2"
         aside={
           <p className="m-0 text-sm text-muted-foreground">
             {t(item.status === 'verified' ? REVOCATION_ADMIN_KEYS.statusVerified : REVOCATION_ADMIN_KEYS.statusSuperseded)}
@@ -115,7 +117,7 @@ function RevocableCard({ item, onRevoked }: {
       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <KaekTerm kaek={item.kaek} />
       </dl>
-      <Label htmlFor={reasonId}>{t(REVOCATION_ADMIN_KEYS.revoke)}</Label>
+      <Label htmlFor={reasonId}>{t(REVOCATION_ADMIN_KEYS.reasonFieldLabel)}</Label>
       <EnumSelect
         id={reasonId}
         value={reason}
@@ -131,7 +133,9 @@ function RevocableCard({ item, onRevoked }: {
           {t(REVOCATION_ADMIN_KEYS.revoke)}
         </Button>
       </footer>
-      {failure !== null && <p role="alert" className="m-0 text-sm text-foreground">{t(REVOKE_ERROR_KEYS[failure])}</p>}
+      {failure !== null && (
+        <Alert variant="destructive" withIcon><AlertDescription>{t(REVOKE_ERROR_KEYS[failure])}</AlertDescription></Alert>
+      )}
       <ConfirmDialog
         open={open}
         // Όσο τρέχει η ανάκληση ο διάλογος ΜΕΝΕΙ (ένδειξη προόδου στο κουμπί)· Esc/έξω-κλικ δεν τον κλείνουν.
@@ -199,8 +203,12 @@ export function RevocableOwnershipSearch(): React.ReactElement {
           </Button>
         </fieldset>
       </form>
-      {malformed && <p id={errorId} role="alert" className="m-0 text-sm text-foreground">{t(REVOCATION_ADMIN_KEYS.searchMalformed)}</p>}
-      {result.state === 'failed' && <p role="alert" className="m-0 text-sm text-foreground">{t(REVOKE_ERROR_KEYS.UNAVAILABLE)}</p>}
+      {malformed && (
+        <Alert id={errorId} variant="destructive" withIcon><AlertDescription>{t(REVOCATION_ADMIN_KEYS.searchMalformed)}</AlertDescription></Alert>
+      )}
+      {result.state === 'failed' && (
+        <Alert variant="destructive" withIcon><AlertDescription>{t(REVOKE_ERROR_KEYS.UNAVAILABLE)}</AlertDescription></Alert>
+      )}
       {result.state === 'ready' && result.items.length === 0 && (
         <p className="m-0 text-sm text-muted-foreground">{t(REVOCATION_ADMIN_KEYS.noResults)}</p>
       )}

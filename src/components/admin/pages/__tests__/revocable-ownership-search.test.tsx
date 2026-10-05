@@ -85,6 +85,8 @@ describe('Ρ — ανάκληση επαληθευμένης κατοχής', ()
     expect(confirm).toHaveAttribute('aria-busy', 'true');
     expect(confirm).toHaveAccessibleName(REVOCATION_ADMIN_KEYS.revoke);
     expect(document.activeElement).toBe(confirm);
+    // Ρ9 (ζωντανά 2026-10-05: 94px → 50px) — η ετικέτα ΜΕΝΕΙ στο κουμπί (αόρατη) ώστε να κρατά το πλάτος του.
+    expect(within(confirm).getByText(REVOCATION_ADMIN_KEYS.revoke)).toHaveClass('invisible');
     await act(async () => {
       fireEvent.click(confirm);
     });
@@ -103,6 +105,19 @@ describe('Ρ — ανάκληση επαληθευμένης κατοχής', ()
     expect(within(dialog).getByText('050970103021/0/0')).toBeInTheDocument();
   });
 
+  it('Ρ6 — ο επιλογέας λόγου έχει ΔΙΚΗ του ετικέτα, όχι το όνομα της πράξης', async () => {
+    get.mockResolvedValue({ revocable: [ITEM] });
+    render(<RevocableOwnershipSearch />);
+    await search('050970103021');
+
+    // Πριν (ζωντανά 2026-10-05): η ετικέτα έγραφε «Ανάκληση», ίδια με το κουμπί — δύο στοιχεία, ένα όνομα.
+    expect(await screen.findByRole('combobox', { name: REVOCATION_ADMIN_KEYS.reasonFieldLabel })).toBeInTheDocument();
+    expect(REVOCATION_ADMIN_KEYS.reasonFieldLabel).not.toBe(REVOCATION_ADMIN_KEYS.revoke);
+    expect(screen.getAllByText(REVOCATION_ADMIN_KEYS.revoke)).toHaveLength(1);
+    // Ρ8 — η κάρτα κρέμεται κατευθείαν από το `h1` της σελίδας: `h2`, όχι `h3` (ζωντανά: H1 → H3, χωρίς H2).
+    expect(screen.getByRole('heading', { level: 2, name: /Μαρία Παπαδοπούλου/ })).toBeInTheDocument();
+  });
+
   it('Ρ3 — αποτυχία ⇒ ο διάλογος κλείνει και η κάρτα το λέει με τον κλειστό κωδικό', async () => {
     post.mockRejectedValue(apiFailure(409, { reason: 'not-revocable' }));
     const dialog = await openDialog();
@@ -112,7 +127,10 @@ describe('Ρ — ανάκληση επαληθευμένης κατοχής', ()
     });
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('alert')).toHaveTextContent(REVOKE_ERROR_KEYS['not-revocable']);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(REVOKE_ERROR_KEYS['not-revocable']);
+    // Ρ7 — η αποτυχία ΦΑΙΝΕΤΑΙ: εικονίδιο από το κεντρικό `Alert`, όχι σκέτο κείμενο στο χρώμα του σώματος.
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
   it('Ρ4 — άκυρος ΚΑΕΚ ⇒ πεδίο `aria-invalid`, δεμένο με την υπόδειξη ΚΑΙ με το μήνυμα', async () => {
@@ -125,6 +143,7 @@ describe('Ρ — ανάκληση επαληθευμένης κατοχής', ()
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(REVOCATION_ADMIN_KEYS.searchMalformed);
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(field).toHaveAccessibleDescription(`${REVOCATION_ADMIN_KEYS.searchHint} ${REVOCATION_ADMIN_KEYS.searchMalformed}`);
   });

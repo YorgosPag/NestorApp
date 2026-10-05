@@ -2528,6 +2528,7 @@
       "statusVerified": "Active",
       "statusSuperseded": "Superseded by a newer one",
       "revoke": "Revoke",
+      "reasonFieldLabel": "Reason for revocation",
       "confirmTitle": "Revoke the verification?",
       "confirmBody": "Reason: {reason}. {unit} The holder will be notified and can submit a new certificate.",
       "unitWillRetire": "If no other valid verification exists for the same KAEK, the public unit becomes historical.",

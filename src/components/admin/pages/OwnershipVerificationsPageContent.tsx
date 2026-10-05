@@ -14,6 +14,7 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -102,7 +103,9 @@ function PendingQueue(): React.ReactElement {
   return (
     <section className="flex flex-col gap-4">
       {queue.state === 'loading' && <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.loading')}</p>}
-      {queue.state === 'failed' && <p role="alert" className="m-0 text-sm text-foreground">{t('admin:ownershipVerifications.failed')}</p>}
+      {queue.state === 'failed' && (
+        <Alert variant="destructive" withIcon><AlertDescription>{t('admin:ownershipVerifications.failed')}</AlertDescription></Alert>
+      )}
       {queue.state === 'ready' && queue.items.length === 0 && (
         <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.empty')}</p>
       )}

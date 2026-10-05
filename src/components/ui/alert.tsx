@@ -1,8 +1,10 @@
 import * as React from "react"
 import { cva } from "class-variance-authority"
+import { AlertCircle, Info } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import { useIconSizes } from '@/hooks/useIconSizes'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 import '@/lib/design-system';
 
@@ -25,16 +27,30 @@ const createAlertVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
 // 🏢 ENTERPRISE: Alert variant type definition
 export type AlertVariantProps = {
   variant?: 'default' | 'destructive';
+  /**
+   * Το εικονίδιο της παραλλαγής, από ΕΔΩ — όχι από κάθε καλούντα (ADR-771: η κατάσταση δεν λέγεται μόνο με χρώμα,
+   * WCAG 1.4.1). Μετρημένο 2026-10-05: 17 από τα 31 `variant="destructive"` δεν είχαν εικονίδιο, γιατί έπρεπε να
+   * το θυμηθεί ο καλών. Opt-in: 14 καλούντες περνούν ήδη δικό τους `<svg>` ως παιδί.
+   */
+  withIcon?: boolean;
 }
+
+/** Ένα εικονίδιο ανά παραλλαγή — το σχήμα διαφέρει, όχι μόνο το χρώμα. */
+const VARIANT_ICON = {
+  default: Info,
+  destructive: AlertCircle,
+} satisfies Record<NonNullable<AlertVariantProps['variant']>, React.ComponentType<{ className?: string }>>;
 
 const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & AlertVariantProps
->(({ className, variant, ...props }, ref) => {
+>(({ className, variant, withIcon = false, children, ...props }, ref) => {
   // 🏢 ENTERPRISE: Use centralized border tokens and semantic colors
   const borderTokens = useBorderTokens();
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
   const alertVariants = createAlertVariants(borderTokens, colors);
+  const Icon = VARIANT_ICON[variant ?? 'default'];
 
   return (
     <div
@@ -42,7 +58,10 @@ const Alert = React.forwardRef<
       role="alert"
       className={cn(alertVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {withIcon && <Icon aria-hidden="true" className={iconSizes.sm} />}
+      {children}
+    </div>
   );
 })
 Alert.displayName = "Alert"
