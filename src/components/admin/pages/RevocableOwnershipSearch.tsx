@@ -18,6 +18,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EnumSelect } from '@/components/ui/enum-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { ApiClientError } from '@/lib/api/api-client-types';
@@ -124,8 +125,7 @@ function RevocableCard({ item, onRevoked }: {
         disabled={busy}
       />
       <Label htmlFor={noteId}>{t('admin:ownershipVerifications.note')}</Label>
-      <textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} rows={2}
-        className="rounded-md border border-border bg-background p-2 text-sm text-foreground" />
+      <Textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} size="sm" rows={2} disabled={busy} />
       <footer className="flex flex-wrap gap-2">
         <Button type="button" variant="destructive" disabled={busy} onClick={() => setOpen(true)}>
           {t(REVOCATION_ADMIN_KEYS.revoke)}
@@ -134,7 +134,9 @@ function RevocableCard({ item, onRevoked }: {
       {failure !== null && <p role="alert" className="m-0 text-sm text-foreground">{t(REVOKE_ERROR_KEYS[failure])}</p>}
       <ConfirmDialog
         open={open}
-        onOpenChange={setOpen}
+        // Όσο τρέχει η ανάκληση ο διάλογος ΜΕΝΕΙ (ένδειξη προόδου στο κουμπί)· Esc/έξω-κλικ δεν τον κλείνουν.
+        onOpenChange={(next) => { if (!busy) setOpen(next); }}
+        keepOpenWhilePending
         variant="destructive"
         title={t(REVOCATION_ADMIN_KEYS.confirmTitle)}
         description={t(REVOCATION_ADMIN_KEYS.confirmBody, {
@@ -144,7 +146,15 @@ function RevocableCard({ item, onRevoked }: {
         confirmText={t(REVOCATION_ADMIN_KEYS.revoke)}
         loading={busy}
         onConfirm={revoke}
-      />
+      >
+        {/* ΠΟΙΑΝ αφορά — δεδομένα, όχι λέξεις: με δύο κάρτες στον ίδιο ΚΑΕΚ ο τίτλος μόνος δεν το λέει. */}
+        <section className="flex flex-col gap-1 text-sm">
+          <p className="m-0 font-semibold text-foreground">{item.claimantName} · …{item.claimantTaxIdLast3}</p>
+          <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            <KaekTerm kaek={item.kaek} />
+          </dl>
+        </section>
+      </ConfirmDialog>
     </article>
   );
 }
@@ -155,6 +165,9 @@ export function RevocableOwnershipSearch(): React.ReactElement {
   const [query, setQuery] = React.useState('');
   const [lastQuery, setLastQuery] = React.useState('');
   const queryId = React.useId();
+  const hintId = React.useId();
+  const errorId = React.useId();
+  const malformed = result.state === 'malformed';
   const search = (value: string) => {
     setLastQuery(value);
     run(value);
@@ -171,15 +184,22 @@ export function RevocableOwnershipSearch(): React.ReactElement {
         }}
       >
         <Label htmlFor={queryId}>{t(REVOCATION_ADMIN_KEYS.searchLabel)}</Label>
-        <p className="m-0 text-sm text-muted-foreground">{t(REVOCATION_ADMIN_KEYS.searchHint)}</p>
+        <p id={hintId} className="m-0 text-sm text-muted-foreground">{t(REVOCATION_ADMIN_KEYS.searchHint)}</p>
         <fieldset className="m-0 flex gap-2 border-0 p-0">
-          <Input id={queryId} value={query} onChange={(event) => setQuery(event.target.value)} autoComplete="off" />
+          <Input
+            id={queryId}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            autoComplete="off"
+            aria-invalid={malformed}
+            aria-describedby={malformed ? `${hintId} ${errorId}` : hintId}
+          />
           <Button type="submit" disabled={query.trim() === '' || result.state === 'loading'}>
             {t(REVOCATION_ADMIN_KEYS.search)}
           </Button>
         </fieldset>
       </form>
-      {result.state === 'malformed' && <p role="alert" className="m-0 text-sm text-foreground">{t(REVOCATION_ADMIN_KEYS.searchMalformed)}</p>}
+      {malformed && <p id={errorId} role="alert" className="m-0 text-sm text-foreground">{t(REVOCATION_ADMIN_KEYS.searchMalformed)}</p>}
       {result.state === 'failed' && <p role="alert" className="m-0 text-sm text-foreground">{t(REVOKE_ERROR_KEYS.UNAVAILABLE)}</p>}
       {result.state === 'ready' && result.items.length === 0 && (
         <p className="m-0 text-sm text-muted-foreground">{t(REVOCATION_ADMIN_KEYS.noResults)}</p>

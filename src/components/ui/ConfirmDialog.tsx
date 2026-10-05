@@ -78,6 +78,13 @@ export interface ConfirmDialogProps {
   variant?: ConfirmDialogVariant;
   /** Show loading state on confirm button */
   loading?: boolean;
+  /**
+   * Keep the dialog open after confirm until the caller closes it (`onOpenChange(false)`).
+   * Radix closes on click by default, so `loading` was never visible for async confirms: the
+   * dialog vanished, focus fell to `<body>` and the user saw no progress. Opt-in — existing
+   * callers rely on the auto-close.
+   */
+  keepOpenWhilePending?: boolean;
   /** Disable confirm button */
   disabled?: boolean;
   /** Custom icon for title (optional) */
@@ -122,6 +129,7 @@ export function ConfirmDialog({
   hideCancelButton = false,
   variant = 'default',
   loading = false,
+  keepOpenWhilePending = false,
   disabled = false,
   icon,
   children,
@@ -133,7 +141,9 @@ export function ConfirmDialog({
   const resolvedCancelText = cancelText || t('buttons.cancel');
 
   // Handle confirm with loading support
-  const handleConfirm = async () => {
+  const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    // Radix composes its close handler after ours and skips it when the event is prevented.
+    if (keepOpenWhilePending) event.preventDefault();
     await onConfirm();
   };
 
@@ -165,7 +175,7 @@ export function ConfirmDialog({
 
         <AlertDialogFooter>
           {!hideCancelButton && (
-            <AlertDialogCancel onClick={handleCancel}>
+            <AlertDialogCancel onClick={handleCancel} disabled={keepOpenWhilePending && loading}>
               {resolvedCancelText}
             </AlertDialogCancel>
           )}

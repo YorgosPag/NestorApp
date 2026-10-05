@@ -16,6 +16,7 @@ import { ShieldCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { formatDate } from '@/lib/intl-formatting';
@@ -85,8 +86,7 @@ function ReviewCard({ item, onDecided }: { readonly item: OwnershipReviewItem; r
         {item.reasons.map((reason) => <li key={reason}>{t(REASON_KEYS[reason])}</li>)}
       </ul>
       <label htmlFor={noteId} className="text-sm text-muted-foreground">{t('admin:ownershipVerifications.note')}</label>
-      <textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} rows={2}
-        className="rounded-md border border-border bg-background p-2 text-sm text-foreground" />
+      <Textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} size="sm" rows={2} />
       <footer className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => void openEvidence(item.id)}>{t('admin:ownershipVerifications.openCertificate')}</Button>
         <Button type="button" disabled={busy} onClick={() => void decide('approve')}>{t('admin:ownershipVerifications.approve')}</Button>
@@ -122,7 +122,8 @@ export function OwnershipVerificationsPageContent(): React.ReactElement {
         </h1>
         <p className="m-0 text-sm text-muted-foreground">{t('admin:ownershipVerifications.description')}</p>
       </header>
-      <Tabs defaultValue="pending">
+      {/* Το `TabsContent` έχει ΜΗΔΕΝ προεπιλεγμένο κενό (δόγμα `ui/tabs`) — το κενό το δηλώνει ο καλών. */}
+      <Tabs defaultValue="pending" className="flex flex-col gap-4">
         <TabsList>
           <TabsTrigger value="pending">{t(REVOCATION_ADMIN_KEYS.tabPending)}</TabsTrigger>
           <TabsTrigger value="verified">{t(REVOCATION_ADMIN_KEYS.tabVerified)}</TabsTrigger>
