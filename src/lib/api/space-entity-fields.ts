@@ -54,6 +54,17 @@ const RECORD_STATUS_NOT_WRITABLE = z.undefined();
  */
 const FLOOR_NUMBER_NOT_WRITABLE = z.undefined();
 
+/**
+ * 🔒 **Το έργο ενός χώρου ΔΕΝ γράφεται από σώμα PATCH** (ADR-898 §21.6 Ε6-δ).
+ *
+ * Το έργο **προκύπτει** από το κτίριο: το γράφει ο καταρράκτης `child-building` όταν αλλάζει το `buildingId`, και ο
+ * φρουρός `space-building-project-guard` αρνείται κτίριο άλλου έργου. Ως τις 2026-10-05 το `PATCH /api/parking/[id]`
+ * δεχόταν ωμό `projectId` και το έγραφε **χωρίς κανέναν έλεγχο** — ούτε «ίδιο έργο με το κτίριο», ούτε «δικό σου
+ * έργο» — δηλαδή παρέκαμπτε τον κανόνα του Ε6 με ένα πεδίο. Κανένας πελάτης δεν το έστελνε (μετρημένο με grep).
+ * Ίδιος λόγος με το `status`: `z.undefined()` και όχι παράλειψη, ώστε όποιος το στείλει να πάρει **400**.
+ */
+const SPACE_PROJECT_NOT_WRITABLE = z.undefined();
+
 /** Η λειτουργική κατάσταση — το **ίδιο** λεξιλόγιο με τα ακίνητα, ή `null` («δεν δηλώνεται»). */
 const OPERATIONAL_STATUS_FIELD = z.enum(OPERATIONAL_STATUSES);
 
@@ -88,6 +99,7 @@ export const SPACE_COMMON_UPDATE_FIELDS = {
   description: z.string().max(2000).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   buildingId: z.string().max(128).nullable().optional(),
+  projectId: SPACE_PROJECT_NOT_WRITABLE,
   /** ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο· κρίνεται από το `mapSpaceCommercialFields`. */
   ...SPACE_COMMERCIAL_UPDATE_FIELDS,
   /** SPEC-256A: expected document version for the optimistic-concurrency check */
@@ -192,7 +204,7 @@ function trimmedOrNull(value: unknown): string | null {
 
 /**
  * Map the PATCH fields BOTH space entities share.
- * Entity-specific extras (parking: `location` / `locationZone` / `projectId`)
+ * Entity-specific extras (parking: `location` / `locationZone`)
  * are merged on top by the route's `mapExtraFields`. The floor (`floorId` →
  * `floor` + `floorKind`) is resolved by the PATCH handler against the floor
  * document (ADR-903 §6) — it needs Firestore, so it cannot live in this pure module.

@@ -215,3 +215,25 @@ describe('resolveAllocationCodeChange — ADR-247 F-4 cascade trigger', () => {
     expect(resolveAllocationCodeChange({ code: '   ' }, { code: 'C-1' }, 'number')).toBeNull();
   });
 });
+
+/**
+ * ADR-898 §21.6 Ε6-δ — το έργο ενός χώρου **προκύπτει** από το κτίριό του. Ως τις 2026-10-05 το PATCH θέσης έγραφε ωμό
+ * `projectId` από το σώμα, παρακάμπτοντας τον κανόνα «ίδιο έργο». Το σχήμα είναι όπως το δηλώνουν οι δύο διαδρομές
+ * (`.passthrough()`): **χωρίς** ρητό `z.undefined()` το πεδίο θα περνούσε σιωπηλά.
+ */
+describe('το `projectId` ΔΕΝ γράφεται από σώμα PATCH', () => {
+  const UpdateSchema = z.object({ number: z.string().optional(), ...SPACE_COMMON_UPDATE_FIELDS }).passthrough();
+
+  it('🔴 PATCH με `projectId` ⇒ 400, και για τους δύο χώρους (κοινό σχήμα)', () => {
+    expect(UpdateSchema.safeParse({ projectId: 'prj_2' }).success).toBe(false);
+    expect(UpdateSchema.safeParse({ buildingId: 'bld_1', projectId: 'prj_2' }).success).toBe(false);
+  });
+
+  it('το `buildingId` μόνο του περνά — το έργο το γράφει ο καταρράκτης', () => {
+    expect(UpdateSchema.safeParse({ buildingId: 'bld_1' }).success).toBe(true);
+  });
+
+  it('ακόμη κι αν έφτανε στον mapper, δεν γράφεται', () => {
+    expect(mapCommonSpaceFields({ projectId: 'prj_2' }, 'number')).not.toHaveProperty('projectId');
+  });
+});

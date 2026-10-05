@@ -5,13 +5,11 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FIELDS } from '@/config/firestore-field-constants';
-import {
-  requireBuildingInTenant,
-  requireProjectInTenant,
-  TenantIsolationError,
-} from '@/lib/auth/tenant-isolation';
+import { requireBuildingInTenant, requireProjectInTenant } from '@/lib/auth/tenant-isolation';
 import { guardParentScope } from '@/lib/api/tenant-scope-http';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { asApiError } from '@/lib/api/api-error-types';
+import { resolveNewSpaceAnchor } from '@/lib/api/space-building-project-guard';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import {
@@ -90,27 +88,11 @@ export const POST = withStandardRateLimit(
         const parsed = safeParseBody(CreateParkingSchema, await request.json());
         if (parsed.error) throw new ApiError(400, 'Validation failed');
         const body = parsed.data;
-        const buildingId = body.buildingId?.trim() || null;
-        const resolvedProjectId = body.projectId?.trim() || null;
-        // ADR-191: Open space parking (no buildingId) — verify project belongs to tenant.
-        //
-        // 🔄 ADR-742 §7undecies: ήταν χειρόγραφο αντίγραφο του φύλακα έργου, με
-        // **δύο** ελαττώματα. (α) Ο ξένος γονέας απαντούσε `403 'Project does not
-        // belong to your company'` — άρνηση που **κατονομάζει τον λόγο**, δηλαδή
-        // επιβεβαιώνει ότι το έργο υπάρχει **και** ανήκει αλλού (§7decies.4).
-        // (β) Σκέτο `!==` ⇒ παγίδα του κενού (§4). Ρωτά πλέον τον ίδιο φύλακα με
-        // τη διαδρομή `buildingId` παρακάτω· και τα δύο «όχι» είναι `404
-        // 'Project not found'`.
-        if (!buildingId && resolvedProjectId) {
-          try {
-            await requireProjectInTenant({ ctx, projectId: resolvedProjectId, path: PARKING_PATH });
-          } catch (err) {
-            if (err instanceof TenantIsolationError) {
-              throw new ApiError(err.status, err.message);
-            }
-            throw err;
-          }
-        }
+        // ADR-898 §21.6 Ε6-γ/δ — η άγκυρα της νέας θέσης, από τον ΕΝΑ επιλυτή (κοινό με τα `storages`):
+        // κτίριο ⇒ του καλούντος, και το έργο **προκύπτει** από αυτό· χωρίς κτίριο (ανοιχτός χώρος, ADR-191) ⇒ το
+        // έργο του σώματος, από τον φύλακα έργου. Ξένος ≡ ανύπαρκτος γονέας ⇒ 404 (ADR-742 §7undecies).
+        // Ως τις 2026-10-05 το `projectId` ελεγχόταν **μόνο** χωρίς κτίριο· δίπλα σε κτίριο γραφόταν ωμό.
+        const { buildingId, projectId: resolvedProjectId } = await resolveNewSpaceAnchor({ ctx, path: PARKING_PATH }, body);
 
         // ADR-903 §6 — ο όροφος από το έγγραφό του (ίδιο κτίριο, ίδια εταιρεία)· μία πηγή.
         const hosted = await resolveHostedFloorForCreate(getAdminFirestore(), ctx, body.floorId, buildingId);
@@ -128,9 +110,7 @@ export const POST = withStandardRateLimit(
           ...hosted,
         };
 
-        // ⚠️ ΟΧΙ από τον SSoT: εδώ το `projectId` είναι **ήδη επιλυμένο** και
-        // περασμένο από τον φύλακα ιδιοκτησίας γονέα παραπάνω — δεν διαβάζεται
-        // ωμό από το σώμα όπως στα `storages`.
+        // Το `projectId` είναι **ήδη επιλυμένο** από την άγκυρα παραπάνω — ποτέ ωμό από το σώμα.
         if (resolvedProjectId) entitySpecificFields.projectId = resolvedProjectId;
 
         // Ιδιαίτερα του parking
@@ -160,7 +140,8 @@ export const POST = withStandardRateLimit(
           'Parking spot created successfully'
         );
       } catch (error) {
-        if (error instanceof ApiError) throw error;
+        const refusal = asApiError(error);
+        if (refusal) throw refusal;
         logger.error('Error creating parking spot', { error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to create parking spot'));
       }

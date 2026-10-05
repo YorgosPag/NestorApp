@@ -29,7 +29,6 @@ const UpdateParkingSchema = z.object({
   number: z.string().max(50).optional(),
   locationZone: z.string().max(100).nullable().optional(),
   location: z.string().max(200).nullable().optional(),
-  projectId: z.string().max(128).optional(),
   /** ADR-898 §19 — η θέση κατά την ΠΟΛ.1149/1994 (άρθ. 7 §4), όταν τη δηλώνει ο άνθρωπος· `null` = «σβήσε». */
   [SPACE_OBJECTIVE_VALUE_POSITION_FIELD]: z.enum(PARKING_POSITIONS).nullable().optional(),
   ...SPACE_COMMON_UPDATE_FIELDS,
@@ -53,7 +52,6 @@ export const { PATCH, DELETE, GET } = createSpaceEntityRoutes<UpdateParkingBody>
     const extra: Record<string, unknown> = {};
     if (body.location !== undefined) extra.location = body.location?.trim() || null;
     if (body.locationZone !== undefined) extra.locationZone = body.locationZone ?? null;
-    if (body.projectId?.trim()) extra.projectId = body.projectId.trim();
     const position = body[SPACE_OBJECTIVE_VALUE_POSITION_FIELD];
     if (position !== undefined) extra[SPACE_OBJECTIVE_VALUE_POSITION_FIELD] = position;
     return extra;

@@ -9,6 +9,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import type { Storage, StorageType } from '@/types/storage/contracts';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { asApiError } from '@/lib/api/api-error-types';
+import { resolveNewSpaceAnchor } from '@/lib/api/space-building-project-guard';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
@@ -32,6 +34,9 @@ const CreateStorageSchema = z.object({
 });
 
 const logger = createModuleLogger('StoragesRoute');
+
+/** Το μονοπάτι όπως καταγράφεται στο ίχνος ελέγχου μιας άρνησης γονέα. */
+const STORAGES_PATH = '/api/storages';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Storages Endpoint
@@ -243,7 +248,9 @@ export const POST = withStandardRateLimit(
         if (parsed.error) throw new ApiError(400, 'Validation failed');
         const body = parsed.data;
 
-        const buildingId = body.buildingId?.trim() || null;
+        // ADR-898 §21.6 Ε6-γ/δ — η άγκυρα από τον ΕΝΑ επιλυτή (κοινό με τα `parking`): το έργο προκύπτει από το
+        // κτίριο· χωρίς κτίριο περνά από τον φύλακα έργου. Ως τις 2026-10-05 εδώ το `projectId` γραφόταν **ωμό**.
+        const { buildingId, projectId } = await resolveNewSpaceAnchor({ ctx, path: STORAGES_PATH }, body);
         // ADR-903 §6 — ο όροφος από το έγγραφό του (ίδιο κτίριο, ίδια εταιρεία)· μία πηγή.
         const hosted = await resolveHostedFloorForCreate(getAdminFirestore(), ctx, body.floorId, buildingId);
 
@@ -259,9 +266,9 @@ export const POST = withStandardRateLimit(
           ...hosted,
         };
 
-        // Ιδιαίτερα των storages — και το `projectId`, που εδώ διαβάζεται ωμό
-        // από το σώμα (στα parking είναι ήδη επιλυμένο και ελεγμένο).
-        if (body.projectId?.trim()) entitySpecificFields.projectId = body.projectId.trim();
+        // Το `projectId` είναι **ήδη επιλυμένο** από την άγκυρα παραπάνω — ποτέ ωμό από το σώμα.
+        if (projectId) entitySpecificFields.projectId = projectId;
+        // Ιδιαίτερο των storages.
         if (body.building?.trim()) entitySpecificFields.building = body.building.trim();
 
         logger.info('Creating storage unit', { name: body.name, buildingId, companyId: ctx.companyId });
@@ -285,7 +292,8 @@ export const POST = withStandardRateLimit(
           'Storage unit created successfully'
         );
       } catch (error) {
-        if (error instanceof ApiError) throw error;
+        const refusal = asApiError(error);
+        if (refusal) throw refusal;
         logger.error('Error creating storage', { error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to create storage unit'));
       }

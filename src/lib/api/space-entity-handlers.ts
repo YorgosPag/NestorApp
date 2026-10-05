@@ -26,6 +26,7 @@ import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { asApiError } from '@/lib/api/api-error-types';
 import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
@@ -188,7 +189,10 @@ function buildMutationHandler<TBody extends Record<string, unknown>>(
       if (error instanceof ConflictError) {
         return NextResponse.json(error.body, { status: error.statusCode });
       }
-      if (error instanceof ApiError) throw error;
+      // Κάθε **αποφασισμένη** άρνηση περνά αυτούσια — και του φύλακα του πόρου (`TenantIsolationError` ⇒ 404).
+      // Ως τις 2026-10-05 εδώ ρωτιόταν μόνο `instanceof ApiError`, άρα ξένος/ανύπαρκτος χώρος απαντούσε **500**.
+      const refusal = asApiError(error);
+      if (refusal) throw refusal;
       cfg.logger.error(errors.log, { id, error: getErrorMessage(error) });
       throw new ApiError(500, getErrorMessage(error, errors.fallback));
     }
@@ -213,7 +217,8 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       // ADR-898 §20 — παρακολούθημα μονάδας δεν αποσυνδέεται από κτίριο (θα «επέστρεφε» σιωπηλά)· άρνηση ΠΡΙΝ τη γραφή.
       await assertNotDetachingAttachedSpace(adminDb, id, body, existing);
       // ADR-898 §21.6 Ε6 — χώρος έργου μετακινείται μόνο σε κτίριο του ΙΔΙΟΥ έργου· άρνηση ΠΡΙΝ τη γραφή.
-      await assertBuildingInSpaceProject(adminDb, id, body, existing);
+      // 🔒 §21.6 Ε6-γ — και το κτίριο είναι **του καλούντος**: ξένο ≡ ανύπαρκτο ⇒ 404 (ο καταρράκτης θα έγραφε το `companyId` του).
+      await assertBuildingInSpaceProject(adminDb, { ctx, path: cfg.apiPath }, id, body, existing);
       // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
       // ADR-903 §6 — ο όροφος: `floorId` → αντίγραφο από το έγγραφο ορόφου (άρνηση ΠΡΙΝ τη γραφή).
       const updateData = {
