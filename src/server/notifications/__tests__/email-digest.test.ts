@@ -25,6 +25,8 @@ import {
   type PendingEmail,
 } from '@/server/notifications/email-digest';
 
+import { EMAIL_CLIENTS, occurrences, preheaderOf, visibleTextOf } from './email-html-view';
+
 /** Συναθροίσιμο εξ ορισμού: ειδοποίηση, μη επείγουσα. */
 function msg(overrides: Partial<PendingEmail> = {}): PendingEmail {
   return {
@@ -434,10 +436,19 @@ describe('Γ — η σύνοψη γράφεται στη γλώσσα του π�
 // ανεξάρτητα από την πρώτη — τα ήδη γραμμένα `pending` έγγραφα της ουράς κουβαλούν
 // το αντίγραφο **για πάντα**, και καμία migration δεν τα αγγίζει.
 
-/** Πόσες φορές εμφανίζεται — ποτέ `includes`, που δεν ξεχωρίζει «μία» από «δύο». */
-function occurrences(haystack: string, needle: string): number {
-  return haystack.split(needle).length - 1;
+// 👁️ **ΤΙ ΜΕΤΡΑΝΕ ΟΙ Η1/Η3 — ΑΥΤΟ ΠΟΥ ΔΙΑΒΑΖΕΙ Ο ΑΝΘΡΩΠΟΣ, ΟΧΙ ΑΥΤΟ ΠΟΥ ΕΙΝΑΙ ΓΡΑΜΜΕΝΟ** (2026-10-05).
+// Το περιστατικό ήταν «κάθε τίτλος δύο φορές **στην οθόνη**». Από το ADR-849 Β4 ο τίτλος ζει
+// **και** στον κρυφό πρόλογο (η προεπισκόπηση των εισερχομένων — πρακτική GitHub · Slack ·
+// LinkedIn), άρα το ωμό HTML τον έχει νόμιμα δύο φορές. Η μέτρηση γίνεται στο **ορατό**
+// κείμενο, και σε **κάθε** οικογένεια προγραμμάτων: στο Outlook υπολογιστή ο πρόλογος κρύβεται
+// με άλλον κανόνα, και ως 2026-10-05 **δεν** κρυβόταν — ο τίτλος φαινόταν όντως δύο φορές εκεί.
+
+/** Πόσες φορές **βλέπει** ο αναγνώστης το κείμενο, ανά οικογένεια προγραμμάτων email. */
+function timesSeen(html: string, needle: string): number[] {
+  return EMAIL_CLIENTS.map((client) => occurrences(visibleTextOf(html, client), needle));
 }
+
+const ONCE_EVERYWHERE = EMAIL_CLIENTS.map(() => 1);
 
 describe('Η — το ΘΕΜΑ δεν είναι ΣΩΜΑ', () => {
   it('Η1 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ — σώμα ΤΑΥΤΟΣΗΜΟ με το θέμα δεν γράφεται δεύτερη φορά', () => {
@@ -448,9 +459,12 @@ describe('Η — το ΘΕΜΑ δεν είναι ΣΩΜΑ', () => {
     const digest = digestsOf(plan)[0] as Extract<DeliveryPlanEntry, { kind: 'digest' }>;
 
     expect(occurrences(digest.content, 'Νέα αγγελία ταιριάζει')).toBe(1);
-    expect(occurrences(digest.html, 'Νέα αγγελία ταιριάζει')).toBe(1);
+    expect(timesSeen(digest.html, 'Νέα αγγελία ταιριάζει')).toEqual(ONCE_EVERYWHERE);
     expect(occurrences(digest.content, '1 άνθρωπος ψάχνει')).toBe(1);
-    expect(occurrences(digest.html, '1 άνθρωπος ψάχνει')).toBe(1);
+    expect(timesSeen(digest.html, '1 άνθρωπος ψάχνει')).toEqual(ONCE_EVERYWHERE);
+    // Η **δηλωμένη** δεύτερη εγγραφή: ο κρυφός πρόλογος. Αν φύγει από εκεί, η προεπισκόπηση
+    // ξαναλέει «Έχετε 2 νέες ειδοποιήσεις» (ADR-849 Β4) — και αυτή η γραμμή το λέει.
+    expect(preheaderOf(digest.html)).toContain('Νέα αγγελία ταιριάζει');
   });
 
   it('Η2 🔴 ΜΕΤΑΛΛΑΞΗ ΕΙΣΟΔΟΥ — σώμα ΔΙΑΦΟΡΕΤΙΚΟ γράφεται κανονικά (η ετυμηγορία ΓΥΡΙΖΕΙ)', () => {
@@ -474,7 +488,7 @@ describe('Η — το ΘΕΜΑ δεν είναι ΣΩΜΑ', () => {
     const digest = digestsOf(plan)[0] as Extract<DeliveryPlanEntry, { kind: 'digest' }>;
 
     expect(occurrences(digest.content, 'Θέμα Α')).toBe(1);
-    expect(occurrences(digest.html, 'Θέμα Α')).toBe(1);
+    expect(timesSeen(digest.html, 'Θέμα Α')).toEqual(ONCE_EVERYWHERE);
   });
 
   it('Η4 🔴 Η ΡΙΖΑ — ο orchestrator αποθηκεύει ΚΕΝΟ, όχι αντίγραφο του θέματος', () => {
@@ -504,7 +518,6 @@ describe('Τ — §8.69.12: η σύνοψη δεν λέει το ίδιο πρά
   const DROP = 'properties.demand_price_drop';
   const twin = (id: string): PendingEmail =>
     msg({ id, subject: 'Μειώθηκε η τιμή: «Χ»', content: 'Από 177.000 σε 170.000', eventType: DROP });
-  const occurrences = (text: string, needle: string): number => text.split(needle).length - 1;
 
   it('Τ1 🔴 ΤΟ ΖΩΝΤΑΝΟ ΕΥΡΗΜΑ — δύο ταυτόσημα μέλη ⇒ ΕΝΑ email με το ΔΙΚΟ του θέμα, και τα δύο μετρημένα', () => {
     const messages = [twin('a'), twin('b')];

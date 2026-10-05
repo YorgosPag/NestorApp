@@ -1,5 +1,9 @@
 /**
- * @jest-environment node
+ * @jest-environment jsdom
+ *
+ * ⚠️ `jsdom` ΣΚΟΠΙΜΑ (ήταν `node` ως 2026-10-05): οι άγκυρες Ε κρίνουν τι **βλέπει** ο αναγνώστης
+ * ανά πρόγραμμα email (`./email-html-view`), και αυτό θέλει αναλυτή HTML. Η απόδοση είναι καθαρές
+ * συναρτήσεις — δεν αγγίζει τίποτα του περιβάλλοντος.
  *
  * Άγκυρα — **Η ΑΠΟΔΟΣΗ ΤΩΝ EMAIL ΕΙΔΟΠΟΙΗΣΕΩΝ, ΜΕ ΣΥΝΔΕΣΜΟΥΣ** (ADR-848)
  *
@@ -20,6 +24,8 @@ import {
   type EmailLinks,
   type RenderableMessage,
 } from '@/server/notifications/notification-email-render';
+
+import { EMAIL_CLIENTS, occurrences, preheaderIsHiddenIn, preheaderOf, visibleTextOf } from './email-html-view';
 
 const ORIGIN = 'https://nestorconstruct.gr';
 
@@ -203,12 +209,6 @@ describe('📧 Δ — «Να μη λαμβάνω τέτοια email» ΜΟΝΟ �
  * θα ήταν **μονίμως πράσινο**: οι τίτλοι υπάρχουν ούτως ή άλλως στο σώμα της σύνοψης.
  */
 describe('📧 Ε — ο πρόλογος συμπληρώνει το θέμα, δεν το επαναλαμβάνει', () => {
-  /** Ο πρόλογος ζει σε κρυφό `div` στην κορυφή του εγγράφου — τον βγάζουμε αυτούσιο. */
-  function preheaderOf(html: string): string {
-    const match = html.match(/<div style="display:none;[^"]*">([\s\S]*?)<\/div>/);
-    return match?.[1] ?? '';
-  }
-
   it('Ε1 🔴 — ΔΕΝ επαναλαμβάνει το «Έχετε N νέες ειδοποιήσεις» (το ακριβές εύρημα)', () => {
     const preheader = preheaderOf(renderDigestHtml([MATCH, INTEREST], 'el', 'x', LINKS));
 
@@ -252,14 +252,26 @@ describe('📧 Ε — ο πρόλογος συμπληρώνει το θέμα, 
   it('Ε6 🔴 — ο πρόλογος κρύβεται ΚΑΙ στο Outlook (μηχανή Word: αγνοεί το display:none)', () => {
     // Χωρίς `mso-hide:all` το Outlook υπολογιστή δείχνει τον πρόλογο ορατό ⇒ στη σύνοψη
     // κάθε τίτλος εμφανίζεται ΔΥΟ φορές (πρόλογος + λίστα). Ίδιο έγγραφο και στο μεμονωμένο.
-    const hiddenStyleOf = (html: string) => html.match(/<div style="(display:none;[^"]*)">/)?.[1] ?? '';
-
+    // 🔑 Κρίνεται η **συμπεριφορά** ανά οικογένεια προγραμμάτων (`email-html-view`), όχι η
+    //    συμβολοσειρά του style: ο πρόλογος είναι κρυφός **παντού**, και ο τίτλος διαβάζεται **μία** φορά.
     for (const html of [
       renderDigestHtml([MATCH, INTEREST], 'el', 'x', LINKS),
       renderSoloHtml(MATCH, 'el', 'x', LINKS),
     ]) {
-      expect(hiddenStyleOf(html)).toContain('mso-hide:all');
-      expect(hiddenStyleOf(html)).toContain('max-height:0');
+      for (const client of EMAIL_CLIENTS) {
+        expect(preheaderIsHiddenIn(html, client)).toBe(true);
+        expect(occurrences(visibleTextOf(html, client), MATCH.subject)).toBe(1);
+      }
+    }
+  });
+
+  it('Ε7 🔑 — το κουμπί διαβάζεται ΜΙΑ φορά σε κάθε πρόγραμμα (VML στο Outlook, <a> στα υπόλοιπα)', () => {
+    // Το HTML έχει την ετικέτα **δύο** φορές (Β1)· κάθε πρόγραμμα αποδίδει **τη μία**. Αν σπάσει
+    // το ζεύγος των υπό όρους σχολίων, κάποιος βλέπει δύο κουμπιά — ή κανένα.
+    const html = renderSoloHtml(MATCH, 'el', 'x', LINKS);
+
+    for (const client of EMAIL_CLIENTS) {
+      expect(occurrences(visibleTextOf(html, client), 'Άνοιγμα στο Nestor App')).toBe(1);
     }
   });
 });

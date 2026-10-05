@@ -219,7 +219,8 @@ function footerHtml(wording: EmailWording, manage: ManageLink | null): string {
  * 🏆 Η στοίβα κανόνων είναι η καθιερωμένη (Litmus · Email on Acid): κάθε πρόγραμμα σέβεται
  * άλλον κανόνα — `display:none` τα περισσότερα, `max-height:0;overflow:hidden` το Gmail,
  * `mso-hide:all` το Outlook· `font-size/line-height:1px` + `max-width:0` ώστε ακόμη και όπου
- * διαρρεύσει να μην πιάνει χώρο. ⚠️ Το `display:none` μένει **πρώτο**: το διαβάζει η άγκυρα.
+ * διαρρεύσει να μην πιάνει χώρο. Η σειρά των κανόνων είναι ελεύθερη: οι άγκυρες κρίνουν τη
+ * **συμπεριφορά** ανά οικογένεια προγραμμάτων (`__tests__/email-html-view`), όχι τη συμβολοσειρά.
  */
 const PREHEADER_STYLE =
   'display:none;mso-hide:all;visibility:hidden;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0;';
