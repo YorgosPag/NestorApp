@@ -59,7 +59,7 @@ import { AdvancedFiltersPanel, fileFiltersConfig } from '@/components/core/Advan
 
 // Split-panel layout
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { FilePreviewPanel } from './FilePreviewPanel';
+import { FileViewerPane } from './FileViewerPane';
 
 // Local components
 import { CompanyFileTree } from './CompanyFileTree';
@@ -128,7 +128,7 @@ export function FileManagerPageContent() {
   const {
     t, user, activeWorkspace, companyId,
     viewMode, setViewMode, treeViewMode, setTreeViewMode,
-    activeTab, setActiveTab, selectedFile, setSelectedFile,
+    activeTab, setActiveTab, viewerOutcome, setSelectedFile,
     searchTerm, setSearchTerm,
     selectedIds, setSelectedIds, toggleSelect,
     fileInputRef, uploading,
@@ -146,7 +146,7 @@ export function FileManagerPageContent() {
     handleRename, handleDescriptionUpdate,
     handleBatchDelete, handleBatchDownload,
     handleBatchClassify, handleBatchArchive,
-    handleFileUpload, handleAIClassify, handleCardClick,
+    handleFileUpload, handleAIClassify, handleCardClick, handleClearFilters,
   } = handlers;
 
   const headerTitle = t('header.title');
@@ -327,9 +327,12 @@ export function FileManagerPageContent() {
 
                   {/* Right panel: preview */}
                   <ResizablePanel defaultSize={60} minSize={25} className="overflow-hidden">
-                    <FilePreviewPanel
-                      file={selectedFile}
-                      onClose={() => setSelectedFile(null)}
+                    <FileViewerPane
+                      outcome={viewerOutcome}
+                      onDismiss={() => setSelectedFile(null)}
+                      onClearFilters={handleClearFilters}
+                      onOpenTrash={() => setActiveTab('trash')}
+                      onOpenInbox={() => setActiveTab('inbox')}
                       companyId={companyId}
                       currentUserId={user?.uid}
                       currentUserName={user?.displayName || undefined}

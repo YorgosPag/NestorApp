@@ -309,6 +309,21 @@
       "totalSize": "Total size"
     }
   },
+  "viewer": {
+    "resolving": "Looking for the file…",
+    "trashedTitle": "This file is in the Trash",
+    "trashedHint": "Restore it from the Trash to view it.",
+    "openTrash": "Open Trash",
+    "archivedTitle": "This file is archived",
+    "archivedHint": "Archived files are not shown here.",
+    "notFoundTitle": "File not found",
+    "notFoundHint": "It does not exist or you do not have access to it.",
+    "dismiss": "Close",
+    "hiddenByFilters": "This file is not in the list because of the active filters.",
+    "clearFilters": "Clear filters",
+    "inboxNotice": "Incoming file that has not been filed yet.",
+    "openInbox": "Open Inbox"
+  },
   "trash": {
     "title": "Trash",
     "description": "Files deleted in the last 30 days",

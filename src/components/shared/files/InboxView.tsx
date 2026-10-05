@@ -13,7 +13,7 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import {
   Inbox, Clock, RefreshCw, HardDrive, Calendar, MessageSquare,
-  User, ExternalLink, Eye, ChevronDown, ChevronRight,
+  User, Download, Eye, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,8 +27,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
-import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
-import { fileDisplayUrl } from '@/lib/files/file-display-url';
+import { FileOpenInTabButton } from './FileOpenInTabAction';
+import { useFileDownload } from './hooks/useFileDownload';
 import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted helpers + fetch hook
@@ -103,9 +103,9 @@ export function InboxView({
     });
   }, []);
 
-  const handlePreview = useCallback((file: InboxFileRecord) => {
-    openRemoteUrlInNewTab(fileDisplayUrl(file));
-  }, []);
+  // ADR-899 §9 θέμα 10 — «Προβολή» = ο θεατής (ο ΕΝΑΣ απαντητής)· «Λήψη» = τα bytes (το ΕΝΑ SSoT λήψης).
+  //    Πριν, και τα δύο κουμπιά άνοιγαν την ίδια γυμνή καρτέλα.
+  const { handleDownload } = useFileDownload();
 
   if (loading) {
     return (
@@ -218,18 +218,12 @@ export function InboxView({
                         </div>
                       </div>
                       <nav className="flex items-center gap-1" role="toolbar">
+                        <FileOpenInTabButton record={file} label={t('list.viewFile')} icon={<Eye className={iconSizes.sm} />} />
                         <Tooltip><TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" onClick={() => handlePreview(file)} disabled={!fileDisplayUrl(file)} aria-label={t('list.viewFile')}>
-                            <Eye className={iconSizes.sm} />
+                          <Button variant="ghost" size="sm" onClick={() => handleDownload(file)} aria-label={t('list.download')}>
+                            <Download className={iconSizes.sm} />
                           </Button>
-                        </TooltipTrigger><TooltipContent>{t('list.viewFile')}</TooltipContent></Tooltip>
-                        {fileDisplayUrl(file) && (
-                          <Tooltip><TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={() => handlePreview(file)} aria-label={t('list.download')}>
-                              <ExternalLink className={iconSizes.sm} />
-                            </Button>
-                          </TooltipTrigger><TooltipContent>{t('list.download')}</TooltipContent></Tooltip>
-                        )}
+                        </TooltipTrigger><TooltipContent>{t('list.download')}</TooltipContent></Tooltip>
                       </nav>
                     </div>
                   ))}

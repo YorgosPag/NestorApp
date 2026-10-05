@@ -51,11 +51,10 @@ import { Iso19650MetadataSection } from './Iso19650MetadataSection';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
-import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileRecord } from '@/types/file-record';
 import { fileCustodyOf } from '@/lib/files/file-custody';
 import { fileDisplayUrlOf } from '@/lib/files/file-display-url';
-import { fileOpenInTabUrl } from '@/lib/files/file-open-in-tab';
+import { FileOpenInTabButton } from '@/components/shared/files/FileOpenInTabAction';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -125,9 +124,6 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   const display = useMemo(() => (file ? fileDisplayUrlOf(file) : null), [file]);
   const fileUrl = display?.kind === 'url' ? display.url : undefined;
   const filePreview = display?.kind === 'url' ? display.preview : null;
-  // ADR-899 §9 θέμα 9 — «άνοιγμα» = προβολή: προσφέρεται μόνο όπου η καρτέλα θα ΕΔΕΙΧΝΕ το αρχείο (όχι DXF/Office).
-  const openInTabUrl = useMemo(() => (file ? fileOpenInTabUrl(file) : null), [file]);
-  const handleOpenNewTab = () => openRemoteUrlInNewTab(openInTabUrl);
 
   // Empty state
   if (!file) {
@@ -183,16 +179,13 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </TooltipTrigger>
                 <TooltipContent>{t('list.download')}</TooltipContent>
               </Tooltip>
-              {openInTabUrl && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={handleOpenNewTab} className="h-7 w-7 p-0">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.openInNewTab')}</TooltipContent>
-                </Tooltip>
-              )}
+              {/* ADR-899 §9 θέμα 10 — «άνοιγμα» = ο ΔΙΚΟΣ ΜΑΣ θεατής, για κάθε τύπο: σύνδεσμος στη διεύθυνση του αρχείου. */}
+              <FileOpenInTabButton
+                record={file}
+                label={t('list.openInNewTab')}
+                icon={<ExternalLink className="h-3.5 w-3.5" />}
+                className="h-7 w-7 p-0"
+              />
             </>
           )}
           {/* Version history toggle — ADR-862 Φ0: η στοίβα είναι η αλυσίδα διαδοχής, την

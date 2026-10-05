@@ -41,16 +41,16 @@ describe('fileOpenInTabUrl', () => {
       .toBe('https://x.test/a.jpg');
   });
 
-  // ⚠️ Άγκυρα ΠΗΓΑΙΟΥ κώδικα, όχι συμπεριφοράς: οι δύο επιφάνειες του file manager ρωτούν τον ΕΝΑΝ απαντητή.
-  test('🔴 Α4 το πάνελ και το διπλό κλικ του file manager περνούν από τον fileOpenInTabUrl', () => {
-    const source = (relative: string) => readFileSync(join(process.cwd(), 'src/components/file-manager', relative), 'utf8');
-    const panel = source('FilePreviewPanel.tsx');
-    expect(panel).toContain('openRemoteUrlInNewTab(openInTabUrl)');
-    expect(panel).toContain('{openInTabUrl && (');
-    expect(panel).not.toContain('openRemoteUrlInNewTab(fileUrl)');
-    const handlers = source('file-manager-handlers.ts');
-    expect(handlers).toContain('openRemoteUrlInNewTab(fileOpenInTabUrl(file))');
-    expect(handlers).not.toContain('fileDisplayUrl(');
+  // ⚠️ Άγκυρα ΠΗΓΑΙΟΥ κώδικα. Από το θέμα 10 οι επιφάνειες ρωτούν τον `fileOpenInTabTarget` (η καλωδίωσή τους
+  //    φυλάσσεται στο `file-viewer-route.test.ts`, Δ4)· ο `fileOpenInTabUrl` μένει η απάντηση της ΓΥΜΝΗΣ καρτέλας,
+  //    και ο μόνος που τον καλεί είναι ο ίδιος ο απαντητής.
+  test('🔴 Α4 η γυμνή καρτέλα αποφασίζεται ΜΟΝΟ μέσα στον απαντητή — καμία επιφάνεια δεν ανοίγει ωμό URL αρχείου', () => {
+    const source = (relative: string) => readFileSync(join(process.cwd(), 'src', relative), 'utf8');
+    expect(source('lib/files/file-open-in-tab.ts')).toContain('const url = fileOpenInTabUrl(record);');
+    for (const surface of ['components/file-manager/FilePreviewPanel.tsx', 'components/file-manager/file-manager-handlers.ts']) {
+      expect(source(surface)).not.toContain('openRemoteUrlInNewTab(fileUrl)');
+      expect(source(surface)).not.toContain('fileDisplayUrl(');
+    }
   });
 
   test('🔴 Α3 εικόνα χωρίς `downloadUrl` ⇒ το proxy του `storagePath` · χωρίς τίποτα ⇒ null', () => {

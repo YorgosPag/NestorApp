@@ -19,6 +19,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { defaultFileFilters, type FileFilterState } from '@/components/core/AdvancedFilters';
 import { useAllCompanyFiles } from './hooks/useAllCompanyFiles';
+import { useFileViewerSelection } from './useFileViewerSelection';
 import { formatFileSize } from '@/utils/file-validation';
 import { useFileClassification } from '@/components/shared/files/hooks/useFileClassification';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -154,7 +155,6 @@ export function useFileManagerState() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [treeViewMode, setTreeViewMode] = useState<TreeViewMode>('business');
   const [activeTab, setActiveTab] = useState<ActiveTab>('files');
-  const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Batch selection
@@ -204,6 +204,11 @@ export function useFileManagerState() {
     [files, searchTerm, filters]
   );
 
+  // ADR-899 §9 θέμα 10 — η επιλογή ζει στη διεύθυνση (`?file=<id>`)· το αρχείο παράγεται από τις ζωντανές λίστες.
+  const { selectedFile, viewerOutcome, setSelectedFile } = useFileViewerSelection({
+    companyId, files, trashedFiles, visibleFiles: filteredFiles, hasAnswered: Boolean(companyId) && !loading && !error,
+  });
+
   // Dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => [
     { title: t('dashboard.totalFiles'), value: stats.totalFiles, icon: Files, color: 'blue' },
@@ -223,7 +228,7 @@ export function useFileManagerState() {
     viewMode, setViewMode,
     treeViewMode, setTreeViewMode,
     activeTab, setActiveTab,
-    selectedFile, setSelectedFile,
+    selectedFile, setSelectedFile, viewerOutcome,
     searchTerm, setSearchTerm,
     // Batch selection
     selectedIds, setSelectedIds,

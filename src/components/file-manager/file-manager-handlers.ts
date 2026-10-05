@@ -31,8 +31,7 @@ import {
 import { defaultFileFilters } from '@/components/core/AdvancedFilters';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
-import { fileOpenInTabUrl } from '@/lib/files/file-open-in-tab';
-import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
+import { useOpenFileInNewTab } from '@/components/shared/files/FileOpenInTabAction';
 import type { FileClassification } from '@/config/domain-constants';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { useFileManagerState } from './useFileManagerState';
@@ -56,7 +55,7 @@ interface HandlerDeps {
 export function useFileManagerHandlers({ state }: HandlerDeps) {
   const {
     user, companyId,
-    setSelectedFile, setSelectedIds, setFilters, setUploading,
+    setSelectedFile, setSelectedIds, setFilters, setSearchTerm, setUploading,
     filteredFiles, selectedIds, fileInputRef,
     classifyBatch, refetch,
     showSuccess, showError, showWarning, t,
@@ -66,11 +65,14 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     setSelectedFile(file);
   }, [setSelectedFile]);
 
-  const handleFileDoubleClick = useCallback((file: FileRecord) => {
-    // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης + ο ΕΝΑΣ «άνοιξε σε νέα καρτέλα» (κενό URL ⇒ no-op με log).
-    // §9 θέμα 9 — μόνο όπου η καρτέλα θα ΕΔΕΙΧΝΕ το αρχείο· αλλιώς το πρώτο κλικ το έχει ήδη ανοίξει στο πάνελ.
-    openRemoteUrlInNewTab(fileOpenInTabUrl(file));
-  }, []);
+  // ADR-899 §9 θέμα 10 — ο ΕΝΑΣ απαντητής: διεύθυνση θεατή για κάθε τύπο (το πρώτο κλικ άνοιξε ήδη το πάνελ).
+  const handleFileDoubleClick = useOpenFileInNewTab();
+
+  // Το αρχείο της διεύθυνσης κρύβεται από τη λίστα ⇒ ΟΛΑ τα κριτήρια φεύγουν μαζί (φίλτρα ΚΑΙ αναζήτηση).
+  const handleClearFilters = useCallback(() => {
+    setFilters(defaultFileFilters);
+    setSearchTerm('');
+  }, [setFilters, setSearchTerm]);
 
   const handleRename = useCallback(async (fileId: string, newDisplayName: string) => {
     if (!user?.uid) return;
@@ -218,5 +220,6 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     handleFileUpload,
     handleAIClassify,
     handleCardClick,
+    handleClearFilters,
   };
 }
