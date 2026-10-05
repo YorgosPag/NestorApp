@@ -1,7 +1,7 @@
 /**
  * POST /api/internal/conveyance/dependency-changed — ADR-905 §6 (Στάδιο 3, CDC).
  *
- * Καλείται **μόνο** από το Cloud Function `onConveyanceDependencyWrite`, υπογεγραμμένα. Λεπτό: η πόρτα κρίνει
+ * Καλείται **μόνο** από τα Cloud Functions `onConveyance{File,Property,Project}Write`, υπογεγραμμένα. Λεπτό: η πόρτα κρίνει
  * υπογραφή + ιδεμποτία, η υπηρεσία κρίνει ποιες όψεις άλλαξαν και ζητά σήμα από τον ΕΝΑ γραφέα.
  */
 

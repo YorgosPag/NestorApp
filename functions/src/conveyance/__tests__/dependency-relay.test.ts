@@ -33,7 +33,7 @@ function harness(status: number) {
 }
 
 const snap = (data: Record<string, unknown> | undefined) => ({ exists: data !== undefined, data: () => data });
-const context = { eventId: 'evt-1', params: { docId: 'file_1' } };
+const context = { eventId: 'evt-1', timestamp: new Date(NOW * 1000).toISOString(), params: { docId: 'file_1' } };
 const change = (before?: Record<string, unknown>, after?: Record<string, unknown>) => ({ before: snap(before), after: snap(after) });
 
 describe('relayDependencyWrite', () => {
@@ -81,6 +81,27 @@ describe('relayDependencyWrite', () => {
     const h = harness(401);
     await expect(relayDependencyWrite('file', change(undefined, { companyId: 'c1' }), context, h.deps)).resolves.toBeUndefined();
     expect(h.logs).toEqual([expect.stringContaining('not retrying')]);
+  });
+
+  it.each([408, 425, 429])('%i ⇒ throws — "not now" is not "no" (the rate limit is backpressure, not loss)', async (status) => {
+    const h = harness(status);
+    await expect(relayDependencyWrite('file', change(undefined, { companyId: 'c1' }), context, h.deps)).rejects.toThrow(String(status));
+    expect(h.logs).toEqual([]);
+  });
+
+  it('an event older than the receiver idempotency window is dropped WITHOUT sending (end condition)', async () => {
+    const h = harness(503);
+    const stale = { ...context, timestamp: new Date((NOW - 24 * 60 * 60 - 1) * 1000).toISOString() };
+    await expect(relayDependencyWrite('file', change(undefined, { companyId: 'c1' }), stale, h.deps)).resolves.toBeUndefined();
+    expect(h.sent).toHaveLength(0);
+    expect(h.logs).toEqual([expect.stringContaining('expired')]);
+  });
+
+  it('a retry inside the window is still sent', async () => {
+    const h = harness(200);
+    const retried = { ...context, timestamp: new Date((NOW - 60 * 60) * 1000).toISOString() };
+    await relayDependencyWrite('file', change(undefined, { companyId: 'c1' }), retried, h.deps);
+    expect(h.sent).toHaveLength(1);
   });
 
   it('network failure ⇒ throws (retry)', async () => {

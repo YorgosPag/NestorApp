@@ -11,8 +11,12 @@
  *
  * - **No field filter here.** "Which fields matter" lives in the app (`evidenceOfFile` / `subjectViewFacts`);
  *   a list here would be a second, silently diverging answer. The receiver drops no-op writes for one query.
- * - **Delivery**: 2xx done · 4xx log + stop (a bad signature/payload does not heal by retrying) · 5xx/network →
- *   throw → Firebase retries (`failurePolicy`). The receiver dedupes by `Idempotency-Key` = `eventId`.
+ * - **Delivery**: judged by the ONE projected dictionary (`judgeInternalWebhookDelivery`): 2xx done · final 4xx
+ *   log + stop (a bad signature/payload does not heal by retrying) · 408/425/429/5xx/network → throw → Firebase
+ *   retries (`failurePolicy`) — the receiver's rate limit is backpressure, not loss. The receiver dedupes by
+ *   `Idempotency-Key` = `eventId`.
+ * - **End condition**: an event older than the receiver's idempotency window is dropped instead of retried
+ *   (gen1 would otherwise retry for 7 days).
  * - **Payload**: document metadata only — never bytes. Timestamps → ISO (`toWireDocument`, projected).
  *
  * @module functions/conveyance/dependency-relay
@@ -30,6 +34,10 @@ import {
   type DependencyChangeEvent,
   type DependencySource,
 } from '../generated/lib/conveyance/dependency-change-event';
+import {
+  isInternalWebhookEventExpired,
+  judgeInternalWebhookDelivery,
+} from '../generated/lib/webhooks/internal-webhook-delivery';
 import {
   INTERNAL_WEBHOOK_SIGNATURE_HEADER,
   signInternalWebhook,
@@ -69,12 +77,16 @@ function hasTenant(event: DependencyChangeEvent): boolean {
 export async function relayDependencyWrite(
   source: DependencySource,
   change: { readonly before: Snapshot; readonly after: Snapshot },
-  context: { readonly eventId: string; readonly params: Record<string, string> },
+  context: { readonly eventId: string; readonly timestamp: string; readonly params: Record<string, string> },
   deps: RelayDeps,
 ): Promise<void> {
   const event = eventOf(source, context.params.docId, context.eventId, change.before, change.after);
   // No tenant ⇒ no case can depend on it (the receiver queries per tenant). Cheapest possible filter.
   if (!event || !hasTenant(event)) return;
+  if (isInternalWebhookEventExpired(context.timestamp, deps.nowSeconds())) {
+    deps.log('error', '[ConveyanceRelay] expired — dropping', { source, docId: event.docId, publishedAt: context.timestamp });
+    return;
+  }
   const body = JSON.stringify(event);
   const url = `${deps.baseUrl().replace(/\/+$/, '')}${CONVEYANCE_DEPENDENCY_WEBHOOK_PATH}`;
   const { status } = await deps.send(url, {
@@ -86,8 +98,9 @@ export async function relayDependencyWrite(
     },
     body,
   });
-  if (status >= 200 && status < 300) return;
-  if (status >= 400 && status < 500) {
+  const delivery = judgeInternalWebhookDelivery(status);
+  if (delivery === 'delivered') return;
+  if (delivery === 'refused') {
     deps.log('error', '[ConveyanceRelay] refused — not retrying', { source, docId: event.docId, status });
     return;
   }

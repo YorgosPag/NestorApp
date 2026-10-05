@@ -14,6 +14,7 @@
     "lib/images/stored-image-dimensions.ts",
     "lib/search/search-index-version.ts",
     "lib/search/search.ts",
+    "lib/webhooks/internal-webhook-delivery.ts",
     "lib/webhooks/internal-webhook-signature.ts",
     "services/enterprise-id-deterministic.ts",
     "types/search-core.ts"

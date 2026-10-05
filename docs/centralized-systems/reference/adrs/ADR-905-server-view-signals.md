@@ -5,7 +5,7 @@
 | **Status** | 🟢 **IMPLEMENTED — Στάδια 1+2 (2026-10-04)**: γραφέας μέσα στη συναλλαγή · κρίση «ποιες όψεις» με τους κριτές της όψης · κανόνες + σουίτα · `freshness` στις όψεις · ένα hook στον client · πρώτος καταναλωτής η υπόθεση μεταβίβασης (ADR-901 §14.8) · ✅ κανόνες **ανεπτυγμένοι** (2026-10-04) · 🟢 **Στάδιο 3 (CDC) IMPLEMENTED σε κώδικα (2026-10-04, §6)** — trigger-αναμεταδότης → υπογεγραμμένο webhook → κρίση με τους κριτές της όψης · ⏳ deploy δείκτη + μυστικού + Functions (§7, απόφαση Giorgio) |
 | **Date** | 2026-10-04 |
 | **Category** | Data Access Layer / Real-Time Architecture |
-| **Canonical Location** | CDC: `functions/src/conveyance/dependency-relay.ts` → `src/app/api/internal/conveyance/dependency-changed/route.ts` → `src/services/conveyance/conveyance-dependency-relay.server.ts` (πόρτα: `src/server/internal-webhooks/signed-webhook-door.ts` · υπογραφή: `src/lib/webhooks/internal-webhook-signature.ts` · συμβόλαιο: `src/lib/conveyance/dependency-change-event.ts`) · server: `src/services/conveyance/conveyance-view-signal.server.ts` · κρίση: `src/lib/conveyance/view-signal-audience.ts` · κλειδί: `src/lib/conveyance/view-signal-key.ts` · client: `src/services/realtime/hooks/use-server-view-signal.ts` + `src/services/realtime/server-view-refresh.ts` · τύπος: `src/types/server-view.ts` · κανόνας: `firestore.rules` (`conveyance_view_signals`) |
+| **Canonical Location** | CDC: `functions/src/conveyance/dependency-relay.ts` → `src/app/api/internal/conveyance/dependency-changed/route.ts` → `src/services/conveyance/conveyance-dependency-relay.server.ts` (πόρτα: `src/server/internal-webhooks/signed-webhook-door.ts` · υπογραφή: `src/lib/webhooks/internal-webhook-signature.ts` · παράδοση: `src/lib/webhooks/internal-webhook-delivery.ts` · συμβόλαιο: `src/lib/conveyance/dependency-change-event.ts`) · server: `src/services/conveyance/conveyance-view-signal.server.ts` · κρίση: `src/lib/conveyance/view-signal-audience.ts` · κλειδί: `src/lib/conveyance/view-signal-key.ts` · client: `src/services/realtime/hooks/use-server-view-signal.ts` + `src/services/realtime/server-view-refresh.ts` · τύπος: `src/types/server-view.ts` · κανόνας: `firestore.rules` (`conveyance_view_signals`) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | **ADR-901 §14.8** (ο πρώτος καταναλωτής) · ADR-355 (συνδρομές Firestore) · ADR-867 Β7 (`use-live-snapshot` — ζωντανή ανάγνωση χωρίς χώρο) · ADR-849 (`useCompanyId` = ίδια απάντηση με τον server) · ADR-874 (προβολή στα Functions) · ADR-865 (deploy κανόνων ≠ push) |
 
@@ -158,9 +158,19 @@ WIP ⇒ σήμα **μόνο** σε όποιον το **έχασε** (γι' αυ�
 - **Ιδεμποτία χωρίς νέο μηχανισμό**: `Idempotency-Key` = `eventId` και η πόρτα περνά από το **υπάρχον** `runIdempotently`
   (principal `internal-webhook:<πηγή>`) ⇒ η επανάληψη του trigger (at-least-once) **και** το replay μέσα στο παράθυρο εκτελούνται
   **μία** φορά. (Η αρχική πρόταση ανεχόταν διπλή αύξηση· δεν χρειάζεται.)
-- **Κωδικοί → συμπεριφορά του trigger**: 2xx τέλος · 4xx τέλος + καταγραφή (λάθος υπογραφή/σώμα δεν διορθώνεται με επανάληψη) ·
-  5xx/δίκτυο ⇒ `throw` ⇒ επανάληψη (`failurePolicy`). Το «λείπει το μυστικό **στον αποδέκτη**» είναι **503**: ρύθμιση που θα
-  διορθωθεί, τα γεγονότα περιμένουν αντί να χαθούν.
+- **Κωδικοί → συμπεριφορά του trigger** — **ένα** λεξικό (`lib/webhooks/internal-webhook-delivery.ts` ·
+  `judgeInternalWebhookDelivery`), **προβαλλόμενο** στα Functions όπως η υπογραφή: 2xx τέλος · 4xx τέλος + καταγραφή (λάθος
+  υπογραφή/σώμα δεν διορθώνεται με επανάληψη) · **408 / 425 / 429** και 5xx/δίκτυο ⇒ `throw` ⇒ επανάληψη (`failurePolicy`).
+  Το «λείπει το μυστικό **στον αποδέκτη**» είναι **503**: ρύθμιση που θα διορθωθεί, τα γεγονότα περιμένουν αντί να χαθούν.
+  🔴 **«Όχι» ≠ «όχι τώρα»** (2026-10-05, βρέθηκε στον έλεγχο πριν το deploy): ο αποδέκτης στέκεται πίσω από
+  `withWebhookRateLimit` (30/λεπτό ανά IP) και οι triggers πυροδοτούν σε **κάθε** εγγραφή τριών συλλογών· με «κάθε 4xx
+  οριστικό» ένα 429 θα έχανε το γεγονός **χωρίς ίχνος**. Πρακτική Stripe/Svix/Hookdeck: 408/429 επαναλαμβάνονται — το όριο
+  γίνεται **αντίθλιψη**, όχι απώλεια.
+- **Συνθήκη τερματισμού** (Google «Retry event-driven functions»: *set an end condition*): ο trigger 1ης γενιάς ξαναδοκιμάζει
+  με εκθετική αναμονή 10–600s επί **7 ημέρες**. Γεγονός παλαιότερο από `INTERNAL_WEBHOOK_MAX_EVENT_AGE_SECONDS` (**24 ώρες**)
+  **απορρίπτεται με καταγραφή** (`expired — dropping`) αντί να ξαναδοκιμαστεί. Το ταβάνι **είναι** το παράθυρο ιδεμποτίας του
+  αποδέκτη (`IDEMPOTENCY_TTL_MS` — άγκυρα σε test): ως εκεί κάθε επανάληψη εκτελείται **μία** φορά· πέρα από εκεί η εγγύηση
+  δεν ισχύει. Το `Retry-After` **δεν** τιμάται: την αναμονή την ορίζει η πλατφόρμα, όχι ο κώδικας (δηλωμένο όριο).
 - **Middleware**: `/api/internal/` δηλώθηκε **μηχανικό endpoint** — αλλιώς το φίλτρο bot (user-agent) απαντά 403 από το Edge,
   που ο trigger θα διάβαζε ως **οριστική** άρνηση: απώλεια χωρίς ίχνος.
 
@@ -185,6 +195,7 @@ WIP ⇒ σήμα **μόνο** σε όποιον το **έχασε** (γι' αυ�
 |---|---|---|
 | Ε1 | ✅ **ΚΛΕΙΣΤΟ 2026-10-04** — webhook HMAC (§6), απόφαση Giorgio | — |
 | Ε2 | ✅ **ΚΛΕΙΣΤΟ 2026-10-04** — **CHECK 3.99** (AST, ZERO-TOL) **δίπλα** στην άγκυρα Α38, και οι δύο πάνω στη **ΜΙΑ** δήλωση `.view-signal-authority.json` (απόφαση Giorgio) | — |
+| Ε3 | ⏳ **Ο προϋπολογισμός ρυθμού του αποδέκτη** — μοιράζεται την κατηγορία `WEBHOOK` (30/λεπτό, κλειδί = IP ανώνυμου καλούντος) με τους εξωτερικούς παρόχους, ενώ ο καλών εδώ είναι **δικός μας και υπογεγραμμένος**. Μετά το §6.4 το 429 δεν χάνει γεγονός, αλλά **καθυστερεί** το σήμα (αναμονή 10–600s). **Δεν μετρήθηκε** πόσες εγγραφές/λεπτό δίνει μια μαζική μεταφόρτωση· πρώτα μέτρηση (γραμμές `answered 429 — retrying` στα logs), μετά απόφαση: δική του κατηγορία με κλειδί την **πηγή** (CHECK 3.78). | Giorgio |
 
 ## 9. Changelog
 
@@ -193,3 +204,4 @@ WIP ⇒ σήμα **μόνο** σε όποιον το **έχασε** (γι' αυ�
 | 2026-10-04 | Δημιουργία. Στάδια 1+2 υλοποιημένα με πρώτο καταναλωτή την υπόθεση μεταβίβασης (ADR-901 §14.8): κανόνες + σουίτα (39/39, μεταλλάξεις 4/4) · γραφέας + κρίση (μεταλλάξεις 8/8 + 5/5 προσκλήσεις) · ελεγκτής + μονοτονία (μεταλλάξεις 6/6). Στάδιο 3 τεκμηριωμένο ως πρόταση (§6). |
 | 2026-10-04 | **Κανόνες ανεπτυγμένοι** (`--only firestore:rules`, παραγωγή = HEAD + μόνο το μπλοκ `conveyance_view_signals`· επαληθευμένο από τον πάροχο). **Στάδιο 3 (CDC) σε κώδικα** (§6): trigger-αναμεταδότης σε `files`/`properties`/`projects` · **ένας** πυρήνας υπογραφής προβαλλόμενος (ADR-874) · πόρτα `withSignedInternalWebhook` (ρίζα CHECK 3.92 · ιδεμποτία ανά γεγονός) · σήμα ⇔ η **προβολή** της όψης άλλαξε (`evidenceOfFile` · `subjectViewFacts`) · ευρετήριο `dependencyKeys` (παράγωγο · read-repair · δείκτης) · middleware: `/api/internal/` = μηχανικό endpoint. Boy-scout: `fileLinkTag` (4 inline αντίγραφα). Tests 27 + 7 + 14 + 7 · **μεταλλάξεις 14/14** (μία επέζησε στην πρώτη εκτέλεση — αρχείο που αλλάζει μισθωτή — και απέκτησε άγκυρα). Ε1 κλειστό. |
 | 2026-10-04 | **Βήμα Γ — CHECK 3.99** «ένας γραφέας σημάτων» (Ε2 κλειστό): Κ1 η συλλογή μόνο σε γραφέα + αναφορά client · Κ2 κλειστό σύνολο καλούντων **προς τις δύο μεριές** (αδήλωτος καλών ⛔ · δηλωμένος γραφέας κάτω από `min` ⛔ — αρχείο που δεν περνά καν το προφίλτρο μετρά **0**) · Κ3 ο client δεν γράφει · Κ4 μία μορφή εγγραφής. Η λίστα `CASE_WRITERS` **βγήκε** από το test σε `.view-signal-authority.json` — τη διαβάζουν πύλη (AST) **και** Α38 (κείμενο). Πραγματικό δέντρο 0 παραβιάσεις, 10 γραφείς · self-test 9 · **μεταλλάξεις πύλης 8/8**. |
+| 2026-10-05 | **Έλεγχος πριν το deploy των Functions** — δείκτης + μυστικό ήδη στην παραγωγή (§7 βήματα 2-4)· ανυπόγραφο POST στον αποδέκτη = **401**. 🔴 **Εύρημα**: ο αναμεταδότης διάβαζε το **429** του `withWebhookRateLimit` ως οριστική άρνηση ⇒ απώλεια γεγονότος σε ριπή εγγραφών. **Διόρθωση (§6.4)**: νέο προβαλλόμενο λεξικό `lib/webhooks/internal-webhook-delivery.ts` (408/425/429 = επανάληψη) + **συνθήκη τερματισμού** 24 ωρών δεμένη με άγκυρα στο `IDEMPOTENCY_TTL_MS`. Tests: 27 (λεξικό + λήξη) + 5 νέα στον αναμεταδότη· προβολή 17 αρχεία. Νέο ανοιχτό **Ε3** (προϋπολογισμός ρυθμού υπογεγραμμένου καλούντος — πρώτα μέτρηση). |
