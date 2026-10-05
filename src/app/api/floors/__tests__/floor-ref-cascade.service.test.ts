@@ -21,6 +21,7 @@ jest.mock('@/lib/telemetry', () => ({
 
 import { cascadeFloorRefToHosted, type CascadeFloor } from '../floor-ref-cascade.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { CASCADE_ACTOR } from './floor-cascade-actor.fixture';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
 
@@ -76,28 +77,33 @@ describe('cascadeFloorRefToHosted', () => {
       [COLLECTIONS.STORAGE]: [hosted('s1')],
     };
     const { db } = makeDb(store);
-    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, 'u1');
+    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, CASCADE_ACTOR);
 
     expect(result).toEqual({ properties: 1, parking: 1, storage: 1, failed: 0 });
     expect(store[COLLECTIONS.PARKING_SPACES][0].data.floor).toBe(2);
     expect(store[COLLECTIONS.PARKING_SPACES][1].data.floor).toBe(1);
     expect(store[COLLECTIONS.PROPERTIES][1].data.floor).toBe(1);
     expect(recordChange).toHaveBeenCalledTimes(3);
+    // ADR-195 — κανένα από τα τρία έγγραφα δεν το πληκτρολόγησε άνθρωπος: εκτελεστής η μηχανή, αιτία ο όροφος.
+    for (const [entry] of recordChange.mock.calls) {
+      expect(entry.performedBy).toBe('system:floor-ref');
+      expect(entry.cause).toBe(CASCADE_ACTOR.cause);
+    }
   });
 
   it('αλλαγή ΜΟΝΟ είδους (ισόγειο → πυλωτή) διαδίδεται', async () => {
     const store: Store = { [COLLECTIONS.PARKING_SPACES]: [hosted('k1', { floor: 0, floorKind: 'ground' })] };
     const { db } = makeDb(store);
-    await cascadeFloorRefToHosted(db, { ...FLOOR, number: 0, kind: 'pilotis' }, COMPANY, 'u1');
+    await cascadeFloorRefToHosted(db, { ...FLOOR, number: 0, kind: 'pilotis' }, COMPANY, CASCADE_ACTOR);
     expect(store[COLLECTIONS.PARKING_SPACES][0].data).toMatchObject({ floor: 0, floorKind: 'pilotis' });
   });
 
   it('🔑 ιδεμποτία: δεύτερη κλήση = καμία γραφή, κανένα ίχνος', async () => {
     const store: Store = { [COLLECTIONS.STORAGE]: [hosted('s1')] };
     const { db, commits } = makeDb(store);
-    await cascadeFloorRefToHosted(db, FLOOR, COMPANY, 'u1');
+    await cascadeFloorRefToHosted(db, FLOOR, COMPANY, CASCADE_ACTOR);
     recordChange.mockClear();
-    const second = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, 'u1');
+    const second = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, CASCADE_ACTOR);
     expect(second).toEqual({ properties: 0, parking: 0, storage: 0, failed: 0 });
     expect(commits).toEqual([1]);
     expect(recordChange).not.toHaveBeenCalled();
@@ -110,7 +116,7 @@ describe('cascadeFloorRefToHosted', () => {
     ];
     const store: Store = { [COLLECTIONS.PROPERTIES]: [hosted('m1', { isMultiLevel: true, levels })] };
     const { db, commits } = makeDb(store);
-    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, 'u1');
+    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, CASCADE_ACTOR);
 
     expect(result.properties).toBe(1);
     expect(commits).toEqual([1]);
@@ -124,7 +130,7 @@ describe('cascadeFloorRefToHosted', () => {
       [COLLECTIONS.PARKING_SPACES]: Array.from({ length: 1000 }, (_, i) => hosted(`k${i}`)),
     };
     const { db, commits } = makeDb(store);
-    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, 'u1');
+    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, CASCADE_ACTOR);
     expect(commits).toEqual([450, 450, 100]);
     expect(result.parking).toBe(1000);
   });
@@ -132,7 +138,7 @@ describe('cascadeFloorRefToHosted', () => {
   it('🔴 αποτυχημένη παρτίδα ⇒ `failed`, και ΚΑΝΕΝΑ ίχνος για ό,τι δεν γράφτηκε σίγουρα', async () => {
     const store: Store = { [COLLECTIONS.STORAGE]: [hosted('s1')] };
     const { db } = makeDb(store, { failCommits: true });
-    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, 'u1');
+    const result = await cascadeFloorRefToHosted(db, FLOOR, COMPANY, CASCADE_ACTOR);
     expect(result.failed).toBe(1);
     expect(recordChange).not.toHaveBeenCalled();
     expect(store[COLLECTIONS.STORAGE][0].data.floor).toBe(1);

@@ -33,7 +33,8 @@ import {
   readBuildingObjectiveValueFacts,
   type BuildingObjectiveValuePatch,
 } from '@/lib/objective-value/building-objective-value-facts';
-import { recordBuildingUpdate } from './_shared/building-update-audit';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 
 /** Το κλειδί σώματος του κλάδου — δηλώνεται ΜΙΑ φορά στο `lib` (το στέλνει και ο πελάτης)· η διαδρομή ρωτά «υπάρχει;». */
 export { BUILDING_OBJECTIVE_VALUE_BODY_KEY };
@@ -78,6 +79,6 @@ export async function patchBuildingObjectiveValue(input: BuildingObjectiveValueP
   });
 
   // Ίχνος — ποιος άλλαξε ποιο γεγονός. Ο **ίδιος** γραφέας με τη γενική διαδρομή του PATCH.
-  await recordBuildingUpdate({ buildingId, before, written: applied, ctx });
+  await recordEntityUpdate({ entityType: ENTITY_TYPES.BUILDING, entityId: buildingId, before, written: applied, ctx });
   return apiSuccess({ buildingId, updated: true, _v: newVersion }, 'Building updated');
 }

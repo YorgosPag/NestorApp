@@ -41,6 +41,7 @@ import {
 import { cascadeFloorElevations } from '../floor-elevation-cascade.service';
 import { cascadeFloorHeightToEntities } from '../floor-height-cascade.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { CASCADE_ACTOR } from './floor-cascade-actor.fixture';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
 const pushElevations = cascadeFloorElevations as jest.Mock;
@@ -78,7 +79,7 @@ async function runDerive(floors: SeedDoc[], changedFloorId: string) {
     BUILDING,
     changedFloorId,
     COMPANY,
-    'user_1',
+    CASCADE_ACTOR,
   );
   return { result, updates };
 }
@@ -164,6 +165,10 @@ describe('deriveAdjacentHeightsFromElevation — elevation-edit (Revit «move a 
     expect(recordChange).toHaveBeenCalledTimes(2);
     expect(recordChange.mock.calls[0][0].changes[0].field).toBe('height');
     expect(recordChange.mock.calls[0][0].action).toBe('updated');
+    // ADR-195 — το ύψος ΠΑΡΑΧΘΗΚΕ από τη στάθμη: γραμμή μηχανής, ώστε η σύμπτυξη να μην το ενώσει με ό,τι
+    // πληκτρολόγησε ο άνθρωπος στον ίδιο όροφο.
+    expect(recordChange.mock.calls[0][0].performedBy).toBe('system:floor-stack');
+    expect(recordChange.mock.calls[0][0].cause).toBe(CASCADE_ACTOR.cause);
   });
 
   it('returns empty for a single-floor building (top keeps explicit height)', async () => {
@@ -213,7 +218,7 @@ describe('reconcileSpecialLevelPlacement — ADR-461 Revit-true satellite placem
       db as unknown as Parameters<typeof reconcileSpecialLevelPlacement>[0],
       BUILDING,
       COMPANY,
-      'user_1',
+      CASCADE_ACTOR,
     );
     return { placed, updates };
   }
@@ -272,7 +277,7 @@ describe('reconcileFloorStackAfterEdit — dispatch', () => {
   ) as unknown as Parameters<typeof reconcileFloorStackAfterEdit>[0];
 
   it('elevation edit → derives heights + re-stretches only those storeys (no FFL push)', async () => {
-    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f2', COMPANY, 'user_1', {
+    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f2', COMPANY, CASCADE_ACTOR, {
       elevationChanged: true,
       heightChanged: false,
       newHeightMetres: null,
@@ -285,19 +290,19 @@ describe('reconcileFloorStackAfterEdit — dispatch', () => {
   });
 
   it('height edit → re-stretches the changed floor + pushes upper FFLs (ADR-450)', async () => {
-    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f1', COMPANY, 'user_1', {
+    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f1', COMPANY, CASCADE_ACTOR, {
       elevationChanged: false,
       heightChanged: true,
       newHeightMetres: 3.2,
     });
     expect(res.mode).toBe('height');
-    expect(stretchEntities).toHaveBeenCalledWith(db, 'f1', COMPANY, 3.2, 'user_1');
-    expect(pushElevations).toHaveBeenCalledWith(db, BUILDING, 'f1', COMPANY, 'user_1');
+    expect(stretchEntities).toHaveBeenCalledWith(db, 'f1', COMPANY, 3.2, CASCADE_ACTOR);
+    expect(pushElevations).toHaveBeenCalledWith(db, BUILDING, 'f1', COMPANY, CASCADE_ACTOR);
     expect(res.elevationsPushed).toBe(2);
   });
 
   it('elevation wins when both fields changed', async () => {
-    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f2', COMPANY, 'user_1', {
+    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f2', COMPANY, CASCADE_ACTOR, {
       elevationChanged: true,
       heightChanged: true,
       newHeightMetres: 9,
@@ -307,7 +312,7 @@ describe('reconcileFloorStackAfterEdit — dispatch', () => {
   });
 
   it('no-op mode when nothing structural changed', async () => {
-    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f1', COMPANY, 'user_1', {
+    const res = await reconcileFloorStackAfterEdit(db, BUILDING, 'f1', COMPANY, CASCADE_ACTOR, {
       elevationChanged: false,
       heightChanged: false,
       newHeightMetres: null,

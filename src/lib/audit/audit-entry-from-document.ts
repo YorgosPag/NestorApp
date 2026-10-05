@@ -30,6 +30,7 @@
 import { auditLedgerScopeFromData } from '@/lib/audit/audit-ledger';
 import type {
   AuditAction,
+  AuditCause,
   AuditEntityType,
   AuditSource,
   EntityAuditEntry,
@@ -51,6 +52,21 @@ function toIsoTimestamp(value: unknown): string {
 
 function toSource(value: unknown): AuditSource | undefined {
   return value === 'cdc' || value === 'service' ? value : undefined;
+}
+
+/** Η αιτία μιας παράγωγης εγγραφής· ό,τι δεν έχει εμπνευστή **δεν** είναι αιτία. */
+function toCause(value: unknown): AuditCause | undefined {
+  if (value === null || typeof value !== 'object') return undefined;
+  const raw = value as Readonly<Record<string, unknown>>;
+  if (typeof raw.initiatedBy !== 'string' || raw.initiatedBy === '') return undefined;
+  return {
+    auditId: typeof raw.auditId === 'string' ? raw.auditId : null,
+    initiatedBy: raw.initiatedBy,
+    initiatedByName: toDisplayString(raw.initiatedByName),
+    entityType: raw.entityType as AuditEntityType,
+    entityId: typeof raw.entityId === 'string' ? raw.entityId : '',
+    entityName: toDisplayString(raw.entityName),
+  };
 }
 
 /**
@@ -82,6 +98,7 @@ export function entityAuditEntryFromData(
   if (scope === null) return null;
 
   const source = toSource(data.source);
+  const cause = toCause(data.cause);
   return {
     id,
     entityType: data.entityType as AuditEntityType,
@@ -93,6 +110,7 @@ export function entityAuditEntryFromData(
     performedByName: toDisplayString(data.performedByName),
     timestamp: toIsoTimestamp(data.timestamp),
     ...(source ? { source } : {}),
+    ...(cause ? { cause } : {}),
     ...scope,
   };
 }

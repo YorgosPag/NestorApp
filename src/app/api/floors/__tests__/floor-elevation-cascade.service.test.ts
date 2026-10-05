@@ -27,6 +27,7 @@ jest.mock('@/lib/telemetry', () => ({
 
 import { cascadeFloorElevations } from '../floor-elevation-cascade.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { CASCADE_ACTOR } from './floor-cascade-actor.fixture';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
 
@@ -62,7 +63,7 @@ async function run(floors: SeedDoc[], changedFloorId: string) {
     BUILDING,
     changedFloorId,
     COMPANY,
-    'user_1',
+    CASCADE_ACTOR,
   );
   return { result, updates };
 }
@@ -138,6 +139,16 @@ describe('cascadeFloorElevations — ADR-450 §1', () => {
     const call = recordChange.mock.calls[0][0];
     expect(call.changes[0].field).toBe('elevation');
     expect(call.action).toBe('updated');
+  });
+
+  it('ADR-195 — η γραμμή είναι της ΜΗΧΑΝΗΣ, με αιτία την ανθρώπινη πράξη· το έγγραφο σφραγίζεται με τον άνθρωπο', async () => {
+    const { updates } = await run([floor('f1', 1, 0, 4), floor('f2', 2, 99, 3)], 'f1');
+
+    const entry = recordChange.mock.calls[0][0];
+    expect(entry.performedBy).toBe('system:floor-stack');
+    expect(entry.cause).toBe(CASCADE_ACTOR.cause);
+    // Η σφραγίδα του εγγράφου ΔΕΝ είναι ιστορικό: μένει «ποιανού πράξη το άγγιξε».
+    expect(updates[0].patch.updatedBy).toBe(CASCADE_ACTOR.updatedBy);
   });
 
   // ADR-461 — special-level satellite behaviour.

@@ -111,7 +111,19 @@ interface TrackedFieldDescriptor {
  * flipped to `collection` together with the engine that understands them.
  */
 export type TrackedFieldDef =
-  | (TrackedFieldDescriptor & { readonly kind: 'scalar' })
+  | (TrackedFieldDescriptor & {
+      readonly kind: 'scalar';
+      /**
+       * Προβολέας **τιμής** για βαθμωτό πεδίο που κρατά αντικείμενο (π.χ. ο δεσμός `placeRef`
+       * `{landId, buildingId}`): η μηχανή συγκρίνει και γράφει **την προβολή**, όχι το
+       * `serializeScalar` — που θα έβγαζε ωμό JSON στο ιστορικό. Το αδελφό του `subFieldValues`
+       * των συλλογών (ADR-195, 2026-10-05).
+       *
+       * 🔑 Η προβολή πρέπει να είναι **ταυτότητα**, όχι περιγραφή: δύο τιμές που διαφέρουν πρέπει
+       * να δίνουν διαφορετικό κείμενο, αλλιώς η αλλαγή χάνεται. `null` ⇒ «δεν υπάρχει».
+       */
+      readonly value?: AuditScalarProjector;
+    })
   | (TrackedFieldDescriptor & {
       readonly kind: 'collection';
       /**
@@ -148,6 +160,9 @@ export type TrackedFieldDef =
        */
       readonly subFieldLabelScope?: string;
     });
+
+/** Η προβολή της τιμής ενός βαθμωτού πεδίου σε τιμή ιστορικού — δες `value`. */
+export type AuditScalarProjector = (value: unknown) => AuditFieldChange['oldValue'];
 
 /** Η προβολή ενός υπο-πεδίου σε τιμή ιστορικού — δες `subFieldValues`. */
 export type AuditSubFieldProjector = (

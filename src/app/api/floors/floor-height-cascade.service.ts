@@ -4,8 +4,9 @@ import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { flushInBatches, type BatchUpdate } from '@/lib/admin-batch-utils';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import type { AuditEntityType, AuditFieldChange } from '@/types/audit-trail';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
+import type { AuditEntityType } from '@/types/audit-trail';
+import { derivedChange, recordDerivedWrites, type FloorCascadeActor } from './_shared/floor-cascade-audit';
 
 const logger = createModuleLogger('FloorHeightCascade');
 
@@ -141,7 +142,8 @@ const CASCADE_TARGETS: readonly CascadeTarget[] = [
  *
  * - Idempotent: same floor.height → same value → no write, no audit.
  * - Belt-and-suspenders: no-op batch when nothing changed.
- * - ADR-195: each updated entity gets an EntityAuditService.recordChange entry.
+ * - ADR-195: each updated entity gets its own audit entry — performed by the machine
+ *   (`system:floor-stack`), caused by the human edit (`actor.cause`).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q5
  * @see docs/centralized-systems/reference/adrs/ADR-448-storey-aware-dxf-viewer.md §6 Phase 4 + 4b
@@ -151,8 +153,9 @@ export async function cascadeFloorHeightToEntities(
   floorId: string,
   companyId: string,
   newHeightMetres: number,
-  updatedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<CascadeResult> {
+  const { updatedBy } = actor;
   const snaps = await Promise.all(
     CASCADE_TARGETS.map((target) =>
       queryStoreyEntities(db, target.collection, companyId, floorId)),
@@ -168,7 +171,7 @@ export async function cascadeFloorHeightToEntities(
   if (updates.length > 0) {
     const flush = await flushInBatches(db, updates);
     if (flush.errors.length > 0) throw new Error(`Floor height cascade partially failed: ${flush.errors.join('; ')}`);
-    await recordCascadeAudit(perTarget, companyId, updatedBy);
+    await recordCascadeAudit(perTarget, companyId, actor);
   }
 
   const result = summarise(perTarget);
@@ -230,27 +233,19 @@ function summarise(perTarget: readonly TargetResult[]): CascadeResult {
 async function recordCascadeAudit(
   perTarget: readonly TargetResult[],
   companyId: string,
-  performedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<void> {
-  const tasks = perTarget.flatMap((target) =>
-    target.entries.map((entry) => {
-      const change: AuditFieldChange = {
-        field: entry.field,
-        oldValue: entry.oldValue,
-        newValue: entry.newValue,
-        label: entry.field,
-      };
-      return EntityAuditService.recordChange({
+  await recordDerivedWrites(
+    SYSTEM_IDENTITY.FLOOR_STACK_ID,
+    perTarget.flatMap((target) =>
+      target.entries.map((entry) => ({
         entityType: target.entityType,
         entityId: entry.docId,
         entityName: entry.docId,
-        action: 'updated',
-        changes: [change],
-        performedBy,
-        performedByName: null,
-        companyId,
-      });
-    }),
+        changes: [derivedChange(entry.field, entry.oldValue, entry.newValue)],
+      })),
+    ),
+    actor,
+    companyId,
   );
-  await Promise.all(tasks);
 }

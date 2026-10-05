@@ -1440,10 +1440,17 @@
       },
       "actors": {
         "addressPosition": "Σύστημα · εντοπισμός θέσης",
+        "floorRef": "Σύστημα · συγχρονισμός ορόφου",
+        "floorStack": "Σύστημα · στοίβα ορόφων",
         "ingestion": "Σύστημα · εισαγωγή αρχείων",
         "system": "Σύστημα"
       },
       "byUser": "από {name}",
+      "cause": {
+        "byUser": "λόγω αλλαγής από {name}",
+        "byUserOnEntity": "λόγω αλλαγής από {name} στο «{entity}»",
+        "onEntity": "λόγω αλλαγής στο «{entity}»"
+      },
       "changeHistory": "Ιστορικό αλλαγών",
       "changes": {
         "movedToTrash": "Μεταφορά στον κάδο: {from} → {to}",

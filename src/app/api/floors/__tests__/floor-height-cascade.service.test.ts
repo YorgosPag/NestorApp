@@ -27,6 +27,7 @@ jest.mock('@/lib/telemetry', () => ({
 
 import { cascadeFloorHeightToEntities } from '../floor-height-cascade.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { CASCADE_ACTOR } from './floor-cascade-actor.fixture';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
 
@@ -81,7 +82,7 @@ async function runCascade(
     FLOOR,
     COMPANY,
     newHeightMetres,
-    'user_1',
+    CASCADE_ACTOR,
   );
   return { result, updates };
 }

@@ -811,7 +811,14 @@
     "actors": {
       "system": "System",
       "addressPosition": "System · position lookup",
-      "ingestion": "System · file ingestion"
+      "ingestion": "System · file ingestion",
+      "floorStack": "System · floor stack",
+      "floorRef": "System · floor sync"
+    },
+    "cause": {
+      "byUserOnEntity": "caused by a change from {name} on “{entity}”",
+      "byUser": "caused by a change from {name}",
+      "onEntity": "caused by a change on “{entity}”"
     },
     "session": {
       "saves": "{count} saves · {from}–{to}",

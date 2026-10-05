@@ -24,6 +24,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import type {
   AuditEntityType,
   AuditAction,
+  AuditCause,
   AuditFieldChange,
   EntityAuditEntry,
 } from '@/types/audit-trail';
@@ -55,6 +56,8 @@ interface RecordChangeBase {
   changes: AuditFieldChange[];
   performedBy: string;
   performedByName: string | null;
+  /** Παράγωγη γραφή (αλυσίδα): η πράξη που την προκάλεσε — δες `AuditCause`. */
+  cause?: AuditCause;
 }
 
 /**
@@ -219,6 +222,9 @@ export class EntityAuditService {
         performedBy: params.performedBy,
         performedByName: resolvedName ?? null,
         ...auditLedgerFieldsOf(params),
+        // Conditional spread: `cause: undefined` θα το έκοβε ο ρηχός καθαριστής, αλλά η ρητή
+        // μορφή κρατά το συμβόλαιο ορατό — το κανάλι υπάρχει ΜΟΝΟ σε παράγωγη εγγραφή.
+        ...(params.cause ? { cause: params.cause } : {}),
         // ADR-195 Phase 1: distinguishes service-layer entries from CDC
         // (Cloud Function) entries during dual-write rollout. Will be removed
         // once CDC coverage is verified and the service path is retired.

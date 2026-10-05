@@ -19,7 +19,7 @@ import type {
   FloorsListResponse,
   FloorUpdateResponse,
 } from './floors.types';
-import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { isBuildingStorey, isFloorKind } from '@/utils/floor-naming';
 import {
   buildFloorsQuery,
@@ -30,7 +30,9 @@ import {
 import { tenantScopeLabel } from '@/lib/auth/tenant-scope';
 import { reconcileSpecialLevelPlacement } from './floor-stack-reconcile.service';
 import { assertFloorSlotFree } from './floor-slot';
-import { buildFloorUpdates, floorUpdateChanges, runFloorUpdateEffects } from './floor-update-effects';
+import { buildFloorUpdates, runFloorUpdateEffects } from './floor-update-effects';
+import { buildFloorCascadeActor } from './_shared/floor-cascade-audit';
+import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -205,7 +207,11 @@ export async function handleCreateFloor(
     // penthouse further up. Non-fatal — the floor is already created.
     if (ctx.companyId) {
       try {
-        await reconcileSpecialLevelPlacement(db, body.buildingId, ctx.companyId, ctx.uid);
+        // Αιτία = ο όροφος που μόλις γεννήθηκε· η γραμμή γέννησης γράφεται μέσα στο `createEntity`.
+        const actor = await buildFloorCascadeActor({
+          ctx, entityType: ENTITY_TYPES.FLOOR, entityId: result.id, entityName: body.name, auditId: null,
+        });
+        await reconcileSpecialLevelPlacement(db, body.buildingId, ctx.companyId, actor);
       } catch (placeErr) {
         logger.warn('[Floors/Create] Special-level placement reconcile failed (floor created)', {
           buildingId: body.buildingId, error: getErrorMessage(placeErr),
@@ -258,8 +264,19 @@ export async function handleUpdateFloor(
     });
     logger.info('[Floors/Update] Floor updated', { floorId: body.floorId, _v: versionResult.newVersion });
 
-    const changes = floorUpdateChanges(updates, before);
-    const effects = await runFloorUpdateEffects({ db, ctx, floorId: body.floorId, before, updates, changes });
+    // ADR-195 — το ιστορικό της ανθρώπινης αλλαγής, δίπλα στη γραφή: διαφορά απέναντι στο αποθηκευμένο
+    // έγγραφο (η αυτόματη αποθήκευση στέλνει όλα τα πεδία), στο βιβλίο του **κατόχου** του ορόφου. Το
+    // `auditId` της γίνεται η **αιτία** κάθε παράγωγης γραμμής που γράφουν οι αλυσίδες.
+    const audit = await recordEntityUpdate({
+      entityType: ENTITY_TYPES.FLOOR,
+      entityId: body.floorId,
+      before,
+      written: updates,
+      ctx,
+    });
+    const effects = await runFloorUpdateEffects({
+      db, ctx, floorId: body.floorId, before, updates, auditId: audit.auditId,
+    });
 
     return NextResponse.json({
       success: true,
@@ -353,7 +370,11 @@ export async function handleDeleteFloor(
     const deletedBuildingId = floorData?.buildingId as string | undefined;
     if (ctx.companyId && deletedBuildingId) {
       try {
-        await reconcileSpecialLevelPlacement(db, deletedBuildingId, ctx.companyId, ctx.uid);
+        // Αιτία = ο όροφος που μόλις σβήστηκε· η γραμμή διαγραφής γράφεται μέσα στο `executeDeletion`.
+        const actor = await buildFloorCascadeActor({
+          ctx, entityType: ENTITY_TYPES.FLOOR, entityId: floorId, entityName: targetFloor.name ?? null, auditId: null,
+        });
+        await reconcileSpecialLevelPlacement(db, deletedBuildingId, ctx.companyId, actor);
       } catch (placeErr) {
         logger.warn('[Floors/Delete] Special-level placement reconcile failed (floor deleted)', {
           buildingId: deletedBuildingId, error: getErrorMessage(placeErr),

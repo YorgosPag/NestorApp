@@ -15,16 +15,6 @@
   **τύπου** στο `Button` για `size="icon" | "icon-sm"`. ⚠️ Ο ανιχνευτής είναι του test (opening tag, χωρίς `aria-label`
   / `aria-labelledby`)· δεν βλέπει κουμπιά με `{...spread}` ούτε εγγενή `<button>`.
 
-- 🟡 **05/10 — ΤΟ `PATCH /api/floors` ΔΕΝ ΓΡΑΦΕΙ ΙΣΤΟΡΙΚΟ** *(CHECK 3.17 · ADR-195)*
-
-  Το βρήκε η διεύρυνση του CHECK 3.17 σε γραφές μέσω `withVersionCheck` (05/10): το `handleUpdateFloor` στο
-  `src/app/api/floors/floors.handlers.ts` γράφει στο `COLLECTIONS.FLOORS` χωρίς `EntityAuditService.recordChange` —
-  ίδιο κενό με αυτό που έκλεισε στα κτίρια (`api/buildings/_shared/building-update-audit.ts`). Μπήκε **ονομαστικά** στη
-  baseline (`.entity-audit-coverage-baseline.json`: 1 → 2). Θεραπεία: το πρότυπο των κτιρίων — διαφορά απέναντι στο
-  αποθηκευμένο έγγραφο με το υπάρχον `FLOOR_TRACKED_FIELDS`, **μετά** το commit. ⚠️ Ο χειριστής έχει αλυσίδες
-  (`floor-elevation-cascade` · `floor-height-cascade` · `floor-ref-cascade`): να αποφασιστεί αν οι **παράγωγες** γραφές
-  τους γράφουν δική τους γραμμή (μηχανή) ή όχι, πριν από τον κώδικα. Μετά: `npm run audit-coverage:baseline`.
-
 - 🟡 **05/10 — CHECK 3.17: ΤΥΦΛΟ ΣΕ ΓΡΑΦΗ ΜΕ ΜΕΤΑΒΛΗΤΗ ΣΥΛΛΟΓΗ** *(CHECK 3.17 · ADR-195 — δηλωμένο όριο, ΟΧΙ σφάλμα)*
 
   Η πύλη αποδίδει γραφή σε συλλογή μόνο από κυριολεκτικό `COLLECTIONS.X` κοντά της ⇒ `db.collection(name).doc(id).update()`
@@ -35,6 +25,11 @@
   πολύ πάνω από τον πήχη ≤10%. **ΜΗΝ «διορθώσεις» την πύλη να τα σημαίνει όλα.** Σωστή θεραπεία: ο καλών **δηλώνει** τη
   συλλογή σε σημείο που λύνεται στατικά (π.χ. τυποποιημένο όρισμα `collection: COLLECTIONS.X` όπως στο `withVersionCheck`),
   ή απογραφή ανά αρχείο. Το όριο το καρφώνει το `scripts/__tests__/check-entity-audit-coverage.test.js` (Β7).
+  **Συγκεκριμένο δείγμα, μετρημένο 05/10 (Π5 του ίδιου test)**: η πύλη **δεν βλέπει καμία** από τις **4** αλυσίδες
+  ορόφου ως γραφέα — `floor-height-cascade` (`target.collection`), `floor-ref-cascade` (`flushInBatches`),
+  `floor-elevation-cascade` και `floor-stack-reconcile` (`batch.update(ref, …)` με αναφορά από ανάγνωση σε άλλο αρχείο,
+  `_shared/floor-stack-rows.ts`). Είναι **καλυμμένες** (όλες καλούν `recordDerivedWrites`), αλλά την κάλυψη την
+  επιβάλλει το test Π4, όχι η πύλη.
   Μέτρα: `rg -l "\.collection\((?!COLLECTIONS)[a-zA-Z_.]+\)" src --pcre2 -g '!**/__tests__/**'`.
 
 - 🟡 **03/10 — ΨΕΥΔΟ-ΤΑΥΤΟΤΗΤΑ «ΝΕΟΥ» `'__new__'`: ~18 ΣΚΕΤΑ LITERALS** *(N.0.2 · ADR-777 §8.31.12)*
@@ -4837,6 +4832,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-10-05 | ✅ **ΙΣΤΟΡΙΚΟ ΟΡΟΦΩΝ — ΕΚΛΕΙΣΕ (CHECK 3.17 · ADR-195, Opus 5.5, απόφαση Giorgio «όπως οι μεγάλοι ή καλύτερα»).** Η εγγραφή έλεγε «το `PATCH /api/floors` δεν γράφει ιστορικό» — **ανακριβές**: έγραφε, μέσα στο `floor-update-effects.ts`, και η πύλη (που κρίνει ανά αρχείο) σήμαινε τον handler. Το πραγματικό ελάττωμα ήταν η **ποιότητα**: χειρόγραφη διαφορά εκτός μητρώου, βιβλίο του καλούντος, καμία γραμμή χωρίς `ctx.companyId`, και οι αλυσίδες έγραφαν με το uid του **ανθρώπου**. Τώρα: **ένας** γραφέας ανθρώπινης ενημέρωσης (`services/audit/record-entity-update.ts`, γενίκευση του `recordBuildingUpdate` — όχι δεύτερος) δίπλα στη γραφή· **ένας** γραφέας παράγωγων (`api/floors/_shared/floor-cascade-audit.ts`) με εκτελεστή τη μηχανή (`system:floor-stack` · `system:floor-ref`) και **αιτία** (`cause.auditId`) τη γραμμή του ανθρώπου. Baseline `.entity-audit-coverage-baseline.json` **2 → 1**. Μαζί: `placeRef` κτιρίου στο ιστορικό, `docs/gates/3.17.md` γραμμένο. |
 | 2026-10-04 | ✅ **ΓΡΑΦΕΑΣ ΑΝΑΚΛΗΣΗΣ ΚΑΤΟΧΗΣ ⇒ ΜΟΝΑΔΑ `historical` — ΕΚΛΕΙΣΕ (ADR-900 §8 #2 Β3, Opus 5.5, απόφαση Giorgio «όπως οι μεγάλοι»).** Ένας γραφέας (`ownership-verification-revoke.service.ts`), δύο πόρτες (ουρά `super_admin` με κλειστό λόγο · αποδέσμευση του κατόχου, Zillow unclaim), μία συναλλαγή στις ίδιες κλειδαριές. 🔑 Η εγγραφή έλεγε «historical αν δεν μένει άλλη **ενεργή** απόδειξη» — η έρευνα (UPRN: `historical` = «δεν υπάρχει πια»· Zillow: η σελίδα μένει μετά το unclaim) το **στένεψε**: historical **μόνο** όταν ο λόγος ρίχνει την **απόδειξη ύπαρξης** **και** καμία άλλη `verified|superseded` δεν τη βεβαιώνει (ο Α έγκυρος → ο Β πλαστός ⇒ η μονάδα μένει). + ειδοποίηση κάθε απόφασης (σχήμα GBP: `security.ownershipLost` υποχρεωτικό, και προς τον προηγούμενο κάτοχο). |
 | 2026-10-02 | ✅ **«ΠΟΙΟΙ ΧΩΡΟΙ ΕΙΝΑΙ ΤΟΥ ΚΤΙΡΙΟΥ;» — ΕΚΛΕΙΣΕ (ADR-898 §20 · ADR-184 · ADR-247, Opus 5.5, απόφαση Giorgio «θέση ≠ ανάθεση»).** Δεν ήταν δύο κανόνες αλλά **τρεις** (πίνακας ποσοστών · αντικειμενική · καρτέλες `?buildingId=`) — η εγγραφή έλεγε ότι η καρτέλα χώρων καλεί το `getBuildingSpaces`, **ψευδές**: το καλεί μόνο ο πίνακας ποσοστών. Πλέον **ΕΝΑΣ** καθαρός επιλυτής (`lib/building-spaces/building-space-membership.ts`) με έγχυση αναγνώστη για client και Admin SDK· αναφορά χωρίς ποσό (τύπος χωρίς `value`)· μοναδικότητα σύνδεσης ανά **έργο**· αποσύνδεση παρακολουθήματος ⇒ 409. Μεταλλάξεις 8/8. |
 | 2026-10-02 | ✅ **ΦΡΟΥΡΟΙ ΠΕΛΑΤΗ ΣΕ ΣΚΕΤΟ `/login` — ΕΚΛΕΙΣΕ (ADR-848 §9 #3 · ADR-900 §3.7, Opus 5.5).** Οι τρεις (`o/[workspace]/dashboard` · `pending-approval` · `onboarding/organization`) ζητούν τον **ένα** `loginHrefForCurrentLocation()` — κρίθηκε ανά σελίδα: το onboarding το ανοίγει **email** του cron (`onboarding-reminder.job.ts`) ⇒ σκέτο `/login` ακύρωνε τον σύνδεσμο· το pending-approval αυτοδιορθώνεται ⇒ η επιστροφή δεν είναι ποτέ αδιέξοδο. Boy Scout: `oauth/authorize` είχε **δεύτερη υλοποίηση** του `?next=` (ωμά `'/login'`/`'next'`, χωρίς `safeReturnPath`) ⇒ `loginHref` · κουμπί του `AdminSetupPageContent` ⇒ με επιστροφή · ωμά «Σφάλμα» του onboarding ⇒ `onboarding.org.saveFailed`. 🔒 **Άγκυρα Ε** (`return-path.test.ts`): κλειστό σύνολο 4 δηλωμένων με λόγο (αποσύνδεση · αποχώρηση · σύνδεσμος μιας χρήσης · `/home`), αμφίδρομο, φράχτης σύμπαντος, μετάλλαξη 2 κόκκινα. Νέα εγγραφή για τους **συνδέσμους** «Σύνδεση». |

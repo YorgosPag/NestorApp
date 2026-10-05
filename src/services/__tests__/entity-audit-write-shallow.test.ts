@@ -110,6 +110,25 @@ describe('EntityAuditService.recordChange — ο καθαριστής είναι
     expect(entry.source).toBe('service');
   });
 
+  it('Ε0β — η ΑΙΤΙΑ γράφεται μόνο σε παράγωγη εγγραφή· άμεση πράξη ΔΕΝ έχει καν το κλειδί', async () => {
+    const changes: AuditFieldChange[] = [{ field: 'height', oldValue: 3, newValue: 3.2, label: 'height' }];
+    const cause = {
+      auditId: 'eaud_human', initiatedBy: 'user_1', initiatedByName: 'Γιώργος',
+      entityType: 'floor' as const, entityId: 'flr_1', entityName: 'Ισόγειο',
+    };
+
+    await EntityAuditService.recordChange({ ...recordParams(changes), performedBy: 'system:floor-stack', cause });
+    const derived = writtenEntry();
+    firebaseAdminMock.__setMock.mockClear();
+    await EntityAuditService.recordChange(recordParams(changes));
+    const direct = writtenEntry();
+
+    // Εκτελεστής και εμπνευστής σε ΔΥΟ πεδία: το ένα δεν αντικαθιστά ποτέ το άλλο.
+    expect(derived).toMatchObject({ performedBy: 'system:floor-stack', cause });
+    // `in`, όχι `toBeUndefined()`: ένα `cause: undefined` θα το απέρριπτε ο Admin SDK (δες Ε2).
+    expect('cause' in direct).toBe(false);
+  });
+
   it('Ε1 🔴 Η ΑΝΑΛΛΟΙΩΤΗ — ο πίνακας `changes[]` φτάνει στο Firestore με ΤΑΥΤΟΤΗΤΑ ΑΝΑΦΟΡΑΣ', async () => {
     const changes: AuditFieldChange[] = [
       { field: 'width', oldValue: '700', newValue: '750', label: 'width' },

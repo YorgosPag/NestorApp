@@ -20,7 +20,7 @@ import enAudit from '@/i18n/locales/en/common-audit.json';
 import elCommon from '@/i18n/locales/el/common.json';
 import enCommon from '@/i18n/locales/en/common.json';
 import { lookupLocaleString } from '@/i18n/locale-key-lookup';
-import { resolveActorName } from '../audit-actor';
+import { resolveActorName, resolveCauseText } from '../audit-actor';
 import { resolveSubFieldLabel } from '../audit-field-descriptor';
 
 /**
@@ -117,11 +117,18 @@ describe('δράστης', () => {
   });
 
   it.each(LANGUAGES)('Δ4 — [%s] κάθε δηλωμένη ταυτότητα μηχανής έχει όνομα στη γλώσσα του θεατή', (_language, translate) => {
-    for (const performedBy of [SYSTEM_IDENTITY.ID, SYSTEM_IDENTITY.ADDRESS_POSITION_ID, SYSTEM_IDENTITY.INGESTION_ID]) {
-      const name = resolveActorName({ performedBy, performedByName: null, translate });
+    // Από το ΙΔΙΟ το μητρώο ταυτοτήτων, όχι από χειρόγραφη λίστα: νέα διεργασία χωρίς όνομα κοκκινίζει εδώ.
+    // (`Set`: το `TYPE` έχει την ίδια τιμή με το `ID`.)
+    const declared = [...new Set(Object.values(SYSTEM_IDENTITY).filter(isSystemActorId))];
+    expect(declared).toEqual(expect.arrayContaining([SYSTEM_IDENTITY.FLOOR_STACK_ID, SYSTEM_IDENTITY.FLOOR_REF_ID]));
+
+    const names = declared.map((performedBy) => resolveActorName({ performedBy, performedByName: null, translate }));
+    for (const name of names) {
       expect(name).toEqual(expect.any(String));
       expect(name).not.toMatch(/^audit\./);
     }
+    // Κάθε διεργασία έχει ΔΙΚΟ της όνομα — αλλιώς ο άνθρωπος δεν ξέρει ποια μηχανή έγραψε.
+    expect(new Set(names).size).toBe(declared.length);
   });
 
   it('Δ5 — ο άνθρωπος ΔΕΝ μεταφράζεται: το όνομά του, αυτούσιο· χωρίς όνομα ⇒ null', () => {
@@ -135,5 +142,53 @@ describe('δράστης', () => {
     const name = resolveActorName({ performedBy: 'system', performedByName: 'System', translate: (key) => key });
 
     expect(name).toBe('System');
+  });
+});
+
+describe('αιτία παράγωγης εγγραφής', () => {
+  /** Το `t` με παρεμβολή `{παράμετρος}` — όπως το ICU του έργου. */
+  const withParams = (translate: (key: string) => unknown) => (key: string, params: Record<string, string> = {}) => {
+    const text = translate(key);
+    return typeof text === 'string' ? text.replace(/\{(\w+)\}/g, (_match, name: string) => params[name] ?? '') : text;
+  };
+  const tEl = withParams(el);
+
+  const cause = {
+    auditId: 'eaud_1',
+    initiatedBy: 'u_1',
+    initiatedByName: 'Γιώργος',
+    entityType: 'floor',
+    entityId: 'flr_1',
+    entityName: '1ος Όροφος',
+  } as const;
+  /** Γραμμή του 3ου ορόφου, που μετακινήθηκε επειδή άλλαξε ο 1ος. */
+  const derived = { entityType: 'floor', entityId: 'flr_3', cause } as const;
+
+  it('Ι1 — άμεση πράξη (χωρίς αιτία) ⇒ τίποτα να ειπωθεί', () => {
+    expect(resolveCauseText({ entityType: 'floor', entityId: 'flr_3' }, tEl)).toBeNull();
+  });
+
+  it('Ι2 — παράγωγη σε ΑΛΛΗ οντότητα ⇒ ποιος ΚΑΙ πού', () => {
+    expect(resolveCauseText(derived, tEl)).toBe('λόγω αλλαγής από Γιώργος στο «1ος Όροφος»');
+  });
+
+  it('Ι3 — παράγωγη στην ΙΔΙΑ οντότητα ⇒ μόνο ποιος (η οντότητα θα ήταν πλεονασμός)', () => {
+    expect(resolveCauseText({ ...derived, entityId: 'flr_1' }, tEl)).toBe('λόγω αλλαγής από Γιώργος');
+  });
+
+  it('Ι4 — άγνωστο όνομα ⇒ λέγεται μόνο το πού, ποτέ κενή θέση ονόματος', () => {
+    expect(resolveCauseText({ ...derived, cause: { ...cause, initiatedByName: null } }, tEl)).toBe('λόγω αλλαγής στο «1ος Όροφος»');
+  });
+
+  it.each(LANGUAGES)('Ι5 — [%s] οι τρεις φράσεις υπάρχουν στη γλώσσα του θεατή (ποτέ ωμό κλειδί)', (_language, translate) => {
+    const t = withParams(translate);
+    const texts = [
+      resolveCauseText(derived, t),
+      resolveCauseText({ ...derived, entityId: 'flr_1' }, t),
+      resolveCauseText({ ...derived, cause: { ...cause, initiatedByName: null } }, t),
+    ];
+
+    for (const text of texts) expect(text).toEqual(expect.stringContaining(' '));
+    expect(new Set(texts).size).toBe(3);
   });
 });

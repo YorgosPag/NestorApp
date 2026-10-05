@@ -479,7 +479,12 @@ export function diffTrackedFields(
       continue;
     }
 
-    pushScalarChange(changes, field, flatOld[field], flatNew[field], descriptorChannels(def));
+    // Πεδίο-αντικείμενο με δηλωμένο προβολέα: συγκρίνεται και γράφεται η προβολή (ταυτότητα),
+    // ποτέ το ωμό JSON του `serializeScalar`.
+    const project = def.value;
+    const oldValue = project ? project(flatOld[field]) : flatOld[field];
+    const newValue = project ? project(flatNew[field]) : flatNew[field];
+    pushScalarChange(changes, field, oldValue, newValue, descriptorChannels(def));
   }
 
   return changes;

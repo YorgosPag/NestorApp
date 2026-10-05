@@ -40,7 +40,7 @@ import { resolveAuditValue } from "./audit-value-resolver";
 // 🏢 ADR-852 Φ2 — ο περιγραφέας του πεδίου: ζωντανή ετικέτα + τίμιο στιγμιότυπο.
 // Καθαρές συναρτήσεις, εκτός React ⇒ η άγκυρα της Φ7 τις καρφώνει χωρίς render.
 import { resolveTrackedFieldDef, resolveFieldLabel, resolveSubFieldLabel } from "./audit-field-descriptor";
-import { resolveActorName } from "./audit-actor";
+import { resolveActorName, resolveCauseText } from "./audit-actor";
 
 // ============================================================================
 // ENTITY LINK MAPPING (for global view)
@@ -181,6 +181,8 @@ export function AuditTimelineEntry({
     performedByName: entry.performedByName,
     translate: t,
   });
+  // Παράγωγη εγγραφή (αλυσίδα): ο εκτελεστής είναι η μηχανή, ο εμπνευστής λέγεται χωριστά.
+  const causeText = resolveCauseText(entry, t);
 
   const timestamp = entry.timestamp ? new Date(entry.timestamp) : null;
   const relativeTime = timestamp ? formatRelativeTime(timestamp) : "";
@@ -274,6 +276,9 @@ export function AuditTimelineEntry({
             <span className={cn("text-xs", colors.text.muted)}>
               {t("audit.byUser", { name: actorName })}
             </span>
+          )}
+          {causeText && (
+            <span className={cn("text-xs", colors.text.muted)}>{causeText}</span>
           )}
           {timestamp && (
             <Tooltip>

@@ -2,14 +2,14 @@ import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_TYPES, SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { flushInBatches, type BatchUpdate } from '@/lib/admin-batch-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { hostedCopyDrift, hostedCopyOf, type HostedFloorCopy, type HostFloorSource } from '@/lib/floor/hosted-floor';
-import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditEntityType, AuditFieldChange } from '@/types/audit-trail';
 import type { PropertyLevel } from '@/types/property';
+import { derivedChange, recordDerivedWrites, type FloorCascadeActor } from './_shared/floor-cascade-audit';
 
 const logger = createModuleLogger('FloorRefCascade');
 
@@ -23,7 +23,8 @@ const logger = createModuleLogger('FloorRefCascade');
  * - **Ιδεμποτικό**: ρωτά το ίδιο `hostedCopyDrift` με τη μετανάστευση — συμφωνεί ⇒ καμία γραφή.
  * - **Παρτίδες** `flushInBatches` (450)· αποτυχημένη παρτίδα μετριέται (`failed`), δεν κρύβεται.
  * - **Ενοικιαστής**: κάθε ερώτημα με `companyId` (CHECK 3.10/3.35) — ισότητες μόνο ⇒ κανένας σύνθετος δείκτης.
- * - **Ίχνος** ADR-195: `recordChange` ανά έγγραφο που άλλαξε.
+ * - **Ίχνος** ADR-195: μία γραμμή ανά έγγραφο που άλλαξε — εκτελεστής η μηχανή (`system:floor-ref`),
+ *   αιτία η ανθρώπινη αλλαγή του ορόφου (`actor.cause`).
  * - Μεζονέτες (ADR-236): το `levels[]` κρατά δικό του αντίγραφο (`floorNumber`, `name`) — ενημερώνεται κι αυτό.
  */
 export interface FloorRefCascadeResult {
@@ -62,8 +63,9 @@ export async function cascadeFloorRefToHosted(
   db: Firestore,
   floor: CascadeFloor,
   companyId: string,
-  updatedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<FloorRefCascadeResult> {
+  const { updatedBy } = actor;
   const expected = hostedCopyOf(floor);
   const planned = await planHostedWrites(db, floor, expected, companyId);
 
@@ -78,7 +80,7 @@ export async function cascadeFloorRefToHosted(
   if (flush.errors.length > 0) {
     logger.error('[FloorRefCascade] Batch failures', { floorId: floor.id, errors: flush.errors });
   } else {
-    await recordCascadeAudit(planned, companyId, updatedBy);
+    await recordCascadeAudit(planned, companyId, actor);
   }
   const result = summarise(planned, updates.length - flush.written);
   logger.info('[FloorRefCascade] Complete', { floorId: floor.id, ...result });
@@ -157,12 +159,8 @@ function mergeWrite(
 ): void {
   const previous = byPath.get(doc.ref.path);
   const data = doc.data();
-  const changes = Object.entries(fields).map(([field, newValue]): AuditFieldChange => ({
-    field,
-    oldValue: (data[field] ?? null) as AuditFieldChange['oldValue'],
-    newValue: newValue as AuditFieldChange['newValue'],
-    label: field,
-  }));
+  const changes = Object.entries(fields).map(([field, newValue]) =>
+    derivedChange(field, (data[field] ?? null) as AuditFieldChange['oldValue'], newValue as AuditFieldChange['newValue']));
   byPath.set(doc.ref.path, {
     entityType,
     doc,
@@ -176,15 +174,16 @@ function summarise(planned: readonly PlannedWrite[], failed: number): FloorRefCa
   return { properties: count(ENTITY_TYPES.PROPERTY), parking: count('parking'), storage: count(ENTITY_TYPES.STORAGE), failed };
 }
 
-async function recordCascadeAudit(planned: readonly PlannedWrite[], companyId: string, performedBy: string): Promise<void> {
-  await Promise.all(planned.map((p) => EntityAuditService.recordChange({
-    entityType: p.entityType,
-    entityId: p.doc.id,
-    entityName: (p.doc.data().name as string | undefined) ?? (p.doc.data().number as string | undefined) ?? p.doc.id,
-    action: 'updated',
-    changes: p.changes,
-    performedBy,
-    performedByName: null,
+async function recordCascadeAudit(planned: readonly PlannedWrite[], companyId: string, actor: FloorCascadeActor): Promise<void> {
+  await recordDerivedWrites(
+    SYSTEM_IDENTITY.FLOOR_REF_ID,
+    planned.map((p) => ({
+      entityType: p.entityType,
+      entityId: p.doc.id,
+      entityName: (p.doc.data().name as string | undefined) ?? (p.doc.data().number as string | undefined) ?? p.doc.id,
+      changes: p.changes,
+    })),
+    actor,
     companyId,
-  })));
+  );
 }

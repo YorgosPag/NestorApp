@@ -199,6 +199,27 @@ export interface AuditFieldChange {
  */
 export type AuditSource = 'service' | 'cdc';
 
+/**
+ * **Η ΑΙΤΙΑ** μιας παράγωγης εγγραφής — ADR-195 (2026-10-05).
+ *
+ * 🔑 Μια αλυσίδα (π.χ. η στοίβα ορόφων) γράφει σε έγγραφα που ο άνθρωπος **δεν άγγιξε**. Η γραμμή
+ * τους έχει **εκτελεστή** τη μηχανή (`performedBy: 'system:…'`) και **εμπνευστή** τον άνθρωπο, εδώ.
+ * Εκτελεστής και εμπνευστής δεν είναι ποτέ το ίδιο πεδίο: το «ποιος το πληκτρολόγησε» και το
+ * «ποιος το προκάλεσε» είναι δύο ερωτήσεις (`causationId` του event sourcing).
+ */
+export interface AuditCause {
+  /** Η γραμμή ιστορικού της πράξης που το προκάλεσε· `null` όταν εκείνη δεν έγραψε γραμμή. */
+  auditId: string | null;
+  /** Ο άνθρωπος που έκανε την αρχική πράξη. */
+  initiatedBy: string;
+  /** Το όνομά του όπως ήταν τότε (στιγμιότυπο, όπως το `performedByName`). */
+  initiatedByName: string | null;
+  /** Η οντότητα πάνω στην οποία έγινε η αρχική πράξη. */
+  entityType: AuditEntityType;
+  entityId: string;
+  entityName: string | null;
+}
+
 /** Ό,τι έχει κάθε εγγραφή, ανεξαρτήτως βιβλίου — δες {@link EntityAuditEntry}. */
 export interface EntityAuditEntryBase {
   /** Firestore document ID (populated on read) */
@@ -225,6 +246,8 @@ export interface EntityAuditEntryBase {
    * service-layer (pre-CDC) semantics.
    */
   source?: AuditSource;
+  /** Παράγωγη εγγραφή: ποια πράξη την προκάλεσε. Λείπει ⇒ άμεση πράξη του `performedBy`. */
+  cause?: AuditCause;
 }
 
 /**

@@ -232,7 +232,11 @@ const VERSIONED_WRITE_RE = /\bwithVersionCheck(?:OnCurrent)?\s*\(/g;
  * should call `recordChange` directly.
  */
 const AUDIT_RECORDER_DELEGATES = [
-  { fn: 'recordBuildingUpdate', file: 'src/app/api/buildings/_shared/building-update-audit.ts' },
+  // Η γραμμή μιας ΑΝΘΡΩΠΙΝΗΣ ενημέρωσης (PATCH κτιρίων ×2, PATCH ορόφων) — γεννήθηκε ως `recordBuildingUpdate`.
+  { fn: 'recordEntityUpdate', file: 'src/services/audit/record-entity-update.ts' },
+  // Η γραμμή μιας ΠΑΡΑΓΩΓΗΣ γραφής των αλυσίδων ορόφου (στοίβα · ειδικές στάθμες · φιλοξενούμενα): εκτελεστής η
+  // μηχανή, αιτία η ανθρώπινη πράξη. Τέσσερα αρχεία είχαν η καθεμία το δικό της αντίγραφο.
+  { fn: 'recordDerivedWrites', file: 'src/app/api/floors/_shared/floor-cascade-audit.ts' },
 ];
 // ---------------------------------------------------------------------------
 // ANSI colours (no-op on non-TTY)

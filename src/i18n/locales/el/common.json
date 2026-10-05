@@ -811,7 +811,14 @@
     "actors": {
       "system": "Σύστημα",
       "addressPosition": "Σύστημα · εντοπισμός θέσης",
-      "ingestion": "Σύστημα · εισαγωγή αρχείων"
+      "ingestion": "Σύστημα · εισαγωγή αρχείων",
+      "floorStack": "Σύστημα · στοίβα ορόφων",
+      "floorRef": "Σύστημα · συγχρονισμός ορόφου"
+    },
+    "cause": {
+      "byUserOnEntity": "λόγω αλλαγής από {name} στο «{entity}»",
+      "byUser": "λόγω αλλαγής από {name}",
+      "onEntity": "λόγω αλλαγής στο «{entity}»"
     },
     "session": {
       "saves": "{count} αποθηκεύσεις · {from}–{to}",

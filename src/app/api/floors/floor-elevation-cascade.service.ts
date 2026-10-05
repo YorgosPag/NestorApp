@@ -1,13 +1,10 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
-import { DEFAULT_FLOOR_HEIGHT_M, isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import type { AuditFieldChange } from '@/types/audit-trail';
+import { ENTITY_TYPES, SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { derivedChange, recordDerivedWrites, type FloorCascadeActor } from './_shared/floor-cascade-audit';
+import { isSpecialLevel, readFloorStack, type FloorStackRow } from './_shared/floor-stack-rows';
 
 const logger = createModuleLogger('FloorElevationCascade');
 
@@ -21,34 +18,14 @@ export interface ElevationCascadeResult {
   readonly skipped: number;
 }
 
-/** Minimal floor shape the cascade reasons over. */
-interface FloorRow {
-  readonly id: string;
-  readonly number: number;
-  elevation: number | null;
-  readonly height: number;
-  /** ADR-461 — Revit-style classification; special levels are stacking satellites. */
-  readonly kind?: FloorKind;
-}
-
-/** True when this floor is a special level (foundation/roof/stair-penthouse). */
-function isSpecial(row: FloorRow): boolean {
-  return row.kind !== undefined && !isBuildingStorey(row.kind);
-}
+/** The stack row, with a WRITABLE elevation: the walk upward propagates each derived value. */
+type FloorRow = Omit<FloorStackRow, 'elevation'> & { elevation: number | null };
 
 interface ShiftEntry {
   readonly id: string;
   readonly name: string;
   readonly oldValue: number | null;
   readonly newValue: number;
-}
-
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function finiteOrNull(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 /**
@@ -66,7 +43,8 @@ function finiteOrNull(value: unknown): number | null {
  *   stored elevation, correcting any stale upper elevations in one pass.
  * - Idempotent: a floor already at its derived elevation → no write, no audit.
  * - Lower floors (number ≤ changed) are never touched (datum stays put).
- * - ADR-195: each shifted floor gets an EntityAuditService.recordChange entry.
+ * - ADR-195: each shifted floor gets its own audit entry — performed by the machine
+ *   (`system:floor-stack`), caused by the human edit (`actor.cause`).
  *
  * All elevations/heights are in METRES (ADR-369 §1). Belt-and-suspenders with the
  * entity cascade ({@link cascadeFloorHeightToEntities}): that re-stretches the
@@ -79,26 +57,12 @@ export async function cascadeFloorElevations(
   buildingId: string,
   changedFloorId: string,
   companyId: string,
-  updatedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<ElevationCascadeResult> {
-  const snap = await db.collection(COLLECTIONS.FLOORS)
-    .where('companyId', '==', companyId)
-    .where(FIELDS.BUILDING_ID, '==', buildingId)
-    .get();
-
-  const refById = new Map(snap.docs.map((d) => [d.id, d.ref] as const));
-  const nameById = new Map(
-    snap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id] as const),
-  );
-  const rows: FloorRow[] = snap.docs
-    .map((d) => ({
-      id: d.id,
-      number: finite(d.data().number, 0),
-      elevation: finiteOrNull(d.data().elevation),
-      height: finite(d.data().height, DEFAULT_FLOOR_HEIGHT_M),
-      kind: d.data().kind as FloorKind | undefined,
-    }))
-    .sort((a, b) => a.number - b.number);
+  const { updatedBy } = actor;
+  const stack = await readFloorStack(db, buildingId, companyId);
+  const { refById } = stack;
+  const rows: FloorRow[] = stack.rows.map((row) => ({ ...row }));
 
   const changedIdx = rows.findIndex((r) => r.id === changedFloorId);
   if (changedIdx < 0) {
@@ -110,8 +74,8 @@ export async function cascadeFloorElevations(
   // depth (its height). Editing its depth must DEEPEN it, never lift the building.
   // Re-anchor it downward and stop — the counted backbone never moves.
   const changedRow = rows[changedIdx];
-  const lowestCounted = rows.find((r) => !isSpecial(r)) ?? null;
-  if (isSpecial(changedRow) && lowestCounted && changedRow.number < lowestCounted.number) {
+  const lowestCounted = rows.find((r) => !isSpecialLevel(r)) ?? null;
+  if (isSpecialLevel(changedRow) && lowestCounted && changedRow.number < lowestCounted.number) {
     if (lowestCounted.elevation === null) return { floorsUpdated: 0, skipped: 1 };
     const derived = lowestCounted.elevation - changedRow.height;
     if (changedRow.elevation !== null && Math.abs(changedRow.elevation - derived) <= ELEVATION_EPSILON_M) {
@@ -123,9 +87,9 @@ export async function cascadeFloorElevations(
       batch.update(ref, { elevation: derived, updatedBy, updatedAt: FieldValue.serverTimestamp() });
       await batch.commit();
       await recordCascadeAudit(
-        [{ id: changedRow.id, name: nameById.get(changedRow.id) ?? changedRow.id, oldValue: changedRow.elevation, newValue: derived }],
+        [{ id: changedRow.id, name: changedRow.name, oldValue: changedRow.elevation, newValue: derived }],
         companyId,
-        updatedBy,
+        actor,
       );
     }
     logger.info('[FloorElevationCascade] Re-anchored below-grade special', { buildingId, changedFloorId });
@@ -149,7 +113,7 @@ export async function cascadeFloorElevations(
       upper.elevation = derived; // anchor the chain on the (already-correct) value
       continue;
     }
-    shifts.push({ id: upper.id, name: nameById.get(upper.id) ?? upper.id, oldValue: upper.elevation, newValue: derived });
+    shifts.push({ id: upper.id, name: upper.name, oldValue: upper.elevation, newValue: derived });
     upper.elevation = derived; // propagate to the next iteration
   }
 
@@ -161,7 +125,7 @@ export async function cascadeFloorElevations(
       if (ref) batch.update(ref, { elevation: s.newValue, updatedBy, updatedAt });
     }
     await batch.commit();
-    await recordCascadeAudit(shifts, companyId, updatedBy);
+    await recordCascadeAudit(shifts, companyId, actor);
   }
 
   const result: ElevationCascadeResult = { floorsUpdated: shifts.length, skipped };
@@ -172,26 +136,17 @@ export async function cascadeFloorElevations(
 async function recordCascadeAudit(
   shifts: readonly ShiftEntry[],
   companyId: string,
-  performedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<void> {
-  await Promise.all(
-    shifts.map((s) => {
-      const change: AuditFieldChange = {
-        field: 'elevation',
-        oldValue: s.oldValue,
-        newValue: s.newValue,
-        label: 'elevation',
-      };
-      return EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.FLOOR,
-        entityId: s.id,
-        entityName: s.name,
-        action: 'updated',
-        changes: [change],
-        performedBy,
-        performedByName: null,
-        companyId,
-      });
-    }),
+  await recordDerivedWrites(
+    SYSTEM_IDENTITY.FLOOR_STACK_ID,
+    shifts.map((s) => ({
+      entityType: ENTITY_TYPES.FLOOR,
+      entityId: s.id,
+      entityName: s.name,
+      changes: [derivedChange('elevation', s.oldValue, s.newValue)],
+    })),
+    actor,
+    companyId,
   );
 }

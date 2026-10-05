@@ -1,13 +1,10 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
-import { DEFAULT_FLOOR_HEIGHT_M, isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import type { AuditFieldChange } from '@/types/audit-trail';
+import { ENTITY_TYPES, SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { derivedChange, recordDerivedWrites, type FloorCascadeActor } from './_shared/floor-cascade-audit';
+import { isSpecialLevel, readFloorStack, type FloorStackRow } from './_shared/floor-stack-rows';
 import { cascadeFloorElevations } from './floor-elevation-cascade.service';
 import { cascadeFloorHeightToEntities } from './floor-height-cascade.service';
 
@@ -40,29 +37,8 @@ export interface FloorStackReconcileResult {
   readonly heightsDerived: readonly HeightDerivation[];
 }
 
-/** Minimal floor shape the reconcile reasons over. */
-interface FloorRow {
-  readonly id: string;
-  readonly name: string;
-  readonly number: number;
-  readonly elevation: number | null;
-  readonly height: number;
-  /** ADR-461 — Revit-style classification; special levels keep explicit heights. */
-  readonly kind?: FloorKind;
-}
-
-/** True when this floor is a special level (foundation/roof/stair-penthouse). */
-function isSpecial(row: FloorRow): boolean {
-  return row.kind !== undefined && !isBuildingStorey(row.kind);
-}
-
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function finiteOrNull(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
+/** The floor shape the reconcile reasons over — ADR-461: special levels keep explicit heights. */
+type FloorRow = FloorStackRow;
 
 /** Round to millimetre precision (normalising −0 → 0) to avoid float drift. */
 function roundM(value: number): number {
@@ -73,31 +49,6 @@ function roundM(value: number): number {
 function approxEqOrNull(a: number | null, b: number | null): boolean {
   if (a === null || b === null) return a === b;
   return Math.abs(a - b) <= RECONCILE_EPSILON_M;
-}
-
-async function readBuildingFloors(
-  db: Firestore,
-  buildingId: string,
-  companyId: string,
-): Promise<{ rows: FloorRow[]; refById: Map<string, FirebaseFirestore.DocumentReference> }> {
-  const snap = await db.collection(COLLECTIONS.FLOORS)
-    .where('companyId', '==', companyId)
-    .where(FIELDS.BUILDING_ID, '==', buildingId)
-    .get();
-
-  const refById = new Map(snap.docs.map((d) => [d.id, d.ref] as const));
-  const rows: FloorRow[] = snap.docs
-    .map((d) => ({
-      id: d.id,
-      name: (d.data().name as string) ?? d.id,
-      number: finite(d.data().number, 0),
-      elevation: finiteOrNull(d.data().elevation),
-      height: finite(d.data().height, DEFAULT_FLOOR_HEIGHT_M),
-      kind: d.data().kind as FloorKind | undefined,
-    }))
-    .sort((a, b) => a.number - b.number);
-
-  return { rows, refById };
 }
 
 /**
@@ -116,7 +67,8 @@ async function readBuildingFloors(
  *
  * - Self-healing (absolute, not delta): recomputes from stored elevations.
  * - Idempotent: a storey already at its derived height → no write, no audit.
- * - ADR-195: each re-derived storey gets an EntityAuditService.recordChange entry.
+ * - ADR-195: each re-derived storey gets its own audit entry — performed by the machine
+ *   (`system:floor-stack`), caused by the human edit (`actor.cause`).
  *
  * All heights/elevations in METRES (ADR-369 §1). Returns the storeys whose height
  * changed so the caller can re-stretch their entities ({@link cascadeFloorHeightToEntities}).
@@ -128,9 +80,10 @@ export async function deriveAdjacentHeightsFromElevation(
   buildingId: string,
   changedFloorId: string,
   companyId: string,
-  updatedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<ElevationEditReconcileResult> {
-  const { rows, refById } = await readBuildingFloors(db, buildingId, companyId);
+  const { updatedBy } = actor;
+  const { rows, refById } = await readFloorStack(db, buildingId, companyId);
   if (rows.length === 0) return { heightsUpdated: [], skipped: 0 };
 
   const derivations: HeightDerivation[] = [];
@@ -150,10 +103,10 @@ export async function deriveAdjacentHeightsFromElevation(
   // storey (no counted floor above) keeps its explicit height.
   for (let idx = 0; idx < rows.length; idx++) {
     const storey = rows[idx];
-    if (isSpecial(storey)) { skipped++; continue; }
+    if (isSpecialLevel(storey)) { skipped++; continue; }
     let above: FloorRow | null = null;
     for (let j = idx + 1; j < rows.length; j++) {
-      if (!isSpecial(rows[j])) { above = rows[j]; break; }
+      if (!isSpecialLevel(rows[j])) { above = rows[j]; break; }
     }
     if (above === null) { skipped++; continue; }
     if (storey.elevation === null || above.elevation === null) { skipped++; continue; }
@@ -172,7 +125,7 @@ export async function deriveAdjacentHeightsFromElevation(
       if (ref) batch.update(ref, { height: a.newValue, updatedBy, updatedAt });
     }
     await batch.commit();
-    await recordHeightAudit(audits, companyId, updatedBy);
+    await recordHeightAudit(audits, companyId, actor);
   }
 
   logger.info('[FloorStackReconcile] Elevation-edit derived heights', {
@@ -184,27 +137,18 @@ export async function deriveAdjacentHeightsFromElevation(
 async function recordHeightAudit(
   audits: ReadonlyArray<{ row: FloorRow; oldValue: number; newValue: number }>,
   companyId: string,
-  performedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<void> {
-  await Promise.all(
-    audits.map((a) => {
-      const change: AuditFieldChange = {
-        field: 'height',
-        oldValue: a.oldValue,
-        newValue: a.newValue,
-        label: 'height',
-      };
-      return EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.FLOOR,
-        entityId: a.row.id,
-        entityName: a.row.name,
-        action: 'updated',
-        changes: [change],
-        performedBy,
-        performedByName: null,
-        companyId,
-      });
-    }),
+  await recordDerivedWrites(
+    SYSTEM_IDENTITY.FLOOR_STACK_ID,
+    audits.map((a) => ({
+      entityType: ENTITY_TYPES.FLOOR,
+      entityId: a.row.id,
+      entityName: a.row.name,
+      changes: [derivedChange('height', a.oldValue, a.newValue)],
+    })),
+    actor,
+    companyId,
   );
 }
 
@@ -229,20 +173,20 @@ export async function reconcileFloorStackAfterEdit(
   buildingId: string,
   floorId: string,
   companyId: string,
-  updatedBy: string,
+  actor: FloorCascadeActor,
   edit: { elevationChanged: boolean; heightChanged: boolean; newHeightMetres: number | null },
 ): Promise<FloorStackReconcileResult> {
   if (edit.elevationChanged) {
-    const res = await deriveAdjacentHeightsFromElevation(db, buildingId, floorId, companyId, updatedBy);
+    const res = await deriveAdjacentHeightsFromElevation(db, buildingId, floorId, companyId, actor);
     for (const d of res.heightsUpdated) {
-      await cascadeFloorHeightToEntities(db, d.floorId, companyId, d.newHeightMetres, updatedBy);
+      await cascadeFloorHeightToEntities(db, d.floorId, companyId, d.newHeightMetres, actor);
     }
     return { mode: 'elevation', elevationsPushed: 0, heightsDerived: res.heightsUpdated };
   }
 
   if (edit.heightChanged && edit.newHeightMetres !== null) {
-    await cascadeFloorHeightToEntities(db, floorId, companyId, edit.newHeightMetres, updatedBy);
-    const pushed = await cascadeFloorElevations(db, buildingId, floorId, companyId, updatedBy);
+    await cascadeFloorHeightToEntities(db, floorId, companyId, edit.newHeightMetres, actor);
+    const pushed = await cascadeFloorElevations(db, buildingId, floorId, companyId, actor);
     return { mode: 'height', elevationsPushed: pushed.floorsUpdated, heightsDerived: [] };
   }
 
@@ -269,10 +213,11 @@ export async function reconcileSpecialLevelPlacement(
   db: Firestore,
   buildingId: string,
   companyId: string,
-  updatedBy: string,
+  actor: FloorCascadeActor,
 ): Promise<number> {
-  const { rows, refById } = await readBuildingFloors(db, buildingId, companyId);
-  const counted = rows.filter((r) => !isSpecial(r));
+  const { updatedBy } = actor;
+  const { rows, refById } = await readFloorStack(db, buildingId, companyId);
+  const counted = rows.filter((r) => !isSpecialLevel(r));
   if (counted.length === 0) return 0; // nothing to anchor against (degenerate)
 
   const minCounted = counted[0];
@@ -319,23 +264,19 @@ export async function reconcileSpecialLevelPlacement(
   }
   await batch.commit();
 
-  await Promise.all(
-    placements.map((p) => {
-      const changes: AuditFieldChange[] = [
-        { field: 'number', oldValue: p.row.number, newValue: p.number, label: 'number' },
-        { field: 'elevation', oldValue: p.row.elevation, newValue: p.elevation, label: 'elevation' },
-      ];
-      return EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.FLOOR,
-        entityId: p.row.id,
-        entityName: p.row.name,
-        action: 'updated',
-        changes,
-        performedBy: updatedBy,
-        performedByName: null,
-        companyId,
-      });
-    }),
+  await recordDerivedWrites(
+    SYSTEM_IDENTITY.FLOOR_STACK_ID,
+    placements.map((p) => ({
+      entityType: ENTITY_TYPES.FLOOR,
+      entityId: p.row.id,
+      entityName: p.row.name,
+      changes: [
+        derivedChange('number', p.row.number, p.number),
+        derivedChange('elevation', p.row.elevation, p.elevation),
+      ],
+    })),
+    actor,
+    companyId,
   );
 
   logger.info('[FloorStackReconcile] Re-placed special levels', { buildingId, placed: placements.length });

@@ -17,7 +17,7 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { loadOwnedBuilding } from './_shared/building-owned-doc';
-import { recordBuildingUpdate } from './_shared/building-update-audit';
+import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 import { BUILDING_OBJECTIVE_VALUE_BODY_KEY, patchBuildingObjectiveValue } from './building-objective-value-patch';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -353,8 +353,9 @@ export const PATCH = withStandardRateLimit(
 
       // ADR-195 — το ιστορικό της οντότητας: τι άλλαξε, απέναντι στο αποθηκευμένο έγγραφο. Το
       // `cleanUpdates` κρατά ό,τι ΓΡΑΦΤΗΚΕ (διευθύνσεις με τη θέση που αποφάσισε ο διακομιστής).
-      await recordBuildingUpdate({
-        buildingId,
+      await recordEntityUpdate({
+        entityType: ENTITY_TYPES.BUILDING,
+        entityId: buildingId,
         before: (buildingData ?? {}) as Record<string, unknown>,
         written: cleanUpdates,
         ctx,

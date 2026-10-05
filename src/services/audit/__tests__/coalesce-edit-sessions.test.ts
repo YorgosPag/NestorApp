@@ -107,6 +107,20 @@ describe('όρια συνεδρίας', () => {
     expect(at).toHaveLength(1);
   });
 
+  it('Σ4β — παράγωγη γραμμή ΑΛΥΣΙΔΑΣ στην ίδια οντότητα κόβει τη συνεδρία: ό,τι υπολόγισε η μηχανή δεν πληκτρολογήθηκε', () => {
+    // Πραγματικό σενάριο ορόφου: ο άνθρωπος αλλάζει στάθμη → η στοίβα ξαναπαράγει το ύψος ΤΟΥ ΙΔΙΟΥ ορόφου →
+    // ο άνθρωπος αλλάζει όνομα. Ως τις 2026-10-05 η μεσαία γραμμή είχε το uid του ανθρώπου και τα τρία γίνονταν ένα.
+    const floor = { entityType: 'floor', entityId: 'flr_1' } as const;
+    const sessions = coalesceEditSessions([
+      entry(0, [scalar('elevation', '3', '3.5')], floor),
+      entry(1_000, [scalar('height', '3', '2.5')], { ...floor, performedBy: 'system:floor-stack', performedByName: 'System' }),
+      entry(2_000, [scalar('name', 'Α', 'Β')], floor),
+    ]);
+
+    expect(sessions.map((session) => session.entries.length)).toEqual([1, 1, 1]);
+    expect(sessions[1].net.changes).toEqual([scalar('height', '3', '2.5')]);
+  });
+
   it('Σ5 — το όριο μετριέται από την ΠΡΟΗΓΟΥΜΕΝΗ αποθήκευση, όχι από την αρχή της συνεδρίας', () => {
     const step = AUDIT_EDIT_SESSION_GAP_MS - 1_000;
     const sessions = coalesceEditSessions([

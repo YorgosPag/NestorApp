@@ -25,6 +25,8 @@ jest.mock('@/lib/telemetry', () => ({
 
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn().mockResolvedValue('audit_1') },
+  // Ο δράστης της τοποθέτησης ειδικών σταθμών λύνει το όνομα του ανθρώπου (ADR-195).
+  resolveUserDisplayName: async () => 'Γιώργος',
 }));
 
 jest.mock('@/lib/firestore/deletion-guard', () => ({ executeDeletion: jest.fn() }));

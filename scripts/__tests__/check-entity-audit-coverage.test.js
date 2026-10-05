@@ -93,37 +93,39 @@ describe('κάλυψη — άμεση ή μέσω δηλωμένου γραφέ�
   });
 
   it('Κ2 — κλήση ΖΩΝΤΑΝΟΥ δηλωμένου γραφέα μετρά ως κάλυψη', () => {
-    expect(hasRecordChangeCall(`await recordBuildingUpdate({ buildingId, before, written, ctx });`, ['recordBuildingUpdate'])).toBe(true);
+    expect(hasRecordChangeCall(`await recordEntityUpdate({ entityType, entityId, before, written, ctx });`, ['recordEntityUpdate'])).toBe(true);
   });
 
   it('Κ3 — ο ίδιος γραφέας, αν ΔΕΝ είναι ζωντανός, δεν μετρά', () => {
-    expect(hasRecordChangeCall(`await recordBuildingUpdate({ buildingId });`, [])).toBe(false);
+    expect(hasRecordChangeCall(`await recordEntityUpdate({ entityId });`, [])).toBe(false);
   });
 
   it('Κ4 — σκέτη εισαγωγή του γραφέα (χωρίς κλήση) δεν είναι κάλυψη', () => {
-    const source = `import { recordBuildingUpdate } from './_shared/building-update-audit';`;
+    const source = `import { recordEntityUpdate } from '@/services/audit/record-entity-update';`;
 
-    expect(hasRecordChangeCall(source, ['recordBuildingUpdate'])).toBe(false);
+    expect(hasRecordChangeCall(source, ['recordEntityUpdate'])).toBe(false);
   });
 
-  it('Κ5 — ο πραγματικός γραφέας κτιρίων είναι ζωντανός (εξάγεται ΚΑΙ γράφει)', () => {
-    expect(liveRecorderDelegates(PROJECT_ROOT)).toContain('recordBuildingUpdate');
+  it('Κ5 — οι πραγματικοί κοινοί γραφείς είναι ζωντανοί (εξάγονται ΚΑΙ γράφουν)', () => {
+    // Ο ανθρώπινος (PATCH κτιρίων/ορόφων) και ο παράγωγος (αλυσίδες ορόφου). Κλειστή λίστα: τρίτο όνομα
+    // εδώ σημαίνει ότι κάποιος πρόσθεσε γραφέα — να είναι όντως ΚΟΙΝΟΣ, όχι παράκαμψη της πύλης.
+    expect(liveRecorderDelegates(PROJECT_ROOT)).toEqual(['recordEntityUpdate', 'recordDerivedWrites']);
   });
 
   it('Κ6 — γραφέας που έπαψε να γράφει (ή λείπει) παύει να μετρά', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-delegate-'));
-    const file = path.join(root, 'src/app/api/buildings/_shared/building-update-audit.ts');
+    const file = path.join(root, 'src/services/audit/record-entity-update.ts');
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const quiet = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       expect(liveRecorderDelegates(root)).toEqual([]);
 
       // Εξάγει τη συνάρτηση αλλά η κλήση στο βιβλίο έγινε σχόλιο.
-      fs.writeFileSync(file, `export async function recordBuildingUpdate() { /* EntityAuditService.recordChange() */ }`);
+      fs.writeFileSync(file, `export async function recordEntityUpdate() { /* EntityAuditService.recordChange() */ }`);
       expect(liveRecorderDelegates(root)).toEqual([]);
 
-      fs.writeFileSync(file, `export async function recordBuildingUpdate() { await EntityAuditService.recordChange({}); }`);
-      expect(liveRecorderDelegates(root)).toEqual(['recordBuildingUpdate']);
+      fs.writeFileSync(file, `export async function recordEntityUpdate() { await EntityAuditService.recordChange({}); }`);
+      expect(liveRecorderDelegates(root)).toEqual(['recordEntityUpdate']);
     } finally {
       quiet.mockRestore();
       fs.rmSync(root, { recursive: true, force: true });
@@ -146,5 +148,43 @@ describe('τα πραγματικά αρχεία', () => {
 
   it('Π2 — ο κλάδος της αντικειμενικής (withVersionCheckOnCurrent) το ίδιο', () => {
     expect(analyse('src/app/api/buildings/building-objective-value-patch.ts')).toEqual({ keys: ['BUILDINGS'], covered: true });
+  });
+
+  it('Π3 — το PATCH των ορόφων: η γραμμή γράφεται ΔΙΠΛΑ στη γραφή, όχι σε αδελφό αρχείο', () => {
+    // Ως τις 2026-10-05 το ίχνος ζούσε στο `floor-update-effects.ts`, και η πύλη (που κρίνει ανά αρχείο)
+    // σήμαινε τον handler — σωστά: γραφή και ίχνος σε δύο αρχεία χωρίζουν με την πρώτη αναδιάταξη.
+    const handler = analyse('src/app/api/floors/floors.handlers.ts');
+
+    expect(handler.keys).toContain('FLOORS');
+    expect(handler.covered).toBe(true);
+  });
+
+  const CASCADES = [
+    'floor-elevation-cascade.service.ts',
+    'floor-stack-reconcile.service.ts',
+    'floor-height-cascade.service.ts',
+    'floor-ref-cascade.service.ts',
+  ];
+
+  it('Π4 — και οι τέσσερις αλυσίδες ορόφου καλύπτονται από τον ΕΝΑ παράγωγο γραφέα, καμία δεν γράφει μόνη της', () => {
+    for (const file of CASCADES) {
+      const source = fs.readFileSync(path.join(PROJECT_ROOT, 'src/app/api/floors', file), 'utf8');
+
+      expect(analyse(`src/app/api/floors/${file}`).covered).toBe(true);
+      // Εκεί ζούσαν τα τέσσερα αντίγραφα του ίδιου `recordCascadeAudit`, με το uid του ανθρώπου.
+      expect(source).not.toMatch(/EntityAuditService\s*\.\s*recordChange\s*\(/);
+    }
+  });
+
+  it('Π5 — ΔΗΛΩΜΕΝΟ όριο: η πύλη ΔΕΝ ΒΛΕΠΕΙ καμία από τις τέσσερις αλυσίδες ως γραφέα', () => {
+    // Μετρημένο 2026-10-05. Όλες γράφουν με τρόπο που η στατική σάρωση δεν αποδίδει σε συλλογή:
+    // `flushInBatches(db, updates)` (καμία μορφή γραφής στο σημείο κλήσης), συλλογή σε ΜΕΤΑΒΛΗΤΗ
+    // (`target.collection` — το ίδιο όριο με το Β7), ή `batch.update(ref, …)` πάνω σε αναφορά που ήρθε από
+    // ανάγνωση σε ΑΛΛΟ αρχείο (`_shared/floor-stack-rows.ts` — εκεί ζει το `COLLECTIONS.FLOORS`).
+    // Άρα την κάλυψη του Π4 ΔΕΝ την επιβάλλει η πύλη· την επιβάλλει εκείνο το test.
+    // Αν κοκκινίσει, κάποιος στένεψε το τυφλό σημείο: ενημέρωσε το `docs/gates/3.17.md`.
+    const seen = CASCADES.filter((file) => analyse(`src/app/api/floors/${file}`).keys.length > 0);
+
+    expect(seen).toEqual([]);
   });
 });

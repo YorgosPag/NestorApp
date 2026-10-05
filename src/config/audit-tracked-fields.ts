@@ -27,15 +27,16 @@ export type { TrackedFieldDef } from '@/lib/audit/audit-diff';
 type CollectionDef = Extract<TrackedFieldDef, { kind: 'collection' }>;
 
 /**
- * Merge a plain `field → label` registry with collection overrides.
- * Fields listed in `collections` are promoted to `{ kind: 'collection', ... }`;
- * the remainder default to `{ kind: 'scalar', label }`. This keeps the raw
- * label maps compact while the collection registries stay colocated with the
- * entity they describe (ADR-195 Phase 11).
+ * Merge a plain `field → label` registry with full-definition overrides.
+ * Fields listed in `collections` take that definition as-is — a
+ * `{ kind: 'collection', ... }`, or a scalar that needs more than a label
+ * (e.g. a value projector); the remainder default to `{ kind: 'scalar', label }`.
+ * This keeps the raw label maps compact while the richer definitions stay
+ * colocated with the entity they describe (ADR-195 Phase 11).
  */
 function mergeDefs(
   raw: Record<string, string>,
-  collections: Record<string, CollectionDef>,
+  collections: Record<string, TrackedFieldDef>,
 ): Record<string, TrackedFieldDef> {
   const out: Record<string, TrackedFieldDef> = {};
   for (const [field, label] of Object.entries(raw)) {
@@ -576,8 +577,24 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   ),
 };
 
-const BUILDING_COLLECTION_DEFS: Record<string, CollectionDef> = {
+/**
+ * Ο δεσμός του κτιρίου προς το επίπεδο Α (`placeRef: {landId, buildingId}`, ADR-777 §14.5) ως τιμή ιστορικού.
+ *
+ * 🔑 Γράφεται η **ταυτότητα** (`landId` ή `landId/buildingId`), όχι όνομα: ο αναγνώστης του επιπέδου Α
+ * (`public-place-read.service.ts`) κρίνει **ύπαρξη**, δεν εκθέτει όνομα τόπου — και ένα όνομα θα ήταν
+ * στιγμιότυπο που δεν ξεχωρίζει δύο οικόπεδα στην ίδια οδό. `null` ⇒ ο δεσμός δεν υπάρχει (άρση).
+ */
+function formatAuditPlaceRef(value: unknown): string | null {
+  if (value === null || typeof value !== 'object') return null;
+  const { landId, buildingId } = value as { landId?: unknown; buildingId?: unknown };
+  if (typeof landId !== 'string' || landId === '') return null;
+  return typeof buildingId === 'string' && buildingId !== '' ? `${landId}/${buildingId}` : landId;
+}
+
+const BUILDING_COLLECTION_DEFS: Record<string, TrackedFieldDef> = {
   addresses: ADDRESS_COLLECTION_DEF,
+  // Αλλαγή δεσμού αλλάζει **ποιο πράγμα είναι** κάθε αγγελία του κτιρίου — δεν γίνεται να μην αφήνει ίχνος.
+  placeRef: { kind: 'scalar', label: 'placeRef', value: formatAuditPlaceRef },
 };
 
 /** Building audit registry — `field → TrackedFieldDef`. */
@@ -595,6 +612,9 @@ const FLOOR_TRACKED_FIELDS_RAW: Record<string, string> = {
   projectId: 'projectId',
   units: 'units',
   elevation: 'elevation',
+  // Το PATCH τα γράφει (`FLOOR_UPDATE_FIELDS`) — χωρίς αυτά, αλλαγή είδους ή ύψους δεν άφηνε γραμμή.
+  kind: 'kind',
+  height: 'height',
 };
 
 /** Floor audit registry — `field → TrackedFieldDef`. */

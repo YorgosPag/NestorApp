@@ -391,13 +391,16 @@
         "category": "Building Category",
         "status": "Building Status",
         "progress": "Building Progress (%)",
-        "addresses": "Address"
+        "addresses": "Address",
+        "placeRef": "Place link (plot/building)"
       },
       "floor": {
         "buildingId": "Building",
         "projectId": "Project",
         "units": "Units",
-        "elevation": "Height (m)",
+        "elevation": "Elevation (m)",
+        "height": "Storey height (m)",
+        "kind": "Level kind",
         "name": "Floor Title",
         "number": "Floor Number"
       },

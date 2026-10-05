@@ -13,6 +13,7 @@
  */
 
 import { SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
+import type { EntityAuditEntry } from '@/types/audit-trail';
 import { translated, type Translate } from './audit-field-descriptor';
 
 /** Το γενικό όνομα της μηχανής — και η πτώση κάθε διεργασίας χωρίς δικό της. */
@@ -22,7 +23,41 @@ const SYSTEM_ACTOR_KEY = 'audit.actors.system';
 const SYSTEM_ACTOR_KEYS: Readonly<Record<string, string>> = {
   [SYSTEM_IDENTITY.ADDRESS_POSITION_ID]: 'audit.actors.addressPosition',
   [SYSTEM_IDENTITY.INGESTION_ID]: 'audit.actors.ingestion',
+  [SYSTEM_IDENTITY.FLOOR_STACK_ID]: 'audit.actors.floorStack',
+  [SYSTEM_IDENTITY.FLOOR_REF_ID]: 'audit.actors.floorRef',
 };
+
+/**
+ * **Η αιτία** μιας παράγωγης εγγραφής, σε μία φράση — `null` όταν η εγγραφή είναι άμεση πράξη.
+ *
+ * 🔑 Εκτελεστής (η μηχανή, `resolveActorName`) και εμπνευστής (ο άνθρωπος, εδώ) λέγονται **χωριστά**:
+ * «από Σύστημα · στοίβα ορόφων — λόγω αλλαγής από Γιώργο στο «1ος Όροφος»».
+ *
+ * ⚠️ Η οντότητα της αιτίας **δεν** αναφέρεται όταν είναι η ίδια με της γραμμής: θα ήταν πλεονασμός.
+ */
+export function resolveCauseText(
+  entry: Pick<EntityAuditEntry, 'cause' | 'entityType' | 'entityId'>,
+  translate: TranslateWithParams,
+): string | null {
+  const { cause } = entry;
+  if (!cause) return null;
+  const name = cause.initiatedByName;
+  const sameEntity = cause.entityType === entry.entityType && cause.entityId === entry.entityId;
+  const entity = sameEntity ? null : cause.entityName;
+  const key = causeKey(name !== null, entity !== null);
+  if (!key) return null;
+  const text = translate(key, { name: name ?? '', entity: entity ?? '' });
+  return typeof text === 'string' && text !== '' && text !== key ? text : null;
+}
+
+/** Μεταφραστής με παραμέτρους — το `t` του `useTranslation`. */
+type TranslateWithParams = (key: string, params?: Record<string, string>) => unknown;
+
+function causeKey(hasName: boolean, hasEntity: boolean): string | null {
+  if (hasName && hasEntity) return 'audit.cause.byUserOnEntity';
+  if (hasName) return 'audit.cause.byUser';
+  return hasEntity ? 'audit.cause.onEntity' : null;
+}
 
 export interface ResolveActorNameParams {
   readonly performedBy: string;

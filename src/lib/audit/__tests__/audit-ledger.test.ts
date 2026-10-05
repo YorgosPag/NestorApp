@@ -99,4 +99,16 @@ describe('Β6 — το σύνορο ανάγνωσης αποδίδει ΜΟΝΟ
     });
     expect(entry).toMatchObject({ entityName: 'Όροφος 1', timestamp: when.toISOString(), changes: [] });
   });
+
+  it('ADR-195 — η ΑΙΤΙΑ παράγωγης εγγραφής περνά το σύνορο· ό,τι δεν έχει εμπνευστή ΔΕΝ είναι αιτία', () => {
+    const cause = { auditId: 'eaud_1', initiatedBy: 'u1', initiatedByName: 'Γιώργος', entityType: 'floor', entityId: 'flr_1', entityName: 'Ισόγειο' };
+    const derived = { ...base, companyId: 'c', performedBy: 'system:floor-stack' };
+
+    expect(entityAuditEntryFromData('a5', { ...derived, cause })?.cause).toEqual(cause);
+    // Γραμμή γέννησης/διαγραφής που δεν επέστρεψε id ⇒ `null`, ποτέ `undefined` προς τον αναγνώστη.
+    expect(entityAuditEntryFromData('a6', { ...derived, cause: { ...cause, auditId: undefined } })?.cause?.auditId).toBeNull();
+    // Παλιά εγγραφή (χωρίς κανάλι) και αλλοιωμένο κανάλι: το κλειδί ΛΕΙΠΕΙ — άμεση πράξη.
+    expect(entityAuditEntryFromData('a7', derived)).not.toHaveProperty('cause');
+    expect(entityAuditEntryFromData('a8', { ...derived, cause: { auditId: 'eaud_1' } })).not.toHaveProperty('cause');
+  });
 });

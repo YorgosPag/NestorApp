@@ -37,6 +37,10 @@ export const SYSTEM_IDENTITY = {
   INGESTION_ID: 'system:ingestion',
   /** Η ολοκλήρωση εκκρεμών θέσεων διευθύνσεων μετά την αποθήκευση (ADR-332 D29) */
   ADDRESS_POSITION_ID: 'system:address-position',
+  /** Η στοίβα ορόφων: στάθμες · ύψη · ειδικές στάθμες · δομικά στοιχεία που ακολουθούν (ADR-450/451/461) */
+  FLOOR_STACK_ID: 'system:floor-stack',
+  /** Το αντίγραφο ορόφου σε ό,τι φιλοξενεί: ακίνητα · θέσεις · αποθήκες (ADR-903 §6) */
+  FLOOR_REF_ID: 'system:floor-ref',
   /** Display name for system messages */
   DISPLAY_NAME: 'System',
   /** System type identifier */
