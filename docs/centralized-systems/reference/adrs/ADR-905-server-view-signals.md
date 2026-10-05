@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟢 **IMPLEMENTED — Στάδια 1+2 (2026-10-04)**: γραφέας μέσα στη συναλλαγή · κρίση «ποιες όψεις» με τους κριτές της όψης · κανόνες + σουίτα · `freshness` στις όψεις · ένα hook στον client · πρώτος καταναλωτής η υπόθεση μεταβίβασης (ADR-901 §14.8) · ✅ κανόνες **ανεπτυγμένοι** (2026-10-04) · 🟢 **Στάδιο 3 (CDC) IMPLEMENTED σε κώδικα (2026-10-04, §6)** — trigger-αναμεταδότης → υπογεγραμμένο webhook → κρίση με τους κριτές της όψης · ⏳ deploy δείκτη + μυστικού + Functions (§7, απόφαση Giorgio) |
+| **Status** | 🟢 **IMPLEMENTED — Στάδια 1+2 (2026-10-04)**: γραφέας μέσα στη συναλλαγή · κρίση «ποιες όψεις» με τους κριτές της όψης · κανόνες + σουίτα · `freshness` στις όψεις · ένα hook στον client · πρώτος καταναλωτής η υπόθεση μεταβίβασης (ADR-901 §14.8) · ✅ κανόνες **ανεπτυγμένοι** (2026-10-04) · 🟢 **Στάδιο 3 (CDC) IMPLEMENTED σε κώδικα (2026-10-04, §6)** — trigger-αναμεταδότης → υπογεγραμμένο webhook → κρίση με τους κριτές της όψης · ✅ δείκτης + μυστικό + push (§7 βήματα 2-4) · ⏳ **μόνο** το deploy των 3 Functions (§7 βήμα 5 — δοκιμάστηκε 2026-10-05, δεν ανέβηκε) |
 | **Date** | 2026-10-04 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Canonical Location** | CDC: `functions/src/conveyance/dependency-relay.ts` → `src/app/api/internal/conveyance/dependency-changed/route.ts` → `src/services/conveyance/conveyance-dependency-relay.server.ts` (πόρτα: `src/server/internal-webhooks/signed-webhook-door.ts` · υπογραφή: `src/lib/webhooks/internal-webhook-signature.ts` · παράδοση: `src/lib/webhooks/internal-webhook-delivery.ts` · συμβόλαιο: `src/lib/conveyance/dependency-change-event.ts`) · server: `src/services/conveyance/conveyance-view-signal.server.ts` · κρίση: `src/lib/conveyance/view-signal-audience.ts` · κλειδί: `src/lib/conveyance/view-signal-key.ts` · client: `src/services/realtime/hooks/use-server-view-signal.ts` + `src/services/realtime/server-view-refresh.ts` · τύπος: `src/types/server-view.ts` · κανόνας: `firestore.rules` (`conveyance_view_signals`) |
@@ -184,10 +184,14 @@ WIP ⇒ σήμα **μόνο** σε όποιον το **έχασε** (γι' αυ�
 ## 7. Deploy (ADR-865 — το push πάει στο Netcup, **ποτέ** στο Firebase)
 
 1. ✅ κανόνες: `npm run firestore:deploy -- --only firestore:rules` — **έγινε 2026-10-04** (release `68423dab`, ο πάροχος: «παραγωγή = δέντρο»· ledger ενημερωμένο)
-2. ⏳ δείκτης Στάδιο 3: `npm run firestore:deploy -- --only firestore:indexes` (`conveyance_cases`: `companyId` + `storedState` + `dependencyKeys[]`)
-3. ⏳ μυστικό: `firebase functions:secrets:set INTERNAL_WEBHOOK_SECRET` **και** η ίδια τιμή στο env του Netcup· `INTERNAL_WEBHOOK_BASE_URL` στο `functions/.env.<project>`
-4. ⏳ κώδικας (push) — ο αποδέκτης πρέπει να υπάρχει **πριν** από τον trigger (αλλιώς 404 = οριστική άρνηση, το γεγονός χάνεται)
+2. ✅ δείκτης Στάδιο 3: `npm run firestore:deploy -- --only firestore:indexes` (`conveyance_cases`: `companyId` + `storedState` + `dependencyKeys[]`) — **έγινε** (κατά το handoff 2026-10-05· δεν ξαναμετρήθηκε σε αυτή τη συνεδρία)
+3. ✅ μυστικό: `firebase functions:secrets:set INTERNAL_WEBHOOK_SECRET` **και** η ίδια τιμή στο env του Netcup· `INTERNAL_WEBHOOK_BASE_URL` στο `functions/.env.<project>` — πλευρά Netcup **μετρημένη 2026-10-05**: ανυπόγραφο POST = **401** (όχι 503)
+4. ✅ κώδικας (push) — ο αποδέκτης πρέπει να υπάρχει **πριν** από τον trigger (αλλιώς 404 = οριστική άρνηση, το γεγονός χάνεται) — `0f84e9b5` + `3ba6028b` στο `origin/main`, ο αποδέκτης απαντά (401, όχι 404/403)
 5. ⏳ `firebase deploy --only functions:onConveyanceFileWrite,functions:onConveyancePropertyWrite,functions:onConveyanceProjectWrite` — ⚠️ το **πρώτο** deploy Functions μετά τη Φάση 0 του ADR-873 (firebase-functions 7 / admin 13): ενημερώνονται **μόνο** αυτά τα τρία
+   - **Δοκιμάστηκε 2026-10-05, ΔΕΝ ανέβηκε τίποτα.** Το `predeploy` (build) και η ανάλυση του πηγαίου πέρασαν με firebase-functions 7.4.0 / firebase-tools 15.13.0· το CLI σταμάτησε στο `Pass the --force option to deploy functions with a failure policy` (μη διαδραστικό τερματικό).
+   - **Τι κάνει το `--force` εδώ** (διαβασμένο στο `firebase-tools/lib/deploy/functions/prompts.js` + `release/planner.js`): αποδέχεται τις επαναλήψεις· οι διαγραφές περιορίζονται στο φίλτρο του `--only` (οι τρεις δεν υπάρχουν ⇒ καμία)· η πολιτική καθαρισμού εικόνων **υπάρχει ήδη** (`firebase-functions-cleanup`, 7 ημέρες) ⇒ δεν δημιουργείται άλλη.
+   - Η εκτέλεση με `--force` από πράκτορα **κόπηκε** από τον φρουρό αδειών της συνεδρίας ⇒ την τρέχει ο Giorgio (διαδραστικά, χωρίς `--force`) ή τη ρητά επιτρέπει.
+   - ⚠️ Ο κώδικας που θα ανεβεί περιλαμβάνει το `1ccb4ca7` (§6.4: 429 = επανάληψη · ταβάνι 24 ωρών).
 
 ## 8. Ανοιχτά
 
