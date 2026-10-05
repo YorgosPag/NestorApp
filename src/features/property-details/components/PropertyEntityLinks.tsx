@@ -16,7 +16,7 @@
 import React, { useCallback } from 'react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { getBuildingsList } from '@/services/properties.service';
+import { loadScopedBuildingOptions } from '@/components/shared/space-info/scoped-building-options';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
@@ -24,8 +24,8 @@ interface PropertyEntityLinksProps {
   propertyId: string;
   /** @deprecated Kept for backward compatibility — no longer rendered */
   currentCompanyId?: string;
-  /** @deprecated Kept for backward compatibility — no longer rendered */
-  currentProjectId?: string;
+  /** Το έργο της μονάδας — ορίζει **ποια** κτίρια προσφέρονται (ADR-898 §21.6 Ε6-α). Δεν αποδίδεται ως πεδίο. */
+  currentProjectId?: string | null;
   currentBuildingId?: string;
   isEditing: boolean;
   onBuildingLinkChange?: (newId: string | null) => Promise<{ success: boolean; error?: string }>;
@@ -34,14 +34,23 @@ interface PropertyEntityLinksProps {
 
 export function PropertyEntityLinks({
   propertyId,
+  currentProjectId,
   currentBuildingId,
   isEditing,
   onBuildingLinkChange,
   onLinkChanged,
 }: PropertyEntityLinksProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t, currentLanguage } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
-  const loadBuildings = useCallback(() => getBuildingsList(), []);
+  // ADR-898 §21.6 Ε6-α — το ΙΔΙΟ κατηγόρημα με τον φρουρό του server (`property-anchor-guard`): μονάδα έργου βλέπει
+  // μόνο τα κτίρια του έργου της. Ως τις 2026-10-05 έδειχνε κάθε κτίριο του χώρου εργασίας (έξι «Κτήριο Α»).
+  const buildingId = currentBuildingId ?? null;
+  const projectId = currentProjectId ?? null;
+  const noProjectGroup = t('entityLinks.building.noProjectGroup');
+  const loadBuildings = useCallback(
+    () => loadScopedBuildingOptions({ buildingId, projectId }, { noProjectGroup, locale: currentLanguage }),
+    [buildingId, projectId, noProjectGroup, currentLanguage],
+  );
 
   const saveBuilding = useCallback(async (newId: string | null) => {
     if (!onBuildingLinkChange) {

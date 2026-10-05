@@ -3,7 +3,7 @@
 /**
  * useSpaceBuildingLink — ο σύνδεσμος «κτίριο» μιας φόρμας χώρου (θέση · αποθήκη) — ADR-898 §21.6 Ε6.
  *
- * Οι δύο καρτέλες έγραφαν το ίδιο μπλοκ (`getBuildingsList` + `useEntityLink` με ίδιες ρυθμίσεις) και φόρτωναν **κάθε**
+ * Οι δύο καρτέλες έγραφαν το ίδιο μπλοκ (λίστα κτιρίων + `useEntityLink` με ίδιες ρυθμίσεις) και φόρτωναν **κάθε**
  * κτίριο του χώρου εργασίας: εννέα επιλογές, έξι από αυτές αδιάκριτα «Κτήριο Α». Γράφεται εδώ μία φορά, και οι επιλογές
  * περνούν από τον κανόνα του τομέα (`lib/spaces/space-building-scope`) — τον ΙΔΙΟ που επιβάλλει ο server:
  * - χώρος **με** έργο ⇒ μόνο τα κτίρια του έργου του·
@@ -15,18 +15,11 @@
 
 import { useCallback } from 'react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { getProjectsList } from '@/components/building-management/building-services';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { useEntityLink, type UseEntityLinkReturn } from '@/hooks/useEntityLink';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import {
-  buildingOptionsForSpace,
-  resolveSpaceProjectId,
-  type ScopedBuilding,
-  type SpaceBuildingAnchor,
-} from '@/lib/spaces/space-building-scope';
-import { getBuildingsList } from '@/services/properties.service';
 import { buildBuildingLinkLabels } from './building-link-labels';
+import { loadScopedBuildingOptions } from './scoped-building-options';
 
 export interface SpaceBuildingLinkSpace {
   readonly id: string;
@@ -45,12 +38,6 @@ export interface UseSpaceBuildingLinkInput {
   readonly cardId: string;
 }
 
-/** Ονόματα έργων μόνο όταν χρειάζονται: ο χώρος με έργο δεν ομαδοποιεί, άρα δεν πληρώνει δεύτερη ανάγνωση. */
-async function projectNamesFor(space: SpaceBuildingAnchor, buildings: readonly ScopedBuilding[]): Promise<Map<string, string>> {
-  if (resolveSpaceProjectId(space, buildings) !== null) return new Map();
-  return new Map((await getProjectsList()).map((project) => [project.id, project.name]));
-}
-
 export function useSpaceBuildingLink(input: UseSpaceBuildingLinkInput): UseEntityLinkReturn {
   const { relation, space, t, isEditing, onFloorReset, cardId } = input;
   const { currentLanguage } = useTranslation();
@@ -58,17 +45,10 @@ export function useSpaceBuildingLink(input: UseSpaceBuildingLinkInput): UseEntit
   const projectId = space.projectId ?? null;
   const noProjectGroup = t('entityLinks.building.noProjectGroup');
 
-  const loadOptions = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const anchor = { buildingId, projectId };
-    const buildings = await getBuildingsList();
-    return buildingOptionsForSpace({
-      space: anchor,
-      buildings,
-      projectNames: await projectNamesFor(anchor, buildings),
-      noProjectGroup,
-      locale: currentLanguage,
-    });
-  }, [buildingId, projectId, noProjectGroup, currentLanguage]);
+  const loadOptions = useCallback(
+    (): Promise<EntityLinkOption[]> => loadScopedBuildingOptions({ buildingId, projectId }, { noProjectGroup, locale: currentLanguage }),
+    [buildingId, projectId, noProjectGroup, currentLanguage],
+  );
 
   return useEntityLink({
     relation,

@@ -51,7 +51,7 @@ async function projectOfBuilding(db: AdminFirestore, buildingId: string): Promis
  * Το έργο ενός κτιρίου **του καλούντος** — ο ΕΝΑΣ φύλακας (ύπαρξη + χώρος εργασίας + ίχνος), μία ανάγνωση.
  * @throws TenantIsolationError(404) ξένο ή ανύπαρκτο κτίριο
  */
-async function projectOfOwnedBuilding(caller: SpaceGuardCaller, buildingId: string): Promise<string | null> {
+export async function projectOfOwnedBuilding(caller: SpaceGuardCaller, buildingId: string): Promise<string | null> {
   const building = await requireBuildingInTenant({ ctx: caller.ctx, buildingId, path: caller.path });
   return nonEmptyText(building.projectId);
 }

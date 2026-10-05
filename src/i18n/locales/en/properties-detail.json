@@ -112,7 +112,8 @@
       "loading": "Loading buildings...",
       "success": "Building link updated",
       "currentLabel": "Current building",
-      "noFloorHint": "Select a building first"
+      "noFloorHint": "Select a building first",
+      "noProjectGroup": "No project"
     }
   },
   "meta": {

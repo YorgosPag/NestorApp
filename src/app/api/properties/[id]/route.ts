@@ -43,6 +43,8 @@ import {
   type PropertyPatchPayload,
 } from './property-patch-helpers';
 import { OBJECTIVE_VALUE_BODY_KEY, patchPropertyObjectiveValue } from './property-objective-value-patch';
+import { assertPropertyAnchorWrite } from './property-anchor-guard';
+import { asApiError } from '@/lib/api/api-error-types';
 
 import { isPlainRecord } from '@/lib/type-guards';
 
@@ -95,6 +97,9 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         if (parsed.error) throw new ApiError(400, 'Validation failed');
         const { _v: expectedVersion, ...body } = parsed.data as PropertyPatchPayload & { _v?: number };
 
+        // 🔒 ADR-898 §21.6 Ε6-α/γ — η άγκυρα (χώρος εργασίας · έργο · κτίριο) κρίνεται ΠΡΙΝ από οτιδήποτε άλλο.
+        const anchorPatch = await assertPropertyAnchorWrite(adminDb, { ctx, path: '/api/properties/[id]' }, id, body, existing);
+
         // 🛡️ ADR-249: Field locking (sale-revert flow bypasses — see helper).
         validatePropertyFieldLockingUnlessRevert(
           existing.commercialStatus as string | undefined,
@@ -125,7 +130,7 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         const isCancellation = detectCancellation(existing, body);
 
         // Build sanitised Firestore payload
-        const updateData = buildUpdateData(body, existing);
+        const updateData = { ...buildUpdateData(body, existing), ...anchorPatch };
         // ADR-903 §6 — φιλοξενούμενο ⇒ `floor`/`floorKind` από το έγγραφο ορόφου (κερδίζει τον client).
         // Αποσύνδεση από όροφο ⇒ ο αριθμός μένει μόνο αν τον έστειλε ρητά (αυτόνομη μονάδα).
         const hostedFloor = await resolveHostedFloorPatch(adminDb, ctx, body, existing);
@@ -271,7 +276,9 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         if (error instanceof ConflictError) {
           return NextResponse.json(error.body, { status: error.statusCode });
         }
-        if (error instanceof ApiError) throw error;
+        // Και η άρνηση του φύλακα του πόρου (`TenantIsolationError` ⇒ 404) περνά αυτούσια — γινόταν 500.
+        const refusal = asApiError(error);
+        if (refusal) throw refusal;
         logger.error('Error updating property', { id, error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to update property'));
       }

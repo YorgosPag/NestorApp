@@ -56,6 +56,8 @@ export const POLICY_ERROR_CODES = {
   SPACE_LINKED_TO_UNIT: 'POLICY_SPACE_LINKED_TO_UNIT',
   /** ADR-898 §21.6 Ε6: μετακίνηση χώρου (θέση · αποθήκη) σε κτίριο άλλου έργου. */
   SPACE_BUILDING_OTHER_PROJECT: 'POLICY_SPACE_BUILDING_OTHER_PROJECT',
+  /** ADR-898 §21.6 Ε6-α: το έργο είναι το όριο της μονάδας — ούτε αλλαγή έργου, ούτε κτίριο άλλου έργου. */
+  PROPERTY_PROJECT_BOUNDARY: 'POLICY_PROPERTY_PROJECT_BOUNDARY',
 } as const;
 
 export type PolicyErrorCode =

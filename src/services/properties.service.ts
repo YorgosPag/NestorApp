@@ -135,29 +135,29 @@ export async function deleteProperty(propertyId: string): Promise<{ success: boo
  *
  * Το `projectId` ταξιδεύει μαζί: ο επιλογέας κτιρίου ενός χώρου περιορίζεται στο έργο του (ADR-898 §21.6 Ε6) και δεν
  * μπορεί να το κάνει με σκέτο `{ id, name }` — έξι «Κτήριο Α» διαφορετικών έργων ήταν αδιάκριτα.
+ *
+ * 🔴 **Η αποτυχία ΠΕΤΑ** (ADR-898 §21.6 Ε6-β). Ως τις 2026-10-05 εδώ υπήρχε `catch { return [] }`: ο επιλογέας έδειχνε
+ * «κανένα κτίριο» όταν απλώς **δεν φόρτωσε** — ψευδές «δεν υπάρχουν». Η κενή λίστα σημαίνει πλέον **μόνο** «ο server
+ * απάντησε και δεν έχει»· την αποτυχία τη δείχνει ο καταναλωτής (`useEntityLink`: σφάλμα + επανάληψη).
  */
 export async function getBuildingsList(): Promise<Array<{ id: string; name: string; projectId: string | null }>> {
-  try {
-    interface BuildingFromAPI {
-      id: string;
-      name?: string;
-      projectId?: string | null;
-    }
-    interface BuildingsResponse {
-      buildings: BuildingFromAPI[];
-    }
-
-    const result = await apiClient.get<BuildingsResponse>(API_ROUTES.BUILDINGS.LIST);
-    if (!result?.buildings) return [];
-
-    return result.buildings.map(b => ({
-      id: b.id,
-      name: b.name || b.id,
-      projectId: b.projectId || null,
-    }));
-  } catch {
-    return [];
+  interface BuildingFromAPI {
+    id: string;
+    name?: string;
+    projectId?: string | null;
   }
+  interface BuildingsResponse {
+    buildings: BuildingFromAPI[];
+  }
+
+  const result = await apiClient.get<BuildingsResponse>(API_ROUTES.BUILDINGS.LIST);
+  if (!Array.isArray(result?.buildings)) throw new Error('Buildings API answered without a list');
+
+  return result.buildings.map(b => ({
+    id: b.id,
+    name: b.name || b.id,
+    projectId: b.projectId || null,
+  }));
 }
 
 export async function updatePropertyCoverage(

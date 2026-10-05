@@ -271,10 +271,8 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
 
     const result = await apiClient.get<ProjectListResponse>(API_ROUTES.PROJECTS.LIST);
 
-    if (!result || !result.projects) {
-      logger.warn('Invalid response from projects API');
-      return [];
-    }
+    // ADR-898 §21.6 Ε6-β — απάντηση χωρίς λίστα είναι ΑΠΟΤΥΧΙΑ, όχι «κανένα έργο».
+    if (!Array.isArray(result?.projects)) throw new Error('Projects API answered without a list');
 
     const projects: ProjectListItem[] = result.projects.map(project => ({
       id: project.id,
@@ -295,7 +293,8 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
     logger.error(
       `getProjectsList failed: ${message} (status=${statusCode ?? 'n/a'}, code=${errorCode ?? 'n/a'})`
     );
-    return [];
+    // ADR-898 §21.6 Ε6-β — η αποτυχία ΠΕΤΑ: `return []` έκανε τον επιλογέα έργου να δείχνει «κανένα» αντί για σφάλμα.
+    throw error;
   }
 }
 

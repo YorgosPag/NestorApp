@@ -41,6 +41,7 @@ import '@/lib/design-system';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 import { EntityLinkSelectOptions } from '@/components/shared/EntityLinkSelectOptions';
+import { EntityLinkOptionsError, type EntityLinkOptionsFailure } from '@/components/shared/EntityLinkOptionsError';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -119,6 +120,8 @@ export interface EntityLinkCardProps {
    * - Syncs options from `initialOptions` prop changes
    */
   externalLoading?: boolean;
+  /** Η φόρτωση των επιλογών **απέτυχε** (managed mode): ορατό σφάλμα + επανάληψη, ποτέ «άδεια λίστα». */
+  optionsFailure?: EntityLinkOptionsFailure;
 }
 
 // =============================================================================
@@ -147,6 +150,7 @@ export function EntityLinkCard({
   hasError = false,
   initialOptions,
   externalLoading,
+  optionsFailure,
 }: EntityLinkCardProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
@@ -289,6 +293,8 @@ export function EntityLinkCard({
     }
   }, [effectiveSavedValue, currentValue, performSave, autoSave, onSave, onValueChange, options]);
 
+  // Αποτυχία χωρίς καμία γνωστή λίστα ⇒ ΟΧΙ επιλογέας: άδεια λίστα θα διαβαζόταν «δεν υπάρχουν» (ADR-898 §21.6 Ε6-β).
+  const optionsUnknown = optionsFailure !== undefined && options.length === 0;
   const currentName = options.find(o => o.id === (effectiveSavedValue ?? currentValue))?.name;
   const selectedName = options.find(o => o.id === selectedId)?.name;
 
@@ -448,9 +454,10 @@ export function EntityLinkCard({
               <Spinner size="small" />
               <span>{labels.loading}</span>
             </section>
-          ) : (
+          ) : !optionsUnknown && (
             searchable ? renderSearchableSelect() : renderStandardSelect()
           )}
+          {optionsFailure && <EntityLinkOptionsError onRetry={optionsFailure.onRetry} stale={!optionsUnknown} />}
         </fieldset>
 
         {!hideCurrentLabel && currentName && (

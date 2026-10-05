@@ -232,7 +232,7 @@ export async function propagateProjectCompanyLink(
  * - Update property with projectId + companyId
  *
  * When buildingId is null (unlink):
- * - Property loses projectId and companyId (set to null)
+ * - Nothing is written: the unit leaves the building, NOT its project (ADR-898 §21.6 Ε6-α).
  */
 export async function propagatePropertyBuildingLink(
   propertyId: string,
@@ -241,43 +241,14 @@ export async function propagatePropertyBuildingLink(
   const db = getAdminFirestore();
 
   try {
-    let resolvedProjectId: string | null = null;
-    let resolvedCompanyId: string | null = null;
-
-    if (newBuildingId) {
-      // Resolve building → projectId + companyId
-      const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(newBuildingId).get();
-      if (buildingDoc.exists) {
-        const buildingData = buildingDoc.data();
-        resolvedProjectId = (buildingData?.projectId as string) ?? null;
-        // 🏢 ENTERPRISE: Inherit companyId from building (Google-level ownership)
-        resolvedCompanyId = (buildingData?.companyId as string) ?? null;
-
-        // Resolve linkedCompanyId from project (business entity link)
-        let resolvedLinkedCompanyId: string | null = null;
-        if (resolvedProjectId) {
-          const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
-          if (projectDoc.exists) {
-            resolvedLinkedCompanyId = (projectDoc.data()?.linkedCompanyId as string) ?? null;
-          }
-        }
-
-        // 🏢 ENTERPRISE: Update BOTH companyId AND linkedCompanyId
-        await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
-          projectId: resolvedProjectId,
-          companyId: resolvedCompanyId,
-          linkedCompanyId: resolvedLinkedCompanyId,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-      }
-    } else {
-      // Unlink: clear project/company references
-      await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
-        projectId: null,
-        linkedCompanyId: null,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
+    const chain = newBuildingId
+      ? await writeBuildingChain(db, COLLECTIONS.PROPERTIES, propertyId, newBuildingId)
+      : null;
+    const resolvedProjectId = chain?.projectId ?? null;
+    const resolvedCompanyId = chain?.companyId ?? null;
+    // Αποσύνδεση: **τίποτα να γραφτεί** (ADR-898 §21.6 Ε6-α · πρότυπο Revit «Not Placed»). Η μονάδα φεύγει από το
+    // κτίριο, **όχι** από το έργο της — ADR-284: μονάδα δεν υπάρχει χωρίς έργο. Ως τις 2026-10-05 εδώ άδειαζαν
+    // `projectId` + `linkedCompanyId`, και «αποσύνδεση + νέα σύνδεση» άλλαζε έργο σε μονάδα χωρίς να το πει κανείς.
 
     logger.info('Property→Building cascade completed', {
       propertyId,
@@ -322,29 +293,10 @@ export async function propagateChildBuildingLink(
 
   try {
     if (newBuildingId) {
-      const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(newBuildingId).get();
-      if (buildingDoc.exists) {
-        const buildingData = buildingDoc.data();
-        const resolvedProjectId = (buildingData?.projectId as string) ?? null;
-        const resolvedCompanyId = (buildingData?.companyId as string) ?? null;
-
-        let resolvedLinkedCompanyId: string | null = null;
-        if (resolvedProjectId) {
-          const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
-          if (projectDoc.exists) {
-            resolvedLinkedCompanyId = (projectDoc.data()?.linkedCompanyId as string) ?? null;
-          }
-        }
-
-        await db.collection(collection).doc(docId).update({
-          projectId: resolvedProjectId,
-          companyId: resolvedCompanyId,
-          linkedCompanyId: resolvedLinkedCompanyId,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-
+      const chain = await writeBuildingChain(db, collection, docId, newBuildingId);
+      if (chain) {
         logger.info('Child→Building cascade completed', {
-          collection, docId, newBuildingId, resolvedProjectId, resolvedCompanyId,
+          collection, docId, newBuildingId, resolvedProjectId: chain.projectId, resolvedCompanyId: chain.companyId,
         });
       }
     } else {
@@ -477,6 +429,39 @@ export { propagateContactNameChange } from './cascade-contact-name.service';
  *
  * @returns Number of documents updated
  */
+/**
+ * Γράφει στο παιδί την αλυσίδα του κτιρίου του: `projectId` + `companyId` από το κτίριο, `linkedCompanyId` από το έργο.
+ * Ο ΕΝΑΣ γραφέας για μονάδα και χώρο (θέση · αποθήκη) — ως τις 2026-10-05 το μπλοκ ζούσε δύο φορές (CHECK 3.28).
+ * @returns `null` όταν το κτίριο δεν υπάρχει — τότε δεν γράφεται τίποτα.
+ */
+async function writeBuildingChain(
+  db: ReturnType<typeof getAdminFirestore>,
+  collection: string,
+  docId: string,
+  buildingId: string
+): Promise<{ projectId: string | null; companyId: string | null } | null> {
+  const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+  if (!buildingDoc.exists) return null;
+
+  const buildingData = buildingDoc.data();
+  const projectId = (buildingData?.projectId as string) ?? null;
+  const companyId = (buildingData?.companyId as string) ?? null;
+
+  let linkedCompanyId: string | null = null;
+  if (projectId) {
+    const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+    if (projectDoc.exists) linkedCompanyId = (projectDoc.data()?.linkedCompanyId as string) ?? null;
+  }
+
+  await db.collection(collection).doc(docId).update({
+    projectId,
+    companyId,
+    linkedCompanyId,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  return { projectId, companyId };
+}
+
 async function batchUpdate(
   db: FirebaseFirestore.Firestore,
   docs: FirebaseFirestore.QueryDocumentSnapshot[],

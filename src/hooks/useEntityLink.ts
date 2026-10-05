@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { EntityLinkOption, EntityLinkLabels, EntityLinkCardProps } from '@/components/shared/EntityLinkCard';
+import { useReconciledResource } from '@/hooks/useReconciledResource';
 import { RealtimeService } from '@/services/realtime';
 import type { RealtimeEventMap } from '@/services/realtime';
 
@@ -92,7 +93,20 @@ export interface UseEntityLinkReturn {
   options: readonly EntityLinkOption[];
   /** `true` ώσπου να απαντήσει η πρώτη φόρτωση: «κενή λίστα» τότε ΔΕΝ σημαίνει «δεν υπάρχουν». */
   optionsLoading: boolean;
+  /** `true` όταν η τελευταία φόρτωση **απέτυχε**: «κενή λίστα» τότε επίσης ΔΕΝ σημαίνει «δεν υπάρχουν». */
+  optionsFailed: boolean;
+  /** Ξαναδιάβασε τις επιλογές (το «Δοκιμάστε ξανά» της κάρτας). */
+  retryOptions: () => void;
 }
+
+/** Οι επιλογές **μαζί με τον φορτωτή που τις έφερε** — απάντηση άλλου φορτωτή δεν είναι απάντηση αυτού. */
+interface LoadedOptions {
+  readonly source: () => Promise<EntityLinkOption[]>;
+  readonly options: EntityLinkOption[];
+}
+
+/** Σταθερή αναφορά για «καμία γνωστή επιλογή» — νέος πίνακας σε κάθε render θα ξανάτρεχε τα effects της κάρτας. */
+const NO_OPTIONS: EntityLinkOption[] = [];
 
 // =============================================================================
 // FOREIGN KEY MAP
@@ -162,39 +176,26 @@ export function useEntityLink(
 
   // SSoT: Hook is the single source of truth for options loading.
   // EntityLinkCard receives options + loading state — never fetches on its own.
-  const [cachedOptions, setCachedOptions] = useState<EntityLinkOption[]>([]);
-  const [optionsLoading, setOptionsLoading] = useState(true);
+  //
+  // ADR-898 §21.6 Ε6-β — πάνω στον ΕΝΑ μηχανισμό ανάγνωσης (`useReconciledResource`: αρίθμηση αναγνώσεων, ρητή
+  // κατάσταση). Ως τις 2026-10-05 εδώ υπήρχε `.catch(() => {})`: αποτυχία φόρτωσης ⇒ **άδειος επιλογέας**, δηλαδή
+  // «δεν υπάρχουν κτίρια» αντί για «δεν φόρτωσαν». Η απάντηση κρατιέται **μαζί με τον φορτωτή που ρωτήθηκε**: όταν
+  // αλλάξει (άλλη οντότητα, άλλο έργο) οι επιλογές του προηγούμενου ΔΕΝ δείχνονται ως δικές του.
+  const readOptions = useCallback(async (): Promise<LoadedOptions> => ({ source: loadOptions, options: await loadOptions() }), [loadOptions]);
+  const { data: loaded, status: optionsStatus, refresh: refreshOptions } = useReconciledResource(readOptions);
+  const optionsKnown = loaded !== null && loaded.source === loadOptions;
+  const cachedOptions = optionsKnown ? loaded.options : NO_OPTIONS;
+  const optionsFailed = optionsStatus === 'error';
+  const optionsLoading = !optionsKnown && !optionsFailed;
 
-  // Realtime refresh — increments when parent entity type changes (create/update/delete)
-  const [refreshSignal, setRefreshSignal] = useState(0);
-
+  // Realtime refresh — re-reads when the parent entity type changes (create/update/delete). Σιωπηλά: χωρίς spinner.
   useEffect(() => {
     const events = RELATION_REALTIME_EVENTS[relation];
-    const unsubscribers = events.map((event) =>
-      RealtimeService.subscribe(event, () => {
-        setRefreshSignal((prev) => prev + 1);
-      })
-    );
+    const unsubscribers = events.map((event) => RealtimeService.subscribe(event, () => { void refreshOptions(); }));
     return () => { unsubscribers.forEach((unsub) => unsub()); };
-  }, [relation]);
+  }, [relation, refreshOptions]);
 
-  // SSoT fetch: loads options on mount + re-fetches on realtime events.
-  // Single fetch eliminates the double-call that previously happened
-  // (hook pre-fetch + EntityLinkCard mount fetch).
-  useEffect(() => {
-    let cancelled = false;
-    // Only show spinner on initial load, not on realtime refreshes
-    if (refreshSignal === 0) setOptionsLoading(true);
-    loadOptions()
-      .then((opts) => {
-        if (!cancelled) setCachedOptions(opts);
-      })
-      .catch(() => { /* non-fatal */ })
-      .finally(() => {
-        if (!cancelled) setOptionsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [loadOptions, refreshSignal]);
+  const retryOptions = useCallback(() => { void refreshOptions(); }, [refreshOptions]);
 
   // Reset when switching to a different entity (cross-entity isolation)
   useEffect(() => {
@@ -261,6 +262,8 @@ export function useEntityLink(
     // SSoT: Hook manages all fetching — card renders what it receives
     initialOptions: cachedOptions,
     externalLoading: optionsLoading,
+    // Αποτυχία φόρτωσης ⇒ ορατό σφάλμα + επανάληψη (ποτέ «άδεια λίστα»)
+    ...(optionsFailed ? { optionsFailure: { onRetry: retryOptions } } : {}),
     // immediate mode → onSave for auto-save
     ...(autoSave && onSave ? { onSave } : {}),
     // form/local mode → onValueChange for parent state sync
@@ -277,5 +280,7 @@ export function useEntityLink(
     reset,
     options: cachedOptions,
     optionsLoading,
+    optionsFailed,
+    retryOptions,
   };
 }

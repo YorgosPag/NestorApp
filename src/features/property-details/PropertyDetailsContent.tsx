@@ -314,6 +314,7 @@ export function PropertyDetailsContent({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <PropertyEntityLinks
             propertyId={resolvedProperty?.id ?? ''}
+            currentProjectId={resolvedProperty?.projectId}
             currentBuildingId={resolvedProperty?.buildingId}
             isEditing={isEditMode && !isSoldOrRented}
             onBuildingLinkChange={handleBuildingLinkChange}
