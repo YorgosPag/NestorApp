@@ -268,7 +268,9 @@ function spanValues(expression, ctx) {
     const access = tablesModule().resolveAccessChain(expression);
     const table = access === null ? null : tablesModule().lookupTable(ctx, access.root);
     if (!table) return null;
-    const leaves = access.wildcard ? [...table.values()] : leavesUnder(table, access.path);
+    // ⚠️ `tablesModule()`, όχι γυμνό όνομα: το `leavesUnder` ζει στο `key-tables` και εδώ δεν
+    // εισάγεται στην κορυφή (κύκλος — βλ. παραπάνω). Γυμνό, ήταν `ReferenceError` (ADR-744 §27).
+    const leaves = access.wildcard ? [...table.values()] : tablesModule().leavesUnder(table, access.path);
     return leaves.length > 0 ? leaves : null;
   }
   return null;

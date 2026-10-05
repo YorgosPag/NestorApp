@@ -870,6 +870,28 @@ describe('Group 14 — `t(`${K}.x`)` όπου K είναι σταθερά ΔΕΝ
     expect(sink.keys).toContainEqual({ ns: 'properties-enums', key: 'types.b' });
   });
 
+  // 🔴 ΤΟ ΑΛΛΟ ΚΛΑΔΙ ΤΟΥ ΙΔΙΟΥ ΣΚΑΛΙΟΥ ΔΕΝ ΕΙΧΕ ΤΡΕΞΕΙ ΠΟΤΕ (ADR-744 §27). Το Γ10 περνά
+  // **υπολογισμένο** δείκτη (`T[x]` ⇒ `wildcard`)· με **σταθερό** μονοπάτι (`T.a`) το
+  // `spanValues` καλούσε `leavesUnder` — όνομα που το `constant-resolution.js` δεν εισήγαγε
+  // ποτέ (έμεινε πίσω στη μετακόμιση από το `key-extract.js`). Αποτέλεσμα: `ReferenceError`
+  // που **έριχνε ολόκληρο τον γεννήτορα** για όποια κλειστότητα περιείχε τέτοια κλήση
+  // (μετρημένο 2026-10-05: `RoleManagementPageContent`).
+  it('Γ10β — σταθερό μονοπάτι πίνακα ΜΕΣΑ σε template ⇒ το ένα φύλλο, χωρίς να σκάσει', () => {
+    const sink = classifyWith(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        'export function C() {',
+        "  const { t } = useTranslation('n');",
+        '  return t(`properties-enums:${T.a}`);',
+        '}',
+      ),
+      TYPES,
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.keys).toContainEqual({ ns: 'properties-enums', key: 'types.a' });
+    expect(sink.keys).not.toContainEqual({ ns: 'properties-enums', key: 'types.b' });
+  });
+
   it('Γ11 — και δίνει ΤΗΝ ΙΔΙΑ απάντηση με το σκέτο `t(T[x])`', () => {
     const bare = classifyWith(
       L("import { useTranslation } from 'react-i18next';",
