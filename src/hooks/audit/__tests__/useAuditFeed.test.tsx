@@ -317,13 +317,102 @@ describe('useAuditFeed — loadMore', () => {
 });
 
 describe('useAuditFeed — refetch', () => {
-  it('clears the error without reopening the subscription', () => {
+  // Ήταν «καθαρίζει το σφάλμα χωρίς να ξανανοίξει τη συνδρομή»: μια συνδρομή που απέτυχε είναι
+  // τερματισμένη, άρα το κουμπί έσβηνε το μήνυμα πάνω από μια νεκρή ροή.
+  it('reopens the subscription and clears the error', () => {
     const { result } = render();
     act(() => callback()([], new Error('boom')));
 
     act(() => result.current.refetch());
 
     expect(result.current.error).toBeNull();
-    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(subscribe).toHaveBeenCalledTimes(2);
+  });
+
+  it('is loading again until the new subscription answers', () => {
+    const { result } = render();
+    act(() => callback()([], new Error('boom')));
+    expect(result.current.isLoading).toBe(false);
+
+    act(() => result.current.refetch());
+    expect(result.current.isLoading).toBe(true);
+
+    act(() => callback()([entry('a', '2026-01-01T00:00:00.000Z')], null));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.entries).toHaveLength(1);
+  });
+});
+
+// Το ερώτημα: «μπορεί η οθόνη να γράψει "δεν υπάρχει ιστορικό" για βιβλίο που δεν ρωτήθηκε ακόμη;»
+// Η οθόνη δείχνει το άδειο όταν `!isLoading && entries.length === 0 && !error`.
+describe('useAuditFeed — "δεν ρώτησα ακόμη" δεν είναι "άδειο"', () => {
+  it('is loading on the very first render, before any effect has run', () => {
+    const seen: boolean[] = [];
+    renderHook(() => {
+      const feed = useAuditFeed({
+        enabled: true,
+        pageSize: 2,
+        subscriptionKey: 'k1',
+        subscribe,
+        fetchPage,
+        subscribeErrorFallback: 'fallback message',
+      });
+      seen.push(feed.isLoading);
+      return feed;
+    });
+
+    expect(seen[0]).toBe(true);
+  });
+
+  it('is loading while the gate is still undecided', () => {
+    const { result } = renderHook(() =>
+      useAuditFeed({
+        enabled: false,
+        pending: true,
+        pageSize: 2,
+        subscriptionKey: 'k1',
+        subscribe,
+        fetchPage,
+        subscribeErrorFallback: 'fallback message',
+      }),
+    );
+
+    expect(result.current.isLoading).toBe(true);
+    expect(subscribe).not.toHaveBeenCalled();
+  });
+
+  it('is NOT loading when the gate is decided and closed', () => {
+    const { result } = render({ enabled: false });
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('reports empty only after an answer arrived', () => {
+    const { result } = render();
+    expect(result.current.isLoading).toBe(true);
+
+    act(() => callback()([], null));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('is loading again when the subscription identity changes', () => {
+    const { result, rerender } = render({ subscriptionKey: 'k1' });
+    act(() => callback()([], null));
+    expect(result.current.isLoading).toBe(false);
+
+    rerender({ subscriptionKey: 'k2' });
+
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it('stops loading on a subscription error', () => {
+    const { result } = render();
+    act(() => callback()([], new Error('denied')));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('denied');
   });
 });

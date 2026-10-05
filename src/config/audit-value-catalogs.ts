@@ -101,12 +101,21 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // διάθεσης (`OFFER_LIFECYCLES`: active/reserved/closed/withdrawn) λέγονται `lifecycle`, και
   // ο κατάλογος κλειδώνεται από το **όνομα** του πεδίου. Οι τιμές είναι ξένες μεταξύ τους
   // εκτός από το `withdrawn`, που σημαίνει το **ίδιο** και στα δύο ⇒ μία ένωση, όχι σύγκρουση.
-  // Όταν ο αναγνώστης δέσει το `TrackedFieldDef.enumCatalog` (ADR-852), χωρίζονται.
+  // Ο αναγνώστης διαβάζει πλέον το `TrackedFieldDef.enumCatalog` (ADR-852, δεμένο 2026-10-05):
+  // ο χωρισμός είναι εφικτός, δεν έχει γίνει.
   lifecycle: { ns: 'properties-enums', path: 'auditLifecycle' },
 
   // ── ADR-864 Φ1β: η ετικέτα στοιχείου της συλλογής `offers` είναι το **είδος** της διάθεσης
   // (`labelFields: ['kind']`) ⇒ «Πώληση», ποτέ ωμό `sell`. Ο ΙΔΙΟΣ κατάλογος με τη φόρμα.
   offers: { ns: 'properties-enums', path: 'offerKind' },
+
+  // ── ADR-903 · ADR-195: το **είδος** στάθμης (`FLOOR_KIND_VALUES`) — «Όροφος», όχι «3ος Όροφος».
+  // Ξεχωριστός κόμβος από το `floors:label`, που είναι η πλήρης ετικέτα στάθμης **με παραμέτρους**
+  // (`{n}ος Όροφος`) και δεν έχει μορφή χωρίς αριθμό. Το όνομα `floorKind` είναι μοναδικό, άρα το
+  // λύνει μόνο του για ακίνητο · αποθήκη · θέση · αγγελία. Το `kind` της **στάθμης** δείχνει στην
+  // ΙΔΙΑ εγγραφή μέσω `TrackedFieldDef.enumCatalog` (`FLOOR_TRACKED_FIELDS`) — το `kind` ως όνομα
+  // πεδίου ανήκει και σε 15+ οντότητες BIM με άλλο λεξιλόγιο, γι' αυτό **δεν** μπαίνει εδώ.
+  floorKind: { ns: 'floors', path: 'kind' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */

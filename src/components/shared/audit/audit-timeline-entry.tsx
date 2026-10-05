@@ -37,6 +37,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ACTION_MAP } from "./activity-tab-config";
 import { formatFieldAwareValue, formatStorageUrl } from "./activity-tab-helpers";
 import { resolveAuditValue } from "./audit-value-resolver";
+import type { AuditCatalogRef } from "@/config/audit-value-catalogs";
 // 🏢 ADR-852 Φ2 — ο περιγραφέας του πεδίου: ζωντανή ετικέτα + τίμιο στιγμιότυπο.
 // Καθαρές συναρτήσεις, εκτός React ⇒ η άγκυρα της Φ7 τις καρφώνει χωρίς render.
 import { resolveTrackedFieldDef, resolveFieldLabel, resolveSubFieldLabel } from "./audit-field-descriptor";
@@ -218,9 +219,9 @@ export function AuditTimelineEntry({
    * ISO-date fallbacks; the country-code map is layered on top for non-enum
    * fields (e.g. `birthCountry`).
    */
-  const makeFieldTranslator = (field: string) =>
+  const makeFieldTranslator = (field: string, catalog: AuditCatalogRef | undefined) =>
     (v: string): string | undefined => {
-      const resolved = resolveAuditValue(field, v, t);
+      const resolved = resolveAuditValue(field, v, t, catalog);
       if (resolved) return resolved;
 
       if (FIREBASE_UID_RE.test(v)) return t('audit.userRef');
@@ -298,12 +299,14 @@ export function AuditTimelineEntry({
         {entry.changes.length > 0 && (
           <ul className="mt-1.5 space-y-1">
             {entry.changes.map((change, idx) => {
-              const translateFieldValue = makeFieldTranslator(change.field);
               // 🏢 ADR-852 Φ2 — ΔΙΠΛΟ ΚΑΝΑΛΙ. Η σειρά επίλυσης (labelKey → ειδική →
               // γενική → στιγμιότυπο → ωμό) ζει στο `resolveFieldLabel`, ώστε να
               // δοκιμάζεται χωρίς render. Τα δύο μεσαία βήματα είναι ΑΚΡΙΒΩΣ ό,τι
               // έκανε αυτό το μπλοκ πριν ⇒ μηδέν παλινδρόμηση εκ κατασκευής.
               const def = resolveTrackedFieldDef(entry.entityType, change.field);
+              // Ο κατάλογος τιμών του περιγραφέα κερδίζει τον κατάλογο ανά όνομα πεδίου: το `kind`
+              // της στάθμης και το `kind` του τοίχου είναι δύο λεξιλόγια κάτω από ένα όνομα.
+              const translateFieldValue = makeFieldTranslator(change.field, def?.enumCatalog);
               const label = resolveFieldLabel({
                 entityType: entry.entityType,
                 field: change.field,
@@ -333,7 +336,7 @@ export function AuditTimelineEntry({
                 // safeStr: itemLabel/itemKey may be objects in legacy Firestore records
                 const rawLabel = safeStr(change.itemLabel ?? change.itemKey ?? '');
                 const itemLabel: string = rawLabel !== ''
-                  ? (resolveAuditValue(change.field, rawLabel, t)
+                  ? (resolveAuditValue(change.field, rawLabel, t, def?.enumCatalog)
                       ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel) : rawLabel))
                   : safeStr(t('audit.collection.emptyItem') as unknown);
                 const rawMessage = t(`audit.collection.${change.op}`, {
@@ -359,7 +362,7 @@ export function AuditTimelineEntry({
                               storedLabel: sub.label,
                               translate: t,
                             }).text;
-                            const translateSubValue = makeFieldTranslator(sub.subField);
+                            const translateSubValue = makeFieldTranslator(sub.subField, undefined);
                             return (
                               <li key={`${sub.subField}-${si}`}>
                                 <span className={colors.text.muted}>

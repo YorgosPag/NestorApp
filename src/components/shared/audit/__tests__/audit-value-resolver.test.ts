@@ -85,6 +85,38 @@ describe('resolveAuditValue', () => {
     });
   });
 
+  // Ο κατάλογος του περιγραφέα (`TrackedFieldDef.enumCatalog`): το `kind` είναι όνομα πεδίου σε
+  // 15+ οντότητες με άλλο λεξιλόγιο, άρα ο χάρτης ανά όνομα δεν μπορεί να το λύσει.
+  describe('declared catalog (entity + field) wins over the field-name catalog', () => {
+    const FLOOR_KIND = { ns: 'floors', path: 'kind' } as const;
+
+    it('translates a floor `kind` that has no field-name catalog', () => {
+      seed({ 'kind.stairPenthouse': 'Απόληξη κλιμακοστασίου', 'kind.ground': 'Ισόγειο' });
+      expect(resolveAuditValue('kind', 'stair-penthouse', t, FLOOR_KIND)).toBe('Απόληξη κλιμακοστασίου');
+      expect(resolveAuditValue('kind', 'ground', t, FLOOR_KIND)).toBe('Ισόγειο');
+    });
+
+    it('leaves the same field name untranslated when the entity declares no catalog', () => {
+      seed({ 'kind.ground': 'Ισόγειο' });
+      expect(resolveAuditValue('kind', 'ground', t)).toBeUndefined();
+    });
+
+    it('is asked before the field-name catalog, not after', () => {
+      seed({
+        'options.serviceCategories.ministry': 'Υπουργείο',
+        'declared.ministry': 'Από τον περιγραφέα',
+      });
+      expect(resolveAuditValue('category', 'ministry', t, { ns: 'x', path: 'declared' })).toBe(
+        'Από τον περιγραφέα',
+      );
+    });
+
+    it('does not fall through to the field-name catalog on a miss', () => {
+      seed({ 'options.serviceCategories.ministry': 'Υπουργείο' });
+      expect(resolveAuditValue('category', 'ministry', t, { ns: 'x', path: 'declared' })).toBeUndefined();
+    });
+  });
+
   describe('unregistered fields', () => {
     it('falls back to common:audit.values.{value}', () => {
       seed({ 'audit.values.approved': 'Εγκεκριμένο' });

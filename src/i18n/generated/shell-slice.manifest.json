@@ -112,7 +112,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "27a89d4cac557c243f20b7632d4db02b49cd08724d49816f8e5c52d2f9882cd1",
+  "inputsSha256": "1beea99db410b3d643dfc85f6801dd1f5b7d9cfc7234752dd86b1fd6ed40fe02",
   "languages": [
     "el"
   ],
@@ -721,7 +721,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/audit-tracked-fields.ts": "37f776eeefae4eeed4d7e5a5735c0eabc572f04e8dba03419e93e000cb4c7520",
+    "src/config/audit-tracked-fields.ts": "b96cc5eac198d321b095f96f3e5506627ce538a57eb77eae9a728dae2b88e119",
     "src/config/conveyance-checklist/catalog.ts": "03dcd635ab30d203635823f663351506232295848b14630686deae8316d549e7",
     "src/config/conveyance-checklist/items-parties.ts": "28e76f32f74aebabac3a4ff5107b36dfbe03eff8392ac3ad0550af430ab8762e",
     "src/config/conveyance-checklist/items-property.ts": "9d384edafac1e4a1262ca28c2c1b6df1640d21ffc2d5109bf7f646c5c78148f1",
@@ -10888,7 +10888,7 @@
     "src/components/voice-ai/VoiceAIPanel.tsx": "cf1fbed66cc005617aef71a9c4612b4135d1be704e98c239a63e0adfc8325fac",
     "src/components/workspace/WorkspaceScopeBridge.tsx": "9aea46983a227313cc2e4585e4ff777802b74ab54d790059abb78a49c6a83e09",
     "src/config/audit-entity-registry.ts": "03143b4cd6bafdea3abd8dae31cbc11def07b01c636b396bf35c2d13a2667335",
-    "src/config/audit-value-catalogs.ts": "df5be84486b544bf20d29d3305976c2d9cace463cae9de14c8ddeb8afa3c4ae0",
+    "src/config/audit-value-catalogs.ts": "3faea0de092231bf99250e66c99264fda41282a72fb0c784f0cb2025fac7c136",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
     "src/config/domain-constants.ts": "6c868fa4d181a4c4f4379299a522c6154e5372afe267fafcae04389510f29a28",

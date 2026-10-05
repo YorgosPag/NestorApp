@@ -342,7 +342,8 @@ describe('useGlobalAuditTrail — loadMore', () => {
 });
 
 describe('useGlobalAuditTrail — refetch', () => {
-  it('clears the error without touching the subscription', () => {
+  // Μια συνδρομή που απέτυχε είναι τερματισμένη — η ανανέωση ανοίγει νέα (ADR-195, 2026-10-05).
+  it('clears the error and reopens the subscription', () => {
     const { result } = render();
     act(() => lastCallback()([], new Error('boom')));
     expect(result.current.error).toBe('boom');
@@ -350,6 +351,6 @@ describe('useGlobalAuditTrail — refetch', () => {
     act(() => result.current.refetch());
 
     expect(result.current.error).toBeNull();
-    expect(mockSubscribeGlobal).toHaveBeenCalledTimes(1);
+    expect(mockSubscribeGlobal).toHaveBeenCalledTimes(2);
   });
 });

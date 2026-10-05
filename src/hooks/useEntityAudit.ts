@@ -68,10 +68,12 @@ export function useEntityAudit({
   pageSize = DEFAULT_PAGE_SIZE,
   ledger = 'company',
 }: UseEntityAuditOptions): UseEntityAuditReturn {
-  const { user } = useAuth();
+  const { user, loading: authPending } = useAuth();
 
   return useAuditFeed({
     enabled: Boolean(user && entityId),
+    // Χωρίς `entityId` δεν υπάρχει τι να περιμένουμε — η πύλη είναι κλειστή, όχι άκριτη.
+    pending: authPending && Boolean(entityId),
     pageSize,
     subscriptionKey: `${user?.uid ?? ''}|${entityType}|${entityId ?? ''}|${ledger}`,
     subscribeErrorFallback: 'Failed to subscribe to entity audit trail',

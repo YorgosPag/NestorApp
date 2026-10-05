@@ -52,6 +52,11 @@ export interface AuditFeedPage {
 export interface UseAuditFeedOptions {
   /** Auth/args gate. While false no subscription is opened and the feed is empty. */
   enabled: boolean;
+  /**
+   * Η πύλη **δεν έχει κριθεί ακόμη** (π.χ. η ταυτότητα του χρήστη φορτώνει). Όσο ισχύει, η ροή
+   * δηλώνει «φορτώνει» — αλλιώς το «δεν ρώτησα ακόμη» φαίνεται στην οθόνη ως «δεν υπάρχει ιστορικό».
+   */
+  pending?: boolean;
   /** Live window size; also the page size for the historical tail. */
   pageSize: number;
   /**
@@ -112,6 +117,7 @@ function dedupeAndSort(entries: EntityAuditEntry[]): EntityAuditEntry[] {
 
 export function useAuditFeed({
   enabled,
+  pending = false,
   pageSize,
   subscriptionKey,
   subscribe,
@@ -120,11 +126,22 @@ export function useAuditFeed({
 }: UseAuditFeedOptions): UseAuditFeedReturn {
   const [liveEntries, setLiveEntries] = useState<EntityAuditEntry[]>([]);
   const [historyEntries, setHistoryEntries] = useState<EntityAuditEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPaging, setIsPaging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
+  // Πόσες φορές ζητήθηκε επανασύνδεση (`refetch`) — μέρος της ταυτότητας της συνδρομής.
+  const [attempt, setAttempt] = useState(0);
+  // Η ταυτότητα της συνδρομής που **έχει ήδη απαντήσει** (με γραμμές ή με σφάλμα).
+  const [answered, setAnswered] = useState<string | null>(null);
   const isMounted = useRef(true);
+
+  // 🔑 Το «περιμένω την πρώτη απάντηση» είναι **παράγωγο**, όχι κατάσταση που ανάβει ένα effect: ένα
+  // effect τρέχει ΜΕΤΑ το πρώτο render, άρα για ένα καρέ η ροή έλεγε «δεν φορτώνω, μηδέν γραμμές» —
+  // και η οθόνη έγραφε «δεν υπάρχει ιστορικό» για ένα βιβλίο που δεν είχε καν ερωτηθεί.
+  const identity = `${subscriptionKey}#${attempt}`;
+  const awaitingFirstAnswer = enabled && answered !== identity;
+  const isLoading = pending || awaitingFirstAnswer || isPaging;
 
   // Stable identities — the effect below re-runs on `subscriptionKey`, never on
   // the caller re-creating its inline closures.
@@ -143,7 +160,6 @@ export function useAuditFeed({
       return;
     }
 
-    setIsLoading(true);
     setError(null);
     // Reset the historical tail whenever the subscription identity changes —
     // prevents mixing pages from the previous entity/filter set.
@@ -153,16 +169,15 @@ export function useAuditFeed({
 
     const unsubscribe = openSubscription((entries, subscriptionError) => {
       if (!isMounted.current) return;
+      setAnswered(identity);
       if (subscriptionError) {
         setError(describeSubscribeError(subscriptionError));
-        setIsLoading(false);
         return;
       }
       setLiveEntries(entries);
       // A full live window implies older entries likely exist.
       setHasMore(entries.length >= pageSize);
       setError(null);
-      setIsLoading(false);
     });
 
     return () => {
@@ -172,7 +187,7 @@ export function useAuditFeed({
   }, [
     enabled,
     pageSize,
-    subscriptionKey,
+    identity,
     openSubscription,
     describeSubscribeError,
   ]);
@@ -190,7 +205,7 @@ export function useAuditFeed({
       return;
     }
 
-    setIsLoading(true);
+    setIsPaging(true);
     setError(null);
 
     try {
@@ -203,7 +218,7 @@ export function useAuditFeed({
       if (!isMounted.current) return;
       setError(getErrorMessage(err, LOAD_MORE_ERROR_FALLBACK));
     } finally {
-      if (isMounted.current) setIsLoading(false);
+      if (isMounted.current) setIsPaging(false);
     }
   }, [
     enabled,
@@ -214,10 +229,12 @@ export function useAuditFeed({
     requestPage,
   ]);
 
-  // Kept for API compatibility — the subscription is already live, so there is
-  // nothing to re-fetch. Clears transient error state.
+  // Ανοίγει **νέα** συνδρομή. Ήταν «καθάρισε το σφάλμα» — αλλά μια συνδρομή Firestore που απέτυχε
+  // είναι **τερματισμένη**: το κουμπί «Ανανέωση» έσβηνε το μήνυμα και άφηνε μια νεκρή ροή να δείχνει
+  // «δεν υπάρχει ιστορικό». Η επανασύνδεση είναι ο μόνος τρόπος να ξαναρωτηθεί το βιβλίο.
   const refetch = useCallback(() => {
     setError(null);
+    setAttempt((n) => n + 1);
   }, []);
 
   const entries = useMemo(

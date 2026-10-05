@@ -12,6 +12,19 @@
     "roof": "Roof",
     "stairPenthouse": "Stair Penthouse"
   },
+  "kind": {
+    "foundation": "Foundation",
+    "basement": "Basement",
+    "semiBasement": "Semi-basement",
+    "ground": "Ground floor",
+    "raisedGround": "Raised ground floor",
+    "pilotis": "Pilotis",
+    "standard": "Upper floor",
+    "mezzanine": "Mezzanine",
+    "attic": "Attic",
+    "roof": "Roof",
+    "stairPenthouse": "Stair penthouse"
+  },
   "picker": {
     "empty": "This building has no floors",
     "loadError": "Floors could not be loaded — try again"

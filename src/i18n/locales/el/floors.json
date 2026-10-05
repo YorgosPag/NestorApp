@@ -12,6 +12,19 @@
     "roof": "Δώμα",
     "stairPenthouse": "Απόληξη Κλιμακοστασίου"
   },
+  "kind": {
+    "foundation": "Θεμελίωση",
+    "basement": "Υπόγειο",
+    "semiBasement": "Ημιυπόγειο",
+    "ground": "Ισόγειο",
+    "raisedGround": "Υπερυψωμένο ισόγειο",
+    "pilotis": "Πυλωτή",
+    "standard": "Όροφος",
+    "mezzanine": "Μεσοπάτωμα",
+    "attic": "Σοφίτα",
+    "roof": "Δώμα",
+    "stairPenthouse": "Απόληξη κλιμακοστασίου"
+  },
   "picker": {
     "empty": "Το κτίριο δεν έχει ορόφους",
     "loadError": "Οι όροφοι δεν φορτώθηκαν — δοκιμάστε ξανά"

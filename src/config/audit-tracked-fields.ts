@@ -16,6 +16,7 @@ import {
   legacyLabelMap,
 } from '@/lib/audit/audit-diff';
 import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
+import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 
@@ -617,9 +618,15 @@ const FLOOR_TRACKED_FIELDS_RAW: Record<string, string> = {
   height: 'height',
 };
 
+const FLOOR_FIELD_DEFS: Record<string, TrackedFieldDef> = {
+  // Ο κατάλογος τιμών δηλώνεται **ανά οντότητα**: το `kind` ως όνομα πεδίου το έχουν και 15+ οντότητες
+  // BIM με άλλο λεξιλόγιο. Η ΙΔΙΑ εγγραφή με το `floorKind` των φιλοξενούμενων — ένα λεξιλόγιο, μία λέξη.
+  kind: { kind: 'scalar', label: 'kind', enumCatalog: AUDIT_VALUE_CATALOGS.floorKind },
+};
+
 /** Floor audit registry — `field → TrackedFieldDef`. */
 export const FLOOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  mergeDefs(FLOOR_TRACKED_FIELDS_RAW, {});
+  mergeDefs(FLOOR_TRACKED_FIELDS_RAW, FLOOR_FIELD_DEFS);
 
 // ============================================================================
 // STORAGE TRACKED FIELDS
@@ -1285,10 +1292,11 @@ export const CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS: Record<string, TrackedField
  * **έκδοση συναίνεσης** του ADR-861, όχι αυτό) · `publication` / `mandatesExpireAt`
  * (παράγωγα του συστήματος).
  *
- * ⚠️ **`media.kind` εκτός, προσωρινά**: το `kind` είναι **καθολικό** κλειδί καταλόγου τιμών
- * που ήδη χρησιμοποιούν ~10 BIM οντότητες με **άλλο** λεξιλόγιο, και ο κατάλογος ανά πεδίο
- * (`TrackedFieldDef.enumCatalog`) **δεν** διαβάζεται ακόμη από τον αναγνώστη (ADR-852). Ωμό
- * `floorplan` στο ιστορικό δεν είναι επαγγελματικό — μπαίνει όταν δεθεί το `enumCatalog`.
+ * ⚠️ **`media.kind` εκτός, προσωρινά**: το `kind` είναι **καθολικό** όνομα πεδίου που ήδη
+ * χρησιμοποιούν ~10 BIM οντότητες με **άλλο** λεξιλόγιο. Ο κατάλογος ανά πεδίο
+ * (`TrackedFieldDef.enumCatalog`) διαβάζεται πλέον από τον αναγνώστη (2026-10-05) — αλλά μόνο για
+ * **πεδία**, όχι για **υπο-πεδία** συλλογής, και το `media.kind` είναι υπο-πεδίο. Ωμό `floorplan`
+ * στο ιστορικό δεν είναι επαγγελματικό — μπαίνει όταν ο κατάλογος φτάσει και στα υπο-πεδία.
  */
 const OWNER_PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   title: 'title',

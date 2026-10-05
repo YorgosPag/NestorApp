@@ -359,7 +359,8 @@ describe('useEntityAudit — loadMore', () => {
 });
 
 describe('useEntityAudit — refetch', () => {
-  it('clears the error without touching the subscription', () => {
+  // Μια συνδρομή που απέτυχε είναι τερματισμένη — η ανανέωση ανοίγει νέα (ADR-195, 2026-10-05).
+  it('clears the error and reopens the subscription', () => {
     const { result } = render();
     act(() => lastCallback()([], new Error('boom')));
     expect(result.current.error).toBe('boom');
@@ -367,7 +368,7 @@ describe('useEntityAudit — refetch', () => {
     act(() => result.current.refetch());
 
     expect(result.current.error).toBeNull();
-    expect(mockSubscribeEntity).toHaveBeenCalledTimes(1);
+    expect(mockSubscribeEntity).toHaveBeenCalledTimes(2);
   });
 });
 

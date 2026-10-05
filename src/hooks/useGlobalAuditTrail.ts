@@ -87,7 +87,7 @@ export function useGlobalAuditTrail({
   filters,
   pageSize = DEFAULT_PAGE_SIZE,
 }: UseGlobalAuditTrailOptions = {}): UseGlobalAuditTrailReturn {
-  const { user } = useAuth();
+  const { user, loading: authPending } = useAuth();
 
   // Value-identity of the filter set, so a caller re-creating an equal object
   // does not tear down the live subscription.
@@ -95,6 +95,7 @@ export function useGlobalAuditTrail({
 
   return useAuditFeed({
     enabled: Boolean(user),
+    pending: authPending,
     pageSize,
     subscriptionKey: `${user?.uid ?? ''}|${filtersKey}`,
     subscribeErrorFallback: 'Failed to subscribe to audit trail',

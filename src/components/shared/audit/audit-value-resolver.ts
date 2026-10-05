@@ -9,8 +9,9 @@
  *
  * Resolution order
  * ----------------
- *   1. **Canonical catalog (direct)** — if the field has a registered catalog,
- *      try `{ns}:{path}.{value}`. Hit → return translation.
+ *   1. **Canonical catalog (direct)** — the catalog the field's descriptor declares
+ *      for this entity (`TrackedFieldDef.enumCatalog`), else the one registered under
+ *      the field name. Try `{ns}:{path}.{value}`. Hit → return translation.
  *   2. **Canonical catalog (snake→camel)** — if the stored value contains
  *      `_` or `-`, retry with a camelCase normalization (e.g. `fire_department`
  *      → `fireDepartment`). Required because form option values persist as
@@ -28,7 +29,7 @@
 
 import i18next from 'i18next';
 
-import { getAuditValueCatalog } from '@/config/audit-value-catalogs';
+import { getAuditValueCatalog, type AuditCatalogRef } from '@/config/audit-value-catalogs';
 
 /**
  * Minimal subset of the react-i18next `t` function signature used here.
@@ -70,13 +71,21 @@ function tryTranslate(
   return translated && translated !== key ? translated : undefined;
 }
 
-/** Result of a catalog lookup. */
+/**
+ * Result of a catalog lookup.
+ *
+ * 🔑 **Οντότητα+πεδίο πρώτα, όνομα πεδίου μετά** — η ίδια προτεραιότητα με την ετικέτα και την
+ * ποσότητα (ADR-852). Ο `declared` είναι ο κατάλογος του περιγραφέα (`TrackedFieldDef.enumCatalog`):
+ * υπάρχει επειδή ένα όνομα πεδίου (`kind`) ανήκει σε πολλές οντότητες με **άλλο** λεξιλόγιο, και ο
+ * χάρτης ανά όνομα δεν μπορεί να τις ξεχωρίσει.
+ */
 function lookupInCatalog(
   field: string,
   value: string,
   t: AuditTranslator,
+  declared: AuditCatalogRef | undefined,
 ): string | undefined {
-  const catalog = getAuditValueCatalog(field);
+  const catalog = declared ?? getAuditValueCatalog(field);
   if (!catalog) return undefined;
 
   const opts = { ns: catalog.ns };
@@ -121,6 +130,9 @@ function formatIsoDate(value: string): string | undefined {
  * @param field - The tracked field name (e.g. `category`, `gender`).
  * @param value - The raw value stored in the audit entry (enum key, date, ...).
  * @param t     - i18next translator bound to the caller's default namespace.
+ * @param catalog - The catalog declared by the field's descriptor for **this entity**
+ *          (`TrackedFieldDef.enumCatalog`). Wins over the field-name catalog; omit it and
+ *          the lookup is by field name alone.
  * @returns A translated string, or `undefined` if no rule matched (caller should
  *          render the raw value so the failure is visible).
  */
@@ -128,13 +140,15 @@ export function resolveAuditValue(
   field: string,
   value: string,
   t: AuditTranslator,
+  catalog?: AuditCatalogRef,
 ): string | undefined {
-  const direct = lookupInCatalog(field, value, t);
+  const direct = lookupInCatalog(field, value, t, catalog);
   if (direct) return direct;
 
   if (value.includes(' — ')) {
     const [head, ...rest] = value.split(' — ');
-    const translatedHead = lookupInCatalog(field, head, t) ?? lookupInAuditValues(head, t);
+    const translatedHead =
+      lookupInCatalog(field, head, t, catalog) ?? lookupInAuditValues(head, t);
     if (translatedHead) return `${translatedHead} — ${rest.join(' — ')}`;
   }
 
