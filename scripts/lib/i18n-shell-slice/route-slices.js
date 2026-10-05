@@ -37,6 +37,11 @@ const path = require('node:path');
 const MG = require('../module-graph');
 const { buildShellPlan, renderArtifacts, buildManifest, sliceName } = require('./plan');
 const { stableStringify } = require('./slice-build');
+const {
+  buildLazyRouteNamespaces,
+  renderLazyArtifact,
+  artifactPath: lazyArtifactPath,
+} = require('./lazy-routes');
 
 const ROUTES_DIR = 'routes';
 
@@ -200,19 +205,28 @@ function wholeNamespacesOf(plan) {
  * @param {object} args.plan     το σχέδιο του **κελύφους**
  * @param {object} args.graph    ο ΙΔΙΟΣ γράφος που έχτισε το `plan` — δεν ξαναχτίζεται (~20s)
  * @param {object} args.rendered η έξοδος του `renderArtifacts` για το κέλυφος
- * @returns {{rendered: object, routes: object[], refused: object[]}}
+ * @returns {{rendered: object, routes: object[], refused: object[], lazy: ?object}}
+ *   `lazy` = ο χάρτης τεμπέλικων διαδρομών (ADR-744 §27), ή `null` όταν δεν δηλώνεται μητρώο.
  */
 function renderComplete({ projectRoot, config, plan, graph, rendered }) {
+  // ADR-744 §27 — ο χάρτης τεμπέλικων διαδρομών, από τον ΙΔΙΟ γράφο. Χτίζεται πρώτος και
+  // επιστρέφεται ΠΑΝΤΑ: ο γεννήτορας κρίνει την απογραφή του ακόμη κι όταν μια
+  // διαδρομή αρνηθεί (καμία πρόωρη έξοδος, §20 Β2).
+  const lazy = config.lazyRouteRegistries.length > 0
+    ? buildLazyRouteNamespaces({ projectRoot, config, graph })
+    : null;
   const declared = Object.keys(config.routeSlices || {});
-  if (declared.length === 0) return { rendered, routes: [], refused: [] };
+  if (declared.length === 0 && lazy === null) return { rendered, routes: [], refused: [], lazy };
 
   const [language] = config.languages;
   const shellPath = MG.toPosix(path.join(config.outputDir, sliceName(language)));
   const shellSlice = JSON.parse(rendered.artifacts.get(shellPath) || '{}');
-  const routes = buildAllRouteSlices(projectRoot, config, graph, shellSlice, wholeNamespacesOf(plan));
+  const routes = declared.length === 0
+    ? []
+    : buildAllRouteSlices(projectRoot, config, graph, shellSlice, wholeNamespacesOf(plan));
 
   const refused = routes.filter(route => route.violations.length > 0);
-  if (refused.length > 0) return { rendered, routes, refused };
+  if (refused.length > 0) return { rendered, routes, refused, lazy };
 
   // 🔑 ΤΑ ROUTE SLICES ΥΠΟΓΡΑΦΟΝΤΑΙ ΑΠΟ ΤΟ ΙΔΙΟ MANIFEST — καμία νέα μηχανή
   // φρεσκάδας. Το `checkArtifactIntegrity` του CHECK 3.34 διατρέχει το
@@ -221,12 +235,21 @@ function renderComplete({ projectRoot, config, plan, graph, rendered }) {
   // ακριβώς το σχήμα που το ADR-744 υπάρχει για να καταργήσει.
   const artifacts = new Map(rendered.artifacts);
   for (const route of routes) artifacts.set(route.artifactPath, stableStringify(route.resources));
-  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes });
+  // Ο χάρτης υπογράφεται από το ίδιο manifest, αλλά ΔΕΝ είναι slice (βλ. `buildManifest`).
+  const signedOnly = new Map();
+  if (lazy !== null) signedOnly.set(lazyArtifactPath(config), renderLazyArtifact(lazy.rows));
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly });
 
   return {
-    rendered: { ...rendered, artifacts, manifest, manifestText: stableStringify(manifest) },
+    rendered: {
+      ...rendered,
+      artifacts: new Map([...artifacts, ...signedOnly]),
+      manifest,
+      manifestText: stableStringify(manifest),
+    },
     routes,
     refused,
+    lazy,
   };
 }
 

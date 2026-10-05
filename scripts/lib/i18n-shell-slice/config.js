@@ -28,6 +28,7 @@ const path = require('node:path');
 
 const { parseDeclaration, parseRouteDeclaration } = require('./ledger');
 const { parseShellDeclaration, parseSeal } = require('./shell-census');
+const { parseMountLedger, parseOpaqueLedger, SEAL: LAZY_MOUNT_SEAL } = require('./lazy-route-census');
 
 const CONFIG_FILE = '.i18n-shell-slice.json';
 
@@ -146,6 +147,38 @@ const DEFAULTS = Object.freeze({
    * κλήση, ακριβώς όπως και για το κέλυφος.
    */
   routeSlices: {},
+
+  /**
+   * ADR-744 §27 — τα **μητρώα τεμπέλικων διαδρομών**: τα αρχεία που καλούν
+   * `defineLazyRoutes({...})`. Από αυτά παράγεται το `lazy-route-namespaces.json`
+   * (`κλειδί → namespaces[]` που το chunk περιμένει πριν αποδώσει).
+   *
+   * ⚠️ ΚΥΡΙΟΛΕΚΤΙΚΗ ΛΙΣΤΑ, ΚΑΙ Η ΑΣΤΟΧΙΑ ΤΗΣ ΕΙΝΑΙ ΘΟΡΥΒΩΔΗΣ: αρχείο που λείπει ή δεν
+   * περιέχει καμία κλήση ⇒ `throw` (`lazy-routes.js`), ποτέ άδειος χάρτης.
+   */
+  lazyRouteRegistries: ['src/utils/lazyRoutes.tsx', 'src/utils/lazyRoutesAdr294.tsx'],
+
+  /**
+   * ADR-744 §27 — η **κλειστή απογραφή** των ζευγών `(διαδρομή, namespace που φορτώνει
+   * ΜΟΝΟ στο mount)`: `{ '<Κλειδί>': ['<namespace>', …] }`. Ό,τι είναι ήδη στην εκκίνηση
+   * (ολόκληρο στο κέλυφος ∪ `CRITICAL_NAMESPACES`) δεν δηλώνεται — δεν κοστίζει λήψη.
+   *
+   * ⛔ Ταυτότητα, **ποτέ bytes** (§23.2). Η ακριβή αναμονή θεραπεύεται με διαχωρισμό
+   * κώδικα· η λίστα στενεύει μόνη της.
+   */
+  lazyRouteMountNamespaces: {},
+
+  /**
+   * ADR-744 §27 — η γραπτή απάντηση σε κάθε `useTranslation(<prop>)` μέσα σε κλειστότητα
+   * τεμπέλικης διαδρομής: `{ '<αρχείο>': { namespaces, reason } }`. Χωρίς εγγραφή ο
+   * generator **αρνείται**· εγγραφή χωρίς αδιαφανή κλήση πια είναι **νεκρή** και μπλοκάρει.
+   * ⚠️ ΟΧΙ το `dynamicKeyPolicy`: εκείνο απαντά «ποια ΚΛΕΙΔΙΑ, για το ΚΕΛΥΦΟΣ» — κρίση
+   * που έγινε για άλλο ερώτημα δεν δανείζεται.
+   */
+  lazyRouteOpaqueNamespaces: {},
+
+  /** ADR-744 §27 — η σφράγιση του πλήθους των ζευγών· **μόνο συρρικνώνεται**. */
+  lazyRouteMountSeal: { count: 0, at: '1970-01-01', why: 'αδήλωτο — ο generator δεν έχει τρέξει ποτέ με απογραφή τεμπέλικων διαδρομών' },
 });
 
 function readJsonIfPresent(file) {
@@ -192,6 +225,10 @@ function loadConfig(projectRoot) {
     parseShellDeclaration(namespace, value);
   }
   parseSeal(config.shellNamespacesSeal);
+  // ADR-744 §27 — και το τέταρτο κατάστιχο, στο ίδιο σημείο για τον ίδιο λόγο.
+  parseMountLedger(config.lazyRouteMountNamespaces);
+  parseOpaqueLedger(config.lazyRouteOpaqueNamespaces);
+  parseSeal(config.lazyRouteMountSeal, LAZY_MOUNT_SEAL);
   return config;
 }
 

@@ -4157,6 +4157,23 @@
   που δεν ανοίγουν ποτέ· «περίμενε και τα 58» καθυστερεί το πρώτο καρέ 74 σελίδων και θέλει μέτρηση στην παραγωγή πριν γίνει προεπιλογή·
   (2) το `AdminRoleManagement` ρίχνει τη μηχανή (`leavesUnder is not defined`) — σφάλμα της μηχανής, όχι της σελίδας.
   ⚠️ Η κλειστότητα κόβεται και στα **εσωτερικά** `dynamic()` μιας σελίδας (η ουρά έχει 3) — ίδια κλάση, ένα επίπεδο πιο μέσα.
+- 🛠️ **ΓΡΑΦΤΗΚΕ 2026-10-05** (ADR-744 §27.5–27.10): γεννήτορας του χάρτη (`lazy-routes.js` · `namespace-declarations.js` ·
+  `lazy-route-census.js`), `defineLazyRoutes` (84 εγγραφές), απογραφή + σφράγιση **45** ζευγών εκτός εκκίνησης στο
+  `.i18n-shell-slice.json`, 22 άγκυρες / 14 μεταλλάξεις. ⏳ **Περιμένει εντολή Giorgio**: εκτέλεση γεννήτορα → σύνδεση στο Layer 1 →
+  ανάγνωση του χάρτη από το εργοστάσιο → αφαίρεση των 4 χειρόγραφων `namespaces` → μέτρηση σε production build (πριν/μετά).
+- 🎯 **ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ RATCHET (45 → στόχος: μόνο ό,τι ζωγραφίζει στο πρώτο καρέ)**: 18 ζεύγη (`Buildings` 7 · `PropertiesManagement` 7 ·
+  `Projects` 4) έρχονται από πίνακες που εισάγουν στατικά κάθε καρτέλα (`components/generic/mappings/buildingMappings.ts` ·
+  `propertiesMappings.ts` · `projectMappings.ts`). Fix: τεμπέλικη καρτέλα μέσω του ίδιου εργοστασίου — ⚠️ περιοχή άλλου agent, μόνο με εντολή.
+
+### 🔤 `useTranslation(ΣΤΑΘΕΡΑ)` — αόρατο στο CHECK 3.8 και στο shell slice (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-05, ADR-744 §27.5)
+
+- **Τι**: ο κοινός εξαγωγέας (`scripts/lib/i18n-namespace-extract.js` → `extractNamespaces`) διαβάζει κυριολεκτικά + bundles του
+  `namespace-bundles.ts`· κάθε άλλο αναγνωριστικό το αγνοεί. Μετρημένο: **167** κλήσεις είναι σταθερές module
+  (`SPATIAL_TOUR_NS` ×110 · `LANDING_HEROES_NS` ×17 · `NAMESPACES` ×12 · `CASE_INVITE_NS` ×6 …). Για αυτά τα αρχεία το CHECK 3.8
+  βλέπει **μηδέν** namespaces και παραλείπει τον έλεγχο κλειδιών — «`0` = κανείς δεν κοίταξε».
+- **Πού**: 3.8 (`check-i18n-missing-keys.js`), shell slice (`plan.js` → `analyseFile`), baseline generator.
+- **Fix**: ο resolver υπάρχει πλέον (`scripts/lib/i18n-shell-slice/namespace-declarations.js`, AST + γράφος)· να γίνει ο αναγνώστης
+  και των δύο. ⚠️ Αλλάζει τη baseline του 3.8 (νέα ορατότητα ⇒ πιθανά νέα «λείποντα») — θέλει μέτρηση πριν, όχι τυφλή αντικατάσταση.
 
 ### 🚨 `Alert variant="destructive"` χωρίς εικονίδιο — 17 από 31 (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-05, ADR-900 §8 #2 βήμα 2γ · WCAG 1.4.1)
 

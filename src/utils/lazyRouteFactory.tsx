@@ -116,3 +116,33 @@ export function createLazyRoute(
     ssr,
   });
 }
+
+/** Ό,τι επιστρέφει το εργοστάσιο — ο τύπος κάθε εγγραφής ενός μητρώου. */
+export type LazyRouteComponent = ReturnType<typeof createLazyRoute>;
+
+/** Η δήλωση μιας διαδρομής μέσα στο {@link defineLazyRoutes}: ο φορτωτής και η όψη αναμονής. */
+export interface LazyRouteDeclaration extends LazyRouteOptions {
+  load: () => Promise<LazyComponentModule>;
+}
+
+/**
+ * Δηλώνει ένα **μητρώο** τεμπέλικων διαδρομών: `{ Κλειδί: { load, loadingType, ssr } }`.
+ *
+ * 🔑 **ΤΟ ΚΛΕΙΔΙ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ (ADR-744 §27).** Με το `Κλειδί: createLazyRoute(…)` το
+ * εργοστάσιο δεν μάθαινε ποτέ **ποια** διαδρομή χτίζει, άρα ό,τι αφορούσε τη διαδρομή
+ * έπρεπε να ξαναγραφτεί με το χέρι δίπλα της. Εδώ το όνομα της ιδιότητας **είναι** η
+ * ταυτότητα — και το ίδιο όνομα διαβάζει ο γεννήτορας του `lazy-route-namespaces.json`
+ * (`scripts/lib/i18n-shell-slice/lazy-routes.js`, που ψάχνει αυτή ακριβώς την κλήση).
+ *
+ * ⚠️ `export function`, όχι `const` — ο ίδιος λόγος με το `createLazyRoute`: τα μητρώα
+ * το καλούν σε **χρόνο αξιολόγησης module**, και μια δήλωση συνάρτησης δεν έχει TDZ.
+ */
+export function defineLazyRoutes<T extends Record<string, LazyRouteDeclaration>>(
+  declarations: T
+): { readonly [K in keyof T]: LazyRouteComponent } {
+  const routes: Record<string, LazyRouteComponent> = {};
+  for (const [key, { load, ...options }] of Object.entries(declarations)) {
+    routes[key] = createLazyRoute(load, options);
+  }
+  return routes as { readonly [K in keyof T]: LazyRouteComponent };
+}

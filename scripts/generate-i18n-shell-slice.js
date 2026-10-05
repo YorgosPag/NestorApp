@@ -50,6 +50,7 @@ const {
 } = require('./lib/i18n-shell-slice/plan');
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { wholeNamespacesOf } = RS;
+const { judgeLazyRoutes } = require('./lib/i18n-shell-slice/lazy-routes');
 const {
   auditLedger,
   describeFailures,
@@ -280,6 +281,16 @@ function main() {
 
   if (routes.length > 0) reportRoutes(routes, config.languages[0], routeLedger, shellRefused);
 
+  // 🔴 ADR-744 §27 — Ο ΧΑΡΤΗΣ ΤΩΝ ΤΕΜΠΕΛΙΚΩΝ ΔΙΑΔΡΟΜΩΝ. Κρίνεται πάνω στο κέλυφος που
+  // ΜΟΛΙΣ χτίστηκε (ποτέ στον δίσκο), και οι ετυμηγορίες του μπαίνουν στην ίδια συγκομιδή.
+  const lazyJudged = complete.lazy === null
+    ? null
+    : judgeLazyRoutes(PROJECT_ROOT, config, complete.lazy, wholeNamespacesOf(plan));
+  if (lazyJudged !== null) {
+    reportLazyRoutes(complete.lazy, lazyJudged);
+    for (const line of lazyJudged.slack) console.log(`${DIM}${line}${NC}`);
+  }
+
   // ⚠️ Ο ΤΖΟΓΟΣ ΑΝΑΚΟΙΝΩΝΕΤΑΙ ΚΑΙ ΣΤΑ ΔΥΟ ΚΑΤΑΣΤΙΧΑ, ΚΑΙ ΔΕΝ ΜΠΛΟΚΑΡΕΙ (ADR-598).
   for (const line of announceLedgerSlack(ledger.entries)) console.log(`${DIM}${line}${NC}`);
   for (const line of announceRouteSlack(routeLedger.entries)) console.log(`${DIM}${line}${NC}`);
@@ -334,6 +345,15 @@ ${RED}❌ Το κέλυφος μεγάλωσε σε ΠΛΗΘΟΣ namespaces:${NC
     });
   }
 
+  if (lazyJudged !== null && lazyJudged.verdicts.length > 0) {
+    failures.push(() => {
+      console.error(`\n${RED}❌ Ο χάρτης των τεμπέλικων διαδρομών (ADR-744 §27):${NC}`);
+      for (const verdict of lazyJudged.verdicts) console.error(`${RED}   · ${verdict}${NC}`);
+      console.error(`${DIM}   ⚠️ ΜΗΝ ανεβάσεις τη σφράγιση για να γίνει πράσινο: κάθε ζεύγος είναι λήψη που η${NC}`);
+      console.error(`${DIM}      διαδρομή περιμένει. Η θεραπεία είναι τεμπέλικη καρτέλα μέσω του ίδιου εργοστασίου.${NC}`);
+    });
+  }
+
   // 🔑 ΤΟ ΟΡΓΑΝΟ ΤΗΣ ΣΦΡΑΓΙΣΗΣ ΔΕΝ ΕΙΝΑΙ ΠΥΛΗ, ΚΑΙ ΤΟ ΛΕΕΙ ΜΟΝΟ ΤΟΥ.
   if (args.measure) {
     console.log(`\n${YELLOW}  ⚠ --measure: ΜΕΤΡΗΣΗ, ΟΧΙ ΚΡΙΣΗ. Έξοδος 0 ανεξαρτήτως ετυμηγοριών· τίποτα δεν γράφτηκε.${NC}`);
@@ -365,6 +385,22 @@ function reportRefusedRoutes(refused) {
     console.error(`${RED}   ${route.url}${NC}`);
     reportViolations(route.violations);
   }
+}
+
+/**
+ * ADR-744 §27 — η αναφορά του χάρτη. Τυπώνονται **και** οι διαδρομές με μηδέν αναμονές
+ * εκτός εκκίνησης (ως πλήθος): ένας κάδος που δεν τυπώνεται διαβάζεται «δεν ελέγχθηκε».
+ */
+function reportLazyRoutes(lazy, judged) {
+  const keys = Object.keys(lazy.rows);
+  const total = keys.reduce((sum, key) => sum + lazy.rows[key].length, 0);
+  console.log(`\n${GREEN}  lazy routes — ${keys.length} διαδρομές ssr:false · ${total} ζεύγη αναμονής · `
+    + `${judged.audit.count} εκτός εκκίνησης (σφράγιση ${judged.audit.sealed.count}):${NC}`);
+  for (const [key, namespaces] of Object.entries(judged.pairs)) {
+    console.log(`     ${key.padEnd(32)} ${namespaces.join(', ')}`);
+  }
+  console.log(`${DIM}    ${keys.length - Object.keys(judged.pairs).length} διαδρομές περιμένουν ΜΟΝΟ ό,τι έχει ήδη ζητηθεί στην εκκίνηση · `
+    + `κλειστότητες: ${lazy.inputs.size} αρχεία · αδιαφανείς κλήσεις χωρίς απάντηση: ${lazy.opaque.length}${NC}`);
 }
 
 /** Compact UTF-8 bytes — η **ίδια** μονάδα με το πρώτο κατάστιχο, ώστε τα δύο να συγκρίνονται. */

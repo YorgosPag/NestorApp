@@ -129,9 +129,11 @@ const CENSUS = Object.freeze({
  * δεν είναι παλινδρόμηση. Εδώ η μονάδα δεν είναι κείμενο, είναι **ακέραιος αποφάσεων**:
  * περιθώριο 25% σε πλήθος 8 σημαίνει «δύο δωρεάν namespaces», δηλαδή **ακριβώς ο
  * αριθμός που ανεβάζεις για να γίνει πράσινο**, με άλλο όνομα.
+ *
+ * @param {string} [at] το όνομα του πεδίου στα μηνύματα — η ίδια σφράγιση φυλά και το
+ *   `lazyRouteMountSeal` (ADR-744 §27)· δεύτερος parser θα ήταν δεύτερο σχήμα.
  */
-function parseSeal(seal) {
-  const at = `${LEDGERS.SLICED}Seal`;
+function parseSeal(seal, at = `${LEDGERS.SLICED}Seal`) {
   if (seal === null || typeof seal !== 'object' || Array.isArray(seal)) {
     throw new Error(`${at}: άγνωστο σχήμα σφράγισης — απαιτείται { "count": <n>, "at": "ΥΥΥΥ-ΜΜ-ΗΗ", "why": "…" }.`);
   }

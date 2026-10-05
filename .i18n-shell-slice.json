@@ -1503,5 +1503,70 @@
       ],
       "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ. Η ΣΕΛΙΔΑ ΚΑΤΟΨΗΣ — ίδια οικογένεια με το `/listing/[id]/tour` (Κ3β): δημόσια, στο `(light)`, συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."
     }
+  },
+  "$lazyRouteOpaqueNamespaces": "ADR-744 §27 — η γραπτή απάντηση σε κάθε `useTranslation(<prop>)` μέσα σε κλειστότητα τεμπέλικης διαδρομής: ποια namespaces μπορούν να φτάσουν εκεί. Ο generator ΑΡΝΕΙΤΑΙ χωρίς εγγραφή· εγγραφή χωρίς αδιαφανή κλήση πια είναι ΝΕΚΡΗ και μπλοκάρει. Κάθε `reason` είναι μέτρηση της 2026-10-05 (απαρίθμηση ΟΛΩΝ των καλούντων) — ξαναμέτρησε όταν προσθέτεις καλούντα.",
+  "lazyRouteOpaqueNamespaces": {
+    "src/components/core/AdvancedFilters/AdvancedFiltersPanel.tsx": {
+      "namespaces": ["filters", "files", "accounting", "procurement", "quotes"],
+      "reason": "`config.i18nNamespace || 'building'`. Και οι 22 FilterPanelConfig ορίζουν ρητά namespace (η εφεδρεία `building` δεν φτάνει ποτέ): filters ×15, files ×1, accounting ×7 (buildFilterConfig), procurement ×1, quotes ×1. Και τα 5 είναι CRITICAL ⇒ μηδέν επιπλέον λήψη."
+    },
+    "src/components/core/AdvancedFilters/FilterField.tsx": {
+      "namespaces": ["filters", "files", "accounting", "procurement", "quotes"],
+      "reason": "Μοναδικός καλών το AdvancedFiltersPanel, που του περνά το δικό του `currentNamespace` — άρα το ίδιο σύνολο με εκείνο."
+    },
+    "src/components/generic/UniversalTabsRenderer.tsx": {
+      "namespaces": ["building"],
+      "reason": "6 καλούντες, όλοι ρητοί: 5 δίνουν `building` (CRITICAL). Ο 6ος (PropertyDossierDetailContent) δίνει `property-market` ΚΑΙ το δηλώνει ο ίδιος με `useTranslation([NS])`, άρα μετριέται ήδη όπου υπάρχει — εδώ θα το χρέωνε σε κάθε διαδρομή με καρτέλες."
+    },
+    "src/components/market/OpenDataAttribution.tsx": {
+      "namespaces": ["market-contracts", "common-account"],
+      "reason": "`useTranslation([NS, textNamespace])`: το NS είναι ΠΑΝΤΑ `market-contracts`, το `textNamespace` έρχεται από το OPEN_DATA_SOURCES (τύπος: market-contracts | common-account). Δύο καλούντες (SessionsList, ObjectiveValueLocation) ΔΕΝ δηλώνουν οι ίδιοι `market-contracts`."
+    },
+    "src/components/shared/PolicyErrorBanner.tsx": {
+      "namespaces": ["building"],
+      "reason": "`namespace = 'building'` — και οι 2 καλούντες (GeneralTabContent, GeneralProjectTab) παραλείπουν το prop. CRITICAL."
+    },
+    "src/components/showcase-core/ShowcaseClient.tsx": {
+      "namespaces": ["showcase"],
+      "reason": "`config.i18nNamespace`, υποχρεωτικό πεδίο· και τα 5 config (building/parking/project/storage/property showcase) γράφουν `showcase`. CRITICAL."
+    },
+    "src/components/space-management/shared/tabs/EntityMediaFilesTab.tsx": {
+      "namespaces": ["parking", "storage"],
+      "reason": "`binding.i18nNamespace` από 3 εργοστάσια: parking, storage (CRITICAL) και property-market — το τελευταίο μόνο από το PropertyDossierTabs, που το δηλώνει το ίδιο με `useTranslation([NS])`."
+    },
+    "src/components/ui/navigation/route-tabs.tsx": {
+      "namespaces": ["projects", "procurement"],
+      "reason": "Υποχρεωτικό prop, 2 καλούντες: ProjectProcurementTabs → `projects`, ProcurementSubNav → `procurement`. Και τα δύο CRITICAL."
+    }
+  },
+  "$lazyRouteMountNamespaces": "ADR-744 §27 — η ΚΛΕΙΣΤΗ ΑΠΟΓΡΑΦΗ των ζευγών (τεμπέλικη διαδρομή → namespace που φορτώνει ΜΟΝΟ στο mount, δηλαδή ούτε ολόκληρο στο κέλυφος ούτε CRITICAL). Κάθε ζεύγος είναι λήψη που το chunk ΠΕΡΙΜΕΝΕΙ πριν ζωγραφίσει. ΤΑΥΤΟΤΗΤΑ, ΠΟΤΕ BYTES. Νέο ζεύγος ⇒ κόψε την εισαγωγή (τεμπέλικη καρτέλα μέσω του ίδιου εργοστασίου) ή δήλωσέ το ΚΑΙ σφράγισε ξανά με γραμμένο why. Ζεύγος που έπαψε ⇒ σβήσε το και ΚΑΤΕΒΑΣΕ τη σφράγιση. Οι μετρήσεις: npm run generate:i18n-shell-slice -- --measure",
+  "lazyRouteMountNamespaces": {
+    "AccountSecurity": ["market-contracts"],
+    "AdminLandingHeroes": ["landing-heroes-admin"],
+    "AdminOwnershipVerifications": ["property-market"],
+    "AdminRoleManagement": ["admin-member-exit"],
+    "Buildings": ["common-audit", "iso19650", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
+    "CompanySettings": ["common-audit", "iso19650", "org-structure"],
+    "Contacts": ["common-audit", "iso19650", "org-structure"],
+    "CrmTaskDetail": ["tasks"],
+    "DXFViewer": ["common-audit"],
+    "FileManager": ["iso19650"],
+    "Navigation": ["hierarchy-navigator"],
+    "Projects": ["common-audit", "iso19650", "org-structure", "surveyRecord"],
+    "PropertiesManagement": ["common-audit", "iso19650", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
+    "ReportsBuilder": ["report-builder", "report-builder-domains", "saved-reports"],
+    "ReportsCashFlow": ["cash-flow"],
+    "SalesAvailableParking": ["common-audit"],
+    "SalesAvailableProperties": ["common-audit"],
+    "SalesAvailableStorage": ["common-audit"],
+    "SalesSold": ["common-audit"],
+    "SharedFile": ["spatial-tour"],
+    "SpacesParking": ["common-audit", "iso19650"],
+    "SpacesStorage": ["common-audit", "iso19650"]
+  },
+  "lazyRouteMountSeal": {
+    "count": 45,
+    "at": "2026-10-05",
+    "why": "Πρώτη σφράγιση, ΜΕΤΡΗΜΕΝΗ: 45 ζεύγη σε 22 διαδρομές / 17 namespaces. Τα 44 είναι όσα μέτρησε η §27.2· το 45ο (AccountSecurity → market-contracts) βρέθηκε από την απάντηση στο OpenDataAttribution, που ο κοινός εξαγωγέας δεν έβλεπε. Τα 18 από τα 45 (Buildings 7 · PropertiesManagement 7 · Projects 4) έρχονται από το ίδιο σχήμα — πίνακας που εισάγει στατικά κάθε καρτέλα (buildingMappings / propertiesMappings / projectMappings): ο διαχωρισμός τους είναι η θεραπεία, όχι μεγαλύτερος αριθμός. Στόχος: μόνο ό,τι ζωγραφίζει στο πρώτο καρέ."
   }
 }
