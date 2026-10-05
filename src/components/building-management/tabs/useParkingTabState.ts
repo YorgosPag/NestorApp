@@ -8,7 +8,7 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createStaleCache } from '@/lib/stale-cache';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -36,6 +36,7 @@ import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
 import type { LinkableItem } from '../shared';
+import { useBuildingSpaceList } from '../shared/useBuildingSpaceList';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type {
@@ -57,6 +58,13 @@ interface UseParkingTabStateParams {
 // ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
 const buildingParkingCache = createStaleCache<ParkingSpot[]>('building-parking-tab');
 
+/** @throws όταν η ανάγνωση αποτύχει ή η απάντηση δεν φέρει λίστα — «δεν φόρτωσε» ≠ «καμία θέση». */
+async function loadBuildingParkingSpots(buildingId: string): Promise<ParkingSpot[]> {
+  const result = await apiClient.get<ParkingApiData>(`${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`);
+  if (!result?.parkingSpots) throw new Error('Parking response carried no list');
+  return result.parkingSpots;
+}
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -67,13 +75,6 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // ADR-898 §21.6 Ε3 — ΕΝΑΣ βοηθός για κάθε αποτυχία: άρνηση πολιτικής ⇒ info + toast, άλλο ⇒ error + toast.
   const reportFailure = useMutationFailureFeedback('ParkingTab');
   const floorLabel = useFloorLabel();
-
-  // ---------------------------------------------------------------------------
-  // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
-  // ---------------------------------------------------------------------------
-  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(buildingParkingCache.get(buildingId) ?? []);
-  const [loading, setLoading] = useState(!buildingParkingCache.hasLoaded(buildingId));
-  const [error, setError] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Edit state
@@ -115,29 +116,11 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // FETCH
   // ===========================================================================
 
-  const fetchParkingSpots = useCallback(async () => {
-    // ADR-300: Only show spinner on first load — not on re-navigation
-    if (!buildingParkingCache.hasLoaded(buildingId)) setLoading(true);
-    setError(null);
-    try {
-      const result = await apiClient.get<ParkingApiData>(
-        `${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`
-      );
-      if (result?.parkingSpots) {
-        // ADR-300: Write to module-level cache so next remount skips spinner
-        buildingParkingCache.set(result.parkingSpots, buildingId);
-        setParkingSpots(result.parkingSpots);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load parking spots');
-    } finally {
-      setLoading(false);
-    }
-  }, [buildingId]);
-
-  useEffect(() => {
-    fetchParkingSpots();
-  }, [fetchParkingSpots]);
+  // ADR-898 §21.6 Ε2β — ρητή κατάσταση ανάγνωσης από τον κοινό μηχανισμό: σε αποτυχία η τελευταία γνωστή λίστα μένει,
+  // και το μήνυμα είναι μεταφρασμένο (ήταν το ωμό κείμενο του server, με αγγλική εφεδρεία).
+  const list = useBuildingSpaceList(buildingId, buildingParkingCache, loadBuildingParkingSpots);
+  const parkingSpots = list.items;
+  const fetchParkingSpots = list.refetch;
 
   // ===========================================================================
   // CREATE — η φόρμα «νέα θέση» ζει στο δικό της hook (N.7.1)
@@ -339,8 +322,10 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
 
     // Data
     parkingSpots,
-    loading,
-    error,
+    loading: list.status === 'loading',
+    // ADR-898 §21.6 Ε2β — αποτυχία ανάγνωσης: ορατή, με επανάληψη· `listKnown` = υπάρχει παλιότερη αληθινή λίστα.
+    loadFailed: list.status === 'error',
+    listKnown: list.known,
     fetchParkingSpots,
 
     // Create form (useParkingCreateForm)

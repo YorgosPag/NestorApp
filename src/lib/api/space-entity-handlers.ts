@@ -36,6 +36,7 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { resolveAllocationCodeChange } from '@/lib/api/space-entity-fields';
 import { planSpaceWrite, spaceAuditEntry } from '@/lib/api/space-entity-write';
 import { assertNotDetachingAttachedSpace } from '@/lib/api/space-attachment-guard';
+import { assertBuildingInSpaceProject } from '@/lib/api/space-building-project-guard';
 import { resolveHostedFloorPatch } from '@/lib/floor/host-floor.server';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type {
@@ -211,6 +212,8 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       if (plan.kind === 'rejected') throw new ApiError(plan.status, plan.message);
       // ADR-898 §20 — παρακολούθημα μονάδας δεν αποσυνδέεται από κτίριο (θα «επέστρεφε» σιωπηλά)· άρνηση ΠΡΙΝ τη γραφή.
       await assertNotDetachingAttachedSpace(adminDb, id, body, existing);
+      // ADR-898 §21.6 Ε6 — χώρος έργου μετακινείται μόνο σε κτίριο του ΙΔΙΟΥ έργου· άρνηση ΠΡΙΝ τη γραφή.
+      await assertBuildingInSpaceProject(adminDb, id, body, existing);
       // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
       // ADR-903 §6 — ο όροφος: `floorId` → αντίγραφο από το έγγραφο ορόφου (άρνηση ΠΡΙΝ τη γραφή).
       const updateData = {

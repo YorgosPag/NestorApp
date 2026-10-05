@@ -29,6 +29,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { CONFLICT_CODE } from '@/config/versioning-config';
+import { policyErrorCodeOf } from '@/lib/policy/policy-error-translator';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useVersionedSave');
@@ -72,6 +73,9 @@ interface UseVersionedSaveReturn<T> {
 
 function is409Conflict(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
+  // Άρνηση πολιτικής (409 με κωδικό του μητρώου) ΔΕΝ είναι σύγκρουση έκδοσης: η επανάληψη χωρίς `_v` θα ξαναρωτούσε
+  // τον server το ίδιο πράγμα και θα έπαιρνε την ίδια άρνηση (ADR-898 §21.6 Ε6).
+  if (policyErrorCodeOf(error) !== null) return false;
   const errObj = error as Record<string, unknown>;
   if (errObj.statusCode === 409) return true;
   if (errObj.errorCode === CONFLICT_CODE || errObj.code === CONFLICT_CODE) return true;
@@ -119,6 +123,17 @@ export function useVersionedSave<T>(
   saveFnRef.current = saveFn;
 
   const save = useCallback(async (data: T) => {
+    // Silent retry without `_v` (last-write-wins) — ΕΝΑΣ δρόμος για τη σύγκρουση, όπως κι αν έφτασε (εξαίρεση ή αποτέλεσμα).
+    const retryWithoutVersion = async (how: string): Promise<void> => {
+      logger.warn(`Version conflict${how} — silent retry without _v`, { entityId });
+      const retryResult = await saveFnRef.current({ ...data } as T & { _v?: number });
+      if (retryResult.success && typeof retryResult._v === 'number') {
+        versionRef.current = retryResult._v;
+      } else if (!retryResult.success) {
+        throw new Error(retryResult.error || 'Save failed after version-conflict retry');
+      }
+    };
+
     // First attempt: with `_v` so the server can audit the version.
     const firstPayload = { ...data, _v: versionRef.current } as T & { _v?: number };
 
@@ -126,33 +141,12 @@ export function useVersionedSave<T>(
     try {
       result = await saveFnRef.current(firstPayload);
     } catch (thrown: unknown) {
-      if (is409Conflict(thrown)) {
-        // Silent retry without _v (last-write-wins).
-        logger.warn('Version conflict — silent retry without _v', { entityId });
-        const retryPayload = { ...data } as T & { _v?: number };
-        const retryResult = await saveFnRef.current(retryPayload);
-        if (retryResult.success && typeof retryResult._v === 'number') {
-          versionRef.current = retryResult._v;
-        } else if (!retryResult.success) {
-          throw new Error(retryResult.error || 'Save failed after version-conflict retry');
-        }
-        return;
-      }
+      if (is409Conflict(thrown)) return retryWithoutVersion('');
       throw thrown;
     }
 
     if (!result.success) {
-      if (resultIs409(result)) {
-        logger.warn('Version conflict (result) — silent retry without _v', { entityId });
-        const retryPayload = { ...data } as T & { _v?: number };
-        const retryResult = await saveFnRef.current(retryPayload);
-        if (retryResult.success && typeof retryResult._v === 'number') {
-          versionRef.current = retryResult._v;
-        } else if (!retryResult.success) {
-          throw new Error(retryResult.error || 'Save failed after version-conflict retry');
-        }
-        return;
-      }
+      if (resultIs409(result)) return retryWithoutVersion(' (result)');
       throw new Error(result.error || 'Save failed');
     }
 

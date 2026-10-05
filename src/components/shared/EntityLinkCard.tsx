@@ -40,6 +40,7 @@ import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+import { EntityLinkSelectOptions } from '@/components/shared/EntityLinkSelectOptions';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -49,6 +50,8 @@ export interface EntityLinkOption {
   name: string;
   /** Optional alternative label shown in "Τρέχον" line instead of name */
   currentLabel?: string;
+  /** Ετικέτα ομάδας (π.χ. το έργο ενός κτιρίου) — ξεχωρίζει ομώνυμες επιλογές διαφορετικών πλαισίων. */
+  group?: string;
 }
 
 export interface EntityLinkLabels {
@@ -379,6 +382,7 @@ export function EntityLinkCard({
             >
               <Check className={cn('mr-2 h-4 w-4', selectedId === option.id ? 'opacity-100' : 'opacity-0')} />
               {option.name}
+              {option.group && <span className={cn('ml-2', colors.text.muted)}>{option.group}</span>}
             </li>
           ))}
 
@@ -418,11 +422,7 @@ export function EntityLinkCard({
         <SelectItem value={NONE_VALUE}>
           {labels.noSelection}
         </SelectItem>
-        {options.map((option) => (
-          <SelectItem key={option.id} value={option.id}>
-            {option.name}
-          </SelectItem>
-        ))}
+        <EntityLinkSelectOptions options={options} />
       </SelectContent>
     </Select>
   );

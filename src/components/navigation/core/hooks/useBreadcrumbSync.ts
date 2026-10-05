@@ -65,6 +65,15 @@ export interface UseBreadcrumbSyncOptions {
   buildings?: Array<{ id: string; name: string; projectId?: string }>;
 }
 
+/**
+ * Το **περιεχόμενο** ενός περιγραφικού ως σταθερό κλειδί εξάρτησης: ίδια πεδία ⇒ ίδιο κλειδί, όποια κι αν είναι η
+ * ταυτότητα του αντικειμένου (οι σελίδες το φτιάχνουν inline σε κάθε render). Τα περιγραφικά είναι μικρά, επίπεδα
+ * (το `property-resolved` ένα επίπεδο βαθύτερα) και μόνο από κείμενα — η σειριοποίηση είναι αμελητέα.
+ */
+export function breadcrumbEntityKey(entity: BreadcrumbEntity | null): string | null {
+  return entity === null ? null : JSON.stringify(entity);
+}
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -85,11 +94,12 @@ export function useBreadcrumbSync(
 ): void {
   const { projects, companies, syncBreadcrumb } = useNavigation();
   const buildings = options?.buildings;
-  // Όσα ΕΜΦΑΝΙΖΟΝΤΑΙ είναι και εξαρτήσεις: ένα έργο που μόλις γεννήθηκε κρατά την ίδια ταυτότητα
-  // όταν μάθει το όνομά του, και χωρίς αυτά το breadcrumb θα έμενε στην πρώτη (κενή) εκδοχή.
-  const entityName = entity && 'name' in entity ? entity.name : undefined;
-  const entityCompanyName = entity?.type === 'project' ? entity.company : undefined;
-  const entityCompanyId = entity?.type === 'project' ? (entity.linkedCompanyId || entity.companyId) : undefined;
+  // Όσα ΕΜΦΑΝΙΖΟΝΤΑΙ είναι και εξαρτήσεις — **όλα**, όχι όσα θυμήθηκε κάποιος να απαριθμήσει. Η λίστα ήταν
+  // χειρόγραφη (`id`, `type`, `name`, εταιρεία του έργου) και της έλειπαν ο γονέας του χώρου (`buildingId`,
+  // `projectId`), το έργο του κτιρίου και ολόκληρη η ιεραρχία του `property-resolved`: θέση που άλλαζε κτίριο
+  // κρατούσε ίδια ταυτότητα και όνομα ⇒ το breadcrumb έμενε στο ΠΑΛΙΟ κτίριο (ADR-898 §21.6 Ε7). Το κλειδί
+  // παράγεται πλέον από το ίδιο το περιγραφικό, άρα νέο πεδίο δεν μπορεί να ξεχαστεί.
+  const entityKey = breadcrumbEntityKey(entity);
 
   useEffect(() => {
     if (!entity?.id) return;
@@ -186,5 +196,5 @@ export function useBreadcrumbSync(
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity?.id, entity?.type, entityName, entityCompanyName, entityCompanyId, projects, companies, syncBreadcrumb, buildings]);
+  }, [entityKey, projects, companies, syncBreadcrumb, buildings]);
 }

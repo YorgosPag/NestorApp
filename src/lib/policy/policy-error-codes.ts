@@ -54,6 +54,8 @@ export const POLICY_ERROR_CODES = {
 
   /** ADR-898 §20: αποσύνδεση από κτίριο χώρου που είναι παρακολούθημα μονάδας. */
   SPACE_LINKED_TO_UNIT: 'POLICY_SPACE_LINKED_TO_UNIT',
+  /** ADR-898 §21.6 Ε6: μετακίνηση χώρου (θέση · αποθήκη) σε κτίριο άλλου έργου. */
+  SPACE_BUILDING_OTHER_PROJECT: 'POLICY_SPACE_BUILDING_OTHER_PROJECT',
 } as const;
 
 export type PolicyErrorCode =

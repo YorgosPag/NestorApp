@@ -5,11 +5,12 @@
  *
  * SSoT for the create-or-update dispatch every space general tab performs when
  * the header's save button fires: route to POST or PATCH depending on
- * `createMode`, turn a thrown error into a `false` result (the header renders
- * the failure), and register the handler on the parent-owned ref.
+ * `createMode`, turn a thrown error into a `false` result, and register the
+ * handler on the parent-owned ref.
  *
- * The caller passes its own module logger, so the failure is reported under the
- * tab's own module name rather than this hook's.
+ * Η αποτυχία **φαίνεται** (ADR-898 §21.6 Ε6): ως τις 2026-10-05 το `catch` έγραφε μόνο στο log και επέστρεφε `false`,
+ * άρα η «Αποθήκευση» που αρνήθηκε ο server (π.χ. 409 «κτίριο άλλου έργου») δεν έλεγε τίποτα στον άνθρωπο. Περνά πλέον
+ * από τον ΕΝΑ βοηθό αποτυχίας mutation: άρνηση πολιτικής ⇒ μεταφρασμένο toast, άλλο σφάλμα ⇒ γενικό toast + `error`.
  *
  * @module hooks/useSpaceGeneralSave
  * @see ADR-588 §General tab — space tab de-duplication (Phase 2)
@@ -17,7 +18,7 @@
 
 import { useCallback } from 'react';
 import type { MutableRefObject } from 'react';
-import type { Logger } from '@/lib/telemetry';
+import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { useSaveHandlerRef, type SaveHandler } from '@/hooks/useSaveHandlerRef';
 
 // ============================================================================
@@ -31,8 +32,10 @@ interface UseSpaceGeneralSaveConfig {
   onUpdate: SaveHandler;
   /** Parent-owned ref the header's save button calls through. */
   onSaveRef?: MutableRefObject<SaveHandler | null>;
-  /** The owning tab's module logger. */
-  logger: Logger;
+  /** The owning tab's module name — the failure is logged under it, not under this hook. */
+  scope: string;
+  /** Translated generic message, shown when the failure is not a known policy refusal. */
+  failureMessage: string;
 }
 
 // ============================================================================
@@ -44,18 +47,19 @@ export function useSpaceGeneralSave({
   onCreate,
   onUpdate,
   onSaveRef,
-  logger,
+  scope,
+  failureMessage,
 }: UseSpaceGeneralSaveConfig): void {
+  const reportFailure = useMutationFailureFeedback(scope);
+
   const handleSave = useCallback<SaveHandler>(async () => {
     try {
       return createMode ? await onCreate() : await onUpdate();
     } catch (err) {
-      logger.error('Failed to save', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      reportFailure(err, createMode ? 'create' : 'update', failureMessage);
       return false;
     }
-  }, [createMode, onCreate, onUpdate, logger]);
+  }, [createMode, onCreate, onUpdate, reportFailure, failureMessage]);
 
   // Register save ref for header delegation (SSoT hook)
   useSaveHandlerRef(onSaveRef, handleSave);

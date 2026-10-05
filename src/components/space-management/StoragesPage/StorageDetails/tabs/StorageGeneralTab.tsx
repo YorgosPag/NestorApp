@@ -44,8 +44,7 @@ import {
 } from '@/components/shared/space-info/space-payload-builder';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getBuildingsList } from '@/services/properties.service';
-import { useEntityLink } from '@/hooks/useEntityLink';
+import { useSpaceBuildingLink } from '@/components/shared/space-info/useSpaceBuildingLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { useSpaceLocation } from '@/components/shared/space-info/useSpaceLocation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -57,7 +56,6 @@ import {
   type SpaceFormPatchApplier,
 } from '@/hooks/useSpaceNameSuggestion';
 import { DescriptionNotesCard } from '@/components/shared/space-info/DescriptionNotesCard';
-import { buildBuildingLinkLabels } from '@/components/shared/space-info/building-link-labels';
 
 const logger = createModuleLogger('StorageGeneralTab');
 
@@ -143,23 +141,15 @@ export function StorageGeneralTab({
     applyPatch: applyNamePatch,
   });
 
-  // Building link callbacks
-  const loadBuildings = useCallback(() => getBuildingsList(), []);
-
-  // ADR-200: Centralized entity linking via useEntityLink
-  const buildingLink = useEntityLink({
+  // ADR-200 + ADR-898 §21.6 Ε6: σύνδεσμος κτιρίου — οι επιλογές περιορίζονται στο έργο της αποθήκης (SSoT hook)
+  const buildingLink = useSpaceBuildingLink({
     relation: 'storage-building',
-    entityId: storage.id,
-    initialParentId: storage.buildingId ?? null,
-    loadOptions: loadBuildings,
-    saveMode: 'form',
-    cascadingResets: [{ resetField: 'floorId' }],
-    onCascadingReset: (resets) => resets.forEach(r => updateField(r.field as keyof StorageFormState, r.value)),
-    icon: NAVIGATION_ENTITIES.building.icon,
-    iconColor: NAVIGATION_ENTITIES.building.color,
+    space: storage,
+    t,
+    isEditing,
+    onFloorReset: () => updateField('floorId', ''),
     cardId: 'storage-building-link',
-    labels: buildBuildingLinkLabels(t),
-  }, isEditing);
+  });
 
   // 🏢 SPEC-256A Phase 2: versioning SSoT — injects `_v`, bumps it on success and
   // silently retries without it on 409 (last-write-wins, never a dialog).
@@ -257,7 +247,10 @@ export function StorageGeneralTab({
     t, disabled: !isEditing, gridClassName: 'grid grid-cols-1 md:grid-cols-2 gap-2',
   });
 
-  useSpaceGeneralSave({ createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, logger });
+  useSpaceGeneralSave({
+    createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef,
+    scope: 'StorageGeneralTab', failureMessage: t('entityLinks.building.error'),
+  });
 
   return (
     <div className="p-2 space-y-2">

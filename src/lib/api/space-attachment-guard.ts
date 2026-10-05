@@ -12,27 +12,14 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { nonEmptyText as textOf, projectOfSpace } from '@/lib/api/space-building-project-guard';
 import { linkedSpaceOwnersInScope } from '@/lib/firestore/entity-linking.service';
 import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
-
-function textOf(raw: unknown): string | null {
-  return typeof raw === 'string' && raw.trim() !== '' ? raw : null;
-}
 
 /** Ζητά το σώμα να αδειάσει το `buildingId`; (`undefined` = δεν το αγγίζει.) */
 function detachesBuilding(body: Readonly<Record<string, unknown>>): boolean {
   return Object.prototype.hasOwnProperty.call(body, 'buildingId') && body.buildingId !== undefined && textOf(body.buildingId) === null;
-}
-
-/** Το έργο του χώρου — δικό του, αλλιώς του κτιρίου του (η σύνδεση είναι μοναδική ανά έργο). */
-async function projectOf(db: AdminFirestore, existing: Readonly<Record<string, unknown>>): Promise<string | null> {
-  const own = textOf(existing.projectId);
-  if (own !== null) return own;
-  const buildingId = textOf(existing.buildingId);
-  if (buildingId === null) return null;
-  return textOf((await db.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get()).data()?.projectId);
 }
 
 /** @throws ApiError(409, SPACE_LINKED_TO_UNIT) όταν ο χώρος αποσυνδέεται από κτίριο ενώ ανήκει σε μονάδα. */
@@ -43,7 +30,7 @@ export async function assertNotDetachingAttachedSpace(
   existing: Readonly<Record<string, unknown>>,
 ): Promise<void> {
   if (!detachesBuilding(body) || textOf(existing.buildingId) === null) return;
-  const scope = { projectId: await projectOf(db, existing), buildingId: textOf(existing.buildingId) };
+  const scope = { projectId: await projectOfSpace(db, existing), buildingId: textOf(existing.buildingId) };
   const owners = await linkedSpaceOwnersInScope(db, scope, new Set([spaceId]));
   if (owners.has(spaceId)) {
     throw new ApiError(409, `Space ${spaceId} is attached to property ${owners.get(spaceId)}`, POLICY_ERROR_CODES.SPACE_LINKED_TO_UNIT);

@@ -236,7 +236,8 @@
     "multilevelFloorMismatch": "All levels must share the same Building.",
     "standaloneWithBuilding": "Standalone units ({type}) cannot have a Building/Floor — they connect directly to the Project.",
     "duplicateCode": "The code already exists. Please try again.",
-    "spaceLinkedToUnit": "This space is attached to a unit. Remove it from the unit first (unit page → {section}), then unlink it from the building."
+    "spaceLinkedToUnit": "This space is attached to a unit. Remove it from the unit first (unit page → {section}), then unlink it from the building.",
+    "spaceBuildingOtherProject": "That building belongs to another project. A space can only move to a building of its own project; to change project, unlink it from its building first, then link it again."
   },
   "recoveries": {
     "createCompany": {
@@ -620,5 +621,10 @@
     "place": "Link to this building",
     "placeError": "Linking to the building failed.",
     "loadError": "Unit spaces located in another building or with no building could not be loaded."
+  },
+  "spaceList": {
+    "parkingLoadError": "The parking spots could not be loaded.",
+    "storageLoadError": "The storage units could not be loaded.",
+    "staleNote": "What you see below is the last version that loaded — it may not be current."
   }
 }

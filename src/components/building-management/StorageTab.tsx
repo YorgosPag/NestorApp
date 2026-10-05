@@ -42,6 +42,7 @@ import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDr
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from './shared';
 import { BuildingSpaceRelationsPanel } from './shared/BuildingSpaceRelationsPanel';
+import { BuildingSpaceTabError } from './shared/BuildingSpaceTabStatus';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
@@ -124,10 +125,23 @@ export function StorageTab({ building }: StorageTabProps) {
     );
   }
 
+  // ── Load failure (ADR-898 §21.6 Ε2β) — «δεν φόρτωσε» δεν δείχνεται ποτέ ως «καμία αποθήκη» ──
+
+  const loadError = s.loadFailed ? (
+    <BuildingSpaceTabError
+      message={s.listKnown ? `${s.t('spaceList.storageLoadError')} ${s.t('spaceList.staleNote')}` : s.t('spaceList.storageLoadError')}
+      retryLabel={s.t('unitStats.retry')}
+      onRetry={s.retryLoad}
+    />
+  ) : null;
+
+  if (loadError && !s.listKnown) return loadError;
+
   // ── Main render ──
 
   return (
     <section className="flex flex-col gap-2 p-2">
+      {loadError}
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">

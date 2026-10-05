@@ -131,13 +131,17 @@ export async function deleteProperty(propertyId: string): Promise<{ success: boo
 }
 
 /**
- * Get list of buildings for entity linking
+ * Get list of buildings for entity linking.
+ *
+ * Το `projectId` ταξιδεύει μαζί: ο επιλογέας κτιρίου ενός χώρου περιορίζεται στο έργο του (ADR-898 §21.6 Ε6) και δεν
+ * μπορεί να το κάνει με σκέτο `{ id, name }` — έξι «Κτήριο Α» διαφορετικών έργων ήταν αδιάκριτα.
  */
-export async function getBuildingsList(): Promise<Array<{ id: string; name: string }>> {
+export async function getBuildingsList(): Promise<Array<{ id: string; name: string; projectId: string | null }>> {
   try {
     interface BuildingFromAPI {
       id: string;
       name?: string;
+      projectId?: string | null;
     }
     interface BuildingsResponse {
       buildings: BuildingFromAPI[];
@@ -149,6 +153,7 @@ export async function getBuildingsList(): Promise<Array<{ id: string; name: stri
     return result.buildings.map(b => ({
       id: b.id,
       name: b.name || b.id,
+      projectId: b.projectId || null,
     }));
   } catch {
     return [];

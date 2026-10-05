@@ -114,12 +114,20 @@ export function ParkingTabContent({ building }: { building: Building }) {
     return <BuildingSpaceTabLoading />;
   }
 
-  if (state.error) {
-    return <BuildingSpaceTabError message={state.error} retryLabel={tBuilding('unitStats.retry')} onRetry={state.fetchParkingSpots} />;
-  }
+  // ADR-898 §21.6 Ε2β — «δεν φόρτωσε» δεν δείχνεται ποτέ ως «καμία θέση»· η τελευταία γνωστή λίστα μένει δίπλα στο σφάλμα.
+  const loadError = state.loadFailed ? (
+    <BuildingSpaceTabError
+      message={state.listKnown ? `${tBuilding('spaceList.parkingLoadError')} ${tBuilding('spaceList.staleNote')}` : tBuilding('spaceList.parkingLoadError')}
+      retryLabel={tBuilding('unitStats.retry')}
+      onRetry={state.fetchParkingSpots}
+    />
+  ) : null;
+
+  if (loadError && !state.listKnown) return loadError;
 
   return (
     <section className="flex flex-col gap-2 p-2">
+      {loadError}
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">

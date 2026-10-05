@@ -19,7 +19,6 @@ import { ALL_SPACE_AVAILABILITY, type SpaceAvailabilityFilter } from '@/lib/spac
 import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { createStaleCache } from '@/lib/stale-cache';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createStorageWithPolicy, deleteStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -28,6 +27,8 @@ import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
+import { useBuildingSpaceList } from '../shared/useBuildingSpaceList';
+import { buildingStorageCache, loadBuildingStorageUnits } from './storage-tab-load';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { getStorageTypeLabel, filterUnits, calculateStats } from './utils';
@@ -35,9 +36,6 @@ import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
 
 const logger = createModuleLogger('StorageTab');
-
-// ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
-const buildingStorageCache = createStaleCache<StorageUnit[]>('building-storage-tab');
 
 interface StorageCreateResult {
   storageId: string;
@@ -56,10 +54,6 @@ export function useStorageTabState(building: Building) {
   const failureText = (err: unknown, whatFailed: string) =>
     `${t('storageNotifications.failurePrefix')} ${err instanceof Error ? err.message : whatFailed}`;
   const floorLabel = useFloorLabel();
-
-  // ── Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation ──
-  const [units, setUnits] = useState<StorageUnit[]>(buildingStorageCache.get(building.id) ?? []);
-  const [loading, setLoading] = useState(!buildingStorageCache.hasLoaded(building.id));
 
   // ── Create form state ──
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -113,55 +107,14 @@ export function useStorageTabState(building: Building) {
 
   // ── Fetch ──
 
-  const fetchStorageUnits = useCallback(async () => {
-    // ADR-300: Only show spinner on first load — not on re-navigation
-    if (!buildingStorageCache.hasLoaded(building.id)) setLoading(true);
-    try {
-      const result = await apiClient.get<StoragesApiData>(
-        `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`,
-      );
-
-      if (result?.storages) {
-        const storageUnits: StorageUnit[] = result.storages.map((s) => ({
-          id: s.id,
-          code: s.name || s.code || `S-${s.id.substring(0, 6)}`,
-          type: (s.type || 'small') as StorageType,
-          // ADR-777 §8.60.20 — κάδος · λειτουργία (ο ΕΝΑΣ αναγνώστης τα έλυσε ήδη στον mapper).
-          status: s.status,
-          operationalStatus: s.operationalStatus,
-          floorId: s.floorId ?? null,
-          floor: s.floor ?? null,
-          floorKind: s.floorKind ?? null,
-          area: typeof s.area === 'number' ? s.area : 0,
-          price: typeof s.price === 'number' ? s.price : 0,
-          // ADR-777 §8.60.18 — χωρίς αυτά ο επιλυτής έβλεπε ΜΟΝΟ το @deprecated `price`:
-          // η στήλη «Τιμή» της καρτέλας αποθηκών δεν μπορούσε να δείξει ποτέ ενοίκιο.
-          commercialStatus: s.commercialStatus,
-          commercial: s.commercial,
-          description: s.description || '',
-          building: s.building || building.name,
-          project: '',        // mapStorageDoc does not expose this field
-          company: '',        // mapStorageDoc does not expose this field
-          linkedProperty: null,    // mapStorageDoc does not expose this field
-          features: [],            // mapStorageDoc does not expose this field
-          coordinates: { x: 0, y: 0 },  // mapStorageDoc does not expose this field
-        }));
-        // ADR-300: Write to module-level cache so next remount skips spinner
-        buildingStorageCache.set(storageUnits, building.id);
-        setUnits(storageUnits);
-        logger.info('Loaded storage units via API', { count: storageUnits.length, buildingId: building.id });
-      }
-    } catch (error) {
-      logger.error('Error fetching storage units', { error });
-      setUnits([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [building.id, building.name]);
-
-  useEffect(() => {
-    fetchStorageUnits();
-  }, [fetchStorageUnits]);
+  // ADR-898 §21.6 Ε2β — ρητή κατάσταση ανάγνωσης: «δεν φόρτωσε» δεν γίνεται ποτέ «καμία αποθήκη».
+  const loadUnits = useCallback(
+    (buildingId: string) => loadBuildingStorageUnits(buildingId, building.name),
+    [building.name],
+  );
+  const list = useBuildingSpaceList(building.id, buildingStorageCache, loadUnits);
+  const units = list.items;
+  const fetchStorageUnits = list.refetch;
 
   // ── Real-time sync ──
 
@@ -359,7 +312,9 @@ export function useStorageTabState(building: Building) {
     // ADR-903 §6 — το κτίριο της καρτέλας: ο επιλογέας ορόφου δείχνει τους ορόφους του.
     buildingId: building.id,
     // Data
-    units, loading, filteredUnits, stats,
+    units, loading: list.status === 'loading', filteredUnits, stats,
+    // ADR-898 §21.6 Ε2β — αποτυχία ανάγνωσης: ορατή, με επανάληψη· `listKnown` = υπάρχει παλιότερη αληθινή λίστα.
+    loadFailed: list.status === 'error', listKnown: list.known, retryLoad: fetchStorageUnits,
     // Create
     showCreateForm, setShowCreateForm,
     createCode, setCreateCode,
