@@ -55,6 +55,18 @@ export function companyPublicNameOf(data: unknown): string | null {
 }
 
 /**
+ * **ΠΟΙΑ ΤΑΥΤΟΤΗΤΑ ΕΤΑΙΡΕΙΑΣ ΑΞΙΖΕΙ ΑΝΑΓΝΩΣΗ** — η μία κρίση και για τους τρεις αναγνώστες αυτού του αρχείου.
+ *
+ * 🔴 **`typeof`, ΟΧΙ `=== null`** — μετρημένο ζωντανά 2026-10-05: η εντολή του `ownp_bc548607…` γράφτηκε πριν
+ * το ADR-832 και **δεν έχει** `agencyCompanyId`. Ο τύπος λέει `string`, η βάση κρατά `undefined` ⇒ το
+ * `companyId.trim()` πέταξε `TypeError` ⇒ **500** στο `/private-marketing`. Η κρίση υπήρχε τρεις φορές εδώ,
+ * σε **δύο** διατυπώσεις, και μόνο η μία άντεχε το `undefined`.
+ */
+function usableCompanyIdOf(companyId: unknown): string | null {
+  return typeof companyId === 'string' && companyId.trim() !== '' ? companyId : null;
+}
+
+/**
  * **Η επωνυμία, ή `null`.**
  *
  * ⚠️ **`null` σε κάθε αστοχία, ποτέ εξαίρεση και ποτέ κείμενο-μπαλαντέρ.** Οι
@@ -65,12 +77,13 @@ export function companyPublicNameOf(data: unknown): string | null {
  */
 export async function readCompanyPublicName(
   adminDb: AdminFirestore,
-  companyId: string | null,
+  companyId: string | null | undefined,
 ): Promise<string | null> {
-  if (companyId === null || companyId.trim() === '') return null;
+  const id = usableCompanyIdOf(companyId);
+  if (id === null) return null;
 
   try {
-    const snapshot = await adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId).get();
+    const snapshot = await adminDb.collection(COLLECTIONS.COMPANIES).doc(id).get();
     return companyPublicNameOf(snapshot.data());
   } catch (error) {
     logger.error('Η επωνυμία του γραφείου δεν διαβάστηκε', {
@@ -142,7 +155,7 @@ export async function readPublicAgencyIdentity(
   adminDb: AdminFirestore,
   companyId: string | null | undefined,
 ): Promise<PublicAgencyIdentity> {
-  const id = typeof companyId === 'string' && companyId.trim() !== '' ? companyId : null;
+  const id = usableCompanyIdOf(companyId);
   if (id === null) return NO_AGENCY_IDENTITY;
 
   const showcase = await lookupAgencyProfile(adminDb, id);
@@ -188,7 +201,7 @@ export function createAgencyIdentityResolver(adminDb: AdminFirestore): AgencyIde
   const inFlight = new Map<string, Promise<PublicAgencyIdentity>>();
 
   return (companyId) => {
-    const id = typeof companyId === 'string' && companyId.trim() !== '' ? companyId : null;
+    const id = usableCompanyIdOf(companyId);
     if (id === null) return Promise.resolve(NO_AGENCY_IDENTITY);
 
     const known = inFlight.get(id);
