@@ -4,6 +4,8 @@ import { isFirebaseAvailable } from "../firebase/availability";
 import { getFirestoreHelpers } from "../firebase/helpers-lazy";
 import { safeDbOperation } from "../firebase/safe-op";
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { getCompanyId } from '@/config/tenant';
 import { isRetired } from '@/lib/firestore/trashed-status';
 
 interface PropertySummary {
@@ -27,8 +29,10 @@ export async function getPropertySummary(): Promise<PropertySummary> {
   return safeDbOperation(async () => {
     const { collection, getDocs } = firestoreHelpers;
 
-    // Firebase Admin SDK: collection() returns a CollectionReference directly
-    const unitsCollection = collection(COLLECTIONS.PROPERTIES);
+    // 🔴 Tenant scope (ADR-210): το bot ανήκει σε ΜΙΑ εταιρεία (`getCompanyId()`, όπως σε όλο το
+    // webhook). Χωρίς αυτό τα σύνολα μετρούσαν ακίνητα **κάθε** εταιρείας.
+    const unitsCollection = collection(COLLECTIONS.PROPERTIES)
+      .where(FIELDS.COMPANY_ID, '==', getCompanyId());
     const querySnapshot = await getDocs(unitsCollection);
 
     interface PropertyDoc {

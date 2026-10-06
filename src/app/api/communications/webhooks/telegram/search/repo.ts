@@ -14,6 +14,7 @@ import { safeDbOperation } from '../firebase/safe-op';
 import { extractSearchCriteria, applyAdvancedFilters } from './criteria';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { getCompanyId } from '@/config/tenant';
 import type { SearchResult, TelegramProperty } from '../shared/types';
 import {
   getTemplateResolver,
@@ -60,7 +61,9 @@ export async function searchProperties(
 
     try {
       // Firebase Admin SDK: use collection(path) then chain .where().orderBy().limit()
+      // 🔴 Tenant scope (ADR-210): χωρίς αυτό το bot έδειχνε διαθέσιμα ακίνητα **κάθε** εταιρείας.
       let q = collection(COLLECTIONS.PROPERTIES)
+        .where(FIELDS.COMPANY_ID, '==', getCompanyId())
         .where(FIELDS.STATUS, '==', 'available');
 
       if (criteria.type) {

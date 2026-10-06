@@ -8,6 +8,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { arePropertyTypesEquivalent } from '@/constants/property-type-aliases';
 import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
@@ -76,8 +77,11 @@ export async function queryAvailableUnits(
 ): Promise<{ matching: MatchedUnit[]; totalAvailable: number }> {
   const adminDb = getAdminFirestore();
 
+  // 🔴 Tenant scope: η παράμετρος `companyId` υπήρχε αλλά δεν έμπαινε στο ερώτημα — ο πράκτορας
+  // πρότεινε σε πελάτη ακίνητα **κάθε** εταιρείας (ADR-281 changelog 2026-10-06).
   const snapshot = await adminDb
     .collection(COLLECTIONS.PROPERTIES)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .limit(200)
     .get();
 
