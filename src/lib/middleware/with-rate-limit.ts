@@ -338,6 +338,15 @@ export function withWebhookRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHa
 }
 
 /**
+ * Rate limiter for signed internal webhooks (Cloud Functions → Next.js, ADR-905 §8 Ε3).
+ * Limit: 300 requests/minute per IP — flood guard **before** signature verification only.
+ * The signed caller's own budget is judged after verification, per source (`signed-webhook-door`).
+ */
+export function withInternalWebhookRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
+  return withRateLimit(handler, { category: 'INTERNAL_WEBHOOK' });
+}
+
+/**
  * Rate limiter for Telegram bot endpoints.
  * Limit: 15 requests/minute
  */

@@ -35,7 +35,7 @@ jest.mock('../conveyance-engagement-notifier', () => ({
   announceEngagementAnswered: jest.fn(async () => undefined),
 }));
 jest.mock('@/lib/workspace/workspace-administrators', () => ({ activeWorkspaceAdministrators: async () => ['u_host'] }));
-const ACCOUNTS: Record<string, string> = { 'seller-lawyer@x.gr': 'u_sl', 'notary@x.gr': 'u_n' };
+const ACCOUNTS: Record<string, string> = { 'seller-lawyer@x.gr': 'u_sl', 'buyer-lawyer@x.gr': 'u_bl', 'notary@x.gr': 'u_n' };
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => fake,
   getAdminAuth: () => ({
@@ -53,10 +53,12 @@ const NOW = Date.parse('2026-10-03T10:00:00.000Z');
 let fake: FakeFirestore;
 const db = () => fake as unknown as Firestore;
 
-type Role = 'seller_lawyer' | 'notary';
-const UID: Readonly<Record<Role, string>> = { seller_lawyer: 'u_sl', notary: 'u_n' };
-const BASIS: Readonly<Record<Role, 'written_instruction' | null>> = { seller_lawyer: null, notary: 'written_instruction' };
-const EMAIL: Readonly<Record<Role, string>> = { seller_lawyer: 'seller-lawyer@x.gr', notary: 'notary@x.gr' };
+type Role = 'seller_lawyer' | 'buyer_lawyer' | 'notary';
+const UID: Readonly<Record<Role, string>> = { seller_lawyer: 'u_sl', buyer_lawyer: 'u_bl', notary: 'u_n' };
+const BASIS: Readonly<Record<Role, 'written_instruction' | 'preliminary_contract' | null>> = {
+  seller_lawyer: null, buyer_lawyer: 'preliminary_contract', notary: 'written_instruction',
+};
+const EMAIL: Readonly<Record<Role, string>> = { seller_lawyer: 'seller-lawyer@x.gr', buyer_lawyer: 'buyer-lawyer@x.gr', notary: 'notary@x.gr' };
 
 const PROPERTY = {
   companyId: 'comp_a', name: 'Δ3', type: 'apartment', buildingId: 'bld_1', projectId: 'proj_1',
@@ -89,10 +91,14 @@ async function engage(record: ConveyanceCase, role: Role): Promise<string> {
   return slot.engagement.engagementId;
 }
 
-/** Αρχείο του μισθωτή, στο ακίνητο, έτοιμο — όπως το γράφει το ανέβασμα. */
+/**
+ * Αρχείο του μισθωτή, στο ακίνητο, έτοιμο — όπως το γράφει το ανέβασμα. `purpose: 'certificate'` = entry point
+ * `unit-certificate` ⇒ πέφτει στη γραμμή `energy_certificate` (ορατή σε όλους). ⚠️ Ως 2026-10-06 έγραφε
+ * `'energy_certificate'`, που **δεν** είναι purpose κανενός entry point: τα tests πρασίνιζαν από την υπερ-σηματοδότηση.
+ */
 function propertyFile(extra: Record<string, unknown> = {}): WireDocument {
   return {
-    companyId: 'comp_a', entityType: 'property', entityId: 'prop_1', purpose: 'energy_certificate', status: 'ready',
+    companyId: 'comp_a', entityType: 'property', entityId: 'prop_1', purpose: 'certificate', status: 'ready',
     displayName: 'ΠΕΑ.pdf', revision: 1, updatedAt: '2026-10-03T09:00:00.000Z', createdAt: '2026-10-03T09:00:00.000Z', ...extra,
   } as WireDocument;
 }
@@ -201,6 +207,46 @@ describe('ADR-905 §6 — αρχείο: σήμα ⇔ η προβολή της ό
     const notary = await engage(record, 'notary');
     const views = [hostView, engagedView(notary, 'notary')];
     expect(await deltas(views, () => relayDependencyChange(db(), event('file', 'file_1', propertyFile(), null), NOW))).toEqual([1, 1]);
+  });
+});
+
+describe('ADR-905 §6.2 — η όψη είναι ο ΚΑΤΑΛΟΓΟΣ: σήμα μόνο για αρχείο σε γραμμή που βλέπει ο θεατής', () => {
+  /** Ό,τι ανεβαίνει ως «Άλλο Έγγραφο» / φωτογραφία: τεκμήριο για τον συλλέκτη, σε **καμία** γραμμή. */
+  const offRow = (extra: Record<string, unknown> = {}) => propertyFile({ purpose: 'generic', ...extra });
+  /** Βεβαίωση ΤΑΠ στην επαφή του πωλητή — γραμμή `municipal_clearance`, `SELLER_PRIVATE`. */
+  const sellerPrivate = (extra: Record<string, unknown> = {}) =>
+    propertyFile({ entityType: 'contact', entityId: 'cont_s', purpose: 'municipal-tap', ...extra });
+
+  it('αρχείο εκτός γραμμής: δημιουργία · επεξεργασία (νέο updatedAt) · διαγραφή ⇒ ΚΑΝΕΝΑ σήμα, ούτε στον οικοδεσπότη', async () => {
+    const record = await openCase();
+    const notary = await engage(record, 'notary');
+    const views = [hostView, engagedView(notary, 'notary')];
+    const edited = offRow({ displayName: 'Άλλο.pdf', updatedAt: '2026-10-03T09:30:00.000Z' });
+    for (const change of [event('file', 'file_1', null, offRow()), event('file', 'file_1', offRow(), edited), event('file', 'file_1', edited, null)]) {
+      expect(await deltas(views, () => relayDependencyChange(db(), change, NOW))).toEqual([0, 0]);
+    }
+  });
+
+  it('γραμμή SELLER_PRIVATE ⇒ οικοδεσπότης + πλευρά πωλητή · ο δικηγόρος του ΑΓΟΡΑΣΤΗ δεν μαθαίνει ούτε πότε', async () => {
+    const record = await openCase();
+    const sellerLawyer = await engage(record, 'seller_lawyer');
+    const buyerLawyer = await engage(record, 'buyer_lawyer');
+    const views = [hostView, engagedView(sellerLawyer, 'seller_lawyer'), engagedView(buyerLawyer, 'buyer_lawyer')];
+    expect(await deltas(views, () => relayDependencyChange(db(), event('file', 'file_tap', null, sellerPrivate()), NOW))).toEqual([1, 1, 0]);
+    const edited = sellerPrivate({ updatedAt: '2026-10-03T09:30:00.000Z' });
+    expect(await deltas(views, () => relayDependencyChange(db(), event('file', 'file_tap', sellerPrivate(), edited), NOW))).toEqual([1, 1, 0]);
+  });
+
+  it('αλλαγή purpose που ΒΑΖΕΙ το αρχείο σε γραμμή ⇒ σήμα (η αντιστοίχιση κρίνεται πριν ΚΑΙ μετά)', async () => {
+    await openCase();
+    const change = event('file', 'file_1', offRow(), propertyFile());
+    expect(await deltas([hostView], () => relayDependencyChange(db(), change, NOW))).toEqual([1]);
+  });
+
+  it('επεξεργασία αρχείου ΣΕ γραμμή (νέο updatedAt ⇒ άλλο αποτύπωμα) ⇒ σήμα — ο έλεγχος μπαγιατεύει', async () => {
+    await openCase();
+    const change = event('file', 'file_1', propertyFile(), propertyFile({ updatedAt: '2026-10-03T09:30:00.000Z' }));
+    expect(await deltas([hostView], () => relayDependencyChange(db(), change, NOW))).toEqual([1]);
   });
 });
 

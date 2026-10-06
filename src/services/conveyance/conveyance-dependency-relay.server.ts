@@ -8,7 +8,8 @@
  *   1. **ποιες υποθέσεις** — ερώτημα στο ευρετήριο `dependencyKeys` (ετικέτες του πριν ∪ μετά, ίδιο λεξιλόγιο με
  *      το `linkedTo`) · μόνο ανοιχτές · μόνο του μισθωτή του εγγράφου.
  *   2. **ποιες όψεις** — σήμα ⇔ **η προβολή αυτής της όψης άλλαξε**, κρινόμενη με τις **ίδιες** συναρτήσεις που την
- *      παράγουν: αρχείο → `evidenceOfFile` ανά θεατή (μισθωτής · `ready` · κάτοχος/σύνδεση · ενεργό · εμβέλεια CDE)·
+ *      παράγουν: αρχείο → `evidenceOfFile` ανά θεατή (μισθωτής · `ready` · κάτοχος/σύνδεση · ενεργό · εμβέλεια CDE)
+ *      ∩ `visibleRowFiles` (γραμμές που βλέπει ο θεατής · αντιστοίχιση γραμμής — ό,τι κάνει το `deriveChecklist`)·
  *      ακίνητο/έργο → `subjectContextOf` → `subjectViewFacts`. Μικρογραφία που δεν αλλάζει τίποτα ορατό ⇒ **κανένα**
  *      σήμα· αρχείο που πέρασε σε WIP ⇒ σήμα **μόνο** σε όποιον το έχασε (κανένα πλάγιο κανάλι χρονισμού).
  *   3. **ο ΕΝΑΣ γραφέας** — `signalCaseChangeInTx`. Αυτό το αρχείο **δεν** γράφει σήματα.
@@ -20,9 +21,11 @@ import 'server-only';
 
 import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { itemsForProfile } from '@/config/conveyance-checklist/catalog';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
+import { visibleRowFiles } from '@/lib/conveyance/derive-checklist';
 import type { DependencyChangeEvent, WireDocument } from '@/lib/conveyance/dependency-change-event';
 import { fileLinkTag } from '@/lib/files/file-link-tag';
 import type { CaseChange } from '@/lib/conveyance/view-signal-audience';
@@ -100,10 +103,16 @@ function sameJson(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** Άλλαξε η προβολή αυτού του αρχείου **για αυτόν τον θεατή**; — ο ίδιος μετασχηματισμός με τον συλλέκτη. */
+/**
+ * Άλλαξε η προβολή αυτού του αρχείου **για αυτόν τον θεατή**; Η όψη είναι ο κατάλογος, όχι ο συλλέκτης: το τεκμήριο
+ * (`evidenceOfFile`) μετρά **μόνο** όπου πέφτει σε γραμμή που βλέπει ο θεατής (`visibleRowFiles` — `visibleTo` ∩
+ * αντιστοίχιση γραμμής, οι κρίσεις του `deriveChecklist`). Αρχείο εκτός γραμμής ⇒ κενή προβολή πριν **και** μετά ⇒
+ * κανένα σήμα, όσο κι αν αλλάξει το `updatedAt` του· γραμμή της άλλης πλευράς ⇒ ούτε χρονισμός.
+ */
 function fileChangedFor(record: ConveyanceCase, event: DependencyChangeEvent, viewer: CaseEvidenceViewer): boolean {
   const targets = evidenceTargets(record.subject, record.parties);
-  const project = (doc: Doc) => evidenceOfFile(record.companyId, event.docId, doc, targets, viewer.audience);
+  const items = itemsForProfile(record.profile);
+  const project = (doc: Doc) => visibleRowFiles(items, viewer.role, evidenceOfFile(record.companyId, event.docId, doc, targets, viewer.audience));
   return !sameJson(project(docOf(event.before)), project(docOf(event.after)));
 }
 

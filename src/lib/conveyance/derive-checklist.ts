@@ -77,6 +77,28 @@ function itemFiles(item: ChecklistItem, evidence: readonly EvidenceFile[]): read
   return item.satisfaction.kind === 'files' ? filesForMatchers(item.satisfaction.matchers, evidence) : [];
 }
 
+/** Τα αρχεία μίας γραμμής που βλέπει ο θεατής. */
+export interface VisibleRowFiles {
+  readonly itemId: string;
+  readonly files: readonly EvidenceFile[];
+}
+
+/**
+ * ADR-905 §6.2 — ό,τι από τα τεκμήρια **φτάνει στην όψη** του θεατή: μόνο γραμμές που βλέπει (`viewerSeesItem`),
+ * μόνο αρχεία που αντιστοιχούν σε αυτές (`itemFiles`) — οι **ίδιες** δύο κρίσεις με το `deriveChecklist`. Τεκμήριο που
+ * δεν πέφτει σε καμία γραμμή του θεατή δεν εμφανίζεται εδώ· άρα ούτε η αλλαγή του είναι αλλαγή της όψης του.
+ */
+export function visibleRowFiles(
+  items: readonly ChecklistItem[],
+  viewer: ConveyanceRole | 'host',
+  evidence: readonly EvidenceFile[],
+): readonly VisibleRowFiles[] {
+  return items
+    .filter((item) => viewerSeesItem(viewer, item))
+    .map((item) => ({ itemId: item.id, files: itemFiles(item, evidence) }))
+    .filter((row) => row.files.length > 0);
+}
+
 /** Ισχύς αποδεκτής γραμμής ως προς σήμερα ΚΑΙ ως προς την ημέρα υπογραφής (Σ-5). */
 function validityOf(item: ChecklistItem, review: ChecklistItemReview, input: DeriveChecklistInput): Validity {
   if (item.validity.kind !== 'days' || review.issuedOn === null || !isDateKey(review.issuedOn)) {

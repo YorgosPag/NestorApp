@@ -40,9 +40,9 @@ const ROUTES_DIR = 'src/app/api';
 const CONFIG_FILE = 'src/lib/middleware/rate-limit-config.ts';
 
 /**
- * Τα επτά περιτυλίγματα + η ωμή μορφή. **Άμεση** δήλωση.
+ * Τα οκτώ περιτυλίγματα + η ωμή μορφή. **Άμεση** δήλωση.
  *
- * ⚠️ Η σειρά έχει σημασία: το `withRateLimit` είναι **πρόθεμα** των άλλων επτά, οπότε
+ * ⚠️ Η σειρά έχει σημασία: το `withRateLimit` είναι **πρόθεμα** των άλλων οκτώ, οπότε
  * ελέγχεται **τελευταίο** — αλλιώς κάθε `withHeavyRateLimit(` θα μετρούσε ως ωμό.
  */
 const WRAPPERS = Object.freeze([
@@ -52,6 +52,7 @@ const WRAPPERS = Object.freeze([
   ['withSensitiveRateLimit', 'SENSITIVE'],
   ['withHeavyRateLimit', 'HEAVY'],
   ['withWebhookRateLimit', 'WEBHOOK'],
+  ['withInternalWebhookRateLimit', 'INTERNAL_WEBHOOK'],
   ['withTelegramRateLimit', 'TELEGRAM'],
 ]);
 

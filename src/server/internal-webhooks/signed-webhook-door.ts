@@ -12,9 +12,14 @@
  *      εκτελούνται **μία** φορά — με τον μηχανισμό που ήδη υπάρχει, όχι με δεύτερο μητρώο.
  *   3. **JSON** — άκυρο ⇒ 400 (ο trigger δεν ξαναδοκιμάζει ό,τι δεν θα γίνει ποτέ έγκυρο).
  *
+ * Ανάμεσα στο 1 και το 2 (§8 Ε3): ο **προϋπολογισμός της πηγής** (`withinSubjectQuota`, κλειδί η πηγή). Ζει **μετά**
+ * την υπογραφή επειδή μόνο τότε η πηγή είναι αποδεδειγμένη — πλαστό αίτημα δεν καταναλώνει τον κάδο του δικού μας
+ * καλούντος· και **πριν** την ιδεμποτία, ώστε το 429 να μη δεσμεύει το κλειδί του γεγονότος. Το ανάχωμα ανά IP
+ * (`withInternalWebhookRateLimit`) τυλίγει την πόρτα απ' έξω και ρωτά άλλο πράγμα: ανώνυμη πλημμύρα.
+ *
  * Κωδικοί → συμπεριφορά του trigger (το λεξικό ζει στο `lib/webhooks/internal-webhook-delivery`, προβαλλόμενο στον
  * αποστολέα): **2xx** τέλος · **4xx** τέλος + καταγραφή (λάθος δεν διορθώνεται με επανάληψη) · **408/425/429** και
- * **5xx** επανάληψη — το 429 του `withWebhookRateLimit` είναι αντίθλιψη, όχι απώλεια. Γι' αυτό το «λείπει το μυστικό **εδώ**» είναι **503**: είναι ρύθμιση που θα διορθωθεί, και
+ * **5xx** επανάληψη — το 429 (ανάχωμα IP ή προϋπολογισμός πηγής) είναι αντίθλιψη, όχι απώλεια. Γι' αυτό το «λείπει το μυστικό **εδώ**» είναι **503**: είναι ρύθμιση που θα διορθωθεί, και
  * τα γεγονότα περιμένουν αντί να χαθούν.
  *
  * @module server/internal-webhooks/signed-webhook-door
@@ -29,6 +34,7 @@ import { runIdempotently } from '@/lib/api/idempotency/with-idempotency';
 import type { IdempotencyPolicy } from '@/lib/api/idempotency/idempotency-contract';
 import { readConfiguredValue } from '@/lib/environment/environment-audit';
 import { getErrorMessage } from '@/lib/error-utils';
+import { withinSubjectQuota, type SubjectQuota } from '@/lib/middleware/subject-quota';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   INTERNAL_WEBHOOK_SIGNATURE_HEADER,
@@ -51,9 +57,17 @@ const REFUSAL_STATUS: Record<InternalWebhookRefusal, number> = {
   signature_invalid: 401,
 };
 
+/** Το είδος πράξης στον κάδο ανά πηγή — δύο πηγές **δεν** τρώνε η μία το όριο της άλλης (το κλειδί κουβαλά την πηγή). */
+const SOURCE_QUOTA_SCOPE = 'internal-webhook';
+
 export interface SignedWebhookOptions {
   /** Ποιος καλεί — μέρος του principal της ιδεμποτίας (δύο πηγές με ίδιο κλειδί δεν συγκρούονται). */
   readonly source: string;
+  /**
+   * Ο προϋπολογισμός ρυθμού **αυτής της πηγής** (ADR-905 §8 Ε3). **Υποχρεωτικός**: κάθε εσωτερικό webhook δηλώνει
+   * πόσα αντέχουμε από τον δικό μας καλούντα — η απουσία δεν επιτρέπεται να σημαίνει «απεριόριστα».
+   */
+  readonly quota: SubjectQuota;
   /** Μόνο με **απόδειξη** στον handler (CHECK 3.92 Κ1: `why` ≥ 15). */
   readonly idempotency?: IdempotencyPolicy;
 }
@@ -74,7 +88,17 @@ function parseJson(raw: string): { readonly ok: true; readonly body: unknown } |
   }
 }
 
-/** **Η πόρτα.** Επιστρέφει handler έτοιμο για `withWebhookRateLimit`. */
+/**
+ * Η πηγή πέρασε τον προϋπολογισμό της ⇒ **429**: «όχι τώρα», ο trigger ξαναδοκιμάζει (`internal-webhook-delivery`).
+ * Απαντά **πριν** από το σύνορο ιδεμποτίας, ώστε η επανάληψη να εκτελεστεί αντί να βρει «ήδη απαντημένο».
+ */
+function overBudget(options: SignedWebhookOptions): NextResponse {
+  logger.warn('Internal webhook over its source budget — the sender will retry', { source: options.source, limit: options.quota.limit });
+  const retryAfter = String(Math.ceil(options.quota.windowMs / 1000));
+  return NextResponse.json({ ok: false, error: 'source_over_budget' }, { status: 429, headers: { 'Retry-After': retryAfter } });
+}
+
+/** **Η πόρτα.** Επιστρέφει handler έτοιμο για `withInternalWebhookRateLimit`. */
 export function withSignedInternalWebhook(
   options: SignedWebhookOptions,
   handler: SignedWebhookHandler,
@@ -91,6 +115,7 @@ export function withSignedInternalWebhook(
     }
     const parsed = parseJson(raw);
     if (!parsed.ok) return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 });
+    if (!(await withinSubjectQuota(SOURCE_QUOTA_SCOPE, options.source, options.quota))) return overBudget(options);
 
     return runIdempotently(request, `internal-webhook:${options.source}`, options.idempotency, async () => {
       try {

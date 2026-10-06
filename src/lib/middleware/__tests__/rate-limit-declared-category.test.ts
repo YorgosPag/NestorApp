@@ -81,6 +81,7 @@ import {
   withSensitiveRateLimit,
   withHeavyRateLimit,
   withWebhookRateLimit,
+  withInternalWebhookRateLimit,
   withTelegramRateLimit,
 } from '../with-rate-limit';
 
@@ -169,7 +170,7 @@ describe('Ρ — η δηλωμένη βαθμίδα', () => {
       .toBe(RATE_LIMIT_CATEGORIES.STANDARD);
   });
 
-  it('🔴 Ρ2 — οι ΕΠΤΑ wrappers δίνουν ΕΠΤΑ διαφορετικά όρια, όχι ένα', async () => {
+  it('🔴 Ρ2 — οι ΟΚΤΩ wrappers δίνουν ΟΚΤΩ διαφορετικά όρια, όχι ένα', async () => {
     const measured: Record<string, number> = {
       ASSET: await limitFor(withAssetRateLimit(handler), '/api/x'),
       HIGH: await limitFor(withHighRateLimit(handler), '/api/x'),
@@ -177,6 +178,7 @@ describe('Ρ — η δηλωμένη βαθμίδα', () => {
       SENSITIVE: await limitFor(withSensitiveRateLimit(handler), '/api/x'),
       HEAVY: await limitFor(withHeavyRateLimit(handler), '/api/x'),
       WEBHOOK: await limitFor(withWebhookRateLimit(handler), '/api/x'),
+      INTERNAL_WEBHOOK: await limitFor(withInternalWebhookRateLimit(handler), '/api/x'),
       TELEGRAM: await limitFor(withTelegramRateLimit(handler), '/api/x'),
     };
 
@@ -189,12 +191,13 @@ describe('Ρ — η δηλωμένη βαθμίδα', () => {
       SENSITIVE: RATE_LIMIT_CATEGORIES.SENSITIVE,
       HEAVY: RATE_LIMIT_CATEGORIES.HEAVY,
       WEBHOOK: RATE_LIMIT_CATEGORIES.WEBHOOK,
+      INTERNAL_WEBHOOK: RATE_LIMIT_CATEGORIES.INTERNAL_WEBHOOK,
       TELEGRAM: RATE_LIMIT_CATEGORIES.TELEGRAM,
     });
 
-    // Και ότι είναι όντως **επτά διακριτά** — μια μελλοντική ισοπέδωση του καταλόγου
+    // Και ότι είναι όντως **οκτώ διακριτά** — μια μελλοντική ισοπέδωση του καταλόγου
     // (δύο βαθμίδες με το ίδιο νούμερο) θα έκανε το παραπάνω πράσινο και άχρηστο.
-    expect(new Set(Object.values(measured)).size).toBe(7);
+    expect(new Set(Object.values(measured)).size).toBe(8);
   });
 
   it('🔴 Ρ3 — ρητό `category` υπερισχύει του πίνακα, ΚΑΙ στις δύο κατευθύνσεις', async () => {
@@ -317,6 +320,6 @@ describe('Κ — ο κατάλογος βαθμίδων', () => {
 
   it('Κ2 — ο τύπος `RateLimitCategory` καλύπτει ΑΚΡΙΒΩΣ τα κλειδιά του καταλόγου', () => {
     const keys = Object.keys(RATE_LIMIT_CATEGORIES) as RateLimitCategory[];
-    expect(keys.length).toBe(7);
+    expect(keys.length).toBe(8);
   });
 });
