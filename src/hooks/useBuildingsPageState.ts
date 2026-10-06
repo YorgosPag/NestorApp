@@ -11,7 +11,7 @@
 import { useCallback } from 'react';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
-import { resolveBuildingById, isArchivedEntity } from './entity-deep-link-sources';
+import { resolveBuildingById, isTrashedEntity } from './entity-deep-link-sources';
 import {
   useEntityPageState,
   type EntityPageStateConfig,
@@ -102,7 +102,7 @@ export function useBuildingsPageState(
     // λίστας (φιλτραρισμένη ή στον κάδο). Ο καλών μπορεί να την
     // παρακάμψει· το `...options` έρχεται ΜΕΤΑ επίτηδες.
     resolveById: resolveBuildingById,
-    isArchived: isArchivedEntity,
+    isArchived: isTrashedEntity,
     // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
     ...options,
     // BUG #5 deep-link: floor search results carry `?floor=<floorId>` so the

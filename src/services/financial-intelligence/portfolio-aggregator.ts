@@ -12,6 +12,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getString, getNumber, getObject } from '@/lib/firestore/field-extractors';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -142,16 +143,19 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
         .where(FIELDS.COMPANY_ID, '==', companyId)
         .get();
 
+      // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν ανήκει στο χαρτοφυλάκιο (ADR-281).
+      const liveDocs = propertiesSnap.docs.filter((doc) => !isRetired(doc.data()));
+
       let projectTotalValue = 0;
       let projectCollected = 0;
-      const projectTotalProperties = propertiesSnap.size;
+      const projectTotalProperties = liveDocs.length;
       let projectSoldProperties = 0;
       let projectCostOfMoneySum = 0;
       let projectCostOfMoneyCount = 0;
       let projectCollectionDaysSum = 0;
       let projectCollectionDaysCount = 0;
 
-      for (const propertyDoc of propertiesSnap.docs) {
+      for (const propertyDoc of liveDocs) {
         const propertyData = propertyDoc.data();
 
         // Extract sale price — try direct fields first, then nested commercial object

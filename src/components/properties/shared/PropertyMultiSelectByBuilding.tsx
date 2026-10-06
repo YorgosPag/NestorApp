@@ -25,6 +25,13 @@ import { useFloorsByBuilding, type FloorOption } from './useFloorsByBuilding';
 import { usePropertiesByBuilding } from './usePropertiesByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
 import { PropertyTypeIcon } from './property-type-icon';
+import {
+  linkedRetiredProperties,
+  liveProperties,
+  propertyOptionLabel,
+  propertyShortLabel,
+} from './linked-retired-properties';
+import { useRetiredBadgeLabel } from './useRetiredBadgeLabel';
 import type { Property } from '@/types/property';
 
 export interface PropertyMultiSelectByBuildingProps {
@@ -70,7 +77,11 @@ export function PropertyMultiSelectByBuilding({
 }: PropertyMultiSelectByBuildingProps) {
   const { t } = useTranslation(['building-tabs']);
   const { floors } = useFloorsByBuilding(buildingId);
-  const { properties, loading } = usePropertiesByBuilding(buildingId);
+  const retiredBadge = useRetiredBadgeLabel();
+  // Φέρνει και τα αποσυρμένα: το δέντρο προσφέρει μόνο τα ζωντανά (`properties`), αλλά ό,τι
+  // είναι ΗΔΗ επιλεγμένο κρατά το chip του — αλλιώς η μέτρηση λέει ψέματα (ADR-329 §3.9).
+  const { properties: allProperties, loading } = usePropertiesByBuilding(buildingId, { includeRetired: true });
+  const properties = useMemo(() => liveProperties(allProperties), [allProperties]);
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -138,8 +149,11 @@ export function PropertyMultiSelectByBuilding({
   }, [selectedSet, onChange]);
 
   const selectedProperties = useMemo(
-    () => properties.filter((p) => selectedSet.has(p.id)),
-    [properties, selectedSet],
+    () => [
+      ...properties.filter((p) => selectedSet.has(p.id)),
+      ...linkedRetiredProperties(allProperties, value),
+    ],
+    [properties, allProperties, selectedSet, value],
   );
 
   if (!buildingId) return null;
@@ -153,6 +167,7 @@ export function PropertyMultiSelectByBuilding({
         labelHeader={t('tabs.measurements.scope.multiSelect.selectedHeader', { count: selectedProperties.length })}
         labelEmpty={t('tabs.measurements.scope.multiSelect.selectedEmpty')}
         labelRemove={t('tabs.measurements.scope.multiSelect.removeChip')}
+        retiredBadge={retiredBadge}
         disabled={disabled}
       />
 
@@ -214,10 +229,14 @@ interface ChipsRowProps {
   labelHeader: string;
   labelEmpty: string;
   labelRemove: string;
+  /** «(αρχειοθετημένο)» για chip αποσυρμένου ακινήτου· κενό για ζωντανό. */
+  retiredBadge: (property: Property) => string;
   disabled: boolean;
 }
 
-function ChipsRow({ selectedProperties, onRemove, labelHeader, labelEmpty, labelRemove, disabled }: ChipsRowProps) {
+function ChipsRow({
+  selectedProperties, onRemove, labelHeader, labelEmpty, labelRemove, retiredBadge, disabled,
+}: ChipsRowProps) {
   return (
     <header className="flex flex-col gap-1.5">
       <p className="text-xs font-semibold text-muted-foreground">{labelHeader}</p>
@@ -237,7 +256,7 @@ function ChipsRow({ selectedProperties, onRemove, labelHeader, labelEmpty, label
                 aria-label={labelRemove}
               >
                 <PropertyTypeIcon type={p.type} className="h-3.5 w-3.5" />
-                <span>{p.code ?? p.name}</span>
+                <span>{propertyShortLabel(p, retiredBadge(p))}</span>
                 <X className="h-3 w-3 opacity-60" />
               </Button>
             </li>
@@ -306,7 +325,7 @@ function FloorGroupRow({
               />
               <label htmlFor={`prop-${p.id}`} className="flex items-center gap-1.5 text-sm cursor-pointer">
                 <PropertyTypeIcon type={p.type} className="h-3.5 w-3.5" />
-                <span>{p.code ? `${p.code} — ${p.name}` : p.name}</span>
+                <span>{propertyOptionLabel(p)}</span>
               </label>
             </li>
           ))}

@@ -47,7 +47,7 @@ export function PropertyArchiveActionsBar({
         view: t('archiveView'),
         back: t('backToList'),
         count: t('archiveCount', { count: archiveCount }),
-        warning: t('archiveExplainer'),
+        warning: `${t('archiveExplainer')} ${t('listingStaysOffMarketNotice')}`,
         restore: t('unarchive'),
         restoreSuccess: (count) => t('unarchiveSuccess', { count }),
         restoreFailed: t('unarchiveFailed'),

@@ -22,6 +22,7 @@ import { useCallback, useMemo } from 'react';
 import type { DocumentData } from 'firebase/firestore';
 import type { RealtimeUnit, SubscriptionStatus } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
 import { useRealtimeEntityEvents } from './use-realtime-entity-events';
 
@@ -61,8 +62,10 @@ interface UseRealtimePropertiesReturn {
 const usePropertiesCollection = createRealtimeCollectionHook<DocumentData, RealtimeUnit>({
   collection: 'PROPERTIES',
   logger,
+  // Η πλοήγηση δείχνει και μετρά μόνο ό,τι είναι στην καθημερινή δουλειά: ό,τι αποσύρθηκε
+  // (κάδος · αρχείο) μένει έξω ΕΔΩ, στην πηγή — όχι σε κάθε καταναλωτή χωριστά (ADR-281).
   mapDocuments: (documents): RealtimeUnit[] =>
-    documents.map((doc) => ({
+    documents.filter((doc) => !isRetired({ status: doc.status as string | undefined })).map((doc) => ({
       id: doc.id,
       name: (doc.name as string) || '',
       buildingId: (doc.buildingId as string) || null,

@@ -11,7 +11,7 @@
 import { useCallback } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 import { defaultParkingFilters, type ParkingFilterState } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
-import { resolveParkingById, isArchivedEntity } from './entity-deep-link-sources';
+import { resolveParkingById, isTrashedEntity } from './entity-deep-link-sources';
 import { matchesSpaceStatusFilters } from '@/lib/spaces/space-availability';
 import { matchesPriceRange } from '@/lib/properties/price-range';
 import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
@@ -94,7 +94,7 @@ export function useParkingPageState(
     // λίστας (φιλτραρισμένη ή στον κάδο). Ο καλών μπορεί να την
     // παρακάμψει· το `...options` έρχεται ΜΕΤΑ επίτηδες.
     resolveById: resolveParkingById,
-    isArchived: isArchivedEntity,
+    isArchived: isTrashedEntity,
     // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
     ...options,
     autoSelectFirstItem: false,

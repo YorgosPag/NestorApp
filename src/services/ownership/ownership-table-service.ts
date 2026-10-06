@@ -21,10 +21,13 @@ import {
   orderBy,
   serverTimestamp,
   runTransaction,
+  type DocumentReference,
+  type Transaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { nowTimestamp } from '@/lib/firestore-now';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import {
   generateOwnershipTableId,
   generateOwnershipRevisionId,
@@ -168,9 +171,11 @@ export async function validateBuildingData(
         where('buildingId', '==', bId),
       ),
     );
-    totalProperties += unitsSnap.size;
+    // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν παίρνει χιλιοστά και δεν μετρά ως ελλιπές (ADR-281).
+    const liveUnitDocs = unitsSnap.docs.filter((unitDoc) => !isRetired(unitDoc.data()));
+    totalProperties += liveUnitDocs.length;
 
-    for (const unitDoc of unitsSnap.docs) {
+    for (const unitDoc of liveUnitDocs) {
       const data = unitDoc.data();
       const area = (data.area as number) ?? (data.areaSqm as number) ?? 0;
       if (area <= 0) unitsWithoutArea++;
@@ -244,6 +249,21 @@ export async function saveTable(
   await setDoc(doc(db, COLLECTIONS.OWNERSHIP_TABLES, id), updateData, { merge: true });
 }
 
+/** Διαβάζει τον πίνακα μέσα σε συναλλαγή· ανύπαρκτος πίνακας είναι σφάλμα, όχι κενό. */
+async function readTableOrThrow(
+  transaction: Transaction,
+  docRef: DocumentReference,
+  tableId: string,
+): Promise<Omit<OwnershipPercentageTable, 'id'>> {
+  const snapshot = await transaction.get(docRef);
+
+  if (!snapshot.exists()) {
+    throw new Error(`Table ${tableId} not found`);
+  }
+
+  return snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
+}
+
 /**
  * Finalize (lock) a table — creates a revision snapshot
  */
@@ -254,13 +274,7 @@ export async function finalizeTable(
   const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
 
   await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(docRef);
-
-    if (!snapshot.exists()) {
-      throw new Error(`Table ${tableId} not found`);
-    }
-
-    const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
+    const currentData = await readTableOrThrow(transaction, docRef, tableId);
 
     // Validate total (only participating rows)
     const total = currentData.rows
@@ -372,13 +386,7 @@ export async function unlockTable(
   const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
 
   await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(docRef);
-
-    if (!snapshot.exists()) {
-      throw new Error(`Table ${tableId} not found`);
-    }
-
-    const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
+    const currentData = await readTableOrThrow(transaction, docRef, tableId);
 
     if (currentData.status !== 'finalized') {
       throw new Error(`Table ${tableId} is not finalized (status: ${currentData.status})`);

@@ -13,6 +13,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type { ProjectInfo, PropertyStats, ProjectWithDetails } from './project-status-types';
@@ -142,18 +143,7 @@ async function resolveProjectInfo(
 
   // Index from collection query
   for (const doc of projectDocs) {
-    const data = doc.data();
-    const status = (data.status as string) ?? null;
-    map.set(doc.id, {
-      projectId: doc.id,
-      name: (data.name ?? data.title ?? 'Χωρίς όνομα') as string,
-      status,
-      statusLabel: status ? (STATUS_LABELS[status] ?? status) : null,
-      address: (data.address as string) ?? null,
-      description: (data.description as string) ?? null,
-      progress: typeof data.progress === 'number' ? data.progress : 0,
-      updatedAt: (data.updatedAt as string) ?? (data.lastModified as string) ?? null,
-    });
+    map.set(doc.id, toProjectInfo(doc.id, doc.data()));
   }
 
   // Fetch missing project docs (referenced by buildings but not in companyId query)
@@ -174,22 +164,50 @@ async function resolveProjectInfo(
         });
         continue;
       }
-      const data = doc.data()!;
-      const status = (data.status as string) ?? null;
-      map.set(doc.id, {
-        projectId: doc.id,
-        name: (data.name ?? data.title ?? 'Χωρίς όνομα') as string,
-        status,
-        statusLabel: status ? (STATUS_LABELS[status] ?? status) : null,
-        address: (data.address as string) ?? null,
-        description: (data.description as string) ?? null,
-        progress: typeof data.progress === 'number' ? data.progress : 0,
-        updatedAt: (data.updatedAt as string) ?? (data.lastModified as string) ?? null,
-      });
+      map.set(doc.id, toProjectInfo(doc.id, doc.data()!));
     }
   }
 
   return map;
+}
+
+/** Ένα έγγραφο έργου → η γραμμή που δείχνει η αναφορά κατάστασης. */
+function toProjectInfo(projectId: string, data: FirebaseFirestore.DocumentData): ProjectInfo {
+  const status = (data.status as string) ?? null;
+  return {
+    projectId,
+    name: (data.name ?? data.title ?? 'Χωρίς όνομα') as string,
+    status,
+    statusLabel: status ? (STATUS_LABELS[status] ?? status) : null,
+    address: (data.address as string) ?? null,
+    description: (data.description as string) ?? null,
+    progress: typeof data.progress === 'number' ? data.progress : 0,
+    updatedAt: (data.updatedAt as string) ?? (data.lastModified as string) ?? null,
+  };
+}
+
+/** Όλα τα έγγραφα μιας συλλογής για μια λίστα κτιρίων — το `in` δέχεται ως BATCH_SIZE τιμές. */
+async function fetchByBuildingBatches(
+  adminDb: FirebaseFirestore.Firestore,
+  collection: string,
+  buildingIds: readonly string[],
+  limitPerBatch: number,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+  const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+
+  for (let i = 0; i < buildingIds.length; i += BATCH_SIZE) {
+    const batch = buildingIds.slice(i, i + BATCH_SIZE);
+    if (batch.length === 0) continue;
+
+    const snapshot = await adminDb
+      .collection(collection)
+      .where(FIELDS.BUILDING_ID, 'in', batch)
+      .limit(limitPerBatch)
+      .get();
+    docs.push(...snapshot.docs);
+  }
+
+  return docs;
 }
 
 async function fetchGanttData(
@@ -200,21 +218,11 @@ async function fetchGanttData(
   const buildingsWithGantt = new Set<string>();
   const ganttPhaseCount = new Map<string, number>();
 
-  for (let i = 0; i < allBuildingIds.length; i += BATCH_SIZE) {
-    const batch = allBuildingIds.slice(i, i + BATCH_SIZE);
-    if (batch.length === 0) continue;
-
-    const snapshot = await adminDb
-      .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-      .where(FIELDS.BUILDING_ID, 'in', batch)
-      .limit(1000)
-      .get();
-
-    for (const doc of snapshot.docs) {
-      const bId = doc.data().buildingId as string;
-      buildingsWithGantt.add(bId);
-      ganttPhaseCount.set(bId, (ganttPhaseCount.get(bId) ?? 0) + 1);
-    }
+  const docs = await fetchByBuildingBatches(adminDb, COLLECTIONS.CONSTRUCTION_PHASES, allBuildingIds, 1000);
+  for (const doc of docs) {
+    const bId = doc.data().buildingId as string;
+    buildingsWithGantt.add(bId);
+    ganttPhaseCount.set(bId, (ganttPhaseCount.get(bId) ?? 0) + 1);
   }
 
   return { buildingsWithGantt, ganttPhaseCount };
@@ -227,33 +235,25 @@ async function fetchPropertyStats(
 ): Promise<Map<string, PropertyStats>> {
   const propertiesByProject = new Map<string, PropertyStats>();
 
-  for (let i = 0; i < allBuildingIds.length; i += BATCH_SIZE) {
-    const batch = allBuildingIds.slice(i, i + BATCH_SIZE);
-    if (batch.length === 0) continue;
+  const docs = await fetchByBuildingBatches(adminDb, COLLECTIONS.PROPERTIES, allBuildingIds, 2000);
+  for (const doc of docs) {
+    const data = doc.data();
+    // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν μετρά στην κατάσταση του έργου (ADR-281).
+    if (isRetired(data)) continue;
+    const bId = data.buildingId as string;
+    const projId = buildingToProject.get(bId);
+    if (!projId) continue;
 
-    const snapshot = await adminDb
-      .collection(COLLECTIONS.PROPERTIES)
-      .where(FIELDS.BUILDING_ID, 'in', batch)
-      .limit(2000)
-      .get();
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const bId = data.buildingId as string;
-      const projId = buildingToProject.get(bId);
-      if (!projId) continue;
-
-      if (!propertiesByProject.has(projId)) {
-        propertiesByProject.set(projId, { total: 0, sold: 0, available: 0, reserved: 0, other: 0 });
-      }
-      const stats = propertiesByProject.get(projId)!;
-      stats.total++;
-      const propertyStatus = ((data.status ?? '') as string).toLowerCase();
-      if (propertyStatus === 'sold' || propertyStatus === 'πωλημένο') stats.sold++;
-      else if (propertyStatus === 'available' || propertyStatus === 'διαθέσιμο') stats.available++;
-      else if (propertyStatus === 'reserved' || propertyStatus === 'κρατημένο') stats.reserved++;
-      else stats.other++;
+    if (!propertiesByProject.has(projId)) {
+      propertiesByProject.set(projId, { total: 0, sold: 0, available: 0, reserved: 0, other: 0 });
     }
+    const stats = propertiesByProject.get(projId)!;
+    stats.total++;
+    const propertyStatus = ((data.status ?? '') as string).toLowerCase();
+    if (propertyStatus === 'sold' || propertyStatus === 'πωλημένο') stats.sold++;
+    else if (propertyStatus === 'available' || propertyStatus === 'διαθέσιμο') stats.available++;
+    else if (propertyStatus === 'reserved' || propertyStatus === 'κρατημένο') stats.reserved++;
+    else stats.other++;
   }
 
   return propertiesByProject;

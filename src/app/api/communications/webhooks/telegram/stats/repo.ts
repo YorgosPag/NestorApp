@@ -4,6 +4,7 @@ import { isFirebaseAvailable } from "../firebase/availability";
 import { getFirestoreHelpers } from "../firebase/helpers-lazy";
 import { safeDbOperation } from "../firebase/safe-op";
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 
 interface PropertySummary {
     totalProperties: number;
@@ -39,6 +40,8 @@ export async function getPropertySummary(): Promise<PropertySummary> {
 
     const properties: PropertyDoc[] = [];
     querySnapshot.forEach((doc) => {
+      // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν μετρά στα σύνολα (ADR-281).
+      if (isRetired(doc.data())) return;
       properties.push({ id: doc.id, ...doc.data() } as PropertyDoc);
     });
 

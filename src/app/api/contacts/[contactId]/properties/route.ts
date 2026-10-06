@@ -3,6 +3,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
@@ -112,9 +113,10 @@ async function loadContactProperties(
     .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
     .get();
 
-  const properties = propertiesSnapshot.docs.map(
-    propDoc => ({ id: propDoc.id, ...propDoc.data() }) as FirestorePropertyData,
-  );
+  // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν μετρά στα ακίνητα της επαφής (ADR-281).
+  const properties = propertiesSnapshot.docs
+    .filter(propDoc => !isRetired(propDoc.data()))
+    .map(propDoc => ({ id: propDoc.id, ...propDoc.data() }) as FirestorePropertyData);
 
   logger.info('Found properties for contact', { count: properties.length, contactId });
   logger.info('Tenant isolation enforced in properties query', { companyId: ctx.companyId });

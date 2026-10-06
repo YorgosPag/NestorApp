@@ -11,7 +11,7 @@
 import { useCallback } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { defaultStorageFilters, type StorageFilterState } from '@/components/core/AdvancedFilters/configs/storageFiltersConfig';
-import { resolveStorageById, isArchivedEntity } from './entity-deep-link-sources';
+import { resolveStorageById, isTrashedEntity } from './entity-deep-link-sources';
 import { matchesSpaceStatusFilters } from '@/lib/spaces/space-availability';
 import { matchesPriceRange } from '@/lib/properties/price-range';
 import { useFloorLabel, type FloorLabelInput } from '@/hooks/useFloorLabel';
@@ -107,7 +107,7 @@ export function useStoragesPageState(
     // λίστας (φιλτραρισμένη ή στον κάδο). Ο καλών μπορεί να την
     // παρακάμψει· το `...options` έρχεται ΜΕΤΑ επίτηδες.
     resolveById: resolveStorageById,
-    isArchived: isArchivedEntity,
+    isArchived: isTrashedEntity,
     // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
     ...options,
     autoSelectFirstItem: false,

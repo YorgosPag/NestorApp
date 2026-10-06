@@ -31,6 +31,11 @@ export interface ArchiveEscapeSpec {
   readonly kind: SoftDeletableEntityType;
   /** Καλείται αφού η εγγραφή μπει στο αρχείο — ο καλών κλείνει τον διάλογο και ανανεώνει. */
   readonly onArchived: (entityId: string) => void;
+  /**
+   * Ό,τι **άλλο** συνεπάγεται η αρχειοθέτηση για αυτή την οντότητα (π.χ. η αγγελία ενός
+   * ακινήτου κατεβαίνει) — ήδη μεταφρασμένο, μπαίνει μετά τη γενική εξήγηση.
+   */
+  readonly consequence?: string;
 }
 
 /** Η τελευταία έξοδος που δόθηκε — ΣΤΑΘΕΡΗ ταυτότητα όσο δεν αλλάζει τίποτα (βλ. `useDependencyGuard`). */
@@ -71,9 +76,10 @@ export function useArchiveEscape(spec: ArchiveEscapeSpec): NonNullable<Dependenc
     const cached = cache.current;
     if (cached && cached.entityId === entityId && cached.pending === archiving) return cached.escape;
 
+    const { consequence } = specRef.current;
     const escape: DeletionBlockedEscape = {
       label: t('archiveInstead'),
-      hint: t('archiveHint'),
+      hint: consequence ? `${t('archiveHint')} ${consequence}` : t('archiveHint'),
       pending: archiving,
       onAction: () => { void archive(entityId); },
     };

@@ -19,6 +19,12 @@ jest.mock('@/lib/telemetry', () => ({
 
 jest.mock('firebase-admin/firestore', () => ({
   FieldValue: { serverTimestamp: () => 'SERVER_TS', delete: () => 'FIELD_DELETE' },
+  Timestamp: { now: () => 'NOW_TS' },
+}));
+
+/** Ο ΕΝΑΣ γραφέας της δημόσιας προβολής — εδώ κρίνεται μόνο ότι η μηχανή τον ΚΑΛΕΙ. */
+jest.mock('@/services/listings/publish-public-listing', () => ({
+  republishListing: jest.fn(async () => 'withdrawn'),
 }));
 
 /** Ο engine εισάγει τον φύλακα διαγραφής, που σέρνει `next/server`. */
@@ -33,7 +39,14 @@ jest.mock('@/services/entity-audit.service', () => ({
 
 import { ApiError } from '@/lib/api/api-error-types';
 import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
-import { archive, listArchived, restoreFromArchive, softDelete } from '../soft-delete-engine';
+import { republishListing } from '@/services/listings/publish-public-listing';
+import {
+  archive,
+  listArchived,
+  restoreFromArchive,
+  restoreFromTrash,
+  softDelete,
+} from '../soft-delete-engine';
 import { ARCHIVED_STATUS, SOFT_DELETE_CONFIG, TRASHED_STATUS } from '../soft-delete-config';
 
 const TENANT = 'comp_1';
@@ -42,15 +55,18 @@ const USER = 'uid_1';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
 const resolveName = resolveUserDisplayName as jest.Mock;
+const republish = republishListing as jest.Mock;
 
 /** Ελάχιστο Firestore για μία εγγραφή: φόρτωση + καταγραφή του τι γράφτηκε. */
 function dbWith(data: Record<string, unknown> | null) {
   const update = jest.fn(async (_payload: Record<string, unknown>) => undefined);
+  const db = {} as FirebaseFirestore.Firestore;
   const docRef = {
     get: async () => ({ exists: data !== null, data: () => data ?? undefined }),
     update,
+    firestore: db,
   };
-  const db = { collection: () => ({ doc: () => docRef }) } as unknown as FirebaseFirestore.Firestore;
+  Object.assign(db, { collection: () => ({ doc: () => docRef }) });
   return { db, update };
 }
 
@@ -68,6 +84,8 @@ async function refusalOf(run: () => Promise<unknown>): Promise<ApiError> {
 beforeEach(() => {
   recordChange.mockClear();
   resolveName.mockClear();
+  republish.mockClear();
+  republish.mockImplementation(async () => 'withdrawn');
 });
 
 describe('archive — ζωντανό → αρχείο', () => {
@@ -228,25 +246,26 @@ describe('εκτελεστής: άνθρωπος ή μηχανή', () => {
 
 describe('restoreFromArchive — αρχείο → ζωντανό', () => {
   it('επιστρέφει στην προηγούμενη κατάσταση και καθαρίζει τις σφραγίδες', async () => {
-    const { db, update } = dbWith({ ...liveProperty, status: ARCHIVED_STATUS, previousStatus: 'for-sale' });
+    const { db, update } = dbWith({ ...liveProperty, status: ARCHIVED_STATUS, previousStatus: 'available' });
 
     await expect(restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT)).resolves.toEqual({
       success: true,
       entityId: PROPERTY_ID,
-      restoredStatus: 'for-sale',
+      restoredStatus: 'available',
     });
 
     expect(update.mock.calls[0][0]).toMatchObject({
-      status: 'for-sale',
+      status: 'available',
       previousStatus: 'FIELD_DELETE',
       archivedAt: 'FIELD_DELETE',
       archivedBy: 'FIELD_DELETE',
       restoredBy: USER,
     });
+    expect(update.mock.calls[0][0]).not.toHaveProperty('commercialStatus');
     expect(recordChange.mock.calls[0][0]).toMatchObject({
       // 🔴 ΟΧΙ `restored`: ο αναγνώστης το διαβάζει «επαναφέρθηκε από τον ΚΑΔΟ».
       action: 'status_changed',
-      changes: [{ field: 'status', oldValue: ARCHIVED_STATUS, newValue: 'for-sale', label: 'status' }],
+      changes: [{ field: 'status', oldValue: ARCHIVED_STATUS, newValue: 'available', label: 'status' }],
     });
   });
 
@@ -265,6 +284,91 @@ describe('restoreFromArchive — αρχείο → ζωντανό', () => {
 
     expect([refused.statusCode, refused.message]).toEqual([409, 'Property is not in archive']);
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('🔴 η δημόσια αγγελία ακολουθεί τον κύκλο ζωής — ΜΙΑ κλήση, κάθε πόρτα', () => {
+  const listed = { ...liveProperty, status: 'active', commercialStatus: 'for-sale' };
+
+  /** Το ακίνητο όπως το παρέλαβε ο γραφέας της προβολής. */
+  const republished = () => republish.mock.calls[0][2] as Record<string, unknown>;
+
+  it('κάδος ⇒ ο γραφέας καλείται με το έγγραφο ΗΔΗ αποσυρμένο', async () => {
+    const { db } = dbWith(listed);
+
+    await softDelete(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(republish).toHaveBeenCalledTimes(1);
+    expect(republish.mock.calls[0].slice(0, 2)).toEqual([db, PROPERTY_ID]);
+    expect(republished()).toMatchObject({ id: PROPERTY_ID, status: TRASHED_STATUS, commercialStatus: 'for-sale' });
+  });
+
+  it('αρχείο ⇒ το ίδιο', async () => {
+    const { db } = dbWith(listed);
+
+    await archive(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(republished()).toMatchObject({ status: ARCHIVED_STATUS });
+  });
+
+  it('ιδεμποτική απόσυρση ⇒ καμία κλήση', async () => {
+    const { db } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'active' });
+
+    await archive(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(republish).not.toHaveBeenCalled();
+  });
+
+  it('επαναφορά από τον ΚΑΔΟ ⇒ γυρίζει όπως ήταν, και ξαναδημοσιεύεται', async () => {
+    const { db, update } = dbWith({ ...listed, status: TRASHED_STATUS, previousStatus: 'active' });
+
+    await restoreFromTrash(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(update.mock.calls[0][0]).not.toHaveProperty('commercialStatus');
+    expect(republished()).toMatchObject({ status: 'active', commercialStatus: 'for-sale' });
+    expect(recordChange.mock.calls[0][0].changes).toHaveLength(1);
+  });
+
+  it('🔴 επαναφορά από το ΑΡΧΕΙΟ ⇒ γυρίζει ΕΚΤΟΣ ΑΓΟΡΑΣ, στην ίδια εγγραφή και στην ίδια γραμμή', async () => {
+    const { db, update } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'active' });
+
+    await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'active', commercialStatus: 'unavailable' });
+    expect(republished()).toMatchObject({ status: 'active', commercialStatus: 'unavailable' });
+    expect(recordChange).toHaveBeenCalledTimes(1);
+    expect(recordChange.mock.calls[0][0].changes).toEqual([
+      { field: 'status', oldValue: ARCHIVED_STATUS, newValue: 'active', label: 'status' },
+      { field: 'commercialStatus', oldValue: 'for-sale', newValue: 'unavailable', label: 'commercialStatus' },
+    ]);
+  });
+
+  it('🔴 παλιό έγγραφο, όπου το `status` ΕΙΝΑΙ η εμπορική κατάσταση ⇒ πάλι εκτός αγοράς', async () => {
+    const { db, update } = dbWith({ ...liveProperty, status: ARCHIVED_STATUS, previousStatus: 'for-sale' });
+
+    await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    // Το `commercialStatus` κερδίζει το `status` στον κριτή ⇒ αρκεί να γραφτεί αυτό.
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'for-sale', commercialStatus: 'unavailable' });
+  });
+
+  it('🔴 αποτυχία της προβολής ΔΕΝ ρίχνει την πράξη', async () => {
+    republish.mockImplementation(async () => {
+      throw new Error('boom');
+    });
+    const { db, update } = dbWith(listed);
+
+    await expect(archive(db, 'property', PROPERTY_ID, USER, TENANT)).resolves.toMatchObject({ success: true });
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  it('οντότητα χωρίς δηλωμένη παρενέργεια ⇒ καμία κλήση', async () => {
+    const { db } = dbWith({ companyId: TENANT, name: 'Κτίριο', status: 'active' });
+
+    await softDelete(db, 'building', 'bld_1', USER, TENANT);
+
+    expect(republish).not.toHaveBeenCalled();
   });
 });
 

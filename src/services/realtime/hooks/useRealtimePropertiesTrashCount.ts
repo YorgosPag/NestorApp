@@ -22,11 +22,12 @@ import { useMemo } from 'react';
 import { where, type QueryConstraint, type DocumentData } from 'firebase/firestore';
 import type { SubscriptionStatus } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { TRASHED_STATUS } from '@/lib/firestore/trashed-status';
 import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
 
 const logger = createModuleLogger('useRealtimePropertiesTrashCount');
 
-const DELETED_CONSTRAINTS: readonly QueryConstraint[] = [where('status', '==', 'deleted')];
+const DELETED_CONSTRAINTS: readonly QueryConstraint[] = [where('status', '==', TRASHED_STATUS)];
 
 export interface UseRealtimePropertiesTrashCountReturn {
   trashCount: number;

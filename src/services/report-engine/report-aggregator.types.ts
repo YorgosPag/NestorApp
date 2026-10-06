@@ -231,6 +231,8 @@ export interface ProjectDoc {
 }
 
 export interface UnitDoc {
+  /** Ο κύκλος ζωής της εγγραφής — τον ρωτά μόνο το `liveUnits` (κάδος · αρχείο μένουν έξω). */
+  status?: string;
   project?: string;
   buildingId?: string;
   type?: string;

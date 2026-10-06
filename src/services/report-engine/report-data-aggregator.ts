@@ -30,7 +30,7 @@ import {
   buildPricePerSqm, buildBOQVariance, buildTopBuyers, computeCompleteness,
   buildOverdueInstallments,
 } from './report-aggregator.helpers';
-import { fetchCompanyUnits } from './report-aggregator.queries';
+import { fetchCompanyUnits, liveUnits } from './report-aggregator.queries';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ReportDataAggregator');
@@ -49,7 +49,7 @@ export class ReportDataAggregator {
     ]);
 
     const contacts = contactsSnap.docs.map(d => ({ id: d.id, ...d.data() as ContactDoc }));
-    const units = unitsSnap.docs.map(d => d.data() as UnitDoc);
+    const units = liveUnits(unitsSnap.docs.map(d => d.data() as UnitDoc));
 
     const inPeriod = contacts.filter(c => {
       if (!filter.dateFrom || !filter.dateTo || !c.createdAt) return false;
@@ -100,7 +100,7 @@ export class ReportDataAggregator {
     ]);
 
     const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() as ProjectDoc }));
-    const units = unitsSnap.docs.map(d => d.data() as UnitDoc);
+    const units = liveUnits(unitsSnap.docs.map(d => d.data() as UnitDoc));
     const buildings = buildingsSnap.docs.map(d => ({ id: d.id, ...d.data() as BuildingDoc }));
     const boqItems = boqSnap.docs.map(d => d.data() as BOQItemDoc);
 

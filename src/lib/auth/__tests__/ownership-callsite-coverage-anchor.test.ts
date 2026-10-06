@@ -189,7 +189,10 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   'lib/auth/resource-ownership-guard.ts',
   'lib/auth/tenant-isolation.ts',
   'lib/firestore/entity-creation.service.ts',
-  'lib/firestore/soft-delete-engine.ts',
+  // Ήταν `lib/firestore/soft-delete-engine.ts`: η φόρτωση + ο έλεγχος μισθωτή βγήκαν στο
+  // `lifecycle-target` όταν η μηχανή απέκτησε το αρχείο (ADR-329 §3.9). Ίδιος έλεγχος, ίδια
+  // κάλυψη (`soft-delete-tenant-concealment.test.ts`) — άλλαξε μόνο το αρχείο που τον κρατά.
+  'lib/firestore/lifecycle-target.ts',
   'services/ai-pipeline/tools/tool-tenant-guard.ts',
   'services/banking/bank-accounts-server.service.ts',
   // ADR-862 Φ0 Β14 — κάθε κρίκος οντότητα → κτίριο → έργο ανήκει στον μισθωτή του ΑΡΧΕΙΟΥ·

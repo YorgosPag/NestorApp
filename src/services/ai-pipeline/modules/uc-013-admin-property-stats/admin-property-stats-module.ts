@@ -23,6 +23,7 @@ import {
 import { isCompanyContactType } from '@/constants/contact-types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -192,6 +193,8 @@ export class AdminPropertyStatsModule implements IUCModule {
 
         for (const doc of propertiesSnapshot.docs) {
           const data = doc.data();
+          // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν μετρά στα στατιστικά (ADR-281).
+          if (isRetired(data)) continue;
           const projectId = (data.projectId as string) ?? 'unknown';
           const projectName = projectMap.get(projectId) ?? 'Χωρίς έργο';
 

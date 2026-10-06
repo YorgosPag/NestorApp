@@ -11,6 +11,7 @@ import { join } from 'node:path';
 
 import {
   isPubliclyListed,
+  offerStateOf,
   buildPublicListing,
   projectListingShape,
   type ProjectableProperty,
@@ -639,6 +640,45 @@ describe('Κ8 — δηλωμένο offerKinds + τελική κατάσταση 
       offerKinds: ['exchange'],
     };
     expect(isPubliclyListed(live)).toBe(true);
+  });
+});
+
+// ============================================================================
+// Κ9 — Ο,ΤΙ ΑΠΟΣΥΡΘΗΚΕ ΔΕΝ ΔΙΑΤΙΘΕΤΑΙ (ADR-281 · ADR-329 §3.9)
+// ============================================================================
+//
+// 🔴 Η μηχανή κύκλου ζωής γράφει **μόνο** το `status` (`deleted` · `archived`)· το
+// `commercialStatus` και το `offerKinds` μένουν ό,τι ήταν. Ο κριτής διάβαζε
+// `commercialStatus ?? status`, άρα **δεν έβλεπε ποτέ** την απόσυρση: ένα ακίνητο «προς
+// πώληση» στον κάδο έμενε στη δημόσια αγορά, και η επανασύνθεση το ξαναδημοσίευε.
+
+describe('Κ9 — ακίνητο στον κάδο ή στο αρχείο ⇒ ΚΑΜΙΑ προβολή', () => {
+  it.each(['deleted', 'archived'] as const)(
+    '⛔ %s με παλιό λεξιλόγιο «for-sale» ⇒ δεν δημοσιεύεται',
+    (status) => {
+      const retired: ProjectableProperty = { ...REAL_MAISONETTE, status };
+      expect(offerStateOf(retired)).toBe('unoffered');
+      expect(isPubliclyListed(retired)).toBe(false);
+      expect(buildPublicListing(retired, NO_PLACE, AT)).toBeNull();
+    }
+  );
+
+  it.each(['deleted', 'archived'] as const)(
+    '⛔ %s με δηλωμένο offerKinds ⇒ δεν δημοσιεύεται (το δεύτερο σκέλος δεν το σώζει)',
+    (status) => {
+      const retired: ProjectableProperty = {
+        id: 'p', type: 'plot', commercialStatus: 'unavailable', offerKinds: ['exchange'], status,
+      };
+      expect(isPubliclyListed(retired)).toBe(false);
+    }
+  );
+
+  it('🔑 ο παρονομαστής: το ΙΔΙΟ ακίνητο με ζωντανό status ΔΗΜΟΣΙΕΥΕΤΑΙ', () => {
+    expect(isPubliclyListed({ ...REAL_MAISONETTE, status: 'active' })).toBe(true);
+  });
+
+  it('το πουλημένο μένει `settled` ακόμη κι αν αποσυρθεί — η ζήτηση ρωτά άλλο πράγμα', () => {
+    expect(offerStateOf({ type: 'apartment', commercialStatus: 'sold', status: 'archived' })).toBe('settled');
   });
 });
 

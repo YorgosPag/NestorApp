@@ -31,6 +31,7 @@ import * as admin from 'firebase-admin';
 
 import { COLLECTIONS } from '../config/firestore-collections';
 import { AGGREGATION_TRIGGER_RUNTIME } from '../config/runtime';
+import { isRetired } from '../generated/lib/firestore/trashed-status';
 
 interface PropertyLevelLike {
   floorId?: unknown;
@@ -56,12 +57,12 @@ function getFloorIdsForProperty(
   return Array.from(ids);
 }
 
-/** Exclude soft-deleted units from the counter (ADR-281). */
+/** Exclude retired units — trash **or archive** — from the counter (ADR-281 · ADR-329 §3.9). */
 function isCountableProperty(
   data: FirebaseFirestore.DocumentData | undefined,
 ): boolean {
   if (!data) return false;
-  if (data.isDeleted === true || data.deletedAt || data.status === 'deleted') {
+  if (data.isDeleted === true || data.deletedAt || isRetired(data)) {
     return false;
   }
   return true;

@@ -77,8 +77,12 @@ export const resolveBuildingById = (id: string): Promise<Building | null> =>
 
 /**
  * Ό,τι έφερε η εφεδρεία δεν ξέρει από ποια λίστα προήλθε — το κρίνει η **μορφή**
- * του. Οι διαδρομές επιστρέφουν **και** τα αρχειοθετημένα επίτηδες, ώστε ο
+ * του. Οι διαδρομές επιστρέφουν **και** όσα είναι στον κάδο επίτηδες, ώστε ο
  * σύνδεσμος να καταλήγει σε **πανό επαναφοράς** αντί για «δεν βρέθηκε».
+ *
+ * ⚠️ Λεγόταν `isArchivedEntity` ενώ ρωτούσε τον **κάδο**. Από τότε που το «αρχείο» είναι
+ * δική του κατάσταση (ADR-329 §3.9) το όνομα θα έλεγε ψέματα· το πεδίο `isArchived` του
+ * κοινού εξαρτήματος κρατά το παλιό του όνομα και αλλάζει μαζί με τη Φάση Β.
  */
-export const isArchivedEntity = (entity: { readonly status?: string | null }): boolean =>
+export const isTrashedEntity = (entity: { readonly status?: string | null }): boolean =>
   isTrashed(entity);

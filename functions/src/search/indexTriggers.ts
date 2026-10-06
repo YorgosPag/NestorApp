@@ -31,6 +31,7 @@ import {
   toCommitVersion,
   type CommitVersion,
 } from '../generated/lib/search/search-index-version';
+import { isRetired } from '../generated/lib/firestore/trashed-status';
 import { applySearchIndexTombstone, applySearchIndexWrite } from './search-index-writer';
 
 // =============================================================================
@@ -80,7 +81,9 @@ function removalReason(
 ): Removal | null {
   if (!change.after.exists) return 'gone';
   const data = change.after.data();
-  if (data && (data.isDeleted === true || data.deletedAt || data.status === 'deleted')) {
+  // `isRetired` = κάδος **ή αρχείο** (ADR-281 · ADR-329 §3.9): ό,τι αποσύρθηκε από την
+  // καθημερινή δουλειά δεν βγαίνει στην αναζήτηση. Η τιμή έρχεται από την προβολή του SSoT.
+  if (data && (data.isDeleted === true || data.deletedAt || isRetired(data))) {
     return 'soft-deleted';
   }
   return null;

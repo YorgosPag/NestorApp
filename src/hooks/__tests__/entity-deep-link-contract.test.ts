@@ -191,9 +191,11 @@ describe('ADR-777 §8.31 — το κοινό εξάρτημα ρωτά, και �
     expect(withoutComments(ssot)).not.toContain('server-only');
 
     const serverConfig = read('src/lib/firestore/soft-delete-config.ts');
-    expect(serverConfig).toContain('export { TRASHED_STATUS } from "./trashed-status"');
+    // Ξαναεξάγεται μαζί με το `ARCHIVED_STATUS` (ADR-329 §3.9) — ό,τι κρίνεται είναι ότι η
+    // τιμή ΕΡΧΕΤΑΙ από το `./trashed-status`, όχι η ακριβής λίστα της γραμμής.
+    expect(serverConfig).toMatch(/export \{[^}]*\bTRASHED_STATUS\b[^}]*\} from "\.\/trashed-status"/);
     // Δεύτερη δήλωση εδώ θα ήταν δεύτερη αλήθεια που μπορεί να αποκλίνει.
-    expect(serverConfig).not.toMatch(/const TRASHED_STATUS\s*=/);
+    expect(serverConfig).not.toMatch(/const (TRASHED|ARCHIVED)_STATUS\s*=/);
   });
 
   // ==========================================================================

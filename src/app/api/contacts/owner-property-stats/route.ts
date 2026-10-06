@@ -38,6 +38,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { mapPropertyDoc } from '@/lib/firestore-mappers';
+import { isRetired, TRASHED_STATUS } from '@/lib/firestore/trashed-status';
 import {
   summarizeByOwner,
   type OwnerPropertyStatsByContact,
@@ -55,15 +56,16 @@ async function loadOwnerStats(
 ): Promise<NextResponse<OwnerPropertyStatsResponse>> {
   const scope = resolveTenantListScopeFromUrl(request.url, ctx);
 
-  // ADR-281: τα διαγραμμένα δεν μετρούν ως ιδιοκτησία — μια επαφή δεν «κατέχει»
-  // ακίνητο που βρίσκεται στον κάδο.
+  // ADR-281: ό,τι αποσύρθηκε δεν μετρά ως ιδιοκτησία — μια επαφή δεν «κατέχει» ακίνητο που
+  // βρίσκεται στον κάδο **ή στο αρχείο**. Το ερώτημα κόβει τον κάδο (ο δείκτης υπάρχει ήδη)·
+  // το αρχείο κόβεται στη μνήμη, όπως στο `/api/properties`.
   const snapshot = await tenantScopedCollection(COLLECTIONS.PROPERTIES, scope)
-    .where('status', '!=', 'deleted')
+    .where('status', '!=', TRASHED_STATUS)
     .get();
 
-  const properties = snapshot.docs.map((doc) =>
-    mapPropertyDoc(doc.id, doc.data() as Record<string, unknown>),
-  );
+  const properties = snapshot.docs
+    .map((doc) => mapPropertyDoc(doc.id, doc.data() as Record<string, unknown>))
+    .filter((property) => !isRetired(property));
 
   const stats = summarizeByOwner(properties);
   const ownerCount = Object.keys(stats).length;

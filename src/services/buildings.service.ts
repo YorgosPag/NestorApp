@@ -5,6 +5,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BuildingStats } from '@/types/building';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRetired } from '@/lib/firestore/trashed-status';
 
 const logger = createModuleLogger('BuildingsService');
 
@@ -29,6 +30,8 @@ export async function getBuildingStats(
 
     unitsSnapshot.forEach(doc => {
       const unit = doc.data();
+      // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν είναι πια ακίνητο του κτιρίου προς μέτρηση (ADR-281).
+      if (isRetired(unit)) return;
       totalProperties++;
       if (unit.status === 'sold') {
         soldProperties++;

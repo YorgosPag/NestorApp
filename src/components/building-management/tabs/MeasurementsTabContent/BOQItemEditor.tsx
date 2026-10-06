@@ -78,7 +78,9 @@ export function BOQItemEditor({
     updateField, handleScopeChange, handleCategoryChange, handleSave,
   } = useBOQEditorState({ open, item, categories, buildingId, projectId, onSave, onClose });
 
-  const { properties } = usePropertiesByBuilding(buildingId, { enabled: open });
+  // Μαζί με τα αποσυρμένα: ακίνητο που η επιμέτρηση ΟΝΟΜΑΖΕΙ μένει στόχος ακόμη κι αν
+  // αρχειοθετήθηκε — το ποια μετρούν το αποφασίζει ο `resolveTargetProperties` (ADR-329 §3.9).
+  const { properties } = usePropertiesByBuilding(buildingId, { enabled: open, includeRetired: true });
 
   const targetProperties = useMemo(
     () => resolveTargetProperties(

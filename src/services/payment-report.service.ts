@@ -11,6 +11,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { createModuleLogger } from '@/lib/telemetry';
 import { formatOwnerNames } from '@/lib/ownership/owner-utils';
 import type { PaymentReportData, PaymentReportRow } from '@/services/payment-export/types';
@@ -73,6 +74,9 @@ export class PaymentReportService {
     let totalOverdueCount = 0;
 
     for (const doc of unitsSnap.docs) {
+      // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν μετρά σε κανένα σύνολο της αναφοράς (ADR-281).
+      if (isRetired(doc.data())) continue;
+
       const unit = { id: doc.id, ...doc.data() } as UnitDoc;
       const summary = unit.commercial?.paymentSummary;
 
@@ -166,7 +170,7 @@ export class PaymentReportService {
       .where('commercial.paymentSummary.overdueInstallments', '>', 0)
       .get();
 
-    return unitsSnap.docs.map(doc => {
+    return unitsSnap.docs.filter(doc => !isRetired(doc.data())).map(doc => {
       const data = doc.data() as UnitDoc;
       const summary = data.commercial?.paymentSummary;
 

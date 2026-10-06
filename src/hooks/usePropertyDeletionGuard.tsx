@@ -34,9 +34,12 @@ export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
   // διάλογος μπλοκαρίσματος προσφέρει το αρχείο. Οι λίστες είναι ζωντανές συνδρομές, άρα μετά
   // την αρχειοθέτηση αρκεί να κλείσει ο διάλογος.
   const closeBlockedRef = useRef<() => void>(() => undefined);
+  // Η αγγελία ακολουθεί τον κύκλο ζωής (ADR-281): ο άνθρωπος το μαθαίνει ΠΡΙΝ πατήσει.
+  const { t: tTrash } = useTranslation('trash');
   const escapeFor = useArchiveEscape({
     kind: 'property',
     onArchived: () => closeBlockedRef.current(),
+    consequence: `${tTrash('listingWithdrawnNotice')} ${tTrash('listingStaysOffMarketNotice')}`,
   });
   const {
     checking,
@@ -109,7 +112,7 @@ export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
           }
         }}
         title={t('deletionGuard.confirm.title')}
-        description={dialogDescription}
+        description={`${dialogDescription} ${tTrash('listingWithdrawnNotice')}`}
         confirmLabel={t('deletionGuard.confirm.action')}
         cancelLabel={t('impactGuard.actions.cancel')}
         onConfirm={() => {
@@ -119,7 +122,7 @@ export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
         variant="destructive"
       />
     </>
-  ), [BlockedDialog, deleting, dialogDescription, handleConfirm, open, reset, t]);
+  ), [BlockedDialog, deleting, dialogDescription, handleConfirm, open, reset, t, tTrash]);
 
   return {
     checking,

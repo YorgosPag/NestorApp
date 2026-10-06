@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/tooltip';
 import type { BOQScope, CostAllocationMethod } from '@/types/boq';
 import type { Property } from '@/types/property';
+import { useRetiredBadgeLabel } from '@/components/properties/shared/useRetiredBadgeLabel';
+import { propertyShortLabel } from '@/components/properties/shared/linked-retired-properties';
 
 const METHODS: CostAllocationMethod[] = ['by_area', 'equal', 'custom'];
 
@@ -44,6 +46,7 @@ export function BOQEditorCostAllocationSection({
 }: BOQEditorCostAllocationSectionProps) {
   const { t } = useTranslation(['building-tabs']);
   const colors = useSemanticColors();
+  const retiredBadge = useRetiredBadgeLabel();
 
   const sum = useMemo(
     () => Object.values(customAllocations).reduce((s, v) => s + v, 0),
@@ -105,7 +108,7 @@ export function BOQEditorCostAllocationSection({
           <ul className="flex flex-col gap-1.5">
             {targetProperties.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
-                <span className="flex-1 text-sm">{p.code ?? p.name}</span>
+                <span className="flex-1 text-sm">{propertyShortLabel(p, retiredBadge(p))}</span>
                 <Input
                   type="number"
                   min="0"

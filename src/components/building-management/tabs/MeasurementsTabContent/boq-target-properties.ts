@@ -11,7 +11,17 @@
 import type { Property } from '@/types/property';
 import type { BOQScope } from '@/types/boq';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
+import { liveProperties } from '@/components/properties/shared/linked-retired-properties';
 
+/**
+ * @param allProperties **όλα** τα ακίνητα του κτιρίου, μαζί με τα αποσυρμένα (κάδος · αρχείο).
+ *
+ * 🔑 Δύο κανόνες, ανάλογα με το **πώς** φτάνει ένα ακίνητο στο εύρος (ADR-329 §3.9):
+ *   - εύρος **συνόλου** (`building` · `common_areas` · `floor`): μόνο τα ζωντανά — ένα
+ *     αποσυρμένο ακίνητο δεν παίρνει μερίδιο από κόστος που δεν το ονόμασε κανείς·
+ *   - εύρος **ρητής αναφοράς** (`property` · `properties`): ό,τι ονομάστηκε **μένει**, ακόμη
+ *     κι αν αρχειοθετήθηκε — αλλιώς το μερίδιό του θα μοιραζόταν σιωπηλά στα υπόλοιπα.
+ */
 export function resolveTargetProperties(
   scope: BOQScope,
   linkedFloorId: string,
@@ -22,9 +32,9 @@ export function resolveTargetProperties(
   switch (scope) {
     case 'building':
     case 'common_areas':
-      return allProperties;
+      return liveProperties(allProperties);
     case 'floor':
-      return linkedFloorId ? propertiesOnFloor(linkedFloorId, allProperties) : [];
+      return linkedFloorId ? propertiesOnFloor(linkedFloorId, liveProperties(allProperties)) : [];
     case 'property': {
       const found = allProperties.find((p) => p.id === linkedUnitId);
       return found ? [found] : [];

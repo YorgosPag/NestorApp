@@ -31,6 +31,7 @@ import { executeDeletion } from "./deletion-guard";
 import { conditionalBlockMessage } from "./deletion-common";
 import { extractEntityName, loadLifecycleTarget, type LifecycleTarget } from "./lifecycle-target";
 import { ARCHIVE, RETIREMENTS, TRASH, type Retirement } from "./lifecycle-retirements";
+import { LIFECYCLE_EFFECTS } from "./lifecycle-effects";
 import { SYSTEM_IDENTITY, isSystemActorId } from "@/config/domain-constants";
 import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
 import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
@@ -39,7 +40,7 @@ import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
 import { ApiError } from "@/lib/api/api-error-types";
 import { createModuleLogger } from "@/lib/telemetry";
 import { getErrorMessage } from "@/lib/error-utils";
-import type { AuditAction, AuditCause } from "@/types/audit-trail";
+import type { AuditAction, AuditCause, AuditFieldChange } from "@/types/audit-trail";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
 const logger = createModuleLogger("SoftDeleteEngine");
@@ -101,7 +102,12 @@ function performerStamps(uid: string, resolvedName: string | null): Record<strin
   };
 }
 
-/** Γράφει τη γραμμή ιστορικού μιας μετάβασης `status`. */
+/**
+ * Γράφει τη γραμμή ιστορικού μιας μετάβασης `status`.
+ *
+ * @param alsoChanged ό,τι άλλο άλλαξε **στην ίδια εγγραφή** (δήλωση της οντότητας,
+ *                    `lifecycle-effects`) — ίδιο γεγονός, ίδια γραμμή
+ */
 function recordStatusTransition(
   entityType: SoftDeletableEntityType,
   entityId: string,
@@ -109,6 +115,7 @@ function recordStatusTransition(
   transition: { action: AuditAction; from: string; to: string },
   actor: LifecycleActor,
   companyId: string,
+  alsoChanged: readonly AuditFieldChange[] = [],
 ): void {
   recordLifecycleAudit({
     entityType,
@@ -117,12 +124,40 @@ function recordStatusTransition(
     action: transition.action,
     changes: [
       { field: "status", oldValue: transition.from, newValue: transition.to, label: "status" },
+      ...alsoChanged,
     ],
     performedBy: actor.uid,
     performedByName: isSystemActorId(actor.uid) ? SYSTEM_IDENTITY.DISPLAY_NAME : (actor.name ?? null),
     ...(actor.cause ? { cause: actor.cause } : {}),
     companyId: (target.data?.companyId as string | undefined) ?? companyId,
   });
+}
+
+/**
+ * Τρέχει ό,τι δήλωσε η οντότητα ότι ακολουθεί μια μετάβαση (π.χ. η δημόσια αγγελία ενός
+ * ακινήτου), με το έγγραφο **όπως είναι πλέον**.
+ *
+ * Awaited: ο άνθρωπος που είδε «επιτυχία» δικαιούται ο κόσμος να έχει ήδη αλλάξει. Αλλά
+ * **δεν πετά ποτέ** — η μετάβαση έγινε, και η αποτυχία μιας παρενέργειας δεν την ακυρώνει.
+ */
+async function settleLifecycleEffects(
+  target: LifecycleTarget,
+  entityType: SoftDeletableEntityType,
+  entityId: string,
+  written: Record<string, unknown>,
+): Promise<void> {
+  const effect = LIFECYCLE_EFFECTS[entityType]?.afterLifecycleChange;
+  if (!effect) return;
+
+  try {
+    await effect(target.docRef.firestore, entityId, { ...target.data, ...written });
+  } catch (err) {
+    logger.error("Lifecycle effect failed (non-blocking)", {
+      entityType,
+      entityId,
+      error: getErrorMessage(err),
+    });
+  }
 }
 
 /**
@@ -173,6 +208,8 @@ async function retire(
     actor,
     companyId,
   );
+
+  await settleLifecycleEffects(target, entityType, entityId, { status: into.status });
 }
 
 /**
@@ -195,9 +232,14 @@ async function reinstate(
   const restoredStatus =
     (target.data.previousStatus as string) || target.config.defaultRestoreStatus;
 
+  // Ό,τι άλλο δηλώνει η οντότητα ότι αλλάζει στην επιστροφή — στην ΙΔΙΑ εγγραφή, ατομικά.
+  const patch =
+    LIFECYCLE_EFFECTS[entityType]?.reinstatePatch?.(from, target.data, restoredStatus) ?? null;
+
   logger.info(`Restoring ${entityType} from ${from.place}`, { entityId, restoredStatus });
 
   await target.docRef.update({
+    ...(patch?.fields ?? {}),
     status: restoredStatus,
     previousStatus: FieldValue.delete(),
     [from.atField]: FieldValue.delete(),
@@ -214,7 +256,13 @@ async function reinstate(
     { action: from.restoreAction, from: from.status, to: restoredStatus },
     actor,
     companyId,
+    patch?.changes,
   );
+
+  await settleLifecycleEffects(target, entityType, entityId, {
+    ...(patch?.fields ?? {}),
+    status: restoredStatus,
+  });
 
   return restoredStatus;
 }

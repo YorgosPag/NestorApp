@@ -8,6 +8,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { arePropertyTypesEquivalent } from '@/constants/property-type-aliases';
 import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
 import type { PropertySearchCriteria } from '@/services/property-search.service';
@@ -87,6 +88,8 @@ export async function queryAvailableUnits(
     const status = (data.status as string) ?? '';
     const operationalStatus = (data.operationalStatus as string) ?? '';
 
+    // Ό,τι αποσύρθηκε (κάδος · αρχείο) δεν προτείνεται ποτέ σε πελάτη (ADR-281).
+    if (isRetired({ status })) continue;
     if (EXCLUDED_STATUSES.has(status)) continue;
     if (operationalStatus && operationalStatus !== 'ready') continue;
 

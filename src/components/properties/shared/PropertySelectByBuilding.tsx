@@ -18,6 +18,12 @@ import { usePropertiesByBuilding } from './usePropertiesByBuilding';
 import { useFloorsByBuilding } from './useFloorsByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
 import { PropertyTypeIcon } from './property-type-icon';
+import {
+  linkedRetiredProperties,
+  liveProperties,
+  propertyOptionLabel,
+} from './linked-retired-properties';
+import { useRetiredBadgeLabel } from './useRetiredBadgeLabel';
 import type { Property } from '@/types/property';
 
 export interface PropertySelectByBuildingProps {
@@ -43,7 +49,9 @@ export function PropertySelectByBuilding({
   id,
 }: PropertySelectByBuildingProps) {
   const { t } = useTranslation(['building-tabs']);
-  const { properties, loading } = usePropertiesByBuilding(buildingId);
+  const retiredBadge = useRetiredBadgeLabel();
+  // Φέρνει και τα αποσυρμένα: ό,τι είναι ΗΔΗ επιλεγμένο πρέπει να φαίνεται με το όνομά του.
+  const { properties, loading } = usePropertiesByBuilding(buildingId, { includeRetired: true });
   const { floors } = useFloorsByBuilding(buildingId);
 
   const floorNameById = useMemo(() => {
@@ -53,14 +61,17 @@ export function PropertySelectByBuilding({
   }, [floors]);
 
   const visibleProperties = useMemo(() => {
-    const base = floorIdContext ? propertiesOnFloor(floorIdContext, properties) : properties;
-    return [...base].sort((a, b) => {
+    const live = liveProperties(properties);
+    const base = floorIdContext ? propertiesOnFloor(floorIdContext, live) : live;
+    const sorted = [...base].sort((a, b) => {
       const fa = a.floor ?? 0;
       const fb = b.floor ?? 0;
       if (fa !== fb) return fa - fb;
       return compareCode(a.code ?? a.name, b.code ?? b.name);
     });
-  }, [properties, floorIdContext]);
+    // Το αποσυρμένο που είναι ήδη επιλεγμένο μπαίνει τελευταίο — ορατό, όχι επιλέξιμο.
+    return [...sorted, ...linkedRetiredProperties(properties, value ? [value] : [])];
+  }, [properties, floorIdContext, value]);
 
   const handleChange = (next: string) => {
     const picked = visibleProperties.find((p) => p.id === next) ?? null;
@@ -78,13 +89,17 @@ export function PropertySelectByBuilding({
         </SelectTrigger>
         <SelectContent>
           {visibleProperties.map((p) => {
-            const code = p.code ?? p.name;
             const floorLabel = floorNameById.get(p.floorId ?? '') ?? '';
+            const badge = retiredBadge(p);
             return (
-              <SelectItem key={p.id} value={p.id}>
+              <SelectItem key={p.id} value={p.id} disabled={badge !== ''}>
                 <span className="flex items-center gap-1.5">
                   <PropertyTypeIcon type={p.type} className="h-4 w-4" />
-                  <span>{code} — {p.name}{floorLabel ? ` (${floorLabel})` : ''}</span>
+                  <span>
+                    {propertyOptionLabel(p)}
+                    {floorLabel ? ` (${floorLabel})` : ''}
+                    {badge ? ` ${badge}` : ''}
+                  </span>
                 </span>
               </SelectItem>
             );

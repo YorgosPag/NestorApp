@@ -23,6 +23,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -162,10 +163,13 @@ export const GET = withStandardRateLimit(async function GET(
           }
           const unitsSnapshot = await unitsQuery.get();
 
-          const units = unitsSnapshot.docs.map(unitDoc => ({
-            id: unitDoc.id,
-            ...unitDoc.data()
-          }));
+          // Το δέντρο του έργου δείχνει ό,τι είναι στην καθημερινή δουλειά — έξω κάδος και αρχείο (ADR-281).
+          const units = unitsSnapshot.docs
+            .filter(unitDoc => !isRetired(unitDoc.data()))
+            .map(unitDoc => ({
+              id: unitDoc.id,
+              ...unitDoc.data()
+            }));
 
           // 📦 STORAGE - Query by buildingId (from migration 006)
           logger.info('Fetching storage for building', { buildingId: building.id });

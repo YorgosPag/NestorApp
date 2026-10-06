@@ -9,6 +9,7 @@
     "lib/dxf/decode-processed-json.ts",
     "lib/files/file-companion-objects.ts",
     "lib/files/file-storage-placement.ts",
+    "lib/firestore/trashed-status.ts",
     "lib/idempotency/event-claim.ts",
     "lib/images/image-dimensions.ts",
     "lib/images/stored-image-dimensions.ts",

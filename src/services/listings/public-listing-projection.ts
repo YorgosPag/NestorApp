@@ -64,6 +64,7 @@ import type { PriceReduction } from '@/types/price-history';
 //    για το γιατί δεν ήταν απλώς «κόψιμο για να περάσει το όριο των 500 γραμμών».
 import { resolveListingPosition } from './public-listing-position';
 import { floorPairOf } from '@/lib/floor/hosted-floor';
+import { isRetired } from '@/lib/firestore/trashed-status';
 
 // ============================================================================
 // ΕΙΣΟΔΟΙ — το συμβόλαιο ζει στο -types.ts (N.7.1), η μηχανή εδώ
@@ -170,6 +171,18 @@ export function offerStateOf(property: OfferStateFacts): OfferState {
   if (typeof status === 'string' && (FINALIZED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
     return 'settled';
   }
+
+  // 🔴 **Ο,ΤΙ ΑΠΟΣΥΡΘΗΚΕ ΔΕΝ ΔΙΑΤΙΘΕΤΑΙ** — κάδος ή αρχείο (ADR-281 · ADR-329 §3.9).
+  //    Η μηχανή κύκλου ζωής γράφει **μόνο** το `status`· το `commercialStatus` και το
+  //    `offerKinds` μένουν ό,τι ήταν. Χωρίς αυτή τη γραμμή, ένα ακίνητο «προς πώληση» που
+  //    μπήκε στον κάδο έμενε `offered` — και η **επανασύνθεση** το ξαναδημοσίευε.
+  //
+  // 🔑 Διαβάζει το **ωμό** `status`, όχι το `commercialStatus ?? status` από πάνω: η
+  //    απόσυρση είναι άξονας **κύκλου ζωής**, όχι εμπορική κατάσταση.
+  //
+  // ⚠️ **Μετά** το `settled`, επίτηδες: ένα πουλημένο ακίνητο μένει πουλημένο για τη
+  //    ζήτηση, ακόμη κι αν κάποτε αποσυρθεί. Για τη δημοσίευση η σειρά είναι αδιάφορη.
+  if (isRetired({ status: property.status })) return 'unoffered';
 
   // 🔴 **ΧΩΡΙΣ ΛΥΜΕΝΟ ΕΙΔΟΣ ΔΕΝ ΔΗΜΟΣΙΕΥΕΤΑΙ** (ADR-842 §7.6.12 / §8 #11 — απόφαση
   //    Giorgio 06/09, δρόμος **Γ′**). Ως τις 2026-09-06 η προβολή έγραφε
