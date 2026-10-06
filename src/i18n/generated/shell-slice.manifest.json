@@ -114,7 +114,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f8c536ce455d90bc750ba32993dcbdc510ff7f19d80397045420425884a87665",
+  "inputsSha256": "941fa41b7129adf922c955c6e0fbfc426fa91893bb7acba1efd631456c209841",
   "languages": [
     "el"
   ],
@@ -215,7 +215,8 @@
     "src/app/(me)/saved-listings/page.tsx": "46dddb724fa23fa246828f74d657916f220833417d809c97ba0e2ce7d19c68de",
     "src/app/(me)/tour-captures/page.tsx": "b0e3fa1c38cf529ec8ab11512ba98d84d6d9b8bbe1166efbc3e5b9dce5985eb4",
     "src/app/(me)/workspace/new/page.tsx": "77a1711b9232d91abfd2ec7ab5e457ce61ab7bc396bc9c0733f70febd340a8f8",
-    "src/auth/account-email-change.ts": "2fc89cecf83dc3a7a7f0cb63dc940f12678f50240cfc739b43ee437d62720985",
+    "src/auth/account-email-change.ts": "63a678bf8365a67d65e5f3c52a4cc675909bee2aed6bf8c3c7601a266618b7bc",
+    "src/auth/account-reauthentication.ts": "4ccdc6b7d0cb4502e4301f8049016a85e82ad3bd50960679056cb2dae0b7b22b",
     "src/auth/components/AuthField.tsx": "872c59716411cba8a3a1af9cd5632c5b5c9f21271d7170bd33b9a7f7a324691e",
     "src/auth/components/AuthForm.tsx": "27ce1777589b1c2d902f07fe92935637669d984c19b0e9a917d4c229520083c5",
     "src/auth/components/GoogleIcon.tsx": "1e014e659a27850966227b415bd53f0b2ce480d0bd4730f03b566fa8de99aca6",
@@ -11866,7 +11867,7 @@
     "src/services/session/session-lifecycle.ts": "6e05268a9397d576e0024f09f7635719365ec99d31291206726bef35c9f3d705",
     "src/services/session/session.types.ts": "74dfb7b28069fa25a27319cd921ff4d09c0e20b278371ef606bc3ee36df13569",
     "src/services/sharing/showcase-surfaces.ts": "468902387af626019d2a1d395c41a60cfb604cc55ece512b4f0f8afbfdb4d8a0",
-    "src/services/two-factor/EnterpriseTwoFactorService.ts": "1f5b41dde53aedc21edf837781c82b82b4a4baa95c48cc9cae454c913610b525",
+    "src/services/two-factor/EnterpriseTwoFactorService.ts": "fe1f2a862813364a2d298108343563a6f57d9e0853a9d9acfb326712e1c7f4df",
     "src/services/two-factor/two-factor-helpers.ts": "4eef9c13bdeb101a43cae7b92010ccb0d0901c1bbf7992749ec307129462c69c",
     "src/services/two-factor/two-factor.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/upload/utils/file-display-name-core.ts": "e65ae649159dd190ba52e715efbe18751e05e54d1c7f056c0bd4631320dfab35",

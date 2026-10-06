@@ -13,6 +13,7 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState, useCallback, useEffect } from 'react';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { RECENT_SIGN_IN_REQUIRED_CODE } from '@/auth/account-reauthentication';
 import { auth, db } from '@/lib/firebase';
 import { twoFactorService } from '@/services/two-factor';
 import type { UserTwoFactorState, TotpSecretInfo } from '@/services/two-factor';
@@ -34,9 +35,14 @@ interface UseTwoFactorEnrollmentParams {
    * πύλη του δείχνει με δικά της λόγια). Δίχτυ ασφαλείας: η πύλη ρωτά **πριν**, αυτό πιάνει ό,τι της ξέφυγε.
    */
   onStartRefused?: () => void;
+  /**
+   * Ο πάροχος ζήτησε **πρόσφατη σύνδεση** (`auth/requires-recent-login`) — δεν είναι αποτυχία, είναι ερώτηση:
+   * ο καλών ανοίγει το βήμα «είστε όντως εσείς;» και ξανακαλεί το `handleStartEnrollment` μετά την επιβεβαίωση.
+   */
+  onIdentityRequired?: () => void;
 }
 
-export function useTwoFactorEnrollment({ userId, onStatusChange, onStartRefused }: UseTwoFactorEnrollmentParams) {
+export function useTwoFactorEnrollment({ userId, onStatusChange, onStartRefused, onIdentityRequired }: UseTwoFactorEnrollmentParams) {
   const { t } = useTranslation(COMMON_NAMESPACES);
 
   // State
@@ -160,6 +166,8 @@ export function useTwoFactorEnrollment({ userId, onStatusChange, onStartRefused 
         setTotpSecret(result.totpSecret);
         setQrCodeDataUrl(result.qrCodeDataUrl);
         setStep('qr_code');
+      } else if (result.errorCode === RECENT_SIGN_IN_REQUIRED_CODE && onIdentityRequired) {
+        onIdentityRequired();
       } else {
         // ⚠️ ΠΟΤΕ το ωμό `result.error`: είναι αγγλικό κείμενο του παρόχου («Firebase: Need to verify email…»).
         setError(t('twoFactor.errors.startFailed'));

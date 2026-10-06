@@ -350,6 +350,18 @@
       "recheck": "I have verified it",
       "rechecking": "Checking…",
       "stillUnverified": "Your email is not verified yet. Follow the link in the message and try again."
+    },
+    "identity": {
+      "title": "Confirm it's you",
+      "body": "It has been a while since you signed in. For your security, enter your password again and setup continues right away.",
+      "signInAgain": "It has been a while since you signed in. Sign out, sign in again and press “Enable” straight away.",
+      "confirm": "Confirm and continue",
+      "confirming": "Checking…",
+      "issues": {
+        "wrong-password": "The password is not correct.",
+        "too-many-attempts": "Too many attempts. Wait a few minutes and try again.",
+        "failed": "Confirmation did not complete. Please try again."
+      }
     }
   },
   "userMenu": {

@@ -37,14 +37,9 @@
  */
 
 import { FirebaseError } from 'firebase/app';
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  verifyBeforeUpdateEmail,
-  type MultiFactorResolver,
-  type User,
-} from 'firebase/auth';
+import { verifyBeforeUpdateEmail, type MultiFactorResolver, type User } from 'firebase/auth';
 
+import { confirmIdentityWithPassword } from '@/auth/account-reauthentication';
 import { normaliseChannelEmail, sameChannelEmail } from '@/lib/contact/channel-email';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isValidEmail } from '@/lib/validation/email-validation';
@@ -74,16 +69,6 @@ export type EmailChangeOutcome =
   | { readonly kind: 'sent'; readonly newEmail: string }
   | { readonly kind: 'second-factor'; readonly resolver: MultiFactorResolver }
   | { readonly kind: 'issue'; readonly issue: EmailChangeIssue };
-
-/**
- * Οι κωδικοί της Firebase για **λάθος κωδικό πρόσβασης** — τρεις, γιατί άλλαξαν με τα
- * χρόνια και η προστασία απαρίθμησης τους ενώνει στο `invalid-credential`.
- */
-const WRONG_PASSWORD_CODES: ReadonlySet<string> = new Set([
-  'auth/wrong-password',
-  'auth/invalid-credential',
-  'auth/invalid-login-credentials',
-]);
 
 function codeOf(error: unknown): string | null {
   return error instanceof FirebaseError ? error.code : null;
@@ -120,13 +105,10 @@ export async function requestAccountEmailChange(
   if (refused !== null) return issue(refused);
   if (user.email === null) return issue('failed');
 
-  try {
-    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
-  } catch (error: unknown) {
-    const resolver = twoFactorService.getMfaResolver(error);
-    if (resolver !== null) return { kind: 'second-factor', resolver };
-    return issue(reauthIssueOf(error));
-  }
+  // 🔑 Η ΜΙΑ επαν-πιστοποίηση (`account-reauthentication.ts`) — την ίδια ζητά και η εγγραφή 2FA.
+  const identity = await confirmIdentityWithPassword(user, password);
+  if (identity.kind === 'second-factor') return { kind: 'second-factor', resolver: identity.resolver };
+  if (identity.kind === 'issue') return issue(identity.issue);
 
   return sendVerificationLink(user, normaliseChannelEmail(rawNewEmail));
 }
@@ -144,14 +126,6 @@ export async function completeEmailChangeWithSecondFactor(
   if (verified.result !== 'success') return issue('failed');
 
   return sendVerificationLink(user, normaliseChannelEmail(rawNewEmail));
-}
-
-function reauthIssueOf(error: unknown): EmailChangeIssue {
-  const code = codeOf(error);
-  if (code !== null && WRONG_PASSWORD_CODES.has(code)) return 'wrong-password';
-  if (code === 'auth/too-many-requests') return 'too-many-attempts';
-  logger.error('Η επαν-πιστοποίηση για αλλαγή email δεν ολοκληρώθηκε', { code });
-  return 'failed';
 }
 
 /**

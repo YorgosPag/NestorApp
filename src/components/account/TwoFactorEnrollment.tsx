@@ -52,6 +52,8 @@ import type { UserTwoFactorState } from '@/services/two-factor';
 import { AccountNotice } from './AccountNotice';
 import { EmailVerificationGate } from './email-verification/EmailVerificationGate';
 import { useEmailVerificationGate } from './email-verification/useEmailVerificationGate';
+import { IdentityConfirmationStep } from './identity-confirmation/IdentityConfirmationStep';
+import { useIdentityConfirmation } from './identity-confirmation/useIdentityConfirmation';
 import { useTwoFactorEnrollment } from './useTwoFactorEnrollment';
 import '@/lib/design-system';
 
@@ -76,6 +78,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const emailGate = useEmailVerificationGate();
+  const identity = useIdentityConfirmation();
 
   const {
     step, setStep, isLoading, error,
@@ -88,7 +91,12 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
     handleComplete, handleCopySecret,
     handleCopyBackupCodes, handleDownloadBackupCodes,
     handleDisable2FA, handleSyncClaims,
-  } = useTwoFactorEnrollment({ userId, onStatusChange, onStartRefused: () => { void emailGate.refresh(); } });
+  } = useTwoFactorEnrollment({
+    userId,
+    onStatusChange,
+    onStartRefused: () => { void emailGate.refresh(); },
+    onIdentityRequired: identity.request,
+  });
 
   // ==========================================================================
   // RENDER STEPS
@@ -100,6 +108,24 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       <EmailVerificationGate gate={emailGate} />
     </CardContent>
   );
+
+  // 🔑 Ο πάροχος ζήτησε πρόσφατη σύνδεση — ζητάμε τον κωδικό ΕΔΩ και η έναρξη συνεχίζει μόνη της.
+  const renderIdentityStep = (prompt: React.ComponentProps<typeof IdentityConfirmationStep>['prompt']) => (
+    <CardContent className={layout.flexColGap4}>
+      <IdentityConfirmationStep
+        prompt={prompt}
+        busy={identity.busy || isLoading}
+        onSubmit={async (password) => { if (await identity.submit(password)) await handleStartEnrollment(); }}
+        onCancel={identity.cancel}
+      />
+    </CardContent>
+  );
+
+  const renderStartStep = () => {
+    if (emailGate.standing === 'unverified') return renderEmailGateStep();
+    if (identity.prompt.kind === 'open') return renderIdentityStep(identity.prompt);
+    return renderInitialStep();
+  };
 
   const renderInitialStep = () => (
     <CardContent className={layout.flexColGap4}>
@@ -361,7 +387,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
         <CardDescription>{t('account.security.twoFactorDescription')}</CardDescription>
       </CardHeader>
 
-      {step === 'initial' && (emailGate.standing === 'unverified' ? renderEmailGateStep() : renderInitialStep())}
+      {step === 'initial' && renderStartStep()}
       {step === 'qr_code' && renderQrCodeStep()}
       {step === 'verify' && renderVerifyStep()}
       {step === 'backup_codes' && renderBackupCodesStep()}

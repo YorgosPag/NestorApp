@@ -145,6 +145,11 @@ export interface StartEnrollmentResult {
   qrCodeDataUrl?: string;
   /** Error message if failed */
   error?: string;
+  /**
+   * Ο **κωδικός** του παρόχου (π.χ. `auth/requires-recent-login`) — η οθόνη αποφασίζει με αυτόν, **ποτέ** με το
+   * αγγλικό κείμενο του `error`.
+   */
+  errorCode?: string;
 }
 
 /**

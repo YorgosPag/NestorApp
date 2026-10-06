@@ -16,38 +16,26 @@ import React from 'react';
 import { MailCheck } from 'lucide-react';
 
 import { AccountNotice } from '@/components/account/AccountNotice';
+import { AccountStepIntro } from '@/components/account/AccountStepIntro';
 import { Button } from '@/components/ui/button';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
-import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import { cn } from '@/lib/design-system';
 
 import { EMAIL_GATE_KEYS, EMAIL_GATE_MAIL_NOTICE } from './email-verification-labels';
 import type { EmailVerificationGate as Gate } from './useEmailVerificationGate';
 
+const TITLE_ID = 'email-gate-title';
+
 export function EmailVerificationGate({ gate }: { readonly gate: Gate }): React.JSX.Element {
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const colors = useSemanticColors();
-  const borders = useBorderTokens();
   const layout = useLayoutClasses();
-  const iconSizes = useIconSizes();
-  const typography = useTypography();
   const { email, mail, recheck } = gate;
   const mailNotice = EMAIL_GATE_MAIL_NOTICE[mail];
 
   return (
-    <section className={layout.flexColGap4} aria-labelledby="email-gate-title">
-      <header className={cn(layout.flexCenterGap2, layout.padding4, borders.radiusClass.md, colors.bg.muted)}>
-        <MailCheck className={cn(iconSizes.lg, colors.text.muted, 'shrink-0')} aria-hidden="true" />
-        <div className={layout.flexColGap2}>
-          <h4 id="email-gate-title" className={cn(typography.body.base, 'font-medium')}>{t(EMAIL_GATE_KEYS.title)}</h4>
-          <p className={cn(typography.body.sm, colors.text.muted)}>{t(EMAIL_GATE_KEYS.body, { email })}</p>
-        </div>
-      </header>
+    <section className={layout.flexColGap4} aria-labelledby={TITLE_ID}>
+      <AccountStepIntro icon={MailCheck} titleId={TITLE_ID} title={t(EMAIL_GATE_KEYS.title)} body={t(EMAIL_GATE_KEYS.body, { email })} />
 
       {mailNotice && <AccountNotice tone={mailNotice.tone}>{t(mailNotice.key, { email })}</AccountNotice>}
       {recheck === 'still-unverified' && <AccountNotice tone="error">{t(EMAIL_GATE_KEYS.stillUnverified)}</AccountNotice>}

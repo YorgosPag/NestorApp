@@ -23,6 +23,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider
 } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { doc, getDoc, updateDoc, Firestore } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 import { qrPngDataUrl } from '@/lib/qr/qr-code';
@@ -270,7 +271,8 @@ export class EnterpriseTwoFactorService {
       logger.error('❌ [2FA] Failed to start enrollment:', error);
       return {
         success: false,
-        error: getErrorMessage(error, 'Failed to generate TOTP secret')
+        error: getErrorMessage(error, 'Failed to generate TOTP secret'),
+        errorCode: error instanceof FirebaseError ? error.code : undefined
       };
     }
   }
