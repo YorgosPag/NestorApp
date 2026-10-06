@@ -2,6 +2,23 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **06/10 — ΠΑΛΙΟ ΛΕΞΙΛΟΓΙΟ ΕΜΠΟΡΙΚΗΣ ΚΑΤΑΣΤΑΣΗΣ ΣΤΟ `status` ΑΚΙΝΗΤΟΥ** *(ADR-777 Α20 · ADR-281 changelog 06/10)*
+
+  Αναγνώστες που ρωτούν `status === 'sold' | 'available' | 'reserved'`, ενώ η εμπορική αλήθεια ζει στο
+  `commercialStatus` (`deriveCommercialStatus` · `offerStateOf`) και το `status` είναι πλέον κύκλος ζωής. Μετρημένο 06/10
+  με `status\s*(===|!==)\s*'(sold|available|reserved)'`: **6 σημεία σε 5 αρχεία** — `api/buildings/[buildingId]/customers`
+  · `api/projects/[projectId]/customers` · `telegram/stats/repo` (3) · `financial-intelligence/portfolio-aggregator` ·
+  `buildings.service`. ⚠️ Το μοτίβο **δεν** πιάνει τα `telegram/search/repo` · `telegram/smart-query` ·
+  `uc-011/project-status-data-fetcher` που ανέφερε το handoff (άλλη γραφή — θέλουν δεύτερο πέρασμα). Άλλη κλάση από τον
+  κύκλο ζωής: θέλει **δικό της σχέδιο** (ένας κριτής εμπορικής κατάστασης, όχι σύγκριση συμβολοσειράς) πριν από κώδικα.
+
+- 🟡 **06/10 — ΠΥΛΗ ΤΗΣ ΚΛΑΣΗΣ «ΑΝΑΓΝΩΣΤΗΣ ΛΙΣΤΑΣ ΑΚΙΝΗΤΩΝ ΡΩΤΑ `isRetired`»: ΔΕΝ ΓΡΑΦΤΗΚΕ** *(ADR-281 changelog 06/10)*
+
+  Σχεδιάστηκε ως module του CHECK 3.7. Μετρήθηκε ότι regex ανά γραμμή βλέπει **38** αρχεία, ενώ τη συλλογή την αγγίζουν
+  **~97** — και χάνει ακριβώς τους αναγνώστες με αλυσίδα πολλών γραμμών (`usePropertiesByBuilding` ·
+  `SharedPropertiesProvider` · `buildings.service` · `owner-property-stats`). Θα ήταν πράσινο που σημαίνει «δεν κοίταξα».
+  Θέλει απόφαση Giorgio: έλεγχος σε επίπεδο AST (νέα πύλη) ή τίποτα.
+
 - 🟡 **05/10 — ΚΟΥΜΠΙΑ-ΕΙΚΟΝΙΔΙΑ ΧΩΡΙΣ ΠΡΟΣΒΑΣΙΜΟ ΟΝΟΜΑ** *(WCAG 4.1.2 · ADR-898 §21.6 Ε10)*
 
   `<Button size="icon">` με μόνο εικονίδιο (+ ίσως tooltip) = ανώνυμο κουμπί: το tooltip **δεν** είναι όνομα. Μετρημένο
