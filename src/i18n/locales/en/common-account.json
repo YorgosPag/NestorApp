@@ -338,6 +338,18 @@
       "verifyFailed": "Invalid verification code",
       "disableFailed": "Failed to disable 2FA",
       "syncFailed": "Failed to sync 2FA permissions"
+    },
+    "emailGate": {
+      "title": "Verify your email first",
+      "body": "Two-factor authentication can only be turned on for an account with a verified email. Open the message we sent to {email} and follow the link.",
+      "resend": "Send the message again",
+      "resending": "Sending…",
+      "sent": "We sent a new message to {email}. Check your spam folder too.",
+      "throttled": "We sent you a message a moment ago. Wait a few minutes before asking for a new one.",
+      "failed": "The message was not sent. Please try again.",
+      "recheck": "I have verified it",
+      "rechecking": "Checking…",
+      "stillUnverified": "Your email is not verified yet. Follow the link in the message and try again."
     }
   },
   "userMenu": {

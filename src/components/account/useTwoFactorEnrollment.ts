@@ -29,9 +29,14 @@ export type EnrollmentStep = 'initial' | 'qr_code' | 'verify' | 'backup_codes' |
 interface UseTwoFactorEnrollmentParams {
   userId: string;
   onStatusChange?: (status: UserTwoFactorState) => void;
+  /**
+   * Ο πάροχος **αρνήθηκε** την έναρξη — ο καλών ξαναρωτά ό,τι θα την εξηγούσε (π.χ. ανεπιβεβαίωτο email, που η
+   * πύλη του δείχνει με δικά της λόγια). Δίχτυ ασφαλείας: η πύλη ρωτά **πριν**, αυτό πιάνει ό,τι της ξέφυγε.
+   */
+  onStartRefused?: () => void;
 }
 
-export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorEnrollmentParams) {
+export function useTwoFactorEnrollment({ userId, onStatusChange, onStartRefused }: UseTwoFactorEnrollmentParams) {
   const { t } = useTranslation(COMMON_NAMESPACES);
 
   // State
@@ -156,10 +161,13 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
         setQrCodeDataUrl(result.qrCodeDataUrl);
         setStep('qr_code');
       } else {
-        setError(result.error || t('twoFactor.errors.startFailed'));
+        // ⚠️ ΠΟΤΕ το ωμό `result.error`: είναι αγγλικό κείμενο του παρόχου («Firebase: Need to verify email…»).
+        setError(t('twoFactor.errors.startFailed'));
+        onStartRefused?.();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('twoFactor.errors.startFailed'));
+    } catch {
+      setError(t('twoFactor.errors.startFailed'));
+      onStartRefused?.();
     } finally {
       setIsLoading(false);
     }

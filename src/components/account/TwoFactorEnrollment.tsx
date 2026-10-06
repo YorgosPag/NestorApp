@@ -49,6 +49,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateShort } from '@/lib/intl-utils';
 import type { UserTwoFactorState } from '@/services/two-factor';
+import { AccountNotice } from './AccountNotice';
+import { EmailVerificationGate } from './email-verification/EmailVerificationGate';
+import { useEmailVerificationGate } from './email-verification/useEmailVerificationGate';
 import { useTwoFactorEnrollment } from './useTwoFactorEnrollment';
 import '@/lib/design-system';
 
@@ -72,6 +75,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
   const layout = useLayoutClasses();
   const iconSizes = useIconSizes();
   const typography = useTypography();
+  const emailGate = useEmailVerificationGate();
 
   const {
     step, setStep, isLoading, error,
@@ -84,11 +88,18 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
     handleComplete, handleCopySecret,
     handleCopyBackupCodes, handleDownloadBackupCodes,
     handleDisable2FA, handleSyncClaims,
-  } = useTwoFactorEnrollment({ userId, onStatusChange });
+  } = useTwoFactorEnrollment({ userId, onStatusChange, onStartRefused: () => { void emailGate.refresh(); } });
 
   // ==========================================================================
   // RENDER STEPS
   // ==========================================================================
+
+  // 🔑 Ο πάροχος αρνείται 2ο παράγοντα σε ανεπιβεβαίωτο email — το λέμε ΠΡΙΝ από το κουμπί, με «στείλτε ξανά».
+  const renderEmailGateStep = () => (
+    <CardContent className={layout.flexColGap4}>
+      <EmailVerificationGate gate={emailGate} />
+    </CardContent>
+  );
 
   const renderInitialStep = () => (
     <CardContent className={layout.flexColGap4}>
@@ -98,6 +109,9 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
           {t('twoFactor.description')}
         </figcaption>
       </figure>
+
+      {/* Μέχρι σήμερα η αποτυχία έναρξης ήταν ΣΙΩΠΗΛΗ: το σφάλμα αποδιδόταν μόνο στο βήμα του κωδικού. */}
+      {error && <AccountNotice tone="error">{error}</AccountNotice>}
 
       <Button onClick={handleStartEnrollment} disabled={isLoading} className="w-full">
         {isLoading ? (
@@ -347,7 +361,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
         <CardDescription>{t('account.security.twoFactorDescription')}</CardDescription>
       </CardHeader>
 
-      {step === 'initial' && renderInitialStep()}
+      {step === 'initial' && (emailGate.standing === 'unverified' ? renderEmailGateStep() : renderInitialStep())}
       {step === 'qr_code' && renderQrCodeStep()}
       {step === 'verify' && renderVerifyStep()}
       {step === 'backup_codes' && renderBackupCodesStep()}

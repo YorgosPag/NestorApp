@@ -27,6 +27,10 @@
   "unarchive": "Restore from archive",
   "unarchiveSuccess": "{count, plural, one {Restored from archive} other {# items restored from archive}}",
   "unarchiveFailed": "Failed to restore from archive",
+  "archivedBadge": "(archived)",
+  "trashedBadge": "(in trash)",
+  "listingWithdrawnNotice": "If it is listed, the listing is taken off the market immediately.",
+  "listingStaysOffMarketNotice": "When restored from the archive, it stays off the market until you publish it again.",
   "softDeleteDialog": {
     "title": "Move to Trash",
     "description": "The item will be removed from active lists but can be restored from trash.",
