@@ -49,6 +49,7 @@ function offMarketOnUnarchive(
         label: 'commercialStatus',
       },
     ],
+    outcome: 'taken-off-market',
   };
 }
 

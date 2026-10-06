@@ -31,7 +31,8 @@ import type {
   ExclusivityValidationResult,
 } from '@/types/brokerage';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import type { InlineFormState, PropertySummary } from './brokerage-form-types';
+import { isRetired } from '@/lib/firestore/trashed-status';
+import { selectableUnits, type InlineFormState, type PropertySummary } from './brokerage-form-types';
 
 // =============================================================================
 // PROPS
@@ -184,8 +185,10 @@ export function BrokerageInlineForm({
               <SelectValue placeholder={t('sales.legal.selectProperty')} />
             </SelectTrigger>
             <SelectContent>
-              {units.map((u) => (
-                <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+              {selectableUnits(units, form.propertyId).map((u) => (
+                <SelectItem key={u.id} value={u.id} disabled={isRetired(u)}>
+                  {propertyNameMap.get(u.id) ?? u.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -14,10 +14,11 @@ import { restoreFromArchive } from '@/lib/firestore/soft-delete-engine';
 export const POST = withStandardRateLimit(createLifecycleMutationRoute({
   permissionOf: (config) => config.archive?.permission,
   run: async ({ db, entityType, entityId, ctx }) => {
-    const { restoredStatus } = await restoreFromArchive(
+    const { restoredStatus, outcomes } = await restoreFromArchive(
       db, entityType, entityId, ctx.uid, ctx.companyId, ctx.email ?? undefined,
     );
-    return { restoredStatus };
+    // `outcomes`: ό,τι άλλο έκανε η επαναφορά (π.χ. «εκτός αγοράς») — η οθόνη το λέει, δεν το μαντεύει.
+    return { restoredStatus, outcomes };
   },
   securityAction: 'restored',
   outcome: (labelEn) => `${labelEn} restored from archive`,

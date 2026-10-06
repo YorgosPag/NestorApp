@@ -21,6 +21,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { useEntityTrashState, type EntityTrashSpec } from '@/hooks/trash/useEntityTrashState';
 import type { Property } from '@/types/property-viewer';
+import type { LifecycleOutcome } from '@/types/soft-deletable';
 
 interface UsePropertiesArchiveStateParams {
   forceDataRefresh: () => void;
@@ -31,7 +32,7 @@ interface UsePropertiesArchiveStateParams {
  * Ο ΕΝΑΣ δρόμος επιστροφής από το αρχείο. Τον ζητά η μηχανή (spec) **και** η μπάρα του αρχείου —
  * ποτέ δεύτερη γραφή του `bulkUnarchive('property', …)`.
  */
-export const unarchiveProperties = (ids: string[]): Promise<void> =>
+export const unarchiveProperties = (ids: string[]): Promise<LifecycleOutcome[]> =>
   TrashService.bulkUnarchive('property', ids);
 
 const PROPERTIES_ARCHIVE_SPEC: EntityTrashSpec<Property> = {

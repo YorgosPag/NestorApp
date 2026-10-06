@@ -30,6 +30,8 @@ import {
   chunkArray,
 } from './report-query-transforms';
 import { nowISO } from '@/lib/date-local';
+import { readFirstDocs } from '@/lib/firestore/live-docs';
+import { isLifecycleCollection } from '@/lib/firestore/soft-delete-config';
 
 const logger = createModuleLogger('ReportQueryExecutor');
 
@@ -289,15 +291,29 @@ async function executeFirestoreQuery(
     query = query.where(clause.fieldPath, clause.opStr, clause.value);
   }
 
+  // Αποσυρμένες εγγραφές (κάδος · αρχείο) δεν είναι γραμμές αναφοράς (ADR-281 · ADR-329 §3.9).
+  const liveOnly = isLifecycleCollection(collection);
+
   // If no 'in' clauses, simple query
   if (inClauses.length === 0) {
-    query = query.orderBy(sortField, sortDirection).limit(limit);
-    const snap = await query.get();
-    return snap.docs.map(docToRow);
+    return fetchRows(query.orderBy(sortField, sortDirection), limit, liveOnly);
   }
 
   // With 'in' clauses — need chunking for >10 values
-  return executeChunkedInQuery(query, inClauses, sortField, sortDirection, limit);
+  return executeChunkedInQuery(query, inClauses, sortField, sortDirection, limit, liveOnly);
+}
+
+/** Οι πρώτες `limit` γραμμές ενός ταξινομημένου ερωτήματος — **ζωντανές** όταν η συλλογή έχει κύκλο ζωής. */
+async function fetchRows(
+  ordered: FirebaseFirestore.Query,
+  limit: number,
+  liveOnly: boolean,
+): Promise<Record<string, unknown>[]> {
+  const docs = await readFirstDocs(ordered, limit, {
+    liveOnly,
+    maxScan: BUILDER_LIMITS.MAX_SERVER_FETCH,
+  });
+  return docs.map(docToRow);
 }
 
 async function executeChunkedInQuery(
@@ -306,6 +322,7 @@ async function executeChunkedInQuery(
   sortField: string,
   sortDirection: 'asc' | 'desc',
   limit: number,
+  liveOnly: boolean,
 ): Promise<Record<string, unknown>[]> {
   // For simplicity, handle first 'in' clause with chunking
   // Additional 'in' clauses become post-filters (rare edge case)
@@ -318,11 +335,9 @@ async function executeChunkedInQuery(
   for (const chunk of chunks) {
     const q = baseQuery
       .where(primaryIn.fieldPath, 'in', chunk)
-      .orderBy(sortField, sortDirection)
-      .limit(limit);
+      .orderBy(sortField, sortDirection);
 
-    const snap = await q.get();
-    allRows.push(...snap.docs.map(docToRow));
+    allRows.push(...await fetchRows(q, limit, liveOnly));
 
     if (allRows.length >= limit) break;
   }

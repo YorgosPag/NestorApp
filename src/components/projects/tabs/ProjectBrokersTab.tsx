@@ -29,6 +29,8 @@ import { BrokerageAgreementCard } from './brokerage/BrokerageAgreementCard';
 import { useBrokerageAgreements } from './brokerage/useBrokerageAgreements';
 import { useGuardedBrokerTerminate } from '@/hooks/useGuardedBrokerTerminate';
 import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
+import { propertyShortLabel } from '@/components/properties/shared/linked-retired-properties';
+import { useRetiredBadgeLabel } from '@/components/properties/shared/useRetiredBadgeLabel';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -68,9 +70,12 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     [runTerminateOperation, hook.handleTerminate],
   );
 
+  // Αποσυρμένο ακίνητο που το αναφέρει σύμβαση φαίνεται με το όνομά του **και** το επίθεμά του
+  // — στην κάρτα, στον επιλογέα και στα μηνύματα αποκλειστικότητας (ADR-329 §3.9).
+  const retiredBadge = useRetiredBadgeLabel();
   const propertyNameMap = useMemo(
-    () => new Map(hook.units.map((u) => [u.id, u.name])),
-    [hook.units]
+    () => new Map(hook.units.map((u) => [u.id, propertyShortLabel({ name: u.name }, retiredBadge(u))])),
+    [hook.units, retiredBadge]
   );
 
   const projectLevel = useMemo(

@@ -82,6 +82,18 @@ describe('Ε — η ροή επαναφοράς', () => {
     expect(mockNotify).toHaveBeenCalledWith('restore-failed', { type: 'error' });
   });
 
+  it('Ε4 — το μήνυμα επιτυχίας παίρνει ό,τι επέστρεψε η υπηρεσία (αρχείο ⇒ «εκτός αγοράς»)', async () => {
+    // ⛔ MUTATION: `successMessage(ids.length)` χωρίς το αποτέλεσμα ⇒ το μήνυμα δεν μαθαίνει τι έγινε ⇒ κόκκινο.
+    const props = renderBar({
+      activeId: 'p1',
+      restore: jest.fn().mockResolvedValue(['taken-off-market']),
+      text: { ...TEXT, restoreSuccess: (count, result) => `restored:${count}:${String(result)}` },
+    });
+    fireEvent.click(restoreButton());
+    await waitFor(() => expect(props.onRefresh).toHaveBeenCalledTimes(1));
+    expect(mockNotify).toHaveBeenCalledWith('restored:1:taken-off-market', { type: 'success' });
+  });
+
   it('Ε3 — η οριστική διαγραφή περνά τα ΙΔΙΑ ids που βλέπει ο χρήστης', () => {
     const props = renderBar({ activeId: 'c9' });
     fireEvent.click(screen.getByRole('button', { name: /permanentDelete/ }));

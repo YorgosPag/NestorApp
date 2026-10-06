@@ -55,7 +55,7 @@ export interface EntityTrashSpec<TItem> {
    * ⚠️ Keep it a stable reference (module-level const): it is a dependency of
    * `handleRestore`.
    */
-  restore?: (ids: string[]) => Promise<void>;
+  restore?: (ids: string[]) => Promise<unknown>;
 }
 
 /** Every trash endpoint answers with the same envelope, under a per-entity key. */

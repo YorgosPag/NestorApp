@@ -13,6 +13,8 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { isLifecycleCollection } from '@/lib/firestore/soft-delete-config';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { greekToLatin, stripDiacritics, stemGreekWord } from '../../shared/greek-nlp';
 import {
   type AgenticContext,
@@ -87,7 +89,11 @@ export async function executeSearchText(
 
     const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
 
+    // Αποσυρμένες εγγραφές (κάδος · αρχείο) δεν είναι αποτέλεσμα αναζήτησης (ADR-281 · ADR-329 §3.9).
+    const hasLifecycle = isLifecycleCollection(collection);
+
     const scored = snap.docs
+      .filter(doc => !(hasLifecycle && isRetired(doc.data())))
       .map(doc => ({ doc, score: scoreDocument(doc.data(), wordVariants) }))
       .filter(entry => entry.score > 0)
       .sort((a, b) => b.score - a.score)

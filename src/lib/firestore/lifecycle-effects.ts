@@ -19,12 +19,14 @@ import "server-only";
 import { propertyLifecycleEffects } from "@/services/property/property-lifecycle-effects";
 import type { Retirement } from "./lifecycle-retirements";
 import type { AuditFieldChange } from "@/types/audit-trail";
-import type { SoftDeletableEntityType } from "@/types/soft-deletable";
+import type { LifecycleOutcome, SoftDeletableEntityType } from "@/types/soft-deletable";
 
 /** Επιπλέον πεδία που γράφονται **στην ίδια** εγγραφή με την επαναφορά, και οι γραμμές τους. */
 export interface ReinstatePatch {
   readonly fields: Record<string, unknown>;
   readonly changes: readonly AuditFieldChange[];
+  /** Τι σημαίνει αυτή η αλλαγή για τον άνθρωπο — φτάνει ως την απάντηση της διαδρομής. */
+  readonly outcome?: LifecycleOutcome;
 }
 
 /** Ό,τι δηλώνει μια οντότητα για τον κύκλο ζωής της. Και τα δύο προαιρετικά. */

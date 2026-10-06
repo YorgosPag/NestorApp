@@ -13,9 +13,9 @@
 import { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { retiredKindOf } from './linked-retired-properties';
-import type { Property } from '@/types/property';
+import type { MaybeTrashed } from '@/lib/firestore/trashed-status';
 
-export function useRetiredBadgeLabel(): (property: Pick<Property, 'status'>) => string {
+export function useRetiredBadgeLabel(): (property: MaybeTrashed) => string {
   const { t } = useTranslation('trash');
 
   return useCallback((property) => {

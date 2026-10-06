@@ -36,6 +36,8 @@ import {
   tenantEqualityFilter,
   withScopedRead,
 } from './firestore-query-plan';
+import { countLive } from './firestore-live-scope';
+import { readFirstDocs } from '@/lib/firestore/live-docs';
 import { nowISO } from '@/lib/date-local';
 
 export class FirestoreHandler implements ToolHandler {
@@ -72,7 +74,7 @@ export class FirestoreHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    return withScopedRead(args, ctx, async ({ collection, filters }, db) => {
+    return withScopedRead(args, ctx, async ({ collection, filters, liveOnly }, db) => {
       const orderBy = typeof args.orderBy === 'string' ? args.orderBy : null;
       const orderDirection = args.orderDirection === 'desc' ? 'desc' : 'asc';
       const limit = Math.min(
@@ -90,11 +92,13 @@ export class FirestoreHandler implements ToolHandler {
         recordQueryStrategy({ collection, failedFilters: nestedDropped.map(f => f.field), failedReason: 'STRIPPED_NESTED_FILTER', successfulFilters: safeFilters.map(f => f.field) }).catch(() => {});
       }
 
-      const snapshot = await this.executeWithFallback(db, collection, safeFilters, orderBy, orderDirection, limit, ctx);
+      const docs = await this.executeWithFallback(
+        db, collection, safeFilters, orderBy, orderDirection, { limit, liveOnly }, ctx,
+      );
 
       const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
 
-      const results = snapshot.docs.map(doc => {
+      const results = docs.map(doc => {
         const raw = redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx);
         let result: Record<string, unknown> = { id: doc.id, ...flattenNestedFields(raw) };
 
@@ -177,29 +181,29 @@ export class FirestoreHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    return withScopedRead(args, ctx, async ({ collection, filters }, db) => {
+    return withScopedRead(args, ctx, async ({ collection, filters, liveOnly }, db) => {
       const safeFilters = filters.filter(f => !f.field.includes('.'));
 
       // Χωρίς `limit`: το `count()` μετρά ΟΛΑ όσα ταιριάζουν, δεν φέρνει έγγραφα.
-      const query = buildFilteredQuery(db, collection, safeFilters, { limit: null });
+      const countOf = async (fs: readonly QueryFilter[]): Promise<number> =>
+        (await buildFilteredQuery(db, collection, fs, { limit: null }).count().get()).data().count;
+      // Αποσυρμένες εγγραφές δεν μετρούν — και στο καταφύγιο (ADR-281 · ADR-329 §3.9).
+      const countMatching = (fs: readonly QueryFilter[]): Promise<number> =>
+        liveOnly ? countLive(countOf, fs) : countOf(fs);
 
       try {
-        const countResult = await query.count().get();
-        return { success: true, data: { count: countResult.data().count }, count: countResult.data().count };
+        const count = await countMatching(safeFilters);
+        return { success: true, data: { count }, count };
       } catch (err) {
         const msg = getErrorMessage(err);
         if (!msg.includes('FAILED_PRECONDITION')) throw err;
         // Το ίδιο «τελευταίο καταφύγιο» με το query path: **ισότητα tenant, πάντα**
         // (βλ. `tenantEqualityFilter` — ο operator του μοντέλου απορρίπτεται εδώ).
         const companyFilter = safeFilters.find(f => f.field === 'companyId');
-        const fallback = buildFilteredQuery(
-          db,
-          collection,
+        const count = await countMatching(
           companyFilter === undefined ? [] : [tenantEqualityFilter(companyFilter)],
-          { limit: null },
         );
-        const fallbackResult = await fallback.count().get();
-        return { success: true, data: { count: fallbackResult.data().count }, count: fallbackResult.data().count };
+        return { success: true, data: { count }, count };
       }
     });
   }
@@ -311,9 +315,10 @@ export class FirestoreHandler implements ToolHandler {
     filters: QueryFilter[],
     orderBy: string | null,
     orderDirection: 'asc' | 'desc',
-    limit: number,
+    read: { readonly limit: number; readonly liveOnly: boolean },
     ctx: AgenticContext,
-  ): Promise<FirebaseFirestore.QuerySnapshot> {
+  ): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+    const { limit } = read;
     const nestedFilters = filters.filter(f => f.field.includes('.'));
     const flatFilters = filters.filter(f => !f.field.includes('.'));
 
@@ -321,10 +326,12 @@ export class FirestoreHandler implements ToolHandler {
 
     for (const attempt of attempts) {
       try {
-        const snapshot = await buildFilteredQuery(db, collection, attempt.filters, {
-          orderBy: attempt.orderBy,
+        // Το όριο το βάζει ο αναγνώστης: μετρά **ζωντανές** εγγραφές σε κάθε βαθμίδα υποχώρησης.
+        const docs = await readFirstDocs(
+          buildFilteredQuery(db, collection, attempt.filters, { orderBy: attempt.orderBy, limit: null }),
           limit,
-        }).get();
+          read,
+        );
         if (attempt.label !== 'full query') {
           logger.warn('Query fallback succeeded', { requestId: ctx.requestId, collection, fallbackLevel: attempt.label });
           const dropped = [...nestedFilters.map(f => f.field), ...(orderBy ? [orderBy] : [])];
@@ -332,7 +339,7 @@ export class FirestoreHandler implements ToolHandler {
             recordQueryStrategy({ collection, failedFilters: dropped, failedReason: 'FAILED_PRECONDITION', successfulFilters: flatFilters.map(f => f.field) }).catch(() => {});
           }
         }
-        return snapshot;
+        return docs;
       } catch (err) {
         const msg = getErrorMessage(err);
         if (!msg.includes('FAILED_PRECONDITION')) throw err;
@@ -342,6 +349,6 @@ export class FirestoreHandler implements ToolHandler {
       }
     }
 
-    return db.collection(collection).limit(limit).get();
+    return readFirstDocs(db.collection(collection), limit, read);
   }
 }

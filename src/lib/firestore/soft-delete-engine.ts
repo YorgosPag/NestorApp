@@ -41,7 +41,7 @@ import { ApiError } from "@/lib/api/api-error-types";
 import { createModuleLogger } from "@/lib/telemetry";
 import { getErrorMessage } from "@/lib/error-utils";
 import type { AuditAction, AuditCause, AuditFieldChange } from "@/types/audit-trail";
-import type { SoftDeletableEntityType } from "@/types/soft-deletable";
+import type { LifecycleOutcome, SoftDeletableEntityType } from "@/types/soft-deletable";
 
 const logger = createModuleLogger("SoftDeleteEngine");
 
@@ -212,6 +212,32 @@ async function retire(
   await settleLifecycleEffects(target, entityType, entityId, { status: into.status });
 }
 
+/** Ό,τι έκανε μια επαναφορά: η κατάσταση στην οποία γύρισε, και ό,τι άλλο τη συνόδευσε. */
+interface Reinstatement {
+  readonly restoredStatus: string;
+  readonly outcomes: readonly LifecycleOutcome[];
+}
+
+/** Η **μία** γραφή της επαναφοράς: κατάσταση, σφραγίδες, και ό,τι δήλωσε η οντότητα — ατομικά. */
+async function writeReinstatement(
+  target: LifecycleTarget,
+  from: Retirement,
+  restoredStatus: string,
+  patchFields: Record<string, unknown>,
+  actor: LifecycleActor,
+): Promise<void> {
+  await target.docRef.update({
+    ...patchFields,
+    status: restoredStatus,
+    previousStatus: FieldValue.delete(),
+    [from.atField]: FieldValue.delete(),
+    [from.byField]: FieldValue.delete(),
+    restoredAt: FieldValue.serverTimestamp(),
+    restoredBy: actor.uid,
+    ...performerStamps(actor.uid, await resolveActorName(actor)),
+  });
+}
+
 /**
  * Επαναφορά: φέρνει την εγγραφή πίσω στην τελευταία ζωντανή της κατάσταση.
  *
@@ -224,7 +250,7 @@ async function reinstate(
   entityId: string,
   actor: LifecycleActor,
   companyId: string,
-): Promise<string> {
+): Promise<Reinstatement> {
   if (target.data?.status !== from.status) {
     throw new ApiError(409, `${target.config.labelEn} is not in ${from.place}`);
   }
@@ -235,19 +261,11 @@ async function reinstate(
   // Ό,τι άλλο δηλώνει η οντότητα ότι αλλάζει στην επιστροφή — στην ΙΔΙΑ εγγραφή, ατομικά.
   const patch =
     LIFECYCLE_EFFECTS[entityType]?.reinstatePatch?.(from, target.data, restoredStatus) ?? null;
+  const patchFields = patch?.fields ?? {};
 
   logger.info(`Restoring ${entityType} from ${from.place}`, { entityId, restoredStatus });
 
-  await target.docRef.update({
-    ...(patch?.fields ?? {}),
-    status: restoredStatus,
-    previousStatus: FieldValue.delete(),
-    [from.atField]: FieldValue.delete(),
-    [from.byField]: FieldValue.delete(),
-    restoredAt: FieldValue.serverTimestamp(),
-    restoredBy: actor.uid,
-    ...performerStamps(actor.uid, await resolveActorName(actor)),
-  });
+  await writeReinstatement(target, from, restoredStatus, patchFields, actor);
 
   recordStatusTransition(
     entityType,
@@ -260,11 +278,11 @@ async function reinstate(
   );
 
   await settleLifecycleEffects(target, entityType, entityId, {
-    ...(patch?.fields ?? {}),
+    ...patchFields,
     status: restoredStatus,
   });
 
-  return restoredStatus;
+  return { restoredStatus, outcomes: patch?.outcome ? [patch.outcome] : [] };
 }
 
 /** Η υπογραφή κάθε επαναφοράς — ίδια για κάδο και αρχείο, γιατί είναι η ίδια πράξη. */
@@ -275,16 +293,16 @@ type RestoreOperation = (
   restoredBy: string,
   companyId: string,
   performedByName?: string,
-) => Promise<{ success: true; entityId: string; restoredStatus: string }>;
+) => Promise<{ success: true; entityId: string } & Reinstatement>;
 
 /** Η επαναφορά από μία απόσυρση. Οι δύο εξαγόμενες επαναφορές είναι αυτή, με άλλο όρισμα. */
 function restoreFrom(from: Retirement): RestoreOperation {
   return async (db, entityType, entityId, restoredBy, companyId, performedByName) => {
     const target = await loadLifecycleTarget(db, entityType, entityId, companyId);
     const actor = { uid: restoredBy, name: performedByName };
-    const restoredStatus = await reinstate(target, from, entityType, entityId, actor, companyId);
+    const reinstatement = await reinstate(target, from, entityType, entityId, actor, companyId);
 
-    return { success: true, entityId, restoredStatus };
+    return { success: true, entityId, ...reinstatement };
   };
 }
 

@@ -213,6 +213,21 @@ export function listArchiveListableEntities(): SoftDeletableEntityType[] {
   );
 }
 
+/** Οι συλλογές των οποίων οι εγγραφές έχουν κύκλο ζωής — παράγεται, δεν απαριθμείται. */
+const LIFECYCLE_COLLECTIONS: ReadonlySet<string> = new Set(
+  Object.values(SOFT_DELETE_CONFIG).map(config => config.collection),
+);
+
+/**
+ * «Μπορεί μια εγγραφή αυτής της συλλογής να είναι αποσυρμένη (κάδος · αρχείο);»
+ *
+ * Το ρωτά κάθε γενικός αναγνώστης που δέχεται **όνομα συλλογής** (κατασκευαστής αναφορών,
+ * εργαλείο ερωτημάτων AI) για να αποφασίσει αν διαβάζει μέσω του `readLiveDocs`.
+ */
+export function isLifecycleCollection(collection: string): boolean {
+  return LIFECYCLE_COLLECTIONS.has(collection);
+}
+
 /** Validate that an entity type is soft-deletable */
 export function isSoftDeletableEntity(
   value: string,

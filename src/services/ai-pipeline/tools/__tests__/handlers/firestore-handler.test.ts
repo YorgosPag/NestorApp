@@ -184,6 +184,77 @@ describe('FirestoreHandler', () => {
   });
 
   // ==========================================================================
+  // Κύκλος ζωής — κάδος και αρχείο δεν είναι απάντηση (ADR-281 · ADR-329 §3.9)
+  // ==========================================================================
+
+  describe('κύκλος ζωής: αποσυρμένες εγγραφές', () => {
+    const seedProperties = () =>
+      mockDb.seedCollection('properties', {
+        'p1': { companyId: 'test-company-001', name: 'Α1', status: 'available' },
+        'p2': { companyId: 'test-company-001', name: 'Α2', status: 'archived' },
+        'p3': { companyId: 'test-company-001', name: 'Α3', status: 'deleted' },
+        'p4': { companyId: 'test-company-001', name: 'Α4', status: 'sold' },
+        'p5': { companyId: 'test-company-001', name: 'Α5' },
+      });
+
+    const namesOf = (result: { data?: unknown }): unknown[] =>
+      (result.data as Array<Record<string, unknown>>).map(row => row.name);
+
+    test('firestore_query: το όριο μετρά ζωντανές — οι αποσυρμένες δεν πιάνουν θέση', async () => {
+      seedProperties();
+
+      const result = await handler.execute('firestore_query', {
+        collection: 'properties', filters: [], orderBy: 'name', limit: 2,
+      }, createAdminContext());
+
+      expect(namesOf(result)).toEqual(['Α1', 'Α4']);
+    });
+
+    test('firestore_query: διαχειριστής που ΟΝΟΜΑΖΕΙ το αρχείο το παίρνει', async () => {
+      seedProperties();
+
+      const result = await handler.execute('firestore_query', {
+        collection: 'properties',
+        filters: [{ field: 'status', operator: '==', value: 'archived' }],
+      }, createAdminContext());
+
+      expect(namesOf(result)).toEqual(['Α2']);
+    });
+
+    test('firestore_count: μετρά μόνο ζωντανές, μαζί με όσες δεν έχουν `status`', async () => {
+      seedProperties();
+
+      const result = await handler.execute('firestore_count', {
+        collection: 'properties', filters: [],
+      }, createAdminContext());
+
+      expect((result.data as { count: number }).count).toBe(3);
+    });
+
+    test('search_text: αποσυρμένο ακίνητο δεν είναι αποτέλεσμα', async () => {
+      seedProperties();
+
+      const result = await handler.execute('search_text', {
+        searchTerm: 'Α2', collections: ['properties'],
+      }, createAdminContext());
+
+      expect((result.data as Record<string, unknown[]>).properties ?? []).toEqual([]);
+    });
+
+    test('συλλογή ΧΩΡΙΣ κύκλο ζωής: το `archived` είναι δική της τιμή και μένει', async () => {
+      mockDb.seedCollection('tasks', {
+        't1': { companyId: 'test-company-001', title: 'x', status: 'archived' },
+      });
+
+      const result = await handler.execute('firestore_count', {
+        collection: 'tasks', filters: [],
+      }, createAdminContext());
+
+      expect((result.data as { count: number }).count).toBe(1);
+    });
+  });
+
+  // ==========================================================================
   // firestore_write — Security + FINDING-006, FINDING-007
   // ==========================================================================
 

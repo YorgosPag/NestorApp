@@ -112,6 +112,9 @@ export function useBrokerageAgreements(
       const list: PropertySummary[] = snap.docs.map((d) => ({
         id: d.id,
         name: (d.data().name as string) || (d.data().propertyName as string) || d.id,
+        // Όλα τα ακίνητα, και τα αποσυρμένα: οι υπάρχουσες συμβάσεις τα ονομάζουν. Τι από
+        // αυτά **προσφέρεται** το αποφασίζει το `selectableUnits`.
+        status: (d.data().status as string | undefined) ?? null,
       }));
       setUnits(list);
     } catch {

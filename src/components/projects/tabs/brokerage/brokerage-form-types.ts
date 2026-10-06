@@ -9,6 +9,10 @@
 
 import type { ExclusivityType, CommissionType } from '@/types/brokerage';
 import { nowISO } from '@/lib/date-local';
+import {
+  linkedRetiredProperties,
+  liveProperties,
+} from '@/components/properties/shared/linked-retired-properties';
 
 // =============================================================================
 // TYPES
@@ -31,6 +35,22 @@ export interface InlineFormState {
 export interface PropertySummary {
   id: string;
   name: string;
+  /** Κύκλος ζωής — αποσυρμένο ακίνητο (κάδος · αρχείο) φαίνεται, δεν προσφέρεται (ADR-329 §3.9). */
+  status: string | null;
+}
+
+/**
+ * Τι δείχνει ο επιλογέας ακινήτου: τα ζωντανά, και — τελευταίο — το αποσυρμένο που η
+ * σύμβαση **ήδη** αναφέρει, ώστε το πεδίο να μη φαίνεται άδειο.
+ */
+export function selectableUnits(
+  units: readonly PropertySummary[],
+  linkedPropertyId: string,
+): PropertySummary[] {
+  return [
+    ...liveProperties(units),
+    ...linkedRetiredProperties(units, linkedPropertyId ? [linkedPropertyId] : []),
+  ];
 }
 
 // =============================================================================

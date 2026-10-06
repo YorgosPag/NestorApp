@@ -55,11 +55,14 @@ export interface AdminBatchResult<T> {
  * @param queryRef  - `adminDb.collection(...)` or `.where(...)` chain
  * @param batchSize - Documents per round-trip (default BATCH_SIZE_READ)
  * @param onBatch   - Called with each batch's docs. Return value is accumulated.
+ * @param shouldStop - Asked after each batch; `true` ends the scan early. For readers that
+ *                     need "the first N that qualify", not the whole collection (`live-docs`).
  */
 export async function processAdminBatch<T = void>(
   queryRef: AdminCollectionReference<AdminDocumentData> | AdminQuery<AdminDocumentData>,
   batchSize: number,
   onBatch: (docs: AdminQuerySnapshot<AdminDocumentData>['docs']) => T | Promise<T>,
+  shouldStop?: () => boolean,
 ): Promise<AdminBatchResult<T>> {
   let lastDoc: AdminDocumentSnapshot<AdminDocumentData> | undefined;
   let totalProcessed = 0;
@@ -82,6 +85,7 @@ export async function processAdminBatch<T = void>(
 
     // If we got fewer than batchSize, we've reached the end
     if (snapshot.size < batchSize) break;
+    if (shouldStop?.()) break;
   }
 
   return { totalProcessed, results };

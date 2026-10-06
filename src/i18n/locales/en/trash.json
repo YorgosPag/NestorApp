@@ -26,6 +26,7 @@
   "archiveFailed": "Failed to archive",
   "unarchive": "Restore from archive",
   "unarchiveSuccess": "{count, plural, one {Restored from archive} other {# items restored from archive}}",
+  "unarchiveSuccessOffMarket": "{count, plural, one {Restored from archive. It stays off the market until you publish it again.} other {# items restored from archive. Those that were listed stay off the market until you publish them again.}}",
   "unarchiveFailed": "Failed to restore from archive",
   "archivedBadge": "(archived)",
   "trashedBadge": "(in trash)",

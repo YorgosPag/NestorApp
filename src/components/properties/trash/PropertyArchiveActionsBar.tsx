@@ -49,7 +49,11 @@ export function PropertyArchiveActionsBar({
         count: t('archiveCount', { count: archiveCount }),
         warning: `${t('archiveExplainer')} ${t('listingStaysOffMarketNotice')}`,
         restore: t('unarchive'),
-        restoreSuccess: (count) => t('unarchiveSuccess', { count }),
+        // Ο διακομιστής λέει αν κάποιο γύρισε εκτός αγοράς — το μήνυμα το λέει ρητά.
+        restoreSuccess: (count, outcomes) =>
+          outcomes.includes('taken-off-market')
+            ? t('unarchiveSuccessOffMarket', { count })
+            : t('unarchiveSuccess', { count }),
         restoreFailed: t('unarchiveFailed'),
       }}
     />

@@ -19,10 +19,11 @@ import { TrashActionsBar, type TrashNoticeTone } from '@/components/shared/trash
 import { useTrashBarRestore } from '@/components/shared/trash/useTrashBarRestore';
 
 /** Τα κείμενα ανά οντότητα — ήδη μεταφρασμένα, από το namespace της. */
-export interface EntityTrashText {
+export interface EntityTrashText<TResult = unknown> {
   readonly back: string;
   readonly warning: string;
-  readonly restoreSuccess: (count: number) => string;
+  /** Το δεύτερο όρισμα είναι ό,τι επέστρεψε το `restore` της οντότητας (βλ. `useTrashBarRestore`). */
+  readonly restoreSuccess: (count: number, result: TResult) => string;
   readonly restoreFailed: string;
   /**
    * Υπέρβαση των ΓΕΝΙΚΩΝ κειμένων του namespace `trash` — μόνο όταν ο κάδος δεν είναι κάδος (αρχείο: «Αρχείο»,
@@ -33,7 +34,7 @@ export interface EntityTrashText {
   readonly restore?: string;
 }
 
-export interface EntityTrashActionsBarProps {
+export interface EntityTrashActionsBarProps<TResult = unknown> {
   readonly selectedIds: string[];
   /** Το στοιχείο του πάνελ λεπτομερειών — ο στόχος όταν δεν υπάρχει πολλαπλή επιλογή. */
   readonly activeId?: string | null;
@@ -46,8 +47,8 @@ export interface EntityTrashActionsBarProps {
   readonly noticeTone?: TrashNoticeTone;
   readonly trashCount: number;
   readonly entity: string;
-  readonly restore: (ids: string[]) => Promise<unknown>;
-  readonly text: EntityTrashText;
+  readonly restore: (ids: string[]) => Promise<TResult>;
+  readonly text: EntityTrashText<TResult>;
 }
 
 /** Σε ποια ids δρα η μπάρα: τα επιλεγμένα, αλλιώς το ενεργό, αλλιώς κανένα. */
@@ -56,7 +57,7 @@ export function effectiveTrashIds(selectedIds: string[], activeId: string | null
   return activeId ? [activeId] : [];
 }
 
-export function EntityTrashActionsBar({
+export function EntityTrashActionsBar<TResult = unknown>({
   selectedIds,
   activeId,
   onBack,
@@ -67,7 +68,7 @@ export function EntityTrashActionsBar({
   entity,
   restore,
   text,
-}: EntityTrashActionsBarProps) {
+}: EntityTrashActionsBarProps<TResult>) {
   // Ό,τι μένει μετά τα δύο μηνύματα ροής είναι ΑΚΡΙΒΩΣ οι ετικέτες της διάταξης (back/warning + τυχόν υπερβάσεις).
   const { restoreSuccess, restoreFailed, ...labels } = text;
   const runRestore = useTrashBarRestore({

@@ -7,12 +7,14 @@
 
 import { apiClient } from "@/lib/api/enterprise-api-client";
 import { API_ROUTES } from "@/config/domain-constants";
-import type { SoftDeletableEntityType } from "@/types/soft-deletable";
+import type { LifecycleOutcome, SoftDeletableEntityType } from "@/types/soft-deletable";
 
 interface RestoreResponse {
   entityType: string;
   entityId: string;
   restoredStatus: string;
+  /** Ό,τι άλλο έκανε η επαναφορά (π.χ. «εκτός αγοράς») — το δηλώνει ο διακομιστής. */
+  outcomes?: LifecycleOutcome[];
 }
 
 interface PermanentDeleteResponse {
@@ -71,12 +73,18 @@ export class TrashService {
     );
   }
 
-  /** Επαναφορά πολλών εγγραφών από το αρχείο */
+  /**
+   * Επαναφορά πολλών εγγραφών από το αρχείο.
+   *
+   * @returns ό,τι άλλο έκανε η επαναφορά, μία τιμή ανά εγγραφή που το έπαθε — ώστε το
+   *          μήνυμα επιτυχίας να λέει τι συνέβη, όχι μόνο «επαναφέρθηκε»
+   */
   static async bulkUnarchive(
     entityType: SoftDeletableEntityType,
     ids: string[],
-  ): Promise<void> {
-    await Promise.all(ids.map((id) => TrashService.unarchive(entityType, id)));
+  ): Promise<LifecycleOutcome[]> {
+    const responses = await Promise.all(ids.map((id) => TrashService.unarchive(entityType, id)));
+    return responses.flatMap((response) => response.outcomes ?? []);
   }
 
   /** Permanently delete multiple entities */

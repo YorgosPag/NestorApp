@@ -45,6 +45,8 @@ import {
   mapOperator,
   coerceFilterValue,
 } from '../executor-shared';
+import { isLifecycleCollection } from '@/lib/firestore/soft-delete-config';
+import { retiredStatusNamed } from './firestore-live-scope';
 
 /** Ταξινόμηση αποτελεσμάτων — `null` σημαίνει «μη ζητηθείσα ή εγκαταλειμμένη». */
 export interface QueryOrder {
@@ -134,12 +136,12 @@ export function buildFallbackAttempts(spec: {
  * αγνοώντας την άρνηση.
  */
 export type ScopedReadPlan =
-  | { readonly ok: true; readonly collection: string; readonly filters: QueryFilter[] }
+  | ({ readonly ok: true } & ApprovedRead)
   | { readonly ok: false; readonly result: ToolResult };
 
 /**
  * Η αλυσίδα ασφαλείας κάθε ανάγνωσης, με **τη σειρά που έχει σημασία**:
- * επιτρεπτή συλλογή → RBAC ρόλου → tenant scope.
+ * επιτρεπτή συλλογή → RBAC ρόλου → tenant scope → κύκλος ζωής.
  *
  * Η σειρά δεν είναι στιλιστική: το `enforceRoleAccess` κρίνει τα φίλτρα **όπως
  * τα έστειλε το μοντέλο**, και το `enforceCompanyScope` επιβάλλει τον tenant
@@ -157,6 +159,12 @@ export function planScopedRead(
 export interface ApprovedRead {
   readonly collection: string;
   readonly filters: QueryFilter[];
+  /**
+   * Η ανάγνωση βλέπει **μόνο ζωντανές** εγγραφές (όχι κάδο · αρχείο, ADR-281 · ADR-329 §3.9).
+   * `false` μόνο όταν η συλλογή δεν έχει κύκλο ζωής, ή διαχειριστής ζήτησε **ρητά**
+   * αποσυρμένη κατάσταση. Ο handler οφείλει να το τηρήσει σε **κάθε** βαθμίδα υποχώρησης.
+   */
+  readonly liveOnly: boolean;
 }
 
 /**
@@ -180,7 +188,8 @@ export async function withScopedRead(
   const plan = planScopedReadImpl(args, ctx);
   if (!plan.ok) return plan.result;
 
-  return run({ collection: plan.collection, filters: plan.filters }, getAdminFirestore());
+  const { collection, filters, liveOnly } = plan;
+  return run({ collection, filters, liveOnly }, getAdminFirestore());
 }
 
 function planScopedReadImpl(
@@ -201,9 +210,17 @@ function planScopedReadImpl(
   const accessCheck = enforceRoleAccess(collection, rawFilters, ctx);
   if (!accessCheck.allowed) return { ok: false, result: accessCheck.result };
 
+  // Κύκλος ζωής — κρίνεται στα φίλτρα **όπως τα έστειλε το μοντέλο**, όπως και το RBAC.
+  const hasLifecycle = isLifecycleCollection(collection);
+  const asksForRetired = hasLifecycle && retiredStatusNamed(rawFilters);
+  if (asksForRetired && !ctx.isAdmin) {
+    return { ok: false, result: { success: false, error: 'Δεν έχετε πρόσβαση σε αυτά τα δεδομένα.' } };
+  }
+
   return {
     ok: true,
     collection,
     filters: enforceCompanyScope(accessCheck.filters, ctx.companyId, collection),
+    liveOnly: hasLifecycle && !asksForRetired,
   };
 }

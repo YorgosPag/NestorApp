@@ -12,28 +12,38 @@
  * @enterprise ADR-281 · ADR-329 §3.9
  */
 
-import { isArchived, isRetired, isTrashed } from '@/lib/firestore/trashed-status';
+import {
+  isArchived,
+  isRetired,
+  isTrashed,
+  type MaybeTrashed,
+} from '@/lib/firestore/trashed-status';
 import type { Property } from '@/types/property';
 
 /** Γιατί ένα ακίνητο δεν προσφέρεται πια — `null` για ζωντανό. */
 export type RetiredKind = 'archived' | 'trashed';
 
-export function retiredKindOf(property: Pick<Property, 'status'>): RetiredKind | null {
+export function retiredKindOf(property: MaybeTrashed): RetiredKind | null {
   if (isArchived(property)) return 'archived';
   if (isTrashed(property)) return 'trashed';
   return null;
 }
 
-/** Τα ακίνητα που προσφέρονται για **νέα** επιλογή. */
-export function liveProperties(all: readonly Property[]): Property[] {
+/**
+ * Τα ακίνητα που προσφέρονται για **νέα** επιλογή.
+ *
+ * Γενικό στο σχήμα της γραμμής: ο επιλογέας μεσιτείας κρατά μόνο `{ id, name, status }`,
+ * και η ερώτηση είναι η ίδια.
+ */
+export function liveProperties<T extends MaybeTrashed>(all: readonly T[]): T[] {
   return all.filter((property) => !isRetired(property));
 }
 
 /** Τα αποσυρμένα που **είναι ήδη συνδεδεμένα** — φαίνονται, δεν ξαναεπιλέγονται. */
-export function linkedRetiredProperties(
-  all: readonly Property[],
+export function linkedRetiredProperties<T extends MaybeTrashed & { readonly id: string }>(
+  all: readonly T[],
   linkedIds: readonly string[],
-): Property[] {
+): T[] {
   if (linkedIds.length === 0) return [];
   const linked = new Set(linkedIds);
   return all.filter((property) => isRetired(property) && linked.has(property.id));
