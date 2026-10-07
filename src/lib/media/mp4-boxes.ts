@@ -320,7 +320,9 @@ export function planFastStart(inspection: Extract<Mp4Inspection, { ok: true }>):
 
   const moovBox = boxes.find((box) => box.type === 'moov') as Mp4TopBox;
   const insertAt = (boxes.find((box) => box.type === 'mdat') as Mp4TopBox).offset;
-  const moved = moov.slice();
+  // ⚠️ `Uint8Array.from`, ΟΧΙ `.slice()`: σε `Buffer` του Node το `slice` επιστρέφει **όψη** της ίδιας μνήμης, και η
+  //    μετατόπιση θα αλλοίωνε το `moov` του καλούντος (άγκυρα Φ4).
+  const moved = Uint8Array.from(moov);
   shiftChunkOffsets(moved, insertAt, moovBox.offset, moovBox.size);
 
   const segments: Mp4Segment[] = [

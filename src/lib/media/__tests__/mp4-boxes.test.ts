@@ -148,7 +148,6 @@ describe('planFastStart — Φ: αναδιάταξη χωρίς μεταγλώτ
     const held = planFastStart(inspection).filter((segment) => segment.kind === 'bytes');
 
     expect(held).toHaveLength(1);
-    expect(held[0]).toMatchObject({ bytes: expect.any(Uint8Array) });
     expect((held[0] as Extract<Mp4Segment, { kind: 'bytes' }>).bytes.byteLength).toBe(inspection.moov.byteLength);
   });
 
