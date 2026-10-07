@@ -30,6 +30,13 @@ import React, { Suspense } from 'react';
 
 import { AuthActionContent } from '@/auth';
 import { StaticPageLoading } from '@/core/states';
+// 🔴 ADR-744 §18 — το slice της διαδρομής, στατικά και σε εμβέλεια module (ίδιο ιδίωμα με το `/login`).
+// Χωρίς αυτό ο διακομιστής έβαφε ωμό `action.titles.*` και η ενυδάτωση αποτύγχανε (ADR-851 Φ2, 2026-10-06).
+// ⚠️ ΠΟΤΕ `import()`, ΠΟΤΕ σε Server Component.
+import routeSlice from '@/i18n/generated/routes/auth__action.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export default function AuthActionPage() {
   return (

@@ -306,6 +306,18 @@
       ],
       "reason": "ADR-896 §8 (2026-10-01) — η ΜΟΝΗ δυναμική κλήση είναι `t(GROUP_KEYS[group])`, και το `GROUP_KEYS` είναι `Record<OccupationFamilyGroup, string>` — ΟΛΙΚΟΣ πίνακας πάνω στην ΚΛΕΙΣΤΗ ένωση `OCCUPATION_FAMILY_GROUPS` (`config/occupation-families.ts`, `as const`) δύο σκελών, με ΔΥΟ ΚΥΡΙΟΛΕΚΤΙΚΑ κλειδιά του `DIRECTORY_KEYS`, και τα δύο εδώ. Τρίτη ομάδα ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — ίδιο σκεπτικό με το `AgencyDirectoryFilters.tsx`. ⛔ ΟΧΙ πρόθεμα-σκούπα: το `property-market` ΔΕΝ είναι guaranteed. ⚠️ Ξαναεπαλήθευσέ το αν προστεθεί ομάδα."
     },
+    "src/auth/components/auth-action-errors.ts": {
+      "keys": [
+        "auth:action.errors.invalidCode",
+        "auth:action.errors.expiredCode",
+        "auth:action.errors.userNotFound",
+        "auth:action.errors.weakPassword",
+        "auth:action.errors.networkError",
+        "auth:action.errors.emailInUse",
+        "auth:action.errors.generic"
+      ],
+      "reason": "ADR-851 Φ2 — ΜΕΤΡΗΜΕΝΟ 2026-10-07. Η ΜΟΝΗ δυναμική κλήση είναι `t(key ?? GENERIC_ERROR_KEY)` στο `mapFirebaseError`: το `key` βγαίνει από το `ACTION_ERROR_KEYS` (παγωμένος πίνακας ΕΞΙ κυριολεκτικών κλειδιών στο ίδιο αρχείο) και η εφεδρεία είναι η σταθερά `action.errors.generic`. Άρα οι δυνατές τιμές είναι ΑΚΡΙΒΩΣ ΕΠΤΑ, όλες εδώ. ⛔ ΟΧΙ πρόθεμα-σκούπα `auth:action.errors`: το `resetFailed` είναι κυριολεκτικό αλλού και το `auth` ΔΕΝ είναι guaranteed. ⚠️ Νέος κωδικός στον πίνακα ⇒ νέα γραμμή εδώ."
+    },
     "src/components/market/OpenDataAttribution.tsx": {
       "keys": [
         "market-contracts:source.transferValues.owner",
@@ -1483,6 +1495,19 @@
         }
       ],
       "reason": "ADR-901 Φ3. Ο δικηγόρος/συμβολαιογράφος φτάνει από EMAIL πριν από κάθε ταυτότητα (ίδιο με `/invite` και `/tour-invite`)· η σελίδα αποδίδεται στον διακομιστή, άρα χωρίς slice το πρώτο καρέ θα έβαφε ωμά κλειδιά σε άνθρωπο που δεν ξέρει ακόμη ποιος τον καλεί (CHECK 3.51). Λεξιλόγιο `conveyance` — το ΙΔΙΟ με τις θέσεις του οικοδεσπότη και το «Οι υποθέσεις μου»."
+    },
+    "src/app/(auth)/auth/action/page.tsx": {
+      "sealed": 3759,
+      "sealedAt": "2026-10-07",
+      "history": [
+        {
+          "from": 0,
+          "to": 3759,
+          "at": "2026-10-07",
+          "why": "ADR-851 Φ2 — ΝΕΑ ΔΗΛΩΣΗ υπάρχουσας σελίδας. ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-10-07): 3759 bytes, 1 ns [auth] — τα επτά μηνύματα σφάλματος του `mapFirebaseError`, τίτλοι, μηνύματα και φόρμα νέου κωδικού και των τριών τρόπων (verifyEmail · resetPassword · recoverEmail), γιατί η στατική κλειστότητα φυλάει τη ΣΕΛΙΔΑ και όχι τον τρόπο που έτυχε να ανοίξει."
+        }
+      ],
+      "reason": "ADR-851 Φ2 — Ο ΧΕΙΡΙΣΤΗΣ ΤΩΝ ΣΥΝΔΕΣΜΩΝ EMAIL (επαλήθευση email · επαναφορά κωδικού · ανάκτηση email). ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-06 σε dev, από αναφορά hydration του Next: ο διακομιστής έβαψε ωμό `action.titles.verifyEmail` σε `<h3>` ΚΑΙ σε `aria-label`, ο πελάτης «Επιβεβαίωση Email» ⇒ «Hydration failed». Ίδια κλάση με το `/login` (ADR-744 §18): το `auth` υπάρχει στο κέλυφος ΚΟΜΜΕΝΟ, και το preload του `CRITICAL_NAMESPACES` δεν αγγίζει ποτέ τον διακομιστή. Ο άνθρωπος φτάνει εδώ από EMAIL, συχνά σε άλλον browser, πριν από κάθε ταυτότητα — το πρώτο καρέ είναι όλη η σελίδα (CHECK 3.51)."
     },
     "src/app/(light)/listing/[id]/tour/page.tsx": {
       "sealed": 3361,
