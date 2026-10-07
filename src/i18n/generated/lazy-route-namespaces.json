@@ -1102,7 +1102,8 @@
     "properties-detail",
     "properties-enums",
     "properties-viewer",
-    "quotes"
+    "quotes",
+    "trash"
   ],
   "PropertiesManagement": [
     "accounting",
@@ -1433,7 +1434,8 @@
     "properties-detail",
     "properties-enums",
     "properties-viewer",
-    "quotes"
+    "quotes",
+    "trash"
   ],
   "SalesAvailableStorage": [
     "accounting",
