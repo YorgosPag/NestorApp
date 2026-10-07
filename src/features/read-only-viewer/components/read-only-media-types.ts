@@ -20,6 +20,12 @@ export interface ReadOnlyMediaViewerProps {
   floorNumber?: number | null;
   companyId?: string | null;
   levels?: Array<{ floorId: string; floorNumber: number; name: string }>;
+  /**
+   * Το ακίνητο της επιλογής **έχει φορτώσει**, άρα τα `levels` είναι οριστικά (και το `undefined` σημαίνει «ένα επίπεδο»,
+   * όχι «δεν ξέρω ακόμη»). Μόνο τότε ο προβολέας διορθώνει διεύθυνση που δείχνει καρτέλα άλλου ακινήτου — πριν, θα έσβηνε
+   * έγκυρο βαθύ σύνδεσμο σε καρτέλα επιπέδου μεζονέτας. Προεπιλογή `false` (η ασφαλής: καμία εγγραφή στη διεύθυνση).
+   */
+  levelsSettled?: boolean;
   onHoverOverlay?: (propertyId: string | null) => void;
   onClickOverlay?: (propertyId: string) => void;
   highlightedOverlayUnitId?: string | null;

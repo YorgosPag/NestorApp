@@ -17,7 +17,7 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Map, Layers, Camera, Video, FileQuestion, type LucideIcon } from 'lucide-react';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -33,7 +33,7 @@ import {
   MediaViewerShell,
   type MediaViewerTab,
 } from '@/components/shared/media/viewer/MediaViewerShell';
-import { useMediaTabParam } from '@/components/shared/media/viewer/useMediaTabParam';
+import { useActiveMediaTab } from '@/components/shared/media/viewer/useMediaTabParam';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -158,6 +158,7 @@ export function ReadOnlyMediaViewer({
   floorNumber,
   companyId: propCompanyId,
   levels,
+  levelsSettled = false,
   onHoverOverlay,
   onClickOverlay,
   highlightedOverlayUnitId,
@@ -178,16 +179,8 @@ export function ReadOnlyMediaViewer({
   // URL-Based Tab State (Deep Linking)
   // ==========================================================================
 
-  const mediaTabParam = useMediaTabParam();
+  // Η ενεργή καρτέλα λύνεται ΜΕΤΑ τη χαρτογράφηση (παρακάτω): επικυρώνεται απέναντι στις καρτέλες που **υπάρχουν**.
   const multiLevels = levels && levels.length > 1 ? levels : null;
-  const activeTab = (!mediaTabParam.raw && multiLevels)
-    ? `unit-floorplan-${multiLevels[0].floorId}`
-    : parseMediaTabParam(mediaTabParam.raw);
-
-  const { write: writeMediaTab } = mediaTabParam;
-  const setActiveTab = useCallback((newTab: MediaTab) => {
-    writeMediaTab(newTab, newTab === DEFAULT_MEDIA_TAB && !multiLevels);
-  }, [writeMediaTab, multiLevels]);
 
   // ==========================================================================
   // Data Fetching (ADR-031)
@@ -233,20 +226,6 @@ export function ReadOnlyMediaViewer({
     category: 'videos', autoFetch: !!propertyId && !!effectiveCompanyId,
     realtime: true,
   });
-
-  // ==========================================================================
-  // Empty State
-  // ==========================================================================
-
-  if (!propertyId) {
-    return (
-      <MediaViewerEmptyState
-        icon={FileQuestion}
-        message={t('viewer.selectPropertyToViewMedia', { ns: 'properties' })}
-        className={className}
-      />
-    );
-  }
 
   // ==========================================================================
   // Tabs — unit floorplans · floor floorplans · photos · videos
@@ -304,6 +283,22 @@ export function ReadOnlyMediaViewer({
       emptyMessage: t('viewer.media.noVideos', { ns: 'properties' }),
     }, spacing.padding.sm, t),
   ];
+
+  // 🔗 Η καρτέλα της διεύθυνσης μπορεί να ανήκει σε **άλλο** ακίνητο (`floorplan-floor-<όροφος μεζονέτας>` ενώ τώρα
+  //    επιλέχθηκε διαμέρισμα ενός επιπέδου): λύνεται απέναντι στις καρτέλες **αυτού** του ακινήτου και η διεύθυνση
+  //    διορθώνεται, ώστε να συμφωνεί και το `ListLayout` (ορατότητα του `PropertyHoverInfo`). ⚠️ `heal` μόνο όταν τα
+  //    επίπεδα είναι οριστικά — πριν φορτώσει η επιλογή οι καρτέλες είναι οι προεπιλεγμένες και θα έσβηναν έγκυρο σύνδεσμο.
+  const { activeTab, setActiveTab } = useActiveMediaTab(tabs.map((tab) => tab.id), { heal: !!propertyId && levelsSettled });
+
+  if (!propertyId) {
+    return (
+      <MediaViewerEmptyState
+        icon={FileQuestion}
+        message={t('viewer.selectPropertyToViewMedia', { ns: 'properties' })}
+        className={className}
+      />
+    );
+  }
 
   return <MediaViewerShell tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} className={className} />;
 }

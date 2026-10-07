@@ -15,7 +15,7 @@
  * @module components/shared/media/viewer/useMediaTabParam
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { useUrlQuery } from '@/hooks/useUrlQuery';
 import { replaceUrlSearchParams } from '@/lib/url-query-state';
@@ -42,4 +42,41 @@ export function useMediaTabParam(): MediaTabParam {
   }, []);
 
   return { raw, write };
+}
+
+export interface ActiveMediaTabOptions {
+  /**
+   * Ξαναγράφει τη διεύθυνση όταν δείχνει καρτέλα που **δεν υπάρχει** — ώστε κάθε άλλος αναγνώστης της παραμέτρου να
+   * συμφωνεί με τη σκηνή. ⚠️ Μόνο όταν το σύνολο των καρτελών είναι **οριστικό**: προσαρμογέας του οποίου καρτέλα
+   * εμφανίζεται ασύγχρονα (π.χ. η περιήγηση 360° της αγγελίας) θα έσβηνε έναν έγκυρο βαθύ σύνδεσμο πριν προλάβει να ισχύσει.
+   */
+  readonly heal?: boolean;
+}
+
+export interface ActiveMediaTab {
+  /** Πάντα καρτέλα που **υπάρχει** — ποτέ η ωμή τιμή της διεύθυνσης. */
+  readonly activeTab: string;
+  readonly setActiveTab: (tabId: string) => void;
+}
+
+/**
+ * Η ενεργή καρτέλα **απέναντι στις καρτέλες που υπάρχουν** — η μία απάντηση και για τους δύο προσαρμογείς.
+ *
+ * 🔴 Γιατί εδώ και όχι σε κάθε προσαρμογέα (βρέθηκε στον browser, 2026-10-07): ο εταιρικός επικύρωνε μόνο το **σχήμα**
+ * της τιμής (`floorplan-floor-*`). Μεζονέτα στην «Κάτοψη Ορόφου 1ος» → επιλογή διαμερίσματος ενός επιπέδου ⇒ η διεύθυνση
+ * έδειχνε καρτέλα άλλου ακινήτου ⇒ **καμία ενεργή καρτέλα, κενή σκηνή**. Η πρώτη καρτέλα είναι η προεπιλογή και δεν
+ * γράφεται στη διεύθυνση.
+ */
+export function useActiveMediaTab(tabIds: readonly string[], { heal = false }: ActiveMediaTabOptions = {}): ActiveMediaTab {
+  const { raw, write } = useMediaTabParam();
+  const defaultTab = tabIds[0] ?? '';
+  const activeTab = raw !== null && tabIds.includes(raw) ? raw : defaultTab;
+
+  useEffect(() => {
+    if (heal && raw !== null && raw !== activeTab) write(activeTab, true);
+  }, [heal, raw, activeTab, write]);
+
+  const setActiveTab = useCallback((tabId: string) => write(tabId, tabId === defaultTab), [write, defaultTab]);
+
+  return { activeTab, setActiveTab };
 }

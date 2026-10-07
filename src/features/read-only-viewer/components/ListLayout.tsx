@@ -293,6 +293,7 @@ export function ListLayout({
           floorNumber={selectedProperty?.floor ?? null}
           companyId={selectedCompanyId}
           levels={selectedProperty?.levels}
+          levelsSettled={hasSelection}
           onHoverOverlay={onHoverProperty}
           onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
           highlightedOverlayUnitId={hoveredPropertyId}

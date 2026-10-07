@@ -24,7 +24,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { Box, Camera, Compass, Map as MapIcon } from 'lucide-react';
 
 import { MediaViewerShell, type MediaViewerTab } from '@/components/shared/media/viewer/MediaViewerShell';
-import { useMediaTabParam } from '@/components/shared/media/viewer/useMediaTabParam';
+import { useActiveMediaTab } from '@/components/shared/media/viewer/useMediaTabParam';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
@@ -36,7 +36,7 @@ import { ListingGallery } from '../ListingGallery';
 import { ListingModels } from '../ListingModels';
 import { ListingTour } from '../ListingTour';
 
-/** Η προεπιλεγμένη όψη — δεν γράφεται στη διεύθυνση. */
+/** Η προεπιλεγμένη όψη — πάντα **πρώτη** καρτέλα, άρα δεν γράφεται στη διεύθυνση (`useActiveMediaTab`). */
 const PHOTOS_TAB = 'photos';
 
 /** Το εσωτερικό περιθώριο κάθε σκηνής: το κέλυφος είναι πλαίσιο χωρίς γέμισμα (στον χώρο η σκηνή είναι καμβάς ως την άκρη). */
@@ -46,16 +46,11 @@ function Stage({ children }: { readonly children: ReactNode }): ReactElement {
 
 export function ListingMediaViewer({ listing }: { readonly listing: PublicListing }): ReactElement {
   const { t } = useTranslation(['listing-detail']);
-  const { raw, write } = useMediaTabParam();
   const tourAvailable = useTourPresenceAvailable(listing.id) === true;
 
   // Οι **ίδιοι** κριτές με τα φύλλα (ADR-842 Α7): καρτέλα υπάρχει μόνο όταν το φύλλο της θα ζωγράφιζε κάτι.
   const floorplanCount = listing.floorplans.filter(isPubliclyPresentable).length;
   const modelCount = listing.models.filter(isPubliclyPresentable).length;
-
-  if (floorplanCount === 0 && modelCount === 0 && !tourAvailable) {
-    return <ListingGallery listing={listing} />;
-  }
 
   const tabs: MediaViewerTab[] = [{
     id: PHOTOS_TAB,
@@ -91,7 +86,11 @@ export function ListingMediaViewer({ listing }: { readonly listing: PublicListin
   }
 
   // Άγνωστη ή πια ανύπαρκτη καρτέλα στη διεύθυνση (π.χ. η κάτοψη αποσύρθηκε) ⇒ η προεπιλογή, ποτέ κενή σκηνή.
-  const activeTab = tabs.some((tab) => tab.id === raw) && raw !== null ? raw : PHOTOS_TAB;
+  // ⚠️ Χωρίς `heal`: η καρτέλα της περιήγησης εμφανίζεται ασύγχρονα — ένα `?mediaTab=tour` δεν πρέπει να σβηστεί πριν ισχύσει.
+  const { activeTab, setActiveTab } = useActiveMediaTab(tabs.map((tab) => tab.id));
+
+  // Μία όψη ⇒ καμία λωρίδα με μία καρτέλα: η συλλογή αποδίδεται γυμνή.
+  if (tabs.length === 1) return <ListingGallery listing={listing} />;
 
   return (
     <MediaViewerShell
@@ -99,7 +98,7 @@ export function ListingMediaViewer({ listing }: { readonly listing: PublicListin
       activeTab={activeTab}
       // Η αγγελία είναι **έγγραφο**: το ύψος το κατέχει η ενεργή σκηνή και κυλά η σελίδα, όχι το κέλυφος.
       layout="flow"
-      onTabChange={(tabId) => write(tabId, tabId === PHOTOS_TAB)}
+      onTabChange={setActiveTab}
     />
   );
 }
