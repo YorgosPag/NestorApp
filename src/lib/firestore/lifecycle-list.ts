@@ -27,6 +27,18 @@ import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 export type TrashedEntityRow = FirebaseFirestore.DocumentData & { id: string };
 
 /**
+ * Η γραμμή μιας οντότητας **όπως ταξιδεύει στον πελάτη** — το ωμό έγγραφο με το id του.
+ *
+ * Εξήχθη όταν απέκτησε δεύτερο καλούντα: το `GET /api/properties/[id]` τροφοδοτεί τη σελίδα ενός
+ * αποσυρμένου ακινήτου (ADR-329 §3.9), και εκείνη οφείλει να δείχνει την **ίδια** εγγραφή με το
+ * πλαίσιο της λίστας του αρχείου/κάδου. Με κοινό κατασκευαστή το «ίδιο σχήμα» ισχύει εκ κατασκευής·
+ * δύο χειρόγραφα `{ id, ...data }` θα αποκλίνανε τη μέρα που το ένα αποκτήσει προβολή πεδίων.
+ */
+export function entityRowOf(doc: FirebaseFirestore.DocumentSnapshot): TrashedEntityRow {
+  return { id: doc.id, ...doc.data() };
+}
+
+/**
  * Οι γραμμές μιας οντότητας σε **μία** κατάσταση απόσυρσης, για μία εταιρεία.
  *
  * Ordering is applied in memory rather than via `orderBy` on purpose — a
@@ -62,7 +74,7 @@ async function listRetired(
   // could come back in a different order after a host change. Presentation-order
   // by language belongs to the client that renders the rows.
   return snapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .map(entityRowOf)
     .sort((a, b) => compareStrings(readSortKey(a, trashList.sortField), readSortKey(b, trashList.sortField)));
 }
 

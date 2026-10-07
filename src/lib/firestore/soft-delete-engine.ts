@@ -490,4 +490,4 @@ export const restoreFromArchive: RestoreOperation = restoreFrom(ARCHIVE);
 // LIST — η ανάγνωση κάδου και αρχείου ζει στο `lifecycle-list` (όριο μεγέθους αρχείου)·
 // ξαναεξάγεται εδώ ώστε η μηχανή να μένει η ΜΙΑ πόρτα του κύκλου ζωής.
 // ============================================================================
-export { listArchived, listTrashed, type TrashedEntityRow } from "./lifecycle-list";
+export { entityRowOf, listArchived, listTrashed, type TrashedEntityRow } from "./lifecycle-list";

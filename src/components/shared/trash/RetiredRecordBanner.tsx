@@ -16,7 +16,7 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System · ADR-329 §3.9
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { API_ROUTES } from '@/config/domain-constants';
 import type { DependencyCheckResult } from '@/config/deletion-registry';
@@ -42,6 +42,11 @@ export interface RetiredRecord extends MaybeTrashed {
 interface RetiredRecordBannerProps {
   readonly entityType: ReinstatePromiseEntity;
   readonly record: RetiredRecord;
+  /**
+   * Η πράξη επιστροφής, δίπλα στην εξήγησή της. Τη δίνει **μόνο** σημείο προσάρτησης που δεν έχει ήδη
+   * μπάρα επαναφοράς από πάνω (η σελίδα της εγγραφής)· στη λίστα λείπει, αλλιώς δύο κουμπιά για μία πράξη.
+   */
+  readonly action?: ReactNode;
 }
 
 /** Ό,τι διαφέρει ανάμεσα στις δύο αποσύρσεις **για την ταινία**. Κλειδιά ολόκληρα — ο σαρωτής i18n δεν συνθέτει. */
@@ -101,12 +106,14 @@ function useRetirementReferences(entityType: ReinstatePromiseEntity, entityId: s
   }, [check]);
 }
 
-export function RetiredRecordBanner({ entityType, record }: RetiredRecordBannerProps) {
+export function RetiredRecordBanner({ entityType, record, action }: RetiredRecordBannerProps) {
   const kind = retiredKindOf(record);
   const references = useRetirementReferences(entityType, record.id, kind === 'archived');
 
   if (kind === null) return null;
-  return <RetiredRecordNotice entityType={entityType} record={record} kind={kind} references={references} />;
+  return (
+    <RetiredRecordNotice entityType={entityType} record={record} kind={kind} references={references} action={action} />
+  );
 }
 
 interface RetiredRecordNoticeProps extends RetiredRecordBannerProps {
@@ -114,7 +121,7 @@ interface RetiredRecordNoticeProps extends RetiredRecordBannerProps {
   readonly references: string | null;
 }
 
-function RetiredRecordNotice({ entityType, record, kind, references }: RetiredRecordNoticeProps) {
+function RetiredRecordNotice({ entityType, record, kind, references, action }: RetiredRecordNoticeProps) {
   const { t } = useTranslation('trash');
   const stamp = retirementStampOf(record, kind);
   const names = useUserDisplayNames(stamp.by ? [stamp.by] : []);
@@ -136,6 +143,7 @@ function RetiredRecordNotice({ entityType, record, kind, references }: RetiredRe
         {purgeAt && <p>{t('retiredBanner.purgeOn', { date: formatDate(purgeAt) })}</p>}
         <p>{t(PROMISE_KEYS[reinstatePromiseOf(entityType, kind)])}</p>
         <p>{t('retiredBanner.readOnly')}</p>
+        {action}
       </TrashNotice>
     </section>
   );

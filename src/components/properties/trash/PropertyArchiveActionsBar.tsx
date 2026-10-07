@@ -17,7 +17,7 @@
 import '@/lib/design-system';
 import { EntityTrashActionsBar } from '@/components/shared/trash/EntityTrashActionsBar';
 import { useTranslation } from '@/i18n';
-import { unarchiveProperties } from '@/hooks/usePropertiesArchiveState';
+import { unarchiveProperties, useArchivedPropertyReinstateText } from './property-reinstate';
 
 interface PropertyArchiveActionsBarProps {
   selectedIds: string[];
@@ -35,6 +35,8 @@ export function PropertyArchiveActionsBar({
   ...bar
 }: PropertyArchiveActionsBarProps) {
   const { t } = useTranslation('trash');
+  // Ετικέτα κουμπιού + μηνύματα ροής: κοινά με την «Επαναφορά» της σελίδας του ακινήτου.
+  const reinstate = useArchivedPropertyReinstateText();
   return (
     <EntityTrashActionsBar
       {...bar}
@@ -48,13 +50,7 @@ export function PropertyArchiveActionsBar({
         back: t('backToList'),
         count: t('archiveCount', { count: archiveCount }),
         warning: `${t('archiveExplainer')} ${t('listingStaysOffMarketNotice')}`,
-        restore: t('unarchive'),
-        // Ο διακομιστής λέει αν κάποιο γύρισε εκτός αγοράς — το μήνυμα το λέει ρητά.
-        restoreSuccess: (count, outcomes) =>
-          outcomes.includes('taken-off-market')
-            ? t('unarchiveSuccessOffMarket', { count })
-            : t('unarchiveSuccess', { count }),
-        restoreFailed: t('unarchiveFailed'),
+        ...reinstate,
       }}
     />
   );

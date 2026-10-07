@@ -300,6 +300,9 @@
     "absent": "Property not found",
     "absentHint": "It may have been deleted, or it does not belong to the company you have selected.",
     "backToList": "See all properties",
+    "unreachable": "We could not check this property",
+    "unreachableHint": "It is not in your list, and checking the archive and the trash failed. This does not mean it was deleted.",
+    "retry": "Try again",
     "photos": {
       "loadFailed": "Photos could not be loaded",
       "captureSpot": "Placed on the floor plan"

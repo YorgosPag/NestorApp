@@ -97,6 +97,11 @@ export interface PropertyDetailSurfaceProps {
   readonly headerActions?: readonly EntityHeaderAction[];
   /** Τι κάνει το κουμπί της κενής κατάστασης. */
   readonly onCreateAction?: () => void;
+  /**
+   * Η πράξη επιστροφής μέσα στην ταινία ενός αποσυρμένου ακινήτου. Ανήκει στο σημείο προσάρτησης: η
+   * λίστα έχει ήδη τη μπάρα της από πάνω και **δεν** τη δίνει· η σελίδα δεν έχει μπάρα και τη δίνει.
+   */
+  readonly retiredAction?: React.ReactNode;
 }
 
 export function PropertyDetailSurface({
@@ -116,6 +121,7 @@ export function PropertyDetailSurface({
   warningBanner,
   headerActions,
   onCreateAction,
+  retiredAction,
 }: PropertyDetailSurfaceProps): React.ReactElement {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const emptyStateMessages = useEmptyStateMessages();
@@ -174,7 +180,9 @@ export function PropertyDetailSurface({
               extraActions={headerActions}
             />
             {/* Στη σταθερή ζώνη της κεφαλίδας: η εξήγηση δεν κυλά μαζί με τα tabs. Ζωντανό ακίνητο ⇒ τίποτα. */}
-            {property && <RetiredRecordBanner entityType={ENTITY_TYPES.PROPERTY} record={property} />}
+            {property && (
+              <RetiredRecordBanner entityType={ENTITY_TYPES.PROPERTY} record={property} action={retiredAction} />
+            )}
           </>
         )}
         tabsRenderer={(

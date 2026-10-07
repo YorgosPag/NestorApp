@@ -43,7 +43,9 @@ import { PropertyDetailSurface } from '@/features/property-detail-surface/Proper
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { StaticPageLoading } from '@/core/states';
+import { PageErrorState, StaticPageLoading } from '@/core/states';
+import { PropertyReinstateAction } from '@/components/properties/trash/PropertyReinstateAction';
+import { useRetiredPropertyRecord } from '@/hooks/useRetiredPropertyRecord';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -81,6 +83,44 @@ async function changePropertyAudience(
   }
 }
 
+/**
+ * **Οι πράξεις της καρτέλας πάνω από την επιφάνεια** — μόνο για ζωντανό ακίνητο (δες το σημείο κλήσης).
+ */
+function LivePropertyPanels({
+  property,
+  interest,
+}: {
+  readonly property: Property;
+  readonly interest: ReturnType<typeof usePlaceInterest>;
+}): React.ReactElement {
+  const audience = marketingAudienceOf(property.marketingAudience);
+  return (
+    <>
+      {/*
+        🔑 **ADR-864 Ε-10 — το κοινό είναι ΠΡΑΞΗ της καρτέλας, όχι πεδίο φόρμας.** Το
+        ίδιο component με την πλευρά ιδιώτη· αλλάζει μόνο η πόρτα γραφής (η ΜΙΑ
+        πύλη μεταλλάξεων του γραφείου). Ίχνος + επαναπροβολή τα κάνει ήδη η διαδρομή PATCH.
+      */}
+      <MarketingAudienceControl audience={audience} onChange={(next) => changePropertyAudience(property, next)} />
+
+      {/* ADR-898 Φ3β-3 — η αντικειμενική: ΙΔΙΑ ενότητα με τον ιδιώτη, ίδιο δικαίωμα απόκρυψης· πράξη της καρτέλας. */}
+      <PropertyObjectiveValuePanel property={property} />
+
+      {/*
+        🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6 ΓΙΑ ΤΗΝ ΠΛΕΥΡΑ ΕΤΑΙΡΕΙΑΣ.** Το ίδιο πάνελ, ο
+        ίδιος διακομιστής, ο ίδιος κριτής με την πλευρά ιδιώτη — αλλιώς οι δύο
+        οθόνες θα μπορούσαν να δείξουν **διαφορετικό αριθμό για το ίδιο
+        ακίνητο**, και καμία δεν θα φαινόταν λάθος.
+      */}
+      <PlaceInterestPanel interest={interest} audience={audience} />
+
+      {/* 📷 ADR-884 Κ3α — ίδιο πάνελ με την πλευρά ιδιώτη· διαχειρίζεται όποιος έχει `listings:listings:publish` στον μισθωτή.
+          Κ3β: το `companyId` ανοίγει τους προσωπικούς συνδέσμους θέασης (ADR-315, εμβέλεια μισθωτή). */}
+      <SpatialTourPanel subject={{ kind: 'company-property', id: property.id }} companyId={property.companyId ?? null} />
+    </>
+  );
+}
+
 export function PropertyDetailPageContent({
   propertyId,
 }: {
@@ -111,10 +151,16 @@ export function PropertyDetailPageContent({
   // 🔑 Η απόφαση ζει σε **καθαρή συνάρτηση** και όχι εδώ, γιατί η πρώτη της
   // γραφή ήταν σιωπηλά λάθος και το βρήκε **ζωντανή μέτρηση**, όχι test. Δες
   // `property-page-state.ts`.
+  // 🗄️ Ο κατάλογος αφήνει έξω ό,τι αποσύρθηκε. Όταν απαντήσει **χωρίς** το id, ρωτάμε μία φορά αν
+  //    είναι στο αρχείο ή στον κάδο — ποτέ νωρίτερα, ποτέ για ακίνητο που ο κατάλογος έχει ήδη.
+  const catalogMissesIt = viewer.hasAnswered && !viewer.loading && !viewer.selectedProperty;
+  const retired = useRetiredPropertyRecord(propertyId, catalogMissesIt);
+
   const state = derivePropertyPageState({
     loading: viewer.loading,
     hasAnswered: viewer.hasAnswered,
     property: viewer.selectedProperty,
+    retired: retired.lookup,
   });
 
   /**
@@ -200,37 +246,32 @@ export function PropertyDetailPageContent({
         </section>
       )}
 
-      {state.kind === 'found' && (
+      {/*
+        🔴 **«ΔΕΝ ΜΠΟΡΕΣΑ ΝΑ ΡΩΤΗΣΩ» ΔΕΝ ΕΙΝΑΙ «ΔΕΝ ΒΡΕΘΗΚΕ»** (ADR-329 §3.9). Ο κατάλογος απάντησε χωρίς
+        το ακίνητο και η ερώτηση για το αρχείο/κάδο απέτυχε (δίκτυο · 5xx). Η σελίδα το λέει και
+        προσφέρει επανάληψη — δεν ανακοινώνει απουσία που δεν διαπίστωσε.
+      */}
+      {state.kind === 'unreachable' && (
+        <PageErrorState
+          layout="contained"
+          title={t(`${NS}:detailPage.unreachable`)}
+          message={t(`${NS}:detailPage.unreachableHint`)}
+          onRetry={retired.retry}
+          retryLabel={t(`${NS}:detailPage.retry`)}
+        />
+      )}
+
+      {(state.kind === 'found' || state.kind === 'retired') && (
         <>
           <PropertyIdentityHeader property={state.property} />
 
           {/*
-            🔑 **ADR-864 Ε-10 — το κοινό είναι ΠΡΑΞΗ της καρτέλας, όχι πεδίο φόρμας.** Το
-            ίδιο component με την πλευρά ιδιώτη· αλλάζει μόνο η πόρτα γραφής (η ΜΙΑ
-            πύλη μεταλλάξεων του γραφείου). Ίχνος + επαναπροβολή τα κάνει ήδη η διαδρομή PATCH.
+            🗄️ **ΑΠΟΣΥΡΜΕΝΟ ⇒ ΚΑΜΙΑ ΠΡΑΞΗ ΤΗΣ ΚΑΡΤΕΛΑΣ** (ADR-329 §3.9). Κοινό αγγελίας, αντικειμενική,
+            ζήτηση και περιήγηση ζουν **έξω** από την επιφάνεια, άρα δεν τις κλειδώνει ο διακόπτης της:
+            είναι όλες καλέσματα σε ενέργεια πάνω σε ακίνητο που είναι εκτός αγοράς και δεν δέχεται
+            γραφή (ο διακομιστής απαντά 409). Δεν αποδίδονται καθόλου — ό,τι μένει είναι η εγγραφή.
           */}
-          <MarketingAudienceControl
-            audience={marketingAudienceOf(state.property.marketingAudience)}
-            onChange={(next) => changePropertyAudience(state.property, next)}
-          />
-
-          {/* ADR-898 Φ3β-3 — η αντικειμενική: ΙΔΙΑ ενότητα με τον ιδιώτη, ίδιο δικαίωμα απόκρυψης· πράξη της καρτέλας. */}
-          <PropertyObjectiveValuePanel property={state.property} />
-
-          {/*
-            🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6 ΓΙΑ ΤΗΝ ΠΛΕΥΡΑ ΕΤΑΙΡΕΙΑΣ.** Το ίδιο πάνελ, ο
-            ίδιος διακομιστής, ο ίδιος κριτής με την πλευρά ιδιώτη — αλλιώς οι δύο
-            οθόνες θα μπορούσαν να δείξουν **διαφορετικό αριθμό για το ίδιο
-            ακίνητο**, και καμία δεν θα φαινόταν λάθος.
-          */}
-          <PlaceInterestPanel
-            interest={interest}
-            audience={marketingAudienceOf(state.property.marketingAudience)}
-          />
-
-          {/* 📷 ADR-884 Κ3α — ίδιο πάνελ με την πλευρά ιδιώτη· διαχειρίζεται όποιος έχει `listings:listings:publish` στον μισθωτή.
-              Κ3β: το `companyId` ανοίγει τους προσωπικούς συνδέσμους θέασης (ADR-315, εμβέλεια μισθωτή). */}
-          <SpatialTourPanel subject={{ kind: 'company-property', id: state.property.id }} companyId={state.property.companyId ?? null} />
+          {state.kind === 'found' && <LivePropertyPanels property={state.property} interest={interest} />}
 
           <section className="flex min-h-0 flex-1 flex-col">
             <PropertyDetailSurface
@@ -250,8 +291,11 @@ export function PropertyDetailPageContent({
                 οι **υπάρχοντες** χειριστές — καμία νέα ροή.
                 ⚠️ Η δημιουργία ζει στη λίστα (`handleNewUnitInline`): η καρτέλα τη **ζητά**.
               */
-              onNewProperty={() => router.push(ENTITY_ROUTES.properties.create)}
-              onDeleteProperty={() => viewer.handleDelete(state.property.id)}
+              // 🗄️ Αποσυρμένο: χειριστής που λείπει ⇒ κουμπί που δεν ζωγραφίζεται (ίδιος κανόνας με τη λίστα).
+              onNewProperty={state.kind === 'found' ? () => router.push(ENTITY_ROUTES.properties.create) : undefined}
+              onDeleteProperty={state.kind === 'found' ? () => viewer.handleDelete(state.property.id) : undefined}
+              // Η σελίδα δεν έχει μπάρα αρχείου/κάδου από πάνω: η επαναφορά ζει δίπλα στην εξήγησή της.
+              retiredAction={state.kind === 'retired' ? <PropertyReinstateAction property={state.property} /> : undefined}
               defaultTab={initialTab}
             />
             {/* Οι διάλογοι της διαγραφής ανήκουν στον **ίδιο** hook που την εκτελεί. */}

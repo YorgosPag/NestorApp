@@ -11,7 +11,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import { softDelete } from '@/lib/firestore/soft-delete-engine';
+import { entityRowOf, softDelete } from '@/lib/firestore/soft-delete-engine';
 import { assertDeletionAllowed } from '@/lib/firestore/deletion-guard';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import {
@@ -342,6 +342,8 @@ export const GET = entityIdRoute<ApiSuccessResponse<Record<string, unknown>>>({
     const doc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(id).get();
     if (!doc.exists) throw new ApiError(404, 'Property not found');
 
-    return apiSuccess({ id: doc.id, ...doc.data() }, 'Property loaded');
+    // 🗄️ Το ίδιο σχήμα γραμμής με τις λίστες αρχείου/κάδου (`entityRowOf`): η σελίδα ενός αποσυρμένου
+    //    ακινήτου διαβάζει από εδώ και οφείλει να δείχνει ό,τι και το πλαίσιο της λίστας (ADR-329 §3.9).
+    return apiSuccess(entityRowOf(doc), 'Property loaded');
   },
 });

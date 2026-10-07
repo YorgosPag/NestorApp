@@ -45,7 +45,8 @@
     "keptBecause": "It was not deleted because other records refer to it: {references}.",
     "purgeOn": "It will be permanently deleted on {date}.",
     "returnsAsItWas": "Restoring brings it back exactly as it was.",
-    "readOnly": "View only: it accepts no changes while it is retired."
+    "readOnly": "View only: it accepts no changes while it is retired.",
+    "restoreFromTrash": "Restore from trash"
   },
   "softDeleteDialog": {
     "title": "Move to Trash",

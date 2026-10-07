@@ -123,6 +123,26 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     expect(content).toMatch(/state\.kind !== 'loading' && \(\s*<nav>/);
   });
 
+  it('Α10 🔴 ο σύνδεσμος προς ΑΠΟΣΥΡΜΕΝΟ ακίνητο δεν είναι αδιέξοδο (ADR-329 §3.9)', () => {
+    /*
+     * 🔴 **ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-07**: ο κατάλογος αφήνει έξω ό,τι αποσύρθηκε, άρα το
+     * «Άνοιγμα σε σελίδα» ενός ακινήτου του αρχείου και κάθε σύνδεσμος του ιστορικού έβγαζαν
+     * «δεν βρέθηκε». Η απόφαση και ο αναγνώστης έχουν δικές τους άγκυρες συμπεριφοράς
+     * (`property-page-state.test` · `useRetiredPropertyRecord.test`)· εδώ φυλάγεται το **δέσιμο**:
+     * μια σελίδα που ξέχασε να ρωτήσει μεταγλωττίζεται και **φαίνεται** σωστή για κάθε ζωντανό ακίνητο.
+     */
+    const content = read('src/components/properties/detail/PropertyDetailPageContent.tsx');
+
+    expect(content).toContain('useRetiredPropertyRecord(propertyId');
+    expect(content).toMatch(/retired: retired\.lookup/);
+    // Η ίδια επιφάνεια και για τις δύο καταστάσεις — ποτέ δεύτερη σύνθεση για το αποσυρμένο.
+    expect(content).toMatch(/state\.kind === 'found' \|\| state\.kind === 'retired'/);
+    // Οι πράξεις της καρτέλας (κοινό, αντικειμενική, ζήτηση, περιήγηση) μόνο σε ζωντανό.
+    expect(content).toMatch(/state\.kind === 'found' && <LivePropertyPanels/);
+    // «Δεν μπόρεσα να ρωτήσω» έχει δική του όψη, με επανάληψη.
+    expect(content).toMatch(/state\.kind === 'unreachable' && \(\s*<PageErrorState/);
+  });
+
   // ==========================================================================
   // Α4 — ΚΑΜΙΑ ΤΡΙΤΗ ΣΥΜΒΑΣΗ
   // ==========================================================================

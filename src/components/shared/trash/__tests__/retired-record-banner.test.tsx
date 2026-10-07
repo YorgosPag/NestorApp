@@ -125,3 +125,26 @@ describe('κάδος', () => {
     expect(screen.queryByText(/retiredBanner\.purgeOn/)).toBeNull();
   });
 });
+
+describe('η πράξη επιστροφής (σελίδα της εγγραφής)', () => {
+  const action = <button type="button">επαναφορά</button>;
+
+  it('🔴 αποσυρμένη εγγραφή ⇒ η πράξη στέκεται ΜΕΣΑ στην ταινία, δίπλα στην εξήγησή της', () => {
+    render(<RetiredRecordBanner entityType="property" record={{ id: 'prop_1', status: 'deleted', deletedAt: AT }} action={action} />);
+
+    const banner = screen.getByRole('region', { name: 'retiredBanner.label' });
+    expect(banner).toContainElement(screen.getByRole('button', { name: 'επαναφορά' }));
+  });
+
+  it('🔴 ζωντανή εγγραφή ⇒ η πράξη ΔΕΝ αποδίδεται, ακόμη κι αν δόθηκε', () => {
+    render(<RetiredRecordBanner entityType="property" record={{ id: 'prop_1', status: 'for-sale' }} action={action} />);
+
+    expect(screen.queryByRole('button', { name: 'επαναφορά' })).toBeNull();
+  });
+
+  it('χωρίς πράξη (λίστα: η μπάρα την έχει ήδη) ⇒ κανένα κουμπί στην ταινία', () => {
+    render(<RetiredRecordBanner entityType="property" record={{ id: 'prop_1', status: 'deleted', deletedAt: AT }} />);
+
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+});
