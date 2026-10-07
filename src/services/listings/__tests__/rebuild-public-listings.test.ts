@@ -35,8 +35,18 @@ import { rebuildAllPublicListings } from '../rebuild-public-listings.service';
 // ⚠️ Οι δύο πραγματικοί γραφείς **δεν** τρέχουν εδώ: η ερώτηση είναι η **σάρωση**,
 //    όχι η προβολή. Αν έτρεχαν, το test θα χρειαζόταν βάση — δηλαδή θα ξαναγινόταν
 //    αδοκίμαστο, ακριβώς όπως ήταν.
+//
+// 🔑 **Η απόσυρση μοκάρεται ΩΣ ΣΥΝΟΡΟ, όχι ως συμπεριφορά**: σβήνει το ψεύτικο έγγραφο *(ώστε
+//    οι άγκυρες Κ1 να εξακολουθούν να μετρούν «ποιος σβήστηκε»)* και **καταγράφεται** — η Κ3
+//    ρωτά αν η σάρωση ζήτησε **απόσυρση** αντί για σκέτο `delete`. Το τι κάνει η απόσυρση στα
+//    bytes έχει δική του άγκυρα, με αληθινό ενορχηστρωτή: `publish-gallery-wiring` Κ3.
+const withdrawPublicListing = jest.fn(async (ref: { delete(): Promise<void> }, _id: string) => {
+  await ref.delete();
+});
 jest.mock('@/services/listings/publish-public-listing', () => ({
   republishListing: jest.fn(async () => 'published'),
+  withdrawPublicListing: (ref: { delete(): Promise<void> }, id: string) =>
+    withdrawPublicListing(ref, id),
 }));
 jest.mock('@/services/owner-property/owner-property-publication.service', () => ({
   republishOwnerProperty: jest.fn(async () => ({ publish: 'published', property: {} })),
@@ -162,6 +172,49 @@ describe('Κ1 — και οι δύο οικογένειες είναι στη λ
 
     expect(deleted(listings)).toEqual([GHOST]);
     expect(report.orphansRemoved).toBe(1);
+  });
+});
+
+// =============================================================================
+// Κ3 — Η ΟΡΦΑΝΗ ΑΠΟΣΥΡΕΤΑΙ, ΔΕΝ ΣΒΗΝΕΤΑΙ ΑΠΛΩΣ (ADR-907 §9)
+// =============================================================================
+
+describe('Κ3 — η ορφανή φεύγει ΜΑΖΙ με τα αρχεία της από το δημόσιο ράφι', () => {
+  beforeEach(() => withdrawPublicListing.mockClear());
+
+  /**
+   * 🔴 **Η ΑΓΚΥΡΑ ΤΗΣ ΔΙΑΡΡΟΗΣ.** Ως τις 2026-10-07 η σάρωση έκανε `orphan.ref.delete()`:
+   * το έγγραφο έφευγε, τα bytes έμεναν δημόσια αναγνώσιμα **για πάντα**.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: γύρνα τη γραμμή σε `await orphan.ref.delete()` ⇒ **κόκκινο** εδώ, ενώ
+   * **όλες** οι Κ1 μένουν πράσινες (το έγγραφο εξακολουθεί να σβήνεται).
+   */
+  it('ζητά ΑΠΟΣΥΡΣΗ για την ορφανή, με τη ΔΙΚΗ της ταυτότητα', async () => {
+    const { db, listings } = fakeDb([PRO, OWNER, GHOST]);
+
+    await rebuildAllPublicListings(asDb(db), false);
+
+    const ghost = listings.find((doc) => doc.id === GHOST);
+    expect(withdrawPublicListing).toHaveBeenCalledTimes(1);
+    expect(withdrawPublicListing).toHaveBeenCalledWith(ghost?.ref, GHOST);
+  });
+
+  it('και ΠΟΤΕ για επιζώντα — η απόσυρση αδειάζει ράφι ζωντανής αγγελίας', async () => {
+    const { db } = fakeDb([PRO, OWNER]);
+
+    await rebuildAllPublicListings(asDb(db), false);
+
+    expect(withdrawPublicListing).not.toHaveBeenCalled();
+  });
+
+  /** ⚠️ Η στεγνή εκτέλεση **μετρά** την ορφανή αλλά δεν αγγίζει ούτε έγγραφο ούτε bytes. */
+  it('στεγνή εκτέλεση — μετρά την ορφανή, δεν αποσύρει τίποτα', async () => {
+    const { db } = fakeDb([PRO, OWNER, GHOST]);
+
+    const report = await rebuildAllPublicListings(asDb(db), true);
+
+    expect(report.orphansRemoved).toBe(1);
+    expect(withdrawPublicListing).not.toHaveBeenCalled();
   });
 });
 

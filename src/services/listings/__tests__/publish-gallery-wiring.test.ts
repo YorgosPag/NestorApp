@@ -43,7 +43,7 @@ jest.mock('../public-shelf-model.service', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { writeListingProjection } = require('../publish-public-listing') as
+const { writeListingProjection, withdrawPublicListing } = require('../publish-public-listing') as
   typeof import('../publish-public-listing');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { LISTING_MATERIAL_KEYS } = require('@/lib/listings/listing-authorship') as
@@ -191,6 +191,24 @@ describe('Κ3 — Η ΑΠΟΣΥΡΣΗ ΚΑΙ Η ΑΝΤΙΣΤΑΘΜΙΣΗ', () =>
 
     expect(outcome).toBe('withdrawn');
     expect(trace).toEqual(['delete', 'reconcile(0)']);
+  });
+
+  it('🔴 η ΜΙΑ πράξη απόσυρσης: έγγραφο ΚΑΙ ράφι — την καλεί και η σάρωση ορφανών (ADR-907 §9)', async () => {
+    // Ο δεύτερος τόπος που σβήνει δημόσια αγγελία δεν περνά από το `writeListingProjection`.
+    // ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε το `withdrawListingShelves` από το `withdrawPublicListing` ⇒ κόκκινο.
+    await withdrawPublicListing(ref as never, LISTING);
+
+    expect(trace).toEqual(['delete', 'reconcile(0)']);
+    expect(reconcilePublicShelf).toHaveBeenCalledWith(LISTING_SHELF, LISTING, []);
+  });
+
+  it('🔴 το `delete` έπεσε ⇒ το ράφι ΔΕΝ αδειάζει — ποτέ ζωντανή αγγελία με νεκρές εικόνες', async () => {
+    ref.delete.mockImplementationOnce(async () => {
+      throw new Error('Firestore unavailable');
+    });
+
+    await expect(withdrawPublicListing(ref as never, LISTING)).rejects.toThrow('Firestore unavailable');
+    expect(trace).toEqual([]);
   });
 
   it('🔴 η γραφή απέτυχε ΑΦΟΥ δημοσιεύτηκαν bytes ⇒ ΑΔΕΙΑΖΕΙ το ράφι', async () => {

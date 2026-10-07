@@ -76,6 +76,7 @@ import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-propert
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import {
   republishListing,
+  withdrawPublicListing,
   type ListingSourceProperty,
   type PublishOutcome,
 } from '@/services/listings/publish-public-listing';
@@ -168,6 +169,15 @@ function buildReport(
  * 🔴 **ΤΟ `liveIds` ΔΕΝ ΕΙΝΑΙ ΛΟΓΙΣΤΙΚΗ — ΕΙΝΑΙ Η ΛΙΣΤΑ ΕΠΙΖΩΝΤΩΝ.** Ό,τι λείπει
  * από εκεί **διαγράφεται**. Άρα το σύνολο πρέπει να είναι η **ΕΝΩΣΗ κάθε
  * οικογένειας** που γράφει στο `public_listings` — ποτέ μιας από αυτές.
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΣΒΗΣΙΜΟ ΕΙΝΑΙ ΑΠΟΣΥΡΣΗ, ΟΧΙ `delete`** *(ADR-907 §9, 2026-10-07)*. Ως τότε εδώ
+ * σβηνόταν **μόνο το έγγραφο** — οι φωτογραφίες, οι κατόψεις και τα μοντέλα της ορφανής
+ * έμεναν στο δημόσιο ράφι **για πάντα**, χωρίς καμία οθόνη να τα δείχνει *(η διαρροή της
+ * ADR-841 Α12.6, από δεύτερη πόρτα)*. ⇒ Η **ίδια** πράξη με την απόσυρση του κύκλου ζωής:
+ * {@link withdrawPublicListing}.
+ *
+ * ⚠️ **Ό,τι ΔΕΝ πιάνει, δηλωμένα**: bytes χωρίς **καθόλου** έγγραφο *(ορφανές που σβήστηκαν
+ * πριν από αυτή τη διόρθωση)*. Η σάρωση ξεκινά από το `public_listings`, όχι από τον κάδο.
  */
 async function removeOrphanListings(
   adminDb: AdminFirestore,
@@ -178,7 +188,7 @@ async function removeOrphanListings(
   const orphans = listings.docs.filter((doc) => !liveIds.has(doc.id));
 
   if (!dryRun) {
-    for (const orphan of orphans) await orphan.ref.delete();
+    for (const orphan of orphans) await withdrawPublicListing(orphan.ref, orphan.id);
   }
   return orphans.length;
 }
