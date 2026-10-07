@@ -37,7 +37,7 @@ import type { Engagement, EngagementDecision, EngagementVerdict } from '@/types/
 import type { CredentialHint } from '@/types/engagement-invitation';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER, type CaseEvidenceViewer } from './conveyance-case-evidence.server';
-import { actingViews, resolveActingFor, type ActingRejection, type ActingViewer, type ActingViews } from './conveyance-acting-workspace.server';
+import { actingViews, placeEngagement, resolveActingFor, type ActingRejection, type ActingViewer, type ActingViews } from './conveyance-acting-workspace.server';
 import { contactCredentialHint } from './conveyance-professional.server';
 import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { listCaseParticipants } from './conveyance-case-participants.server';
@@ -62,6 +62,28 @@ async function findOwnEngagement(db: Firestore, uid: string, engagementId: strin
   const list = await listEngagementsOfUser(db, uid);
   if (list.outcome === 'unknown') return 'unknown';
   return list.engagements.find((e) => e.id === engagementId) ?? null;
+}
+
+/** Το σπίτι μιας **δικής του** συμμετοχής — ή «δεν είναι δική του / δεν υπάρχει» — ή «δεν μπόρεσα να ρωτήσω». */
+export type OwnCaseHome =
+  | { readonly outcome: 'home'; readonly home: WorkspaceRef }
+  | { readonly outcome: 'none' }
+  | { readonly outcome: 'unknown' };
+
+/**
+ * **«Πού ζει ΤΩΡΑ η συμμετοχή μου `eng_…`;»** (ADR-901 §15.16) — για τον φρουρό του χώρου, που βρήκε τον άνθρωπο
+ * σε διεύθυνση υπόθεσης γραφείου όπου **δεν ανήκει πια** (παλιός σύνδεσμος · email γραμμένο πριν από την αποχώρηση).
+ *
+ * 🔑 Ίδια ανάγνωση (`findOwnEngagement`: μόνο οι συμμετοχές **του ίδιου**) και ίδιο σπίτι (`placeEngagement`) με
+ *    την ειδοποίηση — κανένας δεύτερος κανόνας. ⛔ **Δεν κρίνει πρόσβαση**: την κρίνει η σελίδα στο σπίτι
+ *    (`decideEngagement`, ανά αίτημα)· εδώ απαντιέται μόνο η **πόρτα**. Ξένη και ανύπαρκτη ⇒ το ίδιο `none`.
+ */
+export async function locateOwnCaseHome(db: Firestore, uid: string, engagementId: string): Promise<OwnCaseHome> {
+  const own = await findOwnEngagement(db, uid, engagementId);
+  if (own === 'unknown') return { outcome: 'unknown' };
+  if (!own) return { outcome: 'none' };
+  const placement = await placeEngagement(own);
+  return placement.outcome === 'placed' ? { outcome: 'home', home: placement.home } : { outcome: 'unknown' };
 }
 
 function judge(engagement: Engagement, uid: string, nowMs: number): EngagementDecision {

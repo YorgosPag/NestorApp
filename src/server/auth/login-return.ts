@@ -19,12 +19,10 @@ import 'server-only';
  * ανώνυμο `/o/**` → `/login` **χωρίς** σωστό `?next=` ⇒ 🔴 `guard-return-lost`.
  */
 
-import { headers } from 'next/headers';
-
-import { REQUEST_PATH_HEADER } from '@/lib/http/request-path';
 import { loginHref } from '@/lib/routes/return-path';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
+import { readRequestPath } from '@/server/lib/request-path';
 
 export async function loginHrefForRequest(): Promise<WorkspaceHref> {
-  return loginHref((await headers()).get(REQUEST_PATH_HEADER));
+  return loginHref(await readRequestPath());
 }

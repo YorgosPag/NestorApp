@@ -27,6 +27,7 @@
  */
 
 import { typedHref } from '@/lib/workspace/route-worlds';
+import { hasWorkspacePrefix, stripWorkspace } from '@/lib/workspace/workspace-path';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 
 /**
@@ -67,6 +68,25 @@ export function myCasesRoute(home: CaseHome) {
 export function myCaseHref(engagementId: string, home: CaseHome) {
   const id = encodeURIComponent(engagementId);
   return home === 'org' ? typedHref(`${OFFICE_CASES_ROUTE}/${id}`) : typedHref(`${PERSONAL_CASES_ROUTE}/${id}`);
+}
+
+/**
+ * **Είναι αυτή η διεύθυνση η σελίδα ΜΙΑΣ υπόθεσης γραφείου;** — ο αντίστροφος του {@link myCaseHref} (ADR-901 §15.16).
+ *
+ * `/o/<χώρος>/cases/<eng>` ⇒ το `eng`· οτιδήποτε άλλο (λίστα · βαθύτερη διαδρομή · άλλο τμήμα · χωρίς πρόθεμα) ⇒ `null`.
+ * 🔑 Το ερώτημα/θραύσμα **δεν** είναι τμήμα διαδρομής (ίδιος κανόνας με το `firstPathSegment`).
+ * ⛔ **Δεν κρίνει τίποτα**: λέει μόνο «ποια συμμετοχή ονομάζει η διεύθυνση» — αν είναι **δική του** το κρίνει ο server.
+ */
+export function officeCaseEngagementIdOf(requestPath: string): string | null {
+  const pathname = requestPath.split(/[?#]/, 1)[0];
+  if (!hasWorkspacePrefix(pathname)) return null;
+  const [segment, id, ...deeper] = stripWorkspace(pathname).split('/').filter(Boolean);
+  if (segment !== OFFICE_CASES_SEGMENT || id === undefined || deeper.length > 0) return null;
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return null;
+  }
 }
 
 /** Ο φάκελος της σελίδας πρόσκλησης υπόθεσης (`app/(auth)/case-invite/[token]`) — ΕΝΑ όνομα. */

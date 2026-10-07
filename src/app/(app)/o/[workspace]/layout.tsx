@@ -52,9 +52,11 @@ import { WorkspaceScopeBridge } from '@/components/workspace/WorkspaceScopeBridg
 import { resolveWorkspaceFromPath } from '@/lib/auth/workspace-from-path';
 import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { readPageIdentity } from '@/server/auth/page-identity';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { workspacePath } from '@/lib/workspace/workspace-path';
 import { redirect } from '@/lib/workspace/server-navigation';
 import { loginHrefForRequest } from '@/server/auth/login-return';
+import { caseHomecomingForRequest } from '@/server/workspace/own-case-homecoming';
 import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 
 interface WorkspaceLayoutProps {
@@ -129,6 +131,28 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
       // `no-workspace` είναι απροσπέλαστο όσο το Next εγγυάται το `[workspace]`,
       // αλλά η **εξαντλητική** κρίση δεν αφήνει μελλοντική κατάσταση να πέσει
       // σιωπηλά στο «επιτρέπεται».
+      await leaveForOwnCaseHome(identity.ctx.uid, workspace);
       notFound();
+  }
+}
+
+/**
+ * **Πριν από το 404: μήπως η διεύθυνση ονομάζει ΔΙΚΗ ΤΟΥ υπόθεση που ζει πια αλλού;** (ADR-901 §15.16)
+ *
+ * Πρώην μέλος με παλιό σύνδεσμο `/o/<γραφείο>/cases/<eng>` ⇒ φεύγει για το σπίτι της υπόθεσης. Ο φρουρός **δεν**
+ * χαλαρώνει: τίποτα δεν αποδίδεται εδώ, και η απάντηση δεν εξαρτάται από το αν το γραφείο υπάρχει
+ * (`server/workspace/own-case-homecoming`). Κάθε άλλη διεύθυνση ⇒ επιστρέφει, και ο καλών απαντά το **ίδιο** 404.
+ *
+ * ⚠️ Το layout εξακολουθεί να **μην** διαβάζει τη διαδρομή· τη ρωτά ο κριτής από τον ΕΝΑ αναγνώστη της κεφαλίδας.
+ */
+async function leaveForOwnCaseHome(uid: string, workspace: string): Promise<void> {
+  const homecoming = await caseHomecomingForRequest(uid);
+  // ⛔ «Δεν μπόρεσα να ρωτήσω» ⇒ σφάλμα, ποτέ 404 για υπόθεση που ίσως είναι δική του.
+  if (homecoming.outcome === 'unknown') throwBackendUnavailable('workspace-lookup');
+  if (homecoming.outcome === 'moved') {
+    redirect(
+      declaredHref('ADR-901 §15.16 — το σπίτι της υπόθεσης, χτισμένο ολόκληρο από τον server (`addressInWorkspace`)', homecoming.address),
+      workspace,
+    );
   }
 }
