@@ -6,6 +6,10 @@
  * Ultra-simple media viewer for external users (customers/visitors).
  * Shows floorplans, photos, and videos from Unit Management.
  *
+ * Ο **εταιρικός προσαρμογέας** του `MediaViewerShell`: εδώ ζουν οι αναγνώσεις του χώρου (αρχεία, κάτοψη ορόφου,
+ * επικαλύψεις, κλίμακα) και η χαρτογράφησή τους σε καρτέλες. Η εμφάνιση ανήκει στο κοινό κέλυφος — το ίδιο που φορά
+ * η δημόσια αγγελία.
+ *
  * Split: read-only-media-types (types), ReadOnlyMediaSubTabs (sub-components).
  * @module features/read-only-viewer/components/ReadOnlyMediaViewer
  * @enterprise ADR-031 - Canonical File Storage System
@@ -14,17 +18,9 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { useRouter, usePathname } from '@/lib/workspace/navigation';
-import { declaredHref } from '@/lib/workspace/route-worlds';
-import { useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Map, Layers, Camera, Video, FileQuestion } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Map, Layers, Camera, Video, FileQuestion, type LucideIcon } from 'lucide-react';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
@@ -32,6 +28,12 @@ import { useFloorOverlays } from '@/hooks/useFloorOverlays';
 import { useBackgroundScale } from '@/hooks/useBackgroundScale';
 import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
 import { MediaGallery } from '@/components/shared/files/media/MediaGallery';
+import {
+  MediaViewerEmptyState,
+  MediaViewerShell,
+  type MediaViewerTab,
+} from '@/components/shared/media/viewer/MediaViewerShell';
+import { useMediaTabParam } from '@/components/shared/media/viewer/useMediaTabParam';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -62,6 +64,87 @@ export type { MediaTab };
 
 const logger = createModuleLogger('ReadOnlyMediaViewer');
 
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+type ViewerLevel = NonNullable<ReadOnlyMediaViewerProps['levels']>[number];
+
+/** Ό,τι χρειάζεται μια καρτέλα από μια ανάγνωση αρχείων — το κοινό σχήμα των `useEntityFiles` και της κάτοψης ορόφου. */
+interface MediaFilesState {
+  files: FileRecord[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => void;
+}
+
+/** Το πλήθος της ετικέτας: σιωπηλό όσο φορτώνει, ώστε να μη φανεί ψευδές «0». */
+const countOf = (data: MediaFilesState): number | undefined => (data.loading ? undefined : data.files.length);
+
+// =============================================================================
+// TAB BUILDERS — καθαρή χαρτογράφηση δεδομένων → καρτέλες του κελύφους
+// =============================================================================
+
+function unitFloorplanTabs(levels: readonly ViewerLevel[] | null, floorplans: MediaFilesState, t: Translate): MediaViewerTab[] {
+  if (levels) {
+    return levels.map((level, index) => ({
+      id: `unit-floorplan-${level.floorId}`,
+      label: t('properties:viewer.media.floorplanLevel', { name: level.name }),
+      icon: Map,
+      panel: (
+        <UnitFloorplanTabContent
+          allUnitFloorplans={floorplans.files}
+          levelFloorId={level.floorId}
+          isFirstLevel={index === 0}
+          loading={floorplans.loading}
+          error={floorplans.error}
+          onRetry={floorplans.refetch}
+          t={t}
+        />
+      ),
+    }));
+  }
+  return [{
+    id: 'floorplans',
+    label: t('viewer.media.floorplanUnit', { ns: 'properties' }),
+    icon: Map,
+    count: countOf(floorplans),
+    panel: (
+      <TabContentWrapper loading={floorplans.loading} error={floorplans.error} onRetry={floorplans.refetch} t={t}>
+        <FloorplanGallery
+          files={floorplans.files}
+          emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
+          className="h-full"
+        />
+      </TabContentWrapper>
+    ),
+  }];
+}
+
+interface GalleryTabSpec {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  emptyMessage: string;
+  data: MediaFilesState;
+}
+
+function galleryTab({ id, icon, label, emptyMessage, data }: GalleryTabSpec, padding: string, t: Translate): MediaViewerTab {
+  return {
+    id,
+    label,
+    icon,
+    count: countOf(data),
+    scroll: true,
+    panel: (
+      <TabContentWrapper loading={data.loading} error={data.error} onRetry={data.refetch} t={t}>
+        <MediaGallery
+          files={data.files} showToolbar={false} enableSelection={false} cardSize="md"
+          emptyMessage={emptyMessage}
+          className={padding}
+        />
+      </TabContentWrapper>
+    ),
+  };
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -83,8 +166,6 @@ export function ReadOnlyMediaViewer({
 }: ReadOnlyMediaViewerProps) {
   const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account', 'files', 'files-media']);
   const spacing = useSpacingTokens();
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
   const { user } = useAuth();
 
   const effectiveCompanyId = propCompanyId || user?.companyId;
@@ -97,27 +178,16 @@ export function ReadOnlyMediaViewer({
   // URL-Based Tab State (Deep Linking)
   // ==========================================================================
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const mediaTabParam = useMediaTabParam();
+  const multiLevels = levels && levels.length > 1 ? levels : null;
+  const activeTab = (!mediaTabParam.raw && multiLevels)
+    ? `unit-floorplan-${multiLevels[0].floorId}`
+    : parseMediaTabParam(mediaTabParam.raw);
 
-  const hasMultipleLevels = levels && levels.length > 1;
-  const isMultiLevel = levels && levels.length > 1;
-  const rawMediaTabParam = searchParams.get(MEDIA_TAB_PARAM);
-  const parsedTab = parseMediaTabParam(rawMediaTabParam);
-  const activeTab = (!rawMediaTabParam && hasMultipleLevels && levels.length > 0)
-    ? `unit-floorplan-${levels[0].floorId}`
-    : parsedTab;
-
+  const { write: writeMediaTab } = mediaTabParam;
   const setActiveTab = useCallback((newTab: MediaTab) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (newTab === DEFAULT_MEDIA_TAB && !hasMultipleLevels) {
-      params.delete(MEDIA_TAB_PARAM);
-    } else {
-      params.set(MEDIA_TAB_PARAM, newTab);
-    }
-    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`), { scroll: false });
-  }, [searchParams, router, pathname, hasMultipleLevels]);
+    writeMediaTab(newTab, newTab === DEFAULT_MEDIA_TAB && !multiLevels);
+  }, [writeMediaTab, multiLevels]);
 
   // ==========================================================================
   // Data Fetching (ADR-031)
@@ -129,7 +199,7 @@ export function ReadOnlyMediaViewer({
     realtime: true,
   });
 
-  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId, isMultiLevel, levelCount: levels?.length } });
+  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId, isMultiLevel: !!multiLevels, levelCount: levels?.length } });
   const { floorFloorplan, loading: floorFloorplanLoading, error: floorFloorplanError, refetch: refetchFloorFloorplan } = useFloorFloorplans({
     floorId: floorId || null, buildingId: buildingId || null,
     floorNumber: floorNumber ?? null, companyId: effectiveCompanyId || null,
@@ -139,7 +209,7 @@ export function ReadOnlyMediaViewer({
   const { unitsPerMeter: singleFloorUnitsPerMeter, backgroundId: singleFloorBackgroundId } = useBackgroundScale(floorId || null);
 
   // 🏢 Adapter: FloorFloorplanData → FileRecord[] (shared function from types)
-  const floorFloorplansData = React.useMemo(() => {
+  const floorFloorplansData = React.useMemo<MediaFilesState>(() => {
     const files: FileRecord[] = floorFloorplan
       ? [adaptFloorFloorplanToFileRecord(floorFloorplan, effectiveCompanyId || '')]
       : [];
@@ -170,162 +240,72 @@ export function ReadOnlyMediaViewer({
 
   if (!propertyId) {
     return (
-      <Card className={cn('flex-1 flex flex-col min-h-0', className)}>
-        <CardContent className={cn('flex-1 flex items-center justify-center', spacing.padding.md)}>
-          <figure className={cn('text-center', colors.text.muted)}>
-            <FileQuestion className={cn(iconSizes['2xl'], 'mx-auto mb-3 opacity-50')} aria-hidden="true" />
-            <figcaption className="text-sm">
-              {t('viewer.selectPropertyToViewMedia', { ns: 'properties' })}
-            </figcaption>
-          </figure>
-        </CardContent>
-      </Card>
+      <MediaViewerEmptyState
+        icon={FileQuestion}
+        message={t('viewer.selectPropertyToViewMedia', { ns: 'properties' })}
+        className={className}
+      />
     );
   }
 
   // ==========================================================================
-  // Main Render
+  // Tabs — unit floorplans · floor floorplans · photos · videos
   // ==========================================================================
 
-  return (
-    <Card className={cn('flex-1 flex flex-col min-h-0 overflow-hidden', className)}>
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MediaTab)} className="flex-1 flex flex-col min-h-0">
-        {/* Tab Triggers */}
-        <TabsList className={cn('shrink-0 w-full justify-start rounded-none border-b bg-transparent h-auto', spacing.padding.sm)}>
-          {/* Unit floorplan tabs */}
-          {isMultiLevel ? (
-            levels.map((level) => (
-              <TabsTrigger key={`unit-fp-${level.floorId}`} value={`unit-floorplan-${level.floorId}`} className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-                <Map className={iconSizes.sm} aria-hidden="true" />
-                <span className="text-xs">{t('properties:viewer.media.floorplanLevel', { name: level.name })}</span>
-              </TabsTrigger>
-            ))
-          ) : (
-            <TabsTrigger value="floorplans" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-              <Map className={iconSizes.sm} aria-hidden="true" />
-              <span className="text-xs">{t('viewer.media.floorplanUnit', { ns: 'properties' })}</span>
-              {!floorplansData.loading && floorplansData.files.length > 0 && (
-                <span className={cn('ml-1 text-xs', colors.text.muted)}>({floorplansData.files.length})</span>
-              )}
-            </TabsTrigger>
-          )}
-          {/* Floor floorplan tabs */}
-          {isMultiLevel ? (
-            levels.map((level) => (
-              <TabsTrigger key={`floor-fp-${level.floorId}`} value={`floorplan-floor-${level.floorId}`} className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-                <Layers className={iconSizes.sm} aria-hidden="true" />
-                <span className="text-xs">{t('properties:viewer.media.floorplanFloorLevel', { name: level.name })}</span>
-              </TabsTrigger>
-            ))
-          ) : (
-            <TabsTrigger value="floorplan-floor" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-              <Layers className={iconSizes.sm} aria-hidden="true" />
-              <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties' })}</span>
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="photos" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-            <Camera className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.photos', { ns: 'properties' })}</span>
-            {!photosData.loading && photosData.files.length > 0 && (
-              <span className={cn('ml-1 text-xs', colors.text.muted)}>({photosData.files.length})</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="videos" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-            <Video className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.videos', { ns: 'properties' })}</span>
-            {!videosData.loading && videosData.files.length > 0 && (
-              <span className={cn('ml-1 text-xs', colors.text.muted)}>({videosData.files.length})</span>
-            )}
-          </TabsTrigger>
-        </TabsList>
+  const floorFloorplanTabs: MediaViewerTab[] = multiLevels
+    ? multiLevels.map((level) => ({
+        id: `floorplan-floor-${level.floorId}`,
+        label: t('properties:viewer.media.floorplanFloorLevel', { name: level.name }),
+        icon: Layers,
+        panel: (
+          <FloorFloorplanTabContent
+            floorId={level.floorId} buildingId={buildingId || null}
+            floorNumber={level.floorNumber} companyId={effectiveCompanyId || null}
+            t={t}
+            onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
+            highlightedOverlayUnitId={highlightedOverlayUnitId}
+            propertyLabels={propertyLabels}
+          />
+        ),
+      }))
+    : [{
+        id: 'floorplan-floor',
+        label: t('viewer.media.floorplanFloor', { ns: 'properties' }),
+        icon: Layers,
+        panel: (
+          <TabContentWrapper loading={floorFloorplansData.loading} error={floorFloorplansData.error} onRetry={floorFloorplansData.refetch} t={t}>
+            <FloorplanGallery
+              files={floorFloorplansData.files}
+              floorplanId={floorFloorplansData.files[0]?.id ?? null}
+              overlays={singleFloorOverlays}
+              highlightedOverlayUnitId={highlightedOverlayUnitId}
+              onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
+              propertyLabels={propertyLabels}
+              unitsPerMeter={singleFloorUnitsPerMeter}
+              backgroundId={singleFloorBackgroundId}
+              emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
+              className="h-full"
+            />
+          </TabContentWrapper>
+        ),
+      }];
 
-        {/* Tab Content */}
-        <section className="flex-1 min-h-0 overflow-hidden">
-          {/* Unit floorplan content */}
-          {isMultiLevel ? (
-            levels.map((level, index) => (
-              <TabsContent key={`unit-fp-content-${level.floorId}`} value={`unit-floorplan-${level.floorId}`} className="h-full m-0 data-[state=inactive]:hidden">
-                <UnitFloorplanTabContent
-                  allUnitFloorplans={floorplansData.files}
-                  levelFloorId={level.floorId}
-                  isFirstLevel={index === 0}
-                  loading={floorplansData.loading}
-                  error={floorplansData.error}
-                  onRetry={floorplansData.refetch}
-                  spacing={spacing} iconSizes={iconSizes} t={t}
-                />
-              </TabsContent>
-            ))
-          ) : (
-            <TabsContent value="floorplans" className="h-full m-0 data-[state=inactive]:hidden">
-              <TabContentWrapper loading={floorplansData.loading} error={floorplansData.error} onRetry={floorplansData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
-                <FloorplanGallery
-                  files={floorplansData.files}
-                  emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
-                  className="h-full"
-                />
-              </TabContentWrapper>
-            </TabsContent>
-          )}
+  const tabs: MediaViewerTab[] = [
+    ...unitFloorplanTabs(multiLevels, floorplansData, t),
+    ...floorFloorplanTabs,
+    galleryTab({
+      id: 'photos', icon: Camera, data: photosData,
+      label: t('viewer.media.photos', { ns: 'properties' }),
+      emptyMessage: t('viewer.media.noPhotos', { ns: 'properties' }),
+    }, spacing.padding.sm, t),
+    galleryTab({
+      id: 'videos', icon: Video, data: videosData,
+      label: t('viewer.media.videos', { ns: 'properties' }),
+      emptyMessage: t('viewer.media.noVideos', { ns: 'properties' }),
+    }, spacing.padding.sm, t),
+  ];
 
-          {/* Floor floorplan content */}
-          {isMultiLevel ? (
-            levels.map((level) => (
-              <TabsContent key={level.floorId} value={`floorplan-floor-${level.floorId}`} className="h-full m-0 data-[state=inactive]:hidden">
-                <FloorFloorplanTabContent
-                  floorId={level.floorId} buildingId={buildingId || null}
-                  floorNumber={level.floorNumber} companyId={effectiveCompanyId || null}
-                  spacing={spacing} iconSizes={iconSizes} t={t}
-                  onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
-                  highlightedOverlayUnitId={highlightedOverlayUnitId}
-                  propertyLabels={propertyLabels}
-                />
-              </TabsContent>
-            ))
-          ) : (
-            <TabsContent value="floorplan-floor" className="h-full m-0 data-[state=inactive]:hidden">
-              <TabContentWrapper loading={floorFloorplansData.loading} error={floorFloorplansData.error} onRetry={floorFloorplansData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
-                <FloorplanGallery
-                  files={floorFloorplansData.files}
-                  floorplanId={floorFloorplansData.files[0]?.id ?? null}
-                  overlays={singleFloorOverlays}
-                  highlightedOverlayUnitId={highlightedOverlayUnitId}
-                  onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
-                  propertyLabels={propertyLabels}
-                  unitsPerMeter={singleFloorUnitsPerMeter}
-                  backgroundId={singleFloorBackgroundId}
-                  emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
-                  className="h-full"
-                />
-              </TabContentWrapper>
-            </TabsContent>
-          )}
-
-          {/* Photos */}
-          <TabsContent value="photos" className="h-full m-0 overflow-auto data-[state=inactive]:hidden">
-            <TabContentWrapper loading={photosData.loading} error={photosData.error} onRetry={photosData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
-              <MediaGallery
-                files={photosData.files} showToolbar={false} enableSelection={false} cardSize="md"
-                emptyMessage={t('viewer.media.noPhotos', { ns: 'properties' })}
-                className={spacing.padding.sm}
-              />
-            </TabContentWrapper>
-          </TabsContent>
-
-          {/* Videos */}
-          <TabsContent value="videos" className="h-full m-0 overflow-auto data-[state=inactive]:hidden">
-            <TabContentWrapper loading={videosData.loading} error={videosData.error} onRetry={videosData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
-              <MediaGallery
-                files={videosData.files} showToolbar={false} enableSelection={false} cardSize="md"
-                emptyMessage={t('viewer.media.noVideos', { ns: 'properties' })}
-                className={spacing.padding.sm}
-              />
-            </TabContentWrapper>
-          </TabsContent>
-        </section>
-      </Tabs>
-    </Card>
-  );
+  return <MediaViewerShell tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} className={className} />;
 }
 
 export default ReadOnlyMediaViewer;

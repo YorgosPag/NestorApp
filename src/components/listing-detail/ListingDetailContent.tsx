@@ -73,10 +73,7 @@ import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
 import { ListingLegality } from './ListingLegality';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
-import { ListingGallery } from './ListingGallery';
-import { ListingFloorplans } from './ListingFloorplans';
-import { ListingModels } from './ListingModels';
-import { ListingTour } from './ListingTour';
+import { ListingMediaViewer } from './media/ListingMediaViewer';
 import { ListingStay } from './ListingStay';
 import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
@@ -264,27 +261,17 @@ function ListingDetailBody({
       */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex flex-col gap-4">
-          <ListingGallery listing={listing} />
           {/*
-            🔑 **ΔΙΠΛΑ, ΠΟΤΕ ΜΕΣΑ** *(ADR-841 §7 Α17.2)*: η δομή της οθόνης καθρεφτίζει τη
-            δομή του σχήματος, που έβαλε τις κατόψεις σε **δικό τους** πεδίο. Και αποδίδει
-            **τίποτα** όταν δεν υπάρχει καμία — η κάτοψη είναι προαιρετική, άρα η απουσία
-            της δεν ονομάζεται *(αντίθετα από τη συλλογή, που οφείλει να υπάρχει)*.
+            🗂️ **ΕΝΑΣ ΠΡΟΒΟΛΕΑΣ ΜΕ ΚΑΡΤΕΛΕΣ, ΟΧΙ ΤΕΣΣΕΡΑ ΦΥΛΛΑ ΣΤΗ ΣΤΟΙΒΑ** — το ίδιο κέλυφος με τα «Διαθέσιμα Ακίνητα»
+            του χώρου (`MediaViewerShell`), με δημόσια δεδομένα. Η σειρά των καρτελών κρατά την **αύξουσα αφαίρεση**
+            *(ADR-845 Φ4.3)*: φωτογραφία *(τι είναι)* → κάτοψη *(πώς είναι μοιρασμένο)* → μοντέλο *(πώς στέκει στον
+            χώρο)* → περιήγηση 360° *(ADR-884 Κ3β)*.
+
+            🔑 **Οι κανόνες των φύλλων ΔΕΝ άλλαξαν, άλλαξε μόνο η θέση τους**: οι κατόψεις και τα μοντέλα μένουν σε
+            **δικό τους** φύλλο *(ADR-841 §7 Α17.2 — δίπλα, ποτέ μέσα στη συλλογή)*, και ό,τι είναι προαιρετικό
+            **σιωπά** όταν λείπει: η καρτέλα του απλώς δεν υπάρχει. Μόνο η απουσία φωτογραφίας ονομάζεται.
           */}
-          <ListingFloorplans listing={listing} />
-          {/*
-            🔑 **ΜΕΤΑ ΤΗΝ ΚΑΤΟΨΗ, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΠΟΥ ΕΚΕΙΝΗ ΜΠΗΚΕ ΜΕΤΑ ΤΗ ΣΥΛΛΟΓΗ**
-            *(ADR-845 Φ4.3)*: η σειρά είναι **αύξουσας αφαίρεσης** — φωτογραφία *(τι είναι)*
-            → κάτοψη *(πώς είναι μοιρασμένο)* → μοντέλο *(πώς στέκει στον χώρο)*. Και
-            αποδίδει **τίποτα** όταν δεν υπάρχει μοντέλο: είναι **προαιρετικό**, άρα η
-            απουσία του δεν ονομάζεται.
-          */}
-          <ListingModels listing={listing} />
-          {/*
-            ADR-884 Κ3β — **η περιήγηση 360°**, στην ίδια οικογένεια μέσων (φωτογραφία → κάτοψη → μοντέλο →
-            περιήγηση). Αποδίδει **τίποτα** όταν δεν υπάρχει περιήγηση που φαίνεται (`presence`).
-          */}
-          <ListingTour listingId={listing.id} />
+          <ListingMediaViewer listing={listing} />
           <ListingPositionSection listing={listing} />
           {/*
             ADR-835 §21 — **ο ΧΡΟΝΟΣ μετά τον ΤΟΠΟ** (η σειρά «τόπος → χρόνος» του §4.6).

@@ -18,14 +18,14 @@
  */
 
 import React from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertyList } from '@/components/property-viewer/PropertyList';
 import { PropertyDetailsPanel } from '@/components/property-viewer/PropertyDetailsPanel';
 import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInfo';
 import { PropertyStatusLegend } from '@/components/property-viewer/PropertyStatusLegend';
-import { ReadOnlyMediaViewer, MEDIA_TAB_PARAM, parseMediaTabParam } from './ReadOnlyMediaViewer';
+import { ReadOnlyMediaViewer, parseMediaTabParam } from './ReadOnlyMediaViewer';
+import { useMediaTabParam } from '@/components/shared/media/viewer/useMediaTabParam';
 import { ViewerDetailsSheet } from './ViewerDetailsSheet';
 import { ViewerNarrowBar } from './ViewerNarrowBar';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -80,8 +80,8 @@ export function ListLayout({
   // ==========================================================================
   // PropertyHoverInfo is only relevant for floorplan tab (has polygons to hover).
   // Photos/Videos tabs don't have hoverable regions, so hide the info panel.
-  const searchParams = useSearchParams();
-  const activeMediaTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
+  // Ο ίδιος αναγνώστης με τον προβολέα — δύο αναγνώστες της ίδιας παραμέτρου θα μπορούσαν να διαφωνήσουν.
+  const activeMediaTab = parseMediaTabParam(useMediaTabParam().raw);
   // 🏢 ADR-258D: PropertyHoverInfo visible ONLY on floor floorplan tabs
   // Unit floorplan (Κάτοψη Μονάδας) → δεν έχει overlay polygons, δεν χρειάζεται hover info
   // Floor floorplan (Κάτοψη Ορόφου) → έχει overlay polygons, χρειάζεται hover info

@@ -47,7 +47,13 @@ import type { PublicListing } from '@/types/public-listing';
 
 import { ListingModelStage } from './ListingModelStage';
 
-export function ListingModels({ listing }: { readonly listing: PublicListing }) {
+export interface ListingModelsProps {
+  readonly listing: PublicListing;
+  /** Μέσα σε καρτέλα του προβολέα: την επικεφαλίδα τη λέει ήδη η καρτέλα — η ενότητα κρατά μόνο το `aria-label` της. */
+  readonly embedded?: boolean;
+}
+
+export function ListingModels({ listing, embedded = false }: ListingModelsProps) {
   const { t } = useTranslation(['listing-detail']);
 
   // 🔴 **Ο ΚΡΙΤΗΣ ΤΟΥ ADR-842 Α7, ΞΑΝΑΧΡΗΣΙΜΟΠΟΙΗΜΕΝΟΣ — ΟΧΙ ΞΑΝΑΓΡΑΜΜΕΝΟΣ.** Ο ίδιος που
@@ -62,7 +68,7 @@ export function ListingModels({ listing }: { readonly listing: PublicListing }) 
 
   return (
     <section aria-label={heading} className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-foreground">{heading}</h2>
+      {!embedded && <h2 className="text-sm font-medium text-foreground">{heading}</h2>}
 
       <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {shown.map((model) => (

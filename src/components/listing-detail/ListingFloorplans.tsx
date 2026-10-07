@@ -41,7 +41,13 @@ import { ListingFloorplanWithSpots } from './ListingFloorplanWithSpots';
 /** Τα `sizes` μιας κάτοψης — δύο σε σειρά σε οθόνη, μία σε κινητό. */
 const FLOORPLAN_SIZES = '(min-width: 1024px) 31vw, 100vw';
 
-export function ListingFloorplans({ listing }: { readonly listing: PublicListing }) {
+export interface ListingFloorplansProps {
+  readonly listing: PublicListing;
+  /** Μέσα σε καρτέλα του προβολέα: την επικεφαλίδα τη λέει ήδη η καρτέλα — η ενότητα κρατά μόνο το `aria-label` της. */
+  readonly embedded?: boolean;
+}
+
+export function ListingFloorplans({ listing, embedded = false }: ListingFloorplansProps) {
   // `listing-detail`: η ετικέτα `public-record` ζει εκεί (ADR-890 Φ0 · CHECK 3.34).
   const { t } = useTranslation(['search-results', 'listing-detail']);
 
@@ -61,9 +67,11 @@ export function ListingFloorplans({ listing }: { readonly listing: PublicListing
       aria-label={t('search-results:detail.media.floorplanHeading', { count: shown.length })}
       className="flex flex-col gap-2"
     >
-      <h2 className="text-sm font-medium text-foreground">
-        {t('search-results:detail.media.floorplanHeading', { count: shown.length })}
-      </h2>
+      {!embedded && (
+        <h2 className="text-sm font-medium text-foreground">
+          {t('search-results:detail.media.floorplanHeading', { count: shown.length })}
+        </h2>
+      )}
 
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((floorplan) => (

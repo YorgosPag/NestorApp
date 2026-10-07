@@ -75,6 +75,9 @@ jest.mock('@/components/search-results/ResultsMap', () => ({
 // Η κάρτα περιήγησης έχει δικά της tests (`TourAccessCard`)· εδώ θα ζητούσε `AuthProvider` (useAuth, Κ3β `27e38298`)
 // και έριχνε 22 tests της ΣΕΛΙΔΑΣ που δεν αφορούν την περιήγηση (μετρημένο 2026-09-27, ADR-884 Φ2στ).
 jest.mock('@/components/listing-detail/ListingTour', () => ({ ListingTour: () => null }));
+// Ο προβολέας μέσων ρωτά την παρουσία περιήγησης για να αποφασίσει αν υπάρχει η καρτέλα της — δικτυακή ανάγνωση, με
+// δική της άγκυρα (`ListingMediaViewer.test`, Π5). Εδώ: καμία περιήγηση, άρα η σελίδα όπως ήταν.
+jest.mock('@/lib/spatial-tour/useTourPresenceAvailable', () => ({ useTourPresenceAvailable: () => false }));
 
 jest.mock('@/hooks/listings/useListingViewBeacon', () => ({
   useListingViewBeacon: () => undefined,

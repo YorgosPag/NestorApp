@@ -34,8 +34,8 @@ export interface ReadOnlyMediaViewerProps {
  */
 export type MediaTab = string;
 
-/** URL Query Param key */
-export const MEDIA_TAB_PARAM = 'mediaTab' as const;
+/** URL Query Param key — η μία δήλωση ζει στο κοινό κέλυφος του προβολέα. */
+export { MEDIA_TAB_PARAM } from '@/components/shared/media/viewer/useMediaTabParam';
 
 /** Default tab when no URL param */
 export const DEFAULT_MEDIA_TAB: MediaTab = 'floorplans';

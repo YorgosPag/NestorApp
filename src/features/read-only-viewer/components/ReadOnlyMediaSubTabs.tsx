@@ -11,13 +11,7 @@
 
 import '@/lib/design-system';
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import type { useIconSizes } from '@/hooks/useIconSizes';
+import { MediaViewerPanelState } from '@/components/shared/media/viewer/MediaViewerShell';
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
 import { useFloorOverlays } from '@/hooks/useFloorOverlays';
 import { useBackgroundScale } from '@/hooks/useBackgroundScale';
@@ -31,8 +25,6 @@ export interface TabContentWrapperProps {
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
-  spacing: ReturnType<typeof useSpacingTokens>;
-  iconSizes: ReturnType<typeof useIconSizes>;
   t: (key: string, options?: Record<string, unknown>) => string;
   children: React.ReactNode;
 }
@@ -40,37 +32,19 @@ export interface TabContentWrapperProps {
 // ── TabContentWrapper — loading/error states ──
 
 export function TabContentWrapper({
-  loading, error, onRetry, spacing, iconSizes, t, children,
+  loading, error, onRetry, t, children,
 }: TabContentWrapperProps) {
-  const colors = useSemanticColors();
-
-  if (loading) {
-    return (
-      <div className={cn('h-full flex items-center justify-center', spacing.padding.md)}>
-        <figure className={cn('text-center', colors.text.muted)}>
-          <Spinner size="large" className="mx-auto mb-3" />
-          <figcaption className="text-sm">{t('common:loading.message')}</figcaption>
-        </figure>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={cn('h-full flex items-center justify-center', spacing.padding.md)}>
-        <figure className="text-center">
-          <AlertCircle className={cn(iconSizes.xl, 'mx-auto mb-3 text-destructive')} aria-hidden="true" />
-          <figcaption className={cn('text-sm mb-4', colors.text.muted)}>{t('common:error')}</figcaption>
-          <Button variant="outline" size="sm" onClick={onRetry} className="gap-2">
-            <RefreshCw className={iconSizes.sm} aria-hidden="true" />
-            {t('common:retry')}
-          </Button>
-        </figure>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+  // Οι καταστάσεις της σκηνής ζουν στο κοινό κέλυφος· εδώ μένει μόνο η μετάφραση των ετικετών του χώρου.
+  return (
+    <MediaViewerPanelState
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      labels={{ loading: t('common:loading.message'), error: t('common:error'), retry: t('common:retry') }}
+    >
+      {children}
+    </MediaViewerPanelState>
+  );
 }
 
 // ── FloorFloorplanTabContent — per-floor hook isolation (ADR-236) ──
@@ -80,8 +54,6 @@ interface FloorFloorplanTabContentProps {
   buildingId: string | null;
   floorNumber: number;
   companyId: string | null;
-  spacing: ReturnType<typeof useSpacingTokens>;
-  iconSizes: ReturnType<typeof useIconSizes>;
   t: (key: string, options?: Record<string, unknown>) => string;
   onHoverOverlay?: (propertyId: string | null) => void;
   onClickOverlay?: (propertyId: string) => void;
@@ -91,7 +63,7 @@ interface FloorFloorplanTabContentProps {
 
 export function FloorFloorplanTabContent({
   floorId, buildingId, floorNumber, companyId,
-  spacing, iconSizes, t,
+  t,
   onHoverOverlay, onClickOverlay, highlightedOverlayUnitId,
   propertyLabels,
 }: FloorFloorplanTabContentProps) {
@@ -112,8 +84,6 @@ export function FloorFloorplanTabContent({
       loading={loading}
       error={error ? new Error(error) : null}
       onRetry={refetch}
-      spacing={spacing}
-      iconSizes={iconSizes}
       t={t}
     >
       <FloorplanGallery
@@ -142,14 +112,12 @@ interface PropertyFloorplanTabContentProps {
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
-  spacing: ReturnType<typeof useSpacingTokens>;
-  iconSizes: ReturnType<typeof useIconSizes>;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 export function UnitFloorplanTabContent({
   allUnitFloorplans, levelFloorId, isFirstLevel,
-  loading, error, onRetry, spacing, iconSizes, t,
+  loading, error, onRetry, t,
 }: PropertyFloorplanTabContentProps) {
   const filteredFiles = React.useMemo(() => {
     return allUnitFloorplans.filter((file) => {
@@ -164,7 +132,7 @@ export function UnitFloorplanTabContent({
   return (
     <TabContentWrapper
       loading={loading} error={error} onRetry={onRetry}
-      spacing={spacing} iconSizes={iconSizes} t={t}
+      t={t}
     >
       <FloorplanGallery
         files={filteredFiles}
