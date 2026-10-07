@@ -258,3 +258,65 @@ describe('useZoomPan — η όψη ανήκει στο περιεχόμενο (A
     expect(img.style.transform).toBe('translate(30px, 10px) scale(2) rotate(90deg)');
   });
 });
+
+/**
+ * ADR-907 Φ2β-3 — θεατής **μέσα σε σελίδα που κυλά** (η κάτοψη στην καρτέλα της δημόσιας αγγελίας). Χωρίς αυτό, ο
+ * τροχός πάνω από την κάτοψη μεγεθύνει αντί να κυλά τη σελίδα — η γνωστή παγίδα των ενσωματωμένων χαρτών.
+ */
+describe('useZoomPan — yieldScrollAtRest (ADR-907 Φ2β-3)', () => {
+  function embedded() {
+    const view = renderHook(() => useOneContent({ maxZoom: 8, yieldScrollAtRest: true }));
+    const el = document.createElement('figure');
+    el.getBoundingClientRect = () => new DOMRect(0, 0, 200, 100);
+    act(() => view.result.current.containerRef(el));
+    return { ...view, el };
+  }
+  const wheel = (init: WheelEventInit) => new WheelEvent('wheel', { deltaY: -100, clientX: 100, clientY: 50, cancelable: true, ...init });
+
+  it('🔴 σκέτος τροχός ΑΝΗΚΕΙ ΣΤΗ ΣΕΛΙΔΑ — ούτε μεγέθυνση, ούτε `preventDefault`', () => {
+    const { result, el } = embedded();
+    const event = wheel({});
+    act(() => { el.dispatchEvent(event); });
+    expect(result.current.zoom).toBe(1);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('Ctrl ή ⌘ + τροχός μεγεθύνει (και το pinch του trackpad, που φτάνει ως `ctrlKey`)', () => {
+    const { result, el } = embedded();
+    const withCtrl = wheel({ ctrlKey: true });
+    act(() => { el.dispatchEvent(withCtrl); });
+    expect(result.current.zoom).toBeCloseTo(1.1);
+    expect(withCtrl.defaultPrevented).toBe(true);
+    act(() => { el.dispatchEvent(wheel({ metaKey: true })); });
+    expect(result.current.zoom).toBeCloseTo(1.21);
+  });
+
+  it('🔴 αφή: σε ηρεμία η κάθετη κύλιση είναι της σελίδας· μεγεθυμένο, ο θεατής κρατά τις χειρονομίες', () => {
+    const { result } = embedded();
+    expect(result.current.touchClass).toBe('touch-pan-y');
+    act(() => result.current.zoomIn());
+    expect(result.current.touchClass).toBe('touch-none');
+    act(() => result.current.resetAll());
+    expect(result.current.touchClass).toBe('touch-pan-y');
+  });
+
+  it('χωρίς την επιλογή (modal, πάνελ) τίποτα δεν αλλάζει: ο τροχός μεγεθύνει, η αφή είναι του θεατή', () => {
+    const { result } = renderHook(() => useOneContent({ maxZoom: 8 }));
+    const el = document.createElement('figure');
+    el.getBoundingClientRect = () => new DOMRect(0, 0, 200, 100);
+    act(() => result.current.containerRef(el));
+    const event = wheel({});
+    act(() => { el.dispatchEvent(event); });
+    expect(result.current.zoom).toBeCloseTo(1.1);
+    expect(event.defaultPrevented).toBe(true);
+    expect(result.current.touchClass).toBe('touch-none');
+  });
+
+  it('αφή που πήρε ο browser (`touchcancel`) τερματίζει τη σύρση — το «σύρεται» δεν κολλά', () => {
+    const { result } = embedded();
+    act(() => result.current.handlers.onTouchStart(touches([10, 10])));
+    expect(result.current.isPanning).toBe(true);
+    act(() => result.current.handlers.onTouchCancel(touches()));
+    expect(result.current.isPanning).toBe(false);
+  });
+});

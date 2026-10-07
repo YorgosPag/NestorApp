@@ -67,7 +67,8 @@ export interface ListingFloorplanStageProps {
 function useSwallowClickAfterDrag() {
   const start = useRef<{ readonly x: number; readonly y: number } | null>(null);
   return {
-    onPointerDownCapture: (event: React.PointerEvent) => {
+    // Γεγονός **ποντικιού**, όπως και η σύρση του `useZoomPan` — και στη φάση σύλληψης, πριν το σημείο σταματήσει τη διάδοση.
+    onMouseDownCapture: (event: React.MouseEvent) => {
       start.current = { x: event.clientX, y: event.clientY };
     },
     onClickCapture: (event: React.MouseEvent) => {
