@@ -114,6 +114,7 @@
       "panelHint": "Tap a spot on the floor plan to see the photo.",
       "floorplansLabel": "Floor plans with shot positions",
       "floorplanTab": "Floor plan {index}",
+      "viewTools": "Floor plan view tools",
       "planLabel": "Floor plan {index} with shot positions",
       "markerLabel": "Photo {index} of {total}",
       "notPlaced": "This photo has no position on the floor plan.",

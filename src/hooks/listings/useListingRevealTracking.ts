@@ -47,7 +47,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
-  revealInScroll,
+  revealInScrollUntilSettled,
   visibilityWithinScroller,
   type ScrollFrame,
   type ScrollVisibility,
@@ -93,17 +93,22 @@ function cardElement(container: HTMLElement | null, id: string | null): HTMLElem
 function useRevealSelectedListing(container: HTMLElement | null, selected: string | null): void {
   useEffect(() => {
     if (!container || !selected) return;
-    const reveal = (card: HTMLElement): void => revealInScroll(card, {
-      urgency: 'requested',
-      // `'nearest'`: αν η κάρτα είναι ήδη ορατή — η **συνήθης** περίπτωση με 6-9
-      // αποτελέσματα — δεν κουνιέται απολύτως τίποτα.
-      block: 'nearest',
-    });
+    // 🔑 «Ώσπου να φτάσει» (ADR-907 §8.3 Β6): οι κάρτες έχουν εκτιμώμενο ύψος ώσπου να ζωγραφιστούν, και μία
+    // σκέτη αίτηση προσπερνούσε τον στόχο (μετρημένο: 317px εκτός κάδρου στα 1440px, 661px στα 320px).
+    let cancelReveal = (): void => {};
+    const reveal = (card: HTMLElement): void => {
+      cancelReveal = revealInScrollUntilSettled(card, {
+        urgency: 'requested',
+        // `'nearest'`: αν η κάρτα είναι ήδη ορατή — η **συνήθης** περίπτωση με 6-9
+        // αποτελέσματα — δεν κουνιέται απολύτως τίποτα.
+        block: 'nearest',
+      });
+    };
 
     const card = cardElement(container, selected);
     if (card) {
       reveal(card);
-      return;
+      return () => cancelReveal();
     }
     /*
       🔴 **«ΔΕΝ ΤΗ ΒΡΙΣΚΩ» ≠ «ΔΕΝ ΥΠΑΡΧΕΙ»** (μάθημα ADR-332 D20.1 · μετρημένο ζωντανά, §8.77.6):
@@ -118,7 +123,10 @@ function useRevealSelectedListing(container: HTMLElement | null, selected: strin
       reveal(arrived);
     });
     observer.observe(container, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      cancelReveal();
+    };
   }, [container, selected]);
 }
 
@@ -175,7 +183,7 @@ export function useListingRevealTracking(
   const focusVisibility = useFocusVisibility(container, focusedListingId(focus), frame);
 
   const revealFocused = useCallback(() => {
-    revealInScroll(cardElement(container, focusedListingId(focus)), {
+    revealInScrollUntilSettled(cardElement(container, focusedListingId(focus)), {
       urgency: 'requested',
       // 🔑 **`'center'` ΕΔΩ, σε αντίθεση με το κλικ — και είναι το ίδιο σκεπτικό.**
       // Ο άνθρωπος πάτησε δείκτη που λέει «είναι πιο πάνω»: η πράξη του **είναι** «πήγαινέ

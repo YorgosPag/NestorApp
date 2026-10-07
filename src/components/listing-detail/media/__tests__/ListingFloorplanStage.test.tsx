@@ -7,7 +7,8 @@
  * Σ4 — προηγούμενη/επόμενη βηματίζουν **ανάμεσα στα σημεία αυτής της κάτοψης**, κυκλικά;
  * Σ5 — πολλές κατόψεις ⇒ επιλογέας· `?photo=` άλλης κάτοψης **φέρνει** την κάτοψή της;
  * Σ6 — κάτοψη χωρίς σημεία ⇒ καμία φωτογραφία δίπλα, μόνο η σκηνή;
- * Σ7 — κλικ που ακολουθεί **σύρσιμο** δεν ανοίγει φωτογραφία.
+ * Σ7 — κλικ που ακολουθεί **σύρσιμο** δεν ανοίγει φωτογραφία;
+ * Σ8 — η γραμμή εργαλείων ονομάζει **κάτοψη**, όχι φωτογραφία (μέσα στο Σ1).
  *
  * ⚠️ Το ότι ο τροχός κυλά τη σελίδα και ότι η μεγέθυνση/σύρση δουλεύουν πάνω σε πραγματική διάταξη τα βλέπει ο browser
  * (ADR-907 §7)· η λογική τους είναι στο `useZoomPan.test`.
@@ -72,7 +73,8 @@ describe('ListingFloorplanStage', () => {
 
   it('Σ1 χειριστήρια όψης + το κουτί παραχωρεί την κάθετη κύλιση στη σελίδα', () => {
     const { container } = renderStage(images, [plan('ground')]);
-    expect(screen.getByRole('toolbar')).toBeInTheDocument();
+    // Σ8 — η γραμμή ονομάζει ΚΑΤΟΨΗ: το κοινό «Εργαλεία Φωτογραφίας» (`common-photos`) δεν ακριβολογούσε εδώ (ADR-907 §8.3).
+    expect(screen.getByRole('toolbar', { name: 'listing-detail:media.capture.viewTools' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'photoPreview.zoom.in' })).toBeInTheDocument();
     expect(container.querySelector('[data-floorplan-stage]')?.className).toContain('touch-pan-y');
   });

@@ -85,6 +85,88 @@ export function revealInScroll(
   });
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// 🎯 ΑΠΟΚΑΛΥΨΗ ΠΟΥ ΕΠΑΛΗΘΕΥΕΙ ΟΤΙ ΕΦΤΑΣΕ (ADR-907 §8.3 Β6)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Πόσα διαδοχικά καρέ χωρίς μετακίνηση σημαίνουν «η κύλιση τελείωσε» (~100ms στα 60Hz). */
+const SETTLE_FRAMES = 6;
+/** Ταβάνι επαναλήψεων: κάθε πέρασμα ζωγραφίζει ό,τι διέσχισε, άρα το δεύτερο συνήθως φτάνει. */
+const MAX_REVEAL_PASSES = 4;
+/** Ό,τι σημαίνει «ο άνθρωπος πήρε την κύλιση στα χέρια του» — από εκεί και πέρα δεν τον διορθώνουμε. */
+const USER_SCROLL_INTENT = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+
+/** **Μία αποκάλυψη τη φορά**: δύο βρόχοι πάνω στην ίδια οθόνη θα τραβούσαν ο ένας τον άλλον. */
+let cancelActiveReveal: (() => void) | null = null;
+
+/**
+ * Το `revealInScroll`, **ώσπου το στοιχείο να είναι πράγματι εκεί που ζητήθηκε**.
+ *
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ — μετρημένο 2026-10-07 στο `/search/results?selected=…`**: οι κάρτες της λίστας έχουν
+ * `content-visibility: auto` με **εκτιμώμενο** ύψος 420px, ενώ το πραγματικό είναι 333–341px. Το `scrollIntoView`
+ * υπολογίζει τον προορισμό με τις εκτιμήσεις· όσες κάρτες ζωγραφιστούν στη διαδρομή **μικραίνουν**, ο στόχος
+ * ανεβαίνει και η κύλιση τον **προσπερνά**: η επιλεγμένη κάρτα έμενε 317px πάνω από το κάδρο στα 1440px
+ * (24px ορατά) και 661px στα 320px. Ο προορισμός ενός `scrollIntoView` είναι **στιγμιότυπο**, όχι υπόσχεση.
+ *
+ * 🔑 **Η θεραπεία δεν μαντεύει ύψη**: περιμένει να ηρεμήσει η θέση, ξαναζητά την **ίδια** αποκάλυψη και σταματά
+ * όταν μια αίτηση **δεν μετακινεί τίποτα** — δηλαδή όταν ο browser συμφωνεί ότι το στοιχείο είναι στη θέση του.
+ *
+ * ⚠️ **Σταματά μόλις ο άνθρωπος αγγίξει την κύλιση** (τροχός, αφή, πλήκτρο, δείκτης): μια διόρθωση που τον
+ * γυρίζει πίσω είναι το πήδημα που αυτό το αρχείο υπάρχει για να αποτρέψει.
+ * ⚠️ Στοιχείο που **δεν μετριέται** (jsdom, `display: none`) παίρνει **μία** αίτηση και τίποτε άλλο.
+ *
+ * @returns η ακύρωση — για το `return` ενός `useEffect`.
+ */
+export function revealInScrollUntilSettled(
+  element: Element | null | undefined,
+  options: RevealOptions = {}
+): () => void {
+  cancelActiveReveal?.();
+  revealInScroll(element, options);
+  if (!element || typeof requestAnimationFrame !== 'function' || !isMeasurable(element)) return () => {};
+
+  let frame = 0;
+  let passes = 1;
+  let quietFrames = 0;
+  let lastTop = Number.NaN;
+  let settledTop: number | null = null;
+
+  const stop = (): void => {
+    if (frame !== 0) cancelAnimationFrame(frame);
+    frame = 0;
+    USER_SCROLL_INTENT.forEach((type) => window.removeEventListener(type, stop, true));
+    if (cancelActiveReveal === stop) cancelActiveReveal = null;
+  };
+  const tick = (): void => {
+    frame = 0;
+    if (!element.isConnected) return stop();
+    const top = Math.round(element.getBoundingClientRect().top);
+    quietFrames = top === lastTop ? quietFrames + 1 : 0;
+    lastTop = top;
+    if (quietFrames >= SETTLE_FRAMES) {
+      // Η προηγούμενη αίτηση δεν μετακίνησε τίποτα ⇒ έφτασε. Αλλιώς ξαναζήτα, ως το ταβάνι.
+      if (top === settledTop || passes >= MAX_REVEAL_PASSES) return stop();
+      settledTop = top;
+      passes += 1;
+      quietFrames = 0;
+      revealInScroll(element, options);
+    }
+    frame = requestAnimationFrame(tick);
+  };
+
+  USER_SCROLL_INTENT.forEach((type) => window.addEventListener(type, stop, { capture: true, passive: true }));
+  cancelActiveReveal = stop;
+  frame = requestAnimationFrame(tick);
+  return stop;
+}
+
+/** Το jsdom και το `display: none` δίνουν μηδενικό ορθογώνιο — εκεί «ηρέμησε» δεν σημαίνει τίποτα. */
+function isMeasurable(element: Element): boolean {
+  if (typeof element.getBoundingClientRect !== 'function') return false;
+  const { width, height } = element.getBoundingClientRect();
+  return width > 0 || height > 0;
+}
+
 /**
  * **Πού βρίσκεται το στοιχείο σε σχέση με ό,τι βλέπει ο άνθρωπος τώρα.**
  *

@@ -89,7 +89,7 @@ interface ZoomStageProps {
 }
 
 function ZoomStage({ floorplan, spots, total, current, onActivate }: ZoomStageProps) {
-  const { t } = useTranslation(['common-photos']);
+  const { t } = useTranslation(['listing-detail']);
   // `contentKey`: η όψη ανήκει στην κάτοψη — η επόμενη ανοίγει ουδέτερη (ADR-899 §9 θέμα 7).
   const zp = useZoomPan({ ...PHOTO_VIEW_ZOOM, contentKey: floorplan.value.url, yieldScrollAtRest: true });
   const guard = useSwallowClickAfterDrag();
@@ -97,7 +97,8 @@ function ZoomStage({ floorplan, spots, total, current, onActivate }: ZoomStagePr
 
   return (
     <figure className="m-0 flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card">
-      <nav role="toolbar" aria-label={t('common-photos:photoPreview.toolbar.ariaLabel')}
+      {/* Η ετικέτα ονομάζει ΤΙ χειρίζεται η γραμμή (WAI-ARIA APG, toolbar): κάτοψη, όχι φωτογραφία (ADR-907 §8.3). */}
+      <nav role="toolbar" aria-label={t('listing-detail:media.capture.viewTools')}
         className="flex items-center justify-center gap-1 border-b border-border bg-muted/30 py-1">
         <ImageViewControls view={zp} showLevel />
       </nav>
