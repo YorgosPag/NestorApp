@@ -13,6 +13,7 @@
  *   archive()            ζωντανό → αρχείο              (status='archived')
  *                        κάδος → αρχείο                ΜΟΝΟ με `fromTrash` (εκκαθάριση)
  *   restoreFromArchive() αρχείο → ό,τι ήταν πριν       (ιστορικό: status_changed, όχι restored)
+ *                        εκτός αν η οντότητα δηλώσει άλλη κατάσταση επιστροφής (`lifecycle-effects`)
  *   permanentDelete()    κάδος → οριστική διαγραφή     (executeDeletion, ADR-226)
  *
  * Και οι δύο αποσύρσεις γράφουν στο ΙΔΙΟ πεδίο (`status`) ⇒ μια εγγραφή δεν είναι ποτέ
@@ -31,7 +32,7 @@ import { executeDeletion } from "./deletion-guard";
 import { conditionalBlockMessage } from "./deletion-common";
 import { extractEntityName, loadLifecycleTarget, type LifecycleTarget } from "./lifecycle-target";
 import { ARCHIVE, RETIREMENTS, TRASH, type Retirement } from "./lifecycle-retirements";
-import { LIFECYCLE_EFFECTS } from "./lifecycle-effects";
+import { LIFECYCLE_EFFECTS, type ReinstatePatch } from "./lifecycle-effects";
 import { SYSTEM_IDENTITY, isSystemActorId } from "@/config/domain-constants";
 import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
 import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
@@ -218,7 +219,46 @@ interface Reinstatement {
   readonly outcomes: readonly LifecycleOutcome[];
 }
 
-/** Η **μία** γραφή της επαναφοράς: κατάσταση, σφραγίδες, και ό,τι δήλωσε η οντότητα — ατομικά. */
+/** Πού επιστρέφει η εγγραφή και τι τη συνοδεύει — η απόφαση, πριν από οποιαδήποτε γραφή. */
+interface ReinstatementPlan {
+  readonly restoredStatus: string;
+  readonly patch: ReinstatePatch | null;
+}
+
+/**
+ * Αποφασίζει την επιστροφή: η τελευταία ζωντανή κατάσταση, εκτός αν η οντότητα **δηλώσει**
+ * άλλη (`ReinstatePatch.restoredStatus`) επειδή δένει το `status` της με πεδίο που αλλάζει
+ * στην ίδια γραφή.
+ *
+ * @throws Error αν η δήλωση επιστρέφει αποσυρμένη κατάσταση — η επαναφορά θα άφηνε την
+ *   εγγραφή εκεί από όπου έφυγε, με σβησμένες σφραγίδες
+ */
+function planReinstatement(
+  target: LifecycleTarget,
+  from: Retirement,
+  entityType: SoftDeletableEntityType,
+): ReinstatementPlan {
+  const lastLiveStatus =
+    (target.data?.previousStatus as string) || target.config.defaultRestoreStatus;
+
+  const patch =
+    LIFECYCLE_EFFECTS[entityType]?.reinstatePatch?.(from, target.data ?? {}, lastLiveStatus) ?? null;
+  const restoredStatus = patch?.restoredStatus ?? lastLiveStatus;
+
+  if (RETIREMENTS.some((retirement) => retirement.status === restoredStatus)) {
+    throw new Error(`Lifecycle effect of ${entityType} declared a retired restore status`);
+  }
+
+  return { restoredStatus, patch };
+}
+
+/**
+ * Η **μία** γραφή της επαναφοράς: κατάσταση, σφραγίδες, και ό,τι δήλωσε η οντότητα — ατομικά.
+ *
+ * Το `status` γράφεται **μετά** τα πεδία της δήλωσης, επίτηδες: τον κύκλο ζωής τον γράφει
+ * μόνο η μηχανή. Όποια οντότητα θέλει άλλη κατάσταση επιστροφής τη **δηλώνει**
+ * (`planReinstatement`), δεν τη στριμώχνει στα `fields`.
+ */
 async function writeReinstatement(
   target: LifecycleTarget,
   from: Retirement,
@@ -255,12 +295,8 @@ async function reinstate(
     throw new ApiError(409, `${target.config.labelEn} is not in ${from.place}`);
   }
 
-  const restoredStatus =
-    (target.data.previousStatus as string) || target.config.defaultRestoreStatus;
-
   // Ό,τι άλλο δηλώνει η οντότητα ότι αλλάζει στην επιστροφή — στην ΙΔΙΑ εγγραφή, ατομικά.
-  const patch =
-    LIFECYCLE_EFFECTS[entityType]?.reinstatePatch?.(from, target.data, restoredStatus) ?? null;
+  const { restoredStatus, patch } = planReinstatement(target, from, entityType);
   const patchFields = patch?.fields ?? {};
 
   logger.info(`Restoring ${entityType} from ${from.place}`, { entityId, restoredStatus });

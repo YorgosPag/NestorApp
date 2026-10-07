@@ -22,9 +22,13 @@ export interface SoftDeletableFields {
   deletedBy?: string;
   /** Status before deletion — used for restore */
   previousStatus?: string;
-  /** Timestamp of last restore from trash */
+  /**
+   * Πότε έγινε η **τελευταία επαναφορά** — από τον κάδο **ή** από το αρχείο. Οι δύο
+   * επαναφορές είναι η ίδια πράξη της μηχανής (`reinstate`) και γράφουν την ίδια σφραγίδα·
+   * από πού επέστρεψε το λέει το ιστορικό (`restored` έναντι `status_changed`), όχι αυτό το πεδίο.
+   */
   restoredAt?: FirestoreishTimestamp;
-  /** UID of user who restored it */
+  /** Ποιος έκανε την τελευταία επαναφορά (από κάδο ή αρχείο). */
   restoredBy?: string;
   /** Πότε μπήκε στο αρχείο — παρόν μόνο όσο `status='archived'` (ADR-329 §3.9). */
   archivedAt?: FirestoreishTimestamp | null;

@@ -27,6 +27,14 @@ export interface ReinstatePatch {
   readonly changes: readonly AuditFieldChange[];
   /** Τι σημαίνει αυτή η αλλαγή για τον άνθρωπο — φτάνει ως την απάντηση της διαδρομής. */
   readonly outcome?: LifecycleOutcome;
+  /**
+   * Η **ζωντανή** κατάσταση στην οποία επιστρέφει η εγγραφή, όταν η οντότητα δένει το
+   * `status` της με άλλο πεδίο που αλλάζει στην ίδια γραφή (ακίνητο: `status` ≡
+   * `commercialStatus`). Απουσία ⇒ η τελευταία ζωντανή κατάσταση (`previousStatus`).
+   *
+   * Το `status` το γράφει **μόνο** η μηχανή: δηλώνεται εδώ, ποτέ μέσα στα `fields`.
+   */
+  readonly restoredStatus?: string;
 }
 
 /** Ό,τι δηλώνει μια οντότητα για τον κύκλο ζωής της. Και τα δύο προαιρετικά. */
@@ -34,11 +42,14 @@ export interface LifecycleEffects {
   /**
    * Τι **άλλο** αλλάζει στο έγγραφο όταν επιστρέφει. Καθαρή απόφαση — η μηχανή γράφει.
    * `null` ⇒ τίποτα.
+   *
+   * @param lastLiveStatus η τελευταία ζωντανή κατάσταση (`previousStatus` ή η προεπιλογή του
+   *                       μητρώου) — εκεί επιστρέφει η εγγραφή, εκτός αν η δήλωση ορίσει άλλη
    */
   readonly reinstatePatch?: (
     from: Retirement,
     data: FirebaseFirestore.DocumentData,
-    restoredStatus: string,
+    lastLiveStatus: string,
   ) => ReinstatePatch | null;
   /**
    * Τρέχει **μετά** από κάθε επιτυχημένη μετάβαση, με το έγγραφο όπως είναι πλέον.

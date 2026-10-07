@@ -17,6 +17,7 @@
 import 'server-only';
 
 import { Timestamp } from 'firebase-admin/firestore';
+import { deriveLegacyStatusFromCommercial } from '@/constants/commercial-statuses';
 import { ARCHIVED_STATUS } from '@/lib/firestore/trashed-status';
 import type { LifecycleEffects, ReinstatePatch } from '@/lib/firestore/lifecycle-effects';
 import { takeOffMarket } from '@/lib/offers/take-off-market';
@@ -28,16 +29,41 @@ import {
 
 const logger = createModuleLogger('PropertyLifecycleEffects');
 
-/** Επιστροφή από το αρχείο ⇒ εκτός αγοράς. Από τον κάδο ⇒ τίποτα (γυρίζει όπως ήταν). */
+/**
+ * Ακίνητο που ήταν **ήδη** εκτός αγοράς όταν αρχειοθετήθηκε: τίποτα δεν αλλάζει εμπορικά,
+ * αλλά το παλιό `status` οφείλει να επιστρέψει ίσο με το `commercialStatus` — όχι με ό,τι
+ * έτυχε να κρατά το `previousStatus`. Χωρίς `commercialStatus` (παλιό έγγραφο) το `status`
+ * **είναι** η εμπορική κατάσταση, άρα δεν υπάρχει τι να ευθυγραμμιστεί.
+ */
+function realignLegacyStatus(
+  data: FirebaseFirestore.DocumentData,
+  lastLiveStatus: string,
+): ReinstatePatch | null {
+  if (typeof data.commercialStatus !== 'string') return null;
+
+  const mirrored = deriveLegacyStatusFromCommercial(data.commercialStatus);
+  return mirrored === lastLiveStatus
+    ? null
+    : { fields: {}, changes: [], restoredStatus: mirrored };
+}
+
+/**
+ * Επιστροφή από το αρχείο ⇒ εκτός αγοράς. Από τον κάδο ⇒ τίποτα (γυρίζει όπως ήταν).
+ *
+ * Το `status` επιστροφής **παράγεται** από το `commercialStatus` που θα έχει το έγγραφο μετά
+ * τη γραφή, με τον έναν καθρέφτη (`deriveLegacyStatusFromCommercial`): τα δύο πεδία δεν
+ * αποκλίνουν ποτέ. Αλλιώς το `previousStatus` θα ξανάφερνε το `for-sale` δίπλα σε
+ * `commercialStatus: 'unavailable'`.
+ */
 function offMarketOnUnarchive(
   from: { readonly status: string },
   data: FirebaseFirestore.DocumentData,
-  restoredStatus: string,
+  lastLiveStatus: string,
 ): ReinstatePatch | null {
   if (from.status !== ARCHIVED_STATUS) return null;
 
-  const patch = takeOffMarket(data, restoredStatus, Timestamp.now());
-  if (patch === null) return null;
+  const patch = takeOffMarket(data, lastLiveStatus, Timestamp.now());
+  if (patch === null) return realignLegacyStatus(data, lastLiveStatus);
 
   return {
     fields: patch.fields,
@@ -50,6 +76,7 @@ function offMarketOnUnarchive(
       },
     ],
     outcome: 'taken-off-market',
+    restoredStatus: deriveLegacyStatusFromCommercial(patch.commercialStatusAfter),
   };
 }
 

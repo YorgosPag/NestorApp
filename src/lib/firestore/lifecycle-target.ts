@@ -12,6 +12,7 @@ import "server-only";
 
 import { SOFT_DELETE_CONFIG } from "./soft-delete-config";
 import type { SoftDeleteEntityConfig } from "./soft-delete-config";
+import { RETIREMENTS } from "./lifecycle-retirements";
 // Imported from its defining module rather than through `ApiErrorHandler`,
 // which re-exports it but pulls in the whole `next/server` surface with it.
 import { ApiError } from "@/lib/api/api-error-types";
@@ -81,6 +82,31 @@ export async function loadLifecycleTarget(
   }
 
   return { config, docRef, data };
+}
+
+/**
+ * Αρνείται **γραφή πεδίων** σε εγγραφή που είναι στον κάδο ή στο αρχείο.
+ *
+ * Το ρωτά κάθε διαδρομή επεξεργασίας (`PATCH`) πριν γράψει. Χωρίς αυτό, μια γραφή που
+ * αγγίζει το `status` έμμεσα (π.χ. ο καθρέφτης `commercialStatus → status` του ακινήτου)
+ * βγάζει την εγγραφή από την απόσυρση **χωρίς τη μηχανή**: καμία γραμμή μετάβασης, ορφανά
+ * `previousStatus` / σφραγίδες, και κανένα `lifecycle-effects`. Η έξοδος είναι μόνο η
+ * επαναφορά (`soft-delete-engine`).
+ *
+ * @throws ApiError(409, 'ENTITY_RETIRED') αν η εγγραφή είναι αποσυρμένη
+ */
+export function assertNotRetired(
+  entityType: SoftDeletableEntityType,
+  data: FirebaseFirestore.DocumentData | undefined,
+): void {
+  const retirement = RETIREMENTS.find((candidate) => candidate.status === data?.status);
+  if (!retirement) return;
+
+  throw new ApiError(
+    409,
+    `${SOFT_DELETE_CONFIG[entityType].labelEn} is in ${retirement.place}`,
+    "ENTITY_RETIRED",
+  );
 }
 
 /** Το όνομα της εγγραφής όπως θα γραφτεί στη γραμμή ιστορικού. */

@@ -12,6 +12,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
+import { assertNotRetired } from '@/lib/firestore/lifecycle-target';
 import { assertDeletionAllowed } from '@/lib/firestore/deletion-guard';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import {
@@ -87,6 +88,10 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
 
       try {
         const { docRef, existing } = await requirePropertyInScope(adminDb, id, ctx);
+
+        // 🛡️ ADR-281 · ADR-329 §3.9: αποσυρμένο ακίνητο δεν επεξεργάζεται. Ο καθρέφτης
+        //    `commercialStatus → status` θα το έβγαζε από κάδο/αρχείο χωρίς τη μηχανή.
+        assertNotRetired('property', existing);
 
         const raw: unknown = await request.json();
         // ADR-898 Φ3β-3 — οι δηλώσεις της αντικειμενικής: μερική διόρθωση σε συναλλαγή, ΟΧΙ `update(body)` (σβήνει αδέλφια).

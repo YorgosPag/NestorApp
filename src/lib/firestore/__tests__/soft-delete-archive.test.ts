@@ -290,7 +290,7 @@ describe('restoreFromArchive — αρχείο → ζωντανό', () => {
 });
 
 describe('🔴 η δημόσια αγγελία ακολουθεί τον κύκλο ζωής — ΜΙΑ κλήση, κάθε πόρτα', () => {
-  const listed = { ...liveProperty, status: 'active', commercialStatus: 'for-sale' };
+  const listed = { ...liveProperty, status: 'for-sale', commercialStatus: 'for-sale' };
 
   /** Το ακίνητο όπως το παρέλαβε ο γραφέας της προβολής. */
   const republished = () => republish.mock.calls[0][2] as Record<string, unknown>;
@@ -314,7 +314,7 @@ describe('🔴 η δημόσια αγγελία ακολουθεί τον κύκ
   });
 
   it('ιδεμποτική απόσυρση ⇒ καμία κλήση', async () => {
-    const { db } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'active' });
+    const { db } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'for-sale' });
 
     await archive(db, 'property', PROPERTY_ID, USER, TENANT);
 
@@ -322,18 +322,18 @@ describe('🔴 η δημόσια αγγελία ακολουθεί τον κύκ
   });
 
   it('επαναφορά από τον ΚΑΔΟ ⇒ γυρίζει όπως ήταν, και ξαναδημοσιεύεται', async () => {
-    const { db, update } = dbWith({ ...listed, status: TRASHED_STATUS, previousStatus: 'active' });
+    const { db, update } = dbWith({ ...listed, status: TRASHED_STATUS, previousStatus: 'for-sale' });
 
     const result = await restoreFromTrash(db, 'property', PROPERTY_ID, USER, TENANT);
 
     expect(update.mock.calls[0][0]).not.toHaveProperty('commercialStatus');
-    expect(republished()).toMatchObject({ status: 'active', commercialStatus: 'for-sale' });
+    expect(republished()).toMatchObject({ status: 'for-sale', commercialStatus: 'for-sale' });
     expect(recordChange.mock.calls[0][0].changes).toHaveLength(1);
     expect(result.outcomes).toEqual([]);
   });
 
   it('🔴 η επαναφορά από το ΑΡΧΕΙΟ ΔΗΛΩΝΕΙ ότι γύρισε εκτός αγοράς — η οθόνη δεν το μαντεύει', async () => {
-    const { db } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'active' });
+    const { db } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'for-sale' });
 
     const result = await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
 
@@ -341,27 +341,79 @@ describe('🔴 η δημόσια αγγελία ακολουθεί τον κύκ
   });
 
   it('🔴 επαναφορά από το ΑΡΧΕΙΟ ⇒ γυρίζει ΕΚΤΟΣ ΑΓΟΡΑΣ, στην ίδια εγγραφή και στην ίδια γραμμή', async () => {
-    const { db, update } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'active' });
+    const { db, update } = dbWith({ ...listed, status: ARCHIVED_STATUS, previousStatus: 'for-sale' });
 
-    await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
+    const result = await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
 
+    // 🔴 `status` ≡ `commercialStatus` (commercial-statuses.ts): το `previousStatus` ΔΕΝ
+    //    ξαναφέρνει το `for-sale` δίπλα σε `commercialStatus: 'unavailable'`.
     expect(update).toHaveBeenCalledTimes(1);
-    expect(update.mock.calls[0][0]).toMatchObject({ status: 'active', commercialStatus: 'unavailable' });
-    expect(republished()).toMatchObject({ status: 'active', commercialStatus: 'unavailable' });
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'unavailable', commercialStatus: 'unavailable' });
+    expect(republished()).toMatchObject({ status: 'unavailable', commercialStatus: 'unavailable' });
+    expect(result.restoredStatus).toBe('unavailable');
     expect(recordChange).toHaveBeenCalledTimes(1);
     expect(recordChange.mock.calls[0][0].changes).toEqual([
-      { field: 'status', oldValue: ARCHIVED_STATUS, newValue: 'active', label: 'status' },
+      { field: 'status', oldValue: ARCHIVED_STATUS, newValue: 'unavailable', label: 'status' },
       { field: 'commercialStatus', oldValue: 'for-sale', newValue: 'unavailable', label: 'commercialStatus' },
     ]);
   });
 
-  it('🔴 παλιό έγγραφο, όπου το `status` ΕΙΝΑΙ η εμπορική κατάσταση ⇒ πάλι εκτός αγοράς', async () => {
+  it('🔴 παλιό έγγραφο, όπου το `status` ΕΙΝΑΙ η εμπορική κατάσταση ⇒ πάλι εκτός αγοράς, και τα δύο πεδία', async () => {
     const { db, update } = dbWith({ ...liveProperty, status: ARCHIVED_STATUS, previousStatus: 'for-sale' });
 
     await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
 
-    // Το `commercialStatus` κερδίζει το `status` στον κριτή ⇒ αρκεί να γραφτεί αυτό.
-    expect(update.mock.calls[0][0]).toMatchObject({ status: 'for-sale', commercialStatus: 'unavailable' });
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'unavailable', commercialStatus: 'unavailable' });
+  });
+
+  it('🔴 ήδη εκτός αγοράς με `previousStatus` που ΑΠΟΚΛΙΝΕΙ ⇒ το `status` ακολουθεί το `commercialStatus`, χωρίς ψεύτικη εμπορική γραμμή', async () => {
+    const { db, update } = dbWith({
+      ...liveProperty,
+      status: ARCHIVED_STATUS,
+      previousStatus: 'for-sale',
+      commercialStatus: 'unavailable',
+    });
+
+    const result = await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'unavailable' });
+    expect(update.mock.calls[0][0]).not.toHaveProperty('commercialStatus');
+    expect(recordChange.mock.calls[0][0].changes).toEqual([
+      { field: 'status', oldValue: ARCHIVED_STATUS, newValue: 'unavailable', label: 'status' },
+    ]);
+    // Τίποτα δεν κατέβηκε από την αγορά ⇒ η οθόνη δεν το ανακοινώνει.
+    expect(result.outcomes).toEqual([]);
+  });
+
+  it('συναλλαγή που επιβιώνει της απόσυρσης (κράτηση) ⇒ το `status` την ακολουθεί, όχι «μη διαθέσιμο»', async () => {
+    const offers = [
+      { id: 'offr_sell', kind: 'sell', lifecycle: 'reserved', askingPrice: 200000 },
+      { id: 'offr_lease', kind: 'leaseOut', lifecycle: 'active', rentPrice: 900 },
+    ];
+    const { db, update } = dbWith({
+      ...liveProperty,
+      status: ARCHIVED_STATUS,
+      previousStatus: 'for-sale-and-rent',
+      commercialStatus: 'for-sale-and-rent',
+      offers,
+    });
+
+    await restoreFromArchive(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'reserved', commercialStatus: 'reserved' });
+  });
+
+  it('επαναφορά από τον ΚΑΔΟ με το ίδιο αποκλίνον έγγραφο ⇒ ΔΕΝ αγγίζεται: γυρίζει στο `previousStatus`', async () => {
+    const { db, update } = dbWith({
+      ...liveProperty,
+      status: TRASHED_STATUS,
+      previousStatus: 'for-sale',
+      commercialStatus: 'unavailable',
+    });
+
+    await restoreFromTrash(db, 'property', PROPERTY_ID, USER, TENANT);
+
+    expect(update.mock.calls[0][0]).toMatchObject({ status: 'for-sale' });
   });
 
   it('🔴 αποτυχία της προβολής ΔΕΝ ρίχνει την πράξη', async () => {
