@@ -168,11 +168,23 @@ service firebase.storage {
       // NOTE: Firestore-based isFileCreator() had latency issues during upload flow
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
 
+      // 🎬 ADR-907 §10 (Φάση 4) — το βίντεο αγγελίας παίρνει ΜΕΓΑΛΥΤΕΡΟ ταβάνι, τίποτε άλλο.
+      // Προσθετικό σκέλος: ό,τι περνούσε με το `isValidFileSize()` περνά ακόμη, αυτούσιο.
+      // Το ταβάνι των 100 MB ανοίγει ΜΟΝΟ για μονάδα · κατηγορία `videos` · δηλωμένο `video/mp4`.
+      // ⚠️ Ο τύπος εδώ είναι ΔΗΛΩΣΗ του πελάτη — οι κανόνες δεν βλέπουν codec ούτε διάρκεια.
+      //    Το «MP4/H.264, ≤ 120″» κρίνεται στον server, στη δημοσίευση, πάνω στα bytes.
+      function isListingVideoUpload() {
+        return entityType == 'property'
+               && category == 'videos'
+               && request.resource.contentType == 'video/mp4'
+               && request.resource.size <= 100 * 1024 * 1024;
+      }
+
       // ✍️ WRITE: Company-scoped + size validation
       // 🏢 ENTERPRISE: Multi-tenant isolation
       allow write: if isAuthenticated()
                    && (belongsToCompany(companyId) || isSuperAdmin())
-                   && isValidFileSize();
+                   && (isValidFileSize() || isListingVideoUpload());
 
       // 🗑️ DELETE: Company-scoped access
       allow delete: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
