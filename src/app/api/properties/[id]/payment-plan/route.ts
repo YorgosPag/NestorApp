@@ -13,15 +13,12 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentPlanInput, UpdatePaymentPlanInput } from '@/types/payment-plan';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
 
 // =============================================================================
 // VALIDATION SCHEMAS — ADR-252 Phase 3 Security Hardening
@@ -61,190 +58,113 @@ const createPaymentPlanSchema = z.object({
   })).optional(),
 });
 
-type SegmentData = { params: Promise<{ id: string }> };
+type CreatePlanBody = z.infer<typeof createPaymentPlanSchema>;
+type SplitOwners = NonNullable<CreatePlanBody['owners']>;
+type PlanFields = Omit<CreatePlanBody, 'owners'>;
+
+const PATH = '/api/properties/[id]/payment-plan';
 
 // =============================================================================
 // GET — Active Payment Plan
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan' });
-      try {
-        // ADR-244: Return ALL active plans (supports multi-owner split)
-        const plans = await PaymentPlanService.getPaymentPlans(propertyId);
-        return NextResponse.json({ success: true, data: plans });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get payment plan');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+export const GET = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'read',
+  failure: 'Failed to get payment plan',
+  handle: async ({ propertyId }) => {
+    // ADR-244: Return ALL active plans (supports multi-owner split)
+    const plans = await PaymentPlanService.getPaymentPlans(propertyId);
+    return NextResponse.json({ success: true, data: plans });
+  },
+}));
 
 // =============================================================================
 // POST — Create Payment Plan
 // =============================================================================
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan' });
-      try {
-        const rawBody: unknown = await req.json();
-        const parsed = createPaymentPlanSchema.safeParse(rawBody);
-
-        if (!parsed.success) {
-          return NextResponse.json(
-            { success: false, error: parsed.error.issues[0].message },
-            { status: 400 }
-          );
-        }
-
-        const { owners: splitOwners, ...planFields } = parsed.data;
-
-        // ADR-244: If owners[] present → split mode (create N individual plans)
-        if (splitOwners && splitOwners.length > 1) {
-          const result = await PaymentPlanService.createSplitPaymentPlans(
-            propertyId,
-            splitOwners,
-            {
-              buildingId: planFields.buildingId,
-              projectId: planFields.projectId,
-              taxRegime: planFields.taxRegime ?? 'vat_24',
-              taxRate: planFields.taxRate ?? 24,
-              config: planFields.config,
-              loan: planFields.loan,
-              notes: planFields.notes,
-            },
-            planFields.totalAmount,
-            planFields.installments,
-            ctx.uid,
-          );
-          if (!result.success) {
-            return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-          }
-          return NextResponse.json({ success: true, data: result.plans }, { status: 201 });
-        }
-
-        // Standard: single/joint plan
-        const input: CreatePaymentPlanInput = { ...planFields, propertyId } as CreatePaymentPlanInput;
-        const result = await PaymentPlanService.createPaymentPlan(input, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true, data: result.plan }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create payment plan');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
+/** ADR-244: split mode — N individual plans, one per owner. */
+function createSplitPlans(propertyId: string, owners: SplitOwners, plan: PlanFields, uid: string) {
+  return PaymentPlanService.createSplitPaymentPlans(
+    propertyId,
+    owners,
+    {
+      buildingId: plan.buildingId,
+      projectId: plan.projectId,
+      taxRegime: plan.taxRegime ?? 'vat_24',
+      taxRate: plan.taxRate ?? 24,
+      config: plan.config,
+      loan: plan.loan,
+      notes: plan.notes,
+    },
+    plan.totalAmount,
+    plan.installments,
+    uid,
   );
-
-  return handler(request);
 }
 
-export const POST = withStandardRateLimit(handlePost);
+export const POST = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to create payment plan',
+  handle: async ({ req, ctx, propertyId }) => {
+    const rawBody: unknown = await req.json();
+    const parsed = createPaymentPlanSchema.safeParse(rawBody);
+    if (!parsed.success) return failure(parsed.error.issues[0].message, 400);
+
+    const { owners: splitOwners, ...planFields } = parsed.data;
+
+    // ADR-244: If owners[] present → split mode (create N individual plans)
+    if (splitOwners && splitOwners.length > 1) {
+      const split = await createSplitPlans(propertyId, splitOwners, planFields, ctx.uid);
+      if (!split.success) return failure(split.error);
+      return NextResponse.json({ success: true, data: split.plans }, { status: 201 });
+    }
+
+    // Standard: single/joint plan
+    const input: CreatePaymentPlanInput = { ...planFields, propertyId } as CreatePaymentPlanInput;
+    const result = await PaymentPlanService.createPaymentPlan(input, ctx.uid);
+    if (!result.success) return failure(result.error);
+
+    return NextResponse.json({ success: true, data: result.plan }, { status: 201 });
+  },
+}));
 
 // =============================================================================
 // PATCH — Update Payment Plan
 // =============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const PATCH = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to update payment plan',
+  handle: async ({ req, ctx, propertyId }) => {
+    const body = (await req.json()) as UpdatePaymentPlanInput & { planId: string };
+    if (!body.planId) return failure('planId is required', 400);
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan' });
-      try {
-        const body = (await req.json()) as UpdatePaymentPlanInput & { planId: string };
+    const { planId, ...updates } = body;
+    const result = await PaymentPlanService.updatePaymentPlan(propertyId, planId, updates, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        if (!body.planId) {
-          return NextResponse.json(
-            { success: false, error: 'planId is required' },
-            { status: 400 }
-          );
-        }
-
-        const { planId, ...updates } = body;
-        const result = await PaymentPlanService.updatePaymentPlan(propertyId, planId, updates, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update payment plan');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const PATCH = withStandardRateLimit(handlePatch);
+    return NextResponse.json({ success: true });
+  },
+}));
 
 // =============================================================================
 // DELETE — Delete Payment Plan (negotiation/draft only, no payments)
 // =============================================================================
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const DELETE = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to delete payment plan',
+  handle: async ({ req, ctx, propertyId }) => {
+    const planId = new URL(req.url).searchParams.get('planId');
+    if (!planId) return failure('planId query parameter is required', 400);
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan' });
-      try {
-        const { searchParams } = new URL(req.url);
-        const planId = searchParams.get('planId');
+    const result = await PaymentPlanService.deletePlan(propertyId, planId, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        if (!planId) {
-          return NextResponse.json(
-            { success: false, error: 'planId query parameter is required' },
-            { status: 400 }
-          );
-        }
-
-        const result = await PaymentPlanService.deletePlan(propertyId, planId, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to delete payment plan');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const DELETE = withStandardRateLimit(handleDelete);
+    return NextResponse.json({ success: true });
+  },
+}));

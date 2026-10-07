@@ -9,15 +9,13 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
+import { resolvePlanId, noActivePlan } from '@/app/api/properties/_shared/active-payment-plan';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { DISBURSEMENT_TYPES, INTEREST_RATE_TYPES } from '@/types/loan-tracking';
 
@@ -33,92 +31,46 @@ const CreateLoanSchema = CreateLoanFieldsSchema.extend({
   planId: z.string().max(128).optional(),
 });
 
-type SegmentData = { params: Promise<{ id: string }> };
+const PATH = '/api/properties/[id]/payment-plan/loans';
 
 // =============================================================================
 // GET — List Loans
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const GET = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'read',
+  failure: 'Failed to get loans',
+  handle: async ({ propertyId }) => {
+    const plan = await PaymentPlanService.getActivePaymentPlan(propertyId);
+    if (!plan) return NextResponse.json({ success: true, data: [] });
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans' });
+    const result = await LoanTrackingService.getLoans(propertyId, plan.id);
+    if (!result.success) return failure(result.error, 500);
 
-      try {
-        const plan = await PaymentPlanService.getActivePaymentPlan(propertyId);
-        if (!plan) {
-          return NextResponse.json({ success: true, data: [] });
-        }
-        const result = await LoanTrackingService.getLoans(propertyId, plan.id);
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 500 });
-        }
-        return NextResponse.json({ success: true, data: result.loans });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get loans');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return NextResponse.json({ success: true, data: result.loans });
+  },
+}));
 
 // =============================================================================
 // POST — Add Loan
 // =============================================================================
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const POST = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to add loan',
+  handle: async ({ req, ctx, propertyId }) => {
+    const parsed = safeParseBody(CreateLoanSchema, await req.json());
+    if (parsed.error) return parsed.error;
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans' });
+    const planId = await resolvePlanId(propertyId, parsed.data.planId);
+    if (!planId) return noActivePlan();
 
-      try {
-        const parsed = safeParseBody(CreateLoanSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+    const loanInput = CreateLoanFieldsSchema.parse(parsed.data);
+    const result = await LoanTrackingService.addLoan(propertyId, planId, loanInput, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        // Get active plan or use provided planId
-        let planId = body.planId;
-        if (!planId) {
-          const plan = await PaymentPlanService.getActivePaymentPlan(propertyId);
-          if (!plan) {
-            return NextResponse.json(
-              { success: false, error: 'No active payment plan found' },
-              { status: 404 }
-            );
-          }
-          planId = plan.id;
-        }
-
-        const loanInput = CreateLoanFieldsSchema.parse(body);
-        const result = await LoanTrackingService.addLoan(propertyId, planId, loanInput, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true, data: result.loan }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to add loan');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+    return NextResponse.json({ success: true, data: result.loan }, { status: 201 });
+  },
+}));

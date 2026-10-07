@@ -35,7 +35,7 @@ export const POST = withStandardRateLimit(
     const parsed = safeParseBody(documentRequestBody, await request.json());
     if (parsed.error) return parsed.error;
     const { db, actor, record } = await readAuthorizedCase({
-      ctx, cache, caseId: decodeRouteParam(params.id), permission: CONVEYANCE_MANAGE, path: PATH,
+      ctx, cache, caseId: decodeRouteParam(params.id), permission: CONVEYANCE_MANAGE, path: PATH, intent: 'write',
     });
     const context = await loadConveyanceSubject(db, actor.companyId, record.subject.propertyId);
     if (!context) throw failureToApiError({ kind: 'property_not_found' });

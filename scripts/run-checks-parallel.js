@@ -1130,6 +1130,14 @@ if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
 if (!process.env.SKIP_VIEW_SIGNAL_AUTHORITY)
   addThread('3.99', 'View signal authority', 'scripts/check-view-signal-authority.js');
 
+// CHECK 3.100 (ADR-281 · ADR-329 §3.9) — η εγγραφή σε αποσυρμένο ακίνητο. «Γράφει κάποια διαδρομή πάνω
+// σε ακίνητο χωρίς να ρωτήσει αν είναι αποσυρμένο;»
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: ο τύπος αναγκάζει το `intent` του φρουρού, ΟΧΙ το να περάσει κάθε route που
+// γράφει από τον φρουρό — νέο route χωρίς φρουρό ξαναγράφει ακίνητο του κάδου χωρίς κανένα σφάλμα.
+// Κλειστό σύνολο δηλωμένων εξαιρέσεων (επαληθεύεται). AST, ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_RETIRED_PROPERTY_WRITE)
+  addThread('3.100', 'Retired property write', 'scripts/check-retired-property-write.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

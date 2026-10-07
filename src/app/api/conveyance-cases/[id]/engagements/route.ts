@@ -18,6 +18,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import type { PropertyAccessIntent } from '@/lib/auth/tenant-isolation';
 import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
@@ -59,17 +60,23 @@ const REJECTION_STATUS: Readonly<Record<CaseOfferRejection, 409 | 422>> = {
   'consent-basis-required': 422,
 };
 
-async function loadAuthorized(ctx: AuthContext, cache: PermissionCache, id: string, permission: typeof CONVEYANCE_VIEW) {
+async function loadAuthorized(
+  ctx: AuthContext,
+  cache: PermissionCache,
+  id: string,
+  permission: typeof CONVEYANCE_VIEW,
+  intent: PropertyAccessIntent,
+) {
   const record = await readOwnedConveyanceCase(requireAdminFirestore(), actorOf(ctx), id);
   if (!record) throw failureToApiError({ kind: 'case_not_found' });
-  await authorizeForProperty({ ctx, cache, propertyId: record.subject.propertyId, permission, path: PATH });
+  await authorizeForProperty({ ctx, cache, propertyId: record.subject.propertyId, permission, path: PATH, intent });
   return record;
 }
 
 export const GET = withStandardRateLimit(
   withAuth(async (_request: NextRequest, ctx: AuthContext, cache: PermissionCache, segmentData?: Segment) => {
     const { id } = await segmentData!.params;
-    const record = await loadAuthorized(ctx, cache, id, CONVEYANCE_VIEW);
+    const record = await loadAuthorized(ctx, cache, id, CONVEYANCE_VIEW, 'read');
     return apiSuccess({ slots: await listCaseProfessionalSlots(requireAdminFirestore(), record) });
   }),
 );
@@ -79,7 +86,7 @@ export const POST = withSensitiveRateLimit(
     const { id } = await segmentData!.params;
     const parsed = safeParseBody(offerSchema, await request.json());
     if (parsed.error) return parsed.error;
-    const record = await loadAuthorized(ctx, cache, id, CONVEYANCE_MANAGE);
+    const record = await loadAuthorized(ctx, cache, id, CONVEYANCE_MANAGE, 'write');
 
     const outcome = await offerCaseEngagement(requireAdminFirestore(), actorOf(ctx), record, {
       role: parsed.data.role,

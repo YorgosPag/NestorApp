@@ -37,7 +37,7 @@ export const POST = withStandardRateLimit(
     const parsed = safeParseBody(bodySchema, await request.json());
     if (parsed.error) return parsed.error;
     const { db, actor, record } = await readAuthorizedCase({
-      ctx, cache, caseId: decodeRouteParam(params.id), permission: CONVEYANCE_VIEW, path: PATH,
+      ctx, cache, caseId: decodeRouteParam(params.id), permission: CONVEYANCE_VIEW, path: PATH, intent: 'read',
     });
 
     const outcome = await openHostCaseFile(db, {

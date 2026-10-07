@@ -13,7 +13,7 @@ import 'server-only';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 import type { PermissionId } from '@/lib/auth/types';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope, type PropertyAccessIntent } from '@/lib/auth/tenant-isolation';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import type { Firestore } from 'firebase-admin/firestore';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
@@ -24,15 +24,19 @@ import type { ConveyanceCase } from '@/types/conveyance-case';
 export const CONVEYANCE_VIEW: PermissionId = 'legal:conveyance:view';
 export const CONVEYANCE_MANAGE: PermissionId = 'legal:conveyance:manage';
 
-/** Μισθωτής + δικαίωμα για το συγκεκριμένο ακίνητο — αλλιώς ρίχνει (404 ξένου μισθωτή / 403). */
+/**
+ * Μισθωτής + δικαίωμα για το συγκεκριμένο ακίνητο — αλλιώς ρίχνει (404 ξένου μισθωτή / 403).
+ * Το `intent` το κρίνει ο ΕΝΑΣ φρουρός (ADR-281): `write` σε αποσυρμένο ακίνητο ⇒ 409 `ENTITY_RETIRED`.
+ */
 export async function authorizeForProperty(params: {
   readonly ctx: AuthContext;
   readonly cache: PermissionCache;
   readonly propertyId: string;
   readonly permission: PermissionId;
   readonly path: string;
+  readonly intent: PropertyAccessIntent;
 }): Promise<void> {
-  const property = await requirePropertyInTenantScope({ ctx: params.ctx, propertyId: params.propertyId, path: params.path });
+  const property = await requirePropertyInTenantScope({ ctx: params.ctx, propertyId: params.propertyId, path: params.path, intent: params.intent });
   const options = property.projectId ? { projectId: property.projectId } : {};
   if (!(await hasPermission(params.ctx, params.permission, options, params.cache))) {
     throw new ApiError(403, 'Insufficient permissions', 'FORBIDDEN');
@@ -53,13 +57,14 @@ export async function readAuthorizedCase(params: {
   readonly caseId: string;
   readonly permission: PermissionId;
   readonly path: string;
+  readonly intent: PropertyAccessIntent;
 }): Promise<{ readonly db: Firestore; readonly actor: ConveyanceActor; readonly record: ConveyanceCase }> {
   const db = requireAdminFirestore();
   const actor = actorOf(params.ctx);
   const record = await readOwnedConveyanceCase(db, actor, params.caseId);
   if (!record) throw failureToApiError({ kind: 'case_not_found' });
-  const { ctx, cache, permission, path } = params;
-  await authorizeForProperty({ ctx, cache, propertyId: record.subject.propertyId, permission, path });
+  const { ctx, cache, permission, path, intent } = params;
+  await authorizeForProperty({ ctx, cache, propertyId: record.subject.propertyId, permission, path, intent });
   return { db, actor, record };
 }
 

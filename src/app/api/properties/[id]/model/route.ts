@@ -40,7 +40,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
+import { propertyIdOfRequest } from '@/app/api/properties/_shared/property-id-of-request';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
@@ -189,12 +189,9 @@ async function handlePost(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<ApiSuccessResponse<PropertyModelResponse>>> {
-  if (!ctx.companyId) throw new ApiError(403, 'Missing company context');
+  const propertyId = propertyIdOfRequest(request, ctx);
 
-  const propertyId = extractNestedIdFromUrl(request.url, 'properties');
-  if (!propertyId) throw new ApiError(400, 'Property ID is required');
-
-  await requirePropertyInTenantScope({ ctx, propertyId, path: request.nextUrl.pathname });
+  await requirePropertyInTenantScope({ ctx, propertyId, path: request.nextUrl.pathname, intent: 'write' });
 
   const { file, declaration, sceneFileIds } = await readModelUpload(request);
 

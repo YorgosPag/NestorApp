@@ -12,15 +12,13 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth, logAuditEvent } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { logAuditEvent } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentInput } from '@/types/payment-plan';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreatePaymentSchema = z.object({
@@ -33,79 +31,48 @@ const CreatePaymentSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-type SegmentData = { params: Promise<{ id: string }> };
+const PATH = '/api/properties/[id]/payments';
 
 // =============================================================================
 // GET — Payment History
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payments' });
-      try {
-        const payments = await PaymentPlanService.getPayments(propertyId);
-        return NextResponse.json({ success: true, data: payments });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get payments');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+export const GET = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'read',
+  failure: 'Failed to get payments',
+  handle: async ({ propertyId }) => {
+    const payments = await PaymentPlanService.getPayments(propertyId);
+    return NextResponse.json({ success: true, data: payments });
+  },
+}));
 
 // =============================================================================
 // POST — Record Payment
 // =============================================================================
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const POST = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to record payment',
+  handle: async ({ req, ctx, propertyId }) => {
+    const parsed = safeParseBody(CreatePaymentSchema, await req.json());
+    if (parsed.error) return parsed.error;
+    const body = parsed.data;
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payments' });
-      try {
-        const parsed = safeParseBody(CreatePaymentSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+    const paymentInput: CreatePaymentInput = {
+      ...body,
+      methodDetails: body.methodDetails as unknown as CreatePaymentInput['methodDetails'],
+    };
 
-        const paymentInput: CreatePaymentInput = {
-          ...body,
-          methodDetails: body.methodDetails as unknown as CreatePaymentInput['methodDetails'],
-        };
+    const result = await PaymentPlanService.recordPayment(propertyId, paymentInput, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        const result = await PaymentPlanService.recordPayment(propertyId, paymentInput, ctx.uid);
+    await logAuditEvent(ctx, 'data_created', result.payment?.id ?? propertyId, 'payment', {
+      newValue: { type: 'financial_status', value: { amount: body.amount, method: body.method } },
+      metadata: { reason: `Payment recorded property: ${propertyId}, amount: ${body.amount})` },
+    }).catch(() => {/* non-blocking */});
 
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        await logAuditEvent(ctx, 'data_created', result.payment?.id ?? propertyId, 'payment', {
-          newValue: { type: 'financial_status', value: { amount: body.amount, method: body.method } },
-          metadata: { reason: `Payment recorded property: ${propertyId}, amount: ${body.amount})` },
-        }).catch(() => {/* non-blocking */});
-
-        return NextResponse.json({ success: true, data: result.payment }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to record payment');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+    return NextResponse.json({ success: true, data: result.payment }, { status: 201 });
+  },
+}));

@@ -72,7 +72,7 @@ export const GET = withStandardRateLimit(
         throw new ApiError(400, 'Property ID is required');
       }
 
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/hierarchy' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/hierarchy', intent: 'read' });
 
       // 1. Fetch property
       const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();

@@ -24,12 +24,12 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { listPropertyMedia } from '@/services/property-media/property-media.service';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
-import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
+import { propertyIdOfRequest } from '@/app/api/properties/_shared/property-id-of-request';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('PropertyPhotosRoute');
@@ -54,15 +54,13 @@ async function handleGet(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<ApiSuccessResponse<PropertyPhotosResponse>>> {
-  if (!ctx.companyId) throw new ApiError(403, 'Missing company context');
-
-  const propertyId = extractNestedIdFromUrl(request.url, 'properties');
-  if (!propertyId) throw new ApiError(400, 'Property ID is required');
+  const propertyId = propertyIdOfRequest(request, ctx);
 
   await requirePropertyInTenantScope({
     ctx,
     propertyId,
     path: request.nextUrl.pathname,
+    intent: 'read',
   });
 
   const metas = await listPropertyMedia({

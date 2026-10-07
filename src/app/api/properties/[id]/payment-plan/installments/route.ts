@@ -13,16 +13,13 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreateInstallmentInput, UpdateInstallmentInput } from '@/types/payment-plan';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
 
-type SegmentData = { params: Promise<{ id: string }> };
+const PATH = '/api/properties/[id]/payment-plan/installments';
 
 // =============================================================================
 // POST — Add Installment
@@ -34,65 +31,42 @@ interface AddInstallmentBody {
   insertAtIndex?: number;
 }
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+/** Το πρώτο που λείπει ή δεν στέκει στο σώμα — `null` όταν είναι πλήρες. */
+function addInstallmentProblem(body: AddInstallmentBody): string | null {
+  if (!body.planId || !body.installment) return 'planId and installment are required';
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
-      try {
-        const body = (await req.json()) as AddInstallmentBody;
+  const { label, type, amount, percentage, dueDate } = body.installment;
+  if (!label || !type || amount === undefined || percentage === undefined || !dueDate) {
+    return 'installment must include label, type, amount, percentage, dueDate';
+  }
 
-        if (!body.planId || !body.installment) {
-          return NextResponse.json(
-            { success: false, error: 'planId and installment are required' },
-            { status: 400 }
-          );
-        }
+  // 🛡️ ADR-249 P2-2: Defense-in-depth — basic amount sanity check
+  if (typeof amount !== 'number' || amount <= 0) return 'Installment amount must be a positive number';
 
-        const { label, type, amount, percentage, dueDate } = body.installment;
-        if (!label || !type || amount === undefined || percentage === undefined || !dueDate) {
-          return NextResponse.json(
-            { success: false, error: 'installment must include label, type, amount, percentage, dueDate' },
-            { status: 400 }
-          );
-        }
-
-        // 🛡️ ADR-249 P2-2: Defense-in-depth — basic amount sanity check
-        if (typeof amount !== 'number' || amount <= 0) {
-          return NextResponse.json(
-            { success: false, error: 'Installment amount must be a positive number' },
-            { status: 400 }
-          );
-        }
-
-        const result = await PaymentPlanService.addInstallment(
-          propertyId,
-          body.planId,
-          body.installment,
-          ctx.uid,
-          body.insertAtIndex
-        );
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to add installment');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
+  return null;
 }
 
-export const POST = withStandardRateLimit(handlePost);
+export const POST = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to add installment',
+  handle: async ({ req, ctx, propertyId }) => {
+    const body = (await req.json()) as AddInstallmentBody;
+    const problem = addInstallmentProblem(body);
+    if (problem) return failure(problem, 400);
+
+    const result = await PaymentPlanService.addInstallment(
+      propertyId,
+      body.planId,
+      body.installment,
+      ctx.uid,
+      body.insertAtIndex
+    );
+    if (!result.success) return failure(result.error);
+
+    return NextResponse.json({ success: true }, { status: 201 });
+  },
+}));
 
 // =============================================================================
 // PATCH — Update Installment
@@ -104,49 +78,28 @@ interface UpdateInstallmentBody {
   updates: UpdateInstallmentInput;
 }
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+const INDEX_REQUIRED = 'planId and index are required';
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
-      try {
-        const body = (await req.json()) as UpdateInstallmentBody;
+export const PATCH = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to update installment',
+  handle: async ({ req, ctx, propertyId }) => {
+    const body = (await req.json()) as UpdateInstallmentBody;
+    if (!body.planId || body.index === undefined) return failure(INDEX_REQUIRED, 400);
 
-        if (!body.planId || body.index === undefined) {
-          return NextResponse.json(
-            { success: false, error: 'planId and index are required' },
-            { status: 400 }
-          );
-        }
+    const result = await PaymentPlanService.updateInstallment(
+      propertyId,
+      body.planId,
+      body.index,
+      body.updates,
+      ctx.uid
+    );
+    if (!result.success) return failure(result.error);
 
-        const result = await PaymentPlanService.updateInstallment(
-          propertyId,
-          body.planId,
-          body.index,
-          body.updates,
-          ctx.uid
-        );
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update installment');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const PATCH = withStandardRateLimit(handlePatch);
+    return NextResponse.json({ success: true });
+  },
+}));
 
 // =============================================================================
 // DELETE — Remove Installment
@@ -157,45 +110,17 @@ interface RemoveInstallmentBody {
   index: number;
 }
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const DELETE = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to remove installment',
+  handle: async ({ req, ctx, propertyId }) => {
+    const body = (await req.json()) as RemoveInstallmentBody;
+    if (!body.planId || body.index === undefined) return failure(INDEX_REQUIRED, 400);
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
-      try {
-        const body = (await req.json()) as RemoveInstallmentBody;
+    const result = await PaymentPlanService.removeInstallment(propertyId, body.planId, body.index, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        if (!body.planId || body.index === undefined) {
-          return NextResponse.json(
-            { success: false, error: 'planId and index are required' },
-            { status: 400 }
-          );
-        }
-
-        const result = await PaymentPlanService.removeInstallment(
-          propertyId,
-          body.planId,
-          body.index,
-          ctx.uid
-        );
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to remove installment');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const DELETE = withStandardRateLimit(handleDelete);
+    return NextResponse.json({ success: true });
+  },
+}));

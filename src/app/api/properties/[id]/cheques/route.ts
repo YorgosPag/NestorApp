@@ -9,14 +9,11 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateChequeSchema = z.object({
@@ -37,72 +34,38 @@ const CreateChequeSchema = z.object({
   contactId: z.string().max(128).optional(),
 });
 
-type SegmentData = { params: Promise<{ id: string }> };
+const PATH = '/api/properties/[id]/cheques';
 
 // =============================================================================
 // GET — List Cheques
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/cheques' });
-      try {
-        const result = await ChequeRegistryService.getChequesByProperty(propertyId);
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 500 });
-        }
-        return NextResponse.json({ success: true, data: result.cheques });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get cheques');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+export const GET = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'read',
+  failure: 'Failed to get cheques',
+  handle: async ({ propertyId }) => {
+    const result = await ChequeRegistryService.getChequesByProperty(propertyId);
+    if (!result.success) return failure(result.error, 500);
+    return NextResponse.json({ success: true, data: result.cheques });
+  },
+}));
 
 // =============================================================================
 // POST — Create Cheque
 // =============================================================================
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const POST = withStandardRateLimit(propertyRoute({
+  path: PATH,
+  intent: 'write',
+  failure: 'Failed to create cheque',
+  handle: async ({ req, ctx, propertyId }) => {
+    const parsed = safeParseBody(CreateChequeSchema, await req.json());
+    if (parsed.error) return parsed.error;
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/cheques' });
-      try {
-        const parsed = safeParseBody(CreateChequeSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+    const result = await ChequeRegistryService.createCheque(propertyId, parsed.data, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        const result = await ChequeRegistryService.createCheque(propertyId, body, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true, data: result.cheque }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create cheque');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+    return NextResponse.json({ success: true, data: result.cheque }, { status: 201 });
+  },
+}));

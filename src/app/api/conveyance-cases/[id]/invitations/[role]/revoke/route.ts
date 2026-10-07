@@ -14,12 +14,10 @@ import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { ApiError, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { isLegalEngagementRole } from '@/types/engagement';
-import { readOwnedConveyanceCase } from '@/services/conveyance/conveyance-case.service';
 import { cancelCaseInvitation } from '@/services/conveyance/conveyance-engagement-host.service';
-import { actorOf, authorizeForProperty, CONVEYANCE_MANAGE, failureToApiError } from '../../../../_shared/conveyance-route-support';
+import { CONVEYANCE_MANAGE, readAuthorizedCase } from '../../../../_shared/conveyance-route-support';
 
 const PATH = '/api/conveyance-cases/[id]/invitations/[role]/revoke';
 
@@ -29,11 +27,9 @@ export const POST = withSensitiveRateLimit(
   withAuth(async (_request: NextRequest, ctx: AuthContext, cache: PermissionCache, segmentData?: Segment) => {
     const { id, role } = await segmentData!.params;
     if (!isLegalEngagementRole(role)) throw new ApiError(404, 'Slot not found', 'NOT_FOUND');
-    const db = requireAdminFirestore();
-    const actor = actorOf(ctx);
-    const record = await readOwnedConveyanceCase(db, actor, id);
-    if (!record) throw failureToApiError({ kind: 'case_not_found' });
-    await authorizeForProperty({ ctx, cache, propertyId: record.subject.propertyId, permission: CONVEYANCE_MANAGE, path: PATH });
+    const { db, actor, record } = await readAuthorizedCase({
+      ctx, cache, caseId: id, permission: CONVEYANCE_MANAGE, path: PATH, intent: 'withdraw',
+    });
 
     return apiSuccess({ slots: await cancelCaseInvitation(db, actor, record, role, Date.now()) });
   }),

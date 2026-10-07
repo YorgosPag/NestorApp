@@ -12,7 +12,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
-import { assertNotRetired } from '@/lib/firestore/lifecycle-target';
 import { assertDeletionAllowed } from '@/lib/firestore/deletion-guard';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import {
@@ -24,7 +23,7 @@ import { validatePropertyFieldLockingUnlessRevert } from '@/lib/firestore/proper
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope, type PropertyAccessIntent } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import {
@@ -58,11 +57,14 @@ const logger = createModuleLogger('PropertyIdRoute');
  * Η **σειρά** είναι το ουσιώδες και ήταν αντιγραμμένη σε PATCH + DELETE: 404 πρώτα
  * (ανύπαρκτο), tenant scope μετά. Αντίστροφα, ο έλεγχος εμβέλειας θα διέρρεε την
  * ύπαρξη ξένων ακινήτων μέσω διαφορετικού status.
+ *
+ * Το `intent` το κρίνει ο ΕΝΑΣ φρουρός (ADR-281 · ADR-329 §3.9): `write` σε αποσυρμένο ⇒ 409.
  */
 async function requirePropertyInScope(
   adminDb: AdminFirestore,
   id: string,
   ctx: AuthContext,
+  intent: PropertyAccessIntent,
 ): Promise<{
   docRef: FirebaseFirestore.DocumentReference;
   existing: Record<string, unknown>;
@@ -71,7 +73,7 @@ async function requirePropertyInScope(
   const doc = await docRef.get();
   if (!doc.exists) throw new ApiError(404, 'Property not found');
 
-  await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
+  await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]', intent });
 
   return { docRef, existing: doc.data() as Record<string, unknown> };
 }
@@ -87,11 +89,9 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
       if (id === '__new__') throw new ApiError(400, 'Cannot update placeholder property — save it first');
 
       try {
-        const { docRef, existing } = await requirePropertyInScope(adminDb, id, ctx);
-
-        // 🛡️ ADR-281 · ADR-329 §3.9: αποσυρμένο ακίνητο δεν επεξεργάζεται. Ο καθρέφτης
+        // 🛡️ ADR-281 · ADR-329 §3.9: αποσυρμένο ακίνητο δεν επεξεργάζεται (`write` ⇒ 409). Ο καθρέφτης
         //    `commercialStatus → status` θα το έβγαζε από κάδο/αρχείο χωρίς τη μηχανή.
-        assertNotRetired('property', existing);
+        const { docRef, existing } = await requirePropertyInScope(adminDb, id, ctx, 'write');
 
         const raw: unknown = await request.json();
         // ADR-898 Φ3β-3 — οι δηλώσεις της αντικειμενικής: μερική διόρθωση σε συναλλαγή, ΟΧΙ `update(body)` (σβήνει αδέλφια).
@@ -300,7 +300,8 @@ export const DELETE = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>(
   missingIdMessage: 'Property ID is required',
   handler: async ({ ctx, adminDb, id }) => {
       try {
-        const { existing } = await requirePropertyInScope(adminDb, id, ctx);
+        // `lifecycle`: αρχείο → κάδος είναι δηλωμένη μετάβαση· την κρίνει η μηχανή, όχι ο φρουρός γραφής.
+        const { existing } = await requirePropertyInScope(adminDb, id, ctx, 'lifecycle');
 
         // 🛡️ ADR-329 §3.9: ό,τι αναφέρεται (επιμετρήσεις κ.λπ.) ΔΕΝ μπαίνει στον κάδο — ο
         //    κάδος έχει προθεσμία οριστικής διαγραφής. Ο έλεγχος ζούσε μόνο στον browser·
@@ -336,7 +337,7 @@ export const GET = entityIdRoute<ApiSuccessResponse<Record<string, unknown>>>({
   handler: async ({ ctx, adminDb, id }) => {
     // ⚠️ Εδώ ο έλεγχος εμβέλειας προηγείται του 404 — αντίθετα από PATCH/DELETE.
     // Είναι σκόπιμο: το GET δεν επιβεβαιώνει ύπαρξη ακινήτου εκτός εμβέλειας.
-    await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
+    await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]', intent: 'read' });
 
     const doc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(id).get();
     if (!doc.exists) throw new ApiError(404, 'Property not found');

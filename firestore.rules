@@ -604,6 +604,45 @@ service cloud.firestore {
     match /files/{fileId} {
 
       // =======================================================================
+      // 🗄️ ADR-281 · ADR-329 §3.9 (Στάδιο 3β) — ΤΟ ΑΡΧΕΙΟ ΑΚΟΛΟΥΘΕΙ ΤΟ ΑΚΙΝΗΤΟ ΤΟΥ
+      // =======================================================================
+      // Ακίνητο στο αρχείο ή στον κάδο είναι ΚΛΕΙΔΩΜΕΝΟ: ο διακομιστής αρνείται κάθε γραφή πάνω του
+      // (`requirePropertyInTenantScope` με `intent: 'write'` ⇒ 409, CHECK 3.100). Τα αρχεία του όμως
+      // γράφονται από τον ΠΕΛΑΤΗ (ADR-031: εκκρεμής εγγραφή → bytes → οριστικοποίηση), άρα ο ίδιος
+      // φρουρός πρέπει να σταθεί ΕΔΩ — αλλιώς το κλείδωμα θα είχε μια πόρτα που δεν περνά από διακομιστή.
+      //
+      // 🔑 Κρίνει τον ΓΟΝΕΑ, όχι το αρχείο: στη γέννηση τον δηλώνει το νέο έγγραφο
+      //    (`request.resource.data`), σε κάθε άλλη πράξη το αποθηκευμένο (`resource.data`) — ώστε
+      //    κανείς να μη «μετακομίσει» το αρχείο σε άλλον γονέα για να το ξεκλειδώσει.
+      // 🔑 Οι δύο τιμές είναι ΟΙ ΙΔΙΕΣ με τον διακομιστή (`lib/firestore/trashed-status.ts`:
+      //    `TRASHED_STATUS` · `ARCHIVED_STATUS`)· η σουίτα κανόνων τις διαβάζει από εκεί, όχι από εδώ.
+      // ℹ️ Ακίνητο που ΔΕΝ υπάρχει (ακόμη) δεν είναι αποσυρμένο ⇒ περνά: η ύπαρξη/ιδιοκτησία του γονέα
+      //    κρίνεται αλλού, και ένα `get()` σε ανύπαρκτο έγγραφο θα έριχνε ΟΛΟ το allow.
+      // ⚠️ ΔΗΛΩΜΕΝΟ ΟΡΙΟ: το `storage.rules` δεν ρωτά (τα `firestore.get()` του αφαιρέθηκαν σκόπιμα
+      //    2026-07-26). Ωμή γραφή στο Storage ΧΩΡΙΣ εγγραφή `files` αφήνει bytes που καμία οθόνη δεν δείχνει.
+      // ⚠️ Το σκέλος σύνδεσης (`linkedTo`) κρίνει τον ΚΑΤΟΧΟ του αρχείου, όχι τον στόχο της σύνδεσης.
+      function parentPropertyIsLive(file) {
+        return file.get('entityType', null) != 'property'
+               || !(file.get('entityId', null) is string)
+               || file.entityId.size() == 0
+               || !exists(/databases/$(database)/documents/properties/$(file.entityId))
+               || !(get(/databases/$(database)/documents/properties/$(file.entityId)).data.get('status', null)
+                      in ['deleted', 'archived']);
+      }
+
+      // Αλλαγή: ο γονέας ΠΡΙΝ και ο γονέας ΜΕΤΑ. Κανένα σκέλος δεν παγώνει τα `entityType`/`entityId`,
+      // άρα μόνο το «πριν» θα άφηνε ένα αρχείο ζωντανού ακινήτου να ΜΕΤΑΚΟΜΙΣΕΙ κάτω από αποσυρμένο.
+      function fileStaysUnderLiveProperty() {
+        // Ίδιος γονέας ⇒ ΜΙΑ αποτίμηση: το σύνολο κανόνων ζει κοντά στο όριο των 1000 εκφράσεων ανά αίτημα.
+        return parentPropertyIsLive(resource.data)
+               && (
+                    (request.resource.data.get('entityType', null) == resource.data.get('entityType', null)
+                      && request.resource.data.get('entityId', null) == resource.data.get('entityId', null))
+                    || parentPropertyIsLive(request.resource.data)
+                  );
+      }
+
+      // =======================================================================
       // 🔒 ADR-862 Φ0 (Β4) — Η ΚΑΤΑΣΤΑΣΗ CDE ΔΕΝ ΓΡΑΦΕΤΑΙ ΑΠΟ ΠΕΛΑΤΗ
       // =======================================================================
       // Το `cdeState` και τα ίχνη των τεσσάρων πράξεων που το γεννούν είναι
@@ -735,6 +774,8 @@ service cloud.firestore {
                     && holdBornAbsent()
                     // 📐 ADR-899 §3.7 — οι διαστάσεις τις μετρά ο κάδος, όχι ο πελάτης.
                     && measuredBornAbsent()
+                    // 🗄️ ADR-281 · ADR-329 §3.9 — όχι νέο αρχείο κάτω από αποσυρμένο ακίνητο.
+                    && parentPropertyIsLive(request.resource.data)
                     && resource == null; // Ensure document doesn't exist
 
       // 📝 UPDATE: Only creator or company admin can finalize
@@ -769,7 +810,9 @@ service cloud.firestore {
                     // 🔒 ADR-864 §21 — ούτε δέσμευση.
                     && holdCustodyUnchanged()
                     // 📐 ADR-899 §3.7 — ούτε οι μετρημένες διαστάσεις (η οριστικοποίηση ήταν η ανοιχτή πόρτα).
-                    && measuredUnchanged();
+                    && measuredUnchanged()
+                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
+                    && fileStaysUnderLiveProperty();
 
       // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -803,7 +846,9 @@ service cloud.firestore {
                     //    αρχείο (Google Vault · Box · Purview)· αυτό που δεν επιτρέπεται είναι να
                     //    ΑΓΓΙΞΕΙ τη δέσμευση. ⛔ ΜΗΝ προσθέσεις «hold == 'none'» εδώ — απορρίφθηκε.
                     && holdCustodyUnchanged()
-                    && measuredUnchanged();
+                    && measuredUnchanged()
+                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
+                    && fileStaysUnderLiveProperty();
 
       // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -834,7 +879,9 @@ service cloud.firestore {
                     && cdeCustodyUnchanged()
                     // 🔒 ADR-864 §21 — η επαναφορά δεν «καθαρίζει» τη δέσμευση.
                     && holdCustodyUnchanged()
-                    && measuredUnchanged();
+                    && measuredUnchanged()
+                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
+                    && fileStaysUnderLiveProperty();
 
       // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
       // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
@@ -863,7 +910,9 @@ service cloud.firestore {
                     // 🔒 ADR-864 §21 — ούτε η δέσμευση (ήταν το σκέλος με το χαλαρότερο πρόσωπο:
                     //    κάθε μέλος της εταιρείας, όχι μόνο δημιουργός/διαχειριστής).
                     && holdCustodyUnchanged()
-                    && measuredUnchanged();
+                    && measuredUnchanged()
+                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
+                    && fileStaysUnderLiveProperty();
 
       // 🗑️ HARD DELETE: Only creator or company admin
       // 🔒 ADR-864 §21 Δ21.1 — ΠΟΤΕ σε δεσμευμένο ή υπό διατήρηση αρχείο. Ο κάδος (update)
@@ -874,7 +923,9 @@ service cloud.firestore {
                          resource.data.createdBy == request.auth.uid
                          || isCompanyAdminOfCompany(resource.data.companyId)
                        )
-                    && holdAllowsHardDelete();
+                    && holdAllowsHardDelete()
+                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
+                    && parentPropertyIsLive(resource.data);
     }
 
     // =========================================================================

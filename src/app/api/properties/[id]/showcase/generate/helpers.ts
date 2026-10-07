@@ -16,6 +16,7 @@ import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { assertNotRetired } from '@/lib/firestore/lifecycle-target';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
@@ -92,6 +93,9 @@ export async function loadShowcaseSources(
   if (!propertyDoc.exists) throw propertyNotFound();
   const property = (propertyDoc.data() ?? {}) as Record<string, unknown>;
   if (!isPayloadOwnedByCompany(property, companyId)) throw propertyNotFound();
+  // 🛡️ ADR-281 · ADR-329 §3.9 — αποσυρμένο ακίνητο δεν αποκτά ούτε ανανεώνει βιτρίνα. ΜΙΑ φορά εδώ για
+  //    δημιουργία · αναγέννηση · pdf. Η ΑΝΑΚΛΗΣΗ (`deactivateShowcaseShares`) δεν περνά από εδώ: μένει ελεύθερη.
+  assertNotRetired('property', property);
 
   const branding = await resolveShowcaseCompanyBranding({
     adminDb,

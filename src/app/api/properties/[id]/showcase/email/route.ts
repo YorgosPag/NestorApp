@@ -27,6 +27,7 @@ import {
   loadLinkedSpaceFloorplans,
   loadPropertyFloorFloorplans,
 } from '@/app/api/showcase/[token]/helpers';
+import { assertNotRetired } from '@/lib/firestore/lifecycle-target';
 import { buildShowcaseEmail } from '@/services/email-templates/property-showcase-email';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,8 @@ const route = createShowcaseEmailRoute({
     if ((propertyData.companyId as string | undefined) !== companyId) {
       throw new ApiError(403, 'Tenant mismatch');
     }
+    // 🛡️ ADR-281 · ADR-329 §3.9 — η βιτρίνα αποσυρμένου ακινήτου δεν στέλνεται.
+    assertNotRetired('property', propertyData);
 
     const branding = await resolveShowcaseCompanyBranding({
       adminDb, propertyData, companyId,

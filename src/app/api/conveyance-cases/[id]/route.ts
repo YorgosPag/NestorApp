@@ -41,7 +41,7 @@ export const PATCH = withStandardRateLimit(
     const actor = actorOf(ctx);
     const existing = await readOwnedConveyanceCase(db, actor, id);
     if (!existing) throw failureToApiError({ kind: 'case_not_found' });
-    await authorizeForProperty({ ctx, cache, propertyId: existing.subject.propertyId, permission: CONVEYANCE_MANAGE, path: PATH });
+    await authorizeForProperty({ ctx, cache, propertyId: existing.subject.propertyId, permission: CONVEYANCE_MANAGE, path: PATH, intent: 'write' });
 
     const outcome = await applyConveyanceCaseCommand(db, actor, existing, parsed.data);
     if (!outcome.ok) throw failureToApiError(outcome.failure);

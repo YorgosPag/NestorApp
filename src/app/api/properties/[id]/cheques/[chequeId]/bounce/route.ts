@@ -8,14 +8,11 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
 import { logFinancialTransition } from '@/lib/auth/audit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -29,39 +26,19 @@ const BounceSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
+export const POST = withStandardRateLimit(propertyRoute<{ id: string; chequeId: string }>({
+  path: '/api/properties/[id]/cheques/[chequeId]/bounce',
+  intent: 'write',
+  failure: 'Failed to bounce cheque',
+  handle: async ({ req, ctx, params, propertyId }) => {
+    const parsed = safeParseBody(BounceSchema, await req.json());
+    if (parsed.error) return parsed.error;
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId, chequeId } = await segmentData!.params;
+    const result = await ChequeRegistryService.bounceCheque(params.chequeId, parsed.data, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/cheques/[chequeId]/bounce' });
-      try {
-        const parsed = safeParseBody(BounceSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+    await logFinancialTransition(ctx, 'cheque', params.chequeId, 'active', 'bounced', { propertyId });
 
-        const result = await ChequeRegistryService.bounceCheque(chequeId, body, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        await logFinancialTransition(ctx, 'cheque', chequeId, 'active', 'bounced', { propertyId });
-
-        return NextResponse.json({ success: true }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to bounce cheque');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+    return NextResponse.json({ success: true }, { status: 201 });
+  },
+}));

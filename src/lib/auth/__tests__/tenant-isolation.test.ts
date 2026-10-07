@@ -25,6 +25,8 @@ import type { AuthContext } from '../types';
 // Κλειδί: `${collection}/${id}`. Απόν κλειδί ⇒ έγγραφο που δεν υπάρχει.
 const store = new Map<string, Record<string, unknown>>();
 
+jest.mock('server-only', () => ({}));
+
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => ({
     collection: (collection: string) => ({
@@ -97,7 +99,7 @@ const GUARDS = [
     targetType: 'property',
     notFound: 'Property not found',
     call: (ctx: AuthContext, id: string) =>
-      requirePropertyInTenantScope({ ctx, propertyId: id, path: PATH }),
+      requirePropertyInTenantScope({ ctx, propertyId: id, path: PATH, intent: 'read' }),
   },
   {
     label: 'storage',
@@ -304,7 +306,7 @@ describe('🔴 συμβόλαιο που ΔΕΝ επιτρέπεται να με
   it('requireUnitInTenant (@deprecated) εξακολουθεί να δείχνει στα properties', async () => {
     store.set(`${COLLECTIONS.PROPERTIES}/u1`, { companyId: OWNER, name: 'Ακίνητο' });
 
-    await expect(requireUnitInTenant({ ctx: CALLER, unitId: 'u1', path: PATH })).resolves.toMatchObject({
+    await expect(requireUnitInTenant({ ctx: CALLER, unitId: 'u1', path: PATH, intent: 'read' })).resolves.toMatchObject({
       name: 'Ακίνητο',
     });
   });
@@ -343,6 +345,7 @@ describe('filterSnapshotsByTenant — η ίδια ερώτηση, μαζικά',
       ctx: CALLER,
       propertyId: 'orphan',
       path: PATH,
+      intent: 'read',
     }).then(
       () => 'allowed',
       () => 'denied',
@@ -377,5 +380,56 @@ describe('filterSnapshotsByTenant — η ίδια ερώτηση, μαζικά',
   it('καμία άρνηση ⇒ κανένα audit', async () => {
     await filterSnapshotsByTenant([snap('a', { companyId: OWNER })], CALLER, PATH);
     expect(logAuditEventMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Η πρόθεση του καλούντος πάνω σε αποσυρμένο ακίνητο (ADR-281 · ADR-329 §3.9) ───
+describe('requirePropertyInTenantScope — πρόθεση και απόσυρση', () => {
+  const RETIRED = [
+    ['αρχείο', 'archived'],
+    ['κάδος', 'deleted'],
+  ] as const;
+
+  const attempt = (ctx: AuthContext, intent: 'read' | 'write' | 'lifecycle' | 'withdraw') =>
+    requirePropertyInTenantScope({ ctx, propertyId: 'p-ret', path: PATH, intent }).then(
+      () => 'passed' as const,
+      (err: { statusCode?: number; status?: number; errorCode?: string; code?: string }) =>
+        [err.statusCode ?? err.status, err.errorCode ?? err.code] as const,
+    );
+
+  beforeEach(() => {
+    store.clear();
+  });
+
+  it.each(RETIRED)('%s + `write` ⇒ 409 ENTITY_RETIRED', async (_place, status) => {
+    store.set(`${COLLECTIONS.PROPERTIES}/p-ret`, { companyId: OWNER, status });
+
+    expect(await attempt(CALLER, 'write')).toEqual([409, 'ENTITY_RETIRED']);
+  });
+
+  it.each(RETIRED)('%s + `read` / `lifecycle` / `withdraw` ⇒ περνά', async (_place, status) => {
+    store.set(`${COLLECTIONS.PROPERTIES}/p-ret`, { companyId: OWNER, status });
+
+    expect(await attempt(CALLER, 'read')).toBe('passed');
+    expect(await attempt(CALLER, 'lifecycle')).toBe('passed');
+    expect(await attempt(CALLER, 'withdraw')).toBe('passed');
+  });
+
+  it('ζωντανό ακίνητο + `write` ⇒ περνά', async () => {
+    store.set(`${COLLECTIONS.PROPERTIES}/p-ret`, { companyId: OWNER, status: 'for-sale' });
+
+    expect(await attempt(CALLER, 'write')).toBe('passed');
+  });
+
+  it.each(RETIRED)('🔴 ΞΕΝΟ ακίνητο στο %s + `write` ⇒ 404, ποτέ 409 (το 409 θα επιβεβαίωνε ότι υπάρχει)', async (_place, status) => {
+    store.set(`${COLLECTIONS.PROPERTIES}/p-ret`, { companyId: OWNER, status });
+
+    expect(await attempt(ctxFor(INTRUDER), 'write')).toEqual([404, 'NOT_FOUND']);
+  });
+
+  it.each(RETIRED)('ο υπεργραφέας ΔΕΝ παρακάμπτει την απόσυρση (%s): είναι κατάσταση εγγραφής, όχι εξουσιοδότηση', async (_place, status) => {
+    store.set(`${COLLECTIONS.PROPERTIES}/p-ret`, { companyId: OWNER, status });
+
+    expect(await attempt(SUPER_ADMIN, 'write')).toEqual([409, 'ENTITY_RETIRED']);
   });
 });

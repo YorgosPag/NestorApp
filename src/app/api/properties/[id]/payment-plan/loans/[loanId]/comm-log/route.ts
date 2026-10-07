@@ -8,67 +8,30 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { AddCommunicationLogInput } from '@/types/loan-tracking';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
+import { resolvePlanId, noActivePlan } from '@/app/api/properties/_shared/active-payment-plan';
 
-type SegmentData = { params: Promise<{ id: string; loanId: string }> };
+export const POST = withStandardRateLimit(propertyRoute<{ id: string; loanId: string }>({
+  path: '/api/properties/[id]/payment-plan/loans/[loanId]/comm-log',
+  intent: 'write',
+  failure: 'Failed to add comm log',
+  handle: async ({ req, ctx, params, propertyId }) => {
+    const body = (await req.json()) as AddCommunicationLogInput & { planId?: string };
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId, loanId } = await segmentData!.params;
+    const planId = await resolvePlanId(propertyId, body.planId);
+    if (!planId) return noActivePlan();
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]/comm-log' });
+    if (!body.summary?.trim()) return failure('summary is required', 400);
 
-      try {
-        const body = (await req.json()) as AddCommunicationLogInput & { planId?: string };
+    const result = await LoanTrackingService.addCommunicationLog(
+      propertyId, planId, params.loanId, body, ctx.uid
+    );
+    if (!result.success) return failure(result.error);
 
-        let planId = body.planId;
-        if (!planId) {
-          const plan = await PaymentPlanService.getActivePaymentPlan(propertyId);
-          if (!plan) {
-            return NextResponse.json(
-              { success: false, error: 'No active payment plan found' },
-              { status: 404 }
-            );
-          }
-          planId = plan.id;
-        }
-
-        if (!body.summary?.trim()) {
-          return NextResponse.json(
-            { success: false, error: 'summary is required' },
-            { status: 400 }
-          );
-        }
-
-        const result = await LoanTrackingService.addCommunicationLog(
-          propertyId, planId, loanId, body, ctx.uid
-        );
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to add comm log');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+    return NextResponse.json({ success: true }, { status: 201 });
+  },
+}));

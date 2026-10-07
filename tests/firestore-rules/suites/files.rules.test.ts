@@ -22,7 +22,7 @@ import {
   expectDeny,
   type AssertTarget,
 } from '../_harness/assertions';
-import { seedFile } from '../_harness/seed-helpers';
+import { seedFile, seedProperty } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import {
   PERSONA_CLAIMS,
@@ -31,6 +31,7 @@ import {
 } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { FILE_HOLD_FIELDS } from '@/lib/files/file-hold';
+import { ARCHIVED_STATUS, TRASHED_STATUS } from '@/lib/firestore/trashed-status';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'files',
@@ -600,6 +601,156 @@ describe('files.rules — tenant_state_machine pattern', () => {
         });
       });
       await expectAllow(files().doc('cde-read-legacy').get());
+    });
+  });
+  // --- ADR-281 · ADR-329 §3.9 (Στάδιο 3β) — το αρχείο ακολουθεί το ακίνητό του -----------
+  //
+  // 🔑 ΓΙΑΤΙ ΕΞΩ ΑΠΟ ΤΗ ΜΗΤΡΑ: ίδιος λόγος με το `cde freeze` — η ερώτηση δεν είναι «ποιο
+  // ΠΡΟΣΩΠΟ», είναι «σε ποια ΚΑΤΑΣΤΑΣΗ είναι ο γονέας», και η απάντηση είναι ίδια για όλους.
+  //
+  // 🔴 ΤΟ ΠΡΟΣΩΠΟ ΕΙΝΑΙ ΕΠΙΛΟΓΗ: ο `same_tenant_admin` περνά κάθε άλλο σκέλος, άρα κάθε
+  // `expectDeny` αποδίδεται ΜΟΝΟ στον γονέα. Και κάθε άρνηση έχει δίπλα της το ΙΔΙΟ φορτίο
+  // πάνω σε ζωντανό ακίνητο που ΠΕΡΝΑ — αλλιώς θα ήταν πράσινη επειδή το φορτίο ήταν άκυρο.
+  //
+  // 🔑 Οι δύο καταστάσεις διαβάζονται από το `trashed-status.ts` (ό,τι γράφει ο διακομιστής),
+  // ΟΧΙ αντιγραμμένες: αν αλλάξει η τιμή εκεί και όχι στον κανόνα, αυτό το μπλοκ κοκκινίζει.
+  describe('retired parent — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο (ADR-329 §3.9)', () => {
+    const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
+    const PROPERTY_ID = 'prop-parent';
+    const OTHER_PROPERTY_ID = 'prop-other-live';
+
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    const seedParent = (status: string, propertyId: string = PROPERTY_ID) =>
+      seedProperty(env, propertyId, 'proj-1', {
+        overrides: { companyId: SAME_TENANT_COMPANY_ID, status },
+      });
+
+    const seedChild = (docId: string, overrides: Record<string, unknown> = {}) =>
+      seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { entityType: 'property', entityId: PROPERTY_ID, ...overrides },
+      });
+
+    function createPayload(extra: Record<string, unknown> = {}): Record<string, unknown> {
+      return {
+        fileName: 'retired-parent.pdf',
+        mimeType: 'application/pdf',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/retired-parent.pdf`,
+        createdBy: ADMIN_UID,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        entityType: 'property',
+        entityId: PROPERTY_ID,
+        ...extra,
+      };
+    }
+
+    const RETIRED = [
+      ['αρχείο', ARCHIVED_STATUS],
+      ['κάδος', TRASHED_STATUS],
+    ] as const;
+
+    describe.each(RETIRED)('ακίνητο στο %s', (_place, status) => {
+      it('⛔ νέο αρχείο (εκκρεμής εγγραφή): ΑΡΝΗΣΗ', async () => {
+        await seedParent(status);
+        await expectDeny(fileDoc('retired-create').set(createPayload()));
+      });
+
+      it('⛔ οριστικοποίηση pending → ready: ΑΡΝΗΣΗ', async () => {
+        await seedParent(status);
+        await seedChild('retired-finalize', { status: 'pending' });
+        await expectDeny(fileDoc('retired-finalize').update({ status: 'ready' }));
+      });
+
+      it('⛔ κάδος αρχείου: ΑΡΝΗΣΗ', async () => {
+        await seedParent(status);
+        await seedChild('retired-trash');
+        await expectDeny(fileDoc('retired-trash').update({ isDeleted: true }));
+      });
+
+      it('⛔ επαναφορά αρχείου από τον κάδο: ΑΡΝΗΣΗ', async () => {
+        await seedParent(status);
+        await seedChild('retired-restore', { isDeleted: true });
+        await expectDeny(fileDoc('retired-restore').update({ isDeleted: false }));
+      });
+
+      it('⛔ σύνδεση / αποσύνδεση (`linkedTo`): ΑΡΝΗΣΗ', async () => {
+        await seedParent(status);
+        await seedChild('retired-link');
+        await expectDeny(fileDoc('retired-link').update({ linkedTo: ['building:b1'] }));
+      });
+
+      it('⛔ οριστική διαγραφή: ΑΡΝΗΣΗ — το αρχείο υπάρχει για να ΔΙΑΤΗΡΕΙ', async () => {
+        await seedParent(status);
+        await seedChild('retired-delete');
+        await expectDeny(fileDoc('retired-delete').delete());
+      });
+
+      it('⛔ αρχείο ΖΩΝΤΑΝΟΥ ακινήτου δεν μετακομίζει κάτω από το αποσυρμένο: ΑΡΝΗΣΗ', async () => {
+        await seedParent(status);
+        await seedParent('for-sale', OTHER_PROPERTY_ID);
+        await seedChild('retired-move-in', { entityId: OTHER_PROPERTY_ID });
+        await expectDeny(fileDoc('retired-move-in').update({ isDeleted: true, entityId: PROPERTY_ID }));
+      });
+
+      it('✅ η ΑΝΑΓΝΩΣΗ μένει: το πλαίσιο πρέπει να μπορεί να δείξει τα αρχεία του', async () => {
+        await seedParent(status);
+        await seedChild('retired-read');
+        await expectAllow(fileDoc('retired-read').get());
+      });
+    });
+
+    describe('ζωντανό ακίνητο — τα ΙΔΙΑ φορτία περνούν', () => {
+      it('✅ νέο αρχείο', async () => {
+        await seedParent('for-sale');
+        await expectAllow(fileDoc('live-create').set(createPayload()));
+      });
+
+      it('✅ οριστικοποίηση pending → ready', async () => {
+        await seedParent('for-sale');
+        await seedChild('live-finalize', { status: 'pending' });
+        await expectAllow(fileDoc('live-finalize').update({ status: 'ready' }));
+      });
+
+      it('✅ κάδος αρχείου', async () => {
+        await seedParent('for-sale');
+        await seedChild('live-trash');
+        await expectAllow(fileDoc('live-trash').update({ isDeleted: true }));
+      });
+
+      it('✅ επαναφορά αρχείου', async () => {
+        await seedParent('for-sale');
+        await seedChild('live-restore', { isDeleted: true });
+        await expectAllow(fileDoc('live-restore').update({ isDeleted: false }));
+      });
+
+      it('✅ σύνδεση / αποσύνδεση', async () => {
+        await seedParent('for-sale');
+        await seedChild('live-link');
+        await expectAllow(fileDoc('live-link').update({ linkedTo: ['building:b1'] }));
+      });
+
+      it('✅ οριστική διαγραφή', async () => {
+        await seedParent('for-sale');
+        await seedChild('live-delete');
+        await expectAllow(fileDoc('live-delete').delete());
+      });
+    });
+
+    describe('ό,τι ΔΕΝ είναι αρχείο αποσυρμένου ακινήτου — ο φρουρός δεν το αγγίζει', () => {
+      it('✅ ακίνητο που δεν υπάρχει (ακόμη): το ανύπαρκτο δεν είναι αποσυρμένο', async () => {
+        await expectAllow(fileDoc('orphan-create').set(createPayload({ entityId: 'prop-not-yet' })));
+      });
+
+      it('✅ αρχείο ΑΛΛΗΣ οντότητας με το ίδιο id: ο φρουρός κρίνει μόνο `entityType == property`', async () => {
+        await seedParent(ARCHIVED_STATUS);
+        await expectAllow(fileDoc('other-entity').set(createPayload({ entityType: 'building' })));
+      });
     });
   });
 });

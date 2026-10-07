@@ -36,7 +36,7 @@ export const GET = withStandardRateLimit(
   withAuth(async (request: NextRequest, ctx: AuthContext, cache: PermissionCache) => {
     const propertyId = request.nextUrl.searchParams.get('propertyId');
     if (!propertyId) throw new ApiError(400, 'propertyId is required', 'VALIDATION_ERROR');
-    await authorizeForProperty({ ctx, cache, propertyId, permission: CONVEYANCE_VIEW, path: PATH });
+    await authorizeForProperty({ ctx, cache, propertyId, permission: CONVEYANCE_VIEW, path: PATH, intent: 'read' });
 
     const outcome = await getConveyanceCaseView(requireAdminFirestore(), actorOf(ctx), propertyId);
     if (!outcome.ok) throw failureToApiError(outcome.failure);
@@ -49,7 +49,7 @@ export const POST = withStandardRateLimit(
     const parsed = safeParseBody(openCaseSchema, await request.json());
     if (parsed.error) return parsed.error;
     const { propertyId } = parsed.data;
-    await authorizeForProperty({ ctx, cache, propertyId, permission: CONVEYANCE_MANAGE, path: PATH });
+    await authorizeForProperty({ ctx, cache, propertyId, permission: CONVEYANCE_MANAGE, path: PATH, intent: 'write' });
 
     const outcome = await openConveyanceCase(requireAdminFirestore(), actorOf(ctx), propertyId);
     if (!outcome.ok) throw failureToApiError(outcome.failure);

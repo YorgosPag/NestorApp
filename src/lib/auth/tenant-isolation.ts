@@ -77,6 +77,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { isAddressableDocId } from '@/lib/firestore/doc-id';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { TenantIsolationError } from './tenant-isolation-error';
+import { assertNotRetired } from '@/lib/firestore/lifecycle-target';
 
 // ADR-702: the class now lives in a leaf module so `tenant-scope.ts` can throw
 // it without pulling the Admin SDK in. Re-exported here — this is still the
@@ -284,6 +285,8 @@ export interface TenantProperty {
   companyId: string;
   name?: string;
   buildingId?: string;
+  /** Κύκλος ζωής (ADR-281): `'deleted'` / `'archived'` = αποσυρμένο — το διαβάζει ο φρουρός πρόθεσης. */
+  status?: string;
   /** ADR-901 Φ1 — έλεγχος δικαιώματος ρόλου έργου (`hasPermission(…, { projectId })`) χωρίς δεύτερη ανάγνωση. */
   projectId?: string;
 }
@@ -313,14 +316,47 @@ export interface TenantOpportunity {
 }
 
 /**
- * 🔒 Require property to belong to authenticated user's tenant.
+ * Τι σκοπεύει να κάνει ο καλών πάνω στο ακίνητο (ADR-281 · ADR-329 §3.9).
+ *
+ * | Πρόθεση | Σε αποσυρμένο (αρχείο ή κάδος) |
+ * |---|---|
+ * | `read` | περνά — το πλαίσιο πρέπει να μπορεί να το δείξει |
+ * | `write` | **409 `ENTITY_RETIRED`** — ό,τι γράφει πάνω του ή κάτω από αυτό |
+ * | `lifecycle` | περνά — η ίδια η μετάβαση (αρχείο → κάδος), που την κρίνει η μηχανή |
+ * | `withdraw` | περνά — πράξη που **μόνο αφαιρεί** πρόσβαση ή έκθεση (ανάκληση) |
+ */
+export type PropertyAccessIntent = 'read' | 'write' | 'lifecycle' | 'withdraw';
+
+/** Ποια πρόθεση προσκρούει στην απόσυρση. Πίνακας, όχι `if`: νέα πρόθεση δεν μεταγλωττίζεται χωρίς απάντηση. */
+const INTENT_REFUSED_WHEN_RETIRED: Readonly<Record<PropertyAccessIntent, boolean>> = {
+  read: false,
+  write: true,
+  lifecycle: false,
+  withdraw: false,
+};
+
+/**
+ * 🔒 Require property to belong to authenticated user's tenant — **και** να δέχεται αυτό που
+ * σκοπεύει να κάνει ο καλών.
+ *
+ * Το `intent` είναι **υποχρεωτικό**: είναι το ένα σημείο από το οποίο περνά κάθε διαδρομή
+ * ακινήτου, άρα το ένα σημείο όπου ρωτιέται «είναι αποσυρμένο;». Προαιρετικό όρισμα θα
+ * ξεχνιόταν σιωπηλά — ο φρουρός του Σταδίου 2 σκέπαζε μία διαδρομή από τις είκοσι.
+ * Το φυλάει και το CHECK 3.100.
+ *
+ * ⚠️ Η άρνηση απόσυρσης έρχεται **μετά** τον έλεγχο μισθωτή: ξένο ακίνητο απαντά 404,
+ * ποτέ 409 (αλλιώς το 409 θα επιβεβαίωνε ότι το id υπάρχει — ADR-742 §7septies).
+ *
+ * @throws TenantIsolationError(404) ανύπαρκτο ή ξένο
+ * @throws ApiError(409, 'ENTITY_RETIRED') `intent: 'write'` σε ακίνητο στο αρχείο ή στον κάδο
  */
 export async function requirePropertyInTenantScope(params: {
   ctx: AuthContext;
   propertyId: string;
   path: string;
+  intent: PropertyAccessIntent;
 }): Promise<TenantProperty> {
-  return requireDocInTenant<TenantProperty>({
+  const property = await requireDocInTenant<TenantProperty>({
     ctx: params.ctx,
     id: params.propertyId,
     path: params.path,
@@ -328,6 +364,10 @@ export async function requirePropertyInTenantScope(params: {
     targetType: 'property',
     notFoundMessage: 'Property not found',
   });
+
+  if (INTENT_REFUSED_WHEN_RETIRED[params.intent]) assertNotRetired('property', property);
+
+  return property;
 }
 
 /**
@@ -337,11 +377,13 @@ export async function requireUnitInTenant(params: {
   ctx: AuthContext;
   unitId: string;
   path: string;
+  intent: PropertyAccessIntent;
 }): Promise<TenantProperty> {
   return requirePropertyInTenantScope({
     ctx: params.ctx,
     propertyId: params.unitId,
     path: params.path,
+    intent: params.intent,
   });
 }
 

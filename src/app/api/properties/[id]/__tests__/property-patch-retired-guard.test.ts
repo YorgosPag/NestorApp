@@ -12,7 +12,8 @@
  * ιστορικού μετάβασης, με `previousStatus` / `archivedAt` / `archivedBy` να μένουν ορφανά
  * στο έγγραφο, και χωρίς τον κανόνα «από το αρχείο επιστρέφει εκτός αγοράς».
  *
- * 🔑 Ο καθρέφτης, το σχήμα και το κλείδωμα πεδίων είναι **ΠΡΑΓΜΑΤΙΚΑ** — αυτά κρίνονται.
+ * 🔑 Ο καθρέφτης, το σχήμα, το κλείδωμα πεδίων **και ο φρουρός** (`requirePropertyInTenantScope`
+ * με `intent: 'write'` — Στάδιο 3β: ο έλεγχος μετακόμισε στο ΕΝΑ σημείο) είναι **ΠΡΑΓΜΑΤΙΚΑ** — αυτά κρίνονται.
  * Ψεύτικα είναι η ταυτότητα, η βάση και ό,τι τρέχει **μετά** τη γραφή.
  */
 
@@ -40,7 +41,9 @@ jest.mock('@/lib/telemetry', () => ({
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({ withRateLimit: <T>(handler: T) => handler }));
 
-const authContext = { uid: 'uid_1', companyId: 'comp_1', email: 'g@example.com', isAuthenticated: true as const };
+const authContext = {
+  uid: 'uid_1', companyId: 'comp_1', email: 'g@example.com', globalRole: 'company_admin', isAuthenticated: true as const,
+};
 jest.mock('@/lib/auth', () => ({
   withAuth:
     (callback: (...args: unknown[]) => Promise<unknown>) =>
@@ -48,19 +51,18 @@ jest.mock('@/lib/auth', () => ({
   logAuditEvent: jest.fn(async () => undefined),
 }));
 
-jest.mock('@/lib/auth/tenant-isolation', () => ({
-  requirePropertyInTenantScope: async () => undefined,
-}));
+jest.mock('@/lib/auth/audit', () => ({ logAuditEvent: jest.fn(async () => undefined) }));
 
 /** Το έγγραφο όπως κάθεται στη βάση — κάθε δοκιμή ορίζει το δικό της. */
 let stored: Record<string, unknown> = {};
-jest.mock('@/lib/api/admin-db', () => ({
-  requireAdminFirestore: () => ({
-    collection: () => ({
-      doc: () => ({ get: async () => ({ exists: true, data: () => stored }) }),
-    }),
+const fakeDb = {
+  collection: () => ({
+    doc: () => ({ get: async () => ({ exists: true, data: () => stored }) }),
   }),
-}));
+};
+jest.mock('@/lib/api/admin-db', () => ({ requireAdminFirestore: () => fakeDb }));
+// Ο φρουρός διαβάζει το ΙΔΙΟ έγγραφο από το Admin SDK.
+jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => fakeDb }));
 
 /** Η ΜΙΑ γραφή της διαδρομής — ό,τι φτάνει εδώ γράφεται στο έγγραφο. */
 const withVersionCheck = jest.fn(async (_options: { updates: Record<string, unknown> }) => ({ newVersion: 2 }));

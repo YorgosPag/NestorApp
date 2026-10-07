@@ -12,6 +12,7 @@ import { PropertyPatchSchema } from '../property-patch-helpers';
 import { previewPropertyMutationImpact } from '@/lib/firestore/property-mutation-impact-preview.service';
 import type { PropertyMutationImpactPreview } from '@/types/property-mutation-impact';
 
+// retired-write-exempt: προεπισκόπηση επιπτώσεων — POST μόνο για το σώμα, δεν γράφει στο ακίνητο (CHECK 3.100)
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<PropertyMutationImpactPreview>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
@@ -27,7 +28,7 @@ export const POST = withStandardRateLimit(
         throw new ApiError(400, 'Validation failed');
       }
 
-      await requirePropertyInTenantScope({ ctx, propertyId, path: '/api/properties/[id]/impact-preview' });
+      await requirePropertyInTenantScope({ ctx, propertyId, path: '/api/properties/[id]/impact-preview', intent: 'read' });
 
       const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
       if (!propertyDoc.exists) {

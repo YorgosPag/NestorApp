@@ -8,15 +8,13 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth, logAuditEvent } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { logAuditEvent } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
+import { resolvePlanId, noActivePlan } from '@/app/api/properties/_shared/active-payment-plan';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { DISBURSEMENT_TYPES, COLLATERAL_TYPES, INTEREST_RATE_TYPES } from '@/types/loan-tracking';
 
@@ -51,59 +49,29 @@ const UpdateLoanSchema = UpdateLoanFieldsSchema.extend({
   planId: z.string().max(128).optional(),
 });
 
-type SegmentData = { params: Promise<{ id: string; loanId: string }> };
-
 // =============================================================================
 // PATCH — Update Loan
 // =============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId, loanId } = await segmentData!.params;
+export const PATCH = withStandardRateLimit(propertyRoute<{ id: string; loanId: string }>({
+  path: '/api/properties/[id]/payment-plan/loans/[loanId]',
+  intent: 'write',
+  failure: 'Failed to update loan',
+  handle: async ({ req, ctx, params, propertyId }) => {
+    const parsed = safeParseBody(UpdateLoanSchema, await req.json());
+    if (parsed.error) return parsed.error;
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]' });
+    const planId = await resolvePlanId(propertyId, parsed.data.planId);
+    if (!planId) return noActivePlan();
 
-      try {
-        const parsed = safeParseBody(UpdateLoanSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+    const updateInput = UpdateLoanFieldsSchema.parse(parsed.data);
+    const result = await LoanTrackingService.updateLoan(propertyId, planId, params.loanId, updateInput, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-        let planId = body.planId;
-        if (!planId) {
-          const plan = await PaymentPlanService.getActivePaymentPlan(propertyId);
-          if (!plan) {
-            return NextResponse.json(
-              { success: false, error: 'No active payment plan found' },
-              { status: 404 }
-            );
-          }
-          planId = plan.id;
-        }
+    await logAuditEvent(ctx, 'data_updated', params.loanId, 'loan', {
+      metadata: { reason: `Loan fields updated property: ${propertyId}, plan: ${planId})` },
+    }).catch(() => {/* non-blocking */});
 
-        const updateInput = UpdateLoanFieldsSchema.parse(body);
-        const result = await LoanTrackingService.updateLoan(propertyId, planId, loanId, updateInput, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        await logAuditEvent(ctx, 'data_updated', loanId, 'loan', {
-          metadata: { reason: `Loan fields updated property: ${propertyId}, plan: ${planId})` },
-        }).catch(() => {/* non-blocking */});
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update loan');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const PATCH = withStandardRateLimit(handlePatch);
+    return NextResponse.json({ success: true });
+  },
+}));

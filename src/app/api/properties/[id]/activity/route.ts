@@ -54,7 +54,7 @@ export const POST = withStandardRateLimit(
       const id = extractNestedIdFromUrl(request.url, 'properties');
       if (!id) throw new ApiError(400, 'Property ID is required');
 
-      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]/activity' });
+      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]/activity', intent: 'write' });
 
       // Validate property exists
       const docRef = db.collection(COLLECTIONS.PROPERTIES).doc(id);

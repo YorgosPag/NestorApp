@@ -11,57 +11,28 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { LoanInfo } from '@/types/payment-plan';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
-
-type SegmentData = { params: Promise<{ id: string }> };
+import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
 
 // =============================================================================
 // PATCH — Update Loan Info
 // =============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: SegmentData
-): Promise<NextResponse> {
-  const { id: propertyId } = await segmentData!.params;
+export const PATCH = withStandardRateLimit(propertyRoute({
+  path: '/api/properties/[id]/payment-plan/loan',
+  intent: 'write',
+  failure: 'Failed to update loan info',
+  handle: async ({ req, ctx, propertyId }) => {
+    const body = (await req.json()) as Partial<LoanInfo> & { planId: string };
+    if (!body.planId) return failure('planId is required', 400);
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loan' });
+    const { planId, ...loanUpdates } = body;
+    const result = await PaymentPlanService.updateLoanInfo(propertyId, planId, loanUpdates, ctx.uid);
+    if (!result.success) return failure(result.error);
 
-      try {
-        const body = (await req.json()) as Partial<LoanInfo> & { planId: string };
-
-        if (!body.planId) {
-          return NextResponse.json(
-            { success: false, error: 'planId is required' },
-            { status: 400 }
-          );
-        }
-
-        const { planId, ...loanUpdates } = body;
-        const result = await PaymentPlanService.updateLoanInfo(propertyId, planId, loanUpdates, ctx.uid);
-
-        if (!result.success) {
-          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update loan info');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const PATCH = withStandardRateLimit(handlePatch);
+    return NextResponse.json({ success: true });
+  },
+}));
