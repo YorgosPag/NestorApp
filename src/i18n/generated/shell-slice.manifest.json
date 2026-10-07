@@ -114,7 +114,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "35ff133efe035a2673ec1b4f812fa009f063f44247ed58d245c972e73088a944",
+  "inputsSha256": "1002f3c9af37960de44450f79859cbd1926cf1765bc75360ce1f252d39076983",
   "languages": [
     "el"
   ],
@@ -813,7 +813,7 @@
     "src/hooks/owner-property/useOwnerPropertyMedia.ts": "78217b2e2633d096137d135102eab0dae27aa1cb53bd8ad252325049267e1a4d",
     "src/hooks/owner-property/useStayCalendar.ts": "b83f56b6118d15908f693b8e278a2db98feb4c123885c071ae12f4ff5029ff48",
     "src/hooks/owner-property/useStayCalendarSelection.ts": "35fe5211cfb1fc96f528388a92d8361c874897c2c1d4694ae0844314c7788820",
-    "src/hooks/useActiveSection.ts": "2cb04d09d6792adb5c8f55a030d517753a4a3ecb308a8c670aca39f58f01bdb0",
+    "src/hooks/useActiveSection.ts": "a01cb1caddc6cd0bba8b29947c85d3a1532788652993826ab29b524ab2016d66",
     "src/hooks/useAsyncData.ts": "02e59fe71ba777bb647c1638a4e6f1e3033c3aecacf39cff8ae913afefea80db",
     "src/hooks/useCaseContributions.ts": "cabc6698c6d982ecf08f60a2f0a8d067779770f2ebe5844b14795660dffa8841",
     "src/hooks/useCaseFileOpener.ts": "0aaa2061fe503eac0bb8af14a0111637fb0f47d907c9bdb31fd0300f9ea929a2",
@@ -11408,7 +11408,7 @@
     "src/design-system/touch-target.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/hooks/geo/useAdminAreaIndex.ts": "508d54f6c63a43887192389cb060a24a6fcefb39b36dcd855a455841b0fd8956",
     "src/hooks/geo/useRecentPlaceSearches.ts": "43d52ca8dc5b1ef675c57e8f5d8ce3465831d31794add5eb19acc90557fe1243",
-    "src/hooks/listings/useListingRevealTracking.ts": "97d27cea59969423cd57d2f92448e9ef774d8458c7f3cb2ac28dd43a7c80524c",
+    "src/hooks/listings/useListingRevealTracking.ts": "0cd8f9947891e8bb7047886d8fe20a08e6c6fab293304e324b14a81553cec132",
     "src/hooks/listings/useSavedListingsState.ts": "a1418038ca4934264bf4def9141f1c33264832623693c4dcb408b6dce9e66057",
     "src/hooks/media/useElementSize.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/network-messaging/useNetworkUnreadCount.ts": "14d1abe4bc35eaea42a738ce6b3581efafab1ab422148690ec63e4142e0bd20e",
@@ -11478,6 +11478,7 @@
     "src/lib/a11y/reduced-motion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/reveal-in-scroll.ts": "25112419076a5f8dd770a14b850c3fde4c1ee1f2d183e76fc52aec0334a5babb",
     "src/lib/a11y/roving-highlight.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/a11y/scroll-frame.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "2191d350280666f66010241bdcbdc7c8f23a4bb394ced1cc94cca9d6e778efcf",
     "src/lib/a11y/use-modal-keyboard-scope.ts": "1aefe4a7211496c61e829d96a460117b612590ed3e64f4ede0d236117ae87c83",
     "src/lib/a11y/use-reveal-highlighted-option.ts": "efdc1ebf014318f0affd720d75cfe2bd1d78ac84f1be41c67badacf797bd8318",
@@ -12043,7 +12044,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 237,
     "routeBoundaries": 0,
-    "shellFiles": 942,
+    "shellFiles": 943,
     "sliceBytes": 718690
   },
   "unresolvableKeys": [

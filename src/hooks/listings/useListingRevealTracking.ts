@@ -52,6 +52,7 @@ import {
   type ScrollFrame,
   type ScrollVisibility,
 } from '@/lib/a11y/reveal-in-scroll';
+import { onScrollFrame } from '@/lib/a11y/scroll-frame';
 import { focusedListingId, type ListingFocus } from '@/lib/listings/listing-focus';
 
 /** Το γνώρισμα με το οποίο κάθε κάρτα δηλώνει **ποια αγγελία είναι**. */
@@ -155,24 +156,10 @@ function useFocusVisibility(
     }
     const scrollFrame: ScrollFrame = frame === 'viewport' ? 'viewport' : container;
 
-    let pending = 0;
-    const measure = (): void => {
-      pending = 0;
-      setVisibility(visibilityWithinScroller(cardElement(container, focused), scrollFrame));
-    };
-    const schedule = (): void => {
-      if (pending === 0) pending = requestAnimationFrame(measure);
-    };
-
-    measure();
-    const listen = { capture: true, passive: true } as const;
-    document.addEventListener('scroll', schedule, listen);
-    window.addEventListener('resize', schedule, { passive: true });
-    return () => {
-      document.removeEventListener('scroll', schedule, listen);
-      window.removeEventListener('resize', schedule);
-      if (pending !== 0) cancelAnimationFrame(pending);
-    };
+    // Ο ακροατής (scroll με capture + resize, μία μέτρηση ανά καρέ) ζει στο `onScrollFrame` — κοινός με το scrollspy.
+    return onScrollFrame(() =>
+      setVisibility(visibilityWithinScroller(cardElement(container, focused), scrollFrame)),
+    );
   }, [container, focused, frame]);
 
   return visibility;
