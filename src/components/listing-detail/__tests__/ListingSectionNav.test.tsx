@@ -105,6 +105,19 @@ describe('ListingSectionNav', () => {
     expect(document.activeElement).not.toBe(document.getElementById(listingSectionId('legal')));
   });
 
+  it('🔴 Ν7 ενότητα που ΚΟΛΛΑ (σύνοψη τιμής σε δύο στήλες) δεν γίνεται ποτέ «τρέχουσα»', () => {
+    // Βρέθηκε στον browser στα 1440px: μέσα και τιμή έχουν την ίδια κορυφή, και η μπάρα τόνιζε «Τιμή» στην κορυφή της σελίδας.
+    const realStyle = window.getComputedStyle.bind(window);
+    jest.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      const style = realStyle(element, pseudo);
+      return (element as HTMLElement).id === listingSectionId('price') ? { ...style, position: 'sticky' } as CSSStyleDeclaration : style;
+    });
+    renderPage({ media: 262, price: 262, details: 1400, location: 2300, market: 2900, legal: 3100 });
+    jest.spyOn(screen.getByRole('navigation'), 'getBoundingClientRect').mockReturnValue(rect(196, 245));
+    scrollPage();
+    expect(currentLabel()).toBe('listing-detail:sections.media');
+  });
+
   it('Ν6 οι στόχοι δέχονται εστίαση χωρίς να μπαίνουν στη σειρά του Tab', () => {
     renderPage({});
     for (const section of LISTING_SECTIONS) {

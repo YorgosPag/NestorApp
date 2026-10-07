@@ -39,6 +39,12 @@ const READING_LINE_GAP_PX = 24;
 
 const CURRENT_SELECTOR = '[aria-current="location"]';
 
+/**
+ * Η ενότητα που στο `lg` **κολλά** δίπλα στα μέσα (η σύνοψη τιμής, `ListingDetailContent`). Εκεί είναι πάντα σε θέα, άρα
+ * σύνδεσμος προς αυτήν δεν οδηγεί πουθενά — και το `useActiveSection` δεν τη μετρά ως θέση. Σε μία στήλη υπάρχει κανονικά.
+ */
+const STICKY_FROM_LG: ListingSection = 'price';
+
 export interface ListingSectionAnchorProps {
   readonly section: ListingSection;
   /** `aside` για τη σύνοψη τιμής — ό,τι άλλο είναι ουδέτερο δοχείο γύρω από ενότητες που έχουν ήδη δική τους σημασιολογία. */
@@ -106,7 +112,7 @@ export function ListingSectionNav() {
           const id = listingSectionId(section);
           const current = id === active;
           return (
-            <li key={section} className="shrink-0">
+            <li key={section} className={cn('shrink-0', section === STICKY_FROM_LG && 'lg:hidden')}>
               <a
                 href={`#${id}`}
                 aria-current={current ? 'location' : undefined}

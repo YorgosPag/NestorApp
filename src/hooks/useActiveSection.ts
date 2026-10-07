@@ -23,10 +23,19 @@ function documentAtEnd(): boolean {
   return scrollable > 1 && window.scrollY >= scrollable - 1;
 }
 
+/**
+ * 🔴 **Κολλημένο στοιχείο δεν είναι «σημείο της κύλισης»** — βρέθηκε στον browser (ADR-907 §7): σε δύο στήλες η σύνοψη
+ * τιμής είναι `sticky` δίπλα στα μέσα. Η κορυφή της μένει **πάντα** πάνω από τη γραμμή ανάγνωσης, άρα θα έβγαινε
+ * «τρέχουσα» ήδη από την κορυφή της σελίδας, ενώ ο άνθρωπος κοιτά τις φωτογραφίες. Σε μία στήλη δεν κολλά και μετρά κανονικά.
+ */
+function isPlaceInScroll(element: HTMLElement): boolean {
+  return window.getComputedStyle(element).position !== 'sticky';
+}
+
 function measureActive(ids: readonly string[], lineOf: () => number): string | null {
   const present = ids
     .map((id) => ({ id, element: document.getElementById(id) }))
-    .filter((entry): entry is { id: string; element: HTMLElement } => entry.element !== null);
+    .filter((entry): entry is { id: string; element: HTMLElement } => entry.element !== null && isPlaceInScroll(entry.element));
   const index = activeSectionOf({
     tops: present.map((entry) => entry.element.getBoundingClientRect().top),
     line: lineOf(),
