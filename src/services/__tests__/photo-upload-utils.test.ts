@@ -174,7 +174,7 @@ describe('resolvePhotoPurpose', () => {
       'business-card',   // file-upload-config
       'document',        // file-upload-config · PhotoUploadPurpose
       'floorplan',       // file-upload-config · PhotoUploadPurpose
-      'photo',           // defaultUploadHandler fallback · META_PHOTO_PURPOSES
+      'photo',           // defaultUploadHandler fallback · META_TAB_PURPOSES
       'id-document',     // UPLOAD_PURPOSE
       'title-deed',      // UploadEntryPoint (~180)
       'study-topographic',

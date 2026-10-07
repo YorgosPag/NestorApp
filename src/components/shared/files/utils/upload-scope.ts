@@ -13,14 +13,16 @@
  * Ό,τι μπορείς να ανεβάσεις, το βλέπεις — κατασκευαστικά, όχι κατά σύμπτωση.
  *
  * ⚠️ `resolveUploadScope` είναι **αυτούσια** η παλιά λογική του `useFileUpload` (επιλογή γράφει `domain`/`category`·
- * ο σκοπός της καρτέλας κερδίζει εκτός αν είναι «μετα-σκοπός» φωτογραφίας) — ό,τι δεν δηλώνει `purposeAuthority`
- * συμπεριφέρεται **ακριβώς** όπως πριν.
+ * ο σκοπός της καρτέλας κερδίζει εκτός αν είναι «μετα-σκοπός» καρτέλας, `META_TAB_PURPOSES`) — ό,τι δεν δηλώνει
+ * `purposeAuthority` συμπεριφέρεται όπως πριν, **εκτός** από τις καρτέλες «Έγγραφα»: από 2026-10-07 ο `document`
+ * είναι μετα-σκοπός και ο σκοπός του **τύπου** γράφεται (ADR-905 §7 βήμα 6 — πριν, κανένα αρχείο τους δεν
+ * ικανοποιούσε γραμμή καταλόγου).
  */
 
 import type { FileCategory, FileDomain } from '@/config/domain-constants';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import type { FileRecord } from '@/types/file-record';
-import { META_PHOTO_PURPOSES, buildPurposeFilter } from '../hooks/useEntityFiles-purpose-filter';
+import { META_TAB_PURPOSES, buildPurposeFilter } from '../hooks/useEntityFiles-purpose-filter';
 
 /** Το εύρος ενός αρχείου — τα τρία πεδία με τα οποία μια καρτέλα το **βρίσκει**. */
 export interface FileScope {
@@ -43,7 +45,7 @@ export interface UploadTabDefaults {
   readonly domain: FileDomain;
   readonly category: FileCategory;
   readonly purpose?: string;
-  /** Παράλειψη ⇒ ο παλιός κανόνας: `entry` για μετα-σκοπούς φωτογραφίας/χωρίς σκοπό, αλλιώς `tab`. */
+  /** Παράλειψη ⇒ `entry` για μετα-σκοπούς καρτέλας (`META_TAB_PURPOSES`: φωτογραφίες · `document`)/χωρίς σκοπό, αλλιώς `tab`. */
   readonly purposeAuthority?: PurposeAuthority;
 }
 
@@ -60,7 +62,7 @@ type ScopeSource = Pick<UploadEntryPoint, 'domain' | 'category' | 'purpose'>;
 
 function purposeAuthorityOf(tab: UploadTabDefaults): PurposeAuthority {
   if (tab.purposeAuthority) return tab.purposeAuthority;
-  return !tab.purpose || META_PHOTO_PURPOSES.has(tab.purpose) ? 'entry' : 'tab';
+  return !tab.purpose || META_TAB_PURPOSES.has(tab.purpose) ? 'entry' : 'tab';
 }
 
 /** **Πού θα γραφτεί** ένα ανέβασμα αυτής της καρτέλας, με (ή χωρίς) επιλεγμένο τύπο εγγράφου. */

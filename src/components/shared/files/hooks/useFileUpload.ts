@@ -185,7 +185,7 @@ export function useFileUpload({
     try {
       // Entry point overrides for correct tree folder structure — ο ΕΝΑΣ επιλυτής (ADR-866 §2.10 Β1), τον
       // ίδιο που ρωτά η καρτέλα για το τι διαβάζει: ό,τι γράφεται εδώ είναι κατασκευαστικά ορατό εκεί.
-      // Σκοπός: της καρτέλας, εκτός αν είναι μετα-σκοπός φωτογραφίας (photo, building-photo, …) ή η καρτέλα
+      // Σκοπός: της καρτέλας, εκτός αν είναι μετα-σκοπός καρτέλας (photo, building-photo, …, document) ή η καρτέλα
       // δηλώνει `purposeAuthority: 'entry'` — αλλιώς το γενικό 'floorplan' θα εμφανιζόταν σε κάθε *-floorplan.
       const {
         domain: uploadDomain,

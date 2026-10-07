@@ -193,7 +193,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
 
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
       // Helper extracted to useEntityFiles-purpose-filter — see module docs
-      // for META_PHOTO_PURPOSES and '*-floorplan' semantics (ADR-293 Phase 7).
+      // for META_TAB_PURPOSES and '*-floorplan' semantics (ADR-293 Phase 7).
       const filterByPurpose = buildFileReadFilter(purpose, scopes);
 
       const filteredOwned = fetchedFiles

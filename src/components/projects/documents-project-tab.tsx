@@ -17,6 +17,7 @@
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { DOCUMENTS_TAB_PURPOSE } from '@/components/shared/files/hooks/useEntityFiles-purpose-filter';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   ProjectFilesTabPlaceholder,
@@ -47,7 +48,7 @@ export function DocumentsProjectTab({ onNavigateToTab, ...props }: DocumentsProj
     <EntityFilesManager
       {...identity}
       category="documents"
-      purpose="document"
+      purpose={DOCUMENTS_TAB_PURPOSE}
       fetchAllDomains
       entryPointExcludeCategories={['photos', 'videos']}
       enableBuildingLink

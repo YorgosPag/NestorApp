@@ -21,6 +21,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { DOCUMENTS_TAB_PURPOSE } from '@/components/shared/files/hooks/useEntityFiles-purpose-filter';
 import { EntityFilesTabPlaceholder } from '@/components/shared/files/EntityFilesTabPlaceholder';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -78,7 +79,7 @@ export function BuildingContractsTab({ onNavigateToTab, ...props }: BuildingCont
     <EntityFilesManager
       {...identity}
       category="documents"
-      purpose="document"
+      purpose={DOCUMENTS_TAB_PURPOSE}
       entryPointExcludeCategories={['photos', 'videos']}
       fetchAllDomains
       floors={floors}

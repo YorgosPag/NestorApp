@@ -17,6 +17,7 @@
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { DOCUMENTS_TAB_PURPOSE } from '@/components/shared/files/hooks/useEntityFiles-purpose-filter';
 import type { Property } from '@/types/property-viewer';
 import { usePropertyFilesTab } from './property-files-tab';
 
@@ -38,7 +39,7 @@ export function DocumentsTab({ selectedProperty }: DocumentsTabProps) {
       {...identity}
       domain="sales"
       category="documents"
-      purpose="document"
+      purpose={DOCUMENTS_TAB_PURPOSE}
       entryPointExcludeCategories={['photos', 'videos', 'floorplans']}
       fetchAllDomains
     />
