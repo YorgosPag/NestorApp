@@ -17,7 +17,8 @@
  *
  * **2. `width`/`height` ΠΑΝΤΑ**, από το σχήμα. Χωρίς αυτά ο περιηγητής δεν κρατά τον
  * χώρο και η σελίδα «πηδά» — το **CLS < 0,1** που η Α19 δεσμεύτηκε **αριθμητικά**. Το
- * `aspect-[4/3]` της θήκης δίνει το **σχήμα**· τα χαρακτηριστικά δίνουν τον **λόγο**.
+ * `aspect-[4/3]` της θήκης (`LEAD_FRAME` · `THUMB_FRAME`) δίνει το **σχήμα** που βλέπει ο άνθρωπος· τα χαρακτηριστικά
+ * δίνουν τον **λόγο** του αρχείου, ώστε ο περιηγητής να διαλέξει σωστή πηγή.
  *
  * **3. ΤΟ `alt` ΔΕΝ ΕΙΝΑΙ ΚΕΝΟ, ΚΑΙ ΔΕΝ ΜΑΝΤΕΥΕΙ.** Το WCAG 1.1.1 ρωτά *«τι θα έχανε ο
  * βλέπων;»* — για φωτογραφία ακινήτου η απάντηση δεν είναι «τίποτα», άρα `alt=""` θα
@@ -42,13 +43,28 @@ import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { listingGalleryImages, listingImageSrcSet } from '@/lib/listings/listing-images';
 import { listingPhotosHref } from '@/lib/listings/listing-routes';
 import { Link } from '@/lib/workspace/navigation';
+import { cn } from '@/lib/utils';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
-/** Τα `sizes` της **κορυφαίας** εικόνας — μία στήλη σε κινητό, ~2/3 της διάταξης σε οθόνη. */
-const LEAD_SIZES = '(min-width: 1024px) 62vw, 100vw';
+/**
+ * Τα `sizes` της **κορυφαίας** εικόνας — μία στήλη σε κινητό· σε οθόνη η κύρια στήλη της σελίδας (`max-w-7xl` μείον
+ * τη στήλη σύνοψης των 22rem και τα κενά, ADR-907 Φ2β-2).
+ */
+const LEAD_SIZES = '(min-width: 1280px) 912px, (min-width: 1024px) calc(100vw - 26rem), 100vw';
 
-/** Τα `sizes` των **μικρογραφιών** — τρεις σε σειρά σε οθόνη, δύο σε κινητό. */
-const THUMB_SIZES = '(min-width: 1024px) 20vw, 45vw';
+/** Τα `sizes` των **μικρογραφιών** — τρεις σε σειρά από το `sm`, δύο σε κινητό. */
+const THUMB_SIZES = '(min-width: 1280px) 300px, (min-width: 1024px) calc((100vw - 26rem) / 3), (min-width: 640px) 33vw, 50vw';
+
+/**
+ * 🔴 **Η ΘΗΚΗ ΚΑΤΕΧΕΙ ΤΟ ΣΧΗΜΑ, ΟΧΙ Η ΦΩΤΟΓΡΑΦΙΑ** (ADR-907 §7 ii · Φ2β-2). Μετρημένο στον browser: κατακόρυφη κορυφαία
+ * φωτογραφία έπιανε **767px** — η κεφαλίδα αυτού του αρχείου έγραφε `aspect-[4/3]` αλλά καμία κλάση δεν το εφάρμοζε.
+ * `object-cover`: μια φωτογραφία αντέχει κόψιμο (η ολόκληρη ζει στη σελίδα «Φωτογραφίες»)· ένα σχέδιο όχι — γι' αυτό
+ * οι κατόψεις **δεν** περνούν από εδώ. Το ταβάνι `70vh` κρατά τίτλο και τιμή στην πρώτη οθόνη και σε πλατιά στήλη.
+ */
+const LEAD_FRAME = 'aspect-[4/3] max-h-[70vh]';
+
+/** Ίσα πλακίδια: ένα πλέγμα με ανάμεικτες αναλογίες αφήνει κενά κάτω από κάθε οριζόντια φωτογραφία. */
+const THUMB_FRAME = 'aspect-[4/3]';
 
 export function ListingGallery({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results']);
@@ -83,7 +99,7 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
 
   return (
     <section aria-label={t('search-results:detail.media.title')} className="flex flex-col gap-2">
-      <GalleryImage image={lead} index={1} total={total} sizes={LEAD_SIZES} priority />
+      <GalleryImage image={lead} index={1} total={total} sizes={LEAD_SIZES} frame={LEAD_FRAME} priority />
 
       {rest.length > 0 && (
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -94,6 +110,7 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
                 index={position + 2}
                 total={total}
                 sizes={THUMB_SIZES}
+                frame={THUMB_FRAME}
               />
             </li>
           ))}
@@ -135,12 +152,15 @@ function GalleryImage({
   index,
   total,
   sizes,
+  frame,
   priority = false,
 }: {
   readonly image: ListingImage;
   readonly index: number;
   readonly total: number;
   readonly sizes: string;
+  /** Το σχήμα της θήκης (αναλογία, ταβάνι ύψους) — το λέει ο γονιός, όπως και το `priority`. */
+  readonly frame: string;
   readonly priority?: boolean;
 }) {
   const { t } = useTranslation(['search-results']);
@@ -161,7 +181,7 @@ function GalleryImage({
       loading={priority ? 'eager' : 'lazy'}
       fetchPriority={priority ? 'high' : 'auto'}
       decoding="async"
-      className="w-full rounded-lg border border-border object-cover"
+      className={cn('w-full rounded-lg border border-border object-cover', frame)}
     />
   );
 }

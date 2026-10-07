@@ -106,3 +106,35 @@ describe('Γ — Η ΟΡΑΤΗ ΣΗΜΕΙΩΣΗ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΠΡΟ
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * 🔴 **Βρέθηκε ΣΤΟΝ BROWSER** (ADR-907 §7 ii · Φ2β-2), όχι εδώ: το jsdom δεν έχει διάταξη. Κατακόρυφη κορυφαία φωτογραφία
+ * έπιανε **767px** — το αρχείο έγραφε `aspect-[4/3]` στην κεφαλίδα του και **καμία** κλάση δεν το εφάρμοζε. Εδώ κλειδώνεται
+ * η **δήλωση**: κάθε εικόνα της συλλογής παίρνει το σχήμα της από τη θήκη, ποτέ από το αρχείο.
+ */
+describe('Θ — Η ΘΗΚΗ ΚΑΤΕΧΕΙ ΤΟ ΣΧΗΜΑ', () => {
+  const classesOf = (image: HTMLElement): string[] => (image.getAttribute('class') ?? '').split(/\s+/);
+
+  it('🔴 Θ1 — κορυφαία: σταθερή αναλογία ΚΑΙ ταβάνι ύψους, χωρίς να χάσει την προτεραιότητα LCP', () => {
+    render(<ListingGallery listing={listingWith('agency', 3)} />);
+    const [lead] = screen.getAllByRole('img');
+
+    expect(classesOf(lead)).toEqual(expect.arrayContaining(['aspect-[4/3]', 'object-cover']));
+    expect(classesOf(lead).some((name) => name.startsWith('max-h-'))).toBe(true);
+    expect(lead.getAttribute('loading')).toBe('eager');
+    expect(lead.getAttribute('fetchpriority')).toBe('high');
+    expect(lead.getAttribute('width')).not.toBeNull();
+    expect(lead.getAttribute('height')).not.toBeNull();
+  });
+
+  it('Θ2 — μικρογραφίες: ίσα πλακίδια, και καμία δεν διεκδικεί προτεραιότητα', () => {
+    render(<ListingGallery listing={listingWith('agency', 3)} />);
+    const [, ...thumbs] = screen.getAllByRole('img');
+
+    expect(thumbs).toHaveLength(2);
+    for (const thumb of thumbs) {
+      expect(classesOf(thumb)).toEqual(expect.arrayContaining(['aspect-[4/3]', 'object-cover']));
+      expect(thumb.getAttribute('loading')).toBe('lazy');
+    }
+  });
+});

@@ -66,6 +66,7 @@ import {
 } from '@/lib/listings/listing-filters';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { formatDateTime } from '@/lib/intl-formatting';
+import { cn } from '@/lib/utils';
 import type { PublicListing } from '@/types/public-listing';
 import { ListingMarketContextPending } from './ListingMarketContextPending';
 import { ListingPriceBlock } from './ListingPriceBlock';
@@ -201,18 +202,17 @@ function ListingDetailBody({
   const { t } = useTranslation(['search-results']);
 
   return (
-    <main className="mx-auto w-full max-w-5xl">
+    <main className="mx-auto w-full max-w-7xl">
       {/*
         ⚠️ ΤΟ `p-4 sm:p-6` ΕΦΥΓΕ (ADR-797 ΦΑΣΗ Β): τον διάδρομο τον δίνει πλέον το
         `ShellSurface` του `(light)/layout.tsx`, ρευστά και από το πραγματικό πλάτος
         της επιφάνειας αντί για δύο σκαλοπάτια σε breakpoint.
 
-        🔶 ΤΟ `max-w-5xl` ΜΕΝΕΙ, ΚΑΙ ΕΙΝΑΙ ΔΗΛΩΜΕΝΟ ΟΡΙΟ. Δεν είναι **μέτρο**
-        γραμμής: είναι πλάτος **ΔΙΑΤΑΞΗΣ** — η σελίδα είναι δύο στήλες
-        (`lg:grid-cols-[minmax(0,1fr)_22rem]`) και η στήλη κειμένου μέσα της
-        μετρήθηκε ~73 χαρακτήρες, δηλαδή **εντός** του ταβανιού. Ένας ρόλος `measure`
-        εδώ θα ήταν κατηγοριακό λάθος (**114ch**, πάνω από τη σύμβαση των 80ch), και
-        γι' αυτό ο γεννήτορας θα τον αρνιόταν. Το ερώτημα «ποιος κατέχει το πλάτος
+        🔶 ΤΟ `max-w-7xl` ΕΙΝΑΙ ΔΗΛΩΜΕΝΟ ΟΡΙΟ (ήταν `max-w-5xl` ως το ADR-907 Φ2β-2 — «πλατύτερη, μία κύλιση», ο
+        ανασχεδιασμός της Zillow το 2023). Δεν είναι **μέτρο** γραμμής: είναι πλάτος **ΔΙΑΤΑΞΗΣ** — η σελίδα είναι
+        δύο στήλες (`lg:grid-cols-[minmax(0,1fr)_22rem]`). Η κύρια στήλη μετρήθηκε 912px στα 1440px και η πρόζα
+        της κρατιέται στο ταβάνι του ρόλου `wide` από το `SECTION_PROSE_MEASURE` (χωρίς αυτό: 109 χαρακτήρες). Ένας
+        ρόλος `measure` στη ρίζα θα ήταν κατηγοριακό λάθος, και ο γεννήτορας θα τον αρνιόταν. Το ερώτημα «ποιος κατέχει το πλάτος
         ΔΙΑΤΑΞΗΣ;» είναι **τρίτο** και μένει ανοιχτό (ADR-797 §4.2) — μετρημένο:
         17 ρίζες σε 143, δηλαδή 11,9%, με ratchet να το παρακολουθεί.
       */}
@@ -318,9 +318,17 @@ function ListingDetailBody({
  * **τι είναι** (στοιχεία) → **πού είναι** (θέση, και ο χρόνος μετά τον τόπο) → **τι αξίζει εκεί** (συμβόλαια) →
  * **τι ισχύει νομικά**, και στο τέλος ό,τι δεν δημοσιεύουμε ακόμη.
  */
+/**
+ * 🔶 **Η στήλη πλάτυνε, η πρόζα όχι** (ADR-907 Φ2β-2). Μετρημένο στα 1440px με `max-w-7xl`: η κύρια στήλη είναι 912px
+ * και οι παράγραφοι των νομικών έφταναν **109 χαρακτήρες** ανά γραμμή. Το πλάτος το θέλουν οι φωτογραφίες, ο χάρτης και
+ * οι πίνακες — το κείμενο κρατά το ταβάνι του ρόλου `wide` του κελύφους, από το **ίδιο** token (ποτέ δεύτερος αριθμός).
+ */
+const SECTION_PROSE_MEASURE =
+  '[&_p]:max-w-[calc(var(--spacing-layout-measure-wide)*1ch)] [&_li]:max-w-[calc(var(--spacing-layout-measure-wide)*1ch)]';
+
 function ListingSections({ listing }: { readonly listing: PublicListing }) {
   return (
-    <div className="flex min-w-0 flex-col gap-4 lg:col-start-1">
+    <div className={cn('flex min-w-0 flex-col gap-4 lg:col-start-1', SECTION_PROSE_MEASURE)}>
       <ListingSectionAnchor section="details">
         <ListingAttributeList listing={listing} />
       </ListingSectionAnchor>
