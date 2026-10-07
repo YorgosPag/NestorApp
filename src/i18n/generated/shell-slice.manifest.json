@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "101944d7f12751f3040c2e3b093948ce4bba17a08dd0798c6fed12e25ab01909",
+  "inputsSha256": "41c608ad42258154878934f41a51ca9c4c27c9aae5a5334ff7b878253e799fbb",
   "languages": [
     "el"
   ],
@@ -1018,7 +1018,7 @@
     "src/lib/market/value-zones.ts": "f37b17fa525f648fac1fbec4488ecb57b71e694f8703bf1ccd2f090be8e63f37",
     "src/lib/media-rights/media-rights-read.ts": "fac5553370ecc9b12fb2575e5ed9de3f086effcfba89b32d943e5ff71325c126",
     "src/lib/media/photo-floorplan-spots.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/middleware/rate-limit-config.ts": "7f1acb1083c997e8a917a0b20c31ef9add923ede844020d7231eedbbbc0aa600",
+    "src/lib/middleware/rate-limit-config.ts": "8ba0c729bd36fb85eace25d7d778295f21a41d82467d943971f7043790d53772",
     "src/lib/middleware/rate-limit-store.ts": "d889d292e8fa101063a246a3606d5237791c35ff5ed2eab5b555de9ef2f4393a",
     "src/lib/middleware/rate-limiter.ts": "7dd833b5e1de265dbcab25154090e86c50c85d90fa2c6ac26d5c402a7c231f75",
     "src/lib/middleware/with-rate-limit.ts": "17c590d888fbebaec4eb5e6a3b28b98b5bb1941a79d238259857ba3d515b6976",
