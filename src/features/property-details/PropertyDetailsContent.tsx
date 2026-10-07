@@ -44,6 +44,7 @@ import { cn } from '@/lib/utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { usePropertyEditCapability } from '@/hooks/usePropertyEditCapability';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -115,11 +116,15 @@ export function PropertyDetailsContent({
   const editCapability = usePropertyEditCapability();
   const isReadOnly = isReadOnlyRequested || !editCapability.canEdit;
 
+  // 🗄️ ADR-329 §3.9 — ΧΩΡΙΣΤΟ από το `isReadOnly`: εκείνο είναι ρόλος και δείχνει μειωμένη όψη· αυτό είναι
+  //    κατάσταση της εγγραφής και δείχνει την ΠΛΗΡΗ όψη, ανενεργή. Ρωτιέται εδώ, στο φύλλο (ίδιος λόγος με πάνω).
+  const isLocked = useRetiredKind() !== null;
+
   // 🏢 ENTERPRISE: Edit mode - prefer external props (from UnitsSidebar), fallback to local state
   const [localEditMode, setLocalEditMode] = useState(false);
 
-  // Use external edit mode if provided, otherwise local
-  const isEditMode = externalEditMode !== undefined ? externalEditMode : localEditMode;
+  // Use external edit mode if provided, otherwise local — ποτέ για αποσυρμένο ακίνητο
+  const isEditMode = !isLocked && (externalEditMode !== undefined ? externalEditMode : localEditMode);
 
   // 🏢 ENTERPRISE: Toggle edit mode callback - use external if provided
   const _handleToggleEditMode = useCallback(() => {
@@ -187,17 +192,17 @@ export function PropertyDetailsContent({
   // attachments (ίδια λογική με mock)
   const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(resolvedProperty);
 
-  // safe update (ίδια συμπεριφορά: no-op όταν read-only)
+  // safe update (ίδια συμπεριφορά: no-op όταν read-only ή αποσυρμένο)
   const baseSafeUpdate = useCallback(
     async (_propertyId: string, updates: Partial<Property>) => {
-      if (isReadOnly) {
+      if (isReadOnly || isLocked) {
         return;
       }
 
       // ADR-777 §8.69.13 — `failed` (και μετά από `warn`) ⇒ στο catch του `safeOnUpdateProperty`.
       outcomeOrThrow(await runExistingPropertyUpdate(resolvedProperty, updates));
     },
-    [isReadOnly, resolvedProperty, runExistingPropertyUpdate]
+    [isLocked, isReadOnly, resolvedProperty, runExistingPropertyUpdate]
   );
 
   // ADR-236 Phase 4: Auto-create levels when type changes to multi-level capable

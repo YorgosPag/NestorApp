@@ -24,6 +24,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ListingFloorplansPanel } from '@/components/listings/ListingFloorplansPanel';
+import { RetiredRecordProvider } from '@/lib/firestore/retired-record-context';
 import type { FileRecord } from '@/types/file-record';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -193,6 +194,28 @@ describe('Κ3 — «ΔΗΛΩΜΕΝΗ, ΑΛΛΑ ΔΕΝ ΦΕΥΓΕΙ»', () => {
     mount(undefined);
 
     expect(within(rowOf('file_priv')).queryByText(`${K}.blocked`)).toBeNull();
+  });
+});
+
+// ============================================================================
+// Κ5 — ΑΠΟΣΥΡΜΕΝΟ ΑΚΙΝΗΤΟ: Η ΔΗΛΩΣΗ ΦΑΙΝΕΤΑΙ, ΔΕΝ ΑΛΛΑΖΕΙ (ADR-329 §3.9)
+// ============================================================================
+
+describe('Κ5 — ΑΠΟΣΥΡΜΕΝΟ ΑΚΙΝΗΤΟ', () => {
+  it.each(['archived', 'deleted'])('🔴 `%s` ⇒ το πλαίσιο δείχνει τη δήλωση, είναι ανενεργό, και το κλικ ΔΕΝ γράφει', async (status) => {
+    filesFromFirestore = [PLAN_A];
+    render(
+      <RetiredRecordProvider record={{ status }}>
+        <ListingFloorplansPanel propertyId={PROPERTY_ID} companyId={COMPANY_ID} storedFloorplans={['file_pa']} />
+      </RetiredRecordProvider>,
+    );
+
+    const checkbox = within(rowOf('file_pa')).getByRole('checkbox');
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+
+    await userEvent.click(checkbox);
+    expect(updateProperty).not.toHaveBeenCalled();
   });
 });
 

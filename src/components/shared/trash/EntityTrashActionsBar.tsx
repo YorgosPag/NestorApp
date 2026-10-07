@@ -15,7 +15,8 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System · ADR-584 — Anti-Duplication
  */
 
-import { TrashActionsBar, type TrashNoticeTone } from '@/components/shared/trash/TrashActionsBar';
+import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import type { TrashNoticeTone } from '@/components/shared/trash/TrashNotice';
 import { useTrashBarRestore } from '@/components/shared/trash/useTrashBarRestore';
 
 /** Τα κείμενα ανά οντότητα — ήδη μεταφρασμένα, από το namespace της. */

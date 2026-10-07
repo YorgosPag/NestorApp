@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FileCategory } from '@/config/domain-constants';
@@ -111,6 +112,8 @@ export function EntityFilesToolbar({
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
+  // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): ούτε ανέβασμα ούτε λήψη από κάμερα — το μενού δεν ζωγραφίζεται.
+  const canAdd = useRetiredKind() === null;
 
   return (
     <CardHeader>
@@ -268,13 +271,15 @@ export function EntityFilesToolbar({
           {/* Add/Capture Menu + Refresh - Only on files tab */}
           {activeTab === 'files' && (
             <>
-              <AddCaptureMenu
-                category={category}
-                onUploadClick={onOpenUploadZone}
-                onCapture={onCapture}
-                disabled={uploading}
-                loading={uploading}
-              />
+              {canAdd && (
+                <AddCaptureMenu
+                  category={category}
+                  onUploadClick={onOpenUploadZone}
+                  onCapture={onCapture}
+                  disabled={uploading}
+                  loading={uploading}
+                />
+              )}
 
               <Tooltip>
                 <TooltipTrigger asChild>

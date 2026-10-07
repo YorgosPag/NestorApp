@@ -19,6 +19,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PropertyDetailsHeader } from '../PropertyDetailsHeader';
+import { createEntityAction } from '@/core/entity-headers';
+import { RetiredRecordProvider } from '@/lib/firestore/retired-record-context';
 import type { Property } from '@/types/property';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -57,5 +59,55 @@ describe('Υ — οι ενέργειες της κεφαλίδας ακινήτ�
 
     expect(onNewProperty).toHaveBeenCalledTimes(1);
     expect(onDeleteProperty).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Υ3 — **ΑΠΟΣΥΡΜΕΝΟ ΑΚΙΝΗΤΟ: ΜΟΝΟ Ο,ΤΙ ΠΛΟΗΓΕΙ** (ADR-329 §3.9).
+ *
+ * Η κεφαλίδα **ρωτά** `useRetiredKind()`· κανένα prop δεν της λέει ότι το ακίνητο είναι αποσυρμένο. Με όλους
+ * τους χειριστές παρόντες (ό,τι θα περνούσε μια οθόνη που ξέχασε να τους αφαιρέσει), τα κουμπιά γραφής λείπουν.
+ */
+describe('Υ3 — αποσυρμένο ακίνητο', () => {
+  const openPage = jest.fn();
+  const OPEN_PAGE = createEntityAction('view', 'open-page', openPage);
+
+  function mountRetired(status: string) {
+    return render(
+      <RetiredRecordProvider record={{ status }}>
+        <PropertyDetailsHeader
+          property={PROPERTY}
+          onNewProperty={jest.fn()}
+          onDeleteProperty={jest.fn()}
+          onShowcaseProperty={jest.fn()}
+          onToggleEditMode={jest.fn()}
+          extraActions={[OPEN_PAGE]}
+        />
+      </RetiredRecordProvider>,
+    );
+  }
+
+  it.each(['archived', 'deleted'])('🔴 `%s` ⇒ μένει ΜΟΝΟ το «Άνοιγμα σε σελίδα»', (status) => {
+    mountRetired(status);
+
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /open-page/ })).toBeInTheDocument();
+  });
+
+  it('🔴 αποσυρμένο ΚΑΙ `isEditMode` ⇒ ούτε «Αποθήκευση»: η λειτουργία επεξεργασίας δεν ξεκλειδώνει', () => {
+    render(
+      <RetiredRecordProvider record={{ status: 'archived' }}>
+        <PropertyDetailsHeader property={PROPERTY} isEditMode extraActions={[OPEN_PAGE]} />
+      </RetiredRecordProvider>,
+    );
+
+    expect(screen.queryByRole('button', { name: /buildingSelector\.save/ })).toBeNull();
+  });
+
+  it('✅ ζωντανό ακίνητο μέσα στον ίδιο πάροχο ⇒ τα κουμπιά γραφής υπάρχουν', () => {
+    mountRetired('for-sale');
+
+    expect(screen.getByRole('button', { name: /navigation\.actions\.edit\.label/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: DELETE_ACTION })).toBeInTheDocument();
   });
 });

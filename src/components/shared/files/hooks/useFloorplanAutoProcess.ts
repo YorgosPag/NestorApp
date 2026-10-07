@@ -14,6 +14,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import type { FileRecord } from '@/types/file-record';
 import {
   processFloorplanWithPolicy,
@@ -78,9 +79,12 @@ export function useFloorplanAutoProcess({
 }: UseFloorplanAutoProcessParams): void {
   const submittedIds = useRef<Set<string>>(new Set());
   const dxfImportNotifications = useDxfImportNotifications();
+  // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): η επεξεργασία ΓΡΑΦΕΙ `processedData` στο αρχείο, και θα
+  // ξεκινούσε μόνη της με το άνοιγμα της καρτέλας — δηλαδή γραφή χωρίς καν κλικ. Δεν τρέχει.
+  const parentIsLive = useRetiredKind() === null;
 
   useEffect(() => {
-    if (displayStyle !== 'floorplan-gallery') return;
+    if (displayStyle !== 'floorplan-gallery' || !parentIsLive) return;
 
     // ADR-866 §2.10.9 — μόνο ό,τι ο διακομιστής **μπορεί** να επεξεργαστεί (είδος + διαμέρισμα).
     const pending = files
@@ -110,5 +114,5 @@ export function useFloorplanAutoProcess({
     return () => {
       cancelled = true;
     };
-  }, [displayStyle, files, refetch, dxfImportNotifications]);
+  }, [displayStyle, files, refetch, dxfImportNotifications, parentIsLive]);
 }

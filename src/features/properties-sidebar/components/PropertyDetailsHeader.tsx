@@ -5,6 +5,7 @@ import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityDetailsHeader, createEntityAction, type EntityHeaderAction } from '@/core/entity-headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 
@@ -50,6 +51,7 @@ export function PropertyDetailsHeader({
   extraActions,
 }: PropertyDetailsHeaderProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const retiredKind = useRetiredKind();
 
   const handleHeaderSave = useCallback(() => {
     const form = document.getElementById('property-fields-form') as HTMLFormElement | null;
@@ -79,7 +81,11 @@ export function PropertyDetailsHeader({
     );
   }
 
-  const actions = isEditMode
+  // 🗄️ Αποσυρμένο ακίνητο (ADR-329 §3.9): μένει μόνο ό,τι **πλοηγεί** («Άνοιγμα σε σελίδα»). Επεξεργασία,
+  //    νέο, επίδειξη και κάδος είναι πράξεις που ο διακομιστής αρνείται ⇒ δεν ζωγραφίζονται.
+  const actions = retiredKind !== null
+    ? [...(extraActions ?? [])]
+    : isEditMode
     ? [
         createEntityAction(
           'save',

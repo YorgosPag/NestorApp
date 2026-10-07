@@ -119,11 +119,12 @@ export function PropertiesSidebar({
       isCreatingNewUnit={isCreatingNewUnit}
       onPropertyCreated={onPropertyCreated}
       onNewProperty={onNewProperty}
-      onDeleteProperty={handleDeleteProperty}
+      onDeleteProperty={listDeleteAction}
       defaultTab={defaultTab}
       headerActions={openInPageActions}
       onCreateAction={onNewProperty}
-      warningBanner={hasBuildingsWithNoUnits ? (
+      // «Κτίρια χωρίς μονάδες» καλεί σε δημιουργία: χωρίς δημιουργία (κάδος · αρχείο) δεν έχει τι να προσφέρει.
+      warningBanner={hasBuildingsWithNoUnits && onNewProperty ? (
         <BuildingSpaceWarningBanner
           title={t('warningNoBuildingUnits.title')}
           hint={t('warningNoBuildingUnits.hint')}
@@ -165,7 +166,8 @@ export function PropertiesSidebar({
         isOpen={isMobile && !!selectedProperty}
         onClose={() => onSelectProperty('__none__', false)}
         title={selectedProperty?.name || t('mobile.unitDetails')}
-        actionButtons={(
+        // Ίδιος κανόνας με τη λίστα: χωρίς διαγραφή από τον γονιό (κάδος · αρχείο) δεν υπάρχει ούτε επεξεργασία.
+        actionButtons={listDeleteAction && (
           <>
             <button
               onClick={() => {}}

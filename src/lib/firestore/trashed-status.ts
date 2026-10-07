@@ -68,6 +68,15 @@ export const isArchived = (entity: MaybeTrashed | null | undefined): boolean =>
 export const isRetired = (entity: MaybeTrashed | null | undefined): boolean =>
   isTrashed(entity) || isArchived(entity);
 
+/**
+ * Πόσο μένει μια εγγραφή στον κάδο πριν την αφαιρέσει η εκκαθάριση — 30 ημέρες.
+ *
+ * Η **ίδια** υπόσχεση προς τον άνθρωπο («έχεις έναν μήνα να αλλάξεις γνώμη») που εκτελούν τα
+ * purge jobs (μέσω `cron-auth`, που την ξαναεξάγει) και που **λέει** η ταινία του κλειδωμένου
+ * πλαισίου. Μία δήλωση ⇒ το κείμενο και η εκκαθάριση δεν αποκλίνουν.
+ */
+export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 /** Οι τιμές `status` που σημαίνουν «αποσυρμένο» — για ερωτήματα `not-in` στον διακομιστή. */
 export const RETIRED_STATUSES: readonly string[] = [TRASHED_STATUS, ARCHIVED_STATUS];
 

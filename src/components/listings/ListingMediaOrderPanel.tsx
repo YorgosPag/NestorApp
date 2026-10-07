@@ -44,6 +44,7 @@ import { CaptureSpotControl } from './capture-spots/CaptureSpotControl';
 import { captureSpotMaterialOf } from './capture-spots/capture-spot-material';
 import { agencyMediaMaterial } from '@/services/listings/agency-media-publication';
 import { companyReadCustodyOf } from '@/lib/files/file-custody';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
 import type { FileRecord } from '@/types/file-record';
 
@@ -89,6 +90,8 @@ interface ListingMediaOrderRowProps {
 /** **Μία γραμμή της σειράς** — εστίαση (μόνο φωτογραφία) + «1η» ή «να μπει πρώτη». */
 function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }: ListingMediaOrderRowProps) {
   const { t } = useTranslation([NS]);
+  // 🗄️ ADR-329 §3.9 — αποσυρμένο ακίνητο: η σειρά και η εστίαση φαίνονται όπως έμειναν, δεν αλλάζουν.
+  const locked = useRetiredKind() !== null;
   return (
     <ListingMaterialRow
       file={file}
@@ -105,7 +108,7 @@ function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }:
           photo={{ kind: 'file', fileId: file.id, custody: 'company' }}
           declared={focalPoints.pointOf(file.id)}
           onApply={(next) => void focalPoints.setPoint(file.id, next)}
-          disabled={focalPoints.saving}
+          disabled={focalPoints.saving || locked}
         />
       )}
       {/*
@@ -117,7 +120,7 @@ function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }:
           {t(`${K}.firstBadge`)}
         </span>
       ) : (
-        <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => void onMakeFirst(file.id)}>
+        <Button type="button" variant="outline" size="sm" disabled={saving || locked} onClick={() => void onMakeFirst(file.id)}>
           {t(`${K}.makeFirst`)}
         </Button>
       )}
@@ -148,6 +151,7 @@ export function ListingMediaOrderPanel({
   storedFloorplanNorth,
 }: ListingMediaOrderPanelProps) {
   const { t } = useTranslation([NS]);
+  const locked = useRetiredKind() !== null;
 
   const { files } = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY,
@@ -196,7 +200,7 @@ export function ListingMediaOrderPanel({
         declared={captureSpots.declared}
         onSave={(next) => void captureSpots.commit(next)}
         custody="company"
-        disabled={captureSpots.saving}
+        disabled={captureSpots.saving || locked}
       />
       <ol className="flex flex-col gap-2">
         {items.map((file, index) => (

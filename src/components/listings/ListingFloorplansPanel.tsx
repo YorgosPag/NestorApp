@@ -37,6 +37,7 @@ import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
 import { useListingFloorplans } from '@/hooks/listings/useListingFloorplans';
 import { companyReadCustodyOf } from '@/lib/files/file-custody';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
 
 const NS = 'property-market';
@@ -67,6 +68,8 @@ export function ListingFloorplansPanel({
   storedFloorplans,
 }: ListingFloorplansPanelProps) {
   const { t } = useTranslation([NS]);
+  // 🗄️ ADR-329 §3.9 — αποσυρμένο ακίνητο: η δήλωση φαίνεται όπως έμεινε, αλλά δεν αλλάζει (ο διακομιστής αρνείται).
+  const locked = useRetiredKind() !== null;
 
   const { files } = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY,
@@ -114,7 +117,7 @@ export function ListingFloorplansPanel({
                 id={`listing-floorplan-${file.id}`}
                 type="checkbox"
                 checked={declared}
-                disabled={saving}
+                disabled={saving || locked}
                 onChange={() => void toggle(file.id)}
                 className="h-4 w-4 rounded border-border"
               />

@@ -22,7 +22,9 @@ jest.mock('@/services/floorplans/floorplan-processing-mutation-gateway', () => (
   isInProgress: () => false,
 }));
 
+import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { RetiredRecordProvider } from '@/lib/firestore/retired-record-context';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type { FileRecord } from '@/types/file-record';
 import { useFloorplanAutoProcess } from '../useFloorplanAutoProcess';
@@ -55,6 +57,34 @@ describe('Α40.2 — μόνο ό,τι ο διακομιστής μπορεί ν�
   it('εταιρικό DXF ⇒ ένα αίτημα', async () => {
     const files = [file('f_company_dxf', 'dxf', { companyId: 'comp_1' })];
     renderHook(() => useFloorplanAutoProcess({ displayStyle: 'floorplan-gallery', files, refetch: jest.fn() }));
+    await waitFor(() => expect(sentIds()).toEqual(['f_company_dxf']));
+  });
+});
+
+/**
+ * ADR-329 §3.9 — αποσυρμένη μητρική εγγραφή: η επεξεργασία **γράφει** στο αρχείο και θα ξεκινούσε με το
+ * άνοιγμα της καρτέλας, χωρίς κλικ. Το hook **ρωτά** `useRetiredKind()` και δεν στέλνει τίποτα.
+ */
+describe('αποσυρμένη μητρική εγγραφή ⇒ καμία αυτόματη επεξεργασία', () => {
+  const files = [file('f_company_dxf', 'dxf', { companyId: 'comp_1' })];
+  const within = (status: string) => ({ children }: { children: React.ReactNode }) => (
+    <RetiredRecordProvider record={{ status }}>{children}</RetiredRecordProvider>
+  );
+
+  it.each(['archived', 'deleted'])('🔴 `%s` ⇒ ΚΑΝΕΝΑ αίτημα, ακόμη και για επεξεργάσιμο DXF', async (status) => {
+    renderHook(
+      () => useFloorplanAutoProcess({ displayStyle: 'floorplan-gallery', files, refetch: jest.fn() }),
+      { wrapper: within(status) },
+    );
+    await act(async () => { await Promise.resolve(); });
+    expect(processMock).not.toHaveBeenCalled();
+  });
+
+  it('ζωντανή εγγραφή μέσα στον ίδιο πάροχο ⇒ το αίτημα φεύγει', async () => {
+    renderHook(
+      () => useFloorplanAutoProcess({ displayStyle: 'floorplan-gallery', files, refetch: jest.fn() }),
+      { wrapper: within('for-sale') },
+    );
     await waitFor(() => expect(sentIds()).toEqual(['f_company_dxf']));
   });
 });

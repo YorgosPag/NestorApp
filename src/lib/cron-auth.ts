@@ -26,12 +26,16 @@ const logger = createModuleLogger('CronAuth');
  * How long a soft-deleted document stays recoverable before a purge job may
  * remove it — 30 days, in milliseconds.
  *
- * Lives here rather than in each purge route because it is the *same promise*
+ * One declaration rather than one per purge route because it is the *same promise*
  * to the user ("you have a month to change your mind"), not a per-route knob.
  * Two routes declaring it independently is two places to edit when the promise
  * changes, and one of them will be missed.
+ *
+ * The value itself lives in the client-safe leaf `trashed-status` (ADR-329 §3.9):
+ * the locked detail panel tells the user *when* the purge happens, and it cannot
+ * import this file (`next/server`). Re-exported here so every purge job is unchanged.
  */
-export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export { TRASH_RETENTION_MS } from '@/lib/firestore/trashed-status';
 
 /**
  * Verify that a request comes from Vercel Cron (or authorized caller).

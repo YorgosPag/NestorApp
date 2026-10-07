@@ -34,6 +34,19 @@
   "trashedLabel": "In trash",
   "listingWithdrawnNotice": "If it is listed, the listing is taken off the market immediately.",
   "listingStaysOffMarketNotice": "When restored from the archive, it stays off the market until you publish it again.",
+  "retiredBanner": {
+    "label": "Retirement status",
+    "archivedOn": "Archived on {date}.",
+    "archivedOnBy": "Archived on {date} by {name}.",
+    "archivedUndated": "This record is in the archive.",
+    "trashedOn": "Moved to trash on {date}.",
+    "trashedOnBy": "Moved to trash on {date} by {name}.",
+    "trashedUndated": "This record is in the trash.",
+    "keptBecause": "It was not deleted because other records refer to it: {references}.",
+    "purgeOn": "It will be permanently deleted on {date}.",
+    "returnsAsItWas": "Restoring brings it back exactly as it was.",
+    "readOnly": "View only: it accepts no changes while it is retired."
+  },
   "softDeleteDialog": {
     "title": "Move to Trash",
     "description": "The item will be removed from active lists but can be restored from trash.",

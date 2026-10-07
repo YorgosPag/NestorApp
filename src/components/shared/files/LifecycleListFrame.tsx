@@ -24,6 +24,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { formatDateTime } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import type { FileRecord } from '@/types/file-record';
@@ -104,6 +105,9 @@ export function LifecycleFileRow(props: LifecycleFileRowProps) {
   const { iconSizes, quick, colors, t, translateDisplayName } = useLifecycleViewKit();
   const { file, icon: Icon, tone, actionLabel } = props;
   const displayName = translateDisplayName(file);
+  // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): η επαναφορά ΑΡΧΕΙΟΥ γράφει ⇒ η γραμμή μένει, το κουμπί όχι.
+  // Ρωτιέται εδώ, στη ΜΙΑ γραμμή που μοιράζονται κάδος και αρχείο αρχείων — όχι σε κάθε προβολή χωριστά.
+  const canReinstate = useRetiredKind() === null;
 
   return (
     <article
@@ -130,7 +134,7 @@ export function LifecycleFileRow(props: LifecycleFileRowProps) {
           </div>
         </div>
       </div>
-      <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
+      {canReinstate && <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -146,7 +150,7 @@ export function LifecycleFileRow(props: LifecycleFileRowProps) {
           </TooltipTrigger>
           <TooltipContent>{actionLabel}</TooltipContent>
         </Tooltip>
-      </nav>
+      </nav>}
     </article>
   );
 }

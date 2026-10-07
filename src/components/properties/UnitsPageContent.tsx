@@ -437,9 +437,9 @@ export function PropertiesManagementContent() {
             retiredView={retired.retiredView}
             searchFilteredProperties={searchFilteredProperties}
             viewMode={viewMode as 'list' | 'grid'}
-            // ⛔ ADR-329 §3.9 (3β→3γ): σε κάδο/αρχείο το πλαίσιο μένει ΚΛΕΙΣΤΟ μέχρι να ανοίξει κλειδωμένο
-            //    (`RetiredRecordProvider`, 3γ). Ανοιχτό σήμερα θα πρόσφερε επεξεργασία σε αποσυρμένο ακίνητο.
-            selectedProperty={retiredRows ? null : viewedProperty || null}
+            // 🗄️ ADR-329 §3.9 (3γ): σε κάδο/αρχείο το πλαίσιο ανοίγει ΠΛΗΡΕΣ ΚΑΙ ΚΛΕΙΔΩΜΕΝΟ — το κλείδωμα το
+            //    θέτει η επιφάνεια (`RetiredRecordProvider`) από το ίδιο το ακίνητο, όχι αυτή η σελίδα.
+            selectedProperty={viewedProperty || null}
             selectedPropertyIds={selectedPropertyIds}
             isCreatingNewUnit={isCreatingNewUnit}
             newUnitTemplate={newUnitTemplate}

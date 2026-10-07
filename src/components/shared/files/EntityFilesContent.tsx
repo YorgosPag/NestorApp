@@ -54,6 +54,7 @@ import { ArchiveView } from './ArchiveView';
 import { MediaGallery } from './media';
 import { FloorplanGallery } from './media/FloorplanGallery';
 import { gridPatterns } from '@/styles/design-tokens';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 
 // ============================================================================
 // TYPES
@@ -114,19 +115,19 @@ export interface EntityFilesContentProps {
   fetchAllDomains?: boolean;
   listGroupingMode?: 'studyGroup' | 'domainCategory';
   companyName?: string;
-  // File operations
-  onDelete: (fileId: string) => Promise<void>;
-  onRename: (fileId: string, newDisplayName: string) => void;
-  onDescriptionUpdate: (fileId: string, description: string) => void;
+  // File operations — οι πράξεις ΓΡΑΦΗΣ είναι προαιρετικές: χειριστής που λείπει ⇒ κουμπί που δεν ζωγραφίζεται
+  onDelete?: (fileId: string) => Promise<void>;
+  onRename?: (fileId: string, newDisplayName: string) => void;
+  onDescriptionUpdate?: (fileId: string, description: string) => void;
   onView: (file: FileRecord) => void;
   onDownload: (file: { storagePath?: string; downloadUrl?: string; displayName: string }) => Promise<void>;
   onLinkClick?: (file: FileRecord) => void;
-  onUnlink: (fileId: string) => Promise<void>;
+  onUnlink?: (fileId: string) => Promise<void>;
   enableBuildingLink: boolean;
   currentUserId: string;
-  // Selection
+  // Selection — υπάρχει για τις μαζικές πράξεις· χωρίς αυτές δεν υπάρχει ούτε επιλογή
   selectedIds: Set<string>;
-  toggleSelect: (fileId: string) => void;
+  toggleSelect?: (fileId: string) => void;
   // Preview
   selectedFile: FileRecord | null;
   onSelectFile: (file: FileRecord | null) => void;
@@ -146,9 +147,29 @@ export interface EntityFilesContentProps {
 // COMPONENT
 // ============================================================================
 
-export function EntityFilesContent(props: EntityFilesContentProps) {
+/**
+ * Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9) ⇒ καμία πράξη γραφής δεν φτάνει στα φύλλα. Μένουν προβολή,
+ * λήψη, αναζήτηση και όψεις. Ο φύλακας είναι οι κανόνες (`parentPropertyIsLive`)· εδώ δεν προσφέρεται το κουμπί.
+ */
+function withoutWriteActions(props: EntityFilesContentProps): EntityFilesContentProps {
+  return {
+    ...props,
+    showUploadZone: false,
+    onDelete: undefined,
+    onRename: undefined,
+    onDescriptionUpdate: undefined,
+    onLinkClick: undefined,
+    onUnlink: undefined,
+    toggleSelect: undefined,
+    onClassified: undefined,
+  };
+}
+
+export function EntityFilesContent(rawProps: EntityFilesContentProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const _colors = useSemanticColors();
+  const locked = useRetiredKind() !== null;
+  const props = locked ? withoutWriteActions(rawProps) : rawProps;
 
   return (
     <CardContent className={cn('space-y-2', props.isFullscreen && 'flex-1 min-h-0 overflow-auto')}>
@@ -423,11 +444,12 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
 function GalleryView(props: EntityFilesContentProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
+  const { onDelete } = props;
   if (props.displayStyle === 'floorplan-gallery') {
     return (
       <FloorplanGallery
         files={props.filteredFiles}
-        onDelete={async (file) => { await props.onDelete(file.id); }}
+        onDelete={onDelete && (async (file) => { await onDelete(file.id); })}
         onDownload={props.onDownload}
         onRefresh={() => { /* refetch handled by parent */ }}
         emptyMessage={props.emptyMessage ?? t('floorplan.noFloorplans')}
@@ -441,13 +463,13 @@ function GalleryView(props: EntityFilesContentProps) {
         files={props.filteredFiles}
         initialViewMode="grid"
         showToolbar={false}
-        enableSelection
+        enableSelection={Boolean(onDelete)}
         cardSize="md"
-        onDelete={async (filesToDelete) => {
+        onDelete={onDelete && (async (filesToDelete) => {
           for (const file of filesToDelete) {
-            await props.onDelete(file.id);
+            await onDelete(file.id);
           }
-        }}
+        })}
         emptyMessage={props.emptyMessage ?? t('media.noMedia')}
       />
     );

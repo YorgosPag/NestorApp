@@ -21,10 +21,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RotateCcw, Trash2, AlertTriangle, Info } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIconSizes } from "@/hooks/useIconSizes";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
+import { TrashNotice, type TrashNoticeTone } from "./TrashNotice";
 
 interface TrashActionsBarProps {
   /** Selected entity IDs in trash view */
@@ -54,25 +55,6 @@ export interface TrashActionsBarLabels {
   readonly permanentDelete: string;
 }
 
-export type TrashNoticeTone = "warning" | "info";
-
-/**
- * Πλήρεις κλάσεις ανά τόνο — ΟΧΙ σύνθεση `--bg-${tone}`: το Tailwind βλέπει μόνο ό,τι γράφεται ολόκληρο.
- * Και οι δύο τόνοι είναι ζεύγη token (`--bg-*` + `--text-*`) που ορίζονται και στα δύο θέματα.
- */
-const NOTICE_TONES = {
-  warning: {
-    Icon: AlertTriangle,
-    box: "bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))]",
-    icon: "text-[hsl(var(--text-warning))]",
-  },
-  info: {
-    Icon: Info,
-    box: "bg-[hsl(var(--bg-info))]/40 border border-[hsl(var(--text-info))]",
-    icon: "text-[hsl(var(--text-info))]",
-  },
-} as const satisfies Record<TrashNoticeTone, { Icon: typeof AlertTriangle; box: string; icon: string }>;
-
 export function TrashActionsBar({
   selectedIds,
   onBack,
@@ -94,7 +76,6 @@ export function TrashActionsBar({
     permanentDelete: t("permanentDelete"),
     ...labels,
   };
-  const notice = NOTICE_TONES[noticeTone];
 
   return (
     <section
@@ -102,13 +83,10 @@ export function TrashActionsBar({
       role="toolbar"
       aria-label={text.view}
     >
-      {/* Ταινία: προειδοποίηση (κάδος) ή εξήγηση (αρχείο) */}
-      <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-md ${notice.box} text-sm ${colors.text.muted}`}
-      >
-        <notice.Icon className={`${iconSizes.sm} ${notice.icon} shrink-0`} />
+      {/* Ταινία: προειδοποίηση (κάδος) ή εξήγηση (αρχείο) — η ΜΙΑ λωρίδα, κοινή με το κλειδωμένο πλαίσιο */}
+      <TrashNotice tone={noticeTone}>
         <p>{text.warning}</p>
-      </div>
+      </TrashNotice>
 
       {/* Action buttons */}
       <nav className="flex items-center gap-2 flex-wrap">

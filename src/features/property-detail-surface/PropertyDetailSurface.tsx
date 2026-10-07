@@ -32,11 +32,17 @@
  * του `DetailsContainer`: η απάντηση «δεν βρέθηκε» ανήκει στο σημείο προσάρτησης,
  * γιατί **μόνο εκείνο** ξέρει αν το ακίνητο λείπει (σελίδα) ή απλώς δεν έχει
  * επιλεγεί ακόμη (λίστα) — δύο πολύ διαφορετικά πράγματα για τον άνθρωπο μπροστά.
+ *
+ * 🗄️ **ΑΠΟΣΥΡΜΕΝΟ ΑΚΙΝΗΤΟ ⇒ ΠΛΗΡΕΣ ΚΑΙ ΚΛΕΙΔΩΜΕΝΟ** (ADR-329 §3.9). Εδώ είναι το **ένα** σημείο που
+ * θέτει το `RetiredRecordProvider`: κεφαλίδα, tabs και κάθε φύλλο τους **ρωτούν** `useRetiredKind()`.
+ * Η επιφάνεια κάνει μόνο ό,τι δεν μπορεί να ρωτηθεί από φύλλο: αγνοεί τη λειτουργία επεξεργασίας του
+ * σημείου προσάρτησης, δεν προσαρτά τη βιτρίνα, και δείχνει την ταινία που εξηγεί.
  */
 
 import React from 'react';
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { RetiredRecordBanner } from '@/components/shared/trash/RetiredRecordBanner';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import {
   UniversalTabsRenderer,
@@ -46,12 +52,15 @@ import {
   type PropertyTabGlobalProps,
 } from '@/components/generic/UniversalTabsRenderer';
 import { PROPERTIES_COMPONENT_MAPPING } from '@/components/generic/mappings/propertiesMappings';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
 import { DetailsContainer } from '@/core/containers';
 import type { EntityHeaderAction } from '@/core/entity-headers';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { RetiredRecordProvider } from '@/lib/firestore/retired-record-context';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import type { Property } from '@/types/property-viewer';
 
 import { usePropertiesSidebar } from '@/features/properties-sidebar/hooks/usePropertiesSidebar';
@@ -122,6 +131,11 @@ export function PropertyDetailSurface({
 
   const showcase = usePropertyShowcase(property);
 
+  // 🗄️ Το σημείο προσάρτησης κρατά τη λειτουργία επεξεργασίας (τη μοιράζεται με τη λίστα)· για αποσυρμένο
+  //    ακίνητο η επιφάνεια την αγνοεί — ένα μολύβι που πατήθηκε πριν την αλλαγή προβολής δεν ξεκλειδώνει τίποτα.
+  const locked = isRetired(property);
+  const effectiveEditMode = isEditMode && !locked;
+
   const propertyTabAdditionalData: PropertyTabAdditionalData = {
     safeFloors,
     currentFloor,
@@ -130,7 +144,7 @@ export function PropertyDetailSurface({
     setShowHistoryPanel,
     units,
     onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
-    isEditMode,
+    isEditMode: effectiveEditMode,
     onToggleEditMode,
     onExitEditMode,
     isCreatingNewUnit,
@@ -142,22 +156,26 @@ export function PropertyDetailSurface({
   };
 
   return (
-    <>
+    <RetiredRecordProvider record={property}>
       <DetailsContainer
         selectedItem={property}
         warningBanner={warningBanner}
         header={(
-          <PropertyDetailsHeader
-            property={property}
-            isEditMode={isEditMode}
-            isCreatingNewUnit={isCreatingNewUnit}
-            onToggleEditMode={onToggleEditMode}
-            onExitEditMode={onExitEditMode}
-            onNewProperty={onNewProperty}
-            onDeleteProperty={onDeleteProperty}
-            onShowcaseProperty={() => showcase.setOpen(true)}
-            extraActions={headerActions}
-          />
+          <>
+            <PropertyDetailsHeader
+              property={property}
+              isEditMode={effectiveEditMode}
+              isCreatingNewUnit={isCreatingNewUnit}
+              onToggleEditMode={onToggleEditMode}
+              onExitEditMode={onExitEditMode}
+              onNewProperty={onNewProperty}
+              onDeleteProperty={onDeleteProperty}
+              onShowcaseProperty={() => showcase.setOpen(true)}
+              extraActions={headerActions}
+            />
+            {/* Στη σταθερή ζώνη της κεφαλίδας: η εξήγηση δεν κυλά μαζί με τα tabs. Ζωντανό ακίνητο ⇒ τίποτα. */}
+            {property && <RetiredRecordBanner entityType={ENTITY_TYPES.PROPERTY} record={property} />}
+          </>
         )}
         tabsRenderer={(
           <UniversalTabsRenderer<Property | null, PropertyTabComponentProps, PropertyTabAdditionalData, PropertyTabGlobalProps>
@@ -174,13 +192,17 @@ export function PropertyDetailSurface({
         onCreateAction={onCreateAction}
         emptyStateProps={{
           icon: NAVIGATION_ENTITIES.property.icon,
-          ...emptyStateMessages.unit,
+          // Χωρίς δημιουργία (κάδος · αρχείο) η κενή κατάσταση δεν καλεί σε «Δημιουργία»: ζητά επιλογή.
+          ...(onCreateAction
+            ? emptyStateMessages.unit
+            : { title: t('details.selectProperty'), description: t('details.noUnitSelected') }),
         }}
       />
 
       {ImpactDialog}
 
-      {property && user?.uid && user?.companyId && (
+      {/* Η βιτρίνα είναι δημόσια προσφορά: για αποσυρμένο ακίνητο ο διάλογος δεν προσαρτάται καν. */}
+      {property && !locked && user?.uid && user?.companyId && (
         <UnifiedShareDialog
           open={showcase.isOpen}
           onOpenChange={showcase.setOpen}
@@ -199,6 +221,6 @@ export function PropertyDetailSurface({
           }}
         />
       )}
-    </>
+    </RetiredRecordProvider>
   );
 }

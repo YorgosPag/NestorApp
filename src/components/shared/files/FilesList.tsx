@@ -33,6 +33,7 @@ import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import { useFileListActions } from './hooks/useFileListActions';
 import { useFileClassification } from './hooks/useFileClassification';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { useUserDisplayNames, seedUserNameCache } from '@/hooks/useUserDisplayNames';
 import { useAuth } from '@/auth/hooks/useAuth';
 
@@ -101,6 +102,8 @@ export function FilesList({
   const unlinkFileLabel = t('list.unlinkFile', { entity: entityName });
 
   const { classifyFile, classifyingIds } = useFileClassification();
+  // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): η επανάληψη ταξινόμησης ΓΡΑΦΕΙ στο αρχείο ⇒ δεν προσφέρεται.
+  const canRetryClassify = useRetiredKind() === null;
 
   async function handleRetryClassify(fileId: string) {
     await classifyFile(fileId, true);
@@ -279,7 +282,7 @@ export function FilesList({
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('error', 'bg')}/15 ${getStatusColor('error', 'text')}`}>
                       {t('list.classificationFailed')}
                     </span>
-                    <Tooltip>
+                    {canRetryClassify && <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
@@ -299,7 +302,7 @@ export function FilesList({
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>{t('list.retryClassification')}</TooltipContent>
-                    </Tooltip>
+                    </Tooltip>}
                   </span>
                 )}
                 {file.ingestion?.analysis?.documentType && (

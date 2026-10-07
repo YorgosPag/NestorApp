@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/firestore/trashed-status.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:3590913630714253f93750f848b18e019e50d9c910f82cec8a74b3a8ca70c6ba
+// sha256:a4caebd670c2fe417e660f771ab6f718f478e5c3d7fd63061752b26fb0df25f8
 
 /**
  * =============================================================================
@@ -71,6 +71,15 @@ export const isArchived = (entity: MaybeTrashed | null | undefined): boolean =>
  */
 export const isRetired = (entity: MaybeTrashed | null | undefined): boolean =>
   isTrashed(entity) || isArchived(entity);
+
+/**
+ * Πόσο μένει μια εγγραφή στον κάδο πριν την αφαιρέσει η εκκαθάριση — 30 ημέρες.
+ *
+ * Η **ίδια** υπόσχεση προς τον άνθρωπο («έχεις έναν μήνα να αλλάξεις γνώμη») που εκτελούν τα
+ * purge jobs (μέσω `cron-auth`, που την ξαναεξάγει) και που **λέει** η ταινία του κλειδωμένου
+ * πλαισίου. Μία δήλωση ⇒ το κείμενο και η εκκαθάριση δεν αποκλίνουν.
+ */
+export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Οι τιμές `status` που σημαίνουν «αποσυρμένο» — για ερωτήματα `not-in` στον διακομιστή. */
 export const RETIRED_STATUSES: readonly string[] = [TRASHED_STATUS, ARCHIVED_STATUS];
