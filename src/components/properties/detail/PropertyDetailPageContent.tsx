@@ -54,6 +54,7 @@ import { PropertyObjectiveValuePanel } from './PropertyObjectiveValuePanel';
 import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
 import { SpatialTourPanel } from '@/components/spatial-tour/SpatialTourPanel';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
+import { isOffered } from '@/services/listings/public-listing-projection';
 import { updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import type { Property } from '@/types/property';
 import { derivePropertyPageState } from './property-page-state';
@@ -101,7 +102,11 @@ function LivePropertyPanels({
         ίδιο component με την πλευρά ιδιώτη· αλλάζει μόνο η πόρτα γραφής (η ΜΙΑ
         πύλη μεταλλάξεων του γραφείου). Ίχνος + επαναπροβολή τα κάνει ήδη η διαδρομή PATCH.
       */}
-      <MarketingAudienceControl audience={audience} onChange={(next) => changePropertyAudience(property, next)} />
+      <MarketingAudienceControl
+        audience={audience}
+        offered={isOffered(property)}
+        onChange={(next) => changePropertyAudience(property, next)}
+      />
 
       {/* ADR-898 Φ3β-3 — η αντικειμενική: ΙΔΙΑ ενότητα με τον ιδιώτη, ίδιο δικαίωμα απόκρυψης· πράξη της καρτέλας. */}
       <PropertyObjectiveValuePanel property={property} />

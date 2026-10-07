@@ -44,7 +44,7 @@
     "src/i18n/generated/routes/offers.el.json": "fff5726a46fa8f18c2420b20f2913b889a8a9aae332f36c10f0ba8ae27857847",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "aa0b568ec96d2aabfb3a2a7268f8ea327ebcf93d020753305aa982999afd8132",
-    "src/i18n/generated/routes/offers__offerId.el.json": "8447fd04d06952b1488f32c5c2725bc5a09a0ca23bd8ec900b233bea624db81f",
+    "src/i18n/generated/routes/offers__offerId.el.json": "4f2917e3c0d7aba1ba640b335baa5fee9069a225c6fbcfb69ae56b5732b2c26e",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "321843e391008307091be65386dba76ef657429a6a5ed7ada25adf6ecd170066",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ed892634d999934ba557dacfd46db946008f28366fc88591bd3c76a6facd138d",
+  "inputsSha256": "87d5d1fa112f62eec6a06b999be2c07c063a3a41449ff6606cf093cd25f19e46",
   "languages": [
     "el"
   ],
@@ -385,7 +385,7 @@
     "src/components/listing-detail/media/ListingMediaTabs.tsx": "66e1c19c63dce75ba69501230789c388fef6c3b728b187c58627de94823dc7e1",
     "src/components/listing-detail/media/ListingMediaViewer.tsx": "f483e280c7b4f6cced67771e8c02834429d7d5a64c0d85f7ef0dbd0d11f9d2dd",
     "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "02505058c9ad95f03efe65649a9342569700d1fbf4c1cc272c8ef7837adfaf91",
-    "src/components/listings/MarketingAudienceControl.tsx": "48e95e8af02a03863fe19e20c55d5901462b6712c13e757a9a9262ce2390a480",
+    "src/components/listings/MarketingAudienceControl.tsx": "8f7f3ced00336f5eb9b5ac8f84c8dd63cea35851728d4236fbae8c5e0adedeb6",
     "src/components/listings/MySavedListingsContent.tsx": "57b239c7f58430eb1b896b40cdd82bc83da4c79f49fa274e38a1aa584d2a0674",
     "src/components/listings/capture-spots/CaptureSpotControl.tsx": "f601ccf6fa11f0734ab82730c134fa0c92892fcbf0a43dbcc8b53299cebd67fe",
     "src/components/listings/capture-spots/CaptureSpotLayer.tsx": "3994b88f84434549abd340b99f2d232dc42562f1c3df89a5fe84399272133f04",
@@ -8216,6 +8216,7 @@
             "audience.narrowing.description",
             "audience.narrowing.title",
             "audience.networkPending",
+            "audience.notOffered",
             "custody.personal.body",
             "custody.personal.brokered",
             "custody.personal.title",
@@ -8464,6 +8465,7 @@
           ],
           "prefixes": [
             "audience.describe",
+            "audience.describeWhenUnoffered",
             "audience.refused",
             "mandate.privateMarketing.reason",
             "mandate.privateMarketing.standing.channel",
@@ -12655,7 +12657,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 3,
     "shellFiles": 1037,
-    "sliceBytes": 723481
+    "sliceBytes": 724409
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

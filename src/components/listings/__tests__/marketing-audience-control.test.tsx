@@ -92,7 +92,7 @@ function choose(value: string): void {
 describe('MarketingAudienceControl — το στένεμα ζητά επιβεβαίωση, η γραφή δεν είναι αισιόδοξη', () => {
   it('🔴 Ε1 — στένεμα `public → custodians`: ΚΑΜΙΑ γραφή πριν την επιβεβαίωση, μία μετά', async () => {
     const onChange = jest.fn(async () => SAVED);
-    render(<MarketingAudienceControl audience="public" onChange={onChange} />);
+    render(<MarketingAudienceControl offered audience="public" onChange={onChange} />);
 
     choose('custodians');
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
 
   it('Ε2 — διεύρυνση `custodians → public`: γραφή ΑΜΕΣΩΣ, χωρίς διάλογο', async () => {
     const onChange = jest.fn(async () => SAVED);
-    render(<MarketingAudienceControl audience="custodians" onChange={onChange} />);
+    render(<MarketingAudienceControl offered audience="custodians" onChange={onChange} />);
 
     await act(async () => {
       choose('public');
@@ -118,7 +118,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
 
   it('🔴 Ε3 — ακύρωση του στενέματος ⇒ ΚΑΜΙΑ γραφή', () => {
     const onChange = jest.fn(async () => SAVED);
-    render(<MarketingAudienceControl audience="public" onChange={onChange} />);
+    render(<MarketingAudienceControl offered audience="public" onChange={onChange} />);
 
     choose('custodians');
     fireEvent.click(screen.getByText('cancel'));
@@ -129,7 +129,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
 
   it('🔴 Ε4 — αποτυχία ⇒ μήνυμα με λόγια, και η εμφανιζόμενη τιμή ΜΕΝΕΙ η αποθηκευμένη', async () => {
     const onChange = jest.fn(async () => FAILED);
-    render(<MarketingAudienceControl audience="custodians" onChange={onChange} />);
+    render(<MarketingAudienceControl offered audience="custodians" onChange={onChange} />);
 
     await act(async () => {
       choose('public');
@@ -141,7 +141,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
 
   it('🔴 Α21 — άρνηση ⇒ Ο ΛΟΓΟΣ φτάνει στην οθόνη, ΟΧΙ το γενικό «απέτυχε»', async () => {
     const refused: AudienceChangeOutcome = { kind: 'refused', reason: 'private-marketing-consent-missing' };
-    render(<MarketingAudienceControl audience="public" onChange={jest.fn(async () => refused)} />);
+    render(<MarketingAudienceControl offered audience="public" onChange={jest.fn(async () => refused)} />);
 
     choose('custodians');
     await act(async () => {
@@ -158,10 +158,43 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
   });
 
   it('Ε5 — το `network` φαίνεται αλλά ΔΕΝ επιλέγεται (προϋποθέτει ADR-862)', () => {
-    render(<MarketingAudienceControl audience="public" onChange={jest.fn(async () => SAVED)} />);
+    render(<MarketingAudienceControl offered audience="public" onChange={jest.fn(async () => SAVED)} />);
 
     const network = screen.getByText('properties-enums:marketingAudience.network');
     expect(network).toBeDisabled();
     expect(screen.getByText('properties-enums:marketingAudience.custodians')).not.toBeDisabled();
+  });
+});
+
+/**
+ * | **Ε6** (ADR-864 Ε-10 · ADR-329 §3.9) | ακίνητο που **δεν διατίθεται** ⇒ το κοινό λέγεται ως ρύθμιση που **θα ισχύσει**, όχι ως γεγονός | «εμφανίζεται στον δημόσιο χάρτη» για ακίνητο εκτός αγοράς |
+ *
+ * Μετρήθηκε ζωντανά 2026-10-07: ακίνητο με `commercialStatus: 'unavailable'` και **κανένα**
+ * `public_listings` έγραφε «Η αγγελία εμφανίζεται στον δημόσιο χάρτη και στις αναζητήσεις».
+ */
+describe('Ε6 — το κοινό δεν παρουσιάζεται ως δημοσίευση όταν το ακίνητο δεν διατίθεται', () => {
+  const SAVED_OUTCOME: AudienceChangeOutcome = { kind: 'saved' };
+  const noop = jest.fn(async () => SAVED_OUTCOME);
+
+  it('🔴 δεν διατίθεται ⇒ η μελλοντική διατύπωση, ΟΧΙ η παρούσα', () => {
+    render(<MarketingAudienceControl offered={false} audience="public" onChange={noop} />);
+
+    expect(screen.getByText('property-market:audience.describeWhenUnoffered.public')).toBeInTheDocument();
+    expect(screen.queryByText('property-market:audience.describe.public')).not.toBeInTheDocument();
+    expect(screen.getByText('property-market:audience.notOffered')).toBeInTheDocument();
+  });
+
+  it('διατίθεται ⇒ η παρούσα διατύπωση, χωρίς την ένδειξη «δεν διατίθεται»', () => {
+    render(<MarketingAudienceControl offered audience="public" onChange={noop} />);
+
+    expect(screen.getByText('property-market:audience.describe.public')).toBeInTheDocument();
+    expect(screen.queryByText('property-market:audience.notOffered')).not.toBeInTheDocument();
+  });
+
+  it('δεν διατίθεται ⇒ η επιλογή κοινού ΜΕΝΕΙ ενεργή (ρύθμιση πριν από τη δημοσίευση)', () => {
+    render(<MarketingAudienceControl offered={false} audience="custodians" onChange={noop} />);
+
+    expect(screen.getByLabelText('audience')).not.toBeDisabled();
+    expect(screen.getByText('property-market:audience.describeWhenUnoffered.custodians')).toBeInTheDocument();
   });
 });

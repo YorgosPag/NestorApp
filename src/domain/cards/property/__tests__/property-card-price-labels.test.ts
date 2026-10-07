@@ -18,6 +18,7 @@ import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
   buildPropertyBadges,
+  buildPropertyStatusBadge,
   buildPropertyPriceStats,
   buildPropertyPricePerSqmStats,
   pricePerSqmAmount,
@@ -224,5 +225,50 @@ describe('αποσυρμένο ακίνητο: ετικέτα κύκλου ζω�
       status: 'archived',
     } as unknown as Property;
     expect(labelsOf(both)).toEqual(['card.stats.lastPrice']);
+  });
+});
+
+// =============================================================================
+// Κ-ΣΗΜΑ — το ΕΝΑ σήμα κατάστασης της κεφαλίδας και του πλέγματος (ADR-777 §8.30.6 · ADR-329 §3.9)
+// =============================================================================
+//
+// 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ. Το `resolvePropertyBadge` είχε δικό του `switch` με `default: available`:
+// ακίνητο **εκτός αγοράς**, **στον κάδο** ή **στο αρχείο** έγραφε «Διαθέσιμο» στην κεφαλίδα της
+// καρτέλας, ενώ η κάρτα της λίστας —από το SSoT— έγραφε «Μη διαθέσιμο» / «Στον κάδο». Μετρήθηκε
+// ζωντανά 2026-10-07 σε δύο ακίνητα. Δεν είχε κανένα test.
+
+describe('το σήμα κατάστασης: η πραγματική κατάσταση, ποτέ «Διαθέσιμο» από προεπιλογή', () => {
+  const of = (fields: Record<string, unknown>): Property => fields as unknown as Property;
+  const labelOf = (fields: Record<string, unknown>): string | undefined =>
+    buildPropertyStatusBadge(of(fields), t)?.label;
+
+  it('🔴 εκτός αγοράς ⇒ «Μη διαθέσιμο», όχι «Διαθέσιμο»', () => {
+    expect(labelOf({ commercialStatus: 'unavailable' })).toBe('commercialStatus.unavailable');
+  });
+
+  it('🔴 κάθε εμπορική κατάσταση λέει το ΔΙΚΟ της όνομα (ενοικίαση ≠ πώληση, ενοικιάστηκε ≠ πωλήθηκε)', () => {
+    const statuses = ['unavailable', 'for-sale', 'for-rent', 'for-sale-and-rent', 'reserved', 'sold', 'rented'];
+    const labels = statuses.map((commercialStatus) => labelOf({ commercialStatus }));
+    expect(labels).toEqual(statuses.map((status) => `commercialStatus.${status}`));
+  });
+
+  it('🔴 αποσυρμένο με ΠΑΛΙΟ `commercialStatus` ⇒ η ετικέτα κύκλου ζωής, όχι η εμπορική', () => {
+    expect(labelOf({ commercialStatus: 'for-sale', status: 'archived' })).toBe('trash:archivedLabel');
+    expect(labelOf({ commercialStatus: 'for-sale', status: 'deleted' })).toBe('trash:trashedLabel');
+  });
+
+  it('παλιό έγγραφο χωρίς `commercialStatus` ⇒ το `status` ως εφεδρεία (ADR-258)', () => {
+    expect(labelOf({ status: 'for-rent' })).toBe('commercialStatus.for-rent');
+  });
+
+  it('🔴 άγνωστη κατάσταση ⇒ ΚΑΝΕΝΑ σήμα — ποτέ εικασία', () => {
+    expect(buildPropertyStatusBadge(of({ commercialStatus: 'κάτι-άλλο' }), t)).toBeNull();
+    expect(buildPropertyStatusBadge(of({}), t)).toBeNull();
+  });
+
+  it('ίδιο σήμα αποσυρμένου με την κάρτα της λίστας (ΕΝΑΣ πίνακας, όχι δύο)', () => {
+    const trashed = of({ commercialStatus: 'for-sale', status: 'deleted' });
+    const [fromList] = buildPropertyBadges('operationalStatus.ready', 'success', trashed, t);
+    expect(buildPropertyStatusBadge(trashed, t)).toEqual(fromList);
   });
 });

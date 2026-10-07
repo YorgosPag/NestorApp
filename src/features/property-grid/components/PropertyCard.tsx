@@ -1,6 +1,7 @@
 'use client';
 import { Eye, ArrowRight, Square, Bed, Bath } from 'lucide-react';
-import { PropertyBadge, CommonBadge } from '@/core/badges';
+import { CommonBadge } from '@/core/badges';
+import { CardBadges } from '@/design-system/primitives/Card/CardBadges';
 import { getPropertyImage } from '../utils/images';
 import { usePropertyThumbnail } from '../hooks/usePropertyThumbnail';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
@@ -21,7 +22,7 @@ import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
-  resolvePropertyBadge,
+  buildPropertyStatusBadge,
 } from '@/domain/cards/property/property-card-shared';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
@@ -33,9 +34,9 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const { quick, radius } = useBorderTokens();
   const thumbnailUrl = usePropertyThumbnail(property);
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
   const floorLabel = useFloorLabel();
-  const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
+  const statusBadge = buildPropertyStatusBadge(property, t);
   const price = resolveDisplayPrice(property);
   // ADR-777 Α21: η διατύπωση κάθε ποσού ζει δίπλα στον κανόνα που το επιλέγει.
   const priceText = buildCardPriceText(price, t);
@@ -49,10 +50,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
           className={`w-full h-full object-cover ${GROUP_HOVER_PATTERNS.SCALE_ON_GROUP} ${TRANSITION_PRESETS.SLOW_ALL}`}
         />
         <div className="absolute top-3 left-3" aria-label={t('card.aria.propertyStatus')}>
-          <PropertyBadge
-            status={badgeStatus}
-            customLabel={t(labelKey, { ns: 'common' })}
-          />
+          {statusBadge && <CardBadges badges={[statusBadge]} max={1} />}
         </div>
         {/*
           ADR-777 §8.74 — εδώ ζούσε μια καρδιά **χωρίς χειριστή**: κουμπί που ο αναγνώστης οθόνης εκφωνούσε

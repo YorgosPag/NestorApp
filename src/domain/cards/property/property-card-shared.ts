@@ -11,10 +11,8 @@
  */
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
-import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { pricePerAreaLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import {
   resolveDisplayPrice,
@@ -23,7 +21,6 @@ import {
   type PriceRole,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
-import type { CommercialStatus } from '@/types/property';
 import { isEditorCommercialStatus } from '@/constants/commercial-statuses';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 import { commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
@@ -38,9 +35,10 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string;
 /**
  * Optional commercial-status badge appended after the primary status badge.
  *
- * Μόνο για καταστάσεις **αγοράς** (`isEditorCommercialStatus`): κράτηση / πώληση τις δείχνει
- * ήδη το κύριο σήμα (`resolvePropertyBadge`) — δεύτερο ίδιο σήμα θα ήταν θόρυβος. Ετικέτα και
- * απόχρωση από το **ένα** SSoT των μονάδων (ADR-777 §8.60.20· ήταν δύο τοπικοί χάρτες εδώ).
+ * Μόνο για καταστάσεις **αγοράς** (`isEditorCommercialStatus`) — η κάρτα της λίστας δεν δείχνει
+ * κράτηση / πώληση ως δεύτερο σήμα. Ετικέτα και απόχρωση από το **ένα** SSoT των μονάδων
+ * (ADR-777 §8.60.20· ήταν δύο τοπικοί χάρτες εδώ). Το **πλήρες** σήμα (και οι επτά καταστάσεις)
+ * είναι το {@link buildPropertyStatusBadge}.
  */
 export function buildCommercialBadge(property: Property, t: TFn): GridCardBadge | null {
   if (!isEditorCommercialStatus(property.commercialStatus)) return null;
@@ -78,45 +76,43 @@ export function buildPropertyBadges(
 ): GridCardBadge[] {
   const primary: GridCardBadge = { label: t(primaryLabelKey), variant: primaryVariant };
 
-  const retired = retiredKindOf(property);
-  if (retired !== null) {
-    const spec = RETIRED_BADGE[retired];
-    return [{ label: t(spec.labelKey), variant: spec.variant }, primary];
-  }
+  const retired = buildRetiredBadge(property, t);
+  if (retired !== null) return [retired, primary];
 
   const commercial = buildCommercialBadge(property, t);
   return commercial ? [primary, commercial] : [primary];
 }
 
+/** Η ετικέτα κύκλου ζωής ως σήμα — `null` για ζωντανή εγγραφή. */
+function buildRetiredBadge(property: Property, t: TFn): GridCardBadge | null {
+  const retired = retiredKindOf(property);
+  if (retired === null) return null;
+  const spec = RETIRED_BADGE[retired];
+  return { label: t(spec.labelKey), variant: spec.variant };
+}
+
 /**
- * **Εμπορική κατάσταση → σήμα + κλειδί ετικέτας.**
+ * **Το ΕΝΑ σήμα κατάστασης ενός ακινήτου** — για την κεφαλίδα της καρτέλας και την κάρτα πλέγματος.
  *
- * 🔑 **Ανέβηκε εδώ από το `PropertyCard` (ADR-777 §8.30).** Ήταν τοπική συνάρτηση
- * όσο υπήρχε **ένας** καταναλωτής· η κεφαλίδα ταυτότητας της καρτέλας ακινήτου
- * είναι ο **δεύτερος**, και μια αντιγραφή θα σήμαινε ότι την ημέρα που
- * προστίθεται έβδομη εμπορική κατάσταση **η μία** από τις δύο οθόνες θα την
- * αγνοούσε σιωπηλά, δείχνοντας «διαθέσιμο» για ακίνητο που δεν είναι (N.0.2).
+ * Η απόσυρση προηγείται (κύκλος ζωής, όχι εμπορική κατάσταση — ίδια σειρά με το
+ * `buildPropertyBadges` και το `offerStateOf`)· αλλιώς η εμπορική κατάσταση από το **ένα** SSoT
+ * (`commercialStatusBadge`, και οι επτά). Άγνωστη κατάσταση ⇒ `null`: **ποτέ** σήμα από εικασία.
  *
- * ⚠️ **Το `commercialStatus` είναι το SSoT· το `status` είναι κάτοπτρο εγγραφής**
- * και διαβάζεται **μόνο** ως εφεδρεία (ADR-258).
+ * 🔴 Αντικατέστησε το `resolvePropertyBadge` (ADR-777 §8.30.6 · ADR-329 §3.9): εκείνο είχε δικό του
+ * `switch` με `default: available` και έγραφε «Διαθέσιμο» για ακίνητο εκτός αγοράς, στον κάδο ή στο
+ * αρχείο — μετρημένο ζωντανά 2026-10-07, ενώ η κάρτα της λίστας έλεγε «Μη διαθέσιμο» / «Στον κάδο».
+ *
+ * ⚠️ **Το `commercialStatus` είναι το SSoT· το `status` είναι κάτοπτρο εγγραφής** και διαβάζεται
+ * **μόνο** ως εφεδρεία (ADR-258).
  */
-export function resolvePropertyBadge(
-  commercialStatus: CommercialStatus | undefined,
-  legacyStatus: Property['status'],
-): { badgeStatus: PropertyStatus; labelKey: string } {
-  switch (commercialStatus ?? legacyStatus) {
-    case 'for-sale':
-    case 'for-rent':
-    case 'for-sale-and-rent':
-      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
-    case 'reserved':
-      return { badgeStatus: 'reserved', labelKey: UNIFIED_STATUS_FILTER_LABELS.RESERVED };
-    case 'sold':
-    case 'rented':
-      return { badgeStatus: 'sold', labelKey: UNIFIED_STATUS_FILTER_LABELS.SOLD };
-    default:
-      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
-  }
+export function buildPropertyStatusBadge(property: Property, t: TFn): GridCardBadge | null {
+  const retired = buildRetiredBadge(property, t);
+  if (retired !== null) return retired;
+
+  const spec = commercialStatusBadge(property.commercialStatus ?? property.status);
+  return spec
+    ? { label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }), variant: spec.variant }
+    : null;
 }
 
 /**

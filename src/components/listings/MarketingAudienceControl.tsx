@@ -73,12 +73,19 @@ const IDLE: ChangeState = { kind: 'idle' };
 export interface MarketingAudienceControlProps {
   /** Το **αποθηκευμένο** κοινό — η μόνη πηγή της εμφανιζόμενης τιμής. */
   readonly audience: MarketingAudience;
+  /**
+   * **Διατίθεται το ακίνητο τώρα;** — η ετυμηγορία του ΕΝΟΣ κριτή (`isOffered`), όχι τοπική εικασία.
+   * Υποχρεωτικό: το κοινό είναι **ρύθμιση**, και χωρίς αυτό η περιγραφή του διαβάζεται ως γεγονός
+   * δημοσίευσης («εμφανίζεται στον δημόσιο χάρτη») για ακίνητο που δεν έχει αγγελία (ADR-329 §3.9).
+   */
+  readonly offered: boolean;
   /** Η πράξη· η νέα τιμή φτάνει από τη ζωντανή ανάγνωση του καλούντα. */
   readonly onChange: (next: MarketingAudience) => Promise<AudienceChangeOutcome>;
 }
 
 export function MarketingAudienceControl({
   audience,
+  offered,
   onChange,
 }: MarketingAudienceControlProps): React.ReactElement {
   const { t } = useTranslation([NS, ENUMS_NS]);
@@ -129,7 +136,13 @@ export function MarketingAudienceControl({
         </SelectContent>
       </Select>
 
-      <p className="text-sm text-muted-foreground">{t(`${K}.describe.${audience}`)}</p>
+      {/* Το «τώρα» και το «όταν», ρητά: η επιλογή μένει ενεργή — τίθεται ΠΡΙΝ από τη διάθεση. */}
+      {!offered && <p className="text-sm text-foreground">{t(`${K}.notOffered`)}</p>}
+      <p className="text-sm text-muted-foreground">
+        {/* Δύο ρητές κλήσεις, όχι μία με υπολογισμένο κόμβο: ο στατικός αποδέκτης των κλειδιών
+            (shell/route slice) βλέπει ακριβώς τα δύο υποδέντρα, όχι ολόκληρο το `audience`. */}
+        {offered ? t(`${K}.describe.${audience}`) : t(`${K}.describeWhenUnoffered.${audience}`)}
+      </p>
       <p className="text-sm text-muted-foreground">{t(`${K}.networkPending`)}</p>
 
       {state.kind === 'failed' && (

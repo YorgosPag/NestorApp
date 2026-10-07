@@ -19,7 +19,7 @@
  * 🔑 **ΚΑΜΙΑ ΤΙΜΗ ΔΕΝ ΜΕΤΑΦΡΑΖΕΤΑΙ ΔΕΥΤΕΡΗ ΦΟΡΑ.** Ό,τι *σημαίνει* κάτι έρχεται
  * από το ίδιο SSoT με την κάρτα πλέγματος: `resolveDisplayPrice` (ποια τιμή) ·
  * `buildCardPriceText` (πώς λέγεται) · `MISSING_PRICE_LABEL_KEYS` (πώς λέγεται η
- * **απουσία** της) · `resolvePropertyBadge` (ποια κατάσταση) · `useFloorLabel` (ADR-903).
+ * **απουσία** της) · `buildPropertyStatusBadge` (ποια κατάσταση) · `useFloorLabel` (ADR-903).
  * Εδώ ζει **μόνο** η διάταξη.
  *
  * ⚠️ **Η ΑΠΟΥΣΙΑ ΤΙΜΗΣ ΟΝΟΜΑΖΕΤΑΙ, ΔΕΝ ΣΒΗΝΕΤΑΙ** (ADR-777 Α6, κανόνας 9). Ένα
@@ -32,11 +32,11 @@
 
 import React from 'react';
 
-import { PropertyBadge } from '@/core/badges';
+import { CardBadges } from '@/design-system/primitives/Card/CardBadges';
 import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
-  resolvePropertyBadge,
+  buildPropertyStatusBadge,
 } from '@/domain/cards/property/property-card-shared';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -71,16 +71,16 @@ export function PropertyIdentityHeader({
 }: {
   readonly property: Property;
 }): React.ReactElement {
-  // ⚠️ Το `common` δηλώνεται **ρητά**: η ετικέτα κατάστασης ζει εκεί
-  // (`UNIFIED_STATUS_FILTER_LABELS`). Η κάρτα πλέγματος τη ζητά χωρίς να το
-  // δηλώσει και δουλεύει **επειδή κάποιος άλλος** το έχει φορτώσει — εξάρτηση από
-  // τη σειρά φόρτωσης, όχι από δήλωση (CHECK 3.36 §8.1).
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'common']);
+  // ⚠️ Τα namespaces του σήματος δηλώνονται **ρητά**: η εμπορική ετικέτα ζει στο
+  // `properties-enums`, η ετικέτα κύκλου ζωής στο `trash` (`buildPropertyStatusBadge`).
+  // Αλλιώς θα δούλευε **επειδή κάποιος άλλος** τα έχει φορτώσει — εξάρτηση από τη σειρά
+  // φόρτωσης, όχι από δήλωση (CHECK 3.36 §8.1).
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
   const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const { radius, quick } = useBorderTokens();
 
-  const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
+  const statusBadge = buildPropertyStatusBadge(property, t);
   const price = resolveDisplayPrice(property);
   const priceText = buildCardPriceText(price, t);
   const displayArea = property.areas?.gross ?? property.areas?.net ?? property.area;
@@ -111,11 +111,7 @@ export function PropertyIdentityHeader({
               {place ? ` · ${place}` : ''}
             </p>
           </div>
-          <PropertyBadge
-            status={badgeStatus}
-            variant="outline"
-            customLabel={t(labelKey, { ns: 'common' })}
-          />
+          {statusBadge && <CardBadges badges={[statusBadge]} max={1} />}
         </div>
 
         <dl className={`flex flex-wrap gap-x-8 gap-y-3 border-t ${quick.input} pt-3`}>

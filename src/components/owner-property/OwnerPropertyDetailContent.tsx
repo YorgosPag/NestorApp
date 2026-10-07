@@ -41,7 +41,7 @@ import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
-import { projectListingShape } from '@/services/listings/public-listing-projection';
+import { isOffered, projectListingShape } from '@/services/listings/public-listing-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
 import { MY_OFFERS_ROUTE, offerStayCalendarHref, offerTourHref } from '@/lib/owner-property/owner-property-routes';
 import {
@@ -349,6 +349,7 @@ function OwnerPropertyView({
       */}
       <MarketingAudienceControl
         audience={property.marketingAudience}
+        offered={isOffered(projectableFromOwnerProperty(property, atISO))}
         onChange={async (next) => audienceOutcomeOf(await setOwnerListingAudience(property.id, next))}
       />
 

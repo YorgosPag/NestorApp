@@ -2230,6 +2230,12 @@
       "custodians": "Private marketing: the listing is not shown publicly. Only you and agencies with an active mandate can see it.",
       "network": "Private marketing: the listing is not shown publicly. Its custodians’ professional network can also see it."
     },
+    "notOffered": "This property is not on offer right now, so there is no listing for any audience.",
+    "describeWhenUnoffered": {
+      "public": "Once it is on offer, the listing will appear on the public map and in searches.",
+      "custodians": "Once it is on offer, marketing will be private: the listing will not be shown publicly. Only you and agencies with an active mandate will see it.",
+      "network": "Once it is on offer, marketing will be private: the listing will not be shown publicly. Its custodians’ professional network will also see it."
+    },
     "networkPending": "Marketing to the professional network will be available soon.",
     "failed": "The listing audience did not change. Please try again.",
     "refused": {
