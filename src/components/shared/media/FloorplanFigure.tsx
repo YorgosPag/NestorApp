@@ -43,6 +43,11 @@ export interface FloorplanFigureProps {
   readonly source: FloorplanFigureSource;
   readonly sizes: string;
   readonly className?: string;
+  /**
+   * Κλάσεις της **εικόνας** — π.χ. ταβάνι ύψους σε σκηνή (ADR-907 Φ2β-3). Ασφαλές για τα σημεία: η εικόνα είναι
+   * `object-contain` και το SVG τους έχει το ίδιο `viewBox`, άρα μικραίνουν και κεντράρονται **ταυτόσημα**.
+   */
+  readonly imageClassName?: string;
   /** Ό,τι σχεδιάζεται **πάνω** στην κάτοψη — καλείται μόνο με γνωστές διαστάσεις. */
   readonly children?: (size: IntrinsicSize) => ReactNode;
 }
@@ -68,7 +73,7 @@ function useIntrinsicSize(source: FloorplanFigureSource) {
   return { ref, size, onLoad: mustMeasure ? measure : undefined };
 }
 
-export function FloorplanFigure({ source, sizes, className, children }: FloorplanFigureProps) {
+export function FloorplanFigure({ source, sizes, className, imageClassName, children }: FloorplanFigureProps) {
   const { t } = useTranslation(['listing-detail']);
   const { ref, size, onLoad } = useIntrinsicSize(source);
   const north = source.northRad;
@@ -87,7 +92,7 @@ export function FloorplanFigure({ source, sizes, className, children }: Floorpla
         loading="lazy"
         decoding="async"
         onLoad={onLoad}
-        className="w-full rounded-lg border border-border bg-card object-contain"
+        className={cn('w-full rounded-lg border border-border bg-card object-contain', imageClassName)}
       />
       {size !== null && children?.(size)}
       {north !== null && (

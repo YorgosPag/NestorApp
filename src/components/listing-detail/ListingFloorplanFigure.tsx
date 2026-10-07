@@ -22,6 +22,7 @@ export interface ListingFloorplanFigureProps {
   readonly floorplan: ListingFloorplan;
   readonly sizes: string;
   readonly className?: string;
+  readonly imageClassName?: string;
 }
 
 /**
@@ -34,9 +35,10 @@ export function useListingFloorplanAlt(): (floorplan: ListingFloorplan) => strin
   return useCallback((floorplan: ListingFloorplan) => t(floorplan.value.altKey), [t]);
 }
 
-export function ListingFloorplanFigure({ floorplan, sizes, className }: ListingFloorplanFigureProps) {
+export function ListingFloorplanFigure({ floorplan, sizes, className, imageClassName }: ListingFloorplanFigureProps) {
   const altOf = useListingFloorplanAlt();
   return (
-    <FloorplanFigure source={listingFloorplanSource(floorplan, altOf(floorplan))} sizes={sizes} className={className} />
+    <FloorplanFigure source={listingFloorplanSource(floorplan, altOf(floorplan))} sizes={sizes} className={className}
+      imageClassName={imageClassName} />
   );
 }

@@ -24,6 +24,7 @@
  * του ζήτησε. Ίδιο επιχείρημα με το `stay: null` του ADR-835 §4.5.
  */
 
+import dynamic from 'next/dynamic';
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -34,9 +35,19 @@ import { floorplanSpotsByUrl, listingFloorplanSpots } from '@/lib/listings/listi
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import { Link } from '@/lib/workspace/navigation';
-import type { PublicListing } from '@/types/public-listing';
+import type { ListingFloorplan, PublicListing } from '@/types/public-listing';
 
 import { ListingFloorplanWithSpots } from './ListingFloorplanWithSpots';
+
+/**
+ * 🔑 **Πίσω από όριο `next/dynamic`** (ADR-907 Φ2β-3): η σκηνή φέρνει το `useZoomPan`, τα χειριστήρια και το namespace
+ * `common-photos`. Η καρτέλα «Κάτοψη» **δεν** είναι η προεπιλογή — τίποτα από αυτά δεν ανήκει στο πρώτο καρέ ούτε στο
+ * route slice της αγγελίας (CHECK 3.34). Η θέση κρατιέται με ουδέτερο πλακίδιο, ώστε η καρτέλα να μην πηδά.
+ */
+const ListingFloorplanStage = dynamic(() => import('./media/ListingFloorplanStage').then((m) => m.ListingFloorplanStage), {
+  ssr: false,
+  loading: () => <span aria-hidden className="block aspect-[4/3] max-h-[70vh] animate-pulse rounded-lg bg-muted" />,
+});
 
 /** Τα `sizes` μιας κάτοψης — δύο σε σειρά σε οθόνη, μία σε κινητό. */
 const FLOORPLAN_SIZES = '(min-width: 1024px) 31vw, 100vw';
@@ -61,6 +72,9 @@ export function ListingFloorplans({ listing, embedded = false }: ListingFloorpla
   // 📍 ADR-897 — τα σημεία λήψης, με τη σειρά που θα τα δει ο επισκέπτης στο lightbox.
   const images = listingGalleryImages(listing);
   const spotsByUrl = floorplanSpotsByUrl(listingFloorplanSpots(listing, images));
+  const provenanceOf = (floorplan: ListingFloorplan): React.ReactNode => (
+    <p className="text-xs text-muted-foreground">{t(LISTING_FLOORPLAN_PROVENANCE_KEYS[floorplan.provenance])}</p>
+  );
 
   return (
     <section
@@ -73,23 +87,27 @@ export function ListingFloorplans({ listing, embedded = false }: ListingFloorpla
         </h2>
       )}
 
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {shown.map((floorplan) => (
-          <li key={floorplan.value.url} className="flex flex-col gap-1">
-            <ListingFloorplanWithSpots listingId={listing.id} floorplan={floorplan}
-              spots={spotsByUrl.get(floorplan.value.url) ?? null} total={images.length} sizes={FLOORPLAN_SIZES} />
-            {/*
-              🏆 **Η ΓΡΑΜΜΗ ΠΟΥ Η ZILLOW ΔΕΝ ΕΧΕΙ** *(Α17.3)*: εκείνη δείχνει κάτοψη χωρίς
-              να λέει αν τη σχεδίασε άνθρωπος ή τη μέτρησε μηχανή. ⚠️ Το κλειδί έρχεται
-              από `Record<AttributeProvenance, …>` και **όχι** από τριαδικό: μια σταθερά
-              εδώ θα έλεγε «Δηλωμένη» σε **μετρημένη** κάτοψη την ημέρα της Φ4.
-            */}
-            <p className="text-xs text-muted-foreground">
-              {t(LISTING_FLOORPLAN_PROVENANCE_KEYS[floorplan.provenance])}
-            </p>
-          </li>
-        ))}
-      </ul>
+      {/*
+        🏆 **Η ΓΡΑΜΜΗ ΠΟΥ Η ZILLOW ΔΕΝ ΕΧΕΙ** *(Α17.3)* — η προέλευση κάθε κάτοψης: εκείνη δείχνει κάτοψη χωρίς να λέει
+        αν τη σχεδίασε άνθρωπος ή τη μέτρησε μηχανή. ⚠️ Το κλειδί έρχεται από `Record<AttributeProvenance, …>` και
+        **όχι** από τριαδικό: μια σταθερά εδώ θα έλεγε «Δηλωμένη» σε **μετρημένη** κάτοψη την ημέρα της Φ4.
+
+        🔍 **Μέσα σε καρτέλα** (ADR-907 Φ2β-3/4): μία κάτοψη σε σκηνή που μεγεθύνεται, με τη φωτογραφία κάθε σημείου
+        λήψης δίπλα της. Έξω από καρτέλα μένει το πλέγμα — εκεί το πάτημα σημείου οδηγεί στη σελίδα φωτογραφιών.
+      */}
+      {embedded ? (
+        <ListingFloorplanStage listing={listing} shown={shown} caption={provenanceOf} />
+      ) : (
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {shown.map((floorplan) => (
+            <li key={floorplan.value.url} className="flex flex-col gap-1">
+              <ListingFloorplanWithSpots listingId={listing.id} floorplan={floorplan}
+                spots={spotsByUrl.get(floorplan.value.url) ?? null} total={images.length} sizes={FLOORPLAN_SIZES} />
+              {provenanceOf(floorplan)}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/*
         🔴 **`floorplanNote`, ΠΟΤΕ `sourceNote`** — βρέθηκε **περπατώντας** (Α17): το

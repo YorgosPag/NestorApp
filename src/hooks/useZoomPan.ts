@@ -95,6 +95,12 @@ export interface ZoomPanConfig {
    * (ποτέ πάνω από τα pixel της). Χωρίς τιμή: `naturalWidth/Height`, αλλιώς το layout (τότε μόνο σμίκρυνση).
    */
   contentDimensions?: Extent | null;
+  /**
+   * Θεατής **μέσα σε σελίδα που κυλά** (ADR-907 Φ2β-3 — η κάτοψη στην καρτέλα της δημόσιας αγγελίας): ο σκέτος τροχός
+   * **ανήκει στη σελίδα** (μεγέθυνση με Ctrl/⌘ + τροχό, κουμπιά, διπλό κλικ, pinch), και όσο η όψη είναι στην προεπιλογή
+   * το ίδιο ισχύει για την κάθετη αφή (βλ. `touchClass`). Προεπιλογή `false` (modal, πάνελ — κατέχουν την οθόνη τους).
+   */
+  yieldScrollAtRest?: boolean;
 }
 
 /** Οι **ρυθμίσεις** ενός θεατή χωρίς την ταυτότητα του περιεχομένου — ό,τι χωρά σε σταθερά (π.χ. `PHOTO_VIEW_ZOOM`). */
@@ -135,6 +141,8 @@ export interface UseZoomPanReturn {
   handlers: ZoomPanHandlers;
   /** Tailwind cursor class based on zoom/pan state */
   cursorClass: string;
+  /** Tailwind `touch-action` για το κουτί: `touch-none`, ή `touch-pan-y` όσο ο θεατής παραχωρεί την κύλιση (`yieldScrollAtRest`). */
+  touchClass: string;
 }
 
 // ============================================================================
@@ -203,7 +211,7 @@ function useDoubleClickToggle(deps: ActionDeps, container: HTMLElement | null, t
 export function useZoomPan(config: ZoomPanConfig): UseZoomPanReturn {
   const { minZoom = DEFAULTS.minZoom, maxZoom = DEFAULTS.maxZoom, zoomStep = DEFAULTS.zoomStep, zoomFactor,
     defaultZoom = DEFAULTS.defaultZoom, wheelSensitivity = DEFAULTS.wheelSensitivity, confinePan = false, doubleClickZoom,
-    refitOnRotate = false, contentDimensions = null, contentKey } = config;
+    refitOnRotate = false, contentDimensions = null, yieldScrollAtRest = false, contentKey } = config;
 
   const state = useViewState(defaultZoom, confinePan, contentKey, refitOnRotate ? { dimensions: contentDimensions } : null);
   const [isPanning, setIsPanning] = useState(false);
@@ -211,7 +219,7 @@ export function useZoomPan(config: ZoomPanConfig): UseZoomPanReturn {
   const by = useMemo(() => ({ factor: zoomFactor, step: zoomStep }), [zoomFactor, zoomStep]);
   const deps: ActionDeps = { getView: state.getView, commit: state.commit, limits, by, defaultZoom };
 
-  useWheelZoom(state.container, state.getView, state.commit, limits, wheelSensitivity);
+  useWheelZoom(state.container, state.getView, state.commit, limits, wheelSensitivity, yieldScrollAtRest);
   useApplyViewTransform(state.content, state.view, state.scale, isPanning, contentKey);
   const drag = useDragPan({ container: state.container, getView: state.getView, commit: state.commit, limits, setPanning: setIsPanning });
   const actions = useButtonActions(deps);
@@ -219,10 +227,11 @@ export function useZoomPan(config: ZoomPanConfig): UseZoomPanReturn {
 
   const pannable = canPanIn(state.view, state.frame, confinePan);
   const cursorClass = isPanning ? 'cursor-grabbing' : pannable ? 'cursor-grab' : '';
+  const touchClass = yieldScrollAtRest && state.view.zoom <= defaultZoom ? 'touch-pan-y' : 'touch-none';
 
   return {
     zoom: state.view.zoom, scale: state.scale, panOffset: state.view.pan, rotation: state.view.rotation, isPanning, ...actions,
     containerRef: state.containerRef, containerBox: state.containerBox, contentRef: state.contentRef,
-    handlers: { ...drag, onDoubleClick }, cursorClass,
+    handlers: { ...drag, onDoubleClick }, cursorClass, touchClass,
   };
 }

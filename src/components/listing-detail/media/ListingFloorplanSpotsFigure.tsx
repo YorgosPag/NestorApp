@@ -25,6 +25,7 @@ export interface ListingFloorplanSpotsFigureProps {
   readonly onActivate: (imageIndex: number) => void;
   readonly sizes: string;
   readonly className?: string;
+  readonly imageClassName?: string;
 }
 
 export function ListingFloorplanSpotsFigure({ entry, ...rest }: ListingFloorplanSpotsFigureProps) {

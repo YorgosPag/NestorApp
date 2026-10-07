@@ -22,10 +22,12 @@ export interface FloorplanSpotsFigureProps {
   readonly onActivate: (imageIndex: number) => void;
   readonly sizes: string;
   readonly className?: string;
+  /** Δες `FloorplanFigure.imageClassName`. */
+  readonly imageClassName?: string;
 }
 
 export function FloorplanSpotsFigure(props: FloorplanSpotsFigureProps) {
-  const { entry, total, currentImageIndex, onActivate, sizes, className } = props;
+  const { entry, total, currentImageIndex, onActivate, sizes, className, imageClassName } = props;
   const { t } = useTranslation(['listing-detail']);
   const label = t('listing-detail:media.capture.planLabel', { index: entry.ordinal });
   const markers: CaptureSpotMarker[] = entry.photos.map(({ imageIndex, spot }) => ({
@@ -35,7 +37,7 @@ export function FloorplanSpotsFigure(props: FloorplanSpotsFigureProps) {
   }));
 
   return (
-    <FloorplanFigure source={entry.figure} sizes={sizes} className={className}>
+    <FloorplanFigure source={entry.figure} sizes={sizes} className={className} imageClassName={imageClassName}>
       {(size) => (
         <CaptureSpotLayer image={size} markers={markers}
           currentKey={currentImageIndex === null ? null : String(currentImageIndex)}

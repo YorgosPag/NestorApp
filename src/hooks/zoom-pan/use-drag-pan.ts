@@ -30,6 +30,8 @@ export interface DragPanHandlers {
   onTouchStart: (e: ReactTouchEvent) => void;
   onTouchMove: (e: ReactTouchEvent) => void;
   onTouchEnd: (e: ReactTouchEvent) => void;
+  /** Η αφή που **πήρε ο browser** (π.χ. για κύλιση σελίδας) τελειώνει εδώ, όχι στο `touchend` — αλλιώς το «σύρεται» κολλά. */
+  onTouchCancel: (e: ReactTouchEvent) => void;
 }
 
 interface DragPanDeps {
@@ -118,7 +120,7 @@ function useTouchGestures(deps: DragPanDeps): Omit<DragPanHandlers, 'onMouseDown
     }
   }, [setPanning]);
 
-  return { onTouchStart, onTouchMove, onTouchEnd };
+  return { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel: onTouchEnd };
 }
 
 export function useDragPan(deps: DragPanDeps): DragPanHandlers {

@@ -147,7 +147,7 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
  * σελίδα — τη λέει ο γονιός. Ένας υπολογισμός εδώ θα έδινε `fetchpriority="high"` σε
  * κάθε συλλογή που θα ξαναχρησιμοποιούσε αυτό το φύλλο *(Α2.4)*.
  */
-function GalleryImage({
+export function GalleryImage({
   image,
   index,
   total,

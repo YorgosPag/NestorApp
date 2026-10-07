@@ -26,11 +26,18 @@ export function useWheelZoom(
   commit: ViewCommit,
   limits: ZoomLimits,
   sensitivity: number,
+  /**
+   * Θεατής **μέσα σε σελίδα που κυλά** (ADR-907 Φ2β-3): ο σκέτος τροχός **ανήκει στη σελίδα**, μεγέθυνση με Ctrl/⌘ + τροχό
+   * — η ενσωματωμένη Google Maps (`gestureHandling: 'cooperative'`) και η κάτοψη της περιήγησης (`usePlanZoomGestures`,
+   * `wheelMode: 'modifier'`). Το pinch του trackpad φτάνει ως `wheel` με `ctrlKey`, άρα δουλεύει. `false` = modal, πάνελ.
+   */
+  requireModifier = false,
 ): void {
   const { min, max } = limits;
   useEffect(() => {
     if (!container) return;
     const onWheel = (e: WheelEvent) => {
+      if (requireModifier && !e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       e.stopPropagation();
       const view = getView();
@@ -41,5 +48,5 @@ export function useWheelZoom(
     };
     container.addEventListener('wheel', onWheel, { passive: false });
     return () => container.removeEventListener('wheel', onWheel);
-  }, [container, getView, commit, min, max, sensitivity]);
+  }, [container, getView, commit, min, max, sensitivity, requireModifier]);
 }
