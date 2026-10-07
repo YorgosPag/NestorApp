@@ -29,6 +29,7 @@ import { usePropertyFormSync } from '@/hooks/properties/usePropertyFormSync';
 import { buildFormDataFromProperty } from '@/services/property/property-form-sync';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
@@ -76,6 +77,8 @@ export function PropertyFieldsBlock({
   const typography = useTypography();
   const { success, error: notifyError } = useNotifications();
   const { runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(property);
+  // 🗄️ ADR-329 §3.9 — ο μετρητής πληρότητας είναι κάλεσμα σε συμπλήρωση: σε αποσυρμένο ακίνητο δεν έχει τι να ζητήσει.
+  const isLocked = useRetiredKind() !== null;
   const [localEditing, setLocalEditing] = useState(false);
   const isEditing = isEditMode || localEditing;
   const [, setIsSaving] = useState(false);
@@ -404,7 +407,7 @@ export function PropertyFieldsBlock({
       )}
       {/* ADR-287 Batch 28: completion meter — Google profile-strength pattern. */}
       {/* Hidden during creation (nothing to measure) + read-only branch unreachable here. */}
-      {!isCreatingNewUnit && !isReadOnly && (
+      {!isCreatingNewUnit && !isReadOnly && !isLocked && (
         <PropertyCompletionMeter
           property={property}
           formData={formData}
