@@ -99,6 +99,22 @@ describe('PublicSiteHeader — μικτή πλοήγηση κάτω από `lg`'
     }
   });
 
+  /**
+   * **Κ5 — ΤΟ ΚΕΝΟ ΣΤΗΝ ΑΚΡΗ ΕΙΝΑΙ Ο ΔΙΑΔΡΟΜΟΣ ΤΟΥ ΚΕΛΥΦΟΥΣ, ΟΧΙ ΔΙΚΟΣ ΤΗΣ ΑΡΙΘΜΟΣ** (ADR-907 §8.3).
+   * Μετρημένο πριν, στα 1440px: γραμμή κεφαλίδας στα 232px (`max-w-5xl` + `px-6`), περιεχόμενο αρχικής στα 29px.
+   * Το jsdom δεν έχει διάταξη — εδώ κλειδώνει η **δήλωση**· τα pixel τα βλέπει ο browser (8 σελίδες × 6 πλάτη).
+   */
+  it('Κ5: χωρίς στήλη η γραμμή ζητά τον διάδρομο (`data-shell-gutter`) και ΔΕΝ γράφει δικό της πλάτος ή `px-*`', () => {
+    const { unmount } = render(<PublicSiteHeader />);
+    const nav = document.querySelector('header > nav');
+    expect(nav?.hasAttribute('data-shell-gutter')).toBe(true);
+    expect(nav?.className).not.toMatch(/\bmax-w-|\bpx-|\bmx-auto\b/);
+    unmount();
+    // Με στήλη ο διάδρομος μετρά από το inset της στήλης· η γραμμή κρατά το δικό της κενό (ADR-871 §11).
+    render(<SidebarProvider><PublicSiteHeader /></SidebarProvider>);
+    expect(document.querySelector('header > nav')?.hasAttribute('data-shell-gutter')).toBe(false);
+  });
+
   it('Κ4: γλώσσα/θέμα μετακομίζουν ΜΟΝΟ όταν υπάρχει το μενού που τα δέχεται', () => {
     const { unmount } = render(<PublicSiteHeader />);
     expect(screen.getByTestId('shell-utilities').dataset.collapse).toBe('true');

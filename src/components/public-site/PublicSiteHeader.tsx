@@ -92,7 +92,13 @@ export function PublicSiteHeader() {
         aria-label={t('search-results:site.nav')}
         // Με στήλη η κεφαλίδα απλώνεται σε όλο το inset, όπως στο γραφείο: αλλιώς το ☰
         // κάθεται στη μέση της οθόνης, μακριά από τη στήλη που ελέγχει (ADR-871 §11).
-        className={`flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 md:gap-4${hasSidebar ? '' : ' mx-auto max-w-5xl'}`}
+        //
+        // 🔑 Χωρίς στήλη (ADR-907 §8.3): πλάτος οθόνης, και το κενό στην άκρη είναι **ο διάδρομος του κελύφους**
+        // (`data-shell-gutter`, `shell-surface.css` §2) — όχι δικό της `max-w-5xl` + `px-*`. Έτσι το λογότυπο έχει
+        // **την ίδια θέση σε κάθε δημόσια σελίδα** (Zillow · Idealista) και στοιχίζεται με ό,τι αρχίζει στον διάδρομο.
+        // Μετρημένο πριν, στα 1440px: κεφαλίδα στα 232px, αρχική στα 29px, χάρτης αποτελεσμάτων στο 0, αγγελία στα 80px.
+        {...(hasSidebar ? {} : { 'data-shell-gutter': '' })}
+        className={`flex w-full items-center justify-between gap-2 py-3 md:gap-4${hasSidebar ? ' px-4 sm:px-6' : ''}`}
       >
         <div className="flex min-w-0 items-center gap-2">
         {/*
