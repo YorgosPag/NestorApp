@@ -66,6 +66,7 @@ import type {
   ModelShelfEncoding,
   RasterShelfEncoding,
   ShelfEncoding,
+  VideoShelfEncoding,
 } from './public-shelf-encoding';
 
 // ---------------------------------------------------------------------------
@@ -164,8 +165,12 @@ export const PUBLIC_SHELF_MAX_CACHE_SECONDS = 86_400;
  * χαλαρώνει αυτόν τον κανόνα: ένα GLB **δεν είναι εκτελέσιμο**, και ό,τι θα μπορούσε να
  * κρυφτεί μέσα του *(steganographic payload σε υφή)* **δεν επιβιώνει** το ξαναγράψιμο του
  * ψήστη — ό,τι δεν ανήκει σε γνωστό `accessor`/`bufferView`/`image` χάνεται *(ADR-845 §6.2)*.
+ *
+ * ✅ **ΤΟ `mp4` ΜΠΗΚΕ ΣΤΟ ADR-907 §10, ΜΕ ΤΟΝ ΙΔΙΟ ΟΡΟ**: μαζί με τον ψήστη του
+ * *(`services/listings/public-shelf-video-bake`)*. Ένα MP4 δεν είναι εκτελέσιμο, και ό,τι δεν είναι
+ * H.264/AAC σε περιέκτη MP4 **αρνείται με όνομα** πριν αποκτήσει διεύθυνση.
  */
-export const PUBLIC_SHELF_EXTENSIONS = ['webp', 'glb'] as const;
+export const PUBLIC_SHELF_EXTENSIONS = ['webp', 'glb', 'mp4'] as const;
 
 export type PublicShelfExtension = (typeof PUBLIC_SHELF_EXTENSIONS)[number];
 
@@ -323,6 +328,7 @@ export function isPublicShelfExtension(value: string): value is PublicShelfExten
  */
 export function shelfExtension(encoding: RasterShelfEncoding): PublicShelfExtension;
 export function shelfExtension(encoding: ModelShelfEncoding): PublicShelfExtension;
+export function shelfExtension(encoding: VideoShelfEncoding): PublicShelfExtension;
 export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | null;
 export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | null {
   switch (encoding.kind) {
@@ -330,6 +336,8 @@ export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | 
       return 'webp';
     case 'model':
       return 'glb';
+    case 'video':
+      return 'mp4';
   }
 }
 

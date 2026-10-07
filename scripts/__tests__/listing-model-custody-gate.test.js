@@ -144,6 +144,7 @@ describe('Κ3 — ΤΟ ΣΥΜΒΟΛΟ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΚΑΛΕΙ (τ�
   it('ένας καλών αρκεί για να σιωπήσει', () => {
     const full = new Map([
       ['withPublishedModels', 1],
+      ['withPublishedVideos', 1],
       ['withdrawListingShelves', 1],
     ]);
     expect(auditSymbolReach(full)).toEqual([]);
@@ -177,6 +178,7 @@ describe('Κ4 — Ο ΦΡΟΥΡΟΣ ΠΟΥ ΣΒΗΣΤΗΚΕ', () => {
     // ⚠️ Ο αριθμός είναι **φράχτης κατά της διαγραφής**, όχι στολίδι: μια εγγραφή που
     //    εξαφανίζεται σιωπηλά αφήνει τον φρουρό της χωρίς πύλη. 2 → **3** στις 2026-09-09,
     //    όταν η ραφή γραφέα⇄αναγνώστη απέκτησε τις δικές της άγκυρες (ADR-845 §7.7, Ο-13).
-    expect(Object.keys(REQUIRED_ANCHORS)).toHaveLength(3);
+    // 3 → **4** στις 2026-10-07: ο γραφέας του `videos[]` έφερε τις δικές του άγκυρες (ADR-907 §10).
+    expect(Object.keys(REQUIRED_ANCHORS)).toHaveLength(4);
   });
 });

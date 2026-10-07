@@ -316,7 +316,7 @@ describe('🏆 Α-2 — ΥΠΑΡΧΕΙ ΤΙΜΗ ΤΟΥ ΛΕΞΙΛΟΓΙΟΥ ΠΟ
   it('🔴 ΚΑΘΕ τιμή του `LISTING_MATERIAL_KINDS` έχει σκέλος στο `ListingMaterial`', () => {
     // Ο πίνακας είναι η πηγή· ο τύπος παράγεται. Αυτό κάνει το λεξιλόγιο **ορατό σε
     // χρόνο εκτέλεσης**, ώστε μια μελλοντική χαλάρωση του τύπου να μη γίνει σιωπηλά.
-    expect([...LISTING_MATERIAL_KINDS]).toEqual(['photo', 'floorplan', 'model']);
+    expect([...LISTING_MATERIAL_KINDS]).toEqual(['photo', 'floorplan', 'model', 'video']);
     expect(PHOTO_MATERIAL.kind).toBe('photo');
     expect(MODEL_MATERIAL.kind).toBe('model');
     expect(declaredFloorplanMaterial(UPLOADED_AT).kind).toBe('floorplan');

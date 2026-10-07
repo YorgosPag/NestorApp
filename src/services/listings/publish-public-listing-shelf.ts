@@ -44,12 +44,14 @@ import {
   withPublishedModels,
   type ProjectedShelfModel,
 } from './public-listing-model-projection';
+import { withPublishedVideos, type ProjectedShelfVideo } from './public-listing-video-projection';
 import type { PublicListing } from '@/types/public-listing';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 import {
   LISTING_MODEL_SHELF,
   LISTING_SHELF,
+  LISTING_VIDEO_SHELF,
   PUBLIC_SHELF_KINDS,
   PUBLIC_SHELF_LISTING_ROOT,
   type AnyPublicShelfKind,
@@ -60,6 +62,7 @@ import {
   reconcilePublicModelShelf,
   type PublishedShelfModel,
 } from './public-shelf-model.service';
+import { reconcilePublicVideoShelf, type PublishedShelfVideo } from './public-shelf-video.service';
 
 const logger = createModuleLogger('publish-public-listing-shelf');
 
@@ -67,6 +70,7 @@ const logger = createModuleLogger('publish-public-listing-shelf');
 interface ListingShelfSources {
   readonly raster: readonly PublicShelfSource<ListingMaterial>[];
   readonly model: readonly PublicShelfSource<ListingMaterial>[];
+  readonly video: readonly PublicShelfSource<ListingMaterial>[];
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +120,7 @@ export function partitionListingSources(
 ): ListingShelfSources {
   const raster: PublicShelfSource<ListingMaterial>[] = [];
   const model: PublicShelfSource<ListingMaterial>[] = [];
+  const video: PublicShelfSource<ListingMaterial>[] = [];
 
   for (const source of sources) {
     const material = source.material;
@@ -130,12 +135,16 @@ export function partitionListingSources(
         model.push(source);
         break;
 
+      case 'video':
+        video.push(source);
+        break;
+
       default:
         return assertNeverShelfMaterial(material);
     }
   }
 
-  return { raster, model };
+  return { raster, model, video };
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +184,10 @@ async function emptyShelfOfKind(kind: AnyPublicShelfKind, listingId: string): Pr
 
     case 'model':
       await reconcilePublicModelShelf(kind, listingId, []);
+      return;
+
+    case 'video':
+      await reconcilePublicVideoShelf(kind, listingId, []);
       return;
 
     default:
@@ -243,11 +256,12 @@ export async function writeWithShelf(
   listing: PublicListing,
   sources: readonly PublicShelfSource<ListingMaterial>[]
 ): Promise<PublicListing> {
-  const { raster, model } = partitionListingSources(sources);
+  const { raster, model, video } = partitionListingSources(sources);
 
-  const [images, models] = await Promise.all([
+  const [images, models, videos] = await Promise.all([
     reconcilePublicShelf(LISTING_SHELF, listingId, raster),
     reconcilePublicModelShelf(LISTING_MODEL_SHELF, listingId, model),
+    reconcilePublicVideoShelf(LISTING_VIDEO_SHELF, listingId, video),
   ]);
 
   if (images.outcome === 'failed') {
@@ -261,18 +275,26 @@ export async function writeWithShelf(
     });
   }
 
+  if (videos.outcome === 'failed') {
+    logger.error('Το ράφι ΒΙΝΤΕΟ δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ βίντεο', {
+      propertyId: listingId,
+    });
+  }
+
   try {
-    // 🔑 **ΕΝΑ `set`, ΔΥΟ ΓΡΑΦΕΙΣ ΣΕ ΣΥΝΘΕΣΗ.** Ο ένας δένει συλλογή+κατόψεις, ο άλλος τα
-    //    μοντέλα — και το έγγραφο φεύγει **ολόκληρο**, ποτέ ως δύο μερικές ενημερώσεις.
+    // 🔑 **ΕΝΑ `set`, ΤΡΕΙΣ ΓΡΑΦΕΙΣ ΣΕ ΣΥΝΘΕΣΗ.** Συλλογή+κατόψεις, μοντέλα, βίντεο *(ADR-907 §10)* — και το
+    //    έγγραφο φεύγει **ολόκληρο**, ποτέ ως μερικές ενημερώσεις.
     const withGallery = withPublishedGallery(listing, images.published.map(toProjectedImage));
     const withModels = withPublishedModels(withGallery, models.published.map(toProjectedModel));
 
-    await ref.set({ ...withModels, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
-    return withModels;
+    const withVideos = withPublishedVideos(withModels, videos.published.map(toProjectedVideo));
+
+    await ref.set({ ...withVideos, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
+    return withVideos;
   } catch (error) {
     await withdrawShelvesAfterFailure(
       listingId,
-      images.published.length + models.published.length,
+      images.published.length + models.published.length + videos.published.length,
     );
     throw error;
   }
@@ -319,6 +341,12 @@ function toProjectedImage(image: PublicShelfImage<ListingMaterial>): ProjectedSh
  */
 function toProjectedModel(model: PublishedShelfModel): ProjectedShelfModel {
   return { url: model.url, at: model.at };
+}
+
+/** **Ό,τι είδε το ράφι ΒΙΝΤΕΟ, στη γλώσσα της καθαρής προβολής** — το `key` δεν ταξιδεύει, όπως στο μοντέλο. */
+function toProjectedVideo(video: PublishedShelfVideo): ProjectedShelfVideo {
+  const { url, at, durationSec, width, height } = video;
+  return { url, at, durationSec, width, height };
 }
 
 /**

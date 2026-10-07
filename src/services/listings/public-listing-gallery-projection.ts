@@ -221,6 +221,14 @@ export function withPublishedGallery(
             'εικόνων — το `models[]` το γράφει ο ψήστης της Φ4.2 (ADR-845 §2.3, άγκυρα Α-2).',
         );
 
+      case 'video':
+        // ADR-907 §10 — ίδια **άρνηση με όνομα** με το μοντέλο, για τον ίδιο λόγο: η είσοδος εδώ είναι raster με
+        //    `srcset`. Το `videos[]` το γράφει ο **δικός του** γραφέας (`withPublishedVideos`), από το ράφι βίντεο.
+        throw new Error(
+          'withPublishedGallery: το βίντεο δεν περνά από τη διαδρομή των εικόνων — το `videos[]` το γράφει ο ' +
+            '`withPublishedVideos` (ADR-907 §10).',
+        );
+
       default:
         return assertNeverMaterial(material);
     }

@@ -33,10 +33,15 @@ import {
   FILE_CATEGORIES,
   FILE_CLASSIFICATIONS,
 } from '@/config/domain-constants';
-import { isDeliverableListingImage, isDeliverableListingModel } from '@/lib/listings/listing-file-deliverability';
+import {
+  isDeliverableListingImage,
+  isDeliverableListingModel,
+  isDeliverableListingVideo,
+} from '@/lib/listings/listing-file-deliverability';
 import {
   MODEL_MATERIAL,
   PHOTO_MATERIAL,
+  VIDEO_MATERIAL,
   declaredFloorplanMaterial,
   type ListingMaterial,
 } from '@/lib/listings/listing-material';
@@ -135,6 +140,11 @@ export function isDeliverableAgencyModel(file: AgencyMediaCandidate): boolean {
   return isDeliverableListingModel(file, AGENCY_ENTITY_TYPE);
 }
 
+/** **Φεύγει ως βίντεο αυτού του ακινήτου;** — ο τρίτος καταφατικός αδελφός (ADR-907 §10). */
+export function isDeliverableAgencyVideo(file: AgencyMediaCandidate): boolean {
+  return isDeliverableListingVideo(file, AGENCY_ENTITY_TYPE);
+}
+
 /**
  * **ΤΙ ΦΕΥΓΕΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ — ΚΑΙ ΩΣ ΤΙ;** ΜΙΑ ερώτηση, μία απάντηση (Α17.7.4).
  *
@@ -151,6 +161,7 @@ export function isDeliverableAgencyModel(file: AgencyMediaCandidate): boolean {
  * ΚΑΤΟΨΗ      →  public + σχήμα + category === 'floorplans'
  *                            + ΟΝΟΜΑΣΤΙΚΗ ΔΗΛΩΣΗ + αναγνώσιμη στιγμή        ⇒ floorplan
  * ΜΟΝΤΕΛΟ 3D  →  public + σχήμα + category === 'models'                    ⇒ model
+ * ΒΙΝΤΕΟ      →  public + σχήμα + category === 'videos' + δηλωμένο MP4     ⇒ video
  * ```
  *
  * ⚠️ **ΤΟ ΜΟΝΤΕΛΟ ΔΕΝ ΖΗΤΑΕΙ ΟΝΟΜΑΣΤΙΚΗ ΔΗΛΩΣΗ ΕΔΩ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΧΑΛΑΡΩΣΗ.** Η κάτοψη τη
@@ -201,6 +212,12 @@ export function agencyMediaMaterial(
 
     case FILE_CATEGORIES.FLOORPLANS:
       return declaredFloorplanOrNull(file, declaredFloorplans);
+
+    // ADR-907 §10 — όπως η φωτογραφία, **χωρίς** ονομαστική δήλωση: ο κάδος `videos` μιας μονάδας δεν μοιράζεται
+    // με υλικό που κανείς δεν προόριζε για το κοινό (το Ο-21 της κάτοψης δεν έχει ανάλογο εδώ). Το «πόσα» (ένα)
+    // το κόβει η επιλογή· το «είναι όντως H.264, ≤120″» το κρίνει ο ψήστης πάνω στα bytes.
+    case FILE_CATEGORIES.VIDEOS:
+      return isDeliverableAgencyVideo(file) ? VIDEO_MATERIAL : null;
 
     // 🔑 **Σιωπή, όχι `assertNever`**: το `FILE_CATEGORIES` απαριθμεί **ιδιωτικούς κάδους**
     //    (τιμολόγια, συμβόλαια, άδειες), και τα περισσότερα **οφείλουν** να μη δημοσιεύονται.

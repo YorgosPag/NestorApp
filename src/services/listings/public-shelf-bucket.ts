@@ -45,6 +45,8 @@
  * `public-shelf-provision`. Δες το σκεπτικό στο `public-shelf.service`.
  */
 
+import type { Writable } from 'stream';
+
 import type { Bucket, File } from '@google-cloud/storage';
 
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
@@ -197,22 +199,22 @@ export async function scanShelfPrefix(
  */
 export async function uploadMissing(
   bucket: Bucket,
-  writes: readonly ShelfWrite[],
+  writes: readonly AnyShelfWrite[],
   existing: ReadonlySet<string>,
 ): Promise<void> {
   const missing = writes.filter((write) => !existing.has(write.key));
 
+  // 🔑 **ΜΙΑ είσοδος, δύο τρόποι μεταφοράς** (ADR-907 §10.3): το «τι λείπει;» απαντιέται μία φορά για όλα τα είδη.
   await Promise.all(
-    missing.map((write) =>
-      bucket.file(write.key).save(write.bytes, {
-        contentType: write.contentType,
-        metadata: {
-          cacheControl: PUBLIC_SHELF_CACHE_CONTROL,
-          metadata: { ...write.metadata },
-        },
-      }),
-    ),
+    missing.map((write) => (isStreamWrite(write) ? streamOne(bucket, write) : saveOne(bucket, write))),
   );
+}
+
+function saveOne(bucket: Bucket, write: ShelfWrite): Promise<void> {
+  return bucket.file(write.key).save(write.bytes, {
+    contentType: write.contentType,
+    metadata: { cacheControl: PUBLIC_SHELF_CACHE_CONTROL, metadata: { ...write.metadata } },
+  });
 }
 
 /**
@@ -244,4 +246,56 @@ export async function deleteExtra(
 
   await Promise.all(doomed.map((file) => file.delete({ ignoreNotFound: true })));
   return doomed.length;
+}
+
+// ---------------------------------------------------------------------------
+// Η εγγραφή ως ΡΟΗ — για ό,τι δεν χωρά στη μνήμη (ADR-907 §10.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * **Μία εγγραφή στο ράφι που ΔΕΝ κρατά τα bytes της** — ο αδελφός του {@link ShelfWrite} για μεγάλα αρχεία.
+ *
+ * 🔑 Ένα βίντεο αγγελίας φτάνει τα **100 MB**. Ως `Buffer` θα σήμαινε 100 MB στη μνήμη του διακομιστή **ανά
+ * δημοσίευση** (και άλλα τόσα στο αντίγραφο του αιτήματος). Εδώ ο καλών δίνει **τρόπο να γραφτούν** τα bytes, και ο
+ * κάδος τα περνά στον πάροχο κομμάτι-κομμάτι.
+ *
+ * ⚠️ **Το `cacheControl` είναι του καλούντος, σε αντίθεση με το {@link ShelfWrite}**: το βίντεο χρειάζεται
+ * `no-transform` *(ένα αντικείμενο που ο πάροχος αποσυμπιέζει εν πτήσει **χάνει τα αιτήματα εύρους**)*. Ο κάδος
+ * εξακολουθεί να μην ξέρει γιατί — το **κουβαλά**.
+ */
+export interface ShelfStreamWrite {
+  readonly key: string;
+  readonly contentType: string;
+  readonly cacheControl: string;
+  readonly metadata: Readonly<Record<string, string>>;
+  /** Γράφει **όλα** τα bytes στον αποδέκτη. **Δεν** τον κλείνει — το κλείσιμο είναι του κάδου. */
+  readonly pipeTo: (sink: Writable) => Promise<void>;
+}
+
+/** Ό,τι δέχεται το {@link uploadMissing} — bytes στη μνήμη, ή τρόπος να γραφτούν ως ροή. */
+export type AnyShelfWrite = ShelfWrite | ShelfStreamWrite;
+
+function isStreamWrite(write: AnyShelfWrite): write is ShelfStreamWrite {
+  return 'pipeTo' in write;
+}
+
+/**
+ * Η εγγραφή ως ροή. 🔑 **Ατομική από τη φύση του παρόχου**: το αντικείμενο **δεν υπάρχει** στον κάδο πριν κλείσει
+ * επιτυχώς η ροή. Μια πηγή που σπάει στη μέση την **καταστρέφει** ⇒ κανένα μισό βίντεο σε δημόσια, content-addressed
+ * διεύθυνση.
+ */
+function streamOne(bucket: Bucket, write: ShelfStreamWrite): Promise<void> {
+  const sink = bucket.file(write.key).createWriteStream({
+    contentType: write.contentType,
+    metadata: { cacheControl: write.cacheControl, metadata: { ...write.metadata } },
+  });
+
+  return new Promise<void>((resolve, reject) => {
+    sink.once('error', reject);
+    sink.once('finish', resolve);
+    write.pipeTo(sink).then(
+      () => sink.end(),
+      (error: unknown) => sink.destroy(error instanceof Error ? error : new Error(String(error))),
+    );
+  });
 }

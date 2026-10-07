@@ -77,7 +77,7 @@ import { isFloorKind } from '@/utils/floor-naming';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 17;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 18;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -169,6 +169,9 @@ const floorplansArray = z.array(z.object({}).passthrough()).catch([]);
  * πεδία μπορούν να αποκλίνουν **επειδή κάποιος το αποφάσισε**.
  */
 const modelsArray = z.array(z.object({}).passthrough()).catch([]);
+
+/** ADR-907 §10 — **δικός του** κριτής, για τον λόγο που γράφεται ακριβώς από πάνω: τα πεδία αποκλίνουν με απόφαση. */
+const videosArray = z.array(z.object({}).passthrough()).catch([]);
 
 /**
  * **Πότε μπήκε στην αγορά** (ADR-777 §8.61) — και εδώ ο έλεγχος είναι **ΒΑΘΥΣ**, σε
@@ -788,6 +791,16 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
       ...doc,
       floorKind: typeof doc.floor === 'number' && isFloorKind(doc.floorKind) ? doc.floorKind : null,
     }),
+  },
+  {
+    to: 18,
+    adr: 'ADR-907 §10',
+    adds: ['videos'],
+    /**
+     * **Το κουτί του βίντεο** — κενό σε κάθε παλιό έγγραφο, ώστε `doc.videos.map(…)` να μη συναντήσει ποτέ
+     * `undefined`. Ιδιοδύναμο (Κ3): το `.catch([])` κάνει τη δεύτερη εφαρμογή ίδια με την πρώτη.
+     */
+    apply: (doc) => ({ ...doc, videos: videosArray.parse(doc.videos) }),
   },
 ];
 

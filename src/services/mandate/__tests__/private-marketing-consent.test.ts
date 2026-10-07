@@ -43,6 +43,10 @@ jest.mock('@/services/listings/public-shelf.service', () => ({
 jest.mock('@/services/listings/public-shelf-model.service', () => ({
   reconcilePublicModelShelf: (...args: ShelfCall) => reconcilePublicModelShelf(...args),
 }));
+// ADR-907 §10 — το τρίτο κεφάλι του ραφιού (βίντεο): αλλιώς το αληθινό θα ζητούσε κάδο.
+jest.mock('@/services/listings/public-shelf-video.service', () => ({
+  reconcilePublicVideoShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
+}));
 jest.mock('@/services/mandate/showcase-presence.service', () => ({ refreshShowcasePresence: async () => undefined }));
 jest.mock('@/services/owner-property/owner-property-audit', () => ({
   recordOwnerPropertyWrite: (...args: Parameters<typeof recordOwnerPropertyWrite>) => recordOwnerPropertyWrite(...args),

@@ -37,6 +37,7 @@ import {
 import {
   MODEL_MATERIAL,
   PHOTO_MATERIAL,
+  VIDEO_MATERIAL,
   declaredFloorplanMaterial,
   isPhotoMaterial,
   type ListingMaterial,
@@ -116,6 +117,12 @@ export function ownerMediaMaterial(item: OwnerPropertyMedia): ListingMaterial {
       //    όπως κάθε μη αναγνώσιμο αρχείο. Ονομασμένη άρνηση σε **εκείνο** το σύνορο
       //    ανήκει στη **Φ4β** και είναι γραμμένη ως ανοιχτό στο ADR-845 §9 (Ο-5).
       return MODEL_MATERIAL;
+
+    case 'video':
+      // ADR-907 §10 — **ποτέ φωτογραφία**, για τον ίδιο λόγο με το μοντέλο: το `z.enum(LISTING_MATERIAL_KINDS)`
+      //    δέχεται τη νέα τιμή από το σύρμα **αυτομάτως**. Η οθόνη του ιδιώτη δεν την προσφέρει ακόμη· αν φτάσει,
+      //    τα bytes πάνε στο ράφι **βίντεο**, όπου ο ψήστης τα δέχεται ή τα αρνείται **με όνομα** πάνω στα ίδια.
+      return VIDEO_MATERIAL;
 
     default:
       return assertNeverOwnerMediaKind(kind);

@@ -44,7 +44,6 @@
 import type { File } from '@google-cloud/storage';
 
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
-import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import {
   MODEL_DECLARATION_METADATA_KEY,
   decodeModelDeclaration,
@@ -53,33 +52,19 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   isModelShelfKind,
   shelfRecipe,
-  type AnyPublicShelfKind,
   type ModelShelfKind,
   type PublicShelfKind,
 } from '@/services/upload/utils/public-shelf-kinds';
 import {
   buildPublicShelfKey,
-  parsePublicShelfKey,
   publicShelfUrl,
   shelfExtension,
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
 
-import {
-  asLogMessage,
-  deleteExtra,
-  scanShelfPrefix,
-  shelfFailure,
-  uploadMissing,
-  type ShelfScan,
-  type ShelfWrite,
-} from './public-shelf-bucket';
-import {
-  META_RECIPE,
-  META_SOURCE_REF,
-  contentAddress,
-  sourceReference,
-} from './public-shelf-plan';
+import { asLogMessage, shelfFailure, type ShelfWrite } from './public-shelf-bucket';
+import { readPrivateOrigin, reconcileOnePerSource, type ShelfOrigin } from './public-shelf-origin';
+import { META_RECIPE, META_SOURCE_REF, contentAddress } from './public-shelf-plan';
 import {
   ModelBakeError,
   PUBLIC_SHELF_MODEL_CONTENT_TYPE,
@@ -165,27 +150,6 @@ type ModelSourceRefusal =
   | 'undated-source'
   | 'unreadable-source';
 
-/** Κλειδί και διεύθυνση — το ελάχιστο που χρειάζεται και ο σβήστης και η προβολή. */
-interface PublicShelfObjectRef {
-  readonly key: string;
-  readonly url: string;
-}
-
-/**
- * **Ό,τι ξέρουμε για το ΠΡΩΤΟΤΥΠΟ** πριν ψηθεί — τα τέσσερα που ταξιδεύουν μαζί.
- *
- * ⚠️ Ομαδοποιημένα **επίτηδες**: ως έξι θέσεις ορισμάτων, δύο συμβολοσειρές δίπλα-δίπλα
- * *(`sourceRef`, `recipe`, `at`)* θα μπορούσαν να εναλλαχθούν **χωρίς να το δει ο
- * μεταγλωττιστής** — και το αποτέλεσμα θα ήταν μεταδεδομένα που λένε ψέματα σε **μόνιμη**
- * διεύθυνση.
- */
-interface ModelOrigin {
-  readonly subjectId: string;
-  readonly sourceRef: string;
-  readonly recipe: string;
-  readonly at: string;
-}
-
 /** Ό,τι έμαθε η συμφιλίωση για **μία** πηγή. */
 interface AddressedModel {
   readonly key: string;
@@ -193,50 +157,6 @@ interface AddressedModel {
   readonly at: string;
   /** `null` ⇒ τα bytes **κάθονται ήδη** στο ράφι· δεν κατέβηκε και δεν ψήθηκε τίποτα. */
   readonly upload: ShelfWrite | null;
-}
-
-// ---------------------------------------------------------------------------
-// Η μνήμη του ραφιού — τι υπάρχει ήδη, και από ποιο πρωτότυπο
-// ---------------------------------------------------------------------------
-
-/**
- * **Τα αντικείμενα του προθέματος που είναι ΔΙΚΑ ΜΑΣ** — ο ανεκτικός αναγνώστης, πρώτος.
- *
- * 🔴 Η σάρωση επιστρέφει **ΟΛΟ** το πρόθεμα, δηλαδή **και** τα `.webp` της ίδιας αγγελίας. Ένα
- * `.webp` δεν πρόκειται ποτέ να ταιριάξει σε `sourceRef` μοντέλου *(διαφορετικό ιδιωτικό
- * μονοπάτι ⇒ διαφορετικό hash)*, αλλά η ερώτηση *«είναι δικό μου;»* δεν επιτρέπεται να
- * απαντιέται **κατά τύχη**: ο φρουρός τρέχει **ρητά**, με τον ίδιο κριτή που χρησιμοποιεί ο
- * σβήστης *(άγκυρα **Α-1ε**)*.
- */
-function ownKeys(kind: AnyPublicShelfKind, files: readonly File[]): readonly File[] {
-  return files.filter((file) => parsePublicShelfKey(kind, file.name) !== null);
-}
-
-/**
- * **Κάθεται ΗΔΗ στο ράφι το ψημένο αυτής της πηγής;** — `null` αν όχι.
- *
- * ⚠️ Απαιτεί ταύτιση **και** στη συνταγή, για τον **ίδιο** λόγο που την απαιτεί το
- * `cachedVariants`: αλλαγή στα bits κβάντισης ή στο επίπεδο meshopt **οφείλει** να ακυρώσει τα
- * παλιά bytes, και το {@link shelfRecipe} είναι παραγόμενο ακριβώς για να μην ξεχαστεί.
- *
- * 🔑 **Η γρήγορη διαδρομή είναι το ΜΙΣΟ της απόδοσης αυτής της φάσης**: η συμφιλίωση τρέχει σε
- * **κάθε αποθήκευση** του κατόχου, και ένα ψήσιμο GLB είναι WASM + πλήρης ανακατασκευή αρχείου.
- * Χωρίς αυτήν, μια αποθήκευση **τίτλου** θα ξανάψηνε το μοντέλο.
- */
-function cachedModel(
-  own: readonly File[],
-  sourceRef: string,
-  recipe: string,
-): PublicShelfObjectRef | null {
-  for (const file of own) {
-    const custom = file.metadata.metadata;
-    if (custom?.[META_SOURCE_REF] !== sourceRef) continue;
-    if (custom[META_RECIPE] !== recipe) continue;
-
-    return { key: file.name, url: publicShelfUrl(GCS_PUBLIC_MEDIA_BUCKET, file.name) };
-  }
-
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -263,16 +183,14 @@ async function bakeOne<M>(
   const path = source.privateStoragePath;
 
   try {
-    // ADR-895 Α2 — ο κάδος της πηγής αποφασίζεται από τη δηλωμένη θέση της (`storagePlacement`),
-    // όταν η πηγή είναι `FileRecord`· απόν ⇒ κανονικός κάδος (ίδια συμπεριφορά με σήμερα).
-    const original = fileRecordBucket(source).file(path);
-    const [meta] = await original.getMetadata();
-
-    const origin = originOf(kind, subjectId, path, meta.generation, meta.timeCreated);
+    const recipe = shelfRecipe(kind.encoding);
+    const { original, meta, origin, hit } = await readPrivateOrigin(source, recipe, subjectId, own);
     if (origin === null) return refuse(subjectId, path, 'undated-source', 'no timeCreated');
 
-    const hit = cachedModel(own, origin.sourceRef, origin.recipe);
-    if (hit !== null) return { ...hit, at: origin.at, upload: null };
+    if (hit !== null) {
+      const url = publicShelfUrl(GCS_PUBLIC_MEDIA_BUCKET, hit.name);
+      return { key: hit.name, url, at: origin.at, upload: null };
+    }
 
     const declaration = decodeModelDeclaration(meta.metadata?.[MODEL_DECLARATION_METADATA_KEY]);
     if (declaration === null) {
@@ -290,39 +208,6 @@ async function bakeOne<M>(
 
     return refuse(subjectId, path, failure, asLogMessage(error));
   }
-}
-
-/**
- * **Ό,τι ταυτοποιεί το πρωτότυπο** — ή `null` όταν του λείπει η **στιγμή** του.
- *
- * 🔴 **ΥΠΟΛΟΓΙΖΕΤΑΙ ΠΡΙΝ ΤΗ ΓΡΗΓΟΡΗ ΔΙΑΔΡΟΜΗ**, και δεν είναι τάξη: το `at` χρειάζεται σε
- * **αμφότερα** τα σκέλη. Ένα μοντέλο που **δεν ξαναψήνεται** εξακολουθεί να χρειάζεται τη
- * στιγμή του για το `SourcedAttribute` — αλλιώς η επαναδημοσίευση θα έγραφε **άλλη** στιγμή
- * από την πρώτη, για **ταυτόσημα** bytes.
- *
- * ⚠️ **Δέχεται `unknown` για τα δύο πεδία του παρόχου, επίτηδες**: ο τύπος των μεταδεδομένων
- * του GCS αλλάζει ανάμεσα σε εκδόσεις *(`generation` είναι `string | number`)*, και ένας
- * ισχυρισμός εδώ θα ήταν ακριβώς ο τρόπος που ένα `undefined` γίνεται σιωπηλά η συμβολοσειρά
- * `"undefined"` **μέσα σε content-addressed μεταδεδομένο**.
- *
- * ⛔ **Απουσία `timeCreated` ⇒ ΑΡΝΗΣΗ, ποτέ ρολόι διακομιστή.** Ο μόνος διαθέσιμος μάντης θα
- * ήταν ακριβώς εκείνος που το σκέλος της κάτοψης απορρίπτει γραπτώς.
- */
-function originOf(
-  kind: ModelShelfKind<unknown>,
-  subjectId: string,
-  privateStoragePath: string,
-  generation: unknown,
-  timeCreated: unknown,
-): ModelOrigin | null {
-  if (typeof timeCreated !== 'string' || timeCreated.length === 0) return null;
-
-  return {
-    subjectId,
-    sourceRef: sourceReference(privateStoragePath, String(generation ?? '')),
-    recipe: shelfRecipe(kind.encoding),
-    at: timeCreated,
-  };
 }
 
 /**
@@ -355,7 +240,7 @@ function toUpload(
   //    μέλος του *(είναι φάντασμα, δεμένο στην είσοδο του δημόσιου σημείου)*. Ένα γενικό εδώ
   //    θα υποσχόταν δέσμευση που αυτή η συνάρτηση δεν κάνει.
   kind: ModelShelfKind<unknown>,
-  origin: ModelOrigin,
+  origin: ShelfOrigin,
   bytes: Buffer,
 ): AddressedModel {
   const key = buildPublicShelfKey(kind, {
@@ -379,31 +264,6 @@ function toUpload(
       metadata: { [META_SOURCE_REF]: origin.sourceRef, [META_RECIPE]: origin.recipe },
     },
   };
-}
-
-/**
- * **Το επιθυμητό σύνολο, εφαρμοσμένο στον κάδο** — ανέβασε ό,τι λείπει, σβήσε ό,τι περισσεύει.
- *
- * 🔑 **Οι δύο πλευρές μαζί, και με ΑΥΤΗ τη σειρά**: πρώτα το ανέβασμα, μετά το σβήσιμο. Ανάποδα
- * θα υπήρχε παράθυρο όπου το πρόθεμα **δεν έχει ούτε το παλιό ούτε το νέο** — και το ράφι
- * σερβίρει σε **ανώνυμο** επισκέπτη, που δεν έχει σε τι άλλο να πέσει.
- *
- * ⚠️ **Ο σβήστης δέχεται ΟΛΑ τα αρχεία του προθέματος** *(`scan.files`, όχι το `own`)*: αγγίζει
- * μόνο ό,τι αναγνωρίζει, και η **αναγνώριση είναι η δουλειά του** *(άγκυρα Α-1ε)*. Ένα
- * προ-φιλτραρισμένο σύνολο εδώ θα ήταν **δεύτερος** κριτής ταυτότητας κλειδιού.
- */
-async function applyToBucket(
-  kind: ModelShelfKind<unknown>,
-  scan: ShelfScan,
-  desired: readonly AddressedModel[],
-): Promise<number> {
-  const desiredKeys = new Set(desired.map((model) => model.key));
-  const uploads = desired
-    .map((model) => model.upload)
-    .filter((upload): upload is ShelfWrite => upload !== null);
-
-  await uploadMissing(scan.bucket, uploads, scan.keys);
-  return deleteExtra(kind, scan.files, desiredKeys);
 }
 
 // ---------------------------------------------------------------------------
@@ -440,19 +300,18 @@ export async function reconcilePublicModelShelf<M>(
   }
 
   try {
-    const scan = await scanShelfPrefix(kind, subjectId);
-    const own = ownKeys(kind, scan.files);
-    const addressed = await Promise.all(
-      sources.map((source) => bakeOne(kind, subjectId, source, own)),
+    const { desired, removed, rejected } = await reconcileOnePerSource(
+      kind,
+      subjectId,
+      sources,
+      (source: PublicShelfSource<M>, own) => bakeOne(kind, subjectId, source, own),
     );
-    const desired = addressed.filter((model): model is AddressedModel => model !== null);
-    const removed = await applyToBucket(kind, scan, desired);
 
     return {
       outcome: 'reconciled',
       published: desired.map(({ key, url, at }) => ({ key, url, at })),
       removed,
-      rejected: addressed.length - desired.length,
+      rejected,
     };
   } catch (error) {
     return shelfFailure(

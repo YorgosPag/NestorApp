@@ -25,6 +25,7 @@
 
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import { orderByDeclaration } from '@/lib/ordering/declared-order';
+import { LISTING_VIDEO_MAX_COUNT } from '@/lib/listings/listing-video-policy';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
 import {
@@ -137,14 +138,37 @@ export function orderedPublishableAgencyMedia<T extends AgencyMediaCandidate>(
     (file) => agencyMediaMaterial(file, declaredFloorplans) !== null,
   );
 
-  return orderByDeclaration(
+  const ordered = orderByDeclaration(
     // 🔴 **Η ΕΠΙΜΕΛΕΙΑ ΤΡΕΧΕΙ ΕΔΩ — ΜΕΤΑ τη συμμετοχή, ΠΡΙΝ τη σειρά και ΠΡΙΝ το όριο.**
     //    Και οι τρεις θέσεις είναι απόφαση, όχι στιλ — δες {@link currentPerIdentity}.
     currentPerIdentity(publishable),
     (file) => file.id,
     declaration.order,
     compareAgencyMediaForPublication,
-  ).slice(0, PUBLISHED_MEDIA_LIMIT);
+  );
+
+  // ⚠️ **Το βίντεο κόβεται ΜΕΤΑ τη σειρά και ΠΡΙΝ το συνολικό όριο** (ADR-907 §10): «το ένα» είναι το **πρώτο στη
+  //    σειρά του ανθρώπου**, και ένα δεύτερο βίντεο δεν επιτρέπεται να τρώει θέση φωτογραφίας που θα έφευγε.
+  return withinVideoLimit(ordered, declaredFloorplans).slice(0, PUBLISHED_MEDIA_LIMIT);
+}
+
+/**
+ * **Κράτα το πολύ `LISTING_VIDEO_MAX_COUNT` βίντεο**, τα πρώτα στη σειρά — όλα τα άλλα αρχεία περνούν αυτούσια.
+ *
+ * 🔑 Ζει **εδώ** και όχι στο ράφι: ό,τι κόβει αυτή η συνάρτηση **δεν εμφανίζεται** στην οθόνη του γραφείου ως
+ * «φεύγει», γιατί η οθόνη διαβάζει την ίδια απάντηση. Κόψιμο στο ράφι θα έλεγε «δημοσιεύονται 2» ενώ φεύγει 1.
+ */
+function withinVideoLimit<T extends AgencyMediaCandidate>(
+  ordered: readonly T[],
+  declaredFloorplans: ReadonlySet<string>,
+): readonly T[] {
+  let videos = 0;
+
+  return ordered.filter((file) => {
+    if (agencyMediaMaterial(file, declaredFloorplans)?.kind !== 'video') return true;
+    videos += 1;
+    return videos <= LISTING_VIDEO_MAX_COUNT;
+  });
 }
 
 /**

@@ -37,6 +37,7 @@ import {
 } from '../agency-media-publication';
 import { publishedAgencyMediaSources } from '../agency-media-selection';
 import { PUBLISHABLE_CATEGORIES } from '../agency-media.reader';
+import { LISTING_VIDEO_CONTENT_TYPE } from '@/lib/listings/listing-video-policy';
 
 const LISTING = 'prop_a0000009-7777-4aaa-8aaa-000000000009';
 const COMPANY = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
@@ -86,9 +87,9 @@ describe('ADR-845 Ο-9 — το σύνορο του γραφείου μαθαί�
     const deliverable: FileCategory[] = [];
 
     for (const category of categories) {
-      // Δοκιμάζονται **και οι δύο** λευκές λίστες MIME, και **με** δήλωση κάτοψης: αν
+      // Δοκιμάζονται **και οι τρεις** λευκές λίστες MIME (ADR-907 §10: + βίντεο), και **με** δήλωση κάτοψης: αν
       // υπάρχει οποιοσδήποτε συνδυασμός που δίνει υλικό, η κατηγορία «μπορεί να φύγει».
-      const escapes = ['image/jpeg', MODEL_MIME].some((contentType) => {
+      const escapes = ['image/jpeg', MODEL_MIME, LISTING_VIDEO_CONTENT_TYPE].some((contentType) => {
         const file = candidate({ category, contentType });
         return agencyMediaMaterial(file, new Set([file.id])) !== null;
       });

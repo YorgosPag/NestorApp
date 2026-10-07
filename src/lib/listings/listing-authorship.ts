@@ -227,6 +227,12 @@ export interface ListingMaterialKeys {
   readonly modelAlt: string;
 
   /**
+   * **Το εναλλακτικό κείμενο του βίντεο** (ADR-907 §10) — ταξιδεύει ως τιμή μέσα στο δημοσιευμένο `videos[]`, άρα
+   * ισχύει ό,τι και για το {@link modelAlt}: αλλαγή namespace από εδώ και πέρα **είναι σχήμα**, όχι μετονομασία.
+   */
+  readonly videoAlt: string;
+
+  /**
    * **Η ΟΡΑΤΗ ΣΗΜΕΙΩΣΗ ΚΑΤΩ ΑΠΟ ΤΟ ΜΟΝΤΕΛΟ** — *«τίνος υλικό είναι αυτό;»* (Φ4.3).
    *
    * 🔑 **Η ΑΝΑΒΟΛΗ ΤΟΥ ΗΤΑΝ ΓΡΑΜΜΕΝΗ ΕΔΩ ΚΑΙ ΤΗΡΗΘΗΚΕ**: μέχρι τη Φ4.2 αυτή η θέση έγραφε
@@ -252,6 +258,7 @@ export const LISTING_MATERIAL_KEYS: Readonly<Record<ListingAuthorship, ListingMa
     floorplanAlt: 'search-results:detail.media.floorplanAlt.ownerDeclared',
     floorplanNote: 'search-results:detail.media.floorplanNote.ownerDeclared',
     modelAlt: 'listing-detail:model.alt.ownerDeclared',
+    videoAlt: 'listing-detail:video.alt.ownerDeclared',
     modelNote: 'listing-detail:model.note.ownerDeclared',
   },
   agency: {
@@ -260,6 +267,7 @@ export const LISTING_MATERIAL_KEYS: Readonly<Record<ListingAuthorship, ListingMa
     floorplanAlt: 'search-results:detail.media.floorplanAlt.agency',
     floorplanNote: 'search-results:detail.media.floorplanNote.agency',
     modelAlt: 'listing-detail:model.alt.agency',
+    videoAlt: 'listing-detail:video.alt.agency',
     modelNote: 'listing-detail:model.note.agency',
   },
 } as const;

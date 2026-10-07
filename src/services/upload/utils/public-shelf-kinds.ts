@@ -36,6 +36,7 @@ import { isLandingHeroRevisionId } from '@/lib/landing/landing-hero-vocabulary';
 
 import { isValidPathSegment } from './storage-path-validation';
 import { LANDING_HERO_SHELF } from './public-shelf-landing-hero-kind';
+import type { VideoShelfKind } from './public-shelf-video-kind';
 
 
 /**
@@ -449,6 +450,17 @@ export const LISTING_MODEL_SHELF: ModelShelfKind<ListingMaterial> = {
 };
 
 /**
+ * 🎬 **ΤΟ ΒΙΝΤΕΟ ΜΙΑΣ ΑΓΓΕΛΙΑΣ** *(ADR-907 §10)* — ίδια ρίζα, ίδιος φρουρός, **δική του κατάληξη**: ο σβήστης κάθε
+ * κεφαλιού αγγίζει μόνο τα κλειδιά της δικής του κατάληξης *(άγκυρα Α-1ε)*, άρα τα `.mp4` ζουν δίπλα σε `.webp` και
+ * `.glb` χωρίς τέταρτη ρίζα. Τύπος και φρουρός: `./public-shelf-video-kind`· το γιατί της συνταγής: `./public-shelf-encoding`.
+ */
+export const LISTING_VIDEO_SHELF: VideoShelfKind<ListingMaterial> = {
+  root: PUBLIC_SHELF_LISTING_ROOT,
+  acceptsSubject: isPublicShelfListingId,
+  encoding: { kind: 'video', layout: 'fast-start' },
+};
+
+/**
  * **Όλα τα είδη** — ώστε οι άγκυρες να μπορούν να ρωτήσουν *«ισχύει για ΚΑΘΕ γραμμή;»*
  * χωρίς να τις απαριθμεί καθεμιά ξεχωριστά και να ξεχάσει την επόμενη.
  *
@@ -463,4 +475,5 @@ export const PUBLIC_SHELF_KINDS: readonly AnyPublicShelfKind[] = [
   SHOWCASE_SHELF,
   LISTING_MODEL_SHELF,
   LANDING_HERO_SHELF,
+  LISTING_VIDEO_SHELF,
 ];

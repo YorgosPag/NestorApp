@@ -289,6 +289,8 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // `lib/stay/__tests__/stay-availability.test.ts`.
       'stay',
       'terraceAreaSqm', 'title', 'totalRooms', 'type',
+      // ADR-907 §10 — το κουτί του βίντεο: δημόσιο υλικό, καμία ταυτότητα πελάτη (URL ραφιού + μετρημένα στοιχεία).
+      'videos',
       'waterHeating', 'wc', 'windowFrames',
     ]);
   });

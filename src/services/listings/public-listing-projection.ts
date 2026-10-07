@@ -438,6 +438,7 @@ export function projectListingShape(
     //    raster από άκρη σε άκρη *(Α-1δ)*, και ο `case 'model'` του μένει `throw` ως
     //    **δεύτερος** φρουρός. Τη δρομολόγηση την κάνει το `partitionListingSources`.
     models: [],
+    videos: [], // ADR-907 §10 — το γεμίζει ΜΟΝΟ ο `withPublishedVideos`, από την αναφορά του ραφιού βίντεο.
     // 🔴 **ΤΟ ΟΓΔΟΟ `as`, ΚΑΙ ΤΟ ΠΙΟ ΑΚΡΙΒΟ** (ADR-842 §7.6.12 / §8 #11): έγραφε
     //    `(property.type ?? 'apartment') as PropertyType` — **βάφτιζε διαμέρισμα ένα
     //    οικόπεδο** στη δημόσια αγγελία, και ο ισχυρισμός έκανε τον μεταγλωττιστή

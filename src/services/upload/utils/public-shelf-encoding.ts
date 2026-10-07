@@ -137,6 +137,23 @@ export interface ModelShelfEncoding {
 }
 
 /**
+ * **ΠΩΣ ΚΩΔΙΚΟΠΟΙΕΙΤΑΙ ΕΝΑ ΒΙΝΤΕΟ** — δεν κωδικοποιείται· **αναδιατάσσεται** *(ADR-907 §10.3)*.
+ *
+ * 🔴 **ΕΝΑ ΠΕΔΙΟ, ΚΑΙ ΕΙΝΑΙ ΟΛΗ Η ΑΛΗΘΕΙΑ.** Δεν μεταγλωττίζουμε (καμία εξάρτηση τύπου ffmpeg): το μόνο που κάνει ο
+ * ψήστης στα bytes είναι να φέρει το `moov` **μπροστά** από τα δείγματα και να διορθώσει τις θέσεις τους, ώστε ο
+ * περιηγητής να αρχίζει την αναπαραγωγή με **ένα** αίτημα εύρους αντί για τρία. Ισχύει ο κανόνας του
+ * {@link ModelShelfEncoding}: *ό,τι είναι εδώ αλλάζει τα bytes, ό,τι δεν τα αλλάζει δεν επιτρέπεται να είναι εδώ*.
+ *
+ * ⛔ **Γι' αυτό τα 100 MB και τα 120″ ΔΕΝ είναι εδώ** *(ζουν στο `lib/listings/listing-video-policy`)*: είναι
+ * κριτήρια **αποδοχής**. Μέσα στη συνταγή θα ακύρωναν κάθε δημοσιευμένο βίντεο την ημέρα που κάποιος τα πείραζε,
+ * για **ταυτόσημα** bytes. Ούτε ο codec: H.264 είναι αυτό που **δεχόμαστε**, όχι αυτό που **παράγουμε**.
+ */
+export interface VideoShelfEncoding {
+  readonly kind: 'video';
+  readonly layout: 'fast-start';
+}
+
+/**
  * 🏆 **ΤΙ ΕΙΔΟΥΣ BYTES ΔΗΜΟΣΙΕΥΟΝΤΑΙ** — ο άξονας που έλειπε *(ADR-845 §3, Φ4.0)*.
  *
  * 🔴 **Ο {@link PUBLIC_SHELF_KINDS} γενικεύει ΑΛΛΟΝ άξονα**, και η διάκριση είναι όλο το
@@ -152,7 +169,7 @@ export interface ModelShelfEncoding {
  * 🔑 **Ακολουθεί τον γείτονά του**: το {@link ShelfFraming} από κάτω είναι ήδη διακριτή
  * ένωση. Το σχήμα **δεν** εισάγεται εδώ — υιοθετείται.
  */
-export type ShelfEncoding = RasterShelfEncoding | ModelShelfEncoding;
+export type ShelfEncoding = RasterShelfEncoding | ModelShelfEncoding | VideoShelfEncoding;
 
 /**
  * 🏆 **ΠΩΣ ΠΛΑΙΣΙΩΝΕΤΑΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ ΜΕΣΑ ΣΤΑ BYTES** (ADR-841 §7 Α21.10).
@@ -240,6 +257,7 @@ export const FRAMING_INK_TIGHT: ShelfFraming = { mode: 'ink-tight', threshold: 2
  */
 export function shelfRecipe(encoding: RasterShelfEncoding, framing: ShelfFraming): string;
 export function shelfRecipe(encoding: ModelShelfEncoding): string;
+export function shelfRecipe(encoding: VideoShelfEncoding): string;
 export function shelfRecipe(encoding: ShelfEncoding, framing?: ShelfFraming): string {
   // 🔴 **ΤΟ `webp:` ΠΑΥΕΙ ΝΑ ΓΡΑΦΕΤΑΙ ΑΝΕΥ ΟΡΩΝ** *(ADR-845 §3, άγκυρα Α-1)*. Ως τη Φ4.0
   //    αυτή η γραμμή ήταν το **πιο βαθύ** σημείο όπου το ράφι δήλωνε ότι κάθε πράγμα
@@ -250,6 +268,8 @@ export function shelfRecipe(encoding: ShelfEncoding, framing?: ShelfFraming): st
   //    κλάδος πετούσε *«no baker produces it yet»*, και ήταν **ακριβής**: μορφή δηλωμένη
   //    χωρίς καθαριστή που να την παράγει είναι **υπόσχεση χωρίς μηχανισμό**.
   if (encoding.kind === 'model') return modelRecipe(encoding);
+  // ADR-907 §10.3 — καταφατικά, όπως το μοντέλο: ένα «ό,τι δεν είναι μοντέλο είναι εικόνα» θα έγραφε `webp:` σε MP4.
+  if (encoding.kind === 'video') return `mp4:${encoding.layout}`;
 
   // ⚠️ **Ο ΤΥΠΟΣ ΤΟ ΕΓΓΥΑΤΑΙ, Ο ΕΛΕΓΧΟΣ ΤΟ ΕΚΤΕΛΕΙ.** Οι υπερφορτώσεις κάνουν το
   //    *«raster χωρίς πλαισίωμα»* αδύνατο σε χρόνο μεταγλώττισης — αλλά ο **N.17**

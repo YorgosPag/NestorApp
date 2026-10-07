@@ -30,6 +30,7 @@
 import {
   LISTING_MODEL_SHELF,
   LISTING_SHELF,
+  LISTING_VIDEO_SHELF,
   PUBLIC_SHELF_KINDS,
   PUBLIC_SHELF_LISTING_ROOT,
   SHOWCASE_SHELF,
@@ -42,6 +43,7 @@ type ShelfCall = [kind: { root: string; encoding: { kind: string } }, subjectId:
 
 const reconcilePublicShelf = jest.fn<Promise<unknown>, ShelfCall>();
 const reconcilePublicModelShelf = jest.fn<Promise<unknown>, ShelfCall>();
+const reconcilePublicVideoShelf = jest.fn<Promise<unknown>, ShelfCall>();
 
 // 🔑 **ΚΑΙ ΤΑ ΔΥΟ κεφάλια μοκάρονται** — όχι μόνο για ταχύτητα: το κεφάλι του μοντέλου σέρνει
 //    τον ψήστη, δηλαδή **WASM** (`meshoptimizer`, `gltf-validator`). Αυτή η σουίτα ρωτά για
@@ -51,6 +53,10 @@ jest.mock('../public-shelf.service', () => ({
 }));
 jest.mock('../public-shelf-model.service', () => ({
   reconcilePublicModelShelf: (...args: ShelfCall) => reconcilePublicModelShelf(...args),
+}));
+// ADR-907 §10 — το τρίτο κεφάλι: η καλωδίωση ρωτιέται εδώ, το ψήσιμο στο `public-shelf-video-bake.test`.
+jest.mock('../public-shelf-video.service', () => ({
+  reconcilePublicVideoShelf: (...args: ShelfCall) => reconcilePublicVideoShelf(...args),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -100,6 +106,7 @@ function calledKinds(): readonly { root: string; encoding: { kind: string } }[] 
   return [
     ...reconcilePublicShelf.mock.calls.map((call) => call[0]),
     ...reconcilePublicModelShelf.mock.calls.map((call) => call[0]),
+    ...reconcilePublicVideoShelf.mock.calls.map((call) => call[0]),
   ];
 }
 
@@ -107,6 +114,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   reconcilePublicShelf.mockResolvedValue(emptyReport());
   reconcilePublicModelShelf.mockResolvedValue(emptyReport());
+  reconcilePublicVideoShelf.mockResolvedValue(emptyReport());
 });
 
 // ---------------------------------------------------------------------------
@@ -116,6 +124,7 @@ describe('🏆 Α-8 — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΚΑΘΕ ΡΑΦΙ �
     return withdrawListingShelves(LISTING).then(() => {
       expect(reconcilePublicShelf).toHaveBeenCalledTimes(1);
       expect(reconcilePublicModelShelf).toHaveBeenCalledTimes(1);
+      expect(reconcilePublicVideoShelf).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -124,6 +133,7 @@ describe('🏆 Α-8 — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΚΑΘΕ ΡΑΦΙ �
 
     expect(reconcilePublicShelf).toHaveBeenCalledWith(LISTING_SHELF, LISTING, []);
     expect(reconcilePublicModelShelf).toHaveBeenCalledWith(LISTING_MODEL_SHELF, LISTING, []);
+    expect(reconcilePublicVideoShelf).toHaveBeenCalledWith(LISTING_VIDEO_SHELF, LISTING, []);
   });
 
   it('🔴 ΚΑΘΕ είδος της ρίζας των αγγελιών αδειάζεται — η λίστα ΠΑΡΑΓΕΤΑΙ από τον πίνακα', async () => {
@@ -154,6 +164,7 @@ describe('🏆 Α-8 — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΚΑΘΕ ΡΑΦΙ �
     expect(listingRootKinds().length).toBeGreaterThanOrEqual(2);
     expect(listingRootKinds()).toContain(LISTING_SHELF);
     expect(listingRootKinds()).toContain(LISTING_MODEL_SHELF);
+    expect(listingRootKinds()).toContain(LISTING_VIDEO_SHELF);
   });
 });
 
@@ -163,24 +174,26 @@ describe('🏆 Η ΔΙΑΜΕΡΙΣΗ — ΕΝΑ πέρασμα, κάθε πηγ�
       source('owner_properties/u1/a.jpg', { kind: 'photo' }),
       source('owner_properties/u1/plan.png', { kind: 'floorplan', at: SOURCE_AT }),
       source('owner_properties/u1/model.glb', { kind: 'model' }),
+      source('owner_properties/u1/tour.mp4', { kind: 'video' }),
     ];
   }
 
   it('🔴 η φωτογραφία ΚΑΙ η κάτοψη πάνε στο raster· το μοντέλο ΟΧΙ', () => {
-    const { raster, model } = partitionListingSources(mixed());
+    const { raster, model, video } = partitionListingSources(mixed());
 
     expect(raster.map((s) => s.material.kind)).toEqual(['photo', 'floorplan']);
     expect(model.map((s) => s.material.kind)).toEqual(['model']);
+    expect(video.map((s) => s.material.kind)).toEqual(['video']);
   });
 
   it('🔴 καμία πηγή δεν χάνεται και καμία δεν διπλογράφεται — ΕΝΑ πέρασμα', () => {
     // Η μετρημένη κλάση σφάλματος της Φ4.1: **δύο** ανεξάρτητα κατηγορήματα με άρνηση
     // μπορούν να αφήσουν κενό (καμία δεν πιάνεται) Ή να διπλογράψουν (και τα δύο πιάνουν).
     const sources = mixed();
-    const { raster, model } = partitionListingSources(sources);
+    const { raster, model, video } = partitionListingSources(sources);
 
-    expect(raster.length + model.length).toBe(sources.length);
-    expect(new Set([...raster, ...model]).size).toBe(sources.length);
+    expect(raster.length + model.length + video.length).toBe(sources.length);
+    expect(new Set([...raster, ...model, ...video]).size).toBe(sources.length);
   });
 
   it('🔴 το ΜΟΝΤΕΛΟ δεν φτάνει ΠΟΤΕ στο ράφι εικόνων — και το αντίστροφο', async () => {
@@ -192,8 +205,12 @@ describe('🏆 Η ΔΙΑΜΕΡΙΣΗ — ΕΝΑ πέρασμα, κάθε πηγ�
     const rasterSources = reconcilePublicShelf.mock.calls[0][2] as readonly PublicShelfSource<ListingMaterial>[];
     const modelSources = reconcilePublicModelShelf.mock.calls[0][2] as readonly PublicShelfSource<ListingMaterial>[];
 
-    expect(rasterSources.every((s) => s.material.kind !== 'model')).toBe(true);
+    const videoSources = reconcilePublicVideoShelf.mock.calls[0][2] as readonly PublicShelfSource<ListingMaterial>[];
+
+    // ⚠️ Καταφατικά για το raster: «ό,τι δεν είναι μοντέλο» θα άφηνε το βίντεο να περάσει στις εικόνες.
+    expect(rasterSources.map((s) => s.material.kind)).toEqual(['photo', 'floorplan']);
     expect(modelSources.every((s) => s.material.kind === 'model')).toBe(true);
+    expect(videoSources.map((s) => s.material.kind)).toEqual(['video']);
   });
 });
 

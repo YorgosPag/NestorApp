@@ -335,6 +335,31 @@ export interface PublishedModelFile {
 export type ListingModel = SourcedAttribute<PublishedModelFile>;
 
 /**
+ * 🎬 **ΕΝΑ ΔΗΜΟΣΙΕΥΜΕΝΟ ΒΙΝΤΕΟ** (ADR-907 §10) — MP4/H.264, ένα αρχείο, content-addressed.
+ *
+ * 🔑 **Διαστάσεις και διάρκεια είναι ΜΕΤΡΗΜΕΝΕΣ πάνω στα bytes**, όχι δηλωμένες: η οθόνη κρατά το κουτί πριν κατέβει
+ * ένα byte *(`preload="none"` ⇒ ο περιηγητής δεν έχει από πού αλλού να τις μάθει)*, και το `VideoObject` των μηχανών
+ * αναζήτησης ζητά διάρκεια.
+ */
+export interface PublishedVideoFile {
+  readonly url: string;
+  /** Κλειδί i18n — διαλεγμένο από την `authorship` της ίδιας αγγελίας, όπως το `altKey` του μοντέλου. */
+  readonly altKey: string;
+  /** Pixel, **όπως προβάλλονται** (μετά την περιστροφή του κινητού). */
+  readonly width: number;
+  readonly height: number;
+  readonly durationSec: number;
+  /**
+   * Το εξώφυλλο — raster του **ίδιου** ραφιού, με `srcset`. `null` ⇒ η οθόνη δείχνει ουδέτερο πλαίσιο με κουμπί
+   * αναπαραγωγής· ποτέ δεν κατεβάζει το βίντεο για να φτιάξει εικόνα.
+   */
+  readonly poster: ListingImage | null;
+}
+
+/** Το βίντεο **με την προέλευσή του**: `declared` — το ανέβασε άνθρωπος, δεν το παρήγαγε μηχανή. */
+export type ListingVideo = SourcedAttribute<PublishedVideoFile>;
+
+/**
  * **ΟΙ ΟΡΟΙ ΔΙΑΜΟΝΗΣ** — τρία πεδία, **κανένα ημερολόγιο** (ADR-835 §4.5).
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -597,6 +622,12 @@ export interface PublicListing {
    * μόνο του**, ώστε όταν σπάσει κάτι να φαίνεται **ποιο** από τα τρία έσπασε.
    */
   readonly models: readonly ListingModel[];
+
+  /**
+   * 🎬 **Το βίντεο της αγγελίας** (ADR-907 §10). **Πίνακας** για τον ίδιο λόγο με τα `models`: το «πόσα» (σήμερα
+   * ένα) είναι **πολιτική** (`LISTING_VIDEO_MAX_COUNT`), όχι σχήμα — αλλαγή της δεν πρέπει να θέλει νέο κρίκο.
+   */
+  readonly videos: readonly ListingVideo[];
 
   // ── 3. ΕΙΔΟΣ + ΕΜΒΑΔΟΝ ────────────────────────────────────────────────────
   /**

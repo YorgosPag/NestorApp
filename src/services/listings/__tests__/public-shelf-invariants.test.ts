@@ -55,6 +55,7 @@ import {
   shelfRecipe,
   type ModelShelfEncoding,
 } from '@/services/upload/utils/public-shelf-kinds';
+import { isVideoShelfKind } from '@/services/upload/utils/public-shelf-video-kind';
 
 const STORAGE_RULES = readFileSync(join(process.cwd(), 'storage.rules'), 'utf8');
 
@@ -608,7 +609,7 @@ describe('🏆 Α-1β — Η ΜΟΡΦΗ ΔΗΛΩΝΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟΝ 
     // Το ράφι σερβίρει σε ΑΝΩΝΥΜΟ. Κάθε μορφή είναι απόφαση με συνέπειες — π.χ. SVG ΠΟΤΕ,
     // γιατί εκτελεί script στον περιηγητή του επισκέπτη. Χωρίς αυτή τη γραμμή, η προσθήκη
     // του `glb` θα ήταν η στιγμή που «το σύνολο μεγαλώνει» παύει να προσέχεται.
-    expect([...PUBLIC_SHELF_EXTENSIONS].sort()).toEqual(['glb', 'webp']);
+    expect([...PUBLIC_SHELF_EXTENSIONS].sort()).toEqual(['glb', 'mp4', 'webp']);
   });
 
   it('η εικόνα δίνει `webp` — αμετάβλητο', () => {
@@ -657,15 +658,16 @@ describe('🏆 Α-1δ — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΓΡΑΦΕΑ ΞΕΡΕΙ ΤΙ 
   //    ⇒ Η ερώτηση που **αξίζει** δεν ήταν ποτέ «είναι όλες raster;» αλλά **«ξέρει κάθε
   //    γραμμή ΤΙ ΕΙΝΑΙ, και ξέρει ΑΚΡΙΒΩΣ ΕΝΑ πράγμα;»**.
 
-  it('🔴 κάθε γραμμή είναι raster **Ή** μοντέλο — ποτέ και τα δύο, ποτέ κανένα', () => {
+  it('🔴 κάθε γραμμή είναι ΑΚΡΙΒΩΣ ΕΝΑ από raster · μοντέλο · βίντεο — ποτέ δύο, ποτέ κανένα', () => {
     for (const kind of PUBLIC_SHELF_KINDS) {
-      const raster = isRasterShelfKind(kind);
-      const model = isModelShelfKind(kind);
+      // ADR-907 §10 — με τρίτο είδος bytes το «raster !== model» έγινε ψευδές για τη γραμμή του βίντεο (όχι, όχι).
+      //    Η ερώτηση ήταν πάντα «ακριβώς ένα κεφάλι την ψήνει;» — τώρα τη ρωτά με μέτρηση, για όσα είδη υπάρξουν.
+      const answers = [isRasterShelfKind(kind), isModelShelfKind(kind), isVideoShelfKind(kind)];
 
       // Αποκλειστική διάζευξη: μια γραμμή που απαντούσε «ναι» και στους δύο φρουρούς θα
       // έφτανε ΚΑΙ στη μηχανή που μετρά πλάτη ΚΑΙ σε εκείνη που ψήνει γεωμετρία· μια που
       // απαντούσε «όχι» και στους δύο θα ΔΙΑΦΗΜΙΖΟΤΑΝ στο ράφι χωρίς κανέναν να την ψήνει.
-      expect(raster !== model).toBe(true);
+      expect(answers.filter(Boolean)).toHaveLength(1);
     }
   });
 

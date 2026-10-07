@@ -45,6 +45,12 @@ jest.mock('../public-shelf-model.service', () => ({
     outcome: 'reconciled', published: [], removed: 0, rejected: 0,
   }),
 }));
+// ADR-907 §10 — το τρίτο κεφάλι: αλλιώς το αληθινό θα ζητούσε κάδο (αργό και ασταθές υπό φόρτο, όπως το μοντέλο).
+jest.mock('../public-shelf-video.service', () => ({
+  reconcilePublicVideoShelf: async () => ({
+    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
+  }),
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { republishListing } = require('../publish-public-listing') as
@@ -307,7 +313,7 @@ describe('Κ4 — ΚΗΔΕΜΟΝΙΑ: το ερώτημα ΔΕΝ γίνεται 
       ['companyId', '==', COMPANY],
       ['entityType', '==', 'property'],
       ['entityId', '==', LISTING],
-      ['category', 'in', ['photos', 'floorplans', 'models']],
+      ['category', 'in', ['photos', 'floorplans', 'models', 'videos']],
     ]);
   });
 

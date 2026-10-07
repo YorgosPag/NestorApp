@@ -17,6 +17,8 @@ import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import type { FileRecord } from '@/types/file-record';
 
+import { LISTING_VIDEO_CONTENT_TYPE } from './listing-video-policy';
+
 /** Το `FileRecord` όσο το χρειάζεται η **καταλληλότητα** — `Pick` του αληθινού συμβολαίου, ώστε μετονομασία να **σπάει** εδώ. */
 export type ListingFileCandidate = Pick<
   FileRecord,
@@ -40,6 +42,15 @@ const DECODABLE_IMAGE_TYPES: readonly string[] = FILE_TYPE_CONFIG.image.mimeType
  * θα ήταν άρνηση πάνω σε λεξιλόγιο που μεγαλώνει — το τρίτο είδος υλικού θα δημοσιευόταν **ως μοντέλο**.
  */
 const DELIVERABLE_MODEL_TYPES: readonly string[] = FILE_TYPE_CONFIG.model.mimeTypes;
+
+/**
+ * Η μορφή που ο **ψήστης βίντεο** μπορεί να παραλάβει (ADR-907 §10).
+ *
+ * ⚠️ **ΔΕΝ δανείζεται το `FILE_TYPE_CONFIG.video.mimeTypes`, σε αντίθεση με τους δύο αδελφούς — και είναι απόφαση.**
+ * Εκείνη η λίστα (webm, quicktime, avi…) λέει τι **ανεβαίνει** στα αρχεία της εταιρείας. Στο κοινό φεύγει **μόνο**
+ * MP4/H.264, γιατί δεν μεταγλωττίζουμε: ό,τι άλλο θα δημοσιευόταν ως βίντεο που δεν παίζει στο Safari.
+ */
+const DELIVERABLE_VIDEO_TYPES: readonly string[] = [LISTING_VIDEO_CONTENT_TYPE];
 
 /**
  * **Ό,τι ισχύει ΑΝΕΞΑΡΤΗΤΑ από το είδος του υλικού** — κάτοχος · ετοιμότητα · ζωή · μονοπάτι.
@@ -78,4 +89,17 @@ export function isDeliverableListingModel(
   entityType: FileRecord['entityType'],
 ): boolean {
   return isDeliverableListingFile(file, entityType) && DELIVERABLE_MODEL_TYPES.includes(file.contentType);
+}
+
+/**
+ * **Φεύγει ως βίντεο;** — ο τρίτος καταφατικός αδελφός (ADR-907 §10).
+ *
+ * ⚠️ Απαντά μόνο για το **δηλωμένο** MIME. Codec, διάρκεια και μέγεθος τα κρίνει ο ψήστης πάνω στα bytes — ένα
+ * `.mov` μετονομασμένο σε `.mp4` περνά από εδώ και **αρνείται εκεί, με όνομα**.
+ */
+export function isDeliverableListingVideo(
+  file: ListingFileCandidate,
+  entityType: FileRecord['entityType'],
+): boolean {
+  return isDeliverableListingFile(file, entityType) && DELIVERABLE_VIDEO_TYPES.includes(file.contentType);
 }

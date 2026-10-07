@@ -53,7 +53,7 @@ import type { AttributeProvenance } from '@/lib/property/attribute-provenance';
  * που **καμία** δεν έχει νόημα σε δημόσια αγγελία. Ένα συμβόλαιο δεν είναι είδος
  * δημόσιου υλικού· είναι λόγος να **μην** δημοσιευτεί τίποτα.
  */
-export const LISTING_MATERIAL_KINDS = ['photo', 'floorplan', 'model'] as const;
+export const LISTING_MATERIAL_KINDS = ['photo', 'floorplan', 'model', 'video'] as const;
 
 /** Δες {@link LISTING_MATERIAL_KINDS}. **Κλειστή ένωση, ποτέ `string`.** */
 export type ListingMaterialKind = (typeof LISTING_MATERIAL_KINDS)[number];
@@ -135,6 +135,16 @@ export type ListingMaterial =
        * **ανήκει**, μαζί με τον παραγωγό της Φ4.2.
        */
       readonly kind: 'model';
+    }
+  | {
+      /**
+       * **ΒΙΝΤΕΟ** *(ADR-907 §10, Φάση 4)* — γυμνό, για τον **ίδιο** λόγο με το μοντέλο.
+       *
+       * ⛔ **ΟΧΙ `at`, ΟΧΙ διάρκεια, ΟΧΙ διαστάσεις.** Η στιγμή έρχεται από το `timeCreated` του **ιδιωτικού**
+       * αντικειμένου (όπως στο μοντέλο)· διάρκεια και διαστάσεις τις **μετρά** ο ψήστης πάνω στα bytes. Ό,τι
+       * γραφόταν εδώ θα ήταν **δήλωση** για κάτι που μετριέται — δύο αλήθειες για έναν αριθμό.
+       */
+      readonly kind: 'video';
     };
 
 /**
@@ -154,6 +164,9 @@ export const PHOTO_MATERIAL: ListingMaterial = { kind: 'photo' } as const;
  * τη δέχεται αυτομάτως)* σε **κάτι που δεν είναι φωτογραφία**.
  */
 export const MODEL_MATERIAL: ListingMaterial = { kind: 'model' } as const;
+
+/** **Βίντεο** — σταθερά για τον ίδιο λόγο με το {@link PHOTO_MATERIAL} *(ADR-907 §10)*. */
+export const VIDEO_MATERIAL: ListingMaterial = { kind: 'video' } as const;
 
 /** **Κάτοψη δηλωμένη από άνθρωπο**, με τη στιγμή της δήλωσης. */
 export function declaredFloorplanMaterial(at: string): ListingMaterial {

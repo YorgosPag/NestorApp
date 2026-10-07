@@ -60,6 +60,12 @@
     "declaredNone": "Declared as none",
     "groupEmpty": "Nothing in this group has been declared."
   },
+  "video": {
+    "alt": {
+      "ownerDeclared": "Property video — provided by the owner",
+      "agency": "Property video — provided by the real-estate agency"
+    }
+  },
   "model": {
     "heading": "{count, plural, one {3D model} other {3D models}}",
     "reveal": "View in 3D",

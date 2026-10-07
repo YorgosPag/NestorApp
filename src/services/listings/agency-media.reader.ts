@@ -84,6 +84,8 @@ export const PUBLISHABLE_CATEGORIES: readonly string[] = [
   // ✅ Ο κανόνας από πάνω τηρείται: το `MODELS` **έχει** σκέλος στο `agencyMediaMaterial`.
   // 🔑 Τρεις τιμές ≪ όριο 10 του `in`, και **κανένα νέο ευρετήριο** — ίδιο σύνθετο.
   FILE_CATEGORIES.MODELS,
+  // ADR-907 §10 — ίδιος κανόνας: το `VIDEOS` **έχει** σκέλος στο `agencyMediaMaterial`. Τέσσερις τιμές ≪ 10.
+  FILE_CATEGORIES.VIDEOS,
 ];
 
 /**
