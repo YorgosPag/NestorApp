@@ -78,6 +78,7 @@ import { ListingStay } from './ListingStay';
 import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import { ListingDetailActions } from './ListingDetailActions';
+import { ListingSectionAnchor, ListingSectionNav } from './ListingSectionNav';
 
 // ADR-889 Φ2 — ΟΡΙΟ: το `market-contracts` ΔΕΝ μπαίνει στο route slice της αγγελίας (CHECK 3.34). Η ενότητα
 // φέρνει έτσι κι αλλιώς τα δεδομένα της ασύγχρονα, άρα δεν χάνει τίποτα από το πρώτο καρέ.
@@ -255,12 +256,20 @@ function ListingDetailBody({
       */}
       <ListingAuthorshipLine listing={listing} className="mt-1 text-sm text-muted-foreground" />
 
+      {/* ADR-907 Φ2β-1 — μία κύλιση με μπάρα ενοτήτων (Zillow · Idealista), όχι κρυμμένες καρτέλες για τα στοιχεία. */}
+      <ListingSectionNav />
+
       {/*
         ΜΙΑ στήλη που πλαταίνει σε δύο — το κινητό είναι η **βασική** εκδοχή (Α3),
         όχι υποβαθμισμένη· και **ποτέ φύλλο**, σε καμία διάσταση οθόνης.
+
+        🔑 **ΕΝΑ DOM, ΚΑΙ Η ΣΕΙΡΑ ΤΟΥ ΕΙΝΑΙ Η ΣΕΙΡΑ ΤΟΥ ΚΙΝΗΤΟΥ** (ADR-907 Φ2β-1): μέσα → τιμή + επαφή → όλα τα
+        υπόλοιπα. Μετρημένο πριν: σε 390px η τιμή έπεφτε ~1.086px κάτω, μετά τα μέσα **και** τον χάρτη. Στο `lg` η
+        σύνοψη τοποθετείται από το **πλέγμα** στη δεξιά στήλη και κολλά — καμία διπλή απόδοση, καμία CSS `order`
+        (η σειρά εστίασης μένει η οπτική σειρά, WCAG 2.4.3).
       */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex flex-col gap-4">
+        <ListingSectionAnchor section="media" className="min-w-0">
           {/*
             🗂️ **ΕΝΑΣ ΠΡΟΒΟΛΕΑΣ ΜΕ ΚΑΡΤΕΛΕΣ, ΟΧΙ ΤΕΣΣΕΡΑ ΦΥΛΛΑ ΣΤΗ ΣΤΟΙΒΑ** — το ίδιο κέλυφος με τα «Διαθέσιμα Ακίνητα»
             του χώρου (`MediaViewerShell`), με δημόσια δεδομένα. Η σειρά των καρτελών κρατά την **αύξουσα αφαίρεση**
@@ -272,27 +281,20 @@ function ListingDetailBody({
             **σιωπά** όταν λείπει: η καρτέλα του απλώς δεν υπάρχει. Μόνο η απουσία φωτογραφίας ονομάζεται.
           */}
           <ListingMediaViewer listing={listing} />
-          <ListingPositionSection listing={listing} />
-          {/*
-            ADR-835 §21 — **ο ΧΡΟΝΟΣ μετά τον ΤΟΠΟ** (η σειρά «τόπος → χρόνος» του §4.6).
-            Στην κύρια στήλη και όχι στο πλάι: δύο μήνες δίπλα-δίπλα θέλουν πλάτος. Αποδίδει
-            **τίποτα** για ό,τι δεν είναι βραχυχρόνια διάθεση.
-          */}
-          <ListingStay listing={listing} />
-        </div>
+        </ListingSectionAnchor>
 
-        <aside className="flex flex-col gap-4">
+        <ListingSectionAnchor
+          as="aside"
+          section="price"
+          className="flex flex-col gap-4 lg:sticky lg:top-16 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start"
+        >
           <ListingPriceBlock listing={listing} />
           {/* Επαφή + αποθήκευση: μία ετυμηγορία κατόχου για τις δύο (ADR-777 §8.74.7). */}
           <ListingDetailActions listingId={listing.id} />
           <ListingOffers listing={listing} />
-          {/* ADR-889 Φ2 — τιμές συμβολαίων της περιοχής: ΜΕΤΑ την επαφή, ώστε να μη σπρώχνει την κύρια πράξη. */}
-          <ListingMarketContext listingId={listing.id} />
-          <ListingAttributeList listing={listing} />
-          {/* A17 (ADR-838) — i nomimotita einai pleon DEDOMENO, oxi dilomeno keno. */}
-          <ListingLegality listing={listing} />
-          <ListingOpenSubjects />
-        </aside>
+        </ListingSectionAnchor>
+
+        <ListingSections listing={listing} />
       </div>
 
       {/*
@@ -306,6 +308,43 @@ function ListingDetailBody({
         })}
       </footer>
     </main>
+  );
+}
+
+/**
+ * Οι ενότητες **κάτω** από τα μέσα, στην κύρια στήλη — καθεμιά στόχος της μπάρας (ADR-907 Φ2β-1).
+ *
+ * 🔑 Στοιχεία και τιμές περιοχής ζούσαν στη στήλη των 22rem· εδώ παίρνουν το πλάτος που χρειάζονται. Η σειρά:
+ * **τι είναι** (στοιχεία) → **πού είναι** (θέση, και ο χρόνος μετά τον τόπο) → **τι αξίζει εκεί** (συμβόλαια) →
+ * **τι ισχύει νομικά**, και στο τέλος ό,τι δεν δημοσιεύουμε ακόμη.
+ */
+function ListingSections({ listing }: { readonly listing: PublicListing }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-4 lg:col-start-1">
+      <ListingSectionAnchor section="details">
+        <ListingAttributeList listing={listing} />
+      </ListingSectionAnchor>
+
+      <ListingSectionAnchor section="location" className="flex flex-col gap-4">
+        <ListingPositionSection listing={listing} />
+        {/*
+          ADR-835 §21 — **ο ΧΡΟΝΟΣ μετά τον ΤΟΠΟ** (η σειρά «τόπος → χρόνος» του §4.6). Δύο μήνες δίπλα-δίπλα
+          θέλουν πλάτος. Αποδίδει **τίποτα** για ό,τι δεν είναι βραχυχρόνια διάθεση.
+        */}
+        <ListingStay listing={listing} />
+      </ListingSectionAnchor>
+
+      {/* ADR-889 Φ2 — τιμές συμβολαίων της περιοχής. Μένει `dynamic(ssr: false)`: εκτός route slice (CHECK 3.34). */}
+      <ListingSectionAnchor section="market">
+        <ListingMarketContext listingId={listing.id} />
+      </ListingSectionAnchor>
+
+      <ListingSectionAnchor section="legal" className="flex flex-col gap-4">
+        {/* Α17 (ADR-838) — η νομιμότητα είναι πλέον ΔΕΔΟΜΕΝΟ, όχι δηλωμένο κενό. */}
+        <ListingLegality listing={listing} />
+        <ListingOpenSubjects />
+      </ListingSectionAnchor>
+    </div>
   );
 }
 

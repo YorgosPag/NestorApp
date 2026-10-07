@@ -80,6 +80,17 @@
       "inferred": "Estimated — inferred by a model"
     }
   },
+  "sections": {
+    "label": "Listing sections",
+    "media": "Photos",
+    "price": "Price",
+    "details": "Details",
+    "location": "Location",
+    "market": "Area prices",
+    "legal": "Legal",
+    "previous": "Previous sections",
+    "next": "Next sections"
+  },
   "media": {
     "tabs": {
       "label": "Listing views",

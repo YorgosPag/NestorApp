@@ -505,3 +505,48 @@ describe('Ο9 — η σελίδα λέει ΠΟΙΟΣ δημοσίευσε', () 
       .toBeTruthy();
   });
 });
+
+/**
+ * 🔴 **Η ΣΕΙΡΑ ΤΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ Η ΣΕΙΡΑ ΤΟΥ ΚΙΝΗΤΟΥ** (ADR-907 Φ2β-1).
+ *
+ * Μετρημένο στον browser πριν: σε 390px η τιμή έπεφτε ~1.086px κάτω, μετά τα μέσα **και** τον χάρτη, γιατί ζούσε στο
+ * `aside` μαζί με τα στοιχεία. Το jsdom δεν μετρά pixel — αλλά σε μία στήλη η θέση **είναι** η σειρά του DOM, άρα αυτό
+ * που κλειδώνεται εδώ είναι ακριβώς ό,τι βλέπει το κινητό.
+ */
+describe('Ο10 — η σειρά των ενοτήτων', () => {
+  const follows = (a: Element, b: Element): boolean =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('🔴 τιμή και επαφή ΑΜΕΣΩΣ μετά τα μέσα — πριν από στοιχεία, χάρτη και νομικά', () => {
+    renderWith({ state: 'found', listing: located() });
+
+    const media = screen.getByText('search-results:detail.media.absent');
+    const price = screen.getByText('search-results:detail.price.heading');
+    const offers = screen.getByText('search-results:detail.offers.heading');
+    const details = screen.getByText('listing-detail:attributes.heading');
+    const map = screen.getByTestId('results-map');
+    const gaps = screen.getByText('search-results:detail.open.heading');
+
+    expect(follows(media, price)).toBe(true);
+    expect(follows(price, offers)).toBe(true);
+    expect(follows(offers, details)).toBe(true);
+    expect(follows(details, map)).toBe(true);
+    expect(follows(map, gaps)).toBe(true);
+  });
+
+  it('κάθε σύνδεσμος της μπάρας έχει στόχο στη σελίδα, με τη σειρά που τους γράφει', () => {
+    renderWith({ state: 'found', listing: listing() });
+
+    const targets = screen
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href') ?? '')
+      .filter((href) => href.startsWith('#'))
+      .map((href) => document.getElementById(href.slice(1)));
+
+    expect(targets).toHaveLength(6);
+    expect(targets.every((target) => target !== null)).toBe(true);
+    for (let index = 1; index < targets.length; index += 1) {
+      expect(follows(targets[index - 1] as Element, targets[index] as Element)).toBe(true);
+    }
+  });
+});

@@ -22,7 +22,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "8cead78082c0b95a3ff10c4c8ba12cc74a7a8836b613ffd1f3a14d6f5fb19903",
+    "src/i18n/generated/routes/listing__id.el.json": "b7c44bbbce5929add9fa82607d4998217409d113bd759ae6741bb90f66854b8b",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "18908a4209b7ee10245e26917d3340e867c6d1efcd31a57208bbf7eca0b79f9e",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -114,7 +114,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a1174df83392dbdc1266753ef11d83f59839850b4747beb4944df8a5c142657d",
+  "inputsSha256": "35ff133efe035a2673ec1b4f812fa009f063f44247ed58d245c972e73088a944",
   "languages": [
     "el"
   ],
@@ -347,7 +347,7 @@
     "src/components/listing-detail/ListingAttributeList.tsx": "10458d7bdee7cc291b220f374b900293ef1e4add9f46c61930f8f171771cae31",
     "src/components/listing-detail/ListingAttributeRow.tsx": "6a3778e8540d28550dcd99ff9abd4ee69a5ea1b9328e7c037a0cf3b1116fc90b",
     "src/components/listing-detail/ListingDetailActions.tsx": "fe9393a28149b0efbb39876607735c9a73e75fedc7e21a0ae031bfe961d3a2df",
-    "src/components/listing-detail/ListingDetailContent.tsx": "99369678d29ffc400eca85bfd2373f36cb8c066795a318510a6cc14ebac62e85",
+    "src/components/listing-detail/ListingDetailContent.tsx": "8e552e3d62b362da7bb9ce9325eea9bbb4e1a876031975af862a8eb891779bef",
     "src/components/listing-detail/ListingExchangeTerm.tsx": "79d7fae91c2bcc808f0a387695286a72bc014a7e8d7f87d48c1c551ce4d4b154",
     "src/components/listing-detail/ListingFeatureSet.tsx": "774cc19a6284adfa17ff055bec696a05b63ad474793671fdda17cd5aace2d190",
     "src/components/listing-detail/ListingFloorplanFigure.tsx": "f53d485d64747a365d489593f9a706497cf12d1a6e7e7cc6ed79e0da4bbb694e",
@@ -363,6 +363,7 @@
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
     "src/components/listing-detail/ListingPriceBlock.tsx": "c924ae8d7b1901fba95e65cb68d6e719cc27d7ee361b4c9bba615a12cac68246",
     "src/components/listing-detail/ListingPriceReduction.tsx": "6cd7ce237b728dc15ca9f4c4e5c79097218eadc90fb1b996ae9ee6c6ed632310",
+    "src/components/listing-detail/ListingSectionNav.tsx": "ecb4345f7882316eb984ff95addb62ed6a296cd66ca62ed599c00f28663f753a",
     "src/components/listing-detail/ListingStay.tsx": "0e23abb8292656f72546355dd7c6f0a3b474692e8184297607d1dac2c68d8aa0",
     "src/components/listing-detail/ListingStayPets.tsx": "8cba4c4651df6875b5dec93904fe98c9293df0b977669365326b29ca6313b836",
     "src/components/listing-detail/ListingTour.tsx": "0fe4cc12eced5b33843741e444166b1fd5632f9bdd619c66be213648c50360f8",
@@ -812,6 +813,7 @@
     "src/hooks/owner-property/useOwnerPropertyMedia.ts": "78217b2e2633d096137d135102eab0dae27aa1cb53bd8ad252325049267e1a4d",
     "src/hooks/owner-property/useStayCalendar.ts": "b83f56b6118d15908f693b8e278a2db98feb4c123885c071ae12f4ff5029ff48",
     "src/hooks/owner-property/useStayCalendarSelection.ts": "35fe5211cfb1fc96f528388a92d8361c874897c2c1d4694ae0844314c7788820",
+    "src/hooks/useActiveSection.ts": "2cb04d09d6792adb5c8f55a030d517753a4a3ecb308a8c670aca39f58f01bdb0",
     "src/hooks/useAsyncData.ts": "02e59fe71ba777bb647c1638a4e6f1e3033c3aecacf39cff8ae913afefea80db",
     "src/hooks/useCaseContributions.ts": "cabc6698c6d982ecf08f60a2f0a8d067779770f2ebe5844b14795660dffa8841",
     "src/hooks/useCaseFileOpener.ts": "0aaa2061fe503eac0bb8af14a0111637fb0f47d907c9bdb31fd0300f9ea929a2",
@@ -833,6 +835,7 @@
     "src/i18n/bundle-translate.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/date-fns-locale.ts": "3771dd1febf36da9379e5ae501bd58be9f64891b217b9da76c1c9c1a93abc517",
     "src/i18n/route-slice.ts": "cef4139f7e7dae3606e6d8a153f72f3351646f4cb13c613e4e6560f991702459",
+    "src/lib/a11y/active-section.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/focus-first.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/agency/coverage-absorption.ts": "16d287d512457be259218fbff12b86a68c93fd813e7449669ef53948574b8ec8",
     "src/lib/agency/coverage-agreement.ts": "8ab8222184493be20cbd54c57e7f622b6fa1a507a10911f8dfae1f05b8c04618",
@@ -4321,7 +4324,16 @@
             "model.retry",
             "model.reveal",
             "priceReduction.basis",
-            "priceReduction.since"
+            "priceReduction.since",
+            "sections.details",
+            "sections.label",
+            "sections.legal",
+            "sections.location",
+            "sections.market",
+            "sections.media",
+            "sections.next",
+            "sections.previous",
+            "sections.price"
           ],
           "prefixes": [
             "attributes.group",
@@ -12032,7 +12044,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 0,
     "shellFiles": 942,
-    "sliceBytes": 718270
+    "sliceBytes": 718690
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
