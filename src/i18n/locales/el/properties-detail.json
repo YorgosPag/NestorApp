@@ -15,6 +15,7 @@
       "rent": "Ενοίκιο",
       "soldFor": "Τιμή πώλησης",
       "askedFor": "Ζητούσε",
+      "lastPrice": "Τελευταία τιμή",
       "salePricePerSqm": "Πώληση/τ.μ.",
       "rentPricePerSqm": "Ενοίκιο/τ.μ.",
       "nightly": "Διανυκτέρευση"

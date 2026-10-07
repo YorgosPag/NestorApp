@@ -29,6 +29,7 @@
 import React from 'react';
 import { Archive, Filter, Trash2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -64,26 +65,22 @@ function HeaderFilterToggle({ showFilters, setShowFilters, ariaLabel }: HeaderFi
   );
 }
 
-interface BinToggleLook {
-  Icon: LucideIcon;
-  /** Χρώμα της ΕΝΕΡΓΗΣ κατάστασης — ζεύγος φόντου + μελανιού από το ίδιο token. */
-  activeClass: string;
-}
-
 /**
- * Οι δύο κάδοι του κύκλου ζωής. Διαφέρουν ΜΟΝΟ στο εικονίδιο και στο χρώμα της
- * ενεργής κατάστασης — όχι στο hover (μία οπτική γλώσσα, βλ. κεφαλίδα αρχείου).
+ * Οι δύο κάδοι του κύκλου ζωής διαφέρουν ΜΟΝΟ στο εικονίδιο.
  *
- * ⚠️ Το αρχείο ΔΕΝ φορά `destructive`: το κόκκινο λέει «εδώ σβήνονται πράγματα»,
- * και στο αρχείο δεν σβήνεται τίποτα. Φορά το ζεύγος `accent` (φόντο + μελάνι
- * από το ΙΔΙΟ ζεύγος token, και στα δύο θέματα).
+ * 🔴 Η «πατημένη» όψη ΔΕΝ ορίζεται εδώ (ADR-281 · ADR-329 §3.9, 2026-10-07). Ήταν χειρόγραφο ζεύγος
+ * ανά κάδο (`bg-accent` για το αρχείο, `bg-destructive/10` για τον κάδο): στο σκοτεινό θέμα το
+ * `bg-accent` απέχει ~1% φωτεινότητας από το ανενεργό φόντο ⇒ το ανοιχτό αρχείο **δεν φαινόταν
+ * ανοιχτό**. Η πατημένη κατάσταση είναι ΕΝΑΣ ρόλος για κάθε κουμπί εναλλαγής
+ * (`ToggleButton` → `COLOR_BRIDGE.selectionControl.pressed`, ADR-770 §19) — ίδια με το κουμπί
+ * πίνακα ελέγχου και τα κουμπιά όψης που κάθονται δίπλα.
  */
-const BIN_TOGGLE_LOOKS = {
-  trash: { Icon: Trash2, activeClass: 'bg-destructive/10 text-destructive' },
-  archive: { Icon: Archive, activeClass: 'bg-accent text-accent-foreground' },
-} as const satisfies Record<string, BinToggleLook>;
+const BIN_TOGGLE_ICONS = {
+  trash: Trash2,
+  archive: Archive,
+} as const satisfies Record<string, LucideIcon>;
 
-type BinToggleKind = keyof typeof BIN_TOGGLE_LOOKS;
+type BinToggleKind = keyof typeof BIN_TOGGLE_ICONS;
 
 interface HeaderBinToggleProps {
   kind: BinToggleKind;
@@ -100,29 +97,25 @@ interface HeaderBinToggleProps {
  */
 function HeaderBinToggle({ kind, active, onToggle, count, ariaLabel, tooltip }: HeaderBinToggleProps) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
-  const colors = useSemanticColors();
-  const { Icon, activeClass } = BIN_TOGGLE_LOOKS[kind];
+  const Icon = BIN_TOGGLE_ICONS[kind];
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <ToggleButton
+          pressed={Boolean(active)}
+          variant="outline"
+          size="icon"
           onClick={onToggle}
-          className={`relative p-2 ${quick.button} transition-colors ${
-            active
-              ? `${activeClass} ${getStatusBorder('default')}`
-              : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
-          }`}
+          className="relative"
           aria-label={ariaLabel}
-          aria-pressed={active}
         >
           <Icon className={iconSizes.sm} />
           {/* ADR-854: το `w-4` εδώ ήταν ΣΤΑΘΕΡΟ πλάτος — έκοβε το ίδιο του το «99+».
               Το IconCountBadge χρησιμοποιεί `min-w`, και η οροφή 99 ζει πλέον ως
               προεπιλογή του SSoT (η τοπική σταθερά TRASH_BADGE_MAX διαγράφηκε). */}
           <IconCountBadge count={count} announce />
-        </button>
+        </ToggleButton>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>

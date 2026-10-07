@@ -89,6 +89,9 @@ export function CompactToolbarActions({
           tooltip={getTooltip(config.tooltips.newItem)}
           fallbackLabel={t('buttons.add')}
           onClick={onNewItem}
+          // 🔴 Ενέργεια χωρίς χειριστή είναι ΑΝΕΝΕΡΓΗ, όχι σιωπηλό no-op (ADR-329 §3.9): σε κάδο/αρχείο
+          //    η λίστα δεν δημιουργεί, και ένα ζωντανό «+» που δεν κάνει τίποτα κοροϊδεύει.
+          disabled={!onNewItem}
         />
       )}
 
@@ -100,7 +103,7 @@ export function CompactToolbarActions({
           tooltip={getTooltip(config.tooltips.editItem)}
           fallbackLabel={t('buttons.edit')}
           onClick={() => hasSelectedContact && onEditItem?.('0')}
-          disabled={!hasSelectedContact}
+          disabled={!hasSelectedContact || !onEditItem}
         />
       )}
 
@@ -115,7 +118,7 @@ export function CompactToolbarActions({
           // ⚠️ Διατηρείται ΑΚΡΙΒΩΣ η αρχική τριαδική: το `hasSelectedContact` έχει
           // προεπιλογή `false`, άρα δεν είναι ποτέ `undefined` — ο έλεγχος μένει
           // ως έχει ώστε η αλλαγή να είναι αναδιάταξη, όχι απόφαση.
-          disabled={hasSelectedContact !== undefined ? !hasSelectedContact : nothingSelected}
+          disabled={!onDeleteItems || (hasSelectedContact !== undefined ? !hasSelectedContact : nothingSelected)}
         />
       )}
 

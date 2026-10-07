@@ -30,6 +30,8 @@
   "unarchiveFailed": "Αποτυχία επαναφοράς από το αρχείο",
   "archivedBadge": "(αρχειοθετημένο)",
   "trashedBadge": "(στον κάδο)",
+  "archivedLabel": "Αρχειοθετημένο",
+  "trashedLabel": "Στον κάδο",
   "listingWithdrawnNotice": "Αν είναι σε αγγελία, η αγγελία αποσύρεται αμέσως από την αγορά.",
   "listingStaysOffMarketNotice": "Όταν επαναφερθεί από το αρχείο, μένει εκτός αγοράς μέχρι να το δημοσιεύσετε ξανά εσείς.",
   "softDeleteDialog": {

@@ -4,6 +4,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
+import { resolveViewedProperty } from '@/hooks/property-viewer-selection';
 import { usePropertyRetiredViews } from '@/components/properties/page/usePropertyRetiredViews';
 import { PropertiesHeader } from '@/components/properties/page/PropertiesHeader';
 import { ResponsiveFiltersPanel } from '@/components/core/AdvancedFilters';
@@ -174,9 +175,26 @@ export function PropertiesManagementContent() {
     selectedPropertyIds,
     setSelectedProperties,
     forceDataRefresh,
-    activePropertyId: selectedProperty?.id ?? null,
+    // Από την ΕΠΙΛΟΓΗ, όχι από το ακίνητο του πλαισίου: εκείνο λύνεται πάνω στη λίστα που δίνει αυτό το hook.
+    activePropertyId: selectedPropertyIds.length === 1 ? selectedPropertyIds[0] : null,
     activePropertyCount: properties.length,
   });
+
+  // 🗄️ ADR-329 §3.9 — το ακίνητο του πλαισίου λύνεται πάνω στη λίστα της ΕΝΕΡΓΗΣ προβολής. Η ζωντανή
+  // λίστα δεν περιέχει αποσυρμένα (`SharedPropertiesProvider`), άρα σε κάδο/αρχείο το πλαίσιο έμενε άδειο.
+  const retiredRows = retired.retiredView?.properties;
+  const viewedProperty = React.useMemo(
+    () =>
+      retiredRows
+        ? resolveViewedProperty({
+            properties: retiredRows,
+            explicitPropertyId: undefined,
+            selectedPropertyIds,
+            contactIds: [],
+          })
+        : selectedProperty,
+    [retiredRows, selectedPropertyIds, selectedProperty],
+  );
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -198,8 +216,8 @@ export function PropertiesManagementContent() {
   }, [urlPropertyId, properties, selectedProperty, handlePolygonSelect]);
 
   useBreadcrumbSync(
-    selectedProperty
-      ? { type: 'property', id: selectedProperty.id, name: selectedProperty.name }
+    viewedProperty
+      ? { type: 'property', id: viewedProperty.id, name: viewedProperty.name }
       : null
   );
 
@@ -419,7 +437,7 @@ export function PropertiesManagementContent() {
             retiredView={retired.retiredView}
             searchFilteredProperties={searchFilteredProperties}
             viewMode={viewMode as 'list' | 'grid'}
-            selectedProperty={selectedProperty || null}
+            selectedProperty={viewedProperty || null}
             selectedPropertyIds={selectedPropertyIds}
             isCreatingNewUnit={isCreatingNewUnit}
             newUnitTemplate={newUnitTemplate}

@@ -83,7 +83,7 @@ function displayAreaOf(property: Property): number | undefined {
 // =============================================================================
 
 export function usePropertyGridModel(property: Property, showCommercialPrices = false): CardViewModel {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
   const floorLabel = useFloorLabel();
 
   const stats = useMemo<StatItem[]>(() => {
@@ -166,7 +166,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
 // =============================================================================
 
 export function usePropertyListModel(property: Property): CardViewModel {
-  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
+  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'trash']);
   const floorLabel = useFloorLabel();
 
   const stats = useMemo<StatItem[]>(() => {

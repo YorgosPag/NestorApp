@@ -50,6 +50,8 @@ export function PropertiesHeader({
   // Το «Αρχείο» λέγεται ίδια σε κάθε οντότητα ⇒ γενικό namespace `trash`, όχι κλειδί ανά σελίδα.
   const { t: tTrash } = useTranslation('trash');
 
+  const retiredViewOpen = Boolean(showTrash || showArchive);
+
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -71,7 +73,14 @@ export function PropertiesHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode,
-        onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
+        // Κάδος/αρχείο σκεπάζουν τη λίστα: καμία όψη δεν δείχνει πατημένη, και το κλικ σε όψη γυρίζει πίσω.
+        viewModeSuspended: retiredViewOpen,
+        onViewModeChange: (mode) => {
+          if (!isListGridViewMode(mode)) return;
+          if (showTrash) onToggleTrash?.();
+          if (showArchive) onToggleArchive?.();
+          setViewMode(mode);
+        },
         viewModes: LIST_GRID_VIEW_MODES,
         customActions: buildHeaderCustomActions({
           showFilters,

@@ -52,6 +52,7 @@ const CARD_KEYS = [
   'card.stats.rent',
   'card.stats.soldFor',
   'card.stats.askedFor',
+  'card.stats.lastPrice',
   'card.stats.nightly',
   'card.stats.salePricePerSqm',
   'card.stats.rentPricePerSqm',

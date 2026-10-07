@@ -79,6 +79,8 @@ export interface HeaderViewToggleProps {
   viewModes?: ViewMode[];
   className?: string;
   disabled?: boolean;
+  /** Μια άλλη προβολή σκεπάζει τη λίστα (κάδος · αρχείο) ⇒ καμία όψη δεν δείχνει πατημένη. */
+  suspended?: boolean;
 }
 
 export interface HeaderActionsProps {

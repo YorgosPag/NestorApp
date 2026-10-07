@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/firestore/trashed-status.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:4f2258fcca0afc1185130183676154de9b3e08381ebebcd705b46edceb48e1d6
+// sha256:3590913630714253f93750f848b18e019e50d9c910f82cec8a74b3a8ca70c6ba
 
 /**
  * =============================================================================
@@ -74,3 +74,18 @@ export const isRetired = (entity: MaybeTrashed | null | undefined): boolean =>
 
 /** Οι τιμές `status` που σημαίνουν «αποσυρμένο» — για ερωτήματα `not-in` στον διακομιστή. */
 export const RETIRED_STATUSES: readonly string[] = [TRASHED_STATUS, ARCHIVED_STATUS];
+
+/** Ποια απόσυρση — `null` για ζωντανή εγγραφή. */
+export type RetiredKind = 'archived' | 'trashed';
+
+/**
+ * «Σε ποια απόσυρση είναι;» — η ΜΙΑ απάντηση που ρωτά κάθε οθόνη πριν προσφέρει γραφή ή προσφορά.
+ *
+ * Γεννήθηκε στο `linked-retired-properties` (επιλογείς ακινήτων) και ανέβηκε εδώ όταν απέκτησε
+ * δεύτερο καταναλωτή (κάρτα · πλαίσιο λεπτομερειών, ADR-329 §3.9): δεν ρωτά τίποτα ειδικό για ακίνητο.
+ */
+export function retiredKindOf(entity: MaybeTrashed | null | undefined): RetiredKind | null {
+  if (isArchived(entity)) return 'archived';
+  if (isTrashed(entity)) return 'trashed';
+  return null;
+}

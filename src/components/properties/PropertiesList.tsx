@@ -151,6 +151,34 @@ export function PropertiesList({
   // const totalValue = units.reduce((sum, u) => sum + (u.price || 0), 0);
   // Migration: PR1 - Units List Cleanup - These belong to SalesAsset aggregations
 
+  // 🔴 Χειριστής ΜΟΝΟ όταν υπάρχει (ADR-329 §3.9). Το `() => onX?.()` ήταν πάντα συνάρτηση ⇒ η γραμμή
+  //    εργαλείων δεν μπορούσε να ξέρει ότι σε κάδο/αρχείο η ενέργεια δεν υπάρχει, και την έδειχνε ζωντανή.
+  const toolbarActions = {
+    onNewItem: onNewProperty,
+    onEditItem: onEditProperty,
+    onDeleteItems: onDeleteProperty,
+  };
+
+  // ΜΙΑ γραμμή εργαλείων, δύο θέσεις (desktop πάντα · κινητό με διακόπτη).
+  const toolbar = (
+    <CompactToolbar
+      config={propertiesConfig}
+      selectedItems={selectedItems}
+      onSelectionChange={setSelectedItems}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      activeFilters={activeFilters}
+      onFiltersChange={setActiveFilters}
+      sortBy={sortBy}
+      onSortChange={onSortChange}
+      hasSelectedContact={selectedPropertyIds.length > 0}
+      {...toolbarActions}
+      onExport={() => {}}
+      onRefresh={() => {}}
+      onSettings={() => {}}
+    />
+  );
+
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       <PropertiesListHeader
@@ -160,50 +188,10 @@ export function PropertiesList({
       />
 
       {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
-      <div className="hidden md:block">
-        <CompactToolbar
-          config={propertiesConfig}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-          sortBy={sortBy}
-          onSortChange={onSortChange}
-          hasSelectedContact={selectedPropertyIds.length > 0}
-          onNewItem={() => onNewProperty?.()}
-          onEditItem={() => onEditProperty?.()}
-          onDeleteItems={() => onDeleteProperty?.()}
-          onExport={() => {}}
-          onRefresh={() => {}}
-          onSettings={() => {}}
-        />
-      </div>
+      <div className="hidden md:block">{toolbar}</div>
 
       {/* CompactToolbar - Toggleable on Mobile */}
-      <div className="md:hidden">
-        {showToolbar && (
-          <CompactToolbar
-            config={propertiesConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={onSortChange}
-            hasSelectedContact={selectedPropertyIds.length > 0}
-            onNewItem={() => onNewProperty?.()}
-            onEditItem={() => onEditProperty?.()}
-            onDeleteItems={() => onDeleteProperty?.()}
-            onExport={() => {}}
-            onRefresh={() => {}}
-            onSettings={() => {}}
-          />
-        )}
-      </div>
+      <div className="md:hidden">{showToolbar && toolbar}</div>
 
       {/* 🏢 ENTERPRISE: Quick Filters for Unit Types (local_4.log architecture) */}
       {/* List-scoped filtering - NOT global filter panel */}

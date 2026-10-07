@@ -14,7 +14,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { HeaderTitle } from './HeaderTitle';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderFilters } from './HeaderFilters';
-import { HeaderActions } from './HeaderActions';
+import { HeaderActions, type UnifiedHeaderActionsProps } from './HeaderActions';
 import { LucideIcon } from 'lucide-react';
 import '@/lib/design-system';
 
@@ -69,20 +69,6 @@ interface HeaderFiltersProps {
   hasActiveFilters?: boolean;
 }
 
-interface HeaderActionsProps {
-  showDashboard?: boolean;
-  onDashboardToggle?: () => void;
-  viewMode?: 'list' | 'grid' | 'byType' | 'byStatus';
-  onViewModeChange?: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
-  viewModes?: ('list' | 'grid' | 'byType' | 'byStatus')[];
-  addButton?: {
-    label: string;
-    onClick: () => void;
-    icon?: React.ComponentType<{ className?: string }>;
-  };
-  customActions?: React.ReactNode[];
-}
-
 interface PageHeaderProps {
   // Layout & Styling
   variant?: 'sticky' | 'static' | 'floating' | 'sticky-rounded';
@@ -101,7 +87,7 @@ interface PageHeaderProps {
   filters?: HeaderFiltersProps;
 
   // Actions Section
-  actions?: HeaderActionsProps;
+  actions?: UnifiedHeaderActionsProps;
 
   // Layout Control
   layout?: 'single-row' | 'multi-row' | 'stacked' | 'compact';
@@ -146,6 +132,20 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     'stacked': "space-y-6"
   };
 
+  // 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section (single-row + compact)
+  const breadcrumbSlot = breadcrumb && (
+    <div className="flex-1 min-w-0 hidden sm:block">
+      <div className="truncate overflow-hidden whitespace-nowrap">
+        {breadcrumb}
+      </div>
+    </div>
+  );
+  const actionsSlot = actions && (
+    <div className="shrink-0">
+      <HeaderActions {...actions} />
+    </div>
+  );
+
   return (
     <div className={cn(
       variantClasses[variant],
@@ -161,19 +161,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <div className="shrink-0">
               <HeaderTitle {...title} />
             </div>
-            {/* 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section */}
-            {breadcrumb && (
-              <div className="flex-1 min-w-0 hidden sm:block">
-                <div className="truncate overflow-hidden whitespace-nowrap">
-                  {breadcrumb}
-                </div>
-              </div>
-            )}
-            {actions && (
-              <div className="shrink-0">
-                <HeaderActions {...actions} />
-              </div>
-            )}
+            {breadcrumbSlot}
+            {actionsSlot}
           </>
         )}
 
@@ -186,19 +175,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 hideSubtitle
               />
             </div>
-            {/* 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section */}
-            {breadcrumb && (
-              <div className="flex-1 min-w-0 hidden sm:block">
-                <div className="truncate overflow-hidden whitespace-nowrap">
-                  {breadcrumb}
-                </div>
-              </div>
-            )}
-            {actions && (
-              <div className="shrink-0">
-                <HeaderActions {...actions} />
-              </div>
-            )}
+            {breadcrumbSlot}
+            {actionsSlot}
           </>
         )}
 

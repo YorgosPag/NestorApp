@@ -25,6 +25,7 @@ import {
 } from '@/lib/properties/price-resolver';
 import type { CommercialStatus } from '@/types/property';
 import { isEditorCommercialStatus } from '@/constants/commercial-statuses';
+import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 import { commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import type { Property } from '@/types/property-viewer';
 
@@ -50,8 +51,24 @@ export function buildCommercialBadge(property: Property, t: TFn): GridCardBadge 
 }
 
 /**
+ * **Η ετικέτα κύκλου ζωής** μιας αποσυρμένης εγγραφής (ADR-281 · ADR-329 §3.9).
+ *
+ * `Record<RetiredKind, …>` ώστε τρίτη απόσυρση να μη μεταγλωττίζεται χωρίς ετικέτα. Το αρχείο ΔΕΝ
+ * φορά `destructive`: εκεί δεν σβήνεται τίποτα (ίδιος κανόνας με το κουμπί της κεφαλίδας).
+ */
+const RETIRED_BADGE: Readonly<Record<RetiredKind, { labelKey: string; variant: GridCardBadgeVariant }>> = {
+  archived: { labelKey: 'trash:archivedLabel', variant: 'secondary' },
+  trashed: { labelKey: 'trash:trashedLabel', variant: 'destructive' },
+};
+
+/**
  * Assemble the Property badge list: primary status badge (resolved per view) +
  * optional commercial badge. Shared so Grid/List badge memos stay tiny.
+ *
+ * 🔴 **Αποσυρμένο ακίνητο ΔΕΝ είναι προσφορά.** Όσο είναι σε κάδο ή αρχείο, προηγείται η ετικέτα
+ * κύκλου ζωής και η εμπορική **παραλείπεται**: η κάρτα έδειχνε «Προς πώληση» για ακίνητο που ο
+ * κριτής της αγοράς (`offerStateOf`) έχει ήδη κατεβάσει. Η φυσική κατάσταση (πρώτο όρισμα) μένει —
+ * είναι γεγονός για το ακίνητο, όχι υπόσχεση.
  */
 export function buildPropertyBadges(
   primaryLabelKey: string,
@@ -59,10 +76,16 @@ export function buildPropertyBadges(
   property: Property,
   t: TFn,
 ): GridCardBadge[] {
-  const result: GridCardBadge[] = [{ label: t(primaryLabelKey), variant: primaryVariant }];
+  const primary: GridCardBadge = { label: t(primaryLabelKey), variant: primaryVariant };
+
+  const retired = retiredKindOf(property);
+  if (retired !== null) {
+    const spec = RETIRED_BADGE[retired];
+    return [{ label: t(spec.labelKey), variant: spec.variant }, primary];
+  }
+
   const commercial = buildCommercialBadge(property, t);
-  if (commercial) result.push(commercial);
-  return result;
+  return commercial ? [primary, commercial] : [primary];
 }
 
 /**
@@ -216,9 +239,26 @@ export function buildCardPriceText(
   };
 }
 
+/**
+ * **Η τελευταία τιμή μιας αποσυρμένης εγγραφής** — ιστορικό, όχι προσφορά (ADR-329 §3.9).
+ *
+ * Ίδιο ποσό, ίδιος κριτής (`resolveDisplayPrice`), άλλη **σημασία**: χωρίς το χρώμα της τιμής και
+ * με λέξη που δεν υπόσχεται τίποτα. Μία γραμμή — το δεύτερο σκέλος μιας προσφοράς δεν έχει νόημα εδώ.
+ */
+function lastPriceStatItem(price: ResolvedPrice, t: TFn): StatItem {
+  return {
+    icon: NAVIGATION_ENTITIES.price.icon,
+    iconColor: 'text-muted-foreground',
+    label: t('card.stats.lastPrice'),
+    value: resolvedPriceLabel(t, price),
+  };
+}
+
 export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] {
   const resolved = resolveDisplayPrice(property);
   if (resolved.kind === 'missing') return [];
+
+  if (retiredKindOf(property) !== null) return [lastPriceStatItem(resolved.headline, t)];
 
   const { headline, secondary } = resolved;
   const labels = priceLabelKeys(headline, secondary);

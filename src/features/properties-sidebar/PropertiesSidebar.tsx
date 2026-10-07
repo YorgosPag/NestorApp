@@ -79,6 +79,12 @@ export function PropertiesSidebar({
     await onDeleteProperty(selectedProperty.id);
   }, [onDeleteProperty, selectedProperty]);
 
+  // 🔴 Προς τη ΛΙΣΤΑ φεύγει μόνο ό,τι έδωσε ο γονιός (ADR-329 §3.9). Σε κάδο/αρχείο ο γονιός δεν δίνει
+  //    ούτε δημιουργία ούτε διαγραφή ⇒ η γραμμή εργαλείων τις δείχνει ανενεργές αντί για σιωπηλά no-op.
+  //    Η επεξεργασία ακολουθεί τη διαγραφή: όπου δεν σβήνεις, δεν γράφεις.
+  const listDeleteAction = onDeleteProperty ? handleDeleteProperty : undefined;
+  const listEditAction = onDeleteProperty ? handleToggleEditMode : undefined;
+
   /**
    * **«Άνοιγμα σε σελίδα»** (ADR-777 §8.30) — η δεξιά στήλη κρατά τη σειρά σου
    * όταν κοιτάς είκοσι ακίνητα στη σειρά· η σελίδα είναι για όταν θέλεις να
@@ -137,8 +143,8 @@ export function PropertiesSidebar({
           onSelectProperty={onSelectProperty}
           onAssignmentSuccess={onAssignmentSuccess}
           onNewProperty={onNewProperty}
-          onEditProperty={handleToggleEditMode}
-          onDeleteProperty={handleDeleteProperty}
+          onEditProperty={listEditAction}
+          onDeleteProperty={listDeleteAction}
         />
         {!isMobile && detailsContent}
       </div>
@@ -150,8 +156,8 @@ export function PropertiesSidebar({
           onSelectProperty={onSelectProperty}
           onAssignmentSuccess={onAssignmentSuccess}
           onNewProperty={onNewProperty}
-          onEditProperty={handleToggleEditMode}
-          onDeleteProperty={handleDeleteProperty}
+          onEditProperty={listEditAction}
+          onDeleteProperty={listDeleteAction}
         />
       </div>
 

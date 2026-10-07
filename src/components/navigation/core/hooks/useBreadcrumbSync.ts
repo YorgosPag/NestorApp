@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigation } from '../NavigationContext';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -92,7 +92,7 @@ export function useBreadcrumbSync(
   entity: BreadcrumbEntity | null,
   options?: UseBreadcrumbSyncOptions,
 ): void {
-  const { projects, companies, syncBreadcrumb } = useNavigation();
+  const { projects, companies, syncBreadcrumb, selectProperty } = useNavigation();
   const buildings = options?.buildings;
   // Όσα ΕΜΦΑΝΙΖΟΝΤΑΙ είναι και εξαρτήσεις — **όλα**, όχι όσα θυμήθηκε κάποιος να απαριθμήσει. Η λίστα ήταν
   // χειρόγραφη (`id`, `type`, `name`, εταιρεία του έργου) και της έλειπαν ο γονέας του χώρου (`buildingId`,
@@ -100,6 +100,19 @@ export function useBreadcrumbSync(
   // κρατούσε ίδια ταυτότητα και όνομα ⇒ το breadcrumb έμενε στο ΠΑΛΙΟ κτίριο (ADR-898 §21.6 Ε7). Το κλειδί
   // παράγεται πλέον από το ίδιο το περιγραφικό, άρα νέο πεδίο δεν μπορεί να ξεχαστεί.
   const entityKey = breadcrumbEntityKey(entity);
+
+  // 🔴 Το ακίνητο που ΕΦΥΓΕ καθαρίζει το επίπεδό του (ADR-329 §3.9). Το `if (!entity?.id) return`
+  //    παρακάτω άφηνε το breadcrumb στο τελευταίο ακίνητο: αποεπιλογή, ή άνοιγμα κάδου/αρχείου, και
+  //    η κεφαλίδα συνέχιζε να ονομάζει ακίνητο που η οθόνη δεν δείχνει πια.
+  //    ⚠️ Μόνο για ακίνητο: οι άλλοι τύποι έρχονται `null` όσο φορτώνουν, και εκεί το «κράτα ό,τι
+  //    είχες» είναι η σωστή συμπεριφορά (καμία αναλαμπή στη σελίδα της οντότητας).
+  const showedProperty = useRef(false);
+  useEffect(() => {
+    const showsProperty = entity?.type === 'property' || entity?.type === 'property-resolved';
+    if (entity === null && showedProperty.current) selectProperty(null);
+    showedProperty.current = showsProperty;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityKey, selectProperty]);
 
   useEffect(() => {
     if (!entity?.id) return;

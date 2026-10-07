@@ -30,6 +30,8 @@
   "unarchiveFailed": "Failed to restore from archive",
   "archivedBadge": "(archived)",
   "trashedBadge": "(in trash)",
+  "archivedLabel": "Archived",
+  "trashedLabel": "In trash",
   "listingWithdrawnNotice": "If it is listed, the listing is taken off the market immediately.",
   "listingStaysOffMarketNotice": "When restored from the archive, it stays off the market until you publish it again.",
   "softDeleteDialog": {

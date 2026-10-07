@@ -17,6 +17,7 @@
 import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
+  buildPropertyBadges,
   buildPropertyPriceStats,
   buildPropertyPricePerSqmStats,
   pricePerSqmAmount,
@@ -171,5 +172,57 @@ describe('Κ4 — τιμή ανά νύχτα: ποτέ «Τιμή», ποτέ χ
       'not-listed', 'sale-price-missing', 'rent-price-missing', 'nightly-rate-missing',
     ];
     expect(Object.keys(MISSING_PRICE_LABEL_KEYS).sort()).toEqual([...reasons].sort());
+  });
+});
+
+// =============================================================================
+// Κ-ΑΠΟΣΥΡΣΗ — αποσυρμένο ακίνητο ΔΕΝ είναι προσφορά (ADR-281 · ADR-329 §3.9)
+// =============================================================================
+
+describe('αποσυρμένο ακίνητο: ετικέτα κύκλου ζωής, όχι εμπορική· τιμή ως ιστορικό', () => {
+  const listed = { commercialStatus: 'for-sale', commercial: { askingPrice: 150_000 } };
+  const live = listed as unknown as Property;
+  const archived = { ...listed, status: 'archived' } as unknown as Property;
+  const trashed = { ...listed, status: 'deleted' } as unknown as Property;
+
+  const badgeLabels = (p: Property): string[] =>
+    buildPropertyBadges('operationalStatus.ready', 'success', p, t).map((b) => b.label);
+
+  it('ζωντανό: φυσική κατάσταση + εμπορική ετικέτα, καμία ετικέτα κύκλου ζωής', () => {
+    const labels = badgeLabels(live);
+    expect(labels[0]).toBe('operationalStatus.ready');
+    expect(labels).toHaveLength(2);
+    expect(labels).not.toContain('trash:archivedLabel');
+  });
+
+  it('🔴 στο αρχείο: ΠΡΩΤΗ η «Αρχειοθετημένο», η εμπορική ΛΕΙΠΕΙ, η φυσική μένει', () => {
+    expect(badgeLabels(archived)).toEqual(['trash:archivedLabel', 'operationalStatus.ready']);
+  });
+
+  it('🔴 στον κάδο: «Στον κάδο», με άλλη απόχρωση από το αρχείο (εκεί δεν σβήνεται τίποτα)', () => {
+    const [archivedBadge] = buildPropertyBadges('operationalStatus.ready', 'success', archived, t);
+    const [trashedBadge] = buildPropertyBadges('operationalStatus.ready', 'success', trashed, t);
+    expect(trashedBadge?.label).toBe('trash:trashedLabel');
+    expect(trashedBadge?.variant).toBe('destructive');
+    expect(archivedBadge?.variant).not.toBe('destructive');
+  });
+
+  it('🔴 η τιμή λέγεται «Τελευταία τιμή» — μία γραμμή, χωρίς το χρώμα της προσφοράς', () => {
+    const liveRow = buildPropertyPriceStats(live, t)[0];
+    const rows = buildPropertyPriceStats(archived, t);
+    expect(rows.map((r) => r.label)).toEqual(['card.stats.lastPrice']);
+    expect(rows[0]?.value).toBe(liveRow?.value);
+    expect(rows[0]?.valueColor).toBeUndefined();
+    expect(liveRow?.valueColor).toBeDefined();
+    expect(labelsOf(trashed)).toEqual(['card.stats.lastPrice']);
+  });
+
+  it('ακίνητο με δύο σκέλη προσφοράς ⇒ ΜΙΑ γραμμή ιστορικού, όχι δύο', () => {
+    const both = {
+      commercialStatus: 'for-sale-and-rent',
+      commercial: { askingPrice: 150_000, rentPrice: 500 },
+      status: 'archived',
+    } as unknown as Property;
+    expect(labelsOf(both)).toEqual(['card.stats.lastPrice']);
   });
 });

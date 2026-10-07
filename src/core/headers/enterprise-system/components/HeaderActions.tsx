@@ -22,13 +22,18 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// Local interface για compatibility με UnifiedHeaderSystem
-interface UnifiedHeaderActionsProps {
+// Η ΜΙΑ δήλωση των ενεργειών κεφαλίδας — το `PageHeader` την εισάγει, δεν την ξαναγράφει.
+export interface UnifiedHeaderActionsProps {
   showDashboard?: boolean;
   onDashboardToggle?: () => void;
   viewMode?: 'list' | 'grid' | 'byType' | 'byStatus';
   onViewModeChange?: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
   viewModes?: ('list' | 'grid' | 'byType' | 'byStatus')[];
+  /**
+   * Μια άλλη προβολή σκεπάζει τη λίστα/πλέγμα (κάδος · αρχείο): κανένα κουμπί όψης δεν δείχνει
+   * πατημένο. Το κλικ εξακολουθεί να φτάνει στο `onViewModeChange` — ο καλών κλείνει την προβολή.
+   */
+  viewModeSuspended?: boolean;
   addButton?: {
     label: string;
     onClick: () => void;
@@ -48,6 +53,7 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
   viewMode,
   onViewModeChange,
   viewModes,
+  viewModeSuspended,
   addButton,
   customActions = [],
   className
@@ -91,6 +97,7 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
               viewMode={viewMode}
               onViewModeChange={onViewModeChange}
               viewModes={viewModes}
+              suspended={viewModeSuspended}
             />
           </div>
 

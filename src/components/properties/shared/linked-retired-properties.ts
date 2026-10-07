@@ -12,22 +12,11 @@
  * @enterprise ADR-281 · ADR-329 §3.9
  */
 
-import {
-  isArchived,
-  isRetired,
-  isTrashed,
-  type MaybeTrashed,
-} from '@/lib/firestore/trashed-status';
+import { isRetired, type MaybeTrashed } from '@/lib/firestore/trashed-status';
 import type { Property } from '@/types/property';
 
-/** Γιατί ένα ακίνητο δεν προσφέρεται πια — `null` για ζωντανό. */
-export type RetiredKind = 'archived' | 'trashed';
-
-export function retiredKindOf(property: MaybeTrashed): RetiredKind | null {
-  if (isArchived(property)) return 'archived';
-  if (isTrashed(property)) return 'trashed';
-  return null;
-}
+// Το «σε ποια απόσυρση;» ζει πλέον στο SSoT του κύκλου ζωής — εδώ μένει το όνομα για τους καταναλωτές.
+export { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 
 /**
  * Τα ακίνητα που προσφέρονται για **νέα** επιλογή.

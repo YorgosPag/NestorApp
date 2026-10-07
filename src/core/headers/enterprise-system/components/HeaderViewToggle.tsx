@@ -28,7 +28,8 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewMode,
   onViewModeChange,
   viewModes = ['list', 'grid'],
-  className
+  className,
+  suspended = false
 }) => {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
@@ -62,7 +63,7 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
           <Tooltip key={mode}>
             <TooltipTrigger asChild>
               <ToggleButton
-                pressed={viewMode === mode}
+                pressed={!suspended && viewMode === mode}
                 variant="ghost"
                 size="sm"
                 onClick={() => onViewModeChange(mode)}

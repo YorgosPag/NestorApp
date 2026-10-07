@@ -8,6 +8,7 @@ import { renderHook } from '@testing-library/react';
 import { breadcrumbEntityKey, useBreadcrumbSync, type BreadcrumbEntity } from '../useBreadcrumbSync';
 
 const syncBreadcrumb = jest.fn();
+const selectProperty = jest.fn();
 const NAVIGATION = {
   projects: [
     { id: 'prj_1', name: 'ΕΡΓΟ Α', companyId: 'comp_1', linkedCompanyId: null, company: 'Εταιρεία' },
@@ -15,6 +16,7 @@ const NAVIGATION = {
   ],
   companies: [],
   syncBreadcrumb,
+  selectProperty,
 };
 jest.mock('../../NavigationContext', () => ({ useNavigation: () => NAVIGATION }));
 jest.mock('@/lib/api/enterprise-api-client', () => ({ apiClient: { get: jest.fn() } }));
@@ -31,7 +33,10 @@ function space(buildingId: string | undefined, projectId = 'prj_1'): BreadcrumbE
 
 const lastBuilding = () => syncBreadcrumb.mock.calls.at(-1)?.[0].building;
 
-beforeEach(() => syncBreadcrumb.mockClear());
+beforeEach(() => {
+  syncBreadcrumb.mockClear();
+  selectProperty.mockClear();
+});
 
 describe('useBreadcrumbSync — χώρος', () => {
   it('🔴 ίδια θέση, ίδιο όνομα, ΑΛΛΟ κτίριο ⇒ το breadcrumb δείχνει το νέο κτίριο', () => {
@@ -70,5 +75,40 @@ describe('breadcrumbEntityKey', () => {
     expect(breadcrumbEntityKey(space('bld_A'))).not.toBe(breadcrumbEntityKey(space('bld_B')));
     expect(breadcrumbEntityKey(space('bld_A', 'prj_1'))).not.toBe(breadcrumbEntityKey(space('bld_A', 'prj_2')));
     expect(breadcrumbEntityKey(null)).toBeNull();
+  });
+});
+
+describe('useBreadcrumbSync — το ακίνητο που έφυγε (ADR-329 §3.9)', () => {
+  const property: BreadcrumbEntity = { type: 'property', id: 'prop_1', name: 'Α-1.01' };
+  const render = (initial: BreadcrumbEntity | null) =>
+    renderHook(({ entity }: { entity: BreadcrumbEntity | null }) => useBreadcrumbSync(entity), {
+      initialProps: { entity: initial },
+    });
+
+  it('🔴 ακίνητο → καμία επιλογή ⇒ το επίπεδο ακινήτου καθαρίζει (πριν: έμενε το παλιό όνομα)', () => {
+    const { rerender } = render(property);
+    expect(selectProperty).not.toHaveBeenCalled();
+
+    rerender({ entity: null });
+    expect(selectProperty).toHaveBeenCalledTimes(1);
+    expect(selectProperty).toHaveBeenCalledWith(null);
+  });
+
+  it('καμία επιλογή από την αρχή ⇒ τίποτα να καθαριστεί', () => {
+    const { rerender } = render(null);
+    rerender({ entity: null });
+    expect(selectProperty).not.toHaveBeenCalled();
+  });
+
+  it('⚠️ κτίριο → null (φόρτωση) ⇒ ΔΕΝ καθαρίζει: ο κανόνας αφορά μόνο ακίνητο', () => {
+    const { rerender } = render({ type: 'building', id: 'bld_A', name: 'Κτήριο Α', projectId: 'prj_1' });
+    rerender({ entity: null });
+    expect(selectProperty).not.toHaveBeenCalled();
+  });
+
+  it('ακίνητο → άλλο ακίνητο ⇒ δεν καθαρίζει ενδιάμεσα (καμία αναλαμπή)', () => {
+    const { rerender } = render(property);
+    rerender({ entity: { type: 'property', id: 'prop_2', name: 'Α-1.02' } });
+    expect(selectProperty).not.toHaveBeenCalled();
   });
 });
