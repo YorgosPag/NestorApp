@@ -29,6 +29,7 @@ import { resolveSpaceStatuses, type SpaceStatuses } from '@/lib/spaces/space-sta
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { normalizeToDate } from '@/lib/date-local';
 import { readHostedFloor } from '@/lib/floor/hosted-floor';
+import { RETIRED_STATUSES } from '@/lib/firestore/trashed-status';
 
 /**
  * **Τα πεδία παρακολουθήματος πώλησης** (ADR-199) — χιλιοστά, εμπορική κατάσταση, όροι.
@@ -167,11 +168,16 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
 const VALID_PROPERTY_STATUSES: readonly string[] = [
   'for-sale', 'for-rent', 'for-sale-and-rent', 'reserved', 'sold',
   'landowner', 'rented', 'under-negotiation', 'coming-soon',
-  'off-market', 'unavailable', 'deleted',
+  'off-market', 'unavailable',
 ];
 
+// 🔴 Ο κύκλος ζωής (κάδος · αρχείο) **περνά αυτούσιος** (ADR-281 · ADR-329 §3.9). Η λίστα
+//    από πάνω είχε χειρόγραφο `'deleted'` και **όχι** `'archived'` ⇒ το αρχειοθετημένο
+//    ακίνητο βαφτιζόταν `'unavailable'` και κάθε `isRetired()` κατάντη απαντούσε «όχι»
+//    (μετρημένο 2026-10-07: η επιμέτρηση το πρόσφερε ως ζωντανό, χωρίς επίθεμα). Ποιες
+//    τιμές είναι κύκλος ζωής το λέει **μόνο** το `RETIRED_STATUSES`.
 function isValidPropertyStatus(value: string): value is LegacySalesStatus {
-  return VALID_PROPERTY_STATUSES.includes(value);
+  return VALID_PROPERTY_STATUSES.includes(value) || RETIRED_STATUSES.includes(value);
 }
 
 /**

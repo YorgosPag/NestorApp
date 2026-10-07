@@ -2,6 +2,7 @@
 import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { Timestamp } from 'firebase/firestore';
 import type { HostedOnFloor } from '@/lib/floor/hosted-floor';
+import type { ARCHIVED_STATUS } from '@/lib/firestore/trashed-status';
 import type { LegalPhase } from '@/types/legal-contracts';
 import type { PaymentSummary } from '@/types/payment-plan';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
@@ -74,8 +75,13 @@ import type { OperationalStatus } from '@/constants/operational-statuses';
  *
  * @deprecated Use OperationalStatus for units, move sales data to SalesAsset type
  * @migration PR1: Remove from UnitListCard, PR2: Remove from detail tabs
+ *
+ * ⚠️ Το `'archived'` (ADR-281 · ADR-329 §3.9) ζει **εδώ** και όχι στο `PropertyStatus`:
+ * το `PropertyStatus` είναι και λεξιλόγιο **χρωματισμού** (παλέτες του dxf-viewer
+ * απαριθμούν τα κλειδιά του) — εκεί το αρχείο θα γινόταν χρώμα επικάλυψης. Ο κύκλος
+ * ζωής ρωτιέται με `isRetired()` / `isArchived()`, ποτέ με σύγκριση συμβολοσειράς.
  */
-export type LegacySalesStatus = PropertyStatus | 'rented';
+export type LegacySalesStatus = PropertyStatus | 'rented' | typeof ARCHIVED_STATUS;
 
 // =============================================================================
 // 🏢 COMMERCIAL STATUS (Sales/Rental Truth — ADR-197)

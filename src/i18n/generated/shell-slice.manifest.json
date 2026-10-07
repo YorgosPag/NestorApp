@@ -114,7 +114,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f6581a95886fcfd54fe3ceb5a2910a22113a5b43f4a9f67e45dea818dcb4e578",
+  "inputsSha256": "a1174df83392dbdc1266753ef11d83f59839850b4747beb4944df8a5c142657d",
   "languages": [
     "el"
   ],
@@ -11971,7 +11971,7 @@
     "src/types/property-demand.ts": "15d9810ca987694224eb8af69ae2a07c6caef7b3ffebbd991bdd01bdf4c7dedb",
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/types/property-viewer.ts": "0573fee71a105abc63ba39b3d54a7ee754b79255ca5abd75adaba21d3fcab1b3",
-    "src/types/property.ts": "103c064f1b27b4376191264fde661ef6e171586b65f23ba74ee167d903d3beeb",
+    "src/types/property.ts": "161a435054e1b042f97331ca9d3591a69dc59ea20120f6d4a71c02e31662fda4",
     "src/types/public-listing.ts": "d8fb5a901b18b79d0330d7010f9c8a112f96fbd2115249612f29e6e134eeea8b",
     "src/types/saved-listing.ts": "e22be679ba57f9a0604365d02de1eb9a8c96285b1d38440e8b57baac7ba3750d",
     "src/types/search-core.ts": "16866d35c5722806fcaa6857a5a39a4f616f22531da07ce25ea4a10e637d9ced",
