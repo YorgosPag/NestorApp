@@ -1586,7 +1586,7 @@ LINK/UNLINK του `match /files/{fileId}` δέχεται **κάθε μέλος*
 
 | Φάση | Τι | Κατάσταση |
 |---|---|---|
-| **Α1** | Διαβάθμιση ως πράξη διακομιστή: `POST /api/files/classification` *(δέσμη ≤50)* → `writeFileClassification` *(κρίση · γραφή · ίχνος `classify`)* → **μία** επαναπροβολή ανά ακίνητο *(`refreshListingsAfterFileChanges`)*. Ο πελάτης: `setFilesClassificationWithPolicy` | ✅ κώδικας + 10 άγκυρες *(Τ1–Τ10)*. ⏳ ζωντανή επαλήθευση |
+| **Α1** | Διαβάθμιση ως πράξη διακομιστή: `POST /api/files/classification` *(δέσμη ≤50)* → `writeFileClassification` *(κρίση · γραφή · ίχνος `classify`)* → **μία** επαναπροβολή ανά ακίνητο *(`refreshListingsAfterFileChanges`)*. Ο πελάτης: `setFilesClassificationWithPolicy` | ✅ κώδικας + 10 άγκυρες *(Τ1–Τ10)*. ✅ **ζωντανά 2026-10-08** *(από την οθόνη, 95 τ.μ., `file_c098b8d6…`)*: `public → internal` ⇒ `gallery` 2 → 1, `projectedAt` 09:32:52Z → 10:27:13Z, τα **τρία** `.webp` της στο ράφι **404**, ίχνος `classify` `{ from: 'public', to: 'internal' }`· επαναφορά ⇒ ράφι **200**, δεύτερο ίχνος `{ from: 'internal', to: 'public' }` |
 | **Α2** | Κάδος/επαναφορά εταιρικών αρχείων ως πράξη διακομιστή | ⏳ |
 | **Α3** | Οι πόρτες διακομιστή καλούν τον κοινό βοηθό: `/api/files/archive` · `/api/files/[fileId]/cde` · `versions/promote` · `gdpr-delete`. Το εργαλείο AI `firestore_write` χάνει τα πεδία δημοσίευσης της `files` | ⏳ |
 | **Α4** | `firestore.rules`: φρουρός πεδίων δημοσίευσης σε κάθε σκέλος update + «γέννηση χωρίς `public`» · το LINK/UNLINK παγώνει και `lifecycleState`/`category`/`contentType`/`purpose` · φεύγουν τα σκέλη κάδου της `files`. **ΧΩΡΙΣΤΟ push, μετά τον κώδικα** | ⏳ |
