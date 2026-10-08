@@ -43,8 +43,10 @@ import {
   PHOTO_MATERIAL,
   VIDEO_MATERIAL,
   declaredFloorplanMaterial,
+  measuredFloorplanMaterial,
   type ListingMaterial,
 } from '@/lib/listings/listing-material';
+import { isMeasuredFloorplanIdentityKey } from '@/lib/listings/floorplan-publication-identity';
 import {
   declaredFileIds,
   NO_DECLARED_FILE_IDS,
@@ -236,6 +238,9 @@ export function agencyMediaMaterial(
 /**
  * Η κάτοψη: **παραδοτέα εικόνα + ονομαστική δήλωση + αναγνώσιμη στιγμή** — και τα τρία.
  *
+ * ⚠️ **Η παραγόμενη κάτοψη ΔΕΝ εξαιρείται από την ονομαστική δήλωση** (ADR-909 Α8): η πόρτα της τη
+ * **γράφει** στο `publishedFloorplans`, ώστε ο άνθρωπος να μπορεί να την αποσύρει ξε-δηλώνοντάς τη.
+ *
  * ⚠️ Ξεχωριστό σώμα ώστε ο `switch` να μείνει **μία ερώτηση ανά κλάδο**· καμία απόφαση δεν
  * μετακινήθηκε και καμία δεν προστέθηκε *(N.7.1: ≤40 γραμμές ανά συνάρτηση)*.
  */
@@ -247,7 +252,13 @@ function declaredFloorplanOrNull(
   if (!declaredFloorplans.has(file.id)) return null;
 
   const at = normalizeToISO(file.createdAt);
-  return at === null ? null : declaredFloorplanMaterial(at);
+  if (at === null) return null;
+
+  // 🔑 **Η ΠΡΟΕΛΕΥΣΗ ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΗΝ ΤΑΥΤΟΤΗΤΑ** (ADR-909 Α1): πεδίο θεματοφυλακής, που το γράφει
+  //    μόνο η πόρτα `POST …/floorplan`. Κάτοψη χωρίς αυτήν είναι ό,τι ήταν πάντα — «Δηλωμένη».
+  return isMeasuredFloorplanIdentityKey(file.publicationIdentity)
+    ? measuredFloorplanMaterial(at)
+    : declaredFloorplanMaterial(at);
 }
 
 /**

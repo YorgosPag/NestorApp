@@ -23,6 +23,7 @@ import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 // ADR-845 Ο-25 — δανεικός τύπος, ποτέ δεύτερη διατύπωση. Type-only.
 import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions';
+import type { FloorplanRenderRecipe } from '@/lib/listings/floorplan-render-recipe';
 import type { CdeReadReach } from '@/config/iso19650-constants';
 import type { FileDisplayNameResult } from '@/services/upload/utils/file-display-name';
 import type { FileCustody } from '@/lib/files/file-custody';
@@ -172,6 +173,9 @@ export interface PendingFileRecordCoordinates {
    * μπορούσαν να αποκλίνουν χωρίς να το δει ο μεταγλωττιστής.
    */
   sourceRevisions?: readonly ModelSourceRevision[];
+
+  /** **Η συνταγή απόδοσης** της παραγόμενης κάτοψης (ADR-909 Α6) — δες {@link FileRecord.renderRecipe}. */
+  renderRecipe?: FloorplanRenderRecipe;
 }
 
 /** Κάτοχος **εταιρεία** — το μέλος του κοινού πρωτογενούς, όχι δεύτερη δήλωση. */
@@ -224,6 +228,9 @@ export interface FileRecordCommonBase {
 
   // ADR-845 Ο-25 — από ποια έκδοση σχεδίου παρήχθη· απουσία = «δεν ξέρω», ποτέ «ισχύει».
   sourceRevisions?: readonly ModelSourceRevision[];
+
+  // ADR-909 Α6 — πώς αποδόθηκε η παραγόμενη κάτοψη· απουσία = δεν παρήχθη από το σχέδιο.
+  renderRecipe?: FloorplanRenderRecipe;
 
   // Entity linking — cross-entity file references
   linkedTo?: string[];

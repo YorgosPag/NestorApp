@@ -71,7 +71,7 @@ describe('Κ1 — υπολογίζεται στη ΓΕΝΝΗΣΗ των δημό
   });
 
   it('κάτοψη: δεν ρωτιέται καθόλου — κανένα μεταδεδομένο, κανένα σημείο', async () => {
-    const floorplan = await givenPortrait({ kind: 'floorplan', at: '2026-09-24T00:00:00.000Z' });
+    const floorplan = await givenPortrait({ kind: 'floorplan', at: '2026-09-24T00:00:00.000Z', provenance: 'declared' });
     const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [floorplan]);
 
     expect(report.published[0]?.focalPoint).toBeNull();

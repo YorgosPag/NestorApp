@@ -57,6 +57,9 @@ const REFRESH_HELPERS = Object.freeze({
     'Η ίδια επαναπροβολή για ΕΝΑ ακίνητο — όταν αλλάζει η δήλωση, όχι αρχείο.',
   runFileBatch:
     'Ο σκελετός δέσμης (διαβάθμιση · κάδος · αρχειοθέτηση): κρίνει, τρέχει, ξαναπροβάλλει.',
+  publishPropertyMaterial:
+    'Ο κορμός δημοσίευσης υλικού από το σχέδιο (μοντέλο · παραγόμενη κάτοψη, ADR-909 Β1): γράφει, ' +
+    'αρχειοθετεί τους προκατόχους και ξαναπροβάλλει ΤΕΛΕΥΤΑΙΟ. Όπως το `runFileBatch`, η επαναπροβολή είναι ΜΕΣΑ του.',
 });
 
 /**
@@ -76,8 +79,8 @@ const HAND_WRITE = Object.freeze({
 const DOOR_COVER = Object.freeze({ REFRESH: 'refresh', EXEMPT: 'exempt' });
 
 const SUPERSESSION_REASON =
-  'ΕΣΩΤΕΡΙΚΟ ΒΗΜΑ της `POST …/model`: αρχειοθετεί τα προηγούμενα μοντέλα μέσα στην ίδια αίτηση, και ' +
-  'η route από πάνω ξαναπροβάλλει ΜΙΑ φορά στο τέλος. Δεύτερη κλήση εδώ θα έψηνε το ράφι δύο φορές.';
+  'ΕΣΩΤΕΡΙΚΟ ΒΗΜΑ του κορμού `publishPropertyMaterial`: αρχειοθετεί τους προκατόχους μέσα στην ίδια αίτηση, και ' +
+  'ο κορμός ξαναπροβάλλει ΜΙΑ φορά στο τέλος. Δεύτερη κλήση εδώ θα έψηνε το ράφι δύο φορές.';
 
 const CONTACT_FILES_REASON =
   'Γράφει ΜΟΝΟ αρχεία επαφής (`entityType == contact` στο ίδιο το ερώτημα). Η αγγελία παράγεται ' +
@@ -119,13 +122,19 @@ const MATERIAL_DOORS = Object.freeze({
   },
   'src/app/api/properties/[id]/model/route.ts': {
     cover: DOOR_COVER.REFRESH,
-    reason: 'ADR-845 §7.16 — το ανέβασμα μοντέλου. Η πρώτη πόρτα της κλάσης· ξαναπροβάλλει στο τέλος της αίτησης.',
+    reason: 'ADR-845 §7.16 — το ανέβασμα μοντέλου. Η πρώτη πόρτα της κλάσης· περνά από τον κορμό `publishPropertyMaterial`.',
+  },
+  'src/app/api/properties/[id]/floorplan/route.ts': {
+    cover: DOOR_COVER.REFRESH,
+    reason:
+      'ADR-909 Β1 — η δημοσίευση κάτοψης από το σχέδιο. Γεννά δημόσιο αρχείο και αρχειοθετεί την προηγούμενη ' +
+      'παραγόμενη του ίδιου επιπέδου· περνά από τον κορμό `publishPropertyMaterial`, που ξαναπροβάλλει στο τέλος.',
   },
   'src/app/api/properties/[id]/listing-media/route.ts': {
     cover: DOOR_COVER.REFRESH,
     reason: 'Α5β — «ξαναφτιάξε την αγγελία από το τρέχον υλικό». Δεν γράφει αρχείο· ΕΙΝΑΙ η επαναπροβολή κατά παραγγελία.',
   },
-  'src/app/api/properties/[id]/model/model-supersession.ts': {
+  'src/app/api/properties/[id]/_shared/material-supersession.ts': {
     cover: DOOR_COVER.EXEMPT,
     reason: SUPERSESSION_REASON,
   },

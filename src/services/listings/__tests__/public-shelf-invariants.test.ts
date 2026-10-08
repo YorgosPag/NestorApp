@@ -374,7 +374,7 @@ describe('🏆 Κ2γ″ — Η ΓΡΑΜΜΗ ΑΠΑΝΤΑ «ΠΩΣ ΠΛΑΙΣΙΩ
     // Ομοιόμορφος ουρανός στην κορυφή έχει ΑΚΡΙΒΩΣ το σχήμα που ο κριτής του
     // περιγράμματος θα έλεγε «χαρτί» — και το σαλόνι θα δημοσιευόταν κουρεμένο.
     expect(LISTING_SHELF.framingOf({ kind: 'photo' })).toEqual(FRAMING_AS_GIVEN);
-    expect(LISTING_SHELF.framingOf({ kind: 'floorplan', at: '2026-09-07T00:00:00.000Z' })).toEqual(
+    expect(LISTING_SHELF.framingOf({ kind: 'floorplan', at: '2026-09-07T00:00:00.000Z', provenance: 'declared' })).toEqual(
       FRAMING_AS_GIVEN,
     );
   });

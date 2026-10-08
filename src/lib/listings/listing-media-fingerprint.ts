@@ -41,7 +41,8 @@ export const MEDIA_FINGERPRINT_FIELD = 'mediaFingerprint';
  * Η έκδοση της **κανονικής μορφής**. Αλλαγή στο τι μπαίνει ⇒ νέα έκδοση ⇒ κάθε παλιό αποτύπωμα
  * διαβάζεται `unknown` *(ποτέ `stale`)* και ξαναγράφεται στην επόμενη συμφιλίωση.
  */
-const MEDIA_FINGERPRINT_VERSION = 'v1';
+// v2 (ADR-909 Α1, 2026-10-08): το υλικό της κάτοψης απέκτησε `provenance` ⇒ άλλη κανονική μορφή.
+const MEDIA_FINGERPRINT_VERSION = 'v2';
 const STAMP_PREFIX = `${MEDIA_FINGERPRINT_VERSION}:`;
 
 /** **Η κανονική συμβολοσειρά** — ό,τι ζητήθηκε από το ράφι, με τη σειρά του, κλειδιά ταξινομημένα. */
@@ -51,7 +52,7 @@ export function mediaFingerprintInput(
   return canonicalJson(sources);
 }
 
-/** Το αποτύπωμα όπως αποθηκεύεται: `v1:<sha256 hex της κανονικής συμβολοσειράς>`. */
+/** Το αποτύπωμα όπως αποθηκεύεται: `v2:<sha256 hex της κανονικής συμβολοσειράς>`. */
 export function stampOf(sha256Hex: string): string {
   return `${STAMP_PREFIX}${sha256Hex}`;
 }

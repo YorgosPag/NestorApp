@@ -197,8 +197,10 @@ export function withPublishedGallery(
         if (image.sourceFileId !== null) floorplanIndexOf.set(image.sourceFileId, floorplans.length);
         // ⚠️ Το `at` έρχεται από **το υλικό**, ποτέ από ρολόι εδώ: *«πότε το έμαθε η
         //    πηγή»*, όχι *«πότε το πρόβαλα»* (ADR-841 §7 Α17.3).
+        // 🔑 Η προέλευση έρχεται κι αυτή από **το υλικό** (ADR-909 Α1) — ως το 2026-10-08 ήταν
+        //    καρφωμένη `'declared'`, και το κλειδί «Μετρημένη» δεν το παρήγαγε κανείς.
         floorplans.push({
-          provenance: 'declared',
+          provenance: material.provenance,
           value: toListingFloorplanImage(image, keys.floorplanAlt),
           at: material.at,
         });

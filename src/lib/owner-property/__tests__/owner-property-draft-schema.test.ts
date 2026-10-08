@@ -396,7 +396,7 @@ describe('Κ5 — η επιλογή «δημοσίευσε αυτό το αρχ�
       {
         privateStoragePath: 'owner_properties/u1/ownp_1/katopsi.jpg',
         // ⚠️ Το `at` είναι το `uploadedAt` **του ανθρώπου**, ποτέ ρολόι του γραφέα.
-        material: { kind: 'floorplan', at: AT },
+        material: { kind: 'floorplan', at: AT, provenance: 'declared' },
         focalPoint: null,
       },
     ]);

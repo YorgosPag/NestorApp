@@ -172,7 +172,7 @@ describe('🏆 Η ΔΙΑΜΕΡΙΣΗ — ΕΝΑ πέρασμα, κάθε πηγ�
   function mixed(): readonly PublicShelfSource<ListingMaterial>[] {
     return [
       source('owner_properties/u1/a.jpg', { kind: 'photo' }),
-      source('owner_properties/u1/plan.png', { kind: 'floorplan', at: SOURCE_AT }),
+      source('owner_properties/u1/plan.png', { kind: 'floorplan', at: SOURCE_AT, provenance: 'declared' }),
       source('owner_properties/u1/model.glb', { kind: 'model' }),
       source('owner_properties/u1/tour.mp4', { kind: 'video' }),
     ];

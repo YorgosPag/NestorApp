@@ -229,6 +229,10 @@ export function buildPendingFileRecordData(
   if (input.sourceRevisions && input.sourceRevisions.length > 0) {
     recordBase.sourceRevisions = input.sourceRevisions;
   }
+  // ADR-909 Α6 — γράφεται ΜΟΝΟ από τον κατασκευαστή της παραγόμενης κάτοψης, μαζί με τη γέννηση.
+  if (input.renderRecipe) {
+    recordBase.renderRecipe = input.renderRecipe;
+  }
   // ADR-716 Φ5 — γράφεται ΜΟΝΟ όταν υπάρχει ρητή επιλογή· η απουσία σημαίνει
   // «αποφασίζει η σκάλα τεκμηρίων», όχι «άγνωστο».
   if (input.userDrawingUnits) {

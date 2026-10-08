@@ -192,7 +192,7 @@ describe('Κ3 — 🔴 Η ΔΗΛΩΣΗ ΤΑΞΙΔΕΥΕΙ ΑΠΟ ΤΗ ΦΟΡΜΑ
     //    στο τέλος **δεν έχει με τι να γίνει**.
     const [source] = publishedOwnerMediaSources([ownerFile({ kind: 'floorplan' })]);
 
-    expect(source.material).toEqual({ kind: 'floorplan', at: UPLOADED_AT });
+    expect(source.material).toEqual({ kind: 'floorplan', at: UPLOADED_AT, provenance: 'declared' });
   });
 
   it('🔑 ΚΑΙ Η ΚΑΤΟΨΗ ΠΕΡΝΑ ΑΠΟ ΤΟ ΡΑΦΙ — ένα πρόθεμα, μία συμφιλίωση', () => {

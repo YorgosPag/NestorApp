@@ -233,7 +233,7 @@ describe('Φ3 — Η ΔΗΛΩΜΕΝΗ ΚΑΤΟΨΗ ΦΕΥΓΕΙ ΩΣ ΚΑΤΟΨ�
   it('🔴 ΤΟ ΥΛΙΚΟ ΚΟΥΒΑΛΑΕΙ ΤΗ ΣΤΙΓΜΗ ΤΟΥ ΑΝΘΡΩΠΟΥ — ποτέ ρολόι του γραφέα', () => {
     const material = agencyMediaMaterial(PLAN, new Set(['file_plan']));
 
-    expect(material).toEqual({ kind: 'floorplan', at: PLAN_AT });
+    expect(material).toEqual({ kind: 'floorplan', at: PLAN_AT, provenance: 'declared' });
   });
 
   it('🔴 αδήλωτη κάτοψη ⇒ `null` — δεν γίνεται σιωπηλά φωτογραφία', () => {
@@ -325,7 +325,7 @@ describe('Φ5 — ΕΝΑ ΟΡΙΟ ΓΙΑ ΤΑ ΔΥΟ ΕΙΔΗ', () => {
     });
 
     expect(out).toHaveLength(PUBLISHED_MEDIA_LIMIT);
-    expect(out[0].material).toEqual({ kind: 'floorplan', at: LATE_AT });
+    expect(out[0].material).toEqual({ kind: 'floorplan', at: LATE_AT, provenance: 'declared' });
   });
 });
 

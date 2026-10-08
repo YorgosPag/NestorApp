@@ -3,7 +3,11 @@ import 'server-only';
 /**
  * @fileoverview **ΣΕ ΠΟΙΑ ΕΚΔΟΣΗ ΗΤΑΝ ΤΑ ΣΧΕΔΙΑ ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΔΗΜΟΣΙΕΥΣΗΣ;** (ADR-845 Ο-25)
  * @related lib/listings/model-source-revisions · api/cad-files (ο γραφέας του `revision`)
- * @module app/api/properties/[id]/model/model-source-lookup
+ * @module app/api/properties/[id]/_shared/material-source-lookup
+ *
+ * 🔑 **ΚΟΙΝΟ ΓΙΑ ΚΑΘΕ ΥΛΙΚΟ ΠΟΥ ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΣΧΕΔΙΟ** *(ADR-909 Β1)*: μοντέλο και παραγόμενη κάτοψη
+ * ρωτούν τις **ίδιες** δύο ερωτήσεις — *«σε ποιο revision;»* και *«ποιους διαδέχομαι;»*. Γεννήθηκε ως
+ * `model/model-source-lookup` και μετακόμισε δίπλα στον κοινό κορμό· το σώμα έμεινε αυτούσιο.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΧΩΡΙΣΤΟ ΑΡΧΕΙΟ — **ΤΟ ΟΡΙΟ ΤΗΣ ΠΟΡΤΑΣ ΕΙΝΑΙ 300 ΓΡΑΜΜΕΣ**
@@ -30,7 +34,7 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES, type FileCategory } from '@/config/domain-constants';
 import {
   supersededByPublication,
   type AgencyMediaCandidate,
@@ -40,7 +44,7 @@ import type { FileRecordBase } from '@/services/file-record';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
-const logger = createModuleLogger('ModelSourceLookup');
+const logger = createModuleLogger('MaterialSourceLookup');
 
 /**
  * **Πόσα σχέδια δέχεται μία δημοσίευση** — φρουρός εισόδου, όχι προτίμηση.
@@ -98,7 +102,7 @@ export function readSceneFileIds(raw: unknown): readonly string[] {
  * καταγραφής δεν ακυρώνει τη δημοσίευση. Αλλά **ονομάζεται** στο ημερολόγιο, ώστε η διαφορά
  * «δεν υπήρχαν σχέδια» ⇄ «γνωστά απέτυχε» να μένει ορατή.
  */
-export async function readModelSourceRevisions(
+export async function readSourceRevisions(
   adminDb: AdminFirestore,
   companyId: string,
   sceneFileIds: readonly string[],
@@ -119,7 +123,7 @@ export async function readModelSourceRevisions(
         : [];
     });
   } catch (error) {
-    logger.warn('Οι εκδόσεις των σχεδίων δεν διαβάστηκαν — το μοντέλο δημοσιεύεται ΧΩΡΙΣ προέλευση', {
+    logger.warn('Οι εκδόσεις των σχεδίων δεν διαβάστηκαν — το υλικό μένει ΧΩΡΙΣ προέλευση', {
       companyId,
       requested: sceneFileIds.length,
       error: getErrorMessage(error),
@@ -138,6 +142,9 @@ export async function readModelSourceRevisions(
  * ευρετήριο για να διαλέξει ανάμεσα σε **λίγες** εγγραφές: ένα ακίνητο έχει μονοψήφιο αριθμό
  * μοντέλων *(και το `PUBLISHED_MEDIA_LIMIT` το κρατά έτσι)*.
  *
+ * 🔑 **Η κατηγορία είναι όρισμα** *(ADR-909 Β1)*: η ταυτότητα φέρει ήδη πρόθεμα είδους, αλλά το ερώτημα
+ * στενεύει στον **κάδο** του νεοφερμένου — μια κάτοψη δεν διαβάζει ποτέ τα μοντέλα για να βρει αδέλφια.
+ *
  * 🔴 **Η ΙΣΟΤΗΤΑ ΤΑΥΤΟΤΗΤΑΣ ΔΕΝ ΓΡΑΦΕΤΑΙ ΕΔΩ** — τη ρωτά το `supersededByPublication`, το
  * **ίδιο** σώμα που ζει δίπλα στην επιμέλεια της αγγελίας. Μια δεύτερη σύγκριση εδώ θα ήταν
  * δύο απαντήσεις στο *«είναι αυτά τα δύο το ίδιο πράγμα;»*, ελεύθερες να αποκλίνουν — και η
@@ -147,10 +154,11 @@ export async function readModelSourceRevisions(
  * **ήδη** σωστό από την επιμέλεια, ό,τι κι αν πει αυτό το ερώτημα. Η αποτυχία **ονομάζεται**
  * στο ημερολόγιο, ώστε η διαφορά «κανένας προκάτοχος» ⇄ «δεν κοιτάξαμε» να μένει ορατή.
  */
-export async function findSupersededModels(
+export async function findSupersededMaterial(
   adminDb: AdminFirestore,
   companyId: string,
   propertyId: string,
+  category: FileCategory,
   newcomer: FileRecordBase,
 ): Promise<readonly string[]> {
   try {
@@ -159,7 +167,7 @@ export async function findSupersededModels(
       .where('companyId', '==', companyId)
       .where('entityType', '==', ENTITY_TYPES.PROPERTY)
       .where('entityId', '==', propertyId)
-      .where('category', '==', FILE_CATEGORIES.MODELS)
+      .where('category', '==', category)
       .get();
 
     return supersededByPublication(
@@ -167,7 +175,7 @@ export async function findSupersededModels(
       newcomer as AgencyMediaCandidate,
     );
   } catch (error) {
-    logger.warn('Οι προκάτοχοι του μοντέλου δεν διαβάστηκαν — η αγγελία μένει σωστή, η ιστορία όχι', {
+    logger.warn('Οι προκάτοχοι του υλικού δεν διαβάστηκαν — η αγγελία μένει σωστή, η ιστορία όχι', {
       propertyId, companyId, error: getErrorMessage(error),
     });
     return [];

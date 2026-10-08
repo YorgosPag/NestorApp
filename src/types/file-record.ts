@@ -45,6 +45,7 @@ import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 // ADR-845 Ο-25 — ΕΝΑ σχήμα για το «από ποια έκδοση σχεδίου». Type-only ⇒ μηδέν runtime
 // εξάρτηση· η ΚΡΙΣΗ («ισχύει ακόμα;») ζει εκεί, όχι εδώ.
 import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions';
+import type { FloorplanRenderRecipe } from '@/lib/listings/floorplan-render-recipe';
 // ADR-866 §5.2 — ο κάτοχος του αρχείου (εταιρεία Ή άνθρωπος). Type-only.
 import type { FileCustody } from '@/lib/files/file-custody';
 import type { CustodyKind } from '@/lib/workspace/custody-scope';
@@ -381,6 +382,15 @@ export interface FileRecord {
    * Για `active-floor` έχει **ένα** στοιχείο — και αυτό είναι πληροφορία, όχι ειδική περίπτωση.
    */
   sourceRevisions?: readonly ModelSourceRevision[];
+
+  /**
+   * **Πώς αποδόθηκε αυτή η εικόνα από το σχέδιο** (ADR-909 Α6) — μόνο στην **παραγόμενη** κάτοψη.
+   *
+   * 🔑 Προφίλ ορατότητας με έκδοση, κάδρο σε συντεταγμένες σχεδίου, διαστάσεις, ύφος. Το γράφει
+   * **μόνο** η πόρτα `POST /api/properties/{id}/floorplan`, στο ίδιο `set()` με τη γέννηση.
+   * Απουσία = «δεν παρήχθη από το σχέδιο» — ποτέ «άγνωστη συνταγή».
+   */
+  renderRecipe?: FloorplanRenderRecipe;
 
   // =========================================================================
   // STORAGE REFERENCE

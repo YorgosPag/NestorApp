@@ -31,6 +31,10 @@
  * ⚠️ **Ο κύκλος ζωής είναι ο ΥΠΑΡΧΩΝ**: `PENDING` έγγραφο → bytes → `READY`. Ο αναγνώστης της
  * δημοσίευσης φιλτράρει `status === READY`, άρα ένα ημιτελές ανέβασμα είναι **αόρατο** αντί για
  * επικίνδυνο. ⛔ Καμία νέα σειρά εγγραφών — ίδια με το `floorplan-backgrounds`.
+ *
+ * 🔑 **Η ΣΕΙΡΑ ΤΩΝ ΒΗΜΑΤΩΝ ΖΕΙ ΣΤΟΝ ΚΟΙΝΟ ΚΟΡΜΟ** *(ADR-909 Β1, `_shared/publish-property-material`)*:
+ * κηδεμονία · δικαίωμα · εγγραφή · bytes · διαδοχή · επαναπροβολή. Εδώ μένει **μόνο** ό,τι είναι του
+ * μοντέλου — τι δέχεται, τι έγγραφο γεννά, τι ταξιδεύει δίπλα στα bytes.
  */
 
 import 'server-only';
@@ -40,30 +44,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { propertyIdOfRequest } from '@/app/api/properties/_shared/property-id-of-request';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
-import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_STATUS } from '@/config/domain-constants';
+import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
-import {
-  buildFinalizeFileRecordUpdate,
-  type FileRecordBase,
-} from '@/services/file-record';
 import { buildPublishedModelFileRecord } from '@/lib/listings/model-file-record';
+import { readSceneFileIds } from '../_shared/material-source-lookup';
 import {
-  findSupersededModels,
-  readModelSourceRevisions,
-  readSceneFileIds,
-} from './model-source-lookup';
-import { archiveSupersededModels } from './model-supersession';
-import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
-import { mayChangePublication } from '@/services/file-record/file-classification.service';
-import {
-  refreshListingAfterMediaChange,
-  type ListingMediaRefreshOutcome,
-} from '@/services/listings/listing-media-refresh';
+  publishPropertyMaterial,
+  type MaterialPublicationDoor,
+} from '../_shared/publish-property-material';
+import type { ListingMediaRefreshOutcome } from '@/services/listings/listing-media-refresh';
 import {
   MODEL_DECLARATION_METADATA_KEY,
   decodeModelDeclaration,
@@ -74,7 +65,6 @@ import {
   type ModelPublicationDeclaration,
 } from '@/lib/listings/listing-model-declaration';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('PropertyModelRoute');
 
@@ -129,15 +119,13 @@ interface PropertyModelResponse {
  * ⚠️ **Κάθε άρνηση έχει δικό της μήνυμα**, ποτέ ένα κοινό «μη έγκυρο αίτημα»: ο άνθρωπος στην
  * άλλη άκρη πρέπει να μάθει *τι* να διορθώσει. Είναι η ίδια διόρθωση που έκανε το ADR-844 §1.
  */
-async function readModelUpload(
-  request: NextRequest,
-): Promise<{
-  file: File;
-  declaration: ModelPublicationDeclaration;
-  sceneFileIds: readonly string[];
-}> {
-  const formData = await request.formData();
+interface ModelUpload {
+  readonly file: File;
+  readonly declaration: ModelPublicationDeclaration;
+  readonly sceneFileIds: readonly string[];
+}
 
+async function readModelUpload(formData: FormData): Promise<ModelUpload> {
   const file = formData.get('file');
   if (!(file instanceof File)) throw new ApiError(400, 'MODEL_FILE_REQUIRED');
   if (!MODEL_UPLOAD.mimeTypes.includes(file.type)) throw new ApiError(415, 'MODEL_TYPE_UNSUPPORTED');
@@ -161,116 +149,54 @@ async function readModelUpload(
   return { file, declaration, sceneFileIds: readSceneFileIds(formData.get('sceneFileIds')) };
 }
 
+/**
+ * 🏆 **Ό,ΤΙ ΕΙΝΑΙ ΤΟΥ ΜΟΝΤΕΛΟΥ** — ο κορμός κάνει όλα τα υπόλοιπα *(ADR-909 Β1)*.
+ *
+ * 🔴 **ΤΟ ΣΧΗΜΑ ΤΟΥ ΕΓΓΡΑΦΟΥ ΔΕΝ ΑΠΟΦΑΣΙΖΕΤΑΙ ΕΔΩ** *(ADR-845 §9 Ο-13)*: το *«τι έγγραφο γεννιέται —
+ * και είναι εξουσιοδοτημένο να φύγει;»* το απαντά **ένα** σώμα (`buildPublishedModelFileRecord`), το
+ * οποίο εκτελεί αυτούσιο και η άγκυρα της ραφής.
+ * 🔑 **Ο ΠΕΛΑΤΗΣ ΕΙΠΕ *ΠΟΙΑ*, Ο ΚΟΡΜΟΣ ΔΙΑΒΑΖΕΙ *ΣΕ ΠΟΙΟ REVISION*** *(Ο-25)*: ένα revision από τον
+ * πελάτη θα ήταν ισχυρισμός του καλούντος, και θα μπορούσε να είναι μπαγιάτικο τη στιγμή που γράφεται.
+ */
+const MODEL_DOOR: MaterialPublicationDoor<ModelUpload> = {
+  // 🔒 Η πρόθεση εγγραφής γράφεται **εδώ** (CHECK 3.100)· το **πότε** τρέχει το αποφασίζει ο κορμός — πρώτο.
+  judgeProperty: (query) => requirePropertyInTenantScope({ ...query, intent: 'write' }),
+  category: FILE_CATEGORIES.MODELS,
+  codes: { notCapable: 'MODEL_PUBLICATION_NOT_CAPABLE', uploadFailed: 'MODEL_UPLOAD_FAILED' },
+  read: readModelUpload,
+  fileOf: (upload) => upload.file,
+  sceneFileIdsOf: (upload) => upload.sceneFileIds,
+  recordOf: (upload, birth) =>
+    buildPublishedModelFileRecord({
+      ...birth,
+      contentType: upload.file.type,
+      originalFilename: upload.file.name,
+      declaration: upload.declaration,
+    }),
+  // 🏆 **ΕΔΩ ΕΙΝΑΙ Η «ΜΙΑ ΕΓΓΡΑΦΗ»** — η δήλωση μπαίνει στο ίδιο `save()` με τα bytes.
+  //    ⚠️ **`encodeModelDeclaration`, ΠΟΤΕ η ωμή συμβολοσειρά του πελάτη**: αποθηκεύεται ό,τι **πέρασε**
+  //    από τον `decodeModelDeclaration`, στην **κανονική** μορφή του ενός γραφέα — και μαζί ξαναελέγχεται
+  //    το ταβάνι των 4 KiB των custom metadata. Η ωμή θα μπορούσε να κουβαλά πεδία που κανείς δεν επικύρωσε.
+  customMetadataOf: (upload) => ({
+    [MODEL_DECLARATION_METADATA_KEY]: encodeModelDeclaration(upload.declaration),
+  }),
+};
+
 async function handlePost(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<ApiSuccessResponse<PropertyModelResponse>>> {
-  const propertyId = propertyIdOfRequest(request, ctx);
-
-  await requirePropertyInTenantScope({ ctx, propertyId, path: request.nextUrl.pathname, intent: 'write' });
-
-  // 🔒 **Το ανέβασμα 3Δ ΕΙΝΑΙ δημοσίευση** *(ADR-845 §7.17 Α3β)*: το αρχείο γεννιέται δημόσιο και
-  //    αρχειοθετεί τον δημοσιευμένο προκάτοχό του. Ρωτιέται ο **ΕΝΑΣ** τόπος, και **πριν** γραφτεί
-  //    οτιδήποτε — αλλιώς το νέο μοντέλο θα γραφόταν και η διαδοχή θα αρνιόταν ⇒ δύο δημόσια μοντέλα.
-  const subject = { globalRole: ctx.globalRole, permissions: ctx.permissions, companyId: ctx.companyId };
-  if (!mayChangePublication(subject)) throw new ApiError(403, 'MODEL_PUBLICATION_NOT_CAPABLE');
-
-  const { file, declaration, sceneFileIds } = await readModelUpload(request);
-
-  // 🔴 **ΤΟ ΣΧΗΜΑ ΤΟΥ ΕΓΓΡΑΦΟΥ ΔΕΝ ΑΠΟΦΑΣΙΖΕΤΑΙ ΕΔΩ** *(ADR-845 §9 Ο-13)*. Η πόρτα κρίνει
-  //    κηδεμονία και σχήμα· το *«τι έγγραφο γεννιέται — και είναι εξουσιοδοτημένο να φύγει;»*
-  //    το απαντά **ένα** σώμα, το οποίο εκτελεί αυτούσιο και η άγκυρα της ραφής. Όσο η
-  //    απάντηση ζούσε **μόνο** εδώ, καμία δοκιμή δεν μπορούσε να τη ρωτήσει — και δεν τη ρώτησε.
-  // 🔑 **Ο ΠΕΛΑΤΗΣ ΕΙΠΕ *ΠΟΙΑ*, ΕΔΩ ΔΙΑΒΑΖΕΤΑΙ *ΣΕ ΠΟΙΟ REVISION*** *(ADR-845 Ο-25)*. Ίδια
-  //    ραφή με το `at`: ένα revision από τον πελάτη θα ήταν ισχυρισμός του καλούντος, και θα
-  //    μπορούσε να είναι μπαγιάτικο τη στιγμή που γράφεται.
-  const adminDb = getAdminFirestore();
-  const sourceRevisions = await readModelSourceRevisions(adminDb, ctx.companyId, sceneFileIds);
-
-  const { fileId, storagePath, recordBase } = buildPublishedModelFileRecord({
-    companyId: ctx.companyId,
-    propertyId,
-    contentType: file.type,
-    originalFilename: file.name,
-    createdBy: ctx.uid,
-    declaration,
-    sourceRevisions,
-  });
-
-  // 🔑 **ΡΩΤΑΜΕ ΠΡΙΝ ΓΡΑΨΟΥΜΕ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Μετά την εγγραφή, ο νεοφερμένος θα ήταν
-  //    μέσα στο αποτέλεσμα και θα έπρεπε να **εξαιρεθεί** — δηλαδή θα υπήρχε μια γραμμή που,
-  //    αν ξεχαστεί, κάνει το μοντέλο να **διαδεχθεί τον εαυτό του** και να πέσει στον κάδο
-  //    την ίδια στιγμή που δημοσιεύεται. *(Το `supersedeFileRecord` φυλάει ήδη την ταυτότητα,
-  //    αλλά μια εγγύηση που δεν χρειάζεται να ενεργοποιηθεί είναι καλύτερη από μία που
-  //    χρειάζεται.)*
-  const supersedes = await findSupersededModels(adminDb, ctx.companyId, propertyId, recordBase);
-
-  await writeModel({ fileId, storagePath, recordBase, file, declaration, createdBy: ctx.uid });
-  const archived = await archiveSupersededModels(ctx, supersedes, fileId);
-
-  // 🔴 **Η ΚΛΗΣΗ ΠΟΥ ΕΛΕΙΠΕ** *(ADR-845 Ο-35)*: το αρχείο είναι πηγή της προβολής, και ως εδώ
-  //    η αγγελία το μάθαινε μόνο αν κάποιος άγγιζε **μετά** το ακίνητο. **Τελευταία**, ώστε να
-  //    δει τον κόσμο όπως έμεινε — νέο `ready`, προκάτοχοι στο αρχείο. Awaited· δεν πετά ποτέ.
-  const listing = await refreshListingAfterMediaChange(adminDb, propertyId, ctx.companyId);
+  const published = await publishPropertyMaterial(request, ctx, MODEL_DOOR);
+  const { propertyId, fileId, storagePath, supersedes, archived, listing } = published;
+  const { declaration } = published.parsed;
 
   logger.info('Μοντέλο ακινήτου ανέβηκε', {
-    fileId, propertyId, companyId: ctx.companyId, bytes: file.size,
+    fileId, propertyId, companyId: ctx.companyId, bytes: published.bytes,
     state: declaration.state, scope: declaration.scope, supersedes: supersedes.length,
-    archived: archived.length, sources: sourceRevisions.length, listing,
+    archived: archived.length, sources: published.sourceRevisions.length, listing,
   });
 
   return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes, archived, listing });
-}
-
-/**
- * **Έγγραφο σε αναμονή → bytes + δήλωση → έτοιμο.**
- *
- * ⚠️ **Η αποτυχία σημαδεύεται, δεν σιωπά**: ένα `FAILED` έγγραφο λέει *«κάτι ανέβηκε και δεν
- * ολοκληρώθηκε»*, ενώ η διαγραφή του θα άφηνε **μόνο** ορφανά bytes και καμία εξήγηση.
- */
-async function writeModel(params: {
-  fileId: string;
-  storagePath: string;
-  recordBase: FileRecordBase;
-  file: File;
-  declaration: ModelPublicationDeclaration;
-  createdBy: string;
-}): Promise<void> {
-  const filesRef = getAdminFirestore().collection(COLLECTIONS.FILES).doc(params.fileId);
-  await filesRef.set({ ...params.recordBase, createdAt: FieldValue.serverTimestamp() });
-
-  try {
-    const buffer = Buffer.from(await params.file.arrayBuffer());
-    const { url: downloadUrl } = await uploadPublicFile({
-      storagePath: params.storagePath,
-      buffer,
-      contentType: params.file.type,
-      createdBy: params.createdBy,
-      // 🏆 **ΕΔΩ ΕΙΝΑΙ Η «ΜΙΑ ΕΓΓΡΑΦΗ»** — η δήλωση μπαίνει στο ίδιο `save()` με τα bytes.
-      //    ⚠️ **`encodeModelDeclaration`, ΠΟΤΕ η ωμή συμβολοσειρά του πελάτη**: αποθηκεύεται
-      //    ό,τι **πέρασε** από τον `decodeModelDeclaration`, στην **κανονική** μορφή του ενός
-      //    γραφέα — και μαζί ξαναελέγχεται το ταβάνι των 4 KiB των custom metadata. Η ωμή
-      //    συμβολοσειρά θα μπορούσε να κουβαλά πεδία που κανείς δεν επικύρωσε.
-      customMetadata: { [MODEL_DECLARATION_METADATA_KEY]: encodeModelDeclaration(params.declaration) },
-    });
-
-    await filesRef.update({
-      ...buildFinalizeFileRecordUpdate({
-        sizeBytes: buffer.length,
-        downloadUrl,
-        nextStatus: FILE_STATUS.READY,
-      }),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-  } catch (error) {
-    try {
-      await filesRef.update({ status: FILE_STATUS.FAILED, updatedAt: FieldValue.serverTimestamp() });
-    } catch { /* το αρχικό σφάλμα είναι το χρήσιμο — μην το σκεπάσεις */ }
-    logger.error('Το ανέβασμα μοντέλου απέτυχε', {
-      fileId: params.fileId, error: getErrorMessage(error),
-    });
-    throw new ApiError(500, 'MODEL_UPLOAD_FAILED');
-  }
 }
 
 export const POST = withHeavyRateLimit(

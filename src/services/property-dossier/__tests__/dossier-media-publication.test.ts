@@ -85,7 +85,7 @@ describe('Α41.1 — η δήλωση ΕΙΝΑΙ η εξουσιοδότηση, �
   });
 
   it('τοπογραφικό (admin/documents) φεύγει ως ΚΑΤΟΨΗ — η καρτέλα της σελίδας, όχι η κατηγορία', () => {
-    expect(dossierMediaMaterial(DOSSIER, TOPOGRAPHIC)).toEqual({ kind: 'floorplan', at: AT });
+    expect(dossierMediaMaterial(DOSSIER, TOPOGRAPHIC)).toEqual({ kind: 'floorplan', at: AT, provenance: 'declared' });
     expect(dossierMediaMaterial(DOSSIER, PROGRESS)).toEqual({ kind: 'photo' });
   });
 
