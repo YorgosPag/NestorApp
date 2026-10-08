@@ -13,6 +13,7 @@
     "rotate": "Rotate",
     "fullscreen": "Fullscreen",
     "download": "Download",
+    "openInDxf": "Open in DXF",
     "delete": "Delete",
     "loadingScene": "Loading DXF scene...",
     "sceneError": "Error loading scene",

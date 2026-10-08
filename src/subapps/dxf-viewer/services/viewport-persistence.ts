@@ -16,6 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-400-viewport-state-persistence.md
  */
 
+import { DXF_VIEWER_LEVEL_PARAM } from '@/lib/dxf-viewer/dxf-viewer-routes';
 import { currentSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
 import type { ViewTransform } from '../rendering/types/Types';
 import {
@@ -26,7 +27,7 @@ import {
 } from '../utils/storage-utils';
 
 /** Short URL query keys (kept terse so shared links stay compact). */
-const URL_KEYS = { scale: 's', offsetX: 'ox', offsetY: 'oy', level: 'lvl', building: 'bldg' } as const;
+const URL_KEYS = { scale: 's', offsetX: 'ox', offsetY: 'oy', level: DXF_VIEWER_LEVEL_PARAM, building: 'bldg' } as const;
 
 /** Significant figures retained for the scale factor in URL/storage. */
 const SCALE_SIG_FIGS = 5;

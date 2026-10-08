@@ -13,6 +13,7 @@
     "rotate": "Περιστροφή",
     "fullscreen": "Πλήρης οθόνη",
     "download": "Λήψη",
+    "openInDxf": "Άνοιγμα στο DXF",
     "delete": "Διαγραφή",
     "loadingScene": "Φόρτωση σκηνής DXF...",
     "sceneError": "Σφάλμα φόρτωσης σκηνής",

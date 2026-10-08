@@ -5,6 +5,7 @@
  * fallback, and the combined restore facade (URL-wins → storage-fallback).
  */
 
+import { dxfViewerLevelHref } from '@/lib/dxf-viewer/dxf-viewer-routes';
 import type { ViewTransform } from '../../rendering/types/Types';
 import {
   serializeViewportToParams,
@@ -55,6 +56,14 @@ describe('serialize ↔ parse', () => {
       null,
     );
     expect(params.get('s')).toBe('1.2346');
+  });
+
+  // «Άνοιγμα στο DXF» (2026-10-08): ο εξωτερικός κατασκευαστής και αυτός ο αναγνώστης μοιράζονται ΕΝΑ κλειδί.
+  it('reads the level a `dxfViewerLevelHref` deep-link carries — even with no transform', () => {
+    const query = dxfViewerLevelHref('lvl_2a7ff5cc').split('?')[1];
+    const parsed = parseViewportFromParams(new URLSearchParams(query));
+    expect(parsed.levelId).toBe('lvl_2a7ff5cc');
+    expect(parsed.transform).toBeUndefined();
   });
 });
 

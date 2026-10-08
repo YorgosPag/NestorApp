@@ -43,6 +43,7 @@ import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-sn
 import { Bim3DToggleButton } from '@/components/shared/files/media/Bim3DToggleButton';
 import { Bim3DReadOnlyOverlay } from '@/components/shared/files/media/Bim3DReadOnlyOverlay';
 import { FloorplanInkPicker } from '@/components/shared/files/media/FloorplanInkPicker';
+import { OpenInDxfViewerButton } from '@/components/shared/files/media/OpenInDxfViewerButton';
 import { fileDisplayUrl } from '@/lib/files/file-display-url';
 
 // Re-exports for backward compatibility
@@ -424,6 +425,7 @@ export function FloorplanGallery({
             <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
             <FloorplanGalleryZoomControls zp={inlineZP} showFullscreen onOpenFullscreen={handleOpenFullscreen} />
             <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
+            <OpenInDxfViewerButton fileId={isDxf ? viewedFileId : null} />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="sm" onClick={handleDownload} disabled={!currentFileUrl} aria-label={t('floorplan.download')}>

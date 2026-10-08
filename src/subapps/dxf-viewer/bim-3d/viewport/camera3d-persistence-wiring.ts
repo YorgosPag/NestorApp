@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { readPersistedCamera3D, persistCamera3D, type Camera3DPose } from '../../services/camera3d-persistence';
+import { readViewportFromUrl } from '../../services/viewport-persistence';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 /**
@@ -18,7 +19,7 @@ import { DXF_TIMING } from '../../config/dxf-timing';
  * detach the settle callback. Caller MUST invoke it before disposing the manager.
  */
 export function attachCamera3DPersistence(manager: ThreeJsSceneManager): { dispose: () => void } {
-  const docId = new URLSearchParams(window.location.search).get('lvl'); // same key the 2D URL uses
+  const docId = readViewportFromUrl().levelId ?? null; // the SAME reader (and key) the 2D URL uses
   const persisted = readPersistedCamera3D(docId);
   if (persisted) {
     manager.restoreCameraView(
