@@ -38,7 +38,8 @@
    σύνορα: `withAuth`, και στους **δύο** κλάδους του (ανώνυμος + αυθεντικοποιημένος), και `withPersonalOrOrgAuth`.
    Όλα τα routes πίσω τους προστατεύονται χωρίς να το ζητήσουν. **Κανένα** από τα 338 αρχεία routes δεν μεταφέρθηκε.
 2. **Ο πελάτης γεννά ΕΝΑ κλειδί ανά κλήση, ΠΡΙΝ τον βρόχο** (`keyedHeaders`), για κάθε μη-`GET` με σώμα JSON ή χωρίς
-   σώμα. `FormData`/`Blob` **όχι**: δεν ορίζεται αποτύπωμα πάνω σε ροή. Κλειδί που έδωσε ήδη ο καλών μένει.
+   σώμα. `FormData`/`Blob` **όχι αυτόματα**: ανέβασμα που ξαναστέλνεται μόνο του είναι megabytes που κανείς δεν
+   ζήτησε. Κλειδί που έδωσε ήδη ο καλών μένει — και από τις 2026-10-08 το σύνορο το **τιμά** και σε multipart (6β).
 3. **Ο ένας κριτής** του «ξαναστέλνεται;» είναι ο `shouldRetry`: `GET` ή «έφυγε με κλειδί», και `409 IN_FLIGHT` με το
    **ίδιο** κλειδί, σεβόμενος το `Retry-After`.
 4. **Αποθήκη: Firestore** `idempotency_records`, μόνο μέσω Admin SDK (κανόνας χωρίς καμία πρόσβαση πελάτη), TTL 24 ωρών
@@ -46,6 +47,12 @@
 5. **ID εγγράφου ντετερμινιστικό** από (εντολέας, μέθοδος, διαδρομή, κλειδί): η σύγκρουση στο **ίδιο** έγγραφο
    **είναι** το κλείδωμα. Το κλειδί ενός ανθρώπου δεν «πιάνει» ποτέ απάντηση άλλου (`anon` για δημόσιες διαδρομές).
 6. **Αποτύπωμα** = sha256 των μεθόδου, διαδρομής, query και σώματος (`sha256HexOfText`, το υπάρχον SSoT).
+   - **6β — multipart: αποτύπωμα των ΜΕΡΩΝ, όχι του ωμού σώματος** *(2026-10-08, ADR-909 Β2.0)*. Ο browser γεννά
+     **νέο τυχαίο `boundary` σε κάθε αίτηση**: το ωμό σώμα δύο αποστολών των ίδιων bytes διαφέρει, άρα θα απαντούσε
+     `KEY_REUSED` στην πρώτη επανάληψη. Κανονική μορφή (`multipart-fingerprint.ts`): κείμενο ⇒ όνομα · τιμή·
+     αρχείο ⇒ όνομα · `type` · μέγεθος · SHA-256 των bytes· ταξινομημένα. ⛔ Όχι όνομα αρχείου *(ετικέτα, όχι
+     περιεχόμενο)*, όχι σειρά μερών. Σώμα που δεν διαβάζεται ⇒ `400 IDEMPOTENCY_BODY_UNREADABLE` — **ποτέ**
+     εκτέλεση χωρίς σύνορο όταν ο καλών ζήτησε «μία φορά». Ωμή ροή (`octet-stream`): ακόμη διέλευση.
 7. **Η έκβαση της πρώτης εκτέλεσης**:
 
 | Ο handler… | Το κλειδί… | Γιατί |
@@ -75,6 +82,7 @@
 | `IDEMPOTENCY_STORE_UNAVAILABLE` | 503 | ✅ τίποτα δεν εκτελέστηκε |
 | `IDEMPOTENCY_KEY_REUSED` | 422 | ❌ |
 | `IDEMPOTENCY_KEY_INVALID` | 400 | ❌ |
+| `IDEMPOTENCY_BODY_UNREADABLE` | 400 | ❌ multipart με κλειδί που δεν διαβάζεται — τίποτα δεν εκτελέστηκε |
 | `IDEMPOTENCY_OUTCOME_UNKNOWN` | 409 | ❌ |
 | `IDEMPOTENCY_REPLAY_UNAVAILABLE` | 409 | ❌ έγινε, η απάντηση δεν αναπαράγεται (μη-JSON ή > 256 KiB) |
 
@@ -87,6 +95,7 @@
 | `src/lib/api/idempotency/idempotency-contract.ts` | **ΜΙΑ** πηγή πελάτη + server: κεφαλίδες, κωδικοί, lease, TTL, `NaturalIdempotency` |
 | `src/lib/api/idempotency/idempotency-store.ts` | ο **μόνος** γραφέας της `idempotency_records` |
 | `src/lib/api/idempotency/with-idempotency.ts` | το στρώμα `runIdempotently` |
+| `src/lib/api/idempotency/multipart-fingerprint.ts` | η κανονική μορφή ενός σώματος multipart (6β) — καθαρό |
 | `src/lib/auth/handler-execution.ts` | η μία κλήση handler (κεντρικά σφάλματα + μέτρηση χρόνου + `thrown`) |
 | `src/lib/auth/middleware.ts` · `personal-scope-middleware.ts` | οι δύο ρίζες |
 | `src/lib/api/api-client-transport.ts` | `keyedHeaders` · `isKeyedRequest` · `isReplayableRequest` · `retryDelay` |
@@ -116,8 +125,12 @@ Webhooks (Mailgun, Telegram), cron, OAuth `authorize`/`token`, MCP, δημόσι
 
 - **Σύνορο** (`with-idempotency.test.ts`, Ι1–Ι11): αναπαραγωγή · μία εκτέλεση σε 3 αιτήματα · `IN_FLIGHT` · `KEY_REUSED` ·
   απελευθέρωση σε επιστρεφόμενο 503 · αποθήκευση σε έκρηξη (και 503 από έκρηξη) · `OUTCOME_UNKNOWN` · `REPLAY_UNAVAILABLE` ·
-  διέλευση (χωρίς κεφαλίδα · GET · `natural` · multipart) · δύο άνθρωποι · άκυρο κλειδί · λήξη · αποθήκη εκτός.
-- **Πελάτης** (`enterprise-api-client-auth-retry.test.ts`, Ρ1–Ρ10).
+  διέλευση (χωρίς κεφαλίδα · GET · `natural` · ωμή ροή) · δύο άνθρωποι · άκυρο κλειδί · λήξη · αποθήκη εκτός.
+- **Σύνορο, multipart** (ίδια σουίτα, Μ1–Μ6): ίδια μέρη/άλλο `boundary` ⇒ αναπαραγωγή · άλλα bytes ⇒ `KEY_REUSED` ·
+  άλλο πεδίο ⇒ `KEY_REUSED` · άλλη σειρά/άλλο όνομα αρχείου ⇒ ίδια πράξη · αδιάβαστο σώμα ⇒ `BODY_UNREADABLE` χωρίς
+  εκτέλεση · ο handler διαβάζει το σώμα του ανέγγιχτο. Μεταλλάξεις στο `multipart-fingerprint.ts`: **4/4**.
+- **Πελάτης** (`enterprise-api-client-auth-retry.test.ts`, Ρ1–Ρ10 · **Ρ5β**: `FormData` με κλειδί του καλούντος ⇒
+  ίδιο κλειδί σε κάθε επανάληψη).
 - **Πύλη** (`check-idempotency-boundary.test.js`, Π1–Π5 · Ν1–Ν2 · Ρ1–Ρ2 · Δ1–Δ2).
 - **Κανόνες** (`idempotency-records.rules.test.ts`, deny-all).
 - **Μεταλλάξεις**: σύνορο + πελάτης **21/21** · πύλη **6/6**.
@@ -126,5 +139,6 @@ Webhooks (Mailgun, Telegram), cron, OAuth `authorize`/`token`, MCP, δημόσι
 
 | Ημερομηνία | Τι |
 |---|---|
+| 2026-10-08 | **Το σύνορο μαθαίνει multipart** (απόφαση 6β — ADR-909 Β2.0). Ως τώρα κάθε `multipart/form-data` περνούσε **χωρίς** σύνορο, ακόμη και με κλειδί: ο πελάτης της δημόσιας κάτοψης θα έστελνε κεφαλίδα που κανείς δεν διάβαζε. Αποτύπωμα πάνω στα **μέρη** *(το ωμό σώμα αλλάζει `boundary` ανά αίτηση)*, νέος κωδικός `IDEMPOTENCY_BODY_UNREADABLE`. **Ο πελάτης δεν άλλαξε συμπεριφορά**: `FormData` παίρνει κλειδί μόνο όταν το δώσει ο καλών. Μετρημένο πριν από την αλλαγή: **κανένας** υπάρχων καλών δεν έστελνε κλειδί με multipart *(το `vendorPortalFetch` στέλνει `FormData` χωρίς)*. 23 + 23 + 13 tests, μεταλλάξεις 4/4 στο νέο αρχείο· τα tracked αρχεία **δεν** μεταλλάχθηκαν *(κοινό δέντρο)*. Όχι ζωντανά ακόμη. |
 | 2026-09-22 | **Γέννηση + υλοποίηση** (Φάση 2 της επιλογής Γ, ADR-853 Ε3). Σύνορο στις δύο ρίζες, πελάτης με κλειδί, αποθήκη Firestore + TTL, `natural` σε read/mute/follow, CHECK 3.92 (27 σύνορα υπολογισμένα, baseline 38). |
 | 2026-09-22 | **Ζωντανή επαλήθευση (localhost, super_admin, νήμα `nthr_42f6cdda…`)**. Monkeypatch του `fetch`: η 1η απάντηση του `POST …/messages` φτάνει στον server και «χάνεται» (`TypeError('Failed to fetch')`). ✅ Επανάληψη με **ίδιο** `Idempotency-Key` · `201` + `Idempotent-Replayed: true` · **ένα** `network_messages` · **μία** εγγραφή `idempotency_records` (`completed`, κλειδί κατακερματισμένο στο id, TTL +24ω). 🔴 **Εύρημα στον ΠΕΛΑΤΗ, όχι στο σύνορο**: **δύο** φούσκες στην οθόνη για **ένα** έγγραφο. Το `useReconcileArrivals` (`hooks/network-messaging/useNetworkThreadActions.ts`, ADR-867 Β7) έσβηνε την εκκρεμή φούσκα σε effect που ξυπνούσε **μόνο** με το snapshot· όταν το snapshot προλάβαινε την απάντηση με το `messageId` (εδώ ντετερμινιστικά, λόγω επανάληψης· γενικά όποτε ο listener είναι γρηγορότερος από το δίκτυο) ο έλεγχος δεν ξανάτρεχε ποτέ. **Διόρθωση**: η ορατότητα **παράγεται** σε κάθε απόδοση από τις δύο εισόδους (νέο καθαρό `pendingNotArrived` στο `lib/network-messaging/thread-timeline.ts`, ίδια αναφορά όταν δεν φεύγει τίποτα)· το effect μόνο καθαρίζει τη μνήμη. Άγκυρες Χ-10/Χ-11 + νέα σουίτα `useNetworkThreadActions.test.ts` (Α-1, η ακριβής ζωντανή σειρά)· μετάλλαξη **3/3** · 12/12 · jscpd 0. Επανάληψη ζωντανά μετά τη διόρθωση: ίδιο κλειδί, replay, **μία** φούσκα, **ένα** έγγραφο. Αμφίδρομη εγγραφή: ADR-867 §9 (ιδιοκτήτης του Β7). |

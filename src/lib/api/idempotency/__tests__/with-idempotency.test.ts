@@ -11,9 +11,18 @@
  *   Ι6  ο handler ΕΣΚΑΣΕ ⇒ το 500 αποθηκεύεται και αναπαράγεται (Stripe) — ποτέ δεύτερη εκτέλεση
  *   Ι7  🏆 κλείδωμα πέρα από το lease ⇒ 409 OUTCOME_UNKNOWN, ποτέ σιωπηλή δεύτερη εκτέλεση
  *   Ι8  απάντηση μη-JSON ⇒ η επανάληψη παίρνει 409 REPLAY_UNAVAILABLE
- *   Ι9  χωρίς κεφαλίδα · GET · `natural` · multipart ⇒ διέλευση, ΚΑΜΙΑ εγγραφή
+ *   Ι9  χωρίς κεφαλίδα · GET · `natural` · ωμή ροή ⇒ διέλευση, ΚΑΜΙΑ εγγραφή
  *   Ι10 δύο άνθρωποι με το ίδιο κλειδί ⇒ ανεξάρτητοι
  *   Ι11 άκυρο κλειδί ⇒ 400 · ληγμένη εγγραφή ⇒ νέα εκτέλεση · αποθήκη εκτός ⇒ 503 χωρίς εκτέλεση
+ *
+ * ADR-909 Β2.0 — το σύνορο **μαθαίνει multipart** (αποτύπωμα πάνω στα ΜΕΡΗ, όχι στο ωμό σώμα):
+ *
+ *   Μ1  ίδια μέρη, ΑΛΛΟ boundary ⇒ αναπαραγωγή, ο handler τρέχει μία φορά
+ *   Μ2  ίδιο κλειδί, άλλα BYTES αρχείου ⇒ 422 KEY_REUSED
+ *   Μ3  ίδιο κλειδί, άλλο πεδίο κειμένου ⇒ 422 KEY_REUSED
+ *   Μ4  άλλη σειρά μερών · άλλο όνομα αρχείου ⇒ η ΙΔΙΑ πράξη
+ *   Μ5  multipart που δεν διαβάζεται ⇒ 400 BODY_UNREADABLE, ΠΟΤΕ εκτέλεση χωρίς σύνορο
+ *   Μ6  ο handler διαβάζει το σώμα του ΑΝΕΓΓΙΧΤΟ μετά το αποτύπωμα
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -183,11 +192,98 @@ describe('Δ — πότε το σύνορο ΔΕΝ εφαρμόζεται', () =
     expect(await passThrough(post({ a: 1 }), true)).toStrictEqual({ runs: 2, records: 0 });
   });
 
-  it('Ι9δ multipart ⇒ διέλευση (δεν ορίζεται αποτύπωμα πάνω σε ροή)', async () => {
+  it('Ι9δ ωμή ροή (`octet-stream`) ⇒ διέλευση (δεν ορίζεται αποτύπωμα πάνω σε ροή)', async () => {
     const upload = new NextRequest('https://nestorconstruct.gr/api/upload', {
-      method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: 'k', 'content-type': 'multipart/form-data; boundary=x' }, body: '--x--',
+      method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: 'k', 'content-type': 'application/octet-stream' }, body: 'bytes',
     });
     expect(await passThrough(upload)).toStrictEqual({ runs: 2, records: 0 });
+  });
+});
+
+describe('Μ — multipart: το αποτύπωμα είναι των ΜΕΡΩΝ, όχι του ωμού σώματος', () => {
+  const UPLOAD_URL = 'https://nestorconstruct.gr/api/properties/prop_1/floorplan';
+  type Part = readonly [name: string, value: string | Blob, filename?: string];
+
+  /** Κάθε κλήση χτίζει ΝΕΟ `FormData` ⇒ νέο τυχαίο boundary, όπως κάθε αίτηση του browser. */
+  function upload(parts: readonly Part[], key = 'key-1'): NextRequest {
+    const form = new FormData();
+    for (const [name, value, filename] of parts) {
+      if (typeof value === 'string') form.append(name, value);
+      else form.append(name, value, filename ?? 'a.png');
+    }
+    return new NextRequest(UPLOAD_URL, { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, body: form });
+  }
+
+  const png = (bytes: readonly number[]): Blob => new Blob([new Uint8Array(bytes)], { type: 'image/png' });
+  const parts = (bytes: readonly number[], levelId = 'lvl_1'): readonly Part[] => [
+    ['file', png(bytes)], ['levelId', levelId], ['recipe', '{"v":1}'],
+  ];
+
+  /** Πρώτη αποστολή των «κανονικών» μερών, και μετά μία δεύτερη — τι απάντησε, και πόσες φορές έτρεξε ο handler. */
+  async function secondAfterFirst(second: NextRequest): Promise<{ response: NextResponse; runs: number }> {
+    const { deps } = world();
+    const { calls, execute } = handler();
+    await runIdempotently(upload(parts([1, 2, 3])), 'user_a', undefined, execute, deps);
+    const response = await runIdempotently(second, 'user_a', undefined, execute, deps);
+    return { response, runs: calls.count };
+  }
+
+  it('Μ1 ίδια μέρη, ΑΛΛΟ boundary ⇒ αναπαραγωγή, ο handler τρέχει μία φορά', async () => {
+    const again = upload(parts([1, 2, 3]));
+    expect(again.headers.get('content-type')).not.toBe(upload(parts([1, 2, 3])).headers.get('content-type'));
+
+    const { response, runs } = await secondAfterFirst(again);
+    expect(runs).toBe(1);
+    expect(response.status).toBe(201);
+    expect(response.headers.get(IDEMPOTENT_REPLAYED_HEADER)).toBe('true');
+  });
+
+  it('Μ2 ίδιο κλειδί, άλλα BYTES αρχείου ⇒ 422 KEY_REUSED χωρίς εκτέλεση', async () => {
+    const { response, runs } = await secondAfterFirst(upload(parts([1, 2, 4])));
+    expect(response.status).toBe(422);
+    expect(await bodyOf(response)).toMatchObject({ errorCode: IDEMPOTENCY_ERROR.KEY_REUSED });
+    expect(runs).toBe(1);
+  });
+
+  it('Μ3 ίδιο κλειδί, άλλο πεδίο κειμένου ⇒ 422 KEY_REUSED', async () => {
+    const { response, runs } = await secondAfterFirst(upload(parts([1, 2, 3], 'lvl_2')));
+    expect(response.status).toBe(422);
+    expect(runs).toBe(1);
+  });
+
+  it('Μ4 άλλη σειρά μερών · άλλο όνομα αρχείου ⇒ η ΙΔΙΑ πράξη', async () => {
+    const shuffled = upload([['recipe', '{"v":1}'], ['levelId', 'lvl_1'], ['file', png([1, 2, 3]), 'renamed.png']]);
+    const { response, runs } = await secondAfterFirst(shuffled);
+    expect(response.headers.get(IDEMPOTENT_REPLAYED_HEADER)).toBe('true');
+    expect(runs).toBe(1);
+  });
+
+  it('Μ5 multipart που δεν διαβάζεται ⇒ 400 BODY_UNREADABLE, ΠΟΤΕ εκτέλεση χωρίς σύνορο', async () => {
+    const { deps, fake } = world();
+    const { calls, execute } = handler();
+    const broken = new NextRequest(UPLOAD_URL, {
+      method: 'POST',
+      headers: { [IDEMPOTENCY_KEY_HEADER]: 'key-1', 'content-type': 'multipart/form-data; boundary=x' },
+      body: 'this is not a multipart body',
+    });
+    const refused = await runIdempotently(broken, 'user_a', undefined, execute, deps);
+
+    expect(refused.status).toBe(400);
+    expect(await bodyOf(refused)).toMatchObject({ errorCode: IDEMPOTENCY_ERROR.BODY_UNREADABLE });
+    expect(calls.count).toBe(0);
+    expect(fake.all(RECORDS)).toHaveLength(0);
+  });
+
+  it('Μ6 ο handler διαβάζει το σώμα του ΑΝΕΓΓΙΧΤΟ μετά το αποτύπωμα', async () => {
+    const { deps } = world();
+    const request = upload(parts([1, 2, 3]));
+    const seen: string[] = [];
+    await runIdempotently(request, 'user_a', undefined, async () => {
+      seen.push(String((await request.formData()).get('levelId')));
+      return { response: NextResponse.json({ success: true }), thrown: false };
+    }, deps);
+
+    expect(seen).toStrictEqual(['lvl_1']);
   });
 });
 

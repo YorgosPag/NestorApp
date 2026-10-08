@@ -180,6 +180,11 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dxf:publish-model-requested', {});
     return true;
   }
+  // ADR-909 Β2.5: Open the «Δημοσίευση κάτοψης» dialog (PublishFloorplanHost listens)
+  if (action === 'open-publish-floorplan-dialog') {
+    EventBus.emit('dxf:publish-floorplan-requested', {});
+    return true;
+  }
   // ADR-651 Φάση Ε: Open engineer-stamp dialog (StampHost listens)
   if (action === 'open-stamp-dialog') {
     EventBus.emit('dxf:stamp-dialog-requested', {});

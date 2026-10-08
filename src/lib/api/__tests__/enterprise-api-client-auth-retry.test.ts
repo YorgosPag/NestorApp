@@ -235,11 +235,22 @@ describe('EnterpriseApiClient — επανάληψη μόνο με ταυτότ�
     expect(keyOf(0)).toBeUndefined();
   });
 
-  it('Ρ5: FormData ⇒ ΧΩΡΙΣ κλειδί και ΜΙΑ αποστολή (δεν ορίζεται αποτύπωμα πάνω σε ροή)', async () => {
+  it('Ρ5: FormData ⇒ ΧΩΡΙΣ κλειδί και ΜΙΑ αποστολή (το κλειδί ΔΕΝ γεννιέται μόνο του για ανέβασμα)', async () => {
     fetchMock.mockResolvedValue(makeResponse(503, UNAVAILABLE));
     await expect(apiClient.post('/api/x', new FormData())).rejects.toMatchObject({ statusCode: 503 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(keyOf(0)).toBeUndefined();
+  });
+
+  it('Ρ5β: FormData με κλειδί ΤΟΥ ΚΑΛΟΥΝΤΟΣ ⇒ φεύγει με αυτό και ξαναστέλνεται με το ΙΔΙΟ (ADR-909 Β2.0)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(makeResponse(503, UNAVAILABLE))
+      .mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    const headers = { 'Idempotency-Key': 'idk_caller_1' };
+    await expect(apiClient.post('/api/x', new FormData(), { headers })).resolves.toEqual(OK_ENVELOPE.data);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(keyOf(0)).toBe('idk_caller_1');
+    expect(keyOf(1)).toBe('idk_caller_1');
   });
 
   it('Ρ6: `retry: false` ⇒ ΜΙΑ αποστολή, ακόμη και με κλειδί', async () => {

@@ -11,6 +11,9 @@
  * κανόνων *(ενεργό κτήριο · όροφοι · κτήρια)* θα σήμαιναν ότι η δημοσίευση μπορεί να στείλει
  * **άλλο κτήριο** από αυτό που κατεβάζει ο ίδιος άνθρωπος, σιωπηλά.
  *
+ * Η συναρμολόγηση *(σήμα → gate → `useExportDeps` → διάλογος)* ζει στον κοινό `PublishDialogHost`
+ * από τότε που απέκτησε δεύτερο προορισμό, την κάτοψη (ADR-909 Β2.5).
+ *
  * Mounted ως `React.Suspense` leaf στο `DxfViewerDialogs`. ADR-040: μηδέν canvas subscriptions.
  *
  * @see ../ui/components/publish-model/PublishModelDialog — το σώμα του χειριστηρίου
@@ -18,8 +21,7 @@
 
 import * as React from 'react';
 
-import { useEventGatedDialog } from './dialog-hosts/useEventGatedDialog';
-import { useExportDeps } from './dialog-hosts/useExportDeps';
+import { PublishDialogHost } from './dialog-hosts/PublishDialogHost';
 import { PublishModelDialog } from '../ui/components/publish-model/PublishModelDialog';
 
 export interface PublishModelHostProps {
@@ -27,34 +29,6 @@ export interface PublishModelHostProps {
   readonly buildingId?: string;
 }
 
-export function PublishModelHost({ buildingId }: PublishModelHostProps): React.ReactElement | null {
-  const { open, close } = useEventGatedDialog('dxf:publish-model-requested');
-  if (!open) return null;
-  return <PublishModelBody buildingId={buildingId} onClose={close} />;
-}
-
-/**
- * ⚠️ **Χωριστό σώμα, όπως στον `ExportHost`**: το `useExportDeps` ανοίγει συνδρομές Firestore,
- * και ένας always-mounted host θα τις κρατούσε ζωντανές **πάντα**. Το gate είναι πάνω από τα
- * hooks, όχι μέσα τους.
- */
-function PublishModelBody({ buildingId, onClose }: {
-  readonly buildingId?: string;
-  readonly onClose: () => void;
-}): React.JSX.Element {
-  const { activeBuildingId, collect } = useExportDeps(buildingId);
-
-  const handleOpenChange = React.useCallback(
-    (next: boolean) => { if (!next) onClose(); },
-    [onClose],
-  );
-
-  return (
-    <PublishModelDialog
-      open
-      onOpenChange={handleOpenChange}
-      activeBuildingId={activeBuildingId}
-      collectDeps={collect}
-    />
-  );
+export function PublishModelHost({ buildingId }: PublishModelHostProps): React.ReactElement {
+  return <PublishDialogHost event="dxf:publish-model-requested" Dialog={PublishModelDialog} buildingId={buildingId} />;
 }

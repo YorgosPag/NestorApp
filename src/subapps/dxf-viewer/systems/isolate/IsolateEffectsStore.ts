@@ -71,7 +71,31 @@ const store = createExternalStore<IsolateEffectsSnapshot>(INITIAL_SNAPSHOT);
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getIsolateEffectsSnapshot(): IsolateEffectsSnapshot {
-  return store.get();
+  return suspendedDepth > 0 ? INITIAL_SNAPSHOT : store.get();
+}
+
+// ─── Scoped suspension (ADR-909 Β2.2) ────────────────────────────────────────
+
+/** > 0 ⇒ οι αναγνώστες βλέπουν «καμία απομόνωση». Μετρητής, ώστε εμφωλευμένες κλήσεις να μη λύνουν η μία την άλλη. */
+let suspendedDepth = 0;
+
+/**
+ * **Τρέξε το `render` σαν να μην υπάρχει απομόνωση** — χωρίς να αλλάξει η απομόνωση της συνεδρίας.
+ *
+ * Η απομόνωση είναι **προσωρινή κατάσταση όψης** (Revit: *«Temporary Hide/Isolate does not affect
+ * printing»*). Ό,τι αποδίδεται για να **φύγει από την οθόνη** — δημόσια κάτοψη — δεν επιτρέπεται να την
+ * κληρονομήσει: με απομονωμένη μία κολόνα, το κοινό θα έβλεπε μόνο την κολόνα.
+ *
+ * ⚠️ **Μόνο σύγχρονα** (ίδιο συμβόλαιο με το `setPrintColorPolicy`): κανένα `await` μέσα στο `render`.
+ * ⛔ Δεν γράφει στο store και δεν ειδοποιεί συνδρομητές — ο ζωντανός καμβάς δεν ξανασχεδιάζεται.
+ */
+export function renderWithIsolateSuspended<T>(render: () => T): T {
+  suspendedDepth += 1;
+  try {
+    return render();
+  } finally {
+    suspendedDepth -= 1;
+  }
 }
 
 // ─── Subscription ────────────────────────────────────────────────────────────

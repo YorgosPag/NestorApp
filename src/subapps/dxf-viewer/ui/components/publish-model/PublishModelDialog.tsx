@@ -43,7 +43,6 @@ import { PublishedModelFreshness } from '@/components/listings/PublishedModelFre
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { usePropertiesByBuilding } from '@/components/properties/shared/usePropertiesByBuilding';
 import { MODEL_STATE_MARKS } from '@/lib/listings/listing-model-declaration';
-import type { Property } from '@/types/property';
 import { createModuleLogger } from '@/lib/telemetry';
 
 import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
@@ -54,6 +53,7 @@ import {
 } from '../../../io/model-publish/publish-model-to-property';
 import type { ExportDeps } from '../../../export/types';
 import { usePublishModelState } from './usePublishModelState';
+import { Field, PropertyPicker } from '../publish-shared/publish-dialog-fields';
 
 const logger = createModuleLogger('DXF_PUBLISH_MODEL');
 
@@ -199,48 +199,5 @@ export function PublishModelDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/**
- * Ο επιλογέας ακινήτου.
- *
- * ⛔ **ΚΑΝΕΝΑ `<SelectItem value="">`** *(CHECK 3.48)*: το Radix **δεσμεύει** το κενό string και
- * ένα τέτοιο στοιχείο ρίχνει **ολόκληρη** την επιφάνεια σε χρόνο εκτέλεσης. Το «τίποτα
- * επιλεγμένο» το λέει το `placeholder`, και το «τίποτα διαθέσιμο» ένα **μη επιλέξιμο** μήνυμα.
- */
-function PropertyPicker({ properties, value, onChange }: {
-  readonly properties: readonly Property[];
-  readonly value: string;
-  readonly onChange: (id: string) => void;
-}): React.JSX.Element {
-  const { t } = useTranslation('dxf-viewer-shell');
-  return (
-    <Select value={value === '' ? undefined : value} onValueChange={onChange}>
-      <SelectTrigger><SelectValue placeholder={t('publishModel.propertyPlaceholder')} /></SelectTrigger>
-      <SelectContent>
-        {properties.length === 0 ? (
-          <p className="px-2 py-1.5 text-sm text-muted-foreground">{t('publishModel.noProperties')}</p>
-        ) : (
-          properties.map((property) => (
-            <SelectItem key={property.id} value={property.id}>{propertyLabel(property)}</SelectItem>
-          ))
-        )}
-      </SelectContent>
-    </Select>
-  );
-}
-
-/** «A-101 — Διαμέρισμα 2ου» ή σκέτο το όνομα: ο κωδικός είναι **προαιρετικός** στον τύπο. */
-function propertyLabel(property: Property): string {
-  return property.code ? `${property.code} — ${property.name}` : property.name;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }): React.JSX.Element {
-  return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium">
-      <span className="text-muted-foreground">{label}</span>
-      {children}
-    </label>
   );
 }

@@ -41,6 +41,7 @@ import {
   type IdempotencyAcquisition,
   type StoredIdempotentResponse,
 } from './idempotency-store';
+import { canonicalMultipartOf } from './multipart-fingerprint';
 
 const logger = createModuleLogger('IDEMPOTENCY');
 
@@ -90,17 +91,45 @@ function replayOf(stored: StoredIdempotentResponse): NextResponse {
   });
 }
 
-/** Εφαρμόζεται μόνο σε πράξη με κλειδί, σώμα JSON (ή κανένα), και όχι `natural`. */
+/**
+ * **Με ποιο σώμα ορίζεται αποτύπωμα** — `null` ⇒ το σύνορο δεν εφαρμόζεται (ωμή ροή, `octet-stream`, …).
+ *
+ * 🔑 Το multipart **έχει** αποτύπωμα (ADR-909 Β2.0): όχι πάνω στο ωμό σώμα, που αλλάζει `boundary` σε κάθε
+ * αίτηση, αλλά πάνω στα **μέρη** του (`canonicalMultipartOf`).
+ */
+type FingerprintedBody = 'json' | 'multipart';
+
+function fingerprintedBodyOf(request: NextRequest): FingerprintedBody | null {
+  const contentType = request.headers.get('content-type');
+  if (contentType === null || contentType.includes('application/json')) return 'json';
+  return contentType.includes('multipart/form-data') ? 'multipart' : null;
+}
+
+/** Εφαρμόζεται μόνο σε πράξη με κλειδί, σώμα με ορισμένο αποτύπωμα (ή κανένα σώμα), και όχι `natural`. */
 function appliesTo(request: NextRequest, policy: IdempotencyPolicy | undefined): boolean {
   if (SAFE_METHODS.has(request.method) || policy?.mode === 'natural') return false;
   if (request.headers.get(IDEMPOTENCY_KEY_HEADER) === null) return false;
-  const contentType = request.headers.get('content-type');
-  return contentType === null || contentType.includes('application/json');
+  return fingerprintedBodyOf(request) !== null;
 }
 
-async function keyedRequestOf(request: NextRequest, principal: string, key: string): Promise<KeyedRequest> {
+/**
+ * Το σώμα ως κείμενο προς αποτύπωση — `null` όταν ένα multipart **δεν διαβάζεται**.
+ *
+ * ⚠️ Διαβάζεται από **αντίγραφο** της αίτησης: ο handler διαβάζει το δικό του σώμα ανέγγιχτο.
+ */
+async function fingerprintTextOf(request: NextRequest): Promise<string | null> {
+  if (fingerprintedBodyOf(request) !== 'multipart') return request.clone().text();
+  try {
+    return await canonicalMultipartOf(await request.clone().formData());
+  } catch {
+    return null;
+  }
+}
+
+async function keyedRequestOf(request: NextRequest, principal: string, key: string): Promise<KeyedRequest | null> {
   const { pathname, search } = request.nextUrl;
-  const body = await request.clone().text();
+  const body = await fingerprintTextOf(request);
+  if (body === null) return null;
   const fingerprint = await sha256HexOfText(`${request.method}\n${pathname}${search}\n${body}`);
   const recordId = generateDeterministicIdempotencyRecordId(principal, request.method, pathname, key);
   return { recordId, principal, method: request.method, path: pathname, fingerprint };
@@ -144,6 +173,10 @@ export async function runIdempotently(
     return boundaryResponse(IDEMPOTENCY_ERROR.KEY_INVALID, 400, 'Invalid idempotency key');
   }
   const keyed = await keyedRequestOf(request, principal, key);
+  // ⛔ Ποτέ εκτέλεση **χωρίς** σύνορο επειδή το σώμα δεν διαβάστηκε: ο καλών ζήτησε «μία φορά».
+  if (keyed === null) {
+    return boundaryResponse(IDEMPOTENCY_ERROR.BODY_UNREADABLE, 400, 'Request body could not be read');
+  }
   let acquisition: IdempotencyAcquisition;
   try {
     acquisition = await acquireIdempotencyRecord(deps.db(), keyed.recordId, keyed, deps.now());

@@ -181,6 +181,20 @@ export const EXPORT_PANEL: RibbonPanelDef = {
             tooltipKey: 'ribbon.tooltips.publishModel',
           },
         },
+        {
+          // ADR-909 Β2.5 — δίπλα στη «Δημοσίευση 3D»: ο **ίδιος** προορισμός (η αγγελία του ακινήτου),
+          // άλλο υλικό. Η κάτοψη παράγεται από το τρέχον σχέδιο· ο διάλογος δείχνει τι θα δει το κοινό.
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.publishFloorplan',
+            labelKey: 'ribbon.commands.publishFloorplan',
+            icon: 'export-dxf',
+            commandKey: 'open-publish-floorplan-dialog',
+            action: 'open-publish-floorplan-dialog',
+            tooltipKey: 'ribbon.tooltips.publishFloorplan',
+          },
+        },
       ],
     },
   ],

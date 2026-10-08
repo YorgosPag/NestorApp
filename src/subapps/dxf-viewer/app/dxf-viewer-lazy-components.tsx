@@ -34,6 +34,8 @@ export const ExportHost = React.lazy(() => import('./ExportHost').then(mod => ({
 // 🔑 **Τεμπέλικο επίτηδες**: κουβαλά τον αναγνώστη glTF (μέτρηση της δήλωσης) — κώδικας που
 //    δεν αφορά κανέναν μέχρι τη στιγμή που κάποιος πατά «Δημοσίευση 3D».
 export const PublishModelHost = React.lazy(() => import('./PublishModelHost').then(mod => ({ default: mod.PublishModelHost })));
+// ADR-909 Β2.5 — διάλογος «Δημοσίευση κάτοψης» (παράγει την κάτοψη της αγγελίας από το τρέχον σχέδιο).
+export const PublishFloorplanHost = React.lazy(() => import('./PublishFloorplanHost').then(mod => ({ default: mod.PublishFloorplanHost })));
 // ADR-651 Φάση Ε — διάλογος σφραγίδας μηχανικού (ανοίγει από το «Πινακίδα Σχεδίου» tab).
 export const StampHost = React.lazy(() => import('./StampHost').then(mod => ({ default: mod.StampHost })));
 // ADR-651 Φάση Δ — διάλογος «AI Πινακίδα» (ανοίγει από το «Πινακίδα Σχεδίου» tab).

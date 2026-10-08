@@ -41,7 +41,6 @@ import type {
   ModelStateMark,
 } from '@/lib/listings/listing-model-declaration';
 import { measureModelBytes } from '@/services/listings/gltf-model-measure';
-import { RealtimeService } from '@/services/realtime';
 
 import {
   resolveExportFloors,
@@ -49,6 +48,7 @@ import {
 } from '../../export/core/export-floor-scope';
 import { exportFloorsToMesh3d } from '../../export/formats/mesh3d-export-adapter';
 import type { ExportDeps, ExportFloorScope } from '../../export/types';
+import { announceSupersededFiles, archivedFileIdsOf } from '../publish-shared/announce-superseded-files';
 
 /**
  * Το εύρος που **έχει νόημα για μία αγγελία**.
@@ -259,53 +259,15 @@ async function sendModel(
   const fileId = readFileId(payload);
   if (fileId === null) return { ok: false, refusal: 'rejected' };
 
-  announceArchived(readArchived(payload), fileId);
+  announceSupersededFiles(archivedFileIdsOf(readResponseField(payload, 'archived')), fileId);
 
   return { ok: true, fileId };
-}
-
-/**
- * 🌐 **Η ΙΣΤΟΡΙΑ ΕΓΡΑΦΤΗΚΕ ΣΤΟΝ ΔΙΑΚΟΜΙΣΤΗ — ΕΔΩ ΜΟΝΟ ΑΝΑΚΟΙΝΩΝΕΤΑΙ** (ADR-845 Ο-27 · ADR-862 Φ0 Β10).
- *
- * 🔴 **ΑΛΛΑΞΕ ΣΤΟ Β10.** Μέχρι τότε η αρχειοθέτηση των προκατόχων γινόταν **εδώ**, με client SDK
- * (`supersedeFileRecord` → `moveToTrash`), γιατί η μία πόρτα ήταν client και η δημοσίευση
- * `'server-only'`. Ο κανόνας `cdeCustodyUnchanged()` (Β4) άρχισε σωστά να απορρίπτει την εγγραφή
- * `cdeState` από τον browser, και το `allSettled` **έκρυψε** την άρνηση. Πλέον η πόρτα **είναι** ο
- * server γραφέας και την καλεί η ίδια η διαδρομή δημοσίευσης, με τη **δική της** ταυτότητα.
- *
- * 🔑 Ο πελάτης εκπέμπει `FILE_SUPERSEDED` **μόνο** για ό,τι ο διακομιστής **πράγματι** αρχειοθέτησε
- * (`archived`), ποτέ για ό,τι απλώς ταυτοποίησε (`supersedes`): ένα γεγονός για πράξη που δεν
- * έγινε θα έκρυβε από τη λίστα αρχείο που **είναι ακόμη ενεργό**.
- */
-function announceArchived(archived: readonly string[], fileId: string): void {
-  for (const previousFileId of archived) {
-    RealtimeService.dispatch('FILE_SUPERSEDED', {
-      fileId: previousFileId,
-      supersededByFileId: fileId,
-      timestamp: Date.now(),
-    });
-  }
 }
 
 /** Ο διακομιστής υπόσχεται σχήμα· ο πελάτης το **ελέγχει**, δεν το ισχυρίζεται *(N.2)*. */
 function readFileId(payload: unknown): string | null {
   const fileId = readResponseField(payload, 'fileId');
   return typeof fileId === 'string' && fileId.length > 0 ? fileId : null;
-}
-
-/**
- * **Ποιοι αρχειοθετήθηκαν** — και `[]` για **κάθε** άλλη απάντηση.
- *
- * ⚠️ **Fail-closed προς την ανακοίνωση**: ένα σχήμα που δεν αναγνωρίζεται σημαίνει *«μην ανακοινώσεις
- * τίποτα»* — η χειρότερη εκδοχή του λάθους θα ήταν να κρυφτεί από τη λίστα αρχείο που **δεν**
- * αρχειοθετήθηκε.
- */
-function readArchived(payload: unknown): readonly string[] {
-  const raw = readResponseField(payload, 'archived');
-  if (!Array.isArray(raw)) return [];
-
-  const ids: readonly unknown[] = raw;
-  return ids.filter((id): id is string => typeof id === 'string' && id.length > 0);
 }
 
 /**

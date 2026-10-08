@@ -5674,7 +5674,8 @@
           "alignment": "Format Cells: Alignment"
         }
       },
-      "publishModel": "Publish 3D"
+      "publishModel": "Publish 3D",
+      "publishFloorplan": "Publish floor plan"
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -5686,7 +5687,8 @@
       "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code",
       "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)",
       "runStructuralAnalysis": "3D frame static linear analysis (K·u=F) → real internal forces M/V/N + per-member diagrams (informational — does not replace tributary design loads)",
-      "publishModel": "Sends this drawing’s 3D model to a property listing — with a state mark and a declared signatory"
+      "publishModel": "Sends this drawing’s 3D model to a property listing — with a state mark and a declared signatory",
+      "publishFloorplan": "Builds the listing floor plan from the current drawing and sends it to a property — with a preview before it leaves"
     },
     "symbolPicker": {
       "title": "Symbol Picker",
@@ -7804,6 +7806,54 @@
       "declaration-too-large": "The model declaration does not fit in the file metadata",
       "rejected": "The server did not accept the model",
       "network": "No connection to the server — try again"
+    }
+  },
+  "publishFloorplan": {
+    "dialogTitle": "Publish floor plan",
+    "dialogDescription": "The floor plan is generated from the drawing you see now and published on the property listing as “Measured”. Dimensions, notes and building services are left out.",
+    "property": "Property",
+    "furniture": "With furniture",
+    "furnitureHint": "Furniture and decoration from the drawing. Sanitary fixtures and the kitchen are always shown.",
+    "preview": "This is what the public will see",
+    "previewAlt": "Preview of the floor plan that will be published",
+    "preparing": "Preparing the image…",
+    "previewMeta": "{width} × {height} px · {size}",
+    "unruled": "Some elements were left out because their type has not been reviewed for public floor plans yet: {types}",
+    "submit": "Publish",
+    "publishing": "Sending…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "outcomes": {
+      "published": "The floor plan was published on the listing.",
+      "uploaded-not-listed": "The floor plan was saved on the property. The listing is not published, so it is not visible to the public yet.",
+      "declared-full": "The floor plan was saved, but the listing already holds the maximum number of floor plans — it is not visible to the public. Remove one from the property’s “Floor plan” tab.",
+      "declared-failed": "The floor plan was saved, but it was not declared on the listing — it is not visible to the public. Declare it from the property’s “Floor plan” tab.",
+      "listing-failed": "The floor plan was saved, but the listing was not refreshed. The nightly check will fix it, or try again."
+    },
+    "refusals": {
+      "no-level": "No drawing is open — open the level you want to publish first",
+      "no-geometry": "The drawing has nothing that shows on a public floor plan — check that the wall layers are visible",
+      "too-large": "The image came out larger than 20 MB and cannot be sent",
+      "encode-failed": "The browser could not build the image — try again",
+      "network": "The server did not answer. Press “Publish” again: if the first upload arrived, it will not be done twice.",
+      "rejected": "The server did not accept the floor plan",
+      "FLOORPLAN_LEVEL_REQUIRED": "The level being published was not sent — close the dialog and try again",
+      "FLOORPLAN_FILE_REQUIRED": "No image was sent — close the dialog and try again",
+      "FLOORPLAN_TYPE_UNSUPPORTED": "The image is not a PNG and is not accepted",
+      "FLOORPLAN_FILE_EMPTY": "The image came out empty — try again",
+      "FLOORPLAN_FILE_TOO_LARGE": "The image is larger than 20 MB and is not accepted",
+      "FLOORPLAN_RECIPE_INVALID": "The image details could not be read — reload the page and try again",
+      "FLOORPLAN_PROFILE_UNKNOWN": "Your app is using unknown public floor plan rules — reload the page",
+      "FLOORPLAN_PROFILE_STALE": "The public floor plan rules changed since you opened the page — reload it and publish again",
+      "FLOORPLAN_BYTES_MISMATCH": "The image does not have the declared dimensions — try again",
+      "FLOORPLAN_LEVEL_NOT_FOUND": "The level of this drawing was not found — it may have been deleted",
+      "FLOORPLAN_LEVEL_UNPLACED": "The drawing is not linked to a building, so we cannot tell whether it belongs to this property — link the level to its building first",
+      "FLOORPLAN_LEVEL_NOT_OF_PROPERTY": "This drawing belongs to a different building or floor than the property you picked",
+      "FLOORPLAN_LEVEL_WITHOUT_DRAWING": "The level has no saved drawing — save the drawing first",
+      "FLOORPLAN_SOURCE_UNREADABLE": "The version of the saved drawing could not be read — save it again and retry",
+      "FLOORPLAN_PUBLICATION_NOT_CAPABLE": "You do not have permission to publish material on listings",
+      "FLOORPLAN_SHELF_FULL": "The listing already holds the maximum number of floor plans — remove one from the property’s “Floor plan” tab",
+      "FLOORPLAN_UPLOAD_FAILED": "Saving the image failed on the server — try again"
     }
   }
 }

@@ -21,23 +21,13 @@ import {
   buildPendingFileRecordData,
   type BuildPendingFileRecordResult,
 } from '@/services/file-record';
+import { FLOORPLAN_CONTENT_TYPE } from './floorplan-publication-contract';
 import { floorplanPublicationIdentityKey } from './floorplan-publication-identity';
 import type { FloorplanRenderRecipe } from './floorplan-render-recipe';
 import type { ModelSourceRevision } from './model-source-revisions';
 
 /** Η επέκταση της κανονικής διαδρομής — **χωρίς τελεία**. Η πόρτα δέχεται **μόνο** PNG. */
 const FLOORPLAN_FILE_EXT = 'png';
-
-/** Ο τύπος περιεχομένου που γεννά ο viewer — ιδιότητα του **εγγράφου**, γι' αυτό ζει εδώ. */
-export const FLOORPLAN_CONTENT_TYPE = 'image/png';
-
-/**
- * Το ταβάνι μεγέθους της εικόνας που δέχεται η πόρτα.
- *
- * ⚠️ **Όχι το `FILE_TYPE_CONFIG.image.maxSize` (5 MB)**: εκείνο είναι όριο **ανεβάσματος φωτογραφίας από
- * άνθρωπο**. Εδώ φτάνει PNG υψηλής ανάλυσης από τη μηχανή εκτύπωσης, που το ράφι θα ξαναψήσει σε webp.
- */
-export const FLOORPLAN_MAX_BYTES = 20 * 1024 * 1024;
 
 /** **Το αρχείο σκηνής, στην έκδοση που είχε τη στιγμή της δημοσίευσης** — ακριβώς ένα, ποτέ κανένα. */
 type FloorplanSourceRevisions = readonly [ModelSourceRevision];

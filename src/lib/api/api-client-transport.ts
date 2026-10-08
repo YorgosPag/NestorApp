@@ -41,8 +41,12 @@ const REPLAYABLE_METHODS: ReadonlySet<HttpMethod> = new Set<HttpMethod>(['GET'])
 
 /**
  * **Παίρνει αυτό το αίτημα `Idempotency-Key`;** — ADR-853 Ε3 Φάση 2 (Stripe: «All POST requests accept
- * idempotency keys»). Κάθε πράξη εκτός `GET`, με σώμα JSON ή χωρίς σώμα. ⚠️ **Όχι** δυαδικό σώμα
- * (`FormData`/`Blob`): το σύνορο δεν ορίζει αποτύπωμα πάνω σε ροή, άρα δεν το αναγνωρίζει ως «την ίδια» πράξη.
+ * idempotency keys»). Κάθε πράξη εκτός `GET`, με σώμα JSON ή χωρίς σώμα. ⚠️ **Όχι αυτόματα** σε δυαδικό σώμα
+ * (`FormData`/`Blob`): ένα ανέβασμα που ξαναστέλνεται μόνο του είναι megabytes που κανείς δεν ζήτησε.
+ *
+ * 🔑 **Το σύνορο ΟΜΩΣ αναγνωρίζει multipart** (ADR-909 Β2.0 — αποτύπωμα πάνω στα **μέρη**, όχι στο ωμό σώμα):
+ * ο καλών που **θέλει** «μία φορά» δίνει ο ίδιος το κλειδί στις κεφαλίδες, και το `keyedHeaders` το αφήνει
+ * ανέγγιχτο. Απόφαση ανά πράξη, όχι εξ ορισμού. Σκέτο `Blob` / ροή: ακόμη χωρίς αποτύπωμα.
  */
 export function isKeyedRequest(method: HttpMethod, body: unknown): boolean {
   return !REPLAYABLE_METHODS.has(method) && !isBinaryRequestBody(body);

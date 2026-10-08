@@ -75,22 +75,49 @@ export function resolvePrintTransform(
 export function prepareScene2dCapture(
   input: Capture2dInput,
 ): { dxfScene: DxfScene; viewport: Viewport } {
-  const dxfScene = convertSceneToDxf(input.scene, input.userDrawingUnits);
+  const dxfScene = convertSceneForCapture(input.scene, input.userDrawingUnits);
+  const viewport = rasterToViewport(input.raster);
+  return { dxfScene, viewport };
+}
+
+/**
+ * Convert the scene to DXF-shape and hydrate the LayerStore SSoT — the half of
+ * {@link prepareScene2dCapture} that does **not** need a raster yet.
+ *
+ * ADR-909 Β2.3 — the public-floorplan capture sizes its raster FROM the converted
+ * scene's bounds, so it needs the scene before it can name a viewport.
+ */
+export function convertSceneForCapture(
+  scene: SceneModel | null,
+  userDrawingUnits?: SceneUnits,
+): DxfScene {
+  const dxfScene = convertSceneToDxf(scene, userDrawingUnits);
   // Hydrate the LayerStore SSoT so the renderer resolves layer
   // visibility/frozen/colour exactly as the live canvas does (the pure
   // convertSceneToDxf intentionally performs no side effects).
   if (dxfScene.layersById) {
     setLayers(Object.values(dxfScene.layersById));
   }
-  const viewport = rasterToViewport(input.raster);
-  return { dxfScene, viewport };
+  return dxfScene;
+}
+
+/** An offscreen render, with the transform that placed the drawing on it. */
+export interface OffscreenScene2dRender {
+  canvas: HTMLCanvasElement;
+  /** World→pixel transform actually used — callers derive the visible world frame from it. */
+  transform: ViewTransform;
 }
 
 /**
- * Capture the current 2D scene to a paper-resolution PNG `CaptureResult`.
+ * Render an already-converted scene into a fresh offscreen canvas at `input.raster`
+ * size. The ONE render call shared by the print raster path and the public-floorplan
+ * capture (ADR-909 Β2.3) — same options, same plot-style scope.
  */
-export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
-  const { dxfScene, viewport } = prepareScene2dCapture(input);
+export function renderDxfSceneOffscreen(
+  dxfScene: DxfScene,
+  viewport: Viewport,
+  input: Capture2dInput,
+): OffscreenScene2dRender {
   const { canvas, renderer } = createOffscreen2dTarget(input.raster.widthPx, input.raster.heightPx);
   const transform = resolvePrintTransform(dxfScene, viewport, input);
 
@@ -113,6 +140,16 @@ export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
   } finally {
     clearPrintColorPolicy();
   }
+
+  return { canvas, transform };
+}
+
+/**
+ * Capture the current 2D scene to a paper-resolution PNG `CaptureResult`.
+ */
+export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
+  const { dxfScene, viewport } = prepareScene2dCapture(input);
+  const { canvas } = renderDxfSceneOffscreen(dxfScene, viewport, input);
 
   return {
     kind: 'raster',

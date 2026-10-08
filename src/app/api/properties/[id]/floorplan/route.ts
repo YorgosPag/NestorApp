@@ -36,11 +36,13 @@ import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
+import { buildPublishedFloorplanFileRecord } from '@/lib/listings/floorplan-file-record';
 import {
   FLOORPLAN_CONTENT_TYPE,
   FLOORPLAN_MAX_BYTES,
-  buildPublishedFloorplanFileRecord,
-} from '@/lib/listings/floorplan-file-record';
+  FLOORPLAN_UPLOAD_FIELDS,
+  type FloorplanRefusalCode,
+} from '@/lib/listings/floorplan-publication-contract';
 import { levelServesProperty } from '@/lib/listings/floorplan-level-binding';
 import {
   PNG_HEADER_BYTES,
@@ -87,8 +89,16 @@ interface FloorplanUpload {
   readonly recipe: FloorplanRenderRecipe;
 }
 
+/**
+ * **Η άρνηση της πόρτας** — ο κωδικός ελέγχεται από τον τύπο πάνω στην **κλειστή** λίστα του συμβολαίου:
+ * κωδικός που δεν υπάρχει εκεί δεν μεταγλωττίζεται, άρα ο διάλογος έχει μήνυμα για **καθέναν** (ADR-909 §6.2).
+ */
+function refusal(status: number, code: FloorplanRefusalCode): ApiError {
+  return new ApiError(status, code);
+}
+
 /** Κάθε άρνηση της συνταγής έχει δικό της κωδικό **και** δική της κατάσταση HTTP. */
-const RECIPE_REFUSAL: Readonly<Record<FloorplanRecipeRefusal, readonly [status: number, code: string]>> = {
+const RECIPE_REFUSAL: Readonly<Record<FloorplanRecipeRefusal, readonly [status: number, code: FloorplanRefusalCode]>> = {
   malformed: [400, 'FLOORPLAN_RECIPE_INVALID'],
   'unknown-profile': [400, 'FLOORPLAN_PROFILE_UNKNOWN'],
   // 409: το αίτημα είναι καλοσχηματισμένο· ο **πελάτης** είναι παλιός και οφείλει να ξαναφορτώσει.
@@ -99,24 +109,24 @@ const LEVEL_ID_MAX_LENGTH = 128;
 
 function readLevelId(raw: unknown): string {
   const valid = typeof raw === 'string' && raw !== '' && raw.length <= LEVEL_ID_MAX_LENGTH && !raw.includes('/');
-  if (!valid) throw new ApiError(400, 'FLOORPLAN_LEVEL_REQUIRED');
+  if (!valid) throw refusal(400, 'FLOORPLAN_LEVEL_REQUIRED');
   return raw;
 }
 
 /** Τα bytes: είναι PNG, χωρά, και **λέει τις διαστάσεις που δηλώνει η συνταγή**. */
 async function readFloorplanImage(formData: FormData): Promise<{ file: File; recipe: FloorplanRenderRecipe }> {
-  const file = formData.get('file');
-  if (!(file instanceof File)) throw new ApiError(400, 'FLOORPLAN_FILE_REQUIRED');
-  if (file.type !== FLOORPLAN_CONTENT_TYPE) throw new ApiError(415, 'FLOORPLAN_TYPE_UNSUPPORTED');
-  if (file.size === 0) throw new ApiError(400, 'FLOORPLAN_FILE_EMPTY');
-  if (file.size > FLOORPLAN_MAX_BYTES) throw new ApiError(413, 'FLOORPLAN_FILE_TOO_LARGE');
+  const file = formData.get(FLOORPLAN_UPLOAD_FIELDS.file);
+  if (!(file instanceof File)) throw refusal(400, 'FLOORPLAN_FILE_REQUIRED');
+  if (file.type !== FLOORPLAN_CONTENT_TYPE) throw refusal(415, 'FLOORPLAN_TYPE_UNSUPPORTED');
+  if (file.size === 0) throw refusal(400, 'FLOORPLAN_FILE_EMPTY');
+  if (file.size > FLOORPLAN_MAX_BYTES) throw refusal(413, 'FLOORPLAN_FILE_TOO_LARGE');
 
-  const reading = decodeFloorplanRenderRecipe(formData.get('recipe'));
-  if (!reading.ok) throw new ApiError(...RECIPE_REFUSAL[reading.why]);
+  const reading = decodeFloorplanRenderRecipe(formData.get(FLOORPLAN_UPLOAD_FIELDS.recipe));
+  if (!reading.ok) throw refusal(...RECIPE_REFUSAL[reading.why]);
 
   // 🔑 Μόνο η κεφαλίδα: το πλήρες σώμα το διαβάζει ο κορμός **μία** φορά, όταν πρόκειται να το γράψει.
   const header = new Uint8Array(await file.slice(0, PNG_HEADER_BYTES).arrayBuffer());
-  if (!recipeMatchesBytes(reading.recipe, header)) throw new ApiError(400, 'FLOORPLAN_BYTES_MISMATCH');
+  if (!recipeMatchesBytes(reading.recipe, header)) throw refusal(400, 'FLOORPLAN_BYTES_MISMATCH');
 
   return { file, recipe: reading.recipe };
 }
@@ -131,7 +141,7 @@ async function readSceneFileOfLevel(levelId: string, env: MaterialDoorEnv): Prom
   const snapshot = await env.adminDb.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc(levelId).get();
   const data = snapshot.data();
   if (data === undefined || !isPayloadOwnedByCompany(data, env.ctx.companyId)) {
-    throw new ApiError(404, 'FLOORPLAN_LEVEL_NOT_FOUND');
+    throw refusal(404, 'FLOORPLAN_LEVEL_NOT_FOUND');
   }
   const level: Record<string, unknown> = data;
 
@@ -140,24 +150,30 @@ async function readSceneFileOfLevel(levelId: string, env: MaterialDoorEnv): Prom
     logger.warn('Κάτοψη επιπέδου που δεν εξυπηρετεί το ακίνητο — άρνηση', {
       levelId, propertyId: env.propertyId, why: binding.why,
     });
-    throw new ApiError(
+    throw refusal(
       422,
       binding.why === 'level-unplaced' ? 'FLOORPLAN_LEVEL_UNPLACED' : 'FLOORPLAN_LEVEL_NOT_OF_PROPERTY',
     );
   }
 
   const sceneFileId = level.sceneFileId;
-  if (typeof sceneFileId !== 'string' || sceneFileId === '') throw new ApiError(422, 'FLOORPLAN_LEVEL_WITHOUT_DRAWING');
+  if (typeof sceneFileId !== 'string' || sceneFileId === '') throw refusal(422, 'FLOORPLAN_LEVEL_WITHOUT_DRAWING');
   return sceneFileId;
 }
 
 async function readFloorplanUpload(formData: FormData, env: MaterialDoorEnv): Promise<FloorplanUpload> {
   // ⚠️ Πρώτα ό,τι κρίνεται **χωρίς** ανάγνωση βάσης: ένα σπασμένο σώμα δεν αξίζει ούτε ένα `get()`.
-  const levelId = readLevelId(formData.get('levelId'));
+  const levelId = readLevelId(formData.get(FLOORPLAN_UPLOAD_FIELDS.levelId));
   const { file, recipe } = await readFloorplanImage(formData);
   const sceneFileId = await readSceneFileOfLevel(levelId, env);
   return { file, levelId, sceneFileId, recipe };
 }
+
+/** Οι δύο αρνήσεις που πετά **ο κορμός** για λογαριασμό αυτής της πόρτας — με τα δικά της ονόματα. */
+const FLOORPLAN_DOOR_CODES: Readonly<Record<'notCapable' | 'uploadFailed', FloorplanRefusalCode>> = {
+  notCapable: 'FLOORPLAN_PUBLICATION_NOT_CAPABLE',
+  uploadFailed: 'FLOORPLAN_UPLOAD_FAILED',
+};
 
 /**
  * 🏆 **Ό,ΤΙ ΕΙΝΑΙ ΤΗΣ ΚΑΤΟΨΗΣ** — ο κορμός κάνει όλα τα υπόλοιπα, με την **ίδια** σειρά που έχει και
@@ -167,7 +183,7 @@ const FLOORPLAN_DOOR: MaterialPublicationDoor<FloorplanUpload, FloorplanDeclarat
   // 🔒 Η πρόθεση εγγραφής γράφεται **εδώ** (CHECK 3.100)· το **πότε** τρέχει το αποφασίζει ο κορμός — πρώτο.
   judgeProperty: (query) => requirePropertyInTenantScope({ ...query, intent: 'write' }),
   category: FILE_CATEGORIES.FLOORPLANS,
-  codes: { notCapable: 'FLOORPLAN_PUBLICATION_NOT_CAPABLE', uploadFailed: 'FLOORPLAN_UPLOAD_FAILED' },
+  codes: FLOORPLAN_DOOR_CODES,
   read: readFloorplanUpload,
   fileOf: (upload) => upload.file,
   sceneFileIdsOf: (upload) => [upload.sceneFileId],
@@ -175,7 +191,7 @@ const FLOORPLAN_DOOR: MaterialPublicationDoor<FloorplanUpload, FloorplanDeclarat
     // 🔴 **ΑΥΣΤΗΡΟΤΕΡΟ ΑΠΟ ΤΟ ΜΟΝΤΕΛΟ, ΕΠΙΤΗΔΕΣ** (ADR-909 §5): εκεί η έλλειψη έκδοσης αφήνει την
     //    παλαιότητα `unknown`· εδώ θα άφηνε «Μετρημένη» κάτοψη που κανείς δεν μπορεί να πει αν ισχύει.
     const [source, ...rest] = birth.sourceRevisions;
-    if (source === undefined || rest.length > 0) throw new ApiError(422, 'FLOORPLAN_SOURCE_UNREADABLE');
+    if (source === undefined || rest.length > 0) throw refusal(422, 'FLOORPLAN_SOURCE_UNREADABLE');
 
     return buildPublishedFloorplanFileRecord({
       companyId: birth.companyId,
@@ -190,7 +206,7 @@ const FLOORPLAN_DOOR: MaterialPublicationDoor<FloorplanUpload, FloorplanDeclarat
   //    βάση και αόρατο στο κοινό — και ο άνθρωπος θα έβλεπε «επιτυχία».
   beforeWrite: (_upload, verdict, env) => {
     if (!floorplanDeclarationHasRoom(declaredFloorplansOf(env.property), verdict.supersedes)) {
-      throw new ApiError(409, 'FLOORPLAN_SHELF_FULL');
+      throw refusal(409, 'FLOORPLAN_SHELF_FULL');
     }
   },
   afterSuccession: (_upload, verdict, env) =>
