@@ -774,6 +774,8 @@ service cloud.firestore {
                     && holdBornAbsent()
                     // 📐 ADR-899 §3.7 — οι διαστάσεις τις μετρά ο κάδος, όχι ο πελάτης.
                     && measuredBornAbsent()
+                    // 📣 ADR-845 §7.17 Α4α — καμία διαβάθμιση/ταυτότητα δημοσίευσης «από κούνια».
+                    && publicationBornAbsent()
                     // 🗄️ ADR-281 · ADR-329 §3.9 — όχι νέο αρχείο κάτω από αποσυρμένο ακίνητο.
                     && parentPropertyIsLive(request.resource.data)
                     && resource == null; // Ensure document doesn't exist
@@ -811,6 +813,9 @@ service cloud.firestore {
                     && holdCustodyUnchanged()
                     // 📐 ADR-899 §3.7 — ούτε οι μετρημένες διαστάσεις (η οριστικοποίηση ήταν η ανοιχτή πόρτα).
                     && measuredUnchanged()
+                    // 📣 ADR-845 §7.17 Α4α — ούτε διαβάθμιση. Όχι όλο το κατηγόρημα: το `status`
+                    //    ΠΡΕΠΕΙ να αλλάξει εδώ (pending → ready).
+                    && publicationCustodyUnchanged()
                     // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
                     && fileStaysUnderLiveProperty();
 
@@ -847,6 +852,9 @@ service cloud.firestore {
                     //    ΑΓΓΙΞΕΙ τη δέσμευση. ⛔ ΜΗΝ προσθέσεις «hold == 'none'» εδώ — απορρίφθηκε.
                     && holdCustodyUnchanged()
                     && measuredUnchanged()
+                    // 📣 ADR-845 §7.17 Α4α — ούτε διαβάθμιση. (Το σκέλος φεύγει στην Α4β: ο κάδος
+                    //    εταιρικού αρχείου είναι πράξη διακομιστή, `POST /api/files/trash`.)
+                    && publicationCustodyUnchanged()
                     // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
                     && fileStaysUnderLiveProperty();
 
@@ -880,6 +888,10 @@ service cloud.firestore {
                     // 🔒 ADR-864 §21 — η επαναφορά δεν «καθαρίζει» τη δέσμευση.
                     && holdCustodyUnchanged()
                     && measuredUnchanged()
+                    // 📣 ADR-845 §7.17 Α4α — η επαναφορά δεν «ξαναγεννά» το αρχείο δημόσιο:
+                    //    `{ isDeleted: false, classification: 'public' }` ήταν η ανοιχτή πόρτα.
+                    //    (Το σκέλος φεύγει στην Α4β.)
+                    && publicationCustodyUnchanged()
                     // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
                     && fileStaysUnderLiveProperty();
 
@@ -911,6 +923,13 @@ service cloud.firestore {
                     //    κάθε μέλος της εταιρείας, όχι μόνο δημιουργός/διαχειριστής).
                     && holdCustodyUnchanged()
                     && measuredUnchanged()
+                    // 📣 ADR-845 §7.17 Α4α — ΟΛΟ το κατηγόρημα δημοσίευσης παγώνει εδώ: αυτό το
+                    //    σκέλος δεν είχε κανέναν λόγο να αγγίξει κατηγορία, κάτοχο, διαβάθμιση ή
+                    //    κύκλο ζωής — και το πρόσωπό του είναι το χαλαρότερο. Το `purpose` παγώνει
+                    //    ρητά, ΕΚΤΟΣ λίστας: ο επιλογέας υλικού δεν το ρωτά (άρα δεν ανήκει στο
+                    //    κατηγόρημα), και κανένας γραφέας πελάτη δεν το αλλάζει μετά τη γέννηση.
+                    && publicationPredicateUnchanged()
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['purpose'])
                     // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
                     && fileStaysUnderLiveProperty();
 
@@ -6266,6 +6285,48 @@ service cloud.firestore {
     function holdBornAbsent() {
       return request.resource.data.get('hold', 'none') == 'none'
              && !request.resource.data.keys().hasAny(holdCustodyKeys().removeAll(['hold']));
+    }
+
+    // =========================================================================
+    // 📣 ΤΑ ΠΕΔΙΑ ΔΗΜΟΣΙΕΥΣΗΣ ΑΡΧΕΙΟΥ — ADR-845 §7.17 (κλάση Ο-35, Α4α)
+    // =========================================================================
+    // Η δημόσια αγγελία ΠΑΡΑΓΕΤΑΙ από τα αρχεία του ακινήτου. Όποιος αλλάξει ένα από αυτά τα
+    // πεδία αλλάζει την αγγελία — άρα η αλλαγή περνά από ΠΡΑΞΗ διακομιστή (διαβάθμιση · κάδος ·
+    // αρχειοθέτηση · πράξη δοχείου) που κρίνει, καταγράφει και ΞΑΝΑΠΡΟΒΑΛΛΕΙ. Ο browser δεν έχει
+    // πώς να ξαναπροβάλει ⇒ δεν τα γράφει.
+    //
+    // ΔΥΟ λίστες, γιατί τα σκέλη δεν μπορούν όλα να παγώσουν το ίδιο:
+    //  • θεματοφυλακή (2) — ΚΑΝΕΝΑ σκέλος πελάτη δεν την αγγίζει, ούτε στη γέννηση·
+    //  • κατηγόρημα (13) — παγώνει ΟΛΟ στο σκέλος LINK (το χαλαρότερο πρόσωπο: κάθε μέλος).
+    //    Η οριστικοποίηση ΠΡΕΠΕΙ να αλλάξει `status`, άρα εκεί φυλάσσεται μόνο η θεματοφυλακή.
+    // ⚠️ Το κατηγόρημα είναι ΑΚΡΙΒΩΣ το `LISTING_FILE_PUBLICATION_FIELDS`
+    //    (`lib/listings/listing-file-publication-fields.ts`)· την ισότητα τη φυλά η άγκυρα
+    //    `listing-file-publication-rules.test.ts` μέσω του `rulesKeyListOf` — μείνε σε literal.
+    function publicationCustodyKeys() {
+      return ['classification', 'publicationIdentity'];
+    }
+
+    function publicationCustodyUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(publicationCustodyKeys());
+    }
+
+    // Αρχείο δεν γεννιέται από πελάτη με διαβάθμιση ή ταυτότητα δημοσίευσης: «δημόσιο από
+    // κούνια» θα ήταν δημοσίευση που δεν έκρινε κανείς. (Ο διακομιστής τα γράφει με Admin SDK.)
+    function publicationBornAbsent() {
+      return !request.resource.data.keys().hasAny(publicationCustodyKeys());
+    }
+
+    function publicationPredicateKeys() {
+      return [
+        'companyId', 'entityType', 'entityId', 'category',
+        'classification',
+        'status', 'isDeleted', 'lifecycleState', 'storagePath', 'storagePlacement', 'contentType',
+        'publicationIdentity', 'createdAt'
+      ];
+    }
+
+    function publicationPredicateUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(publicationPredicateKeys());
     }
 
     // Οριστική διαγραφή: ΜΟΝΟ χωρίς δέσμευση και χωρίς διατήρηση. Οι κανόνες δεν συγκρίνουν

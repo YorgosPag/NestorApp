@@ -31,6 +31,7 @@ import {
 } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { FILE_HOLD_FIELDS } from '@/lib/files/file-hold';
+import { LISTING_FILE_PUBLICATION_FIELDS } from '@/lib/listings/listing-file-publication-fields';
 import { ARCHIVED_STATUS, TRASHED_STATUS } from '@/lib/firestore/trashed-status';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
@@ -51,6 +52,19 @@ function createdByFor(persona: (typeof COVERAGE.matrix)[number]['persona']): str
   }
   return PERSONA_CLAIMS[persona].uid;
 }
+
+/**
+ * Τα τέσσερα σκέλη `update` της `files` — κάθε ένα με ΔΙΚΟ του έγγραφο και το ελάχιστο φορτίο που
+ * το περνά. ΜΙΑ λίστα για κάθε «πάγωμα» παρακάτω (δέσμευση · διαστάσεις · δημοσίευση): πρώτα οι
+ * αρνήσεις (το έγγραφο μένει άθικτο), ΤΕΛΕΥΤΑΙΟ το allow του παρονομαστή — αν το σκέτο φορτίο δεν
+ * περνούσε, κάθε `expectDeny` θα ήταν πράσινο για λάθος λόγο.
+ */
+const UPDATE_LEGS = [
+  { leg: 'κάδος', seed: {}, base: { isDeleted: true } },
+  { leg: 'επαναφορά', seed: { isDeleted: true }, base: { isDeleted: false } },
+  { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
+  { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
+] as const;
 
 describe('files.rules — tenant_state_machine pattern', () => {
   let env: RulesTestEnvironment;
@@ -387,18 +401,6 @@ describe('files.rules — tenant_state_machine pattern', () => {
       expect(Object.keys(HOLD_WRITES).sort()).toEqual([...FILE_HOLD_FIELDS].sort());
     });
 
-    /**
-     * Τα τέσσερα σκέλη `update` — κάθε ένα με ΔΙΚΟ του έγγραφο και το ελάχιστο φορτίο που το
-     * περνά. Πρώτα οι αρνήσεις (το έγγραφο μένει άθικτο), ΤΕΛΕΥΤΑΙΟ το allow του παρονομαστή:
-     * αν το σκέτο φορτίο δεν περνούσε, κάθε `expectDeny` θα ήταν πράσινο για λάθος λόγο.
-     */
-    const UPDATE_LEGS = [
-      { leg: 'κάδος', seed: {}, base: { isDeleted: true } },
-      { leg: 'επαναφορά', seed: { isDeleted: true }, base: { isDeleted: false } },
-      { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
-      { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
-    ] as const;
-
     it.each(UPDATE_LEGS)('⛔ σκέλος $leg: κάθε κλειδί δέσμευσης από πελάτη ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
       const docId = `hold-leg-${UPDATE_LEGS.findIndex((l) => l.leg === leg)}`;
       await seedHeld(docId, seed);
@@ -478,13 +480,6 @@ describe('files.rules — tenant_state_machine pattern', () => {
     const fileDoc = (docId: string) =>
       getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
 
-    const UPDATE_LEGS = [
-      { leg: 'κάδος', seed: {}, base: { isDeleted: true } },
-      { leg: 'επαναφορά', seed: { isDeleted: true }, base: { isDeleted: false } },
-      { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
-      { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
-    ] as const;
-
     it.each(UPDATE_LEGS)('⛔ σκέλος $leg: γραφή/αλλαγή διαστάσεων ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
       const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
       await seedFile(env, `measured-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
@@ -520,6 +515,129 @@ describe('files.rules — tenant_state_machine pattern', () => {
       });
       await expectDeny(born('born-measured', { ...FORGED }));
       await expectAllow(born('born-plain', {}));
+    });
+  });
+
+  // --- ADR-845 §7.17 (Α4α) — τα πεδία ΔΗΜΟΣΙΕΥΣΗΣ δεν γράφονται από πελάτη ----
+  //
+  // Ίδιο ιδίωμα και ίδιο πρόσωπο (`same_tenant_admin`) με τα τρία παγώματα από πάνω: κάθε `expectDeny`
+  // αποδίδεται ΜΟΝΟ στη ρήτρα `publication…`. 🔴 Το σκέλος σύνδεσης ήταν η ανοιχτή πόρτα: κάθε μέλος
+  // της εταιρείας, χωρίς allowlist κλειδιών ⇒ `classification: 'public'` μαζί με ένα `linkedTo`.
+  describe('publication freeze — ό,τι βλέπει το κοινό το αλλάζει μόνο πράξη διακομιστή (ADR-845 §7.17)', () => {
+    const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    /** Ό,τι έχει ένα αρχείο που ήδη συμμετέχει στην αγγελία — ώστε να δοκιμαστεί ΑΛΛΑΓΗ, όχι μόνο προσθήκη. */
+    const PUBLISHED = {
+      classification: 'public',
+      publicationIdentity: 'property-model:prop_1:as-built',
+      entityType: 'property',
+      entityId: 'prop_live_publication',
+      category: 'photos',
+      lifecycleState: 'active',
+      contentType: 'image/jpeg',
+      storagePlacement: { bucket: 'legacy-default' },
+      purpose: 'gallery',
+    } as const;
+
+    const CUSTODY_WRITES = {
+      classification: 'internal',
+      publicationIdentity: 'property-model:prop_1:proposal',
+    } as const;
+
+    /**
+     * Μία ψεύτικη τιμή ανά πεδίο του κατηγορήματος — ΑΚΡΙΒΩΣ το `LISTING_FILE_PUBLICATION_FIELDS`
+     * (ο τύπος το επιβάλλει, και η αναλογία ελέγχεται παρακάτω).
+     */
+    const PREDICATE_WRITES: Record<(typeof LISTING_FILE_PUBLICATION_FIELDS)[number], unknown> = {
+      companyId: 'company-forged',
+      entityType: 'building',
+      entityId: 'prop_other',
+      category: 'floorplans',
+      classification: 'internal',
+      status: 'failed',
+      isDeleted: true,
+      lifecycleState: 'archived',
+      storagePath: 'companies/forged/files/x',
+      storagePlacement: { bucket: 'eu-originals' },
+      contentType: 'application/pdf',
+      publicationIdentity: 'property-model:prop_1:proposal',
+      createdAt: '2000-01-01T00:00:00.000Z',
+    };
+
+    /**
+     * 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ ΤΗΣ Α4α: το `isDeleted: true` μαζί με `linkedTo` ΔΕΝ περνά από το σκέλος
+     * σύνδεσης — το δέχεται το σκέλος ΚΑΔΟΥ (δημιουργός/διαχειριστής), που ζει ως την Α4β. Δοκιμάζεται
+     * χωριστά παρακάτω, ώστε η εξαίρεση να είναι ορατή και να κοκκινίσει όταν το σκέλος φύγει.
+     */
+    const OWNED_BY_TRASH_LEG = 'isDeleted';
+
+    it('η λίστα του τεστ = `LISTING_FILE_PUBLICATION_FIELDS` (αλλιώς ο βρόχος θα παρέλειπε κλειδί)', () => {
+      expect(Object.keys(PREDICATE_WRITES).sort()).toEqual([...LISTING_FILE_PUBLICATION_FIELDS].sort());
+    });
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: διαβάθμιση/ταυτότητα δημοσίευσης από πελάτη ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
+      await seedFile(env, `publication-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `publication-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...PUBLISHED, ...seed } });
+
+      for (const [key, value] of Object.entries(CUSTODY_WRITES)) {
+        await expectDeny(fileDoc(`publication-add-${index}`).update({ ...base, [key]: value }));
+        await expectDeny(fileDoc(`publication-change-${index}`).update({ ...base, [key]: value }));
+      }
+      await expectAllow(fileDoc(`publication-change-${index}`).update(base));
+    });
+
+    it('⛔ σκέλος σύνδεσης: ΚΑΘΕ πεδίο του κατηγορήματος + `purpose` ⇒ ΑΡΝΗΣΗ · το σκέτο `linkedTo` ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
+      await seedFile(env, 'publication-link', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...PUBLISHED } });
+      const link = { linkedTo: ['property:prop_1'] };
+
+      for (const [key, value] of Object.entries(PREDICATE_WRITES)) {
+        if (key === OWNED_BY_TRASH_LEG) continue;
+        await expectDeny(fileDoc('publication-link').update({ ...link, [key]: value }));
+      }
+      await expectDeny(fileDoc('publication-link').update({ ...link, purpose: 'floorplan' }));
+      await expectAllow(fileDoc('publication-link').update(link));
+    });
+
+    it('🔶 όριο Α4α: `isDeleted` μαζί με `linkedTo` περνά ακόμη — από το σκέλος ΚΑΔΟΥ, όχι της σύνδεσης', async () => {
+      await seedFile(env, 'publication-trash-residue', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...PUBLISHED } });
+      await expectAllow(fileDoc('publication-trash-residue').update({ linkedTo: ['property:prop_1'], isDeleted: true }));
+    });
+
+    it('⛔ ΑΦΑΙΡΕΣΗ της διαβάθμισης (ολόκληρο `set` χωρίς το κλειδί): ΑΡΝΗΣΗ — η αφαίρεση ΕΙΝΑΙ γραφή', async () => {
+      await seedFile(env, 'publication-removed', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...PUBLISHED } });
+      let stored: Record<string, unknown> = {};
+      await withSeedContext(env, async (seedCtx) => {
+        stored = (await seedCtx.firestore().collection('files').doc('publication-removed').get()).data() ?? {};
+      });
+      const { classification: _dropped, ...withoutClassification } = stored;
+
+      await expectDeny(fileDoc('publication-removed').set({ ...withoutClassification, isDeleted: true }));
+      await expectAllow(fileDoc('publication-removed').set({ ...stored, isDeleted: true }));
+    });
+
+    it('⛔ γέννηση με διαβάθμιση ή ταυτότητα δημοσίευσης «από κούνια»: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
+      const born = (docId: string, extra: Record<string, unknown>) => fileDoc(docId).set({
+        fileName: `${docId}.jpg`,
+        mimeType: 'image/jpeg',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        lifecycleState: 'active',
+        category: 'photos',
+        contentType: 'image/jpeg',
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}.jpg`,
+        createdBy: ADMIN_UID,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        ...extra,
+      });
+      await expectDeny(born('born-public', { classification: 'public' }));
+      await expectDeny(born('born-internal', { classification: 'internal' }));
+      await expectDeny(born('born-identity', { publicationIdentity: PUBLISHED.publicationIdentity }));
+      await expectAllow(born('born-unclassified', {}));
     });
   });
 

@@ -121,7 +121,9 @@ describe('🏆 Α49 — κώδικας και κανόνας φυλάνε τα �
     expect(block.match(/allow update:/g)).toHaveLength(updateLegs);
     expect(block.match(/&& holdCustodyUnchanged\(\)/g)).toHaveLength(updateLegs);
     expect(block).toMatch(/allow create:[\s\S]*?&& holdBornAbsent\(\)[\s\S]*?;/);
-    expect(block).toMatch(/allow delete:[\s\S]*?&& holdAllowsHardDelete\(\);/);
+    // Χωρίς `;` αμέσως μετά: το ADR-281 (Στάδιο 3β) πρόσθεσε `&& parentPropertyIsLive(…)` πίσω του.
+    // Η άγκυρα ρωτά «ρωτά η διαγραφή τη δέσμευση;», όχι «είναι η τελευταία ρήτρα;».
+    expect(block).toMatch(/allow delete:[^;]*?&& holdAllowsHardDelete\(\)/);
   });
 
   it('🔴 Δ21.1 σιωπηλή δέσμευση: ΚΑΝΕΝΑ σκέλος update δεν ρωτά «είναι δεσμευμένο;»', () => {
