@@ -710,13 +710,27 @@ export function notifyOutcomeOf(mandate: OwnerPropertyMandate): MandateNotifyOut
  * 🔑 Ξεχωριστό από το {@link isMandateExpired}: μια **προγραμματισμένη** εντολή δεν
  * έχει λήξει **και** δεν ισχύει. Πριν το `startsAt` οι δύο καταστάσεις ήταν μία, γιατί
  * κάθε εντολή γεννιόταν ενεργή.
+ *
+ * 🔴 **ΑΠΟΝ `startsAt` ⇒ ΑΡΧΙΣΕ. ΧΑΛΑΣΜΕΝΟ `startsAt` ⇒ ΟΧΙ** (εύρημα Ν11, 2026-10-08).
+ * Ο τύπος δηλώνει το πεδίο υποχρεωτικό, αλλά εντολή γραμμένη **πριν** το ADR-832 δεν το
+ * έχει — και τότε **κάθε εντολή γεννιόταν ενεργή**. Χωρίς το πρώτο σκέλος,
+ * `Date.parse(undefined)` ⇒ `NaN` ⇒ «δεν άρχισε ποτέ»: εγκεκριμένη εντολή με λήξη το 2027
+ * κατέβαζε την αγγελία από την αγορά, ενώ το `mandateStandingOf` (που δεν ρωτά έναρξη) την
+ * έδειχνε σε ισχύ στην ίδια σελίδα.
+ *
+ * 🔑 Ίδιο δόγμα, ίδιο αρχείο, με το {@link isAgencyRevoked}: η **απουσία** πεδίου που το
+ * έγγραφο δεν χρωστούσε είναι η προ-πεδίου σημασία, όχι άρνηση. ⚠️ **Δεν επινοείται
+ * ημερομηνία** — το {@link occupancyOf} συνεχίζει να δίνει `''` στον κριτή σύγκρουσης, που
+ * χρειάζεται **διάστημα** και σωστά απαντά `undetermined`. Εδώ η ερώτηση είναι ναι/όχι.
  */
 export function hasMandateStarted(
   mandate: OwnerPropertyMandate,
   nowISOValue: string,
 ): boolean {
   if (mandate.kind === 'self') return true;
-  return Date.parse(mandate.startsAt) <= Date.parse(nowISOValue);
+  const startsAt: string | null | undefined = mandate.startsAt;
+  if (startsAt === undefined || startsAt === null) return true;
+  return Date.parse(startsAt) <= Date.parse(nowISOValue);
 }
 
 /**

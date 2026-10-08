@@ -23,8 +23,10 @@ import {
 } from '../owner-property-projection';
 import {
   buildPublicListing,
+  isOffered,
   isPubliclyListed,
 } from '@/services/listings/public-listing-projection';
+import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import {
   brokeredOwnerProperty,
   offerOf,
@@ -330,6 +332,25 @@ describe('🔴 Μ — καμία αγγελία γραφείου στον κόσ
     // κατάλογος του γραφείου την κρατά. Είναι η υπόσχεση «λήγει, δεν σβήνει».
     expect(expired.lifecycle).toBe('listed');
     expect(expired.offers).toHaveLength(1);
+  });
+
+  /**
+   * 🔴 **ΖΩΝΤΑΝΟ, 2026-10-08 (Ν11)** — εγκεκριμένη εντολή γραμμένη **πριν** το ADR-832 δεν έχει
+   * `startsAt`. Ο κριτής της αγοράς την έκρινε «δεν άρχισε» ⇒ καμία διάθεση ⇒ η αγγελία
+   * έφευγε από τον κόσμο ενώ το πλαίσιο της εντολής την έδειχνε σε ισχύ.
+   */
+  it('🔴 Μ4β — εγκεκριμένη εντολή ΧΩΡΙΣ `startsAt` (προ ADR-832) ΔΕΝ κατεβάζει την αγγελία', () => {
+    const { startsAt: _absent, ...legacyMandate } = brokeredOwnerProperty({
+      confirmation: 'confirmed',
+      decidedAt: AT,
+    }).mandates[0];
+    const legacy = validOwnerProperty({
+      authorCompanyId: 'comp_alfa',
+      mandates: [legacyMandate as unknown as BrokeredListingMandate],
+    });
+
+    expect(isOffered(projectableFromOwnerProperty(legacy, AT))).toBe(true);
+    expect(publish(legacy)).not.toBeNull();
   });
 
   it('Μ5 — ΑΡΝΗΣΗ του ιδιοκτήτη: εξίσου εκτός χάρτη', () => {

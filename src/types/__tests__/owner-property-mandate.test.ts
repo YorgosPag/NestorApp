@@ -24,8 +24,10 @@ import {
 } from '@/types/mandate';
 import {
   AGENCY_ATTESTATION,
+  hasMandateStarted,
   initialConfirmationFor,
   isMandateExpired,
+  isMandateLive,
   mandateAllowsPublication,
   mandateInvariantViolations,
   mandateWriteVerdict,
@@ -538,5 +540,38 @@ describe('Γ — `occupancyOf` πάνω σε έγγραφο ΠΡΙΝ το ADR-83
       startsAt: '2026-08-01T00:00:00.000Z',
       expiresAt: '2027-04-30T23:59:59.999Z',
     });
+  });
+
+  /**
+   * 🔴 **ΖΩΝΤΑΝΟ, ΜΕΤΡΗΜΕΝΟ 2026-10-08** (εύρημα Ν11). Το ίδιο έγγραφο, εγκεκριμένο και με
+   * λήξη το 2027, κρινόταν **«δεν άρχισε ποτέ»**: `Date.parse(undefined)` ⇒ `NaN` ⇒
+   * `NaN <= τώρα` είναι `false`. Η αγγελία έβγαινε εκτός αγοράς **χωρίς λόγο που να
+   * μπορεί να δει κανείς** — ενώ το πλαίσιο της εντολής, στην ίδια σελίδα, την έδειχνε
+   * σε ισχύ (`mandateStandingOf` δεν ρωτά έναρξη).
+   *
+   * 🔑 Πριν το ADR-832 **κάθε εντολή γεννιόταν ενεργή** — το γράφει το ίδιο το πεδίο.
+   * Άρα η **απουσία** του σημαίνει «άρχισε με τη γέννησή της», όχι «άγνωστο».
+   */
+  const TODAY = '2026-10-08T09:00:00.000Z';
+
+  it('Γ-5 🔴 εντολή ΧΩΡΙΣ `startsAt` έχει αρχίσει — και είναι ζωντανή', () => {
+    expect(hasMandateStarted(LEGACY, TODAY)).toBe(true);
+    expect(isMandateLive(LEGACY, TODAY)).toBe(true);
+  });
+
+  it('Γ-6 🔑 ΠΑΡΟΝΟΜΑΣΤΗΣ: η απουσία έναρξης ΔΕΝ παρακάμπτει τα άλλα τρία σκέλη', () => {
+    const afterExpiry = '2027-05-01T00:00:00.000Z';
+    expect(isMandateLive(LEGACY, afterExpiry)).toBe(false);
+    expect(isMandateLive({ ...LEGACY, confirmation: 'pending' }, TODAY)).toBe(false);
+    expect(isMandateLive({ ...LEGACY, agencyRevokedAt: TODAY }, TODAY)).toBe(false);
+  });
+
+  it('Γ-7 🔴 ΠΑΡΟΥΣΑ αλλά μη αναγνώσιμη έναρξη μένει «δεν ξέρω» ⇒ ΟΧΙ ζωντανή (N.12)', () => {
+    // ⚠️ Απόν ≠ χαλασμένο: το πρώτο είναι σχήμα παλιού εγγράφου, το δεύτερο είναι βλάβη.
+    expect(hasMandateStarted({ ...LEGACY, startsAt: 'χαλασμένο' }, TODAY)).toBe(false);
+    expect(hasMandateStarted({ ...LEGACY, startsAt: '' }, TODAY)).toBe(false);
+    // …και η ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ εξακολουθεί να μην ισχύει πριν την ώρα της.
+    expect(hasMandateStarted({ ...LEGACY, startsAt: '2026-12-01T00:00:00.000Z' }, TODAY)).toBe(false);
+    expect(hasMandateStarted({ ...LEGACY, startsAt: '2026-09-01T00:00:00.000Z' }, TODAY)).toBe(true);
   });
 });
