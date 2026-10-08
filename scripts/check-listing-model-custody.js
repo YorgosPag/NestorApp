@@ -69,6 +69,7 @@ const path = require('node:path');
 
 const { GATE_STATES, GUARD_STATES } = require('./lib/listing-model-custody/contract.js');
 const { sweep } = require('./lib/listing-model-custody/gate.js');
+const { DOOR_STATES, REGISTRY_STATES } = require('./lib/listing-model-custody/material-doors-contract.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 
@@ -97,19 +98,44 @@ const GUARD_ORDER = Object.freeze([
   GUARD_STATES.GUARD_HEALTHY,
 ]);
 
+/** Κ5+Κ6 — οι πόρτες αρχείου-υλικού (ADR-845 §7.17 Α6). */
+const DOOR_ORDER = Object.freeze([
+  DOOR_STATES.UNREGISTERED_DOOR,
+  DOOR_STATES.UNREGISTERED_WRITER,
+  DOOR_STATES.DOOR_WITHOUT_REFRESH,
+  DOOR_STATES.DOOR,
+  DOOR_STATES.EXEMPT_DOOR,
+  DOOR_STATES.DOOR_DEFINER,
+  DOOR_STATES.NOT_A_DOOR,
+]);
+
+const REGISTRY_ORDER = Object.freeze([
+  REGISTRY_STATES.ORPHAN_DOOR,
+  REGISTRY_STATES.REASONLESS_DOOR,
+  REGISTRY_STATES.ORPHAN_DOOR_SYMBOL,
+  REGISTRY_STATES.REGISTRY_HEALTHY,
+]);
+
 const ADVICE = Object.freeze([
   'Ο γραφέας του `models[]` και η απόσυρση είναι ΑΠΟ ΕΝΑΣ, επίτηδες.',
   'Χρειάζεσαι δεύτερο σημείο κλήσης; Δήλωσέ το στο CALL_OWNERS με ΛΟΓΟ ≥40 χαρακτήρων',
   'στο scripts/lib/listing-model-custody/contract.js — και γράψε ΓΙΑΤΙ, όχι ΤΙ.',
+  'ΠΟΡΤΑ ΑΡΧΕΙΟΥ-ΥΛΙΚΟΥ (Κ5/Κ6): όποιος αλλάζει τι βλέπει το κοινό ΞΑΝΑΠΡΟΒΑΛΛΕΙ την αγγελία',
+  '(`refreshListingsAfterFileChanges` · `runFileBatch`) και γράφεται στο MATERIAL_DOORS του',
+  'material-doors-contract.js. Εξαίρεση μόνο με ΑΛΗΘΙΝΟ λόγο — όχι για να πρασινίσει η πύλη.',
 ]);
 
-function printLedger({ tally, guardTally, scanned }) {
+function printLedger({ tally, guardTally, doorTally, registryTally, scanned }) {
   const row = (bucket, state) =>
     console.log(`${DIM}     ${String(bucket[state] ?? 0).padStart(6)}  ${state}${NC}`);
   console.log(`${DIM}  CHECK 3.76 — Κ1+Κ2 ΑΡΧΕΙΑ (σαρώθηκαν ${scanned})${NC}`);
   for (const state of FILE_ORDER) row(tally, state);
   console.log(`${DIM}  CHECK 3.76 — Κ1′+Κ3+Κ4 ΟΙ ΦΡΟΥΡΟΙ${NC}`);
   for (const state of GUARD_ORDER) row(guardTally, state);
+  console.log(`${DIM}  CHECK 3.76 — Κ5+Κ6 ΟΙ ΠΟΡΤΕΣ ΑΡΧΕΙΟΥ-ΥΛΙΚΟΥ${NC}`);
+  for (const state of DOOR_ORDER) row(doorTally, state);
+  console.log(`${DIM}  CHECK 3.76 — Κ5′ ΤΟ ΜΗΤΡΩΟ ΤΩΝ ΠΟΡΤΩΝ${NC}`);
+  for (const state of REGISTRY_ORDER) row(registryTally, state);
 }
 
 function main(argv = process.argv) {
@@ -130,7 +156,7 @@ function main(argv = process.argv) {
   printLedger(result);
 
   if (result.violations.length === 0) {
-    console.log(`${GREEN}  ✅ CHECK 3.76 — ένας γραφέας, μία απόσυρση, φρουροί ζωντανοί${NC}`);
+    console.log(`${GREEN}  ✅ CHECK 3.76 — ένας γραφέας, μία απόσυρση, κάθε πόρτα ξαναπροβάλλει, φρουροί ζωντανοί${NC}`);
     return 0;
   }
 
@@ -151,4 +177,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { FILE_ORDER, GUARD_ORDER, main, printLedger };
+module.exports = { DOOR_ORDER, FILE_ORDER, GUARD_ORDER, REGISTRY_ORDER, main, printLedger };

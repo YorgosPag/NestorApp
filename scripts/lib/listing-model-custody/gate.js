@@ -30,6 +30,8 @@ const {
   isCallOwner,
   repoRelativePosix,
 } = require('./contract.js');
+const { callsSymbol, definesSymbol, executableLines } = require('./lines.js');
+const { sweepDoors } = require('./material-doors.js');
 
 /** Ό,τι μπλοκάρει το commit — **κλειστό σύνολο**, ώστε νέα κατάσταση να μη σιωπά. */
 const BLOCKING = Object.freeze([
@@ -44,14 +46,6 @@ const BLOCKING = Object.freeze([
 
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'coverage']);
 
-/** Οι γραμμές που **εκτελούνται** — χωρίς σχόλια. Δες το δηλωμένο όριο στην κεφαλίδα. */
-function executableLines(source) {
-  return source.split(/\r?\n/).filter((line) => {
-    const t = line.trim();
-    return t !== '' && !t.startsWith('*') && !t.startsWith('//') && !t.startsWith('/*');
-  });
-}
-
 /** Κάθε `.ts`/`.tsx` κάτω από τη ρίζα, εκτός δοκιμών. */
 function collectSources(dir, root, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -64,18 +58,6 @@ function collectSources(dir, root, out = []) {
     }
   }
   return out;
-}
-
-/** Καλεί αυτό το αρχείο το σύμβολο — σε γραμμή που **εκτελείται**; */
-function callsSymbol(lines, symbol) {
-  const call = new RegExp(`\\b${symbol}\\s*\\(`);
-  return lines.some((line) => call.test(line));
-}
-
-/** Ορίζει αυτό το αρχείο το σύμβολο; */
-function definesSymbol(lines, symbol) {
-  const def = new RegExp(`\\b(?:function|const|let)\\s+${symbol}\\b`);
-  return lines.some((line) => def.test(line));
 }
 
 /** Η ταξινόμηση **ενός** αρχείου — μία ερώτηση, μία απάντηση. */
@@ -159,17 +141,22 @@ function auditAnchors(root, anchors = REQUIRED_ANCHORS) {
   return findings;
 }
 
-/** Το πλήρες πέρασμα — **ένα**, πάνω στο `src/`. */
+/**
+ * Το πλήρες πέρασμα — **ένα**, πάνω στο `src/`. Κάθε αρχείο διαβάζεται **μία** φορά και κρίνεται
+ * από **δύο** σκέλη: την επιμέλεια του μοντέλου (Κ1–Κ4) και τις πόρτες αρχείου-υλικού (Κ5+Κ6).
+ */
 function sweep(root) {
-  const files = collectSources(path.join(root, 'src'), root);
+  const files = collectSources(path.join(root, 'src'), root).map((full) => ({
+    rel: repoRelativePosix(full, root),
+    source: fs.readFileSync(full, 'utf8'),
+  }));
   const tally = Object.create(null);
   const violations = [];
   const callersByOwner = new Map();
   const callerCount = new Map();
 
-  for (const full of files) {
-    const rel = repoRelativePosix(full, root);
-    const verdict = classifyFile(rel, fs.readFileSync(full, 'utf8'));
+  for (const { rel, source } of files) {
+    const verdict = classifyFile(rel, source);
     tally[verdict.state] = (tally[verdict.state] ?? 0) + 1;
     for (const symbol of verdict.symbols) {
       if (verdict.state === GATE_STATES.DEFINER) continue;
@@ -190,11 +177,15 @@ function sweep(root) {
   for (const f of guardFindings) guardTally[f.state] = (guardTally[f.state] ?? 0) + 1;
   guardTally[GUARD_STATES.GUARD_HEALTHY] = guardFindings.length === 0 ? 1 : 0;
 
+  const doors = sweepDoors(files);
+
   return {
     tally,
     guardTally,
+    doorTally: doors.doorTally,
+    registryTally: doors.registryTally,
     scanned: files.length,
-    violations: [...violations, ...guardFindings],
+    violations: [...violations, ...guardFindings, ...doors.violations],
   };
 }
 

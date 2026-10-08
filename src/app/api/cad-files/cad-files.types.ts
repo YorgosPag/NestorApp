@@ -31,8 +31,3 @@ export interface CadFileUpsertResponse {
 export type CadFileGetResponse =
   | { success: true; metadata: CadFileDocument; message?: string }
   | { success: false; error: string; details?: string };
-
-/** DELETE /api/cad-files?fileId=... — result payload */
-export type CadFileDeleteResponse =
-  | { success: true; message: string }
-  | { success: false; error: string; details?: string };

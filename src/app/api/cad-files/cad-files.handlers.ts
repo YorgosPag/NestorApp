@@ -11,7 +11,9 @@
  * @see ADR-238 — Entity Creation Centralization (pattern reference)
  *
  * 🔒 SECURITY:
- * - Permission: dxf:files:view (read) · dxf:files:upload (write/delete)
+ * - Permission: dxf:files:view (read) · dxf:files:upload (write)
+ * - ⛔ ΚΑΜΙΑ διαγραφή εδώ (ADR-845 §7.17 Α6): το σχέδιο πάει στον κάδο από τη ΜΙΑ πόρτα
+ *   (`POST /api/files/trash`), που κρίνει, καταγράφει και ξαναπροβάλλει την αγγελία.
  * - Admin SDK for server-side writes
  * - Tenant isolation: enforced on every read/write by companyId check
  */
@@ -20,7 +22,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { AuthContext } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { isRoleBypass } from '@/lib/auth/roles';
@@ -29,7 +31,6 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { UpsertCadFileSchema } from './cad-files.schemas';
 import { writeToFilesCollection } from './dual-write-to-files';
 import type {
-  CadFileDeleteResponse,
   CadFileDocument,
   CadFileGetResponse,
   CadFileUpsertResponse,
@@ -206,85 +207,6 @@ export async function handleGetCadFile(
       {
         success: false,
         error: 'Failed to fetch CAD file metadata',
-        details: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * DELETE /api/cad-files?fileId=... — Remove cadFile metadata.
- * The underlying Firebase Storage scene JSON is NOT deleted — that is managed
- * by the `files` collection lifecycle (ADR-031).
- */
-export async function handleDeleteCadFile(
-  request: NextRequest,
-  ctx: AuthContext
-): Promise<NextResponse<CadFileDeleteResponse>> {
-  try {
-    const { searchParams } = new URL(request.url);
-    const fileId = searchParams.get('fileId');
-
-    if (!fileId) {
-      return NextResponse.json(
-        { success: false, error: 'fileId query parameter is required' },
-        { status: 400 }
-      );
-    }
-
-    // 🏢 ADR-292 Phase 3: Soft-delete in `files` collection (was hard-delete in cadFiles)
-    const adminDb = getAdminFirestore();
-    const docRef = adminDb.collection(COLLECTIONS.FILES).doc(fileId);
-    const snapshot = await docRef.get();
-
-    if (!snapshot.exists) {
-      return NextResponse.json(
-        { success: false, error: 'CAD file metadata not found' },
-        { status: 404 }
-      );
-    }
-
-    const data = snapshot.data() as Record<string, unknown>;
-    const docCompanyId = data.companyId as string | null | undefined;
-
-    if (
-      docCompanyId &&
-      docCompanyId !== ctx.companyId &&
-      !isRoleBypass(ctx.globalRole)
-    ) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Soft-delete via enterprise lifecycle pattern (ADR-191)
-    await docRef.update({
-      isDeleted: true,
-      lifecycleState: 'deleted',
-      status: 'deleted',
-      trashedAt: FieldValue.serverTimestamp(),
-      trashedBy: ctx.uid,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    await logAuditEvent(ctx, 'data_deleted', fileId, 'api', {
-      metadata: {
-        path: '/api/cad-files (DELETE)',
-        reason: 'DXF FileRecord soft-deleted (ADR-292 Phase 3)',
-      },
-    });
-
-    logger.info('[CadFiles/Delete] FileRecord soft-deleted', { fileId, userId: ctx.uid });
-
-    return NextResponse.json({
-      success: true,
-      message: `CAD file metadata "${fileId}" deleted`,
-    });
-  } catch (error) {
-    logger.error('[CadFiles/Delete] Error', { error: getErrorMessage(error) });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to delete CAD file metadata',
         details: getErrorMessage(error),
       },
       { status: 500 }
