@@ -57,9 +57,12 @@ import {
   readModelSourceRevisions,
   readSceneFileIds,
 } from './model-source-lookup';
+import { archiveSupersededModels } from './model-supersession';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
-import { containerActorOf, transitionContainer } from '@/services/iso19650/container-transitions';
-import { isSupersessionDone } from '@/services/iso19650/container-transition-vocabulary';
+import {
+  refreshListingAfterMediaChange,
+  type ListingMediaRefreshOutcome,
+} from '@/services/listings/listing-media-refresh';
 import {
   MODEL_DECLARATION_METADATA_KEY,
   decodeModelDeclaration,
@@ -111,40 +114,12 @@ interface PropertyModelResponse {
    * η αγγελία είναι ήδη σωστή· χάνεται μόνο η τακτοποίηση της ιστορίας, και καταγράφεται.
    */
   readonly archived: readonly string[];
-}
-
-/**
- * **Οι προκάτοχοι → ΑΡΧΕΙΟ**, μέσω του ΕΝΟΣ γραφέα (ADR-862 Φ0 Β10).
- *
- * ⚠️ **Σειριακά, όχι `Promise.all`**: κάθε πράξη είναι συναλλαγή πάνω στον **ίδιο** διάδοχο· σε
- * παράλληλη εκτέλεση θα ξαναεκτελούνταν η μία την άλλη χωρίς κέρδος. Στην πράξη είναι ένας.
- *
- * 🔑 Μια **βλάβη** (ρίψη) στον έναν δεν κρύβει την επιτυχία του άλλου και **δεν** ρίχνει τη
- * δημοσίευση — το μοντέλο ανέβηκε ήδη. Καταγράφεται με όνομα.
- */
-async function archiveSuperseded(
-  ctx: AuthContext,
-  supersedes: readonly string[],
-  fileId: string,
-): Promise<readonly string[]> {
-  const archived: string[] = [];
-  for (const previousFileId of supersedes) {
-    try {
-      const outcome = await transitionContainer({
-        fileId: previousFileId,
-        act: 'supersede',
-        actor: containerActorOf(ctx),
-        supersededByFileId: fileId,
-      });
-      if (isSupersessionDone(outcome)) archived.push(previousFileId);
-      if (outcome.kind === 'refused') {
-        logger.warn('Ο προκάτοχος μοντέλου δεν αρχειοθετήθηκε', { previousFileId, fileId, why: outcome.why });
-      }
-    } catch (error) {
-      logger.error('Η αρχειοθέτηση προκατόχου μοντέλου απέτυχε', { previousFileId, fileId, error: getErrorMessage(error) });
-    }
-  }
-  return archived;
+  /**
+   * 🌍 **ΤΙ ΕΓΙΝΕ ΣΤΗΝ ΑΓΓΕΛΙΑ** (ADR-845 Ο-35) — το μοντέλο ανέβηκε **σε κάθε** τιμή· αυτό λέει
+   * αν το **είδε ο κόσμος**: `published` ναι · `withdrawn` το ακίνητο δεν είναι στην αγορά ·
+   * `failed` εκκρεμεί ως την επανασύνθεση · `absent` δεν βρέθηκε ακίνητο να προβληθεί.
+   */
+  readonly listing: ListingMediaRefreshOutcome;
 }
 
 /**
@@ -224,15 +199,20 @@ async function handlePost(
   const supersedes = await findSupersededModels(adminDb, ctx.companyId, propertyId, recordBase);
 
   await writeModel({ fileId, storagePath, recordBase, file, declaration, createdBy: ctx.uid });
-  const archived = await archiveSuperseded(ctx, supersedes, fileId);
+  const archived = await archiveSupersededModels(ctx, supersedes, fileId);
+
+  // 🔴 **Η ΚΛΗΣΗ ΠΟΥ ΕΛΕΙΠΕ** *(ADR-845 Ο-35)*: το αρχείο είναι πηγή της προβολής, και ως εδώ
+  //    η αγγελία το μάθαινε μόνο αν κάποιος άγγιζε **μετά** το ακίνητο. **Τελευταία**, ώστε να
+  //    δει τον κόσμο όπως έμεινε — νέο `ready`, προκάτοχοι στο αρχείο. Awaited· δεν πετά ποτέ.
+  const listing = await refreshListingAfterMediaChange(adminDb, propertyId, ctx.companyId);
 
   logger.info('Μοντέλο ακινήτου ανέβηκε', {
     fileId, propertyId, companyId: ctx.companyId, bytes: file.size,
     state: declaration.state, scope: declaration.scope, supersedes: supersedes.length,
-    archived: archived.length, sources: sourceRevisions.length,
+    archived: archived.length, sources: sourceRevisions.length, listing,
   });
 
-  return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes, archived });
+  return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes, archived, listing });
 }
 
 /**

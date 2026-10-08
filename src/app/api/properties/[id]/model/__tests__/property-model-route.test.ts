@@ -120,6 +120,19 @@ jest.mock('@/services/storage-admin/public-upload.service', () => ({
   uploadPublicFile: (...args: unknown[]) => uploadPublicFile(...args),
 }));
 
+/**
+ * 🔴 **ADR-845 Ο-35 — Η ΔΕΥΤΕΡΗ ΠΗΓΗ ΤΗΣ ΠΡΟΒΟΛΗΣ.** Στο σύνορό της: η κρίση της επαναπροβολής
+ * έχει **δική της** άγκυρα (`listing-media-refresh.test`)· εδώ ρωτάμε αν η πόρτα την **καλεί**,
+ * **πότε**, και **για ποιον**.
+ */
+const refreshListing = jest.fn(async (..._args: unknown[]): Promise<string> => {
+  trace.push('refresh');
+  return 'published';
+});
+jest.mock('@/services/listings/listing-media-refresh', () => ({
+  refreshListingAfterMediaChange: (...args: unknown[]) => refreshListing(...args),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { POST } = require('../route') as typeof import('../route');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -225,7 +238,45 @@ describe('ADR-845 Βήμα Γ — η πόρτα του μοντέλου', () => 
     //    αποτέλεσμα και θα έπρεπε να **εξαιρεθεί** — δηλαδή θα υπήρχε μια γραμμή που, αν
     //    ξεχαστεί, κάνει το μοντέλο να **διαδεχθεί τον εαυτό του** και να πέσει στον κάδο την
     //    ίδια στιγμή που δημοσιεύεται.
-    expect(trace).toEqual(['query', 'set', 'upload', 'update']);
+    // 🔴 **ΚΑΙ ΤΟ `refresh` ΕΙΝΑΙ ΤΕΛΕΥΤΑΙΟ** *(Ο-35)*: η προβολή διαβάζει τα αρχεία **όπως
+    //    έμειναν**. Πριν από το `update` θα έβρισκε το μοντέλο `pending` και θα το αγνοούσε —
+    //    δηλαδή θα έτρεχε και θα άφηνε την αγγελία **ακριβώς** όπως ήταν.
+    expect(trace).toEqual(['query', 'set', 'upload', 'update', 'refresh']);
+  });
+
+  it('🏆 Κ11 — Ο-35: το ανέβασμα ΞΑΝΑΠΡΟΒΑΛΛΕΙ την αγγελία ΤΟΥ ΙΔΙΟΥ ακινήτου και λέει τι έγινε', async () => {
+    // Το ζωντανό γεγονός της 2026-10-08: 200, αρχείο `ready`/`public`, και `models: []`.
+    const response = await POST(
+      request(glb(), declaration()) as never, undefined as never, undefined as never,
+    );
+    const payload = await (response as unknown as Response).json();
+
+    expect(refreshListing).toHaveBeenCalledTimes(1);
+    // 🔐 Μισθωτής από το **auth context**, ακίνητο από τη **διαδρομή** — ποτέ από το σώμα.
+    expect(refreshListing.mock.calls[0].slice(1)).toEqual([PROPERTY, 'comp_alfa']);
+    expect(payload.data.listing).toBe('published');
+  });
+
+  it('🔑 Κ12 — Ο-35: προβολή που ΔΕΝ ενημερώθηκε δεν ρίχνει το ανέβασμα — ΟΝΟΜΑΖΕΤΑΙ', async () => {
+    refreshListing.mockImplementationOnce(async () => 'failed');
+
+    const response = await POST(
+      request(glb(), declaration()) as never, undefined as never, undefined as never,
+    );
+    const payload = await (response as unknown as Response).json();
+
+    expect(payload.data.fileId).toEqual(expect.any(String));
+    expect(payload.data.listing).toBe('failed');
+  });
+
+  it('⛔ Κ13 — Ο-35: ανέβασμα που ΑΠΕΤΥΧΕ δεν ξαναπροβάλλει τίποτα', async () => {
+    uploadPublicFile.mockImplementationOnce(async () => { throw new Error('bucket down'); });
+
+    await expect(
+      POST(request(glb(), declaration()) as never, undefined as never, undefined as never),
+    ).rejects.toMatchObject({ statusCode: 500, message: 'MODEL_UPLOAD_FAILED' });
+
+    expect(refreshListing).not.toHaveBeenCalled();
   });
 
   it('🏆 Κ6 — Ο-27: η πόρτα ΛΕΕΙ ποιους διαδέχεται, και ΠΟΤΕ τον εαυτό της', async () => {
