@@ -284,6 +284,30 @@ export function publicWorldMatrix(): CoverageDefinition {
 }
 
 /**
+ * Τα εννέα κελιά «η ανάγνωση ακολουθεί την απομόνωση μισθωτή»: κάθε μέλος του
+ * μισθωτή (και ο super admin) διαβάζει και απαριθμεί, ο διαχειριστής ΑΛΛΟΥ
+ * μισθωτή όχι, ο ανώνυμος δεν διαβάζει.
+ *
+ * 🔴 **Εξήχθη 2026-10-08**: τα `adminWriteOnlyMatrix`, `tenantStateMachineMatrix`
+ * και `roleDualMatrix` τα έγραφαν λέξη προς λέξη (jscpd: 12 γρ./91 tokens και
+ * 18 γρ./108 tokens). Τρία πρότυπα με **διαφορετική** πολιτική εγγραφής
+ * μοιράζονται **ταυτόσημη** πολιτική ανάγνωσης — μία απόφαση, ένα σημείο.
+ *
+ * ⚠️ Το `anonymous × list` **δεν** είναι εδώ, επίτηδες: το
+ * `tenantStateMachineMatrix` το αφήνει αμέτρητο (`anonymousUnmeasured`), τα άλλα
+ * δύο το μετρούν ως άρνηση. Κάθε πίνακας το δηλώνει μόνος του.
+ */
+function tenantIsolatedReadCells(): readonly CoverageCell[] {
+  const members: readonly Persona[] = ['super_admin', 'same_tenant_admin', 'same_tenant_user'];
+  return [
+    ...members.flatMap((persona) => [cell(persona, 'read', 'allow'), cell(persona, 'list', 'allow')]),
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+  ];
+}
+
+/**
  * Canonical matrix for the `admin_write_only` pattern — reads follow tenant
  * isolation, but **every client-side write is denied** at the rule level
  * because mutations happen exclusively via Firebase Admin SDK on the server.
@@ -298,15 +322,7 @@ export function publicWorldMatrix(): CoverageDefinition {
 export function adminWriteOnlyMatrix(): CoverageDefinition {
   return defineMatrix('adminWriteOnlyMatrix', [
     // Reads follow tenant isolation
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    ...tenantIsolatedReadCells(),
     cell('anonymous', 'list', 'deny', 'missing_claim'),
     // Writes: server-only. Every persona denies at rule level.
     // ⚠️ ΓΡΑΜΜΕΝΑ ΡΗΤΑ, ΕΠΙΤΗΔΕΣ — δες τη σημείωση στο `serverOnlyWriteCells`:
@@ -354,15 +370,7 @@ export function adminWriteOnlyMatrix(): CoverageDefinition {
 export function tenantStateMachineMatrix(): CoverageDefinition {
   return defineMatrix('tenantStateMachineMatrix', [
     // Reads
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    ...tenantIsolatedReadCells(),
     // Create (status == 'pending'): super_admin + same_tenant_admin allow
     cell('super_admin', 'create', 'allow'),
     cell('same_tenant_admin', 'create', 'allow'),
@@ -421,15 +429,7 @@ export function tenantStateMachineMatrix(): CoverageDefinition {
 export function roleDualMatrix(): CoverageDefinition {
   return defineMatrix('roleDualMatrix', [
     // Read: isSuperAdminOnly() || isInternalUserOfCompany(companyId)
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    ...tenantIsolatedReadCells(),
     cell('anonymous', 'list', 'deny', 'missing_claim'),
     // Create: isInternalUser() && companyId==getUserCompanyId() && createdBy==uid
     // No isSuperAdminOnly() short-circuit — super_admin (company-root)
