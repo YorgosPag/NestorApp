@@ -16,6 +16,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
+import { verifyIdToken } from '@/lib/auth/token-credentials';
+import { readIdTokenBody } from '@/server/auth/id-token-body';
 import type { UserRecord } from 'firebase-admin/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -27,10 +29,6 @@ const logger = createModuleLogger('MfaEnrollCompleteRoute');
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface MfaEnrollCompleteRequest {
-  idToken: string;
-}
 
 interface MfaEnrollCompleteResponse {
   success: boolean;
@@ -59,21 +57,23 @@ async function handlePOST(request: NextRequest): Promise<NextResponse<MfaEnrollC
     const adminAuth = getAdminAuth();
     const adminDb = getAdminFirestore();
 
-    const body: MfaEnrollCompleteRequest = await request.json();
-    const { idToken } = body;
-
-    if (!idToken || typeof idToken !== 'string') {
+    const idToken = await readIdTokenBody(request);
+    if (idToken === null) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid request',
-          error: 'idToken is required and must be a string',
-        },
-        { status: 400 }
+        { success: false, message: 'Invalid request', error: 'idToken is required and must be a string' },
+        { status: 400 },
       );
     }
 
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    // ADR-908 §3.5 — ο ΙΔΙΟΣ κριτής με κάθε αναγνώστη: ανακλημένη σύνδεση δεν γράφει claims.
+    // (Ήταν ωμό `adminAuth.verifyIdToken`, το τρίτο και τελευταίο έξω από το `token-credentials`.)
+    const decoded = await verifyIdToken(idToken);
+    if (decoded === null) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to sync MFA enrollment', error: 'Invalid or revoked ID token' },
+        { status: 401 },
+      );
+    }
     const uid = decoded.uid;
 
     const userRecord = await adminAuth.getUser(uid);

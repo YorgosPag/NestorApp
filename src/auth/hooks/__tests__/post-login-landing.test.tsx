@@ -31,9 +31,19 @@ const mockReplace = jest.fn();
 const mockPush = jest.fn();
 const mockPrefetch = jest.fn();
 
+// ⚠️ Το hook ΔΕΝ ζητά πια δρομολογητή (ADR-908 §3.4). Το mock μένει ώστε μια επιστροφή του
+//    `router.replace` να κοκκινίσει τις άγκυρες «ΚΑΜΙΑ μετάβαση δρομολογητή» από κάτω.
 jest.mock('@/lib/workspace/navigation', () => ({
   useRouter: () => ({ replace: mockReplace, push: mockPush, prefetch: mockPrefetch }),
 }));
+
+/** 🔴 ADR-908 §3.4 — η ΜΙΑ πλοήγηση μετά τη σύνδεση είναι πλοήγηση ΕΓΓΡΑΦΟΥ. */
+const mockNavigate = jest.fn();
+jest.mock('@/lib/browser/document-navigation', () => ({
+  navigateDocument: (...args: unknown[]) => mockNavigate(...args),
+}));
+/** Το παλιό έγγραφο (ανώνυμο) φεύγει από το ιστορικό: το «Πίσω» δεν ξαναδείχνει τη φόρμα. */
+const REPLACE = { replace: true };
 
 const mockUseAuth = jest.fn();
 jest.mock('@/auth/contexts/AuthContext', () => ({ useAuth: () => mockUseAuth() }));
@@ -75,9 +85,9 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
 
     render();
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(PRIVATE_SPACE_HOME));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(PRIVATE_SPACE_HOME, REPLACE));
     // ⛔ Η βλάβη ήταν ΑΚΡΙΒΩΣ αυτό: προσγείωση στον εταιρικό χώρο.
-    expect(mockReplace).not.toHaveBeenCalledWith(AUTH_ROUTES.home);
+    expect(mockNavigate).not.toHaveBeenCalledWith(AUTH_ROUTES.home, REPLACE);
   });
 
   it('Π1 — ΠΑΡΟΝΟΜΑΣΤΗΣ: ο ΕΠΑΓΓΕΛΜΑΤΙΑΣ πάει στο dashboard, όπως πάντα', async () => {
@@ -87,8 +97,8 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
 
     render();
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(AUTH_ROUTES.home));
-    expect(mockReplace).not.toHaveBeenCalledWith(PRIVATE_SPACE_HOME);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(AUTH_ROUTES.home, REPLACE));
+    expect(mockNavigate).not.toHaveBeenCalledWith(PRIVATE_SPACE_HOME, REPLACE);
   });
 
   it('Κ2 — ΚΕΝΟ companyId μετρά ως ΑΠΟΥΣΙΑ, όχι ως μισθωτής', async () => {
@@ -99,7 +109,7 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
 
     render();
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(PRIVATE_SPACE_HOME));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(PRIVATE_SPACE_HOME, REPLACE));
   });
 
   it('Κ3 — ο ΑΝΩΝΥΜΟΣ δεν προσγειώνεται πουθενά — και ΤΙΠΟΤΑ δεν προφορτώνεται', async () => {
@@ -114,6 +124,7 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
     expect(result.current.isRedirecting).toBe(false);
     expect(mockPrefetch).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('Κ4 — η ΡΗΤΗ παράκαμψη νικά τον επιλυτή', async () => {
@@ -125,7 +136,7 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
       useAuthFormState({ defaultMode: 'signin', redirectTo: '/listings/mandates' }),
     );
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/listings/mandates'));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/listings/mandates', REPLACE));
   });
 });
 
@@ -149,6 +160,7 @@ describe('ADR-859 — καμία πλοήγηση από το αποτέλεσμ
   const noNavigation = () => {
     expect(mockPush).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   };
 
   it('Λ1 — Google ζητά δεύτερο παράγοντα ⇒ ΜΕΝΟΥΜΕ, καμία φόρτωση', async () => {
@@ -213,9 +225,45 @@ describe('ADR-859 — καμία πλοήγηση από το αποτέλεσμ
     mockUseAuth.mockReturnValue(authContext({ uid: 'uid-oe', companyId: 'comp_x' }));
     rerender();
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(INVITE));
-    expect(mockReplace).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(INVITE, REPLACE));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(mockPush).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ADR-908 §3.4 — **ΤΟ ΕΓΓΡΑΦΟ ΤΟΥ ΑΝΩΝΥΜΟΥ ΔΕΝ ΑΛΛΑΖΕΙ ΧΕΡΙΑ.**
+ *
+ * 🔴 Μετρημένο στην παραγωγή 2026-10-08: η φόρμα πλοηγούσε με `router.replace`, και ο δρομολογητής σέρβιρε
+ * στον νέο άνθρωπο την απάντηση που είχε αποθηκεύσει για **ανώνυμο** ⇒ 425 `replace`, 0 αιτήματα προς τον προορισμό.
+ *
+ * Μεταλλάξεις που ΠΡΕΠΕΙ να κοκκινίσουν:
+ *   - `router.replace(landing)` αντί για `navigateDocument` ⇒ Ν1
+ *   - `navigateDocument(landing)` χωρίς `replace` ⇒ Ν1
+ *   - αφαίρεση του μανδάλου `leaving` ⇒ Ν2
+ */
+describe('ADR-908 §3.4 — η σύνδεση τελειώνει το έγγραφο', () => {
+  it('Ν1 — πλοήγηση ΕΓΓΡΑΦΟΥ με `replace`, και ΚΑΜΙΑ μετάβαση δρομολογητή', async () => {
+    mockUseAuth.mockReturnValue(authContext({ uid: 'uid-int', companyId: 'comp_alpha' }));
+
+    render();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(AUTH_ROUTES.home, REPLACE));
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('Ν2 — ο `user` ξαναγράφεται όσο το έγγραφο φεύγει (ανανέωση claims) ⇒ ΜΙΑ πλοήγηση, όχι δύο', async () => {
+    mockUseAuth.mockReturnValue(authContext({ uid: 'uid-oe' }));
+    const { rerender } = render();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
+
+    // Τα claims έφτασαν με οργανισμό: άλλη προσγείωση, αλλά το έγγραφο έχει ήδη αποφασίσει πού πάει.
+    mockUseAuth.mockReturnValue(authContext({ uid: 'uid-oe', companyId: 'comp_x' }));
+    rerender();
+    await act(async () => undefined);
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 });
 

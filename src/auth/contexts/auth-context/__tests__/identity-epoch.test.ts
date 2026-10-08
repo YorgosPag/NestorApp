@@ -10,7 +10,9 @@
 
 import type { User as FirebaseUser } from 'firebase/auth';
 
-import { syncServerSession } from '../auth-context-session';
+import { SIGN_IN_REVOKED_ERROR_CODE } from '@/lib/auth/session-issue-wire';
+
+import { SignInRevokedError, syncServerSession } from '../auth-context-session';
 import {
   advanceIdentityEpoch,
   currentIdentityEpoch,
@@ -47,6 +49,30 @@ describe('syncServerSession — ο ΕΝΑΣ φρουρός', () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe('POST');
     expect(init.body).toBe(JSON.stringify({ idToken: 'id-token' }));
+  });
+});
+
+/**
+ * ADR-908 §3.5 — ο διακομιστής αρνείται cookie σε **ανακλημένη** σύνδεση· ο πελάτης πρέπει να το ξεχωρίσει
+ * από κάθε άλλη αποτυχία, γιατί μόνο εκεί η σωστή αντίδραση είναι το **τέλος** της σύνδεσης.
+ */
+describe('syncServerSession — η άρνηση του εκδότη', () => {
+  const refusedWith = (body: Record<string, unknown>) =>
+    fetchMock.mockResolvedValue({ ok: false, status: 401, json: async () => body });
+
+  it('Ε4 🔴 — 401 με τον κωδικό της ανάκλησης ⇒ `SignInRevokedError`', async () => {
+    refusedWith({ success: false, message: 'Sign-in revoked', code: SIGN_IN_REVOKED_ERROR_CODE });
+
+    await expect(syncServerSession(userWhoseTokenArrives(() => undefined))).rejects.toBeInstanceOf(SignInRevokedError);
+  });
+
+  it('Ε5 — 401 ΧΩΡΙΣ τον κωδικό (ληγμένο token) ⇒ απλό σφάλμα, ΟΧΙ ανάκληση', async () => {
+    // ⚠️ Αν κάθε 401 μετρούσε ως ανάκληση, ο άνθρωπος θα αποσυνδεόταν για ένα token που απλώς έληξε.
+    refusedWith({ success: false, message: 'Failed to create session cookie', error: 'Invalid ID token' });
+
+    const failure = await syncServerSession(userWhoseTokenArrives(() => undefined)).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(SignInRevokedError);
   });
 });
 

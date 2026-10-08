@@ -17,9 +17,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { SESSION_COOKIE_CONFIG, getSessionCookieDurationMs } from '@/lib/auth/security-policy';
+import { SIGN_IN_REVOKED_ERROR_CODE } from '@/lib/auth/session-issue-wire';
+import { judgeIdToken, type IdTokenVerdict } from '@/lib/auth/token-credentials';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { ensureCompanyDocument } from '@/services/company-document.service';
+import { readIdTokenBody } from '@/server/auth/id-token-body';
 import { ensureIdentityRecord } from '@/server/auth/identity-record';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -29,14 +32,12 @@ const logger = createModuleLogger('AuthSession');
 // TYPES
 // ============================================================================
 
-interface SessionCreateRequest {
-  idToken: string;
-}
-
 interface SessionResponse {
   success: boolean;
   message: string;
   error?: string;
+  /** Μόνο στην ανακλημένη σύνδεση — η λέξη του σύρματος (`lib/auth/session-issue-wire`). */
+  code?: typeof SIGN_IN_REVOKED_ERROR_CODE;
 }
 
 // ============================================================================
@@ -83,6 +84,34 @@ function buildClearCookieOptions(): {
   };
 }
 
+/**
+ * **Το «όχι» του κριτή, στη γλώσσα του HTTP** — κανένα cookie σε καμία από τις τρεις (ADR-908 §3.5).
+ *
+ * | ετυμηγορία | απάντηση | τι κάνει ο πελάτης |
+ * |---|---|---|
+ * | `invalid` | 401 | ξαναδοκιμάζει στην επόμενη ανανέωση token |
+ * | `revoked` | 401 + `code` | **τελειώνει** τη σύνδεση (`endSignIn`) — το token του δεν θα γίνει ποτέ δεκτό |
+ * | `unavailable` | 503 | τίποτα οριστικό: «δεν ξέρω» ≠ «δεν είσαι» (N.12) |
+ */
+function refusal(outcome: Exclude<IdTokenVerdict['outcome'], 'valid'>): NextResponse<SessionResponse> {
+  if (outcome === 'unavailable') {
+    return NextResponse.json(
+      { success: false, message: 'Session could not be verified', error: 'Sign-in state unavailable' },
+      { status: 503 },
+    );
+  }
+  if (outcome === 'revoked') {
+    return NextResponse.json(
+      { success: false, message: 'Sign-in revoked', error: 'This sign-in was revoked', code: SIGN_IN_REVOKED_ERROR_CODE },
+      { status: 401 },
+    );
+  }
+  return NextResponse.json(
+    { success: false, message: 'Failed to create session cookie', error: 'Invalid ID token' },
+    { status: 401 },
+  );
+}
+
 // ============================================================================
 // HANDLERS
 // ============================================================================
@@ -92,29 +121,30 @@ function buildClearCookieOptions(): {
  */
 const postHandler = async (request: NextRequest): Promise<NextResponse<SessionResponse>> => {
   try {
-    const adminAuth = getAdminAuth();
-
-    const body: SessionCreateRequest = await request.json();
-    const { idToken } = body;
-
-    if (!idToken || typeof idToken !== 'string') {
+    const idToken = await readIdTokenBody(request);
+    if (idToken === null) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid request',
-          error: 'idToken is required and must be a string',
-        },
-        { status: 400 }
+        { success: false, message: 'Invalid request', error: 'idToken is required and must be a string' },
+        { status: 400 },
       );
     }
 
-    const expiresIn = getSessionCookieDurationMs();
+    // 🔴 ADR-908 §3.5 — Η ΕΚΔΟΣΗ ΡΩΤΑ ΤΟΝ ΙΔΙΟ ΚΡΙΤΗ ΜΕ ΤΗΝ ΑΝΑΓΝΩΣΗ, ΚΑΙ ΤΟΝ ΡΩΤΑ **ΠΡΩΤΑ**.
+    //
+    // Ως τις 2026-10-08 εδώ έτρεχαν **παράλληλα** το `createSessionCookie` και ένα ωμό
+    // `adminAuth.verifyIdToken`: ανακλημένη σύνδεση **έπαιρνε** cookie, και το απέρριπτε
+    // ο πρώτος αναγνώστης (`verifySessionCookie` → `unlessRevoked`). Μετρημένο: το
+    // `__session` ξαναστηνόταν 0,25 s μετά την αποσύνδεση.
+    //
+    // ⛔ **ΜΗΝ τα ξαναβάλεις σε `Promise.all`**: ο κριτής απαντά **πριν** ζητηθεί cookie.
+    //    Η παράλληλη γραφή εξαρτιόταν από το ποιος θα θυμηθεί να πετάξει το αποτέλεσμα.
+    const verdict = await judgeIdToken(idToken);
+    if (verdict.outcome !== 'valid') return refusal(verdict.outcome);
+    const decodedToken = verdict.decoded;
 
-    // Verify token + create session cookie in parallel
-    const [sessionCookie, decodedToken] = await Promise.all([
-      adminAuth.createSessionCookie(idToken, { expiresIn }),
-      adminAuth.verifyIdToken(idToken),
-    ]);
+    const sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
+      expiresIn: getSessionCookieDurationMs(),
+    });
 
     // Proactive workspace bootstrap — fire-and-forget (ADR-316)
     // Creates companies/{companyId} at login time, before any action fires.
@@ -167,14 +197,17 @@ const postHandler = async (request: NextRequest): Promise<NextResponse<SessionRe
 
     return response;
   } catch (error) {
-    const message = getErrorMessage(error);
+    // ⚠️ **500, ΟΧΙ 401** (ADR-908 §3.5): εδώ φτάνει μόνο ό,τι **χάλασε** — το «όχι» του
+    //    κριτή έχει ήδη απαντηθεί παραπάνω. Ένα 401 θα έλεγε στον πελάτη «η ταυτότητά
+    //    σου δεν ισχύει» για αστοχία δική μας (ίδιο σκεπτικό με το `api-denial.ts`).
+    logger.error('[Session] Session cookie could not be issued', { error: getErrorMessage(error) });
     return NextResponse.json(
       {
         success: false,
         message: 'Failed to create session cookie',
-        error: message,
+        error: 'Session cookie could not be issued',
       },
-      { status: 401 }
+      { status: 500 }
     );
   }
 };

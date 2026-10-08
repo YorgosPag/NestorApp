@@ -79,24 +79,56 @@ export function extractSessionCookie(request: NextRequest): string | null {
 // =============================================================================
 
 /**
+ * **Η ετυμηγορία για ένα ID token — τέσσερις, ρητές** (ADR-908 §3.5).
+ *
+ * 🔑 Το `null` του {@link verifyIdToken} αρκεί σε όποιον απλώς **αρνείται**. Το σημείο που **εκδίδει** συνεδρία
+ * (`POST /api/auth/session`) πρέπει να ξεχωρίσει τρία «όχι» που ζητούν **άλλη** αντίδραση από τον πελάτη:
+ *
+ * | | σημασία | τι κάνει ο εκδότης |
+ * |---|---|---|
+ * | `invalid` | η υπογραφή/λήξη δεν στέκει | 401 — ο πελάτης ξαναδοκιμάζει με νέο token |
+ * | `revoked` | υπογεγραμμένο, αλλά η σύνδεση **ανακλήθηκε** | 401 με κωδικό — ο πελάτης **τελειώνει** τη σύνδεση |
+ * | `unavailable` | **δεν μπορέσαμε να ρωτήσουμε** | 503 — ⛔ ποτέ «ανακλήθηκε» (N.12) |
+ */
+export type IdTokenVerdict =
+  | { readonly outcome: 'valid'; readonly decoded: DecodedIdToken }
+  | { readonly outcome: 'invalid' }
+  | { readonly outcome: 'revoked' }
+  | { readonly outcome: 'unavailable' };
+
+/** Κρίνει το token με τον **ίδιο** κριτή ανάκλησης που ρωτούν οι αναγνώστες — και λέει **γιατί** όχι. */
+export async function judgeIdToken(token: string): Promise<IdTokenVerdict> {
+  if (!isFirebaseAdminAvailable()) {
+    logger.info('[AUTH_CONTEXT] Cannot verify token - Admin SDK not available');
+    return { outcome: 'unavailable' };
+  }
+
+  let decoded: DecodedIdToken;
+  try {
+    decoded = await getAdminAuth().verifyIdToken(token);
+  } catch (error) {
+    logger.info('[AUTH_CONTEXT] Token verification failed:', { message: (error as Error).message });
+    return { outcome: 'invalid' };
+  }
+
+  try {
+    return (await unlessRevoked(decoded)) === null ? { outcome: 'revoked' } : { outcome: 'valid', decoded };
+  } catch (error) {
+    // Ούτε σφραγίδα στη μνήμη ούτε απάντηση από το Auth: «δεν ξέρω», όχι «ανακλήθηκε».
+    logger.info('[AUTH_CONTEXT] Revocation state unavailable:', { message: (error as Error).message });
+    return { outcome: 'unavailable' };
+  }
+}
+
+/**
  * Verify Firebase ID token and return decoded token.
  *
  * @param token - ID token string
- * @returns DecodedIdToken or null
+ * @returns DecodedIdToken or null — κάθε «όχι» της {@link judgeIdToken} είναι άρνηση εδώ (fail-closed).
  */
 export async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
-  try {
-    if (!isFirebaseAdminAvailable()) {
-      logger.info('[AUTH_CONTEXT] Cannot verify token - Admin SDK not available');
-      return null;
-    }
-
-    const auth = getAdminAuth();
-    return await unlessRevoked(await auth.verifyIdToken(token));
-  } catch (error) {
-    logger.info('[AUTH_CONTEXT] Token verification failed:', { message: (error as Error).message });
-    return null;
-  }
+  const verdict = await judgeIdToken(token);
+  return verdict.outcome === 'valid' ? verdict.decoded : null;
 }
 
 /**

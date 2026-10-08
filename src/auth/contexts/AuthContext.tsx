@@ -21,6 +21,7 @@ import { clearCorruptedUserData, validateSession } from './auth-context/auth-con
 import {
   buildAuthUser,
   clearServerSessionCookie,
+  SignInRevokedError,
   syncServerSession,
 } from './auth-context/auth-context-session';
 import {
@@ -296,6 +297,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await syncServerSession(firebaseUser);
         logger.debug('[AuthContext] Server session cookie synced');
       } catch (sessionError) {
+        // 🔴 ADR-908 §3.5 — ανακλημένη σύνδεση ⇒ ο κάτοχος, και ΠΟΤΕ `user`: χωρίς cookie η φόρμα θα πλοηγούσε
+        //    σε κύκλο με τον φρουρό του διακομιστή. Κάθε άλλη αποτυχία μένει non-blocking, όπως παραπάνω.
+        if (sessionError instanceof SignInRevokedError) {
+          void endSignIn({ reason: 'revoked' });
+          return;
+        }
         logger.warn('[AuthContext] Failed to sync server session cookie (non-blocking)', { error: sessionError });
       }
 

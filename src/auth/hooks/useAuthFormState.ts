@@ -7,8 +7,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from '@/lib/workspace/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { navigateDocument } from '@/lib/browser/document-navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -49,7 +49,6 @@ interface UseAuthFormStateOptions {
 
 export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuthFormStateOptions) {
   const { t } = useTranslation('auth');
-  const router = useRouter();
   const {
     user,
     signIn,
@@ -114,12 +113,23 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
    * `staleTimes.static` (**5′**): η **ανώνυμη** απόδοση του προορισμού («Συνδεθείτε»)
    * μπορούσε να σερβιριστεί **μετά** τη σύνδεση — δεύτερος βρόχος, κρυμμένος πίσω από τον
    * πρώτο. Κάθε προορισμός εδώ εξαρτάται από την ταυτότητα, άρα δεν προφορτώνεται.
+   *
+   * 🔴 **ADR-908 §3.4 — ΠΛΟΗΓΗΣΗ ΕΓΓΡΑΦΟΥ, ΟΧΙ `router.replace`.** Αυτό το έγγραφο γεννήθηκε
+   * για **ανώνυμο**· ο άνθρωπος που μόλις συνδέθηκε ξεκινά σε **καινούργιο**, με μνήμη
+   * δρομολογητή που δεν είδε ποτέ άλλον (μετρημένο 2026-10-08: αποθηκευμένη απάντηση του
+   * φρουρού για ανώνυμο σερβιρίστηκε στον επόμενο που συνδέθηκε ⇒ 425 `replace` σε βρόχο).
+   * Τον προορισμό τον κρίνει **ο ίδιος ο προορισμός**, στον διακομιστή, για όποιον τελικά
+   * συνδέθηκε (`o/[workspace]/layout.tsx`, CHECK 3.58) — ⛔ όχι δεύτερος κριτής εδώ.
+   * ⚠️ Η διεύθυνση φεύγει **ωμή**: όταν δεν ονομάζει χώρο, τον βάζει το δίχτυ
+   * (`(app)/[...unprefixed]`) με **κριμένη** ταυτότητα — ο πελάτης δεν μαντεύει (άγκυρα Λ2).
    */
+  const leaving = useRef(false);
   useEffect(() => {
-    if (!loading && user) {
-      router.replace(landing);
-    }
-  }, [loading, user, router, landing]);
+    if (loading || !user || leaving.current) return;
+    // Μία φορά: το έγγραφο φεύγει, και μια αλλαγή του `user` στο μεταξύ δεν ξαναπλοηγεί.
+    leaving.current = true;
+    navigateDocument(landing, { replace: true });
+  }, [loading, user, landing]);
 
   // ── Handlers ──
 

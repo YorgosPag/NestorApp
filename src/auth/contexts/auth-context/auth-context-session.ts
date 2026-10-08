@@ -3,6 +3,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { API_ROUTES, AUTH_EVENTS } from '@/config/domain-constants';
 import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
+import { SIGN_IN_REVOKED_ERROR_CODE } from '@/lib/auth/session-issue-wire';
 import { currentIdentityEpoch, identityChangedSince } from './identity-epoch';
 
 export function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<string, unknown>): FirebaseAuthUser {
@@ -37,6 +38,21 @@ interface SessionApiResponse {
   success: boolean;
   message: string;
   error?: string;
+  code?: string;
+}
+
+/**
+ * **Ο διακομιστής ΑΡΝΗΘΗΚΕ να εκδώσει συνεδρία γιατί αυτή η σύνδεση ανακλήθηκε** (ADR-908 §3.5).
+ *
+ * 🔑 Ξεχωριστός τύπος και όχι σκέτο `Error`: κάθε άλλη αποτυχία του `POST` είναι **παροδική** (ο άνθρωπος
+ * συνεχίζει, και το cookie ξαναζητείται στην επόμενη ανανέωση). Αυτή είναι **οριστική** — το token αυτής της
+ * σύνδεσης δεν θα γίνει ποτέ δεκτό, άρα ο μόνος σωστός δρόμος είναι ο κάτοχος της αποσύνδεσης.
+ */
+export class SignInRevokedError extends Error {
+  constructor() {
+    super('This sign-in was revoked');
+    this.name = 'SignInRevokedError';
+  }
 }
 
 export async function syncServerSession(firebaseUser: FirebaseUser): Promise<void> {
@@ -64,6 +80,8 @@ export async function syncServerSession(firebaseUser: FirebaseUser): Promise<voi
     } catch {
       payload = null;
     }
+
+    if (payload?.code === SIGN_IN_REVOKED_ERROR_CODE) throw new SignInRevokedError();
 
     const errorMessage = payload?.error || payload?.message || 'Failed to create session cookie';
     throw new Error(errorMessage);
