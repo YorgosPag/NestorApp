@@ -28,6 +28,7 @@ import {
   buildPublicListing,
   isOffered,
   isPubliclyListed,
+  offeredAudienceOf,
   projectListingShape,
   type PlaceKnowledge,
   type ProjectableProperty,
@@ -95,6 +96,27 @@ describe('🏆 Α1 — μόνο το `public` περνά την πύλη προ�
 
   it('η πύλη δεν ανοίγει για ΜΗ διαθέσιμη αγγελία, όποιο κι αν είναι το κοινό', () => {
     expect(isPubliclyListed(forSale({ commercialStatus: 'sold', marketingAudience: 'public' }))).toBe(false);
+  });
+});
+
+describe('🏆 Α1.ε — `offeredAudienceOf`: το κοινό είναι ΓΕΓΟΝΟΣ μόνο όταν το ακίνητο διατίθεται (ADR-777 §8.87.3)', () => {
+  it('🔑 παρονομαστής: διατίθεται ⇒ το κοινό του, και η απουσία πεδίου είναι `public` (Α3)', () => {
+    expect(offeredAudienceOf(forSale())).toBe('public');
+    expect(offeredAudienceOf(forSale({ marketingAudience: 'custodians' }))).toBe('custodians');
+  });
+
+  it.each([
+    ['εκτός αγοράς', { commercialStatus: 'unavailable' }],
+    ['πουλημένο', { commercialStatus: 'sold' }],
+    ['στον κάδο', { status: 'deleted' }],
+    ['χωρίς είδος', { type: null }],
+  ] as const)('🔴 %s ⇒ `null` — ΟΧΙ `public`, παρότι το πεδίο λείπει', (_label, overrides) => {
+    expect(offeredAudienceOf(forSale(overrides))).toBeNull();
+  });
+
+  it.each(MARKETING_AUDIENCES)('🔴 ένας κριτής: η πύλη προβολής συμφωνεί για `%s`', (audience) => {
+    const property = forSale({ marketingAudience: audience });
+    expect(isPubliclyListed(property)).toBe(offeredAudienceOf(property) === 'public');
   });
 });
 

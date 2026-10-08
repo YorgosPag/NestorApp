@@ -27,6 +27,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 
 import { TOUR_FAILURE_KEYS, TOUR_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
+import { TourPanelSection } from './TourPanelSection';
 import {
   LIFECYCLE_KEY,
   SPACE_AREA_SETTING_KEYS,
@@ -53,8 +54,7 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
   // ADR-884 §4.7 Α8 — ο ΙΔΙΟΣ κριτής με τον θεατή και τον διακομιστή: ό,τι θα αρνιόταν, φαίνεται κλειστό πριν πατηθεί.
   const showsSomething = state.viewerStopCount > 0;
   return (
-    <section className="space-y-3" aria-labelledby="tour-settings-heading">
-      <h3 id="tour-settings-heading" className="text-base font-semibold">{t(VIEWING_KEYS.settingsTitle)}</h3>
+    <TourPanelSection headingId="tour-settings-heading" title={t(VIEWING_KEYS.settingsTitle)}>
       <section className="grid gap-3 sm:grid-cols-2">
         <VisibilityField settings={settings} supported={state.supportedVisibilities}
           onChange={(visibility) => void update({ ...settings, visibility })} />
@@ -83,7 +83,7 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
       {!showsSomething && <p className="text-sm text-muted-foreground" role="note">{t(VIEWING_KEYS.needsStop)}</p>}
       <SettingsNotice notice={notice} />
       {companyId !== null && <PersonalLinks tourId={state.tourId} companyId={companyId} ready={showsSomething} />}
-    </section>
+    </TourPanelSection>
   );
 }
 

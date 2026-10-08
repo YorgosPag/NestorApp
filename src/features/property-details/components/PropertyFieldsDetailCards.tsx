@@ -50,7 +50,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
 
   return (
     <>
-      <section className="grid grid-cols-3 gap-3">
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-3">
         {/* ─── Layout Card (level-aware) ─── */}
         {/* ADR-287 Batch 28: id anchor for completion-meter click-to-jump. */}
         <Card id="field-layout" tabIndex={-1}>

@@ -6,8 +6,28 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityDetailsHeader, createEntityAction, type EntityHeaderAction } from '@/core/entity-headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  PropertyIdentityFacts,
+  PropertyIdentityStatus,
+  usePropertyIdentityLine,
+} from '@/components/properties/detail/property-identity-parts';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
+
+/**
+ * **Η γκαλερί φορτώνεται με όριο** (`React.lazy`) — ADR-744 §27. Με στατική εισαγωγή έβαζε το namespace
+ * `listing-detail` στις αναμονές των διαδρομών Ακινήτων **και** Κτιρίων, όπου η κεφαλίδα είναι `compact` και η
+ * γκαλερί δεν ζωγραφίζεται ποτέ. Ίδιο ιδίωμα με το `LazyPropertyTourTab` (`propertiesMappings`).
+ */
+const LazyPropertyHeaderGallery = React.lazy(() =>
+  import('@/components/properties/detail/PropertyHeaderGallery').then((gallery) => ({
+    default: gallery.PropertyHeaderGallery,
+  })),
+);
+
+/** Ίδιο κουτί με τη γκαλερί (`h-32 w-full sm:w-48`) ⇒ καμία μετατόπιση διάταξης όταν φτάσει. */
+const GALLERY_FALLBACK = <Skeleton className="h-32 w-full shrink-0 sm:w-48" />;
 
 // 🏢 ENTERPRISE: Centralized Property Icon & Color (SSoT)
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
@@ -37,6 +57,12 @@ interface PropertyDetailsHeaderProps {
    * αλλαγή δεν πρέπει να έχει δίπλα της κουμπί που φεύγει από τη σελίδα.
    */
   extraActions?: readonly EntityHeaderAction[];
+  /**
+   * Πόση ταυτότητα δείχνει η κεφαλίδα (ADR-777 §8.87). `compact` (προεπιλογή): εικονίδιο + όνομα — η δεξιά
+   * στήλη, όπου η λίστα δίπλα **είναι** η ταυτότητα. `full`: γκαλερί · υπότιτλος · κατάσταση · τιμή · εμβαδόν —
+   * η σελίδα, όπου δεν υπάρχει τίποτα άλλο να πει ποιο ακίνητο κοιτάς. **Ίδιος τίτλος, ίδιες ενέργειες.**
+   */
+  identity?: 'compact' | 'full';
 }
 
 export function PropertyDetailsHeader({
@@ -49,9 +75,11 @@ export function PropertyDetailsHeader({
   onDeleteProperty,
   onShowcaseProperty,
   extraActions,
+  identity = 'compact',
 }: PropertyDetailsHeaderProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const retiredKind = useRetiredKind();
+  const identityLine = usePropertyIdentityLine(property);
 
   const handleHeaderSave = useCallback(() => {
     const form = document.getElementById('property-fields-form') as HTMLFormElement | null;
@@ -116,6 +144,30 @@ export function PropertyDetailsHeader({
   const headerTitle = isCreatingNewUnit
     ? t('navigation.actions.newUnit.label')
     : property.name;
+
+  // 🔑 **Κεφαλίδα σελίδας εγγραφής** (ADR-777 §8.87): η ταυτότητα γεμίζει τις θυρίδες της ΙΔΙΑΣ κεφαλίδας — ίδιος
+  //    τίτλος, ίδιες ενέργειες, μία φορά. Ορατή **και** σε κινητό: εκεί είναι ο μόνος τίτλος της σελίδας.
+  if (identity === 'full' && !isCreatingNewUnit) {
+    return (
+      <EntityDetailsHeader
+        icon={PropertyIcon}
+        iconColor={propertyColor}
+        title={headerTitle}
+        headingLevel={1}
+        subtitle={identityLine}
+        titleAdornment={<PropertyIdentityStatus property={property} />}
+        media={
+          <React.Suspense fallback={GALLERY_FALLBACK}>
+            <LazyPropertyHeaderGallery property={property} />
+          </React.Suspense>
+        }
+        details={<PropertyIdentityFacts property={property} />}
+        actions={actions}
+        variant="detailed"
+        className="p-4"
+      />
+    );
+  }
 
   return (
     <>

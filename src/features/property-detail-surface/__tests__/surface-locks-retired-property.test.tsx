@@ -6,6 +6,7 @@
  *   Ε2 — αγνοεί τη λειτουργία επεξεργασίας του σημείου προσάρτησης (το μολύβι της λίστας δεν ξεκλειδώνει)
  *   Ε3 — δεν προσαρτά τη βιτρίνα (δημόσια προσφορά)
  *   Ε4 — δείχνει την ταινία που εξηγεί
+ *   Ε5 — δεν ζωγραφίζει τις καρτέλες-πράξεις (`liveRecordOnly`: αγγελία · αντικειμενική · περιήγηση)
  *
  * | Μετάλλαξη (`PropertyDetailSurface.tsx`) | Αποτέλεσμα |
  * |---|---|
@@ -53,28 +54,35 @@ jest.mock('@/features/properties-sidebar/components/PropertyDetailsHeader', () =
     <div data-testid="header" data-edit={String(isEditMode)} />
   ),
 }));
-jest.mock('@/config/properties-tabs-config', () => ({ getSortedPropertiesTabs: () => [] }));
+jest.mock('@/config/properties-tabs-config', () => ({
+  getSortedPropertiesTabs: () => [{ id: 'info' }, { id: 'listing', liveRecordOnly: true }],
+}));
 jest.mock('@/components/generic/mappings/propertiesMappings', () => ({ PROPERTIES_COMPONENT_MAPPING: {} }));
 
 /** Ένα φύλλο κάτω από τα tabs: ρωτά μόνο του, όπως κάθε πραγματικό φύλλο. */
-function LeafProbe({ isEditMode }: { isEditMode: boolean }) {
-  return <div data-testid="leaf" data-kind={String(useRetiredKind())} data-edit={String(isEditMode)} />;
+function LeafProbe({ isEditMode, tabIds }: { isEditMode: boolean; tabIds: string }) {
+  return <div data-testid="leaf" data-kind={String(useRetiredKind())} data-edit={String(isEditMode)} data-tabs={tabIds} />;
 }
 jest.mock('@/components/generic/UniversalTabsRenderer', () => ({
   convertToUniversalConfig: (tab: unknown) => tab,
-  UniversalTabsRenderer: ({ additionalData }: { additionalData: { isEditMode: boolean } }) => (
-    <LeafProbe isEditMode={additionalData.isEditMode} />
-  ),
+  UniversalTabsRenderer: ({
+    additionalData,
+    tabs,
+  }: {
+    additionalData: { isEditMode: boolean };
+    tabs: { id: string }[];
+  }) => <LeafProbe isEditMode={additionalData.isEditMode} tabIds={tabs.map((tab) => tab.id).join(',')} />,
 }));
 
 import { PropertyDetailSurface } from '../PropertyDetailSurface';
 
 const property = (status: string) => ({ id: 'prop_1', name: 'Δοκιμή', status }) as unknown as Property;
 
-function mount(target: Property | null, isEditMode: boolean, onCreateAction?: () => void) {
+function mount(target: Property | null, isEditMode: boolean, onCreateAction?: () => void, isCreatingNewUnit = false) {
   return render(
     <PropertyDetailSurface
       property={target}
+      isCreatingNewUnit={isCreatingNewUnit}
       units={[]}
       viewerProps={{ properties: [] }}
       floors={[]}
@@ -109,6 +117,26 @@ describe.each([
 
     expect(screen.queryByTestId('showcase-dialog')).toBeNull();
     expect(screen.getByTestId('retired-banner')).toBeInTheDocument();
+  });
+
+  it('🔴 Ε5 — οι καρτέλες-πράξεις (`liveRecordOnly`) δεν ζωγραφίζονται καθόλου', () => {
+    mount(property(status), false);
+
+    expect(screen.getByTestId('leaf')).toHaveAttribute('data-tabs', 'info');
+  });
+});
+
+describe('καρτέλες-πράξεις (`liveRecordOnly`)', () => {
+  it('✅ ζωντανό ακίνητο ⇒ προσφέρονται', () => {
+    mount(property('for-sale'), false);
+
+    expect(screen.getByTestId('leaf')).toHaveAttribute('data-tabs', 'info,listing');
+  });
+
+  it('🔴 δημιουργία ⇒ δεν υπάρχει ακόμη εγγραφή να δεχτεί την πράξη', () => {
+    mount(property('for-sale'), true, undefined, true);
+
+    expect(screen.getByTestId('leaf')).toHaveAttribute('data-tabs', 'info');
   });
 });
 

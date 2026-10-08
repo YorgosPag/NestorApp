@@ -28,6 +28,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 
 import { DELIVERY_KEY, PANEL_KEYS, STANDING_KEY, TOUR_FAILURE_KEYS, TOUR_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
+import { TourPanelSection } from './TourPanelSection';
 import { useTourPhotographers, type PhotographerActResult } from './useTourPhotographers';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,8 +41,7 @@ export function TourPhotographersSection({ subject }: { readonly subject: TourSu
   const photographers = useTourPhotographers(subject);
   const { load } = photographers;
   return (
-    <section className="space-y-4" aria-labelledby="tour-photographers-heading">
-      <h3 id="tour-photographers-heading" className="text-base font-semibold">{t(PANEL_KEYS.photographers)}</h3>
+    <TourPanelSection headingId="tour-photographers-heading" title={t(PANEL_KEYS.photographers)}>
       <InviteForm busy={photographers.busy} onIssue={photographers.issue} />
       <ActResultLine result={photographers.last} />
       {load.kind === 'failed' && (
@@ -58,7 +58,7 @@ export function TourPhotographersSection({ subject }: { readonly subject: TourSu
           <Grants grants={load.grants} busy={photographers.busy} onRevoke={(g) => photographers.revokeGrant(g.granteeUid)} />
         </>
       )}
-    </section>
+    </TourPanelSection>
   );
 }
 

@@ -105,6 +105,10 @@ export interface UnitsTabLabelsConfig {
   readonly documents: string;
   readonly photos: string;
   readonly videos: string;
+  /** ADR-777 §8.30 — οι πράξεις της αγγελίας ως καρτέλες (όχι ενότητες πάνω από τις καρτέλες). */
+  readonly tour: string;
+  readonly listing: string;
+  readonly objectiveValue: string;
   // Legacy keys for backward compatibility
   readonly general: string;
   readonly details: string;
@@ -258,6 +262,9 @@ export const VOCAB_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
   documents: "tabs.labels.unitDocuments",
   photos: "tabs.labels.photos",
   videos: "tabs.labels.videos",
+  tour: "tabs.labels.tour360",
+  listing: "tabs.labels.listing",
+  objectiveValue: "tabs.labels.objectiveValue",
   // 🔧 Legacy keys for backward compatibility
   general: "tabs.labels.basicInfo",
   details: "tabs.labels.customer",

@@ -269,7 +269,13 @@ export function UniversalTabsRenderer<
   }, [sortedTabs, defaultTab]);
 
   // 🏢 ENTERPRISE: Track active tab for lazy rendering
-  const [activeTab, setActiveTab] = useState(selectableDefaultTab);
+  const [selectedTab, setActiveTab] = useState(selectableDefaultTab);
+
+  // Το σύνολο των καρτελών μπορεί να **στενέψει** όσο η οθόνη είναι ανοιχτή (π.χ. το ακίνητο αποσύρθηκε και οι
+  // καρτέλες-πράξεις του έφυγαν): επιλογή που δεν υπάρχει πια πέφτει στην προεπιλεγμένη, αντί για κενή οθόνη.
+  const activeTab = sortedTabs.some(tab => !tab.href && tab.value === selectedTab)
+    ? selectedTab
+    : selectableDefaultTab;
 
   // 🏢 ENTERPRISE: Sync activeTab when defaultTab prop changes (deep-link navigation)
   // Only triggers when defaultTab actually changes value, NOT on user tab clicks

@@ -22,6 +22,8 @@ import {
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
 import { isEditorCommercialStatus } from '@/constants/commercial-statuses';
+import type { MarketingAudience } from '@/constants/marketing-audiences';
+import { offeredAudienceOf } from '@/services/listings/public-listing-projection';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 import { commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import type { Property } from '@/types/property-viewer';
@@ -113,6 +115,29 @@ export function buildPropertyStatusBadge(property: Property, t: TFn): GridCardBa
   return spec
     ? { label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }), variant: spec.variant }
     : null;
+}
+
+/** Απόχρωση ανά κοινό. `Record<MarketingAudience, …>`: τέταρτο κοινό δεν μεταγλωττίζεται χωρίς απόχρωση. */
+const AUDIENCE_BADGE_VARIANT: Readonly<Record<MarketingAudience, GridCardBadgeVariant>> = {
+  public: 'success',
+  network: 'outline',
+  custodians: 'outline',
+};
+
+/**
+ * **Το σήμα κοινού** — «Δημόσια» / «Κλειστή — …», δίπλα στο σήμα κατάστασης (ADR-777 §8.87.3 · ADR-864 §5.1).
+ *
+ * 🔴 **`null` όταν το ακίνητο ΔΕΝ διατίθεται**: τότε δεν υπάρχει αγγελία σε κανένα κοινό, και το «γιατί» το λέει
+ * ήδη το σήμα κατάστασης. Την ετυμηγορία τη δίνει ο ΕΝΑΣ κριτής (`offeredAudienceOf` — ο ίδιος με την πύλη
+ * προβολής και την καρτέλα «Αγγελία»)· ετικέτα από τον ΕΝΑ κατάλογο (`properties-enums:marketingAudience`).
+ */
+export function buildListingAudienceBadge(property: Property, t: TFn): GridCardBadge | null {
+  const audience = offeredAudienceOf(property);
+  if (audience === null) return null;
+  return {
+    label: t(`marketingAudience.${audience}`, { ns: UNIT_STATUS_NAMESPACE }),
+    variant: AUDIENCE_BADGE_VARIANT[audience],
+  };
 }
 
 /**

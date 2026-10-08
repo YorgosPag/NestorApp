@@ -56,7 +56,9 @@
       "procurement": "Προμήθειες",
       "buildingCode": "Όροι Δόμησης",
       "surveyData": "Στοιχεία Τοπογραφικού",
-      "objectiveValue": "Αντικειμενική"
+      "objectiveValue": "Αντικειμενική",
+      "listing": "Αγγελία",
+      "tour360": "Περιήγηση 360°"
     },
     "descriptions": {
       "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",

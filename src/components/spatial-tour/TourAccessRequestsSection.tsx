@@ -27,6 +27,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 
 import { TOUR_FAILURE_KEYS, TOUR_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
+import { TourPanelSection } from './TourPanelSection';
 import { VIEWING_KEYS } from './spatial-tour-viewing-labels';
 import { useTourAccessRequests, type TourViewingNotice } from './useTourViewing';
 
@@ -38,8 +39,7 @@ const DEFAULT_DAYS = 30;
 export function TourAccessRequestsSection({ subject }: { readonly subject: TourSubject }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   return (
-    <section className="space-y-3" aria-labelledby="tour-requests-heading">
-      <h3 id="tour-requests-heading" className="text-base font-semibold">{t(VIEWING_KEYS.requestsTitle)}</h3>
+    <TourPanelSection headingId="tour-requests-heading" title={t(VIEWING_KEYS.requestsTitle)}>
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending">{t(VIEWING_KEYS.tabPending)}</TabsTrigger>
@@ -48,7 +48,7 @@ export function TourAccessRequestsSection({ subject }: { readonly subject: TourS
         <TabsContent value="pending"><PendingRequests subject={subject} /></TabsContent>
         <TabsContent value="approved"><ApprovedViewers subject={subject} /></TabsContent>
       </Tabs>
-    </section>
+    </TourPanelSection>
   );
 }
 

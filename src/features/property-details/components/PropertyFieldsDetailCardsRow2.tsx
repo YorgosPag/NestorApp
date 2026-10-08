@@ -49,7 +49,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
   const colors = useSemanticColors();
 
   return (
-    <section className="grid grid-cols-3 gap-3">
+    <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-3">
       {/* ─── Systems Card ─── */}
       {/* ADR-287 Batch 28: id anchor for completion-meter click-to-jump. */}
       <Card id="field-systems" tabIndex={-1}>

@@ -4,8 +4,8 @@
     "adr": "ADR-898 §18.2",
     "description": "Κλήσεις μετάφρασης (`t`/`tX`/`x.t`) με `defaultValue` που ΔΕΝ είναι γνωστό κείμενο ⇒ ωμή τιμή στην οθόνη όταν λείψει το κλειδί, και κλειδί που λείπει αόρατο στο CHECK 3.8.",
     "generatedBy": "node scripts/check-i18n-raw-fallback.js --write-baseline",
-    "totalFindings": 83,
-    "totalFiles": 43,
+    "totalFindings": 82,
+    "totalFiles": 42,
     "note": "Μόνο μειώνεται. Θεραπεία: κλειδί και στα δύο locales ή SSoT συνάρτηση ετικέτας με ρητό κλειδί `unknown` (π.χ. src/lib/buildings/building-enum-labels.ts) — ΠΟΤΕ προσθήκη εδώ."
   },
   "files": {
@@ -23,7 +23,6 @@
     "src/components/projects/customers-tab/parts/ErrorCard.tsx": 1,
     "src/components/projects/structure-tab/ProjectStructureTab.tsx": 1,
     "src/components/projects/structure-tab/parts/ParkingNode.tsx": 1,
-    "src/components/properties/detail/PropertyIdentityHeader.tsx": 1,
     "src/components/properties/dialogs/PropertyMutationImpactDialog.tsx": 3,
     "src/components/sales/cards/SalesParkingCard.tsx": 2,
     "src/components/sales/cards/SalesPropertyListCard.tsx": 2,

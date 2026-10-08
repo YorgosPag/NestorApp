@@ -26,6 +26,8 @@ import type {
   InteriorFeatureCodeType,
   SecurityFeatureCodeType
 } from '@/constants/property-features-enterprise';
+import type { MarketingAudience } from '@/constants/marketing-audiences';
+import type { OfferKind } from './property-offers';
 import type { Timestamp } from 'firebase/firestore';
 // 🏢 PHASE 2: LinkedSpaces type
 import type { LinkedSpace } from './property';
@@ -70,6 +72,15 @@ export interface Property {
      * Populated via SharedPropertiesProvider spread from Unit data
      */
     commercialStatus?: CommercialStatus;
+
+    /**
+     * **Ποιος βλέπει την αγγελία** (ADR-864 §5.1) + **τι διαθέτει** (ADR-777 Α20) — ίδια πεδία, ίδιοι τύποι με το
+     * `Property` του `@/types/property`: το αντικείμενο είναι το ίδιο έγγραφο (ωμό spread). Δηλώνονται εδώ για να
+     * ρωτά η κεφαλίδα τον ΕΝΑ κριτή (`offeredAudienceOf`) **χωρίς cast** (ADR-777 §8.87.3).
+     * ⚠️ Μην τα διαβάσεις απευθείας: απουσία κοινού ⇒ `public` μόνο μέσω `marketingAudienceOf`.
+     */
+    marketingAudience?: MarketingAudience;
+    offerKinds?: OfferKind[];
 
     /**
      * ⚠️ DEPRECATED: Price (commercial data)

@@ -75,6 +75,17 @@ export interface EntityHeaderProps {
   variant?: 'default' | 'compact' | 'detailed';
   className?: string;
 
+  /**
+   * **Μέσο ταυτότητας** στη θέση του εικονιδίου (π.χ. γκαλερί φωτογραφιών) — η κεφαλίδα **σελίδας εγγραφής**
+   * (ADR-777 §8.87): ταυτότητα αριστερά, ενέργειες δεξιά, ΜΙΑ φορά. Με `media` η διάταξη στοιβάζεται σε στενό
+   * πλάτος και οι ενέργειες αναδιπλώνονται, αντί να ξεχειλίζουν.
+   */
+  media?: React.ReactNode;
+  /** Γεγονότα ταυτότητας κάτω από τον υπότιτλο (π.χ. τιμή · εμβαδόν). */
+  details?: React.ReactNode;
+  /** Επίπεδο επικεφαλίδας του τίτλου. `1` όταν η κεφαλίδα **είναι** ο τίτλος της σελίδας. Προεπιλογή `3`. */
+  headingLevel?: 1 | 3;
+
   // Custom content
   children?: React.ReactNode;
 }
@@ -93,8 +104,12 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   iconColor,
   variant = 'default',
   className,
+  media,
+  details,
+  headingLevel = 3,
   children
 }) => {
+  const Heading = headingLevel === 1 ? 'h1' : 'h3';
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
@@ -123,11 +138,22 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
       variantClasses[variant],
       className
     )}>
-      <div className="flex items-center justify-between">
+      {/*
+        🔑 Με `media` η αναδίπλωση είναι **εγγενής** (`flex-wrap` + `basis`), όχι σημείο θραύσης οθόνης: η κεφαλίδα
+        ζει μέσα σε κέλυφος με πλαϊνό μενού, άρα το πλάτος της **δεν** είναι το πλάτος της οθόνης. Μετρημένο
+        2026-10-08 (ADR-777 §8.87.2): με `lg:flex-row` + ενέργειες `flex-shrink-0`, σε οθόνη 1024–1300px ο τίτλος
+        είχε πλάτος **0** και οι ενέργειες έπεφταν πάνω στο μέσο. Τώρα οι ενέργειες κατεβαίνουν όταν η ταυτότητα
+        δεν χωρά στη βάση της (`basis-[32rem]`: μέσο 12rem + 20rem κείμενο).
+      */}
+      <div className={media
+        ? "flex flex-wrap items-start justify-between gap-3"
+        : "flex items-center justify-between"}>
         {/* Left side: Icon + Content */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Icon or Avatar */}
-          {avatarImageUrl ? (
+        <div className={media
+          ? "flex flex-col gap-4 sm:flex-row sm:items-start flex-1 basis-[32rem] min-w-0"
+          : "flex items-center gap-3 flex-1 min-w-0"}>
+          {/* Media, Icon or Avatar */}
+          {media ? media : avatarImageUrl ? (
             <Avatar
               key={avatarImageUrl || 'empty-avatar'}
               className={cn(
@@ -177,13 +203,15 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
           {/* Content */}
           <div className="flex-1 min-w-0">
             {/* Title row (title + optional inline adornment) */}
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className={cn(
-                "font-semibold text-foreground line-clamp-1",
+            {/* Τίτλος σελίδας (`media`): αναδιπλώνεται σε δύο γραμμές και το σήμα κατεβαίνει — δεν κόβεται στη μία. */}
+            <div className={media ? "flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0" : "flex items-center gap-2 min-w-0"}>
+              <Heading className={cn(
+                "font-semibold text-foreground",
+                media ? "line-clamp-2 min-w-0" : "line-clamp-1",
                 titleSizes[variant]
               )}>
                 {title}
-              </h3>
+              </Heading>
               {titleAdornment && (
                 <div className="flex-shrink-0">{titleAdornment}</div>
               )}
@@ -204,12 +232,14 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
                 ))}
               </div>
             )}
+
+            {details && <div className="mt-3">{details}</div>}
           </div>
         </div>
 
         {/* Right side: Actions */}
         {actions.length > 0 && (
-          <div className="flex gap-2 flex-shrink-0 ml-3">
+          <div className={media ? "flex flex-wrap gap-2 max-w-full" : "flex gap-2 flex-shrink-0 ml-3"}>
             {actions.map((action, index) => (
               <EntityAction key={index} {...action} />
             ))}

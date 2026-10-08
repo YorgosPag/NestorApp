@@ -88,8 +88,8 @@ type ContactAdmissionResponse =
       readonly reason: FirstContactRejection;
       /**
        * **Πού τη διαχειρίζεσαι** — αποκλειστικά στο `contact-own-target`, `null` παντού
-       * αλλού. Δες `manageHrefOfOwnTarget` για το γιατί ο **εταιρικός** χώρος δεν
-       * ονομάζεται από δημόσια σελίδα: είναι **ονομασμένη απουσία**, όχι παράλειψη.
+       * αλλού. **Ωμή** διεύθυνση, χωρίς πρόθεμα χώρου: την εταιρική την παραλαμβάνει
+       * το δίχτυ `(app)/[...unprefixed]` — δες `manageHrefOfOwnTarget`.
        */
       readonly manageHref: string | null;
     }

@@ -32,7 +32,25 @@ import VideosTabContent from '@/components/building-management/tabs/VideosTabCon
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+import { PropertyListingTab } from '@/components/properties/tabs/PropertyListingTab';
+import { PropertyObjectiveValuePanel } from '@/components/properties/detail/PropertyObjectiveValuePanel';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AuditEntityType } from '@/types/audit-trail';
+
+/**
+ * **Η περιήγηση φορτώνεται με όριο** (`React.lazy`) — ADR-744 §27. Με στατική εισαγωγή το `SpatialTourPanel` έβαζε το
+ * namespace `spatial-tour` στις αναμονές των διαδρομών Ακινήτων **και** Κτιρίων: λήψη πριν το πρώτο καρέ, για κείμενο
+ * που ζει πίσω από καρτέλα. Ίδιο ιδίωμα με το `propertyDossierMappings`.
+ */
+const LazyPropertyTourTab = React.lazy(() =>
+  import('@/components/properties/tabs/PropertyTourTab').then((tabs) => ({ default: tabs.PropertyTourTab })),
+);
+
+/** Η στιγμή φόρτωσης μιας τεμπέλικης καρτέλας. */
+function TabLoading(): React.ReactElement {
+  const { t } = useTranslation(['common']);
+  return React.createElement('p', { className: 'm-0 p-4 text-sm text-muted-foreground' }, t('common:common.loading'));
+}
 
 function isProperty(value: unknown): value is Property {
   return typeof value === 'object' && value !== null && 'id' in value;
@@ -155,7 +173,34 @@ function ActivityTabAdapter(props: PropertyTabComponentProps) {
   });
 }
 
+// ADR-777 §8.30 — οι πράξεις της αγγελίας ως καρτέλες. Χωρίς επιλεγμένο ακίνητο δεν αποδίδουν τίποτα: την κενή
+// κατάσταση τη λέει το `DetailsContainer` της επιφάνειας, όχι κάθε φύλλο χωριστά.
+
+function PropertyListingTabAdapter(props: PropertyTabComponentProps) {
+  const property = resolveSelectedProperty(props);
+  return property ? React.createElement(PropertyListingTab, { property }) : null;
+}
+
+function PropertyObjectiveValueTabAdapter(props: PropertyTabComponentProps) {
+  const property = resolveSelectedProperty(props);
+  if (!property) return null;
+  return React.createElement('article', { className: 'p-2' }, React.createElement(PropertyObjectiveValuePanel, { property }));
+}
+
+function PropertyTourTabAdapter(props: PropertyTabComponentProps) {
+  const property = resolveSelectedProperty(props);
+  if (!property) return null;
+  return React.createElement(
+    React.Suspense,
+    { fallback: React.createElement(TabLoading) },
+    React.createElement(LazyPropertyTourTab, { property }),
+  );
+}
+
 export const PROPERTIES_COMPONENT_MAPPING: Record<string, ComponentType<PropertyTabComponentProps>> = {
+  PropertyListingTab: PropertyListingTabAdapter,
+  PropertyObjectiveValueTab: PropertyObjectiveValueTabAdapter,
+  PropertyTourTab: PropertyTourTabAdapter,
   PropertyDetailsContent: PropertyDetailsTabAdapter,
   UnitCustomerTab: UnitCustomerTabAdapter,
   FloorPlanTab: FloorPlanTabAdapter,

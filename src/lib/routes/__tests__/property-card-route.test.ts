@@ -21,6 +21,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { createTabsConfig } from '@/config/unified-tabs-factory';
 import { ENTITY_ROUTES } from '@/lib/routes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
@@ -137,8 +138,14 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     expect(content).toMatch(/retired: retired\.lookup/);
     // Η ίδια επιφάνεια και για τις δύο καταστάσεις — ποτέ δεύτερη σύνθεση για το αποσυρμένο.
     expect(content).toMatch(/state\.kind === 'found' \|\| state\.kind === 'retired'/);
-    // Οι πράξεις της καρτέλας (κοινό, αντικειμενική, ζήτηση, περιήγηση) μόνο σε ζωντανό.
-    expect(content).toMatch(/state\.kind === 'found' && <LivePropertyPanels/);
+    // Οι πράξεις της αγγελίας (κοινό, ζήτηση, αντικειμενική, περιήγηση) μόνο σε ζωντανό. Είναι πλέον
+    // **καρτέλες**, άρα το κρίνει η ΜΙΑ σύνθεση και όχι η σελίδα: το εργοστάσιο τις δηλώνει
+    // `liveRecordOnly` και η επιφάνεια τις φιλτράρει — για κάθε σημείο προσάρτησης μαζί.
+    const liveOnly = createTabsConfig('properties').filter((tab) => tab.liveRecordOnly).map((tab) => tab.id);
+    expect(liveOnly).toEqual(['tour', 'listing', 'objectiveValue']);
+    const surface = read(DETAIL_SURFACE);
+    expect(surface).toMatch(/offersLiveActs = !locked && !isCreatingNewUnit/);
+    expect(surface).toMatch(/\.filter\(\(tab\) => offersLiveActs \|\| !tab\.liveRecordOnly\)/);
     // «Δεν μπόρεσα να ρωτήσω» έχει δική του όψη, με επανάληψη.
     expect(content).toMatch(/state\.kind === 'unreachable' && \(\s*<PageErrorState/);
   });
@@ -200,9 +207,20 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     // Ο διακομιστής (`lookupOwnedPlace`) ήξερε **ήδη** και τις δύο πλευρές· μόνο
     // η μία οθόνη ρωτούσε. Το χαρακτηριστικό έφτανε στους μισούς ιδιοκτήτες και
     // **φαινόταν** να δουλεύει.
+    // Ζει στην καρτέλα «Αγγελία» της ΜΙΑΣ σύνθεσης — άρα το έχουν **και** η σελίδα **και** η δεξιά στήλη.
+    const listingTab = read('src/components/properties/tabs/PropertyListingTab.tsx');
+    expect(listingTab).toContain('usePlaceInterest');
+    expect(listingTab).toContain('PlaceInterestPanel');
+    expect(read('src/components/generic/mappings/propertiesMappings.ts')).toContain('PropertyListingTab: ');
+    expect(createTabsConfig('properties').map((tab) => tab.component)).toContain('PropertyListingTab');
+
+    // 🔴 Και **τίποτα** δεν ξαναμπαίνει ανάμεσα στην ταυτότητα και τις καρτέλες: η σελίδα δεν συνθέτει πάνελ,
+    //    ούτε δεύτερη κεφαλίδα — ζητά από τη ΜΙΑ κεφαλίδα της επιφάνειας πλήρη ταυτότητα (§8.87).
     const page = read('src/components/properties/detail/PropertyDetailPageContent.tsx');
-    expect(page).toContain('usePlaceInterest');
-    expect(page).toContain('PlaceInterestPanel');
+    expect(page).toContain('headerIdentity="full"');
+    for (const panel of ['PlaceInterestPanel', 'MarketingAudienceControl', 'SpatialTourPanel', 'PropertyObjectiveValuePanel', 'PropertyIdentity']) {
+      expect(page).not.toContain(`<${panel}`);
+    }
 
     const owner = read('src/components/owner-property/OwnerPropertyDetailContent.tsx');
     expect(owner).toContain('usePlaceInterest');

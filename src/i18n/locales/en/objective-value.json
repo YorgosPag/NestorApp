@@ -322,7 +322,8 @@
     "failed": "The answer was not saved because of a connection problem.",
     "retry": "Try again",
     "dismiss": "Close",
-    "locked": "The property has been sold or rented: its details are locked (contracts, land registry) and the objective value cannot be changed here."
+    "locked": "The property has been sold or rented: its details are locked (contracts, land registry) and the objective value cannot be changed here.",
+    "notApplicable": "No objective value is calculated here for this type of property."
   },
   "stages": {
     "fieldLabel": "Stage under POL.1149/1994 (optional)",

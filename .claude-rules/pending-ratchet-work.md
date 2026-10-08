@@ -2,6 +2,15 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **08/10 — ΤΟ «ΠΛΑΙΣΙΟ ΕΝΟΤΗΤΑΣ» ΕΙΝΑΙ ΓΡΑΜΜΕΝΟ ΜΕ ΤΟ ΧΕΡΙ ΣΕ 63 ΑΡΧΕΙΑ** *(ADR-777 §8.87.4, εύρημα κατά το audit)*
+
+  **Τι**: η συνταγή `rounded-(md|lg) border border-border bg-card p-4` πάνω σε `<section>` — δηλαδή «`Card` που είναι
+  ορόσημο». **Πού**: `grep -rlE "rounded-(md|lg) border border-border bg-card p-4" src` ⇒ **63** αρχεία (μετρημένο
+  2026-10-08· μεταξύ τους `properties/tabs/PropertyListingTab.tsx`). **Γιατί υπάρχει**: το `Card` αποδίδει μόνο
+  `<div>`, άρα όποιος θέλει `<section aria-labelledby>` με πλαίσιο το ξαναγράφει. **Θεραπεία**: θυρίδα στοιχείου στο
+  `Card` (`as`) ή ένα primitive «πλαισιωμένη ενότητα» με επικεφαλίδα — το `spatial-tour/TourPanelSection.tsx` είναι
+  η τοπική του μορφή (τυλίγει `Card`, δεν επαναλαμβάνει τη συνταγή). Αλλάζει εμφάνιση σε 63 οθόνες ⇒ δικό του σχέδιο.
+
 - 🟡 **07/10 — ΤΡΕΙΣ ΣΥΜΒΑΣΕΙΣ «ΑΠΟΣΥΡΜΕΝΗ ΕΓΓΡΑΦΗ ⇒ ΜΟΝΟ ΑΝΑΓΝΩΣΗ», ΕΝΑΣ ΠΑΡΟΧΟΣ** *(ADR-329 §3.9 υπο-στάδιο 3γ · ADR-281)*
 
   Το ακίνητο ρωτά πλέον `useRetiredKind()` (`src/lib/firestore/retired-record-context.tsx`, το θέτει **μόνο** το

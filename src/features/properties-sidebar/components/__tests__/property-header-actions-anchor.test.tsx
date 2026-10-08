@@ -27,6 +27,10 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+jest.mock('@/components/properties/detail/PropertyHeaderGallery', () => ({
+  PropertyHeaderGallery: () => <figure data-testid="identity-gallery" />,
+}));
+
 const PROPERTY = { id: 'prop_1', name: 'Δοκιμή' } as unknown as Property;
 
 const NEW_ACTION = /navigation\.actions\.newUnit\.label/;
@@ -59,6 +63,86 @@ describe('Υ — οι ενέργειες της κεφαλίδας ακινήτ�
 
     expect(onNewProperty).toHaveBeenCalledTimes(1);
     expect(onDeleteProperty).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Υ4 — **ΜΙΑ ΚΕΦΑΛΙΔΑ: Η ΤΑΥΤΟΤΗΤΑ ΓΕΜΙΖΕΙ ΤΙΣ ΘΥΡΙΔΕΣ ΤΗΣ, ΔΕΝ ΣΤΕΚΕΤΑΙ ΔΙΠΛΑ ΤΗΣ** (ADR-777 §8.87).
+ *
+ * 🔴 Η αφορμή: στη σελίδα `/properties/[id]` μια αυτόνομη κάρτα ταυτότητας και η κεφαλίδα της επιφάνειας έλεγαν
+ * το όνομα **δύο φορές**, και οι ενέργειες ζούσαν στη δεύτερη — που σε κινητό ήταν **κρυμμένη** (`hidden md:block`).
+ */
+describe('Υ4 — `identity="full"`: κεφαλίδα σελίδας εγγραφής', () => {
+  function mountFull() {
+    return render(
+      <PropertyDetailsHeader property={PROPERTY} identity="full" onNewProperty={jest.fn()} onDeleteProperty={jest.fn()} />,
+    );
+  }
+
+  it('🔴 το όνομα λέγεται ΜΙΑ φορά, και είναι ο τίτλος της σελίδας (h1)', () => {
+    mountFull();
+
+    expect(screen.getAllByText('Δοκιμή')).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Δοκιμή' })).toBeInTheDocument();
+  });
+
+  it('🔴 ταυτότητα ΚΑΙ ενέργειες στην ΙΔΙΑ κεφαλίδα — και ορατή σε κινητό', async () => {
+    const { container } = mountFull();
+
+    // Η γκαλερί έρχεται με όριο (`React.lazy`, ADR-744 §27) ⇒ φτάνει ένα καρέ μετά.
+    expect(await screen.findByTestId('identity-gallery')).toBeInTheDocument();
+    expect(screen.getByText('properties-detail:card.stats.price')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /navigation\.actions\.edit\.label/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: DELETE_ACTION })).toBeInTheDocument();
+    // Στο κινητό είναι ο ΜΟΝΟΣ τίτλος της σελίδας: κανένα περιτύλιγμα που την κρύβει κάτω από `md`.
+    expect(container.querySelector('.hidden')).toBeNull();
+  });
+
+  it('✅ `compact` (προεπιλογή, δεξιά στήλη): καμία γκαλερί, κανένα γεγονός — ο τίτλος μένει h3', () => {
+    render(<PropertyDetailsHeader property={PROPERTY} />);
+
+    expect(screen.queryByTestId('identity-gallery')).toBeNull();
+    expect(screen.queryByText('properties-detail:card.stats.price')).toBeNull();
+    expect(screen.getByRole('heading', { level: 3, name: 'Δοκιμή' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Υ5 — **ΤΟ ΣΗΜΑ ΚΟΙΝΟΥ ΡΩΤΑ ΤΟΝ ΚΡΙΤΗ ΤΗΣ ΔΙΑΘΕΣΗΣ** (ADR-777 §8.87.3 · ADR-864 §5.1).
+ *
+ * 🔴 Η παγίδα: έγγραφο **χωρίς** `marketingAudience` ερμηνεύεται `public` (Α3). Σήμα που ρωτούσε μόνο το κοινό θα
+ * έγραφε «Δημόσια» πάνω σε ακίνητο εκτός αγοράς ή πουλημένο — δηλαδή για αγγελία που **δεν υπάρχει**.
+ */
+describe('Υ5 — σήμα κοινού στην κεφαλίδα σελίδας', () => {
+  const AUDIENCE = /^marketingAudience\./;
+  function mountWith(facts: Record<string, unknown>, identity: 'full' | 'compact' = 'full') {
+    const property = { ...PROPERTY, type: 'apartment', ...facts } as unknown as Property;
+    return render(<PropertyDetailsHeader property={property} identity={identity} />);
+  }
+
+  it('✅ παρονομαστής: διατίθεται, χωρίς πεδίο κοινού ⇒ «Δημόσια» (Α3)', () => {
+    mountWith({ commercialStatus: 'for-sale' });
+    expect(screen.getByText('marketingAudience.public')).toBeInTheDocument();
+  });
+
+  it('✅ διατίθεται σε κλειστό κοινό ⇒ το λέει με το όνομά του', () => {
+    mountWith({ commercialStatus: 'for-sale', marketingAudience: 'custodians' });
+    expect(screen.getByText('marketingAudience.custodians')).toBeInTheDocument();
+    expect(screen.queryByText('marketingAudience.public')).toBeNull();
+  });
+
+  it.each([
+    ['εκτός αγοράς', { commercialStatus: 'unavailable' }],
+    ['πουλημένο', { commercialStatus: 'sold', marketingAudience: 'public' }],
+    ['στον κάδο', { commercialStatus: 'for-sale', status: 'deleted' }],
+  ])('🔴 %s ⇒ ΚΑΝΕΝΑ σήμα κοινού, ό,τι κι αν λέει το πεδίο', (_label, facts) => {
+    mountWith(facts);
+    expect(screen.queryByText(AUDIENCE)).toBeNull();
+  });
+
+  it('✅ `compact` (δεξιά στήλη): κανένα σήμα — η λίστα δίπλα είναι η ταυτότητα', () => {
+    mountWith({ commercialStatus: 'for-sale' }, 'compact');
+    expect(screen.queryByText(AUDIENCE)).toBeNull();
   });
 });
 

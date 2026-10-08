@@ -70,7 +70,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { canOpenAnotherContact } from '@/lib/contact/first-contact-capacity';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
-import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+import { listingManageHref } from '@/lib/listings/listing-manage-route';
 import { resolveTarget } from '@/services/contact/first-contact-guards';
 import { loadSeekerContacts } from '@/services/contact/first-contact-projection';
 import {
@@ -169,35 +169,34 @@ export async function admitFirstContact(
  * **λάθος σύνδεσμο** ακριβώς σε αυτόν, και σιωπηλά.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔶 ΤΟ `null` ΤΟΥ ΕΤΑΙΡΙΚΟΥ ΧΩΡΟΥ ΕΙΝΑΙ **ΟΝΟΜΑΣΜΕΝΗ ΑΠΟΥΣΙΑ**, ΟΧΙ ΠΑΡΑΛΕΙΨΗ
+ * 🔑 Η ΕΤΑΙΡΙΚΗ ΑΓΓΕΛΙΑ ΕΧΕΙ ΠΛΕΟΝ ΠΟΡΤΑ — **ΧΩΡΙΣ ΝΑ ΟΝΟΜΑΣΤΕΙ ΧΩΡΟΣ** (2026-10-08)
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Η σελίδα διαχείρισης μιας **εταιρικής** αγγελίας ζει **μέσα σε χώρο**
- * (`/o/[workspace]/properties/[id]`), και από **δημόσια** σελίδα κανείς δεν μπορεί να
- * την ονομάσει — για **δύο** ανεξάρτητους λόγους:
+ * Ως σήμερα η εταιρική θεματοφυλακή έπαιρνε `null`, με δύο γραμμένους λόγους: ο
+ * διακομιστής δεν έχει το ψευδώνυμο (`companyId → alias` είναι σάρωση, ADR-787 Ε-5 §4
+ * #1) και ο πελάτης ούτε αυτός (το `/listing/[id]` ζει **εκτός** χώρου). Και οι δύο
+ * **ισχύουν ακόμη** — το συμπέρασμα *«άρα ο σύνδεσμος θα έβγαζε 404»* **όχι**:
  *
- * 1. **Ο διακομιστής** δεν έχει το ψευδώνυμο: η αντίστροφη αναζήτηση
- *    `companyId → alias` είναι **σάρωση**, και το `alias-registry.ts` την αρνείται εξ
- *    ορισμού (ADR-787 Ε-5 §4 #1) — το ίδιο γράφει και το `AgencyProfileContent`.
- * 2. **Ο πελάτης** δεν το έχει ούτε αυτός: το σύνορο πλοήγησης διαβάζει τον ενεργό
- *    χώρο από το **μονοπάτι** (`extractWorkspaceSegment`), και το `/listing/[id]` ζει
- *    στο `(light)` — **εκτός** χώρου. Ένα `<Link href="/properties/…">` εκεί θα έβγαζε
- *    **404**.
+ * Η **ωμή** διεύθυνση (`/properties/<id>` · `/listings/mandates/<id>`) πέφτει στο δίχτυ
+ * `(app)/[...unprefixed]`, που τη στέλνει στον χώρο του ανθρώπου με **κριμένη**
+ * ταυτότητα (ADR-787 §5.3 ιβ) — ο ίδιος δρόμος που περπατούν ήδη οι ειδοποιήσεις
+ * (`place-detail-route.ts`, `mandate-routes.ts`). Κανείς δεν ονομάζει χώρο· αρκεί η
+ * **πόρτα**, και την ξέρει ο **ένας** πίνακας του `listing-manage-route.ts`.
  *
- * ⇒ Ο πίνακας δείχνει τη **δήλωση** χωρίς σύνδεσμο, αντί για σύνδεσμο που σπάει. Όταν
- * κάποιος δώσει στο δημόσιο κέλυφος τρόπο να ονομάσει χώρο, **αυτή η γραμμή** είναι το
- * σημείο που το μαθαίνει.
+ * 🔶 **Το `null` που μένει είναι στενότερο και ονομασμένο**: η **βιτρίνα** (δεν είναι
+ * αγγελία), η **βλάβη/απουσία** του εντοπιστή, και ο συνδυασμός που ο επιλυτής δεν
+ * γεννά ποτέ. Η δήλωση *«είναι δικό σας»* μένει και τότε· λείπει μόνο ο σύνδεσμος.
  */
 export async function manageHrefOfOwnTarget(
   adminDb: AdminFirestore,
   target: FirstContactTarget,
   nowISO: string,
 ): Promise<string | null> {
-  // Η βιτρίνα ζει πάντα σε **εταιρικό** χώρο ⇒ ποτέ ονομάσιμη από εδώ (δες παραπάνω).
+  // Η βιτρίνα δεν είναι αγγελία ⇒ δεν έχει γραμμή στον πίνακα των θυρών (δες παραπάνω).
   if (target.kind !== 'listing') return null;
 
   const located = await locateTarget(adminDb, target, nowISO);
   if (located === null || located === 'absent') return null;
 
-  return located.custody.kind === 'personal' ? offerDetailHref(target.listingId) : null;
+  return listingManageHref(target.listingId, located.custody);
 }

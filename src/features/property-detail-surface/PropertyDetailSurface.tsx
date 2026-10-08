@@ -102,6 +102,11 @@ export interface PropertyDetailSurfaceProps {
    * λίστα έχει ήδη τη μπάρα της από πάνω και **δεν** τη δίνει· η σελίδα δεν έχει μπάρα και τη δίνει.
    */
   readonly retiredAction?: React.ReactNode;
+  /**
+   * Πόση ταυτότητα δείχνει η ΜΙΑ κεφαλίδα (ADR-777 §8.87). Ανήκει στο σημείο προσάρτησης: η δεξιά στήλη έχει τη
+   * λίστα δίπλα της (`compact`)· η σελίδα δεν έχει τίποτα άλλο να πει ποιο ακίνητο κοιτάς (`full`).
+   */
+  readonly headerIdentity?: 'compact' | 'full';
 }
 
 export function PropertyDetailSurface({
@@ -122,6 +127,7 @@ export function PropertyDetailSurface({
   headerActions,
   onCreateAction,
   retiredAction,
+  headerIdentity = 'compact',
 }: PropertyDetailSurfaceProps): React.ReactElement {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const emptyStateMessages = useEmptyStateMessages();
@@ -141,6 +147,10 @@ export function PropertyDetailSurface({
   //    ακίνητο η επιφάνεια την αγνοεί — ένα μολύβι που πατήθηκε πριν την αλλαγή προβολής δεν ξεκλειδώνει τίποτα.
   const locked = isRetired(property);
   const effectiveEditMode = isEditMode && !locked;
+  // Αγγελία · αντικειμενική · περιήγηση είναι καλέσματα σε ενέργεια πάνω σε **ζωντανή εγγραφή**: ο διακομιστής τα
+  // αρνείται σε αποσυρμένο ακίνητο (409) και δεν έχουν σε τι να γράψουν πριν δημιουργηθεί. Η καρτέλα δεν
+  // ζωγραφίζεται καθόλου — ίδιος κανόνας με το κουμπί χωρίς χειριστή.
+  const offersLiveActs = !locked && !isCreatingNewUnit;
 
   const propertyTabAdditionalData: PropertyTabAdditionalData = {
     safeFloors,
@@ -178,6 +188,7 @@ export function PropertyDetailSurface({
               onDeleteProperty={onDeleteProperty}
               onShowcaseProperty={() => showcase.setOpen(true)}
               extraActions={headerActions}
+              identity={headerIdentity}
             />
             {/* Στη σταθερή ζώνη της κεφαλίδας: η εξήγηση δεν κυλά μαζί με τα tabs. Ζωντανό ακίνητο ⇒ τίποτα. */}
             {property && (
@@ -187,7 +198,9 @@ export function PropertyDetailSurface({
         )}
         tabsRenderer={(
           <UniversalTabsRenderer<Property | null, PropertyTabComponentProps, PropertyTabAdditionalData, PropertyTabGlobalProps>
-            tabs={getSortedPropertiesTabs().map(convertToUniversalConfig)}
+            tabs={getSortedPropertiesTabs()
+              .filter((tab) => offersLiveActs || !tab.liveRecordOnly)
+              .map(convertToUniversalConfig)}
             data={property}
             componentMapping={PROPERTIES_COMPONENT_MAPPING}
             defaultTab={defaultTab || 'info'}

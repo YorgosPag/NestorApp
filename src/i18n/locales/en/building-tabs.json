@@ -56,7 +56,9 @@
       "procurement": "Procurement",
       "buildingCode": "Building Code",
       "surveyData": "Survey Data",
-      "objectiveValue": "Objective value"
+      "objectiveValue": "Objective value",
+      "listing": "Listing",
+      "tour360": "360° tour"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",

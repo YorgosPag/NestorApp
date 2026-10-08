@@ -9,6 +9,7 @@
  * @module components/properties/detail/PropertyObjectiveValuePanel
  *
  * 🔑 **Ίδιο δικαίωμα απόκρυψης** για γραφείο και ιδιώτη (ADR-898 §12 — μάθημα της αγωγής κατά της Zillow).
+ * 🔑 **Δική της καρτέλα** («Αντικειμενική», ADR-777 §8.30) στη ΜΙΑ σύνθεση καρτελών — όχι ενότητα πάνω από αυτές.
  * 🔑 **Πράξη της καρτέλας, όχι πεδίο φόρμας**: κάθε απάντηση αποθηκεύεται αμέσως (σειριακή ουρά), όπως το κοινό
  *   αγγελίας δίπλα — η φόρμα με «Αποθήκευση» θα ξανάγραφε ολόκληρο το έγγραφο.
  * 🔑 **Κλειδωμένο σε συναλλαγή** (πώληση/μίσθωση, ADR-249): εξήγηση αντί για ερωτήσεις — η ΜΙΑ λίστα κλειδωμάτων.
@@ -58,19 +59,23 @@ function usePropertyImproveSubject(property: Property): ObjectiveValueImproveSub
   );
 }
 
-export function PropertyObjectiveValuePanel({ property }: { readonly property: Property }): React.ReactElement | null {
+export function PropertyObjectiveValuePanel({ property }: { readonly property: Property }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const headingId = useId();
   const subject = usePropertyImproveSubject(property);
-  // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων (κατάστημα · γραφείο · γη ⇒ καμία ενότητα).
-  if (objectiveValueFormOf(property.type) === null) return null;
+  // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων (κατάστημα · γραφείο · γη ⇒ καμία ερώτηση).
+  // ⚠️ Ως ενότητα πάνω από τις καρτέλες αρκούσε να μην αποδίδεται· ως **καρτέλα** μια κενή οθόνη διαβάζεται
+  //    ως βλάβη, άρα η απουσία ονομάζεται.
+  const applicable = objectiveValueFormOf(property.type) !== null;
   const locked = isFieldLocked(property.commercialStatus, 'objectiveValueDeclarations');
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-4 rounded-xl border border-border p-4">
+    <section aria-labelledby={headingId} className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
       <h2 id={headingId} className="m-0 text-lg font-semibold text-foreground">{t(`${I}.sections.objectiveValue.title`)}</h2>
-      {locked
-        ? <p className="m-0 text-sm text-muted-foreground">{t(`${I}.locked`)}</p>
-        : <ObjectiveValueImproveSection subject={subject} />}
+      {!applicable
+        ? <p className="m-0 text-sm text-muted-foreground">{t(`${I}.notApplicable`)}</p>
+        : locked
+          ? <p className="m-0 text-sm text-muted-foreground">{t(`${I}.locked`)}</p>
+          : <ObjectiveValueImproveSection subject={subject} />}
     </section>
   );
 }

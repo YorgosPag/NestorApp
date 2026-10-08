@@ -176,7 +176,7 @@ export function PropertyFieldsEditForm({
       )}
 
       {/* ─── Identity + Location Row ─── */}
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-3">
         {/* ─── Identity Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">

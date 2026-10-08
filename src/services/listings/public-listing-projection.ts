@@ -53,7 +53,7 @@ import { projectLegality } from './legality-projection';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
-import { marketingAudienceOf } from '@/constants/marketing-audiences';
+import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
 import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { projectListingAttributes } from './public-listing-attributes';
@@ -115,7 +115,22 @@ export function isPubliclyListed(property: ProjectableProperty): boolean {
   //    `delete()` + απόσυρση ραφιού όταν το `buildPublicListing` επιστρέφει `null` (Α2),
   //    και ο επιλυτής πρώτης επαφής ρωτά την ίδια πύλη (ADR-864 §2.3 Φ0.2). Έλεγχος
   //    κοινού σε **αναγνώστη** θα ήταν δεύτερος κριτής — η μετάλλαξη που πιάνει η Α1.
-  return isOffered(property) && marketingAudienceOf(property.marketingAudience) === 'public';
+  return offeredAudienceOf(property) === 'public';
+}
+
+/** Ό,τι χρειάζεται η ετυμηγορία «σε ποιο κοινό διατίθεται»: τα γεγονότα διάθεσης + το ωμό κοινό. */
+export type OfferedAudienceFacts = OfferStateFacts & Pick<ProjectableProperty, 'marketingAudience'>;
+
+/**
+ * **Σε ποιο κοινό διατίθεται ΤΩΡΑ αυτό το ακίνητο;** — `null` όταν **δεν διατίθεται**.
+ *
+ * 🔴 **Το κοινό είναι ΡΥΘΜΙΣΗ· γίνεται ΓΕΓΟΝΟΣ μόνο όταν το ακίνητο διατίθεται** (ADR-777 §8.87.3). Ένα
+ * έγγραφο χωρίς το πεδίο ερμηνεύεται `public` (Α3) — άρα όποιος ρωτούσε σκέτο το `marketingAudienceOf`
+ * για να γράψει «Δημόσια» θα το έγραφε και για ακίνητο πουλημένο, αποσυρμένο ή εκτός αγοράς.
+ * Η {@link isPubliclyListed} (πύλη προβολής) και το σήμα κοινού της κεφαλίδας ρωτούν **αυτή** τη συνάρτηση.
+ */
+export function offeredAudienceOf(property: OfferedAudienceFacts): MarketingAudience | null {
+  return isOffered(property) ? marketingAudienceOf(property.marketingAudience) : null;
 }
 
 /**

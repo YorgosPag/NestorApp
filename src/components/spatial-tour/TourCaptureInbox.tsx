@@ -28,6 +28,7 @@ import type { TourCapture, TourSubject } from '@/types/spatial-tour';
 
 import { MILESTONE_KEY, PANEL_KEYS, UPLOAD_SOURCE_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
+import { TourPanelSection } from './TourPanelSection';
 import { TourCaptureUploadForm } from './TourCaptureUploadForm';
 
 /** Μόνο για τον υπεύθυνο — πίσω από όριο, ώστε η σελίδα του φωτογράφου να μην κουβαλά τις λέξεις του (ADR-744 §15). */
@@ -67,13 +68,13 @@ export function TourCaptureInbox({ subject }: { readonly subject: TourSubject })
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const { load, refresh } = useTourCaptures(subject);
   return (
-    <section className="space-y-3" aria-labelledby="tour-inbox-heading">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="tour-inbox-heading" className="text-base font-semibold">{t(PANEL_KEYS.captures)}</h3>
-        {load.kind === 'loaded' && load.asManager && load.captures.length > 0 && (
-          <TourEditorDialog subject={subject} onClosed={() => void refresh()} />
-        )}
-      </header>
+    <TourPanelSection
+      headingId="tour-inbox-heading"
+      title={t(PANEL_KEYS.captures)}
+      actions={load.kind === 'loaded' && load.asManager && load.captures.length > 0
+        ? <TourEditorDialog subject={subject} onClosed={() => void refresh()} />
+        : null}
+    >
       <TourCaptureUploadForm subject={subject} onUploaded={() => void refresh()} />
       {load.kind === 'failed' && (
         <p className="text-sm text-destructive" role="alert">
@@ -84,7 +85,7 @@ export function TourCaptureInbox({ subject }: { readonly subject: TourSubject })
       {load.kind === 'loaded' && (load.captures.length === 0
         ? <p className="text-sm text-muted-foreground">{t(PANEL_KEYS.noCaptures)}</p>
         : <CaptureList captures={load.captures} levels={load.levels} subject={subject} />)}
-    </section>
+    </TourPanelSection>
   );
 }
 

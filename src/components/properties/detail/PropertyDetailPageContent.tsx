@@ -24,21 +24,17 @@
  * ποιος ψάχνει. Πίσω από τη σύνδεση, εξ ορισμού — γι' αυτό η σελίδα ανήκει στο
  * `(app)` και **όχι** στο `(light)` (CHECK 3.52).
  *
- * 🔑 **ΤΟ ΠΑΝΕΛ ΖΗΤΗΣΗΣ ΕΙΝΑΙ ΤΟ ΜΙΣΟ ΚΟΙΝΟ ΠΟΥ ΕΛΕΙΠΕ.** Ο διακομιστής
- * (`lookupOwnedPlace`) ήξερε **ήδη** και τις δύο πλευρές — ιδιώτη *και* εταιρείας
- * — αλλά μόνο η οθόνη του ιδιώτη το ρωτούσε. Το §12.6 έφτανε στους μισούς
- * ιδιοκτήτες και **φαινόταν** να δουλεύει.
- *
- * ⚠️ **Στέκεται ΠΑΝΩ από τις καρτέλες, όπως και στην πλευρά ιδιώτη**: είναι ο
- * *λόγος* να ανοίξει κάποιος τις φωτογραφίες ή να διορθώσει την τιμή, όχι επίμετρο.
+ * 🔑 **Η ΣΕΛΙΔΑ ΕΙΝΑΙ ΤΑΥΤΟΤΗΤΑ + ΚΑΡΤΕΛΕΣ, ΤΙΠΟΤΑ ΑΝΑΜΕΣΑ** (απόφαση Giorgio, 2026-10-08). Κοινό αγγελίας,
+ * ζήτηση (§12.6), αντικειμενική και περιήγηση ζούσαν εδώ ως ενότητες **πάνω** από τις καρτέλες: έσπρωχναν τη
+ * μπάρα καρτελών τρεις οθόνες κάτω, και η δεξιά στήλη της λίστας δεν τις είχε καθόλου. Πλέον είναι καρτέλες της
+ * ΜΙΑΣ σύνθεσης (`PropertyDetailSurface`): «Αγγελία» (`PropertyListingTab`) · «Αντικειμενική» · «Περιήγηση 360°».
+ * Διεύθυνση: `?tab=listing` · `?tab=objectiveValue` · `?tab=tour`.
  */
 
 import React from 'react';
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 
-import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
-import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { PropertyDetailSurface } from '@/features/property-detail-surface/PropertyDetailSurface';
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -49,82 +45,9 @@ import { useRetiredPropertyRecord } from '@/hooks/useRetiredPropertyRecord';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
-import { PropertyIdentityHeader } from './PropertyIdentityHeader';
-import { PropertyObjectiveValuePanel } from './PropertyObjectiveValuePanel';
-import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
-import { SpatialTourPanel } from '@/components/spatial-tour/SpatialTourPanel';
-import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
-import { isOffered } from '@/services/listings/public-listing-projection';
-import { updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
-import type { Property } from '@/types/property';
 import { derivePropertyPageState } from './property-page-state';
 
 const NS = 'properties-detail';
-
-/**
- * **Αλλαγή κοινού αγγελίας γραφείου** (ADR-864 §5.1) — μέσω της ΜΙΑΣ πύλης μεταλλάξεων.
- *
- * ⚠️ Επιστρέφει `failed` αντί να πετά: το component δείχνει την αποτυχία **με λόγια**, και η
- * εμφανιζόμενη τιμή μένει η αποθηκευμένη (η ζωντανή ανάγνωση φέρνει τη νέα όταν γραφτεί).
- * Τα εταιρικά `properties` **δεν** έχουν εντολή ⇒ καμία άρνηση συναίνεσης εδώ (ADR-864 §17, δηλωμένο όριο).
- */
-async function changePropertyAudience(
-  property: Property,
-  next: MarketingAudience,
-): Promise<AudienceChangeOutcome> {
-  try {
-    const result = await updatePropertyWithPolicy({
-      propertyId: property.id,
-      currentProperty: property,
-      updates: { marketingAudience: next },
-    });
-    return result.success ? { kind: 'saved' } : { kind: 'failed' };
-  } catch {
-    return { kind: 'failed' };
-  }
-}
-
-/**
- * **Οι πράξεις της καρτέλας πάνω από την επιφάνεια** — μόνο για ζωντανό ακίνητο (δες το σημείο κλήσης).
- */
-function LivePropertyPanels({
-  property,
-  interest,
-}: {
-  readonly property: Property;
-  readonly interest: ReturnType<typeof usePlaceInterest>;
-}): React.ReactElement {
-  const audience = marketingAudienceOf(property.marketingAudience);
-  return (
-    <>
-      {/*
-        🔑 **ADR-864 Ε-10 — το κοινό είναι ΠΡΑΞΗ της καρτέλας, όχι πεδίο φόρμας.** Το
-        ίδιο component με την πλευρά ιδιώτη· αλλάζει μόνο η πόρτα γραφής (η ΜΙΑ
-        πύλη μεταλλάξεων του γραφείου). Ίχνος + επαναπροβολή τα κάνει ήδη η διαδρομή PATCH.
-      */}
-      <MarketingAudienceControl
-        audience={audience}
-        offered={isOffered(property)}
-        onChange={(next) => changePropertyAudience(property, next)}
-      />
-
-      {/* ADR-898 Φ3β-3 — η αντικειμενική: ΙΔΙΑ ενότητα με τον ιδιώτη, ίδιο δικαίωμα απόκρυψης· πράξη της καρτέλας. */}
-      <PropertyObjectiveValuePanel property={property} />
-
-      {/*
-        🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6 ΓΙΑ ΤΗΝ ΠΛΕΥΡΑ ΕΤΑΙΡΕΙΑΣ.** Το ίδιο πάνελ, ο
-        ίδιος διακομιστής, ο ίδιος κριτής με την πλευρά ιδιώτη — αλλιώς οι δύο
-        οθόνες θα μπορούσαν να δείξουν **διαφορετικό αριθμό για το ίδιο
-        ακίνητο**, και καμία δεν θα φαινόταν λάθος.
-      */}
-      <PlaceInterestPanel interest={interest} audience={audience} />
-
-      {/* 📷 ADR-884 Κ3α — ίδιο πάνελ με την πλευρά ιδιώτη· διαχειρίζεται όποιος έχει `listings:listings:publish` στον μισθωτή.
-          Κ3β: το `companyId` ανοίγει τους προσωπικούς συνδέσμους θέασης (ADR-315, εμβέλεια μισθωτή). */}
-      <SpatialTourPanel subject={{ kind: 'company-property', id: property.id }} companyId={property.companyId ?? null} />
-    </>
-  );
-}
 
 export function PropertyDetailPageContent({
   propertyId,
@@ -149,7 +72,6 @@ export function PropertyDetailPageContent({
   // `SharedPropertiesProvider` ζει στο `(app)/layout.tsx` — άρα η καρτέλα δεν
   // πληρώνει δεύτερη ανάγνωση, ούτε γεννά δεύτερη μετάφραση.
   const viewer = usePropertiesViewerState(propertyId);
-  const interest = usePlaceInterest(propertyId);
   // Πλοήγηση **από το σύνορο** (CHECK 3.61) — η καρτέλα στέλνει στη ροή δημιουργίας της λίστας.
   const router = useRouter();
 
@@ -268,16 +190,13 @@ export function PropertyDetailPageContent({
 
       {(state.kind === 'found' || state.kind === 'retired') && (
         <>
-          <PropertyIdentityHeader property={state.property} />
-
           {/*
-            🗄️ **ΑΠΟΣΥΡΜΕΝΟ ⇒ ΚΑΜΙΑ ΠΡΑΞΗ ΤΗΣ ΚΑΡΤΕΛΑΣ** (ADR-329 §3.9). Κοινό αγγελίας, αντικειμενική,
-            ζήτηση και περιήγηση ζουν **έξω** από την επιφάνεια, άρα δεν τις κλειδώνει ο διακόπτης της:
-            είναι όλες καλέσματα σε ενέργεια πάνω σε ακίνητο που είναι εκτός αγοράς και δεν δέχεται
-            γραφή (ο διακομιστής απαντά 409). Δεν αποδίδονται καθόλου — ό,τι μένει είναι η εγγραφή.
+            🔑 **ΜΙΑ ΚΕΦΑΛΙΔΑ, ΚΑΙ ΤΙΠΟΤΑ ΑΝΑΜΕΣΑ ΣΕ ΑΥΤΗΝ ΚΑΙ ΤΙΣ ΚΑΡΤΕΛΕΣ** (ADR-777 §8.87). Η ταυτότητα
+            (γκαλερί · κατάσταση · τιμή · εμβαδόν) ζει **μέσα** στην κεφαλίδα της επιφάνειας
+            (`headerIdentity="full"`), δίπλα στις ενέργειες — το όνομα λέγεται μία φορά. Κοινό αγγελίας, ζήτηση,
+            αντικειμενική και περιήγηση είναι **καρτέλες** («Αγγελία» · «Αντικειμενική» · «Περιήγηση 360°»)· το ότι
+            δεν προσφέρονται σε αποσυρμένο ακίνητο (ADR-329 §3.9) το κρίνει η ίδια η επιφάνεια (`liveRecordOnly`).
           */}
-          {state.kind === 'found' && <LivePropertyPanels property={state.property} interest={interest} />}
-
           <section className="flex min-h-0 flex-1 flex-col">
             <PropertyDetailSurface
               property={state.property}
@@ -302,6 +221,7 @@ export function PropertyDetailPageContent({
               // Η σελίδα δεν έχει μπάρα αρχείου/κάδου από πάνω: η επαναφορά ζει δίπλα στην εξήγησή της.
               retiredAction={state.kind === 'retired' ? <PropertyReinstateAction property={state.property} /> : undefined}
               defaultTab={initialTab}
+              headerIdentity="full"
             />
             {/* Οι διάλογοι της διαγραφής ανήκουν στον **ίδιο** hook που την εκτελεί. */}
             {viewer.PropertyDeletionDialogs}

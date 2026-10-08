@@ -91,6 +91,12 @@ export interface UnifiedTabConfig {
 
   /** Contact type condition (μόνο για contact tabs) */
   contactType?: ContactType[];
+
+  /**
+   * Η καρτέλα είναι **πράξη πάνω σε ζωντανή εγγραφή**: δεν προσφέρεται σε αποσυρμένη (αρχείο · κάδος) ούτε
+   * πριν δημιουργηθεί η εγγραφή. Το κρίνει το σημείο σύνθεσης των καρτελών, όχι το φύλλο.
+   */
+  liveRecordOnly?: boolean;
 }
 
 /**
@@ -242,12 +248,43 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'VideosTab'
           },
+          // ADR-777 §8.30 — οι πράξεις της αγγελίας είναι ΚΑΡΤΕΛΕΣ: τα μέσα μαζί (βίντεο → περιήγηση), μετά η
+          // προώθηση, το ιστορικό τελευταίο. `liveRecordOnly`: καλέσματα σε ενέργεια που ο διακομιστής αρνείται
+          // σε αποσυρμένο ακίνητο (409) και που δεν έχουν νόημα πριν υπάρξει εγγραφή (συρτάρι δημιουργίας).
+          // Χωρίς `description`: οι ετικέτες ζουν στο i18n (N.11), όχι εδώ.
+          {
+            id: 'tour',
+            value: 'tour',
+            icon: 'globe',
+            order: 6,
+            enabled: true,
+            component: 'PropertyTourTab',
+            liveRecordOnly: true
+          },
+          {
+            id: 'listing',
+            value: 'listing',
+            icon: 'megaphone',
+            order: 7,
+            enabled: true,
+            component: 'PropertyListingTab',
+            liveRecordOnly: true
+          },
+          {
+            id: 'objectiveValue',
+            value: 'objectiveValue',
+            icon: 'landmark',
+            order: 8,
+            enabled: true,
+            component: 'PropertyObjectiveValueTab',
+            liveRecordOnly: true
+          },
           {
             id: 'history',
             value: 'history',
             icon: 'clock',
             description: 'Ιστορικό αλλαγών της μονάδας',
-            order: 6,
+            order: 9,
             enabled: true,
             component: 'ActivityTab'
           }
