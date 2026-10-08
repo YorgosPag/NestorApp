@@ -332,6 +332,61 @@ describe('FirestoreHandler', () => {
     });
 
     /**
+     * ADR-845 §7.17 Α3 (κλάση Ο-35): τα πεδία του κατηγορήματος δημοσίευσης αλλάζουν μόνο από
+     * πράξη που κρίνει, καταγράφει και ξαναπροβάλλει την αγγελία — ποτέ από γενική γραφή.
+     */
+    test.each([
+      ['classification', { classification: 'public' }],
+      ['lifecycleState', { lifecycleState: 'active', isDeleted: false }],
+      ['entityId', { entityId: 'prop_other' }],
+      ['storagePlacement.bucket', { 'storagePlacement.bucket': 'elsewhere' }],
+    ])('should block publication field %s on files — καμία γραφή', async (field, data) => {
+      const ctx = createAdminContext();
+      mockDb.seedCollection('files', {
+        'file_001': { companyId: 'test-company-001', classification: 'internal', description: 'πριν' },
+      });
+
+      const result = await handler.execute('firestore_write', {
+        collection: 'files',
+        documentId: 'file_001',
+        mode: 'update',
+        data: { description: 'μετά', ...data },
+      }, ctx);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(field);
+      expect(mockDb.getData('files', 'file_001')).toMatchObject({ classification: 'internal', description: 'πριν' });
+    });
+
+    test('should block a file BORN public via firestore_write (mode=create)', async () => {
+      const result = await handler.execute('firestore_write', {
+        collection: 'files',
+        mode: 'create',
+        data: { displayName: 'x.jpg', classification: 'public', entityType: 'property', entityId: 'prop_1' },
+      }, createAdminContext());
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('classification');
+    });
+
+    test('should still update a NON-publication field on files', async () => {
+      const ctx = createAdminContext();
+      mockDb.seedCollection('files', {
+        'file_001': { companyId: 'test-company-001', classification: 'internal', description: 'πριν' },
+      });
+
+      const result = await handler.execute('firestore_write', {
+        collection: 'files',
+        documentId: 'file_001',
+        mode: 'update',
+        data: { description: 'μετά' },
+      }, ctx);
+
+      expect(result.success).toBe(true);
+      expect(mockDb.getData('files', 'file_001')).toMatchObject({ classification: 'internal', description: 'μετά' });
+    });
+
+    /**
      * FINDING-006 REGRESSION: firestore_write must BLOCK writes to contact_links.
      * contact_links was removed from ALLOWED_WRITE_COLLECTIONS.
      * Relationships require a dedicated tool with validation.

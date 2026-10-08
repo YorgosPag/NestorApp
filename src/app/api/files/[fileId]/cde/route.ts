@@ -53,7 +53,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import {
+  refreshListingsAfterFileChanges,
+  type ChangedListingFile,
+  type ListingRefreshReport,
+} from '@/services/listings/listing-media-refresh';
 import { isSuitabilityCode } from '@/services/iso19650/validators';
 import { ACT_SPEC } from '@/services/iso19650/container-transition-policy';
 import {
@@ -96,7 +102,10 @@ function isContainerAct(value: unknown): value is ContainerAct {
  * οθόνη το μεταφράζει (N.11). Χωρίς αυτό, ο άνθρωπος βλέπει «κάτι πήγε στραβά» εκεί
  * όπου το σύστημα ξέρει **ακριβώς** τι έλειπε.
  */
-function toResponse(outcome: ContainerTransitionOutcome): NextResponse {
+function toResponse(
+  outcome: ContainerTransitionOutcome,
+  listings: readonly ListingRefreshReport[],
+): NextResponse {
   if (outcome.kind === 'refused') {
     // `not-found` ⇒ 404 (ίδιο σχήμα με κάθε άλλη άρνηση ύπαρξης της οικογένειας).
     if (outcome.why === 'not-found' || outcome.why === 'tenant-mismatch') {
@@ -108,7 +117,29 @@ function toResponse(outcome: ContainerTransitionOutcome): NextResponse {
     );
   }
 
-  return NextResponse.json({ success: true, ...outcome }, { status: 200 });
+  return NextResponse.json({ success: true, ...outcome, listings }, { status: 200 });
+}
+
+/**
+ * 🌍 **Πράξη που ΕΓΙΝΕ ⇒ η αγγελία του ακινήτου ξαναπροβάλλεται** (ADR-845 §7.17 Α3, κλάση Ο-35).
+ *
+ * Η **αντικατάσταση** αρχειοθετεί το αρχείο *(`lifecycleState`)*, άρα δημοσιευμένη φωτογραφία
+ * φεύγει από το κοινό — και ως την Α3 η αγγελία **δεν το μάθαινε**.
+ *
+ * ⚠️ **Κάθε πράξη, όχι μόνο η αντικατάσταση — επίτηδες.** Το *«αλλάζει αυτό κάτι στο κοινό;»* το
+ * απαντά **μόνο** το κατηγόρημα δημοσίευσης· μια λίστα πράξεων εδώ θα πάλιωνε τη μέρα που εκείνο
+ * αρχίσει να ρωτά τη φάση του δοχείου. Το κόστος είναι φραγμένο: μία επαναπροβολή, και μόνο για
+ * αρχείο **ακινήτου** *(τα υπόλοιπα, και τα προσωπικά, παραλείπονται από τον βοηθό)*.
+ *
+ * 🔑 **Στο επίπεδο της διαδρομής, όχι μέσα στον γραφέα**: η `POST …/model` καλεί τον ίδιο γραφέα
+ * και ξαναπροβάλλει ήδη μόνη της — μέσα στον `transitionContainer` θα έψηνε την αγγελία δύο φορές.
+ */
+async function listingsAfter(
+  outcome: ContainerTransitionOutcome,
+  file: ChangedListingFile | undefined,
+): Promise<readonly ListingRefreshReport[]> {
+  if (outcome.kind === 'refused' || outcome.kind === 'noop') return [];
+  return refreshListingsAfterFileChanges(getAdminFirestore(), [file ?? {}]);
 }
 
 /**
@@ -189,7 +220,8 @@ async function handlePost(
     if (refusal) return refusal;
   }
 
-  return toResponse(await transitionContainer(transitionRequestOf(fileId, actor, payload.act, payload)));
+  const outcome = await transitionContainer(transitionRequestOf(fileId, actor, payload.act, payload));
+  return toResponse(outcome, await listingsAfter(outcome, resolved.doc.data));
 }
 
 // ⚠️ **ΚΑΜΙΑ ικανότητα στο σύνορο — αμετάβλητο** (δες την αιτιολογία στην κεφαλή): η πόρτα

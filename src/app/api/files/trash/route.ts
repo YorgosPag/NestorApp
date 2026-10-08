@@ -42,12 +42,11 @@ import {
   writeFileTrashState,
 } from '@/services/file-record/file-trash.service';
 import {
-  batchEnvelope,
   batchRefusal,
-  fileActorOf,
-  readBatchFileIds,
   readJsonBody,
   runFileBatch,
+  verdictOf,
+  type ChangedBatchFile,
   type OwnedBatchFile,
 } from '../_shared/file-batch-act';
 
@@ -69,6 +68,13 @@ function changeOf(file: OwnedBatchFile, purgeAt: string | null): FileTrashChange
   };
 }
 
+/** Το `files` του σύρματος — ό,τι **άλλαξε**, κενό στην άρνηση ολόκληρου του αιτήματος. */
+function filesOf(
+  changed: readonly ChangedBatchFile<string | null>[],
+): { readonly files: readonly FileTrashChange[] } {
+  return { files: changed.map(({ file, detail }) => changeOf(file, detail)) };
+}
+
 async function handlePost(
   request: NextRequest,
   ctx: AuthContext,
@@ -77,28 +83,20 @@ async function handlePost(
   const payload = await readJsonBody(request);
   const { action } = payload;
 
-  if (!isFileTrashAction(action)) return batchRefusal(400, 'action is invalid', { files: [] });
-  const fileIds = readBatchFileIds(payload);
-  if (typeof fileIds === 'string') return batchRefusal(400, fileIds, { files: [] });
+  if (!isFileTrashAction(action)) return batchRefusal(400, 'action is invalid', filesOf([]));
 
-  const actor = fileActorOf(ctx);
   // Μία ανάγνωση ανά ακίνητο για όλη τη δέσμη — 30 φωτογραφίες του ίδιου ακινήτου, ένα ερώτημα.
   const propertyIsLive = createLivePropertyProbe(getAdminFirestore());
 
-  const result = await runFileBatch({
-    fileIds,
+  return runFileBatch({
+    payload,
     ctx,
     action: `trash:${action}`,
-    act: async (file) => {
+    extra: filesOf,
+    act: async (file, actor) => {
       const outcome = await writeFileTrashState({ ...file, action, actor, propertyIsLive });
-      if (outcome.kind === 'refused') return { refused: outcome.why };
-      return outcome.kind === 'changed' ? { changed: outcome.purgeAt } : null;
+      return verdictOf(outcome, outcome.kind === 'changed' ? outcome.purgeAt : null);
     },
-  });
-
-  return NextResponse.json({
-    ...batchEnvelope(result),
-    files: result.changed.map(({ file, detail }) => changeOf(file, detail)),
   });
 }
 

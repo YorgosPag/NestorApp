@@ -38,6 +38,7 @@ import {
 } from './firestore-query-plan';
 import { countLive } from './firestore-live-scope';
 import { readFirstDocs } from '@/lib/firestore/live-docs';
+import { publicationFieldsIn } from '@/lib/listings/listing-file-publication-fields';
 import { nowISO } from '@/lib/date-local';
 
 export class FirestoreHandler implements ToolHandler {
@@ -255,6 +256,19 @@ export class FirestoreHandler implements ToolHandler {
         return {
           success: false,
           error: `Τα πεδία [${blockedFields.join(', ')}] προστατεύονται — χρησιμοποίησε set_contact_esco αντί firestore_write.`,
+        };
+      }
+    }
+
+    // 🌍 ADR-845 §7.17 Α3 (κλάση Ο-35) — τα πεδία που ορίζουν **τι βλέπει το κοινό** αλλάζουν μόνο
+    //    από πράξη που κρίνει, καταγράφει και ξαναπροβάλλει την αγγελία. Γενική γραφή εδώ θα
+    //    δημοσίευε ή θα απέσυρε υλικό χωρίς δικαίωμα δημοσίευσης, χωρίς ίχνος και χωρίς επαναπροβολή.
+    if (collection === COLLECTIONS.FILES) {
+      const publicationFields = publicationFieldsIn(data);
+      if (publicationFields.length > 0) {
+        return {
+          success: false,
+          error: `Τα πεδία [${publicationFields.join(', ')}] ορίζουν τι βλέπει το κοινό στην αγγελία — αλλάζουν μόνο από τις πράξεις αρχείων (διαβάθμιση, κάδος, αρχειοθέτηση), όχι με firestore_write.`,
         };
       }
     }

@@ -35,11 +35,11 @@ interface FileUploadAuthContext {
   tokenLength: number;
 }
 
-export interface ArchiveFilesResponse {
-  success: boolean;
-  processedCount: number;
-  errors: string[];
-}
+/**
+ * Η απάντηση της αρχειοθέτησης — ο **κοινός φάκελος** κάθε μαζικής πράξης αρχείων (ADR-845 §7.17 Α3):
+ * φέρει πλέον και `listings`, τι έγινε σε κάθε δημόσια αγγελία που αφορούσε η αλλαγή.
+ */
+export type ArchiveFilesResponse = FileClassificationActResponse;
 
 // ============================================================================
 // 🏢 ADR-292: CANONICAL UPLOAD AUTH VALIDATION (SSoT)

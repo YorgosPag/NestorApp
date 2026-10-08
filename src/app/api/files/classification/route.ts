@@ -47,12 +47,11 @@ import {
   type FileClassificationResponse,
 } from '@/services/file-record/file-classification.service';
 import {
-  batchEnvelope,
   batchRefusal,
-  fileActorOf,
-  readBatchFileIds,
+  noBatchExtra,
   readJsonBody,
   runFileBatch,
+  verdictOf,
 } from '../_shared/file-batch-act';
 
 export const dynamic = 'force-dynamic';
@@ -65,23 +64,18 @@ async function handlePost(
   const payload = await readJsonBody(request);
   const { classification } = payload;
 
-  if (!isFileClassification(classification)) return batchRefusal(400, 'classification is invalid', {});
-  const fileIds = readBatchFileIds(payload);
-  if (typeof fileIds === 'string') return batchRefusal(400, fileIds, {});
+  if (!isFileClassification(classification)) {
+    return batchRefusal(400, 'classification is invalid', noBatchExtra());
+  }
 
-  const actor = fileActorOf(ctx);
-  const result = await runFileBatch({
-    fileIds,
+  return runFileBatch({
+    payload,
     ctx,
     action: 'classification',
-    act: async (file) => {
-      const outcome = await writeFileClassification({ ...file, classification, actor });
-      if (outcome.kind === 'refused') return { refused: outcome.why };
-      return outcome.kind === 'changed' ? { changed: outcome.from } : null;
-    },
+    extra: noBatchExtra,
+    act: async (file, actor) =>
+      verdictOf(await writeFileClassification({ ...file, classification, actor }), classification),
   });
-
-  return NextResponse.json(batchEnvelope(result));
 }
 
 export const POST = withSensitiveRateLimit(withAuth(handlePost));

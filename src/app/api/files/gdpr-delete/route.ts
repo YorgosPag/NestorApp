@@ -24,6 +24,7 @@ import { nowISO } from '@/lib/date-local';
 import { deleteStorageObjectForPurge, isFileHeld } from '@/services/file-record/file-purge-helpers';
 import { findSubjectActivity, findSubjectFiles } from '@/services/file-record/file-subject-scan';
 import { FILE_COMPANION_POINTER_FIELDS } from '@/lib/files/file-companion-objects';
+import { refreshListingsAfterFileChanges } from '@/services/listings/listing-media-refresh';
 
 /** Οι δείκτες προς συνοδευτικά (μικρογραφίες, σκηνές) μηδενίζονται μαζί με το `storagePath` — ίδιο μητρώο με τον γραφέα. */
 const COMPANION_POINTERS_ERASED = Object.fromEntries(FILE_COMPANION_POINTER_FIELDS.map((field) => [field, null]));
@@ -128,6 +129,16 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
     }
     await batch1.commit();
 
+    // 🌍 ADR-845 §7.17 Α3 (κλάση Ο-35) — τα bytes σβήστηκαν και η εγγραφή έγινε `purged`: αν ήταν
+    //    δημοσιευμένη φωτογραφία ακινήτου, η αγγελία **δείχνει ακόμη** σε υλικό που δεν υπάρχει.
+    //    Μία επαναπροβολή ανά ακίνητο, **αμέσως μετά τη γραφή** και πριν από τα υπόλοιπα βήματα:
+    //    αποτυχία παρακάτω δεν επιτρέπεται να αφήσει σβησμένο υλικό στο κοινό. Προσωπικά αρχεία
+    //    (χωρίς `companyId`) παραλείπονται από τον βοηθό.
+    const listings = await refreshListingsAfterFileChanges(
+      adminDb,
+      filesToPurge.map((fileDoc) => fileDoc.data()),
+    );
+
     // 2. Delete comments
     const commentsSnapshot = await adminDb
       .collection(COLLECTIONS.FILE_COMMENTS)
@@ -176,6 +187,7 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
       success: true,
       gdprArticle: 'Article 17 — Right to Erasure',
       results,
+      listings,
     });
   } catch (error) {
     console.error('[GDPR Delete] Error:', error);

@@ -24,7 +24,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import {
+  refreshListingsAfterFileChanges,
+  type ChangedListingFile,
+  type ListingRefreshReport,
+} from '@/services/listings/listing-media-refresh';
 import { ACT_SPEC } from '@/services/iso19650/container-transition-policy';
 import {
   promoteVersion,
@@ -40,12 +46,46 @@ import {
   resolveContainerFile,
   type FileSegment,
 } from '../../../_shared/container-route-responses';
+import { fileResource } from '../../../_shared/file-ownership';
+
+/**
+ * 🌍 **Προώθηση που ΕΓΙΝΕ ⇒ η αγγελία του ακινήτου ξαναπροβάλλεται** (ADR-845 §7.17 Α3, κλάση Ο-35).
+ *
+ * Η προώθηση **αρχειοθετεί** την ως τώρα τρέχουσα έκδοση, και ο διάδοχος γεννιέται **χωρίς**
+ * διαβάθμιση *(`version-promotion-policy`: το `classification` έχει ΕΝΑΝ γραφέα)*. Αν η τρέχουσα
+ * ήταν δημοσιευμένη φωτογραφία, **φεύγει από το κοινό** — και ως την Α3 η αγγελία δεν το μάθαινε.
+ *
+ * 🔑 **Δύο αρχεία, όχι ένα**: η *θέση* του διαδόχου έρχεται από την **κεφαλή**, που μπορεί να έχει
+ * μετακινηθεί σε άλλο ακίνητο από την πηγή. Ξαναπροβάλλονται τα ακίνητα **και των δύο**· ο βοηθός
+ * κρατά ένα ανά ακίνητο. Η κεφαλή φορτώνεται από τον **ίδιο** PEP *(ξένη = ανύπαρκτη)*.
+ *
+ * ⚠️ Μόνο για εταιρεία: προσωπικό αρχείο δεν είναι υλικό αγγελίας γραφείου.
+ */
+async function listingsAfter(
+  outcome: VersionPromotionOutcome,
+  caller: FileCustodyCaller,
+  source: ChangedListingFile | undefined,
+): Promise<readonly ListingRefreshReport[]> {
+  if (outcome.kind !== 'promoted' || caller.custody !== 'company') return [];
+
+  const head = await fileResource.load({
+    docId: outcome.previousHeadFileId,
+    caller: caller.ctx,
+    action: 'promote-version:listing',
+    refusal: fileNotFoundResponse,
+  });
+  const changed = head.refusal === undefined ? [source ?? {}, head.doc.data ?? {}] : [source ?? {}];
+  return refreshListingsAfterFileChanges(getAdminFirestore(), changed);
+}
 
 /** Η έκβαση → HTTP. Σύγκρουση προϋπόθεσης = **409**, άρνηση πολιτικής = **403 με όνομα**. */
-function toResponse(outcome: VersionPromotionOutcome): NextResponse {
+function toResponse(
+  outcome: VersionPromotionOutcome,
+  listings: readonly ListingRefreshReport[],
+): NextResponse {
   switch (outcome.kind) {
     case 'promoted':
-      return NextResponse.json({ success: true, ...outcome }, { status: 200 });
+      return NextResponse.json({ success: true, ...outcome, listings }, { status: 200 });
     case 'noop':
       return NextResponse.json({ success: true, ...outcome }, { status: 200 });
     case 'refused':
@@ -87,7 +127,8 @@ async function handlePost(request: NextRequest, caller: FileCustodyCaller, segme
     if (refusal) return refusal;
   }
 
-  return toResponse(await promoteVersion({ actor, sourceFileId: fileId, expectedHeadFileId }));
+  const outcome = await promoteVersion({ actor, sourceFileId: fileId, expectedHeadFileId });
+  return toResponse(outcome, await listingsAfter(outcome, caller, resolved.doc.data));
 }
 
 export const POST = withSensitiveRateLimit(
