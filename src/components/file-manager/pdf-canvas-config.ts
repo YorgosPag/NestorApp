@@ -10,6 +10,8 @@
  * @enterprise ADR-031 - Canonical File Storage System
  */
 
+import type { PreviewUrlDelivery } from './pdf-fetch-target';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -29,6 +31,11 @@ export interface PdfCanvasViewerProps {
    * 2026-09-16): το κενό ήταν **μία γραμμή**, όχι έλλειψη δεδομένου.
    */
   fileId?: string;
+  /**
+   * Πώς παραδίδεται το `url` — `'direct'` όταν είναι **βραχύβια υπογεγραμμένη άδεια**
+   * που ο διακομιστής έδωσε αφού έκρινε (ADR-901 §14.9). Απών ⇒ `'proxied'`.
+   */
+  urlDelivery?: PreviewUrlDelivery;
   /** Accessible title */
   title: string;
   /** Optional className */

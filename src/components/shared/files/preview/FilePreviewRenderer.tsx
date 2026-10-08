@@ -33,6 +33,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatFileSize } from '@/utils/file-validation';
 import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
+import type { PreviewUrlDelivery } from '@/components/file-manager/pdf-fetch-target';
 import { DocxPreview } from '@/components/file-manager/preview/DocxPreview';
 import { ExcelPreview } from '@/components/file-manager/preview/ExcelPreview';
 import { XmlPreview } from '@/components/file-manager/preview/XmlPreview';
@@ -77,6 +78,12 @@ export interface FilePreviewRendererProps {
    * συνοδευτικό. Η σελίδα κοινοποίησης δεν έχει εγγραφή ⇒ την παραλείπει και το σχέδιο διαβάζεται από το `url`.
    */
   record?: FileRecord | null;
+  /**
+   * Πώς παραδίδεται το `url` (ADR-901 §14.9). `'direct'` ⇒ είναι **βραχύβια υπογεγραμμένη άδεια** που ο διακομιστής
+   * έδωσε αφού έκρινε, και ζητείται όπως είναι. Αφορά **μόνο** το PDF: είναι η μόνη προεπισκόπηση που αλλιώς περνά
+   * από τον proxy `/api/download` — οι υπόλοιπες (εικόνα, κείμενο, DOCX, XML, HTML) ζητούν ήδη το `url` απευθείας.
+   */
+  urlDelivery?: PreviewUrlDelivery;
 }
 
 // ============================================================================
@@ -84,11 +91,16 @@ export interface FilePreviewRendererProps {
 // ============================================================================
 
 /** PDF preview via pdfjs-dist canvas (theme-aware) */
-function PdfPreview({ url, fileId, title }: { url: string; fileId?: string; title: string }) {
+function PdfPreview({ url, fileId, urlDelivery, title }: {
+  url: string;
+  fileId?: string;
+  urlDelivery?: PreviewUrlDelivery;
+  title: string;
+}) {
   // 🔑 Το `fileId` **υπήρχε ήδη** σε αυτό το component (δηλωμένο στα props του, για
   //    το Excel preview) και **δεν προωθούνταν** στον PDF viewer — μετρημένο
   //    2026-09-16. Το κενό ήταν **μία γραμμή**, όχι έλλειψη δεδομένου (ADR-862 Φ0 Β8).
-  return <PdfCanvasViewer url={url} fileId={fileId} title={title} className="flex-1" />;
+  return <PdfCanvasViewer url={url} fileId={fileId} urlDelivery={urlDelivery} title={title} className="flex-1" />;
 }
 
 /** Video preview with native player */
@@ -176,6 +188,7 @@ export function FilePreviewRenderer({
   className,
   preview,
   record,
+  urlDelivery,
 }: FilePreviewRendererProps) {
   const previewType: PreviewType = getPreviewType(contentType, fileName);
   const hasUrl = !!url;
@@ -196,7 +209,9 @@ export function FilePreviewRenderer({
 
   return (
     <section className={cn('flex flex-col flex-1 min-h-[400px]', className)}>
-      {previewType === 'pdf' && <PdfPreview url={url!} fileId={fileId} title={displayName} />}
+      {previewType === 'pdf' && (
+        <PdfPreview url={url!} fileId={fileId} urlDelivery={urlDelivery} title={displayName} />
+      )}
       {previewType === 'image' && <ImagePreview url={url!} preview={preview} title={displayName} />}
       {previewType === 'video' && <VideoPreview url={url!} title={displayName} />}
       {previewType === 'audio' && <AudioPreview url={url!} title={displayName} />}

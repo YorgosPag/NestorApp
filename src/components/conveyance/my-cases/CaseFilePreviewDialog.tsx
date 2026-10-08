@@ -7,6 +7,9 @@
  * ⚠️ **Χωρίς `fileId` στον renderer**: η προεπισκόπηση Excel ζητά `/api/files/[id]/excel-preview`, που φυλάει
  *    **μισθωτή**, και ο επαγγελματίας δεν είναι μέλος. Ο υπογεγραμμένος σύνδεσμος αρκεί για PDF/εικόνα/κείμενο·
  *    τα υπόλοιπα δείχνουν «Λήψη».
+ * 🔑 **`urlDelivery="direct"`** (§14.9): ο σύνδεσμος **είναι** η άδεια — ο διακομιστής έκρινε και υπέγραψε. Χωρίς τη
+ *    δήλωση ο PDF viewer τον τύλιγε στον proxy `/api/download?url=`, που είναι `withAuth`: ο επαγγελματίας χωρίς
+ *    εταιρεία έπαιρνε **401** σε κάθε PDF, και ο σύνδεσμος ταξίδευε ως παράμετρος στον δικό μας διακομιστή.
  * Φορτώνεται **δυναμικά** από τη σελίδα υπόθεσης: ο renderer είναι βαρύς και χρειάζεται μόνο στο κλικ.
  *
  * @module components/conveyance/my-cases/CaseFilePreviewDialog
@@ -37,6 +40,7 @@ export default function CaseFilePreviewDialog({ preview, onClose, onDownload }: 
         <figure className="m-0 flex max-h-[75vh] min-h-[400px] flex-col overflow-hidden rounded-md border">
           <FilePreviewRenderer
             url={preview.url}
+            urlDelivery="direct"
             contentType={preview.contentType}
             fileName={preview.fileName}
             displayName={preview.fileName}

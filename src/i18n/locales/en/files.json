@@ -74,6 +74,7 @@
     "previous": "Previous",
     "next": "Next",
     "loading": "Loading PDF...",
+    "loadFailed": "The PDF could not be opened. Try again or download the file.",
     "fullscreen": "Full screen"
   },
   "validation": {

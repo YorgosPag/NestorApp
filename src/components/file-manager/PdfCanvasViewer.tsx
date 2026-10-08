@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { API_ROUTES } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
@@ -43,12 +43,15 @@ import {
   WHEEL_ZOOM_FACTOR,
   loadPdfJs,
 } from './pdf-canvas-config';
+import { pdfFetchTarget } from './pdf-fetch-target';
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function PdfCanvasViewer({ url, fileId, title, className }: PdfCanvasViewerProps) {
+const logger = createModuleLogger('PdfCanvasViewer');
+
+export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: PdfCanvasViewerProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -97,20 +100,10 @@ export function PdfCanvasViewer({ url, fileId, title, className }: PdfCanvasView
           docRef.current = null;
         }
 
-        // 🔑 **ΤΟ `fileId` ΝΙΚΑ** (ADR-862 Φ0 Β8): είναι η μόνη είσοδος που ο
-        //    διακομιστής μπορεί να επαληθεύσει **πλήρως** — μισθωτή **και**
-        //    ορατότητα δοχείου. Το `?url=` φυλάει μόνο μισθωτή.
-        //
-        // Same-origin relative URLs (e.g. `/api/shared/[token]/pdf`) are already
-        // public streams — skip the auth-gated `/api/download` proxy which
-        // requires a Firebase Storage URL + auth. External Firebase URLs still
-        // route through the proxy to bypass CORS.
-        const fetchUrl = fileId
-          ? `${API_ROUTES.DOWNLOAD}?fileId=${encodeURIComponent(fileId)}`
-          : url.startsWith('/')
-            ? url
-            : `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(url)}&filename=preview.pdf`;
-        const response = await fetch(fetchUrl);
+        // 🔑 «Από πού, και με ποια διαπιστευτήρια;» το απαντά ο ΕΝΑΣ απαντητής
+        //    (`pdfFetchTarget`, ADR-901 §14.9) — ποτέ ξανά inline εδώ.
+        const target = pdfFetchTarget({ url, fileId, urlDelivery });
+        const response = await fetch(target.url, { credentials: target.credentials });
         if (!response.ok) throw new Error(`PDF fetch: HTTP ${response.status}`);
         const data = new Uint8Array(await response.arrayBuffer());
         if (cancelled) return;
@@ -130,6 +123,9 @@ export function PdfCanvasViewer({ url, fileId, title, className }: PdfCanvasView
         }));
       } catch (err) {
         if (!cancelled) {
+          // ⚠️ Το τεχνικό αίτιο πάει στο ημερολόγιο· ο άνθρωπος βλέπει μεταφρασμένο
+          //    μήνυμα (N.11). ⛔ Ποτέ το URL: μπορεί να είναι υπογεγραμμένη άδεια.
+          logger.warn('PDF load failed', { error: err instanceof Error ? err.message : String(err), urlDelivery });
           setState((s) => ({
             ...s,
             loading: false,
@@ -151,7 +147,7 @@ export function PdfCanvasViewer({ url, fileId, title, className }: PdfCanvasView
     // ⚠️ Το `fileId` **πρέπει** να είναι εδώ: είναι πλέον η **πηγή** του `fetchUrl`
     //    (ADR-862 Φ0 Β8). Χωρίς αυτό, η εναλλαγή αρχείου θα άφηνε στην οθόνη το
     //    **προηγούμενο** PDF κάτω από το νέο όνομα.
-  }, [url, fileId]);
+  }, [url, fileId, urlDelivery]);
 
   // Render current page
   useEffect(() => {
@@ -476,7 +472,7 @@ export function PdfCanvasViewer({ url, fileId, title, className }: PdfCanvasView
               </p>
             )}
             {state.error && (
-              <p className="text-sm text-destructive">{state.error}</p>
+              <p role="alert" className="text-sm text-destructive">{t('pdf.loadFailed')}</p>
             )}
           </div>
         )}
