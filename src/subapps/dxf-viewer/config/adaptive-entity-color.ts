@@ -31,6 +31,7 @@ import {
   type RgbaColor,
 } from './color-math';
 import { resolveDxfCanvasBackgroundHex } from './color-config';
+import { applyPlotColor, getPrintColorPolicy, type PrintColorPolicy } from './print-color-policy';
 
 // ============================================================================
 // MAX-CONTRAST INK — το «άκρο», όχι η ελάχιστη ανάμειξη
@@ -211,6 +212,11 @@ const _fillCache = new Map<string, string>();
  * Memoized ανά `fill|bg`. Καλείται από τους 2D BIM renderers πριν το `ctx.fillStyle`.
  */
 export function adaptFillTintForCanvas(fill: string, bgHex?: string): string {
+  // ADR-454 / ADR-909 Β2.5 — σε print pass η επιφάνεια είναι **χαρτί**, όχι ο ζωντανός καμβάς: το γέμισμα
+  // δεν «προσαρμόζεται» στο σκοτεινό φόντο της οθόνης, περνά από την πολιτική εκτύπωσης όπως κάθε μελάνι.
+  const printPolicy = getPrintColorPolicy();
+  if (printPolicy !== null) return plotFillTint(fill, printPolicy);
+
   const bg = bgHex ?? resolveDxfCanvasBackgroundHex();
   const key = `${fill}|${bg}`;
   const hit = _fillCache.get(key);
@@ -218,6 +224,24 @@ export function adaptFillTintForCanvas(fill: string, bgHex?: string): string {
   const out = computeAdaptedFillTint(fill, bg);
   _fillCache.set(key, out);
   return out;
+}
+
+/**
+ * **Το γέμισμα όπως τυπώνεται** — το χρώμα από το {@link applyPlotColor} (ρόλος `'fill'`), η **διαφάνεια
+ * αυτούσια**.
+ *
+ * 🔴 Μετρημένο ζωντανά (2026-10-08): το `monochrome` μαύριζε κάθε γραμμή και άφηνε **χρωματιστό** κάθε
+ * γέμισμα BIM — οι ~20 αποδότες που καλούν το `adaptFillTintForCanvas` δεν ρωτούσαν ποτέ αν τυπώνουν, και
+ * επιπλέον προσάρμοζαν το χρώμα στο **σκοτεινό φόντο της οθόνης** ενώ ζωγράφιζαν σε λευκό χαρτί.
+ *
+ * ⚠️ Η διαφάνεια **δεν** γίνεται 1: ένα ημιδιαφανές γέμισμα πλάκας που θα τυπωνόταν αδιαφανές μαύρο θα
+ * κατάπινε ολόκληρη την κάτοψη. Μαύρο × α = ο τόνος του γκρι που ζήτησε ο σχεδιαστής.
+ */
+function plotFillTint(fill: string, policy: PrintColorPolicy): string {
+  const c = parseColor(fill);
+  if (c === null) return fill;
+  const plotted = parseHex(applyPlotColor(rgbToHex(c), null, policy, 'fill'));
+  return plotted === null ? fill : rgbaString({ ...plotted, a: c.a });
 }
 
 /** Pure core του {@link adaptFillTintForCanvas} (χωρίς memo/live-bg). */

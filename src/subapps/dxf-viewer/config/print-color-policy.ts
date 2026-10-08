@@ -37,6 +37,12 @@ export interface PrintColorPolicy {
   style: PrintPlotStyle;
   /** Physical print DPI used for ISO lineweight mm → px conversion. */
   dpi: number;
+  /**
+   * ADR-909 Β2.5 — το **δάπεδο πάχους** αυτής της απόδοσης, σε px της εικόνας. Παραλείπεται ⇒ 1 px
+   * (χαρτί: η εκτύπωση ζωγραφίζει τα πραγματικά πάχη). Το ορίζει μόνο ό,τι θα **μικρύνει** πριν το δει
+   * άνθρωπος — μια εικόνα 4096 px που η αγγελία δείχνει στα 1024 κάνει τη γραμμή του 1 px ένα τέταρτο pixel.
+   */
+  minLineWidthPx?: number;
 }
 
 const PRINT_BLACK = '#000000';

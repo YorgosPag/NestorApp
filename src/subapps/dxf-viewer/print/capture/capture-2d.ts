@@ -40,6 +40,11 @@ export interface Capture2dInput {
    * Defaults to `'colour'` (white-safe) when omitted.
    */
   plotStyle?: PrintPlotStyle;
+  /**
+   * ADR-909 Β2.5 — δάπεδο πάχους σε px της εικόνας (`PrintColorPolicy.minLineWidthPx`). Η εκτύπωση σε
+   * χαρτί **δεν** το ορίζει· το ορίζει μόνο εικόνα που θα μικρύνει πριν τη δει άνθρωπος.
+   */
+  minLineWidthPx?: number;
 }
 
 /**
@@ -128,6 +133,7 @@ export function renderDxfSceneOffscreen(
   setPrintColorPolicy({
     style: input.plotStyle ?? 'colour',
     dpi: input.raster.effectiveDpi,
+    ...(input.minLineWidthPx !== undefined ? { minLineWidthPx: input.minLineWidthPx } : {}),
   });
   try {
     renderer.render(dxfScene, transform, viewport, {

@@ -58,6 +58,11 @@ export interface LineweightDisplayState {
   readonly dpi: number;
   /** `false` μόνο όταν ο χρήστης έσβησε τον διακόπτη «ΠΑΧΟΣ» σε **ζωντανή** οθόνη. */
   readonly show: boolean;
+  /**
+   * Το δάπεδο **αυτής** της απόδοσης: {@link HAIRLINE_DISPLAY_PX}, εκτός αν το ενεργό print pass δήλωσε
+   * μεγαλύτερο (`PrintColorPolicy.minLineWidthPx` — εικόνα που θα μικρύνει πριν τη δει άνθρωπος, ADR-909 Β2.5).
+   */
+  readonly hairlinePx: number;
 }
 
 /**
@@ -74,6 +79,7 @@ export function lineweightDisplayState(): LineweightDisplayState {
   return {
     dpi: printPolicy ? printPolicy.dpi : SCREEN_DPI,
     show: printPolicy !== null || getShowLineweight(),
+    hairlinePx: Math.max(HAIRLINE_DISPLAY_PX, printPolicy?.minLineWidthPx ?? HAIRLINE_DISPLAY_PX),
   };
 }
 
@@ -85,7 +91,7 @@ export function lineweightDisplayState(): LineweightDisplayState {
  *   `ctx.lineWidth` κάνει τον καμβά να **αγνοήσει σιωπηλά ολόκληρη τη διαδρομή**.
  */
 export function lineweightDisplayPx(widthMm: number): number {
-  const { dpi, show } = lineweightDisplayState();
-  if (!show || !Number.isFinite(widthMm) || widthMm <= 0) return HAIRLINE_DISPLAY_PX;
-  return Math.max(HAIRLINE_DISPLAY_PX, mmToDisplayPx(widthMm, dpi));
+  const { dpi, show, hairlinePx } = lineweightDisplayState();
+  if (!show || !Number.isFinite(widthMm) || widthMm <= 0) return hairlinePx;
+  return Math.max(hairlinePx, mmToDisplayPx(widthMm, dpi));
 }

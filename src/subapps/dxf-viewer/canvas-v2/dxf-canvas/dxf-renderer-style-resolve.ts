@@ -23,10 +23,7 @@ import { lineweightToPx, isConcreteLineweight } from '../../config/lineweight-is
 // ADR-510 Φ2G / ADR-756 — the global "Show Lineweight" toggle (AutoCAD LWDISPLAY) + the
 // active mm→px DPI, as ONE reading. Both the LINE batch path and the per-entity path honour
 // it through the same gate — and so does every non-entity pen (table grid, sheet strokes).
-import {
-  lineweightDisplayState,
-  HAIRLINE_DISPLAY_PX,
-} from '../../config/lineweight-display-px';
+import { lineweightDisplayState } from '../../config/lineweight-display-px';
 // ADR-362 — ONE name→pattern SSoT (Unified catalog ∪ runtime registry customs),
 // shared with the dim stroke resolver + linetype thumbnail. Was `resolveAnyDashMm`
 // (catalog-only) → the no-layer fallback silently rendered user-created custom
@@ -97,9 +94,10 @@ export function resolveEntityRenderStyle(
   // the gate open. When closed, every stroke collapses to a hairline (zoom-independent,
   // big-player LWT-off). Was two hand-written lines here; the table grid grew its own,
   // different answer (see `config/lineweight-display-px.ts` for what that cost).
-  const { dpi: dpiForMm, show: showLineweight } = lineweightDisplayState();
-  const gatePx = (px: number): number =>
-    showLineweight ? Math.max(HAIRLINE_DISPLAY_PX, px) : HAIRLINE_DISPLAY_PX;
+  const { dpi: dpiForMm, show: showLineweight, hairlinePx } = lineweightDisplayState();
+  // ADR-909 Β2.5 — το δάπεδο το δίνει η ΙΔΙΑ ανάγνωση (1 px στην οθόνη και στο χαρτί· μεγαλύτερο μόνο
+  // όταν το print pass το δήλωσε) — όχι η σταθερά, αλλιώς οι σκέτες γραμμές DXF θα το αγνοούσαν.
+  const gatePx = (px: number): number => (showLineweight ? Math.max(hairlinePx, px) : hairlinePx);
   // ADR-510 Φ2G — even without a layer/cascade context, the entity's OWN concrete
   // lineweight (mm) must still paint (mirror of the `resolveAnyDashMm` linetype
   // fallback below). A freshly-drawn line whose layer isn't in `layersById` would

@@ -28,6 +28,7 @@ import { isEntityLayerSkipped } from '../../canvas-v2/dxf-canvas/dxf-entity-laye
 import { createCombinedBounds } from '../../utils/bounds-utils';
 import type { PrintPlotStyle, RasterTargetPx } from '../config/paper-types';
 import { rasterToViewport } from '../config/paper-math';
+import { MM_PER_INCH } from '../config/paper-constants';
 import { convertSceneForCapture, renderDxfSceneOffscreen } from '../capture/capture-2d';
 import { applyPublicFloorplanProfile } from './public-floorplan-profile';
 import { renderInPublicFloorplanView } from './public-floorplan-view';
@@ -39,8 +40,24 @@ import { renderInPublicFloorplanView } from './public-floorplan-view';
 const LONG_SIDE_PX = 4096;
 /** Κάτω από αυτό μια πολύ στενόμακρη κάτοψη θα γινόταν λωρίδα λίγων pixels. */
 const MIN_SHORT_SIDE_PX = 512;
-/** Ονομαστική ανάλυση: ορίζει **μόνο** το πάχος γραμμών ISO σε pixels (ADR-454). */
-const NOMINAL_DPI = 300;
+/**
+ * 🔴 **Η εικόνα δεν είναι χαρτί — είναι οθόνη.** Το πάχος μιας πένας είναι sheet-mm, άρα θέλει «φύλλο»· και
+ * το φύλλο μιας κάτοψης αγγελίας είναι **όσο τη βλέπει ο αγοραστής**, όχι Α3.
+ *
+ * Μετρημένο ζωντανά (2026-10-08, 95 τ.μ.): με `300 dpi` τα 4096 px αντιστοιχούσαν σε φύλλο **347 mm** ⇒ κάθε
+ * γραμμή έβγαινε **1–2 px**, δηλαδή μισό pixel στο ράφι των 1280 — «τοίχοι σαν τρίχες», μελάνι 1,6% της εικόνας.
+ * Ο νόμος είναι του Revit: *τα πάχη είναι σχετικά με το μέγεθος της εικόνας — μεγαλύτερη εικόνα, λεπτότερες
+ * γραμμές*. Άρα δηλώνεται **το φύλλο**, και το dpi **προκύπτει**.
+ */
+const NOMINAL_SHEET_LONG_SIDE_MM = 150;
+/** Ονομαστική ανάλυση: ορίζει **μόνο** το πάχος γραμμών ISO σε pixels (ADR-454). ≈ 694 dpi. */
+const NOMINAL_DPI = (LONG_SIDE_PX * MM_PER_INCH) / NOMINAL_SHEET_LONG_SIDE_MM;
+/**
+ * Το **μικρότερο** πλάτος στο οποίο οφείλει να διαβάζεται η κάτοψη (κάρτα αγγελίας σε κινητό, πυκνότητα 2×).
+ * Από αυτό βγαίνει το δάπεδο πάχους: καμία γραμμή κάτω από **1 px εκεί**.
+ */
+const SMALLEST_LEGIBLE_WIDTH_PX = 1024;
+const MIN_LINE_WIDTH_PX = LONG_SIDE_PX / SMALLEST_LEGIBLE_WIDTH_PX;
 /** Μαύρο σε λευκό — η σύμβαση κάθε δημόσιας κάτοψης (Zillow, Matterport schematic). */
 const PUBLIC_FLOORPLAN_PLOT_STYLE: PrintPlotStyle = 'monochrome';
 // eslint-disable-next-line design-system/no-hardcoded-colors -- χαρτί εικόνας που φεύγει από την εφαρμογή, όχι θέμα UI
@@ -149,6 +166,7 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
       raster,
       fitMode: 'fit-to-page',
       plotStyle: PUBLIC_FLOORPLAN_PLOT_STYLE,
+      minLineWidthPx: MIN_LINE_WIDTH_PX,
     });
     layPaperBehind(canvas);
 
