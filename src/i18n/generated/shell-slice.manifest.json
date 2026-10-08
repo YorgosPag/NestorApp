@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4db8cf3e3f78a19b0903c35911886130f5ad82d905b673e036d772544c19cac7",
+  "inputsSha256": "cd240372b20649f1fd1dd225122921e8af9808fad3e4a0dd42a8e87c1e8e31ab",
   "languages": [
     "el"
   ],
@@ -934,7 +934,6 @@
     "src/lib/http/response-refusal.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/invitations/invitation-respond.ts": "334fb11f26fd1c7fb1ebb7329c023a77687a899bb72175ae886d372755557665",
     "src/lib/layout/bottom-sheet-stops.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/legal/canonical-json.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/legal/frozen-legal-document.ts": "00adf9971088ff81c3be181666598e4ef73aaecac9f1aad7714579e6371033bb",
     "src/lib/legal/legal-clauses.ts": "9f7254a7ca5784f68e95629a3c521a948419820387a993a41391c9b4386b22ac",
     "src/lib/legal/legal-document-versions.ts": "5de0138c9dffd4dfe5c86856ee12492a651c5bc2647d0723ce59f13941ca4f27",
@@ -12187,6 +12186,7 @@
     "src/lib/landing/landing-hero-document.ts": "4c2ff42e29071a535560d9d210a5a84871a5c58a730688d5652c9632777e3374",
     "src/lib/landing/landing-hero-vocabulary.ts": "71a0be2fbf2b689cde2fdd14ae4570ed6b49bb2e5cf6a1a18a3981ffe9a96980",
     "src/lib/landing/landing-modes.ts": "c198f45e41b222e2081ae306c78ac59b01ca64f1e7283c3adf8d2ae870761ebf",
+    "src/lib/legal/canonical-json.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/legality/legality-claim.ts": "b15cff70a2ffa81dd14d1040f6d6384548fbaf8caf7b7e11a4e24eddc3778faa",
     "src/lib/legality/legality-offer-matrix.ts": "efd6ceb8a1a9a5847b97dad9da74f97019f27053fa9af604c49d556f36c2dff5",
     "src/lib/legality/legality-signal.ts": "14338e333b022ec6e3b0dd36791ecb5b97a4f4cc48e91a3ea2f1696c4952d6e2",
@@ -12208,6 +12208,7 @@
     "src/lib/listings/listing-map-mark.ts": "1a7ebe289523b902bfcf58502fad3b908d0b2ac7ec566a88b8ef109b95f2fee9",
     "src/lib/listings/listing-map-shape.ts": "e34eb0cf82fd8a1a57c1169c3c880b3a7fb1f00a54936d7ddd8694672c364220",
     "src/lib/listings/listing-material.ts": "c9aa8ee3915a604344049570c85b8326386058c88a172a53fc8336538b5b56d9",
+    "src/lib/listings/listing-media-fingerprint.ts": "1407a77bb7050e506bab11bd7274a067f83ab3478069dfa6a432e56fbe93d083",
     "src/lib/listings/listing-model-declaration.ts": "d856750e0071e40eaa77cb707f19a19d535a11da432fc0b691a4fe908c4342e9",
     "src/lib/listings/listing-photo-position.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-price-keys.ts": "fb8654e402bbd486ba5022b5a32e232b043a080f42209fd8ae0446336d8bfadd",
@@ -12458,6 +12459,7 @@
     "src/services/listings/gltf-model-measure.ts": "55f3a520f9523d8c098eb05208177527a8d7535e7ee333359f46479719418c8b",
     "src/services/listings/legality-projection.ts": "a88bc62c2d2e65a3eed1ab5215e12e0fab6e0155255d8649037e1b26e05efcd4",
     "src/services/listings/listed-at-stamp.ts": "f4e194f22728b08d8e1327fdfc81706432daa875cd311299f4ba69f21d5d7ddd",
+    "src/services/listings/listing-media-fingerprint-stamp.ts": "7c52b97c00bc7dc0268f8d04c008ab27a626d604680874bc26d8843714ca60fd",
     "src/services/listings/listing-media-refresh.ts": "9c28a1a9e78c6f1a005094212e8b9f5a4d02880a0d6fd6ac72c190b40afdb6bb",
     "src/services/listings/listing-publication-facts.ts": "0ecc23dc7f81fb62fea425f69ebce969fb7aaff253b75bb48a560e6d224a6891",
     "src/services/listings/price-history-stamp.ts": "c2cd6811c100c61bd032f781aae6ff28548a2e6fad4fc4955070d44561c72226",
@@ -12480,7 +12482,7 @@
     "src/services/listings/public-shelf-video-bake.ts": "c11072819d17c7d9b9ced87ca39493586bb4fffe76ebe200895e1951b68597c4",
     "src/services/listings/public-shelf-video.service.ts": "2eca211c24b46a358fa35f36376032a2163ac4bcefd8e76df29ece12726baf0a",
     "src/services/listings/public-shelf.service.ts": "6637a07dc6247cba1142a77ca9e752a49657fcfe5ab7bc8c2b422aa2ddb41729",
-    "src/services/listings/publish-public-listing-shelf.ts": "3f09aa5ff7b022aa74830f0cc3058cb4e1fa0dc6bcb4045189fa9d844be5a538",
+    "src/services/listings/publish-public-listing-shelf.ts": "89dabd261e62958da97fd6f41845be18ed055adeee1d8f71b58f62804128c46f",
     "src/services/listings/publish-public-listing.ts": "dd615c123731ac844126207ad0db7ae28e60441a090b06ec369ad6ad2dd4d909",
     "src/services/mandate/agency-profile-credential.ts": "b7ebd2ef7d1d57c08749c44722ee782a0c82c3c1235b206b9525141d028202ca",
     "src/services/mandate/agency-profile-verdict.ts": "2ef3c2cec8549d4e4c1a2103f0bb15108b7563098b7eb90114237b9b31dd22c9",
@@ -12688,7 +12690,7 @@
     "dynamicBoundaries": 24,
     "matchedKeys": 237,
     "routeBoundaries": 3,
-    "shellFiles": 1122,
+    "shellFiles": 1125,
     "sliceBytes": 724547
   },
   "unresolvableKeys": [

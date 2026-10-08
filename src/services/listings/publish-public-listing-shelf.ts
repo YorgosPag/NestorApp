@@ -38,7 +38,9 @@
 
 import type { DocumentReference } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
+import { MEDIA_FINGERPRINT_FIELD } from '@/lib/listings/listing-media-fingerprint';
 import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-schema';
+import { mediaFingerprintOf } from './listing-media-fingerprint-stamp';
 import { withPublishedGallery, type ProjectedShelfImage } from './public-listing-projection';
 import {
   withPublishedModels,
@@ -289,7 +291,19 @@ export async function writeWithShelf(
 
     const withVideos = withPublishedVideos(withModels, videos.published.map(toProjectedVideo));
 
-    await ref.set({ ...withVideos, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
+    // 🧬 ADR-845 §7.17 Α5 — **το αποτύπωμα των μέσων**, δίπλα στο `schemaVersion` και για τον ίδιο
+    //    λόγο: μεταδεδομένο **αποθήκευσης**, όχι περιεχόμενο αγγελίας *(το κλειστό σχήμα δεν αλλάζει)*.
+    //
+    // ⚠️ **Μόνο όταν και τα ΤΡΙΑ ράφια συμφιλιώθηκαν.** Το αποτύπωμα λέει *«αυτά ζητήθηκαν»*· αν
+    //    ένα ράφι απέτυχε, η αγγελία γράφτηκε **χωρίς** κάτι που ζητήθηκε, και ένα αποτύπωμα εδώ θα
+    //    έλεγε *«συμφωνεί»* στη συμφιλίωση που θα το διόρθωνε. Απόν ⇒ `unknown` ⇒ ξαναψήνεται.
+    const shelvesSettled = [images, models, videos].every((shelf) => shelf.outcome !== 'failed');
+
+    await ref.set({
+      ...withVideos,
+      schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION,
+      ...(shelvesSettled ? { [MEDIA_FINGERPRINT_FIELD]: mediaFingerprintOf(sources) } : {}),
+    });
     return withVideos;
   } catch (error) {
     await withdrawShelvesAfterFailure(

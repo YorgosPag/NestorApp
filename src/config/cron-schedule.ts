@@ -56,6 +56,7 @@ import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
 import { runHolidayHoursQuestion } from '@/lib/cron/jobs/holiday-hours-question.job';
+import { runListingMediaReconcile } from '@/lib/cron/jobs/listing-media-reconcile.job';
 import { runListingStatsRollup } from '@/lib/cron/jobs/listing-stats-rollup.job';
 import { runMandateEvidenceRetention } from '@/lib/cron/jobs/mandate-evidence-retention.job';
 import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
@@ -506,6 +507,23 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runListingStatsRollup,
+  },
+  {
+    slug: 'listing-media-reconcile',
+    path: '/api/cron/listing-media-reconcile',
+    description: 'Συμφιλίωση μέσων αγγελίας: αποτύπωμα ⇄ τρέχον υλικό, επαναπροβολή μόνο όπου διαφέρουν (ADR-845 §7.17 Α5)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί είναι ΔΙΧΤΥ και όχι μηχανισμός.** Η αγγελία ενημερώνεται στο ίδιο αίτημα
+    // με την αλλαγή του αρχείου (κάθε πόρτα ξαναπροβάλλει)· εδώ μετριέται μόνο αν κάποια ξέφυγε.
+    // Πυκνότερη σάρωση θα πλήρωνε μία ανάγνωση αρχείων ανά αγγελία για αριθμό που οφείλει να είναι μηδέν.
+    //
+    // ⚠️ **04:41**: μετά τις νυχτερινές εκκαθαρίσεις (03:00–04:29), σε λεπτό που δεν κατέχει κανείς.
+    schedule: '41 4 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runListingMediaReconcile,
   },
   {
     slug: 'area-market-rollup',
