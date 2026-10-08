@@ -12,7 +12,9 @@ import type { AuditEntityType } from '@/types/audit-trail';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
-import { COLLECTIONS } from '@/config/firestore-collections';
+// ⚠️ `import type` — το module είναι `server-only`· ο τύπος σβήνεται στη μεταγλώττιση. Ψευδώνυμο, γιατί το
+//    `FileClassificationResponse` εδώ είναι ήδη η απάντηση της ταξινόμησης **AI** (`/api/files/classify`).
+import type { FileClassificationResponse as FileClassificationActResponse } from '@/services/file-record/file-classification.service';
 import { FILE_CUSTODY_PARAM, type FileCustody } from '@/lib/files/file-custody';
 import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
@@ -410,15 +412,26 @@ export async function unarchiveFilesWithPolicy(
   return setFilesArchivedWithPolicy(fileIds, 'unarchive');
 }
 
-export async function updateFileClassificationWithPolicy(
-  fileId: string,
+/**
+ * **Ζήτα διαβάθμιση για μια δέσμη αρχείων** — ο διακομιστής κρίνει, γράφει, καταγράφει και
+ * ξαναπροβάλλει την αγγελία στο ίδιο αίτημα (ADR-845 §7.17).
+ *
+ * 🔴 Ως τις 2026-10-08 αυτό ήταν `updateDoc({ classification })` από τον browser: η δημόσια
+ * αγγελία δεν το μάθαινε ποτέ, και αρχείο που έγινε `internal` έμενε στο κοινό. ⛔ **ΜΗΝ το
+ * ξαναγράψεις με client SDK** — οι κανόνες παγώνουν το πεδίο (ADR-862 Φ0, ίδιο ιδίωμα με το `cdeState`).
+ *
+ * 🧹 ADR-866 §2.6.8 Β11 — η δημοσιοποίηση είναι πράξη ΓΡΑΦΕΙΟΥ: μόνο εταιρικό διαμέρισμα, και το
+ * UI την κρύβει για προσωπικό κάτοχο.
+ */
+export async function setFilesClassificationWithPolicy(
+  fileIds: readonly string[],
   classification: FileClassification,
-): Promise<void> {
-  // 🧹 ADR-866 §2.6.8 Β11 — ήταν ωμό `'files'`. Η δημοσιοποίηση (ADR-845) είναι πράξη ΓΡΑΦΕΙΟΥ:
-  //    μόνο εταιρικό διαμέρισμα, και το UI την κρύβει για προσωπικό κάτοχο.
-  const { doc, updateDoc } = await import('firebase/firestore');
-  const { db } = await import('@/lib/firebase');
-  await updateDoc(doc(db, COLLECTIONS.FILES, fileId), { classification });
+): Promise<FileClassificationActResponse> {
+  return mutateJson<FileClassificationActResponse>(API_ROUTES.FILES.CLASSIFICATION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileIds, classification }),
+  });
 }
 
 // ============================================================================

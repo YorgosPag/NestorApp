@@ -86,8 +86,11 @@ export type AgencyMediaCandidate = Pick<
  * `lib/listings/listing-file-deliverability`** (ADR-866 Φ1.3): ο φάκελος του ιδιώτη ρωτά την **ίδια** ερώτηση για τα
  * δικά του αρχεία. Εδώ μένει **μόνο** ό,τι είναι του γραφείου — η εξουσιοδότηση (`classification`) και ο κάτοχος
  * `entityType: 'property'`.
+ *
+ * ⚠️ **Εξάγεται** (ADR-845 §7.17) για το `listing-media-refresh`: το *«ποιανού οντότητας αρχείο είναι υλικό
+ * αγγελίας;»* το ρωτά και η πόρτα που **άλλαξε** αρχείο — δεύτερο `'property'` εκεί θα ήταν δεύτερη απάντηση.
  */
-const AGENCY_ENTITY_TYPE = 'property';
+export const AGENCY_ENTITY_TYPE = 'property';
 
 /**
  * **Επιτρέπεται αυτό το αρχείο να φύγει από την εταιρεία;** — ο φρουρός #1.

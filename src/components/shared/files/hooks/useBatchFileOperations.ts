@@ -18,7 +18,7 @@ import {
   unarchiveFilesWithPolicy,
   batchDownloadFilesWithPolicy,
   moveFileToTrashWithPolicy,
-  updateFileClassificationWithPolicy,
+  setFilesClassificationWithPolicy,
   type ArchiveFilesResponse,
 } from '@/services/filesystem/file-mutation-gateway';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
@@ -140,12 +140,27 @@ export async function trashFilesInBatch(
   await Promise.all(targets.map(({ id, custody }) => moveFileToTrashWithPolicy(id, custody, userId)));
 }
 
-/** Χειροκίνητη διαβάθμιση δεδομένων σε πολλά αρχεία — ίδιος λόγος με το {@link trashFilesInBatch}. */
+/**
+ * Χειροκίνητη διαβάθμιση δεδομένων σε πολλά αρχεία — ίδιος λόγος με το {@link trashFilesInBatch}.
+ *
+ * 🔑 **ΕΝΑ αίτημα για όλη τη δέσμη** (ADR-845 §7.17): ο διακομιστής ξαναπροβάλλει την αγγελία
+ * **μία φορά ανά ακίνητο**, όχι μία ανά αρχείο.
+ *
+ * ⚠️ **Άρνηση ανά αρχείο ⇒ ρίψη**, όπως πριν: τότε την έδιναν οι κανόνες (`permission-denied`),
+ * τώρα ο γραφέας με όνομα (`not-capable` · `not found`). Σιωπηλή μερική επιτυχία θα έλεγε στον
+ * άνθρωπο «έγινε» για φωτογραφία που **έμεινε** δημόσια.
+ */
 export async function classifyFilesInBatch(
   fileIds: readonly string[],
   classification: FileClassification,
 ): Promise<void> {
-  await Promise.all(fileIds.map(id => updateFileClassificationWithPolicy(id, classification)));
+  if (fileIds.length === 0) return;
+
+  const result = await setFilesClassificationWithPolicy(fileIds, classification);
+  if (result.errors.length > 0) {
+    logger.error('Batch classification refused for some files', { errors: result.errors });
+    throw new Error(`FILE_CLASSIFICATION_REFUSED: ${result.errors[0]}`);
+  }
 }
 
 // ============================================================================

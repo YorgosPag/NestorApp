@@ -1035,6 +1035,8 @@ export const API_ROUTES = {
   // ── Files & Floorplans ────────────────────────────────────────────────
   FILES: {
     CLASSIFY: '/api/files/classify',
+    /** Η **διαβάθμιση** (public · internal · confidential) — ΟΧΙ η ταξινόμηση AI του `CLASSIFY` (ADR-845 §7.17). */
+    CLASSIFICATION: '/api/files/classification',
     BATCH_DOWNLOAD: '/api/files/batch-download',
     ARCHIVE: '/api/files/archive',
     PROPAGATE_ENTITY_RENAME: '/api/files/propagate-entity-rename',

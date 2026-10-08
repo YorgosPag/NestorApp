@@ -32,6 +32,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 
+import { AGENCY_ENTITY_TYPE } from './agency-media-publication';
 import {
   republishListing,
   reportProjectionFailure,
@@ -81,4 +82,71 @@ export async function refreshListingAfterMediaChange(
   } catch (error) {
     return reportProjectionFailure(propertyId, error);
   }
+}
+
+/**
+ * Ό,τι χρειάζεται από ένα αρχείο που **άλλαξε** για να βρεθεί η αγγελία του — τα πεδία κατόχου,
+ * **όπως βγήκαν από τη βάση** *(γι' αυτό `unknown`: η πόρτα δεν τα έχει στενέψει, και δεν οφείλει)*.
+ */
+export interface ChangedListingFile {
+  readonly entityType?: unknown;
+  readonly entityId?: unknown;
+  readonly companyId?: unknown;
+}
+
+/** Τι έγινε στην αγγελία **ενός** ακινήτου, μετά από αλλαγή αρχείων του. */
+export interface ListingRefreshReport {
+  readonly propertyId: string;
+  readonly outcome: ListingMediaRefreshOutcome;
+}
+
+/**
+ * **Ποια ακίνητα αγγίζει αυτή η δέσμη αρχείων** — ένα ανά ακίνητο, με τον μισθωτή του αρχείου.
+ *
+ * ⚠️ **Καμία στένωση σε «δημοσιεύσιμο κάδο» εδώ, επίτηδες.** Το *«τι φεύγει;»* το απαντά **μόνο**
+ * το `agencyMediaMaterial`· ένα δεύτερο φίλτρο κάδων σε αυτό το σημείο θα ήταν ακριβώς ο φρουρός
+ * που **έκοβε πρώτος** στο Ο-21 *(Α17.7.1)*. Το κόστος είναι φραγμένο: **μία** επαναπροβολή ανά
+ * ακίνητο, και μόνο όταν **άλλαξε** αρχείο του.
+ */
+function propertiesOf(files: readonly ChangedListingFile[]): ReadonlyMap<string, string> {
+  const owners = new Map<string, string>();
+
+  for (const file of files) {
+    if (file.entityType !== AGENCY_ENTITY_TYPE) continue;
+    if (typeof file.entityId !== 'string' || file.entityId.trim() === '') continue;
+    if (typeof file.companyId !== 'string' || file.companyId.trim() === '') continue;
+    if (!owners.has(file.entityId)) owners.set(file.entityId, file.companyId);
+  }
+
+  return owners;
+}
+
+/**
+ * 🏆 **Η ΜΙΑ ΚΛΗΣΗ ΚΑΘΕ ΠΟΡΤΑΣ ΑΡΧΕΙΟΥ** *(ADR-845 §7.17 — κλείσιμο της κλάσης Ο-35)*.
+ *
+ * Η πόρτα δίνει τα αρχεία που **μόλις άλλαξε** *(ταξινόμηση · κάδος · αρχειοθέτηση · πράξη CDE ·
+ * διαγραφή)* και παίρνει την έκβαση **ανά ακίνητο**. Αρχεία που δεν ανήκουν σε ακίνητο
+ * *(επαφή, έργο, προσφορά)* **δεν** είναι υλικό αγγελίας και παραλείπονται σιωπηλά — κενή απάντηση
+ * σημαίνει *«καμία αγγελία δεν αφορούσε»*, όχι αποτυχία.
+ *
+ * 🔑 **Μία επαναπροβολή ανά ακίνητο, όχι ανά αρχείο**: η μαζική σήμανση 30 φωτογραφιών του ίδιου
+ * ακινήτου θα έψηνε την ίδια αγγελία 30 φορές — και η τελευταία θα ήταν η μόνη που μετράει.
+ *
+ * ⚠️ **Σειριακά, και δεν πετά ποτέ** — ίδιο συμβόλαιο με την {@link refreshListingAfterMediaChange}.
+ * Awaited από τον καλούντα: είναι **τι βλέπει ο κόσμος**.
+ */
+export async function refreshListingsAfterFileChanges(
+  adminDb: AdminFirestore,
+  files: readonly ChangedListingFile[],
+): Promise<readonly ListingRefreshReport[]> {
+  const reports: ListingRefreshReport[] = [];
+
+  for (const [propertyId, companyId] of propertiesOf(files)) {
+    reports.push({
+      propertyId,
+      outcome: await refreshListingAfterMediaChange(adminDb, propertyId, companyId),
+    });
+  }
+
+  return reports;
 }
