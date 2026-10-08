@@ -92,7 +92,12 @@ export class FakeShelfBucket {
       name,
       get metadata() {
         const found = bucket.objects.get(name);
-        return { generation: String(found?.generation ?? ''), metadata: found?.custom };
+        return {
+          generation: String(found?.generation ?? ''),
+          metadata: found?.custom,
+          // ADR-845 §7.17 Α7 — το GCS το επιστρέφει **μαζί** με τη λίστα· το πέρασμα σύγκλισης το διαβάζει από εδώ.
+          cacheControl: found?.cacheControl,
+        };
       },
       getMetadata: async () => {
         const found = bucket.objects.get(name);
@@ -121,11 +126,17 @@ export class FakeShelfBucket {
         bucket.objects.delete(name);
       },
       // ADR-880 — ίδια σημασιολογία με το GCS: τα προσαρμοσμένα κλειδιά **συγχωνεύονται**.
-      setMetadata: async (patch: { metadata?: Record<string, string> }) => {
+      // ⚠️ Το `cacheControl` είναι **σταθερό** μεταδεδομένο, όχι προσαρμοσμένο κλειδί (Α7): αλλάζει μόνο αν δοθεί,
+      //    και **δεν** αγγίζει ούτε τα bytes ούτε τη γενιά — όπως στο GCS (εκεί αλλάζει η metageneration).
+      setMetadata: async (patch: { cacheControl?: string; metadata?: Record<string, string> }) => {
         bucket.metadataCalls += 1;
         const found = bucket.objects.get(name);
         if (!found) throw new Error(`no such object: ${name}`);
-        bucket.objects.set(name, { ...found, custom: { ...found.custom, ...patch.metadata } });
+        bucket.objects.set(name, {
+          ...found,
+          cacheControl: patch.cacheControl ?? found.cacheControl,
+          custom: { ...found.custom, ...patch.metadata },
+        });
       },
       download: async (): Promise<[Buffer]> => {
         bucket.downloadCalls += 1;
@@ -136,7 +147,8 @@ export class FakeShelfBucket {
     };
   }
 
-  async getFiles({ prefix }: { prefix: string }) {
+  /** Χωρίς `prefix` ⇒ **όλος** ο κάδος, όπως στο GCS (το πέρασμα σύγκλισης της Α7 σαρώνει έτσι). */
+  async getFiles({ prefix = '' }: { prefix?: string } = {}) {
     const names = [...this.objects.keys()].filter((name) => name.startsWith(prefix));
     return [names.map((name) => this.file(name))];
   }

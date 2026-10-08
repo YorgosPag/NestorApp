@@ -41,7 +41,7 @@ import {
   type Mp4Segment,
 } from '@/lib/media/mp4-boxes';
 import { sha256PassThrough } from '@/lib/storage/sha256-pass-through';
-import { PUBLIC_SHELF_CACHE_CONTROL } from '@/services/upload/utils/storage-path-public-shelf';
+import { shelfCacheControlFor } from '@/services/upload/utils/storage-path-public-shelf';
 
 /** Ο τύπος περιεχομένου του δημοσιευμένου αντικειμένου — ο **ίδιος** που δεχόμαστε, γιατί δεν μεταγλωττίζουμε. */
 export const PUBLIC_SHELF_VIDEO_CONTENT_TYPE = LISTING_VIDEO_CONTENT_TYPE;
@@ -52,8 +52,11 @@ export const PUBLIC_SHELF_VIDEO_CONTENT_TYPE = LISTING_VIDEO_CONTENT_TYPE;
  * 🔑 Ο πάροχος σερβίρει αιτήματα εύρους **μόνο** σε αντικείμενο που δεν μετασχηματίζει εν πτήσει *(μετρημένο και με
  * πηγή στο ADR-907 §10.2/§10.3)*. Δεν ανεβάζουμε ποτέ gzip, άρα σήμερα είναι ζώνη **και** τιράντες — αλλά η Safari iOS
  * **δεν παίζει** βίντεο χωρίς εύρη, και η αστοχία θα ήταν σιωπηλή: μαύρο πλαίσιο σε μία μόνο οικογένεια συσκευών.
+ *
+ * ⚠️ Η συναρμολόγηση ζει στο `shelfCacheControlFor` *(ADR-845 §7.17 Α7)*: το πέρασμα σύγκλισης ρωτά την **ίδια**
+ * συνάρτηση, αλλιώς θα «διόρθωνε» το βίντεο σβήνοντάς του το `no-transform`.
  */
-export const PUBLIC_SHELF_VIDEO_CACHE_CONTROL = `${PUBLIC_SHELF_CACHE_CONTROL}, no-transform`;
+export const PUBLIC_SHELF_VIDEO_CACHE_CONTROL = shelfCacheControlFor('mp4');
 
 /**
  * **Ό,τι χρειάζεται ο ψήστης από ένα αρχείο του κάδου** — δύο τρόποι ανάγνωσης **εύρους**, και τίποτε άλλο.

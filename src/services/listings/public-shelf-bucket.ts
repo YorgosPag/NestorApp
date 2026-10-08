@@ -54,8 +54,10 @@ import { getAdminStorage } from '@/lib/firebaseAdmin';
 import type { Logger } from '@/lib/telemetry';
 import {
   PUBLIC_SHELF_CACHE_CONTROL,
+  isPublicShelfExtension,
   parsePublicShelfKey,
   publicShelfPrefix,
+  shelfCacheControlFor,
 } from '@/services/upload/utils/storage-path-public-shelf';
 import type { AnyPublicShelfKind } from '@/services/upload/utils/public-shelf-kinds';
 
@@ -246,6 +248,59 @@ export async function deleteExtra(
 
   await Promise.all(doomed.map((file) => file.delete({ ignoreNotFound: true })));
   return doomed.length;
+}
+
+// ---------------------------------------------------------------------------
+// Η σύγκλιση της κρυφής μνήμης — για ό,τι ανέβηκε με παλιότερη τιμή (ADR-845 §7.17 Α7)
+// ---------------------------------------------------------------------------
+
+/** Τι βρήκε και τι διόρθωσε ένα πέρασμα σύγκλισης. `healed: 0` ⇒ ο κάδος συμφωνεί ήδη με τη δήλωση. */
+export interface ShelfCacheConvergence {
+  readonly scanned: number;
+  readonly healed: number;
+}
+
+/** Πόσες εγγραφές μεταδεδομένων φεύγουν μαζί — φράζει το κόστος όταν αλλάξει η τιμή για **όλο** τον κάδο. */
+const CACHE_CONVERGENCE_BATCH = 25;
+
+/**
+ * **Τι κρυφή μνήμη ΛΕΙΠΕΙ από αυτό το αντικείμενο** — `null` αν συμφωνεί ήδη, ή αν δεν είναι δικό μας.
+ *
+ * ⚠️ **Άγνωστη κατάληξη ⇒ `null`, δηλαδή δεν αγγίζεται** — ο ίδιος κανόνας με τον {@link deleteExtra}: ό,τι δεν
+ * αναγνωρίζουμε δεν το μαντεύουμε. Ρωτά την **κατάληξη** και όχι τον πίνακα ειδών, επίτηδες: η απάντηση είναι
+ * ιδιότητα της **μορφής** *(το βίντεο θέλει `no-transform` όπου κι αν κάθεται)*, και το πέρασμα **δεν σβήνει** ποτέ.
+ */
+export function staleCacheControl(key: string, current: unknown): string | null {
+  const ext = key.slice(key.lastIndexOf('.') + 1);
+  if (!isPublicShelfExtension(ext)) return null;
+
+  const declared = shelfCacheControlFor(ext);
+  return current === declared ? null : declared;
+}
+
+/**
+ * **Φέρε κάθε αντικείμενο του ραφιού στη ΔΗΛΩΜΕΝΗ κρυφή μνήμη.**
+ *
+ * 🔴 **Γιατί υπάρχει**: το `cacheControl` είναι μεταδεδομένο **ανά αντικείμενο**, και το {@link uploadMissing}
+ * δεν ξαναγράφει ό,τι υπάρχει ήδη. Χωρίς αυτό το πέρασμα, αλλαγή της σταθεράς ισχύει μόνο για ό,τι ανεβεί
+ * **από εδώ και πέρα** — ό,τι ήταν ήδη δημόσιο θα κρατούσε την παλιά καθυστέρηση απόσυρσης **για πάντα**.
+ *
+ * 🔑 **Ιδεμποτές**: τα μεταδεδομένα έρχονται **μαζί** με τη λίστα, άρα δεύτερο πέρασμα είναι μία κλήση λίστας
+ * και **καμία** εγγραφή. Αγγίζει **μόνο** μεταδεδομένα — ποτέ bytes, ποτέ διαγραφή.
+ */
+export async function convergeShelfCacheControl(): Promise<ShelfCacheConvergence> {
+  const [files] = await shelfBucket().getFiles();
+  const stale = files.flatMap((file) => {
+    const cacheControl = staleCacheControl(file.name, file.metadata.cacheControl);
+    return cacheControl === null ? [] : [{ file, cacheControl }];
+  });
+
+  for (let start = 0; start < stale.length; start += CACHE_CONVERGENCE_BATCH) {
+    const batch = stale.slice(start, start + CACHE_CONVERGENCE_BATCH);
+    await Promise.all(batch.map(({ file, cacheControl }) => file.setMetadata({ cacheControl })));
+  }
+
+  return { scanned: files.length, healed: stale.length };
 }
 
 // ---------------------------------------------------------------------------

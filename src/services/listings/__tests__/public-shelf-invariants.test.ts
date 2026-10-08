@@ -38,6 +38,7 @@ import {
   parsePublicShelfKey,
   publicShelfPrefix,
   publicShelfUrl,
+  shelfCacheControlFor,
   shelfExtension,
   PUBLIC_SHELF_EXTENSIONS,
 } from '@/services/upload/utils/storage-path-public-shelf';
@@ -484,6 +485,20 @@ describe('Κ5 — ΤΟ ΠΑΡΑΘΥΡΟ ΤΗΣ ΑΠΟΣΥΡΣΗΣ ΕΙΝΑΙ Φ�
   it('παραμένει δημόσια cache-άριστο — το όφελος δεν θυσιάστηκε', () => {
     expect(PUBLIC_SHELF_CACHE_CONTROL).toContain('public');
     expect(maxAge).toBeGreaterThanOrEqual(60);
+  });
+
+  it('🔴 το όριο είναι ΠΕΝΤΕ ΛΕΠΤΑ — όχι ώρα, όχι μέρα (ADR-845 §7.17 Α7)', () => {
+    // ⚠️ ΑΝ ΚΟΚΚΙΝΙΣΕΙ: με όριο 24 ωρών το `max-age` ξαναγινόταν ώρα χωρίς να ρωτήσει καμία πύλη.
+    //    Το όριο ανεβαίνει ΜΟΝΟ μαζί με υποδομή ακύρωσης (χωριστό ADR, `media.` hostname).
+    expect(PUBLIC_SHELF_MAX_CACHE_SECONDS).toBeLessThanOrEqual(300);
+  });
+
+  it('κάθε μορφή του ραφιού έχει το ΙΔΙΟ παράθυρο — και το βίντεο κρατά `no-transform`', () => {
+    for (const ext of PUBLIC_SHELF_EXTENSIONS) {
+      expect(shelfCacheControlFor(ext)).toContain(`max-age=${maxAge}`);
+    }
+    expect(shelfCacheControlFor('mp4')).toMatch(/(^|,\s*)no-transform(\s*,|$)/);
+    expect(shelfCacheControlFor('webp')).toBe(PUBLIC_SHELF_CACHE_CONTROL);
   });
 });
 

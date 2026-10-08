@@ -12,16 +12,23 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { reconcileListingMedia } from '@/services/listings/listing-media-reconciliation.service';
+import { convergeShelfCacheControl } from '@/services/listings/public-shelf-bucket';
 import type { CronJobResult } from '@/types/cron-schedule';
 
+/**
+ * 🔑 **Δύο συμφιλιώσεις, με αυτή τη σειρά** *(Α7)*: πρώτα **ποια** αντικείμενα πρέπει να υπάρχουν
+ * (η επαναπροβολή σβήνει ό,τι περισσεύει), έπειτα **πόσο** μένει στην κρυφή μνήμη ό,τι έμεινε.
+ * Ανάποδα, το πέρασμα θα διόρθωνε μεταδεδομένα σε αντικείμενα που σβήνονται ένα βήμα μετά.
+ */
 export async function runListingMediaReconcile(): Promise<CronJobResult> {
   const report = await reconcileListingMedia(getAdminFirestore());
+  const cache = await convergeShelfCacheControl();
 
   return {
     summary:
       `listed ${report.listed}/${report.scanned}: agreed ${report.agreed}, drifted ${report.drifted}, `
       + `unstamped ${report.unstamped}, missing ${report.missing}, republished ${report.republished}, `
-      + `failed ${report.failed}`,
-    metrics: { ...report },
+      + `failed ${report.failed} · cache healed ${cache.healed}/${cache.scanned}`,
+    metrics: { ...report, cacheScanned: cache.scanned, cacheHealed: cache.healed },
   };
 }
