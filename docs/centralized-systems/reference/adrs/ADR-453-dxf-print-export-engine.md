@@ -71,6 +71,15 @@ Ribbon **Ανάλυση → «Εκτύπωση»** (`analyze-tab.ts` PRINT_PANEL
 
 ## Changelog
 
+- **2026-10-08** — **Η 2D λήψη απέκτησε δεύτερο καταναλωτή** (ADR-909 Β2.3 — «Δημοσίευση κάτοψης»). **MOD**
+  `capture/capture-2d.ts`: εξήχθησαν `convertSceneForCapture` *(μετατροπή + ενυδάτωση στρωμάτων, χωρίς raster —
+  η κάτοψη υπολογίζει τις διαστάσεις της **από** τη μετατραπείσα σκηνή)* και `renderDxfSceneOffscreen` *(η **μία**
+  κλήση απόδοσης, με το plot-style scope· επιστρέφει και τον μετασχηματισμό)*. Τα `prepareScene2dCapture` /
+  `captureCurrent2dView` έγιναν λεπτά περιτυλίγματα — ίδια έξοδος, οι σουίτες `print/__tests__` αμετάβλητες.
+  🔶 **Εύρημα, όχι λυμένο εδώ**: η εκτύπωση ζωγραφίζει με ό,τι ισχύει στη **συνεδρία** *(απομόνωση, τομή, V/G)* —
+  `print-service.ts` δεν ουδετεροποιεί τίποτα. Στο Revit το *Temporary Hide/Isolate* «does not affect printing». Ο
+  μηχανισμός υπάρχει πλέον *(`renderWithIsolateSuspended` · `renderWithViewSettings`, ADR-909 §6.2)*· το **τι** από
+  τη συνεδρία τυπώνεται είναι απόφαση αυτού του ADR.
 - **2026-07-14** — **Ο assembler έγινε πολυσέλιδος** (ADR-651 Φάση Ζ — σετ φύλλων, Opus). **MOD**
   `assemble/pdf-assembler.ts`: νέο `assemblePrintPdfPages(pages, paper)` (`new jsPDF`+font μία φορά,
   `addPage()` ανά φύλλο, κοινός `drawPrintPage`) ⇒ ένα πολυσέλιδο PDF για ολόκληρο **σετ φύλλων**·
