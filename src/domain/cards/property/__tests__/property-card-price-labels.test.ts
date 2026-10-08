@@ -243,11 +243,11 @@ describe('αποσυρμένο ακίνητο: ετικέτα κύκλου ζω�
   it('🔴 η τιμή λέγεται «Τελευταία τιμή» — μία γραμμή, χωρίς το χρώμα της προσφοράς', () => {
     const liveRow = buildPropertyPriceStats(live, t)[0];
     const rows = buildPropertyPriceStats(archived, t);
-    expect(rows.map((r) => r.label)).toEqual(['card.stats.lastPrice']);
+    expect(rows.map((r) => r.label)).toEqual(['common:priceStanding.retired']);
     expect(rows[0]?.value).toBe(liveRow?.value);
     expect(rows[0]?.valueColor).toBeUndefined();
     expect(liveRow?.valueColor).toBeDefined();
-    expect(labelsOf(trashed)).toEqual(['card.stats.lastPrice']);
+    expect(labelsOf(trashed)).toEqual(['common:priceStanding.retired']);
   });
 
   it('ακίνητο με δύο σκέλη προσφοράς ⇒ ΜΙΑ γραμμή ιστορικού, όχι δύο', () => {
@@ -256,7 +256,7 @@ describe('αποσυρμένο ακίνητο: ετικέτα κύκλου ζω�
       commercial: { askingPrice: 150_000, rentPrice: 500 },
       status: 'archived',
     } as unknown as Property;
-    expect(labelsOf(both)).toEqual(['card.stats.lastPrice']);
+    expect(labelsOf(both)).toEqual(['common:priceStanding.retired']);
   });
 });
 
@@ -345,7 +345,7 @@ describe('Κ-ΣΤΑΘΜΗ — η λέξη και το χρώμα ακολουθ�
 
   it('🔴 εκτός αγοράς: ΜΙΑ γραμμή «Τιμή ζήτησης», το ποσό μένει, χωρίς το χρώμα της προσφοράς', () => {
     const rows = buildPropertyPriceStats(offMarket, t);
-    expect(rows.map((r) => r.label)).toEqual(['card.stats.askingPrice']);
+    expect(rows.map((r) => r.label)).toEqual(['common:priceStanding.offMarket']);
     expect(rows[0]?.value).toBe(buildPropertyPriceStats(forSale, t)[0]?.value);
     expect(rows[0]?.valueColor).toBeUndefined();
     expect(buildPropertyPriceStats(forSale, t)[0]?.valueColor).toBeDefined();
@@ -362,13 +362,13 @@ describe('Κ-ΣΤΑΘΜΗ — η λέξη και το χρώμα ακολουθ�
     expect(buildCardPriceText(resolveDisplayPrice(offMarket), t)).toEqual({
       headline: buildCardPriceText(resolveDisplayPrice(forSale), t)?.headline,
       secondary: null,
-      standingLabel: 'card.stats.askingPrice',
+      standingLabel: 'common:priceStanding.offMarket',
     });
   });
 
   it('🔴 κεφαλίδα και κάρτα λένε την ΙΔΙΑ λέξη για το ίδιο αποσυρμένο ακίνητο', () => {
     const header = buildCardPriceText(resolveDisplayPrice(trashedForSale), t);
-    expect(header?.standingLabel).toBe('card.stats.lastPrice');
+    expect(header?.standingLabel).toBe('common:priceStanding.retired');
     expect([header?.standingLabel]).toEqual(labelsOf(trashedForSale));
   });
 

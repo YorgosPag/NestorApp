@@ -51,7 +51,10 @@ export function SalesSpaceFinancialCard({ item, labels }: SalesSpaceFinancialCar
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['common']);
   // ADR-777 §8.60.14.14 — τιμή και τιμή/m² ΜΕ τη μονάδα του ρόλου («60 €/μήνα», «6 €/m²/μήνα»).
-  const { price, pricePerSqm } = salesCardPricing(item, t);
+  // ADR-329 §3.9 (Ν3) — χώρος που δεν προσφέρεται κρατά το ποσό του, με άλλη λέξη και χωρίς το χρώμα
+  // της προσφοράς: η λέξη της στάθμης υπερισχύει της `labels.price` του καλούντα.
+  const { price, pricePerSqm, standingLabel } = salesCardPricing(item, t);
+  const inEffect = standingLabel === null;
   const finalPrice = item.commercial?.finalPrice;
 
   return (
@@ -65,10 +68,10 @@ export function SalesSpaceFinancialCard({ item, labels }: SalesSpaceFinancialCar
       <CardContent className="space-y-1">
         <InfoRow
           icon={DollarSign}
-          iconColor={SALES_ICON_COLORS.askingPrice}
-          label={labels.price}
+          iconColor={inEffect ? SALES_ICON_COLORS.askingPrice : SALES_ICON_COLORS.outOfOfferPrice}
+          label={standingLabel ?? labels.price}
           value={price ?? NO_PRICE_TOTAL}
-          valueColor={SALES_ICON_COLORS.askingPrice}
+          valueColor={inEffect ? SALES_ICON_COLORS.askingPrice : undefined}
         />
         {pricePerSqm && (
           <InfoRow

@@ -42,6 +42,7 @@ import {
   PRICE_AMOUNT_KEY,
   PRICE_PER_AREA_KEY,
   PRICE_SECTION_KEY,
+  PRICE_STANDING_KEY,
 } from './listing-price-keys';
 import type { StayTotal } from './listing-stay-total';
 
@@ -108,6 +109,20 @@ export function displayPriceLabel(
   return price.kind === 'priced'
     ? resolvedPriceLabel(t, price.headline)
     : t(MISSING_PRICE_KEY[price.reason]);
+}
+
+/**
+ * **Η λέξη ενός ποσού που ΔΕΝ είναι προσφορά** — «Τιμή ζήτησης» · «Τελευταία τιμή» — ή `null`
+ * (ADR-329 §3.9 · Ν3).
+ *
+ * 🔑 **`null` σημαίνει «σε ισχύ»**: η επιφάνεια κρατά τη δική της λέξη **και** το χρώμα της τιμής.
+ * Οτιδήποτε άλλο ⇒ η λέξη αντικαθιστά την «Τιμή» και το χρώμα της προσφοράς **φεύγει**. Ένα
+ * ερώτημα, μία απάντηση, για κάθε επιφάνεια που κρατά `DisplayPrice` (κάρτα ακινήτου · κεφαλίδα ·
+ * θέσεις · αποθήκες · κάρτες πωλήσεων) — ώστε καμία να μην τυπώσει το ποσό και να ξεχάσει τι είναι.
+ */
+export function priceStandingLabel(t: PriceLabelT, price: DisplayPrice): string | null {
+  if (price.kind !== 'priced' || price.standing === 'in-effect') return null;
+  return t(PRICE_STANDING_KEY[price.standing]);
 }
 
 /**

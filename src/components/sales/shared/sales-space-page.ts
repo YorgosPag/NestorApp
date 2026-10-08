@@ -20,6 +20,7 @@ import { useCallback, useMemo } from 'react';
 import { pricePerSqmAmount } from '@/domain/cards/property/property-card-shared';
 import {
   pricePerAreaLabel,
+  priceStandingLabel,
   resolvedPriceLabel,
   type PriceLabelT,
 } from '@/lib/listings/listing-price-label';
@@ -74,6 +75,13 @@ export function salesSpaceSidebarProps<TItem extends SalesSpaceItem>(
 export interface SalesCardPricing {
   price: string | null;
   pricePerSqm: string | null;
+  /**
+   * `null` ⇒ ποσό **σε ισχύ** (προσφορά ή συναλλαγή): η κάρτα κρατά τη λέξη και το χρώμα της τιμής.
+   * Αλλιώς η λέξη που αντικαθιστά την «Τιμή» («Τιμή ζήτησης» · «Τελευταία τιμή») — και η κάρτα
+   * **αφήνει** το χρώμα της προσφοράς (ADR-329 §3.9 · Ν3). Ταξιδεύει μαζί με το κείμενο, ώστε
+   * καμία κάρτα να μην τυπώσει το ποσό και να ξεχάσει τι είναι.
+   */
+  standingLabel: string | null;
 }
 
 /**
@@ -93,12 +101,13 @@ export function salesCardPricing(
   t: PriceLabelT,
 ): SalesCardPricing {
   const price = resolveDisplayPrice(item);
-  if (price.kind !== 'priced') return { price: null, pricePerSqm: null };
+  if (price.kind !== 'priced') return { price: null, pricePerSqm: null, standingLabel: null };
 
   const perSqm = pricePerSqmAmount(price.headline, item.area);
   return {
     price: resolvedPriceLabel(t, price.headline),
     pricePerSqm: perSqm === null ? null : pricePerAreaLabel(t, { role: price.headline.role, amount: perSqm }),
+    standingLabel: priceStandingLabel(t, price),
   };
 }
 

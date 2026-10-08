@@ -26,7 +26,12 @@
  * (CHECK 3.34: ανεπίλυτη δυναμική `t()` ⇒ ο generator αρνείται να παράγει).
  */
 
-import type { MissingPriceReason, PriceRole, PriceSource } from '@/lib/properties/price-resolver';
+import type {
+  MissingPriceReason,
+  PriceRole,
+  PriceSource,
+  PriceStanding,
+} from '@/lib/properties/price-resolver';
 import type { ListingSectionHeading } from './listing-price-sections';
 
 /**
@@ -100,6 +105,29 @@ export const PRICE_AMOUNT_KEY: Readonly<Record<PriceRole, string>> = {
   sale: 'common:priceAmount.sale',
   rent: 'common:priceAmount.rent',
   nightly: 'common:priceAmount.nightly',
+};
+
+/**
+ * **Πώς λέγεται ένα ποσό που ΔΕΝ είναι προσφορά** — ανά στάθμη της ετυμηγορίας (ADR-329 §3.9 · Ν3).
+ *
+ * - `off-market` ⇒ «Τιμή ζήτησης»: το ποσό μπορεί να ορίστηκε **πριν** βγει η μονάδα στην αγορά
+ *   (`priceFieldsForStatus`), άρα «τελευταία» θα ήταν ισχυρισμός που κανείς δεν μπορεί να αποδείξει.
+ *   Πρακτική MLS / RESO: το `ListPrice` κρατά το όνομά του σε κάθε κατάσταση.
+ * - `retired` ⇒ «Τελευταία τιμή»: η εγγραφή έφυγε από τη δουλειά· ό,τι ποσό κι αν ήταν (ζήτησης,
+ *   συμβολαίου, ενοίκιο), είναι το τελευταίο της.
+ *
+ * ⚠️ `Record<Exclude<PriceStanding, 'in-effect'>, …>`: τέταρτη στάθμη δεν μεταγλωττίζεται χωρίς λέξη·
+ * και το `in-effect` **δεν έχει** γραμμή επίτηδες — ποσό σε ισχύ το ονομάζει η επιφάνεια που το δείχνει
+ * («Τιμή» · «Ενοίκιο» · «Τιμή πώλησης»).
+ *
+ * 📦 **Ανέβηκε εδώ από το `property-card-shared.ts` στις 2026-10-08**, τη στιγμή που το ζήτησε δεύτερος
+ * καταναλωτής (κάρτες θέσεων · αποθηκών · πωλήσεων). Ζει στο `common` για τον λόγο του
+ * {@link PRICE_AMOUNT_KEY}: οι κάρτες χώρων φορτώνουν `parking` / `storage`, όχι `properties-detail`,
+ * και δεύτερο αντίγραφο των δύο λέξεων ανά namespace θα ήταν ελεύθερο να αποκλίνει.
+ */
+export const PRICE_STANDING_KEY: Readonly<Record<Exclude<PriceStanding, 'in-effect'>, string>> = {
+  'off-market': 'common:priceStanding.offMarket',
+  retired: 'common:priceStanding.retired',
 };
 
 /**

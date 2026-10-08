@@ -57,6 +57,12 @@ export interface SalesGridCardProps {
   price: string | null;
   /** Price per m², already written with its unit («6 €/m²/μήνα») — `null` = hide */
   pricePerSqm: string | null;
+  /**
+   * The word for an amount that is NOT an offer («Τιμή ζήτησης» · «Τελευταία τιμή») — `null` / absent
+   * = an amount in effect. When present it is printed above the amount, and the amount drops the
+   * colour of the offer (ADR-329 §3.9, Ν3). Comes from `salesCardPricing`, never from the caller.
+   */
+  standingLabel?: string | null;
   /** Click handler */
   onClick: (id: string) => void;
 }
@@ -79,6 +85,7 @@ export function SalesGridCard({
   description,
   price,
   pricePerSqm,
+  standingLabel = null,
   onClick,
 }: SalesGridCardProps) {
   const colors = useSemanticColors();
@@ -104,7 +111,15 @@ export function SalesGridCard({
           </span>
         </div>
         <p className={cn('text-xs', colors.text.muted)}>{description}</p>
-        <p className={cn('text-lg font-bold mt-1', colors.text.success)}>
+        {standingLabel !== null && (
+          <p className={cn('text-xs mt-1', colors.text.muted)}>{standingLabel}</p>
+        )}
+        <p
+          className={cn(
+            'text-lg font-bold',
+            standingLabel === null ? ['mt-1', colors.text.success] : colors.text.muted,
+          )}
+        >
           {price ?? NO_PRICE_TOTAL}
         </p>
         {pricePerSqm ? (

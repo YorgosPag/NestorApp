@@ -7,6 +7,8 @@
 export const SALES_ICON_COLORS = {
   // Pricing concepts
   askingPrice: 'text-[hsl(var(--text-success))]',
+  /** Ποσό που ΔΕΝ είναι προσφορά (εκτός αγοράς · αποσυρμένο) — ουδέτερο, ποτέ το χρώμα της τιμής (ADR-329 §3.9). */
+  outOfOfferPrice: 'text-muted-foreground',
   finalPrice: 'text-primary',
   pricePerSqm: 'text-primary',
   deposit: 'text-[hsl(var(--text-warning))]',

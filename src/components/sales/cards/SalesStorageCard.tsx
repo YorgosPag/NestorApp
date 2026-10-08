@@ -15,6 +15,7 @@ import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
 import { salesCardPricing } from '@/components/sales/shared/sales-space-page';
+import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
 import { spaceStatusBadges } from '@/lib/units/unit-status-badges';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
@@ -53,7 +54,9 @@ export function SalesStorageCard({
   const badges = useMemo(() => spaceStatusBadges(storage, tUnit), [storage, tUnit]);
 
   // ADR-777 Α6 + §8.60.14.14 — the ONE shared pricing helper, with the UNIT written in.
-  const { price, pricePerSqm } = salesCardPricing(storage, t);
+  // ADR-329 §3.9 (Ν3) — a space that is not offered keeps its amount, under another word and
+  // without the colour of the offer.
+  const { price, pricePerSqm, standingLabel } = salesCardPricing(storage, t);
   const area = storage.area ?? 0;
 
   const stats = useMemo(() => {
@@ -72,8 +75,8 @@ export function SalesStorageCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-[hsl(var(--text-success))]',
-        label: t('storage:general.fields.price'),
+        iconColor: standingLabel === null ? SALES_ICON_COLORS.askingPrice : SALES_ICON_COLORS.outOfOfferPrice,
+        label: standingLabel ?? t('storage:general.fields.price'),
         value: price ?? NO_PRICE_TOTAL,
       },
     ];
@@ -88,7 +91,7 @@ export function SalesStorageCard({
     }
 
     return items;
-  }, [t, storage.type, area, price, pricePerSqm]);
+  }, [t, storage.type, area, price, pricePerSqm, standingLabel]);
 
   return (
     <ListCard

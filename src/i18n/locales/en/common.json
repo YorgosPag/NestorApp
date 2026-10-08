@@ -990,6 +990,10 @@
     "nightly": "{price}/night",
     "stayTotal": "{price} · {nights, plural, one {# night} other {# nights}}"
   },
+  "priceStanding": {
+    "offMarket": "Asking price",
+    "retired": "Last price"
+  },
   "priceSection": {
     "sale": "For sale · {count, plural, one {# property} other {# properties}}",
     "rent": "For rent · {count, plural, one {# property} other {# properties}}",

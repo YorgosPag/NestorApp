@@ -13,13 +13,17 @@
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
-import { pricePerAreaLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { priceAmountStat } from '@/domain/cards/shared/spot-card-stats';
+import {
+  pricePerAreaLabel,
+  priceStandingLabel,
+  resolvedPriceLabel,
+} from '@/lib/listings/listing-price-label';
 import {
   resolveDisplayPrice,
   type DisplayPrice,
   type MissingPriceReason,
   type PriceRole,
-  type PriceStanding,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
@@ -163,20 +167,6 @@ const PRICE_ROLE_LABEL_KEY: Readonly<Record<PriceRole, string>> = {
 };
 
 /**
- * One price → one StatItem. The value carries its unit through the ONE amount-with-unit
- * rule (`resolvedPriceLabel` → `common:priceAmount.*`), shared with the public search.
- */
-function priceStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem {
-  return {
-    icon: NAVIGATION_ENTITIES.price.icon,
-    iconColor: NAVIGATION_ENTITIES.price.color,
-    label: t(labelKey),
-    value: resolvedPriceLabel(t, price),
-    valueColor: NAVIGATION_ENTITIES.price.color,
-  };
-}
-
-/**
  * Context-aware price stat(s) for a Property card.
  *
  * The rule of WHICH price to show is NOT decided here — it belongs to the
@@ -247,12 +237,9 @@ export function buildCardPriceText(
 
   // Not an offer ⇒ one amount, and the word that says what it is. The second leg of an offer
   // means nothing on a record that offers nothing (same rule as `buildPropertyPriceStats`).
-  if (price.standing !== 'in-effect') {
-    return {
-      headline: format(headline),
-      secondary: null,
-      standingLabel: t(OUT_OF_OFFER_LABEL_KEY[price.standing]),
-    };
+  const standingLabel = priceStandingLabel(t, price);
+  if (standingLabel !== null) {
+    return { headline: format(headline), secondary: null, standingLabel };
   }
 
   return {
@@ -268,52 +255,27 @@ export function buildCardPriceText(
 }
 
 /**
- * **Πώς λέγεται ένα ποσό που ΔΕΝ είναι προσφορά** — ανά στάθμη της ετυμηγορίας (ADR-329 §3.9 · Ν3).
+ * 📦 Ο πίνακας λέξεων της στάθμης (`PRICE_STANDING_KEY`) και η γραμμή ποσού (`priceAmountStat`)
+ * ζούσαν εδώ ιδιωτικά ως τις 2026-10-08· ανέβηκαν σε κοινό σημείο όταν τα ζήτησαν οι κάρτες θέσεων,
+ * αποθηκών και πωλήσεων (ADR-329 §3.9). Εδώ μένει μόνο ό,τι είναι **του ακινήτου**: ποια λέξη φορά
+ * ένα ποσό **σε ισχύ** (`priceLabelKeys`).
  *
- * `Record<Exclude<PriceStanding, 'in-effect'>, …>`: τέταρτη στάθμη δεν μεταγλωττίζεται χωρίς λέξη.
- *
- * - `off-market` ⇒ «Τιμή ζήτησης»: το ποσό μπορεί να ορίστηκε **πριν** βγει η μονάδα στην αγορά
- *   (`priceFieldsForStatus`), άρα «τελευταία» θα ήταν ισχυρισμός που κανείς δεν μπορεί να αποδείξει.
- *   Πρακτική MLS / RESO: το `ListPrice` κρατά το όνομά του σε κάθε κατάσταση.
- * - `retired` ⇒ «Τελευταία τιμή»: η εγγραφή έφυγε από τη δουλειά· ό,τι ποσό κι αν ήταν (ζήτησης,
- *   συμβολαίου, ενοίκιο), είναι το τελευταίο της.
+ * Ποσό που δεν είναι προσφορά ⇒ **μία** γραμμή: το δεύτερο σκέλος μιας προσφοράς δεν έχει νόημα σε
+ * εγγραφή που δεν προσφέρει τίποτα.
  */
-const OUT_OF_OFFER_LABEL_KEY: Readonly<Record<Exclude<PriceStanding, 'in-effect'>, string>> = {
-  'off-market': 'card.stats.askingPrice',
-  retired: 'card.stats.lastPrice',
-};
-
-/**
- * **Το ποσό μιας εγγραφής που δεν προσφέρεται** — δεδομένο εργασίας, όχι προσφορά.
- *
- * Ίδιο ποσό, ίδιος κριτής (`resolveDisplayPrice`), άλλη **σημασία**: χωρίς το χρώμα της τιμής και
- * με λέξη που δεν υπόσχεται τίποτα. Μία γραμμή — το δεύτερο σκέλος μιας προσφοράς δεν έχει νόημα εδώ.
- */
-function outOfOfferStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem {
-  return {
-    icon: NAVIGATION_ENTITIES.price.icon,
-    iconColor: 'text-muted-foreground',
-    label: t(labelKey),
-    value: resolvedPriceLabel(t, price),
-  };
-}
-
 export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] {
   const resolved = resolveDisplayPrice(property);
   if (resolved.kind === 'missing') return [];
 
   // Η στάθμη έρχεται ΜΕ την ετυμηγορία. Ως τις 2026-10-08 αυτή η συνάρτηση ρωτούσε μόνη της
   // `retiredKindOf` — και η κεφαλίδα, που διάβαζε την ίδια ετυμηγορία, δεν ρωτούσε τίποτα.
-  if (resolved.standing !== 'in-effect') {
-    return [outOfOfferStatItem(resolved.headline, OUT_OF_OFFER_LABEL_KEY[resolved.standing], t)];
-  }
-
   const { headline, secondary } = resolved;
+  const standingLabel = priceStandingLabel(t, resolved);
   const labels = priceLabelKeys(headline, secondary);
 
-  const items = [priceStatItem(headline, labels.headline, t)];
-  if (secondary && labels.secondary) {
-    items.push(priceStatItem(secondary, labels.secondary, t));
+  const items = [priceAmountStat(headline, t(labels.headline), standingLabel, t)];
+  if (standingLabel === null && secondary && labels.secondary) {
+    items.push(priceAmountStat(secondary, t(labels.secondary), null, t));
   }
   return items;
 }

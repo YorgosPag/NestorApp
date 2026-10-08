@@ -2221,6 +2221,10 @@
       "sale": "Πώληση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
       "unpriced": "Χωρίς καταγεγραμμένη τιμή · {count, plural, one {# ακίνητο} other {# ακίνητα}}"
     },
+    "priceStanding": {
+      "offMarket": "Τιμή ζήτησης",
+      "retired": "Τελευταία τιμή"
+    },
     "priority": {
       "attention": "Προσοχή",
       "critical": "Κρίσιμη",

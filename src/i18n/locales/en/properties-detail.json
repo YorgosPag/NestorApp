@@ -15,8 +15,6 @@
       "rent": "Rent",
       "soldFor": "Sold price",
       "askedFor": "Asked",
-      "lastPrice": "Last price",
-      "askingPrice": "Asking price",
       "salePricePerSqm": "Sale/sqm",
       "rentPricePerSqm": "Rent/sqm",
       "nightly": "Nightly rate"

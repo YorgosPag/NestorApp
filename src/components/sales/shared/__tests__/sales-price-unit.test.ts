@@ -8,7 +8,7 @@
  */
 
 import { mapCommonSpaceFilters, salesCardPricing, spacePanelFilters } from '../sales-space-page';
-import { PRICE_AMOUNT_KEY, PRICE_PER_AREA_KEY } from '@/lib/listings/listing-price-keys';
+import { PRICE_AMOUNT_KEY, PRICE_PER_AREA_KEY, PRICE_STANDING_KEY } from '@/lib/listings/listing-price-keys';
 import type { PriceLabelT } from '@/lib/listings/listing-price-label';
 import { EMPTY_PRICE_RANGE } from '@/lib/properties/price-range';
 import type { SalesSpaceFilterState } from '@/types/sales-shared';
@@ -34,7 +34,35 @@ describe('Α. Η ΚΑΡΤΑ ΓΡΑΦΕΙ ΤΗ ΜΟΝΑΔΑ', () => {
   });
 
   it('Α3 — χωρίς τιμή ⇒ `null` (η κάρτα γράφει παύλα, ποτέ «0 €»)', () => {
-    expect(salesCardPricing({ commercialStatus: 'for-sale', area: 10 }, t)).toEqual({ price: null, pricePerSqm: null });
+    expect(salesCardPricing({ commercialStatus: 'for-sale', area: 10 }, t))
+      .toEqual({ price: null, pricePerSqm: null, standingLabel: null });
+  });
+});
+
+/**
+ * 🔴 ADR-329 §3.9 (Ν3 → κάρτες πωλήσεων, 2026-10-08): οι σελίδες πωλήσεων χώρων δείχνουν **όλους**
+ * τους χώρους (το φίλτρο διάθεσης είναι επιλογή, όχι πύλη) — άρα και θέση «Μη διαθέσιμη», με το ποσό
+ * της στο πράσινο της προσφοράς. Η στάθμη ταξιδεύει πλέον **μαζί** με το κείμενο.
+ */
+describe('Α′. ΠΟΣΟ ΠΟΥ ΔΕΝ ΕΙΝΑΙ ΠΡΟΣΦΟΡΑ ΤΟ ΛΕΕΙ', () => {
+  const priced = { commercial: { askingPrice: 12_000 }, area: 12 };
+
+  it('προσφορά ⇒ καμία σημείωση στάθμης (η κάρτα κρατά λέξη και χρώμα)', () => {
+    expect(salesCardPricing({ ...priced, commercialStatus: 'for-sale' }, t).standingLabel).toBeNull();
+    expect(salesCardPricing({ ...priced, commercialStatus: 'reserved' }, t).standingLabel).toBeNull();
+  });
+
+  it('🔴 εκτός αγοράς ⇒ «Τιμή ζήτησης»· το ποσό και η τιμή/m² μένουν ίδια', () => {
+    const offered = salesCardPricing({ ...priced, commercialStatus: 'for-sale' }, t);
+    const offMarket = salesCardPricing({ ...priced, commercialStatus: 'unavailable' }, t);
+    expect(keyOf(offMarket.standingLabel)).toBe(PRICE_STANDING_KEY['off-market']);
+    expect(offMarket.price).toBe(offered.price);
+    expect(offMarket.pricePerSqm).toBe(offered.pricePerSqm);
+  });
+
+  it('🔴 αποσυρμένος χώρος ⇒ «Τελευταία τιμή», ακόμη κι αν η κατάσταση λέει «προς πώληση»', () => {
+    const trashed = salesCardPricing({ ...priced, commercialStatus: 'for-sale', status: 'deleted' }, t);
+    expect(keyOf(trashed.standingLabel)).toBe(PRICE_STANDING_KEY.retired);
   });
 });
 

@@ -69,7 +69,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "0efc7ae63eb73d0bf34462fae5150e10a650b7a5d6cc99f0a3192e46b687d936",
+    "src/i18n/generated/shell-slice.el.json": "013edbfbc31ba743d5937bc08eba239f95778ed61dcd32e0847d82677cd05056",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2793f78fd7b4971154043a38af2ffd6c9d3f385203976887299d93da270c17fd",
+  "inputsSha256": "de9e7d8333fb5c47e24a80a75f9cfc7c1bac3aab524a8e626c975f467ff19630",
   "languages": [
     "el"
   ],
@@ -1556,6 +1556,8 @@
             "priceSection.rent",
             "priceSection.sale",
             "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired",
             "savedListing.label"
           ],
           "prefixes": [
@@ -2590,7 +2592,9 @@
             "priceSection.nightly",
             "priceSection.rent",
             "priceSection.sale",
-            "priceSection.unpriced"
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -2712,7 +2716,9 @@
             "priceSection.nightly",
             "priceSection.rent",
             "priceSection.sale",
-            "priceSection.unpriced"
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -4147,7 +4153,9 @@
             "priceSection.nightly",
             "priceSection.rent",
             "priceSection.sale",
-            "priceSection.unpriced"
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -4617,6 +4625,8 @@
             "priceSection.rent",
             "priceSection.sale",
             "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired",
             "savedListing.label"
           ],
           "prefixes": [
@@ -7508,7 +7518,9 @@
             "priceSection.nightly",
             "priceSection.rent",
             "priceSection.sale",
-            "priceSection.unpriced"
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -9348,7 +9360,9 @@
             "priceSection.nightly",
             "priceSection.rent",
             "priceSection.sale",
-            "priceSection.unpriced"
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -9497,6 +9511,8 @@
             "priceSection.rent",
             "priceSection.sale",
             "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired",
             "savedListing.label"
           ],
           "prefixes": [
@@ -10279,6 +10295,8 @@
             "priceSection.rent",
             "priceSection.sale",
             "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired",
             "savedListing.label"
           ],
           "prefixes": [
@@ -10374,6 +10392,8 @@
             "priceSection.rent",
             "priceSection.sale",
             "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired",
             "savedListing.label"
           ],
           "prefixes": [
@@ -10794,6 +10814,8 @@
             "priceSection.rent",
             "priceSection.sale",
             "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired",
             "savedListing.label"
           ],
           "prefixes": [
@@ -11104,7 +11126,9 @@
             "priceSection.nightly",
             "priceSection.rent",
             "priceSection.sale",
-            "priceSection.unpriced"
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -12213,8 +12237,8 @@
     "src/lib/listings/listing-media-fingerprint.ts": "1407a77bb7050e506bab11bd7274a067f83ab3478069dfa6a432e56fbe93d083",
     "src/lib/listings/listing-model-declaration.ts": "d856750e0071e40eaa77cb707f19a19d535a11da432fc0b691a4fe908c4342e9",
     "src/lib/listings/listing-photo-position.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/listings/listing-price-keys.ts": "fb8654e402bbd486ba5022b5a32e232b043a080f42209fd8ae0446336d8bfadd",
-    "src/lib/listings/listing-price-label.ts": "d8341e4208c43c68976cbbdc7426d8f4cf2937b52b1ce883b5158c6f3ade31bb",
+    "src/lib/listings/listing-price-keys.ts": "150251ea54f843137c0618c97a893a213549a4f077bb6e9c8e366e1c1ebfb614",
+    "src/lib/listings/listing-price-label.ts": "3452f2b265afa77be2a274b436f5e0c254c06c5b945abeab13b843bff799c6bc",
     "src/lib/listings/listing-price-sections.ts": "c8049dc79a8e5ec4b2a281cc6ac87c973a1205955571b5e0f5e7220973bb982d",
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/listings/listing-search-area.ts": "6635c289241b2a7861817f1133920667487fe99a551ca59ac74423bb7627a022",
@@ -12693,7 +12717,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 3,
     "shellFiles": 1127,
-    "sliceBytes": 724547
+    "sliceBytes": 724670
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -13645,6 +13669,8 @@
         "priceSection.rent",
         "priceSection.sale",
         "priceSection.unpriced",
+        "priceStanding.offMarket",
+        "priceStanding.retired",
         "productTour.dontShowAgain",
         "productTour.finish",
         "productTour.next",

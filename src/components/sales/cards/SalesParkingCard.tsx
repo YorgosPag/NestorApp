@@ -15,6 +15,7 @@ import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
 import { salesCardPricing } from '@/components/sales/shared/sales-space-page';
+import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
 import { spaceStatusBadges } from '@/lib/units/unit-status-badges';
 import type { ParkingSpot } from '@/types/parking';
 import '@/lib/design-system';
@@ -54,7 +55,9 @@ export function SalesParkingCard({
 
   // ADR-777 Α6 + §8.60.14.14 — the ONE shared pricing helper, with the UNIT written in:
   // «60 €/μήνα» for a space offered for rent, never a bare «60 €».
-  const { price } = salesCardPricing(spot, t);
+  // ADR-329 §3.9 (Ν3) — a space that is not offered keeps its amount, under another word and
+  // without the colour of the offer.
+  const { price, standingLabel } = salesCardPricing(spot, t);
   const area = spot.area ?? 0;
 
   const stats = useMemo(() => {
@@ -75,8 +78,8 @@ export function SalesParkingCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-[hsl(var(--text-success))]',
-        label: t('parking:general.fields.price'),
+        iconColor: standingLabel === null ? SALES_ICON_COLORS.askingPrice : SALES_ICON_COLORS.outOfOfferPrice,
+        label: standingLabel ?? t('parking:general.fields.price'),
         value: price ?? NO_PRICE_TOTAL,
       },
     ];
@@ -91,7 +94,7 @@ export function SalesParkingCard({
     }
 
     return items;
-  }, [t, spot.type, spot.locationZone, price, area]);
+  }, [t, spot.type, spot.locationZone, price, standingLabel, area]);
 
   return (
     <ListCard

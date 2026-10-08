@@ -990,6 +990,10 @@
     "nightly": "{price}/νύχτα",
     "stayTotal": "{price} · {nights, plural, one {# νύχτα} other {# νύχτες}}"
   },
+  "priceStanding": {
+    "offMarket": "Τιμή ζήτησης",
+    "retired": "Τελευταία τιμή"
+  },
   "priceSection": {
     "sale": "Πώληση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
     "rent": "Ενοικίαση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",

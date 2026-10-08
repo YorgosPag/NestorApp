@@ -13,9 +13,14 @@ import type { TFunction } from 'i18next';
 import el from '@/i18n/locales/el/common.json';
 import elResults from '@/i18n/locales/el/search-results.json';
 import en from '@/i18n/locales/en/common.json';
-import { displayPriceLabel, headlinePriceLabel, resolvedPriceLabel } from '../listing-price-label';
-import { PRICE_AMOUNT_KEY } from '../listing-price-keys';
-import type { PriceRole } from '@/lib/properties/price-resolver';
+import {
+  displayPriceLabel,
+  headlinePriceLabel,
+  priceStandingLabel,
+  resolvedPriceLabel,
+} from '../listing-price-label';
+import { PRICE_AMOUNT_KEY, PRICE_STANDING_KEY } from '../listing-price-keys';
+import type { DisplayPrice, PriceRole, PriceStanding } from '@/lib/properties/price-resolver';
 
 jest.mock('@/lib/intl-formatting', () => ({
   formatCurrency: (amount: number) => `${amount} €`,
@@ -88,6 +93,43 @@ describe('displayPriceLabel — ποσό ή αιτία απουσίας', () => 
   it('απουσία ⇒ η ΑΙΤΙΑ, ποτέ «0 €»', () => {
     expect(displayPriceLabel(tEl, { kind: 'missing', reason: 'nightly-rate-missing' }))
       .toBe(elResults.listing.priceMissing.nightlyRateMissing);
+  });
+});
+
+/**
+ * 🔴 ADR-329 §3.9 (Ν3 → κάρτες χώρων, 2026-10-08): η λέξη ενός ποσού που ΔΕΝ είναι προσφορά ζούσε
+ * ιδιωτικά στην κάρτα ακινήτου. Θέσεις, αποθήκες και κάρτες πωλήσεων διάβαζαν την ΙΔΙΑ ετυμηγορία
+ * και έγραφαν «Τιμή» στο πράσινο. Ένας πίνακας, ένας αναγνώστης — για κάθε επιφάνεια.
+ */
+describe('priceStandingLabel — πώς λέγεται ποσό που ΔΕΝ είναι προσφορά', () => {
+  const priced = (standing: PriceStanding): DisplayPrice => ({
+    kind: 'priced',
+    headline: { role: 'sale', amount: 12000, source: 'commercial.askingPrice' },
+    secondary: null,
+    standing,
+  });
+
+  it('🔴 εκτός αγοράς ⇒ «Τιμή ζήτησης» · αποσυρμένο ⇒ «Τελευταία τιμή»', () => {
+    expect(priceStandingLabel(tEl, priced('off-market'))).toBe('Τιμή ζήτησης');
+    expect(priceStandingLabel(tEl, priced('retired'))).toBe('Τελευταία τιμή');
+  });
+
+  it('προσφορά ⇒ `null`: ο καλών κρατά τη δική του λέξη ΚΑΙ το χρώμα της', () => {
+    expect(priceStandingLabel(tEl, priced('in-effect'))).toBeNull();
+  });
+
+  it('χωρίς ποσό ⇒ `null` (δεν υπάρχει τίποτα να ονομαστεί)', () => {
+    expect(priceStandingLabel(tEl, { kind: 'missing', reason: 'not-listed' })).toBeNull();
+  });
+
+  it('κάθε στάθμη εκτός προσφοράς έχει κλειδί που ΛΥΝΕΤΑΙ και στις δύο γλώσσες', () => {
+    for (const standing of Object.keys(PRICE_STANDING_KEY) as Exclude<PriceStanding, 'in-effect'>[]) {
+      for (const t of [tEl, tEn]) {
+        const text = priceStandingLabel(t, priced(standing));
+        expect(text).not.toBeNull();
+        expect(text).not.toContain('common:');
+      }
+    }
   });
 });
 
