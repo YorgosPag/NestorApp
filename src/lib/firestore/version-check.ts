@@ -120,6 +120,30 @@ function conflictOf(data: Readonly<Record<string, unknown>>, currentVersion: num
   });
 }
 
+/** Η έκδοση που **έχει** το έγγραφο — χωρίς `_v` ⇒ έκδοση 0 (lazy migration). */
+function currentVersionOf(before: Readonly<Record<string, unknown>>): number {
+  return typeof before[VERSION_FIELD] === 'number' ? (before[VERSION_FIELD] as number) : DEFAULT_VERSION;
+}
+
+/**
+ * **Η ΜΙΑ σφραγίδα έκδοσης** — `_v + 1` · `updatedAt` · `updatedBy`, πάνω σε ό,τι γράφεται.
+ *
+ * 🔑 Εξάγεται για όποιον γράφει το έγγραφο **μέσα σε ΔΙΚΗ ΤΟΥ συναλλαγή** (ADR-845 §7.17 Α3γ: η διαδοχή
+ * αρχείου μεταφέρει τις δηλώσεις του ακινήτου ατομικά με την αρχειοθέτηση). Χωρίς αυτήν, η δεύτερη
+ * συναλλαγή θα έγραφε χωρίς να ανεβάσει το `_v` ⇒ browser με παλιά εικόνα θα **πατούσε** τη μεταφορά.
+ */
+export function versionedWrite(
+  before: Readonly<Record<string, unknown>>,
+  applied: Readonly<Record<string, unknown>>,
+  userId: string,
+): { readonly newVersion: number; readonly data: Record<string, unknown> } {
+  const newVersion = currentVersionOf(before) + 1;
+  return {
+    newVersion,
+    data: { ...applied, [VERSION_FIELD]: newVersion, updatedAt: FieldValue.serverTimestamp(), updatedBy: userId },
+  };
+}
+
 async function runVersionedUpdate(
   target: VersionedTarget,
   derive: (current: Readonly<Record<string, unknown>>) => Record<string, unknown>,
@@ -133,7 +157,7 @@ async function runVersionedUpdate(
     if (!snapshot.exists) throw new Error(`Document ${collection}/${docId} not found in transaction`);
 
     const before: Readonly<Record<string, unknown>> = snapshot.data() ?? {};
-    const currentVersion: number = typeof before[VERSION_FIELD] === 'number' ? (before[VERSION_FIELD] as number) : DEFAULT_VERSION;
+    const currentVersion = currentVersionOf(before);
     // Conflict check (skip if expectedVersion is undefined → force-write / backward compat)
     if (expectedVersion !== undefined && currentVersion !== expectedVersion) {
       throw conflictOf(before, currentVersion, expectedVersion);
@@ -142,9 +166,9 @@ async function runVersionedUpdate(
     const applied = derive(before);
     // Ο συνοδός διαβάζει ΠΡΙΝ από κάθε εγγραφή (κανόνας συναλλαγής Firestore) και γράφει ΜΑΖΙ με το κύριο έγγραφο.
     const writeCompanion = companion ? await companion(transaction, before) : null;
-    const newVersion = currentVersion + 1;
     // Write: updates + version bump + metadata
-    transaction.update(docRef, { ...applied, [VERSION_FIELD]: newVersion, updatedAt: FieldValue.serverTimestamp(), updatedBy: userId });
+    const { newVersion, data } = versionedWrite(before, applied, userId);
+    transaction.update(docRef, data);
     writeCompanion?.(transaction);
     return { newVersion, docId, before, applied };
   });

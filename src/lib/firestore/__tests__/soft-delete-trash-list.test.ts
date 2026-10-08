@@ -198,7 +198,13 @@ describe('listTrashed — ordering', () => {
 describe('trash routes ↔ config (anchor)', () => {
   const API_DIR = path.join(process.cwd(), 'src', 'app', 'api');
 
-  /** Every `src/app/api/<segment>/trash/route.ts`, mapped to its factory argument. */
+  /**
+   * Every `src/app/api/<segment>/trash/route.ts` that **lists** a trash, mapped to its factory argument.
+   *
+   * ⚠️ «Λίστα κάδου» = εξάγει `GET`. Το `files/trash` (ADR-845 §7.17 Α2) είναι **πράξη** (`POST`
+   * κάδος/επαναφορά) που μοιράζεται μόνο το όνομα φακέλου — δεν έχει `GET`, άρα δεν είναι λίστα και
+   * δεν μπορεί να είναι «χειρόγραφη λίστα». Ένα `GET` εκεί έξω από το εργοστάσιο κοκκινίζει κανονικά.
+   */
   function readRouteEntities(): Array<{ segment: string; entityType: string | null }> {
     return fs
       .readdirSync(API_DIR, { withFileTypes: true })
@@ -208,8 +214,10 @@ describe('trash routes ↔ config (anchor)', () => {
         file: path.join(API_DIR, entry.name, 'trash', 'route.ts'),
       }))
       .filter(candidate => fs.existsSync(candidate.file))
+      .map(candidate => ({ ...candidate, source: fs.readFileSync(candidate.file, 'utf8') }))
+      .filter(candidate => /^export\s+(const|async\s+function|function)\s+GET\b/m.test(candidate.source))
       .map(candidate => {
-        const source = fs.readFileSync(candidate.file, 'utf8');
+        const { source } = candidate;
         const match = source.match(/createTrashListRoute\(\s*'([a-z]+)'\s*\)/);
         return { segment: candidate.segment, entityType: match ? match[1] : null };
       });

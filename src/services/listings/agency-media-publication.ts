@@ -54,6 +54,7 @@ import type { FileRecord } from '@/types/file-record';
 import { readDeclaredFocalPoints, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { readDeclaredCaptureSpots, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import { readDeclaredFloorplanNorth, type DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
+import type { AgencyDeclarationSource } from '@/lib/listings/declaration-succession';
 
 /**
  * **Το `FileRecord` όσο το χρειάζεται η απόφαση** — και ούτε πεδίο παραπάνω.
@@ -340,14 +341,12 @@ export const NO_AGENCY_DECLARATION: AgencyMediaDeclaration = {
  *
  * ⚠️ **Δέχεται ωμό αντικείμενο, και κάθε πεδίο περνά από το {@link declaredFileIds}**:
  * ο δίσκος δεν είναι έμπιστος όσο η πόρτα του PATCH είναι `.passthrough()` *(Α14.7.5)*.
+ *
+ * 🔒 **Ο τύπος εισόδου ΠΑΡΑΓΕΤΑΙ από την κλειστή λίστα** `AGENCY_DECLARATION_FIELDS` (ADR-845 §7.17
+ * Α3γ): πεδίο που διαβάζεται εδώ χωρίς γραμμή εκεί **δεν μεταγλωττίζεται** — άρα δεν μπορεί να
+ * υπάρξει δήλωση που η αντικατάσταση αρχείου την αφήνει στην παλιά έκδοση.
  */
-export function agencyMediaDeclaration(source: {
-  readonly publishedMediaOrder?: unknown;
-  readonly publishedFloorplans?: unknown;
-  readonly publishedMediaFocalPoints?: unknown;
-  readonly publishedPhotoCaptureSpots?: unknown;
-  readonly publishedFloorplanNorth?: unknown;
-}): AgencyMediaDeclaration {
+export function agencyMediaDeclaration(source: AgencyDeclarationSource): AgencyMediaDeclaration {
   return {
     order: declaredFileIds(source.publishedMediaOrder),
     floorplans: declaredFileIds(source.publishedFloorplans),

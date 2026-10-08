@@ -110,6 +110,53 @@ export function mayChangePublication(subject: CapabilitySubject): boolean {
   return isGranted(decideCapability({ subject, action: PUBLICATION_CAPABILITY }).verdict);
 }
 
+/**
+ * 🧬 **Ποια διαβάθμιση ΚΛΗΡΟΝΟΜΕΙ η νέα έκδοση;** (ADR-845 §7.17 Α3γ) — καθαρή.
+ *
+ * Η αντικατάσταση δεν είναι αλλαγή διαβάθμισης: είναι **το ίδιο αρχείο, νέα έκδοση**. Άρα ο διάδοχος
+ * συνεχίζει ό,τι ίσχυε — δημόσια φωτογραφία **μένει** στην αγγελία, και εμπιστευτικό έγγραφο **δεν**
+ * γίνεται αδιαβάθμητο επειδή ήρθε νέα έκδοσή του.
+ *
+ * 🔑 **Ό,τι δηλώνει ήδη ο διάδοχος ΝΙΚΑ** (δόγμα του γραφέα διαδοχής): ρητή διαβάθμιση του ανθρώπου
+ * πάνω στη νέα έκδοση δεν ξαναγράφεται ποτέ από κληρονομιά.
+ *
+ * ⚠️ **Το δικαίωμα ΔΕΝ κρίνεται εδώ**: για δημόσιο προκάτοχο το έχει ήδη κρίνει η κρίση διαδοχής
+ * *(`publication-not-capable`, Α3β)* — πριν φτάσει κανείς ως εδώ.
+ *
+ * @returns τα πεδία προς εγγραφή στον διάδοχο, ή `null` όταν δεν κληρονομείται τίποτα.
+ */
+export function inheritedClassificationOf(
+  predecessor: Readonly<Record<string, unknown>>,
+  successor: Readonly<Record<string, unknown>> | null,
+): { readonly classification: FileClassification } | null {
+  const inherited = storedClassification(predecessor);
+  if (inherited === null) return null;
+  if (successor !== null && storedClassification(successor) !== null) return null;
+  return { classification: inherited };
+}
+
+/**
+ * **Το ίχνος της κληρονομημένης διαβάθμισης** — ίδια ενέργεια `classify`, με την προέλευση ονομασμένη.
+ *
+ * Το *«ποιος δημοσιοποίησε τι»* πρέπει να απαντιέται **και** για τη νέα έκδοση: χωρίς αυτή τη γραμμή
+ * ένα αρχείο θα ήταν δημόσιο χωρίς **καμία** πράξη στο βιβλίο του. Δεν πετά ποτέ (`recordFileAudit`).
+ */
+export async function recordInheritedClassification(params: {
+  readonly fileId: string;
+  readonly inheritedFrom: string;
+  readonly classification: FileClassification;
+  readonly performedBy: string;
+  readonly companyId: string;
+}): Promise<void> {
+  await recordFileAudit({
+    fileId: params.fileId,
+    action: 'classify',
+    performedBy: params.performedBy,
+    companyId: params.companyId,
+    metadata: { from: null, to: params.classification, inheritedFrom: params.inheritedFrom },
+  });
+}
+
 export interface WriteClassificationParams {
   readonly fileId: string;
   /** Το έγγραφο, **ήδη φορτωμένο και κριμένο ως δικό του** από τον PEP της διαδρομής (ADR-742). */

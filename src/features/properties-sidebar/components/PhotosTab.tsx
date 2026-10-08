@@ -22,6 +22,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { ListingMediaOrderPanel } from '@/components/listings/ListingMediaOrderPanel';
+import { PublishedMediaAgreement } from '@/components/listings/PublishedMediaAgreement';
 import { DEFAULT_PHOTO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
 import { usePropertyFilesTab } from './property-files-tab';
@@ -63,6 +64,13 @@ export function PhotosTab({
 
   return (
     <>
+      {/* ADR-845 §7.17 Α3γ — «έφτασε στην αγγελία ό,τι άλλαξα εδώ;». Το ΙΔΙΟ σώμα με την καρτέλα
+          «Κάτοψη»: εδώ γίνονται οι περισσότερες αποσύρσεις και αντικαταστάσεις, άρα εδώ πρέπει να
+          απαντιέται — όχι σε άλλη καρτέλα. Την ετυμηγορία τη δίνει ο διακομιστής. */}
+      <aside className="flex flex-wrap items-center gap-2 px-2 pt-2">
+        <PublishedMediaAgreement propertyId={selectedProperty.id} />
+      </aside>
+
       <EntityFilesManager
         {...identity}
         domain="sales"
