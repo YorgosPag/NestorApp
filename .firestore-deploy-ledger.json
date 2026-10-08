@@ -280,6 +280,13 @@
       "digest": "sha256:eb180001cbcaa1fc8c6caf466a01a93808e7ab5b137574eb3bddfde930978164",
       "source": "firestore.indexes.json",
       "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-10-08",
+      "commit": "a78a2e20",
+      "digest": "sha256:a86b0274ecb6c2ec32e29f8dd083f1aea5bdaf4981f3f7ab572b8e1ecafcadee",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
     }
   ]
 }
