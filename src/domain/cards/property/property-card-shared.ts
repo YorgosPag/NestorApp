@@ -21,7 +21,6 @@ import {
   type PriceRole,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
-import { isEditorCommercialStatus } from '@/constants/commercial-statuses';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 import { offeredAudienceOf } from '@/services/listings/public-listing-projection';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
@@ -33,22 +32,6 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string;
 // =============================================================================
 // 🏢 COMMERCIAL STATUS MAPPINGS (identical Grid + List)
 // =============================================================================
-
-/**
- * Optional commercial-status badge appended after the primary status badge.
- *
- * Μόνο για καταστάσεις **αγοράς** (`isEditorCommercialStatus`) — η κάρτα της λίστας δεν δείχνει
- * κράτηση / πώληση ως δεύτερο σήμα. Ετικέτα και απόχρωση από το **ένα** SSoT των μονάδων
- * (ADR-777 §8.60.20· ήταν δύο τοπικοί χάρτες εδώ). Το **πλήρες** σήμα (και οι επτά καταστάσεις)
- * είναι το {@link buildPropertyStatusBadge}.
- */
-export function buildCommercialBadge(property: Property, t: TFn): GridCardBadge | null {
-  if (!isEditorCommercialStatus(property.commercialStatus)) return null;
-  const spec = commercialStatusBadge(property.commercialStatus);
-  return spec
-    ? { label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }), variant: spec.variant }
-    : null;
-}
 
 /**
  * **Η ετικέτα κύκλου ζωής** μιας αποσυρμένης εγγραφής (ADR-281 · ADR-329 §3.9).
@@ -63,7 +46,8 @@ const RETIRED_BADGE: Readonly<Record<RetiredKind, { labelKey: string; variant: G
 
 /**
  * Assemble the Property badge list: primary status badge (resolved per view) +
- * optional commercial badge + optional audience badge (`buildListingAudienceBadge`).
+ * the ONE commercial status badge (`buildPropertyStatusBadge`) + optional audience badge
+ * (`buildListingAudienceBadge`).
  * Shared so Grid/List badge memos stay tiny.
  *
  * 🔴 **Αποσυρμένο ακίνητο ΔΕΝ είναι προσφορά.** Όσο είναι σε κάδο ή αρχείο, προηγείται η ετικέτα
@@ -82,9 +66,12 @@ export function buildPropertyBadges(
   const retired = buildRetiredBadge(property, t);
   if (retired !== null) return [retired, primary];
 
+  // Το εμπορικό σήμα **είναι** το σήμα της κεφαλίδας (`buildPropertyStatusBadge`, και οι επτά καταστάσεις).
+  // Ως τις 2026-10-08 ένας δεύτερος κατασκευαστής εδώ έκοβε με `isEditorCommercialStatus`, και κρατημένο /
+  // πωλημένο / ενοικιασμένο ακίνητο έγραφε μόνο τη φυσική του κατάσταση (Ν7 · ADR-329 §3.9).
   // Το σήμα κοινού ακολουθεί το ακίνητο σε κάθε επιφάνεια του γραφείου (ADR-777 §8.87.8): η γραμμή της λίστας
   // λέει ό,τι και η κεφαλίδα της σελίδας, από τον **ίδιο** κατασκευαστή — `null` όταν το ακίνητο δεν διατίθεται.
-  return [primary, buildCommercialBadge(property, t), buildListingAudienceBadge(property, t)].filter(
+  return [primary, buildPropertyStatusBadge(property, t), buildListingAudienceBadge(property, t)].filter(
     (badge): badge is GridCardBadge => badge !== null,
   );
 }

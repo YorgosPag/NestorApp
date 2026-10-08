@@ -303,4 +303,28 @@ describe('το σήμα κατάστασης: η πραγματική κατάσ
     const [fromList] = buildPropertyBadges('operationalStatus.ready', 'success', trashed, t);
     expect(buildPropertyStatusBadge(trashed, t)).toEqual(fromList);
   });
+
+  // Ν7 (2026-10-08) — η κάρτα της «Διαχείρισης» έκοβε το εμπορικό σήμα με `isEditorCommercialStatus`:
+  // κρατημένο / πωλημένο / ενοικιασμένο έγραφαν ΜΟΝΟ τη φυσική κατάσταση («Ημιτελές»). Η αιτιολογία του
+  // φίλτρου («τις δείχνει ήδη το κύριο σήμα») πέθανε μαζί με το `resolvePropertyBadge`.
+  it('🔴 η κάρτα λίστας/πλέγματος δείχνει ΚΑΙ τις επτά — το ΙΔΙΟ σήμα με την κεφαλίδα', () => {
+    const statuses = ['unavailable', 'for-sale', 'for-rent', 'for-sale-and-rent', 'reserved', 'sold', 'rented'];
+    for (const commercialStatus of statuses) {
+      const property = of({ commercialStatus });
+      const [, second] = buildPropertyBadges('operationalStatus.under-construction', 'warning', property, t);
+      expect(second?.label).toBe(`commercialStatus.${commercialStatus}`);
+      expect(second).toEqual(buildPropertyStatusBadge(property, t));
+    }
+  });
+
+  it('🔴 παλιό έγγραφο χωρίς `commercialStatus` ⇒ η κάρτα διαβάζει την ΙΔΙΑ εφεδρεία με την κεφαλίδα', () => {
+    const legacy = of({ status: 'sold' });
+    const [, second] = buildPropertyBadges('operationalStatus.ready', 'success', legacy, t);
+    expect(second).toEqual(buildPropertyStatusBadge(legacy, t));
+    expect(second?.label).toBe('commercialStatus.sold');
+  });
+
+  it('άγνωστη κατάσταση ⇒ η κάρτα μένει με τη φυσική μόνο — κανένα σήμα από εικασία', () => {
+    expect(buildPropertyBadges('operationalStatus.ready', 'success', of({}), t)).toHaveLength(1);
+  });
 });
