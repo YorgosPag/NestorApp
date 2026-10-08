@@ -39,6 +39,7 @@
 
 import React from 'react';
 
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingAttributeLedger } from '@/lib/listings/listing-attribute-declared';
 import { LISTING_ATTRIBUTE_GROUPS } from '@/lib/listings/listing-attribute-groups';
@@ -55,14 +56,7 @@ export function ListingAttributeList({ listing }: ListingAttributeListProps) {
   const ledger = listingAttributeLedger(listing);
 
   return (
-    <section
-      aria-labelledby="listing-attributes-heading"
-      className="rounded-lg border border-border bg-card p-4"
-    >
-      <h2 id="listing-attributes-heading" className="text-sm font-medium text-muted-foreground">
-        {t('listing-detail:attributes.heading')}
-      </h2>
-
+    <SectionFrame headingId="listing-attributes-heading" title={t('listing-detail:attributes.heading')} headingLevel="h2" titleSize="eyebrow">
       {/* Η λογιστική **πάντα** — και όταν είναι πλήρης. Ένα «27 από 27» που δεν
           τυπώνεται αφήνει τον αναγνώστη να μαντέψει αν κοίταξε κανείς. */}
       <p className="mt-1 text-xs text-muted-foreground">
@@ -77,6 +71,6 @@ export function ListingAttributeList({ listing }: ListingAttributeListProps) {
           <ListingAttributeGroupSection key={group} listing={listing} group={group} />
         ))}
       </div>
-    </section>
+    </SectionFrame>
   );
 }

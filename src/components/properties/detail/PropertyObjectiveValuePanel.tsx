@@ -15,9 +15,10 @@
  * 🔑 **Κλειδωμένο σε συναλλαγή** (πώληση/μίσθωση, ADR-249): εξήγηση αντί για ερωτήσεις — η ΜΙΑ λίστα κλειδωμάτων.
  */
 
-import React, { useId, useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 import { ObjectiveValueImproveSection } from '@/components/owner-property/improve/ObjectiveValueImproveSection';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ObjectiveValueDeclarationsPatch } from '@/lib/objective-value/objective-value-declarations';
 import { objectiveValueFormOf } from '@/lib/objective-value/objective-value-form-of-type';
@@ -61,7 +62,6 @@ function usePropertyImproveSubject(property: Property): ObjectiveValueImproveSub
 
 export function PropertyObjectiveValuePanel({ property }: { readonly property: Property }): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const headingId = useId();
   const subject = usePropertyImproveSubject(property);
   // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων (κατάστημα · γραφείο · γη ⇒ καμία ερώτηση).
   // ⚠️ Ως ενότητα πάνω από τις καρτέλες αρκούσε να μην αποδίδεται· ως **καρτέλα** μια κενή οθόνη διαβάζεται
@@ -69,13 +69,12 @@ export function PropertyObjectiveValuePanel({ property }: { readonly property: P
   const applicable = objectiveValueFormOf(property.type) !== null;
   const locked = isFieldLocked(property.commercialStatus, 'objectiveValueDeclarations');
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
-      <h2 id={headingId} className="m-0 text-lg font-semibold text-foreground">{t(`${I}.sections.objectiveValue.title`)}</h2>
+    <SectionFrame title={t(`${I}.sections.objectiveValue.title`)} headingLevel="h2" titleSize="lg" gap={4}>
       {!applicable
         ? <p className="m-0 text-sm text-muted-foreground">{t(`${I}.notApplicable`)}</p>
         : locked
           ? <p className="m-0 text-sm text-muted-foreground">{t(`${I}.locked`)}</p>
           : <ObjectiveValueImproveSection subject={subject} />}
-    </section>
+    </SectionFrame>
   );
 }

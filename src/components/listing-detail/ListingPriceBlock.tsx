@@ -24,6 +24,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveDisplayPrice, type ResolvedPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY, PRICE_ROLE_KEY } from '@/lib/listings/listing-price-keys';
@@ -60,11 +61,7 @@ export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
   const price = resolveDisplayPrice(listing);
 
   return (
-    <section aria-labelledby="listing-price-heading" className="rounded-lg border border-border bg-card p-4">
-      <h2 id="listing-price-heading" className="text-sm font-medium text-muted-foreground">
-        {t('search-results:detail.price.heading')}
-      </h2>
-
+    <SectionFrame headingId="listing-price-heading" title={t('search-results:detail.price.heading')} headingLevel="h2" titleSize="eyebrow">
       {price.kind === 'priced' ? (
         <>
           <dl className="mt-2 space-y-1">
@@ -80,6 +77,6 @@ export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
         /* Η απουσία είναι **κατάσταση με αιτία**, ποτέ «0 €» και ποτέ «επικοινωνήστε». */
         <p className="mt-2 text-lg text-muted-foreground">{t(MISSING_PRICE_KEY[price.reason])}</p>
       )}
-    </section>
+    </SectionFrame>
   );
 }

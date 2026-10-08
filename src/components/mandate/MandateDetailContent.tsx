@@ -48,6 +48,7 @@ import {
   DETAIL_KEYS,
 } from '@/components/mandate/catalog/mandate-catalog-labels';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { PrivateMarketingAgencySection } from '@/components/mandate/PrivateMarketingAgencySection';
 import { useMandateDetail } from '@/hooks/mandate/useMandateDetail';
 import { MANDATE_FOUND } from '@/lib/mandate/mandate-detail-outcome';
@@ -133,7 +134,7 @@ function AbsenceNotice({
   const keys = DETAIL_ABSENCE_KEYS[kind];
 
   return (
-    <div className="flex flex-col items-start gap-2 rounded-md border border-border bg-card p-4">
+    <Card className="flex flex-col items-start gap-2 p-4">
       <p className="m-0 font-medium text-foreground">{t(keys.title)}</p>
       <p className="m-0 text-sm text-muted-foreground">{t(keys.hint)}</p>
       {kind === 'failed' ? (
@@ -141,7 +142,7 @@ function AbsenceNotice({
           {t(CATALOG_KEYS.retry)}
         </Button>
       ) : null}
-    </div>
+    </Card>
   );
 }
 

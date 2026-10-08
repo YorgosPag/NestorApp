@@ -20,6 +20,7 @@ import React from 'react';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
+import { Card } from '@/components/ui/card';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { isOffered } from '@/services/listings/public-listing-projection';
@@ -55,13 +56,15 @@ export function PropertyListingTab({ property }: { readonly property: Property }
   return (
     <article className="flex flex-col gap-4 p-2">
       {/* Ίδιο πλαίσιο με τις αδελφές ενότητες: ό,τι είναι ενότητα της καρτέλας έχει όριο, τίποτα δεν αιωρείται. */}
-      <section className="rounded-md border border-border bg-card p-4">
-        <MarketingAudienceControl
-          audience={audience}
-          offered={isOffered(property)}
-          onChange={(next) => changePropertyAudience(property, next)}
-        />
-      </section>
+      <Card asChild className="p-4">
+        <section>
+          <MarketingAudienceControl
+            audience={audience}
+            offered={isOffered(property)}
+            onChange={(next) => changePropertyAudience(property, next)}
+          />
+        </section>
+      </Card>
 
       <PlaceInterestPanel interest={interest} audience={audience} />
     </article>

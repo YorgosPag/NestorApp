@@ -25,6 +25,8 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -69,13 +71,10 @@ function DemandBody({ demand }: { demand: PropertyDemand }): React.ReactElement 
       <DemandTitleEditor demand={demand} />
       <DemandSeekBadges demand={demand} />
 
-      <section className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold text-foreground">
-          {t(`${NS}:demand.detail.criteria`)}
-        </h2>
+      <SectionFrame title={t(`${NS}:demand.detail.criteria`)} headingLevel="h2" titleSize="sm" gap={3}>
         <DemandSummary demand={demand} />
         <DemandLifecycleActions demand={demand} />
-      </section>
+      </SectionFrame>
 
       {answer.state === 'loading' && (
         <p className="text-muted-foreground">{t(`${NS}:demand.answer.checking`)}</p>
@@ -107,13 +106,12 @@ function IncompleteDemand({ gaps }: { gaps: readonly string[] }): React.ReactEle
   const K = `${NS}:demand.incomplete`;
 
   return (
-    <section className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-foreground">{t(`${K}.badge`)}</h2>
+    <SectionFrame title={t(`${K}.badge`)} headingLevel="h2" titleSize="sm" gap={2}>
       <p className="text-sm text-foreground">
         {t(`${K}.why`, { gaps: gaps.map((gap) => t(`${K}.gap.${gap}`)).join(' · ') })}
       </p>
       <p className="text-sm text-muted-foreground">{t(`${K}.reassure`)}</p>
-    </section>
+    </SectionFrame>
   );
 }
 
@@ -121,12 +119,12 @@ function IncompleteDemand({ gaps }: { gaps: readonly string[] }): React.ReactEle
 function NotFound(): React.ReactElement {
   const { t } = useTranslation([NS]);
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <Card className="p-4">
       <p className="font-medium text-foreground">{t(`${NS}:demand.detail.notFound`)}</p>
       <p className="mt-1 text-sm text-muted-foreground">
         {t(`${NS}:demand.detail.notFoundHint`)}
       </p>
-    </div>
+    </Card>
   );
 }
 

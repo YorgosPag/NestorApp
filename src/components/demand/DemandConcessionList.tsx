@@ -29,6 +29,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
@@ -111,13 +112,7 @@ export function DemandConcessionList({
   if (suggested.length === 0 && multiAxis === 0 && unquantified === 0) return null;
 
   return (
-    <section
-      aria-label={t('property-market:demand.concession.heading')}
-      className="rounded-md border border-border bg-card p-4"
-    >
-      <h3 className="text-sm font-semibold text-foreground">
-        {t('property-market:demand.concession.heading')}
-      </h3>
+    <SectionFrame title={t('property-market:demand.concession.heading')} headingLevel="h3" titleSize="sm">
       <p className="mt-1 text-sm text-muted-foreground">
         {t('property-market:demand.concession.lead')}
       </p>
@@ -148,6 +143,6 @@ export function DemandConcessionList({
           )}
         </ul>
       )}
-    </section>
+    </SectionFrame>
   );
 }

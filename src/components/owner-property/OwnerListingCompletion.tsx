@@ -43,6 +43,7 @@
 
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -142,66 +143,65 @@ export function OwnerListingCompletion({
   const tone = bucketColor === 'red' ? 'amber' : bucketColor;
 
   return (
-    <section
-      aria-label={t(`${K}.aria`)}
-      className="flex flex-col gap-2 rounded-md border border-border bg-card p-4"
-    >
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-medium text-foreground">{t(`${K}.title`)}</h2>
-        <p className={cn('text-sm font-semibold', completionBucketTextClass(tone, colors))}>
-          {percentage}%
+    <Card asChild className="flex flex-col gap-2 p-4">
+      <section aria-label={t(`${K}.aria`)}>
+        <header className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-medium text-foreground">{t(`${K}.title`)}</h2>
+          <p className={cn('text-sm font-semibold', completionBucketTextClass(tone, colors))}>
+            {percentage}%
+          </p>
+        </header>
+
+        <Progress
+          value={percentage}
+          className="h-2"
+          indicatorClassName={completionBucketIndicatorClass(tone)}
+        />
+
+        {/*
+          🔑 **Η ΒΑΘΜΙΔΑ ΜΕΤΡΑΕΙ ΤΟ ΣΩΣΤΟ ΠΡΑΓΜΑ ΣΕ ΚΑΘΕ ΧΡΩΜΑ.** Στο κόκκινο μιλάμε για
+          τα **κρίσιμα** (εκεί είναι ο πόνος)· στο πορτοκαλί για **όλες** τις βελτιώσεις
+          (εκεί μένουν μόνο μικρά). Το ίδιο κείμενο και στις δύο θα ήταν είτε
+          τρομακτικό είτε ανακριβές.
+        */}
+        <p aria-live="polite" className="text-sm text-muted-foreground">
+          {bucketColor === 'green'
+            ? t(`${K}.bucket.green`)
+            : bucketColor === 'amber'
+              ? t(`${K}.bucket.amber`, { count: missing.length })
+              : t(`${K}.bucket.red`, { count: assessment.missingCritical.length })}
         </p>
-      </header>
 
-      <Progress
-        value={percentage}
-        className="h-2"
-        indicatorClassName={completionBucketIndicatorClass(tone)}
-      />
+        {shown.length > 0 && (
+          <>
+            {/*
+              📐 **NN/g — «strong information scent»**: η επικεφαλίδα λέει **τι** είναι η
+              λίστα, και η βαθμίδα από πάνω λέει **πόσα** μένουν συνολικά. Ποτέ
+              «Περισσότερα», που είναι η διατύπωση χωρίς άρωμα.
+            */}
+            <h3 className="text-sm font-medium text-foreground">{t(`${K}.breakdown.heading`)}</h3>
+            <ul className="flex flex-col gap-1">
+              {shown.map((fieldKey) => (
+                <Suggestion
+                  key={fieldKey}
+                  fieldKey={fieldKey}
+                  propertyType={assessment.propertyType}
+                />
+              ))}
+            </ul>
+          </>
+        )}
 
-      {/*
-        🔑 **Η ΒΑΘΜΙΔΑ ΜΕΤΡΑΕΙ ΤΟ ΣΩΣΤΟ ΠΡΑΓΜΑ ΣΕ ΚΑΘΕ ΧΡΩΜΑ.** Στο κόκκινο μιλάμε για
-        τα **κρίσιμα** (εκεί είναι ο πόνος)· στο πορτοκαλί για **όλες** τις βελτιώσεις
-        (εκεί μένουν μόνο μικρά). Το ίδιο κείμενο και στις δύο θα ήταν είτε
-        τρομακτικό είτε ανακριβές.
-      */}
-      <p aria-live="polite" className="text-sm text-muted-foreground">
-        {bucketColor === 'green'
-          ? t(`${K}.bucket.green`)
-          : bucketColor === 'amber'
-            ? t(`${K}.bucket.amber`, { count: missing.length })
-            : t(`${K}.bucket.red`, { count: assessment.missingCritical.length })}
-      </p>
+        {missing.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t(`${K}.breakdown.allComplete`)}</p>
+        )}
 
-      {shown.length > 0 && (
-        <>
-          {/*
-            📐 **NN/g — «strong information scent»**: η επικεφαλίδα λέει **τι** είναι η
-            λίστα, και η βαθμίδα από πάνω λέει **πόσα** μένουν συνολικά. Ποτέ
-            «Περισσότερα», που είναι η διατύπωση χωρίς άρωμα.
-          */}
-          <h3 className="text-sm font-medium text-foreground">{t(`${K}.breakdown.heading`)}</h3>
-          <ul className="flex flex-col gap-1">
-            {shown.map((fieldKey) => (
-              <Suggestion
-                key={fieldKey}
-                fieldKey={fieldKey}
-                propertyType={assessment.propertyType}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-
-      {missing.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t(`${K}.breakdown.allComplete`)}</p>
-      )}
-
-      {improveOfferId !== null && (
-        <Link href={offerImproveHref(improveOfferId)} className="self-start text-sm font-medium underline">
-          {t(`${K}.improveLink`)}
-        </Link>
-      )}
-    </section>
+        {improveOfferId !== null && (
+          <Link href={offerImproveHref(improveOfferId)} className="self-start text-sm font-medium underline">
+            {t(`${K}.improveLink`)}
+          </Link>
+        )}
+      </section>
+    </Card>
   );
 }

@@ -17,6 +17,7 @@ import React from 'react';
 import { unitPriceLabel } from '@/components/area-market/area-market-format';
 import { ContractMedian } from '@/components/market/ContractMedian';
 import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useListingMarketContext } from '@/hooks/market/useListingMarketContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay } from '@/lib/intl-formatting';
@@ -94,11 +95,10 @@ export function ListingMarketContext({ listingId }: { readonly listingId: string
   const { t } = useTranslation([NS]);
   const state = useListingMarketContext(listingId);
   return (
-    <section aria-labelledby={HEADING_ID} aria-busy={state.kind === 'loading'} className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <h2 id={HEADING_ID} className="m-0 text-base font-semibold text-foreground">{t(`${NS}:listing.title`)}</h2>
+    <SectionFrame headingId={HEADING_ID} title={t(`${NS}:listing.title`)} headingLevel="h2" gap={2} aria-busy={state.kind === 'loading'}>
       {state.kind === 'loading' && <span aria-hidden className="block h-24 animate-pulse rounded bg-muted" />}
       {state.kind === 'unavailable' && <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:listing.unavailable`)}</p>}
       {state.kind === 'ready' && <Body context={state.context} />}
-    </section>
+    </SectionFrame>
   );
 }

@@ -19,6 +19,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { MARKETING_AUDIENCES, isOfferableAudience } from '@/constants/marketing-audiences';
 import { usePrivateMarketingPanels } from '@/hooks/mandate/usePrivateMarketingPanels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -101,7 +102,6 @@ export function PrivateMarketingAgencySection({ ownerPropertyId }: { readonly ow
   const { t } = useTranslation([NS]);
   const { load, reload } = usePrivateMarketingPanels(ownerPropertyId);
   const [outcome, setOutcome] = React.useState<PrivateMarketingRequestOutcome | null>(null);
-  const headingId = React.useId();
 
   if (load === null) return <p className="text-sm text-muted-foreground">{t(`${K}.loading`)}</p>;
   if (load.kind === 'failed') return <p className="text-sm text-muted-foreground">{t(`${K}.loadFailed`)}</p>;
@@ -117,8 +117,7 @@ export function PrivateMarketingAgencySection({ ownerPropertyId }: { readonly ow
   };
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <h2 id={headingId} className="text-base font-semibold text-card-foreground">{t(`${K}.title`)}</h2>
+    <SectionFrame title={t(`${K}.title`)} headingLevel="h2" gap={3}>
       <PrivateMarketingStandingLine standing={panel.standing} />
       <MandateEvidenceList evidence={panel.evidence} source={{ kind: 'account', ownerPropertyId }} />
       <AgencyOutcomeNotice outcome={outcome} />
@@ -129,6 +128,6 @@ export function PrivateMarketingAgencySection({ ownerPropertyId }: { readonly ow
       {audience !== null && load.panels.disclosure !== null && (
         <AttestationControl ownerPropertyId={ownerPropertyId} panel={panel} audience={audience} onDone={onDone} disclosure={load.panels.disclosure} />
       )}
-    </section>
+    </SectionFrame>
   );
 }

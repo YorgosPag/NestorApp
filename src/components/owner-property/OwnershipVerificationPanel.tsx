@@ -16,6 +16,7 @@ import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PRIVATE_PROFILE_ROUTE } from '@/lib/routes/accountRoutes';
 import { Link } from '@/lib/workspace/navigation';
@@ -154,14 +155,12 @@ function ReleaseOwnership({ release, onRelease }: {
 export function OwnershipVerificationPanel({ ownerPropertyId, dossier }: OwnershipVerificationPanelProps): React.ReactElement {
   const { t } = useTranslation([OWNERSHIP_NS]);
   const { status, submit, submitCertificate, release, releaseOwnership } = useOwnershipVerification(ownerPropertyId, dossier);
-  const headingId = React.useId();
   const verification = status.state === 'ready' ? status.verification : null;
   const canSubmit = dossier !== null && status.state === 'ready' && verification?.status !== 'verified'
     && verification?.status !== 'pending-review';
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
-      <h3 id={headingId} className="m-0 text-sm font-semibold text-foreground">{t(OWNERSHIP_KEYS.heading)}</h3>
+    <SectionFrame title={t(OWNERSHIP_KEYS.heading)} headingLevel="h3" titleSize="sm" gap={2}>
       {status.state === 'loading' && <p className="m-0 text-sm text-muted-foreground">{t(OWNERSHIP_KEYS.loading)}</p>}
       {status.state === 'unavailable' && <p className="m-0 text-sm text-muted-foreground">{t(OWNERSHIP_KEYS.unavailable)}</p>}
       {verification !== null && <VerificationStatus verification={verification} />}
@@ -184,6 +183,6 @@ export function OwnershipVerificationPanel({ ownerPropertyId, dossier }: Ownersh
         <ReleaseOwnership release={release} onRelease={releaseOwnership} />
       )}
       <p className="m-0 text-xs text-muted-foreground">{t(OWNERSHIP_KEYS.privacy)}</p>
-    </section>
+    </SectionFrame>
   );
 }

@@ -45,6 +45,7 @@ import {
   type MyOwnerPropertiesState,
 } from '@/services/realtime/hooks/useMyOwnerProperties';
 
+import { Card } from '@/components/ui/card';
 import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
 import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader';
 import { OwnerPortfolio } from './OwnerPortfolio';
@@ -73,10 +74,10 @@ const K = `${NS}:offer.list`;
 function EmptyState(): React.ReactElement {
   const { t } = useTranslation([NS]);
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <Card className="p-4">
       <p className="font-medium text-foreground">{t(`${K}.empty`)}</p>
       <p className="mt-1 text-sm text-muted-foreground">{t(`${K}.emptyHint`)}</p>
-    </div>
+    </Card>
   );
 }
 

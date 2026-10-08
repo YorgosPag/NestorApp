@@ -30,6 +30,7 @@
 
 import React from 'react';
 
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const NS = 'property-market';
@@ -45,11 +46,7 @@ export function RestoredDraftNotice({
   const { t } = useTranslation([NS]);
 
   return (
-    <section
-      aria-live="polite"
-      className="flex flex-col gap-2 rounded-md border border-border bg-card p-4"
-    >
-      <h2 className="text-sm font-semibold text-foreground">{t(`${K}.title`)}</h2>
+    <SectionFrame title={t(`${K}.title`)} headingLevel="h2" titleSize="sm" gap={2} aria-live="polite">
       <p className="text-sm text-muted-foreground">{t(`${K}.help`)}</p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -67,6 +64,6 @@ export function RestoredDraftNotice({
           {t(`${K}.discard`)}
         </button>
       </div>
-    </section>
+    </SectionFrame>
   );
 }

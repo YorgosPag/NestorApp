@@ -20,6 +20,7 @@
 import React from 'react';
 import { Contact, Navigation } from 'lucide-react';
 
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import { formatContactAddressLine } from '@/utils/address/address-line';
@@ -112,34 +113,36 @@ function LocationCard({
   const role = t(PROFILE_ROLE_KEYS[location.role]);
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-col gap-0.5">
-        <h3 className="m-0 text-base font-semibold text-foreground">{location.label ?? role}</h3>
-        {location.label !== null ? <p className="m-0 text-xs text-muted-foreground">{role}</p> : null}
-      </header>
-      <LocationAddress location={location} />
-      {location.street !== null && location.position !== null ? (
-        <a
-          href={googleMapsDirectionsUrl(location.position)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
-        >
-          <Navigation aria-hidden="true" className="h-4 w-4" /> {t(PROFILE_KEYS.cardDirections)}
-        </a>
-      ) : null}
-      {location.hours !== null ? <ShowcaseOpeningHours hours={location.hours} special={location.specialHours} /> : null}
-      {/* 🔴 Α21.17 — ΠΟΤΕ δεύτερη «Εμφάνιση» για το κατάστημα που ήδη συνοψίζεται ψηλά (δύο κουμπιά, δύο εισιτήρια ορίου). */}
-      {summarisedAbove ? null : (
-        <>
-          <ChannelReveal companyId={companyId} locationId={location.id} kinds={location.channelKinds} />
-          <SaveContactLink companyId={companyId} location={location} />
-          {canHoldMandate && location.channelKinds.includes('phone') ? (
-            <p className="m-0 text-xs text-muted-foreground">{t(PROFILE_KEYS.cardBrokerWritten)}</p>
-          ) : null}
-        </>
-      )}
-    </article>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <header className="flex flex-col gap-0.5">
+          <h3 className="m-0 text-base font-semibold text-foreground">{location.label ?? role}</h3>
+          {location.label !== null ? <p className="m-0 text-xs text-muted-foreground">{role}</p> : null}
+        </header>
+        <LocationAddress location={location} />
+        {location.street !== null && location.position !== null ? (
+          <a
+            href={googleMapsDirectionsUrl(location.position)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
+          >
+            <Navigation aria-hidden="true" className="h-4 w-4" /> {t(PROFILE_KEYS.cardDirections)}
+          </a>
+        ) : null}
+        {location.hours !== null ? <ShowcaseOpeningHours hours={location.hours} special={location.specialHours} /> : null}
+        {/* 🔴 Α21.17 — ΠΟΤΕ δεύτερη «Εμφάνιση» για το κατάστημα που ήδη συνοψίζεται ψηλά (δύο κουμπιά, δύο εισιτήρια ορίου). */}
+        {summarisedAbove ? null : (
+          <>
+            <ChannelReveal companyId={companyId} locationId={location.id} kinds={location.channelKinds} />
+            <SaveContactLink companyId={companyId} location={location} />
+            {canHoldMandate && location.channelKinds.includes('phone') ? (
+              <p className="m-0 text-xs text-muted-foreground">{t(PROFILE_KEYS.cardBrokerWritten)}</p>
+            ) : null}
+          </>
+        )}
+      </article>
+    </Card>
   );
 }
 

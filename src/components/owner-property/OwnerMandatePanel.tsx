@@ -27,6 +27,7 @@
 
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import { formatTermDay } from '@/lib/mandate/mandate-term-window';
@@ -115,38 +116,40 @@ function OwnerMandateCard({ view }: { view: OwnerMandateView }): React.JSX.Eleme
       : view.scope.map((kind) => t(OFFER_KIND_I18N_KEYS[kind])).join(' · ');
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <p className="m-0 text-sm font-semibold text-foreground">
-        {t(OWNER_STANDING_KEYS[view.standing])}
-        {view.daysLeft !== null && (
-          <span className="ml-2 font-normal text-muted-foreground">
-            {/* ⚠️ `count`, ΟΧΙ `days` — το ICU plural του δέντρου κλειδώνει σε
-                `{count, plural, …}` (ίδιο με τον κατάλογο του γραφείου). */}
-            {t(OWNER_MANDATE_KEYS.expiresIn, { count: view.daysLeft })}
-          </span>
-        )}
-      </p>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <p className="m-0 text-sm font-semibold text-foreground">
+          {t(OWNER_STANDING_KEYS[view.standing])}
+          {view.daysLeft !== null && (
+            <span className="ml-2 font-normal text-muted-foreground">
+              {/* ⚠️ `count`, ΟΧΙ `days` — το ICU plural του δέντρου κλειδώνει σε
+                  `{count, plural, …}` (ίδιο με τον κατάλογο του γραφείου). */}
+              {t(OWNER_MANDATE_KEYS.expiresIn, { count: view.daysLeft })}
+            </span>
+          )}
+        </p>
 
-      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <Detail label={t(OWNER_MANDATE_KEYS.agencyLabel)}>
-          <AgencyName companyId={view.agencyCompanyId} />
-        </Detail>
-        <Detail label={t(OWNER_MANDATE_KEYS.roleLabel)}>{role}</Detail>
-        <Detail label={t(OWNER_MANDATE_KEYS.scopeLabel)}>{scope}</Detail>
-        <Detail label={t(OWNER_MANDATE_KEYS.periodLabel)}>{periodTextOf(view, t)}</Detail>
-        <Detail label={t(OWNER_MANDATE_KEYS.feeLabel)}>{feeTextOf(view, t)}</Detail>
-        <Detail label={t(OWNER_MANDATE_KEYS.proofLabel)}>
-          {t(OWNER_PROOF_KEYS[view.proofVia])}
-          {/* ⚠️ **`formatDate` εδώ είναι το ΣΩΣΤΟ**: το `decidedAt` είναι πραγματική
-              στιγμή («πότε πάτησε ο άνθρωπος»), όχι πολιτική ημέρα — οφείλει να
-              διαβάζεται στη ζώνη του αναγνώστη. Δες `formatTermDay`. */}
-          {view.decidedAt !== null && ` · ${formatDate(view.decidedAt)}`}
-        </Detail>
-      </dl>
+        <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+          <Detail label={t(OWNER_MANDATE_KEYS.agencyLabel)}>
+            <AgencyName companyId={view.agencyCompanyId} />
+          </Detail>
+          <Detail label={t(OWNER_MANDATE_KEYS.roleLabel)}>{role}</Detail>
+          <Detail label={t(OWNER_MANDATE_KEYS.scopeLabel)}>{scope}</Detail>
+          <Detail label={t(OWNER_MANDATE_KEYS.periodLabel)}>{periodTextOf(view, t)}</Detail>
+          <Detail label={t(OWNER_MANDATE_KEYS.feeLabel)}>{feeTextOf(view, t)}</Detail>
+          <Detail label={t(OWNER_MANDATE_KEYS.proofLabel)}>
+            {t(OWNER_PROOF_KEYS[view.proofVia])}
+            {/* ⚠️ **`formatDate` εδώ είναι το ΣΩΣΤΟ**: το `decidedAt` είναι πραγματική
+                στιγμή («πότε πάτησε ο άνθρωπος»), όχι πολιτική ημέρα — οφείλει να
+                διαβάζεται στη ζώνη του αναγνώστη. Δες `formatTermDay`. */}
+            {view.decidedAt !== null && ` · ${formatDate(view.decidedAt)}`}
+          </Detail>
+        </dl>
 
-      {/* ⛔ ΠΛΗΡΟΦΟΡΙΑ, ΟΧΙ ΚΑΝΑΛΙ — δες την κεφαλίδα (ADR-827 §9.8). */}
-      <p className="m-0 text-sm text-muted-foreground">{t(OWNER_MANDATE_KEYS.contactNote)}</p>
-    </article>
+        {/* ⛔ ΠΛΗΡΟΦΟΡΙΑ, ΟΧΙ ΚΑΝΑΛΙ — δες την κεφαλίδα (ADR-827 §9.8). */}
+        <p className="m-0 text-sm text-muted-foreground">{t(OWNER_MANDATE_KEYS.contactNote)}</p>
+      </article>
+    </Card>
   );
 }
 

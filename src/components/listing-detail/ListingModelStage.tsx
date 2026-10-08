@@ -32,6 +32,7 @@
 import dynamic from 'next/dynamic';
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ⛔ **ΑΠΟ ΤΟ ΑΡΧΕΙΟ ΧΩΡΙΣ ΠΑΡΕΝΕΡΓΕΙΕΣ, ΠΟΤΕ ΑΠΟ ΤΟΝ ΚΑΜΒΑ.** Ένα στατικό `import` από το
@@ -40,8 +41,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 //    megabyte θα κατέβαινε σε **κάθε** επισκέπτη. Δες την κεφαλίδα του `…-stage-metrics`.
 import { MODEL_STAGE_ASPECT_CLASS } from './listing-model-stage-metrics';
 
-/** Κοινό περίγραμμα και για τις τρεις καταστάσεις ⇒ **καμία** μετατόπιση στην εναλλαγή. */
-const STAGE_BOX = `flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-card p-4 text-center ${MODEL_STAGE_ASPECT_CLASS}`;
+/**
+ * Κοινό κουτί και για τις τρεις καταστάσεις ⇒ **καμία** μετατόπιση στην εναλλαγή. Η επιφάνεια (όριο · φόντο · ακτίνα)
+ * είναι του `Card` (`asChild`, ADR-777 §8.87.10)· εδώ ζει **μόνο** η διάταξη.
+ */
+const STAGE_BOX = `flex w-full flex-col items-center justify-center gap-2 p-4 text-center ${MODEL_STAGE_ASPECT_CLASS}`;
 
 /**
  * ⛔ **`ssr: false` ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ, ΟΧΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ**: το `<model-viewer>` δηλώνει
@@ -94,12 +98,14 @@ function StageInvitation({ alt, onReveal }: { readonly alt: string; readonly onR
   const { t } = useTranslation(['listing-detail']);
 
   return (
-    <button type="button" onClick={onReveal} className={`${STAGE_BOX} hover:bg-accent`}>
-      <span className="text-sm text-muted-foreground">{alt}</span>
-      <span className="text-sm font-medium text-foreground underline underline-offset-4">
-        {t('listing-detail:model.reveal')}
-      </span>
-    </button>
+    <Card asChild className={`${STAGE_BOX} hover:bg-accent`}>
+      <button type="button" onClick={onReveal}>
+        <span className="text-sm text-muted-foreground">{alt}</span>
+        <span className="text-sm font-medium text-foreground underline underline-offset-4">
+          {t('listing-detail:model.reveal')}
+        </span>
+      </button>
+    </Card>
   );
 }
 
@@ -108,9 +114,11 @@ function StageLoading() {
   const { t } = useTranslation(['listing-detail']);
 
   return (
-    <section className={STAGE_BOX} aria-live="polite">
-      <p className="text-sm text-muted-foreground">{t('listing-detail:model.loading')}</p>
-    </section>
+    <Card asChild className={STAGE_BOX}>
+      <section aria-live="polite">
+        <p className="text-sm text-muted-foreground">{t('listing-detail:model.loading')}</p>
+      </section>
+    </Card>
   );
 }
 
@@ -125,15 +133,17 @@ function StageFailure({ onRetry }: { readonly onRetry: () => void }) {
   const { t } = useTranslation(['listing-detail']);
 
   return (
-    <section className={STAGE_BOX} aria-live="polite">
-      <p className="text-sm text-muted-foreground">{t('listing-detail:model.failed')}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="text-sm font-medium text-foreground underline underline-offset-4"
-      >
-        {t('listing-detail:model.retry')}
-      </button>
-    </section>
+    <Card asChild className={STAGE_BOX}>
+      <section aria-live="polite">
+        <p className="text-sm text-muted-foreground">{t('listing-detail:model.failed')}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-sm font-medium text-foreground underline underline-offset-4"
+        >
+          {t('listing-detail:model.retry')}
+        </button>
+      </section>
+    </Card>
   );
 }

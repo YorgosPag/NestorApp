@@ -1,17 +1,28 @@
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
 import '@/lib/design-system';
 
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Η επιφάνεια φοριέται από το ΠΑΙΔΙ (`<section>` · `<article>` · `<li>` · `<fieldset>` …) αντί για δικό της `<div>`:
+   * ένας κόμβος DOM, η σημασιολογία μένει στον καλούντα. Υπάρχει ώστε κανείς να μη χρειάζεται να ξαναγράψει με το
+   * χέρι όριο/φόντο/ακτίνα μόνο και μόνο επειδή ήθελε άλλο στοιχείο (ADR-777 §8.87.10).
+   */
+  asChild?: boolean;
+}
+
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
+  CardProps
+>(({ className, asChild = false, ...props }, ref) => {
   const { quick } = useBorderTokens();
+  const Comp = asChild ? Slot : 'div';
 
   return (
-    <div
+    <Comp
       ref={ref}
       className={cn(
         `${quick.card} bg-card text-card-foreground shadow-sm overflow-hidden min-w-0`,

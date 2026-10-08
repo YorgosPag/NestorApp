@@ -37,6 +37,7 @@ import {
   GROUP_LABEL_KEYS,
 } from '@/components/mandate/catalog/mandate-catalog-labels';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useMandateCatalog, type MandateCatalogState } from '@/hooks/mandate/useMandateCatalog';
 import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
 import { isCapabilityActive, type CapabilityStatus } from '@/types/organization-capability';
@@ -73,10 +74,10 @@ registerRouteSlice(routeSlice);
 function EmptyState(): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <Card className="p-4">
       <p className="m-0 font-medium text-foreground">{t(CATALOG_KEYS.empty)}</p>
       <p className="mt-1 text-sm text-muted-foreground">{t(CATALOG_KEYS.emptyHint)}</p>
-    </div>
+    </Card>
   );
 }
 

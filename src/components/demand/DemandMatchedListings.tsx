@@ -25,6 +25,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -116,16 +117,13 @@ export function DemandMatchedListings({ answer }: { answer: DemandAnswer }): Rea
   if (shown.length === 0) return null;
 
   return (
-    <section aria-labelledby={headingId} className="rounded-md border border-border bg-card p-4">
-      <h3 id={headingId} className="text-sm font-semibold text-foreground">
-        {t(`${K}.heading`)}
-      </h3>
+    <SectionFrame headingId={headingId} title={t(`${K}.heading`)} headingLevel="h3" titleSize="sm">
       <ul className="mt-3 flex flex-col gap-3">
         {shown.map((outcome) => (
           <MatchedListingItem key={outcome.facts.listing.id} outcome={outcome} />
         ))}
       </ul>
       {hidden > 0 && <p className="mt-3 text-sm text-muted-foreground">{t(`${K}.more`, { count: hidden })}</p>}
-    </section>
+    </SectionFrame>
   );
 }

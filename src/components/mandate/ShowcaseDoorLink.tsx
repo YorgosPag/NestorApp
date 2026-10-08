@@ -15,6 +15,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 
+import { Card } from '@/components/ui/card';
 import { Link } from '@/lib/workspace/navigation';
 
 /** `alert` ⇒ η γραμμή κατάστασης ζητά προσοχή (π.χ. «κλειστή στο ΓΕΜΗ»). */
@@ -37,22 +38,21 @@ export function ShowcaseDoorLink({
 }): React.ReactElement {
   return (
     <nav>
-      <Link
-        href={href}
-        className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-sm font-medium">{title}</span>
-          <span
-            className={tone === 'alert' ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}
-            data-testid={detailTestId}
-          >
-            {detail}
+      <Card asChild className="flex items-center gap-3 p-4 text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link href={href}>
+          <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-medium">{title}</span>
+            <span
+              className={tone === 'alert' ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}
+              data-testid={detailTestId}
+            >
+              {detail}
+            </span>
           </span>
-        </span>
-        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-      </Link>
+          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+        </Link>
+      </Card>
     </nav>
   );
 }

@@ -35,6 +35,7 @@ import React from 'react';
 
 import { Link } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { MandateInboxRow } from '@/components/mandate/inbox/MandateInboxRow';
 import {
   GROUP_HINT_KEYS,
@@ -69,10 +70,10 @@ registerRouteSlice(routeSlice);
 function EmptyState(): React.ReactElement {
   const { t } = useTranslation([INBOX_NS]);
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <Card className="p-4">
       <p className="m-0 font-medium text-foreground">{t(INBOX_KEYS.empty)}</p>
       <p className="mt-1 text-sm text-muted-foreground">{t(INBOX_KEYS.emptyHint)}</p>
-    </div>
+    </Card>
   );
 }
 

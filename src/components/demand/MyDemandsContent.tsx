@@ -25,6 +25,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 import '@/lib/design-system';
 import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -56,12 +57,12 @@ registerRouteSlice(routeSlice);
 function EmptyState(): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <Card className="p-4">
       <p className="font-medium text-foreground">{t('property-market:demand.list.empty')}</p>
       <p className="mt-1 text-sm text-muted-foreground">
         {t('property-market:demand.list.emptyHint')}
       </p>
-    </div>
+    </Card>
   );
 }
 

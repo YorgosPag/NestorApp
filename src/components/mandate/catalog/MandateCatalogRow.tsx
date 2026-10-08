@@ -27,6 +27,7 @@
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { allowedActionsFor, type MandateAction } from '@/lib/mandate/mandate-actions';
 import { CLIENT_NAME_KNOWN } from '@/lib/mandate/mandate-client-name';
@@ -187,71 +188,73 @@ export function MandateCatalogRow({
   const Title = titleAs ?? 'h3';
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-col gap-1">
-        <Title className="m-0 text-base font-semibold text-foreground">{row.listingTitle}</Title>
-        <p className="m-0 text-sm font-medium text-foreground">
-          {t(STANDING_LABEL_KEYS[row.standing])}
-        </p>
-        {/*
-          🔴 **Η ΘΕΡΑΠΕΙΑ ΔΙΑΒΑΖΕΙ ΔΥΟ ΑΞΟΝΕΣ, ΟΧΙ ΕΝΑΝ** (ADR-834 §6.5.δ). Ήταν
-          `STANDING_HINT_KEYS[row.standing]` — και για το «Δεν στάλθηκε ποτέ» έλεγε
-          *«η επαφή δεν είχε email»* χωρίς κανείς να το έχει καταγράψει. Η αιτία
-          ταξιδεύει τώρα στο `row.notifyOutcome`.
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <header className="flex flex-col gap-1">
+          <Title className="m-0 text-base font-semibold text-foreground">{row.listingTitle}</Title>
+          <p className="m-0 text-sm font-medium text-foreground">
+            {t(STANDING_LABEL_KEYS[row.standing])}
+          </p>
+          {/*
+            🔴 **Η ΘΕΡΑΠΕΙΑ ΔΙΑΒΑΖΕΙ ΔΥΟ ΑΞΟΝΕΣ, ΟΧΙ ΕΝΑΝ** (ADR-834 §6.5.δ). Ήταν
+            `STANDING_HINT_KEYS[row.standing]` — και για το «Δεν στάλθηκε ποτέ» έλεγε
+            *«η επαφή δεν είχε email»* χωρίς κανείς να το έχει καταγράψει. Η αιτία
+            ταξιδεύει τώρα στο `row.notifyOutcome`.
 
-          ⛔ **ΜΗΝ το τυλίξεις σε συνάρτηση** — δοκιμάστηκε και **μετρήθηκε**: ο
-          generator του route slice (ADR-744) διαβάζει τριαδικό και πίνακα σταθερών,
-          αλλά **όχι κλήση**, και αρνήθηκε να εκπέμψει ⇒ ωμά κλειδιά σε αυτή την
-          οθόνη. Δες το `NEVER_NOTIFIED_HINT_KEYS` για ολόκληρη τη μέτρηση.
-        */}
-        <p className="m-0 text-sm text-muted-foreground">
-          {t(
-            row.standing === NEVER_NOTIFIED
-              ? NEVER_NOTIFIED_HINT_KEYS[row.notifyOutcome ?? NOTIFY_UNRECORDED]
-              : STANDING_HINT_KEYS[row.standing],
-          )}
-        </p>
-      </header>
+            ⛔ **ΜΗΝ το τυλίξεις σε συνάρτηση** — δοκιμάστηκε και **μετρήθηκε**: ο
+            generator του route slice (ADR-744) διαβάζει τριαδικό και πίνακα σταθερών,
+            αλλά **όχι κλήση**, και αρνήθηκε να εκπέμψει ⇒ ωμά κλειδιά σε αυτή την
+            οθόνη. Δες το `NEVER_NOTIFIED_HINT_KEYS` για ολόκληρη τη μέτρηση.
+          */}
+          <p className="m-0 text-sm text-muted-foreground">
+            {t(
+              row.standing === NEVER_NOTIFIED
+                ? NEVER_NOTIFIED_HINT_KEYS[row.notifyOutcome ?? NOTIFY_UNRECORDED]
+                : STANDING_HINT_KEYS[row.standing],
+            )}
+          </p>
+        </header>
 
-      <RowFacts row={row} />
+        <RowFacts row={row} />
 
-      <footer className="flex flex-wrap gap-2">
-        {actions.map((action) => (
+        <footer className="flex flex-wrap gap-2">
+          {actions.map((action) => (
+            <Button
+              key={action}
+              type="button"
+              size="sm"
+              variant={action === 'revoke' ? 'destructive' : 'secondary'}
+              disabled={busy}
+              onClick={() => onAct(row.ownerPropertyId, action)}
+            >
+              {busy ? t(CATALOG_KEYS.working) : t(ACTION_LABEL_KEYS[action])}
+            </Button>
+          ))}
+
+          {/*
+            🔴 ADR-777 §8.39 — ΤΟ ΚΟΥΜΠΙ ΠΟΥ ΕΛΕΙΠΕ. Η απόσυρση ζούσε **μόνο** στην οθόνη
+            του ιδιώτη, πίσω από κριτήριο `authorUserId === uid`: μια αγγελία που ανήκει
+            στο **γραφείο** δεν μπορούσε να κατέβει από κανέναν άλλον — ούτε όταν ο
+            υπάλληλος που την καταχώρησε είχε φύγει.
+
+            ⚠️ **Πάντα ορατό, ποτέ υπό όρους κατάστασης εντολής**: η έξοδος από την αγορά
+            δεν επιτρέπεται να εξαρτάται από το αν η πρόσκληση είναι `pending` ή `expired`
+            — «*μια πύλη που εμποδίζει τον άνθρωπο να αποσύρει το ακίνητό του τον κλειδώνει
+            έξω από την έξοδο*» (setOwnerPropertyLifecycle).
+          */}
           <Button
-            key={action}
             type="button"
             size="sm"
-            variant={action === 'revoke' ? 'destructive' : 'secondary'}
+            variant={presence === 'withdraw' ? 'destructive' : 'secondary'}
             disabled={busy}
-            onClick={() => onAct(row.ownerPropertyId, action)}
+            onClick={() => onSetPresence(row.ownerPropertyId, presence)}
           >
-            {busy ? t(CATALOG_KEYS.working) : t(ACTION_LABEL_KEYS[action])}
+            {busy ? t(CATALOG_KEYS.working) : t(PRESENCE_LABEL_KEYS[presence])}
           </Button>
-        ))}
+        </footer>
 
-        {/*
-          🔴 ADR-777 §8.39 — ΤΟ ΚΟΥΜΠΙ ΠΟΥ ΕΛΕΙΠΕ. Η απόσυρση ζούσε **μόνο** στην οθόνη
-          του ιδιώτη, πίσω από κριτήριο `authorUserId === uid`: μια αγγελία που ανήκει
-          στο **γραφείο** δεν μπορούσε να κατέβει από κανέναν άλλον — ούτε όταν ο
-          υπάλληλος που την καταχώρησε είχε φύγει.
-
-          ⚠️ **Πάντα ορατό, ποτέ υπό όρους κατάστασης εντολής**: η έξοδος από την αγορά
-          δεν επιτρέπεται να εξαρτάται από το αν η πρόσκληση είναι `pending` ή `expired`
-          — «*μια πύλη που εμποδίζει τον άνθρωπο να αποσύρει το ακίνητό του τον κλειδώνει
-          έξω από την έξοδο*» (setOwnerPropertyLifecycle).
-        */}
-        <Button
-          type="button"
-          size="sm"
-          variant={presence === 'withdraw' ? 'destructive' : 'secondary'}
-          disabled={busy}
-          onClick={() => onSetPresence(row.ownerPropertyId, presence)}
-        >
-          {busy ? t(CATALOG_KEYS.working) : t(PRESENCE_LABEL_KEYS[presence])}
-        </Button>
-      </footer>
-
-      {feedback === null ? null : <FeedbackLine feedback={feedback} />}
-    </article>
+        {feedback === null ? null : <FeedbackLine feedback={feedback} />}
+      </article>
+    </Card>
   );
 }

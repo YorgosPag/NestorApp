@@ -22,6 +22,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
+import { SectionFrame } from '@/components/ui/section-frame';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 import { usePrivateMarketingPanels } from '@/hooks/mandate/usePrivateMarketingPanels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -116,7 +117,6 @@ export function PrivateMarketingOwnerSection({
   const { load, reload } = usePrivateMarketingPanels(ownerPropertyId, revision);
   const [outcome, setOutcome] = React.useState<PrivateMarketingActionOutcome | null>(null);
   const [started, setStarted] = React.useState(false);
-  const headingId = React.useId();
 
   if (load === null || load.kind !== 'found' || load.panels.viewer !== 'owner') return null;
   const { panels, disclosure } = load.panels;
@@ -129,8 +129,7 @@ export function PrivateMarketingOwnerSection({
   };
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <h2 id={headingId} className="text-base font-semibold text-card-foreground">{t(`${K}.title`)}</h2>
+    <SectionFrame title={t(`${K}.title`)} headingLevel="h2" gap={3}>
       <ul className="flex flex-col gap-3">
         {panels.map((panel) => (
           <AgencyRow key={panel.agencyCompanyId} panel={panel} closed={marketingAudience !== 'public'} ownerPropertyId={ownerPropertyId} onDone={onDone} />
@@ -143,6 +142,6 @@ export function PrivateMarketingOwnerSection({
       {awaiting.length > 0 && (requested || started) && disclosure !== null && (
         <PrivateMarketingOwnerConsent ownerPropertyId={ownerPropertyId} awaiting={awaiting} disclosure={disclosure} onDone={onDone} />
       )}
-    </section>
+    </SectionFrame>
   );
 }

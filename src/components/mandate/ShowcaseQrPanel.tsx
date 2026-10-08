@@ -17,6 +17,7 @@ import React from 'react';
 import { Download } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { svgDataUrl, useShowcaseQr } from '@/hooks/mandate/useShowcaseQr';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
@@ -49,13 +50,7 @@ export function ShowcaseQrPanel({ alias }: { readonly alias: string }): React.Re
   }, [alias, qr]);
 
   return (
-    <section aria-labelledby="showcase-qr-title" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-      <header className="flex flex-col gap-1">
-        <h2 id="showcase-qr-title" className="m-0 text-base font-semibold text-foreground">
-          {t(SHOWCASE_CARD_KEYS.qrTitle)}
-        </h2>
-        <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.qrLead)}</p>
-      </header>
+    <SectionFrame title={t(SHOWCASE_CARD_KEYS.qrTitle)} headingLevel="h2" headingId="showcase-qr-title" description={t(SHOWCASE_CARD_KEYS.qrLead)} gap={3}>
       <figure className="m-0 flex min-h-48 items-center">
         {qr.phase === 'ready' ? (
           <img
@@ -79,6 +74,6 @@ export function ShowcaseQrPanel({ alias }: { readonly alias: string }): React.Re
       {qr.phase === 'failed' || pngFailed ? (
         <p role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_CARD_KEYS.qrFailed)}</p>
       ) : null}
-    </section>
+    </SectionFrame>
   );
 }

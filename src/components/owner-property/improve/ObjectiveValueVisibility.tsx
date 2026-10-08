@@ -13,6 +13,7 @@
 import React, { useId } from 'react';
 
 import { ListingObjectiveValue } from '@/components/listing-detail/ListingObjectiveValue';
+import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -37,25 +38,27 @@ export function ObjectiveValueVisibility({ display, buyerView, onAnswer }: Visib
   const helpId = useId();
   const previewId = useId();
   return (
-    <section aria-labelledby={previewId} className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <p className="m-0 flex items-center justify-between gap-3">
-        <Label htmlFor={switchId}>{t(`${I}.label`)}</Label>
-        <Switch
-          id={switchId}
-          aria-describedby={helpId}
-          checked={display === 'shown'}
-          onCheckedChange={(checked) => onAnswer({ display: checked ? 'shown' : 'hidden' })}
-        />
-      </p>
-      <p id={helpId} className="m-0 text-xs text-muted-foreground">
-        {t(`${I}.help`)} {t(`${I}.frontageStays`)}
-      </p>
-      <h3 id={previewId} className="m-0 text-sm font-semibold text-foreground">{t(`${I}.previewTitle`)}</h3>
-      {buyerView.kind === 'hidden' ? (
-        <p className="m-0 text-sm text-muted-foreground">{t(`${I}.hiddenPreview`)}</p>
-      ) : (
-        <ListingObjectiveValue value={buyerView} />
-      )}
-    </section>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <section aria-labelledby={previewId}>
+        <p className="m-0 flex items-center justify-between gap-3">
+          <Label htmlFor={switchId}>{t(`${I}.label`)}</Label>
+          <Switch
+            id={switchId}
+            aria-describedby={helpId}
+            checked={display === 'shown'}
+            onCheckedChange={(checked) => onAnswer({ display: checked ? 'shown' : 'hidden' })}
+          />
+        </p>
+        <p id={helpId} className="m-0 text-xs text-muted-foreground">
+          {t(`${I}.help`)} {t(`${I}.frontageStays`)}
+        </p>
+        <h3 id={previewId} className="m-0 text-sm font-semibold text-foreground">{t(`${I}.previewTitle`)}</h3>
+        {buyerView.kind === 'hidden' ? (
+          <p className="m-0 text-sm text-muted-foreground">{t(`${I}.hiddenPreview`)}</p>
+        ) : (
+          <ListingObjectiveValue value={buyerView} />
+        )}
+      </section>
+    </Card>
   );
 }

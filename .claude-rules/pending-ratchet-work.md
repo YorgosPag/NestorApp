@@ -10,6 +10,23 @@
   `<div>`, άρα όποιος θέλει `<section aria-labelledby>` με πλαίσιο το ξαναγράφει. **Θεραπεία**: θυρίδα στοιχείου στο
   `Card` (`as`) ή ένα primitive «πλαισιωμένη ενότητα» με επικεφαλίδα — το `spatial-tour/TourPanelSection.tsx` είναι
   η τοπική του μορφή (τυλίγει `Card`, δεν επαναλαμβάνει τη συνταγή). Αλλάζει εμφάνιση σε 63 οθόνες ⇒ δικό του σχέδιο.
+  **Πρόοδος (ADR-777 §8.87.10)**: παρτίδα 0 ✅ 08/10 — `Card asChild` + `ui/section-frame.tsx` (`SectionFrame`) +
+  `TourPanelSection` ως καταναλωτής· παρτίδα 1 ✅ 08/10 — `listing-detail` (8 αρχεία)· παρτίδα 2 ✅ 08/10 — `demand`
+  (9 αρχεία)· παρτίδα 3 ✅ 08/10 — `owner-property` (9) + `properties` (2)· παρτίδα 4 ✅ 08/10 — `mandate` (11). **Υπόλοιπο: 24 αρχεία / 25 εμφανίσεις**
+  (grep 08/10 μετά την παρτίδα 4). Επόμενη: παρτίδα 5 (`stay-calendar` · `contact` · `area-market` · `shared/forms` ·
+  `property-dossier` · `admin`)· εκεί αποφασίζεται και το κλειστό `gap` του `FormFieldset` (για το `ShowcaseLocationEditor`). ⚠️ Οι κενές καταστάσεις (8) φορούν προσωρινά σκέτο `Card`: η σύγκλιση στο `shared/EmptyState`
+  αλλάζει διάταξη (κεντραρισμένο ↔ αριστερά) και θέλει απόφαση Giorgio. Ταξινόμησε ανά εμφάνιση (πίνακας στη §8.87.10): ενότητα με τίτλο ⇒ `SectionFrame`· γραμμή
+  λίστας / κάρτα / σκελετός ⇒ `<Card asChild>`. Εκτός grep: 32 συγγενείς εμφανίσεις με `p-3`/`p-5`/`p-6`.
+
+- 🟡 **08/10 — ΧΕΙΡΟΓΡΑΦΟ «ΚΟΥΜΠΙ ΠΕΡΙΓΡΑΜΜΑΤΟΣ» ΣΕ 27 ΑΡΧΕΙΑ** *(ADR-777 §8.87.10, εύρημα κατά την παρτίδα 2)*
+
+  **Τι**: `rounded-md border border-border bg-card px-(3|4) py-(1.5|2) font-medium text-foreground` πάνω σε `<Link>` ή
+  `<button>` — δηλαδή το `Button variant="outline"` γραμμένο με το χέρι. **Πού**:
+  `grep -rlE "rounded-md border border-border bg-card px-[34] py-(1\.5|2)" src` ⇒ **27** αρχεία / **29** εμφανίσεις
+  (μετρημένο 2026-10-08· π.χ. `demand/DemandAnswerPanel`, `demand/DemandTitleEditor`, `listing-detail/ListingDetailContent`).
+  **Γιατί μετρά**: τουλάχιστον μία εμφάνιση (`interest-check/InterestCheckResult`) δεν έχει ούτε `focus-visible`
+  δακτύλιο ούτε `hover` — **δεν ελέγχθηκαν και οι 29**· αν ισχύει γενικά, είναι και κενό προσβασιμότητας, όχι μόνο διπλότυπο. **Θεραπεία**: `<Button variant="outline" asChild><Link …/></Button>` (το `Button` έχει ήδη `asChild`).
+  Αλλάζει όψη (ύψος, δακτύλιος) σε 27 οθόνες ⇒ δικό του σχέδιο, μετά το πλαίσιο ενότητας.
 
 - 🟡 **07/10 — ΤΡΕΙΣ ΣΥΜΒΑΣΕΙΣ «ΑΠΟΣΥΡΜΕΝΗ ΕΓΓΡΑΦΗ ⇒ ΜΟΝΟ ΑΝΑΓΝΩΣΗ», ΕΝΑΣ ΠΑΡΟΧΟΣ** *(ADR-329 §3.9 υπο-στάδιο 3γ · ADR-281)*
 

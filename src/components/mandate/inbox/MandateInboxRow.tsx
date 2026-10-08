@@ -29,6 +29,7 @@
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
 import type { InboxFeedback } from '@/hooks/mandate/useMandateInbox';
@@ -108,82 +109,84 @@ export function MandateInboxRow({
   const isDecided = row.status !== 'pending';
 
   return (
-    <li className="rounded-md border border-border bg-card p-4">
-      <article>
-        <header className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="m-0 text-base font-medium text-foreground">{row.listing.title}</h3>
-          {/* 🔑 **Το «νέο» λέγεται με ΛΕΞΗ**, ποτέ με κουκκίδα χρώματος (CHECK 3.41). */}
-          {row.seenAt === null && (
-            <span className="text-xs font-medium text-muted-foreground">
-              {t(INBOX_KEYS.unseen, { count: 1 })}
-            </span>
+    <Card asChild className="p-4">
+      <li>
+        <article>
+          <header className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="m-0 text-base font-medium text-foreground">{row.listing.title}</h3>
+            {/* 🔑 **Το «νέο» λέγεται με ΛΕΞΗ**, ποτέ με κουκκίδα χρώματος (CHECK 3.41). */}
+            {row.seenAt === null && (
+              <span className="text-xs font-medium text-muted-foreground">
+                {t(INBOX_KEYS.unseen, { count: 1 })}
+              </span>
+            )}
+          </header>
+
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">{t(INBOX_KEYS.agreement)}</dt>
+            <dd className="m-0 text-foreground">
+              {t(LISTING_AGREEMENT_I18N_KEYS[row.terms.agreement])}
+            </dd>
+            <dt className="text-muted-foreground">{t(INBOX_KEYS.compensation)}</dt>
+            <dd className="m-0 text-foreground">{compensationText(row)}</dd>
+            <dt className="text-muted-foreground">{t(INBOX_KEYS.expiresAt)}</dt>
+            <dd className="m-0 text-foreground">{day(row.terms.expiresAt)}</dd>
+            <dt className="text-muted-foreground">{t(INBOX_KEYS.requestedAt)}</dt>
+            <dd className="m-0 text-foreground">{day(row.requestedAt)}</dd>
+          </dl>
+
+          {/* 🏆 Η αλυσίδα του Autodesk: η αναθεώρηση διαβάζεται **ως αναθεώρηση**, όχι ως
+              δεύτερο ταυτόσημο ερώτημα. Δες `MandateRequestForAgency.supersedesRequestId`. */}
+          {row.supersedesRequestId !== null && (
+            <p className="mt-2 text-sm text-muted-foreground">{t(INBOX_KEYS.revision)}</p>
           )}
-        </header>
 
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <dt className="text-muted-foreground">{t(INBOX_KEYS.agreement)}</dt>
-          <dd className="m-0 text-foreground">
-            {t(LISTING_AGREEMENT_I18N_KEYS[row.terms.agreement])}
-          </dd>
-          <dt className="text-muted-foreground">{t(INBOX_KEYS.compensation)}</dt>
-          <dd className="m-0 text-foreground">{compensationText(row)}</dd>
-          <dt className="text-muted-foreground">{t(INBOX_KEYS.expiresAt)}</dt>
-          <dd className="m-0 text-foreground">{day(row.terms.expiresAt)}</dd>
-          <dt className="text-muted-foreground">{t(INBOX_KEYS.requestedAt)}</dt>
-          <dd className="m-0 text-foreground">{day(row.requestedAt)}</dd>
-        </dl>
+          {isDecided && (
+            <p className="mt-2 text-sm font-medium text-foreground">
+              {t(DECIDED_LABEL_KEYS[row.status as MandateRequestDecision])} · {day(row.decidedAt)}
+            </p>
+          )}
 
-        {/* 🏆 Η αλυσίδα του Autodesk: η αναθεώρηση διαβάζεται **ως αναθεώρηση**, όχι ως
-            δεύτερο ταυτόσημο ερώτημα. Δες `MandateRequestForAgency.supersedesRequestId`. */}
-        {row.supersedesRequestId !== null && (
-          <p className="mt-2 text-sm text-muted-foreground">{t(INBOX_KEYS.revision)}</p>
-        )}
+          <footer className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => (opened ? onClose() : onOpen(row.id))}
+            >
+              {t(opened ? INBOX_KEYS.close : INBOX_KEYS.open)}
+            </Button>
+          </footer>
 
-        {isDecided && (
-          <p className="mt-2 text-sm font-medium text-foreground">
-            {t(DECIDED_LABEL_KEYS[row.status as MandateRequestDecision])} · {day(row.decidedAt)}
-          </p>
-        )}
+          {/* 🔴 Τα κουμπιά απόφασης εμφανίζονται **μόνο μετά το άνοιγμα**, και είναι
+              απόφαση σχεδιασμού: το `seenAt` σφραγίζεται στο άνοιγμα, άρα «απάντησα
+              χωρίς να το δω» γίνεται **αδύνατο να συμβεί κατά λάθος**. */}
+          {decidable && opened && (
+            <section className="mt-3 border-t border-border pt-3">
+              <p className="m-0 mb-2 text-sm text-muted-foreground">{t(INBOX_KEYS.anonymity)}</p>
+              <ul className="m-0 grid gap-2 p-0">
+                {MANDATE_REQUEST_DECISIONS.map((decision) => (
+                  <li key={decision} className="flex flex-wrap items-baseline gap-2">
+                    <Button
+                      size="sm"
+                      variant={decision === 'accepted' ? 'default' : 'outline'}
+                      disabled={busy}
+                      onClick={() => onDecide(row.id, decision)}
+                    >
+                      {t(DECISION_LABEL_KEYS[decision])}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {t(DECISION_HINT_KEYS[decision])}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-        <footer className="mt-3 flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => (opened ? onClose() : onOpen(row.id))}
-          >
-            {t(opened ? INBOX_KEYS.close : INBOX_KEYS.open)}
-          </Button>
-        </footer>
-
-        {/* 🔴 Τα κουμπιά απόφασης εμφανίζονται **μόνο μετά το άνοιγμα**, και είναι
-            απόφαση σχεδιασμού: το `seenAt` σφραγίζεται στο άνοιγμα, άρα «απάντησα
-            χωρίς να το δω» γίνεται **αδύνατο να συμβεί κατά λάθος**. */}
-        {decidable && opened && (
-          <section className="mt-3 border-t border-border pt-3">
-            <p className="m-0 mb-2 text-sm text-muted-foreground">{t(INBOX_KEYS.anonymity)}</p>
-            <ul className="m-0 grid gap-2 p-0">
-              {MANDATE_REQUEST_DECISIONS.map((decision) => (
-                <li key={decision} className="flex flex-wrap items-baseline gap-2">
-                  <Button
-                    size="sm"
-                    variant={decision === 'accepted' ? 'default' : 'outline'}
-                    disabled={busy}
-                    onClick={() => onDecide(row.id, decision)}
-                  >
-                    {t(DECISION_LABEL_KEYS[decision])}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    {t(DECISION_HINT_KEYS[decision])}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {feedback !== null && feedback.requestId === row.id && <Feedback feedback={feedback} />}
-      </article>
-    </li>
+          {feedback !== null && feedback.requestId === row.id && <Feedback feedback={feedback} />}
+        </article>
+      </li>
+    </Card>
   );
 }

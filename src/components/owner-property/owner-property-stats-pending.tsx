@@ -19,6 +19,7 @@
 
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
 import { ChartBandPending } from '@/components/ui/chart-card/ChartBandPending';
 import { cn } from '@/lib/utils';
 
@@ -101,11 +102,16 @@ export function StatsPanelSkeleton(): React.ReactElement {
   );
 }
 
+/** Η διάταξη του πλαισίου του πίνακα — **ΜΙΑ** τιμή για σκελετό και τελικό: ίδιο κουτί, καμία μετατόπιση (ADR-777 §8.72.8). */
+export const STATS_PANEL_BOX = 'flex flex-col gap-4 p-4';
+
 /** Ο πίνακας της λεπτομέρειας πριν γεμίσει το namespace — ίδιο πλαίσιο και ίδια δομή με τον τελικό. */
 export function StatsPanelPending(): React.ReactElement {
   return (
-    <section aria-hidden className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
-      <StatsPanelSkeleton />
-    </section>
+    <Card asChild className={STATS_PANEL_BOX}>
+      <section aria-hidden>
+        <StatsPanelSkeleton />
+      </section>
+    </Card>
   );
 }

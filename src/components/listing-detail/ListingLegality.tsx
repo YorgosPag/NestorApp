@@ -30,6 +30,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { legalityKindSpec, type LegalityClaimKind } from '@/lib/legality/legality-claim';
 import type { LegalitySignal, LegalitySignalState } from '@/lib/legality/legality-signal';
@@ -130,13 +131,7 @@ export function ListingLegality({ listing }: { readonly listing: PublicListing }
   const { t } = useTranslation(['legality']);
 
   return (
-    <section
-      aria-labelledby="listing-legality-heading"
-      className="rounded-lg border border-border bg-card p-4"
-    >
-      <h2 id="listing-legality-heading" className="text-sm font-medium text-foreground">
-        {t('legality:heading')}
-      </h2>
+    <SectionFrame headingId="listing-legality-heading" title={t('legality:heading')} headingLevel="h2" titleSize="sm">
       <p className="mt-1 text-xs text-muted-foreground">{t('legality:intro')}</p>
 
       <dl className="mt-3">
@@ -146,6 +141,6 @@ export function ListingLegality({ listing }: { readonly listing: PublicListing }
       </dl>
 
       <p className="mt-1 text-xs text-muted-foreground">{t('legality:disclaimer')}</p>
-    </section>
+    </SectionFrame>
   );
 }

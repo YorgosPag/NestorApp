@@ -16,6 +16,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Link } from '@/lib/workspace/navigation';
@@ -42,8 +43,7 @@ export function InterestCheckResult({ query }: { query: ProspectQuery }): React.
 function ClaimCard({ query }: { query: ProspectQuery }): React.ReactElement {
   const { t } = useTranslation([NS]);
   return (
-    <aside className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
-      <h2 className="text-base font-semibold text-foreground">{t(`${K}.claim.title`)}</h2>
+    <SectionFrame as="aside" title={t(`${K}.claim.title`)} headingLevel="h2" gap={2}>
       <p className="text-sm text-muted-foreground">{t(`${K}.claim.body`)}</p>
       <Link
         href={newOfferFromProspectHref(query)}
@@ -51,6 +51,6 @@ function ClaimCard({ query }: { query: ProspectQuery }): React.ReactElement {
       >
         {t(`${K}.claim.cta`)}
       </Link>
-    </aside>
+    </SectionFrame>
   );
 }

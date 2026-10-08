@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
+
 /**
  * Ο σκελετός της ενότητας «Τιμές συμβολαίων» — `loading` του `next/dynamic` (ADR-889 Φ2).
  *
@@ -9,9 +11,11 @@ import React from 'react';
  */
 export function ListingMarketContextPending(): React.ReactElement {
   return (
-    <span aria-hidden className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <span className="block h-6 w-48 animate-pulse rounded bg-muted" />
-      <span className="block h-24 animate-pulse rounded bg-muted" />
-    </span>
+    <Card asChild className="flex flex-col gap-2 p-4">
+      <span aria-hidden>
+        <span className="block h-6 w-48 animate-pulse rounded bg-muted" />
+        <span className="block h-24 animate-pulse rounded bg-muted" />
+      </span>
+    </Card>
   );
 }

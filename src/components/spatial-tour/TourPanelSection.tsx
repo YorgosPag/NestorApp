@@ -2,19 +2,19 @@
 
 /**
  * @fileoverview **ΤΟ ΠΛΑΙΣΙΟ ΜΙΑΣ ΥΠΟΕΝΟΤΗΤΑΣ ΤΟΥ ΠΑΝΕΛ «ΠΕΡΙΗΓΗΣΗ 360°»** — ένα πλαίσιο, μία επικεφαλίδα, μία ευθύνη.
- * @related ADR-777 §8.87.4 · ADR-884 §4.5 · `SpatialTourPanel.tsx`
+ * @related ADR-777 §8.87.4 · §8.87.10 · ADR-884 §4.5 · `SpatialTourPanel.tsx` · `ui/section-frame.tsx`
  * @module components/spatial-tour/TourPanelSection
  *
  * 🔑 **Το πλαίσιο το φορά η ΥΠΟΕΝΟΤΗΤΑ, όχι το πάνελ.** Οι υποενότητες φορτώνουν ανεξάρτητα και κάποιες επιστρέφουν
  * `null` όσο δεν ξέρουν τι να δείξουν (ρυθμίσεις)· αν τις τύλιγε το πάνελ, θα ζωγράφιζε **άδειο πλαίσιο** γύρω από το
  * τίποτα. Έτσι ό,τι δεν αποδίδεται δεν αφήνει ίχνος.
- * 🔑 Το πλαίσιο **είναι** το `Card` του συστήματος — καμία δεύτερη συνταγή ορίου/φόντου. Το `<section aria-labelledby>`
- * μένει απ' έξω: η υποενότητα είναι **ορόσημο με όνομα** για τον αναγνώστη οθόνης, όπως ήταν.
+ * 🔑 Το πλαίσιο **είναι** το `SectionFrame` του συστήματος (που γεννήθηκε από εδώ, §8.87.10)· αυτό το αρχείο κρατά μόνο
+ * τις **σταθερές του πάνελ**: επίπεδο επικεφαλίδας `h3`, μέγεθος τίτλου, κενό — ώστε οι υποενότητες να μην τις επαναλαμβάνουν.
  */
 
 import type { ReactNode } from 'react';
 
-import { Card } from '@/components/ui/card';
+import { SectionFrame } from '@/components/ui/section-frame';
 
 interface TourPanelSectionProps {
   /** Σταθερό `id` της επικεφαλίδας — το όνομα του ορόσημου. */
@@ -27,14 +27,8 @@ interface TourPanelSectionProps {
 
 export function TourPanelSection({ headingId, title, actions, children }: TourPanelSectionProps) {
   return (
-    <section aria-labelledby={headingId}>
-      <Card className="space-y-3 p-4">
-        <header className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id={headingId} className="text-base font-semibold">{title}</h3>
-          {actions}
-        </header>
-        {children}
-      </Card>
-    </section>
+    <SectionFrame headingId={headingId} title={title} headingLevel="h3" gap={3} actions={actions ?? undefined}>
+      {children}
+    </SectionFrame>
   );
 }

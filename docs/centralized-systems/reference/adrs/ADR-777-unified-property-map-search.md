@@ -16449,4 +16449,157 @@ Zillow («Homes for you»), Airbnb, Realtor.com: η ενότητα καρτών 
 3. Η συνταγή `rounded-(md|lg) border border-border bg-card p-4` είναι γραμμένη με το χέρι σε **63 αρχεία / 67
    εμφανίσεις** (grep 2026-10-08· η προηγούμενη εκδοχή αυτής της γραμμής έγραφε «12+», **μετρημένα λάθος κατά 5×**).
    Το `TourPanelSection` δεν την επανέλαβε, αλλά ούτε την ένωσε. Εγγραφή 08/10 στο
-   `.claude-rules/pending-ratchet-work.md`· διατομεακό ⇒ N.8, τρόπος εκτέλεσης με απόφαση Giorgio.
+   `.claude-rules/pending-ratchet-work.md`. 🟡 **Σε εξέλιξη — §8.87.10**: το θεμέλιο γράφτηκε (παρτίδα 0), οι 63
+   οθόνες μεταφέρονται ανά περιοχή.
+
+#### 8.87.9 ⏳ ΔΕΣΜΕΥΜΕΝΗ — ζωντανή μέτρηση των §8.87.7 – §8.87.8
+
+*(Ο αριθμός είναι **δεσμευμένος** για τη ζωντανή μέτρηση των §8.87.7 – §8.87.8: δεν έχουν αναπτυχθεί ακόμη —
+`origin/main` = `408387a3`, τα αρχεία τους uncommitted στις 2026-10-08.)*
+
+#### 8.87.10 ΜΙΑ ΕΠΙΦΑΝΕΙΑ, ΚΑΙ Η ΕΝΟΤΗΤΑ ΜΕ ΤΙΤΛΟ ΕΙΝΑΙ ΠΑΝΤΑ ΟΡΟΣΗΜΟ ΜΕ ΟΝΟΜΑ *(2026-10-08, «Ανοιχτό» #3 · εντολή Giorgio: «όπως οι μεγάλοι»)*
+
+**Ρίζα** (όχι σύμπτωμα): το `Card` απέδιδε **μόνο `<div>`**. Όποιος ήθελε `<section>` / `<article>` / `<li>` /
+`<fieldset>` με πλαίσιο ξανάγραφε την επιφάνεια με το χέρι ⇒ 63 αρχεία, **δύο** ακτίνες (`rounded-md` · `rounded-lg`)
+και **δύο** επιφάνειες (με / χωρίς `shadow-sm`) για το ίδιο πράγμα.
+
+**Πρακτική**: Polaris `Card`, SLDS `Card`, Material 3 `Card`, Primer `Box` έχουν **ένα** στοιχείο επιφάνειας με **ένα**
+token ακτίνας/ανύψωσης — καμία οθόνη δεν δηλώνει δική της ακτίνα. **Απόφαση όψης**: η επιφάνεια **είναι** το `Card`
+(`rounded-lg` + `shadow-sm`). Είναι **ορατή, σκόπιμη αλλαγή** στις οθόνες που είχαν `rounded-md` χωρίς σκιά·
+ελέγχεται οπτικά ανά παρτίδα. Αν θελήσουμε επίπεδη επιφάνεια, αλλάζει σε **ένα** σημείο.
+
+**Θεμέλιο (παρτίδα 0)**:
+- `components/ui/card.tsx` — το `Card` αποκτά **`asChild`** (`@radix-ui/react-slot`, ήδη στο `button` / `form` /
+  `sidebar`· καμία νέα εξάρτηση). `<Card asChild><article …/></Card>` ⇒ **ένας** κόμβος DOM, η σημασιολογία μένει
+  στον καλούντα. Χωρίς `asChild` η συμπεριφορά είναι αμετάβλητη.
+- `components/ui/section-frame.tsx` — **`SectionFrame`**, ανεβασμένο από το `TourPanelSection`: `title` ·
+  `headingLevel` (**υποχρεωτικό** — το περίγραμμα εγγράφου δεν μαντεύεται) · `headingId?` · `titleSize`
+  (`eyebrow | sm | base | lg`) · `description?` · `actions?` · `as` (`section | aside`) · `gap?` (`2 | 3 | 4`).
+  `titleSize` και `gap` είναι **κλειστά σύνολα** και **δεν υπάρχει `className`** (πρότυπο `AuthCardSection`).
+- 🔑 **Πού ξεπερνά τη συνήθη πρακτική**: το `aria-labelledby` δένεται **μέσα** στο στοιχείο με την ορατή επικεφαλίδα.
+  Από τις ~27 ενότητες με τίτλο, ~10 ήταν σκέτο `<section>` + `<h2>` (δεν είναι ορόσημο) ή είχαν `aria-label` που
+  **διπλασίαζε** τον ορατό τίτλο. Η προσβασιμότητα γίνεται ιδιότητα του στοιχείου, όχι πειθαρχία του καλούντος.
+- `spatial-tour/TourPanelSection.tsx` — λεπτός καταναλωτής (`h3` · `gap 3`)· κρατά μόνο τις σταθερές του πάνελ. Οι 4
+  υποενότητες δεν άλλαξαν. ⚠️ Δύο διαφορές στο DOM, **αμέτρητες ζωντανά**: ένας κόμβος αντί δύο (`<section>` =
+  επιφάνεια), και `flex flex-col gap-3` αντί `space-y-3` (παιδί `inline-block` θα τεντωνόταν σε όλο το πλάτος — δεν
+  βρέθηκε τέτοιο άμεσο παιδί με ανάγνωση). Ξαναμετριέται μαζί με τη §8.87.9.
+- Άγκυρα: `components/ui/__tests__/section-frame.test.tsx` — Κ1 · Κ2 (`asChild`) · Π1–Π6 (ορόσημο με όνομα, επίπεδο,
+  `aside`, κεφαλίδα, επιφάνεια του `Card`, `aria-live`/`aria-busy`). 8/8 πράσινα· `jscpd:diff` καθαρό· `tsc` όχι (N.17).
+
+**Ταξινόμηση των 67 εμφανίσεων** — δεν είναι όλες «ενότητα με τίτλο», και ό,τι δεν είναι **δεν** παίρνει `SectionFrame`:
+
+| Κλάση | ~Πλήθος | Τι παίρνει |
+|---|---|---|
+| Α. Ενότητα με τίτλο (`section`/`aside` + επικεφαλίδα) | 27 | `SectionFrame` |
+| Β. Πλαίσιο χωρίς τίτλο (σκελετοί, `STAGE_BOX`, `PropertyListingTab`, `StayCalendarPanel` …) | 8 | `Card asChild` |
+| Γ. Κενή κατάσταση (δύο `<p>`) | 8 | `shared/EmptyState` αν χωρά τη διάταξη, αλλιώς `Card asChild` — απόφαση στην παρτίδα |
+| Δ. Γραμμή λίστας / κάρτα οντότητας (`article` · `li`) | 16 | `Card asChild` |
+| Ε. `fieldset` · `details` · σύνδεσμος | 5 | υπάρχον `FormFieldset` / `Card asChild` |
+| ΣΤ. Test harness | 3 | `Card asChild` (τελευταία) |
+
+**Πρόοδος** (υπόλοιπο = `grep -rlE "rounded-(md|lg) border border-border bg-card p-4" src | wc -l`):
+
+| Παρτίδα | Περιοχή | Κατάσταση | Υπόλοιπο αρχείων |
+|---|---|---|---|
+| 0 | θεμέλιο (`Card asChild` · `SectionFrame` · `TourPanelSection`) | ✅ κώδικας + jest | 63 |
+| 1 | `listing-detail` (8 αρχεία · 8 εμφανίσεις) | ✅ κώδικας + jest, **αμέτρητο ζωντανά** | **55** (59 εμφανίσεις) |
+| 2 | `demand` (9 αρχεία · 12 εμφανίσεις) | ✅ κώδικας + jest, **αμέτρητο ζωντανά** | **46** (47 εμφανίσεις) |
+| 3 | `owner-property` (9 αρχεία) + `properties` (2) · 11 εμφανίσεις | ✅ κώδικας + jest, **αμέτρητο ζωντανά** | **35** (36 εμφανίσεις) |
+| 4 | `mandate` (11 αρχεία · 11 εμφανίσεις) | ✅ κώδικας + jest, **αμέτρητο ζωντανά** | **24** (25 εμφανίσεις) |
+| 5 – 6 | μικρές περιοχές · μεμονωμένα + harness | ⏳ | — |
+
+**Παρτίδα 1 — `listing-detail`** *(2026-10-08)*: έξι ενότητες με τίτλο ⇒ `SectionFrame` (`ListingStay` ·
+`ListingPriceBlock` · `ListingMarketContext` · `ListingLegality` · `ListingAttributeList` · `ListingOffers` μέσα στο
+`ListingDetailContent`), όλες `h2` με το **ίδιο** σταθερό `id` επικεφαλίδας που είχαν. Δύο πλαίσια χωρίς τίτλο ⇒
+`Card asChild`: ο σκελετός `ListingMarketContextPending` και το `STAGE_BOX` του `ListingModelStage` (κρατά **μόνο**
+διάταξη· τρεις καταστάσεις, ίδιο κουτί). Τι αλλάζει στην οθόνη — **σκόπιμα**, θέλει μάτι:
+- όλα αποκτούν `shadow-sm` + `overflow-hidden` (η ακτίνα ήταν ήδη `rounded-lg` σε όλη την περιοχή)·
+- ο τίτλος της «Νομιμότητας» ήταν **πέμπτη** μορφή (`text-sm font-medium text-foreground`) ⇒ έγινε `sm`
+  (`font-semibold`)· τα υπόλοιπα έμειναν ακριβώς όπως ήταν (`eyebrow` × 4 · `base` × 1).
+- ⚠️ CLS: σκελετός και ενότητα «Τιμές συμβολαίων» φορούν την **ίδια** επιφάνεια (`p-4` · `gap-2`), άρα το κουτί τους
+  μένει ίδιο — επαληθευμένο με ανάγνωση, **όχι** με μέτρηση.
+Σουίτες: 13 (218 tests) πράσινες· `jscpd:diff` καθαρό στα 8 αρχεία.
+Συγγενείς **εκτός grep** στην ίδια περιοχή (επιφάνεια χωρίς `p-4`): `ListingPositionSection` · `ListingModelCanvas`
+· ο σύνδεσμος στο `ListingDetailContent:125` — προστίθενται στο (γ) παρακάτω.
+
+**Παρτίδα 2 — `demand`** *(2026-10-08)*: οκτώ ενότητες με τίτλο ⇒ `SectionFrame` — `PlaceInterestPanel` ·
+`DemandConcessionList` · `DemandCompetitionPanel` · `DemandBlockerList` · `DemandMatchedListings` (`h3` · `sm`), τα
+«Κριτήρια» και η «Ελλιπής ζήτηση» του `DemandDetailContent` (`h2` · `sm`), και το `ClaimCard` του
+`InterestCheckResult` (`as="aside"` · `h2` · `base`). Δύο κάρτες οντότητας (`DemandCard` πλήρης / ελλιπής) ⇒
+`<Card asChild><article>`. Δύο κενές καταστάσεις (`MyDemandsContent` · «δεν βρέθηκε») ⇒ σκέτο `<Card className="p-4">`.
+- 🔑 **Κέρδος προσβασιμότητας, όχι μόνο όψης**: τέσσερις ενότητες είχαν `aria-label` **ίδιο** με τον ορατό τίτλο τους
+  (ο αναγνώστης οθόνης τον άκουγε δύο φορές)· τρεις ήταν σκέτο `<section>`/`<aside>` + επικεφαλίδα, δηλαδή **όχι**
+  ορόσημο. Τώρα και οι οκτώ είναι ορόσημο με όνομα την ορατή επικεφαλίδα.
+- Αλλαγή όψης, **σκόπιμη**: όλη η περιοχή ήταν `rounded-md` χωρίς σκιά ⇒ γίνεται `rounded-lg` + `shadow-sm`.
+- ⚠️ **Κενές καταστάσεις — απόφαση που ΔΕΝ πάρθηκε εδώ**: το `shared/EmptyState` είναι **κεντραρισμένο** με εικονίδιο
+  και `py-8`· οι 8 του grep είναι **αριστερά**, δύο γραμμές, και κάποιες φέρουν σύνδεσμο ή κουμπί. Η μετάβαση αλλάζει
+  διάταξη, όχι μόνο επιφάνεια ⇒ θέλει ρητή απόφαση (π.χ. στοίχιση `start` στο υπάρχον στοιχείο — **όχι** ένατο
+  `EmptyState`). Ως τότε φορούν το `Card` και το διπλό «τίτλος + υπόδειξη» μένει καταγεγραμμένο.
+Σουίτες: 4 (21 tests) πράσινες· `jscpd:diff` καθαρό στα 9 αρχεία.
+🔴 **Νέο εύρημα, εκτός εύρους**: χειρόγραφο «κουμπί περιγράμματος» `rounded-md border border-border bg-card px-(3|4)
+py-(1.5|2) font-medium` σε **27 αρχεία / 29 εμφανίσεις** (grep 2026-10-08), ενώ υπάρχει `Button variant="outline"`.
+Εγγραφή 08/10 στο `.claude-rules/pending-ratchet-work.md`.
+
+**Παρτίδα 3 — `owner-property` + `properties`** *(2026-10-08)*: η ταξινόμηση έγινε **ανά εμφάνιση**, και από τις 11
+μόνο **τέσσερις** ήταν «ενότητα με τίτλο»:
+- `SectionFrame` × 4 — `OwnershipVerificationPanel` (`h3` · `sm` · `gap 2`) · `PrivateMarketingOwnerSection` (`h2` ·
+  `base` · `gap 3`) · `PropertyObjectiveValuePanel` (`h2` · `lg` · `gap 4`) · `RestoredDraftNotice` (`h2` · `sm` ·
+  `gap 2`, κρατά το `aria-live="polite"`). Οι τρεις πρώτες είχαν **ήδη** σωστό `aria-labelledby` με δικό τους `useId`
+  — έφυγε, το δένει το στοιχείο. Η τέταρτη ήταν σκέτο `<section aria-live>` + `<h2>`: τώρα είναι ορόσημο με όνομα.
+- `Card asChild` × 6, επειδή **δεν** είναι ενότητα με τίτλο στην κορυφή:
+  - `OwnerListingCompletion` — έχει ορατό `<h2>` («Πληρότητα καταχώρησης») αλλά **άλλο** προσβάσιμο όνομα
+    (`aria-label` «Δείκτης πληρότητας ακινήτου», δεμένο στο test) και το ποσοστό στην ίδια γραμμή με `items-baseline`.
+    Το `SectionFrame` θα άλλαζε το όνομα του οροσήμου και θα έβαζε μια **τιμή** στη θυρίδα `actions` ⇒ μένει όπως είναι.
+  - `ObjectiveValueVisibility` — το `aria-labelledby` δείχνει σε `<h3>` που είναι **τρίτο** παιδί (τίτλος προεπισκόπησης,
+    κάτω από τον διακόπτη)· το `SectionFrame` βάζει την επικεφαλίδα πρώτη, άρα θα άλλαζε τη σειρά ανάγνωσης.
+  - `OwnerMandatePanel` (`article`) · `PropertyListingTab` (πλαίσιο χωρίς τίτλο).
+  - `OwnerPropertyStatsPanel` + `StatsPanelPending` — 🔑 **ίδιο κουτί από ΜΙΑ τιμή**: η διάταξη ήταν γραμμένη δύο
+    φορές (πίνακας · σκελετός) και η ισότητά τους ήταν σύμπτωση. Τώρα `STATS_PANEL_BOX` (στο
+    `owner-property-stats-pending.tsx`, το αρχείο-φύλλο χωρίς `t()`) και οι δύο φορούν `<Card asChild
+    className={STATS_PANEL_BOX}>` ⇒ το CLS 0,056 της §8.72.8 δεν μπορεί να ξανανοίξει από αλλαγή στη μία πλευρά.
+    Το `aria-label` του πίνακα μένει (καμία ορατή επικεφαλίδα).
+- Κενή κατάσταση × 1 (`MyOwnerPropertiesContent`) ⇒ σκέτο `<Card className="p-4">`, όπως οι δύο της παρτίδας 2.
+- Αλλαγή όψης, **σκόπιμη**: όλη η περιοχή ήταν `rounded-md` χωρίς σκιά ⇒ `rounded-lg` + `shadow-sm` + `overflow-hidden`.
+  Ο τίτλος του `PrivateMarketingOwnerSection` ήταν `text-card-foreground` ⇒ `text-foreground` (ίδιο χρώμα πάνω σε
+  κάρτα· **αμέτρητο**).
+- ⚠️ **Τι ΔΕΝ αποδεικνύεται**: (i) ότι το `overflow-hidden` δεν κόβει τον δακτύλιο εστίασης του `Switch` στο
+  `ObjectiveValueVisibility` ή των κουμπιών στην άκρη του `OwnershipVerificationPanel` (`p-4` = 16px περιθώριο, άρα
+  αναμένεται όχι — **δεν ειδώθηκε**)· (ii) ~~αν το `owner-property-stats-pending` μένει έξω από το route slice τώρα που εισάγει το `Card`~~ — **μετρήθηκε**
+  μετά την παρτίδα 4: CHECK 3.34 Layer 1 πράσινο (20 namespaces / 237 κλειδιά, **αμετάβλητα**), άρα κανένα κλειδί δεν
+  μπήκε στο κέλυφος. 🔴 Το **Layer 2** (`--full`) είναι κόκκινο: το `shell-slice.manifest.json` κρατά sha256 κάθε
+  αρχείου της κλειστότητας και οι παρτίδες 0–4 άλλαξαν δεκάδες ⇒ **`npm run generate:i18n-shell-slice` μία φορά, αμέσως
+  πριν το commit** (δεν έτρεξε εδώ: κοινό δέντρο, θα σφράγιζε και το WIP του άλλου πράκτορα)· (iii) CLS
+  πίνακα/σκελετού: ίδια τιμή με ανάγνωση, **όχι** με μέτρηση.
+- Εκτός εύρους, αμετάβλητα: τα δύο χειρόγραφα κουμπιά του `RestoredDraftNotice` (ανήκουν στις 27 του «κουμπιού»).
+Σουίτες: 8 (141 tests) πράσινες — έξι της περιοχής, `property-card-route`, `section-frame`· `jscpd:diff` καθαρό στα 11.
+
+**Παρτίδα 4 — `mandate`** *(2026-10-08)*: 11 εμφανίσεις, **δύο** μόνο «ενότητα με τίτλο»:
+- `SectionFrame` × 2 — `PrivateMarketingAgencySection` (`h2` · `base` · `gap 3`, δίδυμο της πλευράς ιδιοκτήτη της
+  παρτίδας 3 ⇒ οι δύο όψεις της ίδιας συναίνεσης φορούν πλέον **το ίδιο** στοιχείο) · `ShowcaseQrPanel` (`h2` ·
+  `base` · `gap 3`, κρατά το σταθερό `headingId="showcase-qr-title"`· η εισαγωγική γραμμή πέρασε στη θυρίδα
+  `description` — **πρώτος** καταναλωτής της, η χειρόγραφη `<header>` έφυγε).
+- `Card asChild` × 6 — `MandateCatalogRow` · `ShowcaseContactCard` (`article`) · `MandateInboxRow` (`li`) ·
+  `ShowcasePublicDoor` (`section` χωρίς τίτλο: μόνο σύνδεσμος + κουμπί) · `ShowcaseLocationEditor` (`fieldset`) ·
+  `ShowcaseDoorLink` (το **`Link` του συνόρου** φορά την επιφάνεια).
+  - 🔑 `ShowcaseDoorLink`: το `Link` του `@/lib/workspace/navigation` **προωθεί `ref` και `className`** (άγκυρα Ι2), άρα
+    το `asChild` δουλεύει χωρίς τύλιγμα· οι κλάσεις αλληλεπίδρασης (`hover:bg-accent` · `focus-visible:ring-2`)
+    έμειναν **αυτούσιες** πάνω στο ίδιο στοιχείο. Ο δακτύλιος είναι `box-shadow` του **ίδιου** κόμβου — το
+    `overflow-hidden` κόβει απογόνους, όχι τη σκιά του στοιχείου που το φορά· και στο Tailwind ο δακτύλιος
+    **συντίθεται** με το `shadow-sm` (`--tw-ring-shadow` + `--tw-shadow`). Αιτιολογημένο, **όχι ειδωμένο**.
+  - ⚠️ `ShowcaseLocationEditor` **δεν** έγινε καταναλωτής του `FormFieldset`: εκείνο έχει `gap-2` και θυρίδα `help`,
+    ο επεξεργαστής `gap-4` + `m-0`. Η σύγκλιση θέλει κλειστό σύνολο `gap` **στο ίδιο το `FormFieldset`**, που αλλάζει
+    στην παρτίδα 5 — εκεί αποφασίζεται, μία φορά, μαζί με τις 9 χρήσεις του (6 αρχεία, grep 08/10). Ως τότε: ίδια επιφάνεια, δύο
+    `fieldset` (καταγεγραμμένο, όχι σιωπηλό). Κέρδος που ήρθε δωρεάν: το `Card` δίνει `min-w-0`, που σε `fieldset`
+    ακυρώνει το `min-inline-size: min-content` του browser (η γνωστή αιτία υπερχείλισης φορμών σε στενό πλάτος).
+- Κενές / απούσες καταστάσεις × 3 ⇒ σκέτο `<Card>`: οι δύο `EmptyState` (`MandateCatalogContent` ·
+  `MandateInboxContent`) και η «απουσία» του `MandateDetailContent` (τίτλος + υπόδειξη + «Δοκίμασε ξανά»). Μαζί με
+  τις τρεις των παρτίδων 2–3 είναι πλέον **έξι** που περιμένουν την απόφαση για το `shared/EmptyState`.
+- Αλλαγή όψης, **σκόπιμη**: επτά ήταν `rounded-md` χωρίς σκιά, τρεις (`ShowcaseDoorLink` · `ShowcasePublicDoor` ·
+  `ShowcaseQrPanel`) ήταν ήδη `rounded-lg` ⇒ όλες `rounded-lg` + `shadow-sm` + `overflow-hidden`. ⚠️ Τα
+  `ShowcaseContactCard` και `ShowcaseDoorLink` ζουν και στη **δημόσια** βιτρίνα γραφείου — η αλλαγή φαίνεται σε κοινό.
+Σουίτες: 6 (52 tests) πράσινες — πέντε της περιοχής + `navigation-showcase-door`· `jscpd:diff` καθαρό στα 11.
+
+**Ανοιχτό**: (α) οπτικός έλεγχος κάθε παρτίδας ζωντανά· (β) το `overflow-hidden` του `Card` κόβει ό,τι βγαίνει από το
+πλαίσιο — ελέγχεται ρητά σε `StayCalendarPanel` και `ShowcaseDoorLink`· (γ) 32 συγγενείς εμφανίσεις με `p-3`/`p-5`/`p-6`
+(31 αρχεία) **εκτός** αυτού του grep· (δ) **πρόταση, όχι απόφαση**: module στο `.ssot-registry.json` που μπλοκάρει νέο
+`border border-border bg-card` εκτός `components/ui/` (υπάρχουσα μηχανή ADR-749, όχι νέα πύλη).

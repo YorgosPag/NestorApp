@@ -70,6 +70,7 @@ import React from 'react';
 import { Copy, Check, ExternalLink } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Link } from '@/lib/workspace/navigation';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -114,50 +115,52 @@ export function ShowcasePublicDoor({
   if (!published) return null;
 
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <nav className="flex flex-wrap items-center gap-2">
+    <Card asChild className="flex flex-col gap-2 p-4">
+      <section>
+        <nav className="flex flex-wrap items-center gap-2">
+          {/*
+            ⚠️ **`Link` του συνόρου, ποτέ ωμό `next/link`** (CHECK 3.61): ο κριτής βλέπει
+            ότι το `pro` είναι δηλωμένο `OUTSIDE_WORKSPACE` και αφήνει τη διεύθυνση
+            **άθικτη** — χωρίς αυτό θα έμπαινε το πρόθεμα του χώρου και η «δημόσια» όψη θα
+            οδηγούσε **πίσω μέσα** στην εφαρμογή.
+
+            🔑 **Νέα καρτέλα, και είναι απόφαση**: ο άνθρωπος βρίσκεται στη μέση μιας
+            επεξεργασίας με **μη αποθηκευμένες** αλλαγές. Πλοήγηση στην ίδια καρτέλα θα του
+            τις έτρωγε για να του δείξει την **παλιά** δημοσιευμένη εκδοχή.
+          */}
+          <Link
+            href={path}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            {t(SHOWCASE_KEYS.publicView)}
+          </Link>
+
+          {/*
+            🔴 **`<button>` και ΟΧΙ `<a>`, και δεν είναι λεπτομέρεια**: η αντιγραφή είναι
+            **πράξη**, όχι πλοήγηση. Ο αναγνώστης οθόνης ανακοινώνει «σύνδεσμος» για το
+            πρώτο και «κουμπί» για το δεύτερο, και ο χρήστης πληκτρολογίου περιμένει
+            διαφορετικό πλήκτρο. Το `Button` του `ui/` αποδίδει `<button>`.
+          */}
+          <Button type="button" variant="outline" size="sm" onClick={onCopy}>
+            {copied ? (
+              <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
+            )}
+            {t(copied ? SHOWCASE_KEYS.linkCopied : SHOWCASE_KEYS.copyLink)}
+          </Button>
+        </nav>
+
         {/*
-          ⚠️ **`Link` του συνόρου, ποτέ ωμό `next/link`** (CHECK 3.61): ο κριτής βλέπει
-          ότι το `pro` είναι δηλωμένο `OUTSIDE_WORKSPACE` και αφήνει τη διεύθυνση
-          **άθικτη** — χωρίς αυτό θα έμπαινε το πρόθεμα του χώρου και η «δημόσια» όψη θα
-          οδηγούσε **πίσω μέσα** στην εφαρμογή.
-
-          🔑 **Νέα καρτέλα, και είναι απόφαση**: ο άνθρωπος βρίσκεται στη μέση μιας
-          επεξεργασίας με **μη αποθηκευμένες** αλλαγές. Πλοήγηση στην ίδια καρτέλα θα του
-          τις έτρωγε για να του δείξει την **παλιά** δημοσιευμένη εκδοχή.
+          ⚠️ **Το μήνυμα επιτυχίας ζει ΜΕΣΑ στο κουμπί** *(«Ο σύνδεσμος αντιγράφηκε»)* και
+          δεν προστίθεται ως δεύτερο κείμενο από κάτω: δύο σημεία που λένε το ίδιο πράγμα
+          είναι δύο σημεία που μπορούν να διαφωνήσουν. Ο άγκιστρος επαναφέρει μόνος του.
         */}
-        <Link
-          href={path}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          {t(SHOWCASE_KEYS.publicView)}
-        </Link>
-
-        {/*
-          🔴 **`<button>` και ΟΧΙ `<a>`, και δεν είναι λεπτομέρεια**: η αντιγραφή είναι
-          **πράξη**, όχι πλοήγηση. Ο αναγνώστης οθόνης ανακοινώνει «σύνδεσμος» για το
-          πρώτο και «κουμπί» για το δεύτερο, και ο χρήστης πληκτρολογίου περιμένει
-          διαφορετικό πλήκτρο. Το `Button` του `ui/` αποδίδει `<button>`.
-        */}
-        <Button type="button" variant="outline" size="sm" onClick={onCopy}>
-          {copied ? (
-            <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-          ) : (
-            <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-          )}
-          {t(copied ? SHOWCASE_KEYS.linkCopied : SHOWCASE_KEYS.copyLink)}
-        </Button>
-      </nav>
-
-      {/*
-        ⚠️ **Το μήνυμα επιτυχίας ζει ΜΕΣΑ στο κουμπί** *(«Ο σύνδεσμος αντιγράφηκε»)* και
-        δεν προστίθεται ως δεύτερο κείμενο από κάτω: δύο σημεία που λένε το ίδιο πράγμα
-        είναι δύο σημεία που μπορούν να διαφωνήσουν. Ο άγκιστρος επαναφέρει μόνος του.
-      */}
-      <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_KEYS.publicViewHint)}</p>
-    </section>
+        <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_KEYS.publicViewHint)}</p>
+      </section>
+    </Card>
   );
 }

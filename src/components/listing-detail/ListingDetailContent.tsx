@@ -78,6 +78,7 @@ import { ListingMediaViewer } from './media/ListingMediaViewer';
 import { ListingStay } from './ListingStay';
 import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { ListingDetailActions } from './ListingDetailActions';
 import { ListingSectionAnchor, ListingSectionNav } from './ListingSectionNav';
 
@@ -361,13 +362,7 @@ function ListingOffers({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results']);
 
   return (
-    <section
-      aria-labelledby="listing-offers-heading"
-      className="rounded-lg border border-border bg-card p-4"
-    >
-      <h2 id="listing-offers-heading" className="text-sm font-medium text-muted-foreground">
-        {t('search-results:detail.offers.heading')}
-      </h2>
+    <SectionFrame headingId="listing-offers-heading" title={t('search-results:detail.offers.heading')} headingLevel="h2" titleSize="eyebrow">
       <ul className="mt-2 flex flex-wrap gap-1">
         {listing.offerKinds.map((kind) => (
           <li
@@ -380,6 +375,6 @@ function ListingOffers({ listing }: { readonly listing: PublicListing }) {
       </ul>
       {/* ADR-777 §8.60.17 — ο όρος της αντιπαροχής, δίπλα στη διάθεσή του. */}
       <ListingExchangeTerm exchange={listing.exchange} />
-    </section>
+    </SectionFrame>
   );
 }

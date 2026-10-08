@@ -18,6 +18,7 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
+import { Card } from '@/components/ui/card';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatNumber } from '@/lib/intl-formatting';
@@ -38,7 +39,7 @@ import type { ListedAt } from '@/types/public-listing';
 
 import { OwnerPropertyPriceSteps } from './OwnerPropertyPriceSteps';
 import { Kpi, STATS_KEYS as S, formatCount, viewsKpiView } from './owner-property-kpi';
-import { STATS_KPI_GRID, StatsChartPending, StatsPanelPending, StatsPanelSkeleton } from './owner-property-stats-pending';
+import { STATS_KPI_GRID, STATS_PANEL_BOX, StatsChartPending, StatsPanelPending, StatsPanelSkeleton } from './owner-property-stats-pending';
 
 const OwnerPropertyStatsChart = dynamic(() => import('./OwnerPropertyStatsChart'), {
   ssr: false,
@@ -166,22 +167,24 @@ export function OwnerPropertyStatsPanel({ stats, listedAt, priceHistory }: Owner
   //    Ο φραγμός ζει στο ΦΥΛΛΟ (όχι σε PageContent — CHECK 3.7 `no-navigation-flash`): ο σκελετός
   //    κρατά το ύψος του πλαισίου, άρα δεν υπάρχει μετατόπιση.
   return isNamespaceReady ? (
-    <section aria-label={t(`${S}.heading`)} className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
-      {stats.state === 'loading' ? (
-        // Ο σκελετός έχει τη ΔΟΜΗ του τελικού πίνακα: ένα «Φόρτωση…» μίας γραμμής θα μάζευε το πλαίσιο
-        // και θα το ξαναμεγάλωνε — μετρημένο CLS 0,056 στη σελίδα (ADR-777 §8.72.8).
-        <>
-          <p aria-busy="true" className="sr-only">
-            {t(`${S}.loading`)}
-          </p>
-          <StatsPanelSkeleton />
-        </>
-      ) : stats.state === 'unavailable' ? (
-        <p className="m-0 text-sm text-muted-foreground">{t(`${S}.unavailable`)}</p>
-      ) : (
-        <ReadyPanel stats={stats} listedAt={listedAt} priceHistory={priceHistory} />
-      )}
-    </section>
+    <Card asChild className={STATS_PANEL_BOX}>
+      <section aria-label={t(`${S}.heading`)}>
+        {stats.state === 'loading' ? (
+          // Ο σκελετός έχει τη ΔΟΜΗ του τελικού πίνακα: ένα «Φόρτωση…» μίας γραμμής θα μάζευε το πλαίσιο
+          // και θα το ξαναμεγάλωνε — μετρημένο CLS 0,056 στη σελίδα (ADR-777 §8.72.8).
+          <>
+            <p aria-busy="true" className="sr-only">
+              {t(`${S}.loading`)}
+            </p>
+            <StatsPanelSkeleton />
+          </>
+        ) : stats.state === 'unavailable' ? (
+          <p className="m-0 text-sm text-muted-foreground">{t(`${S}.unavailable`)}</p>
+        ) : (
+          <ReadyPanel stats={stats} listedAt={listedAt} priceHistory={priceHistory} />
+        )}
+      </section>
+    </Card>
   ) : (
     <StatsPanelPending />
   );

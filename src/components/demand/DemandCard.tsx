@@ -32,6 +32,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
@@ -123,19 +124,21 @@ function IncompleteDemandCard({
   const K = 'property-market:demand.incomplete';
 
   return (
-    <article className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{t(`${K}.badge`)}</h3>
-        <Link href={demandDetailHref(id)} className="text-sm font-medium text-foreground underline">
-          {t(`${K}.fix`)}
-        </Link>
-      </header>
+    <Card asChild className="flex flex-col gap-2 p-4">
+      <article>
+        <header className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-sm font-semibold text-foreground">{t(`${K}.badge`)}</h3>
+          <Link href={demandDetailHref(id)} className="text-sm font-medium text-foreground underline">
+            {t(`${K}.fix`)}
+          </Link>
+        </header>
 
-      <p className="text-sm text-foreground">
-        {t(`${K}.why`, { gaps: gaps.map((gap) => t(`${K}.gap.${gap}`)).join(' · ') })}
-      </p>
-      <p className="text-sm text-muted-foreground">{t(`${K}.reassure`)}</p>
-    </article>
+        <p className="text-sm text-foreground">
+          {t(`${K}.why`, { gaps: gaps.map((gap) => t(`${K}.gap.${gap}`)).join(' · ') })}
+        </p>
+        <p className="text-sm text-muted-foreground">{t(`${K}.reassure`)}</p>
+      </article>
+    </Card>
   );
 }
 
@@ -156,28 +159,30 @@ function CompleteDemandCard({ demand }: { demand: PropertyDemand }): React.React
   const { displayName } = useDemandName();
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-base font-semibold text-foreground">{displayName(demand)}</h3>
-          <Link
-            href={demandDetailHref(demand.id)}
-            className="text-sm font-medium text-foreground underline"
-          >
-            {t('property-market:demand.list.open')}
-          </Link>
-        </div>
-        <DemandSeekBadges demand={demand} />
-      </header>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <header className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-base font-semibold text-foreground">{displayName(demand)}</h3>
+            <Link
+              href={demandDetailHref(demand.id)}
+              className="text-sm font-medium text-foreground underline"
+            >
+              {t('property-market:demand.list.open')}
+            </Link>
+          </div>
+          <DemandSeekBadges demand={demand} />
+        </header>
 
-      <DemandSummary demand={demand} />
+        <DemandSummary demand={demand} />
 
-      {/*
-        Το «ψάχνω ακόμη» εμφανίζεται **μόνο** στις ζωντανές: το να ζητάμε από κάποιον
-        να επιβεβαιώσει μια ζήτηση που ο ίδιος απέσυρε θα ήταν να του μιλάμε για
-        απόφαση που έχει ήδη πάρει.
-      */}
-      {demand.lifecycle === 'active' && <AffirmButton demand={demand} />}
-    </article>
+        {/*
+          Το «ψάχνω ακόμη» εμφανίζεται **μόνο** στις ζωντανές: το να ζητάμε από κάποιον
+          να επιβεβαιώσει μια ζήτηση που ο ίδιος απέσυρε θα ήταν να του μιλάμε για
+          απόφαση που έχει ήδη πάρει.
+        */}
+        {demand.lifecycle === 'active' && <AffirmButton demand={demand} />}
+      </article>
+    </Card>
   );
 }

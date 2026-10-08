@@ -40,6 +40,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { JudgedInterestStance, PlaceInterest } from '@/lib/demand/demand-interest';
@@ -152,15 +153,9 @@ export function PlaceInterestPanel({
 function InterestFrame({ children }: { children: React.ReactNode }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   return (
-    <section
-      aria-label={t('property-market:demand.interest.heading')}
-      className="rounded-md border border-border bg-card p-4"
-    >
-      <h3 className="text-sm font-semibold text-foreground">
-        {t('property-market:demand.interest.heading')}
-      </h3>
+    <SectionFrame title={t('property-market:demand.interest.heading')} headingLevel="h3" titleSize="sm">
       {children}
-    </section>
+    </SectionFrame>
   );
 }
 

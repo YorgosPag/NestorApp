@@ -25,6 +25,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DemandBlocker } from '@/lib/demand/demand-match-vocabulary';
@@ -47,13 +48,7 @@ export function DemandBlockerList({
   if (entries.length === 0) return null;
 
   return (
-    <section
-      aria-label={t('property-market:demand.blocker.heading')}
-      className="rounded-md border border-border bg-card p-4"
-    >
-      <h3 className="text-sm font-semibold text-foreground">
-        {t('property-market:demand.blocker.heading')}
-      </h3>
+    <SectionFrame title={t('property-market:demand.blocker.heading')} headingLevel="h3" titleSize="sm">
 
       <dl className="mt-2 flex flex-col gap-1 text-sm">
         {entries.map(([blocker, count]) => (
@@ -72,6 +67,6 @@ export function DemandBlockerList({
           </div>
         ))}
       </dl>
-    </section>
+    </SectionFrame>
   );
 }

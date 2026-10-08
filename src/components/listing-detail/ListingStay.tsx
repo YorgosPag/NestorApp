@@ -15,6 +15,7 @@
 
 import dynamic from 'next/dynamic';
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 
@@ -40,12 +41,11 @@ export function ListingStay({ listing }: { readonly listing: PublicListing }): R
   const { t } = useTranslation(['short-stay']);
   if (listing.stay === null || !listing.offerKinds.includes('leaseShort')) return null;
   return (
-    <section aria-labelledby="listing-stay-heading" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-      <h2 id="listing-stay-heading" className="text-sm font-medium text-muted-foreground">{t('short-stay:calendar.heading')}</h2>
+    <SectionFrame headingId="listing-stay-heading" title={t('short-stay:calendar.heading')} headingLevel="h2" titleSize="eyebrow" gap={3}>
       <StayTerms stay={listing.stay} />
       {/* ADR-777 §8.60.21 — πάντα: ακόμη και χωρίς δήλωση λέει «δεν έχει δηλωθεί» + σκύλοι βοήθειας. */}
       <ListingStayPets pets={listing.stay.pets ?? null} />
       <span className="block min-h-[22rem]"><ListingStayBooking listing={listing} /></span>
-    </section>
+    </SectionFrame>
   );
 }
