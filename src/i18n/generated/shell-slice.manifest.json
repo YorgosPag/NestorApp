@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ce0a8a856bc01858d9c9aa6ec616e69a5845ddbe9f995e957f8cd1c3f7f494cd",
+  "inputsSha256": "b8b0d1469f6abdb8238019c3766cc4cad01d28e3e344271f5ce376b4a3a6395e",
   "languages": [
     "el"
   ],
@@ -12280,7 +12280,7 @@
     "src/lib/properties/price-by-role.ts": "6a93343a96b02e5de25db13f5d189e812c96616ce1e8423167267a8b32434105",
     "src/lib/properties/price-class-sections.ts": "0430f1a185edc1cfc572bc148f2dbc79b7180e14f1338cbbbd768e718a738cf6",
     "src/lib/properties/price-range.ts": "a831f7f97e7531d60db483570fd906b6f18a588907600e8487cde639994454a7",
-    "src/lib/properties/price-resolver.ts": "46bb0913578361182cc61a022e2079b374d3a2ec6ac9c832ab17fe4d50a1c820",
+    "src/lib/properties/price-resolver.ts": "90f329779aba33b4104196ec741298091d548d951b13a76ac106fd7e6be66207",
     "src/lib/properties/price-totals.ts": "b92075efc07889ca75be9d9f72a8c7dc2f3ccec04fc10e451814cbf82bbbcffa",
     "src/lib/property-dossier/property-dossier-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/property/attribute-provenance.ts": "88766ef85d80513fca5474caf3c3976d73533aad8dae15a34538db6fd4ffe69f",

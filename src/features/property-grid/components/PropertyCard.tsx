@@ -79,7 +79,16 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         <aside className="mb-3" role="region" aria-label={t('card.aria.propertyPrice')}>
           {priceText ? (
             <>
-              <span className={`text-2xl font-bold ${colors.text.info}`} itemProp="price">
+              {/* ADR-329 §3.9 (Ν3): ποσό που δεν είναι προσφορά λέει τι είναι, και δεν φορά το χρώμα της. */}
+              {priceText.standingLabel !== null && (
+                <span className={`block text-xs font-medium ${colors.text.muted}`}>
+                  {priceText.standingLabel}
+                </span>
+              )}
+              <span
+                className={`text-2xl font-bold ${priceText.standingLabel === null ? colors.text.info : colors.text.muted}`}
+                itemProp="price"
+              >
                 {priceText.headline}
               </span>
               {priceText.secondary && (

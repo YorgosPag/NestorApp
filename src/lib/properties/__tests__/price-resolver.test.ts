@@ -35,6 +35,7 @@ describe('Κ1 — modern data (askingPrice only) must resolve', () => {
       kind: 'priced',
       headline: { role: 'sale', amount: 185000, source: 'commercial.askingPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -95,6 +96,7 @@ describe('Κ3 — rent statuses resolve the rent, never the sale price', () => {
       kind: 'priced',
       headline: { role: 'rent', amount: 750, source: 'commercial.rentPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -122,6 +124,7 @@ describe('Κ4 — for-sale-and-rent never silently drops half the offer', () => 
       kind: 'priced',
       headline: { role: 'sale', amount: 240000, source: 'commercial.askingPrice' },
       secondary: { role: 'rent', amount: 900, source: 'commercial.rentPrice' },
+      standing: 'in-effect',
     });
   });
 
@@ -133,6 +136,7 @@ describe('Κ4 — for-sale-and-rent never silently drops half the offer', () => 
       kind: 'priced',
       headline: { role: 'rent', amount: 900, source: 'commercial.rentPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -399,6 +403,7 @@ describe('Κ11 — sold: contract price leads, asking price is context', () => {
       kind: 'priced',
       headline: { role: 'sale', amount: 185_000, source: 'commercial.finalPrice' },
       secondary: { role: 'sale', amount: 200_000, source: 'commercial.askingPrice' },
+      standing: 'in-effect',
     });
   });
 
@@ -415,6 +420,7 @@ describe('Κ11 — sold: contract price leads, asking price is context', () => {
       kind: 'priced',
       headline: { role: 'sale', amount: 200_000, source: 'commercial.finalPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -428,6 +434,7 @@ describe('Κ11 — sold: contract price leads, asking price is context', () => {
       kind: 'priced',
       headline: { role: 'sale', amount: 200_000, source: 'commercial.askingPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -474,6 +481,7 @@ describe('Κ12 — a rented unit closes on its RENT, not on a sale figure', () =
       kind: 'priced',
       headline: { role: 'rent', amount: 500, source: 'commercial.rentPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 });
@@ -504,6 +512,7 @@ describe('Κ13 — η βραχυχρόνια απαντά όπου το επτά
       kind: 'priced',
       headline: { role: 'nightly', amount: 65, source: 'commercial.nightlyRate' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -534,6 +543,7 @@ describe('Κ13 — η βραχυχρόνια απαντά όπου το επτά
       kind: 'priced',
       headline: { role: 'sale', amount: 250_000, source: 'commercial.askingPrice' },
       secondary: null,
+      standing: 'in-effect',
     });
   });
 
@@ -572,5 +582,77 @@ describe('Κ13 — η βραχυχρόνια απαντά όπου το επτά
         }),
       ),
     ).toEqual({ amount: 65, mode: 'nightly' });
+  });
+});
+
+// =============================================================================
+// Κ14 — ΤΙ *ΕΙΝΑΙ* ΤΟ ΠΟΣΟ: ΠΡΟΣΦΟΡΑ, ΤΙΜΗ ΕΚΤΟΣ ΑΓΟΡΑΣ, ΤΙΜΗ ΑΠΟΣΥΡΜΕΝΗΣ ΕΓΓΡΑΦΗΣ (ADR-329 §3.9 · Ν3)
+// =============================================================================
+
+/**
+ * 🔴 Ως τις 2026-10-08 η ετυμηγορία έλεγε **ποιο** ποσό και **από πού** — όχι **τι είναι**. Ακίνητο
+ * «Μη διαθέσιμο» με καταχωρημένη τιμή ζήτησης έβγαινε `priced`, και κάθε οθόνη το έβαφε στο χρώμα της
+ * προσφοράς: «Τιμή 100.000 €» για κάτι που δεν πουλιέται (μετρημένο ζωντανά). Η κάρτα το είχε λύσει
+ * μόνη της για τον κάδο· η κεφαλίδα όχι — δύο επιφάνειες, δύο απαντήσεις.
+ */
+describe('Κ14 — η στάθμη του ποσού (`standing`)', () => {
+  const standingOf = (p: PricedPropertyLike): string | null => {
+    const verdict = resolveDisplayPrice(p);
+    return verdict.kind === 'priced' ? verdict.standing : null;
+  };
+
+  it.each(['for-sale', 'for-sale-and-rent', 'reserved', 'sold'])(
+    'Κ14.1 — %s ⇒ το ποσό ΙΣΧΥΕΙ (`in-effect`)',
+    (commercialStatus) => {
+      expect(standingOf(unit({ commercialStatus, commercial: { askingPrice: 100_000 } }))).toBe('in-effect');
+    },
+  );
+
+  it.each(['for-rent', 'rented'])('Κ14.1 — %s ⇒ το ενοίκιο ΙΣΧΥΕΙ', (commercialStatus) => {
+    expect(standingOf(unit({ commercialStatus, commercial: { rentPrice: 500 } }))).toBe('in-effect');
+  });
+
+  it('Κ14.2 — «Μη διαθέσιμο» με τιμή ζήτησης ⇒ `off-market`: το ποσό ΜΕΝΕΙ, δεν είναι προσφορά', () => {
+    const verdict = resolveDisplayPrice(
+      unit({ commercialStatus: 'unavailable', commercial: { askingPrice: 100_000 } }),
+    );
+    expect(verdict).toEqual({
+      kind: 'priced',
+      headline: { role: 'sale', amount: 100_000, source: 'commercial.askingPrice' },
+      secondary: null,
+      standing: 'off-market',
+    });
+  });
+
+  it('Κ14.3 — καμία ή άγνωστη κατάσταση ⇒ `off-market`: ποτέ προσφορά από εικασία', () => {
+    expect(standingOf(unit({ commercial: { askingPrice: 100_000 } }))).toBe('off-market');
+    expect(standingOf(unit({ commercialStatus: 'κάτι-άγνωστο', commercial: { askingPrice: 1 } }))).toBe('off-market');
+  });
+
+  it('Κ14.4 — παλιό έγγραφο: η κατάσταση ζει στο `status` ⇒ ίδια κρίση με το `commercialStatus`', () => {
+    expect(standingOf(unit({ status: 'for-sale', commercial: { askingPrice: 100_000 } }))).toBe('in-effect');
+  });
+
+  it.each(['deleted', 'archived'])(
+    'Κ14.5 — στον κάδο / στο αρχείο (`status: %s`) ⇒ `retired`, ΟΣΟ κι αν λέει «Προς πώληση»',
+    (status) => {
+      expect(
+        standingOf(unit({ status, commercialStatus: 'for-sale', commercial: { askingPrice: 100_000 } })),
+      ).toBe('retired');
+      expect(standingOf(unit({ status, commercialStatus: 'sold', commercial: { finalPrice: 90_000 } }))).toBe('retired');
+    },
+  );
+
+  it('Κ14.6 — κατάλυμα ΜΟΝΟ προς διανυκτέρευση είναι στην αγορά, παρότι το επτάτιμο λέει `unavailable`', () => {
+    expect(
+      standingOf(unit({ commercialStatus: 'unavailable', offerKinds: ['leaseShort'], commercial: { nightlyRate: 65 } })),
+    ).toBe('in-effect');
+  });
+
+  it('Κ14.7 — η στάθμη ΔΕΝ αλλάζει ποσό, ρόλο ή προέλευση: αθροίσματα και ταξινόμηση μένουν ως είχαν', () => {
+    const offMarket = unit({ commercialStatus: 'unavailable', commercial: { askingPrice: 100_000 } });
+    expect(getEffectivePrice(offMarket)).toEqual({ amount: 100_000, mode: 'sale' });
+    expect(priceSortKey(offMarket)).toBe(100_000);
+    expect(totalPriceByRole([offMarket]).byRole.sale.total).toBe(100_000);
   });
 });

@@ -37,8 +37,10 @@
 import {
   FINALIZED_COMMERCIAL_STATUSES,
   isListedCommercialStatus,
+  isTransactionOwnedCommercialStatus,
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
+import { isRetired } from '@/lib/firestore/trashed-status';
 import { KINDS_WITHOUT_LEGACY_PROJECTION } from '@/lib/offers/derive-commercial-status';
 
 /**
@@ -189,8 +191,45 @@ export type MissingPriceReason =
  *     differs from what the unit actually sold for. Equal numbers say nothing.
  */
 export type DisplayPrice =
-  | { kind: 'priced'; headline: ResolvedPrice; secondary: ResolvedPrice | null }
+  | (PricedAmounts & { standing: PriceStanding })
   | { kind: 'missing'; reason: MissingPriceReason };
+
+/**
+ * **What the amount IS** — the third thing a number must declare, after its role and its
+ * origin (ADR-329 §3.9, finding Ν3).
+ *
+ *   - `in-effect`  — the amount means what its status says: an asking price on the market,
+ *                    the price a reservation was made at, a contract price, a running rent.
+ *   - `off-market` — a live record that is **not offered**. The amount stays (it is working
+ *                    data: a price may be set *before* the unit is released — see
+ *                    `priceFieldsForStatus`), but it promises nothing to anyone.
+ *   - `retired`    — the record is in the trash or the archive. Whatever the amount was, it
+ *                    is history now — even if `commercialStatus` still reads `for-sale`.
+ *
+ * 🔑 **A field of the verdict, not a second question.** The card had answered this privately
+ * for retired records (`retiredKindOf` inside `buildPropertyPriceStats`) while the record-page
+ * header, reading the *same* verdict, painted the same amount in the colour of an offer. A
+ * presenter that holds a `DisplayPrice` now holds the standing with it.
+ *
+ * ⚠️ **Not a new `kind`, on purpose.** Some 25 consumers ask `kind === 'priced'` to sum, sort,
+ * filter and rate per m². An off-market unit still *has* that amount; a new variant would have
+ * dropped it silently from every total. The standing changes what the number is **called**,
+ * never whether it **counts** (anchor Κ14.7).
+ *
+ * 🏆 MLS / RESO practice: `ListPrice` keeps its name in every status and `StandardStatus` is a
+ * separate field — the price is not renamed, it simply stops being presented as an offer.
+ */
+export type PriceStanding = 'in-effect' | 'off-market' | 'retired';
+
+/** The amounts of a priced verdict, before anyone asked what they stand for. */
+interface PricedAmounts {
+  kind: 'priced';
+  headline: ResolvedPrice;
+  secondary: ResolvedPrice | null;
+}
+
+/** The status-driven answer — which amounts, or why none. Internal: it carries no standing yet. */
+type PriceVerdict = PricedAmounts | { kind: 'missing'; reason: MissingPriceReason };
 
 // =============================================================================
 // 2. STATUS GROUPS
@@ -322,7 +361,7 @@ export function resolveNightlyPrice(input: PricedPropertyLike): ResolvedPrice | 
  *   - **An asking price equal to the final one is dropped.** "Sold 200.000,
  *     asked 200.000" is not a second fact, it is the same fact twice.
  */
-function resolveSoldPrice(input: PricedPropertyLike): DisplayPrice {
+function resolveSoldPrice(input: PricedPropertyLike): PriceVerdict {
   const commercial = input.commercial ?? {};
 
   const contract = pickPriced('sale', [
@@ -363,7 +402,38 @@ function missingReasonFor(statusKey: string): MissingPriceReason {
  * no path that returns `0` for a property whose price was never recorded.
  */
 export function resolveDisplayPrice(input: PricedPropertyLike): DisplayPrice {
-  return answerFromLegacyVocabulary(input, statusKeyOf(input));
+  const statusKey = statusKeyOf(input);
+  const verdict = answerFromLegacyVocabulary(input, statusKey);
+  return verdict.kind === 'priced'
+    ? { ...verdict, standing: standingOf(input, statusKey, verdict.headline) }
+    : verdict;
+}
+
+/**
+ * **What the headline stands for** — asked once, here, for every priced verdict.
+ *
+ * Order matters, and it is the order every other judge of the record uses (`offerStateOf`,
+ * `buildPropertyStatusBadge`): **lifecycle first**. A trashed record that still reads
+ * `for-sale` is not for sale.
+ *
+ * ⚠️ **A nightly headline is in effect by construction.** It is reachable only through
+ * {@link answerFromOfferKinds}, i.e. only when `offerKinds` proves a live short-stay offer —
+ * the one case where the seven-value vocabulary says `unavailable` about a property that IS
+ * on the market.
+ *
+ * ⚠️ **Unknown status ⇒ `off-market`, never an offer by default.** Same rule as the status
+ * badge («ποτέ σήμα από εικασία»): the amount is shown, the promise is not invented.
+ */
+function standingOf(
+  input: PricedPropertyLike,
+  statusKey: string,
+  headline: ResolvedPrice,
+): PriceStanding {
+  if (isRetired(input)) return 'retired';
+  if (headline.role === 'nightly') return 'in-effect';
+  return isListedCommercialStatus(statusKey) || isTransactionOwnedCommercialStatus(statusKey)
+    ? 'in-effect'
+    : 'off-market';
 }
 
 /**
@@ -373,7 +443,7 @@ export function resolveDisplayPrice(input: PricedPropertyLike): DisplayPrice {
 function answerFromLegacyVocabulary(
   input: PricedPropertyLike,
   statusKey: string,
-): DisplayPrice {
+): PriceVerdict {
   if (PURE_RENT_STATUSES.has(statusKey)) {
     const rent = resolveRentPrice(input);
     return rent
@@ -428,7 +498,7 @@ function answerFromLegacyVocabulary(
  * nightly rate stays reachable through `offerKinds`, which loses nothing — the same
  * declared trade-off `deriveCommercialStatus` makes one layer down.
  */
-function answerFromOfferKinds(input: PricedPropertyLike): DisplayPrice {
+function answerFromOfferKinds(input: PricedPropertyLike): PriceVerdict {
   const offered = input.offerKinds ?? [];
 
   // ⚠️ Iterated in the constant's own order, never the document's: two properties with

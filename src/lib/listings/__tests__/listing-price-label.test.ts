@@ -81,6 +81,7 @@ describe('displayPriceLabel — ποσό ή αιτία απουσίας', () => 
       kind: 'priced',
       headline: { role: 'nightly', amount: 50, source: 'commercial.nightlyRate' },
       secondary: null,
+      standing: 'in-effect',
     })).toBe('50 €/νύχτα');
   });
 
@@ -102,6 +103,7 @@ describe('σύνολο διαμονής — «150 € · 3 νύχτες» (§8.6
       kind: 'priced',
       headline: { role: 'nightly', amount: 50, source: 'commercial.nightlyRate' },
       secondary: null,
+      standing: 'in-effect',
     }, TOTAL);
     expect(text).toBe('common:priceAmount.stayTotal|{"price":"165 €","nights":3}');
   });

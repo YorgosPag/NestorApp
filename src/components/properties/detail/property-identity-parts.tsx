@@ -109,7 +109,12 @@ export function PropertyIdentityFacts({ property }: { readonly property: Propert
   return (
     // Μόνο λεπτή γραμμή από πάνω: το `quick.input` ζωγράφιζε πλήρες πλαίσιο πεδίου γύρω από δύο τιμές.
     <dl className="m-0 flex flex-wrap gap-x-8 gap-y-3 border-t border-border pt-3">
-      <IdentityFact label={t('properties-detail:card.stats.price')}>
+      {/*
+        Η ετικέτα και το χρώμα ακολουθούν τη **στάθμη** του ποσού (ADR-329 §3.9 · Ν3): ακίνητο εκτός αγοράς ή
+        αποσυρμένο κρατά το ποσό του, αλλά δεν το λέει «Τιμή» ούτε το βάφει στο χρώμα της προσφοράς. Η λέξη
+        έρχεται από τον ίδιο πίνακα με την κάρτα της λίστας (`buildCardPriceText`) — καμία δεύτερη κρίση εδώ.
+      */}
+      <IdentityFact label={priceText?.standingLabel ?? t('properties-detail:card.stats.price')}>
         {/*
           ⚠️ Η διακλάδωση γίνεται στο `price.kind` και **όχι** στο `priceText`: το δεύτερο είναι *παράγωγο* του
           πρώτου, και ένας μελλοντικός τρίτος λόγος απουσίας θα περνούσε σιωπηλά από τον έλεγχο ενός `null`.
@@ -126,7 +131,9 @@ export function PropertyIdentityFacts({ property }: { readonly property: Propert
           </span>
         ) : (
           <>
-            <span className={COLOR_BRIDGE.text.price}>{priceText.headline}</span>
+            <span className={priceText.standingLabel === null ? COLOR_BRIDGE.text.price : undefined}>
+              {priceText.headline}
+            </span>
             {priceText.secondary ? (
               <span className={`ml-2 text-xs font-normal ${colors.text.muted}`}>{priceText.secondary}</span>
             ) : null}

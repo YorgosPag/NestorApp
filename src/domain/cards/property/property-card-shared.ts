@@ -19,6 +19,7 @@ import {
   type DisplayPrice,
   type MissingPriceReason,
   type PriceRole,
+  type PriceStanding,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
@@ -225,13 +226,17 @@ function priceLabelKeys(
  * there: 200.000 € would have been printed as **«200.000 €/μήνα»**. The rule of
  * what each number MEANS belongs next to the rule of which number to show.
  *
+ * `standingLabel` is `null` for an amount in effect and, otherwise, the word that replaces
+ * «Τιμή» — the caller also drops the colour of the offer (ADR-329 §3.9, Ν3). It travels with
+ * the texts so that no surface can print the amount and forget what it stands for.
+ *
  * @returns `null` when there is no displayable price — the caller names the
  *          absence via {@link MISSING_PRICE_LABEL_KEYS}.
  */
 export function buildCardPriceText(
   price: DisplayPrice,
   t: TFn,
-): { headline: string; secondary: string | null } | null {
+): { headline: string; secondary: string | null; standingLabel: string | null } | null {
   if (price.kind === 'missing') return null;
 
   // The unit follows the ROLE, never the source field: a nightly rate read as a bare
@@ -240,7 +245,18 @@ export function buildCardPriceText(
 
   const { headline, secondary } = price;
 
+  // Not an offer ⇒ one amount, and the word that says what it is. The second leg of an offer
+  // means nothing on a record that offers nothing (same rule as `buildPropertyPriceStats`).
+  if (price.standing !== 'in-effect') {
+    return {
+      headline: format(headline),
+      secondary: null,
+      standingLabel: t(OUT_OF_OFFER_LABEL_KEY[price.standing]),
+    };
+  }
+
   return {
+    standingLabel: null,
     headline: format(headline),
     secondary: secondary
       ? secondary.source === 'commercial.askingPrice'
@@ -252,16 +268,32 @@ export function buildCardPriceText(
 }
 
 /**
- * **Η τελευταία τιμή μιας αποσυρμένης εγγραφής** — ιστορικό, όχι προσφορά (ADR-329 §3.9).
+ * **Πώς λέγεται ένα ποσό που ΔΕΝ είναι προσφορά** — ανά στάθμη της ετυμηγορίας (ADR-329 §3.9 · Ν3).
+ *
+ * `Record<Exclude<PriceStanding, 'in-effect'>, …>`: τέταρτη στάθμη δεν μεταγλωττίζεται χωρίς λέξη.
+ *
+ * - `off-market` ⇒ «Τιμή ζήτησης»: το ποσό μπορεί να ορίστηκε **πριν** βγει η μονάδα στην αγορά
+ *   (`priceFieldsForStatus`), άρα «τελευταία» θα ήταν ισχυρισμός που κανείς δεν μπορεί να αποδείξει.
+ *   Πρακτική MLS / RESO: το `ListPrice` κρατά το όνομά του σε κάθε κατάσταση.
+ * - `retired` ⇒ «Τελευταία τιμή»: η εγγραφή έφυγε από τη δουλειά· ό,τι ποσό κι αν ήταν (ζήτησης,
+ *   συμβολαίου, ενοίκιο), είναι το τελευταίο της.
+ */
+const OUT_OF_OFFER_LABEL_KEY: Readonly<Record<Exclude<PriceStanding, 'in-effect'>, string>> = {
+  'off-market': 'card.stats.askingPrice',
+  retired: 'card.stats.lastPrice',
+};
+
+/**
+ * **Το ποσό μιας εγγραφής που δεν προσφέρεται** — δεδομένο εργασίας, όχι προσφορά.
  *
  * Ίδιο ποσό, ίδιος κριτής (`resolveDisplayPrice`), άλλη **σημασία**: χωρίς το χρώμα της τιμής και
  * με λέξη που δεν υπόσχεται τίποτα. Μία γραμμή — το δεύτερο σκέλος μιας προσφοράς δεν έχει νόημα εδώ.
  */
-function lastPriceStatItem(price: ResolvedPrice, t: TFn): StatItem {
+function outOfOfferStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem {
   return {
     icon: NAVIGATION_ENTITIES.price.icon,
     iconColor: 'text-muted-foreground',
-    label: t('card.stats.lastPrice'),
+    label: t(labelKey),
     value: resolvedPriceLabel(t, price),
   };
 }
@@ -270,7 +302,11 @@ export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] 
   const resolved = resolveDisplayPrice(property);
   if (resolved.kind === 'missing') return [];
 
-  if (retiredKindOf(property) !== null) return [lastPriceStatItem(resolved.headline, t)];
+  // Η στάθμη έρχεται ΜΕ την ετυμηγορία. Ως τις 2026-10-08 αυτή η συνάρτηση ρωτούσε μόνη της
+  // `retiredKindOf` — και η κεφαλίδα, που διάβαζε την ίδια ετυμηγορία, δεν ρωτούσε τίποτα.
+  if (resolved.standing !== 'in-effect') {
+    return [outOfOfferStatItem(resolved.headline, OUT_OF_OFFER_LABEL_KEY[resolved.standing], t)];
+  }
 
   const { headline, secondary } = resolved;
   const labels = priceLabelKeys(headline, secondary);

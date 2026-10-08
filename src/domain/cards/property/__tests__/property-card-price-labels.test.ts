@@ -328,3 +328,56 @@ describe('το σήμα κατάστασης: η πραγματική κατάσ
     expect(buildPropertyBadges('operationalStatus.ready', 'success', of({}), t)).toHaveLength(1);
   });
 });
+
+// =============================================================================
+// Κ-ΣΤΑΘΜΗ — ΠΟΣΟ ΠΟΥ ΔΕΝ ΕΙΝΑΙ ΠΡΟΣΦΟΡΑ ΔΕΝ ΦΟΡΑ ΤΟ ΧΡΩΜΑ ΤΗΣ (ADR-329 §3.9 · Ν3)
+// =============================================================================
+
+/**
+ * 🔴 Μετρημένο ζωντανά 2026-10-08: «Τιμή 100.000 €» στο πράσινο της προσφοράς για ακίνητο «Μη
+ * διαθέσιμο», σε κάρτα **και** κεφαλίδα· και για ακίνητο στον κάδο, η κάρτα έλεγε «Τελευταία τιμή»
+ * ενώ η κεφαλίδα του ίδιου ακινήτου «Τιμή». Η λέξη έρχεται πλέον από τη **στάθμη** της ετυμηγορίας.
+ */
+describe('Κ-ΣΤΑΘΜΗ — η λέξη και το χρώμα ακολουθούν το `standing`', () => {
+  const offMarket = unit('unavailable', { askingPrice: 100_000 });
+  const forSale = unit('for-sale', { askingPrice: 100_000 });
+  const trashedForSale = { ...forSale, status: 'deleted' } as unknown as Property;
+
+  it('🔴 εκτός αγοράς: ΜΙΑ γραμμή «Τιμή ζήτησης», το ποσό μένει, χωρίς το χρώμα της προσφοράς', () => {
+    const rows = buildPropertyPriceStats(offMarket, t);
+    expect(rows.map((r) => r.label)).toEqual(['card.stats.askingPrice']);
+    expect(rows[0]?.value).toBe(buildPropertyPriceStats(forSale, t)[0]?.value);
+    expect(rows[0]?.valueColor).toBeUndefined();
+    expect(buildPropertyPriceStats(forSale, t)[0]?.valueColor).toBeDefined();
+  });
+
+  it('κρατημένο ακίνητο ΕΙΝΑΙ συναλλαγή σε εξέλιξη ⇒ «Τιμή», με το χρώμα της (Zillow «Pending»)', () => {
+    const rows = buildPropertyPriceStats(unit('reserved', { askingPrice: 100_000 }), t);
+    expect(rows.map((r) => r.label)).toEqual(['card.stats.price']);
+    expect(rows[0]?.valueColor).toBeDefined();
+  });
+
+  it('🔴 συμπαγής κάρτα / κεφαλίδα: η προσφορά ΔΕΝ έχει σημείωση στάθμης, το εκτός αγοράς έχει', () => {
+    expect(buildCardPriceText(resolveDisplayPrice(forSale), t)?.standingLabel).toBeNull();
+    expect(buildCardPriceText(resolveDisplayPrice(offMarket), t)).toEqual({
+      headline: buildCardPriceText(resolveDisplayPrice(forSale), t)?.headline,
+      secondary: null,
+      standingLabel: 'card.stats.askingPrice',
+    });
+  });
+
+  it('🔴 κεφαλίδα και κάρτα λένε την ΙΔΙΑ λέξη για το ίδιο αποσυρμένο ακίνητο', () => {
+    const header = buildCardPriceText(resolveDisplayPrice(trashedForSale), t);
+    expect(header?.standingLabel).toBe('card.stats.lastPrice');
+    expect([header?.standingLabel]).toEqual(labelsOf(trashedForSale));
+  });
+
+  it('αποσυρμένο με δύο σκέλη ⇒ καμία δεύτερη τιμή και στη συμπαγή όψη (ιστορικό, όχι προσφορά)', () => {
+    const both = {
+      commercialStatus: 'for-sale-and-rent',
+      commercial: { askingPrice: 150_000, rentPrice: 500 },
+      status: 'archived',
+    } as unknown as Property;
+    expect(buildCardPriceText(resolveDisplayPrice(both), t)?.secondary).toBeNull();
+  });
+});
