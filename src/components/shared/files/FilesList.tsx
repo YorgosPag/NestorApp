@@ -103,7 +103,9 @@ export function FilesList({
 
   const { classifyFile, classifyingIds } = useFileClassification();
   // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): η επανάληψη ταξινόμησης ΓΡΑΦΕΙ στο αρχείο ⇒ δεν προσφέρεται.
-  const canRetryClassify = useRetiredKind() === null;
+  // Η ίδια απάντηση κρίνει και την κενή κατάσταση (Ν1): προτροπή προς κουμπί μόνο όπου το κουμπί ζωγραφίζεται.
+  const parentIsLive = useRetiredKind() === null;
+  const canRetryClassify = parentIsLive;
 
   async function handleRetryClassify(fileId: string) {
     await classifyFile(fileId, true);
@@ -148,7 +150,9 @@ export function FilesList({
         aria-label={t('list.noFiles')}
       >
         <FileText className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
-        <p className={cn("text-sm", colors.text.muted)}>{t('list.noFilesDescription')}</p>
+        <p className={cn("text-sm", colors.text.muted)}>
+          {parentIsLive ? t('list.noFilesDescription') : t('list.noFiles')}
+        </p>
       </section>
     );
   }
