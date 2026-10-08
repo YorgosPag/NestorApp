@@ -5,7 +5,6 @@ import {
   getAdditionalUserInfo,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signOut as firebaseSignOut,
   updateProfile,
   type Auth,
   type UserCredential,
@@ -15,7 +14,6 @@ import type { FirebaseAuthUser, SignInOutcome, SignUpData } from '@/auth/types/a
 import { SECOND_FACTOR_REQUIRED, SIGNED_IN } from './second-factor';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 import { syncServerSession } from './auth-context-session';
-import { sessionService } from '@/services/session';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 import {
@@ -259,30 +257,9 @@ export function useAuthActions(params: UseAuthActionsParams) {
     }
   }, [auth, handleError, setError, setLoading, setUser]);
 
-  const signOut = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-      logger.info('[AuthContext] Signing out');
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:logout'));
-        logger.info('[AuthContext] Dispatched auth:logout event');
-      }
-
-      // ADR-894 — η εγγραφή «αυτή η συσκευή» κλείνει ΠΡΙΝ χαθεί το token (μετά δεν θα μπορούσε).
-      // Δεν ρίχνει ποτέ: μια αποτυχημένη ανάκληση δεν εμποδίζει την αποσύνδεση.
-      if (auth.currentUser) await sessionService.endCurrentSession(auth.currentUser.uid);
-
-      await firebaseSignOut(auth);
-      logger.info('[AuthContext] Sign out successful');
-    } catch (error) {
-      handleError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, handleError, setError, setLoading]);
+  // ⛔ ADR-908 — ΕΔΩ ΔΕΝ ΖΕΙ ΠΙΑ `signOut`. Ο ΕΝΑΣ κάτοχος είναι το `auth/identity-change/end-sign-in`:
+  //    το `finally { setLoading(false) }` που βρισκόταν εδώ έτρεχε ΠΡΙΝ μηδενιστεί ο `user` και άνοιγε το
+  //    παράθυρο `!loading && user`, από το οποίο η φόρμα σύνδεσης έστελνε τον άνθρωπο πίσω.
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
@@ -467,7 +444,6 @@ export function useAuthActions(params: UseAuthActionsParams) {
     signIn,
     signInWithGoogle,
     signUp,
-    signOut,
     resetPassword,
     updateUserProfile,
     updateUserPhoto,

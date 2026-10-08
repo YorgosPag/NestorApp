@@ -3,6 +3,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { API_ROUTES, AUTH_EVENTS } from '@/config/domain-constants';
 import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
+import { currentIdentityEpoch, identityChangedSince } from './identity-epoch';
 
 export function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<string, unknown>): FirebaseAuthUser {
   const displayName = firebaseUser.displayName;
@@ -43,7 +44,12 @@ export async function syncServerSession(firebaseUser: FirebaseUser): Promise<voi
     return;
   }
 
+  // 🔴 ADR-908 §3.2 — ο ΕΝΑΣ φρουρός για όλους τους καλούντες: αν ο άνθρωπος άλλαξε όσο περιμέναμε το token,
+  //    το cookie ΔΕΝ ζητείται. Μετρημένο: χωρίς αυτό, το `__session` ξαναστηνόταν 0,25 s μετά την αποσύνδεση.
+  const startedAt = currentIdentityEpoch();
   const idToken = await firebaseUser.getIdToken(true);
+  if (identityChangedSince(startedAt)) return;
+
   const response = await fetch(API_ROUTES.AUTH.SESSION, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

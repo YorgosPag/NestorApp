@@ -63,7 +63,8 @@ const RETIRED_BADGE: Readonly<Record<RetiredKind, { labelKey: string; variant: G
 
 /**
  * Assemble the Property badge list: primary status badge (resolved per view) +
- * optional commercial badge. Shared so Grid/List badge memos stay tiny.
+ * optional commercial badge + optional audience badge (`buildListingAudienceBadge`).
+ * Shared so Grid/List badge memos stay tiny.
  *
  * 🔴 **Αποσυρμένο ακίνητο ΔΕΝ είναι προσφορά.** Όσο είναι σε κάδο ή αρχείο, προηγείται η ετικέτα
  * κύκλου ζωής και η εμπορική **παραλείπεται**: η κάρτα έδειχνε «Προς πώληση» για ακίνητο που ο
@@ -81,8 +82,11 @@ export function buildPropertyBadges(
   const retired = buildRetiredBadge(property, t);
   if (retired !== null) return [retired, primary];
 
-  const commercial = buildCommercialBadge(property, t);
-  return commercial ? [primary, commercial] : [primary];
+  // Το σήμα κοινού ακολουθεί το ακίνητο σε κάθε επιφάνεια του γραφείου (ADR-777 §8.87.8): η γραμμή της λίστας
+  // λέει ό,τι και η κεφαλίδα της σελίδας, από τον **ίδιο** κατασκευαστή — `null` όταν το ακίνητο δεν διατίθεται.
+  return [primary, buildCommercialBadge(property, t), buildListingAudienceBadge(property, t)].filter(
+    (badge): badge is GridCardBadge => badge !== null,
+  );
 }
 
 /** Η ετικέτα κύκλου ζωής ως σήμα — `null` για ζωντανή εγγραφή. */

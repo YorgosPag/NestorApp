@@ -6,7 +6,10 @@
 import {
   isLiveOwnerProperty,
   isOwnerPropertyLifecycle,
+  isOwnerPropertyOnTheMarket,
   newOwnerProperty,
+  OWNER_MARKET_STANDINGS,
+  ownerMarketStandingOf,
   ownerPropertyOfferKinds,
 } from '../owner-property';
 import {
@@ -14,6 +17,7 @@ import {
   OWNER_PROPERTY_INVARIANTS,
 } from '../owner-property-invariants';
 import {
+  brokeredOwnerProperty,
   offerOf,
   validDraft,
   validOwnerProperty,
@@ -403,5 +407,53 @@ describe('βοηθητικά κατηγορήματα', () => {
       ],
     });
     expect(ownerPropertyOfferKinds(property)).toEqual(['leaseOut', 'sell']);
+  });
+});
+
+/**
+ * 🔴 **ΜΙΑ ΚΑΤΑΣΤΑΣΗ ΑΓΟΡΑΣ, ΜΕ ΟΝΟΜΑ** (εύρημα Ν11, 2026-10-08). Η κάρτα του κατόχου έγραφε
+ * «Στην αγορά» από το **ωμό** `lifecycle`, ενώ ο κριτής της αγοράς ρωτά **και** την εντολή:
+ * αγγελία με ληγμένη ή μη εγκεκριμένη εντολή διάβαζε «Στην αγορά» και δεν ήταν.
+ */
+describe('ownerMarketStandingOf — γιατί (δεν) είναι στην αγορά, από ΕΝΑΝ κριτή', () => {
+  const NOW = '2026-10-08T09:00:00.000Z';
+
+  it('χωρίς εντολή και μη αποσυρμένη ⇒ `on-market`', () => {
+    expect(ownerMarketStandingOf(validOwnerProperty(), NOW)).toBe('on-market');
+  });
+
+  it('αποσυρμένη από τον κάτοχο ⇒ `withdrawn`, ό,τι κι αν λέει η εντολή', () => {
+    const withdrawn = brokeredOwnerProperty({ confirmation: 'confirmed' }, { lifecycle: 'withdrawn' });
+    expect(ownerMarketStandingOf(withdrawn, NOW)).toBe('withdrawn');
+  });
+
+  it('🔴 `listed` αλλά ΚΑΜΙΑ εντολή σε ισχύ ⇒ `no-live-mandate`, ΟΧΙ `on-market`', () => {
+    expect(ownerMarketStandingOf(brokeredOwnerProperty({ confirmation: 'pending' }), NOW)).toBe('no-live-mandate');
+    expect(
+      ownerMarketStandingOf(
+        brokeredOwnerProperty({ confirmation: 'confirmed', expiresAt: '2026-09-01T00:00:00.000Z' }),
+        NOW,
+      ),
+    ).toBe('no-live-mandate');
+  });
+
+  it('🔑 ο παρονομαστής: η ΙΔΙΑ αγγελία με εντολή σε ισχύ ⇒ `on-market`', () => {
+    const live = brokeredOwnerProperty({ confirmation: 'confirmed', startsAt: '2026-09-01T00:00:00.000Z', expiresAt: '2027-02-01T00:00:00.000Z' });
+    expect(ownerMarketStandingOf(live, NOW)).toBe('on-market');
+  });
+
+  it('🔑 το boolean ΠΑΡΑΓΕΤΑΙ από την κατάσταση — δεν μπορούν να διαφωνήσουν', () => {
+    const cases = [
+      validOwnerProperty(),
+      validOwnerProperty({ lifecycle: 'withdrawn' }),
+      brokeredOwnerProperty({ confirmation: 'pending' }),
+      brokeredOwnerProperty({ confirmation: 'confirmed', startsAt: '2026-09-01T00:00:00.000Z', expiresAt: '2027-02-01T00:00:00.000Z' }),
+    ];
+    for (const property of cases) {
+      expect(isOwnerPropertyOnTheMarket(property, NOW)).toBe(ownerMarketStandingOf(property, NOW) === 'on-market');
+    }
+    expect(new Set(cases.map((property) => ownerMarketStandingOf(property, NOW)))).toEqual(
+      new Set(OWNER_MARKET_STANDINGS),
+    );
   });
 });

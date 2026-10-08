@@ -79,6 +79,12 @@ export interface MarketingAudienceControlProps {
    * δημοσίευσης («εμφανίζεται στον δημόσιο χάρτη») για ακίνητο που δεν έχει αγγελία (ADR-329 §3.9).
    */
   readonly offered: boolean;
+  /**
+   * **Διατίθεται, αλλά η δημόσια αγγελία δεν έχει γραφτεί** — «δικαιούται» ≠ «έφτασε» (Ν11). Το δίνει
+   * ο καλών που **ξέρει** την έκβαση της σύνθεσης (`ownerListingVisibility === 'failed'`)· αλλιώς `false`.
+   * Χωρίς αυτό, το πάνελ έγραφε «εμφανίζεται στον δημόσιο χάρτη» κάτω από κάρτα που έλεγε το αντίθετο.
+   */
+  readonly unpublished?: boolean;
   /** Η πράξη· η νέα τιμή φτάνει από τη ζωντανή ανάγνωση του καλούντα. */
   readonly onChange: (next: MarketingAudience) => Promise<AudienceChangeOutcome>;
 }
@@ -86,6 +92,7 @@ export interface MarketingAudienceControlProps {
 export function MarketingAudienceControl({
   audience,
   offered,
+  unpublished = false,
   onChange,
 }: MarketingAudienceControlProps): React.ReactElement {
   const { t } = useTranslation([NS, ENUMS_NS]);
@@ -138,11 +145,16 @@ export function MarketingAudienceControl({
 
       {/* Το «τώρα» και το «όταν», ρητά: η επιλογή μένει ενεργή — τίθεται ΠΡΙΝ από τη διάθεση. */}
       {!offered && <p className="text-sm text-foreground">{t(`${K}.notOffered`)}</p>}
-      <p className="text-sm text-muted-foreground">
-        {/* Δύο ρητές κλήσεις, όχι μία με υπολογισμένο κόμβο: ο στατικός αποδέκτης των κλειδιών
-            (shell/route slice) βλέπει ακριβώς τα δύο υποδέντρα, όχι ολόκληρο το `audience`. */}
-        {offered ? t(`${K}.describe.${audience}`) : t(`${K}.describeWhenUnoffered.${audience}`)}
-      </p>
+      {offered && unpublished ? (
+        // Τρίτο σκέλος: διατίθεται, αλλά η προβολή δεν έχει γραφτεί — ποτέ η παρούσα διατύπωση.
+        <p className="text-sm text-foreground">{t(`${K}.notPublishedYet`)}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {/* Δύο ρητές κλήσεις, όχι μία με υπολογισμένο κόμβο: ο στατικός αποδέκτης των κλειδιών
+              (shell/route slice) βλέπει ακριβώς τα δύο υποδέντρα, όχι ολόκληρο το `audience`. */}
+          {offered ? t(`${K}.describe.${audience}`) : t(`${K}.describeWhenUnoffered.${audience}`)}
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">{t(`${K}.networkPending`)}</p>
 
       {state.kind === 'failed' && (

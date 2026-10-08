@@ -74,6 +74,8 @@ describe('Λ — αλλαγή και ανάκτηση email', () => {
     await waitFor(() => expect(result.current.state.status).toBe('success'));
     expect(result.current.state).toMatchObject({ mode: 'verifyAndChangeEmail', email: 'new@example.com' });
     expect(signOutMock).toHaveBeenCalledTimes(1);
+    // ADR-908 — ο λόγος που ΜΕΝΕΙ στη σελίδα: νέα φόρτωση θα ξανάπαιζε καταναλωμένο κωδικό.
+    expect(signOutMock).toHaveBeenCalledWith({ reason: 'credential-changed' });
     expect(checkMock.mock.invocationCallOrder[0]).toBeLessThan(applyMock.mock.invocationCallOrder[0]);
   });
 

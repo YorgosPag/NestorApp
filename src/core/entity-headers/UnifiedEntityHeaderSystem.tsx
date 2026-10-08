@@ -8,10 +8,9 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Spinner } from '@/components/ui/spinner';
 import { LucideIcon } from 'lucide-react';
+import { EntityActionButton, EntityHeaderActions } from './EntityHeaderActions';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -145,9 +144,17 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
         είχε πλάτος **0** και οι ενέργειες έπεφταν πάνω στο μέσο. Τώρα οι ενέργειες κατεβαίνουν όταν η ταυτότητα
         δεν χωρά στη βάση της (`basis-[32rem]`: μέσο 12rem + 20rem κείμενο).
       */}
+      {/*
+        🔑 Χωρίς `media` (η μονόγραμμη κεφαλίδα — κτίρια, έργα, επαφές, στενή στήλη ακινήτων) οι ενέργειες
+        **υπερχειλίζουν σε μενού** αντί να αναδιπλωθούν (ADR-777 §8.87.7). Το πλέγμα δίνει στην ταυτότητα εγγυημένο
+        ελάχιστο και στις ενέργειες ό,τι περισσεύει: `minmax(0,auto)` — με σκέτο `auto` το ελάχιστο της στήλης θα
+        ήταν το περιεχόμενό της, δηλαδή όλα τα κουμπιά, και ο τίτλος θα έπεφτε ξανά στο 0 (μετρημένο §8.87.6γ).
+      */}
       <div className={media
         ? "flex flex-wrap items-start justify-between gap-3"
-        : "flex items-center justify-between"}>
+        : actions.length > 0
+          ? "grid grid-cols-[minmax(min(16rem,100%),1fr)_minmax(0,auto)] items-center gap-3"
+          : "flex items-center justify-between"}>
         {/* Left side: Icon + Content */}
         <div className={media
           ? "flex flex-col gap-4 sm:flex-row sm:items-start flex-1 basis-[32rem] min-w-0"
@@ -238,13 +245,15 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
         </div>
 
         {/* Right side: Actions */}
-        {actions.length > 0 && (
-          <div className={media ? "flex flex-wrap gap-2 max-w-full" : "flex gap-2 flex-shrink-0 ml-3"}>
+        {actions.length > 0 && (media ? (
+          <div className="flex flex-wrap gap-2 max-w-full">
             {actions.map((action, index) => (
-              <EntityAction key={index} {...action} />
+              <EntityActionButton key={index} action={action} />
             ))}
           </div>
-        )}
+        ) : (
+          <EntityHeaderActions actions={actions} />
+        ))}
       </div>
 
       {/* Custom children content */}
@@ -297,40 +306,6 @@ const EntityBadge: React.FC<EntityHeaderBadge> = ({
     )}>
       {value}
     </span>
-  );
-};
-
-// ===== ENTITY ACTION COMPONENT =====
-
-const EntityAction: React.FC<EntityHeaderAction> = ({
-  label,
-  onClick,
-  icon: Icon,
-  variant = 'default',
-  className,
-  disabled,
-  pending,
-  pendingLabel,
-}) => {
-  const iconSizes = useIconSizes();
-  const spacing = useSpacingTokens();
-  return (
-    <Button
-      type="button"
-      variant={variant}
-      size="sm"
-      onClick={onClick}
-      disabled={disabled || pending}
-      aria-busy={pending}
-      className={cn("h-8", spacing.padding.x.sm, className)}
-    >
-      {pending ? (
-        <Spinner size="small" color="inherit" className="mr-2" />
-      ) : (
-        Icon && <Icon className={`${iconSizes.sm} mr-2`} />
-      )}
-      {pending && pendingLabel ? pendingLabel : label}
-    </Button>
   );
 };
 

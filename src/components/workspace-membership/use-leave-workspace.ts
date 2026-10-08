@@ -9,6 +9,7 @@
  *   Υιοθέτηση → αναμονή του **γεγονότος** «το `AuthContext` έστησε χρήστη ΚΑΙ cookie» (`SessionPhase`,
  *   ADR-859 — ποτέ `setTimeout`) → `/home`. Όσο διαρκεί, ο ακροατής των claims σωπαίνει (`session-handover`).
  * - `ended`     — ανακλήθηκαν χωρίς κλειδί ⇒ αποσύνδεση **με λόγια** και σύνδεση ξανά. Η αποχώρηση **έγινε**.
+ *   Την αποσύνδεση **και** την πλοήγηση τις κάνει ο ΕΝΑΣ κάτοχος (ADR-908, λόγος `left-workspace`).
  *
  * 🔑 **Πλήρης πλοήγηση** στο `/home` (όχι του router): ο διακομιστής κρίνει τον προορισμό με το **νέο** cookie
  * (επόμενο γραφείο ή προσωπικός χώρος), και καμία μνήμη του παλιού γραφείου δεν επιζεί στη σελίδα.
@@ -24,8 +25,6 @@ import { beginSessionHandover } from '@/auth/contexts/auth-context/session-hando
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { navigateDocument } from '@/lib/browser/document-navigation';
-import { AUTH_ROUTES } from '@/lib/routes';
-import { useRouter } from '@/lib/workspace/navigation';
 import { HOME_REDIRECT_ROUTE } from '@/lib/workspace/workspace-routes';
 // ⚠️ TYPE-ONLY πέρα από το σύνορο του διακομιστή — σβήνονται στη μεταγλώττιση (ιδίωμα `useMemberExit`).
 import type { MemberExitPreview } from '@/server/workspace/member-exit';
@@ -74,7 +73,6 @@ function goHome(): void {
 export function useLeaveWorkspace(onSignedOut: () => void): LeaveWorkspace {
   const { previewState, reloadPreview } = useExitPreview<LeavePreview>(API_ROUTES.WORKSPACES.MY_MEMBERSHIP);
   const { user, sessionPhase, signOut } = useAuth();
-  const router = useRouter();
   const [stage, setStage] = useState<LeaveStage>({ kind: 'ready' });
   const endHandover = useRef<(() => void) | null>(null);
   const staleUser = useRef<unknown>(null);
@@ -90,9 +88,10 @@ export function useLeaveWorkspace(onSignedOut: () => void): LeaveWorkspace {
   const signInAgain = useCallback(async () => {
     endHandover.current?.();
     onSignedOut();
-    router.replace(AUTH_ROUTES.login);
-    await signOut();
-  }, [onSignedOut, router, signOut]);
+    // ADR-908 — ο κάτοχος αποσυνδέει και ΜΕΤΑ φορτώνει τη σύνδεση· η `router.replace` που προηγούνταν εδώ
+    // πλοηγούσε με τον άνθρωπο ακόμη συνδεδεμένο.
+    await signOut({ reason: 'left-workspace' });
+  }, [onSignedOut, signOut]);
 
   const continueAfter = useCallback(async (session: SessionContinuation) => {
     if (session.kind === 'unchanged') return goHome();

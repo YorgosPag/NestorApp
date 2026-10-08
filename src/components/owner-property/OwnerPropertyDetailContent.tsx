@@ -197,7 +197,8 @@ function OwnerPropertyView({
   //    δημοσίευσης και ο ταξινομητής της εντολής μπορούν να πέσουν σε **διαφορετική
   //    μέρα** — και η οθόνη θα έλεγε «στον χάρτη» για εντολή που μόλις έληξε.
   const atISO = nowISO();
-  const onMap = ownerListingVisibility(property, atISO) === 'published';
+  const visibility = ownerListingVisibility(property, atISO);
+  const onMap = visibility === 'published';
   // 🏆 **ADR-834 — Η ΠΡΩΤΗ ΠΡΟΒΟΛΗ ΤΗΣ ΑΚΜΗΣ.** Η σχέση **ήδη ταξιδεύει** μέσα στο
   //    έγγραφο· μέχρι σήμερα καμία γραμμή δεν τη ζωγράφιζε. Ο ταξινομητής είναι **ο
   //    ίδιος** με του καταλόγου του γραφείου — αλλάζουν μόνο τα κείμενα.
@@ -350,6 +351,8 @@ function OwnerPropertyView({
       <MarketingAudienceControl
         audience={property.marketingAudience}
         offered={isOffered(projectableFromOwnerProperty(property, atISO))}
+        // 🔑 Ν11 — ο ίδιος κριτής με την κάρτα από πάνω: «δικαιούται» ≠ «έφτασε».
+        unpublished={visibility === 'failed'}
         onChange={async (next) => audienceOutcomeOf(await setOwnerListingAudience(property.id, next))}
       />
 

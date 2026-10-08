@@ -146,7 +146,7 @@ export default function PendingApprovalPage() {
               {t('pendingApproval.checkAgain')}
             </Button>
           )}
-          <Button variant="ghost" onClick={() => void signOut()} className="w-full text-muted-foreground">
+          <Button variant="ghost" onClick={() => void signOut({ reason: 'user-request' })} className="w-full text-muted-foreground">
             <LogOut className="h-4 w-4" aria-hidden="true" />
             {t('pendingApproval.signOut')}
           </Button>

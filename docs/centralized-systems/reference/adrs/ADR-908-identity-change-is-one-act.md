@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **PROPOSED (2026-10-08)** — μετρημένη διάγνωση + πρόταση. **Κανένας κώδικας δεν γράφτηκε.** Περιμένει το «ναι» του Giorgio. |
+| **Status** | 🟡 **ΠΑΡΑΔΟΣΗ Α ΥΛΟΠΟΙΗΜΕΝΗ (2026-10-08), ΑΝΕΠΑΛΗΘΕΥΤΗ ΣΤΗΝ ΠΑΡΑΓΩΓΗ** — βήματα 1–4 του §5 (κάτοχος · 8 καλούντες · εποχή · `loading`). Εκκρεμεί η ζωντανή επαλήθευση μετά το push. Οι παραδόσεις Β, Γ, Δ **δεν** ξεκίνησαν. |
 | **Date** | 2026-10-08 |
 | **Category** | Authentication / Session Lifecycle / Client Navigation |
-| **Canonical Location** | (προτεινόμενο) `src/auth/identity-change/` — ο ΕΝΑΣ κάτοχος· επαναχρησιμοποιεί `src/lib/browser/document-navigation.ts`, `src/auth/contexts/auth-context/session-handover.ts`, `src/lib/auth/token-credentials.ts` |
+| **Canonical Location** | `src/auth/identity-change/end-sign-in.ts` (ο ΕΝΑΣ κάτοχος) · `end-sign-in-destinations.ts` (ο πίνακας) · `src/auth/contexts/auth-context/identity-epoch.ts` (η εποχή) — επαναχρησιμοποιεί `src/lib/browser/document-navigation.ts`, `src/auth/contexts/auth-context/session-handover.ts`, `src/lib/auth/token-credentials.ts` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | ADR-859 (δύο προηγούμενοι βρόχοι σύνδεσης — ίδια κλάση) · ADR-894 (ανάκληση ανά σύνδεση, `signInIsLive`) · ADR-892 §13 (παράδοση συνεδρίας) · ADR-853 §13 (σκληρή πλοήγηση) · ADR-848 §9 (διεύθυνση επιστροφής) · ADR-787 / CHECK 3.58 (κριτής χώρου) · ADR-819 (`/home`) |
 
@@ -140,6 +140,25 @@ another tab… Reload» είναι παρατηρημένο, όχι τεκμηρ
 | ανάκληση από μακριά / λήξη | `/login` | ναι (ο ίδιος άνθρωπος επιστρέφει) |
 | αποχώρηση από χώρο | όπως σήμερα (ADR-892 §13) | όχι |
 
+**Όπως υλοποιήθηκε (παράδοση Α)** — ο τύπος `EndSignInRequest` είναι κλειστό σύνολο και το `signOut` του
+`AuthContext` τον **απαιτεί**, άρα καλών χωρίς λόγο δεν μεταγλωττίζεται:
+
+| `reason` | Προορισμός | Καλούντες |
+|---|---|---|
+| `user-request` | `/login`, ποτέ `next` | `user-menu` · `pending-approval` · `UserRoleContext.logout` |
+| `left-workspace` | `/login`, ποτέ `next` | `use-leave-workspace` (έκβαση `ended` ή αποτυχία υιοθέτησης) |
+| `revoked` | `/login?next=<εδώ>` | `use-sign-in-revocation` ×2 · `SessionsList` |
+| `switch-account` | το `href` του διακομιστή (υποχρεωτικό πεδίο του τύπου) | `SwitchAccount` |
+| `credential-changed` | **μένει** (`stay`) | `useAuthActionCode` |
+
+⚠️ **Το `stay` είναι η μία δηλωμένη εξαίρεση στο «το έγγραφο τελειώνει»**: το `/auth/action` είναι δημόσιο και
+δείχνει το αποτέλεσμα της αλλαγής email· νέα φόρτωση θα ξανάπαιζε **καταναλωμένο** κωδικό και θα έδειχνε σφάλμα
+για πράξη που πέτυχε. Εκεί ο κάτοχος ανοίγει τον φράχτη και το `loading` πέφτει **μετά** το σβήσιμο του cookie.
+
+🔁 **Διόρθωση της καταμέτρησης**: οι καλούντες δεν είναι 8 αλλά **9**. Το `AuthContext.tsx` καλεί `auth.signOut()`
+μέσα στον ίδιο τον ακροατή όταν η συνεδρία κριθεί κατεστραμμένη (`validateSession` ⇒ `LOGOUT`). Δεν πλοηγεί και
+**δεν** άλλαξε στην παράδοση Α· η πύλη του βήματος 9 οφείλει να το δηλώσει ως εξαίρεση ή να το φέρει στον κάτοχο.
+
 **Κόστος που δέχεται η απόφαση**: η αποσύνδεση δεν είναι πια «ακαριαία»· το κουμπί δείχνει «Αποσύνδεση…» για
 ~1,5 s (μετρημένο) και μετά φορτώνει το `/login`. Η αισιόδοξη πλοήγηση ήταν ακριβώς η πηγή και των δύο ελαττωμάτων.
 
@@ -259,4 +278,5 @@ cookies· το `"cache"` «κολλά για δευτερόλεπτα» στο C
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-10-08 | Δημιουργία — μετρημένη διάγνωση Ε1/Ε2 (παραγωγή), έρευνα, SSoT audit, πρόταση. **PROPOSED, χωρίς κώδικα.** |
+| 2026-10-08 | **Παράδοση Α (βήματα 1–4) — κώδικας, ανεπαλήθευτος στην παραγωγή.** Νέα: `auth/identity-change/end-sign-in.ts` (κάτοχος: φράχτης → εποχή → συσκευή → Firebase → cookie → `navigateDocument` με `replace`· ιδεμποτικός· κάθε σκέλος σε δικό του `try`), `end-sign-in-destinations.ts` (πίνακας), `auth-context/identity-epoch.ts`, `auth-context/use-session-refresh-event.ts` (εξαγωγή από το `AuthContext`, όριο 500 γραμμών). Το `AuthContextType.signOut` απαιτεί πλέον `EndSignInRequest`· το `useAuthActions.signOut` **διαγράφηκε** μαζί με το `finally { setLoading(false) }`. Το `syncServerSession` παραιτείται αν η εποχή άλλαξε κατά το `getIdToken(true)` (ένας φρουρός για 4 καλούντες)· ίδιος έλεγχος πριν το `setUser` σε `use-claims-refresh` και στον ακροατή `REFRESH_SESSION`. Το δεύτερο `DELETE` cookie έφυγε· ο ακροατής ταυτότητας δεν σβήνει cookie ούτε κατεβάζει `loading` όσο τρέχει ο κάτοχος. Το μενού δεν κάνει πια `router.push` (το «optimistic» του ADR-022 αντικαταστάθηκε). **Δεν άλλαξαν**: `useAuthFormState`, `ProtectedRoute` (τα παράθυρά τους κλείνουν επειδή το `loading` μένει), `POST /api/auth/session`, `safeReturnPath` — αυτά είναι παράδοση Β. Εύρημα: ένατος καλών (§3.1). Tests: `end-sign-in.test.ts` (Κ1–Κ6, Π1–Π4), `identity-epoch.test.ts` (Ε1–Ε3) + 4 ενημερωμένες σουίτες. |
 | 2026-10-08 | Αναθεώρηση μετά από δεύτερο γύρο έρευνας: η αρχή «ένα έγγραφο = μία ταυτότητα»· **μέσα** στην εμβέλεια πλέον οι άλλες καρτέλες (§3.8) και το bfcache (§3.7)· αιτιολογημένη απόρριψη του γενικού `Clear-Site-Data` (§3.9). Ακόμη **PROPOSED, χωρίς κώδικα.** |

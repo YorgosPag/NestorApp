@@ -44,13 +44,16 @@ export function SwitchAccountButton({ href }: { href: string }) {
 
   const onSwitch = useCallback(async () => {
     setSwitching(true);
+    // ADR-908 — ο ΕΝΑΣ κάτοχος αποσυνδέει ΚΑΙ πλοηγεί (έγγραφο, μετά το τελευταίο `await`). Χωρίς πάροχο
+    // ταυτότητας δεν υπάρχει τι να αποσυνδεθεί ⇒ σκέτη πλοήγηση.
+    if (auth === null) return navigateDocument(href);
     try {
-      await auth?.signOut();
+      await auth.signOut({ reason: 'switch-account', href });
     } catch (error: unknown) {
-      // ⚠️ Προχωράμε: η σελίδα σύνδεσης είναι ο σωστός τόπος και για να ξαναδοκιμάσει.
+      // ⚠️ Δίχτυ: ο άνθρωπος δεν κολλά — η σελίδα σύνδεσης είναι ο σωστός τόπος και για να ξαναδοκιμάσει.
       logger.warn('Η αποσύνδεση πριν την αλλαγή λογαριασμού απέτυχε', { error });
+      navigateDocument(href);
     }
-    navigateDocument(href);
   }, [auth, href]);
 
   return (

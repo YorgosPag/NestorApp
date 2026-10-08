@@ -49,7 +49,12 @@ import {
   LISTING_FOCUS_CARD_CLASS,
 } from '@/components/search-results/listing-focus-card';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
-import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
+import {
+  ownerMarketStandingOf,
+  ownerPropertyOfferKinds,
+  type OwnerMarketStanding,
+  type OwnerProperty,
+} from '@/types/owner-property';
 
 import { OwnerPropertyCardCover } from './OwnerPropertyCardCover';
 import { StatsRowPending } from './owner-property-stats-pending';
@@ -74,6 +79,16 @@ const PRESENCE_KEY: Record<OwnerMapPresence['kind'], string> = {
   unrecorded: `${K}.publish.public`,
   withdrawn: `${K}.publish.withdrawn`,
   failed: `${K}.publish.failed`,
+};
+
+/**
+ * **Η ετικέτα της κεφαλίδας** — από τον κριτή της αγοράς, ποτέ από το ωμό `lifecycle` (Ν11): μια
+ * `listed` αγγελία χωρίς εντολή σε ισχύ **δεν** είναι «Στην αγορά». Πίνακας, όχι υπολογισμένο κλειδί.
+ */
+const MARKET_STANDING_KEY: Record<OwnerMarketStanding, string> = {
+  'on-market': `${K}.lifecycle.listed`,
+  withdrawn: `${K}.lifecycle.withdrawn`,
+  'no-live-mandate': `${K}.lifecycle.noLiveMandate`,
 };
 
 export function OwnerPropertyCard({
@@ -130,7 +145,7 @@ export function OwnerPropertyCard({
         <header className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-base font-semibold text-foreground">{property.title}</h2>
           <span className="text-sm text-muted-foreground">
-            {t(`${K}.lifecycle.${property.lifecycle}`)}
+            {t(MARKET_STANDING_KEY[ownerMarketStandingOf(property, at)])}
           </span>
         </header>
 

@@ -84,7 +84,7 @@ function useSessionRevocation(userId: string, t: Translate, setSessions: Session
   // ADR-894 §10 Β1 — ανακλήθηκαν ΟΛΕΣ οι συνδέσεις και αυτή η συσκευή δεν πήρε νέο κλειδί ⇒ σύνδεση ξανά.
   const settle = (result: { success: boolean; signInRequired?: boolean }, keep: (s: SessionDisplayItem) => boolean) => {
     if (result.signInRequired) {
-      void signOut();
+      void signOut({ reason: 'revoked' });
       return;
     }
     if (result.success) {

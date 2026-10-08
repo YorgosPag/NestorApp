@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FirebaseAuthUser } from '@/auth/types/auth.types';
 import { buildAuthUser, syncServerSession } from './auth-context-session';
+import { currentIdentityEpoch, identityChangedSince } from './identity-epoch';
 import { isSessionHandoverActive } from './session-handover';
 
 const logger = createModuleLogger('UseClaimsRefresh');
@@ -73,8 +74,11 @@ export function useClaimsRefresh({
         lastHandledRef.current = mirroredAt;
         logger.info('Detected claims update, forcing token refresh', { uid, mirroredAt });
 
+        // ADR-908 §3.2 — ο έλεγχος `currentUser` από πάνω μιλά για το ΠΡΙΝ· η εποχή μιλά για το ΜΕΤΑ το `await`.
+        const startedAt = currentIdentityEpoch();
         try {
           const idTokenResult = await firebaseUser.getIdTokenResult(true);
+          if (identityChangedSince(startedAt)) return;
           const updatedUser = buildAuthUser(firebaseUser, idTokenResult.claims);
           setUser(updatedUser);
           await syncServerSession(firebaseUser);

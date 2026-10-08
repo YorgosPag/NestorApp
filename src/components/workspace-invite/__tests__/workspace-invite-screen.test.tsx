@@ -69,7 +69,7 @@ jest.mock('@/lib/browser/document-navigation', () => ({
 }));
 const mockRefreshToken = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/auth', () => ({
-  useAuthOptional: () => ({ signOut: () => mockSignOut(), refreshToken: () => mockRefreshToken() }),
+  useAuthOptional: () => ({ signOut: (request: unknown) => mockSignOut(request), refreshToken: () => mockRefreshToken() }),
 }));
 
 // 🔴 **ΚΑΝΕΝΑ mock στο `useSemanticColors` / `useLayoutClasses`** — μάθημα μετρημένο στη
@@ -405,14 +405,16 @@ describe('Η — αλλαγή λογαριασμού με επιστροφή σ�
     expect(screen.queryByRole('button', { name: INVITE_PAGE_KEYS.decline })).toBeNull();
   });
 
-  it('🔴 Η2 — «Αλλαγή λογαριασμού»: ΠΡΩΤΑ αποσύνδεση, ΜΕΤΑ σύνδεση με επιστροφή ΕΔΩ', async () => {
+  // 🔑 ADR-908 — η οθόνη δηλώνει ΛΟΓΟ + προορισμό· αποσύνδεση ΚΑΙ πλοήγηση τις κάνει ο ΕΝΑΣ κάτοχος
+  //    (η σειρά «πρώτα αποσύνδεση, μετά έγγραφο» φυλάγεται στο `end-sign-in.test.ts`).
+  it('🔴 Η2 — «Αλλαγή λογαριασμού»: ζητά από τον κάτοχο αποσύνδεση με επιστροφή ΕΔΩ, και ΔΕΝ πλοηγεί η ίδια', async () => {
     render(<WorkspaceInviteContent view={previewView({ kind: 'other-account', signedInAs: 'allos@example.com' })} />);
 
     await userEvent.setup().click(screen.getByRole('button', { name: INVITE_PAGE_KEYS.switchAccount }));
 
-    await waitFor(() => expect(mockNavigateDocument).toHaveBeenCalledWith(SWITCH_HREF));
+    await waitFor(() => expect(mockSignOut).toHaveBeenCalledWith({ reason: 'switch-account', href: SWITCH_HREF }));
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockSignOut.mock.invocationCallOrder[0]).toBeLessThan(mockNavigateDocument.mock.invocationCallOrder[0]);
+    expect(mockNavigateDocument).not.toHaveBeenCalled();
   });
 
   it('🔴 Η3 — `wrong-recipient` την ώρα της ΠΡΑΞΗΣ: αλλαγή λογαριασμού, ΟΧΙ σκέτο `/login`', async () => {
@@ -420,7 +422,7 @@ describe('Η — αλλαγή λογαριασμού με επιστροφή σ�
 
     await userEvent.setup().click(await screen.findByRole('button', { name: INVITE_PAGE_KEYS.switchAccount }));
 
-    await waitFor(() => expect(mockNavigateDocument).toHaveBeenCalledWith(SWITCH_HREF));
+    await waitFor(() => expect(mockSignOut).toHaveBeenCalledWith({ reason: 'switch-account', href: SWITCH_HREF }));
     expect(screen.queryByRole('link')).toBeNull();
   });
 

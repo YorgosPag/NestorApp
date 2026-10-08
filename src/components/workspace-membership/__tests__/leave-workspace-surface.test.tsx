@@ -157,13 +157,14 @@ describe('Σ — μετά την αποχώρηση', () => {
     await waitFor(() => expect(docNav.calledHome).toBe(true));
   });
 
-  it('Σ3 — `ended` (χωρίς κλειδί): σύνδεση ξανά, όχι /home', async () => {
+  // 🔑 ADR-908 — ο ΕΝΑΣ κάτοχος αποσυνδέει και πλοηγεί· η οθόνη δηλώνει μόνο τον λόγο, και ΔΕΝ πλοηγεί η ίδια.
+  it('Σ3 🔴 — `ended` (χωρίς κλειδί): αποσύνδεση με λόγο `left-workspace`, καμία δική της πλοήγηση', async () => {
     mockGet.mockResolvedValue(previewWith({ isHomeWorkspace: true }));
     mockPost.mockResolvedValue({ status: 'left', home: { kind: 'personal' }, session: { kind: 'ended' } });
     render(<LeaveWorkspaceDialog open onClose={jest.fn()} />);
     await userEvent.click(await screen.findByRole('button', { name: new RegExp(`^${K.confirm}`) }));
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/login'));
-    expect(authState.signOut).toHaveBeenCalled();
+    await waitFor(() => expect(authState.signOut).toHaveBeenCalledWith({ reason: 'left-workspace' }));
+    expect(mockRouter.replace).not.toHaveBeenCalled();
     expect(docNav.called).toBe(false);
   });
 });

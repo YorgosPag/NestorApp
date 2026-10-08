@@ -143,7 +143,8 @@ export interface AuthContextActions {
   signIn: (email: string, password: string) => Promise<SignInOutcome>;
   signInWithGoogle: () => Promise<SignInOutcome>;
   signUp: (data: SignUpData) => Promise<void>;
-  signOut: () => Promise<void>;
+  /** ADR-908 — ο λόγος είναι υποχρεωτικός· ο προορισμός βγαίνει από τον ΕΝΑΝ πίνακα. */
+  signOut: (request: import('@/auth/identity-change/end-sign-in-destinations').EndSignInRequest) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;

@@ -20,6 +20,7 @@
 import { useEffect } from 'react';
 import { onIdTokenChanged } from 'firebase/auth';
 
+import type { EndSignInRequest } from '@/auth/identity-change/end-sign-in-destinations';
 import { auth } from '@/lib/firebase';
 import { isOwnSignInRevoked } from '@/lib/auth/revoked-sign-ins-claim';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -30,8 +31,11 @@ const logger = createModuleLogger('UseSignInRevocation');
 interface UseSignInRevocationParams {
   readonly uid: string | null | undefined;
   readonly activeSessionId: string | null;
-  readonly signOut: () => Promise<void>;
+  /** Ο ΕΝΑΣ κάτοχος (ADR-908)· ο λόγος `revoked` ⇒ σύνδεση **με επιστροφή** εδώ, γιατί γυρνά ο ίδιος άνθρωπος. */
+  readonly signOut: (request: EndSignInRequest) => Promise<void>;
 }
+
+const REVOKED: EndSignInRequest = { reason: 'revoked' };
 
 /** Ακούει και τα δύο σήματα· όποιο φτάσει πρώτο αποσυνδέει (το δεύτερο βρίσκει ήδη αποσυνδεδεμένο browser). */
 export function useSignInRevocation({ uid, activeSessionId, signOut }: UseSignInRevocationParams): void {
@@ -39,7 +43,7 @@ export function useSignInRevocation({ uid, activeSessionId, signOut }: UseSignIn
     if (!uid || !activeSessionId) return;
     return EnterpriseSessionService.watchSessionRevocation(uid, activeSessionId, () => {
       logger.warn('Session revoked remotely — signing out');
-      void signOut();
+      void signOut(REVOKED);
     });
   }, [uid, activeSessionId, signOut]);
 
@@ -51,7 +55,7 @@ export function useSignInRevocation({ uid, activeSessionId, signOut }: UseSignIn
         (result) => {
           if (!isOwnSignInRevoked(result.claims)) return;
           logger.warn('This sign-in is listed as revoked in its own token — signing out');
-          void signOut();
+          void signOut(REVOKED);
         },
         (error: unknown) => logger.warn('Token claims unreadable (non-blocking)', { error }),
       );

@@ -670,14 +670,46 @@ export function isOwnerPropertyOnTheMarket(
   property: OwnerProperty,
   nowISOValue: string,
 ): boolean {
-  return (
-    isLiveOwnerProperty(property) &&
-    // 🔑 **Καμία εντολή = ο ιδιώτης μόνος του ⇒ δημοσιεύεται.** Ήταν το σκέλος `self`
-    //    του `mandateAllowsPublication`, και η σημασιολογία μένει **ταυτόσημη**: μία
-    //    τουλάχιστον ζωντανή εντολή, ή καμία καθόλου. Ό,τι έχει **μόνο** ληγμένες ή
-    //    ανακληθείσες εξακολουθεί να **μην** φτάνει στον κόσμο.
-    (mandatesOf(property).length === 0 || hasAnyActiveMandate(mandatesOf(property), nowISOValue))
-  );
+  return ownerMarketStandingOf(property, nowISOValue) === 'on-market';
+}
+
+/**
+ * Οι τρεις θέσεις μιας αγγελίας απέναντι στην αγορά — **κλειστό σύνολο**.
+ *
+ * | Θέση | Σημασία |
+ * |---|---|
+ * | `on-market` | ο κάτοχος δεν την απέσυρε **και** η εντολή (αν υπάρχει) είναι σε ισχύ |
+ * | `withdrawn` | την απέσυρε ο **κάτοχος** (`lifecycle`) |
+ * | `no-live-mandate` | είναι `listed`, αλλά **καμία** εντολή δεν ισχύει τώρα (αναμονή · λήξη · ανάκληση · δεν άρχισε) |
+ */
+export const OWNER_MARKET_STANDINGS = ['on-market', 'withdrawn', 'no-live-mandate'] as const;
+
+export type OwnerMarketStanding = (typeof OWNER_MARKET_STANDINGS)[number];
+
+/**
+ * 🔴 **ΓΙΑΤΙ (ΔΕΝ) ΕΙΝΑΙ ΣΤΗΝ ΑΓΟΡΑ** — ο ταξινομητής πίσω από το {@link isOwnerPropertyOnTheMarket}.
+ *
+ * Το boolean έκρυβε **δύο** λόγους με **άλλη θεραπεία**: «την απέσυρα» (πάτα Επαναφορά) και «η
+ * εντολή δεν ισχύει» (μίλα με το γραφείο). Η οθόνη, χωρίς όνομα για το δεύτερο, έγραφε «Στην
+ * αγορά» από το ωμό `lifecycle` — δεύτερος κριτής, που διαφωνούσε με τον πρώτο (Ν11, 2026-10-08).
+ *
+ * 🔑 Η απόσυρση κρίνεται **πρώτη**: είναι πράξη του κατόχου και ισχύει σε κάθε κατάσταση εντολής
+ * (`listing-presence.ts`).
+ */
+export function ownerMarketStandingOf(
+  property: OwnerProperty,
+  nowISOValue: string,
+): OwnerMarketStanding {
+  if (!isLiveOwnerProperty(property)) return 'withdrawn';
+
+  // 🔑 **Καμία εντολή = ο ιδιώτης μόνος του ⇒ δημοσιεύεται.** Ήταν το σκέλος `self`
+  //    του `mandateAllowsPublication`, και η σημασιολογία μένει **ταυτόσημη**: μία
+  //    τουλάχιστον ζωντανή εντολή, ή καμία καθόλου. Ό,τι έχει **μόνο** ληγμένες ή
+  //    ανακληθείσες εξακολουθεί να **μην** φτάνει στον κόσμο.
+  const mandates = mandatesOf(property);
+  return mandates.length === 0 || hasAnyActiveMandate(mandates, nowISOValue)
+    ? 'on-market'
+    : 'no-live-mandate';
 }
 
 /**

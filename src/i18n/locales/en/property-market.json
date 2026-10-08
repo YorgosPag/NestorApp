@@ -746,6 +746,7 @@
       "label": "Status",
       "listed": "On the market",
       "withdrawn": "Withdrawn",
+      "noLiveMandate": "Off the market — no mandate in force",
       "withdraw": "Withdraw",
       "restore": "Restore",
       "withdrawNote": "Withdrawing deletes nothing — the listing leaves the public map and stays in your list.",
@@ -2231,6 +2232,7 @@
       "network": "Private marketing: the listing is not shown publicly. Its custodians’ professional network can also see it."
     },
     "notOffered": "This property is not on offer right now, so there is no listing for any audience.",
+    "notPublishedYet": "The public listing has not been updated yet. Save the property again; after that the listing will follow this setting.",
     "describeWhenUnoffered": {
       "public": "Once it is on offer, the listing will appear on the public map and in searches.",
       "custodians": "Once it is on offer, marketing will be private: the listing will not be shown publicly. Only you and agencies with an active mandate will see it.",

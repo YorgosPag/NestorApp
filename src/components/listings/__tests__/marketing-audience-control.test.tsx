@@ -191,6 +191,25 @@ describe('Ε6 — το κοινό δεν παρουσιάζεται ως δημ�
     expect(screen.queryByText('property-market:audience.notOffered')).not.toBeInTheDocument();
   });
 
+  /**
+   * 🔴 **Ν11, 2026-10-08** — «διατίθεται» ≠ «έφτασε». Η κάρτα του κατόχου έλεγε «η δημόσια αγγελία
+   * δεν ενημερώθηκε» και το πάνελ από κάτω «εμφανίζεται στον δημόσιο χάρτη» — στην ίδια σελίδα.
+   */
+  it('🔴 διατίθεται αλλά η δημόσια αγγελία ΔΕΝ έχει γραφτεί ⇒ το λέει, ΟΧΙ «εμφανίζεται»', () => {
+    render(<MarketingAudienceControl offered unpublished audience="public" onChange={noop} />);
+
+    expect(screen.getByText('property-market:audience.notPublishedYet')).toBeInTheDocument();
+    expect(screen.queryByText('property-market:audience.describe.public')).not.toBeInTheDocument();
+    expect(screen.queryByText('property-market:audience.notOffered')).not.toBeInTheDocument();
+  });
+
+  it('🔑 ο παρονομαστής: το `unpublished` ΔΕΝ ακυρώνει το «δεν διατίθεται»', () => {
+    render(<MarketingAudienceControl offered={false} unpublished audience="public" onChange={noop} />);
+
+    expect(screen.getByText('property-market:audience.notOffered')).toBeInTheDocument();
+    expect(screen.queryByText('property-market:audience.notPublishedYet')).not.toBeInTheDocument();
+  });
+
   it('δεν διατίθεται ⇒ η επιλογή κοινού ΜΕΝΕΙ ενεργή (ρύθμιση πριν από τη δημοσίευση)', () => {
     render(<MarketingAudienceControl offered={false} audience="custodians" onChange={noop} />);
 

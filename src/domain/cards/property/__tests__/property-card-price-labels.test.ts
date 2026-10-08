@@ -17,6 +17,7 @@
 import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
+  buildListingAudienceBadge,
   buildPropertyBadges,
   buildPropertyStatusBadge,
   buildPropertyPriceStats,
@@ -192,8 +193,39 @@ describe('αποσυρμένο ακίνητο: ετικέτα κύκλου ζω�
   it('ζωντανό: φυσική κατάσταση + εμπορική ετικέτα, καμία ετικέτα κύκλου ζωής', () => {
     const labels = badgeLabels(live);
     expect(labels[0]).toBe('operationalStatus.ready');
-    expect(labels).toHaveLength(2);
+    expect(labels[1]).toBe('commercialStatus.for-sale');
     expect(labels).not.toContain('trash:archivedLabel');
+  });
+
+  // ADR-777 §8.87.8 — η γραμμή της λίστας λέει ό,τι και η κεφαλίδα της σελίδας, από τον ΙΔΙΟ κατασκευαστή.
+  // Το `type` είναι γεγονός διάθεσης: χωρίς αυτό ο κριτής (`offeredAudienceOf`) δεν βλέπει προσφορά.
+  const offered = { ...listed, type: 'apartment' };
+
+  it('✅ παρονομαστής: διατίθεται χωρίς πεδίο κοινού ⇒ τρίτο σήμα «Δημόσια» (ADR-864 Α3)', () => {
+    expect(badgeLabels(offered as unknown as Property)).toEqual([
+      'operationalStatus.ready',
+      'commercialStatus.for-sale',
+      'marketingAudience.public',
+    ]);
+  });
+
+  it('🔴 το σήμα κοινού της λίστας ΕΙΝΑΙ το σήμα κοινού της κεφαλίδας — για κάθε κοινό', () => {
+    for (const marketingAudience of ['public', 'network', 'custodians'] as const) {
+      const property = { ...offered, marketingAudience } as unknown as Property;
+      const badges = buildPropertyBadges('operationalStatus.ready', 'success', property, t);
+      const last = badges[badges.length - 1];
+      expect(last?.label).toBe(`marketingAudience.${marketingAudience}`);
+      expect(last).toEqual(buildListingAudienceBadge(property, t));
+    }
+  });
+
+  it('🔴 ακίνητο που ΔΕΝ διατίθεται ⇒ κανένα σήμα κοινού στη λίστα (απουσία πεδίου ≠ «Δημόσια»)', () => {
+    const unavailable = { ...offered, commercialStatus: 'unavailable' } as unknown as Property;
+    const sold = { ...offered, commercialStatus: 'sold' } as unknown as Property;
+    const retired = { ...offered, status: 'archived' } as unknown as Property;
+    for (const property of [unavailable, sold, retired]) {
+      expect(badgeLabels(property).some((label) => label.startsWith('marketingAudience.'))).toBe(false);
+    }
   });
 
   it('🔴 στο αρχείο: ΠΡΩΤΗ η «Αρχειοθετημένο», η εμπορική ΛΕΙΠΕΙ, η φυσική μένει', () => {

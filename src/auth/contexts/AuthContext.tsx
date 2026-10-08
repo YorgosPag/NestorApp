@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
@@ -19,7 +19,6 @@ import { userPreferencesService } from '@/services/user/EnterpriseUserPreference
 import { createModuleLogger } from '@/lib/telemetry';
 import { clearCorruptedUserData, validateSession } from './auth-context/auth-context-errors';
 import {
-  bindRefreshSessionListener,
   buildAuthUser,
   clearServerSessionCookie,
   syncServerSession,
@@ -37,6 +36,10 @@ import { useAuthActions } from './auth-context/useAuthActions';
 import { useSecondFactor } from './auth-context/second-factor';
 import { useClaimsRefresh } from './auth-context/use-claims-refresh';
 import { useSignInRevocation } from './auth-context/use-sign-in-revocation';
+import { useSessionRefreshEvent } from './auth-context/use-session-refresh-event';
+import { observeIdentity } from './auth-context/identity-epoch';
+import { endSignIn, isEndSignInActive } from '../identity-change/end-sign-in';
+import type { EndSignInRequest } from '../identity-change/end-sign-in-destinations';
 
 const logger = createModuleLogger('AuthContext');
 
@@ -85,7 +88,11 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<SignInOutcome>;
   signInWithGoogle: () => Promise<SignInOutcome>;
   signUp: (data: SignUpData) => Promise<void>;
-  signOut: () => Promise<void>;
+  /**
+   * 🔴 **ADR-908 — Ο ΛΟΓΟΣ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟΣ, ΚΑΙ Ο ΚΑΛΩΝ ΔΕΝ ΠΛΟΗΓΕΙ.** Ο προορισμός βγαίνει από τον ΕΝΑΝ
+   * πίνακα (`end-sign-in-destinations`)· η πλοήγηση είναι **εγγράφου** και γίνεται **μετά** το τελευταίο `await`.
+   */
+  signOut: (request: EndSignInRequest) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
   /**
@@ -159,6 +166,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     challengeSecondFactor,
   });
 
+  // 🔴 ADR-908 §3.1/§3.3 — η αποσύνδεση ΑΝΑΤΙΘΕΤΑΙ στον ΕΝΑΝ κάτοχο. Το `loading` ανεβαίνει εδώ και το
+  //    κατεβάζει ΜΟΝΟ η έκβαση `stay`· στο `navigate` το έγγραφο φεύγει και δεν το κατεβάζει κανείς.
+  const signOut = useCallback(async (request: EndSignInRequest): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    if ((await endSignIn(request)) === 'stay') setLoading(false);
+  }, []);
+
   // 🌐 ADR-851 — η γλώσσα των μηνυμάτων της ίδιας της Firebase ακολουθεί την οθόνη.
   useEffect(() => bindAuthLanguage(auth, i18n), []);
 
@@ -180,6 +195,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     //    δεν γράφει ποτέ κατασκευασμένη ταυτότητα σε βάση.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       logger.debug('[AuthContext] Auth state changed:', { uid: firebaseUser?.uid || 'No user' });
+      // ADR-908 §3.2 — ΣΥΓΧΡΟΝΑ, πριν από κάθε `await`: άλλος άνθρωπος ⇒ ό,τι εκκρεμεί παραιτείται.
+      observeIdentity(firebaseUser?.uid ?? null);
 
       const validation = validateSession(firebaseUser);
       logger.debug('[AuthContext] Session validation:', { status: validation.status });
@@ -209,18 +226,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (!firebaseUser) {
-        try {
-          await clearServerSessionCookie();
-          logger.debug('[AuthContext] Server session cookie cleared');
-        } catch (sessionError) {
-          logger.warn('[AuthContext] Failed to clear server session cookie (non-blocking)', { error: sessionError });
+        // 🔴 ADR-908 §3.3 — όσο τρέχει ο κάτοχος της αποσύνδεσης, το cookie το σβήνει ΕΚΕΙΝΟΣ (ήταν δύο `DELETE`)
+        //    και το `loading` ΜΕΝΕΙ: αν έπεφτε εδώ, οι φρουροί θα πλοηγούσαν πριν φύγει το έγγραφο.
+        const ownedByEndSignIn = isEndSignInActive();
+        if (!ownedByEndSignIn) {
+          try {
+            await clearServerSessionCookie();
+            logger.debug('[AuthContext] Server session cookie cleared');
+          } catch (sessionError) {
+            logger.warn('[AuthContext] Failed to clear server session cookie (non-blocking)', { error: sessionError });
+          }
         }
         setSessionPhase('anonymous');
         setUser(null);
         setDeclaredOccupation(null);
         setVatNumber(null);
         setActiveSessionId(null);
-        setLoading(false);
+        if (!ownedByEndSignIn) setLoading(false);
         return;
       }
 
@@ -291,7 +313,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // ADR-894 §10.1 + §10.7: ανάκληση ΑΥΤΗΣ της συσκευής — από την εγγραφή της ή από το ίδιο της το token.
-  useSignInRevocation({ uid: user?.uid, activeSessionId, signOut: actions.signOut });
+  useSignInRevocation({ uid: user?.uid, activeSessionId, signOut });
 
   // ADR-360: Auto-refresh ID token when server bumps claimsUpdatedAt mirror
   useClaimsRefresh({
@@ -300,23 +322,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser,
   });
 
-  useEffect(() => {
-    return bindRefreshSessionListener(async () => {
-      if (!auth.currentUser) {
-        return;
-      }
-
-      try {
-        await syncServerSession(auth.currentUser);
-        logger.debug('[AuthContext] Server session cookie refreshed (event)');
-        const idTokenResult = await auth.currentUser.getIdTokenResult(true);
-        const updatedUser = buildAuthUser(auth.currentUser, idTokenResult.claims);
-        setUser(updatedUser);
-      } catch (sessionError) {
-        logger.warn('[AuthContext] Failed to refresh server session cookie (event)', { error: sessionError });
-      }
-    });
-  }, []);
+  useSessionRefreshEvent(setUser);
 
   useEffect(() => {
     if (!user) {
@@ -355,15 +361,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await saveProfileNames(db, outcome.uid, outcome.names);
       }
     },
-    signOut: async () => {
-      await actions.signOut();
-      try {
-        await clearServerSessionCookie();
-        logger.debug('[AuthContext] Server session cookie cleared on sign-out');
-      } catch (sessionError) {
-        logger.warn('[AuthContext] Failed to clear server session cookie on sign-out', { error: sessionError });
-      }
-    },
+    signOut,
     resetPassword: actions.resetPassword,
     /**
      * 🔴 **ADR-834 §6.2 — ΤΟ ΔΕΥΤΕΡΟ ΑΠΟΘΕΤΗΡΙΟ, ΠΟΥ ΕΛΕΙΠΕ ΟΛΟΚΛΗΡΟ.**
@@ -462,7 +460,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // και που στην οθόνη μοιάζει με «ο χρήστης δεν έχει επάγγελμα».
   }), [
     actions, cancelMfaVerification, declaredOccupation, error, loading, mfaRequired,
-    sessionPhase, user, vatNumber, verifyMfaCode,
+    sessionPhase, signOut, user, vatNumber, verifyMfaCode,
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

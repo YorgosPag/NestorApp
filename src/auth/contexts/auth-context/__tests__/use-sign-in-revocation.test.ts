@@ -45,7 +45,7 @@ function emitToken(claims: Record<string, unknown>): void {
 }
 
 describe('useSignInRevocation', () => {
-  const signOut = jest.fn(async () => undefined);
+  const signOut = jest.fn(async (_request: unknown) => undefined);
 
   beforeEach(() => {
     signOut.mockClear();
@@ -56,6 +56,8 @@ describe('useSignInRevocation', () => {
     emitToken({ auth_time: SIGN_IN, revokedSignIns: [SIGN_IN] });
     await flush();
     expect(signOut).toHaveBeenCalledTimes(1);
+    // ADR-908 — `revoked` ⇒ ο κάτοχος στέλνει στη σύνδεση ΜΕ επιστροφή (γυρνά ο ίδιος άνθρωπος).
+    expect(signOut).toHaveBeenCalledWith({ reason: 'revoked' });
   });
 
   it('Υ2 — ανακλήθηκε ΑΛΛΗ σύνδεση του λογαριασμού ⇒ αυτή μένει', async () => {

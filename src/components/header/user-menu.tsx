@@ -5,13 +5,11 @@
  * USER MENU - ENTERPRISE DROPDOWN WITH LOGOUT
  * =============================================================================
  *
- * Enterprise Pattern: Optimistic UI for instant feedback
- * - Immediate redirect (no waiting for Firebase)
- * - Background signOut (fire & forget)
- * - Loading state during transition
+ * Η αποσύνδεση ανατίθεται στον ΕΝΑΝ κάτοχο (`auth/identity-change/end-sign-in`):
+ * αποσυνδέει πρώτα, φορτώνει νέο έγγραφο μετά. Το μενού δείχνει μόνο την αναμονή.
  *
  * @module components/header/user-menu
- * @enterprise ADR-022 - Optimistic Auth Operations
+ * @enterprise ADR-908 - η αλλαγή ταυτότητας είναι ΜΙΑ πράξη (αντικατέστησε το optimistic του ADR-022)
  */
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
@@ -44,8 +42,6 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 ENTERPRISE: Centralized routes
-import { AUTH_ROUTES } from '@/lib/routes';
 // ADR-871 Ε5 — οι συντομεύσεις «τα δικά μου» έρχονται από τον ΕΝΑ κατάλογο.
 import { resolvePersonalNavigation } from '@/config/personal-navigation';
 import { MenuCountBadge } from '@/components/sidebar/menu-count-badge';
@@ -98,32 +94,17 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
   if (!user && !isLoggingOut) return <>{signedOut}</>;
 
   /**
-   * 🏢 ENTERPRISE: Optimistic Logout Pattern
-   *
-   * 1. Set loading state immediately
-   * 2. Redirect FIRST (instant user feedback)
-   * 3. SignOut in background (fire & forget)
-   *
-   * This matches Google/Microsoft logout UX
+   * 🔴 **ADR-908 — ΚΑΜΙΑ ΠΛΟΗΓΗΣΗ ΑΠΟ ΕΔΩ.** Το μενού έκανε `router.push('/login')` **πρώτα** και αποσύνδεε στο
+   * παρασκήνιο («optimistic»): μετρημένο στην παραγωγή, η φόρμα σύνδεσης έστελνε τον άνθρωπο πίσω και η
+   * αποσύνδεση αναιρούνταν. Ο ΕΝΑΣ κάτοχος αποσυνδέει και **μετά** φορτώνει νέο έγγραφο· ως τότε, spinner.
    */
   const handleLogout = async () => {
     // Prevent double-click
     if (isLoggingOut) return;
 
     setIsLoggingOut(true);
-    logger.info('Starting optimistic logout');
-
-    // 🚀 OPTIMISTIC: Redirect immediately for instant feedback
-    router.push(AUTH_ROUTES.login);
-
-    // 🔥 FIRE & FORGET: SignOut in background
-    try {
-      await signOut();
-      logger.info('Logout completed');
-    } catch (error) {
-      logger.error('Logout error (user already redirected)', { error });
-      // User is already on login page, so this error is acceptable
-    }
+    logger.info('Signing out');
+    await signOut({ reason: 'user-request' });
   };
 
   return (

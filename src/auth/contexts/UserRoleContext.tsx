@@ -172,7 +172,7 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
   const logout = async () => {
     try {
       logger.info('[UserRoleContext] Logout');
-      await signOut();
+      await signOut({ reason: 'user-request' });
     } catch (error) {
       logger.error('[UserRoleContext] Logout failed', { error });
     }

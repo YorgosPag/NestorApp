@@ -164,7 +164,8 @@ export function useAuthActionCode(
   const signOutHolder = React.useCallback<SignOutHolder>(async (previousEmail) => {
     if (session === null || !sameChannelEmail(auth.currentUser?.email, previousEmail)) return;
     try {
-      await session.signOut();
+      // ADR-908 — `credential-changed` ⇒ η σελίδα ΜΕΝΕΙ: δείχνει το αποτέλεσμα, και ο κωδικός έχει καταναλωθεί.
+      await session.signOut({ reason: 'credential-changed' });
     } catch {
       // Η αλλαγή **έγινε**· μια αποτυχία τοπικής αποσύνδεσης δεν την αναιρεί.
     }
