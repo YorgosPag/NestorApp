@@ -46,6 +46,20 @@ describe('Card — asChild', () => {
     expect(row.querySelector('div')).toBeNull();
     for (const cls of [...surface, 'p-4', 'flex', 'flex-col']) expect(row).toHaveClass(cls);
   });
+
+  test('Κ3: η επιφάνεια κόβει με `clip`, ποτέ με `hidden` — αλλιώς ως παιδί flex συμπιέζεται και κόβει το κείμενό της', () => {
+    const surface = surfaceClasses();
+    expect(surface).toContain('overflow-clip');
+    expect(surface).toContain('min-w-0');
+    expect(surface).not.toContain('overflow-hidden');
+  });
+
+  test('Κ4: ο καλών που έχει δικό του κυλιόμενο παιδί ξαναδηλώνει `overflow-hidden` και κερδίζει', () => {
+    render(<Card data-testid="shell" className="min-h-0 overflow-hidden" />);
+    const shell = screen.getByTestId('shell');
+    expect(shell).toHaveClass('overflow-hidden');
+    expect(shell).not.toHaveClass('overflow-clip');
+  });
 });
 
 describe('SectionFrame', () => {

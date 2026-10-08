@@ -21,11 +21,16 @@ const Card = React.forwardRef<
   const { quick } = useBorderTokens();
   const Comp = asChild ? Slot : 'div';
 
+  // 🔑 `overflow-clip`, ΟΧΙ `overflow-hidden` (ADR-777 §8.87.9): το `hidden` κάνει το κουτί δοχείο κύλισης, άρα ως
+  //    παιδί flex το αυτόματο ελάχιστο ύψος του γίνεται 0 — σε στήλη που γεμίζει την οθόνη η κάρτα συμπιέζεται και
+  //    ΚΟΒΕΙ το κείμενό της (μετρημένο στην παραγωγή: 87px ορατά από 129). Το `clip` κόβει ίδια στις γωνίες, αλλά το
+  //    ελάχιστο ύψος μένει το περιεχόμενο. Το πλάτος υποχωρεί ρητά (`min-w-0`)· όποιος θέλει να υποχωρεί ΚΑΙ το ύψος
+  //    (δικό του κυλιόμενο παιδί) το δηλώνει με `min-h-0`, όπως ήδη κάνουν όλοι οι τέτοιοι καταναλωτές.
   return (
     <Comp
       ref={ref}
       className={cn(
-        `${quick.card} bg-card text-card-foreground shadow-sm overflow-hidden min-w-0`,
+        `${quick.card} bg-card text-card-foreground shadow-sm overflow-clip min-w-0`,
         className
       )}
       {...props}
