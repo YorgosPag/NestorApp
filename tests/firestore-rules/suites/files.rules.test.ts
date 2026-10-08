@@ -54,14 +54,15 @@ function createdByFor(persona: (typeof COVERAGE.matrix)[number]['persona']): str
 }
 
 /**
- * Τα τέσσερα σκέλη `update` της `files` — κάθε ένα με ΔΙΚΟ του έγγραφο και το ελάχιστο φορτίο που
+ * Τα δύο σκέλη `update` της `files` — κάθε ένα με ΔΙΚΟ του έγγραφο και το ελάχιστο φορτίο που
  * το περνά. ΜΙΑ λίστα για κάθε «πάγωμα» παρακάτω (δέσμευση · διαστάσεις · δημοσίευση): πρώτα οι
  * αρνήσεις (το έγγραφο μένει άθικτο), ΤΕΛΕΥΤΑΙΟ το allow του παρονομαστή — αν το σκέτο φορτίο δεν
  * περνούσε, κάθε `expectDeny` θα ήταν πράσινο για λάθος λόγο.
+ *
+ * ℹ️ Ήταν τέσσερα: ο κάδος και η επαναφορά αφαιρέθηκαν από τους κανόνες (ADR-845 §7.17 Α4β) —
+ * είναι πράξη διακομιστή. Ότι ο πελάτης ΑΡΝΕΙΤΑΙ το μετρά το μπλοκ «trash is a server act».
  */
 const UPDATE_LEGS = [
-  { leg: 'κάδος', seed: {}, base: { isDeleted: true } },
-  { leg: 'επαναφορά', seed: { isDeleted: true }, base: { isDeleted: false } },
   { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
   { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
 ] as const;
@@ -100,16 +101,18 @@ describe('files.rules — tenant_state_machine pattern', () => {
         const target: AssertTarget = {
           collection: 'files',
           docId,
-          // Update payload exercises the `ready → trashed` transition of the
-          // files state machine (firestore.rules:424). All immutable fields
-          // are preserved verbatim from the seed.
+          // Update payload exercises the LINK leg (`linkedTo` on a ready,
+          // non-deleted doc) — the only client update of a ready file since the
+          // trash/restore legs left the rules (ADR-845 §7.17 Α4β). All immutable
+          // fields are preserved verbatim from the seed.
           data: {
             id: docId,
             fileName: `seed-${docId}.pdf`,
             mimeType: 'application/pdf',
             size: 1024,
             status: 'ready',
-            isDeleted: true,
+            isDeleted: false,
+            linkedTo: ['property:prop_1'],
             storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}`,
             createdBy: seedCreatedBy,
             companyId: SAME_TENANT_COMPANY_ID,
@@ -161,13 +164,14 @@ describe('files.rules — tenant_state_machine pattern', () => {
     const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
 
     /**
-     * Το **ελάχιστο** φορτίο που περνά το leg «ready → trashed». Κάθε
+     * Το **ελάχιστο** φορτίο που περνά το σκέλος σύνδεσης. Κάθε
      * `expectDeny` παρακάτω προσθέτει σε ΑΥΤΟ ένα πεδίο CDE — ώστε η διαφορά
      * ανάμεσα στο allow και στο deny να είναι **ακριβώς** η ρήτρα που
      * δοκιμάζεται, και τίποτε άλλο. Χωρίς αυτή την πειθαρχία, ένα `expectDeny`
      * μπορεί να είναι πράσινο επειδή το φορτίο ήταν ούτως ή άλλως άκυρο.
+     * (Ως την Α4β του ADR-845 §7.17 ήταν το `{ isDeleted: true }` του σκέλους κάδου, που αφαιρέθηκε.)
      */
-    const TRASH_UPDATE: Record<string, unknown> = { isDeleted: true };
+    const LINK_UPDATE: Record<string, unknown> = { linkedTo: ['property:prop_1'] };
 
     /** Μια πράξη όπως τη γράφει ο διακομιστής — ADR-862 §5.4.1.γ. */
     const ACT = { by: ADMIN_UID, at: new Date('2026-09-01'), revision: 1 };
@@ -198,14 +202,14 @@ describe('files.rules — tenant_state_machine pattern', () => {
         overrides: { cdeState: 'WIP', cdeTeamId: 'team-structural' },
       });
 
-      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeState: 'PUBLISHED' }));
+      await expectDeny(fileDoc(docId).update({ ...LINK_UPDATE, cdeState: 'PUBLISHED' }));
     });
 
     it('⛔ αδήλωτο → ΠΡΟΣΘΗΚΗ `cdeState`: ΑΡΝΗΣΗ (η προσθήκη ΕΙΝΑΙ γραφή)', async () => {
       const docId = 'cde-absent-then-added';
       await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
 
-      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeState: 'WIP' }));
+      await expectDeny(fileDoc(docId).update({ ...LINK_UPDATE, cdeState: 'WIP' }));
     });
 
     it('✅ αδήλωτο + κανονικό update: ΕΠΙΤΡΕΠΕΤΑΙ — η ρήτρα του απόντος', async () => {
@@ -221,7 +225,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
         expect(snap.data()).not.toHaveProperty('cdeState');
       });
 
-      await expectAllow(fileDoc(docId).update(TRASH_UPDATE));
+      await expectAllow(fileDoc(docId).update(LINK_UPDATE));
     });
 
     it('⛔ μετακίνηση σε άλλη ομάδα (`cdeTeamId`) από πελάτη: ΑΡΝΗΣΗ', async () => {
@@ -231,7 +235,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
         overrides: { cdeState: 'WIP', cdeTeamId: 'team-structural' },
       });
 
-      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeTeamId: 'team-mep' }));
+      await expectDeny(fileDoc(docId).update({ ...LINK_UPDATE, cdeTeamId: 'team-mep' }));
     });
 
     it('⛔ αλλοίωση υπάρχουσας σφραγίδας: ΑΡΝΗΣΗ — φρουρούνται ΚΑΙ ΤΑ ΕΞΙ πεδία', async () => {
@@ -243,7 +247,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
 
       await expectDeny(
         fileDoc(docId).update({
-          ...TRASH_UPDATE,
+          ...LINK_UPDATE,
           cdeSeal: { by: ADMIN_UID, at: new Date('2026-09-15'), revision: 99 },
         }),
       );
@@ -260,7 +264,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
       });
 
       for (const act of ['cdeShare', 'cdeRelease', 'cdeWithdrawal', 'cdeSupersession'] as const) {
-        await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, [act]: ACT }));
+        await expectDeny(fileDoc(docId).update({ ...LINK_UPDATE, [act]: ACT }));
       }
     });
 
@@ -288,47 +292,24 @@ describe('files.rules — tenant_state_machine pattern', () => {
       );
     });
 
-    /**
-     * 🔬 ADR-862 Φ0 Β10 — **το ΑΚΡΙΒΕΣ φορτίο** του `moveToTrash`
-     * (`services/file-record-lifecycle.ts`), όχι το ελάχιστο `TRASH_UPDATE`.
-     * Οι δύο γραμμές διαφέρουν **μόνο** στα τρία πεδία της διαδοχής — άρα αν η
-     * πρώτη περνά και η δεύτερη όχι, η αιτία είναι η διαδοχή και τίποτε άλλο.
-     */
-    function productionTrashPayload(): Record<string, unknown> {
-      const at = new Date('2026-09-17');
-      return {
-        lifecycleState: 'trashed',
-        trashedAt: at,
-        trashedBy: ADMIN_UID,
-        purgeAt: '2026-10-17T00:00:00.000Z',
-        isDeleted: true,
-        deletedAt: at,
-        deletedBy: ADMIN_UID,
-        updatedAt: at,
-      };
-    }
-
-    it('✅ κάδος όπως τον γράφει η παραγωγή: ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
-      const docId = 'cde-production-trash';
-      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
-
-      await expectAllow(fileDoc(docId).update(productionTrashPayload()));
-    });
-
-    // 🔴 ADR-862 Φ0 Β10 — ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΑΠΟΔΕΙΧΘΗΚΕ (2026-09-17): αυτό ακριβώς έστελνε ο παλιός
-    //    `moveToTrash` σε κάθε αντικατάσταση, και απορριπτόταν ολόκληρο, σιωπηλά.
+    // 🔴 ADR-862 Φ0 Β10 — ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΑΠΟΔΕΙΧΘΗΚΕ (2026-09-17): ο παλιός `moveToTrash` έστελνε
+    //    πεδία διαδοχής μαζί με τον κάδο σε κάθε αντικατάσταση, και απορριπτόταν ολόκληρο, σιωπηλά.
+    //    Ο κάδος δεν είναι πια πράξη πελάτη (ADR-845 §7.17 Α4β) — το ερώτημα «γράφει ο πελάτης
+    //    διαδοχή;» μένει, πάνω στο ελάχιστο φορτίο που αλλιώς περνά (`LINK_UPDATE`), ώστε η άρνηση
+    //    να αποδίδεται στη διαδοχή και όχι στον κάδο που έφυγε.
     it('⛔ διαδοχή που γράφει `cdeState` από πελάτη: ΑΡΝΗΣΗ — ΟΛΗ η εγγραφή', async () => {
       const docId = 'cde-production-supersede';
       await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
 
       await expectDeny(
         fileDoc(docId).update({
-          ...productionTrashPayload(),
+          ...LINK_UPDATE,
           supersededByFileId: 'file_successor',
           supersededAt: new Date('2026-09-17'),
           cdeState: 'SUPERSEDED',
         }),
       );
+      await expectAllow(fileDoc(docId).update(LINK_UPDATE));
     });
 
     it('⛔ ισχυρισμός διαδοχής ΧΩΡΙΣ `cdeState` από πελάτη: ΑΡΝΗΣΗ — η απόδειξη είναι του διακομιστή', async () => {
@@ -338,8 +319,9 @@ describe('files.rules — tenant_state_machine pattern', () => {
       await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
 
       for (const claim of [{ supersededByFileId: 'file_successor' }, { supersededAt: new Date('2026-09-17') }]) {
-        await expectDeny(fileDoc(docId).update({ ...productionTrashPayload(), ...claim }));
+        await expectDeny(fileDoc(docId).update({ ...LINK_UPDATE, ...claim }));
       }
+      await expectAllow(fileDoc(docId).update(LINK_UPDATE));
     });
 
     it('⛔ άνοιγμα του φράχτη ανάγνωσης (`cdeReadReach`) από πελάτη: ΑΡΝΗΣΗ', async () => {
@@ -349,7 +331,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
         overrides: { cdeState: 'WIP', cdeReadReach: 'author' },
       });
 
-      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeReadReach: 'tenant' }));
+      await expectDeny(fileDoc(docId).update({ ...LINK_UPDATE, cdeReadReach: 'tenant' }));
     });
 
     it('⛔ γέννηση ΧΩΡΙΣ φράχτη, ή με φράχτη που δεν ταιριάζει στη φάση: ΑΡΝΗΣΗ', async () => {
@@ -368,9 +350,11 @@ describe('files.rules — tenant_state_machine pattern', () => {
   // «ποιο πρόσωπο». Πρόσωπο `same_tenant_admin`: περνά ΚΑΘΕ άλλο σκέλος (και το
   // hard delete), άρα κάθε `expectDeny` αποδίδεται ΜΟΝΟ στη δέσμευση.
   //
-  // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ (Δ21.1): ο κάδος σε δεσμευμένο αρχείο ΕΠΙΤΡΕΠΕΤΑΙ — Google
-  // Vault · Box «silent legal hold». Χωρίς αυτό το allow, ένα λάθος «άρνηση κάδου»
-  // (το σχέδιο που απορρίφθηκε) θα περνούσε πράσινο.
+  // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ (Δ21.1): ο φρουρός ρωτά «άγγιξες τη δέσμευση;», ΠΟΤΕ «είναι
+  // δεσμευμένο;» — Google Vault · Box «silent legal hold». Χωρίς το allow πάνω σε
+  // δεσμευμένο αρχείο, ένα λάθος «άρνηση σε ό,τι είναι δεσμευμένο» θα περνούσε πράσινο.
+  // ℹ️ Ο ΚΑΔΟΣ δεσμευμένου εταιρικού αρχείου κρίνεται πλέον στον διακομιστή (ADR-845 §7.17
+  //    Α4β)· η άγκυρά του είναι η Κ17 του `api/files/trash/__tests__/trash-route.test.ts`.
   describe('hold freeze — η δέσμευση δεν γράφεται από πελάτη (ADR-864 §21)', () => {
     const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
     const HELD = {
@@ -419,13 +403,13 @@ describe('files.rules — tenant_state_machine pattern', () => {
       });
       const { hold: _released, ...withoutHold } = stored;
 
-      await expectDeny(fileDoc('hold-removed').set({ ...withoutHold, isDeleted: true }));
-      await expectAllow(fileDoc('hold-removed').set({ ...stored, isDeleted: true }));
+      await expectDeny(fileDoc('hold-removed').set({ ...withoutHold, linkedTo: ['property:prop_1'] }));
+      await expectAllow(fileDoc('hold-removed').set({ ...stored, linkedTo: ['property:prop_1'] }));
     });
 
-    it('✅ Δ21.1 κάδος σε ΔΕΣΜΕΥΜΕΝΟ αρχείο: ΕΠΙΤΡΕΠΕΤΑΙ — σιωπηλή δέσμευση', async () => {
-      await seedHeld('hold-silent-trash');
-      await expectAllow(fileDoc('hold-silent-trash').update({ isDeleted: true }));
+    it('✅ Δ21.1 γραφή σε ΔΕΣΜΕΥΜΕΝΟ αρχείο που ΔΕΝ αγγίζει τη δέσμευση: ΕΠΙΤΡΕΠΕΤΑΙ — σιωπηλή δέσμευση', async () => {
+      await seedHeld('hold-silent-write');
+      await expectAllow(fileDoc('hold-silent-write').update({ linkedTo: ['property:prop_1'] }));
     });
 
     it('⛔ οριστική διαγραφή δεσμευμένου ή υπό διατήρηση αρχείου: ΑΡΝΗΣΗ', async () => {
@@ -496,8 +480,8 @@ describe('files.rules — tenant_state_machine pattern', () => {
         stored = (await seedCtx.firestore().collection('files').doc('measured-removed').get()).data() ?? {};
       });
       const { imageDimensions: _dropped, ...withoutDimensions } = stored;
-      await expectDeny(fileDoc('measured-removed').set({ ...withoutDimensions, isDeleted: true }));
-      await expectAllow(fileDoc('measured-removed').set({ ...stored, isDeleted: true }));
+      await expectDeny(fileDoc('measured-removed').set({ ...withoutDimensions, linkedTo: ['property:prop_1'] }));
+      await expectAllow(fileDoc('measured-removed').set({ ...stored, linkedTo: ['property:prop_1'] }));
     });
 
     it('⛔ γέννηση με διαστάσεις «από κούνια»: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
@@ -566,13 +550,6 @@ describe('files.rules — tenant_state_machine pattern', () => {
       createdAt: '2000-01-01T00:00:00.000Z',
     };
 
-    /**
-     * 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ ΤΗΣ Α4α: το `isDeleted: true` μαζί με `linkedTo` ΔΕΝ περνά από το σκέλος
-     * σύνδεσης — το δέχεται το σκέλος ΚΑΔΟΥ (δημιουργός/διαχειριστής), που ζει ως την Α4β. Δοκιμάζεται
-     * χωριστά παρακάτω, ώστε η εξαίρεση να είναι ορατή και να κοκκινίσει όταν το σκέλος φύγει.
-     */
-    const OWNED_BY_TRASH_LEG = 'isDeleted';
-
     it('η λίστα του τεστ = `LISTING_FILE_PUBLICATION_FIELDS` (αλλιώς ο βρόχος θα παρέλειπε κλειδί)', () => {
       expect(Object.keys(PREDICATE_WRITES).sort()).toEqual([...LISTING_FILE_PUBLICATION_FIELDS].sort());
     });
@@ -593,17 +570,12 @@ describe('files.rules — tenant_state_machine pattern', () => {
       await seedFile(env, 'publication-link', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...PUBLISHED } });
       const link = { linkedTo: ['property:prop_1'] };
 
+      // Και τα ΔΕΚΑΤΡΙΑ, χωρίς εξαίρεση. (Ως την Α4β το `isDeleted` περνούσε από το σκέλος κάδου.)
       for (const [key, value] of Object.entries(PREDICATE_WRITES)) {
-        if (key === OWNED_BY_TRASH_LEG) continue;
         await expectDeny(fileDoc('publication-link').update({ ...link, [key]: value }));
       }
       await expectDeny(fileDoc('publication-link').update({ ...link, purpose: 'floorplan' }));
       await expectAllow(fileDoc('publication-link').update(link));
-    });
-
-    it('🔶 όριο Α4α: `isDeleted` μαζί με `linkedTo` περνά ακόμη — από το σκέλος ΚΑΔΟΥ, όχι της σύνδεσης', async () => {
-      await seedFile(env, 'publication-trash-residue', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...PUBLISHED } });
-      await expectAllow(fileDoc('publication-trash-residue').update({ linkedTo: ['property:prop_1'], isDeleted: true }));
     });
 
     it('⛔ ΑΦΑΙΡΕΣΗ της διαβάθμισης (ολόκληρο `set` χωρίς το κλειδί): ΑΡΝΗΣΗ — η αφαίρεση ΕΙΝΑΙ γραφή', async () => {
@@ -614,8 +586,8 @@ describe('files.rules — tenant_state_machine pattern', () => {
       });
       const { classification: _dropped, ...withoutClassification } = stored;
 
-      await expectDeny(fileDoc('publication-removed').set({ ...withoutClassification, isDeleted: true }));
-      await expectAllow(fileDoc('publication-removed').set({ ...stored, isDeleted: true }));
+      await expectDeny(fileDoc('publication-removed').set({ ...withoutClassification, linkedTo: ['property:prop_1'] }));
+      await expectAllow(fileDoc('publication-removed').set({ ...stored, linkedTo: ['property:prop_1'] }));
     });
 
     it('⛔ γέννηση με διαβάθμιση ή ταυτότητα δημοσίευσης «από κούνια»: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
@@ -638,6 +610,71 @@ describe('files.rules — tenant_state_machine pattern', () => {
       await expectDeny(born('born-internal', { classification: 'internal' }));
       await expectDeny(born('born-identity', { publicationIdentity: PUBLISHED.publicationIdentity }));
       await expectAllow(born('born-unclassified', {}));
+    });
+  });
+
+  // --- ADR-845 §7.17 (Α4β) — Ο ΚΑΔΟΣ ΔΕΝ ΕΙΝΑΙ ΠΡΑΞΗ ΠΕΛΑΤΗ ------------------
+  //
+  // Τα σκέλη «ready → trashed» και «trashed → ready» αφαιρέθηκαν από τους κανόνες: ο κάδος εταιρικού
+  // αρχείου είναι πράξη διακομιστή (`POST /api/files/trash`), που κρίνει, αφήνει ίχνος και ξαναπροβάλλει
+  // τη δημόσια αγγελία. Εδώ μετριέται ότι ο πελάτης ΑΡΝΕΙΤΑΙ — για ΚΑΘΕ πρόσωπο που το παλιό σκέλος
+  // άφηνε να περάσει (δημιουργός · διαχειριστής εταιρείας · super_admin).
+  //
+  // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: το ΙΔΙΟ πρόσωπο, στο ΙΔΙΟ έγγραφο, περνά με `linkedTo`. Άρα κάθε άρνηση
+  // αποδίδεται στο φορτίο του κάδου, όχι σε μισθωτή/ρόλο/κατάσταση εγγράφου.
+  describe('trash is a server act — ο κάδος δεν είναι πράξη πελάτη (ADR-845 §7.17 Α4β)', () => {
+    const TRASHERS = ['same_tenant_user', 'same_tenant_admin', 'super_admin'] as const;
+    const LINK = { linkedTo: ['property:prop_1'] } as const;
+
+    /** Το ΑΚΡΙΒΕΣ φορτίο που έστελνε ο παλιός `moveToTrash` του πελάτη — όχι μόνο το ελάχιστο. */
+    function legacyTrashPayload(uid: string): Record<string, unknown> {
+      const at = new Date('2026-09-17');
+      return {
+        lifecycleState: 'trashed',
+        trashedAt: at,
+        trashedBy: uid,
+        purgeAt: '2026-10-17T00:00:00.000Z',
+        isDeleted: true,
+        deletedAt: at,
+        deletedBy: uid,
+        updatedAt: at,
+      };
+    }
+
+    it.each(TRASHERS)('⛔ %s (και ως ΔΗΜΙΟΥΡΓΟΣ): κάδος ⇒ ΑΡΝΗΣΗ · ✅ `linkedTo` στο ίδιο έγγραφο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async (persona) => {
+      const uid = PERSONA_CLAIMS[persona].uid;
+      const docId = `client-trash-${persona}`;
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID, createdBy: uid });
+      const fileDoc = getContext(env, persona).firestore().collection('files').doc(docId);
+
+      await expectDeny(fileDoc.update({ isDeleted: true }));
+      await expectDeny(fileDoc.update(legacyTrashPayload(uid)));
+      await expectDeny(fileDoc.update({ ...LINK, isDeleted: true }));
+      await expectAllow(fileDoc.update(LINK));
+    });
+
+    it.each(TRASHERS)('⛔ %s (και ως ΔΗΜΙΟΥΡΓΟΣ): επαναφορά από τον κάδο ⇒ ΑΡΝΗΣΗ', async (persona) => {
+      const uid = PERSONA_CLAIMS[persona].uid;
+      const docId = `client-restore-${persona}`;
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        createdBy: uid,
+        overrides: { isDeleted: true, lifecycleState: 'trashed' },
+      });
+      const fileDoc = getContext(env, persona).firestore().collection('files').doc(docId);
+
+      await expectDeny(fileDoc.update({ isDeleted: false }));
+      await expectDeny(fileDoc.update({ isDeleted: false, lifecycleState: 'active', trashedAt: null, purgeAt: null }));
+    });
+
+    // Το κελί `same_tenant_user × update` της μήτρας είναι «ανά συλλογή», αμέτρητο. Εδώ μετριέται:
+    // το σκέλος σύνδεσης δέχεται ΚΑΘΕ μέλος της εταιρείας, όχι μόνο δημιουργό/διαχειριστή.
+    it('✅ μέλος της εταιρείας που ΔΕΝ είναι δημιουργός: `linkedTo` ⇒ ΕΠΙΤΡΕΠΕΤΑΙ · κάδος ⇒ ΑΡΝΗΣΗ', async () => {
+      await seedFile(env, 'client-trash-non-creator', { companyId: SAME_TENANT_COMPANY_ID, createdBy: 'seed-system' });
+      const fileDoc = getContext(env, 'same_tenant_user').firestore().collection('files').doc('client-trash-non-creator');
+
+      await expectDeny(fileDoc.update({ isDeleted: true }));
+      await expectAllow(fileDoc.update(LINK));
     });
   });
 
@@ -785,17 +822,9 @@ describe('files.rules — tenant_state_machine pattern', () => {
         await expectDeny(fileDoc('retired-finalize').update({ status: 'ready' }));
       });
 
-      it('⛔ κάδος αρχείου: ΑΡΝΗΣΗ', async () => {
-        await seedParent(status);
-        await seedChild('retired-trash');
-        await expectDeny(fileDoc('retired-trash').update({ isDeleted: true }));
-      });
-
-      it('⛔ επαναφορά αρχείου από τον κάδο: ΑΡΝΗΣΗ', async () => {
-        await seedParent(status);
-        await seedChild('retired-restore', { isDeleted: true });
-        await expectDeny(fileDoc('retired-restore').update({ isDeleted: false }));
-      });
+      // ℹ️ Κάδος/επαναφορά αρχείου αποσυρμένου ακινήτου: δεν είναι πια πράξη πελάτη για ΚΑΝΕΝΑ
+      //    ακίνητο (ADR-845 §7.17 Α4β). Ο γονέας κρίνεται στον διακομιστή — άγκυρα Κ15 του
+      //    `api/files/trash/__tests__/trash-route.test.ts`.
 
       it('⛔ σύνδεση / αποσύνδεση (`linkedTo`): ΑΡΝΗΣΗ', async () => {
         await seedParent(status);
@@ -812,8 +841,10 @@ describe('files.rules — tenant_state_machine pattern', () => {
       it('⛔ αρχείο ΖΩΝΤΑΝΟΥ ακινήτου δεν μετακομίζει κάτω από το αποσυρμένο: ΑΡΝΗΣΗ', async () => {
         await seedParent(status);
         await seedParent('for-sale', OTHER_PROPERTY_ID);
-        await seedChild('retired-move-in', { entityId: OTHER_PROPERTY_ID });
-        await expectDeny(fileDoc('retired-move-in').update({ isDeleted: true, entityId: PROPERTY_ID }));
+        // Η οριστικοποίηση είναι το μόνο σκέλος πελάτη που αφήνει ακόμη το `entityId` να αλλάξει
+        // (η σύνδεση το παγώνει — ADR-845 §7.17 Α4α). Ο παρονομαστής της ζει στο «ζωντανό ακίνητο».
+        await seedChild('retired-move-in', { entityId: OTHER_PROPERTY_ID, status: 'pending' });
+        await expectDeny(fileDoc('retired-move-in').update({ status: 'ready', entityId: PROPERTY_ID }));
       });
 
       it('✅ η ΑΝΑΓΝΩΣΗ μένει: το πλαίσιο πρέπει να μπορεί να δείξει τα αρχεία του', async () => {
@@ -835,16 +866,11 @@ describe('files.rules — tenant_state_machine pattern', () => {
         await expectAllow(fileDoc('live-finalize').update({ status: 'ready' }));
       });
 
-      it('✅ κάδος αρχείου', async () => {
+      it('✅ οριστικοποίηση που μετακομίζει το αρχείο σε ΑΛΛΟ ζωντανό ακίνητο (ο παρονομαστής του «δεν μετακομίζει»)', async () => {
         await seedParent('for-sale');
-        await seedChild('live-trash');
-        await expectAllow(fileDoc('live-trash').update({ isDeleted: true }));
-      });
-
-      it('✅ επαναφορά αρχείου', async () => {
-        await seedParent('for-sale');
-        await seedChild('live-restore', { isDeleted: true });
-        await expectAllow(fileDoc('live-restore').update({ isDeleted: false }));
+        await seedParent('for-sale', OTHER_PROPERTY_ID);
+        await seedChild('live-move-in', { entityId: OTHER_PROPERTY_ID, status: 'pending' });
+        await expectAllow(fileDoc('live-move-in').update({ status: 'ready', entityId: PROPERTY_ID }));
       });
 
       it('✅ σύνδεση / αποσύνδεση', async () => {

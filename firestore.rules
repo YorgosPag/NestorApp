@@ -819,81 +819,19 @@ service cloud.firestore {
                     // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
                     && fileStaysUnderLiveProperty();
 
-      // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
-      // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
-      //    - Creator can ALWAYS manage their own files (no claims required)
-      //    - Admins need proper company claims for cross-user operations
-      // 🔐 SECURITY: Only allows setting isDeleted flag, preserves all other immutable fields
-      allow update: if isAuthenticated()
-                    && (
-                         // OWNERSHIP PRINCIPLE: Creator can ALWAYS trash their own files
-                         resource.data.createdBy == request.auth.uid
-                         // OR company admin can trash any file in their company (requires claims)
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         // OR super_admin can trash anything
-                         || isSuperAdminOnly()
-                       )
-                    // Only for ready files (soft delete)
-                    && resource.data.status == 'ready'
-                    // Must be setting isDeleted to true
-                    && request.resource.data.isDeleted == true
-                    // Preserve immutable fields
-                    && request.resource.data.id == resource.data.id
-                    && request.resource.data.companyId == resource.data.companyId
-                    && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.storagePath == resource.data.storagePath
-                    && request.resource.data.status == resource.data.status
-                    // 🔒 ADR-862 Φ0 — ούτε η μετακίνηση στον κάδο. Η ΑΠΟΣΥΡΣΗ είναι
-                    // άλλη πράξη (⇒ SUPERSEDED, ποτέ εξαφάνιση) και περνά από τον
-                    // ΕΝΑ γραφέα του Β10 — ποτέ από εδώ.
-                    && cdeCustodyUnchanged()
-                    // 🔒 ADR-864 §21 Δ21.1 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ: ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ σε δεσμευμένο
-                    //    αρχείο (Google Vault · Box · Purview)· αυτό που δεν επιτρέπεται είναι να
-                    //    ΑΓΓΙΞΕΙ τη δέσμευση. ⛔ ΜΗΝ προσθέσεις «hold == 'none'» εδώ — απορρίφθηκε.
-                    && holdCustodyUnchanged()
-                    && measuredUnchanged()
-                    // 📣 ADR-845 §7.17 Α4α — ούτε διαβάθμιση. (Το σκέλος φεύγει στην Α4β: ο κάδος
-                    //    εταιρικού αρχείου είναι πράξη διακομιστή, `POST /api/files/trash`.)
-                    && publicationCustodyUnchanged()
-                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
-                    && fileStaysUnderLiveProperty();
-
-      // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
-      // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
-      //    - Creator can ALWAYS restore their own files (no claims required)
-      //    - Admins need proper company claims for cross-user operations
-      // 📅 Added: 2026-01-20 (ADR-032 - Enterprise Trash System)
-      allow update: if isAuthenticated()
-                    && (
-                         // OWNERSHIP PRINCIPLE: Creator can ALWAYS restore their own files
-                         resource.data.createdBy == request.auth.uid
-                         // OR company admin can restore any file in their company (requires claims)
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         // OR super_admin can restore anything
-                         || isSuperAdminOnly()
-                       )
-                    // Only for trashed files (isDeleted == true)
-                    && resource.data.isDeleted == true
-                    // Must be setting isDeleted to false (restoring)
-                    && request.resource.data.isDeleted == false
-                    // Preserve immutable fields
-                    && request.resource.data.id == resource.data.id
-                    && request.resource.data.companyId == resource.data.companyId
-                    && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.storagePath == resource.data.storagePath
-                    && request.resource.data.status == resource.data.status
-                    // 🔒 ADR-862 Φ0 — ούτε η επαναφορά από τον κάδο: ένα αρχείο δεν
-                    // «ξαναγεννιέται» σε άλλη κατάσταση από αυτή που είχε.
-                    && cdeCustodyUnchanged()
-                    // 🔒 ADR-864 §21 — η επαναφορά δεν «καθαρίζει» τη δέσμευση.
-                    && holdCustodyUnchanged()
-                    && measuredUnchanged()
-                    // 📣 ADR-845 §7.17 Α4α — η επαναφορά δεν «ξαναγεννά» το αρχείο δημόσιο:
-                    //    `{ isDeleted: false, classification: 'public' }` ήταν η ανοιχτή πόρτα.
-                    //    (Το σκέλος φεύγει στην Α4β.)
-                    && publicationCustodyUnchanged()
-                    // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
-                    && fileStaysUnderLiveProperty();
+      // 🗑️ ΚΑΔΟΣ / ΕΠΑΝΑΦΟΡΑ: ΔΕΝ είναι πράξη πελάτη — ADR-845 §7.17 (κλάση Ο-35, Α4β)
+      // Τα δύο σκέλη `update` που ζούσαν εδώ (ready → trashed · trashed → ready) ΑΦΑΙΡΕΘΗΚΑΝ.
+      // Ο κάδος εταιρικού αρχείου είναι πράξη ΔΙΑΚΟΜΙΣΤΗ (`POST /api/files/trash` →
+      // `services/file-record/file-trash.service.ts`, Admin SDK): κρίνει, γράφει `purgeAt`,
+      // αφήνει ίχνος και ΞΑΝΑΠΡΟΒΑΛΛΕΙ τη δημόσια αγγελία. Ο browser δεν έχει πώς να
+      // ξαναπροβάλει — ένα `{ isDeleted: true }` από την κονσόλα «έσβηνε» τη φωτογραφία στη
+      // βάση ενώ το κοινό συνέχιζε να τη βλέπει. Το ίδιο σκέλος δεν είχε λίστα επιτρεπτών
+      // πεδίων, άρα περνούσε και `{ isDeleted: true, category: …, entityId: … }`.
+      // 🔒 Η σιωπηλή δέσμευση (ADR-864 §21 Δ21.1 — ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ σε δεσμευμένο αρχείο)
+      //    ισχύει ακέραια· την κρίνει πλέον ο διακομιστής, όχι αυτό το αρχείο.
+      // ⛔ ΜΗΝ ξαναφέρεις σκέλος κάδου εδώ. Το φυλά η άγκυρα
+      //    `listing-file-publication-rules.test.ts` (Κ5) και η σουίτα emulator.
+      // ℹ️ `files_personal`: εκεί ο κάδος ΜΕΝΕΙ πράξη πελάτη (προσωπικά αρχεία, εκτός αγγελίας).
 
       // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
       // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
@@ -934,8 +872,8 @@ service cloud.firestore {
                     && fileStaysUnderLiveProperty();
 
       // 🗑️ HARD DELETE: Only creator or company admin
-      // 🔒 ADR-864 §21 Δ21.1 — ΠΟΤΕ σε δεσμευμένο ή υπό διατήρηση αρχείο. Ο κάδος (update)
-      //    μένει ανοιχτός· η ΟΡΙΣΤΙΚΗ διαγραφή είναι αυτό που η δέσμευση απαγορεύει.
+      // 🔒 ADR-864 §21 Δ21.1 — ΠΟΤΕ σε δεσμευμένο ή υπό διατήρηση αρχείο. Η ΟΡΙΣΤΙΚΗ διαγραφή
+      //    είναι αυτό που η δέσμευση απαγορεύει· ο κάδος (πράξη διακομιστή) όχι.
       allow delete: if isAuthenticated()
                     && resource.data.companyId == getUserCompanyId()
                     && (
@@ -6254,8 +6192,10 @@ service cloud.firestore {
     }
 
     // Καμία γραφή πελάτη δεν αγγίζει δέσμευση — προσθήκη, αλλαγή ΚΑΙ αφαίρεση (`affectedKeys()`).
-    // 🔑 Ο κάδος ΜΕΝΕΙ ΑΝΟΙΧΤΟΣ (Δ21.1 — Google Vault · Box «silent legal hold»): ο φρουρός
-    //    ρωτά «άγγιξες τη δέσμευση;», ΠΟΤΕ «είναι δεσμευμένο;».
+    // 🔑 Σιωπηλή δέσμευση (Δ21.1 — Google Vault · Box «silent legal hold»): ο φρουρός ρωτά
+    //    «άγγιξες τη δέσμευση;», ΠΟΤΕ «είναι δεσμευμένο;» — ο κάδος δεσμευμένου αρχείου
+    //    επιτρέπεται. Στο `files_personal` τον κρίνει αυτό το αρχείο· στη `files` ο κάδος είναι
+    //    πράξη διακομιστή (ADR-845 §7.17 Α4β) και η ίδια αρχή κρίνεται εκεί.
     function holdCustodyUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(holdCustodyKeys());
     }

@@ -336,15 +336,18 @@ export function adminWriteOnlyMatrix(): CoverageDefinition {
  * writes gated by a document lifecycle state machine. The `files` collection
  * is the canonical case:
  *   - create requires `status == 'pending'` and `createdBy == request.auth.uid`
- *   - update is split into four disjoint rule bodies:
+ *   - update is split into two disjoint rule bodies:
  *       (a) pending → ready / pending → failed transition
- *       (b) ready → trashed (set `isDeleted: true`)
- *       (c) trashed → ready (set `isDeleted: false`)
- *       (d) linkedTo mutation
+ *       (b) linkedTo mutation on a ready, non-deleted doc
+ *     Trash / restore (`isDeleted` true ↔ false) were rule bodies until
+ *     ADR-845 §7.17 Α4β; they are now a server act (`POST /api/files/trash`),
+ *     so NO client persona may write them.
  *   - delete (hard) has **no super_admin leg** — super admin uses Admin SDK
  *
  * The test suite exercises the generic lifecycle: create (pending) and update
- * (trash, i.e. `isDeleted: false → true` on a ready doc). Hard delete is
+ * (link, i.e. `linkedTo` on a ready doc). The update cells kept their values
+ * when the payload moved from trash to link: the link leg admits the same
+ * three measured personas (tenant match or super admin). Hard delete is
  * marked `deny/server_only` because the rule intentionally excludes super
  * admin — the Admin SDK bypass is the sanctioned path.
  */
@@ -364,7 +367,7 @@ export function tenantStateMachineMatrix(): CoverageDefinition {
     cell('super_admin', 'create', 'allow'),
     cell('same_tenant_admin', 'create', 'allow'),
     cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
-    // Update (trash transition): super_admin + same_tenant_admin allow
+    // Update (link leg — ADR-845 §7.17 Α4β): super_admin + same_tenant_admin allow
     cell('super_admin', 'update', 'allow'),
     cell('same_tenant_admin', 'update', 'allow'),
     cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),

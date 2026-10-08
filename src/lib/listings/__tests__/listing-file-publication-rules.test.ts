@@ -12,6 +12,7 @@
  * | Κ2 η θεματοφυλακή ⊂ κατηγορήματος | πεδίο που παγώνει «παντού» χωρίς να το ρωτά κανείς |
  * | Κ3 κάθε `allow update` της `files` φέρει φρουρό δημοσίευσης | σκέλος χωρίς φρουρό |
  * | Κ4 γέννηση χωρίς διαβάθμιση · το LINK παγώνει ΟΛΟ το κατηγόρημα + `purpose` | «δημόσιο από κούνια» · χαλάρωση του LINK |
+ * | Κ5 (Α4β) ακριβώς δύο `allow update`, κανένα δεν θέτει `isDeleted` | επανεισαγωγή σκέλους κάδου/επαναφοράς |
  *
  * ℹ️ Το **αν ο κανόνας αρνείται πράγματι** το εκτελεί η σουίτα emulator
  * (`tests/firestore-rules/suites/files.rules.test.ts`, «publication freeze»). Εδώ φυλάσσεται η **ισότητα των λιστών**.
@@ -72,8 +73,16 @@ describe('🏆 Α4α — κώδικας και κανόνας παγώνουν �
     expect(linkLegs[0]).toMatch(/affectedKeys\(\)\.hasAny\(\['purpose'\]\)/);
   });
 
+  it('🔴 Κ5 ο κάδος ΔΕΝ είναι πράξη πελάτη: ακριβώς δύο `allow update`, κανένα δεν ζητά τιμή `isDeleted`', () => {
+    const updates = legsOf('update');
+    // Οριστικοποίηση (pending → ready) + σύνδεση. Τρίτο σκέλος = νέα πόρτα προς ό,τι βλέπει το κοινό.
+    expect(updates).toHaveLength(2);
+    // Το σχήμα και των δύο σκελών που αφαιρέθηκαν: «η αίτηση θέτει `isDeleted` σε συγκεκριμένη τιμή».
+    for (const leg of updates) expect(leg).not.toMatch(/request\.resource\.data\.isDeleted\s*==\s*(?:true|false)/);
+  });
+
   it('🔑 παρονομαστής: το μπλοκ διαβάστηκε — αλλιώς κάθε «φέρει» παραπάνω θα ήταν πράσινο πάνω σε κενό', () => {
     expect(FILES_BLOCK).toContain('allow delete:');
-    expect(legsOf('update').length).toBeGreaterThanOrEqual(2);
+    expect(FILES_BLOCK).toContain('allow create:');
   });
 });

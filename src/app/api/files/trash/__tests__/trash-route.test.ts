@@ -272,6 +272,20 @@ describe('ADR-845 §7.17 Α2 — ποιος επιτρέπεται (ό,τι έκ
     expect(stored('file_orphan').isDeleted).toBe(true);
   });
 
+  // ADR-864 §21 Δ21.1 · ADR-845 §7.17 Α4β — μέχρι την Α4β το αποδείκνυε ο ΚΑΝΟΝΑΣ (σουίτα emulator,
+  // «κάδος σε δεσμευμένο αρχείο: επιτρέπεται»). Το σκέλος κάδου έφυγε από το `firestore.rules`, άρα η
+  // αρχή κρίνεται εδώ — και εδώ οφείλει να έχει την άγκυρά της.
+  it('🔒 Κ17 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ: δεσμευμένο αρχείο ΠΕΤΙΕΤΑΙ, και η δέσμευσή του μένει ανέγγιχτη', async () => {
+    const HELD = { hold: 'legal', holdPlacedBy: 'u_legal', holdReason: 'Δικαστική διαφορά', retentionUntil: '2999-01-01T00:00:00.000Z' };
+    seedFile('file_held', { entityType: 'contact', entityId: 'cont_1', ...HELD });
+
+    const { body } = await call({ fileIds: ['file_held'], action: 'trash' });
+
+    expect(body.errors).toEqual([]);
+    expect(body.processedCount).toBe(1);
+    expect(stored('file_held')).toMatchObject({ isDeleted: true, lifecycleState: 'trashed', ...HELD });
+  });
+
   it('Κ16 — άκυρο σώμα ⇒ 400 με όνομα, καμία γραφή', async () => {
     const bad = await call({ fileIds: [MINE], action: 'purge' });
     const empty = await call({ fileIds: [], action: 'trash' });

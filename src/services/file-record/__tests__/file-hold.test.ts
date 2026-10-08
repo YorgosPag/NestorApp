@@ -114,7 +114,8 @@ describe('🏆 Α49 — κώδικας και κανόνας φυλάνε τα �
   });
 
   it.each([
-    ['match /files/{fileId} {', 4],
+    // ADR-845 §7.17 Α4β — οριστικοποίηση + σύνδεση. Ο κάδος/επαναφορά είναι πράξη διακομιστή.
+    ['match /files/{fileId} {', 2],
     ['match /files_personal/{fileId} {', 1],
   ] as const)('🔴 %s — κάθε `allow update` φυλά τη δέσμευση · create γεννά χωρίς · delete ρωτά', (matchLine, updateLegs) => {
     const block = blockOf(matchLine);
