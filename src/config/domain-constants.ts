@@ -917,6 +917,8 @@ export const API_ROUTES = {
     CHEQUES: (propertyId: string) => `/api/properties/${propertyId}/cheques` as const,
     /** ADR-845 Φ4.2β/Βήμα Γ — ανέβασμα 3D μοντέλου *(bytes + δήλωση, μία εγγραφή)*. */
     MODEL: (propertyId: string) => `/api/properties/${propertyId}/model` as const,
+    /** ADR-845 §7.17 Α5β — «συμφωνεί η δημόσια αγγελία με το τρέχον υλικό;» (`GET`) · ενημέρωση τώρα (`POST`). */
+    LISTING_MEDIA: (propertyId: string) => `/api/properties/${propertyId}/listing-media` as const,
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',

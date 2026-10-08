@@ -29,7 +29,7 @@
  * @see services/iso19650/container-transitions — ο **γραφέας** που ρωτά
  */
 
-import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
+import { FILE_CLASSIFICATIONS, FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { successionIdentityOf } from '@/lib/files/succession-identity';
 
@@ -53,7 +53,12 @@ export type SuccessionRefusalReason =
   /** Ο «διάδοχος» είναι **παλαιότερος** — η έκδοση δεν γυρίζει πίσω με αντικατάσταση. */
   | 'successor-not-newer'
   /** Ο αιτών **δεν** ανέβασε τον διάδοχο και δεν έχει εξουσία συντονιστή. */
-  | 'not-successor-author';
+  | 'not-successor-author'
+  /**
+   * Το αρχείο που αντικαθίσταται είναι **δημόσιο**, και ο αιτών δεν έχει δικαίωμα δημοσίευσης
+   * (ADR-845 §7.17 Α3β): η αντικατάσταση το **κατεβάζει από το κοινό**, άρα είναι πράξη απόσυρσης.
+   */
+  | 'publication-not-capable';
 
 export interface SuccessionQuery {
   /** Το έγγραφο που **αντικαθίσταται**, όπως βγήκε από τη βάση. */
@@ -74,6 +79,13 @@ export interface SuccessionQuery {
    * ⚠️ Το κρίνει ο **ΕΝΑΣ** κριτής (`decideCapability`) στον γραφέα — εδώ φτάνει ως γεγονός.
    */
   readonly actsForOthers: boolean;
+  /**
+   * **Μπορεί ο αιτών να αλλάξει τι βλέπει ο κόσμος;** (ADR-845 §7.17 Α3β). Το κρίνει ο ΕΝΑΣ τόπος
+   * (`mayChangePublication`) στον γραφέα — εδώ φτάνει ως γεγονός, όπως το `actsForOthers`.
+   * ⚠️ Ρωτιέται **μόνο** όταν ο προκάτοχος είναι `public`: η καθημερινή αντικατάσταση μη δημόσιου
+   * αρχείου δεν το χρειάζεται. Στον προσωπικό χώρο είναι πάντα `true` (δεν υπάρχει αγγελία γραφείου).
+   */
+  readonly mayChangePublication: boolean;
 }
 
 export type SuccessionVerdict =
@@ -150,6 +162,12 @@ export function judgeSuccession(query: SuccessionQuery): SuccessionVerdict {
     return { ok: false, outcome: 'noop', why: 'already-in-state' };
   }
   if (!isActive(predecessor)) return deny('predecessor-not-active');
+  // 🔒 ADR-845 §7.17 Α3β — **πριν** από κάθε κρίση του διαδόχου: δεν τον χρειάζεται, και η πίσω
+  //    πόρτα της απόσυρσης (διαβάθμιση · κάδος · αρχειοθέτηση ζητούν ήδη το ίδιο δικαίωμα) κλείνει
+  //    χωρίς να μαρτυρήσει τίποτα για τον διάδοχο.
+  if (predecessor.classification === FILE_CLASSIFICATIONS.PUBLIC && !query.mayChangePublication) {
+    return deny('publication-not-capable');
+  }
 
   // 🔑 ADR-866 §2.6.10 Β4 — **ίδιος κάτοχος**, για τα δύο διαμερίσματα, με **μία** σύγκριση:
   //    ανύπαρκτος · ξένου μισθωτή · ξένου ανθρώπου · **άλλου διαμερίσματος** ⇒ το **ίδιο**

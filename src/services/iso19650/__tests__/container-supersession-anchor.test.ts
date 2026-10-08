@@ -77,6 +77,7 @@ function query(overrides: Partial<SuccessionQuery> = {}): SuccessionQuery {
     actorUid: ARCHITECT,
     actorCustody: { companyId: COMPANY },
     actsForOthers: false,
+    mayChangePublication: false,
     ...overrides,
   };
 }
@@ -143,6 +144,31 @@ describe('Α20 — η κρίση διαδοχής (καθαρή)', () => {
   it('🔴 Α20.9 — ο διάδοχος είναι ΑΛΛΟΥ, χωρίς εξουσία συντονιστή ⇒ not-successor-author', () => {
     expect(judgeSuccession(query({ actorUid: OTHER }))).toEqual(refusedWith('not-successor-author'));
     expect(judgeSuccession(query({ actorUid: OTHER, actsForOthers: true }))).toEqual({ ok: true, successorId: NEXT });
+  });
+
+  it('🔒 Α20.10 — ADR-845 Α3β: ΔΗΜΟΣΙΟ αρχείο χωρίς δικαίωμα δημοσίευσης ⇒ publication-not-capable', () => {
+    const published = predecessorDoc({ classification: 'public' });
+
+    expect(judgeSuccession(query({ predecessor: published }))).toEqual(refusedWith('publication-not-capable'));
+    expect(judgeSuccession(query({ predecessor: published, mayChangePublication: true }))).toEqual({
+      ok: true, successorId: NEXT,
+    });
+  });
+
+  it('🔑 Α20.10β — ADR-845 Α3β: ΜΗ δημόσιο αρχείο ΔΕΝ ρωτά το δικαίωμα — η καθημερινή δουλειά δεν σπάει', () => {
+    for (const classification of ['internal', 'confidential', undefined]) {
+      expect(judgeSuccession(query({ predecessor: predecessorDoc({ classification }) }))).toEqual({
+        ok: true, successorId: NEXT,
+      });
+    }
+  });
+
+  it('🔒 Α20.10γ — ADR-845 Α3β: η άρνηση προηγείται ΚΑΘΕ κρίσης του διαδόχου (δεν μαρτυρά τίποτα για εκείνον)', () => {
+    const published = predecessorDoc({ classification: 'public' });
+
+    expect(judgeSuccession(query({ predecessor: published, successor: null }))).toEqual(
+      refusedWith('publication-not-capable'),
+    );
   });
 
   it('🔑 Α20.9β — η ρητή ταυτότητα δημοσίευσης ΝΙΚΑ τη θέση (μοντέλα)', () => {

@@ -36,6 +36,7 @@ export const SUPERSEDE_REFUSALS = [
   'identity-mismatch',
   'successor-not-newer',
   'not-successor-author',
+  'publication-not-capable',
 ] as const satisfies readonly ContainerRefusalReason[];
 
 export type SupersedeRefusal = (typeof SUPERSEDE_REFUSALS)[number];

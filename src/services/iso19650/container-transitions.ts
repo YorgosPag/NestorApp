@@ -69,7 +69,8 @@ import {
   type ContainerTransitionOutcome,
   type ContainerTransitionRequest,
 } from './container-transition-policy';
-import { judgeSuccession } from './container-succession-policy';
+import { mayChangePublication } from '@/services/file-record/file-classification.service';
+import { judgeSuccession, type SuccessionQuery } from './container-succession-policy';
 import { custodyOnEntry, type ContainerCustodyFields } from './container-custody';
 import { regimeRefusal } from './container-regime-policy';
 
@@ -236,8 +237,12 @@ export async function transitionContainer(
     request.act === 'supersede' &&
     isGranted(decideCapability({ subject: request.actor, action: ACT_SPEC.withdraw.capability }).verdict);
 
+  // 🔒 ADR-845 §7.17 Α3β — «μπορεί να αλλάξει τι βλέπει ο κόσμος;», από τον **ΕΝΑ** τόπο του. Στον
+  //    προσωπικό χώρο δεν υπάρχει αγγελία γραφείου ⇒ δεν υπάρχει τίποτα να φραχτεί.
+  const succession = { actsForOthers, mayChangePublication: !organisational || mayChangePublication(request.actor) };
+
   try {
-    const outcome = await runTransition(request, spec, actsForOthers);
+    const outcome = await runTransition(request, spec, succession);
     recordTrace(request, outcome);
     return outcome;
   } catch (error: unknown) {
@@ -287,7 +292,7 @@ function refusal(
 function runTransition(
   request: ContainerTransitionRequest,
   spec: ActSpec,
-  actsForOthers: boolean,
+  authority: SuccessionAuthority,
 ): Promise<ContainerTransitionOutcome> {
   const db = getAdminFirestore();
   const ref = filesOf(db, request).doc(request.fileId);
@@ -305,7 +310,7 @@ function runTransition(
     }
 
     const succession =
-      request.act === 'supersede' ? await successionBlock(transaction, raw, request, actsForOthers) : null;
+      request.act === 'supersede' ? await successionBlock(transaction, raw, request, authority) : null;
     if (succession !== null && succession.blocked !== null) return succession.blocked;
 
     // 🔑 Β14 — έργο + ομάδα στην είσοδο στο CDE, **και** το καθεστώς (§5.3.7) από την ΙΔΙΑ
@@ -346,7 +351,7 @@ async function successionBlock(
   transaction: Transaction,
   predecessor: Record<string, unknown>,
   request: ContainerTransitionRequest,
-  actsForOthers: boolean,
+  authority: SuccessionAuthority,
 ): Promise<SuccessionJudgement> {
   const successorId = request.supersededByFileId;
   // 🔑 Ο διάδοχος ζητείται στο **ίδιο** διαμέρισμα με τον προκάτοχο: «έκδοση» που αλλάζει
@@ -373,7 +378,7 @@ async function successionBlock(
     successorId,
     actorUid: request.actor.uid,
     actorCustody: request.actor.custody,
-    actsForOthers,
+    ...authority,
   });
   if (verdict.ok) return { blocked: null, birth, successorId: verdict.successorId };
   return {
@@ -383,6 +388,9 @@ async function successionBlock(
     birth: null,
   };
 }
+
+/** Οι δύο εξουσίες που κρίνει ο γραφέας **πριν** τη βάση και φτάνουν στην καθαρή κρίση ως γεγονότα. */
+type SuccessionAuthority = Pick<SuccessionQuery, 'actsForOthers' | 'mayChangePublication'>;
 
 /** Η έκβαση της κρίσης διαδοχής: άρνηση/noop **ή** (προαιρετική) γέννηση προς εγγραφή. */
 type SuccessionJudgement =

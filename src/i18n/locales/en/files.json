@@ -714,6 +714,7 @@
         "identity-mismatch": "the two files belong to different slots",
         "successor-not-newer": "the \"new\" version is older than the previous one",
         "not-successor-author": "the new version was uploaded by another user",
+        "publication-not-capable": "the file is published on the listing — replacing it requires the publish permission",
         "failed": "temporary error — please try again"
       }
     },

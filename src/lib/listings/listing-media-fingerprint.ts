@@ -79,3 +79,33 @@ export function mediaAgreement(stored: unknown, current: string): MediaAgreement
   if (typeof stored !== 'string' || !stored.startsWith(STAMP_PREFIX)) return 'unknown';
   return stored === current ? 'current' : 'stale';
 }
+
+/**
+ * Η ετυμηγορία για **ένα ακίνητο**, όπως τη βλέπει η οθόνη του γραφείου (ADR-845 §7.17 Α5β).
+ *
+ * Οι τρεις του {@link MediaAgreement}, και δύο που αφορούν την **ύπαρξη** της αγγελίας:
+ * - `missing` — το ακίνητο διατίθεται στο κοινό, αλλά δημόσια αγγελία **δεν υπάρχει**
+ * - `unlisted` — το ακίνητο **δεν** διατίθεται στο κοινό· δεν υπάρχει τίποτα να συγκριθεί
+ */
+export type ListingMediaVerdict = MediaAgreement | 'missing' | 'unlisted';
+
+/**
+ * Η απάντηση του `GET|POST /api/properties/{id}/listing-media` στο σύρμα.
+ *
+ * 🔑 **Το `mayRefresh` το λέει ο διακομιστής**: η οθόνη δεν ξαναδιατυπώνει το *«μπορεί να αλλάξει
+ * τι βλέπει ο κόσμος;»* — το ρωτά ο ΕΝΑΣ τόπος του (`mayChangePublication`) και ταξιδεύει έτοιμο.
+ */
+export interface ListingMediaAgreementResponse {
+  readonly agreement: ListingMediaVerdict;
+  readonly mayRefresh: boolean;
+}
+
+/**
+ * **Έχει νόημα να προταθεί «ενημέρωση τώρα»;** — σε ό,τι **δεν** είναι αποδεδειγμένα σωστό.
+ *
+ * 🔑 Και στο `unknown`: μια επαναπροβολή **γράφει αποτύπωμα**, άρα είναι ο τρόπος να γίνει το «δεν
+ * ξέρω» οριστική απάντηση. Ποτέ στο `unlisted` — δεν υπάρχει αγγελία να ενημερωθεί.
+ */
+export function needsListingRefresh(verdict: ListingMediaVerdict): boolean {
+  return verdict !== 'current' && verdict !== 'unlisted';
+}

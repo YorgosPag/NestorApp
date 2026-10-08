@@ -59,6 +59,7 @@ import {
 } from './model-source-lookup';
 import { archiveSupersededModels } from './model-supersession';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
+import { mayChangePublication } from '@/services/file-record/file-classification.service';
 import {
   refreshListingAfterMediaChange,
   type ListingMediaRefreshOutcome,
@@ -167,6 +168,12 @@ async function handlePost(
   const propertyId = propertyIdOfRequest(request, ctx);
 
   await requirePropertyInTenantScope({ ctx, propertyId, path: request.nextUrl.pathname, intent: 'write' });
+
+  // 🔒 **Το ανέβασμα 3Δ ΕΙΝΑΙ δημοσίευση** *(ADR-845 §7.17 Α3β)*: το αρχείο γεννιέται δημόσιο και
+  //    αρχειοθετεί τον δημοσιευμένο προκάτοχό του. Ρωτιέται ο **ΕΝΑΣ** τόπος, και **πριν** γραφτεί
+  //    οτιδήποτε — αλλιώς το νέο μοντέλο θα γραφόταν και η διαδοχή θα αρνιόταν ⇒ δύο δημόσια μοντέλα.
+  const subject = { globalRole: ctx.globalRole, permissions: ctx.permissions, companyId: ctx.companyId };
+  if (!mayChangePublication(subject)) throw new ApiError(403, 'MODEL_PUBLICATION_NOT_CAPABLE');
 
   const { file, declaration, sceneFileIds } = await readModelUpload(request);
 

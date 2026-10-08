@@ -15,6 +15,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { ListingFloorplansPanel } from '@/components/listings/ListingFloorplansPanel';
 import { LevelTabStrip } from '@/features/property-details/components/PropertyFieldsReadOnly';
 import { PublishedModelFreshness } from '@/components/listings/PublishedModelFreshness';
+import { PublishedMediaAgreement } from '@/components/listings/PublishedMediaAgreement';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
@@ -58,9 +59,12 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
       {/* 🏆 ADR-845 Ο-25 — «ισχύει ακόμα το δημοσιευμένο 3Δ;». ΕΝΑ σώμα, δύο οθόνες: το ίδιο
           component κάθεται και στον διάλογο «Δημοσίευση 3D» του viewer. Εδώ σε τόνο `badge`,
           γιατί η **διόρθωση** ζει στον viewer — αυτή η οθόνη πληροφορεί, δεν δημοσιεύει. */}
-      <div className="px-2 pt-2">
+      {/* ADR-845 §7.17 Α5β — δίπλα του, ο αδελφός: «έφτασε στην αγγελία ό,τι άλλαξε στα αρχεία;».
+          Ίδιο ιδίωμα, ίδιο namespace· την ετυμηγορία τη δίνει ο διακομιστής. */}
+      <aside className="flex flex-wrap items-center gap-2 px-2 pt-2">
         <PublishedModelFreshness propertyId={selectedProperty?.id} companyId={companyId} />
-      </div>
+        <PublishedMediaAgreement propertyId={selectedProperty?.id} />
+      </aside>
 
       {/* Level sub-tabs for multi-level properties (ADR-236 Phase 3) */}
       {isMultiLevel && (

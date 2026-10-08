@@ -8,6 +8,24 @@
   "current": {
     "badge": "The published 3D matches the drawing"
   },
+  "media": {
+    "stale": {
+      "badge": "The public listing differs from the current material"
+    },
+    "missing": {
+      "badge": "The property is on offer, but its public listing is missing"
+    },
+    "unknown": {
+      "badge": "Unknown whether the public listing shows the current material"
+    },
+    "current": {
+      "badge": "The public listing shows the current material"
+    },
+    "refresh": {
+      "action": "Update the listing now",
+      "busy": "Updating…"
+    }
+  },
   "unknown": {
     "badge": "Unknown whether the published 3D still applies",
     "body": "This model was published before provenance was recorded. Publishing again will answer it definitively."

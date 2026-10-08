@@ -38,7 +38,8 @@ jest.mock('next/server', () => {
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({ withHeavyRateLimit: <T>(h: T) => h }));
 
-const authContext = { uid: 'user_1', companyId: 'comp_alfa', isAuthenticated: true as const };
+const authContext: { uid: string; companyId: string; isAuthenticated: true; globalRole: string; permissions: string[] } =
+  { uid: 'user_1', companyId: 'comp_alfa', isAuthenticated: true, globalRole: 'external_user', permissions: ['listings:listings:publish'] };
 jest.mock('@/lib/auth/middleware', () => ({
   withAuth:
     (callback: (...args: unknown[]) => Promise<unknown>) =>
@@ -179,7 +180,17 @@ describe('ADR-845 Βήμα Γ — η πόρτα του μοντέλου', () => 
     //    του Κ6 και θα ήταν πράσινο για λόγο δικό του (ADR-845 Ο-27).
     siblings = [];
     sceneFiles = {};
+    authContext.permissions = ['listings:listings:publish'];
     jest.clearAllMocks();
+  });
+
+  it('🔒 Κ14 — Α3β: χωρίς δικαίωμα δημοσίευσης ⇒ άρνηση ΠΡΙΝ γραφτεί ή ανέβει οτιδήποτε', async () => {
+    authContext.permissions = [];
+
+    await expect(
+      POST(request(glb(), declaration()) as never, undefined as never, undefined as never),
+    ).rejects.toMatchObject({ message: 'MODEL_PUBLICATION_NOT_CAPABLE' });
+    expect(uploadPublicFile).not.toHaveBeenCalled();
   });
 
   it('Κ1 — 🏆 τα bytes ΚΑΙ η δήλωση φεύγουν σε ΜΙΑ εγγραφή', async () => {

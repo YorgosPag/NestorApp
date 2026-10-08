@@ -37,6 +37,7 @@ export const VERSION_PROMOTION_REFUSALS = [
   'head-moved',
   'source-not-ready',
   'not-capable',
+  'publication-not-capable',
   'predecessor-not-active',
   'identity-mismatch',
   'identity-absent',

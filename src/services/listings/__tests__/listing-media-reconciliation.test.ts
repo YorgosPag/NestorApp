@@ -38,7 +38,7 @@ jest.mock('@/services/company/company-public-name.reader', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { reconcileListingMedia } = require('../listing-media-reconciliation.service') as
+const { reconcileListingMedia, judgeListingMedia } = require('../listing-media-reconciliation.service') as
   typeof import('../listing-media-reconciliation.service');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { mediaFingerprintOf } = require('../listing-media-fingerprint-stamp') as
@@ -130,5 +130,56 @@ describe('ADR-845 §7.17 Α5 — η συμφιλίωση ΣΥΓΚΡΙΝΕΙ, δ�
     const report = await run();
 
     expect(report).toMatchObject({ drifted: 1, republished: 0, failed: 1 });
+  });
+});
+
+describe('ADR-845 §7.17 Α5β — ο ΙΔΙΟΣ κριτής, για ΕΝΑ ακίνητο (η ένδειξη της καρτέλας)', () => {
+  function judge(propertyId: string, companyId = 'c_alpha') {
+    return judgeListingMedia(fake as unknown as AdminFirestore, propertyId, companyId);
+  }
+
+  it('🏆 Κ1 — ό,τι γράφτηκε ΕΙΝΑΙ το τρέχον υλικό ⇒ `current`', async () => {
+    seedListed('prop_ok', [source('a')], [source('a')]);
+
+    await expect(judge('prop_ok')).resolves.toBe('current');
+  });
+
+  it('🔴 Κ2 — το υλικό άλλαξε, η αγγελία όχι ⇒ `stale`', async () => {
+    seedListed('prop_drift', [source('a'), source('b')], [source('a')]);
+
+    await expect(judge('prop_drift')).resolves.toBe('stale');
+  });
+
+  it('🔴 Κ3 — αγγελία ΧΩΡΙΣ αποτύπωμα ⇒ `unknown`, ΠΟΤΕ `current`', async () => {
+    seedListed('prop_old', 'unstamped', [source('a')]);
+
+    await expect(judge('prop_old')).resolves.toBe('unknown');
+  });
+
+  it('Κ4 — ακίνητο που διατίθεται ΧΩΡΙΣ αγγελία ⇒ `missing`', async () => {
+    seedListed('prop_lost', 'no-listing', [source('a')]);
+
+    await expect(judge('prop_lost')).resolves.toBe('missing');
+  });
+
+  it('Κ5 — ακίνητο που ΔΕΝ διατίθεται ⇒ `unlisted` (η οθόνη σιωπά)', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_draft', { companyId: 'c_alpha', listed: false });
+
+    await expect(judge('prop_draft')).resolves.toBe('unlisted');
+  });
+
+  it('🔐 Κ6 — ακίνητο ΑΛΛΟΥ μισθωτή, ή ανύπαρκτο ⇒ `unlisted`: τίποτα δικό του να συγκριθεί', async () => {
+    seedListed('prop_theirs', [source('a')], [source('b')]);
+
+    await expect(judge('prop_theirs', 'c_beta')).resolves.toBe('unlisted');
+    await expect(judge('prop_nowhere')).resolves.toBe('unlisted');
+  });
+
+  it('Κ7 — η κρίση ΔΕΝ γράφει και ΔΕΝ ξαναπροβάλλει: μόνο ρωτά', async () => {
+    seedListed('prop_drift', [source('a')], [source('b')]);
+
+    await judge('prop_drift');
+
+    expect(republishListing).not.toHaveBeenCalled();
   });
 });

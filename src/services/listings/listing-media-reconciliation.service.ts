@@ -28,6 +28,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   MEDIA_FINGERPRINT_FIELD,
   mediaAgreement,
+  type ListingMediaVerdict,
   type MediaAgreement,
 } from '@/lib/listings/listing-media-fingerprint';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -67,23 +68,69 @@ export interface MediaReconciliationReport {
 
 type Finding = MediaAgreement | 'missing';
 
+/** Η δημόσια αγγελία ενός ακινήτου, όσο χρειάζεται ο κριτής: **υπάρχει;** και **τι αποτύπωμα γράφτηκε;** */
+interface StoredListing {
+  readonly exists: boolean;
+  readonly fingerprint: unknown;
+}
+
 /** Το αποθηκευμένο αποτύπωμα κάθε δημοσιευμένης αγγελίας — **μία** ανάγνωση για όλη τη σάρωση. */
 async function readStoredFingerprints(adminDb: AdminFirestore): Promise<ReadonlyMap<string, unknown>> {
   const listings = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).get();
   return new Map(listings.docs.map((doc) => [doc.id, doc.get(MEDIA_FINGERPRINT_FIELD)]));
 }
 
-/** **Ένα ακίνητο**: τι θα έφευγε τώρα ⇄ τι γράφτηκε. */
+/**
+ * **Ένα ακίνητο**: τι θα έφευγε τώρα ⇄ τι γράφτηκε.
+ *
+ * 🔑 **Ο ΕΝΑΣ κριτής, δύο καλούντες**: η βραδινή σάρωση *(με τον χάρτη της μίας ανάγνωσης)* και η
+ * οθόνη του γραφείου *(με την αγγελία ενός ακινήτου — {@link judgeListingMedia})*.
+ */
 async function judgeProperty(
   propertyId: string,
   property: ListingSourceProperty,
-  stored: ReadonlyMap<string, unknown>,
+  stored: StoredListing,
   resolveMedia: AgencyMediaResolver,
 ): Promise<Finding> {
-  if (!stored.has(propertyId)) return 'missing';
+  if (!stored.exists) return 'missing';
 
   const sources = await resolveMedia(propertyId, property.companyId, agencyMediaDeclaration(property));
-  return mediaAgreement(stored.get(propertyId), mediaFingerprintOf(sources));
+  return mediaAgreement(stored.fingerprint, mediaFingerprintOf(sources));
+}
+
+/**
+ * **Συμφωνεί η δημόσια αγγελία ΑΥΤΟΥ του ακινήτου με το τρέχον υλικό του;** — για την καρτέλα του
+ * ακινήτου *(ADR-845 §7.17 Α5β)*.
+ *
+ * ⚠️ **Το έγγραφο διαβάζεται ΤΩΡΑ, από τη βάση** — ίδιος λόγος με το `refreshListingAfterMediaChange`.
+ * 🔐 Ακίνητο που λείπει ή ανήκει σε **άλλον** μισθωτή απαντά `unlisted`: δεν υπάρχει τίποτα δικό του
+ * να συγκριθεί, και η απάντηση δεν μαρτυρά αν το ακίνητο υπάρχει.
+ *
+ * 🔑 **Δεν πετά ποτέ**: βλάβη ανάγνωσης ⇒ `unknown` *(«δεν ξέρω»)*, ποτέ `current`. Μια ένδειξη που
+ * δεν φορτώθηκε δεν επιτρέπεται να ρίξει την οθόνη στην οποία κάθεται.
+ */
+export async function judgeListingMedia(
+  adminDb: AdminFirestore,
+  propertyId: string,
+  companyId: string,
+): Promise<ListingMediaVerdict> {
+  try {
+    const snapshot = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+    const data = snapshot.data() as ListingSourceProperty | undefined;
+    if (data === undefined || data.companyId !== companyId) return 'unlisted';
+
+    const property = { ...data, id: propertyId };
+    if (!isPubliclyListed(property)) return 'unlisted';
+
+    const listing = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(propertyId).get();
+    const stored = { exists: listing.exists, fingerprint: listing.get(MEDIA_FINGERPRINT_FIELD) };
+    return await judgeProperty(propertyId, property, stored, createAgencyMediaResolver(adminDb));
+  } catch (error) {
+    logger.warn('Η συμφωνία μέσων δεν κρίθηκε — η οθόνη λέει «δεν ξέρω»', {
+      propertyId, error: error instanceof Error ? error.message : String(error),
+    });
+    return 'unknown';
+  }
 }
 
 /** Η απόκλιση **με όνομα και ακίνητο** — αυτό είναι το προϊόν της συμφιλίωσης, όχι η διόρθωση. */
@@ -131,7 +178,8 @@ export async function reconcileListingMedia(adminDb: AdminFirestore): Promise<Me
     if (!isPubliclyListed({ ...property, id: doc.id })) continue;
     tally.listed += 1;
 
-    const finding = await judgeProperty(doc.id, property, stored, resolveMedia);
+    const listing = { exists: stored.has(doc.id), fingerprint: stored.get(doc.id) };
+    const finding = await judgeProperty(doc.id, property, listing, resolveMedia);
     tally[FINDING_TALLY[finding]] += 1;
     if (finding === 'current') continue;
 
