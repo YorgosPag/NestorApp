@@ -88,6 +88,11 @@ export const PERMISSIONS = {
   // DXF
   "dxf:files:view": true,
   "dxf:files:upload": true,
+  // ADR-845 §7.17 Α2 — «πετάω στον κάδο / επαναφέρω αρχείο που ΔΕΝ ανέβασα εγώ». Ο δημιουργός
+  // πετά το δικό του χωρίς αυτό (ιδιοκτησία, όχι εξουσιοδότηση — την κρίνει ο γραφέας
+  // `file-trash.service`). Ως την Α2 το «διαχειριστής εταιρείας» το έλεγαν οι κανόνες της βάσης
+  // (`isCompanyAdminOfCompany`)· ο διακομιστής δεν γράφει όνομα ρόλου (CHECK 3.68) ⇒ ικανότητα.
+  "dxf:files:delete": true,
   "dxf:layers:view": true,
   "dxf:layers:manage": true,
   "dxf:layers:unlock": true, // ADR-344 Q8 — unlock locked layers to write

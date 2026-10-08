@@ -43,22 +43,14 @@ import { FILE_CLASSIFICATIONS, type FileClassification } from '@/config/domain-c
 import { decideCapability } from '@/lib/auth/authority';
 import { nowISO } from '@/lib/date-local';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
-import type { ListingRefreshReport } from '@/services/listings/listing-media-refresh';
+import type { FileBatchActResponse } from '@/services/file-record/file-batch-act.types';
 import { isGranted, type CapabilitySubject } from '@/types/capability-authority';
 
 /**
- * **Η απάντηση της πόρτας στο σύρμα** — ζει εδώ ώστε η διαδρομή και η πύλη του πελάτη να
- * διαβάζουν **έναν** τύπο *(ο πελάτης την εισάγει με `import type`, που σβήνεται στη μεταγλώττιση)*.
+ * **Η απάντηση της πόρτας στο σύρμα** — ο κοινός φάκελος κάθε μαζικής πράξης αρχείων
+ * *(`file-batch-act.types`)*. Το όνομα μένει ώστε η πύλη του πελάτη να μη χρειαστεί αλλαγή.
  */
-export interface FileClassificationResponse {
-  readonly success: boolean;
-  /** Πόσα αρχεία **άλλαξαν** διαβάθμιση. Όσα την είχαν ήδη δεν μετρούν και δεν είναι σφάλμα. */
-  readonly processedCount: number;
-  /** `"{fileId}: {λόγος}"` — `not found` · `not-capable` · μήνυμα βλάβης. */
-  readonly errors: readonly string[];
-  /** 🌍 Τι έγινε σε **κάθε** αγγελία που αφορούσε η αλλαγή — κενό όταν κανένα αρχείο δεν ήταν ακινήτου. */
-  readonly listings: readonly ListingRefreshReport[];
-}
+export type FileClassificationResponse = FileBatchActResponse;
 
 /** Το δικαίωμα που ορίζει **τι βλέπει ο κόσμος** — το ίδιο που διαχειρίζεται την αγγελία (ADR-884 Φ0.3). */
 const PUBLICATION_CAPABILITY = 'listings:listings:publish' as const;
@@ -106,6 +98,18 @@ export function touchesPublication(
   return from === FILE_CLASSIFICATIONS.PUBLIC || to === FILE_CLASSIFICATIONS.PUBLIC;
 }
 
+/**
+ * **Μπορεί αυτός ο άνθρωπος να αλλάξει τι βλέπει ο κόσμος;** — ο ΕΝΑΣ τόπος της απάντησης.
+ *
+ * 🔑 Τον ρωτά **κάθε** πράξη που ανεβάζει ή **κατεβάζει** δημοσιευμένο υλικό: διαβάθμιση (εδώ) ·
+ * κάδος και επαναφορά (`file-trash.service`) · αρχειοθέτηση. Αλλιώς το λουκέτο της διαβάθμισης
+ * παρακάμπτεται με **βαρύτερη** πράξη *(πρακτική Contentful: για να διαγράψεις ή να
+ * αρχειοθετήσεις **δημοσιευμένο** περιεχόμενο χρειάζεσαι το δικαίωμα δημοσίευσης)*.
+ */
+export function mayChangePublication(subject: CapabilitySubject): boolean {
+  return isGranted(decideCapability({ subject, action: PUBLICATION_CAPABILITY }).verdict);
+}
+
 export interface WriteClassificationParams {
   readonly fileId: string;
   /** Το έγγραφο, **ήδη φορτωμένο και κριμένο ως δικό του** από τον PEP της διαδρομής (ADR-742). */
@@ -134,9 +138,8 @@ export async function writeFileClassification(
 
   if (from === classification) return { kind: 'unchanged' };
 
-  if (touchesPublication(from, classification)) {
-    const decision = decideCapability({ subject: actor.capability, action: PUBLICATION_CAPABILITY });
-    if (!isGranted(decision.verdict)) return { kind: 'refused', why: 'not-capable' };
+  if (touchesPublication(from, classification) && !mayChangePublication(actor.capability)) {
+    return { kind: 'refused', why: 'not-capable' };
   }
 
   await ref.update({ classification, updatedAt: nowISO() });

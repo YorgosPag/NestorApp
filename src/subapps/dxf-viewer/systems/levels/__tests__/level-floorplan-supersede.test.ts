@@ -177,7 +177,12 @@ describe('ADR-845 Ο-16 · ADR-862 Φ0 Β10 — αντικατάσταση κά�
   beforeEach(() => {
     updateDocMock.mockClear();
     postMock.mockClear();
-    postMock.mockImplementation(async () => ({ success: true, kind: 'transitioned' }));
+    // 🗑️ ADR-845 §7.17 Α2 — και ο ΚΑΔΟΣ εταιρικού αρχείου είναι πλέον αίτημα προς τον διακομιστή
+    //    (`POST /api/files/trash`)· το `FILE_TRASHED` εκπέμπεται από την απάντησή του.
+    postMock.mockImplementation(async (...args: unknown[]) =>
+      args[0] === '/api/files/trash'
+        ? { success: true, processedCount: 1, errors: [], listings: [], files: [{ fileId: PREV_FILE, purgeAt: null }] }
+        : { success: true, kind: 'transitioned' });
     SceneStore._resetForTests();
   });
 

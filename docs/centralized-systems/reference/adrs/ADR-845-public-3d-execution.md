@@ -1587,7 +1587,7 @@ LINK/UNLINK του `match /files/{fileId}` δέχεται **κάθε μέλος*
 | Φάση | Τι | Κατάσταση |
 |---|---|---|
 | **Α1** | Διαβάθμιση ως πράξη διακομιστή: `POST /api/files/classification` *(δέσμη ≤50)* → `writeFileClassification` *(κρίση · γραφή · ίχνος `classify`)* → **μία** επαναπροβολή ανά ακίνητο *(`refreshListingsAfterFileChanges`)*. Ο πελάτης: `setFilesClassificationWithPolicy` | ✅ κώδικας + 10 άγκυρες *(Τ1–Τ10)*. ✅ **ζωντανά 2026-10-08** *(από την οθόνη, 95 τ.μ., `file_c098b8d6…`)*: `public → internal` ⇒ `gallery` 2 → 1, `projectedAt` 09:32:52Z → 10:27:13Z, τα **τρία** `.webp` της στο ράφι **404**, ίχνος `classify` `{ from: 'public', to: 'internal' }`· επαναφορά ⇒ ράφι **200**, δεύτερο ίχνος `{ from: 'internal', to: 'public' }` |
-| **Α2** | Κάδος/επαναφορά εταιρικών αρχείων ως πράξη διακομιστή | ⏳ |
+| **Α2** | Κάδος/επαναφορά εταιρικών αρχείων ως πράξη διακομιστή: `POST /api/files/trash` *(δέσμη ≤50, `action: trash \| restore`)* → `writeFileTrashState` *(κρίση · γραφή · ίχνος `delete`/`restore`)* → **μία** επαναπροβολή ανά ακίνητο. Ο πελάτης: `file-trash.client` μέσα από το **ένα** σημείο (`file-record-lifecycle`) | ✅ κώδικας + **26** άγκυρες *(Κ1–Κ16 διακομιστής · Π1–Π8 πελάτης · 2 για το DXF)*. ✅ **ζωντανά 2026-10-08** *(από την οθόνη, 95 τ.μ., `file_c098b8d6…`, αρχείο `public`)*: κάδος ⇒ `lifecycleState: trashed`, `trashedBy` = ο αιτών, `purgeAt` +30 ημέρες, χρόνοι `Timestamp`, τα **τρία** `.webp` της στο ράφι **404** *(της άλλης φωτογραφίας 200)*, ίχνος `delete` με `companyId`· επαναφορά από τον «Κάδο Ανακύκλωσης» ⇒ όλα τα πεδία κάδου `null`, `restoredBy`, ράφι **200**, ίχνος `restore`. Η βάση είναι όπως πριν |
 | **Α3** | Οι πόρτες διακομιστή καλούν τον κοινό βοηθό: `/api/files/archive` · `/api/files/[fileId]/cde` · `versions/promote` · `gdpr-delete`. Το εργαλείο AI `firestore_write` χάνει τα πεδία δημοσίευσης της `files` | ⏳ |
 | **Α4** | `firestore.rules`: φρουρός πεδίων δημοσίευσης σε κάθε σκέλος update + «γέννηση χωρίς `public`» · το LINK/UNLINK παγώνει και `lifecycleState`/`category`/`contentType`/`purpose` · φεύγουν τα σκέλη κάδου της `files`. **ΧΩΡΙΣΤΟ push, μετά τον κώδικα** | ⏳ |
 | **Α5** | Cron συμφιλίωσης *(`createScanCronRoute`)* πάνω στην υπάρχουσα επανασύνθεση + αποτύπωμα μέσων | ⏳ |
@@ -1614,9 +1614,55 @@ LINK/UNLINK του `match /files/{fileId}` δέχεται **κάθε μέλος*
   απάντηση φέρει `listings[]` *(τι έγινε σε κάθε αγγελία)* αλλά **καμία οθόνη δεν το δείχνει ακόμη** —
   ίδια εκκρεμότητα με το `listing` της `POST …/model` *(Ο-23)*.
 - 🔶 **Δέσμη > 50 αρχείων** ⇒ 400. Πριν δεν υπήρχε όριο· η πύλη του πελάτη δεν τεμαχίζει ακόμη.
-- 🔶 **Ευρήματα εκτός κλάσης, όχι λυμένα**: το `cad-files` γράφει `isDeleted: false` ·
-  `lifecycleState: active` σε **κάθε** αποθήκευση DXF *(ανασταίνει αρχείο από τον κάδο)*· αρχείο
-  μπορεί να **γεννηθεί** `public` από τον πελάτη *(κλείνει στην Α4)*.
+- 🔶 **Ευρήματα εκτός κλάσης**: ~~το `cad-files` γράφει `isDeleted: false` · `lifecycleState: active`
+  σε **κάθε** αποθήκευση DXF~~ *(✅ λύθηκε στην Α2)*· αρχείο μπορεί να **γεννηθεί** `public` από τον
+  πελάτη *(κλείνει στην Α4)*.
+
+#### Α2 — τι ισχύει στον κώδικα
+
+- **Ένα σημείο αλλαγής στον πελάτη.** `moveToTrash` / `restoreFromTrash` του
+  `file-record-lifecycle`: `custody === 'company'` ⇒ αίτημα στον διακομιστή· `personal` ⇒ η
+  ατομική δέσμη όπως πριν *(ADR-866 §2.6.11)*. Οι τέσσερις καλούντες που παρακάμπτουν την πύλη
+  *(`Building/Floor/PropertyFloorplanService`, `level-panel-hooks`)* καλύφθηκαν **χωρίς να αγγιχτούν**.
+- **Ποιος επιτρέπεται — ό,τι έκριναν οι κανόνες, το κρίνει πλέον ο γραφέας** *(ο Admin SDK τους
+  παρακάμπτει)*, με τη σειρά: **δημιουργός** *(`createdBy === uid`, ιδιοκτησία)* **ή** η νέα
+  ικανότητα `dxf:files:delete` *(μόνο `company_admin` — ADR-801 changelog 2026-10-08)* → αρχείο
+  `public` ⇒ **και** `listings:listings:publish` *(κάδος = απόσυρση, επαναφορά = επαναδημοσίευση·
+  ένας βοηθός `mayChangePublication`, κοινός με τη διαβάθμιση)* → κάδος μόνο για `status: 'ready'`
+  → αρχείο **αποσυρμένου** ακινήτου κλειδωμένο *(ADR-281)*. Αρνήσεις **με όνομα**: `not-owner` ·
+  `not-capable` · `not-ready` · `not-in-trash` · `retired-property`.
+- **Το αποσυρμένο ακίνητο κρίνεται σκέλος προς σκέλος όπως το `parentPropertyIsLive()` των
+  κανόνων** — ακίνητο που **δεν υπάρχει πια** είναι *ζωντανό*. ⛔ Γι' αυτό **όχι**
+  `requirePropertyInTenantScope`: απαντά 404 στο ανύπαρκτο και θα κλείδωνε για πάντα τα ορφανά
+  αρχεία. Μία ανάγνωση ανά ακίνητο για όλη τη δέσμη *(`createLivePropertyProbe`)*.
+- **Ιδεμποτής.** Ήδη στον κάδο ⇒ καμία γραφή, κανένα ίχνος, καμία επαναπροβολή — το `purgeAt`
+  **δεν** μετατίθεται *(ADR-866 §2.6.11 Β3)*.
+- **`trashedBy` = ο αιτών του αιτήματος**, ποτέ τιμή από τον πελάτη *(ένας καλών έγραφε `'system'`)*.
+  Χρόνοι `FieldValue.serverTimestamp()`, όπως έγραφε ο πελάτης — **όχι** `nowISO()`.
+- **Τα γεγονότα `FILE_TRASHED` / `FILE_RESTORED` μετά την απάντηση, μόνο για ό,τι άλλαξε.** Η
+  απάντηση φέρει `files[]` με ό,τι **γράφτηκε**· σε μερική άρνηση πρώτα τα γεγονότα, μετά η ρίψη.
+- **Ένας σκελετός δέσμης** *(`app/api/files/_shared/file-batch-act`)*: κρίση `fileIds` · PEP ·
+  συλλογή αρνήσεων · **η επαναπροβολή μέσα στον σκελετό**, ώστε πόρτα που περνά από εκεί να **μην
+  μπορεί** να την ξεχάσει. Η διαβάθμιση ξαναγράφτηκε πάνω του *(Τ1–Τ10 αμετάβλητες)*· η
+  αρχειοθέτηση ανεβαίνει στην Α3. Το ταβάνι των 50 ζει **μία** φορά *(`MAX_FILES_PER_BATCH_ACT`)*
+  και ο πελάτης **τεμαχίζει** — για τον κάδο· η διαβάθμιση ακόμη όχι.
+- **Μαζικός κάδος = ένα αίτημα** *(`moveManyToTrash`)* αντί `Promise.all` ένα-ένα.
+- **Η αποθήκευση DXF δεν είναι «Επαναφορά».** `dual-write-to-files`: `lifecycleState` / `isDeleted`
+  **μόνο στη γέννηση**. Αποθήκευση πάνω σε πεταμένο αρχείο ενημερώνει τη σκηνή του και το αφήνει
+  στον κάδο.
+
+#### Δηλωμένα όρια της Α2
+
+- 🔶 **Οι κανόνες δέχονται ακόμη κάδο από τον browser** ως την Α4 — ίδιο όριο με την Α1.
+- 🔶 **Καμία ένδειξη στον viewer** ότι το σχέδιο που αποθηκεύεις είναι στον κάδο. Δεν βρέθηκε
+  πρακτική των μεγάλων για *«αποθήκευση πάνω σε πεταμένο»*· το ελάχιστο *(η αποθήκευση δεν
+  αγγίζει τον κάδο)* έγινε, η ένδειξη **όχι**.
+- 🔶 **Ανατροφοδότηση οθόνης**: άρνηση ⇒ ρίψη με κωδικό *(`FILE_TRASH_REFUSED: …`)*, όχι μήνυμα
+  στη γλώσσα του ανθρώπου· το `listings[]` δεν φαίνεται πουθενά *(ίδια εκκρεμότητα με την Α1)*.
+- 🔶 **Η μετονομασία εταιρικού αρχείου μένει στον πελάτη** *(`commitFileActivity`)* — δεν είναι
+  πεδίο του κατηγορήματος δημοσίευσης.
+- 🔶 **Εύρημα, όχι λυμένο**: `DELETE /api/cad-files` ζητά `dxf:files:upload`, που ο `company_admin`
+  **δεν** έχει.
 
 ## §8. ΑΓΚΥΡΕΣ — τι πρέπει να **μπορεί να κοκκινίσει**
 
@@ -1691,6 +1737,19 @@ LINK/UNLINK του `match /files/{fileId}` δέχεται **κάθε μέλος*
 ---
 
 ## §10. Changelog
+
+### 2026-10-08 — **Κλάση Ο-35, Φάση Α2: ο κάδος των εταιρικών αρχείων ως πράξη διακομιστή** *(§7.17)*
+
+- ✅ Νέα `POST /api/files/trash` + `services/file-record/file-trash.service.ts` *(`judgeFileTrash` · `writeFileTrashState` · `createLivePropertyProbe`)*. Ίχνος `delete` / `restore` awaited· ιδεμποτής.
+- ✅ **Νέα ικανότητα `dxf:files:delete`** *(μόνο `company_admin`)* — `types.ts` · `role-catalogue.ts` · ετικέτα `admin.json` el/en · `src/types/i18n.ts` αναπαραγμένο. ADR-801 changelog.
+- ✅ Κοινός σκελετός `app/api/files/_shared/file-batch-act.ts`· η `classification/route.ts` ξαναγράφτηκε πάνω του. Κοινός φάκελος απάντησης + ταβάνι δέσμης στο `file-batch-act.types.ts`.
+- ✅ `lib/files/file-trash-state.ts` — `calculatePurgeDate` · `isInTrash` **μεταφέρθηκαν** από το lifecycle *(καθαρό module, κοινό πελάτη/διακομιστή)*. `mayChangePublication` εξάγεται από το `file-classification.service`.
+- ✅ Πελάτης: `services/filesystem/file-trash.client.ts`· το `file-record-lifecycle` ζητά από τον διακομιστή για `company`· νέα `moveManyToTrash` → `moveFilesToTrashWithPolicy` → `trashFilesInBatch` *(ένα αίτημα)*.
+- ✅ `cad-files/dual-write-to-files.ts`: η κατάσταση κάδου write-once — η αποθήκευση DXF δεν ανασταίνει πια αρχείο.
+- 🧪 `trash-route.test.ts` Κ1–Κ16 *(PEP, γραφέας, κριτής και κατάλογος ρόλων **χωρίς** mock)* · `file-record-lifecycle-company-trash.test.ts` Π1–Π8 · +2 στο `dual-write-to-files.test.ts` · το `level-floorplan-supersede.test.ts` προσαρμόστηκε *(ο κάδος είναι πλέον αίτημα)*. 45 σουίτες αρχείων **333/333**. `jscpd:diff` καθαρό στα 12 αρχεία κώδικα. Πύλες που **εκτελέστηκαν** στο δέντρο: 3.33 · 3.68 · 3.76 · 3.78 · 3.92 · 3.100 ✅.
+- ✅ **Ζωντανή επαλήθευση ΕΓΙΝΕ** *(κάδος + επαναφορά δημόσιας φωτογραφίας από την οθόνη· δες τον πίνακα φάσεων)*. Δοκιμάστηκε **μόνο** ο δρόμος «δικό μου αρχείο, με δικαίωμα δημοσίευσης» — οι αρνήσεις *(`not-owner` · `not-capable` · `retired-property`)* μόνο στις άγκυρες.
+- ⚠️ **Δεν** έτρεξε `tsc` (N.17). **Δεν** έγινε εκτέλεση μεταλλάξεων στις νέες άγκυρες.
+- ⚠️ Στο `src/lib/auth/__tests__` κοκκινίζουν 6 σουίτες *(`personal-scope-consumers` · `project-team-birth-anchor` · `surface-authority-reachability` · `identity-provenance` · `ownership-callsite-coverage-anchor` · `identity-remediation`)* και η `file-hold.test`· τα μηνύματά τους διαβάστηκαν **όλα** και ονομάζουν **άλλα** αρχεία *(landing heroes · vendor invite · διαδρομές engagements/network · `container-transitions` · `allow delete` των κανόνων)* — κανένα της Α2. **Δεν** αποδείχθηκε σε καθαρό δέντρο ότι προϋπήρχαν.
 
 ### 2026-10-08 — **Κλάση Ο-35, Φάση Α1: η διαβάθμιση ως πράξη διακομιστή** *(§7.17)*
 

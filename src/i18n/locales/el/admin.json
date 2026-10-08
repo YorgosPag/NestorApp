@@ -580,6 +580,7 @@
       "dxf": {
         "files_view": "Προβολή Αρχείων DXF",
         "files_upload": "Μεταφόρτωση DXF",
+        "files_delete": "Κάδος / Επαναφορά Αρχείων Άλλων",
         "layers_view": "Προβολή Επιπέδων",
         "layers_manage": "Διαχείριση Επιπέδων",
         "layers_unlock": "Ξεκλείδωμα Επιπέδων",

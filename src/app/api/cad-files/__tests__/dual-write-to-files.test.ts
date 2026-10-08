@@ -177,3 +177,22 @@ describe('writeToFilesCollection — write-once createdAt & displayName, real la
     expect(sceneStats.layerCount).toBeUndefined();
   });
 });
+
+// ADR-845 §7.17 Α2 — η αποθήκευση δεν είναι «Επαναφορά»: την κατάσταση κάδου τη γράφει ΕΝΑΣ.
+describe('writeToFilesCollection — η κατάσταση κάδου είναι write-once', () => {
+  beforeEach(() => { captured.length = 0; });
+
+  it('🔴 auto-save (update) ΔΕΝ ανασταίνει αρχείο από τον κάδο: ούτε `lifecycleState` ούτε `isDeleted`', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: false, version: 9 });
+    const { payload } = captured[0];
+    expect('lifecycleState' in payload).toBe(false);
+    expect('isDeleted' in payload).toBe(false);
+  });
+
+  it('στη γέννηση το αρχείο είναι ενεργό', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: true });
+    const { payload } = captured[0];
+    expect(payload.lifecycleState).toBe('active');
+    expect(payload.isDeleted).toBe(false);
+  });
+});

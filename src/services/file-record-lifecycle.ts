@@ -26,13 +26,12 @@ import {
   type EntityType,
   type FileCategory,
   FILE_LIFECYCLE_STATES,
-  DEFAULT_RETENTION_POLICIES,
-  TRASH_RETENTION_BY_CATEGORY,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
+import { calculatePurgeDate, isInTrash, trashRetentionDays } from '@/lib/files/file-trash-state';
 import {
   custodyKindOfScope,
   custodyScopeFromData,
@@ -46,23 +45,13 @@ import {
   requestSupersession,
   type SupersedeOutcome,
 } from '@/services/filesystem/container-transition.client';
+import { requestFileTrash } from '@/services/filesystem/file-trash.client';
 
 const logger = createModuleLogger('FILE_RECORD_LIFECYCLE');
 
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Calculate purge date based on category retention policy
- * @enterprise Uses TRASH_RETENTION_BY_CATEGORY from domain-constants
- */
-function calculatePurgeDate(category: FileCategory): Date {
-  const retentionDays = TRASH_RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS;
-  const purgeDate = new Date();
-  purgeDate.setDate(purgeDate.getDate() + retentionDays);
-  return purgeDate;
-}
 
 /** Lifecycle timestamp that accompanies `createdAt` when normalizing a raw doc */
 type LifecycleTimestampField = 'trashedAt' | 'archivedAt' | 'updatedAt';
@@ -94,11 +83,6 @@ async function loadFileDocOrThrow(fileId: string, custody: CustodyKind): Promise
   }
 
   return { docRef, data, owner };
-}
-
-/** Στον κάδο ήδη; — `lifecycleState` **ή** το legacy `isDeleted` (πάνε πάντα μαζί). */
-function isInTrash(data: DocumentData): boolean {
-  return data.lifecycleState === FILE_LIFECYCLE_STATES.TRASHED || data.isDeleted === true;
 }
 
 /**
@@ -167,6 +151,76 @@ async function queryLifecycleFiles(
 // ============================================================================
 
 /**
+ * Η άρνηση του διακομιστή γίνεται **ρίψη με όνομα** — όπως πριν το `permission-denied` των κανόνων.
+ * Σιωπηλή μερική επιτυχία θα έλεγε στον άνθρωπο «έγινε» για αρχείο που **έμεινε** όπως ήταν.
+ */
+function throwIfRefused(code: string, errors: readonly string[]): void {
+  if (errors.length === 0) return;
+  logger.error('File trash request refused for some files', { code, errors });
+  throw new Error(`${code}: ${errors[0]}`);
+}
+
+/**
+ * 🗑️ **Κάδος ΕΤΑΙΡΙΚΩΝ αρχείων — ένα αίτημα για όλη τη δέσμη** (ADR-845 §7.17 Α2).
+ *
+ * 🔑 **Το γεγονός ΜΕΤΑ την επιβεβαίωση, και μόνο για ό,τι άλλαξε πραγματικά**: οι συνδρομητές
+ * (`useLevelFloorplanSync` · `useEntityFiles` · `GlobalFileUploadToast` · `useFloorsTabState`)
+ * αδειάζουν καμβά και λίστες — ένα `FILE_TRASHED` για αρχείο που ο διακομιστής **αρνήθηκε** θα
+ * έσβηνε από την οθόνη κάτι που υπάρχει. Γι' αυτό πρώτα τα γεγονότα, μετά η ρίψη της άρνησης.
+ */
+async function trashCompanyFiles(fileIds: readonly string[], trashedBy: string): Promise<void> {
+  if (fileIds.length === 0) return;
+  const result = await requestFileTrash(fileIds, 'trash');
+
+  for (const file of result.files) {
+    RealtimeService.dispatch('FILE_TRASHED', {
+      fileId: file.fileId,
+      trashedBy,
+      purgeAt: file.purgeAt ?? undefined,
+      displayName: file.displayName,
+      entityId: file.entityId,
+      entityType: file.entityType,
+      timestamp: Date.now(),
+    });
+  }
+
+  throwIfRefused('FILE_TRASH_REFUSED', result.errors);
+}
+
+/** ♻️ Επαναφορά ΕΤΑΙΡΙΚΟΥ αρχείου — ο διακομιστής κρίνει· το γεγονός μετά την επιβεβαίωση. */
+async function restoreCompanyFile(fileId: string, restoredBy: string): Promise<void> {
+  const result = await requestFileTrash([fileId], 'restore');
+
+  for (const file of result.files) {
+    RealtimeService.dispatch('FILE_RESTORED', { fileId: file.fileId, restoredBy, timestamp: Date.now() });
+  }
+
+  throwIfRefused('FILE_RESTORE_REFUSED', result.errors);
+}
+
+/** Ένα αρχείο προς τον κάδο, **με το διαμέρισμά του** — το αποδεικνύει το ίδιο το έγγραφο. */
+export interface TrashTarget {
+  readonly id: string;
+  readonly custody: CustodyKind;
+}
+
+/**
+ * 🗑️ **Μαζικός κάδος** — τα εταιρικά σε **ένα** αίτημα, τα προσωπικά ένα-ένα όπως πάντα.
+ *
+ * 🔴 Ως την Α2 ήταν `Promise.all` ένα-ένα: 30 φωτογραφίες του ίδιου ακινήτου = 30 αιτήματα, και
+ * με τον κάδο στον διακομιστή θα ήταν **30 επαναπροβολές της ίδιας αγγελίας**.
+ */
+export async function moveManyToTrash(targets: readonly TrashTarget[], trashedBy: string): Promise<void> {
+  const personal = targets.filter((target) => target.custody === 'personal');
+  const company = targets.filter((target) => target.custody === 'company').map((target) => target.id);
+
+  await Promise.all([
+    trashCompanyFiles(company, trashedBy),
+    ...personal.map((target) => moveToTrash(target.id, 'personal', trashedBy)),
+  ]);
+}
+
+/**
  * 🗑️ Move file to Trash (soft delete)
  * @enterprise Replaces hard delete with 3-tier lifecycle
  *
@@ -176,6 +230,10 @@ async function queryLifecycleFiles(
  */
 export async function moveToTrash(fileId: string, custody: CustodyKind, trashedBy: string): Promise<void> {
   logger.info('Moving FileRecord to trash', { fileId, trashedBy });
+
+  // 🔴 ADR-845 §7.17 Α2 — το ΕΤΑΙΡΙΚΟ αρχείο το πετά ο ΔΙΑΚΟΜΙΣΤΗΣ (κρίση · γραφή · ίχνος ·
+  //    επαναπροβολή αγγελίας). Ό,τι ακολουθεί είναι πλέον ο δρόμος του ΠΡΟΣΩΠΙΚΟΥ αρχείου.
+  if (custody === 'company') return trashCompanyFiles([fileId], trashedBy);
 
   const { docRef, data, owner } = await loadFileDocOrThrow(fileId, custody);
   // 🔴 ADR-866 §2.6.11 Β3 — ΙΔΕΜΠΟΤΗΤΑ: μετρημένα, 10 από τις 15 γραμμές `delete` ήταν ζεύγη σε
@@ -212,7 +270,7 @@ export async function moveToTrash(fileId: string, custody: CustodyKind, trashedB
   logger.info('FileRecord moved to trash', {
     fileId,
     purgeAt: purgeDate.toISOString(),
-    retentionDays: TRASH_RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS,
+    retentionDays: trashRetentionDays(category),
   });
 
   RealtimeService.dispatch('FILE_TRASHED', {
@@ -278,6 +336,9 @@ export async function supersedeFileRecord(
  */
 export async function restoreFromTrash(fileId: string, custody: CustodyKind, restoredBy: string): Promise<void> {
   logger.info('Restoring FileRecord from trash', { fileId, restoredBy });
+
+  // 🔴 ADR-845 §7.17 Α2 — εταιρικό ⇒ ο διακομιστής (η επαναφορά `public` αρχείου το ξαναβγάζει στο κοινό).
+  if (custody === 'company') return restoreCompanyFile(fileId, restoredBy);
 
   const { docRef, data, owner } = await loadFileDocOrThrow(fileId, custody);
   if (!isInTrash(data)) {

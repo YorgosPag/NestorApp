@@ -580,6 +580,7 @@
       "dxf": {
         "files_view": "View DXF Files",
         "files_upload": "Upload DXF Files",
+        "files_delete": "Trash / Restore Others' Files",
         "layers_view": "View Layers",
         "layers_manage": "Manage Layers",
         "layers_unlock": "Unlock Layers",

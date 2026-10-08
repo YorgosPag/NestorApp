@@ -17,7 +17,7 @@ import {
   archiveFilesWithPolicy,
   unarchiveFilesWithPolicy,
   batchDownloadFilesWithPolicy,
-  moveFileToTrashWithPolicy,
+  moveFilesToTrashWithPolicy,
   setFilesClassificationWithPolicy,
   type ArchiveFilesResponse,
 } from '@/services/filesystem/file-mutation-gateway';
@@ -137,7 +137,8 @@ export async function trashFilesInBatch(
     if (custody === null) throw new Error(`FILE_CUSTODY_UNKNOWN: ${file.id}`);
     targets.push({ id: file.id, custody });
   }
-  await Promise.all(targets.map(({ id, custody }) => moveFileToTrashWithPolicy(id, custody, userId)));
+  // 🔑 ADR-845 §7.17 Α2 — τα εταιρικά σε ΕΝΑ αίτημα: ο διακομιστής ξαναπροβάλλει κάθε αγγελία μία φορά.
+  await moveFilesToTrashWithPolicy(targets, userId);
 }
 
 /**

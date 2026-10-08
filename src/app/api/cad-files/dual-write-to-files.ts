@@ -198,8 +198,12 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
       ext: 'dxf',
       contentType: 'application/dxf',
       status: 'ready' as const,
-      lifecycleState: 'active' as const,
-      isDeleted: false,
+      // 🗑️ ADR-845 §7.17 Α2 — η κατάσταση κάδου είναι WRITE-ONCE, όπως το `displayName`: με
+      //    `merge: true` τα δύο αυτά πεδία, άνευ όρων, **ανάσταιναν** αρχείο από τον κάδο σε ΚΑΘΕ
+      //    auto-save (το `purgeAt` έμενε πίσω ⇒ «ενεργό» αρχείο με ρολόι εκκαθάρισης). Μετά τη
+      //    γέννηση την αλλάζει **μόνο** ο γραφέας του κάδου (`file-trash.service`) — η επαναφορά
+      //    είναι ρητή πράξη, με κρίση και ίχνος, ποτέ παρενέργεια αποθήκευσης.
+      ...(isCreate ? { lifecycleState: 'active' as const, isDeleted: false } : {}),
       // 🔴 ADR-899 §9 θέμα 9 — `downloadUrl` / `sizeBytes` του πάνω επιπέδου περιγράφουν **το αρχείο** (το
       //    πρωτότυπο στο `storagePath`), όχι τη σκηνή. Ως 2026-10-05 γράφονταν άνευ όρων σε ΚΑΘΕ auto-save ⇒
       //    μετρημένο στην παραγωγή: 13/14 εγγραφές CAD με `storagePath → ….dxf` (143.056 bytes) αλλά

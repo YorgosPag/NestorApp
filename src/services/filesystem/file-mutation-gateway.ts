@@ -285,6 +285,17 @@ export async function moveFileToTrashWithPolicy(
   return FileRecordService.moveToTrash(fileId, custody, trashedBy);
 }
 
+/**
+ * **Μαζικός κάδος** — τα εταιρικά αρχεία φεύγουν σε **ένα** αίτημα, ώστε ο διακομιστής να
+ * ξαναπροβάλει κάθε αγγελία **μία** φορά (ADR-845 §7.17 Α2). Το διαμέρισμα κάθε αρχείου το δίνει ο καλών.
+ */
+export async function moveFilesToTrashWithPolicy(
+  targets: Parameters<typeof FileRecordService.moveManyToTrash>[0],
+  trashedBy: string,
+): Promise<void> {
+  return FileRecordService.moveManyToTrash(targets, trashedBy);
+}
+
 export async function restoreFileFromTrashWithPolicy(
   fileId: string,
   custody: CustodyKind,
