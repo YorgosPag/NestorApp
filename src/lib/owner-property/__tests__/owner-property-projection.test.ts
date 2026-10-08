@@ -511,6 +511,36 @@ describe('🔴 Φ — «δικαιούται» ≠ «έφτασε»: το γεγ
     expect(ownerListingVisibility(withdrawn, AT)).toBe('withdrawn');
   });
 
+  /**
+   * 🔴 **ΤΟ ΑΝΤΙΣΤΡΟΦΟ ΨΕΜΑ, ΖΩΝΤΑΝΟ 2026-10-08 (Ν11).** Η τελευταία σύνθεση **έσβησε** την
+   * προβολή (`withdrawn`) και από τότε η αγγελία **ξαναδικαιούται** — χωρίς καμία γραφή:
+   * άλλαξε ο κανόνας του κριτή, ή έφτασε η ώρα μιας προγραμματισμένης εντολής. Η οθόνη έλεγε
+   * «*Η αγγελία είναι δημόσια*» και έδινε σύνδεσμο προς σελίδα που **δεν υπάρχει**.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: κρίνε μόνο το `'failed'` αποτύπωμα ⇒ **κόκκινο**.
+   */
+  it('δικαιούται, αλλά η τελευταία σύνθεση την ΕΣΒΗΣΕ ⇒ «failed», ΟΧΙ «published»', () => {
+    const property = validOwnerProperty({
+      publication: { outcome: 'withdrawn', at: AT },
+    });
+
+    // ✅ Ο παρονομαστής: **δικαιούται** — η διαφορά έρχεται μόνο από το αποτύπωμα.
+    expect(isPubliclyListed(projectableFromOwnerProperty(property, AT))).toBe(true);
+    expect(ownerListingVisibility(property, AT)).toBe('failed');
+  });
+
+  it('🔑 οι δύο παρονομαστές του παραπάνω: «published» μένει «published», αποσυρμένη μένει «withdrawn»', () => {
+    expect(
+      ownerListingVisibility(validOwnerProperty({ publication: { outcome: 'published', at: AT } }), AT),
+    ).toBe('published');
+    expect(
+      ownerListingVisibility(
+        validOwnerProperty({ lifecycle: 'withdrawn', publication: { outcome: 'withdrawn', at: AT } }),
+        AT,
+      ),
+    ).toBe('withdrawn');
+  });
+
   /** Και τα τρία σκέλη έχουν **γραμμένο** κλειδί i18n — `offer.publish.<σκέλος>`. */
   it('το λεξιλόγιο είναι το ΥΠΑΡΧΟΝ `PublishOutcome`, καμία νέα λέξη', () => {
     const outcomes = new Set([
