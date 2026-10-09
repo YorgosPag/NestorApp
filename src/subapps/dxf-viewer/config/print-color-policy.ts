@@ -47,6 +47,13 @@ export interface PrintColorPolicy {
 
 const PRINT_BLACK = '#000000';
 
+/**
+ * **Το χαρτί** — η επιφάνεια κάθε print pass (ADR-454 / ADR-909 Β2.5). ΜΙΑ πηγή: ό,τι ρωτά «πάνω σε τι
+ * ζωγραφίζω τώρα;» ενώ τρέχει εκτύπωση παίρνει αυτό, **ποτέ** το φόντο του ζωντανού καμβά.
+ */
+// eslint-disable-next-line design-system/no-hardcoded-colors -- χαρτί παραδοτέου, όχι θέμα UI
+export const PRINT_PAPER_HEX = '#ffffff';
+
 /** Above this per-channel level (0..1) a colour is treated as "white" ink. */
 const NEAR_WHITE_THRESHOLD = 0.92;
 
@@ -95,8 +102,18 @@ export function survivesAsInk(colorHex: string, colorAci: number | null = null):
  *
  * Το `monochrome` **δεν** εξαιρείται: εκεί ο χρήστης ζητά ρητά «όλα μαύρα» (AutoCAD
  * `monochrome.ctb`), και ένα γεμισμένο πλακάκι είναι μέρος του «όλα».
+ *
+ * - `'tint'` (ADR-909 Β2.5) — το **ημιδιαφανές σώμα** ενός μέλους BIM (poché κολόνας/τοίχου/πλάκας). Δεν
+ *   είναι μελάνι του σχεδιαστή, είναι **τόνος**: στο `monochrome` γίνεται **γκρι της δικής του
+ *   φωτεινότητας** (Revit «Black Lines»: γραμμές μαύρες, *solid patterns in grayscale*). Μαύρο εδώ θα
+ *   έσβηνε τη διαφορά ανάμεσα σε ανοιχτό και σκούρο υλικό — ό,τι ακριβώς κρατά το Revit.
  */
-export type PlotColorRole = 'ink' | 'fill';
+export type PlotColorRole = 'ink' | 'fill' | 'tint';
+
+function greyOf(rgb: Rgb): string {
+  const lum = toHex(luminance(rgb) * 255);
+  return `#${lum}${lum}${lum}`;
+}
 
 /**
  * Map a resolved entity colour to a print-safe colour under the given policy.
@@ -116,18 +133,18 @@ export function applyPlotColor(
   policy: PrintColorPolicy,
   role: PlotColorRole = 'ink',
 ): string {
-  if (policy.style === 'monochrome') return PRINT_BLACK;
-
   const rgb = colorHex ? parseHex(colorHex) : null;
+  if (policy.style === 'monochrome') {
+    return role === 'tint' && rgb !== null ? greyOf(rgb) : PRINT_BLACK;
+  }
+
   // Άγνωστο χρώμα (BIM neutral token) → μαύρο σε ΚΑΘΕ ρόλο: δεν υπάρχει χρώμα να κρατηθεί.
   if (rgb === null) return PRINT_BLACK;
   // ACI 7 (white pen) or near-white → black INK. A fill keeps its colour (see PlotColorRole).
   const forcedWhite = role === 'ink' && (colorAci === ACI_WHITE || isNearWhite(rgb));
 
   if (policy.style === 'grayscale') {
-    if (forcedWhite) return PRINT_BLACK;
-    const lum = luminance(rgb) * 255;
-    return `#${toHex(lum)}${toHex(lum)}${toHex(lum)}`;
+    return forcedWhite ? PRINT_BLACK : greyOf(rgb);
   }
 
   // 'colour' and 'by-pen' (Slice 5 fallback): white-safe colour preservation.

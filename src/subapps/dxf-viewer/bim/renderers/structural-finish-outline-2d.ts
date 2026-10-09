@@ -17,9 +17,17 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { StructuralFinishFaces } from '../finishes/structural-finish-types';
 import { collectFinishOutlinePlanPolylines } from '../finishes/structural-finish-plan-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
+import { applyPlotColor, getPrintColorPolicy } from '../../config/print-color-policy';
+import { lineweightDisplayPx } from '../../config/lineweight-display-px';
 
 /** Line width (px) της σοβατισμένης όψης (λεπτή, δευτερεύουσα του πυρήνα). */
 const FINISH_OUTLINE_LINE_WIDTH_PX = 0.75;
+/**
+ * Η ίδια πένα σε **χαρτί** (ISO 0,18 mm ≈ 0,75 px στα 96 dpi). 🔴 ADR-909 Β2.5, μετρημένο ζωντανά: με σταθερά
+ * px και το χρώμα του υλικού, ο σοβάς έβγαινε στη `monochrome` δημόσια κάτοψη **μπεζ τρίχα 0,75 px** σε
+ * εικόνα 4096 px (8.552 χρωματιστά pixels) — ούτε πολιτική χρώματος, ούτε πάχος στο dpi, ούτε δάπεδο.
+ */
+const FINISH_OUTLINE_PEN_MM = 0.18;
 
 /**
  * Ζωγραφίζει τη σοβατισμένη όψη ενός δομικού στοιχείου (κολόνα/δοκάρι). No-op όταν δεν
@@ -36,11 +44,13 @@ export function drawStructuralFinishOutline(
 
   ctx.save();
   ctx.setLineDash([]);
-  ctx.lineWidth = FINISH_OUTLINE_LINE_WIDTH_PX;
+  // Print pass ⇒ μελάνι της πολιτικής + πένα στο dpi/δάπεδο της απόδοσης· οθόνη ⇒ όπως πάντα.
+  const printPolicy = getPrintColorPolicy();
+  ctx.lineWidth = printPolicy ? lineweightDisplayPx(FINISH_OUTLINE_PEN_MM) : FINISH_OUTLINE_LINE_WIDTH_PX;
   for (const pl of polylines) {
     const pts = pl.points.map(worldToScreen);
     if (pts.length < 2) continue;
-    ctx.strokeStyle = pl.colorHex;
+    ctx.strokeStyle = printPolicy ? applyPlotColor(pl.colorHex, null, printPolicy) : pl.colorHex;
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);

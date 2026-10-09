@@ -40,9 +40,13 @@ const WALL_PALETTE = 'src/subapps/dxf-viewer/bim/walls/wall-render-palette.ts';
 const CANVAS_THEME = 'src/subapps/dxf-viewer/config/canvas-theme.ts';
 const TABLE_INK = 'src/subapps/dxf-viewer/bim/table/table-ink.ts';
 const VARIABLES_CSS = 'src/styles/design-system/generated/variables.css';
+/** Η πηγή του «χαρτιού»: το `TABLE_PAPER_HEX` είναι **αναφορά** σε αυτήν (ADR-909 Β2.5). */
+const PRINT_POLICY = 'src/subapps/dxf-viewer/config/print-color-policy.ts';
 
 /** Τα αρχεία που χρειάζεται η μηχανή για να απαντήσει — τίποτα παραπάνω. */
-const MINI_REPO_FILES = [ADAPTIVE_MODULE, CANVAS_THEME, TABLE_INK, WALL_PALETTE, WALL_RENDERER, VARIABLES_CSS];
+const MINI_REPO_FILES = [
+  ADAPTIVE_MODULE, CANVAS_THEME, PRINT_POLICY, TABLE_INK, WALL_PALETTE, WALL_RENDERER, VARIABLES_CSS,
+];
 
 const read = (repoRoot, rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 
@@ -141,6 +145,31 @@ describe('Μ0 — το ζωντανό δέντρο', () => {
       .map((s) => s.key)
       .sort();
     expect(keys).toEqual(['paper', 'sheet']);
+  });
+
+  /**
+   * 🔴 **ADR-909 Β2.5 — Η ΕΠΙΦΑΝΕΙΑ ΠΟΥ ΞΕΦΥΓΕ.** Το `TABLE_PAPER_HEX = '#ffffff'` έγινε
+   * `= PRINT_PAPER_HEX` και ο σαρωτής, που διάβαζε μόνο literals, **έχασε το χαρτί χωρίς να
+   * σκάσει**. Τρία tests: η αναφορά λύνεται στην **τιμή της πηγής** (όχι σε κάτι που της μοιάζει),
+   * ακολουθεί την πηγή όταν **αλλάζει**, και ό,τι δεν λύνεται **ρίχνει σφάλμα**.
+   */
+  it('🔴 το χαρτί λύνεται ΜΕΣΑ από την αναφορά — στην τιμή της πηγής του', () => {
+    expect(read(REPO_ROOT, TABLE_INK)).toContain('TABLE_PAPER_HEX = PRINT_PAPER_HEX');
+    const paper = presentableSurfaces(REPO_ROOT).find((s) => s.key === 'paper');
+    expect(paper.hex).toBe('#ffffff');
+  });
+
+  it('η αναφορά ΑΚΟΛΟΥΘΕΙ την πηγή: άλλο χαρτί εκεί ⇒ άλλη επιφάνεια εδώ', () => {
+    const policy = mutate(read(REPO_ROOT, PRINT_POLICY),
+      "PRINT_PAPER_HEX = '#ffffff'", "PRINT_PAPER_HEX = '#777777'");
+    const paper = presentableSurfaces(miniRepo({ [PRINT_POLICY]: policy })).find((s) => s.key === 'paper');
+    expect(paper.hex).toBe('#777777');
+  });
+
+  it('ανεπίλυτη αναφορά ⇒ σκάει, ποτέ «μία επιφάνεια λιγότερη»', () => {
+    const ink = mutate(read(REPO_ROOT, TABLE_INK),
+      'TABLE_PAPER_HEX = PRINT_PAPER_HEX', 'TABLE_PAPER_HEX = somewhereElse()');
+    expect(() => presentableSurfaces(miniRepo({ [TABLE_INK]: ink }))).toThrow(/Ανεπίλυτη επιφάνεια πίνακα/);
   });
 
   it('η ανακάλυψη είναι fail-closed: καμία σταθερά ⇒ σκάει, ποτέ «0 επιφάνειες»', () => {

@@ -59,7 +59,7 @@ import {
   TABLE_CELL_SELECTION,
 } from '../../config/color-config';
 import { hexToRgba } from '../../config/color-math';
-import { getPrintColorPolicy } from '../../config/print-color-policy';
+import { getPrintColorPolicy, PRINT_PAPER_HEX } from '../../config/print-color-policy';
 import { getTableSurfaceMode } from '../../systems/table-surface/table-surface-mode';
 import type { TableBorderSpec } from '../../types/table-edges';
 import type { TableCellStyle } from './table-style';
@@ -78,7 +78,7 @@ export const AUTOMATIC_TABLE_INK = 'auto';
  * viewer **δεν** αναπαράγεται. Ρητή σταθερά ώστε η λέξη «χαρτί» να μη γραφτεί ως literal σε
  * τρία σημεία που μπορούν να αποκλίνουν.
  */
-export const TABLE_PAPER_HEX = '#ffffff';
+export const TABLE_PAPER_HEX = PRINT_PAPER_HEX;
 
 /**
  * 🔴 ADR-771 Φ.2 — **Το φύλλο**: ουδέτερη ανοιχτή, **αδιαφανής** επιφάνεια ανάγνωσης.

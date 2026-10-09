@@ -31,7 +31,25 @@ import {
   type RgbaColor,
 } from './color-math';
 import { resolveDxfCanvasBackgroundHex } from './color-config';
-import { applyPlotColor, getPrintColorPolicy, type PrintColorPolicy } from './print-color-policy';
+import {
+  applyPlotColor,
+  getPrintColorPolicy,
+  PRINT_PAPER_HEX,
+  type PrintColorPolicy,
+} from './print-color-policy';
+
+/**
+ * **Πάνω σε τι ζωγραφίζω ΤΩΡΑ;** — χαρτί όταν τρέχει print pass, αλλιώς το ζωντανό φόντο του καμβά.
+ *
+ * 🔴 Μετρημένο ζωντανά (ADR-909 Β2.5, 2026-10-09): η αδιαφανής βάση κάθε σώματος BIM ρωτούσε σκέτο
+ * `resolveDxfCanvasBackgroundHex()` — και στην εκτύπωση το `getComputedStyle` του `:root` λέει ακόμη
+ * «σκούρο». Κάθε κολόνα έβγαινε στη δημόσια κάτοψη **συμπαγές `rgb(23,32,46)`**: το φόντο του θέματος
+ * `#1d283a`, σκουρυμένο από το γέμισμα (× 0,78). Όποιος στρώνει ή μιμείται «φόντο» σε δρόμο που τυπώνεται
+ * ρωτά **αυτό**, όχι τον καμβά.
+ */
+export function liveDrawingSurfaceHex(): string {
+  return getPrintColorPolicy() !== null ? PRINT_PAPER_HEX : resolveDxfCanvasBackgroundHex();
+}
 
 // ============================================================================
 // MAX-CONTRAST INK — το «άκρο», όχι η ελάχιστη ανάμειξη
@@ -227,20 +245,21 @@ export function adaptFillTintForCanvas(fill: string, bgHex?: string): string {
 }
 
 /**
- * **Το γέμισμα όπως τυπώνεται** — το χρώμα από το {@link applyPlotColor} (ρόλος `'fill'`), η **διαφάνεια
+ * **Το γέμισμα όπως τυπώνεται** — το χρώμα από το {@link applyPlotColor} (ρόλος `'tint'`), η **διαφάνεια
  * αυτούσια**.
  *
  * 🔴 Μετρημένο ζωντανά (2026-10-08): το `monochrome` μαύριζε κάθε γραμμή και άφηνε **χρωματιστό** κάθε
  * γέμισμα BIM — οι ~20 αποδότες που καλούν το `adaptFillTintForCanvas` δεν ρωτούσαν ποτέ αν τυπώνουν, και
  * επιπλέον προσάρμοζαν το χρώμα στο **σκοτεινό φόντο της οθόνης** ενώ ζωγράφιζαν σε λευκό χαρτί.
  *
- * ⚠️ Η διαφάνεια **δεν** γίνεται 1: ένα ημιδιαφανές γέμισμα πλάκας που θα τυπωνόταν αδιαφανές μαύρο θα
- * κατάπινε ολόκληρη την κάτοψη. Μαύρο × α = ο τόνος του γκρι που ζήτησε ο σχεδιαστής.
+ * ⚠️ Η διαφάνεια **δεν** γίνεται 1: ένα ημιδιαφανές γέμισμα πλάκας που θα τυπωνόταν αδιαφανές θα
+ * κατάπινε ολόκληρη την κάτοψη. Στο `monochrome` το χρώμα γίνεται **γκρι της δικής του φωτεινότητας**
+ * (Revit «Black Lines»), όχι μαύρο: ανοιχτό και σκούρο υλικό μένουν διακριτά.
  */
 function plotFillTint(fill: string, policy: PrintColorPolicy): string {
   const c = parseColor(fill);
   if (c === null) return fill;
-  const plotted = parseHex(applyPlotColor(rgbToHex(c), null, policy, 'fill'));
+  const plotted = parseHex(applyPlotColor(rgbToHex(c), null, policy, 'tint'));
   return plotted === null ? fill : rgbaString({ ...plotted, a: c.a });
 }
 

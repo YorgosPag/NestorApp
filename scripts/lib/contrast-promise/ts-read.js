@@ -69,28 +69,31 @@ function* namedImports(sourceFile) {
 }
 
 /**
- * Κάθε `export const NAME = '…'` του αρχείου, ως `{ name, value }`.
+ * Κάθε `export const NAME = …` του αρχείου, ως `{ name, initializer }`.
  *
  * Υπάρχει για να μπορεί ένας καταναλωτής να **ανακαλύψει** σταθερές αντί να τις απαριθμήσει.
  * Το {@link initializerOf} απαντά «δώσε μου **αυτό** το όνομα», δηλαδή απαιτεί να ξέρεις εκ
  * των προτέρων τι υπάρχει — και αυτό ακριβώς είναι η χειρόγραφη λίστα που αποκλίνει σιωπηλά
  * (σχήμα CHECK 3.34 / 3.37). Εδώ η ερώτηση αντιστρέφεται: «τι **υπάρχει**;».
  *
- * ⚠️ Μόνο **εξαγόμενες** και μόνο **κυριολεκτικές συμβολοσειρές**: μια μη εξαγόμενη σταθερά
- * δεν είναι συμβόλαιο, και μια υπολογισμένη τιμή δεν διαβάζεται χωρίς `tsc` (N.17).
+ * ⚠️ Μόνο **εξαγόμενες**: μια μη εξαγόμενη σταθερά δεν είναι συμβόλαιο.
+ *
+ * 🔴 **Επιστρέφει τον κόμβο, ΟΧΙ την τιμή** (ADR-909 Β2.5). Η προηγούμενη εκδοχή έδινε μόνο
+ * κυριολεκτικές συμβολοσειρές και **πετούσε σιωπηλά** κάθε άλλη αρχικοποίηση — οπότε τη μέρα που
+ * το `TABLE_PAPER_HEX = '#ffffff'` έγινε `= PRINT_PAPER_HEX`, η σταθερά **εξαφανίστηκε** από την
+ * ανακάλυψη αντί να αποτύχει. Το «δεν διαβάζεται» είναι απόφαση του **καταναλωτή** (που ξέρει
+ * αν οφείλει να σκάσει), όχι φίλτρο εδώ.
  */
-function* exportedStringConstants(sourceFile) {
+function* exportedConstants(sourceFile) {
   for (const statement of sourceFile.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     const exported = statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
     if (exported !== true) continue;
     for (const declaration of statement.declarationList.declarations) {
       if (!ts.isIdentifier(declaration.name)) continue;
-      const init = declaration.initializer;
-      if (init === undefined || !ts.isStringLiteral(init)) continue;
-      yield { name: declaration.name.text, value: init.text };
+      yield { name: declaration.name.text, initializer: declaration.initializer ?? null };
     }
   }
 }
 
-module.exports = { exportedStringConstants, initializerOf, namedImports, parseSource };
+module.exports = { exportedConstants, initializerOf, namedImports, parseSource };

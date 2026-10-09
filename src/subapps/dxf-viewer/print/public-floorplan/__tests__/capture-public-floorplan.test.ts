@@ -118,11 +118,13 @@ describe('Λ — η λήψη', () => {
 
     const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: true });
 
-    const [rendered, viewport, input] = render.mock.calls[0] as [DxfScene, { width: number; height: number }, { plotStyle: string }];
+    const [rendered, viewport, input] = render.mock.calls[0] as [DxfScene, { width: number; height: number }, { plotStyle: string; minLineWidthPx?: number }];
     expect(rendered.entities.map((e) => e.id)).toStrictEqual(['a', 'b']);
     // 🔑 Το κάδρο δεν φούσκωσε από τη διάσταση που κόπηκε: 15000 × 9000 ⇒ 4096 × 2458.
     expect(viewport).toStrictEqual({ width: 4096, height: 2458 });
     expect(input.plotStyle).toBe('monochrome');
+    // ADR-909 Β2.5 — καμία γραμμή κάτω από 1 px στο μικρότερο πλάτος ανάγνωσης (4096 / 1024).
+    expect(input.minLineWidthPx).toBe(4);
 
     if (!capture.ok) throw new Error('expected a capture');
     expect(capture.recipe).toMatchObject({

@@ -29,6 +29,7 @@ import { createCombinedBounds } from '../../utils/bounds-utils';
 import type { PrintPlotStyle, RasterTargetPx } from '../config/paper-types';
 import { rasterToViewport } from '../config/paper-math';
 import { MM_PER_INCH } from '../config/paper-constants';
+import { PRINT_PAPER_HEX } from '../../config/print-color-policy';
 import { convertSceneForCapture, renderDxfSceneOffscreen } from '../capture/capture-2d';
 import { applyPublicFloorplanProfile } from './public-floorplan-profile';
 import { renderInPublicFloorplanView } from './public-floorplan-view';
@@ -60,8 +61,6 @@ const SMALLEST_LEGIBLE_WIDTH_PX = 1024;
 const MIN_LINE_WIDTH_PX = LONG_SIDE_PX / SMALLEST_LEGIBLE_WIDTH_PX;
 /** Μαύρο σε λευκό — η σύμβαση κάθε δημόσιας κάτοψης (Zillow, Matterport schematic). */
 const PUBLIC_FLOORPLAN_PLOT_STYLE: PrintPlotStyle = 'monochrome';
-// eslint-disable-next-line design-system/no-hardcoded-colors -- χαρτί εικόνας που φεύγει από την εφαρμογή, όχι θέμα UI
-const PAPER_WHITE = '#ffffff';
 
 interface WorldBounds {
   readonly min: Point2D;
@@ -142,7 +141,7 @@ function layPaperBehind(canvas: HTMLCanvasElement): void {
   if (ctx === null) return;
   ctx.save();
   ctx.globalCompositeOperation = 'destination-over';
-  ctx.fillStyle = PAPER_WHITE;
+  ctx.fillStyle = PRINT_PAPER_HEX;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
 }

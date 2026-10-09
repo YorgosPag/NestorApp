@@ -17,8 +17,7 @@
 import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import type { CutState } from '../../config/bim-view-range';
 import { resolveVgFillTint } from './bim-vg-fill-tint';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
-import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import { adaptFillTintForCanvas, liveDrawingSurfaceHex } from '../../config/adaptive-entity-color';
 
 /**
  * Translucent ORANGE poché for an armed-selected BIM body (GRIP_ARMED_COLOR #FF6A00 @ 45%).
@@ -101,7 +100,8 @@ export function fillBimBodyPath(
 ): void {
   const previousFill = ctx.fillStyle;
   if (cutState !== 'beyond') {
-    ctx.fillStyle = bgHex ?? resolveDxfCanvasBackgroundHex();
+    // ADR-909 Β2.5 — η βάση είναι η επιφάνεια που ζωγραφίζεται ΤΩΡΑ: χαρτί σε print pass, αλλιώς ο καμβάς.
+    ctx.fillStyle = bgHex ?? liveDrawingSurfaceHex();
     ctx.fill();
   }
   ctx.fillStyle = resolvedFill;

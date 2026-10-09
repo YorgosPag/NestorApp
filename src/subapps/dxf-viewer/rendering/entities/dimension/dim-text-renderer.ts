@@ -38,7 +38,8 @@ import {
 } from '../../../systems/dimensions/dim-text-formatter';
 import { resolveDimColorTC } from './dim-color-resolver';
 import { buildUIFont } from '../../../config/text-rendering-config';
-import { HOVER_HIGHLIGHT, resolveDxfCanvasBackgroundHex } from '../../../config/color-config';
+import { HOVER_HIGHLIGHT } from '../../../config/color-config';
+import { liveDrawingSurfaceHex } from '../../../config/adaptive-entity-color';
 import type { Point2D, ViewTransform } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // ADR-362 Round 5 — paper-mm DIMSTYLE values must be converted to scene world
@@ -440,7 +441,7 @@ function drawTextBackgroundMask(
       ? resolveDimColorTC(style.dimtfillclrTrueColor, style.dimtfillclr, layerColour)
       // ADR-608 — «Φόντο σχεδίου»: το ΖΩΝΤΑΝΟ χρώμα καμβά Nestor 2Δ (SSoT, default #000000), ΟΧΙ
       // hardcoded #1a1a1a — αλλιώς η μάσκα δεν ταιριάζει το φόντο (ορατό κουτί). Full parity με 3D.
-      : (canvasBackground ?? resolveDxfCanvasBackgroundHex());
+      : (canvasBackground ?? liveDrawingSurfaceHex());
 
   const textWidth = ctx.measureText ? ctx.measureText(text).width : text.length * primaryHeight * 0.6;
   const gapPx = style.dimgap * primaryHeight * 0.15;

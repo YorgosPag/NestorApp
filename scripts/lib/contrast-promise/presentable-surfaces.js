@@ -30,7 +30,8 @@ const ts = require('typescript');
 
 const { hexToRgb } = require('../contrast/cvd');
 const { contrastRatio } = require('../contrast/wcag-contrast');
-const { exportedStringConstants, initializerOf, parseSource } = require('./ts-read');
+const { createReader } = require('./promise-sites');
+const { exportedConstants, initializerOf, namedImports, parseSource } = require('./ts-read');
 
 const CANVAS_THEME_TS = 'src/subapps/dxf-viewer/config/canvas-theme.ts';
 const VARIABLES_CSS = 'src/styles/design-system/generated/variables.css';
@@ -147,6 +148,31 @@ function stringProp(objectLiteral, propName) {
   return null;
 }
 
+const stringValue = (node) => (node !== null && ts.isStringLiteral(node) ? node.text : null);
+
+/**
+ * Λύνει την αρχικοποίηση μιας σταθεράς-χρώματος σε συμβολοσειρά: literal, τοπική σταθερά, ή
+ * **εισαγόμενη** σταθερά (ένα άλμα module — ίδιο βάθος με το `resolveThreshold`). `null` ⇒ ανεπίλυτο.
+ *
+ * Ακολουθεί το **αρχικό** όνομα της εισαγωγής, όχι το τοπικό: `import { A as B }` ψάχνει το `A`.
+ */
+function resolveStringConstant(init, sourceFile, absFile, reader) {
+  const direct = stringValue(init);
+  if (direct !== null || init === null || !ts.isIdentifier(init)) return direct;
+
+  const local = initializerOf(sourceFile, init.text);
+  if (local !== null) return stringValue(local);
+
+  for (const imported of namedImports(sourceFile)) {
+    if (imported.local !== init.text) continue;
+    const target = reader.resolve(imported.moduleSpecifier, absFile);
+    if (target.kind !== 'internal') return null;
+    const targetAst = reader.parse(target.file);
+    return targetAst === null ? null : stringValue(initializerOf(targetAst, imported.original));
+  }
+  return null;
+}
+
 /**
  * Κάθε επιφάνεια που μπορεί να βρεθεί κάτω από μια οντότητα: τα preset θέματα καμβά, το
  * προεπιλεγμένο `custom`, και το **χαρτί**. Ρίχνει σφάλμα σε ανεπίλυτη επιφάνεια —
@@ -187,11 +213,20 @@ function presentableSurfaces(repoRoot) {
   // Το κριτήριο είναι το ίδιο σχήμα με τις υποσχέσεις του `promise-sites.js` («κάθε εξαγόμενη
   // συνάρτηση με παράμετρο …contrast… **είναι** υπόσχεση»): κάθε εξαγόμενο `TABLE_<X>_HEX`
   // **είναι** παρουσιάσιμη επιφάνεια. Μια τρίτη καλύπτεται δωρεάν.
-  const inkAst = parseSource(path.join(repoRoot, TABLE_INK_TS));
+  //
+  // 🔴 ADR-909 Β2.5 — **Η ΤΙΜΗ ΜΠΟΡΕΙ ΝΑ ΕΙΝΑΙ ΑΝΑΦΟΡΑ.** Το `TABLE_PAPER_HEX` έγινε
+  // `= PRINT_PAPER_HEX` (μία πηγή για «το χαρτί»), και ο σαρωτής που διάβαζε μόνο literals το
+  // **έχασε χωρίς να σκάσει**. Τώρα η αναφορά λύνεται, και ό,τι δεν λύνεται **ρίχνει σφάλμα**:
+  // ένα όνομα που λέει «είμαι επιφάνεια» χωρίς τιμή που διαβάζεται είναι επιφάνεια που δεν κρίθηκε.
+  const inkFile = path.join(repoRoot, TABLE_INK_TS);
+  const inkAst = parseSource(inkFile);
+  const reader = createReader(repoRoot);
   let tableSurfaces = 0;
-  for (const { name, value } of exportedStringConstants(inkAst)) {
+  for (const { name, initializer } of exportedConstants(inkAst)) {
     const match = /^TABLE_(\w+)_HEX$/.exec(name);
     if (match === null) continue;
+    const value = resolveStringConstant(initializer, inkAst, inkFile, reader);
+    if (value === null) throw new Error(`Ανεπίλυτη επιφάνεια πίνακα «${name}» στο ${TABLE_INK_TS}`);
     out.push({ key: match[1].toLowerCase(), hex: value.toLowerCase(), origin: TABLE_INK_TS });
     tableSurfaces++;
   }

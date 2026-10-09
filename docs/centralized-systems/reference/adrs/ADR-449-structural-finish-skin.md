@@ -220,6 +220,11 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-10-09 (ADR-909 Β2.5 — ο σοβάς είναι ΜΕΛΑΝΙ στο print pass)** — Μετρημένο ζωντανά στη `monochrome`
+  δημόσια κάτοψη: **8.552 μπεζ pixels**, γραμμή 0,75 px σε εικόνα 4096 px. Το `drawStructuralFinishOutline` έβαζε
+  σταθερά px και το χρώμα του υλικού χωρίς να ρωτά την πολιτική εκτύπωσης. Τώρα, **μόνο** σε print pass: χρώμα από
+  `applyPlotColor`, πένα ISO 0,18 mm μέσω `lineweightDisplayPx` *(dpi + δάπεδο της απόδοσης)*. Οθόνη **αμετάβλητη**
+  *(0,75 px, χρώμα υλικού)*. Άγκυρα Ε8.
 - **2026-07-26 (ADR-713 — ο σοβάς σταματά στη ΣΤΑΘΜΗ ΤΕΛΕΙΩΜΕΝΟΥ ΕΔΑΦΟΥΣ)** — SSoT audit διαπίστωσε
   **μετρημένα** ότι ο ενιαίος silhouette **ΔΕΝ** είχε το πρόβλημα που του αποδιδόταν: το `columnZExtent`
   διαβάζει το `buildColumnVerticalExtentLookup`, που αγνοεί το `baseDropMm` (ADR-489 §6.1) → σταματούσε ήδη
