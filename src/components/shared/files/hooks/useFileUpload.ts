@@ -29,6 +29,12 @@ import {
 } from '@/services/filesystem/file-mutation-gateway';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
 import type { FileCustody } from '@/lib/files/file-custody';
+import {
+  LISTING_VIDEO_LIMIT_LABELS,
+  isListingVideoSlot,
+  judgeListingVideoUpload,
+} from '@/lib/listings/listing-video-upload-check';
+import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { entryPointUploadTitle } from '@/config/upload-entry-points/entry-point-title';
@@ -200,6 +206,18 @@ export function useFileUpload({
         const file = selectedFiles[i];
 
         try {
+          // ADR-907 §10.9 — πριν φύγει ένα byte: ο ΙΔΙΟΣ κριτής με τον ψήστη της δημοσίευσης. Ό,τι δεν δημοσιεύεται το
+          // λέει ΤΩΡΑ, με τον λόγο του· ό,τι δεν χωρά ούτε ως υλικό γραφείου δεν ανεβαίνει (δική του ειδοποίηση,
+          // άρα δεν μετρά στο γενικό «αποτυχία αποστολής»).
+          if (isListingVideoSlot(entityType, uploadCategory)) {
+            const verdict = await judgeListingVideoUpload(file);
+            if (verdict.kind !== 'publishable') {
+              const reasonKey = NOTIFICATION_KEYS.files.upload.listingVideo.reasons[verdict.refusal];
+              fileNotifications.upload.listingVideoRefused(file.name, verdict.kind, t(reasonKey, LISTING_VIDEO_LIMIT_LABELS));
+            }
+            if (verdict.kind === 'blocked') continue;
+          }
+
           // ADR-054/191/292 — ο **ένας** αγωγός (βήματα Α-Γ), κοινός με το έντυπο κλειστής διάθεσης (ADR-864 §18.4 Δ1).
           const { fileId, displayName } = await uploadEntityFile(
             {

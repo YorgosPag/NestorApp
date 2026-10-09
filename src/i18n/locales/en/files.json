@@ -110,6 +110,23 @@
       "partialSuccess": "{success} succeeded, {fail} failed out of {total} files",
       "allFailed": "{count, plural, =1 {Failed to upload 1 file} other {Failed to upload {count} files}}"
     },
+    "listingVideo": {
+      "blocked": "“{name}” was not uploaded. {reason}",
+      "unpublishable": "“{name}” was uploaded to your files, but it cannot be published on a listing. {reason}",
+      "reasons": {
+        "too-large": "The video is larger than {maxMb} MB. Export it at a lower resolution or shorter, then upload it again.",
+        "too-long": "The video is longer than {maxSeconds} seconds. Trim it to fit that duration.",
+        "not-mp4": "The file is not an MP4. Listings accept only MP4 with H.264 video — export it in that format.",
+        "quicktime-container": "The file is QuickTime (.mov). Export it as MP4 with H.264 video.",
+        "malformed": "The file is damaged or incomplete. Export it again from the app that created it.",
+        "fragmented": "The video is a fragmented MP4, a format for live streaming. Export it as a regular MP4.",
+        "no-video-track": "The file contains no picture, only audio. Upload a video file.",
+        "hevc-codec": "The video is HEVC (H.265) and does not play in every browser. On iPhone: Settings → Camera → Formats → “Most Compatible”, or export it as H.264.",
+        "unsupported-video-codec": "The video encoding does not play in every browser. Export the video as MP4 with H.264 video.",
+        "unsupported-h264-profile": "The video's H.264 profile (High 10, 4:2:2 or 4:4:4) does not play on phones. Export it with the High or Main profile, 8-bit.",
+        "unsupported-audio-codec": "The video's audio is not AAC. Export it with AAC audio or without audio."
+      }
+    },
     "toast": {
       "invalidFile": "Invalid file",
       "fileFallback": "File",

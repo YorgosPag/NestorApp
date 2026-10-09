@@ -3117,6 +3117,10 @@
         "notAuthenticated": "Πρέπει να είστε συνδεδεμένος για να ανεβάσετε αρχεία",
         "partialSuccess": "{success} επιτυχία, {fail} αποτυχία από {total} αρχεία"
       },
+      "listingVideo": {
+        "blocked": "Το «{name}» δεν ανέβηκε. {reason}",
+        "unpublishable": "Το «{name}» ανέβηκε στο αρχείο σας, αλλά δεν μπορεί να δημοσιευτεί σε αγγελία. {reason}"
+      },
       "success": "{count, plural, =1 {1 αρχείο ανέβηκε επιτυχώς} other {{count} αρχεία ανέβηκαν επιτυχώς}}",
       "toast": {
         "uploadSuccess": "🎉 {name} ανέβηκε επιτυχώς!"

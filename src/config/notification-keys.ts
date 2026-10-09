@@ -26,6 +26,9 @@
  * @see docs/centralized-systems/reference/precommit-checks.md — hardcoded strings check (3.8)
  */
 
+// Μόνο τύπος (σβήνεται στη μεταγλώττιση): δένει τα κλειδιά των λόγων με το λεξιλόγιο του αναγνώστη κουτιών.
+import type { Mp4Refusal } from '@/lib/media/mp4-boxes';
+
 export const NOTIFICATION_KEYS = {
   // ==========================================================================
   // CONTACTS domain
@@ -201,6 +204,28 @@ export const NOTIFICATION_KEYS = {
       partialSuccess: 'files:upload.errors.partialSuccess',
       allFailed: 'files:upload.errors.allFailed',
       generic: 'files:upload.errors.generic',
+      /**
+       * Βίντεο στον κάδο μιας μονάδας που **δεν** μπορεί να δημοσιευτεί σε αγγελία (ADR-907 §10.9). Δύο περιβλήματα
+       * (δεν ανέβηκε · ανέβηκε αλλά δεν δημοσιεύεται) γύρω από **έναν** λόγο ανά άρνηση του αναγνώστη κουτιών — κάθε
+       * λόγος λέει τι να αλλάξει. Κλειδιά ίδια με τα ονόματα του `Mp4Refusal`: νέα άρνηση χωρίς γραμμή εδώ δεν μεταγλωττίζεται.
+       */
+      listingVideo: {
+        blocked: 'files:upload.listingVideo.blocked',
+        unpublishable: 'files:upload.listingVideo.unpublishable',
+        reasons: {
+          'too-large': 'files:upload.listingVideo.reasons.too-large',
+          'too-long': 'files:upload.listingVideo.reasons.too-long',
+          'not-mp4': 'files:upload.listingVideo.reasons.not-mp4',
+          'quicktime-container': 'files:upload.listingVideo.reasons.quicktime-container',
+          malformed: 'files:upload.listingVideo.reasons.malformed',
+          fragmented: 'files:upload.listingVideo.reasons.fragmented',
+          'no-video-track': 'files:upload.listingVideo.reasons.no-video-track',
+          'hevc-codec': 'files:upload.listingVideo.reasons.hevc-codec',
+          'unsupported-video-codec': 'files:upload.listingVideo.reasons.unsupported-video-codec',
+          'unsupported-h264-profile': 'files:upload.listingVideo.reasons.unsupported-h264-profile',
+          'unsupported-audio-codec': 'files:upload.listingVideo.reasons.unsupported-audio-codec',
+        } satisfies Record<Mp4Refusal, string>,
+      },
     },
     list: {
       renameSuccess: 'files:list.renameSuccess',

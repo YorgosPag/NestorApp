@@ -69,7 +69,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "013edbfbc31ba743d5937bc08eba239f95778ed61dcd32e0847d82677cd05056",
+    "src/i18n/generated/shell-slice.el.json": "497a2ccaab394a090a3db7b558746a0cef1363f252386ec0035521864735d70a",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "daf31a8b70195ee87e18c4ee41ecba1b26757de31236352c499a63761b898702",
+  "inputsSha256": "7340f057a5ae3d74539f2f717f1202f2a661561dcbf8be4a4fb7d61b4f015e9c",
   "languages": [
     "el"
   ],
@@ -283,7 +283,7 @@
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
     "src/components/conveyance/acting/ActingWorkspaceField.tsx": "78052edfb11b372460b78a4d1d35d1f09ce9b27fddd93f10c63019772d215b08",
     "src/components/conveyance/acting/acting-workspace-labels.ts": "130aae0a43e8f3d5ab971359d69bfc42461c68a4419ddcdd6c1aec7f0d9f1b10",
-    "src/components/conveyance/my-cases/AcceptEngagementDialog.tsx": "3c36a68de943d53b809ad0713ac4aee83def29b5b4d679b29ee8fc27ab07bce5",
+    "src/components/conveyance/my-cases/AcceptEngagementDialog.tsx": "7e72e2f13951b361cf7bd19bf29eb12d92c05cc91a7bc24fd039809647f0d714",
     "src/components/conveyance/my-cases/EngagedCaseActivity.tsx": "868ee6c8a40e644a5d61fff0a8ac5b93af9e67f7f90133d8b9fdd25ce34dd9f6",
     "src/components/conveyance/my-cases/EngagedCaseChecklist.tsx": "56d49dd9de69eb1d9040e706ab99dd4e94eb82b80a5301783d3faddf9111e834",
     "src/components/conveyance/my-cases/EngagedCaseContent.tsx": "e76326580eaa5be49b70a389e8699a4c9aea88a64be37073f0738cf524cb4f48",
@@ -413,7 +413,7 @@
     "src/components/mandate/CoverageAgreementNotice.tsx": "03639f093a5ba29b1c846b19e7949b2049620bfe14d1d6a7a1dc686b1413b3cb",
     "src/components/mandate/CoverageAreaPicker.tsx": "bce2e7fba716985f38b5290271743fb0caac2da72e4a92fdf44741f1687ff49c",
     "src/components/mandate/CoverageOutlineMap.tsx": "4d4794b3f39fa910eb4085617da26f7da90a67f4e529f902c4272fd303f9212d",
-    "src/components/mandate/CoverageOutlinePicker.tsx": "84f39f2cc8925dcb851d36fc46f2645b7dd528e97c57c14d05bd09d4b9e828ae",
+    "src/components/mandate/CoverageOutlinePicker.tsx": "d5a4588d12fd3a9c46a31d8531b3c6c14d2d7b1c5840dac13ed1de1559a257d0",
     "src/components/mandate/CoverageRadiusPicker.tsx": "e7980160f4bf016c9874b80a1c72da57895b36caf09d612294687682de8ff2f0",
     "src/components/mandate/DailyIntervalsEditor.tsx": "af004adbaf4cf96f966ff2886353f093bf279fc32dfe95dfddaf3bcbb358e935",
     "src/components/mandate/DirectoryQueryState.tsx": "7da21d22c77249b6ffb74eba2b9553fb2cf0f28bb7a394eda404daecdbf91e57",
@@ -468,7 +468,7 @@
     "src/components/mandate/agency-showcase-import-labels.ts": "71ce6c906bc513341f331e075038547a9c74da0234343e09a0a33ae71ba56e91",
     "src/components/mandate/agency-showcase-registry-labels.ts": "f4f0867b8fbf322b073c61920b2a938e2768ec22898c6a3eb22a7cbe7885702b",
     "src/components/mandate/agency-showcase-special-hours-labels.ts": "20ffaaab13a977ab463c4094e78d95c8d998d68d982c8e5d9d5f829fd7690560",
-    "src/components/mandate/catalog/MandateCatalogRow.tsx": "6cd688c003e897da46f0ffabfc4069cc222e2eec2c0375d15af4f623a53db97d",
+    "src/components/mandate/catalog/MandateCatalogRow.tsx": "f99fb20f5d2915efb99c38c52bd1f6909579c2360cd7f9b4cdebdbb62d905f69",
     "src/components/mandate/catalog/mandate-catalog-labels.ts": "0c0767e8a4cbde6b0173d69bcb6edb9bc0f131f84e950c85ec5606536982d09d",
     "src/components/mandate/holiday-question-labels.ts": "46fa27983958adca9c65cc6b23abd3e1b221458311948cd22d5834e3a3165ade",
     "src/components/mandate/inbox/MandateInboxRow.tsx": "eb5cd8e96a39f7e40f2717998ee8869c0020917f4f882850d0af6adac7f06441",
@@ -488,14 +488,14 @@
     "src/components/market/choropleth/PriceMapLabelLayer.tsx": "391f61b1675c7b15430dd53b05726aac65cbcfe85471074b3afcc746a46f89ed",
     "src/components/market/choropleth/choropleth-sync.ts": "cf520728ef85ddf6cb925c96be889ee8856016833c3b65d2fd8daee43b6695b9",
     "src/components/market/choropleth/price-map-paint.ts": "e82319dd27abb8f9ba56ca30690cb307bd4d7be47c7c306b56d1fb8100bbcd7b",
-    "src/components/market/choropleth/price-map-words.tsx": "d7309a834f2a379aa30a720fab4bd02da7ceed676d9181c449c2476bb185c049",
+    "src/components/market/choropleth/price-map-words.tsx": "70f5a106df29983794825f484a70557db77ad6807f02e2f99e7f98a9aa892d66",
     "src/components/market/map-ramp.ts": "56bb90712e4ceaec533731b9cea343a44b52495b00ffe84dc63ac42fd13f7ddb",
     "src/components/notifications/EmailPreferencesPanel.tsx": "304ec64e3b5972b5a0d60e6ed5ac1f4800c0034ad2092c667a33a623c1a2a259",
     "src/components/notifications/EmailTypePreferences.tsx": "f6bb7acf05ddecd0224061b23606ae9e698944fbb9a4521f7bf92059ae49286c",
     "src/components/notifications/NotificationPermalinkUnavailable.tsx": "526e8252778b77f0e0681b5589f1a8b1c28535812fc5e3c47dc4c53587df6fe3",
     "src/components/objective-value/ObjectiveValueAdjustments.tsx": "9537f3ec5817dbaaa530315a05f3eef0f5dea920b27fd70dd6d07ae21001534b",
     "src/components/objective-value/ObjectiveValueContent.tsx": "0d1eb5dd6727539405f6d270370607b8154abf9882e3ee1f4b41e4da4882f4a7",
-    "src/components/objective-value/ObjectiveValueEvaluated.tsx": "4148479819d7ad4414280f7f70845e96ec8bd0be1ec72063817a3019e5830df8",
+    "src/components/objective-value/ObjectiveValueEvaluated.tsx": "116b62d627a7d49d314934f1d225faefa609d77f8d3eb7cc52c3abfd8bd9f375",
     "src/components/objective-value/ObjectiveValueFaq.tsx": "bd7d8c882abb78e4644b4f78d6c5de636712a6d94795e7188b7a4fe3ea79aa27",
     "src/components/objective-value/ObjectiveValueLocation.tsx": "013eca8a3b486525ef6dd83e4e10a4bc41322f94c4571bc278e5f836f19d1ee6",
     "src/components/objective-value/ObjectiveValueProperty.tsx": "612107a93133a53b3a3a1978505c7c94e1e947e3d1f665d36c00c7a16d14a0c2",
@@ -11840,7 +11840,7 @@
     "src/config/navigation-capability.ts": "888e30a6e4806bb725a96107de6ac62b21599489a0e08b52d912f30a2c0b4bb3",
     "src/config/navigation-node.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/notification-events.ts": "7e83a0bf8e293affd438760c8414e27b8634d3caa39d3a24e4a18420ead1bef1",
-    "src/config/notification-keys.ts": "b950758c9cedf33936b9923ba41e908c5298e5e79da2eb3675c93ea4758976e9",
+    "src/config/notification-keys.ts": "b778bb903ebcb6c4104ba8eef93d2345fe93f8f4b9f11620e540c79fe3e1e28e",
     "src/config/occupation-families.ts": "59606df82fbe0e1017966eb4ce97154e0bc51477622b594a76aed2a2c39d0029",
     "src/config/office-navigation/catalog-main.ts": "acbe44b485f051c98a435736edcc8fb6078814710e5b0b3c64fd4df98c7e1c72",
     "src/config/office-navigation/catalog-settings.ts": "b2fb014f573886831000ebbcf7d6140482ad07bd6b0d858b29f9b2135540ea13",
@@ -11938,7 +11938,7 @@
     "src/hooks/listings/useSavedListingsState.ts": "a1418038ca4934264bf4def9141f1c33264832623693c4dcb408b6dce9e66057",
     "src/hooks/media/useElementSize.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/network-messaging/useNetworkUnreadCount.ts": "14d1abe4bc35eaea42a738ce6b3581efafab1ab422148690ec63e4142e0bd20e",
-    "src/hooks/notifications/useFilesNotifications.ts": "2394f57ce9d431654818cef6fe1185a7b35a39258463e0b1a5cea8b75fe64ca3",
+    "src/hooks/notifications/useFilesNotifications.ts": "6ed83b7c8b8d862414e91ec3da6805c09561da75a8edce3e3b4c349794a86af2",
     "src/hooks/useAdminFootprints.ts": "727d0a65dba9ec3c35dc72b624e2d0db1e601e5f4f2295aa599c9ab73a0c3405",
     "src/hooks/useAdministrativeHierarchy.ts": "56042afe67716dac51a9b7e45a05132c593ee8371880b64364c624da8947f32b",
     "src/hooks/useBorderTokens.ts": "e57e219e9753daedbc00c737db3d3e3ef8fcc88a2013823ad53361ae1257bcd9",
@@ -12735,10 +12735,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 24,
-    "matchedKeys": 237,
+    "matchedKeys": 239,
     "routeBoundaries": 3,
     "shellFiles": 1132,
-    "sliceBytes": 725731
+    "sliceBytes": 726007
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -17820,6 +17820,8 @@
         "upload.errors.generic",
         "upload.errors.notAuthenticated",
         "upload.errors.partialSuccess",
+        "upload.listingVideo.blocked",
+        "upload.listingVideo.unpublishable",
         "upload.success",
         "upload.toast.uploadSuccess"
       ],

@@ -46,6 +46,14 @@ export interface FilesUploadNotifications {
   readonly partialSuccess: (params: { success: number; fail: number; total: number }) => void;
   readonly allFailed: (count: number) => void;
   readonly generic: () => void;
+  /**
+   * Βίντεο μονάδας που δεν μπορεί να δημοσιευτεί σε αγγελία — δεν ανέβηκε, ή ανέβηκε με προειδοποίηση (ADR-907 §10.9).
+   *
+   * ⚠️ Ο `reason` έρχεται **ήδη μεταφρασμένος** από τον καλούντα, επίτηδες: αυτό το hook ζει στην κλειστότητα του
+   * κελύφους, άρα κάθε κλειδί που διαβάζει ταξιδεύει σε **κάθε** σελίδα. Οι έντεκα προτάσεις των λόγων ανήκουν μόνο στις
+   * σελίδες που ανεβάζουν αρχεία· εδώ μένουν τα δύο σύντομα περιβλήματα.
+   */
+  readonly listingVideoRefused: (filename: string, kind: 'blocked' | 'unpublishable', reason: string) => void;
 }
 
 export interface FilesListNotifications {
@@ -117,6 +125,10 @@ export function useFilesNotifications(): FilesNotifications {
           error(t(NOTIFICATION_KEYS.files.upload.allFailed, { count })),
         generic: () =>
           error(t(NOTIFICATION_KEYS.files.upload.generic)),
+        listingVideoRefused: (filename, kind, reason) =>
+          kind === 'blocked'
+            ? error(t(NOTIFICATION_KEYS.files.upload.listingVideo.blocked, { name: filename, reason }))
+            : warning(t(NOTIFICATION_KEYS.files.upload.listingVideo.unpublishable, { name: filename, reason })),
       },
 
       list: {
