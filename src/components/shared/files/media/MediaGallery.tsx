@@ -47,7 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -420,11 +420,12 @@ export function MediaGallery({
 
       {/* Video Preview Modal */}
       <Dialog open={!!videoPreviewFile} onOpenChange={(open) => !open && handleCloseVideoPreview()}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        {/* Ο τίτλος του διαλόγου ΕΙΝΑΙ το όνομα του αρχείου (Radix: χωρίς `DialogTitle` ο αναγνώστης οθόνης δεν ξέρει τι άνοιξε). Περιγραφή δεν υπάρχει — δηλωμένα. */}
+        <DialogContent className="max-w-4xl p-0 overflow-hidden" aria-describedby={undefined}>
           {videoPreviewFile && (
             <article className="flex flex-col">
               <header className="p-2 border-b">
-                <h2 className="text-lg font-semibold truncate">{videoPreviewFile.displayName}</h2>
+                <DialogTitle className="truncate leading-7 tracking-normal">{videoPreviewFile.displayName}</DialogTitle>
               </header>
               <VideoPlayer
                 file={videoPreviewFile}
