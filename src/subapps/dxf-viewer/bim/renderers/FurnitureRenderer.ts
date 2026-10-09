@@ -21,6 +21,8 @@ import { isFurnitureEntity } from '../../types/entities';
 import type { FurnitureEntity } from '../types/furniture-types';
 import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
+import { hexToRgba } from '../../config/color-math';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
@@ -31,11 +33,15 @@ import { getFurnitureGrips } from '../furniture/furniture-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 
-/** Plan-symbol palette — interior furniture (neutral tan). */
+/**
+ * Plan-symbol palette — interior furniture (neutral tan).
+ * ADR-909 Γ2.2 — το χρώμα γραμμής **διαβάζεται** από τον πίνακα κατηγοριών (`BIM_CATEGORY_LINE_COLORS`)· πριν
+ * ήταν εδώ δεύτερο αντίγραφο του ίδιου `#8b5e34`, και η ακμή τρίτο (σε `rgba`).
+ */
 const FURNITURE_PALETTE = {
-  stroke: '#8b5e34',
+  stroke: BIM_CATEGORY_LINE_COLORS.furniture,
   fill: 'rgba(180, 130, 80, 0.16)',
-  edge: 'rgba(139, 94, 52, 0.55)',
+  edge: hexToRgba(BIM_CATEGORY_LINE_COLORS.furniture, 0.55),
 } as const;
 
 export class FurnitureRenderer extends BimFootprintRenderer {

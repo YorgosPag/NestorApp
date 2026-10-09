@@ -167,14 +167,16 @@ describe('Χ7 — ποιος δηλώνει το δάπεδο αντίθεσης
 
 describe('Χ8 — ημιδιαφανές μελάνι (`rgba`)', () => {
   const EDGE = 'rgba(139, 94, 52, 0.55)';
-  const seenOnPaper = mixHex(PRINT_PAPER_HEX, '#8b5e34', 0.55);
+  const FULL = '#8b5e34';
+  const washedOut = mixHex(PRINT_PAPER_HEX, FULL, 0.55);
 
-  it('Χ8 οθόνη ⇒ αυτούσιο · «Έγχρωμο» ⇒ ό,τι φαίνεται στο χαρτί, όχι μαύρο · monochrome ⇒ μαύρο', () => {
+  it('Χ8 οθόνη ⇒ αυτούσιο · «Έγχρωμο» ⇒ το ΠΛΗΡΕΣ χρώμα (η διαφάνεια πέφτει), όχι μαύρο · monochrome ⇒ μαύρο', () => {
     expect(liveStrokeInk(EDGE)).toBe(EDGE);
     expect(liveStrokeInk('#8b5e34')).toBe('#8b5e34');
 
     setPrintColorPolicy(paperPdf('colour'));
-    expect(liveStrokeInk(EDGE)).toBe(seenOnPaper);
+    expect(liveStrokeInk(EDGE)).toBe(FULL);
+    expect(liveStrokeInk(EDGE)).not.toBe(washedOut);
     expect(liveStrokeInk(EDGE)).not.toBe('#000000');
     expect(liveStrokeInk('#8b5e34')).toBe('#8b5e34');
     expect(liveStrokeInk('rgb(139, 94, 52)')).toBe('#8b5e34');
@@ -183,10 +185,11 @@ describe('Χ8 — ημιδιαφανές μελάνι (`rgba`)', () => {
     expect(liveStrokeInk(EDGE)).toBe('#000000');
   });
 
-  it('Χ8β δημόσια κάτοψη: το δάπεδο κρίνει το ΣΥΝΘΕΤΟ χρώμα, άρα η αχνή ακμή φτάνει το 3:1', () => {
-    expect(onPaper(seenOnPaper)).toBeLessThan(FLOOR);
+  it('Χ8β δημόσια κάτοψη: το ξεπλυμένο θα έπεφτε κάτω από 3:1 · το πλήρες το φτάνει, και αχνό rgba σκουραίνει', () => {
+    expect(onPaper(washedOut)).toBeLessThan(FLOOR);
     setPrintColorPolicy(publicImage('colour'));
-    expect(onPaper(liveStrokeInk(EDGE))).toBeGreaterThanOrEqual(FLOOR);
+    expect(liveStrokeInk(EDGE)).toBe(FULL);
+    expect(onPaper(liveStrokeInk('rgba(200, 200, 0, 0.5)'))).toBeGreaterThanOrEqual(FLOOR);
     setPrintColorPolicy(publicImage('grayscale'));
     expect(onPaper(liveStrokeInk(EDGE))).toBeGreaterThanOrEqual(FLOOR);
   });

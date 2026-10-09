@@ -55,15 +55,22 @@ import { gripKindOf } from '../../hooks/grip-kinds';
  * Παλέτα κάτοψης — ουδέτερο γκρι-μπλε, **σκόπιμα διακριτό** από τις παλέτες των εγγενών BIM
  * στοιχείων: ο χρήστης πρέπει να βλέπει με μια ματιά τι είναι δικό του μοντέλο και τι ήρθε από έξω.
  */
-const IMPORTED_MESH_PALETTE: MeshSilhouettePalette = {
-  stroke: '#5b6b7a',
-  fill: 'rgba(91, 107, 122, 0.28)',
-  edge: 'rgba(91, 107, 122, 0.5)',
-};
+const IMPORTED_MESH_STROKE = '#5b6b7a';
 
-/** Ημιδιαφάνειες 2Δ — καθρέφτης των alpha του ουδέτερου {@link IMPORTED_MESH_PALETTE} (ADR-686 override). */
+/** Ημιδιαφάνειες 2Δ — ίδιες για το ουδέτερο {@link IMPORTED_MESH_PALETTE} και για το ADR-686 override. */
 const SILHOUETTE_FILL_ALPHA = 0.28;
 const SILHOUETTE_EDGE_ALPHA = 0.5;
+
+/** ADR-909 Γ2.2 — ΕΝΑ χρώμα, δύο διαφάνειες: γέμισμα και ακμή **παράγονται** (πριν: τρία χειρόγραφα αντίγραφα). */
+function meshPaletteOf(hex: string): MeshSilhouettePalette {
+  return {
+    stroke: hex,
+    fill: hexToRgba(hex, SILHOUETTE_FILL_ALPHA),
+    edge: hexToRgba(hex, SILHOUETTE_EDGE_ALPHA),
+  };
+}
+
+const IMPORTED_MESH_PALETTE: MeshSilhouettePalette = meshPaletteOf(IMPORTED_MESH_STROKE);
 
 /**
  * ADR-683 §10.9.3 (Giorgio 2026-07-22, «Β»): η 2Δ κάτοψη των εισαγόμενων βάφεται **ομοιόμορφα** με το
@@ -81,12 +88,7 @@ function slotPaletteWithOverride(
     ? faceAppearance[slotFaceKey(materialName ?? '')] ?? faceAppearance[BASE_FACE_KEY]
     : undefined;
   const hex = override ? faceAppearanceColorHex(override) : null;
-  if (!hex) return IMPORTED_MESH_PALETTE;
-  return {
-    stroke: hex,
-    fill: hexToRgba(hex, SILHOUETTE_FILL_ALPHA),
-    edge: hexToRgba(hex, SILHOUETTE_EDGE_ALPHA),
-  };
+  return hex ? meshPaletteOf(hex) : IMPORTED_MESH_PALETTE;
 }
 
 /** Type guard — το `EntityModel` είναι δομικό, οπότε ελέγχουμε τον διακριτή τύπου. */
