@@ -1200,6 +1200,16 @@ alignElementId?: string;         // host· η γωνία μοτίβου = εφα
 
 ## 8. Changelog
 
+- **2026-10-09** — **Η ΓΡΑΜΜΟΣΚΙΑΣΗ ΣΤΟ ΧΑΡΤΙ: πένα και χρώμα ρωτούν την πολιτική εκτύπωσης** (ADR-909 Β2.6, §6.4).
+
+  Μετρημένο ζωντανά σε raster λήψη 694 dpi: γραμμές μοτίβου **0,5 px** και περίγραμμα **1 px**, και τα δύο σε
+  **ωμό** `fillColor` — ο `HatchRenderer` έχει δικό του `render()` που δεν περνά από το `setupStyle`.
+  `resolveHatchLineWidthPx` και νέο `resolveHatchContourWidthPx` *(`hatch-properties`)*: σε print pass →
+  `lineweightDisplayPx` *(dpi + δάπεδο της απόδοσης)*· χωρίς ρητό πάχος **0,13 mm** μέσα / **0,18 mm** γύρω
+  *(ISO 128)*. Χρώμα από το `resolveHatchFillHex` — το **ίδιο** SSoT με το vector PDF. Το `strokeHatchContourPen`
+  δέχεται πλέον **λυμένο** χρώμα *(διάβαζε μόνο του το `contour.color` ⇒ έφτανε ωμό στο χαρτί)*.
+  **Οθόνη αμετάβλητη** *(0,5 px · 1 px · ωμό χρώμα — άγκυρες Ζ6 + `HatchRenderer-contour-pen`)*.
+
 - **2026-07-30** — **CONTOUR PEN Φ3: PALETTE UI — ορατότητα/χρώμα/πάχος/linetype ΕΚΘΕΤΑ πλέον στο
   αριστερό Properties palette.**
 

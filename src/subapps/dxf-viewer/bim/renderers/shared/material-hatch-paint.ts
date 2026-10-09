@@ -12,6 +12,7 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { HatchLineSegment } from '../../geometry/shared/hatch-pattern-geometry';
+import { liveStrokeWidthPx } from '../../../config/adaptive-entity-color';
 
 /** Faint neutral stroke — η ιστορική σύμβαση structural poché (ADR-363). */
 export const MATERIAL_HATCH_STROKE_RGBA = 'rgba(0, 0, 0, 0.20)';
@@ -39,7 +40,8 @@ export function paintMaterialHatchSegments(
   if (segments.length === 0) return;
   ctx.save();
   ctx.strokeStyle = style.strokeStyle ?? MATERIAL_HATCH_STROKE_RGBA;
-  ctx.lineWidth = style.lineWidthPx ?? MATERIAL_HATCH_LINE_WIDTH_PX;
+  // ADR-909 Β2.6 — print pass ⇒ ποτέ κάτω από το δάπεδο της απόδοσης (ήταν 0,5 px σε εικόνα 4096 px)· οθόνη ⇒ αυτούσιο.
+  ctx.lineWidth = liveStrokeWidthPx(style.lineWidthPx ?? MATERIAL_HATCH_LINE_WIDTH_PX);
   ctx.setLineDash(style.dashPx ? [...style.dashPx] : []);
   ctx.beginPath();
   for (const seg of segments) {

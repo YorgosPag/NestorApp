@@ -25,6 +25,8 @@ jest.mock('firebase/auth', () => ({
 import { HatchRenderer } from '../HatchRenderer';
 import type { EntityModel, RenderOptions } from '../../types/Types';
 import type { HatchContourPen } from '../../../types/entities';
+import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
+import { hatchFillImageCache } from '../shared/shared-image-caches';
 
 interface MockCtxCall { fn: string; args: readonly unknown[] }
 
@@ -167,5 +169,77 @@ describe('contour pen — η ΓΕΝΝΗΣΗ γράφει ρητή τιμή (δε
     // `buildHatchSceneEntity` είναι SSoT ΚΑΙ για τους δύο importers (native + R12/R14 xdata),
     // οπότε αυτό το ένα test καλύπτει και τα δύο μονοπάτια εισαγωγής.
     expect(imported.contourPen).toEqual({ visible: false });
+  });
+});
+
+/**
+ * ADR-909 Β2.6 — **η γραμμοσκίαση στο χαρτί.** Μετρημένο ζωντανά (2026-10-09, δημόσια κάτοψη 3732×4096,
+ * `monochrome`): περίγραμμα **1 px** σε γκρι `#808080`, δίπλα σε τοίχους 4,92 px μαύρους — το `fillColor`
+ * και η πένα έφταναν **ωμά** στον καμβά, γιατί ο `HatchRenderer` δεν περνά από το `setupStyle`.
+ */
+describe('HatchRenderer — print pass (ADR-909 Β2.6)', () => {
+  const PUBLIC_IMAGE = { style: 'monochrome' as const, dpi: 694, minLineWidthPx: 4 };
+
+  afterEach(clearPrintColorPolicy);
+
+  it('🔴 `monochrome` ⇒ περίγραμμα ΜΑΥΡΟ, στο dpi της απόδοσης (0,18 mm @ 694 dpi ≈ 4,92 px)', () => {
+    setPrintColorPolicy(PUBLIC_IMAGE);
+    const [outline] = renderWith({ visible: true });
+    expect(outline.args[0]).toBe('#000000');
+    expect(outline.args[1]).toBeCloseTo((0.18 * 694) / 25.4, 5);
+  });
+
+  it('🔴 ρητό χρώμα πένας ⇒ περνά ΚΙ ΑΥΤΟ από την πολιτική (ήταν η διαρροή χρώματος)', () => {
+    setPrintColorPolicy(PUBLIC_IMAGE);
+    const [outline] = renderWith({ visible: true, color: '#ff00ff' });
+    expect(outline.args[0]).toBe('#000000');
+  });
+
+  it('`colour` ⇒ το χρώμα της πένας επιβιώνει', () => {
+    setPrintColorPolicy({ style: 'colour', dpi: 300 });
+    const [outline] = renderWith({ visible: true, color: '#ff00ff' });
+    expect(outline.args[0]).toBe('#ff00ff');
+  });
+
+  it('🔑 μετά το print pass η οθόνη είναι ΟΠΩΣ ΠΡΙΝ: χρώμα γεμίσματος, hairline 1 px', () => {
+    setPrintColorPolicy(PUBLIC_IMAGE);
+    renderWith({ visible: true });
+    clearPrintColorPolicy();
+    const [outline] = renderWith({ visible: true });
+    expect(outline.args).toEqual(expect.arrayContaining(['#112233', 1]));
+  });
+
+  describe('γέμισμα εικόνας', () => {
+    const imageHatch = {
+      id: 'hi', type: 'hatch', visible: true, fillType: 'image', fillColor: '#112233',
+      imageFill: { assetId: 'stone', tileWidth: 300, tileHeight: 300 },
+      boundaryPaths: [SQUARE], contourPen: { visible: false },
+    } as unknown as EntityModel;
+
+    function requestedKeys(): string[] {
+      const spy = jest.spyOn(hatchFillImageCache, 'resolve').mockReturnValue(null);
+      const renderer = new HatchRenderer(createMockCtx().ctx);
+      renderer.setTransform({ scale: 1, offsetX: 0, offsetY: 0 });
+      renderer.render(imageHatch, {} as RenderOptions);
+      const keys = spy.mock.calls.map(([spec]) => (typeof spec === 'string' ? spec : spec.key));
+      spy.mockRestore();
+      return keys;
+    }
+
+    it('οθόνη ⇒ ζητά ΑΚΡΙΒΩΣ το ιστορικό κλειδί (καμία ακύρωση αποθήκης)', () => {
+      expect(requestedKeys()).toStrictEqual(['stone']);
+    });
+
+    it('🔴 `monochrome` ⇒ ζητά τη ΓΚΡΙ εκδοχή — άλλη εγγραφή από την έγχρωμη', () => {
+      setPrintColorPolicy(PUBLIC_IMAGE);
+      const [key] = requestedKeys();
+      expect(key).not.toBe('stone');
+      expect(key.startsWith('stone')).toBe(true);
+    });
+
+    it('`colour` ⇒ η έγχρωμη, ίδια εγγραφή με την οθόνη (ό,τι είδε ο καμβάς δεν ξαναφορτώνεται)', () => {
+      setPrintColorPolicy({ style: 'colour', dpi: 300 });
+      expect(requestedKeys()).toStrictEqual(['stone']);
+    });
   });
 });

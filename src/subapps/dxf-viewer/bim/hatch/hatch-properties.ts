@@ -14,6 +14,8 @@
 
 import type { HatchEntity, LineweightMm } from '../../types/entities';
 import { lineweightToPx, isConcreteLineweight } from '../../config/lineweight-iso-catalog';
+import { lineweightDisplayPx } from '../../config/lineweight-display-px';
+import { getPrintColorPolicy } from '../../config/print-color-policy';
 
 /** Island/fill style — παράγεται από τον τύπο (SSoT, μηδέν χειροκίνητο literal). */
 export type HatchIslandStyle = NonNullable<HatchEntity['islandStyle']>;
@@ -35,8 +37,46 @@ export const DEFAULT_HATCH_LINE_WIDTH_PX = 0.5;
 export function resolveHatchLineWidthPx(
   lineweightMm: LineweightMm | null | undefined,
 ): number {
+  if (getPrintColorPolicy() !== null) return printHatchPenPx(lineweightMm, DEFAULT_HATCH_LINE_PEN_MM);
   if (!isConcreteLineweight(lineweightMm)) return DEFAULT_HATCH_LINE_WIDTH_PX;
   return Math.max(DEFAULT_HATCH_LINE_WIDTH_PX, lineweightToPx(lineweightMm));
+}
+
+/** Ιστορικό πάχος περιγράμματος στην οθόνη (px) όταν ο contour pen δεν ορίζει πάχος. */
+export const DEFAULT_HATCH_CONTOUR_WIDTH_PX = 1;
+
+/**
+ * Οι πένες που **τυπώνονται** όταν η γραμμοσκίαση δεν ορίζει δική της (ADR-909 Β2.6). ISO 128: η
+ * γραμμοσκίαση είναι **λεπτή** γραμμή, λεπτότερη από το περίγραμμα που την περικλείει — 0,13 mm μέσα,
+ * 0,18 mm γύρω. Στην οθόνη δεν ισχύουν: εκεί μένουν τα ιστορικά 0,5 / 1 px.
+ */
+const DEFAULT_HATCH_LINE_PEN_MM = 0.13;
+const DEFAULT_HATCH_CONTOUR_PEN_MM = 0.18;
+
+/**
+ * 🔴 **Η πένα μιας γραμμοσκίασης στο χαρτί** — στο dpi και με το δάπεδο της απόδοσης που τρέχει.
+ *
+ * Μετρημένο ζωντανά (2026-10-09, δημόσια κάτοψη 3732×4096): οι διαγώνιες έβγαιναν **0,5 px** δίπλα σε
+ * τοίχους 4,92 px — το `lineweightToPx` μετέτρεπε στα **96 dpi της οθόνης** μέσα σε εικόνα 694 dpi, και
+ * χωρίς δάπεδο. Πέμπτη εμφάνιση της κλάσης «ζωγράφος που δεν ρωτά την πολιτική εκτύπωσης».
+ */
+function printHatchPenPx(lineweightMm: LineweightMm | null | undefined, defaultMm: number): number {
+  const concrete = isConcreteLineweight(lineweightMm) && lineweightMm > 0;
+  return lineweightDisplayPx(concrete ? lineweightMm : defaultMm);
+}
+
+/**
+ * Πάχος **περιγράμματος** γραμμοσκίασης (px) — ο αδελφός του {@link resolveHatchLineWidthPx} για τον
+ * contour pen. Οθόνη: ό,τι και πριν (ρητό πάχος → LWT px, αλλιώς 1 px). Print pass: πένα στο dpi της
+ * απόδοσης, με το δάπεδό της.
+ */
+export function resolveHatchContourWidthPx(
+  lineweightMm: LineweightMm | null | undefined,
+): number {
+  if (getPrintColorPolicy() !== null) return printHatchPenPx(lineweightMm, DEFAULT_HATCH_CONTOUR_PEN_MM);
+  return lineweightMm === undefined
+    ? DEFAULT_HATCH_CONTOUR_WIDTH_PX
+    : resolveHatchLineWidthPx(lineweightMm);
 }
 
 /** Τα μόνα πεδία που χρειάζεται ο solid-έλεγχος (loose ώστε να δέχεται writer carriers). */

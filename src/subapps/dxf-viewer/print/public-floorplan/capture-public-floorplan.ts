@@ -11,8 +11,9 @@
  * 4. **απόδοση** με τον πραγματικό `DxfRenderer`, στην όψη της δημόσιας κάτοψης·
  * 5. **κάδρο** = ποιο ορθογώνιο του **σχεδίου** δείχνουν τα pixels — από τον μετασχηματισμό που **χρησιμοποιήθηκε**.
  *
- * 🔑 Τα βήματα 2–5 τρέχουν **σύγχρονα** μέσα στο `renderInPublicFloorplanView`· το μόνο `await` είναι η
- * κωδικοποίηση PNG, **μετά** την έξοδο από την όψη.
+ * 🔑 Τα βήματα 2–5 τρέχουν **σύγχρονα** μέσα στο `renderInPublicFloorplanView`. Τα δύο `await` ζουν **έξω**
+ * από την όψη: οι εικόνες του σχεδίου **πριν** (Β2.6 — ένας σύγχρονος αποδότης δεν τις περιμένει), και η
+ * κωδικοποίηση PNG **μετά**.
  *
  * ⛔ **ΟΧΙ** `thumbnail-generator` / `svg-from-dxf-scene`: παραλείπουν σιωπηλά κάθε οντότητα BIM (ADR-909 §2).
  */
@@ -30,7 +31,9 @@ import type { PrintPlotStyle, RasterTargetPx } from '../config/paper-types';
 import { rasterToViewport } from '../config/paper-math';
 import { MM_PER_INCH } from '../config/paper-constants';
 import { PRINT_PAPER_HEX } from '../../config/print-color-policy';
-import { convertSceneForCapture, renderDxfSceneOffscreen } from '../capture/capture-2d';
+import { convertSceneForCapture, preloadCaptureImages, renderDxfSceneOffscreen } from '../capture/capture-2d';
+import { missingSceneImageWarnings } from '../capture/preload-scene-images';
+import { summarizePrintFidelity, type PrintFidelityNote } from '../print-fidelity';
 import { applyPublicFloorplanProfile } from './public-floorplan-profile';
 import { renderInPublicFloorplanView } from './public-floorplan-view';
 
@@ -78,6 +81,11 @@ export type PublicFloorplanCapture =
       readonly recipe: FloorplanRenderRecipe;
       /** Τύποι στοιχείων που το προφίλ δεν γνωρίζει και **έμειναν έξω**. */
       readonly unruledTypes: readonly string[];
+      /**
+       * Ό,τι **έχασε** η εικόνα έναντι του σχεδίου (π.χ. εικόνα υλικού που δεν φόρτωσε ⇒ επίπεδο χρώμα).
+       * Κενό ⇒ πιστή. Ο διάλογος το ονομάζει **πριν** ο άνθρωπος πατήσει «Δημοσίευση» (ADR-909 Β2.6).
+       */
+      readonly fidelity: readonly PrintFidelityNote[];
     }
   | { readonly ok: false; readonly why: PublicFloorplanCaptureRefusal };
 
@@ -133,6 +141,7 @@ interface RenderedFloorplan {
   readonly canvas: HTMLCanvasElement;
   readonly recipe: FloorplanRenderRecipe;
   readonly unruledTypes: readonly string[];
+  readonly fidelity: readonly PrintFidelityNote[];
 }
 
 /** Λευκό **πίσω** από το σχέδιο: ο αποδότης αφήνει διαφανή καμβά, και ένα διαφανές PNG ψήνεται μαύρο. */
@@ -172,6 +181,8 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
     return {
       canvas,
       unruledTypes,
+      // Πάνω σε ό,τι **ζωγραφίστηκε** (μετά το προφίλ): μια εικόνα που το προφίλ έκρυψε δεν είναι απώλεια.
+      fidelity: summarizePrintFidelity(missingSceneImageWarnings(scene.entities, PUBLIC_FLOORPLAN_PLOT_STYLE)),
       recipe: {
         profileId: PUBLIC_FLOORPLAN_PROFILE.id,
         profileVersion: PUBLIC_FLOORPLAN_PROFILE.version,
@@ -195,6 +206,10 @@ function encodePng(canvas: HTMLCanvasElement): Promise<Blob | null> {
  * ⚠️ Δεν πετά για λόγο που ο άνθρωπος μπορεί να διορθώσει — επιστρέφει **ονομασμένη** άρνηση.
  */
 export async function capturePublicFloorplan(input: PublicFloorplanCaptureInput): Promise<PublicFloorplanCapture> {
+  // 🔑 Το `await` των εικόνων ζει **εδώ** — πριν και έξω από το `renderInPublicFloorplanView`, που μένει
+  // σύγχρονο. Μετρημένο ζωντανά (2026-10-09): χωρίς αυτό, πέτρα και πλακάκι έβγαιναν επίπεδο γκρι.
+  await preloadCaptureImages(input.scene, PUBLIC_FLOORPLAN_PLOT_STYLE);
+
   const rendered = renderPublicFloorplan(input);
   if (rendered === null) return { ok: false, why: 'no-geometry' };
 
@@ -203,5 +218,11 @@ export async function capturePublicFloorplan(input: PublicFloorplanCaptureInput)
   // 🔑 Η πόρτα θα το αρνιόταν ούτως ή άλλως· εδώ ο άνθρωπος το μαθαίνει **πριν** ανεβάσει megabytes.
   if (blob.size > FLOORPLAN_MAX_BYTES) return { ok: false, why: 'too-large' };
 
-  return { ok: true, blob, recipe: rendered.recipe, unruledTypes: rendered.unruledTypes };
+  return {
+    ok: true,
+    blob,
+    recipe: rendered.recipe,
+    unruledTypes: rendered.unruledTypes,
+    fidelity: rendered.fidelity,
+  };
 }

@@ -10,6 +10,8 @@
  *   Λ3  τίποτα να φανεί ⇒ `no-geometry`, χωρίς απόδοση
  *   Λ4  εικόνα πάνω από το ταβάνι ⇒ `too-large` · αποτυχία κωδικοποίησης ⇒ `encode-failed`
  *   Λ5  τα bytes που επιστρέφονται είναι ΑΥΤΑ που έβγαλε ο καμβάς (το ίδιο αντικείμενο)
+ *   Λ6  🔴 οι εικόνες φορτώνονται ΠΡΙΝ από την απόδοση και ΕΞΩ από την όψη (Β2.6 — έβγαιναν επίπεδο γκρι)
+ *   Λ7  εικόνα υλικού που δεν είναι έτοιμη ⇒ ΟΝΟΜΑΣΜΕΝΗ απώλεια στο αποτέλεσμα, ποτέ σιωπηλό γκρι
  */
 
 import { PUBLIC_FLOORPLAN_PROFILE, readFloorplanRenderRecipe } from '@/lib/listings/floorplan-render-recipe';
@@ -23,7 +25,7 @@ import {
   getIsolateEffectsSnapshot,
   setIsolateEffects,
 } from '../../../systems/isolate/IsolateEffectsStore';
-import { convertSceneForCapture, renderDxfSceneOffscreen } from '../../capture/capture-2d';
+import { convertSceneForCapture, preloadCaptureImages, renderDxfSceneOffscreen } from '../../capture/capture-2d';
 import {
   capturePublicFloorplan,
   publicFloorplanFrameOf,
@@ -33,10 +35,12 @@ import {
 jest.mock('../../capture/capture-2d', () => ({
   convertSceneForCapture: jest.fn(),
   renderDxfSceneOffscreen: jest.fn(),
+  preloadCaptureImages: jest.fn(),
 }));
 
 const convert = convertSceneForCapture as jest.Mock;
 const render = renderDxfSceneOffscreen as jest.Mock;
+const preload = preloadCaptureImages as jest.Mock;
 
 const line = (id: string, x1: number, y1: number, x2: number, y2: number, type = 'line'): DxfEntityUnion =>
   ({ id, type, layerId: 'lyr_1', visible: true, start: { x: x1, y: y1 }, end: { x: x2, y: y2 } }) as unknown as DxfEntityUnion;
@@ -60,6 +64,7 @@ function fakeCanvas(blob: Blob | null): HTMLCanvasElement {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  preload.mockResolvedValue(undefined);
   __resetIsolateEffectsForTesting();
 });
 
@@ -176,5 +181,43 @@ describe('Λ — η λήψη', () => {
     const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
 
     expect(capture.ok && capture.blob).toBe(PNG);
+  });
+
+  it('Λ6 🔴 οι εικόνες φορτώνονται ΠΡΙΝ από την απόδοση και ΕΞΩ από την όψη', async () => {
+    arrange([line('a', 0, 0, 100, 50)]);
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedEntityIds: ['other'], dimOpacityPercent: 30 });
+    const seen: { rendersBefore: number; insideView: boolean }[] = [];
+    preload.mockImplementation(async () => {
+      // Μέσα στην όψη η απομόνωση είναι ανεσταλμένη (`active === false`)· εδώ οφείλει να ισχύει ακόμη.
+      seen.push({ rendersBefore: render.mock.calls.length, insideView: !getIsolateEffectsSnapshot().active });
+    });
+
+    await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+
+    expect(preload).toHaveBeenCalledWith(SOURCE, 'monochrome');
+    expect(seen).toStrictEqual([{ rendersBefore: 0, insideView: false }]);
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it('Λ7 εικόνα υλικού που δεν είναι έτοιμη ⇒ ονομασμένη απώλεια, ποτέ σιωπηλό γκρι', async () => {
+    const stone = {
+      id: 'h1', type: 'hatch', layerId: 'lyr_1', visible: true, fillType: 'image',
+      imageFill: { assetId: 'asset-that-never-loaded', tileWidth: 300, tileHeight: 300 },
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 50 }, { x: 0, y: 50 }]],
+    } as unknown as DxfEntityUnion;
+    arrange([line('a', 0, 0, 100, 50), stone]);
+
+    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+
+    if (!capture.ok) throw new Error('expected a capture');
+    expect(capture.fidelity).toStrictEqual([{ code: 'hatch-image-solid', count: 1 }]);
+  });
+
+  it('Λ7β σχέδιο χωρίς εικόνες ⇒ καμία απώλεια', async () => {
+    arrange([line('a', 0, 0, 100, 50)]);
+
+    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+
+    expect(capture.ok && capture.fidelity).toStrictEqual([]);
   });
 });

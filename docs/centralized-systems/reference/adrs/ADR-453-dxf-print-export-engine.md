@@ -71,6 +71,13 @@ Ribbon **Ανάλυση → «Εκτύπωση»** (`analyze-tab.ts` PRINT_PANEL
 
 ## Changelog
 
+- **2026-10-09** — **Η raster λήψη περιμένει τις εικόνες της** (ADR-909 Β2.6, §6.4). `captureCurrent2dView` είναι
+  πλέον **async**: `preloadCaptureImages` *(νέο `capture/preload-scene-images.ts`)* **πριν** από τη σύγχρονη
+  απόδοση, και `fidelity` στο αποτέλεσμα — οι **ίδιοι** κωδικοί με το vector *(`image-fill:decode-failed`,
+  `image-entity:decode-failed`, `image-entity:unresolved-reference`)*, μετρημένοι πάνω σε ό,τι δεν κρύβει στρώμα.
+  Μέχρι τώρα κάθε γέμισμα εικόνας τυπωνόταν σε raster PDF ως **επίπεδο γκρι, χωρίς καμία ένδειξη** *(μετρημένο)*.
+  Το `set→render→clear` της πολιτικής μένει σύγχρονο· το `await` είναι **έξω** του.
+
 - **2026-10-09** — **Η λήψη δηλώνει δάπεδο πάχους** (ADR-909 Β2.5). `Capture2dInput.minLineWidthPx?` →
   `setPrintColorPolicy`· το κλειδί **παραλείπεται** όταν δεν δόθηκε, άρα το PDF έχει την ίδια πολιτική με πριν
   *(άγκυρα Ε7)*. Οφειλόμενη εγγραφή: το `9e2f5258` άγγιξε `capture-2d.ts` και

@@ -59,11 +59,11 @@ function depsOf(activeLevelId: string | null): ExportDeps {
 }
 
 const prepared = (key = 'idk_1'): PreparedFloorplan =>
-  ({ blob: PNG, recipe: RECIPE, levelId: 'lvl_b', idempotencyKey: key, unruledTypes: [] });
+  ({ blob: PNG, recipe: RECIPE, levelId: 'lvl_b', idempotencyKey: key, unruledTypes: [], fidelity: [] });
 
 beforeEach(() => {
   jest.clearAllMocks();
-  capture.mockResolvedValue({ ok: true, blob: PNG, recipe: RECIPE, unruledTypes: ['hologram'] });
+  capture.mockResolvedValue({ ok: true, blob: PNG, recipe: RECIPE, unruledTypes: ['hologram'], fidelity: [] });
   post.mockResolvedValue({ fileId: 'file_new', archived: [], declared: 'declared', listing: 'published' });
 });
 

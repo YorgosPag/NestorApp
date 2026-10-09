@@ -64,6 +64,10 @@ column steel-blue `#2f6690`, slab taupe `#6e6358`, wall-interior `#6b7280`) έχ
   reuse-άρει `mixHex`)· **δεν** προστέθηκε 3ο `hexToRgba` (τα υπάρχοντα κάνουν την αντίστροφη φορά).
 
 ## Changelog
+
+- **2026-10-09** — `liveStrokeInk` · `liveStrokeWidthPx` · `liveSymbolFill` (ADR-909 Β2.6, §6.4): αδελφοί του
+  `liveDrawingSurfaceHex` για ζωγράφους με δικό τους `strokeStyle`. Οθόνη ⇒ τιμή **αυτούσια**· print pass ⇒
+  πολιτική εκτύπωσης / δάπεδο πάχους της απόδοσης.
 - **2026-10-09 (ADR-909 Β2.5 — η βάση του σώματος δεν είναι πάντα ο καμβάς)** — Το `fillBimBodyPath` στρώνει
   αδιαφανή βάση για να κρύψει ό,τι είναι κάτω από το μέλος· τη ζητούσε από το `resolveDxfCanvasBackgroundHex()`,
   δηλαδή και στην **εκτύπωση** έστρωνε το σκούρο του θέματος πάνω σε λευκό χαρτί. NEW `liveDrawingSurfaceHex()`

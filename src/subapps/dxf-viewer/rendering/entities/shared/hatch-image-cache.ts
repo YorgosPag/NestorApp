@@ -42,7 +42,7 @@
 import type { HatchImageTint, HatchProceduralParams } from '../../../types/entities';
 import { resolveMaterialImageSrc } from './material-image-resolver';
 import { getUserMaterialImageVersion } from './user-material-image-store';
-import { applyDuotoneTint } from './hatch-image-tint';
+import { applyDuotoneTint, toGrayscaleImage } from './hatch-image-tint';
 import { renderProceduralTile } from './procedural-tile-render';
 import { createExternalStore } from '../../../stores/createExternalStore';
 
@@ -94,10 +94,25 @@ export interface ImageResolveSpec {
   readonly procedural?: HatchProceduralParams;
   readonly tileWidthMm?: number;
   readonly tileHeightMm?: number;
+  /**
+   * ADR-909 Β2.6 — η εικόνα ζητείται **σε κλίμακα του γκρι** (print pass `monochrome`/`grayscale`). Το
+   * `key` οφείλει να τη διακρίνει από την έγχρωμη (βλ. `shared-image-caches`): είναι άλλη εικόνα.
+   */
+  readonly grayscale?: boolean;
+}
+
+/**
+ * Η εικόνα όπως **ζητήθηκε**: γκρι όταν το spec το θέλει. `null` ⇒ η μετατροπή απέτυχε (taint) — ο caller
+ * τη μετρά ως **αποτυχία**, ποτέ ως «δώσε την έγχρωμη» (διαρροή χρώματος σε ασπρόμαυρη εκτύπωση).
+ */
+function inRequestedTone(img: CanvasImageSource, spec: string | ImageResolveSpec): CanvasImageSource | null {
+  return typeof spec !== 'string' && spec.grayscale ? toGrayscaleImage(img) : img;
 }
 
 export class HatchImageCache {
   private readonly entries = new Map<string, CacheEntry>();
+  /** Φορτώσεις σε εξέλιξη — ό,τι περιμένει το {@link preload} (ADR-909 Β2.6). */
+  private readonly pending = new Map<string, Promise<void>>();
   /** Τελευταία γνωστή έκδοση του user-image store (Φ4 lazy error-retry gate). */
   private lastStoreVersion = getUserMaterialImageVersion();
 
@@ -128,13 +143,42 @@ export class HatchImageCache {
     // ADR-653 Φ9 — procedural: ζωγράφισε το tile ΣΥΓΧΡΟΝΑ (μηδέν δίκτυο/decode) → επέστρεψε
     // αμέσως (χωρίς loading flash· ο caller έχει έτοιμο pattern στο ίδιο frame).
     if (typeof spec !== 'string' && spec.procedural) {
-      const canvas = renderProceduralTile(spec.procedural, spec.tileWidthMm ?? 1, spec.tileHeightMm ?? 1);
+      const tile = renderProceduralTile(spec.procedural, spec.tileWidthMm ?? 1, spec.tileHeightMm ?? 1);
+      const canvas = tile ? inRequestedTone(tile, spec) : null;
       this.entries.set(key, { img: canvas, state: canvas ? 'ready' : 'error' });
       return canvas;
     }
     this.entries.set(key, { img: null, state: 'loading' });
-    void this.load(key, spec);
+    // Η ανάλυση του src (`resolveSrc`) τρέχει ΕΞΩ από το try του `load` — αν πετάξει, η εγγραφή δεν
+    // επιτρέπεται να μείνει αιώνια `loading`: γίνεται `error`, και το `preload` απαντά `false`.
+    const loading = this.load(key, spec)
+      .catch(() => { this.entries.set(key, { img: null, state: 'error' }); })
+      .finally(() => this.pending.delete(key));
+    this.pending.set(key, loading);
     return null;
+  }
+
+  /**
+   * **Φέρε την εικόνα ΠΡΙΝ τη χρειαστεί ένας σύγχρονος αποδότης** (ADR-909 Β2.6) — `true` όταν είναι έτοιμη.
+   *
+   * 🔴 Μετρημένο ζωντανά (2026-10-09): η λήψη εκτός οθόνης ζωγραφίζει **μία φορά, σύγχρονα**. Το `resolve()`
+   * ξεκινούσε τη φόρτωση και επέστρεφε `null`· η εικόνα έφτανε 30–55 ms **μετά** το τελευταίο pixel, και
+   * στη θέση της έμενε επίπεδο γκρι — σε PDF και σε δημόσια κάτοψη, χωρίς καμία ένδειξη. Το «έλα ξανά στο
+   * επόμενο frame» δεν υπάρχει εκεί: όποιος ζωγραφίζει μία φορά **περιμένει πρώτα εδώ**.
+   *
+   * Μια παλιά αποτυχία **ξαναδοκιμάζεται**: ο άνθρωπος ζητά νέα εικόνα, και το δίκτυο μπορεί να γύρισε.
+   */
+  async preload(spec: string | ImageResolveSpec): Promise<boolean> {
+    const key = typeof spec === 'string' ? spec : spec.key;
+    if (this.entries.get(key)?.state === 'error') this.entries.delete(key);
+    this.resolve(spec);
+    await this.pending.get(key);
+    return this.isReady(key);
+  }
+
+  /** Είναι αυτή η εικόνα **έτοιμη να ζωγραφιστεί** τώρα, σύγχρονα; */
+  isReady(key: string): boolean {
+    return this.entries.get(key)?.state === 'ready';
   }
 
   /**
@@ -164,7 +208,12 @@ export class HatchImageCache {
       await img.decode();
       // ADR-653 Φ8 — duotone επαναχρωματισμός ΜΙΑ φορά μετά το decode (offscreen canvas)·
       // αποτυχία (invalid hex / taint) → ανέγγιχτη εικόνα (graceful).
-      const final = tint ? applyDuotoneTint(img, tint) ?? img : img;
+      const tinted = tint ? applyDuotoneTint(img, tint) ?? img : img;
+      const final = inRequestedTone(tinted, spec);
+      if (final === null) {
+        this.entries.set(key, { img: null, state: 'error' });
+        return;
+      }
       this.entries.set(key, { img: final, state: 'ready' });
       this.onLoad();
       // ADR-654 — το `onLoad` (markAllCanvasDirty) ζητά ΝΕΟ frame· αυτό εδώ ακυρώνει το

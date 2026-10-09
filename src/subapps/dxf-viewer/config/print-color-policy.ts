@@ -110,6 +110,18 @@ export function survivesAsInk(colorHex: string, colorAci: number | null = null):
  */
 export type PlotColorRole = 'ink' | 'fill' | 'tint';
 
+/**
+ * ADR-909 Β2.6 — **τυπώνεται αυτή η εικόνα σε κλίμακα του γκρι;** Μία απάντηση για κάθε raster που φτάνει
+ * στο χαρτί (εικόνα υλικού γραμμοσκίασης, «γυμνή» εικόνα).
+ *
+ * Revit «Black Lines»: *«All raster images and solid patterns print in grayscale»* — οι γραμμές μαυρίζουν,
+ * η εικόνα **όχι** (μια μαύρη εικόνα δεν είναι εικόνα), ούτε μένει έγχρωμη (το AutoCAD `monochrome.ctb`
+ * την αφήνει έγχρωμη, και είναι το γνωστό παράπονο: ασπρόμαυρο σχέδιο με μία χρωματιστή φωτογραφία).
+ */
+export function plotStyleGreysImages(style: PrintPlotStyle): boolean {
+  return style === 'monochrome' || style === 'grayscale';
+}
+
 function greyOf(rgb: Rgb): string {
   const lum = toHex(luminance(rgb) * 255);
   return `#${lum}${lum}${lum}`;

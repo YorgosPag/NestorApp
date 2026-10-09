@@ -42,6 +42,30 @@ export function applyDuotoneTint(
   const a: Rgb | null = parseHex(tint.colorA);
   const b: Rgb | null = parseHex(tint.colorB);
   if (!a || !b) return null;
+  return rampImage(img, a, b, clamp01(tint.strength));
+}
+
+/** Τα δύο άκρα της ράμπας του γκρι (κανάλια 0..255 — όχι χρώμα θέματος, αριθμητικά άκρα). */
+const RAMP_BLACK: Rgb = { r: 0, g: 0, b: 0 };
+const RAMP_WHITE: Rgb = { r: 255, g: 255, b: 255 };
+
+/**
+ * **Η εικόνα σε κλίμακα του γκρι** (ADR-909 Β2.6) — ό,τι τυπώνει το Revit «Black Lines»: γραμμές μαύρες,
+ * *raster images and solid patterns in grayscale*.
+ *
+ * Είναι η **ίδια** ράμπα φωτεινότητας με το duotone, με άκρα μαύρο→λευκό και πλήρη ένταση: κάθε pixel
+ * γίνεται το γκρι της δικής του φωτεινότητας (`luminance601`, ίδιο SSoT με το `applyPlotColor`). Δεύτερη
+ * υλοποίηση εδώ θα ήταν δεύτερη απάντηση στο «πόσο φωτεινό είναι αυτό το χρώμα».
+ *
+ * `null` όταν αδύνατο (εκφυλισμένο μέγεθος, χωρίς 2D context, cross-origin taint) — ο caller **δεν**
+ * επιτρέπεται να πέσει στην έγχρωμη εικόνα: σε `monochrome` αυτό είναι διαρροή χρώματος.
+ */
+export function toGrayscaleImage(img: CanvasImageSource): HTMLCanvasElement | null {
+  return rampImage(img, RAMP_BLACK, RAMP_WHITE, 1);
+}
+
+/** Ράμπα φωτεινότητας `a`(σκούρο)→`b`(φωτεινό), ανακατεμένη με το πρωτότυπο κατά `s` (0..1). */
+function rampImage(img: CanvasImageSource, a: Rgb, b: Rgb, s: number): HTMLCanvasElement | null {
   const { w, h } = imageIntrinsicSize(img);
   if (w <= 0 || h <= 0) return null;
 
@@ -60,7 +84,6 @@ export function applyDuotoneTint(
   }
 
   const px = data.data;
-  const s = clamp01(tint.strength);
   for (let i = 0; i < px.length; i += 4) {
     const r0 = px[i], g0 = px[i + 1], b0 = px[i + 2];
     // Φωτεινότητα → θέση στη ράμπα colorA→colorB.

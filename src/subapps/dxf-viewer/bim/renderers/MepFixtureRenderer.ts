@@ -17,7 +17,9 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import {
+  adaptFillTintForCanvas, liveStrokeInk, liveStrokeWidthPx, liveSymbolFill,
+} from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
@@ -84,7 +86,10 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
       : null;
     const defaultStroke = drainColor ?? FIXTURE_STROKE;
     const defaultFill = drainColor ? hexToRgba(drainColor, SYSTEM_FILL_ALPHA) : FIXTURE_FILL;
-    const strokeColor = systemColor ?? defaultStroke;
+    // ADR-909 Β2.6 — print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους· οθόνη ⇒ αυτούσια. Μετρημένο ζωντανά:
+    // τα είδη υγιεινής έβγαιναν `#b45309` 2 px στη `monochrome` δημόσια κάτοψη.
+    const strokeColor = liveStrokeInk(systemColor ?? defaultStroke);
+    const outlineWidthPx = liveStrokeWidthPx(RENDER_LINE_WIDTHS.NORMAL);
     const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : defaultFill;
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
@@ -120,8 +125,8 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
             rotationDeg: fixture.params.rotation,
             sceneUnits: fixture.params.sceneUnits ?? 'mm',
           },
-          palette: { stroke: strokeColor, fill: fillColor, edge: hexToRgba(strokeColor, 0.55) },
-          lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+          palette: { stroke: strokeColor, fill: liveSymbolFill(fillColor), edge: hexToRgba(strokeColor, 0.55) },
+          lineWidth: outlineWidthPx,
         })
       : false;
 
@@ -132,7 +137,7 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
       tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
       this.ctx.fill();
       this.ctx.strokeStyle = strokeColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+      this.ctx.lineWidth = outlineWidthPx;
       tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
       this.ctx.stroke();
 

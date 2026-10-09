@@ -27,6 +27,9 @@ import { setPrintColorPolicy, clearPrintColorPolicy } from '../../config/print-c
 import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
 import type { CaptureResult } from './capture-types';
 import { createOffscreen2dTarget } from './capture-2d-offscreen-canvas';
+import { missingSceneImageWarnings, preloadSceneImages } from './preload-scene-images';
+import { summarizePrintFidelity } from '../print-fidelity';
+import { isEntityLayerSkipped } from '../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
 
 export interface Capture2dInput {
   scene: SceneModel | null;
@@ -151,11 +154,35 @@ export function renderDxfSceneOffscreen(
 }
 
 /**
- * Capture the current 2D scene to a paper-resolution PNG `CaptureResult`.
+ * ADR-909 Β2.6 — **φέρε τις εικόνες του σχεδίου πριν ζωγραφίσεις** (εικόνες υλικού γραμμοσκίασης, «γυμνές»
+ * εικόνες). Το ΕΝΑ `await` κάθε raster λήψης, και ζει **πριν** από την απόδοση.
+ *
+ * 🔑 Μετατρέπει με το **καθαρό** `convertSceneToDxf` (χωρίς ενυδάτωση του LayerStore): ανάμεσα σε αυτό το
+ * `await` και στην απόδοση ο ζωντανός καμβάς συνεχίζει να τρέχει, και μια ενυδάτωση εδώ θα μπορούσε να
+ * έχει ξεπεραστεί ως τότε. Η ενυδάτωση γίνεται από το {@link convertSceneForCapture}, **σύγχρονα** με την απόδοση.
  */
-export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
+export async function preloadCaptureImages(
+  scene: SceneModel | null,
+  plotStyle: PrintPlotStyle,
+  userDrawingUnits?: SceneUnits,
+): Promise<void> {
+  await preloadSceneImages(convertSceneToDxf(scene, userDrawingUnits).entities, plotStyle);
+}
+
+/**
+ * Capture the current 2D scene to a paper-resolution PNG `CaptureResult`.
+ *
+ * ADR-909 Β2.6 — async: the scene's images are decoded **before** the one-shot synchronous
+ * render (they used to arrive after the last pixel and print as flat grey), and whatever
+ * still is not ready is **reported** through `fidelity` — same channel as the vector path.
+ */
+export async function captureCurrent2dView(input: Capture2dInput): Promise<CaptureResult> {
+  const plotStyle = input.plotStyle ?? 'colour';
+  await preloadCaptureImages(input.scene, plotStyle, input.userDrawingUnits);
+
   const { dxfScene, viewport } = prepareScene2dCapture(input);
   const { canvas } = renderDxfSceneOffscreen(dxfScene, viewport, input);
+  const drawn = dxfScene.entities.filter((e) => !isEntityLayerSkipped(e, dxfScene.layersById));
 
   return {
     kind: 'raster',
@@ -163,5 +190,6 @@ export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
     widthPx: input.raster.widthPx,
     heightPx: input.raster.heightPx,
     appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
+    fidelity: summarizePrintFidelity(missingSceneImageWarnings(drawn, plotStyle)),
   };
 }

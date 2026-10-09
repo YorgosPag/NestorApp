@@ -40,6 +40,17 @@ import {
   type ResolvedOpeningTagStyle,
 } from '../services/opening-tag-style-service';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { getPrintColorPolicy, PRINT_PAPER_HEX } from '../../config/print-color-policy';
+// ADR-909 Β2.6 — το μελάνι όπως τυπώνεται (οθόνη ⇒ αυτούσιο). Μετρημένο ζωντανά (2026-10-09, δημόσια κάτοψη
+// `monochrome`): 198 χρωματιστά pixels σε ορθογώνιο 55×18 ήταν αυτή η ετικέτα — περίγραμμα στο πορτοκαλί
+// της πόρτας, οδηγός γκριζογάλανος. Η ετικέτα δεν είναι `BaseEntityRenderer` (είναι σχολιασμός του
+// ανοίγματος), άρα δεν περνούσε ποτέ από το `setupStyle` όπου ζει η πολιτική εκτύπωσης.
+import { liveStrokeInk as tagInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+
+/** Η επιφάνεια του χαπιού: χαρτί όταν τυπώνεται (ένα έγχρωμο φόντο θα διέρρεε στο `monochrome`). */
+function tagSurface(color: string): string {
+  return getPrintColorPolicy() !== null ? PRINT_PAPER_HEX : color;
+}
 
 /** Below this zoom scale, tags are hidden to reduce clutter. Matches minScale (0.1) from
  * transform-config so tags appear at every usable zoom level. */
@@ -198,8 +209,8 @@ export function drawLeaderLine(
   if (Math.hypot(dx, dy) < LEADER_MIN_DISTANCE_PX) return;
 
   ctx.save();
-  ctx.strokeStyle = style.leaderColor;
-  ctx.lineWidth = LEADER_WIDTH_PX;
+  ctx.strokeStyle = tagInk(style.leaderColor);
+  ctx.lineWidth = liveStrokeWidthPx(LEADER_WIDTH_PX);
   const dash = LEADER_DASH_PATTERN[style.leaderStyle];
   ctx.setLineDash(dash as unknown as number[]);
   ctx.beginPath();
@@ -249,17 +260,17 @@ export function drawPillTag(
   const y = screenCenter.y - pillH / 2;
 
   pillPath(ctx, x, y, pillW, pillH, PILL_RADIUS);
-  ctx.fillStyle = style.pillBgColor;
+  ctx.fillStyle = tagSurface(style.pillBgColor);
   ctx.fill();
   if (style.borderWidthPx > 0) {
-    ctx.lineWidth = style.borderWidthPx;
-    ctx.strokeStyle = kindColor;
+    ctx.lineWidth = liveStrokeWidthPx(style.borderWidthPx);
+    ctx.strokeStyle = tagInk(kindColor);
     // Solid border irrespective of leader style.
     ctx.setLineDash([]);
     ctx.stroke();
   }
 
-  ctx.fillStyle = contrastTextColor(style.pillBgColor);
+  ctx.fillStyle = tagInk(contrastTextColor(tagSurface(style.pillBgColor)));
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.fillText(mark, screenCenter.x, screenCenter.y);

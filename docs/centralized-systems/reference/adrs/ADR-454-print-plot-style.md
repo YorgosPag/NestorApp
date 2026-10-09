@@ -104,6 +104,14 @@ PrintDialog (plotStyle Select, μόνο 2Δ)
 
 ## Changelog
 
+- **2026-10-09** — **Η πολιτική μαθαίνει τις εικόνες, και τέσσερις ζωγράφοι μαθαίνουν την πολιτική** (ADR-909 Β2.6,
+  §6.4). (α) **`plotStyleGreysImages(style)`**: σε `monochrome`/`grayscale` κάθε raster *(εικόνα υλικού, «γυμνή»
+  εικόνα)* τυπώνεται σε **κλίμακα του γκρι** — Revit «Black Lines»: *raster images and solid patterns in
+  grayscale*. (β) **`liveStrokeInk` / `liveStrokeWidthPx` / `liveSymbolFill`** *(`adaptive-entity-color`)*: για
+  ζωγράφους που θέτουν `ctx.strokeStyle` μόνοι τους, έξω από `setupStyle` και `bim-line-weight-resolver`. Τους
+  ρωτούν: γραμμοσκίαση, ετικέτα ανοίγματος, είδη υγιεινής, κιγκλίδωμα, poché υλικού. 🔴 **Η κλάση μετρήθηκε και
+  δεν έκλεισε**: ~70 σημεία σε 38 αρχεία του `bim/renderers` — τα βλέπει μόνο πύλη pixels σε πραγματικό browser.
+
 - **2026-10-09** — **Τρία πράγματα που η πολιτική δεν έλεγε** (ADR-909 Β2.5, μετρημένα ζωντανά — ADR-909 §6.3).
   (α) **`minLineWidthPx`**: δάπεδο πάχους που το δηλώνει **η απόδοση** *(εικόνα που θα μικρύνει πριν τη δει
   άνθρωπος)*· η εκτύπωση σε χαρτί δεν το ορίζει και βγαίνει όπως πριν. (β) **`PRINT_PAPER_HEX` +

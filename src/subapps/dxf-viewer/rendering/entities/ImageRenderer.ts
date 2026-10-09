@@ -47,10 +47,10 @@ import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { toRenderGripInfo } from './shared/grip-utils';
-import { HatchImageCache } from './shared/hatch-image-cache';
+// ADR-643 Φ1 SSoT (reused) — η ΜΙΑ αποθήκη «γυμνών» εικόνων (identity src + CORS), ADR-909 Β2.6.
+import { imageEntityImageCache, imageEntityResolveSpec } from './shared/shared-image-caches';
+import { getPrintColorPolicy } from '../../config/print-color-policy';
 import { imageIntrinsicSize } from './shared/image-intrinsic-size';
-// ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
-import { markAllCanvasDirty } from '../core/frame-scheduler-api';
 // ADR-736 Φ2 — το οπτικό συμβόλαιο του «δεν έχω (ακόμη) περιεχόμενο» (πλαίσιο + όνομα).
 import { paintImagePlaceholder } from './shared/image-placeholder-paint';
 
@@ -60,16 +60,6 @@ function imageEntityVertices(e: ImageEntity): Point2D[] {
 }
 
 export class ImageRenderer extends BaseEntityRenderer {
-  /**
-   * ADR-643 Φ1 SSoT (reused) — identity `resolveSrc` (το `url` ΕΙΝΑΙ ήδη το src) +
-   * `crossOrigin: 'anonymous'` (remote asset δεν πρέπει να «μολύνει» τον καμβά).
-   */
-  private readonly imageCache = new HatchImageCache(
-    markAllCanvasDirty,
-    async (url) => url,
-    'anonymous',
-  );
-
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isImageEntity(entity as Entity)) return;
     const e = entity as unknown as ImageEntity;
@@ -96,7 +86,11 @@ export class ImageRenderer extends BaseEntityRenderer {
       return;
     }
 
-    const img = this.imageCache.resolve(e.url);
+    // ADR-909 Β2.6 — κοινή αποθήκη (η λήψη εκτός οθόνης τη βρίσκει προφορτωμένη) + τόνος εκτύπωσης:
+    // σε `monochrome`/`grayscale` η εικόνα ζητείται γκρι (Revit «Black Lines»).
+    const img = imageEntityImageCache.resolve(
+      imageEntityResolveSpec(e.url, getPrintColorPolicy()?.style ?? null),
+    );
     if (!img) {
       this.drawPlaceholder(corners);
       return;

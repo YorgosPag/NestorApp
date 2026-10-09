@@ -153,7 +153,7 @@ function FloorplanPreviewFigure({ preview }: { readonly preview: FloorplanPrevie
     );
   }
 
-  const { recipe, blob, unruledTypes } = preview.prepared;
+  const { recipe, blob, unruledTypes, fidelity } = preview.prepared;
   return (
     <figure className="flex flex-col gap-2">
       <figcaption className="text-sm font-medium text-muted-foreground">{t('publishFloorplan.preview')}</figcaption>
@@ -175,6 +175,12 @@ function FloorplanPreviewFigure({ preview }: { readonly preview: FloorplanPrevie
           {t('publishFloorplan.unruled', { types: unruledTypes.join(', ') })}
         </p>
       )}
+      {/* ADR-909 Β2.6 — ό,τι έχασε η εικόνα έναντι του σχεδίου, με το όνομά του: ποτέ σιωπηλό γκρι. */}
+      {fidelity.map((note) => (
+        <p key={note.code} role="alert" className="text-xs text-destructive">
+          {t(`publishFloorplan.fidelity.${note.code}`, { count: note.count })}
+        </p>
+      ))}
     </figure>
   );
 }

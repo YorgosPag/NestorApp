@@ -31,6 +31,7 @@ import {
   type RgbaColor,
 } from './color-math';
 import { resolveDxfCanvasBackgroundHex } from './color-config';
+import { lineweightDisplayState } from './lineweight-display-px';
 import {
   applyPlotColor,
   getPrintColorPolicy,
@@ -49,6 +50,41 @@ import {
  */
 export function liveDrawingSurfaceHex(): string {
   return getPrintColorPolicy() !== null ? PRINT_PAPER_HEX : resolveDxfCanvasBackgroundHex();
+}
+
+/**
+ * **Το μελάνι μιας γραμμής όπως ζωγραφίζεται ΤΩΡΑ** (ADR-909 Β2.6): print pass ⇒ η πολιτική εκτύπωσης
+ * (ρόλος `'ink'`)· ζωντανή οθόνη ⇒ το χρώμα **αυτούσιο**, χωρίς καμία προσαρμογή.
+ *
+ * 🔴 Για ζωγράφους που βάζουν `ctx.strokeStyle` **μόνοι τους**, έξω από το `setupStyle` και τον
+ * `bim-line-weight-resolver` — εκεί η πολιτική δεν φτάνει ποτέ. Μετρημένο ζωντανά (2026-10-09, δημόσια
+ * κάτοψη `monochrome`): η ετικέτα ανοίγματος (πορτοκαλί/γκριζογάλανο), τα είδη υγιεινής (`#b45309`) και οι
+ * ορθοστάτες του κιγκλιδώματος (`#607080`) ήταν τα **μόνα** χρωματιστά pixels της εικόνας.
+ *
+ * ⚠️ Η κλάση **δεν έκλεισε**: ~70 σημεία σε 38 αρχεία του `bim/renderers` θέτουν `strokeStyle` ωμά. Εδώ
+ * περνούν όσα **μετρήθηκαν**· τα υπόλοιπα τα βλέπει μόνο πύλη pixels σε πραγματικό browser (ADR-909 §6.4).
+ */
+export function liveStrokeInk(color: string): string {
+  const policy = getPrintColorPolicy();
+  return policy ? applyPlotColor(color, null, policy) : color;
+}
+
+/**
+ * **Το πάχος μιας γραμμής σε px όπως ζωγραφίζεται ΤΩΡΑ**: print pass ⇒ ποτέ κάτω από το δάπεδο της
+ * απόδοσης (`PrintColorPolicy.minLineWidthPx`)· ζωντανή οθόνη ⇒ **αυτούσιο**. Αδελφός του
+ * {@link liveStrokeInk} για ζωγράφους με σταθερό πάχος σε px (`RENDER_LINE_WIDTHS`).
+ */
+export function liveStrokeWidthPx(px: number): number {
+  return getPrintColorPolicy() !== null ? Math.max(lineweightDisplayState().hairlinePx, px) : px;
+}
+
+/**
+ * **Γέμισμα που στην οθόνη μένει ΑΥΤΟΥΣΙΟ** (παλέτα συμβόλου, χωρίς προσαρμογή στο φόντο) αλλά σε print
+ * pass περνά από την πολιτική όπως κάθε σώμα BIM ({@link adaptFillTintForCanvas} — γκρι της δικής του
+ * φωτεινότητας στο `monochrome`, ίδια διαφάνεια).
+ */
+export function liveSymbolFill(fill: string): string {
+  return getPrintColorPolicy() !== null ? adaptFillTintForCanvas(fill) : fill;
 }
 
 // ============================================================================

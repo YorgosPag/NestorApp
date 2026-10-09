@@ -10,13 +10,17 @@
  */
 
 import type { HatchContourPen } from '../../types/entities';
-import { resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
+import { resolveHatchContourWidthPx } from '../../bim/hatch/hatch-properties';
 import { applyEntityLinetypeDash } from './base-entity-style-helpers';
 import { resolveLinetypePatternMm } from '../linetype-dash-resolver';
 
 /**
- * Sets strokeStyle/lineWidth/dash from the contour pen (falling back to the hatch's own
- * fill color / a 1px hairline / solid), then calls `drawPath` and strokes.
+ * Sets strokeStyle/lineWidth/dash from the contour pen (a 1px hairline / solid when unset),
+ * then calls `drawPath` and strokes.
+ *
+ * ADR-909 Β2.6 — `color` is the **resolved** pen colour (`contour.color ?? fill colour`, already
+ * through the print policy when a print pass is active). This leaf used to read `contour.color`
+ * itself, so a pen colour reached the paper raw; the caller owns the policy question now.
  *
  * ADR-510 Φ2 — resolve-then-reset pairing (mirror `BaseEntityRenderer.setupStyle`): reset
  * to solid first, THEN apply the resolved pattern iff one exists. Absent/unknown/
@@ -26,12 +30,12 @@ import { resolveLinetypePatternMm } from '../linetype-dash-resolver';
 export function strokeHatchContourPen(
   ctx: CanvasRenderingContext2D,
   contour: HatchContourPen | undefined,
-  fallbackColor: string,
+  color: string,
   scale: number,
   drawPath: () => void,
 ): void {
-  ctx.strokeStyle = contour?.color ?? fallbackColor;
-  ctx.lineWidth = contour?.lineweightMm !== undefined ? resolveHatchLineWidthPx(contour.lineweightMm) : 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = resolveHatchContourWidthPx(contour?.lineweightMm);
   ctx.setLineDash([]);
   applyEntityLinetypeDash(ctx, { dashMm: resolveLinetypePatternMm(contour?.linetypeName) }, scale);
   drawPath();

@@ -121,7 +121,8 @@ async function capture2dScene(
     scaleDenominator: request.scaleDenominator,
     plotStyle: request.plotStyle,
   };
-  // ADR-608 hybrid — το vector path είναι πλέον async (προ-decode εικόνων)· raster μένει sync.
+  // Και οι δύο δρόμοι είναι async για τον ίδιο λόγο: οι εικόνες αποκωδικοποιούνται ΠΡΙΝ από τη
+  // σύγχρονη απόδοση (vector: ADR-608 hybrid · raster: ADR-909 Β2.6 — έβγαιναν επίπεδο γκρι).
   return request.outputMode === 'raster'
     ? captureCurrent2dView(capture2dInput)
     : captureCurrent2dViewVector(capture2dInput);

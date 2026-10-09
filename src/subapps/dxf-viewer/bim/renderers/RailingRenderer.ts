@@ -17,7 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveStrokeInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isRailingEntity } from '../../types/entities';
@@ -69,8 +69,9 @@ export class RailingRenderer extends BaseEntityRenderer {
     const params = railing.params;
 
     // Path centreline.
-    this.ctx.strokeStyle = railingComponentColorHex(params, 'rail') ?? RAILING_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    // ADR-909 Β2.6 — print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους· οθόνη ⇒ αυτούσια.
+    this.ctx.strokeStyle = liveStrokeInk(railingComponentColorHex(params, 'rail') ?? RAILING_STROKE);
+    this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.NORMAL);
     this.strokePolyline(symbol.pathStroke);
 
     // Post plan footprints (rotated squares / circles).

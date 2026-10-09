@@ -32,6 +32,7 @@ import {
   capturePublicFloorplan,
   type PublicFloorplanCaptureRefusal,
 } from '../../print/public-floorplan/capture-public-floorplan';
+import type { PrintFidelityNote } from '../../print/print-fidelity';
 import type { ExportDeps } from '../../export/types';
 import { announceSupersededFiles, archivedFileIdsOf } from '../publish-shared/announce-superseded-files';
 
@@ -43,6 +44,8 @@ export interface PreparedFloorplan {
   readonly idempotencyKey: string;
   /** Τύποι στοιχείων που το προφίλ δεν γνωρίζει και έμειναν έξω — ο διάλογος τους ονομάζει. */
   readonly unruledTypes: readonly string[];
+  /** Ό,τι έχασε η εικόνα έναντι του σχεδίου (εικόνα υλικού που δεν φόρτωσε κ.λπ.) — ο διάλογος το ονομάζει. */
+  readonly fidelity: readonly PrintFidelityNote[];
 }
 
 /** Γιατί δεν υπάρχει εικόνα να φανεί: δεν υπάρχει ενεργό επίπεδο με σχέδιο, ή η λήψη αρνήθηκε. */
@@ -77,6 +80,7 @@ export async function prepareFloorplanPublication(
       levelId,
       idempotencyKey: generateIdempotencyKey(),
       unruledTypes: capture.unruledTypes,
+      fidelity: capture.fidelity,
     },
   };
 }

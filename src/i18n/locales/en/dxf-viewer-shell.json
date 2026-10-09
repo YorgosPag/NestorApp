@@ -7819,6 +7819,12 @@
     "preparing": "Preparing the image…",
     "previewMeta": "{width} × {height} px · {size}",
     "unruled": "Some elements were left out because their type has not been reviewed for public floor plans yet: {types}",
+    "fidelity": {
+      "hatch-image-solid": "{count, plural, one {# material fill could not load its image and is shown as a flat colour.} other {# material fills could not load their images and are shown as a flat colour.}} Close and reopen this dialog to try again.",
+      "image-dropped": "{count, plural, one {# image could not be loaded and is missing from the floor plan.} other {# images could not be loaded and are missing from the floor plan.}} Close and reopen this dialog to try again.",
+      "hatch-lines-dropped": "{count, plural, one {# hatch is shown as an outline only, without its pattern.} other {# hatches are shown as outlines only, without their patterns.}}",
+      "hatch-density-collapsed": "{count, plural, one {# hatch is too dense and is shown as a tint instead of lines.} other {# hatches are too dense and are shown as a tint instead of lines.}}"
+    },
     "submit": "Publish",
     "publishing": "Sending…",
     "cancel": "Cancel",

@@ -31,6 +31,7 @@ const preparedOf = (tag: string): PreparedFloorplan =>
     levelId: 'lvl_1',
     idempotencyKey: `idk_${tag}`,
     unruledTypes: [],
+    fidelity: [],
   }) as unknown as PreparedFloorplan;
 
 const DEPS = { activeLevelId: 'lvl_1' } as unknown as ExportDeps;

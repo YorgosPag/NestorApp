@@ -43,9 +43,12 @@ import { fillHatchGradient, traceHatchBoundary } from './shared/hatch-gradient-p
 import {
   resolveImageFillOrigin, computeImageTileMatrix, fillHatchPattern, drawImageGrout, averageImageColor,
 } from './shared/hatch-image-paint';
-import { HatchImageCache } from './shared/hatch-image-cache';
-// ADR-653 Φ8 — variant key SSoT: «τι ζωγραφίζεται» (υλικό + tint), όχι σκέτο assetId.
-import { imageFillVariantKey } from './shared/hatch-image-variant-key';
+// ADR-909 Β2.6 — ΜΙΑ αποθήκη εικόνων υλικού για κάθε αποδότη (οθόνη + λήψη εκτός οθόνης) και ΜΙΑ απάντηση
+// στο «ποια εικόνα ζητώ» (variant key ADR-653 Φ8 + τόνος εκτύπωσης). Η προφόρτωση ζητά το ίδιο κλειδί.
+import { hatchFillImageCache, imageFillResolveSpec } from './shared/shared-image-caches';
+import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
+// ADR-667 — το χρώμα γεμίσματος υπό πολιτική εκτύπωσης: το ΙΔΙΟ SSoT με το vector PDF (raster ≡ vector).
+import { resolveHatchFillHex } from '../../print/vector/hatch-fill-style';
 // ADR-531 Φ5b.6 / ADR-667 Απόφαση 6 — screen-space μοτίβο: οι σταθερές ΚΑΙ η αντιστοιχία τους στο
 // χαρτί ζουν σε ΕΝΑ SSoT, ώστε το vector PDF export να μη ξαναγράψει `45`/`3` ως σκέτα literals
 // (N.18: το jscpd ΔΕΝ πιάνει σκέτο literal ⇒ η διπλοτυπία θα περνούσε πράσινη και θα ήταν λάθος).
@@ -57,8 +60,6 @@ import {
 // ρωτά τώρα ΚΑΙ το vector PDF export, με τη δική του κλίμακα (mm/world αντί px/world). Ήταν
 // module-private εδώ ⇒ το χαρτί δεν είχε καμία προστασία και τύπωνε συμπαγή μαύρη μάζα.
 import { HATCH_COLLAPSE_ALPHA, isHatchDensityTooHighOnScreen } from './shared/hatch-density-lod';
-// ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
-import { markAllCanvasDirty } from '../core/frame-scheduler-api';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 /** Πάνω από τόσα segments ενεργοποιείται το viewport culling (αλλιώς ασύμφορο). */
@@ -111,8 +112,6 @@ export class HatchRenderer extends BaseEntityRenderer {
   private readonly segCache = new Map<string, { sig: string; segs: ReturnType<typeof buildHatchEntitySegments> }>();
   /** ADR-531 Φ5b.6 — cache του screen-space raster `CanvasPattern` ανά χρώμα (tile = σταθερό px). */
   private readonly screenPatternCache = new Map<string, CanvasPattern | null>();
-  /** ADR-643 Φ1 — live cache decoded εικόνων υλικού· async load → dirty-frame (ADR-040). */
-  private readonly imageCache = new HatchImageCache(markAllCanvasDirty);
   /** ADR-643 Φ1 / ADR-653 Φ8 — `CanvasPattern` (repeat) ανά variant key· size/angle/scale στο DOMMatrix. */
   private readonly imagePatternCache = new Map<string, CanvasPattern | null>();
   /** ADR-643 Φ1 / ADR-653 Φ8 — μέσο χρώμα εικόνας ανά variant key (LOD tint fallback)· `null`=taint. */
@@ -212,7 +211,12 @@ export class HatchRenderer extends BaseEntityRenderer {
       this.ctx.globalAlpha *= options.alpha;
     }
 
-    const color = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
+    // ADR-909 Β2.6 — σε print pass το χρώμα περνά από την πολιτική (ίδιο SSoT με το vector PDF). Μετρημένο
+    // ζωντανά: το `hatch.fillColor` έφτανε **ωμό** στον καμβά ⇒ γκρι `#808080` γραμμές σε `monochrome`.
+    const printPolicy = getPrintColorPolicy();
+    const color = printPolicy
+      ? resolveHatchFillHex(hatch, printPolicy)
+      : hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
 
     // ADR-507 / ADR-531 Φ5b.6 — «Background color» (AutoCAD DXF 63): γεμίζει την περιοχή ΠΙΣΩ από
     // τις γραμμές μοτίβου (π.χ. ο Τέκτων δίνει λευκό raster_bgcolor → λευκό φόντο + πράσινες γραμμές).
@@ -263,8 +267,11 @@ export class HatchRenderer extends BaseEntityRenderer {
     // Στυλ + dash pattern + stroke: `strokeHatchContourPen` (N.7.1 — extracted κρατά αυτό το
     // αρχείο ≤500 γραμμές).
     if (isHatchContourVisible(hatch)) {
+      const penColor = hatch.contourPen?.color;
+      const contourColor = penColor === undefined ? color
+        : printPolicy ? applyPlotColor(penColor, hatch.colorAci ?? null, printPolicy) : penColor;
       strokeHatchContourPen(
-        this.ctx, hatch.contourPen, color, this.transform.scale, () => this.drawBoundaryPath(paths),
+        this.ctx, hatch.contourPen, contourColor, this.transform.scale, () => this.drawBoundaryPath(paths),
       );
     }
 
@@ -401,15 +408,9 @@ export class HatchRenderer extends BaseEntityRenderer {
   ): void {
     // ADR-653 Φ8 — ΕΝΑ variant key τρέφει ΚΑΙ τα τρία caches (decoded image / pattern /
     // μέσο χρώμα), ώστε καφέ vs άσπρη/μαύρη εκδοχή του ίδιου υλικού να μη συγκρούονται.
-    const key = imageFillVariantKey(imageFill);
-    const img = this.imageCache.resolve({
-      key,
-      assetId: imageFill.assetId,
-      tint: imageFill.tint,
-      procedural: imageFill.procedural,
-      tileWidthMm: imageFill.tileWidth,
-      tileHeightMm: imageFill.tileHeight,
-    });
+    const spec = imageFillResolveSpec(imageFill, getPrintColorPolicy()?.style ?? null);
+    const key = spec.key;
+    const img = hatchFillImageCache.resolve(spec);
     if (!img || this.isImageTileTooSmall(imageFill)) {
       const tint = img
         ? this.cachedAverageColor(key, img) ?? fallbackColor
