@@ -1466,6 +1466,13 @@
         "checkLevelBuildingScope"
       ],
       "reason": "ADR-845 Ο-18 (2026-09-10) — ΣΧΕΔΙΑΣΜΕΝΗ επιφάνεια, όχι διαρροή. Ο κριτής «δηλώνει αυτό το επίπεδο κτήριο που ΔΕΝ περιέχει τον όροφό του;» πρέπει να απαντηθεί ΚΑΙ ΣΤΟΝ ΔΙΑΚΟΜΙΣΤΗ: το `dxf_viewer_levels` δέχεται γραφές από HTTP, και ένας τύπος TypeScript (`LevelScopeAssignment`, §7.14) ΔΕΝ ταξιδεύει στο σύρμα — φυλάει τον εισαγωγέα, όχι το σύνορο. Καταναλωτής: `app/api/dxf-levels/_shared/level-scope-guards.ts`. ⚠️ ΓΙΑΤΙ ΟΧΙ ΑΝΤΙΓΡΑΦΟ ΣΤΟ `app/api/`: δύο υλοποιήσεις του ΙΔΙΟΥ κριτή αποκλίνουν σιωπηλά, και εδώ η απόκλιση δεν βγάζει σφάλμα — βγάζει κάτοψη σε ΛΑΘΟΣ ΚΤΗΡΙΟ. Το σύμβολο είναι καθαρή συνάρτηση (μηδέν three.js, μηδέν React), άρα η εξαγωγή του δεν σύρει τίποτα από το subapp."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/print/public-floorplan/pixel-gate/PublicFloorplanPixelGateHarness.tsx",
+      "symbols": [
+        "PublicFloorplanPixelGateHarness"
+      ],
+      "reason": "ADR-909 §6.7 / CHECK 3.101 — το όργανο της πύλης pixels της δημόσιας κάτοψης. Η σελίδα δοκιμής `/test-harness/public-floorplan-pixels` (404 σε παραγωγή) ζητά ΜΟΝΟ αυτό το σύμβολο: το σχέδιο-δείγμα, η λήψη και ο καταγραφέας γραμμών μένουν ιδιωτικά μέσα στο subapp, αντί να ανοίξουν δέκα εσωτερικά σύμβολα προς το src/app."
     }
   ]
 }

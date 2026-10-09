@@ -28,6 +28,7 @@ const DEDICATED_SPECS = {
   cameraMotion: '**/test-harness/camera-motion/camera-motion.e2e.spec.ts',
   addressFieldWidth: '**/test-harness/address-field-width/address-field-width.e2e.spec.ts',
   publicReflow: '**/public-site/reflow/public-reflow.e2e.spec.ts',
+  publicFloorplanPixels: '**/public-floorplan/pixel-gate/public-floorplan-pixels.e2e.spec.ts',
 } as const;
 
 /** Ό,τι ανήκει σε ειδικό project, ΔΕΝ ανήκει στα γενικά. Παράγεται — ποτέ δεύτερη λίστα. */
@@ -243,6 +244,29 @@ export default defineConfig({
       },
       testMatch: [DEDICATED_SPECS.publicReflow],
       timeout: 180000,
+    },
+    {
+      /*
+        🖼️ CHECK 3.101 (ADR-909 §6.7) — η πύλη pixels της δημόσιας κάτοψης. ΔΙΚΟ της project:
+
+        1. ⚠️ **Το `timeout` είναι ΚΑΙ του `beforeAll`.** Η μέτρηση γίνεται ΜΙΑ φορά εκεί: έξι λήψεις
+           4096 px (τρεις στάθμες × δύο για το αποτύπωμα) και ανάγνωση όλων των pixels. Αργό ≠ λάθος.
+        2. Το `deviceScaleFactor: 1` κρατά το κάδρο της σελίδας σταθερό· η λήψη ζωγραφίζει σε καμβά εκτός
+           οθόνης με **δικές της** διαστάσεις, άρα το viewport δεν αλλάζει τα pixels που κρίνονται.
+
+        ⚠️ ΚΑΜΙΑ `snapshotPathTemplate`: κρίνει **αριθμούς** (pixels ανά κελί, χρώμα και πάχος κάθε
+        γραμμής), όχι εικόνες-πρότυπα — άρα καμία εξάρτηση από πλατφόρμα (CHECK 3.46 ομάδα Β).
+        ⚠️ Καμία σημαία WebGL: η λήψη είναι Canvas 2D.
+      */
+      name: 'public-floorplan-pixels',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 900 },
+        deviceScaleFactor: 1,
+        navigationTimeout: 120000,
+      },
+      testMatch: [DEDICATED_SPECS.publicFloorplanPixels],
+      timeout: 300000,
     },
   ],
   webServer: {

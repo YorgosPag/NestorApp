@@ -1,7 +1,7 @@
 {
   "adr": "ADR-796 (CHECK 3.62)",
   "note": "Δημόσια επιφάνεια του dxf-viewer, ΑΝΑ ΣΥΜΒΟΛΟ. Ratchet κατά ΤΑΥΤΟΤΗΤΑ: η ανταλλαγή μπλοκάρει.",
-  "generated": "2026-09-12",
+  "generated": "2026-10-09",
   "violations": [],
   "declarations": [
     "src/subapps/dxf-viewer/ai-assistant/dxf-openai-call.ts#ChatCompletionMessage",
@@ -215,7 +215,6 @@
     "src/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas.tsx#PreviewCanvas",
     "src/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas.tsx#PreviewCanvasHandle",
     "src/subapps/dxf-viewer/components/icons/index.ts#CraneIcon",
-    "src/subapps/dxf-viewer/components/modal/ModalLoadingStates.tsx#AnimatedSpinner",
     "src/subapps/dxf-viewer/config/ai-assistant-config.ts#DXF_AI_LIMITS",
     "src/subapps/dxf-viewer/config/color-config.ts#OVERLAY_OPACITY",
     "src/subapps/dxf-viewer/config/color-config.ts#UI_COLORS",
@@ -255,6 +254,7 @@
     "src/subapps/dxf-viewer/overlays/types.ts#OverlayKind",
     "src/subapps/dxf-viewer/overlays/types.ts#Status",
     "src/subapps/dxf-viewer/pdf-background/services/PdfRenderer.ts#PdfRenderer",
+    "src/subapps/dxf-viewer/print/public-floorplan/pixel-gate/PublicFloorplanPixelGateHarness.tsx#PublicFloorplanPixelGateHarness",
     "src/subapps/dxf-viewer/providers/UnifiedProviders.tsx#UnifiedProviders",
     "src/subapps/dxf-viewer/rendering/canvas/core/CanvasManager.ts#CanvasInstance",
     "src/subapps/dxf-viewer/rendering/canvas/core/CanvasManager.ts#CanvasManagerOptions",

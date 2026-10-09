@@ -82,6 +82,10 @@ describe('Τ — πρότυπα και επιλογή', () => {
     const placed = PUBLIC_FLOORPLAN_SECTIONS.flatMap((section) => publicFloorplanGroupsOf(section));
     expect([...placed].sort()).toStrictEqual([...PUBLIC_FLOORPLAN_GROUPS].sort());
     expect(new Set(placed).size).toBe(placed.length);
+    // 🔑 Και **ποια** πάει πού: Model / Annotation του Revit. Χωρίς αυτό, «Κείμενα» κάτω από «Κτίσμα και
+    //    εξοπλισμός» περνούσε πράσινο (μετάλλαξη Γ6).
+    expect(publicFloorplanGroupsOf('model')).toStrictEqual(['furniture', 'electrical', 'heating', 'plumbing']);
+    expect(publicFloorplanGroupsOf('drawing')).toStrictEqual(['texts', 'hatches', 'orientation']);
   });
 
   it('Τ6 το χρώμα δεν είναι μέρος του προτύπου — αλλάζει την εικόνα, όχι το πρότυπο', () => {

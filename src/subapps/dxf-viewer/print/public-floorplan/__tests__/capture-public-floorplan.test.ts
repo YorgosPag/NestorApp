@@ -12,7 +12,7 @@
  *   Λ5  τα bytes που επιστρέφονται είναι ΑΥΤΑ που έβγαλε ο καμβάς (το ίδιο αντικείμενο)
  *   Λ6  🔴 οι εικόνες φορτώνονται ΠΡΙΝ από την απόδοση και ΕΞΩ από την όψη (Β2.6 — έβγαιναν επίπεδο γκρι)
  *   Λ7  εικόνα υλικού που δεν είναι έτοιμη ⇒ ΟΝΟΜΑΣΜΕΝΗ απώλεια στο αποτέλεσμα, ποτέ σιωπηλό γκρι
- *   Λ8  Β2.8 — το ΧΡΩΜΑ της επιλογής φτάνει ΙΔΙΟ σε προφόρτωση, αποδότη και συνταγή
+ *   Λ8  Β2.8 — το ΧΡΩΜΑ της επιλογής φτάνει ΙΔΙΟ σε προφόρτωση, αποδότη, έλεγχο απωλειών και συνταγή
  *   Λ9  Β2.8 — οι ομάδες γράφονται στη συνταγή σε ΚΑΝΟΝΙΚΗ μορφή, όπως κι αν ήρθαν
  */
 
@@ -28,6 +28,7 @@ import {
   setIsolateEffects,
 } from '../../../systems/isolate/IsolateEffectsStore';
 import { convertSceneForCapture, preloadCaptureImages, renderDxfSceneOffscreen } from '../../capture/capture-2d';
+import { missingSceneImageWarnings } from '../../capture/preload-scene-images';
 import {
   capturePublicFloorplan,
   publicFloorplanFrameOf,
@@ -41,7 +42,14 @@ jest.mock('../../capture/capture-2d', () => ({
   preloadCaptureImages: jest.fn(),
 }));
 
+// Ο **πραγματικός** έλεγχος απωλειών, τυλιγμένος μόνο για να φαίνεται με ποιο χρώμα ρωτήθηκε (Λ8).
+jest.mock('../../capture/preload-scene-images', () => {
+  const actual = jest.requireActual<typeof import('../../capture/preload-scene-images')>('../../capture/preload-scene-images');
+  return { ...actual, missingSceneImageWarnings: jest.fn(actual.missingSceneImageWarnings) };
+});
+
 const convert = convertSceneForCapture as jest.Mock;
+const missingImages = missingSceneImageWarnings as jest.Mock;
 const render = renderDxfSceneOffscreen as jest.Mock;
 const preload = preloadCaptureImages as jest.Mock;
 
@@ -218,13 +226,17 @@ describe('Λ — η λήψη', () => {
     expect(capture.fidelity).toStrictEqual([{ code: 'hatch-image-solid', count: 1 }]);
   });
 
-  it('Λ8 το χρώμα της επιλογής φτάνει ΙΔΙΟ σε προφόρτωση, αποδότη και συνταγή', async () => {
+  it('Λ8 το χρώμα της επιλογής φτάνει ΙΔΙΟ σε προφόρτωση, αποδότη, έλεγχο απωλειών και συνταγή', async () => {
     arrange([line('a', 0, 0, 100, 50)]);
 
     const capture = await capturePublicFloorplan({ scene: SOURCE, choice: { ...LISTING, plotStyle: 'colour' } });
 
     expect(preload).toHaveBeenCalledWith(SOURCE, 'colour');
     expect((render.mock.calls[0] as [unknown, unknown, { plotStyle: string }])[2].plotStyle).toBe('colour');
+    // 🔑 Η προφόρτωση ζεσταίνει την εγγραφή **αυτού** του χρώματος· έλεγχος με άλλο θα ρωτούσε άλλη εγγραφή
+    //    και θα έλεγε «δεν φόρτωσε» για εικόνα που φόρτωσε (μετάλλαξη Δ5: επέζησε πριν από αυτή τη γραμμή).
+    expect(missingImages).toHaveBeenCalledTimes(1);
+    expect(missingImages.mock.calls[0][1]).toBe('colour');
     expect(capture.ok && capture.recipe.plotStyle).toBe('colour');
   });
 

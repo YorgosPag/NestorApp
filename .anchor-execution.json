@@ -24,6 +24,10 @@
     {
       "file": "src/components/contacts/e2e/contact-mutation-impact.e2e.spec.ts",
       "why": "ADR-775 §11 δρόμος α: δεν αγγίζει golden (χτίζει τις απαντήσεις με page.route), άρα είναι ο πρώτος υποψήφιος για ενεργοποίηση. Χρειάζεται ζωντανή εφαρμογή στον runner + εγκατεστημένους browsers (~10-20′), κόστος ΜΗ εγκεκριμένο — απόφαση Giorgio."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/print/public-floorplan/pixel-gate/public-floorplan-pixels.e2e.spec.ts",
+      "why": "ADR-909 §6.7 (CHECK 3.101, ΣΕ ΕΞΕΛΙΞΗ): η πύλη pixels της δημόσιας κάτοψης τρέχει τοπικά (`npm run test:public-floorplan-pixels`) αλλά ΔΕΝ έχει ακόμη workflow. Λόγος: η λήψη δεν περιμένει τα σχήματα 3Δ ⇒ το Κ5 είναι ασταθές (2 στις 5 εκτελέσεις), άρα workflow σήμερα θα ήταν τυχαία κόκκινο. Άρση ΜΑΖΙ με το workflow, αφού κλείσει η φάση Γ1β και γραφτεί σταθερή baseline — ⚠️ η δήλωση αυτή ΠΡΕΠΕΙ να σβηστεί τη στιγμή που γράφεται το workflow (το `classifyFile` προτιμά το `exemptWhy` πριν κοιτάξει εκτελεστή)."
     }
   ]
 }

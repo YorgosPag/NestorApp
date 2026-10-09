@@ -5,13 +5,15 @@
  *   Β2  αλλαγή επιλογής ⇒ νέα εικόνα · το παλιό object URL ανακαλείται
  *   Β5  Β2.8 — ίδια επιλογή σε ΝΕΟ αντικείμενο ΔΕΝ ξαναβγάζει την εικόνα (ούτε αλλάζει το κλειδί της)
  *   Β6  Β2.8 — γρήγορες αλλαγές στη σειρά ⇒ ΜΙΑ λήψη, με την τελευταία επιλογή
+ *   Β7  Β2.8 — η αλλαγή περιμένει ΟΛΟ το διάστημα ηρεμίας: ούτε ένα ms νωρίτερα
  *   Β3  νέο snapshot των `collectDeps` ΔΕΝ ξαναβγάζει την εικόνα (ούτε αλλάζει το κλειδί της)
  *   Β4  άρνηση λήψης ⇒ καμία εικόνα, ο λόγος με το όνομά του
  *   Μ1  «ανέβηκε» ≠ «το βλέπει το κοινό»: η δήλωση προηγείται της αγγελίας, και μόνο `published` λέει «δημοσιεύτηκε»
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
+import { DXF_TIMING } from '../../../../config/dxf-timing';
 import type { ExportDeps } from '../../../../export/types';
 import {
   prepareFloorplanPublication,
@@ -139,6 +141,33 @@ describe('Β — η προεπισκόπηση', () => {
 
     expect(prepare).toHaveBeenCalledTimes(2);
     expect(prepare).toHaveBeenLastCalledWith(DEPS, { ...FURNISHED, plotStyle: 'colour' });
+  });
+
+  it('Β7 η αλλαγή περιμένει ΟΛΟ το διάστημα ηρεμίας — ούτε ένα ms νωρίτερα', async () => {
+    prepare.mockResolvedValue({ ok: true, prepared: preparedOf('plain') });
+    const settle = DXF_TIMING.ui.FLOORPLAN_PREVIEW_DEBOUNCE;
+
+    const { result, rerender } = renderHook(
+      ({ choice }) => usePublishFloorplanPreview(() => DEPS, choice),
+      { initialProps: { choice: LISTING } },
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    // 🔑 Η Β6 κάνει τις αλλαγές στο ΙΔΙΟ tick, άρα περνά και με καθυστέρηση 0 (μετάλλαξη Ε1 επέζησε).
+    //    Ο άνθρωπος όμως πατά διακόπτες με δέκατα του δευτερολέπτου ανάμεσα: το διάστημα είναι το συμβόλαιο.
+    jest.useFakeTimers();
+    try {
+      rerender({ choice: FURNISHED });
+      act(() => { jest.advanceTimersByTime(settle - 1); });
+      expect(prepare).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe('preparing');
+
+      act(() => { jest.advanceTimersByTime(1); });
+      expect(prepare).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+    await waitFor(() => expect(result.current.status).toBe('ready'));
   });
 
   it('Β4 άρνηση λήψης ⇒ καμία εικόνα, ο λόγος με το όνομά του', async () => {

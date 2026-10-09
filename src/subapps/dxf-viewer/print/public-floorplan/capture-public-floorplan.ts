@@ -62,7 +62,8 @@ const NOMINAL_DPI = (LONG_SIDE_PX * MM_PER_INCH) / NOMINAL_SHEET_LONG_SIDE_MM;
  * Από αυτό βγαίνει το δάπεδο πάχους: καμία γραμμή κάτω από **1 px εκεί**.
  */
 const SMALLEST_LEGIBLE_WIDTH_PX = 1024;
-const MIN_LINE_WIDTH_PX = LONG_SIDE_PX / SMALLEST_LEGIBLE_WIDTH_PX;
+/** Εξάγεται για την πύλη pixels (CHECK 3.101): κρίνει κάθε γραμμή με **αυτό** το δάπεδο, όχι με δεύτερο αριθμό. */
+export const PUBLIC_FLOORPLAN_MIN_LINE_WIDTH_PX = LONG_SIDE_PX / SMALLEST_LEGIBLE_WIDTH_PX;
 
 interface WorldBounds {
   readonly min: Point2D;
@@ -179,7 +180,7 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
       raster,
       fitMode: 'fit-to-page',
       plotStyle,
-      minLineWidthPx: MIN_LINE_WIDTH_PX,
+      minLineWidthPx: PUBLIC_FLOORPLAN_MIN_LINE_WIDTH_PX,
     });
     layPaperBehind(canvas);
 

@@ -435,6 +435,8 @@ describe('Π — χειρόγραφα γεγονότα του πραγματικ
       'src/subapps/dxf-viewer/e2e/dxf-visual-regression.spec.ts',
       'src/subapps/dxf-viewer/e2e/visual-cross-browser.spec.ts',
       'src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundCanvas.e2e.spec.ts',
+      // ADR-909 §6.7 — προσωρινή: φεύγει ΜΑΖΙ με το workflow της πύλης pixels (μετά τη Γ1β).
+      'src/subapps/dxf-viewer/print/public-floorplan/pixel-gate/public-floorplan-pixels.e2e.spec.ts',
     ]);
     for (const entry of declarations.exempt) expect(entry.why.length).toBeGreaterThan(40);
 

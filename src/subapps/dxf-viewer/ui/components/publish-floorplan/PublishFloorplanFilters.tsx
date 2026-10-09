@@ -61,15 +61,16 @@ export function PublishFloorplanFilters({
     label: t(`publishFloorplan.filters.presets.${id}`),
     disabled,
   }));
-  // «Προσαρμοσμένο» δεν διαλέγεται — **προκύπτει**. Φαίνεται μόνο όταν ισχύει.
-  if (preset === CUSTOM_PRESET) {
-    presetOptions.push({ value: CUSTOM_PRESET, label: t('publishFloorplan.filters.presets.custom'), disabled: true });
-  }
+  // «Προσαρμοσμένο» δεν διαλέγεται — **προκύπτει**. Γι' αυτό δεν είναι τέταρτο κουμπί *(μετρημένο ζωντανά: η σειρά
+  // γινόταν 370 px σε στήλη 272 και έπεφτε πάνω στην εικόνα)*· το λέει ο τίτλος, και κανένα κουμπί δεν είναι αναμμένο.
+  const presetLegend = preset === CUSTOM_PRESET
+    ? `${t('publishFloorplan.filters.preset')} · ${t('publishFloorplan.filters.presets.custom')}`
+    : t('publishFloorplan.filters.preset');
 
   return (
     <aside className="flex flex-col gap-4 text-sm" aria-label={t('publishFloorplan.filters.title')}>
       <PrintRadioGroup
-        legend={t('publishFloorplan.filters.preset')}
+        legend={presetLegend}
         name="publish-floorplan-preset"
         value={preset}
         options={presetOptions}
