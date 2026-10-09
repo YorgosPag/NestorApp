@@ -26,12 +26,10 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import { drawMeshSilhouette, drawMeshFallbackBox } from './mesh-silhouette-draw';
+import { meshAssetOf } from '../mesh-library/entity-mesh-asset';
 import { getFurnitureGrips } from '../furniture/furniture-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
-
-/** BIM category → Storage library folder for furniture meshes. */
-const FURNITURE_MESH_CATEGORY = 'furniture';
 
 /** Plan-symbol palette — interior furniture (neutral tan). */
 const FURNITURE_PALETTE = {
@@ -58,12 +56,14 @@ export class FurnitureRenderer extends BimFootprintRenderer {
 
     // ADR-411 — prefer the per-asset top-view silhouette + interior detail lines
     // (shared SSoT). Falls back to the authored rectangle + glyph until loaded.
-    const { assetId, position, rotationDeg, sceneUnits } = furniture.params;
+    // ADR-909 Γ1β — «ποιο σχήμα» από το ΕΝΑ SSoT που ρωτά και η προφόρτωση της λήψης.
+    const asset = meshAssetOf(furniture);
+    const { position, rotationDeg, sceneUnits } = furniture.params;
     const drew = drawMeshSilhouette({
       ctx: this.ctx,
       worldToScreen: (p) => this.worldToScreen(p),
-      silhouette: bimMeshCache.getSilhouette(FURNITURE_MESH_CATEGORY, assetId),
-      edges: bimMeshCache.getTopEdges(FURNITURE_MESH_CATEGORY, assetId),
+      silhouette: asset ? bimMeshCache.getSilhouette(asset.category, asset.assetId) : null,
+      edges: asset ? bimMeshCache.getTopEdges(asset.category, asset.assetId) : null,
       transform: { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' },
       palette: FURNITURE_PALETTE,
       lineWidth: RENDER_LINE_WIDTHS.NORMAL,
@@ -73,8 +73,8 @@ export class FurnitureRenderer extends BimFootprintRenderer {
       // Cache-miss → πυροδότησε το lazy glTF load (καθρέφτης `MepFixtureRenderer.ts:111` / ImportedMesh).
       // Idempotent + de-duped· το `markAllCanvasDirty` του cache ξαναβάφει το 2Δ μόλις φορτώσει το silhouette →
       // μηδέν 3Δ roundtrip. Authored rectangle (dashed όσο φορτώνει) + generic glyph μέχρι τότε.
-      if (assetId) bimMeshCache.preload(FURNITURE_MESH_CATEGORY, assetId);
-      const loading = bimMeshCache.getLoadState(FURNITURE_MESH_CATEGORY, assetId) === 'loading';
+      if (asset) bimMeshCache.preload(asset.category, asset.assetId);
+      const loading = asset !== null && bimMeshCache.getLoadState(asset.category, asset.assetId) === 'loading';
       drawMeshFallbackBox({
         ctx: this.ctx,
         worldToScreen: (p) => this.worldToScreen(p),

@@ -18,6 +18,7 @@
 
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { getPrintColorPolicy } from '../../config/print-color-policy';
 import { fillRingsEvenOdd, tracePolygonScreenPath } from './bim-polygon-render';
 import type { SilPoint, SilSegment } from '../mesh-library/mesh-silhouette';
 
@@ -247,9 +248,12 @@ export function drawMeshFallbackBox(args: DrawMeshFallbackBoxArgs): void {
   ctx.fill();
 
   // Outline — dashed provisional όσο φορτώνει, αλλιώς solid.
+  // ADR-909 Γ1β — το «φορτώνει» είναι υπόσχεση για το **επόμενο frame**· μια λήψη (print pass) ζωγραφίζει μία
+  // φορά, άρα εκεί δεν μπαίνει ποτέ: το κουτί είναι συμπαγές, και η απώλεια αναφέρεται (`mesh-shape-missing`).
+  const provisional = loading && getPrintColorPolicy() === null;
   ctx.strokeStyle = palette.stroke;
   ctx.lineWidth = lineWidth;
-  ctx.setLineDash(loading ? [...LOADING_DASH] : []);
+  ctx.setLineDash(provisional ? [...LOADING_DASH] : []);
   tracePolygonScreenPath(ctx, worldToScreen, vertices);
   ctx.stroke();
   ctx.setLineDash([]);

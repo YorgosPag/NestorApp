@@ -30,10 +30,8 @@ import { BimFootprintRenderer } from './bim-footprint-renderer';
 import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { ImportedMeshEntity } from '../entities/imported-mesh/imported-mesh-types';
-import {
-  IMPORTED_MESH_CATEGORY,
-  importedMeshAssetId,
-} from '../entities/imported-mesh/imported-mesh-types';
+import { IMPORTED_MESH_CATEGORY } from '../entities/imported-mesh/imported-mesh-types';
+import { meshAssetOf } from '../mesh-library/entity-mesh-asset';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
@@ -118,16 +116,16 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
 
     this.beginPhasedBodyRender(entity, verts, options);
 
-    const { uploadId, nodeName } = mesh.params;
-    const assetId = importedMeshAssetId(uploadId, nodeName);
+    // ADR-909 Γ1β — «ποιο σχήμα» από το ΕΝΑ SSoT που ρωτά και η προφόρτωση της λήψης.
+    const asset = meshAssetOf(mesh);
 
-    if (!this.drawImportedSilhouette(mesh, assetId)) {
+    if (!asset || !this.drawImportedSilhouette(mesh, asset.assetId)) {
       // Cache-miss → πυροδότησε το lazy glTF load (καθρέφτης `MepFixtureRenderer.ts:111`). Idempotent +
       // de-duped μέσα στο `preload`· το `markAllCanvasDirty` του cache ξαναβάφει το 2Δ μόλις φορτώσει →
       // μηδέν 3Δ roundtrip. Το `status='loading'/'error'` guard μπλοκάρει επαναφόρτωση (missing-.glb = κουτί).
-      if (assetId) bimMeshCache.preload(IMPORTED_MESH_CATEGORY, assetId);
+      if (asset) bimMeshCache.preload(asset.category, asset.assetId);
       // Το ορθογώνιο του μετρημένου bbox — dashed όσο φορτώνει («loading»), solid αλλιώς («εδώ είναι»).
-      const loading = bimMeshCache.getLoadState(IMPORTED_MESH_CATEGORY, assetId) === 'loading';
+      const loading = asset !== null && bimMeshCache.getLoadState(asset.category, asset.assetId) === 'loading';
       const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, mesh.faceAppearance);
       drawMeshFallbackBox({
         ctx: this.ctx,

@@ -647,6 +647,15 @@ embedded/textured/anonymous → `side === DoubleSide` + look preserved· overrid
 
 ## 11. Changelog
 
+- **2026-10-09 (§capture-waits-for-shapes — βλ. ADR-909 §6.8)** — Το εισαγόμενο πλέγμα σε **λήψη** (δημόσια κάτοψη,
+  raster PDF) έβγαινε κουτί-εφεδρεία όταν το `.glb` δεν είχε φορτώσει, χωρίς προειδοποίηση· και ακόμη κι όταν είχε
+  φορτώσει, η ακριβής ένωση του §10.9.2 μπορούσε να φτάσει **μετά** τη ζωγραφική (πρόχειρο περίγραμμα στη μία λήψη,
+  ακριβές στην επόμενη). Η λήψη περιμένει πλέον `bimMeshCache.awaitSettled()` (αρχείο **και** ένωση), και ό,τι δεν
+  φόρτωσε αναφέρεται ως `mesh-shape-missing`. Ο `ImportedMeshRenderer` ρωτά το κλειδί του από το κοινό `meshAssetOf`
+  (καμία αλλαγή στο πώς ζωγραφίζει). Το διακεκομμένο «φορτώνει» δεν μπαίνει σε print pass. Η πύλη pixels (CHECK 3.101)
+  έχει πλέον πραγματικό δείγμα `imported-mesh`, δύο κόμβους ενός bundle: ένα υλικό (περίγραμμα + worker) και δύο
+  υλικά (poché ανά slot, με `extras.faceKeyByMaterialIndex`).
+
 - **2026-07-27 (§union-membership — 🐛 Το Φ3α ΞΕΧΑΣΕ τη μία γραμμή του `Entity` union· η περιστροφή
   ΔΕΝ δούλευε ποτέ. IMPLEMENTED UNCOMMITTED, 🔴 browser verify).**
   **Εύρημα 1 — ο τύπος δεν ήταν πολίτης της σκηνής.** Το Φ3α πρόσθεσε το `'imported-mesh'` στο

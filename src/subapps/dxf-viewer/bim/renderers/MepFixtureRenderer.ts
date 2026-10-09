@@ -24,7 +24,8 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
 import type { MepFixtureEntity } from '../types/mep-fixture-types';
-import { resolveFixtureBimCategory, resolveFixtureMeshCategory } from '../types/mep-fixture-types';
+import { resolveFixtureBimCategory } from '../types/mep-fixture-types';
+import { meshAssetOf } from '../mesh-library/entity-mesh-asset';
 import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { paintPolygonHoverHalo, polygonBboxHitTest, mapBimGrips, tracePolygonScreenPath } from './bim-polygon-render';
@@ -106,20 +107,20 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     // footprint (#1) and recentred-origin (#2) fixes. The colour-by-system
     // stroke/fill still tints it. Falls back to the parametric family-symbol until
     // the glTF (and its silhouette) has loaded, or when no asset is set.
-    const assetId = fixture.params.assetId;
-    const meshCategory = resolveFixtureMeshCategory(fixture.params.kind);
-    const silhouette = assetId ? bimMeshCache.getSilhouette(meshCategory, assetId) : null;
+    // ADR-909 Γ1β — «ποιο σχήμα» από το ΕΝΑ SSoT που ρωτά και η προφόρτωση της λήψης.
+    const asset = meshAssetOf(fixture);
+    const silhouette = asset ? bimMeshCache.getSilhouette(asset.category, asset.assetId) : null;
     // Proactive load (belt-and-suspenders): if the asset is set but its silhouette
     // is not cached yet — e.g. the 3D viewport never mounted to trigger the load —
     // kick off the glTF preload so the real top-view appears in 2D too. Idempotent,
     // fire-and-forget; the cache repaints the canvas on completion (ADR-411).
-    if (assetId && !silhouette) bimMeshCache.preload(meshCategory, assetId);
-    const meshDrew = assetId && silhouette
+    if (asset && !silhouette) bimMeshCache.preload(asset.category, asset.assetId);
+    const meshDrew = asset && silhouette
       ? drawMeshSilhouette({
           ctx: this.ctx,
           worldToScreen: (p) => this.worldToScreen(p),
           silhouette,
-          edges: bimMeshCache.getTopEdges(meshCategory, assetId),
+          edges: bimMeshCache.getTopEdges(asset.category, asset.assetId),
           transform: {
             position: fixture.params.position,
             rotationDeg: fixture.params.rotation,

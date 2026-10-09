@@ -34,6 +34,8 @@ jest.mock('../../../bim-3d/library/bim-mesh-library/bim-mesh-cache', () => ({
 
 import { ImportedMeshRenderer } from '../ImportedMeshRenderer';
 import { FurnitureRenderer } from '../FurnitureRenderer';
+import { MepFixtureRenderer } from '../MepFixtureRenderer';
+import { meshAssetOf } from '../../mesh-library/entity-mesh-asset';
 import { bimMeshCache } from '../../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import { IMPORTED_MESH_CATEGORY, importedMeshAssetId } from '../../entities/imported-mesh/imported-mesh-types';
 import type { EntityModel } from '../../../rendering/types/Types';
@@ -84,6 +86,19 @@ function makeFurniture(): EntityModel {
   } as unknown as EntityModel;
 }
 
+/** Είδος υγιεινής· με `assetId` ζωγραφίζεται από σχήμα, χωρίς — από το παραμετρικό του σύμβολο. */
+function makeFixture(assetId: string | undefined): EntityModel {
+  return {
+    id: 'mf1', type: 'mep-fixture', ifcType: 'IfcSanitaryTerminal',
+    params: {
+      kind: 'wc', shape: 'rectangular', width: 400, length: 700, bodyHeightMm: 400, mountingElevationMm: 0,
+      position: { x: 0, y: 0, z: 0 }, rotation: 0, sceneUnits: 'mm', connectors: [],
+      ...(assetId ? { assetId } : {}),
+    },
+    geometry: { footprint: { vertices: SQUARE }, bbox: BBOX, area: 0.28, height: 400 },
+  } as unknown as EntityModel;
+}
+
 beforeEach(() => { preloadMock.mockClear(); });
 
 describe('ADR-683 — render-driven preload on cache-miss (μηδέν 3Δ roundtrip)', () => {
@@ -105,6 +120,42 @@ describe('ADR-683 — render-driven preload on cache-miss (μηδέν 3Δ roundt
     renderer.setTransform({ scale: 1, offsetX: 0, offsetY: 0 });
     renderer.render(makeFurniture(), {});
     expect(preloadMock).toHaveBeenCalledWith('furniture', 'chair_01');
+  });
+
+  it('MepFixtureRenderer → preload(κατηγορία του ΕΙΔΟΥΣ, assetId) σε άδειο cache· χωρίς `assetId` ⇒ κανένα', () => {
+    const renderer = new MepFixtureRenderer(createMockCtx()) as unknown as {
+      setTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
+      render: (e: EntityModel, o?: unknown) => void;
+    };
+    renderer.setTransform({ scale: 1, offsetX: 0, offsetY: 0 });
+    renderer.render(makeFixture('wc_01'), {});
+    expect(preloadMock.mock.calls).toStrictEqual([['sanitary', 'wc_01']]);
+
+    preloadMock.mockClear();
+    renderer.render(makeFixture(undefined), {});
+    expect(preloadMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['ImportedMeshRenderer', () => new ImportedMeshRenderer(createMockCtx()), makeImportedMesh],
+    ['FurnitureRenderer', () => new FurnitureRenderer(createMockCtx()), makeFurniture],
+    ['MepFixtureRenderer', () => new MepFixtureRenderer(createMockCtx()), () => makeFixture('wc_01')],
+  ])('ADR-909 Γ1β 🔴 %s ρωτά το cache ΜΟΝΟ με το κλειδί του `meshAssetOf` — το ίδιο που ζεσταίνει η προφόρτωση της λήψης', (_name, build, make) => {
+    const cache = bimMeshCache as unknown as Record<string, jest.Mock>;
+    Object.values(cache).forEach((fn) => fn.mockClear());
+    const entity = make();
+    const renderer = build() as unknown as {
+      setTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
+      render: (e: EntityModel, o?: unknown) => void;
+    };
+    renderer.setTransform({ scale: 1, offsetX: 0, offsetY: 0 });
+    renderer.render(entity, {});
+
+    const expected = meshAssetOf(entity);
+    if (expected === null) throw new Error('the sample must be mesh-backed');
+    const asked = Object.values(cache).flatMap((fn) => fn.mock.calls);
+    expect(asked.length).toBeGreaterThan(0);
+    for (const call of asked) expect(call).toStrictEqual([expected.category, expected.assetId]);
   });
 
   it('cache-hit (silhouette διαθέσιμο) → ΚΑΝΕΝΑ preload (δεν σπαταλά δίκτυο)', () => {
