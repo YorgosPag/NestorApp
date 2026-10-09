@@ -23,7 +23,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "3c2d49e223534bff94eb7ac29183e02b245767cd1107735a3eea2d875e08af9f",
+    "src/i18n/generated/routes/listing__id.el.json": "b82a63c5bcf85dccfeba2d3461fe2add25eaf9bf8e61657a5d753e7600e97b9c",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9474be008b379de5a6e97c8afd736080f984dcc734fde64f117b151230e7e9e5",
+  "inputsSha256": "e3c0c81ab95d5248f5bb5843ebd8b5956ac99611f2ace54dd2c808473cd305d1",
   "languages": [
     "el"
   ],
@@ -377,14 +377,16 @@
     "src/components/listing-detail/ListingStay.tsx": "a821c13208983bbd0a9b6a822409ace9ac775abacc19c42490e1a520380bc6bb",
     "src/components/listing-detail/ListingStayPets.tsx": "8cba4c4651df6875b5dec93904fe98c9293df0b977669365326b29ca6313b836",
     "src/components/listing-detail/ListingTour.tsx": "0fe4cc12eced5b33843741e444166b1fd5632f9bdd619c66be213648c50360f8",
+    "src/components/listing-detail/ListingVideos.tsx": "60aba5d64f054311a48331b786d6cd06a25cf4c1ce443832b79629180555866b",
     "src/components/listing-detail/listing-attribute-value.ts": "14309ad3fb1014249142673e64eeb9b1bad11a5f3bcb1bc6f1091f1ef0695ce2",
     "src/components/listing-detail/listing-model-stage-metrics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/listing-detail/media/ListingFloorplanPageContent.tsx": "bb734bd0d15ce4446a9affe999aa73f66f6d4633ec11e07e498d8b9c5195c7c5",
     "src/components/listing-detail/media/ListingFloorplanSpotsFigure.tsx": "d4fa183eb6f1600446a4e2d763266b78d565b56a1359a8e04029a623279943ab",
     "src/components/listing-detail/media/ListingMediaPageChrome.tsx": "10c7bd9fd5ee2a57024f842bd93c71b89399d77cc78afb0af5922549bb7f4185",
     "src/components/listing-detail/media/ListingMediaTabs.tsx": "66e1c19c63dce75ba69501230789c388fef6c3b728b187c58627de94823dc7e1",
-    "src/components/listing-detail/media/ListingMediaViewer.tsx": "f483e280c7b4f6cced67771e8c02834429d7d5a64c0d85f7ef0dbd0d11f9d2dd",
+    "src/components/listing-detail/media/ListingMediaViewer.tsx": "94aefe791e1321386cfe6ca3b07f67dde40d4c520ff185e519ec63c06df929f6",
     "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "02505058c9ad95f03efe65649a9342569700d1fbf4c1cc272c8ef7837adfaf91",
+    "src/components/listing-detail/media/ListingVideoStage.tsx": "5a764c168191ca24a455b720987901778c11cabfdb8f10abfb0c96e1fa8355ba",
     "src/components/listings/MarketingAudienceControl.tsx": "5d8748c36941e01444bba536a1cc8fb158e49b70695590cbd14b8ba5006ce61e",
     "src/components/listings/MySavedListingsContent.tsx": "57b239c7f58430eb1b896b40cdd82bc83da4c79f49fa274e38a1aa584d2a0674",
     "src/components/listings/capture-spots/CaptureSpotControl.tsx": "f601ccf6fa11f0734ab82730c134fa0c92892fcbf0a43dbcc8b53299cebd67fe",
@@ -959,6 +961,7 @@
     "src/lib/listings/listing-results-order.ts": "cc71dba5fbd77df6afc22f063469c6725700fc1524821fc4685f154c68668fd7",
     "src/lib/listings/listing-shape-keys.ts": "4434106cb898c44d3c147ffb8252babda539af9f1776f5244566cb73c7963126",
     "src/lib/listings/listing-stats.ts": "87e2e467da5b9abd20886a8002d9263ad9249656d51b32c6a4e9a806214a62b2",
+    "src/lib/listings/listing-video-keys.ts": "db127a1d8208318d2e8f23a55abafb1b55ad5f09a56a9a4c40bc535c7402eb4a",
     "src/lib/listings/listings-geojson.ts": "6c51a6eb6ad82aa195c3b8ddee01c0c3365ea0d75da88432f62532b0a453f14e",
     "src/lib/listings/stay-ledger.ts": "7f7560bdeb467a51cc8961fe3337ca6442aa130e55feeeb5dbd6cb3e6132359f",
     "src/lib/mandate/mandate-actions.ts": "d0664f969eb9f0cb8c5d8ce0b15e0723a153c475303a1b88331ebdecbfd5ec55",
@@ -1000,6 +1003,7 @@
     "src/lib/market/value-zone-request.ts": "5c2c8a14096a6711bc962e233bdf882bbe2d7191367b196dabaf1f75cd31212a",
     "src/lib/market/value-zones.ts": "f37b17fa525f648fac1fbec4488ecb57b71e694f8703bf1ccd2f090be8e63f37",
     "src/lib/media-rights/media-rights-read.ts": "fac5553370ecc9b12fb2575e5ed9de3f086effcfba89b32d943e5ff71325c126",
+    "src/lib/media/media-clock.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/photo-floorplan-spots.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/network-edge/edge-judge.ts": "34eec66d1690d276d3cc8baea18f205ee59565125998f65f9edff296902bd4ea",
     "src/lib/network-edge/edge-sources.ts": "edd60c33eb9730fd991521255da36e7c7db94888705785449fabbca390009c77",
@@ -4775,6 +4779,7 @@
             "media.tabs.floorplan",
             "media.tabs.photos",
             "media.tabs.tour",
+            "media.tabs.video",
             "model.alt.agency",
             "model.alt.ownerDeclared",
             "model.failed",
@@ -4799,12 +4804,20 @@
             "sections.previous",
             "sections.price",
             "video.alt.agency",
-            "video.alt.ownerDeclared"
+            "video.alt.ownerDeclared",
+            "video.failed",
+            "video.loading",
+            "video.note.agency",
+            "video.note.ownerDeclared",
+            "video.play",
+            "video.playLabel",
+            "video.retry"
           ],
           "prefixes": [
             "attributes.group",
             "attributes.label",
-            "model"
+            "model",
+            "video"
           ],
           "whole": false
         },
@@ -12722,7 +12735,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 3,
     "shellFiles": 1130,
-    "sliceBytes": 725026
+    "sliceBytes": 725731
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

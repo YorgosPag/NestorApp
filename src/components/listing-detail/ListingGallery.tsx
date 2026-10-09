@@ -49,8 +49,11 @@ import type { ListingImage, PublicListing } from '@/types/public-listing';
 /**
  * Τα `sizes` της **κορυφαίας** εικόνας — μία στήλη σε κινητό· σε οθόνη η κύρια στήλη της σελίδας (`max-w-7xl` μείον
  * τη στήλη σύνοψης των 22rem και τα κενά, ADR-907 Φ2β-2).
+ *
+ * Εξάγεται για το εξώφυλλο του βίντεο (`ListingVideoStage`): ίδια στήλη, ίδιο πλάτος — δεύτερη συμβολοσειρά θα απέκλινε
+ * την πρώτη μέρα που θα άλλαζε η διάταξη της σελίδας.
  */
-const LEAD_SIZES = '(min-width: 1280px) 912px, (min-width: 1024px) calc(100vw - 26rem), 100vw';
+export const LEAD_SIZES = '(min-width: 1280px) 912px, (min-width: 1024px) calc(100vw - 26rem), 100vw';
 
 /** Τα `sizes` των **μικρογραφιών** — τρεις σε σειρά από το `sm`, δύο σε κινητό. */
 const THUMB_SIZES = '(min-width: 1280px) 300px, (min-width: 1024px) calc((100vw - 26rem) / 3), (min-width: 640px) 33vw, 50vw';

@@ -28,12 +28,13 @@ jest.mock('../../ListingFloorplans', () => ({
 }));
 jest.mock('../../ListingModels', () => ({ ListingModels: () => <div data-testid="models" /> }));
 jest.mock('../../ListingTour', () => ({ ListingTour: () => <div data-testid="tour" /> }));
+jest.mock('../../ListingVideos', () => ({ ListingVideos: () => <div data-testid="videos" /> }));
 
 const DECLARED = { value: { url: '/a', altKey: 'k' }, provenance: 'declared' };
 const GUESSED = { value: { url: '/b', altKey: 'k' }, provenance: 'inferred', confirmedAt: null };
 
-function listing(floorplans: unknown[] = [], models: unknown[] = []) {
-  return { id: 'l1', floorplans, models } as never;
+function listing(floorplans: unknown[] = [], models: unknown[] = [], videos: unknown[] = []) {
+  return { id: 'l1', floorplans, models, videos } as never;
 }
 
 function setQuery(query: string): void {
@@ -101,5 +102,27 @@ describe('ListingMediaViewer', () => {
   it('🔴 Π6 η αγγελία είναι έγγραφο ⇒ το κέλυφος δηλώνεται `flow`, ποτέ `fill`', () => {
     const { container } = render(<ListingMediaViewer listing={listing([DECLARED])} />);
     expect(container.querySelector('[data-media-viewer-layout]')?.getAttribute('data-media-viewer-layout')).toBe('flow');
+  });
+
+  // ADR-907 §10.6 — ως εδώ το `videos[]` γραφόταν στο δημόσιο έγγραφο και καμία οθόνη δεν το έδειχνε.
+  it('🔴 Π7 το βίντεο είναι ΔΕΥΤΕΡΗ καρτέλα, χωρίς πλήθος — και μόνο όταν το φύλλο του θα το έδειχνε', () => {
+    const { unmount } = render(<ListingMediaViewer listing={listing([DECLARED], [DECLARED], [DECLARED])} />);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'listing-detail:media.tabs.photos(3)',
+      'listing-detail:media.tabs.video',
+      'listing-detail:media.tabs.floorplan(1)',
+      'listing-detail:model.heading',
+    ]);
+    unmount();
+
+    // Μαντεμένο βίντεο ⇒ καμία καρτέλα· και επειδή μένουν μόνο οι φωτογραφίες, ούτε λωρίδα.
+    const guessed = render(<ListingMediaViewer listing={listing([], [], [GUESSED])} />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    guessed.unmount();
+
+    setQuery('?mediaTab=video');
+    render(<ListingMediaViewer listing={listing([], [], [DECLARED])} />);
+    expect(screen.getByTestId('videos')).toBeTruthy();
+    expect(screen.queryByTestId('gallery')).toBeNull();
   });
 });

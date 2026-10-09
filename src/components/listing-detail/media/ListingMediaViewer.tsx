@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Ο ΠΡΟΒΟΛΕΑΣ ΜΕΣΩΝ ΤΗΣ ΑΓΓΕΛΙΑΣ** — ο **δημόσιος** προσαρμογέας του `MediaViewerShell`: φωτογραφίες · κάτοψη ·
- * τρισδιάστατο μοντέλο · περιήγηση 360°, σε καρτέλες μέσα στη σελίδα (πρότυπο Zillow/Idealista: ένας προβολέας στην κορυφή).
+ * βίντεο · τρισδιάστατο μοντέλο · περιήγηση 360°, σε καρτέλες μέσα στη σελίδα (πρότυπο Zillow/Idealista: ένας προβολέας στην κορυφή).
  * @related components/shared/media/viewer/MediaViewerShell · features/read-only-viewer (ο εταιρικός προσαρμογέας) · ADR-884 §4.12 Μέρος Δ
  * @module components/listing-detail/media/ListingMediaViewer
  *
@@ -21,7 +21,7 @@
  */
 
 import type { ReactElement, ReactNode } from 'react';
-import { Box, Camera, Compass, Map as MapIcon } from 'lucide-react';
+import { Box, Camera, Compass, Map as MapIcon, Video } from 'lucide-react';
 
 import { MediaViewerShell, type MediaViewerTab } from '@/components/shared/media/viewer/MediaViewerShell';
 import { useActiveMediaTab } from '@/components/shared/media/viewer/useMediaTabParam';
@@ -35,6 +35,7 @@ import { ListingFloorplans } from '../ListingFloorplans';
 import { ListingGallery } from '../ListingGallery';
 import { ListingModels } from '../ListingModels';
 import { ListingTour } from '../ListingTour';
+import { ListingVideos } from '../ListingVideos';
 
 /** Η προεπιλεγμένη όψη — πάντα **πρώτη** καρτέλα, άρα δεν γράφεται στη διεύθυνση (`useActiveMediaTab`). */
 const PHOTOS_TAB = 'photos';
@@ -51,6 +52,7 @@ export function ListingMediaViewer({ listing }: { readonly listing: PublicListin
   // Οι **ίδιοι** κριτές με τα φύλλα (ADR-842 Α7): καρτέλα υπάρχει μόνο όταν το φύλλο της θα ζωγράφιζε κάτι.
   const floorplanCount = listing.floorplans.filter(isPubliclyPresentable).length;
   const modelCount = listing.models.filter(isPubliclyPresentable).length;
+  const videoCount = listing.videos.filter(isPubliclyPresentable).length;
 
   const tabs: MediaViewerTab[] = [{
     id: PHOTOS_TAB,
@@ -59,6 +61,15 @@ export function ListingMediaViewer({ listing }: { readonly listing: PublicListin
     count: listingGalleryImages(listing).length,
     panel: <Stage><ListingGallery listing={listing} /></Stage>,
   }];
+  // Δεύτερη, αμέσως μετά τις φωτογραφίες (ADR-907 §10.3). Χωρίς πλήθος: «Βίντεο (1)» δεν λέει τίποτα όταν το ένα είναι πολιτική.
+  if (videoCount > 0) {
+    tabs.push({
+      id: 'video',
+      label: t('listing-detail:media.tabs.video'),
+      icon: Video,
+      panel: <Stage><ListingVideos listing={listing} /></Stage>,
+    });
+  }
   if (floorplanCount > 0) {
     tabs.push({
       id: 'floorplan',
