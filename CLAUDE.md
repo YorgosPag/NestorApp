@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:c9a558d5cfd4be853ee202f1e117bc5aa552e98e9d245f632f9819ef3992185c -->
+     fingerprint: sha256:c6aec31be231c27d46c9157188be0783cf35d633b5702178c4e7d10fb842f863 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -392,6 +392,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.98** | **Πύλη του συμβολαίου της εφαρμογής κινητού** (ADR-904) — «είναι το `contracts/capture-api/` **ΑΚΡΙΒΩΣ** ό,τι λέει σήμερα ο κώδικας του διακομιστή — ή ένα συμβόλαιο που κάποτε του έμοιαζε, πάνω στο οποίο χτίζ…» · `npm run test:capture-api-contract` · `SKIP_CAPTURE_API_CONTRACT=1` · 📘 `docs/gates/3.98.md` | ⛔ ZERO TOL | — |
 | **3.99** | **Πύλη του ενός γραφέα σημάτων όψεων** (ADR-905) — «γράφει κάποιος σήμα όψης **ΕΞΩ από τον ΕΝΑ γραφέα** — ή αλλάζει την υπόθεση **ΧΩΡΙΣ** να ζητήσει σήμα; (ο αριθμός είναι πληροφορία **χρονισμού** — οι…» · `npm run test:view-signal-authority` · `SKIP_VIEW_SIGNAL_AUTHORITY=1` · 📘 `docs/gates/3.99.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 | **3.100** | **Πύλη της εγγραφής σε αποσυρμένο ακίνητο** (ADR-281) — «γράφει κάποια διαδρομή πάνω σε ακίνητο **χωρίς να ρωτήσει αν είναι αποσυρμένο**; (ο τύπος αναγκάζει το `intent` — **όχι** το να περάσει κάθε route πο…» · `npm run test:retired-property-write` · `SKIP_RETIRED_PROPERTY_WRITE=1` · 📘 `docs/gates/3.100.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3) | — |
+| **3.101** | **Πύλη pixels της δημόσιας κάτοψης** (ADR-909) — «βγαίνει η δημόσια κάτοψη άχρωμη όταν ζητήθηκε άχρωμη, και διαβάζεται κάθε γραμμή της; — για ΚΑΘΕ τύπο στοιχείου, όχι για το σχέδιο που έτυχε να δοκιμ…» · `npm run test:public-floorplan-pixels` · 📘 `docs/gates/3.101.md` | 🔴 RATCHET (Κ0–Κ3) + ⛔ ZERO-TOL (Κ4–Κ6) · μόνο CI (Chromium) | `.public-floorplan-pixels-baseline.json` |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -406,7 +407,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **92** (εκτελεστής 84 + hook 21) ·
-γραμμές εδώ: **82** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **83** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

@@ -1,0 +1,178 @@
+name: T2 🖼️ Public Floorplan Pixels Gate (CHECK 3.101)
+
+# =============================================================================
+# CHECK 3.101 — ADR-909 §6.7 · §6.8. «ΒΓΑΙΝΕΙ Η ΔΗΜΟΣΙΑ ΚΑΤΟΨΗ ΑΧΡΩΜΗ ΟΤΑΝ ΖΗΤΗΘΗΚΕ
+# ΑΧΡΩΜΗ, ΚΑΙ ΔΙΑΒΑΖΕΤΑΙ ΚΑΘΕ ΓΡΑΜΜΗ ΤΗΣ;»
+#
+# ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΟ ΓΕΝΝΗΣΕ
+# ------------------------------
+# Στις 2026-10-09 μετρήθηκε ζωντανά ότι τα Υδραυλικά έβγαιναν **μπλε** σε «Ασπρόμαυρο»
+# και σε «Γκρι» (5.080 px): ζωγράφοι του `bim/renderers` με ωμό `ctx.strokeStyle`,
+# γραμμένοι για σκούρο καμβά. Φάνηκε **μόνο** επειδή το σχέδιο της δοκιμής έτυχε να έχει
+# θερμοσίφωνα — η εικόνα ήταν «άχρωμη **για αυτό το σχέδιο**», όχι γενικά.
+#
+# ⚠️ ΚΑΝΕΝΑ jest ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΤΟ ΔΕΙ: το jsdom δεν έχει Canvas 2D — δεν ζωγραφίζει, δεν
+# έχει pixels. Η **κρίση** είναι καθαρή συνάρτηση με δικό της jest· η **μέτρηση** θέλει
+# πραγματικό browser.
+#
+# ⚠️ ΚΑΝΕΝΑ `continue-on-error` (ADR-587 §6.1). Το tier αλλάζει το **μέσο ειδοποίησης**,
+# ποτέ την αυστηρότητα.
+#
+# 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ: η baseline (`.public-floorplan-pixels-baseline.json`) γράφεται
+# τοπικά σε Windows και εδώ κρίνεται σε Linux. Η ταυτότητα είναι `κριτήριο:στάθμη:τύπος`
+# και όχι πλήθος pixels, ακριβώς για να μην εξαρτάται από την εξομάλυνση της πλατφόρμας.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      # ΟΙ ΖΩΓΡΑΦΟΙ ΚΑΙ ΤΑ ΕΡΓΟΣΤΑΣΙΑ — τα προεπιλεγμένα χρώματα και πάχη ζουν στα
+      # εργοστάσια του `bim/`, και το δείγμα χτίζεται με αυτά: είναι ΕΙΣΟΔΟΙ της μέτρησης.
+      - 'src/subapps/dxf-viewer/bim/**'
+      - 'src/subapps/dxf-viewer/rendering/**'
+      - 'src/subapps/dxf-viewer/canvas-v2/dxf-canvas/**'
+      # Η ΛΗΨΗ, ΤΟ ΠΡΟΦΙΛ ΚΑΙ ΤΟ ΟΡΓΑΝΟ.
+      - 'src/subapps/dxf-viewer/print/**'
+      - 'src/lib/listings/floorplan-render-recipe.ts'
+      # Η ΠΟΛΙΤΙΚΗ ΧΡΩΜΑΤΟΣ ΚΑΙ ΠΑΧΟΥΣ (`adaptive-entity-color`, `print-color-policy`, χρόνοι).
+      - 'src/subapps/dxf-viewer/config/**'
+      # ΤΑ ΣΧΗΜΑΤΑ 3Δ: cache, επιλυτής, και τα δύο παραγόμενα `.glb` της πύλης.
+      - 'src/subapps/dxf-viewer/bim-3d/library/bim-mesh-library/**'
+      - 'public/test-fixtures/pixel-gate/**'
+      - 'scripts/generate-pixel-gate-mesh-fixture.js'
+      # ⚠️ `src/app/**/test-harness/…`: το harness ζει μέσα σε route group (`(bare)`), και ένα
+      # route group ΕΙΝΑΙ ΦΑΚΕΛΟΣ στο μονοπάτι (ίδιο μάθημα με CHECK 3.52 / 3.82).
+      - 'src/app/**/test-harness/public-floorplan-pixels/**'
+      # ΟΙ ΔΥΟ ΠΟΡΤΕΣ ΠΟΥ ΚΛΕΙΝΟΥΝ ΤΟ HARNESS (403 bot-blocker · 404 φρουρός έκθεσης). Ο
+      # bot-blocker πιάνει και τα `.glb` του `public/`.
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      # Η BASELINE ΚΑΙ Η ΕΚΤΕΛΕΣΗ.
+      - '.public-floorplan-pixels-baseline.json'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/public-floorplan-pixels-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/subapps/dxf-viewer/bim/**'
+      - 'src/subapps/dxf-viewer/rendering/**'
+      - 'src/subapps/dxf-viewer/canvas-v2/dxf-canvas/**'
+      - 'src/subapps/dxf-viewer/print/**'
+      - 'src/lib/listings/floorplan-render-recipe.ts'
+      - 'src/subapps/dxf-viewer/config/**'
+      - 'src/subapps/dxf-viewer/bim-3d/library/bim-mesh-library/**'
+      - 'public/test-fixtures/pixel-gate/**'
+      - 'scripts/generate-pixel-gate-mesh-fixture.js'
+      - 'src/app/**/test-harness/public-floorplan-pixels/**'
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      - '.public-floorplan-pixels-baseline.json'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/public-floorplan-pixels-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-floorplan-pixels-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pixels:
+    name: 🖼️ CHECK 3.101 — άχρωμη όταν ζητήθηκε άχρωμη, και διαβάζεται; (Κ0–Κ6 + μάρτυρας Μ1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # 🔴 ΨΕΥΤΙΚΑ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΕΠΙΤΗΔΕΣ — ίδιος λόγος με το CHECK 3.82: χωρίς `apiKey` το
+    # `getAuth(app)` πετά κατά την αποτίμηση του module και **κάθε** διαδρομή απαντά 500.
+    # ⚠️ ΔΕΝ είναι μυστικά και ΔΕΝ πρέπει να γίνουν: η πύλη ζωγραφίζει ένα σχέδιο-δείγμα σε
+    # καμβά εκτός οθόνης — δεν διαβάζει, δεν γράφει και δεν αυθεντικοποιεί τίποτα. Τα σχήματα
+    # 3Δ της έρχονται από το `public/`, όχι από το Storage.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-public-floorplan-pixels-no-network
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-public-floorplan-pixels
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-public-floorplan-pixels.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # ⚠️ pnpm, ΠΟΤΕ `npm ci`: το `engines` λέει κατά λέξη `"npm": "please-use-pnpm"`.
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # 🔑 ΠΡΙΝ ΑΠΟ ΟΛΑ, ΚΑΙ ΦΘΗΝΟ: τα δεσμευμένα `.glb` είναι ΑΚΡΙΒΩΣ ό,τι γράφει ο γεννήτορας;
+      # Σκέτο Node, χωρίς εξαρτήσεις. Αν λείπουν ή διαφέρουν, η πύλη θα μετρούσε
+      # κουτιά-εφεδρεία (το Κ4 θα το ονόμαζε, αλλά δέκα λεπτά αργότερα).
+      - name: 🧊 Τα σχήματα 3Δ της πύλης = ό,τι γράφει ο γεννήτορας
+        run: node scripts/generate-pixel-gate-mesh-fixture.js --check
+
+      # ⚠️ ΧΩΡΙΣ `--ignore-scripts`: ο Next dev server πρέπει όντως να σηκωθεί.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Μόνο chromium, και **καμία σημαία WebGL**: η λήψη είναι Canvas 2D.
+      - name: 🌐 Install chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 🚀 Start dev server
+        run: pnpm run dev > /tmp/dev-server.log 2>&1 &
+
+      # 🔑 Η ΑΝΑΜΟΝΗ ΕΙΝΑΙ ΓΙΑ ΤΗ ΣΥΓΚΕΚΡΙΜΕΝΗ ΔΙΑΔΡΟΜΗ και την **προθερμαίνει**: η σελίδα
+      # τραβά ολόκληρο τον αποδότη του DXF viewer, και η κρύα μεταγλώττισή του είναι λεπτά.
+      # ⚠️ ΥΠΟΧΡΕΩΤΙΚΟΣ ΠΡΑΓΜΑΤΙΚΟΣ USER-AGENT: το `src/middleware.ts` μπλοκάρει ό,τι μοιάζει
+      # με bot με **403 χωρίς σώμα**.
+      - name: ⏳ Wait for the harness route
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" -H 'Accept: text/html' \
+              http://localhost:3000/test-harness/public-floorplan-pixels || echo 000)
+            [ "$code" = "200" ] && echo "harness έτοιμο μετά ${i}0s" && exit 0
+            sleep 10
+          done
+          echo "::error::το harness δεν απάντησε 200 σε 600s (τελευταίος κώδικας $code)"
+          tail -80 /tmp/dev-server.log
+          exit 1
+
+      # ⚠️ ΤΟ ΦΙΛΤΡΟ ΖΕΙ ΣΤΟ `package.json` (SSoT, CHECK 3.46 ομάδα Γ) — σκέτο όνομα, ποτέ
+      # πλήρης διαδρομή. ⛔ ΠΟΤΕ `PUBLIC_FLOORPLAN_PIXELS_WRITE_BASELINE` εδώ: το CI κρίνει,
+      # δεν γράφει.
+      - name: 🖼️ CHECK 3.101 — η πύλη pixels
+        # ⚠️ `PLAYWRIGHT_WEB_SERVER_URL` = η διαδρομή που μόλις προθερμάναμε, ώστε το
+        # Playwright να μη σηκώσει **δεύτερο** dev server (βλ. `playwright.config.ts`).
+        env:
+          PLAYWRIGHT_WEB_SERVER_URL: http://localhost:3000/test-harness/public-floorplan-pixels
+        run: pnpm run test:public-floorplan-pixels
+
+      # Η αναφορά ανεβαίνει ΠΑΝΤΑ: όταν η πύλη κοκκινίσει, η εξήγηση είναι **τα ονόματα**
+      # (`K1:monochrome:mep-water-heater`) και οι αριθμοί τους.
+      - name: 📤 Upload playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-floorplan-pixels-report
+          path: |
+            playwright-report/
+            reports/junit/playwright.xml
+          if-no-files-found: warn
+
+      - name: 📤 Upload dev server log
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-floorplan-pixels-dev-server-log
+          path: /tmp/dev-server.log
+          if-no-files-found: warn
