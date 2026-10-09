@@ -222,6 +222,8 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           ...curRenderOptions,
           skipInteractive: true,
           layersById: curLayersById,
+          // ADR-909 Β2.7 — ο ζωντανός καμβάς: το στρώμα γραμμών GPU κάθεται από πάνω του (βλ. bitmap cache).
+          linesOwnedByGpuLayer: true,
         });
       }
 

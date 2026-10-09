@@ -118,6 +118,8 @@ function FloorUnderlayCanvas({
               wireframeMode: false,
               selectedEntityIds: [],
               skipInteractive: true,
+              // ADR-909 Β2.7 — ξένη σκηνή (άλλοι όροφοι): το LayerStore κρατά τα στρώματα του ΕΝΕΡΓΟΥ ορόφου.
+              layerSource: 'scene',
             });
 
             // AutoCAD xref fade — uniform alpha reduction that preserves colours and keeps

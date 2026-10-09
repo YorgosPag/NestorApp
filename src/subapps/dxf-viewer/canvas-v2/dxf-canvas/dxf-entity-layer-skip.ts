@@ -10,7 +10,8 @@
  *   • ADR-452 cut-plane (Revit View Range) — base above the active cut → hidden;
  *   • ADR-375 «DXF Σχέδιο» master row off → every raw DXF primitive hidden;
  *   • ADR-358 §5.6.bis isolate FREEZE (entity-scope, then category-scope);
- *   • layer frozen / invisible (LayerStore first, then the scene `layersById`).
+ *   • layer frozen / invisible (LayerStore first, then the scene `layersById` — or, for a
+ *     FOREIGN scene rendered with `layerSource: 'scene'`, the scene `layersById` alone).
  *
  * Pure module function (no `this`, only store/config reads) — same shape as
  * `resolveEntityRenderStyle`. `DxfRenderer` delegates here (STEP 12) so there is
@@ -21,7 +22,7 @@
  * @see canvas-v2/webgl-lines/is-webgl-owned-line.ts — the ownership predicate that reads this
  */
 
-import type { DxfEntityUnion } from './dxf-types';
+import type { DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
@@ -37,6 +38,7 @@ import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../st
 export function isEntityLayerSkipped(
   entity: DxfEntityUnion,
   layersById?: Record<string, SceneLayer>,
+  layerSource: NonNullable<DxfRenderOptions['layerSource']> = 'session',
 ): boolean {
   // ADR-358 §5.6.bis — entity-scope isolate in FREEZE mode hides every entity
   // outside the isolated set. (Layer flags are NOT mutated for entity isolate,
@@ -78,7 +80,9 @@ export function isEntityLayerSkipped(
     return !entity.layerId || !isolate.isolatedLayerIds.has(entity.layerId);
   }
   if (!entity.layerId && !layersById) return false;
-  const storeLayer = entity.layerId ? getLayerStoreLayer(entity.layerId) : null;
+  // ADR-909 Β2.7 — ξένη σκηνή (`'scene'`): το store ΔΕΝ ερωτάται. Κρατά τα στρώματα του σχεδίου που έχει
+  // ανοιχτό ο επεξεργαστής — ή τίποτα — και θα απαντούσε για άλλο έγγραφο από αυτό που ζωγραφίζεται.
+  const storeLayer = layerSource === 'session' && entity.layerId ? getLayerStoreLayer(entity.layerId) : null;
   if (storeLayer) {
     return storeLayer.frozen === true || storeLayer.visible === false;
   }

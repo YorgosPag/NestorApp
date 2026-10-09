@@ -901,6 +901,26 @@ export interface DxfRenderOptions {
    */
   layersById?: Record<string, SceneLayer>;
   /**
+   * ADR-909 Β2.7 — **ποιος λέει αν ένα στρώμα είναι κρυφό / παγωμένο** σε αυτή την απόδοση.
+   *
+   *  - `'session'` *(προεπιλογή)*: το ζωντανό `LayerStore` του επεξεργαστή, και μετά τα στρώματα της σκηνής —
+   *    ο ζωντανός καμβάς και η εκτύπωση *(που ενυδατώνει το store από τη σκηνή της)*.
+   *  - `'scene'`: **μόνο** τα στρώματα της σκηνής που ζωγραφίζεται. Για **ξένη** σκηνή — read-only προβολή
+   *    ακινήτου, υπόστρωμα άλλου ορόφου — όπου το store είτε είναι άδειο είτε κρατά τα στρώματα **άλλου** σχεδίου.
+   *
+   * Μετρημένο 2026-10-09: στη read-only κάτοψη ένα κρυφό στρώμα 632 στοιχείων ζωγραφιζόταν ολόκληρο.
+   */
+  layerSource?: 'session' | 'scene';
+  /**
+   * ADR-909 Β2.7 / ADR-639 — **δήλωση του καλούντος**: «πάνω από αυτόν τον καμβά κάθεται το στρώμα γραμμών GPU,
+   * άρα μη χαράξεις όσες γραμμές κατέχει». Το δηλώνουν **μόνο** ο ζωντανός καμβάς και το bitmap cache του.
+   *
+   * Ήταν καθολική ανάγνωση (`isWebglLineLayerActive()`), δηλαδή τη ρωτούσε **κάθε** απόδοση: σε σχέδιο ≥ 50.000
+   * στοιχείων η εκτύπωση και η δημόσια κάτοψη θα έβγαιναν **χωρίς** τις γραμμές που ζωγράφιζε το GPU στην οθόνη.
+   * Απούσα ⇒ ο αποδότης χαράζει τα πάντα: κάθε νέος καλών είναι σωστός **χωρίς να το θυμηθεί**.
+   */
+  linesOwnedByGpuLayer?: boolean;
+  /**
    * When true, selected entities are rendered without grip handles (selection highlight
    * is preserved). Used when activeTool is not 'select' / 'layering' — e.g. Move tool,
    * matching AutoCAD behaviour where grips disappear once a command is active.

@@ -154,6 +154,11 @@ Highest cost; the "professional-grade" ceiling. **Touches ADR-040 critical files
   ADR-635 spatial-index hatch-bounds gap.
 
 ## Changelog
+- **2026-10-09** — **Στάδιο 5, διόρθωση (ADR-909 Β2.7)**: η καταστολή του Canvas2D stroke για γραμμές που κατέχει
+  το στρώμα GPU ήταν **καθολική ανάγνωση** (`isWebglLineLayerActive()`), άρα τη ρωτούσε **κάθε** `DxfRenderer` —
+  και η εκτύπωση / δημόσια κάτοψη έβγαιναν **χωρίς** αυτές τις γραμμές (μετρημένο με τη σημαία αναμμένη: −7,9%
+  μελάνι στη λήψη). Τώρα είναι **δήλωση του καλούντος** (`DxfRenderOptions.linesOwnedByGpuLayer`), που τη δίνουν
+  μόνο το bitmap cache και η εφεδρική άμεση απόδοση του ζωντανού καμβά. Το store και το `owned ids` αμετάβλητα.
 - **2026-07-12** — ADR created. 4-agent read-only codebase survey completed
   (parse pipeline, render pipeline, ADR landscape, WebGL feasibility). Root causes
   #1-#9 documented with file:line. Five-phase plan defined.

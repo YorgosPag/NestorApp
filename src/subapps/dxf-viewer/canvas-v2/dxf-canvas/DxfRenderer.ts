@@ -13,8 +13,9 @@ import type { Entity, SceneLayer } from '../../types/entities';
 import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
 // ADR-510 Φ2 — canvas linetype dash: metric pattern (mm) → setLineDash px (zoom + LTSCALE aware).
 import { dashMmToScreenPx } from '../../rendering/linetype-dash-resolver';
-// ADR-375 — «DXF Σχέδιο» row lineweight override: mm → screen px (ISO catalog SSoT).
-import { lineweightToPx } from '../../config/lineweight-iso-catalog';
+// ADR-375 / ADR-909 Β2.7 — «DXF Σχέδιο» row override: mm → px of THIS render + plot-colour policy.
+import { lineweightDisplayPx } from '../../config/lineweight-display-px';
+import { applyPlotColor, getPrintColorPolicy } from '../../config/print-color-policy';
 // ADR-510 Φ2H — effective LTSCALE = per-scene base × user knob; scene base set once/frame.
 import { getEffectiveLinetypeScale, setActiveSceneLinetypeScale } from '../../stores/LinetypeScaleStore';
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
@@ -53,6 +54,10 @@ export class DxfRenderer {
   // ADR-559 — AutoCAD GRIPOBJLIMIT: true for this frame when the selection-object count
   // exceeds the limit ⇒ no grips drawn for ANY selected entity (objects stay selected).
   private _gripsSuppressedByObjLimit = false;
+  // ADR-909 Β2.7 — ποιος λέει «κρυφό στρώμα;» σε ΑΥΤΟ το καρέ: τα στρώματα της σκηνής που ζωγραφίζεται.
+  // ΜΟΝΟ για την πύλη απόκρυψης — η επίλυση στυλ (ByLayer) ΔΕΝ τα παίρνει (θα άλλαζε τον ζωντανό καμβά).
+  private _skipLayersById: Record<string, SceneLayer> | undefined;
+  private _layerSource: DxfRenderOptions['layerSource'];
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -138,8 +143,11 @@ export class DxfRenderer {
           selectedEntityIds: [],
           hoveredEntityId: null,
           gripInteractionState: undefined,
+          linesOwnedByGpuLayer: options.linesOwnedByGpuLayer,
         }
       : options;
+    this._skipLayersById = options.layersById ?? scene.layersById;
+    this._layerSource = options.layerSource;
     // 🏢 GRIP EDITING: Update grip interaction state for visual feedback (always set, even when empty)
     const gripOpts = effectiveOptions.gripInteractionState;
     this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip, armedKeys: gripOpts.armedKeys } : {});
@@ -170,7 +178,9 @@ export class DxfRenderer {
     type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number; dashMm: ReadonlyArray<number>; celtscale: number };
     // ADR-639 Στάδιο 5 — event-time read (once/frame, never stale): when the GPU line layer is live,
     // the ids in `webglOwnedIds` are drawn by it, so their Canvas2D stroke is suppressed below.
-    const webglLineActive = isWebglLineLayerActive();
+    // ADR-909 Β2.7 — ONLY for the canvas that declares the GPU layer sits on top of it (opt-in):
+    // print / public floorplan / read-only / underlay must stroke every line themselves.
+    const webglLineActive = effectiveOptions.linesOwnedByGpuLayer === true && isWebglLineLayerActive();
     const webglOwnedIds = webglLineActive ? getWebglOwnedEntityIds() : null;
     const batchedIds = new Set<string>();
     // ADR-363 §11.Q3 — slab-openings collected here, drawn LAST (after every slab).
@@ -205,7 +215,7 @@ export class DxfRenderer {
       if (!entity.visible) return;
       if (!isEntityInViewport(entity, worldViewport)) return;
       // ADR-358 §5.6.bis Phase 10 — frozen/invisible/isolate/cut-plane skip.
-      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) return;
+      if (this.isEntityLayerSkipped(entity)) return;
       // ADR-640 arc-fix — TYPE-gated: only a batched LINE is suppressed; a non-line container
       // member sharing the id (block/group/array) must still draw.
       if (isDrawnByBatchedLineLayer(entity, batchedIds)) return;
@@ -405,18 +415,19 @@ export class DxfRenderer {
     const style = resolveEntityRenderStyle(entity, layersById);
     // ADR-375 — «DXF Σχέδιο» row overrides (colour + lineweight) for every raw DXF
     // entity (null category). null colour / 0 mm ⇒ keep the entity's own value.
-    // Applied ONLY on the interactive canvas path (this method) — print / WYSIWYG
-    // resolve through resolveEntityRenderStyle directly and stay untouched.
+    // ADR-909 Β2.7 — the PRINT pass runs through here too (measured: 0.5 mm came out 1.89 px in a
+    // 694-dpi image). So the override asks the same SSoT as every other pen: `lineweightDisplayPx`
+    // (render dpi + floor + LWDISPLAY) and, when printing, the plot-colour policy.
     const dxf = useBimRenderSettingsStore.getState().dxfImport;
     const hasColorOverride = dxf.projectionColor !== null;
     const hasWeightOverride = dxf.projectionLineweightMm > 0;
     if ((hasColorOverride || hasWeightOverride) && resolveEntityBimCategory(entity) === null) {
+      const policy = getPrintColorPolicy();
+      const overrideHex = policy ? applyPlotColor(dxf.projectionColor, null, policy) : dxf.projectionColor as string;
       return {
         ...style,
-        colorHex: hasColorOverride ? dxf.projectionColor as string : style.colorHex,
-        lineWidthPx: hasWeightOverride
-          ? Math.max(1, lineweightToPx(dxf.projectionLineweightMm))
-          : style.lineWidthPx,
+        colorHex: hasColorOverride ? overrideHex : style.colorHex,
+        lineWidthPx: hasWeightOverride ? lineweightDisplayPx(dxf.projectionLineweightMm) : style.lineWidthPx,
       };
     }
     return style;
@@ -442,7 +453,7 @@ export class DxfRenderer {
   ): { key: string; start: Point2D; end: Point2D; lw: number; alpha: number; dashMm: ReadonlyArray<number>; celtscale: number } | null {
     if (!entity.visible) return null;
     if (!isEntityInViewport(entity, worldViewport)) return null;
-    if (this.isEntityLayerSkipped(entity, options.layersById)) return null;
+    if (this.isEntityLayerSkipped(entity)) return null;
     if (this._selectionSet.has(entity.id)) return null;
     if (options.hoveredEntityId === entity.id) return null;
     const meta = entity as typeof entity & { measurement?: boolean; lineType?: string };
@@ -478,11 +489,9 @@ export class DxfRenderer {
    * the WebGL line-layer buffer builder asks the EXACT same question (a divergence would
    * leave a frozen/isolated line drawn by one layer and suppressed by the other). This
    * stays a thin instance method so the two call sites above keep the `this.` form.
+   * ADR-909 Β2.7 — the layer truth is the per-frame pair set at the top of `render()`.
    */
-  private isEntityLayerSkipped(
-    entity: DxfEntityUnion,
-    layersById?: Record<string, SceneLayer>,
-  ): boolean {
-    return isEntityLayerSkippedShared(entity, layersById);
+  private isEntityLayerSkipped(entity: DxfEntityUnion): boolean {
+    return isEntityLayerSkippedShared(entity, this._skipLayersById, this._layerSource);
   }
 }

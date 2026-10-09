@@ -63,6 +63,9 @@ const DXF_READONLY_OPTIONS = {
   wireframeMode: false,
   selectedEntityIds: [] as string[],
   skipInteractive: true,
+  // ADR-909 Β2.7 — τα στρώματα τα λέει το ΕΓΓΡΑΦΟ που φορτώθηκε, όχι η συνεδρία του επεξεργαστή: εδώ το
+  // LayerStore είναι άδειο (ή κρατά άλλο σχέδιο), και ένα κρυφό στρώμα ζωγραφιζόταν ολόκληρο.
+  layerSource: 'scene' as const,
 };
 
 /** Gallery background per drawing mode (mirrors DRAWING_MODE_CONFIG backgrounds). */

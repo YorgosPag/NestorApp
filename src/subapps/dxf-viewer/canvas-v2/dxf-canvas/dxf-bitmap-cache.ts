@@ -313,6 +313,8 @@ export class DxfBitmapCache {
           selectedEntityIds: [],
           hoveredEntityId: null,
           skipInteractive: true,
+          // ADR-909 Β2.7 — αυτό το raster ΕΙΝΑΙ ο ζωντανός καμβάς: το στρώμα γραμμών GPU κάθεται από πάνω του.
+          linesOwnedByGpuLayer: true,
         },
       );
 

@@ -113,6 +113,23 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-10-09 — ADR-909 Β2.7: ο `DxfRenderer` παύει να ρωτά τη συνεδρία για ό,τι δεν είναι ο ζωντανός καμβάς (CHECK 6B)
+
+- **`DxfRenderer.ts`** — τρεις αλλαγές, **καμία** νέα συνδρομή, καμία αλλαγή στο cache key:
+  1. Η **πύλη απόκρυψης** στρώματος διαβάζει ένα ζεύγος ανά καρέ (`_skipLayersById` = `options.layersById ??
+     scene.layersById`, `_layerSource`). Πριν, το `skipInteractive` **πετούσε** το `layersById`. ⚠️ Η **επίλυση
+     στυλ** (`resolveStyleForRender`) **δεν** παίρνει τα στρώματα της σκηνής — αυτό θα άλλαζε τον ζωντανό καμβά.
+  2. Η καταστολή γραμμών του στρώματος GPU (ADR-639 Στάδιο 5) είναι **opt-in**:
+     `effectiveOptions.linesOwnedByGpuLayer === true && isWebglLineLayerActive()`. Η ανάγνωση μένει **event-time
+     getter** (κανόνας #2). Τη δηλώνουν το `dxf-bitmap-cache.ts` (`rebuild`) και η εφεδρική άμεση απόδοση του
+     `dxf-canvas-renderer.ts`.
+  3. Η παράκαμψη «DXF Σχέδιο» (ADR-375) περνά από `lineweightDisplayPx` + `applyPlotColor`.
+- **Ζωντανός καμβάς: αμετάβλητος.** Με `layerSource` απόν (= `'session'`) το `LayerStore` απαντά πρώτο όπως πάντα,
+  και το bitmap cache δηλώνει το στρώμα GPU. Άγκυρες Σ3 / Σ3β / Γ2 / Π3 καρφώνουν ακριβώς το «όπως πριν».
+- **Γιατί**: μετρημένο ζωντανά (ADR-909 §6.5) — read-only κάτοψη με κρυφό στρώμα 632 στοιχείων ζωγραφισμένο
+  ολόκληρο· λήψη εκτός οθόνης χωρίς τις γραμμές του GPU (−7,9% μελάνι)· παράκαμψη πάχους 1,89 px αντί 13,65.
+- **Μέγεθος**: `DxfRenderer.ts` 488 → **497** γραμμές (όριο 500). Η επόμενη προσθήκη εκεί θέλει εξαγωγή πρώτα.
+
 ### 2026-08-27 — ADR-418: το `zoomSystem` του `CanvasSection` δηλώνει ρητά το SSoT του (CHECK 6B)
 
 - **`CanvasSection.tsx`**: **+1 πεδίο στο ένα υπάρχον `useZoom({...})`**, καμία νέα συνδρομή, καμία
