@@ -79,6 +79,8 @@ describe('ListingVideoStage', () => {
 
     expect(button.getAttribute('aria-label')).toBe('listing-detail:video.playLabel|{"duration":"1:45"}');
     expect(button.textContent).toContain('1:45');
+    // Σ3β (browser 320px, 2026-10-09): η ετικέτα του χαπιού δεν σπάει — το jsdom δεν έχει διάταξη, άρα φυλάμε τη δήλωση.
+    expect(screen.getByText('listing-detail:video.play').className).toContain('whitespace-nowrap');
 
     fireEvent.click(button);
     // Συγχρονισμένα: καμία αναμονή ανάμεσα στο κλικ και στον ισχυρισμό.

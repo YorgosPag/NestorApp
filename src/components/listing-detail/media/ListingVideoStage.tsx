@@ -146,12 +146,13 @@ function StageInvitation({ video, alt, onPlay }: ListingVideoStageProps & { read
       type="button"
       onClick={onPlay}
       aria-label={t('listing-detail:video.playLabel', { duration: clock })}
-      className="group absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center focus-visible:outline-none"
+      className="group absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center focus-visible:outline-none sm:p-4"
     >
       {video.poster === null && <span className="text-sm text-muted-foreground">{alt}</span>}
       <StageChip className="group-hover:bg-accent group-focus-visible:ring-2 group-focus-visible:ring-ring">
-        <Play className="h-4 w-4" aria-hidden="true" />
-        <span>{t('listing-detail:video.play')}</span>
+        <Play className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {/* Μετρημένο στα 320px με πλατύ κλιπ (κουτί 262×120): χωρίς αυτό η ετικέτα έσπαγε σε δύο γραμμές μέσα στο χάπι. */}
+        <span className="whitespace-nowrap">{t('listing-detail:video.play')}</span>
         <span className="tabular-nums text-muted-foreground">{clock}</span>
       </StageChip>
     </button>
