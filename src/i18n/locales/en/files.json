@@ -112,7 +112,7 @@
     },
     "listingVideo": {
       "blocked": "“{name}” was not uploaded. {reason}",
-      "unpublishable": "“{name}” was uploaded to your files, but it cannot be published on a listing. {reason}",
+      "unpublishable": "“{name}” is being uploaded to your files, but it cannot be published on a listing. {reason}",
       "reasons": {
         "too-large": "The video is larger than {maxMb} MB. Export it at a lower resolution or shorter, then upload it again.",
         "too-long": "The video is longer than {maxSeconds} seconds. Trim it to fit that duration.",
