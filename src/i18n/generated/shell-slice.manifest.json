@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1661ea18a6f1884587da753d5f758d870ef3659216b8f2530ef2006182bdcb2b",
+  "inputsSha256": "01eb6eb016de0e0c86a87ceeb2bde2042111c665762a9ae38449cd3404c851da",
   "languages": [
     "el"
   ],
@@ -194,7 +194,7 @@
     "src/app/(light)/area/[id]/page.tsx": "b78644b49fae528be106ad8ee9c46de58d6d8937d23263bd740e169d9a7b3347",
     "src/app/(light)/ergaleia/antikeimeniki-axia/page.tsx": "9d91e62c41b82aa06168355b9bc4a9835c1071d2f7e34df4b882531ba686bdb1",
     "src/app/(light)/listing/[id]/floorplan/page.tsx": "bfe0e4f1db2c12e0c560f99f4b2bcf018e59c967da73dd3bb60845f8dbfde9eb",
-    "src/app/(light)/listing/[id]/page.tsx": "a58d8e91a3e97a78f851ae00f123ac678f0db46c270ad5a7659740e699529a62",
+    "src/app/(light)/listing/[id]/page.tsx": "35b8d31f9dd2281a795218910b2384d09c8624322b54a77984f4b7bf255f88fd",
     "src/app/(light)/listing/[id]/photos/page.tsx": "d952c89f36bccc22cd0a471435364679bd6cb8f0df2166a4d0d72c4787abdab1",
     "src/app/(light)/listing/[id]/tour/page.tsx": "5accff88763d3953d55d56f4c4457d0a034c55b5c026ccb5e02ae2700792a89a",
     "src/app/(light)/offers/new/page.tsx": "d6817b5be0a2beded715b1a08ba66afc89bfe8f426c18f595c3829a0f246dd0d",
@@ -961,6 +961,7 @@
     "src/lib/listings/listing-shape-keys.ts": "4434106cb898c44d3c147ffb8252babda539af9f1776f5244566cb73c7963126",
     "src/lib/listings/listing-stats.ts": "87e2e467da5b9abd20886a8002d9263ad9249656d51b32c6a4e9a806214a62b2",
     "src/lib/listings/listing-video-keys.ts": "db127a1d8208318d2e8f23a55abafb1b55ad5f09a56a9a4c40bc535c7402eb4a",
+    "src/lib/listings/listing-video-structured-data.ts": "ef44e107f9a8ac32b44caa988ec8cc70e77d68e7053e2674f325b03a7403365e",
     "src/lib/listings/listings-geojson.ts": "6c51a6eb6ad82aa195c3b8ddee01c0c3365ea0d75da88432f62532b0a453f14e",
     "src/lib/listings/stay-ledger.ts": "7f7560bdeb467a51cc8961fe3337ca6442aa130e55feeeb5dbd6cb3e6132359f",
     "src/lib/mandate/mandate-actions.ts": "d0664f969eb9f0cb8c5d8ce0b15e0723a153c475303a1b88331ebdecbfd5ec55",
@@ -1178,6 +1179,8 @@
     "src/services/floorplans/BuildingFloorplanService.ts": "abeec07bffeea36417a0334c1b54d0d11db024b0cf7bc97056bc09e236e34e1e",
     "src/services/floorplans/floorplan-save-orchestrator.ts": "1aeb504cc9d37e5589ca372b4642a7ab22b17057e8d3ada9108e0295e8be4494",
     "src/services/listings/listing-resolver.ts": "03ad90790d811f14ddb6d50e437bf825eb4f642786e7f99b40e5b143f7dd1014",
+    "src/services/listings/listing-structured-data.service.ts": "62046e78513766406a1d1e0655fe29aeeb761b91a825b3d08da0ac9d39c6643d",
+    "src/services/listings/public-listing-by-id.reader.ts": "5fc6acdabb7aa37a470ba677ed364f600416d152912aa3a0e32161663c32240e",
     "src/services/mandate/evidence-registry.ts": "3316e12421c92b6bbad6723c8f412dc347531370371e2bd6d6f967d8d3331d6f",
     "src/services/mandate/holiday-hours-question-decision.ts": "efe1d395abcc45eed08a89070a38110caf3a2af28f716ea575d6c5e576fe3bfa",
     "src/services/mandate/holiday-hours-question-token.ts": "e3f724e6d44a1640373a041c82313a2120ccc6371d9839ae59fa46ca6b3fc4ba",

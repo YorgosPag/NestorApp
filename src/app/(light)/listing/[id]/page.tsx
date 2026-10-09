@@ -20,11 +20,24 @@
  * διαφορετικά δικαιώματα — ακριβώς το σχήμα που το ADR-749 ονομάζει «δύο μηχανές, μία
  * ερώτηση». Είναι πραγματικό κενό (SEO για portal ακινήτων **μετράει**) και ανήκει σε
  * **δική του απόφαση**, όχι σε πλάγια είσοδο από μια σελίδα. Γραμμένο στο ADR-777 §8.11.
+ *
+ * 🔑 **ΕΞΑΙΡΕΣΗ, ΚΑΙ ΕΙΝΑΙ ΣΤΕΝΗ — τα ΔΟΜΗΜΕΝΑ ΔΕΔΟΜΕΝΑ (ADR-907 §10.10).** Το JSON-LD του βίντεο μπαίνει στο HTML
+ * που στέλνει ο **διακομιστής**: ανιχνευτής που δεν εκτελεί JavaScript δεν θα το έβλεπε ποτέ αλλιώς, και η καρτέλα
+ * «Βίντεο» δεν στήνεται πριν πατηθεί. Διαβάζει με τον **υπάρχοντα** αναγνώστη του συνόρου (`readPublicListingById`,
+ * CHECK 3.74) — κανένας δεύτερος. Το **ορατό** περιεχόμενο μένει στον πελάτη· το όριο παραπάνω ισχύει γι' αυτό.
+ *
+ * 🔑 **ISR 5′** — ίδιο παράθυρο με το `max-age=300` των αντικειμένων του δημόσιου ραφιού. Χωρίς `revalidate` η
+ * πρώτη απόδοση θα έμενε στην κρυφή μνήμη **για πάντα** (η ανάγνωση με Admin SDK δεν είναι `fetch`), και βίντεο που
+ * αποσύρθηκε θα δηλωνόταν επ' αόριστον.
  */
 
 import React, { Suspense } from 'react';
 import { StaticPageLoading } from '@/core/states';
 import { ListingDetailContent } from '@/components/listing-detail/ListingDetailContent';
+import { JsonLdScript } from '@/components/seo/JsonLdScript';
+import { loadListingStructuredData } from '@/services/listings/listing-structured-data.service';
+
+export const revalidate = 300;
 
 interface ListingDetailPageProps {
   readonly params: Promise<{ readonly id: string }>;
@@ -32,10 +45,14 @@ interface ListingDetailPageProps {
 
 export default async function ListingDetailPage({ params }: ListingDetailPageProps) {
   const { id } = await params;
+  const structuredData = await loadListingStructuredData(id);
 
   return (
-    <Suspense fallback={<StaticPageLoading />}>
-      <ListingDetailContent id={id} />
-    </Suspense>
+    <>
+      {structuredData === null ? null : <JsonLdScript data={structuredData} />}
+      <Suspense fallback={<StaticPageLoading />}>
+        <ListingDetailContent id={id} />
+      </Suspense>
+    </>
   );
 }
