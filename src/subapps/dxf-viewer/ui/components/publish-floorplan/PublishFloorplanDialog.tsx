@@ -69,7 +69,10 @@ export function PublishFloorplanDialog({
   const [choice, setChoice] = React.useState<PublicFloorplanChoice>(DEFAULT_PUBLIC_FLOORPLAN_CHOICE);
   const [busy, setBusy] = React.useState(false);
   const [outcome, setOutcome] = React.useState<FloorplanPublishOutcome | null>(null);
-  const preview = usePublishFloorplanPreview(collectDeps, choice);
+  // ADR-909 Γ1β — «Δοκίμασε ξανά»: ρητή νέα προσπάθεια για σχήματα 3Δ που δεν φόρτωσαν (Reload των Revit / ArchiCAD).
+  const [retryAttempt, setRetryAttempt] = React.useState(0);
+  const retryShapes = React.useCallback(() => setRetryAttempt((n) => n + 1), []);
+  const preview = usePublishFloorplanPreview(collectDeps, choice, retryAttempt);
 
   const published = outcome !== null && outcome.ok;
   const prepared = preview.status === 'ready' ? preview.prepared : null;
@@ -121,7 +124,7 @@ export function PublishFloorplanDialog({
             counts={groupCounts}
             disabled={busy || published}
           />
-          <FloorplanPreviewFigure preview={preview} />
+          <FloorplanPreviewFigure preview={preview} onRetryShapes={busy || published ? null : retryShapes} />
         </section>
 
         {outcome !== null && <OutcomeMessage outcome={outcome} />}
@@ -148,7 +151,14 @@ export function PublishFloorplanDialog({
  * bytes — καμία κλάση φόντου εδώ)*. Τα pixels και το μέγεθος γράφονται από κάτω — είναι τα ίδια που θα
  * ελέγξει η πόρτα πάνω στα bytes.
  */
-function FloorplanPreviewFigure({ preview }: { readonly preview: FloorplanPreview }): React.JSX.Element {
+function FloorplanPreviewFigure({
+  preview,
+  onRetryShapes,
+}: {
+  readonly preview: FloorplanPreview;
+  /** `null` ⇒ η νέα προσπάθεια δεν προσφέρεται τώρα (γίνεται αποστολή, ή έχει ήδη δημοσιευτεί). */
+  readonly onRetryShapes: (() => void) | null;
+}): React.JSX.Element {
   const { t, currentLanguage } = useTranslation('dxf-viewer-shell');
 
   if (preview.status === 'preparing') {
@@ -190,6 +200,12 @@ function FloorplanPreviewFigure({ preview }: { readonly preview: FloorplanPrevie
           {t(`publishFloorplan.fidelity.${note.code}`, { count: note.count })}
         </p>
       ))}
+      {/* ADR-909 Γ1β — σχήμα 3Δ που δεν φόρτωσε διορθώνεται με ρητή πράξη, όχι με κλείσιμο του διαλόγου. */}
+      {onRetryShapes !== null && fidelity.some((note) => note.code === 'mesh-shape-missing') && (
+        <Button variant="outline" size="sm" className="self-start" onClick={onRetryShapes}>
+          {t('publishFloorplan.fidelityRetry')}
+        </Button>
+      )}
     </figure>
   );
 }

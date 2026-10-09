@@ -33,6 +33,7 @@ import {
   type PublicFloorplanCaptureRefusal,
 } from '../../print/public-floorplan/capture-public-floorplan';
 import type { PrintFidelityNote } from '../../print/print-fidelity';
+import { retryFailedSceneMeshes } from '../../print/capture/preload-scene-meshes';
 import type { PublicFloorplanGroupCounts } from '../../print/public-floorplan/public-floorplan-profile';
 import type { PublicFloorplanChoice } from '../../print/public-floorplan/public-floorplan-presets';
 import type { ExportDeps } from '../../export/types';
@@ -59,6 +60,14 @@ export type FloorplanPreparation =
   | { readonly ok: true; readonly prepared: PreparedFloorplan }
   | { readonly ok: false; readonly refusal: FloorplanPreparationRefusal };
 
+export interface FloorplanPreparationOptions {
+  /**
+   * ADR-909 Γ1β — ο άνθρωπος πάτησε «Δοκίμασε ξανά»: τα σχήματα 3Δ που απέτυχαν ξαναζητούνται (πρακτική
+   * «Reload» των Revit / ArchiCAD). Χωρίς αυτό ένα αποτυχημένο σχήμα **δεν** ξαναχτυπά το Storage σε κάθε λήψη.
+   */
+  readonly retryFailedShapes?: boolean;
+}
+
 /**
  * **Φτιάξε την εικόνα του ΕΝΕΡΓΟΥ επιπέδου** — αυτού που βλέπει ο άνθρωπος στον καμβά.
  *
@@ -68,10 +77,14 @@ export type FloorplanPreparation =
 export async function prepareFloorplanPublication(
   deps: ExportDeps,
   choice: PublicFloorplanChoice,
+  options: FloorplanPreparationOptions = {},
 ): Promise<FloorplanPreparation> {
   const levelId = deps.activeLevelId;
   const active = deps.levelScenes.find((entry) => entry.level.id === levelId);
   if (levelId === null || active === undefined) return { ok: false, refusal: 'no-level' };
+
+  // Ρητή νέα προσπάθεια: σβήνονται οι δείκτες σφάλματος, και η λήψη που ακολουθεί ξαναζητά τα σχήματα.
+  if (options.retryFailedShapes) retryFailedSceneMeshes(active.scene?.entities ?? []);
 
   const capture = await capturePublicFloorplan({ scene: active.scene, choice });
   if (!capture.ok) return { ok: false, refusal: capture.why };

@@ -143,6 +143,26 @@ describe('Β — η προεπισκόπηση', () => {
     expect(prepare).toHaveBeenLastCalledWith(DEPS, { ...FURNISHED, plotStyle: 'colour' });
   });
 
+  it('Β8 «Δοκίμασε ξανά» ⇒ νέα λήψη ΑΜΕΣΩΣ, με ρητή νέα προσπάθεια για τα σχήματα 3Δ — και μόνο τότε', async () => {
+    prepare.mockResolvedValueOnce({ ok: true, prepared: preparedOf('boxed') });
+    prepare.mockResolvedValueOnce({ ok: true, prepared: preparedOf('shaped') });
+
+    const { result, rerender } = renderHook(
+      ({ attempt }) => usePublishFloorplanPreview(() => DEPS, LISTING, attempt),
+      { initialProps: { attempt: 0 } },
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    // Το άνοιγμα ΔΕΝ ζητά νέα προσπάθεια: ένα αρχείο που λείπει δεν ξαναχτυπιέται σε κάθε λήψη.
+    expect(prepare).toHaveBeenLastCalledWith(DEPS, LISTING);
+
+    rerender({ attempt: 1 });
+    expect(result.current.status).toBe('preparing');
+    // 🔑 Χωρίς αναμονή ηρεμίας: είναι ρητή πράξη, όχι αλλαγή διακόπτη.
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare).toHaveBeenLastCalledWith(DEPS, LISTING, { retryFailedShapes: true });
+    await waitFor(() => expect(result.current.status === 'ready' && result.current.prepared.idempotencyKey).toBe('idk_shaped'));
+  });
+
   it('Β7 η αλλαγή περιμένει ΟΛΟ το διάστημα ηρεμίας — ούτε ένα ms νωρίτερα', async () => {
     prepare.mockResolvedValue({ ok: true, prepared: preparedOf('plain') });
     const settle = DXF_TIMING.ui.FLOORPLAN_PREVIEW_DEBOUNCE;

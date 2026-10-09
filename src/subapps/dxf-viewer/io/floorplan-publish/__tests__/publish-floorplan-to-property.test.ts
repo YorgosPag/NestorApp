@@ -20,6 +20,7 @@ import { RealtimeService } from '@/services/realtime';
 import type { ExportDeps } from '../../../export/types';
 import type { SceneModel } from '../../../types/entities';
 import { capturePublicFloorplan } from '../../../print/public-floorplan/capture-public-floorplan';
+import { retryFailedSceneMeshes } from '../../../print/capture/preload-scene-meshes';
 import {
   DEFAULT_PUBLIC_FLOORPLAN_CHOICE as LISTING,
   type PublicFloorplanChoice,
@@ -33,6 +34,9 @@ import {
 jest.mock('@/lib/api/enterprise-api-client', () => ({ apiClient: { post: jest.fn() } }));
 jest.mock('../../../print/public-floorplan/capture-public-floorplan', () => ({ capturePublicFloorplan: jest.fn() }));
 
+jest.mock('../../../print/capture/preload-scene-meshes', () => ({ retryFailedSceneMeshes: jest.fn() }));
+
+const retryShapes = retryFailedSceneMeshes as jest.Mock;
 const post = apiClient.post as jest.Mock;
 const capture = capturePublicFloorplan as jest.Mock;
 
@@ -91,6 +95,17 @@ describe('Ε — η προετοιμασία της εικόνας', () => {
 
     capture.mockResolvedValue({ ok: false, why: 'no-geometry' });
     expect(await prepareFloorplanPublication(depsOf('lvl_a'), LISTING)).toStrictEqual({ ok: false, refusal: 'no-geometry' });
+  });
+
+  it('Ε4 «Δοκίμασε ξανά» ⇒ νέα προσπάθεια για τα σχήματα 3Δ του ΕΝΕΡΓΟΥ επιπέδου, ΠΡΙΝ από τη λήψη — και μόνο τότε', async () => {
+    await prepareFloorplanPublication(depsOf('lvl_b'), LISTING);
+    expect(retryShapes).not.toHaveBeenCalled();
+
+    await prepareFloorplanPublication(depsOf('lvl_b'), LISTING, { retryFailedShapes: true });
+    expect(retryShapes).toHaveBeenCalledTimes(1);
+    expect(retryShapes).toHaveBeenCalledWith(sceneB.entities);
+    // Πρώτα σβήνουν οι δείκτες σφάλματος, μετά ζητά η λήψη τα σχήματα — αλλιώς η «νέα προσπάθεια» δεν θα φόρτωνε τίποτα.
+    expect(retryShapes.mock.invocationCallOrder[0]).toBeLessThan(capture.mock.invocationCallOrder[1]);
   });
 
   it('Ε3 νέα εικόνα ⇒ νέο κλειδί ιδεμποτίας', async () => {

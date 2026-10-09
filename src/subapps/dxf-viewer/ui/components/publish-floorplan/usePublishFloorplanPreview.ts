@@ -45,10 +45,12 @@ const CHOICE_SETTLE_MS = DXF_TIMING.ui.FLOORPLAN_PREVIEW_DEBOUNCE;
 /**
  * @param collectDeps τα ζωντανά υλικά, διαβασμένα τη **στιγμή** της λήψης (`useExportDeps`).
  * @param choice ομάδες και χρώμα του διαλόγου — αλλαγή τους ξαναφτιάχνει την εικόνα.
+ * @param retryAttempt μετρητής του «Δοκίμασε ξανά» — κάθε αύξηση ξαναζητά τα σχήματα 3Δ που απέτυχαν (Γ1β).
  */
 export function usePublishFloorplanPreview(
   collectDeps: () => ExportDeps,
   choice: PublicFloorplanChoice,
+  retryAttempt = 0,
 ): FloorplanPreview {
   const [preview, setPreview] = React.useState<FloorplanPreview>(PREPARING);
   // 🔑 Το `collectDeps` αλλάζει ταυτότητα σε κάθε ενημέρωση επιπέδων· η εικόνα **δεν** πρέπει να ξαναβγεί
@@ -60,14 +62,22 @@ export function usePublishFloorplanPreview(
   const choiceRef = React.useRef(choice);
   choiceRef.current = choice;
   const openedRef = React.useRef(false);
+  const attemptRef = React.useRef(retryAttempt);
 
   React.useEffect(() => {
     let cancelled = false;
     let url: string | null = null;
     setPreview(PREPARING);
+    // ADR-909 Γ1β — «Δοκίμασε ξανά»: ίδια επιλογή, νέα προσπάθεια για τα σχήματα 3Δ που απέτυχαν. Ρητή πράξη
+    // ⇒ ζωγραφίζει αμέσως (δεν είναι αλλαγή διακόπτη που περιμένει τις επόμενες).
+    const retryFailedShapes = attemptRef.current !== retryAttempt;
+    attemptRef.current = retryAttempt;
 
     const prepare = (): void => {
-      void prepareFloorplanPublication(collectRef.current(), choiceRef.current).then((result) => {
+      const pending = retryFailedShapes
+        ? prepareFloorplanPublication(collectRef.current(), choiceRef.current, { retryFailedShapes })
+        : prepareFloorplanPublication(collectRef.current(), choiceRef.current);
+      void pending.then((result) => {
         if (cancelled) return;
         if (!result.ok) {
           setPreview({ status: 'refused', refusal: result.refusal });
@@ -79,7 +89,7 @@ export function usePublishFloorplanPreview(
     };
 
     // Το άνοιγμα ζωγραφίζει αμέσως· μόνο οι αλλαγές επιλογής περιμένουν.
-    const timer = openedRef.current ? setTimeout(prepare, CHOICE_SETTLE_MS) : null;
+    const timer = openedRef.current && !retryFailedShapes ? setTimeout(prepare, CHOICE_SETTLE_MS) : null;
     if (timer === null) prepare();
     openedRef.current = true;
 
@@ -88,7 +98,7 @@ export function usePublishFloorplanPreview(
       if (timer !== null) clearTimeout(timer);
       if (url !== null) URL.revokeObjectURL(url);
     };
-  }, [choiceKey]);
+  }, [choiceKey, retryAttempt]);
 
   return preview;
 }
