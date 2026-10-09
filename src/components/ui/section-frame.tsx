@@ -28,10 +28,11 @@ const HEADING_CLASSES = {
   lg: 'text-lg font-semibold text-foreground',
 } as const;
 
-const GAP_CLASSES = { 2: 'flex flex-col gap-2', 3: 'flex flex-col gap-3', 4: 'flex flex-col gap-4' } as const;
+/** Το ΕΝΑ κλειστό σύνολο κάθετου κενού μιας επιφάνειας — το φορά και το `FormFieldset` (ίδια επιφάνεια, άλλο στοιχείο). */
+export const FRAME_GAP_CLASSES = { 2: 'flex flex-col gap-2', 3: 'flex flex-col gap-3', 4: 'flex flex-col gap-4' } as const;
 
 export type SectionFrameTitleSize = keyof typeof HEADING_CLASSES;
-export type SectionFrameGap = keyof typeof GAP_CLASSES;
+export type SectionFrameGap = keyof typeof FRAME_GAP_CLASSES;
 export type SectionFrameHeadingLevel = 'h2' | 'h3' | 'h4';
 
 type SectionFrameProps = Omit<
@@ -71,7 +72,7 @@ export function SectionFrame({
   const hasHeaderRow = actions !== undefined || description !== undefined;
 
   return (
-    <Card asChild className={`p-4 ${gap === undefined ? '' : GAP_CLASSES[gap]}`}>
+    <Card asChild className={`p-4 ${gap === undefined ? '' : FRAME_GAP_CLASSES[gap]}`}>
       <Landmark {...rest} aria-labelledby={id}>
         {hasHeaderRow ? (
           <header className={`flex flex-wrap justify-between gap-2 ${description === undefined ? 'items-center' : 'items-start'}`}>

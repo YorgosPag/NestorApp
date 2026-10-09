@@ -15,6 +15,7 @@ import React from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EnumSelect } from '@/components/ui/enum-select';
 import { Input } from '@/components/ui/input';
@@ -102,64 +103,66 @@ function RevocableCard({ item, onRevoked }: {
   };
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <ClaimantHeader
-        item={item}
-        // `h2`: η κάρτα κρέμεται κατευθείαν από το `h1` της σελίδας — η καρτέλα δεν έχει δική της κεφαλίδα (WCAG 1.3.1).
-        level="h2"
-        aside={
-          <p className="m-0 text-sm text-muted-foreground">
-            {t(item.status === 'verified' ? REVOCATION_ADMIN_KEYS.statusVerified : REVOCATION_ADMIN_KEYS.statusSuperseded)}
-            {item.decidedAt !== null && <> · <time dateTime={item.decidedAt}>{formatDate(item.decidedAt)}</time></>}
-          </p>
-        }
-      />
-      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <KaekTerm kaek={item.kaek} />
-      </dl>
-      <Label htmlFor={reasonId}>{t(REVOCATION_ADMIN_KEYS.reasonFieldLabel)}</Label>
-      <EnumSelect
-        id={reasonId}
-        value={reason}
-        onValueChange={setReason}
-        values={ADMIN_REVOCATION_REASONS}
-        getLabel={(value) => t(REVOCATION_REASON_KEYS[value])}
-        disabled={busy}
-      />
-      <Label htmlFor={noteId}>{t('admin:ownershipVerifications.note')}</Label>
-      <Textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} size="sm" rows={2} disabled={busy} />
-      <footer className="flex flex-wrap gap-2">
-        <Button type="button" variant="destructive" disabled={busy} onClick={() => setOpen(true)}>
-          {t(REVOCATION_ADMIN_KEYS.revoke)}
-        </Button>
-      </footer>
-      {failure !== null && (
-        <Alert variant="destructive" withIcon><AlertDescription>{t(REVOKE_ERROR_KEYS[failure])}</AlertDescription></Alert>
-      )}
-      <ConfirmDialog
-        open={open}
-        // Όσο τρέχει η ανάκληση ο διάλογος ΜΕΝΕΙ (ένδειξη προόδου στο κουμπί)· Esc/έξω-κλικ δεν τον κλείνουν.
-        onOpenChange={(next) => { if (!busy) setOpen(next); }}
-        keepOpenWhilePending
-        variant="destructive"
-        title={t(REVOCATION_ADMIN_KEYS.confirmTitle)}
-        description={t(REVOCATION_ADMIN_KEYS.confirmBody, {
-          reason: t(REVOCATION_REASON_KEYS[reason]),
-          unit: t(REVOCATION_REASONS_VOIDING_EVIDENCE.has(reason) ? REVOCATION_ADMIN_KEYS.unitWillRetire : REVOCATION_ADMIN_KEYS.unitStays),
-        })}
-        confirmText={t(REVOCATION_ADMIN_KEYS.revoke)}
-        loading={busy}
-        onConfirm={revoke}
-      >
-        {/* ΠΟΙΑΝ αφορά — δεδομένα, όχι λέξεις: με δύο κάρτες στον ίδιο ΚΑΕΚ ο τίτλος μόνος δεν το λέει. */}
-        <section className="flex flex-col gap-1 text-sm">
-          <p className="m-0 font-semibold text-foreground">{item.claimantName} · …{item.claimantTaxIdLast3}</p>
-          <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-            <KaekTerm kaek={item.kaek} />
-          </dl>
-        </section>
-      </ConfirmDialog>
-    </article>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <ClaimantHeader
+          item={item}
+          // `h2`: η κάρτα κρέμεται κατευθείαν από το `h1` της σελίδας — η καρτέλα δεν έχει δική της κεφαλίδα (WCAG 1.3.1).
+          level="h2"
+          aside={
+            <p className="m-0 text-sm text-muted-foreground">
+              {t(item.status === 'verified' ? REVOCATION_ADMIN_KEYS.statusVerified : REVOCATION_ADMIN_KEYS.statusSuperseded)}
+              {item.decidedAt !== null && <> · <time dateTime={item.decidedAt}>{formatDate(item.decidedAt)}</time></>}
+            </p>
+          }
+        />
+        <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <KaekTerm kaek={item.kaek} />
+        </dl>
+        <Label htmlFor={reasonId}>{t(REVOCATION_ADMIN_KEYS.reasonFieldLabel)}</Label>
+        <EnumSelect
+          id={reasonId}
+          value={reason}
+          onValueChange={setReason}
+          values={ADMIN_REVOCATION_REASONS}
+          getLabel={(value) => t(REVOCATION_REASON_KEYS[value])}
+          disabled={busy}
+        />
+        <Label htmlFor={noteId}>{t('admin:ownershipVerifications.note')}</Label>
+        <Textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} size="sm" rows={2} disabled={busy} />
+        <footer className="flex flex-wrap gap-2">
+          <Button type="button" variant="destructive" disabled={busy} onClick={() => setOpen(true)}>
+            {t(REVOCATION_ADMIN_KEYS.revoke)}
+          </Button>
+        </footer>
+        {failure !== null && (
+          <Alert variant="destructive" withIcon><AlertDescription>{t(REVOKE_ERROR_KEYS[failure])}</AlertDescription></Alert>
+        )}
+        <ConfirmDialog
+          open={open}
+          // Όσο τρέχει η ανάκληση ο διάλογος ΜΕΝΕΙ (ένδειξη προόδου στο κουμπί)· Esc/έξω-κλικ δεν τον κλείνουν.
+          onOpenChange={(next) => { if (!busy) setOpen(next); }}
+          keepOpenWhilePending
+          variant="destructive"
+          title={t(REVOCATION_ADMIN_KEYS.confirmTitle)}
+          description={t(REVOCATION_ADMIN_KEYS.confirmBody, {
+            reason: t(REVOCATION_REASON_KEYS[reason]),
+            unit: t(REVOCATION_REASONS_VOIDING_EVIDENCE.has(reason) ? REVOCATION_ADMIN_KEYS.unitWillRetire : REVOCATION_ADMIN_KEYS.unitStays),
+          })}
+          confirmText={t(REVOCATION_ADMIN_KEYS.revoke)}
+          loading={busy}
+          onConfirm={revoke}
+        >
+          {/* ΠΟΙΑΝ αφορά — δεδομένα, όχι λέξεις: με δύο κάρτες στον ίδιο ΚΑΕΚ ο τίτλος μόνος δεν το λέει. */}
+          <section className="flex flex-col gap-1 text-sm">
+            <p className="m-0 font-semibold text-foreground">{item.claimantName} · …{item.claimantTaxIdLast3}</p>
+            <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+              <KaekTerm kaek={item.kaek} />
+            </dl>
+          </section>
+        </ConfirmDialog>
+      </article>
+    </Card>
   );
 }
 

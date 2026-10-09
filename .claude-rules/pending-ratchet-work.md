@@ -12,9 +12,11 @@
   η τοπική του μορφή (τυλίγει `Card`, δεν επαναλαμβάνει τη συνταγή). Αλλάζει εμφάνιση σε 63 οθόνες ⇒ δικό του σχέδιο.
   **Πρόοδος (ADR-777 §8.87.10)**: παρτίδα 0 ✅ 08/10 — `Card asChild` + `ui/section-frame.tsx` (`SectionFrame`) +
   `TourPanelSection` ως καταναλωτής· παρτίδα 1 ✅ 08/10 — `listing-detail` (8 αρχεία)· παρτίδα 2 ✅ 08/10 — `demand`
-  (9 αρχεία)· παρτίδα 3 ✅ 08/10 — `owner-property` (9) + `properties` (2)· παρτίδα 4 ✅ 08/10 — `mandate` (11). **Υπόλοιπο: 24 αρχεία / 25 εμφανίσεις**
-  (grep 08/10 μετά την παρτίδα 4). Επόμενη: παρτίδα 5 (`stay-calendar` · `contact` · `area-market` · `shared/forms` ·
-  `property-dossier` · `admin`)· εκεί αποφασίζεται και το κλειστό `gap` του `FormFieldset` (για το `ShowcaseLocationEditor`). ⚠️ Οι κενές καταστάσεις (8) φορούν προσωρινά σκέτο `Card`: η σύγκλιση στο `shared/EmptyState`
+  (9 αρχεία)· παρτίδα 3 ✅ 08/10 — `owner-property` (9) + `properties` (2)· παρτίδα 4 ✅ 08/10 — `mandate` (11)· παρτίδα 5 ✅ 09/10 — `stay-calendar` · `contact` · `area-market` · `shared/forms` ·
+  `property-dossier` · `admin` (15 αρχεία / 16 εμφανίσεις· `FormFieldset` με κλειστό `gap`, το `ShowcaseLocationEditor`
+  καταναλωτής του). **Υπόλοιπο: 9 αρχεία / 9 εμφανίσεις** (grep 09/10 μετά την παρτίδα 5). Επόμενη: παρτίδα 6
+  (`account` · `building-management` · `construction` · `contacts/testing` · `conveyance` · `listings` ·
+  `objective-value` · `search` · `workspace`). ⚠️ Οι κενές καταστάσεις (7 ως τώρα) φορούν προσωρινά σκέτο `Card`: η σύγκλιση στο `shared/EmptyState`
   αλλάζει διάταξη (κεντραρισμένο ↔ αριστερά) και θέλει απόφαση Giorgio. Ταξινόμησε ανά εμφάνιση (πίνακας στη §8.87.10): ενότητα με τίτλο ⇒ `SectionFrame`· γραμμή
   λίστας / κάρτα / σκελετός ⇒ `<Card asChild>`. Εκτός grep: 32 συγγενείς εμφανίσεις με `p-3`/`p-5`/`p-6`.
 

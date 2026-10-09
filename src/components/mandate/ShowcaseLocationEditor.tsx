@@ -17,7 +17,7 @@ import dynamic from 'next/dynamic';
 import { MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -167,24 +167,21 @@ export function ShowcaseLocationEditor({ draft, saved, onChange, onRemove, place
   const id = React.useId();
 
   return (
-    <Card asChild className="m-0 flex flex-col gap-4 p-4">
-      <fieldset>
-        <legend className="px-1 text-sm font-semibold text-foreground">{t(SHOWCASE_CARD_ROLE_KEYS[draft.role])}</legend>
-        <span className="flex flex-col gap-1">
-          <Label htmlFor={`${id}-label`}>{t(SHOWCASE_CARD_KEYS.labelLabel)}</Label>
-          <Input id={`${id}-label`} maxLength={80} placeholder={t(SHOWCASE_CARD_KEYS.labelPlaceholder)} value={draft.label} onChange={(event) => onChange({ ...draft, label: event.target.value })} />
-        </span>
-        <PlaceSection draft={draft} placeMissing={placeMissing} onChange={onChange} />
-        <StreetFields draft={draft} onChange={onChange} />
-        <ShowcaseImportProvenance origin={draft.provenance.phones} />
-        <ShowcasePhoneFields phones={draft.phones} onChange={(phones) => onChange({ ...withoutProvenance(draft, 'phones'), phones })} />
-        <ShowcaseImportProvenance origin={draft.provenance.emails} />
-        <ShowcaseEmailFields emails={draft.emails} saved={saved} onChange={(emails) => onChange({ ...withoutProvenance(draft, 'emails'), emails })} />
-        <HoursSection draft={draft} onChange={onChange} />
-        <Button type="button" variant="outline" className="self-start" onClick={onRemove}>
-          {t(SHOWCASE_CARD_KEYS.removeLocation)}
-        </Button>
-      </fieldset>
-    </Card>
+    <FormFieldset legend={t(SHOWCASE_CARD_ROLE_KEYS[draft.role])} gap={4}>
+      <span className="flex flex-col gap-1">
+        <Label htmlFor={`${id}-label`}>{t(SHOWCASE_CARD_KEYS.labelLabel)}</Label>
+        <Input id={`${id}-label`} maxLength={80} placeholder={t(SHOWCASE_CARD_KEYS.labelPlaceholder)} value={draft.label} onChange={(event) => onChange({ ...draft, label: event.target.value })} />
+      </span>
+      <PlaceSection draft={draft} placeMissing={placeMissing} onChange={onChange} />
+      <StreetFields draft={draft} onChange={onChange} />
+      <ShowcaseImportProvenance origin={draft.provenance.phones} />
+      <ShowcasePhoneFields phones={draft.phones} onChange={(phones) => onChange({ ...withoutProvenance(draft, 'phones'), phones })} />
+      <ShowcaseImportProvenance origin={draft.provenance.emails} />
+      <ShowcaseEmailFields emails={draft.emails} saved={saved} onChange={(emails) => onChange({ ...withoutProvenance(draft, 'emails'), emails })} />
+      <HoursSection draft={draft} onChange={onChange} />
+      <Button type="button" variant="outline" className="self-start" onClick={onRemove}>
+        {t(SHOWCASE_CARD_KEYS.removeLocation)}
+      </Button>
+    </FormFieldset>
   );
 }

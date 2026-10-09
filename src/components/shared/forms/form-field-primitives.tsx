@@ -34,6 +34,8 @@
 
 import React from 'react';
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
+import { Card } from '@/components/ui/card';
+import { FRAME_GAP_CLASSES, type SectionFrameGap } from '@/components/ui/section-frame';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
@@ -47,22 +49,29 @@ import '@/lib/design-system';
  *
  * 🔑 **Χωρίς γενικά**: δεν αγγίζει τιμές φόρμας, οπότε μια παράμετρος τύπου εδώ θα
  * ήταν φρουρός που δεν μπορεί να πυροδοτήσει.
+ *
+ * 🔑 **Η επιφάνεια ΕΙΝΑΙ το `Card`** (ADR-777 §8.87.10) και το `gap` είναι το **ίδιο κλειστό σύνολο** με του
+ * `SectionFrame` — καμία `className`, καμία δεύτερη συνταγή ορίου/φόντου για «ομάδα πεδίων».
  */
 export function FormFieldset({
   legend,
   help,
+  gap = 2,
   children,
 }: {
   legend: string;
   help?: string;
+  gap?: SectionFrameGap;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <fieldset className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
-      <legend className="px-1 text-sm font-semibold text-foreground">{legend}</legend>
-      {help !== undefined && <p className="text-sm text-muted-foreground">{help}</p>}
-      {children}
-    </fieldset>
+    <Card asChild className={`p-4 ${FRAME_GAP_CLASSES[gap]}`}>
+      <fieldset>
+        <legend className="px-1 text-sm font-semibold text-foreground">{legend}</legend>
+        {help !== undefined && <p className="text-sm text-muted-foreground">{help}</p>}
+        {children}
+      </fieldset>
+    </Card>
   );
 }
 

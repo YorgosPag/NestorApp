@@ -75,6 +75,8 @@
 
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
+
 import { apiClient, type ApiRequestConfig } from '@/lib/api/enterprise-api-client';
 
 import { FirstContactAwaitingProof } from '../FirstContactAwaitingProof';
@@ -190,33 +192,32 @@ function HarnessControls({
   readonly onWidthChange: (next: PanelWidth) => void;
 }): React.JSX.Element {
   return (
-    <section
-      className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-card p-4 text-sm"
-      aria-label="Harness controls"
-    >
-      <label className="flex items-center gap-2 text-foreground">
-        <input
-          type="checkbox"
-          checked={resending}
-          onChange={(event) => onResendingChange(event.target.checked)}
-        />
-        resending
-      </label>
+    <Card asChild className="flex flex-wrap items-center gap-6 p-4 text-sm">
+      <section aria-label="Harness controls">
+        <label className="flex items-center gap-2 text-foreground">
+          <input
+            type="checkbox"
+            checked={resending}
+            onChange={(event) => onResendingChange(event.target.checked)}
+          />
+          resending
+        </label>
 
-      <label className="flex items-center gap-2 text-foreground">
-        width
-        <select
-          className="rounded-md border border-border bg-background px-2 py-1"
-          value={width}
-          onChange={(event) => onWidthChange(event.target.value === '375' ? '375' : 'auto')}
-        >
-          <option value="auto">auto</option>
-          <option value="375">375px (phone)</option>
-        </select>
-      </label>
+        <label className="flex items-center gap-2 text-foreground">
+          width
+          <select
+            className="rounded-md border border-border bg-background px-2 py-1"
+            value={width}
+            onChange={(event) => onWidthChange(event.target.value === '375' ? '375' : 'auto')}
+          >
+            <option value="auto">auto</option>
+            <option value="375">375px (phone)</option>
+          </select>
+        </label>
 
-      <span className="text-muted-foreground">{PROOF_SCENARIOS.length} panels</span>
-    </section>
+        <span className="text-muted-foreground">{PROOF_SCENARIOS.length} panels</span>
+      </section>
+    </Card>
   );
 }
 
@@ -257,29 +258,29 @@ function ProofPanel({
     //    σύνολο δύο τιμών**, άρα είναι κλάσεις — όχι υπολογισμός. Ένα inline `style`
     //    εδώ θα ήταν και παράβαση κανόνα και μονόδρομος για «άλλο ένα πλάτος» ως
     //    αριθμός σκορπισμένος στο JSX.
-    <article
-      className={`flex flex-col gap-3 rounded-lg border border-border bg-card p-4 ${PANEL_WIDTH_CLASS[width]}`}
-      data-testid={`proof-panel-${scenario.id}`}
-    >
-      <h2 className="m-0 font-mono text-xs text-muted-foreground">{scenario.id}</h2>
-      {handoff !== null && (
-        <p
-          data-testid={`proof-handoff-${scenario.id}`}
-          className="m-0 rounded-md border border-border p-2 font-mono text-xs text-muted-foreground"
-        >
-          ⬆ leaves this screen — parent renders `{handoff}`
-        </p>
-      )}
-      <div ref={host}>
-        <FirstContactAwaitingProof
-          invitationId={scenario.id}
-          resending={resending}
-          onProven={(result) => setHandoff(result.kind)}
-          onResend={noop}
-          onCancel={noop}
-        />
-      </div>
-    </article>
+    // `overflow-visible`: η γκαλερί υπάρχει για να ΦΑΙΝΕΤΑΙ ό,τι ξεχειλίζει στα 375px — το κόψιμο του `Card` θα το έκρυβε.
+    <Card asChild className={`flex flex-col gap-3 overflow-visible p-4 ${PANEL_WIDTH_CLASS[width]}`}>
+      <article data-testid={`proof-panel-${scenario.id}`}>
+        <h2 className="m-0 font-mono text-xs text-muted-foreground">{scenario.id}</h2>
+        {handoff !== null && (
+          <p
+            data-testid={`proof-handoff-${scenario.id}`}
+            className="m-0 rounded-md border border-border p-2 font-mono text-xs text-muted-foreground"
+          >
+            ⬆ leaves this screen — parent renders `{handoff}`
+          </p>
+        )}
+        <div ref={host}>
+          <FirstContactAwaitingProof
+            invitationId={scenario.id}
+            resending={resending}
+            onProven={(result) => setHandoff(result.kind)}
+            onResend={noop}
+            onCancel={noop}
+          />
+        </div>
+      </article>
+    </Card>
   );
 }
 

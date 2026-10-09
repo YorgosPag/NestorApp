@@ -64,6 +64,15 @@
     "alt": {
       "ownerDeclared": "Property video — provided by the owner",
       "agency": "Property video — provided by the real-estate agency"
+    },
+    "play": "Play video",
+    "playLabel": "Play video, duration {duration}",
+    "loading": "Loading video…",
+    "failed": "The video did not load. Try again or refresh the page.",
+    "retry": "Try again",
+    "note": {
+      "ownerDeclared": "The video is the owner’s own material, selected by them.",
+      "agency": "The video is the agency’s own material, selected by them."
     }
   },
   "model": {
@@ -101,6 +110,7 @@
     "tabs": {
       "label": "Listing views",
       "photos": "Photos",
+      "video": "Video",
       "floorplan": "Floor plan",
       "tour": "3D tour"
     },

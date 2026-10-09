@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -203,26 +204,28 @@ export function StayRulesSettings({ rules, busy, onSend }: {
   const valid = stayRulesFrom(draft);
 
   return (
-    <details className="rounded-lg border border-border bg-card p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-foreground">{t('property-market:offer.stayCalendar.rules.heading')}</summary>
-      <form onSubmit={(event) => { event.preventDefault(); if (valid !== null) onSend({ action: 'rules', rules: valid }); }} className="mt-3 flex flex-col gap-3">
-        <p className="text-xs text-muted-foreground">{t('property-market:offer.stayCalendar.rules.lead')}</p>
-        <p className="text-xs text-muted-foreground">{t('property-market:offer.stayCalendar.rules.termsNote')}</p>
-        <TimeRules draft={draft} patch={patch} />
-        <LengthRules draft={draft} patch={patch} />
-        <ResponseRules draft={draft} patch={patch} />
-        {/* Ό,τι αρνείται ο αναλυτής, ονομασμένο ανά αιτία — ποτέ «μέρες κενές» για άκυρο ωράριο. */}
-        {valid === null && (
-          <p role="alert" className={cn('text-sm', COLOR_BRIDGE.text.error)}>
-            {draft.responseHours !== null && !responseHoursUsable(draft.responseHours)
-              ? t('property-market:offer.stayCalendar.rules.responseHoursInvalid')
-              : t('property-market:offer.stayCalendar.rules.weekdaysEmpty')}
-          </p>
-        )}
-        <button type="submit" disabled={busy || valid === null} className={cn(BUTTON, COLOR_BRIDGE.action.primary)}>
-          {t('property-market:offer.stayCalendar.rules.submit')}
-        </button>
-      </form>
-    </details>
+    <Card asChild className="p-4">
+      <details>
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">{t('property-market:offer.stayCalendar.rules.heading')}</summary>
+        <form onSubmit={(event) => { event.preventDefault(); if (valid !== null) onSend({ action: 'rules', rules: valid }); }} className="mt-3 flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">{t('property-market:offer.stayCalendar.rules.lead')}</p>
+          <p className="text-xs text-muted-foreground">{t('property-market:offer.stayCalendar.rules.termsNote')}</p>
+          <TimeRules draft={draft} patch={patch} />
+          <LengthRules draft={draft} patch={patch} />
+          <ResponseRules draft={draft} patch={patch} />
+          {/* Ό,τι αρνείται ο αναλυτής, ονομασμένο ανά αιτία — ποτέ «μέρες κενές» για άκυρο ωράριο. */}
+          {valid === null && (
+            <p role="alert" className={cn('text-sm', COLOR_BRIDGE.text.error)}>
+              {draft.responseHours !== null && !responseHoursUsable(draft.responseHours)
+                ? t('property-market:offer.stayCalendar.rules.responseHoursInvalid')
+                : t('property-market:offer.stayCalendar.rules.weekdaysEmpty')}
+            </p>
+          )}
+          <button type="submit" disabled={busy || valid === null} className={cn(BUTTON, COLOR_BRIDGE.action.primary)}>
+            {t('property-market:offer.stayCalendar.rules.submit')}
+          </button>
+        </form>
+      </details>
+    </Card>
   );
 }

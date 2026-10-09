@@ -12,6 +12,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay } from '@/lib/intl-formatting';
@@ -134,41 +135,43 @@ export function StayCalendarPanel(props: StayCalendarPanelProps): React.ReactEle
   const { selection, meaning, busy, locked, message, warnings, days, onSend, onClear, onDismissWarnings } = props;
 
   return (
-    <aside aria-live="polite" className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-      {message !== null && (
-        <p role={message.tone === 'alert' ? 'alert' : 'status'} className={cn('text-sm', message.tone === 'alert' ? COLOR_BRIDGE.text.error : COLOR_BRIDGE.text.primary)}>
-          {t(MESSAGE[message.id], message.params)}
-        </p>
-      )}
-      {warnings !== null && (
-        <StayRuleWarningsConfirm pending={warnings} busy={busy} onSend={onSend} onDismiss={onDismissWarnings} />
-      )}
-      {selection === null || meaning === null ? (
-        <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.selection.prompt')}</p>
-      ) : (
-        <>
-          <header className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium text-foreground">
-              {t('property-market:offer.stayCalendar.selection.summary', {
-                nights: selection.nights, from: formatCalendarDay(selection.from, true), to: formatCalendarDay(selection.to, true),
-              })}
-            </p>
-            <button type="button" onClick={onClear} className="text-sm text-foreground underline">
-              {t('property-market:offer.stayCalendar.selection.clear')}
-            </button>
-          </header>
-          {!locked && meaning.kind === 'free' && (
-            <>
-              <StayBookingForm selection={selection} busy={busy} onSend={onSend} />
-              <StayBlockForm selection={selection} busy={busy} onSend={onSend} />
-            </>
-          )}
-          {!locked && meaning.kind === 'entry' && <EntryDetails entry={meaning.entry} busy={busy} onSend={onSend} />}
-          {meaning.kind === 'mixed' && <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.selection.mixed')}</p>}
-          {/* Οι κανόνες ανά ημερομηνία ισχύουν όποια κι αν είναι η κατάσταση των νυχτών. */}
-          {!locked && <StayDayRulesForm selection={selection} days={days} busy={busy} onSend={onSend} />}
-        </>
-      )}
-    </aside>
+    <Card asChild className="flex flex-col gap-4 p-4">
+      <aside aria-live="polite">
+        {message !== null && (
+          <p role={message.tone === 'alert' ? 'alert' : 'status'} className={cn('text-sm', message.tone === 'alert' ? COLOR_BRIDGE.text.error : COLOR_BRIDGE.text.primary)}>
+            {t(MESSAGE[message.id], message.params)}
+          </p>
+        )}
+        {warnings !== null && (
+          <StayRuleWarningsConfirm pending={warnings} busy={busy} onSend={onSend} onDismiss={onDismissWarnings} />
+        )}
+        {selection === null || meaning === null ? (
+          <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.selection.prompt')}</p>
+        ) : (
+          <>
+            <header className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-foreground">
+                {t('property-market:offer.stayCalendar.selection.summary', {
+                  nights: selection.nights, from: formatCalendarDay(selection.from, true), to: formatCalendarDay(selection.to, true),
+                })}
+              </p>
+              <button type="button" onClick={onClear} className="text-sm text-foreground underline">
+                {t('property-market:offer.stayCalendar.selection.clear')}
+              </button>
+            </header>
+            {!locked && meaning.kind === 'free' && (
+              <>
+                <StayBookingForm selection={selection} busy={busy} onSend={onSend} />
+                <StayBlockForm selection={selection} busy={busy} onSend={onSend} />
+              </>
+            )}
+            {!locked && meaning.kind === 'entry' && <EntryDetails entry={meaning.entry} busy={busy} onSend={onSend} />}
+            {meaning.kind === 'mixed' && <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.selection.mixed')}</p>}
+            {/* Οι κανόνες ανά ημερομηνία ισχύουν όποια κι αν είναι η κατάσταση των νυχτών. */}
+            {!locked && <StayDayRulesForm selection={selection} days={days} busy={busy} onSend={onSend} />}
+          </>
+        )}
+      </aside>
+    </Card>
   );
 }

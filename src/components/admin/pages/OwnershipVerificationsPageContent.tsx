@@ -16,6 +16,7 @@ import { ShieldCheck } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -72,28 +73,30 @@ function ReviewCard({ item, onDecided }: { readonly item: OwnershipReviewItem; r
   };
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <ClaimantHeader
-        item={item}
-        level="h2"
-        aside={<time dateTime={item.createdAt} className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</time>}
-      />
-      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <KaekTerm kaek={item.kaek} />
-        <dt className="text-muted-foreground">{t('admin:ownershipVerifications.signer')}</dt>
-        <dd className="m-0 text-foreground">{item.sealValid ? (item.sealSigner ?? t('admin:ownershipVerifications.unread')) : t('admin:ownershipVerifications.sealInvalid')}</dd>
-      </dl>
-      <ul className="m-0 list-disc pl-5 text-sm text-foreground">
-        {item.reasons.map((reason) => <li key={reason}>{t(REASON_KEYS[reason])}</li>)}
-      </ul>
-      <label htmlFor={noteId} className="text-sm text-muted-foreground">{t('admin:ownershipVerifications.note')}</label>
-      <Textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} size="sm" rows={2} />
-      <footer className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" onClick={() => void openEvidence(item.id)}>{t('admin:ownershipVerifications.openCertificate')}</Button>
-        <Button type="button" disabled={busy} onClick={() => void decide('approve')}>{t('admin:ownershipVerifications.approve')}</Button>
-        <Button type="button" variant="destructive" disabled={busy} onClick={() => void decide('reject')}>{t('admin:ownershipVerifications.reject')}</Button>
-      </footer>
-    </article>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <ClaimantHeader
+          item={item}
+          level="h2"
+          aside={<time dateTime={item.createdAt} className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</time>}
+        />
+        <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <KaekTerm kaek={item.kaek} />
+          <dt className="text-muted-foreground">{t('admin:ownershipVerifications.signer')}</dt>
+          <dd className="m-0 text-foreground">{item.sealValid ? (item.sealSigner ?? t('admin:ownershipVerifications.unread')) : t('admin:ownershipVerifications.sealInvalid')}</dd>
+        </dl>
+        <ul className="m-0 list-disc pl-5 text-sm text-foreground">
+          {item.reasons.map((reason) => <li key={reason}>{t(REASON_KEYS[reason])}</li>)}
+        </ul>
+        <label htmlFor={noteId} className="text-sm text-muted-foreground">{t('admin:ownershipVerifications.note')}</label>
+        <Textarea id={noteId} value={note} onChange={(event) => setNote(event.target.value)} size="sm" rows={2} />
+        <footer className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => void openEvidence(item.id)}>{t('admin:ownershipVerifications.openCertificate')}</Button>
+          <Button type="button" disabled={busy} onClick={() => void decide('approve')}>{t('admin:ownershipVerifications.approve')}</Button>
+          <Button type="button" variant="destructive" disabled={busy} onClick={() => void decide('reject')}>{t('admin:ownershipVerifications.reject')}</Button>
+        </footer>
+      </article>
+    </Card>
   );
 }
 

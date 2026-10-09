@@ -1246,7 +1246,8 @@
       },
       "owner": {
         "start": "Market without a public listing…",
-        "consentFor": "Consent to: {agency}"
+        "consentFor": "Consent to: {agency}",
+        "agencyUnrecorded": "This mandate was recorded without naming the agency, so consent cannot be recorded for it. While it is in force, the property cannot be marketed without a public listing."
       },
       "decline": "Not interested",
       "declineExplain": "The agency will not be able to send you another request for the current mandate terms. You can always consent later from here.",

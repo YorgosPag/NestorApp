@@ -11,6 +11,7 @@
 import React from 'react';
 
 import { ContractMedian } from '@/components/market/ContractMedian';
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE, type ReportedStatCell } from '@/lib/market/market-statistics';
 
@@ -105,18 +106,20 @@ export function AreaContractCard({ view, parentName }: AreaContractCardProps) {
   const headline = view.summary.last12;
   const hasTrend = view.trend.some((point) => isReportedStatCell(point.cell));
   return (
-    <article className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-      <header className="flex flex-col gap-1">
-        <h3 className="m-0 text-base font-semibold text-foreground">{t(`area-market:segment.${view.segment}`)}</h3>
-        {isReportedStatCell(headline)
-          ? <Headline view={view} cell={headline} price={price} />
-          : <Suppressed view={view} parentName={parentName} price={price} />}
-        <ZoneFigures view={view} price={price} />
-      </header>
-      {hasTrend && (
-        <LazyMarketTrendChart period="quarter" points={view.trend.map((point) => ({ period: point.quarter, cell: point.cell }))} formatPrice={price} />
-      )}
-      {isReportedStatCell(headline) && <YearBuiltTable view={view} price={price} />}
-    </article>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <header className="flex flex-col gap-1">
+          <h3 className="m-0 text-base font-semibold text-foreground">{t(`area-market:segment.${view.segment}`)}</h3>
+          {isReportedStatCell(headline)
+            ? <Headline view={view} cell={headline} price={price} />
+            : <Suppressed view={view} parentName={parentName} price={price} />}
+          <ZoneFigures view={view} price={price} />
+        </header>
+        {hasTrend && (
+          <LazyMarketTrendChart period="quarter" points={view.trend.map((point) => ({ period: point.quarter, cell: point.cell }))} formatPrice={price} />
+        )}
+        {isReportedStatCell(headline) && <YearBuiltTable view={view} price={price} />}
+      </article>
+    </Card>
   );
 }

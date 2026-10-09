@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE, type ReportedStatCell } from '@/lib/market/market-statistics';
@@ -108,19 +109,21 @@ export function AreaSegmentFigures({ offer, view, parentName }: AreaSegmentFigur
   const headline = view.summary.unitPrice;
   const breakdowns = isReportedStatCell(headline) ? breakdownViews(view.segment, view.summary) : [];
   return (
-    <article className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-      <header className="flex flex-col gap-1">
-        <h3 className="m-0 text-base font-semibold text-foreground">{t(`${NS}:segment.${view.segment}`)}</h3>
-        {isReportedStatCell(headline)
-          ? <ReportedHeadline offer={offer} view={view} cell={headline} />
-          : <SuppressedHeadline offer={offer} view={view} parentName={parentName} />}
-      </header>
-      {view.trend !== null && (
-        <AreaAskingTrend trend={view.trend} formatPrice={(amount) => unitPriceLabel(t, offer, view.segment, amount)} />
-      )}
-      {breakdowns.map((breakdown) => (
-        <AskingBreakdown key={breakdown.axis} offer={offer} view={view} breakdown={breakdown} />
-      ))}
-    </article>
+    <Card asChild className="flex flex-col gap-3 p-4">
+      <article>
+        <header className="flex flex-col gap-1">
+          <h3 className="m-0 text-base font-semibold text-foreground">{t(`${NS}:segment.${view.segment}`)}</h3>
+          {isReportedStatCell(headline)
+            ? <ReportedHeadline offer={offer} view={view} cell={headline} />
+            : <SuppressedHeadline offer={offer} view={view} parentName={parentName} />}
+        </header>
+        {view.trend !== null && (
+          <AreaAskingTrend trend={view.trend} formatPrice={(amount) => unitPriceLabel(t, offer, view.segment, amount)} />
+        )}
+        {breakdowns.map((breakdown) => (
+          <AskingBreakdown key={breakdown.axis} offer={offer} view={view} breakdown={breakdown} />
+        ))}
+      </article>
+    </Card>
   );
 }

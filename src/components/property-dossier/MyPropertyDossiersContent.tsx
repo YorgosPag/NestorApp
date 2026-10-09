@@ -19,6 +19,7 @@ import React from 'react';
 import '@/lib/design-system';
 
 import { useAuth } from '@/auth/hooks/useAuth';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import routeSlice from '@/i18n/generated/routes/dossiers.el.json';
@@ -48,10 +49,10 @@ const K = `${NS}:dossier.list`;
 function EmptyDossiers({ lifecycle }: { readonly lifecycle: PropertyDossierLifecycle }) {
   const { t } = useTranslation([NS]);
   return (
-    <section className="rounded-md border border-border bg-card p-4">
+    <Card className="p-4">
       <p className="m-0 font-medium text-foreground">{t(`${K}.empty.${lifecycle}.title`)}</p>
       <p className="mt-1 mb-0 text-sm text-muted-foreground">{t(`${K}.empty.${lifecycle}.body`)}</p>
-    </section>
+    </Card>
   );
 }
 

@@ -13,6 +13,7 @@
 import React from 'react';
 import '@/lib/design-system';
 import { MoreHorizontal } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 import {
   DropdownMenu,
@@ -77,18 +78,20 @@ export function PropertyDossierCard(props: PropertyDossierCardProps): React.Reac
   const { t } = useTranslation([NS]);
   const typeLabel = usePropertyDossierTypeLabel(dossier.type);
   return (
-    <article className="flex items-start justify-between gap-3 rounded-md border border-border bg-card p-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="m-0 truncate text-base font-semibold">
-          <Link href={dossierDetailHref(dossier.id)} className="text-foreground hover:underline">
-            {dossier.label}
-          </Link>
-        </h2>
-        <p className="m-0 text-sm text-muted-foreground">
-          {typeLabel} · {t(`${K}.updated`, { date: formatRelativeTime(dossier.updatedAt) })}
-        </p>
-      </div>
-      <DossierActions {...props} />
-    </article>
+    <Card asChild className="flex items-start justify-between gap-3 p-4">
+      <article>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="m-0 truncate text-base font-semibold">
+            <Link href={dossierDetailHref(dossier.id)} className="text-foreground hover:underline">
+              {dossier.label}
+            </Link>
+          </h2>
+          <p className="m-0 text-sm text-muted-foreground">
+            {typeLabel} · {t(`${K}.updated`, { date: formatRelativeTime(dossier.updatedAt) })}
+          </p>
+        </div>
+        <DossierActions {...props} />
+      </article>
+    </Card>
   );
 }

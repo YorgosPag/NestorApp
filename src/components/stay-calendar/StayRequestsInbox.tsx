@@ -14,6 +14,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatDateTime } from '@/lib/intl-formatting';
@@ -77,13 +78,15 @@ export function StayRequestsInbox({ requests, busy, onSend }: {
   const bookings = requests.filter((entry): entry is BookingView => entry.kind === 'booking');
   if (bookings.length === 0) return null;
   return (
-    <section aria-labelledby="stay-requests-heading" className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <h2 id="stay-requests-heading" className="text-base font-semibold text-foreground">
-        {t('property-market:offer.stayCalendar.requests.heading', { count: bookings.length })}
-      </h2>
+    <SectionFrame
+      title={t('property-market:offer.stayCalendar.requests.heading', { count: bookings.length })}
+      headingLevel="h2"
+      headingId="stay-requests-heading"
+      gap={2}
+    >
       <ul className="flex flex-col gap-2">
         {bookings.map((request) => <RequestItem key={request.id} request={request} busy={busy} onSend={onSend} />)}
       </ul>
-    </section>
+    </SectionFrame>
   );
 }

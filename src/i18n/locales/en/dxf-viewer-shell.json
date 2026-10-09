@@ -7175,6 +7175,7 @@
       "hatchLinesDropped": "{count, plural, one {# hatch was too complex (far too many lines): only its outline was printed, without the pattern lines.} other {# hatches were too complex (far too many lines): only their outlines were printed, without the pattern lines.}}",
       "hatchDensityCollapsed": "{count, plural, one {# hatch was too dense for paper and printed as a tint — its lines would have merged into each other. Increase the pattern scale to make them visible.} other {# hatches were too dense for paper and printed as a tint — their lines would have merged into each other. Increase the pattern scale to make them visible.}}",
       "imageDropped": "{count, plural, one {# image was dropped from the PDF.} other {# images were dropped from the PDF.}}",
+      "meshShapeMissing": "{count, plural, one {# 3D object could not load its shape and was printed as a plain outline.} other {# 3D objects could not load their shapes and were printed as plain outlines.}}",
       "rasterHint": "For a faithful result, print again with «Output: Image (raster)»."
     },
     "dialogTitle": "Print Drawing",
@@ -7852,8 +7853,10 @@
       "hatch-image-solid": "{count, plural, one {# material fill could not load its image and is shown as a flat colour.} other {# material fills could not load their images and are shown as a flat colour.}} Close and reopen this dialog to try again.",
       "image-dropped": "{count, plural, one {# image could not be loaded and is missing from the floor plan.} other {# images could not be loaded and are missing from the floor plan.}} Close and reopen this dialog to try again.",
       "hatch-lines-dropped": "{count, plural, one {# hatch is shown as an outline only, without its pattern.} other {# hatches are shown as outlines only, without their patterns.}}",
-      "hatch-density-collapsed": "{count, plural, one {# hatch is too dense and is shown as a tint instead of lines.} other {# hatches are too dense and are shown as a tint instead of lines.}}"
+      "hatch-density-collapsed": "{count, plural, one {# hatch is too dense and is shown as a tint instead of lines.} other {# hatches are too dense and are shown as a tint instead of lines.}}",
+      "mesh-shape-missing": "{count, plural, one {# 3D object could not load its shape and is shown as a plain outline.} other {# 3D objects could not load their shapes and are shown as plain outlines.}}"
     },
+    "fidelityRetry": "Try again",
     "submit": "Publish",
     "publishing": "Sending…",
     "cancel": "Cancel",

@@ -30,6 +30,7 @@
 
 import React from 'react';
 
+import { SectionFrame } from '@/components/ui/section-frame';
 import type { DraftFormValidation } from '@/lib/forms/draft-validation';
 import type { DraftFormText } from '@/lib/forms/draft-form-labels';
 
@@ -68,13 +69,12 @@ export function FormIssues<TDraft, TBlocker extends string, TViolation extends s
   if (messages.length === 0) return null;
 
   return (
-    <section aria-live="polite" className="rounded-md border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-foreground">{text('issuesHeading')}</h2>
-      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
+    <SectionFrame title={text('issuesHeading')} headingLevel="h2" titleSize="sm" gap={2} aria-live="polite">
+      <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
         {messages.map((message) => (
           <li key={message}>{message}</li>
         ))}
       </ul>
-    </section>
+    </SectionFrame>
   );
 }

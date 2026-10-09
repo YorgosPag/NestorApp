@@ -27,8 +27,11 @@ import { CardBadges } from './CardBadges';
 import type { CardBadge, CardIdentityProps } from './types';
 import '@/lib/design-system';
 
-/** Maximum badges on a card, per Enterprise spec */
-const MAX_BADGES_STACKED = 2;
+/**
+ * Maximum badges on a card's own row. Τρία: φυσική κατάσταση · εμπορική κατάσταση · κοινό (ADR-777 §8.87.8) — με δύο
+ * το σήμα κοινού της κάρτας ακινήτου δεν αποδιδόταν ποτέ (§8.87.9γ2). Ό,τι περισσεύει γίνεται «+N» (`CardBadges`).
+ */
+const MAX_BADGES_STACKED = 3;
 /** Maximum badges when they share the title's row */
 const MAX_BADGES_INLINE = 1;
 
@@ -98,6 +101,9 @@ export function CardHeaderBlock({
             <CardBadges
               badges={badges}
               max={MAX_BADGES_INLINE}
+              // ⚠️ Η θυρίδα δίπλα στον τίτλο χωρά ΕΝΑ σήμα· «+N» εκεί αλλάζει ~12 κάρτες λίστας και δεν έχει μετρηθεί
+              //    σε browser (ADR-777 §8.87.9γ2, ανοιχτό). Δηλωμένο ρητά, όχι σιωπηλό.
+              overflow="drop"
               keyPrefix="inline-"
               badgeClassName="flex-shrink-0"
             />

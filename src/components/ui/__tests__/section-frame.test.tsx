@@ -17,6 +17,7 @@ import { render, screen, within } from '@testing-library/react';
 
 import { Card } from '@/components/ui/card';
 import { SectionFrame } from '@/components/ui/section-frame';
+import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 
 /** Οι κλάσεις που κάνουν κάτι «επιφάνεια» — διαβάζονται από το ίδιο το `Card`, δεν αντιγράφονται εδώ. */
 function surfaceClasses(): string[] {
@@ -117,5 +118,24 @@ describe('SectionFrame', () => {
     const region = screen.getByRole('region');
     expect(region).toHaveAttribute('aria-live', 'polite');
     expect(region).toHaveAttribute('aria-busy', 'true');
+  });
+});
+
+describe('FormFieldset — η ομάδα πεδίων φορά την ΙΔΙΑ επιφάνεια', () => {
+  test('Φ1: ένας κόμβος <fieldset> με την επιφάνεια του Card και όνομα από το <legend>', () => {
+    const surface = surfaceClasses();
+    const { container } = render(<FormFieldset legend="Ταυτότητα" help="Βοήθεια">.</FormFieldset>);
+    const group = screen.getByRole('group', { name: 'Ταυτότητα' });
+    expect(container.firstElementChild).toBe(group);
+    expect(group.tagName).toBe('FIELDSET');
+    for (const cls of [...surface, 'p-4', 'gap-2']) expect(group).toHaveClass(cls);
+    expect(group).not.toHaveClass('rounded-md');
+  });
+
+  test('Φ2: το gap είναι το κλειστό σύνολο του SectionFrame', () => {
+    render(<FormFieldset legend="Σημείο" gap={4}>.</FormFieldset>);
+    const group = screen.getByRole('group', { name: 'Σημείο' });
+    expect(group).toHaveClass('gap-4');
+    expect(group).not.toHaveClass('gap-2');
   });
 });

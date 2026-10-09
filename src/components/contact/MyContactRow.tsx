@@ -14,6 +14,7 @@ import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
 import type { FirstContactForSeeker } from '@/types/first-contact';
@@ -44,46 +45,48 @@ export function MyContactRow({
   const isOpen = contact.lifecycle === 'open';
 
   return (
-    <li className="rounded-md border border-border bg-card p-4">
-      <article>
-        <header className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-medium text-foreground">{t(targetLabelKey(contact))}</span>
-          <Badge variant={isOpen ? 'success' : 'muted'}>
-            {t(isOpen ? MINE_KEYS.openBadge : MINE_KEYS.withdrawnBadge)}
-          </Badge>
-        </header>
+    <Card asChild className="p-4">
+      <li>
+        <article>
+          <header className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium text-foreground">{t(targetLabelKey(contact))}</span>
+            <Badge variant={isOpen ? 'success' : 'muted'}>
+              {t(isOpen ? MINE_KEYS.openBadge : MINE_KEYS.withdrawnBadge)}
+            </Badge>
+          </header>
 
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t(MINE_KEYS.requestedAt, { date: formatDate(contact.createdAt) })}
-        </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t(MINE_KEYS.requestedAt, { date: formatDate(contact.createdAt) })}
+          </p>
 
-        {/* 🔑 Κ10 — ο ζητών δικαιούται να ξέρει τι έφτασε στον άλλο. */}
-        <p className="mt-1 text-sm text-muted-foreground">
-          {contact.seenAt === null
-            ? t(MINE_KEYS.seenNever)
-            : t(MINE_KEYS.seenAt, { date: formatDate(contact.seenAt) })}
-        </p>
-
-        {!isOpen && contact.withdrawnAt !== null && (
+          {/* 🔑 Κ10 — ο ζητών δικαιούται να ξέρει τι έφτασε στον άλλο. */}
           <p className="mt-1 text-sm text-muted-foreground">
-            {t(MINE_KEYS.withdrawnAt, { date: formatDate(contact.withdrawnAt) })}
+            {contact.seenAt === null
+              ? t(MINE_KEYS.seenNever)
+              : t(MINE_KEYS.seenAt, { date: formatDate(contact.seenAt) })}
           </p>
-        )}
 
-        {notice !== null && (
-          <p className="mt-2 text-sm text-foreground" role="status">
-            {t(notice === 'absent' ? MINE_KEYS.withdrawAbsent : MINE_KEYS.withdrawFailed)}
-          </p>
-        )}
+          {!isOpen && contact.withdrawnAt !== null && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t(MINE_KEYS.withdrawnAt, { date: formatDate(contact.withdrawnAt) })}
+            </p>
+          )}
 
-        {isOpen && (
-          <footer className="mt-3">
-            <Button variant="outline" size="sm" disabled={busy} onClick={onWithdraw}>
-              {t(busy ? MINE_KEYS.withdrawing : MINE_KEYS.withdraw)}
-            </Button>
-          </footer>
-        )}
-      </article>
-    </li>
+          {notice !== null && (
+            <p className="mt-2 text-sm text-foreground" role="status">
+              {t(notice === 'absent' ? MINE_KEYS.withdrawAbsent : MINE_KEYS.withdrawFailed)}
+            </p>
+          )}
+
+          {isOpen && (
+            <footer className="mt-3">
+              <Button variant="outline" size="sm" disabled={busy} onClick={onWithdraw}>
+                {t(busy ? MINE_KEYS.withdrawing : MINE_KEYS.withdraw)}
+              </Button>
+            </footer>
+          )}
+        </article>
+      </li>
+    </Card>
   );
 }

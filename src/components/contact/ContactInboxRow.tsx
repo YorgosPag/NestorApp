@@ -21,6 +21,7 @@
 import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
 import type { FirstContactInboxEntry } from '@/services/contact/first-contact-vocabulary';
@@ -97,21 +98,23 @@ export function ContactInboxRow({ entry }: ContactInboxRowProps): React.ReactEle
   const { t } = useTranslation([FIRST_CONTACT_NS]);
 
   return (
-    <li className="rounded-md border border-border bg-card p-4">
-      <article>
-        <header className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-medium text-foreground">{t(targetLabelKey(entry))}</span>
-          {/* 🔑 Το «νέο» λέγεται με ΛΕΞΗ, ποτέ μόνο με χρώμα (CHECK 3.41). */}
-          {entry.seenAt === null && <Badge variant="info">{t(INBOX_KEYS.newBadge)}</Badge>}
-        </header>
+    <Card asChild className="p-4">
+      <li>
+        <article>
+          <header className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium text-foreground">{t(targetLabelKey(entry))}</span>
+            {/* 🔑 Το «νέο» λέγεται με ΛΕΞΗ, ποτέ μόνο με χρώμα (CHECK 3.41). */}
+            {entry.seenAt === null && <Badge variant="info">{t(INBOX_KEYS.newBadge)}</Badge>}
+          </header>
 
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t(INBOX_KEYS.requestedAt, { date: formatDate(entry.requestedAt) })}
-        </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t(INBOX_KEYS.requestedAt, { date: formatDate(entry.requestedAt) })}
+          </p>
 
-        <Disclosure entry={entry} />
-        <WhySection entry={entry} />
-      </article>
-    </li>
+          <Disclosure entry={entry} />
+          <WhySection entry={entry} />
+        </article>
+      </li>
+    </Card>
   );
 }

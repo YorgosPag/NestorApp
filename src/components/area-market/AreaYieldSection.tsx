@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
@@ -24,21 +25,23 @@ const HEADING_ID = 'area-yield';
 function YieldFigures({ view }: { readonly view: YieldView }) {
   const { t } = useTranslation([NS]);
   return (
-    <li className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-card p-4">
-      <h3 className="m-0 text-base font-semibold text-foreground">{t(`${NS}:segment.${view.segment}`)}</h3>
-      {view.asking !== null ? (
-        <p className="m-0 text-2xl font-semibold tabular-nums text-foreground">
-          {t(`${NS}:yield.asking`, { pct: yieldPercentLabel(view.asking) })}
-        </p>
-      ) : (
-        <p className="m-0 text-sm text-foreground">
-          {t(`${NS}:yield.suppressed`, { min: MARKET_STAT_MIN_SAMPLE, sale: view.saleCount, rent: view.rentCount })}
-        </p>
-      )}
-      {view.contract !== null && (
-        <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:yield.contract`, { pct: yieldPercentLabel(view.contract) })}</p>
-      )}
-    </li>
+    <Card asChild className="flex flex-col gap-1 p-4">
+      <li>
+        <h3 className="m-0 text-base font-semibold text-foreground">{t(`${NS}:segment.${view.segment}`)}</h3>
+        {view.asking !== null ? (
+          <p className="m-0 text-2xl font-semibold tabular-nums text-foreground">
+            {t(`${NS}:yield.asking`, { pct: yieldPercentLabel(view.asking) })}
+          </p>
+        ) : (
+          <p className="m-0 text-sm text-foreground">
+            {t(`${NS}:yield.suppressed`, { min: MARKET_STAT_MIN_SAMPLE, sale: view.saleCount, rent: view.rentCount })}
+          </p>
+        )}
+        {view.contract !== null && (
+          <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:yield.contract`, { pct: yieldPercentLabel(view.contract) })}</p>
+        )}
+      </li>
+    </Card>
   );
 }
 

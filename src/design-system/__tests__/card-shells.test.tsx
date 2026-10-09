@@ -73,14 +73,17 @@ describe('Card shells - shared contract', () => {
       expect(screen.getByText('Τυπική Θέση')).toBeInTheDocument();
     });
 
-    it('caps badges at two, keeping the highest priority ones', () => {
-      render(<Card title="P-001" badges={BADGES} />);
+    // Ως τις 2026-10-09 το όριο ήταν δύο και το τρίτο έπεφτε χωρίς ίχνος (ADR-777 §8.87.9γ2).
+    it('caps badges at three in priority order — the overflow is counted, never dropped', () => {
+      render(<Card title="P-001" badges={[...BADGES, { label: 'Τέταρτη', variant: 'outline' as const }]} />);
 
       const badges = screen.getAllByTestId('badge');
-      expect(badges).toHaveLength(2);
+      expect(badges).toHaveLength(4);
       expect(badges[0]).toHaveTextContent('Διαθέσιμη');
       expect(badges[1]).toHaveTextContent('Νέα');
-      expect(screen.queryByText('Τρίτη')).not.toBeInTheDocument();
+      expect(badges[2]).toHaveTextContent('Τρίτη');
+      expect(badges[3]).toHaveTextContent('+1');
+      expect(badges[3]).toHaveTextContent('Τέταρτη');
     });
 
     it('activates on click', async () => {
@@ -232,6 +235,25 @@ describe('ListCard - list-specific behaviour', () => {
     const badges = screen.getAllByTestId('badge');
     expect(badges).toHaveLength(1);
     expect(badges[0]).toHaveTextContent('Διαθέσιμη');
+  });
+
+  // ADR-777 §8.87.9γ2 — το τρίτο σήμα (κοινό) υπήρχε στο μοντέλο και ΔΕΝ αποδιδόταν: όριο 2, σιωπηλή αποκοπή.
+  it('renders three stacked badges — the third is not dropped', () => {
+    const three = [...BADGES, { label: 'Δημόσια', variant: 'success' as const }].slice(0, 3);
+    render(<ListCard title="P-001" badges={three} />);
+
+    expect(three).toHaveLength(3);
+    expect(screen.getAllByTestId('badge').map((badge) => badge.textContent)).toEqual(three.map((badge) => badge.label));
+  });
+
+  it('collapses badges beyond the cap into a named "+N" badge, never silently', () => {
+    const five = ['Α', 'Β', 'Γ', 'Δ', 'Ε'].map((label) => ({ label, variant: 'outline' as const }));
+    render(<ListCard title="P-001" badges={five} />);
+
+    const badges = screen.getAllByTestId('badge');
+    expect(badges).toHaveLength(4);
+    expect(badges[3]).toHaveTextContent('+2');
+    expect(badges[3]).toHaveTextContent('Δ, Ε');
   });
 
   it('forwards its ref to the card element', () => {
