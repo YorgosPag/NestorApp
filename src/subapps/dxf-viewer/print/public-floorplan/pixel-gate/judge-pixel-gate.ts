@@ -11,7 +11,7 @@
  * | Κ1 | Ασπρόμαυρο / Γκρι ⇒ κανένα χρωματιστό pixel | 🔴 ratchet κατά ταυτότητα |
  * | Κ2 | καμία γραμμή με αντίθεση < 3:1 προς το χαρτί | 🔴 ratchet κατά ταυτότητα |
  * | Κ3 | καμία γραμμή κάτω από το δάπεδο πάχους | 🔴 ratchet κατά ταυτότητα |
- * | Κ4 | η μέτρηση **έγινε** (κάθε τύπος έχει δείγμα, ό,τι φαίνεται ζωγράφισε, ό,τι κρύβεται όχι) | ⛔ μηδενική ανοχή |
+ * | Κ4 | η μέτρηση **έγινε** (κάθε τύπος έχει δείγμα, ό,τι φαίνεται ζωγράφισε, ό,τι κρύβεται όχι, **καμία απώλεια πόρου**) | ⛔ μηδενική ανοχή |
  * | Κ5 | δύο λήψεις ⇒ ίδια pixels | ⛔ μηδενική ανοχή |
  * | Κ6 | μετρήθηκε το **χειρότερο** σενάριο: όλες οι ομάδες αναμμένες | ⛔ μηδενική ανοχή |
  *
@@ -145,6 +145,11 @@ function levelMeasuredFindings(level: PixelGateLevel, sampleTypes: readonly stri
   for (const type of level.unruledTypes) {
     findings.push(fail('K4', `unruled:${style}:${type}`, 'το προφίλ δεν έχει κανόνα για αυτόν τον τύπο'));
   }
+  for (const code of level.fidelity) {
+    findings.push(
+      fail('K4', `fidelity:${style}:${code}`, 'η λήψη έχασε πόρο — μετρήθηκε εφεδρικό σχέδιο (κουτί / επίπεδο χρώμα), όχι το στοιχείο'),
+    );
+  }
   for (const type of sampleTypes) {
     const cell = cells.get(type);
     if (cell === undefined) findings.push(fail('K4', `no-cell:${style}:${type}`, 'το δείγμα δεν μετρήθηκε'));
@@ -159,7 +164,10 @@ function levelMeasuredFindings(level: PixelGateLevel, sampleTypes: readonly stri
 
 function determinismFindings(level: PixelGateLevel): PixelGateFinding[] {
   if (level.digest !== '' && level.digest === level.repeatDigest) return [];
-  return [fail('K5', level.plotStyle, `δύο λήψεις διαφέρουν: ${level.digest || '∅'} ≠ ${level.repeatDigest || '∅'}`)];
+  const where = level.repeatDrift.length > 0 ? ` — ${level.repeatDrift.join(' · ')}` : '';
+  return [
+    fail('K5', level.plotStyle, `δύο λήψεις διαφέρουν: ${level.digest || '∅'} ≠ ${level.repeatDigest || '∅'}${where}`),
+  ];
 }
 
 function worstCaseFindings(level: PixelGateLevel, expected: PixelGateExpectation): PixelGateFinding[] {

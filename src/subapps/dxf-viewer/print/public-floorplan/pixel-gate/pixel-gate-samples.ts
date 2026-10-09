@@ -12,7 +12,6 @@
  * τα ωμά `strokeStyle`. Μόνο τα σκέτα DXF πρωτογενή (που δεν έχουν εργοστάσιο) γράφονται ως αντικείμενα.
  */
 
-import type { Point2D } from '../../../rendering/types/Types';
 import type { RenderableEntityType } from '../../../rendering/contract/renderable-entity-type';
 import { RENDERABLE_ENTITY_TYPES } from '../../../rendering/contract/renderable-entity-type';
 import type { Entity, SceneModel } from '../../../types/entities';
@@ -22,7 +21,6 @@ import { convertSceneToDxf } from '../../../hooks/canvas/useDxfSceneConversion';
 import { buildHatchEntityFromBoundary } from '../../../bim/hatch/hatch-completion';
 import { buildScaleBarEntity } from '../../../bim/scale-bar/build-scale-bar-entity';
 import { buildOpeningInfoTagEntity } from '../../../bim/opening-info-tag/build-opening-info-tag-entity';
-import { buildDefaultWallParams, buildWallEntity } from '../../../hooks/drawing/wall-completion';
 import { buildDefaultOpeningParams, buildOpeningEntity } from '../../../hooks/drawing/opening-completion';
 import { buildDefaultSlabParams, buildSlabEntity } from '../../../hooks/drawing/slab-completion';
 import { buildDefaultSlabOpeningParams, buildSlabOpeningEntity } from '../../../hooks/drawing/slab-opening-completion';
@@ -38,12 +36,10 @@ import {
   buildDefaultSpaceSeparatorParams,
   buildSpaceSeparatorEntity,
 } from '../../../hooks/drawing/space-separator-completion';
-import { buildDefaultFurnitureParams, buildFurnitureEntity } from '../../../hooks/drawing/furniture-completion';
 import {
   buildDefaultFloorplanSymbolParams,
   buildFloorplanSymbolEntity,
 } from '../../../hooks/drawing/floorplan-symbol-completion';
-import { buildDefaultMepFixtureParams, buildMepFixtureEntity } from '../../../hooks/drawing/mep-fixture-completion';
 import {
   buildDefaultElectricalPanelParams,
   buildElectricalPanelEntity,
@@ -66,41 +62,17 @@ import {
 } from '../../../hooks/drawing/generic-solid-completion';
 import { publicFloorplanRuleOf } from '../public-floorplan-profile';
 import type { PixelGateSampleCell } from './measure-public-floorplan-pixels';
+import { PIXEL_GATE_ANNOTATION_SAMPLES } from './pixel-gate-annotation-samples';
+import { PIXEL_GATE_HOSTED_SAMPLES } from './pixel-gate-hosted-samples';
+import { PIXEL_GATE_MESH_SAMPLES } from './pixel-gate-mesh-samples';
+import type { CellGeometry, SampleFactory } from './pixel-gate-sample-kit';
+import { LAYER_ID, built, primitive, wallOf } from './pixel-gate-sample-kit';
 
 /** Πλευρά κελιού σε mm σχεδίου. Αρκετή για τοίχο 3 m με πόρτα, και για σκάλα. */
 const CELL_MM = 5000;
 /** Κενό από την άκρη του κελιού: κανένα δείγμα δεν αγγίζει το διπλανό του. */
 const INSET_MM = 1000;
 const COLUMNS = 8;
-const LAYER_ID = 'pixel-gate-layer';
-
-/** Τα σημεία αναφοράς ενός κελιού — κάθε εργοστάσιο παίρνει από εδώ, ποτέ δικές του συντεταγμένες. */
-interface CellGeometry {
-  readonly centre: Point2D;
-  /** Οριζόντιο τμήμα στη μέση του κελιού (τοίχος, δοκός, σωλήνας). */
-  readonly from: Point2D;
-  readonly to: Point2D;
-  /** Τετράγωνο μέσα στο κελί, αριστερόστροφα (πλάκα, δάπεδο, γραμμοσκίαση). */
-  readonly ring: Point2D[];
-}
-
-type SampleFactory = (cell: CellGeometry) => Entity[];
-
-type Built<E> = { readonly ok: true; readonly entity: E } | { readonly ok: false; readonly hardErrors: readonly string[] };
-
-/** Δείγμα που το ίδιο το εργοστάσιο αρνείται είναι σφάλμα του **δείγματος** — δυνατά, όχι άδειο κελί. */
-function built<E>(type: RenderableEntityType, result: Built<E>): E {
-  if (!result.ok) throw new Error(`pixel-gate: sample "${type}" rejected: ${result.hardErrors.join(', ')}`);
-  return result.entity;
-}
-
-function primitive<T extends Entity['type']>(type: T): { id: string; type: T; layerId: string; visible: true } {
-  return { id: generateEntityId(), type, layerId: LAYER_ID, visible: true };
-}
-
-function wallOf(cell: CellGeometry) {
-  return built('wall', buildWallEntity(buildDefaultWallParams(cell.from, cell.to), LAYER_ID));
-}
 
 function slabOf(cell: CellGeometry) {
   return built('slab', buildSlabEntity(buildDefaultSlabParams(cell.ring), LAYER_ID));
@@ -126,19 +98,7 @@ export const PIXEL_GATE_SAMPLES: Readonly<Record<RenderableEntityType, SampleFac
   hatch: hatchOf,
   'scale-bar': (c) => [buildScaleBarEntity(c.from, c.to, { layerId: LAYER_ID })],
   'opening-info-tag': (c) => [buildOpeningInfoTagEntity(c.centre, {}, generateEntityId(), LAYER_ID)],
-  // Χωρίς δείγμα ακόμη — το Κ4 τα ονομάζει ένα-ένα.
-  text: null,
-  mtext: null,
-  spline: null,
-  dimension: null,
-  'angle-measurement': null,
-  xline: null,
-  ray: null,
-  leader: null,
-  'annotation-symbol': null,
-  table: null,
-  image: null,
-  'topo-surface': null,
+  ...PIXEL_GATE_ANNOTATION_SAMPLES,
 
   // ── BIM ────────────────────────────────────────────────────────────────────
   wall: (c) => [wallOf(c)],
@@ -167,12 +127,8 @@ export const PIXEL_GATE_SAMPLES: Readonly<Record<RenderableEntityType, SampleFac
   'space-separator': (c) => [
     built('space-separator', buildSpaceSeparatorEntity(buildDefaultSpaceSeparatorParams(c.from, c.to), LAYER_ID)),
   ],
-  furniture: (c) => [built('furniture', buildFurnitureEntity(buildDefaultFurnitureParams(c.centre), LAYER_ID))],
   'floorplan-symbol': (c) => [
     built('floorplan-symbol', buildFloorplanSymbolEntity(buildDefaultFloorplanSymbolParams(c.centre), LAYER_ID)),
-  ],
-  'mep-fixture': (c) => [
-    built('mep-fixture', buildMepFixtureEntity(buildDefaultMepFixtureParams(c.centre), LAYER_ID)),
   ],
   'electrical-panel': (c) => [
     built('electrical-panel', buildElectricalPanelEntity(buildDefaultElectricalPanelParams(c.centre), LAYER_ID)),
@@ -196,10 +152,10 @@ export const PIXEL_GATE_SAMPLES: Readonly<Record<RenderableEntityType, SampleFac
   'generic-solid': (c) => [
     built('generic-solid', buildGenericSolidEntity(buildDefaultGenericSolidParams(c.centre), LAYER_ID)),
   ],
-  // Χωρίς δείγμα ακόμη: θέλουν ξενιστή / υπολογισμένη γεωμετρία / αρχείο 3Δ.
-  'wall-covering': null,
-  'mep-fitting': null,
-  'imported-mesh': null,
+  ...PIXEL_GATE_HOSTED_SAMPLES,
+  // Έπιπλο · είδος υγιεινής · εισαγόμενο πλέγμα: η κάτοψή τους βγαίνει από `.glb` — με δικά τους αρχεία δοκιμής,
+  // αλλιώς η πύλη θα μετρούσε ΜΟΝΟ το κουτί-εφεδρεία και θα έλεγε «μετρήθηκε» (ADR-909 Γ1β).
+  ...PIXEL_GATE_MESH_SAMPLES,
 };
 
 function cellGeometry(index: number): { geometry: CellGeometry; minX: number; minY: number } {

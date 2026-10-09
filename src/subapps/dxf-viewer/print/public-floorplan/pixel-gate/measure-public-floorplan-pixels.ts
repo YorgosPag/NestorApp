@@ -104,6 +104,24 @@ function digestOf(image: ImageData): string {
   return `${image.width}x${image.height}:${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
+/** «Ποιο κελί άλλαξε ανάμεσα στις δύο λήψεις;» — `δείγμα (πλήθος px)`. Εικόνες άλλου μεγέθους ⇒ το λέει ρητά. */
+function driftOf(first: ImageData, repeat: ImageData, rects: ReadonlyArray<readonly [string, PixelRect]>): string[] {
+  if (first.width !== repeat.width || first.height !== repeat.height) return ['άλλο μέγεθος εικόνας'];
+  const a = new Uint32Array(first.data.buffer, first.data.byteOffset, first.data.byteLength >>> 2);
+  const b = new Uint32Array(repeat.data.buffer, repeat.data.byteOffset, repeat.data.byteLength >>> 2);
+  const drift: string[] = [];
+  for (const [sample, rect] of rects) {
+    let changed = 0;
+    for (let y = rect.y0; y < rect.y1; y += 1) {
+      for (let i = y * first.width + rect.x0, end = y * first.width + rect.x1; i < end; i += 1) {
+        if (a[i] !== b[i]) changed += 1;
+      }
+    }
+    if (changed > 0) drift.push(`${sample} (${changed} px)`);
+  }
+  return drift;
+}
+
 function sampleAt(point: RecordedStroke['at'], rects: ReadonlyArray<readonly [string, PixelRect]>): string | null {
   if (point === null) return null;
   const hit = rects.find(([, r]) => point.x >= r.x0 && point.x < r.x1 && point.y >= r.y0 && point.y < r.y1);
@@ -152,7 +170,10 @@ export async function measurePixelGateLevel(
   const rects = cells.map((cell) => [cell.sample, toPixelRect(cell, recipe.frame, image.width, image.height)] as const);
   const onImage = strokes.filter((s) => s.canvas.width === recipe.widthPx && s.canvas.height === recipe.heightPx);
 
-  const repeat = await captureOrThrow(scene, choice);
+  const repeatCapture = await captureOrThrow(scene, choice);
+  const repeat = await decodePixels(repeatCapture.blob);
+  const digest = digestOf(image);
+  const repeatDigest = digestOf(repeat);
 
   return {
     plotStyle,
@@ -167,7 +188,9 @@ export async function measurePixelGateLevel(
     })),
     strokes: groupStrokes(onImage, rects),
     unruledTypes: capture.unruledTypes,
-    digest: digestOf(image),
-    repeatDigest: digestOf(await decodePixels(repeat.blob)),
+    digest,
+    repeatDigest,
+    repeatDrift: digest === repeatDigest ? [] : driftOf(image, repeat, rects),
+    fidelity: [...new Set([...capture.fidelity, ...repeatCapture.fidelity].map((note) => note.code))],
   };
 }

@@ -33,6 +33,8 @@ function level(plotStyle: PixelGateLevel['plotStyle'], over: Partial<PixelGateLe
     unruledTypes: [],
     digest: 'abc',
     repeatDigest: 'abc',
+    repeatDrift: [],
+    fidelity: [],
     ...over,
   };
 }
@@ -130,6 +132,14 @@ describe('CHECK 3.101 — κρίση της πύλης pixels', () => {
       expect(idsOf(measurement([level('monochrome'), level('colour')])).zero).toEqual(['K4:no-level:grayscale']);
     });
 
+    it('🔴 λήψη με απώλεια πόρου (σχήμα 3Δ / εικόνα που δεν φόρτωσε) ⇒ η μέτρηση είναι άκυρη', () => {
+      // Η πύλη θα έκρινε το κουτί-εφεδρεία και θα έλεγε «μετρήθηκε» (ADR-909 Γ1β). Ανά στάθμη, ανά κωδικό.
+      const boxed = level('grayscale', { fidelity: ['mesh-shape-missing', 'hatch-image-solid'] });
+      const { ratchet, zero } = idsOf(measurement([level('monochrome'), boxed, level('colour')]));
+      expect(zero).toEqual(['K4:fidelity:grayscale:mesh-shape-missing', 'K4:fidelity:grayscale:hatch-image-solid']);
+      expect(ratchet).toEqual([]);
+    });
+
     it('ό,τι φαίνεται οφείλει να ζωγραφίσει· ό,τι κρύβεται, όχι', () => {
       const cells = [cell('wall', { inkPx: 0 }), cell('pipe'), cell('dimension', { shown: false, inkPx: 12 })];
       const m = measurement([level('monochrome', { cells }), level('grayscale'), level('colour')]);
@@ -150,6 +160,13 @@ describe('CHECK 3.101 — κρίση της πύλης pixels', () => {
     const drift = level('monochrome', { repeatDigest: 'abd' });
     const empty = level('grayscale', { digest: '', repeatDigest: '' });
     expect(idsOf(measurement([drift, empty, level('colour')])).zero).toEqual(['K5:monochrome', 'K5:grayscale']);
+  });
+
+  it('Κ5 — το εύρημα ονομάζει ΠΟΙΟ δείγμα άλλαξε, όχι μόνο ότι «διαφέρουν»', () => {
+    const drift = level('monochrome', { repeatDigest: 'abd', repeatDrift: ['text (120 px)', 'table (9 px)'] });
+    const verdict = judgePixelGate(measurement([drift, level('grayscale'), level('colour')]), EXPECTED);
+    const finding = verdict.zeroTolerance.find((f) => f.criterion === 'K5');
+    expect(finding?.detail).toContain('text (120 px) · table (9 px)');
   });
 
   it('Κ6 — λήψη με λιγότερες ομάδες από όλες δεν είναι το χειρότερο σενάριο', () => {

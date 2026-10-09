@@ -56,6 +56,17 @@ export interface PixelGateLevel {
   /** Αποτύπωμα των pixels της λήψης, και μιας **δεύτερης** ίδιας λήψης. */
   readonly digest: string;
   readonly repeatDigest: string;
+  /**
+   * Τα δείγματα που το κελί τους **άλλαξε** ανάμεσα στις δύο λήψεις (με πλήθος pixels) — ώστε το Κ5 να λέει
+   * **πού**, όχι μόνο «διαφέρουν». Κενό όταν τα αποτυπώματα συμφωνούν.
+   */
+  readonly repeatDrift: readonly string[];
+  /**
+   * Οι κωδικοί απώλειας (`PrintFidelityCode`) που ανέφερε η λήψη — **και οι δύο** λήψεις της στάθμης. Κενό ⇒ κάθε
+   * εικόνα και κάθε σχήμα 3Δ ήταν έτοιμο. Μη κενό ⇒ η πύλη έκρινε **εφεδρικό** σχέδιο (κουτί, επίπεδο γκρι), όχι
+   * το στοιχείο: η μέτρηση είναι άκυρη (Κ4, ADR-909 Γ1β).
+   */
+  readonly fidelity: readonly string[];
 }
 
 export interface PixelGateMeasurement {

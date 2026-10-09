@@ -29,13 +29,16 @@ export type PixelGateHarnessOutput =
   | { readonly ok: false; readonly error: string };
 
 async function measure(): Promise<PixelGateMeasurement> {
-  const [{ buildPixelGateSampleScene }, { measurePixelGateLevel }, presets, capture] = await Promise.all([
+  const [{ buildPixelGateSampleScene }, { measurePixelGateLevel }, presets, capture, meshes] = await Promise.all([
     import('./pixel-gate-samples'),
     import('./measure-public-floorplan-pixels'),
     import('../public-floorplan-presets'),
     import('../capture-public-floorplan'),
+    import('./pixel-gate-mesh-samples'),
   ]);
 
+  // ADR-909 Γ1β — τα `.glb` των δειγμάτων ζουν στην ίδια την εφαρμογή: η σελίδα δεν έχει σύνδεση για το Storage.
+  meshes.registerPixelGateMeshFixtures();
   const { scene, cells, sampleTypes } = buildPixelGateSampleScene();
   const levels: PixelGateLevel[] = [];
   // Διαδοχικά, ποτέ παράλληλα: ο καταγραφέας τυλίγει το πρωτότυπο του καμβά, και η πολιτική χρώματος είναι καθολική.
