@@ -32,6 +32,7 @@ jest.mock('../../ListingVideos', () => ({ ListingVideos: () => <div data-testid=
 
 const DECLARED = { value: { url: '/a', altKey: 'k' }, provenance: 'declared' };
 const GUESSED = { value: { url: '/b', altKey: 'k' }, provenance: 'inferred', confirmedAt: null };
+const APPROVED = { value: { url: '/c', altKey: 'k' }, provenance: 'inferred', confirmedAt: '2026-10-09T08:00:00.000Z' };
 
 function listing(floorplans: unknown[] = [], models: unknown[] = [], videos: unknown[] = []) {
   return { id: 'l1', floorplans, models, videos } as never;
@@ -119,6 +120,15 @@ describe('ListingMediaViewer', () => {
     const guessed = render(<ListingMediaViewer listing={listing([], [], [GUESSED])} />);
     expect(screen.queryByRole('tablist')).toBeNull();
     guessed.unmount();
+
+    // Μάντεμα που ΕΝΕΚΡΙΝΕ άνθρωπος ⇒ το φύλλο θα το έδειχνε, άρα υπάρχει καρτέλα. Χωρίς αυτό, ο κριτής ξαναγραμμένος
+    // ως `provenance === 'declared'` περνούσε (μετάλλαξη §10.11) — και η καρτέλα θα έλειπε για υλικό που φαίνεται.
+    const approved = render(<ListingMediaViewer listing={listing([], [], [APPROVED])} />);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'listing-detail:media.tabs.photos(3)',
+      'listing-detail:media.tabs.video',
+    ]);
+    approved.unmount();
 
     setQuery('?mediaTab=video');
     render(<ListingMediaViewer listing={listing([], [], [DECLARED])} />);

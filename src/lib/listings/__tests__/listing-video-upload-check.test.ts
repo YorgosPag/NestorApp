@@ -18,7 +18,12 @@ import { buildMp4 } from '@/lib/media/__tests__/mp4-fixture';
 import type { Mp4Refusal } from '@/lib/media/mp4-boxes';
 
 import { LISTING_VIDEO_CONTENT_TYPE, LISTING_VIDEO_LIMITS } from '../listing-video-policy';
-import { blobByteSource, isListingVideoSlot, judgeListingVideoUpload } from '../listing-video-upload-check';
+import {
+  LISTING_VIDEO_LIMIT_LABELS,
+  blobByteSource,
+  isListingVideoSlot,
+  judgeListingVideoUpload,
+} from '../listing-video-upload-check';
 
 function mp4File(bytes: Uint8Array, type: string = LISTING_VIDEO_CONTENT_TYPE): Blob {
   return new Blob([bytes], { type });
@@ -114,6 +119,12 @@ describe('τα μηνύματα των αρνήσεων', () => {
       expect(localeText(locale, REASON_KEYS['too-large'])).not.toMatch(/\d/);
       expect(localeText(locale, REASON_KEYS['too-long'])).not.toMatch(/\d/);
     }
+  });
+
+  // 🔴 «Είναι παράμετροι» δεν λέει ΠΟΙΟΙ αριθμοί: `maxMb` 104,86 (διαίρεση με 1000·1000) και `maxSeconds` 121 περνούσαν
+  // (2 μεταλλάξεις §10.11). Είναι οι αριθμοί που διαβάζει ο άνθρωπος στην άρνηση — καρφώνονται ως κυριολεκτικά.
+  it('🔴 Υ5 οι παράμετροι που φτάνουν στο μήνυμα είναι ΑΚΡΙΒΩΣ «100 MB» και «120 δευτερόλεπτα»', () => {
+    expect(LISTING_VIDEO_LIMIT_LABELS).toEqual({ maxMb: 100, maxSeconds: 120 });
   });
 
   it('τα δύο περιβλήματα παίρνουν όνομα αρχείου και λόγο', () => {

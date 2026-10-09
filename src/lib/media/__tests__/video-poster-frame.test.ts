@@ -8,12 +8,19 @@
  * - Κ3: σκοτεινό καρέ κερδίζει φωτεινό· ή, όταν όλα είναι σκοτεινά, δεν επιστρέφεται κανένα.
  * - Κ4: στιγμή που δεν έδωσε καρέ ακυρώνει τις επόμενες.
  * - Κ5: το καρέ μεγεθύνεται, χάνει την αναλογία του, ή το ταβάνι του χωρίζει από το μεγαλύτερο παράγωγο του ραφιού.
+ *
+ * Προστέθηκαν μετά το πέρασμα μεταλλάξεων (ADR-907 §10.11) — ό,τι επέζησε τότε:
+ * - Κ5β: `floor` αντί `round`, ή χαμένο `max(1, …)` ⇒ καμβάς με ακμή 0.
+ * - Κ6: όριο σκοτεινού `<=` αντί `<`, αλλαγμένο βάρος καναλιού (Rec. 601), διαίρεση του μέσου με bytes αντί για pixel.
  */
 
 import { LISTING_SHELF } from '@/services/upload/utils/public-shelf-kinds';
 
+import { fileCompanionPath } from '@/lib/files/file-companion-objects';
+
 import {
   VIDEO_POSTER_MAX_EDGE,
+  VIDEO_POSTER_MIME,
   isDarkFrame,
   pickPosterFrame,
   posterFrameSize,
@@ -57,6 +64,45 @@ describe('isDarkFrame', () => {
     expect(isDarkFrame(mostlyBlack)).toBe(true);
   });
 
+  // 🔴 Τα καρέ των υπόλοιπων tests είναι σχεδόν γκρίζα ⇒ τα τρία βάρη αθροίζουν σε 1 και ΚΑΝΕΝΑ δεν φαίνεται χωριστά:
+  // αλλαγμένο βάρος πράσινου, όριο `<=` αντί `<` και διαίρεση με λάθος πλήθος περνούσαν (5 μεταλλάξεις §10.11).
+  it('🔴 Κ6 το όριο είναι ΑΥΣΤΗΡΟ: μέση φωτεινότητα ακριβώς 24 ΔΕΝ είναι σκοτεινή, 23 είναι', () => {
+    expect(isDarkFrame(pixels(256, [24, 24, 24]))).toBe(false);
+    expect(isDarkFrame(pixels(256, [23, 23, 23]))).toBe(true);
+    expect(isDarkFrame(pixels(1, [24, 24, 24]))).toBe(false);
+  });
+
+  it.each([
+    // [κανάλι, τελευταία τιμή που είναι ακόμη σκοτεινή] — η επόμενη περνά το 24. Βάρη Rec. 601: 0,299 · 0,587 · 0,114.
+    ['κόκκινο', 0, 80],
+    ['πράσινο', 1, 40],
+    ['μπλε', 2, 210],
+  ] as const)('🔴 Κ6 κάθε κανάλι ζυγίζει με το ΔΙΚΟ του βάρος (%s)', (_name, channel, lastDark) => {
+    const colour = (value: number): [number, number, number] => {
+      const rgb: [number, number, number] = [0, 0, 0];
+      rgb[channel] = value;
+      return rgb;
+    };
+
+    expect(isDarkFrame(pixels(256, colour(lastDark)))).toBe(true);
+    expect(isDarkFrame(pixels(256, colour(lastDark + 1)))).toBe(false);
+  });
+
+  it('🔴 Κ6 κορεσμένα χρώματα: καθαρό πράσινο είναι φωτεινό, σκούρο μπλε σκοτεινό — το μάτι, όχι ο μέσος όρος RGB', () => {
+    expect(isDarkFrame(pixels(256, [0, 255, 0]))).toBe(false);
+    // Μέσος όρος RGB 46 (θα περνούσε ως φωτεινό)· φωτεινότητα 15,8.
+    expect(isDarkFrame(pixels(256, [0, 0, 139]))).toBe(true);
+  });
+
+  it('🔴 Κ6 ο μέσος διαιρείται με το πλήθος των PIXEL, όχι των bytes: αμυδρό καρέ μέσης 30 δεν είναι σκοτεινό', () => {
+    expect(isDarkFrame(pixels(256, [30, 30, 30]))).toBe(false);
+
+    // Μισό μαύρο, μισό 60 ⇒ μέση 30.
+    const half = pixels(256, [0, 0, 0]);
+    for (let i = 0; i < 128; i++) half.set([60, 60, 60, 255], i * 4);
+    expect(isDarkFrame(half)).toBe(false);
+  });
+
   it('κενό δείγμα ⇒ σκοτεινό: δεν υπάρχει εικόνα να δείξει', () => {
     expect(isDarkFrame(new Uint8ClampedArray(0))).toBe(true);
   });
@@ -93,7 +139,24 @@ describe('posterFrameSize', () => {
     expect(posterFrameSize(2160, 3840)).toEqual({ width: 1440, height: 2560 });
   });
 
+  // Οι τρεις είσοδοι από πάνω κλιμακώνονται όλες σε ΑΚΕΡΑΙΟΥΣ ⇒ `floor` αντί `round` και χαμένο `max(1, …)` περνούσαν
+  // (μεταλλάξεις §10.11).
+  it('🔴 Κ5β στρογγυλοποίηση στο πλησιέστερο, και ποτέ ακμή μηδέν', () => {
+    // 2001 × (2560 / 3000) = 1707,52 ⇒ 1708 (το `floor` δίνει 1707).
+    expect(posterFrameSize(3000, 2001)).toEqual({ width: 2560, height: 1708 });
+    expect(posterFrameSize(2001, 3000)).toEqual({ width: 1708, height: 2560 });
+    // 1 × 0,256 = 0,256 ⇒ στρογγυλεύει στο 0· καμβάς πλάτους 0 δεν δίνει καρέ.
+    expect(posterFrameSize(1, 10000)).toEqual({ width: 1, height: 2560 });
+    expect(posterFrameSize(10000, 1)).toEqual({ width: 2560, height: 1 });
+  });
+
   it('🔑 Κ5 το ταβάνι ΕΙΝΑΙ το μεγαλύτερο παράγωγο του ραφιού αγγελιών — τα δύο νούμερα δεν χωρίζουν', () => {
     expect(VIDEO_POSTER_MAX_EDGE).toBe(Math.max(...LISTING_SHELF.encoding.widths));
+  });
+
+  // Το μητρώο συνοδευτικών ονομάζει το αντικείμενο `_poster.webp`: άλλη μορφή εδώ ⇒ bytes PNG πίσω από κατάληξη WebP.
+  it('🔑 η μορφή του καρέ είναι αυτή που υπόσχεται η κατάληξη του συνοδευτικού', () => {
+    expect(VIDEO_POSTER_MIME).toBe('image/webp');
+    expect(fileCompanionPath('a/file_v1.mp4', 'videoPoster').endsWith('.webp')).toBe(true);
   });
 });

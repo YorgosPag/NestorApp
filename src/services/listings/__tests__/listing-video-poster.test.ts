@@ -9,6 +9,10 @@
  * - Ε5: το δέσιμο γίνεται με **θέση** στον πίνακα αντί για ταυτότητα πηγής.
  * - Ε6: τα εξώφυλλα πάνε σε **δεύτερη** συμφιλίωση του raster ραφιού ⇒ οι φωτογραφίες σβήνονται ως «εκτός συνόλου».
  * - Ε7: χωρίς καρέ στο ράφι το `poster` γίνεται κάτι άλλο από `null`.
+ *
+ * Προστέθηκαν μετά το πέρασμα μεταλλάξεων (ADR-907 §10.11) — ό,τι επέζησε τότε:
+ * - Ε1β: χειρόγραφο `.replace(/\.mp4$/, …)` αντί για το μητρώο (με πηγή `.mp4` έδινε την ίδια συμβολοσειρά).
+ * - Ε8: `durationSec` / `width` / `height` του βίντεο χάνονται ή αντικαθίστανται από του εξωφύλλου στο γραμμένο έγγραφο.
  */
 
 import { fileCompanionPath } from '@/lib/files/file-companion-objects';
@@ -117,6 +121,19 @@ describe('videoPosterSources — ποια πηγή εξωφύλλου αντισ
     expect(poster.sourceFileId).toBe('file_v1');
   });
 
+  // 🔴 Με πηγή `.mp4` ένα χειρόγραφο `.replace(/\.mp4$/, '_poster.webp')` δίνει την ΙΔΙΑ συμβολοσειρά με το μητρώο —
+  // η Ε1 περνούσε χωρίς να αποδεικνύει «μέσω του μητρώου» (μετάλλαξη §10.11). Το μητρώο κόβει την ΤΕΛΕΥΤΑΙΑ κατάληξη,
+  // όποια κι αν είναι, και δεν αγγίζει τελεία φακέλου· το χειρόγραφο όχι.
+  it.each([
+    [`${DIR}file_v3.m4v`, `${DIR}file_v3_poster.webp`],
+    [`${DIR}file_v4.MP4`, `${DIR}file_v4_poster.webp`],
+    ['companies/comp_1/v1.2/files/file_v5.mp4', 'companies/comp_1/v1.2/files/file_v5_poster.webp'],
+  ])('🔴 Ε1β η κατάληξη της πηγής δεν είναι υπόθεση αυτού του module (%s)', (videoPath, posterPath) => {
+    const [poster] = videoPosterSources([publishedVideo('file_x')], [videoSource(videoPath, 'file_x')]);
+
+    expect(poster.privateStoragePath).toBe(posterPath);
+  });
+
   it('🔴 Ε2 βίντεο που ΔΕΝ δημοσιεύτηκε δεν αποκτά εξώφυλλο — ούτε βίντεο χωρίς ταυτότητα πηγής', () => {
     const sources = [videoSource(VIDEO_PATH, 'file_v1'), videoSource(SECOND_PATH, 'file_v2')];
 
@@ -190,6 +207,12 @@ describe('writeWithShelf — η καλωδίωση του εξωφύλλου', (
 
     expect(videos.map((video) => video.value.poster?.url)).toEqual(['https://shelf/v1-1024.webp', 'https://shelf/v2-1024.webp']);
     expect(gallery.map((image) => image.url)).toEqual(['https://shelf/p-1024.webp']);
+    // Και ΚΑΘΕ δημοσιευμένο βίντεο ζήτησε το δικό του καρέ: το ψεύτικο ράφι απαντά ό,τι του πουν, άρα «ζητήθηκε μόνο
+    // του πρώτου» δεν φαινόταν από το έγγραφο.
+    expect(reconcilePublicShelf.mock.calls[0][2].filter((s) => s.material.kind === 'video').map((s) => s.privateStoragePath)).toEqual([
+      POSTER_PATH,
+      `${DIR}file_v2_poster.webp`,
+    ]);
   });
 
   it('το εξώφυλλο είναι πλήρες `ListingImage`: διαστάσεις, παράγωγα κατά αύξον πλάτος, `altKey` του βίντεο', async () => {
@@ -218,5 +241,22 @@ describe('writeWithShelf — η καλωδίωση του εξωφύλλου', (
 
     expect(video.value.url).toBe('https://shelf/aa.mp4');
     expect(video.value.poster).toBeNull();
+  });
+
+  // Η σκηνή κρατά το κουτί της από `width`/`height` και λέει τη διάρκεια ΠΡΙΝ το πάτημα — και τα τρία έρχονται από εδώ.
+  // Καμία άγκυρα αυτής της σουίτας δεν τα διάβαζε πίσω από το γραμμένο έγγραφο (μετάλλαξη §10.11).
+  it('🔴 Ε8 οι ΜΕΤΡΗΜΕΝΕΣ διαστάσεις και η διάρκεια του ραφιού φτάνουν αυτούσιες στο έγγραφο — με ή χωρίς εξώφυλλο', async () => {
+    // Κατακόρυφο κλιπ κινητού, με διαστάσεις που ΔΙΑΦΕΡΟΥΝ από του εξωφύλλου του fixture (1024×512) σε κάθε άξονα.
+    const vertical = { ...publishedVideo('file_v1'), width: 576, height: 1024, durationSec: 9.15 };
+    reconcilePublicVideoShelf.mockResolvedValue(report([vertical]));
+    reconcilePublicShelf.mockResolvedValue(report([shelfImage(VIDEO, 'file_v1', 'v1')]));
+
+    const [video] = (await write(sources)).videos as PublicListing['videos'];
+
+    expect(video.value.durationSec).toBe(9.15);
+    expect(video.value.width).toBe(576);
+    expect(video.value.height).toBe(1024);
+    // Το εξώφυλλο κρατά τις ΔΙΚΕΣ του διαστάσεις: δεν αντικαθιστούν του βίντεο, ούτε το αντίστροφο.
+    expect([video.value.poster?.width, video.value.poster?.height]).toEqual([1024, 512]);
   });
 });

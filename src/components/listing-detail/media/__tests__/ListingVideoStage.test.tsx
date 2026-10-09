@@ -8,12 +8,20 @@
  * - Σ4: τα χειριστήρια δεν εμφανίζονται όταν αρχίσει να παίζει — ή όταν ο περιηγητής αρνηθεί το `play()`.
  * - Σ5: το εξώφυλλο γίνεται ιδιότητα `poster` (μία διεύθυνση) αντί για `<img srcset>`· χωρίς εξώφυλλο το πλαίσιο σιωπά.
  * - Σ6: αρχείο που δεν φόρτωσε αφήνει σιωπηλό κενό, ή η επανάληψη ξαναχρησιμοποιεί το στοιχείο που απέτυχε.
+ *
+ * Προστέθηκαν μετά το πέρασμα μεταλλάξεων (ADR-907 §10.11) — ό,τι επέζησε τότε:
+ * - Σ2β: το ταβάνι `max-h-[70vh]` φεύγει από το πλαίσιο.
+ * - Σ3γ: η γραμμή «φορτώνει» χάνει το `aria-live`.
+ * - Σ5β: με εξώφυλλο το `src` του `<video>` δείχνει στην εικόνα (`poster?.url ?? url`).
+ * - Σ5γ: το εξώφυλλο χάνει `sizes` / `src`, ή φορτώνει πρόθυμα.
+ * - Σ6 (συμπλήρωση): η επανάληψη κολλά στο «φορτώνει» αντί να γυρίσει στην πρόσκληση.
  */
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import type { ListingImage, PublishedVideoFile } from '@/types/public-listing';
 
+import { LEAD_SIZES } from '../../ListingGallery';
 import { ListingVideoStage } from '../ListingVideoStage';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -71,6 +79,9 @@ describe('ListingVideoStage', () => {
     expect(node.getAttribute('width')).toBe('1080');
     expect(node.getAttribute('height')).toBe('1920');
     expect(node.getAttribute('aria-label')).toBe('ALT');
+    // Σ2β: το ταβάνι ύψους είναι ΔΗΛΩΣΗ κλάσης (το jsdom δεν έχει διάταξη) — χωρίς αυτό ένα κατακόρυφο κλιπ σπρώχνει
+    // τίτλο και τιμή έξω από την πρώτη οθόνη. Μετάλλαξη §10.11: η κλάση έφευγε και καμία άγκυρα δεν κοκκίνιζε.
+    expect(node.className.split(/\s+/)).toContain('max-h-[70vh]');
   });
 
   it('🔴 Σ3 η διάρκεια λέγεται πριν το πάτημα · το `play()` καλείται ΜΕΣΑ στη χειρονομία', () => {
@@ -86,7 +97,8 @@ describe('ListingVideoStage', () => {
     // Συγχρονισμένα: καμία αναμονή ανάμεσα στο κλικ και στον ισχυρισμό.
     expect(play).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.getByText('listing-detail:video.loading')).toBeTruthy();
+    // Σ3γ: η γραμμή «φορτώνει» ΑΝΑΚΟΙΝΩΝΕΤΑΙ — αλλιώς ο αναγνώστης οθόνης ακούει το κουμπί να χάνεται και μετά σιωπή.
+    expect(screen.getByText('listing-detail:video.loading').closest('p')?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('🔴 Σ4 τα εγγενή χειριστήρια έρχονται όταν παίξει — και όταν ο περιηγητής αρνηθεί το `play()`', async () => {
@@ -132,6 +144,14 @@ describe('ListingVideoStage', () => {
     expect(image?.getAttribute('srcset')).toBe('https://shelf/p-480.webp 480w, https://shelf/p-960.webp 960w');
     expect(image?.getAttribute('alt')).toBe('');
     expect(element(container).hasAttribute('poster')).toBe(false);
+    // Σ5β: ΜΕ εξώφυλλο το `<video>` εξακολουθεί να δείχνει στο ΑΡΧΕΙΟ — `poster?.url ?? url` περνούσε, γιατί η Σ1 ρωτά
+    // μόνο χωρίς εξώφυλλο (μετάλλαξη §10.11).
+    expect(element(container).getAttribute('src')).toBe('https://shelf/v.mp4');
+    // Σ5γ: το `srcset` χωρίς `sizes` διαλέγει παράγωγο σαν η εικόνα να πιάνει όλο το πλάτος της οθόνης· και το εξώφυλλο
+    // ζει σε καρτέλα που δεν είναι η πρώτη, άρα δεν κατεβαίνει πριν χρειαστεί.
+    expect(image?.getAttribute('src')).toBe('https://shelf/p-960.webp');
+    expect(image?.getAttribute('sizes')).toBe(LEAD_SIZES);
+    expect(image?.getAttribute('loading')).toBe('lazy');
     // Με εξώφυλλο η πρόταση δεν τυπώνεται δεύτερη φορά πάνω στην εικόνα.
     expect(screen.queryByText('ALT')).toBeNull();
 
@@ -154,5 +174,8 @@ describe('ListingVideoStage', () => {
     expect(element(container)).not.toBe(failedNode);
     expect(element(container).hasAttribute('controls')).toBe(false);
     expect(play).toHaveBeenCalledTimes(1);
+    // Η επανάληψη γυρίζει στην ΠΡΟΣΚΛΗΣΗ, όχι σε «φορτώνει» χωρίς τέλος: τίποτα δεν ζητήθηκε ακόμη από το νέο στοιχείο.
+    expect(screen.getByRole('button').getAttribute('aria-label')).toBe('listing-detail:video.playLabel|{"duration":"1:45"}');
+    expect(screen.queryByText('listing-detail:video.loading')).toBeNull();
   });
 });
