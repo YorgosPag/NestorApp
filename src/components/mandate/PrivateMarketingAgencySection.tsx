@@ -24,7 +24,7 @@ import { MARKETING_AUDIENCES, isOfferableAudience } from '@/constants/marketing-
 import { usePrivateMarketingPanels } from '@/hooks/mandate/usePrivateMarketingPanels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateTime } from '@/lib/intl-formatting';
-import type { PrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
+import { isAddressablePanel, type PrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
 import {
   requestPrivateMarketing,
   type PrivateMarketingRequestOutcome,
@@ -107,7 +107,8 @@ export function PrivateMarketingAgencySection({ ownerPropertyId }: { readonly ow
   if (load.kind === 'failed') return <p className="text-sm text-muted-foreground">{t(`${K}.loadFailed`)}</p>;
   const panel = load.kind === 'found' ? load.panels.panels[0] : undefined;
   // Χωρίς δεσμευτική εντολή του γραφείου δεν υπάρχει συναίνεση να ζητηθεί (Α7β).
-  if (load.kind === 'absent' || panel === undefined) return null;
+  // Το γραφείο βρίσκει την εντολή του **κατά ταυτότητα** (`mandatesPartyTo`) ⇒ πάνελ χωρίς γραφείο δεν φτάνει εδώ (Α50).
+  if (load.kind === 'absent' || panel === undefined || !isAddressablePanel(panel)) return null;
 
   // Α22 — με ενεργή συναίνεση **καμία** πράξη δεν προσφέρεται: μόνο η κατάσταση.
   const audience = panel.standing.kind === 'granted' ? null : audienceFor(panel);

@@ -28,7 +28,7 @@ import {
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
 import { retainUntilByEvidenceOf } from '@/services/mandate/evidence-registry';
 import { consentActorOfProperty, mandatesVisibleTo } from '@/services/mandate/private-marketing-actor';
-import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
+import { mandateAgencyIdOf, type BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { PRIVATE_MARKETING_DOCUMENT } from '@/types/private-marketing-consent';
 
 type PrivateMarketingPanelsRead =
@@ -41,7 +41,7 @@ type PrivateMarketingPanelsRead =
  */
 function privateMarketingPanelOf(mandate: BrokeredListingMandate, agencyName: string, nowISOValue: string, retainUntilById: ReadonlyMap<string, EvidenceRetentionView>): PrivateMarketingPanel {
   return {
-    agencyCompanyId: mandate.agencyCompanyId,
+    agencyCompanyId: mandateAgencyIdOf(mandate),
     agencyName,
     standing: privateMarketingStandingViewOf(mandate),
     values: consentValuesFor(agencyName, mandate.expiresAt),

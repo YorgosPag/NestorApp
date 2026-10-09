@@ -74,7 +74,7 @@ const CLAUSES = clauseIdsOf(DISCLOSURE.frozen).length;
 /** Τιμές που **κανένας** υπολογισμός πελάτη δεν θα έβγαζε — μόνο ο διακομιστής τις ξέρει (Α25). */
 const SERVER_VALUES = { agency: 'Επωνυμία-Μόνο-Του-Διακομιστή', expiresOn: '31/12/2099' };
 
-function panel(agencyCompanyId: string, standing: PrivateMarketingPanel['standing'], nextRequestAt: string | null = null): PrivateMarketingPanel {
+function panel(agencyCompanyId: string | null, standing: PrivateMarketingPanel['standing'], nextRequestAt: string | null = null): PrivateMarketingPanel {
   return { agencyCompanyId, agencyName: SERVER_VALUES.agency, standing, values: SERVER_VALUES, nextRequestAt, evidence: [] };
 }
 
@@ -158,6 +158,45 @@ describe('🏆 Α24 · Α25 — ο ιδιοκτήτης συναινεί μόν�
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
     fireEvent.click(screen.getByText('property-market:mandate.privateMarketing.owner.start'));
     expect(await screen.findAllByRole('checkbox')).toHaveLength(CLAUSES);
+  });
+});
+
+describe('🏆 Α50 — εντολή χωρίς καταγεγραμμένο γραφείο: φαίνεται, λέγεται με όνομα, ΚΑΜΙΑ πράξη', () => {
+  const START = 'property-market:mandate.privateMarketing.owner.start';
+  const UNRECORDED = 'property-market:mandate.privateMarketing.owner.agencyUnrecorded';
+  const owner = (panels: readonly PrivateMarketingPanel[]): void => {
+    currentLoad = found('owner', panels);
+    render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="public" revision={null} />);
+  };
+
+  it('🔴 καμία προειδοποίηση `key` — η γραμμή έχει ταυτότητα και χωρίς γραφείο', () => {
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    owner([panel(null, { kind: 'absent' }), panel(null, { kind: 'absent' })]);
+    // Δύο πρόσωπα του ίδιου σφάλματος: `undefined` ⇒ «unique "key"» · `null` ⇒ `'null'` δύο φορές ⇒ «same key».
+    const keyWarnings = errors.mock.calls.filter((call) => /unique "key"|same key/.test(String(call[0])));
+    errors.mockRestore();
+    expect(keyWarnings).toHaveLength(0);
+  });
+
+  it('🔴 «δεν καταγράφηκε ποιο γραφείο» + ο λόγος · ΟΧΙ κουμπί που ο διακομιστής θα αρνιόταν', () => {
+    owner([{ ...panel(null, { kind: 'absent' }), agencyName: '' }]);
+    expect(screen.getByText('property-market:offer.mandate.agencyUnknown')).toBeInTheDocument();
+    expect(screen.getByText(UNRECORDED)).toBeInTheDocument();
+    expect(screen.queryByText(START)).toBeNull();
+  });
+
+  it('🔴 μαζί με γραφείο που ζητά ⇒ ΚΑΜΙΑ φόρμα (ο γραφέας θα αρνιόταν όλα, Α27) · η άρνηση του αιτήματος μένει', () => {
+    owner([panel(null, { kind: 'absent' }), panel('comp_beta', REQUESTED)]);
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.queryByText(START)).toBeNull();
+    expect(screen.queryByText('property-market:mandate.privateMarketing.submit')).toBeNull();
+    expect(screen.getByText('property-market:mandate.privateMarketing.decline')).toBeInTheDocument();
+  });
+
+  it('🔑 παρονομαστής: γραφείο με ταυτότητα ⇒ το κουμπί προσφέρεται, χωρίς τη γραμμή του λόγου', () => {
+    owner([panel('comp_alfa', { kind: 'absent' })]);
+    expect(screen.getByText(START)).toBeInTheDocument();
+    expect(screen.queryByText(UNRECORDED)).toBeNull();
   });
 });
 

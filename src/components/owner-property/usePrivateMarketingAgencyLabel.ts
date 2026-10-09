@@ -17,5 +17,9 @@ import { OWNER_MANDATE_KEYS } from './owner-mandate-labels';
 
 export function usePrivateMarketingAgencyLabel(): (panel: PrivateMarketingPanel) => string {
   const { t } = useTranslation(['property-market']);
-  return (panel) => (panel.agencyName.trim() === '' ? t(OWNER_MANDATE_KEYS.agencyUnnamed) : panel.agencyName);
+  // Τρεις καταστάσεις, όχι δύο (`OWNER_MANDATE_KEYS`): «δεν ξέρω ποιο γραφείο» ≠ «γραφείο χωρίς επωνυμία» (Α50).
+  return (panel) => {
+    if (panel.agencyCompanyId === null) return t(OWNER_MANDATE_KEYS.agencyUnknown);
+    return panel.agencyName.trim() === '' ? t(OWNER_MANDATE_KEYS.agencyUnnamed) : panel.agencyName;
+  };
 }

@@ -65,6 +65,7 @@ import {
   type MandateStandingGroup,
 } from '@/lib/mandate/mandate-standing';
 import {
+  mandateAgencyIdOf,
   mandatesOf,
   type BrokeredListingMandate,
   type MandateCompensation,
@@ -117,7 +118,7 @@ export function ownerMandateViewOf(
   const standing = mandateStandingOf(mandate, nowISOValue);
 
   return {
-    agencyCompanyId: emptyToNull(mandate.agencyCompanyId),
+    agencyCompanyId: mandateAgencyIdOf(mandate),
     standing,
     group: groupOfStanding(standing),
     agreement: mandate.agreement ?? null,

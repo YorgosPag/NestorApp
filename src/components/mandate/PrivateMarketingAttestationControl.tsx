@@ -21,7 +21,7 @@ import React from 'react';
 import { PrivateMarketingConsentForm, type PartySubmission } from '@/components/mandate/PrivateMarketingConsentForm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { LegalDocumentVersion } from '@/lib/legal/legal-document-versions';
-import { pendingRequestIdOf, type PrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
+import { pendingRequestIdOf, type AddressablePrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
 import { legalDocumentVersionHref } from '@/lib/routes/legalRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import {
@@ -37,7 +37,7 @@ const K = `${NS}:mandate.privateMarketing`;
 
 export interface PrivateMarketingAttestationProps {
   readonly ownerPropertyId: string;
-  readonly panel: PrivateMarketingPanel;
+  readonly panel: AddressablePrivateMarketingPanel;
   readonly audience: ClosedMarketingAudience;
   readonly disclosure: LegalDocumentVersion;
   readonly onDone: (outcome: PrivateMarketingActionOutcome) => void;

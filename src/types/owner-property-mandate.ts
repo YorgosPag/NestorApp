@@ -977,6 +977,20 @@ export function occupancyOf(mandate: BrokeredListingMandate): MandateOccupancy {
 }
 
 /**
+ * **Ποιο γραφείο κρατά αυτή την εντολή — όταν το ξέρουμε.** `null` = **δεν καταγράφηκε** (έγγραφο προ-ADR-832).
+ *
+ * 🔑 Ο **ένας** αναγνώστης για κάθε **προβολή** που φεύγει προς οθόνη (`OwnerMandateView` · `PrivateMarketingPanel`):
+ * ο τύπος λέει `string`, η βάση κρατά `undefined`, και το JSON **σβήνει** το `undefined` στο σύρμα — η οθόνη
+ * έμενε χωρίς ταυτότητα γραμμής και με κουμπιά που ο διακομιστής αρνείται (ADR-864 Α50).
+ *
+ * ⚠️ Ο κριτής σύγκρουσης θέλει `''` και όχι `null` ({@link occupancyOf}) — άλλο ερώτημα, ίδια πηγή.
+ */
+export function mandateAgencyIdOf(mandate: BrokeredListingMandate): string | null {
+  const id: unknown = mandate.agencyCompanyId;
+  return typeof id === 'string' && id.trim() !== '' ? id.trim() : null;
+}
+
+/**
  * Οι παραβιάσεις της εντολής, ως **κλειστό σύνολο κωδικών** — ίδιο ιδίωμα με τα
  * `OWNER_PROPERTY_INVARIANTS`: κωδικός εδώ, μήνυμα στα locale (N.11).
  */

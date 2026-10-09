@@ -20,7 +20,7 @@ import { PrivateMarketingConsentForm, type PartySubmission } from '@/components/
 import { MARKETING_AUDIENCES, isOfferableAudience } from '@/constants/marketing-audiences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { LegalDocumentVersion } from '@/lib/legal/legal-document-versions';
-import { pendingRequestIdOf, type PrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
+import { pendingRequestIdOf, type AddressablePrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
 import {
   grantPrivateMarketing,
   type PrivateMarketingActionOutcome,
@@ -33,14 +33,15 @@ const NS = 'property-market';
 const K = `${NS}:mandate.privateMarketing`;
 
 /** Κοινό της υποβολής: `null` όταν **κάθε** γραμμή εκτελεί αίτημα (το κοινό του αιτήματος)· αλλιώς το πρώτο επιλέξιμο κλειστό. */
-function grantAudienceOf(awaiting: readonly PrivateMarketingPanel[]): ClosedMarketingAudience | null {
+function grantAudienceOf(awaiting: readonly AddressablePrivateMarketingPanel[]): ClosedMarketingAudience | null {
   if (awaiting.every((panel) => pendingRequestIdOf(panel) !== null)) return null;
   return MARKETING_AUDIENCES.filter(isClosedMarketingAudience).find(isOfferableAudience) ?? null;
 }
 
 export interface PrivateMarketingOwnerConsentProps {
   readonly ownerPropertyId: string;
-  readonly awaiting: readonly PrivateMarketingPanel[];
+  /** Μόνο πάνελ **με ταυτότητα γραφείου** (Α50) — κάθε γραμμή της υποβολής την κουβαλά. */
+  readonly awaiting: readonly AddressablePrivateMarketingPanel[];
   readonly disclosure: LegalDocumentVersion;
   readonly onDone: (outcome: PrivateMarketingActionOutcome) => void;
 }

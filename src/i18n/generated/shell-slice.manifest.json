@@ -44,7 +44,7 @@
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "aa0b568ec96d2aabfb3a2a7268f8ea327ebcf93d020753305aa982999afd8132",
-    "src/i18n/generated/routes/offers__offerId.el.json": "cb3f0c9159bfbd2ff6f91a224ff65132906a3f81ecf130f5a6b534b1984bba46",
+    "src/i18n/generated/routes/offers__offerId.el.json": "657fdbe56a3e1800e20aec4af2f8d258182aa2a42ce0f9915f45abca6859ff52",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "321843e391008307091be65386dba76ef657429a6a5ed7ada25adf6ecd170066",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2b57bcf9f10866d6f745cddec302c4f151edf37c9ec5bfbc2759fa8961484306",
+  "inputsSha256": "707677e2a2c3795ba6d4b407b76d8a9fb0739a84e98df6bf2f26a87b9d58950a",
   "languages": [
     "el"
   ],
@@ -513,7 +513,7 @@
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "bf426c40c826799fe6f52863f0bbff8ee26d6dcd50b13936b219e4fd9082c6b3",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "852eaf0d7a110ef720c66602470b58aac6f699b9a2227ddd3112f978e4532724",
     "src/components/owner-property/OwnerPropertyHistory.tsx": "82d2eb220476a9775fe52c195c13db6dd6ccdfd28c59cf5bf1c076cdd064b862",
-    "src/components/owner-property/PrivateMarketingOwnerSection.tsx": "7b6da5a6f96645ca245f8412953c1e72de68bdc6afec12038f150e3007136dbe",
+    "src/components/owner-property/PrivateMarketingOwnerSection.tsx": "c2dfd09bde83b40ccd36f7fc13f92c89a69a2e0aebac8e1265a2fbf69cbab9f3",
     "src/components/owner-property/form/OwnerPropertyDossierCaptureSpots.tsx": "5043bdad9d9de51dd2f51724cb2a9403df5d5e15b41c64eb1d385dc6da5f9c8c",
     "src/components/owner-property/form/OwnerPropertyDossierField.tsx": "f5950780f1d7b2888432c58a5d85cce4625ba9522938996a21a3df0515b6d4e1",
     "src/components/owner-property/form/OwnerPropertyDossierItem.tsx": "192381cdab498427ce458d683d6f32eb38ee00bfdd5a65a094c86fa156d6b6e1",
@@ -537,7 +537,7 @@
     "src/components/owner-property/offer-form-labels.ts": "5d660c2140c814421ac75adb4bdde7719b3d2ebae7e6654e2d1619b1663d317e",
     "src/components/owner-property/owner-mandate-labels.ts": "adcfbdb334735a6e95e59baa8a884cb44a94b6b6121d3f6bace70d87f91785c2",
     "src/components/owner-property/owner-property-stats-pending.tsx": "9fe1fd31906410da2add06ae1e1b4ceeb78eb9a2fcf7512fda459fa6ea4261cb",
-    "src/components/owner-property/usePrivateMarketingAgencyLabel.ts": "93d98fe3c3d883aef4be97a774ac4575967b73df49f466076ce29d6f21f8be59",
+    "src/components/owner-property/usePrivateMarketingAgencyLabel.ts": "af75de77061ff83ebefe75087aed476645e36721a2d10063a26e21f7627018e0",
     "src/components/private-space/OwnedListStatus.tsx": "8e60eab3d209116341bda268c5a426de73bdfd1ca163193029d570fe65177e4f",
     "src/components/private-space/PrivatePageHeader.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/components/property-dossier/MyPropertyDossiersContent.tsx": "178b5305d9f65514c095fa3bf7dacac0946429160d847c44201d5cc42fb55648",
@@ -8207,6 +8207,7 @@
             "mandate.privateMarketing.decline",
             "mandate.privateMarketing.declineExplain",
             "mandate.privateMarketing.failed",
+            "mandate.privateMarketing.owner.agencyUnrecorded",
             "mandate.privateMarketing.owner.start",
             "mandate.privateMarketing.revokeExplain",
             "mandate.privateMarketing.revokePublic",
@@ -12720,7 +12721,7 @@
     "matchedKeys": 237,
     "routeBoundaries": 3,
     "shellFiles": 1130,
-    "sliceBytes": 724670
+    "sliceBytes": 725026
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

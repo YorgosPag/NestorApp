@@ -27,8 +27,11 @@ import type { MarketingAudience } from '@/constants/marketing-audiences';
 import { usePrivateMarketingPanels } from '@/hooks/mandate/usePrivateMarketingPanels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
+  isAddressablePanel,
+  panelRowKeyOf,
   panelsAwaitingConsent,
   pendingRequestIdOf,
+  type AddressablePrivateMarketingPanel,
   type PrivateMarketingPanel,
 } from '@/lib/mandate/private-marketing-panel';
 import {
@@ -51,7 +54,7 @@ const PrivateMarketingOwnerConsent = dynamic(() =>
   import('./PrivateMarketingOwnerConsent').then((mod) => mod.PrivateMarketingOwnerConsent),
 );
 
-function RevokeControl({ ownerPropertyId, panel, onDone }: { readonly ownerPropertyId: string; readonly panel: PrivateMarketingPanel; readonly onDone: (outcome: PrivateMarketingActionOutcome) => void }): React.ReactElement {
+function RevokeControl({ ownerPropertyId, panel, onDone }: { readonly ownerPropertyId: string; readonly panel: AddressablePrivateMarketingPanel; readonly onDone: (outcome: PrivateMarketingActionOutcome) => void }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [busy, setBusy] = React.useState(false);
   const revoke = async (outcome: PrivateMarketingRevocationOutcome): Promise<void> => {
@@ -68,7 +71,7 @@ function RevokeControl({ ownerPropertyId, panel, onDone }: { readonly ownerPrope
 }
 
 /** Α35 — «μη μου ξαναστείλετε»: δικαίωμα του παραλήπτη (Adobe Acrobat Sign), ένα κλικ δίπλα στο αίτημα. */
-function DeclineControl({ ownerPropertyId, panel, requestId, onDone }: { readonly ownerPropertyId: string; readonly panel: PrivateMarketingPanel; readonly requestId: string; readonly onDone: (outcome: PrivateMarketingActionOutcome) => void }): React.ReactElement {
+function DeclineControl({ ownerPropertyId, panel, requestId, onDone }: { readonly ownerPropertyId: string; readonly panel: AddressablePrivateMarketingPanel; readonly requestId: string; readonly onDone: (outcome: PrivateMarketingActionOutcome) => void }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [busy, setBusy] = React.useState(false);
   const decline = async (): Promise<void> => {
@@ -88,18 +91,21 @@ function AgencyRow({ panel, closed, ownerPropertyId, onDone }: { readonly panel:
   const { t } = useTranslation([NS]);
   const agencyLabel = usePrivateMarketingAgencyLabel();
   const requestId = pendingRequestIdOf(panel);
+  // Α50 — κάθε πράξη θέλει ταυτότητα γραφείου· χωρίς αυτήν η γραμμή λέει **γιατί** δεν προσφέρει τίποτα.
+  const addressable = isAddressablePanel(panel) ? panel : null;
   return (
     <li className="flex flex-col gap-1">
       <p className="text-sm font-medium text-card-foreground">{agencyLabel(panel)}</p>
       <PrivateMarketingStandingLine standing={panel.standing} />
       <MandateEvidenceList evidence={panel.evidence} source={{ kind: 'account', ownerPropertyId }} />
-      {panel.standing.kind === 'granted' && closed && (
+      {addressable === null && <p className="text-sm text-muted-foreground">{t(`${K}.owner.agencyUnrecorded`)}</p>}
+      {addressable !== null && panel.standing.kind === 'granted' && closed && (
         <>
           <p className="text-sm text-muted-foreground">{t(`${K}.revokeExplain`)}</p>
-          <RevokeControl ownerPropertyId={ownerPropertyId} panel={panel} onDone={onDone} />
+          <RevokeControl ownerPropertyId={ownerPropertyId} panel={addressable} onDone={onDone} />
         </>
       )}
-      {requestId !== null && <DeclineControl ownerPropertyId={ownerPropertyId} panel={panel} requestId={requestId} onDone={onDone} />}
+      {addressable !== null && requestId !== null && <DeclineControl ownerPropertyId={ownerPropertyId} panel={addressable} requestId={requestId} onDone={onDone} />}
     </li>
   );
 }
@@ -131,8 +137,8 @@ export function PrivateMarketingOwnerSection({
   return (
     <SectionFrame title={t(`${K}.title`)} headingLevel="h2" gap={3}>
       <ul className="flex flex-col gap-3">
-        {panels.map((panel) => (
-          <AgencyRow key={panel.agencyCompanyId} panel={panel} closed={marketingAudience !== 'public'} ownerPropertyId={ownerPropertyId} onDone={onDone} />
+        {panels.map((panel, index) => (
+          <AgencyRow key={panelRowKeyOf(panel, index)} panel={panel} closed={marketingAudience !== 'public'} ownerPropertyId={ownerPropertyId} onDone={onDone} />
         ))}
       </ul>
       <PrivateMarketingActionNotice outcome={outcome} />

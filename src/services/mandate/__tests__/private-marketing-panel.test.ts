@@ -112,6 +112,32 @@ describe('🏆 Α25 · Α26 — οι τιμές και η κατάσταση ε�
   });
 });
 
+describe('🏆 Α50 — εντολή προ-ADR-832 (χωρίς γραφείο) φτάνει ως «άγνωστο γραφείο», ποτέ ως τρύπα', () => {
+  /** Το σχήμα του **ζωντανού** `ownp_bc548607…`: ενικό `mandate`, χωρίς `agencyCompanyId` · `scope` · `startsAt`. */
+  function seededLegacy(): AdminFirestore {
+    const { mandates: _plural, ...withoutPlural } = fixtures.validOwnerProperty({ authorCompanyId: null });
+    const { agencyCompanyId: _agency, scope: _scope, startsAt: _startsAt, ...legacy } = mandate('comp_gone');
+    const db = new FakeFirestore();
+    db.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_a', { ...withoutPlural, mandate: legacy });
+    return db as unknown as AdminFirestore;
+  }
+
+  it('🔴 `agencyCompanyId` = `null` ΜΕ ΟΝΟΜΑ — όχι `undefined` που το JSON σβήνει στο σύρμα', async () => {
+    const read = await readPrivateMarketingPanels(seededLegacy(), 'ownp_a', OWNER, NOW);
+
+    expect(read.kind).toBe('found');
+    if (read.kind !== 'found') return;
+    expect(read.panels).toHaveLength(1);
+    expect(read.panels[0]?.agencyCompanyId).toBeNull();
+    expect(JSON.parse(JSON.stringify(read.panels[0]))).toHaveProperty('agencyCompanyId', null);
+  });
+
+  it('🔑 παρονομαστής: εντολή με γραφείο κρατά την ταυτότητά της', async () => {
+    const read = await readPrivateMarketingPanels(seeded([mandate('comp_alfa')]), 'ownp_a', OWNER, NOW);
+    expect(read.kind === 'found' && read.panels[0]?.agencyCompanyId).toBe('comp_alfa');
+  });
+});
+
 describe('🏆 Α30 — το πάνελ δίνει την ώρα του επόμενου αιτήματος', () => {
   it('🔴 αίτημα πριν από 10′ ⇒ `nextRequestAt` = +1h από το αίτημα · χωρίς αίτημα ⇒ `null`', async () => {
     const at = new Date(Date.parse(NOW) - 10 * 60_000).toISOString();

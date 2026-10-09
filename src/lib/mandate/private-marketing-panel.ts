@@ -42,7 +42,11 @@ export type PrivateMarketingStandingView =
 
 /** Μία εντολή — ένα γραφείο. */
 export interface PrivateMarketingPanel {
-  readonly agencyCompanyId: string;
+  /**
+   * `null` = **δεν καταγράφηκε ποιο γραφείο** (εντολή προ-ADR-832), ποτέ «κανένα» — ίδιο σχήμα με το
+   * `OwnerMandateView`. ⚠️ Ποτέ `undefined`: το JSON το **σβήνει** στο σύρμα και η οθόνη μένει χωρίς ταυτότητα γραμμής.
+   */
+  readonly agencyCompanyId: string | null;
   /** Η επωνυμία **του CAS** — κενό όταν η `companies` δεν τη γνωρίζει (η οθόνη το ονομάζει). */
   readonly agencyName: string;
   readonly standing: PrivateMarketingStandingView;
@@ -83,11 +87,35 @@ export function privateMarketingStandingViewOf(mandate: BrokeredListingMandate):
 }
 
 /**
+ * **Πάνελ που ΔΕΧΕΤΑΙ πράξη** (Α50) — ο διακομιστής ζητά ταυτότητα γραφείου σε **κάθε** γραφή
+ * (`private-marketing-request-body`: `agencyCompanyId.min(1)`), άρα γραμμή χωρίς ταυτότητα **δεν** έχει κουμπί.
+ */
+export type AddressablePrivateMarketingPanel = PrivateMarketingPanel & { readonly agencyCompanyId: string };
+
+export function isAddressablePanel(panel: PrivateMarketingPanel): panel is AddressablePrivateMarketingPanel {
+  return panel.agencyCompanyId !== null;
+}
+
+/**
+ * **Η ταυτότητα της γραμμής στη λίστα** — το γραφείο όταν υπάρχει· αλλιώς η **θέση** (η σειρά είναι του
+ * διακομιστή, σταθερή ανά ανάγνωση). Δύο εντολές χωρίς γραφείο δεν επιτρέπεται να μοιραστούν ταυτότητα.
+ */
+export function panelRowKeyOf(panel: PrivateMarketingPanel, index: number): string {
+  return panel.agencyCompanyId ?? `unrecorded-${index}`;
+}
+
+/**
  * **Ποια γραφεία περιμένουν συναίνεση του ιδιοκτήτη** (Α24) — κάθε εντολή **χωρίς** ενεργή συναίνεση.
  * `outdated` · `revoked` · `absent` · `requested` μετρούν όλα: μόνο το `granted` καλύπτει τους τρέχοντες όρους.
+ *
+ * 🔴 **Μία εντολή χωρίς καταγεγραμμένο γραφείο ⇒ ΚΑΝΕΝΑ** (Α50): δεν μπορεί να λάβει συναίνεση, και ο κριτής του
+ * γραφέα (`privateMarketingViolationsAdded`) τη μετρά παραβάτη ⇒ αρνείται τη συναίνεση προς **όλα** τα γραφεία
+ * (Α27: «έστω μία άρνηση ⇒ τίποτα δεν γράφεται»). Φόρμα για τα υπόλοιπα θα ήταν κουμπί που αποτυγχάνει πάντα.
  */
-export function panelsAwaitingConsent(panels: readonly PrivateMarketingPanel[]): readonly PrivateMarketingPanel[] {
-  return panels.filter((panel) => panel.standing.kind !== 'granted');
+export function panelsAwaitingConsent(panels: readonly PrivateMarketingPanel[]): readonly AddressablePrivateMarketingPanel[] {
+  const addressable = panels.filter(isAddressablePanel);
+  if (addressable.length !== panels.length) return [];
+  return addressable.filter((panel) => panel.standing.kind !== 'granted');
 }
 
 /** Το αίτημα που εκτελείται για αυτό το γραφείο — `null` όταν ο ιδιοκτήτης στενεύει χωρίς αίτημα. */
