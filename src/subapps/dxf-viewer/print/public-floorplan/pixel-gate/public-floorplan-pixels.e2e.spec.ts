@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 
 import { PUBLIC_FLOORPLAN_GROUPS } from '@/lib/listings/floorplan-render-recipe';
 
@@ -60,23 +60,32 @@ function ofCriterion(findings: readonly PixelGateFinding[], criterion: PixelGate
   return lines(findings.filter((finding) => finding.criterion === criterion));
 }
 
-test.beforeAll(async ({ browser }) => {
+/** Τα `.glb` των δειγμάτων που ζωγραφίζονται από σχήμα 3Δ (`pixel-gate-mesh-samples`). */
+const MESH_FIXTURES = '**/test-fixtures/pixel-gate/*.glb';
+
+const EXPECTED = {
+  renderableTypes: RENDERABLE_ENTITY_TYPES,
+  groups: PUBLIC_FLOORPLAN_GROUPS,
+  plotStyles: PUBLIC_FLOORPLAN_PLOT_STYLES,
+};
+
+/** Μία πλήρης μέτρηση σε **νέα** σελίδα. `prepare` τρέχει πριν από την πλοήγηση (π.χ. για να κόψει αιτήματα). */
+async function measureOnce(browser: Browser, prepare?: (page: Page) => Promise<void>): Promise<PixelGateHarnessOutput> {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   try {
+    await prepare?.(page);
     await page.goto(HARNESS);
     const json = page.locator(`#${PIXEL_GATE_RESULTS_ELEMENT_ID}`);
     await expect(json).toBeAttached({ timeout: 240_000 });
-    output = JSON.parse(await json.innerText()) as PixelGateHarnessOutput;
+    return JSON.parse(await json.innerText()) as PixelGateHarnessOutput;
   } finally {
     await page.close();
   }
-  if (output?.ok) {
-    verdict = judgePixelGate(output.measurement, {
-      renderableTypes: RENDERABLE_ENTITY_TYPES,
-      groups: PUBLIC_FLOORPLAN_GROUPS,
-      plotStyles: PUBLIC_FLOORPLAN_PLOT_STYLES,
-    });
-  }
+}
+
+test.beforeAll(async ({ browser }) => {
+  output = await measureOnce(browser);
+  if (output.ok) verdict = judgePixelGate(output.measurement, EXPECTED);
 });
 
 test.describe('ADR-909 — η δημόσια κάτοψη στα pixels της', () => {
@@ -92,6 +101,26 @@ test.describe('ADR-909 — η δημόσια κάτοψη στα pixels της',
 
   test('Κ6 🔴 μετρήθηκε το ΧΕΙΡΟΤΕΡΟ σενάριο — όλες οι ομάδες αναμμένες', () => {
     expect(ofCriterion(verdict.zeroTolerance, 'K6')).toEqual([]);
+  });
+
+  test('Μ1 🔴 μάρτυρας: με τα σχήματα 3Δ ΚΟΜΜΕΝΑ, το Κ4 το ονομάζει — και η λήψη μένει ντετερμινιστική', async ({ browser }) => {
+    /*
+      ADR-909 Γ1β. Πριν, τα `.glb` δεν φόρτωναν ΠΟΤΕ εδώ (το Storage θέλει σύνδεση): η πύλη μετρούσε
+      κουτιά-εφεδρεία, έλεγε «μετρήθηκε», και το Κ5 κοκκίνιζε 2 στις 5 (διακεκομμένο → συμπαγές ανάμεσα στις
+      δύο λήψεις). Αυτό το test ξαναφτιάχνει εκείνη τη συνθήκη **επίτηδες** και απαιτεί δύο πράγματα:
+      (α) η απώλεια έχει όνομα (`K4:fidelity`) — πύλη που δεν μπορεί να κοκκινίσει εδώ δεν φυλάει τίποτα·
+      (β) το Κ5 είναι πράσινο ΚΑΙ έτσι — η λήψη περιμένει ώσπου το σχήμα να **καταλήξει** (έστω σε αποτυχία),
+          άρα ζωγραφίζει το ίδιο συμπαγές κουτί και τις δύο φορές. Καμία αναμονή μέσα στο όργανο.
+    */
+    const starved = await measureOnce(browser, (page) => page.route(MESH_FIXTURES, (route) => route.abort()));
+    expect(starved.ok ? '' : starved.error, 'το όργανο απέτυχε να μετρήσει').toBe('');
+    if (!starved.ok) return;
+
+    const witness = judgePixelGate(starved.measurement, EXPECTED);
+    expect(ofCriterion(witness.zeroTolerance, 'K4').map((line) => line.split(' — ')[0])).toEqual(
+      PUBLIC_FLOORPLAN_PLOT_STYLES.map((style) => `K4:fidelity:${style}:mesh-shape-missing`),
+    );
+    expect(ofCriterion(witness.zeroTolerance, 'K5')).toEqual([]);
   });
 
   test('Κ0–Κ3 🔴 κανένα ΝΕΟ εύρημα, και κανένα διορθωμένο που έμεινε γραμμένο (ratchet κατά ταυτότητα)', () => {
