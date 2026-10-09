@@ -27,7 +27,7 @@ import {
   getIsolateEffectsSnapshot,
   setIsolateEffects,
 } from '../../../systems/isolate/IsolateEffectsStore';
-import { convertSceneForCapture, preloadCaptureImages, renderDxfSceneOffscreen } from '../../capture/capture-2d';
+import { convertSceneForCapture, preloadCaptureAssets, renderDxfSceneOffscreen } from '../../capture/capture-2d';
 import { missingSceneImageWarnings } from '../../capture/preload-scene-images';
 import {
   capturePublicFloorplan,
@@ -39,7 +39,7 @@ import { DEFAULT_PUBLIC_FLOORPLAN_CHOICE, type PublicFloorplanChoice } from '../
 jest.mock('../../capture/capture-2d', () => ({
   convertSceneForCapture: jest.fn(),
   renderDxfSceneOffscreen: jest.fn(),
-  preloadCaptureImages: jest.fn(),
+  preloadCaptureAssets: jest.fn(),
 }));
 
 // Ο **πραγματικός** έλεγχος απωλειών, τυλιγμένος μόνο για να φαίνεται με ποιο χρώμα ρωτήθηκε (Λ8).
@@ -48,10 +48,16 @@ jest.mock('../../capture/preload-scene-images', () => {
   return { ...actual, missingSceneImageWarnings: jest.fn(actual.missingSceneImageWarnings) };
 });
 
+// Η αποθήκη σχημάτων 3Δ είναι ψεύτικη: εδώ κρίνεται ότι η λήψη **ρωτά** για ό,τι ζωγράφισε (Λ10), όχι η φόρτωση.
+const mockMeshState = jest.fn((_category: string, _assetId: string): string => 'ready');
+jest.mock('../../../bim-3d/library/bim-mesh-library/bim-mesh-cache', () => ({
+  bimMeshCache: { getLoadState: (category: string, assetId: string) => mockMeshState(category, assetId) },
+}));
+
 const convert = convertSceneForCapture as jest.Mock;
 const missingImages = missingSceneImageWarnings as jest.Mock;
 const render = renderDxfSceneOffscreen as jest.Mock;
-const preload = preloadCaptureImages as jest.Mock;
+const preload = preloadCaptureAssets as jest.Mock;
 
 const line = (id: string, x1: number, y1: number, x2: number, y2: number, type = 'line'): DxfEntityUnion =>
   ({ id, type, layerId: 'lyr_1', visible: true, start: { x: x1, y: y1 }, end: { x: x2, y: y2 } }) as unknown as DxfEntityUnion;
@@ -136,13 +142,15 @@ describe('Λ — η λήψη', () => {
 
     const capture = await capturePublicFloorplan({ scene: SOURCE, choice: FURNISHED });
 
-    const [rendered, viewport, input] = render.mock.calls[0] as [DxfScene, { width: number; height: number }, { plotStyle: string; minLineWidthPx?: number }];
+    const [rendered, viewport, input] = render.mock.calls[0] as [DxfScene, { width: number; height: number }, { plotStyle: string; minLineWidthPx?: number; minInkContrast?: number }];
     expect(rendered.entities.map((e) => e.id)).toStrictEqual(['a', 'b']);
     // 🔑 Το κάδρο δεν φούσκωσε από τη διάσταση που κόπηκε: 15000 × 9000 ⇒ 4096 × 2458.
     expect(viewport).toStrictEqual({ width: 4096, height: 2458 });
     expect(input.plotStyle).toBe('monochrome');
     // ADR-909 Β2.5 — καμία γραμμή κάτω από 1 px στο μικρότερο πλάτος ανάγνωσης (4096 / 1024).
     expect(input.minLineWidthPx).toBe(4);
+    // ADR-909 Γ2.1 — και καμία γραμμή κάτω από 3:1 προς το χαρτί: το δηλώνει η δημόσια κάτοψη, όχι η εκτύπωση.
+    expect(input.minInkContrast).toBe(3);
 
     if (!capture.ok) throw new Error('expected a capture');
     expect(capture.recipe).toMatchObject({
@@ -252,6 +260,29 @@ describe('Λ — η λήψη', () => {
     expect(capture.recipe.groups).toStrictEqual(['furniture', 'texts']);
     expect(capture.groupCounts).toMatchObject({ texts: 1, furniture: 0 });
     expect(readFloorplanRenderRecipe(JSON.parse(JSON.stringify(capture.recipe)))).toMatchObject({ ok: true });
+  });
+
+  it('Λ10 🔴 σχήμα 3Δ που δεν φόρτωσε ⇒ ονομασμένη απώλεια — μόνο για ό,τι ΖΩΓΡΑΦΙΣΤΗΚΕ', async () => {
+    const mesh = (id: string, type: string, params: object): DxfEntityUnion =>
+      ({ ...line(id, 0, 0, 100, 50, type), params }) as unknown as DxfEntityUnion;
+    const wc = mesh('wc', 'mep-fixture', { kind: 'wc', assetId: 'wc-that-never-loaded' });
+    const chair = mesh('chair', 'furniture', { assetId: 'chair-that-never-loaded' });
+    const lamp = mesh('lamp', 'mep-fixture', { kind: 'wc' }); // χωρίς `assetId`: παραμετρικό, δεν του λείπει σχήμα
+    mockMeshState.mockReturnValue('error');
+
+    // «Αγγελία»: τα έπιπλα είναι σβηστά ⇒ η καρέκλα δεν ζωγραφίστηκε, άρα δεν είναι απώλεια.
+    arrange([line('a', 0, 0, 100, 50), wc, chair, lamp]);
+    const listing = await capturePublicFloorplan({ scene: SOURCE, choice: LISTING });
+    expect(listing.ok && listing.fidelity).toStrictEqual([{ code: 'mesh-shape-missing', count: 1 }]);
+
+    arrange([line('a', 0, 0, 100, 50), wc, chair, lamp]);
+    const furnished = await capturePublicFloorplan({ scene: SOURCE, choice: FURNISHED });
+    expect(furnished.ok && furnished.fidelity).toStrictEqual([{ code: 'mesh-shape-missing', count: 2 }]);
+
+    mockMeshState.mockReturnValue('ready');
+    arrange([line('a', 0, 0, 100, 50), wc, chair, lamp]);
+    const loaded = await capturePublicFloorplan({ scene: SOURCE, choice: FURNISHED });
+    expect(loaded.ok && loaded.fidelity).toStrictEqual([]);
   });
 
   it('Λ7β σχέδιο χωρίς εικόνες ⇒ καμία απώλεια', async () => {

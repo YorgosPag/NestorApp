@@ -31,9 +31,10 @@ import type { RasterTargetPx } from '../config/paper-types';
 import { rasterToViewport } from '../config/paper-math';
 import { MM_PER_INCH } from '../config/paper-constants';
 import { PRINT_PAPER_HEX } from '../../config/print-color-policy';
-import { convertSceneForCapture, preloadCaptureImages, renderDxfSceneOffscreen } from '../capture/capture-2d';
-import { missingSceneImageWarnings } from '../capture/preload-scene-images';
-import { summarizePrintFidelity, type PrintFidelityNote } from '../print-fidelity';
+import { MIN_ENTITY_CONTRAST } from '../../config/contrast-adaptation';
+import { convertSceneForCapture, preloadCaptureAssets, renderDxfSceneOffscreen } from '../capture/capture-2d';
+import { captureAssetFidelity } from '../capture/capture-asset-fidelity';
+import type { PrintFidelityNote } from '../print-fidelity';
 import { applyPublicFloorplanProfile, type PublicFloorplanGroupCounts } from './public-floorplan-profile';
 import type { PublicFloorplanChoice } from './public-floorplan-presets';
 import { renderInPublicFloorplanView } from './public-floorplan-view';
@@ -64,6 +65,12 @@ const NOMINAL_DPI = (LONG_SIDE_PX * MM_PER_INCH) / NOMINAL_SHEET_LONG_SIDE_MM;
 const SMALLEST_LEGIBLE_WIDTH_PX = 1024;
 /** Εξάγεται για την πύλη pixels (CHECK 3.101): κρίνει κάθε γραμμή με **αυτό** το δάπεδο, όχι με δεύτερο αριθμό. */
 export const PUBLIC_FLOORPLAN_MIN_LINE_WIDTH_PX = LONG_SIDE_PX / SMALLEST_LEGIBLE_WIDTH_PX;
+/**
+ * ADR-909 Γ2.1 — το δάπεδο αντίθεσης κάθε γραμμής προς το χαρτί: το **ίδιο** κατώφλι που το έργο επιβάλλει σε
+ * κάθε οντότητα της οθόνης (WCAG 1.4.11, 3:1) και με το οποίο κρίνει η πύλη pixels (Κ2). Το δηλώνει **μόνο** η
+ * δημόσια κάτοψη — το PDF του μηχανικού τυπώνει τα χρώματά του αυτούσια.
+ */
+const PUBLIC_FLOORPLAN_MIN_INK_CONTRAST = MIN_ENTITY_CONTRAST;
 
 interface WorldBounds {
   readonly min: Point2D;
@@ -181,6 +188,7 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
       fitMode: 'fit-to-page',
       plotStyle,
       minLineWidthPx: PUBLIC_FLOORPLAN_MIN_LINE_WIDTH_PX,
+      minInkContrast: PUBLIC_FLOORPLAN_MIN_INK_CONTRAST,
     });
     layPaperBehind(canvas);
 
@@ -188,8 +196,8 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
       canvas,
       unruledTypes,
       groupCounts,
-      // Πάνω σε ό,τι **ζωγραφίστηκε** (μετά το προφίλ): μια εικόνα που το προφίλ έκρυψε δεν είναι απώλεια.
-      fidelity: summarizePrintFidelity(missingSceneImageWarnings(scene.entities, plotStyle)),
+      // Πάνω σε ό,τι **ζωγραφίστηκε** (μετά το προφίλ): εικόνα ή σχήμα 3Δ που το προφίλ έκρυψε δεν είναι απώλεια.
+      fidelity: captureAssetFidelity(scene.entities, plotStyle),
       recipe: {
         profileId: PUBLIC_FLOORPLAN_PROFILE.id,
         profileVersion: PUBLIC_FLOORPLAN_PROFILE.version,
@@ -213,9 +221,10 @@ function encodePng(canvas: HTMLCanvasElement): Promise<Blob | null> {
  * ⚠️ Δεν πετά για λόγο που ο άνθρωπος μπορεί να διορθώσει — επιστρέφει **ονομασμένη** άρνηση.
  */
 export async function capturePublicFloorplan(input: PublicFloorplanCaptureInput): Promise<PublicFloorplanCapture> {
-  // 🔑 Το `await` των εικόνων ζει **εδώ** — πριν και έξω από το `renderInPublicFloorplanView`, που μένει
-  // σύγχρονο. Μετρημένο ζωντανά (2026-10-09): χωρίς αυτό, πέτρα και πλακάκι έβγαιναν επίπεδο γκρι.
-  await preloadCaptureImages(input.scene, input.choice.plotStyle);
+  // 🔑 Το `await` των εικόνων **και των σχημάτων 3Δ** ζει **εδώ** — πριν και έξω από το
+  // `renderInPublicFloorplanView`, που μένει σύγχρονο. Μετρημένο ζωντανά (2026-10-09): χωρίς αυτό, πέτρα και
+  // πλακάκι έβγαιναν επίπεδο γκρι (Β2.6), και έπιπλο που δεν είχε φορτώσει έβγαινε κουτί-εφεδρεία (Γ1β).
+  await preloadCaptureAssets(input.scene, input.choice.plotStyle);
 
   const rendered = renderPublicFloorplan(input);
   if (rendered === null) return { ok: false, why: 'no-geometry' };

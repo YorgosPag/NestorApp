@@ -46,7 +46,7 @@ const {
   calibrate, presentableSurfaces, reachabilityLimits,
 } = require('./lib/contrast-promise/presentable-surfaces');
 const {
-  ADAPTIVE_MODULE, SCAN_ROOT, createReader, isTestFile, readAdaptiveApi, sitesInFile,
+  ADAPTIVE_MODULES, SCAN_ROOT, createReader, isTestFile, promiseSites, readAdaptiveApi,
 } = require('./lib/contrast-promise/promise-sites');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -59,7 +59,7 @@ const C = {
 };
 
 /**
- * Οι **επτά ρητές καταστάσεις**. Κάθε κλήση πέφτει σε ακριβώς μία και ο σαρωτής τυπώνει τον
+ * Οι **οκτώ ρητές καταστάσεις**. Κάθε κλήση πέφτει σε ακριβώς μία και ο σαρωτής τυπώνει τον
  * **παρονομαστή** — καμία σιωπηλή απόρριψη (πρότυπο CHECK 3.35/3.43/3.44).
  *
  * ⚠️ Το `unreachable-rescued` **δεν είναι πολυτέλεια**. Η πρώτη γραφή το μετρούσε ως
@@ -67,6 +67,10 @@ const C = {
  * είναι *αποδεδειγμένα ανέφικτες* και απλώς διασώζονται. Ένα άθροισμα που ονομάζει τη
  * διάσωση «επιτυχία» επικυρώνει τον εαυτό του, και ο επόμενος αναγνώστης θα συμπέραινε ότι το
  * `WALL_LINE_CONTRAST` κρατιέται από μόνο του.
+ *
+ * Το `forwarded-threshold` (ADR-909 Γ2.1) είναι η κλήση που **δεν γράφει** αριθμό — τον παίρνει από
+ * πεδίο (`policy.minInkContrast`). Δεν είναι «εφικτό»: η υπόσχεση κρίνεται **στον δηλούντα**, που
+ * απογράφεται ως δική του γραμμή. Προωθητής **χωρίς** δηλούντα με αριθμό μένει `unanalyzable`.
  */
 const STATES = {
   DEFINITION: 'definition-site',
@@ -76,6 +80,7 @@ const STATES = {
   UNREACHABLE_PRESET: 'unreachable-preset',
   UNREACHABLE_CUSTOM: 'unreachable-custom',
   UNANALYZABLE: 'unanalyzable-threshold',
+  FORWARDED: 'forwarded-threshold',
 };
 
 /** Οι καταστάσεις που μπλοκάρουν. Οι υπόλοιπες μετριούνται και εξηγούνται. */
@@ -94,11 +99,13 @@ function reachabilityGap(threshold, limits) {
  * ⚠️ Η ιεραρχία είναι **σκόπιμη**: το «είναι το ίδιο το αρχείο ορισμού;» προηγείται, γιατί ο
  * λεπτός wrapper `adaptStructuralLineColorForCanvas` ζει εκεί και *οφείλει* να πετά την
  * ετυμηγορία — αυτή είναι η δουλειά του. Το κριτήριο δεν είναι χειρόγραφο μονοπάτι: το
- * `ADAPTIVE_MODULE` είναι η ίδια σταθερά από την οποία διαβάστηκε το API.
+ * `ADAPTIVE_MODULES` είναι η ίδια σταθερά από την οποία διαβάστηκε το API.
  */
-function classify(site, limits) {
-  if (site.file === ADAPTIVE_MODULE) return STATES.DEFINITION;
+function classify(site, limits, anchored = new Set()) {
+  if (ADAPTIVE_MODULES.includes(site.file)) return STATES.DEFINITION;
   if (isTestFile(site.file)) return STATES.TEST;
+  // Ο αριθμός γράφεται αλλού: ομώνυμη αναμετάδοση, ή προωθητής πεδίου που ΕΧΕΙ δηλούντα με αριθμό.
+  if (site.relay === true || anchored.has(site.forwardedField)) return STATES.FORWARDED;
   if (site.threshold === null) return STATES.UNANALYZABLE;
   const gap = reachabilityGap(site.threshold, limits);
   if (gap === null) return STATES.REACHABLE;
@@ -107,11 +114,24 @@ function classify(site, limits) {
   return gap === 'preset' ? STATES.UNREACHABLE_PRESET : STATES.UNREACHABLE_CUSTOM;
 }
 
-function explain(site, state, limits) {
-  const where = `${site.file}:${site.line}  ${site.fn}(…, ${site.fromDefault ? 'προεπιλογή ' : ''}${site.threshold})`;
-  if (state === STATES.UNANALYZABLE) {
-    return `${site.file}:${site.line}  ${site.fn}(…) — το κατώφλι ΔΕΝ αναλύεται (fail-closed).`;
+/** Γιατί ένα κατώφλι δεν διαβάστηκε — τρεις διαφορετικές βλάβες, τρεις διαφορετικές θεραπείες. */
+function unanalyzableReason(site) {
+  if (site.forwardedField !== undefined) {
+    return `${site.fn}(…, ….${site.forwardedField}) — το κατώφλι είναι πεδίο και ΚΑΝΕΙΣ δεν το δηλώνει `
+      + 'με αριθμό μέσα στο subapp (fail-closed).';
   }
+  if (site.declares !== undefined) {
+    return `${site.declares}: … — η τιμή του πεδίου-κατωφλιού ΔΕΝ αναλύεται (fail-closed).`;
+  }
+  return `${site.fn}(…) — το κατώφλι ΔΕΝ αναλύεται (fail-closed).`;
+}
+
+function explain(site, state, limits) {
+  const at = `${site.file}:${site.line}  `;
+  const where = site.declares !== undefined
+    ? `${at}${site.declares}: ${site.threshold}`
+    : `${at}${site.fn}(…, ${site.fromDefault ? 'προεπιλογή ' : ''}${site.threshold})`;
+  if (state === STATES.UNANALYZABLE) return at + unanalyzableReason(site);
   if (state === STATES.UNREACHABLE_PRESET) {
     return `${where} — ΑΝΕΦΙΚΤΟ στο preset «${limits.worstPreset.key}» (μέγιστο δυνατό `
       + `${limits.worstPreset.max.toFixed(2)}:1) και η ετυμηγορία πετιέται.`;
@@ -124,7 +144,7 @@ function explain(site, state, limits) {
  * Τα αρχεία-SSoT που αλλάζουν την **ετυμηγορία για όλους**: το API, οι επιφάνειες, το χαρτί.
  * **Παράγονται** από τα ίδια modules που τα διαβάζουν — καμία δεύτερη λίστα να αποκλίνει.
  */
-const SSOT_INPUTS = new Set([ADAPTIVE_MODULE, CANVAS_THEME_TS, VARIABLES_CSS, TABLE_INK_TS]);
+const SSOT_INPUTS = new Set([...ADAPTIVE_MODULES, CANVAS_THEME_TS, VARIABLES_CSS, TABLE_INK_TS]);
 
 const isOwnFile = (rel) => rel === 'scripts/check-contrast-promise-reachability.js'
   || rel.startsWith('scripts/lib/contrast-promise/');
@@ -138,9 +158,12 @@ const isOwnFile = (rel) => rel === 'scripts/check-contrast-promise-reachability.
  * ίδιο πρόβλημα υπάρχει (ένα νέο μεσοτονικό θέμα κάνει ανέφικτες υποσχέσεις **αλλού**), αλλά
  * λύνεται αντί να δηλωθεί: όταν κάτι σχετικό είναι staged, τρέχει **ολόκληρο** το subapp.
  *
- * Το κόστος μένει μηδενικό επειδή η **σκανδάλη** είναι φθηνή: μόλις ~8 αρχεία σε όλο το
- * δέντρο καλούν το προσαρμοστικό API, οπότε ένα τυπικό commit στο dxf-viewer δεν την αγγίζει
- * καν (~0,05s). Όταν όντως πυροδοτεί, ο πλήρης έλεγχος κοστίζει ~2,7s.
+ * Η **φθηνή** σκανδάλη (εδώ): SSoT inputs, τα αρχεία της πύλης, και κάθε αρχείο που ονομάζει το
+ * API. ⚠️ Δεν αρκεί (ADR-909 Γ2.1): ο **δηλούντας** ενός προωθημένου πεδίου
+ * (`minInkContrast: 3.0`) δεν ονομάζει το API πουθενά — και ποια πεδία προωθούνται το ξέρει μόνο
+ * η σάρωση. Γι' αυτό η `main` έχει **δεύτερη** σκανδάλη μετά τη σάρωση
+ * ({@link writesForwardedField}). Κόστος: κάθε commit με `.ts` του subapp πληρώνει τη σάρωση (~3s)·
+ * ό,τι δεν αγγίζει το subapp μένει στα ~0,05s.
  */
 function shouldRunFull(stagedRelFiles, api, reader) {
   for (const rel of stagedRelFiles) {
@@ -149,6 +172,14 @@ function shouldRunFull(stagedRelFiles, api, reader) {
     if (reader.mayContain(path.join(REPO_ROOT, rel), api)) return true;
   }
   return false;
+}
+
+const isScannable = (rel) => rel.startsWith(`${SCAN_ROOT}/`) && /\.tsx?$/.test(rel);
+
+/** Η δεύτερη σκανδάλη: σταδιοποιήθηκε αρχείο που **ονομάζει** προωθημένο πεδίο-κατώφλι; */
+function writesForwardedField(stagedRelFiles, fields, reader, repoRoot = REPO_ROOT) {
+  if (fields.size === 0) return false;
+  return stagedRelFiles.some((rel) => isScannable(rel) && reader.mayContain(path.join(repoRoot, rel), fields));
 }
 
 /** Ολόκληρο το subapp — η **μόνη** εμβέλεια σάρωσης που υπάρχει. */
@@ -185,12 +216,18 @@ function main() {
     return 1;
   }
 
-  const staged = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-  if (!process.argv.includes('--all') && staged.length > 0
-      && !shouldRunFull(staged.map((f) => f.split(path.sep).join('/')), api, reader)) {
+  const staged = process.argv.slice(2).filter((a) => !a.startsWith('--')).map((f) => f.split(path.sep).join('/'));
+  const triggered = process.argv.includes('--all') || staged.length === 0 || shouldRunFull(staged, api, reader);
+  const skip = () => {
     console.log(C.dim('  καμία σταδιοποιημένη αλλαγή δεν αγγίζει υπόσχεση αντίθεσης — παράλειψη\n'));
     return 0;
-  }
+  };
+  if (!triggered && !staged.some(isScannable)) return skip();
+
+  const files = targetFiles();
+  const entries = files.map((abs) => ({ abs, rel: path.relative(REPO_ROOT, abs).split(path.sep).join('/') }));
+  const { sites, fields, anchored } = promiseSites(entries, api, reader);
+  if (!triggered && !writesForwardedField(staged, fields, reader)) return skip();
 
   if (verbose) {
     console.log(C.dim(`    API: ${[...api.keys()].join(', ')}`));
@@ -198,18 +235,14 @@ function main() {
     console.log('');
   }
 
-  const files = targetFiles();
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   const failures = [];
 
-  for (const abs of files) {
-    const rel = path.relative(REPO_ROOT, abs).split(path.sep).join('/');
-    for (const site of sitesInFile(abs, rel, api, reader)) {
-      const state = classify(site, limits);
-      tally[state] += 1;
-      if (BLOCKING.has(state)) failures.push(explain(site, state, limits));
-      else if (verbose) console.log(C.dim(`    ${state.padEnd(22)} ${rel}:${site.line} ${site.fn}`));
-    }
+  for (const site of sites) {
+    const state = classify(site, limits, anchored);
+    tally[state] += 1;
+    if (BLOCKING.has(state)) failures.push(explain(site, state, limits));
+    else if (verbose) console.log(C.dim(`    ${state.padEnd(22)} ${site.file}:${site.line} ${site.fn}`));
   }
 
   const total = Object.values(tally).reduce((a, b) => a + b, 0);
@@ -237,4 +270,7 @@ function main() {
 
 if (require.main === module) process.exit(main());
 
-module.exports = { BLOCKING, SSOT_INPUTS, STATES, classify, explain, reachabilityGap, shouldRunFull, targetFiles };
+module.exports = {
+  BLOCKING, SSOT_INPUTS, STATES, classify, explain, reachabilityGap, shouldRunFull, targetFiles,
+  writesForwardedField,
+};

@@ -24,10 +24,11 @@ const {
   calibrate, customSurfaceCeiling, maxAchievableOn, presentableSurfaces, reachabilityLimits,
 } = require('../lib/contrast-promise/presentable-surfaces');
 const {
-  ADAPTIVE_MODULE, createReader, isTestFile, mayContainPromise, readAdaptiveApi, sitesInFile,
+  ADAPTIVE_MODULE, CONTRAST_ADAPTATION_MODULE, createReader, isTestFile, mayContainPromise,
+  promiseSites, readAdaptiveApi, sitesInFile,
 } = require('../lib/contrast-promise/promise-sites');
 const {
-  BLOCKING, STATES, classify, reachabilityGap, shouldRunFull,
+  BLOCKING, STATES, classify, reachabilityGap, shouldRunFull, writesForwardedField,
 } = require('../check-contrast-promise-reachability');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -45,7 +46,8 @@ const PRINT_POLICY = 'src/subapps/dxf-viewer/config/print-color-policy.ts';
 
 /** Τα αρχεία που χρειάζεται η μηχανή για να απαντήσει — τίποτα παραπάνω. */
 const MINI_REPO_FILES = [
-  ADAPTIVE_MODULE, CANVAS_THEME, PRINT_POLICY, TABLE_INK, WALL_PALETTE, WALL_RENDERER, VARIABLES_CSS,
+  ADAPTIVE_MODULE, CONTRAST_ADAPTATION_MODULE, CANVAS_THEME, PRINT_POLICY, TABLE_INK, WALL_PALETTE,
+  WALL_RENDERER, VARIABLES_CSS,
 ];
 
 const read = (repoRoot, rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
@@ -79,7 +81,10 @@ function miniRepo(overrides = {}, sourceOf = (rel) => read(REPO_ROOT, rel)) {
   for (const rel of MINI_REPO_FILES) {
     const dest = path.join(root, rel);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, overrides[rel] ?? sourceOf(rel));
+    // `null` ⇒ το αρχείο δεν υπάρχει σε αυτή την εκδοχή του δέντρου (ιστορικό πριν από διαχωρισμό).
+    const content = overrides[rel] ?? sourceOf(rel);
+    if (content === null) continue;
+    fs.writeFileSync(dest, content);
   }
   // Το `tsconfig.base.json` τροφοδοτεί τα aliases του resolveSpecifier (ADR-700 SSoT).
   fs.copyFileSync(path.join(REPO_ROOT, 'tsconfig.base.json'), path.join(root, 'tsconfig.base.json'));
@@ -99,6 +104,31 @@ function analyze(root, files = [WALL_RENDERER, TABLE_INK]) {
     }
   }
   return { api, limits, sites, blocking: sites.filter((s) => BLOCKING.has(s.state)) };
+}
+
+/** Ο προωθητής (`print-color-policy.ts`) μαζί με την αναμετάδοση και τον δηλούντα του πεδίου του. */
+const CAPTURE_2D = 'src/subapps/dxf-viewer/print/capture/capture-2d.ts';
+const PUBLIC_FLOORPLAN = 'src/subapps/dxf-viewer/print/public-floorplan/capture-public-floorplan.ts';
+
+/** Το μίνι-repo συν τα δύο αρχεία της αλυσίδας του πεδίου (υπάρχουν μόνο στο σημερινό δέντρο). */
+function forwardingRepo(overrides = {}) {
+  const root = miniRepo();
+  for (const rel of [CAPTURE_2D, PUBLIC_FLOORPLAN]) {
+    const dest = path.join(root, rel);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, overrides[rel] ?? read(REPO_ROOT, rel));
+  }
+  return root;
+}
+
+/** Ο ΙΔΙΟΣ δρόμος με την πύλη (`promiseSites`): κλήσεις + εγγραφές πεδίων, με τις άγκυρές τους. */
+function analyzeForwarding(root, files = [PRINT_POLICY, CAPTURE_2D, PUBLIC_FLOORPLAN]) {
+  const reader = createReader(root);
+  const api = readAdaptiveApi(root, reader);
+  const limits = reachabilityLimits(presentableSurfaces(root));
+  const entries = files.map((rel) => ({ abs: path.join(root, rel).split(path.sep).join('/'), rel }));
+  const { sites, fields, anchored } = promiseSites(entries, api, reader);
+  return { fields, sites: sites.map((s) => ({ ...s, state: classify(s, limits, anchored) })) };
 }
 
 const statesOf = (result) => [...new Set(result.sites.map((s) => s.state))].sort();
@@ -228,10 +258,13 @@ describe('Μ — μεταλλάξεις στις ΕΙΣΟΔΟΥΣ', () => {
   });
 
   it('Μ7: μετονομασία ΚΑΘΕ παραμέτρου «contrast» ⇒ η πύλη ΣΚΑΕΙ (fail-closed)', () => {
-    const api = read(REPO_ROOT, ADAPTIVE_MODULE)
+    const rename = (rel) => read(REPO_ROOT, rel)
       .split('minContrast').join('minThing')
       .split('brightContrast').join('brightThing');
-    const root = miniRepo({ [ADAPTIVE_MODULE]: api });
+    const root = miniRepo({
+      [ADAPTIVE_MODULE]: rename(ADAPTIVE_MODULE),
+      [CONTRAST_ADAPTATION_MODULE]: rename(CONTRAST_ADAPTATION_MODULE),
+    });
     expect(() => readAdaptiveApi(root, createReader(root))).toThrow(/Καμία προσαρμοστική συνάρτηση/);
   });
 
@@ -271,7 +304,10 @@ describe('Π — ο ιστορικός κώδικας, από καρφωμένο
   });
 
   it('Π3: η πύλη ΜΠΛΟΚΑΡΕΙ τον ιστορικό κώδικα — το ελάττωμα ήταν αληθινό, όχι υποθετικό', () => {
-    const root = miniRepo({}, (rel) => gitShow(PRE_PHASE3_COMMIT, rel));
+    // Το `contrast-adaptation.ts` δεν υπήρχε τότε — ο πυρήνας ζούσε μέσα στο ADAPTIVE_MODULE.
+    const root = miniRepo({}, (rel) => (
+      rel === CONTRAST_ADAPTATION_MODULE ? null : gitShow(PRE_PHASE3_COMMIT, rel)
+    ));
     const result = analyze(root, [WALL_RENDERER]);
     expect(result.blocking.length).toBeGreaterThan(0);
     expect(statesOf(result)).toContain(STATES.UNREACHABLE_PRESET);
@@ -358,6 +394,74 @@ describe('Κ — τι πιάνει και τι ΔΕΝ πιάνει, δηλωμέ
     for (const rel of [WALL_RENDERER, TABLE_INK, ADAPTIVE_MODULE]) {
       expect(mayContainPromise(read(REPO_ROOT, rel), api)).toBe(true);
     }
+  });
+
+  it('Κ12: κατώφλι που φτάνει μέσω ΕΠΑΝΕΞΑΓΩΓΗΣ λύνεται — και σπασμένη αλυσίδα ΜΠΛΟΚΑΡΕΙ', () => {
+    // Το `table-ink.ts` εισάγει το MIN_ENTITY_CONTRAST από το ADAPTIVE_MODULE, που μόνο το επανεξάγει.
+    const tableSites = (root) => analyze(root, [TABLE_INK]).sites
+      .filter((s) => s.fn === 'adaptColorForSurface');
+    const live = tableSites(miniRepo());
+    expect(live.length).toBeGreaterThan(0);
+    for (const s of live) expect(s.threshold).toBe(3);
+
+    // Κόβεται ΜΟΝΟ η επανεξαγωγή (η γραμμή πριν από το `type MaxContrastInk`), όχι η εισαγωγή.
+    const source = read(REPO_ROOT, ADAPTIVE_MODULE);
+    const broken = source.replace(/MIN_ENTITY_CONTRAST,(\s+type MaxContrastInk,)/, '$1');
+    if (broken === source) throw new Error('Η μετάλλαξη δεν βρήκε την επανεξαγωγή του MIN_ENTITY_CONTRAST');
+    const states = tableSites(miniRepo({ [ADAPTIVE_MODULE]: broken })).map((s) => s.state);
+    expect(states).toContain(STATES.UNANALYZABLE);
+  });
+
+  describe('Κ13: κατώφλι που ταξιδεύει ως ΠΕΔΙΟ κρίνεται στον ΔΗΛΟΥΝΤΑ (ADR-909 Γ2.1)', () => {
+    const DECLARED = 'const PUBLIC_FLOORPLAN_MIN_INK_CONTRAST = MIN_ENTITY_CONTRAST;';
+    const stateAt = (result, rel) => result.sites.filter((s) => s.file === rel).map((s) => s.state);
+
+    it('ζωντανό δέντρο: προωθητής + αναμετάδοση = forwarded · ο δηλούντας κρίνεται με τον αριθμό του', () => {
+      const result = analyzeForwarding(forwardingRepo());
+      expect([...result.fields]).toEqual(['minInkContrast']);
+      expect(stateAt(result, PRINT_POLICY)).toEqual([STATES.FORWARDED]);
+      expect(stateAt(result, CAPTURE_2D)).toEqual([STATES.FORWARDED]);
+      expect(stateAt(result, PUBLIC_FLOORPLAN)).toEqual([STATES.REACHABLE]);
+      expect(result.sites.find((s) => s.file === PUBLIC_FLOORPLAN).threshold).toBe(3);
+    });
+
+    it('🔴 ανέφικτος αριθμός στον δηλούντα ΜΠΛΟΚΑΡΕΙ — το «forwarded» δεν είναι άσυλο', () => {
+      const source = mutate(read(REPO_ROOT, PUBLIC_FLOORPLAN), DECLARED,
+        'const PUBLIC_FLOORPLAN_MIN_INK_CONTRAST = 9.0;');
+      const result = analyzeForwarding(forwardingRepo({ [PUBLIC_FLOORPLAN]: source }));
+      expect(stateAt(result, PUBLIC_FLOORPLAN)).toEqual([STATES.UNREACHABLE_PRESET]);
+    });
+
+    it('🔴 δηλούντας με τιμή που δεν διαβάζεται ⇒ μπλοκάρει ΚΑΙ αυτός ΚΑΙ ο προωθητής (καμία άγκυρα)', () => {
+      const source = mutate(read(REPO_ROOT, PUBLIC_FLOORPLAN), DECLARED,
+        'const PUBLIC_FLOORPLAN_MIN_INK_CONTRAST = readSetting();');
+      const result = analyzeForwarding(forwardingRepo({ [PUBLIC_FLOORPLAN]: source }));
+      expect(stateAt(result, PUBLIC_FLOORPLAN)).toEqual([STATES.UNANALYZABLE]);
+      expect(stateAt(result, PRINT_POLICY)).toEqual([STATES.UNANALYZABLE]);
+    });
+
+    it('🔴 προωθητής ΧΩΡΙΣ κανέναν δηλούντα ⇒ unanalyzable, ποτέ «forwarded» στο κενό', () => {
+      const result = analyzeForwarding(forwardingRepo(), [PRINT_POLICY]);
+      expect(stateAt(result, PRINT_POLICY)).toEqual([STATES.UNANALYZABLE]);
+    });
+
+    it('🔴 αναμετάδοση που ΑΛΛΑΖΕΙ όνομα πεδίου δεν ακολουθείται — μπλοκάρει', () => {
+      const source = mutate(read(REPO_ROOT, CAPTURE_2D),
+        '{ minInkContrast: input.minInkContrast }', '{ minInkContrast: input.floor }');
+      const result = analyzeForwarding(forwardingRepo({ [CAPTURE_2D]: source }));
+      expect(stateAt(result, CAPTURE_2D)).toEqual([STATES.UNANALYZABLE]);
+    });
+
+    it('η δεύτερη σκανδάλη βλέπει τον δηλούντα — που ΔΕΝ ονομάζει το API πουθενά', () => {
+      const root = forwardingRepo();
+      const reader = createReader(root);
+      const api = readAdaptiveApi(root, reader);
+      expect(shouldRunFull([PUBLIC_FLOORPLAN], api, reader)).toBe(false);
+      const fields = new Set(['minInkContrast']);
+      expect(writesForwardedField([PUBLIC_FLOORPLAN], fields, reader, root)).toBe(true);
+      expect(writesForwardedField([WALL_PALETTE], fields, reader, root)).toBe(false);
+      expect(writesForwardedField([PUBLIC_FLOORPLAN], new Set(), reader, root)).toBe(false);
+    });
   });
 
   it('Κ11: η σκανδάλη πυροδοτεί σε SSoT input, σε καταναλωτή, ΚΑΙ στα ίδια τα αρχεία της πύλης', () => {

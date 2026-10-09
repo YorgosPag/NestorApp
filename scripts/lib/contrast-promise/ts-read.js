@@ -69,6 +69,29 @@ function* namedImports(sourceFile) {
 }
 
 /**
+ * Το `export { original as name } from '…'` που επανεξάγει το `name`, ή `null`.
+ *
+ * Χωρίς αυτό, μια σταθερά που φτάνει στον καλούντα **μέσα από barrel/επανεξαγωγή** δεν έχει
+ * αρχικοποίηση στο αρχείο από το οποίο εισάγεται ⇒ «ανεπίλυτη», ενώ η τιμή της είναι γραμμένη.
+ */
+function reExportOf(sourceFile, name) {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExportDeclaration(statement) || statement.moduleSpecifier === undefined) continue;
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const clause = statement.exportClause;
+    if (clause === undefined || !ts.isNamedExports(clause)) continue;
+    for (const element of clause.elements) {
+      if (element.name.text !== name) continue;
+      return {
+        original: (element.propertyName ?? element.name).text,
+        moduleSpecifier: statement.moduleSpecifier.text,
+      };
+    }
+  }
+  return null;
+}
+
+/**
  * Κάθε `export const NAME = …` του αρχείου, ως `{ name, initializer }`.
  *
  * Υπάρχει για να μπορεί ένας καταναλωτής να **ανακαλύψει** σταθερές αντί να τις απαριθμήσει.
@@ -96,4 +119,4 @@ function* exportedConstants(sourceFile) {
   }
 }
 
-module.exports = { exportedConstants, initializerOf, namedImports, parseSource };
+module.exports = { exportedConstants, initializerOf, namedImports, parseSource, reExportOf };

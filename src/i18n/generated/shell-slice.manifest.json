@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e3c0c81ab95d5248f5bb5843ebd8b5956ac99611f2ace54dd2c808473cd305d1",
+  "inputsSha256": "f1ad6e2916997517d8d6d4aaa5d7884070497e385c631ae86ad94241d49803a2",
   "languages": [
     "el"
   ],
@@ -1336,11 +1336,12 @@
     "src/subapps/dxf-viewer/config/bim-pen-table.ts": "1b5a700bcd86113bac9e9e768ef32004870e0835da22767e932a803db42d309f",
     "src/subapps/dxf-viewer/config/bim-structural-components.ts": "d732f78485f90375c8d31626bc49cd4c8a5dd9e96b4007e3eebcad29d12dca13",
     "src/subapps/dxf-viewer/config/complex-linetype-types.ts": "80166e85d392294ed940377b7d99b02607f1bc6f81567def1302458a6afde231",
+    "src/subapps/dxf-viewer/config/contrast-adaptation.ts": "dc8e686f6ccd05e1cfdb8b8c91331d4f100642fa1c049409bab7d6448f09c77b",
     "src/subapps/dxf-viewer/config/layer-config.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/config/linetype-iso-catalog.ts": "c09aec2efd19d322a1db456963501365e05b00186b464aed87aff147bd9f3498",
     "src/subapps/dxf-viewer/config/lineweight-iso-catalog.ts": "3d2014cc5190d14af39a1c1b08f96c8628e69c5c38bc0ab9332a964c2bae9c82",
     "src/subapps/dxf-viewer/config/number-format-config.ts": "178792d613e9a495396c56d927fdba7eeda63ed356d4e0192ddd3da608e4d7df",
-    "src/subapps/dxf-viewer/config/print-color-policy.ts": "dc8e686f6ccd05e1cfdb8b8c91331d4f100642fa1c049409bab7d6448f09c77b",
+    "src/subapps/dxf-viewer/config/print-color-policy.ts": "0348314335db9dfd5e6ea69652b9e4b7534342aee24e4c3b060b95ffda60c193",
     "src/subapps/dxf-viewer/data/hatch-pattern-catalog.ts": "5c4967964d99dafb6d002fa3bea2a6743413208e3c773cfcde81280a70d2e62c",
     "src/subapps/dxf-viewer/debug/core/UnifiedDebugManager.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/subapps/dxf-viewer/debug/core/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",

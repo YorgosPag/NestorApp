@@ -20,17 +20,21 @@
 import {
   compositeOverHex,
   contrastRatio,
-  contrastRatioRgb,
   mixHex,
   parseColor,
   parseHex,
   rgbaString,
   rgbToHex,
   saturation,
-  type Rgb,
   type RgbaColor,
 } from './color-math';
 import { resolveDxfCanvasBackgroundHex } from './color-config';
+import {
+  _clearSurfaceAdaptationCache,
+  adaptColorForSurface,
+  inkForBackgroundRgb,
+  MIN_ENTITY_CONTRAST,
+} from './contrast-adaptation';
 import { lineweightDisplayState } from './lineweight-display-px';
 import {
   applyPlotColor,
@@ -63,10 +67,20 @@ export function liveDrawingSurfaceHex(): string {
  *
  * ⚠️ Η κλάση **δεν έκλεισε**: ~70 σημεία σε 38 αρχεία του `bim/renderers` θέτουν `strokeStyle` ωμά. Εδώ
  * περνούν όσα **μετρήθηκαν**· τα υπόλοιπα τα βλέπει μόνο πύλη pixels σε πραγματικό browser (ADR-909 §6.4).
+ *
+ * ## 🔴 Ημιδιαφανές μελάνι (`rgba(…)`) — ADR-909 Γ2.1
+ * Το {@link applyPlotColor} διαβάζει μόνο `#hex`: ένα `rgba(139,94,52,0.55)` (ακμή επίπλου) του ήταν «άγνωστο
+ * χρώμα» και έβγαινε **σκέτο μαύρο σε κάθε στάθμη**, ακόμη και στο «Έγχρωμο». Στο χαρτί η διαφάνεια μιας
+ * γραμμής δεν είναι ιδιότητα — είναι ο τρόπος που η οθόνη τη δείχνει διακριτική. Άρα πρώτα γίνεται **αυτό που
+ * θα έβλεπε το μάτι πάνω στο χαρτί** (σύνθεση πάνω στο {@link PRINT_PAPER_HEX}) και μετά κρίνεται ως μελάνι:
+ * έτσι το δάπεδο αντίθεσης μετρά το πραγματικό αποτέλεσμα, όχι ένα χρώμα που η διαφάνεια θα ξέπλενε μετά.
  */
 export function liveStrokeInk(color: string): string {
   const policy = getPrintColorPolicy();
-  return policy ? applyPlotColor(color, null, policy) : color;
+  if (policy === null) return color;
+  const c = parseColor(color);
+  const opaque = c === null ? color : compositeOverHex(c, PRINT_PAPER_HEX);
+  return applyPlotColor(opaque, null, policy);
 }
 
 /**
@@ -87,156 +101,32 @@ export function liveSymbolFill(fill: string): string {
   return getPrintColorPolicy() !== null ? adaptFillTintForCanvas(fill) : fill;
 }
 
-// ============================================================================
-// MAX-CONTRAST INK — το «άκρο», όχι η ελάχιστη ανάμειξη
-// ============================================================================
+// ADR-909 Γ2.1 — η καθαρή προσαρμογή αντίθεσης ζει στο φύλλο `contrast-adaptation.ts` (ώστε να τη ζητά και
+// η πολιτική εκτύπωσης χωρίς κύκλο εισαγωγών). Επανεξάγεται εδώ: οι καλούντες αυτού του αρχείου δεν αλλάζουν.
+export {
+  adaptColorForSurface,
+  adaptColorToBackground,
+  maxContrastInk,
+  MIN_ENTITY_CONTRAST,
+  type MaxContrastInk,
+} from './contrast-adaptation';
 
 /**
- * Οι **δύο** τιμές που μπορεί να πάρει ένα αυτόματο μελάνι. Λευκό ή μαύρο — τίποτε ενδιάμεσο:
- * είναι η σημασιολογία του **AutoCAD ACI 7** («white/black»), όχι μια προσαρμογή απόχρωσης.
- */
-export type MaxContrastInk = '#ffffff' | '#000000';
-
-/** Τα δύο άκρα, ως `Rgb` — ώστε η σύγκριση να μη χρειάζεται parsing σε κάθε κλήση. */
-const WHITE_RGB: Rgb = { r: 255, g: 255, b: 255 };
-const BLACK_RGB: Rgb = { r: 0, g: 0, b: 0 };
-
-/**
- * 🔴 **Το άκρο μέγιστης αντίθεσης για ένα φόντο** — ο ΕΝΑΣ τύπος, πρώην γραμμένος **δύο φορές**.
- *
- * Ήταν αυτούσιος στο {@link adaptColorToBackground} («στόχος ανάμειξης») και στο
- * {@link computeAdaptedFillTint} («endpoint»). Δύο σώματα του ίδιου κανόνα είναι sibling clone
- * που το CHECK 3.28 (jscpd, token-based) πιάνει **ανεξάρτητα ονόματος** — και, χειρότερα, δύο
- * σημεία που θα αποκλίνουν στην πρώτη ρύθμιση.
- *
- * ## 🔴 ΓΙΑΤΙ ΡΩΤΑΕΙ ΤΗΝ ΑΝΤΙΘΕΣΗ ΚΑΙ ΔΕΝ ΣΥΓΚΡΙΝΕΙ ΜΕ ΚΑΤΩΦΛΙ ΦΩΤΕΙΝΟΤΗΤΑΣ
- * Μέχρι την 2026-08-04 η γραμμή ήταν `srgbRelativeLuminance(bg) < 0.5 ? λευκό : μαύρο` — το
- * διαισθητικό «μισό». Είναι **μετρήσιμα λάθος**, και το όνομα της {@link maxContrastInk} το
- * υπόσχεται ρητά: η αντίθεση με το λευκό είναι `1,05/(L+0,05)` και με το μαύρο `(L+0,05)/0,05`,
- * άρα ισοπαλία στο `L = √(1,05×0,05) − 0,05 ≈ **0,179**`, **όχι** στο 0,5. Σε ολόκληρη τη ζώνη
- * `0,179 < L < 0,5` το παλιό κατώφλι διάλεγε **λευκό ενώ το μαύρο έδινε περισσότερη αντίθεση**:
- *
- * ```
- *   φόντο #868686 (L≈0,238) → λευκό 3,64:1  ·  μαύρο 5,77:1   ⇒ έχανε 1,6×
- *   φόντο #808080 (L≈0,216) → λευκό 3,95:1  ·  μαύρο 5,32:1   ⇒ έχανε 1,3×
- * ```
- *
- * Κανένα από τα 9 προκαθορισμένα θέματα καμβά δεν πέφτει σε αυτή τη ζώνη (το πλησιέστερο,
- * `cinema4d #5b5b5b`, είναι στο `L≈0,105`) — γι' αυτό το ελάττωμα ήταν **αόρατο** μέχρι που το
- * μελάνι κελιού άρχισε να ρωτά και για **γεμίσματα κελιών**, που είναι αυθαίρετα χρώματα του
- * χρήστη και πέφτουν μέσα στη ζώνη συνέχεια — όπως και το `custom` φόντο καμβά.
- *
- * ⚠️ Το `0,179` **δεν γράφεται** ως σταθερά: θα ήταν τρίτη διατύπωση της ίδιας εξίσωσης δίπλα
- * στο {@link contrastRatioRgb} που την υλοποιεί ήδη. Ρωτάμε το SSoT και κρατάμε τον νικητή —
- * η συνάρτηση κάνει τότε **κυριολεκτικά** ό,τι λέει το όνομά της. Ισοπαλία ⇒ λευκό (αυθαίρετο,
- * αλλά ντετερμινιστικό· συμβαίνει σε ένα ακριβώς `L`).
- *
- * ⚠️ **Δεν είναι το ίδιο με το {@link adaptColorToBackground}, και η διαφορά είναι μετρημένη.**
- * Εκείνο κάνει binary-search της **ελάχιστης** ανάμειξης μέχρι να πιάσει το κατώφλι, ώστε να
- * κρατήσει την απόχρωση: `#111111` πάνω σε `#1d283a` με κατώφλι 4,5 του βγάζει `≈#8f8f8f` —
- * **γκρι**. Ένα αυτόματο μελάνι δεν έχει απόχρωση να διατηρήσει· *είναι* η αντίθεση, άρα πάει
- * στο άκρο. Το να επαναχρησιμοποιηθεί το άλλο «επειδή μοιάζει» δίνει γκρι αντί για λευκό.
- */
-function inkForBackgroundRgb(bg: Rgb): MaxContrastInk {
-  return contrastRatioRgb(WHITE_RGB, bg) >= contrastRatioRgb(BLACK_RGB, bg)
-    ? '#ffffff'
-    : '#000000';
-}
-
-/**
- * Λευκό ή μαύρο — όποιο ξεχωρίζει από το `bgHex`. Καθαρή συνάρτηση: το φόντο είναι **όρισμα**,
- * ποτέ διαβασμένο μέσα (σε jsdom το `resolveDxfCanvasBackgroundHex()` επιστρέφει πάντα το σκούρο
- * default, οπότε ένας resolver που το ρωτούσε μόνος του θα δοκιμαζόταν **μόνο** στη μία
- * κατεύθυνση και θα ήταν πράσινος με σπασμένη την άλλη).
- *
- * **Άκυρο φόντο ⇒ `#000000`.** Δεν είναι αυθαίρετο: από τις δύο σιωπηλές αποτυχίες, το λευκό
- * κείμενο σε λευκό **χαρτί** φεύγει στον πελάτη και δεν αναιρείται, ενώ το μαύρο κείμενο σε
- * σκούρη **οθόνη** το βλέπει ο χρήστης αμέσως και δεν κοστίζει τίποτα. Αποτυγχάνουμε προς την
- * αναστρέψιμη πλευρά.
- */
-export function maxContrastInk(bgHex: string): MaxContrastInk {
-  const bg = parseHex(bgHex);
-  return bg ? inkForBackgroundRgb(bg) : '#000000';
-}
-
-/**
- * Ελάχιστο WCAG contrast ratio οντότητας↔φόντου. 3.0 = WCAG AA «graphical objects»: αρκετά
- * ορατό χωρίς να ξεπλένει υπερβολικά τα κορεσμένα χρώματα (red `#FF0000`/blue `#0000FF` ≥ 3.0
- * → μένουν αυτούσια)· near-black `#2b2f36` (≈1.6) → προσαρμόζεται.
- */
-export const MIN_ENTITY_CONTRAST = 3.0;
-
-/**
- * Προσαρμόζει `colorHex` ώστε να έχει ≥ `minContrast` με το `bgHex`. Αυτούσιο αν ήδη επαρκεί.
- * Αλλιώς binary-search ελάχιστης ανάμειξης προς άσπρο/μαύρο (ανάλογα φωτεινότητα φόντου).
- */
-export function adaptColorToBackground(
-  colorHex: string,
-  bgHex: string,
-  minContrast: number = MIN_ENTITY_CONTRAST,
-): string {
-  const c = parseHex(colorHex);
-  const bg = parseHex(bgHex);
-  if (!c || !bg) return colorHex;
-  if (contrastRatio(colorHex, bgHex) >= minContrast) return colorHex;
-
-  // Στόχος ανάμειξης = το αντίθετο άκρο φωτεινότητας του φόντου — ο ΕΝΑΣ κανόνας.
-  const target = inkForBackgroundRgb(bg);
-  // Mid-gray φόντο: ακόμη κι ο στόχος δεν φτάνει το κατώφλι → καλύτερη δυνατή προσέγγιση.
-  if (contrastRatio(target, bgHex) < minContrast) return target;
-
-  // Μονότονη αύξηση contrast καθώς το `t` πάει προς τον στόχο → binary-search ελάχιστου `t`.
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 18; i++) {
-    const mid = (lo + hi) / 2;
-    if (contrastRatio(mixHex(colorHex, target, mid), bgHex) >= minContrast) hi = mid;
-    else lo = mid;
-  }
-  return mixHex(colorHex, target, hi);
-}
-
-const _cache = new Map<string, string>();
-
-/**
- * 🔴 **Η ΙΔΙΑ προσαρμογή, με την επιφάνεια ως ΡΗΤΟ ΟΡΙΣΜΑ** — ADR-739 §38.11.
- *
- * Ήταν το σώμα της {@link adaptEntityColorForCanvas} και δεν άλλαξε ούτε γραμμή: το κλειδί του
- * memo περιείχε **ήδη** το φόντο (`χρώμα|φόντο|κατώφλι`), οπότε η μόνη διαφορά των δύο εισόδων
- * είναι **ποιος απαντά «ποια επιφάνεια»**. Μία μνήμη, δύο πόρτες — ακριβώς το σχήμα
- * `resolveDxfCanvasBackgroundHex()` (οθόνη) vs `liveTableSurfaceHex()` (οθόνη **ή χαρτί**).
- *
- * ## 🔴 Γιατί δεν αρκούσε η {@link adaptEntityColorForCanvas} για τον πίνακα
- * Εκείνη ρωτά **μόνη της** το ζωντανό CSS. Η raster **εκτύπωση** όμως ξαναχρησιμοποιεί το
- * παραγωγικό pipeline πάνω σε **διάφανο** offscreen καμβά, ενώ το `getComputedStyle` του `:root`
- * εξακολουθεί να λέει «σκούρο» ⇒ ένα πλέγμα που ρωτούσε εκείνη θα ζωγραφιζόταν **λευκό σε λευκό
- * χαρτί**: η γραμμική εκδοχή ακριβώς του ελαττώματος που το §38 έκλεισε για το κείμενο.
- * Ο μόνος τρόπος να μην ξανασυμβεί είναι η επιφάνεια να **μη μπορεί** να μαντευτεί από μέσα.
- */
-export function adaptColorForSurface(
-  colorHex: string,
-  surfaceHex: string,
-  minContrast: number = MIN_ENTITY_CONTRAST,
-): string {
-  const key = `${colorHex}|${surfaceHex}|${minContrast}`;
-  const hit = _cache.get(key);
-  if (hit !== undefined) return hit;
-  const out = adaptColorToBackground(colorHex, surfaceHex, minContrast);
-  _cache.set(key, out);
-  return out;
-}
-
-/**
- * Προσαρμόζει ένα χρώμα οντότητας στο **ζωντανό** 2D canvas background. Memoized ανά
- * `χρώμα|φόντο|κατώφλι`. Καλείται από τους 2D renderers ΑΚΡΙΒΩΣ πριν το `ctx.strokeStyle`/
+ * Προσαρμόζει ένα χρώμα οντότητας στην επιφάνεια όπου ζωγραφίζεται **τώρα**
+ * ({@link liveDrawingSurfaceHex}: ζωντανό φόντο του καμβά, ή χαρτί σε print pass). Memoized ανά
+ * `χρώμα|επιφάνεια|κατώφλι`. Καλείται από τους 2D renderers ΑΚΡΙΒΩΣ πριν το `ctx.strokeStyle`/
  * `fillStyle`. Το `minContrast` επιτρέπει σε συγκεκριμένες οντότητες (π.χ. wall outline +
- * axis, βλ. `WALL_LINE_CONTRAST`) να ζητούν **πιο φωτεινό** αποτέλεσμα από το default 3.0.
+ * axis, βλ. `WALL_LINE_CONTRAST`) να ζητούν **πιο έντονο** αποτέλεσμα από το default 3.0.
+ *
+ * 🔴 ADR-909 Γ2.1 — ρωτούσε σκέτο `resolveDxfCanvasBackgroundHex()`, και στην εκτύπωση το CSS λέει ακόμη
+ * «σκούρο»: το σκούρο χρώμα «φωτιζόταν» για να φανεί σε φόντο που στο χαρτί **δεν υπάρχει**. Στην οθόνη η
+ * απάντηση είναι η ίδια με πριν.
  */
 export function adaptEntityColorForCanvas(
   colorHex: string,
   minContrast: number = MIN_ENTITY_CONTRAST,
 ): string {
-  return adaptColorForSurface(colorHex, resolveDxfCanvasBackgroundHex(), minContrast);
+  return adaptColorForSurface(colorHex, liveDrawingSurfaceHex(), minContrast);
 }
 
 // ============================================================================
@@ -450,18 +340,23 @@ export function adaptInkForSurface(
  * ρύθμιση. Ίδιο σχήμα με το ζεύγος {@link adaptColorForSurface}/{@link adaptEntityColorForCanvas}.
  *
  * Μία ανάγνωση του ζωντανού CSS ανά κλήση — ακριβώς όσες και πριν.
+ *
+ * 🔴 ADR-909 Γ2.1 — η επιφάνεια είναι το {@link liveDrawingSurfaceHex}, όχι σκέτος ο καμβάς. Μετρημένο στην
+ * πύλη pixels: το περίγραμμα **κάθε τοίχου** έβγαινε στη δημόσια κάτοψη `#aaaaaa` (2,3:1) αντί για μαύρο,
+ * επειδή το μαύρο μελάνι της εκτύπωσης «φωτιζόταν» απέναντι στο σκούρο φόντο της οθόνης. Σε χαρτί η
+ * ετυμηγορία δεν βγαίνει ποτέ `shortfall` (το μαύρο δίνει 21:1) ⇒ το casing εκεί δεν ζωγραφίζεται.
  */
 export function adaptStructuralLineInkForCanvas(colorHex: string, brightContrast: number): InkVerdict {
   const c = parseHex(colorHex);
   // Κορεσμένο (user V/G override) ⇒ standard κατώφλι· το mix-προς-λευκό θα το ξέπλενε.
   // Μη αναγνωρίσιμο ⇒ το κατώφλι που ζητήθηκε· η ετυμηγορία θα βγει `unmeasurable` ούτως ή άλλως.
   const required = c && saturation(c) >= SATURATED_LINE_THRESHOLD ? MIN_ENTITY_CONTRAST : brightContrast;
-  return adaptInkForSurface(colorHex, resolveDxfCanvasBackgroundHex(), required);
+  return adaptInkForSurface(colorHex, liveDrawingSurfaceHex(), required);
 }
 
 /** Test hook — καθαρίζει τα memo caches (π.χ. όταν αλλάζει το background στο test). */
 export function _clearAdaptiveColorCache(): void {
-  _cache.clear();
+  _clearSurfaceAdaptationCache();
   _fillCache.clear();
   _verdictCache.clear();
 }

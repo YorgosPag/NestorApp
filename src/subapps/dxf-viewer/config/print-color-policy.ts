@@ -28,6 +28,7 @@
  */
 
 import { parseHex, luminance601 as luminance, channelToHex as toHex, type Rgb } from './color-math';
+import { adaptColorForSurface } from './contrast-adaptation';
 
 /** AutoCAD CTB / Revit plot-style families — the ONE enumeration; the type derives from it. */
 export const PRINT_PLOT_STYLES = ['colour', 'monochrome', 'grayscale', 'by-pen'] as const;
@@ -45,6 +46,13 @@ export interface PrintColorPolicy {
    * άνθρωπος — μια εικόνα 4096 px που η αγγελία δείχνει στα 1024 κάνει τη γραμμή του 1 px ένα τέταρτο pixel.
    */
   minLineWidthPx?: number;
+  /**
+   * ADR-909 Γ2.1 — το **δάπεδο αντίθεσης μελανιού** προς το χαρτί (WCAG, π.χ. 3.0). Παραλείπεται ⇒ κανένα:
+   * το χρώμα του σχεδιαστή τυπώνεται αυτούσιο (το κίτρινο του μηχανικού μένει κίτρινο). Το ορίζει μόνο ό,τι
+   * πάει **στο κοινό**: εκεί μια κίτρινη γραμμή 1,1:1 πάνω σε λευκό δεν είναι επιλογή, είναι γραμμή που λείπει.
+   * Ρόλος `'ink'` μόνο, σε `colour` / `by-pen` **και** `grayscale`· ίδια απόχρωση, όσο σκούρο χρειάζεται.
+   */
+  minInkContrast?: number;
 }
 
 const PRINT_BLACK = '#000000';
@@ -130,6 +138,21 @@ function greyOf(rgb: Rgb): string {
 }
 
 /**
+ * ADR-909 Γ2.1 — **το δάπεδο αντίθεσης μελανιού**: αν η πολιτική το δηλώνει, το χρώμα σκουραίνει **όσο ακριβώς
+ * χρειάζεται** για να το φτάσει απέναντι στο χαρτί, με την ίδια απόχρωση. Κίτρινο `#c8c800` (1,8:1) ⇒ λαδί 3:1·
+ * ό,τι ήδη το φτάνει μένει αυτούσιο. Η μαθηματική είναι η **ίδια** που κρατά ορατές τις γραμμές στη σκούρα
+ * οθόνη (`adaptColorForSurface`) — εδώ με επιφάνεια το χαρτί.
+ *
+ * 🔴 Γιατί κανόνας και όχι πίνακας τύπου CTB: ο πίνακας δεν μπορεί να απαριθμήσει True Color — το τεκμηριωμένο
+ * κενό του AutoCAD (True Color αγνοεί το `monochrome.ctb`). Ο κανόνας ισχύει για **κάθε** χρώμα.
+ */
+function withInkContrastFloor(hex: string, policy: PrintColorPolicy): string {
+  return policy.minInkContrast === undefined
+    ? hex
+    : adaptColorForSurface(hex, PRINT_PAPER_HEX, policy.minInkContrast);
+}
+
+/**
  * Map a resolved entity colour to a print-safe colour under the given policy.
  *
  * Always returns a concrete `#rrggbb` string (never null) so callers can feed it
@@ -157,13 +180,10 @@ export function applyPlotColor(
   // ACI 7 (white pen) or near-white → black INK. A fill keeps its colour (see PlotColorRole).
   const forcedWhite = role === 'ink' && (colorAci === ACI_WHITE || isNearWhite(rgb));
 
-  if (policy.style === 'grayscale') {
-    return forcedWhite ? PRINT_BLACK : greyOf(rgb);
-  }
-
-  // 'colour' and 'by-pen' (Slice 5 fallback): white-safe colour preservation.
   if (forcedWhite) return PRINT_BLACK;
-  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+  // 'grayscale' → luminance grey · 'colour' and 'by-pen' (Slice 5 fallback): colour preserved.
+  const plotted = policy.style === 'grayscale' ? greyOf(rgb) : `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+  return role === 'ink' ? withInkContrastFloor(plotted, policy) : plotted;
 }
 
 // ─── Module-level singleton (mirror of _activePenTable / setPenTableSource) ────

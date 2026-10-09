@@ -27,8 +27,9 @@ import { setPrintColorPolicy, clearPrintColorPolicy } from '../../config/print-c
 import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
 import type { CaptureResult } from './capture-types';
 import { createOffscreen2dTarget } from './capture-2d-offscreen-canvas';
-import { missingSceneImageWarnings, preloadSceneImages } from './preload-scene-images';
-import { summarizePrintFidelity } from '../print-fidelity';
+import { preloadSceneImages } from './preload-scene-images';
+import { preloadSceneMeshes } from './preload-scene-meshes';
+import { captureAssetFidelity } from './capture-asset-fidelity';
 import { isEntityLayerSkipped } from '../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
 
 export interface Capture2dInput {
@@ -48,6 +49,11 @@ export interface Capture2dInput {
    * χαρτί **δεν** το ορίζει· το ορίζει μόνο εικόνα που θα μικρύνει πριν τη δει άνθρωπος.
    */
   minLineWidthPx?: number;
+  /**
+   * ADR-909 Γ2.1 — δάπεδο αντίθεσης μελανιού προς το χαρτί (`PrintColorPolicy.minInkContrast`). Η εκτύπωση
+   * του μηχανικού **δεν** το ορίζει (το χρώμα του τυπώνεται αυτούσιο)· το ορίζει μόνο ό,τι πάει στο κοινό.
+   */
+  minInkContrast?: number;
 }
 
 /**
@@ -137,6 +143,7 @@ export function renderDxfSceneOffscreen(
     style: input.plotStyle ?? 'colour',
     dpi: input.raster.effectiveDpi,
     ...(input.minLineWidthPx !== undefined ? { minLineWidthPx: input.minLineWidthPx } : {}),
+    ...(input.minInkContrast !== undefined ? { minInkContrast: input.minInkContrast } : {}),
   });
   try {
     renderer.render(dxfScene, transform, viewport, {
@@ -154,19 +161,21 @@ export function renderDxfSceneOffscreen(
 }
 
 /**
- * ADR-909 Β2.6 — **φέρε τις εικόνες του σχεδίου πριν ζωγραφίσεις** (εικόνες υλικού γραμμοσκίασης, «γυμνές»
- * εικόνες). Το ΕΝΑ `await` κάθε raster λήψης, και ζει **πριν** από την απόδοση.
+ * ADR-909 Β2.6 / Γ1β — **φέρε ό,τι φορτώνεται ασύγχρονα πριν ζωγραφίσεις**: τις εικόνες του σχεδίου (εικόνες
+ * υλικού γραμμοσκίασης, «γυμνές» εικόνες) **και** τα σχήματα 3Δ (έπιπλα, είδη υγιεινής, εισαγόμενα πλέγματα).
+ * Το ΕΝΑ `await` κάθε raster λήψης, και ζει **πριν** από την απόδοση. Τα δύο είδη είναι ανεξάρτητα ⇒ παράλληλα.
  *
  * 🔑 Μετατρέπει με το **καθαρό** `convertSceneToDxf` (χωρίς ενυδάτωση του LayerStore): ανάμεσα σε αυτό το
  * `await` και στην απόδοση ο ζωντανός καμβάς συνεχίζει να τρέχει, και μια ενυδάτωση εδώ θα μπορούσε να
  * έχει ξεπεραστεί ως τότε. Η ενυδάτωση γίνεται από το {@link convertSceneForCapture}, **σύγχρονα** με την απόδοση.
  */
-export async function preloadCaptureImages(
+export async function preloadCaptureAssets(
   scene: SceneModel | null,
   plotStyle: PrintPlotStyle,
   userDrawingUnits?: SceneUnits,
 ): Promise<void> {
-  await preloadSceneImages(convertSceneToDxf(scene, userDrawingUnits).entities, plotStyle);
+  const { entities } = convertSceneToDxf(scene, userDrawingUnits);
+  await Promise.all([preloadSceneImages(entities, plotStyle), preloadSceneMeshes(entities)]);
 }
 
 /**
@@ -178,7 +187,7 @@ export async function preloadCaptureImages(
  */
 export async function captureCurrent2dView(input: Capture2dInput): Promise<CaptureResult> {
   const plotStyle = input.plotStyle ?? 'colour';
-  await preloadCaptureImages(input.scene, plotStyle, input.userDrawingUnits);
+  await preloadCaptureAssets(input.scene, plotStyle, input.userDrawingUnits);
 
   const { dxfScene, viewport } = prepareScene2dCapture(input);
   const { canvas } = renderDxfSceneOffscreen(dxfScene, viewport, input);
@@ -190,6 +199,7 @@ export async function captureCurrent2dView(input: Capture2dInput): Promise<Captu
     widthPx: input.raster.widthPx,
     heightPx: input.raster.heightPx,
     appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
-    fidelity: summarizePrintFidelity(missingSceneImageWarnings(drawn, plotStyle)),
+    // ADR-909 Γ1β — εικόνες ΚΑΙ σχήματα 3Δ που δεν ήταν έτοιμα, πάνω σε ό,τι ζωγραφίστηκε.
+    fidelity: captureAssetFidelity(drawn, plotStyle),
   };
 }
