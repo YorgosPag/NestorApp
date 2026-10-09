@@ -40,12 +40,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 //    κομμάτι με αυτό το αρχείο — το `dynamic()` από κάτω θα έμενε, θα φαινόταν σωστό, και το
 //    megabyte θα κατέβαινε σε **κάθε** επισκέπτη. Δες την κεφαλίδα του `…-stage-metrics`.
 import { MODEL_STAGE_ASPECT_CLASS } from './listing-model-stage-metrics';
+import { LISTING_STAGE_NOTICE_BOX, ListingStageFailure } from './ListingStageFailure';
 
 /**
  * Κοινό κουτί και για τις τρεις καταστάσεις ⇒ **καμία** μετατόπιση στην εναλλαγή. Η επιφάνεια (όριο · φόντο · ακτίνα)
  * είναι του `Card` (`asChild`, ADR-777 §8.87.10)· εδώ ζει **μόνο** η διάταξη.
  */
-const STAGE_BOX = `flex w-full flex-col items-center justify-center gap-2 p-4 text-center ${MODEL_STAGE_ASPECT_CLASS}`;
+const STAGE_BOX = `${LISTING_STAGE_NOTICE_BOX} ${MODEL_STAGE_ASPECT_CLASS}`;
 
 /**
  * ⛔ **`ssr: false` ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ, ΟΧΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ**: το `<model-viewer>` δηλώνει
@@ -123,27 +124,17 @@ function StageLoading() {
 }
 
 /**
- * Η ονομασμένη αποτυχία.
- *
- * ⛔ **Ποτέ σιωπηλό κενό**: ένα μοντέλο που δεν φόρτωσε και **δεν το λέει** διαβάζεται ως
- * *«αυτό το ακίνητο δεν έχει μοντέλο»* — δηλαδή η οθόνη λέει ψέματα για τα δεδομένα. Είναι
- * η ίδια κλάση με το ADR-844 §1, όπου *«κάτι πήγε στραβά»* αντικαταστάθηκε από αιτία.
+ * Η ονομασμένη αποτυχία — το σώμα είναι κοινό με το βίντεο (`ListingStageFailure`)· εδώ μένει **η πρόταση του μοντέλου**.
  */
 function StageFailure({ onRetry }: { readonly onRetry: () => void }) {
   const { t } = useTranslation(['listing-detail']);
 
   return (
-    <Card asChild className={STAGE_BOX}>
-      <section aria-live="polite">
-        <p className="text-sm text-muted-foreground">{t('listing-detail:model.failed')}</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="text-sm font-medium text-foreground underline underline-offset-4"
-        >
-          {t('listing-detail:model.retry')}
-        </button>
-      </section>
-    </Card>
+    <ListingStageFailure
+      boxClassName={STAGE_BOX}
+      message={t('listing-detail:model.failed')}
+      retryLabel={t('listing-detail:model.retry')}
+      onRetry={onRetry}
+    />
   );
 }
