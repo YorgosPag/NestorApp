@@ -18,12 +18,14 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
+import { hexToRgba } from '../../config/color-math';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepWaterHeaterEntity } from '../types/mep-water-heater-types';
-import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
+import { polygonBboxHitTest, strokePolylinePaths } from './bim-polygon-render';
 import { buildMepWaterHeaterSymbol } from '../mep-water-heaters/mep-water-heater-symbol';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -40,10 +42,10 @@ function isMepWaterHeaterEntity(entity: Entity): entity is MepWaterHeaterEntity 
  * SOURCE of a DHW supply network, so it gets a clear blue identity to distinguish it
  * from the warm-red hydronic heating equipment (boiler / radiator). Blue = water.
  */
-const WATER_HEATER_STROKE = '#1d4ed8';
-const WATER_HEATER_FILL = 'rgba(29, 78, 216, 0.14)';
+const WATER_HEATER_STROKE = BIM_CATEGORY_LINE_COLORS.domesticHotWater;
+const WATER_HEATER_FILL = hexToRgba(WATER_HEATER_STROKE, 0.14);
 
-export class MepWaterHeaterRenderer extends BaseEntityRenderer {
+export class MepWaterHeaterRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepWaterHeaterEntity(entity)) return;
     const waterHeater = entity as MepWaterHeaterEntity;
@@ -57,32 +59,18 @@ export class MepWaterHeaterRenderer extends BaseEntityRenderer {
     const verts = waterHeater.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // Fill + outline — blue DHW equipment (water heater = domestic-hot-water source).
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(WATER_HEATER_FILL);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-    this.ctx.strokeStyle = WATER_HEATER_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
+    this.paintLiveBody(verts, WATER_HEATER_FILL, WATER_HEATER_STROKE, RENDER_LINE_WIDTHS.NORMAL);
 
     // Water heater symbol — cold/hot connector stubs + DHW tank glyph.
     const symbol = buildMepWaterHeaterSymbol(waterHeater.params, waterHeater.geometry);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.strokes);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.glyphStrokes);
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(_entity: EntityModel): GripInfo[] {

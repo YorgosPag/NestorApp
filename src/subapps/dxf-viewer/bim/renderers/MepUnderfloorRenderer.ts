@@ -20,10 +20,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { applyLiveStroke } from './shared/live-stroke';
+import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
+import { hexToRgba } from '../../config/color-math';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isMepUnderfloorEntity } from '../../types/entities';
 import type { MepUnderfloorEntity } from '../types/mep-underfloor-types';
 import {
@@ -31,7 +32,7 @@ import {
   buildFilletedUnderfloorPath,
   resolveUnderfloorBendRadiusScene,
 } from '../mep-underfloor/mep-underfloor-geometry';
-import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import { getMepUnderfloorGrips } from '../mep-underfloor/mep-underfloor-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -42,13 +43,15 @@ import { getLayer } from '../../stores/LayerStore';
  * Underfloor palette — hydronic heating terminal (warm red, matches radiator/boiler family).
  * The fill is slightly more translucent than the boiler so the floor plan behind shows through.
  */
-const UF_STROKE = '#dc2626';
-const UF_FILL = 'rgba(220, 38, 38, 0.10)';
-const UF_LOOP_STROKE = '#dc2626';
+const UF_STROKE = BIM_CATEGORY_LINE_COLORS.hydronicHeating;
+const UF_FILL = hexToRgba(UF_STROKE, 0.1);
+const UF_LOOP_STROKE = UF_STROKE;
 const UF_LOOP_LINE_WIDTH = 2;
 const UF_CONNECTOR_RADIUS_SCREEN = 5; // px — diamond half-diagonal in screen space
+/** Dash pattern (screen-px on/off) for the heated-zone boundary. */
+const UF_OUTLINE_DASH: readonly number[] = [6, 4];
 
-export class MepUnderfloorRenderer extends BaseEntityRenderer {
+export class MepUnderfloorRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepUnderfloorEntity(entity)) return;
     const uf = entity as MepUnderfloorEntity;
@@ -65,26 +68,11 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     // Recompute geometry if the cache is absent (corruption-safe fallback).
     const geometry = uf.geometry ?? computeMepUnderfloorGeometry(uf.params);
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
+    this.beginPhasedBodyRender(entity, verts, options);
 
-    // Hover halo — outline the footprint polygon.
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-
-    // 1. Translucent warm-red fill for the heating area.
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(UF_FILL);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-
-    // 2. Dashed footprint outline (visual boundary of the heated zone).
-    this.ctx.strokeStyle = UF_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    this.ctx.setLineDash([6, 4]);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
+    // 1–2. Translucent warm-red fill for the heating area + dashed footprint outline
+    //      (visual boundary of the heated zone).
+    this.paintLiveBody(verts, UF_FILL, UF_STROKE, RENDER_LINE_WIDTHS.THIN, UF_OUTLINE_DASH);
 
     // 3. Serpentine pipe loopPath — continuous polyline at 2px solid, with the same
     //    rounded pipe bends (arc fillets) the 3D tube uses, so 2D and 3D match (the
@@ -98,8 +86,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     this.drawConnectorDiamond(geometry.supplyConnectorLocal);
     this.drawConnectorDiamond(geometry.returnConnectorLocal);
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
@@ -121,8 +108,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
   /** Stroke the serpentine loopPath as a continuous polyline. */
   private drawLoopPath(path: ReadonlyArray<{ x: number; y: number }>): void {
     this.ctx.beginPath();
-    this.ctx.strokeStyle = UF_LOOP_STROKE;
-    this.ctx.lineWidth = UF_LOOP_LINE_WIDTH;
+    applyLiveStroke(this.ctx, UF_LOOP_STROKE, UF_LOOP_LINE_WIDTH);
     const start = this.worldToScreen({ x: path[0].x, y: path[0].y });
     this.ctx.moveTo(start.x, start.y);
     for (let i = 1; i < path.length; i++) {
@@ -142,8 +128,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     this.ctx.lineTo(s.x, s.y + r);
     this.ctx.lineTo(s.x - r, s.y);
     this.ctx.closePath();
-    this.ctx.strokeStyle = UF_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    applyLiveStroke(this.ctx, UF_STROKE, RENDER_LINE_WIDTHS.THIN);
     this.ctx.stroke();
   }
 }

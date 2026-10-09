@@ -24,11 +24,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { liveStrokeInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import type { MepSegmentEntity, MepSegmentDomain } from '../types/mep-segment-types';
+import type { MepSegmentEntity } from '../types/mep-segment-types';
 import {
   isSegmentInclined,
   isSegmentVertical,
@@ -39,7 +40,7 @@ import {
   resolveSegmentBimCategory,
 } from '../types/mep-segment-types';
 import { buildRiserSymbol, drawRiserSymbol, RISER_SYMBOL_RADIUS_PX } from '../mep-segments/mep-riser-symbol';
-import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
+import { polygonBboxHitTest, strokePolylinePaths } from './bim-polygon-render';
 import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
 import { buildSegmentSymbol, buildPipeTickScreen } from '../mep-segments/mep-segment-symbol';
@@ -55,31 +56,10 @@ import {
   resolveEntitySystemColor,
   resolveSegmentClassificationColor,
   hexToRgba,
+  MEP_DOMAIN_DEFAULT_STROKE,
 } from '../mep-systems/mep-system-color';
 
 // ─── Palette ────────────────────────────────────────────────────────────────────
-
-/**
- * Stroke colour per domain.
- *   - duct  → steel/slate (mechanical runs, HVAC blue-grey convention)
- *   - pipe  → copper/amber (plumbing runs, warm-orange convention)
- *   - fuel  → yellow (gas convention, ADR-434 — distinct from pipe amber)
- */
-const DOMAIN_STROKE: Readonly<Record<MepSegmentDomain, string>> = {
-  'duct': '#64748b',
-  'pipe': '#b45309',
-  'fuel': '#eab308',
-};
-
-/**
- * Translucent fill per domain (~15% opacity — matches beam plan-hidden
- * convention; faint because the segment is above the cut plane).
- */
-const DOMAIN_FILL: Readonly<Record<MepSegmentDomain, string>> = {
-  'duct': 'rgba(100, 116, 139, 0.15)',
-  'pipe': 'rgba(180, 83, 9, 0.15)',
-  'fuel': 'rgba(234, 179, 8, 0.15)',
-};
 
 /** Translucent fill alpha for the colour-by-system (ADR-408 Φ9/Φ10) override. */
 const SEGMENT_SYSTEM_FILL_ALPHA = 0.15;
@@ -105,7 +85,7 @@ function isMepSegmentEntity(entity: EntityModel): entity is MepSegmentEntity {
 
 // ─── Renderer ────────────────────────────────────────────────────────────────────
 
-export class MepSegmentRenderer extends BaseEntityRenderer {
+export class MepSegmentRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepSegmentEntity(entity)) return;
     const segment = entity as MepSegmentEntity;
@@ -147,39 +127,24 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     // colour-index key (network members carry `entityId === segment.id`).
     const { strokeColor, fillColor } = this.resolveSegmentColors(segment);
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
+    this.beginPhasedBodyRender(entity, verts, options);
 
-    // Hover halo via outline thicker glow (mirror BeamRenderer / MepFixtureRenderer).
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-
-    // 1. Translucent fill — communicates the footprint extent in plan.
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-
-    // 2. Dashed outline (industry convention: linear run hidden above cut plane).
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
+    // 1–2. Translucent fill (the footprint extent in plan) + dashed outline (industry
+    //      convention: linear run hidden above cut plane).
+    this.paintLiveBody(verts, fillColor, strokeColor, RENDER_LINE_WIDTHS.NORMAL, OUTLINE_DASH);
 
     // 3. Axis centerline — thinner dashed stroke along the run centreline.
     const axisPoints = geometry.axisPolyline.points;
     if (axisPoints.length >= 2) {
       this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+      this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
       strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [axisPoints]);
     }
 
     // 4. Domain symbol — centerline (world-space) from buildSegmentSymbol SSoT.
     const symbol = buildSegmentSymbol(geometry);
     this.ctx.setLineDash([]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
     for (const stroke of symbol.strokes) {
       if (stroke.length < 2) continue;
       this.ctx.beginPath();
@@ -222,8 +187,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
       }
     }
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
@@ -274,8 +238,8 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     const baseColor = systemColor ?? resolveSegmentClassificationColor(segment.params.classification);
     const domain = segment.params.domain;
     return {
-      strokeColor: baseColor ?? DOMAIN_STROKE[domain],
-      fillColor: baseColor ? hexToRgba(baseColor, SEGMENT_SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain],
+      strokeColor: baseColor ?? MEP_DOMAIN_DEFAULT_STROKE[domain],
+      fillColor: hexToRgba(baseColor ?? MEP_DOMAIN_DEFAULT_STROKE[domain], SEGMENT_SYSTEM_FILL_ALPHA),
     };
   }
 
@@ -336,8 +300,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
 
     this.ctx.save();
     this.ctx.setLineDash([]);
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    applyLiveStroke(this.ctx, color, RENDER_LINE_WIDTHS.THIN);
     // Shaft.
     this.ctx.beginPath();
     this.ctx.moveTo(tail.x, tail.y);
@@ -360,7 +323,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     // Label "X.X%" offset perpendicular to the run.
     const nx = -uy;
     const ny = ux;
-    this.ctx.fillStyle = color;
+    this.ctx.fillStyle = liveStrokeInk(color);
     this.ctx.font = SLOPE_LABEL_FONT;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';

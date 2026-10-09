@@ -27,14 +27,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
-import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
+import type { MepFittingEntity } from '../types/mep-fitting-types';
 import { incidentEntityId, resolveFittingBimCategory } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { bboxRejectsPoint, paintPolygonHoverHalo, tracePolygonScreenPath } from './bim-polygon-render';
+import { bboxRejectsPoint } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -45,25 +43,10 @@ import {
   resolveFittingSystemColor,
   resolveSegmentClassificationColor,
   hexToRgba,
+  MEP_DOMAIN_DEFAULT_STROKE,
 } from '../mep-systems/mep-system-color';
 
 // ─── Palette ────────────────────────────────────────────────────────────────────
-
-/**
- * Stroke colour per domain. Mirrors the segment palette so a fitting reads as
- * the same network as the pipes it joins (copper/amber for plumbing; reserved
- * steel/slate for duct).
- */
-const DOMAIN_STROKE: Readonly<Record<MepFittingDomain, string>> = {
-  'pipe': '#b45309',
-  'duct': '#64748b',
-};
-
-/** Translucent footprint fill per domain (~15% opacity — segment mirror). */
-const DOMAIN_FILL: Readonly<Record<MepFittingDomain, string>> = {
-  'pipe': 'rgba(180, 83, 9, 0.15)',
-  'duct': 'rgba(100, 116, 139, 0.15)',
-};
 
 /** Dash pattern for the plan outline (dashed = above cut plane, segment mirror). */
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
@@ -79,7 +62,7 @@ function isMepFittingEntity(entity: EntityModel): entity is MepFittingEntity {
 
 // ─── Renderer ────────────────────────────────────────────────────────────────────
 
-export class MepFittingRenderer extends BaseEntityRenderer {
+export class MepFittingRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepFittingEntity(entity)) return;
     const fitting = entity as MepFittingEntity;
@@ -112,32 +95,15 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     // membership wins; else the inherited classification tint (drainage brown, …);
     // else the per-domain default. So a drainage fitting reads brown like its pipes.
     const baseColor = systemColor ?? resolveSegmentClassificationColor(fitting.params.classification);
-    const strokeColor = baseColor ?? DOMAIN_STROKE[domain];
-    const fillColor = baseColor ? hexToRgba(baseColor, SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
+    const strokeColor = baseColor ?? MEP_DOMAIN_DEFAULT_STROKE[domain];
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
+    this.beginPhasedBodyRender(entity, verts, options);
 
-    // Hover halo via outline thicker glow (mirror segment / fixture renderer).
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
+    // Translucent footprint fill (the real body in plan) + dashed outline
+    // (linear-run-above-cut-plane convention, segment mirror).
+    this.paintLiveBody(verts, hexToRgba(strokeColor, SYSTEM_FILL_ALPHA), strokeColor, RENDER_LINE_WIDTHS.THIN, OUTLINE_DASH);
 
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-
-    // 1. Translucent footprint fill — the real body in plan.
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-
-    // 2. Dashed outline (linear-run-above-cut-plane convention, segment mirror).
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
-
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(_entity: EntityModel): GripInfo[] {

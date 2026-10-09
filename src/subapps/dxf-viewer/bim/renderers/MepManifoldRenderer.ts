@@ -16,13 +16,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { liveStrokeWidthPx } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isMepManifoldEntity } from '../../types/entities';
 import type { MepManifoldEntity } from '../types/mep-manifold-types';
-import { paintPolygonHoverHalo, polygonBboxHitTest, mapBimGrips, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
+import { polygonBboxHitTest, mapBimGrips, strokePolylinePaths } from './bim-polygon-render';
 import { buildMepManifoldSymbol, resolveManifoldPalette } from '../mep-manifolds/mep-manifold-symbol';
 // 🏢 ADR-571: hexToRgba SSoT (fill derived from strokeHex — μηδέν rgb tuple)
 import { hexToRgba } from '../../config/color-math';
@@ -41,7 +40,7 @@ import { getLayer } from '../../stores/LayerStore';
  */
 const MANIFOLD_FILL_ALPHA = 0.18;
 
-export class MepManifoldRenderer extends BaseEntityRenderer {
+export class MepManifoldRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepManifoldEntity(entity)) return;
     const manifold = entity as MepManifoldEntity;
@@ -55,25 +54,12 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     const verts = manifold.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // Fill + outline — equipment cyan-teal for a water manifold; brown for a
     // drainage collector (φρεάτιο). Manifolds are not coloured by circuit (source).
-    const palette = resolveManifoldPalette(manifold.params.kind);
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(palette.strokeHex, MANIFOLD_FILL_ALPHA));
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-    this.ctx.strokeStyle = palette.strokeHex;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
+    const { strokeHex } = resolveManifoldPalette(manifold.params.kind);
+    this.paintLiveBody(verts, hexToRgba(strokeHex, MANIFOLD_FILL_ALPHA), strokeHex, RENDER_LINE_WIDTHS.NORMAL);
 
     // Manifold symbol strokes (inlet stub + outlet stubs).
     const symbol = buildMepManifoldSymbol(manifold.params, manifold.geometry);
@@ -82,12 +68,11 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     // ADR-408 Φ14 — drainage collector (φρεάτιο) grating: parallel bars inside the
     // footprint, thinner than the stubs so the catch-basin reads at a glance.
     if (symbol.gratingStrokes) {
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+      this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
       strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.gratingStrokes);
     }
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

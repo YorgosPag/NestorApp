@@ -16,13 +16,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { liveStrokeInk, liveStrokeWidthPx, liveSymbolFill } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
+import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
+import { hexToRgba } from '../../config/color-math';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isMepBoilerEntity } from '../../types/entities';
 import type { MepBoilerEntity } from '../types/mep-boiler-types';
-import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
+import { polygonBboxHitTest, strokePolylinePaths } from './bim-polygon-render';
 import { buildMepBoilerSymbol } from '../mep-boilers/mep-boiler-symbol';
 import { resolveBoilerTagLines } from '../mep-boilers/mep-boiler-tag';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
@@ -37,8 +39,8 @@ import { getLayer } from '../../stores/LayerStore';
  * radiator palette — both are "heating equipment" regardless of the pipe circuit
  * colours on its connectors.
  */
-const BOILER_STROKE = '#dc2626';
-const BOILER_FILL = 'rgba(220, 38, 38, 0.16)';
+const BOILER_STROKE = BIM_CATEGORY_LINE_COLORS.hydronicHeating;
+const BOILER_FILL = hexToRgba(BOILER_STROKE, 0.16);
 
 // ─── Service-clearance envelope (Revit Mechanical Equipment «Clearances») ──────
 /** Dash pattern (screen-px on/off) for the dashed «keep-clear» maintenance zone. */
@@ -63,7 +65,7 @@ const TAG_BG_COLOR = 'rgba(255, 255, 255, 0.92)';
 /** Dark neutral text colour. */
 const TAG_TEXT_COLOR = '#1f2937';
 
-export class MepBoilerRenderer extends BaseEntityRenderer {
+export class MepBoilerRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepBoilerEntity(entity)) return;
     const boiler = entity as MepBoilerEntity;
@@ -77,23 +79,10 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     const verts = boiler.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // Fill + outline — warm-red heating equipment (boiler = hydronic source).
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(BOILER_FILL);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-    this.ctx.strokeStyle = BOILER_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
+    this.paintLiveBody(verts, BOILER_FILL, BOILER_STROKE, RENDER_LINE_WIDTHS.NORMAL);
 
     // Boiler symbol — connector-driven pipe stubs + flue vent + fuel-cock glyph + divider/flame.
     // Each connector stub is coloured by its System Classification (Revit color-coded MEP plan)
@@ -102,20 +91,20 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     // keep the warm-red boiler identity (the fuel domain is not covered by the colour SSoT).
     const symbol = buildMepBoilerSymbol(boiler.params, boiler.geometry);
     for (const { line, classification } of symbol.strokes) {
-      this.ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
+      this.ctx.strokeStyle = liveStrokeInk(resolveSegmentClassificationColor(classification) ?? BOILER_STROKE);
       strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [line]);
     }
     // Combustion flue (καπναγωγός) vent glyph — coloured exhaust grey via the classification
     // SSoT; its chevron arrowhead also distinguishes it from the pipe stubs.
     for (const { line, classification } of symbol.ventStrokes) {
-      this.ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
+      this.ctx.strokeStyle = liveStrokeInk(resolveSegmentClassificationColor(classification) ?? BOILER_STROKE);
       strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [line]);
     }
     // Fuel inlet (τροφοδοσία καυσίμου) gas-cock glyph — warm-red default (fuel domain not in the
     // colour SSoT); its bow-tie isolation valve distinguishes the piped fuel line from pipes/flue.
-    this.ctx.strokeStyle = BOILER_STROKE;
+    this.ctx.strokeStyle = liveStrokeInk(BOILER_STROKE);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.fuelStrokes);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.glyphStrokes);
 
     this.ctx.restore();
@@ -158,9 +147,8 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash(CLEARANCE_DASH as number[]);
     this.ctx.globalAlpha = CLEARANCE_ALPHA;
-    this.ctx.strokeStyle = BOILER_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), outline);
+    applyLiveStroke(this.ctx, BOILER_STROKE, RENDER_LINE_WIDTHS.THIN);
+    this.drawPolygonPath(outline);
     this.ctx.stroke();
     this.ctx.restore();
   }
@@ -198,20 +186,19 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     const boxTop = boxBottom - boxH;
 
     // Leader from the boiler corner to the box bottom-left corner.
-    this.ctx.strokeStyle = BOILER_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    applyLiveStroke(this.ctx, BOILER_STROKE, RENDER_LINE_WIDTHS.THIN);
     this.ctx.beginPath();
     this.ctx.moveTo(anchor.x, anchor.y);
     this.ctx.lineTo(boxLeft, boxBottom);
     this.ctx.stroke();
 
     // Box background + warm-red border.
-    this.ctx.fillStyle = TAG_BG_COLOR;
+    this.ctx.fillStyle = liveSymbolFill(TAG_BG_COLOR);
     this.ctx.fillRect(boxLeft, boxTop, boxW, boxH);
     this.ctx.strokeRect(boxLeft, boxTop, boxW, boxH);
 
     // Text lines.
-    this.ctx.fillStyle = TAG_TEXT_COLOR;
+    this.ctx.fillStyle = liveStrokeInk(TAG_TEXT_COLOR);
     const textX = boxLeft + TAG_PADDING_PX;
     for (let i = 0; i < lines.length; i++) {
       const textY = boxTop + TAG_PADDING_PX + i * TAG_LINE_HEIGHT_PX;

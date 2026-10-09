@@ -16,13 +16,14 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
+import { hexToRgba } from '../../config/color-math';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isMepRadiatorEntity } from '../../types/entities';
 import type { MepRadiatorEntity } from '../types/mep-radiator-types';
-import { paintPolygonHoverHalo, polygonBboxHitTest, mapBimGrips, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
+import { polygonBboxHitTest, mapBimGrips, strokePolylinePaths } from './bim-polygon-render';
 import { buildMepRadiatorSymbol } from '../mep-radiators/mep-radiator-symbol';
 import { getMepRadiatorGrips } from '../mep-radiators/mep-radiator-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
@@ -38,10 +39,10 @@ import { getLayer } from '../../stores/LayerStore';
  * it reads as a radiator regardless of the supply/return circuit colours on its
  * connected pipes.
  */
-const RADIATOR_STROKE = '#dc2626';
-const RADIATOR_FILL = 'rgba(220, 38, 38, 0.16)';
+const RADIATOR_STROKE = BIM_CATEGORY_LINE_COLORS.hydronicHeating;
+const RADIATOR_FILL = hexToRgba(RADIATOR_STROKE, 0.16);
 
-export class MepRadiatorRenderer extends BaseEntityRenderer {
+export class MepRadiatorRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepRadiatorEntity(entity)) return;
     const radiator = entity as MepRadiatorEntity;
@@ -55,32 +56,18 @@ export class MepRadiatorRenderer extends BaseEntityRenderer {
     const verts = radiator.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // Fill + outline — warm-red heating equipment.
-    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(RADIATOR_FILL);
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.fill();
-    this.ctx.strokeStyle = RADIATOR_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-    this.ctx.stroke();
+    this.paintLiveBody(verts, RADIATOR_FILL, RADIATOR_STROKE, RENDER_LINE_WIDTHS.NORMAL);
 
     // Radiator symbol — supply/return connector stubs + thin fin bars.
     const symbol = buildMepRadiatorSymbol(radiator.params, radiator.geometry);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.strokes);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.finStrokes);
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

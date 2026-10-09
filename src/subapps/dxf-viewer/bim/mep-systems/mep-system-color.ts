@@ -20,6 +20,7 @@
  */
 
 import type { MepSystemEntity } from '../types/mep-system-types';
+import type { MepSegmentDomain } from '../types/mep-segment-types';
 import type {
   PlumbingSystemClassification,
   DuctSystemClassification,
@@ -308,6 +309,21 @@ export function buildEntitySystemColorIntIndex(
   }
   return out;
 }
+
+/**
+ * ADR-909 Γ2.3 — **προεπιλεγμένο χρώμα γραμμής ανά domain** δικτύου (όταν δεν υπάρχει ούτε System ούτε
+ * classification): steel/slate για αεραγωγό, amber για σωλήνα, κίτρινο αερίου για καύσιμο (ADR-434).
+ *
+ * 🔴 Πριν ζούσε **δύο φορές** — `DOMAIN_STROKE` στον `MepSegmentRenderer` και ξανά στον `MepFittingRenderer`,
+ * μαζί με δεύτερο ζεύγος `DOMAIN_FILL` σε χειρόγραφα `rgba(…)` των ίδιων χρωμάτων. Το γέμισμα πλέον
+ * **παράγεται** από το χρώμα γραμμής ({@link hexToRgba}). Ο `MepFittingDomain` είναι υποσύνολο του
+ * `MepSegmentDomain`, άρα ο ίδιος πίνακας εξυπηρετεί και τους δύο.
+ */
+export const MEP_DOMAIN_DEFAULT_STROKE: Readonly<Record<MepSegmentDomain, string>> = {
+  duct: '#64748b',
+  pipe: '#b45309',
+  fuel: '#eab308',
+};
 
 /**
  * Hex colour → `rgba(r,g,b,a)` string for translucent 2D fills. Falls back to the hex.

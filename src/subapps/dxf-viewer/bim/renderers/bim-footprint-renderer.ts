@@ -8,6 +8,8 @@
  */
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import { tracePolygonScreenPath, paintPolygonHoverHalo } from './bim-polygon-render';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { PhaseRenderingState } from '../../systems/phase-manager/types';
@@ -34,6 +36,40 @@ export abstract class BimFootprintRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
     return phaseState;
+  }
+
+  /**
+   * Closing half of {@link beginPhasedBodyRender}: `restore()` the state it saved, then run
+   * the shared post-render pass (grips etc.). For bodies with nothing to draw after the restore.
+   */
+  protected endPhasedBodyRender(entity: EntityModel, options: RenderOptions): void {
+    this.ctx.restore();
+    this.finalizeRender(entity, options);
+  }
+
+  /**
+   * ADR-909 Γ2.3 — fill the footprint + stroke its outline, for a body whose colour belongs to
+   * the SYSTEM or the equipment (MEP), not to an Object-Styles category (N.18).
+   *
+   * Screen ⇒ `fillTint` through the shared adaptive body-fill layer, `strokeColor` / `widthPx`
+   * verbatim. Print pass ⇒ the print policy decides ink + width ({@link applyLiveStroke}).
+   * The stroke state it sets is left in place on purpose: symbol strokes drawn right after
+   * inherit the same pen (and `dash`, when given — clear it before solid sub-strokes).
+   */
+  protected paintLiveBody(
+    vertices: ReadonlyArray<{ x: number; y: number }>,
+    fillTint: string,
+    strokeColor: string,
+    widthPx: number,
+    dash?: readonly number[],
+  ): void {
+    this.ctx.fillStyle = adaptFillTintForCanvas(fillTint);
+    this.drawPolygonPath(vertices);
+    this.ctx.fill();
+    applyLiveStroke(this.ctx, strokeColor, widthPx);
+    if (dash) this.ctx.setLineDash([...dash]);
+    this.drawPolygonPath(vertices);
+    this.ctx.stroke();
   }
 
   /** Hover-halo glow outline around the footprint; no-op unless `highlighted`. */

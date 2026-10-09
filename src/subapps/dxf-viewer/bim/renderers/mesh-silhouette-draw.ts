@@ -17,7 +17,8 @@
  */
 
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { adaptFillTintForCanvas, liveStrokeInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
 import { getPrintColorPolicy } from '../../config/print-color-policy';
 import { fillRingsEvenOdd, tracePolygonScreenPath } from './bim-polygon-render';
 import type { SilPoint, SilSegment } from '../mesh-library/mesh-silhouette';
@@ -76,19 +77,6 @@ function makePlanToWorld(
 }
 
 /**
- * ADR-909 Γ2.2 — **το ΕΝΑ σημείο όπου ένα σχήμα 3Δ αποκτά μελάνι και πάχος**. Οθόνη ⇒ αυτούσια τα `color` /
- * `widthPx` της παλέτας· print pass ⇒ η πολιτική εκτύπωσης ({@link liveStrokeInk}: άχρωμο σε «Ασπρόμαυρο» /
- * «Γκρι», δάπεδο αντίθεσης όπου δηλώνεται) και το δάπεδο πάχους ({@link liveStrokeWidthPx}).
- *
- * 🔴 Πριν: πέντε ωμά `ctx.strokeStyle = palette.…` + `ctx.lineWidth = …` σε αυτό το αρχείο — το έπιπλο έβγαινε
- * `#8b5e34` 2 px στη δημόσια κάτοψη «Ασπρόμαυρο» (πύλη pixels: `K1/K2/K3:*:furniture` · `imported-mesh`).
- */
-function applyMeshStroke(ctx: CanvasRenderingContext2D, color: string, widthPx: number): void {
-  ctx.strokeStyle = liveStrokeInk(color);
-  ctx.lineWidth = liveStrokeWidthPx(widthPx);
-}
-
-/**
  * Draw the projected top-view feature edges (crease/boundary lines) — the interior detail + crisp
  * outline. Shared by {@link drawMeshSilhouette} (over the raster fill) and {@link drawMeshContourFill}
  * (over the cached contour fill), so the edge-draw lives in ONE place (N.18, no parallel twin).
@@ -102,7 +90,7 @@ function drawFeatureEdges(
   lineWidth: number,
 ): void {
   if (!edges || edges.length === 0) return;
-  applyMeshStroke(ctx, edgeColor, Math.max(1, lineWidth - 1));
+  applyLiveStroke(ctx, edgeColor, Math.max(1, lineWidth - 1));
   ctx.beginPath();
   for (const seg of edges) {
     const a = worldToScreen(toWorld(seg.x1, seg.y1));
@@ -128,7 +116,7 @@ export function drawMeshSilhouette(args: DrawMeshSilhouetteArgs): boolean {
   ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
   tracePolygon(ctx, worldToScreen, outline);
   ctx.fill();
-  applyMeshStroke(ctx, palette.stroke, lineWidth);
+  applyLiveStroke(ctx, palette.stroke, lineWidth);
   tracePolygon(ctx, worldToScreen, outline);
   ctx.stroke();
 
@@ -170,7 +158,7 @@ export function drawMeshContourFill(args: DrawMeshContourFillArgs): boolean {
   fillRingsEvenOdd(ctx, toScreen, contours);
 
   // Contour outline — SAME stroke/width as every other mesh path → uniform component appearance.
-  applyMeshStroke(ctx, palette.stroke, lineWidth);
+  applyLiveStroke(ctx, palette.stroke, lineWidth);
   for (const ring of contours) {
     if (ring.length < 3) continue;
     tracePolygon(ctx, worldToScreen, ring.map((p) => toWorld(p.x, p.y)));
@@ -216,7 +204,7 @@ export function drawMeshSlotSilhouettes(args: DrawMeshSlotSilhouettesArgs): bool
       ctx.fillStyle = adaptFillTintForCanvas(slot.palette.fill);
       tracePolygon(ctx, worldToScreen, outline);
       ctx.fill();
-      applyMeshStroke(ctx, slot.palette.stroke, lineWidth);
+      applyLiveStroke(ctx, slot.palette.stroke, lineWidth);
       tracePolygon(ctx, worldToScreen, outline);
       ctx.stroke();
       drew = true;
@@ -260,7 +248,7 @@ export function drawMeshFallbackBox(args: DrawMeshFallbackBoxArgs): void {
   // ADR-909 Γ1β — το «φορτώνει» είναι υπόσχεση για το **επόμενο frame**· μια λήψη (print pass) ζωγραφίζει μία
   // φορά, άρα εκεί δεν μπαίνει ποτέ: το κουτί είναι συμπαγές, και η απώλεια αναφέρεται (`mesh-shape-missing`).
   const provisional = loading && getPrintColorPolicy() === null;
-  applyMeshStroke(ctx, palette.stroke, lineWidth);
+  applyLiveStroke(ctx, palette.stroke, lineWidth);
   ctx.setLineDash(provisional ? [...LOADING_DASH] : []);
   tracePolygonScreenPath(ctx, worldToScreen, vertices);
   ctx.stroke();
