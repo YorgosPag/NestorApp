@@ -10,8 +10,12 @@
  * κοινό είναι να το **δει** — άρα το `<img>` δείχνει το **ίδιο αντικείμενο `Blob`** που θα ανεβεί, όχι μια
  * δεύτερη απόδοση που «θα έπρεπε» να βγει ίδια.
  *
- * 🔑 Η εικόνα ξαναφτιάχνεται **μόνο** όταν αλλάξει κάτι που αλλάζει τα pixels *(άνοιγμα · επίπλωση)*. Κάθε
- * νέα εικόνα έχει **νέο** κλειδί ιδεμποτίας· η ίδια εικόνα κρατά το ίδιο, ό,τι κι αν πατηθεί.
+ * 🔑 Η εικόνα ξαναφτιάχνεται **μόνο** όταν αλλάξει κάτι που αλλάζει τα pixels *(άνοιγμα · ομάδες · χρώμα)*.
+ * Κάθε νέα εικόνα έχει **νέο** κλειδί ιδεμποτίας· η ίδια εικόνα κρατά το ίδιο, ό,τι κι αν πατηθεί.
+ *
+ * ⏱️ Οι αλλαγές **μετά** το άνοιγμα περιμένουν λίγο πριν ζωγραφίσουν (ADR-909 Β2.8): πέντε γρήγορα κλικ
+ * στους διακόπτες δίνουν **μία** λήψη 4096 px, όχι πέντε. Όσο περιμένει, η κατάσταση είναι ήδη `preparing` —
+ * το κουμπί «Δημοσίευση» δεν μένει ποτέ ενεργό πάνω σε εικόνα που δεν αντιστοιχεί στους διακόπτες.
  */
 
 import * as React from 'react';
@@ -21,7 +25,12 @@ import {
   type FloorplanPreparationRefusal,
   type PreparedFloorplan,
 } from '../../../io/floorplan-publish/publish-floorplan-to-property';
+import {
+  publicFloorplanChoiceKey,
+  type PublicFloorplanChoice,
+} from '../../../print/public-floorplan/public-floorplan-presets';
 import type { ExportDeps } from '../../../export/types';
+import { DXF_TIMING } from '../../../config/dxf-timing';
 
 export type FloorplanPreview =
   | { readonly status: 'preparing' }
@@ -30,40 +39,56 @@ export type FloorplanPreview =
 
 const PREPARING: FloorplanPreview = { status: 'preparing' };
 
+/** Πόσο περιμένει μια αλλαγή επιλογής πριν ζητήσει νέα εικόνα. */
+const CHOICE_SETTLE_MS = DXF_TIMING.ui.FLOORPLAN_PREVIEW_DEBOUNCE;
+
 /**
  * @param collectDeps τα ζωντανά υλικά, διαβασμένα τη **στιγμή** της λήψης (`useExportDeps`).
- * @param furniture η επιλογή του διαλόγου — αλλαγή της ξαναφτιάχνει την εικόνα.
+ * @param choice ομάδες και χρώμα του διαλόγου — αλλαγή τους ξαναφτιάχνει την εικόνα.
  */
 export function usePublishFloorplanPreview(
   collectDeps: () => ExportDeps,
-  furniture: boolean,
+  choice: PublicFloorplanChoice,
 ): FloorplanPreview {
   const [preview, setPreview] = React.useState<FloorplanPreview>(PREPARING);
   // 🔑 Το `collectDeps` αλλάζει ταυτότητα σε κάθε ενημέρωση επιπέδων· η εικόνα **δεν** πρέπει να ξαναβγεί
   //    (και να αλλάξει κλειδί) επειδή ήρθε ένα snapshot. Διαβάζεται από ref, τη στιγμή της λήψης.
   const collectRef = React.useRef(collectDeps);
   collectRef.current = collectDeps;
+  // 🔑 Η επιλογή συγκρίνεται ως **κείμενο**: νέο αντικείμενο με τις ίδιες ομάδες δεν είναι νέα εικόνα.
+  const choiceKey = publicFloorplanChoiceKey(choice);
+  const choiceRef = React.useRef(choice);
+  choiceRef.current = choice;
+  const openedRef = React.useRef(false);
 
   React.useEffect(() => {
     let cancelled = false;
     let url: string | null = null;
     setPreview(PREPARING);
 
-    void prepareFloorplanPublication(collectRef.current(), { furniture }).then((result) => {
-      if (cancelled) return;
-      if (!result.ok) {
-        setPreview({ status: 'refused', refusal: result.refusal });
-        return;
-      }
-      url = URL.createObjectURL(result.prepared.blob);
-      setPreview({ status: 'ready', prepared: result.prepared, url });
-    });
+    const prepare = (): void => {
+      void prepareFloorplanPublication(collectRef.current(), choiceRef.current).then((result) => {
+        if (cancelled) return;
+        if (!result.ok) {
+          setPreview({ status: 'refused', refusal: result.refusal });
+          return;
+        }
+        url = URL.createObjectURL(result.prepared.blob);
+        setPreview({ status: 'ready', prepared: result.prepared, url });
+      });
+    };
+
+    // Το άνοιγμα ζωγραφίζει αμέσως· μόνο οι αλλαγές επιλογής περιμένουν.
+    const timer = openedRef.current ? setTimeout(prepare, CHOICE_SETTLE_MS) : null;
+    if (timer === null) prepare();
+    openedRef.current = true;
 
     return () => {
       cancelled = true;
+      if (timer !== null) clearTimeout(timer);
       if (url !== null) URL.revokeObjectURL(url);
     };
-  }, [furniture]);
+  }, [choiceKey]);
 
   return preview;
 }

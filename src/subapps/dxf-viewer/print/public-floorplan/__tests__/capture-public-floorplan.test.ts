@@ -12,6 +12,8 @@
  *   Λ5  τα bytes που επιστρέφονται είναι ΑΥΤΑ που έβγαλε ο καμβάς (το ίδιο αντικείμενο)
  *   Λ6  🔴 οι εικόνες φορτώνονται ΠΡΙΝ από την απόδοση και ΕΞΩ από την όψη (Β2.6 — έβγαιναν επίπεδο γκρι)
  *   Λ7  εικόνα υλικού που δεν είναι έτοιμη ⇒ ΟΝΟΜΑΣΜΕΝΗ απώλεια στο αποτέλεσμα, ποτέ σιωπηλό γκρι
+ *   Λ8  Β2.8 — το ΧΡΩΜΑ της επιλογής φτάνει ΙΔΙΟ σε προφόρτωση, αποδότη και συνταγή
+ *   Λ9  Β2.8 — οι ομάδες γράφονται στη συνταγή σε ΚΑΝΟΝΙΚΗ μορφή, όπως κι αν ήρθαν
  */
 
 import { PUBLIC_FLOORPLAN_PROFILE, readFloorplanRenderRecipe } from '@/lib/listings/floorplan-render-recipe';
@@ -31,6 +33,7 @@ import {
   publicFloorplanFrameOf,
   publicFloorplanRasterOf,
 } from '../capture-public-floorplan';
+import { DEFAULT_PUBLIC_FLOORPLAN_CHOICE, type PublicFloorplanChoice } from '../public-floorplan-presets';
 
 jest.mock('../../capture/capture-2d', () => ({
   convertSceneForCapture: jest.fn(),
@@ -49,6 +52,8 @@ const sceneOf = (entities: DxfEntityUnion[]): DxfScene =>
   ({ entities, layers: [], bounds: null }) as unknown as DxfScene;
 
 const SOURCE = { entities: [] } as unknown as SceneModel;
+const LISTING = DEFAULT_PUBLIC_FLOORPLAN_CHOICE;
+const FURNISHED: PublicFloorplanChoice = { groups: ['furniture', 'texts', 'hatches', 'orientation'], plotStyle: 'monochrome' };
 const TRANSFORM = { scale: 2, offsetX: 10, offsetY: 20 };
 
 /** Πλαστός καμβάς: θυμάται τι του ζητήθηκε και δίνει πίσω το `blob` που του ορίστηκε. */
@@ -121,7 +126,7 @@ describe('Λ — η λήψη', () => {
   it('Λ1 στον αποδότη φτάνει ΜΟΝΟ ό,τι επιτρέπει το προφίλ — και η συνταγή λέει πώς βγήκε', async () => {
     arrange([line('a', 0, 0, 15000, 0), line('b', 0, 0, 0, 9000), line('dim', 0, 0, 90000, 90000, 'dimension')]);
 
-    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: true });
+    const capture = await capturePublicFloorplan({ scene: SOURCE, choice: FURNISHED });
 
     const [rendered, viewport, input] = render.mock.calls[0] as [DxfScene, { width: number; height: number }, { plotStyle: string; minLineWidthPx?: number }];
     expect(rendered.entities.map((e) => e.id)).toStrictEqual(['a', 'b']);
@@ -138,7 +143,7 @@ describe('Λ — η λήψη', () => {
       widthPx: 4096,
       heightPx: 2458,
       plotStyle: 'monochrome',
-      furniture: true,
+      groups: ['furniture', 'texts', 'hatches', 'orientation'],
     });
     // Η ΙΔΙΑ κρίση με την πόρτα: η συνταγή που φτιάχνει ο viewer είναι αυτή που δέχεται ο διακομιστής.
     expect(readFloorplanRenderRecipe(JSON.parse(JSON.stringify(capture.recipe)))).toMatchObject({ ok: true });
@@ -153,7 +158,7 @@ describe('Λ — η λήψη', () => {
       return { canvas: fakeCanvas(PNG), transform: TRANSFORM };
     });
 
-    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+    const capture = await capturePublicFloorplan({ scene: SOURCE, choice: LISTING });
 
     expect(capture.ok).toBe(true);
     expect(seenDuringRender).toStrictEqual([false]);
@@ -163,22 +168,22 @@ describe('Λ — η λήψη', () => {
   it('Λ3 τίποτα να φανεί ⇒ `no-geometry`, χωρίς απόδοση', async () => {
     arrange([line('dim', 0, 0, 100, 100, 'dimension')]);
 
-    expect(await capturePublicFloorplan({ scene: SOURCE, furniture: false })).toStrictEqual({ ok: false, why: 'no-geometry' });
+    expect(await capturePublicFloorplan({ scene: SOURCE, choice: LISTING })).toStrictEqual({ ok: false, why: 'no-geometry' });
     expect(render).not.toHaveBeenCalled();
   });
 
   it('Λ4 πάνω από το ταβάνι ⇒ `too-large` · αποτυχία κωδικοποίησης ⇒ `encode-failed`', async () => {
     arrange([line('a', 0, 0, 100, 50)], { size: FLOORPLAN_MAX_BYTES + 1 } as Blob);
-    expect(await capturePublicFloorplan({ scene: SOURCE, furniture: false })).toStrictEqual({ ok: false, why: 'too-large' });
+    expect(await capturePublicFloorplan({ scene: SOURCE, choice: LISTING })).toStrictEqual({ ok: false, why: 'too-large' });
 
     arrange([line('a', 0, 0, 100, 50)], null);
-    expect(await capturePublicFloorplan({ scene: SOURCE, furniture: false })).toStrictEqual({ ok: false, why: 'encode-failed' });
+    expect(await capturePublicFloorplan({ scene: SOURCE, choice: LISTING })).toStrictEqual({ ok: false, why: 'encode-failed' });
   });
 
   it('Λ5 τα bytes που επιστρέφονται είναι ΑΥΤΑ που έβγαλε ο καμβάς', async () => {
     arrange([line('a', 0, 0, 100, 50)]);
 
-    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+    const capture = await capturePublicFloorplan({ scene: SOURCE, choice: LISTING });
 
     expect(capture.ok && capture.blob).toBe(PNG);
   });
@@ -192,7 +197,7 @@ describe('Λ — η λήψη', () => {
       seen.push({ rendersBefore: render.mock.calls.length, insideView: !getIsolateEffectsSnapshot().active });
     });
 
-    await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+    await capturePublicFloorplan({ scene: SOURCE, choice: LISTING });
 
     expect(preload).toHaveBeenCalledWith(SOURCE, 'monochrome');
     expect(seen).toStrictEqual([{ rendersBefore: 0, insideView: false }]);
@@ -207,16 +212,40 @@ describe('Λ — η λήψη', () => {
     } as unknown as DxfEntityUnion;
     arrange([line('a', 0, 0, 100, 50), stone]);
 
-    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+    const capture = await capturePublicFloorplan({ scene: SOURCE, choice: LISTING });
 
     if (!capture.ok) throw new Error('expected a capture');
     expect(capture.fidelity).toStrictEqual([{ code: 'hatch-image-solid', count: 1 }]);
   });
 
+  it('Λ8 το χρώμα της επιλογής φτάνει ΙΔΙΟ σε προφόρτωση, αποδότη και συνταγή', async () => {
+    arrange([line('a', 0, 0, 100, 50)]);
+
+    const capture = await capturePublicFloorplan({ scene: SOURCE, choice: { ...LISTING, plotStyle: 'colour' } });
+
+    expect(preload).toHaveBeenCalledWith(SOURCE, 'colour');
+    expect((render.mock.calls[0] as [unknown, unknown, { plotStyle: string }])[2].plotStyle).toBe('colour');
+    expect(capture.ok && capture.recipe.plotStyle).toBe('colour');
+  });
+
+  it('Λ9 οι ομάδες γράφονται στη συνταγή σε κανονική μορφή — και η πόρτα τη δέχεται', async () => {
+    arrange([line('a', 0, 0, 100, 50), line('t', 0, 0, 10, 10, 'text')]);
+
+    const capture = await capturePublicFloorplan({
+      scene: SOURCE,
+      choice: { groups: ['texts', 'furniture', 'texts'], plotStyle: 'grayscale' },
+    });
+
+    if (!capture.ok) throw new Error('expected a capture');
+    expect(capture.recipe.groups).toStrictEqual(['furniture', 'texts']);
+    expect(capture.groupCounts).toMatchObject({ texts: 1, furniture: 0 });
+    expect(readFloorplanRenderRecipe(JSON.parse(JSON.stringify(capture.recipe)))).toMatchObject({ ok: true });
+  });
+
   it('Λ7β σχέδιο χωρίς εικόνες ⇒ καμία απώλεια', async () => {
     arrange([line('a', 0, 0, 100, 50)]);
 
-    const capture = await capturePublicFloorplan({ scene: SOURCE, furniture: false });
+    const capture = await capturePublicFloorplan({ scene: SOURCE, choice: LISTING });
 
     expect(capture.ok && capture.fidelity).toStrictEqual([]);
   });

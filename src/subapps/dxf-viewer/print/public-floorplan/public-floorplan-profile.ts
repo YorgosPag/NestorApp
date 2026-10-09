@@ -27,9 +27,13 @@ import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-ty
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { DxfRenderableType } from '../../rendering/contract/renderable-entity-type';
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
+import { PUBLIC_FLOORPLAN_GROUPS, type PublicFloorplanGroup } from '@/lib/listings/floorplan-render-recipe';
 
-/** `furniture` = φαίνεται **μόνο** όταν ο άνθρωπος ζήτησε επίπλωση στον διάλογο. */
-export type PublicFloorplanRule = 'show' | 'hide' | 'furniture';
+/**
+ * `show` = πάντα · `hide` = ποτέ · **όνομα ομάδας** = φαίνεται μόνο όταν ο άνθρωπος άναψε την ομάδα στον
+ * διάλογο (ADR-909 Β2.8). Η «επίπλωση» της έκδοσης 1 ήταν η πρώτη τέτοια ομάδα, γραμμένη ως ειδική περίπτωση.
+ */
+export type PublicFloorplanRule = 'show' | 'hide' | PublicFloorplanGroup;
 
 export const PUBLIC_FLOORPLAN_CATEGORY_RULES: Readonly<Record<BimCategory, PublicFloorplanRule>> = {
   // Το κτίσμα όπως το περπατά ο αγοραστής.
@@ -40,7 +44,8 @@ export const PUBLIC_FLOORPLAN_CATEGORY_RULES: Readonly<Record<BimCategory, Publi
   'slab-opening': 'show',
   stair: 'show',
   railing: 'show',
-  hatch: 'show',
+  // Γραμμοσκιάσεις και υφές υλικών: δείχνουν το δάπεδο, αλλά μια «καθαρή» κάτοψη τις σβήνει.
+  hatch: 'hatches',
   // Είδη υγιεινής και κουζίνα: μόνιμος εξοπλισμός, δείχνει τη χρήση του χώρου.
   sanitary: 'show',
   kitchen: 'show',
@@ -60,19 +65,20 @@ export const PUBLIC_FLOORPLAN_CATEGORY_RULES: Readonly<Record<BimCategory, Publi
   'wall-covering': 'hide',
   'thermal-space': 'hide',
   'space-separator': 'hide',
-  // Η/Μ εγκαταστάσεις.
-  'light-fixture': 'hide',
-  'electrical-panel': 'hide',
-  'mep-manifold': 'hide',
-  'mep-radiator': 'hide',
-  'mep-boiler': 'hide',
-  'mep-water-heater': 'hide',
-  'mep-underfloor': 'hide',
-  'mep-wire': 'hide',
-  duct: 'hide',
-  pipe: 'hide',
-  'drain-pipe': 'hide',
-  fuel: 'hide',
+  // Η/Μ εγκαταστάσεις — τρεις ομάδες με νόημα για αγοραστή, όχι οι ειδικότητες της μελέτης: στο
+  // `DISCIPLINE_BY_CATEGORY` το καλοριφέρ και το WC είναι και τα δύο «υδραυλικά».
+  'light-fixture': 'electrical',
+  'electrical-panel': 'electrical',
+  'mep-wire': 'electrical',
+  'mep-radiator': 'heating',
+  'mep-boiler': 'heating',
+  'mep-underfloor': 'heating',
+  duct: 'heating',
+  fuel: 'heating',
+  'mep-manifold': 'plumbing',
+  'mep-water-heater': 'plumbing',
+  pipe: 'plumbing',
+  'drain-pipe': 'plumbing',
   'generic-solid': 'hide',
 };
 
@@ -92,14 +98,14 @@ export const PUBLIC_FLOORPLAN_PRIMITIVE_RULES: Readonly<
   spline: 'show',
   rectangle: 'show',
   rect: 'show',
-  hatch: 'show',
+  hatch: 'hatches',
   image: 'show',
   // Ονόματα χώρων: είναι απλά κείμενα — δεν ξεχωρίζουν από σημείωση, άρα ακολουθούν το στρώμα τους.
-  text: 'show',
-  mtext: 'show',
+  text: 'texts',
+  mtext: 'texts',
   // Προσανατολισμός και κλίμακα: ό,τι βοηθά τον αγοραστή να διαβάσει την κάτοψη.
-  'annotation-symbol': 'show',
-  'scale-bar': 'show',
+  'annotation-symbol': 'orientation',
+  'scale-bar': 'orientation',
   // Διαστάσεις, σημειώσεις, πίνακες, βοηθητικές γραμμές.
   dimension: 'hide',
   'angle-measurement': 'hide',
@@ -125,15 +131,26 @@ export function publicFloorplanRuleOf(entity: DxfEntityUnion): PublicFloorplanRu
 }
 
 export interface PublicFloorplanOptions {
-  /** Η επιλογή του ανθρώπου στον διάλογο — το **μόνο** που αλλάζει ανά δημοσίευση. */
-  readonly furniture: boolean;
+  /** Οι ομάδες που άναψε ο άνθρωπος στον διάλογο — το **μόνο** που αλλάζει ανά δημοσίευση. */
+  readonly groups: ReadonlySet<PublicFloorplanGroup>;
 }
+
+/** Πόσα στοιχεία του σχεδίου ανήκουν σε κάθε ομάδα — αναμμένη ή όχι. */
+export type PublicFloorplanGroupCounts = Readonly<Record<PublicFloorplanGroup, number>>;
 
 export interface PublicFloorplanSelection {
   /** Η σκηνή **μόνο** με ό,τι φεύγει στο κοινό — τα όριά της ορίζουν και το κάδρο. */
   readonly scene: DxfScene;
   /** Τύποι που το προφίλ δεν γνωρίζει και γι' αυτό **έμειναν έξω** — ο διάλογος τους ονομάζει. */
   readonly unruledTypes: readonly string[];
+  /** Ο διάλογος δείχνει τον αριθμό δίπλα σε κάθε διακόπτη: ομάδα με 0 δεν έχει τι να δείξει. */
+  readonly groupCounts: PublicFloorplanGroupCounts;
+}
+
+function emptyGroupCounts(): Record<PublicFloorplanGroup, number> {
+  const counts: Partial<Record<PublicFloorplanGroup, number>> = {};
+  for (const group of PUBLIC_FLOORPLAN_GROUPS) counts[group] = 0;
+  return counts as Record<PublicFloorplanGroup, number>;
 }
 
 /**
@@ -151,6 +168,7 @@ export function applyPublicFloorplanProfile(
   isLayerHidden: (entity: DxfEntityUnion) => boolean,
 ): PublicFloorplanSelection {
   const unruled = new Set<string>();
+  const groupCounts = emptyGroupCounts();
 
   const entities = scene.entities.filter((entity) => {
     if (entity.visible === false || isLayerHidden(entity)) return false;
@@ -159,8 +177,10 @@ export function applyPublicFloorplanProfile(
       unruled.add(entity.type);
       return false;
     }
-    return rule === 'show' || (rule === 'furniture' && options.furniture);
+    if (rule === 'show' || rule === 'hide') return rule === 'show';
+    groupCounts[rule] += 1;
+    return options.groups.has(rule);
   });
 
-  return { scene: { ...scene, entities }, unruledTypes: [...unruled].sort() };
+  return { scene: { ...scene, entities }, unruledTypes: [...unruled].sort(), groupCounts };
 }

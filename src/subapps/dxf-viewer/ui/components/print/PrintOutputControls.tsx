@@ -23,10 +23,8 @@ import type {
   PrintSource,
 } from '../../../print/config/paper-types';
 import { PRINT_SCALE_DENOMINATORS } from '../../../print/config/paper-constants';
+import { PRINT_PLOT_STYLES } from '../../../config/print-color-policy';
 import { PrintRadioGroup } from './PrintRadioGroup';
-
-/** ADR-454 — plot-style options offered in the dialog (2D only). */
-const PLOT_STYLES: readonly PrintPlotStyle[] = ['colour', 'monochrome', 'grayscale', 'by-pen'];
 
 /** ADR-604 — output-encoding options offered in the dialog (2D only). */
 const OUTPUT_MODES: readonly PrintOutputMode[] = ['vector', 'raster'];
@@ -133,7 +131,7 @@ export function PrintOutputControls(props: PrintOutputControlsProps): React.JSX.
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PLOT_STYLES.map((style) => (
+              {PRINT_PLOT_STYLES.map((style) => (
                 <SelectItem key={style} value={style}>
                   {t(`print.plotStyle.${style}`)}
                 </SelectItem>

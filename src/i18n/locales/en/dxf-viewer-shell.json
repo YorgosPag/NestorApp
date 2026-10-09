@@ -7810,10 +7810,39 @@
   },
   "publishFloorplan": {
     "dialogTitle": "Publish floor plan",
-    "dialogDescription": "The floor plan is generated from the drawing you see now and published on the property listing as “Measured”. Dimensions, notes and building services are left out.",
+    "dialogDescription": "The floor plan is generated from the drawing you see now and published on the property listing as “Measured”. Choose what is shown; dimensions and notes are never included.",
     "property": "Property",
-    "furniture": "With furniture",
-    "furnitureHint": "Furniture and decoration from the drawing. Sanitary fixtures and the kitchen are always shown.",
+    "filters": {
+      "title": "What the floor plan shows",
+      "preset": "Preset",
+      "presets": {
+        "listing": "Listing",
+        "furnished": "Furnished",
+        "technical": "Technical",
+        "custom": "Custom"
+      },
+      "colour": "Colour",
+      "colours": {
+        "monochrome": "Black & white",
+        "grayscale": "Greyscale",
+        "colour": "Colour"
+      },
+      "sections": {
+        "model": "Building and equipment",
+        "drawing": "Drawing"
+      },
+      "groups": {
+        "furniture": "Furniture",
+        "electrical": "Lighting and electrical",
+        "heating": "Heating",
+        "plumbing": "Plumbing",
+        "texts": "Text",
+        "hatches": "Hatches and textures",
+        "orientation": "North arrow and scale"
+      },
+      "always": "Always shown: walls, columns, doors, windows, stairs, sanitary fixtures and the kitchen.",
+      "never": "Never shown: dimensions, notes, door and window tags, and construction lines."
+    },
     "preview": "This is what the public will see",
     "previewAlt": "Preview of the floor plan that will be published",
     "preparing": "Preparing the image…",

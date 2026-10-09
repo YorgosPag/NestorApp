@@ -133,6 +133,8 @@ export const DXF_TIMING = {
     ARIA_DEBOUNCE: 250,
     /** Spell-check worker round-trip debounce (text engine, ADR-516 Group 6). */
     SPELLCHECK_DEBOUNCE: 300,
+    /** Public floorplan preview: a filter choice settles before a new 4096 px capture (ADR-909 Β2.8). */
+    FLOORPLAN_PREVIEW_DEBOUNCE: 250,
   },
 
   // ──────────────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@
  * | `profileId` · `profileVersion` | με ποιον κανόνα ορατότητας; | η παλαιότητα (Β3): άλλη έκδοση προφίλ ⇒ μπαγιάτικη |
  * | `frame` | ποιο ορθογώνιο του **σχεδίου** δείχνει η εικόνα; | τα σημεία λήψης (Β4): μετατροπή παλιού κάδρου → νέου |
  * | `widthPx` · `heightPx` | πόσα pixels; | επαλήθευση πάνω στα **ίδια τα bytes** (IHDR) |
- * | `plotStyle` · `furniture` | με ποιο ύφος, με ή χωρίς επίπλωση; | αναπαραγωγή |
+ * | `plotStyle` · `groups` | με ποιο ύφος, και ποιες **προαιρετικές ομάδες** ζήτησε ο άνθρωπος; | αναπαραγωγή |
  *
  * 🔴 **ΖΕΙ ΣΤΟ `FileRecord`, ΟΧΙ ΣΤΑ CUSTOM METADATA ΤΟΥ ΑΝΤΙΚΕΙΜΕΝΟΥ** — σε αντίθεση με τη δήλωση του
  * μοντέλου, και είναι απόφαση. Εκείνη τη διαβάζει ο **ψήστης**, μαζί με τα bytes. Αυτήν τη διαβάζουν
@@ -31,7 +31,34 @@ import { isPlainRecord } from '@/lib/type-guards';
  * του **οφείλει** να ανεβάσει την `version`: έτσι οι ήδη δημοσιευμένες κατόψεις σημαίνονται
  * μπαγιάτικες από τον **ίδιο** μηχανισμό παλαιότητας, χωρίς τρίτο.
  */
-export const PUBLIC_FLOORPLAN_PROFILE = { id: 'public-floorplan', version: 1 } as const;
+export const PUBLIC_FLOORPLAN_PROFILE = { id: 'public-floorplan', version: 2 } as const;
+
+/**
+ * **Οι προαιρετικές ομάδες** της δημόσιας κάτοψης (ADR-909 Β2.8) — ό,τι ο άνθρωπος ανάβει ή σβήνει στον
+ * διάλογο. Κλειστή λίστα: ο πίνακας του προφίλ δίνει σε κάθε στοιχείο «πάντα», «ποτέ» ή **μία** από αυτές.
+ *
+ * 🔑 Ζει **εδώ**, δίπλα στην έκδοση του προφίλ, γιατί είναι μέρος του συμβολαίου: η πόρτα αρνείται ομάδα
+ * που δεν γνωρίζει. Η **σειρά** της λίστας είναι και η κανονική σειρά μέσα στη συνταγή.
+ */
+export const PUBLIC_FLOORPLAN_GROUPS = [
+  'furniture',
+  'electrical',
+  'heating',
+  'plumbing',
+  'texts',
+  'hatches',
+  'orientation',
+] as const;
+
+export type PublicFloorplanGroup = (typeof PUBLIC_FLOORPLAN_GROUPS)[number];
+
+/** Οι ομάδες στην **κανονική** τους μορφή: σειρά της λίστας, καμία διπλή — έτσι γράφονται στη συνταγή. */
+export function canonicalFloorplanGroups(
+  chosen: Iterable<PublicFloorplanGroup>,
+): readonly PublicFloorplanGroup[] {
+  const wanted = new Set(chosen);
+  return PUBLIC_FLOORPLAN_GROUPS.filter((group) => wanted.has(group));
+}
 
 /** Το ταβάνι κάθε πλευράς της εικόνας — πάνω από το μεγαλύτερο πλάτος του ραφιού (2560), με περιθώριο. */
 const FLOORPLAN_MAX_SIDE_PX = 8192;
@@ -52,7 +79,8 @@ export interface FloorplanRenderRecipe {
   readonly heightPx: number;
   /** Το ύφος εκτύπωσης όπως το ονομάζει ο viewer — αδιαφανές εδώ· το λεξιλόγιο ανήκει σε εκείνον. */
   readonly plotStyle: string;
-  readonly furniture: boolean;
+  /** Οι προαιρετικές ομάδες που **φαίνονται**, σε κανονική μορφή ({@link canonicalFloorplanGroups}). */
+  readonly groups: readonly PublicFloorplanGroup[];
 }
 
 /** Γιατί αυτό που ήρθε **δεν** είναι συνταγή — με όνομα, ώστε ο άνθρωπος να μάθει τι να διορθώσει. */
@@ -80,18 +108,37 @@ function readFrame(raw: unknown): FloorplanFrame | null {
   return maxX > minX && maxY > minY ? { minX, minY, maxX, maxY } : null;
 }
 
+/**
+ * Ομάδες **γνωστές** και σε **κανονική** σειρά — αυστηρά αύξουσα θέση στη λίστα, άρα και χωρίς διπλές.
+ * Έτσι δύο συνταγές με τις ίδιες επιλογές είναι ίδιες και ως bytes.
+ */
+function readGroups(raw: unknown): readonly PublicFloorplanGroup[] | null {
+  if (!Array.isArray(raw)) return null;
+  const known: readonly string[] = PUBLIC_FLOORPLAN_GROUPS;
+  const groups: PublicFloorplanGroup[] = [];
+  let previous = -1;
+  for (const item of raw) {
+    const position = typeof item === 'string' ? known.indexOf(item) : -1;
+    if (position <= previous) return null;
+    previous = position;
+    groups.push(PUBLIC_FLOORPLAN_GROUPS[position]);
+  }
+  return groups;
+}
+
 function readShape(raw: unknown): FloorplanRenderRecipe | null {
   if (!isPlainRecord(raw)) return null;
   const frame = readFrame(raw.frame);
-  const { profileId, profileVersion, widthPx, heightPx, plotStyle, furniture } = raw;
+  const { profileId, profileVersion, widthPx, heightPx, plotStyle } = raw;
+  const groups = readGroups(raw.groups);
 
   if (frame === null || typeof profileId !== 'string' || !finite(profileVersion)) return null;
   if (!sidePx(widthPx) || !sidePx(heightPx)) return null;
   if (typeof plotStyle !== 'string' || !PLOT_STYLE_SHAPE.test(plotStyle)) return null;
-  if (typeof furniture !== 'boolean') return null;
+  if (groups === null) return null;
 
   // 🔑 Ξαναχτίζεται πεδίο προς πεδίο: ό,τι επιπλέον έστειλε ο πελάτης **δεν** αποθηκεύεται.
-  return { profileId, profileVersion, frame, widthPx, heightPx, plotStyle, furniture };
+  return { profileId, profileVersion, frame, widthPx, heightPx, plotStyle, groups };
 }
 
 /**

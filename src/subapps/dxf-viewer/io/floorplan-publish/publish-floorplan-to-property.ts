@@ -33,6 +33,8 @@ import {
   type PublicFloorplanCaptureRefusal,
 } from '../../print/public-floorplan/capture-public-floorplan';
 import type { PrintFidelityNote } from '../../print/print-fidelity';
+import type { PublicFloorplanGroupCounts } from '../../print/public-floorplan/public-floorplan-profile';
+import type { PublicFloorplanChoice } from '../../print/public-floorplan/public-floorplan-presets';
 import type { ExportDeps } from '../../export/types';
 import { announceSupersededFiles, archivedFileIdsOf } from '../publish-shared/announce-superseded-files';
 
@@ -46,6 +48,8 @@ export interface PreparedFloorplan {
   readonly unruledTypes: readonly string[];
   /** Ό,τι έχασε η εικόνα έναντι του σχεδίου (εικόνα υλικού που δεν φόρτωσε κ.λπ.) — ο διάλογος το ονομάζει. */
   readonly fidelity: readonly PrintFidelityNote[];
+  /** Πόσα στοιχεία έχει το σχέδιο σε κάθε προαιρετική ομάδα — δίπλα στον διακόπτη της. */
+  readonly groupCounts: PublicFloorplanGroupCounts;
 }
 
 /** Γιατί δεν υπάρχει εικόνα να φανεί: δεν υπάρχει ενεργό επίπεδο με σχέδιο, ή η λήψη αρνήθηκε. */
@@ -63,13 +67,13 @@ export type FloorplanPreparation =
  */
 export async function prepareFloorplanPublication(
   deps: ExportDeps,
-  options: { readonly furniture: boolean },
+  choice: PublicFloorplanChoice,
 ): Promise<FloorplanPreparation> {
   const levelId = deps.activeLevelId;
   const active = deps.levelScenes.find((entry) => entry.level.id === levelId);
   if (levelId === null || active === undefined) return { ok: false, refusal: 'no-level' };
 
-  const capture = await capturePublicFloorplan({ scene: active.scene, furniture: options.furniture });
+  const capture = await capturePublicFloorplan({ scene: active.scene, choice });
   if (!capture.ok) return { ok: false, refusal: capture.why };
 
   return {
@@ -81,6 +85,7 @@ export async function prepareFloorplanPublication(
       idempotencyKey: generateIdempotencyKey(),
       unruledTypes: capture.unruledTypes,
       fidelity: capture.fidelity,
+      groupCounts: capture.groupCounts,
     },
   };
 }

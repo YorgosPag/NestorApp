@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * @fileoverview 🏆 **«ΔΗΜΟΣΙΕΥΣΗ ΚΑΤΟΨΗΣ»** — σε ποιο ακίνητο, με ή χωρίς επίπλωση, και **τι ακριβώς θα δει το κοινό**.
+ * @fileoverview 🏆 **«ΔΗΜΟΣΙΕΥΣΗ ΚΑΤΟΨΗΣ»** — σε ποιο ακίνητο, με ποιες ομάδες και ποιο χρώμα, και **τι ακριβώς θα δει το κοινό**.
  * @related ADR-909 Α4 (υποχρεωτική προεπισκόπηση) · Α8 (η δημοσίευση είναι η δήλωση) · ../publish-model/PublishModelDialog
  * @module subapps/dxf-viewer/ui/components/publish-floorplan/PublishFloorplanDialog
  *
- * Ο διάλογος ρωτά **δύο** πράγματα *(ακίνητο · επίπλωση)* και δείχνει **ένα** *(την εικόνα)*. Ό,τι άλλο
+ * Ο διάλογος ρωτά **δύο** πράγματα *(ακίνητο · τι φαίνεται — `PublishFloorplanFilters`)* και δείχνει **ένα**
+ * *(την εικόνα)*. Ό,τι άλλο
  * χρειάζεται η δημοσίευση — επίπεδο, αρχείο σκηνής, έκδοση, ταυτότητα, διαβάθμιση — το ξέρει ή το γράφει ο
  * διακομιστής. Το κουμπί «Δημοσίευση» είναι σβηστό όσο δεν υπάρχει εικόνα να φανεί.
  *
@@ -24,7 +25,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePropertiesByBuilding } from '@/components/properties/shared/usePropertiesByBuilding';
 import { formatFileSize } from '@/utils/file-validation';
@@ -35,14 +35,18 @@ import {
   publishFloorplanToProperty,
   type FloorplanPublishOutcome,
 } from '../../../io/floorplan-publish/publish-floorplan-to-property';
+import type { PublicFloorplanGroupCounts } from '../../../print/public-floorplan/public-floorplan-profile';
+import {
+  DEFAULT_PUBLIC_FLOORPLAN_CHOICE,
+  type PublicFloorplanChoice,
+} from '../../../print/public-floorplan/public-floorplan-presets';
 import type { ExportDeps } from '../../../export/types';
 import { Field, PropertyPicker } from '../publish-shared/publish-dialog-fields';
 import { floorplanOutcomeMessageOf, type FloorplanOutcomeMessage } from './floorplan-publish-messages';
+import { PublishFloorplanFilters } from './PublishFloorplanFilters';
 import { usePublishFloorplanPreview, type FloorplanPreview } from './usePublishFloorplanPreview';
 
 const logger = createModuleLogger('DXF_PUBLISH_FLOORPLAN');
-
-const FURNITURE_SWITCH_ID = 'publish-floorplan-furniture';
 
 export interface PublishFloorplanDialogProps {
   readonly open: boolean;
@@ -62,13 +66,19 @@ export function PublishFloorplanDialog({
   const { t } = useTranslation('dxf-viewer-shell');
   const { properties } = usePropertiesByBuilding(activeBuildingId, { enabled: open });
   const [propertyId, setPropertyId] = React.useState('');
-  const [furniture, setFurniture] = React.useState(false);
+  const [choice, setChoice] = React.useState<PublicFloorplanChoice>(DEFAULT_PUBLIC_FLOORPLAN_CHOICE);
   const [busy, setBusy] = React.useState(false);
   const [outcome, setOutcome] = React.useState<FloorplanPublishOutcome | null>(null);
-  const preview = usePublishFloorplanPreview(collectDeps, furniture);
+  const preview = usePublishFloorplanPreview(collectDeps, choice);
 
   const published = outcome !== null && outcome.ok;
   const prepared = preview.status === 'ready' ? preview.prepared : null;
+  // 🔑 Τα πλήθη ανά ομάδα είναι του **σχεδίου**, όχι της επιλογής: μένουν όσο ετοιμάζεται η επόμενη εικόνα,
+  //    αλλιώς οι αριθμοί θα αναβόσβηναν σε κάθε κλικ.
+  const [groupCounts, setGroupCounts] = React.useState<PublicFloorplanGroupCounts | null>(null);
+  React.useEffect(() => {
+    if (prepared !== null) setGroupCounts(prepared.groupCounts);
+  }, [prepared]);
 
   const handleSubmit = React.useCallback(async () => {
     if (prepared === null || propertyId === '') return;
@@ -93,27 +103,26 @@ export function PublishFloorplanDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent size="xl">
         <DialogHeader>
           <DialogTitle>{t('publishFloorplan.dialogTitle')}</DialogTitle>
           <DialogDescription>{t('publishFloorplan.dialogDescription')}</DialogDescription>
         </DialogHeader>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t('publishFloorplan.property')}>
-            <PropertyPicker properties={properties} value={propertyId} onChange={setPropertyId} />
-          </Field>
+        <Field label={t('publishFloorplan.property')}>
+          <PropertyPicker properties={properties} value={propertyId} onChange={setPropertyId} />
+        </Field>
 
-          <fieldset className="flex flex-col gap-1.5 text-sm" disabled={busy || published}>
-            <label htmlFor={FURNITURE_SWITCH_ID} className="flex items-center gap-2 font-medium">
-              <Switch id={FURNITURE_SWITCH_ID} checked={furniture} onCheckedChange={setFurniture} />
-              {t('publishFloorplan.furniture')}
-            </label>
-            <p className="text-xs text-muted-foreground">{t('publishFloorplan.furnitureHint')}</p>
-          </fieldset>
+        {/* Τα φίλτρα αριστερά, η εικόνα που προκύπτει δεξιά — κάθε αλλαγή φαίνεται δίπλα της. */}
+        <section className="grid grid-cols-1 items-start gap-4 md:grid-cols-[17rem_minmax(0,1fr)]">
+          <PublishFloorplanFilters
+            choice={choice}
+            onChange={setChoice}
+            counts={groupCounts}
+            disabled={busy || published}
+          />
+          <FloorplanPreviewFigure preview={preview} />
         </section>
-
-        <FloorplanPreviewFigure preview={preview} />
 
         {outcome !== null && <OutcomeMessage outcome={outcome} />}
 

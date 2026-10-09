@@ -19,7 +19,7 @@
  */
 
 import type { FloorplanRenderRecipe } from '@/lib/listings/floorplan-render-recipe';
-import { PUBLIC_FLOORPLAN_PROFILE } from '@/lib/listings/floorplan-render-recipe';
+import { PUBLIC_FLOORPLAN_PROFILE, canonicalFloorplanGroups } from '@/lib/listings/floorplan-render-recipe';
 import { FLOORPLAN_CONTENT_TYPE, FLOORPLAN_MAX_BYTES } from '@/lib/listings/floorplan-publication-contract';
 
 import type { SceneModel } from '../../types/entities';
@@ -27,14 +27,15 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { isEntityLayerSkipped } from '../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
 import { createCombinedBounds } from '../../utils/bounds-utils';
-import type { PrintPlotStyle, RasterTargetPx } from '../config/paper-types';
+import type { RasterTargetPx } from '../config/paper-types';
 import { rasterToViewport } from '../config/paper-math';
 import { MM_PER_INCH } from '../config/paper-constants';
 import { PRINT_PAPER_HEX } from '../../config/print-color-policy';
 import { convertSceneForCapture, preloadCaptureImages, renderDxfSceneOffscreen } from '../capture/capture-2d';
 import { missingSceneImageWarnings } from '../capture/preload-scene-images';
 import { summarizePrintFidelity, type PrintFidelityNote } from '../print-fidelity';
-import { applyPublicFloorplanProfile } from './public-floorplan-profile';
+import { applyPublicFloorplanProfile, type PublicFloorplanGroupCounts } from './public-floorplan-profile';
+import type { PublicFloorplanChoice } from './public-floorplan-presets';
 import { renderInPublicFloorplanView } from './public-floorplan-view';
 
 /**
@@ -62,8 +63,6 @@ const NOMINAL_DPI = (LONG_SIDE_PX * MM_PER_INCH) / NOMINAL_SHEET_LONG_SIDE_MM;
  */
 const SMALLEST_LEGIBLE_WIDTH_PX = 1024;
 const MIN_LINE_WIDTH_PX = LONG_SIDE_PX / SMALLEST_LEGIBLE_WIDTH_PX;
-/** Μαύρο σε λευκό — η σύμβαση κάθε δημόσιας κάτοψης (Zillow, Matterport schematic). */
-const PUBLIC_FLOORPLAN_PLOT_STYLE: PrintPlotStyle = 'monochrome';
 
 interface WorldBounds {
   readonly min: Point2D;
@@ -86,12 +85,15 @@ export type PublicFloorplanCapture =
        * Κενό ⇒ πιστή. Ο διάλογος το ονομάζει **πριν** ο άνθρωπος πατήσει «Δημοσίευση» (ADR-909 Β2.6).
        */
       readonly fidelity: readonly PrintFidelityNote[];
+      /** Πόσα στοιχεία έχει το σχέδιο σε κάθε προαιρετική ομάδα — ο διάλογος το γράφει δίπλα στον διακόπτη. */
+      readonly groupCounts: PublicFloorplanGroupCounts;
     }
   | { readonly ok: false; readonly why: PublicFloorplanCaptureRefusal };
 
 export interface PublicFloorplanCaptureInput {
   readonly scene: SceneModel | null;
-  readonly furniture: boolean;
+  /** Ομάδες και χρώμα, όπως τα διάλεξε ο άνθρωπος στον διάλογο (ADR-909 Β2.8). */
+  readonly choice: PublicFloorplanChoice;
 }
 
 /**
@@ -142,6 +144,7 @@ interface RenderedFloorplan {
   readonly recipe: FloorplanRenderRecipe;
   readonly unruledTypes: readonly string[];
   readonly fidelity: readonly PrintFidelityNote[];
+  readonly groupCounts: PublicFloorplanGroupCounts;
 }
 
 /** Λευκό **πίσω** από το σχέδιο: ο αποδότης αφήνει διαφανή καμβά, και ένα διαφανές PNG ψήνεται μαύρο. */
@@ -158,11 +161,13 @@ function layPaperBehind(canvas: HTMLCanvasElement): void {
 /** Τα σύγχρονα βήματα 1–5. `null` ⇒ δεν έμεινε τίποτα να φανεί μετά το προφίλ. */
 function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloorplan | null {
   const converted = convertSceneForCapture(input.scene);
+  const { plotStyle } = input.choice;
+  const groups = canonicalFloorplanGroups(input.choice.groups);
 
   return renderInPublicFloorplanView(() => {
-    const { scene, unruledTypes } = applyPublicFloorplanProfile(
+    const { scene, unruledTypes, groupCounts } = applyPublicFloorplanProfile(
       converted,
-      { furniture: input.furniture },
+      { groups: new Set(groups) },
       (entity) => isEntityLayerSkipped(entity, converted.layersById),
     );
     const raster = publicFloorplanRasterOf(createCombinedBounds(scene, [], true));
@@ -173,7 +178,7 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
       scene: input.scene,
       raster,
       fitMode: 'fit-to-page',
-      plotStyle: PUBLIC_FLOORPLAN_PLOT_STYLE,
+      plotStyle,
       minLineWidthPx: MIN_LINE_WIDTH_PX,
     });
     layPaperBehind(canvas);
@@ -181,16 +186,17 @@ function renderPublicFloorplan(input: PublicFloorplanCaptureInput): RenderedFloo
     return {
       canvas,
       unruledTypes,
+      groupCounts,
       // Πάνω σε ό,τι **ζωγραφίστηκε** (μετά το προφίλ): μια εικόνα που το προφίλ έκρυψε δεν είναι απώλεια.
-      fidelity: summarizePrintFidelity(missingSceneImageWarnings(scene.entities, PUBLIC_FLOORPLAN_PLOT_STYLE)),
+      fidelity: summarizePrintFidelity(missingSceneImageWarnings(scene.entities, plotStyle)),
       recipe: {
         profileId: PUBLIC_FLOORPLAN_PROFILE.id,
         profileVersion: PUBLIC_FLOORPLAN_PROFILE.version,
         frame: publicFloorplanFrameOf(transform, viewport),
         widthPx: raster.widthPx,
         heightPx: raster.heightPx,
-        plotStyle: PUBLIC_FLOORPLAN_PLOT_STYLE,
-        furniture: input.furniture,
+        plotStyle,
+        groups,
       },
     };
   });
@@ -208,7 +214,7 @@ function encodePng(canvas: HTMLCanvasElement): Promise<Blob | null> {
 export async function capturePublicFloorplan(input: PublicFloorplanCaptureInput): Promise<PublicFloorplanCapture> {
   // 🔑 Το `await` των εικόνων ζει **εδώ** — πριν και έξω από το `renderInPublicFloorplanView`, που μένει
   // σύγχρονο. Μετρημένο ζωντανά (2026-10-09): χωρίς αυτό, πέτρα και πλακάκι έβγαιναν επίπεδο γκρι.
-  await preloadCaptureImages(input.scene, PUBLIC_FLOORPLAN_PLOT_STYLE);
+  await preloadCaptureImages(input.scene, input.choice.plotStyle);
 
   const rendered = renderPublicFloorplan(input);
   if (rendered === null) return { ok: false, why: 'no-geometry' };
@@ -224,5 +230,6 @@ export async function capturePublicFloorplan(input: PublicFloorplanCaptureInput)
     recipe: rendered.recipe,
     unruledTypes: rendered.unruledTypes,
     fidelity: rendered.fidelity,
+    groupCounts: rendered.groupCounts,
   };
 }

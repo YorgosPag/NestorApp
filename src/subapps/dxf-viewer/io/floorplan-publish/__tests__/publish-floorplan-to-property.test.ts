@@ -21,6 +21,10 @@ import type { ExportDeps } from '../../../export/types';
 import type { SceneModel } from '../../../types/entities';
 import { capturePublicFloorplan } from '../../../print/public-floorplan/capture-public-floorplan';
 import {
+  DEFAULT_PUBLIC_FLOORPLAN_CHOICE as LISTING,
+  type PublicFloorplanChoice,
+} from '../../../print/public-floorplan/public-floorplan-presets';
+import {
   prepareFloorplanPublication,
   publishFloorplanToProperty,
   type PreparedFloorplan,
@@ -39,8 +43,10 @@ const RECIPE: FloorplanRenderRecipe = {
   widthPx: 4096,
   heightPx: 2458,
   plotStyle: 'monochrome',
-  furniture: false,
+  groups: ['texts', 'hatches', 'orientation'],
 };
+const FURNISHED: PublicFloorplanChoice = { groups: ['furniture', 'texts', 'hatches', 'orientation'], plotStyle: 'grayscale' };
+const COUNTS = { furniture: 0, electrical: 0, heating: 0, plumbing: 0, texts: 0, hatches: 0, orientation: 0 };
 const PNG = new Blob([new Uint8Array([137, 80, 78, 71, 1, 2, 3])], { type: 'image/png' });
 
 const sceneA = { entities: [{ id: 'a' }] } as unknown as SceneModel;
@@ -59,37 +65,37 @@ function depsOf(activeLevelId: string | null): ExportDeps {
 }
 
 const prepared = (key = 'idk_1'): PreparedFloorplan =>
-  ({ blob: PNG, recipe: RECIPE, levelId: 'lvl_b', idempotencyKey: key, unruledTypes: [], fidelity: [] });
+  ({ blob: PNG, recipe: RECIPE, levelId: 'lvl_b', idempotencyKey: key, unruledTypes: [], fidelity: [], groupCounts: COUNTS });
 
 beforeEach(() => {
   jest.clearAllMocks();
-  capture.mockResolvedValue({ ok: true, blob: PNG, recipe: RECIPE, unruledTypes: ['hologram'], fidelity: [] });
+  capture.mockResolvedValue({ ok: true, blob: PNG, recipe: RECIPE, unruledTypes: ['hologram'], fidelity: [], groupCounts: COUNTS });
   post.mockResolvedValue({ fileId: 'file_new', archived: [], declared: 'declared', listing: 'published' });
 });
 
 describe('Ε — η προετοιμασία της εικόνας', () => {
   it('Ε1 από το ΕΝΕΡΓΟ επίπεδο, και μόνο από αυτό', async () => {
-    const result = await prepareFloorplanPublication(depsOf('lvl_b'), { furniture: true });
+    const result = await prepareFloorplanPublication(depsOf('lvl_b'), FURNISHED);
 
     expect(capture).toHaveBeenCalledTimes(1);
-    expect(capture).toHaveBeenCalledWith({ scene: sceneB, furniture: true });
+    expect(capture).toHaveBeenCalledWith({ scene: sceneB, choice: FURNISHED });
     if (!result.ok) throw new Error('expected a prepared image');
     expect(result.prepared).toMatchObject({ levelId: 'lvl_b', recipe: RECIPE, unruledTypes: ['hologram'] });
     expect(result.prepared.blob).toBe(PNG);
   });
 
   it('Ε2 χωρίς ενεργό επίπεδο με σχέδιο ⇒ `no-level` · άρνηση λήψης ⇒ με το όνομά της', async () => {
-    expect(await prepareFloorplanPublication(depsOf(null), { furniture: false })).toStrictEqual({ ok: false, refusal: 'no-level' });
-    expect(await prepareFloorplanPublication(depsOf('lvl_unloaded'), { furniture: false })).toStrictEqual({ ok: false, refusal: 'no-level' });
+    expect(await prepareFloorplanPublication(depsOf(null), LISTING)).toStrictEqual({ ok: false, refusal: 'no-level' });
+    expect(await prepareFloorplanPublication(depsOf('lvl_unloaded'), LISTING)).toStrictEqual({ ok: false, refusal: 'no-level' });
     expect(capture).not.toHaveBeenCalled();
 
     capture.mockResolvedValue({ ok: false, why: 'no-geometry' });
-    expect(await prepareFloorplanPublication(depsOf('lvl_a'), { furniture: false })).toStrictEqual({ ok: false, refusal: 'no-geometry' });
+    expect(await prepareFloorplanPublication(depsOf('lvl_a'), LISTING)).toStrictEqual({ ok: false, refusal: 'no-geometry' });
   });
 
   it('Ε3 νέα εικόνα ⇒ νέο κλειδί ιδεμποτίας', async () => {
-    const first = await prepareFloorplanPublication(depsOf('lvl_a'), { furniture: false });
-    const second = await prepareFloorplanPublication(depsOf('lvl_a'), { furniture: false });
+    const first = await prepareFloorplanPublication(depsOf('lvl_a'), LISTING);
+    const second = await prepareFloorplanPublication(depsOf('lvl_a'), LISTING);
 
     if (!first.ok || !second.ok) throw new Error('expected prepared images');
     expect(first.prepared.idempotencyKey).not.toBe('');

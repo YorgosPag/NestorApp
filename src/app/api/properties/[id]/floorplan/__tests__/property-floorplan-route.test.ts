@@ -124,15 +124,20 @@ const { POST } = require('../route') as typeof import('../route');
 const { PUBLISHED_MEDIA_LIMIT } = require('@/services/upload/utils/storage-path-public-shelf') as
   typeof import('@/services/upload/utils/storage-path-public-shelf');
 
+// Η τρέχουσα έκδοση διαβάζεται από τη ρίζα: καρφωμένος αριθμός εδώ κοκκίνιζε 16 tests σε κάθε άνοδο προφίλ.
+const { PUBLIC_FLOORPLAN_PROFILE } = require('@/lib/listings/floorplan-render-recipe') as
+  typeof import('@/lib/listings/floorplan-render-recipe');
+const PROFILE_VERSION = PUBLIC_FLOORPLAN_PROFILE.version;
+
 const PROPERTY = 'prop_48a7caf6-ddeb-4f6b-a074-2d3ddb9daa3b';
 const LEVEL = 'lvl_2a7ff5cc-4901-4dda-84f4-a2a243886dc2';
 const SCENE = 'file_227cec18-a868-440f-8aa8-a32a7d7133c3';
 
 function recipe(over: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    profileId: 'public-floorplan', profileVersion: 1,
+    profileId: 'public-floorplan', profileVersion: PROFILE_VERSION,
     frame: { minX: 0, minY: 0, maxX: 12000, maxY: 9000 },
-    widthPx: 2560, heightPx: 1920, plotStyle: 'colour', furniture: false,
+    widthPx: 2560, heightPx: 1920, plotStyle: 'colour', groups: [],
     ...over,
   });
 }
@@ -197,7 +202,7 @@ describe('ADR-909 Β1 — η πόρτα της παραγόμενης κάτοψ
       publicationIdentity: `floorplan/measured/${LEVEL}`,
       // 🔴 Ο πελάτης έστειλε ΜΟΝΟ `levelId`: αρχείο σκηνής και `revision` διαβάστηκαν από τη βάση.
       sourceRevisions: [{ fileId: SCENE, revision: 5 }],
-      renderRecipe: { profileId: 'public-floorplan', profileVersion: 1, widthPx: 2560, heightPx: 1920 },
+      renderRecipe: { profileId: 'public-floorplan', profileVersion: PROFILE_VERSION, widthPx: 2560, heightPx: 1920, groups: [] },
     });
     // ⛔ Ούτε το όνομα του αρχείου είναι του πελάτη.
     expect(born.originalFilename).toBe(`${LEVEL}.png`);
@@ -264,7 +269,7 @@ describe('ADR-909 Β1 — η πόρτα της παραγόμενης κάτοψ
   it.each([
     ['χωρίς συνταγή', { recipe: null }, 400, 'FLOORPLAN_RECIPE_INVALID'],
     ['ξένο προφίλ', { recipe: recipe({ profileId: 'engineer-view' }) }, 400, 'FLOORPLAN_PROFILE_UNKNOWN'],
-    ['παλιά έκδοση προφίλ', { recipe: recipe({ profileVersion: 2 }) }, 409, 'FLOORPLAN_PROFILE_STALE'],
+    ['παλιά έκδοση προφίλ', { recipe: recipe({ profileVersion: PROFILE_VERSION + 1 }) }, 409, 'FLOORPLAN_PROFILE_STALE'],
     ['χωρίς επίπεδο', { levelId: null }, 400, 'FLOORPLAN_LEVEL_REQUIRED'],
     ['χωρίς αρχείο', { file: null }, 400, 'FLOORPLAN_FILE_REQUIRED'],
     ['όχι PNG', { file: png(2560, 1920, 'image/jpeg') }, 415, 'FLOORPLAN_TYPE_UNSUPPORTED'],

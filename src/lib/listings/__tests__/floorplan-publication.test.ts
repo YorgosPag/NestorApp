@@ -44,7 +44,7 @@ function recipe(over: Partial<FloorplanRenderRecipe> = {}): FloorplanRenderRecip
     widthPx: 2560,
     heightPx: 1920,
     plotStyle: 'colour',
-    furniture: false,
+    groups: ['furniture', 'texts'],
     ...over,
   };
 }
@@ -130,6 +130,11 @@ describe('ADR-909 Β1 — η συνταγή απόδοσης', () => {
     ['κλασματικό ύψος', { heightPx: 10.5 }],
     ['υπερβολικό πλάτος', { widthPx: 100000 }],
     ['ύφος με κενά', { plotStyle: 'my style' }],
+    ['άγνωστη ομάδα', { groups: ['holograms'] }],
+    ['ομάδες εκτός κανονικής σειράς', { groups: ['texts', 'furniture'] }],
+    ['διπλή ομάδα', { groups: ['texts', 'texts'] }],
+    ['ομάδες που δεν είναι λίστα', { groups: 'furniture' }],
+    ['παλιά συνταγή με `furniture` αντί για ομάδες', { groups: undefined, furniture: true }],
   ])('Σ3 — %s ⇒ δεν είναι συνταγή', (_name, over) => {
     expect(readFloorplanRenderRecipe(recipe(over as Partial<FloorplanRenderRecipe>))).toEqual({ ok: false, why: 'malformed' });
   });

@@ -29,8 +29,10 @@
 
 import { parseHex, luminance601 as luminance, channelToHex as toHex, type Rgb } from './color-math';
 
-/** AutoCAD CTB / Revit plot-style families. */
-export type PrintPlotStyle = 'colour' | 'monochrome' | 'grayscale' | 'by-pen';
+/** AutoCAD CTB / Revit plot-style families — the ONE enumeration; the type derives from it. */
+export const PRINT_PLOT_STYLES = ['colour', 'monochrome', 'grayscale', 'by-pen'] as const;
+
+export type PrintPlotStyle = (typeof PRINT_PLOT_STYLES)[number];
 
 export interface PrintColorPolicy {
   /** Active plot-style mode. */
