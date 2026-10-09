@@ -163,7 +163,8 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
     // raster placeholder → exact contours + repaint. Fire-and-forget: failure → raster placeholder stays.
     const fill = computeTopFillTriangles(template);
     if (fill.length >= 6) {
-      requestExactFillRings(key, fill)
+      // ADR-909 Γ1β — η ένωση καταγράφεται ώστε μια λήψη να μπορεί να την περιμένει (`awaitSettled`).
+      const union: Promise<void> = requestExactFillRings(key, fill)
         .then((rings) => {
           if (!rings || rings.length === 0) return;
           const exact = flatRingsToFilteredContours(rings);
@@ -172,7 +173,9 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
           useBim3DEntitiesStore.getState().bumpMeshAssetVersion();
           markAllCanvasDirty();
         })
-        .catch(() => { /* keep the raster placeholder */ });
+        .catch(() => { /* keep the raster placeholder */ })
+        .finally(() => { inFlightFillUnions.delete(union); });
+      inFlightFillUnions.add(union);
     }
     const sil = computeTopSilhouette(template);
     if (sil.length >= 3) silhouettes.set(key, sil);
@@ -245,6 +248,13 @@ const BUNDLE_SEPARATOR = '#';
  * de-dup γίνεται **εδώ**, στο επίπεδο αρχείου.
  */
 const inFlightScenes = new Map<string, Promise<THREE.Object3D>>();
+
+/**
+ * ADR-909 Γ1β — in-flight **ακριβείς ενώσεις γεμίσματος** (worker, §10.9.2). Το αρχείο μπορεί να έχει φορτώσει
+ * και το περίγραμμα να είναι ακόμη το πρόχειρο raster: μια λήψη που ζωγραφίζει **μία φορά** ανάμεσα στα δύο
+ * βγάζει άλλη εικόνα από την επόμενη. Κάθε υπόσχεση εδώ έχει ήδη `catch` — δεν κάνει ποτέ reject.
+ */
+const inFlightFillUnions = new Set<Promise<void>>();
 
 /** Κατεβάζει + κάνει parse ένα αρχείο **μία φορά**· ταυτόχρονοι καλούντες μοιράζονται το Promise. */
 function loadScene(category: string, fileId: string): Promise<THREE.Object3D> {
@@ -337,6 +347,36 @@ function awaitInFlightScenes(): Promise<number> {
   return Promise.all(pending.map((p) => p.catch(() => undefined))).then(() => pending.length);
 }
 
+/**
+ * ADR-909 Γ1β — αποστράγγιση των ακριβών ενώσεων γεμίσματος που τρέχουν **τώρα** στον worker. Ποτέ reject.
+ * Καλείται **μετά** το {@link awaitInFlightScenes}: οι ενώσεις ξεκινούν μέσα στο `indexTemplate`, δηλαδή
+ * αφού φορτώσει το αρχείο τους.
+ */
+function awaitInFlightFillUnions(): Promise<number> {
+  const pending = [...inFlightFillUnions];
+  return Promise.all(pending).then(() => pending.length);
+}
+
+/**
+ * ADR-909 Γ1β — **«ό,τι ζητήθηκε έχει καταλήξει»**: αρχεία φορτωμένα (ή αποτυχημένα) ΚΑΙ ακριβή περιγράμματα
+ * στη θέση τους. Αυτό περιμένει μια λήψη που ζωγραφίζει μία φορά (δημόσια κάτοψη, raster PDF)· ο καλών βάζει
+ * το όριο χρόνου. Ποτέ reject — ό,τι δεν φόρτωσε το ρωτά ο καλών με το {@link getLoadState}.
+ */
+async function awaitSettled(): Promise<void> {
+  await awaitInFlightScenes();
+  await awaitInFlightFillUnions();
+}
+
+/**
+ * ADR-909 Γ1β — ρητή **νέα προσπάθεια** για σχήμα που απέτυχε (πρακτική «Reload» των Revit / ArchiCAD). Ο
+ * δείκτης `'error'` υπάρχει για να μη χτυπιέται το Storage σε κάθε resync· τον σβήνει **μόνο** ρητή πράξη
+ * ανθρώπου, ώστε το επόμενο `preload` να ξαναδοκιμάσει. No-op για ό,τι δεν είναι σε σφάλμα.
+ */
+function retryFailed(category: string, assetId: string): void {
+  const key = meshAssetKey(category, assetId);
+  if (status.get(key) === 'error') status.delete(key);
+}
+
 export const bimMeshCache = {
   preload,
   getInstance,
@@ -347,6 +387,8 @@ export const bimMeshCache = {
   getReadyAgeMs,
   getLoadState,
   awaitInFlightScenes,
+  awaitSettled,
+  retryFailed,
 };
 
 /** Test-only — reset cache between specs. */
@@ -359,4 +401,5 @@ export function __resetBimMeshCacheForTests(): void {
   slotSilhouettes.clear();
   readyAt.clear();
   inFlightScenes.clear();
+  inFlightFillUnions.clear();
 }

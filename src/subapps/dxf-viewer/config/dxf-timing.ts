@@ -262,6 +262,10 @@ export const DXF_TIMING = {
      *  `img.decode()` never settle (Chromium gotcha) and freeze the whole export; this bounds each
      *  op so a missing raster falls back to the solid fill instead of hanging. */
     IMAGE_OP_TIMEOUT: 8000,
+    /** ADR-909 Γ1β — a one-shot capture waits this long for the scene's `.glb` shapes (download + parse +
+     *  exact fill union) before it draws; whatever is still not ready is REPORTED, never silently boxed.
+     *  Longer than an image: an imported model can be tens of MB. */
+    MESH_PRELOAD_TIMEOUT: 20000,
     /** Default cache TTL (5 minutes). */
     CACHE_TTL: 300000,
     /** Extended cache TTL (10 minutes, global/singleton caches). */

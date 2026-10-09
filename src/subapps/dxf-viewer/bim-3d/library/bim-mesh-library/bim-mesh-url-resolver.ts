@@ -78,6 +78,24 @@ export function registerMeshAssetPath(category: string, assetId: string, storage
   inFlight.delete(key);
 }
 
+/**
+ * ADR-909 Γ1β — μητρώο **προ-δηλωμένων URL** (όχι Storage path), keyed by `category/assetId`.
+ *
+ * Ένα σχήμα που σερβίρεται από αλλού (στατικό αρχείο της εφαρμογής, CDN) δεν έχει Storage path να δηλώσει.
+ * Πρώτος καταναλωτής: η σελίδα της πύλης pixels (CHECK 3.101), που τρέχει **χωρίς σύνδεση** — το Storage
+ * δίνει read μόνο σε συνδεδεμένο, άρα εκεί κανένα `.glb` δεν θα φόρτωνε ποτέ και η πύλη θα μετρούσε κουτιά.
+ * Το URL **προηγείται** κάθε path. Η υπόσχεση του αρχείου μένει: αλλαγή hosting = αλλαγή μόνο εδώ.
+ */
+const registeredUrls = new Map<string, string>();
+
+/** Δηλώνει απευθείας URL για ένα asset. Idempotent· αλλαγή URL ακυρώνει την in-flight επίλυση. */
+export function registerMeshAssetUrl(category: string, assetId: string, url: string): void {
+  const key = meshAssetKey(category, assetId);
+  if (registeredUrls.get(key) === url) return;
+  registeredUrls.set(key, url);
+  inFlight.delete(key);
+}
+
 /** In-flight URL resolutions, keyed by `category/assetId` (de-dup concurrent). */
 const inFlight = new Map<string, Promise<string>>();
 
@@ -90,6 +108,10 @@ export function resolveMeshUrl(category: string, assetId: string): Promise<strin
   const key = meshAssetKey(category, assetId);
   const existing = inFlight.get(key);
   if (existing) return existing;
+
+  // ADR-909 Γ1β — προ-δηλωμένο URL: καμία διαδρομή προς το Storage.
+  const directUrl = registeredUrls.get(key);
+  if (directUrl !== undefined) return Promise.resolve(directUrl);
 
   // ADR-683 Φ3 — προ-δηλωμένο (project-scoped) path προηγείται· αλλιώς η σύμβαση βιβλιοθήκης.
   const path = registeredPaths.get(key) ?? meshAssetStoragePath(category, assetId);
