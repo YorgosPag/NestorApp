@@ -22,6 +22,7 @@ import {
   FURNITURE_RIBBON_KEYS_ACTIONS,
 } from './bridge/furniture-command-keys';
 import { FURNITURE_CATALOG } from '../../../bim/furniture/furniture-catalog';
+import { FURNITURE_MESH_CATEGORY } from '../../../bim/mesh-library/entity-mesh-asset';
 import { bimMeshThumbnailStore } from '../../../bim-3d/library/bim-mesh-library/bim-mesh-thumbnail-cache';
 import type { RibbonEntityBridgeCore } from './ribbon-entity-bridge-shared';
 import {
@@ -29,9 +30,6 @@ import {
   useThumbnailPreload,
   buildMeshCatalogOptions,
 } from './ribbon-tool-handle-bridge-shared';
-
-/** BIM category → Storage library folder for furniture meshes. */
-const FURNITURE_MESH_CATEGORY = 'furniture';
 
 export type RibbonFurnitureBridge = RibbonEntityBridgeCore;
 

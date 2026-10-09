@@ -34,10 +34,7 @@ import * as THREE from 'three';
 import type { Entity } from '../../types/entities';
 import { isImportedMeshEntity } from '../../types/entities';
 import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
-import {
-  IMPORTED_MESH_CATEGORY,
-  importedMeshAssetId,
-} from '../../bim/entities/imported-mesh/imported-mesh-types';
+import { meshAssetOf } from '../../bim/mesh-library/entity-mesh-asset';
 import { importedMeshToObject3D } from '../../bim-3d/converters/imported-mesh-to-three';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import { readWorldPositions, forEachTriangle, triangleArea } from '../../io/mesh3d-roundtrip/mesh-triangles';
@@ -68,8 +65,8 @@ export async function buildImportedMeshFaceCarriers(
   // το drain resolve-άρει (καταχωρήθηκαν νωρίτερα στο ίδιο promise), οπότε το `getInstance` βλέπει
   // το πραγματικό template.
   for (const mesh of meshes) {
-    if (!mesh.params) continue;
-    bimMeshCache.preload(IMPORTED_MESH_CATEGORY, assetIdOf(mesh));
+    const asset = meshAssetOf(mesh);
+    if (asset) bimMeshCache.preload(asset.category, asset.assetId);
   }
   await bimMeshCache.awaitInFlightScenes();
 
@@ -89,7 +86,8 @@ export function buildImportedMeshFaceCarrier(mesh: ImportedMeshEntity): SolidFac
   if (!mesh.params) return null;
   // Μόνο πραγματικό, φορτωμένο πλέγμα — αλλιώς το `importedMeshToObject3D` δίνει placeholder κουτί,
   // που θα διπλασίαζε το bounding-box ως 3DFACE.
-  if (bimMeshCache.getLoadState(IMPORTED_MESH_CATEGORY, assetIdOf(mesh)) !== 'ready') return null;
+  const asset = meshAssetOf(mesh);
+  if (!asset || bimMeshCache.getLoadState(asset.category, asset.assetId) !== 'ready') return null;
 
   // floorElevationMm=0 (per-floor, floor-relative z — ίδιο convention με τον σοβά· storey stacking
   // = DEFER). Το `mountingElevationMm` + το τοπικό Y δίνουν το σχετικό ύψος στο zMm.
@@ -103,11 +101,6 @@ export function buildImportedMeshFaceCarrier(mesh: ImportedMeshEntity): SolidFac
   const color = mesh.color ?? DEFAULT_MESH_COLOR;
   const boundary = projectVerticesTo2D(extractEntityFootprintRing(mesh) ?? []);
   return makeSolidFacesHatch(`${mesh.id}__mesh3dfaces`, mesh.layerId, color, boundary, faces);
-}
-
-/** `<uploadId>#<nodeName>` του πλέγματος (cache/resolver key). */
-function assetIdOf(mesh: ImportedMeshEntity): string {
-  return importedMeshAssetId(mesh.params.uploadId, mesh.params.nodeName);
 }
 
 /** Διατρέχει όλα τα `THREE.Mesh` παιδιά και μαζεύει τα world τρίγωνα ως DXF `Fill3DFace`. */

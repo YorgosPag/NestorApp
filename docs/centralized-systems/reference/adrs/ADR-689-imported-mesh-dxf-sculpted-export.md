@@ -191,6 +191,13 @@ jest **37/37** στο `bim-3d/wireframe/` + **774** regression σε converters/e
 
 ## Changelog
 
+- **2026-10-09 (SSoT κλειδιού — βλ. ADR-909 §6.8)** — Το `imported-mesh-faces.ts` έχασε το τοπικό `assetIdOf`: το
+  «ποιο σχήμα ζητώ» το απαντά πλέον το κοινό `meshAssetOf` (`bim/mesh-library/entity-mesh-asset.ts`), το ίδιο που
+  ρωτούν οι ζωγράφοι της κάτοψης και η προφόρτωση της λήψης. Καμία αλλαγή συμπεριφοράς στην εξαγωγή (τα 3DFACE
+  βγαίνουν όπως πριν· `imported-mesh-faces.test.ts` πράσινο). Το μοτίβο `preload` → `awaitInFlightScenes` αυτού του
+  ADR είναι ο πρόγονος του `awaitSettled` — που περιμένει **και** την ακριβή ένωση γεμίσματος, γιατί η κάτοψη τη
+  ζωγραφίζει ενώ η εξαγωγή όχι.
+
 - **2026-07-24 (Φ3)** — Barycentric single-pass GPU wireframe. **Αντικαθιστά τη Φ2** (το
   `imported-mesh-wireframe.ts` + test διαγράφηκαν). Νέος φάκελος `bim-3d/wireframe/` (6 modules) +
   `bim-edge-colors.ts` SSoT. Εμβέλεια ανέβηκε στο `meshToObject3D` → καλύπτει και έπιπλα + Η/Μ (δύο

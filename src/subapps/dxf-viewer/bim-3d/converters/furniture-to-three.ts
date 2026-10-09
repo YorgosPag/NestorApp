@@ -13,9 +13,7 @@
 import type * as THREE from 'three';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { meshToObject3D } from './mesh-to-object3d';
-
-/** BIM category → Storage library folder for furniture meshes. */
-const FURNITURE_MESH_CATEGORY = 'furniture';
+import { FURNITURE_MESH_CATEGORY } from '../../bim/mesh-library/entity-mesh-asset';
 
 /**
  * Build the 3D representation of a furniture entity. Returns a placed glTF clone
