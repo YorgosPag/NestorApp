@@ -28,6 +28,7 @@ const FIDELITY_MESSAGE_KEY: Readonly<Record<PrintFidelityCode, string>> = {
   'hatch-lines-dropped': 'print.fidelity.hatchLinesDropped',
   'hatch-density-collapsed': 'print.fidelity.hatchDensityCollapsed',
   'image-dropped': 'print.fidelity.imageDropped',
+  'mesh-shape-missing': 'print.fidelity.meshShapeMissing',
 };
 
 /**

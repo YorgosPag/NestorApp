@@ -45,7 +45,12 @@ export type PrintFidelityCode =
    */
   | 'hatch-density-collapsed'
   /** «Γυμνή» εικόνα (δέντρο/ταπετσαρία) παραλείφθηκε εντελώς — δεν έχει χρώμα να υποβαθμιστεί. */
-  | 'image-dropped';
+  | 'image-dropped'
+  /**
+   * ADR-909 Γ1β — στοιχείο που ζωγραφίζεται από `.glb` (έπιπλο, είδος υγιεινής, εισαγόμενο πλέγμα) βγήκε
+   * **χωρίς το σχήμα του**: κουτί ή γενικό σύμβολο στη θέση του. Το αρχείο δεν φόρτωσε εγκαίρως ή λείπει.
+   */
+  | 'mesh-shape-missing';
 
 /** Μία απώλεια πιστότητας + **πόσες φορές** συνέβη (ένα toast ανά είδος, με πλήθος). */
 export interface PrintFidelityNote {
@@ -80,6 +85,8 @@ const RESOLVER_CODE_TO_FIDELITY: Readonly<Record<string, PrintFidelityCode>> = {
   // απόχρωση ⇒ **υπαρκτή απόκλιση**, άρα αναφέρεται. (Το Revit κάνει το ίδιο collapse **σιωπηλά**·
   // η Απόφαση 11 λέει «καμία σιωπηλή αλλοίωση» ⇒ κρατάμε τη συμπεριφορά, όχι τη σιωπή.)
   'hatch-lines:density': 'hatch-density-collapsed',
+  // ADR-909 Γ1β — `preload-scene-meshes`: σχήμα που δεν ήταν έτοιμο τη στιγμή της σύγχρονης απόδοσης.
+  'mesh:not-loaded': 'mesh-shape-missing',
 };
 
 /**
