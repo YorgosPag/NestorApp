@@ -46,7 +46,12 @@ import {
   withPublishedModels,
   type ProjectedShelfModel,
 } from './public-listing-model-projection';
-import { withPublishedVideos, type ProjectedShelfVideo } from './public-listing-video-projection';
+import {
+  withPublishedVideos,
+  type ProjectedShelfVideo,
+  type ProjectedVideoPoster,
+} from './public-listing-video-projection';
+import { splitVideoPosters, videoPosterSources } from './listing-video-poster';
 import type { PublicListing } from '@/types/public-listing';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
@@ -258,38 +263,19 @@ export async function writeWithShelf(
   listing: PublicListing,
   sources: readonly PublicShelfSource<ListingMaterial>[]
 ): Promise<PublicListing> {
-  const { raster, model, video } = partitionListingSources(sources);
-
-  const [images, models, videos] = await Promise.all([
-    reconcilePublicShelf(LISTING_SHELF, listingId, raster),
-    reconcilePublicModelShelf(LISTING_MODEL_SHELF, listingId, model),
-    reconcilePublicVideoShelf(LISTING_VIDEO_SHELF, listingId, video),
-  ]);
-
-  if (images.outcome === 'failed') {
-    logger.error('Το ράφι ΕΙΚΟΝΩΝ δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ εικόνες', {
-      propertyId: listingId,
-    });
-  }
-  if (models.outcome === 'failed') {
-    logger.error('Το ράφι ΜΟΝΤΕΛΩΝ δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ μοντέλα', {
-      propertyId: listingId,
-    });
-  }
-
-  if (videos.outcome === 'failed') {
-    logger.error('Το ράφι ΒΙΝΤΕΟ δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ βίντεο', {
-      propertyId: listingId,
-    });
-  }
+  const { images, models, videos } = await reconcileListingShelves(listingId, sources);
 
   try {
     // 🔑 **ΕΝΑ `set`, ΤΡΕΙΣ ΓΡΑΦΕΙΣ ΣΕ ΣΥΝΘΕΣΗ.** Συλλογή+κατόψεις, μοντέλα, βίντεο *(ADR-907 §10)* — και το
     //    έγγραφο φεύγει **ολόκληρο**, ποτέ ως μερικές ενημερώσεις.
-    const withGallery = withPublishedGallery(listing, images.published.map(toProjectedImage));
+    const { gallery, posterByVideo } = splitVideoPosters(images.published);
+    const withGallery = withPublishedGallery(listing, gallery.map(toProjectedImage));
     const withModels = withPublishedModels(withGallery, models.published.map(toProjectedModel));
 
-    const withVideos = withPublishedVideos(withModels, videos.published.map(toProjectedVideo));
+    const withVideos = withPublishedVideos(
+      withModels,
+      videos.published.map((published) => toProjectedVideo(published, posterByVideo)),
+    );
 
     // 🧬 ADR-845 §7.17 Α5 — **το αποτύπωμα των μέσων**, δίπλα στο `schemaVersion` και για τον ίδιο
     //    λόγο: μεταδεδομένο **αποθήκευσης**, όχι περιεχόμενο αγγελίας *(το κλειστό σχήμα δεν αλλάζει)*.
@@ -315,6 +301,36 @@ export async function writeWithShelf(
 }
 
 /**
+ * **Οι τρεις συμφιλιώσεις μιας αγγελίας**, με τη σειρά που τις δένει — εξήχθη από το {@link writeWithShelf} (N.7.1).
+ *
+ * 🖼️ ADR-907 §10.8 — **το βίντεο ΠΡΩΤΑ, οι εικόνες ΜΕΤΑ**: το raster ράφι παίρνει εξώφυλλο μόνο για βίντεο που
+ * **δημοσιεύτηκε**, και το μαθαίνει από την αναφορά του. Τα εξώφυλλα μπαίνουν στην **ίδια** συμφιλίωση με τις
+ * φωτογραφίες — δεύτερη κλήση στο ίδιο πρόθεμα θα έσβηνε τις φωτογραφίες ως «εκτός επιθυμητού συνόλου». Τα μοντέλα δεν
+ * εξαρτώνται από κανένα και τρέχουν παράλληλα από την αρχή (κανένα κεφάλι δεν πετά — επιστρέφουν αποτυχία ονομαστικά).
+ *
+ * ⚠️ Μια αποτυχία **καταγράφεται και δεν σταματά τη γραφή**: η αγγελία γράφεται χωρίς ό,τι δεν συμφιλιώθηκε, και η
+ * επανασύνθεση το διορθώνει.
+ */
+async function reconcileListingShelves(listingId: string, sources: readonly PublicShelfSource<ListingMaterial>[]) {
+  const { raster, model, video } = partitionListingSources(sources);
+
+  const modelsSettling = reconcilePublicModelShelf(LISTING_MODEL_SHELF, listingId, model);
+  const videos = await reconcilePublicVideoShelf(LISTING_VIDEO_SHELF, listingId, video);
+  const [images, models] = await Promise.all([
+    reconcilePublicShelf(LISTING_SHELF, listingId, [...raster, ...videoPosterSources(videos.published, video)]),
+    modelsSettling,
+  ]);
+
+  const shelves = { ΕΙΚΟΝΩΝ: images, ΜΟΝΤΕΛΩΝ: models, ΒΙΝΤΕΟ: videos } as const;
+  for (const [name, shelf] of Object.entries(shelves)) {
+    if (shelf.outcome !== 'failed') continue;
+    logger.error(`Το ράφι ${name} δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ το υλικό του`, { propertyId: listingId });
+  }
+
+  return { images, models, videos };
+}
+
+/**
  * **Ό,τι είδε το ράφι ΕΙΚΟΝΩΝ, στη γλώσσα της ΚΑΘΑΡΗΣ προβολής** — μία γραμμή μετάφρασης.
  *
  * 🔑 Υπάρχει ώστε η προβολή να μη χρειαστεί ποτέ να εισαγάγει τον τύπο της υπηρεσίας: εκείνη
@@ -325,10 +341,7 @@ export async function writeWithShelf(
  */
 function toProjectedImage(image: PublicShelfImage<ListingMaterial>): ProjectedShelfImage {
   return {
-    url: image.canonical.url,
-    width: image.canonical.width,
-    height: image.canonical.height,
-    sources: image.variants.map((variant) => ({ url: variant.url, width: variant.width })),
+    ...toProjectedFace(image),
     // 🔑 **Ταξιδεύει αυτούσιο, καμία κρίση εδώ** (ADR-841 §7 Α17.4): αυτή η γραμμή είναι
     //    μετάφραση τύπων, όχι σημασιολογία. Ο **ένας** τόπος που ρωτά «κάτοψη ή
     //    φωτογραφία;» είναι το `withPublishedGallery`.
@@ -357,10 +370,35 @@ function toProjectedModel(model: PublishedShelfModel): ProjectedShelfModel {
   return { url: model.url, at: model.at };
 }
 
-/** **Ό,τι είδε το ράφι ΒΙΝΤΕΟ, στη γλώσσα της καθαρής προβολής** — το `key` δεν ταξιδεύει, όπως στο μοντέλο. */
-function toProjectedVideo(video: PublishedShelfVideo): ProjectedShelfVideo {
-  const { url, at, durationSec, width, height } = video;
-  return { url, at, durationSec, width, height };
+/**
+ * **Ό,τι είδε το ράφι ΒΙΝΤΕΟ, στη γλώσσα της καθαρής προβολής** — το `key` και η ταυτότητα της πηγής **δεν** ταξιδεύουν.
+ *
+ * 🖼️ Το εξώφυλλο βρίσκεται με την **ταυτότητα της πηγής**, ποτέ με τη θέση στον πίνακα: ό,τι απορρίφθηκε λείπει από
+ * την αναφορά, άρα «το πρώτο εξώφυλλο» δεν είναι απαραίτητα του «πρώτου βίντεο».
+ */
+function toProjectedVideo(
+  video: PublishedShelfVideo,
+  posterByVideo: ReadonlyMap<string, PublicShelfImage<ListingMaterial>>,
+): ProjectedShelfVideo {
+  const { url, at, durationSec, width, height, sourceFileId } = video;
+  const image = sourceFileId === null ? undefined : posterByVideo.get(sourceFileId);
+
+  return { url, at, durationSec, width, height, poster: image === undefined ? null : toProjectedFace(image) };
+}
+
+/**
+ * **Η όψη μιας εικόνας του ραφιού** — διεύθυνση, διαστάσεις και **όλα** τα παράγωγα (αυτό ακριβώς είναι το `srcset`).
+ *
+ * 🔑 Ένα σώμα για φωτογραφία, κάτοψη **και** εξώφυλλο (N.18): το εξώφυλλο είναι αυτό και **τίποτε άλλο** — καμία δήλωση
+ * ανθρώπου (σημείο εστίασης, σημείο λήψης, βορράς) δεν το αφορά· οι εικόνες της συλλογής τις προσθέτουν από πάνω.
+ */
+function toProjectedFace(image: PublicShelfImage<ListingMaterial>): ProjectedVideoPoster {
+  return {
+    url: image.canonical.url,
+    width: image.canonical.width,
+    height: image.canonical.height,
+    sources: image.variants.map((variant) => ({ url: variant.url, width: variant.width })),
+  };
 }
 
 /**

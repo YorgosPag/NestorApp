@@ -13,7 +13,7 @@
  * | Βήμα | Τι |
  * |---|---|
  * | Α | `FileRecord` σε `pending` — η διαδρομή αποθήκευσης **γεννιέται από τον διακομιστή** (`buildStoragePath`) |
- * | Β | bytes στο Storage (+ μικρογραφία, μη μπλοκάρουσα) |
+ * | Β | bytes στο Storage (+ μικρογραφία εικόνας/PDF και εξώφυλλο βίντεο, μη μπλοκάροντα) |
  * | Γ | `ready` με `downloadUrl` + μέγεθος |
  *
  * ⚠️ Ο έλεγχος ταυτότητας (`validateUploadAuth`) **δεν** είναι εδώ: ο καλών διαλέγει πώς λέει την άρνηση.
@@ -23,7 +23,9 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import type { EntityType, FileCategory, FileDomain } from '@/config/domain-constants';
 import { storage } from '@/lib/firebase';
+import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 import type { FileCustody } from '@/lib/files/file-custody';
+import { VIDEO_POSTER_MIME, captureVideoPosterFrame } from '@/lib/media/video-poster-frame';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
 import { createModuleLogger } from '@/lib/telemetry';
 import { buildThumbnailPath, generateUploadThumbnail } from '@/components/shared/files/utils/generate-upload-thumbnail';
@@ -73,6 +75,25 @@ async function uploadThumbnail(file: File, storagePath: string): Promise<string 
   }
 }
 
+/**
+ * 🖼️ **Το εξώφυλλο ενός βίντεο** — ένα καρέ σε πλήρη ανάλυση, δίπλα στο πρωτότυπο (ADR-907 §10.8).
+ *
+ * 🔑 Η διαδρομή βγαίνει από το **μητρώο συνοδευτικών**, και ο διακομιστής τη **ξαναπαράγει** από τη διαδρομή του βίντεο
+ * όταν δημοσιεύει — γι' αυτό εδώ **δεν** γράφεται κανένας δείκτης στην εγγραφή: δείκτης γραμμένος από πελάτη θα ήταν
+ * διαδρομή που ο διακομιστής δεν μπορεί να εμπιστευτεί. Μη μπλοκάρον: χωρίς καρέ η αγγελία δείχνει ουδέτερο πλαίσιο.
+ */
+async function uploadVideoPoster(file: File, storagePath: string): Promise<void> {
+  if (!file.type.startsWith('video/')) return;
+  try {
+    const frame = await captureVideoPosterFrame(file);
+    if (frame === null) return;
+    const posterRef = ref(storage, fileCompanionPath(storagePath, 'videoPoster'));
+    await uploadBytes(posterRef, frame, { contentType: VIDEO_POSTER_MIME });
+  } catch (posterErr) {
+    logger.warn('Video poster generation failed (non-blocking)', { error: String(posterErr) });
+  }
+}
+
 /** **Ένα αρχείο, τρία βήματα.** Πετά σε αποτυχία — ο καλών μετρά επιτυχίες/αποτυχίες όπως θέλει. */
 export async function uploadEntityFile(spec: EntityFileUploadSpec, file: File): Promise<UploadedEntityFile> {
   const { fileId, storagePath, displayName } = await createPendingFileRecordWithPolicy({
@@ -101,6 +122,8 @@ export async function uploadEntityFile(spec: EntityFileUploadSpec, file: File): 
   const storageRef = ref(storage, storagePath);
   const downloadUrl = await uploadResumableToUrl(storageRef, file);
   const thumbnailUrl = await uploadThumbnail(file, storagePath);
+  // Πριν το `ready`: όποιος δει έτοιμη εγγραφή βίντεο δικαιούται το εξώφυλλό της να κάθεται ήδη δίπλα της.
+  await uploadVideoPoster(file, storagePath);
 
   await finalizeFileRecordWithPolicy({
     fileId,

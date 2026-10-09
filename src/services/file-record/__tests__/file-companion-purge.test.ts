@@ -97,6 +97,8 @@ describe('Μ — το μητρώο ονομάτων', () => {
   it('🔴 Μ1 — τα ονόματα είναι ΑΚΡΙΒΩΣ όσα βρέθηκαν στον κάδο της παραγωγής (2026-10-01)', () => {
     expect(FILE_COMPANION_KIND_NAMES.map((kind) => fileCompanionPath(DXF, kind))).toEqual([
       `${DIR}${DXF_ID}_thumb.webp`,
+      // ADR-907 §10.8 — το εξώφυλλο βίντεο (νέο είδος, 2026-10-09)· ο γραφέας του είναι ο `upload-entity-file`.
+      `${DIR}${DXF_ID}_poster.webp`,
       `${DXF}_thumb.png`,
       `${DXF}.thumbnail.png`,
       `${DXF}.processed.json`,

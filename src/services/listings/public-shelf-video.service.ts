@@ -60,6 +60,12 @@ export interface PublishedShelfVideo extends PublishedVideoFacts {
   readonly url: string;
   /** ISO — *πότε εμφανίστηκαν αυτά τα bytes* (`timeCreated` του ιδιωτικού αντικειμένου), ποτέ ρολόι διακομιστή. */
   readonly at: string;
+  /**
+   * 📍 Η ταυτότητα της πηγής (`PublicShelfSource.sourceFileId`) — κουβαλιέται **αδιαφανώς**, όπως στο raster ράφι. Με αυτήν
+   * δένεται το εξώφυλλο στο **δικό του** βίντεο (ADR-907 §10.8): το `published` δεν έχει τη σειρά των `sources`, γιατί ό,τι
+   * απορρίφθηκε λείπει. `null` ⇒ ο παραγωγός δεν την έδωσε ⇒ κανένα εξώφυλλο. ⛔ **Δεν** γράφεται στο δημόσιο έγγραφο.
+   */
+  readonly sourceFileId: string | null;
 }
 
 /** Τι έκανε η συμφιλίωση — ρητά, ώστε ο καλών να **μετρήσει**. */
@@ -135,13 +141,13 @@ async function bakeOne<M>(
     const remembered = hit === null ? null : cachedFacts(hit);
     if (hit !== null && remembered !== null) {
       const url = publicShelfUrl(GCS_PUBLIC_MEDIA_BUCKET, hit.name);
-      return { key: hit.name, url, at: origin.at, ...remembered, upload: null };
+      return { key: hit.name, url, at: origin.at, sourceFileId: source.sourceFileId ?? null, ...remembered, upload: null };
     }
 
     // 🔴 **Καρφωμένο στη γενιά των μεταδεδομένων**: τα δύο περάσματα του ψήστη διαβάζουν τα **ίδια** bytes.
     const pinned = found.original.bucket.file(path, { generation: Number(meta.generation) });
     const baked = await bakeVideo(pinned, Number(meta.size));
-    return toUpload(kind, origin, baked);
+    return toUpload(kind, origin, baked, source.sourceFileId ?? null);
   } catch (error) {
     const failure: VideoSourceRefusal = error instanceof VideoBakeError ? error.failure : 'unreadable-source';
 
@@ -156,7 +162,12 @@ function refuse(subjectId: string, privateStoragePath: string, failure: VideoSou
 }
 
 /** **Δεκτό βίντεο → διεύθυνση + εγγραφή ως ροή**, με τα μεταδεδομένα που κρατούν τη μνήμη. */
-function toUpload(kind: VideoShelfKind<unknown>, origin: ShelfOrigin, baked: BakedVideo): AddressedVideo {
+function toUpload(
+  kind: VideoShelfKind<unknown>,
+  origin: ShelfOrigin,
+  baked: BakedVideo,
+  sourceFileId: string | null,
+): AddressedVideo {
   const { durationSec, width, height } = baked.facts;
   const key = buildPublicShelfKey(kind, {
     subjectId: origin.subjectId,
@@ -168,6 +179,7 @@ function toUpload(kind: VideoShelfKind<unknown>, origin: ShelfOrigin, baked: Bak
     key,
     url: publicShelfUrl(GCS_PUBLIC_MEDIA_BUCKET, key),
     at: origin.at,
+    sourceFileId,
     durationSec,
     width,
     height,
@@ -216,8 +228,8 @@ export async function reconcilePublicVideoShelf<M>(
     const result = await reconcileOnePerSource(kind, subjectId, sources, (source: PublicShelfSource<M>, own) =>
       bakeOne(kind, subjectId, source, own),
     );
-    const published = result.desired.map(({ key, url, at, durationSec, width, height }) => ({
-      key, url, at, durationSec, width, height,
+    const published = result.desired.map(({ key, url, at, sourceFileId, durationSec, width, height }) => ({
+      key, url, at, sourceFileId, durationSec, width, height,
     }));
 
     return { outcome: 'reconciled', published, removed: result.removed, rejected: result.rejected };

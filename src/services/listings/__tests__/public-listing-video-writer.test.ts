@@ -15,6 +15,7 @@ const VIDEO: ProjectedShelfVideo = {
   durationSec: 74.5,
   width: 1080,
   height: 1920,
+  poster: null,
 };
 
 /** Μόνο ό,τι διαβάζει ο γραφέας — ο πλήρης τύπος έχει δεκάδες πεδία που δεν τον αφορούν. */
@@ -45,8 +46,15 @@ describe('Β-1 — ΤΟ `videos[]` ΧΤΙΖΕΤΑΙ ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ
     ]);
   });
 
-  it('το εξώφυλλο γράφεται `null` ρητά — δεν μαντεύεται από το βίντεο', () => {
+  it('χωρίς καρέ από το raster ράφι το εξώφυλλο γράφεται `null` — δεν μαντεύεται από το βίντεο', () => {
     expect(withPublishedVideos(listing('agency'), [VIDEO]).videos[0].value.poster).toBeNull();
+  });
+
+  it('🔴 το εξώφυλλο φτάνει όπως το έβγαλε το ράφι, με το `altKey` ΤΟΥ ΒΙΝΤΕΟ (ADR-907 §10.8)', () => {
+    const poster = { url: 'https://shelf/p-1280.webp', width: 1280, height: 720, sources: [{ url: 'https://shelf/p-1280.webp', width: 1280 }] };
+    const [video] = withPublishedVideos(listing('owner-declared'), [{ ...VIDEO, poster }]).videos;
+
+    expect(video.value.poster).toEqual({ ...poster, altKey: LISTING_MATERIAL_KEYS['owner-declared'].videoAlt });
   });
 });
 

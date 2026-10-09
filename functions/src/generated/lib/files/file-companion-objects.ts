@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/files/file-companion-objects.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:15c1f4f166282ec9703bfe2de1909996ce8414fc9c43cd35000211aaf7b9f4e2
+// sha256:f97ba7090c5cc8deea5f2ff1316e96256318a8fd87cc48a1a64c88090afbf067
 
 /**
  * 🧩 **ΤΑ ΣΥΝΟΔΕΥΤΙΚΑ ΑΝΤΙΚΕΙΜΕΝΑ ΕΝΟΣ ΑΡΧΕΙΟΥ** — το κλειστό μητρώο (ADR-899 §2.2 · ADR-191 document management).
@@ -44,6 +44,11 @@ export interface FileCompanionKindSpec {
 export const FILE_COMPANION_KINDS = {
   /** Μικρογραφία webp κάθε εικόνας στο ανέβασμα (`generate-upload-thumbnail` · CRM συνημμένα). */
   uploadThumbnail: { base: 'stem', suffix: '_thumb.webp', home: 'client-default' },
+  /**
+   * Εξώφυλλο βίντεο — **ένα καρέ σε πλήρη ανάλυση**, από τον browser του εκδότη (`upload-entity-file`, ADR-907 §10.8).
+   * ⚠️ Όχι η `uploadThumbnail`: εκείνη είναι 300px για κάρτες· αυτό τροφοδοτεί το δημόσιο ράφι, που βγάζει παράγωγα ως 2560px.
+   */
+  videoPoster: { base: 'stem', suffix: '_poster.webp', home: 'client-default' },
   /** Μικρογραφία κάτοψης DXF/PDF του οδηγού αποθήκευσης (`floorplan-save-orchestrator`). */
   floorplanThumbnail: { base: 'path', suffix: '_thumb.png', home: 'client-default' },
   /** Raster μικρογραφία DXF (`functions/dxf-thumbnail-onfinalize` · `dxf-thumbnail-selfheal`). */

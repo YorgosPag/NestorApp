@@ -40,6 +40,11 @@ export interface FileCompanionKindSpec {
 export const FILE_COMPANION_KINDS = {
   /** Μικρογραφία webp κάθε εικόνας στο ανέβασμα (`generate-upload-thumbnail` · CRM συνημμένα). */
   uploadThumbnail: { base: 'stem', suffix: '_thumb.webp', home: 'client-default' },
+  /**
+   * Εξώφυλλο βίντεο — **ένα καρέ σε πλήρη ανάλυση**, από τον browser του εκδότη (`upload-entity-file`, ADR-907 §10.8).
+   * ⚠️ Όχι η `uploadThumbnail`: εκείνη είναι 300px για κάρτες· αυτό τροφοδοτεί το δημόσιο ράφι, που βγάζει παράγωγα ως 2560px.
+   */
+  videoPoster: { base: 'stem', suffix: '_poster.webp', home: 'client-default' },
   /** Μικρογραφία κάτοψης DXF/PDF του οδηγού αποθήκευσης (`floorplan-save-orchestrator`). */
   floorplanThumbnail: { base: 'path', suffix: '_thumb.png', home: 'client-default' },
   /** Raster μικρογραφία DXF (`functions/dxf-thumbnail-onfinalize` · `dxf-thumbnail-selfheal`). */

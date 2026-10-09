@@ -12,7 +12,13 @@
  */
 
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
-import type { ListingVideo, PublicListing } from '@/types/public-listing';
+import type { ListingImage, ListingVideo, PublicListing } from '@/types/public-listing';
+
+/**
+ * **Το εξώφυλλο, όπως το έβγαλε το raster ράφι** — ό,τι χρειάζεται ένα `ListingImage` εκτός από το `altKey`, που το
+ * διαλέγει ο γραφέας. Χωρίς σημείο εστίασης: το εξώφυλλο αποδίδεται **ολόκληρο** (`object-contain`), δεν κόβεται ποτέ.
+ */
+export type ProjectedVideoPoster = Pick<ListingImage, 'url' | 'width' | 'height' | 'sources'>;
 
 /**
  * **Ένα δημοσιευμένο βίντεο, όπως το μαθαίνει ο γραφέας από το ράφι.** Δομικός τύπος και όχι ο τύπος της υπηρεσίας
@@ -25,6 +31,8 @@ export interface ProjectedShelfVideo {
   readonly durationSec: number;
   readonly width: number;
   readonly height: number;
+  /** `null` ⇒ το raster ράφι **δεν** δημοσίευσε καρέ για αυτό το βίντεο — ποτέ εικόνα που δεν κάθεται στον κάδο. */
+  readonly poster: ProjectedVideoPoster | null;
 }
 
 /**
@@ -34,8 +42,9 @@ export interface ProjectedShelfVideo {
  * από το BIM μας· το βίντεο το **ανέβασε άνθρωπος**. Ο ψήστης μέτρησε τη *μορφή* του (codec, διάρκεια), όχι το
  * *περιεχόμενό* του — δεν ξέρουμε αν δείχνει αυτό το σπίτι. Η ετικέτα «μετρημένο» θα υποσχόταν ακριβώς αυτό.
  *
- * ⚠️ **Το `poster` γράφεται `null` ΕΔΩ, ρητά**: το εξώφυλλο περνά από το **raster** ράφι και δένεται από τον γραφέα
- * του (ADR-907 §10.6). Ως τότε η οθόνη δείχνει ουδέτερο πλαίσιο — ποτέ δεν κατεβάζει βίντεο για να φτιάξει εικόνα.
+ * 🔑 **Το `poster` χτίζεται ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ του raster ραφιού, όπως και το ίδιο το βίντεο** (ADR-907 §10.8): `null` όταν
+ * το ράφι δεν δημοσίευσε καρέ — η οθόνη δείχνει τότε ουδέτερο πλαίσιο, ποτέ δεν κατεβάζει βίντεο για να φτιάξει εικόνα.
+ * Το `altKey` του είναι **του βίντεο**: το καρέ δείχνει το ίδιο υλικό, του ίδιου παραγωγού.
  *
  * ⚠️ **Η σειρά ταξιδεύει αυτούσια** από τη συμφιλίωση — η σειρά που δήλωσε ο άνθρωπος. Καμία ταξινόμηση.
  */
@@ -53,7 +62,7 @@ export function withPublishedVideos(
       width: video.width,
       height: video.height,
       durationSec: video.durationSec,
-      poster: null,
+      poster: video.poster === null ? null : { ...video.poster, altKey },
     },
     at: video.at,
   }));
