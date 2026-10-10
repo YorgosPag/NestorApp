@@ -45,6 +45,7 @@ import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
+import { liveStrokeInk } from '../../config/adaptive-entity-color';
 import { drawOpeningPlanOverlay, drawOpeningFrameOutlines } from './opening-overlay-drawing';
 import { resolveOpeningMaterial } from '../family-types/resolve-opening-material';
 import { getMaterialFlatColorHex } from '../materials/material-catalog-defs';
@@ -99,7 +100,8 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // Armed-transform selection keeps the ORANGE stroke from applyPhaseStyle throughout the
     // opening's outline + overlay passes (skip every category-colour override). Giorgio 2026-07-21.
     const _opArmed = isArmedSelectedHighlight(options);
-    if (!_opArmed) this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
+    // ADR-909 Γ2.5 (Η4) — η εφεδρεία χρώματος ρωτά την πολιτική εκτύπωσης· οθόνη ⇒ αυτούσια.
+    if (!_opArmed) this.ctx.strokeStyle = liveStrokeInk(OPENING_KIND_STROKE[opening.kind]);
     const _opLayerOverride = _opLayer ? {
       lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
       color: _opLayer.color ?? undefined,

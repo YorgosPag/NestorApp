@@ -20,14 +20,9 @@ jest.mock('firebase/auth', () => ({
 
 import { FloorplanSymbolRenderer } from '../FloorplanSymbolRenderer';
 import { adaptFillTintForCanvas } from '../../../config/adaptive-entity-color';
-import { contrastRatio, parseColor, parseHex, saturation } from '../../../config/color-math';
+import { parseColor, parseHex, saturation } from '../../../config/color-math';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
-import {
-  clearPrintColorPolicy,
-  PRINT_PAPER_HEX,
-  setPrintColorPolicy,
-  type PrintColorPolicy,
-} from '../../../config/print-color-policy';
+import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
 import { RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
 import {
   buildDefaultFloorplanSymbolParams,
@@ -37,11 +32,11 @@ import { FLOORPLAN_SYMBOL_CATALOG } from '../../floorplan-symbols/floorplan-symb
 import { resolveSymbolCategoryConfig } from '../../floorplan-symbols/floorplan-symbol-categories';
 import type { FloorplanSymbolCategory } from '../../types/floorplan-symbol-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+import { ENGINEER_PDF, FLOOR_PX, isGrey, onPaper, publicImage } from './print-pass-policies';
 import { recordingContext, type Painted } from './recording-canvas';
 
 const CATEGORIES: readonly FloorplanSymbolCategory[] = ['sanitary', 'kitchen', 'furniture'];
 const NORMAL = RENDER_LINE_WIDTHS.NORMAL;
-const FLOOR_PX = 4;
 
 /** Πραγματικό σύμβολο από το εργοστάσιο της παραγωγής — το πρώτο του καταλόγου για την κατηγορία. */
 function symbolOf(category: FloorplanSymbolCategory): EntityModel {
@@ -60,11 +55,6 @@ function paint(category: FloorplanSymbolCategory): Painted {
   return painted;
 }
 
-const publicImage = (style: PrintColorPolicy['style']): PrintColorPolicy => ({
-  style, dpi: 694, minLineWidthPx: FLOOR_PX, minInkContrast: MIN_ENTITY_CONTRAST,
-});
-const onPaper = (hex: string): number => contrastRatio(hex, PRINT_PAPER_HEX);
-const isGrey = (color: string): boolean => saturation(parseColor(color)!) === 0;
 const alphaOf = (color: string): number => parseColor(color)!.a;
 
 afterEach(clearPrintColorPolicy);
@@ -113,7 +103,7 @@ describe.each(CATEGORIES)('FloorplanSymbolRenderer — «%s» (ADR-909 Γ2.4)', 
   });
 
   it('Φ5 PDF του μηχανικού (χωρίς δάπεδα): άχρωμο σε «Ασπρόμαυρο», το πάχος του όπως το ζήτησε', () => {
-    setPrintColorPolicy({ style: 'monochrome', dpi: 300 });
+    setPrintColorPolicy(ENGINEER_PDF);
     for (const s of paint(category).strokes) expect(s).toStrictEqual({ ink: '#000000', width: NORMAL, dash: [] });
   });
 

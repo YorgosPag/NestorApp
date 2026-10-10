@@ -34,7 +34,9 @@ import { getWallCoveringColor, getWallCoveringHatchType } from '../wall-covering
 import { resolveVisibleWallCoveringLayer } from '../wall-coverings/wall-covering-layers';
 import { strokeHatchLines, fillHatchDots } from './shared/canvas-hatch-fill';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveStrokeInk } from '../../config/adaptive-entity-color';
+// ADR-909 Γ2.5 (Η4) — περίγραμμα και γραμμοσκίαση ρωτούν την πολιτική εκτύπωσης· οθόνη ⇒ αυτούσια.
+import { applyLiveStroke } from './shared/live-stroke';
 
 /** Opacity του translucent fill της λωρίδας (λίγο πιο έντονο από floor-finish για να ξεχωρίζει). */
 const STRIP_FILL_ALPHA = 0.35;
@@ -98,8 +100,7 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     }
 
     // Outline stroke.
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
+    applyLiveStroke(this.ctx, color, RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY);
     this.ctx.setLineDash([]);
     this.drawQuadPath(quad);
     this.ctx.stroke();
@@ -152,9 +153,9 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.drawQuadPath(quad);
     this.ctx.clip();
-    this.ctx.strokeStyle = HATCH_STROKE;
-    this.ctx.fillStyle = HATCH_STROKE;
-    this.ctx.lineWidth = HATCH_LINE_WIDTH;
+    applyLiveStroke(this.ctx, HATCH_STROKE, HATCH_LINE_WIDTH);
+    // Οι τελείες του σοβά είναι ΜΕΛΑΝΙ που ζωγραφίζεται με `fill` ⇒ ίδιο χρώμα με τις γραμμές, όχι απόχρωση σώματος.
+    this.ctx.fillStyle = liveStrokeInk(HATCH_STROKE);
     this.ctx.setLineDash([]);
 
     // Reuse the canvas hatch-fill SSoT (N.0.2) — mapping (material→pattern) μένει εδώ.

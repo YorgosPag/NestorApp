@@ -21,16 +21,15 @@ jest.mock('firebase/auth', () => ({
 
 import { BimFootprintRenderer } from '../bim-footprint-renderer';
 import { adaptFillTintForCanvas } from '../../../config/adaptive-entity-color';
-import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
 import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
 import type { EntityModel, GripInfo, RenderOptions } from '../../../rendering/types/Types';
+import { FLOOR_PX, publicImage } from './print-pass-policies';
 import { recordingContext, type Painted } from './recording-canvas';
 
 const SQUARE = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
 const TINT = 'rgba(29, 78, 216, 0.14)';
 const BLUE = '#1d4ed8';
 const DASH: readonly number[] = [8, 4];
-const FLOOR_PX = 4;
 
 /** Ο πιο λιτός ζωγράφος Η/Μ: ακριβώς οι τρεις κλήσεις που κάνουν και οι επτά πραγματικοί. */
 class ProbeRenderer extends BimFootprintRenderer {
@@ -70,7 +69,7 @@ describe('BimFootprintRenderer — κοινό σώμα Η/Μ (ADR-909 Γ2.3)', (
   });
 
   it('Π3 🔴 «Ασπρόμαυρο» δημόσιας κάτοψης: μαύρο και στο δάπεδο πάχους — και η παύλα μένει', () => {
-    setPrintColorPolicy({ style: 'monochrome', dpi: 694, minLineWidthPx: FLOOR_PX, minInkContrast: MIN_ENTITY_CONTRAST });
+    setPrintColorPolicy(publicImage('monochrome'));
     expect(paint().strokes).toStrictEqual([{ ink: '#000000', width: FLOOR_PX, dash: [] }]);
     expect(paint(DASH).strokes).toStrictEqual([{ ink: '#000000', width: FLOOR_PX, dash: [...DASH] }]);
   });

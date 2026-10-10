@@ -40,7 +40,10 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { drawBimHoverHalo } from './bim-hover-halo';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
-import { adaptEntityColorForCanvas, adaptStructuralLineInkForCanvas } from '../../config/adaptive-entity-color';
+import { adaptEntityColorForCanvas, adaptStructuralLineInkForCanvas, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+// ADR-909 Γ2.5 — ο άξονας είναι βοήθημα ΟΘΟΝΗΣ (Η2)· τα σταθερά πάχη σε px ρωτούν το δάπεδο της απόδοσης (Η4).
+import { getPrintColorPolicy } from '../../config/print-color-policy';
+import { applyLiveStroke } from './shared/live-stroke';
 // ADR-771 Φ.3 — όπου το WALL_LINE_CONTRAST είναι ΑΝΕΦΙΚΤΟ στην επιφάνεια (μετρημένο: cinema4d
 // #555555 ⇒ μέγιστο 7,46:1 < 9,0), το casing δίνει στη γραμμή δικό της φόντο ⇒ τοπικά 21:1.
 import { strokeWithContrastCasing } from './bim-contrast-casing';
@@ -239,11 +242,12 @@ export class WallRenderer extends BaseEntityRenderer {
     if (segs.length === 0) return;
     this.ctx.save();
     this.ctx.setLineDash([]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    const widthPx = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
+    this.ctx.lineWidth = widthPx;
     strokeWithContrastCasing(
       this.ctx,
       adaptStructuralLineInkForCanvas(wall.color ?? '#000000', WALL_LINE_CONTRAST),
-      RENDER_LINE_WIDTHS.THIN,
+      widthPx,
       () => strokePlanLineSegments(this.ctx, (p) => this.worldToScreen(p), segs),
     );
     this.ctx.restore();
@@ -381,10 +385,13 @@ export class WallRenderer extends BaseEntityRenderer {
    * (Revit/AutoCAD location line σταματά στο σώμα, δεν το διαπερνά). Το clip γίνεται μέσω
    * του ΕΝΟΣ `coveredIntervals`/`exposedComplement` SSoT (segment-polygon-coverage). Χωρίς
    * column footprints (default) → ένα run = ο άξονας αυτούσιος (μηδέν regression).
+   *
+   * ADR-909 Γ2.5 (Η2) — βοήθημα ΟΘΟΝΗΣ, όχι περιεχόμενο σχεδίου: σε print pass ΔΕΝ τυπώνεται (ArchiCAD
+   * reference line = On-Screen View Option). Στη δημόσια κάτοψη έβγαινε τρίχα 1 px σε εικόνα 4096 px.
    */
   private drawAxis(wall: WallEntity, edgeColor: string | null): void {
     const axis = wall.geometry.axisPolyline.points;
-    if (axis.length < 2) return;
+    if (axis.length < 2 || getPrintColorPolicy() !== null) return;
     this.ctx.save();
     this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
@@ -472,8 +479,7 @@ export class WallRenderer extends BaseEntityRenderer {
     if (lines.length === 0) return;
 
     this.ctx.save();
-    this.ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    applyLiveStroke(this.ctx, MATERIAL_HATCH_STROKE_RGBA, RENDER_LINE_WIDTHS.THIN);
     this.ctx.setLineDash([]);
     for (const poly of lines) strokePolyline(this.ctx, (p) => this.worldToScreen(p), poly);
     this.ctx.restore();

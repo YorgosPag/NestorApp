@@ -378,9 +378,10 @@ describe('Κ — τι πιάνει και τι ΔΕΝ πιάνει, δηλωμέ
   it('Κ9: ΕΙΣΑΓΩΓΗ ΜΕ ΨΕΥΔΩΝΥΜΟ δεν κρύβει την υπόσχεση (`import { f as g }`)', () => {
     // Χωρίς τον χάρτη τοπικών ονομάτων, το `g(…)` δεν είναι στο API ⇒ σιωπηλή απουσία,
     // δηλαδή η πύλη θα ανακοίνωνε «καθαρό» για κώδικα που δεν κοίταξε καθόλου.
-    const wall = read(REPO_ROOT, WALL_RENDERER)
-      .split('adaptStructuralLineInkForCanvas } from').join('adaptStructuralLineColorForCanvas as adaptLine } from')
-      .split('adaptStructuralLineInkForCanvas(').join('adaptLine(');
+    // Πρώτα οι κλήσεις, μετά ό,τι όνομα απέμεινε (η εισαγωγή) — ανεξάρτητα από τη ΘΕΣΗ του μέσα στις αγκύλες.
+    // Με `mutate`, όχι γυμνό `split/join`: μετάλλαξη που δεν βρίσκει στόχο ΠΕΤΑ, δεν ελέγχει σιωπηλά το αμετάλλακτο αρχείο.
+    const calls = mutate(read(REPO_ROOT, WALL_RENDERER), 'adaptStructuralLineInkForCanvas(', 'adaptLine(');
+    const wall = mutate(calls, 'adaptStructuralLineInkForCanvas', 'adaptStructuralLineColorForCanvas as adaptLine');
     const result = analyze(miniRepo({ [WALL_RENDERER]: wall }));
     expect(statesOf(result)).toContain(STATES.UNREACHABLE_PRESET);
   });

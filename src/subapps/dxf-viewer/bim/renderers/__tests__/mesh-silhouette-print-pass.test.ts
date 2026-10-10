@@ -9,14 +9,8 @@
  */
 
 import { BIM_CATEGORY_LINE_COLORS } from '../../../config/bim-object-styles';
-import { contrastRatio, parseHex, saturation } from '../../../config/color-math';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
-import {
-  clearPrintColorPolicy,
-  PRINT_PAPER_HEX,
-  setPrintColorPolicy,
-  type PrintColorPolicy,
-} from '../../../config/print-color-policy';
+import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
 import {
   drawMeshContourFill,
   drawMeshFallbackBox,
@@ -24,6 +18,7 @@ import {
   drawMeshSlotSilhouettes,
   type MeshSilhouettePalette,
 } from '../mesh-silhouette-draw';
+import { ENGINEER_PDF, FLOOR_PX, isGrey, onPaper, publicImage } from './print-pass-policies';
 
 const STROKE = BIM_CATEGORY_LINE_COLORS.furniture;
 const EDGE = 'rgba(139, 94, 52, 0.55)';
@@ -32,7 +27,6 @@ const SQUARE = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
 const SEGMENT = [{ x1: 0, y1: 0, x2: 1, y2: 1 }];
 const TRANSFORM = { position: { x: 0, y: 0 }, rotationDeg: 0, sceneUnits: 'mm' as const };
 const WIDTH = 2;
-const FLOOR_PX = 4;
 
 interface Stroke { readonly ink: string; readonly width: number }
 
@@ -68,12 +62,6 @@ function drawAllPaths(): Stroke[] {
   drawMeshFallbackBox({ ctx, worldToScreen: identity, vertices: SQUARE, palette: PALETTE, lineWidth: WIDTH, loading: false });
   return strokes;
 }
-
-const publicImage = (style: PrintColorPolicy['style']): PrintColorPolicy => ({
-  style, dpi: 694, minLineWidthPx: FLOOR_PX, minInkContrast: MIN_ENTITY_CONTRAST,
-});
-const onPaper = (hex: string): number => contrastRatio(hex, PRINT_PAPER_HEX);
-const isGrey = (hex: string): boolean => saturation(parseHex(hex)!) === 0;
 
 afterEach(clearPrintColorPolicy);
 
@@ -111,7 +99,7 @@ describe('mesh-silhouette-draw — print pass (ADR-909 Γ2.2)', () => {
   });
 
   it('Σ5 PDF του μηχανικού (χωρίς δάπεδα): άχρωμο σε «Ασπρόμαυρο», το πάχος του όπως το ζήτησε', () => {
-    setPrintColorPolicy({ style: 'monochrome', dpi: 300 });
+    setPrintColorPolicy(ENGINEER_PDF);
     const strokes = drawAllPaths();
     for (const s of strokes) expect(s.ink).toBe('#000000');
     expect(strokes.map((s) => s.width)).toStrictEqual([WIDTH, WIDTH - 1, WIDTH, WIDTH - 1, WIDTH, WIDTH]);

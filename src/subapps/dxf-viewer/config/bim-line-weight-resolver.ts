@@ -15,6 +15,7 @@ import { type LinePatternKey } from './bim-line-patterns';
 // ADR-454 — Print Plot Style: print-DPI lineweights + white-safe colour remap.
 // Singleton is null during interactive render (single boolean branch, zero hot-path cost).
 import { getPrintColorPolicy, applyPlotColor } from './print-color-policy';
+import { liveStrokeWidthPx } from './adaptive-entity-color';
 
 /** Map a numeric view scale denominator (e.g., 100 for 1:100) to nearest SCALE_COLUMN index. */
 export function closestScaleColumn(scaleDenominator: number): number {
@@ -137,6 +138,10 @@ export function resolveSubcategoryStyle(
   // active: ISO mm → px at the real print DPI and white-safe colour remap.
   const printPolicy = getPrintColorPolicy();
   const effectiveDpi = printPolicy ? printPolicy.dpi : (ctx.dpi ?? 96);
+  // ADR-909 Γ2.5 (Η3) — το δάπεδο πάχους της απόδοσης μπαίνει ΕΔΩ, στη ρίζα, όχι σε κάθε ζωγράφο: print pass ⇒
+  // ποτέ κάτω από `PrintColorPolicy.minLineWidthPx` (το άνοιγμα πλάκας έβγαινε 3,55 px στη δημόσια κάτοψη των
+  // 4096 px)· οθόνη ⇒ αυτούσιο. Ο κανόνας είναι του `liveStrokeWidthPx` — εδώ δεν γράφεται δεύτερη φορά.
+  const toPx = (mm: Parameters<typeof lineweightToPx>[0]): number => liveStrokeWidthPx(lineweightToPx(mm, effectiveDpi));
   if (ctx.cutState === 'hidden') {
     return { lineWidthPx: 0, linePattern: 'solid', color: null };
   }
@@ -210,7 +215,7 @@ export function resolveSubcategoryStyle(
     : null;
   if (elemPen !== null) {
     const mm = _activePenTable[elemPen - 1][scaleCol];
-    const lineWidthPx = lineweightToPx(mm, effectiveDpi);
+    const lineWidthPx = toPx(mm);
     return { lineWidthPx, linePattern, color };
   }
 
@@ -222,7 +227,7 @@ export function resolveSubcategoryStyle(
     : undefined;
   if (ctx.cutState !== 'beyond' && subPen !== undefined) {
     const mm = _activePenTable[subPen - 1][scaleCol];
-    const lineWidthPx = lineweightToPx(mm, effectiveDpi);
+    const lineWidthPx = toPx(mm);
     return { lineWidthPx, linePattern, color };
   }
 
@@ -230,13 +235,13 @@ export function resolveSubcategoryStyle(
   // Skip for 'beyond' (BEYOND_PEN convention, same as sub pen above).
   if (ctx.cutState !== 'beyond' && userVgPen !== undefined) {
     const mm = _activePenTable[userVgPen - 1][scaleCol];
-    const lineWidthPx = lineweightToPx(mm, effectiveDpi);
+    const lineWidthPx = toPx(mm);
     return { lineWidthPx, linePattern, color };
   }
 
   // 4. Layer concrete mm (C.6 — bypasses pen table, wins over DEFAULT).
   if (ctx.cutState !== 'beyond' && ctx.layerOverride?.lineweightMm !== undefined) {
-    const lineWidthPx = lineweightToPx(ctx.layerOverride.lineweightMm, effectiveDpi);
+    const lineWidthPx = toPx(ctx.layerOverride.lineweightMm);
     return { lineWidthPx, linePattern, color };
   }
 
@@ -250,7 +255,7 @@ export function resolveSubcategoryStyle(
     penIdx = BEYOND_PEN;
   }
   const mm = _activePenTable[penIdx - 1][scaleCol];
-  const lineWidthPx = lineweightToPx(mm, effectiveDpi);
+  const lineWidthPx = toPx(mm);
 
   return { lineWidthPx, linePattern, color };
 }

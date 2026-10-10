@@ -10,16 +10,11 @@
 import { BIM_CATEGORY_LINE_COLORS } from '../../../../config/bim-object-styles';
 import { contrastRatio, hexToRgba, parseHex, saturation } from '../../../../config/color-math';
 import { MIN_ENTITY_CONTRAST } from '../../../../config/contrast-adaptation';
-import {
-  clearPrintColorPolicy,
-  PRINT_PAPER_HEX,
-  setPrintColorPolicy,
-  type PrintColorPolicy,
-} from '../../../../config/print-color-policy';
+import { clearPrintColorPolicy, PRINT_PAPER_HEX, setPrintColorPolicy } from '../../../../config/print-color-policy';
 import { MEP_DOMAIN_DEFAULT_STROKE } from '../../../mep-systems/mep-system-color';
 import { applyLiveStroke } from '../live-stroke';
+import { ENGINEER_PDF, FLOOR_PX, publicImage } from '../../__tests__/print-pass-policies';
 
-const FLOOR_PX = 4;
 /** Τα χρώματα γραμμής των ζωγράφων Η/Μ της πύλης pixels (ADR-909 §6.9). */
 const MEP_INKS = [
   BIM_CATEGORY_LINE_COLORS.hydronicHeating,
@@ -29,10 +24,6 @@ const MEP_INKS = [
   MEP_DOMAIN_DEFAULT_STROKE.fuel,
   '#2563eb',
 ];
-
-const publicImage = (style: PrintColorPolicy['style']): PrintColorPolicy => ({
-  style, dpi: 694, minLineWidthPx: FLOOR_PX, minInkContrast: MIN_ENTITY_CONTRAST,
-});
 
 function stroked(color: string, widthPx: number): { ink: string; width: number } {
   const ctx = { strokeStyle: '', lineWidth: 0 };
@@ -76,7 +67,7 @@ describe('applyLiveStroke (ADR-909 Γ2.3)', () => {
   });
 
   it('Λ5 PDF του μηχανικού (χωρίς δάπεδα): άχρωμο σε «Ασπρόμαυρο», το πάχος όπως ζητήθηκε', () => {
-    setPrintColorPolicy({ style: 'monochrome', dpi: 300 });
+    setPrintColorPolicy(ENGINEER_PDF);
     expect(stroked('#1d4ed8', 2)).toStrictEqual({ ink: '#000000', width: 2 });
     expect(stroked('#1d4ed8', 1)).toStrictEqual({ ink: '#000000', width: 1 });
   });

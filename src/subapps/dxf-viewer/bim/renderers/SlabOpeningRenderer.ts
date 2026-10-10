@@ -43,6 +43,7 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getSlabOpeningGrips } from '../slab-openings/slab-opening-grips';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
+import { liveStrokeInk } from '../../config/adaptive-entity-color';
 
 /**
  * Stroke colour per kind — saturated, high-contrast over typical slab fills
@@ -127,7 +128,8 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       : KIND_DASH[opening.kind];
     this.ctx.setLineDash(_soDash as number[]);
     // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip category override).
-    if (!_soArmed) this.ctx.strokeStyle = _soColor ?? KIND_STROKE[opening.kind];
+    // ADR-909 Γ2.5 (Η4) — η εφεδρεία χρώματος ρωτά την πολιτική εκτύπωσης (το `_soColor` την έχει ήδη περάσει).
+    if (!_soArmed) this.ctx.strokeStyle = _soColor ?? liveStrokeInk(KIND_STROKE[opening.kind]);
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
     this.ctx.restore();
