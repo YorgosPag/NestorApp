@@ -14,6 +14,7 @@
  * |---|---|---|
  * | `BasemapControlGroup` | **έργο** — πού είναι πάνω στη Γη | **πάντα** (η άρνηση είναι απάντηση) |
  * | `FloorTabBar` | **κτίριο** — ποιος όροφος | μόνο με κτίριο & ορόφους |
+ * | `SelectedPropertyBreadcrumb` | **ακίνητο** — ποιο είναι επιλεγμένο | μόνο με επιλεγμένη περιοχή συνδεδεμένη με ακίνητο |
  *
  * ## Γιατί σκέτο δοχείο διάταξης και όχι `<section>`/`<nav>`
  * Η γραμμή **δεν είναι** η ίδια ορόσημο πλοήγησης· είναι λωρίδα που κρατά δύο χειριστήρια, το
@@ -39,6 +40,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { BasemapControlGroup } from './BasemapControlGroup';
 import { FloorTabBar } from './FloorTabBar';
+import { SelectedPropertyBreadcrumb } from './SelectedPropertyBreadcrumb';
 
 export const ViewerContextStrip: React.FC = () => {
   const { getDirectionalBorder } = useBorderTokens();
@@ -55,6 +57,9 @@ export const ViewerContextStrip: React.FC = () => {
           άλλαξε με τη μετακόμιση του §25· άλλαξε μόνο ποιος κρατά τη ζωή του. */}
       <BasemapControlGroup />
       <FloorTabBar />
+      {/* Δεξιά άκρη: το breadcrumb του επιλεγμένου ακινήτου — το ΙΔΙΟ component της σελίδας
+          «Διαχείριση Ακινήτων», όχι αντίγραφο. Αποφασίζει μόνο του αν έχει κάτι να πει. */}
+      <SelectedPropertyBreadcrumb />
     </div>
   );
 };

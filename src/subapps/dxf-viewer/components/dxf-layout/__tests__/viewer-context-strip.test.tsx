@@ -34,7 +34,13 @@ jest.mock('../../../hooks/data/useFloorTabs', () => ({
   useFloorTabs: () => mockFloorTabs(),
 }));
 
-const TOGGLE_ARIA = 'basemap.toggleAria';
+// Το breadcrumb του επιλεγμένου ακινήτου θέλει NavigationContext + επιλογή + περιοχές· εδώ
+// κρίνεται ο χάρτης και οι όροφοι. Οι δικές του άγκυρες: `selected-property-breadcrumb.test.tsx`.
+jest.mock('../SelectedPropertyBreadcrumb', () => ({
+  SelectedPropertyBreadcrumb: () => null,
+}));
+
+const TOGGLE_ARIA ='basemap.toggleAria';
 const GENERIC_HINT = 'basemap.unavailableHint';
 const NO_ADDRESS_HINT = 'basemap.unavailableReason.noAddress';
 const SETTINGS_ARIA = 'basemap.settings.openAria';
