@@ -74,8 +74,8 @@ export interface FillingWallsResult {
 }
 
 /**
- * Προαιρετικές ραφές του χτισίματος. Και οι δύο τρέχουν ΜΕΣΑ στον ένα βρόχο, ώστε ο
- * σταδιακός έλεγχος (γείτονες + επικάλυψη) να βλέπει πάντα τον τελικό τοίχο.
+ * Προαιρετικές ραφές του χτισίματος. Και οι δύο τρέχουν ΜΕΣΑ στο χτίσιμο (φάση α), ώστε η
+ * ένωση και ο έλεγχος επικάλυψης να βλέπουν πάντα τον τελικό τοίχο.
  */
 export interface FillingWallsOptions {
   /**
@@ -85,21 +85,110 @@ export interface FillingWallsOptions {
   readonly typeWall?: (wall: WallEntity) => WallEntity;
   /**
    * ADR-911 Δ3 — overrides ΑΝΑ ορθογώνιο (π.χ. λειτουργία ανά ομάδα πάχους), πάνω από τα
-   * κοινά. Κλήση ανά ομάδα θα έσπαγε τον σταδιακό έλεγχο· γι' αυτό είναι ραφή του βρόχου.
+   * κοινά. Κλήση ανά ομάδα θα έκρυβε τη μία ομάδα από την άλλη· γι' αυτό είναι ραφή του χτισίματος.
    */
   readonly overridesFor?: (rect: DetectedRectangle) => WallParamOverrides;
 }
 
 // ─── Build + validate + extend + no-overlap (ΙΔΙΟ με τον commit) ──────────────
 
+/** Ένα ορθογώνιο που πέρασε τον επικυρωτή: ο τοίχος του με τύπο, ΠΡΙΝ από κάθε επέκταση. */
+interface FillingCandidate {
+  /** Θέση του ορθογωνίου στην είσοδο — η ταυτότητα του υποψηφίου μέσα στον υπολογισμό. */
+  readonly index: number;
+  readonly wall: WallEntity;
+}
+
+/**
+ * Φάση α — χτίσιμο + επικύρωση + τύπος για ΟΛΑ τα ορθογώνια, πριν ενωθεί οτιδήποτε. Όσα κόβει
+ * ο επικυρωτής γυρίζουν στο `invalid` (θέση → φιλικός λόγος).
+ */
+function buildFillingCandidates(
+  rects: readonly DetectedRectangle[],
+  overrides: WallParamOverrides,
+  sceneUnits: SceneUnits,
+  levelId: string,
+  options: FillingWallsOptions,
+): { readonly candidates: FillingCandidate[]; readonly invalid: Map<number, string> } {
+  const candidates: FillingCandidate[] = [];
+  const invalid = new Map<number, string>();
+  rects.forEach((rect, index) => {
+    const rectOverrides = options.overridesFor ? { ...overrides, ...options.overridesFor(rect) } : overrides;
+    const build = buildWallFillingRectResult(rect, rectOverrides, sceneUnits, levelId);
+    if (!build.ok) {
+      invalid.set(index, friendlyReason(build.reason));
+      return;
+    }
+    // ADR-911 Φ3 — ο τύπος μπαίνει ΕΔΩ, πριν από την επέκταση και τον έλεγχο επικάλυψης:
+    // ό,τι ακολουθεί κρίνει τον ΤΕΛΙΚΟ τοίχο, όχι έναν που ο τύπος θα αλλάξει μετά.
+    candidates.push({ index, wall: options.typeWall ? options.typeWall(build.wall) : build.wall });
+  });
+  return { candidates, invalid };
+}
+
+/**
+ * Η σειρά ΚΡΙΣΗΣ επικάλυψης — ιδιότητα της γεωμετρίας, όχι της σειράς εισόδου: ο μακρύτερος
+ * τοίχος κρίνεται πρώτος (άρα κερδίζει όταν δύο υποψήφιοι διεκδικούν τον ίδιο χώρο), μετά ο
+ * παχύτερος, μετά η θέση. Η θέση εισόδου σπάει μόνο την ισοπαλία ΤΑΥΤΟΣΗΜΩΝ τοίχων.
+ */
+function byJudgingPriority(a: FillingCandidate, b: FillingCandidate): number {
+  const pa = a.wall.params, pb = b.wall.params;
+  const lenA = Math.hypot(pa.end.x - pa.start.x, pa.end.y - pa.start.y);
+  const lenB = Math.hypot(pb.end.x - pb.start.x, pb.end.y - pb.start.y);
+  return (
+    lenB - lenA ||
+    pb.thickness - pa.thickness ||
+    (pa.start.x + pa.end.x) - (pb.start.x + pb.end.x) ||
+    (pa.start.y + pa.end.y) - (pb.start.y + pb.end.y) ||
+    a.index - b.index
+  );
+}
+
+/**
+ * Φάσεις β + γ — ένωση και κρίση, ΑΝΕΞΑΡΤΗΤΕΣ από τη σειρά των ορθογωνίων (ADR-911 Φ3α-3).
+ *
+ * β. Κάθε υποψήφιος επεκτείνεται ΜΙΑ φορά, από την ΩΜΗ του θέση, έναντι της σκηνής και ΟΛΩΝ των
+ *    άλλων ζωντανών υποψηφίων στην ωμή τους θέση. Πριν, επεκτεινόταν μόνο προς όσους είχαν ήδη
+ *    χτιστεί: ο βραχίονας ενός Τ ενωνόταν μόνο αν ο διαμπερής έτυχε να προηγείται. Δεν
+ *    επαναλαμβάνεται ως σταθερό σημείο: μετρήθηκε ότι ο δεύτερος γύρος σπρώχνει τοίχο ΟΜΟΑΞΟΝΙΚΑ
+ *    μέσα στον συνεχόμενό του.
+ * γ. ADR-567 — ΠΟΤΕ τοίχος πάνω σε υπάρχουσα δομική· κρίση με τη σειρά `byJudgingPriority`,
+ *    έναντι της σκηνής + όσων έχουν ήδη γίνει δεκτοί. Η ένωση με γείτονα ΔΕΝ είναι κατάληψη
+ *    (§join-is-not-occupation).
+ *
+ * Αν το γ κόψει κάποιον, το β ξανατρέχει ΑΠΟ ΤΑ ΩΜΑ με όσους έμειναν: κανείς δεν μένει
+ * επεκταμένος προς τοίχο που δεν θα χτιστεί. Το σύνολο μόνο μικραίνει ⇒ τερματίζει.
+ */
+function joinAndJudge(
+  candidates: readonly FillingCandidate[],
+  sceneEntities: readonly Entity[],
+  sceneUnits: SceneUnits,
+): Map<number, WallEntity> {
+  const sceneWalls = sceneEntities.filter(isWallEntity);
+  let alive = [...candidates].sort(byJudgingPriority);
+  for (;;) {
+    const neighbours = [...sceneWalls, ...alive.map((c) => c.wall)];
+    const existing: Entity[] = [...sceneEntities];
+    const accepted = new Map<number, WallEntity>();
+    for (const candidate of alive) {
+      const entity = extendFillingWallToNeighbors(candidate.wall, neighbours, sceneUnits);
+      if (findStructuralOverlapForEntity(entity as unknown as Entity, existing)) continue;
+      accepted.set(candidate.index, entity);
+      existing.push(entity as unknown as Entity);
+    }
+    if (accepted.size === alive.length) return accepted;
+    alive = alive.filter((c) => accepted.has(c.index));
+  }
+}
+
 /**
  * Build ΕΝΑΣ τοίχος ανά `DetectedRectangle`: validate (κρατά reason) → extend στους γείτονες
  * (Revit auto-join) → ADR-567 no-overlap guard. Επιστρέφει τους buildable τοίχους + τους
- * rejected με τον λόγο. **Ταυτόσημη λογική αποδοχής/απόρριψης με τον commit** — ο commit
- * καλεί ΑΥΤΟ, οπότε preview ≡ commit εξ ορισμού.
+ * rejected με τον λόγο, και τα δύο στη σειρά των ορθογωνίων. **Ταυτόσημη λογική
+ * αποδοχής/απόρριψης με τον commit** — ο commit καλεί ΑΥΤΟ, οπότε preview ≡ commit εξ ορισμού.
  *
- * Το no-overlap guard τρέχει με το ΙΔΙΟ incremental scene (`sceneEntities` + όσοι τοίχοι της
- * παρτίδας έχουν ήδη γίνει δεκτοί) όπως το `addWallToScene` ανά τοίχο → μηδέν απόκλιση.
+ * Το αποτέλεσμα είναι συνάρτηση του ΣΥΝΟΛΟΥ των ορθογωνίων, όχι της σειράς τους (Revit: οι
+ * ενώσεις αναγεννώνται στο τέλος της συναλλαγής, όχι ανά στοιχείο).
  */
 export function computeFillingWalls(
   rects: readonly DetectedRectangle[],
@@ -109,30 +198,17 @@ export function computeFillingWalls(
   sceneEntities: readonly Entity[],
   options: FillingWallsOptions = {},
 ): FillingWallsResult {
-  const sceneWalls = sceneEntities.filter(isWallEntity);
+  const { candidates, invalid } = buildFillingCandidates(rects, overrides, sceneUnits, levelId, options);
+  const joined = joinAndJudge(candidates, sceneEntities, sceneUnits);
   const walls: WallEntity[] = [];
   const rejected: FillingWallReject[] = [];
-  for (const rect of rects) {
-    const rectOverrides = options.overridesFor ? { ...overrides, ...options.overridesFor(rect) } : overrides;
-    const build = buildWallFillingRectResult(rect, rectOverrides, sceneUnits, levelId);
-    if (!build.ok) {
-      rejected.push({ rect, reason: friendlyReason(build.reason) });
-      continue;
-    }
-    // ADR-911 Φ3 — ο τύπος μπαίνει ΕΔΩ, πριν από την επέκταση και τον έλεγχο επικάλυψης:
-    // ό,τι ακολουθεί κρίνει τον ΤΕΛΙΚΟ τοίχο, όχι έναν που ο τύπος θα αλλάξει μετά.
-    const typed = options.typeWall ? options.typeWall(build.wall) : build.wall;
-    const entity = extendFillingWallToNeighbors(typed, [...sceneWalls, ...walls], sceneUnits);
-    // ADR-567 parity με το `addWallToScene`: ΠΟΤΕ τοίχος πάνω σε υπάρχουσα δομική.
-    // Έλεγχος με το ΙΔΙΟ incremental scene (existing + δεκτοί της παρτίδας) → ίδιο αποτέλεσμα.
-    // Η ένωση με γείτονα (η επέκταση από πάνω) ΔΕΝ είναι κατάληψη: το SSoT κρίνει τοίχο↔τοίχο
-    // μετά την ένωση (ADR-567 §join-is-not-occupation).
-    if (findStructuralOverlapForEntity(entity as unknown as Entity, [...sceneEntities, ...walls] as Entity[])) {
-      rejected.push({ rect, reason: REGION_REJECT_OCCUPIED_KEY });
-      continue;
-    }
-    walls.push(entity);
-  }
+  rects.forEach((rect, index) => {
+    const invalidReason = invalid.get(index);
+    const wall = joined.get(index);
+    if (invalidReason) rejected.push({ rect, reason: invalidReason });
+    else if (wall) walls.push(wall);
+    else rejected.push({ rect, reason: REGION_REJECT_OCCUPIED_KEY });
+  });
   return { walls, rejected };
 }
 

@@ -10,8 +10,9 @@
  * Κανόνας (πρακτική Revit / ArchiCAD: η επικάλυψη κρίνεται πάνω στη γεωμετρία ΜΕΤΑ την ένωση,
  * και μόνο οι παράλληλοι τοίχοι «επικαλύπτονται»): για ζεύγος ευθύγραμμων, μη παράλληλων
  * τοίχων, κάθε άκρο που βρίσκεται μέσα στο σώμα του άλλου κόβεται πίσω προς την παρειά του,
- * με το ΙΔΙΟ `penetrationBevel` που χρησιμοποιεί ο λύτης ενώσεων. Η κρίση επικάλυψης γίνεται
- * μετά, πάνω στα κομμένα αποτυπώματα.
+ * με το ΙΔΙΟ `penetrationBevel` που χρησιμοποιεί ο λύτης ενώσεων — και με το ΙΔΙΟ φράγμα των
+ * δύο κοψιμάτων (`resolveOpposingEndCuts`) που εφαρμόζει η γεωμετρία. Η κρίση επικάλυψης
+ * γίνεται μετά, πάνω στα κομμένα αποτυπώματα.
  *
  * Το κόψιμο είναι `(μισό πάχος − απόσταση άκρου από τον άξονα) / sin`: μέγιστο όταν το άκρο
  * κάθεται στον άξονα (γνήσια ένωση ⇒ μηδέν υπόλοιπο), μηδέν όταν κάθεται σε παρειά. Είναι
@@ -34,6 +35,7 @@ import { mmScaleFor } from '../../utils/scene-units';
 import { sinAngleBetween } from '../walls/wall-trims-geometry';
 import { penetrationBevel, MIN_ANGLE_RAD } from '../walls/wall-trims-corner-resolve';
 import { wallFootprintFromParams } from '../finishes/wall-footprint-union';
+import { resolveOpposingEndCuts } from '../geometry/wall-end-cuts';
 
 /**
  * Το ζεύγος μετά την ένωση. `swallowed` = ένας από τους δύο δεν έχει σώμα έξω από τον άλλον
@@ -74,17 +76,23 @@ function frameOf(wall: WallEntity): WallFrame | null {
 function joinRetraction(ex: number, ey: number, own: WallFrame, other: WallFrame, sin: number): number {
   const along = (ex - other.sx) * other.ux + (ey - other.sy) * other.uy;
   if (along < -own.half || along > other.len + own.half) return 0;
-  // `stemLen = ∞`: εδώ ΔΕΝ ισχύει το όριο αναστροφής του σχεδιασμού (`MAX_BEVEL_FRACTION`) —
-  // η κρίση θέλει την πραγματική διείσδυση, όχι όση αντέχει να ζωγραφιστεί.
-  return penetrationBevel(ex, ey, other.sx, other.sy, other.ux, other.uy, other.half, sin, Infinity);
+  return penetrationBevel(ex, ey, other.sx, other.sy, other.ux, other.uy, other.half, sin);
 }
 
 /** Το αποτύπωμα του `wall` με τα άκρα του κομμένα έναντι του `other`· `null` αν δεν μένει σώμα. */
 function retractedFootprint(wall: WallEntity, own: WallFrame, other: WallFrame, sin: number): Point2D[] | null {
   const { start, end } = wall.params;
-  const atStart = joinRetraction(start.x, start.y, own, other, sin);
-  const atEnd = joinRetraction(end.x, end.y, own, other, sin);
-  if (atStart + atEnd >= own.len) return null;
+  // Το ΙΔΙΟ φράγμα «τα δύο κοψίματα μαζί έναντι του μήκους» που εφαρμόζει η γεωμετρία. Εδώ με
+  // μηδενικό ελάχιστο σώμα: η κρίση ρωτά αν μένει ΟΠΟΙΟΔΗΠΟΤΕ σώμα έξω από τον γείτονα.
+  const cuts = resolveOpposingEndCuts(
+    joinRetraction(start.x, start.y, own, other, sin),
+    joinRetraction(end.x, end.y, own, other, sin),
+    own.len,
+    0,
+  );
+  if (cuts.swallowed) return null;
+  const atStart = cuts.start;
+  const atEnd = cuts.end;
   // Ωμά params: τα αποθηκευμένα πεδία ένωσης αφορούν ΟΛΟΥΣ τους γείτονες, όχι αυτό το ζεύγος.
   const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...raw } = wall.params;
   const params = {

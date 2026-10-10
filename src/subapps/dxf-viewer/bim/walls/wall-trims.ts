@@ -226,6 +226,22 @@ export function wallTrimChanged(prev: WallTrimFields, next: WallTrimFields): boo
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /**
+ * Which END of an axis the junction parameter `p` (0 = start, 1 = end) touches, within the
+ * join window `eps` — or `null` when it touches neither.
+ *
+ * ADR-911 Φ3α-3: the two windows `[−eps, eps]` and `[1−eps, 1+eps]` OVERLAP as soon as
+ * `eps ≥ 0.5`, i.e. for every wall up to 2·`JOIN_THRESHOLD_MM` long. Asking "near start?" first
+ * then answered `start` for a junction sitting at the END of a short wall: the cut landed on the
+ * wrong end and the corner cluster was built from the wrong endpoint. The end is the NEARER one —
+ * a rule with no window to overlap.
+ */
+function nearAxisEnd(p: number, eps: number): 'start' | 'end' | null {
+  if (p < -eps || p > 1 + eps) return null;
+  if (p <= 0.5) return p <= eps ? 'start' : null;
+  return p >= 1 - eps ? 'end' : null;
+}
+
+/**
  * Classify one wall pair (A, B). T-junctions (one endpoint hits the other's
  * interior) bevel the stem immediately. Corner junctions (both endpoints meet)
  * are NOT mitred here — they are recorded so `resolveCornerClusters` can resolve
@@ -275,12 +291,14 @@ function classifyPair(
   const epsA = joinThreshold / lenA;
   const epsB = joinThreshold / lenB;
 
-  const tNearStart = t >= -epsA && t <= epsA;
-  const tNearEnd   = t >= 1 - epsA && t <= 1 + epsA;
+  const tNear = nearAxisEnd(t, epsA);
+  const tNearStart = tNear === 'start';
+  const tNearEnd   = tNear === 'end';
   const tInterior  = t > epsA && t < 1 - epsA;
 
-  const uNearStart = u >= -epsB && u <= epsB;
-  const uNearEnd   = u >= 1 - epsB && u <= 1 + epsB;
+  const uNear = nearAxisEnd(u, epsB);
+  const uNearStart = uNear === 'start';
+  const uNearEnd   = uNear === 'end';
   const uInterior  = u > epsB && u < 1 - epsB;
 
   if ((tNearStart || tNearEnd) && (uNearStart || uNearEnd)) {
@@ -319,7 +337,7 @@ function classifyPair(
     const bJoin = (uNearStart ? b.params.startJoin : b.params.endJoin) ?? 'auto';
     if (bJoin === 'disallow') return;
     const bEndX = uNearStart ? b1x : b2x, bEndY = uNearStart ? b1y : b2y;
-    const bevelB = penetrationBevel(bEndX, bEndY, a1x, a1y, dax / lenA, day / lenA, halfA, sinA, lenB);
+    const bevelB = penetrationBevel(bEndX, bEndY, a1x, a1y, dax / lenA, day / lenA, halfA, sinA);
     if (bevelB > 0) accumBevel(acc, b.id, uNearStart ? 'start' : 'end', bevelB);
   } else if (uInterior && (tNearStart || tNearEnd)) {
     // ── T-junction: B continues; trim only A's stem endpoint ─────────────────
@@ -327,7 +345,7 @@ function classifyPair(
     const aJoin = (tNearStart ? a.params.startJoin : a.params.endJoin) ?? 'auto';
     if (aJoin === 'disallow') return;
     const aEndX = tNearStart ? a1x : a2x, aEndY = tNearStart ? a1y : a2y;
-    const bevelA = penetrationBevel(aEndX, aEndY, b1x, b1y, dbx / lenB, dby / lenB, halfB, sinA, lenA);
+    const bevelA = penetrationBevel(aEndX, aEndY, b1x, b1y, dbx / lenB, dby / lenB, halfB, sinA);
     if (bevelA > 0) accumBevel(acc, a.id, tNearStart ? 'start' : 'end', bevelA);
   }
   // Cross (both interior): skip Phase 1D-B/C.

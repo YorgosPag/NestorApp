@@ -10,8 +10,16 @@
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Maximum bevel (square-off / penetration) as fraction of axis length; prevents
- *  inversion. The corner-miter spike uses `MITER_MAX_EXTENSION_FRACTION` instead. */
+/**
+ * Cap of the mutual axis-bevel that REPLACES a corner miter when the miter overflows
+ * (`resolveTwoWayCorner` fallback), as a fraction of axis length. The corner-miter spike uses
+ * `MITER_MAX_EXTENSION_FRACTION` instead.
+ *
+ * ADR-911 Φ3α-3 — this is no longer the cap of a butt / penetration cut: `penetrationBevel`
+ * returns the true distance to the face, and inversion is guarded once for both ends of a wall
+ * (`geometry/wall-end-cuts.ts`). The miter fallback keeps it: there BOTH walls are cut by each
+ * other's half-thickness, a different (open) case.
+ */
 export const MAX_BEVEL_FRACTION = 0.40;
 
 /**

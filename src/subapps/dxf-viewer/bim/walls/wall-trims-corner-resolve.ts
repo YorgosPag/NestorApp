@@ -185,17 +185,22 @@ function perpDistanceToAxis(px: number, py: number, qx: number, qy: number, ux: 
  * `half`), by ONLY how far the stem currently penetrates past that face":
  *   penetration⊥ = half − ⊥dist(endpoint → axis);  bevel = penetration⊥ / sin(angle)
  * Returns 0 when the stem ends at/short of the face (penetration ≤ 0) → no gap is
- * ever introduced. Clamped to MAX_BEVEL_FRACTION·stemLen. Shared by the T-junction
- * branches and `squareOffCorner` so face-alignment is identical for both.
+ * ever introduced. Shared by the T-junction branches, `squareOffCorner`, the opening
+ * junction dimensions and the occupation judge, so the face is the same for all.
+ *
+ * ADR-911 Φ3α-3 — the result is the TRUE distance to the face. It used to be capped at
+ * 40 % of the stem length, which left a short stem with a remainder inside a thick
+ * neighbour. Inversion is not a per-end question: the two cuts of a wall are guarded
+ * together, where the geometry is produced (`geometry/wall-end-cuts.ts`).
  */
 export function penetrationBevel(
   ex: number, ey: number,
   qx: number, qy: number, ux: number, uy: number,
-  half: number, sinAngle: number, stemLen: number,
+  half: number, sinAngle: number,
 ): number {
   const pen = half - perpDistanceToAxis(ex, ey, qx, qy, ux, uy);
   if (pen <= 1e-6) return 0;
-  return Math.min(pen / sinAngle, MAX_BEVEL_FRACTION * stemLen);
+  return pen / sinAngle;
 }
 
 /**
@@ -376,8 +381,8 @@ function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, Mu
  * (Phase 1K) is pulled back precisely to the face.
  */
 function squareOffCorner(a: EndpointRec, b: EndpointRec, sinA: number, acc: Map<string, MutablePatch>): void {
-  const bevA = penetrationBevel(a.px, a.py, b.px, b.py, b.ux, b.uy, b.half, sinA, a.len);
-  const bevB = penetrationBevel(b.px, b.py, a.px, a.py, a.ux, a.uy, a.half, sinA, b.len);
+  const bevA = penetrationBevel(a.px, a.py, b.px, b.py, b.ux, b.uy, b.half, sinA);
+  const bevB = penetrationBevel(b.px, b.py, a.px, a.py, a.ux, a.uy, a.half, sinA);
   if (bevA > 0) accumBevel(acc, a.wallId, a.which, bevA);
   if (bevB > 0) accumBevel(acc, b.wallId, b.which, bevB);
 }
@@ -434,7 +439,26 @@ function resolveMultiWayCorner(group: readonly EndpointRec[], acc: Map<string, M
     if (group[i]!.joinMode === 'disallow') continue; // ADR-363 Phase 1L-J — no cleanup
     if (clusterStemIsThrough(group, i)) continue;
     bevelStemByPenetration(group, i, acc);
+    if (primaryCollinear) bevelStemToThroughFace(group[i]!, p, q, acc);
   }
+}
+
+/**
+ * ADR-911 Φ3α-3 — a stem meeting a GENUINE through-wall (coincident collinear pair `p`+`q`) is
+ * cut back to the through-wall's NEAR face, wherever its end sits inside that body:
+ *   cut = depth(J) + half / sin   (J = the axes' crossing; depth > 0 ⇔ the end ran PAST J)
+ * near face → 0 · on the centreline → half · on the FAR face → 2·half. The unsigned
+ * `penetrationBevel` reads a far-face end as "on a face" (0), so a stem that owned the junction
+ * block stayed whole while both through halves were joined into it: a triple overlap. Only
+ * here — at a 2-way corner one wall legitimately owns the block.
+ */
+function bevelStemToThroughFace(r: EndpointRec, p: EndpointRec, q: EndpointRec, acc: Map<string, MutablePatch>): void {
+  const sinRP = sinAngleBetween(r.ux, r.uy, p.ux, p.uy);
+  if (sinRP < Math.sin(MIN_ANGLE_RAD)) return;
+  const j = axisJunction(r, p);
+  if (!j) return;
+  const cut = junctionDepth(r, j.x, j.y) + Math.max(p.half, q.half) / sinRP;
+  if (cut > 1e-6) accumBevel(acc, r.wallId, r.which, cut);
 }
 
 /**
@@ -465,7 +489,7 @@ function bevelStemByPenetration(group: readonly EndpointRec[], i: number, acc: M
     const s = group[k]!;
     const sinRS = sinAngleBetween(r.ux, r.uy, s.ux, s.uy);
     if (sinRS < minSin) continue; // collinear neighbours never cut each other
-    const bevel = penetrationBevel(r.px, r.py, s.px, s.py, s.ux, s.uy, s.half, sinRS, r.len);
+    const bevel = penetrationBevel(r.px, r.py, s.px, s.py, s.ux, s.uy, s.half, sinRS);
     if (bevel > 0) accumBevel(acc, r.wallId, r.which, bevel);
   }
 }

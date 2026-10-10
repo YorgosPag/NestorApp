@@ -30,6 +30,7 @@ import { subdivideQuadraticBezier, tessellateArcAxis } from './shared/curve-tess
 import { BULGE_STRAIGHT_EPS } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { bboxOfAll } from './shared/xy-bounds';
 import { polylineLength } from './shared/polyline-frame';
+import { resolveOpposingEndCuts } from './wall-end-cuts';
 
 const MM_TO_M = 1 / 1000;
 /** mm² → m² (1e6). ADR-395 G6 opening face area conversion. */
@@ -340,39 +341,41 @@ function applyMiterAxisJoin(
   return result;
 }
 
+/**
+ * Shorten the axis at its two ends by the junction bevels (scene units).
+ *
+ * ADR-911 Φ3α-3 — a straight wall (2 vertices) is cut twice on the SAME segment, so the two
+ * cuts are resolved TOGETHER (`resolveOpposingEndCuts`): they pass verbatim while they leave a
+ * body, and shrink proportionally when they would cross. Clamping each end on its own against
+ * the ORIGINAL length let two large cuts pass each other once the 40 % per-end cap was lifted.
+ * On a polyline the two ends live on different segments and stay independent.
+ */
 function applyAxisBevels(
   pts: readonly BimPoint[],
-  startBevelMm: number,
-  endBevelMm: number,
+  startBevel: number,
+  endBevel: number,
   minAxis: number,
 ): readonly BimPoint[] {
-  if (pts.length < 2 || (startBevelMm <= 0 && endBevelMm <= 0)) return pts;
+  if (pts.length < 2 || (startBevel <= 0 && endBevel <= 0)) return pts;
+  const n = pts.length;
+  const firstSeg = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+  const lastSeg = Math.hypot(pts[n - 2].x - pts[n - 1].x, pts[n - 2].y - pts[n - 1].y);
+  const cuts = n === 2
+    ? resolveOpposingEndCuts(startBevel, endBevel, firstSeg, minAxis)
+    : {
+        start: resolveOpposingEndCuts(startBevel, 0, firstSeg, minAxis).start,
+        end: resolveOpposingEndCuts(0, endBevel, lastSeg, minAxis).end,
+      };
+
   const result = [...pts];
-  const n = result.length;
-
-  if (startBevelMm > 0) {
-    const dx = pts[1].x - pts[0].x;
-    const dy = pts[1].y - pts[0].y;
-    const seg = Math.hypot(dx, dy);
-    const clamped = Math.min(startBevelMm, seg - minAxis);
-    if (clamped > 0) {
-      const t = clamped / seg;
-      result[0] = { x: pts[0].x + dx * t, y: pts[0].y + dy * t, z: pts[0].z ?? 0 };
-    }
-  }
-
-  if (endBevelMm > 0) {
-    const dx = pts[n - 2].x - pts[n - 1].x;
-    const dy = pts[n - 2].y - pts[n - 1].y;
-    const seg = Math.hypot(dx, dy);
-    const clamped = Math.min(endBevelMm, seg - minAxis);
-    if (clamped > 0) {
-      const t = clamped / seg;
-      result[n - 1] = { x: pts[n - 1].x + dx * t, y: pts[n - 1].y + dy * t, z: pts[n - 1].z ?? 0 };
-    }
-  }
-
+  if (cuts.start > 0) result[0] = pointAlong(pts[0], pts[1], cuts.start / firstSeg);
+  if (cuts.end > 0) result[n - 1] = pointAlong(pts[n - 1], pts[n - 2], cuts.end / lastSeg);
   return result;
+}
+
+/** The point at fraction `t` of the way from `from` to `to`, keeping `from`'s elevation. */
+function pointAlong(from: BimPoint, to: BimPoint, t: number): BimPoint {
+  return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, z: from.z ?? 0 };
 }
 
 /**

@@ -102,5 +102,5 @@ function transverseInsetScene(axis: HostAxis, w: WallEntity): number {
   if (!tNear || !uOnWall) return 0;
 
   const halfW = (w.params.thickness / 2) * sW;
-  return penetrationBevel(axis.ex, axis.ey, b1x, b1y, (b2x - b1x) / lenB, (b2y - b1y) / lenB, halfW, sinA, axis.len);
+  return penetrationBevel(axis.ex, axis.ey, b1x, b1y, (b2x - b1x) / lenB, (b2y - b1y) / lenB, halfW, sinA);
 }
