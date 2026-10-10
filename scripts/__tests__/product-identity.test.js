@@ -131,8 +131,8 @@ describe('CHECK 3.81 — Μ0: το καθαρό δέντρο', () => {
 
 describe('CHECK 3.81 — Κ1: αδήλωτη γραφή, σε ΚΑΘΕ μορφή που κουβαλά κείμενο', () => {
   it('Μ1 — ωμό string literal ⇒ undeclared-writing', () => {
-    mutate(tmpRoot, 'src/app/layout.tsx', 'variable: "--font-sans",',
-      'variable: "--font-sans", brand: "Nestor Construct",');
+    mutate(tmpRoot, 'src/app/layout.tsx', 'storageKey={THEME_STORAGE_KEY}',
+      'storageKey={THEME_STORAGE_KEY} data-brand={"Nestor Construct"}');
     expect(states(run(tmpRoot))).toContain(STATES.UNDECLARED_WRITING);
   });
 
@@ -148,8 +148,8 @@ describe('CHECK 3.81 — Κ1: αδήλωτη γραφή, σε ΚΑΘΕ μορφ�
   });
 
   it('Μ3 — γραφή μέσα σε template literal ⇒ undeclared-writing', () => {
-    mutate(tmpRoot, 'src/app/layout.tsx', 'variable: "--font-sans",',
-      'variable: `--font-sans ΝΕΣΤΩΡ`,');
+    mutate(tmpRoot, 'src/app/layout.tsx', 'storageKey={THEME_STORAGE_KEY}',
+      'storageKey={THEME_STORAGE_KEY} data-brand={`ΝΕΣΤΩΡ`}');
     expect(states(run(tmpRoot))).toContain(STATES.UNDECLARED_WRITING);
   });
 
@@ -166,8 +166,8 @@ describe('CHECK 3.81 — Κ1: αδήλωτη γραφή, σε ΚΑΘΕ μορφ�
   it.each([
     ['ΝΕΣΤΩΡ'], ['Nestor Construct'], ['Nestor Pagonis'], ['Nestor App'], ['NestorApp'],
   ])('Μ4 — η γραφή «%s» ΚΟΚΚΙΝΙΖΕΙ όπου δεν είναι δηλωμένη', (spelling) => {
-    mutate(tmpRoot, 'src/app/layout.tsx', 'variable: "--font-sans",',
-      `variable: "--font-sans", brand: "${spelling}",`);
+    mutate(tmpRoot, 'src/app/layout.tsx', 'storageKey={THEME_STORAGE_KEY}',
+      `storageKey={THEME_STORAGE_KEY} data-brand={"${spelling}"}`);
     expect(states(run(tmpRoot))).toContain(STATES.UNDECLARED_WRITING);
   });
 
@@ -294,8 +294,8 @@ describe('CHECK 3.81 — συμβόλαια', () => {
   });
 
   it('Κ-Δ — η αναφορά ονομάζει τη ΘΕΡΑΠΕΙΑ, όχι μόνο το πρόβλημα', () => {
-    mutate(tmpRoot, 'src/app/layout.tsx', 'variable: "--font-sans",',
-      'variable: "--font-sans", brand: "Nestor Construct",');
+    mutate(tmpRoot, 'src/app/layout.tsx', 'storageKey={THEME_STORAGE_KEY}',
+      'storageKey={THEME_STORAGE_KEY} data-brand={"Nestor Construct"}');
     const lines = [];
     gate.report(run(tmpRoot), (l) => lines.push(l));
     expect(lines.join('\n')).toContain('ΘΕΡΑΠΕΙΑ');
