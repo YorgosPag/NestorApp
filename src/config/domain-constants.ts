@@ -856,6 +856,8 @@ export const API_ROUTES = {
   FLOORS: {
     LIST: '/api/floors',
     BY_ID: (id: string) => `/api/floors/${id}` as const,
+    /** ADR-907 §11.10 — δήλωση κάτοψης ορόφου: ανάγνωση (`GET`) · υπογραφή (`POST`) · άρση (`DELETE`). */
+    FLOOR_PLATE: (floorId: string) => `/api/floors/${floorId}/floor-plate` as const,
   },
 
   // ── DXF Levels (ADR-286) ──────────────────────────────────────────────

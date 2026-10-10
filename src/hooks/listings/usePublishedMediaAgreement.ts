@@ -26,21 +26,9 @@ import type {
   ListingMediaVerdict,
 } from '@/lib/listings/listing-media-fingerprint';
 import { createModuleLogger } from '@/lib/telemetry';
-import { RealtimeService } from '@/services/realtime';
+import { useSettledFileChange } from '@/hooks/files/useSettledFileChange';
 
 const logger = createModuleLogger('usePublishedMediaAgreement');
-
-/** Τα σήματα που σημαίνουν *«άλλαξε αρχείο»* — όσα ακούει και η λίστα αρχείων της ίδιας οθόνης. */
-const FILE_CHANGE_EVENTS = [
-  'FILE_CREATED',
-  'FILE_UPDATED',
-  'FILE_TRASHED',
-  'FILE_RESTORED',
-  'FILE_SUPERSEDED',
-] as const;
-
-/** Πόσο περιμένει μετά το τελευταίο σήμα πριν ξαναρωτήσει (ms). */
-const SETTLE_MS = 600;
 
 export interface PublishedMediaAgreement {
   /** `null` όσο δεν έχει απαντήσει ο διακομιστής — η οθόνη **σιωπά**, δεν μαντεύει. */
@@ -102,19 +90,12 @@ export function usePublishedMediaAgreement(
     if (!propertyId) return;
 
     run(propertyId, 'read');
-
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const onFileChange = (): void => {
-      if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(() => run(propertyId, 'read'), SETTLE_MS);
-    };
-    const unsubscribers = FILE_CHANGE_EVENTS.map((event) => RealtimeService.subscribe(event, onFileChange));
-
-    return () => {
-      if (timer !== null) clearTimeout(timer);
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    };
   }, [propertyId, run]);
+
+  // Ένα αίτημα μετά το τελευταίο σήμα — και ό,τι εκκρεμούσε για **άλλο** ακίνητο ακυρώνεται (`useSettledFileChange`).
+  useSettledFileChange(propertyId || null, () => {
+    if (propertyId) run(propertyId, 'read');
+  });
 
   const refresh = React.useCallback(() => {
     if (propertyId) run(propertyId, 'refresh');

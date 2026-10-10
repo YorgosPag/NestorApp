@@ -47,6 +47,22 @@ export function readFloorPlateDeclaration(floor: Readonly<Record<string, unknown
   return { fileId: raw.fileId, declaredBy: raw.declaredBy, declaredAt };
 }
 
+/** Ό,τι λέει η πόρτα σε **κάθε** απάντησή της για τη δήλωση που ισχύει μετά την πράξη — `null` όταν ο όροφος δεν έχει. */
+export interface FloorPlateDeclarationStanding {
+  readonly declaration: FloorPlateDeclaration | null;
+}
+
+/**
+ * Η απάντηση της **ανάγνωσης** (`GET`) — ό,τι χρειάζεται η οθόνη του χώρου για να δείξει «ποιος, πότε» (ADR-907 §11.10).
+ *
+ * 🔑 Το `mayDeclare` το απαντά ο **διακομιστής**, από τον ΕΝΑ τόπο (`mayChangePublication`): η οθόνη δεν μαντεύει
+ * δικαίωμα, δείχνει ή δεν δείχνει κουμπιά.
+ */
+export interface FloorPlateDeclarationStatus extends FloorPlateDeclarationStanding {
+  readonly floorId: string;
+  readonly mayDeclare: boolean;
+}
+
 /**
  * **Γιατί ο όροφος δεν βγαίνει στο κοινό** — το κλειστό λεξιλόγιο που ταξιδεύει από τον διακομιστή ως τον άνθρωπο που
  * υπογράφει. Οι αρνήσεις της εικόνας και της επιμέλειας περνούν **αυτούσιες**· εδώ προστίθενται μόνο όσες αφορούν τον
@@ -63,5 +79,5 @@ export type FloorPlateRefusal =
   | 'no-frame'
   | 'too-many-units';
 
-/** Ο κωδικός της άρνησης στο σύρμα — το `why` και το `overlayId` ταξιδεύουν στα `details` του ίδιου σφάλματος. */
+/** Ο κωδικός της άρνησης στο σύρμα — το `why` και το `overlayId` ταξιδεύουν στη **ρίζα** του ίδιου σώματος (`./floor-plate-refusal`). */
 export const FLOOR_PLATE_REFUSED_CODE = 'FLOOR_PLATE_REFUSED';
