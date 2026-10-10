@@ -24,15 +24,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isRoofEntity } from '../../types/entities';
 import type { RoofEntity } from '../types/roof-types';
 import type { BimPoint } from '../types/bim-base';
 import { getRoofGrips } from '../roofs/roof-grips';
 import { getSelectedRoofEdge } from '../roofs/roof-edge-selection-store';
-import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
+import { polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
+import { applyLiveStroke } from './shared/live-stroke';
 import { buildRoofEaveDetail } from '../geometry/roof-eave-detail';
 import {
   DEFAULT_EAVE_MATERIAL_ID,
@@ -77,7 +77,7 @@ const ROOF_EDGE_HIGHLIGHT_LINE_WIDTH = 3.5;
 
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
-export class RoofRenderer extends BaseEntityRenderer {
+export class RoofRenderer extends BimFootprintRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isRoofEntity(entity)) return;
@@ -94,13 +94,8 @@ export class RoofRenderer extends BaseEntityRenderer {
     const footprintVerts = roof.geometry.footprint.vertices;
     if (footprintVerts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    // Hover halo: glow stroke around footprint polygon outline.
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), footprintVerts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
+    // Φάση + λάμψη hover + `save` από το ΕΝΑ προοίμιο της βάσης (ADR-909 Γ2.6α — ήταν αντίγραφό του εδώ).
+    this.beginPhasedBodyRender(entity, footprintVerts, options);
 
     // Eave overhang outline (γείσο) — projects beyond the footprint. Drawn first
     // so the face fills read on top (Revit plan: overhang = outer thin line).
@@ -124,9 +119,7 @@ export class RoofRenderer extends BaseEntityRenderer {
       this.drawSelectedEdgeHighlight(roof);
     }
 
-    this.ctx.restore();
-
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
@@ -159,8 +152,9 @@ export class RoofRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = adaptFillTintForCanvas(ROOF_FACE_FILL);
     this.ctx.fill();
 
-    this.ctx.strokeStyle = ROOF_FACE_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους (η στέγη έβγαινε
+    // `#a04a2b` στο «Ασπρόμαυρο» PDF). Ίδιο στον κορφιά και στο γείσο παρακάτω.
+    applyLiveStroke(this.ctx, ROOF_FACE_STROKE, RENDER_LINE_WIDTHS.NORMAL);
     this.ctx.setLineDash([]);
     this.ctx.stroke();
   }
@@ -173,8 +167,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     if (roof.geometry.ridges.length === 0) return;
 
     this.ctx.save();
-    this.ctx.strokeStyle = ROOF_RIDGE_STROKE;
-    this.ctx.lineWidth = ROOF_RIDGE_LINE_WIDTH;
+    applyLiveStroke(this.ctx, ROOF_RIDGE_STROKE, ROOF_RIDGE_LINE_WIDTH);
     this.ctx.setLineDash(ROOF_RIDGE_DASH as number[]);
 
     for (const ridge of roof.geometry.ridges) {
@@ -208,6 +201,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     const sb = this.worldToScreen({ x: b.x, y: b.y });
 
     this.ctx.save();
+    // chrome — μόνο με `options.selected`· δεν τυπώνεται, μένει σταθερό.
     this.ctx.strokeStyle = ROOF_EDGE_HIGHLIGHT_STROKE;
     this.ctx.lineWidth = ROOF_EDGE_HIGHLIGHT_LINE_WIDTH;
     this.ctx.lineCap = 'round';
@@ -245,8 +239,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     if (!hasOverhang || detail.overhangEdges.length === 0) return;
 
     this.ctx.save();
-    this.ctx.strokeStyle = ROOF_EAVE_STROKE;
-    this.ctx.lineWidth = ROOF_EAVE_LINE_WIDTH;
+    applyLiveStroke(this.ctx, ROOF_EAVE_STROKE, ROOF_EAVE_LINE_WIDTH);
     this.ctx.setLineDash([]);
     this.ctx.beginPath();
     const ring = detail.overhangEdges;

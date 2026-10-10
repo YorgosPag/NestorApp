@@ -21,7 +21,7 @@
  */
 
 import { BimFootprintRenderer } from './bim-footprint-renderer';
-import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
+import { polygonBboxHitTest, mapBimGrips, strokePolylinePaths } from './bim-polygon-render';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
@@ -32,7 +32,8 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { FOUNDATION_KIND_FILL, FOUNDATION_KIND_STROKE } from '../foundations/foundation-render-palette';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveStrokeInk } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
@@ -50,6 +51,9 @@ const CENTERLINE_DASH_DOT: readonly number[] = [12, 3, 3, 3];
 
 /** Κεντρικός σταυρός (column footprint indicator) μισό-μήκος σε CSS px. */
 const CENTER_CROSS_HALF_PX = 7;
+/** Αχνός στην οθόνη επίτηδες· στο χαρτί πλήρες μελάνι (ADR-909 Γ2.6α — η διαφάνεια γραμμής δεν τυπώνεται). */
+const CENTER_CROSS_STROKE = 'rgba(0, 0, 0, 0.45)';
+const CENTER_CROSS_LINE_WIDTH_PX = 0.8;
 
 export class FoundationRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -155,8 +159,7 @@ export class FoundationRenderer extends BimFootprintRenderer {
     });
     this.ctx.save();
     this.ctx.setLineDash([]);
-    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-    this.ctx.lineWidth = 0.8;
+    applyLiveStroke(this.ctx, CENTER_CROSS_STROKE, CENTER_CROSS_LINE_WIDTH_PX);
     this.ctx.beginPath();
     this.ctx.moveTo(c.x - CENTER_CROSS_HALF_PX, c.y);
     this.ctx.lineTo(c.x + CENTER_CROSS_HALF_PX, c.y);
@@ -174,8 +177,6 @@ export class FoundationRenderer extends BimFootprintRenderer {
   private drawCenterline(foundation: FoundationEntity): void {
     const { params } = foundation;
     if (params.kind === 'pad') return;
-    const a = this.worldToScreen({ x: params.start.x, y: params.start.y });
-    const b = this.worldToScreen({ x: params.end.x, y: params.end.y });
     const { lineWidthPx } = resolveSubcategoryStyle({
       category: 'foundation', subcategoryKey: 'centerline',
       cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale,
@@ -186,10 +187,7 @@ export class FoundationRenderer extends BimFootprintRenderer {
     this.ctx.lineWidth = lineWidthPx;
     this.ctx.strokeStyle = this.kindStrokeColor(foundation);
     this.ctx.setLineDash(CENTERLINE_DASH_DOT as number[]);
-    this.ctx.beginPath();
-    this.ctx.moveTo(a.x, a.y);
-    this.ctx.lineTo(b.x, b.y);
-    this.ctx.stroke();
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [[params.start, params.end]]);
     this.ctx.setLineDash([]);
     this.ctx.restore();
   }
@@ -227,8 +225,9 @@ export class FoundationRenderer extends BimFootprintRenderer {
     foundation: FoundationEntity,
     layer: ReturnType<typeof getLayer> = foundation.layerId ? getLayer(foundation.layerId) : null,
   ): string {
-    return foundation.styleOverride?.color
+    // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσιο· print pass ⇒ μελάνι πολιτικής (το πέδιλο έβγαινε σιένα στο «Ασπρόμαυρο» PDF).
+    return liveStrokeInk(foundation.styleOverride?.color
       ?? layer?.color
-      ?? FOUNDATION_KIND_STROKE[foundation.kind];
+      ?? FOUNDATION_KIND_STROKE[foundation.kind]);
   }
 }

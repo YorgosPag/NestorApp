@@ -20,19 +20,15 @@
  * @see ./FloorFinishRenderer (το area-renderer πρότυπο)
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
+import type { EntityModel, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isThermalSpaceEntity } from '../../types/entities';
 import type { ThermalSpaceEntity } from '../types/thermal-space-types';
 import { resolveThermalSpaceSetpointC } from '../thermal/thermal-space-use-catalog';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
-import {
-  polygonBboxHitTest,
-  paintPolygonHoverHalo,
-  paintSelectionHalo,
-  tracePolygonScreenPath,
-} from './bim-polygon-render';
+import { adaptFillTintForCanvas, liveStrokeInk } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
+import { polygonBboxHitTest, paintGriplessOverlayHalos, tracePolygonScreenPath } from './bim-polygon-render';
+import { GriplessBimRenderer } from './shared/gripless-bim-renderer';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-571: teal analytical accent SSoT + hexToRgba SSoT (color-math.ts)
 import { MEP_TEAL_COLOR } from '../../config/color-config';
@@ -43,7 +39,8 @@ const THERMAL_SPACE_COLOR = MEP_TEAL_COLOR;
 const TAG_FONT = '12px sans-serif';
 const TAG_LINE_HEIGHT_PX = 14;
 
-export class ThermalSpaceRenderer extends BaseEntityRenderer {
+/** Grips disabled — boundary is wall-bound (ADR-422 L0): `GriplessBimRenderer` answers `getGrips`. */
+export class ThermalSpaceRenderer extends GriplessBimRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isThermalSpaceEntity(entity)) return;
     const ts = entity as ThermalSpaceEntity;
@@ -53,18 +50,10 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal').
-    paintPolygonHoverHalo(
-      this.ctx,
-      (p) => this.worldToScreen(p),
-      verts,
-      phaseState.phase === 'highlighted',
-      RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY,
-    );
-
-    // Selection emphasis. Grips are disabled for wall-bound spaces (ADR-422 L0),
+    // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal') +
+    // selection emphasis. Grips are disabled for wall-bound spaces (ADR-422 L0),
     // so selection MUST be signalled by this highlight.
-    paintSelectionHalo(this.ctx, options.selected === true, () =>
+    paintGriplessOverlayHalos(this.ctx, phaseState.phase === 'highlighted', options.selected === true, () =>
       tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts),
     );
 
@@ -78,8 +67,8 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
     this.ctx.fill();
 
     // Dashed analytical outline.
-    this.ctx.strokeStyle = THERMAL_SPACE_COLOR;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
+    // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους.
+    applyLiveStroke(this.ctx, THERMAL_SPACE_COLOR, RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY);
     this.ctx.setLineDash([6, 4]);
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
@@ -89,11 +78,6 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
-  }
-
-  /** Grips disabled — boundary is wall-bound (ADR-422 L0). */
-  getGrips(_entity: EntityModel): GripInfo[] {
-    return [];
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -125,7 +109,7 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
     this.ctx.font = TAG_FONT;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillStyle = THERMAL_SPACE_COLOR;
+    this.ctx.fillStyle = liveStrokeInk(THERMAL_SPACE_COLOR); // το κείμενο είναι μελάνι
     const totalH = (lines.length - 1) * TAG_LINE_HEIGHT_PX;
     const startY = c.y - totalH / 2;
     lines.forEach((line, i) => {

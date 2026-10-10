@@ -15,19 +15,21 @@
  * @see ./ThermalSpaceRenderer (το L0 renderer πρότυπο — selection-highlight pattern)
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
+import { GriplessBimRenderer } from './shared/gripless-bim-renderer';
+import type { EntityModel, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isSpaceSeparatorEntity } from '../../types/entities';
 import type { SpaceSeparatorEntity } from '../types/space-separator-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { paintHoverHalo, paintSelectionHalo } from './bim-polygon-render';
+import { paintGriplessOverlayHalos } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { applyLiveStroke } from './shared/live-stroke';
 
 /** Room-separator accent colour (violet) — Revit «Room/Space Separation Line». */
 const SPACE_SEPARATOR_COLOR = '#9333ea';
 
-export class SpaceSeparatorRenderer extends BaseEntityRenderer {
+/** Grips disabled in v1 (ADR-437 D-F) — edit = delete + redraw: `GriplessBimRenderer` answers `getGrips`. */
+export class SpaceSeparatorRenderer extends GriplessBimRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isSpaceSeparatorEntity(entity)) return;
     const ss = entity as SpaceSeparatorEntity;
@@ -37,18 +39,10 @@ export class SpaceSeparatorRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal').
-    // An OPEN 2-point path, so it traces itself and uses the bare `paintHoverHalo`.
-    paintHoverHalo(
-      this.ctx,
-      phaseState.phase === 'highlighted',
-      () => this.drawLinePath(start, end),
-      RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY,
-    );
-
-    // Selection emphasis. No grips in v1 (ADR-437 D-F), so selection MUST be
-    // signalled by this highlight.
-    paintSelectionHalo(this.ctx, options.selected === true, () =>
+    // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal') +
+    // selection emphasis, over the OPEN 2-point path this renderer traces itself.
+    // No grips in v1 (ADR-437 D-F), so selection MUST be signalled by this highlight.
+    paintGriplessOverlayHalos(this.ctx, phaseState.phase === 'highlighted', options.selected === true, () =>
       this.drawLinePath(start, end),
     );
 
@@ -56,19 +50,14 @@ export class SpaceSeparatorRenderer extends BaseEntityRenderer {
     this.ctx.save();
 
     // Thin dashed violet boundary line.
-    this.ctx.strokeStyle = SPACE_SEPARATOR_COLOR;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
+    // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους.
+    applyLiveStroke(this.ctx, SPACE_SEPARATOR_COLOR, RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY);
     this.ctx.setLineDash([8, 5]);
     this.drawLinePath(start, end);
     this.ctx.stroke();
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
-  }
-
-  /** Grips disabled in v1 (ADR-437 D-F) — edit = delete + redraw. */
-  getGrips(_entity: EntityModel): GripInfo[] {
-    return [];
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

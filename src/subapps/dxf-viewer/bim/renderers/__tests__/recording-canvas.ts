@@ -8,17 +8,21 @@
 
 export interface PaintedStroke { ink: string; width: number; dash: number[] }
 
-export interface Painted { fills: string[]; strokes: PaintedStroke[]; saves: number; restores: number }
+/** `texts` = το μελάνι κάθε `fillText` — ξεχωριστά από τα `fills`, γιατί το κείμενο είναι μελάνι, όχι γέμισμα. */
+export interface Painted { fills: string[]; texts: string[]; strokes: PaintedStroke[]; saves: number; restores: number }
 
 export function recordingContext(): { ctx: CanvasRenderingContext2D; painted: Painted } {
   let dash: number[] = [];
-  const painted: Painted = { fills: [], strokes: [], saves: 0, restores: 0 };
+  const painted: Painted = { fills: [], texts: [], strokes: [], saves: 0, restores: 0 };
   const noop = (): void => {};
   const ctx = {
     canvas: { width: 800, height: 600, getBoundingClientRect: () => ({ width: 800, height: 600, left: 0, top: 0 }) },
     fillStyle: '', strokeStyle: '', lineWidth: 0, globalAlpha: 1, lineCap: 'butt', lineJoin: 'miter',
     shadowBlur: 0, shadowColor: '', globalCompositeOperation: 'source-over',
+    font: '', textAlign: 'start', textBaseline: 'alphabetic',
     beginPath: noop, moveTo: noop, lineTo: noop, closePath: noop, arc: noop, clip: noop,
+    translate: noop, rotate: noop, scale: noop,
+    fillText() { painted.texts.push(this.fillStyle); },
     save: () => { painted.saves += 1; },
     restore: () => { painted.restores += 1; },
     setLineDash: (next: number[]) => { dash = [...next]; },

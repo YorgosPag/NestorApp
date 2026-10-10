@@ -15,6 +15,7 @@
 import { BimFootprintRenderer } from './bim-footprint-renderer';
 import { polygonBboxHitTest, fillRingsEvenOdd, strokePolylinePaths, mapBimGrips } from './bim-polygon-render';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { GenericSolidEntity } from '../entities/generic-solid/generic-solid-types';
 import { computeGenericSolidPlanOutline } from '../entities/generic-solid/generic-solid-plan-outline';
@@ -74,8 +75,8 @@ export class GenericSolidRenderer extends BimFootprintRenderer {
     fillRingsEvenOdd(this.ctx, toScreen, outline.rings);
 
     // Περίγραμμα κάθε δαχτυλιδιού (εξωτερικό + τρύπες = κλασικό plan σύμβολο δακτυλίου).
-    this.ctx.strokeStyle = GENERIC_SOLID_PALETTE.stroke;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους.
+    applyLiveStroke(this.ctx, GENERIC_SOLID_PALETTE.stroke, RENDER_LINE_WIDTHS.NORMAL);
     for (const ring of outline.rings) {
       this.drawPolygonPath(ring);
       this.ctx.stroke();
@@ -83,13 +84,11 @@ export class GenericSolidRenderer extends BimFootprintRenderer {
 
     // Εσωτερικές χαρακτηριστικές ακμές (top-view feature edges): οι 4 ακμές γωνία→κορυφή της πυραμίδας.
     if (outline.interiorEdges.length > 0) {
-      this.ctx.strokeStyle = GENERIC_SOLID_PALETTE.edge;
-      this.ctx.lineWidth = Math.max(1, RENDER_LINE_WIDTHS.NORMAL - 1);
+      applyLiveStroke(this.ctx, GENERIC_SOLID_PALETTE.edge, Math.max(1, RENDER_LINE_WIDTHS.NORMAL - 1));
       strokePolylinePaths(this.ctx, toScreen, outline.interiorEdges);
     }
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   /**

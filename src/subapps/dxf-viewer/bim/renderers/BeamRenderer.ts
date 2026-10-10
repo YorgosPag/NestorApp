@@ -34,6 +34,7 @@ import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { bboxRejectsPoint, mapBimGrips, paintHoverHalo, strokePolylinePaths } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { liveStrokeInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
@@ -170,7 +171,8 @@ export class BeamRenderer extends BaseEntityRenderer {
     });
     // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip both category overrides).
     if (!_beamArmed) {
-      this.ctx.strokeStyle = KIND_STROKE[beam.kind];
+      // ADR-909 Γ2.6α — η εφεδρεία χρώματος ρωτά την πολιτική εκτύπωσης (οθόνη ⇒ αυτούσια).
+      this.ctx.strokeStyle = liveStrokeInk(KIND_STROKE[beam.kind]);
       if (_beamCol !== null) this.ctx.strokeStyle = _beamCol;
     }
     this.ctx.lineWidth = _beamPx;
@@ -183,7 +185,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const axis = (beam.geometry.displayAxisPolyline ?? beam.geometry.axisPolyline).points;
     if (axis.length >= 2) {
       this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+      this.ctx.lineWidth = liveStrokeWidthPx(RENDER_LINE_WIDTHS.THIN);
       strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [axis]);
     }
 
@@ -246,17 +248,14 @@ export class BeamRenderer extends BaseEntityRenderer {
       x: (start.x + end.x) / 2,
       y: (start.y + end.y) / 2,
     };
-    const a = this.worldToScreen(midWorld);
     const b = this.worldToScreen(handlePos);
 
+    // chrome — μόνο όταν `highlighted` (hover)· δεν τυπώνεται, μένει σταθερό.
     this.ctx.save();
     this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
     this.ctx.lineWidth = 0.8;
     this.ctx.setLineDash([3, 3]);
-    this.ctx.beginPath();
-    this.ctx.moveTo(a.x, a.y);
-    this.ctx.lineTo(b.x, b.y);
-    this.ctx.stroke();
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [[midWorld, handlePos]]);
     this.ctx.restore();
 
     this.ctx.save();
@@ -310,6 +309,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const alpha = Math.max(0, 0.15 + 0.25 * Math.sin(t * Math.PI * 2 * ANCHOR_PULSE_HZ));
 
     const pts = getBimEntityKeyPoints2D(beam);
+    // chrome — μόνο όταν `highlighted` (hover)· δεν τυπώνεται, μένει σταθερό.
     this.ctx.save();
     this.ctx.setLineDash([]);
     this.ctx.strokeStyle = `rgba(30, 60, 160, ${alpha.toFixed(2)})`;

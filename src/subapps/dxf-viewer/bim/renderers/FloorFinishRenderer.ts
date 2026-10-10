@@ -24,6 +24,7 @@ import {
   paintPolygonHoverHalo,
   tracePolygonScreenPath,
   mapBimGrips,
+  strokePolylinePaths,
 } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { getFloorFinishGrips } from '../floor-finishes/floor-finish-grips';
@@ -32,7 +33,8 @@ import {
   getFloorFinishHatchType,
 } from '../floor-finishes/floor-finish-material-catalog';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveStrokeInk } from '../../config/adaptive-entity-color';
+import { applyLiveStroke } from './shared/live-stroke';
 
 const HATCH_STROKE = 'rgba(0, 0, 0, 0.15)';
 const HATCH_LINE_WIDTH = 0.5;
@@ -83,8 +85,8 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     }
 
     // Outline stroke.
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
+    // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους.
+    applyLiveStroke(this.ctx, color, RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY);
     this.ctx.setLineDash([4, 4]);
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
@@ -119,9 +121,9 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     this.ctx.save();
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), ff.params.footprint.vertices);
     this.ctx.clip();
-    this.ctx.strokeStyle = HATCH_STROKE;
-    this.ctx.fillStyle = HATCH_STROKE;
-    this.ctx.lineWidth = HATCH_LINE_WIDTH;
+    // Γραμμές ΚΑΙ τελείες του μοτίβου είναι μελάνι: στο χαρτί πλήρες (η διαφάνεια γραμμής δεν τυπώνεται).
+    applyLiveStroke(this.ctx, HATCH_STROKE, HATCH_LINE_WIDTH);
+    this.ctx.fillStyle = liveStrokeInk(HATCH_STROKE);
     this.ctx.setLineDash([]);
 
     if (hatch === 'dot') {
@@ -140,27 +142,19 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     spacingMm: number,
     orientation: 'horizontal' | 'vertical',
   ): void {
+    const lines: Point2D[][] = [];
     if (orientation === 'horizontal') {
       const startY = Math.ceil(bbox.min.y / spacingMm) * spacingMm;
       for (let y = startY; y <= bbox.max.y; y += spacingMm) {
-        const s = this.worldToScreen({ x: bbox.min.x, y });
-        const e = this.worldToScreen({ x: bbox.max.x, y });
-        this.ctx.beginPath();
-        this.ctx.moveTo(s.x, s.y);
-        this.ctx.lineTo(e.x, e.y);
-        this.ctx.stroke();
+        lines.push([{ x: bbox.min.x, y }, { x: bbox.max.x, y }]);
       }
     } else {
       const startX = Math.ceil(bbox.min.x / spacingMm) * spacingMm;
       for (let x = startX; x <= bbox.max.x; x += spacingMm) {
-        const s = this.worldToScreen({ x, y: bbox.min.y });
-        const e = this.worldToScreen({ x, y: bbox.max.y });
-        this.ctx.beginPath();
-        this.ctx.moveTo(s.x, s.y);
-        this.ctx.lineTo(e.x, e.y);
-        this.ctx.stroke();
+        lines.push([{ x, y: bbox.min.y }, { x, y: bbox.max.y }]);
       }
     }
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), lines);
   }
 
   private drawDotGrid(

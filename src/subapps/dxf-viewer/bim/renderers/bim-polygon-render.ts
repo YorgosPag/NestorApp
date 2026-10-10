@@ -15,6 +15,7 @@ import type { GripInfo as ParametricGripInfo } from '../../hooks/grip-types';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { applyLiveStroke } from './shared/live-stroke';
 
 type ScreenPt = { x: number; y: number };
 type ToScreen = (p: ScreenPt) => ScreenPt;
@@ -92,8 +93,8 @@ export function strokePolygonOutline(
 ): void {
   ctx.save();
   ctx.setLineDash([]);
-  ctx.lineWidth = lineWidthPx;
-  ctx.strokeStyle = strokeStyle;
+  // ADR-909 Γ2.6α — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους (όψη «Μόνο κάτοψη»).
+  applyLiveStroke(ctx, strokeStyle, lineWidthPx);
   tracePolygonScreenPath(ctx, toScreen, vertices);
   ctx.stroke();
   ctx.restore();
@@ -175,6 +176,22 @@ export function paintSelectionHalo(
   trace();
   ctx.stroke();
   ctx.restore();
+}
+
+/**
+ * Both halos of a GRIPLESS overlay (thermal space, space separator), over ONE `trace`:
+ * the hover glow sized for a `BIM_FINISH_BOUNDARY` body, then the selection emphasis that
+ * stands in for the grips these overlays do not emit. SSoT for the pair the two renderers
+ * inlined back-to-back (N.18) — the same path must feed both, or the states drift apart.
+ */
+export function paintGriplessOverlayHalos(
+  ctx: CanvasRenderingContext2D,
+  highlighted: boolean,
+  selected: boolean,
+  trace: () => void,
+): void {
+  paintHoverHalo(ctx, highlighted, trace, RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY);
+  paintSelectionHalo(ctx, selected, trace);
 }
 
 /**

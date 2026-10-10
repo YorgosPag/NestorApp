@@ -76,6 +76,6 @@ describe('paintMaterialHatchSegments (ADR-909 Γ2.5 Η1)', () => {
     expect(drawn.saves).toBe(1);
     expect(drawn.restores).toBe(1);
     const empty = paint(undefined, []);
-    expect(empty).toStrictEqual({ fills: [], strokes: [], saves: 0, restores: 0 });
+    expect(empty).toStrictEqual({ fills: [], texts: [], strokes: [], saves: 0, restores: 0 });
   });
 });

@@ -16,19 +16,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import {
-  adaptFillTintForCanvas, liveStrokeInk, liveStrokeWidthPx, liveSymbolFill,
-} from '../../config/adaptive-entity-color';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { liveStrokeInk, liveStrokeWidthPx, liveSymbolFill } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
 import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import { resolveFixtureBimCategory } from '../types/mep-fixture-types';
 import { meshAssetOf } from '../mesh-library/entity-mesh-asset';
 import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
-import { paintPolygonHoverHalo, polygonBboxHitTest, mapBimGrips, tracePolygonScreenPath } from './bim-polygon-render';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
 import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
@@ -52,7 +49,7 @@ const FIXTURE_FILL = 'rgba(251, 191, 36, 0.18)';
 /** Translucent fill alpha for the colour-by-system (ADR-408 Φ5) override. */
 const SYSTEM_FILL_ALPHA = 0.18;
 
-export class MepFixtureRenderer extends BaseEntityRenderer {
+export class MepFixtureRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isMepFixtureEntity(entity)) return;
     const fixture = entity as MepFixtureEntity;
@@ -89,17 +86,13 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     const defaultFill = drainColor ? hexToRgba(drainColor, SYSTEM_FILL_ALPHA) : FIXTURE_FILL;
     // ADR-909 Β2.6 — print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους· οθόνη ⇒ αυτούσια. Μετρημένο ζωντανά:
     // τα είδη υγιεινής έβγαιναν `#b45309` 2 px στη `monochrome` δημόσια κάτοψη.
-    const strokeColor = liveStrokeInk(systemColor ?? defaultStroke);
+    const rawStroke = systemColor ?? defaultStroke;
+    const strokeColor = liveStrokeInk(rawStroke);
     const outlineWidthPx = liveStrokeWidthPx(RENDER_LINE_WIDTHS.NORMAL);
     const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : defaultFill;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    // Φάση + λάμψη hover + `save` από το ΕΝΑ προοίμιο της βάσης (ADR-909 Γ2.6α — ήταν αντίγραφό του εδώ).
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // ADR-411 — a fixture carrying an `assetId` paints the per-asset top-view of
     // the real mesh: the outer silhouette PLUS the interior feature edges (the
@@ -133,14 +126,8 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
 
     if (!meshDrew) {
       // Fill + outline (colour-by-system override, ADR-408 Φ5).
-      // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-      this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
-      tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-      this.ctx.fill();
-      this.ctx.strokeStyle = strokeColor;
-      this.ctx.lineWidth = outlineWidthPx;
-      tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
-      this.ctx.stroke();
+      // Το ΕΝΑ σώμα της βάσης (γέμισμα + ζωντανό περίγραμμα)· οι γραμμές του συμβόλου κληρονομούν το πενάκι.
+      this.paintLiveBody(verts, fillColor, rawStroke, RENDER_LINE_WIDTHS.NORMAL);
 
       // Family symbol strokes (the luminaire "X").
       const symbol = buildFixtureSymbol(fixture.params, fixture.geometry);
@@ -157,8 +144,7 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
       }
     }
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
