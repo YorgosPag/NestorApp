@@ -106,8 +106,8 @@ function seedImage(overrides: Doc = {}): void {
   });
 }
 
-function seedBackground(overrides: Doc = {}): void {
-  fake.seed(COLLECTIONS.FLOORPLAN_BACKGROUNDS, BACKGROUND, {
+function seedBackground(overrides: Doc = {}, id: string = BACKGROUND): void {
+  fake.seed(COLLECTIONS.FLOORPLAN_BACKGROUNDS, id, {
     companyId: COMPANY,
     floorId: FLOOR,
     fileId: FILE,
@@ -221,7 +221,116 @@ describe('ΑΟ-1 — όροφος με υπογεγραμμένη δήλωση �
   });
 });
 
+describe('ΑΟ-1β — ό,τι ΔΕΝ ανήκει σε αυτόν τον όροφο δεν τον αγγίζει (Βήμα 9, ADR-907 §11.11)', () => {
+  const unitsOf = async (propertyId: string = SELF) => {
+    const reading = await sourceFor(propertyId);
+    if (!reading.ok || reading.source.material.kind !== 'floorPlate') throw new Error(`refused: ${JSON.stringify(reading)}`);
+    return reading.source.material.units;
+  };
+
+  it('🔐 περίγραμμα ΑΛΛΟΥ μισθωτή ή ΑΛΛΟΥ ορόφου πάνω στο ίδιο υπόβαθρο δεν διαβάζεται', async () => {
+    seedHealthyFloor();
+    seedOutline('ovrl_7', null, rect(0, 0, 50, 50), { companyId: 'comp_other' });
+    seedOutline('ovrl_8', null, rect(0, 0, 60, 60), { floorId: 'flr_other' });
+
+    await expect(unitsOf()).resolves.toHaveLength(3);
+  });
+
+  it('🔐 υπόβαθρο ΑΛΛΟΥ μισθωτή ή ΑΛΛΟΥ ορόφου για το ίδιο αρχείο δεν μετρά ως «δεύτερο υπόβαθρο»', async () => {
+    seedHealthyFloor();
+    seedBackground({ companyId: 'comp_other' }, 'rbg_foreign');
+    seedBackground({ floorId: 'flr_other' }, 'rbg_elsewhere');
+
+    await expect(unitsOf()).resolves.toHaveLength(3);
+  });
+
+  it('υπόβαθρο ΧΩΡΙΣ πεδίο μετασχηματισμού είναι ταυτοτικό — δεν αρνείται', async () => {
+    seedHealthyFloor();
+    seedBackground({ transform: undefined });
+
+    await expect(unitsOf()).resolves.toHaveLength(3);
+  });
+
+  it.each([
+    ['parking', 'parkingId', COLLECTIONS.PARKING_SPACES],
+    ['storage', 'storageId', COLLECTIONS.STORAGE],
+  ] as const)('το «%s» δένει με το ΔΙΚΟ του κλειδί, διαβάζεται από τη ΔΙΚΗ του συλλογή, και δεν γίνεται ποτέ σύνδεσμος', async (role, key, collection) => {
+    seedHealthyFloor();
+    seedOutline('ovrl_4', null, rect(0, 0, 300, 400), { role, linked: { [key]: 'space_1' } });
+    // `listed: true`: ακόμη κι αν ο κριτής έλεγε «δημόσιο», χώρος στάθμευσης / αποθήκη δεν έχει αγγελία να δείξει.
+    fake.seed(collection, 'space_1', { companyId: COMPANY, commercialStatus: 'reserved', listed: true });
+
+    const units = await unitsOf();
+    expect(units).toHaveLength(4);
+    expect(units[3]).toEqual({ outline: [0, 1, 0.3, 1, 0.3, 0.5, 0, 0.5], state: 'reserved' });
+  });
+
+  it('ίδια στιγμή δημιουργίας ⇒ η σειρά είναι του αναγνωριστικού, όχι της τύχης της ανάγνωσης', async () => {
+    seedFloor();
+    seedImage();
+    seedBackground();
+    const at = { createdAt: '2026-10-09T10:00:00.000Z' };
+    seedOutline('ovrl_c', HIDDEN, rect(600, 400, 1000, 800), at);
+    seedOutline('ovrl_a', SELF, rect(0, 400, 300, 800), at);
+    seedOutline('ovrl_b', NEIGHBOUR, rect(300, 400, 600, 800), at);
+    seedUnit(SELF, { listed: true });
+    seedUnit(NEIGHBOUR, { commercialStatus: 'reserved', listed: true });
+    seedUnit(HIDDEN, { commercialStatus: 'sold' });
+
+    expect((await unitsOf()).map((unit) => unit.state)).toEqual(['self', 'reserved', 'unavailable']);
+  });
+
+  /** Όροφος με `count` μονάδες σε πλέγμα 13 στηλών — καμία δεν ακουμπά άλλη, όλες μέσα στα 1000 × 800. */
+  function seedCrowdedFloor(count: number): void {
+    seedFloor();
+    seedImage();
+    seedBackground();
+    for (let index = 0; index < count; index += 1) {
+      const x = (index % 13) * 70;
+      const y = Math.floor(index / 13) * 100;
+      const unitId = index === 0 ? SELF : `prop_n${index}`;
+      seedOutline(`ovrl_n${String(index).padStart(2, '0')}`, unitId, rect(x, y, x + 60, y + 90), { createdAt: '2026-10-09T10:00:00.000Z' });
+      seedUnit(unitId);
+    }
+  }
+
+  it('ταβάνι μονάδων: 64 βγαίνουν, η 65η αρνείται ΟΛΟΚΛΗΡΟ τον όροφο με όνομα', async () => {
+    seedCrowdedFloor(64);
+    await expect(unitsOf()).resolves.toHaveLength(64);
+
+    fake = new FakeFirestore();
+    seedCrowdedFloor(65);
+    expect(await sourceFor(SELF)).toEqual({ ok: false, why: 'too-many-units', overlayId: null });
+  });
+
+  it('«η πρώτη δεμένη μονάδα» προσπερνά ό,τι δεν δένει (αποτύπωμα κτιρίου πρώτο στη σειρά)', async () => {
+    seedHealthyFloor();
+    seedOutline('ovrl_0', null, rect(0, 0, 1000, 800), { role: 'footprint' });
+
+    const evidence = await reader.readDeclaredFloorPlateEvidence(db(), COMPANY, FLOOR);
+    expect(evidence.ok && evidence.evidence.outlines[0].unitId).toBeNull();
+    expect(evidence.ok && reader.firstLinkedUnitOf(evidence.evidence)).toBe(SELF);
+  });
+
+  it('η μνήμη του επιλυτή είναι ΑΝΑ ΟΡΟΦΟ: όροφος χωρίς δήλωση δεν «απαντά» για τον διπλανό του', async () => {
+    seedHealthyFloor();
+    fake.seed(COLLECTIONS.FLOORS, 'flr_bare', { companyId: COMPANY, name: 'Α΄' });
+    const resolve = reader.createFloorPlateResolver(db());
+
+    await expect(resolve('prop_upstairs', { companyId: COMPANY, floorId: 'flr_bare' })).resolves.toEqual([]);
+    await expect(resolve(SELF, { companyId: COMPANY, floorId: FLOOR })).resolves.toHaveLength(1);
+  });
+});
+
 describe('ΑΟ-2 — ό,τι λείπει ή δεν εξηγείται ⇒ ΚΑΜΙΑ πηγή, με όνομα', () => {
+  /** Κάθε συνιστώσα του μετασχηματισμού, ΜΟΝΗ της: ο ταυτοτικός είναι σύζευξη πέντε όρων, όχι «η κλίμακα είναι 1». */
+  const TRANSFORMED: readonly [string, Doc][] = [
+    ['μετατόπιση X', { translateX: 5 }],
+    ['μετατόπιση Y', { translateY: 5 }],
+    ['κλίμακα X', { scaleX: 2 }],
+    ['κλίμακα Y', { scaleY: 2 }],
+    ['στροφή', { rotation: 90 }],
+  ];
   const refusals: readonly [string, () => void, string][] = [
     ['χωρίς δήλωση', () => seedFloor({ publishedFloorPlate: null }), 'not-declared'],
     ['δήλωση χωρίς υπογράφοντα', () => seedFloor({ publishedFloorPlate: { fileId: FILE, declaredAt: '2026-10-10T09:00:00.000Z' } }), 'not-declared'],
@@ -239,6 +348,23 @@ describe('ΑΟ-2 — ό,τι λείπει ή δεν εξηγείται ⇒ ΚΑ�
     ['άδετο περίγραμμα', () => seedOutline('ovrl_4', null, rect(0, 0, 100, 100)), 'unlinked-outline'],
     ['μονάδα άλλου χώρου', () => seedUnit(HIDDEN, { companyId: 'comp_other' }), 'foreign-unit'],
     ['περίγραμμα έξω από την εικόνα', () => seedOutline('ovrl_3', HIDDEN, rect(600, 400, 1200, 800)), 'outside-frame'],
+    // ── Βήμα 9 (μεταλλάξεις, ADR-907 §11.11): ό,τι επέζησε στο πρώτο πέρασμα απέκτησε γραμμή.
+    ['δήλωση χωρίς εικόνα', () => seedFloor({ publishedFloorPlate: { declaredBy: 'uid_giorgio', declaredAt: '2026-10-10T09:00:00.000Z' } }), 'not-declared'],
+    ['δήλωση χωρίς ημερομηνία', () => seedFloor({ publishedFloorPlate: { fileId: FILE, declaredBy: 'uid_giorgio' } }), 'not-declared'],
+    ['δήλωση με κενό υπογράφοντα', () => seedFloor({ publishedFloorPlate: { fileId: FILE, declaredBy: '  ', declaredAt: '2026-10-10T09:00:00.000Z' } }), 'not-declared'],
+    ['αρχείο άλλης κατηγορίας', () => seedImage({ category: 'photos' }), 'image-missing'],
+    ['αρχείο χωρίς ημερομηνία', () => seedImage({ createdAt: undefined }), 'image-undated'],
+    ['υπόβαθρο με άλλο ΠΛΑΤΟΣ από τα bytes', () => seedBackground({ naturalBounds: { width: 1001, height: 800 } }), 'frame-mismatch'],
+    ['δύο υπόβαθρα για το ίδιο αρχείο', () => seedBackground({}, 'rbg_second'), 'background-missing'],
+    ['μετασχηματισμός που δεν είναι αντικείμενο', () => seedBackground({ transform: 'rotated' }), 'background-transformed'],
+    ...TRANSFORMED.map(([label, change]): [string, () => void, string] => [
+      `υπόβαθρο με ${label}`,
+      () => seedBackground({ transform: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0, ...change } }),
+      'background-transformed',
+    ]),
+    ['σχήμα που δεν είναι πολύγωνο', () => seedOutline('ovrl_3', HIDDEN, { ...rect(600, 400, 1000, 800), type: 'rectangle' }), 'not-a-polygon'],
+    ['ανοιχτή πολυγραμμή', () => seedOutline('ovrl_3', HIDDEN, { ...rect(600, 400, 1000, 800), closed: false }), 'not-a-polygon'],
+    ['δεσμός με κενή ταυτότητα', () => seedOutline('ovrl_4', null, rect(0, 0, 100, 100), { linked: { propertyId: '' } }), 'unlinked-outline'],
   ];
 
   it.each(refusals)('%s', async (_label, damage, why) => {
@@ -262,9 +388,14 @@ describe('ΑΟ-2 — ό,τι λείπει ή δεν εξηγείται ⇒ ΚΑ�
   });
 
   it('ακίνητο χωρίς όροφο ή χωρίς χώρο ⇒ κενό ΧΩΡΙΣ καμία ανάγνωση', async () => {
-    const resolve = reader.createFloorPlateResolver({} as AdminFirestore);
+    // Μάρτυρας είναι ότι η βάση ΔΕΝ ρωτήθηκε: ένα σκέτο `[]` θα το έδινε και το δίχτυ του `catch`.
+    const collection = jest.fn(() => { throw new Error('δεν έπρεπε να διαβάσει'); });
+    const resolve = reader.createFloorPlateResolver({ collection } as unknown as AdminFirestore);
     await expect(resolve(SELF, { companyId: COMPANY })).resolves.toEqual([]);
     await expect(resolve(SELF, { companyId: null, floorId: FLOOR })).resolves.toEqual([]);
+    await expect(resolve(SELF, { companyId: COMPANY, floorId: '' })).resolves.toEqual([]);
+    await expect(resolve(SELF, { companyId: '', floorId: FLOOR })).resolves.toEqual([]);
+    expect(collection).not.toHaveBeenCalled();
   });
 
   it('βλάβη ανάγνωσης δεν πετά — η αγγελία δημοσιεύεται χωρίς κάτοψη ορόφου', async () => {
@@ -339,6 +470,15 @@ describe('ΑΟ-5 — σε ποιους ορόφους ΦΑΙΝΕΤΑΙ μια μ
     await expect(reader.readFloorsShowingUnit(db(), COMPANY, { link: 'propertyId', unitId: SELF })).resolves.toEqual([FLOOR]);
   });
 
+  it('δύο περιγράμματα της μονάδας στον ΙΔΙΟ όροφο ⇒ ο όροφος μία φορά· περίγραμμα χωρίς όροφο δεν δίνει «όροφο»', async () => {
+    seedHealthyFloor();
+    seedOutline('ovrl_7', SELF, rect(0, 0, 100, 100));
+    seedOutline('ovrl_8', SELF, rect(0, 0, 100, 100), { floorId: undefined });
+    seedOutline('ovrl_9', SELF, rect(0, 0, 100, 100), { floorId: '' });
+
+    await expect(reader.readFloorsShowingUnit(db(), COMPANY, { link: 'propertyId', unitId: SELF })).resolves.toEqual([FLOOR]);
+  });
+
   it('δήλωση: υπογεγραμμένος όροφος ναι· χωρίς δήλωση, ανύπαρκτος ή ξένος όχι', async () => {
     seedHealthyFloor();
     await expect(reader.hasFloorPlateDeclaration(db(), COMPANY, FLOOR)).resolves.toBe(true);
@@ -358,6 +498,9 @@ describe('ΕΒ — ο ΕΝΑΣ βρόχος επαναπροβολής, με ε�
 
   it('ΕΒ-1 όροφος: ξαναπροβάλλονται ΜΟΝΟ οι δημοσιευμένες, και δεύτερο πέρασμα δεν γράφει τίποτα', async () => {
     seedHealthyFloor();
+    // Δημοσιευμένες μονάδες που ΔΕΝ είναι αυτού του ορόφου: άλλος όροφος του ίδιου χώρου, ίδιος όροφος άλλου χώρου.
+    seedUnit('prop_upstairs', { listed: true, floorId: 'flr_other' });
+    seedUnit('prop_foreign', { listed: true, companyId: 'comp_other' });
 
     const first = await scoped.republishListingsInScope(db(), floorScope);
     expect(first.map((report) => report.propertyId).sort()).toEqual([NEIGHBOUR, SELF].sort());
@@ -400,6 +543,9 @@ describe('ΕΒ — ο ΕΝΑΣ βρόχος επαναπροβολής, με ε�
     const [first, second] = republishListing.mock.calls;
     expect(second[3]).toBe(first[3]);
     expect(second[4]).toBe(first[4]);
+    // Ο γραφέας παίρνει τη μονάδα ΜΕ την ταυτότητά της — το έγγραφο της βάσης δεν την κουβαλά.
+    expect(first[2]).toMatchObject({ id: first[1] });
+    expect(second[2]).toMatchObject({ id: second[1] });
   });
 
   it('ΕΒ-2δ όροφος: βλάβη στην ανάγνωση της αγγελίας ⇒ «οφείλει», ποτέ «συμφωνεί»', async () => {

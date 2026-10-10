@@ -56,6 +56,8 @@ describe('useSettledFileChange', () => {
 
     act(() => { jest.advanceTimersByTime(FILE_CHANGE_SETTLE_MS); });
     expect(onSettled).toHaveBeenCalledTimes(1);
+    // Κυριολεκτικά: κάθε άλλη βεβαίωση μετρά ΜΕ τη σταθερά, άρα «ησυχία 6″» θα περνούσε (ADR-907 §11.11).
+    expect(FILE_CHANGE_SETTLE_MS).toBe(600);
   });
 
   it.each(['FILE_CREATED', 'FILE_UPDATED', 'FILE_TRASHED', 'FILE_RESTORED', 'FILE_SUPERSEDED'])('ΣΑ-1 — ακούει το «%s»', (event) => {

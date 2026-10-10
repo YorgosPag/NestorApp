@@ -78,6 +78,21 @@ function patternKindOf(scope: Element): string | null {
   const declared = Array.from(scope.closest('svg')?.querySelectorAll('pattern') ?? []).find((p) => p.getAttribute('id') === id);
   return declared?.getAttribute('data-floor-plate-pattern') ?? 'ΑΝΥΠΑΡΚΤΟ';
 }
+/**
+ * Τι ΖΩΓΡΑΦΙΖΕΙ το μοτίβο, όχι τι δηλώνει: το γνώρισμα `data-floor-plate-pattern` το γράφει ο ίδιος κώδικας που θα
+ * μπορούσε να ζωγραφίσει λάθος. Τελείες = κύκλος· διαγράμμιση = 3 τμήματα· σταυρωτό = 6 (ADR-907 §11.11).
+ */
+function patternMarksOf(scope: Element): string | null {
+  const fills = Array.from(scope.querySelectorAll('[fill]')).map((el) => el.getAttribute('fill') ?? '');
+  const id = fills.map((fill) => fill.match(/^url\(#(.+)\)$/u)?.[1]).find((found) => found !== undefined);
+  const declared = Array.from(scope.closest('svg')?.querySelectorAll('pattern') ?? []).find((p) => p.getAttribute('id') === id);
+  if (declared === undefined) return null;
+  if (declared.querySelector('circle') !== null) return 'circle';
+  return `path:${(declared.querySelector('path')?.getAttribute('d') ?? '').split('M').length - 1}`;
+}
+/** Το παχύτερο περίγραμμα του σχήματος — ο τονισμός οφείλει να ΦΑΙΝΕΤΑΙ, όχι μόνο να δηλώνεται με γνώρισμα. */
+const edgeOf = (unit: Element | null): number =>
+  Math.max(...Array.from(unit?.querySelectorAll('polygon') ?? []).map((p) => Number(p.getAttribute('stroke-width') ?? 0)));
 const classesOf = (scope: Element) => Array.from(scope.querySelectorAll('polygon, rect')).map((el) => el.getAttribute('class') ?? '').join(' ');
 
 describe('ListingFloorPlateStage', () => {
@@ -106,10 +121,14 @@ describe('ListingFloorPlateStage', () => {
       expect(classesOf(unit)).toMatch(new RegExp(`(^|\\s)fill-\\S+${token}\\S+`, 'u'));
       expect(classesOf(unit)).toMatch(new RegExp(`(^|\\s)stroke-\\S+${token}\\S+`, 'u'));
       expect(within(rowOf(unitNumber)).getByText(stateKey(state))).toBeInTheDocument();
+      // Η γραμμή της λίστας κουβαλά το ΙΔΙΟ δείγμα: όποιος διαβάζει μόνο τη λίστα έχει και τα τρία κανάλια.
+      expect(rowOf(unitNumber).querySelector('[data-floor-plate-swatch]')?.getAttribute('data-floor-plate-swatch')).toBe(state);
       return patternKindOf(unit);
     });
     // Τρία ΥΠΑΡΚΤΑ μοτίβα, τρία ΔΙΑΦΟΡΕΤΙΚΑ είδη: η διάκριση επιζεί σε ασπρόμαυρο.
     expect(kinds).toEqual(['dots', 'hatch', 'cross']);
+    // …και τρία διαφορετικά ΣΧΕΔΙΑ: το είδος δεν είναι μόνο ετικέτα πάνω στο ίδιο μοτίβο.
+    expect(expected.map(({ unitNumber }) => patternMarksOf(unitOf(container, unitNumber) as Element))).toEqual(['circle', 'path:3', 'path:6']);
   });
 
   it('🔴 ΟΡ-3 «αυτό το ακίνητο»: όχι κόκκινο, παχύτερο περίγραμμα με άλω, aria-current στη γραμμή του', () => {
@@ -163,6 +182,11 @@ describe('ListingFloorPlateStage', () => {
     const swatches = Array.from(legend.querySelectorAll('[data-floor-plate-swatch]'));
     expect(swatches.map((s) => s.getAttribute('data-floor-plate-swatch'))).toEqual(['self', 'available', 'reserved']);
     expect(swatches.map(patternKindOf)).toEqual([null, 'dots', 'hatch']);
+    // Και την ίδια ΑΠΟΧΡΩΣΗ: δείγμα με χρώμα άλλης κατάστασης είναι υπόμνημα που ψεύδεται.
+    ['--plan-ink', '--status-success', '--status-warning'].forEach((token, index) => {
+      expect(classesOf(swatches[index])).toMatch(new RegExp(`(^|\\s)stroke-\\S+${token}\\S+`, 'u'));
+    });
+    expect(classesOf(swatches[1])).not.toContain('--status-warning');
     expect(within(legend).getByText(stateKey('reserved'))).toBeInTheDocument();
     expect(within(legend).queryByText(stateKey('unavailable'))).toBeNull();
     const reserved = unitOf(container, 3);
@@ -179,11 +203,21 @@ describe('ListingFloorPlateStage', () => {
     });
 
     expect(unitOf(container, 3)).not.toHaveAttribute('data-emphasised');
+    const atRest = edgeOf(unitOf(container, 3));
     fireEvent.pointerEnter(rowOf(3));
     expect(unitOf(container, 3)).toHaveAttribute('data-emphasised');
+    expect(edgeOf(unitOf(container, 3))).toBeGreaterThan(atRest);
     expect(unitOf(container, 2)).not.toHaveAttribute('data-emphasised');
     fireEvent.pointerLeave(rowOf(3));
     expect(unitOf(container, 3)).not.toHaveAttribute('data-emphasised');
+    expect(edgeOf(unitOf(container, 3))).toBe(atRest);
+
+    // Με το πληκτρολόγιο: η εστίαση στον σύνδεσμο της γραμμής τονίζει το σχήμα της, όπως το ποντίκι.
+    const link = within(rowOf(2)).getByRole('link');
+    fireEvent.focusIn(link);
+    expect(unitOf(container, 2)).toHaveAttribute('data-emphasised');
+    fireEvent.focusOut(link);
+    expect(unitOf(container, 2)).not.toHaveAttribute('data-emphasised');
 
     const drawn = unitOf(container, 4);
     if (drawn === null) throw new Error('καμία μονάδα 4');
@@ -222,6 +256,14 @@ describe('ListingFloorPlateStage', () => {
     expect(screen.getByText('listing-detail:floorPlate.neighboursNote')).toBeInTheDocument();
     expect(screen.getByText('search-results:detail.media.floorplanProvenance.declared')).toBeInTheDocument();
     expect(screen.getByRole('toolbar', { name: 'listing-detail:media.capture.viewTools' })).toBeInTheDocument();
+  });
+
+  it('ΟΡ-8β μεγέθυνση ⇒ ο browser ζητά μεγαλύτερο παράγωγο της εικόνας (`sizes`), όχι το ίδιο τεντωμένο', () => {
+    renderStage();
+    const image = screen.getByRole('img');
+    expect(image.getAttribute('sizes')).not.toContain('300vw');
+    fireEvent.click(screen.getByRole('button', { name: 'photoPreview.zoom.in' }));
+    expect(image.getAttribute('sizes')).toBe('300vw');
   });
 
   it('🔴 ΟΡ-9 κανένα αρχείο της όψης δεν γράφει κλάση με αγκύλες ΚΑΙ παρεμβολή μέσα της', () => {

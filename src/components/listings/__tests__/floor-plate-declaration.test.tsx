@@ -20,7 +20,7 @@
  */
 import React from 'react';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { FILE_CLASSIFICATIONS, FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { ApiClientError } from '@/lib/api/api-client-types';
@@ -73,8 +73,11 @@ jest.mock('@/components/ui/select', () => {
   };
 });
 jest.mock('@/components/ui/checkbox', () => ({
-  Checkbox: ({ id, checked, onCheckedChange }: { id?: string; checked?: boolean; onCheckedChange?: (value: boolean) => void }) => (
-    <input id={id} type="checkbox" checked={checked === true} onChange={(event) => onCheckedChange?.(event.target.checked)} />
+  Checkbox: ({ id, checked, onCheckedChange, 'aria-describedby': describedBy }: {
+    id?: string; checked?: boolean; onCheckedChange?: (value: boolean) => void; 'aria-describedby'?: string;
+  }) => (
+    <input id={id} type="checkbox" aria-describedby={describedBy} checked={checked === true}
+      onChange={(event) => onCheckedChange?.(event.target.checked)} />
   ),
 }));
 jest.mock('@/components/ui/ConfirmDialog', () => ({
@@ -88,6 +91,7 @@ jest.mock('@/components/ui/ConfirmDialog', () => ({
 }));
 
 import { FloorPlateDeclaration } from '../FloorPlateDeclaration';
+import { chosenFloorPlateImageId } from '../FloorPlateSigningForm';
 
 const K = 'tabs.floors.floorPlate';
 const ROUTE = '/api/floors/floor_1/floor-plate';
@@ -142,6 +146,9 @@ describe('FloorPlateDeclaration', () => {
     mount();
 
     expect(await screen.findByText(`${K}.notDeclared`)).toBeInTheDocument();
+    // Η φόρμα σιωπά όσο φορτώνουν τα αρχεία: η απουσία της μετρά ΜΟΝΟ αφού έχουν έρθει (ADR-907 §11.11).
+    await waitFor(() => expect(getFilesByEntity).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
@@ -291,5 +298,141 @@ describe('FloorPlateDeclaration', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(`${K}.imageGone`);
     expect(screen.queryByText('img_other.png')).not.toBeInTheDocument();
+  });
+
+  it('ΔΧ-9β — όσο τα αρχεία ΦΟΡΤΩΝΟΥΝ δεν υπάρχει προειδοποίηση: «δεν ξέρω ακόμη» δεν είναι «έφυγε»', async () => {
+    arrange({ declaration: SIGNED, mayDeclare: true });
+    getFilesByEntity.mockReturnValue(new Promise(() => undefined));
+    mount();
+
+    expect(await screen.findByText('Μαρία Π.')).toBeInTheDocument();
+    await waitFor(() => expect(getFilesByEntity).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+/** Υπόσχεση που λύνεται με το χέρι: η κατάσταση «τρέχει» γίνεται παρατηρήσιμη. */
+function deferred<T>(): { readonly promise: Promise<T>; readonly resolve: (value: T) => void } {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+describe('FloorPlateDeclaration — όσο τρέχει η πράξη, και όταν αλλάζει ο όροφος (ADR-907 §11.11)', () => {
+  const section = (): HTMLElement => {
+    const found = document.querySelector<HTMLElement>('[data-floor-plate-declaration]');
+    if (found === null) throw new Error('κανένα πάνελ δήλωσης');
+    return found;
+  };
+
+  it('ΔΧ-10 — υπογραφή σε εξέλιξη: το πάνελ το δηλώνει, το κουμπί κλείνει, δεύτερο πάτημα δεν φεύγει', async () => {
+    arrange({ declaration: null, mayDeclare: true });
+    const pending = deferred<unknown>();
+    apiPost.mockReturnValue(pending.promise);
+    mount();
+
+    const box = await screen.findByRole('checkbox');
+    expect(box).toHaveAccessibleDescription(`${K}.statementNote`);
+    expect(section()).toHaveAttribute('aria-busy', 'false');
+    fireEvent.click(box);
+    fireEvent.click(signButton());
+
+    const busy = await screen.findByRole('button', { name: `${K}.declareBusy` });
+    expect(busy).toBeDisabled();
+    expect(section()).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(busy);
+    expect(apiPost).toHaveBeenCalledTimes(1);
+
+    await act(async () => { pending.resolve({ floorId: 'floor_1', state: 'declared', declaration: SIGNED, listings: [] }); });
+    expect(await screen.findByText('Μαρία Π.')).toBeInTheDocument();
+    expect(section()).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('ΔΧ-11 — νέα προσπάθεια μετά από άρνηση: η παλιά άρνηση φεύγει ΜΟΛΙΣ ξεκινήσει η νέα πράξη', async () => {
+    arrange({ declaration: null, mayDeclare: true });
+    const body = floorPlateRefusalBody({ why: 'unlinked-outline', overlayId: 'ovl_9' });
+    apiPost.mockRejectedValueOnce(new ApiClientError(body.error, 409, body.errorCode, undefined, 'req_1', undefined, body));
+    mount();
+
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(signButton());
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    apiPost.mockReturnValue(deferred<unknown>().promise);
+    fireEvent.click(signButton());
+    await screen.findByRole('button', { name: `${K}.declareBusy` });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('ΔΧ-12 — άρση σε εξέλιξη: το κουμπί της κλείνει', async () => {
+    arrange({ declaration: SIGNED, mayDeclare: true });
+    apiDelete.mockReturnValue(deferred<unknown>().promise);
+    mount();
+
+    fireEvent.click(await screen.findByRole('button', { name: `${K}.withdraw` }));
+    fireEvent.click(screen.getByRole('button', { name: 'confirm' }));
+
+    expect(await screen.findByRole('button', { name: `${K}.withdrawBusy` })).toBeDisabled();
+  });
+
+  it('ΔΧ-13 — άλλος όροφος: η προηγούμενη υπογραφή φεύγει ΑΜΕΣΩΣ, και αργοπορημένη απάντηση δεν τη φέρνει πίσω', async () => {
+    const first = deferred<unknown>();
+    const second = deferred<unknown>();
+    apiGet.mockImplementation((route: string) => (route === ROUTE ? first.promise : second.promise));
+    getFilesByEntity.mockResolvedValue([fileOf('img_a')]);
+    const view = mount();
+
+    view.rerender(<FloorPlateDeclaration floorId="floor_2" companyId="c1" />);
+    await act(async () => { first.resolve({ floorId: 'floor_1', declaration: SIGNED, mayDeclare: true }); });
+    expect(view.container).toBeEmptyDOMElement(); // η απάντηση του ορόφου 1 ήρθε αργά: δεν ανήκει πια εδώ
+
+    await act(async () => { second.resolve({ floorId: 'floor_2', declaration: null, mayDeclare: false }); });
+    expect(await screen.findByText(`${K}.notDeclared`)).toBeInTheDocument();
+    expect(screen.queryByText('Μαρία Π.')).not.toBeInTheDocument();
+  });
+
+  it('ΔΧ-13β — άλλος όροφος όσο ο νέος διαβάζεται: τίποτα από τον παλιό στην οθόνη', async () => {
+    apiGet.mockImplementation((route: string) =>
+      route === ROUTE ? Promise.resolve({ floorId: 'floor_1', declaration: SIGNED, mayDeclare: true }) : new Promise(() => undefined));
+    getFilesByEntity.mockResolvedValue([fileOf('img_a')]);
+    const view = mount();
+    expect(await screen.findByText('Μαρία Π.')).toBeInTheDocument();
+
+    view.rerender(<FloorPlateDeclaration floorId="floor_2" companyId="c1" />);
+    await waitFor(() => expect(view.container).toBeEmptyDOMElement());
+  });
+
+  it('ΔΧ-13γ — πράξη του ορόφου 1 που απαντά αφού φύγαμε: δεν γράφει υπογραφή στον όροφο 2', async () => {
+    arrange({ declaration: null, mayDeclare: true });
+    const pending = deferred<unknown>();
+    apiPost.mockReturnValue(pending.promise);
+    const view = mount();
+
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(signButton());
+    await screen.findByRole('button', { name: `${K}.declareBusy` });
+
+    view.rerender(<FloorPlateDeclaration floorId="floor_2" companyId="c1" />);
+    await screen.findByRole('button', { name: `${K}.declare` });
+    await act(async () => { pending.resolve({ floorId: 'floor_1', state: 'declared', declaration: SIGNED, listings: [{}] }); });
+
+    expect(screen.queryByText('Μαρία Π.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+describe('chosenFloorPlateImageId — ποια εικόνα ονομάζει η υπογραφή (ADR-907 §11.11)', () => {
+  const two = [fileOf('img_a'), fileOf('img_b')];
+
+  it('επιλογή που υπάρχει ακόμη μένει· επιλογή που ΕΦΥΓΕ από τον όροφο δεν υπογράφεται', () => {
+    expect(chosenFloorPlateImageId(two, 'img_b')).toBe('img_b');
+    expect(chosenFloorPlateImageId(two, 'img_gone')).toBeNull();
+    expect(chosenFloorPlateImageId([fileOf('img_a')], 'img_gone')).toBe('img_a');
+  });
+
+  it('χωρίς επιλογή: μία εικόνα προεπιλέγεται, δύο όχι, καμία όχι', () => {
+    expect(chosenFloorPlateImageId([fileOf('img_a')], null)).toBe('img_a');
+    expect(chosenFloorPlateImageId(two, null)).toBeNull();
+    expect(chosenFloorPlateImageId([], null)).toBeNull();
   });
 });

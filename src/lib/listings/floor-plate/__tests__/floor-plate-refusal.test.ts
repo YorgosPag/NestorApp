@@ -49,6 +49,41 @@ describe('ΑΡ-1 — γραφή και ανάγνωση του σώματος σ
     const body = floorPlateRefusalBody({ why: 'unlinked-outline', overlayId: 'ovl_1' });
     expect(body.success).toBe(false);
     expect(body.errorCode).toBe(FLOOR_PLATE_REFUSED_CODE);
+    // Το `error` είναι ό,τι βλέπει όποιος διαβάζει μόνο αρχεία καταγραφής: οφείλει να λέει ΓΙΑΤΙ.
+    expect(body.error).toContain('unlinked-outline');
+  });
+});
+
+describe('ΑΡ-1β — ποια άρνηση λέει ποια πρόταση, ΚΥΡΙΟΛΕΚΤΙΚΑ (ADR-907 §11.11)', () => {
+  // Οι ΑΡ-3 ρωτούν «έχει λέξεις κάθε πρόταση;» — όχι «είναι η ΣΩΣΤΗ πρόταση;». Μια άρνηση που δείχνει σε πρόταση
+  // άλλης (με τη δική της να χρησιμοποιείται ακόμη από δίδυμη) περνούσε: ο άνθρωπος θα διόρθωνε λάθος πράγμα.
+  it('ο πίνακας αρνήσεων → προτάσεων', () => {
+    expect(FLOOR_PLATE_REFUSAL_MESSAGE).toEqual({
+      'image-missing': 'imageMissing',
+      'image-not-public': 'imageNotPublic',
+      'image-not-deliverable': 'imageNotDeliverable',
+      'image-undated': 'imageNotReady',
+      'image-unmeasured': 'imageNotReady',
+      'no-frame': 'imageNotReady',
+      'background-missing': 'backgroundMissing',
+      'background-transformed': 'backgroundTransformed',
+      'frame-mismatch': 'frameMismatch',
+      'too-few-vertices': 'outlineGeometry',
+      'not-finite': 'outlineGeometry',
+      degenerate: 'outlineGeometry',
+      'too-many-vertices': 'outlineTooComplex',
+      'outside-frame': 'outlineOutside',
+      'unknown-role': 'outlineUnsupported',
+      'not-a-polygon': 'outlineUnsupported',
+      'unlinked-outline': 'outlineUnlinked',
+      'foreign-unit': 'unitForeign',
+      'duplicate-unit': 'unitDuplicate',
+      'coincident-outlines': 'outlinesCoincident',
+      'self-missing': 'noLinkedUnit',
+      'floor-missing': 'floorMissing',
+      'not-declared': 'floorMissing',
+      'too-many-units': 'tooManyUnits',
+    });
   });
 });
 
