@@ -122,6 +122,26 @@ describe('ADR-911 Α-3 — προεπισκόπηση ≡ αποτέλεσμα',
     expect(written).not.toEqual(raw);
   });
 
+  it('Φ3α-2: με θόρυβο 0,001 mm στο σχέδιο η εγκεκριμένη πρόταση γράφεται ΟΛΟΚΛΗΡΗ (refuse)', () => {
+    // Η ένωση τοίχων δεν είναι κατάληψη. Πριν: ο θόρυβος ενεργοποιούσε την επέκταση προς γείτονα
+    // 100 mm, ο ωμός λόγος εμβαδού έβγαζε τον κοντό τοίχο «κατειλημμένο», και με `refuse` η
+    // εγγραφή αρνιόταν ΟΛΗ την παρτίδα.
+    const nudged = ENTITIES.map((e) => {
+      const l = e as unknown as { start?: { x: number; y: number }; end?: { x: number; y: number } };
+      if (!l.start || !l.end) return e;
+      return { ...e, start: { x: l.start.x + 0.001, y: l.start.y - 0.001 }, end: l.end } as unknown as Entity;
+    });
+    const proposal = propose(nudged);
+    const h = harness(nudged);
+
+    const result = addWallsToScene(proposal.walls, h.accessor, { origin: 'bulk', onOverlap: 'refuse' });
+
+    expect(proposal.walls).toHaveLength(38);
+    expect(result).toMatchObject({ blocked: 0 });
+    expect(result.refusal).toBeUndefined();
+    expect(result.written).toHaveLength(38);
+  });
+
   it('οι γραμμές του σχεδίου μένουν ανέγγιχτες', () => {
     const proposal = propose();
     const h = harness();

@@ -54,6 +54,37 @@ describe('extendFillingWallToNeighbors', () => {
     expect(extendFillingWallToNeighbors(joined, [through], 'mm')).toBe(joined);
   });
 
+  // ADR-911 Φ3α-2 — the "already on the centreline" guard is a float epsilon, not the 50 mm
+  // drafting slack. With 50, the half-thickness of a 100 mm neighbour sat EXACTLY on the bound.
+  describe('thin neighbour (half-thickness = the old 50 mm bound)', () => {
+    const thin = makeWall({ x: -1000, y: 0 }, { x: 1000, y: 0 }, 100, 'THIN');
+
+    it('extends to the centreline of a 100 mm neighbour', () => {
+      const fill = makeWall({ x: 0, y: 50 }, { x: 0, y: 2000 }, 100, 'FILL');
+      const joined = extendFillingWallToNeighbors(fill, [thin], 'mm');
+      expect(joined.params.start.y).toBeCloseTo(0, 6);
+    });
+
+    it('extends to the centreline of a 50 mm neighbour', () => {
+      const thinner = makeWall({ x: -1000, y: 0 }, { x: 1000, y: 0 }, 50, 'THINNER');
+      const fill = makeWall({ x: 0, y: 25 }, { x: 0, y: 2000 }, 100, 'FILL');
+      expect(extendFillingWallToNeighbors(fill, [thinner], 'mm').params.start.y).toBeCloseTo(0, 6);
+    });
+
+    it('the result does not depend on the last decimal of the endpoint', () => {
+      for (const y of [49.999, 50, 50.001]) {
+        const fill = makeWall({ x: 0, y }, { x: 0, y: 2000 }, 100, 'FILL');
+        expect(extendFillingWallToNeighbors(fill, [thin], 'mm').params.start.y).toBeCloseTo(0, 6);
+      }
+    });
+
+    it('stays idempotent on the thin neighbour', () => {
+      const fill = makeWall({ x: 0, y: 50 }, { x: 0, y: 2000 }, 100, 'FILL');
+      const joined = extendFillingWallToNeighbors(fill, [thin], 'mm');
+      expect(extendFillingWallToNeighbors(joined, [thin], 'mm')).toBe(joined);
+    });
+  });
+
   it('extends BOTH endpoints when each sits on a different neighbour', () => {
     // Two parallel through walls (y=0 and y=3000, half=150). A vertical fill between
     // them with both ends on the inner faces (y=150 and y=2850).
