@@ -10,6 +10,10 @@
  * μικρότερο footprint. Διασταύρωση τοίχων (+/T) → ratio ~πάχος/μήκος (μικρό) → allow· διπλότυπο
  * πάνω-πάνω → ~100% → block· μισός-πάνω-στον-άλλο → ~50% → block.
  *
+ * §join-is-not-occupation (ADR-911 Φ3α-2): για ζεύγος ΤΟΙΧΩΝ το ratio μετριέται στα αποτυπώματα
+ * ΜΕΤΑ την ένωση (`./wall-join-overlap`). Το κοινό κομμάτι μιας ένωσης δεν εξαρτάται από το
+ * μήκος του τοίχου, άρα για κοντό τοίχο το ωμό ratio έβγαινε 33–55% = ψευδής κατάληψη.
+ *
  * ΚΑΘΑΡΟ (pure) — zero React/DOM/store. **Reuse μόνο υπάρχοντα primitives** (N.0.2):
  *   · `safeIntersection` + `multiPolygonArea` — bim/geometry/shared (boolean/area SSoT),
  *   · `wallFootprintPolygon` — bim/finishes (miter-aware union),
@@ -37,6 +41,8 @@ import { safeIntersection } from '../geometry/shared/safe-polygon-boolean';
 import { multiPolygonArea, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
+import type { WallEntity } from '../types/wall-types';
+import { joinedWallPairFootprints } from './wall-join-overlap';
 
 /**
  * Οι δομικές («Δομικά») οντότητες που ελέγχονται για επικάλυψη (Φ1). `opening`/`slab-opening`
@@ -95,6 +101,14 @@ export interface StructuralOverlapHit {
   readonly ratio: number;
 }
 
+/** Οι επιλογές του {@link findStructuralOverlap}. */
+export interface StructuralOverlapOptions {
+  readonly excludeIds?: ReadonlySet<string>;
+  readonly ratioThreshold?: number;
+  readonly candidateType?: Entity['type'];
+  readonly candidate?: Entity;
+}
+
 /**
  * 2D plan footprint (world/scene units) μιας δομικής οντότητας, ή `null` αν δεν υπάρχει έγκυρο
  * πολύγωνο (≥3 κορυφές) ή ο τύπος δεν είναι δομικός. Reuse των υπαρχουσών geometry πηγών —
@@ -127,19 +141,24 @@ export function structuralFootprintOf(entity: Entity): Point2D[] | null {
  * {@link StructuralCollisionGroup} με το candidate (π.χ. δοκάρι κρίνεται μόνο εναντίον δοκαριών,
  * ΟΧΙ τοίχων — γι' αυτό «Δοκάρι από τοίχο» δεν μπλοκάρεται). Αν παραλειφθεί → ελέγχονται όλες οι
  * δομικές (legacy behaviour).
+ *
+ * `candidate`: η ίδια η υποψήφια οντότητα. Όταν είναι τοίχος, κάθε ζεύγος τοίχος↔τοίχος κρίνεται
+ * ΜΕΤΑ την ένωση (§join-is-not-occupation). Χωρίς αυτήν (π.χ. σκέτο πολύγωνο ζώνης) η κρίση
+ * γίνεται στα πλήρη αποτυπώματα. Οι φρουροί τοποθέτησης καλούν το
+ * {@link findStructuralOverlapForEntity}, που τη δίνει πάντα.
  */
 export function findStructuralOverlap(
   candidateFootprint: readonly Point2D[],
   existing: readonly Entity[],
-  opts?: { excludeIds?: ReadonlySet<string>; ratioThreshold?: number; candidateType?: Entity['type'] },
+  opts?: StructuralOverlapOptions,
 ): StructuralOverlapHit | null {
   if (candidateFootprint.length < 3) return null;
   const threshold = opts?.ratioThreshold ?? DEFAULT_OVERLAP_RATIO_THRESHOLD;
   const candGroup = opts?.candidateType ? structuralCollisionGroupOf(opts.candidateType) : null;
-  const candClip = toClipPolygon(candidateFootprint);
-  const candArea = multiPolygonArea([candClip]);
-  if (candArea <= 0) return null;
+  const cand = clipFootprintOf(candidateFootprint);
+  if (cand.area <= 0) return null;
   const candBbox = bboxOf(candidateFootprint);
+  const candWall = opts?.candidate && isWallEntity(opts.candidate) ? opts.candidate : null;
 
   for (const e of existing) {
     if (opts?.excludeIds?.has(e.id)) continue;
@@ -150,16 +169,76 @@ export function findStructuralOverlap(
     const ef = structuralFootprintOf(e);
     if (!ef) continue;
     // Φτηνό AABB fast-reject ΠΡΙΝ το βαρύ polygon-clipping (per-frame hover, N.17 perf).
+    // Τα αποτυπώματα μετά την ένωση είναι υποσύνολα των πλήρων ⇒ ο φρουρός ισχύει και γι' αυτά.
     if (bboxDisjoint(candBbox, bboxOf(ef))) continue;
-    const efClip = toClipPolygon(ef);
-    const efArea = multiPolygonArea([efClip]);
-    if (efArea <= 0) continue;
-    const interArea = multiPolygonArea(safeIntersection(candClip, efClip));
-    if (interArea <= 0) continue; // touch-only (κοινή παρειά/σημείο) → allow
-    const ratio = interArea / Math.min(candArea, efArea);
-    if (ratio >= threshold) return { blockedById: e.id, ratio };
+    const ratio = occupationRatio(cand, candWall, e, ef);
+    // ratio 0 = touch-only (κοινή παρειά/σημείο) ή καθαρή ένωση → allow
+    if (ratio > 0 && ratio >= threshold) return { blockedById: e.id, ratio };
   }
   return null;
+}
+
+/**
+ * Η είσοδος ΜΕ ΟΝΤΟΤΗΤΑ — αυτή που καλούν οι φρουροί τοποθέτησης. Βγάζει το αποτύπωμα, εξαιρεί
+ * τον εαυτό της, περιορίζει τον έλεγχο στην ομάδα σύγκρουσης του τύπου της και δίνει στο SSoT
+ * την ίδια την οντότητα, ώστε τοίχος↔τοίχος να κριθεί ΜΕΤΑ την ένωση
+ * ({@link occupationRatio}). Μη δομικός τύπος ή οντότητα χωρίς έγκυρο αποτύπωμα → `null`.
+ */
+export function findStructuralOverlapForEntity(
+  entity: Entity,
+  existing: readonly Entity[],
+  opts?: Pick<StructuralOverlapOptions, 'ratioThreshold'>,
+): StructuralOverlapHit | null {
+  if (!STRUCTURAL_OVERLAP_TYPES.has(entity.type)) return null;
+  const footprint = structuralFootprintOf(entity);
+  if (!footprint) return null;
+  return findStructuralOverlap(footprint, existing, {
+    ...opts,
+    excludeIds: new Set([entity.id]),
+    candidateType: entity.type,
+    candidate: entity,
+  });
+}
+
+/** Αποτύπωμα έτοιμο για boolean πράξεις, μαζί με το εμβαδό του. */
+interface ClipFootprint {
+  readonly clip: Polygon;
+  readonly area: number;
+}
+
+function clipFootprintOf(footprint: readonly Point2D[]): ClipFootprint {
+  const clip = toClipPolygon(footprint);
+  return { clip, area: multiPolygonArea([clip]) };
+}
+
+/** Εμβαδό τομής / μικρότερο εμβαδό. `0` όταν δεν μοιράζονται εμβαδό ή κάποιο είναι εκφυλισμένο. */
+function areaOverlapRatio(a: ClipFootprint, b: ClipFootprint): number {
+  if (a.area <= 0 || b.area <= 0) return 0;
+  const interArea = multiPolygonArea(safeIntersection(a.clip, b.clip));
+  return interArea <= 0 ? 0 : interArea / Math.min(a.area, b.area);
+}
+
+/**
+ * Ο λόγος κατάληψης του υποψηφίου έναντι ΜΙΑΣ υπάρχουσας οντότητας.
+ *
+ * §join-is-not-occupation (ADR-911 Φ3α-2): δύο τοίχοι που ενώνονται μοιράζονται εμβαδό εκ
+ * κατασκευής, και αυτό το κομμάτι δεν εξαρτάται από το μήκος τους — για κοντό τοίχο έβγαινε
+ * 33–55 % του «μικρότερου εμβαδού», δηλαδή ψευδής κατάληψη. Γι' αυτό ζεύγος τοίχων κρίνεται
+ * στα αποτυπώματα ΜΕΤΑ την ένωση (`wall-join-overlap`)· κάθε άλλο ζεύγος, και οι παράλληλοι
+ * τοίχοι, στα πλήρη αποτυπώματα όπως πάντα.
+ */
+function occupationRatio(
+  cand: ClipFootprint,
+  candWall: WallEntity | null,
+  existing: Entity,
+  existingFootprint: readonly Point2D[],
+): number {
+  if (candWall && isWallEntity(existing)) {
+    const pair = joinedWallPairFootprints(candWall, existing);
+    if (pair?.kind === 'swallowed') return 1;
+    if (pair) return areaOverlapRatio(clipFootprintOf(pair.a), clipFootprintOf(pair.b));
+  }
+  return areaOverlapRatio(cand, clipFootprintOf(existingFootprint));
 }
 
 /** Διαμέριση μιας παρτίδας: όσες χωρούν, και πόσες (και από ποια) κόπηκαν. */
@@ -192,10 +271,7 @@ export function partitionByStructuralOverlap<E extends { readonly id: string }>(
   let firstBlockedType: Entity['type'] | null = null;
   for (const e of entities) {
     const ent = e as unknown as Entity;
-    const footprint = STRUCTURAL_OVERLAP_TYPES.has(ent.type) ? structuralFootprintOf(ent) : null;
-    const hit = footprint
-      ? findStructuralOverlap(footprint, existing, { excludeIds: new Set([ent.id]), candidateType: ent.type })
-      : null;
+    const hit = findStructuralOverlapForEntity(ent, existing);
     if (hit) {
       blocked++;
       firstBlockedById ??= hit.blockedById;

@@ -10,7 +10,7 @@
  * οι enablers είναι ΗΔΗ καθαρές συναρτήσεις → τρέχουν transient χωρίς mutation:
  *   · `buildWallFillingRectResult` (validate, κρατά reason)  — wall-in-region.ts
  *   · `extendFillingWallToNeighbors` (Revit "Allow Join")    — wall-region-autojoin.ts
- *   · `findStructuralOverlap` (ADR-567 no-overlap parity)    — structural-placement-overlap.ts
+ *   · `findStructuralOverlapForEntity` (ADR-567 no-overlap)  — structural-placement-overlap.ts
  *   · `computeWallTrims` + `applyTrimPatches` (miter/bevel)  — wall-trims.ts
  *   · `wallFootprintPolygon` (raw ∪ mitered footprint)       — wall-footprint-union.ts
  *
@@ -34,7 +34,7 @@ import { buildWallFillingRectResult, type DetectedRectangle } from './wall-in-re
 import { extendFillingWallToNeighbors } from './wall-region-autojoin';
 import { computeWallTrims, applyTrimPatches, collectColumnFootprints } from './wall-trims';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
-import { structuralFootprintOf, findStructuralOverlap } from '../placement/structural-placement-overlap';
+import { findStructuralOverlapForEntity } from '../placement/structural-placement-overlap';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Reject reasons (friendly i18n keys — «κόκκινο + tooltip με ΛΟΓΟ») ─────────
@@ -125,14 +125,9 @@ export function computeFillingWalls(
     const entity = extendFillingWallToNeighbors(typed, [...sceneWalls, ...walls], sceneUnits);
     // ADR-567 parity με το `addWallToScene`: ΠΟΤΕ τοίχος πάνω σε υπάρχουσα δομική.
     // Έλεγχος με το ΙΔΙΟ incremental scene (existing + δεκτοί της παρτίδας) → ίδιο αποτέλεσμα.
-    const footprint = structuralFootprintOf(entity as unknown as Entity);
-    if (
-      footprint &&
-      findStructuralOverlap(footprint, [...sceneEntities, ...walls] as Entity[], {
-        excludeIds: new Set([entity.id]),
-        candidateType: 'wall',
-      })
-    ) {
+    // Η ένωση με γείτονα (η επέκταση από πάνω) ΔΕΝ είναι κατάληψη: το SSoT κρίνει τοίχο↔τοίχο
+    // μετά την ένωση (ADR-567 §join-is-not-occupation).
+    if (findStructuralOverlapForEntity(entity as unknown as Entity, [...sceneEntities, ...walls] as Entity[])) {
       rejected.push({ rect, reason: REGION_REJECT_OCCUPIED_KEY });
       continue;
     }

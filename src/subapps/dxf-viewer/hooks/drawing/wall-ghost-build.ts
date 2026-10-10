@@ -33,7 +33,7 @@ import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-r
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 // ADR-567 — no-overlap: 🔴 ghost όταν το footprint επικαλύπτει υπάρχουσα δομική (SSoT, preview ≡ commit).
-import { structuralFootprintOf, findStructuralOverlap } from '../../bim/placement/structural-placement-overlap';
+import { findStructuralOverlapForEntity } from '../../bim/placement/structural-placement-overlap';
 import type { Entity } from '../../types/entities';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -116,11 +116,8 @@ export function buildWallGhostEntity(
   // δομική (τοίχο/κολόνα/δοκό/πλάκα/θεμελίωση), σε κάθε γωνία — ΟΧΙ μόνο ομοαξονική (πιάνει ό,τι το
   // στενό `isMemberCollinearOverlap` έχανε). Ίδιο SSoT + κατώφλι με τον commit/append guard → preview
   // ≡ commit. Γωνίες/ενώσεις/διασταυρώσεις (μικρό κοινό εμβαδό) μένουν 🟢.
-  const ghostFootprint = structuralFootprintOf(built.entity as unknown as Entity);
   const structuralEntities = sceneSnapTargetsStore.get().structuralEntities;
-  const footprintOverlap = ghostFootprint
-    ? findStructuralOverlap(ghostFootprint, structuralEntities, { excludeIds: new Set([built.entity.id]), candidateType: 'wall' }) !== null
-    : false;
+  const footprintOverlap = findStructuralOverlapForEntity(built.entity as unknown as Entity, structuralEntities) !== null;
   const overlap = isOverlap || conflict !== null || footprintOverlap;
   const ghostStatusColor = overlap ? resolveGhostStatusColor('overlap') : null;
   // 🔴 → ποτέ listening dims (mirror short-end overlap).

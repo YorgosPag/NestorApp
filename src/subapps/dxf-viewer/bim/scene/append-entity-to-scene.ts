@@ -37,26 +37,18 @@ import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { EventBus } from '../../systems/events/EventBus';
 import {
-  STRUCTURAL_OVERLAP_TYPES,
-  structuralFootprintOf,
-  findStructuralOverlap,
+  findStructuralOverlapForEntity,
   partitionByStructuralOverlap,
 } from '../placement/structural-placement-overlap';
 
 /**
  * ADR-567 — `true` αν η δομική οντότητα θα καθόταν πάνω σε υπάρχουσα δομική (ουσιαστική
  * επικάλυψη εμβαδού). Emit-άρει `bim:placement-blocked` για non-blocking toast. Reuse
- * το SSoT {@link findStructuralOverlap}· non-structural τύποι (opening, MEP, furniture…)
- * περνούν πάντα (δεν ανήκουν στο {@link STRUCTURAL_OVERLAP_TYPES}).
+ * το SSoT {@link findStructuralOverlapForEntity}· non-structural τύποι (opening, MEP,
+ * furniture…) περνούν πάντα.
  */
 function isStructuralOverlapBlocked(entity: Entity, existing: readonly Entity[]): boolean {
-  if (!STRUCTURAL_OVERLAP_TYPES.has(entity.type)) return false;
-  const footprint = structuralFootprintOf(entity);
-  if (!footprint) return false;
-  const hit = findStructuralOverlap(footprint, existing, {
-    excludeIds: new Set([entity.id]),
-    candidateType: entity.type,
-  });
+  const hit = findStructuralOverlapForEntity(entity, existing);
   if (!hit) return false;
   EventBus.emit('bim:placement-blocked', { entityType: entity.type, blockedById: hit.blockedById, count: 1 });
   return true;

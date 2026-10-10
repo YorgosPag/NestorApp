@@ -24,8 +24,23 @@ import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
-/** Slack (mm) for "the endpoint sits on the neighbour's boundary line". */
+/**
+ * Slack (mm) for "the endpoint sits on the neighbour's boundary line": how far PAST the
+ * neighbour's face (a drafting gap) an endpoint may sit and still be joined.
+ */
 const AUTOJOIN_TOL_MM = 50;
+
+/**
+ * "Already on the centreline" (mm) — the idempotence guard, and ONLY that. It is a float
+ * epsilon, not a drafting tolerance.
+ *
+ * ADR-911 Φ3α-2: this used to be `AUTOJOIN_TOL_MM` (50). One constant did two jobs, and as the
+ * LOWER bound it sat exactly on a data value — the half-thickness of a 100 mm wall is 50. A
+ * wall therefore NEVER joined a neighbour ≤ 100 mm thick in clean drawings, and joined it as
+ * soon as the drawing carried 0.001 mm of noise (50.0005 > 50). Classification must not depend
+ * on the last decimal: with an epsilon the extension is continuous in the endpoint position.
+ */
+const AUTOJOIN_ON_CENTRELINE_EPS_MM = 1e-6;
 
 /**
  * Distance along the unit ray (o + t·û) at which it crosses segment [a,b], plus
@@ -69,7 +84,7 @@ function resolveExtension(
     if (!hit || !hit.within) continue;
     // The endpoint must be on/near the neighbour's face: 0 ≤ dist ≤ half + slack.
     if (hit.dist < -slack || hit.dist > nHalf + slack) continue;
-    if (hit.dist <= slack) continue; // already at (or past) the centreline → no move
+    if (hit.dist <= AUTOJOIN_ON_CENTRELINE_EPS_MM * scale) continue; // already at (or past) the centreline → no move
     if (!best || hit.dist < best.dist) {
       best = { dist: hit.dist, x: ex + ux * hit.dist, y: ey + uy * hit.dist };
     }

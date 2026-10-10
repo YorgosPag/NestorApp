@@ -14,8 +14,12 @@ import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import { toPt2 } from './structural-finish-point';
 import type { WallFinishObstacle } from './structural-finish-scene';
 
-/** Wall → plan footprint (outer + reversed inner) από τα δοσμένα params (miters ενσωματωμένα). */
-function wallFootprintFromParams(params: WallFinishObstacle['params'], kind: WallFinishObstacle['kind']): Pt2[] {
+/**
+ * Wall → plan footprint (outer + reversed inner) από τα δοσμένα params (miters ενσωματωμένα).
+ * Εξάγεται για το `placement/wall-join-overlap` (ADR-567 §join-is-not-occupation), που χρειάζεται
+ * το αποτύπωμα ΑΚΡΙΒΩΣ των params που του δίνει — όχι την ένωση raw ∪ mitered.
+ */
+export function wallFootprintFromParams(params: WallFinishObstacle['params'], kind: WallFinishObstacle['kind']): Pt2[] {
   const g = computeWallGeometry(params, kind);
   const outer = g.outerEdge.points.map(toPt2);
   const inner = [...g.innerEdge.points].reverse().map(toPt2);
