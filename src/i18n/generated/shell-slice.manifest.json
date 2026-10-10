@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2f3df4b478e9ca968d93386609353e7a7703202d8c936db3131d676f29c3970a",
+  "inputsSha256": "a884cbab4e218fd490f9a1153cf1e360313cc8a262c2c0d56c18e327242a9bfa",
   "languages": [
     "el"
   ],
@@ -12151,7 +12151,7 @@
     "src/lib/demand/demand-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/demand/demand-title.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/prospect-interest.ts": "da31a2c7e4d9a066d64612ab695645becb6da88ccfae66bf53429d6eda569989",
-    "src/lib/design-system.ts": "cb22ef6086375aa0e11d18e09aa039b0e2d70601a56fc347036f2317492b2ebe",
+    "src/lib/design-system.ts": "ddee1a723091fe015e7a93e689dd46082062f0c497c5b413073f31083fccb0b4",
     "src/lib/error-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/errors/backend-unavailable.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/esco/esco-uri.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",

@@ -21,6 +21,9 @@ export default {
     './src/styles/design-tokens.ts',
     './src/styles/design-tokens/**/*.ts',
     './src/design-system/**/*.ts',
+    // Οι κλάσεις χρώματος κατάστασης (`getStatusColor`) ζουν ΕΔΩ ως κυριολεκτικές συμβολοσειρές. Το `src/lib` δεν
+    // σαρώνεται ολόκληρο· χωρίς αυτή τη γραμμή 7 από τις 15 δεν παράγονταν (μετρημένο 2026-10-10).
+    './src/lib/design-system.ts',
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',

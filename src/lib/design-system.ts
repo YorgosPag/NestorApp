@@ -14,10 +14,12 @@ const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' =
     'for-sale': 'status-success',
     'available': 'status-success',
     'active': 'status-success',
+    'success': 'status-success',
     
     'for-rent': 'status-info',
     'planned': 'status-info',
     'pending': 'status-info',
+    'info': 'status-info',
     
     'reserved': 'status-warning',
     'construction': 'status-warning',
@@ -33,17 +35,51 @@ const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' =
     'owner': 'status-purple',
   };
 
-  const colorVar = statusColorMap[status] || 'status-info';
-  
-  switch (variant) {
-    case 'bg':
-      return `bg-[hsl(var(--${colorVar}))]`;
-    case 'border':
-      return `border-[hsl(var(--${colorVar}))]`;
-    case 'text':
-    default:
-      return `text-[hsl(var(--${colorVar}))]`;
-  }
+  const colorVar = statusColorMap[status];
+  const classes = (colorVar && STATUS_COLOR_CLASSES[colorVar]) || STATUS_COLOR_CLASSES['status-info'];
+  return classes[variant];
+};
+
+/**
+ * Οι κλάσεις χρώματος κατάστασης, **ολόκληρες και κυριολεκτικές**.
+ *
+ * 🔴 ΓΙΑΤΙ ΕΙΝΑΙ ΠΙΝΑΚΑΣ ΚΑΙ ΟΧΙ ΠΑΡΕΜΒΟΛΗ (μετρημένο στον browser, 2026-10-10): ως τότε το όνομα συντίθετο από
+ * πρόθεμα + μεταβλητή μέσα σε template literal. Το Tailwind σαρώνει **κείμενο**: κλάση που δεν υπάρχει αυτούσια σε αρχείο
+ * του `content` δεν παράγεται ποτέ. Από τους 15 συνδυασμούς οι **7 δεν είχαν CSS** — ανάμεσά τους το κόκκινο κείμενο
+ * σφάλματος. Οι υπόλοιποι 8 δούλευαν **κατά σύμπτωση** (η ίδια συμβολοσειρά υπήρχε αλλού). Το μήνυμα σύγκρουσης
+ * ορόφων έβγαινε λευκό, ίδιο με μια προειδοποίηση.
+ *
+ * ⚠️ ΜΗΝ το ξανακάνεις παρεμβολή, και ΜΗΝ βγάλεις αυτό το αρχείο από το `content` του `tailwind.config.ts`.
+ * ⚠️ ΜΗΝ γράψεις εδώ **ούτε σε σχόλιο** όνομα κλάσης με παρεμβολή: το αρχείο σαρώνεται, και το Tailwind γεννά CSS
+ *    από ό,τι μοιάζει με κλάση — άκυρο CSS που ρίχνει ΟΛΟ το `globals.css` (συνέβη την ίδια μέρα, από αυτό το σχόλιο).
+ * Άγκυρα: `src/lib/__tests__/design-system-status-classes.test.ts`.
+ */
+const STATUS_COLOR_CLASSES: Record<string, Record<'bg' | 'text' | 'border', string>> = {
+  'status-success': {
+    bg: 'bg-[hsl(var(--status-success))]',
+    text: 'text-[hsl(var(--status-success))]',
+    border: 'border-[hsl(var(--status-success))]',
+  },
+  'status-info': {
+    bg: 'bg-[hsl(var(--status-info))]',
+    text: 'text-[hsl(var(--status-info))]',
+    border: 'border-[hsl(var(--status-info))]',
+  },
+  'status-warning': {
+    bg: 'bg-[hsl(var(--status-warning))]',
+    text: 'text-[hsl(var(--status-warning))]',
+    border: 'border-[hsl(var(--status-warning))]',
+  },
+  'status-error': {
+    bg: 'bg-[hsl(var(--status-error))]',
+    text: 'text-[hsl(var(--status-error))]',
+    border: 'border-[hsl(var(--status-error))]',
+  },
+  'status-purple': {
+    bg: 'bg-[hsl(var(--status-purple))]',
+    text: 'text-[hsl(var(--status-purple))]',
+    border: 'border-[hsl(var(--status-purple))]',
+  },
 };
 const getStatusColor = getStatusColorClass;
 export { getStatusColor };
