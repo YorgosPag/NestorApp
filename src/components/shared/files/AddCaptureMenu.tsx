@@ -133,6 +133,34 @@ const _CAPTURE_OPTIONS: Record<CaptureSource, CaptureOption> = {
   },
 };
 
+/** Ό,τι χρειάζεται μία επιλογή από το κέλυφός της — το ίδιο συμβόλαιο για μενού και για φύλλο. */
+interface CaptureItemProps {
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Η επιλογή **μέσα στο φύλλο κινητού**. Το `DropdownMenuItem` δεν μπορεί να ζήσει εδώ: χωρίς `DropdownMenu`
+ * γύρω του το Radix πετά «`MenuItem` must be used within `Menu`» και ρίχνει όλη τη σελίδα — μετρημένο ζωντανά
+ * στα 390px (2026-10-10, ADR-912 Changelog). Στόχος αφής 44px (WCAG 2.5.5).
+ */
+function SheetCaptureItem({ onClick, className, children }: CaptureItemProps) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={cn(
+        'flex min-h-11 w-full items-center rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent',
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -183,12 +211,13 @@ export function AddCaptureMenu({
   // RENDER HELPERS
   // =========================================================================
 
-  const renderMenuItems = () => {
+  // Οι επιλογές δηλώνονται ΜΙΑ φορά· το κέλυφος (στοιχείο μενού ή κουμπί φύλλου) το δίνει ο καλών.
+  const renderMenuItems = (Item: React.ComponentType<CaptureItemProps>, separator: React.ReactNode) => {
     return (
       <>
         {/* Upload file - always available, opens entry point selector */}
         {allowedSources.includes('upload') && (
-          <DropdownMenuItem onClick={handleUploadClick} className="gap-2 py-2">
+          <Item onClick={handleUploadClick} className="gap-2 py-2">
             <Upload className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.upload')}</span>
@@ -196,14 +225,14 @@ export function AddCaptureMenu({
                 {t('capture.uploadDesc')}
               </span>
             </div>
-          </DropdownMenuItem>
+          </Item>
         )}
 
-        {allowedSources.length > 1 && <DropdownMenuSeparator />}
+        {allowedSources.length > 1 && separator}
 
         {/* Camera capture */}
         {allowedSources.includes('camera') && (
-          <DropdownMenuItem onClick={handleCameraCapture} className="gap-2 py-2">
+          <Item onClick={handleCameraCapture} className="gap-2 py-2">
             <Camera className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.photo')}</span>
@@ -211,12 +240,12 @@ export function AddCaptureMenu({
                 {t('capture.photoDesc')}
               </span>
             </div>
-          </DropdownMenuItem>
+          </Item>
         )}
 
         {/* Video capture */}
         {allowedSources.includes('video') && (
-          <DropdownMenuItem onClick={handleVideoCapture} className="gap-2 py-2">
+          <Item onClick={handleVideoCapture} className="gap-2 py-2">
             <Video className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.video')}</span>
@@ -224,12 +253,12 @@ export function AddCaptureMenu({
                 {t('capture.videoDesc')}
               </span>
             </div>
-          </DropdownMenuItem>
+          </Item>
         )}
 
         {/* Audio recording */}
         {allowedSources.includes('microphone') && (
-          <DropdownMenuItem
+          <Item
             onClick={handleAudioCapture}
             className={cn('gap-2 py-2', isRecording && 'bg-destructive/10 text-destructive')}
           >
@@ -244,12 +273,12 @@ export function AddCaptureMenu({
                 {isRecording ? t('capture.clickToStop') : t('capture.audioDesc')}
               </span>
             </div>
-          </DropdownMenuItem>
+          </Item>
         )}
 
         {/* Text note */}
         {allowedSources.includes('text') && (
-          <DropdownMenuItem
+          <Item
             onClick={() => setIsTextNoteOpen(true)}
             className="gap-2 py-2"
           >
@@ -260,7 +289,7 @@ export function AddCaptureMenu({
                 {t('capture.textDesc')}
               </span>
             </div>
-          </DropdownMenuItem>
+          </Item>
         )}
       </>
     );
@@ -378,7 +407,7 @@ export function AddCaptureMenu({
               <SheetTitle>{t('capture.title')}</SheetTitle>
             </SheetHeader>
             <nav className="mt-4 space-y-2" role="menu">
-              {renderMenuItems()}
+              {renderMenuItems(SheetCaptureItem, <hr className="border-border" />)}
             </nav>
             {textNoteContent}
           </SheetContent>
@@ -397,7 +426,7 @@ export function AddCaptureMenu({
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel>{t('capture.title')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {renderMenuItems()}
+          {renderMenuItems(DropdownMenuItem, <DropdownMenuSeparator />)}
         </DropdownMenuContent>
       </DropdownMenu>
 
