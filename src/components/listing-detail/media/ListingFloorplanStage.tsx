@@ -20,6 +20,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useListingPhotoParam } from '@/hooks/listings/useListingPhotoParam';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { floorplanSpotsByUrl, listingFloorplanSpots, type ListingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
@@ -101,10 +102,10 @@ function PlanPicker({ count, active, onPick }: PlanPickerProps) {
     <ul aria-label={t('listing-detail:media.capture.floorplansLabel')} className="m-0 flex list-none flex-wrap gap-2 p-0">
       {Array.from({ length: count }, (_, index) => (
         <li key={index}>
-          <Button type="button" size="sm" variant={index === active ? 'default' : 'outline'} aria-pressed={index === active}
+          <ToggleButton type="button" size="sm" pressed={index === active}
             onClick={() => onPick(index)}>
             {t('listing-detail:media.capture.floorplanTab', { index: index + 1 })}
-          </Button>
+          </ToggleButton>
         </li>
       ))}
     </ul>
