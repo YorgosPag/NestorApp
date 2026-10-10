@@ -1156,6 +1156,96 @@ module)* ⇒ πράσινα. Η πρώτη εκτέλεση έπιασε **23/26
 - Αντίγραφα του `publicImage` μένουν σε tests **εκτός** του φακέλου των ζωγράφων *(`print/__tests__/*` ·
   `HatchRenderer-contour-pen.test.ts` · `dxf-renderer-render-scope.test.ts`)* — δεν αγγίχτηκαν.
 
+**Γ2.6 — οι ζωγράφοι που η πύλη pixels δεν βλέπει** *(2026-10-10· χωρίστηκε σε **Γ2.6α** «μόνο raster PDF» και **Γ2.6β**
+«δημόσια κάτοψη εκτός δείγματος» + overlays — κάθε commit μία ιστορία)*
+
+Η baseline 4 σημαίνει «ό,τι **μετράει η πύλη** είναι καθαρό», όχι «όλοι οι ζωγράφοι είναι καθαροί»: η πύλη μετρά μόνο ό,τι
+αφήνει το προφίλ, και μόνο το **ένα** προεπιλεγμένο δείγμα ανά τύπο. Το audit *(grep `\.(strokeStyle|fillStyle|lineWidth)\s*=`:
+**171** αναθέσεις στο `bim/renderers`, ιχνηλάτηση προέλευσης)* έβγαλε τέσσερις ομάδες ανά **δρόμο προς το χαρτί**:
+
+| Ομάδα | Ποιος | Τι έγραφε ωμά | Βήμα |
+|---|---|---|---|
+| **Α. Μόνο raster PDF** *(το προφίλ τους κρύβει)* | `RoofRenderer` | όψη · κορφιάς · γείσο *(3 χρώματα + 3 πάχη)* | Γ2.6α ✅ |
+| | `FoundationRenderer` | `kindStrokeColor` *(περίγραμμα + άξονας)* · σταυρός `rgba(0,0,0,0.45)` 0,8 px | Γ2.6α ✅ |
+| | `BeamRenderer` | εφεδρεία `KIND_STROKE` · άξονας `THIN` | Γ2.6α ✅ |
+| | `FloorFinishRenderer` | περίγραμμα *(χρώμα υλικού, 1,2 px)* · γραμμοσκίαση + τελείες `rgba(0,0,0,0.15)` 0,5 px | Γ2.6α ✅ |
+| | `ThermalSpaceRenderer` | περίγραμμα + **κείμενο** ετικέτας `#0d9488` | Γ2.6α ✅ |
+| | `SpaceSeparatorRenderer` | `#9333ea` 1,2 px | Γ2.6α ✅ |
+| | `GenericSolidRenderer` | `#7b6cff` 2 px · ακμές `rgba(…,0.6)` 1 px | Γ2.6α ✅ |
+| | `strokePolygonOutline` *(όψη «Μόνο κάτοψη» πλάκας / κολόνας)* | χρώμα + `THIN` | Γ2.6α ✅ |
+| **Β. Και δημόσια κάτοψη, εκτός δείγματος** | `draw-rebar-plan-geometry` | `#c0392b` γραμμές + κουκκίδες | Γ2.6β |
+| | `SlabRenderer.drawReinforcementHatch` | `rgba(0,0,0,0.15)` 0,5 px | Γ2.6β |
+| | `stair-render-structure-style` *(σχάρα)* | `lineWidth = 0.6` | Γ2.6β |
+| | `cut-plane-tilt-projection` | `#5b6478` 0,75 px | Γ2.6β |
+| **Γ. Ποτέ στο χαρτί** *(React overlay σε δικό του καμβά)* | `MepWireRenderer` · `EnvelopeRenderer` | όλα | Γ2.6β |
+| **Δ. Chrome** *(μόνο hover / επιλογή)* | βλ. κατάλογο παρακάτω | όλα — **μένουν ωμά** | — |
+
+🔴 **Τρία ευρήματα που διέψευσαν το πλαίσιο του βήματος**
+- **Το vector PDF δεν καλεί ΚΑΝΕΝΑΝ ζωγράφο καμβά** *(`capture-2d-vector.ts` → jsPDF)*. «Μόνο σε PDF» = μόνο το **raster**
+  PDF του μηχανικού *(`capture-2d.ts`, πολιτική `{style, dpi}`, χωρίς τα δύο δάπεδα της δημόσιας κάτοψης)*. Vector = Γ2.7.
+  🔶 Τον vector δρόμο τον διάβασε υποπράκτορας, όχι εγώ.
+- **`MepWireRenderer` και `EnvelopeRenderer` δεν φτάνουν ΠΟΤΕ στο χαρτί**: ζωγραφίζονται από `HomeRunWiresOverlay` /
+  `EnvelopeOverlay` σε δικό τους καμβά· η λήψη καλεί μόνο `DxfRenderer.render`. Η προηγούμενη διατύπωση «τυπώνονται μόνο σε
+  PDF» ήταν λάθος — ούτε εκεί.
+- **Υπάρχει ομάδα Β που το όνομα του βήματος δεν κάλυπτε**: ο οπλισμός *(`drawSceneLevelOverlays2D`)* ζωγραφίζεται μέσα στη
+  λήψη· η όψη της δημόσιας κάτοψης έχει `showReinforcement: false`, αλλά το **ανά-στοιχείο** override προηγείται ⇒ κολόνα με
+  «δείξε οπλισμό» βγάζει κόκκινο στο «Ασπρόμαυρο» της αγγελίας.
+
+**Αποφάσεις Θ**
+- **Θ1** κάθε γραμμή **περιεχομένου** περνά από τα υπάρχοντα `applyLiveStroke` · `liveStrokeInk` · `liveStrokeWidthPx` —
+  κανένα νέο βοηθητικό μελανιού.
+- **Θ2 το chrome μένει ωμό, με όνομα**. Η λήψη περνά `skipInteractive: true` ⇒ κανένα hover, καμία επιλογή ⇒ δεν ζωγραφίζεται
+  σε print pass. **Κατάλογος** *(η έτοιμη λίστα εξαιρέσεων «με λόγο» για το Γ2.8)*: `paintHoverHalo` · `paintSelectionHalo` ·
+  `paintGriplessOverlayHalos` · λαβές *(`finalizeRender`)* · `BeamRenderer.drawDepthIndicator` · `drawAnchorPulse` ·
+  `drawBeamSectionProfile` · `drawEntityDimLabel` *(δοκός, θεμέλιο)* · `RoofRenderer.drawSelectedEdgeHighlight`.
+- **Θ3 οι αχνές γραμμές τυπώνονται με πλήρες μελάνι** *(κανόνας Γ2.2 / Η1)*: σταυρός πεδίλου `0.45` · γραμμοσκίαση δαπέδου
+  `0.15` · ακμές στερεού `0.6`. ⚠️ **Αντίθετη ένδειξη, δηλωμένη**: στο Revit το halftone τυπώνεται **γκρι** από προεπιλογή·
+  μαύρο μόνο με «Replace halftone with thin lines». Κρατάμε τον κανόνα μας: οι δικές μας αχνές είναι διαφάνεια για σκούρο
+  φόντο οθόνης, όχι δηλωμένο halftone. Αλλάζει σε **ένα** σημείο *(`liveStrokeInk`)*.
+- **Θ4 ο άξονας δοκού και ο άξονας / σταυρός θεμελίου ΤΥΠΩΝΟΝΤΑΙ** *(αντίθετα με τον άξονα τοίχου, Η2)*: ο άξονας θεμελίου
+  είναι **δηλωμένη υποκατηγορία** των Object Styles *(`'centerline'`)*, δηλαδή περιεχόμενο σχεδίου. Για τον σταυρό του
+  πεδίλου **δεν βρέθηκε πηγή** — μένει όπως ήταν.
+- **Θ5 κείμενο και γεμάτες τελείες είναι μελάνι** *(ετικέτα θερμικού χώρου · τελείες μοκέτας → `liveStrokeInk`)*.
+- **Θ8 προοίμιο**: `RoofRenderer` και `MepFixtureRenderer` → `extends BimFootprintRenderer` *(`beginPhasedBodyRender` ·
+  `paintLiveBody` · `endPhasedBodyRender`)*· `GenericSolidRenderer` → `endPhasedBodyRender`. Οι υπόλοιποι δομικοί **δεν**
+  είναι πιστά αντίγραφα *(βήμα ανάμεσα, ή άλλη λάμψη)* — η εικόνα «έξι αντίγραφα» παραπάνω ήταν χοντρή.
+- **Θ9 το `ENGINEER_PDF` των αγκυρών έγραφε 300 dpi, η παραγωγή εξάγει στα 150** ⇒ διαβάζει πλέον το `EXPORT_DPI`.
+  🔴 Κοκκίνισε **μία** παλιά άγκυρα *(άνοιγμα πλάκας Δ3)*, και είχε δίκιο: στα 150 dpi η πένα των 0,13 mm είναι **0,77 px**
+  και κάθεται στο δάπεδο του 1 px — στα 300 ήταν 1,5 px. Η Δ3 κρατά ρητά δικό της `PLOTTER_300_DPI`· νέα Δ4 καρφώνει τα 150.
+  Δηλαδή **στο πραγματικό PDF του μηχανικού οι λεπτές πένες των BIM είναι ήδη όλες 1 px** — το Γ2.5 το μετρούσε σε DPI που
+  δεν εξάγεται.
+
+**Γ2.6α — μετρημένο** *(2026-10-10)*
+- **Ωμές αναθέσεις στο `bim/renderers`: 171 → 146.** Στα εννέα αρχεία του βήματος: 52 → 27, και **κάθε** εναπομείνασα είναι
+  γέμισμα μέσω `adaptFillTintForCanvas` / `resolveBimBodyFill`, μελάνι ή πάχος από τον επιλυτή, `liveStroke*`, ή chrome του
+  καταλόγου Θ2 *(στέγη 2 · δοκός 5 · `bim-polygon-render` 4)*.
+- 🧪 **Άγκυρες** — νέα σουίτα `plan-only-painters-print-pass.test.ts` *(10 δείγματα × Ζ1–Ζ4 + μοκέτα + `strokePolygonOutline`)*
+  και η δοκός στο `structural-fallback-ink` *(πλαστός επιλυτής)*: **84** tests. Δείγματα από τα `PIXEL_GATE_SAMPLES` — το
+  **ίδιο** εργοστάσιο με την πύλη, όχι δεύτερο σετ· τρεις παραλλαγές που η πύλη δεν έχει *(πεδιλοδοκός για τον άξονα,
+  πυραμίδα για τις εσωτερικές ακμές, μοκέτα για τις τελείες)*. Ζ1 οθόνη όπως πριν *(οι παλιές σταθερές γραμμένες ρητά στο
+  test)* · Ζ2 δημόσια κάτοψη × 3 στάθμες · Ζ3 PDF μηχανικού · Ζ4 ίδιες γραμμές / παύλες με την οθόνη, `save` = `restore`.
+- **Μεταλλάξεις με μάρτυρα 34/34** *(ωμό μελάνι και ωμό πάχος **χωριστά** σε κάθε κλήση `applyLiveStroke`, χωρίς `restore`,
+  χωρίς προοίμιο)*, οι δύο μάρτυρες πράσινοι, κανένα υπόλειμμα `.mut-*`. `jscpd:diff` καθαρό στα 10 αρχεία παραγωγής.
+  jest γειτονικών **84 σουίτες / 1003**.
+- CHECK 3.28 στο commit του κώδικα έπιασε 4 κλώνους· λύθηκαν με SSoT *(`strokePolylinePaths` · `paintGriplessOverlayHalos` ·
+  βάση `shared/gripless-bim-renderer.ts`)* — βλ. changelog.
+- **Πύλη pixels 3.101**: ⏳ *(συμπληρώνεται με τη μέτρηση — προσδοκία 4, καμία νέα ταυτότητα· την αγγίζει μόνο ο
+  `MepFixtureRenderer`)*
+
+🔶 **Δηλωμένα όρια του Γ2.6α**
+- 🔴 **Το raster PDF του μηχανικού αλλάζει** στο «Ασπρόμαυρο» και στο «Γκρι»: στέγη, θεμέλιο, δάπεδο, θερμικός χώρος,
+  διαχωριστικό, γενικό στερεό δεν βγαίνουν πια χρωματιστά. Στο «Έγχρωμο» ίδια. Σε κάθε print pass πάχος ≥ 1 px *(σταυρός
+  0,8 → 1 · γραμμοσκίαση δαπέδου 0,5 → 1)* και πλήρες μελάνι ⇒ η γραμμοσκίαση δαπέδου φαίνεται **πιο έντονη** από πριν.
+- 🔴 **Πυκνότητα**: το ανοιχτό «μαύρη γραμμοσκίαση που ίσως κλείνει» αφορά τώρα και το δάπεδο. Καμία πύλη δεν το κρίνει.
+- **Κανένας ζωγράφος της ομάδας Α δεν περνά από την πύλη pixels**: τους κρίνει **μόνο** το jest, με πλαστό καμβά — το κενό
+  που κλείνει το Γ2.8. Η Ζ3 δεν έχει **δική της** μετάλλαξη-μάρτυρα *(κάθε μεταλλαγμένος πέθανε ήδη στη Ζ2)*.
+- Η εφεδρεία χρώματος της δοκού είναι σήμερα **απρόσιτη** στο χαρτί *(όπως οι δύο του Γ2.5)*· την κρίνει πλαστός επιλυτής.
+- Ο κλάδος **πλέγματος** του φωτιστικού *(`drawMeshSilhouette`)* δεν άλλαξε εδώ· τον κρατούν οι άγκυρες του Γ2.2.
+- `WallCoveringRenderer` και `MepFittingRenderer` επιστρέφουν επίσης `getGrips() ⇒ []` και **δεν** μεταφέρθηκαν στη νέα βάση.
+- Chrome: δηλώνεται ότι δεν τυπώνεται **από κατασκευή** *(`skipInteractive`)*· άγκυρα που να ζωγραφίζει hover μέσα σε print
+  pass **δεν** γράφτηκε. Ζωντανά στην οθόνη δεν κοιτάχτηκε τίποτα. `tsc` δεν έτρεξε *(N.17)* — δύο ζωγράφοι άλλαξαν βασική
+  κλάση, το βλέπει το CI *(3.29)*.
+
 ## 7. Πηγές
 
 **Γ1β — έρευνα 2026-10-09.** Περιλήψεις αναζήτησης, όχι αυτολεξεί παραθέσεις.
@@ -1209,6 +1299,11 @@ module)* ⇒ πράσινα. Η πρώτη εκτέλεση έπιασε **23/26
 - ArchiCAD — reference lines μόνο στην οθόνη *(Γ2.5 Η2· **φόρουμ Graphisoft**)*: https://community.graphisoft.com/t5/Modeling/View-of-Reference-Lines-only-Is-it-possible/td-p/257732 · η επιλογή στο On-Screen View Options *(άρθρο υποστήριξης Graphisoft)*: https://support.graphisoft.com/hc/en-us/articles/25515364771473-Small-arrows-show-around-the-edges-of-Walls-and-Slabs
 - Revit — location line του τοίχου *(Γ2.5 Η2· **φόρουμ Autodesk, όχι επίσημη τεκμηρίωση**)*: https://forums.autodesk.com/t5/revit-architecture-forum/wall-location-line-on-wrong-side/m-p/10393132
 - 🔴 **ΔΕΝ βρέθηκε πηγή** για το δάπεδο 1 px στο PDF του μηχανικού *(Γ2.5 Η3)*: είναι **δικός μας** κανόνας, κληρονομημένος από τις γραμμές DXF.
+- Revit — Print Setup, Options: *Hide ref/work planes* · *Hide crop boundaries* · *Hide scope boxes* · *Replace halftone with thin lines* *(Γ2.6 Θ2 · Θ3· η ίδια σελίδα με την πρώτη γραμμή)*: https://help.autodesk.com/cloudhelp/2023/ENU/Revit-DocumentPresent/files/GUID-5DDD101F-4BB7-46B5-8B4A-603FF1B7B4A1.htm
+- Autodesk — το halftone τυπώνεται **γκρι** εκτός αν ανάψει η επιλογή *(Γ2.6 Θ3 — η **αντίθετη** ένδειξη)*: https://autodesk.com/support/technical/article/Halftone-gray-lines-print-black-in-Revit · Halftone / Underlay Settings: https://help.autodesk.com/cloudhelp/2024/ENU/Revit-Customize/files/GUID-3B363D33-70F7-491C-9ED0-9D27977E635F.htm
+- Revit — Structural Settings, Symbolic Representation *(δοκοί σε Coarse· Γ2.6 Θ4)*: https://help.autodesk.com/cloudhelp/2023/ENU/Revit-StructEng/files/GUID-70ACF7A0-4056-48AA-8F98-5D373A07372A.htm · «Stick Symbols» στα Object Styles *(**φόρουμ AUGI, όχι επίσημο**)*: https://forums.augi.com/archive/index.php/t-126211.html
+- Revit — Wires στα Object Styles *(Γ2.6 Θ7· **tutorial τρίτου, όχι Autodesk**)*: https://www.nobledesktop.com/learn/revit-mep/optimizing-wiring-line-styles-in-revit-for-better-readability
+- 🔴 **ΔΕΝ βρέθηκε πηγή** *(Γ2.6)*: πώς τυπώνονται τα καλώδια στο Revit *(πάχος / χρώμα)* · ο σταυρός κέντρου πεδίλου · οτιδήποτε για ArchiCAD, Cinema 4D, Figma, Zillow, Idealista σε αυτά τα θέματα — **δεν επαληθεύτηκαν**, δεν είναι ότι συμφωνούν.
 
 ## 8. Changelog
 

@@ -21,7 +21,7 @@ import { OpeningRenderer } from '../OpeningRenderer';
 import { SlabOpeningRenderer } from '../SlabOpeningRenderer';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
 import { lineweightToPx } from '../../../config/lineweight-iso-catalog';
-import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
+import { clearPrintColorPolicy, setPrintColorPolicy, type PrintColorPolicy } from '../../../config/print-color-policy';
 import { MATERIAL_HATCH_LINE_WIDTH_PX, MATERIAL_HATCH_STROKE_RGBA } from '../shared/material-hatch-paint';
 import { ENGINEER_PDF, FLOOR_PX, PLOT_STYLES, isGrey, isOpaque, onPaper, publicImage } from './print-pass-policies';
 import type { Painted } from './recording-canvas';
@@ -29,6 +29,11 @@ import { paintedBy, sampleColumn, sampleOpening, sampleSlabOpening, sampleWall }
 
 /** Η πένα του περιγράμματος του ανοίγματος πλάκας στο 1:100 (πένα 3). */
 const SLAB_OPENING_PEN_MM = 0.13;
+/**
+ * Χαρτί στα 300 dpi — DPI **αυτής** της άγκυρας, με όνομα (ADR-909 Γ2.6α Θ9): εδώ η πένα των 0,13 mm βγαίνει
+ * 1,5 px, πάνω από την τρίχα, άρα φαίνεται αυτούσια. Το `ENGINEER_PDF` ακολουθεί πλέον το `EXPORT_DPI` (150).
+ */
+const PLOTTER_300_DPI: PrintColorPolicy = { style: 'monochrome', dpi: 300 };
 
 const wall = sampleWall();
 const SAMPLES: ReadonlyArray<readonly [string, () => Painted]> = [
@@ -98,10 +103,18 @@ describe('άνοιγμα πλάκας — πάχος από τα Object Styles (
     expect(outline.dash).toStrictEqual([8, 4]);
   });
 
-  it('Δ3 PDF του μηχανικού: η πένα του στα 300 dpi, κάτω από τα 4 px', () => {
+  it('Δ3 χαρτί στα 300 dpi: η πένα του αυτούσια (1,5 px), κάτω από τα 4 px', () => {
+    setPrintColorPolicy(PLOTTER_300_DPI);
+    const [outline] = paint().strokes;
+    expect(outline.width).toBe(lineweightToPx(SLAB_OPENING_PEN_MM, PLOTTER_300_DPI.dpi));
+    expect(outline.width).toBeGreaterThan(1);
+    expect(outline.width).toBeLessThan(FLOOR_PX);
+  });
+
+  it('Δ4 PDF του μηχανικού όπως εξάγεται (150 dpi): η πένα πέφτει κάτω από 1 px ⇒ κάθεται στο δάπεδο της τρίχας', () => {
     setPrintColorPolicy(ENGINEER_PDF);
     const [outline] = paint().strokes;
-    expect(outline.width).toBe(lineweightToPx(SLAB_OPENING_PEN_MM, ENGINEER_PDF.dpi));
-    expect(outline.width).toBeLessThan(FLOOR_PX);
+    expect(lineweightToPx(SLAB_OPENING_PEN_MM, ENGINEER_PDF.dpi)).toBeLessThan(1);
+    expect(outline.width).toBe(1);
   });
 });

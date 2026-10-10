@@ -9,6 +9,7 @@
 import { contrastRatio, parseColor, saturation } from '../../../config/color-math';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
 import { PRINT_PAPER_HEX, type PrintColorPolicy } from '../../../config/print-color-policy';
+import { EXPORT_DPI } from '../../../print/config/paper-constants';
 
 /** Το δάπεδο πάχους της δημόσιας κάτοψης (`PUBLIC_FLOORPLAN_MIN_LINE_WIDTH_PX`). */
 export const FLOOR_PX = 4;
@@ -20,8 +21,12 @@ export const publicImage = (style: PrintColorPolicy['style']): PrintColorPolicy 
   style, dpi: PUBLIC_IMAGE_DPI, minLineWidthPx: FLOOR_PX, minInkContrast: MIN_ENTITY_CONTRAST,
 });
 
-/** PDF του μηχανικού: άχρωμο, **χωρίς** δάπεδο πάχους 4 px και χωρίς δάπεδο αντίθεσης. */
-export const ENGINEER_PDF: PrintColorPolicy = { style: 'monochrome', dpi: 300 };
+/**
+ * PDF του μηχανικού: άχρωμο, **χωρίς** δάπεδο πάχους 4 px και χωρίς δάπεδο αντίθεσης — στο DPI που **εξάγει η
+ * παραγωγή** (`EXPORT_DPI`, ADR-909 Γ2.6α Θ9· πριν έγραφε 300, ενώ το `print-service` εξάγει στα 150). Όποια
+ * άγκυρα χρειάζεται άλλο DPI το δηλώνει με δικό της όνομα — οι υπάρχουσες ζητούν `ENGINEER_PDF.dpi`, όχι αριθμό.
+ */
+export const ENGINEER_PDF: PrintColorPolicy = { style: 'monochrome', dpi: EXPORT_DPI };
 
 export const onPaper = (color: string): number => contrastRatio(color, PRINT_PAPER_HEX);
 export const isGrey = (color: string): boolean => saturation(parseColor(color)!) === 0;

@@ -1,6 +1,6 @@
 /**
- * ADR-909 Γ2.5 (Η4) — οι **εφεδρείες χρώματος** του ανοίγματος και του ανοίγματος πλάκας ρωτούν την πολιτική
- * εκτύπωσης.
+ * ADR-909 Γ2.5 (Η4) · Γ2.6α — οι **εφεδρείες χρώματος** του ανοίγματος, του ανοίγματος πλάκας και της δοκού
+ * ρωτούν την πολιτική εκτύπωσης.
  *
  * 🔶 Σήμερα ο δρόμος αυτός είναι **απρόσιτος σε print pass**: το `resolveSubcategoryStyle` περνά κάθε χρώμα από το
  * `applyPlotColor`, που δεν γυρίζει ποτέ `null` — άρα η εφεδρεία δεν φτάνει στο χαρτί. Γι' αυτό ο επιλυτής εδώ
@@ -22,6 +22,9 @@ jest.mock('../../../config/bim-line-weight-resolver', () => ({
   resolveSubcategoryStyle: () => ({ lineWidthPx: 4, linePattern: 'solid', color: null }),
 }));
 
+import { BeamRenderer } from '../BeamRenderer';
+import { buildBeamEntity, buildDefaultBeamParams } from '../../../hooks/drawing/beam-completion';
+import { LAYER_ID, built } from '../../../print/public-floorplan/pixel-gate/pixel-gate-sample-kit';
 import { OpeningRenderer } from '../OpeningRenderer';
 import { SlabOpeningRenderer } from '../SlabOpeningRenderer';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
@@ -35,7 +38,12 @@ const wall = sampleWall();
 /** Το χρώμα του είδους όπως είναι γραμμένο στον ζωγράφο (`KIND_STROKE.shaft`) — η «οθόνη όπως πριν». */
 const SHAFT_STROKE = '#1f3a5f';
 
+/** `KIND_STROKE.straight` της δοκού (Γ2.6α) — περίγραμμα **και** άξονας κληρονομούν την ίδια εφεδρεία. */
+const BEAM_STRAIGHT_STROKE = '#b07d1f';
+const sampleBeam = () => built('beam', buildBeamEntity(buildDefaultBeamParams({ x: 0, y: 0 }, { x: 3000, y: 0 }), LAYER_ID));
+
 const SAMPLES: ReadonlyArray<readonly [string, string, () => Painted]> = [
+  ['beam', BEAM_STRAIGHT_STROKE, () => paintedBy((ctx) => new BeamRenderer(ctx), sampleBeam())],
   ['slab-opening', SHAFT_STROKE, () => paintedBy((ctx) => new SlabOpeningRenderer(ctx), sampleSlabOpening())],
   ['opening', OPENING_KIND_STROKE.door, () => paintedBy((ctx) => new OpeningRenderer(ctx), sampleOpening(wall))],
 ];
