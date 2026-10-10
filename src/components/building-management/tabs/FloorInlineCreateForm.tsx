@@ -48,8 +48,7 @@ type ExistingFloorElevation = { number: number; elevation?: number | null; heigh
 
 interface FloorMutationResponse {
   floorId?: string;
-  sameElevationFloorIds?: string[];
-  data?: { floorId: string; sameElevationFloorIds?: string[] };
+  data?: { floorId: string };
 }
 
 // =============================================================================
@@ -149,7 +148,7 @@ export function FloorInlineCreateForm({
   existingFloors = [],
 }: FloorInlineCreateFormProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-  const { success, error: notifyError, warning: notifyWarning } = useNotifications();
+  const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
   const floorLabel = useFloorLabel();
 
@@ -248,13 +247,10 @@ export function FloorInlineCreateForm({
 
       const result = await createFloorWithPolicy<FloorMutationResponse>({ payload: toFloorCreatePayload(floor, projectId) });
       success(t('tabs.floors.createSuccess'));
-      // Ίδιο υψόμετρο με άλλη στάθμη: επιτρέπεται (Revit), αλλά ο άνθρωπος πρέπει να το ξέρει.
-      const sameElevation = result?.sameElevationFloorIds ?? result?.data?.sameElevationFloorIds;
-      if (sameElevation && sameElevation.length > 0) notifyWarning(t('tabs.floors.createdSameElevation'));
       const createdId = result?.floorId ?? result?.data?.floorId;
       onCreated(createdId, { number: num, name: floor.name ?? '' });
     } catch (err) {
-      // Η άρνηση μοναδικότητας λέει ΤΙ είναι πιασμένο: αριθμός, όνομα ή είδος ειδικής στάθμης.
+      // Η άρνηση της στοίβας λέει ΤΙ φταίει: αριθμός, όνομα, είδος ειδικής στάθμης ή υψόμετρο χωρίς ύψος ορόφου.
       const refusalKey = floorSlotRefusalKey(err);
       if (refusalKey) {
         notifyError(t(refusalKey));
@@ -265,7 +261,7 @@ export function FloorInlineCreateForm({
     } finally {
       setCreating(false);
     }
-  }, [buildingId, projectId, createName, createNumber, createElevation, createHeight, onCreated, t, success, notifyError, notifyWarning]);
+  }, [buildingId, projectId, createName, createNumber, createElevation, createHeight, onCreated, t, success, notifyError]);
 
   return (
     <div

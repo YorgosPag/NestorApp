@@ -24,8 +24,8 @@ describe('judgeFloorStacks', () => {
     expect(report.conflicts.map((c) => [c.buildingId, c.clash, c.floors.map((f) => f.id)])).toEqual([
       ['bldg_A', 'number', ['flr_5c28', 'flr_690f']],
       ['bldg_A', 'name', ['flr_5c28', 'flr_690f']],
+      ['bldg_A', 'elevation', ['flr_5c28', 'flr_690f']],
     ]);
-    expect(report.sameElevation.map((s) => s.buildingId)).toEqual(['bldg_A']);
   });
 
   it('ίδιος αριθμός σε ΑΛΛΟ κτίριο ή σε άλλον ενοικιαστή δεν είναι σύγκρουση', () => {

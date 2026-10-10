@@ -18,7 +18,8 @@ import {
  * 🔴 Ως τις 2026-10-10 αυτή η συνάρτηση έκανε η ίδια το ερώτημα, **έξω** από συναλλαγή ⇒ δύο ταυτόχρονα αιτήματα
  * περνούσαν και τα δύο. Και ως τις 2026-10-03 ζούσε μόνο στη δημιουργία (η επεξεργασία αριθμού δεν ρωτούσε).
  *
- * @throws {ApiError} 409 όταν η θέση ή το όνομα είναι πιασμένα — `details.conflictingFloorId` = με ποιον
+ * @throws {ApiError} 409 όταν η θέση ή το όνομα είναι πιασμένα, ή το υψόμετρο αφήνει όροφο χωρίς ύψος —
+ *   `details.conflictingFloorId` = με ποιον
  */
 export function assertFloorSlotFree(
   siblings: readonly FloorSlotRow[],
@@ -38,5 +39,8 @@ export function assertFloorSlotFree(
 function refusalMessage(clash: FloorSlotClash, candidate: FloorSlotCandidate, buildingId: string): string {
   if (clash === 'kind') return `A ${candidate.kind} special level already exists in building ${buildingId}`;
   if (clash === 'name') return `Floor name "${candidate.name}" already exists in building ${buildingId}`;
+  if (clash === 'elevation') {
+    return `Elevation ${candidate.elevation} leaves a storey below the minimum height in building ${buildingId}`;
+  }
   return `Floor number ${candidate.number} already exists in building ${buildingId}`;
 }

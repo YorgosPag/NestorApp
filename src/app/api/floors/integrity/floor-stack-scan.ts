@@ -7,7 +7,6 @@
 
 import {
   findFloorStackConflicts,
-  findSameElevationGroups,
   type FloorSlotClash,
   type FloorSlotRow,
 } from '@/lib/floor/floor-stack-integrity';
@@ -33,10 +32,8 @@ export interface FloorsIntegrityReport {
   buildingsScanned: number;
   /** Όροφοι χωρίς κτίριο ή ενοικιαστή — δεν ανήκουν σε καμία στοίβα, άρα δεν κρίνονται. */
   ownerlessFloors: number;
-  /** Παραβιάσεις μοναδικότητας — σφάλματα προς επίλυση. */
+  /** Παραβιάσεις του κανόνα (μοναδικότητα · όροφος χωρίς ύψος, `clash: 'elevation'`) — σφάλματα προς επίλυση. */
   conflicts: Array<StackFinding & { clash: FloorSlotClash }>;
-  /** Μετρούμενοι όροφοι στο ίδιο υψόμετρο — επιτρέπεται (Revit), αναφέρεται. */
-  sameElevation: StackFinding[];
 }
 
 /** Ένας όροφος της σάρωσης: η γραμμή του κανόνα μαζί με τον κάτοχο της στοίβας του. */
@@ -83,9 +80,6 @@ export function judgeFloorStacks(scanned: readonly ScannedFloor[]): FloorsIntegr
         ...findingOf(stack, conflict.floorIds),
         clash: conflict.clash,
       })),
-    ),
-    sameElevation: stacks.flatMap((stack) =>
-      findSameElevationGroups(rowsOf(stack)).map((ids) => findingOf(stack, ids)),
     ),
   };
 }

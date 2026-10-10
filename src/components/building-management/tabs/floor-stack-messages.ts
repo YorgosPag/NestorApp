@@ -17,7 +17,6 @@ import {
   FLOOR_INTERMEDIATE,
   FLOOR_SLOT_ERROR_CODES,
   findFloorStackConflicts,
-  findSameElevationGroups,
   isFloorSlotErrorCode,
   type FloorSlotClash,
   type FloorSlotErrorCode,
@@ -29,6 +28,7 @@ const REFUSAL_KEYS: Record<FloorSlotErrorCode, string> = {
   [FLOOR_SLOT_ERROR_CODES.number]: 'tabs.floors.duplicateNumber',
   [FLOOR_SLOT_ERROR_CODES.kind]: 'tabs.floors.duplicateKind',
   [FLOOR_SLOT_ERROR_CODES.name]: 'tabs.floors.duplicateName',
+  [FLOOR_SLOT_ERROR_CODES.elevation]: 'tabs.floors.storeyTooLow',
 };
 
 /** Το κλειδί i18n κάθε σύγκρουσης που υπάρχει ήδη. */
@@ -36,6 +36,7 @@ const CONFLICT_KEYS: Record<FloorSlotClash, string> = {
   number: 'tabs.floors.conflictDuplicateNumber',
   kind: 'tabs.floors.conflictDuplicateKind',
   name: 'tabs.floors.conflictDuplicateName',
+  elevation: 'tabs.floors.conflictStoreyTooLow',
 };
 
 /**
@@ -68,16 +69,12 @@ function describeFloors(floors: readonly FloorSlotRow[], ids: readonly string[])
     .join(', ');
 }
 
-/** Οι συγκρούσεις της στοίβας ως μηνύματα **σφάλματος** — κενό ⇒ η στοίβα τηρεί τον κανόνα. */
+/**
+ * Οι συγκρούσεις της στοίβας ως μηνύματα **σφάλματος** — κενό ⇒ η στοίβα τηρεί τον κανόνα. Μαζί και ο όροφος χωρίς
+ * ύψος (ίδιο ή αντεστραμμένο υψόμετρο): ως τις 2026-10-10 ήταν προειδοποίηση «επιτρέπεται».
+ */
 export function describeFloorStackConflicts(floors: readonly FloorSlotRow[], t: Translate): string[] {
   return findFloorStackConflicts(floors).map((conflict) =>
     t(CONFLICT_KEYS[conflict.clash], { floors: describeFloors(floors, conflict.floorIds) }),
-  );
-}
-
-/** Οι ομάδες ορόφων στο ίδιο υψόμετρο ως **προειδοποιήσεις** (η Revit το επιτρέπει — δεν είναι σφάλμα). */
-export function describeSameElevation(floors: readonly FloorSlotRow[], t: Translate): string[] {
-  return findSameElevationGroups(floors).map((ids) =>
-    t('tabs.floors.sameElevationWarning', { floors: describeFloors(floors, ids) }),
   );
 }

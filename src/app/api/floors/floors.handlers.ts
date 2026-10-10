@@ -173,7 +173,7 @@ export async function handleCreateFloor(
     if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
     if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
-    // ADR-461 — μοναδικότητα (αριθμός/είδος/όνομα), γέννηση και επανατοποθέτηση ειδικών σταθμών (η θεμελίωση
+    // ADR-461 / ADR-910 — μοναδικότητα (αριθμός/είδος/όνομα), ελάχιστο ύψος ορόφου, γέννηση και επανατοποθέτηση ειδικών σταθμών (η θεμελίωση
     // κατεβαίνει όταν προστίθεται υπόγειο, η απόληξη ανεβαίνει όταν προστίθεται όροφος) σε ΜΙΑ συναλλαγή, κάτω από
     // το κλειδί της στοίβας. Κτίριο που λείπει το αρνείται το `createEntity`· κτίριο χωρίς ενοικιαστή, η γέννηση.
     const result = await writeFloorBirth({
@@ -195,10 +195,7 @@ export async function handleCreateFloor(
     });
 
     return apiSuccess<FloorCreateResponse>(
-      {
-        floorId: result.floorId,
-        ...(result.sameElevationFloorIds.length > 0 ? { sameElevationFloorIds: [...result.sameElevationFloorIds] } : {}),
-      },
+      { floorId: result.floorId },
       `Floor "${body.name}" created successfully`
     );
   } catch (error) {
@@ -231,7 +228,7 @@ export async function handleUpdateFloor(
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
 
-    // ADR-461 / ADR-903 §6 — αλλαγή αριθμού, είδους ή ονόματος ⇒ ο ίδιος κανόνας μοναδικότητας με τη γέννηση,
+    // ADR-461 / ADR-903 §6 — αλλαγή αριθμού, είδους, ονόματος ή υψομέτρου ⇒ ο ίδιος κανόνας με τη γέννηση,
     // **μέσα** στη συναλλαγή της εγγραφής (ο συνοδός διαβάζει το κλειδί και τη στοίβα, και σφραγίζει μαζί).
     const versionResult = await withVersionCheck({
       db,

@@ -11,8 +11,13 @@
  *   - μετρούμενοι όροφοι ⇒ **μοναδικός αριθμός** μεταξύ τους·
  *   - ειδικές στάθμες (θεμελίωση/δώμα/απόληξη/πυλωτή/σοφίτα) ⇒ **μία ανά είδος**, μοιράζονται νόμιμα αριθμό με
  *     μετρούμενο όροφο (θεμελίωση −1 δίπλα σε υπόγειο −1)·
- *   - **μοναδικό όνομα** ανά κτίριο (Revit), αγνοώντας πεζά/κεφαλαία, τόνους και κενά.
- * Ίδιο υψόμετρο **δεν** είναι σύγκρουση: η Revit το επιτρέπει, αλλά σπάει την εξαγωγή IFC ⇒ προειδοποίηση.
+ *   - **μοναδικό όνομα** ανά κτίριο (Revit), αγνοώντας πεζά/κεφαλαία, τόνους και κενά·
+ *   - **κάθε μετρούμενος όροφος έχει ύψος** ≥ {@link MIN_STOREY_HEIGHT_M}: το υψόμετρό του απέχει τόσο από τον
+ *     μετρούμενο από κάτω και από πάνω του.
+ *
+ * 🔴 Ως τις 2026-10-10 το ίδιο υψόμετρο ήταν **προειδοποίηση** («η Revit το επιτρέπει»). Εδώ όμως το ύψος ορόφου
+ * **παράγεται** από τα υψόμετρα (ADR-451): δύο μετρούμενοι στο ίδιο υψόμετρο = όροφος ύψους μηδέν, γραμμένος στη βάση
+ * από την ανασύνταξη — ακριβώς ό,τι το σχήμα του API αρνείται όταν το πληκτρολογεί άνθρωπος (`height ≥ 0,1`).
  */
 
 import { isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
@@ -27,9 +32,15 @@ export interface FloorSlotRow {
 }
 
 /** Ο όροφος όπως **θα είναι** μετά την εγγραφή. */
-export type FloorSlotCandidate = Omit<FloorSlotRow, 'id' | 'elevation'>;
+export type FloorSlotCandidate = Omit<FloorSlotRow, 'id'>;
 
-export type FloorSlotClash = 'number' | 'kind' | 'name';
+export type FloorSlotClash = 'number' | 'kind' | 'name' | 'elevation';
+
+/**
+ * Μέτρα — το ελάχιστο ύψος ορόφου. **Μία** τιμή για το ρητό ύψος (σχήμα του API) και για το παράγωγο (απόσταση
+ * υψομέτρων δύο διαδοχικών μετρούμενων ορόφων).
+ */
+export const MIN_STOREY_HEIGHT_M = 0.1;
 
 /** Γιατί δεν χωράει — και με ποιον συγκρούεται. */
 export interface FloorSlotVerdict {
@@ -51,6 +62,7 @@ export const FLOOR_SLOT_ERROR_CODES = {
   number: 'FLOOR_NUMBER_TAKEN',
   kind: 'FLOOR_KIND_TAKEN',
   name: 'FLOOR_NAME_TAKEN',
+  elevation: 'FLOOR_STOREY_TOO_LOW',
 } as const satisfies Record<FloorSlotClash, string>;
 
 export type FloorSlotErrorCode = (typeof FLOOR_SLOT_ERROR_CODES)[FloorSlotClash];
@@ -59,9 +71,6 @@ export type FloorSlotErrorCode = (typeof FLOOR_SLOT_ERROR_CODES)[FloorSlotClash]
 export function isFloorSlotErrorCode(code: unknown): code is FloorSlotErrorCode {
   return (Object.values(FLOOR_SLOT_ERROR_CODES) as readonly unknown[]).includes(code);
 }
-
-/** Μέτρα — δύο στάθμες πιο κοντά από αυτό είναι «στο ίδιο υψόμετρο» (ίδιο κατώφλι με την ανασύνταξη στοίβας). */
-const SAME_ELEVATION_EPSILON_M = 1e-4;
 
 /** Μετρά ως όροφος («Building Story»); Όροφος χωρίς `kind` (παλαιό έγγραφο) ⇒ ναι. */
 export function isCountedStorey(row: { readonly kind?: FloorKind }): boolean {
@@ -83,12 +92,43 @@ export function normalizeFloorName(name: unknown): string {
 export interface FloorSlotChecks {
   readonly slot: boolean;
   readonly name: boolean;
+  /** Το ύψος ορόφου που αφήνει το υψόμετρο — αλλάζει με το υψόμετρο **και** με τη θέση (αριθμός/είδος). */
+  readonly elevation: boolean;
 }
 
-const ALL_CHECKS: FloorSlotChecks = { slot: true, name: true };
+const ALL_CHECKS: FloorSlotChecks = { slot: true, name: true, elevation: true };
+
+/** Μετρούμενος όροφος με γνωστό υψόμετρο — ο μόνος που έχει παράγωγο ύψος. */
+type PlacedStorey<T> = T & { readonly elevation: number };
+
+function isPlacedStorey<T extends { readonly kind?: FloorKind; readonly elevation?: number | null }>(
+  row: T,
+): row is PlacedStorey<T> {
+  return isCountedStorey(row) && typeof row.elevation === 'number' && Number.isFinite(row.elevation);
+}
+
+/** Αφήνει το `upper` ύψος ορόφου κάτω από το ελάχιστο πάνω από το `lower`; Σύγκριση στο χιλιοστό (χωρίς float drift). */
+function isStoreyTooLow(lower: number, upper: number): boolean {
+  return Math.round((upper - lower) * 1000) < Math.round(MIN_STOREY_HEIGHT_M * 1000);
+}
 
 /**
- * **Χωράει;** `null` ⇒ ναι. Αλλιώς η πρώτη σύγκρουση, με σειρά: θέση (αριθμός/είδος) → όνομα.
+ * Ο γείτονας που ο υποψήφιος **στριμώχνει**: ο πλησιέστερος μετρούμενος από κάτω (κατά αριθμό) που δεν του αφήνει
+ * ύψος, ή ο πλησιέστερος από πάνω στον οποίο δεν αφήνει ο ίδιος. Όροφος στον **ίδιο** αριθμό δεν κρίνεται εδώ — είναι
+ * σύγκρουση θέσης. Ειδική στάθμη ή άγνωστο υψόμετρο ⇒ δεν κρίνεται (η θέση της παράγεται από τη στοίβα, ADR-461).
+ */
+function squeezedNeighbour(others: readonly FloorSlotRow[], candidate: FloorSlotCandidate): FloorSlotRow | null {
+  if (!isPlacedStorey(candidate)) return null;
+  const placed = others.filter(isPlacedStorey);
+  const below = placed.filter((row) => row.number < candidate.number).sort((a, b) => b.number - a.number)[0];
+  if (below && isStoreyTooLow(below.elevation, candidate.elevation)) return below;
+  const above = placed.filter((row) => row.number > candidate.number).sort((a, b) => a.number - b.number)[0];
+  if (above && isStoreyTooLow(candidate.elevation, above.elevation)) return above;
+  return null;
+}
+
+/**
+ * **Χωράει;** `null` ⇒ ναι. Αλλιώς η πρώτη σύγκρουση, με σειρά: θέση (αριθμός/είδος) → όνομα → ύψος ορόφου.
  *
  * @param excludeId ο ίδιος ο όροφος, όταν επεξεργάζεται — δεν συγκρούεται με τον εαυτό του
  */
@@ -109,7 +149,8 @@ export function judgeFloorSlot(
     const namesake = others.find((row) => normalizeFloorName(row.name) === name);
     if (namesake) return { clash: 'name', withFloorId: namesake.id };
   }
-  return null;
+  const squeezed = checks.elevation ? squeezedNeighbour(others, candidate) : null;
+  return squeezed ? { clash: 'elevation', withFloorId: squeezed.id } : null;
 }
 
 /** Ομάδες με περισσότερα από ένα μέλη, κατά κλειδί. */
@@ -135,12 +176,37 @@ export function findFloorStackConflicts(rows: readonly FloorSlotRow[]): FloorSta
   const names = crowdedGroups(rows, (row) => normalizeFloorName(row.name)).map(
     (floorIds): FloorStackConflict => ({ clash: 'name', floorIds }),
   );
-  return [...slots, ...names];
+  return [...slots, ...names, ...findTooLowStoreys(rows)];
 }
 
-/** Τα ids κάθε ορόφου που μετέχει σε **οποιαδήποτε** σύγκρουση — για σήμανση στο UI. */
+/**
+ * Ζεύγη **διαδοχικών** μετρούμενων ορόφων (κατά αριθμό, μετά υψόμετρο) όπου ο κάτω μένει χωρίς ύψος: ίδιο υψόμετρο,
+ * σχεδόν ίδιο, ή αντεστραμμένο. Είναι το ίδιο ζεύγος από το οποίο ο πίνακας ορόφων παράγει το ύψος που δείχνει.
+ */
+function findTooLowStoreys(rows: readonly FloorSlotRow[]): FloorStackConflict[] {
+  const placed = rows.filter(isPlacedStorey).sort((a, b) => a.number - b.number || a.elevation - b.elevation);
+  const conflicts: FloorStackConflict[] = [];
+  for (let i = 0; i + 1 < placed.length; i++) {
+    if (isStoreyTooLow(placed[i].elevation, placed[i + 1].elevation)) {
+      conflicts.push({ clash: 'elevation', floorIds: [placed[i].id, placed[i + 1].id] });
+    }
+  }
+  return conflicts;
+}
+
+/** Τα ids των ορόφων χωρίς ύψος — ο **κάτω** κάθε ζεύγους: αυτουνού το παράγωγο ύψος είναι άκυρο. */
+export function tooLowStoreyIds(rows: readonly FloorSlotRow[]): ReadonlySet<string> {
+  return new Set(findTooLowStoreys(rows).map((conflict) => conflict.floorIds[0]));
+}
+
+/**
+ * Τα ids κάθε ορόφου που μετέχει σε σύγκρουση **μοναδικότητας** (αριθμός/είδος/όνομα) — για το σήμα «διπλός» στο UI.
+ * Ο όροφος χωρίς ύψος δεν είναι «διπλός»: έχει δικό του μήνυμα και δική του σήμανση ({@link tooLowStoreyIds}).
+ */
 export function conflictedFloorIds(rows: readonly FloorSlotRow[]): ReadonlySet<string> {
-  return new Set(findFloorStackConflicts(rows).flatMap((conflict) => conflict.floorIds));
+  return new Set(
+    findFloorStackConflicts(rows).filter((conflict) => conflict.clash !== 'elevation').flatMap((conflict) => conflict.floorIds),
+  );
 }
 
 /**
@@ -163,32 +229,4 @@ export function isIntermediateStorey(rows: readonly FloorSlotRow[], floorId: str
   const others = rows.filter((row) => row.id !== floorId && isCountedStorey(row));
   if (others.some((row) => row.number === target.number)) return false;
   return others.some((row) => row.number < target.number) && others.some((row) => row.number > target.number);
-}
-
-/**
- * Ομάδες **μετρούμενων** ορόφων στο ίδιο υψόμετρο — προειδοποίηση, όχι σφάλμα. Οι ειδικές στάθμες εξαιρούνται:
- * η θέση τους παράγεται από τη στοίβα (ADR-461) και δεν είναι επιλογή του ανθρώπου.
- */
-export function findSameElevationGroups(rows: readonly FloorSlotRow[]): string[][] {
-  const counted = rows
-    .filter((row) => isCountedStorey(row) && typeof row.elevation === 'number')
-    .sort((a, b) => (a.elevation as number) - (b.elevation as number));
-  const groups: string[][] = [];
-  let run: FloorSlotRow[] = [];
-  for (const row of counted) {
-    const anchor = run[0];
-    if (anchor && Math.abs((row.elevation as number) - (anchor.elevation as number)) > SAME_ELEVATION_EPSILON_M) {
-      if (run.length > 1) groups.push(run.map((member) => member.id));
-      run = [];
-    }
-    run.push(row);
-  }
-  if (run.length > 1) groups.push(run.map((member) => member.id));
-  return groups;
-}
-
-/** Οι **άλλοι** όροφοι στο ίδιο υψόμετρο με αυτόν — κενό ⇒ καμία προειδοποίηση. */
-export function sameElevationPeersOf(rows: readonly FloorSlotRow[], floorId: string): string[] {
-  const group = findSameElevationGroups(rows).find((ids) => ids.includes(floorId));
-  return group ? group.filter((id) => id !== floorId) : [];
 }

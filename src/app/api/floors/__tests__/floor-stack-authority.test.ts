@@ -165,12 +165,14 @@ describe('γέννηση ορόφου', () => {
     expect(floors()[result.floorId]).toMatchObject({ number: -1, elevation: -1 });
   });
 
-  it('Γ9 — ίδιο υψόμετρο με άλλον μετρούμενο ⇒ προειδοποίηση, ΟΧΙ άρνηση', async () => {
+  it('Γ9 — 🔴 ίδιο υψόμετρο με τον από κάτω μετρούμενο ⇒ 409 FLOOR_STOREY_TOO_LOW, ΚΑΝΕΝΑ έγγραφο (όροφος ύψους μηδέν)', async () => {
     fake.seed(COLLECTIONS.FLOORS, 'flr_g', floor(0, 'Ισόγειο', 'ground'));
 
-    const result = await birth(1, 'Ημιώροφος', 'standard', { elevation: 0 });
+    const refusal = await refusalOf(birth(1, 'Ημιώροφος', 'standard', { elevation: 0 }));
 
-    expect(result.sameElevationFloorIds).toEqual(['flr_g']);
+    expect(refusal).toMatchObject({ statusCode: 409, errorCode: 'FLOOR_STOREY_TOO_LOW' });
+    expect(Object.keys(floors())).toEqual(['flr_g']);
+    expect(lockRev()).toBeUndefined();
   });
 
   it('Γ10 — 🔴 κτίριο χωρίς ενοικιαστή ⇒ ρητή άρνηση 422, όχι σιωπηλή παράλειψη του κανόνα', async () => {
@@ -224,6 +226,34 @@ describe('επεξεργασία ορόφου — ο συνοδός του withV
     await patch('flr_g2', { height: 2.8 });
 
     expect(floors().flr_g2.height).toBe(2.8);
+  });
+
+  it('Ε7 — 🔴 υψόμετρο πάνω στον από κάτω όροφο ⇒ 409 FLOOR_STOREY_TOO_LOW και το υψόμετρο ΔΕΝ αλλάζει', async () => {
+    expect(await refusalOf(patch('flr_1', { elevation: 0 }))).toMatchObject({ statusCode: 409, errorCode: 'FLOOR_STOREY_TOO_LOW' });
+    expect(floors().flr_1.elevation).toBe(3);
+    expect(lockRev()).toBeUndefined();
+  });
+
+  it('Ε8 — υψόμετρο που αφήνει ύψος ⇒ γράφεται, με το κλειδί σφραγισμένο (αλλαγή της στοίβας)', async () => {
+    await patch('flr_1', { elevation: 3.5 });
+
+    expect(floors().flr_1.elevation).toBe(3.5);
+    expect(lockRev()).toBe(1);
+  });
+
+  it('Ε9 — 🔴 αναρίθμηση που αφήνει τον όροφο ΚΑΤΩ από τον νέο του γείτονα ⇒ 409 (το ύψος κρίνεται κατά αριθμό)', async () => {
+    fake.seed(COLLECTIONS.FLOORS, 'flr_2', floor(2, '2ος Όροφος', 'standard'));
+
+    expect(await refusalOf(patch('flr_1', { number: 3 }))).toMatchObject({ errorCode: 'FLOOR_STOREY_TOO_LOW' });
+    expect(floors().flr_1.number).toBe(1);
+  });
+
+  it('Ε10 — 🔑 παλαιός όροφος χωρίς ύψος ΔΕΝ μπλοκάρει μετονομασία ή αλλαγή ύψους πάνω του', async () => {
+    fake.seed(COLLECTIONS.FLOORS, 'flr_2', floor(2, '2ος Όροφος', 'standard', { elevation: 3 }));
+
+    await patch('flr_2', { name: 'Δεύτερος', elevation: 3 });
+
+    expect(floors().flr_2.name).toBe('Δεύτερος');
   });
 
   it('Ε6 — 🔴 ΤΑΥΤΟΧΡΟΝΑ: ο ανταγωνιστής πιάνει τον αριθμό ανάμεσα στην ανάγνωση και στο commit ⇒ 409', async () => {
@@ -323,7 +353,8 @@ describe('επεξεργασία ορόφου — η θέση των ειδικ�
 
     expect(result.warnings).toEqual([]);
     expect(floors().flr_fnd).toMatchObject({ number: -2, elevation: -4.05 });
-    expect(lockRev()).toBe(1);
+    // Δύο σφραγίσεις: η αλλαγή υψομέτρου κρίνεται πλέον κάτω από το κλειδί (ύψος ορόφου), και μετά η επανατοποθέτηση.
+    expect(lockRev()).toBe(2);
     // Παράγωγη γραμμή της μηχανής, με αιτία τη γραμμή του ανθρώπου.
     const derived = recordChange.mock.calls.map(([entry]) => entry).find((entry) => entry.entityId === 'flr_fnd');
     expect(derived).toMatchObject({ performedBy: 'system:floor-stack', cause: { auditId: 'eaud_human' } });

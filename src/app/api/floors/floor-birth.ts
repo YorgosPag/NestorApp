@@ -24,7 +24,6 @@ import type { AuthContext } from '@/lib/auth';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import type { EntityCommitWrite, EntityCreationParams } from '@/lib/firestore/entity-creation.types';
-import { sameElevationPeersOf } from '@/lib/floor/floor-stack-integrity';
 import { createModuleLogger } from '@/lib/telemetry';
 import { buildFloorCascadeActor } from './_shared/floor-cascade-audit';
 import { toFloorStackRow } from './_shared/floor-stack-rows';
@@ -50,21 +49,19 @@ export interface FloorBirthRequest {
 
 export interface FloorBirthResult {
   readonly floorId: string;
-  /** Άλλοι μετρούμενοι όροφοι στο **ίδιο υψόμετρο** — προειδοποίηση, όχι άρνηση (η Revit το επιτρέπει). */
-  readonly sameElevationFloorIds: readonly string[];
 }
 
-/** Ό,τι αποφάσισε η συναλλαγή της γέννησης — για το ίχνος και την απάντηση. */
+/** Ό,τι αποφάσισε η συναλλαγή της γέννησης — για το ίχνος. */
 interface BirthOutcome {
   readonly owner: FloorStackOwner;
   readonly placements: readonly SpecialLevelPlacement[];
-  readonly sameElevationFloorIds: readonly string[];
 }
 
 /**
  * **Η ΜΙΑ γέννηση ορόφου** — η μόνη εγγραφή νέου `floors/{id}` (CHECK 3.102 Κ1).
  *
- * @throws {ApiError} 409 `FLOOR_NUMBER_TAKEN` · `FLOOR_KIND_TAKEN` · `FLOOR_NAME_TAKEN` — τίποτα δεν γράφεται
+ * @throws {ApiError} 409 `FLOOR_NUMBER_TAKEN` · `FLOOR_KIND_TAKEN` · `FLOOR_NAME_TAKEN` · `FLOOR_STOREY_TOO_LOW` —
+ *   τίποτα δεν γράφεται
  * @throws {ApiError} 422 `FLOOR_OWNER_MISSING` — το κτίριο δεν έχει ενοικιαστή
  */
 export async function writeFloorBirth(request: FloorBirthRequest): Promise<FloorBirthResult> {
@@ -82,9 +79,8 @@ export async function writeFloorBirth(request: FloorBirthRequest): Promise<Floor
   });
 
   const settled = outcome as BirthOutcome | null;
-  if (settled === null) return { floorId: created.id, sameElevationFloorIds: [] };
-  await recordPlacements(settled, created.id, request);
-  return { floorId: created.id, sameElevationFloorIds: settled.sameElevationFloorIds };
+  if (settled !== null) await recordPlacements(settled, created.id, request);
+  return { floorId: created.id };
 }
 
 /** Η συναλλαγή: κρίση → όροφος → επανατοποθέτηση ειδικών σταθμών → σφράγιση κλειδιού. */
@@ -102,7 +98,7 @@ function commitBirth(write: EntityCommitWrite, userId: string): Promise<BirthOut
     const own = placements.find((placement) => placement.row.id === entityId);
     transaction.create(ref, own ? { ...doc, number: own.number, elevation: own.elevation } : { ...doc });
     writeSpecialLevelPlacements(transaction, stack.refById, placements.filter((placement) => placement !== own), userId);
-    return { owner, placements, sameElevationFloorIds: sameElevationPeersOf(rows, entityId) };
+    return { owner, placements };
   });
 }
 

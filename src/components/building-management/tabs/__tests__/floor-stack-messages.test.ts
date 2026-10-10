@@ -11,7 +11,6 @@ import type { Translate } from '@/i18n/hooks/useTranslation';
 import type { FloorSlotRow } from '@/lib/floor/floor-stack-integrity';
 import {
   describeFloorStackConflicts,
-  describeSameElevation,
   floorRemovalRefusalKey,
   floorSlotRefusalKey,
 } from '../floor-stack-messages';
@@ -26,6 +25,7 @@ describe('floorSlotRefusalKey', () => {
     expect(floorSlotRefusalKey(refusal(409, 'FLOOR_NUMBER_TAKEN'))).toBe('tabs.floors.duplicateNumber');
     expect(floorSlotRefusalKey(refusal(409, 'FLOOR_NAME_TAKEN'))).toBe('tabs.floors.duplicateName');
     expect(floorSlotRefusalKey(refusal(409, 'FLOOR_KIND_TAKEN'))).toBe('tabs.floors.duplicateKind');
+    expect(floorSlotRefusalKey(refusal(409, 'FLOOR_STOREY_TOO_LOW'))).toBe('tabs.floors.storeyTooLow');
   });
   it('🔴 σύγκρουση εκδόσεων (επίσης 409) ΔΕΝ είναι άρνηση μοναδικότητας', () => {
     expect(floorSlotRefusalKey(refusal(409, 'VERSION_CONFLICT'))).toBeNull();
@@ -67,15 +67,14 @@ describe('describeFloorStackConflicts', () => {
   });
 });
 
-describe('describeSameElevation', () => {
-  it('ίδιο υψόμετρο ⇒ προειδοποίηση (όχι σύγκρουση)', () => {
+describe('όροφος χωρίς ύψος', () => {
+  it('🔴 ίδιο υψόμετρο ⇒ μήνυμα ΣΦΑΛΜΑΤΟΣ με τους ορόφους ονομαστικά (ως τις 2026-10-10: προειδοποίηση)', () => {
     const rows: FloorSlotRow[] = [
       { id: 'a', number: 0, name: 'Ισόγειο', kind: 'ground', elevation: 0 },
       { id: 'b', number: 1, name: 'Ημιώροφος', kind: 'standard', elevation: 0 },
     ];
-    expect(describeSameElevation(rows, t)).toEqual([
-      'tabs.floors.sameElevationWarning::{"floors":"Ισόγειο (0), Ημιώροφος (1)"}',
+    expect(describeFloorStackConflicts(rows, t)).toEqual([
+      'tabs.floors.conflictStoreyTooLow::{"floors":"Ισόγειο (0), Ημιώροφος (1)"}',
     ]);
-    expect(describeFloorStackConflicts(rows, t)).toEqual([]);
   });
 });

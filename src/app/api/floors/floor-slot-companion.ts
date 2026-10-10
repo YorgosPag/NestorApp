@@ -8,7 +8,12 @@
  *
  * 🔑 Κρίνεται **μόνο ό,τι αλλάζει** (απέναντι στο φρέσκο έγγραφο): αλλαγή ύψους σε όροφο που ήδη μετέχει σε παλαιά
  * σύγκρουση δεν μπλοκάρεται — αλλιώς ένα κτίριο με διπλότυπο θα πάγωνε ολόκληρο. Και όταν δεν αλλάζει ούτε θέση
- * ούτε όνομα, ο συνοδός **δεν αγγίζει** το κλειδί: η αυτόματη αποθήκευση δεν σειριοποιεί το κτίριο χωρίς λόγο.
+ * ούτε όνομα ούτε υψόμετρο, ο συνοδός **δεν αγγίζει** το κλειδί: η αυτόματη αποθήκευση δεν σειριοποιεί το κτίριο
+ * χωρίς λόγο.
+ *
+ * 🔑 Το **υψόμετρο** κρίνεται εδώ, πριν γραφτεί (ADR-910 §3.2): η ανασύνταξη που ακολουθεί (ADR-451) παράγει το ύψος
+ * του από κάτω ορόφου από την απόσταση των υψομέτρων και το γράφει **χωρίς** να περάσει από το σχήμα του API — άρα
+ * ένα υψόμετρο πάνω σε γειτονικό όροφο θα έγραφε ύψος μηδέν (ή αρνητικό) στη βάση.
  */
 
 import 'server-only';
@@ -29,10 +34,14 @@ type FloorRecord = Readonly<Record<string, unknown>>;
 
 /** Ποιες όψεις της θέσης αλλάζουν **όντως** — η ίδια τιμή ξανασταλμένη δεν είναι αλλαγή. */
 export function changedSlotChecks(before: FloorRecord, updates: FloorRecord): FloorSlotChecks {
-  const differs = (field: 'number' | 'kind') => updates[field] !== undefined && updates[field] !== before[field];
+  const differs = (field: 'number' | 'kind' | 'elevation') =>
+    updates[field] !== undefined && updates[field] !== before[field];
+  const slot = differs('number') || differs('kind');
   return {
-    slot: differs('number') || differs('kind'),
+    slot,
     name: updates.name !== undefined && normalizeFloorName(updates.name) !== normalizeFloorName(before.name),
+    // Το ύψος ορόφου κρίνεται απέναντι στους γείτονες **κατά αριθμό** ⇒ αλλάζει και όταν μετακινείται η θέση.
+    elevation: slot || differs('elevation'),
   };
 }
 
@@ -44,6 +53,7 @@ function candidateAfter(before: FloorRecord, updates: FloorRecord): FloorSlotCan
     number: after.number,
     kind: isFloorKind(after.kind) ? after.kind : undefined,
     name: typeof after.name === 'string' ? after.name : null,
+    elevation: typeof after.elevation === 'number' ? after.elevation : null,
   };
 }
 
@@ -60,7 +70,7 @@ export function floorSlotCompanion(
 ): VersionedCompanion {
   return async (transaction, before) => {
     const checks = changedSlotChecks(before, updates);
-    const candidate = checks.slot || checks.name ? candidateAfter(before, updates) : null;
+    const candidate = checks.slot || checks.name || checks.elevation ? candidateAfter(before, updates) : null;
     if (candidate === null) return () => undefined;
 
     const owner = requireFloorStackOwner(before);

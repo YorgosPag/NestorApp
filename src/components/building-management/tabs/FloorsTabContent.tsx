@@ -121,7 +121,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    continuityWarnings, stackConflicts, heightDerivedFloorIds,
+    continuityWarnings, stackConflicts, tooLowFloorIds, heightDerivedFloorIds,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId, focusFloorId);
@@ -244,6 +244,9 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                     ? nextFloor.elevation - floor.elevation
                     : floor.height ?? null;
                 const displayHeight = isHeightDerived ? derivedHeight : (floor.height ?? null);
+                // ADR-910 §3.2 — όροφος χωρίς ύψος (ίδιο/αντεστραμμένο υψόμετρο με τον από πάνω): το «0.00 m» δεν
+                // είναι τιμή, είναι σφάλμα — δείχνεται ως τέτοιο, όχι σαν έγκυρη μέτρηση.
+                const isTooLow = tooLowFloorIds.has(floor.id);
 
                 return (
                   <Fragment key={floor.id}>
@@ -336,7 +339,14 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                             </div>
                           </td>
                           <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{formatElevation(floor.elevation)}</td>
-                          <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{displayHeight != null ? `${displayHeight.toFixed(2)} m` : '—'}</td>
+                          <td className={cn("px-2 py-2 font-mono text-xs", isTooLow ? getStatusColor('error', 'text') : colors.text.muted)}>
+                            {isTooLow ? (
+                              <span className="inline-flex items-center gap-1">
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                {t('tabs.floors.storeyTooLowCell')}
+                              </span>
+                            ) : displayHeight != null ? `${displayHeight.toFixed(2)} m` : '—'}
+                          </td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MIN_STOREY_HEIGHT_M } from '@/lib/floor/floor-stack-integrity';
 import { FLOOR_KIND_VALUES, type FloorKind } from '@/utils/floor-naming';
 
 // ─── ADR-369 enum schema ─────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ export const CreateFloorSchema = z.object({
   projectName: z.string().max(200).optional(),
   units: z.number().int().min(0).max(9999).optional(),
   elevation: z.number().min(-999).max(9999).optional(),
-  height: z.number().min(0.1).max(999).optional(),
+  height: z.number().min(MIN_STOREY_HEIGHT_M).max(999).optional(),
 
   // ADR-369 additions
   kind: FloorKindSchema,
@@ -37,7 +38,7 @@ export const UpdateFloorSchema = z.object({
   number: z.number().int().optional(),
   name: z.string().max(200).optional(),
   elevation: z.number().min(-999).max(9999).optional(),
-  height: z.number().min(0.1).max(999).optional().nullable(),
+  height: z.number().min(MIN_STOREY_HEIGHT_M).max(999).optional().nullable(),
   _v: z.number().int().optional(),
 
   // ADR-369 additions (all optional on update)

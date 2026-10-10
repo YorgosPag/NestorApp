@@ -25,10 +25,9 @@ import {
 } from '@/subapps/dxf-viewer/bim/stairs/stair-floor-sync';
 import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import { isBuildingStorey } from '@/utils/floor-naming';
-import { isIntermediateStorey } from '@/lib/floor/floor-stack-integrity';
+import { isIntermediateStorey, tooLowStoreyIds } from '@/lib/floor/floor-stack-integrity';
 import {
   describeFloorStackConflicts,
-  describeSameElevation,
   floorRemovalRefusalKey,
   floorSlotRefusalKey,
 } from './floor-stack-messages';
@@ -208,11 +207,14 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     if (lowest > 0) {
       out.push(t('tabs.floors.continuityNoBase', { lowest }));
     }
-    return [...out, ...describeSameElevation(floors, t)];
+    return out;
   }, [floors, floorGaps, t]);
 
-  /** Συγκρούσεις μοναδικότητας που υπάρχουν ΗΔΗ στα δεδομένα (ίδιος αριθμός/όνομα/είδος) — σφάλμα προς επίλυση. */
+  /** Συγκρούσεις που υπάρχουν ΗΔΗ στα δεδομένα (ίδιος αριθμός/όνομα/είδος · όροφος χωρίς ύψος) — σφάλμα προς επίλυση. */
   const stackConflicts = useMemo(() => describeFloorStackConflicts(floors, t), [floors, t]);
+
+  /** Όροφοι που το υψόμετρο του από πάνω τους αφήνει χωρίς ύψος — ο πίνακας ΔΕΝ δείχνει το «0.00 m» σαν έγκυρη τιμή. */
+  const tooLowFloorIds = useMemo(() => tooLowStoreyIds(floors), [floors]);
 
   /**
    * ADR-451 / ADR-461 — `elevation` is the SSoT, `height` its derived projection.
@@ -485,7 +487,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    floorGaps, continuityWarnings, stackConflicts, heightDerivedFloorIds,
+    floorGaps, continuityWarnings, stackConflicts, tooLowFloorIds, heightDerivedFloorIds,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog, confirm,
   };
