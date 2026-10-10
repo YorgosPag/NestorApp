@@ -8,7 +8,7 @@
  */
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import { tracePolygonScreenPath, paintPolygonHoverHalo } from './bim-polygon-render';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveSymbolFill } from '../../config/adaptive-entity-color';
 import { applyLiveStroke } from './shared/live-stroke';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
@@ -63,7 +63,32 @@ export abstract class BimFootprintRenderer extends BaseEntityRenderer {
     widthPx: number,
     dash?: readonly number[],
   ): void {
-    this.ctx.fillStyle = adaptFillTintForCanvas(fillTint);
+    this.paintResolvedBody(vertices, adaptFillTintForCanvas(fillTint), strokeColor, widthPx, dash);
+  }
+
+  /**
+   * ADR-909 Γ2.4 — {@link paintLiveBody} for a body whose fill is a SYMBOL palette: on screen the
+   * fill stays verbatim ({@link liveSymbolFill}), with no background-adaptive boost — the boost
+   * would repaint every plan symbol on the live canvas. Print pass ⇒ same policy as every body.
+   */
+  protected paintLiveSymbolBody(
+    vertices: ReadonlyArray<{ x: number; y: number }>,
+    symbolFill: string,
+    strokeColor: string,
+    widthPx: number,
+  ): void {
+    this.paintResolvedBody(vertices, liveSymbolFill(symbolFill), strokeColor, widthPx);
+  }
+
+  /** The one fill + outline sequence behind both live bodies; `fillStyle` arrives already resolved. */
+  private paintResolvedBody(
+    vertices: ReadonlyArray<{ x: number; y: number }>,
+    fillStyle: string,
+    strokeColor: string,
+    widthPx: number,
+    dash?: readonly number[],
+  ): void {
+    this.ctx.fillStyle = fillStyle;
     this.drawPolygonPath(vertices);
     this.ctx.fill();
     applyLiveStroke(this.ctx, strokeColor, widthPx);

@@ -52,21 +52,16 @@ export class FloorplanSymbolRenderer extends BimFootprintRenderer {
 
     this.beginPhasedBodyRender(entity, verts, options);
 
-    // Fill + outline (category palette).
-    this.ctx.fillStyle = symbolFill;
-    this.drawPolygonPath(verts);
-    this.ctx.fill();
-    this.ctx.strokeStyle = symbolStroke;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(verts);
-    this.ctx.stroke();
+    // Fill + outline (category palette). ADR-909 Γ2.4 — the print policy decides ink, width and
+    // fill on paper; on screen the palette stays verbatim (no adaptive boost on the symbol fill).
+    this.paintLiveSymbolBody(verts, symbolFill, symbolStroke, RENDER_LINE_WIDTHS.NORMAL);
 
     // Kind-identifying vector strokes (the WC cistern + bowl) — shared SSoT (bim-polygon-render).
+    // They inherit the pen the body just set.
     const built = buildFloorplanSymbol(symbol.params, symbol.geometry);
     strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), built.strokes);
 
-    this.ctx.restore();
-    this.finalizeRender(entity, options);
+    this.endPhasedBodyRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

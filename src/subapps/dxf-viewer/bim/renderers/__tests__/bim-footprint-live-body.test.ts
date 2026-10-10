@@ -24,33 +24,13 @@ import { adaptFillTintForCanvas } from '../../../config/adaptive-entity-color';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
 import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
 import type { EntityModel, GripInfo, RenderOptions } from '../../../rendering/types/Types';
+import { recordingContext, type Painted } from './recording-canvas';
 
 const SQUARE = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
 const TINT = 'rgba(29, 78, 216, 0.14)';
 const BLUE = '#1d4ed8';
 const DASH: readonly number[] = [8, 4];
 const FLOOR_PX = 4;
-
-interface Painted { fills: string[]; strokes: Array<{ ink: string; width: number; dash: number[] }>; saves: number; restores: number }
-
-/** Πλαστός καμβάς: θυμάται τι ίσχυε τη στιγμή κάθε `fill()` / `stroke()`. */
-function recordingContext(): { ctx: CanvasRenderingContext2D; painted: Painted } {
-  let dash: number[] = [];
-  const painted: Painted = { fills: [], strokes: [], saves: 0, restores: 0 };
-  const noop = (): void => {};
-  const ctx = {
-    canvas: { width: 800, height: 600, getBoundingClientRect: () => ({ width: 800, height: 600, left: 0, top: 0 }) },
-    fillStyle: '', strokeStyle: '', lineWidth: 0, globalAlpha: 1, lineCap: 'butt', lineJoin: 'miter',
-    shadowBlur: 0, shadowColor: '', globalCompositeOperation: 'source-over',
-    beginPath: noop, moveTo: noop, lineTo: noop, closePath: noop, arc: noop, clip: noop,
-    save: () => { painted.saves += 1; },
-    restore: () => { painted.restores += 1; },
-    setLineDash: (next: number[]) => { dash = [...next]; },
-    fill() { painted.fills.push(this.fillStyle); },
-    stroke() { painted.strokes.push({ ink: this.strokeStyle, width: this.lineWidth, dash: [...dash] }); },
-  };
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, painted };
-}
 
 /** Ο πιο λιτός ζωγράφος Η/Μ: ακριβώς οι τρεις κλήσεις που κάνουν και οι επτά πραγματικοί. */
 class ProbeRenderer extends BimFootprintRenderer {
