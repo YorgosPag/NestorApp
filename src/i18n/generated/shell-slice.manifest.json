@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a884cbab4e218fd490f9a1153cf1e360313cc8a262c2c0d56c18e327242a9bfa",
+  "inputsSha256": "f033f822c82f51ea5283b43a9c4cea2be57bec1fc344ccd48e5ccceac9b9fd42",
   "languages": [
     "el"
   ],
@@ -11602,7 +11602,7 @@
     "src/app/(light)/layout.tsx": "e4f3775b8316a2f792fa57f7bebfd71accb9f99424ed93afbb5c1438510eab1d",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "48a5d03c5579240d0884a774b2a328a2964f47f8ff33bd23e8ce694c419c3dac",
-    "src/app/layout.tsx": "8f5a87b53789a29f43493b70722f162e974c60b4f179ff49aa4f4590370cbcf4",
+    "src/app/layout.tsx": "ed3607f6343146a2ed1c4f499c5ac8e203d0c8ed5ea455df3d17832e466cac85",
     "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
     "src/auth/components/AuthScreenChrome.tsx": "438ba62471b0ecb90ed4ae4f7d58ef619ac66bdb650ef41df84a906154fdcc7e",
     "src/auth/components/ProtectedRoute.tsx": "b5ba836b4704128b24aebdd2b3b351b802e6cd3267fbd39caf00d7bec2704764",
@@ -13055,6 +13055,7 @@
   "unresolvedSpecs": [
     "src/app/(app)/o/[workspace]/dxf/viewer/layout.tsx → @/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css",
     "src/app/layout.tsx → ./globals.css",
+    "src/app/layout.tsx → ./ui-font.css",
     "src/components/search-results/ListingCard.tsx → ./ListingCard.module.css",
     "src/components/search/LandingModeSwitch.tsx → ../ui/scroll-edge-fade.module.css",
     "src/components/search/LandingShowcase.tsx → ./landing-showcase-rail.module.css",

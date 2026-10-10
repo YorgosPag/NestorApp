@@ -280,6 +280,22 @@
       "approvedOn": "2026-08-25",
       "scope": "prod",
       "evidence": ["name table κάθε αρχείου: «SIL Open Font License, Version 1.1» (CHECK 3.69, άγκυρα Α1)"]
+    },
+    {
+      "id": "roboto-ui-ofl",
+      "paths": ["public/fonts/roboto/roboto-*.woff2"],
+      "license": "OFL-1.1",
+      "category": "byExceptionOnly",
+      "reason": "ADR-805 §10 — η γραμματοσειρά του UI, φιλοξενούμενη τοπικά αντί για next/font/google. 🔴 Η Roboto 3.x είναι OFL-1.1, ΟΧΙ Apache-2.0: μετρημένο 2026-10-10 από το name table των ΙΔΙΩΝ αρχείων που σέρβιρε ήδη η παραγωγή (ID 14 = https://openfontlicense.org, «Version 3.015; 2026») — δηλαδή η εξαίρεση δεν εισάγει OFL, ΔΗΛΩΝΕΙ αυτή που διανεμόταν αδήλωτη. Απόφαση Giorgio 2026-10-10: «όπως οι μεγάλοι παίχτες, χωρίς εκπτώσεις στην ποιότητα» — η ίδια έκδοση 3.015 με την παραγωγή (ίδια περιγράμματα και πλάτη, μετρημένο), όχι παλαιότερη έκδοση Apache με άλλες μετρικές.",
+      "owner": "giorgio",
+      "conditions": [
+        "το κείμενο της άδειας ταξιδεύει μαζί: public/fonts/Roboto-OFL-1.1-LICENSE.txt (το ελέγχει η κατάσταση unattributed του CHECK 3.69)",
+        "αναλλοίωτα αρχεία, όπως τα σερβίρει το fonts.gstatic.com (sha256 ανά αρχείο στο ADR-805 §10)· η OFL της Roboto ΔΕΝ δηλώνει Reserved Font Name, αλλά τροποποίηση θέλει νέα καταγραφή προέλευσης",
+        "δεν πωλούνται αυτοτελώς"
+      ],
+      "approvedOn": "2026-10-10",
+      "scope": "prod",
+      "evidence": ["name table κάθε αρχείου: ID 14 «https://openfontlicense.org» (CHECK 3.69, άγκυρα Α6)"]
     }
   ]
 }

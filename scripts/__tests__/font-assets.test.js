@@ -395,3 +395,221 @@ describe('Ζ — το zero-tolerance ΜΠΛΟΚΑΡΕΙ όντως', () => {
       .toThrow(/άρνηση σποράς/);
   });
 });
+
+// ─── WOFF2: Η ΙΔΙΑ ΑΠΟΔΕΙΞΗ, ΑΠΟ ΜΟΡΦΗ ΠΟΥ ΤΟ opentype.js ΔΕΝ ΔΙΑΒΑΖΕΙ ─────────
+
+/**
+ * 🔴 Ως τις 2026-10-10 δεν διανέμαμε κανένα `.woff2`, οπότε το ότι το `opentype.js` δεν τα
+ * διαβάζει ήταν αόρατο. Τη μέρα που η Roboto του UI έγινε checked-in, και τα εννέα αρχεία της
+ * θα έβγαιναν ⛔ `unreadable-asset` — μπλοκάρισμα επειδή η πύλη **δεν μπορεί να κοιτάξει**.
+ */
+describe('Α′ — η απόδειξη διαβάζεται ΚΑΙ από WOFF2 (ADR-805 §10)', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const W2 = require('../lib/font-assets/woff2');
+  const LATIN = 'public/fonts/roboto/roboto-v3.015-latin.woff2';
+
+  it('Α6: η Roboto του UI δηλώνει OFL-1.1 στο ΔΙΚΟ της name table — όχι Apache-2.0', () => {
+    const ev = E.readEvidence(REPO_ROOT, LATIN);
+    expect(ev.family).toBe('Roboto');
+    expect(ev.licenseURL).toMatch(/openfontlicense\.org/);
+    expect(ev.spdx).toBe('OFL-1.1');
+    expect(ev.glyphs).toBeGreaterThan(100);
+  });
+
+  /** 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς τον αναγνώστη WOFF2, το ίδιο αρχείο ΔΕΝ διαβάζεται. */
+  it('Α7: το opentype.js ΑΠΟΡΡΙΠΤΕΙ το ίδιο αρχείο — ο αναγνώστης WOFF2 δεν είναι πλεονασμός', () => {
+    const buf = fs.readFileSync(path.join(REPO_ROOT, LATIN));
+    expect(W2.isWoff2(buf)).toBe(true);
+    // eslint-disable-next-line global-require
+    const opentype = require('opentype.js');
+    expect(() => opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)))
+      .toThrow();
+  });
+
+  it('Α8: κομμένο WOFF2 ⇒ `unreadable`, ΠΟΤΕ σιωπηλό πέρασμα', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'font-assets-w2-'));
+    const whole = fs.readFileSync(path.join(REPO_ROOT, LATIN));
+    fs.writeFileSync(path.join(dir, 'cut.woff2'), whole.subarray(0, 400));
+    const ev = E.readEvidence(dir, 'cut.woff2');
+    expect(ev.unreadable).toBeTruthy();
+    expect(ev.spdx).toBeUndefined();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('Α9: η μορφή κρίνεται από τα BYTES — ένα TTF δεν περνά από τον αναγνώστη WOFF2', () => {
+    const ttf = fs.readFileSync(path.join(REPO_ROOT, 'public/fonts/LiberationSans-Regular.ttf'));
+    expect(W2.isWoff2(ttf)).toBe(false);
+    expect(() => W2.readNames(ttf)).toThrow(/υπογραφή/);
+  });
+});
+
+// ─── Ρ — ΚΑΜΙΑ ΓΡΑΜΜΑΤΟΣΕΙΡΑ ΑΠΟ ΤΡΙΤΟΝ, ΚΑΙ Η ROBOTO ΤΟΥ UI ΕΙΝΑΙ ΑΥΤΗ ΠΟΥ ΛΕΜΕ ──
+
+/**
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ** (2026-10-10). Το `next/font/google` κατέβαζε το CSS της Google σε κάθε
+ * εκκίνηση· μια μέρα η Google απάντησε αλλιώς και **καμία σελίδα δεν αποδόθηκε**. Και τα bytes
+ * που σέρβιρε ήταν **OFL-1.1** ενώ το ADR έγραφε Apache-2.0 — κανείς δεν μπορούσε να το δει,
+ * γιατί δεν ήταν ποτέ checked-in.
+ */
+describe('Ρ — καμία γραμματοσειρά από τρίτον (ADR-805 §10)', () => {
+  const fs = require('node:fs');
+  const W2 = require('../lib/font-assets/woff2');
+  const { stripComments } = require('../lib/source-text');
+  const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+
+  const GOOGLE_IMPORT = 'import { Roboto } from "next/font/google";\n';
+
+  it('Ρ1: το πραγματικό δέντρο δεν φορτώνει γραμματοσειρά από τρίτον', () => {
+    expect(A.remoteFontSources(REPO_ROOT)).toEqual([]);
+  });
+
+  /**
+   * 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ, ΠΑΝΩ ΣΤΟ ΠΡΑΓΜΑΤΙΚΟ ΑΡΧΕΙΟ: το `layout.tsx` όπως είναι **δεν** δίνει
+ * εύρημα· με την παλιά γραμμή εισαγωγής μπροστά, **δίνει**. Αν ο ανιχνευτής ήταν κενός, το
+   * `Ρ1` θα έμενε πράσινο για πάντα.
+   */
+  it('Ρ2: αν ξαναμπεί το `next/font/google` στο layout ⇒ ο ανιχνευτής το ΒΛΕΠΕΙ', () => {
+    const layout = read('src/app/layout.tsx');
+    expect(A.remoteNeedlesIn(layout)).toEqual([]);
+    expect(A.remoteNeedlesIn(GOOGLE_IMPORT + layout)).toEqual(['next/font/google']);
+    expect(A.remoteNeedlesIn("@import url('https://fonts.googleapis.com/css2?family=Roboto');"))
+      .toEqual(['fonts.googleapis.com']);
+  });
+
+  it('Ρ2β: …και το εύρημα ΜΠΛΟΚΑΡΕΙ (⛔ remote-font-source, ποτέ σε baseline)', () => {
+    const v = A.judge(world({ remote: [{ file: 'src/app/layout.tsx', needle: 'next/font/google' }] }));
+    expect(A.idsOf(v, A.STATES.REMOTE_FONT_SOURCE)).toEqual(['src/app/layout.tsx']);
+    expect(A.BLOCKING).toContain(A.STATES.REMOTE_FONT_SOURCE);
+    expect(A.RATCHETED).not.toContain(A.STATES.REMOTE_FONT_SOURCE);
+  });
+
+  /** Η τεκμηρίωση της βλάβης δεν είναι η βλάβη (σχήμα `Π6`): το `ui-font.css` την περιγράφει σε σχόλιο. */
+  it('Ρ2γ: η αναφορά μέσα σε ΣΧΟΛΙΟ δεν μετρά — και το `ui-font.css` έχει τέτοια', () => {
+    const css = read('src/app/ui-font.css');
+    expect(css).toContain('next/font/google');
+    expect(A.remoteNeedlesIn(css)).toEqual([]);
+  });
+
+  // ── Το φύλλο στυλ της Roboto ↔ τα αρχεία της ──────────────────────────────
+
+  const UI_CSS = 'src/app/ui-font.css';
+  const PUBLIC = 'public';
+
+  /** Οι όψεις `Roboto UI` του φύλλου στυλ, με τη σειρά δήλωσης. */
+  function faces() {
+    const css = stripComments(read(UI_CSS));
+    return [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)]
+      .map((m) => m[1])
+      .filter((body) => /font-family:\s*'Roboto UI'\s*;/.test(body))
+      .map((body) => ({
+        url: /url\('([^']+)'\)/.exec(body)[1],
+        weight: Number(/font-weight:\s*(\d+)/.exec(body)[1]),
+        ranges: /unicode-range:\s*([^;]+);/.exec(body)[1].split(',').map((r) => {
+          const [lo, hi] = r.trim().replace(/^U\+/i, '').split('-').map((h) => parseInt(h, 16));
+          return [lo, hi ?? lo];
+        }),
+      }));
+  }
+  const inRanges = (ranges, cp) => ranges.some(([lo, hi]) => cp >= lo && cp <= hi);
+  const subsetOf = (url) => /roboto-v[\d.]+-([a-z-]+)\.woff2$/.exec(url)[1];
+  const coverage = (url) => W2.readCoverage(fs.readFileSync(path.join(REPO_ROOT, PUBLIC, url)));
+
+  it('Ρ3: κάθε `url()` είναι αρχείο του ΜΗΤΡΩΟΥ, και κάθε δηλωμένη Roboto woff2 χρησιμοποιείται', () => {
+    const registry = JSON.parse(read(A.REGISTRY_FILE)).assets;
+    const used = [...new Set(faces().map((f) => `${PUBLIC}${f.url}`))].sort();
+    const declared = Object.keys(registry).filter((rel) => rel.endsWith('.woff2')).sort();
+    expect(used).toHaveLength(9);
+    expect(used).toEqual(declared);
+    // Κάθε υποσύνολο έχει ΚΑΙ τα δύο βάρη, πάνω στο ΙΔΙΟ αρχείο.
+    for (const rel of used) {
+      const weights = faces().filter((f) => `${PUBLIC}${f.url}` === rel).map((f) => f.weight).sort();
+      expect(weights).toEqual([400, 700]);
+    }
+  });
+
+  it('Ρ4: το layout προφορτώνει ΑΚΡΙΒΩΣ latin + greek, με `href` ίδιο με το `url()` και με crossOrigin', () => {
+    const layout = stripComments(read('src/app/layout.tsx'));
+    const links = [...layout.matchAll(/<link\s+rel="preload"([^>]*)>/g)].map((m) => m[1])
+      .filter((attrs) => /as="font"/.test(attrs));
+    const hrefs = links.map((attrs) => /href="([^"]+)"/.exec(attrs)[1]);
+    expect(hrefs.map(subsetOf).sort()).toEqual(['greek', 'latin']);
+    const urls = new Set(faces().map((f) => f.url));
+    for (const href of hrefs) expect(urls.has(href)).toBe(true);
+    for (const attrs of links) {
+      expect(attrs).toMatch(/crossOrigin="anonymous"/);
+      expect(attrs).toMatch(/type="font\/woff2"/);
+    }
+  });
+
+  /**
+   * 🔑 «Ελληνικά και λατινικά σε Roboto 400/700» — κριμένο από τα **bytes**, όχι από το όνομα
+   * του αρχείου: κάθε χαρακτήρας πρέπει να είναι ΚΑΙ μέσα στο δηλωμένο εύρος ΚΑΙ γλύφος του αρχείου.
+   */
+  it('Ρ5: ελληνικά και λατινικά καλύπτονται από το εύρος ΚΑΙ από τους γλύφους του αρχείου τους', () => {
+    const bySubset = Object.fromEntries(faces().map((f) => [subsetOf(f.url), f]));
+    const check = (subset, text) => {
+      const face = bySubset[subset];
+      const glyphs = new Set(coverage(face.url).codepoints);
+      for (const ch of text) {
+        const cp = ch.codePointAt(0);
+        expect([subset, ch, inRanges(face.ranges, cp), glyphs.has(cp)]).toEqual([subset, ch, true, true]);
+      }
+    };
+    check('greek', 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρσςτυφχψωάέήίόύώϊϋΐΰΆΈΉΊΌΎΏ');
+    check('latin', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?()€²%');
+  });
+
+  /**
+   * 🔴 **ΜΕΤΡΗΜΕΝΟ 2026-10-10**: με τα εύρη της Google αυτούσια, ένα «→» και ένα «⌘» στη σελίδα
+   * κτιρίων κατέβαζαν το `symbols` **και** το `math` (62 KB) — και **κανένα** δεν είχε τον γλύφο.
+   * Η Google δηλώνει το ίδιο γενικό εύρος για κάθε οικογένεια (`symbols`: 3.960 κωδικοί, το
+   * αρχείο έχει 9). Ένας δηλωμένος κωδικός χωρίς γλύφο είναι **υπόσχεση που κοστίζει αίτημα**.
+   */
+  it('Ρ5β: ΚΑΘΕ δηλωμένος κωδικός είναι γλύφος του αρχείου του — κανένα εύρος-υπόσχεση', () => {
+    for (const face of faces().filter((f) => f.weight === 400)) {
+      const glyphs = new Set(coverage(face.url).codepoints);
+      const promised = face.ranges.flatMap(([lo, hi]) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i));
+      const empty = promised.filter((cp) => !glyphs.has(cp));
+      expect([subsetOf(face.url), empty]).toEqual([subsetOf(face.url), []]);
+      expect(promised.length).toBeGreaterThan(0);
+    }
+    // Και τα δύο βάρη του ίδιου αρχείου δηλώνουν το ΙΔΙΟ εύρος.
+    for (const face of faces().filter((f) => f.weight === 700)) {
+      const twin = faces().find((f) => f.weight === 400 && f.url === face.url);
+      expect(face.ranges).toEqual(twin.ranges);
+    }
+  });
+
+  it('Ρ6: κάθε αρχείο είναι variable με άξονα wght που ΠΕΡΙΕΧΕΙ το 400 και το 700 (όχι ψευδο-έντονα)', () => {
+    for (const url of new Set(faces().map((f) => f.url))) {
+      const wght = coverage(url).axes.find((a) => a.tag === 'wght');
+      expect([url, wght && wght.min <= 400 && wght.max >= 700]).toEqual([url, true]);
+    }
+  });
+
+  /**
+   * 🔑 Σε επικάλυψη ευρών κερδίζει η **τελευταία** δήλωση (CSS Fonts 4 §4.5). Το `math` έχει κι
+   * αυτό ελληνικά γράμματα και τα δηλώνει — ο παρονομαστής είναι **μέσα** στην άγκυρα: αν έπαυε
+   * να τα έχει, η σειρά δεν θα είχε πια σημασία και η άγκυρα θα το έλεγε.
+   */
+  it('Ρ7: το `greek` δηλώνεται ΜΕΤΑ το `math` — αλλιώς τα ελληνικά τραβούν το αρχείο `math`', () => {
+    const order = faces().filter((f) => f.weight === 400).map((f) => subsetOf(f.url));
+    const math = faces().find((f) => subsetOf(f.url) === 'math');
+    const alpha = 'α'.codePointAt(0);
+    expect(inRanges(math.ranges, alpha)).toBe(true);
+    expect(coverage(math.url).codepoints).toContain(alpha);
+    expect(order.indexOf('greek')).toBeGreaterThan(order.indexOf('math'));
+    expect(order[order.length - 1]).toBe('latin');
+  });
+
+  /** Το `/fonts/(.*)` σερβίρεται `immutable` για έναν χρόνο: το όνομα ΠΡΕΠΕΙ να αλλάζει με την έκδοση. */
+  it('Ρ8: το όνομα κάθε αρχείου κουβαλά την έκδοση που δηλώνει το ΔΙΚΟ του name table', () => {
+    for (const url of new Set(faces().map((f) => f.url))) {
+      const inName = /roboto-v([\d.]+)-/.exec(url)[1];
+      const names = W2.readNames(fs.readFileSync(path.join(REPO_ROOT, PUBLIC, url)));
+      expect([url, names.version.includes(`Version ${inName}`)]).toEqual([url, true]);
+    }
+    expect(read('next.config.js')).toMatch(/source: '\/fonts\/\(\.\*\)'[\s\S]{0,200}immutable/);
+  });
+});

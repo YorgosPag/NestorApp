@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import "./ui-font.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, UserRoleProvider } from "@/auth";
-import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
@@ -47,12 +46,6 @@ import { APP_DEFAULT_THEME, THEME_STORAGE_KEY } from '@/lib/appearance/theme-sto
  */
 
 
-const roboto = Roboto({
-  subsets: ["latin", "greek"],
-  weight: ["400", "700"],
-  variable: "--font-sans",
-});
-
 /**
  * 🔑 Ο ΤΙΤΛΟΣ ΕΙΝΑΙ ΠΡΟΤΥΠΟ, ΚΑΙ ΤΟ ΟΝΟΜΑ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ (ADR-857 Φ8α).
  *
@@ -87,6 +80,20 @@ export default function RootLayout({
   return (
     <html lang="el" className="overflow-x-hidden" suppressHydrationWarning>
       <head>
+        {/*
+          🔤 ADR-805 §10 — Η ΓΡΑΜΜΑΤΟΣΕΙΡΑ ΤΟΥ UI ΠΡΟΦΟΡΤΩΝΕΤΑΙ ΑΠΟ ΕΔΩ, ΟΧΙ ΑΠΟ ΤΗ GOOGLE.
+
+          Μόνο τα δύο υποσύνολα που χρειάζεται ΚΑΘΕ σελίδα (λατινικά + ελληνικά)· τα άλλα
+          επτά του `ui-font.css` κατεβαίνουν μόνο αν η σελίδα έχει χαρακτήρα τους.
+
+          ⚠️ Το `crossOrigin` είναι ΥΠΟΧΡΕΩΤΙΚΟ ακόμη και για δικό μας αρχείο: οι γραμματοσειρές
+          ζητούνται πάντα σε λειτουργία CORS, και μια προφόρτωση χωρίς αυτό ΔΕΝ ταιριάζει με το
+          αίτημα του `@font-face` — ο browser κατεβάζει το αρχείο ΔΥΟ φορές.
+          ⚠️ Το `href` πρέπει να είναι ΓΡΑΜΜΑ ΠΡΟΣ ΓΡΑΜΜΑ το `url()` του `ui-font.css` (το
+          φυλάει η άγκυρα Ρ4 του `font-assets.test.js`).
+        */}
+        <link rel="preload" href="/fonts/roboto/roboto-v3.015-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/roboto/roboto-v3.015-greek.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <Script src="/react-bugfix-guards.js" strategy="beforeInteractive" />
         {/*
           🔴 ADR-811 — Η ΠΥΚΝΟΤΗΤΑ ΠΡΙΝ ΑΠΟ ΤΟ ΠΡΩΤΟ ΚΑΡΕ.
@@ -120,7 +127,7 @@ export default function RootLayout({
         (μετρημένο: πάνελ χάρτη στο −359px μετά από κύλιση 600px). Το `clip` κόβει το ίδιο, χωρίς
         να φτιάχνει scroll container. Η οριζόντια κύλιση μένει απαγορευμένη από το <html>.
       */}
-      <body className={cn("font-sans overflow-x-clip", roboto.variable)}>
+      <body className="font-sans overflow-x-clip">
         {/* 🏢 ENTERPRISE: Minimal provider stack - essential providers only */}
         <ThemeProvider
           attribute="class"

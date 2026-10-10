@@ -24,6 +24,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const W2 = require('./woff2');
+
 /** Καταλήξεις που θεωρούνται δυαδικό γραμματοσειράς. */
 const FONT_EXTENSIONS = /\.(ttf|otf|woff2?)$/i;
 const TYPEFACE_JSON = /\.typeface\.json$/i;
@@ -124,7 +126,10 @@ function readEvidence(repoRoot, relPath) {
     }
     if (FONT_EXTENSIONS.test(relPath)) {
       const buf = fs.readFileSync(abs);
-      const ev = readOpenTypeNames(buf);
+      // 🔑 Η μορφή κρίνεται από τα **bytes**, όχι από την κατάληξη: το `opentype.js` δεν
+      //    διαβάζει WOFF2, και ένα `.woff2` θα έβγαινε `unreadable-asset` — μπλοκάρισμα επειδή
+      //    η πύλη δεν μπορεί να κοιτάξει, όχι επειδή βρήκε κάτι (ADR-805 §10).
+      const ev = W2.isWoff2(buf) ? W2.readNames(buf) : readOpenTypeNames(buf);
       return { ...ev, bytes: buf.length, spdx: spdxFromEvidence(ev) };
     }
     // base64 module (.ts/.js) — τα bytes ΕΙΝΑΙ TTF, ίδιος αναγνώστης.

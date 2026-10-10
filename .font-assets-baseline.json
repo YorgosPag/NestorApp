@@ -7,6 +7,15 @@
     "public/fonts/LiberationSans-BoldItalic.ttf",
     "public/fonts/LiberationSans-Italic.ttf",
     "public/fonts/LiberationSans-Regular.ttf",
+    "public/fonts/roboto/roboto-v3.015-cyrillic-ext.woff2",
+    "public/fonts/roboto/roboto-v3.015-cyrillic.woff2",
+    "public/fonts/roboto/roboto-v3.015-greek-ext.woff2",
+    "public/fonts/roboto/roboto-v3.015-greek.woff2",
+    "public/fonts/roboto/roboto-v3.015-latin-ext.woff2",
+    "public/fonts/roboto/roboto-v3.015-latin.woff2",
+    "public/fonts/roboto/roboto-v3.015-math.woff2",
+    "public/fonts/roboto/roboto-v3.015-symbols.woff2",
+    "public/fonts/roboto/roboto-v3.015-vietnamese.woff2",
     "src/services/gantt-export/roboto-font-data.ts"
   ]
 }

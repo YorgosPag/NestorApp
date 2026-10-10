@@ -48,6 +48,61 @@
       "family": "Roboto",
       "attribution": "public/fonts/Roboto-Apache-2.0-LICENSE.txt",
       "why": "🔴 Η ΠΙΟ ΕΚΤΕΘΕΙΜΕΝΗ ΔΙΑΝΟΜΗ ΤΟΥ ΕΡΓΟΥ: 687 KB base64 TTF που το jsPDF ΕΝΣΩΜΑΤΩΝΕΙ σε κάθε τιμολόγιο, gantt, milestone και εκτύπωση DXF που φεύγει σε πελάτη. Η άδεια επαληθεύεται αποκωδικοποιώντας τα ίδια τα bytes και διαβάζοντας το name table τους — όχι από τη δήλωση."
+    },
+
+    "public/fonts/roboto/roboto-v3.015-latin.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — το UI (--font-sans). ΠΡΟΦΟΡΤΩΝΕΤΑΙ. Variable wght 100–900, το ΙΔΙΟ αρχείο υπηρετεί τα βάρη 400 και 700. Roboto 3.015, hinted build του Google Fonts v51."
+    },
+    "public/fonts/roboto/roboto-v3.015-greek.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — το UI, ελληνικά (U+0370–03FF). ΠΡΟΦΟΡΤΩΝΕΤΑΙ: η εφαρμογή είναι lang=\"el\"."
+    },
+    "public/fonts/roboto/roboto-v3.015-greek-ext.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — πολυτονικά (U+1F00–1FFF). Κατεβαίνει ΜΟΝΟ αν η σελίδα έχει τέτοιον χαρακτήρα (unicode-range)."
+    },
+    "public/fonts/roboto/roboto-v3.015-latin-ext.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — λατινικά με διακριτικά (š, ő, ł, ğ…): ονόματα επαφών εκτός Ελλάδας. Κατεβαίνει μόνο όταν χρειαστεί."
+    },
+    "public/fonts/roboto/roboto-v3.015-cyrillic.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — κυριλλικά. Κατεβαίνει μόνο όταν χρειαστεί."
+    },
+    "public/fonts/roboto/roboto-v3.015-cyrillic-ext.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — εκτεταμένα κυριλλικά. Κατεβαίνει μόνο όταν χρειαστεί."
+    },
+    "public/fonts/roboto/roboto-v3.015-vietnamese.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — βιετναμικά. Κατεβαίνει μόνο όταν χρειαστεί."
+    },
+    "public/fonts/roboto/roboto-v3.015-math.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — μαθηματικά σύμβολα (≤, ≥, ≈, →…). Κατεβαίνει μόνο όταν χρειαστεί."
+    },
+    "public/fonts/roboto/roboto-v3.015-symbols.woff2": {
+      "spdx": "OFL-1.1",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-OFL-1.1-LICENSE.txt",
+      "why": "ADR-805 §10 — σύμβολα και βέλη. Κατεβαίνει μόνο όταν χρειαστεί."
     }
   }
 }

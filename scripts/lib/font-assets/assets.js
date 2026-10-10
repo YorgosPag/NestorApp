@@ -68,6 +68,7 @@ const STATES = {
   LICENSE_NOT_ALLOWED: 'license-not-allowed',
   UNATTRIBUTED: 'unattributed',
   DECLARED_NOT_TRACKED: 'declared-not-tracked',
+  REMOTE_FONT_SOURCE: 'remote-font-source',
 };
 
 /**
@@ -81,6 +82,7 @@ const BLOCKING = [
   STATES.UNREADABLE_ASSET,
   STATES.LICENSE_UNVERIFIABLE,
   STATES.LICENSE_DRIFT,
+  STATES.REMOTE_FONT_SOURCE,
 ];
 
 /** 🔴 Ratchet κατά ταυτότητα — εκστρατείες που τελειώνουν στο μηδέν. */
@@ -114,11 +116,13 @@ function binaryAssets(files) {
  * `await import()`, και ένας δεύτερος resolver θα ήταν δεύτερη μηχανή για κάτι που το
  * **όνομα** ήδη απαντά μονοσήμαντα.
  */
-function gitGrepFiles(repoRoot, needle) {
+const SOURCE_PATHSPECS = ['*.ts', '*.tsx', '*.js', '*.mjs'];
+
+function gitGrepFiles(repoRoot, needle, pathspecs = SOURCE_PATHSPECS) {
   try {
     const out = execFileSync(
       'git',
-      ['grep', '-l', '--fixed-strings', '-z', needle, '--', '*.ts', '*.tsx', '*.js', '*.mjs'],
+      ['grep', '-l', '--fixed-strings', '-z', needle, '--', ...pathspecs],
       { cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
     );
     return out.split('\0').filter(Boolean);
@@ -144,6 +148,47 @@ function base64FontModules(repoRoot) {
     for (const rel of gitGrepFiles(repoRoot, `export const ${ident}`)) owners.add(rel);
   }
   return [...owners].sort();
+}
+
+/**
+ * 🔴 **Η ΔΙΑΝΟΜΗ ΠΟΥ ΤΟ ΜΗΤΡΩΟ ΔΕΝ ΜΠΟΡΟΥΣΕ ΝΑ ΔΕΙ** (ADR-805 §10, ως τότε «δηλωμένο όριο» §9.2).
+ *
+ * Το `next/font/google` κατεβάζει γραμματοσειρά **στο build** και τη σερβίρει από το
+ * `.next/static/media`: bytes που διανέμουμε, χωρίς να είναι ποτέ checked-in ⇒ **αόρατα** στην
+ * απογραφή δυαδικών. Μετρημένο 2026-10-10: το ADR έγραφε γι' αυτά «είναι Apache-2.0», ενώ το
+ * `name` table τους έλεγε **OFL-1.1** (η Roboto 3 άλλαξε άδεια) — και η εκκίνηση του dev server
+ * εξαρτιόταν από το τι θα απαντήσει η Google εκείνη τη στιγμή.
+ *
+ * Μια φόρτωση από τρίτον δεν «δηλώνεται»: **αντικαθίσταται** από αρχείο στο μητρώο. Γι' αυτό
+ * είναι ⛔ zero-tolerance και όχι γραμμή του `.font-assets.json`.
+ */
+const REMOTE_FONT_NEEDLES = ['next/font/google', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const SHIPPED_CODE_PATHSPECS = [...SOURCE_PATHSPECS, '*.cjs', '*.css', '*.scss', '*.html'];
+
+/**
+ * ⚠️ Τα εργαλεία του `scripts/` **ονομάζουν** τις βελόνες (αυτό το αρχείο, η σουίτα του) χωρίς
+ * να φορτώνουν τίποτα, και δεν φτάνουν ποτέ σε χρήστη. Εξαιρούνται κατά φάκελο, όχι κατά όνομα.
+ */
+const TOOLING_PREFIX = 'scripts/';
+
+/** Ποιες βελόνες εμφανίζονται στον **κώδικα** ενός κειμένου — τα σχόλια δεν φορτώνουν τίποτα. */
+function remoteNeedlesIn(sourceText) {
+  const code = stripComments(sourceText);
+  return REMOTE_FONT_NEEDLES.filter((needle) => code.includes(needle));
+}
+
+function remoteFontSources(repoRoot) {
+  const candidates = new Set();
+  for (const needle of REMOTE_FONT_NEEDLES) {
+    for (const rel of gitGrepFiles(repoRoot, needle, SHIPPED_CODE_PATHSPECS)) candidates.add(rel);
+  }
+  const found = [];
+  for (const rel of [...candidates].sort()) {
+    if (rel.startsWith(TOOLING_PREFIX)) continue;
+    const [needle] = remoteNeedlesIn(fs.readFileSync(path.join(repoRoot, rel), 'utf8'));
+    if (needle) found.push({ file: rel, needle });
+  }
+  return found;
 }
 
 function readJson(repoRoot, rel, what) {
@@ -185,6 +230,8 @@ function takeInventory(repoRoot, override = {}) {
     attributionExists: override.attributionExists
       ?? ((rel) => !!rel && fs.existsSync(path.join(repoRoot, rel))),
     existsOnDisk: override.existsOnDisk ?? ((rel) => fs.existsSync(path.join(repoRoot, rel))),
+    // Συνθετικός κόσμος (`shipped` δοσμένο) ⇒ δεν σαρώνεται το πραγματικό δέντρο πίσω από την πλάτη του.
+    remote: override.remote ?? (override.shipped ? [] : remoteFontSources(repoRoot)),
   };
 }
 
@@ -249,6 +296,11 @@ function judge(inv) {
         detail: 'δήλωση για αρχείο που ΔΕΝ υπάρχει — σβήσε τη δήλωση' });
   }
 
+  for (const { file, needle } of inv.remote) {
+    rows.push({ state: STATES.REMOTE_FONT_SOURCE, id: file,
+      detail: `φορτώνει γραμματοσειρά από τρίτον («${needle}») — bytes που διανέμουμε χωρίς να είναι στο μητρώο· φιλοξένησέ τη τοπικά (ADR-805 §10)` });
+  }
+
   return { rows, tally: tallyOf(rows) };
 }
 
@@ -268,5 +320,6 @@ module.exports = {
   REGISTRY_FILE, POLICY_FILE,
   STATES, BLOCKING, RATCHETED,
   tracked, binaryAssets, base64FontModules, gitGrepFiles,
+  REMOTE_FONT_NEEDLES, remoteNeedlesIn, remoteFontSources,
   takeInventory, judge, tallyOf, idsOf,
 };
