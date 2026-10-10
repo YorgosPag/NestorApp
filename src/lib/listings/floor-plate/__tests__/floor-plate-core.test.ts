@@ -90,6 +90,29 @@ describe('Κ1 — το κάδρο της εικόνας', () => {
     expect(floorPlateFrameOf({ kind: 'capture', recipe: { frame: flipped, widthPx: 400, heightPx: 200 } })).toBeNull();
     expect(floorPlateFrameOf({ kind: 'capture', recipe: { frame: flat, widthPx: 400, heightPx: 200 } })).toBeNull();
   });
+
+  it('λήψη με κάδρο ανάποδο ΚΑΙ στους δύο άξονες ⇒ κανένα κάδρο (ο λόγος πλευρών του «συμφωνεί»)', () => {
+    const upsideDown = { minX: 200, minY: 100, maxX: 0, maxY: 0 };
+    expect(floorPlateFrameOf({ kind: 'capture', recipe: { frame: upsideDown, widthPx: 400, heightPx: 200 } })).toBeNull();
+  });
+
+  it('λήψη: η ανοχή είναι ΕΝΑ pixel της ΚΟΝΤΗΣ πλευράς, και προς τις δύο κατευθύνσεις', () => {
+    const frame = { minX: 0, minY: 0, maxX: 200, maxY: 100 }; // 2:1
+    const capture = (widthPx: number, heightPx: number) =>
+      floorPlateFrameOf({ kind: 'capture', recipe: { frame, widthPx, heightPx } });
+    expect(capture(2000, 999)).toBe(frame); // ένα pixel — ανοχή της κοντής πλευράς, όχι της μακριάς
+    expect(capture(2000, 1005)).toBeNull(); // πέντε pixels ψηλότερη
+    expect(capture(2000, 995)).toBeNull(); // πέντε pixels κοντύτερη (αρνητική απόκλιση)
+  });
+
+  it.each([
+    [0, 200],
+    [400, 0],
+    [Number.NaN, 200],
+  ])('λήψη με pixels %p × %p ⇒ κανένα κάδρο', (widthPx, heightPx) => {
+    const frame = { minX: 0, minY: 0, maxX: 200, maxY: 100 };
+    expect(floorPlateFrameOf({ kind: 'capture', recipe: { frame, widthPx, heightPx } })).toBeNull();
+  });
 });
 
 describe('Κ2 — γνωστό κάδρο ⇒ γνωστές κορυφές', () => {
@@ -123,6 +146,31 @@ describe('Κ2 — γνωστό κάδρο ⇒ γνωστές κορυφές', ()
       { x: 200, y: 250 },
     ]);
     expect(closed).toHaveLength(6);
+  });
+
+  it('κλείσιμο που ταυτίζεται με την αρχή μόνο ΜΕΤΑ τον κβαντισμό πέφτει κι αυτό', () => {
+    const almostClosed = outlineOf([
+      { x: 200, y: 250 },
+      { x: 400, y: 250 },
+      { x: 400, y: 350 },
+      { x: 200.0000001, y: 250 },
+    ]);
+    expect(almostClosed).toEqual([0.25, 0.75, 0.75, 0.75, 0.75, 0.25]);
+  });
+
+  it('κορυφή που επαναλαμβάνεται διαδοχικά γράφεται μία φορά', () => {
+    const stuttered = outlineOf([
+      { x: 200, y: 250 },
+      { x: 400, y: 250 },
+      { x: 400, y: 250 },
+      { x: 400, y: 350 },
+      { x: 200, y: 350 },
+    ]);
+    expect(stuttered).toEqual([0.25, 0.75, 0.75, 0.75, 0.75, 0.25, 0.25, 0.25]);
+  });
+
+  it('μικρή αλλά πραγματική μονάδα (0,25% της εικόνας) ΔΕΝ είναι εκφυλισμένη', () => {
+    expect(refusalOf([{ x: 200, y: 250 }, { x: 220, y: 250 }, { x: 220, y: 260 }, { x: 200, y: 260 }])).toBeNull();
   });
 
   it('τα κλάσματα κβαντίζονται στα 5 ψηφία', () => {
@@ -183,6 +231,11 @@ describe('Κ4 — περίγραμμα εκτός κάδρου', () => {
     ]);
     expect(outline).toEqual([0, 1, 1, 1, 0.5, 0]);
   });
+
+  it('κάδρο χωρίς άνοιγμα ⇒ άρνηση, ποτέ NaN μέσα σε «έγκυρο» περίγραμμα', () => {
+    const flat: FloorPlateFrame = { minX: 100, minY: 200, maxX: 100, maxY: 400 };
+    expect(refusalOf([{ x: 100, y: 250 }, { x: 100, y: 300 }, { x: 100, y: 350 }], flat)).toBe('outside-frame');
+  });
 });
 
 describe('Κ5 — σχήματα που δεν βγαίνουν στο κοινό', () => {
@@ -190,6 +243,8 @@ describe('Κ5 — σχήματα που δεν βγαίνουν στο κοιν�
     expect(refusalOf([{ x: 200, y: 250 }, { x: 400, y: 250 }])).toBe('too-few-vertices');
     // Τρεις, αλλά η τρίτη είναι το κλείσιμο ⇒ δύο.
     expect(refusalOf([{ x: 200, y: 250 }, { x: 400, y: 250 }, { x: 200, y: 250 }])).toBe('too-few-vertices');
+    expect(refusalOf([])).toBe('too-few-vertices');
+    expect(refusalOf([{ x: 200, y: 250 }])).toBe('too-few-vertices');
   });
 
   it('περισσότερες από το ταβάνι', () => {
@@ -199,6 +254,8 @@ describe('Κ5 — σχήματα που δεν βγαίνουν στο κοιν�
     });
     expect(refusalOf(many)).toBe('too-many-vertices');
     expect(refusalOf(many.slice(1))).toBeNull();
+    // Κυριολεκτικά: χωρίς αυτό, το ταβάνι αλλάζει σιωπηλά μαζί με τη σταθερά που το ελέγχει.
+    expect(FLOOR_PLATE_OUTLINE_MAX_VERTICES).toBe(128);
   });
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])('κορυφή με %p', (bad) => {
@@ -228,6 +285,7 @@ describe('Κ6 — ο αναγνώστης του επισκέπτη', () => {
   it.each([
     ['όχι πίνακας', { 0: 0.1 }],
     ['μονός αριθμός τιμών', [0, 0, 1, 0, 1]],
+    ['μονός αριθμός τιμών πάνω από τρεις κορυφές', [0, 0, 1, 0, 1, 1, 0.5]],
     ['δύο κορυφές', [0, 0, 1, 1]],
     ['τιμή πάνω από 1', [0, 0, 1.2, 0, 1, 1]],
     ['αρνητική τιμή', [0, 0, -0.1, 0, 1, 1]],

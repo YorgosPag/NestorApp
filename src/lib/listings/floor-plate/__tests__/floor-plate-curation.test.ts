@@ -84,6 +84,7 @@ describe('Ε-2 — ΕΝΑ ΑΝΕΞΗΓΗΤΟ ΠΕΡΙΓΡΑΜΜΑ ΑΡΝΕΙΤΑ
     ['δεύτερο περίγραμμα για την ίδια μονάδα', outline('ovrl_x', 'prop_b', 78), 'duplicate-unit'],
     ['σχήμα που δεν είναι πολύγωνο', outline('ovrl_x', 'prop_d', 78, { vertices: null }), 'not-a-polygon'],
     ['άγνωστος ρόλος', outline('ovrl_x', 'prop_d', 78, { role: 'balcony' }), 'unknown-role'],
+    ['ρόλος που είναι κληρονομημένο όνομα αντικειμένου', outline('ovrl_x', 'prop_d', 78, { role: 'toString' }), 'unknown-role'],
     ['κορυφή έξω από το κάδρο', outline('ovrl_x', 'prop_d', 95), 'outside-frame'],
     ['δύο μόνο κορυφές', outline('ovrl_x', 'prop_d', 78, { vertices: [{ x: 1, y: 1 }, { x: 2, y: 2 }] }), 'too-few-vertices'],
     ['μη πεπερασμένη συντεταγμένη', outline('ovrl_x', 'prop_d', 78, { vertices: [{ x: NaN, y: 1 }, { x: 2, y: 2 }, { x: 3, y: 1 }] }), 'not-finite'],

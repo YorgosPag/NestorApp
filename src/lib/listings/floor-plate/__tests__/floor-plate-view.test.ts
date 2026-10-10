@@ -81,6 +81,12 @@ describe('ΟΨ-2 floorPlateShapes — κλάσματα σε φυσικά pixels'
     expect(shape.points).toBe('200,100 800,100 800,400 200,400');
   });
 
+  it('τα pixels κρατούν δύο δεκαδικά — το περίγραμμα δεν κουμπώνει σε ακέραιο πλέγμα', () => {
+    const fine: FloorPlateUnit = { outline: [0.12345, 0.1, 0.4, 0.1, 0.4, 0.33333], state: 'self' };
+    const [shape] = floorPlateShapes([fine], { width: 1000, height: 1000 });
+    expect(shape.points).toBe('123.45,100 400,100 400,333.33');
+  });
+
   it('ο αριθμός είναι η θέση στο έγγραφο, 1-based', () => {
     expect(floorPlateShapes([SELF, FREE, HELD], size).map((shape) => shape.number)).toEqual([1, 2, 3]);
   });
@@ -107,6 +113,12 @@ describe('ΟΨ-3 η ετικέτα πέφτει μέσα στο σχήμα', () 
     });
     expect(pointInPolygon(shape.label, ring)).toBe(true);
     expect(shape.clearance).toBeGreaterThan(0);
+    // Κορυφή του σχήματος «είναι μέσα» για το `pointInPolygon`: η ετικέτα οφείλει να έχει χώρο ΓΥΡΩ της.
+    const reach = shape.clearance / 2;
+    for (const [dx, dy] of [[reach, 0], [-reach, 0], [0, reach], [0, -reach]]) {
+      expect(pointInPolygon({ x: shape.label.x + dx, y: shape.label.y + dy }, ring)).toBe(true);
+    }
+    expect(reach).toBeGreaterThan(10); // ο φαρδύς βραχίονας του Γ είναι 100 px — όχι σημείο πάνω στο περίγραμμα
   });
 });
 
