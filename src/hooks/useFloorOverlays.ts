@@ -34,6 +34,7 @@ import { where, orderBy, type Unsubscribe } from 'firebase/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useEntityStatusResolver } from './useEntityStatusResolver';
+import { isSameOverlaySnapshot } from './floor-overlay-snapshot';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import {
@@ -177,17 +178,10 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
           items.push(normalized);
         }
         // ADR-040 Phase XVIII: defensive equality guard — ADR-361 service-level
-        // guard supprime duplicates ma metadata-only updates passano. Skip setState
-        // se gli campi rilevanti per downstream useMemo (id + status) sono invariati.
-        setRawOverlays((prev) => {
-          if (prev.length !== items.length) return items;
-          for (let i = 0; i < items.length; i++) {
-            if (prev[i].id !== items[i].id || prev[i].status !== items[i].status) {
-              return items;
-            }
-          }
-          return prev;
-        });
+        // guard supprime duplicates ma metadata-only updates passano. Το «άλλαξε;» το
+        // απαντά το SSoT `isSameOverlaySnapshot` (id + status + updatedAt): μόνο με
+        // id + status, κάθε αλλαγή σε linked / label / γεωμετρία χανόταν.
+        setRawOverlays((prev) => (isSameOverlaySnapshot(prev, items) ? prev : items));
         setLoading(false);
         logger.debug('Floor overlays loaded', { data: { floorId, count: items.length } });
       },

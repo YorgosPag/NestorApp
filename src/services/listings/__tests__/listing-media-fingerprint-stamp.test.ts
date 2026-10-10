@@ -45,7 +45,7 @@ const { mediaFingerprintOf } = require('../listing-media-fingerprint-stamp') as
 
 const LISTING_ID = 'prop_95';
 const LISTING = {
-  id: LISTING_ID, authorship: 'agency', gallery: [], floorplans: [], models: [], videos: [],
+  id: LISTING_ID, authorship: 'agency', gallery: [], floorplans: [], models: [], videos: [], floorPlates: [],
 } as unknown as PublicListing;
 
 const SOURCES = [

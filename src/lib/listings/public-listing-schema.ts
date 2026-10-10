@@ -77,7 +77,7 @@ import { isFloorKind } from '@/utils/floor-naming';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 18;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 19;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -172,6 +172,12 @@ const modelsArray = z.array(z.object({}).passthrough()).catch([]);
 
 /** ADR-907 §10 — **δικός του** κριτής, για τον λόγο που γράφεται ακριβώς από πάνω: τα πεδία αποκλίνουν με απόφαση. */
 const videosArray = z.array(z.object({}).passthrough()).catch([]);
+
+/**
+ * ADR-907 §11 — η κάτοψη ορόφου, **ρηχά** όπως τα αδέλφια της. Το βάθος (περίγραμμα, κατάσταση) το κρίνει ο αναγνώστης
+ * της όψης (`readFloorPlateOutline` · `isFloorPlateState`), ανά μονάδα: μία χαλασμένη δεν ρίχνει τις άλλες.
+ */
+const floorPlatesArray = z.array(z.object({}).passthrough()).catch([]);
 
 /**
  * **Πότε μπήκε στην αγορά** (ADR-777 §8.61) — και εδώ ο έλεγχος είναι **ΒΑΘΥΣ**, σε
@@ -801,6 +807,16 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * `undefined`. Ιδιοδύναμο (Κ3): το `.catch([])` κάνει τη δεύτερη εφαρμογή ίδια με την πρώτη.
      */
     apply: (doc) => ({ ...doc, videos: videosArray.parse(doc.videos) }),
+  },
+  {
+    to: 19,
+    adr: 'ADR-907 §11',
+    adds: ['floorPlates'],
+    /**
+     * **Το κουτί της κάτοψης ορόφου** — κενό σε κάθε παλιό έγγραφο. Κενό = «δεν δημοσιεύτηκε», ποτέ «δεν υπάρχει».
+     * Ιδιοδύναμο (Κ3) μέσω του `.catch([])`.
+     */
+    apply: (doc) => ({ ...doc, floorPlates: floorPlatesArray.parse(doc.floorPlates) }),
   },
 ];
 

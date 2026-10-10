@@ -64,6 +64,7 @@
 
 import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import type { FloorPlateState } from '@/lib/listings/floor-plate/floor-plate-state';
 import type { ListingCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
@@ -360,6 +361,35 @@ export interface PublishedVideoFile {
 export type ListingVideo = SourcedAttribute<PublishedVideoFile>;
 
 /**
+ * 🏢 **ΜΙΑ ΜΟΝΑΔΑ ΠΑΝΩ ΣΤΗΝ ΚΑΤΟΨΗ ΤΟΥ ΟΡΟΦΟΥ** (ADR-907 §11) — σχήμα και κατάσταση, **τίποτε άλλο**.
+ *
+ * 🔴 **Καμία τιμή, κανένα όνομα, κανένα αναγνωριστικό μη δημόσιου γείτονα.** Το `public_listings` διαβάζεται από
+ * οποιονδήποτε· ό,τι μπει εδώ είναι δημόσιο για **κάθε** μονάδα του ορόφου, όχι μόνο για αυτήν της αγγελίας.
+ */
+export interface FloorPlateUnit {
+  /**
+   * Το περίγραμμα σε κλάσματα της εικόνας, από πάνω-αριστερά: `x0, y0, x1, y1, …` — **επίπεδο**, γιατί το Firestore
+   * δεν δέχεται πίνακα μέσα σε πίνακα. ⛔ Μην το διαβάσεις απευθείας — η μία ανάγνωση είναι το `readFloorPlateOutline`.
+   */
+  readonly outline: readonly number[];
+  readonly state: FloorPlateState;
+  /** **Μόνο** όταν ο γείτονας έχει ήδη δική του δημόσια αγγελία — τότε γίνεται σύνδεσμος. */
+  readonly listingId?: string;
+}
+
+/** Η εικόνα του ορόφου (raster του **ίδιου** ραφιού, με `srcset`) και οι μονάδες πάνω της. */
+export interface PublishedFloorPlate {
+  readonly image: ListingImage;
+  readonly units: readonly FloorPlateUnit[];
+}
+
+/**
+ * Η κάτοψη ορόφου **με την προέλευσή της**: `measured` όταν η εικόνα παρήχθη από το σχέδιο (ADR-909), `declared` όταν
+ * την ανέβασε άνθρωπος. Ίδιο δοχείο με κάτοψη, μοντέλο και βίντεο — κανένα νέο λεξιλόγιο προέλευσης.
+ */
+export type ListingFloorPlate = SourcedAttribute<PublishedFloorPlate>;
+
+/**
  * **ΟΙ ΟΡΟΙ ΔΙΑΜΟΝΗΣ** — τρία πεδία, **κανένα ημερολόγιο** (ADR-835 §4.5).
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -628,6 +658,13 @@ export interface PublicListing {
    * ένα) είναι **πολιτική** (`LISTING_VIDEO_MAX_COUNT`), όχι σχήμα — αλλαγή της δεν πρέπει να θέλει νέο κρίκο.
    */
   readonly videos: readonly ListingVideo[];
+
+  /**
+   * 🏢 **Η κάτοψη του ορόφου με τους γείτονες** (ADR-907 §11). **Δικό της κουτί**, όχι μέσα στα {@link floorplans}:
+   * εκείνα είναι του **ακινήτου**· αυτή δείχνει και **ξένες** μονάδες, με δική της επιμέλεια (δήλωση ανά όροφο).
+   * Κενός πίνακας = δεν δημοσιεύτηκε. Πίνακας για τον λόγο των `videos`: το «πόσες» (σήμερα μία) είναι πολιτική.
+   */
+  readonly floorPlates: readonly ListingFloorPlate[];
 
   // ── 3. ΕΙΔΟΣ + ΕΜΒΑΔΟΝ ────────────────────────────────────────────────────
   /**

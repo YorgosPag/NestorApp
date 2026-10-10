@@ -114,6 +114,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     models: [],
     // Απαιτείται από την έκδοση 18 (ADR-907 §10.5) — και έσκασε ακριβώς όπως το `models` από πάνω, στην ίδια γραμμή κώδικα.
     videos: [],
+    // Απαιτείται από την έκδοση 19 (ADR-907 §11) — ίδιος λόγος.
+    floorPlates: [],
     type: 'apartment',
     areaSqm: 95,
     offerKinds: ['sell'],

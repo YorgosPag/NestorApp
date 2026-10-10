@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "01eb6eb016de0e0c86a87ceeb2bde2042111c665762a9ae38449cd3404c851da",
+  "inputsSha256": "63d353a5ce84f96e4fa7051d972c20a93d72c228105abab905d45827a055c951",
   "languages": [
     "el"
   ],
@@ -12241,6 +12241,7 @@
     "src/lib/listings/declaration-succession.ts": "e4c998f702c3dd06da179a5bb9568b7d8ed455e86686bce74b77310dc426b393",
     "src/lib/listings/declared-file-ids.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/declared-file-map.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/listings/floor-plate/floor-plate-state.ts": "a3c14e0baa8cd0d5bb7443380219a1c9627271fe6a9703828d2861b113d202d1",
     "src/lib/listings/floorplan-north.ts": "b12a726dc4bfb148d87de8db00260f4a6a6315ee5d2bfdfb64ae59f62504834a",
     "src/lib/listings/floorplan-publication-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/floorplan-render-recipe.ts": "70417ffed450aa31939c4a1304ce717cf1d90f468febace606ef7cee7cb6b51d",
@@ -12275,7 +12276,7 @@
     "src/lib/listings/photo-focal-point.ts": "b4c659d02993d3e43fa84abc5cdac555799d55d36ac627fc2a44d6ba62f6c232",
     "src/lib/listings/price-history.ts": "80b98e4a82b167abf8009da26a960fe51c4b2ba13929117e7057646b5f77ab95",
     "src/lib/listings/public-listing-from-document.ts": "e33b7e6e07bd55f364bbf3a6ae91981593417cd9a1d3dfea3b658bcb72b072f4",
-    "src/lib/listings/public-listing-schema.ts": "cf42ee84f1424531fc576271e6e15de4dce55b3715c77d86a098fe1b9b3a9863",
+    "src/lib/listings/public-listing-schema.ts": "0df9158bf132ce09c746c5f4da5a8580bf15a0658c300a5048e8277e9b9c58d8",
     "src/lib/listings/saved-listing-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/mandate/mandate-conflict.ts": "e8b2654967f10965431ea208a967ad8fcd3a11c16556d4f4820692b871ae795a",
@@ -12680,7 +12681,7 @@
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/types/property-viewer.ts": "a981edcd97e17192fe1dbd7214219fd1f382547fe1dae619e33aa018ec0c4dcc",
     "src/types/property.ts": "161a435054e1b042f97331ca9d3591a69dc59ea20120f6d4a71c02e31662fda4",
-    "src/types/public-listing.ts": "d8fb5a901b18b79d0330d7010f9c8a112f96fbd2115249612f29e6e134eeea8b",
+    "src/types/public-listing.ts": "5b11d5e2fd5e156a2cc7fd3dade376a99c7bb3b602a8c0d159ed316dcfc0f7a7",
     "src/types/saved-listing.ts": "e22be679ba57f9a0604365d02de1eb9a8c96285b1d38440e8b57baac7ba3750d",
     "src/types/search-core.ts": "16866d35c5722806fcaa6857a5a39a4f616f22531da07ce25ea4a10e637d9ced",
     "src/types/search.ts": "2048c06631ca24ebf01adc50499e7485defe8a05e60a76fd2a3abd48f3794644",
@@ -12740,7 +12741,7 @@
     "dynamicBoundaries": 24,
     "matchedKeys": 239,
     "routeBoundaries": 3,
-    "shellFiles": 1132,
+    "shellFiles": 1133,
     "sliceBytes": 726011
   },
   "unresolvableKeys": [
