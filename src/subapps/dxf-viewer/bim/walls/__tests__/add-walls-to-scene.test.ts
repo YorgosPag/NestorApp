@@ -9,6 +9,7 @@
  *   +    ο μονός τοίχος είναι η παρτίδα του ενός — και είναι πλέον αναιρέσιμος.
  */
 
+import type { Pair, Polygon } from 'polygon-clipping';
 import type { Entity } from '../../../types/entities';
 import { isWallEntity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene';
@@ -18,8 +19,9 @@ import { getGlobalCommandHistory } from '../../../core/commands/CommandHistory';
 import { EventBus } from '../../../systems/events/EventBus';
 import { isInteractiveEntityCreation } from '../../../systems/events/bim-entity-lifecycle-events';
 import type { EntityCreatedOrigin } from '../../../systems/events/drawing-event-map';
-import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
-import { wallFootprintPolygon } from '../../finishes/wall-footprint-union';
+import { multiPolygonArea, projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
+import { safeIntersection } from '../../geometry/shared/safe-polygon-boolean';
+import { wallFootprintFromParams, wallFootprintPolygon } from '../../finishes/wall-footprint-union';
 import { computeWallProposal, type WallProposal } from '../../model-from-drawing/wall-proposal';
 import fixture from '../../model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
 import { computeFillingWallFootprints } from '../filling-walls-compute';
@@ -307,6 +309,69 @@ describe('ADR-911 Φ2 — άρνηση αντί για μερική εγγραφ
     expect(addWallsToScene([wall(0, 0, 1000, 0)], { ...h.accessor, currentLevelId: null }).refusal)
       .toBe('no-active-scene');
     expect(history.canUndo()).toBe(false);
+  });
+});
+
+describe('ADR-911 Φ3α-3 — ό,τι σχεδιάστηκε είναι ό,τι ζωγραφίζεται: ούτε διπλό ούτε κενό', () => {
+  /** Το αποτύπωμα που ΖΩΓΡΑΦΙΖΕΤΑΙ (params με τις ενώσεις τους) — όχι η ένωση raw ∪ mitered του σοβά. */
+  const drawn = (w: WallEntity): Polygon =>
+    [wallFootprintFromParams(w.params, w.kind).map((p): Pair => [p.x, p.y])];
+
+  function written(entities: readonly Entity[] = ENTITIES): { proposal: WallProposal; walls: WallEntity[] } {
+    const proposal = propose(entities);
+    const h = harness(entities);
+    addWallsToScene(proposal.walls, h.accessor, { origin: 'bulk', onOverlap: 'refuse' });
+    return { proposal, walls: h.walls() };
+  }
+
+  it('κανένα ζεύγος γραμμένων τοίχων δεν μοιράζεται εμβαδό', () => {
+    // Τα ορθογώνια του σχεδίου πλακοστρώνουν τον χώρο χωρίς επικάλυψη. Η ένωση επεκτείνει άκρα
+    // ως τον άξονα του γείτονα, ο λύτης τα κόβει πίσω στην παρειά: αν το ένα γίνει χωρίς το άλλο,
+    // δύο τοίχοι ζωγραφίζονται ο ένας πάνω στον άλλον. Πριν από τη Φ3α-3 αυτό συνέβαινε σε κοντό
+    // τοίχο (κόψιμο στο λάθος άκρο) και σε τριπλή ένωση με τον βραχίονα στην απέναντι παρειά.
+    const { walls } = written();
+    const clips = walls.map(drawn);
+    const overlapping: string[] = [];
+    for (let i = 0; i < walls.length; i++) {
+      for (let j = i + 1; j < walls.length; j++) {
+        const area = multiPolygonArea(safeIntersection(clips[i], clips[j]));
+        if (area > 1) overlapping.push(`${i}✕${j}: ${area.toFixed(0)} mm²`);
+      }
+    }
+    expect(walls).toHaveLength(38);
+    expect(overlapping).toEqual([]);
+  });
+
+  it('το συνολικό εμβαδό των γραμμένων τοίχων ισούται με των ορθογωνίων τους (κανένα κενό)', () => {
+    const { proposal, walls } = written();
+    const drawnArea = walls.reduce((sum, w) => sum + multiPolygonArea([drawn(w)]), 0);
+    const rectArea = proposal.items.filter((i) => i.status === 'ready').reduce((sum, i) => sum + i.rect.area, 0);
+    expect(drawnArea).toBeCloseTo(rectArea, 3);
+  });
+
+  it('η πρόταση δεν εξαρτάται από τη σειρά των γραμμών του σχεδίου', () => {
+    const shape = (w: WallEntity): string => {
+      const ends = [w.params.start, w.params.end].map((p) => `${p.x.toFixed(6)},${p.y.toFixed(6)}`).sort();
+      const { startBevel, endBevel, startMiter, endMiter } = w.params;
+      const cuts = [startBevel ?? 0, endBevel ?? 0].map((c) => c.toFixed(6)).sort();
+      // Έξι δεκαδικά παντού: η σειρά των γραμμών αλλάζει τη σειρά των πράξεων, άρα το 13ο ψηφίο.
+      return `${ends.join('→')}|${w.params.thickness.toFixed(6)}|${cuts.join('+')}|${startMiter || endMiter ? 'miter' : 'butt'}`;
+    };
+    const shapes = (entities: readonly Entity[]): string[] => written(entities).walls.map(shape).sort();
+
+    // Ντετερμινιστικό ανακάτεμα (LCG + Fisher–Yates) — ίδιο σε κάθε εκτέλεση.
+    const shuffled = [...ENTITIES];
+    let seed = 20261011;
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      const j = seed % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const reference = shapes(ENTITIES);
+    expect(reference).toHaveLength(38);
+    expect(shapes([...ENTITIES].reverse())).toEqual(reference);
+    expect(shapes(shuffled)).toEqual(reference);
   });
 });
 

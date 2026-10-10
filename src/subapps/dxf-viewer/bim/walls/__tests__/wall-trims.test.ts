@@ -1078,3 +1078,130 @@ describe('computeWallTrims — column end-miter (Pass 3)', () => {
   });
 });
 
+// ─── ADR-911 Φ3α-3 — κοντοί τοίχοι, γνήσιος διαμπερής, πραγματική απόσταση παρειάς ──
+
+describe('ADR-911 Φ3α-3 — το άκρο της ένωσης είναι το ΠΛΗΣΙΕΣΤΕΡΟ', () => {
+  it('κοντός βραχίονας (150 mm) με το ΤΕΛΟΣ στον άξονα διαμπερούς κόβεται στο τέλος, όχι στην αρχή', () => {
+    // Μήκος ≤ 2·JOIN_THRESHOLD ⇒ τα παράθυρα «κοντά στην αρχή» / «κοντά στο τέλος» επικαλύπτονται.
+    // Πριν: η ένωση στο τέλος (t = 1) διαβαζόταν ως «αρχή» και το κόψιμο έβγαινε 0.
+    const through = makeWall({ x: 1000, y: 0 }, { x: 1000, y: 2000 }, 100, 'T');
+    const stem = makeWall({ x: 850, y: 1000 }, { x: 1000, y: 1000 }, 100, 'S');
+
+    const trims = computeWallTrims([through, stem]);
+
+    expect(trims.get(stem.id)).toEqual({ endBevel: 50 });
+    expect(trims.has(through.id)).toBe(false);
+  });
+
+  it('το ίδιο με τον κοντό τοίχο γραμμένο ανάποδα: κόβεται η αρχή', () => {
+    const through = makeWall({ x: 1000, y: 0 }, { x: 1000, y: 2000 }, 100, 'T');
+    const stem = makeWall({ x: 1000, y: 1000 }, { x: 850, y: 1000 }, 100, 'S');
+
+    expect(computeWallTrims([stem, through]).get(stem.id)).toEqual({ startBevel: 50 });
+  });
+
+  it('κοντός τοίχος που ακουμπά στο ΑΚΡΟ γείτονα: κόβεται μόνο αυτός, στο σωστό άκρο (περίπτωση σχεδίου)', () => {
+    // Οι δύο τοίχοι του σχεδίου δοκιμής στο (7001, 6350). Πριν: ο κοντός έπαιρνε το κόψιμο στην
+    // ΑΡΧΗ του, το τέλος του έμενε 50 mm μέσα στον γείτονα, και ο γείτονας έχανε 50 mm από το
+    // δικό του άκρο (ψευδής γωνία ⇒ miter-fallback).
+    const short = makeWall({ x: 6851, y: 6350 }, { x: 7001, y: 6350 }, 100, 'A');
+    const neighbour = makeWall({ x: 7001, y: 5750 }, { x: 7001, y: 6400 }, 100, 'B');
+
+    const trims = computeWallTrims([neighbour, short]);
+
+    expect(trims.get(short.id)).toEqual({ endBevel: 50 });
+    expect(trims.has(neighbour.id)).toBe(false);
+  });
+
+  it('τοίχος μακρύτερος από 2·JOIN_THRESHOLD δεν αλλάζει: τα παράθυρα δεν επικαλύπτονται', () => {
+    const through = makeWall({ x: 0, y: 0 }, { x: 6000, y: 0 }, 200, 'A');
+    const stem = makeWall({ x: 3000, y: 401 }, { x: 3000, y: 0 }, 200, 'B');
+    expect(computeWallTrims([through, stem]).get(stem.id)).toEqual({ endBevel: 100 });
+  });
+});
+
+describe('ADR-911 Φ3α-3 — βραχίονας έναντι ΓΝΗΣΙΟΥ διαμπερούς κόβεται στην κοντινή παρειά', () => {
+  // Δύο ομοαξονικοί τοίχοι 250 mm που συναντιούνται στο (0,0) = ένας διαμπερής. Ο βραχίονας
+  // έρχεται από τα αριστερά (σώμα προς −x) και το άκρο του κάθεται κάπου μέσα στο σώμα τους.
+  const lower = makeWall({ x: 0, y: -3000 }, { x: 0, y: 0 }, 250, 'L');
+  const upper = makeWall({ x: 0, y: 3000 }, { x: 0, y: 0 }, 250, 'U');
+  const stemFrom = (startX: number): WallEntity => makeWall({ x: startX, y: 0 }, { x: -725, y: 0 }, 250, 'S');
+
+  it('άκρο στην ΑΠΕΝΑΝΤΙ παρειά (ο βραχίονας κατείχε το τετράγωνο της ένωσης) ⇒ κόψιμο ολόκληρο το πάχος', () => {
+    // Η περίπτωση του σχεδίου στο (7076, 3725): οι δύο κατακόρυφοι επεκτάθηκαν μέσα στον
+    // οριζόντιο, έγιναν «διαμπερής», και ο οριζόντιος — με το άκρο του στην απέναντι παρειά —
+    // διαβαζόταν ως «στην παρειά» (διείσδυση 0). Αποτέλεσμα: τριπλή επικάλυψη 250×250.
+    const stem = stemFrom(125);
+    const trims = computeWallTrims([lower, stem, upper]);
+
+    expect(trims.get(stem.id)).toEqual({ startBevel: 250 });
+    expect(trims.has(lower.id)).toBe(false);
+    expect(trims.has(upper.id)).toBe(false);
+  });
+
+  it('άκρο στον άξονα ⇒ μισό πάχος (όπως πάντα)', () => {
+    const stem = stemFrom(0);
+    expect(computeWallTrims([lower, upper, stem]).get(stem.id)).toEqual({ startBevel: 125 });
+  });
+
+  it('άκρο ήδη στην κοντινή παρειά ⇒ κανένα κόψιμο, ποτέ κενό', () => {
+    const stem = stemFrom(-125);
+    expect(computeWallTrims([lower, upper, stem]).has(stem.id)).toBe(false);
+  });
+
+  it('διαμπερής με ΑΝΙΣΑ πάχη: ο βραχίονας κόβεται στην παρειά του ΠΑΧΥΤΕΡΟΥ μισού (ποτέ διπλό σώμα)', () => {
+    // Ο βραχίονας είναι ο λεπτότερος των τριών, ώστε το πρωτεύον ζεύγος να είναι οι δύο ομοαξονικοί.
+    const thin = makeWall({ x: 0, y: 3000 }, { x: 0, y: 0 }, 150, 'N');
+    const stem = makeWall({ x: 0, y: 0 }, { x: -725, y: 0 }, 100, 'S');
+    expect(computeWallTrims([lower, thin, stem]).get(stem.id)).toEqual({ startBevel: 125 });
+  });
+
+  it('είναι συνεχές: θόρυβος 0,001 mm στο άκρο αλλάζει το κόψιμο κατά 0,001 mm', () => {
+    const at = (x: number): number => {
+      const stem = stemFrom(x);
+      return computeWallTrims([lower, upper, stem]).get(stem.id)?.startBevel ?? 0;
+    };
+    expect(at(0.001) - at(0)).toBeCloseTo(0.001, 6);
+    expect(at(0) - at(-0.001)).toBeCloseTo(0.001, 6);
+  });
+
+  it('η σειρά των τοίχων δεν αλλάζει το αποτέλεσμα', () => {
+    const stem = stemFrom(125);
+    const orders = [[lower, upper, stem], [stem, upper, lower], [upper, stem, lower]];
+    for (const walls of orders) {
+      expect(computeWallTrims(walls).get(stem.id)).toEqual({ startBevel: 250 });
+    }
+  });
+});
+
+describe('ADR-911 Φ3α-3 — το κόψιμο είναι η ΠΡΑΓΜΑΤΙΚΗ απόσταση ως την παρειά (όχι 40 % του μήκους)', () => {
+  it('κοντός βραχίονας σε χοντρό γείτονα τελειώνει ακριβώς στην παρειά', () => {
+    // Καθαρό 100 mm + 125 mm ως τον άξονα τοίχου 250. Πριν: min(125, 0,4 × 225 = 90) ⇒ έμεναν
+    // 35 mm του βραχίονα ΜΕΣΑ στον γείτονα. Revit: ο βραχίονας butt τελειώνει πάντα στην παρειά.
+    const thick = makeWall({ x: 0, y: -3000 }, { x: 0, y: 3000 }, 250, 'K');
+    const stem = makeWall({ x: -225, y: 0 }, { x: 0, y: 0 }, 100, 'S');
+
+    const trims = computeWallTrims([thick, stem]);
+    expect(trims.get(stem.id)).toEqual({ endBevel: 125 });
+
+    const [, patched] = applyTrimPatches([thick, stem], trims) as WallEntity[];
+    const axis = patched.geometry.axisPolyline.points;
+    expect(axis[axis.length - 1].x).toBeCloseTo(-125, 6); // η παρειά του γείτονα
+    expect(patched.geometry.length).toBeCloseTo(0.1, 6); // καθαρό μήκος για το BOQ
+  });
+
+  it('κοντός βραχίονας ανάμεσα σε ΔΥΟ χοντρούς γείτονες κόβεται και στα δύο άκρα, χωρίς αναστροφή', () => {
+    const left = makeWall({ x: 0, y: -3000 }, { x: 0, y: 3000 }, 250, 'L');
+    const right = makeWall({ x: 350, y: -3000 }, { x: 350, y: 3000 }, 250, 'R');
+    const stem = makeWall({ x: 0, y: 0 }, { x: 350, y: 0 }, 100, 'S');
+
+    const trims = computeWallTrims([left, right, stem]);
+    expect(trims.get(stem.id)).toEqual({ startBevel: 125, endBevel: 125 });
+
+    const patched = (applyTrimPatches([left, right, stem], trims) as WallEntity[])[2];
+    const axis = patched.geometry.axisPolyline.points;
+    expect(axis[0].x).toBeCloseTo(125, 6);
+    expect(axis[1].x).toBeCloseTo(225, 6);
+  });
+});
+
