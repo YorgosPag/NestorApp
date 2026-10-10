@@ -14,9 +14,10 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Users, UserPlus, AlertCircle, HardHat, X } from 'lucide-react';
+import { Users, UserPlus, HardHat, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -27,6 +28,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useProjectWorkers } from './hooks/useProjectWorkers';
 import { WorkerCard } from './components/WorkerCard';
+import { IkaTabLoadingCard, IkaTabErrorCard } from './components/IkaTabStatusCards';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import {
@@ -150,35 +152,29 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
     setSelectedContact(null);
   }, []);
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Spinner size="large" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center gap-2 py-12">
-          <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
-          <p className={typography.special.secondary}>{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (isLoading) return <IkaTabLoadingCard />;
+  if (error) return <IkaTabErrorCard message={error} />;
 
   return (
     <section className="space-y-2">
       {/* Header card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <HeaderBar
+            actions={
+              <>
+                <span className={typography.special.secondary}>
+                  {t('ika.workersTab.totalWorkers')}: {workers.length}
+                </span>
+                {projectId && !showSearch && (
+                  <Button onClick={() => setShowSearch(true)}>
+                    <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+                    {t('ika.workersTab.addWorker')}
+                  </Button>
+                )}
+              </>
+            }
+          >
             <hgroup>
               <CardTitle className={typography.card.titleCompact}>
                 <HardHat className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
@@ -188,18 +184,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
                 {t('ika.workersTab.description')}
               </CardDescription>
             </hgroup>
-            <div className="flex items-center gap-2">
-              <span className={typography.special.secondary}>
-                {t('ika.workersTab.totalWorkers')}: {workers.length}
-              </span>
-              {projectId && !showSearch && (
-                <Button onClick={() => setShowSearch(true)}>
-                  <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                  {t('ika.workersTab.addWorker')}
-                </Button>
-              )}
-            </div>
-          </div>
+          </HeaderBar>
         </CardHeader>
 
         <CardContent className="space-y-2">

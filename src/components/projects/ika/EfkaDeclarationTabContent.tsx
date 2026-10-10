@@ -18,9 +18,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Landmark, Save, AlertCircle, Plus } from 'lucide-react';
+import { Landmark, Save, Plus } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +41,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useEfkaDeclaration } from './hooks/useEfkaDeclaration';
 import { EfkaChecklist } from './components/EfkaChecklist';
+import { IkaTabLoadingCard, IkaTabErrorCard } from './components/IkaTabStatusCards';
 import { EfkaStatusBadge } from './components/EfkaStatusBadge';
 import { EfkaDocumentTracker } from './components/EfkaDocumentTracker';
 import type { EfkaDeclarationData, EfkaProjectCategory } from './contracts';
@@ -106,28 +108,8 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
     await initializeDeclaration('current_user');
   }, [initializeDeclaration]);
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Spinner size="large" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center gap-2 py-12">
-          <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
-          <p className={typography.special.secondary}>{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (isLoading) return <IkaTabLoadingCard />;
+  if (error) return <IkaTabErrorCard message={error} />;
 
   // No declaration yet — show init button
   if (!declaration) {
@@ -152,26 +134,27 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
       {/* Status header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className={typography.card.titleCompact}>
-                <Landmark className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
-                {t('ika.efka.title')}
-              </CardTitle>
-              <CardDescription>{t('ika.efka.description')}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <EfkaStatusBadge status={declaration.status} />
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? (
-                  <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
-                ) : (
-                  <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                )}
-                {t('ika.efka.save')}
-              </Button>
-            </div>
-          </div>
+          <HeaderBar
+            actions={
+              <>
+                <EfkaStatusBadge status={declaration.status} />
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
+                  ) : (
+                    <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+                  )}
+                  {t('ika.efka.save')}
+                </Button>
+              </>
+            }
+          >
+            <CardTitle className={typography.card.titleCompact}>
+              <Landmark className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
+              {t('ika.efka.title')}
+            </CardTitle>
+            <CardDescription>{t('ika.efka.description')}</CardDescription>
+          </HeaderBar>
         </CardHeader>
 
         {/* ΑΜΟΕ display */}

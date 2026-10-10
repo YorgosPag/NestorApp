@@ -17,8 +17,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { ClipboardList, Plus, AlertCircle } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { ClipboardList, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -38,6 +37,7 @@ import { useAttendanceSummary } from './hooks/useAttendanceSummary';
 
 // IKA components
 import { DateNavigator } from './components/DateNavigator';
+import { IkaTabLoadingCard, IkaTabErrorCard } from './components/IkaTabStatusCards';
 import { AttendanceDashboard } from './components/AttendanceDashboard';
 import { DailyTimeline } from './components/DailyTimeline';
 import { CrewGroupFilter } from './components/CrewGroupFilter';
@@ -128,28 +128,8 @@ export function TimesheetTabContent({ projectId, siteCenter }: TimesheetTabConte
     );
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Spinner size="large" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center gap-2 py-12">
-          <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
-          <p className={typography.special.secondary}>{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (isLoading) return <IkaTabLoadingCard />;
+  if (error) return <IkaTabErrorCard message={error} />;
 
   // No workers
   if (workers.length === 0) {

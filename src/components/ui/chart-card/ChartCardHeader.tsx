@@ -14,9 +14,12 @@
  * `<h3>`. Hardcoding it here is what put an `<h3>` inside an `<h3>` — see
  * `surface-context.tsx`. The visual size stays fixed regardless of level, because
  * heading level is document structure and type scale is design.
+ *
+ * Layout (wrap, title basis, actions row) belongs to `HeaderBar` (ADR-912 §8) — this file owns the heading only.
  */
 
 import type { ReactNode } from 'react';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { useChartCard } from './chart-card-context';
 
 export interface ChartCardHeaderProps {
@@ -30,11 +33,10 @@ export function ChartCardHeader({ title, children }: ChartCardHeaderProps) {
   const { cardId, headingTag: Heading } = useChartCard();
 
   return (
-    <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <HeaderBar as="header" className="mb-4" actions={children}>
       <Heading id={`${cardId}-title`} className="text-lg font-semibold text-foreground">
         {title}
       </Heading>
-      {children}
-    </header>
+    </HeaderBar>
   );
 }

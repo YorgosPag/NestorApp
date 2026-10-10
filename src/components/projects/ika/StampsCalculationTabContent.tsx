@@ -17,15 +17,15 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Save, Calculator, AlertTriangle } from 'lucide-react';
+import { Save, Calculator } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -35,6 +35,7 @@ import { useLaborComplianceConfig } from './hooks/useLaborComplianceConfig';
 import { useStampsCalculation } from './hooks/useStampsCalculation';
 import { useEmploymentRecords } from './hooks/useEmploymentRecords';
 import { MonthYearSelector } from './components/MonthYearSelector';
+import { IkaIssueWarningCard } from './components/IkaTabStatusCards';
 import { StampsSummaryDashboard } from './components/StampsSummaryDashboard';
 import { WorkerStampsTable } from './components/WorkerStampsTable';
 import { EmploymentRecordDialog } from './components/EmploymentRecordDialog';
@@ -71,7 +72,6 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacing = useSpacingTokens();
-  const borderTokens = useBorderTokens();
 
   // Current month/year
   const now = new Date();
@@ -220,30 +220,31 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
       {/* Header Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className={typography.heading.lg}>
-                {t('ika.stampsTab.title')}
-              </CardTitle>
-              <CardDescription className={spacing.margin.top.xs}>
-                {t('ika.stampsTab.description')}
-              </CardDescription>
-            </div>
-            <div className={cn('flex items-center', spacing.gap.md)}>
-              <MonthYearSelector
-                month={selectedMonth}
-                year={selectedYear}
-                onChange={handleMonthYearChange}
-              />
-              <Button
-                onClick={handleSaveRecords}
-                disabled={isSaving || isLoading || summary.totalWorkers === 0}
-              >
-                <Save className={cn(iconSizes.sm, spacing.margin.right.xs)} />
-                {isSaving ? t('ika.stampsTab.saving') : t('ika.stampsTab.saveRecords')}
-              </Button>
-            </div>
-          </div>
+          <HeaderBar
+            actions={
+              <>
+                <MonthYearSelector
+                  month={selectedMonth}
+                  year={selectedYear}
+                  onChange={handleMonthYearChange}
+                />
+                <Button
+                  onClick={handleSaveRecords}
+                  disabled={isSaving || isLoading || summary.totalWorkers === 0}
+                >
+                  <Save className={cn(iconSizes.sm, spacing.margin.right.xs)} />
+                  {isSaving ? t('ika.stampsTab.saving') : t('ika.stampsTab.saveRecords')}
+                </Button>
+              </>
+            }
+          >
+            <CardTitle className={typography.heading.lg}>
+              {t('ika.stampsTab.title')}
+            </CardTitle>
+            <CardDescription className={spacing.margin.top.xs}>
+              {t('ika.stampsTab.description')}
+            </CardDescription>
+          </HeaderBar>
         </CardHeader>
       </Card>
 
@@ -276,24 +277,14 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
         <>
           {/* Issues warning — separate messages per issue type */}
           {summary.missingClassCount > 0 && (
-            <Card className={borderTokens.quick.warning}>
-              <CardContent className={cn('flex items-center', spacing.padding.md)}>
-                <AlertTriangle className={cn(iconSizes.md, colors.text.warning, spacing.margin.right.sm)} />
-                <p className={cn(typography.body.sm, colors.text.warning)}>
-                  {summary.missingClassCount} {t('ika.stampsTab.issues.missingClass')}
-                </p>
-              </CardContent>
-            </Card>
+            <IkaIssueWarningCard>
+              {summary.missingClassCount} {t('ika.stampsTab.issues.missingClass')}
+            </IkaIssueWarningCard>
           )}
           {summary.noDaysCount > 0 && (
-            <Card className={borderTokens.quick.warning}>
-              <CardContent className={cn('flex items-center', spacing.padding.md)}>
-                <AlertTriangle className={cn(iconSizes.md, colors.text.warning, spacing.margin.right.sm)} />
-                <p className={cn(typography.body.sm, colors.text.warning)}>
-                  {summary.noDaysCount} {t('ika.stampsTab.issues.noDays')}
-                </p>
-              </CardContent>
-            </Card>
+            <IkaIssueWarningCard>
+              {summary.noDaysCount} {t('ika.stampsTab.issues.noDays')}
+            </IkaIssueWarningCard>
           )}
 
           {/* Summary Dashboard */}
