@@ -161,6 +161,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
       <Card>
         <CardHeader>
           <HeaderBar
+            description={<CardDescription>{t('ika.workersTab.description')}</CardDescription>}
             actions={
               <>
                 <span className={typography.special.secondary}>
@@ -175,15 +176,10 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
               </>
             }
           >
-            <hgroup>
-              <CardTitle className={typography.card.titleCompact}>
-                <HardHat className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
-                {t('ika.workersTab.title')}
-              </CardTitle>
-              <CardDescription>
-                {t('ika.workersTab.description')}
-              </CardDescription>
-            </hgroup>
+            <CardTitle className={typography.card.titleCompact}>
+              <HardHat className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
+              {t('ika.workersTab.title')}
+            </CardTitle>
           </HeaderBar>
         </CardHeader>
 

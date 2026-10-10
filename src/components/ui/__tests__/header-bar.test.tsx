@@ -3,12 +3,16 @@
  *
  * Τι κλειδώνει (δομή — το jsdom δεν έχει διάταξη· το «χωράει στα 390px» μετριέται στον browser):
  * - Δ1: η γραμμή αναδιπλώνεται (`flex-wrap`) — η απουσία του ήταν το ελάττωμα.
- * - Δ2: η περιοχή τίτλου υποχωρεί (`min-w-0`), μεγαλώνει (`flex-1`) και έχει βάση (`basis-48`).
+ * - Δ2: η περιοχή τίτλου υποχωρεί (`min-w-0`) και μεγαλώνει από το ΕΓΓΕΝΕΣ της πλάτος (`flex-auto`) — καμία σταθερή
+ *   βάση: με `basis-48` μια στενή κάρτα έριχνε σήμα/εικονίδιο κάτω από τίτλο δύο λέξεων.
  * - Δ3: οι πράξεις αναδιπλώνονται και δεν ξεπερνούν τον περιέκτη (`max-w-full`).
  * - Δ4: χωρίς `actions` (ή με `false`/`null` από συνθήκη του καλούντος) δεν αποδίδεται δεύτερος κόμβος.
  * - Δ5: `as` / `actionsAs` αλλάζουν στοιχείο, όχι διάταξη.
  * - Δ6: `align="start"` ⇒ `items-start`, αλλιώς `items-center`.
  * - Δ7: καμία παραβίαση axe.
+ * - Δ8: η περιγραφή μπαίνει ΜΕΣΑ στην περιοχή τίτλου, σε περιτύλιγμα `w-0 min-w-full` (δεν ψηφίζει στην αναδίπλωση),
+ *   και γυρίζει την προεπιλεγμένη στοίχιση σε `items-start`· ρητό `align` κερδίζει.
+ * - Δ9: `wrap={false}` ⇒ καμία αναδίπλωση, ο τίτλος υποχωρεί (`flex-1`), το διακοσμητικό δεν συμπιέζεται (`shrink-0`).
  */
 
 import * as React from 'react';
@@ -28,15 +32,20 @@ function renderBar(props: Partial<React.ComponentProps<typeof HeaderBar>> = {}) 
   return container.firstElementChild as HTMLElement;
 }
 
+function titleAreaOf(root: HTMLElement): HTMLElement {
+  return root.firstElementChild as HTMLElement;
+}
+
 describe('HeaderBar', () => {
   test('Δ1: η γραμμή αναδιπλώνεται', () => {
     expect(renderBar()).toHaveClass('flex', 'flex-wrap', 'justify-between');
   });
 
-  test('Δ2: η περιοχή τίτλου υποχωρεί, μεγαλώνει και έχει βάση', () => {
-    renderBar();
-    const titleArea = screen.getByRole('heading', { name: 'Εργαζόμενοι' }).parentElement as HTMLElement;
-    expect(titleArea).toHaveClass('min-w-0', 'flex-1', 'basis-48');
+  test('Δ2: η περιοχή τίτλου υποχωρεί και μεγαλώνει από το εγγενές της πλάτος', () => {
+    const titleArea = titleAreaOf(renderBar());
+    expect(titleArea).toContainElement(screen.getByRole('heading', { name: 'Εργαζόμενοι' }));
+    expect(titleArea).toHaveClass('min-w-0', 'flex-auto');
+    expect(titleArea.className).not.toMatch(/\bbasis-/);
   });
 
   test('Δ3: οι πράξεις αναδιπλώνονται και δεν ξεπερνούν τον περιέκτη', () => {
@@ -65,11 +74,37 @@ describe('HeaderBar', () => {
   test('Δ7: καμία παραβίαση axe', async () => {
     const { container } = render(
       <main>
-        <HeaderBar as="header" actions={<button type="button">Προσθήκη</button>}>
+        <HeaderBar as="header" description={<p>Όλοι οι εργαζόμενοι</p>} actions={<button type="button">Προσθήκη</button>}>
           <h1>Εργαζόμενοι</h1>
         </HeaderBar>
       </main>,
     );
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('Δ8: η περιγραφή ζει στην περιοχή τίτλου χωρίς να ψηφίζει στην αναδίπλωση', () => {
+    const root = renderBar({ description: <p>Όλοι οι εργαζόμενοι του έργου</p> });
+    const slot = screen.getByText('Όλοι οι εργαζόμενοι του έργου').parentElement as HTMLElement;
+    expect(slot).toHaveClass('w-0', 'min-w-full');
+    expect(slot.parentElement).toBe(titleAreaOf(root));
+    expect(root).toHaveClass('items-start');
+  });
+
+  test('Δ8: ρητό align κερδίζει την προεπιλογή της περιγραφής', () => {
+    expect(renderBar({ description: <p>κείμενο</p>, align: 'center' })).toHaveClass('items-center');
+  });
+
+  test.each([undefined, null, false])('Δ8: description=%p ⇒ κανένα περιτύλιγμα περιγραφής', (description) => {
+    const root = renderBar({ description });
+    expect(titleAreaOf(root).childElementCount).toBe(1);
+    expect(root).toHaveClass('items-center');
+  });
+
+  test('Δ9: wrap={false} — διακοσμητικό που δεν αναδιπλώνεται ποτέ', () => {
+    const root = renderBar({ wrap: false, actions: <svg data-testid="icon" /> });
+    expect(root).toHaveClass('flex-nowrap');
+    expect(root).not.toHaveClass('flex-wrap');
+    expect(titleAreaOf(root)).toHaveClass('min-w-0', 'flex-1');
+    expect(screen.getByTestId('icon').parentElement).toHaveClass('shrink-0');
   });
 });

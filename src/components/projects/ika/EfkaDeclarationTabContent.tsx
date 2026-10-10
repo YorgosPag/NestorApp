@@ -135,6 +135,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
       <Card>
         <CardHeader>
           <HeaderBar
+            description={<CardDescription>{t('ika.efka.description')}</CardDescription>}
             actions={
               <>
                 <EfkaStatusBadge status={declaration.status} />
@@ -153,7 +154,6 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
               <Landmark className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
               {t('ika.efka.title')}
             </CardTitle>
-            <CardDescription>{t('ika.efka.description')}</CardDescription>
           </HeaderBar>
         </CardHeader>
 

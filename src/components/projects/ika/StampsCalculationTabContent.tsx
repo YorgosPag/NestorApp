@@ -221,6 +221,11 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
       <Card>
         <CardHeader>
           <HeaderBar
+            description={
+              <CardDescription className={spacing.margin.top.xs}>
+                {t('ika.stampsTab.description')}
+              </CardDescription>
+            }
             actions={
               <>
                 <MonthYearSelector
@@ -241,9 +246,6 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
             <CardTitle className={typography.heading.lg}>
               {t('ika.stampsTab.title')}
             </CardTitle>
-            <CardDescription className={spacing.margin.top.xs}>
-              {t('ika.stampsTab.description')}
-            </CardDescription>
           </HeaderBar>
         </CardHeader>
       </Card>
