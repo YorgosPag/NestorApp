@@ -127,7 +127,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   // Layout classes with mobile-first responsive design
   const layoutClasses = {
     'single-row': "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-    'compact': "flex flex-row items-center justify-between gap-2",
+    // 🔑 `flex-wrap` (ADR-912 §10): τίτλος και πράξεις είναι και τα δύο `shrink-0`· χωρίς αναδίπλωση οι πράξεις
+    //    έβγαιναν από το πλαίσιο και τις έκοβε το `overflow-hidden` της ρίζας (390px, λίστα κτιρίων: πράξεις ως τα
+    //    485px σε πλαίσιο 340px, μετρημένο 2026-10-11). Όταν δεν χωρούν, κατεβαίνουν κάτω από τον τίτλο.
+    'compact': "flex flex-row flex-wrap items-center justify-between gap-2",
     'multi-row': "space-y-4",
     'stacked': "space-y-6"
   };

@@ -28,7 +28,11 @@ const ScrollArea = React.forwardRef<
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+    {/* 🔑 `[&>div]:!block` (ADR-912 §10): το Radix τυλίγει το περιεχόμενο σε `<div style="display:table; min-width:100%">`.
+        Ως πίνακας, το περιτύλιγμα φαρδαίνει όσο το πιο φαρδύ ΑΣΠΑΣΤΟ περιεχόμενο (ένας μακρύς τίτλος με `truncate`),
+        και επειδή δεν υπάρχει οριζόντια μπάρα, ό,τι περισσεύει απλώς ΚΟΒΕΤΑΙ: στα 390px οι κάρτες της λίστας κτιρίων
+        έβγαιναν 375px σε θυρίδα 348px (μετρημένο 2026-10-11). Ως block το πλάτος το ορίζει η θυρίδα. */}
+    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] [&>div]:!block">
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />

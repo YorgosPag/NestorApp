@@ -34,7 +34,7 @@ export const HEADER_THEME: HeaderTheme = {
   // Layout classes with responsive design
   layouts: {
     'single-row': "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-    'compact': "flex flex-row items-center justify-between gap-2",
+    'compact': "flex flex-row flex-wrap items-center justify-between gap-2",
     'multi-row': "flex flex-col gap-4"
   },
 
