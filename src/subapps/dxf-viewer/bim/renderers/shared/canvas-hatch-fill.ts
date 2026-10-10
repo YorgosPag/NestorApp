@@ -14,6 +14,18 @@
  * @see docs/centralized-systems/reference/adrs/ADR-511-wall-finish-per-room.md
  */
 
+import { liveStrokeInk } from '../../../config/adaptive-entity-color';
+import { tracePolygonScreenPath } from '../bim-polygon-render';
+import { applyLiveStroke } from './live-stroke';
+
+/** Αχνό ουδέτερο μελάνι του μοτίβου επιφάνειας (πλάκα / επίστρωση δαπέδου) — «hint», όχι περίγραμμα. */
+export const AREA_HATCH_STROKE_RGBA = 'rgba(0, 0, 0, 0.15)';
+/** Πάχος γραμμής του μοτίβου επιφάνειας (CSS px, zoom-invariant). */
+export const AREA_HATCH_LINE_WIDTH_PX = 0.5;
+
+/** Μοτίβο επιφάνειας: παράλληλες γραμμές · κάνναβος · πλέγμα τελειών (με την ακτίνα τους σε px). */
+export type AreaHatchMotif = 'lines' | 'grid' | { readonly dotRadiusPx: number };
+
 /** World → screen projector (ο renderer δίνει το `this.worldToScreen`). */
 export type WorldToScreen = (p: { x: number; y: number }) => { x: number; y: number };
 
@@ -57,6 +69,38 @@ export function strokeHatchLines(
       ctx.stroke();
     }
   }
+}
+
+/**
+ * Ολόκληρο το πέρασμα μοτίβου μιας επιφάνειας (ADR-909 Γ2.6β): clip στο `ring` → μελάνι → μοτίβο → restore.
+ * Το ίδιο σώμα ήταν γραμμένο στον `SlabRenderer` και στον `FloorFinishRenderer`· ο καθένας κρατά πλέον μόνο το
+ * mapping του (οικογένεια οπλισμού / υλικό → μοτίβο + βήμα).
+ *
+ * Γραμμές ΚΑΙ τελείες είναι **μελάνι**: οθόνη ⇒ αχνές αυτούσιες· print pass ⇒ πλήρες μελάνι πολιτικής + δάπεδο
+ * πάχους (η διαφάνεια γραμμής δεν τυπώνεται). No-op για μη έγκυρο βήμα — χωρίς `save`.
+ */
+export function paintClippedAreaHatch(
+  ctx: CanvasRenderingContext2D,
+  w2s: WorldToScreen,
+  ring: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  bbox: HatchFillBbox,
+  spacingMm: number,
+  motif: AreaHatchMotif,
+): void {
+  if (!Number.isFinite(spacingMm) || spacingMm <= 0) return;
+  ctx.save();
+  tracePolygonScreenPath(ctx, w2s, ring);
+  ctx.clip();
+  applyLiveStroke(ctx, AREA_HATCH_STROKE_RGBA, AREA_HATCH_LINE_WIDTH_PX);
+  ctx.fillStyle = liveStrokeInk(AREA_HATCH_STROKE_RGBA);
+  ctx.setLineDash([]);
+  if (typeof motif === 'object') {
+    fillHatchDots(ctx, w2s, bbox, spacingMm, motif.dotRadiusPx);
+  } else {
+    strokeHatchLines(ctx, w2s, bbox, spacingMm, 'horizontal');
+    if (motif === 'grid') strokeHatchLines(ctx, w2s, bbox, spacingMm, 'vertical');
+  }
+  ctx.restore();
 }
 
 /**

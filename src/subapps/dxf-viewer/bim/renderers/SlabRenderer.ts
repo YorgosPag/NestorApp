@@ -57,14 +57,18 @@ import { getWallCoveringColor } from '../wall-coverings/wall-covering-material-c
 import { isFinishActive } from '../finishes/structural-finish-types';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { paintClippedAreaHatch, type AreaHatchMotif } from './shared/canvas-hatch-fill';
 
 /**
- * Hatch line stroke (light gray, low-opacity) — non-intrusive against the
- * already-tinted fill, matches the industry convention for "hint" hatch in
- * plan view.
+ * Μοτίβο ανά οικογένεια οπλισμού — «hint» στην κάτοψη (το αχνό μελάνι και το πάχος ζουν στο `canvas-hatch-fill`):
+ * one-way παράλληλες · two-way / waffle κάνναβος · flat πλέγμα τελειών ακτίνας 1 px.
  */
-const HATCH_STROKE = 'rgba(0, 0, 0, 0.15)';
-const HATCH_LINE_WIDTH = 0.5;
+const HATCH_MOTIF: Readonly<Record<SlabReinforcement, AreaHatchMotif>> = {
+  'one-way': 'lines',
+  'two-way': 'grid',
+  'waffle':  'grid',
+  'flat':    { dotRadiusPx: 1 },
+};
 
 /** World-space spacing (mm) per reinforcement family. */
 const HATCH_SPACING_MM: Readonly<Record<SlabReinforcement, number>> = {
@@ -248,73 +252,11 @@ export class SlabRenderer extends BimFootprintRenderer {
   private drawReinforcementHatch(slab: SlabEntity): void {
     const reinforcement = slab.params.reinforcement;
     if (!reinforcement) return;
-    const bbox = slab.geometry.bbox;
-    const spacingMm = HATCH_SPACING_MM[reinforcement];
-    if (!Number.isFinite(spacingMm) || spacingMm <= 0) return;
-
-    this.ctx.save();
-    this.drawPolygonPath(slab.geometry.polygon.vertices);
-    this.ctx.clip();
-    this.ctx.strokeStyle = HATCH_STROKE;
-    this.ctx.fillStyle = HATCH_STROKE;
-    this.ctx.lineWidth = HATCH_LINE_WIDTH;
-    this.ctx.setLineDash([]);
-
-    if (reinforcement === 'flat') {
-      this.drawDotGrid(bbox, spacingMm);
-    } else {
-      if (reinforcement === 'one-way' || reinforcement === 'two-way' || reinforcement === 'waffle') {
-        this.drawParallelLines(bbox, spacingMm, 'horizontal');
-      }
-      if (reinforcement === 'two-way' || reinforcement === 'waffle') {
-        this.drawParallelLines(bbox, spacingMm, 'vertical');
-      }
-    }
-    this.ctx.restore();
-  }
-
-  /** Stroke ενός world-space τμήματος (SSoT — κοινό για τα δύο orientations, N.0.2 anti-dup). */
-  private strokeWorldSegment(ax: number, ay: number, bx: number, by: number): void {
-    const a = this.worldToScreen({ x: ax, y: ay });
-    const b = this.worldToScreen({ x: bx, y: by });
-    this.ctx.beginPath();
-    this.ctx.moveTo(a.x, a.y);
-    this.ctx.lineTo(b.x, b.y);
-    this.ctx.stroke();
-  }
-
-  private drawParallelLines(
-    bbox: SlabEntity['geometry']['bbox'],
-    spacingMm: number,
-    orientation: 'horizontal' | 'vertical',
-  ): void {
-    if (orientation === 'horizontal') {
-      const startY = Math.ceil(bbox.min.y / spacingMm) * spacingMm;
-      for (let y = startY; y <= bbox.max.y; y += spacingMm) {
-        this.strokeWorldSegment(bbox.min.x, y, bbox.max.x, y);
-      }
-      return;
-    }
-    const startX = Math.ceil(bbox.min.x / spacingMm) * spacingMm;
-    for (let x = startX; x <= bbox.max.x; x += spacingMm) {
-      this.strokeWorldSegment(x, bbox.min.y, x, bbox.max.y);
-    }
-  }
-
-  private drawDotGrid(
-    bbox: SlabEntity['geometry']['bbox'],
-    spacingMm: number,
-  ): void {
-    const startX = Math.ceil(bbox.min.x / spacingMm) * spacingMm;
-    const startY = Math.ceil(bbox.min.y / spacingMm) * spacingMm;
-    const dotRadius = 1;
-    for (let x = startX; x <= bbox.max.x; x += spacingMm) {
-      for (let y = startY; y <= bbox.max.y; y += spacingMm) {
-        const s = this.worldToScreen({ x, y });
-        this.ctx.beginPath();
-        this.ctx.arc(s.x, s.y, dotRadius, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
+    // ADR-909 Γ2.6β — clip + μελάνι (ρωτά την πολιτική εκτύπωσης) + μοτίβο ζουν ΜΙΑ φορά στο `canvas-hatch-fill`·
+    // εδώ μόνο το mapping οικογένειας οπλισμού → μοτίβο + βήμα.
+    paintClippedAreaHatch(
+      this.ctx, (p) => this.worldToScreen(p), slab.geometry.polygon.vertices, slab.geometry.bbox,
+      HATCH_SPACING_MM[reinforcement], HATCH_MOTIF[reinforcement],
+    );
   }
 }

@@ -27,6 +27,8 @@ import type { WireWaypointHover } from '../mep-systems/mep-wire-waypoint-ui-stor
 // size / colour / cold-warm-hot temperature / DPI all resolve in a single place. No
 // hand-rolled grip sizes or colours here (CLAUDE.md "no magic numbers").
 import { createGripRenderer, type GripRenderConfig } from '../../rendering/grips';
+import { liveStrokeInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
+import { strokePolylinePaths } from './bim-polygon-render';
 
 /**
  * ADR-408 Φ7 — default wire colour when the per-view `colorBySystem` toggle is
@@ -43,12 +45,9 @@ const HOME_RUN_ARROW_LEN = 11; // px — arrowhead size in screen space (zoom-in
 const HOME_RUN_ARROW_HALF_RAD = 0.42; // half-angle of the arrowhead wings (rad)
 const CONDUCTOR_TICK_WIDTH = 1; // px — home-run conductor slash stroke width
 
-/** Stroke the polyline through `screen` (assumes ≥2 points). */
+/** Stroke the polyline through `screen` — points already in screen space, via the one polyline SSoT. */
 function strokePolyline(ctx: CanvasRenderingContext2D, screen: readonly Point2D[]): void {
-  ctx.beginPath();
-  ctx.moveTo(screen[0]!.x, screen[0]!.y);
-  for (let i = 1; i < screen.length; i++) ctx.lineTo(screen[i]!.x, screen[i]!.y);
-  ctx.stroke();
+  strokePolylinePaths(ctx, (p) => p, [screen]);
 }
 
 /**
@@ -68,9 +67,13 @@ function drawOneWire(
   const pts = buildWirePolyline(path);
   if (pts.length < 2) return;
   const screen = pts.map((p) => CoordinateTransforms.worldToScreen({ x: p.x, y: p.y }, transform, viewport));
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
+  // ADR-909 Γ2.6β — γραμμή, βέλος home-run και κουκκίδα γείωσης είναι μελάνι: οθόνη ⇒ το χρώμα του συστήματος
+  // αυτούσιο· print pass ⇒ μελάνι πολιτικής.
+  const ink = liveStrokeInk(color);
+  ctx.strokeStyle = ink;
+  ctx.fillStyle = ink;
   if (highlight) {
+    // chrome — λάμψη hover, δεν τυπώνεται: πάχη ωμά.
     ctx.save();
     ctx.globalAlpha = WIRE_HALO_ALPHA;
     ctx.lineWidth = WIRE_HALO_WIDTH;
@@ -79,7 +82,7 @@ function drawOneWire(
     ctx.lineWidth = WIRE_HIGHLIGHT_WIDTH;
   }
   strokePolyline(ctx, screen);
-  if (highlight) ctx.lineWidth = WIRE_LINE_WIDTH;
+  if (highlight) ctx.lineWidth = liveStrokeWidthPx(WIRE_LINE_WIDTH);
   drawHomeRunArrow(ctx, screen[0]!, screen[1]!);
   drawConductorTicks(ctx, screen[0]!, screen[1]!, path.conductors ?? DEFAULT_CONDUCTORS);
 }
@@ -98,7 +101,7 @@ function drawConductorTicks(
   const ticks = buildConductorTicks(tip, from, conductors);
   if (ticks.length === 0) return;
   ctx.save();
-  ctx.lineWidth = CONDUCTOR_TICK_WIDTH;
+  ctx.lineWidth = liveStrokeWidthPx(CONDUCTOR_TICK_WIDTH);
   for (const tick of ticks) {
     ctx.beginPath();
     ctx.moveTo(tick.a.x, tick.a.y);
@@ -148,7 +151,7 @@ export function drawCircuitWires(
   colorBySystem = true,
 ): void {
   ctx.save();
-  ctx.lineWidth = WIRE_LINE_WIDTH;
+  ctx.lineWidth = liveStrokeWidthPx(WIRE_LINE_WIDTH);
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.setLineDash([]);
@@ -168,6 +171,7 @@ const INSERT_GHOST_RADIUS_PX = 5; // hollow "+" preview where a vertex would be 
 function drawInsertGhost(ctx: CanvasRenderingContext2D, p: Point2D, color: string): void {
   ctx.beginPath();
   ctx.arc(p.x, p.y, INSERT_GHOST_RADIUS_PX, 0, Math.PI * 2);
+  // chrome — το «+» εισαγωγής κορυφής υπάρχει μόνο σε hover, δεν τυπώνεται: ωμά.
   ctx.lineWidth = HANDLE_STROKE_PX;
   ctx.strokeStyle = color;
   ctx.stroke();

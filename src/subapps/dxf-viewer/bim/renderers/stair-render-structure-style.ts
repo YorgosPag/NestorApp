@@ -29,7 +29,7 @@
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type { StairGeometry, StairStructureType } from '../types/stair-types';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
 
 /**
  * Render-helper deps. `worldToScreen` is `BaseEntityRenderer.worldToScreen`
@@ -62,6 +62,7 @@ const GLASS_TREAD_FILL_ALPHA = 0.04;
 const GLASS_TREAD_OUTLINE_DASH: readonly [number, number] = [4, 3];
 const SUSPENDED_STRINGER_DASH: readonly [number, number] = [5, 3];
 const STEEL_GRATING_HATCH_SPACING_PX = 6;
+const STEEL_GRATING_HATCH_LINE_WIDTH_PX = 0.6;
 const STEEL_GRATING_HATCH_ANGLE_RAD = Math.PI / 4;
 
 /** Default translucent slate fill — used for every type that is not glass. */
@@ -272,7 +273,9 @@ function drawSteelGratingHatch(
   const span = w + h;
 
   ctx.save();
-  ctx.lineWidth = 0.6;
+  // ADR-909 Γ2.6β — οθόνη ⇒ αυτούσιο· print pass ⇒ ποτέ κάτω από το δάπεδο της απόδοσης. Το μελάνι το έχει
+  // ήδη θέσει ο `PhaseManager` (βλ. κεφαλίδα), άρα εδώ μόνο το πάχος.
+  ctx.lineWidth = liveStrokeWidthPx(STEEL_GRATING_HATCH_LINE_WIDTH_PX);
   ctx.setLineDash([]);
   ctx.beginPath();
   // Sweep parallel lines along the diagonal. Offset `t` is the signed

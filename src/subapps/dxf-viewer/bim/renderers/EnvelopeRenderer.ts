@@ -16,7 +16,9 @@
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { MATERIAL_HATCH_STROKE_RGBA } from './shared/material-hatch-paint';
+import { paintMaterialHatchSegments } from './shared/material-hatch-paint';
+import { applyLiveStroke } from './shared/live-stroke';
+import type { HatchLineSegment } from '../geometry/shared/hatch-pattern-geometry';
 import type { EnvelopeOpeningCut } from '../geometry/envelope-opening-cuts';
 import type { EnvelopeRenderPlan, EnvelopeSlabHatchPlan } from './envelope-render-plan';
 
@@ -28,8 +30,6 @@ export {
 } from './envelope-render-plan';
 
 // ─── Visual constants ─────────────────────────────────────────────────────────
-/** Insulation hatch line width (px). Reuse-aligned με wall hatch (~0.5). */
-const HATCH_LINE_WIDTH_PX = 0.5;
 /** Συνεχής όψη μόνωσης — θερμό insulation tint (Revit-style cladding line). */
 const ENVELOPE_OUTLINE_RGBA = 'rgba(184, 92, 28, 0.95)';
 const ENVELOPE_OUTLINE_WIDTH_PX = 1.2;
@@ -62,21 +62,21 @@ export class EnvelopeRenderer {
     viewport: EnvelopeRenderViewport,
   ): void {
     if (plan.polygon.length < 3 || plan.hatch.length === 0) return;
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
-    ctx.lineWidth = HATCH_LINE_WIDTH_PX;
-    ctx.setLineDash([]);
-    ctx.beginPath();
     // ADR-507 Φ7 — τα segments έρχονται ήδη clipped στο footprint (μηδέν `ctx.clip()`).
-    for (const seg of plan.hatch) {
-      const a = this.toScreen(seg.start, transform, viewport);
-      const b = this.toScreen(seg.end, transform, viewport);
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-    }
-    ctx.stroke();
-    ctx.restore();
+    this.paintHatch(plan.hatch, transform, viewport);
+  }
+
+  /**
+   * ADR-909 Γ2.6β — η γραμμοσκίαση μόνωσης ζωγραφίζεται από τον ΕΝΑ painter γραμμοσκίασης υλικού
+   * (`paintMaterialHatchSegments`: ίδιο χρώμα, ίδιο πάχος, ρωτά την πολιτική εκτύπωσης). Πριν, το σώμα του ήταν
+   * γραμμένο εδώ δύο φορές (πλάκα + ζώνη).
+   */
+  private paintHatch(
+    segments: readonly HatchLineSegment[],
+    transform: ViewTransform,
+    viewport: EnvelopeRenderViewport,
+  ): void {
+    paintMaterialHatchSegments(this.ctx, segments, (p) => this.toScreen(p, transform, viewport));
   }
 
   /**
@@ -94,6 +94,7 @@ export class EnvelopeRenderer {
     const ctx = this.ctx;
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
+    // Μάσκα σβησίματος, όχι μελάνι: με `destination-out` μετρά μόνο η αδιαφάνεια — δεν ρωτά την πολιτική (ADR-909 Γ2.6β).
     ctx.fillStyle = 'rgba(0, 0, 0, 1)';
     for (const cut of cuts) {
       const q = cut.bandQuad;
@@ -127,8 +128,7 @@ export class EnvelopeRenderer {
     if (cuts.length === 0) return;
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = ENVELOPE_OUTLINE_RGBA;
-    ctx.lineWidth = ENVELOPE_OUTLINE_WIDTH_PX;
+    applyLiveStroke(ctx, ENVELOPE_OUTLINE_RGBA, ENVELOPE_OUTLINE_WIDTH_PX);
     ctx.setLineDash([]);
     ctx.beginPath();
     for (const cut of cuts) {
@@ -169,21 +169,8 @@ export class EnvelopeRenderer {
     viewport: EnvelopeRenderViewport,
   ): void {
     if (plan.bandRing.length < 3 || plan.hatch.length === 0) return;
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
-    ctx.lineWidth = HATCH_LINE_WIDTH_PX;
-    ctx.setLineDash([]);
-    ctx.beginPath();
     // ADR-507 Φ7 — segments ήδη clipped στο band ring (μηδέν `ctx.clip()`).
-    for (const seg of plan.hatch) {
-      const a = this.toScreen(seg.start, transform, viewport);
-      const b = this.toScreen(seg.end, transform, viewport);
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-    }
-    ctx.stroke();
-    ctx.restore();
+    this.paintHatch(plan.hatch, transform, viewport);
   }
 
   /** Συνεχής εξωτ. όψη μόνωσης. */
@@ -195,8 +182,7 @@ export class EnvelopeRenderer {
     if (plan.outerLoop.length < 2) return;
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = ENVELOPE_OUTLINE_RGBA;
-    ctx.lineWidth = ENVELOPE_OUTLINE_WIDTH_PX;
+    applyLiveStroke(ctx, ENVELOPE_OUTLINE_RGBA, ENVELOPE_OUTLINE_WIDTH_PX);
     ctx.setLineDash([]);
     ctx.beginPath();
     const first = this.toScreen(plan.outerLoop[0], transform, viewport);

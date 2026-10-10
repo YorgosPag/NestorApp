@@ -17,6 +17,7 @@
  */
 
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { applyLiveStroke } from './shared/live-stroke';
 
 interface Vec2 {
   readonly x: number;
@@ -73,8 +74,9 @@ export function drawCutPlaneTiltProjection(
   if (ring.length < 3) return;
 
   ctx.save();
-  ctx.strokeStyle = strokeStyle;
-  ctx.lineWidth = TILT_PROJECTION_LINE_WIDTH_PX;
+  // ADR-909 Γ2.6β — οθόνη ⇒ αυτούσια· print pass ⇒ μελάνι πολιτικής + δάπεδο πάχους (η βάση του γερμένου
+  // στοιχείου είναι περιεχόμενο σχεδίου και φτάνει στη δημόσια κάτοψη).
+  applyLiveStroke(ctx, strokeStyle, TILT_PROJECTION_LINE_WIDTH_PX);
   ctx.setLineDash([]);
 
   // Connecting lines: βάση-γωνία → cut-plane-γωνία (οι ακμές της γερμένης οντότητας).

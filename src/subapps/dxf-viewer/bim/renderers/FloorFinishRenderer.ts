@@ -24,8 +24,8 @@ import {
   paintPolygonHoverHalo,
   tracePolygonScreenPath,
   mapBimGrips,
-  strokePolylinePaths,
 } from './bim-polygon-render';
+import { paintClippedAreaHatch, type AreaHatchMotif } from './shared/canvas-hatch-fill';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { getFloorFinishGrips } from '../floor-finishes/floor-finish-grips';
 import {
@@ -33,11 +33,15 @@ import {
   getFloorFinishHatchType,
 } from '../floor-finishes/floor-finish-material-catalog';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
-import { adaptFillTintForCanvas, liveStrokeInk } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { applyLiveStroke } from './shared/live-stroke';
 
-const HATCH_STROKE = 'rgba(0, 0, 0, 0.15)';
-const HATCH_LINE_WIDTH = 0.5;
+/** Μοτίβο ανά οικογένεια υλικού: ξύλο παράλληλες · πλακάκι κάνναβος · μοκέτα πλέγμα τελειών ακτίνας 1,5 px. */
+const HATCH_MOTIF: Readonly<Record<'wood' | 'tile' | 'dot', AreaHatchMotif>> = {
+  wood: 'lines',
+  tile: 'grid',
+  dot:  { dotRadiusPx: 1.5 },
+};
 
 /** World-space spacing (mm) for each hatch family. */
 const HATCH_SPACING_MM = {
@@ -114,62 +118,11 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     ff: FloorFinishEntity,
     hatch: 'wood' | 'tile' | 'dot',
   ): void {
-    const bbox = ff.geometry!.bbox;
-    const spacingMm = HATCH_SPACING_MM[hatch];
-    if (!Number.isFinite(spacingMm) || spacingMm <= 0) return;
-
-    this.ctx.save();
-    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), ff.params.footprint.vertices);
-    this.ctx.clip();
-    // Γραμμές ΚΑΙ τελείες του μοτίβου είναι μελάνι: στο χαρτί πλήρες (η διαφάνεια γραμμής δεν τυπώνεται).
-    applyLiveStroke(this.ctx, HATCH_STROKE, HATCH_LINE_WIDTH);
-    this.ctx.fillStyle = liveStrokeInk(HATCH_STROKE);
-    this.ctx.setLineDash([]);
-
-    if (hatch === 'dot') {
-      this.drawDotGrid(bbox, spacingMm);
-    } else if (hatch === 'wood') {
-      this.drawParallelLines(bbox, spacingMm, 'horizontal');
-    } else {
-      this.drawParallelLines(bbox, spacingMm, 'horizontal');
-      this.drawParallelLines(bbox, spacingMm, 'vertical');
-    }
-    this.ctx.restore();
-  }
-
-  private drawParallelLines(
-    bbox: FloorFinishEntity['geometry']['bbox'],
-    spacingMm: number,
-    orientation: 'horizontal' | 'vertical',
-  ): void {
-    const lines: Point2D[][] = [];
-    if (orientation === 'horizontal') {
-      const startY = Math.ceil(bbox.min.y / spacingMm) * spacingMm;
-      for (let y = startY; y <= bbox.max.y; y += spacingMm) {
-        lines.push([{ x: bbox.min.x, y }, { x: bbox.max.x, y }]);
-      }
-    } else {
-      const startX = Math.ceil(bbox.min.x / spacingMm) * spacingMm;
-      for (let x = startX; x <= bbox.max.x; x += spacingMm) {
-        lines.push([{ x, y: bbox.min.y }, { x, y: bbox.max.y }]);
-      }
-    }
-    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), lines);
-  }
-
-  private drawDotGrid(
-    bbox: FloorFinishEntity['geometry']['bbox'],
-    spacingMm: number,
-  ): void {
-    const startX = Math.ceil(bbox.min.x / spacingMm) * spacingMm;
-    const startY = Math.ceil(bbox.min.y / spacingMm) * spacingMm;
-    for (let x = startX; x <= bbox.max.x; x += spacingMm) {
-      for (let y = startY; y <= bbox.max.y; y += spacingMm) {
-        const s = this.worldToScreen({ x, y });
-        this.ctx.beginPath();
-        this.ctx.arc(s.x, s.y, 1.5, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
+    // ADR-909 Γ2.6α · Γ2.6β — clip + μελάνι (ρωτά την πολιτική εκτύπωσης) + μοτίβο ζουν ΜΙΑ φορά στο
+    // `canvas-hatch-fill`· εδώ μόνο το mapping υλικού → μοτίβο + βήμα.
+    paintClippedAreaHatch(
+      this.ctx, (p) => this.worldToScreen(p), ff.params.footprint.vertices, ff.geometry!.bbox,
+      HATCH_SPACING_MM[hatch], HATCH_MOTIF[hatch],
+    );
   }
 }

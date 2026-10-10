@@ -24,6 +24,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { RebarPlanGeometry } from '../structural/reinforcement/rebar-plan-geometry-types';
 // ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (μελετητική σύμβαση — crimson).
 import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
+import { liveStrokeInk, liveStrokeWidthPx } from '../../config/adaptive-entity-color';
 
 /** Ελάχιστο πάχος γραμμής (px) ώστε να φαίνεται σε μικρό zoom. */
 const MIN_LINE_PX = 0.6;
@@ -43,15 +44,19 @@ export function drawRebarPlanGeometry(
   worldToScreen: (p: Point2D) => Point2D,
 ): void {
   ctx.save();
-  ctx.strokeStyle = REBAR_COLOR;
-  ctx.fillStyle = REBAR_COLOR;
+  // ADR-909 Γ2.6β — οθόνη ⇒ crimson αυτούσιο· print pass ⇒ μελάνι πολιτικής. Ράβδοι ΚΑΙ κουκκίδες είναι μελάνι
+  // (Θ5): μια κολόνα με «δείξε οπλισμό» έβγαινε κόκκινη στην «Ασπρόμαυρη» δημόσια κάτοψη.
+  const ink = liveStrokeInk(REBAR_COLOR);
+  ctx.strokeStyle = ink;
+  ctx.fillStyle = ink;
 
   // ── Στεφάνια / συνδετήρια / γάντζοι / διαμήκεις-γραμμές / σχάρες (ως paths) ──
   for (const path of geo.paths) {
     const pts = path.points.map(worldToScreen);
     if (pts.length < 2) continue;
     ctx.setLineDash(path.dashed ? [...TOP_MESH_DASH] : []);
-    ctx.lineWidth = Math.max(MIN_LINE_PX, path.diameterMm * pxPerMm);
+    // Θ6 — το πάχος μένει η πραγματική διάμετρος· το δάπεδο της απόδοσης μπαίνει μόνο από κάτω.
+    ctx.lineWidth = liveStrokeWidthPx(Math.max(MIN_LINE_PX, path.diameterMm * pxPerMm));
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
