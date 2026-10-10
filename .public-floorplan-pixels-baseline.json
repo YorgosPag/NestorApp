@@ -4,21 +4,6 @@
     "K0:ellipse",
     "K0:point",
     "K0:rect",
-    "K0:spline",
-    "K2:colour:column",
-    "K2:grayscale:column",
-    "K2:monochrome:column",
-    "K3:colour:opening",
-    "K3:colour:slab-opening",
-    "K3:colour:wall",
-    "K3:colour:wall-covering",
-    "K3:grayscale:opening",
-    "K3:grayscale:slab-opening",
-    "K3:grayscale:wall",
-    "K3:grayscale:wall-covering",
-    "K3:monochrome:opening",
-    "K3:monochrome:slab-opening",
-    "K3:monochrome:wall",
-    "K3:monochrome:wall-covering"
+    "K0:spline"
   ]
 }
