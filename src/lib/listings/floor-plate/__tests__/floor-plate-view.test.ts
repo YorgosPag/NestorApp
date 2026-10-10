@@ -133,5 +133,8 @@ describe('ΟΨ-4 σειρά ζωγραφικής και υπόμνημα', () =>
   it('το υπόμνημα έχει μόνο όσες καταστάσεις υπάρχουν, με τη σειρά του λεξιλογίου', () => {
     expect(floorPlateLegendStates(shapes)).toEqual(['self', 'available', 'reserved']);
     expect(floorPlateLegendStates(floorPlateShapes([SELF], { width: 10, height: 10 }))).toEqual(['self']);
+    // Δύο μονάδες της ίδιας κατάστασης ⇒ ΜΙΑ γραμμή, και η σειρά είναι του λεξιλογίου, όχι του εγγράφου.
+    const twoHeld = floorPlateShapes([HELD, { ...FREE, state: 'reserved' }, SELF], { width: 2000, height: 1000 });
+    expect(floorPlateLegendStates(twoHeld)).toEqual(['self', 'reserved']);
   });
 });
