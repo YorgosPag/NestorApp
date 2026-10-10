@@ -10,7 +10,9 @@ import '@/lib/design-system';
 // 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens and semantic colors
 // ✅ CENTRALIZED: Single source of truth for ALL badges (Grid view + List view)
 const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => cva(
-  `inline-flex items-center ${borderTokens.radiusClass.full} border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
+  // `whitespace-nowrap` (ADR-912 §4): σε στενό κελί το κείμενο αναδιπλωνόταν ΜΕΣΑ στο χάπι και το
+  // `rounded-full` το έκανε κύκλο («Ειδική / στάθμη»). Το σηματάκι είναι μία λέξη-ετικέτα, όχι πρόζα.
+  `inline-flex items-center whitespace-nowrap ${borderTokens.radiusClass.full} border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
   {
     variants: {
       variant: {
@@ -85,7 +87,7 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 // 🏢 ENTERPRISE: Static badge variants for use outside of React components
 // Uses CSS variables for theme-aware styling (same as dynamic variants)
 const staticBadgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {

@@ -10,6 +10,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -43,6 +44,23 @@ function DefaultEmptyState({
     </div>
   );
 }
+
+/**
+ * **Μέσα στο φύλλο κινητού η κάρτα παύει να είναι κάρτα** (ADR-912 §3). Το `MobileDetailsSlideIn` είναι ήδη
+ * μια πλήρης επιφάνεια με δικό της κενό· μια δεύτερη, πλαισιωμένη, μέσα της έτρωγε ~50 από τα 390px
+ * (μετρημένο 2026-10-10) και έδειχνε «κάρτα μέσα σε κάρτα». Εδώ το πλαίσιο σβήνει, και το φύλλο αφαιρεί το
+ * **δικό του** κενό όταν βλέπει `data-details-flush` — iOS και Material πάνε το περιεχόμενο άκρη-άκρη στο compact.
+ * Εκτός φύλλου (desktop πάνελ) καμία από αυτές τις κλάσεις δεν ταιριάζει.
+ *
+ * ⚠️ ΜΗΝ το ξανακάνεις με αρνητικό περιθώριο: το `globals.css` επιβάλλει `.flex { max-width: 100% !important }`
+ * κάτω από 640px, άρα το πλαίσιο **μετακινείται** αλλά δεν **φαρδαίνει** — μετρημένο ζωντανά: 358px σε φύλλο
+ * 390px, 32px νεκρή λωρίδα δεξιά και κομμένο περιεχόμενο.
+ */
+const IN_SHEET_FLUSH = [
+  '[[data-details-sheet]>&]:rounded-none',
+  '[[data-details-sheet]>&]:border-0',
+  '[[data-details-sheet]>&]:shadow-none',
+].join(' ');
 
 /** Generic selected item interface */
 interface SelectedItemBase {
@@ -140,7 +158,7 @@ export function DetailsContainer({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+    <div data-details-flush="" className={cn('flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm', IN_SHEET_FLUSH)}>
       {/* Fixed Header - Never scrolls */}
       <div className="shrink-0">
         {header}

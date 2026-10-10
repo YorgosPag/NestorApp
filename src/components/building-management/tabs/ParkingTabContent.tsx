@@ -18,6 +18,7 @@ import { useRouter } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
 import { Car, Plus, Link2 } from 'lucide-react';
 import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
+import { BuildingSpaceTabHeader } from '../shared/BuildingSpaceTabHeader';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
@@ -129,23 +130,20 @@ export function ParkingTabContent({ building }: { building: Building }) {
     <section className="flex flex-col gap-2 p-2">
       {loadError}
       {/* Header */}
-      <header className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Car className="h-5 w-5 text-primary" />
+      <BuildingSpaceTabHeader
+        icon={<Car className="h-5 w-5 shrink-0 text-primary" />}
+        title={tBuilding('tabs.labels.parking')}
+        count={state.parkingSpots.length}
+      >
+        <Button variant="outline" size="sm" onClick={() => state.setShowLinkDialog(true)} disabled={!hasAnyParking}>
+          <Link2 className="mr-1 h-4 w-4" />
+          {tBuilding('spaceLink.linkExisting')}
+        </Button>
+        <Button variant="default" size="sm" onClick={() => state.setShowCreateForm(true)} disabled={state.showCreateForm}>
+          <Plus className="mr-1 h-4 w-4" />
           {tBuilding('tabs.labels.parking')}
-          <span className={cn("text-sm font-normal", colors.text.muted)}>({state.parkingSpots.length})</span>
-        </h2>
-        <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => state.setShowLinkDialog(true)} disabled={!hasAnyParking}>
-            <Link2 className="mr-1 h-4 w-4" />
-            {tBuilding('spaceLink.linkExisting')}
-          </Button>
-          <Button variant="default" size="sm" onClick={() => state.setShowCreateForm(true)} disabled={state.showCreateForm}>
-            <Plus className="mr-1 h-4 w-4" />
-            {tBuilding('tabs.labels.parking')}
-          </Button>
-        </nav>
-      </header>
+        </Button>
+      </BuildingSpaceTabHeader>
 
       {/* Stats Cards */}
       <UnifiedDashboard stats={state.dashboardStats} columns={4} className="" />

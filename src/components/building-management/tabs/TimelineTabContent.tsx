@@ -199,9 +199,10 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
       {/* Milestones View (existing) */}
       {activeView === 'milestones' && (
         <>
-          <div className="flex items-center justify-between">
+          {/* ADR-912 §5.3 — `flex-wrap`: σε στενό χώρο οι πράξεις κατεβαίνουν κάτω από τον τίτλο αντί να κόβονται. */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <TimelineHeader milestones={milestones} />
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="default" size="sm" onClick={handleOpenCreate}>
                 <Plus className={cn(iconSizes.sm, 'mr-1.5')} />
                 {t('tabs.timeline.milestoneDialog.addButton')}

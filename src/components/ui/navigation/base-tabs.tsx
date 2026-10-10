@@ -21,7 +21,7 @@
  * @see ADR-328 §Architecture
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent, useTabsTriggerClassName } from '@/components/ui/tabs';
 import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
@@ -31,6 +31,8 @@ import {
   type ThemeVariant,
 } from '@/components/ui/theme/ThemeComponents';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useContainerClass } from '@/hooks/media/useContainerClass';
+import { TABS_RAIL_BELOW_REM, TabsRail } from './tabs-rail';
 import { TABS_STYLES, type BaseTabDef } from './tabs-types';
 
 export type { BaseTabDef, TabDefinition, TabsNavTab } from './tabs-types';
@@ -52,7 +54,7 @@ export interface BaseTabsProps {
   listClassName?: string;
   /** ARIA label propagated to the `<Tabs>` root. */
   ariaLabel?: string;
-  /** Force label visibility on small viewports (default: hidden below `sm:`). */
+  /** Force label visibility on small viewports (default: below `sm:` only the ACTIVE tab shows its label). */
   alwaysShowLabels?: boolean;
   /**
    * When provided, replaces the automatic `tab.content` rendering. Use this for
@@ -94,21 +96,59 @@ function TabLink({ href, disabled, className, children }: TabLinkProps) {
   );
 }
 
-export function BaseTabs({
-  tabs,
-  value,
-  onValueChange,
-  theme = 'default',
-  className,
-  listClassName,
-  ariaLabel,
-  alwaysShowLabels = false,
-  children,
-}: BaseTabsProps) {
+/**
+ * Η ετικέτα μιας καρτέλας (ADR-912 §2.2). Κάτω από `sm` φαίνεται **μόνο της ενεργής** — αλλά δεν κρύβεται ποτέ
+ * από την υποβοηθητική τεχνολογία: `sr-only`, όχι `hidden`. Με `hidden` κάθε καρτέλα-εικονίδιο ήταν κουμπί
+ * **χωρίς όνομα** σε κάθε κινητό (WCAG 4.1.2).
+ *
+ * ⚠️ Το `!` στα `not-sr-only` ΔΕΝ είναι διακοσμητικό: το `globals.css` ξαναδηλώνει το `.sr-only` με `!important`,
+ * άρα ένα σκέτο `sm:not-sr-only` χάνει **πάντα** — μετρημένο ζωντανά 2026-10-10: η ετικέτα έμενε κρυφή σε κάθε
+ * πλάτος, και στην ενεργή καρτέλα. Το jsdom δεν το βλέπει (δεν φορτώνει CSS).
+ */
+const LABEL_RESPONSIVE = 'sr-only sm:!not-sr-only [[data-state=active]>&]:!not-sr-only';
+
+interface TabStripItemsProps {
+  tabs: readonly BaseTabDef[];
+  triggerTheme: string | undefined;
+  alwaysShowLabels: boolean;
+}
+
+/** Τα μέλη της λωρίδας — **μία** δήλωση για τη φαρδιά (`TabsList`) και τη στενή (`TabsRail`) εκδοχή. */
+function TabStripItems({ tabs, triggerTheme, alwaysShowLabels }: TabStripItemsProps) {
   const iconSizes = useIconSizes();
   const triggerClassName = useTabsTriggerClassName();
-  const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
+  return (
+    <>
+      {tabs.map((tab) => {
+        const face = (
+          <>
+            {tab.icon ? React.createElement(tab.icon, { className: cn(iconSizes.sm, tab.iconColor) }) : null}
+            <span className={alwaysShowLabels ? '' : LABEL_RESPONSIVE}>{tab.label}</span>
+            {tab.warningDot ? (
+              <span className="ml-1 h-2 w-2 rounded-full bg-[hsl(var(--status-warning))] shrink-0" />
+            ) : null}
+          </>
+        );
+        if (tab.href !== undefined) {
+          return (
+            <TabLink key={tab.id} href={tab.href} disabled={tab.disabled} className={cn(triggerClassName, triggerTheme)}>
+              {face}
+            </TabLink>
+          );
+        }
+        return (
+          <TabsTrigger key={tab.id} value={tab.id} disabled={tab.disabled} className={triggerTheme}>
+            {face}
+          </TabsTrigger>
+        );
+      })}
+    </>
+  );
+}
+
+/** Dev-only: πραγματικά `children` ΚΑΙ πραγματικό `tab.content` — τα `children` κερδίζουν, και το λέμε. */
+function warnOnContentConflict(tabs: readonly BaseTabDef[], children: React.ReactNode): void {
   // Use loose `!= null` so that a deliberately-passed `null` (e.g. triggers-only
   // wrappers like `TabsOnlyTriggers` send `children ?? null`) or `content: null`
   // tabs are treated as "not provided" and never trip a false-positive warning.
@@ -123,55 +163,44 @@ export function BaseTabs({
       '[BaseTabs] `children` and `tab.content` both provided. `children` wins; tab.content is ignored.',
     );
   }
+}
+
+export function BaseTabs({
+  tabs,
+  value,
+  onValueChange,
+  theme = 'default',
+  className,
+  listClassName,
+  ariaLabel,
+  alwaysShowLabels = false,
+  children,
+}: BaseTabsProps) {
+  const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Ο ΧΩΡΟΣ που υπάρχει, όχι το παράθυρο (ADR-912 §2.1): το ίδιο πάνελ είναι στενό και σε desktop με ανοιχτή
+  // πλαϊνή στήλη. `'measuring'` (SSR · jsdom) ⇒ η φαρδιά εκδοχή, δηλαδή η συμπεριφορά πριν από αυτή την αλλαγή.
+  const isRail = useContainerClass(rootRef, TABS_RAIL_BELOW_REM, { zeroWidth: 'measuring' }) === 'narrow';
+
+  warnOnContentConflict(tabs, children);
+
+  const items = (
+    <TabStripItems tabs={tabs} triggerTheme={themeConfig?.tabTrigger} alwaysShowLabels={alwaysShowLabels} />
+  );
 
   return (
     <Tabs
+      ref={rootRef}
       value={value}
       onValueChange={onValueChange}
       aria-label={ariaLabel}
       className={cn(TABS_STYLES.container, className)}
     >
-      <TabsList className={cn(TABS_STYLES.list, listClassName)}>
-        {tabs.map((tab) => {
-          const face = (
-            <>
-              {tab.icon
-                ? React.createElement(tab.icon, {
-                    className: cn(iconSizes.sm, tab.iconColor),
-                  })
-                : null}
-              <span className={alwaysShowLabels ? '' : 'hidden sm:inline'}>
-                {tab.label}
-              </span>
-              {tab.warningDot ? (
-                <span className="ml-1 h-2 w-2 rounded-full bg-[hsl(var(--status-warning))] shrink-0" />
-              ) : null}
-            </>
-          );
-          if (tab.href !== undefined) {
-            return (
-              <TabLink
-                key={tab.id}
-                href={tab.href}
-                disabled={tab.disabled}
-                className={cn(triggerClassName, themeConfig?.tabTrigger)}
-              >
-                {face}
-              </TabLink>
-            );
-          }
-          return (
-            <TabsTrigger
-              key={tab.id}
-              value={tab.id}
-              disabled={tab.disabled}
-              className={themeConfig?.tabTrigger}
-            >
-              {face}
-            </TabsTrigger>
-          );
-        })}
-      </TabsList>
+      {isRail ? (
+        <TabsRail value={value} className={listClassName}>{items}</TabsRail>
+      ) : (
+        <TabsList className={cn(TABS_STYLES.list, listClassName)}>{items}</TabsList>
+      )}
 
       {children !== undefined
         ? children

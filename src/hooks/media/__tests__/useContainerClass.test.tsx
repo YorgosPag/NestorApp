@@ -28,9 +28,9 @@ class FakeResizeObserver {
   }
 }
 
-function Probe({ minRem }: { readonly minRem: number }) {
+function Probe({ minRem, zeroWidth }: { readonly minRem: number; readonly zeroWidth?: 'narrow' | 'measuring' }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const value = useContainerClass(ref, minRem);
+  const value = useContainerClass(ref, minRem, { zeroWidth });
   return <div ref={ref} data-testid="probe" data-value={value} />;
 }
 
@@ -86,6 +86,27 @@ describe('useContainerClass', () => {
     globalThis.ResizeObserver = undefined as unknown as typeof ResizeObserver;
     initialWidth = 2000;
     render(<Probe minRem={52} />);
+    expect(screen.getByTestId('probe')).toHaveAttribute('data-value', 'measuring');
+  });
+
+  it('Π4 · πλάτος 0 = «στενό» από προεπιλογή — η συμπεριφορά πριν από το ADR-912', () => {
+    installFakeObserver();
+    initialWidth = 0;
+    render(<Probe minRem={52} />);
+    expect(screen.getByTestId('probe')).toHaveAttribute('data-value', 'narrow');
+  });
+
+  it('Π5 · με `zeroWidth: measuring`, περιέκτης χωρίς διάταξη ΔΕΝ είναι στενός — και γίνεται όταν μετρηθεί', () => {
+    installFakeObserver();
+    initialWidth = 0;
+    render(<Probe minRem={52} zeroWidth="measuring" />);
+    expect(screen.getByTestId('probe')).toHaveAttribute('data-value', 'measuring');
+
+    act(() => listener?.([{ contentRect: { width: 390 } }]));
+    expect(screen.getByTestId('probe')).toHaveAttribute('data-value', 'narrow');
+
+    // Η καρτέλα κρύβεται ξανά (display:none) ⇒ πίσω στο «δεν ξέρω», όχι «στενό».
+    act(() => listener?.([{ contentRect: { width: 0 } }]));
     expect(screen.getByTestId('probe')).toHaveAttribute('data-value', 'measuring');
   });
 });

@@ -13,6 +13,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Home, Plus, CheckCircle, Euro, Ruler, Link2 } from 'lucide-react';
 import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
+import { BuildingSpaceTabHeader } from '../shared/BuildingSpaceTabHeader';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
@@ -318,23 +319,20 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   return (
     <section className="flex flex-col gap-2 p-2">
       {/* Header */}
-      <header className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Home className="h-5 w-5 text-primary" />
+      <BuildingSpaceTabHeader
+        icon={<Home className="h-5 w-5 shrink-0 text-primary" />}
+        title={t('tabs.labels.units')}
+        count={units.length}
+      >
+        <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)} disabled={!hasAnyUnits}>
+          <Link2 className="mr-1 h-4 w-4" />
+          {t('spaceLink.linkExisting')}
+        </Button>
+        <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
+          <Plus className="mr-1 h-4 w-4" />
           {t('tabs.labels.units')}
-          <span className={cn("text-sm font-normal", colors.text.muted)}>({units.length})</span>
-        </h2>
-        <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)} disabled={!hasAnyUnits}>
-            <Link2 className="mr-1 h-4 w-4" />
-            {t('spaceLink.linkExisting')}
-          </Button>
-          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            {t('tabs.labels.units')}
-          </Button>
-        </nav>
-      </header>
+        </Button>
+      </BuildingSpaceTabHeader>
 
       {/* Stats Cards */}
       <UnifiedDashboard stats={dashboardStats} columns={4} className="" />

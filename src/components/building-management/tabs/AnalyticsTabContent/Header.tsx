@@ -37,14 +37,14 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
 
     return (
         <header>
-            <section className="flex items-center justify-between">
-                <hgroup>
+            <section className="flex flex-wrap items-center justify-between gap-2">
+                <hgroup className="min-w-0">
                     <h3 className="text-lg font-semibold">{t('tabs.analytics.title')}</h3>
                     <p className={cn("text-sm", colors.text.muted)}>
                         {t('tabs.analytics.subtitle')}
                     </p>
                 </hgroup>
-                <nav className="flex items-center gap-2">
+                <nav className="flex flex-wrap items-center gap-2">
                     <Select value={timeRange} onValueChange={setTimeRange}>
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder={t('tabs.analytics.timeRange.placeholder')} />

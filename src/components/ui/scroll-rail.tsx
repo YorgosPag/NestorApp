@@ -32,9 +32,18 @@ import { pageTargetOf, railInsetOf, railSpansOf, type RailDirection } from './sc
 import fadeStyles from './scroll-edge-fade.module.css';
 import styles from './scroll-rail.module.css';
 
+/**
+ * Δικό του στοιχείο ως **λωρίδα** (π.χ. το `tablist` του Radix, ADR-912 §2): παίρνει ό,τι θα έπαιρνε
+ * το `<div>` — `ref`, `className`, χειριστές — και οφείλει να τα περάσει **αυτούσια** στο DOM στοιχείο του,
+ * συνθέτοντας (όχι αντικαθιστώντας) τους χειριστές. Τα παιδιά του DOM στοιχείου είναι τα στοιχεία της λωρίδας.
+ */
+export type ScrollRailScroller = React.ComponentType<
+  React.HTMLAttributes<HTMLDivElement> & { readonly ref?: React.RefCallback<HTMLDivElement> }
+>;
+
 export interface ScrollRailProps {
   /** `ul` όταν τα παιδιά είναι `<li>` — η σημασιολογία λίστας μένει στον καταναλωτή. */
-  readonly as?: 'ul' | 'div';
+  readonly as?: 'ul' | 'div' | ScrollRailScroller;
   /** Προσβάσιμο όνομα του ◀ (π.χ. «Προηγούμενες ειδικότητες»). */
   readonly prevLabel: string;
   /** Προσβάσιμο όνομα του ▶. */

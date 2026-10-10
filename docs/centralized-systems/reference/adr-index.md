@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 858 ADRs | Last Updated: 2026-10-10
+**📊 Stats**: 860 ADRs | Last Updated: 2026-10-10
 
 ---
 
@@ -893,6 +893,8 @@
 | **ADR-908** | Η αλλαγή ταυτότητας είναι **ΜΙΑ** πράξη: αποσύνδεση με έναν κάτοχο και τέλος που δεν ανατρέπεται | ✅ 🟢 **ΠΑΡΑΔΟΣΗ Α ΥΛΟΠΟΙΗΜΕΝΗ ΚΑΙ ΕΠΑΛΗΘΕΥΜΕΝΗ ΣΤΗΝ ΠΑΡΑΓΩΓΗ (2026-10-08, `f1cf8954`)** — βήματα 1–4 του §5 (κάτοχος · καλούντες · εποχή · `loading`). Ε1 και Ε2 **δεν αναπαράγονται** (μέτρηση στο §6). 🟡 **ΠΑΡΑΔΟΣΗ Β (βήματα 5–6): κώδικας γραμμένος, ΑΝΕΠΑΛΗΘΕΥΤΟΣ στην παραγωγή** (2026-10-08). Οι παραδόσεις Γ, Δ **δεν** ξεκίνησαν. | 2026-10-08 | Authentication / Session Lifecycle / Client Navigation | [📄](./adrs/ADR-908-identity-change-is-one-act.md) |
 | **ADR-909** | «Δημοσίευση κάτοψης» από το σχέδιο: η δημόσια κάτοψη παράγεται, δεν ανεβαίνει με το χέρι | ✅ 🟠 PROPOSED — 2026-10-08 · Β0 (αποφάσεις) ✅ · Β1 (πόρτα διακομιστή) ✅ · **Β2 (viewer: προφίλ, λήψη, διάλογος, πελάτης) ✅ κώδικας + άγκυρες, ΟΧΙ ζωντανά** · Β3–Β5 δεν ξεκίνησαν | 2026-10-08 | Marketplace / Public listing / 2D pipeline | [📄](./adrs/ADR-909-floorplan-publication-from-drawing.md) |
 | **ADR-910** | Η αρχή της στοίβας ορόφων: η μοναδικότητα ορόφου ανά κτίριο είναι **ατομική**, όχι ευχή | ✅ 🟢 **ΥΛΟΠΟΙΗΜΕΝΟ (2026-10-10, uncommitted)** — σύνορο εγγραφής · γέννηση/επεξεργασία/αφαίρεση κάτω από το κλειδί · ανίχνευση και UI · πύλη CHECK 3.102. Εκκρεμεί: deploy κανόνων Firestore (απόφαση Giorgio) και η επίλυση του υπάρχοντος διπλότυπου (χωριστή απόφαση). | 2026-10-10 | Entity Systems / Data Integrity / Firestore Concurrency | [📄](./adrs/ADR-910-floor-stack-authority.md) |
+| **ADR-911** | Βοηθός «Μοντέλο από το σχέδιο»: πραγματικοί τοίχοι και κουφώματα BIM από γραμμές DXF, με έγκριση ανθρώπου | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — σχέδιο εγκεκριμένο (Giorgio, 2026-10-10). **Φ1 υλοποιημένη (uncommitted)**: καθαρός πυρήνας πρότασης + αναφορά κάλυψης + fixture + άγκυρες Α-1 · Α-2 · Α-4 · Α-6. Χωρίς καταναλωτή παραγωγής ακόμη (έρχεται με Φ2/Φ3). | 2026-10-10 | DXF Viewer / BIM Authoring / Public Listing 3D | [📄](./adrs/ADR-911-model-from-drawing-assistant.md) |
+| **ADR-912** | Η στενή επιφάνεια λεπτομερειών: καρτέλες, πίνακας και πλαίσιο όταν ο χώρος δεν φτάνει | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ (2026-10-10, uncommitted) — ΧΩΡΙΣ ζωντανή επαλήθευση σε browser** (δες §7) | 2026-10-10 | UI Systems / Responsive / Accessibility | [📄](./adrs/ADR-912-narrow-details-surface.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

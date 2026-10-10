@@ -29,6 +29,20 @@ jest.mock('@/hooks/useIconSizes', () => ({
   useIconSizes: () => ({ sm: 'h-4 w-4' }),
 }));
 
+// ADR-912 §2 — ο χώρος του περιέκτη. Το jsdom δεν έχει διάταξη ⇒ η αληθινή τιμή εδώ είναι `'measuring'`.
+let mockContainerClass: 'measuring' | 'narrow' | 'wide' = 'measuring';
+jest.mock('@/hooks/media/useContainerClass', () => ({
+  useContainerClass: () => mockContainerClass,
+}));
+
+jest.mock('@/i18n/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+afterEach(() => {
+  mockContainerClass = 'measuring';
+});
+
 const fixtureTabs: TabDefinition[] = [
   {
     id: 'actions',
@@ -90,13 +104,18 @@ describe('BaseTabs — array mode', () => {
     expect(icon?.getAttribute('class') ?? '').toContain('text-orange-600');
   });
 
-  it('hides label below sm: by default', () => {
+  // ADR-912 §2.2 — κάτω από `sm` η ετικέτα φαίνεται μόνο στην ενεργή, αλλά ΔΕΝ φεύγει ποτέ από το δέντρο
+  // προσβασιμότητας: `sr-only`, όχι `hidden` (με `hidden` κάθε καρτέλα-εικονίδιο ήταν κουμπί χωρίς όνομα).
+  it('keeps the label in the accessibility tree below sm: (sr-only, never hidden)', () => {
     render(
       <BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />,
     );
     const labelSpan = screen.getByText('Ενέργειες');
-    expect(labelSpan).toHaveClass('hidden');
-    expect(labelSpan).toHaveClass('sm:inline');
+    expect(labelSpan).not.toHaveClass('hidden');
+    expect(labelSpan).toHaveClass('sr-only');
+    // Το `!` είναι το νόημα: το `globals.css` δηλώνει `.sr-only` με `!important` (ADR-912, μέτρηση 2026-10-10).
+    expect(labelSpan).toHaveClass('sm:!not-sr-only');
+    expect(labelSpan).toHaveClass('[[data-state=active]>&]:!not-sr-only');
   });
 
   it('shows labels unconditionally when alwaysShowLabels=true', () => {
@@ -110,6 +129,7 @@ describe('BaseTabs — array mode', () => {
     );
     const labelSpan = screen.getByText('Ενέργειες');
     expect(labelSpan).not.toHaveClass('hidden');
+    expect(labelSpan).not.toHaveClass('sr-only');
   });
 
   it('applies theme variant tabTrigger class', () => {
@@ -254,6 +274,69 @@ describe('BaseTabs — link tabs (ADR-328 · ADR-330)', () => {
   it('has no jest-axe violations with a link tab in the strip', async () => {
     const { container } = render(
       <BaseTabs tabs={linkTabs} value="actions" onValueChange={jest.fn()} ariaLabel="Test tabs" />,
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('BaseTabs — narrow container rail (ADR-912 §2)', () => {
+  const rail = (container: HTMLElement) => container.querySelector('[data-scroll-edges]');
+
+  it('wraps (no rail) while the container is unmeasured — the pre-ADR-912 behaviour', () => {
+    const { container } = render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />);
+    expect(rail(container)).toBeNull();
+    expect(screen.getByRole('tablist')).toHaveClass('flex-wrap');
+  });
+
+  it('wraps (no rail) in a wide container', () => {
+    mockContainerClass = 'wide';
+    const { container } = render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />);
+    expect(rail(container)).toBeNull();
+  });
+
+  it('becomes ONE scrolling line in a narrow container — the tablist IS the rail', () => {
+    mockContainerClass = 'narrow';
+    const { container } = render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />);
+    const tablist = screen.getByRole('tablist');
+    expect(rail(container)).toBe(tablist);
+    expect(tablist).toHaveClass('flex-nowrap');
+    expect(tablist).not.toHaveClass('flex-wrap');
+    // Τα μέλη της λωρίδας είναι ΑΜΕΣΑ παιδιά της — το `ScrollRail` μετρά και αποκαλύπτει `node.children`.
+    expect(Array.from(tablist.children).filter((el) => el.getAttribute('role') === 'tab')).toHaveLength(2);
+  });
+
+  it('keeps tabs operable in the rail: click still changes the value', async () => {
+    mockContainerClass = 'narrow';
+    const handle = jest.fn();
+    const user = userEvent.setup();
+    render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={handle} />);
+    await user.click(screen.getByRole('tab', { name: /Επικοινωνία/ }));
+    expect(handle).toHaveBeenCalledWith('communication');
+  });
+
+  it('keeps keyboard roving focus in the rail (ArrowRight moves to the next tab)', async () => {
+    mockContainerClass = 'narrow';
+    const user = userEvent.setup();
+    render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />);
+    screen.getByRole('tab', { name: /Ενέργειες/ }).focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: /Επικοινωνία/ })).toHaveFocus();
+  });
+
+  it('names the paging arrows and keeps them OUT of the tablist', () => {
+    mockContainerClass = 'narrow';
+    render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />);
+    const tablist = screen.getByRole('tablist');
+    const prev = screen.getByRole('button', { name: 'common-actions:actions.previous', hidden: true });
+    const next = screen.getByRole('button', { name: 'common-actions:actions.next', hidden: true });
+    expect(tablist.contains(prev)).toBe(false);
+    expect(tablist.contains(next)).toBe(false);
+  });
+
+  it('has no jest-axe violations as a rail', async () => {
+    mockContainerClass = 'narrow';
+    const { container } = render(
+      <BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} ariaLabel="Test tabs" />,
     );
     expect(await axe(container)).toHaveNoViolations();
   });

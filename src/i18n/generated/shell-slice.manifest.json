@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f033f822c82f51ea5283b43a9c4cea2be57bec1fc344ccd48e5ccceac9b9fd42",
+  "inputsSha256": "a6d2acb61a3efd57861d88f47e4a825be8272f28331fcf35a2f92b5c4bbc2d0b",
   "languages": [
     "el"
   ],
@@ -800,10 +800,8 @@
     "src/hooks/market/usePriceMap.ts": "29e0b06d270b01804a6e8b7baaed438b3c50540d376c7de961bd1aa3c506e729",
     "src/hooks/market/useValueZoneAt.ts": "c072196a1a754737211cb6ab664f3d5b297a59f9119bbc10c5f2d06fa2ea1d94",
     "src/hooks/market/useValueZoneLayer.ts": "fca4c54a111521c82f044355225036b692a44a8bdc1e1566d239073060c17df8",
-    "src/hooks/media/useContainerClass.ts": "d62df59edbe11494e032452d7c653dde05c4aa6e5f05387177569f42fe639270",
     "src/hooks/media/useSheetBackDismiss.ts": "c7046dd08105ad48417f1abeac803cc94fdc3f86b14e71eb870507203aab463f",
     "src/hooks/media/useSheetSnap.ts": "152bd8294640c5e67d6c36e8547885cdc5a7208ba2602c48a252b0a4dccba8f6",
-    "src/hooks/media/useViewportClass.ts": "0769e01c621e8642ca805ff4fe8c5df5dd9b418d98bb86a71afbd7876e6cd336",
     "src/hooks/owner-property/useOwnerPortfolioStats.ts": "0552a589b305795d1005b34844ae09398ec55d3508986b2f6736167d01bb29b4",
     "src/hooks/owner-property/useOwnerPropertyDossierFiles.ts": "b99bfb5cf2cb835e6a0a5a0133bbc99477c65200b806d0e1076452a04fe7fe9b",
     "src/hooks/owner-property/useOwnerPropertyDraftMemory.ts": "df9a345e5c720a31c3b54184b10c3a38c219d1ffcb3adfc5e9a4bbde06c77292",
@@ -3498,6 +3496,8 @@
         },
         "common-actions": {
           "keys": [
+            "actions.next",
+            "actions.previous",
             "buttons.cancel",
             "buttons.close",
             "buttons.confirm"
@@ -3934,6 +3934,8 @@
         },
         "common-actions": {
           "keys": [
+            "actions.next",
+            "actions.previous",
             "buttons.cancel",
             "buttons.close",
             "buttons.confirm",
@@ -6019,6 +6021,8 @@
         },
         "common-actions": {
           "keys": [
+            "actions.next",
+            "actions.previous",
             "buttons.cancel",
             "buttons.close",
             "buttons.confirm",
@@ -11770,8 +11774,9 @@
     "src/components/ui/input.tsx": "4950c27575d480d3c9d74b67f7c9ace2962a83715fd6db48cef2a7d96ea64d82",
     "src/components/ui/label.tsx": "cabf5967a8b0427eec637edd08fde237dcd0cc6c90e60b7c299280bb930c2cad",
     "src/components/ui/multiple-photos/photo-slot-types.ts": "97632404f0a15d82584d55b66536aa7aa9c7f9a46dbf831938d33b470be68b38",
-    "src/components/ui/navigation/base-tabs.tsx": "de00a8bea7b87f13e5059c06c4c714c0a86c6c7d8e500e5f25fc1b4aebe331ae",
+    "src/components/ui/navigation/base-tabs.tsx": "eb1742878d6be3e46431640e30b5865fdc1a59332e2ebb21281dfd4be2e511be",
     "src/components/ui/navigation/route-tabs.tsx": "b5a7e9f453d52367a0ac07241248a8710fbf546d33c7253eba76c22bf96bbc6f",
+    "src/components/ui/navigation/tabs-rail.tsx": "3bd3afed603a059b88bf45033eb1278afa08f26809db1a0ead3d2d035128987a",
     "src/components/ui/navigation/tabs-types.ts": "a9317bb904ca8f972f42b65c3ef76850bc793b5523b7109340960a90198e3c2c",
     "src/components/ui/popover.tsx": "f5f118afa2a1c900799e1c32fc893c471cd917b1c072928cd5282bb3b47c35d7",
     "src/components/ui/radix-escape-ownership.ts": "46132d46d8622dcdb40692a2d28bc39212fb3a5f960a79f359e58b1d60f4fbc9",
@@ -11941,7 +11946,9 @@
     "src/hooks/geo/useRecentPlaceSearches.ts": "43d52ca8dc5b1ef675c57e8f5d8ce3465831d31794add5eb19acc90557fe1243",
     "src/hooks/listings/useListingRevealTracking.ts": "0cd8f9947891e8bb7047886d8fe20a08e6c6fab293304e324b14a81553cec132",
     "src/hooks/listings/useSavedListingsState.ts": "a1418038ca4934264bf4def9141f1c33264832623693c4dcb408b6dce9e66057",
+    "src/hooks/media/useContainerClass.ts": "d62df59edbe11494e032452d7c653dde05c4aa6e5f05387177569f42fe639270",
     "src/hooks/media/useElementSize.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/hooks/media/useViewportClass.ts": "0769e01c621e8642ca805ff4fe8c5df5dd9b418d98bb86a71afbd7876e6cd336",
     "src/hooks/network-messaging/useNetworkUnreadCount.ts": "14d1abe4bc35eaea42a738ce6b3581efafab1ab422148690ec63e4142e0bd20e",
     "src/hooks/notifications/useFilesNotifications.ts": "6ed83b7c8b8d862414e91ec3da6805c09561da75a8edce3e3b4c349794a86af2",
     "src/hooks/useAdminFootprints.ts": "727d0a65dba9ec3c35dc72b624e2d0db1e601e5f4f2295aa599c9ab73a0c3405",
@@ -12755,7 +12762,7 @@
     "dynamicBoundaries": 24,
     "matchedKeys": 239,
     "routeBoundaries": 3,
-    "shellFiles": 1145,
+    "shellFiles": 1148,
     "sliceBytes": 726062
   },
   "unresolvableKeys": [
@@ -14312,6 +14319,7 @@
         "src/components/ui/dialog.tsx",
         "src/components/ui/email-sharing/ContactEmailPicker.tsx",
         "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/navigation/tabs-rail.tsx",
         "src/components/ui/search/SearchInput.tsx",
         "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
         "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",

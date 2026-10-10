@@ -43,6 +43,7 @@ import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceEditActions, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumns, buildAreaColumn, buildFloorColumn, useSpaceAvailabilityColumn, useSpaceTableExport, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from './shared';
 import { BuildingSpaceRelationsPanel } from './shared/BuildingSpaceRelationsPanel';
 import { BuildingSpaceTabError } from './shared/BuildingSpaceTabStatus';
+import { BuildingSpaceTabHeader } from './shared/BuildingSpaceTabHeader';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 
@@ -142,23 +143,20 @@ export function StorageTab({ building }: StorageTabProps) {
     <section className="flex flex-col gap-2 p-2">
       {loadError}
       {/* Header */}
-      <header className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Warehouse className="h-5 w-5 text-primary" />
+      <BuildingSpaceTabHeader
+        icon={<Warehouse className="h-5 w-5 shrink-0 text-primary" />}
+        title={s.t('tabs.labels.storage')}
+        count={s.units.length}
+      >
+        <Button variant="outline" size="sm" onClick={() => s.setShowLinkDialog(true)} disabled={!hasAnyStorages}>
+          <Link2 className="mr-1 h-4 w-4" />
+          {s.t('spaceLink.linkExisting')}
+        </Button>
+        <Button variant="default" size="sm" onClick={() => s.setShowCreateForm(true)}>
+          <Plus className="mr-1 h-4 w-4" />
           {s.t('tabs.labels.storage')}
-          <span className={cn('text-sm font-normal', colors.text.muted)}>({s.units.length})</span>
-        </h2>
-        <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => s.setShowLinkDialog(true)} disabled={!hasAnyStorages}>
-            <Link2 className="mr-1 h-4 w-4" />
-            {s.t('spaceLink.linkExisting')}
-          </Button>
-          <Button variant="default" size="sm" onClick={() => s.setShowCreateForm(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            {s.t('tabs.labels.storage')}
-          </Button>
-        </nav>
-      </header>
+        </Button>
+      </BuildingSpaceTabHeader>
 
       {/* Stats Cards */}
       <StorageTabStats

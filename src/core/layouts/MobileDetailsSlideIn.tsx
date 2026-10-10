@@ -70,7 +70,7 @@ export function MobileDetailsSlideIn({
       </div>
 
       {/* 📱 Content - FULL REMAINING HEIGHT (existing pattern) */}
-      <div className={cn(canvasUtilities.geoInteractive.mobileSlideContentClass, colors.bg.primary)}>
+      <div data-details-sheet="" className={cn(canvasUtilities.geoInteractive.mobileSlideContentClass, colors.bg.primary)}>
         {children}
       </div>
     </div>

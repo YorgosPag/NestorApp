@@ -34,6 +34,19 @@ const TabsList = React.forwardRef<
 TabsList.displayName = TabsPrimitive.List.displayName
 
 /**
+ * Το `tablist` **γυμνό** — ως λωρίδα ενός `ScrollRail` (ADR-912 §2). Χωρίς φόντο, padding ή `flex-wrap`:
+ * τη γεωμετρία την ορίζει η λωρίδα (`scroll-rail.module.css`) και το πλαίσιο ο καταναλωτής. Αν το ντύναμε
+ * εδώ, δύο κλάσεις ίδιας εξειδίκευσης θα μάλωναν για το padding και θα κέρδιζε η σειρά φόρτωσης.
+ */
+const TabsRailList = React.forwardRef<
+  React.ComponentRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List ref={ref} className={cn('items-center gap-1 text-muted-foreground', className)} {...props} />
+))
+TabsRailList.displayName = 'TabsRailList'
+
+/**
  * Η όψη ενός trigger — **μία** δήλωση για το `TabsTrigger` και για την καρτέλα-σύνδεσμο του
  * `BaseTabs` (ADR-328): δύο αντίγραφα θα απέκλιναν στην πρώτη αλλαγή θέματος.
  */
@@ -99,4 +112,4 @@ TabsContent.displayName = TabsPrimitive.Content.displayName
  * ```
  */
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, useTabsTriggerClassName }
+export { Tabs, TabsList, TabsRailList, TabsTrigger, TabsContent, useTabsTriggerClassName }

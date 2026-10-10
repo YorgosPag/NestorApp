@@ -38,16 +38,33 @@ function rootFontPx(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 16;
 }
 
+export interface ContainerClassOptions {
+  /**
+   * Τι σημαίνει **πλάτος 0** (ADR-912 §2.1). Ένας περιέκτης χωρίς διάταξη — μέσα σε `display:none` (ανενεργή
+   * καρτέλα), ή σε jsdom — δεν είναι «στενός»: **δεν μετρήθηκε**. Προεπιλογή `'narrow'` = η συμπεριφορά πριν από
+   * αυτή την επιλογή (`ListMapSplit` · `TourViewer`). Ο καταναλωτής που αλλάζει **δομή** στο «στενό» δηλώνει
+   * `'measuring'`, ώστε να μη στήσει τη στενή εκδοχή για κάτι που κανείς δεν βλέπει.
+   */
+  readonly zeroWidth?: 'narrow' | 'measuring';
+}
+
 /**
  * **Χωράει ο περιέκτης `minRem`;** `'measuring'` μέχρι την πρώτη μέτρηση — και **για πάντα**
  * εκεί όπου δεν υπάρχει `ResizeObserver` (jsdom, πολύ παλιός browser): η ειλικρινής απάντηση
  * είναι «δεν ξέρω», και ο καταναλωτής οφείλει να τη χειριστεί ρητά.
  */
-export function useContainerClass(ref: RefObject<HTMLElement | null>, minRem: number): ViewportClass {
+export function useContainerClass(
+  ref: RefObject<HTMLElement | null>,
+  minRem: number,
+  { zeroWidth = 'narrow' }: ContainerClassOptions = {},
+): ViewportClass {
   const [value, setValue] = useState<ViewportClass>('measuring');
   const sync = useCallback(
-    (width: number): void => setValue(width >= minRem * rootFontPx() ? 'wide' : 'narrow'),
-    [minRem],
+    (width: number): void => {
+      if (!(width > 0)) setValue(zeroWidth);
+      else setValue(width >= minRem * rootFontPx() ? 'wide' : 'narrow');
+    },
+    [minRem, zeroWidth],
   );
   useSizeObserver(ref, sync);
   return value;

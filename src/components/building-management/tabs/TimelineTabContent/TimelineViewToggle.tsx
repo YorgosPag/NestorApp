@@ -24,7 +24,7 @@ export function TimelineViewToggle({ activeView, onViewChange }: TimelineViewTog
   const iconSizes = useIconSizes();
 
   return (
-    <nav role="tablist" aria-label={t('tabs.timeline.header.title')} className="flex gap-2">
+    <nav role="tablist" aria-label={t('tabs.timeline.header.title')} className="flex flex-wrap gap-2">
       <Tooltip>
         <TooltipTrigger asChild>
           <ToggleButton

@@ -19,8 +19,8 @@ export function TimelineHeader({ milestones }: TimelineHeaderProps) {
     const completedCount = milestones.filter(m => m.status === 'completed').length;
 
     return (
-        <div className="flex items-center justify-between">
-            <div>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
                 <h3 className="text-lg font-semibold">{t('tabs.timeline.header.title')}</h3>
                 <p className={cn("text-sm", colors.text.muted)}>
                     {t('tabs.timeline.header.subtitle')}

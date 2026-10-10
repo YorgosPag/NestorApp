@@ -134,7 +134,7 @@ export function EntityFilesToolbar({
 
         <div className="flex flex-wrap gap-2">
           {/* Tab switcher (Procore/BIM360 pattern) */}
-          <div className="flex gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
+          <div className="flex flex-wrap gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
             <ToggleButton
               pressed={activeTab === 'files'}
               variant="ghost"

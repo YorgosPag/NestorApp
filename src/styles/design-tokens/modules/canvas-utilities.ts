@@ -59,7 +59,9 @@ export const canvasUtilities = {
       display: 'flex',
       flexDirection: 'column'
     }),
-    mobileSlideContentClass: 'flex-1 overflow-y-auto bg-card p-4 h-full flex flex-col',
+    // ADR-912 §3 — το κενό του φύλλου είναι ΜΙΑ μεταβλητή: όποιο παιδί είναι ήδη πλήρης επιφάνεια
+    // (`DetailsContainer`) το ακυρώνει με τον ΙΔΙΟ αριθμό, αντί να μαντεύει ένα `-m-4`.
+    mobileSlideContentClass: 'flex-1 overflow-y-auto bg-card p-4 [&:has(>[data-details-flush])]:p-0 h-full flex flex-col',
     canvasFullDisplay: (): React.CSSProperties => ({
       width: '100%',
       height: '100%',
@@ -206,6 +208,29 @@ export const canvasUtilities = {
 };
 
 /**
+ * Τα χρώματα κατάστασης της αυτόματης αποθήκευσης — ΜΙΑ δήλωση. Τα δύο λεξιλόγια παρακάτω
+ * (`saved` / `success`) ονομάζουν την ίδια επιτυχία διαφορετικά, αλλά βάφουν με το ίδιο ζεύγος.
+ */
+const saveStatusColors = {
+  saving: {
+    backgroundColor: semanticColors.status.warning,
+    color: colors.text.inverse
+  },
+  success: {
+    backgroundColor: semanticColors.status.success,
+    color: colors.text.inverse
+  },
+  error: {
+    backgroundColor: semanticColors.status.error,
+    color: colors.text.inverse
+  },
+  idle: {
+    backgroundColor: colors.background.secondary,
+    color: colors.text.secondary
+  }
+} as const;
+
+/**
  * 🎯 STATUS INDICATOR COMPONENTS - ENTERPRISE AUTO-SAVE SYSTEM
  */
 export const autoSaveStatusTokens = {
@@ -219,22 +244,10 @@ export const autoSaveStatusTokens = {
     gap: spacing.xs
   },
   variants: {
-    saving: {
-      backgroundColor: semanticColors.status.warning,
-      color: colors.text.inverse
-    },
-    saved: {
-      backgroundColor: semanticColors.status.success,
-      color: colors.text.inverse
-    },
-    error: {
-      backgroundColor: semanticColors.status.error,
-      color: colors.text.inverse
-    },
-    idle: {
-      backgroundColor: colors.background.secondary,
-      color: colors.text.secondary
-    }
+    saving: saveStatusColors.saving,
+    saved: saveStatusColors.success,
+    error: saveStatusColors.error,
+    idle: saveStatusColors.idle
   }
 } as const;
 
@@ -265,24 +278,7 @@ export const statusIndicatorComponents = {
   },
 
   // Status colors
-  statusColors: {
-    saving: {
-      backgroundColor: semanticColors.status.warning,
-      color: colors.text.inverse
-    },
-    success: {
-      backgroundColor: semanticColors.status.success,
-      color: colors.text.inverse
-    },
-    error: {
-      backgroundColor: semanticColors.status.error,
-      color: colors.text.inverse
-    },
-    idle: {
-      backgroundColor: colors.background.secondary,
-      color: colors.text.secondary
-    }
-  },
+  statusColors: saveStatusColors,
 
   // Status dot styles
   statusDot: {
