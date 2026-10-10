@@ -47,9 +47,9 @@ async function settle(): Promise<void> {
   });
 }
 
-async function mountAt(url: string, autoSelectFirstItem = true) {
+async function mountAt(url: string) {
   startAt(url);
-  const hook = renderHook(() => useEntityPageState(ITEMS, { ...CONFIG, autoSelectFirstItem }));
+  const hook = renderHook(() => useEntityPageState(ITEMS, CONFIG));
   await settle();
   return hook;
 }
@@ -85,13 +85,39 @@ describe('ADR-777 §8.31.12 — η χειροκίνητη επιλογή γρά�
   });
 
   it('αποεπιλογή ⇒ η παράμετρος σβήνει (αλλιώς ξαναγεννιέται η παλιά επιλογή)', async () => {
-    const { result } = await mountAt('/buildings?buildingId=bldg_a', false);
+    const { result } = await mountAt('/buildings?buildingId=bldg_a');
 
     act(() => result.current.setSelectedItem(null));
     await settle();
 
     expect(result.current.selectedItem).toBeNull();
     expect(urlId()).toBeNull();
+  });
+
+  /*
+   * 🔴 ADR-777 §8.31.13 — μετρημένο ζωντανά στα 390px (2026-10-11): το X του
+   * φύλλου λεπτομερειών κτιρίου έκλεινε το φύλλο και **ξανάνοιγε το πρώτο
+   * κτίριο** της λίστας. Το test «αποεπιλογή» παραπάνω υπήρχε, αλλά έτρεχε με τη
+   * σημαία **σβηστή** — δηλαδή ποτέ με τη ρύθμιση του μόνου καταναλωτή που έσπαγε.
+   */
+  it('🔴 κλείσιμο εγγραφής ⇒ ΜΕΝΕΙ κλειστή — ποτέ δεν ξαναεπιλέγεται η πρώτη', async () => {
+    const { result } = await mountAt('/buildings?buildingId=bldg_b');
+    expect(result.current.selectedItem?.id).toBe('bldg_b');
+
+    act(() => result.current.setSelectedItem(null));
+    await settle();
+    await settle();
+
+    expect(result.current.selectedItem).toBeNull();
+    expect(result.current.selection.kind).toBe('none');
+  });
+
+  it('🔴 διεύθυνση χωρίς ταυτότητα ⇒ καμία επιλογή — η λίστα δεν διαλέγει μόνη της', async () => {
+    const { result } = await mountAt('/buildings');
+    await settle();
+
+    expect(result.current.selection.kind).toBe('none');
+    expect(result.current.selectedItem).toBeNull();
   });
 
   it('επεξεργασία με συνάρτηση ⇒ ίδια ταυτότητα, ίδια διεύθυνση', async () => {
@@ -116,7 +142,7 @@ describe('ADR-777 §8.31.12 — η χειροκίνητη επιλογή γρά�
   });
 
   it('σύνδεσμος που δεν οδηγεί πουθενά ⇒ η επόμενη χειροκίνητη επιλογή ΔΕΝ σβήνεται', async () => {
-    const { result } = await mountAt('/buildings?buildingId=bldg_missing', false);
+    const { result } = await mountAt('/buildings?buildingId=bldg_missing');
     expect(result.current.selection.kind).toBe('not-found');
 
     act(() => result.current.setSelectedItem(B));

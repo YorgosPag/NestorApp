@@ -106,8 +106,6 @@ export function useProjectsPageState(
     ...options,
     extraUrlParams: ['tab'],
     syncCompareFields: ['name', 'title', 'status'],
-    // Avoid mounting the full project details/tab graph on initial page load.
-    autoSelectFirstItem: false,
   };
 
   const {

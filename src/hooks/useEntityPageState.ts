@@ -12,7 +12,7 @@
  * - View mode state (list | grid | byType | byStatus)
  * - Dashboard toggle
  * - Filter state management
- * - Auto-select from URL parameter
+ * - Selection from URL parameter (never an unrequested first item — ADR-777 §8.31.13)
  * - Data sync when source array refreshes
  * - Filtered items via caller-supplied filter function
  */
@@ -34,7 +34,6 @@ import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
 import {
   deriveEntitySelection,
   isPendingOwnSelection,
-  mayAutoSelectFirst,
   shouldClearStaleSelection,
   type EntitySelection,
 } from './entity-selection-state';
@@ -79,15 +78,6 @@ export interface EntityPageStateConfig<T extends IdentifiableEntity, F> {
    * If omitted, a referential-equality check on the found item is used.
    */
   syncCompareFields?: (keyof T)[];
-
-  /**
-   * Optional: auto-select the first item when no URL-selected item exists.
-   * Defaults to true to preserve the existing page behavior.
-   *
-   * ⚠️ **ΔΕΝ ΕΦΑΡΜΟΖΕΤΑΙ ΠΟΤΕ όταν η διεύθυνση ζητά ρητή ταυτότητα** (ADR-777
-   * §8.31): «δεν βρήκα αυτό που ζήτησες» **δεν** είναι άδεια να δείξεις άλλο.
-   */
-  autoSelectFirstItem?: boolean;
 
   /**
    * 🔴 **ΥΠΟΧΡΕΩΤΙΚΟ, ΕΠΙΤΗΔΕΣ** — *«απάντησε η πηγή της λίστας;»* (ADR-777 §8.31).
@@ -165,7 +155,6 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
     filterFn,
     extraUrlParams = [],
     syncCompareFields,
-    autoSelectFirstItem = true,
     hasAnswered,
     archivedItems,
     resolveById,
@@ -272,15 +261,14 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
     // προηγούμενη εγγραφή, που έμενε ορατή (μετρημένο ζωντανά, §8.31).
     if (shouldClearStaleSelection(selection, selectedItem?.id)) {
       setSelectedItemRaw(null);
-      return;
     }
 
-    // ⚠️ Ρητή ταυτότητα ⇒ ΚΑΜΙΑ αυτόματη επιλογή, σε καμία κατάσταση.
-    if (mayAutoSelectFirst(selection, autoSelectFirstItem) && !selectedItem && items.length > 0) {
-      setSelectedItemRaw(items[0]);
-    }
+    // 🔴 ΚΑΜΙΑ αυτόματη επιλογή πρώτης εγγραφής — δεν υπάρχει πια ούτε ως ρύθμιση
+    // (ADR-777 §8.31.13). «Καμία επιλογή» είναι ΕΓΚΥΡΗ κατάσταση: σε στενό πλάτος
+    // είναι η ίδια η λίστα, και όποιος την «διόρθωνε» ξανάνοιγε το φύλλο που ο
+    // άνθρωπος μόλις έκλεισε (μετρημένο ζωντανά στα 390px, 2026-10-11).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, autoSelectFirstItem, items, selectedItem?.id]);
+  }, [selection, selectedItem?.id]);
 
   // ── Sync selected item with refreshed data ─────────────────────────
   useEffect(() => {

@@ -75,8 +75,11 @@ describe('ADR-777 §8.31 — το κοινό εξάρτημα ρωτά, και �
   it('Α1 🔴 το useEntityPageState δεν επιλέγει ΠΟΤΕ μόνο του χωρίς τον φρουρό', () => {
     const source = read(GENERIC_HOOK);
 
-    // Η μοναδική επιτρεπτή αυτόματη επιλογή είναι πίσω από το `mayAutoSelectFirst`.
-    expect(source).toContain('mayAutoSelectFirst(selection, autoSelectFirstItem)');
+    // §8.31.13 — δεν υπάρχει πια «επιτρεπτή» αυτόματη επιλογή: ούτε σημαία, ούτε
+    // φρουρός, ούτε `items[0]`. Κανένας καταναλωτής δεν μπορεί να την ξανανάψει.
+    expect(source).not.toMatch(/autoSelectFirst/i);
+    expect(source).not.toMatch(/setSelectedItemRaw\(\s*items\[0\]\s*\)/);
+    for (const wrapper of WRAPPERS) expect(withoutComments(read(wrapper))).not.toMatch(/autoSelectFirst/i);
 
     // 🔴 Η παλιά γραφή. Αν ξαναγυρίσει, ο σύνδεσμος ξαναρχίζει να δείχνει ΑΛΛΗ
     // εγγραφή από αυτή που ζητήθηκε — σιωπηλά, όπως έκανε επί τέσσερις μήνες.

@@ -20,7 +20,6 @@
 import {
   deriveEntitySelection,
   isPendingOwnSelection,
-  mayAutoSelectFirst,
   requestedIdOf,
   shouldClearStaleSelection,
   type EntitySelection,
@@ -126,23 +125,15 @@ describe('ADR-777 §8.31 — deriveEntitySelection: καμία σιωπηλή κ
      * `true` ⇒ σύνδεσμος για το κτίριο Α που δεν ήταν στη φορτωμένη λίστα
      * εμφάνιζε **το πρώτο κτίριο**, χωρίς καμία ένδειξη.
      *
-     * Ελέγχεται με `autoSelectFirstItem === true` **επίτηδες**: η εγγύηση δεν
-     * επιτρέπεται να εξαρτάται από το αν κάποιος θυμήθηκε τη σημαία.
+     * Από το §8.31.13 η εγγύηση δεν είναι πια φρουρός αλλά **απουσία**: ούτε η
+     * σημαία ούτε το `mayAutoSelectFirst` υπάρχουν. Η συμπεριφορά καρφώνεται στο
+     * πραγματικό hook (`useEntityPageState-url-selection.test.ts`)· εδώ μένει
+     * ότι το leaf module δεν ξαναποκτά την πόρτα.
      */
-    const withId: EntitySelection<Thing>[] = [
-      { kind: 'resolving', requestedId: 'bld_A' },
-      { kind: 'selected', item: A },
-      { kind: 'archived', item: GONE },
-      { kind: 'not-found', requestedId: 'bld_A' },
-    ];
-
-    for (const selection of withId) {
-      expect(mayAutoSelectFirst(selection, true)).toBe(false);
-    }
-
-    // Χωρίς ρητή ταυτότητα η λίστα ξαναγίνεται ελεύθερη — η σημαία μετρά ΜΟΝΟ εκεί.
-    expect(mayAutoSelectFirst<Thing>({ kind: 'none' }, true)).toBe(true);
-    expect(mayAutoSelectFirst<Thing>({ kind: 'none' }, false)).toBe(false);
+    const exported = Object.keys(
+      jest.requireActual<Record<string, unknown>>('../entity-selection-state'),
+    );
+    expect(exported.filter((name) => /autoselect/i.test(name))).toEqual([]);
   });
 
   // ==========================================================================

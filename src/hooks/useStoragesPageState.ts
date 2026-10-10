@@ -110,7 +110,6 @@ export function useStoragesPageState(
     isArchived: isTrashedEntity,
     // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
     ...options,
-    autoSelectFirstItem: false,
   };
 
   const {
