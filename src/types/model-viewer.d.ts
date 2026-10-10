@@ -59,6 +59,8 @@ export interface ModelViewerAttributes
   readonly 'shadow-intensity'?: string;
   /** Έκθεση φωτισμού. */
   readonly exposure?: string;
+  /** `"<αζιμούθιο> <πολική γωνία> <ακτίνα>"` — π.χ. `"45deg 65deg auto"`. */
+  readonly 'camera-orbit'?: string;
   /** Ουδέτερος φωτισμός στούντιο, χωρίς εξωτερικό αρχείο HDR. */
   readonly 'environment-image'?: 'neutral' | 'legacy';
   readonly loading?: ModelViewerLoading;

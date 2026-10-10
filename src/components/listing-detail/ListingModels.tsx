@@ -70,7 +70,11 @@ export function ListingModels({ listing, embedded = false }: ListingModelsProps)
     <section aria-label={heading} className="flex flex-col gap-2">
       {!embedded && <h2 className="text-sm font-medium text-foreground">{heading}</h2>}
 
-      <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+      {/*
+        ⚠️ **Δύο στήλες ΜΟΝΟ όταν υπάρχουν δύο μοντέλα.** Με ένα, το πλέγμα των δύο στηλών άφηνε τη μισή σκηνή άδεια:
+        το μοντέλο ζούσε σε κουτί μισού πλάτους, ενώ κάτοψη και φωτογραφία πιάνουν όλη την καρτέλα.
+      */}
+      <ul className={shown.length > 1 ? 'grid grid-cols-1 gap-2 lg:grid-cols-2' : 'grid grid-cols-1 gap-2'}>
         {shown.map((model) => (
           <li key={model.value.url} className="flex flex-col gap-1">
             <ListingModelStage src={model.value.url} alt={t(model.value.altKey)} />

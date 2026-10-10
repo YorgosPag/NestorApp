@@ -103,6 +103,18 @@ function useMeshoptDecoderRegistered(): void {
   });
 }
 
+/**
+ * **Η ΑΡΧΙΚΗ ΓΩΝΙΑ ΤΗΣ ΚΑΜΕΡΑΣ — Η ΙΔΙΑ ΜΕ ΤΟΥ ΧΩΡΟΥ.** Ο προβολέας του χώρου ανοίγει από τη θέση `(15, 10, 15)`
+ * (`INITIAL_CAMERA_POSITION`, `bim-3d/scene/ThreeJsSceneManager`) και το πρώτο του πλαισίωμα κρατά την κατεύθυνση:
+ * αζιμούθιο `atan2(15, 15) = 45°`, πολική γωνία από την κατακόρυφο `90° − atan(10 / √450) ≈ 65°`. Ο ψήστης δεν
+ * στρέφει ούτε κεντράρει το μοντέλο, άρα οι άξονες του GLB είναι οι άξονες της σκηνής. Χωρίς αυτό ο επισκέπτης
+ * έβλεπε το ίδιο ακίνητο από μπροστά (`0deg 75deg`, η προεπιλογή της βιβλιοθήκης) — άλλη εικόνα από του εκδότη.
+ *
+ * ⛔ **Λεκτικό, όχι εισαγωγή**: η σταθερά του χώρου ζει μέσα στο `dxf-viewer`, και μια εισαγωγή από εδώ θα έσερνε
+ * τη μηχανή CAD στο δημόσιο πακέτο (CHECK 3.62). Αν αλλάξει εκεί, αλλάζει και εδώ.
+ */
+const WORKSPACE_HOME_ORBIT = '45deg 65deg auto';
+
 interface ListingModelCanvasProps {
   readonly src: string;
   readonly alt: string;
@@ -131,18 +143,22 @@ export default function ListingModelCanvas({ src, alt, onFailed }: ListingModelC
 
   // ⚠️ `touch-action="pan-y"`: χωρίς αυτό ο καμβάς τρώει την κατακόρυφη κύλιση της σελίδας
   //    σε κινητό — ο επισκέπτης **παγιδεύεται** μέσα στο μοντέλο και δεν διαβάζει την αγγελία.
+  // 🔴 `h-auto` ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ: το στοιχείο δηλώνει στο δικό του `:host` **`height: 150px`**, και το `aspect-ratio`
+  //    ισχύει μόνο όταν το ύψος είναι `auto`. Χωρίς αυτό ο καμβάς έμενε 150px ψηλός σε κάθε πλάτος — η κάρτα εισόδου
+  //    (ένα `button`, χωρίς τέτοια δήλωση) είχε το σωστό ύψος, άρα η αποκάλυψη **μίκραινε** τη σκηνή (και CLS).
   return (
     <model-viewer
       ref={ref}
       src={src}
       alt={alt}
       camera-controls=""
+      camera-orbit={WORKSPACE_HOME_ORBIT}
       touch-action="pan-y"
       environment-image="neutral"
       shadow-intensity="1"
       loading="eager"
       reveal="auto"
-      className={`w-full rounded-lg border border-border bg-card ${MODEL_STAGE_ASPECT_CLASS}`}
+      className={`h-auto w-full rounded-lg border border-border bg-card ${MODEL_STAGE_ASPECT_CLASS}`}
     />
   );
 }
