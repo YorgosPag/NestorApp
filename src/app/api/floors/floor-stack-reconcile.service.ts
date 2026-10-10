@@ -1,5 +1,5 @@
 import { FieldValue } from 'firebase-admin/firestore';
-import type { Firestore } from 'firebase-admin/firestore';
+import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -9,6 +9,7 @@ import { derivedChange, recordDerivedWrites, type FloorCascadeActor } from './_s
 import { isSpecialLevel, readFloorStack, type FloorStackRow } from './_shared/floor-stack-rows';
 import { cascadeFloorElevations } from './floor-elevation-cascade.service';
 import { cascadeFloorHeightToEntities } from './floor-height-cascade.service';
+import { withFloorStack } from './floor-stack-authority';
 
 const logger = createModuleLogger('FloorStackReconcile');
 
@@ -219,55 +220,94 @@ export async function reconcileSpecialLevelPlacement(
   companyId: string,
   actor: FloorCascadeActor,
 ): Promise<number> {
-  const { updatedBy } = actor;
-  const { rows, refById } = await readFloorStack(db, buildingId, companyId);
-  const counted = rows.filter((r) => !isSpecialLevel(r));
-  if (counted.length === 0) return 0; // nothing to anchor against (degenerate)
+  // 🔒 Κάτω από το κλειδί της στοίβας: η επανατοποθέτηση γράφει `number`, άρα είναι αλλαγή της στοίβας όπως κάθε άλλη.
+  //    Ως τις 2026-10-10 ήταν ελεύθερη παρτίδα — ο τρίτος γραφέας αριθμού, ο μόνος που δεν περνούσε από πουθενά.
+  const placements = await withFloorStack(db, { buildingId, companyId }, actor.updatedBy, (transaction, stack) => {
+    const planned = planSpecialLevelPlacement(stack.rows);
+    writeSpecialLevelPlacements(transaction, stack.refById, planned, actor.updatedBy);
+    return planned;
+  });
+  if (placements.length === 0) return 0;
 
-  const minCounted = counted[0];
-  const maxCounted = counted[counted.length - 1];
+  await recordSpecialLevelPlacements(placements, companyId, actor);
+  logger.info('[FloorStackReconcile] Re-placed special levels', { buildingId, placed: placements.length });
+  return placements.length;
+}
 
-  interface Placement { row: FloorRow; number: number; elevation: number | null; }
-  const placements: Placement[] = [];
+/** Μία ειδική στάθμη που πρέπει να μετακινηθεί: πού είναι (`row`) και πού ανήκει. */
+export interface SpecialLevelPlacement {
+  readonly row: FloorRow;
+  readonly number: number;
+  readonly elevation: number | null;
+}
 
-  // Below-grade specials (foundation) — stacked UNDER minCounted, deepest last.
-  const below = rows.filter((r) => r.kind === 'foundation').sort((a, b) => b.number - a.number);
-  let belowNum = minCounted.number;
-  let belowElev = minCounted.elevation;
-  for (const f of below) {
-    const num = belowNum - 1;
-    const elev = belowElev !== null ? roundM(belowElev - f.height) : null;
-    if (f.number !== num || !approxEqOrNull(f.elevation, elev)) placements.push({ row: f, number: num, elevation: elev });
-    belowNum = num;
-    belowElev = elev;
+/** Στοιβάζει μια πλευρά ειδικών σταθμών πάνω σε μια άγκυρα· επιστρέφει όσες δεν είναι ήδη στη θέση τους. */
+function stackSpecials(
+  specials: readonly FloorRow[],
+  anchor: FloorRow,
+  direction: 1 | -1,
+): SpecialLevelPlacement[] {
+  const placements: SpecialLevelPlacement[] = [];
+  let prevNumber = anchor.number;
+  let prevElevation = anchor.elevation;
+  let prevHeight = anchor.height;
+  for (const special of specials) {
+    const number = prevNumber + direction;
+    // Πάνω: η στάθμη κάθεται στην κορυφή της προηγούμενης. Κάτω: κρέμεται από τη βάση της, κατά το ΔΙΚΟ της βάθος.
+    const offset = direction === 1 ? prevHeight : -special.height;
+    const elevation = prevElevation !== null ? roundM(prevElevation + offset) : null;
+    if (special.number !== number || !approxEqOrNull(special.elevation, elevation)) {
+      placements.push({ row: special, number, elevation });
+    }
+    prevNumber = number;
+    prevElevation = elevation;
+    prevHeight = special.height;
   }
+  return placements;
+}
 
-  // Above specials (roof, stair-penthouse) — stacked ABOVE maxCounted, in order.
+/**
+ * **Το σχέδιο της επανατοποθέτησης** — καθαρό, χωρίς βάση: το καλεί και η αυτόνομη ανασύνταξη και η γέννηση ορόφου
+ * (`floor-birth.ts`), ώστε η θεμελίωση να κατεβαίνει **στην ίδια συναλλαγή** που γεννιέται το υπόγειο.
+ * Κενό ⇒ όλα στη θέση τους (ή δεν υπάρχει μετρούμενος όροφος για άγκυρα).
+ */
+export function planSpecialLevelPlacement(rows: readonly FloorRow[]): SpecialLevelPlacement[] {
+  const counted = rows.filter((r) => !isSpecialLevel(r)).sort((a, b) => a.number - b.number);
+  if (counted.length === 0) return []; // nothing to anchor against (degenerate)
+
+  // Below-grade specials (foundation) — stacked UNDER the lowest counted storey, deepest last.
+  const below = rows.filter((r) => r.kind === 'foundation').sort((a, b) => b.number - a.number);
+  // Above specials (roof, stair-penthouse) — stacked ABOVE the top counted storey, in order.
   const above = rows
     .filter((r) => r.kind === 'roof' || r.kind === 'stair-penthouse')
     .sort((a, b) => a.number - b.number);
-  let topNum = maxCounted.number;
-  let topElev = maxCounted.elevation;
-  let topHeight = maxCounted.height;
-  for (const s of above) {
-    const num = topNum + 1;
-    const elev = topElev !== null ? roundM(topElev + topHeight) : null;
-    if (s.number !== num || !approxEqOrNull(s.elevation, elev)) placements.push({ row: s, number: num, elevation: elev });
-    topNum = num;
-    topElev = elev;
-    topHeight = s.height;
-  }
 
-  if (placements.length === 0) return 0;
+  return [
+    ...stackSpecials(below, counted[0], -1),
+    ...stackSpecials(above, counted[counted.length - 1], 1),
+  ];
+}
 
-  const batch = openDeclaredBatch(db, [COLLECTIONS.FLOORS]);
+/** Γράφει το σχέδιο μέσα στη συναλλαγή της στοίβας. */
+export function writeSpecialLevelPlacements(
+  transaction: Transaction,
+  refById: ReadonlyMap<string, DocumentReference>,
+  placements: readonly SpecialLevelPlacement[],
+  updatedBy: string,
+): void {
   const updatedAt = FieldValue.serverTimestamp();
-  for (const p of placements) {
-    const ref = refById.get(p.row.id);
-    if (ref) batch.update(ref, { number: p.number, elevation: p.elevation, updatedBy, updatedAt });
+  for (const placement of placements) {
+    const ref = refById.get(placement.row.id);
+    if (ref) transaction.update(ref, { number: placement.number, elevation: placement.elevation, updatedBy, updatedAt });
   }
-  await batch.commit();
+}
 
+/** ADR-195 — μία παράγωγη γραμμή ανά στάθμη που μετακινήθηκε. **Μετά** το commit. */
+export async function recordSpecialLevelPlacements(
+  placements: readonly SpecialLevelPlacement[],
+  companyId: string,
+  actor: FloorCascadeActor,
+): Promise<void> {
   await recordDerivedWrites(
     SYSTEM_IDENTITY.FLOOR_STACK_ID,
     placements.map((p) => ({
@@ -282,7 +322,4 @@ export async function reconcileSpecialLevelPlacement(
     actor,
     companyId,
   );
-
-  logger.info('[FloorStackReconcile] Re-placed special levels', { buildingId, placed: placements.length });
-  return placements.length;
 }

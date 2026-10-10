@@ -890,6 +890,8 @@
   "floorTabs": {
     "ariaLabel": "Building floor navigation",
     "emptyBadge": "empty",
+    "conflictBadge": "duplicate",
+    "conflictTooltip": "Floor “{floor}” conflicts with another floor of this building (same number or same name). Right-click the floor strip to resolve it.",
     "allFloors": "All floors",
     "allFloorsAria": "Show all floors stacked in 3D",
     "floorVisibleAria": "Show floor {floor} in the all-floors view"

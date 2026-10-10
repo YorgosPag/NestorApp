@@ -64,7 +64,7 @@ function withFloors(): UseFloorTabsResult {
   return {
     ...noFloors(),
     visible: true,
-    tabs: [{ floorId: 'flr_1', number: 0, label: 'Ισόγειο', levelId: 'lvl_1', hasFloorplan: true }],
+    tabs: [{ floorId: 'flr_1', number: 0, label: 'Ισόγειο', levelId: 'lvl_1', hasFloorplan: true, conflict: false }],
     activeFloorId: 'flr_1',
   };
 }

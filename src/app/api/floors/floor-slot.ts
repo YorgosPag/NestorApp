@@ -1,52 +1,42 @@
-import type { Firestore } from 'firebase-admin/firestore';
-
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
-import { isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
+import {
+  FLOOR_SLOT_ERROR_CODES,
+  judgeFloorSlot,
+  type FloorSlotCandidate,
+  type FloorSlotChecks,
+  type FloorSlotClash,
+  type FloorSlotRow,
+} from '@/lib/floor/floor-stack-integrity';
 
 /**
- * ADR-461 — **kind-aware μοναδικότητα** (Revit «Building Story» OFF για ειδικές στάθμες).
+ * ADR-461 — **η άρνηση** του κανόνα μοναδικότητας: ετυμηγορία → `409` με `errorCode`.
  *
- * Οι μετρούμενοι όροφοι κρατούν **μοναδικούς** αριθμούς μεταξύ τους· μια ειδική στάθμη
- * (θεμελίωση/δώμα/απόληξη) μπορεί νόμιμα να μοιράζεται αριθμό με μετρούμενο όροφο, αλλά υπάρχει
- * **μία** ανά είδος. Ένα ερώτημα (κανένας νέος σύνθετος δείκτης) + απόφαση στη μνήμη —
- * τα κτίρια έχουν λίγους ορόφους. 🔒 Με `companyId` του **κατόχου** (κτίριο/όροφος — όχι του καλούντα:
- * ο υπερδιαχειριστής γράφει σε ξένο κτίριο) ⇒ δείκτης `(buildingId, companyId)` υπάρχει ήδη (CHECK 3.35).
+ * 🔑 Ο κανόνας ζει στο `lib/floor/floor-stack-integrity.ts` (καθαρός, κοινός με τον πελάτη)· εδώ μόνο η μετάφρασή του
+ * σε απάντηση HTTP. **Δεν διαβάζει τη βάση**: τα αδέλφια τα δίνει το σύνορο της στοίβας (`floor-stack-authority.ts`),
+ * διαβασμένα **μέσα στη συναλλαγή** που θα γράψει.
  *
- * 🔴 Ως τις 2026-10-03 ο κανόνας ζούσε **μόνο** στη δημιουργία: η **επεξεργασία** αριθμού δεν τον
- * ρωτούσε ⇒ δύο «1ος όροφος» στο ίδιο κτίριο, και ο cascade αναρίθμησης (ADR-903 §6) θα
- * έγραφε τον ίδιο αριθμό σε στοιχεία δύο διαφορετικών ορόφων. Ένας κανόνας, δύο καλούντες.
+ * 🔴 Ως τις 2026-10-10 αυτή η συνάρτηση έκανε η ίδια το ερώτημα, **έξω** από συναλλαγή ⇒ δύο ταυτόχρονα αιτήματα
+ * περνούσαν και τα δύο. Και ως τις 2026-10-03 ζούσε μόνο στη δημιουργία (η επεξεργασία αριθμού δεν ρωτούσε).
  *
- * @throws {ApiError} 409 όταν η θέση είναι πιασμένη
+ * @throws {ApiError} 409 όταν η θέση ή το όνομα είναι πιασμένα — `details.conflictingFloorId` = με ποιον
  */
-export async function assertFloorSlotFree(
-  db: Firestore,
-  owner: { readonly buildingId: string; readonly companyId: string },
-  slot: { readonly number: number; readonly kind?: FloorKind },
+export function assertFloorSlotFree(
+  siblings: readonly FloorSlotRow[],
+  candidate: FloorSlotCandidate,
+  buildingId: string,
+  checks?: FloorSlotChecks,
   excludeFloorId?: string,
-): Promise<void> {
-  const siblingsSnap = await db
-    .collection(COLLECTIONS.FLOORS)
-    .where(FIELDS.BUILDING_ID, '==', owner.buildingId)
-    .where(FIELDS.COMPANY_ID, '==', owner.companyId)
-    .select('number', 'kind')
-    .get();
-  const siblings = siblingsSnap.docs
-    .filter((d) => excludeFloorId === undefined || d.id !== excludeFloorId)
-    .map((d) => ({ number: d.data().number as number, kind: d.data().kind as FloorKind | undefined }));
+): void {
+  const verdict = judgeFloorSlot(siblings, candidate, checks, excludeFloorId);
+  if (verdict === null) return;
+  throw new ApiError(409, refusalMessage(verdict.clash, candidate, buildingId), FLOOR_SLOT_ERROR_CODES[verdict.clash], {
+    conflictingFloorId: verdict.withFloorId,
+  });
+}
 
-  const isSpecial = slot.kind !== undefined && !isBuildingStorey(slot.kind);
-  if (isSpecial) {
-    if (siblings.some((s) => s.kind === slot.kind)) {
-      throw new ApiError(409, `A ${slot.kind} special level already exists in building ${owner.buildingId}`);
-    }
-    return;
-  }
-  const clashesCounted = siblings.some(
-    (s) => s.number === slot.number && (s.kind === undefined || isBuildingStorey(s.kind)),
-  );
-  if (clashesCounted) {
-    throw new ApiError(409, `Floor number ${slot.number} already exists in building ${owner.buildingId}`);
-  }
+/** Μήνυμα για τα logs και τους προγραμματιστές — ο άνθρωπος βλέπει τη μετάφραση του `errorCode`. */
+function refusalMessage(clash: FloorSlotClash, candidate: FloorSlotCandidate, buildingId: string): string {
+  if (clash === 'kind') return `A ${candidate.kind} special level already exists in building ${buildingId}`;
+  if (clash === 'name') return `Floor name "${candidate.name}" already exists in building ${buildingId}`;
+  return `Floor number ${candidate.number} already exists in building ${buildingId}`;
 }

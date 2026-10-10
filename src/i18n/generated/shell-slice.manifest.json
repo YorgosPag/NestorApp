@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dd7869094f45dfaddca236706d928b9df9968abc171f55ed24417df50a92f8d3",
+  "inputsSha256": "e51af4dd14730421c076e0f9afbfe9f5b376c08fe52b1b957378a00c4e97b216",
   "languages": [
     "el"
   ],
@@ -11824,7 +11824,7 @@
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/error-reporting.ts": "d3788019febf32f4a488395c75b897af501fe2a869bb82059d107dbcd076a74d",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
-    "src/config/firestore-collections.ts": "2212c709e1448322ed490e3ca593dc825d83ef9310623bb6ec55f5c45b983b08",
+    "src/config/firestore-collections.ts": "f0347e7e99e458d08112d9d306fa5b24885348f2fc8fa99a426fa13e593f59ef",
     "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
     "src/config/gcs-buckets.ts": "c5e906713dc47ce5d3be96d97142a31839532a43304947dfdb7f7dc52c697014",
     "src/config/geographic-config.ts": "42453bbb4e8870560540403f219cb9b26f6308519f6b28c9cc8ef4a8de59deee",

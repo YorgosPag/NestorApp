@@ -27,7 +27,8 @@
  */
 
 import React from 'react';
-import { Layers } from 'lucide-react';
+import { AlertTriangle, Layers } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -69,12 +70,14 @@ interface FloorTabButtonProps {
   visibleInAll: boolean;
   emptyLabel: string;
   checkboxLabel: string;
+  conflictLabel: string;
+  conflictDescription: string;
   onSelect: (tab: FloorTab) => void;
   onToggleVisible: (tab: FloorTab) => void;
 }
 
 const FloorTabButton: React.FC<FloorTabButtonProps> = ({
-  tab, active, visibleInAll, emptyLabel, checkboxLabel, onSelect, onToggleVisible,
+  tab, active, visibleInAll, emptyLabel, checkboxLabel, conflictLabel, conflictDescription, onSelect, onToggleVisible,
 }) => {
   const colors = useSemanticColors();
   const stateClass = active
@@ -106,7 +109,43 @@ const FloorTabButton: React.FC<FloorTabButtonProps> = ({
           </span>
         )}
       </button>
+      {tab.conflict && (
+        <FloorConflictBadge label={conflictLabel} description={conflictDescription} active={active} />
+      )}
     </span>
+  );
+};
+
+interface FloorConflictBadgeProps {
+  label: string;
+  description: string;
+  active: boolean;
+}
+
+/**
+ * Σήμα σύγκρουσης: ο όροφος παραβιάζει τη μοναδικότητα της στοίβας (ίδιος αριθμός/όνομα με άλλον). Εικονίδιο **και**
+ * κείμενο — ποτέ μόνο χρώμα. Το κλικ ανοίγει τη διαχείριση ορόφων, όπου η σύγκρουση επιλύεται.
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ (2026-10-10): δύο έγγραφα «Ισόγειο» στο ίδιο κτίριο έδειχναν δύο πανομοιότυπες καρτέλες — ο
+ * άνθρωπος δεν μπορούσε να ξέρει ούτε ότι υπάρχει πρόβλημα ούτε ποια είναι η «σωστή».
+ */
+const FloorConflictBadge: React.FC<FloorConflictBadgeProps> = ({ label, description, active }) => {
+  const colors = useSemanticColors();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={description}
+          onClick={() => FloorManagementDialogStore.open()}
+          className={`flex shrink-0 items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${active ? colors.text.inverse : colors.text.error}`}
+        >
+          <AlertTriangle size={12} aria-hidden="true" />
+          <span>{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{description}</TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -142,6 +181,8 @@ export const FloorTabBar: React.FC = () => {
           visibleInAll={(floorVisibilityModes.get(tab.levelId ?? '') ?? 'show') !== 'hide'}
           emptyLabel={t('floorTabs.emptyBadge')}
           checkboxLabel={t('floorTabs.floorVisibleAria', { floor: tab.label })}
+          conflictLabel={t('floorTabs.conflictBadge')}
+          conflictDescription={t('floorTabs.conflictTooltip', { floor: tab.label })}
           onSelect={onSelectTab}
           onToggleVisible={onToggleFloorVisible}
         />

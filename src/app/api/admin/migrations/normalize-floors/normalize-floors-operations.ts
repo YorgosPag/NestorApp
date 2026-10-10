@@ -122,6 +122,7 @@ export async function handleFloorsNormalization(
       const batchFloors = floorsToCreate.slice(i, i + BATCH_SIZE);
 
       for (const floor of batchFloors) {
+        // floor-stack-authority-exempt: ιστορική μετανάστευση μίας χρήσης (ενσωματωμένοι `buildingFloors` → συλλογή `floors`), προγενέστερη του συνόρου της στοίβας· ΜΗΝ την αντιγράψεις — νέος όροφος γεννιέται ΜΟΝΟ με `writeFloorBirth`.
         batch.set(adminDb.collection(COLLECTIONS.FLOORS).doc(floor.id), floor);
       }
 

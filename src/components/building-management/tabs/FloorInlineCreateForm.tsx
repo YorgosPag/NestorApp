@@ -34,8 +34,8 @@ import { getStatusColor } from '@/lib/design-system';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { createFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { createFloor, toFloorCreatePayload } from '@/services/factories/floor.factory';
-import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { floorSlotRefusalKey } from './floor-stack-messages';
 
 // =============================================================================
 // CONSTANTS
@@ -48,7 +48,8 @@ type ExistingFloorElevation = { number: number; elevation?: number | null; heigh
 
 interface FloorMutationResponse {
   floorId?: string;
-  data?: { floorId: string };
+  sameElevationFloorIds?: string[];
+  data?: { floorId: string; sameElevationFloorIds?: string[] };
 }
 
 // =============================================================================
@@ -148,7 +149,7 @@ export function FloorInlineCreateForm({
   existingFloors = [],
 }: FloorInlineCreateFormProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-  const { success, error: notifyError } = useNotifications();
+  const { success, error: notifyError, warning: notifyWarning } = useNotifications();
   const colors = useSemanticColors();
   const floorLabel = useFloorLabel();
 
@@ -247,11 +248,16 @@ export function FloorInlineCreateForm({
 
       const result = await createFloorWithPolicy<FloorMutationResponse>({ payload: toFloorCreatePayload(floor, projectId) });
       success(t('tabs.floors.createSuccess'));
+      // Ίδιο υψόμετρο με άλλη στάθμη: επιτρέπεται (Revit), αλλά ο άνθρωπος πρέπει να το ξέρει.
+      const sameElevation = result?.sameElevationFloorIds ?? result?.data?.sameElevationFloorIds;
+      if (sameElevation && sameElevation.length > 0) notifyWarning(t('tabs.floors.createdSameElevation'));
       const createdId = result?.floorId ?? result?.data?.floorId;
       onCreated(createdId, { number: num, name: floor.name ?? '' });
     } catch (err) {
-      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        notifyError(t('tabs.floors.duplicateNumber'));
+      // Η άρνηση μοναδικότητας λέει ΤΙ είναι πιασμένο: αριθμός, όνομα ή είδος ειδικής στάθμης.
+      const refusalKey = floorSlotRefusalKey(err);
+      if (refusalKey) {
+        notifyError(t(refusalKey));
       } else {
         const msg = err instanceof Error ? err.message : '';
         notifyError(t('tabs.floors.createError') + (msg ? `: ${msg}` : ''));
@@ -259,7 +265,7 @@ export function FloorInlineCreateForm({
     } finally {
       setCreating(false);
     }
-  }, [buildingId, projectId, createName, createNumber, createElevation, createHeight, onCreated, t, success, notifyError]);
+  }, [buildingId, projectId, createName, createNumber, createElevation, createHeight, onCreated, t, success, notifyError, notifyWarning]);
 
   return (
     <div

@@ -25,6 +25,8 @@ import {
 } from '@/subapps/dxf-viewer/bim/stairs/stair-floor-sync';
 import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import { isBuildingStorey } from '@/utils/floor-naming';
+import { isIntermediateStorey } from '@/lib/floor/floor-stack-integrity';
+import { describeFloorStackConflicts, describeSameElevation, floorSlotRefusalKey } from './floor-stack-messages';
 import type { FloorRecord, FloorsApiResponse, FloorMutationResponse } from './useFloorsTabState.types';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
@@ -201,8 +203,11 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     if (lowest > 0) {
       out.push(t('tabs.floors.continuityNoBase', { lowest }));
     }
-    return out;
+    return [...out, ...describeSameElevation(floors, t)];
   }, [floors, floorGaps, t]);
+
+  /** Συγκρούσεις μοναδικότητας που υπάρχουν ΗΔΗ στα δεδομένα (ίδιος αριθμός/όνομα/είδος) — σφάλμα προς επίλυση. */
+  const stackConflicts = useMemo(() => describeFloorStackConflicts(floors, t), [floors, t]);
 
   /**
    * ADR-451 / ADR-461 — `elevation` is the SSoT, `height` its derived projection.
@@ -344,6 +349,13 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
       success(t('tabs.floors.editSuccess'));
       await fetchFloors();
     } catch (err) {
+      // Πιασμένος αριθμός/όνομα/είδος είναι επίσης `409` — αλλά ΔΕΝ είναι σύγκρουση εκδόσεων: ο άνθρωπος μένει
+      // στην επεξεργασία και διορθώνει την τιμή του.
+      const refusalKey = floorSlotRefusalKey(err);
+      if (refusalKey) {
+        notifyError(t(refusalKey));
+        return;
+      }
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
         notifyError(t('tabs.floors.versionConflict'));
         setEditingId(null);
@@ -358,18 +370,9 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
   };
 
   const handleDelete = async (floor: FloorRecord) => {
-    // ADR-461 — only COUNTED storeys sandwich a floor. A special level (foundation
-    // at −1, roof, stair-penthouse) never makes a counted storey "intermediate",
-    // and a special level is itself always deletable (mirrors the server guard).
-    const targetIsSpecial = floor.kind !== undefined && !isBuildingStorey(floor.kind);
-    const countedNums = floors
-      .filter((f) => f.kind === undefined || isBuildingStorey(f.kind))
-      .map((f) => f.number);
-    const isIntermediate =
-      !targetIsSpecial &&
-      countedNums.some((n) => n < floor.number) &&
-      countedNums.some((n) => n > floor.number);
-    if (isIntermediate) {
+    // ADR-461 — only COUNTED storeys sandwich a floor; a special level is always deletable, and so is a
+    // duplicate (it leaves no gap). The SAME predicate the server applies inside its transaction.
+    if (isIntermediateStorey(floors, floor.id)) {
       await confirm({
         title: t('tabs.floors.deleteIntermediateTitle'),
         description: t('tabs.floors.deleteIntermediate'),
@@ -469,7 +472,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    floorGaps, continuityWarnings, heightDerivedFloorIds,
+    floorGaps, continuityWarnings, stackConflicts, heightDerivedFloorIds,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog, confirm,
   };

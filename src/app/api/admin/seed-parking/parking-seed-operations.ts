@@ -89,7 +89,7 @@ function hostedFieldsFor(template: (typeof PARKING_TEMPLATES)[number], companyId
   const plan = planHostedFloorBackfill({ floor: template.floor, buildingId: TARGET_BUILDING.id, companyId }, index);
   if (plan.kind === 'write') return plan.fields;
   if (plan.kind === 'unresolved') {
-    logger.warn('Seed parking floor not resolved — run seed-floors first', { number: template.number, reason: plan.reason });
+    logger.warn('Seed parking floor not resolved — create the building floors first', { number: template.number, reason: plan.reason });
   }
   return {};
 }

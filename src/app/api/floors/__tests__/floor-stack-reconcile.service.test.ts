@@ -63,12 +63,22 @@ function makeDb(floors: SeedDoc[], updates: Update[]) {
       docs: floors.map((d) => ({ id: d.id, ref: { id: d.id, parent: { id: col } }, data: () => d.data })),
     }),
   });
+  const readable = { get: async () => ({ exists: false, data: () => undefined }) };
   return {
-    collection: (name: string) => makeQuery(name),
+    // Το κλειδί της στοίβας (`floor_stack_locks/{buildingId}`) διαβάζεται με id — εδώ πάντα «δεν υπάρχει ακόμη».
+    collection: (name: string) => ({ ...makeQuery(name), doc: () => readable }),
     batch: () => ({
       update: (ref: { id: string }, patch: Record<string, unknown>) => updates.push({ ref, patch }),
       commit: jest.fn().mockResolvedValue(undefined),
     }),
+    // Η επανατοποθέτηση ειδικών σταθμών γράφει μέσα στη συναλλαγή της στοίβας (η ατομικότητα δοκιμάζεται στο
+    // `floor-stack-authority.test.ts`, πάνω στο ψεύτικο Firestore· εδώ μόνο ΤΙ γράφεται).
+    runTransaction: async <T>(body: (transaction: unknown) => Promise<T>): Promise<T> =>
+      body({
+        get: (target: { get: () => Promise<unknown> }) => target.get(),
+        update: (ref: { id: string }, patch: Record<string, unknown>) => updates.push({ ref, patch }),
+        set: () => undefined,
+      }),
   };
 }
 

@@ -1758,6 +1758,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/idempotency-records.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ─── ΤΟ ΚΛΕΙΔΙ ΤΗΣ ΣΤΟΙΒΑΣ ΟΡΟΦΩΝ (CHECK 3.102) ─────────────────────────────
+  // Γραφή από πελάτη = ψεύτικη σύγκρουση σε κάθε αλλαγή ορόφου του κτιρίου.
+  {
+    collection: 'floor_stack_locks',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/floor-stack-locks.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   {
     collection: 'workspace_aliases',
     pattern: 'deny_all',

@@ -2,6 +2,19 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **10/10 — ΟΙ ΠΥΛΕΣ «ΕΝΑΣ ΓΡΑΦΕΑΣ» ΚΟΥΒΑΛΟΥΝ ΕΞΙ ΑΝΤΙΓΡΑΦΑ ΤΩΝ ΙΔΙΩΝ ΕΡΓΑΛΕΙΩΝ AST** *(ADR-910, εύρημα κατά τη συγγραφή της CHECK 3.102)*
+
+  **Τι**: `sourceFileOf` · `chainNodes` · `exemptionAbove` (και, στις περισσότερες, `isCreation` / `classifyByExemption`)
+  είναι αντιγραμμένα αυτούσια. **Πού**: `grep -rln "function chainNodes" scripts` ⇒ **6** αρχεία (μετρημένο 2026-10-10):
+  `check-cde-authority.js` · `check-network-thread-authority.js` · `check-project-member-authority.js` ·
+  `check-retired-property-write.js` · `check-sender-authority.js` · `check-view-signal-authority.js`.
+  **Γιατί δεν το έπιασε πύλη**: το ratchet του jscpd (Layer 2) σαρώνει **μόνο** `src/` — το `scripts/` είναι εκτός
+  (N.18, δηλωμένο τυφλό σημείο). **Τι υπάρχει ήδη**: `scripts/lib/write-authority/ast.js` — η κοινή εκδοχή, με πρώτο
+  καταναλωτή την CHECK 3.102 (`check-floor-stack-authority.js`). **Θεραπεία**: κάθε μία από τις έξι να κάνει
+  `require('./lib/write-authority/ast')` και να σβήσει το δικό της αντίγραφο· οι σουίτες τους (`*-gate.test.js`)
+  εισάγουν `sourceFileOf` από την πύλη, άρα η επανεξαγωγή του πρέπει να μείνει. **Γιατί όχι τώρα**: 6 αρχεία, 6 πύλες
+  που μπλοκάρουν commits — θέλει δική του συνεδρία και τις σουίτες τους μία-μία (>1 ώρα, 4+ αρχεία ⇒ N.0.2).
+
 - 🟡 **08/10 — ΤΟ «ΠΛΑΙΣΙΟ ΕΝΟΤΗΤΑΣ» ΕΙΝΑΙ ΓΡΑΜΜΕΝΟ ΜΕ ΤΟ ΧΕΡΙ ΣΕ 63 ΑΡΧΕΙΑ** *(ADR-777 §8.87.4, εύρημα κατά το audit)*
 
   **Τι**: η συνταγή `rounded-(md|lg) border border-border bg-card p-4` πάνω σε `<section>` — δηλαδή «`Card` που είναι

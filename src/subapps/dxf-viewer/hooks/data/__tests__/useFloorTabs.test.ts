@@ -114,6 +114,36 @@ describe('useFloorTabs — mapping & labels', () => {
     expect(result.current.activeFloorId).toBe('f1');
   });
 
+  it('🔴 flags BOTH floors of a duplicate (the 2026-10-10 incident: two «Ισόγειο», same number) — and only those', () => {
+    mockUseLevelsContext.mockReturnValue(visibleCtx());
+    mockUseFloorsByBuilding.mockReturnValue({
+      floors: [
+        floor('f1', 0, { name: 'Ισόγειο', kind: 'standard' }),
+        floor('f1b', 0, { name: 'Ισόγειο', kind: 'standard' }),
+        floor('f2', 1, { name: '1ος Όροφος', kind: 'standard' }),
+      ],
+      loading: false,
+    });
+
+    const { result } = renderHook(() => useFloorTabs());
+    const conflictOf = (id: string) => result.current.tabs.find((t) => t.floorId === id)!.conflict;
+    expect([conflictOf('f1'), conflictOf('f1b'), conflictOf('f2')]).toEqual([true, true, false]);
+  });
+
+  it('a foundation sharing its number with a basement is NOT a conflict (ADR-461 R6)', () => {
+    mockUseLevelsContext.mockReturnValue(visibleCtx());
+    mockUseFloorsByBuilding.mockReturnValue({
+      floors: [
+        floor('fnd', -1, { name: 'F', kind: 'foundation' }),
+        floor('bsm', -1, { name: 'Υπόγειο', kind: 'basement' }),
+      ],
+      loading: false,
+    });
+
+    const { result } = renderHook(() => useFloorTabs());
+    expect(result.current.tabs.every((t) => !t.conflict)).toBe(true);
+  });
+
   it('produces a virtual tab for a floor with no level', () => {
     mockUseLevelsContext.mockReturnValue(visibleCtx());
     mockUseFloorsByBuilding.mockReturnValue({

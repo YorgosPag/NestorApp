@@ -11,6 +11,8 @@
  * @module lib/firestore/entity-creation.types
  */
 
+import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
+
 import type { AuthContext, AuditTargetType } from '@/lib/auth/types';
 import type { AuditEntityType } from '@/types/audit-trail';
 import type { PropertyType } from '@/types/property';
@@ -270,6 +272,26 @@ export interface EntityCreationParams {
    * instead of `diffFields` so the History tab shows names, not IDs.
    */
   auditFieldResolvers?: Record<string, (id: unknown) => Promise<string | null>>;
+  /**
+   * Optional **transactional commit** — replaces the plain `.set()` of the new document.
+   *
+   * For entities whose birth must be atomic with something else (an invariant check, a
+   * sibling write): the caller opens its own transaction and writes `write.doc` at
+   * `write.ref` inside it — with `create`, so a colliding id fails instead of overwriting.
+   * Throwing (e.g. `ApiError(409)`) aborts the creation: nothing is written, no audit row.
+   * The audit trail is recorded by `createEntity` **after** this resolves — never inside
+   * the transaction, which reruns on contention. Absent → `.set()` as before.
+   */
+  commit?: (write: EntityCommitWrite) => Promise<void>;
+}
+
+/** What a transactional {@link EntityCreationParams.commit} receives: the finished document and where it goes. */
+export interface EntityCommitWrite {
+  readonly db: Firestore;
+  readonly ref: DocumentReference;
+  readonly entityId: string;
+  /** The sanitized document, common fields included — write it as-is. */
+  readonly doc: Readonly<Record<string, unknown>>;
 }
 
 /** Result returned by createEntity() */

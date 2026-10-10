@@ -226,6 +226,7 @@ class FloorsNormalizationMigrationSteps {
             try {
               // Create new document in floors collection
               const floorRef = doc(collection(db, COLLECTIONS.FLOORS), floor.id);
+              // floor-stack-authority-exempt: ιστορική μετανάστευση μίας χρήσης με client SDK — οι κανόνες (`floors: allow write: if false`) την αρνούνται ήδη· μένει ως τεκμήριο, όχι ως διαδρομή εγγραφής.
               batch.set(floorRef, floor);
 
               logger.info('Queued floor', { floorName: floor.name, buildingName: floor.buildingName });

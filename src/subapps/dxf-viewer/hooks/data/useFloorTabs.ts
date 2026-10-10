@@ -24,6 +24,7 @@ import { useLevelsContext } from '../../systems/levels/LevelsSystem';
 import { useFloorsByBuilding, type FloorOption } from '@/components/properties/shared/useFloorsByBuilding';
 import { inferKindFromNumber } from '@/utils/floor-naming';
 import { canonicalFloorLongName } from '@/lib/floor/floor-label-bundle';
+import { conflictedFloorIds } from '@/lib/floor/floor-stack-integrity';
 import { useViewMode3DStore, type Floor3DScope } from '../../bim-3d/stores/ViewMode3DStore';
 import type { FloorVisMode } from '../../bim-3d/utils/floor-visibility-state';
 
@@ -38,6 +39,12 @@ export interface FloorTab {
   readonly levelId: string | null;
   /** True when the linked level already carries a floorplan (scene file or entities). */
   readonly hasFloorplan: boolean;
+  /**
+   * True when this floor breaks the building's uniqueness rule with another floor (same number, same name,
+   * or a second special level of its kind) — data written outside the app's floor-stack boundary. The strip
+   * shows it as a problem to resolve, never as two indistinguishable tabs (incident 2026-10-10).
+   */
+  readonly conflict: boolean;
 }
 
 export interface UseFloorTabsResult {
@@ -100,15 +107,26 @@ export function useFloorTabs(): UseFloorTabsResult {
     return map;
   }, [levels]);
 
+  // The SAME rule the server applies when it writes a floor (lib/floor/floor-stack-integrity) — here it
+  // only detects what is already stored.
+  const conflicted = useMemo(() => conflictedFloorIds(floors), [floors]);
+
   const tabs = useMemo<FloorTab[]>(() => {
     return floors.map((floor) => {
       const levelId = levelByFloorId.get(floor.id) ?? null;
       const linked = levelId ? levels.find((l) => l.id === levelId) : undefined;
       const hasFloorplan = !!linked
         && (!!linked.sceneFileId || (getLevelScene(linked.id)?.entities.length ?? 0) > 0);
-      return { floorId: floor.id, number: floor.number, label: floorLabel(floor), levelId, hasFloorplan };
+      return {
+        floorId: floor.id,
+        number: floor.number,
+        label: floorLabel(floor),
+        levelId,
+        hasFloorplan,
+        conflict: conflicted.has(floor.id),
+      };
     });
-  }, [floors, levelByFloorId, levels, getLevelScene]);
+  }, [floors, levelByFloorId, levels, getLevelScene, conflicted]);
 
   // ADR-399 Phase B/C — 3D scope + per-level visibility (SSoT = ViewMode3DStore).
   const floor3DScope = useViewMode3DStore((s) => s.floor3DScope);

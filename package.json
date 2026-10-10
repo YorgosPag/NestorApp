@@ -266,6 +266,8 @@
     "retired-property-write:report": "node scripts/check-retired-property-write.js",
     "test:retired-property-write": "jest scripts/__tests__/check-retired-property-write.test.js",
     "test:project-member-authority":"jest scripts/__tests__/project-member-authority-gate.test.js src/lib/auth/__tests__/project-team-birth-anchor.test.ts",
+    "floor-stack-authority:report": "node scripts/check-floor-stack-authority.js",
+    "test:floor-stack-authority": "jest scripts/__tests__/floor-stack-authority-gate.test.js src/app/api/floors/__tests__/floor-stack-authority.test.ts src/lib/floor/__tests__/floor-stack-integrity.test.ts",
     "network-thread-authority:report": "node scripts/check-network-thread-authority.js",
     "server-action-boundary:check": "node scripts/check-server-action-boundary.js",
     "server-action-boundary:report": "node scripts/check-server-action-boundary.js --report",

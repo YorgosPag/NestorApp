@@ -543,6 +543,16 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         queryType: 'equals',
         skipCompanyFilter: true,
       },
+      // Το κλειδί της στοίβας ορόφων (`floor_stack_locks/{buildingId}`) πεθαίνει με το κτίριό του. Δεν είναι
+      // οντότητα και δεν μπλοκάρει τη διαγραφή· το `buildingId` είναι ήδη μοναδικό, άρα χωρίς φίλτρο εταιρείας
+      // (ο υπερδιαχειριστής σβήνει κτίριο άλλου ενοικιαστή).
+      {
+        collection: COLLECTIONS.FLOOR_STACK_LOCKS,
+        foreignKey: 'buildingId',
+        label: 'Κλειδί στοίβας ορόφων',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
     ],
     dependencies: [
       {

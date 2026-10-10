@@ -32,6 +32,7 @@ import { updateBuildingWithPolicy } from '@/services/building/building-mutation-
 import { createFloor, toFloorCreatePayload } from '@/services/factories/floor.factory';
 import { isBuildingStorey } from '@/utils/floor-naming';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { floorSlotRefusalKey } from './floor-stack-messages';
 import {
   generateFloorStack,
   DEFAULT_TYPICAL_STOREY_HEIGHT_M,
@@ -173,7 +174,9 @@ export function BuildingVerticalSetupForm({
       }
       onComplete();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
+      // Άρνηση μοναδικότητας (πιασμένος αριθμός/όνομα/είδος) ⇒ το μεταφρασμένο μήνυμά της, όχι το αγγλικό του διακομιστή.
+      const refusalKey = floorSlotRefusalKey(err);
+      const msg = refusalKey ? t(refusalKey) : err instanceof Error ? err.message : '';
       notifyError(t('tabs.floors.quickSetup.error') + (msg ? `: ${msg}` : ''));
     } finally {
       setBusy(false);

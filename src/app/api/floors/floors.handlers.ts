@@ -5,8 +5,6 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { groupByKey } from '@/utils/collection-utils';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -20,7 +18,6 @@ import type {
   FloorUpdateResponse,
 } from './floors.types';
 import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
-import { isBuildingStorey, isFloorKind } from '@/utils/floor-naming';
 import {
   buildFloorsQuery,
   loadFloorInTenant,
@@ -28,10 +25,10 @@ import {
   sortFloors,
 } from './floors.shared';
 import { tenantScopeLabel } from '@/lib/auth/tenant-scope';
-import { reconcileSpecialLevelPlacement } from './floor-stack-reconcile.service';
-import { assertFloorSlotFree } from './floor-slot';
+import { writeFloorBirth } from './floor-birth';
+import { FLOOR_INTERMEDIATE, removeFloor } from './floor-removal';
+import { floorSlotCompanion } from './floor-slot-companion';
 import { buildFloorUpdates, runFloorUpdateEffects } from './floor-update-effects';
-import { buildFloorCascadeActor } from './_shared/floor-cascade-audit';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 
 const logger = createModuleLogger('FloorsRoute');
@@ -176,18 +173,14 @@ export async function handleCreateFloor(
     if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
     if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
-    // ADR-461 — kind-aware uniqueness, one rule shared with the update path (floor-slot.ts),
-    // scoped to the building OWNER's tenant. A missing building is refused by createEntity below.
-    const ownerCompanyId = buildingDoc.data()?.companyId;
-    if (typeof ownerCompanyId === 'string') {
-      await assertFloorSlotFree(db, { buildingId: body.buildingId, companyId: ownerCompanyId }, { number: body.number, kind: body.kind });
-    }
-
-    const result = await createEntity('floor', {
-      auth: ctx,
-      parentId: body.buildingId,
-      entitySpecificFields,
-      apiPath: '/api/floors (POST)',
+    // ADR-461 — μοναδικότητα (αριθμός/είδος/όνομα), γέννηση και επανατοποθέτηση ειδικών σταθμών (η θεμελίωση
+    // κατεβαίνει όταν προστίθεται υπόγειο, η απόληξη ανεβαίνει όταν προστίθεται όροφος) σε ΜΙΑ συναλλαγή, κάτω από
+    // το κλειδί της στοίβας. Κτίριο που λείπει το αρνείται το `createEntity`· κτίριο χωρίς ενοικιαστή, η γέννηση.
+    const result = await writeFloorBirth({
+      db,
+      ctx,
+      buildingId: body.buildingId,
+      fields: entitySpecificFields,
       auditFieldResolvers: {
         buildingId: async (id) => {
           if (!id || typeof id !== 'string') return null;
@@ -201,26 +194,11 @@ export async function handleCreateFloor(
       },
     });
 
-    // ADR-461 — Revit-true satellite placement: keep foundation always at the
-    // bottom & roof/stair-penthouse always at the top after this create. Adding a
-    // basement pushes the foundation further down; adding a top floor pushes the
-    // penthouse further up. Non-fatal — the floor is already created.
-    if (ctx.companyId) {
-      try {
-        // Αιτία = ο όροφος που μόλις γεννήθηκε· η γραμμή γέννησης γράφεται μέσα στο `createEntity`.
-        const actor = await buildFloorCascadeActor({
-          ctx, entityType: ENTITY_TYPES.FLOOR, entityId: result.id, entityName: body.name, auditId: null,
-        });
-        await reconcileSpecialLevelPlacement(db, body.buildingId, ctx.companyId, actor);
-      } catch (placeErr) {
-        logger.warn('[Floors/Create] Special-level placement reconcile failed (floor created)', {
-          buildingId: body.buildingId, error: getErrorMessage(placeErr),
-        });
-      }
-    }
-
     return apiSuccess<FloorCreateResponse>(
-      { floorId: result.id },
+      {
+        floorId: result.floorId,
+        ...(result.sameElevationFloorIds.length > 0 ? { sameElevationFloorIds: [...result.sameElevationFloorIds] } : {}),
+      },
       `Floor "${body.name}" created successfully`
     );
   } catch (error) {
@@ -252,8 +230,9 @@ export async function handleUpdateFloor(
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
-    await assertSlotStillFree(db, body.floorId, before, updates);
 
+    // ADR-461 / ADR-903 §6 — αλλαγή αριθμού, είδους ή ονόματος ⇒ ο ίδιος κανόνας μοναδικότητας με τη γέννηση,
+    // **μέσα** στη συναλλαγή της εγγραφής (ο συνοδός διαβάζει το κλειδί και τη στοίβα, και σφραγίζει μαζί).
     const versionResult = await withVersionCheck({
       db,
       collection: COLLECTIONS.FLOORS,
@@ -261,6 +240,7 @@ export async function handleUpdateFloor(
       expectedVersion,
       updates,
       userId: ctx.uid,
+      companion: floorSlotCompanion(db, body.floorId, updates, ctx.uid),
     });
     logger.info('[Floors/Update] Floor updated', { floorId: body.floorId, _v: versionResult.newVersion });
 
@@ -299,24 +279,6 @@ export async function handleUpdateFloor(
   }
 }
 
-/**
- * ADR-461 / ADR-903 §6 — αλλαγή αριθμού ή είδους ⇒ ο ίδιος κανόνας μοναδικότητας με τη δημιουργία,
- * **πριν** τη γραφή (αλλιώς δύο «1ος όροφος» και ο cascade θα τους μπέρδευε).
- */
-async function assertSlotStillFree(
-  db: FirebaseFirestore.Firestore,
-  floorId: string,
-  before: Readonly<Record<string, unknown>>,
-  updates: Readonly<Record<string, unknown>>,
-): Promise<void> {
-  if (updates.number === undefined && updates.kind === undefined) return;
-  const { buildingId, companyId } = before;
-  const number = updates.number ?? before.number;
-  if (typeof buildingId !== 'string' || typeof companyId !== 'string' || typeof number !== 'number') return;
-  const kind = updates.kind ?? before.kind;
-  await assertFloorSlotFree(db, { buildingId, companyId }, { number, kind: isFloorKind(kind) ? kind : undefined }, floorId);
-}
-
 export async function handleDeleteFloor(
   request: NextRequest,
   ctx: AuthContext
@@ -334,56 +296,18 @@ export async function handleDeleteFloor(
     if (loaded instanceof NextResponse) {
       return loaded as NextResponse<FloorDeleteResponse>;
     }
-    const { ref: floorRef, data: floorData } = loaded;
 
-    const siblingsSnap = await db.collection(COLLECTIONS.FLOORS)
-      .where(FIELDS.BUILDING_ID, '==', floorData?.buildingId)
-      .get();
-    // ADR-461 — only COUNTED storeys sandwich a floor. A special level (foundation
-    // at −1, roof, stair-penthouse) never makes a counted storey "intermediate",
-    // and a special level is itself always deletable (it is outside the stack).
-    const targetFloor = floorData as FloorDocument;
-    const targetIsSpecial = targetFloor.kind !== undefined && !isBuildingStorey(targetFloor.kind);
-    const countedSiblingNumbers = siblingsSnap.docs
-      .filter((d) => d.id !== floorId)
-      .map((d) => d.data() as FloorDocument)
-      .filter((f) => f.kind === undefined || isBuildingStorey(f.kind))
-      .map((f) => f.number);
-    const targetNumber = targetFloor.number;
-    const isIntermediate =
-      !targetIsSpecial &&
-      countedSiblingNumbers.some((n) => n < targetNumber) &&
-      countedSiblingNumbers.some((n) => n > targetNumber);
-    if (isIntermediate) {
-      return NextResponse.json({
-        success: false,
-        error: 'Cannot delete an intermediate floor. Delete the floors above it first.',
-      }, { status: 422 });
-    }
-
-    await executeDeletion(db, 'floor', floorId, ctx.uid, ctx.companyId);
+    // ADR-461 — κρίση «ενδιάμεσος;» (μόνο ΜΕΤΡΟΥΜΕΝΟΙ όροφοι σφηνώνουν· ειδική στάθμη σβήνεται πάντα), διαγραφή
+    // και επανατοποθέτηση όσων ειδικών σταθμών μένουν (η θεμελίωση ανεβαίνει κάτω από τον νέο χαμηλότερο όροφο)
+    // σε ΜΙΑ συναλλαγή, κάτω από το κλειδί της στοίβας.
+    await removeFloor({ db, ctx, floorId, floor: loaded.data });
     logger.info('[Floors/Delete] Floor deleted', { floorId, userId: ctx.uid });
-
-    // ADR-461 — re-place special levels after a counted storey is removed, so the
-    // foundation rises back up under the new lowest counted storey (and the
-    // penthouse drops onto the new top). Non-fatal — the floor is already deleted.
-    const deletedBuildingId = floorData?.buildingId as string | undefined;
-    if (ctx.companyId && deletedBuildingId) {
-      try {
-        // Αιτία = ο όροφος που μόλις σβήστηκε· η γραμμή διαγραφής γράφεται μέσα στο `executeDeletion`.
-        const actor = await buildFloorCascadeActor({
-          ctx, entityType: ENTITY_TYPES.FLOOR, entityId: floorId, entityName: targetFloor.name ?? null, auditId: null,
-        });
-        await reconcileSpecialLevelPlacement(db, deletedBuildingId, ctx.companyId, actor);
-      } catch (placeErr) {
-        logger.warn('[Floors/Delete] Special-level placement reconcile failed (floor deleted)', {
-          buildingId: deletedBuildingId, error: getErrorMessage(placeErr),
-        });
-      }
-    }
 
     return NextResponse.json({ success: true, message: `Floor "${floorId}" deleted` });
   } catch (error) {
+    if (error instanceof ApiError && error.errorCode === FLOOR_INTERMEDIATE) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
+    }
     logger.error('[Floors/Delete] Error', { error: getErrorMessage(error, 'Unknown') });
     return NextResponse.json({
       success: false,

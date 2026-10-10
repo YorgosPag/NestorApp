@@ -39,29 +39,34 @@ jest.mock('../floors.shared', () => ({
   resolveFloorsListParams: jest.fn(),
   sortFloors: jest.fn(),
 }));
-jest.mock('../floor-stack-reconcile.service', () => ({
-  reconcileFloorStackAfterEdit: jest.fn(),
-  // ADR-461 satellite placement — called after every successful create. The
-  // handler wraps it in try/catch, so a missing double failed silently as a
-  // logged warning instead of a test failure.
-  reconcileSpecialLevelPlacement: jest.fn(),
-}));
+// ADR-461 satellite placement is planned INSIDE the birth transaction — the planner stays real.
 
-const createEntityMock = jest.fn().mockResolvedValue({ id: 'floor_new_1' });
+// `createEntity` as the floor birth sees it: the finished document (stamped with the building
+// owner's tenant) handed to the caller's transactional `commit` — exactly what the real one does.
+const createEntityMock = jest.fn(async (_type: string, params: EntityCreationParams) => {
+  const db = fake as unknown as Firestore;
+  const doc = { companyId: 'co_1', ...params.entitySpecificFields };
+  await params.commit?.({ db, ref: db.collection('floors').doc('floor_new_1'), entityId: 'floor_new_1', doc });
+  return { id: 'floor_new_1', code: null, doc };
+});
 jest.mock('@/lib/firestore/entity-creation.service', () => ({
-  createEntity: (...args: unknown[]) => createEntityMock(...args),
+  createEntity: (type: string, params: EntityCreationParams) => createEntityMock(type, params),
 }));
 
-// Minimal Firestore Admin double: building lookup + the ADR-461 sibling scan.
-const getAdminFirestoreMock = jest.fn();
+// The verified fake: the uniqueness rule now runs INSIDE the stack transaction, so the double
+// must be a real transactional store, not a canned query.
+let fake: FakeFirestore;
 jest.mock('@/lib/firebaseAdmin', () => ({
-  getAdminFirestore: () => getAdminFirestoreMock(),
+  getAdminFirestore: () => fake,
 }));
 
 import { handleCreateFloor } from '../floors.handlers';
 import type { AuthContext } from '@/lib/auth';
+import type { EntityCreationParams } from '@/lib/firestore/entity-creation.types';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+import type { Firestore } from 'firebase-admin/firestore';
 
-/** A floor already present in the building, as the sibling scan sees it. */
+/** A floor already present in the building, as the stack transaction reads it. */
 interface SiblingRow {
   number: number;
   kind?: string;
@@ -69,30 +74,14 @@ interface SiblingRow {
 
 /**
  * @param siblings floors the building already holds — drives the ADR-461
- *                 kind-aware uniqueness decision the handler makes in memory
+ *                 kind-aware uniqueness decision made inside the stack transaction
  */
-function makeDb(siblings: SiblingRow[] = []) {
-  const floorsQuery = {
-    where: () => floorsQuery,
-    select: () => floorsQuery,
-    limit: () => floorsQuery,
-    get: async () => ({
-      empty: siblings.length === 0,
-      docs: siblings.map((row) => ({ data: () => row })),
-    }),
-  };
-  return {
-    collection: (name: string) => ({
-      doc: () => ({
-        exists: true,
-        get: async () => ({
-          exists: true,
-          data: () => (name.includes('building') ? { name: 'Κτήριο Α', companyId: 'co_1' } : {}),
-        }),
-      }),
-      where: () => floorsQuery,
-    }),
-  };
+function seedBuilding(siblings: SiblingRow[] = []): void {
+  fake = new FakeFirestore();
+  fake.seed('buildings', 'bldg_1', { name: 'Κτήριο Α', companyId: 'co_1' });
+  siblings.forEach((row, index) => {
+    fake.seed('floors', `floor_old_${index}`, { ...row, name: `old-${index}`, buildingId: 'bldg_1', companyId: 'co_1' });
+  });
 }
 
 function makeRequest(body: Record<string, unknown>) {
@@ -115,7 +104,7 @@ const baseBody = {
 
 beforeEach(() => {
   createEntityMock.mockClear();
-  getAdminFirestoreMock.mockReturnValue(makeDb());
+  seedBuilding();
 });
 
 describe('handleCreateFloor — ADR-461 kind persistence', () => {
@@ -188,24 +177,25 @@ describe('handleCreateFloor — ADR-461 kind-aware uniqueness', () => {
   }
 
   it('rejects a counted storey whose number is already taken by a counted storey', async () => {
-    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: 0, kind: 'ground' }]));
+    seedBuilding([{ number: 0, kind: 'ground' }]);
 
     const error = await expectRejection(baseBody);
 
     expect(error.statusCode).toBe(409);
     expect(error.message).toContain('already exists in building');
-    expect(createEntityMock).not.toHaveBeenCalled();
+    // The refusal happens inside the transaction: nothing was written.
+    expect(fake.getData('floors', 'floor_new_1')).toBeUndefined();
   });
 
   it('treats a legacy floor with NO kind as a counted storey', async () => {
     // Pre-ADR-461 documents carry no `kind`; they must still block a clashing number.
-    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: 0 }]));
+    seedBuilding([{ number: 0 }]);
 
     expect((await expectRejection(baseBody)).statusCode).toBe(409);
   });
 
   it('rejects a SECOND special level of the same kind', async () => {
-    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: -1, kind: 'foundation' }]));
+    seedBuilding([{ number: -1, kind: 'foundation' }]);
 
     const error = await expectRejection({ ...baseBody, number: -5, kind: 'foundation' });
 
@@ -216,18 +206,18 @@ describe('handleCreateFloor — ADR-461 kind-aware uniqueness', () => {
   it('ALLOWS a special level to share a number with a counted storey', async () => {
     // The Revit-true case: a foundation auto-numbered −1 co-existing with a
     // manually created basement −1. A number-only check would have refused this.
-    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: -1, kind: 'basement' }]));
+    seedBuilding([{ number: -1, kind: 'basement' }]);
 
     await handleCreateFloor(makeRequest({ ...baseBody, number: -1, kind: 'foundation' }), ctx);
 
-    expect(createEntityMock).toHaveBeenCalledTimes(1);
+    expect(fake.getData('floors', 'floor_new_1')).toBeDefined();
   });
 
   it('ALLOWS a counted storey whose number is only taken by a special level', async () => {
-    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: 3, kind: 'stair-penthouse' }]));
+    seedBuilding([{ number: 3, kind: 'stair-penthouse' }]);
 
     await handleCreateFloor(makeRequest({ ...baseBody, number: 3, kind: 'standard' }), ctx);
 
-    expect(createEntityMock).toHaveBeenCalledTimes(1);
+    expect(fake.getData('floors', 'floor_new_1')).toBeDefined();
   });
 });

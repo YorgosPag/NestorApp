@@ -63,6 +63,11 @@ export type FloorsListResponse = FloorsListSuccess | FloorsListError;
 
 export interface FloorCreateResponse {
   floorId: string;
+  /**
+   * Άλλοι μετρούμενοι όροφοι του κτιρίου στο **ίδιο υψόμετρο** με τον νέο — προειδοποίηση, όχι άρνηση: η Revit το
+   * επιτρέπει, αλλά η εξαγωγή IFC ρίχνει όλα τα στοιχεία στην πρώτη στάθμη. Απόν ⇒ καμία σύμπτωση.
+   */
+  sameElevationFloorIds?: string[];
 }
 
 export type FloorUpdateResponse =

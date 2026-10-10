@@ -1138,6 +1138,15 @@ if (!process.env.SKIP_VIEW_SIGNAL_AUTHORITY)
 if (!process.env.SKIP_RETIRED_PROPERTY_WRITE)
   addThread('3.100', 'Retired property write', 'scripts/check-retired-property-write.js');
 
+// CHECK 3.102 (ADR-910) — η αρχή της στοίβας ορόφων. «Γεννά, σβήνει ή αλλάζει τη ΘΕΣΗ ενός ορόφου κάποιος ΕΞΩ
+// από το σύνορο της στοίβας, ή έμεινε ανοιχτή η πόρτα απευθείας εγγραφής;»
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: μετρημένα δύο «Ισόγειο» στο ίδιο κτίριο. Η μοναδικότητα είναι ατομική ΜΟΝΟ για όποιον
+// περνά από το κλειδί (`floor_stack_locks`) — και ο γραφέας που την παραβιάζει μπορεί να γεννηθεί σε ΟΠΟΙΟΔΗΠΟΤΕ
+// αρχείο (η επανατοποθέτηση ειδικών σταθμών έγραφε `number` από service που δεν λεγόταν «floor-slot»). Οι κανόνες
+// κλείνουν τον ΠΕΛΑΤΗ, όχι το Admin SDK. AST, ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_FLOOR_STACK_AUTHORITY)
+  addThread('3.102', 'Floor stack authority', 'scripts/check-floor-stack-authority.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

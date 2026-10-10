@@ -121,7 +121,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    continuityWarnings, heightDerivedFloorIds,
+    continuityWarnings, stackConflicts, heightDerivedFloorIds,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId, focusFloorId);
@@ -394,6 +394,17 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
               })}
             </tbody>
           </table>
+          {/* Συγκρούσεις μοναδικότητας που υπάρχουν ήδη στα δεδομένα — σφάλμα προς επίλυση, όχι προειδοποίηση. */}
+          {stackConflicts.length > 0 && (
+            <ul className="flex flex-col gap-1" role="alert">
+              {stackConflicts.map((conflict) => (
+                <li key={conflict} className={cn("flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs", getStatusColor('error', 'border'), getStatusColor('error', 'text'))}>
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  {conflict}
+                </li>
+              ))}
+            </ul>
+          )}
           {continuityWarnings.length > 0 && (
             <ul className="flex flex-col gap-1">
               {continuityWarnings.map((warning) => (

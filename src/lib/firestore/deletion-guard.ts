@@ -267,6 +267,16 @@ async function executeCascadeDeletions(
 // EXECUTE DELETION
 // ============================================================================
 
+export interface ExecuteDeletionOptions {
+  /**
+   * Optional **transactional commit** — replaces the plain `docRef.delete()` (mirror of
+   * `EntityCreationParams.commit`). For entities whose removal must be atomic with an
+   * invariant (the floor stack): the caller deletes `ref` inside its own transaction.
+   * Throwing aborts the deletion — the entity stays, and no audit row is written.
+   */
+  readonly commit?: (ref: FirebaseFirestore.DocumentReference) => Promise<void>;
+}
+
 /**
  * Execute a guarded deletion: check dependencies, cascade junctions, delete, audit.
  *
@@ -287,7 +297,8 @@ export async function executeDeletion(
   entityType: EntityType,
   entityId: string,
   deletedBy: string,
-  companyId: string
+  companyId: string,
+  options: ExecuteDeletionOptions = {},
 ): Promise<{ success: true; entityId: string }> {
   const config = DELETION_REGISTRY[entityType];
 
@@ -320,7 +331,11 @@ export async function executeDeletion(
   }
 
   // ── Step 4: Delete entity document ──
-  await docRef.delete();
+  if (options.commit) {
+    await options.commit(docRef);
+  } else {
+    await docRef.delete();
+  }
 
   logger.info(`[DeletionGuard] Deleted ${entityType}/${entityId}`, {
     entityType,

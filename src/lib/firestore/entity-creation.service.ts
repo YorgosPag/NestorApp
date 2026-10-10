@@ -343,7 +343,14 @@ export async function createEntity(
     }
   }
 
-  await adminDb.collection(entry.collection).doc(entityId).set(sanitizedDoc);
+  const entityRef = adminDb.collection(entry.collection).doc(entityId);
+  // A caller that must be atomic with something else (an invariant, a sibling write) commits
+  // inside its own transaction; everyone else gets the plain write.
+  if (params.commit) {
+    await params.commit({ db: adminDb, ref: entityRef, entityId, doc: sanitizedDoc });
+  } else {
+    await entityRef.set(sanitizedDoc);
+  }
   logger.info('Entity created', { entityType, entityId });
 
   // --- Step 9: Entity Audit Trail (ADR-195) ---

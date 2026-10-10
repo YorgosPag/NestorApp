@@ -38,7 +38,11 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'projects',
   'buildings',
   'properties',
-  'floors',
+  // 🔒 `floors` is deliberately NOT writable here. Floor uniqueness per building is enforced by
+  // one transactional boundary in the app (`src/app/api/floors/floor-stack-authority.ts`); a
+  // direct write bypasses it. Incident 2026-10-10: a building held two «Ισόγειο» documents with
+  // no `createdAt` and no audit row — written straight to the database. Create floors through
+  // the application (`POST /api/floors`). Gate: CHECK 3.102.
   'tasks',
   'leads',
   'opportunities',

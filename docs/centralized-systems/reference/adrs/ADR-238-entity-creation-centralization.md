@@ -414,6 +414,7 @@ createEntity(entityType, params):
 
 | Date | Decision | Author |
 |------|----------|--------|
+| 2026-10-10 | **ADR-910** extension — `EntityCreationParams.commit` (optional): a caller whose birth must be atomic with an invariant writes the finished document inside its **own** transaction (`create`, not `set`), replacing the plain `.set()` of step 8. Absent → unchanged for all 9 callers. First consumer: `floor-birth.ts` (floor uniqueness under the stack lock). The audit row is still recorded by `createEntity` **after** the commit resolves — never inside the transaction, which reruns on contention. A throwing `commit` aborts the creation: no document, no audit row. Mirror on the deletion side: `ExecuteDeletionOptions.commit` (`deletion-guard.ts`). The admin route `/api/admin/seed-floors` (second `createEntity('floor')` caller) was **removed**; CHECK 3.102 forbids `createEntity('floor'` outside `floor-birth.ts`. | Γιώργος Παγώνης + Claude Code |
 | 2026-03-17 | ADR Created — audit complete, architecture designed, 9 bugs documented | Γιώργος Παγώνης + Claude Code |
 | 2026-03-17 | Phase 1 IMPLEMENTED — types, service, parking canary migration. No utils file (reused existing sanitize). Single parent read optimization. | Γιώργος Παγώνης + Claude Code |
 | 2026-03-17 | Phase 2 COMPLETE — All 4 remaining endpoints migrated (storages, buildings, floors, units). 5 bugs auto-fixed. Unit codeField corrected to 'code'. Frontend FloorsTabContent adapted to canonical response format. Net -300 lines. | Γιώργος Παγώνης + Claude Code |
