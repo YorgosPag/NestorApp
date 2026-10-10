@@ -21,7 +21,12 @@ import { isInteractiveEntityCreation } from '../../../systems/events/bim-entity-
 import type { EntityCreatedOrigin } from '../../../systems/events/drawing-event-map';
 import { multiPolygonArea, projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import { safeIntersection } from '../../geometry/shared/safe-polygon-boolean';
-import { wallFootprintFromParams, wallFootprintPolygon } from '../../finishes/wall-footprint-union';
+import { buildWallFootprintRing } from '../../geometry/wall-geometry';
+import { wallFootprintFromParams } from '../../finishes/wall-footprint-union';
+import type { Point2D } from '../../../rendering/types/Types';
+import type { DxfEntityUnion, DxfWall } from '../../../canvas-v2/dxf-canvas/dxf-types';
+import { applyWallColumnCutback2D } from '../../../hooks/canvas/dxf-scene-wall-cutback';
+import { applyWallWallCrossCutback2D } from '../../../hooks/canvas/dxf-scene-wall-wall-cutback';
 import { computeWallProposal, type WallProposal } from '../../model-from-drawing/wall-proposal';
 import fixture from '../../model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
 import { computeFillingWallFootprints } from '../filling-walls-compute';
@@ -88,6 +93,35 @@ function withoutTrim(w: WallEntity): Record<string, unknown> {
   return rest;
 }
 
+const axisLength = (w: WallEntity): number =>
+  Math.hypot(w.params.end.x - w.params.start.x, w.params.end.y - w.params.start.y);
+
+/** Τετράγωνη κολώνα (μόνο ό,τι διαβάζουν οι ενώσεις, ο κριτής επικάλυψης και το κόψιμο σώματος). */
+function columnAt(id: string, c: Point2D, half: number): Entity {
+  const vertices = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => ({ x: c.x + sx * half, y: c.y + sy * half, z: 0 }));
+  return { id, type: 'column', geometry: { footprint: { vertices } } } as unknown as Entity;
+}
+
+const ringArea = (ring: readonly Point2D[]): number => multiPolygonArea([[ring.map((p): Pair => [p.x, p.y])]]);
+const piecesArea = (pieces: readonly Point2D[][]): number => pieces.reduce((sum, p) => sum + ringArea(p), 0);
+
+/** Το αποτύπωμα από τα γραμμένα params (με τις ενώσεις τους) — ανεξάρτητο από την κρυφή `geometry`. */
+const drawnFromParams = (w: WallEntity): Point2D[] => projectVerticesTo2D(wallFootprintFromParams(w.params, w.kind));
+
+/**
+ * Το σώμα κάθε τοίχου της σκηνής ΟΠΩΣ ΤΟ ΠΑΙΡΝΕΙ Ο `WallRenderer`: οι δύο πραγματικές περάσεις
+ * της μετατροπής σκηνής (κολώνες → διασταύρωση) και μετά `displayFootprint ?? δακτύλιος`
+ * (`traceWallBody`). Ο κριτής της Α-3.
+ */
+function paintedBodies(entities: readonly Entity[]): Point2D[][][] {
+  const rendered = applyWallWallCrossCutback2D(applyWallColumnCutback2D([...entities] as unknown as DxfEntityUnion[]));
+  return rendered
+    .filter((e): e is DxfWall => e.type === 'wall')
+    .map((w) => (w.geometry.displayFootprint
+      ? w.geometry.displayFootprint.map((r) => [...r])
+      : [buildWallFootprintRing(w.geometry.outerEdge.points, w.geometry.innerEdge.points)]));
+}
+
 const history = getGlobalCommandHistory();
 
 beforeEach(() => {
@@ -110,18 +144,79 @@ describe('ADR-911 Α-3 — προεπισκόπηση ≡ αποτέλεσμα',
     });
   });
 
-  it('το αποτύπωμα κάθε γραμμένου τοίχου είναι ΑΚΡΙΒΩΣ αυτό που φωτίστηκε', () => {
+  it('ό,τι φωτίστηκε είναι ΑΚΡΙΒΩΣ το σώμα που ζωγραφίζεται για κάθε γραμμένο τοίχο', () => {
+    // ADR-911 Φ3α-4 — ο κριτής είναι ο ΠΡΑΓΜΑΤΙΚΟΣ αγωγός απόδοσης πάνω στη γραμμένη σκηνή, όχι η
+    // συνάρτηση της προεπισκόπησης ξανά. Πριν, και οι δύο πλευρές ήταν `wallFootprintPolygon`
+    // (ωμό ∪ λοξοτομημένο του σοβά), που δεν αλλάζει εμβαδό όσο κι αν κοπεί ένα άκρο: η άγκυρα
+    // έμενε πράσινη ενώ το πράσινο περίγραμμα έφτανε ως τον άξονα του γείτονα.
     const proposal = propose();
     const preview = computeFillingWallFootprints(proposal.walls, ENTITIES);
     const h = harness();
 
     addWallsToScene(proposal.walls, h.accessor, { origin: 'bulk', onOverlap: 'refuse' });
 
-    const written = h.walls().map((w) => projectVerticesTo2D(wallFootprintPolygon(w)));
-    expect(written).toEqual(preview);
-    // Η άγκυρα δεν είναι κενή: οι ενώσεις ΑΛΛΑΖΟΥΝ πραγματικά αποτυπώματα σε αυτό το σχέδιο.
-    const raw = proposal.walls.map((w) => projectVerticesTo2D(wallFootprintPolygon(w)));
-    expect(written).not.toEqual(raw);
+    expect(preview).toEqual(paintedBodies(h.entities()));
+    // Δεύτερος, ανεξάρτητος μάρτυρας: τα ΓΡΑΜΜΕΝΑ params (όχι η κρυφή `geometry` που διαβάζει η
+    // απόδοση). Αν η εγγραφή άφηνε μπαγιάτικη `geometry`, οι δύο μάρτυρες θα διαφωνούσαν.
+    expect(preview).toEqual(h.walls().map((w) => [drawnFromParams(w)]));
+  });
+
+  it('η άγκυρα δεν είναι κενή: οι ενώσεις ΑΛΛΑΖΟΥΝ εμβαδό, όχι μόνο σειρά κορυφών', () => {
+    const proposal = propose();
+    const preview = computeFillingWallFootprints(proposal.walls, ENTITIES);
+    const changed = proposal.walls.filter((w, i) =>
+      Math.abs(piecesArea(preview[i]) - ringArea(buildWallFootprintRing(w.geometry.outerEdge.points, w.geometry.innerEdge.points))) > 1,
+    );
+    // 14 τοίχοι του σχεδίου κόβονται πίσω στην παρειά του γείτονα (bevel)· κανένα miter.
+    expect(changed).toHaveLength(14);
+  });
+
+  it('κανένα ζεύγος ΦΩΤΙΣΜΕΝΩΝ σωμάτων δεν μοιράζεται εμβαδό, και μαζί καλύπτουν ακριβώς τα ορθογώνια', () => {
+    const proposal = propose();
+    const preview = computeFillingWallFootprints(proposal.walls, ENTITIES);
+    const clips = preview.map((pieces): Polygon[] => pieces.map((p): Polygon => [p.map((v): Pair => [v.x, v.y])]));
+    const overlapping: string[] = [];
+    for (let i = 0; i < clips.length; i++) {
+      for (let j = i + 1; j < clips.length; j++) {
+        const area = multiPolygonArea(safeIntersection(clips[i], clips[j]));
+        if (area > 1) overlapping.push(`${i}✕${j}: ${area.toFixed(0)} mm²`);
+      }
+    }
+    expect(preview).toHaveLength(38);
+    expect(overlapping).toEqual([]);
+    const lit = preview.reduce((sum, pieces) => sum + piecesArea(pieces), 0);
+    const rects = proposal.items.filter((i) => i.status === 'ready').reduce((sum, i) => sum + i.rect.area, 0);
+    expect(lit).toBeCloseTo(rects, 3);
+  });
+
+  it('με κολώνες στη σκηνή: άκρο μέσα σε κολώνα και κολώνα στη μέση φωτίζονται όπως ζωγραφίζονται', () => {
+    // Το σχέδιο δοκιμής δεν έχει κολώνες· η ζωντανή σκηνή έχει 11. Δύο κολώνες πάνω σε τοίχους της
+    // πρότασης: η μία καταπίνει ένα άκρο, η άλλη κάθεται στη μέση του μακρύτερου και τον χωρίζει.
+    const base = propose();
+    const longest = [...base.walls].sort((a, b) => axisLength(b) - axisLength(a))[0];
+    const mid = { x: (longest.params.start.x + longest.params.end.x) / 2, y: (longest.params.start.y + longest.params.end.y) / 2 };
+    const other = base.walls.find((w) => w.id !== longest.id && axisLength(w) > 1500) as WallEntity;
+    const columns = [columnAt('col_mid', mid, 200), columnAt('col_end', other.params.start, 200)];
+    const scene = [...ENTITIES, ...columns];
+
+    const proposal = propose(scene);
+    const preview = computeFillingWallFootprints(proposal.walls, scene);
+    const h = harness(scene);
+    const result = addWallsToScene(proposal.walls, h.accessor, { origin: 'bulk', onOverlap: 'refuse' });
+
+    expect(result.refusal).toBeUndefined();
+    expect(preview).toEqual(paintedBodies(h.entities()));
+    // Δεν είναι κενό: τουλάχιστον ένας τοίχος φωτίζεται σε ΔΥΟ κομμάτια.
+    expect(preview.some((pieces) => pieces.length === 2)).toBe(true);
+    // Απόλυτος ισχυρισμός, ανεξάρτητος από τον αγωγό απόδοσης (που μοιράζεται τα βήματα κοψίματος
+    // με την προεπισκόπηση): κανένα φωτισμένο κομμάτι δεν πατά πάνω σε κολώνα.
+    const columnClips = columns.map((c): Polygon => [
+      (c as unknown as { geometry: { footprint: { vertices: Point2D[] } } }).geometry.footprint.vertices
+        .map((v): Pair => [v.x, v.y]),
+    ]);
+    const onColumn = preview.flat().reduce((sum, piece) =>
+      sum + multiPolygonArea(safeIntersection([[piece.map((v): Pair => [v.x, v.y])]], columnClips)), 0);
+    expect(onColumn).toBeLessThan(1);
   });
 
   it('Φ3α-2: με θόρυβο 0,001 mm στο σχέδιο η εγκεκριμένη πρόταση γράφεται ΟΛΟΚΛΗΡΗ (refuse)', () => {

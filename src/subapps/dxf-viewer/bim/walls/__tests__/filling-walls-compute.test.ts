@@ -11,7 +11,11 @@
  * footprints (`computeFillingWallFootprints`, 1:1 με τους τοίχους, μηδέν mutation).
  */
 
+import type { Pair, Polygon } from 'polygon-clipping';
 import type { Entity } from '../../../types/entities';
+import type { Point2D } from '../../../rendering/types/Types';
+import { multiPolygonArea } from '../../geometry/shared/polygon-utils';
+import { safeIntersection } from '../../geometry/shared/safe-polygon-boolean';
 import type { WallEntity } from '../../types/wall-types';
 import {
   computeFillingWalls,
@@ -46,6 +50,22 @@ function offset(segs: RegionLineSeg[], dx: number, dy: number): RegionLineSeg[] 
     end: { x: s.end.x + dx, y: s.end.y + dy },
   }));
 }
+
+/** Άξονο-ευθυγραμμισμένο κουτί (κάτω-αριστερή γωνία + διαστάσεις). */
+const BOX = (x: number, y: number, w: number, h: number): Point2D[] =>
+  [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
+
+/** Ελάχιστη κολώνα: μόνο το αποτύπωμα (ό,τι διαβάζουν οι ενώσεις, ο κριτής και το κόψιμο σώματος). */
+function columnBox(id: string, x: number, y: number, w: number, h: number): Entity {
+  const vertices = BOX(x, y, w, h).map((p) => ({ ...p, z: 0 }));
+  return { id, type: 'column', geometry: { footprint: { vertices } } } as unknown as Entity;
+}
+
+const toClip = (pieces: readonly Point2D[][]): Polygon[] => pieces.map((p): Polygon => [p.map((v): Pair => [v.x, v.y])]);
+const litArea = (bodies: readonly Point2D[][][]): number =>
+  bodies.reduce((sum, pieces) => sum + pieces.reduce((s, p) => s + multiPolygonArea(toClip([p])), 0), 0);
+const pairOverlap = (a: readonly Point2D[][], b: readonly Point2D[][]): number =>
+  multiPolygonArea(safeIntersection(toClip(a), toClip(b)));
 
 describe('computeFillingWalls — build parity με τον commit', () => {
   it('builds one filling wall from a thin rectangle (thickness = short, axis = long)', () => {
@@ -220,12 +240,14 @@ describe('computeFillingWallFootprints — transient miter (μηδέν mutation)
     expect(computeFillingWallFootprints([], [])).toEqual([]);
   });
 
-  it('returns one footprint polygon per wall (1:1, non-empty)', () => {
+  it('ελεύθερος τοίχος: ΕΝΑ κομμάτι, το ίδιο το ορθογώνιο (1:1 με τους τοίχους)', () => {
     const rects = findRectanglesFromSegments(rectSegments(5000, 250), TOL);
     const { walls } = computeFillingWalls(rects, {}, SU, LEVEL, []);
     const footprints = computeFillingWallFootprints(walls, []);
     expect(footprints).toHaveLength(walls.length);
-    expect(footprints[0].length).toBeGreaterThanOrEqual(4);
+    expect(footprints[0]).toHaveLength(1);
+    expect(footprints[0][0]).toHaveLength(4);
+    expect(litArea(footprints)).toBeCloseTo(5000 * 250, 3);
   });
 
   it('τρέχει το trim/miter pipeline για ζεύγος τοίχων → 1:1 footprints, μηδέν mutation', () => {
@@ -237,10 +259,72 @@ describe('computeFillingWallFootprints — transient miter (μηδέν mutation)
     const before = walls.map((w) => ({ ...w.params.start }));
     const footprints = computeFillingWallFootprints(walls, []);
     expect(footprints).toHaveLength(2);
-    footprints.forEach((fp) => expect(fp.length).toBeGreaterThanOrEqual(4));
+    footprints.forEach((pieces) => expect(pieces[0].length).toBeGreaterThanOrEqual(4));
     walls.forEach((w, i) => {
       expect(w.params.start.x).toBeCloseTo(before[i].x, 6);
       expect(w.params.start.y).toBeCloseTo(before[i].y, 6);
     });
+  });
+});
+
+describe('computeFillingWallFootprints — φωτίζεται ό,τι ΖΩΓΡΑΦΙΖΕΤΑΙ (ADR-911 Φ3α-4)', () => {
+  // Πριν: η πηγή ήταν το αποτύπωμα του σοβά (ωμό ∪ λοξοτομημένο), που αγνοεί κάθε κόψιμο. Ο
+  // βραχίονας ενός Τ φωτιζόταν ως τον ΑΞΟΝΑ του διαμπερούς και το άκρο πάνω σε κολώνα ΜΕΣΑ της.
+
+  it('Τ: ο βραχίονας φωτίζεται ως την ΠΑΡΕΙΑ του διαμπερούς — κανένα κοινό εμβαδό', () => {
+    // Διαμπερής 5000×250 στο y∈[0,250]· βραχίονας 250×3000 που ακουμπά την πάνω παρειά του.
+    const segs = [...rectSegments(5000, 250), ...offset(rectSegments(250, 3000), 2000, 250)];
+    const rects = findRectanglesFromSegments(segs, TOL);
+    const { walls } = computeFillingWalls(rects, {}, SU, LEVEL, []);
+    expect(walls).toHaveLength(2);
+    // Η ένωση ΕΓΙΝΕ: ο άξονας του βραχίονα επεκτάθηκε μέσα στον διαμπερή (αλλιώς η άγκυρα είναι κενή).
+    const rawArea = walls.reduce((sum, w) =>
+      sum + Math.hypot(w.params.end.x - w.params.start.x, w.params.end.y - w.params.start.y) * w.params.thickness, 0);
+    expect(rawArea).toBeGreaterThan(5000 * 250 + 250 * 3000 + 1);
+
+    const footprints = computeFillingWallFootprints(walls, []);
+
+    expect(pairOverlap(footprints[0], footprints[1])).toBeLessThan(1);
+    expect(litArea(footprints)).toBeCloseTo(5000 * 250 + 250 * 3000, 3);
+  });
+
+  it('γωνία Γ: τα δύο σκέλη φωτίζονται χωρίς διπλό τετράγωνο στη γωνία', () => {
+    // Οριζόντιο 3000×250 και κατακόρυφο 250×3000 που κάθεται πάνω στο αριστερό του άκρο.
+    const segs = [...rectSegments(3000, 250), ...offset(rectSegments(250, 3000), 0, 250)];
+    const rects = findRectanglesFromSegments(segs, TOL);
+    const { walls } = computeFillingWalls(rects, {}, SU, LEVEL, []);
+    expect(walls).toHaveLength(2);
+
+    const footprints = computeFillingWallFootprints(walls, []);
+
+    expect(pairOverlap(footprints[0], footprints[1])).toBeLessThan(1);
+    expect(litArea(footprints)).toBeCloseTo(3000 * 250 + 250 * 3000, 3);
+  });
+
+  it('άκρο μέσα σε κολώνα: φωτίζεται ως την παρειά της κολώνας, όχι μέσα της', () => {
+    // Κολώνα 400×400 στο x∈[0,400]· ο τοίχος ξεκινά 100 mm μέσα της.
+    const col = columnBox('c', 0, -75, 400, 400);
+    const rects = findRectanglesFromSegments(offset(rectSegments(3100, 250), 300, 0), TOL);
+    const { walls } = computeFillingWalls(rects, {}, SU, LEVEL, [col]);
+    expect(walls).toHaveLength(1);
+
+    const footprints = computeFillingWallFootprints(walls, [col]);
+
+    expect(footprints[0]).toHaveLength(1);
+    expect(litArea(footprints)).toBeCloseTo(3000 * 250, 3);
+    expect(pairOverlap(footprints[0], [BOX(0, -75, 400, 400)])).toBeLessThan(1);
+  });
+
+  it('κολώνα στη μέση του τοίχου: ΔΥΟ κομμάτια εκατέρωθεν («η κολόνα νικάει»)', () => {
+    const col = columnBox('c', 1500, -75, 400, 400);
+    const rects = findRectanglesFromSegments(rectSegments(3400, 250), TOL);
+    const { walls } = computeFillingWalls(rects, {}, SU, LEVEL, [col]);
+    expect(walls).toHaveLength(1);
+
+    const footprints = computeFillingWallFootprints(walls, [col]);
+
+    expect(footprints[0]).toHaveLength(2);
+    expect(litArea(footprints)).toBeCloseTo((3400 - 400) * 250, 3);
+    expect(pairOverlap(footprints[0], [BOX(1500, -75, 400, 400)])).toBeLessThan(1);
   });
 });

@@ -14,6 +14,7 @@ import {
 // ορθογώνια με κοινές κορυφές, όχι μόνο καθαρούς simple-cycles όπως το perimeter loop).
 import { extractLineSegments, findEnclosingRectangle } from '../../bim/walls/wall-in-region';
 import { computeFillingWalls, computeFillingWallFootprints } from '../../bim/walls/filling-walls-compute';
+import { largestBodyPieceIndex } from '../../bim/walls/wall-painted-body';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { createPreviewWallTyper } from '../../bim/family-types/wall-typer';
 import { useBimFamilyTypeStore } from '../../bim/family-types/bim-family-type-store';
@@ -170,6 +171,16 @@ function singleZone(polygon: Point2D[], label: string): PreviewPick {
 }
 
 /**
+ * ADR-911 Φ3α-4 — μία ζώνη ανά ΚΟΜΜΑΤΙ του ζωγραφιζόμενου σώματος ενός τοίχου (κολώνα στη μέση
+ * του τον χωρίζει σε δύο). Ο τοίχος είναι ένας, άρα και η ετικέτα μία: πάει στο μεγαλύτερο κομμάτι.
+ */
+function wallBodyZones(pieces: readonly Point2D[][], label: string): RegionPerimeterZone[] {
+  const drawable = pieces.filter((p) => p.length >= 3);
+  const labelled = largestBodyPieceIndex(drawable);
+  return drawable.map((polygon, i) => ({ polygon, label: i === labelled ? label : '' }));
+}
+
+/**
  * Region/perimeter εργαλεία — smallest-containing κλειστό loop (κοινό cache με το
  * click-inside commit). `null` όταν κανένα ή oversized (Layer 4 — το γιγάντιο
  * εξωτερικό περίγραμμα ΔΕΝ ζωγραφίζεται· warning μόνο στο κλικ).
@@ -195,14 +206,12 @@ function resolvePerimeterPreview(
     // καμία εγγραφή): η επέκταση και ο έλεγχος επικάλυψης κρίνουν τον τελικό τοίχο.
     const { typeWall } = createPreviewWallTyper(useBimFamilyTypeStore.getState().getTypes());
     const { walls, rejected } = computeFillingWalls(pick.rects, overrides, sceneUnits, levelId, entities, { typeWall });
-    const footprints = computeFillingWallFootprints(walls, entities);
+    const bodies = computeFillingWallFootprints(walls, entities);
     const zones: RegionPerimeterZone[] = [];
     walls.forEach((w, i) => {
       const lenWorld = Math.hypot(w.params.end.x - w.params.start.x, w.params.end.y - w.params.start.y);
-      zones.push({
-        polygon: footprints[i] ?? [...pick.polygon],
-        label: `${(lenWorld / scale / 1000).toFixed(2)} × ${(w.params.thickness / 1000).toFixed(2)} m`,
-      });
+      const label = `${(lenWorld / scale / 1000).toFixed(2)} × ${(w.params.thickness / 1000).toFixed(2)} m`;
+      zones.push(...wallBodyZones(bodies[i] ?? [], label));
     });
     // Giorgio (επιλογή Α): rejected → κόκκινο + tooltip με τον λόγο (i18n key).
     for (const rej of rejected) {

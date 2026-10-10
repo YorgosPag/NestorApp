@@ -8,10 +8,9 @@
  */
 
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
-import { computeWallGeometry } from '../geometry/wall-geometry';
+import { buildWallFootprintRing, computeWallGeometry } from '../geometry/wall-geometry';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
-import { toPt2 } from './structural-finish-point';
 import type { WallFinishObstacle } from './structural-finish-scene';
 
 /**
@@ -20,10 +19,10 @@ import type { WallFinishObstacle } from './structural-finish-scene';
  * το αποτύπωμα ΑΚΡΙΒΩΣ των params που του δίνει — όχι την ένωση raw ∪ mitered.
  */
 export function wallFootprintFromParams(params: WallFinishObstacle['params'], kind: WallFinishObstacle['kind']): Pt2[] {
+  // ADR-911 Φ3α-4 — ο δακτύλιος (outer εμπρός + inner ανάποδα) έχει ΕΝΑ SSoT, αυτό που ζωγραφίζει
+  // και ο `WallRenderer`· εδώ ζούσε δεύτερο, ταυτόσημο αντίγραφο της ίδιας σύμβασης.
   const g = computeWallGeometry(params, kind);
-  const outer = g.outerEdge.points.map(toPt2);
-  const inner = [...g.innerEdge.points].reverse().map(toPt2);
-  return [...outer, ...inner];
+  return buildWallFootprintRing(g.outerEdge.points, g.innerEdge.points);
 }
 
 /** Pt2[] → CCW polygon-clipping Polygon (winding-normalised, κλειστό ring). */

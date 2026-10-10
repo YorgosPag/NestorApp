@@ -12,7 +12,7 @@
  *   · `extendFillingWallToNeighbors` (Revit "Allow Join")    — wall-region-autojoin.ts
  *   · `findStructuralOverlapForEntity` (ADR-567 no-overlap)  — structural-placement-overlap.ts
  *   · `computeWallTrims` + `applyTrimPatches` (miter/bevel)  — wall-trims.ts
- *   · `wallFootprintPolygon` (raw ∪ mitered footprint)       — wall-footprint-union.ts
+ *   · `resolveWallPaintedBodies` (το σώμα ΟΠΩΣ ζωγραφίζεται)  — wall-painted-body.ts
  *
  * Ο commit (`use-wall-commit.buildFillingWalls`) ΚΑΙ το preview (`resolvePerimeterPreview`)
  * καλούν ΑΥΤΟΝ τον υπολογισμό → ό,τι φωτίζεται πράσινο = ΑΚΡΙΒΩΣ οι τοίχοι που θα χτιστούν
@@ -25,7 +25,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-419-floor-finish-per-room.md §region-fill
  */
 
-import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
@@ -33,9 +32,8 @@ import type { WallParamOverrides, SceneUnits } from '../../hooks/drawing/wall-co
 import { buildWallFillingRectResult, type DetectedRectangle } from './wall-in-region';
 import { extendFillingWallToNeighbors } from './wall-region-autojoin';
 import { computeWallTrims, applyTrimPatches, collectColumnFootprints } from './wall-trims';
-import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
+import { resolveWallPaintedBodies, type WallBodyPieces } from './wall-painted-body';
 import { findStructuralOverlapForEntity } from '../placement/structural-placement-overlap';
-import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Reject reasons (friendly i18n keys — «κόκκινο + tooltip με ΛΟΓΟ») ─────────
 
@@ -216,29 +214,27 @@ export function computeFillingWalls(
 
 /**
  * Preview-only: τρέχει το ΙΔΙΟ `computeWallTrims` + `applyTrimPatches` που τρέχει ο
- * `addWallToScene`, αλλά **transient** πάνω σε `[...sceneEntities, ...walls]` → επιστρέφει
- * τα ΤΕΛΙΚΑ mitered footprints (Point2D[][], σε σειρά `walls`) ΧΩΡΙΣ καμία mutation.
+ * `addWallToScene`, αλλά **transient** πάνω σε `[...sceneEntities, ...walls]`, και μετά το ΙΔΙΟ
+ * κόψιμο σώματος που τρέχει η απόδοση (`resolveWallPaintedBodies`: κολώνες → διασταύρωση).
+ * Επιστρέφει, σε σειρά `walls`, τα ΚΟΜΜΑΤΙΑ του σώματος κάθε τοίχου όπως θα ζωγραφιστεί — ΧΩΡΙΣ
+ * καμία mutation. Ένα κομμάτι = άκοπος τοίχος· δύο+ = κολώνα που τον χωρίζει· `[]` = καταπίνεται.
  *
- * Έτσι το πράσινο περίγραμμα του preview = ΑΚΡΙΒΩΣ το footprint που θα έχει ο τοίχος μετά
- * το miter/bevel του commit (T-junction → mitered ≠ raw rect). Reuse `collectColumnFootprints`
- * (κολόνα νικάει) + `wallFootprintPolygon` (raw ∪ mitered SSoT).
+ * ADR-911 Φ3α-4 — η πηγή είναι το ΖΩΓΡΑΦΙΖΟΜΕΝΟ σώμα, όχι το `wallFootprintPolygon`. Εκείνο είναι
+ * το αποτύπωμα του ΣΟΒΑ (ADR-449: ωμό ∪ λοξοτομημένο) και εκ σχεδιασμού αγνοεί κάθε κόψιμο που
+ * αφαιρεί υλικό: φώτιζε τον βραχίονα ως τον άξονα του γείτονα και τη γωνία διπλή. Μετρημένο στο
+ * σχέδιο δοκιμής: 16 ζεύγη φωτισμένων αποτυπωμάτων με κοινό εμβαδό → 0.
  */
 export function computeFillingWallFootprints(
   walls: readonly WallEntity[],
   sceneEntities: readonly Entity[],
-): Point2D[][] {
+): WallBodyPieces[] {
   if (walls.length === 0) return [];
-  const sceneWalls = sceneEntities.filter(isWallEntity);
-  const allWalls = [...sceneWalls, ...walls];
-  const trims = computeWallTrims(allWalls, collectColumnFootprints(sceneEntities as readonly AnySceneEntity[]));
+  const columnFootprints = collectColumnFootprints(sceneEntities as readonly AnySceneEntity[]);
+  const trims = computeWallTrims([...sceneEntities.filter(isWallEntity), ...walls], columnFootprints);
   const patched = applyTrimPatches([...sceneEntities, ...walls] as readonly AnySceneEntity[], trims);
-  const patchedById = new Map<string, WallEntity>();
-  for (const e of patched) {
-    if (isWallEntity(e)) patchedById.set(e.id, e);
-  }
+  // Το σώμα κρίνεται ανάμεσα σε ΟΛΟΥΣ τους τοίχους (σκηνή + νέοι, με τις ενώσεις τους), όπως
+  // ακριβώς θα τους δει η απόδοση μετά την εγγραφή.
+  const bodies = resolveWallPaintedBodies(patched.filter(isWallEntity), columnFootprints);
   // Σειρά `walls` (όχι scene order) → 1:1 pairing με τα labels στο preview.
-  return walls.map((w) => {
-    const pw = patchedById.get(w.id) ?? w;
-    return projectVerticesTo2D(wallFootprintPolygon(pw));
-  });
+  return walls.map((w) => bodies.get(w.id) ?? []);
 }

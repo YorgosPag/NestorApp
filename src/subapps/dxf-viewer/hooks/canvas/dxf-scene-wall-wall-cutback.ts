@@ -19,28 +19,19 @@
  */
 
 import type { DxfEntityUnion, DxfWall } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
-import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
-import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
-import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
+// ADR-911 Φ3α-4 — οι κόπτες και το κόψιμο ζουν στο ΕΝΑ SSoT του ζωγραφισμένου σώματος (κοινό με
+// την προεπισκόπηση πλήρωσης)· εδώ μένει μόνο η εφαρμογή τους πάνω στη σκηνή.
+import { collectWallCrossCutters, cutWallBodyByCross } from '../../bim/walls/wall-painted-body';
 
 /**
  * Εφαρμόζει το wall-to-wall cross cutback. Επιστρέφει το ίδιο array (by-reference) όταν καμία
  * διασταύρωση δεν κόβει τοίχο· αλλιώς νέο array με τους κομμένους (losers) ανανεωμένους.
  */
 export function applyWallWallCrossCutback2D(entities: DxfEntityUnion[]): DxfEntityUnion[] {
-  const wallInputs: WallCrossInput[] = [];
-  for (const e of entities) {
-    if (e.type !== 'wall') continue;
-    const wall = e as DxfWall;
-    if (wall.kind !== 'straight') continue;
-    const ring = buildWallFootprintRing(wall.geometry.outerEdge.points, wall.geometry.innerEdge.points);
-    if (ring.length < 3) continue;
-    wallInputs.push({ id: wall.id, params: wall.params, footprint: ring });
-  }
-  if (wallInputs.length < 2) return entities;
+  const walls = entities.filter((e): e is DxfWall => e.type === 'wall');
+  if (walls.length < 2) return entities;
 
-  const cutterMap = computeWallCrossCutters(wallInputs);
+  const cutterMap = collectWallCrossCutters(walls);
   if (cutterMap.size === 0) return entities;
 
   return entities.map((e) => {
@@ -49,25 +40,11 @@ export function applyWallWallCrossCutback2D(entities: DxfEntityUnion[]): DxfEnti
     if (!cutters || cutters.length === 0) return e;
     const wall = e as DxfWall;
 
-    // Base rings = ήδη-κομμένα κομμάτια από το column pass, αλλιώς ο raw footprint ring.
+    // Βάση = τα ήδη-κομμένα κομμάτια από το column pass, αλλιώς ο άκοπος δακτύλιος.
     // ADR-789 — το column pass αφήνει ήδη 2Δ δακτυλίους· μηδέν cast, μηδέν επαναπροβολή.
-    const existing = wall.geometry.displayFootprint;
-    const baseRings: Pt2[][] = existing
-      ? existing.map((r) => [...r])
-      : [buildWallFootprintRing(wall.geometry.outerEdge.points, wall.geometry.innerEdge.points)];
+    const displayFootprint = cutWallBodyByCross(wall, wall.geometry.displayFootprint, cutters);
+    if (displayFootprint === null) return e; // οι κόπτες δεν τεμαχίζουν → ό,τι έδωσε το column pass
 
-    let changed = false;
-    const out: Pt2[][] = [];
-    for (const ring of baseRings) {
-      if (ring.length < 3) { out.push(ring); continue; }
-      const cut = computeMemberCutbackOutline(ring, cutters);
-      if (cut === null) { out.push(ring); continue; }
-      out.push(...cut);
-      changed = true;
-    }
-    if (!changed) return e; // wall cutters δεν τεμαχίζουν → κράτα ό,τι έδωσε το column pass
-
-    const displayFootprint = out;
     return { ...wall, geometry: { ...wall.geometry, displayFootprint } } as DxfEntityUnion;
   });
 }

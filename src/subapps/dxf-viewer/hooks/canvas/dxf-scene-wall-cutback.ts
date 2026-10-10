@@ -23,8 +23,9 @@
  */
 
 import type { DxfEntityUnion, DxfWall } from '../../canvas-v2/dxf-canvas/dxf-types';
-import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
-import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
+// ADR-911 Φ3α-4 — το βήμα «κόψιμο από κολώνες» ζει στο ΕΝΑ SSoT του ζωγραφισμένου σώματος
+// (κοινό με την προεπισκόπηση πλήρωσης)· εδώ μένει μόνο η εφαρμογή του πάνω στη σκηνή.
+import { cutWallBodyByColumns } from '../../bim/walls/wall-painted-body';
 import { scanColumnCutters } from './dxf-scene-column-cutters';
 
 /**
@@ -39,9 +40,7 @@ export function applyWallColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityU
   return entities.map((e) => {
     if (e.type !== 'wall') return e;
     const wall = e as DxfWall;
-    const ring = buildWallFootprintRing(wall.geometry.outerEdge.points, wall.geometry.innerEdge.points);
-    if (ring.length < 3) return e;
-    const pieces = computeMemberCutbackOutline(ring, columnFootprints);
+    const pieces = cutWallBodyByColumns(wall, columnFootprints);
     if (pieces === null) return e; // καμία τομή → αυτούσιο (zero regression)
     const displayFootprint = pieces;
     return {
