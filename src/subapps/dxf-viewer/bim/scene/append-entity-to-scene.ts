@@ -40,6 +40,7 @@ import {
   STRUCTURAL_OVERLAP_TYPES,
   structuralFootprintOf,
   findStructuralOverlap,
+  partitionByStructuralOverlap,
 } from '../placement/structural-placement-overlap';
 
 /**
@@ -112,32 +113,11 @@ export function appendEntitiesToScene<E extends { id: string }>(
   const scene = accessor.getLevelScene(levelId);
   if (!scene) return;
   // ADR-567 — φιλτράρισε όσες θα κάθονταν πάνω σε υπάρχουσα δομική (ή σε ήδη-αποδεκτή
-  // του ίδιου batch). Το `existing` μεγαλώνει με κάθε αποδεκτή ώστε τα region-fill κελιά
-  // να μην επικαλύπτονται ούτε μεταξύ τους. `count` = πόσες κόπηκαν (N.7.2 — όχι silent cap).
-  const existing: Entity[] = [...(scene.entities as unknown as Entity[])];
-  const accepted: E[] = [];
-  let blocked = 0;
-  let firstBlockedById: string | null = null;
-  let firstBlockedType: string | null = null;
-  for (const e of entities) {
-    const ent = e as unknown as Entity;
-    if (STRUCTURAL_OVERLAP_TYPES.has(ent.type)) {
-      const footprint = structuralFootprintOf(ent);
-      const hit = footprint
-        ? findStructuralOverlap(footprint, existing, { excludeIds: new Set([ent.id]), candidateType: ent.type })
-        : null;
-      if (hit) {
-        blocked++;
-        if (!firstBlockedById) {
-          firstBlockedById = hit.blockedById;
-          firstBlockedType = ent.type;
-        }
-        continue; // δεν μπαίνει ΚΑΙ δεν γίνεται baseline για τις επόμενες
-      }
-    }
-    accepted.push(e);
-    existing.push(ent);
-  }
+  // του ίδιου batch) μέσω του ΕΝΟΣ φίλτρου παρτίδας. `count` = πόσες κόπηκαν (N.7.2).
+  const { accepted, blocked, firstBlockedById, firstBlockedType } = partitionByStructuralOverlap(
+    entities,
+    scene.entities as unknown as Entity[],
+  );
   if (blocked > 0 && firstBlockedById && firstBlockedType) {
     EventBus.emit('bim:placement-blocked', {
       entityType: firstBlockedType,

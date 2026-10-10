@@ -4,6 +4,9 @@
  *   Α-1  160 γραμμές ρόλου «τοίχος» → 40 ορθογώνια, 160/160 εξηγημένες.
  *   Α-2  η αναφορά κάλυψης κλείνει λογιστικά (εξηγημένες + ανεξήγητες + αγνοημένες = όλες).
  *   Α-4  ορθογώνιο χωρίς προφανή άξονα ΔΕΝ βγαίνει έτοιμο.
+ *   Δ7   άξονας από ομοαξονικό γείτονα ίδιου πάχους· αντίφαση ή μοναξιά ⇒ «θέλει απόφαση».
+ *   Δ3   ομάδες πάχους με τοπολογική πρόταση· η επιλογή του ανθρώπου νικά και φαίνεται.
+ *   Α-3  ο τύπος μπαίνει ΜΕΣΑ στην πρόταση (ό,τι φωτίζεται φέρει ήδη τον τύπο του).
  *   Α-6  δεύτερη εκτέλεση στο ίδιο σχέδιο προτείνει μηδέν νέους τοίχους.
  *
  * Το fixture είναι οι γραμμές + τόξα του «Ισόγειο 1.dxf» (scene revision 11). Ο `colorOf`
@@ -14,6 +17,9 @@
 import type { Entity } from '../../../types/entities';
 import type { WallDetectionStrategy } from '../wall-detection-strategy';
 import { computeWallProposal, type WallProposal, type WallProposalInput } from '../wall-proposal';
+import { buildAutoWallType } from '../../family-types/auto-wall-type';
+import { getBuiltInWallTypes } from '../../family-types/built-in-types';
+import { createWallTyper } from '../../family-types/wall-typer';
 import fixture from './fixtures/floor-plan-lines.json';
 
 const WALL_HEX = '#003fff';
@@ -122,10 +128,11 @@ describe('ADR-911 Α-2 — η αναφορά κάλυψης κλείνει λο�
 });
 
 describe('ADR-911 Α-4 — ορθογώνιο χωρίς προφανή άξονα θέλει απόφαση', () => {
-  it('τα 6 σχεδόν τετράγωνα δεν βγαίνουν έτοιμα και δεν φέρουν τοίχο', () => {
+  it('τα σχεδόν τετράγωνα που ΔΕΝ εξηγεί το συμφραζόμενο δεν βγαίνουν έτοιμα και δεν φέρουν τοίχο', () => {
+    // 6 ορθογώνια έχουν λόγο πλευρών < 1,75· τα 4 παίρνουν άξονα από ομοαξονικό γείτονα (Δ7).
     const p = propose();
-    expect(countByStatus(p)).toEqual({ ready: 34, 'needs-decision': 6 });
-    expect(p.walls).toHaveLength(34);
+    expect(countByStatus(p)).toEqual({ ready: 38, 'needs-decision': 2 });
+    expect(p.walls).toHaveLength(38);
     for (const item of p.items.filter((i) => i.status === 'needs-decision')) {
       expect(item.wall).toBeUndefined();
       expect(item.rect.longSide / item.rect.shortSide).toBeLessThan(1.75);
@@ -145,8 +152,8 @@ describe('ADR-911 Α-4 — ορθογώνιο χωρίς προφανή άξον
 
   it('με απόφαση ανθρώπου γίνονται τοίχοι — και μόνο όσα αποφασίστηκαν', () => {
     const keys = [...undecidedKeys(propose())];
-    expect(countByStatus(propose({ acceptedKeys: new Set(keys.slice(0, 2)) })))
-      .toEqual({ ready: 36, 'needs-decision': 4 });
+    expect(countByStatus(propose({ acceptedKeys: new Set(keys.slice(0, 1)) })))
+      .toEqual({ ready: 39, 'needs-decision': 1 });
     expect(countByStatus(propose({ acceptedKeys: new Set(keys) }))).toEqual({ ready: 40 });
   });
 
@@ -191,6 +198,129 @@ describe('ADR-911 Α-6 — ιδεμποτία', () => {
     const first = propose();
     const half = first.walls.slice(0, 20);
     const second = propose({ entities: [...ENTITIES, ...(half as unknown as Entity[])] });
-    expect(countByStatus(second)).toEqual({ existing: 20, ready: 14, 'needs-decision': 6 });
+    expect(countByStatus(second)).toEqual({ existing: 20, ready: 18, 'needs-decision': 2 });
+  });
+});
+
+describe('ADR-911 Δ7 — άξονας από το συμφραζόμενο', () => {
+  const C = '#003FFF';
+  const hWall = frame('h', C, 0, 0, 2000, 100); // οριζόντιος τοίχος 100 mm, άξονας y=50
+  const inLine = frame('a', C, 2500, 0, 100, 100); // τετράγωνο στην ευθεία του, κενό 500
+  const lonely = frame('b', C, 20000, 20000, 100, 100); // τετράγωνο χωρίς κανέναν γείτονα
+  const vWall = frame('v', C, 5000, 1000, 100, 2000); // κατακόρυφος, άξονας x=5050
+  const hWall2 = frame('h2', C, 6000, 400, 2000, 100); // οριζόντιος, άξονας y=450
+  const crossing = frame('c', C, 5000, 400, 100, 100); // στη διασταύρωση των δύο αξόνων
+
+  const byKeyPrefix = (p: WallProposal, cx: number, cy: number) =>
+    p.items.find((i) => i.key.startsWith(`${cx}:${cy}:`));
+
+  it('τετράγωνο στην ευθεία τοίχου ίδιου πάχους γίνεται τοίχος με τον άξονα του γείτονα', () => {
+    const p = propose({ entities: [...hWall, ...inLine] });
+    const item = byKeyPrefix(p, 2550, 50);
+    expect(item?.status).toBe('ready');
+    expect(item?.axisFromContext).toBe(true);
+    // Ο άξονας είναι οριζόντιος (του γείτονα), όχι αυθαίρετος.
+    expect(item?.wall?.params.start.y).toBeCloseTo(50, 6);
+    expect(item?.wall?.params.end.y).toBeCloseTo(50, 6);
+  });
+
+  it('τετράγωνο χωρίς γείτονα μένει «θέλει απόφαση»', () => {
+    const p = propose({ entities: [...hWall, ...lonely] });
+    const item = byKeyPrefix(p, 20050, 20050);
+    expect(item?.status).toBe('needs-decision');
+    expect(item?.axisFromContext).toBe(false);
+  });
+
+  it('δύο γείτονες με κάθετους άξονες αντιφάσκουν ⇒ «θέλει απόφαση», όχι μαντεψιά', () => {
+    const p = propose({ entities: [...vWall, ...hWall2, ...crossing] });
+    expect(byKeyPrefix(p, 5050, 450)?.status).toBe('needs-decision');
+  });
+
+  it('γείτονας πέρα από το μέγιστο κενό δεν εξηγεί το τετράγωνο', () => {
+    const far = frame('far', C, 2000 + 2600, 0, 100, 100); // κενό 2600 > 2500
+    const p = propose({ entities: [...hWall, ...far] });
+    expect(byKeyPrefix(p, 4650, 50)?.status).toBe('needs-decision');
+  });
+
+  it('στο σχέδιο δοκιμής λύνονται 4 από τα 6 και σημαδεύονται', () => {
+    const p = propose();
+    expect(p.items.filter((i) => i.axisFromContext)).toHaveLength(4);
+    expect(p.items.filter((i) => i.axisFromContext).every((i) => i.status === 'ready')).toBe(true);
+  });
+});
+
+describe('ADR-911 Δ3 — ομάδες πάχους και τοπολογική πρόταση λειτουργίας', () => {
+  const C = '#003FFF';
+  // Κουτί 6000×4000 με τοίχους 200 mm που ΔΕΝ ακουμπούν (κενά 300 mm στις γωνίες), πόρτα
+  // 1000 mm στον κάτω τοίχο, και ένα εσωτερικό χώρισμα 100 mm στη μέση.
+  const box: Entity[] = [
+    ...frame('bl', C, 0, 0, 2500, 200),
+    ...frame('br', C, 3500, 0, 2500, 200),
+    ...frame('top', C, 0, 3800, 6000, 200),
+    ...frame('left', C, 0, 500, 200, 3000),
+    ...frame('right', C, 5800, 500, 200, 3000),
+    ...frame('part', C, 2950, 500, 100, 3000),
+  ];
+
+  it('οι τοίχοι του κελύφους βγαίνουν εξωτερικοί· το χώρισμα εσωτερικό — και η πόρτα δεν «μπάζει»', () => {
+    const p = propose({ entities: box });
+    expect(p.groups.map((g) => [g.thicknessMm, g.exteriorCount, g.interiorCount, g.suggestedCategory]))
+      .toEqual([[100, 0, 1, 'interior'], [200, 5, 0, 'exterior']]);
+    expect(p.groups.every((g) => !g.confirmed)).toBe(true);
+  });
+
+  it('οι τοίχοι χτίζονται με την κατηγορία της ομάδας τους, όχι όλοι «εξωτερικοί»', () => {
+    const p = propose({ entities: box });
+    const cats = p.walls.map((w) => `${Math.round(w.params.thickness)}:${w.params.category}`).sort();
+    expect(cats).toEqual(['100:interior', '200:exterior', '200:exterior', '200:exterior', '200:exterior', '200:exterior']);
+  });
+
+  it('η επιλογή του ανθρώπου νικά την πρόταση και σημειώνεται ως επιβεβαιωμένη', () => {
+    const p = propose({ entities: box, categoryByThicknessMm: new Map([[100, 'partition']]) });
+    const thin = p.groups.find((g) => g.thicknessMm === 100);
+    expect(thin).toMatchObject({ suggestedCategory: 'interior', category: 'partition', confirmed: true });
+    expect(p.groups.find((g) => g.thicknessMm === 200)?.confirmed).toBe(false);
+    expect(p.walls.find((w) => Math.round(w.params.thickness) === 100)?.params.category).toBe('partition');
+  });
+
+  it('στο σχέδιο δοκιμής: τέσσερις ομάδες, η διαφωνία της ομάδας 250 ΦΑΙΝΕΤΑΙ', () => {
+    const p = propose();
+    expect(p.groups.map((g) => [g.thicknessMm, g.keys.length, g.exteriorCount, g.interiorCount, g.category]))
+      .toEqual([
+        [50, 3, 0, 3, 'interior'],
+        [100, 21, 0, 21, 'interior'],
+        [200, 3, 3, 0, 'exterior'],
+        [250, 13, 8, 5, 'exterior'],
+      ]);
+    // Κάθε ορθογώνιο ανήκει σε ακριβώς μία ομάδα.
+    expect(p.groups.flatMap((g) => g.keys).sort()).toEqual(p.items.map((i) => i.key).sort());
+  });
+});
+
+describe('ADR-911 Α-3 — ο τύπος μπαίνει μέσα στην πρόταση', () => {
+  const mintingTyper = () => {
+    let n = 0;
+    return createWallTyper({
+      types: getBuiltInWallTypes('co'),
+      mint: (category, thicknessMm) => buildAutoWallType(`t-${(n += 1)}`, category, thicknessMm, 'co', 'u'),
+    });
+  };
+
+  it('κάθε τοίχος της πρότασης φέρει ήδη τύπο και ονομαστικό πάχος', () => {
+    const typer = mintingTyper();
+    const p = propose({ typeWall: typer.typeWall });
+    expect(p.walls).toHaveLength(38);
+    expect(p.walls.every((w) => typeof w.typeId === 'string' && w.typeId.length > 0)).toBe(true);
+    expect(p.walls.every((w) => Number.isInteger(w.params.thickness))).toBe(true);
+    // Ένας τύπος ανά (κατηγορία, πάχος) — όχι ένας ανά τοίχο.
+    const signatures = new Set(p.walls.map((w) => `${w.params.category}:${w.params.thickness}`));
+    expect(new Set(p.walls.map((w) => w.typeId)).size).toBe(signatures.size);
+    expect(typer.mintedFor(p.walls).length).toBeLessThanOrEqual(signatures.size);
+  });
+
+  it('ο τύπος δεν αλλάζει ΠΟΙΑ ορθογώνια γίνονται τοίχοι', () => {
+    const plain = propose();
+    const typed = propose({ typeWall: mintingTyper().typeWall });
+    expect(typed.items.map((i) => [i.key, i.status])).toEqual(plain.items.map((i) => [i.key, i.status]));
   });
 });

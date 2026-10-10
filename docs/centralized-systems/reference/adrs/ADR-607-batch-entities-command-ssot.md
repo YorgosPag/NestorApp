@@ -49,3 +49,4 @@ export const CreateColumnsCommand = createBatchEntitiesCommand<ColumnEntity>({
 
 ## Changelog
 - **2026-07-09** — Created. Extracted `createBatchEntitiesCommand`; migrated all 6 batch grid-gen commands to config bindings. 12 tests green; jscpd −7.
+- **2026-10-10 (ADR-911 Φ2)** — Προαιρετικό τρίτο όρισμα constructor `options?: { origin?: EntityCreatedOrigin }`: το `origin` που φέρει κάθε `drawing:entity-created` της παρτίδας. Απόν ⇒ payload χωρίς `origin`, δηλαδή **αμετάβλητη** συμπεριφορά για τους 6 υπάρχοντες καταναλωτές. Πρώτος χρήστης: `addWallsToScene` (`'bulk'` για την εγκεκριμένη παρτίδα του βοηθού). Το `CreateWallsCommand` έγινε επίσης η εντολή δημιουργίας **κάθε** τοίχου (και του μονού).

@@ -32,8 +32,7 @@ import type { WallEntity } from '../types/wall-types';
 import type { WallParamOverrides, SceneUnits } from '../../hooks/drawing/wall-completion';
 import { buildWallFillingRectResult, type DetectedRectangle } from './wall-in-region';
 import { extendFillingWallToNeighbors } from './wall-region-autojoin';
-import { computeWallTrims, applyTrimPatches } from './wall-trims';
-import { collectColumnFootprints } from './add-wall-to-scene';
+import { computeWallTrims, applyTrimPatches, collectColumnFootprints } from './wall-trims';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { structuralFootprintOf, findStructuralOverlap } from '../placement/structural-placement-overlap';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
@@ -74,6 +73,23 @@ export interface FillingWallsResult {
   readonly rejected: FillingWallReject[];
 }
 
+/**
+ * Προαιρετικές ραφές του χτισίματος. Και οι δύο τρέχουν ΜΕΣΑ στον ένα βρόχο, ώστε ο
+ * σταδιακός έλεγχος (γείτονες + επικάλυψη) να βλέπει πάντα τον τελικό τοίχο.
+ */
+export interface FillingWallsOptions {
+  /**
+   * ADR-412 / ADR-911 Φ3 — σφραγίζει τον φρεσκοχτισμένο τοίχο με τον τύπο του («ο τύπος
+   * νικά πάντα»). Καθαρή συνάρτηση (`wall-typer.ts`)· απούσα ⇒ ο τοίχος μένει όπως χτίστηκε.
+   */
+  readonly typeWall?: (wall: WallEntity) => WallEntity;
+  /**
+   * ADR-911 Δ3 — overrides ΑΝΑ ορθογώνιο (π.χ. λειτουργία ανά ομάδα πάχους), πάνω από τα
+   * κοινά. Κλήση ανά ομάδα θα έσπαγε τον σταδιακό έλεγχο· γι' αυτό είναι ραφή του βρόχου.
+   */
+  readonly overridesFor?: (rect: DetectedRectangle) => WallParamOverrides;
+}
+
 // ─── Build + validate + extend + no-overlap (ΙΔΙΟ με τον commit) ──────────────
 
 /**
@@ -91,17 +107,22 @@ export function computeFillingWalls(
   sceneUnits: SceneUnits,
   levelId: string,
   sceneEntities: readonly Entity[],
+  options: FillingWallsOptions = {},
 ): FillingWallsResult {
   const sceneWalls = sceneEntities.filter(isWallEntity);
   const walls: WallEntity[] = [];
   const rejected: FillingWallReject[] = [];
   for (const rect of rects) {
-    const build = buildWallFillingRectResult(rect, overrides, sceneUnits, levelId);
+    const rectOverrides = options.overridesFor ? { ...overrides, ...options.overridesFor(rect) } : overrides;
+    const build = buildWallFillingRectResult(rect, rectOverrides, sceneUnits, levelId);
     if (!build.ok) {
       rejected.push({ rect, reason: friendlyReason(build.reason) });
       continue;
     }
-    const entity = extendFillingWallToNeighbors(build.wall, [...sceneWalls, ...walls], sceneUnits);
+    // ADR-911 Φ3 — ο τύπος μπαίνει ΕΔΩ, πριν από την επέκταση και τον έλεγχο επικάλυψης:
+    // ό,τι ακολουθεί κρίνει τον ΤΕΛΙΚΟ τοίχο, όχι έναν που ο τύπος θα αλλάξει μετά.
+    const typed = options.typeWall ? options.typeWall(build.wall) : build.wall;
+    const entity = extendFillingWallToNeighbors(typed, [...sceneWalls, ...walls], sceneUnits);
     // ADR-567 parity με το `addWallToScene`: ΠΟΤΕ τοίχος πάνω σε υπάρχουσα δομική.
     // Έλεγχος με το ΙΔΙΟ incremental scene (existing + δεκτοί της παρτίδας) → ίδιο αποτέλεσμα.
     const footprint = structuralFootprintOf(entity as unknown as Entity);

@@ -81,6 +81,15 @@ records). Τα Tekton `TekOpeningRecord` θα συνδεθούν αργότερ�
 (zero high-freq subscriptions· pure geometry).
 
 ## Changelog
+- **2026-10-10 — v1.2 — τρίτη τιμή `origin: 'bulk'` + allowlist (ADR-911 Φ2).** Η μαζική εγγραφή
+  τοίχων (`addWallsToScene`, βοηθός «Μοντέλο από το σχέδιο») εκπέμπει `origin:'bulk'`: τα
+  persistence hooks αποθηκεύουν κανονικά, ο host **σιωπά** (40 τοίχοι ≠ 40 ανιχνεύσεις — η
+  παρτίδα θα έχει δικό της έλεγχο κουφωμάτων, ADR-911 Φ4). Ο έλεγχος του host έγινε **allowlist**
+  μέσω του `isInteractiveEntityCreation` (`bim-entity-lifecycle-events.ts`): αντιδρά μόνο σε
+  `undefined` / `'create'`. Πριν ήταν denylist (`=== 'retrim'`), άρα κάθε νέα τιμή θα άνοιγε
+  διαλόγους μέχρι να τη θυμηθεί κάποιος. ⚠️ Οι υπάρχουσες μαζικές διαδρομές του εργαλείου τοίχου
+  (πλήρωση περιοχής / περίγραμμα / κλειστό σχήμα) **δεν** φέρουν `'bulk'` — εκεί ο host προτείνει
+  κουφώματα ανά τοίχο όπως πάντα. Τύπος: `EntityCreatedOrigin` (`drawing-event-map.ts`).
 - **2026-07-04 — v1.1 — false-positive trigger fix (Giorgio browser bug: «περιέστρεψα μια ΓΡΑΜΜΗ
   και βγήκε "Εντοπίστηκε κούφωμα"»).** Το `DxfSymbolDetectHost` άκουγε **κάθε**
   `drawing:entity-created {tool:'wall'}` ως «νέος τοίχος → σκάναρε σύμβολα». Όμως το event αυτό

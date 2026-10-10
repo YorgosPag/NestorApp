@@ -22,6 +22,7 @@ import type { LevelsHookReturn } from '../systems/levels';
 import type { WallEntity } from '../bim/types/wall-types';
 import { isWallEntity } from '../types/entities';
 import { EventBus } from '../systems/events/EventBus';
+import { isInteractiveEntityCreation } from '../systems/events/bim-entity-lifecycle-events';
 import { resolveSceneUnits, mmToSceneUnits } from '../utils/scene-units';
 import { gatherSymbolCandidates } from '../bim/walls/dxf-symbol-gatherer';
 import { detectSymbolsOnWall } from '../bim/walls/dxf-symbol-detector';
@@ -44,11 +45,12 @@ export function DxfSymbolDetectHost({ levelManager }: DxfSymbolDetectHostProps):
   useEffect(() => {
     return EventBus.on('drawing:entity-created', (payload) => {
       if (payload.tool !== 'wall') return;
-      // ADR-533 — μόνο σε ΠΡΑΓΜΑΤΙΚΑ νέο τοίχο (`origin:'create'`/undefined). Τα
+      // ADR-533 — μόνο σε ΠΡΑΓΜΑΤΙΚΑ νέο, μεμονωμένο τοίχο (`origin:'create'`/undefined). Τα
       // `origin:'retrim'` re-emits (recompute miters μετά από move/rotate ΟΠΟΙΟΥΔΗΠΟΤΕ
       // entity) είναι persistence-only → αλλιώς το dialog «Εντοπίστηκε κούφωμα»
-      // εμφανιζόταν ενώ ο χρήστης απλώς περιέστρεψε μια άσχετη γραμμή.
-      if (payload.origin === 'retrim') return;
+      // εμφανιζόταν ενώ ο χρήστης απλώς περιέστρεψε μια άσχετη γραμμή. ADR-911 Φ2 — και η
+      // εγκεκριμένη παρτίδα (`'bulk'`) σιωπά: 40 τοίχοι ≠ 40 ανιχνεύσεις (allowlist SSoT).
+      if (!isInteractiveEntityCreation(payload.origin)) return;
       const wall = payload.entity;
       if (!isWallEntity(wall)) return;
       void detectAndPropose(wall, lmRef.current);

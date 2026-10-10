@@ -162,6 +162,52 @@ export function findStructuralOverlap(
   return null;
 }
 
+/** Διαμέριση μιας παρτίδας: όσες χωρούν, και πόσες (και από ποια) κόπηκαν. */
+export interface StructuralOverlapPartition<E> {
+  /** Οι οντότητες που χωρούν, στη σειρά εισόδου. */
+  readonly accepted: E[];
+  /** Πόσες κόπηκαν (N.7.2 — ποτέ σιωπηλό όριο). */
+  readonly blocked: number;
+  /** Η πρώτη υπάρχουσα οντότητα που έκοψε κάποια, και ο τύπος της κομμένης· `null` αν καμία. */
+  readonly firstBlockedById: string | null;
+  readonly firstBlockedType: Entity['type'] | null;
+}
+
+/**
+ * ADR-567 — χωρίζει μια ΠΑΡΤΙΔΑ νέων οντοτήτων σε όσες χωρούν και όσες θα κάθονταν πάνω σε
+ * υπάρχουσα δομική **ή σε ήδη-αποδεκτή της ίδιας παρτίδας** (το σύνολο ελέγχου μεγαλώνει με
+ * κάθε αποδεκτή, ώστε τα μέλη να μην επικαλύπτονται ούτε μεταξύ τους). Μη δομικοί τύποι
+ * περνούν πάντα. ΚΑΘΑΡΟ — ο καλών αποφασίζει τι κάνει με τις κομμένες (παράλειψη ή άρνηση).
+ *
+ * Το ΕΝΑ φίλτρο παρτίδας: το μοιράζονται το `appendEntitiesToScene` και το `addWallsToScene`.
+ */
+export function partitionByStructuralOverlap<E extends { readonly id: string }>(
+  entities: readonly E[],
+  sceneEntities: readonly Entity[],
+): StructuralOverlapPartition<E> {
+  const existing: Entity[] = [...sceneEntities];
+  const accepted: E[] = [];
+  let blocked = 0;
+  let firstBlockedById: string | null = null;
+  let firstBlockedType: Entity['type'] | null = null;
+  for (const e of entities) {
+    const ent = e as unknown as Entity;
+    const footprint = STRUCTURAL_OVERLAP_TYPES.has(ent.type) ? structuralFootprintOf(ent) : null;
+    const hit = footprint
+      ? findStructuralOverlap(footprint, existing, { excludeIds: new Set([ent.id]), candidateType: ent.type })
+      : null;
+    if (hit) {
+      blocked++;
+      firstBlockedById ??= hit.blockedById;
+      firstBlockedType ??= ent.type;
+      continue; // δεν μπαίνει ΚΑΙ δεν γίνεται baseline για τις επόμενες
+    }
+    accepted.push(e);
+    existing.push(ent);
+  }
+  return { accepted, blocked, firstBlockedById, firstBlockedType };
+}
+
 /** Axis-aligned bbox ενός footprint. */
 function bboxOf(footprint: readonly Point2D[]): { minX: number; minY: number; maxX: number; maxY: number } {
   let minX = Infinity;

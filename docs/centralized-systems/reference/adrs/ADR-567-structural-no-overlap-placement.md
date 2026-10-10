@@ -160,6 +160,11 @@ footprint (100% overlap) → ο flat guard το μπλόκαρε πάντα. Ί�
 ---
 
 ## Changelog
+- **2026-10-10 (ADR-911 Φ2)** — `partitionByStructuralOverlap` στο SSoT module: το **ένα** φίλτρο
+  παρτίδας (αποδεκτές / κομμένες, με το σύνολο ελέγχου να μεγαλώνει ανά αποδεκτή). Το σώμα ζούσε inline
+  στο `appendEntitiesToScene`· τώρα το μοιράζεται με το `addWallsToScene`. Ο φρουρός τοίχου δεν είναι πια
+  ξεχωριστή ανά-τοίχο υλοποίηση στο `add-wall-to-scene.ts`. Νέα πολιτική καλούντος `onOverlap: 'refuse'`
+  (καμία μερική εγγραφή όταν κοπεί έστω ένα μέλος) — η απόφαση ανήκει στον καλούντα, όχι στο φίλτρο.
 - **2026-07-03** — Initial implementation (UNCOMMITTED). SSoT module + 2 chokepoints + event/toast/i18n
   + 17 jest. Φ1 = wall/column/beam/slab/foundation. Threshold default 25% (Giorgio-tunable).
 - **2026-07-03** — Preview red-ghost fix (Giorgio browser-report: ghost έμενε πράσινο πάνω σε τοίχους).

@@ -22,6 +22,7 @@
 import { EventBus } from './EventBus';
 import type { AnySceneEntity } from '../../types/scene';
 import type { BimEventMap } from './drawing-event-map-bim';
+import type { EntityCreatedOrigin } from './drawing-event-map';
 
 /** Payload shape του `bim:entity-restore-requested` — SSoT για τα param types του helper. */
 type RestoreRequestedPayload = BimEventMap['bim:entity-restore-requested'];
@@ -31,8 +32,23 @@ type RestoreRequestedPayload = BimEventMap['bim:entity-restore-requested'];
  * on to schedule the first Firestore save. `tool` = the entity-type tag ('column',
  * 'beam', 'slab', …). Caller is responsible for any defensive deep-clone.
  */
-export function emitBimEntityCreated(entity: AnySceneEntity, tool: string): void {
-  EventBus.emit('drawing:entity-created', { entity, tool });
+export function emitBimEntityCreated(
+  entity: AnySceneEntity,
+  tool: string,
+  origin?: EntityCreatedOrigin,
+): void {
+  // Χωρίς `origin` το payload μένει ΑΚΡΙΒΩΣ `{ entity, tool }` (όχι `origin: undefined`).
+  EventBus.emit('drawing:entity-created', origin ? { entity, tool, origin } : { entity, tool });
+}
+
+/**
+ * ADR-533 / ADR-911 Φ2 — «είναι αυτό ΝΕΑ, ΜΕΜΟΝΩΜΕΝΗ δημιουργία από τον άνθρωπο;». Η μόνη
+ * ερώτηση που επιτρέπεται να κάνει ένας ανά-οντότητα διαλογικός ανιχνευτής (π.χ. ο
+ * `DxfSymbolDetectHost`) πριν αντιδράσει. Allowlist, όχι denylist: κάθε ΜΕΛΛΟΝΤΙΚΗ τιμή του
+ * `origin` σιωπά εξ ορισμού, αντί να ανοίγει διαλόγους μέχρι να τη θυμηθεί κάποιος.
+ */
+export function isInteractiveEntityCreation(origin: EntityCreatedOrigin | undefined): boolean {
+  return origin === undefined || origin === 'create';
 }
 
 /**

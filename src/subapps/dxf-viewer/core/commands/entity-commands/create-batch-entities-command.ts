@@ -22,6 +22,7 @@
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { AnySceneEntity } from '../../../types/scene';
+import type { EntityCreatedOrigin } from '../../../systems/events/drawing-event-map';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import {
@@ -44,9 +45,22 @@ export interface BatchCreateEntitiesCommandConfig {
   readonly validationNoun: string;
 }
 
+/** Per-instance options of a batch-create command. */
+export interface BatchCreateEntitiesCommandOptions {
+  /**
+   * ADR-911 Φ2 — το `origin` που φέρει κάθε `drawing:entity-created` της παρτίδας. Απόν ⇒
+   * payload χωρίς `origin` (ιστορική συμπεριφορά: κάθε οντότητα μετρά ως μεμονωμένη δημιουργία).
+   */
+  readonly origin?: EntityCreatedOrigin;
+}
+
 /** Constructor shape every batch-create command shares. */
 export interface BatchCreateEntitiesCommandClass<TEntity> {
-  new (entities: readonly TEntity[], sceneManager: ISceneManager): ICommand;
+  new (
+    entities: readonly TEntity[],
+    sceneManager: ISceneManager,
+    options?: BatchCreateEntitiesCommandOptions,
+  ): ICommand;
 }
 
 /**
@@ -68,6 +82,7 @@ export function createBatchEntitiesCommand<TEntity extends { readonly id: string
     constructor(
       entities: readonly TEntity[],
       private readonly sceneManager: ISceneManager,
+      private readonly options: BatchCreateEntitiesCommandOptions = {},
     ) {
       // Defensive deep-clone: snapshots ανεξάρτητα από μετέπειτα live-scene edits.
       this.entities = entities.map((e) => deepClone(e));
@@ -111,10 +126,11 @@ export function createBatchEntitiesCommand<TEntity extends { readonly id: string
      */
     private deferFirestore(direction: 'apply' | 'revert'): void {
       const entities = this.entities;
+      const origin = this.options.origin;
       queueMicrotask(() => {
         if (direction === 'apply') {
           for (const e of entities) {
-            emitBimEntityCreated(deepClone(e) as unknown as AnySceneEntity, config.bimType);
+            emitBimEntityCreated(deepClone(e) as unknown as AnySceneEntity, config.bimType, origin);
           }
         } else {
           for (const e of entities) {

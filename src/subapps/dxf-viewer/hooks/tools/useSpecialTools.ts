@@ -51,7 +51,7 @@ import { useSpecialToolsPlacementTools, type PlacementToolsReturn } from './useS
 // ADR-417/419/422/437 — slab/roof/floor-finish/underfloor/thermal-space/space-separator
 // area & space tools extracted to a sub-hook (N.7.1).
 import { useSpecialToolsAreaTools, type AreaToolsReturn } from './useSpecialTools-area-tools';
-import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
+import { addWallToScene, addWallsToScene } from '../../bim/walls/add-wall-to-scene';
 import { useRegionGapClose } from '../drawing/use-region-gap-close';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene, addColumnsToScene } from '../../bim/columns/add-column-to-scene';
@@ -211,7 +211,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   );
   // ADR-412 — auto-type-on-create (Revit «Generic Wall»): give every freshly
   // drawn wall a shared family type before it lands in the scene (SSoT host).
-  const { ensureAutoWallType } = useWallAutoTyping();
+  const { ensureAutoWallType, beginWallTyping } = useWallAutoTyping();
   // ADR-363 Phase 1B — WALL TOOL
   /**
    * Wall drawing tool — 2-click placement (startPoint → endPoint) + commit.
@@ -231,6 +231,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     // (`addWallToScene`) so the DRAW path and the Ctrl-COPY hot-grip path use
     // ONE insertion routine (N.0.2 — no copy-paste of the persistence trigger).
     onWallCreated: (wallEntity) => addWallToScene(ensureAutoWallType(wallEntity), levelManager),
+    // ADR-911 Φ2 — multi-wall paths μέσω ΕΝΟΣ adapter: ΕΝΑ πέρασμα ενώσεων, ΕΝΑ undo.
+    onWallsCreated: (ws) => void addWallsToScene(ws.map(ensureAutoWallType), levelManager),
+    beginWallTyping,
   });
   // ADR-363 Phase 1J — both the freehand wall tool ('wall') and the on-entity
   // variant ('wall-on-entity') share ONE useWallTool instance; lifecycle covers

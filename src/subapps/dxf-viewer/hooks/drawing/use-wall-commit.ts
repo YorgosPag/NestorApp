@@ -31,10 +31,15 @@ import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 import { bulgeFrom3Points, bulgeFromRadius } from '../../bim/walls/wall-arc-descriptor';
 import { resolveCurvedArcParams, wallEndTangentAt } from '../../bim/walls/wall-curved-draw';
 import type { WallParams } from '../../bim/types/wall-types';
+import type { WallTypingSession } from '../../bim/family-types/wall-typer';
 
 export interface WallCommitContext {
   readonly currentLevelId: string;
   readonly onWallCreated?: (entity: WallEntity) => void;
+  /** ADR-911 Φ2 — batch sink (ΕΝΑ undo + ΕΝΑ πέρασμα ενώσεων). Omit ⇒ per-entity fallback. */
+  readonly onWallsCreated?: (entities: readonly WallEntity[]) => void;
+  /** ADR-911 Φ3 — ο τύπος μπαίνει μέσα στο `computeFillingWalls` (προεπισκόπηση ≡ εγγραφή). */
+  readonly beginWallTyping?: () => WallTypingSession;
   readonly getSceneUnits?: () => SceneUnits;
   /**
    * Live scene entities — used by the region/perimeter fill paths to auto-join a
@@ -111,7 +116,18 @@ function continueChain(s: WallToolState): WallToolState {
  * tool's React identity/perf profile is unchanged.
  */
 export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
-  const { currentLevelId, onWallCreated, getSceneUnits, getSceneEntities, setState } = ctx;
+  const { currentLevelId, onWallCreated, onWallsCreated, beginWallTyping, getSceneUnits, getSceneEntities, setState } = ctx;
+
+  // ADR-911 Φ2 — ΕΝΑΣ δρόμος για κάθε διαδρομή που χτίζει πολλούς τοίχους με μία κίνηση: όλοι
+  // μαζί στο batch sink (ένα undo, ένα πέρασμα ενώσεων)· χωρίς sink, ένας-ένας όπως πριν.
+  const emitWalls = useCallback(
+    (walls: readonly WallEntity[]): void => {
+      if (walls.length === 0) return;
+      if (onWallsCreated) onWallsCreated(walls);
+      else for (const w of walls) onWallCreated?.(w);
+    },
+    [onWallCreated, onWallsCreated],
+  );
 
   // ── commit (straight) ────────────────────────────────────────────────────
   const commitStraightFromState = useCallback(
@@ -306,36 +322,40 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
           sceneUnits,
           currentLevelId,
         );
-        for (const w of walls) onWallCreated?.(w);
+        emitWalls(walls);
       }
       setState(continueChain(s));
       return true;
     },
-    [currentLevelId, onWallCreated, getSceneUnits, setState],
+    [currentLevelId, onWallCreated, emitWalls, getSceneUnits, setState],
   );
 
   // ── shared rect→wall build (in-region + outer-perimeter) ─────────────────
   // One filling wall per detected rectangle; returns how many passed the validator.
-  // Each `onWallCreated` recomputes neighbour miter trims (addWallToScene), so the
-  // whole batch is mitred/bevelled once the last leg lands.
+  // The whole batch lands through `emitWalls` → `addWallsToScene`: ONE neighbour-join
+  // pass and ONE undo step for all legs (ADR-911 Φ2).
   const buildFillingWalls = useCallback(
     (s: WallToolState, rects: readonly DetectedRectangle[]): number => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       // ADR-419 v2.4 «μία διαδρομή δημιουργίας» — build + validate + Revit auto-join +
       // ADR-567 no-overlap ζουν στο ΕΝΑ SSoT `computeFillingWalls`, ΤΟ ΙΔΙΟ που τρέχει το
       // preview (`resolvePerimeterPreview`) → ό,τι φωτίστηκε πράσινο = ΑΚΡΙΒΩΣ οι τοίχοι που
-      // χτίζονται. Το `onWallCreated` (addWallToScene) κάνει τον authoritative miter+persist.
+      // χτίζονται. Το batch sink (addWallsToScene) κάνει τον authoritative miter+persist.
+      const typing = beginWallTyping?.();
       const { walls } = computeFillingWalls(
         rects,
         s.overrides,
         sceneUnits,
         currentLevelId,
         getSceneEntities?.() ?? [],
+        { typeWall: typing?.typeWall },
       );
-      for (const entity of walls) onWallCreated?.(entity);
+      // Μόνο οι τύποι των τοίχων που ΕΠΙΒΙΩΣΑΝ γράφονται — απορριφθείς τοίχος δεν αφήνει ορφανό τύπο.
+      typing?.commit(walls);
+      emitWalls(walls);
       return walls.length;
     },
-    [currentLevelId, onWallCreated, getSceneUnits, getSceneEntities],
+    [currentLevelId, emitWalls, beginWallTyping, getSceneUnits, getSceneEntities],
   );
 
   // ── commit (in-region, ADR-363 Phase 1K) ─────────────────────────────────

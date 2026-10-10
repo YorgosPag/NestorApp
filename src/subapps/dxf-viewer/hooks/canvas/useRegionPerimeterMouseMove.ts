@@ -15,6 +15,8 @@ import {
 import { extractLineSegments, findEnclosingRectangle } from '../../bim/walls/wall-in-region';
 import { computeFillingWalls, computeFillingWallFootprints } from '../../bim/walls/filling-walls-compute';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
+import { createPreviewWallTyper } from '../../bim/family-types/wall-typer';
+import { useBimFamilyTypeStore } from '../../bim/family-types/bim-family-type-store';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 import type { WallParamOverrides } from '../drawing/wall-completion';
 // Giorgio 2026-07-01 — ο σκέτος «Κολόνα» δείχνει το ΙΔΙΟ σχήμα (ορθογώνιο ή Γ/Τ/Π)
@@ -189,7 +191,10 @@ function resolvePerimeterPreview(
   // φωτίζεται = ΑΚΡΙΒΩΣ ό,τι δημιουργεί το κλικ (preview ≡ commit 100%).
   // Μη-ορθογωνικό loop (rects=[]) → ένα σχήμα (το commit ούτως ή άλλως το αγνοεί).
   if (pick.rects.length > 0) {
-    const { walls, rejected } = computeFillingWalls(pick.rects, overrides, sceneUnits, levelId, entities);
+    // ADR-911 Φ3 — ο ΙΔΙΟΣ τύπος που θα σφραγίσει ο commit μπαίνει και εδώ (πρόχειροι τύποι,
+    // καμία εγγραφή): η επέκταση και ο έλεγχος επικάλυψης κρίνουν τον τελικό τοίχο.
+    const { typeWall } = createPreviewWallTyper(useBimFamilyTypeStore.getState().getTypes());
+    const { walls, rejected } = computeFillingWalls(pick.rects, overrides, sceneUnits, levelId, entities, { typeWall });
     const footprints = computeFillingWallFootprints(walls, entities);
     const zones: RegionPerimeterZone[] = [];
     walls.forEach((w, i) => {

@@ -14,6 +14,9 @@ import type { TopoEventMap } from './drawing-event-map-topo';
 import type { PrintFidelityNote } from '../../print/print-fidelity';
 import type { EntityCreateTargetScope } from '../../bim/persistence/bim-floor-scope';
 
+/** Γιατί εκπέμφθηκε ένα `drawing:entity-created` (ADR-533 · ADR-911 Φ2). */
+export type EntityCreatedOrigin = 'create' | 'retrim' | 'bulk';
+
 // Event type definitions - centralized and type-safe.
 // MEP auto-design feedback events live in `MepAutoDesignEventMap` (SRP split, N.7.1).
 // BIM entity events (params/delete, grid-generation, attach, 3D placement, IFC) live
@@ -58,8 +61,13 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
      * μετά από recompute miters (add-wall-to-scene neighbours / recomputeWallTrims) —
      * μόνο τα persistence hooks το χρειάζονται· οι detectors ΤΟ ΑΓΝΟΟΥΝ, αλλιώς κάθε
      * move/rotate άσχετου entity ξανα-πυροδοτεί τον ανιχνευτή κουφωμάτων (false positive).
+     * ADR-911 Φ2 — `'bulk'` = νέα οντότητα που γεννήθηκε από ΕΓΚΕΚΡΙΜΕΝΗ παρτίδα (βοηθός
+     * «Μοντέλο από το σχέδιο»): τα persistence hooks αποθηκεύουν κανονικά, οι ανά-οντότητα
+     * διαλογικοί ανιχνευτές ΣΙΩΠΟΥΝ (40 τοίχοι ≠ 40 διάλογοι — η παρτίδα έχει δικό της έλεγχο).
+     * Το ερώτημα «είναι αυτό νέα, μεμονωμένη δημιουργία;» απαντιέται ΜΟΝΟ από το
+     * `isInteractiveEntityCreation` (bim-entity-lifecycle-events.ts).
      */
-    origin?: 'create' | 'retrim';
+    origin?: EntityCreatedOrigin;
     /**
      * ADR-635 Φ C.16 — the floor/level this creation BELONGS to, when the emitter
      * knows it and it may differ from the active level. Absent (the overwhelming

@@ -81,7 +81,7 @@ import { useWallPreviewSync } from './use-wall-preview-sync';
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult {
-  const { onWallCreated, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
+  const { onWallCreated, onWallsCreated, beginWallTyping, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<WallToolState>(INITIAL_STATE);
   const stateRef = useRef<WallToolState>(state);
@@ -160,7 +160,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     commitOnEntity,
     commitInRegionRects,
     commitPerimeterFaces,
-  } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, getSceneEntities, setState });
+  } = useWallCommit({ currentLevelId, onWallCreated, onWallsCreated, beginWallTyping, getSceneUnits, getSceneEntities, setState });
 
   // ── in-region / perimeter click handlers (extracted for N.7.1) ───────────
   const { regionTol, fillEnclosingRectAt, onRegionClick, onPerimeterClick, getRegionPickIds } = useWallRegionClicks({

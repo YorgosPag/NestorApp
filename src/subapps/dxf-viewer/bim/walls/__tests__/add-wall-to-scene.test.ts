@@ -35,7 +35,7 @@ function makeDeps(scene: { current: SceneModel | null }, levelId: string | null 
 }
 
 describe('addWallToScene', () => {
-  it('appends the wall, persists the scene, and broadcasts drawing:entity-created', () => {
+  it('appends the wall, persists the scene, and broadcasts drawing:entity-created', async () => {
     const wall = makeWall({ x: 0, y: 0 }, { x: 1000, y: 0 });
     const scene = { current: { entities: [] } as unknown as SceneModel };
     const events: Array<{ id: string; tool: string }> = [];
@@ -43,7 +43,10 @@ describe('addWallToScene', () => {
 
     addWallToScene(wall, makeDeps(scene));
 
+    // Scene mutation is synchronous (CreateWallsCommand.execute → adapter.addEntity).
     expect(scene.current?.entities.map((e) => e.id)).toContain(wall.id);
+    // ADR-911 Φ2 — the persistence broadcast fires in a microtask (after CommandHistory.execute).
+    await Promise.resolve();
     expect(events).toHaveLength(1);
     expect(events[0]).toEqual({ id: wall.id, tool: 'wall' });
     off();
@@ -85,7 +88,7 @@ describe('commitWallCopy', () => {
     };
   }
 
-  it('inserts a NEW wall translated by delta, leaving the original untouched', () => {
+  it('inserts a NEW wall translated by delta, leaving the original untouched', async () => {
     const original = makeWall({ x: 0, y: 0 }, { x: 1000, y: 0 });
     const scene = { current: { entities: [original] } as unknown as SceneModel };
     const created: WallEntity[] = [];
@@ -109,6 +112,7 @@ describe('commitWallCopy', () => {
     const stillOriginal = scene.current!.entities.find((e) => e.id === original.id) as WallEntity;
     expect(stillOriginal.params.start.y).toBeCloseTo(0, 6);
 
+    await Promise.resolve();
     expect(created).toHaveLength(1);
     expect(created[0].id).toBe(copy.id);
     off();

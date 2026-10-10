@@ -9,6 +9,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity, WallKind, WallArcVariant } from '../../bim/types/wall-types';
+import type { WallTypingSession } from '../../bim/family-types/wall-typer';
 import type { Entity } from '../../types/entities';
 import type { WallSource } from '../../bim/walls/wall-from-entity';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
@@ -137,6 +138,18 @@ export const INITIAL_STATE: WallToolState = {
 export interface UseWallToolOptions {
   /** Callback fired after a `WallEntity` is built & committed. */
   readonly onWallCreated?: (entity: WallEntity) => void;
+  /**
+   * ADR-911 Φ2 — batch callback για τις διαδρομές που χτίζουν ΠΟΛΛΟΥΣ τοίχους με μία κίνηση
+   * (πλήρωση περιοχής / περιγράμματος / κλειστό σχήμα): όλοι μαζί ⇒ ΕΝΑ undo + ΕΝΑ πέρασμα
+   * ενώσεων (`addWallsToScene`). Omit ⇒ per-entity fallback στο `onWallCreated`.
+   */
+  readonly onWallsCreated?: (entities: readonly WallEntity[]) => void;
+  /**
+   * ADR-911 Φ3 — συνεδρία τύπου για τις διαδρομές που χτίζουν μέσω `computeFillingWalls`: ο
+   * τύπος μπαίνει ΜΕΣΑ στο χτίσιμο (πριν από ένωση + επικάλυψη) ώστε προεπισκόπηση ≡ εγγραφή.
+   * Omit ⇒ οι τοίχοι χτίζονται χωρίς τύπο (ο καλών τους σφραγίζει μετά, όπως πριν).
+   */
+  readonly beginWallTyping?: () => WallTypingSession;
   /** Layer ID at which the WallEntity is registered. */
   readonly currentLevelId?: string;
   /**

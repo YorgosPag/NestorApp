@@ -35,6 +35,7 @@
 
 import type { WallEntity, WallParams } from '../types/wall-types';
 import type { AnySceneEntity } from '../../types/entities';
+import { isColumnEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmScaleFor } from '../../utils/scene-units';
@@ -193,6 +194,33 @@ export function applyTrimPatches(
       geometry: computeWallGeometry(newParams, wall.kind),
     } as WallEntity;
   });
+}
+
+/**
+ * World-baked column footprint polygons of the scene — the ADR-363
+ * §wall-column-end-miter targets so a wall END framing a column is cut flush on the
+ * column face (Revit parity). The `columnFootprints` input of {@link computeWallTrims},
+ * shared by every trim caller (commit, retrim, preview).
+ */
+export function collectColumnFootprints(entities: readonly AnySceneEntity[]): readonly (readonly Point2D[])[] {
+  const out: (readonly Point2D[])[] = [];
+  for (const e of entities) {
+    if (isColumnEntity(e)) out.push(e.geometry.footprint.vertices);
+  }
+  return out;
+}
+
+/** Τα τέσσερα πεδία ένωσης ενός τοίχου — ό,τι γράφει ένα {@link WallTrimPatch}. */
+export type WallTrimFields = Pick<WallParams, 'startMiter' | 'endMiter' | 'startBevel' | 'endBevel'>;
+
+/** `true` αν η ένωση ενός τοίχου διαφέρει ανάμεσα σε δύο καταστάσεις (απέκτησε / έχασε / άλλαξε). */
+export function wallTrimChanged(prev: WallTrimFields, next: WallTrimFields): boolean {
+  return (
+    JSON.stringify(prev.startMiter) !== JSON.stringify(next.startMiter) ||
+    JSON.stringify(prev.endMiter) !== JSON.stringify(next.endMiter) ||
+    prev.startBevel !== next.startBevel ||
+    prev.endBevel !== next.endBevel
+  );
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
