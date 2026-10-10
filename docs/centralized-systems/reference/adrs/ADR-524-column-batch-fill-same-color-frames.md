@@ -156,6 +156,15 @@ per-entity fallback). `appendColumnsWithBreakdown` δέχεται πλέον bat
 auto-foundation βλέπει όλο το set → πέδιλα για όλες.
 
 ## 7. Changelog
+- **2026-10-10 (ADR-911 Φ1 — ο χρωματικός σαρωτής έγινε ουδέτερος)** — τα
+  `resolveRectFrameColorHex`, `findSameColorRects` και ο τύπος `EntityColorResolver`
+  **μετακινήθηκαν** από το `bim/columns/column-batch-fill.ts` στο
+  `bim/walls/same-color-rects.ts`, μαζί με το νέο `rectEdgeSourceIds` (ακμή πλαισίου →
+  id γραμμής-πηγή, που πριν ζούσε ενσωματωμένο στο majority vote). Καμία αλλαγή
+  συμπεριφοράς. Λόγος: δεύτερος καταναλωτής (ο βοηθός «Μοντέλο από το σχέδιο»), και
+  καμία γραμμή τους δεν ήξερε τι είναι κολώνα. Στο `column-batch-fill.ts` έμεινε ό,τι
+  **ξέρει** κολώνα: `rectAlreadyFilled` και `scanSameColorUnfilledRects`. Οι αναφορές
+  της ενότητας 3.1 στο παλιό αρχείο διαβάζονται με αυτή τη διόρθωση.
 - **2026-06-25** — Αρχική υλοποίηση (UNCOMMITTED). Pure orchestrator + confirm
   store/dialog + wiring στο `use-column-region-clicks.ts`. Πλήρης επανάχρηση
   region-detection + color SSoT· μηδέν νέος μηχανισμός ανίχνευσης/χρώματος.

@@ -3,13 +3,12 @@
  * rectangle filtering, idempotency (filled vs unfilled), full scan.
  */
 
+import { rectAlreadyFilled, scanSameColorUnfilledRects } from '../column-batch-fill';
 import {
   resolveRectFrameColorHex,
   findSameColorRects,
-  rectAlreadyFilled,
-  scanSameColorUnfilledRects,
   type EntityColorResolver,
-} from '../column-batch-fill';
+} from '../../walls/same-color-rects';
 import { extractLineSegments, type DetectedRectangle } from '../../walls/wall-in-region';
 import type { Entity } from '../../../types/entities';
 import type { ColumnEntity } from '../../types/column-types';
