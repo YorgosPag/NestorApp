@@ -23,8 +23,8 @@ jest.mock('firebase-admin/firestore', () => ({
 }));
 
 /** Ο ΕΝΑΣ γραφέας της δημόσιας προβολής — εδώ κρίνεται μόνο ότι η μηχανή τον ΚΑΛΕΙ. */
-jest.mock('@/services/listings/publish-public-listing', () => ({
-  republishListing: jest.fn(async () => 'withdrawn'),
+jest.mock('@/services/listings/listing-media-refresh', () => ({
+  republishListingOfChangedUnit: jest.fn(async () => 'withdrawn'),
 }));
 
 /** Ο engine εισάγει τον φύλακα διαγραφής, που σέρνει `next/server`. */
@@ -39,7 +39,7 @@ jest.mock('@/services/entity-audit.service', () => ({
 
 import { ApiError } from '@/lib/api/api-error-types';
 import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
-import { republishListing } from '@/services/listings/publish-public-listing';
+import { republishListingOfChangedUnit } from '@/services/listings/listing-media-refresh';
 import {
   archive,
   listArchived,
@@ -55,7 +55,7 @@ const USER = 'uid_1';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
 const resolveName = resolveUserDisplayName as jest.Mock;
-const republish = republishListing as jest.Mock;
+const republish = republishListingOfChangedUnit as jest.Mock;
 
 /** Ελάχιστο Firestore για μία εγγραφή: φόρτωση + καταγραφή του τι γράφτηκε. */
 function dbWith(data: Record<string, unknown> | null) {

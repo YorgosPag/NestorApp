@@ -324,8 +324,10 @@ describe('5. Η ρητή εξαίρεση απαιτεί ΛΟΓΟ', () => {
   // καλεί `query()`, διαβάζει σκέτο `collection()`. Άγκυρα πάνω του θα ήταν
   // `[].some(...) === false`, δηλαδή **μονίμως κόκκινη**· και το σχόλιο εξαίρεσης εκεί
   // είναι, αυστηρά, τεκμηρίωση για άνθρωπο — καμία πύλη δεν το διαβάζει.
-  test('πραγματικό αρχείο: ο γραφέας της δημόσιας προβολής έχει τεκμηριωμένη εξαίρεση', () => {
-    const file = path.resolve(__dirname, '..', '..', 'src/services/listings/publish-public-listing.ts');
+  // ADR-907 §11.8: το ερώτημα «όλα τα ακίνητα του έργου» μετακόμισε από τον γραφέα στον ΕΝΑ βρόχο με εμβέλεια —
+  // η εξαίρεση και ο λόγος της ταξίδεψαν αυτούσια μαζί του.
+  test('πραγματικό αρχείο: ο βρόχος της δημόσιας προβολής έχει τεκμηριωμένη εξαίρεση', () => {
+    const file = path.resolve(__dirname, '..', '..', 'src/services/listings/listing-scope-republish.ts');
     const sites = scanFile(file, ctx);
     expect(sites.some((s) => s.status === 'exempt')).toBe(true);
     expect(sites.some((s) => s.status === 'violation')).toBe(false);

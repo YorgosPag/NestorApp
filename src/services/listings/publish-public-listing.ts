@@ -18,8 +18,10 @@
  * idempotent (ίδιο ιδίωμα με το `floorUnitsAggregation`).
  *
  * ⚠️ **Ο κύκλος ζωής της ΘΕΣΗΣ ζει αλλού από το ακίνητο** (Α1): αλλάζει στο **έργο**.
- * Γι' αυτό εκτίθεται και το {@link republishListingsForProject} — αλλιώς μια διόρθωση
- * διεύθυνσης θα άφηνε **κάθε** αγγελία του έργου με παλιά θέση, σιωπηλά.
+ * Γι' αυτό υπάρχει και ο βρόχος με εμβέλεια (`listing-scope-republish` —
+ * `republishListingsForProject`): αλλιώς μια διόρθωση διεύθυνσης θα άφηνε **κάθε** αγγελία
+ * του έργου με παλιά θέση, σιωπηλά. Ο βρόχος ζει **εκεί** και καλεί τον γραφέα· το αντίστροφο
+ * δεν γίνεται ποτέ (ADR-907 §11.8).
  */
 
 import type { DocumentReference, Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -450,45 +452,4 @@ export function reportProjectionFailure(listingId: string, error: unknown): Publ
     error: error instanceof Error ? error.message : String(error),
   });
   return 'failed';
-}
-
-/**
- * Ξαναγράφει τις προβολές **όλων** των ακινήτων ενός έργου.
- *
- * Η θέση ζει στο **έργο** (Α1): μια διόρθωση διεύθυνσης εκεί αλλάζει το σχήμα στον
- * χάρτη για **κάθε** αγγελία του — και χωρίς αυτό, καμία δεν θα το μάθαινε.
- */
-export async function republishListingsForProject(
-  adminDb: AdminFirestore,
-  projectId: string
-): Promise<Record<PublishOutcome, number>> {
-  // tenant-scope-exempt: το `projectId` ΕΙΝΑΙ όριο μισθωτή — ένα έργο ανήκει σε
-  // ακριβώς μία εταιρεία, οπότε το φίλτρο δεν είναι ευρύτερο από ένα `companyId`,
-  // είναι στενότερο. Επιπλέον τρέχει με Admin SDK ως **επανασύνθεση παραγώγου**: ο
-  // καλών έχει ήδη αποδείξει δικαίωμα στο έργο, και η έξοδος είναι η δημόσια προβολή,
-  // που εξ ορισμού δεν κουβαλά ταυτότητα πελάτη (`types/public-listing.ts`).
-  const snap = await adminDb
-    .collection(COLLECTIONS.PROPERTIES)
-    .where('projectId', '==', projectId)
-    .get();
-
-  const tally: Record<PublishOutcome, number> = { published: 0, withdrawn: 0, failed: 0 };
-
-  // 🔑 **ΕΝΑΣ επιλυτής για ΟΛΟ το πέρασμα** (ADR-841 §7 Α1): ένα έργο ανήκει σε
-  //    **ακριβώς μία** εταιρεία — δες την εξαίρεση μισθωτή δύο γραμμές πιο πάνω — άρα
-  //    N ακίνητα κάνουν **μία** ανάγνωση εταιρείας, όχι N ταυτόσημες.
-  const resolveAgency = createAgencyIdentityResolver(adminDb);
-
-  for (const doc of snap.docs) {
-    const outcome = await republishListing(
-      adminDb,
-      doc.id,
-      doc.data() as ListingSourceProperty,
-      resolveAgency
-    );
-    tally[outcome] += 1;
-  }
-
-  logger.info('Επανασύνθεση προβολών έργου', { projectId, ...tally });
-  return tally;
 }

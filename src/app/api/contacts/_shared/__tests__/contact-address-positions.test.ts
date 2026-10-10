@@ -50,7 +50,7 @@ jest.mock('@/app/api/geocoding/geocoding-engine', () => ({
     return geocoderVerdict;
   },
 }));
-jest.mock('@/services/listings/publish-public-listing', () => ({
+jest.mock('@/services/listings/listing-scope-republish', () => ({
   republishListingsForProject: async () => ({ published: 0, withdrawn: 0, failed: 0 }),
 }));
 

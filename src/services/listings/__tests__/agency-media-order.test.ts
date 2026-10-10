@@ -498,11 +498,16 @@ describe('Κ8 — ΚΛΕΙΣΤΟΤΗΤΑ ΤΩΝ ΚΑΛΟΥΝΤΩΝ', () => {
     // 🏢 ADR-907 §11.7 — η κλήση ζει πλέον στον **ΕΝΑ τόπο των πηγών** (αρχεία ακινήτου + κάτοψη ορόφου), όχι στον
     //    γραφέα: τον ρωτούν **και** ο γραφέας **και** η συμφιλίωση, αλλιώς το αποτύπωμα των δύο θα διέφερε πάντα.
     expect(listings('listing-media-sources.ts')).toContain('agencyMediaDeclaration(property)');
-    for (const caller of ['publish-public-listing.ts', 'listing-media-reconciliation.service.ts', 'listing-media-refresh.ts']) {
+    // 🏢 ADR-907 §11.8 — ο επιλυτής των βρόχων (έργο · όροφος) γεννιέται στον ΕΝΑ βρόχο με εμβέλεια (`createListingPass`)·
+    //    το `listing-media-refresh` δεν φτιάχνει πια δικό του: παίρνει το πέρασμα από εκεί.
+    for (const caller of ['publish-public-listing.ts', 'listing-media-reconciliation.service.ts', 'listing-scope-republish.ts']) {
       expect(listings(caller)).toContain('createListingMediaResolver(adminDb)');
-      // ⛔ Κανένας από τους τρεις δεν φτιάχνει δικό του επιλυτή αρχείων — δεύτερος δρόμος θα έχανε την κάτοψη ορόφου.
+    }
+    // ⛔ Κανένας δεν φτιάχνει δικό του επιλυτή αρχείων — δεύτερος δρόμος θα έχανε την κάτοψη ορόφου.
+    for (const caller of ['publish-public-listing.ts', 'listing-media-reconciliation.service.ts', 'listing-scope-republish.ts', 'listing-media-refresh.ts']) {
       expect(listings(caller)).not.toContain('createAgencyMediaResolver');
     }
+    expect(listings('listing-media-refresh.ts')).toContain('createListingPass(adminDb)');
   });
 });
 

@@ -34,9 +34,9 @@ import type { PublicListing } from '@/types/public-listing';
 import { brokeredOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import {
   republishListing,
-  republishListingsForProject,
   type ListingSourceProperty,
 } from '../publish-public-listing';
+import { republishListingsForProject } from '../listing-scope-republish';
 import { republishListingsForCompany } from '../rebuild-public-listings.service';
 
 // ============================================================================
@@ -228,7 +228,7 @@ describe('🔴 Β — η απο-κανονικοποίηση πληρώνετα�
     for (const id of ['prop_a', 'prop_b', 'prop_c']) {
       expect(store.written.get(id)!.agencyName).toBe('ΑΛΦΑ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.');
     }
-    // …με **μία** ανάγνωση εταιρείας συνολικά. Το ίδιο το `publish-public-listing.ts`
+    // …με **μία** ανάγνωση εταιρείας συνολικά. Ο ίδιος ο βρόχος (`listing-scope-republish.ts`)
     // το δηλώνει: ένα έργο ανήκει σε **ακριβώς μία** εταιρεία.
     expect(store.reads.filter((r) => r === `${COLLECTIONS.COMPANIES}/${ALFA}`)).toHaveLength(1);
   });

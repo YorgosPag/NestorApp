@@ -52,7 +52,7 @@ jest.mock('@/lib/firestore/version-check', () => ({
 }));
 jest.mock('@/lib/firestore/entity-linking.service', () => ({ linkEntity: async () => undefined }));
 jest.mock('@/services/places/public-place-read.service', () => ({ verifyPlaceRef: async () => 'exists' }));
-jest.mock('@/services/listings/publish-public-listing', () => ({ republishListingsForProject: jest.fn() }));
+jest.mock('@/services/listings/listing-scope-republish', () => ({ republishListingsForProject: jest.fn() }));
 jest.mock('@/app/api/geocoding/geocoding-engine', () => ({ geocodeWithVerdict: jest.fn() }));
 jest.mock('@/services/listings/address-position-completion-schedule', () => ({
   scheduleAddressPositionCompletion: jest.fn(),

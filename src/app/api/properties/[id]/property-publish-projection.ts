@@ -12,12 +12,13 @@
 
 import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { createModuleLogger } from '@/lib/telemetry';
-import { republishListing } from '@/services/listings/publish-public-listing';
+import { republishListingOfChangedUnit } from '@/services/listings/listing-media-refresh';
+import type { ListingSourceProperty } from '@/services/listings/publish-public-listing';
 
 const logger = createModuleLogger('PropertyPublishProjection');
 
 /** Το σχήμα που περιμένει η προβολή — εξαγόμενο ώστε ο καλών να δηλώνει τη στένωσή του ρητά. */
-export type ListingProperty = Parameters<typeof republishListing>[2];
+export type ListingProperty = ListingSourceProperty;
 
 /**
  * Ξαναγράφει τη δημόσια προβολή μετά από επιτυχημένη γραφή του κατόχου.
@@ -27,17 +28,20 @@ export type ListingProperty = Parameters<typeof republishListing>[2];
  * ο κόσμος**. Ένας κάτοχος που πάτησε «αποθήκευση» και είδε επιτυχία δικαιούται η
  * αγγελία του να έχει ήδη αλλάξει όταν του απαντήσουμε.
  *
- * 🔑 **Δεν πετά ποτέ**: το `republishListing` επιστρέφει `'failed'` **ονομαστικά**. Η
+ * 🔑 **Δεν πετά ποτέ**: ο γραφέας επιστρέφει `'failed'` **ονομαστικά**. Η
  * αποτυχία της δημόσιας προβολής δεν ακυρώνει τη δουλειά του κατόχου — η γραφή του
  * **έγινε** ήδη. Η διαφορά ανάμεσα σε «*σιωπηλά μπαγιάτικο*» και «*γνωστά εκκρεμές*»
  * είναι ακριβώς αυτή η γραμμή στο ημερολόγιο.
+ *
+ * 🏢 **Και οι αδελφές αγγελίες του ορόφου** *(ADR-907 §11.8)*: ακίνητο που κρατήθηκε ή βγήκε από την αγορά
+ * αλλάζει την κάτοψη ορόφου **κάθε** γείτονα. Η διάδοση ζει στο `republishListingOfChangedUnit` — όχι εδώ.
  */
 export async function republishPublicProjection(
   adminDb: AdminFirestore,
   id: string,
   property: ListingProperty,
 ): Promise<void> {
-  const outcome = await republishListing(adminDb, id, property);
+  const outcome = await republishListingOfChangedUnit(adminDb, id, property);
   if (outcome === 'failed') {
     logger.warn('Δημόσια προβολή εκκρεμής — θα διορθωθεί από την επανασύνθεση', { id });
   }

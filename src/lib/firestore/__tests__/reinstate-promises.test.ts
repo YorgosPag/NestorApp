@@ -8,8 +8,8 @@
  * @module lib/firestore/__tests__/reinstate-promises
  */
 
-jest.mock('@/services/listings/publish-public-listing', () => ({
-  republishListing: jest.fn(),
+jest.mock('@/services/listings/listing-media-refresh', () => ({
+  republishListingOfChangedUnit: jest.fn(),
 }));
 
 import { propertyLifecycleEffects } from '@/services/property/property-lifecycle-effects';

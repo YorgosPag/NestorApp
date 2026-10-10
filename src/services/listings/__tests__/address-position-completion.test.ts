@@ -16,7 +16,7 @@ import { geocodeWithVerdict } from '@/app/api/geocoding/geocoding-engine';
 import { EntityAuditService } from '@/services/entity-audit.service';
 
 jest.mock('server-only', () => ({}));
-jest.mock('../publish-public-listing', () => ({ republishListingsForProject: jest.fn() }));
+jest.mock('../listing-scope-republish', () => ({ republishListingsForProject: jest.fn() }));
 jest.mock('@/app/api/geocoding/geocoding-engine', () => ({ geocodeWithVerdict: jest.fn() }));
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn().mockResolvedValue('audit_1') },

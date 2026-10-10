@@ -25,6 +25,10 @@ jest.mock('@/lib/api/space-entity-write', () => ({
   spaceAuditEntry: () => null,
 }));
 jest.mock('@/lib/api/space-entity-fields', () => ({ resolveAllocationCodeChange: () => null }));
+jest.mock('@/services/listings/listing-media-refresh', () => ({
+  refreshFloorPlateNeighbours: jest.fn(async () => []),
+  SPACE_OVERLAY_LINK: { parking: 'parkingId', storage: 'storageId' },
+}));
 
 const mockVersionCheck = jest.fn(async () => ({ newVersion: 8 }));
 jest.mock('@/lib/firestore/version-check', () => ({

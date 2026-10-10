@@ -22,10 +22,8 @@ import { ARCHIVED_STATUS } from '@/lib/firestore/trashed-status';
 import type { LifecycleEffects, ReinstatePatch } from '@/lib/firestore/lifecycle-effects';
 import { takeOffMarket } from '@/lib/offers/take-off-market';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  republishListing,
-  type ListingSourceProperty,
-} from '@/services/listings/publish-public-listing';
+import { republishListingOfChangedUnit } from '@/services/listings/listing-media-refresh';
+import type { ListingSourceProperty } from '@/services/listings/publish-public-listing';
 
 const logger = createModuleLogger('PropertyLifecycleEffects');
 
@@ -83,8 +81,9 @@ function offMarketOnUnarchive(
 /**
  * Ξαναγράφει τη δημόσια προβολή μετά από μετάβαση κύκλου ζωής.
  *
- * Το `republishListing` **δεν πετά ποτέ**· το `'failed'` σημαίνει «γνωστά εκκρεμές», και η
- * επανασύνθεση το διορθώνει.
+ * Ο γραφέας **δεν πετά ποτέ**· το `'failed'` σημαίνει «γνωστά εκκρεμές», και η
+ * επανασύνθεση το διορθώνει. Ακίνητο που κατεβαίνει από την αγορά αλλάζει και την κάτοψη
+ * ορόφου των γειτόνων του — η διάδοση ζει στο `republishListingOfChangedUnit` (ADR-907 §11.8).
  */
 async function republishAfterLifecycleChange(
   db: FirebaseFirestore.Firestore,
@@ -93,7 +92,7 @@ async function republishAfterLifecycleChange(
 ): Promise<void> {
   // Το `id` δεν ζει μέσα στο έγγραφο — η προβολή το θέλει ως ταυτότητα της αγγελίας.
   const property: ListingSourceProperty = { ...data, id: entityId };
-  const outcome = await republishListing(db, entityId, property);
+  const outcome = await republishListingOfChangedUnit(db, entityId, property);
   if (outcome === 'failed') {
     logger.warn('Δημόσια προβολή εκκρεμής μετά από αλλαγή κύκλου ζωής', { entityId });
   }

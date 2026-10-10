@@ -7,7 +7,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
-import { republishListing } from '@/services/listings/publish-public-listing';
+import { republishListingOfChangedUnit } from '@/services/listings/listing-media-refresh';
+import type { ListingSourceProperty } from '@/services/listings/publish-public-listing';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { resolveHostedFloorForCreate } from '@/lib/floor/host-floor.server';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -229,14 +230,17 @@ export const POST = withStandardRateLimit(
         // Χωρίς αυτό, ένα ακίνητο που γεννιέται ήδη δημοσιεύσιμο θα έβγαινε **ανώνυμο**
         // — και θα διορθωνόταν μόνο στην πρώτη επεξεργασία. Η πηγή είναι το **auth
         // context**, η ίδια που έγραψε το πεδίο μία γραμμή πιο πάνω.
-        await republishListing(
+        //
+        // 🏢 Από την ΙΔΙΑ πόρτα με κάθε άλλη αλλαγή ακινήτου (ADR-907 §11.8): νέο ακίνητο δεν έχει ακόμη
+        // περίγραμμα, άρα η φρεσκάδα των αδελφών κοστίζει ένα κενό ερώτημα — αλλά δεν υπάρχει δεύτερος δρόμος.
+        await republishListingOfChangedUnit(
           adminDb,
           result.id,
           {
             ...entitySpecificFields,
             id: result.id,
             companyId: ctx.companyId,
-          } as Parameters<typeof republishListing>[2],
+          } as ListingSourceProperty,
         );
 
         return apiSuccess<PropertyCreateResponse>(

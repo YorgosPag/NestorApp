@@ -53,7 +53,7 @@ import {
   type ResolveAddressPositionsOptions,
   type ResolvedAddressPositions,
 } from '@/lib/geocoding/address-position';
-import { republishListingsForProject } from './publish-public-listing';
+import { republishListingsForProject } from './listing-scope-republish';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const logger = createModuleLogger('ProjectPlaceProjection');

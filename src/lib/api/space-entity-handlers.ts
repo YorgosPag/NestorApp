@@ -40,6 +40,7 @@ import { assertNotDetachingAttachedSpace } from '@/lib/api/space-attachment-guar
 import { assertBuildingInSpaceProject } from '@/lib/api/space-building-project-guard';
 import { resolveHostedFloorPatch } from '@/lib/floor/host-floor.server';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { refreshFloorPlateNeighbours, SPACE_OVERLAY_LINK } from '@/services/listings/listing-media-refresh';
 import type {
   SpaceEntityRouteConfig,
   SpaceMutationResult,
@@ -238,6 +239,12 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       cascadeAllocationCode(cfg, id, body, existing);
       cascadeBuildingLink(cfg, ctx, id, body, existing);
       recordSpaceEntityAudit(cfg, ctx, id, existing, updateData);
+
+      // ADR-907 §11.8 — ο χώρος φαίνεται (με την κατάστασή του) στην κάτοψη ορόφου κάθε γειτονικής αγγελίας.
+      // Awaited, και δεν πετά ποτέ: είναι τι βλέπει ο κόσμος· το κριτήριο «άλλαξε κάτι;» ζει εκεί, όχι εδώ.
+      await refreshFloorPlateNeighbours(adminDb, [
+        { link: SPACE_OVERLAY_LINK[cfg.entityKind], unitId: id, companyId: ctx.companyId },
+      ]);
 
       // ADR-029 Phase D: search_documents written by the entity's Cloud Function.
       cfg.logger.info(cfg.messages.logUpdated, { id, companyId: ctx.companyId });

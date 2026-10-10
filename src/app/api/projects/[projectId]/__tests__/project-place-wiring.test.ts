@@ -83,7 +83,7 @@ jest.mock('@/app/api/geocoding/geocoding-engine', () => ({
 }));
 
 /** Ο **προβολέας**, ενθυλακωμένος: καταγράφει ποιο έργο ξαναπροβλήθηκε και **πότε**. */
-jest.mock('@/services/listings/publish-public-listing', () => ({
+jest.mock('@/services/listings/listing-scope-republish', () => ({
   republishListingsForProject: async (_db: unknown, projectId: string) => {
     sequence.push('republish');
     republishedFor.push(projectId);
@@ -233,7 +233,7 @@ describe('Χ — διεύθυνση → θέση → επαναπροβολή', 
   });
 
   it('Χ8 — η επαναπροβολή ΔΕΝ πετά ποτέ: η γραφή του χρήστη έγινε ήδη', async () => {
-    const listings = jest.requireMock('@/services/listings/publish-public-listing') as {
+    const listings = jest.requireMock('@/services/listings/listing-scope-republish') as {
       republishListingsForProject: unknown;
     };
     const original = listings.republishListingsForProject;

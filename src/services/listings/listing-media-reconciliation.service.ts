@@ -65,6 +65,7 @@ export interface MediaReconciliationReport {
   readonly failed: number;
 }
 
+/** Η ετυμηγορία του κριτή για **ένα** δημοσιεύσιμο ακίνητο. */
 type Finding = MediaAgreement | 'missing';
 
 /** Η δημόσια αγγελία ενός ακινήτου, όσο χρειάζεται ο κριτής: **υπάρχει;** και **τι αποτύπωμα γράφτηκε;** */
@@ -100,6 +101,24 @@ async function judgeProperty(
 }
 
 /**
+ * **Η γραμμένη αγγελία ΕΝΟΣ ακινήτου ⇄ το τρέχον υλικό του** — η ανάγνωση της αγγελίας και ο ΕΝΑΣ κριτής, μαζί.
+ *
+ * 🔑 Τρίτος καλών του ίδιου κριτή *(ADR-907 §11.8)*: ο βρόχος ορόφου ρωτά **εδώ** ποια αδελφή αγγελία οφείλει
+ * επαναπροβολή, αντί να αποκτήσει δικό του κριτήριο «άλλαξε κάτι ορατό;». ⚠️ **Πετά** σε βλάβη ανάγνωσης — το
+ * τι σημαίνει αυτό το αποφασίζει ο καλών *(η οθόνη λέει «δεν ξέρω», ο βρόχος ξαναπροβάλλει)*.
+ */
+export async function judgeStoredListingMedia(
+  adminDb: AdminFirestore,
+  propertyId: string,
+  property: ListingSourceProperty,
+  resolveMedia: ListingMediaResolver,
+): Promise<MediaAgreement | 'missing'> {
+  const listing = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(propertyId).get();
+  const stored = { exists: listing.exists, fingerprint: listing.get(MEDIA_FINGERPRINT_FIELD) };
+  return judgeProperty(propertyId, property, stored, resolveMedia);
+}
+
+/**
  * **Συμφωνεί η δημόσια αγγελία ΑΥΤΟΥ του ακινήτου με το τρέχον υλικό του;** — για την καρτέλα του
  * ακινήτου *(ADR-845 §7.17 Α5β)*.
  *
@@ -123,9 +142,7 @@ export async function judgeListingMedia(
     const property = { ...data, id: propertyId };
     if (!isPubliclyListed(property)) return 'unlisted';
 
-    const listing = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(propertyId).get();
-    const stored = { exists: listing.exists, fingerprint: listing.get(MEDIA_FINGERPRINT_FIELD) };
-    return await judgeProperty(propertyId, property, stored, createListingMediaResolver(adminDb));
+    return await judgeStoredListingMedia(adminDb, propertyId, property, createListingMediaResolver(adminDb));
   } catch (error) {
     logger.warn('Η συμφωνία μέσων δεν κρίθηκε — η οθόνη λέει «δεν ξέρω»', {
       propertyId, error: error instanceof Error ? error.message : String(error),

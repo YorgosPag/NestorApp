@@ -248,6 +248,61 @@ export async function readDeclaredFloorPlateEvidence(
 }
 
 // ---------------------------------------------------------------------------
+// ΠΟΙΟΥΣ ΟΡΟΦΟΥΣ ΑΦΟΡΑ ΜΙΑ ΜΟΝΑΔΑ ΠΟΥ ΑΛΛΑΞΕ (ADR-907 §11.8)
+// ---------------------------------------------------------------------------
+
+/** Μια μονάδα **όπως τη δείχνει ένα περίγραμμα**: ποιο κλειδί του `linked`, ποια ταυτότητα. */
+export interface FloorPlateUnitRef {
+  readonly link: keyof OverlayLinked;
+  readonly unitId: string;
+}
+
+/**
+ * **Σε ποιους ορόφους ΦΑΙΝΕΤΑΙ αυτή η μονάδα;** — οι όροφοι των περιγραμμάτων που δένουν μαζί της.
+ *
+ * 🔴 **Από τα ΠΕΡΙΓΡΑΜΜΑΤΑ, όχι από το `floorId` της μονάδας**: η κάτοψη ενός ορόφου δείχνει ό,τι **σχεδιάστηκε**
+ * πάνω της. Μεζονέτα σχεδιασμένη σε δύο επίπεδα, ή θέση στάθμευσης χωρίς δικό της όροφο, φαίνονται σε κατόψεις που το
+ * `floorId` τους δεν ονομάζει — και εκεί ακριβώς θα έμενε μπαγιάτικη κατάσταση χωρίς να το πει κανείς.
+ *
+ * 🔒 Μόνο περιγράμματα του **ίδιου χώρου**: ξένο περίγραμμα που δείχνει σε δική μας μονάδα δεν ξυπνά ξένο όροφο.
+ */
+export async function readFloorsShowingUnit(
+  adminDb: AdminFirestore,
+  companyId: string,
+  unit: FloorPlateUnitRef,
+): Promise<readonly string[]> {
+  // firestore-index-exempt: δύο ισότητες και καμία ταξινόμηση — το Firestore συγχωνεύει τους αυτόματους δείκτες ενός πεδίου, σύνθετος δείκτης δεν χρειάζεται.
+  const snapshot = await adminDb
+    .collection(COLLECTIONS.FLOORPLAN_OVERLAYS)
+    .where('companyId', '==', companyId)
+    .where(`linked.${unit.link}`, '==', unit.unitId)
+    .get();
+
+  const floors = new Set<string>();
+  for (const doc of snapshot.docs) {
+    const floorId: unknown = doc.get('floorId');
+    if (typeof floorId === 'string' && floorId !== '') floors.add(floorId);
+  }
+  return [...floors];
+}
+
+/**
+ * **Έχει ο όροφος υπογεγραμμένη κάτοψη;** — μία ανάγνωση, και η μόνη που πληρώνει όροφος **χωρίς** δήλωση.
+ *
+ * 🔑 Χωρίς δήλωση καμία αγγελία του δεν έχει κάτοψη ορόφου, άρα καμία αλλαγή μονάδας δεν μπορεί να τις αγγίξει.
+ * Η **άρση** της δήλωσης δεν περνά από εδώ: την ξαναπροβάλλει η πόρτα της, χωρίς αυτή την ερώτηση.
+ */
+export async function hasFloorPlateDeclaration(
+  adminDb: AdminFirestore,
+  companyId: string,
+  floorId: string,
+): Promise<boolean> {
+  const floor = (await adminDb.collection(COLLECTIONS.FLOORS).doc(floorId).get()).data();
+  if (floor === undefined || !isPayloadOwnedByCompany(floor, companyId)) return false;
+  return readFloorPlateDeclaration(floor) !== null;
+}
+
+// ---------------------------------------------------------------------------
 // Η ΚΡΙΣΗ ΑΝΑ ΑΓΓΕΛΙΑ
 // ---------------------------------------------------------------------------
 

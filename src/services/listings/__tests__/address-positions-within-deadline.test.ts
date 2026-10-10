@@ -14,7 +14,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { resolveAddressPositionsWithinDeadline } from '../address-place-writeback';
 import { geocodeWithVerdict } from '@/app/api/geocoding/geocoding-engine';
 
-jest.mock('../publish-public-listing', () => ({ republishListingsForProject: jest.fn() }));
+jest.mock('../listing-scope-republish', () => ({ republishListingsForProject: jest.fn() }));
 jest.mock('@/app/api/geocoding/geocoding-engine', () => ({ geocodeWithVerdict: jest.fn() }));
 
 const engine = geocodeWithVerdict as jest.MockedFunction<typeof geocodeWithVerdict>;

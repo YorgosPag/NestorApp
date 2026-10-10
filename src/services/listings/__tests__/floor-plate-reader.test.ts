@@ -9,11 +9,18 @@
  * - **ΑΟ-2** — κάθε τι που λείπει ή δεν εξηγείται ⇒ **καμία** πηγή, με όνομα· ποτέ μισός όροφος.
  * - **ΑΟ-3** — τίποτα ιδιωτικό δεν φτάνει στην πηγή (όνομα, τιμή, ταυτότητα μη δημόσιου γείτονα).
  * - **ΑΟ-4** — γραφέας και συμφιλίωση παίρνουν τις **ίδιες** πηγές από τον **ίδιο** τόπο (το αποτύπωμα συμφωνεί).
+ * - **ΑΟ-5** — *«σε ποιους ορόφους φαίνεται αυτή η μονάδα;»* απαντιέται από τα **περιγράμματα**, όχι από το `floorId` της (§11.8).
+ * - **ΕΒ** — ο ΕΝΑΣ βρόχος με εμβέλεια (§11.8): στον **όροφο** ξαναψήνεται μόνο ό,τι διαφωνεί, δεύτερο πέρασμα δεν γράφει,
+ *   γείτονας που άλλαξε ξυπνά **μόνο** τις αδελφές· στο **έργο** όλα, χωρίς κριτή· και ο βρόχος δεν ξέρει την πόρτα (χωρίς αναδρομή).
  *
  * ⚠️ Η κρίση επιμέλειας, η κανονικοποίηση και η κρίση της εικόνας **ΔΕΝ** γίνονται mock — τρέχουν οι αληθινές.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { MEDIA_FINGERPRINT_FIELD } from '@/lib/listings/listing-media-fingerprint';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
@@ -26,9 +33,33 @@ jest.mock('../public-listing-projection', () => ({
 const agencyMedia = [{ privateStoragePath: 'companies/c/photo.jpg', material: { kind: 'photo' } }];
 jest.mock('../agency-media.reader', () => ({ createAgencyMediaResolver: () => async () => agencyMedia }));
 jest.mock('../agency-media-publication', () => ({ agencyMediaDeclaration: () => ({}) }));
+jest.mock('@/services/company/company-public-name.reader', () => ({
+  createAgencyIdentityResolver: () => async () => null,
+}));
+
+/**
+ * Ο γραφέας, **μόνο ως προς το αποτύπωμα** (ΕΒ): γράφει στη δημόσια αγγελία ό,τι θα έγραφε ο αληθινός για τις πηγές
+ * που του έδωσε ο επιλυτής του περάσματος. Ο κριτής, ο αναγνώστης ορόφου και ο βρόχος τρέχουν **αληθινοί**.
+ */
+const republishListing = jest.fn(
+  async (_db: unknown, propertyId: string, property: never, _agency: unknown, resolveMedia: MediaResolver): Promise<string> => {
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, propertyId, {
+      [MEDIA_FINGERPRINT_FIELD]: mediaFingerprintOf(await resolveMedia(propertyId, property)),
+    });
+    return 'published';
+  },
+);
+jest.mock('../publish-public-listing', () => ({
+  republishListing: (...args: Parameters<typeof republishListing>) => republishListing(...args),
+  reportProjectionFailure: () => 'failed',
+}));
+
+type MediaResolver = ReturnType<typeof import('../listing-media-sources').createListingMediaResolver>;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const reader = require('../floor-plate.reader') as typeof import('../floor-plate.reader');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const scoped = require('../listing-scope-republish') as typeof import('../listing-scope-republish');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { createListingMediaResolver } = require('../listing-media-sources') as typeof import('../listing-media-sources');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -279,5 +310,138 @@ describe('ΑΟ-4 — γραφέας και συμφιλίωση ρωτούν τ�
     seedHealthyFloor();
     seedFloor({ publishedFloorPlate: null });
     await expect(createListingMediaResolver(db())(SELF, property)).resolves.toEqual(agencyMedia);
+  });
+});
+
+describe('ΑΟ-5 — σε ποιους ορόφους ΦΑΙΝΕΤΑΙ μια μονάδα, και έχουν δήλωση;', () => {
+  it('οι όροφοι βγαίνουν από τα ΠΕΡΙΓΡΑΜΜΑΤΑ — και μονάδα με άλλο `floorId` φαίνεται εκεί που σχεδιάστηκε', async () => {
+    seedHealthyFloor();
+    seedUnit(NEIGHBOUR, { floorId: 'flr_ΑΛΛΟΣ', listed: true });
+    seedOutline('ovrl_7', NEIGHBOUR, rect(0, 0, 100, 100), { floorId: 'flr_first' });
+
+    const floors = await reader.readFloorsShowingUnit(db(), COMPANY, { link: 'propertyId', unitId: NEIGHBOUR });
+
+    expect([...floors].sort()).toEqual(['flr_first', FLOOR].sort());
+  });
+
+  it('το κλειδί του δεσμού μετρά: θέση στάθμευσης με ίδιο id δεν είναι το ακίνητο', async () => {
+    seedHealthyFloor();
+    seedOutline('ovrl_8', null, rect(0, 0, 100, 100), { role: 'parking', linked: { parkingId: 'park_1' }, floorId: 'flr_basement' });
+
+    await expect(reader.readFloorsShowingUnit(db(), COMPANY, { link: 'parkingId', unitId: 'park_1' })).resolves.toEqual(['flr_basement']);
+    await expect(reader.readFloorsShowingUnit(db(), COMPANY, { link: 'propertyId', unitId: 'park_1' })).resolves.toEqual([]);
+  });
+
+  it('🔒 ξένο περίγραμμα που δείχνει σε δική μας μονάδα δεν ξυπνά ξένο όροφο', async () => {
+    seedHealthyFloor();
+    seedOutline('ovrl_9', SELF, rect(0, 0, 100, 100), { companyId: 'comp_other', floorId: 'flr_ΞΕΝΟΣ' });
+
+    await expect(reader.readFloorsShowingUnit(db(), COMPANY, { link: 'propertyId', unitId: SELF })).resolves.toEqual([FLOOR]);
+  });
+
+  it('δήλωση: υπογεγραμμένος όροφος ναι· χωρίς δήλωση, ανύπαρκτος ή ξένος όχι', async () => {
+    seedHealthyFloor();
+    await expect(reader.hasFloorPlateDeclaration(db(), COMPANY, FLOOR)).resolves.toBe(true);
+    await expect(reader.hasFloorPlateDeclaration(db(), 'comp_other', FLOOR)).resolves.toBe(false);
+    await expect(reader.hasFloorPlateDeclaration(db(), COMPANY, 'flr_ΑΝΥΠΑΡΚΤΟΣ')).resolves.toBe(false);
+
+    seedFloor({ publishedFloorPlate: null });
+    await expect(reader.hasFloorPlateDeclaration(db(), COMPANY, FLOOR)).resolves.toBe(false);
+  });
+});
+
+describe('ΕΒ — ο ΕΝΑΣ βρόχος επαναπροβολής, με εμβέλεια', () => {
+  const floorScope = { kind: 'floor', floorId: FLOOR, companyId: COMPANY } as const;
+  const republished = (): string[] => republishListing.mock.calls.map((call) => call[1]).sort();
+
+  beforeEach(() => republishListing.mockClear());
+
+  it('ΕΒ-1 όροφος: ξαναπροβάλλονται ΜΟΝΟ οι δημοσιευμένες, και δεύτερο πέρασμα δεν γράφει τίποτα', async () => {
+    seedHealthyFloor();
+
+    const first = await scoped.republishListingsInScope(db(), floorScope);
+    expect(first.map((report) => report.propertyId).sort()).toEqual([NEIGHBOUR, SELF].sort());
+    expect(republished()).not.toContain(HIDDEN);
+
+    republishListing.mockClear();
+    await expect(scoped.republishListingsInScope(db(), floorScope)).resolves.toEqual([]);
+    expect(republishListing).not.toHaveBeenCalled();
+  });
+
+  it('ΕΒ-2 όροφος: γείτονας που πουλήθηκε ξυπνά ΤΗΝ ΑΔΕΛΦΗ — όχι τον εαυτό του, όχι όλο τον όροφο', async () => {
+    seedHealthyFloor();
+    seedOutline('ovrl_4', 'prop_third', rect(0, 0, 300, 400));
+    seedUnit('prop_third', { listed: true });
+    await scoped.republishListingsInScope(db(), floorScope);
+    republishListing.mockClear();
+
+    // Η κατάσταση του γείτονα αλλάζει — στη δική του κάτοψη είναι `self`, άρα το ΔΙΚΟ του αποτύπωμα δεν αλλάζει.
+    seedUnit(NEIGHBOUR, { commercialStatus: 'sold', listed: true });
+    await scoped.republishListingsInScope(db(), floorScope);
+
+    expect(republished()).toEqual(['prop_third', SELF].sort());
+  });
+
+  it('ΕΒ-2β όροφος: γείτονας που ΒΓΗΚΕ από την αγορά — η αδελφή χάνει τον σύνδεσμο· ο ίδιος δεν ξαναπροβάλλεται εδώ', async () => {
+    seedHealthyFloor();
+    await scoped.republishListingsInScope(db(), floorScope);
+    republishListing.mockClear();
+
+    seedUnit(NEIGHBOUR, { commercialStatus: 'reserved', listed: false });
+    await scoped.republishListingsInScope(db(), floorScope);
+
+    expect(republished()).toEqual([SELF]);
+  });
+
+  it('ΕΒ-2γ όροφος: ένας επιλυτής για όλο το πέρασμα — ο ίδιος σε κάθε αδελφή', async () => {
+    seedHealthyFloor();
+    await scoped.republishListingsInScope(db(), floorScope);
+
+    const [first, second] = republishListing.mock.calls;
+    expect(second[3]).toBe(first[3]);
+    expect(second[4]).toBe(first[4]);
+  });
+
+  it('ΕΒ-2δ όροφος: βλάβη στην ανάγνωση της αγγελίας ⇒ «οφείλει», ποτέ «συμφωνεί»', async () => {
+    seedHealthyFloor();
+    await scoped.republishListingsInScope(db(), floorScope);
+    republishListing.mockClear();
+
+    const blind = {
+      getAll: fake.getAll.bind(fake),
+      collection: (name: string) => {
+        if (name === COLLECTIONS.PUBLIC_LISTINGS) throw new Error('UNAVAILABLE');
+        return fake.collection(name);
+      },
+    } as unknown as AdminFirestore;
+    republishListing.mockImplementationOnce(async () => 'failed').mockImplementationOnce(async () => 'failed');
+
+    const reports = await scoped.republishListingsInScope(blind, floorScope);
+
+    expect(reports.map((report) => report.outcome)).toEqual(['failed', 'failed']);
+  });
+
+  it('ΕΒ-3 έργο: ΟΛΑ τα ακίνητα του έργου, και τα μη δημοσιευμένα, χωρίς να ρωτηθεί ο κριτής', async () => {
+    seedHealthyFloor();
+    for (const id of [SELF, NEIGHBOUR]) seedUnit(id, { listed: true, projectId: 'proj_1' });
+    seedUnit(HIDDEN, { commercialStatus: 'sold', projectId: 'proj_1' });
+    seedUnit('prop_ΑΛΛΟΥ_ΕΡΓΟΥ', { listed: true, projectId: 'proj_2' });
+    await scoped.republishListingsInScope(db(), floorScope);
+    republishListing.mockClear();
+
+    // Όλα συμφωνούν ήδη με το υλικό τους — το έργο ξαναπροβάλλει παρ' όλα αυτά: άλλαξε ο τόπος.
+    const tally = await scoped.republishListingsForProject(db(), 'proj_1');
+
+    expect(tally).toEqual({ published: 3, withdrawn: 0, failed: 0 });
+    expect(republished()).toEqual([HIDDEN, NEIGHBOUR, SELF].sort());
+  });
+
+  it('ΕΒ-4 ΧΩΡΙΣ ΑΝΑΔΡΟΜΗ: ο βρόχος δεν εισάγει την πόρτα «άλλαξε μονάδα» — καλεί μόνο τον γραφέα', () => {
+    const source = readFileSync(join(__dirname, '..', 'listing-scope-republish.ts'), 'utf8');
+    const imports = source.split('\n').filter((line) => /\bfrom '/.test(line)).join('\n');
+
+    expect(imports).toContain("from './publish-public-listing'");
+    expect(imports).not.toContain('listing-media-refresh');
+    expect(source).toMatch(/await republishListing\(/);
   });
 });

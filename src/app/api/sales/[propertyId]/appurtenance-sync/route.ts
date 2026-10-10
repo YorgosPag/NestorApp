@@ -28,6 +28,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
+import { refreshFloorPlateNeighbours, SPACE_OVERLAY_LINK } from '@/services/listings/listing-media-refresh';
 
 import {
   applyAppurtenanceSync,
@@ -63,6 +64,17 @@ async function syncAppurtenances(
       companyId: ctx.companyId,
     }),
     undefined,
+  );
+
+  // ADR-907 §11.8 — θέση που κρατήθηκε ή πουλήθηκε αλλάζει την κάτοψη ορόφου κάθε γειτονικής αγγελίας.
+  // Awaited, μετά τη δέσμη, και δεν πετά ποτέ· ο όροφος βρίσκεται από τα περιγράμματα, όχι από το σώμα.
+  await safeFirestoreOperation(
+    async (db) => refreshFloorPlateNeighbours(db, payload.spaces.map((space) => ({
+      link: SPACE_OVERLAY_LINK[space.spaceType],
+      unitId: space.spaceId,
+      companyId: ctx.companyId,
+    }))),
+    [],
   );
 
   return NextResponse.json({
