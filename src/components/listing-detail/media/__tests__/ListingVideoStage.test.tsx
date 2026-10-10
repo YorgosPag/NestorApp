@@ -152,6 +152,7 @@ describe('ListingVideoStage', () => {
     expect(image?.getAttribute('src')).toBe('https://shelf/p-960.webp');
     expect(image?.getAttribute('sizes')).toBe(LEAD_SIZES);
     expect(image?.getAttribute('loading')).toBe('lazy');
+    expect(image?.getAttribute('decoding')).toBe('async');
     // Με εξώφυλλο η πρόταση δεν τυπώνεται δεύτερη φορά πάνω στην εικόνα.
     expect(screen.queryByText('ALT')).toBeNull();
 
@@ -169,6 +170,8 @@ describe('ListingVideoStage', () => {
 
     expect(container.querySelector('video')).toBeNull();
     expect(screen.getByText('listing-detail:video.failed')).toBeTruthy();
+    // Η σκηνή που έδινε αναλογία δεν υπάρχει πια: το κουτί της αποτυχίας δηλώνει τη δική του, αλλιώς καταρρέει σε μία γραμμή.
+    expect(container.querySelector('.aspect-video')).not.toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'listing-detail:video.retry' }));
     expect(element(container)).not.toBe(failedNode);

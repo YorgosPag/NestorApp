@@ -145,6 +145,9 @@ describe('posterFrameSize', () => {
     // 2001 × (2560 / 3000) = 1707,52 ⇒ 1708 (το `floor` δίνει 1707).
     expect(posterFrameSize(3000, 2001)).toEqual({ width: 2560, height: 1708 });
     expect(posterFrameSize(2001, 3000)).toEqual({ width: 1708, height: 2560 });
+    // 2000 × (2560 / 3001) = 1706,1 ⇒ 1706 (το `ceil` δίνει 1707): μαζί με το από πάνω, μόνο το `round` περνά και τα δύο.
+    expect(posterFrameSize(2000, 3001)).toEqual({ width: 1706, height: 2560 });
+    expect(posterFrameSize(3001, 2000)).toEqual({ width: 2560, height: 1706 });
     // 1 × 0,256 = 0,256 ⇒ στρογγυλεύει στο 0· καμβάς πλάτους 0 δεν δίνει καρέ.
     expect(posterFrameSize(1, 10000)).toEqual({ width: 1, height: 2560 });
     expect(posterFrameSize(10000, 1)).toEqual({ width: 2560, height: 1 });

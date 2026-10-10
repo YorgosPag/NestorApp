@@ -15,9 +15,15 @@ import { readPublicListingById } from '../public-listing-by-id.reader';
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn() }));
 jest.mock('../public-listing-by-id.reader', () => ({ readPublicListingById: jest.fn() }));
-jest.mock('@/lib/telemetry', () => ({
-  createModuleLogger: () => ({ warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-}));
+// ΕΝΑΣ καταγραφέας για όλο το module, ώστε το test να τον ξαναβρίσκει (`loggerOf`) και να ρωτά «γράφτηκε προειδοποίηση;».
+jest.mock('@/lib/telemetry', () => {
+  const logger = { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() };
+  return { createModuleLogger: () => logger };
+});
+
+function loggerOf(): { readonly warn: jest.Mock } {
+  return (jest.requireMock('@/lib/telemetry') as { createModuleLogger: () => { warn: jest.Mock } }).createModuleLogger();
+}
 
 const reader = readPublicListingById as jest.MockedFunction<typeof readPublicListingById>;
 const adminFirestore = getAdminFirestore as jest.MockedFunction<typeof getAdminFirestore>;
@@ -42,6 +48,7 @@ describe('loadListingStructuredData', () => {
     reader.mockReset();
     adminFirestore.mockReset();
     adminFirestore.mockReturnValue(ADMIN_DB);
+    loggerOf().warn.mockClear();
   });
 
   it('🔴 Λ3 διαβάζει μέσα από τον αναγνώστη του συνόρου και δηλώνει το βίντεο', async () => {
@@ -57,6 +64,10 @@ describe('loadListingStructuredData', () => {
   it('🔴 Λ2 αγγελία που δεν είναι δημοσιευμένη ⇒ null', async () => {
     reader.mockResolvedValue(null);
     await expect(loadListingStructuredData('l1')).resolves.toBeNull();
+    // 🔴 Η απουσία ΔΕΝ είναι αποτυχία. Χωρίς τον έλεγχο `null` η κρίση πετούσε πάνω σε `null`, το `catch` την έπιανε
+    // και το αποτέλεσμα έβγαινε ίδιο (μετάλλαξη Λ1, §10.11) — με μία ψευδή προειδοποίηση ανά επίσκεψη σε αγγελία
+    // που αποσύρθηκε, δηλαδή θόρυβος που θάβει την αληθινή «δεν μπόρεσα να διαβάσω».
+    expect(loggerOf().warn).not.toHaveBeenCalled();
   });
 
   it('αγγελία χωρίς βίντεο ⇒ null', async () => {
@@ -75,5 +86,8 @@ describe('loadListingStructuredData', () => {
   it('🔴 Λ1 αποτυχία ανάγνωσης ⇒ null, ποτέ εξαίρεση προς τη σελίδα', async () => {
     reader.mockRejectedValue(new Error('UNAVAILABLE'));
     await expect(loadListingStructuredData('l1')).resolves.toBeNull();
+    // Η αληθινή αποτυχία ΛΕΓΕΤΑΙ — μία φορά, με την ταυτότητα της αγγελίας.
+    expect(loggerOf().warn).toHaveBeenCalledTimes(1);
+    expect(loggerOf().warn.mock.calls[0][1]).toMatchObject({ listingId: 'l1' });
   });
 });

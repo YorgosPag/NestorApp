@@ -104,6 +104,17 @@ describe('listingVideoStructuredData', () => {
     });
   });
 
+  // Όταν το κανονικό είναι ένα από τα παράγωγα, η λίστα βγαίνει ίδια και χωρίς αυτό (μετάλλαξη Δ16, §10.11). Το
+  // κανονικό είναι όμως η διεύθυνση που ζωγραφίζει η σκηνή — δηλώνεται πάντα, και πρώτο.
+  it('🔴 Δ3γ το ΚΑΝΟΝΙΚΟ εξώφυλλο δηλώνεται πρώτο, ακόμη κι όταν δεν είναι ένα από τα παράγωγα', () => {
+    const poster = { ...POSTER, url: `${SHELF}/poster-canonical.webp` };
+    const video = { ...DECLARED, value: { ...FILE, poster } };
+
+    expect(listingVideoStructuredData(listing([video]))).toMatchObject({
+      thumbnailUrl: [`${SHELF}/poster-canonical.webp`, `${SHELF}/poster-1024.webp`, `${SHELF}/poster-640.webp`],
+    });
+  });
+
   it('η στιγμή κανονικοποιείται σε ISO με ζώνη (η Google αλλιώς υποθέτει τη ζώνη του Googlebot)', () => {
     const local = { ...DECLARED, at: '2026-10-09T21:30:00+03:00' };
     expect(listingVideoStructuredData(listing([local]))).toMatchObject({ uploadDate: '2026-10-09T18:30:00.000Z' });
