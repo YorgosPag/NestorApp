@@ -74,7 +74,15 @@ export function floorplanSpotsByUrl(entries: readonly ListingFloorplanSpots[]): 
  * ραφιού (ADR-841 Α2.2), άρα καμία μέτρηση· το `alt` το δίνει ο καλών (μεταφρασμένο).
  */
 export function listingFloorplanSource(floorplan: ListingFloorplan, alt: string): FloorplanFigureSource {
-  const image = floorplan.value;
+  return listingImageFigureSource(floorplan.value, alt);
+}
+
+/**
+ * **Εικόνα του ραφιού → ουδέτερη πηγή σχεδίου** — το σώμα του {@link listingFloorplanSource}, για όποιο σχέδιο **δεν**
+ * είναι `ListingFloorplan`: η κάτοψη ορόφου κουβαλά την εικόνα της ένα επίπεδο πιο μέσα (`floorPlates[].value.image`,
+ * ADR-907 §11.9). Ένας τόπος για `srcset`, διαστάσεις και βορρά — όχι δεύτερη χαρτογράφηση.
+ */
+export function listingImageFigureSource(image: ListingImage, alt: string): FloorplanFigureSource {
   return {
     src: image.url,
     srcSet: listingImageSrcSet(image),

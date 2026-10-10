@@ -7,6 +7,7 @@
  * - Π3: η ενεργή καρτέλα δεν διαβάζεται από τη διεύθυνση, ή άγνωστη τιμή αφήνει κενή σκηνή αντί για «Φωτογραφίες».
  * - Π4: η προεπιλογή γράφεται στη διεύθυνση, ή η αλλαγή καρτέλας σβήνει άσχετα κλειδιά (`?guests=2`).
  * - Π5: η καρτέλα περιήγησης εμφανίζεται χωρίς παρουσία περιήγησης.
+ * - Π8: καρτέλα «Κάτοψη ορόφου» χωρίς κάτοψη που το φύλλο θα έδειχνε (κενή σκηνή), ή σε λάθος θέση, ή με πλήθος.
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -29,13 +30,27 @@ jest.mock('../../ListingFloorplans', () => ({
 jest.mock('../../ListingModels', () => ({ ListingModels: () => <div data-testid="models" /> }));
 jest.mock('../../ListingTour', () => ({ ListingTour: () => <div data-testid="tour" /> }));
 jest.mock('../../ListingVideos', () => ({ ListingVideos: () => <div data-testid="videos" /> }));
+jest.mock('../../ListingFloorPlates', () => ({ ListingFloorPlates: () => <div data-testid="floor-plates" /> }));
 
 const DECLARED = { value: { url: '/a', altKey: 'k' }, provenance: 'declared' };
 const GUESSED = { value: { url: '/b', altKey: 'k' }, provenance: 'inferred', confirmedAt: null };
 const APPROVED = { value: { url: '/c', altKey: 'k' }, provenance: 'inferred', confirmedAt: '2026-10-09T08:00:00.000Z' };
 
-function listing(floorplans: unknown[] = [], models: unknown[] = [], videos: unknown[] = []) {
-  return { id: 'l1', floorplans, models, videos } as never;
+const OUTLINE = [0.1, 0.1, 0.4, 0.1, 0.4, 0.4, 0.1, 0.4];
+const PLATE_IMAGE = { url: '/floor', width: 2000, height: 1000, altKey: 'k', sources: [] };
+/** Κάτοψη ορόφου που ο ΑΛΗΘΙΝΟΣ κριτής (`presentableFloorPlate`) δέχεται: εικόνα με διαστάσεις, μία «αυτό το ακίνητο». */
+const FLOOR_PLATE = {
+  provenance: 'declared',
+  value: { image: PLATE_IMAGE, units: [{ outline: OUTLINE, state: 'self' }, { outline: OUTLINE, state: 'available' }] },
+};
+/** Ίδια εικόνα, αλλά ΚΑΜΙΑ μονάδα δεν είναι «αυτό το ακίνητο» — το φύλλο δεν θα ζωγράφιζε τίποτα. */
+const FLOOR_PLATE_WITHOUT_SELF = {
+  provenance: 'declared',
+  value: { image: PLATE_IMAGE, units: [{ outline: OUTLINE, state: 'available' }] },
+};
+
+function listing(floorplans: unknown[] = [], models: unknown[] = [], videos: unknown[] = [], floorPlates: unknown[] = []) {
+  return { id: 'l1', floorplans, models, videos, floorPlates } as never;
 }
 
 function setQuery(query: string): void {
@@ -134,5 +149,40 @@ describe('ListingMediaViewer', () => {
     render(<ListingMediaViewer listing={listing([], [], [DECLARED])} />);
     expect(screen.getByTestId('videos')).toBeTruthy();
     expect(screen.queryByTestId('gallery')).toBeNull();
+  });
+
+  // ADR-907 §11.9 — ως εδώ το `floorPlates[]` γραφόταν στο δημόσιο έγγραφο και καμία οθόνη δεν το έδειχνε.
+  it('🔴 Π8 η κάτοψη ορόφου: αμέσως μετά την κάτοψη της μονάδας, χωρίς πλήθος — και μόνο όταν το φύλλο θα την έδειχνε', () => {
+    const full = render(<ListingMediaViewer listing={listing([DECLARED], [DECLARED], [], [FLOOR_PLATE])} />);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'listing-detail:media.tabs.photos(3)',
+      'listing-detail:media.tabs.floorplan(1)',
+      'listing-detail:media.tabs.floorPlate',
+      'listing-detail:model.heading',
+    ]);
+    full.unmount();
+
+    // Χωρίς κάτοψη μονάδας η καρτέλα στέκεται μόνη της — η κάτοψη ορόφου δεν εξαρτάται από εκείνη.
+    const alone = render(<ListingMediaViewer listing={listing([], [], [], [FLOOR_PLATE])} />);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'listing-detail:media.tabs.photos(3)',
+      'listing-detail:media.tabs.floorPlate',
+    ]);
+    alone.unmount();
+
+    // Κάτοψη που το φύλλο θα αρνιόταν ⇒ καμία καρτέλα· και επειδή μένουν μόνο οι φωτογραφίες, ούτε λωρίδα.
+    const refused = render(<ListingMediaViewer listing={listing([], [], [], [FLOOR_PLATE_WITHOUT_SELF])} />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    refused.unmount();
+
+    const guessed = render(<ListingMediaViewer listing={listing([], [], [], [{ ...FLOOR_PLATE, provenance: 'inferred', confirmedAt: null }])} />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    guessed.unmount();
+
+    setQuery('?mediaTab=floorPlate');
+    render(<ListingMediaViewer listing={listing([DECLARED], [], [], [FLOOR_PLATE])} />);
+    expect(screen.getByTestId('floor-plates')).toBeTruthy();
+    expect(screen.queryByTestId('gallery')).toBeNull();
+    expect(screen.queryByTestId('floorplans')).toBeNull();
   });
 });

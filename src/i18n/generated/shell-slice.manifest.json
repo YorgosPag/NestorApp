@@ -23,7 +23,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "b82a63c5bcf85dccfeba2d3461fe2add25eaf9bf8e61657a5d753e7600e97b9c",
+    "src/i18n/generated/routes/listing__id.el.json": "21c5a00172c115c3318dcec1de2518c39b13c1f4c31aa79abd098432c08b6ab6",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fcd18470752b703090ebbc4409ba7da9e90fd1a626698e600709f3aff6e67f67",
+  "inputsSha256": "2f3df4b478e9ca968d93386609353e7a7703202d8c936db3131d676f29c3970a",
   "languages": [
     "el"
   ],
@@ -359,6 +359,7 @@
     "src/components/listing-detail/ListingDetailContent.tsx": "45b26544f489c1dc44aa2ea74fe9b9b4c4955398c4bce2340bf39962b178d992",
     "src/components/listing-detail/ListingExchangeTerm.tsx": "79d7fae91c2bcc808f0a387695286a72bc014a7e8d7f87d48c1c551ce4d4b154",
     "src/components/listing-detail/ListingFeatureSet.tsx": "774cc19a6284adfa17ff055bec696a05b63ad474793671fdda17cd5aace2d190",
+    "src/components/listing-detail/ListingFloorPlates.tsx": "edd93e8c7ee8985f88d08ed32367ed7c11196552768756847438d541599ecb7c",
     "src/components/listing-detail/ListingFloorplanFigure.tsx": "f53d485d64747a365d489593f9a706497cf12d1a6e7e7cc6ed79e0da4bbb694e",
     "src/components/listing-detail/ListingFloorplanWithSpots.tsx": "e8222329693802508d0a695b87be643d4cc0cab7fc129deec783c65260f328fe",
     "src/components/listing-detail/ListingFloorplans.tsx": "6d603256b8c1428457cdf391250f73176407da6b7cd0b2301515826317775b8a",
@@ -384,7 +385,7 @@
     "src/components/listing-detail/media/ListingFloorplanSpotsFigure.tsx": "d4fa183eb6f1600446a4e2d763266b78d565b56a1359a8e04029a623279943ab",
     "src/components/listing-detail/media/ListingMediaPageChrome.tsx": "10c7bd9fd5ee2a57024f842bd93c71b89399d77cc78afb0af5922549bb7f4185",
     "src/components/listing-detail/media/ListingMediaTabs.tsx": "66e1c19c63dce75ba69501230789c388fef6c3b728b187c58627de94823dc7e1",
-    "src/components/listing-detail/media/ListingMediaViewer.tsx": "94aefe791e1321386cfe6ca3b07f67dde40d4c520ff185e519ec63c06df929f6",
+    "src/components/listing-detail/media/ListingMediaViewer.tsx": "eab689071087bdd920194f356116df6c2735a5a5913dc45210db385df898d950",
     "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "02505058c9ad95f03efe65649a9342569700d1fbf4c1cc272c8ef7837adfaf91",
     "src/components/listing-detail/media/ListingVideoStage.tsx": "5a764c168191ca24a455b720987901778c11cabfdb8f10abfb0c96e1fa8355ba",
     "src/components/listings/MarketingAudienceControl.tsx": "5d8748c36941e01444bba536a1cc8fb158e49b70695590cbd14b8ba5006ce61e",
@@ -4780,6 +4781,7 @@
             "media.capture.northGlyph",
             "media.capture.northLabel",
             "media.capture.planLabel",
+            "media.tabs.floorPlate",
             "media.tabs.floorplan",
             "media.tabs.photos",
             "media.tabs.tour",
@@ -12246,7 +12248,7 @@
     "src/lib/listings/floor-plate/floor-plate-image.ts": "821c04ca53fc78616ba4bbbe458f017585019b3ba5a2319b783b6a5f065af824",
     "src/lib/listings/floor-plate/floor-plate-keys.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/floor-plate/floor-plate-outline.ts": "3fce8621407c74089cf881f852d70d8e821b2ef9281289c7a3b5d6d7746dbc16",
-    "src/lib/listings/floor-plate/floor-plate-publication.ts": "f2340afd21ed9c52e478f8b2147a2e058aeeb76199c91b2041d2559cb0e14185",
+    "src/lib/listings/floor-plate/floor-plate-publication.ts": "2a7fd8cc032913a8f9fb6b7733c7ea50313d79be408d1a9b3daccd02862c1e5d",
     "src/lib/listings/floor-plate/floor-plate-state.ts": "a3c14e0baa8cd0d5bb7443380219a1c9627271fe6a9703828d2861b113d202d1",
     "src/lib/listings/floorplan-north.ts": "b12a726dc4bfb148d87de8db00260f4a6a6315ee5d2bfdfb64ae59f62504834a",
     "src/lib/listings/floorplan-publication-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -12754,7 +12756,7 @@
     "matchedKeys": 239,
     "routeBoundaries": 3,
     "shellFiles": 1145,
-    "sliceBytes": 726011
+    "sliceBytes": 726062
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

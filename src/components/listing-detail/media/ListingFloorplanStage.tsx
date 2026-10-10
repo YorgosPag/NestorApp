@@ -4,7 +4,7 @@
  * @fileoverview **Η ΣΚΗΝΗ ΤΗΣ ΚΑΤΟΨΗΣ ΜΕΣΑ ΣΤΗΝ ΚΑΡΤΕΛΑ** — μεγέθυνση/μετακίνηση, και η φωτογραφία κάθε σημείου λήψης
  * **δίπλα** της, χωρίς αλλαγή σελίδας (ADR-907 Φ2β-3 · Φ2β-4).
  * @module components/listing-detail/media/ListingFloorplanStage
- * @related hooks/useZoomPan (`yieldScrollAtRest`) · shared/media/viewer/ImageViewControls · ListingFloorplanSpotsFigure ·
+ * @related ./ListingZoomStage (το κοινό πλαίσιο μεγέθυνσης — και της κάτοψης ορόφου) · ListingFloorplanSpotsFigure ·
  *   hooks/listings/useListingPhotoParam · ListingFloorplans (ο κάτοχος — τη φορτώνει πίσω από όριο `next/dynamic`)
  *
  * 🔑 **Κανένα νέο zoom**: ο μηχανισμός είναι το `useZoomPan`, τα κουμπιά το `ImageViewControls`, τα όρια το
@@ -16,15 +16,11 @@
  * 🔑 **Μία κάτοψη τη φορά** (με επιλογέα όταν είναι πολλές): μια σκηνή που μεγεθύνεται θέλει όλο το πλάτος της.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { ImageViewControls } from '@/components/shared/media/viewer/ImageViewControls';
-import { PHOTO_VIEW_ZOOM } from '@/components/shared/media/viewer/photo-view-zoom';
-import { DRAG_THRESHOLD_PX } from '@/components/spatial-tour/viewer/usePointerDragRelease';
 import { Button } from '@/components/ui/button';
 import { useListingPhotoParam } from '@/hooks/listings/useListingPhotoParam';
-import { useZoomPan } from '@/hooks/useZoomPan';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { floorplanSpotsByUrl, listingFloorplanSpots, type ListingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
@@ -37,17 +33,9 @@ import type { ListingFloorplan, ListingImage, PublicListing } from '@/types/publ
 import { ListingFloorplanFigure } from '../ListingFloorplanFigure';
 import { GalleryImage } from '../ListingGallery';
 import { ListingFloorplanSpotsFigure } from './ListingFloorplanSpotsFigure';
-
-/** Η σκηνή σε ηρεμία: η κύρια στήλη της σελίδας, ή τα 3/5 της όταν δίπλα στέκεται η φωτογραφία του σημείου. */
-const STAGE_SIZES = '(min-width: 1280px) 880px, (min-width: 1024px) calc(100vw - 28rem), 100vw';
-
-/** Μεγεθυμένη: ο περιηγητής ξαναδιαλέγει **μεγαλύτερη** πηγή από το ίδιο `srcSet` — το σχέδιο δεν θολώνει. */
-const STAGE_SIZES_ZOOMED = '300vw';
+import { ListingZoomStage, ZOOM_STAGE_IMAGE } from './ListingZoomStage';
 
 const PHOTO_SIZES = '(min-width: 1280px) 350px, (min-width: 1024px) 30vw, 100vw';
-
-/** Η κάτοψη χωρά **ολόκληρη** στην οθόνη — και μια κατακόρυφη· το πλαίσιο το δίνει η σκηνή, όχι η εικόνα. */
-const STAGE_IMAGE = 'max-h-[70vh] rounded-none border-0';
 
 export interface ListingFloorplanStageProps {
   readonly listing: PublicListing;
@@ -58,63 +46,6 @@ export interface ListingFloorplanStageProps {
    * για το route slice (CHECK 3.34) — δεύτερη δήλωση εδώ θα ήταν δεύτερη χαρτογράφηση προέλευσης → πρότασης.
    */
   readonly caption: (floorplan: ListingFloorplan) => React.ReactNode;
-}
-
-/**
- * Κλικ μετά από **σύρσιμο** δεν είναι κλικ: χωρίς αυτό, μετακίνηση της κάτοψης που τελειώνει πάνω σε σημείο θα άνοιγε
- * τη φωτογραφία του. Ίδιο κατώφλι με τον θεατή της περιήγησης (`DRAG_THRESHOLD_PX`).
- */
-function useSwallowClickAfterDrag() {
-  const start = useRef<{ readonly x: number; readonly y: number } | null>(null);
-  return {
-    // Γεγονός **ποντικιού**, όπως και η σύρση του `useZoomPan` — και στη φάση σύλληψης, πριν το σημείο σταματήσει τη διάδοση.
-    onMouseDownCapture: (event: React.MouseEvent) => {
-      start.current = { x: event.clientX, y: event.clientY };
-    },
-    onClickCapture: (event: React.MouseEvent) => {
-      const from = start.current;
-      if (from === null || Math.hypot(event.clientX - from.x, event.clientY - from.y) < DRAG_THRESHOLD_PX) return;
-      event.stopPropagation();
-      event.preventDefault();
-    },
-  };
-}
-
-interface ZoomStageProps {
-  readonly floorplan: ListingFloorplan;
-  readonly spots: ListingFloorplanSpots | null;
-  readonly total: number;
-  readonly current: number | null;
-  readonly onActivate: (imageIndex: number) => void;
-}
-
-function ZoomStage({ floorplan, spots, total, current, onActivate }: ZoomStageProps) {
-  const { t } = useTranslation(['listing-detail']);
-  // `contentKey`: η όψη ανήκει στην κάτοψη — η επόμενη ανοίγει ουδέτερη (ADR-899 §9 θέμα 7).
-  const zp = useZoomPan({ ...PHOTO_VIEW_ZOOM, contentKey: floorplan.value.url, yieldScrollAtRest: true });
-  const guard = useSwallowClickAfterDrag();
-  const sizes = zp.zoom > PHOTO_VIEW_ZOOM.defaultZoom ? STAGE_SIZES_ZOOMED : STAGE_SIZES;
-
-  return (
-    <figure className="m-0 flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card">
-      {/* Η ετικέτα ονομάζει ΤΙ χειρίζεται η γραμμή (WAI-ARIA APG, toolbar): κάτοψη, όχι φωτογραφία (ADR-907 §8.3). */}
-      <nav role="toolbar" aria-label={t('listing-detail:media.capture.viewTools')}
-        className="flex items-center justify-center gap-1 border-b border-border bg-muted/30 py-1">
-        <ImageViewControls view={zp} showLevel />
-      </nav>
-      <div ref={zp.containerRef} {...zp.handlers} {...guard} data-floorplan-stage=""
-        className={cn('overflow-hidden', zp.cursorClass, zp.touchClass)}>
-        <div ref={zp.contentRef} className="origin-center">
-          {spots === null ? (
-            <ListingFloorplanFigure floorplan={floorplan} sizes={sizes} imageClassName={STAGE_IMAGE} />
-          ) : (
-            <ListingFloorplanSpotsFigure entry={spots} total={total} currentImageIndex={current} onActivate={onActivate}
-              sizes={sizes} imageClassName={STAGE_IMAGE} />
-          )}
-        </div>
-      </div>
-    </figure>
-  );
 }
 
 interface SpotPhotoProps {
@@ -203,7 +134,15 @@ export function ListingFloorplanStage({ listing, shown, caption }: ListingFloorp
     <>
       {shown.length > 1 && <PlanPicker count={shown.length} active={planIndex} onPick={pickPlan} />}
       <div className={cn('grid grid-cols-1 gap-3', spots !== null && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
-        <ZoomStage floorplan={floorplan} spots={spots} total={images.length} current={current} onActivate={setPhotoParam} />
+        {/* `contentKey`: η όψη ανήκει στην κάτοψη — η επόμενη ανοίγει ουδέτερη (ADR-899 §9 θέμα 7). */}
+        <ListingZoomStage contentKey={floorplan.value.url}>
+          {(sizes) => (spots === null ? (
+            <ListingFloorplanFigure floorplan={floorplan} sizes={sizes} imageClassName={ZOOM_STAGE_IMAGE} />
+          ) : (
+            <ListingFloorplanSpotsFigure entry={spots} total={images.length} currentImageIndex={current}
+              onActivate={setPhotoParam} sizes={sizes} imageClassName={ZOOM_STAGE_IMAGE} />
+          ))}
+        </ListingZoomStage>
         {spots !== null && current !== null && (
           <SpotPhoto listingId={listing.id} images={images} spots={spots} current={current} onGo={setPhotoParam} />
         )}

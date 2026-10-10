@@ -76,7 +76,19 @@
     }
   },
   "floorPlate": {
-    "alt": "Floor plan of the storey, showing its units"
+    "alt": "Floor plan of the storey, showing its units",
+    "state": {
+      "self": "This property",
+      "available": "Available",
+      "reserved": "Reserved",
+      "unavailable": "Not available"
+    },
+    "legend": "Key",
+    "units": "Units on this storey",
+    "unit": "Unit {number}",
+    "openListing": "View the listing",
+    "openListingLabel": "Unit {number}, {state}: view its listing",
+    "neighboursNote": "For the other units on this storey, only their availability is shown."
   },
   "model": {
     "heading": "{count, plural, one {3D model} other {3D models}}",
@@ -115,6 +127,7 @@
       "photos": "Photos",
       "video": "Video",
       "floorplan": "Floor plan",
+      "floorPlate": "Storey plan",
       "tour": "3D tour"
     },
     "backToListing": "Back to the listing",

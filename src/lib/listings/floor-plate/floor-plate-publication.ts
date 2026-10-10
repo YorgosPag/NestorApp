@@ -11,7 +11,8 @@
  * ⚠️ **Καθαρό module** — κανένα React, καμία I/O.
  */
 
-import type { FloorPlateUnit } from '@/types/public-listing';
+import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
+import type { FloorPlateUnit, ListingFloorPlate } from '@/types/public-listing';
 
 import { readFloorPlateOutline } from './floor-plate-outline';
 import { FLOOR_PLATE_SELF_STATE, isFloorPlateState } from './floor-plate-state';
@@ -57,4 +58,29 @@ function isPublishableUnit(unit: unknown): unit is FloorPlateUnit {
 export function isPublishableFloorPlateUnits(units: unknown): units is readonly FloorPlateUnit[] {
   if (!Array.isArray(units) || !units.every(isPublishableUnit)) return false;
   return units.filter((unit) => unit.state === FLOOR_PLATE_SELF_STATE).length === 1;
+}
+
+/** Εικόνα πάνω στην οποία **μπορεί** να σταθεί περίγραμμα: διεύθυνση και θετικές διαστάσεις (το `viewBox` του στρώματος). */
+function isDrawableImage(image: unknown): boolean {
+  if (!isRecord(image) || typeof image.url !== 'string' || image.url.length === 0) return false;
+  return [image.width, image.height].every((side) => typeof side === 'number' && Number.isFinite(side) && side > 0);
+}
+
+/**
+ * **Η κάτοψη ορόφου που ΘΑ ΔΕΙ ο επισκέπτης**, ή `null` (ADR-907 §11.9) — ο ΕΝΑΣ κριτής της όψης: τον ρωτούν και η
+ * καρτέλα («υπάρχω;») και το φύλλο («τι ζωγραφίζω;»), ώστε να μην υπάρξει ποτέ καρτέλα με κενή σκηνή.
+ *
+ * 🔑 Το δημόσιο σχήμα διαβάζει το κουτί **ρηχά** (`z.object({}).passthrough()`), άρα εδώ γίνεται ξανά η **ίδια** ερώτηση
+ * με το σύνορο της γραφής: προέλευση που παρουσιάζεται (ADR-842 Α7), εικόνα με διαστάσεις, και **όλες οι μονάδες ή
+ * καμία** — μισός όροφος θα έλεγε στον αγοραστή ότι εκεί δεν υπάρχει τίποτα.
+ */
+export function presentableFloorPlate(listing: {
+  readonly floorPlates: readonly ListingFloorPlate[];
+}): ListingFloorPlate | null {
+  const shown = listing.floorPlates
+    .slice(0, LISTING_FLOOR_PLATE_MAX_COUNT)
+    .filter(isPubliclyPresentable)
+    .find((plate) => isRecord(plate.value) && isDrawableImage(plate.value.image)
+      && isPublishableFloorPlateUnits(plate.value.units));
+  return shown ?? null;
 }
