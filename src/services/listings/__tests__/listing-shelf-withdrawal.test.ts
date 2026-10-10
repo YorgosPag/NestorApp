@@ -214,6 +214,93 @@ describe('🏆 Η ΔΙΑΜΕΡΙΣΗ — ΕΝΑ πέρασμα, κάθε πηγ�
   });
 });
 
+describe('ΚΟ-4 (καλωδίωση) — Η ΚΑΤΟΨΗ ΟΡΟΦΟΥ ΠΕΡΝΑ ΑΠΟ ΤΟ RASTER ΡΑΦΙ ΚΑΙ ΚΑΘΕΤΑΙ ΣΤΟ ΔΙΚΟ ΤΗΣ ΚΟΥΤΙ', () => {
+  const FLOOR_URL = 'https://storage.googleapis.com/bucket/listings/ownp_77aa21bc/ff.webp';
+  const SELF = { outline: [0.1, 0.1, 0.9, 0.1, 0.5, 0.9], state: 'self' } as const;
+  const NEIGHBOUR = { outline: [0.2, 0.2, 0.4, 0.2, 0.4, 0.4], state: 'reserved' } as const;
+
+  function floorPlate(units: readonly { outline: readonly number[]; state: 'self' | 'reserved' }[]): ListingMaterial {
+    return { kind: 'floorPlate', at: SOURCE_AT, provenance: 'measured', units };
+  }
+
+  /** Μια εικόνα όπως την αναφέρει το raster ράφι — ό,τι διαβάζει ο ενορχηστρωτής. */
+  function shelfImage(url: string, material: ListingMaterial): Record<string, unknown> {
+    const face = { key: 'k', url, width: 2560, height: 1829 };
+    return {
+      canonical: face, variants: [face], material, focalPoint: null, declaredFocalPoint: null,
+      sourceFileId: null, declaredCaptureSpot: null, declaredNorthRad: null,
+    };
+  }
+
+  function writtenBy(set: jest.Mock): Record<string, unknown> {
+    return set.mock.calls[0][0] as Record<string, unknown>;
+  }
+
+  it('🔴 η διαμέριση τη στέλνει στο raster — ίδιο ράφι με τις φωτογραφίες, καμία δεύτερη κλήση', async () => {
+    const plate = source('companies/c1/floors/f1/floor.png', floorPlate([SELF, NEIGHBOUR]));
+    const photo = source('owner_properties/u1/a.jpg', { kind: 'photo' });
+
+    expect(partitionListingSources([photo, plate]).raster).toEqual([photo, plate]);
+
+    await writeWithShelf({ set: jest.fn(async () => undefined) } as never, LISTING, listing(), [photo, plate]);
+
+    expect(reconcilePublicShelf).toHaveBeenCalledTimes(1);
+    expect(reconcilePublicShelf.mock.calls[0][2]).toEqual([photo, plate]);
+  });
+
+  it('🔴 γράφεται στο `floorPlates[]` ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ — και ΟΧΙ στη συλλογή ή στις κατόψεις του ακινήτου', async () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `splitFloorPlateImages` ⇒ η εικόνα φτάνει στο `withPublishedGallery`, που πετά,
+    //    και η αγγελία δεν γράφεται καθόλου.
+    const material = floorPlate([SELF, NEIGHBOUR]);
+    reconcilePublicShelf.mockResolvedValue({
+      outcome: 'reconciled',
+      published: [shelfImage('https://shelf/a.webp', { kind: 'photo' }), shelfImage(FLOOR_URL, material)],
+      removed: 0,
+      rejected: 0,
+    });
+
+    const set = jest.fn(async () => undefined);
+    await writeWithShelf({ set } as never, LISTING, listing(), [
+      source('owner_properties/u1/a.jpg', { kind: 'photo' }),
+      source('companies/c1/floors/f1/floor.png', material),
+    ]);
+
+    const doc = writtenBy(set);
+    const plates = doc.floorPlates as readonly {
+      provenance: string;
+      at: string;
+      value: { image: { url: string }; units: unknown };
+    }[];
+
+    expect(plates).toHaveLength(1);
+    expect(plates[0].value.image.url).toBe(FLOOR_URL);
+    expect(plates[0].value.units).toEqual([SELF, NEIGHBOUR]);
+    expect(plates[0].provenance).toBe('measured');
+    expect(plates[0].at).toBe(SOURCE_AT);
+    expect((doc.gallery as readonly { url: string }[]).map((image) => image.url)).toEqual(['https://shelf/a.webp']);
+    expect(doc.floorplans).toEqual([]);
+  });
+
+  it('🔴 κάτοψη που ΔΕΝ περνά την κρίση δεν φτάνει ΠΟΤΕ στο ράφι — κανένα δημόσιο byte χωρίς έγγραφο', async () => {
+    // Χωρίς μονάδα «αυτό το ακίνητο»: αν ανέβαινε, η εικόνα ολόκληρου του ορόφου θα έμενε στον δημόσιο κάδο.
+    const refused = source('companies/c1/floors/f1/floor.png', floorPlate([NEIGHBOUR]));
+    const photo = source('owner_properties/u1/a.jpg', { kind: 'photo' });
+    const set = jest.fn(async () => undefined);
+
+    await writeWithShelf({ set } as never, LISTING, listing(), [photo, refused]);
+
+    expect(reconcilePublicShelf.mock.calls[0][2]).toEqual([photo]);
+    expect(writtenBy(set).floorPlates).toEqual([]);
+  });
+
+  it('αγγελία χωρίς κάτοψη ορόφου γράφει ΚΕΝΟ κουτί — το ίδιο έγγραφο με πριν', async () => {
+    const set = jest.fn(async () => undefined);
+    await writeWithShelf({ set } as never, LISTING, listing(), []);
+
+    expect(writtenBy(set).floorPlates).toEqual([]);
+  });
+});
+
 describe('🏆 Α-7 (καλωδίωση) — ΕΝΑ `set`, ΚΑΙ ΤΑ ΜΟΝΤΕΛΑ ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ', () => {
   const MODEL_URL = 'https://storage.googleapis.com/bucket/listings/ownp_77aa21bc/aa.glb';
 

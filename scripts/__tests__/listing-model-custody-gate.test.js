@@ -145,6 +145,7 @@ describe('Κ3 — ΤΟ ΣΥΜΒΟΛΟ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΚΑΛΕΙ (τ�
     const full = new Map([
       ['withPublishedModels', 1],
       ['withPublishedVideos', 1],
+      ['withPublishedFloorPlates', 1],
       ['withdrawListingShelves', 1],
     ]);
     expect(auditSymbolReach(full)).toEqual([]);
@@ -180,6 +181,7 @@ describe('Κ4 — Ο ΦΡΟΥΡΟΣ ΠΟΥ ΣΒΗΣΤΗΚΕ', () => {
     //    όταν η ραφή γραφέα⇄αναγνώστη απέκτησε τις δικές της άγκυρες (ADR-845 §7.7, Ο-13).
     // 3 → **4** στις 2026-10-07: ο γραφέας του `videos[]` έφερε τις δικές του άγκυρες (ADR-907 §10).
     // 4 → **5** στις 2026-10-08: ο ΕΝΑΣ βοηθός επαναπροβολής της κλάσης Ο-35 (ADR-845 §7.17 Α6).
-    expect(Object.keys(REQUIRED_ANCHORS)).toHaveLength(5);
+    // 5 → **6** στις 2026-10-10: ο γραφέας του `floorPlates[]` (ADR-907 §11.5).
+    expect(Object.keys(REQUIRED_ANCHORS)).toHaveLength(6);
   });
 });

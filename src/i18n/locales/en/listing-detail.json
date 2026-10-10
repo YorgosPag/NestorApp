@@ -75,6 +75,9 @@
       "agency": "The video is the agency’s own material, selected by them."
     }
   },
+  "floorPlate": {
+    "alt": "Floor plan of the storey, showing its units"
+  },
   "model": {
     "heading": "{count, plural, one {3D model} other {3D models}}",
     "reveal": "View in 3D",

@@ -34,6 +34,7 @@ import {
   LISTING_FLOORPLAN_PROVENANCE_KEYS,
   LISTING_MATERIAL_KINDS,
   MODEL_MATERIAL,
+  OWNER_DECLARABLE_MATERIAL_KINDS,
   PHOTO_MATERIAL,
   declaredFloorplanMaterial,
 } from '@/lib/listings/listing-material';
@@ -44,6 +45,9 @@ import {
   PUBLIC_LISTING_SCHEMA_VERSION,
   upgradeListingDocument,
 } from '@/lib/listings/public-listing-schema';
+import { ownerPropertyDraftSchema } from '@/lib/owner-property/owner-property-draft-schema';
+import { ownerPropertyFormSchema } from '@/lib/owner-property/owner-property-form-values';
+import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
 import type { AgencyMediaCandidate } from '@/services/listings/agency-media-publication';
 import type { PublicListing } from '@/types/public-listing';
@@ -316,7 +320,7 @@ describe('🏆 Α-2 — ΥΠΑΡΧΕΙ ΤΙΜΗ ΤΟΥ ΛΕΞΙΛΟΓΙΟΥ ΠΟ
   it('🔴 ΚΑΘΕ τιμή του `LISTING_MATERIAL_KINDS` έχει σκέλος στο `ListingMaterial`', () => {
     // Ο πίνακας είναι η πηγή· ο τύπος παράγεται. Αυτό κάνει το λεξιλόγιο **ορατό σε
     // χρόνο εκτέλεσης**, ώστε μια μελλοντική χαλάρωση του τύπου να μη γίνει σιωπηλά.
-    expect([...LISTING_MATERIAL_KINDS]).toEqual(['photo', 'floorplan', 'model', 'video']);
+    expect([...LISTING_MATERIAL_KINDS]).toEqual(['photo', 'floorplan', 'model', 'video', 'floorPlate']);
     expect(PHOTO_MATERIAL.kind).toBe('photo');
     expect(MODEL_MATERIAL.kind).toBe('model');
     expect(declaredFloorplanMaterial(UPLOADED_AT).kind).toBe('floorplan');
@@ -370,6 +374,47 @@ describe('🏆 Α-2 — ΥΠΑΡΧΕΙ ΤΙΜΗ ΤΟΥ ΛΕΞΙΛΟΓΙΟΥ ΠΟ
     expect(publishedOwnerPhotos(media).map((m) => m.storagePath)).toEqual(['p/photo.jpg']);
     expect(isLeadOwnerMedia(media, 'p/model.glb')).toBe(false);
     expect(isLeadOwnerMedia(media, 'p/photo.jpg')).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // ADR-907 §11.5 — το ΠΕΜΠΤΟ είδος: κάτοψη ορόφου. Δείχνει μονάδες ΑΛΛΩΝ, άρα οι δύο πόρτες
+  // που το μοντέλο και το βίντεο πέρασαν «αυτομάτως» εδώ οφείλουν να είναι ΚΛΕΙΣΤΕΣ.
+  // -------------------------------------------------------------------------
+
+  /** Ελάχιστη νόμιμη κάτοψη ορόφου — μία μονάδα, αυτή της αγγελίας. */
+  const FLOOR_PLATE: ListingMaterial = {
+    kind: 'floorPlate',
+    at: UPLOADED_AT,
+    provenance: 'declared',
+    units: [{ outline: [0.1, 0.1, 0.9, 0.1, 0.9, 0.9], state: 'self' }],
+  };
+
+  it('🔴 η κάτοψη ΟΡΟΦΟΥ δεν γίνεται φωτογραφία ούτε κάτοψη του ακινήτου — άρνηση με όνομα', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βάλε `case 'floorPlate':` δίπλα στο `case 'floorplan':` ⇒ η εικόνα με τις μονάδες
+    //    των γειτόνων μπαίνει στα `floorplans[]` της αγγελίας, χωρίς περιγράμματα και χωρίς επιμέλεια ορόφου.
+    const shelf = [shelfImage('https://shelf/floor.webp', { material: FLOOR_PLATE })];
+
+    expect(() => withPublishedGallery(listing(), shelf)).toThrow(/floorPlates\[\]/);
+  });
+
+  it('🔴 Ο ΙΔΙΩΤΗΣ ΔΕΝ ΤΗ ΔΗΛΩΝΕΙ ΠΟΤΕ — η λίστα του σύρματος είναι καταφατική και δεν την περιέχει', () => {
+    // Ο αριθμός είναι φράχτης: νέο είδος στο λεξιλόγιο ΔΕΝ μπαίνει εδώ μόνο του (πριν από το §11.5 έμπαινε).
+    expect([...OWNER_DECLARABLE_MATERIAL_KINDS]).toEqual(['photo', 'floorplan', 'model', 'video']);
+  });
+
+  // ⚠️ Συναρτήσεις, όχι τιμές: το σώμα του `describe` τρέχει στη συλλογή, και εξαίρεση εκεί ρίχνει όλο το αρχείο.
+  //    Το `sourceType()` περνά κάτω από τον κανόνα του προχείρου (`superRefine`) ως το σκέτο αντικείμενο.
+  it.each([
+    ['πρόχειρο', () => ownerPropertyDraftSchema.sourceType().shape.media.element],
+    ['φόρμα', () => ownerPropertyFormSchema.shape.media.element],
+  ] as const)('🔴 το σχήμα «%s» αρνείται `kind: floorPlate` από το δίκτυο — και δέχεται την κάτοψη', (_name, elementOf) => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα το `z.enum` πίσω στο `LISTING_MATERIAL_KINDS` ⇒ το πρώτο `expect` κοκκινίζει.
+    //    Το δεύτερο είναι ο μάρτυρας: το ίδιο αντικείμενο με νόμιμο είδος περνά, άρα η άρνηση οφείλεται στο είδος.
+    const element = elementOf();
+    const file = { storagePath: 'p/a.jpg', fileName: 'a.jpg', sizeBytes: 1024, uploadedAt: UPLOADED_AT };
+
+    expect(element.safeParse({ ...file, kind: 'floorPlate' }).success).toBe(false);
+    expect(element.safeParse({ ...file, kind: 'floorplan' }).success).toBe(true);
   });
 
   it('🔴 Ο ΚΡΙΚΟΣ 10 — έγγραφο χωρίς `models` ⇒ κενός πίνακας, ποτέ `undefined`', () => {

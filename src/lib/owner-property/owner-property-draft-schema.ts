@@ -54,7 +54,7 @@ import { z } from 'zod';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { normalizeUnitNumber, UNIT_NUMBER_MAX_LENGTH } from '@/lib/geo/unit-number';
 import { FloorKindSchema } from '@/app/api/floors/floors.schemas';
-import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
+import { OWNER_DECLARABLE_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
 import { declaredCaptureSpotsSchema } from '@/lib/listings/photo-capture-spot';
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
@@ -225,7 +225,7 @@ const media = z.object({
    * **προαιρετικό** στην οντότητα, άρα αντικείμενο **χωρίς** αυτό ικανοποιεί τον
    * τύπο. Το φυλάει **μόνο** άγκυρα που περνά τιμή από το σύνορο.
    */
-  kind: z.enum(LISTING_MATERIAL_KINDS).optional(),
+  kind: z.enum(OWNER_DECLARABLE_MATERIAL_KINDS).optional(),
   /**
    * 🎯 **«ΠΟΥ ΕΙΝΑΙ ΤΟ ΘΕΜΑ;» (ADR-880) — ρητό για τον ΙΔΙΟ λόγο με τα δύο από πάνω**: το `zod` κόβει
    * σιωπηλά ό,τι δεν δηλώνεται, και η διόρθωση του ανθρώπου θα χανόταν στο σύνορο.

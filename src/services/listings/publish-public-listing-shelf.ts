@@ -51,6 +51,13 @@ import {
   type ProjectedShelfVideo,
   type ProjectedVideoPoster,
 } from './public-listing-video-projection';
+import {
+  splitFloorPlateImages,
+  withPublishedFloorPlates,
+  withinFloorPlateAdmission,
+  type ProjectedShelfFloorPlate,
+  type ShelfFloorPlate,
+} from './public-listing-floor-plate-projection';
 import { splitVideoPosters, videoPosterSources } from './listing-video-poster';
 import type { PublicListing } from '@/types/public-listing';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
@@ -135,6 +142,13 @@ export function partitionListingSources(
     switch (material.kind) {
       case 'photo':
       case 'floorplan':
+        raster.push(source);
+        break;
+
+      case 'floorPlate':
+        // ADR-907 §11.5 — raster όπως η κάτοψη του ακινήτου: **ίδιο** ράφι, ίδια κατάληξη, ίδια συμφιλίωση. Δικό της
+        //    σκέλος και όχι τρίτη ετικέτα στο από πάνω, γιατί η απάντηση «στο ράφι εικόνων» εδώ είναι **απόφαση**
+        //    (η εικόνα δείχνει ξένες μονάδες) — το αν φεύγει το κρίνει το `withinFloorPlateAdmission`, πριν από το ράφι.
         raster.push(source);
         break;
 
@@ -266,9 +280,12 @@ export async function writeWithShelf(
   const { images, models, videos } = await reconcileListingShelves(listingId, sources);
 
   try {
-    // 🔑 **ΕΝΑ `set`, ΤΡΕΙΣ ΓΡΑΦΕΙΣ ΣΕ ΣΥΝΘΕΣΗ.** Συλλογή+κατόψεις, μοντέλα, βίντεο *(ADR-907 §10)* — και το
-    //    έγγραφο φεύγει **ολόκληρο**, ποτέ ως μερικές ενημερώσεις.
-    const { gallery, posterByVideo } = splitVideoPosters(images.published);
+    // 🔑 **ΕΝΑ `set`, ΤΕΣΣΕΡΙΣ ΓΡΑΦΕΙΣ ΣΕ ΣΥΝΘΕΣΗ.** Συλλογή+κατόψεις, μοντέλα, βίντεο *(ADR-907 §10)*, κάτοψη ορόφου
+    //    *(§11.5)* — και το έγγραφο φεύγει **ολόκληρο**, ποτέ ως μερικές ενημερώσεις.
+    // 🏢 ADR-907 §11.5 — η κάτοψη ορόφου βγαίνει **πρώτη** από την αναφορά του raster ραφιού: το `splitVideoPosters`
+    //    στέλνει στη συλλογή ό,τι δεν είναι βίντεο, και το `withPublishedGallery` πετά ονομαστικά σε κάτοψη ορόφου.
+    const { floorPlates, rest } = splitFloorPlateImages(images.published);
+    const { gallery, posterByVideo } = splitVideoPosters(rest);
     const withGallery = withPublishedGallery(listing, gallery.map(toProjectedImage));
     const withModels = withPublishedModels(withGallery, models.published.map(toProjectedModel));
 
@@ -276,6 +293,7 @@ export async function writeWithShelf(
       withModels,
       videos.published.map((published) => toProjectedVideo(published, posterByVideo)),
     );
+    const complete = withPublishedFloorPlates(withVideos, floorPlates.map(toProjectedFloorPlate));
 
     // 🧬 ADR-845 §7.17 Α5 — **το αποτύπωμα των μέσων**, δίπλα στο `schemaVersion` και για τον ίδιο
     //    λόγο: μεταδεδομένο **αποθήκευσης**, όχι περιεχόμενο αγγελίας *(το κλειστό σχήμα δεν αλλάζει)*.
@@ -286,11 +304,11 @@ export async function writeWithShelf(
     const shelvesSettled = [images, models, videos].every((shelf) => shelf.outcome !== 'failed');
 
     await ref.set({
-      ...withVideos,
+      ...complete,
       schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION,
       ...(shelvesSettled ? { [MEDIA_FINGERPRINT_FIELD]: mediaFingerprintOf(sources) } : {}),
     });
-    return withVideos;
+    return complete;
   } catch (error) {
     await withdrawShelvesAfterFailure(
       listingId,
@@ -317,7 +335,10 @@ async function reconcileListingShelves(listingId: string, sources: readonly Publ
   const modelsSettling = reconcilePublicModelShelf(LISTING_MODEL_SHELF, listingId, model);
   const videos = await reconcilePublicVideoShelf(LISTING_VIDEO_SHELF, listingId, video);
   const [images, models] = await Promise.all([
-    reconcilePublicShelf(LISTING_SHELF, listingId, [...raster, ...videoPosterSources(videos.published, video)]),
+    reconcilePublicShelf(LISTING_SHELF, listingId, [
+      ...admittedRasterSources(listingId, raster),
+      ...videoPosterSources(videos.published, video),
+    ]),
     modelsSettling,
   ]);
 
@@ -328,6 +349,26 @@ async function reconcileListingShelves(listingId: string, sources: readonly Publ
   }
 
   return { images, models, videos };
+}
+
+/**
+ * **Οι πηγές που φτάνουν στο raster ράφι** — ό,τι έκοψε η κρίση της κάτοψης ορόφου καταγράφεται, δεν σωπαίνει.
+ *
+ * 🔑 Η κρίση τρέχει **πριν** από το ράφι (ADR-907 §11.5): εικόνα ορόφου που δεν θα έγραφε ο γραφέας δεν αποκτά ποτέ
+ * δημόσια διεύθυνση. ⚠️ Η αγγελία γράφεται κανονικά χωρίς αυτήν — ίδια στάση με ράφι που δεν συμφιλιώθηκε.
+ */
+function admittedRasterSources(
+  listingId: string,
+  raster: readonly PublicShelfSource<ListingMaterial>[],
+): readonly PublicShelfSource<ListingMaterial>[] {
+  const admitted = withinFloorPlateAdmission(raster);
+  if (admitted.length < raster.length) {
+    logger.warn('Κάτοψη ορόφου ΔΕΝ πέρασε την κρίση πριν από το ράφι — η αγγελία γράφεται χωρίς αυτήν', {
+      propertyId: listingId,
+      refused: raster.length - admitted.length,
+    });
+  }
+  return admitted;
 }
 
 /**
@@ -387,9 +428,20 @@ function toProjectedVideo(
 }
 
 /**
+ * **Ό,τι είδε το ράφι για την ΚΑΤΟΨΗ ΟΡΟΦΟΥ, στη γλώσσα της καθαρής προβολής** — η όψη από το ράφι, όλα τα άλλα από το
+ * υλικό που ταξίδεψε μαζί της. Καμία ταυτότητα πηγής δεν περνά.
+ */
+function toProjectedFloorPlate(
+  plate: ShelfFloorPlate<PublicShelfImage<ListingMaterial>>,
+): ProjectedShelfFloorPlate {
+  const { at, provenance, units } = plate.material;
+  return { image: toProjectedFace(plate.image), at, provenance, units };
+}
+
+/**
  * **Η όψη μιας εικόνας του ραφιού** — διεύθυνση, διαστάσεις και **όλα** τα παράγωγα (αυτό ακριβώς είναι το `srcset`).
  *
- * 🔑 Ένα σώμα για φωτογραφία, κάτοψη **και** εξώφυλλο (N.18): το εξώφυλλο είναι αυτό και **τίποτε άλλο** — καμία δήλωση
+ * 🔑 Ένα σώμα για φωτογραφία, κάτοψη, κάτοψη ορόφου **και** εξώφυλλο (N.18): το εξώφυλλο είναι αυτό και **τίποτε άλλο** — καμία δήλωση
  * ανθρώπου (σημείο εστίασης, σημείο λήψης, βορράς) δεν το αφορά· οι εικόνες της συλλογής τις προσθέτουν από πάνω.
  */
 function toProjectedFace(image: PublicShelfImage<ListingMaterial>): ProjectedVideoPoster {

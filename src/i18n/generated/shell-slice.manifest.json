@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "63d353a5ce84f96e4fa7051d972c20a93d72c228105abab905d45827a055c951",
+  "inputsSha256": "789d773e727e6fc09d62c0efacbb06b96e99a24e7520544fb22f8335b5dce22d",
   "languages": [
     "el"
   ],
@@ -12241,6 +12241,9 @@
     "src/lib/listings/declaration-succession.ts": "e4c998f702c3dd06da179a5bb9568b7d8ed455e86686bce74b77310dc426b393",
     "src/lib/listings/declared-file-ids.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/declared-file-map.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/listings/floor-plate/floor-plate-keys.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/listings/floor-plate/floor-plate-outline.ts": "3fce8621407c74089cf881f852d70d8e821b2ef9281289c7a3b5d6d7746dbc16",
+    "src/lib/listings/floor-plate/floor-plate-publication.ts": "f2340afd21ed9c52e478f8b2147a2e058aeeb76199c91b2041d2559cb0e14185",
     "src/lib/listings/floor-plate/floor-plate-state.ts": "a3c14e0baa8cd0d5bb7443380219a1c9627271fe6a9703828d2861b113d202d1",
     "src/lib/listings/floorplan-north.ts": "b12a726dc4bfb148d87de8db00260f4a6a6315ee5d2bfdfb64ae59f62504834a",
     "src/lib/listings/floorplan-publication-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -12257,7 +12260,7 @@
     "src/lib/listings/listing-images.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
     "src/lib/listings/listing-map-mark.ts": "1a7ebe289523b902bfcf58502fad3b908d0b2ac7ec566a88b8ef109b95f2fee9",
     "src/lib/listings/listing-map-shape.ts": "e34eb0cf82fd8a1a57c1169c3c880b3a7fb1f00a54936d7ddd8694672c364220",
-    "src/lib/listings/listing-material.ts": "c9aa8ee3915a604344049570c85b8326386058c88a172a53fc8336538b5b56d9",
+    "src/lib/listings/listing-material.ts": "212bae603a32fceb865a7c43c943e623f3675f470bba375d437405d6a15f5549",
     "src/lib/listings/listing-media-fingerprint.ts": "1407a77bb7050e506bab11bd7274a067f83ab3478069dfa6a432e56fbe93d083",
     "src/lib/listings/listing-model-declaration.ts": "d856750e0071e40eaa77cb707f19a19d535a11da432fc0b691a4fe908c4342e9",
     "src/lib/listings/listing-photo-position.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -12515,6 +12518,7 @@
     "src/services/listings/listing-video-poster.ts": "2e201318cbea94aa6e91c224da7bfdcdde00674c0494deb8df9f90bf911c2281",
     "src/services/listings/price-history-stamp.ts": "c2cd6811c100c61bd032f781aae6ff28548a2e6fad4fc4955070d44561c72226",
     "src/services/listings/public-listing-attributes.ts": "f53d81fd3cd6aeb344dbc7a1ab1201092b8f964005cedbf6e72ab4afea3a5d8b",
+    "src/services/listings/public-listing-floor-plate-projection.ts": "b273da585bc73534769c24112d7223abcf861c2645abefc451bfaa24095a295e",
     "src/services/listings/public-listing-gallery-projection.ts": "06dd276e323fac362a7fbee5d4a9a03676647b660ab56d25aefa7a45401c8ae4",
     "src/services/listings/public-listing-model-projection.ts": "483f8fd4947297a2d10a7ce0055bd203e61c8094a1d4317588e1597480b7c09a",
     "src/services/listings/public-listing-objective-value.ts": "8e7808de623381a72acdfd3663ad1497b623aef7226e8be2a020ee6cc4e34b44",
@@ -12533,7 +12537,7 @@
     "src/services/listings/public-shelf-video-bake.ts": "c11072819d17c7d9b9ced87ca39493586bb4fffe76ebe200895e1951b68597c4",
     "src/services/listings/public-shelf-video.service.ts": "2eca211c24b46a358fa35f36376032a2163ac4bcefd8e76df29ece12726baf0a",
     "src/services/listings/public-shelf.service.ts": "6637a07dc6247cba1142a77ca9e752a49657fcfe5ab7bc8c2b422aa2ddb41729",
-    "src/services/listings/publish-public-listing-shelf.ts": "1c2542f973ca148f01ba61c70cb9895f4e7c0ea56aebe038dc1f254b8edf4a86",
+    "src/services/listings/publish-public-listing-shelf.ts": "08015cd1e2ffe94c307543071749caf8b797d2c22834e1e682af94a65a123ee5",
     "src/services/listings/publish-public-listing.ts": "dd615c123731ac844126207ad0db7ae28e60441a090b06ec369ad6ad2dd4d909",
     "src/services/mandate/agency-profile-credential.ts": "b7ebd2ef7d1d57c08749c44722ee782a0c82c3c1235b206b9525141d028202ca",
     "src/services/mandate/agency-profile-verdict.ts": "2ef3c2cec8549d4e4c1a2103f0bb15108b7563098b7eb90114237b9b31dd22c9",
@@ -12741,7 +12745,7 @@
     "dynamicBoundaries": 24,
     "matchedKeys": 239,
     "routeBoundaries": 3,
-    "shellFiles": 1133,
+    "shellFiles": 1137,
     "sliceBytes": 726011
   },
   "unresolvableKeys": [

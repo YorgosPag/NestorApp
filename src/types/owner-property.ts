@@ -88,7 +88,7 @@ import {
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
 import type { ListedAt, ListingAuthorship, ListingImage } from '@/types/public-listing';
-import type { ListingMaterialKind } from '@/lib/listings/listing-material';
+import type { OwnerDeclarableMaterialKind } from '@/lib/listings/listing-material';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
@@ -235,7 +235,8 @@ export interface OwnerPropertyMedia {
    * συμπεριφορά**. Ένα `'floorplan'` ως προεπιλογή θα **έβγαζε** σιωπηλά από τη συλλογή
    * αρχεία που ο κόσμος ήδη βλέπει — αλλαγή στην αγγελία που **κανείς άνθρωπος δεν ζήτησε**.
    */
-  readonly kind?: ListingMaterialKind;
+  // ⚠️ `OwnerDeclarableMaterialKind`, όχι ολόκληρο το λεξιλόγιο (ADR-907 §11.5): η κάτοψη ορόφου δεν δηλώνεται από ιδιώτη.
+  readonly kind?: OwnerDeclarableMaterialKind;
   /**
    * 🎯 **Η ΤΡΙΤΗ ΑΝΘΡΩΠΙΝΗ ΠΡΑΞΗ: «ΠΟΥ ΕΙΝΑΙ ΤΟ ΘΕΜΑ;»** (ADR-880).
    *

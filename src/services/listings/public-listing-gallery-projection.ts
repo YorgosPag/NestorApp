@@ -231,6 +231,15 @@ export function withPublishedGallery(
             '`withPublishedVideos` (ADR-907 §10).',
         );
 
+      case 'floorPlate':
+        // ADR-907 §11.5 — **άρνηση με όνομα**, και εδώ ο λόγος είναι βαρύτερος από το σχήμα: η εικόνα δείχνει τις μονάδες
+        //    **άλλων**. Στη συλλογή θα γινόταν «φωτογραφία του ακινήτου», χωρίς περιγράμματα και χωρίς την επιμέλεια
+        //    του ορόφου. Το `floorPlates[]` το γράφει ο **δικός του** γραφέας, αφού το `splitFloorPlateImages` τη βγάλει.
+        throw new Error(
+          'withPublishedGallery: η κάτοψη ορόφου δεν περνά από τη διαδρομή της συλλογής — το `floorPlates[]` το ' +
+            'γράφει ο `withPublishedFloorPlates` (ADR-907 §11.5).',
+        );
+
       default:
         return assertNeverMaterial(material);
     }

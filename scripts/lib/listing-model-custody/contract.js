@@ -28,6 +28,10 @@ const GUARDED_SYMBOLS = Object.freeze({
     'ADR-907 §10 — Ο ΓΡΑΦΕΑΣ ΤΟΥ `videos[]`. Δέχεται ΜΟΝΟ `ProjectedShelfVideo`, δηλαδή βίντεο που ο ψήστης ' +
     'ΔΕΧΤΗΚΕ πάνω στα bytes (H.264, ≤120″, ≤100 MB). Δεύτερος καλών με ωμό URL θα διαφήμιζε βίντεο που ' +
     'κανείς δεν έλεγξε — σε content-addressed, δηλαδή ΜΟΝΙΜΗ, διεύθυνση.',
+  withPublishedFloorPlates:
+    'ADR-907 §11.5 — Ο ΓΡΑΦΕΑΣ ΤΟΥ `floorPlates[]`. Η κάτοψη ορόφου δείχνει μονάδες ΑΛΛΩΝ· δέχεται ΜΟΝΟ ' +
+    '`ProjectedShelfFloorPlate`, δηλαδή εικόνα που βγήκε από το raster ράφι ΑΦΟΥ πέρασε την κρίση των μονάδων. ' +
+    'Δεύτερος καλών θα έγραφε περιγράμματα γειτόνων που καμία επιμέλεια ορόφου δεν ενέκρινε.',
   withdrawListingShelves:
     'Α-8 — Η ΑΠΟΣΥΡΣΗ. ΑΠΑΡΙΘΜΕΙ τον πίνακα ειδών, ώστε νέο ράφι να ΜΗΝ ΜΠΟΡΕΙ να ξεχαστεί. ' +
     'Ο προκάτοχός της ήταν `reconcileShelfSafely(listingId, [])` σε ΔΥΟ σημεία, και άδειαζε ' +
@@ -96,6 +100,11 @@ const REQUIRED_ANCHORS = Object.freeze({
   'src/services/listings/__tests__/public-listing-video-writer.test.ts': [
     'Β-1 — ΤΟ `videos[]` ΧΤΙΖΕΤΑΙ ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ ΤΟΥ ΡΑΦΙΟΥ',
     'Β-2 — Η ΠΡΟΕΛΕΥΣΗ ΕΙΝΑΙ `declared` ΚΑΙ Η ΣΤΙΓΜΗ ΕΙΝΑΙ ΤΗΣ ΠΗΓΗΣ',
+  ],
+  'src/services/listings/__tests__/public-listing-floor-plate-writer.test.ts': [
+    'ΚΟ-1 — ΤΟ `floorPlates[]` ΧΤΙΖΕΤΑΙ ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ ΤΟΥ ΡΑΦΙΟΥ',
+    'ΚΟ-2 — ΜΟΝΟ ΣΧΗΜΑ, ΚΑΤΑΣΤΑΣΗ ΚΑΙ ΔΗΜΟΣΙΟΣ ΣΥΝΔΕΣΜΟΣ ΦΤΑΝΟΥΝ ΣΤΟ ΕΓΓΡΑΦΟ',
+    'ΚΟ-3 — Η ΑΡΝΗΣΗ ΓΙΝΕΤΑΙ ΠΡΙΝ ΑΠΟ ΤΟ ΡΑΦΙ',
   ],
   'src/services/listings/__tests__/agency-model-publication.test.ts': [
     'Κ5 — 🏆 Η ΠΗΓΗ ΔΕΝ ΕΙΝΑΙ ΚΕΝΗ: το ανεβασμένο μοντέλο ΦΕΥΓΕΙ, ως μοντέλο',
