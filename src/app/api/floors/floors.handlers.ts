@@ -26,7 +26,7 @@ import {
 } from './floors.shared';
 import { tenantScopeLabel } from '@/lib/auth/tenant-scope';
 import { writeFloorBirth } from './floor-birth';
-import { FLOOR_INTERMEDIATE, removeFloor } from './floor-removal';
+import { removeFloor } from './floor-removal';
 import { floorSlotCompanion } from './floor-slot-companion';
 import { buildFloorUpdates, runFloorUpdateEffects } from './floor-update-effects';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
@@ -305,9 +305,10 @@ export async function handleDeleteFloor(
 
     return NextResponse.json({ success: true, message: `Floor "${floorId}" deleted` });
   } catch (error) {
-    if (error instanceof ApiError && error.errorCode === FLOOR_INTERMEDIATE) {
-      return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
-    }
+    // Κάθε τυπωμένη άρνηση (`422 FLOOR_INTERMEDIATE` · `409 DELETION_BLOCKED` · `404`) φεύγει **όπως είναι**, με τον
+    // κωδικό της — ίδιο σχήμα με τη γέννηση και την επεξεργασία. Ως τις 2026-10-10 η `422` έβγαινε χωρίς `errorCode`
+    // και κάθε άλλη άρνηση (π.χ. όροφος με ακίνητα) ισοπεδωνόταν σε `500 «Failed to delete floor»`.
+    if (error instanceof ApiError) throw error;
     logger.error('[Floors/Delete] Error', { error: getErrorMessage(error, 'Unknown') });
     return NextResponse.json({
       success: false,

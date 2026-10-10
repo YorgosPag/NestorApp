@@ -9,7 +9,12 @@
 import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import type { Translate } from '@/i18n/hooks/useTranslation';
 import type { FloorSlotRow } from '@/lib/floor/floor-stack-integrity';
-import { describeFloorStackConflicts, describeSameElevation, floorSlotRefusalKey } from '../floor-stack-messages';
+import {
+  describeFloorStackConflicts,
+  describeSameElevation,
+  floorRemovalRefusalKey,
+  floorSlotRefusalKey,
+} from '../floor-stack-messages';
 
 const t = ((key: string, params?: Record<string, unknown>) =>
   (params ? `${key}::${JSON.stringify(params)}` : key)) as unknown as Translate;
@@ -29,6 +34,18 @@ describe('floorSlotRefusalKey', () => {
   it('άλλο status ή άγνωστο σφάλμα ⇒ null', () => {
     expect(floorSlotRefusalKey(refusal(422, 'FLOOR_NUMBER_TAKEN'))).toBeNull();
     expect(floorSlotRefusalKey(new Error('boom'))).toBeNull();
+  });
+});
+
+describe('floorRemovalRefusalKey', () => {
+  it('🔴 ο διακομιστής αρνείται διαγραφή ενδιάμεσου ⇒ το ΙΔΙΟ μήνυμα με τον τοπικό έλεγχο', () => {
+    expect(floorRemovalRefusalKey(refusal(422, 'FLOOR_INTERMEDIATE'))).toBe('tabs.floors.deleteIntermediate');
+  });
+  it('άλλη άρνηση (εξαρτήσεις, χωρίς κωδικό, άλλο status) ⇒ null — η οθόνη δείχνει το μήνυμα του διακομιστή', () => {
+    expect(floorRemovalRefusalKey(refusal(409, 'DELETION_BLOCKED'))).toBeNull();
+    expect(floorRemovalRefusalKey(refusal(422))).toBeNull();
+    expect(floorRemovalRefusalKey(refusal(409, 'FLOOR_INTERMEDIATE'))).toBeNull();
+    expect(floorRemovalRefusalKey(new Error('boom'))).toBeNull();
   });
 });
 

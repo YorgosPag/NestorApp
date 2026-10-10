@@ -14,6 +14,7 @@
 import type { Translate } from '@/i18n/hooks/useTranslation';
 import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import {
+  FLOOR_INTERMEDIATE,
   FLOOR_SLOT_ERROR_CODES,
   findFloorStackConflicts,
   findSameElevationGroups,
@@ -44,6 +45,18 @@ const CONFLICT_KEYS: Record<FloorSlotClash, string> = {
 export function floorSlotRefusalKey(error: unknown): string | null {
   if (!ApiClientError.isApiClientError(error) || error.statusCode !== 409) return null;
   return isFloorSlotErrorCode(error.errorCode) ? REFUSAL_KEYS[error.errorCode] : null;
+}
+
+/**
+ * Το κλειδί i18n όταν ο διακομιστής αρνείται διαγραφή **ενδιάμεσου** ορόφου (`422`), ή `null` για κάθε άλλο σφάλμα.
+ *
+ * Η οθόνη κρίνει πρώτη με το ίδιο κατηγόρημα — αλλά πάνω στη λίστα που **έχει**. Αν κάποιος άλλος πρόσθεσε όροφο
+ * από πάνω στο μεταξύ, η κρίση που μετρά είναι του διακομιστή· ο άνθρωπος πρέπει να δει το ίδιο μήνυμα, όχι ένα
+ * γενικό «αποτυχία διαγραφής» με αγγλική ουρά.
+ */
+export function floorRemovalRefusalKey(error: unknown): string | null {
+  if (!ApiClientError.isApiClientError(error) || error.statusCode !== 422) return null;
+  return error.errorCode === FLOOR_INTERMEDIATE ? 'tabs.floors.deleteIntermediate' : null;
 }
 
 /** «Ισόγειο (0), Ισόγειο (0)» — τα μέλη μιας ομάδας, όπως τα αναγνωρίζει ο άνθρωπος. */

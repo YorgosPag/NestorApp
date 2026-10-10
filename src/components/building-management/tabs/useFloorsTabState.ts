@@ -26,7 +26,12 @@ import {
 import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import { isBuildingStorey } from '@/utils/floor-naming';
 import { isIntermediateStorey } from '@/lib/floor/floor-stack-integrity';
-import { describeFloorStackConflicts, describeSameElevation, floorSlotRefusalKey } from './floor-stack-messages';
+import {
+  describeFloorStackConflicts,
+  describeSameElevation,
+  floorRemovalRefusalKey,
+  floorSlotRefusalKey,
+} from './floor-stack-messages';
 import type { FloorRecord, FloorsApiResponse, FloorMutationResponse } from './useFloorsTabState.types';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
@@ -409,6 +414,14 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
         notifyError(result?.error ?? t('tabs.floors.deleteError'));
       }
     } catch (err) {
+      // Η στοίβα άλλαξε από τότε που φορτώθηκε η λίστα (π.χ. προστέθηκε όροφος από πάνω): η κρίση του διακομιστή
+      // μετρά — ίδιο μήνυμα με τον τοπικό έλεγχο, και φρέσκια λίστα για να φανεί γιατί.
+      const refusalKey = floorRemovalRefusalKey(err);
+      if (refusalKey) {
+        notifyError(t(refusalKey));
+        await fetchFloors();
+        return;
+      }
       const msg = err instanceof Error ? err.message : '';
       notifyError(t('tabs.floors.deleteError') + (msg ? `: ${msg}` : ''));
       console.error('[FloorsTab] Delete error:', err);

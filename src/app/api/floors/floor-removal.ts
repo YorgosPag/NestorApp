@@ -21,7 +21,7 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import type { AuthContext } from '@/lib/auth';
 import { getErrorMessage } from '@/lib/error-utils';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { isIntermediateStorey } from '@/lib/floor/floor-stack-integrity';
+import { FLOOR_INTERMEDIATE, isIntermediateStorey } from '@/lib/floor/floor-stack-integrity';
 import { createModuleLogger } from '@/lib/telemetry';
 import { buildFloorCascadeActor } from './_shared/floor-cascade-audit';
 import { readFloorStack } from './_shared/floor-stack-rows';
@@ -34,9 +34,6 @@ import {
 } from './floor-stack-reconcile.service';
 
 const logger = createModuleLogger('FloorRemoval');
-
-/** Το `errorCode` της άρνησης όταν η διαγραφή θα άφηνε κενό στη στοίβα. */
-export const FLOOR_INTERMEDIATE = 'FLOOR_INTERMEDIATE';
 
 export interface FloorRemovalRequest {
   readonly db: Firestore;

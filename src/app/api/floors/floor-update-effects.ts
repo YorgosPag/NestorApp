@@ -28,6 +28,16 @@ const logger = createModuleLogger('FloorUpdateEffects');
 export const FLOOR_UPDATE_FIELDS = ['name', 'number', 'kind', 'elevation', 'height'] as const;
 type FloorUpdateField = (typeof FLOOR_UPDATE_FIELDS)[number];
 
+/**
+ * Τα πεδία που **διαμορφώνουν τη στοίβα**: κάθε ένα μπορεί να μετακινήσει την άγκυρα μιας ειδικής στάθμης (τον
+ * κατώτατο/ανώτατο μετρούμενο όροφο) ή το δικό της βάθος. Το `name` όχι.
+ *
+ * 🔴 Ως τις 2026-10-10 η επανατοποθέτηση έτρεχε **μόνο** σε αλλαγή `kind`: αλλαγή υψομέτρου του κατώτατου ορόφου
+ * άφηνε τη θεμελίωση στο παλιό της υψόμετρο ώσπου να τη «θεραπεύσει» η επόμενη γέννηση/αφαίρεση (μετρημένο ζωντανά:
+ * θεμελίωση στο −4,20 με βάση −2,85 και βάθος 1,20). Η θέση είναι **αναλλοίωτη** της στοίβας, όχι συνέπεια ενός πεδίου.
+ */
+const STACK_SHAPING_FIELDS = ['number', 'kind', 'elevation', 'height'] as const satisfies readonly FloorUpdateField[];
+
 /** Σώμα → ενημερώσεις. Το `kind` γράφεται πλέον (ADR-903 §6): το σχήμα το δεχόταν και το πετούσε σιωπηλά. */
 export function buildFloorUpdates(body: Partial<Record<FloorUpdateField, unknown>>): Record<string, unknown> {
   const updates: Record<string, unknown> = {};
@@ -95,7 +105,8 @@ export async function runFloorUpdateEffects(input: FloorUpdateEffectsInput): Pro
   const run: EffectsRun = { input, buildingId, companyId, actor, warnings: [] };
 
   await reconcileStack(run, changed.has('elevation'), changed.has('height'));
-  if (changed.has('kind')) await placeSpecialLevels(run);
+  // Τελευταία: η θέση των ειδικών σταθμών κρίνεται πάνω στα υψόμετρα/ύψη που άφησε η ανασύνταξη.
+  if (STACK_SHAPING_FIELDS.some((field) => changed.has(field))) await placeSpecialLevels(run);
   const hostedCascade = changed.has('number') || changed.has('kind') || changed.has('name')
     ? await cascadeHosted(run)
     : undefined;
@@ -123,7 +134,10 @@ async function reconcileStack(run: EffectsRun, elevationChanged: boolean, height
   }
 }
 
-/** ADR-461 — αλλαγή είδους (π.χ. σε δώμα/θεμελίωση) ⇒ οι ειδικές στάθμες ξαναμπαίνουν στη θέση τους. */
+/**
+ * ADR-461 — οι ειδικές στάθμες ξαναμπαίνουν στα άκρα της στοίβας (θεμελίωση κάτω από τον κατώτατο μετρούμενο, δώμα/
+ * απόληξη πάνω από τον ανώτατο). Ιδεμποτικό: όταν όλα είναι στη θέση τους δεν γράφει τίποτα και δεν αγγίζει το κλειδί.
+ */
 async function placeSpecialLevels(run: EffectsRun): Promise<void> {
   const { input, buildingId, companyId, actor, warnings } = run;
   try {

@@ -153,18 +153,15 @@ describe('cascadeFloorElevations — ADR-450 §1', () => {
   });
 
   // ADR-461 — special-level satellite behaviour.
-  it('editing the foundation depth re-anchors it DOWN, never lifts the building', async () => {
+  it('editing the foundation depth NEVER lifts the building — and leaves the re-anchor to the one placement rule', async () => {
     // foundation depth just changed 1 → 1.5; ground stays the datum at 0.
     const { result, updates } = await run(
       [floorK('fnd', -1, -1, 1.5, 'foundation'), floorK('grd', 0, 0, 3, 'ground')],
       'fnd',
     );
-    expect(result.floorsUpdated).toBe(1);
-    expect(updates).toHaveLength(1);
-    expect(updates[0].ref.id).toBe('fnd');
-    expect(updates[0].patch.elevation).toBe(-1.5); // ground(0) − depth(1.5)
-    // The counted ground storey is NEVER pushed.
-    expect(updates.some((u) => u.ref.id === 'grd')).toBe(false);
+    // Χωρίς τη διακοπή, η ανοδική διαδρομή θα έγραφε grd.elevation = −1 + 1.5 = 0.5 (το κτίριο σηκώνεται).
+    expect(updates).toHaveLength(0);
+    expect(result.floorsUpdated).toBe(0);
   });
 
   it('a stair-penthouse rides up when the top counted storey grows', async () => {

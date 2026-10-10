@@ -206,10 +206,11 @@ export async function reconcileFloorStackAfterEdit(
  *   - roof / stair-penthouse → ΠΑΝΤΑ πάνω: stacked above `topCounted`
  *     (`number = prev.number + 1`, `elevation = prev.elevation + prev.height`).
  *
- * Idempotent: a special already in place → no write. Called after a counted storey
- * is created/deleted so adding a basement pushes the foundation further down, and
- * adding a top floor pushes the penthouse further up — the special never ends up
- * sandwiched inside the occupied stack. Multiple specials on a side are stacked in
+ * Idempotent: a special already in place → no write, lock untouched. Called after
+ * EVERY stack-shaping edit (number / kind / elevation / height — see
+ * `STACK_SHAPING_FIELDS` in `floor-update-effects.ts`); birth and removal plan the
+ * same placement inside their own transaction. The special never ends up
+ * sandwiched inside the occupied stack, nor left behind when its anchor moves. Multiple specials on a side are stacked in
  * their current relative order.
  *
  * All metres (ADR-369). Returns how many special levels were re-placed.
@@ -220,6 +221,12 @@ export async function reconcileSpecialLevelPlacement(
   companyId: string,
   actor: FloorCascadeActor,
 ): Promise<number> {
+  // Πρώτη κρίση **έξω** από τη συναλλαγή: τρέχει μετά από κάθε αλλαγή υψομέτρου/ύψους (αυτόματη αποθήκευση), και τις
+  // περισσότερες φορές δεν έχει τίποτα να μετακινήσει — τότε δεν σφραγίζει το κλειδί, άρα δεν σειριοποιεί το κτίριο.
+  // Η οριστική κρίση γίνεται μέσα στη συναλλαγή (ίδιο πρότυπο με το `floor-removal.ts`).
+  const preview = await readFloorStack(db, buildingId, companyId);
+  if (planSpecialLevelPlacement(preview.rows).length === 0) return 0;
+
   // 🔒 Κάτω από το κλειδί της στοίβας: η επανατοποθέτηση γράφει `number`, άρα είναι αλλαγή της στοίβας όπως κάθε άλλη.
   //    Ως τις 2026-10-10 ήταν ελεύθερη παρτίδα — ο τρίτος γραφέας αριθμού, ο μόνος που δεν περνούσε από πουθενά.
   const placements = await withFloorStack(db, { buildingId, companyId }, actor.updatedBy, (transaction, stack) => {

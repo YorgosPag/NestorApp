@@ -72,32 +72,17 @@ export async function cascadeFloorElevations(
   }
 
   // ADR-461 — a below-grade special level (foundation) is a SATELLITE that hangs
-  // under the lowest counted storey: its elevation = lowestCounted.elevation −
-  // depth (its height). Editing its depth must DEEPEN it, never lift the building.
-  // Re-anchor it downward and stop — the counted backbone never moves.
+  // under the lowest counted storey. Editing its depth must DEEPEN it, never lift
+  // the building: the upward walk stops here and the counted backbone never moves.
+  //
+  // 🔑 WHERE it hangs is NOT decided here. The one placement rule
+  // (`planSpecialLevelPlacement`) runs right after this cascade, under the stack
+  // lock. Until 2026-10-10 this branch carried its own copy of that formula — a
+  // second rule that covered «depth changed» but not «the anchor moved».
   const changedRow = rows[changedIdx];
   const lowestCounted = rows.find((r) => !isSpecialLevel(r)) ?? null;
   if (isSpecialLevel(changedRow) && lowestCounted && changedRow.number < lowestCounted.number) {
-    if (lowestCounted.elevation === null) return { floorsUpdated: 0, skipped: 1 };
-    const derived = lowestCounted.elevation - changedRow.height;
-    if (changedRow.elevation !== null && Math.abs(changedRow.elevation - derived) <= ELEVATION_EPSILON_M) {
-      return { floorsUpdated: 0, skipped: 1 };
-    }
-    const ref = refById.get(changedRow.id);
-    if (ref) {
-      // Δηλωμένη παρτίδα: οι αναφορές έρχονται από το `readFloorStack` (άλλο αρχείο), άρα η συλλογή δηλώνεται ΕΔΩ —
-      // από εδώ η CHECK 3.17 βλέπει αυτό το αρχείο ως γραφέα ορόφων, και η παρτίδα αρνείται ό,τι δεν είναι όροφος.
-      const batch = openDeclaredBatch(db, [COLLECTIONS.FLOORS]);
-      batch.update(ref, { elevation: derived, updatedBy, updatedAt: FieldValue.serverTimestamp() });
-      await batch.commit();
-      await recordCascadeAudit(
-        [{ id: changedRow.id, name: changedRow.name, oldValue: changedRow.elevation, newValue: derived }],
-        companyId,
-        actor,
-      );
-    }
-    logger.info('[FloorElevationCascade] Re-anchored below-grade special', { buildingId, changedFloorId });
-    return { floorsUpdated: 1, skipped: 0 };
+    return { floorsUpdated: 0, skipped: 1 };
   }
 
   if (changedIdx === rows.length - 1) {
@@ -122,6 +107,8 @@ export async function cascadeFloorElevations(
   }
 
   if (shifts.length > 0) {
+    // Δηλωμένη παρτίδα: οι αναφορές έρχονται από το `readFloorStack` (άλλο αρχείο), άρα η συλλογή δηλώνεται ΕΔΩ —
+    // από εδώ η CHECK 3.17 βλέπει αυτό το αρχείο ως γραφέα ορόφων, και η παρτίδα αρνείται ό,τι δεν είναι όροφος.
     const batch = openDeclaredBatch(db, [COLLECTIONS.FLOORS]);
     const updatedAt = FieldValue.serverTimestamp();
     for (const s of shifts) {

@@ -62,6 +62,7 @@ import { writeFloorBirth } from '../floor-birth';
 import { removeFloor } from '../floor-removal';
 import { floorSlotCompanion } from '../floor-slot-companion';
 import { reconcileSpecialLevelPlacement } from '../floor-stack-reconcile.service';
+import { runFloorUpdateEffects } from '../floor-update-effects';
 import { CASCADE_ACTOR } from './floor-cascade-actor.fixture';
 
 const recordChange = EntityAuditService.recordChange as jest.Mock;
@@ -297,5 +298,57 @@ describe('επανατοποθέτηση ειδικών σταθμών — κά�
     expect(placed).toBe(1);
     expect(floors().flr_sp).toMatchObject({ number: 1, elevation: 3 });
     expect(lockRev()).toBe(1);
+  });
+});
+
+describe('επεξεργασία ορόφου — η θέση των ειδικών σταθμών είναι αναλλοίωτη, όχι συνέπεια ενός πεδίου', () => {
+  /** Η ανθρώπινη αλλαγή όπως τη γράφει το `PATCH`, και μετά οι συνέπειές της — με την ΠΡΑΓΜΑΤΙΚΗ ανασύνταξη. */
+  const edit = async (floorId: string, updates: Record<string, unknown>) => {
+    const before = { ...floors()[floorId] };
+    await withVersionCheck({
+      db: db(), collection: COLLECTIONS.FLOORS, docId: floorId, expectedVersion: undefined, updates, userId: 'u1',
+      companion: floorSlotCompanion(db(), floorId, updates, 'u1'),
+    });
+    return runFloorUpdateEffects({ db: db(), ctx, floorId, before, updates, auditId: 'eaud_human' });
+  };
+
+  beforeEach(() => {
+    fake.seed(COLLECTIONS.FLOORS, 'flr_b', floor(-1, 'Υπόγειο', 'basement'));
+    fake.seed(COLLECTIONS.FLOORS, 'flr_g', floor(0, 'Ισόγειο', 'ground'));
+    fake.seed(COLLECTIONS.FLOORS, 'flr_fnd', floor(-2, 'Θεμελίωση', 'foundation', { elevation: -4.2, height: 1.2 }));
+  });
+
+  it('Θ1 — 🔴 (το ζωντανό εύρημα) αλλάζει το υψόμετρο του κατώτατου ορόφου ⇒ η θεμελίωση ακολουθεί', async () => {
+    const result = await edit('flr_b', { elevation: -2.85 });
+
+    expect(result.warnings).toEqual([]);
+    expect(floors().flr_fnd).toMatchObject({ number: -2, elevation: -4.05 });
+    expect(lockRev()).toBe(1);
+    // Παράγωγη γραμμή της μηχανής, με αιτία τη γραμμή του ανθρώπου.
+    const derived = recordChange.mock.calls.map(([entry]) => entry).find((entry) => entry.entityId === 'flr_fnd');
+    expect(derived).toMatchObject({ performedBy: 'system:floor-stack', cause: { auditId: 'eaud_human' } });
+  });
+
+  it('Θ2 — αλλάζει το βάθος της θεμελίωσης ⇒ βαθαίνει, και το κτίριο ΔΕΝ σηκώνεται', async () => {
+    await edit('flr_fnd', { height: 1.5 });
+
+    expect(floors().flr_fnd).toMatchObject({ number: -2, elevation: -4.5 });
+    expect(floors().flr_b.elevation).toBe(-3);
+    expect(floors().flr_g.elevation).toBe(0);
+  });
+
+  it('Θ3 — αλλαγή που δεν μετακινεί καμία άγκυρα ⇒ τίποτα δεν γράφεται και το κλειδί ΔΕΝ σφραγίζεται', async () => {
+    await edit('flr_g', { height: 3.4 });
+
+    expect(floors().flr_fnd).toMatchObject({ number: -2, elevation: -4.2 });
+    expect(lockRev()).toBeUndefined();
+  });
+
+  it('Θ4 — μετονομασία ⇒ η επανατοποθέτηση δεν τρέχει καθόλου (το όνομα δεν διαμορφώνει τη στοίβα)', async () => {
+    fake.seed(COLLECTIONS.FLOORS, 'flr_fnd', floor(-2, 'Θεμελίωση', 'foundation', { elevation: -9, height: 1.2 }));
+
+    await edit('flr_g', { name: 'Ισόγειο Α' });
+
+    expect(floors().flr_fnd.elevation).toBe(-9);
   });
 });
