@@ -489,14 +489,20 @@ describe('Κ8 — ΚΛΕΙΣΤΟΤΗΤΑ ΤΩΝ ΚΑΛΟΥΝΤΩΝ', () => {
     );
     expect(reader).toContain('declaration: AgencyMediaDeclaration');
 
-    const writer = readFileSync(
-      join(REPO_ROOT, 'src', 'services', 'listings', 'publish-public-listing.ts'),
-      'utf8',
-    );
+    const listings = (name: string): string =>
+      readFileSync(join(REPO_ROOT, 'src', 'services', 'listings', name), 'utf8');
+
     // 🔑 **ΜΙΑ κλήση για ΚΑΙ ΤΑ ΔΥΟ πεδία** (Α17.7.6): ο γραφέας δεν μπορεί να διαβάσει
     //    το ένα και να **ξεχάσει** το άλλο — το σχήμα που άφησε το `publishedMedia` άδειο
     //    επί μήνες (Α14.5).
-    expect(writer).toContain('agencyMediaDeclaration(property)');
+    // 🏢 ADR-907 §11.7 — η κλήση ζει πλέον στον **ΕΝΑ τόπο των πηγών** (αρχεία ακινήτου + κάτοψη ορόφου), όχι στον
+    //    γραφέα: τον ρωτούν **και** ο γραφέας **και** η συμφιλίωση, αλλιώς το αποτύπωμα των δύο θα διέφερε πάντα.
+    expect(listings('listing-media-sources.ts')).toContain('agencyMediaDeclaration(property)');
+    for (const caller of ['publish-public-listing.ts', 'listing-media-reconciliation.service.ts', 'listing-media-refresh.ts']) {
+      expect(listings(caller)).toContain('createListingMediaResolver(adminDb)');
+      // ⛔ Κανένας από τους τρεις δεν φτιάχνει δικό του επιλυτή αρχείων — δεύτερος δρόμος θα έχανε την κάτοψη ορόφου.
+      expect(listings(caller)).not.toContain('createAgencyMediaResolver');
+    }
   });
 });
 

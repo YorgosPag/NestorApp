@@ -24,6 +24,16 @@ import { FLOOR_PLATE_SELF_STATE, isFloorPlateState } from './floor-plate-state';
  */
 export const LISTING_FLOOR_PLATE_MAX_COUNT = 1;
 
+/**
+ * **Το ταβάνι μονάδων μιας κάτοψης ορόφου** (ADR-907 §11.7) — πάνω από αυτό ο όροφος **αρνείται**, δεν κόβεται: μισός
+ * όροφος στο κοινό θα έδειχνε κενά εκεί όπου υπάρχουν μονάδες.
+ *
+ * 🔑 Το έγγραφο ταξιδεύει ολόκληρο στο HTML. Μετρημένο στα δεδομένα δοκιμής: 3 μονάδες, 4–6 κορυφές ⇒ ~90 bytes η
+ * καθεμία· στο ταβάνι, με τυπικά περιγράμματα, ~6 KB. ⚠️ Όροφος στάθμευσης με περισσότερες θέσεις **δεν** έχει μετρηθεί
+ * — το όριο είναι δηλωμένο πάνω σε τρεις πραγματικές μονάδες, όχι σε πραγματικό υπόγειο.
+ */
+export const FLOOR_PLATE_MAX_UNITS = 64;
+
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null;
 }

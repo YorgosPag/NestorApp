@@ -31,8 +31,11 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createAgencyIdentityResolver } from '@/services/company/company-public-name.reader';
 
 import { AGENCY_ENTITY_TYPE } from './agency-media-publication';
+import { createListingMediaResolver } from './listing-media-sources';
+import { isPubliclyListed } from './public-listing-projection';
 import {
   republishListing,
   reportProjectionFailure,
@@ -145,6 +148,48 @@ export async function refreshListingsAfterFileChanges(
     reports.push({
       propertyId,
       outcome: await refreshListingAfterMediaChange(adminDb, propertyId, companyId),
+    });
+  }
+
+  return reports;
+}
+
+/**
+ * 🏢 **«ΑΛΛΑΞΕ Η ΔΗΛΩΣΗ ΤΟΥ ΟΡΟΦΟΥ ⇒ ΞΑΝΑΠΡΟΒΑΛΕ ΤΙΣ ΑΓΓΕΛΙΕΣ ΤΟΥ»** *(ADR-907 §11.7)*.
+ *
+ * Η κάτοψη ορόφου είναι υλικό **κάθε** αγγελίας του ορόφου, και η πόρτα της γράφει στον **όροφο** — κανένα ακίνητο δεν
+ * αγγίζεται, άρα καμία υπάρχουσα πόρτα δεν θα ξαναπρόβαλλε. Εδώ: όσα ακίνητα του ορόφου **δημοσιεύονται**, με τον ΕΝΑ
+ * {@link republishListing}.
+ *
+ * 🔑 **Ένας επιλυτής για όλο το πέρασμα**: τα τεκμήρια του ορόφου διαβάζονται **μία** φορά, όχι ανά αδελφή μονάδα.
+ * ⚠️ Ακίνητο που **δεν** δημοσιεύεται παραλείπεται — δεν έχει αγγελία να αλλάξει (ίδια πολιτική κόστους με τη συμφιλίωση).
+ * ⚠️ **Σειριακά, και δεν πετά ποτέ** — ίδιο συμβόλαιο με την {@link refreshListingsAfterFileChanges}.
+ */
+export async function refreshListingsOfFloor(
+  adminDb: AdminFirestore,
+  floorId: string,
+  companyId: string,
+): Promise<readonly ListingRefreshReport[]> {
+  const reports: ListingRefreshReport[] = [];
+
+  try {
+    const units = await adminDb
+      .collection(COLLECTIONS.PROPERTIES)
+      .where('companyId', '==', companyId)
+      .where('floorId', '==', floorId)
+      .get();
+    const resolveAgency = createAgencyIdentityResolver(adminDb);
+    const resolveMedia = createListingMediaResolver(adminDb);
+
+    for (const doc of units.docs) {
+      const property = { ...(doc.data() as ListingSourceProperty), id: doc.id };
+      if (!isPubliclyListed(property)) continue;
+      const outcome = await republishListing(adminDb, doc.id, property, resolveAgency, resolveMedia);
+      reports.push({ propertyId: doc.id, outcome });
+    }
+  } catch (error) {
+    logger.error('Οι αγγελίες του ορόφου δεν ξαναπροβλήθηκαν — τις κλείνει η βραδινή συμφιλίωση', {
+      floorId, error: error instanceof Error ? error.message : String(error),
     });
   }
 

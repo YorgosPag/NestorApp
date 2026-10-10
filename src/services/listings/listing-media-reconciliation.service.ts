@@ -34,9 +34,8 @@ import {
 import { createModuleLogger } from '@/lib/telemetry';
 import { createAgencyIdentityResolver } from '@/services/company/company-public-name.reader';
 
-import { agencyMediaDeclaration } from './agency-media-publication';
-import { createAgencyMediaResolver, type AgencyMediaResolver } from './agency-media.reader';
 import { mediaFingerprintOf } from './listing-media-fingerprint-stamp';
+import { createListingMediaResolver, type ListingMediaResolver } from './listing-media-sources';
 import { isPubliclyListed } from './public-listing-projection';
 import {
   republishListing,
@@ -90,11 +89,13 @@ async function judgeProperty(
   propertyId: string,
   property: ListingSourceProperty,
   stored: StoredListing,
-  resolveMedia: AgencyMediaResolver,
+  resolveMedia: ListingMediaResolver,
 ): Promise<Finding> {
   if (!stored.exists) return 'missing';
 
-  const sources = await resolveMedia(propertyId, property.companyId, agencyMediaDeclaration(property));
+  // 🔑 Ο **ίδιος** επιλυτής με τον γραφέα (ADR-907 §11.7): αρχεία του ακινήτου **και** κάτοψη ορόφου — αλλιώς το
+  //    αποτύπωμα εδώ θα διέφερε **πάντα** από το γραμμένο, και η αγγελία θα ξαναψηνόταν κάθε βράδυ.
+  const sources = await resolveMedia(propertyId, property);
   return mediaAgreement(stored.fingerprint, mediaFingerprintOf(sources));
 }
 
@@ -124,7 +125,7 @@ export async function judgeListingMedia(
 
     const listing = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(propertyId).get();
     const stored = { exists: listing.exists, fingerprint: listing.get(MEDIA_FINGERPRINT_FIELD) };
-    return await judgeProperty(propertyId, property, stored, createAgencyMediaResolver(adminDb));
+    return await judgeProperty(propertyId, property, stored, createListingMediaResolver(adminDb));
   } catch (error) {
     logger.warn('Η συμφωνία μέσων δεν κρίθηκε — η οθόνη λέει «δεν ξέρω»', {
       propertyId, error: error instanceof Error ? error.message : String(error),
@@ -168,7 +169,7 @@ const OUTCOME_TALLY = {
 export async function reconcileListingMedia(adminDb: AdminFirestore): Promise<MediaReconciliationReport> {
   const tally = { scanned: 0, listed: 0, agreed: 0, drifted: 0, unstamped: 0, missing: 0, republished: 0, failed: 0 };
   const stored = await readStoredFingerprints(adminDb);
-  const resolveMedia = createAgencyMediaResolver(adminDb);
+  const resolveMedia = createListingMediaResolver(adminDb);
   const resolveAgency = createAgencyIdentityResolver(adminDb);
   const properties = await adminDb.collection(COLLECTIONS.PROPERTIES).get();
 

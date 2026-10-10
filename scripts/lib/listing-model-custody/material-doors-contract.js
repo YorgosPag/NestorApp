@@ -55,6 +55,8 @@ const REFRESH_HELPERS = Object.freeze({
     'Ο ΕΝΑΣ βοηθός: μία επαναπροβολή ανά ακίνητο, για όσα αρχεία άλλαξαν.',
   refreshListingAfterMediaChange:
     'Η ίδια επαναπροβολή για ΕΝΑ ακίνητο — όταν αλλάζει η δήλωση, όχι αρχείο.',
+  refreshListingsOfFloor:
+    'Η ίδια επαναπροβολή για τις δημοσιευμένες μονάδες ΕΝΟΣ ορόφου — όταν αλλάζει η δήλωση κάτοψης ορόφου (ADR-907 §11.7).',
   runFileBatch:
     'Ο σκελετός δέσμης (διαβάθμιση · κάδος · αρχειοθέτηση): κρίνει, τρέχει, ξαναπροβάλλει.',
   publishPropertyMaterial:
@@ -133,6 +135,12 @@ const MATERIAL_DOORS = Object.freeze({
   'src/app/api/properties/[id]/listing-media/route.ts': {
     cover: DOOR_COVER.REFRESH,
     reason: 'Α5β — «ξαναφτιάξε την αγγελία από το τρέχον υλικό». Δεν γράφει αρχείο· ΕΙΝΑΙ η επαναπροβολή κατά παραγγελία.',
+  },
+  'src/app/api/floors/[floorId]/floor-plate/route.ts': {
+    cover: DOOR_COVER.REFRESH,
+    reason:
+      'ADR-907 §11.7 — η υπογραφή και η άρση της δήλωσης κάτοψης ορόφου. Δεν γράφει αρχείο· γράφει στον ΟΡΟΦΟ, και η ' +
+      'κάτοψη είναι υλικό κάθε αγγελίας του. Ξαναπροβάλλει ΤΕΛΕΥΤΑΙΟ, μέσω του `refreshListingsOfFloor`.',
   },
   'src/app/api/properties/[id]/_shared/material-supersession.ts': {
     cover: DOOR_COVER.EXEMPT,

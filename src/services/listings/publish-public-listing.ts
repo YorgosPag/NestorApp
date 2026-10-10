@@ -47,11 +47,7 @@ import {
   createAgencyIdentityResolver,
   type AgencyIdentityResolver,
 } from '@/services/company/company-public-name.reader';
-import {
-  createAgencyMediaResolver,
-  type AgencyMediaResolver,
-} from './agency-media.reader';
-import { agencyMediaDeclaration } from './agency-media-publication';
+import { createListingMediaResolver, type ListingMediaResolver } from './listing-media-sources';
 // ADR-846 Φ5δ — η **απόδειξη παρουσίας** ξαναχτίζεται όποτε αλλάζει η προσφορά.
 import { refreshShowcasePresence } from '@/services/mandate/showcase-presence.service';
 
@@ -128,6 +124,8 @@ export type ListingSourceProperty = ProjectableProperty & {
   readonly publishedPhotoCaptureSpots?: unknown;
   /** 🧭 Ο βορράς ανά κάτοψη που ΔΗΛΩΣΕ το γραφείο (ADR-897 Φ5.2) — ωμό `unknown`, η ανάγνωση είναι το `agencyMediaDeclaration`. */
   readonly publishedFloorplanNorth?: unknown;
+  /** 🏢 Ο όροφος της μονάδας (ADR-907 §11.7) — ωμό `unknown`· το διαβάζει **αποκλειστικά** ο `floor-plate.reader`. */
+  readonly floorId?: unknown;
 };
 
 /**
@@ -273,7 +271,7 @@ export async function republishListing(
   propertyId: string,
   property: ListingSourceProperty,
   resolveAgency: AgencyIdentityResolver = createAgencyIdentityResolver(adminDb),
-  resolveMedia: AgencyMediaResolver = createAgencyMediaResolver(adminDb)
+  resolveMedia: ListingMediaResolver = createListingMediaResolver(adminDb)
 ): Promise<PublishOutcome> {
   const now = nowISO();
   const listed = isPubliclyListed(property);
@@ -282,12 +280,12 @@ export async function republishListing(
     const [place, agency, publishedMedia, listedAt, priceHistory] = await Promise.all([
       collectPlaceKnowledge(adminDb, property, now),
       resolveAgency(property.companyId),
-      // 🔑 **Η δήλωση σειράς διαβάζεται ΕΔΩ, από το έγγραφο που ήδη κρατάμε** (Α14.7.2):
-      //    το `properties/{id}` είναι **1:1** με την αγγελία και είναι **η είσοδος** αυτής
-      //    της συνάρτησης ⇒ η πράξη του ανθρώπου φτάνει στον επιλυτή **χωρίς καμία
-      //    επιπλέον ανάγνωση** και χωρίς να μπορεί να δει **άλλη** έκδοση του εγγράφου
-      //    από αυτήν που δημοσιεύεται στο ίδιο πέρασμα.
-      resolveMedia(propertyId, property.companyId, agencyMediaDeclaration(property)),
+      // 🔑 **Ο επιλυτής παίρνει ΤΟ ΕΓΓΡΑΦΟ που ήδη κρατάμε** (Α14.7.2): το `properties/{id}`
+      //    είναι **1:1** με την αγγελία ⇒ η δήλωση του ανθρώπου και ο όροφος της μονάδας
+      //    διαβάζονται **χωρίς καμία επιπλέον ανάγνωση** και χωρίς να φανεί **άλλη** έκδοση
+      //    του εγγράφου. Η σύνθεση (αρχεία ακινήτου + κάτοψη ορόφου) ζει στο
+      //    `listing-media-sources` — ο **ίδιος** τόπος που ρωτά και η συμφιλίωση (ADR-907 §11.7).
+      resolveMedia(propertyId, property),
       // 🔴 **Η ΣΦΡΑΓΙΔΑ ΕΙΣΟΔΟΥ ΣΤΗΝ ΑΓΟΡΑ** (ADR-777 §8.61) — τέταρτη **ανεξάρτητη**
       //    ερώτηση, στο ίδιο πέρασμα και με τη **ίδια** στιγμή `now`.
       //
