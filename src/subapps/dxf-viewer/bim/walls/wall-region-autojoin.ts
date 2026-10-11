@@ -23,6 +23,7 @@ import type { BimPoint } from '../types/bim-base';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { rayHitsSegment } from '../geometry/shared/ray-segment';
 
 /**
  * Slack (mm) for "the endpoint sits on the neighbour's boundary line": how far PAST the
@@ -41,26 +42,6 @@ const AUTOJOIN_TOL_MM = 50;
  * on the last decimal: with an epsilon the extension is continuous in the endpoint position.
  */
 const AUTOJOIN_ON_CENTRELINE_EPS_MM = 1e-6;
-
-/**
- * Distance along the unit ray (o + t·û) at which it crosses segment [a,b], plus
- * whether the crossing lies within the segment. `null` when parallel.
- * Solves o + t·û = a + s·(b−a) for (t, s); `within` ⇔ s ∈ [0,1] (± slack).
- */
-function rayHitsSegment(
-  ox: number, oy: number,
-  ux: number, uy: number,
-  ax: number, ay: number,
-  bx: number, by: number,
-): { dist: number; within: boolean } | null {
-  const sx = bx - ax, sy = by - ay;
-  const det = sx * uy - ux * sy;
-  if (Math.abs(det) < 1e-9) return null;
-  const wx = ax - ox, wy = ay - oy;
-  const dist = (-wx * sy + sx * wy) / det; // t along the ray (û is unit → distance)
-  const s = (ux * wy - uy * wx) / det;     // param along a→b
-  return { dist, within: s >= -1e-6 && s <= 1 + 1e-6 };
-}
 
 /**
  * Find where one endpoint should extend to. Walks neighbours; picks the nearest

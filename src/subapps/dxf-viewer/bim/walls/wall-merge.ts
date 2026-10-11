@@ -36,7 +36,7 @@ import { lineIntersection } from '../../utils/angle-entity-math';
  * both endpoints onto the primary axis anyway — so a small drift still yields a
  * clean straight wall (mirrors AutoCAD JOIN's tolerance).
  */
-const COLLINEAR_SIN_TOL = 0.087;
+export const COLLINEAR_SIN_TOL = 0.087;
 /**
  * Absolute floor for the perpendicular-offset tolerance (scene units / mm). The
  * effective tolerance is `max(this, PERP_TOL_THICKNESS_FRAC × thickness)` so that
@@ -77,13 +77,13 @@ export type WallJoinPlan =
 
 // ── Internal geometry helpers ─────────────────────────────────────────────────
 
-interface Axis {
+export interface WallAxis {
   readonly origin: Point2D;
   readonly u: Point2D;
   readonly length: number;
 }
 
-function wallAxis(wall: WallEntity): Axis | null {
+export function wallAxis(wall: WallEntity): WallAxis | null {
   const { start, end } = wall.params;
   const dx = end.x - start.x;
   const dy = end.y - start.y;
@@ -93,12 +93,12 @@ function wallAxis(wall: WallEntity): Axis | null {
 }
 
 /** Signed distance of `p` along `axis.u` from `axis.origin`. */
-function scalarAlong(axis: Axis, p: Point2D): number {
+function scalarAlong(axis: WallAxis, p: Point2D): number {
   return (p.x - axis.origin.x) * axis.u.x + (p.y - axis.origin.y) * axis.u.y;
 }
 
 /** Perpendicular distance of `p` from the infinite line of `axis`. */
-function perpDistance(axis: Axis, p: Point2D): number {
+function perpDistance(axis: WallAxis, p: Point2D): number {
   return Math.abs((p.x - axis.origin.x) * -axis.u.y + (p.y - axis.origin.y) * axis.u.x);
 }
 
@@ -236,7 +236,7 @@ interface Endpoint {
 }
 
 /** The four wall endpoints projected on the primary axis, with owning bevel. */
-function collectEndpoints(a: WallEntity, b: WallEntity, axis: Axis): Endpoint[] {
+function collectEndpoints(a: WallEntity, b: WallEntity, axis: WallAxis): Endpoint[] {
   const mk = (p: BimPoint, bevel?: number): Endpoint => {
     const pt = { x: p.x, y: p.y };
     return { pt, scalar: scalarAlong(axis, pt), bevel };
