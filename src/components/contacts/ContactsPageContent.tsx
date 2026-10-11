@@ -3,12 +3,11 @@
 
 import React from 'react';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { toggleSelect } from '@/lib/toggle-select';
-import { Users, Trash2 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { ContactsHeader } from './page/ContactsHeader';
 import { ContactFilterIndicator } from './page/ContactFilterIndicator';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -45,8 +44,6 @@ const TrashActionsBar = dynamic(
 
 export function ContactsPageContent() {
   const state = useContactsPageState();
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
 
   const {
     authLoading,
@@ -130,18 +127,6 @@ export function ContactsPageContent() {
     onArchiveContact: handleArchiveContacts,
     onContactUpdated: handleContactUpdatedInPlace,
   };
-
-  // Το ίδιο κουμπί διαγραφής σερβίρεται και από τα δύο mobile slide-in· διαφέρει μόνο
-  // η συνθήκη απόκρυψης, όχι το κουμπί.
-  const deleteActionButton = (
-    <button
-      onClick={() => handleDeleteContacts()}
-      className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-      aria-label={t('page.details.deleteContact')}
-    >
-      <Trash2 className={iconSizes.sm} />
-    </button>
-  );
 
   const filterParam = searchParams.get('filter');
 
@@ -256,7 +241,6 @@ export function ContactsPageContent() {
                   ? t('form.addTitle')
                   : selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')
               }
-              actionButtons={(creationMode || showTrash) ? undefined : deleteActionButton}
             >
               {creationMode === 'selecting' ? (
                 <ContactTypeSelector onSelect={handleSelectContactType} onCancel={handleCancelCreation} />
@@ -303,7 +287,6 @@ export function ContactsPageContent() {
               isOpen={!!selectedContact}
               onClose={() => setSelectedContact(null)}
               title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
-              actionButtons={showTrash ? undefined : deleteActionButton}
             >
               {selectedContact && (
                 <ContactDetails {...contactDetailProps} />

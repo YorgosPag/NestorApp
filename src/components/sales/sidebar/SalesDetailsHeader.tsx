@@ -9,7 +9,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { ShoppingBag, DollarSign, UserCheck, CheckCircle, Undo2 } from 'lucide-react';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { EntityDetailsHeader, createEntityAction, inDeclaredOrder } from '@/core/entity-headers';
 import type { EntityHeaderAction } from '@/core/entity-headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property';
@@ -82,7 +82,7 @@ export function SalesDetailsHeader({
       );
     }
 
-    return list;
+    return inDeclaredOrder(list);
   }, [t, onChangePrice, onReserve, onSell, onRevert, canReserve, isSold, canRevert]);
 
   return (

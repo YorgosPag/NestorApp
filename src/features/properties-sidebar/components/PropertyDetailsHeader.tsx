@@ -96,7 +96,6 @@ export function PropertyDetailsHeader({
 
   if (!property) {
     return (
-      <div className="hidden md:block">
         <EntityDetailsHeader
           icon={PropertyIcon}
           iconColor={propertyColor}
@@ -105,7 +104,6 @@ export function PropertyDetailsHeader({
           variant="detailed"
           className="h-[81px] flex items-center"
         />
-      </div>
     );
   }
 
@@ -171,7 +169,6 @@ export function PropertyDetailsHeader({
 
   return (
     <>
-      <div className="hidden md:block">
         <EntityDetailsHeader
           icon={PropertyIcon}
           iconColor={propertyColor}
@@ -179,7 +176,6 @@ export function PropertyDetailsHeader({
           actions={actions}
           variant="detailed"
         />
-      </div>
     </>
   );
 }

@@ -4,13 +4,11 @@ import React, { useState, useCallback } from 'react';
 import type { Project } from '@/types/project';
 import type { ProjectStatus } from '@/constants/project-statuses';
 import type { NavigationCompany } from '@/components/navigation/core/types';
-import { Trash2 } from 'lucide-react';
 import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
 import type { CreatedProjectFields } from './general-tab/created-project';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -55,12 +53,10 @@ interface ProjectViewSwitchProps {
 export function ProjectViewSwitch({
   projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate, onDraftStatusChange, isTrashMode = false }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
-  const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
-  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Lifted edit state — shared between CompactToolbar and ProjectDetails
   const [isEditingProject, setIsEditingProject] = useState(false);
 
@@ -131,15 +127,6 @@ export function ProjectViewSwitch({
       isOpen={!!selectedProject}
       onClose={() => onSelectProject(null)}
       title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
-      actionButtons={
-        <button
-          onClick={() => selectedProject && onDeleteProject?.(selectedProject)}
-          className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-          aria-label={t('viewSwitch.deleteLabel')}
-        >
-          <Trash2 className={iconSizes.sm} />
-        </button>
-      }
     >
       {selectedProject && (
         <ProjectDetails

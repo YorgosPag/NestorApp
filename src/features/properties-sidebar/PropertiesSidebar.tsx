@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
-import { Edit, ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -16,7 +16,6 @@ import { PropertiesList } from '@/components/properties/PropertiesList';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { createEntityAction } from '@/core/entity-headers';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 /**
  * 🔑 **Η καρτέλα ΔΕΝ συντίθεται εδώ πια** (ADR-777 §8.30). Απέκτησε **δεύτερο**
@@ -49,11 +48,7 @@ export function PropertiesSidebar({
   defaultTab,
 }: PropertiesSidebarProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-  const { quick } = useBorderTokens();
-  const colors = useSemanticColors();
-  const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
-  const spacing = useSpacingTokens();
   const isMobile = useIsMobile();
   const router = useRouter();
 
@@ -166,27 +161,6 @@ export function PropertiesSidebar({
         isOpen={isMobile && !!selectedProperty}
         onClose={() => onSelectProperty('__none__', false)}
         title={selectedProperty?.name || t('mobile.unitDetails')}
-        // Ίδιος κανόνας με τη λίστα: χωρίς διαγραφή από τον γονιό (κάδος · αρχείο) δεν υπάρχει ούτε επεξεργασία.
-        actionButtons={listDeleteAction && (
-          <>
-            <button
-              onClick={() => {}}
-              className={`${spacing.padding.sm} rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.editUnit')}
-            >
-              <Edit className={iconSizes.sm} />
-            </button>
-            <button
-              onClick={() => {
-                void handleDeleteProperty();
-              }}
-              className={`${spacing.padding.sm} rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.deleteUnit')}
-            >
-              <Trash2 className={iconSizes.sm} />
-            </button>
-          </>
-        )}
       >
         {/*
           ⚠️ Το `detailsContent` αποδίδεται σε **δύο** θέσεις (επιτραπέζιο /

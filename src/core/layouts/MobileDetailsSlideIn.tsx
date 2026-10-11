@@ -13,11 +13,7 @@ interface MobileDetailsSlideInProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  /**
-   * @deprecated ADR-912 §12 — οι ενέργειες **δηλώνονται στην κεφαλίδα της οντότητας** (`EntityDetailsHeader actions`)
-   *   και φτάνουν εδώ μόνες τους. Χειρόγραφο κουμπί εδώ = ενέργεια που το desktop δεν ξέρει.
-   */
-  actionButtons?: React.ReactNode;
+  /** ⚠️ Χωρίς θυρίδα για κουμπιά (ADR-912 §12): οι ενέργειες δηλώνονται στο `EntityDetailsHeader` του περιεχομένου και φτάνουν στην μπάρα μόνες τους. */
   children: React.ReactNode;
 }
 
@@ -37,7 +33,6 @@ export function MobileDetailsSlideIn({
   isOpen,
   onClose,
   title,
-  actionButtons,
   children
 }: MobileDetailsSlideInProps) {
   const iconSizes = useIconSizes();
@@ -66,12 +61,6 @@ export function MobileDetailsSlideIn({
 
         {/* `grid`: το παιδί (γραμμή ενεργειών) παίρνει ΟΛΟ το πλάτος της θυρίδας, ανεξάρτητα από το πόσες κρύφτηκαν. */}
         <div ref={setHost} data-details-sheet-actions="" className="grid min-w-0 flex-1 basis-0" />
-
-        {actionButtons && (
-          <div className="flex items-center gap-1">
-            {actionButtons}
-          </div>
-        )}
       </div>
 
       <div data-details-sheet="" className={cn(canvasUtilities.geoInteractive.mobileSlideContentClass, colors.bg.primary)}>

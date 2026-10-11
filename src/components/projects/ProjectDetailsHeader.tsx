@@ -92,19 +92,13 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, hideEditButton, onShowcaseProject, t]);
 
     return (
-        <>
-            {/* Desktop: Full header with CRUD actions */}
-            <div className="hidden md:block">
-                <EntityDetailsHeader
-                    icon={NAVIGATION_ENTITIES.project.icon}
-                    title={project.name}
-                    titleAdornment={statusPill}
-                    actions={actions}
-                    variant="detailed"
-                />
-            </div>
-
-            {/* Mobile: Hidden (no header duplication) */}
-        </>
+        // 📱 Καμία απόκρυψη σε κινητό (ADR-912 §12): μέσα στο φύλλο οι ενέργειες πάνε στην μπάρα του, το χάπι κατάστασης μένει.
+        <EntityDetailsHeader
+            icon={NAVIGATION_ENTITIES.project.icon}
+            title={project.name}
+            titleAdornment={statusPill}
+            actions={actions}
+            variant="detailed"
+        />
     );
 });

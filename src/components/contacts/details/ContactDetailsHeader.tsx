@@ -160,8 +160,8 @@ export function ContactDetailsHeader({
 
   return (
     <>
-      {/* 🖥️ DESKTOP: Show full header with actions */}
-      <div className="hidden md:block">
+      {/* 📱 Καμία απόκρυψη σε κινητό (ADR-912 §12): στο φύλλο οι ενέργειες πάνε στην μπάρα του· οι ρόλοι μένουν ορατοί. */}
+      <div>
         <EntityDetailsHeader
           key={`contact-header-${contact.id}-${avatarKey}`}
           icon={Icon}
@@ -220,8 +220,6 @@ export function ContactDetailsHeader({
           />
         )}
       </div>
-
-      {/* 📱 MOBILE: Hidden (no header duplication) */}
 
       {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
     </>

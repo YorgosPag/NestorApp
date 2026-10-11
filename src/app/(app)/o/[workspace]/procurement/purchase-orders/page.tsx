@@ -197,15 +197,6 @@ export default function PurchaseOrdersPage() {
       detailOpen={!!selectedPO}
       detailTitle={selectedPO?.poNumber ?? ''}
       onDetailClose={handleDeselectPO}
-      detailActions={
-        <button
-          type="button"
-          className="text-xs underline px-2"
-          onClick={() => selectedPO && handleEditPO(selectedPO.id)}
-        >
-          {t('detail.edit')}
-        </button>
-      }
     />
   );
 }

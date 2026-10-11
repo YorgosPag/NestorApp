@@ -99,8 +99,6 @@ export interface ProcurementHubPageProps {
   readonly detailOpen: boolean;
   readonly detailTitle: string;
   readonly onDetailClose: () => void;
-  /** Κουμπιά στην κεφαλίδα του mobile slide-in (π.χ. «επεξεργασία»). */
-  readonly detailActions?: React.ReactNode;
   /** Διάλογοι και ό,τι άλλο ζει κάτω από το σώμα. */
   readonly children?: React.ReactNode;
 }
@@ -119,7 +117,6 @@ export function ProcurementHubPage({
   detailOpen,
   detailTitle,
   onDetailClose,
-  detailActions,
   children,
 }: ProcurementHubPageProps) {
   const { viewMode, setViewMode, showDashboard, setShowDashboard } = chrome;
@@ -181,7 +178,6 @@ export function ProcurementHubPage({
             isOpen={detailOpen}
             onClose={onDetailClose}
             title={detailTitle}
-            actionButtons={detailActions}
           >
             {detail}
           </MobileDetailsSlideIn>
