@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import { ENTITY_LIST_TOKENS } from '@/styles/design-tokens';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Contact } from '@/types/contacts';
@@ -228,7 +229,7 @@ export function ContactsPageContent() {
             </section>
 
             {/* Mobile list */}
-            <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label={t('page.views.mobileList')}>
+            <section className={selectedContact ? ENTITY_LIST_TOKENS.mobileRegion.hidden : ENTITY_LIST_TOKENS.mobileRegion.shown} role="region" aria-label={t('page.views.mobileList')}>
               <ContactsList {...contactListProps} />
             </section>
 

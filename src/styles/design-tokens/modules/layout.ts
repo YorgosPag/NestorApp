@@ -358,6 +358,21 @@ export const ENTITY_LIST_TOKENS = {
     maxHeight: 'max-h-full',
     heightFit: 'h-fit',
   },
+
+  /**
+   * **Η περιοχή της λίστας στο κινητό** (η λίστα μόνη της, όσο δεν έχει επιλεγεί εγγραφή) — ADR-912 §12.8.
+   *
+   * 🔴 Μετρημένο 2026-10-11 στα 390px (κτίρια): η περιοχή ήταν `block` ⇒ η στήλη (`flex-col` + `max-h-full`) είχε
+   *   **αόριστο** ύψος ⇒ το `h-full` της θυρίδας κύλισης δεν λυνόταν: θυρίδα 1088px = όσο το περιεχόμενο, μέσα σε
+   *   κουτί 517px με `overflow-hidden`. **Η λίστα δεν κυλούσε** και ό,τι δεν χωρούσε ήταν απρόσιτο.
+   * 🔑 `flex flex-col min-h-0`: η στήλη γίνεται στοιχείο flex με **οριστικό** ύψος (ό,τι της δίνει η περιοχή), άρα το
+   *   ποσοστό λύνεται. Στο desktop το ίδιο το δίνει η γραμμή (`flex` + stretch).
+   */
+  mobileRegion: {
+    shown: 'md:hidden w-full flex flex-col min-h-0',
+    /** Έχει επιλεγεί εγγραφή: τη θέση παίρνει το φύλλο λεπτομερειών. */
+    hidden: 'hidden',
+  },
 } as const;
 
 /** Type for ENTITY_LIST_TOKENS for external usage */

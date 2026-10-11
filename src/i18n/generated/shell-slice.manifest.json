@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e196d053a31105518dc0878ba832abbd5c56b8760ee3b0eeb5735ff449d4687e",
+  "inputsSha256": "64e1f196e555f13a1fe0561d4790d8e00035047994caab57f41b4ef884b09bb7",
   "languages": [
     "el"
   ],
@@ -12629,7 +12629,7 @@
     "src/styles/design-tokens/modules/borders.ts": "2a1dca295361b01d1a3e117c7fac45a8b42486290f7dce13bf5d894a97fa35d3",
     "src/styles/design-tokens/modules/component-sizes.ts": "e154fc91bd0b2013d850ee9a053e315c382f9aac61373cade05e7333ca3f34ec",
     "src/styles/design-tokens/modules/foundations.ts": "3748a0c74a99cddef63cff715dd573379d532bbe5b97b67ab013377bfa3e6d4d",
-    "src/styles/design-tokens/modules/layout.ts": "533f015e77030364139a9370f83df13e7e7d221f18b0ec60d688fd2b1962ec91",
+    "src/styles/design-tokens/modules/layout.ts": "7a9cff639f46c5a8737c2919b5c019cc09fb22122ba600eea90658dd7b87634a",
     "src/styles/design-tokens/modules/portal-overlay.ts": "b5d469f1ea794f783e3e0f3399e150c9d99f9f4bec66573b6c994b52d9fc8e8e",
     "src/subapps/accounting/types/entity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts": "31f5c90a905b757963db4bf4b4cebaa8ac532bf982c978a5927d128ef1d6c9d7",

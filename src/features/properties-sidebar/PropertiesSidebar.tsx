@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
+import { ENTITY_LIST_TOKENS } from '@/styles/design-tokens';
 import { useRouter } from '@/lib/workspace/navigation';
 import { ExternalLink } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -145,7 +146,7 @@ export function PropertiesSidebar({
         {!isMobile && detailsContent}
       </div>
 
-      <div className={`md:hidden w-full ${selectedProperty ? 'hidden' : 'block'}`}>
+      <div className={selectedProperty ? ENTITY_LIST_TOKENS.mobileRegion.hidden : ENTITY_LIST_TOKENS.mobileRegion.shown}>
         <PropertiesList
           units={properties}
           selectedPropertyIds={selectedPropertyIds}

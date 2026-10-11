@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { ENTITY_LIST_TOKENS } from '@/styles/design-tokens';
 import type { Project } from '@/types/project';
 import type { ProjectStatus } from '@/constants/project-statuses';
 import type { NavigationCompany } from '@/components/navigation/core/types';
@@ -216,7 +217,7 @@ export function ProjectViewSwitch({
       </div>
 
       {/* 📱 MOBILE: Show only ProjectsList when no project is selected */}
-      <div className={`md:hidden w-full ${selectedProject ? 'hidden' : 'block'}`}>
+      <div className={selectedProject ? ENTITY_LIST_TOKENS.mobileRegion.hidden : ENTITY_LIST_TOKENS.mobileRegion.shown}>
         {projectsListPanel}
       </div>
 

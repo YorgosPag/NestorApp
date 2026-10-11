@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useCallback, useTransition, useEffect } from 'react';
+import { ENTITY_LIST_TOKENS } from '@/styles/design-tokens';
 import { toggleSelect } from '@/lib/toggle-select';
 // [ENTERPRISE] Import from canonical location
 import { PageLoadingState, PageErrorState } from '@/core/states';
@@ -400,7 +401,7 @@ export function BuildingsPageContent() {
               </section>
 
               {/* [MOBILE] Show only BuildingsList when no building is selected */}
-              <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label={t('pages.buildings.views.mobileList')}>
+              <section className={selectedBuilding ? ENTITY_LIST_TOKENS.mobileRegion.hidden : ENTITY_LIST_TOKENS.mobileRegion.shown} role="region" aria-label={t('pages.buildings.views.mobileList')}>
                 {buildingsList}
               </section>
 

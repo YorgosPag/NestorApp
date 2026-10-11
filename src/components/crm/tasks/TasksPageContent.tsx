@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { ENTITY_LIST_TOKENS } from '@/styles/design-tokens';
 import {
   Clock,
   Plus,
@@ -243,7 +244,7 @@ export function TasksPageContent() {
 
         {/* Mobile — full width list */}
         <section
-          className="md:hidden w-full flex flex-col min-h-0"
+          className={ENTITY_LIST_TOKENS.mobileRegion.shown}
           role="region"
           aria-label={t('tasks.title')}
         >
