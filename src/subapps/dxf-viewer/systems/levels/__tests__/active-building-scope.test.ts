@@ -29,7 +29,11 @@
  * δώσεις — και **κανένας** από τους δύο καλούντες δεν το θυμόταν.
  */
 
-import { resolveActiveBuildingId, resolveActiveProjectId } from '../level-floor-resolution';
+import {
+  resolveActiveBuildingId,
+  resolveActiveProjectId,
+  resolveUrlBuildingId,
+} from '../level-floor-resolution';
 import type { Level } from '../config';
 
 const lvl = (over: Partial<Level>): Level => ({ id: 'lvl', name: 'L', ...over }) as Level;
@@ -97,5 +101,26 @@ describe('Ε3 — ο αδελφός `resolveActiveProjectId` ΔΕΝ παρασύ
     // γι' αυτό οι δύο συναρτήσεις παύουν να είναι καθρέφτες.
     const levels = [lvl({ id: 'f', name: 'Θεμελίωση' }), lvl({ id: 'g', projectId: 'proj_x' })];
     expect(resolveActiveProjectId(levels)).toBe('proj_x');
+  });
+});
+
+describe('Ε4 — η ΔΙΕΥΘΥΝΣΗ μαθαίνει μόνο από το ανοιχτό επίπεδο (ADR-914)', () => {
+  const draft = { id: 'lvl_draft', name: 'Πρόχειρο 1', order: 9, isDefault: false, visible: true } as Level;
+  const storey = { ...draft, id: 'lvl_storey', name: 'Ισόγειο', buildingId: 'bldg_A' } as Level;
+
+  it('ανοιχτό επίπεδο με κτήριο ⇒ το κτήριό του', () => {
+    expect(resolveUrlBuildingId([draft, storey], 'lvl_storey')).toBe('bldg_A');
+  });
+
+  it('🔑 ανοιχτό ΠΡΟΧΕΙΡΟ ⇒ `null`: η διεύθυνση ξεχνά το κτήριο, ώστε το F5 να μην το κρύψει', () => {
+    expect(resolveUrlBuildingId([draft, storey], 'lvl_draft')).toBeNull();
+    // Το «οποιοδήποτε κτήριο» μένει διαθέσιμο στους καταναλωτές — αλλά ΔΕΝ γράφεται στη διεύθυνση.
+    expect(resolveActiveBuildingId([draft, storey], 'lvl_draft', null)).toBe('bldg_A');
+  });
+
+  it('κανένα ανοιχτό επίπεδο ακόμη ⇒ `undefined`: καμία γνώμη, η διεύθυνση μένει ως έχει', () => {
+    expect(resolveUrlBuildingId([draft, storey], null)).toBeUndefined();
+    expect(resolveUrlBuildingId([], 'lvl_not_loaded_yet')).toBeUndefined();
+    expect(resolveUrlBuildingId(null, 'lvl_draft')).toBeUndefined();
   });
 });

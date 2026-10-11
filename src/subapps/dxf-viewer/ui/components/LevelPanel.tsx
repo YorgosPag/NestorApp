@@ -270,6 +270,7 @@ export function LevelPanel({
                         type="text"
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
+                        onFocus={(e) => e.currentTarget.select()}
                         onBlur={() => handleRename(level.id)}
                         onKeyDown={(e) => e.key === 'Enter' && handleRename(level.id)}
                         className={PANEL_TOKENS.LEVEL_PANEL.LEVEL_INPUT.BASE}

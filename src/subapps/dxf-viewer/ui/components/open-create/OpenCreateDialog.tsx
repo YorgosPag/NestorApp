@@ -9,7 +9,7 @@
  * @module subapps/dxf-viewer/ui/components/open-create/OpenCreateDialog
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from '@/i18n';
 import {
   Dialog,
@@ -38,9 +38,28 @@ export function OpenCreateDialog({ open, onOpenChange, availability, onAction }:
   const { t } = useTranslation('dxf-viewer-panels');
   const sections = useMemo(() => buildOpenCreateSections(availability, t), [availability, t]);
 
+  // Όταν το παράθυρο κλείνει ΕΠΕΙΔΗ επιλέχθηκε ενέργεια, η εστίαση ανήκει σε ό,τι ανοίγει εκείνη
+  // (το πεδίο μετονομασίας του νέου πρόχειρου, ο οδηγός) — όχι πίσω στο κουμπί. Μετρημένο
+  // 2026-10-11: η επιστροφή στο κουμπί έκλεβε την εστίαση από το πεδίο μετονομασίας, και ό,τι
+  // πληκτρολογούσε ο άνθρωπος πήγαινε στις συντομεύσεις του καμβά. Με Esc/✕ η εστίαση γυρίζει
+  // κανονικά στο κουμπί (προεπιλογή Radix).
+  const actionTakenRef = useRef(false);
+  const handleSelect = useCallback(
+    (kind: OpenCreateActionKind) => {
+      actionTakenRef.current = true;
+      onAction(kind);
+    },
+    [onAction],
+  );
+  const handleCloseAutoFocus = useCallback((event: Event) => {
+    if (!actionTakenRef.current) return;
+    actionTakenRef.current = false;
+    event.preventDefault();
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" onCloseAutoFocus={handleCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{t('panels.openCreate.title')}</DialogTitle>
           <DialogDescription>{t('panels.openCreate.description')}</DialogDescription>
@@ -56,7 +75,7 @@ export function OpenCreateDialog({ open, onOpenChange, availability, onAction }:
             </h3>
             <ChoiceCards
               options={section.cards}
-              onSelect={onAction}
+              onSelect={handleSelect}
               className={CARD_GRID}
               ariaLabel={section.title}
             />

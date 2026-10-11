@@ -15,7 +15,8 @@
  *
  * ## Η διεύθυνση **μαθαίνει**, δεν διατάζει
  *
- * Μόλις η εμβέλεια γίνει γνωστή από το ανοιχτό επίπεδο, γράφεται στη διεύθυνση με
+ * Μόλις η εμβέλεια γίνει γνωστή από το ανοιχτό επίπεδο, γράφεται στη διεύθυνση (και **σβήνεται**
+ * όταν το ανοιχτό επίπεδο δεν έχει κτήριο — `resolveUrlBuildingId`, ADR-914) με
  * `history.replaceState` *(μηδέν πλοήγηση, μηδέν re-render — ADR-040)*. Έτσι:
  *
  * - το link που θα μοιραστεί ο μηχανικός **κουβαλά** το κτήριο, χωρίς να το
@@ -33,7 +34,7 @@ import {
   readActiveBuildingFromUrl,
   writeActiveBuildingToUrl,
 } from '../../../services/viewport-persistence';
-import { resolveActiveBuildingId } from '../level-floor-resolution';
+import { resolveActiveBuildingId, resolveUrlBuildingId } from '../level-floor-resolution';
 import type { Level } from '../config';
 
 /**
@@ -52,12 +53,15 @@ export function useActiveBuildingId(
   );
 
   const resolved = resolveActiveBuildingId(levels, currentLevelId, declared);
+  // ADR-914 — η διεύθυνση μαθαίνει ΜΟΝΟ από το ανοιχτό επίπεδο· για επίπεδο χωρίς κτήριο
+  // (πρόχειρο) **ξεχνά** το κτήριο, αλλιώς το επόμενο φόρτωμα θα το έκρυβε πίσω από ξένο φίλτρο.
+  const urlBuildingId = resolveUrlBuildingId(levels, currentLevelId);
 
   useEffect(() => {
-    if (!resolved || resolved === declared) return;
-    writeActiveBuildingToUrl(resolved);
-    setDeclared(resolved);
-  }, [resolved, declared]);
+    if (urlBuildingId === undefined || urlBuildingId === declared) return;
+    writeActiveBuildingToUrl(urlBuildingId);
+    setDeclared(urlBuildingId);
+  }, [urlBuildingId, declared]);
 
   return resolved;
 }

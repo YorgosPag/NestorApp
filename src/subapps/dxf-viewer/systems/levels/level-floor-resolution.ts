@@ -105,6 +105,31 @@ export function resolveActiveBuildingId(
 }
 
 /**
+ * **Τι θυμάται η διεύθυνση** (`?bldg=`) — το κτήριο του **ανοιχτού** επιπέδου, και τίποτα άλλο.
+ *
+ * ## Γιατί δεν είναι το {@link resolveActiveBuildingId} (ADR-914, μετρημένο 2026-10-11)
+ *
+ * Το τρίτο σκαλί εκείνης της συνάρτησης («οποιοδήποτε κτήριο») είναι έσχατη λύση για τους
+ * **καταναλωτές** (σειρά επιπέδων, modal ορόφων). Γραμμένο στη **διεύθυνση**, γίνεται φίλτρο: το
+ * επόμενο φόρτωμα ζητά μόνο τα επίπεδα εκείνου του κτηρίου. Με ανοιχτό ένα **πρόχειρο** (επίπεδο
+ * χωρίς κτήριο) αυτό σήμαινε: F5 ⇒ η λίστα στενεύει σε κτήριο που ο άνθρωπος δεν κοιτούσε, το
+ * πρόχειρο **εξαφανίζεται** από τη λίστα και ο viewer πέφτει σε άλλο επίπεδο. Το σχέδιο ήταν
+ * αποθηκευμένο — απλώς αόρατο.
+ *
+ * - ανοιχτό επίπεδο **με** κτήριο ⇒ το κτήριό του·
+ * - ανοιχτό επίπεδο **χωρίς** κτήριο ⇒ `null`: η διεύθυνση **ξεχνά** το κτήριο (καμία εμβέλεια)·
+ * - κανένα ανοιχτό επίπεδο ακόμη (bootstrap) ⇒ `undefined`: καμία γνώμη, η διεύθυνση μένει ως έχει.
+ */
+export function resolveUrlBuildingId(
+  levels: readonly Level[] | null | undefined,
+  currentLevelId: string | null | undefined,
+): string | null | undefined {
+  const active = currentLevelId ? levels?.find((l) => l.id === currentLevelId) : undefined;
+  if (!active) return undefined;
+  return active.buildingId ?? null;
+}
+
+/**
  * SSoT — το **durable projectId** του viewer = το `projectId` του πρώτου level που το
  * φέρει. Κάθε linked Level παίρνει το ίδιο `projectId` από τον wizard (ADR-309), άρα ο
  * πρώτος αρκεί.
