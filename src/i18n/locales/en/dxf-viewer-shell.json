@@ -347,6 +347,60 @@
     "overlap": "Cannot place on top of an existing structural element.",
     "overlapBatch": "{count, plural, one {Skipped # element} other {Skipped # elements}} — placement over an existing structural element is not allowed."
   },
+  "modelFromDrawing": {
+    "title": "Model from drawing",
+    "undoName": "Walls from drawing",
+    "pickHint": "Click a wall line in the drawing (Esc to cancel)",
+    "pick": {
+      "instruction": "Point at one wall line in the drawing. The “wall” role spreads to every line of the same colour."
+    },
+    "sample": {
+      "label": "Wall colour",
+      "change": "Another sample"
+    },
+    "status": {
+      "ready": "Will be created",
+      "needs-decision": "Need a decision",
+      "existing": "Already exist",
+      "rejected": "Will not be created"
+    },
+    "groups": {
+      "title": "Function per thickness",
+      "row": "{thicknessMm} mm · {count} rectangles",
+      "topology": "Their position suggests: {exterior} exterior, {interior} interior",
+      "category": "Function of the {thicknessMm} mm walls",
+      "confirm": "Confirm",
+      "confirmed": "Confirmed",
+      "pending": "Needs confirmation"
+    },
+    "decisions": {
+      "title": "Rectangles with no obvious axis",
+      "item": "{longMm} × {shortMm} mm",
+      "isWall": "It is a wall",
+      "focus": "Focus in the drawing"
+    },
+    "rejected": {
+      "title": "Why they will not be created"
+    },
+    "coverage": {
+      "summary": "Wall lines: {explained} explained, {unexplained} unexplained · {ignored} of another colour",
+      "unexplainedHint": "Unexplained lines are lit red in the drawing: they are wall that will not be built."
+    },
+    "approve": "Create walls ({count})",
+    "notice": {
+      "no-scene": "There is no active drawing.",
+      "no-line": "No line found at that point. Click on a wall line.",
+      "no-color": "The line has no colour that can become a role.",
+      "stale": "The drawing changed since the proposal was lit. Nothing was written — check the new preview and approve again.",
+      "unconfirmed": "Confirm the function of every thickness group first.",
+      "written": "{count} walls created. Ctrl+Z to undo.",
+      "refused": {
+        "overlap": "Nothing was written: {blocked} walls sit on an existing structural element.",
+        "nothing-to-write": "There is no new wall to create.",
+        "no-active-scene": "There is no active drawing."
+      }
+    }
+  },
   "regionPerimeter": {
     "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
     "noClosedLoop": "The lines don't form a closed loop. Join the marked endpoints (○) and try again.",
@@ -2669,6 +2723,10 @@
         "columnsFromGridOuter": {
           "label": "Columns — outer faces",
           "tooltip": "Perimeter columns flush outward (inner corner/edge on the boundary axis; protrude outside)"
+        },
+        "wallsFromDrawing": {
+          "label": "Walls from drawing",
+          "tooltip": "Assistant: point at one wall line, see every wall that will be created, approve once"
         },
         "wallsFromGrid": {
           "label": "Walls from grid",

@@ -29,7 +29,7 @@ describe('ADR-443 §wall-entry-split — CONTEXTUAL_WALL_TAB wall-tools panel', 
     expect(WALL_TOOLS_PANEL?.labelKey).toBe('ribbon.panels.wallTools');
   });
 
-  it('hosts exactly the 6 wall tools moved from the permanent «Δομικά» tab', () => {
+  it('hosts the 6 wall tools moved from the permanent «Δομικά» tab + the ADR-911 assistant', () => {
     const keys = wallToolButtons().map((b) => b.command.commandKey);
     expect(keys).toEqual([
       'wall-on-entity',
@@ -37,11 +37,20 @@ describe('ADR-443 §wall-entry-split — CONTEXTUAL_WALL_TAB wall-tools panel', 
       'wall-region-inside',
       'wall-region-box',
       'wall-from-perimeter',
+      'open-model-from-drawing',
       'wall.actions.fromGrid',
     ]);
   });
 
-  it('renders every wall tool as a LARGE button (5 simple tools + 1 «από κάναβο» split)', () => {
+  it('wires «Τοίχοι από το σχέδιο» as an ACTION, never a tool (ADR-911 Φ3β)', () => {
+    // Ο βοηθός ανοίγει πάνελ και οπλίζει ένα κλικ-δείγμα· αν ήταν εργαλείο, θα άλλαζε το ενεργό
+    // εργαλείο και το κλικ-δείγμα θα διεκδικούνταν από τη σχεδίαση τοίχου.
+    const assistant = wallToolButtons().find((b) => b.command.commandKey === 'open-model-from-drawing');
+    expect(assistant?.command.action).toBe('open-model-from-drawing');
+    expect(assistant?.type).toBe('simple');
+  });
+
+  it('renders every wall tool as a LARGE button (6 simple + 1 «από κάναβο» split)', () => {
     for (const button of wallToolButtons()) {
       expect(button.size).toBe('large');
       const isGridSplit = button.command.commandKey === 'wall.actions.fromGrid';

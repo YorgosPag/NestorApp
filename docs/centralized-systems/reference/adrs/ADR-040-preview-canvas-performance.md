@@ -113,6 +113,33 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-10-11 — ADR-911 Φ3β: φύλλο προεπισκόπησης του βοηθού «Μοντέλο από το σχέδιο» + κοινό primitive ζώνης (CHECK 6B/6D)
+
+- **Νέο φύλλο `ModelFromDrawingPreviewOverlay`**, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` μετά το
+  `TopoAutoBreaklinePreviewOverlay` (ίδιο σχήμα: SVG, `pointer-events-none`, z-10). Συνδρομές: **ένα** υψίσυχνο hook
+  (`useTransformValue`) + το **χαμηλόσυχνο** `model-from-drawing-store` (γράφεται μόνο σε κλικ: άνοιγμα · δείγμα ·
+  επιβεβαίωση ομάδας · έγκριση — ποτέ ανά καρέ, ποτέ ανά mousemove). Κλειστός βοηθός ⇒ `null` πριν από κάθε προβολή.
+  Κανόνας #4 τηρείται (≤1 στοιχείο καμβά, ≤2 υψίσυχνα hooks).
+- **`CanvasSection` / `CanvasLayerStack`: ανέγγιχτα** (CHECK 6C — καμία νέα συνδρομή στο κέλυφος· το
+  `CanvasLayerStack.tsx` μένει στις 498 γραμμές). Το πάνελ του βοηθού **δεν** mount-άρεται στον καμβά: το αποδίδει ο
+  `ModelFromDrawingHost` από το `DxfViewerTopBar`, δίπλα στους υπόλοιπους always-on hosts.
+- **Κοινό primitive ζώνης** `components/dxf-layout/preview-zone/PreviewZoneShape.tsx` — **χωρίς** δική του συνδρομή:
+  το transform το διαβάζει το φύλλο-γονέας και το περνά ως prop, ώστε Ν ζώνες = **μία** συνδρομή, όχι Ν. Το
+  `RegionPerimeterPreviewOverlay` ζωγραφίζει πλέον μέσω αυτού· η δική του συνδρομή δεν άλλαξε.
+- **`world-ring-path.ts`** — η μετατροπή «δακτύλιος κόσμου → SVG path οθόνης» ζούσε αυτούσια σε τρία overlays
+  (`AutoAreaPreviewOverlay`, `RegionPerimeterPreviewOverlay`, `TopoAutoBreaklinePreviewOverlay`). Τώρα ένα σημείο, που
+  περνά **πάντα** από το `CoordinateTransforms.worldToScreen` (ο τύπος δεν ξαναγράφεται — μάθημα 2026-07-29 β).
+- **`useCanvasClickHandler.ts`** — ένας νέος κλάδος προτεραιότητας **0.41** (αμέσως μετά το «σημείο βάσης» 0.4):
+  όσο ο βοηθός είναι οπλισμένος, το κλικ αφήνει το σημείο κόσμου στο store της συνεδρίας και καταναλώνεται. Η πύλη
+  είναι **event-time getter** (`isModelFromDrawingPicking()`, κανόνας #2) — κανένα στιγμιότυπο, καμία συνδρομή.
+  Μέγεθος 483 → **488** γραμμές.
+- **Ορατή αλλαγή εκτός βοηθού**: στο hover των εργαλείων «τοίχος σε περιοχή / από περίγραμμα» η **κόκκινη** ζώνη
+  έχει πλέον κοντή παύλα (`2 4`) αντί για την ίδια παύλα με την πράσινη (`8 4`) — η διάκριση δεν είναι πια μόνο
+  χρωματική (WCAG 1.4.1). Η πράσινη ζώνη είναι αμετάβλητη.
+- **Bitmap cache: ανέγγιχτο.** Η προεπισκόπηση είναι SVG πάνω από τον καμβά· τίποτα δεν μπαίνει στο cache key
+  (κανόνας #3 δεν μπορεί να πυροδοτηθεί).
+- Πλήρες: **ADR-911 §12 «Φ3β»**.
+
 ### 2026-10-09 — ADR-909 Β2.7: ο `DxfRenderer` παύει να ρωτά τη συνεδρία για ό,τι δεν είναι ο ζωντανός καμβάς (CHECK 6B)
 
 - **`DxfRenderer.ts`** — τρεις αλλαγές, **καμία** νέα συνδρομή, καμία αλλαγή στο cache key:

@@ -6,13 +6,13 @@ import {
   subscribeRegionPerimeterPreview,
   getRegionPerimeterPreview,
 } from '../../systems/region-preview/RegionPerimeterPreviewStore';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
 import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
-import type { Point2D } from '../../rendering/types/Types';
+import type { Viewport } from '../../rendering/types/Types';
+import { PreviewZoneShape } from './preview-zone/PreviewZoneShape';
 
 interface Props {
-  viewport: { width: number; height: number };
+  viewport: Viewport;
 }
 
 /**
@@ -20,6 +20,9 @@ interface Props {
  * κέρσορα όταν είναι ενεργό εργαλείο «σε περιοχή / από περίγραμμα» (κολώνες +
  * τοίχοι), Revit «Finish Sketch» feedback. Πράσινο = έγκυρο μέλος· κόκκινο =
  * πολύ μεγάλο (εξωτερικό περίγραμμα → δεν θα δημιουργηθεί). Δείχνει διαστάσεις.
+ *
+ * ADR-911 Φ3β — η ζωγραφική κάθε ζώνης ζει στο κοινό `PreviewZoneShape` (ένα λεξιλόγιο
+ * όψης με τον βοηθό «Μοντέλο από το σχέδιο»)· εδώ μένει μόνο η απόφαση «ποιος τόνος».
  *
  * ADR-040 compliant: standalone subscriber (useSyncExternalStore στο leaf, όχι στο
  * shell). Mirror του `AutoAreaPreviewOverlay`.
@@ -45,53 +48,21 @@ export function RegionPerimeterPreviewOverlay({ viewport }: Props) {
           ετικέτα (ένας τοίχος ανά ζώνη), ώστε η preview να δείχνει ΑΚΡΙΒΩΣ ό,τι θα
           δημιουργήσει το κλικ (preview ≡ commit). */}
       {preview.zones.map((zone, zi) => {
-        if (zone.polygon.length < 3) return null;
         // ADR-419 Layer 4 (oversized) + ADR-567 (occupied) + v2.4 (reason: κοντός/χοντρός/
-        // κατειλημμένος) → κόκκινο ανά ζώνη· αλλιώς πράσινο.
-        const isRed = preview.oversized || zone.occupied === true || zone.reason !== undefined;
-        const color = isRed ? '#ef4444' : '#22c55e';
-        const fill = isRed ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.12)';
+        // κατειλημμένος) → απόρριψη ανά ζώνη· αλλιώς αποδοχή.
+        const rejected = preview.oversized || zone.occupied === true || zone.reason !== undefined;
         // Rejected ζώνη → δείξε τον ΛΟΓΟ (Giorgio επιλογή Α)· αλλιώς τις διαστάσεις.
-        const labelText = zone.reason ? t(zone.reason) : zone.label;
-        const screenPts = zone.polygon.map((p) =>
-          CoordinateTransforms.worldToScreen(p, transform, viewport),
-        );
-        const d =
-          screenPts
-            .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-            .join(' ') + ' Z';
-        const centroid: Point2D = screenPts.reduce(
-          (acc, p) => ({ x: acc.x + p.x / screenPts.length, y: acc.y + p.y / screenPts.length }),
-          { x: 0, y: 0 },
-        );
+        const reasonText = zone.reason ? t(zone.reason) : undefined;
         return (
-          <g key={zi}>
-            <path
-              d={d}
-              fill={fill}
-              stroke={color}
-              strokeWidth="2"
-              strokeDasharray="8 4"
-              strokeLinejoin="round"
-            >
-              {/* Tooltip με τον λόγο απόρριψης (native SVG <title>). */}
-              {zone.reason ? <title>{labelText}</title> : null}
-            </path>
-            <text
-              x={centroid.x}
-              y={centroid.y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="12"
-              fontWeight="600"
-              fill={color}
-              stroke="#0b0f19"
-              strokeWidth="0.5"
-              paintOrder="stroke"
-            >
-              {labelText}
-            </text>
-          </g>
+          <PreviewZoneShape
+            key={zi}
+            pieces={[zone.polygon]}
+            tone={rejected ? 'reject' : 'accept'}
+            label={reasonText ?? zone.label}
+            title={reasonText}
+            transform={transform}
+            viewport={viewport}
+          />
         );
       })}
     </svg>

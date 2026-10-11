@@ -4,7 +4,8 @@ import React from 'react';
 import {
   useAutoBreaklineState,
 } from '../../systems/topography/auto-breaklines/auto-breakline-store';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-911 Φ3β — η μετατροπή κόσμου → SVG path έχει ένα σπίτι (ήταν αντίγραφο σε τρία overlays).
+import { worldRingToSvgPath } from './preview-zone/world-ring-path';
 import { UI_COLORS } from '../../config/color-config';
 // Πάχη γραμμής (px οθόνης) ανά κατάσταση: η εστιασμένη είναι ΚΑΙ πιο χοντρή ΚΑΙ φοράει άλως στο
 // χρώμα επιλογής — «χρώμα ΚΑΙ μέγεθος», γιατί μόνο το χρώμα χάνεται σε ένα σχέδιο γεμάτο πράσινες
@@ -49,13 +50,8 @@ export function TopoAutoBreaklinePreviewOverlay({ viewport }: Props) {
 
   if (report === null || report.candidates.length === 0) return null;
 
-  const toPath = (candidate: AutoBreaklineCandidate): string => {
-    const d = candidate.vertices
-      .map((v) => CoordinateTransforms.worldToScreen({ x: v.x, y: v.y }, transform, viewport))
-      .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-      .join(' ');
-    return candidate.closed ? `${d} Z` : d;
-  };
+  const toPath = (candidate: AutoBreaklineCandidate): string =>
+    worldRingToSvgPath(candidate.vertices, transform, viewport, candidate.closed);
 
   // Η εστιασμένη τελευταία στη σειρά ζωγραφικής (SVG = painter's order) → πάντα από πάνω.
   const ordered = [

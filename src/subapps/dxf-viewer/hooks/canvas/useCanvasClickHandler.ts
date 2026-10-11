@@ -36,6 +36,8 @@ import { handleTopoBoundaryClick } from './canvas-click-topo-boundary'; // ADR-6
 import { handleGeoRefAnchorClick } from './canvas-click-geo-ref'; // ADR-650 M10
 import { handlePickBasePointClick } from './canvas-click-pick-base-point'; // ADR-652 M6
 import { isPickBasePointArmed } from '../../systems/block/pick-base-point-store'; // ADR-652 M6
+import { handleModelFromDrawingSampleClick } from './canvas-click-model-from-drawing'; // ADR-911 Φ3β
+import { isModelFromDrawingPicking } from '../../systems/model-from-drawing/model-from-drawing-store';
 import { addDistPoint } from '../../systems/measure/dist-ephemeral-store'; // ADR-680 — εφήμερο DIST
 import { isAnnotationSymbolTool } from '../../config/annotation-kind-registry';
 // ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
@@ -132,6 +134,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       handlePickBasePointClick(worldPoint, params);
       return;
     }
+    // PRIORITY 0.41: ADR-911 Φ3β — κλικ-δείγμα του βοηθού «Μοντέλο από το σχέδιο». Όσο είναι
+    // οπλισμένος, το κλικ δείχνει τη γραμμή-«τοίχο» και καταναλώνεται (ο βοηθός είναι το mode).
+    if (isModelFromDrawingPicking()) { handleModelFromDrawingSampleClick(worldPoint); return; }
     // PRIORITY 0.45: ADR-581 — «Αντιγραφή Ιδιοτήτων» πινέλο (σταγονόμετρο/σύριγγα).
     // Ενεργό είτε με το εργαλείο `match-properties`, είτε με Alt/Ctrl+Alt ΜΟΝΟ σε select
     // mode (ΟΧΙ κατά τη σχεδίαση — δεν κλέβει το Alt-click των drawing tools). Το target

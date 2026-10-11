@@ -2,13 +2,14 @@
 
 import React, { useSyncExternalStore } from 'react';
 import { subscribeAutoAreaPreview, getAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
 import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D, Viewport } from '../../rendering/types/Types';
+// ADR-911 Φ3β — η μετατροπή κόσμου → SVG path έχει ένα σπίτι (ήταν αντίγραφο σε τρία overlays).
+import { worldRingToSvgPath } from './preview-zone/world-ring-path';
 
 interface Props {
-  viewport: { width: number; height: number };
+  viewport: Viewport;
 }
 
 /**
@@ -28,11 +29,7 @@ export function AutoAreaPreviewOverlay({ viewport }: Props) {
 
   if (!preview || preview.polygon.length < 3) return null;
 
-  const toScreenPath = (polygon: Point2D[]): string =>
-    polygon
-      .map(p => CoordinateTransforms.worldToScreen(p, transform, viewport))
-      .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-      .join(' ') + ' Z';
+  const toScreenPath = (polygon: Point2D[]): string => worldRingToSvgPath(polygon, transform, viewport);
 
   const outerPath = toScreenPath(preview.polygon);
   const holePaths = (preview.holes ?? [])

@@ -21,7 +21,7 @@
 import type { RibbonTab } from '../types/ribbon-types';
 // ADR-443 §wall-entry-split — τα εργαλεία τοίχου (πρώην στο permanent «Δομικά» tab)
 // φιλοξενούνται εδώ ως LARGE buttons· κοινοί helpers (SSoT) με το structural-tab.
-import { toolBtn, actionVariant, splitActionBtn } from './ribbon-large-button-helpers';
+import { toolBtn, actionBtn, actionVariant, splitActionBtn } from './ribbon-large-button-helpers';
 import {
   WALL_RIBBON_KEYS,
   WALL_RIBBON_KEYS_ACTIONS,
@@ -106,6 +106,10 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
             toolBtn('structuralTab.wallRegionInside', 'ribbon.commands.bim.wallRegionInside.label', 'struct-wall-region-inside', 'wall-region-inside'),
             toolBtn('structuralTab.wallRegionBox', 'ribbon.commands.bim.wallRegionBox.label', 'struct-wall-region-box', 'wall-region-box'),
             toolBtn('structuralTab.wallFromPerimeter', 'ribbon.commands.bim.wallFromPerimeter.label', 'struct-wall-from-perimeter', 'wall-from-perimeter'),
+            // ADR-911 Φ3β — βοηθός «Μοντέλο από το σχέδιο»: ΕΝΕΡΓΕΙΑ, όχι εργαλείο (ανοίγει πάνελ
+            // και οπλίζει ΕΝΑ κλικ-δείγμα· το ενεργό εργαλείο δεν αλλάζει). Δίπλα στα υπόλοιπα
+            // «τοίχος από…»: εδώ γεννιούνται οι τοίχοι. Γράφει μόνο μετά από ρητή έγκριση.
+            actionBtn('structuralTab.wallsFromDrawing', 'ribbon.commands.bim.wallsFromDrawing.label', 'import-wizard', 'open-model-from-drawing', 'open-model-from-drawing'),
             // ADR-441 Slice GEN-WALL / 3-mode — «Τοίχοι από κάναβο»: split-button· main =
             // inner (default), dropdown = Wall Location Line (Εσωτερικά/Κεντρικά/Εξωτερικά).
             splitActionBtn(

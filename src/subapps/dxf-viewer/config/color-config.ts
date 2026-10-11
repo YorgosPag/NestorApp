@@ -214,6 +214,16 @@ export const UI_COLORS_BASE = {
   TOPO_BREAKLINE_APPROVED: '#22c55e', // ticked → will be written on «Προσθήκη»
   TOPO_BREAKLINE_REJECTED: '#94a3b8', // unticked → shown, but will be ignored
 
+  // ADR-911 Φ3β — PREVIEW-ZONE colours: «τι θα συμβεί σε αυτό το σχήμα αν εγκρίνω». One
+  // vocabulary for every surface that lights a zone before a write (region/perimeter hover,
+  // «Μοντέλο από το σχέδιο»). Colour is never the only carrier: each tone also has its own
+  // line pattern in `systems/region-preview/preview-zone-style.ts` (WCAG 1.4.1).
+  PREVIEW_ZONE_ACCEPT: '#22c55e',   // will be created exactly as lit
+  PREVIEW_ZONE_REJECT: '#ef4444',   // will NOT be created — the reason is shown
+  PREVIEW_ZONE_DECIDE: '#f59e0b',   // needs a human decision — neither green nor red
+  PREVIEW_ZONE_EXISTING: '#94a3b8', // already there — nothing will be written
+  PREVIEW_ZONE_LABEL_CASING: '#0b0f19', // dark casing under a zone label (legible on any plan)
+
   // Selection colors
   SELECTION_HIGHLIGHT: '#ffffff',
   EDIT_EDGE_HIGHLIGHT: '#00b8d4',   // Cyan — η ακμή υπό επεξεργασία (per-edge edit· ADR-417 roof «Κλίση ανά νερό»)

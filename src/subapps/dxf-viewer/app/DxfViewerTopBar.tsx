@@ -34,6 +34,7 @@ import { RibbonContextualTabScope } from './RibbonContextualTabScope';
 import { WallPersistenceHost } from './WallPersistenceHost';
 import { OpeningPersistenceHost } from './OpeningPersistenceHost';
 import { DxfSymbolDetectHost } from './DxfSymbolDetectHost';
+import { ModelFromDrawingHost } from './ModelFromDrawingHost';
 import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { FoundationPersistenceHost } from './FoundationPersistenceHost';
@@ -205,6 +206,8 @@ export function DxfViewerTopBar({
       />
       {/* ADR-533 — ανίχνευση συμβόλου κουφώματος (DXF) μετά την τοποθέτηση τοίχου. */}
       <DxfSymbolDetectHost levelManager={levelManager} />
+      {/* ADR-911 Φ3β — βοηθός «Μοντέλο από το σχέδιο»: δείγμα → προεπισκόπηση → ΜΙΑ έγκριση. */}
+      <ModelFromDrawingHost levelManager={levelManager} />
       <SlabPersistenceHost
         primarySelectedId={primarySelectedId}
         levelManager={levelManager}

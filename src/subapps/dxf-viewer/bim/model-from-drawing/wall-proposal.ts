@@ -66,6 +66,8 @@ export interface WallProposalItem {
   readonly sourceIds: readonly (readonly string[])[];
   /** Πάχος (μικρή διάσταση) σε ακέραια mm — το κλειδί της ομάδας του (Δ3). */
   readonly thicknessMm: number;
+  /** Μήκος κατά τον άξονα σε ακέραια mm — ό,τι διαβάζει ο άνθρωπος στη λίστα (Φ3β). */
+  readonly lengthMm: number;
   /** Δ3 — τι λέει η τοπολογία για ΑΥΤΟ το ορθογώνιο (πρόταση, όχι απόφαση). */
   readonly suggestedFunction: WallFunctionSuggestion;
   /** Δ7 — `true` όταν ο άξονας δόθηκε από ομοαξονικό γείτονα ίδιου πάχους, όχι από το σχήμα. */
@@ -255,6 +257,7 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
     rect,
     sourceIds: rectEdgeSourceIds(rect, roleSegments, tol),
     thicknessMm: thicknessOf.get(rect) ?? 0,
+    lengthMm: Math.round(detectedRectAxis(rect).length / scale),
     suggestedFunction: suggestions.get(rect) ?? 'interior',
     axisFromContext: fromContext.has(rect),
     ...(outcome.get(rect) ?? { status: 'needs-decision' as const }),

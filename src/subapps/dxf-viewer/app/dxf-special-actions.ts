@@ -180,6 +180,11 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dxf:publish-model-requested', {});
     return true;
   }
+  // ADR-911 Φ3β: Open the «Μοντέλο από το σχέδιο» assistant (ModelFromDrawingHost listens)
+  if (action === 'open-model-from-drawing') {
+    EventBus.emit('dxf:model-from-drawing-requested', {});
+    return true;
+  }
   // ADR-909 Β2.5: Open the «Δημοσίευση κάτοψης» dialog (PublishFloorplanHost listens)
   if (action === 'open-publish-floorplan-dialog') {
     EventBus.emit('dxf:publish-floorplan-requested', {});

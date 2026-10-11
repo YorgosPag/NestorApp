@@ -335,6 +335,10 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   //    σήμανση και ποιον υπογράφοντα;»*. Δύο ερωτήσεις σε έναν διάλογο θα σήμαινε ότι κάθε
   //    κατέβασμα ζητά υπογράφοντα — δηλαδή θα φόρτωνε τον έναν προορισμό με τους όρους του άλλου.
   'dxf:publish-model-requested': Record<string, never>;
+  // ADR-911 Φ3β — Άνοιγμα του βοηθού **«Μοντέλο από το σχέδιο»** (ο `ModelFromDrawingHost` ακούει).
+  // Εκπέμπεται από την ενέργεια «Τοίχοι από το σχέδιο» των εργαλείων τοίχου. Ο βοηθός οπλίζεται
+  // για δείγμα· τίποτα δεν γράφεται πριν από ρητή έγκριση.
+  'dxf:model-from-drawing-requested': Record<string, never>;
   // ADR-909 Β2.5 — Άνοιγμα του διαλόγου **«Δημοσίευση κάτοψης»** (ο `PublishFloorplanHost` ακούει).
   // Ξεχωριστό σήμα από το 3D: άλλο υλικό, άλλες ερωτήσεις *(επίπλωση + προεπισκόπηση, όχι υπογράφων)*.
   'dxf:publish-floorplan-requested': Record<string, never>;
