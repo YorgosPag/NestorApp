@@ -2,11 +2,14 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED (Phase 1 + 2) |
+| **Status** | PARTIALLY SUPERSEDED (2026-10-11 — §2.5: το `useAutoSave` καταργήθηκε· μένουν ένδειξη + λεξιλόγιο κατάστασης) |
 | **Date** | 2026-03-19 |
 | **Category** | UI / State Management / Data Persistence |
-| **Canonical Files** | `src/hooks/useAutoSave.ts`, `src/types/auto-save.ts`, `src/config/auto-save-config.ts`, `src/components/shared/AutoSaveStatusIndicator.tsx` |
+| **Canonical Files** | `src/types/auto-save.ts`, `src/components/shared/AutoSaveStatusIndicator.tsx` · αδελφός: `src/lib/async/field-patch-queue.ts` + `src/hooks/useFieldPatchQueue.ts` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
+
+> ⚠️ **Διάβασε πρώτα το §2.5.** Τα §1, §2.1–§2.3 και η Φάση 2 του §3 περιγράφουν τον μηχανισμό όπως **ήταν** ως τις
+> 2026-10-11. Τα `src/hooks/useAutoSave.ts` και `src/config/auto-save-config.ts` **δεν υπάρχουν πια**.
 
 ---
 
@@ -106,6 +109,60 @@ Three variants:
 
 Uses semantic `<output>` tag with `aria-live="polite"`.
 
+#### 2.5 Κανόνας (2026-10-11): η ενεργή εγγραφή αλλάζει ΜΟΝΟ με ρητή «Αποθήκευση»
+
+**Το ελάττωμα** (ADR-912 Εύρημα 8, μετρημένο στα 390px): οι φόρμες **κτιρίου** και **έργου** είχαν «Αποθήκευση» και
+«Ακύρωση» **και** `useAutoSave` με debounce 2 s πάνω στην **ενεργή** εγγραφή. Συνέπειες:
+
+- Η «Ακύρωση» **δεν ακύρωνε**: επανέφερε την οθόνη, ενώ οι αλλαγές είχαν ήδη γραφτεί.
+- Ο διάλογος απόρριψης (ADR-912 §12.5) έλεγε «οι αλλαγές που δεν αποθηκεύσατε θα χαθούν» για αλλαγές που είχαν σωθεί.
+- Κάθε παύση 2 s ήταν **ξεχωριστή εγγραφή** που παρέκαμπτε την επικύρωση του `handleSave` (π.χ. κενό όνομα)· στα
+  έργα και τον έλεγχο επιπτώσεων για κάθε πεδίο που δεν παρακολουθούσε το `hasImpactTrackedChanges`.
+- Το «flush on unmount» έγραφε **χωρίς** να περιμένει και κατάπινε την αποτυχία (ADR-253 A8).
+
+**Η πρακτική**: GitHub Primer — «never mix save patterns in a single form», και ξεκινάς με ρητή αποθήκευση· SAP Fiori
+draft handling — η αυτόματη γράφει σε **πρόχειρο**, η ενεργή εγγραφή αλλάζει μόνο στο Save· Shopify save bar — τίποτα
+δεν γράφεται πριν το Save· Material full-screen dialog — ✕ = απόρριψη, με επιβεβαίωση μόνο όταν υπάρχουν αλλαγές.
+Revit / ArchiCAD / Cinema 4D / Zillow / Idealista: καμία δημόσια τεκμηρίωση για το θέμα.
+
+**Η απόφαση (Α)**: ρητή αποθήκευση. Μια φόρμα με «Αποθήκευση/Ακύρωση» **δεν γράφει ποτέ** στην ενεργή εγγραφή όσο
+γράφει ο άνθρωπος, ούτε όταν φεύγει.
+
+| Τι | Πριν | Τώρα |
+|---|---|---|
+| `building-management/tabs/GeneralTabContent.tsx` | `useAutoSave` + ρητή ενημέρωση **χωρίς** `_v` | μόνο ρητή, μέσω `useVersionedSave` (SPEC-256A, όπως τα έργα)· `buildingFieldsFrom` = μία αντιστοίχιση για δημιουργία και ενημέρωση |
+| `projects/general-tab/GeneralProjectTab.tsx` | `useAutosave` + βάση σύγκρισης `autosaved` | μόνο ρητή· βάση σύγκρισης το ίδιο το `project`, μαζί και η συνδεδεμένη εταιρεία |
+| `projects/general-tab/hooks/useAutosave.ts` | περιτύλιγμα | **διαγράφηκε** |
+| `src/hooks/useAutoSave.ts` · `src/config/auto-save-config.ts` | ο μηχανισμός | **διαγράφηκαν** (μηδέν καταναλωτές ⇒ νεκρός κώδικας, CHECK 3.22)· μαζί το module `auto-save-config` του `.ssot-registry.json` και οι τύποι `AutoSaveConfig` / `AutoSaveReturn` |
+| `GeneralTabContent/Header.tsx` · `GeneralProjectHeader.tsx` | «Αποθήκευση… / Αποθηκεύτηκε ΩΩ:ΛΛ» | μόνο ο δείκτης της ρητής αποθήκευσης |
+
+**Τι μένει από αυτό το ADR**: το λεξιλόγιο `SaveStatus` και η ένδειξη `AutoSaveStatusIndicator` — τα χρησιμοποιεί ο
+αδελφός μηχανισμός (ουρά μερικών διορθώσεων, πιο κάτω), που **είναι** καθαρή αυτόματη αποθήκευση: εκεί δεν υπάρχει
+«Αποθήκευση/Ακύρωση», άρα δεν αναμειγνύονται δύο σχήματα.
+
+**Κανόνας επιλογής**:
+
+| Η επιφάνεια έχει | Σχήμα |
+|---|---|
+| «Αποθήκευση» + «Ακύρωση» | ρητή αποθήκευση· δηλώνει αλλαγές με `useUnsavedEdits` (ADR-912 §12.5 · ADR-860) |
+| καμία από τις δύο (απαντήσεις ανά πεδίο, ζωντανός listener) | `useFieldPatchQueue` |
+| ανάγκη «να μη χαθεί ό,τι γράφω» **και** Αποθήκευση/Ακύρωση | **πρόχειρο** τύπου SAP (επιλογή Β) — δικό του ADR, **δεν έχει ξεκινήσει** |
+
+**Άγκυρες** (η αναλλοίωτη, όχι η υλοποίηση — «αλλαγή πεδίου + 60 s ⇒ μηδέν εγγραφές», «αποχώρηση ⇒ μηδέν εγγραφές»,
+«Αποθήκευση ⇒ μία εγγραφή με `_v`»):
+`building-management/tabs/__tests__/general-tab-explicit-save.test.tsx` (4) ·
+`projects/general-tab/__tests__/general-project-tab-explicit-save.test.tsx` (3). Μετάλλαξη 4/4: debounce και εγγραφή
+στην αποχώρηση, σε κάθε φόρμα, κοκκινίζουν το Ε1 και το Ε2 αντίστοιχα.
+
+🔶 **Ανοιχτά, ίδια κλάση**:
+- **Ακίνητα** — `onAutoSaveFields` (ADR-236): η αλλαγή **τύπου** (`usePropertyFieldHandlers.handleTypeChange`) και η
+  αυτόματη δημιουργία επιπέδων (`PropertyFieldsBlock`) γράφουν αμέσως, μέσα σε φόρμα με «Αποθήκευση/Ακύρωση».
+- **Κτίρια** — η κάρτα σύνδεσης με έργο είναι `saveMode: 'immediate'` (δική της αποθήκευση, εκτός φόρμας).
+- **Desktop** — αλλαγή επιλογής στη λίστα όσο τρέχει επεξεργασία με αλλαγές: παλιά τις έσωζε το «flush on unmount»,
+  τώρα χάνονται χωρίς ερώτηση. Η φύλαξη `beforeunload` ισχύει (`useUnsavedEdits` → μητρώο)· φύλαξη για αλλαγή
+  επιλογής **δεν βρέθηκε** στα κτίρια (`BuildingsPageContent.onSelectBuilding` αλλάζει επιλογή απευθείας). Οι άλλες
+  σελίδες δεν ελέγχθηκαν.
+
 ### Αρχιτεκτονικές Αποφάσεις
 
 | Απόφαση | Επιλογή | Γιατί |
@@ -131,7 +188,7 @@ Uses semantic `<output>` tag with `aria-live="polite"`.
 | `src/components/shared/AutoSaveStatusIndicator.tsx` | Status component |
 | `src/i18n/locales/{en,el}/common.json` | i18n keys (`autoSave.*`) |
 
-### Phase 2: First Migration (DONE)
+### Phase 2: First Migration (DONE 2026-03-19 · **ΑΝΑΙΡΕΘΗΚΕ 2026-10-11**, §2.5)
 
 | File | Change |
 |------|--------|
@@ -140,7 +197,7 @@ Uses semantic `<output>` tag with `aria-live="polite"`.
 | `src/components/projects/GeneralProjectHeader.tsx` | Added `AutoSaveStatusIndicator` support with backward compat |
 | `src/components/building-management/tabs/GeneralTabContent.tsx` | Replaced fake setTimeout auto-save with real `useAutoSave` + `updateBuilding()` |
 
-### Phase 3: Extended Migration (FUTURE, as-we-touch-files)
+### Phase 3: Extended Migration (**ΑΚΥΡΩΘΗΚΕ 2026-10-11** — ο μηχανισμός δεν υπάρχει, §2.5)
 
 - `EntityLinkCard.tsx` — Replace `saveStatus` boilerplate
 - `LinkedSpacesCard.tsx` — Replace `saveStatus` boilerplate
@@ -149,7 +206,7 @@ Uses semantic `<output>` tag with `aria-live="polite"`.
 
 ### Αδελφός: σειριακή ουρά μερικών διορθώσεων (ADR-898 Φ3β-2, 2026-10-01)
 
-Το `useAutoSave` αποθηκεύει **ολόκληρο** αντικείμενο με debounce (`saveFn(data): Promise<void>`). Δεν ταιριάζει όπου ο
+Το `useAutoSave` (καταργήθηκε, §2.5) αποθήκευε **ολόκληρο** αντικείμενο με debounce (`saveFn(data): Promise<void>`). Δεν ταιριάζει όπου ο
 server δέχεται **μερική διόρθωση ανά πεδίο** σε συναλλαγή και απαντά τριμερώς (`saved` · `invalid` με κωδικούς ·
 `failed`): ολόκληρο αντικείμενο θα ξανάγραφε και πεδία που ο άνθρωπος δεν άγγιξε (ό,τι άλλαξε άλλη καρτέλα).
 
@@ -159,8 +216,8 @@ server δέχεται **μερική διόρθωση ανά πεδίο** σε �
 | `src/hooks/useFieldPatchQueue.ts` | Ο δέτης: `useSyncExternalStore` · `sourceVersion` (νέα αλήθεια του listener ⇒ σβήνει το `acknowledged`) · όσο κάτι δεν έφυγε ⇒ `markUnsavedWork` στο μητρώο του ADR-860 §Ε3γ (ο ΕΝΑΣ `beforeunload`) |
 
 **Κοινά με το ADR-248**: η ένδειξη (`AutoSaveStatusIndicator`) και το λεξιλόγιο κατάστασης (`idle · saving · success · error`).
-**Κανόνας επιλογής**: έγγραφο-φόρμα που αποθηκεύεται ολόκληρο ⇒ `useAutoSave`· απαντήσεις ανά πεδίο σε έγγραφο με
-ζωντανό listener ⇒ `useFieldPatchQueue`. Πρώτος καταναλωτής: `/offers/[offerId]/improve`.
+**Κανόνας επιλογής**: δες τον πίνακα του §2.5 (η γραμμή «έγγραφο-φόρμα ⇒ `useAutoSave`» **δεν ισχύει πια**).
+Πρώτος καταναλωτής της ουράς: `/offers/[offerId]/improve`.
 
 ⚠️ **Γνωστό χρέος (δεν διορθώθηκε εδώ)**: το `formatSaveAge` του `AutoSaveStatusIndicator` επιστρέφει **αγγλικά**
 χωρίς i18n («just now», «5s ago»). Ο νέος καταναλωτής το παρακάμπτει με `showTimestamp={false}`.
@@ -187,3 +244,4 @@ Added to `common.json` under `autoSave` namespace:
 |------|--------|
 | 2026-03-19 | Initial implementation: Phase 1 (foundation) + Phase 2 (first migration) |
 | 2026-10-01 | Αδελφός μηχανισμός για **μερικές διορθώσεις ανά πεδίο**: `lib/async/field-patch-queue.ts` + `hooks/useFieldPatchQueue.ts` (ADR-898 Φ3β-2) — ίδια ένδειξη και κατάσταση, άλλο συμβόλαιο αποθήκευσης. Καταγράφηκε το χρέος i18n του `formatSaveAge` |
+| 2026-10-11 | **§2.5 (νέα) — ρητή αποθήκευση σε κτίρια και έργα· το `useAutoSave` καταργήθηκε** (ADR-912 Εύρημα 8, απόφαση Α). Η αυτόματη εγγραφή στην ενεργή εγγραφή ζούσε δίπλα σε «Αποθήκευση/Ακύρωση»: η Ακύρωση δεν ακύρωνε και ο διάλογος απόρριψης έλεγε ψέματα. Βγήκε από `GeneralTabContent` και `GeneralProjectTab`· διαγράφηκαν `hooks/useAutoSave.ts`, `config/auto-save-config.ts`, `projects/general-tab/hooks/useAutosave.ts`, το module `auto-save-config` του μητρώου SSoT και οι ορφανοί τύποι. Τα κτίρια αποθηκεύουν πλέον με `_v` (`useVersionedSave`). Στα έργα έφυγαν το `autosaved` και το `hasImpactTrackedChanges` (υπήρχαν μόνο για να φρενάρουν την αυτόματη)· η συνδεδεμένη εταιρεία μπήκε στη σύγκριση «έχει αλλαγές». jest: 2 νέες σουίτες, **7/7**· μετάλλαξη **4/4**. ⚠️ **Αμέτρητο σε browser** τη στιγμή της εγγραφής αυτής· έλεγχος τύπων δεν έτρεξε (N.17). 🔶 Ανοιχτά της ίδιας κλάσης: `onAutoSaveFields` των ακινήτων (ADR-236) · φύλαξη αλλαγής επιλογής σε desktop. Το **Β** (πρόχειρο τύπου SAP) μένει για δικό του ADR. Τα κλειδιά `tabs.general.header.saved` και `projectHeader.savedAt` έμειναν χωρίς καταναλωτή στα locales (αφαίρεση μαζί με το CHECK 3.33). |

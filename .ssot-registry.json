@@ -1522,16 +1522,6 @@
         "src/config/geographic-config.ts"
       ]
     },
-    "auto-save-config": {
-      "ssotFile": "src/config/auto-save-config.ts",
-      "description": "Auto-save timing must use centralized config — no inline timing definitions",
-      "forbiddenPatterns": [
-        "(AUTO_SAVE_TIMING)\\s*(=|:)\\s*(\\{|\\[|Record)"
-      ],
-      "allowlist": [
-        "src/config/auto-save-config.ts"
-      ]
-    },
     "file-preview-registry": {
       "ssotFile": "src/lib/file-types/preview-registry.ts",
       "description": "File preview type/category detection must use preview-registry — no inline categorizeFile/getPreviewType/getFileCategory declarations",

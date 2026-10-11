@@ -3,7 +3,7 @@
 /**
  * @fileoverview **Ο React δέτης της σειριακής ουράς διορθώσεων** (ADR-898 Φ3β-2) — μία ουρά ανά έγγραφο, συνδρομή με
  * `useSyncExternalStore`, και προειδοποίηση πριν κλείσει η σελίδα όσο κάτι δεν έχει αποθηκευτεί (Google Docs).
- * @related `lib/async/field-patch-queue.ts` (η ουρά) · αδελφός του `useAutoSave` (ADR-248: ολόκληρο έγγραφο, debounce)
+ * @related `lib/async/field-patch-queue.ts` (η ουρά) · ADR-248 (κοινή ένδειξη + λεξιλόγιο κατάστασης· το `useAutoSave` καταργήθηκε, §2.5)
  * @module hooks/useFieldPatchQueue
  *
  * 🔑 **`sourceVersion` = η ταυτότητα της αλήθειας του αναγνώστη** (π.χ. το έγγραφο του listener). Όταν αλλάζει, ό,τι

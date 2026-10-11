@@ -23,9 +23,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useSaveHandlerRef } from '@/hooks/useSaveHandlerRef';
-// 🏢 ADR-248: Centralized auto-save system
-import { useAutoSave } from '@/hooks/useAutoSave';
-import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
 // 🏢 SPEC-256A: Optimistic versioning — silent last-write-wins
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { createBuildingWithCodeRetry, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
@@ -56,6 +53,22 @@ function buildFormData(building: Building) {
     address: building.address || '',
     city: building.city || '',
     category: building.category ?? '',
+  };
+}
+
+type BuildingFormData = ReturnType<typeof buildFormData>;
+
+/** Τα πεδία της φόρμας ως εγγραφή κτιρίου — ΜΙΑ αντιστοίχιση για τη δημιουργία ΚΑΙ την ενημέρωση. */
+function buildingFieldsFrom(data: BuildingFormData) {
+  return {
+    name: data.name,
+    description: data.description,
+    startDate: data.startDate,
+    completionDate: data.completionDate,
+    ...constructionYearUpdate(data.constructionYear, new Date().getFullYear()),
+    address: data.address,
+    city: data.city,
+    ...(isBuildingCategory(data.category) ? { category: data.category } : {}),
   };
 }
 
@@ -251,44 +264,19 @@ export function GeneralTabContent({
   }, [effectiveIsEditing, building]);
 
   // 🏢 SPEC-256A: Optimistic versioning — wraps updateBuilding with _v tracking
-  const versionedSaveFn = useCallback(async (data: ReturnType<typeof buildFormData> & { _v?: number }) => {
+  // 🔑 ADR-248 §2.5: η ενεργή εγγραφή αλλάζει ΜΟΝΟ με ρητή «Αποθήκευση» — καμία εγγραφή όσο γράφει ο άνθρωπος.
+  const versionedSaveFn = useCallback(async (data: BuildingFormData & { _v?: number }) => {
     const result = await updateBuildingWithPolicy({
       buildingId: String(building.id),
-      updates: {
-        name: data.name,
-        description: data.description,
-        startDate: data.startDate,
-        completionDate: data.completionDate,
-        ...constructionYearUpdate(data.constructionYear, new Date().getFullYear()),
-        address: data.address,
-        city: data.city,
-        _v: data._v,
-        ...(isBuildingCategory(data.category) ? { category: data.category } : {}),
-      },
+      updates: { ...buildingFieldsFrom(data), _v: data._v },
     });
     return result;
   }, [building.id]);
 
-  const versioned = useVersionedSave<ReturnType<typeof buildFormData>>({
+  const { save: saveVersioned } = useVersionedSave<BuildingFormData>({
     initialVersion: (building._v as number | undefined),
     entityId: building.id,
     saveFn: versionedSaveFn,
-  });
-
-  // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
-  const autoSaveFn = useCallback(async (data: ReturnType<typeof buildFormData>) => {
-    if (isCreateMode) return;
-    await versioned.save(data);
-  }, [isCreateMode, versioned]);
-
-  const {
-    status: autoSaveStatus,
-    lastSaved,
-    error: autoSaveError,
-    retry: autoSaveRetry,
-  } = useAutoSave(formData, {
-    saveFn: autoSaveFn,
-    enabled: effectiveIsEditing && !isCreateMode,
   });
 
   /**
@@ -331,18 +319,8 @@ export function GeneralTabContent({
       setSaveError(null);
       setSaveErrorCode(null);
 
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        startDate: formData.startDate,
-        completionDate: formData.completionDate,
-        ...constructionYearUpdate(formData.constructionYear, new Date().getFullYear()),
-        address: formData.address,
-        city: formData.city,
-        ...(isBuildingCategory(formData.category) ? { category: formData.category } : {}),
-      };
-
       if (isCreateMode) {
+        const payload = buildingFieldsFrom(formData);
         const projectPayload = projectLink.getPayload();
         const projectIdForCode = String(projectPayload.projectId ?? '');
 
@@ -387,14 +365,8 @@ export function GeneralTabContent({
 
       } else {
         logger.info('Updating building in Firestore', { buildingId: building.id });
-        const result = await updateBuildingWithPolicy({
-          buildingId: String(building.id),
-          updates: payload,
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to save building');
-        }
+        // Με `_v` (SPEC-256A)· αποτυχία ⇒ εξαίρεση ⇒ στο catch ⇒ `saveError`.
+        await saveVersioned(formData);
 
         logger.info('Building updated successfully');
         didSaveRef.current = true;
@@ -411,7 +383,7 @@ export function GeneralTabContent({
     } finally {
       setIsSaving(false);
     }
-  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, projectLink, t, buildingNotifications]);
+  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, projectLink, t, buildingNotifications, saveVersioned]);
 
   // Register save function for parent header delegation (SSoT hook)
   useSaveHandlerRef(onSaveRef, handleSave);
@@ -440,22 +412,11 @@ export function GeneralTabContent({
       <Header
         building={building}
         isEditing={effectiveIsEditing}
-        autoSaving={autoSaveStatus === 'saving' || isSaving}
-        lastSaved={lastSaved}
+        saving={isSaving}
         setIsEditing={setEffectiveEditing}
         handleSave={handleSave}
         hideEditControls={isParentControlled}
       />
-      {/* 🏢 ADR-248: Centralized auto-save status indicator */}
-      {effectiveIsEditing && !isCreateMode && (
-        <AutoSaveStatusIndicator
-          status={autoSaveStatus}
-          lastSaved={lastSaved}
-          error={autoSaveError}
-          variant="inline"
-          onRetry={autoSaveRetry}
-        />
-      )}
       {/* 🏢 ADR-284 §3.0.5: Shared PolicyErrorBanner handles i18n + any
           registered inline recovery action (e.g. link orphan project →
           company) without domain-specific logic leaking into this tab. */}

@@ -4,7 +4,7 @@ import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { CheckCircle, Copy } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -16,36 +16,19 @@ import {
 } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
-import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
-import type { SaveStatus } from '@/types/auto-save';
 import '@/lib/design-system';
 
 interface GeneralProjectHeaderProps {
-    isEditing: boolean;
-    /** @deprecated Use autoSaveStatus instead (ADR-248) */
-    autoSaving?: boolean;
-    lastSaved: Date | null;
     projectCode?: string;
     projectId?: string;
+    /** Τρέχει η ρητή «Αποθήκευση» (ADR-248 §2.5: καμία αυτόματη εγγραφή όσο γράφει ο άνθρωπος). */
     isSaving?: boolean;
-    /** ADR-248: Centralized auto-save status */
-    autoSaveStatus?: SaveStatus;
-    /** ADR-248: Auto-save error message */
-    autoSaveError?: string | null;
-    /** ADR-248: Retry callback for failed auto-save */
-    onAutoSaveRetry?: () => void;
 }
 
 export function GeneralProjectHeader({
-    isEditing,
-    autoSaving,
-    lastSaved,
     projectCode,
     projectId,
     isSaving = false,
-    autoSaveStatus,
-    autoSaveError,
-    onAutoSaveRetry,
 }: GeneralProjectHeaderProps) {
     const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const iconSizes = useIconSizes();
@@ -95,34 +78,6 @@ export function GeneralProjectHeader({
                   variant="outline"
                   size="sm"
                 />
-
-                {isEditing && autoSaveStatus && (
-                  <AutoSaveStatusIndicator
-                    status={autoSaveStatus}
-                    lastSaved={lastSaved}
-                    error={autoSaveError}
-                    variant="inline"
-                    onRetry={onAutoSaveRetry}
-                  />
-                )}
-                {/* Fallback for legacy autoSaving prop */}
-                {isEditing && !autoSaveStatus && (autoSaving || lastSaved) && (
-                <div className={cn("flex items-center", typography.body.xs, spacing.gap.sm)}>
-                    {autoSaving ? (
-                    <>
-                        <AnimatedSpinner size="small" />
-                        <span className={colors.text.info}>{t('projectHeader.saving')}</span>
-                    </>
-                    ) : lastSaved ? (
-                    <>
-                        <CheckCircle className={`${iconSizes.xs} ${colors.text.success}`} />
-                        <span className={colors.text.success}>
-                        {t('projectHeader.savedAt', { time: lastSaved.toLocaleTimeString() })}
-                        </span>
-                    </>
-                    ) : null}
-                </div>
-                )}
             </div>
 
             {/* Save status indicators */}

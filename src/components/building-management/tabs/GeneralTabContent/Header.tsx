@@ -5,8 +5,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { formatDateTime } from '@/lib/intl-utils';
-import { Edit, Save, X, CheckCircle } from 'lucide-react';
+import { Edit, Save, X } from 'lucide-react';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
@@ -14,15 +13,15 @@ import '@/lib/design-system';
 interface HeaderProps {
     building: { id: string };
     isEditing: boolean;
-    autoSaving: boolean;
-    lastSaved: Date | null;
+    /** Τρέχει η ρητή «Αποθήκευση» (ADR-248 §2.5: καμία αυτόματη εγγραφή όσο γράφει ο άνθρωπος). */
+    saving: boolean;
     setIsEditing: (isEditing: boolean) => void;
     handleSave: () => void;
     /** When true, Edit/Save/Cancel buttons are hidden (parent header controls them) */
     hideEditControls?: boolean;
 }
 
-export function Header({ isEditing, autoSaving, lastSaved, setIsEditing, handleSave, hideEditControls }: HeaderProps) {
+export function Header({ isEditing, saving, setIsEditing, handleSave, hideEditControls }: HeaderProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const buttonPatterns = useButtonPatterns();
   const iconSizes = useIconSizes();
@@ -30,21 +29,10 @@ export function Header({ isEditing, autoSaving, lastSaved, setIsEditing, handleS
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        {isEditing && (
+        {isEditing && saving && (
           <div className="flex items-center gap-2 text-xs">
-            {autoSaving ? (
-              <>
-                <AnimatedSpinner size="small" />
-                <span className="text-primary">{t('tabs.general.header.saving')}</span>
-              </>
-            ) : lastSaved ? (
-              <>
-                <CheckCircle className={`${iconSizes.xs} text-[hsl(var(--text-success))]`} />
-                <span className="text-[hsl(var(--text-success))]">
-                  {t('tabs.general.header.saved')} {lastSaved ? formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1] : '--'}
-                </span>
-              </>
-            ) : null}
+            <AnimatedSpinner size="small" />
+            <span className="text-primary">{t('tabs.general.header.saving')}</span>
           </div>
         )}
       </div>

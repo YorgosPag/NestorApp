@@ -9,7 +9,6 @@ import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsTab } from '../PermitsTab';
 
-import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectUpdatePayload } from '@/services/projects-client.service';
@@ -49,11 +48,6 @@ interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
   draftAddresses?: ProjectDraftAddresses;
 }
 
-function normalizeGuardValue(value: string | number | null | undefined): string {
-  if (typeof value === 'number') return String(value);
-  return typeof value === 'string' ? value.trim() : '';
-}
-
 /**
  * **Οι τιμές της φόρμας από το έργο** — ΜΙΑ αντιστοίχιση για την αρχική κατάσταση ΚΑΙ τον συγχρονισμό
  * (N.18 / CHECK 3.28: ήταν γραμμένη δύο φορές, με ήδη αποκλίνουσα γραφή στο `description`).
@@ -91,25 +85,6 @@ function projectFormValuesFrom(
     client: project.client || '',
     location: project.location || '',
   };
-}
-
-function hasImpactTrackedChanges(
-  project: ExtendedGeneralProjectTabProps['project'],
-  projectData: ProjectFormData,
-  linkedCompanyId: string | null,
-): boolean {
-  return (
-    normalizeGuardValue(project.name) !== normalizeGuardValue(projectData.name) ||
-    normalizeGuardValue(project.title) !== normalizeGuardValue(projectData.licenseTitle) ||
-    normalizeGuardValue(project.description) !== normalizeGuardValue(projectData.description) ||
-    normalizeGuardValue(project.buildingBlock) !== normalizeGuardValue(projectData.buildingBlock) ||
-    normalizeGuardValue(project.protocolNumber) !== normalizeGuardValue(projectData.protocolNumber) ||
-    normalizeGuardValue(project.licenseNumber) !== normalizeGuardValue(projectData.licenseNumber) ||
-    normalizeGuardValue(project.issuingAuthority) !== normalizeGuardValue(projectData.issuingAuthority) ||
-    normalizeGuardValue(project.issueDate) !== normalizeGuardValue(projectData.issueDate) ||
-    normalizeGuardValue(project.status) !== normalizeGuardValue(projectData.status) ||
-    normalizeGuardValue(project.linkedCompanyId) !== normalizeGuardValue(linkedCompanyId)
-  );
 }
 
 export function GeneralProjectTab({
@@ -223,35 +198,21 @@ export function GeneralProjectTab({
     saveFn: versionedSaveFn,
   });
 
-  const hasPendingImpactReview = useMemo(() => (
-    hasImpactTrackedChanges(project, projectData, companyLink.linkedId)
-  ), [companyLink.linkedId, project, projectData]);
-
-  // Ό,τι έφτασε ΗΔΗ στη βάση μέσα σε αυτή την επεξεργασία (η αυτόματη αποθήκευση τρέχει όσο γράφει ο άνθρωπος, και το
-  // `project` δεν ανανεώνεται όσο κρατά η επεξεργασία) ⇒ «αλλαγές» είναι μόνο ό,τι ΔΕΝ έχει αποθηκευτεί ακόμη.
-  const [autosaved, setAutosaved] = useState<ProjectFormData | null>(null);
-  useEffect(() => {
-    if (!isEditing) setAutosaved(null);
-  }, [isEditing]);
-
-  const autoSaveFn = useCallback(async (data: ProjectFormData) => {
-    if (isCreateMode || hasPendingImpactReview) return;
-    await versioned.save(data);
-    setAutosaved(data);
-  }, [hasPendingImpactReview, isCreateMode, versioned]);
-
   // Η φόρμα δηλώνει αν έχει αλλαγές που θα χαθούν — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
-  const persistedValues = useMemo(
-    () => autosaved ?? projectFormValuesFrom(project, fallbackCompanyId),
-    [autosaved, project, fallbackCompanyId],
+  // 🔑 ADR-248 §2.5: η ενεργή εγγραφή αλλάζει ΜΟΝΟ με ρητή «Αποθήκευση» ⇒ βάση σύγκρισης είναι το ίδιο το `project`.
+  //   Μαζί και η συνδεδεμένη εταιρεία (`saveMode: 'form'`): φεύγει με την ίδια «Αποθήκευση», άρα χάνεται με την ίδια απόρριψη.
+  const editedFields = useMemo(
+    () => ({ values: projectData, linkedCompanyId: companyLink.linkedId }),
+    [projectData, companyLink.linkedId],
   );
-  useUnsavedEdits(isEditing || isCreateMode === true, projectData, persistedValues);
-
-  const { autoSaving, lastSaved, status: autoSaveStatus, error: autoSaveError, retry: autoSaveRetry } = useAutosave(
-    projectData,
-    isEditing && !isCreateMode && !hasPendingImpactReview,
-    { saveFn: autoSaveFn }
+  const savedFields = useMemo(
+    () => ({
+      values: projectFormValuesFrom(project, fallbackCompanyId),
+      linkedCompanyId: project.linkedCompanyId || null,
+    }),
+    [project, fallbackCompanyId],
   );
+  useUnsavedEdits(isEditing || isCreateMode === true, editedFields, savedFields);
 
   // 🏢 ADR-284 §3.0: Clear the company-required policy error as soon as the
   // user links a company — no stale banner sticking around after the fix.
@@ -418,15 +379,9 @@ export function GeneralProjectTab({
       {ImpactDialog}
 
       <GeneralProjectHeader
-        autoSaving={autoSaving}
-        lastSaved={lastSaved}
         projectCode={project.projectCode}
         projectId={project.id}
         isSaving={isSaving}
-        isEditing={isEditing}
-        autoSaveStatus={autoSaveStatus}
-        autoSaveError={autoSaveError}
-        onAutoSaveRetry={autoSaveRetry}
       />
 
       {/* 🏢 ADR-284: Shared policy banner — auto i18n + auto recovery action.
