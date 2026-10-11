@@ -22,8 +22,8 @@ jest.mock('@/lib/workspace/navigation', () => ({
 // ⚠️ Το mock ΚΡΑΤΑ τη σημαία `collapsePreferences` ορατή: η απόφαση «μετακομίζουν γλώσσα/θέμα;»
 //    ανήκει στην ΚΕΦΑΛΙΔΑ (ξέρει αν αποδίδει μενού), και κρίνεται εδώ (ADR-809 §9).
 jest.mock('@/core/containers/ShellUtilities', () => ({
-  ShellUtilities: ({ collapsePreferences }: { collapsePreferences?: boolean }) => (
-    <span data-testid="shell-utilities" data-collapse={String(Boolean(collapsePreferences))} />
+  ShellUtilities: ({ collapsePreferences }: { collapsePreferences?: false | 'md' | 'lg' }) => (
+    <span data-testid="shell-utilities" data-collapse={String(collapsePreferences ?? false)} />
   ),
 }));
 
@@ -117,7 +117,7 @@ describe('PublicSiteHeader — μικτή πλοήγηση κάτω από `lg`'
 
   it('Κ4: γλώσσα/θέμα μετακομίζουν ΜΟΝΟ όταν υπάρχει το μενού που τα δέχεται', () => {
     const { unmount } = render(<PublicSiteHeader />);
-    expect(screen.getByTestId('shell-utilities').dataset.collapse).toBe('true');
+    expect(screen.getByTestId('shell-utilities').dataset.collapse).toBe('lg');
     unmount();
     // Με στήλη το μενού ΔΕΝ αποδίδεται ⇒ αν μετακόμιζαν, θα χάνονταν (CHECK 3.72).
     render(<SidebarProvider><PublicSiteHeader /></SidebarProvider>);

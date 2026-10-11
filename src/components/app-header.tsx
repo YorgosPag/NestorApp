@@ -84,7 +84,10 @@ export function AppHeader() {
           <Search className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center gap-2 px-2 flex-shrink-0">
+        {/* ADR-809 §9.6 — `min-w-0`, όχι `flex-shrink-0`: ομάδα που αρνείται να στενέψει
+            μέσα σε `overflow-hidden` ΚΟΒΕΤΑΙ ΑΘΟΡΥΒΑ (μετρημένο στα 390px: χειριστήρια ως
+            τα 675px, λογαριασμός εκτός οθόνης). */}
+        <div className="flex min-w-0 items-center gap-2 px-2">
           {/* ADR-367 §2.7 — «τι γίνεται με τις αλλαγές μου» (πρότυπο Google Docs):
               ΜΗΔΕΝ ορατό DOM όσο δεν έχει κάτι να πει· ΠΡΩΤΟ στη σειρά, γιατί
               αφορά ό,τι έκανε ο άνθρωπος, όχι πού βρίσκεται. */}
@@ -93,8 +96,13 @@ export function AppHeader() {
               ΕΞΩ από το μονοπάτι *οργανισμός › έργο* (πρότυπο: Figma Dev Mode).
               Το μονοπάτι της Φάσης 4 θα χτιστεί ΑΡΙΣΤΕΡΑ — δεν αντικαθιστά
               αυτό εδώ. ⚠️ Το `CompanySwitcher` δίπλα είναι ο ΟΡΓΑΝΙΣΜΟΣ. */}
-          <JobSwitch />
-          <CompanySwitcher />
+          {/* ADR-809 §9.6 — κάτω από `md` οι δύο επιλογείς ΜΕΤΑΚΟΜΙΖΟΥΝ στο συρτάρι
+              (`app-sidebar.tsx`): έχουν ετικέτα άγνωστου μήκους, και στη μπάρα του κινητού
+              μένει μόνο ό,τι είναι εικονίδιο σταθερού πλάτους. Μόνο CSS. */}
+          <div className="hidden md:contents">
+            <JobSwitch />
+            <CompanySwitcher />
+          </div>
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <VoiceAssistantButton />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
@@ -132,7 +140,9 @@ export function AppHeader() {
 
             ⚠️ ΧΩΡΙΣ `signedOutAction`: στο (app) δεν υπάρχει ποτέ ανώνυμος.
           */}
-          <ShellUtilities />
+          {/* `md` = το πλάτος όπου το πλαϊνό μενού γίνεται φύλλο (`MOBILE_BREAKPOINT`)·
+              εκεί ζει το `ShellPreferences` που υποδέχεται γλώσσα και θέμα. */}
+          <ShellUtilities collapsePreferences="md" />
         </div>
       </div>
 

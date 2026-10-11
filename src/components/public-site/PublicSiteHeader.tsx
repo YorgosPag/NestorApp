@@ -239,7 +239,7 @@ export function PublicSiteHeader() {
             αφορά τους **9 βαρείς providers + sidebar** — που δεν αγγίζονται.
           */}
           <ShellUtilities
-            collapsePreferences={!hasSidebar}
+            collapsePreferences={hasSidebar ? false : 'lg'}
             signedOutAction={
               <Link
                 href={AUTH_ROUTES.login}

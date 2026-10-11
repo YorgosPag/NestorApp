@@ -195,22 +195,32 @@ describe('ADR-809 §9 — οι προτιμήσεις μετακομίζουν, 
 
   test('Μ1 — collapsePreferences: γλώσσα ΚΑΙ θέμα κρύβονται κάτω από `lg` (μόνο CSS)', () => {
     currentUser = SIGNED_IN;
-    const { container } = render(<ShellUtilities collapsePreferences />);
+    const { container } = render(<ShellUtilities collapsePreferences="lg" />);
     const lang = wrapperOf(container, 'header.changeLanguage');
     expect(lang?.className).toBe('hidden lg:contents');
     expect(wrapperOf(container, 'theme.toggle')).toBe(lang);
   });
 
+  test('Μ1β — το όριο το δηλώνει Ο ΚΑΛΩΝ: `md` για το `(app)` (ADR-809 §9.6)', () => {
+    // Το πλαϊνό μενού του `(app)` γίνεται φύλλο στα 768px· με `lg` η γλώσσα και το θέμα
+    // θα έλειπαν από ΠΑΝΤΟΥ στα 768–1023px (κρυμμένα στη μπάρα, χωρίς φύλλο να τα δεχτεί).
+    currentUser = SIGNED_IN;
+    const { container } = render(<ShellUtilities collapsePreferences="md" />);
+    const lang = wrapperOf(container, 'header.changeLanguage');
+    expect(lang?.className).toBe('hidden md:contents');
+    expect(wrapperOf(container, 'theme.toggle')).toBe(lang);
+  });
+
   test('Μ2 — ...αλλά ο λογαριασμός ΔΕΝ μετακομίζει (μικτή πλοήγηση, NN/g)', () => {
     currentUser = SIGNED_IN;
-    const { container } = render(<ShellUtilities collapsePreferences />);
+    const { container } = render(<ShellUtilities collapsePreferences="lg" />);
     const account = [...container.querySelectorAll('button')].find((b) =>
       `${b.getAttribute('aria-label') ?? ''}${b.textContent ?? ''}`.includes('userMenu.menuLabel'));
     expect(account).toBeDefined();
     expect(account?.closest('span.hidden')).toBeNull();
   });
 
-  test('Μ3 — ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς τη σημαία, τίποτα δεν κρύβεται (το `(me)` και το `(app)`)', () => {
+  test('Μ3 — ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς τη σημαία, τίποτα δεν κρύβεται (το `(me)`)', () => {
     currentUser = SIGNED_IN;
     const { container } = render(<ShellUtilities />);
     expect(container.querySelector('span.hidden')).toBeNull();

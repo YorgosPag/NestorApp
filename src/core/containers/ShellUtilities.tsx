@@ -90,10 +90,20 @@ import { UserMenu } from '@/components/header/user-menu';
  * @param signedOutAction Τι μπαίνει στη θέση του λογαριασμού όταν **δεν**
  *   υπάρχει ταυτότητα. Παραλείπεται όπου δεν έχει νόημα (`(auth)`, `(app)`).
  * @param className Επιπλέον κλάσεις **διάταξης** του καλούντος — ποτέ χρώματος.
- * @param collapsePreferences Κάτω από `lg` η γλώσσα και το θέμα **μετακομίζουν** στο
+ * @param collapsePreferences Κάτω από το όριο η γλώσσα και το θέμα **μετακομίζουν** στο
  *   μενού του καλούντος ({@link ShellPreferences}) — ΜΟΝΟ όταν ο καλών το αποδίδει.
- *   Ταυτότητα (καμπανάκι · λογαριασμός) μένει **πάντα** ορατή (ADR-809 §9).
+ *   Το όριο το δηλώνει **ο καλών**: είναι το πλάτος όπου το ΔΙΚΟ του μενού γίνεται φύλλο
+ *   (`lg` στη δημόσια κεφαλίδα, `md` στο `(app)` — ADR-809 §9.6). Ταυτότητα (καμπανάκι ·
+ *   λογαριασμός) μένει **πάντα** ορατή (ADR-809 §9).
  */
+export type PreferencesCollapse = 'md' | 'lg';
+
+/** Στατικές κλάσεις: το Tailwind δεν βλέπει ονόματα που συντίθενται σε χρόνο εκτέλεσης. */
+const COLLAPSE_CLASSES: Readonly<Record<PreferencesCollapse, string>> = {
+  md: 'hidden md:contents',
+  lg: 'hidden lg:contents',
+};
+
 export function ShellUtilities({
   signedOutAction,
   className,
@@ -101,7 +111,7 @@ export function ShellUtilities({
 }: Readonly<{
   signedOutAction?: React.ReactNode;
   className?: string;
-  collapsePreferences?: boolean;
+  collapsePreferences?: false | PreferencesCollapse;
 }>): React.ReactElement {
   return (
     <div className={className ? `flex items-center gap-2 ${className}` : 'flex items-center gap-2'}>
@@ -128,7 +138,7 @@ export function ShellUtilities({
         (`display: contents` από `lg`) — καμία ερώτηση πλάτους σε JS ⇒ κανένα hydration mismatch.
       */}
       {collapsePreferences ? (
-        <span className="hidden lg:contents">
+        <span className={COLLAPSE_CLASSES[collapsePreferences]}>
           <LanguageSwitcher />
           <ThemeToggle />
         </span>

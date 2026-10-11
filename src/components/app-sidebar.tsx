@@ -12,6 +12,9 @@ import { SidebarLogo } from "@/components/sidebar/sidebar-logo"
 import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
 import { SidebarRevealBanner } from "@/components/sidebar/sidebar-reveal-banner"
 import { LegalLinksNav } from "@/components/legal/LegalLinksNav"
+import { CompanySwitcher } from "@/components/header/CompanySwitcher"
+import { JobSwitch } from "@/components/header/JobSwitch"
+import { ShellPreferences } from "@/core/containers/ShellUtilities"
 // 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
 import { useJobFilteredNavigation } from "@/hooks/useJobFilteredNavigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
@@ -73,6 +76,14 @@ export function AppSidebar() {
         <Sidebar collapsible="icon" label={t('menu.main')}>
             <SidebarHeader>
                 <SidebarLogo />
+                {/* ADR-809 §9.6 — κάτω από `md` η μπάρα δεν χωρά τους δύο επιλογείς (ετικέτες
+                    άγνωστου μήκους) και τους παραδίδει εδώ: ο οργανισμός στην κορυφή του
+                    συρταριού (Linear · Slack · Vercel), και η δουλειά δίπλα στο μενού που
+                    φιλτράρει. Τα ΙΔΙΑ συστατικά — η κατάστασή τους ζει σε context. */}
+                <div className="flex flex-wrap items-center gap-2 md:hidden">
+                    <CompanySwitcher />
+                    <JobSwitch />
+                </div>
             </SidebarHeader>
 
             <SidebarContent>
@@ -110,6 +121,14 @@ export function AppSidebar() {
                     activeHref={activeHref}
                     reveal={reveal}
                 />
+
+                {/* ADR-809 §9.6 — γλώσσα και θέμα, από τον ΕΝΑΝ ιδιοκτήτη τους (CHECK 3.72 Κ3).
+                    ⚠️ ΜΕΣΑ στο κυλιόμενο περιεχόμενο, ΟΧΙ στο σταθερό υποσέλιδο: μετρημένο στα
+                    390×844, στο υποσέλιδο έπιαναν 350px και άφηναν στο μενού 211px από 764
+                    (Gmail · YouTube: οι ρυθμίσεις κυλούν στο τέλος της λίστας). */}
+                <div className="border-t border-sidebar-border p-2 md:hidden">
+                    <ShellPreferences />
+                </div>
             </SidebarContent>
 
             <SidebarFooter className="border-t border-sidebar-border">
