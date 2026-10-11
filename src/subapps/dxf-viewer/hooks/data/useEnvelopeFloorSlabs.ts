@@ -23,10 +23,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3.1.5
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
-import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import { useBuildingFloorLevels } from './useBuildingFloorLevels';
+import {
+  liveSceneOf,
+  loadSnapshotScene,
+  useFloorSceneSnapshots,
+  useUnvisitedFloorPredicate,
+} from './useFloorSceneSnapshots';
 import { useBim3DEntitiesStore } from '../../bim-3d/stores/Bim3DEntitiesStore';
 import { isSlabEntity } from '../../types/entities';
 import type { SlabEntity } from '../../types/entities';
@@ -79,6 +84,12 @@ function coverageSlabsFromScene(scene: SceneModel): SlabForRegionCoverage[] {
   return out;
 }
 
+/** Οι πλάκες κάλυψης του αποθηκευμένου στιγμιοτύπου ενός ορόφου (κενό αν δεν έχει σκηνή). */
+async function loadCoverageSlabs(t: TargetFloor): Promise<readonly SlabForRegionCoverage[]> {
+  const scene = await loadSnapshotScene(t);
+  return scene ? coverageSlabsFromScene(scene) : EMPTY_SLABS;
+}
+
 export function useEnvelopeFloorSlabs(): void {
   const levelsCtx = useLevelsOptional();
   const levels = levelsCtx?.levels;
@@ -88,33 +99,24 @@ export function useEnvelopeFloorSlabs(): void {
   const activeLevelId = useBim3DEntitiesStore((s) => s.activeLevelId);
   const liveSlabs = useBim3DEntitiesStore((s) => s.slabs);
 
-  const currentLevel = useMemo(
-    () => (levels ? levels.find((l) => l.id === currentLevelId) ?? null : null),
-    [levels, currentLevelId],
-  );
-  const buildingId = currentLevel?.buildingId ?? null;
+  // 🏢 Κτήριο + canonical storey elevations (metres) + ένα επίπεδο ανά όροφο (ADR-914 §2.14).
+  const { currentLevel, buildingFloors, floorLevels } = useBuildingFloorLevels(levels, currentLevelId);
   const activeFloorId = currentLevel?.floorId ?? null;
 
-  // 🏢 Canonical storey elevations (metres) from the floor-tabs source.
-  const { floors: buildingFloors } = useFloorsByBuilding(buildingId, Boolean(buildingId));
-
-  // One target per building floor (first level wins for duplicates).
-  const targets = useMemo<TargetFloor[]>(() => {
-    if (!levels || !buildingId) return [];
-    const seen = new Set<string>();
-    const out: TargetFloor[] = [];
-    for (const lvl of levels) {
-      if (lvl.buildingId !== buildingId || !lvl.floorId || seen.has(lvl.floorId)) continue;
-      seen.add(lvl.floorId);
-      out.push({ levelId: lvl.id, floorId: lvl.floorId, sceneFileId: lvl.sceneFileId ?? null });
-    }
-    return out;
-  }, [levels, buildingId]);
-
-  // Firestore snapshots for floors not visited this session.
-  const [loaded, setLoaded] = useState<ReadonlyMap<string, readonly SlabForRegionCoverage[]>>(
-    new Map(),
+  const targets = useMemo<TargetFloor[]>(
+    () => floorLevels.map((lvl) => ({ levelId: lvl.id, floorId: lvl.floorId, sceneFileId: lvl.sceneFileId ?? null })),
+    [floorLevels],
   );
+
+  // Firestore snapshots for unvisited, file-linked floors (ADR-914 §2.14).
+  const needsSnapshot = useUnvisitedFloorPredicate(activeLevelId, getLevelScene);
+  const loaded = useFloorSceneSnapshots<TargetFloor, readonly SlabForRegionCoverage[]>({
+    enabled: true,
+    targets,
+    needsSnapshot,
+    load: loadCoverageSlabs,
+    fallback: EMPTY_SLABS,
+  });
 
   const liveCoverage = useMemo<readonly SlabForRegionCoverage[]>(() => {
     const out: SlabForRegionCoverage[] = [];
@@ -129,52 +131,11 @@ export function useEnvelopeFloorSlabs(): void {
   const resolveSlabs = useCallback(
     (t: TargetFloor): readonly SlabForRegionCoverage[] | null => {
       if (t.levelId === activeLevelId) return liveCoverage;
-      const scene = getLevelScene?.(t.levelId);
-      if (scene && scene.entities.length > 0) return coverageSlabsFromScene(scene);
-      return loaded.get(t.levelId) ?? null;
+      const scene = liveSceneOf(getLevelScene, t.levelId);
+      return scene ? coverageSlabsFromScene(scene) : loaded.get(t.levelId) ?? null;
     },
     [activeLevelId, liveCoverage, getLevelScene, loaded],
   );
-
-  // Lazily fetch snapshots for unvisited, file-linked floors.
-  useEffect(() => {
-    let cancelled = false;
-    const missing = targets.filter(
-      (t) =>
-        t.sceneFileId &&
-        t.levelId !== activeLevelId &&
-        !loaded.has(t.levelId) &&
-        !((getLevelScene?.(t.levelId)?.entities.length ?? 0) > 0),
-    );
-    if (missing.length === 0) return;
-
-    void (async () => {
-      const entries: [string, readonly SlabForRegionCoverage[]][] = [];
-      for (const t of missing) {
-        try {
-          const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId as string);
-          if (cancelled) return;
-          const scene = rec?.scene as SceneModel | undefined;
-          entries.push([
-            t.levelId,
-            scene && Array.isArray(scene.entities) ? coverageSlabsFromScene(scene) : EMPTY_SLABS,
-          ]);
-        } catch {
-          entries.push([t.levelId, EMPTY_SLABS]);
-        }
-      }
-      if (cancelled || entries.length === 0) return;
-      setLoaded((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of entries) next.set(k, v);
-        return next;
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [targets, activeLevelId, loaded, getLevelScene]);
 
   // Compose floors (StoreyRef) + flat slabs of ALL building floors.
   const snapshot = useMemo<EnvelopeFloorSlabs>(() => {

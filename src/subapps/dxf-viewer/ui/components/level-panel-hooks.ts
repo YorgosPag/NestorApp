@@ -22,6 +22,12 @@ import { FileRecordService } from '@/services/file-record.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import { buildDxfImportSaveContext } from '../../app/dxf-import-save-context';
 import type { WizardCompleteMeta } from '@/features/floorplan-import';
+import i18next from 'i18next';
+import { provisionLevelForBinding } from '../../systems/levels/level-provision';
+import { wizardMetaToBinding } from './open-create/wizard-meta-binding';
+
+/** Όνομα κάτοψης ακινήτου όταν ο οδηγός δεν έδωσε ετικέτα — κλειδί, όχι κείμενο (N.11). */
+const PROPERTY_PLAN_FALLBACK_KEY = 'dxf-viewer-panels:panels.openCreate.fallbackLabel';
 
 /** Fire-and-forget trigger: pass the building id to backfill all its storeys. */
 export type TriggerAllFloorsBackfill = (buildingId: string) => void;
@@ -124,19 +130,31 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
       // ADR-420 — resolve the Level that OWNS the selected floor (find-or-create
       // + switch), so the import targets that floor's own level rather than the
       // active level. Falls back to the active level for project/building imports.
-      const targetLevelId = await findOrCreateLevelForFloor(
-        { levels, addLevel },
-        {
-          floorId: scope.kind === 'storey' ? scope.floorId : undefined,
-          buildingId: scopeFields.buildingId ?? undefined,
-          entityLabel: meta.entityLabel,
-          currentLevelId,
-        },
-      );
+      // ADR-914 §2.13 — κάτοψη ΑΚΙΝΗΤΟΥ = δική της όψη, όχι η κάτοψη του ορόφου (Revit: πολλές
+      // όψεις κάτοψης ανά Level). Πριν, η εισαγωγή έγραφε ΠΑΝΩ στο επίπεδο του ορόφου και το
+      // σημάδευε ως ακίνητο: ο όροφος έχανε την κάτοψή του και, από το ADR-914, έπαυε να μετρά ως
+      // «επίπεδο ορόφου». Ο ίδιος provisioner με το «Κάτοψη για… ακίνητο»: find-or-create ανά
+      // (ακίνητο, όροφος), όλη η δέσμευση στη γέννηση.
+      const propertyBinding = meta.entityType === ENTITY_TYPES.PROPERTY
+        ? wizardMetaToBinding(meta, i18next.t(PROPERTY_PLAN_FALLBACK_KEY) || PROPERTY_PLAN_FALLBACK_KEY)
+        : null;
+      const targetLevelId = propertyBinding
+        ? (await provisionLevelForBinding({ levels, addLevel }, propertyBinding)).levelId
+        : await findOrCreateLevelForFloor(
+            { levels, addLevel },
+            {
+              floorId: scope.kind === 'storey' ? scope.floorId : undefined,
+              buildingId: scopeFields.buildingId ?? undefined,
+              entityLabel: meta.entityLabel,
+              currentLevelId,
+            },
+          );
       if (targetLevelId) {
         setCurrentLevel(targetLevelId);
         const floorplanType = entityTypeToFloorplanType(meta.entityType);
-        if (floorplanType) {
+        // Το επίπεδο ακινήτου γεννήθηκε ήδη δεμένο· δεύτερη εγγραφή θα ξανάγραφε τον όροφό του
+        // με τον όροφο του βήματος 4 (για πολυεπίπεδη μονάδα: λάθος όροφος).
+        if (floorplanType && !propertyBinding) {
           void updateLevelContext(targetLevelId, {
             floorplanType,
             entityLabel: meta.entityLabel,

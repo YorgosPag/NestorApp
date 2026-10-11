@@ -149,15 +149,17 @@ async function runImportComplete(meta: WizardCompleteMeta): Promise<{
   active: Level;
   captured: CapturedContext[];
   targetLevelId: string | null;
+  addLevel: jest.Mock;
 }> {
   const active = activeLevelOfBuildingA();
   const captured: CapturedContext[] = [];
   let targetLevelId: string | null = null;
+  const addLevel = jest.fn(async () => 'lvl_new-0000-0000-0000-000000000002');
 
   const deps: FloorplanImportCompleteDeps = {
     resolver: {
       levels: [active],
-      addLevel: jest.fn(async () => 'lvl_new-0000-0000-0000-000000000002'),
+      addLevel,
       linkLevelToFloor: jest.fn(async () => undefined),
     },
     currentLevelId: active.id,
@@ -176,7 +178,7 @@ async function runImportComplete(meta: WizardCompleteMeta): Promise<{
   await act(async () => {
     await result.current(new File(['0'], 'katopsi.dxf'), meta);
   });
-  return { active, captured, targetLevelId };
+  return { active, captured, targetLevelId, addLevel };
 }
 
 /** Η επιλογή «μονάδα του ορόφου B1, στο κτήριο Β» — όπως τη στέλνει ο οδηγός. */
@@ -193,29 +195,35 @@ const UNIT_SELECTION_IN_BUILDING_B: WizardCompleteMeta = {
 };
 
 describe('Κ2 — 🔴 ο ΠΑΡΑΓΩΓΟΣ: τι γράφει ο εισαγωγέας όταν ο άνθρωπος διαλέγει μονάδα', () => {
+  // ADR-914 §2.13 — η κάτοψη ακινήτου είναι ΔΙΚΗ ΤΗΣ όψη: γεννιέται ως δικό της επίπεδο, με όλη
+  // τη δέσμευση στο ΕΝΑ αίτημα δημιουργίας. Το ανοιχτό επίπεδο (όροφος άλλου κτηρίου) δεν αγγίζεται.
   it('ΔΕΝ αφήνει το επίπεδο να δηλώνει κτήριο ξένο προς τον όροφό του', async () => {
-    const { active, captured } = await runImportComplete(UNIT_SELECTION_IN_BUILDING_B);
+    const { addLevel } = await runImportComplete(UNIT_SELECTION_IN_BUILDING_B);
 
-    expect(captured).toHaveLength(1);
-    const after = levelAfterPatch(active, captured[0].context);
-
-    // Ο όροφος του επιπέδου μετά την εισαγωγή — και το κτήριο που τον περιέχει.
-    const owner = after.floorId ? FLOOR_OWNER[after.floorId] : null;
-    const verdict = checkLevelBuildingScope(after, owner);
+    expect(addLevel).toHaveBeenCalledTimes(1);
+    const [, , floorId, birth] = addLevel.mock.calls[0] as unknown as [string, boolean, string, { buildingId?: string }];
+    const verdict = checkLevelBuildingScope({ floorId, buildingId: birth.buildingId }, FLOOR_OWNER[floorId]);
 
     expect(verdict.status).not.toBe('foreign-building');
   });
 
   it('ο όροφος που διάλεξε ο άνθρωπος ΦΤΑΝΕΙ στο επίπεδο — δεν πετιέται στον δρόμο', async () => {
-    const { active, captured } = await runImportComplete(UNIT_SELECTION_IN_BUILDING_B);
-    const after = levelAfterPatch(active, captured[0].context);
+    const { addLevel, targetLevelId } = await runImportComplete(UNIT_SELECTION_IN_BUILDING_B);
+    const [, , floorId, birth] = addLevel.mock.calls[0] as unknown as [
+      string, boolean, string, { buildingId?: string; propertyId?: string; floorplanType?: string },
+    ];
 
-    // 🔑 Ο ΣΩΣΤΟΣ όροφος γράφεται ήδη στο ΑΡΧΕΙΟ (`linkedTo`) από το `uploadConfig`.
-    // Αν δεν φτάσει και εδώ, το επίπεδο κρατά τον όροφο του ΠΡΟΗΓΟΥΜΕΝΟΥ κτηρίου —
-    // και κάθε BIM οντότητα που θα σχεδιαστεί πάνω του (ADR-420: `floorId` = το
-    // κλειδί εμβέλειας) γράφεται σε **ξένο κτήριο**.
-    expect(after.floorId).toBe(FLOOR_B1);
-    expect(after.buildingId).toBe(BLDG_B);
+    // 🔑 Ο όροφος είναι το κλειδί εμβέλειας των BIM οντοτήτων (ADR-420)· ο κάτοχος είναι το ακίνητο.
+    expect(floorId).toBe(FLOOR_B1);
+    expect(birth).toMatchObject({
+      buildingId: BLDG_B, propertyId: UNIT_SELECTION_IN_BUILDING_B.entityId, floorplanType: 'unit',
+    });
+    expect(targetLevelId).toBe('lvl_new-0000-0000-0000-000000000002');
+  });
+
+  it('🔑 η εισαγωγή κάτοψης ακινήτου ΔΕΝ γράφει πάνω σε επίπεδο ορόφου — καμία δεύτερη εγγραφή', async () => {
+    const { captured } = await runImportComplete(UNIT_SELECTION_IN_BUILDING_B);
+    expect(captured).toEqual([]);
   });
 
   it('η γενική κάτοψη ΚΤΗΡΙΟΥ δεν κληρονομεί σιωπηλά τον όροφο του προηγούμενου', async () => {

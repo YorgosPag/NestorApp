@@ -35,6 +35,10 @@ export interface DualWriteContext {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
+  /** ADR-914 §2.12 — το ακίνητο-κάτοχος (`entityType: 'property'`). */
+  propertyId?: string;
+  /** ADR-914 §2.12 — ο όροφος που απεικονίζει μια κάτοψη ακινήτου (ADR-236)· WRITE-ONCE. */
+  levelFloorId?: string;
   entityType?: CadLinkableEntityType;
   filesCategory?: 'drawings' | 'floorplans';
   purpose?: string;
@@ -90,7 +94,9 @@ function resolveEntityId(
     return context?.floorId ?? 'standalone';
   }
   if (entityType === 'property') {
-    return context?.floorId ?? context?.buildingId ?? 'standalone';
+    // ADR-914 §2.12 — κάτοχος είναι το ΑΚΙΝΗΤΟ. Ο όροφος/κτήριο μένουν μόνο ως εφεδρεία για
+    // καλούντες που δεν στέλνουν ακόμη `propertyId` (η προηγούμενη συμπεριφορά, αυτούσια).
+    return context?.propertyId ?? context?.floorId ?? context?.buildingId ?? 'standalone';
   }
   return context?.buildingId ?? 'standalone';
 }
@@ -179,6 +185,8 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
         entityType: resolvedEntityType,
         entityId: resolvedEntityId,
       } : {}),
+      // ADR-914 §2.12 — ταυτότητα θέσης όπως το `entityId`: γράφεται ΜΙΑ φορά, στη γέννηση.
+      ...(isCreate && context?.levelFloorId ? { levelFloorId: context.levelFloorId } : {}),
       domain: 'construction' as const,
       // category: only write if explicitly provided — prevents overwriting 'floorplans' with
       // 'drawings' default on DXF Viewer auto-save (would hide file from FloorplanGallery query)

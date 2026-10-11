@@ -16,6 +16,16 @@ export interface DxfSaveContext {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
+  /**
+   * ADR-914 §2.12 — το **ακίνητο** που κατέχει το αρχείο (`entityType: 'property'`). Χωρίς αυτό ο
+   * διακομιστής δεν είχε από πού να μάθει τον κάτοχο και έγραφε τον **όροφο** ως `entityId`.
+   */
+  propertyId?: string;
+  /**
+   * ADR-914 §2.12 — ο όροφος που **απεικονίζει** μια κάτοψη ακινήτου (ADR-236): για πολυεπίπεδη
+   * μονάδα, ο όροφος του επιπέδου της. Η καρτέλα κατόψεων του ακινήτου φιλτράρει με αυτό.
+   */
+  levelFloorId?: string;
   createdBy?: string;
   /** 🏢 ENTERPRISE: Canonical scene path (derived from FileRecord storagePath) */
   canonicalScenePath?: string;

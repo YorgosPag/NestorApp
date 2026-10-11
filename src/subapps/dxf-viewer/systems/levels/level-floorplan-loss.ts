@@ -54,6 +54,8 @@ export interface FloorplanBearingLevel {
   readonly id: string;
   readonly sceneFileId?: string | null;
   readonly floorId?: string | null;
+  /** ADR-914 — κάτοψη **ακινήτου**: μοιράζεται τον όροφο χωρίς να είναι η κάτοψή του. */
+  readonly propertyId?: string | null;
 }
 
 /**
@@ -75,10 +77,14 @@ export function didLevelLoseItsFloorplan(
   notice: TrashedFileNotice,
 ): boolean {
   const matchByFile = !!level.sceneFileId && level.sceneFileId === notice.fileId;
+  // ADR-914 §2.10 — μια κάτοψη ΑΚΙΝΗΤΟΥ μοιράζεται τον `floorId` του ορόφου της (κλειδί εμβέλειας
+  // του BIM), αλλά το αρχείο της ανήκει στο ακίνητο: η διαγραφή της κάτοψης του ΟΡΟΦΟΥ δεν την
+  // αφορά. Χάνει τη δική της μόνο μέσω του `matchByFile`.
   const matchByFloor =
     notice.entityType === 'floor' &&
     !!notice.entityId &&
     !!level.floorId &&
+    !level.propertyId &&
     level.floorId === notice.entityId;
 
   return matchByFile || matchByFloor;

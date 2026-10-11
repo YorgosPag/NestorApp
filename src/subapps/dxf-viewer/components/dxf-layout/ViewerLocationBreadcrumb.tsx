@@ -19,7 +19,7 @@
  * τρέχουν οι σελίδες «Κτίρια» και «Διαχείριση Ακινήτων» (ADR-016):
  * - **ιεραρχία** → {@link useBreadcrumbSync} (`type: 'property'` ή `'building'`)
  * - **απόδοση**  → {@link NavigationBreadcrumb}
- * - **ποιο κτίριο** → {@link useActiveBuildingId} (ADR-845 §7.15)
+ * - **ποιο κτίριο** → το κτίριο του ΑΝΟΙΧΤΟΥ επιπέδου ({@link resolveBuildingIdForLevel}, ADR-914)
  *
  * ## Γιατί ο έλεγχος «το context λέει ό,τι ζήτησα»
  * Το `NavigationContext` είναι καθολικό: όσο τρέχει το αίτημα κρατά ακόμη την προηγούμενη
@@ -38,7 +38,7 @@ import {
 } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLevels } from '../../systems/levels';
-import { useActiveBuildingId } from '../../systems/levels/hooks/useActiveBuildingId';
+import { resolveBuildingIdForLevel } from '../../systems/levels/building-foundation-level';
 import { useUniversalSelection } from '../../systems/selection';
 
 /** Το ακίνητο της επιλεγμένης περιοχής — ή `null` αν δεν υπάρχει τέτοια σύνδεση. */
@@ -53,7 +53,10 @@ function useSelectedPropertyEntity(): BreadcrumbEntity | null {
 /** Το κτίριο που δουλεύουμε — ή `null` όσο δεν είναι γνωστό το ίδιο ή το έργο του. */
 function useActiveBuildingEntity(): BreadcrumbEntity | null {
   const { levels, currentLevelId } = useLevels();
-  const buildingId = useActiveBuildingId(levels, currentLevelId);
+  // ADR-914 — «πού βρίσκομαι» = το κτίριο του ΑΝΟΙΧΤΟΥ επιπέδου, και τίποτα άλλο. Το
+  // `useActiveBuildingId` πέφτει σε «οποιοδήποτε κτίριο» όταν το ανοιχτό επίπεδο δεν έχει δικό
+  // του — σωστό για τη σειρά των επιπέδων, ψευδές εδώ: ένα πρόχειρο έδειχνε ότι ανήκει σε κτίριο.
+  const buildingId = resolveBuildingIdForLevel(levels, currentLevelId);
   const { getBuildingById } = useNavigation();
   const building = buildingId ? getBuildingById(buildingId) : undefined;
   if (!building?.projectId) return null;

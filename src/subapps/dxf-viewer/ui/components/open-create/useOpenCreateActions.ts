@@ -17,7 +17,10 @@ import type { WizardCompleteMeta } from '@/features/floorplan-import';
 import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useLevels } from '../../../systems/levels';
 import { commitImportedScene } from '../../../systems/levels/commit-imported-scene';
-import { provisionLevelForBinding } from '../../../systems/levels/level-provision';
+import { provisionLevelForBinding, type LevelProvisioner } from '../../../systems/levels/level-provision';
+import { levelFromServerDocument } from '../../../systems/levels/utils';
+import { listDxfLevelsWithPolicy } from '@/services/dxf-level-mutation-gateway';
+import type { Level } from '../../../systems/levels/config';
 import type { OpenCreateAvailability } from './open-create-cards';
 import { wizardMetaToBinding } from './wizard-meta-binding';
 
@@ -30,28 +33,32 @@ export interface CreatedLevelRef {
 interface UseOpenCreateActionsParams {
   /** `true` όταν ο host μπορεί να παραλάβει εισαγόμενη σκηνή (`onSceneImported`). */
   readonly canImportFloorplan: boolean;
-  /** Καλείται μόλις γεννηθεί πρόχειρο — ο host ανοίγει άμεση μετονομασία. */
-  readonly onDraftCreated?: (level: CreatedLevelRef) => void;
 }
 
 export interface OpenCreateActions {
   readonly availability: OpenCreateAvailability;
-  readonly createDraft: () => Promise<void>;
+  /** Το πρόχειρο που γεννήθηκε και άνοιξε· `null` όταν δεν γεννήθηκε (το σφάλμα έχει ήδη αναφερθεί). */
+  readonly createDraft: () => Promise<CreatedLevelRef | null>;
   /** Πετά όταν η κάτοψη δεν δημιουργήθηκε — ο οδηγός το δείχνει και μένει ανοιχτός. */
   readonly createForSelection: (meta: WizardCompleteMeta) => Promise<void>;
   /** Πετά όταν το αρχείο δεν διαβάζεται — ο οδηγός το σημαδεύει ως κατεστραμμένο. */
   readonly loadFromStorage: (fileId: string) => Promise<void>;
 }
 
+/** Τα επίπεδα της εμβέλειας όπως τα ξέρει ο διακομιστής (ADR-914 §2.11). */
+async function loadServerScopeLevels(buildingId: string | null): Promise<Level[]> {
+  return (await listDxfLevelsWithPolicy(buildingId)).map(levelFromServerDocument);
+}
+
 export function useOpenCreateActions({
   canImportFloorplan,
-  onDraftCreated,
 }: UseOpenCreateActionsParams): OpenCreateActions {
   const { t } = useTranslation('dxf-viewer-panels');
   const {
     levels,
     currentLevelId,
     addLevel,
+    adoptLevel,
     setCurrentLevel,
     getLevelScene,
     setLevelScene,
@@ -72,25 +79,32 @@ export function useOpenCreateActions({
     [currentLevelId, currentLevel, canImportFloorplan],
   );
 
+  // Από εδώ γεννιούνται επίπεδα ΕΞΩ από το κτήριο της συνεδρίας (πρόχειρο, έργο, άλλο κτήριο):
+  // ο provisioner ρωτά τον διακομιστή για την εμβέλεια της δέσμευσης, όχι τη στενεμένη λίστα.
+  const provisioner = useMemo<LevelProvisioner>(
+    () => ({ levels, addLevel, adoptLevel, loadScopeLevels: loadServerScopeLevels }),
+    [levels, addLevel, adoptLevel],
+  );
+
   const createDraft = useCallback(async () => {
     const { levelId, name } = await provisionLevelForBinding(
-      { levels, addLevel },
+      provisioner,
       { kind: 'draft', label: t('panels.openCreate.draftName') },
     );
-    if (!levelId || !name) return;
+    if (!levelId || !name) return null;
     setCurrentLevel(levelId);
-    onDraftCreated?.({ id: levelId, name });
-  }, [levels, addLevel, setCurrentLevel, onDraftCreated, t]);
+    return { id: levelId, name };
+  }, [provisioner, setCurrentLevel, t]);
 
   const createForSelection = useCallback(
     async (meta: WizardCompleteMeta) => {
       const binding = wizardMetaToBinding(meta, t('panels.openCreate.fallbackLabel'));
       if (!binding) throw new Error('open-create: selection has no provisionable owner');
-      const { levelId } = await provisionLevelForBinding({ levels, addLevel }, binding);
+      const { levelId } = await provisionLevelForBinding(provisioner, binding);
       if (!levelId) throw new Error('open-create: level was not created');
       setCurrentLevel(levelId);
     },
-    [levels, addLevel, setCurrentLevel, t],
+    [provisioner, setCurrentLevel, t],
   );
 
   const loadFromStorage = useCallback(

@@ -12,7 +12,7 @@
  * @module subapps/dxf-viewer/ui/components/open-create/OpenCreateLauncher
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { FolderPlus } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
@@ -55,27 +55,67 @@ export function OpenCreateLauncher({ onImportComplete, onDraftCreated }: OpenCre
   });
 
   const mesh3d = useMesh3dImport();
-  const actions = useOpenCreateActions({
-    canImportFloorplan: !!onImportComplete,
-    onDraftCreated,
-  });
+  const actions = useOpenCreateActions({ canImportFloorplan: !!onImportComplete });
+  const [creatingDraft, setCreatingDraft] = useState(false);
 
   const closeWizard = useCallback(() => setWizard((prev) => ({ ...prev, open: false })), []);
 
+  // Όταν το παράθυρο κλείνει ΕΠΕΙΔΗ επιλέχθηκε ενέργεια, η εστίαση ανήκει σε ό,τι ανοίγει εκείνη
+  // (το πεδίο μετονομασίας του νέου πρόχειρου, ο οδηγός) — όχι πίσω στο κουμπί. Με Esc/✕ η
+  // εστίαση γυρίζει κανονικά στο κουμπί (προεπιλογή Radix).
+  const closedByActionRef = useRef(false);
+  const closeForAction = useCallback(() => {
+    closedByActionRef.current = true;
+    setDialogOpen(false);
+  }, []);
+  // Το πρόχειρο που περιμένει να ονομαστεί μόλις το παράθυρο ΑΦΗΣΕΙ την εστίαση.
+  const draftAwaitingNameRef = useRef<CreatedLevelRef | null>(null);
+  const handleCloseAutoFocus = useCallback(
+    (event: Event) => {
+      if (!closedByActionRef.current) return;
+      closedByActionRef.current = false;
+      event.preventDefault();
+      // 🔑 Η μετονομασία ανοίγει ΕΔΩ, όχι μαζί με το κλείσιμο (μετρημένο σε Chrome 2026-10-11): όσο
+      // το παράθυρο είναι προσαρτημένο, η παγίδα εστίασης του Radix παίρνει πίσω την εστίαση από
+      // το πεδίο που μόλις εμφανίστηκε, το πεδίο χάνει την εστίαση και η μετονομασία κλείνει πριν
+      // ο άνθρωπος πληκτρολογήσει. Το `onCloseAutoFocus` είναι η στιγμή που το Radix ρωτά «πού
+      // πάει η εστίαση τώρα;» — και η απάντηση είναι το πεδίο.
+      const draft = draftAwaitingNameRef.current;
+      draftAwaitingNameRef.current = null;
+      if (draft) onDraftCreated?.(draft);
+    },
+    [onDraftCreated],
+  );
+
+  // Το πρόχειρο γεννιέται με το παράθυρο ΑΝΟΙΧΤΟ: ό,τι πληκτρολογήσει ο άνθρωπος όσο απαντά ο
+  // διακομιστής μένει μέσα στο παράθυρο, δεν πάει στις συντομεύσεις του καμβά (ADR-914 §2.9).
+  const createDraft = useCallback(async () => {
+    setCreatingDraft(true);
+    try {
+      const draft = await actions.createDraft();
+      if (!draft) return;
+      draftAwaitingNameRef.current = draft;
+      closeForAction();
+    } finally {
+      setCreatingDraft(false);
+    }
+  }, [actions, closeForAction]);
+
   const handleAction = useCallback(
     (kind: OpenCreateActionKind) => {
-      setDialogOpen(false);
       const wizardMode = WIZARD_MODE_BY_ACTION[kind];
       if (wizardMode) {
+        closeForAction();
         setWizard({ open: true, mode: wizardMode });
       } else if (kind === 'importMesh3d') {
+        closeForAction();
         // Μέσα στη χειρονομία του χρήστη: ο browser ανοίγει επιλογέα αρχείων μόνο από κλικ.
         mesh3d.openPicker();
       } else {
-        void actions.createDraft();
+        void createDraft();
       }
     },
-    [mesh3d, actions],
+    [mesh3d, closeForAction, createDraft],
   );
 
   const handleImportComplete = useCallback(
@@ -98,6 +138,8 @@ export function OpenCreateLauncher({ onImportComplete, onDraftCreated }: OpenCre
         onOpenChange={setDialogOpen}
         availability={actions.availability}
         onAction={handleAction}
+        busy={creatingDraft}
+        onCloseAutoFocus={handleCloseAutoFocus}
       />
 
       <FloorplanImportWizard

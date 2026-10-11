@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Level,
   FloorplanDoc,
@@ -24,6 +24,8 @@ import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 // levels sync (top-level DXF viewer provider), tenant-gated by the same claims.
 import { useDimStylesFirestoreSync } from '../dimensions/hooks/useDimStylesFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
+import { useLevelOverlay } from './hooks/useLevelOverlay';
+import { resolveSubscriptionBuildingScope } from './level-floor-resolution';
 import { useLevelFloorplanOperations } from './hooks/useLevelFloorplanOperations';
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useLevelImportWizardOps } from './hooks/useLevelImportWizardOps';
@@ -62,7 +64,11 @@ function useLevelsSystemState({
   onFloorplanRemove,
   onError,
 }: Omit<LevelsSystemProps, 'children'>): LevelsHookReturn {
-  const [levels, setLevels] = useState<Level[]>(initialLevels);
+  // Η λίστα της συνδρομής (ή του in-memory συστήματος) — η ΜΙΑ πηγή αλήθειας.
+  const [baseLevels, setLevels] = useState<Level[]>(initialLevels);
+  // ADR-914 §2.9 — από πάνω της, ό,τι επιβεβαίωσε ο διακομιστής και δεν έχει αντηχήσει ακόμη.
+  // Κάθε καταναλωτής παρακάτω βλέπει ΑΥΤΗ τη λίστα· η συνδρομή γράφει μόνο στη βάση.
+  const { levels, actions: levelOverlay } = useLevelOverlay(baseLevels);
   const [currentLevelId, setCurrentLevelId] = useState<string | null>(initialCurrentLevelId);
   const [floorplans, setFloorplans] = useState<Record<string, FloorplanDoc>>(initialFloorplans);
   const [importWizard, setImportWizard] = useState<ImportWizardState>(DEFAULT_IMPORT_WIZARD_STATE);
@@ -125,9 +131,16 @@ function useLevelsSystemState({
   // ανοιχτό κτήριο κλειδώνει τον μηχανικό μέσα του (η λίστα αδειάζει από τα άλλα
   // πριν προλάβει να μεταβεί). Το `useActiveBuildingId` γράφει τη λυμένη τιμή στη
   // διεύθυνση, οπότε το **επόμενο** φόρτωμα ξέρει — χωρίς να παγιδεύει το τωρινό.
-  const [declaredBuildingId] = useState<string | null>(() =>
+  const [declaredBuildingId, setDeclaredBuildingId] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : readActiveBuildingFromUrl(),
   );
+  // ADR-914 §2.9 — η εμβέλεια περιέχει ΠΑΝΤΑ το ανοιχτό επίπεδο. Το μόνο που μπορεί να βρεθεί
+  // έξω της είναι επίπεδο που γέννησε αυτή η συνεδρία (πρόχειρο, κάτοψη άλλου κτηρίου): χωρίς
+  // αυτό η συνδρομή δεν θα το έφερνε ποτέ. Δεν στενεύει — μόνο ακολουθεί προς τα έξω.
+  const subscriptionBuildingId = resolveSubscriptionBuildingScope(declaredBuildingId, levels, currentLevelId);
+  useEffect(() => {
+    if (subscriptionBuildingId !== declaredBuildingId) setDeclaredBuildingId(subscriptionBuildingId);
+  }, [subscriptionBuildingId, declaredBuildingId]);
 
   useLevelsFirestoreSync({
     enableFirestore,
@@ -137,6 +150,7 @@ function useLevelsSystemState({
     userId,
     isSuperAdmin,
     activeBuildingId: declaredBuildingId,
+    isAwaitingEcho: levelOverlay.isAwaitingEcho,
     setLevels,
     setCurrentLevelId,
     setIsLoading,
@@ -159,6 +173,7 @@ function useLevelsSystemState({
   const levelOps = useLevelOperations({
     levels,
     setLevels,
+    overlay: levelOverlay,
     currentLevelId,
     setCurrentLevelId,
     setFloorplans,

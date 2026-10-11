@@ -2,7 +2,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
-import { LevelOperations, FloorplanOperations, levelBirthFields } from '../utils';
+import { LevelOperations, FloorplanOperations, buildNewLevel, levelBirthFields } from '../utils';
+import type { LevelOverlayActions } from './useLevelOverlay';
 import {
   createDxfLevelWithPolicy,
   updateDxfLevelWithPolicy,
@@ -17,6 +18,11 @@ type SceneManager = ReturnType<typeof useAutoSaveSceneManager>;
 interface UseLevelOperationsParams {
   levels: Level[];
   setLevels: React.Dispatch<React.SetStateAction<Level[]>>;
+  /**
+   * ADR-914 §2.9 — το στρώμα πάνω στη λίστα της συνδρομής: ό,τι επιβεβαίωσε ο διακομιστής
+   * φαίνεται αμέσως, χωρίς να περιμένει την ηχώ. Στο in-memory σύστημα δεν χρησιμοποιείται.
+   */
+  overlay: LevelOverlayActions;
   currentLevelId: string | null;
   setCurrentLevelId: (levelId: string | null) => void;
   setFloorplans: React.Dispatch<React.SetStateAction<Record<string, FloorplanDoc>>>;
@@ -51,6 +57,12 @@ export interface LevelContextUpdate {
 export interface UseLevelOperationsResult {
   /** ADR-914: το 4ο όρισμα γράφει την υπόλοιπη δέσμευση στην ΙΔΙΑ εγγραφή με τη γέννηση. */
   addLevel: AddLevel;
+  /**
+   * ADR-914 §2.11 — «αυτό το επίπεδο ΥΠΑΡΧΕΙ στον διακομιστή, αλλά η συνδρομή αυτής της
+   * συνεδρίας δεν το έχει φέρει» (βρέθηκε έξω από τη στενεμένη λίστα). Μπαίνει στη λίστα ώστε να
+   * μπορεί να ανοίξει· η εμβέλεια το ακολουθεί και η ηχώ το αντικαθιστά.
+   */
+  adoptLevel: (level: Level) => void;
   removeLevel: (levelId: string) => Promise<void>;
   deleteLevel: (levelId: string) => Promise<void>;
   clearAllLevels: () => Promise<void>;
@@ -83,6 +95,7 @@ export interface UseLevelOperationsResult {
 export function useLevelOperations({
   levels,
   setLevels,
+  overlay,
   currentLevelId,
   setCurrentLevelId,
   setFloorplans,
@@ -121,10 +134,11 @@ export function useLevelOperations({
         if (enableFirestore) {
           // 🏢 ENTERPRISE (ADR-286): Route creation through centralized API
           // → /api/dxf-levels → createEntity('dxfLevel', …) → audit + enterprise ID + tenancy
+          const order = levels.length;
           const response = await createDxfLevelWithPolicy<DxfLevelCreateResponse>({
             payload: {
               name,
-              order: levels.length,
+              order,
               isDefault: setAsDefault,
               visible: true,
               ...(floorId ? { floorId } : {}),
@@ -138,6 +152,12 @@ export function useLevelOperations({
             handleError('Failed to add level to Firestore');
             return null;
           }
+
+          // ADR-914 §2.9 — το επίπεδο ΥΠΑΡΧΕΙ (ο διακομιστής απάντησε): μπαίνει στη λίστα τώρα,
+          // όχι όταν φτάσει η ηχώ της συνδρομής. Ίδια πεδία με το σώμα του αιτήματος.
+          overlay.registerBorn(
+            buildNewLevel({ id: enterpriseId, name, order, isDefault: setAsDefault, floorId, birth }),
+          );
 
           if (setAsDefault || settings.autoSelectNewLevel) {
             setCurrentLevelId(enterpriseId);
@@ -167,8 +187,10 @@ export function useLevelOperations({
         setIsLoading(false);
       }
     },
-    [levels, enableFirestore, settings.autoSelectNewLevel, handleError, onLevelChange, setIsLoading, setLevels, setCurrentLevelId]
+    [levels, enableFirestore, settings.autoSelectNewLevel, handleError, onLevelChange, setIsLoading, setLevels, setCurrentLevelId, overlay]
   );
+
+  const adoptLevel = useCallback((level: Level) => overlay.registerBorn(level), [overlay]);
 
   const removeLevel = useCallback(
     async (levelId: string): Promise<void> => {
@@ -179,6 +201,7 @@ export function useLevelOperations({
         if (enableFirestore) {
           // 🏢 ENTERPRISE (ADR-286): Route delete through gateway → /api/dxf-levels DELETE
           await deleteDxfLevelWithPolicy({ levelId });
+          overlay.forget(levelId);
         } else {
           setLevels(prev => LevelOperations.removeLevel(prev, levelId));
         }
@@ -197,7 +220,7 @@ export function useLevelOperations({
         setIsLoading(false);
       }
     },
-    [levels, currentLevelId, enableFirestore, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]
+    [levels, currentLevelId, enableFirestore, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId, overlay]
   );
 
   const deleteLevel = useCallback(
@@ -264,8 +287,15 @@ export function useLevelOperations({
         }
 
         if (enableFirestore) {
-          // 🏢 ENTERPRISE (ADR-286): Route rename through gateway → /api/dxf-levels PATCH
-          await updateDxfLevelWithPolicy({ payload: { levelId, name } });
+          // ADR-914 §2.9 — το νέο όνομα φαίνεται ΑΜΕΣΩΣ· αν η εγγραφή αποτύχει, αποσύρεται.
+          overlay.patch(levelId, { name });
+          try {
+            // 🏢 ENTERPRISE (ADR-286): Route rename through gateway → /api/dxf-levels PATCH
+            await updateDxfLevelWithPolicy({ payload: { levelId, name } });
+          } catch (renameErr) {
+            overlay.revertPatch(levelId, { name });
+            throw renameErr;
+          }
           // ADR-451 — A Level is a PROJECTION of the Floor SSoT. Propagate the
           // rename to the linked building floor through the SAME /api/floors API so
           // the name stays consistent across the «Όροφοι» tab and the viewer. The
@@ -286,7 +316,7 @@ export function useLevelOperations({
         handleError(getErrorMessage(err, 'Failed to rename level'));
       }
     },
-    [levels, enableFirestore, handleError, setLevels]
+    [levels, enableFirestore, handleError, setLevels, overlay]
   );
 
   const setCurrentLevel = useCallback(
@@ -407,6 +437,7 @@ export function useLevelOperations({
   return useMemo<UseLevelOperationsResult>(
     () => ({
       addLevel,
+      adoptLevel,
       removeLevel,
       deleteLevel,
       clearAllLevels,
@@ -420,7 +451,7 @@ export function useLevelOperations({
       updateLevelContext,
     }),
     [
-      addLevel, removeLevel, deleteLevel, clearAllLevels, reorderLevels, renameLevel,
+      addLevel, adoptLevel, removeLevel, deleteLevel, clearAllLevels, reorderLevels, renameLevel,
       setCurrentLevel, toggleLevelVisibility, setDefaultLevel, duplicateLevel,
       linkLevelToFloor, updateLevelContext,
     ],

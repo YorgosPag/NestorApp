@@ -57,7 +57,6 @@
       "noFloorLinked": "Χωρίς σύνδεση ορόφου",
       "selectFloorPlaceholder": "-- Επιλέξτε όροφο --",
       "noBuildingSelected": "Επιλέξτε κτίριο στην Ιεραρχία",
-      "loadFromStorage": "Φόρτωση από αποθήκη",
       "storagePicker": {
         "title": "Αποθηκευμένες Κατόψεις",
         "empty": "Δεν βρέθηκαν αποθηκευμένες κατόψεις",

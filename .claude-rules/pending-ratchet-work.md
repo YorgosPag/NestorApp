@@ -2,6 +2,13 @@
 
 **STATUS: ACTIVE**
 
+- ✅ **11/10 — ΟΙ AGGREGATORS «ΟΛΟΙ ΟΙ ΟΡΟΦΟΙ»: ΤΟ ΦΟΡΤΩΜΑ ΣΤΙΓΜΙΟΤΥΠΩΝ ΣΕ ΕΞΙ ΑΝΤΙΓΡΑΦΑ — ΕΚΛΕΙΣΕ** *(ADR-914 §2.14, εντολή Giorgio «προχώρα»)*
+
+  Άνοιξε και έκλεισε την ίδια μέρα: το commit της v1.2 του ADR-914 μπλόκαρε στο CHECK 3.28 (16 κλώνοι ανάμεσα στα έξι
+  `hooks/data/` aggregators). Ένας φορτωτής `useFloorSceneSnapshots` + `floor-scoped-scene-loader` +
+  `useBuildingFloorLevels` + `createFloorStackElevationResolver`· `jscpd:diff` **16 → 0**, 5 suites / 43 tests πράσινα.
+  **Υπόλοιπο** (ADR-914 §8.11): τέσσερις από τους έξι δεν έχουν δική τους σουίτα, και `tsc` δεν έτρεξε (N.17).
+
 - 🟡 **10/10 — ΟΙ ΠΥΛΕΣ «ΕΝΑΣ ΓΡΑΦΕΑΣ» ΚΟΥΒΑΛΟΥΝ ΕΞΙ ΑΝΤΙΓΡΑΦΑ ΤΩΝ ΙΔΙΩΝ ΕΡΓΑΛΕΙΩΝ AST** *(ADR-910, εύρημα κατά τη συγγραφή της CHECK 3.102)*
 
   **Τι**: `sourceFileOf` · `chainNodes` · `exemptionAbove` (και, στις περισσότερες, `isCreation` / `classifyByExemption`)

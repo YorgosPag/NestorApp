@@ -32,6 +32,7 @@
 import {
   resolveActiveBuildingId,
   resolveActiveProjectId,
+  resolveSubscriptionBuildingScope,
   resolveUrlBuildingId,
 } from '../level-floor-resolution';
 import type { Level } from '../config';
@@ -122,5 +123,33 @@ describe('Ε4 — η ΔΙΕΥΘΥΝΣΗ μαθαίνει μόνο από το α
     expect(resolveUrlBuildingId([draft, storey], null)).toBeUndefined();
     expect(resolveUrlBuildingId([], 'lvl_not_loaded_yet')).toBeUndefined();
     expect(resolveUrlBuildingId(null, 'lvl_draft')).toBeUndefined();
+  });
+});
+
+describe('Ε5 — η ΣΥΝΔΡΟΜΗ περιέχει πάντα το ανοιχτό επίπεδο (ADR-914 §2.9)', () => {
+  const draft = { id: 'lvl_draft', name: 'Πρόχειρο 1', order: 9, isDefault: false, visible: true } as Level;
+  const inA = { ...draft, id: 'lvl_a', name: 'Ισόγειο', buildingId: 'bldg_A' } as Level;
+  const inB = { ...draft, id: 'lvl_b', name: 'Γενική κάτοψη', buildingId: 'bldg_B' } as Level;
+
+  it('ανοιχτό επίπεδο ΜΕΣΑ στην εμβέλεια ⇒ η εμβέλεια μένει', () => {
+    expect(resolveSubscriptionBuildingScope('bldg_A', [inA, draft], 'lvl_a')).toBe('bldg_A');
+  });
+
+  it('🔑 ΠΡΟΧΕΙΡΟ που γεννήθηκε σε στενεμένη συνεδρία ⇒ καμία εμβέλεια: αλλιώς δεν θα ερχόταν ποτέ', () => {
+    expect(resolveSubscriptionBuildingScope('bldg_A', [inA, draft], 'lvl_draft')).toBeNull();
+  });
+
+  it('κάτοψη ΑΛΛΟΥ κτηρίου ⇒ η εμβέλεια το ακολουθεί', () => {
+    expect(resolveSubscriptionBuildingScope('bldg_A', [inA, inB], 'lvl_b')).toBe('bldg_B');
+  });
+
+  it('χωρίς εμβέλεια δεν ΣΤΕΝΕΥΕΙ ποτέ — ο μηχανικός δεν κλειδώνεται στο ανοιχτό κτήριο', () => {
+    expect(resolveSubscriptionBuildingScope(null, [inA, inB], 'lvl_a')).toBeNull();
+  });
+
+  it('άγνωστο ή κανένα ανοιχτό επίπεδο ⇒ η εμβέλεια μένει ως έχει', () => {
+    expect(resolveSubscriptionBuildingScope('bldg_A', [inA], null)).toBe('bldg_A');
+    expect(resolveSubscriptionBuildingScope('bldg_A', [inA], 'lvl_not_loaded_yet')).toBe('bldg_A');
+    expect(resolveSubscriptionBuildingScope('bldg_A', null, 'lvl_a')).toBe('bldg_A');
   });
 });

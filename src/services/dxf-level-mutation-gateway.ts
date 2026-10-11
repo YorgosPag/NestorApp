@@ -12,6 +12,7 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import type { DxfLevelDocument, DxfLevelsListResponse } from '@/app/api/dxf-levels/dxf-levels.types';
 
 export interface DxfLevelMutationResponse {
   success: boolean;
@@ -31,6 +32,20 @@ interface UpdateDxfLevelWithPolicyInput {
 
 interface DeleteDxfLevelWithPolicyInput {
   readonly levelId: string;
+}
+
+/**
+ * Τα επίπεδα όπως τα ξέρει ο **διακομιστής**, μέσα σε μια εμβέλεια: ενός κτηρίου, ή — χωρίς
+ * κτήριο — όλου του μισθωτή. Είναι η ίδια εμβέλεια στην οποία ο διακομιστής κρίνει τη
+ * μοναδικότητα ονόματος (ADR-845 §7.15), άρα ό,τι ρωτά ένας γραφέας **πριν** δημιουργήσει
+ * (ADR-914 §2.11). Αποτυχία ⇒ πετά· ο καλών αποφασίζει αν συνεχίζει με ό,τι έχει.
+ */
+export async function listDxfLevelsWithPolicy(buildingId?: string | null): Promise<DxfLevelDocument[]> {
+  const url = buildingId
+    ? `${API_ROUTES.DXF_LEVELS.LIST}?buildingId=${encodeURIComponent(buildingId)}`
+    : API_ROUTES.DXF_LEVELS.LIST;
+  const response = await apiClient.get<DxfLevelsListResponse>(url);
+  return response?.success ? response.levels : [];
 }
 
 export async function createDxfLevelWithPolicy<T = DxfLevelMutationResponse>({

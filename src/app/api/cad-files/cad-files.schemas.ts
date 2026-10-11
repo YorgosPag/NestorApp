@@ -31,6 +31,9 @@ const FilesContextSchema = z
     projectId: z.string().max(128).optional(),
     buildingId: z.string().max(128).optional(),
     floorId: z.string().max(128).optional(),
+    // ADR-914 §2.12 — ο κάτοχος μιας κάτοψης ακινήτου, και ο όροφος που απεικονίζει (ADR-236).
+    propertyId: z.string().max(128).optional(),
+    levelFloorId: z.string().max(128).optional(),
     // 🛡️ Derived from the SSoT list — an inline copy here omitted 'project' and
     // rejected every project-scoped scene save with 400 (ADR-288).
     entityType: z.enum(CAD_LINKABLE_ENTITY_TYPES).optional(),

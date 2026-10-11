@@ -9,7 +9,7 @@
  * @module subapps/dxf-viewer/ui/components/open-create/OpenCreateDialog
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n';
 import {
   Dialog,
@@ -30,36 +30,41 @@ interface OpenCreateDialogProps {
   readonly onOpenChange: (open: boolean) => void;
   readonly availability: OpenCreateAvailability;
   readonly onAction: (kind: OpenCreateActionKind) => void;
+  /**
+   * Μια ενέργεια εκτελείται και το παράθυρο την περιμένει (το πρόχειρο γεννιέται). Οι κάρτες δεν
+   * δέχονται δεύτερη επιλογή· η εστίαση μένει μέσα στο παράθυρο.
+   */
+  readonly busy?: boolean;
+  /** Πού πάει η εστίαση όταν κλείσει — ο host ξέρει ΓΙΑΤΙ έκλεισε (Radix `onCloseAutoFocus`). */
+  readonly onCloseAutoFocus?: (event: Event) => void;
 }
 
 const CARD_GRID = 'grid grid-cols-1 sm:grid-cols-2 gap-2 w-full';
+const BUSY_GRID = 'pointer-events-none opacity-60';
 
-export function OpenCreateDialog({ open, onOpenChange, availability, onAction }: OpenCreateDialogProps) {
+export function OpenCreateDialog({
+  open,
+  onOpenChange,
+  availability,
+  onAction,
+  busy = false,
+  onCloseAutoFocus,
+}: OpenCreateDialogProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const sections = useMemo(() => buildOpenCreateSections(availability, t), [availability, t]);
 
-  // Όταν το παράθυρο κλείνει ΕΠΕΙΔΗ επιλέχθηκε ενέργεια, η εστίαση ανήκει σε ό,τι ανοίγει εκείνη
-  // (το πεδίο μετονομασίας του νέου πρόχειρου, ο οδηγός) — όχι πίσω στο κουμπί. Μετρημένο
-  // 2026-10-11: η επιστροφή στο κουμπί έκλεβε την εστίαση από το πεδίο μετονομασίας, και ό,τι
-  // πληκτρολογούσε ο άνθρωπος πήγαινε στις συντομεύσεις του καμβά. Με Esc/✕ η εστίαση γυρίζει
-  // κανονικά στο κουμπί (προεπιλογή Radix).
-  const actionTakenRef = useRef(false);
+  // Όσο μια ενέργεια εκτελείται, δεύτερο κλικ δεν ξεκινά δεύτερη (δύο πρόχειρα από διπλό κλικ).
+  // Οι κάρτες ΔΕΝ γίνονται `disabled`: ένα ανενεργό κουμπί χάνει την εστίαση προς το `<body>`.
   const handleSelect = useCallback(
     (kind: OpenCreateActionKind) => {
-      actionTakenRef.current = true;
-      onAction(kind);
+      if (!busy) onAction(kind);
     },
-    [onAction],
+    [busy, onAction],
   );
-  const handleCloseAutoFocus = useCallback((event: Event) => {
-    if (!actionTakenRef.current) return;
-    actionTakenRef.current = false;
-    event.preventDefault();
-  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" onCloseAutoFocus={handleCloseAutoFocus}>
+      <DialogContent className="max-w-2xl" onCloseAutoFocus={onCloseAutoFocus} aria-busy={busy}>
         <DialogHeader>
           <DialogTitle>{t('panels.openCreate.title')}</DialogTitle>
           <DialogDescription>{t('panels.openCreate.description')}</DialogDescription>
@@ -76,7 +81,7 @@ export function OpenCreateDialog({ open, onOpenChange, availability, onAction }:
             <ChoiceCards
               options={section.cards}
               onSelect={handleSelect}
-              className={CARD_GRID}
+              className={busy ? `${CARD_GRID} ${BUSY_GRID}` : CARD_GRID}
               ariaLabel={section.title}
             />
           </section>

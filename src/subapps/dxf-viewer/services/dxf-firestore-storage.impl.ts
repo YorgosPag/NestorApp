@@ -226,6 +226,8 @@ export async function saveToStorageImpl(
             projectId: context.projectId,
             buildingId: context.buildingId,
             floorId: context.floorId,
+            propertyId: context.propertyId,
+            levelFloorId: context.levelFloorId,
             entityType: context.entityType,
             filesCategory: context.filesCategory,
             purpose: context.purpose,

@@ -31,6 +31,16 @@ import { levelsSharingNameScope } from './utils';
 export interface LevelProvisioner {
   readonly levels: readonly Level[];
   readonly addLevel: AddLevel;
+  /**
+   * ADR-914 §2.11 — τα επίπεδα όπως τα ξέρει ο **διακομιστής** στην εμβέλεια της δέσμευσης (το
+   * κτήριό της, ή όλος ο μισθωτής). Η φορτωμένη λίστα μπορεί να είναι **στενεμένη** σε άλλο
+   * κτήριο (`?bldg=`, ADR-845): τότε ούτε το «υπάρχει ήδη;» ούτε το «ποιο όνομα είναι ελεύθερο;»
+   * απαντώνται από αυτήν — και ο διακομιστής απαντούσε 409 σε κάθε επανάληψη, με το ίδιο όνομα.
+   * Απόν ⇒ η φορτωμένη λίστα είναι όλη η αλήθεια (in-memory, ή γραφέας που μένει στο ίδιο κτήριο).
+   */
+  readonly loadScopeLevels?: (buildingId: string | null) => Promise<readonly Level[]>;
+  /** Το επίπεδο βρέθηκε στον διακομιστή, έξω από τη φορτωμένη λίστα — ο viewer το μαθαίνει. */
+  readonly adoptLevel?: (level: Level) => void;
 }
 
 /** Σε τι δένεται το επίπεδο που ζητείται. Ένα σκέλος ανά είδος — καμία μισή δέσμευση. */
@@ -146,6 +156,24 @@ function bindingName(binding: LevelProvisionBinding, levels: readonly Level[], b
 }
 
 /**
+ * Ό,τι ξέρει ο διακομιστής στην εμβέλεια της δέσμευσης και **λείπει** από τη φορτωμένη λίστα.
+ * Αποτυχία ανάγνωσης ⇒ κενό: η δημιουργία προχωρά με ό,τι υπάρχει και ο διακομιστής μένει ο
+ * τελικός κριτής (409).
+ */
+async function loadUnseenScopeLevels(
+  provisioner: LevelProvisioner,
+  buildingId: string | null,
+): Promise<readonly Level[]> {
+  if (!provisioner.loadScopeLevels) return [];
+  try {
+    const seen = new Set(provisioner.levels.map((l) => l.id));
+    return (await provisioner.loadScopeLevels(buildingId)).filter((l) => !seen.has(l.id));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Γεννά το επίπεδο της δέσμευσης — ή, για όροφο/ακίνητο που έχει ήδη επίπεδο, το επιστρέφει.
  * Ένα αίτημα δημιουργίας, καμία δεύτερη εγγραφή.
  */
@@ -157,7 +185,14 @@ export async function provisionLevelForBinding(
   if (existing) return { levelId: existing.id, created: false, name: existing.name };
 
   const scope = bindingScope(binding);
-  const name = bindingName(binding, provisioner.levels, scope.buildingId);
+  const unseen = await loadUnseenScopeLevels(provisioner, scope.buildingId);
+  const unseenExisting = findExistingLevel(unseen, binding);
+  if (unseenExisting) {
+    provisioner.adoptLevel?.(unseenExisting);
+    return { levelId: unseenExisting.id, created: false, name: unseenExisting.name };
+  }
+
+  const name = bindingName(binding, [...provisioner.levels, ...unseen], scope.buildingId);
   const levelId = await provisioner.addLevel(
     name,
     false,

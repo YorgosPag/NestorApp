@@ -31,16 +31,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ15
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import { floorRepresentativeLevels } from '../../systems/levels/level-floor-representative';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
-// ADR-469 — file-less / orphaned floor fallback: source the floor's BIM one-shot
-// from its per-entity collections (floorplan_*, keyed-by-floorId) when no `.scene.json`
-// snapshot exists, so its entities still appear in the cross-floor underlay.
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
-import { loadFloorBimEntities } from '../../bim/persistence/cross-floor-bim-loader';
+// ADR-469 / ADR-484 Slice 3 — snapshot με φράχτη ορόφου, και per-entity εφεδρεία
+// (floorplan_*, keyed-by-floorId) για όροφο χωρίς `.scene.json`· ένας φορτωτής, ADR-914 §2.14.
+import { loadFloorScopedScene } from './floor-scoped-scene-loader';
+import { liveSceneOf, useFloorSceneSnapshots } from './useFloorSceneSnapshots';
 // ADR-459 Φ7 — read-side foreign-floor BIM guard + model-SSoT footing injection:
 // ένα floor model δείχνει ΜΟΝΟ τα δικά του entities, και ο όροφος Θεμελίωσης παίρνει
 // τα cross-level πέδιλα από το `floorplan_foundations` (όχι από το snapshot).
@@ -49,9 +48,6 @@ import {
   replaceFootingsFromModel,
   stripAllFoundations,
 } from '../../systems/levels/scene-bim-load-policy';
-// ADR-484 Slice 3 — file-level cross-floor guard (belt-and-suspenders πάνω από το
-// per-entity stripForeignFloorBim· legacy shared sceneFileId δεν διαρρέει).
-import { resolveFloorScopedScene } from '../../systems/levels/cross-floor-link';
 import { useFoundationLevelStore } from '../../state/foundation-level-store';
 import { isFoundationEntity, type Entity } from '../../types/entities';
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
@@ -93,20 +89,14 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
     [foundationStoreEntities],
   );
 
-  // Firestore snapshots for floors not visited this session.
-  const [loaded, setLoaded] = useState<ReadonlyMap<string, SceneModel | null>>(new Map());
-
   // One target per NON-active building floor (first level wins per floor).
   const targets = useMemo<TargetFloor[]>(() => {
     if (!active || !levels) return [];
     const current = levels.find((l) => l.id === currentLevelId);
     const buildingId = current?.buildingId;
     if (!buildingId) return [];
-    const seen = new Set<string>();
     const out: TargetFloor[] = [];
-    for (const lvl of levels) {
-      if (lvl.buildingId !== buildingId || !lvl.floorId || seen.has(lvl.floorId)) continue;
-      seen.add(lvl.floorId);
+    for (const lvl of floorRepresentativeLevels(levels, buildingId, currentLevelId)) {
       if (lvl.id === currentLevelId) continue; // active floor drawn by main pipeline
       if (floorVisibilityModes.get(lvl.id) === 'hide') continue; // Phase C SSoT
       out.push({
@@ -119,70 +109,30 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
     return out;
   }, [active, levels, currentLevelId, floorVisibilityModes]);
 
-  // Resolve a floor's SceneModel: in-memory scene → loaded snapshot.
-  const resolveScene = (t: TargetFloor): SceneModel | null => {
-    const scene = getLevelScene?.(t.levelId);
-    if (scene && scene.entities.length > 0) return scene;
-    return loaded.get(t.levelId) ?? null;
-  };
-
   // Lazily source unvisited floors: snapshot first, then per-entity fallback for
   // file-less / orphaned floors (ADR-469). Includes floors WITHOUT a sceneFileId
   // (file-less) — previously skipped, hence invisible in the cross-floor underlay.
-  useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    const missing = targets.filter(
-      (t) =>
-        !loaded.has(t.levelId) &&
-        !((getLevelScene?.(t.levelId)?.entities.length ?? 0) > 0),
-    );
-    if (missing.length === 0) return;
+  const needsSnapshot = useCallback(
+    (t: TargetFloor): boolean => !liveSceneOf(getLevelScene, t.levelId),
+    [getLevelScene],
+  );
+  const load = useCallback(
+    (t: TargetFloor, isCancelled: () => boolean) =>
+      loadFloorScopedScene(t, { companyId, userId }, isCancelled),
+    [companyId, userId],
+  );
+  // Firestore snapshots for floors not visited this session (ADR-914 §2.14).
+  const loaded = useFloorSceneSnapshots<TargetFloor, SceneModel | null>({
+    enabled: active,
+    targets,
+    needsSnapshot,
+    load,
+    fallback: null,
+  });
 
-    void (async () => {
-      const entries: [string, SceneModel | null][] = [];
-      for (const t of missing) {
-        try {
-          let model: SceneModel | null = null;
-          // 1. `.scene.json` snapshot (file-linked, has a valid record). ADR-484
-          // Slice 3 — null όταν το record ανήκει σε άλλον όροφο (shared fileId)
-          // → πέφτει στο ADR-469 own-floor per-entity fallback παρακάτω.
-          if (t.sceneFileId) {
-            const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId);
-            if (cancelled) return;
-            model = resolveFloorScopedScene(rec, t.floorId);
-          }
-          // 2. ADR-469 — no snapshot (file-less or orphaned): one-shot per-entity BIM.
-          if (!model) {
-            const scope = resolveBimPersistenceScope({
-              companyId,
-              projectId: t.projectId,
-              userId,
-              floorId: t.floorId,
-              floorplanId: t.sceneFileId,
-            });
-            const entities = scope ? await loadFloorBimEntities(scope) : [];
-            if (cancelled) return;
-            model =
-              entities.length > 0
-                ? ({ entities, layersById: {}, bounds: { ...EMPTY_BOUNDS }, units: 'mm' } as unknown as SceneModel)
-                : null;
-          }
-          entries.push([t.levelId, model]);
-        } catch {
-          entries.push([t.levelId, null]);
-        }
-      }
-      if (cancelled || entries.length === 0) return;
-      setLoaded((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of entries) next.set(k, v);
-        return next;
-      });
-    })();
-
-    return () => { cancelled = true; };
-  }, [active, targets, loaded, getLevelScene, companyId, userId]);
+  // Resolve a floor's SceneModel: in-memory scene → loaded snapshot.
+  const resolveScene = (t: TargetFloor): SceneModel | null =>
+    liveSceneOf(getLevelScene, t.levelId) ?? loaded.get(t.levelId) ?? null;
 
   // Compose the visible non-active floors' raw models (skip floors still loading).
   return useMemo<readonly BuildingFloorScene[]>(() => {

@@ -22,9 +22,7 @@
 import { useEffect, useState } from 'react';
 
 import { useAuthOptional } from '@/auth/contexts/AuthContext';
-import type { DxfLevelsListResponse } from '@/app/api/dxf-levels/dxf-levels.types';
-import { API_ROUTES } from '@/config/domain-constants';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { listDxfLevelsWithPolicy } from '@/services/dxf-level-mutation-gateway';
 
 /** `sceneFileId → levelId` για τα επίπεδα που βλέπει ο χρήστης. */
 type SceneFileLevels = ReadonlyMap<string, string>;
@@ -35,11 +33,10 @@ const NO_LEVELS: SceneFileLevels = new Map();
 let shared: { readonly uid: string; readonly levels: Promise<SceneFileLevels> } | null = null;
 
 async function fetchSceneFileLevels(): Promise<SceneFileLevels> {
-  const response = await apiClient.get<DxfLevelsListResponse>(API_ROUTES.DXF_LEVELS.LIST);
-  if (!response?.success) return NO_LEVELS;
+  const levels = await listDxfLevelsWithPolicy();
 
   const bySceneFile = new Map<string, string>();
-  for (const level of response.levels) {
+  for (const level of levels) {
     // Το πρώτο επίπεδο κερδίζει: η λίστα έρχεται ταξινομημένη κατά `order`, άρα η επιλογή είναι σταθερή.
     if (level.sceneFileId && !bySceneFile.has(level.sceneFileId)) bySceneFile.set(level.sceneFileId, level.id);
   }

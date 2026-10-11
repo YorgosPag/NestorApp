@@ -100,6 +100,19 @@ describe('OpenCreateDialog', () => {
     fireEvent.click(fromStorage);
     expect(onAction).not.toHaveBeenCalled();
   });
+
+  it('όσο εκτελείται ενέργεια δεν δέχεται δεύτερη — και η κάρτα ΔΕΝ χάνει την εστίαση', () => {
+    const onAction = jest.fn();
+    render(<OpenCreateDialog open onOpenChange={jest.fn()} availability={ALL_ON} onAction={onAction} busy />);
+
+    const draft = screen.getByRole('button', { name: new RegExp(`${card('draft')}.title`) });
+    fireEvent.click(draft);
+
+    expect(onAction).not.toHaveBeenCalled();
+    // Ανενεργό κουμπί θα έστελνε την εστίαση στο <body>, δηλαδή στις συντομεύσεις του καμβά.
+    expect(draft).not.toBeDisabled();
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'true');
+  });
 });
 
 describe('wizardMetaToBinding', () => {

@@ -134,6 +134,11 @@ export function resolveLevelDrawingBirthTarget(
       ...(level.projectId ? { projectId: level.projectId } : {}),
       ...(level.buildingId ? { buildingId: level.buildingId } : {}),
       ...(level.floorId ? { floorId: level.floorId } : {}),
+      // ADR-914 §2.12 — κάτοψη ΑΚΙΝΗΤΟΥ: ο κάτοχος ταξιδεύει ρητά (αλλιώς ο διακομιστής έγραφε
+      // τον όροφο ως κάτοχο), μαζί με τον όροφο που απεικονίζει (ADR-236, καρτέλα κατόψεων).
+      ...(binding.entityType === ENTITY_TYPES.PROPERTY
+        ? { propertyId: binding.entityId, ...(level.floorId ? { levelFloorId: level.floorId } : {}) }
+        : {}),
       ...(binding.entityType ? { entityType: binding.entityType } : {}),
       ...(binding.purpose ? { purpose: binding.purpose } : {}),
       filesCategory,

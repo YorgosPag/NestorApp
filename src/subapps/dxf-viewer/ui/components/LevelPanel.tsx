@@ -27,6 +27,7 @@ import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
 import { useActiveBuildingId } from '../../systems/levels/hooks/useActiveBuildingId';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { useAllFloorsBackfill, useLevelDeletion, useFloorplanImportComplete } from './level-panel-hooks';
+import { useLevelRename } from './useLevelRename';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
 import { useUniversalSelection } from '../../systems/selection';
@@ -128,8 +129,6 @@ export function LevelPanel({
       level.floorId ? byId.get(level.floorId) : undefined
     );
   }, [levels, buildingFloors]);
-  const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
   const [activeEditingMode, setActiveEditingMode] = useState<EditingMode>(null);
   const [showToolbox, setShowToolbox] = useState(false);
   // ADR-465 — «Αντιγραφή κάτοψης σε όροφο»: source floor for the duplicate dialog.
@@ -144,20 +143,13 @@ export function LevelPanel({
     handleCloseLevel,
   } = useLevelDeletion({ levels, deleteLevel, userUid: user?.uid });
 
-  const handleRename = (levelId: string) => {
-    if (!editingName.trim()) {
-      notifications.warning(t('panels.levels.emptyNameWarning'));
-      return;
-    }
-    renameLevel(levelId, editingName);
-    setEditingLevelId(null);
-    setEditingName('');
-  };
-  
-  const startEditing = (level: { id: string, name: string }) => {
-    setEditingLevelId(level.id);
-    setEditingName(level.name);
-  };
+  // ADR-914 §2.9 — Enter κρατά, Escape πετά, απώλεια εστίασης κρατά· γράφει μόνο αν άλλαξε.
+  const warnEmptyName = useCallback(
+    () => notifications.warning(t('panels.levels.emptyNameWarning')),
+    [notifications, t],
+  );
+  const rename = useLevelRename({ renameLevel, onEmptyName: warnEmptyName });
+  const { editingLevelId, startEditing } = rename;
 
   const handleEditingModeChange = (mode: EditingMode) => {
     setActiveEditingMode(mode);
@@ -268,11 +260,12 @@ export function LevelPanel({
                     <div className="flex-1">
                       <input
                         type="text"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
+                        value={rename.editingName}
+                        onChange={(e) => rename.setEditingName(e.target.value)}
                         onFocus={(e) => e.currentTarget.select()}
-                        onBlur={() => handleRename(level.id)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRename(level.id)}
+                        onBlur={rename.commit}
+                        onKeyDown={rename.onKeyDown}
+                        aria-label={t('panels.levels.renameLevel')}
                         className={PANEL_TOKENS.LEVEL_PANEL.LEVEL_INPUT.BASE}
                         autoFocus
                       />

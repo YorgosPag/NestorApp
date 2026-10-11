@@ -31,10 +31,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-632-stairwell-auto-opening-ssot.md §8b
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import { useBuildingFloorLevels } from './useBuildingFloorLevels';
+import {
+  liveSceneOf,
+  loadSnapshotScene,
+  useFloorSceneSnapshots,
+  useUnvisitedFloorPredicate,
+} from './useFloorSceneSnapshots';
 import { useBim3DEntitiesStore } from '../../bim-3d/stores/Bim3DEntitiesStore';
 import { isSlabEntity, isSlabOpeningEntity, isStairEntity } from '../../types/entities';
 import { resolveFloorElevationMm } from '../../systems/levels/building-foundation-level';
@@ -89,6 +94,12 @@ function bundleFromScene(scene: SceneModel): FloorBundle {
   };
 }
 
+/** Το bundle του αποθηκευμένου στιγμιοτύπου ενός ορόφου (κενό αν δεν έχει σκηνή). */
+async function loadFloorBundle(t: TargetFloor): Promise<FloorBundle> {
+  const scene = await loadSnapshotScene(t);
+  return scene ? bundleFromScene(scene) : EMPTY_BUNDLE;
+}
+
 export function useCrossLevelStairwellOpenings(props: {
   levelManager: CrossLevelStairwellManager;
 }): void {
@@ -107,90 +118,47 @@ export function useCrossLevelStairwellOpenings(props: {
   const liveSlabs = useBim3DEntitiesStore((s) => s.slabs);
   const liveSlabOpenings = useBim3DEntitiesStore((s) => s.slabOpenings);
 
-  const currentLevel = useMemo(
-    () => (levels ? levels.find((l) => l.id === currentLevelId) ?? null : null),
-    [levels, currentLevelId],
-  );
-  const buildingId = currentLevel?.buildingId ?? null;
-
-  const { floors: buildingFloors } = useFloorsByBuilding(buildingId, Boolean(buildingId));
-
-  // One target per building floor (first level wins for duplicates), με FFL (mm).
-  const targets = useMemo<TargetFloor[]>(() => {
-    if (!levels || !buildingId) return [];
-    const seen = new Set<string>();
-    const out: TargetFloor[] = [];
-    for (const lvl of levels) {
-      if (lvl.buildingId !== buildingId || !lvl.floorId || seen.has(lvl.floorId)) continue;
-      seen.add(lvl.floorId);
-      out.push({
+  // Κτήριο + στάθμες + ένα επίπεδο ανά όροφο (ADR-914 §2.14)· κάθε στόχος με FFL (mm).
+  const { buildingFloors, floorLevels } = useBuildingFloorLevels(levels, currentLevelId);
+  const targets = useMemo<TargetFloor[]>(
+    () =>
+      floorLevels.map((lvl) => ({
         levelId: lvl.id,
         floorId: lvl.floorId,
         sceneFileId: lvl.sceneFileId ?? null,
         projectId: lvl.projectId ?? null,
         floorElevationMm: resolveFloorElevationMm(buildingFloors, lvl.floorId),
-      });
-    }
-    return out;
-  }, [levels, buildingId, buildingFloors]);
+      })),
+    [floorLevels, buildingFloors],
+  );
 
   const liveBundle = useMemo<FloorBundle>(
     () => ({ stairs: liveStairs, slabs: liveSlabs, managedOpenings: liveSlabOpenings }),
     [liveStairs, liveSlabs, liveSlabOpenings],
   );
 
-  // Firestore snapshots για ορόφους που δεν επισκεφθήκαμε αυτή τη συνεδρία.
-  const [loaded, setLoaded] = useState<ReadonlyMap<string, FloorBundle>>(new Map());
+  // Firestore snapshots για μη-επισκεφθέντες, file-linked ορόφους (ADR-914 §2.14).
+  const needsSnapshot = useUnvisitedFloorPredicate(activeLevelId, getLevelScene);
+  const loaded = useFloorSceneSnapshots<TargetFloor, FloorBundle>({
+    enabled: true,
+    targets,
+    needsSnapshot,
+    load: loadFloorBundle,
+    fallback: EMPTY_BUNDLE,
+  });
 
   // Resolve entities ενός ορόφου: live (active) → in-memory scene → loaded snapshot.
   // `null` = ακόμη pending (file-linked, μη φορτωμένος) → delete-safety gate.
   const resolveBundle = useCallback(
     (t: TargetFloor): FloorBundle | null => {
       if (t.levelId === activeLevelId) return liveBundle;
-      const scene = getLevelScene?.(t.levelId);
-      if (scene && scene.entities.length > 0) return bundleFromScene(scene);
+      const scene = liveSceneOf(getLevelScene, t.levelId);
+      if (scene) return bundleFromScene(scene);
       if (loaded.has(t.levelId)) return loaded.get(t.levelId) ?? EMPTY_BUNDLE;
       return t.sceneFileId ? null : EMPTY_BUNDLE;
     },
     [activeLevelId, liveBundle, getLevelScene, loaded],
   );
-
-  // Lazily fetch snapshots για μη-επισκεφθέντες, file-linked ορόφους.
-  useEffect(() => {
-    let cancelled = false;
-    const missing = targets.filter(
-      (t) =>
-        t.sceneFileId &&
-        t.levelId !== activeLevelId &&
-        !loaded.has(t.levelId) &&
-        !((getLevelScene?.(t.levelId)?.entities.length ?? 0) > 0),
-    );
-    if (missing.length === 0) return;
-
-    void (async () => {
-      const entries: [string, FloorBundle][] = [];
-      for (const t of missing) {
-        try {
-          const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId as string);
-          if (cancelled) return;
-          const scene = rec?.scene as SceneModel | undefined;
-          entries.push([t.levelId, scene && Array.isArray(scene.entities) ? bundleFromScene(scene) : EMPTY_BUNDLE]);
-        } catch {
-          entries.push([t.levelId, EMPTY_BUNDLE]);
-        }
-      }
-      if (cancelled || entries.length === 0) return;
-      setLoaded((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of entries) next.set(k, v);
-        return next;
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [targets, activeLevelId, loaded, getLevelScene]);
 
   // Compose entries — ΜΟΝΟ resolved όροφοι· `allResolved` gate για delete-safety.
   const { entries, allResolved } = useMemo(() => {

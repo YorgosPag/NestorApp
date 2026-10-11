@@ -48,12 +48,18 @@ jest.mock('../../../overlays/overlay-store', () => ({
   useOverlayStore: () => ({ overlays: mockOverlays }),
 }));
 
-jest.mock('../../../systems/levels', () => ({
-  useLevels: () => ({ levels: [], currentLevelId: null }),
-}));
+// Το κτίριο του breadcrumb είναι το κτίριο του ΑΝΟΙΧΤΟΥ επιπέδου (ADR-914). Το δεύτερο επίπεδο
+// ανήκει πάντα σε κτίριο: υπάρχει για να αποδεικνύει ότι ένα ανοιχτό επίπεδο ΧΩΡΙΣ κτίριο
+// (πρόχειρο) δεν δανείζεται «οποιοδήποτε» κτίριο της λίστας.
 let mockActiveBuildingId: string | null = null;
-jest.mock('../../../systems/levels/hooks/useActiveBuildingId', () => ({
-  useActiveBuildingId: () => mockActiveBuildingId,
+jest.mock('../../../systems/levels', () => ({
+  useLevels: () => ({
+    levels: [
+      { id: 'lvl_open', ...(mockActiveBuildingId ? { buildingId: mockActiveBuildingId } : {}) },
+      { id: 'lvl_elsewhere', buildingId: 'bldg_1' },
+    ],
+    currentLevelId: 'lvl_open',
+  }),
 }));
 
 const PROPERTY_ENTITY = { type: 'property', id: 'prop_1', name: 'Διαμέρισμα 95 τ.μ.' };
@@ -69,7 +75,8 @@ beforeEach(() => {
 });
 
 describe('ViewerLocationBreadcrumb — το κοινό breadcrumb, από την κατάσταση του θεατή', () => {
-  it('Β1: ούτε κτίριο ούτε επιλογή ⇒ τίποτα, και καθαρισμός (null)', () => {
+  it('Β1: ανοιχτό επίπεδο ΧΩΡΙΣ κτίριο (πρόχειρο), ακόμη κι αν η λίστα έχει άλλα κτίρια ⇒ τίποτα (null)', () => {
+    mockNavBuilding = { id: 'bldg_1' };
     render(<ViewerLocationBreadcrumb />);
 
     expect(queryBreadcrumb()).not.toBeInTheDocument();

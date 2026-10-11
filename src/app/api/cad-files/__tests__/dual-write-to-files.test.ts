@@ -93,6 +93,39 @@ describe('writeToFilesCollection — write-once entity identity', () => {
     expect(payload.revision).toBe(7);
   });
 
+  describe('ADR-914 §2.12 — κάτοψη ΑΚΙΝΗΤΟΥ: κάτοχος το ακίνητο, όχι ο όροφός του', () => {
+    const propertyContext = {
+      ...baseParams.context,
+      entityType: 'property' as const,
+      propertyId: 'prop_a1',
+      levelFloorId: 'flr_correct',
+    };
+
+    it('🔑 στη γέννηση `entityId` = το ΑΚΙΝΗΤΟ, και `levelFloorId` = ο όροφος που απεικονίζει', async () => {
+      await writeToFilesCollection({ ...baseParams, isCreate: true, context: propertyContext });
+      const { payload } = captured[0];
+
+      expect(payload.entityType).toBe('property');
+      expect(payload.entityId).toBe('prop_a1');
+      expect(payload.levelFloorId).toBe('flr_correct');
+    });
+
+    it('σε ενημέρωση δεν ξαναγράφεται — ταυτότητα θέσης, μία φορά', async () => {
+      await writeToFilesCollection({ ...baseParams, isCreate: false, context: propertyContext });
+      const { payload } = captured[0];
+
+      expect(payload.entityId).toBeUndefined();
+      expect(payload.levelFloorId).toBeUndefined();
+    });
+
+    it('καλών χωρίς `propertyId` κρατά την προηγούμενη εφεδρεία (όροφος)', async () => {
+      const legacy = { ...baseParams.context, entityType: 'property' as const };
+      await writeToFilesCollection({ ...baseParams, isCreate: true, context: legacy });
+
+      expect(captured[0].payload.entityId).toBe('flr_correct');
+    });
+  });
+
   it('treats a missing isCreate flag as update (safe default — never drift identity)', async () => {
     await writeToFilesCollection({ ...baseParams });
     const { payload } = captured[0];

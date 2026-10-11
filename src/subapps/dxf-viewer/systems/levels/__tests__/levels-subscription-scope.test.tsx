@@ -127,3 +127,24 @@ describe('Π2 — 🔴 το bootstrap ΔΕΝ τρέχει πίσω από φίλ
     expect(createdLevels.length).toBeGreaterThan(0);
   });
 });
+
+describe('Π3 — το snapshot δεν διώχνει τον άνθρωπο από επίπεδο που μόλις γέννησε (ADR-914 §2.9)', () => {
+  const ground = { id: 'lvl_ground', name: 'Ισόγειο', order: 0, isDefault: false, visible: true, floorId: 'flr_1' };
+
+  it('🔑 ανοιχτό επίπεδο που περιμένει την ηχώ του ⇒ ΚΑΜΙΑ επανεκλογή', () => {
+    const params = baseParams({ currentLevelId: 'lvl_new', isAwaitingEcho: (id: string) => id === 'lvl_new' });
+    renderHook(() => useLevelsFirestoreSync(params));
+    deliver?.({ documents: [ground] });
+
+    expect(params.setLevels).toHaveBeenCalledWith([ground]);
+    expect(params.setCurrentLevelId).not.toHaveBeenCalled();
+  });
+
+  it('ανοιχτό επίπεδο που λείπει ΧΩΡΙΣ να περιμένει ηχώ (διαγράφηκε) ⇒ επανεκλογή, όπως πριν', () => {
+    const params = baseParams({ currentLevelId: 'lvl_deleted', isAwaitingEcho: () => false });
+    renderHook(() => useLevelsFirestoreSync(params));
+    deliver?.({ documents: [ground] });
+
+    expect(params.setCurrentLevelId).toHaveBeenCalledWith('lvl_ground');
+  });
+});

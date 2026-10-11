@@ -57,7 +57,6 @@
       "noFloorLinked": "No floor linked",
       "selectFloorPlaceholder": "-- Select floor --",
       "noBuildingSelected": "Select a building in Hierarchy",
-      "loadFromStorage": "Load from Storage",
       "storagePicker": {
         "title": "Saved Floorplans",
         "empty": "No saved floorplans found",

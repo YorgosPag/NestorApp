@@ -902,11 +902,9 @@
       "overlayActions": "Overlay actions",
       "historyControls": "History controls"
     },
-    "importFloorplan": "Import Floorplan",
-    "importFloorplanWizard": "Import Floorplan (Wizard)"
+    "importFloorplan": "Import Floorplan"
   },
   "c4dMaterialImport": {
-    "button": "Import 3D file (geometry + materials)",
     "uploadingTextures": "Uploading textures and creating materials…",
     "missingTextures": "Missing texture images: {files}. Send them together with the .dae (C4D references them from another disk) or use “Save Project with Assets” in C4D so they land in the textures folder.",
     "success": "Material import: {applied} bodies + {finish} finish members (matched {matched}, {unmatched} unmatched).",

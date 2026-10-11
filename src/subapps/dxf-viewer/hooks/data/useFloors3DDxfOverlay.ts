@@ -21,20 +21,22 @@
  * @see docs/centralized-systems/reference/adrs/ADR-399-dxf-floor-navigation-tabs.md (Phase B)
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
-import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import { useBuildingFloorLevels } from './useBuildingFloorLevels';
+import {
+  liveSceneOf,
+  loadSnapshotScene,
+  useFloorSceneSnapshots,
+  useUnvisitedFloorPredicate,
+} from './useFloorSceneSnapshots';
 import { useDxfOverlay3DStore } from '../../bim-3d/stores/DxfOverlay3DStore';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import {
   setMultiFloorDxfStack,
   type DxfFloorStackEntry,
 } from '../../bim-3d/scene/multi-floor-dxf-source';
-import {
-  resolveBuildingDatumElevationM,
-  resolveFloorDatumRelativeElevationMm,
-} from '../../bim-3d/scene/floor-stack-elevation';
+import { createFloorStackElevationResolver } from '../../bim-3d/scene/floor-stack-elevation';
 import { convertSceneToDxf } from '../canvas/useDxfSceneConversion';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneModel } from '../../types/scene';
@@ -57,84 +59,41 @@ export function useFloors3DDxfOverlay(active: boolean): void {
   // SSoT visibility (shared with BIM / Floor3DPanel) — 'hide' excludes the floor.
   const floorVisibilityModes = useViewMode3DStore((s) => s.floorVisibilityModes);
 
-  const buildingId = useMemo(
-    () => (active && levels ? levels.find((l) => l.id === currentLevelId)?.buildingId ?? null : null),
-    [active, levels, currentLevelId],
-  );
-  // Canonical storey elevations (same source as the floor tabs + the BIM stack).
-  const { floors: buildingFloors } = useFloorsByBuilding(buildingId, active);
-
-  // Firestore snapshots for floors not visited this session.
-  const [loaded, setLoaded] = useState<ReadonlyMap<string, SceneModel | null>>(new Map());
+  // Canonical storey elevations (same source as the floor tabs + the BIM stack) + ένα
+  // επίπεδο ανά όροφο (ADR-914 §2.14).
+  const { buildingFloors, floorLevels } = useBuildingFloorLevels(levels, currentLevelId, active);
 
   // One target per building floor (datum-relative elevation), hidden floors excluded.
   const targets = useMemo<TargetFloor[]>(() => {
-    if (!active || !levels || !buildingId) return [];
-    const datumM = resolveBuildingDatumElevationM(buildingFloors);
-    const elevByFloorId = new Map(buildingFloors.map((f) => [f.id, f.elevation ?? 0] as const));
-    const seen = new Set<string>();
-    const out: TargetFloor[] = [];
-    for (const lvl of levels) {
-      if (lvl.buildingId !== buildingId || !lvl.floorId || seen.has(lvl.floorId)) continue;
-      seen.add(lvl.floorId);
-      if (floorVisibilityModes.get(lvl.id) === 'hide') continue; // Phase C SSoT
-      const elevationM = elevByFloorId.get(lvl.floorId) ?? 0;
-      out.push({
+    const elevationMmOf = createFloorStackElevationResolver(buildingFloors);
+    return floorLevels
+      .filter((lvl) => floorVisibilityModes.get(lvl.id) !== 'hide') // Phase C SSoT
+      .map((lvl) => ({
         levelId: lvl.id,
         floorId: lvl.floorId,
         sceneFileId: lvl.sceneFileId ?? null,
-        floorElevationMm: resolveFloorDatumRelativeElevationMm(elevationM, datumM),
-      });
-    }
-    return out;
-  }, [active, levels, currentLevelId, buildingId, buildingFloors, floorVisibilityModes]);
+        floorElevationMm: elevationMmOf(lvl.floorId),
+      }));
+  }, [floorLevels, buildingFloors, floorVisibilityModes]);
+
+  // Lazily fetch snapshots for unvisited, file-linked, non-active floors (ADR-914 §2.14).
+  const needsSnapshot = useUnvisitedFloorPredicate(currentLevelId, getLevelScene);
+  const loaded = useFloorSceneSnapshots<TargetFloor, SceneModel | null>({
+    enabled: active,
+    targets,
+    needsSnapshot,
+    load: loadSnapshotScene,
+    fallback: null,
+  });
 
   // Resolve a floor's DXF plan: active = live overlay scene; else in-memory → snapshot.
   const resolveScene = (t: TargetFloor): DxfScene | null => {
     if (t.levelId === currentLevelId) return activeDxfScene;
-    const scene = getLevelScene?.(t.levelId);
-    if (scene && scene.entities.length > 0) return convertSceneToDxf(scene);
+    const scene = liveSceneOf(getLevelScene, t.levelId);
+    if (scene) return convertSceneToDxf(scene);
     const snap = loaded.get(t.levelId);
     return snap && snap.entities.length > 0 ? convertSceneToDxf(snap) : null;
   };
-
-  // Lazily fetch snapshots for unvisited, file-linked, non-active floors.
-  useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    const missing = targets.filter(
-      (t) =>
-        t.sceneFileId &&
-        t.levelId !== currentLevelId &&
-        !loaded.has(t.levelId) &&
-        !((getLevelScene?.(t.levelId)?.entities.length ?? 0) > 0),
-    );
-    if (missing.length === 0) return;
-
-    void (async () => {
-      const entries: [string, SceneModel | null][] = [];
-      for (const t of missing) {
-        try {
-          const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId as string);
-          if (cancelled) return;
-          entries.push([
-            t.levelId,
-            rec?.scene && Array.isArray(rec.scene.entities) ? (rec.scene as SceneModel) : null,
-          ]);
-        } catch {
-          entries.push([t.levelId, null]);
-        }
-      }
-      if (cancelled || entries.length === 0) return;
-      setLoaded((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of entries) next.set(k, v);
-        return next;
-      });
-    })();
-
-    return () => { cancelled = true; };
-  }, [active, targets, currentLevelId, loaded, getLevelScene]);
 
   // Compose + publish the DXF stack (skip floors still loading / empty).
   const stack = useMemo<DxfFloorStackEntry[]>(() => {

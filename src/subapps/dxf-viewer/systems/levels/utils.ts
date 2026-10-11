@@ -8,7 +8,7 @@ import type { Level, FloorplanDoc, CalibrationData } from './config';
 import { generateLayerId, generateFloorId } from '@/services/enterprise-id.service';
 import { nowISO } from '@/lib/date-local';
 import i18next from 'i18next';
-import type { LevelBirthBinding } from './config';
+import type { FloorplanType, LevelBirthBinding } from './config';
 
 /** Μηνύματα επικύρωσης ονόματος — κλειδιά, όχι κείμενο (N.11). Χωρίς φορτωμένο i18n μένει το κλειδί. */
 const LEVEL_NAME_ERROR_KEYS = {
@@ -47,6 +47,70 @@ export function levelBirthFields(
     ...(birth?.propertyId ? { propertyId: birth.propertyId } : {}),
     ...(birth?.floorplanType ? { floorplanType: birth.floorplanType } : {}),
     ...(birth?.entityLabel ? { entityLabel: birth.entityLabel } : {}),
+  };
+}
+
+/** Ό,τι ορίζει ένα επίπεδο τη στιγμή που γεννιέται — τα ίδια ορίσματα με το `addLevel`. */
+export interface NewLevelSpec {
+  readonly id: string;
+  readonly name: string;
+  readonly order: number;
+  readonly isDefault: boolean;
+  readonly floorId?: string;
+  readonly birth?: LevelBirthBinding;
+}
+
+/**
+ * Το επίπεδο όπως γεννιέται — ΜΙΑ κατασκευή για το in-memory σύστημα και για το επίπεδο που
+ * μπαίνει στη λίστα πριν από την ηχώ της συνδρομής (ADR-914 §2.9). Τα πεδία δέσμευσης είναι
+ * ακριβώς όσα ταξιδεύουν στο `POST /api/dxf-levels` ({@link levelBirthFields}), ώστε ο στόχος
+ * γέννησης του ADR-913 να βγαίνει ίδιος πριν και μετά την ηχώ.
+ */
+export function buildNewLevel({ id, name, order, isDefault, floorId, birth }: NewLevelSpec): Level {
+  return {
+    id,
+    name,
+    order,
+    isDefault,
+    visible: true,
+    ...(floorId ? { floorId } : {}),
+    ...levelBirthFields(birth),
+  };
+}
+
+/** Ένα έγγραφο επιπέδου όπως το επιστρέφει ο διακομιστής — `null` όπου το πεδίο είναι κενό. */
+type ServerLevelDocument = { readonly id: string; readonly name: string; readonly order: number } & Readonly<
+  Record<string, unknown>
+>;
+
+const textField = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
+const FLOORPLAN_TYPES: readonly FloorplanType[] = ['project', 'building', 'floor', 'unit'];
+
+/**
+ * Έγγραφο του `GET /api/dxf-levels` → `Level` του viewer: μόνο η ταυτότητα και η δέσμευση, με
+ * το `null` του διακομιστή γραμμένο ως απουσία (ο τύπος `Level` δεν έχει `null`). Ό,τι χρειάζεται
+ * για να **βρεθεί** και να **ανοίξει** ένα επίπεδο πριν το φέρει η συνδρομή (ADR-914 §2.11) — τα
+ * υπόλοιπα πεδία έρχονται με την ηχώ.
+ */
+export function levelFromServerDocument(doc: ServerLevelDocument): Level {
+  const floorplanType = FLOORPLAN_TYPES.find((type) => type === doc.floorplanType);
+  return {
+    id: doc.id,
+    name: doc.name,
+    order: doc.order,
+    isDefault: doc.isDefault === true,
+    visible: doc.visible !== false,
+    companyId: textField(doc.companyId),
+    floorId: textField(doc.floorId),
+    buildingId: textField(doc.buildingId),
+    projectId: textField(doc.projectId),
+    propertyId: textField(doc.propertyId),
+    sceneFileId: textField(doc.sceneFileId),
+    sceneFileName: textField(doc.sceneFileName),
+    entityLabel: textField(doc.entityLabel),
+    ...(floorplanType ? { floorplanType } : {}),
   };
 }
 
@@ -95,15 +159,7 @@ export class LevelOperations {
     const id = LevelOperations.generateLevelId();
     const order = LevelOperations.getNextOrder(levels);
 
-    const newLevel: Level = {
-      id,
-      name,
-      order,
-      isDefault: setAsDefault,
-      visible: true,
-      ...(floorId ? { floorId } : {}),
-      ...levelBirthFields(birth),
-    };
+    const newLevel = buildNewLevel({ id, name, order, isDefault: setAsDefault, floorId, birth });
 
     const updatedLevels = setAsDefault
       ? [...levels.map(l => ({ ...l, isDefault: false })), newLevel]

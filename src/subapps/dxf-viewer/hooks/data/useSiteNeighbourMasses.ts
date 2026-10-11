@@ -21,11 +21,17 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
+import { floorRepresentativeLevels } from '../../systems/levels/level-floor-representative';
 import { useCurrentLevelScene } from '../../systems/levels/useCurrentLevelScene';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import {
+  liveSceneOf,
+  loadSnapshotScene,
+  useFloorSceneSnapshots,
+  useUnvisitedFloorPredicate,
+} from './useFloorSceneSnapshots';
 import { isWallEntity } from '../../types/entities';
 import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
@@ -89,61 +95,31 @@ export function useSiteNeighbourMasses(active: boolean): readonly HorizonObstacl
   // Ένα target ανά μη-ενεργό κτίριο (πρώτος όροφος με floorId).
   const targets = useMemo<NeighbourTarget[]>(() => {
     if (!active || !levels || !activeBuildingId) return [];
-    const seen = new Set<string>();
-    const out: NeighbourTarget[] = [];
+    const neighbourIds = new Set<string>();
     for (const lvl of levels) {
-      if (!lvl.buildingId || !lvl.floorId || lvl.buildingId === activeBuildingId) continue;
-      if (seen.has(lvl.buildingId)) continue;
-      seen.add(lvl.buildingId);
-      out.push({ buildingId: lvl.buildingId, levelId: lvl.id, sceneFileId: lvl.sceneFileId ?? null });
+      if (lvl.buildingId && lvl.buildingId !== activeBuildingId) neighbourIds.add(lvl.buildingId);
+    }
+    const out: NeighbourTarget[] = [];
+    for (const buildingId of neighbourIds) {
+      // ADR-914 §2.10 — το αποτύπωμα του κτηρίου βγαίνει από επίπεδο ΟΡΟΦΟΥ, όχι από κάτοψη ακινήτου.
+      const lvl = floorRepresentativeLevels(levels, buildingId)[0];
+      if (lvl) out.push({ buildingId, levelId: lvl.id, sceneFileId: lvl.sceneFileId ?? null });
     }
     return out;
   }, [active, levels, activeBuildingId]);
 
-  const [loaded, setLoaded] = useState<ReadonlyMap<string, SceneModel | null>>(new Map());
+  // Lazy fetch των μη-επισκεφθέντων, file-linked γειτονικών ορόφων (one-shot snapshot, ADR-914 §2.14).
+  const needsSnapshot = useUnvisitedFloorPredicate(null, getLevelScene);
+  const loaded = useFloorSceneSnapshots<NeighbourTarget, SceneModel | null>({
+    enabled: active,
+    targets,
+    needsSnapshot,
+    load: loadSnapshotScene,
+    fallback: null,
+  });
 
-  const resolveScene = (t: NeighbourTarget): SceneModel | null => {
-    const scene = getLevelScene?.(t.levelId);
-    if (scene && scene.entities.length > 0) return scene;
-    return loaded.get(t.levelId) ?? null;
-  };
-
-  // Lazy fetch των μη-επισκεφθέντων, file-linked γειτονικών ορόφων (one-shot snapshot).
-  useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    const missing = targets.filter(
-      (t) =>
-        t.sceneFileId &&
-        !loaded.has(t.levelId) &&
-        !((getLevelScene?.(t.levelId)?.entities.length ?? 0) > 0),
-    );
-    if (missing.length === 0) return;
-
-    void (async () => {
-      const entries: [string, SceneModel | null][] = [];
-      for (const t of missing) {
-        try {
-          const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId as string);
-          if (cancelled) return;
-          entries.push([
-            t.levelId,
-            rec?.scene && Array.isArray(rec.scene.entities) ? (rec.scene as SceneModel) : null,
-          ]);
-        } catch {
-          entries.push([t.levelId, null]);
-        }
-      }
-      if (cancelled || entries.length === 0) return;
-      setLoaded((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of entries) next.set(k, v);
-        return next;
-      });
-    })();
-
-    return () => { cancelled = true; };
-  }, [active, targets, loaded, getLevelScene]);
+  const resolveScene = (t: NeighbourTarget): SceneModel | null =>
+    liveSceneOf(getLevelScene, t.levelId) ?? loaded.get(t.levelId) ?? null;
 
   // Active placement + κλίμακα (από τη σκηνή του ενεργού ορόφου· fallback mm).
   const activePlacement = useMemo<BuildingPlacement>(() => {

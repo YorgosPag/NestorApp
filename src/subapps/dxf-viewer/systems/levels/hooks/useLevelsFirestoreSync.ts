@@ -31,6 +31,12 @@ interface UseLevelsFirestoreSyncParams {
    * αρχείο στο Revit: **με άλλη διεύθυνση**, όχι με φίλτρο που αυτο-κλειδώνεται.
    */
   activeBuildingId?: string | null;
+  /**
+   * ADR-914 §2.9 — «αυτό το επίπεδο γεννήθηκε σε αυτή τη συνεδρία και η συνδρομή δεν το έχει
+   * φέρει ακόμη». Ένα snapshot που δεν το περιέχει **δεν** είναι λόγος να φύγουμε από πάνω του.
+   * Getter (ανάγνωση τη στιγμή του snapshot), όχι τιμή — ADR-040.
+   */
+  isAwaitingEcho?: (levelId: string) => boolean;
   setLevels: (levels: Level[]) => void;
   setCurrentLevelId: (levelId: string | null) => void;
   setIsLoading: (loading: boolean) => void;
@@ -58,6 +64,7 @@ export function useLevelsFirestoreSync({
   userId: creatorUid,
   isSuperAdmin,
   activeBuildingId = null,
+  isAwaitingEcho,
   setLevels,
   setCurrentLevelId,
   setIsLoading,
@@ -65,6 +72,11 @@ export function useLevelsFirestoreSync({
   onLevelChange,
   handleError,
 }: UseLevelsFirestoreSyncParams): void {
+  // Σταθερό σε όλη τη ζωή του provider στην πράξη· το ref το κρατά ΕΚΤΟΣ εξαρτήσεων της
+  // συνδρομής ώστε να μην την ξαναστήνει ποτέ (ίδιος λόγος με το `currentLevelIdRef`).
+  const isAwaitingEchoRef = useRef(isAwaitingEcho);
+  isAwaitingEchoRef.current = isAwaitingEcho;
+
   // ADR-040: read currentLevelId via ref inside the snapshot callback so it is
   // NOT a subscription dep. Including it in the deps array tears down + rebuilds
   // the Firestore onSnapshot on every level change, and the synchronous local-cache
@@ -110,7 +122,11 @@ export function useLevelsFirestoreSync({
             // «Στάθμες» panel filter too, so panel + active stay consistent.
             const activeIsHiddenOrphan =
               !!activeLevel && isUnlinkedDefaultLevel(activeLevel) && hasFloorLinkedLevel(fetchedLevels);
-            if (!activeLevel || activeIsHiddenOrphan) {
+            // ADR-914 §2.9 — το ανοιχτό επίπεδο μόλις γεννήθηκε και η ηχώ του εκκρεμεί: λείπει
+            // από ΑΥΤΟ το snapshot, όχι από τη βάση. Επανεκλογή εδώ θα πετούσε τον άνθρωπο σε
+            // άλλο επίπεδο τη στιγμή που ονομάζει το καινούργιο.
+            const activeAwaitsEcho = !!activeId && !activeLevel && !!isAwaitingEchoRef.current?.(activeId);
+            if ((!activeLevel && !activeAwaitsEcho) || activeIsHiddenOrphan) {
               const nextLevel = pickActiveLevel(fetchedLevels);
               if (nextLevel && nextLevel.id !== activeId) {
                 setCurrentLevelId(nextLevel.id);

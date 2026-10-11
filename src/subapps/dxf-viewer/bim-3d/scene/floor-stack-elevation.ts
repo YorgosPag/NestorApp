@@ -95,3 +95,16 @@ export function resolveFloorDatumRelativeElevationMm(
   const e = typeof floorElevationM === 'number' && Number.isFinite(floorElevationM) ? floorElevationM : 0;
   return (e - datumM) * 1000;
 }
+
+/**
+ * `floorId` → datum-relative FFL (mm) για κάθε όροφο του κτηρίου. Ένας resolver για τους δύο
+ * παραγωγούς της στοίβας «όλοι οι όροφοι» (BIM + υπόβαθρο DXF), ώστε να στοιβάζουν **στο ίδιο
+ * ύψος** (ADR-914 §2.14). Άγνωστος όροφος ⇒ στάθμη 0 πριν το datum.
+ */
+export function createFloorStackElevationResolver(
+  floors: readonly (FloorElevationRef & { readonly id: string })[],
+): (floorId: string) => number {
+  const datumM = resolveBuildingDatumElevationM(floors);
+  const elevByFloorId = new Map(floors.map((f) => [f.id, f.elevation ?? 0] as const));
+  return (floorId) => resolveFloorDatumRelativeElevationMm(elevByFloorId.get(floorId) ?? 0, datumM);
+}

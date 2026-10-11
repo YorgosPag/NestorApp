@@ -23,11 +23,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-399-dxf-floor-navigation-tabs.md
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
-import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import { useBuildingFloorLevels } from './useBuildingFloorLevels';
 import { useBim3DEntitiesStore } from '../../bim-3d/stores/Bim3DEntitiesStore';
 import { EMPTY_BIM_ENTITIES, type Bim3DEntities } from '../../bim-3d/stores/Bim3DEntitiesStore';
 import {
@@ -39,26 +38,19 @@ import {
   hasAnyBim3DEntity,
   resolveSnapshotFoundations,
 } from '../../bim-3d/scene/extract-bim3d-entities';
-import {
-  resolveBuildingDatumElevationM,
-  resolveFloorDatumRelativeElevationMm,
-} from '../../bim-3d/scene/floor-stack-elevation';
+import { createFloorStackElevationResolver } from '../../bim-3d/scene/floor-stack-elevation';
 import { buildActiveStoreyContext } from '../../systems/levels/active-storey-context';
 // ADR-459 Φ7 — foreign-floor BIM guard: το stack entry κάθε ορόφου περιέχει ΜΟΝΟ τα
 // δικά του entities (cross-level πέδιλο baked σε λάθος snapshot δεν εμφανίζεται 3Δ).
 import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
-// ADR-484 Slice 3 — file-level cross-floor guard: skip a snapshot whose fileRecord
-// belongs to ANOTHER floor (legacy shared `sceneFileId`), independent of entity tags.
-import { resolveFloorScopedScene } from '../../systems/levels/cross-floor-link';
-// ADR-469 — file-less / orphaned floor fallback: one-shot per-entity BIM source so
-// a floor with no `.scene.json` snapshot still shows its entities in «all floors» 3Δ.
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
-import { loadFloorBimEntities } from '../../bim/persistence/cross-floor-bim-loader';
-import { EMPTY_BOUNDS } from '../../config/geometry-constants';
+// ADR-484 Slice 3 + ADR-469 — snapshot με φράχτη ορόφου (το fileRecord άλλου ορόφου
+// παραλείπεται) και per-entity εφεδρεία για όροφο χωρίς `.scene.json`: ένας φορτωτής,
+// κοινός με το `useBuildingFloorScenes` (ADR-914 §2.14).
+import { loadFloorScopedScene } from './floor-scoped-scene-loader';
+import { useFloorSceneSnapshots } from './useFloorSceneSnapshots';
 import { useFoundationLevelStore } from '../../state/foundation-level-store';
 // ADR-668 — τα υπόλοιπα type guards μετακόμισαν μαζί με το `extractBim3DEntities` στο SSoT.
 import { isFoundationEntity } from '../../types/entities';
-import type { SceneModel } from '../../types/scene';
 
 interface TargetFloor {
   readonly levelId: string;
@@ -98,17 +90,12 @@ export function useFloors3DAggregator(active: boolean): void {
     [foundationStoreEntities],
   );
 
-  // ADR-399 Phase B — building of the active level. Drives the canonical floor
-  // elevation lookup below.
-  const buildingId = useMemo(
-    () => (active && levels ? levels.find((l) => l.id === currentLevelId)?.buildingId ?? null : null),
-    [active, levels, currentLevelId],
-  );
-  // 🏢 ADR-369 storey elevations from the SAME canonical Firestore source as the
-  // floor tabs (`useFloorsByBuilding` → FLOORS doc). NOT `Bim3DEntitiesStore.floors`,
-  // whose `elevation` arrives undefined (ProjectHierarchyContext drops it + the
-  // by-company API never returns it) → previously every floor stacked at Y=0.
-  const { floors: buildingFloors } = useFloorsByBuilding(buildingId, active);
+  // ADR-399 Phase B — building of the active level + 🏢 ADR-369 storey elevations from the
+  // SAME canonical Firestore source as the floor tabs (FLOORS doc). NOT
+  // `Bim3DEntitiesStore.floors`, whose `elevation` arrives undefined (ProjectHierarchyContext
+  // drops it + the by-company API never returns it) → previously every floor stacked at Y=0.
+  // Ένα επίπεδο ανά όροφο: ο εκπρόσωπος (ADR-914 §2.10 / §2.14).
+  const { buildingFloors, floorLevels } = useBuildingFloorLevels(levels, currentLevelId, active);
   // Individual array selectors keep stable refs (no re-render unless changed).
   const walls = useBim3DEntitiesStore((s) => s.walls);
   const columns = useBim3DEntitiesStore((s) => s.columns);
@@ -133,9 +120,6 @@ export function useFloors3DAggregator(active: boolean): void {
   const underfloors = useBim3DEntitiesStore((s) => s.underfloors);
   const foundations = useBim3DEntitiesStore((s) => s.foundations);
 
-  // Firestore snapshots for floors the user has not visited this session.
-  const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
-
   const liveActive = useMemo<Bim3DEntities>(
     () => ({ walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, genericSolids, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors }),
     [walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, genericSolids, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors],
@@ -143,33 +127,22 @@ export function useFloors3DAggregator(active: boolean): void {
 
   // One target per building floor (first level wins for a floor with duplicates).
   const targets = useMemo<TargetFloor[]>(() => {
-    if (!active || !levels || !buildingId) return [];
     // 🏢 Revit-grade datum: stack relative to the building's ground floor (or the
     // lowest storey when no ground floor exists) so the model rests on the ground
     // (world 0) instead of floating at the lowest storey's raw elevation. The
     // building-base offset is applied downstream by the per-entity converters.
-    const datumM = resolveBuildingDatumElevationM(buildingFloors);
-    const elevByFloorId = new Map(buildingFloors.map((f) => [f.id, f.elevation ?? 0] as const));
-    const seen = new Set<string>();
-    const out: TargetFloor[] = [];
-    for (const lvl of levels) {
-      if (lvl.buildingId !== buildingId || !lvl.floorId || seen.has(lvl.floorId)) continue;
-      seen.add(lvl.floorId);
-      const elevationM = elevByFloorId.get(lvl.floorId) ?? 0;
+    const elevationMmOf = createFloorStackElevationResolver(buildingFloors);
+    return floorLevels.map((lvl) => ({
+      levelId: lvl.id,
+      floorId: lvl.floorId,
+      sceneFileId: lvl.sceneFileId ?? null,
+      projectId: lvl.projectId ?? null,
+      floorElevationMm: elevationMmOf(lvl.floorId),
       // ADR-448 1b — reuse the storey-context SSoT for the next-floor (ceiling) FFL
       // so the "all floors" stack matches single-floor storey-ceiling resolution.
-      const storey = buildActiveStoreyContext(buildingFloors, lvl.floorId);
-      out.push({
-        levelId: lvl.id,
-        floorId: lvl.floorId,
-        sceneFileId: lvl.sceneFileId ?? null,
-        projectId: lvl.projectId ?? null,
-        floorElevationMm: resolveFloorDatumRelativeElevationMm(elevationM, datumM),
-        nextFloorElevationMm: storey?.nextFloorElevationMm ?? undefined,
-      });
-    }
-    return out;
-  }, [active, levels, currentLevelId, buildingId, buildingFloors]);
+      nextFloorElevationMm: buildActiveStoreyContext(buildingFloors, lvl.floorId)?.nextFloorElevationMm ?? undefined,
+    }));
+  }, [floorLevels, buildingFloors]);
 
   // Το BIM που κάθεται ΗΔΗ στην in-memory σκηνή ενός ορόφου (null όταν δεν υπάρχει
   // σκηνή). Ένα κοινό σημείο για τους ΔΥΟ καταναλωτές παρακάτω (`resolveEntities` +
@@ -182,6 +155,30 @@ export function useFloors3DAggregator(active: boolean): void {
     },
     [getLevelScene],
   );
+
+  // Firestore snapshots for floors the user has not visited this session (ADR-914 §2.14).
+  // 🛡️ Το κριτήριο είναι «λείπει **BIM**», όχι «λείπει σκηνή». Ένας όροφος με κάτοψη
+  // DXF αλλά χωρίς BIM στη μνήμη πρέπει να φορτώσει snapshot / per-entity (ADR-469)·
+  // ο φορτωτής κρατά την προσπάθεια one-shot ακόμη κι όταν γυρίσει κενή.
+  const needsSnapshot = useCallback(
+    (t: TargetFloor): boolean =>
+      t.levelId !== activeLevelId && !hasAnyBim3DEntity(resolveInMemoryBim(t)),
+    [activeLevelId, resolveInMemoryBim],
+  );
+  const load = useCallback(
+    async (t: TargetFloor, isCancelled: () => boolean): Promise<Bim3DEntities> => {
+      const scene = await loadFloorScopedScene(t, { companyId, userId }, isCancelled);
+      return scene ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId)) : EMPTY_BIM_ENTITIES;
+    },
+    [companyId, userId],
+  );
+  const loaded = useFloorSceneSnapshots<TargetFloor, Bim3DEntities>({
+    enabled: active,
+    targets,
+    needsSnapshot,
+    load,
+    fallback: EMPTY_BIM_ENTITIES,
+  });
 
   // Resolve a floor's entities: live (active) → in-memory scene → loaded snapshot.
   const resolveEntities = useCallback(
@@ -208,69 +205,6 @@ export function useFloors3DAggregator(active: boolean): void {
     },
     [activeLevelId, liveActive, resolveInMemoryBim, loaded, foundationLevelId, modelFootings],
   );
-
-  // Lazily fetch snapshots for unvisited, file-linked floors.
-  useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    // 🛡️ Το κριτήριο είναι «λείπει **BIM**», όχι «λείπει σκηνή». Ένας όροφος με κάτοψη
-    // DXF αλλά χωρίς BIM στη μνήμη πρέπει να φορτώσει snapshot / per-entity (ADR-469)·
-    // ο `loaded` guard κρατά την προσπάθεια one-shot ακόμη κι όταν γυρίσει κενή.
-    const missing = targets.filter(
-      (t) =>
-        t.levelId !== activeLevelId &&
-        !loaded.has(t.levelId) &&
-        !hasAnyBim3DEntity(resolveInMemoryBim(t)),
-    );
-    if (missing.length === 0) return;
-
-    void (async () => {
-      const entries: [string, Bim3DEntities][] = [];
-      for (const t of missing) {
-        try {
-          let scene: SceneModel | null = null;
-          // 1. `.scene.json` snapshot (file-linked, has a valid record). ADR-484
-          // Slice 3 — null when the record belongs to another floor (shared fileId)
-          // → falls through to the ADR-469 own-floor per-entity fallback below.
-          if (t.sceneFileId) {
-            const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId);
-            if (cancelled) return;
-            scene = resolveFloorScopedScene(rec, t.floorId);
-          }
-          // 2. ADR-469 — no snapshot (file-less or orphaned): one-shot per-entity BIM.
-          if (!scene) {
-            const scope = resolveBimPersistenceScope({
-              companyId,
-              projectId: t.projectId,
-              userId,
-              floorId: t.floorId,
-              floorplanId: t.sceneFileId,
-            });
-            const entities = scope ? await loadFloorBimEntities(scope) : [];
-            if (cancelled) return;
-            scene =
-              entities.length > 0
-                ? ({ entities, layersById: {}, bounds: { ...EMPTY_BOUNDS }, units: 'mm' } as unknown as SceneModel)
-                : null;
-          }
-          entries.push([
-            t.levelId,
-            scene ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId)) : EMPTY_BIM_ENTITIES,
-          ]);
-        } catch {
-          entries.push([t.levelId, EMPTY_BIM_ENTITIES]);
-        }
-      }
-      if (cancelled || entries.length === 0) return;
-      setLoaded((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of entries) next.set(k, v);
-        return next;
-      });
-    })();
-
-    return () => { cancelled = true; };
-  }, [active, targets, activeLevelId, loaded, resolveInMemoryBim, companyId, userId]);
 
   // Compose + publish the stack to the SSoT source (skip floors still loading).
   const stack = useMemo<FloorStackEntry[]>(() => {

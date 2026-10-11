@@ -52,7 +52,10 @@ export async function ensureLevelsForBuilding(
     .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
 
   // Snapshot of floors that already own a Level — used only to report `created`.
-  const linkedFloorIds = new Set(resolver.levels.map((l) => l.floorId).filter(Boolean));
+  // ADR-914 — μόνο επίπεδα ΟΡΟΦΟΥ: μια κάτοψη ακινήτου στον ίδιο όροφο δεν τον «έχει ήδη».
+  const linkedFloorIds = new Set(
+    resolver.levels.filter((l) => !!l.floorId && !l.propertyId).map((l) => l.floorId),
+  );
 
   const results: EnsureLevelResult[] = [];
   for (const floor of ordered) {

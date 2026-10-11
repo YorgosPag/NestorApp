@@ -100,6 +100,9 @@ describe('resolveLevelDrawingBirthTarget — η πιο συγκεκριμένη 
     expect(target?.saveContext).toMatchObject({
       entityType: 'property', floorId: 'flr_1', buildingId: 'bldg_1', projectId: 'proj_1',
       filesCategory: 'floorplans', purpose: 'property-floorplan',
+      // ADR-914 §2.12 — ο κάτοχος ταξιδεύει ΡΗΤΑ στον διακομιστή (αλλιώς έγραφε τον όροφο ως
+      // `entityId`), μαζί με τον όροφο που απεικονίζει η κάτοψη (καρτέλα κατόψεων, ADR-236).
+      propertyId: 'prop_1', levelFloorId: 'flr_1',
     });
     expect(parsed(target)).toMatchObject({
       companyId: COMPANY, entityType: 'property', entityId: 'prop_1', category: 'floorplans',
