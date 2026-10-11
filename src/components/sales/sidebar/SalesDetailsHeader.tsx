@@ -6,7 +6,6 @@
  * @pattern Uses centralized EntityDetailsHeader + createEntityAction
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { ShoppingBag, DollarSign, UserCheck, CheckCircle, Undo2 } from 'lucide-react';
 import { EntityDetailsHeader, createEntityAction, inDeclaredOrder } from '@/core/entity-headers';
@@ -37,7 +36,9 @@ export function SalesDetailsHeader({
   onSell,
   onRevert,
 }: SalesDetailsHeaderProps) {
-  const { t } = useTranslation(COMMON_NAMESPACES);
+  // `properties-enums`: εκεί ζει το `types.*` του ακινήτου (ίδιο με `SalesPropertyListCard`). Το `units:` που γραφόταν εδώ δεν υπήρξε ποτέ.
+  // Ρητή λίστα, όχι `[...COMMON_NAMESPACES]`: το CHECK 3.8 δεν λύνει spread και θα έχανε τα `sales.actions.*`.
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
 
   const status = unit.commercialStatus;
   const isReserved = status === 'reserved';
@@ -89,7 +90,7 @@ export function SalesDetailsHeader({
     <EntityDetailsHeader
       icon={ShoppingBag}
       title={unit.name || unit.code || unit.id}
-      subtitle={[unit.code, t(`units:types.${unit.type}`)].filter(Boolean).join(' · ')}
+      subtitle={[unit.code, t(`properties-enums:types.${unit.type}`, { defaultValue: '' })].filter(Boolean).join(' · ')}
       variant="detailed"
       actions={actions}
     />

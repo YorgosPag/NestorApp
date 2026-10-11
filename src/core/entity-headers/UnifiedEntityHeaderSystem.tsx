@@ -11,7 +11,7 @@ import React from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LucideIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { useDetailsSheetActions } from '@/core/layouts/details-sheet-actions';
+import { useDetailsSheetActions, type DetailsSheetActionsSlot } from '@/core/layouts/details-sheet-actions';
 import { EntityActionButton, EntityHeaderActions } from './EntityHeaderActions';
 import { orderEntityActions } from './entity-action-presets';
 import { cn } from '@/lib/utils';
@@ -56,6 +56,16 @@ export interface EntityHeaderAction {
    * το `createEntityAction` από τον `ENTITY_ACTION_PRIORITY`· ρητή τιμή μόνο για δηλωμένη εξαίρεση.
    */
   priority?: number;
+  /**
+   * **Η ενέργεια εγκαταλείπει την επεξεργασία** (ADR-912 §12.5). Το γεμίζει το `createEntityAction` για τον τύπο
+   * `cancel`. Στο φύλλο κινητού την αναλαμβάνει ο ✕ της μπάρας και **δεν** ζωγραφίζεται ως κουμπί· αλλού μένει κουμπί.
+   */
+  dismisses?: boolean;
+  /**
+   * Θα χαθούν αλλαγές αν εκτελεστεί; Το δηλώνει η φόρμα που **ξέρει**. `false` ⇒ ο ✕ ακυρώνει χωρίς ερώτηση·
+   * `undefined` (η φόρμα δεν το δήλωσε) ⇒ ρωτά: το άγνωστο δεν δηλώνει ποτέ «καθαρό».
+   */
+  discards?: boolean;
 }
 
 export interface EntityHeaderProps {
@@ -146,7 +156,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   if (sheet && !media) {
     return (
       <EntityHeaderInSheet
-        host={sheet.host}
+        sheet={sheet}
         actions={orderedActions}
         icon={Icon}
         title={title}
@@ -306,18 +316,50 @@ type EntityHeaderInSheetProps = Pick<
   EntityHeaderProps,
   'icon' | 'title' | 'subtitle' | 'badges' | 'titleAdornment' | 'avatarImageUrl' | 'onAvatarClick' | 'details' | 'children'
 > & {
-  readonly host: HTMLElement | null;
+  readonly sheet: DetailsSheetActionsSlot;
   readonly actions: readonly EntityHeaderAction[];
 };
+
+/**
+ * Χωρίζει την Ακύρωση από τις ενέργειες της μπάρας και τη δηλώνει στο φύλλο — ο ✕ **είναι** η Ακύρωση (ADR-912 §12.5).
+ * Επιστρέφει ό,τι μένει να ζωγραφιστεί ως κουμπιά.
+ */
+function useSheetDismissal(
+  sheet: DetailsSheetActionsSlot,
+  actions: readonly EntityHeaderAction[],
+): readonly EntityHeaderAction[] {
+  const dismissal = actions.find((action) => action.dismisses);
+  const barActions = React.useMemo(
+    () => (dismissal ? actions.filter((action) => action !== dismissal) : actions),
+    [actions, dismissal],
+  );
+  const { claimDismissal } = sheet;
+
+  // Σε κάθε render: ο χειριστής αλλάζει ταυτότητα, και ο ✕ πρέπει να καλέσει τον ΤΩΡΙΝΟ (το φύλλο κρατά μόνο ό,τι αλλάζει όψη).
+  React.useLayoutEffect(() => {
+    claimDismissal(dismissal ? {
+      label: dismissal.label,
+      onDismiss: dismissal.onClick,
+      disabled: dismissal.disabled || dismissal.pending,
+      discards: dismissal.discards,
+    } : null);
+  });
+  React.useLayoutEffect(() => () => claimDismissal(null), [claimDismissal]);
+
+  return barActions;
+}
 
 /**
  * **Η κεφαλίδα μέσα στο φύλλο κινητού**: οι ενέργειες πάνε στην μπάρα του φύλλου (portal — ΕΝΑ αντίτυπο στο DOM), ο
  * τίτλος δεν ξαναγράφεται. Ό,τι **δεν** είναι όνομα ή ενέργεια (φωτογραφία · χάπι κατάστασης · υπότιτλος · σήματα ·
  * γεγονότα) μένει σε λεπτή λωρίδα — αλλιώς θα χανόταν μαζί με τον διπλό τίτλο, όπως χάνονταν ως τώρα οι ενέργειες.
+ *
+ * 🔑 Το πλήρες όνομα γράφεται στη λωρίδα **μόνο όταν η μπάρα το κόβει** (ADR-912 §12.6), και μόνο για το μάτι
+ *   (`aria-hidden`): το `h2` της μπάρας έχει ήδη ολόκληρο το κείμενο ⇒ ο αναγνώστης οθόνης το ακούει ΜΙΑ φορά.
  */
 function EntityHeaderInSheet({
-  host,
-  actions,
+  sheet,
+  actions: declaredActions,
   icon: Icon,
   title,
   subtitle,
@@ -331,12 +373,19 @@ function EntityHeaderInSheet({
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const hasIdentityExtras = Boolean(avatarImageUrl || titleAdornment || subtitle || badges.length > 0);
+  const actions = useSheetDismissal(sheet, declaredActions);
+  const { host, titleTruncated } = sheet;
 
   return (
     <>
       {host && actions.length > 0 && createPortal(<EntityHeaderActions actions={actions} keepPrimary />, host)}
-      {(hasIdentityExtras || details || children) && (
+      {(titleTruncated || hasIdentityExtras || details || children) && (
         <div className="flex flex-col gap-2 border-b px-3 py-2">
+          {titleTruncated && (
+            <p aria-hidden="true" data-details-sheet-full-title="" className="line-clamp-2 break-words text-base font-semibold text-foreground">
+              {title}
+            </p>
+          )}
           {hasIdentityExtras && (
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               {avatarImageUrl && (

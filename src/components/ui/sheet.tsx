@@ -13,6 +13,7 @@ import { useSemanticColors, type SemanticColors } from '@/ui-adapters/react/useS
 import { useTranslation } from '@/i18n/hooks/useTranslation'
 // ADR-711 — modal keyboard ownership + focus restore (κοινό με το dialog.tsx).
 import { ModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope'
+import { OutsideDetailsSheet } from '@/core/layouts/details-sheet-actions'
 import { useDialogFocusRestore } from '@/lib/a11y/use-dialog-focus-restore'
 // ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
 import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership'
@@ -116,7 +117,8 @@ const SheetContent = React.forwardRef<
         onEscapeKeyDown={withRadixEscapeOwner('ui/sheet-content', onEscapeKeyDown)}
       >
         <ModalKeyboardScope />
-        {children}
+        {/* ADR-912 §12.7 — συρτάρι που ανοίγει από το φύλλο κινητού δεν στέλνει τις ενέργειές του στην μπάρα από κάτω. */}
+        <OutsideDetailsSheet>{children}</OutsideDetailsSheet>
         <SheetClose />
       </SheetPrimitive.Content>
     </SheetPortal>

@@ -16,7 +16,9 @@
  * @module components/shared/space-info/useSpaceFormState
  */
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+
+import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 
 export function useSpaceFormState<TEntity extends { readonly id: string }, TForm>(
   entity: TEntity,
@@ -35,6 +37,10 @@ export function useSpaceFormState<TEntity extends { readonly id: string }, TForm
   useEffect(() => {
     if (!isEditing) setForm(build(entity));
   }, [entity, isEditing, build]);
+
+  // Η φόρμα δηλώνει αν διαφέρει από το αποθηκευμένο — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
+  const saved = useMemo(() => build(entity), [build, entity]);
+  useUnsavedEdits(isEditing, form, saved);
 
   return [form, setForm];
 }

@@ -175,7 +175,8 @@ export function ContactDetailsHeader({
             hasFocus && focus
               ? [
                   createEntityAction('save', t('header.actions.save'), () => { void focus.submit(); }),
-                  createEntityAction('cancel', t('header.actions.cancel'), () => focus.cancel()),
+                  // `discards: true`: η εστιασμένη υποφόρμα δεν δηλώνει ακόμη αν έχει αλλαγές ⇒ ο ✕ του φύλλου ρωτά πάντα (ADR-912 §12.5).
+                  createEntityAction('cancel', t('header.actions.cancel'), () => focus.cancel(), { discards: true }),
                 ]
               : [
                   // 🆕 New Contact button - always visible

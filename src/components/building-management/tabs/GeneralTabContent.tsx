@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 import { Header } from './GeneralTabContent/Header';
 import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 // BuildingStats → moved to "Αναλυτικά" tab (AnalyticsTabContent)
@@ -107,6 +108,9 @@ export function GeneralTabContent({
   // orphan project → company) right next to the banner.
   const [saveErrorCode, setSaveErrorCode] = useState<string | null>(null);
   const [formData, setFormData] = useState(() => buildFormData(building));
+  // Η φόρμα δηλώνει αν διαφέρει από το αποθηκευμένο κτίριο — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
+  const savedFormData = useMemo(() => buildFormData(building), [building]);
+  useUnsavedEdits(effectiveIsEditing, formData, savedFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // =========================================================================

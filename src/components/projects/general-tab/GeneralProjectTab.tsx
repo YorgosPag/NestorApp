@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
@@ -226,10 +227,25 @@ export function GeneralProjectTab({
     hasImpactTrackedChanges(project, projectData, companyLink.linkedId)
   ), [companyLink.linkedId, project, projectData]);
 
+  // Ό,τι έφτασε ΗΔΗ στη βάση μέσα σε αυτή την επεξεργασία (η αυτόματη αποθήκευση τρέχει όσο γράφει ο άνθρωπος, και το
+  // `project` δεν ανανεώνεται όσο κρατά η επεξεργασία) ⇒ «αλλαγές» είναι μόνο ό,τι ΔΕΝ έχει αποθηκευτεί ακόμη.
+  const [autosaved, setAutosaved] = useState<ProjectFormData | null>(null);
+  useEffect(() => {
+    if (!isEditing) setAutosaved(null);
+  }, [isEditing]);
+
   const autoSaveFn = useCallback(async (data: ProjectFormData) => {
     if (isCreateMode || hasPendingImpactReview) return;
     await versioned.save(data);
+    setAutosaved(data);
   }, [hasPendingImpactReview, isCreateMode, versioned]);
+
+  // Η φόρμα δηλώνει αν έχει αλλαγές που θα χαθούν — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
+  const persistedValues = useMemo(
+    () => autosaved ?? projectFormValuesFrom(project, fallbackCompanyId),
+    [autosaved, project, fallbackCompanyId],
+  );
+  useUnsavedEdits(isEditing || isCreateMode === true, projectData, persistedValues);
 
   const { autoSaving, lastSaved, status: autoSaveStatus, error: autoSaveError, retry: autoSaveRetry } = useAutosave(
     projectData,

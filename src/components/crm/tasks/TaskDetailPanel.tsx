@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 import { Clock, Calendar, User, MapPin, CalendarIcon, Plus, type LucideIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
@@ -133,6 +134,28 @@ export function TaskDetailPanel({
     setIsEditing(false);
     if (activity?.kind === 'task') populateFromTask(activity.task);
   }, [activity, populateFromTask, isCreating]);
+
+  // Η φόρμα δηλώνει αν διαφέρει από την αποθηκευμένη εργασία (ή από την κενή, στη δημιουργία) — το ρωτά ο ✕ του
+  // φύλλου κινητού πριν απορρίψει (ADR-912 §12.5). Η ημέρα συγκρίνεται ως ημερολογιακή, όχι ως στιγμή.
+  const editedTask = useMemo(() => ({
+    title: editTitle, type: editType, status: editStatus, priority: editPriority,
+    day: editDate ? format(editDate, 'yyyy-MM-dd') : '', time: editTime, description: editDescription,
+  }), [editTitle, editType, editStatus, editPriority, editDate, editTime, editDescription]);
+  const savedTask = useMemo(() => {
+    if (activity?.kind !== 'task' || isCreating) {
+      return {
+        title: '', type: CRM_TASK_TYPES.MEETING, status: CRM_TASK_STATUSES.PENDING, priority: CRM_TASK_PRIORITIES.MEDIUM,
+        day: format(new Date(), 'yyyy-MM-dd'), time: '09:00', description: '',
+      };
+    }
+    const { task } = activity;
+    const due = splitDateAndTime(task.dueDate);
+    return {
+      title: task.title, type: task.type, status: task.status, priority: task.priority,
+      day: format(due.date, 'yyyy-MM-dd'), time: due.time, description: task.description ?? '',
+    };
+  }, [activity, isCreating]);
+  useUnsavedEdits(isEditing || isCreating, editedTask, savedTask);
 
   const getLeadName = useCallback(
     (leadId?: string) => leads.find(l => l.id === leadId)?.fullName ?? null,

@@ -114,7 +114,7 @@ function createEntityAction(
   label: string,
   onClick: () => void,
   overrides?: Partial<
-    Pick<EntityHeaderAction, 'icon' | 'className' | 'variant' | 'disabled' | 'pending' | 'pendingLabel' | 'priority'>
+    Pick<EntityHeaderAction, 'icon' | 'className' | 'variant' | 'disabled' | 'pending' | 'pendingLabel' | 'priority' | 'discards'>
   >
 ): EntityHeaderAction {
   const preset = ENTITY_ACTION_PRESETS[type];
@@ -124,6 +124,9 @@ function createEntityAction(
     icon: overrides?.icon ?? preset.icon,
     className: overrides?.className ?? preset.className,
     priority: overrides?.priority ?? ENTITY_ACTION_PRIORITY[type],
+    // Η Ακύρωση εγκαταλείπει την επεξεργασία: στο φύλλο κινητού την αναλαμβάνει ο ✕ της μπάρας (ADR-912 §12.5).
+    ...(type === 'cancel' ? { dismisses: true } : {}),
+    ...(overrides?.discards !== undefined ? { discards: overrides.discards } : {}),
     ...(overrides?.variant ? { variant: overrides.variant } : {}),
     ...(overrides?.disabled !== undefined ? { disabled: overrides.disabled } : {}),
     ...(overrides?.pending !== undefined ? { pending: overrides.pending } : {}),

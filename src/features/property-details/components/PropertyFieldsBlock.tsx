@@ -2,7 +2,8 @@
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -189,6 +190,14 @@ export function PropertyFieldsBlock({
       editExitWasSaveRef.current = false;
     }
   }, [isEditing, property]);
+
+  // Η φόρμα δηλώνει αν διαφέρει από το αποθηκευμένο ακίνητο — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
+  const editedFields = useMemo(() => ({ formData, type: localType }), [formData, localType]);
+  const savedFields = useMemo(
+    () => ({ formData: buildFormDataFromProperty(property), type: property.type ?? '' }),
+    [property],
+  );
+  useUnsavedEdits(isEditing, editedFields, savedFields);
 
   // ADR-233: Gate suggestion — EntityCodeField receives empty buildingId when
   // hierarchy is incomplete, which naturally disables the auto-suggest hook.

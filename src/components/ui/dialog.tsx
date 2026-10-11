@@ -14,6 +14,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 import { useTranslation } from '@/i18n/hooks/useTranslation'
 // ADR-711 — modal keyboard ownership + focus restore. ΕΝΑ σημείο για 170 αρχεία.
 import { ModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope'
+import { OutsideDetailsSheet } from '@/core/layouts/details-sheet-actions'
 import { useDialogFocusRestore } from '@/lib/a11y/use-dialog-focus-restore'
 // ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
 import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership'
@@ -133,7 +134,8 @@ const DialogContent = React.forwardRef<
             κρατούσε το scope μόνιμα πατημένο (η συνάρτηση του DialogContent τρέχει
             και με open={false}). */}
         <ModalKeyboardScope />
-        {children}
+        {/* ADR-912 §12.7 — διάλογος που ανοίγει από το φύλλο κινητού δεν στέλνει τις ενέργειές του στην μπάρα από κάτω. */}
+        <OutsideDetailsSheet>{children}</OutsideDetailsSheet>
         {!hideCloseButton && <DialogClose />}
       </DialogPrimitive.Content>
     </DialogPortal>

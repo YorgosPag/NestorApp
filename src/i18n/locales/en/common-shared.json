@@ -957,5 +957,11 @@
     "releasedBody": "Your account no longer shows as the verified owner. If this was not you, change your password immediately.",
     "supersededTitle": "Another account verified ownership of “{title}”",
     "supersededBody": "Your verification is no longer valid. If you are still the owner, upload a recent certificate from your listing."
+  },
+  "discardChanges": {
+    "title": "Discard changes?",
+    "body": "Changes you have not saved will be lost.",
+    "confirm": "Discard",
+    "keep": "Keep editing"
   }
 }

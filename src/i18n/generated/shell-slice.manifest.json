@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0d7b6c21075378d7b8af3d5bebd5dfef2e083d4aece95a857551e04d48b80124",
+  "inputsSha256": "e196d053a31105518dc0878ba832abbd5c56b8760ee3b0eeb5735ff449d4687e",
   "languages": [
     "el"
   ],
@@ -11764,7 +11764,7 @@
     "src/components/ui/channel-sharing/ContactChannelPicker.tsx": "da7c1acb046e4869c2ac1acb25fdf74c8621179adffbdf2a4f4cf53deb702d43",
     "src/components/ui/channel-sharing/types.ts": "dc1e7ffd97e8a698932d3620e6b5796267bb7924e86701c7df2bfe4357d9c218",
     "src/components/ui/checkbox.tsx": "c5bf173b77b48de41b4762313a749d46843fe6b782bce4d845685ceb32437ebe",
-    "src/components/ui/dialog.tsx": "5bb902d46036f10ef7f1c77205f3f3705d63bea609eb1b5c1f83e8fd970af507",
+    "src/components/ui/dialog.tsx": "b49ec4d6fd5a7d1a6395b2be2389e50e6ab009b5eaa373deb58570ec646d0506",
     "src/components/ui/dropdown-menu/parts.tsx": "822e6621a278993bc0f6bdeaedd2f8ae81d4eef23be514aac6e81fafa737a2a4",
     "src/components/ui/dropdown-menu/primitives.tsx": "863d44ba33b889249658c9993bf604cb67a931ed89cdb36745fb8a56808111b1",
     "src/components/ui/effects/hover-effects.ts": "c37af38e712c570a57716c2623434f00a50eef0c56feafb493aafc137cbb839b",
@@ -11801,7 +11801,7 @@
     "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx": "ff2597fa2e2db74b6969649243e9e1f2206a4b30dc58d0e0cc4ff5c694677485",
     "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx": "6fb2165b8e6a90b1c5bac31c334f1edba7976e0f7e058b36a9c6d5daa45514ee",
     "src/components/ui/sharing/panels/user-auth/PlatformShareController.tsx": "15767a90ef64f2fdd3a2b9a86d069c483fe88008c9951825772e8bab493bc5f6",
-    "src/components/ui/sheet.tsx": "28d3cf43453ab7d383736364a5caa9b5d2232c9e12ea0d091b77d513e29c9c97",
+    "src/components/ui/sheet.tsx": "effc89b79d10ad652d53ff9b4073cf1734b65facbd4c82e9b5b60f6083300a54",
     "src/components/ui/sidebar-context.tsx": "ed0c6d3648650549ba66b6dd58001ec7c87e276ce2a3833d163d2e31b6d7bc67",
     "src/components/ui/sidebar-menu.tsx": "203d3f290baeb09c29bc7a4e7e6494864c8ad4a5d6c82aad35f567d8535e17fa",
     "src/components/ui/sidebar-trigger.tsx": "4971e3d47f677cdd297c932137eeea76464f7cb78813417a0308161a5b0324c8",
@@ -11918,6 +11918,7 @@
     "src/core/containers/PageContainer.tsx": "86e6be0e84bbc0fb7ccc86167856ebcf5591b2d8f9dad105c8b2154dc66b04c8",
     "src/core/containers/ShellSurface.tsx": "f1da2f889d0e940653d7ce4c6fc81cd2572fc1bb518cb6b68eb919ceedae8a6b",
     "src/core/containers/ShellUtilities.tsx": "42e0f51ec9fa684a169e9624647cf69565816370c7fb4c7487de05222f3bfadb",
+    "src/core/layouts/details-sheet-actions.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/core/modals/PhotoPreviewImage.tsx": "4d4b5bb513112242b8b0787429db7194305d2e123750634e0841884e3bc8f73c",
     "src/core/modals/PhotoPreviewModal.tsx": "7acb2b49d47a8183474a6b00ae42316d96cc8a9e78a04bb6b2256c40b0c070d4",
     "src/core/modals/photo-preview-helpers.ts": "f35c78070d56ba09c843dbb6b7618acaa806101e9e83319ca6e29641f497a589",
@@ -12764,7 +12765,7 @@
     "dynamicBoundaries": 24,
     "matchedKeys": 239,
     "routeBoundaries": 3,
-    "shellFiles": 1149,
+    "shellFiles": 1150,
     "sliceBytes": 726062
   },
   "unresolvableKeys": [
