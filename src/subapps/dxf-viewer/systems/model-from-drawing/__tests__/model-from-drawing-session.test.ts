@@ -53,6 +53,17 @@ const ON_WALL_LINE: Point2D = {
 };
 const NOWHERE: Point2D = { x: -9e6, y: -9e6 };
 
+/** Οι στρώσεις του fixture ανά id (`COLOR_160` → `#003FFF`), όπως τις δίνει το `getLayersById()`. */
+const FIXTURE_LAYERS: Record<string, SceneLayer> = Object.fromEntries(
+  Object.entries((fixture as unknown as { layers: Record<string, { name: string; color: string }> }).layers)
+    .map(([id, layer]) => [id, { ...layer, id } as unknown as SceneLayer]),
+);
+/** Το ίδιο σχέδιο με κάθε γραμμή ByLayer: κανένα ρητό `color`, μόνο `layerId`. */
+const BY_LAYER_ENTITIES = (fixture.entities as readonly { color?: string }[]).map((entity) => {
+  const { color: _explicit, ...byLayer } = entity;
+  return byLayer;
+}) as unknown as readonly Entity[];
+
 interface Harness {
   readonly deps: ModelFromDrawingDeps;
   readonly commit: jest.Mock;
@@ -142,19 +153,36 @@ describe('ADR-911 Δ1 — το δείγμα', () => {
     expect(state().notice).toBeNull();
   });
 
-  it('το χρώμα περνά από τον καταρράκτη στρώσεων του SSoT, όχι από ωμό πεδίο', () => {
-    // Το fixture κρατά τις στρώσεις ανά id (`COLOR_160` → `#003FFF`)· με στρώσεις στο χέρι ο
-    // resolver παίρνει τη διαδρομή του καταρράκτη (`resolveRenderedColorHex`), όχι την εφεδρεία.
-    const layers = (fixture as unknown as { layers: Record<string, { name: string; color: string }> }).layers;
-    const layersById = Object.fromEntries(
-      Object.entries(layers).map(([id, layer]) => [id, { ...layer, id } as unknown as SceneLayer]),
-    );
-    const h = harness(ENTITIES, layersById);
+  it('ρητό χρώμα ΜΕ στρώσεις στο χέρι δίνει την ίδια πρόταση (κλάδος «Concrete» του καταρράκτη)', () => {
+    // ⚠️ Αυτό το test ΔΕΝ αποδεικνύει ότι οι στρώσεις διαβάζονται: το fixture γράφει ρητό `color`
+    // ίδιο με της στρώσης, άρα περνά και με `layersById = {}`. Το ByLayer το δένει το επόμενο.
+    const h = harness(ENTITIES, FIXTURE_LAYERS);
     sample(h);
-    expect(Object.keys(layersById)).toHaveLength(4);
+    expect(Object.keys(FIXTURE_LAYERS)).toHaveLength(4);
     expect(state().wallColorHex).toBe(WALL_HEX);
     expect(state().proposal?.items).toHaveLength(40);
     expect(state().proposal?.coverage.ignoredCount).toBe(362);
+  });
+
+  it('ByLayer: γραμμές ΧΩΡΙΣ δικό τους χρώμα παίρνουν ρόλο ΜΟΝΟ από τη στρώση τους', () => {
+    // Το πραγματικό DXF γράφει σπάνια χρώμα στη γραμμή· το κρατά η στρώση. Εδώ ο ΜΟΝΟΣ φορέας
+    // του χρώματος είναι το `layersById` — και στο δείγμα και στο άπλωμα του ρόλου.
+    expect(BY_LAYER_ENTITIES.some((e) => 'color' in e)).toBe(false);
+    const h = harness(BY_LAYER_ENTITIES, FIXTURE_LAYERS);
+    sample(h);
+    expect(state().wallColorHex).toBe(WALL_HEX);
+    expect(state().proposal?.items).toHaveLength(40);
+    expect(counts()).toEqual({ ready: 38, 'needs-decision': 2, existing: 0, rejected: 0 });
+    expect(state().proposal?.coverage.ignoredCount).toBe(362);
+  });
+
+  it('ByLayer χωρίς τη στρώση: ο βοηθός λέει «χωρίς χρώμα» και μένει οπλισμένος — δεν μαντεύει', () => {
+    // Ο μάρτυρας του προηγούμενου: οι ίδιες γραμμές, χωρίς στρώσεις, ΔΕΝ έχουν από πού να πάρουν χρώμα.
+    const h = harness(BY_LAYER_ENTITIES, {});
+    sample(h);
+    expect(state().notice).toEqual({ kind: 'no-color' });
+    expect(state().phase).toBe('picking');
+    expect(state().proposal).toBeNull();
   });
 
   it('κλικ στο κενό ⇒ ο βοηθός ΜΕΝΕΙ οπλισμένος και το λέει', () => {

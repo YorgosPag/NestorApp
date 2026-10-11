@@ -138,6 +138,14 @@ describe('ModelFromDrawingPanel — οι αποφάσεις φεύγουν πρ�
     expect(confirmed.every((row) => row.getAttribute('data-confirmed') === 'true')).toBe(true);
   });
 
+  it('το κουμπί «Επιβεβαίωση» υπάρχει ΜΟΝΟ όσο η ομάδα εκκρεμεί', () => {
+    // Το Select είναι mock χωρίς <button>: το μόνο κουμπί μιας γραμμής είναι η «Επιβεβαίωση».
+    expect(renderPanel().all('mfd-group').every((row) => row.querySelectorAll('button').length === 1)).toBe(true);
+    const confirmed = renderPanel({ proposal: ALL_CONFIRMED }).all('mfd-group');
+    expect(confirmed.length).toBeGreaterThan(0);
+    expect(confirmed.every((row) => row.querySelector('button') === null)).toBe(true);
+  });
+
   it('«Επιβεβαίωση» στέλνει την ΠΡΟΤΕΙΝΟΜΕΝΗ λειτουργία της ομάδας· αλλαγή επιλογής στέλνει τη νέα', () => {
     const { all, actions } = renderPanel();
     const first = UNCONFIRMED.groups[0];

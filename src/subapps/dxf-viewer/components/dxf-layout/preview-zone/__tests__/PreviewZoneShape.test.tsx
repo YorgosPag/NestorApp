@@ -57,6 +57,20 @@ describe('preview-zone-style — οι τόνοι ξεχωρίζουν χωρίς
   it('η σειρά ζωγραφικής περιέχει κάθε τόνο ακριβώς μία φορά', () => {
     expect([...PREVIEW_ZONE_PAINT_ORDER].sort()).toEqual([...TONES].sort());
   });
+
+  it('ό,τι θέλει προσοχή ζωγραφίζεται τελευταίο: «υπάρχει» πρώτο, «απορρίφθηκε» από πάνω', () => {
+    expect(PREVIEW_ZONE_PAINT_ORDER[0]).toBe('existing');
+    expect(PREVIEW_ZONE_PAINT_ORDER[PREVIEW_ZONE_PAINT_ORDER.length - 1]).toBe('reject');
+  });
+
+  it('γέμισμα έχουν ΜΟΝΟ οι τόνοι που αποφασίζουν τι θα γραφτεί· το «υπάρχει» είναι το λεπτότερο', () => {
+    // Απόλυτοι ισχυρισμοί: το it.each παρακάτω συγκρίνει το SVG με τον ΙΔΙΟ τον πίνακα, άρα
+    // δεν βλέπει αλλαγή ΜΕΣΑ στον πίνακα.
+    const filled = TONES.filter((tone) => PREVIEW_ZONE_STYLE[tone].fillOpacity > 0);
+    expect([...filled].sort()).toEqual(['accept', 'reject']);
+    const otherWidths = TONES.filter((tone) => tone !== 'existing').map((tone) => PREVIEW_ZONE_STYLE[tone].strokeWidth);
+    expect(PREVIEW_ZONE_STYLE.existing.strokeWidth).toBeLessThan(Math.min(...otherWidths));
+  });
 });
 
 describe('PreviewZoneShape — το λεξιλόγιο φτάνει στο SVG', () => {

@@ -57,6 +57,29 @@ describe('wallProposalSignature — «το ίδιο που ενέκρινα»', 
     const accepted = propose({ acceptedKeys: new Set([undecided.key]) });
     expect(wallProposalSignature(accepted)).not.toBe(wallProposalSignature(base));
   });
+
+  it('αλλάζει όταν αλλάζει ΜΟΝΟ η κατάσταση, χωρίς να αλλάξει κανένας τοίχος', () => {
+    // Το προηγούμενο δεν το ξεχωρίζει: εκεί η αποδοχή γεννά ΚΑΙ τοίχο. Εδώ «προς απόφαση» →
+    // «απορρίφθηκε»: κανένα από τα δύο δεν γράφει, αλλά ο άνθρωπος είδε άλλο πράγμα.
+    const base = propose();
+    const index = base.items.findIndex((i) => i.status === 'needs-decision');
+    const restated: WallProposal = {
+      ...base,
+      items: base.items.map((item, k) => (k === index ? { ...item, status: 'rejected' as const } : item)),
+    };
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(restated.items.map((i) => i.wall)).toEqual(base.items.map((i) => i.wall));
+    expect(wallProposalSignature(restated)).not.toBe(wallProposalSignature(base));
+  });
+
+  it('αλλάζει όταν αλλάζει ο ΤΥΠΟΣ τοίχου που θα γραφτεί, με ίδια γεωμετρία', () => {
+    const typed = (typeId: string): WallProposal => propose({ typeWall: (wall) => ({ ...wall, typeId }) });
+    const a = typed('type-a');
+    const b = typed('type-b');
+    expect(a.walls.map((w) => w.params)).toEqual(b.walls.map((w) => w.params));
+    expect(wallProposalSignature(a)).not.toBe(wallProposalSignature(b));
+    expect(wallProposalSignature(typed('type-a'))).toBe(wallProposalSignature(a));
+  });
 });
 
 describe('groupsAwaitingConfirmation — τι κλειδώνει την έγκριση (Δ3)', () => {
