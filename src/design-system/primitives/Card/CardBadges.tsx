@@ -45,7 +45,21 @@ export interface CardBadgesProps {
   keyPrefix?: string;
   /** Additional className applied to every badge */
   badgeClassName?: string;
+  /**
+   * **Μετρημένη γραμμή** (ADR-912 §11): πόσα από τα πρώτα `max` σήματα **χωρούν** στο πλάτος της γραμμής — η απάντηση
+   * του `usePriorityOverflow`. Όσα δεν χωρούν προστίθενται στο «+N», αλλά **μένουν στη ροή αόρατα**, ώστε να μετριούνται
+   * ακόμη και να επιστρέφουν όταν η γραμμή πλατύνει. Παράλειψη = γραμμή χωρίς μέτρηση (ισχύει μόνο το `max`).
+   */
+  fitting?: number;
 }
+
+/** Σημάδι πάνω σε κάθε σήμα της γραμμής — αυτά μετρά το `usePriorityOverflow`. */
+export const CARD_BADGE_ATTR = 'data-card-badge';
+/** Σημάδι πάνω στο σήμα «+N». */
+export const CARD_BADGE_OVERFLOW_ATTR = 'data-card-badge-overflow';
+
+const BADGE_MARK = { [CARD_BADGE_ATTR]: '' };
+const OVERFLOW_MARK = { [CARD_BADGE_OVERFLOW_ATTR]: '' };
 
 /**
  * 🏢 CardBadges Component
@@ -59,21 +73,36 @@ export interface CardBadgesProps {
  * </div>
  * ```
  */
-export function CardBadges({ badges, max, overflow = 'count', keyPrefix = '', badgeClassName }: CardBadgesProps) {
-  const hidden = overflow === 'count' ? badges.slice(max) : [];
+export function CardBadges({
+  badges,
+  max,
+  overflow = 'count',
+  keyPrefix = '',
+  badgeClassName,
+  fitting,
+}: CardBadgesProps) {
+  // Ένα όριο, δύο λόγοι: το πλήθος (`max`) και — μόνο στη μετρημένη γραμμή — το πλάτος (`fitting`).
+  const shown = Math.min(max, fitting ?? max);
+  const hidden = overflow === 'count' ? badges.slice(shown) : [];
   return (
     <>
-      {badges.slice(0, max).map((badge, index) => (
-        <Badge
-          key={`${keyPrefix}${badge.label}-${index}`}
-          variant={badge.variant}
-          className={cn('whitespace-nowrap', badgeClassName, badge.className)}
-        >
-          {badge.label}
-        </Badge>
-      ))}
+      {badges.slice(0, max).map((badge, index) => {
+        // Δεν χωρά: μένει στη ροή για να μετριέται, αλλά δεν φαίνεται και δεν διαβάζεται (το όνομά του το λέει το «+N»).
+        const unfitted = index >= shown;
+        return (
+          <Badge
+            key={`${keyPrefix}${badge.label}-${index}`}
+            variant={badge.variant}
+            className={cn('whitespace-nowrap', badgeClassName, badge.className, unfitted && 'invisible order-last')}
+            aria-hidden={unfitted || undefined}
+            {...BADGE_MARK}
+          >
+            {badge.label}
+          </Badge>
+        );
+      })}
       {hidden.length > 0 && (
-        <Badge variant="outline" className={cn('whitespace-nowrap', badgeClassName)} data-card-badge-overflow>
+        <Badge variant="outline" className={cn('whitespace-nowrap', badgeClassName)} {...OVERFLOW_MARK}>
           <span aria-hidden="true">+{hidden.length}</span>
           <span className="sr-only">{hidden.map((badge) => badge.label).join(', ')}</span>
         </Badge>

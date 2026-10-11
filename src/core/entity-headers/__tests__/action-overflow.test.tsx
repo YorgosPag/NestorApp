@@ -5,7 +5,7 @@
  * (820px) μέσα σε γραμμή 517–671px ⇒ τίτλος **0px** και το τελευταίο κουμπί κομμένο. Η §8.87.2 είχε θεραπεύσει μόνο
  * τον κλάδο `media`· ο κλάδος χωρίς `media` — που τροφοδοτεί ~20 κεφαλίδες — κρατούσε το ίδιο σφάλμα.
  *
- * ⚠️ **Τι αποδεικνύει και τι όχι.** Το jsdom δεν έχει διάταξη: η αριθμητική (`countFittingActions`) ελέγχεται με τα
+ * ⚠️ **Τι αποδεικνύει και τι όχι.** Το jsdom δεν έχει διάταξη: η αριθμητική (`countFittingItems`) ελέγχεται με τα
  * **μετρημένα** πλάτη της παραγωγής, και η συμπεριφορά με ψεύτικο παρατηρητή + ψεύτικα πλάτη. Το ότι το πλέγμα δίνει
  * πράγματι αυτόν τον χώρο στον browser **δεν** αποδεικνύεται εδώ — μετριέται ζωντανά.
  */
@@ -16,7 +16,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { User } from 'lucide-react';
 
-import { countFittingActions } from '../action-overflow';
+import { countFittingItems } from '@/hooks/media/usePriorityOverflow';
 import { createEntityAction } from '../entity-action-presets';
 import { EntityDetailsHeader } from '../UnifiedEntityHeaderSystem';
 
@@ -32,32 +32,32 @@ const PRODUCTION_WIDTHS = [172, 138, 142, 176, 160];
 const GAP = 8;
 const MORE = 32;
 
-describe('Υ6α — `countFittingActions`: η αριθμητική', () => {
+describe('Υ6α — `countFittingItems`: η αριθμητική', () => {
   it('✅ χωρούν όλες ⇒ όλες, χωρίς να κρατηθεί χώρος για το «Περισσότερα»', () => {
-    expect(countFittingActions(PRODUCTION_WIDTHS, 820, GAP, MORE)).toBe(5);
+    expect(countFittingItems(PRODUCTION_WIDTHS, 820, GAP, MORE)).toBe(5);
   });
 
   it('🔴 1px λιγότερο ⇒ φεύγει ενέργεια, και ο χώρος του «Περισσότερα» ΜΕΤΡΑ', () => {
     // 819 − 32 (μενού) = 787: 172+8+138+8+142+8+176+8 = 660 χωρά, +160+8 = 828 όχι.
-    expect(countFittingActions(PRODUCTION_WIDTHS, 819, GAP, MORE)).toBe(4);
+    expect(countFittingItems(PRODUCTION_WIDTHS, 819, GAP, MORE)).toBe(4);
   });
 
   it('🔴 τα μετρημένα πλάτη της παραγωγής: 403px ⇒ 2 ενέργειες · 249px ⇒ 1', () => {
-    expect(countFittingActions(PRODUCTION_WIDTHS, 403, GAP, MORE)).toBe(2);
-    expect(countFittingActions(PRODUCTION_WIDTHS, 249, GAP, MORE)).toBe(1);
+    expect(countFittingItems(PRODUCTION_WIDTHS, 403, GAP, MORE)).toBe(2);
+    expect(countFittingItems(PRODUCTION_WIDTHS, 249, GAP, MORE)).toBe(1);
   });
 
   it('✅ δεν χωρά ούτε η πρώτη ⇒ 0 ορατές (όλες στο μενού), ποτέ αρνητικός', () => {
-    expect(countFittingActions(PRODUCTION_WIDTHS, 100, GAP, MORE)).toBe(0);
+    expect(countFittingItems(PRODUCTION_WIDTHS, 100, GAP, MORE)).toBe(0);
   });
 
   it('🔴 ΑΜΕΤΡΗΤΟΣ χώρος (0) ⇒ ΟΛΕΣ: το «δεν ξέρω» δεν κρύβει τίποτα', () => {
-    expect(countFittingActions(PRODUCTION_WIDTHS, 0, GAP, MORE)).toBe(5);
-    expect(countFittingActions(PRODUCTION_WIDTHS, Number.NaN, GAP, MORE)).toBe(5);
+    expect(countFittingItems(PRODUCTION_WIDTHS, 0, GAP, MORE)).toBe(5);
+    expect(countFittingItems(PRODUCTION_WIDTHS, Number.NaN, GAP, MORE)).toBe(5);
   });
 
   it('✅ κλασματικά πλάτη (zoom 80%) δεν ρίχνουν ενέργεια για μισό pixel', () => {
-    expect(countFittingActions([100.3, 100.3], 208.4, GAP, MORE)).toBe(2);
+    expect(countFittingItems([100.3, 100.3], 208.4, GAP, MORE)).toBe(2);
   });
 });
 

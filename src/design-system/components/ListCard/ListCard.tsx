@@ -142,12 +142,12 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       {/* ================================================================== */}
       {/* 🏢 HEADER: Icon + Title + Badges */}
       {/* ================================================================== */}
-      {/* Badges clip rather than wrap - a list row must keep its height */}
+      {/* A list row must keep its height: badges that do not fit whole collapse into "+N" */}
       <CardHeaderBlock
         {...pickCardIdentity(props)}
         badges={props.badges}
         inlineBadges={props.inlineBadges}
-        badgeRowClassName="overflow-hidden"
+        badgeRow="fit"
       />
 
       {/* ================================================================== */}

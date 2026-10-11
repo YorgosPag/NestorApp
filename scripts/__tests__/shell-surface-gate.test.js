@@ -379,7 +379,10 @@ describe('Β-Κ — το κριτήριο της ΦΑΣΗΣ Β', () => {
     expect(exportedRootOf(src).tag).toBe('main');
     // Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η παλιά διαδρομή έδινε ΑΛΛΟ στοιχείο — αλλιώς η άγκυρα
     // θα ήταν πράσινη ακόμη κι αν το άλμα δεν έκανε τίποτα.
-    expect(rootElementOf(src).tag).toBe('section');
+    // ⚠️ Ο ισχυρισμός είναι «ΑΛΛΟ στοιχείο», όχι «ποιο»: έγραφε `'section'` και
+    //    κοκκίνισε τη μέρα που η κάρτα έγινε `<SectionFrame>` (`8551cd3d`) — αλλαγή
+    //    άσχετη με το άλμα. Το όνομα της κάρτας δεν είναι υπόθεση αυτής της άγκυρας.
+    expect(rootElementOf(src).tag).not.toBe(exportedRootOf(src).tag);
   });
 
   it('Β-Κ4: το όριο σώματος αντέχει πολυγραμμικό destructuring παραμέτρων', () => {
@@ -829,15 +832,33 @@ describe('Γ-Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ: οι πέ�
       });
   });
 
-  it('Γ-Μ4 (Υ2): δήλωση κλειδώματος ΧΩΡΙΣ αξίωση εξαίρεσης WCAG 1.4.10 ⇒ ΚΟΚΚΙΝΟ', () => {
-    // Κλειδωμένη επιφάνεια δεν κυλά ⇒ στο 400% zoom ό,τι δεν χωρά ΧΑΝΕΤΑΙ. Η
-    // εξαίρεση υπάρχει για επιφάνειες χειρισμού, όχι για κείμενο — και πρέπει
-    // να είναι ΓΡΑΠΤΗ, ώστε να μπορεί να ελεγχθεί ξανά από άνθρωπο.
-    withMutation(SHELL_REGISTRY, '"reflowException"', '"reflowExceptionΜΕΤΑΛΛΑΞΗ"', (r) => {
-      expect(r.code).not.toBe(0);
-      expect(r.out).toMatch(/reflowException|WCAG/);
-    });
+  // Κλειδωμένη επιφάνεια δεν κυλά ⇒ στο 400% zoom ό,τι δεν χωρά ΧΑΝΕΤΑΙ. Η
+  // εξαίρεση υπάρχει για επιφάνειες χειρισμού, όχι για κείμενο — και πρέπει
+  // να είναι ΓΡΑΠΤΗ, ώστε να μπορεί να ελεγχθεί ξανά από άνθρωπο.
+  //
+  // ⚠️ ΜΙΑ ΜΕΤΑΛΛΑΞΗ ΑΝΑ ΔΗΛΩΣΗ, ΠΑΡΑΓΜΕΝΗ ΑΠΟ ΤΟ ΜΗΤΡΩΟ. Ο στόχος ήταν το σκέτο
+  //    `"reflowException"` και έγινε ασαφής τη μέρα που δηλώθηκε δεύτερο κλείδωμα
+  //    (`dfa7b3ac`). Καρφωμένο `occurrence` θα φύλαγε ΜΙΑ δήλωση και θα μετακόμιζε
+  //    στην επόμενη προσθήκη· εδώ κάθε δήλωση στοχεύεται με το ΔΙΚΟ της κείμενο και
+  //    η πύλη οφείλει να ονομάσει τη ΔΙΚΗ της διαδρομή — άρα και η τρίτη καλύπτεται.
+  const lockedDeclarations = Object.entries(
+    JSON.parse(fs.readFileSync(SHELL_REGISTRY, 'utf8')).viewportLocked,
+  ).filter(([route]) => !route.startsWith('$'));
+
+  it('Γ-Μ4α (Υ2): το μητρώο ΕΧΕΙ δηλώσεις κλειδώματος — αλλιώς το Γ-Μ4 δεν τρέχει τίποτα', () => {
+    expect(lockedDeclarations.length).toBeGreaterThan(0);
   });
+
+  it.each(lockedDeclarations)(
+    'Γ-Μ4 (Υ2): το κλείδωμα «%s» ΧΩΡΙΣ αξίωση εξαίρεσης WCAG 1.4.10 ⇒ ΚΟΚΚΙΝΟ',
+    (route, entry) => {
+      const claim = `"reflowException": ${JSON.stringify(entry.reflowException)}`;
+      withMutation(SHELL_REGISTRY, claim,
+        claim.replace('"reflowException"', '"reflowExceptionΜΕΤΑΛΛΑΞΗ"'), (r) => {
+          expect(r.code).not.toBe(0);
+          expect(r.out).toContain(`«${route}» δεν αξιώνει την εξαίρεση WCAG 1.4.10`);
+        });
+    });
 
   it('Γ-Μ5 (Υ5): ο δείκτης φεύγει από τη ρίζα ⇒ ΚΟΚΚΙΝΟ (το κλείδωμα δεν συμβαίνει)', () => {
     // 🔑 Ο ΚΑΝΟΝΑΣ ΠΟΥ ΚΑΝΕΙΣ ΣΤΗ ΒΙΟΜΗΧΑΝΙΑ ΔΕΝ ΕΧΕΙ. dockview · golden-layout ·
@@ -952,6 +973,9 @@ describe('Γ-Π — βαθμονόμηση σε ΠΡΑΓΜΑΤΙΚΟ ιστορ�
 //    άγκυρα αποδεικνύει ότι η αλλαγή **έκανε διαφορά** — μια άγκυρα που απλώς
 //    επιβεβαιώνει το σημερινό αποτέλεσμα θα ήταν πράσινη και πριν τη θεραπεία.
 describe('Δ — η αφαίρεση σχολίων δεν καταπίνει κώδικα', () => {
+  /** Το commit της θεραπείας: η σελίδα όπως ήταν όταν ο σαρωτής διάβαζε το μισό της. */
+  const INCIDENT_COMMIT = '1869b21c';
+
   /** Η ΠΑΛΙΑ μηχανή, αυτούσια. Ζει ΜΟΝΟ εδώ, και ΜΟΝΟ για να αποτύχει. */
   const LEGACY = (s) => s
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
@@ -1007,10 +1031,21 @@ describe('Δ — η αφαίρεση σχολίων δεν καταπίνει κ
   it('Δ5 (ΖΩΝΤΑΝΟ): η σελίδα που το αποκάλυψε διαβάζεται ΟΛΟΚΛΗΡΗ', () => {
     // Μετρημένο στο περιστατικό: 7.994 → 2.234 χαρακτήρες, με το `export
     // default` της γρ. 118 μέσα στα καταπιωμένα.
-    const page = path.join(REPO, 'src', 'app', '(app)', 'test-harness', 'listing-shapes', 'page.tsx');
-    const raw = fs.readFileSync(page, 'utf8');
-    expect(LEGACY(raw)).not.toContain('export default');   // ΤΟΤΕ
-    expect(stripComments(raw)).toContain('export default'); // ΤΩΡΑ
+    //
+    // ⚠️ ΤΟ «ΤΟΤΕ» ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΟ ΚΑΡΦΩΜΕΝΟ COMMIT, ΟΧΙ ΑΠΟ ΤΟΝ ΔΙΣΚΟ. Η πρώτη
+    //    γραφή έτρεχε την παλιά μηχανή πάνω στο ΖΩΝΤΑΝΟ αρχείο και κοκκίνισε όταν
+    //    ένα μεταγενέστερο μπλοκ σχόλιο μπήκε ανάμεσα στο glob και το `export
+    //    default`: το ψεύτικο μπλοκ έκλεινε πλέον νωρίτερα. Ένα περιστατικό είναι
+    //    γεγονός του ιστορικού· το ζωντανό αρχείο αποδεικνύει μόνο το «ΤΩΡΑ».
+    const rel = 'src/app/(app)/test-harness/listing-shapes/page.tsx';
+    const then = execFileSync('git', ['show', `${INCIDENT_COMMIT}:${rel}`],
+      { cwd: REPO, encoding: 'utf8', maxBuffer: 8 << 20 });
+    if (!then.trim()) throw new Error(`git show ${INCIDENT_COMMIT}:${rel} γύρισε κενό — η άγκυρα δεν αποδεικνύει τίποτα.`);
+    expect(then).toContain('export default');
+    expect(LEGACY(then)).not.toContain('export default');        // ΤΟΤΕ, παλιά μηχανή
+    expect(stripComments(then)).toContain('export default');      // ΤΟΤΕ, σημερινή μηχανή
+    expect(stripComments(fs.readFileSync(path.join(REPO, rel), 'utf8')))
+      .toContain('export default');                               // ΤΩΡΑ
   });
 });
 

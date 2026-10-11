@@ -123,7 +123,7 @@ export function GridCard(props: GridCardProps) {
       <CardHeaderBlock
         {...pickCardIdentity(props)}
         badges={props.badges}
-        badgeRowClassName="flex-wrap"
+        badgeRow="wrap"
       />
 
       {/* ================================================================== */}
