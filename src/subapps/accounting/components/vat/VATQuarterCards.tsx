@@ -10,8 +10,10 @@
 
 'use client';
 
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Badge } from '@/components/ui/badge';
 import type { VATQuarterSummary, VATQuarterStatus, FiscalQuarter } from '@/subapps/accounting/types';
@@ -47,6 +49,50 @@ const QUARTER_PERIOD_LABELS: Record<FiscalQuarter, string> = {
 };
 
 // ============================================================================
+// SHARED PARTS — ίδια κεφαλίδα και ίδια γραμμή ποσού για γεμάτο και κενό τρίμηνο
+// ============================================================================
+
+interface QuarterCardHeaderProps {
+  quarterNumber: FiscalQuarter;
+  /** Το σήμα κατάστασης του τριμήνου, απέναντι από τον τίτλο. */
+  badge: ReactNode;
+}
+
+function QuarterCardHeader({ quarterNumber, badge }: QuarterCardHeaderProps) {
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const colors = useSemanticColors();
+
+  return (
+    <CardHeader className="pb-3">
+      <HeaderBar actions={badge}>
+        <CardTitle className="text-base">
+          {t('quarterCard', { quarter: quarterNumber })}
+        </CardTitle>
+      </HeaderBar>
+      <p className={cn("text-xs", colors.text.muted)}>
+        {QUARTER_PERIOD_LABELS[quarterNumber]}
+      </p>
+    </CardHeader>
+  );
+}
+
+interface VatAmountRowProps {
+  label: string;
+  amount: number;
+}
+
+function VatAmountRow({ label, amount }: VatAmountRowProps) {
+  const colors = useSemanticColors();
+
+  return (
+    <div className="flex justify-between">
+      <dt className={colors.text.muted}>{label}</dt>
+      <dd className="font-medium">{formatAccountingCurrency(amount)}</dd>
+    </div>
+  );
+}
+
+// ============================================================================
 // SINGLE QUARTER CARD
 // ============================================================================
 
@@ -60,29 +106,18 @@ function QuarterCard({ quarter }: QuarterCardProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            {t('quarterCard', { quarter: quarter.quarter })}
-          </CardTitle>
+      <QuarterCardHeader
+        quarterNumber={quarter.quarter}
+        badge={
           <Badge variant={STATUS_BADGE_VARIANTS[quarter.status]}>
             {t(`vat.statuses.${quarter.status}`)}
           </Badge>
-        </div>
-        <p className={cn("text-xs", colors.text.muted)}>
-          {QUARTER_PERIOD_LABELS[quarter.quarter]}
-        </p>
-      </CardHeader>
+        }
+      />
       <CardContent>
         <dl className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
-            <dd className="font-medium">{formatAccountingCurrency(quarter.totalOutputVat)}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
-            <dd className="font-medium">{formatAccountingCurrency(quarter.totalDeductibleInputVat)}</dd>
-          </div>
+          <VatAmountRow label={t('vat.outputVat')} amount={quarter.totalOutputVat} />
+          <VatAmountRow label={t('vat.deductibleVat')} amount={quarter.totalDeductibleInputVat} />
           <div className="flex justify-between border-t border-border pt-2">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
             <dd className={`font-bold ${quarter.vatPayable >= 0 ? colors.text.error : colors.text.success}`}>
@@ -111,31 +146,17 @@ interface EmptyQuarterCardProps {
 
 function EmptyQuarterCard({ quarterNumber }: EmptyQuarterCardProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
-  const colors = useSemanticColors();
 
   return (
     <Card className="opacity-60">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            {t('quarterCard', { quarter: quarterNumber })}
-          </CardTitle>
-          <Badge variant="outline">{t('vat.statuses.open')}</Badge>
-        </div>
-        <p className={cn("text-xs", colors.text.muted)}>
-          {QUARTER_PERIOD_LABELS[quarterNumber]}
-        </p>
-      </CardHeader>
+      <QuarterCardHeader
+        quarterNumber={quarterNumber}
+        badge={<Badge variant="outline">{t('vat.statuses.open')}</Badge>}
+      />
       <CardContent>
         <dl className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
-            <dd className="font-medium">{formatAccountingCurrency(0)}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
-            <dd className="font-medium">{formatAccountingCurrency(0)}</dd>
-          </div>
+          <VatAmountRow label={t('vat.outputVat')} amount={0} />
+          <VatAmountRow label={t('vat.deductibleVat')} amount={0} />
           <div className="flex justify-between border-t border-border pt-2">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
             <dd className="font-bold">{formatAccountingCurrency(0)}</dd>

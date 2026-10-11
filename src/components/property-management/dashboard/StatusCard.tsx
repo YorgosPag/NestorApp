@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Activity } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -35,9 +36,15 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     
     return (
         <Card>
-            <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
+            <CardHeader className={`${spacing.padding.sm} pb-2`}>
+              <HeaderBar
+                wrap={false}
+                actions={
+                  <Activity className={`${iconSizes.sm} ${colors.text.muted}`} />
+                }
+              >
                 <CardTitle className="text-sm font-medium">{t('page.dashboard.propertyStatus')}</CardTitle>
-                <Activity className={`${iconSizes.sm} ${colors.text.muted}`} />
+              </HeaderBar>
             </CardHeader>
             <CardContent className={`${spacing.padding.sm} pt-0`}>
                 <div className="space-y-2">

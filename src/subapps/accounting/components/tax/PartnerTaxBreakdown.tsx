@@ -12,6 +12,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { PartnershipTaxResult } from '../../types/tax';
 
@@ -68,12 +69,15 @@ export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
       {result.partnerResults.map((pr) => (
         <Card key={pr.partnerId}>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>{pr.partnerName}</span>
-              <span className={cn("text-sm font-normal", colors.text.muted)}>
-                {pr.profitSharePercent}%
-              </span>
-            </CardTitle>
+            <HeaderBar
+              actions={
+                <span className={cn("text-sm font-normal leading-none tracking-tight", colors.text.muted)}>
+                  {pr.profitSharePercent}%
+                </span>
+              }
+            >
+              <CardTitle>{pr.partnerName}</CardTitle>
+            </HeaderBar>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">

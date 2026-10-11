@@ -4,6 +4,7 @@ import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Heart, MoreVertical } from 'lucide-react';
@@ -331,102 +332,109 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
 
       {/* Legacy Header Section (when no headerConfig) */}
       {!headerConfig && (header || status || badges.length > 0 || validActions.length > 0 || showFavorite || title) && (
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-          <div className="flex-1 space-y-1">
-            {/* Title/Subtitle without headerConfig */}
-            {(title || subtitle) && !headerConfig && (
-              <div>
-                {title && <h3 className="font-semibold text-foreground">{title}</h3>}
-                {subtitle && <p className={cn("text-sm", colors.text.muted)}>{subtitle}</p>}
-              </div>
-            )}
-            {header}
+        <CardHeader className="pb-2">
+          <HeaderBar
+            align="start"
+            actions={
+              <>
+                {/* Actions Section */}
+                <div className="flex items-center gap-1">
+                  {/* Favorite button (when not on image) */}
+                  {showFavorite && !image && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleFavoriteClick}
+                    >
+                      <Heart className={cn(
+                        iconSizes.sm,
+                        isFavorite ? `fill-current ${colors.text.error}` : `${colors.text.muted}`
+                      )} />
+                    </Button>
+                  )}
 
-            {/* Legacy Status and Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {status && (
-                <CommonBadge
-                  status="company"
-                  customLabel={status.label}
-                  variant={status.variant || 'default'}
-                  className={status.color ? `bg-${status.color}` : ''}
-                />
-              )}
-
-              {badges.map((badge, index) => (
-                <CommonBadge
-                  key={index}
-                  status="company"
-                  customLabel={badge.label}
-                  variant={badge.variant || 'secondary'}
-                  className={badge.color ? `bg-${badge.color}` : ''}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Actions Section */}
-          <div className="flex items-center gap-1">
-            {/* Favorite button (when not on image) */}
-            {showFavorite && !image && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleFavoriteClick}
-              >
-                <Heart className={cn(
-                  iconSizes.sm,
-                  isFavorite ? `fill-current ${colors.text.error}` : `${colors.text.muted}`
-                )} />
-              </Button>
-            )}
-
-            {/* Primary Action */}
-            {primaryAction && (
-              <Button
-                variant={primaryAction.variant || 'default'}
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  primaryAction.onClick();
-                }}
-                disabled={primaryAction.disabled}
-              >
-                {primaryAction.icon && (
-                  <primaryAction.icon className={`${iconSizes.sm} mr-1`} />
-                )}
-                {primaryAction.label}
-              </Button>
-            )}
-
-            {/* Dropdown Actions */}
-            {validActions.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className={iconSizes.sm} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {validActions.map((action, index) => (
-                    <DropdownMenuItem
-                      key={action.id || index}
+                  {/* Primary Action */}
+                  {primaryAction && (
+                    <Button
+                      variant={primaryAction.variant || 'default'}
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        action.onClick();
+                        primaryAction.onClick();
                       }}
-                      disabled={action.disabled}
+                      disabled={primaryAction.disabled}
                     >
-                      {action.icon && (
-                        <action.icon className={`${iconSizes.sm} mr-2`} />
+                      {primaryAction.icon && (
+                        <primaryAction.icon className={`${iconSizes.sm} mr-1`} />
                       )}
-                      {action.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+                      {primaryAction.label}
+                    </Button>
+                  )}
+
+                  {/* Dropdown Actions */}
+                  {validActions.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className={iconSizes.sm} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {validActions.map((action, index) => (
+                          <DropdownMenuItem
+                            key={action.id || index}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              action.onClick();
+                            }}
+                            disabled={action.disabled}
+                          >
+                            {action.icon && (
+                              <action.icon className={`${iconSizes.sm} mr-2`} />
+                            )}
+                            {action.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </>
+            }
+          >
+            <div className="flex-1 space-y-1">
+              {/* Title/Subtitle without headerConfig */}
+              {(title || subtitle) && !headerConfig && (
+                <div>
+                  {title && <h3 className="font-semibold text-foreground">{title}</h3>}
+                  {subtitle && <p className={cn("text-sm", colors.text.muted)}>{subtitle}</p>}
+                </div>
+              )}
+              {header}
+
+              {/* Legacy Status and Badges */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {status && (
+                  <CommonBadge
+                    status="company"
+                    customLabel={status.label}
+                    variant={status.variant || 'default'}
+                    className={status.color ? `bg-${status.color}` : ''}
+                  />
+                )}
+
+                {badges.map((badge, index) => (
+                  <CommonBadge
+                    key={index}
+                    status="company"
+                    customLabel={badge.label}
+                    variant={badge.variant || 'secondary'}
+                    className={badge.color ? `bg-${badge.color}` : ''}
+                  />
+                ))}
+              </div>
+            </div>
+          </HeaderBar>
         </CardHeader>
       )}
 

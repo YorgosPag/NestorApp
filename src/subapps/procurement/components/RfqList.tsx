@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -72,12 +73,17 @@ export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-4 pb-3">
-        <CardTitle className="text-base">{t('rfqs.title')}</CardTitle>
-        <Button size="sm" onClick={handleCreate}>
-          <Plus className="mr-1 h-4 w-4" />
-          {t('rfqs.create')}
-        </Button>
+      <CardHeader className="pb-3">
+        <HeaderBar
+          actions={
+            <Button size="sm" onClick={handleCreate}>
+              <Plus className="mr-1 h-4 w-4" />
+              {t('rfqs.create')}
+            </Button>
+          }
+        >
+          <CardTitle className="text-base">{t('rfqs.title')}</CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         <div className="mb-3 flex gap-2">

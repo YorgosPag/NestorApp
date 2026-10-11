@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -129,11 +130,17 @@ export function FinancialReportCard({
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
       className="cursor-pointer transition-shadow hover:shadow-md"
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
-          {t(`reports.reportTypes.${type}`)}
-        </CardTitle>
-        <Icon className={cn('h-4 w-4', config.colorClass)} />
+      <CardHeader className="pb-2">
+        <HeaderBar
+          wrap={false}
+          actions={
+            <Icon className={cn('h-4 w-4', config.colorClass)} />
+          }
+        >
+          <CardTitle className="text-sm font-medium">
+            {t(`reports.reportTypes.${type}`)}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-bold">{formatMetricValue(keyMetric, format)}</p>

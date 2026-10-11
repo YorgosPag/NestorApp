@@ -13,6 +13,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -144,7 +145,16 @@ export function ThreadView({
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex-shrink-0 border-b">
-        <div className="flex items-center justify-between">
+        <HeaderBar
+          actions={
+            <div className={`flex items-center ${spacing.gap.sm}`}>
+              {conversation.unreadCount > 0 && <CommonBadge status="company" customLabel={t('inbox.thread.unread', { count: conversation.unreadCount })} variant="destructive" />}
+              <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
+                <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          }
+        >
           <div className={`flex items-center ${spacing.gap.sm}`}>
             <div className={`${spacing.padding.sm} rounded-full ${colors.bg.infoSubtle}`}><MessageSquare className={iconSizes.md} /></div>
             <div>
@@ -152,13 +162,7 @@ export function ThreadView({
               <p className={`text-sm ${colors.text.muted}`}>{conversation.channel.toUpperCase()} • {t(`inbox.status.${conversation.status}`)}</p>
             </div>
           </div>
-          <div className={`flex items-center ${spacing.gap.sm}`}>
-            {conversation.unreadCount > 0 && <CommonBadge status="company" customLabel={t('inbox.thread.unread', { count: conversation.unreadCount })} variant="destructive" />}
-            <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
-              <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-        </div>
+        </HeaderBar>
       </CardHeader>
 
       {isSelectionMode && (

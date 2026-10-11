@@ -12,6 +12,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import {
   Table,
   TableBody,
@@ -70,15 +71,18 @@ export function InstallmentsCard({ installments }: InstallmentsCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center justify-between">
-          <span>{t('reports.installments')}</span>
-          <span className={cn("text-sm font-normal", colors.text.muted)}>
-            {t('installmentsPaid', {
-              paid: formatAccountingCurrency(paidAmount),
-              total: formatAccountingCurrency(totalAmount),
-            })}
-          </span>
-        </CardTitle>
+        <HeaderBar
+          actions={
+            <span className={cn("text-sm font-normal leading-none tracking-tight", colors.text.muted)}>
+              {t('installmentsPaid', {
+                paid: formatAccountingCurrency(paidAmount),
+                total: formatAccountingCurrency(totalAmount),
+              })}
+            </span>
+          }
+        >
+          <CardTitle className="text-lg">{t('reports.installments')}</CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border border-border">

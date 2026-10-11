@@ -13,6 +13,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -122,10 +123,13 @@ export function DocumentReviewCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <HeaderBar
+          actions={
+            <Badge variant={statusVariant}>{statusLabel}</Badge>
+          }
+        >
           <CardTitle className="text-base">{doc.fileName}</CardTitle>
-          <Badge variant={statusVariant}>{statusLabel}</Badge>
-        </div>
+        </HeaderBar>
         <p className={cn("text-xs mt-1", colors.text.muted)}>
           {doc.mimeType} — {(doc.fileSize / 1024).toFixed(1)} KB
         </p>

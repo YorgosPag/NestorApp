@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
 import { Building2, TrendingUp, Clock, PackageCheck } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -38,10 +39,16 @@ export function VendorCard({ data }: VendorCardProps) {
   return (
     <Card className="flex flex-col gap-0 hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
+        <HeaderBar
+          align="start"
+          wrap={false}
+          className="gap-x-2"
+          actions={
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          }
+        >
           <CardTitle className="text-base leading-tight">{displayName}</CardTitle>
-          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
-        </div>
+        </HeaderBar>
         {tradeSpecialties.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
             {tradeSpecialties.slice(0, 3).map((code) => (

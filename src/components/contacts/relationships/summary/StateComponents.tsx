@@ -12,6 +12,7 @@
 import React from 'react';
 import '@/lib/design-system';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
@@ -131,22 +132,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
   <Card className={className}>
     <CardHeader>
-      <CardTitle className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Users className={iconSizes.md} />
-          <span>{t('relationships.summary.title')}</span>
-        </div>
-        {!readonly && onManageRelationships && (
-          <Button
-            onClick={onManageRelationships}
-            size="sm"
-            className="ml-auto"
-          >
+      <HeaderBar
+        actions={!readonly && onManageRelationships && (
+          <Button onClick={onManageRelationships} size="sm">
             <Plus className={`${iconSizes.sm} mr-2`} />
             {t('relationships.summary.add')}
           </Button>
         )}
-      </CardTitle>
+      >
+        <CardTitle className="flex items-center space-x-2">
+          <Users className={iconSizes.md} />
+          <span>{t('relationships.summary.title')}</span>
+        </CardTitle>
+      </HeaderBar>
     </CardHeader>
     <CardContent>
       {/* ADR-244: Project roles appear even when no contact relationships exist */}

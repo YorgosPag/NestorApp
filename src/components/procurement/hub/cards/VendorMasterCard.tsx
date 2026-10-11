@@ -21,9 +21,7 @@ export function VendorMasterCard() {
       aria-label={t('hub.vendorMaster.title')}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <Users2 className="h-8 w-8 text-[hsl(var(--text-success))]" aria-hidden />
-        </div>
+        <Users2 className="h-8 w-8 text-[hsl(var(--text-success))]" aria-hidden />
         <CardTitle className="text-lg">{t('hub.vendorMaster.title')}</CardTitle>
         <CardDescription>{t('hub.vendorMaster.description')}</CardDescription>
       </CardHeader>

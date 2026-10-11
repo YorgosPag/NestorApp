@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import type { Building } from '../../BuildingsPageContent';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -28,10 +29,11 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                    <span>{t('tabs.timeline.overallProgress.title')}</span>
-                    <span className="text-2xl font-bold text-primary">{building.progress}%</span>
-                </CardTitle>
+                <HeaderBar
+                    actions={<span className="text-2xl font-bold leading-none tracking-tight text-primary">{building.progress}%</span>}
+                >
+                    <CardTitle>{t('tabs.timeline.overallProgress.title')}</CardTitle>
+                </HeaderBar>
             </CardHeader>
             <CardContent>
                 <ThemeProgressBar

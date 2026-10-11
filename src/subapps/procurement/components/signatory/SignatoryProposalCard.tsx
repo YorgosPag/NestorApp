@@ -16,6 +16,7 @@ import { useMemo, useState } from 'react';
 import { Loader2, UserCheck, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -297,14 +298,19 @@ export function SignatoryProposalCard({
   return (
     <>
       <Card className={`border-l-4 ${BAND_BORDER[aggregateBand].split(' ')[0]}`}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="text-base">{t('quotes.signatory.cardTitle')}</CardTitle>
-          <Badge variant="outline" className="text-xs">
-            {t(`quotes.signatory.confidenceBand.${aggregateBand}`, {
-              high: SIGNATORY_CONFIDENCE_HIGH,
-              medium: SIGNATORY_CONFIDENCE_MEDIUM,
-            })}
-          </Badge>
+        <CardHeader className="pb-3">
+          <HeaderBar
+            actions={
+              <Badge variant="outline" className="text-xs">
+                {t(`quotes.signatory.confidenceBand.${aggregateBand}`, {
+                  high: SIGNATORY_CONFIDENCE_HIGH,
+                  medium: SIGNATORY_CONFIDENCE_MEDIUM,
+                })}
+              </Badge>
+            }
+          >
+            <CardTitle className="text-base">{t('quotes.signatory.cardTitle')}</CardTitle>
+          </HeaderBar>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

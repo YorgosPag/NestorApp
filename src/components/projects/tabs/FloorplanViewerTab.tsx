@@ -3,6 +3,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from "@/components/ui/button";
 import { Map, Plus, Edit } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -161,33 +162,36 @@ export function FloorplanViewerTab({
   return (
     <Card className="w-full h-full">
       <CardHeader className={spacing.padding.bottom.sm}>
-        <div className="flex justify-between items-center">
+        <HeaderBar
+          actions={
+            <div className={cn("flex", spacing.gap.sm)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAddFloorplan}
+                className="flex items-center gap-1"
+              >
+                <Plus className={iconSizes.sm} />
+                {t('tabs.floorplan.addFloorplan')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEditFloorplan}
+                disabled={!floorplanData}
+                className="flex items-center gap-1"
+              >
+                <Edit className={iconSizes.sm} />
+                {t('tabs.floorplan.editFloorplan')}
+              </Button>
+            </div>
+          }
+        >
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <Map className={iconSizes.md} />
             {translatedTitle}
           </CardTitle>
-          <div className={cn("flex", spacing.gap.sm)}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddFloorplan}
-              className="flex items-center gap-1"
-            >
-              <Plus className={iconSizes.sm} />
-              {t('tabs.floorplan.addFloorplan')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onEditFloorplan}
-              disabled={!floorplanData}
-              className="flex items-center gap-1"
-            >
-              <Edit className={iconSizes.sm} />
-              {t('tabs.floorplan.editFloorplan')}
-            </Button>
-          </div>
-        </div>
+        </HeaderBar>
       </CardHeader>
       
       <CardContent className={cn(spacing.padding.sm, "flex-1 min-h-[500px]")}>

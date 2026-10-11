@@ -38,7 +38,7 @@ export interface HeaderBarProps {
   readonly description?: ReactNode;
   /** Ό,τι στέκεται απέναντι από τον τίτλο: κουμπιά, σήματα, πλήθος. Χωρίς τιμή δεν αποδίδεται κόμβος. */
   readonly actions?: ReactNode;
-  /** `start` όταν οι πράξεις πρέπει να μείνουν στο ύψος της πρώτης γραμμής. Προεπιλογή: `start` με περιγραφή, αλλιώς `center`. */
+  /** `start` όταν οι πράξεις πρέπει να μείνουν στο ύψος της πρώτης γραμμής (τίτλος με περιγραφή). */
   readonly align?: keyof typeof ALIGN_CLASSES;
   /** `false` μόνο για διακοσμητικό σταθερού μεγέθους (εικονίδιο) απέναντι από τον τίτλο. */
   readonly wrap?: boolean;
@@ -53,26 +53,24 @@ export function HeaderBar({
   children,
   description,
   actions,
-  align,
+  align = 'center',
   wrap = true,
   as: Root = 'div',
   actionsAs: Actions = 'div',
   className,
 }: HeaderBarProps) {
-  const hasDescription = isRendered(description);
-  const alignment = align ?? (hasDescription ? 'start' : 'center');
   return (
     <Root
       className={cn(
         'flex justify-between gap-x-4 gap-y-2',
         wrap ? 'flex-wrap' : 'flex-nowrap',
-        ALIGN_CLASSES[alignment],
+        ALIGN_CLASSES[align],
         className,
       )}
     >
       <div className={cn('min-w-0', wrap ? 'flex-auto' : 'flex-1')}>
         {children}
-        {hasDescription && <div className="w-0 min-w-full">{description}</div>}
+        {isRendered(description) && <div className="w-0 min-w-full">{description}</div>}
       </div>
       {isRendered(actions) && (
         <Actions className={cn('flex max-w-full items-center gap-2', wrap ? 'flex-wrap' : 'shrink-0')}>

@@ -19,9 +19,7 @@ export function MaterialCatalogCard() {
       aria-label={t('hub.materialCatalog.title')}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <Layers className="h-8 w-8 text-[hsl(var(--text-warning))]" aria-hidden />
-        </div>
+        <Layers className="h-8 w-8 text-[hsl(var(--text-warning))]" aria-hidden />
         <CardTitle className="text-lg">{t('hub.materialCatalog.title')}</CardTitle>
         <CardDescription>{t('hub.materialCatalog.description')}</CardDescription>
       </CardHeader>

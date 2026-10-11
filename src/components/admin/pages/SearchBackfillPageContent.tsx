@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -63,16 +64,19 @@ export function SearchBackfillPageContent() {
       {/* Current Index Status */}
       <Card className="mb-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <HeaderBar
+            actions={
+              <Button variant="outline" size="sm" onClick={s.fetchStatus} disabled={s.isLoading}>
+                <RefreshCw className={cn(iconSizes.sm, 'mr-2', s.isLoading && 'animate-spin')} />
+                {t('searchBackfill.indexStatus.refresh')}
+              </Button>
+            }
+          >
             <div className="flex items-center gap-2">
               <Database className={iconSizes.md} />
               <CardTitle>{t('searchBackfill.indexStatus.title')}</CardTitle>
             </div>
-            <Button variant="outline" size="sm" onClick={s.fetchStatus} disabled={s.isLoading}>
-              <RefreshCw className={cn(iconSizes.sm, 'mr-2', s.isLoading && 'animate-spin')} />
-              {t('searchBackfill.indexStatus.refresh')}
-            </Button>
-          </div>
+          </HeaderBar>
         </CardHeader>
         <CardContent>
           {s.status ? (

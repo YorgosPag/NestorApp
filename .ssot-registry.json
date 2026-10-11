@@ -5822,6 +5822,17 @@
         "src/server/comms/egress/__tests__/email-egress.test.ts"
       ],
       "tier": 3
+    },
+    "card-header-bar": {
+      "addedDate": "2026-10-11",
+      "ssotFile": "src/components/ui/header-bar.tsx",
+      "description": "ADR-912 §8 — η γραμμή «τίτλος + πράξεις» μιας κεφαλίδας κάρτας έχει ΜΙΑ υλοποίηση: `HeaderBar` (μόνο διάταξη· αναδίπλωση από το εγγενές πλάτος του τίτλου, περιγραφή που δεν ψηφίζει, `wrap={false}` για διακοσμητικό εικονίδιο). 🔴 ΜΕΤΡΗΜΕΝΟ 2026-10-11: το σχήμα ζούσε γραμμένο με το χέρι ως `justify-between` χωρίς αναδίπλωση σε 55 σημεία / 53 αρχεία — στα 390px οι πράξεις έβγαιναν από το πλαίσιο και ο τίτλος συμπιεζόταν. FORBIDDEN: `justify-between` πάνω σε `<CardHeader>` ή `<CardTitle>` — το `CardHeader` κρατά μόνο το padding του και μέσα του μπαίνει `<HeaderBar>`. ⚠️ ΟΡΙΟ: η μηχανή είναι ανά γραμμή, άρα ΔΕΝ βλέπει το `<div>` με `justify-between` στη γραμμή ΚΑΤΩ από το `<CardHeader>` (36 από τα 55 ήταν έτσι)· εκείνο το πιάνει μόνο μέτρηση διάταξης σε browser.",
+      "forbiddenPatterns": [
+        "<CardHeader[^>]*justify-between",
+        "<CardTitle[^>]*justify-between"
+      ],
+      "allowlist": [],
+      "tier": 3
     }
   }
 }

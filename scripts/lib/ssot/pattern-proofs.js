@@ -1284,4 +1284,16 @@ const outcome = await writeSearchIndexEntry(db, docId, searchDoc, sourceUpdateTi
 await writeSearchIndexTombstone(adminDb, docId, { tenantId, entityType, entityId }, null, Date.now());
 await applySearchIndexTombstone(searchDocRef, identity, version, Date.now());`,
   },
+  // ADR-912 §8 — η γραμμή «τίτλος + πράξεις» γραμμένη με το χέρι πάνω στο ίδιο το στοιχείο της κάρτας.
+  // Η παγίδα του `shouldSkip` είναι η ΝΟΜΙΜΗ μορφή: το `CardHeader` κρατά μόνο το padding του.
+  'card-header-bar': {
+    shouldMatch: `<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+<CardHeader className={cn('flex flex-row items-center justify-between', spacing.padding.sm)}>
+<CardTitle className="text-lg flex items-center justify-between">`,
+    shouldSkip: `<CardHeader className="pb-2">
+<HeaderBar wrap={false} actions={<Icon className="h-4 w-4" aria-hidden />}>
+<CardTitle className="flex items-center gap-2 text-sm">
+<CardHeader><HeaderBar actions={<Button>Προσθήκη</Button>}><CardTitle>Τίτλος</CardTitle></HeaderBar></CardHeader>
+<li className="flex justify-between text-sm">`,
+  },
 };

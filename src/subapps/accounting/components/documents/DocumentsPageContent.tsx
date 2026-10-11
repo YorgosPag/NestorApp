@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -299,7 +300,16 @@ export function DocumentsPageContent() {
                     onClick={() => handleDocumentClick(doc.documentId)}
                   >
                     <CardHeader className="py-3 px-4">
-                      <div className="flex items-center justify-between">
+                      <HeaderBar
+                        actions={
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium">
+                              {formatCurrencyOrDash(doc.extractedData.grossAmount)}
+                            </span>
+                            <Badge variant={statusVariant}>{statusLabel}</Badge>
+                          </div>
+                        }
+                      >
                         <div className="flex items-center gap-3">
                           <FileText className={cn("h-5 w-5", colors.text.muted)} />
                           <div>
@@ -310,13 +320,7 @@ export function DocumentsPageContent() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium">
-                            {formatCurrencyOrDash(doc.extractedData.grossAmount)}
-                          </span>
-                          <Badge variant={statusVariant}>{statusLabel}</Badge>
-                        </div>
-                      </div>
+                      </HeaderBar>
                     </CardHeader>
                   </Card>
 

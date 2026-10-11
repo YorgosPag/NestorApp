@@ -3,6 +3,7 @@
 import { Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Progress } from '@/components/ui/progress';
 import type { ProjectProcurementStats } from '@/hooks/useProjectProcurementStats';
 
@@ -18,11 +19,17 @@ export function KpiBoqCoverage({ stats }: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('overview.kpi.boqCoverage.label')}
-        </CardTitle>
-        <Layers className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <CardHeader className="pb-2">
+        <HeaderBar
+          wrap={false}
+          actions={
+            <Layers className="h-4 w-4 text-muted-foreground" aria-hidden />
+          }
+        >
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {t('overview.kpi.boqCoverage.label')}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         {!hasBoq ? (

@@ -13,6 +13,7 @@
  */
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users2, Plus, Settings, Shield, UserCheck } from 'lucide-react';
@@ -230,12 +231,15 @@ export function CrmTeamsPageContent() {
           {teams.map((team) => (
             <Card key={team.id} className={cn('flex flex-col')}>
               <CardHeader>
-                <div className={cn('flex items-center justify-between')}>
+                <HeaderBar
+                  actions={
+                    <Button variant="ghost" size="sm">
+                      <Settings className={iconSizes.sm} />
+                    </Button>
+                  }
+                >
                   <CardTitle>{team.name}</CardTitle>
-                  <Button variant="ghost" size="sm">
-                    <Settings className={iconSizes.sm} />
-                  </Button>
-                </div>
+                </HeaderBar>
                 <CardDescription>{team.description}</CardDescription>
               </CardHeader>
               <CardContent className={cn('flex-1 space-y-4')}>

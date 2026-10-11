@@ -25,9 +25,7 @@ export function QuotesCard() {
       aria-label={t('hub.quotes.title')}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <FileText className="h-8 w-8 text-[hsl(var(--text-warning))]" aria-hidden />
-        </div>
+        <FileText className="h-8 w-8 text-[hsl(var(--text-warning))]" aria-hidden />
         <CardTitle className="text-lg">{t('hub.quotes.title')}</CardTitle>
         <CardDescription>{t('hub.quotes.description')}</CardDescription>
       </CardHeader>

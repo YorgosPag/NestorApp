@@ -15,6 +15,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Users, ArrowUpFromLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -151,20 +152,20 @@ export function EntityAssociationsManager({
   return (
     <Card>
       <CardHeader>
-        <header className="flex items-center justify-between">
-          <div>
-            <CardTitle className={typography.card.titleCompact}>
-              {t('associations.title')}
-            </CardTitle>
-            <CardDescription>
-              {t('associations.description')}
-            </CardDescription>
-          </div>
-          <Button onClick={handleOpenAddDialog}>
-            <Plus className={cn('h-4 w-4', spacing.margin.right.sm)} />
-            {t('associations.addContact')}
-          </Button>
-        </header>
+        <HeaderBar
+          as="header"
+          description={<CardDescription>{t('associations.description')}</CardDescription>}
+          actions={
+            <Button onClick={handleOpenAddDialog}>
+              <Plus className={cn('h-4 w-4', spacing.margin.right.sm)} />
+              {t('associations.addContact')}
+            </Button>
+          }
+        >
+          <CardTitle className={typography.card.titleCompact}>
+            {t('associations.title')}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
 
       <CardContent>

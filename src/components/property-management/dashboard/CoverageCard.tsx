@@ -14,6 +14,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -93,11 +94,17 @@ export function CoverageCard({
 
   return (
     <Card className={`lg:col-span-2 ${className || ''}`}>
-      <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
-        <CardTitle className="text-sm font-medium">
-          {t('page.dashboard.coverage.title')}
-        </CardTitle>
-        <TrendingUp className={`${iconSizes.sm} ${colors.text.muted}`} />
+      <CardHeader className={`${spacing.padding.sm} pb-2`}>
+        <HeaderBar
+          wrap={false}
+          actions={
+            <TrendingUp className={`${iconSizes.sm} ${colors.text.muted}`} />
+          }
+        >
+          <CardTitle className="text-sm font-medium">
+            {t('page.dashboard.coverage.title')}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
 
       <CardContent className={`${spacing.padding.sm} pt-0`}>

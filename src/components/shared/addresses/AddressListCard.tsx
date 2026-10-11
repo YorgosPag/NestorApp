@@ -18,6 +18,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Plus, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddressCard } from './AddressCard';
@@ -79,11 +80,8 @@ export function AddressListCard({
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">
-            {t('list.title')}
-          </CardTitle>
-          {onAddAddress && (
+        <HeaderBar
+          actions={onAddAddress && (
             <Button
               variant="outline"
               size="sm"
@@ -94,7 +92,11 @@ export function AddressListCard({
               {t('list.addButton')}
             </Button>
           )}
-        </div>
+        >
+          <CardTitle className="text-lg font-semibold">
+            {t('list.title')}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
 
       <CardContent className="space-y-3">

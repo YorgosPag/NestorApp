@@ -12,6 +12,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle2, Loader2, Pencil, Save, X } from 'lucide-react';
@@ -188,17 +189,22 @@ export function ExtractedDataReviewPanel({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base">{t('quotes.scan.reviewTitle')}</CardTitle>
-        <div className="flex items-center gap-2">
-          {overall >= 80 ? (
-            <CheckCircle2 className="h-4 w-4 text-[hsl(var(--text-success))]" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 text-[hsl(var(--text-warning))]" />
-          )}
-          <span className="text-sm text-muted-foreground">{t('quotes.scan.overallConfidence')}:</span>
-          <ConfidenceBadge confidence={overall} />
-        </div>
+      <CardHeader className="pb-3">
+        <HeaderBar
+          actions={
+            <div className="flex items-center gap-2">
+              {overall >= 80 ? (
+                <CheckCircle2 className="h-4 w-4 text-[hsl(var(--text-success))]" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-[hsl(var(--text-warning))]" />
+              )}
+              <span className="text-sm text-muted-foreground">{t('quotes.scan.overallConfidence')}:</span>
+              <ConfidenceBadge confidence={overall} />
+            </div>
+          }
+        >
+          <CardTitle className="text-base">{t('quotes.scan.reviewTitle')}</CardTitle>
+        </HeaderBar>
       </CardHeader>
 
       <CardContent className="space-y-5">

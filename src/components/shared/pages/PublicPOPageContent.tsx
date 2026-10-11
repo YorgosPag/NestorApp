@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn, getStatusColor } from '@/lib/design-system';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -133,10 +134,13 @@ export function PublicPOPageContent() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <HeaderBar
+              actions={
+                <Badge variant="outline">{statusMeta.label.el}</Badge>
+              }
+            >
               <CardTitle className="text-xl">{po.poNumber}</CardTitle>
-              <Badge variant="outline">{statusMeta.label.el}</Badge>
-            </div>
+            </HeaderBar>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">

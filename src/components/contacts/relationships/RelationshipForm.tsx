@@ -7,6 +7,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -144,40 +145,47 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       "mb-2",
       "rounded-lg border bg-card text-card-foreground shadow-sm"
     )}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className={designSystem.cn(
-          "flex items-center space-x-2",
-          designSystem.presets.text.subtitle
-        )}>
-          <Plus className={iconSizes.md} />
-          <span>{editingId ? t('relationships.form.editTitle') : t('relationships.form.title')}</span>
-        </CardTitle>
-        {/* 🏢 ENTERPRISE: Action buttons at header level — always visible without scrolling */}
-        <div className="flex items-center space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            {t('relationships.form.buttons.cancel')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={loading}
-            onClick={handleSubmit}
-          >
-            {loading
-              ? t('relationships.form.buttons.save')
-              : (editingId
-                ? t('relationships.form.buttons.update')
-                : t('relationships.form.buttons.add')
-              )
-            }
-          </Button>
-        </div>
+      <CardHeader className="pb-2">
+        <HeaderBar
+          actions={
+            <>
+              {/* 🏢 ENTERPRISE: Action buttons at header level — always visible without scrolling */}
+              <div className="flex items-center space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancel}
+                  disabled={loading}
+                >
+                  {t('relationships.form.buttons.cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={loading}
+                  onClick={handleSubmit}
+                >
+                  {loading
+                    ? t('relationships.form.buttons.save')
+                    : (editingId
+                      ? t('relationships.form.buttons.update')
+                      : t('relationships.form.buttons.add')
+                    )
+                  }
+                </Button>
+              </div>
+            </>
+          }
+        >
+          <CardTitle className={designSystem.cn(
+            "flex items-center space-x-2",
+            designSystem.presets.text.subtitle
+          )}>
+            <Plus className={iconSizes.md} />
+            <span>{editingId ? t('relationships.form.editTitle') : t('relationships.form.title')}</span>
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         <form onSubmit={preventFormSubmit} className={designSystem.getSpacingClass('p', 'md')}>

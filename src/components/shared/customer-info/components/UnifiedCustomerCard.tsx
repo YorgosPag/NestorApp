@@ -16,6 +16,7 @@ import React from 'react';
 import { Users, Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommonBadge } from '@/core/badges';
@@ -364,7 +365,14 @@ export function UnifiedCustomerCard({
     >
       {!isMinimalVariant && (
         <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
+          <HeaderBar
+            align="start"
+            actions={context === 'property' && (
+              <Button variant="ghost" size="sm" className="shrink-0">
+                <ArrowRight className={iconSizes.sm} />
+              </Button>
+            )}
+          >
             <div className="flex items-center gap-3">
               {renderAvatar()}
               <div>
@@ -378,13 +386,7 @@ export function UnifiedCustomerCard({
                 )}
               </div>
             </div>
-
-            {context === 'property' && (
-              <Button variant="ghost" size="sm" className="shrink-0">
-                <ArrowRight className={iconSizes.sm} />
-              </Button>
-            )}
-          </div>
+          </HeaderBar>
         </CardHeader>
       )}
 

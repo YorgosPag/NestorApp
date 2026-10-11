@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -80,6 +81,14 @@ export function PropertyStatusDemoPageContent() {
     issues: allStatuses.filter(status => hasPropertyIssues(status))
   };
 
+  const statusOptionsCaption = t('propertyStatusDemo.cards.statusOptions');
+  const summaryTiles = [
+    { key: 'available', Icon: Zap, tone: 'text-[hsl(var(--text-success))]', label: t('propertyStatusDemo.cards.available'), count: categorizedStatuses.available.length, caption: statusOptionsCaption },
+    { key: 'committed', Icon: Settings, tone: 'text-[hsl(var(--text-warning))]', label: t('propertyStatusDemo.cards.committed'), count: categorizedStatuses.committed.length, caption: statusOptionsCaption },
+    { key: 'offMarket', Icon: Home, tone: 'text-muted-foreground', label: t('propertyStatusDemo.cards.offMarket'), count: categorizedStatuses.offMarket.length, caption: statusOptionsCaption },
+    { key: 'totalStatuses', Icon: BarChart3, tone: 'text-primary', label: t('propertyStatusDemo.cards.totalStatuses'), count: allStatuses.length, caption: t('propertyStatusDemo.cards.enhancedStatuses') },
+  ];
+
   const StatusBadge = ({ status, interactive = false }: {
     status: EnhancedPropertyStatus;
     interactive?: boolean;
@@ -102,15 +111,18 @@ export function PropertyStatusDemoPageContent() {
       onClick={() => setSelectedProperty(property)}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <HeaderBar
+          actions={
+            <PropertyBadge
+              status={property.status as PropertyStatus}
+              variant="default"
+              size="sm"
+              className="text-xs"
+            />
+          }
+        >
           <CardTitle className="text-lg">{property.name}</CardTitle>
-          <PropertyBadge
-            status={property.status as PropertyStatus}
-            variant="default"
-            size="sm"
-            className="text-xs"
-          />
-        </div>
+        </HeaderBar>
         <p className={cn("text-sm", colors.text.muted)}>{property.type}</p>
       </CardHeader>
       <CardContent>
@@ -157,46 +169,18 @@ export function PropertyStatusDemoPageContent() {
       <Separator />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="text-center">
-            <Zap className={`${iconSizes.xl} mx-auto text-[hsl(var(--text-success))]`} />
-            <CardTitle className="text-sm">{t('propertyStatusDemo.cards.available')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-2xl font-bold">{categorizedStatuses.available.length}</div>
-            <p className={cn("text-xs", colors.text.muted)}>{t('propertyStatusDemo.cards.statusOptions')}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="text-center">
-            <Settings className={`${iconSizes.xl} mx-auto text-[hsl(var(--text-warning))]`} />
-            <CardTitle className="text-sm">{t('propertyStatusDemo.cards.committed')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-2xl font-bold">{categorizedStatuses.committed.length}</div>
-            <p className={cn("text-xs", colors.text.muted)}>{t('propertyStatusDemo.cards.statusOptions')}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="text-center">
-            <Home className={`${iconSizes.xl} mx-auto text-muted-foreground`} />
-            <CardTitle className="text-sm">{t('propertyStatusDemo.cards.offMarket')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-2xl font-bold">{categorizedStatuses.offMarket.length}</div>
-            <p className={cn("text-xs", colors.text.muted)}>{t('propertyStatusDemo.cards.statusOptions')}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="text-center">
-            <BarChart3 className={`${iconSizes.xl} mx-auto text-primary`} />
-            <CardTitle className="text-sm">{t('propertyStatusDemo.cards.totalStatuses')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-2xl font-bold">{allStatuses.length}</div>
-            <p className={cn("text-xs", colors.text.muted)}>{t('propertyStatusDemo.cards.enhancedStatuses')}</p>
-          </CardContent>
-        </Card>
+        {summaryTiles.map(({ key, Icon, tone, label, count, caption }) => (
+          <Card key={key}>
+            <CardHeader className="text-center">
+              <Icon className={`${iconSizes.xl} mx-auto ${tone}`} />
+              <CardTitle className="text-sm">{label}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="text-2xl font-bold">{count}</div>
+              <p className={cn("text-xs", colors.text.muted)}>{caption}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>

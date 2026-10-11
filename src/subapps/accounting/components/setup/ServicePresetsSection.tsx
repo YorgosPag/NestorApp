@@ -13,6 +13,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -182,21 +183,24 @@ export function ServicePresetsSection() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{t('servicePresets.title')}</CardTitle>
-          <div className="flex gap-2">
-            {localPresets.length === 0 && (
-              <Button variant="outline" size="sm" onClick={handleLoadDefaults} disabled={saving}>
-                <Download className="mr-2 h-4 w-4" />
-                {t('servicePresets.loadDefaults')}
+        <HeaderBar
+          actions={
+            <div className="flex gap-2">
+              {localPresets.length === 0 && (
+                <Button variant="outline" size="sm" onClick={handleLoadDefaults} disabled={saving}>
+                  <Download className="mr-2 h-4 w-4" />
+                  {t('servicePresets.loadDefaults')}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setShowForm(!showForm)} disabled={saving}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('servicePresets.addPreset')}
               </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={() => setShowForm(!showForm)} disabled={saving}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('servicePresets.addPreset')}
-            </Button>
-          </div>
-        </div>
+            </div>
+          }
+        >
+          <CardTitle>{t('servicePresets.title')}</CardTitle>
+        </HeaderBar>
         <p className={cn("text-sm", colors.text.muted)}>{t('servicePresets.description')}</p>
       </CardHeader>
 

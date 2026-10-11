@@ -23,9 +23,7 @@ export function FrameworkAgreementsCard() {
       aria-label={t('hub.frameworkAgreements.title')}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <ScrollText className="h-8 w-8 text-foreground" aria-hidden />
-        </div>
+        <ScrollText className="h-8 w-8 text-foreground" aria-hidden />
         <CardTitle className="text-lg">{t('hub.frameworkAgreements.title')}</CardTitle>
         <CardDescription>{t('hub.frameworkAgreements.description')}</CardDescription>
       </CardHeader>

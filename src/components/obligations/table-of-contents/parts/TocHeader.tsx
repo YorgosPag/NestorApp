@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
@@ -25,7 +26,30 @@ export function TocHeader({
 
   return (
     <CardHeader className={cn("pb-4", compact && "pb-2")}>
-      <div className="flex items-center justify-between">
+      <HeaderBar
+        actions={
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={isAllExpanded ? onCollapseAll : onExpandAll}
+                  className="h-7 px-2"
+                  aria-label={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
+                >
+                  {isAllExpanded ? (
+                    <ChevronDown className={iconSizes.sm} />
+                  ) : (
+                    <ChevronRight className={iconSizes.sm} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}</TooltipContent>
+            </Tooltip>
+          </div>
+        }
+      >
         <CardTitle className={cn("text-lg flex items-center gap-2", compact && "text-base")}>
           <BookOpen className={iconSizes.md} />
           {t('toc.title')}
@@ -33,28 +57,7 @@ export function TocHeader({
             {t('toc.sectionCount', { count: items.length })}
           </Badge>
         </CardTitle>
-
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={isAllExpanded ? onCollapseAll : onExpandAll}
-                className="h-7 px-2"
-                aria-label={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
-              >
-                {isAllExpanded ? (
-                  <ChevronDown className={iconSizes.sm} />
-                ) : (
-                  <ChevronRight className={iconSizes.sm} />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
+      </HeaderBar>
 
       {!compact && (
         <CardDescription>

@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { resolveStorageById } from '@/hooks/entity-deep-link-sources';
@@ -118,7 +119,15 @@ export function StorageDetailPageContent() {
        </div>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <HeaderBar
+            actions={
+              <>
+                {/* ADR-777 §8.60.20 — διάθεση + λειτουργική εξαίρεση από το ΕΝΑ SSoT. Ως τις 2026-09-18
+                     εδώ ένα `sold` γινόταν ρητά «available» και ένα `maintenance` «reserved». */}
+                <SpaceStatusBadges space={unit} />
+              </>
+            }
+          >
             <div className="flex items-center gap-3">
                 <div className="p-3 rounded-lg bg-muted">
                     <MainIcon className={`${iconSizes.lg} text-primary`} />
@@ -128,10 +137,7 @@ export function StorageDetailPageContent() {
                     <CardDescription>{unit.type === 'storage' ? t('common.storage') : t('common.parking')}</CardDescription>
                 </div>
             </div>
-             {/* ADR-777 §8.60.20 — διάθεση + λειτουργική εξαίρεση από το ΕΝΑ SSoT. Ως τις 2026-09-18
-                 εδώ ένα `sold` γινόταν ρητά «available» και ένα `maintenance` «reserved». */}
-             <SpaceStatusBadges space={unit} />
-          </div>
+          </HeaderBar>
         </CardHeader>
         <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

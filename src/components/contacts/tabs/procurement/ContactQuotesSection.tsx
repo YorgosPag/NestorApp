@@ -2,6 +2,7 @@
 
 import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import {
   ProcurementRowLink,
@@ -48,16 +49,19 @@ export function ContactQuotesSection({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-base">
-          {t('contacts:procurementTab.sections.quotes')}
-        </CardTitle>
-        {!archived && (
-          <Button size="sm" variant="outline" onClick={() => onCreateManual?.()}>
-            <Plus className="mr-1 h-4 w-4" />
-            {t('quotes:quotes.create')}
-          </Button>
-        )}
+      <CardHeader className="pb-3">
+        <HeaderBar
+          actions={!archived && (
+            <Button size="sm" variant="outline" onClick={() => onCreateManual?.()}>
+              <Plus className="mr-1 h-4 w-4" />
+              {t('quotes:quotes.create')}
+            </Button>
+          )}
+        >
+          <CardTitle className="text-base">
+            {t('contacts:procurementTab.sections.quotes')}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         {loading ? (

@@ -10,6 +10,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -69,11 +70,16 @@ export function BackupListSection({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{t('backup.list.title')}</CardTitle>
-        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-          {t('backup.actions.refresh')}
-        </Button>
+      <CardHeader>
+        <HeaderBar
+          actions={
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+              {t('backup.actions.refresh')}
+            </Button>
+          }
+        >
+          <CardTitle>{t('backup.list.title')}</CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         {isLoading && (

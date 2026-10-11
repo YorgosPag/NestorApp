@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -83,9 +84,8 @@ export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionPro
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{t('setup.invoiceSeriesSection')}</CardTitle>
-          {!showNewForm && (
+        <HeaderBar
+          actions={!showNewForm && (
             <Button
               type="button"
               variant="outline"
@@ -96,7 +96,9 @@ export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionPro
               {t('setup.addSeries')}
             </Button>
           )}
-        </div>
+        >
+          <CardTitle>{t('setup.invoiceSeriesSection')}</CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         <section className="space-y-4">

@@ -3,6 +3,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle } from '../../../components/ui/card';
+import { HeaderBar } from '../../../components/ui/header-bar';
 import { CommonBadge } from '../../../core/badges';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 // 🏢 ENTERPRISE: Centralized SearchInput (same as UnitsList/CompactToolbar)
@@ -87,15 +88,18 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   return (
     <Card className={`w-full h-full flex flex-col ${colors.bg.card} ${getStatusBorder('default')} ${colors.text.primary}`}>
       <CardHeader className={`${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
-        <div className="flex items-center justify-between">
+        <HeaderBar
+          actions={
+            <CommonBadge
+              status="company"
+              customLabel={overlays.length.toString()}
+              variant="secondary"
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.hover} ${colors.text.tertiary}`}
+            />
+          }
+        >
           <CardTitle className={PANEL_LAYOUT.TYPOGRAPHY.SM}>{t('overlayList.title')}</CardTitle>
-          <CommonBadge
-            status="company"
-            customLabel={overlays.length.toString()}
-            variant="secondary"
-            className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.hover} ${colors.text.tertiary}`}
-          />
-        </div>
+        </HeaderBar>
 
         {/* 🏢 ENTERPRISE: Centralized SearchInput (same as UnitsList/CompactToolbar) */}
         <div className={PANEL_LAYOUT.MARGIN.TOP_SM}>

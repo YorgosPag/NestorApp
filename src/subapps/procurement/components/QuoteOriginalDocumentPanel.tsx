@@ -20,6 +20,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
@@ -197,39 +198,44 @@ export function QuoteOriginalDocumentPanel({
 
   return (
     <Card className={cn(className, sticky && 'lg:sticky lg:top-4')}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-base">
-            {t('quotes.scan.originalDocument.title')}
-          </CardTitle>
-          <Badge variant="secondary">
-            {t('quotes.scan.originalDocument.badge')}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-1">
-          {activeFile?.downloadUrl && (
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={activeFile.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                {t('quotes.scan.originalDocument.openExternal')}
-              </a>
-            </Button>
-          )}
-          {activeFile && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => void handleDownload(activeFile)}
-            >
-              <Download className="mr-1 h-3.5 w-3.5" />
-              {t('quotes.scan.originalDocument.download')}
-            </Button>
-          )}
-        </div>
+      <CardHeader className="pb-2">
+        <HeaderBar
+          actions={
+            <div className="flex items-center gap-1">
+              {activeFile?.downloadUrl && (
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={activeFile.downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                    {t('quotes.scan.originalDocument.openExternal')}
+                  </a>
+                </Button>
+              )}
+              {activeFile && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => void handleDownload(activeFile)}
+                >
+                  <Download className="mr-1 h-3.5 w-3.5" />
+                  {t('quotes.scan.originalDocument.download')}
+                </Button>
+              )}
+            </div>
+          }
+        >
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">
+              {t('quotes.scan.originalDocument.title')}
+            </CardTitle>
+            <Badge variant="secondary">
+              {t('quotes.scan.originalDocument.badge')}
+            </Badge>
+          </div>
+        </HeaderBar>
       </CardHeader>
 
       <CardContent className="space-y-3">

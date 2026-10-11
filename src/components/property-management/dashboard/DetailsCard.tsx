@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -30,9 +31,15 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
     if (isThreeColumnGrid) {
         return (
             <Card className="lg:col-span-2">
-                <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
+                <CardHeader className={`${spacing.padding.sm} pb-2`}>
+                  <HeaderBar
+                    wrap={false}
+                    actions={
+                      <Icon className={`${iconSizes.sm} ${colors.text.muted}`} />
+                    }
+                  >
                     <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                    <Icon className={`${iconSizes.sm} ${colors.text.muted}`} />
+                  </HeaderBar>
                 </CardHeader>
                 <CardContent className={`${spacing.padding.sm} pt-0`}>
                     <div className="grid grid-cols-3 gap-4 text-center">
@@ -50,9 +57,15 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
     
     return (
         <Card className={isFloorData ? "" : "lg:col-span-2"}>
-            <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
+            <CardHeader className={`${spacing.padding.sm} pb-2`}>
+              <HeaderBar
+                wrap={false}
+                actions={
+                  <Icon className={`${iconSizes.sm} ${colors.text.muted}`} />
+                }
+              >
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className={`${iconSizes.sm} ${colors.text.muted}`} />
+              </HeaderBar>
             </CardHeader>
             <CardContent className={`${spacing.padding.sm} pt-0`}>
                 <div className={isFloorData ? "space-y-2" : "flex flex-wrap gap-2"}>

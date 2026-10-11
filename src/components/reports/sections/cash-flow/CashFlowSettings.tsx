@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -110,14 +111,17 @@ export function CashFlowSettings({ settings }: CashFlowSettingsProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">{t('settings.title')}</CardTitle>
-        {settings.hasChanges && (
-          <Button size="sm" onClick={settings.saveConfig} disabled={settings.saving}>
-            <Save className="mr-1 h-4 w-4" />
-            {t('settings.save', 'Save')}
-          </Button>
-        )}
+      <CardHeader>
+        <HeaderBar
+          actions={settings.hasChanges && (
+            <Button size="sm" onClick={settings.saveConfig} disabled={settings.saving}>
+              <Save className="mr-1 h-4 w-4" />
+              {t('settings.save', 'Save')}
+            </Button>
+          )}
+        >
+          <CardTitle className="text-base">{t('settings.title')}</CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Initial Balance */}

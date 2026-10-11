@@ -43,6 +43,7 @@ import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted helpers + sub-component
 import { ConversationItem } from './unified-inbox-helpers';
+import { HeaderBar } from '@/components/ui/header-bar';
 
 // Re-exports for backward compatibility
 export { ConversationItem, getChannelIcon, getChannelColorClasses, getRelativeTime } from './unified-inbox-helpers';
@@ -157,18 +158,21 @@ export function UnifiedInbox({
       {/* Left Panel: Conversations List */}
       <Card className="w-1/3 flex flex-col">
         <CardHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
+          <HeaderBar
+            actions={
+              <div className="flex items-center gap-2">
+                <CommonBadge status="company" customLabel={t('inbox.conversationsCount', { count: totalCount })} variant="secondary" />
+                <Button variant="outline" size="sm" onClick={handleRefreshAll} disabled={conversationsLoading} aria-label="Refresh">
+                  <RefreshCw className={`${iconSizes.sm} ${conversationsLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            }
+          >
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className={iconSizes.md} />
               {t('inbox.title')}
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <CommonBadge status="company" customLabel={t('inbox.conversationsCount', { count: totalCount })} variant="secondary" />
-              <Button variant="outline" size="sm" onClick={handleRefreshAll} disabled={conversationsLoading} aria-label="Refresh">
-                <RefreshCw className={`${iconSizes.sm} ${conversationsLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </div>
+          </HeaderBar>
 
           {showFilters && (
             <nav className="flex flex-wrap gap-2 mt-4" aria-label="Filters">

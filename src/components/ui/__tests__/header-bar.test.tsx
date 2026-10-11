@@ -10,8 +10,8 @@
  * - Δ5: `as` / `actionsAs` αλλάζουν στοιχείο, όχι διάταξη.
  * - Δ6: `align="start"` ⇒ `items-start`, αλλιώς `items-center`.
  * - Δ7: καμία παραβίαση axe.
- * - Δ8: η περιγραφή μπαίνει ΜΕΣΑ στην περιοχή τίτλου, σε περιτύλιγμα `w-0 min-w-full` (δεν ψηφίζει στην αναδίπλωση),
- *   και γυρίζει την προεπιλεγμένη στοίχιση σε `items-start`· ρητό `align` κερδίζει.
+ * - Δ8: η περιγραφή μπαίνει ΜΕΣΑ στην περιοχή τίτλου, σε περιτύλιγμα `w-0 min-w-full` (δεν ψηφίζει στην αναδίπλωση)·
+ *   η στοίχιση ΔΕΝ αλλάζει μόνη της (τη δηλώνει ο καλών — καμία σιωπηλή αλλαγή όψης στη μετανάστευση).
  * - Δ9: `wrap={false}` ⇒ καμία αναδίπλωση, ο τίτλος υποχωρεί (`flex-1`), το διακοσμητικό δεν συμπιέζεται (`shrink-0`).
  */
 
@@ -87,11 +87,7 @@ describe('HeaderBar', () => {
     const slot = screen.getByText('Όλοι οι εργαζόμενοι του έργου').parentElement as HTMLElement;
     expect(slot).toHaveClass('w-0', 'min-w-full');
     expect(slot.parentElement).toBe(titleAreaOf(root));
-    expect(root).toHaveClass('items-start');
-  });
-
-  test('Δ8: ρητό align κερδίζει την προεπιλογή της περιγραφής', () => {
-    expect(renderBar({ description: <p>κείμενο</p>, align: 'center' })).toHaveClass('items-center');
+    expect(root).toHaveClass('items-center');
   });
 
   test.each([undefined, null, false])('Δ8: description=%p ⇒ κανένα περιτύλιγμα περιγραφής', (description) => {

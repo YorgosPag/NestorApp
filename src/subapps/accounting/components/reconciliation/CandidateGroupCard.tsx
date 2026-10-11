@@ -14,6 +14,7 @@ import { Layers, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import type { MatchCandidateGroup } from '@/subapps/accounting/types';
 import { TIER_BADGE_VARIANT } from './tier-colors';
 import { formatAccountingCurrency } from '../../utils/format';
@@ -38,15 +39,18 @@ export function CandidateGroupCard({
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="p-3 pb-2">
-        <div className="flex items-center justify-between">
+        <HeaderBar
+          actions={
+            <Badge variant={TIER_BADGE_VARIANT[group.tier]}>
+              {Math.round(group.confidence)}%
+            </Badge>
+          }
+        >
           <CardTitle className="flex items-center gap-2 text-sm">
             <Layers className="h-4 w-4 text-muted-foreground" />
             {t('reconciliation.groupMatch', { count: group.candidates.length })}
           </CardTitle>
-          <Badge variant={TIER_BADGE_VARIANT[group.tier]}>
-            {Math.round(group.confidence)}%
-          </Badge>
-        </div>
+        </HeaderBar>
       </CardHeader>
       <CardContent className="p-3 pt-0 space-y-2">
         <ul className="space-y-1">

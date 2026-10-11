@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
@@ -89,9 +90,15 @@ function KpiTile({ def, value, delta, hasHistory, deltaTooltip }: KpiTileProps) 
 
   return (
     <Card aria-label={t(def.labelKey)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{t(def.labelKey)}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <CardHeader className="pb-2">
+        <HeaderBar
+          wrap={false}
+          actions={
+            <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+          }
+        >
+          <CardTitle className="text-sm font-medium text-muted-foreground">{t(def.labelKey)}</CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent className="space-y-1">
         <p className="text-3xl font-bold tracking-tight">{display}</p>

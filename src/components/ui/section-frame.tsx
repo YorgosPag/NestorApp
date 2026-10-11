@@ -11,6 +11,8 @@
  * 🔑 **Η επιφάνεια ΕΙΝΑΙ το `Card`** — καμία δεύτερη συνταγή ορίου/φόντου. Ακτίνα και ανύψωση αλλάζουν σε ΕΝΑ σημείο.
  * 🔑 **Το ορόσημο έχει ΠΑΝΤΑ όνομα**: το `aria-labelledby` δένεται εδώ με την ορατή επικεφαλίδα, ώστε να μην είναι
  * πειθαρχία του καλούντος (σκέτο `<section>` + `<h2>` δεν είναι ορόσημο· `aria-label` δίπλα σε ορατό τίτλο τον διπλασιάζει).
+ * 🔑 **Η γραμμή «τίτλος + πράξεις» ΔΕΝ γράφεται εδώ**: τη διάταξη (αναδίπλωση, περιγραφή που δεν ψηφίζει) την κατέχει το
+ * `HeaderBar` (ADR-912 §8) — ήταν η τρίτη χειρόγραφη υλοποίηση του ίδιου σχήματος.
  * ⚠️ `headingLevel` **υποχρεωτικό**: το περίγραμμα του εγγράφου το ξέρει μόνο η σελίδα, δεν μαντεύεται (WCAG 1.3.1).
  * ⚠️ `titleSize` και `gap` είναι **κλειστά σύνολα** και δεν υπάρχει `className`: καμία πόρτα για χειρόγραφη τιμή.
  * ⚠️ Ό,τι **δεν** είναι ενότητα με τίτλο (γραμμή λίστας, κάρτα οντότητας, σκελετός) παίρνει `<Card asChild>`, όχι αυτό.
@@ -19,6 +21,7 @@
 import React, { useId } from 'react';
 
 import { Card } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 
 const HEADING_CLASSES = {
   /** Ετικέτα πάνω από το περιεχόμενο — το περιεχόμενο είναι ο πρωταγωνιστής (τιμή, χαρακτηριστικά). */
@@ -75,13 +78,15 @@ export function SectionFrame({
     <Card asChild className={`p-4 ${gap === undefined ? '' : FRAME_GAP_CLASSES[gap]}`}>
       <Landmark {...rest} aria-labelledby={id}>
         {hasHeaderRow ? (
-          <header className={`flex flex-wrap justify-between gap-2 ${description === undefined ? 'items-center' : 'items-start'}`}>
-            <span className="flex min-w-0 flex-col gap-1">
-              {heading}
-              {description !== undefined && <p className="m-0 text-sm text-muted-foreground">{description}</p>}
-            </span>
-            {actions}
-          </header>
+          <HeaderBar
+            as="header"
+            className="gap-x-2"
+            align={description === undefined ? 'center' : 'start'}
+            description={description !== undefined && <p className="m-0 mt-1 text-sm text-muted-foreground">{description}</p>}
+            actions={actions}
+          >
+            {heading}
+          </HeaderBar>
         ) : heading}
         {children}
       </Landmark>

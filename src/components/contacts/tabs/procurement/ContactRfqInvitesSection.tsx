@@ -2,6 +2,7 @@
 
 import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,17 +48,18 @@ export function ContactRfqInvitesSection({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            {t('contacts:procurementTab.sections.rfqInvites')}
-          </CardTitle>
-          {onCreateRfq && (
+        <HeaderBar
+          actions={onCreateRfq && (
             <Button size="sm" variant="outline" onClick={onCreateRfq}>
               <Plus className="mr-1 h-3.5 w-3.5" />
               {t('quotes:rfqs.create')}
             </Button>
           )}
-        </div>
+        >
+          <CardTitle className="text-base">
+            {t('contacts:procurementTab.sections.rfqInvites')}
+          </CardTitle>
+        </HeaderBar>
       </CardHeader>
       <CardContent>
         {loading ? (
