@@ -48,6 +48,52 @@ const ENTITY_ACTION_PRESETS: Record<ActionType, EntityActionPreset> = {
   complete: { icon: CheckCircle,  className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
 };
 
+// ===== PRIORITY =====
+
+/**
+ * **Η κανονική σειρά των ενεργειών** (ADR-912 §12) — μικρότερος αριθμός = πιο μπροστά **και** τελευταία που φεύγει
+ * στο μενού «Περισσότερες». ΕΝΑΣ πίνακας για όλες τις οντότητες.
+ *
+ * 🔴 **Η αφορμή**: κάθε κεφαλίδα δήλωνε τις ίδιες ενέργειες με άλλη σειρά (κτίριο: Επίδειξη · Νέο · Επεξεργασία ·
+ *   Διαγραφή — έργο: Νέο · Επεξεργασία · Επίδειξη · Κάδος), και η υπερχείλιση κρατά **τις πρώτες**. Σε στενό πλάτος το
+ *   κτίριο κρατούσε την «Επίδειξη» και έστελνε στο μενού την «Επεξεργασία».
+ * 🔑 Η προτεραιότητα **δηλώνεται**, δεν προκύπτει από το πώς έτυχε να γραφτεί ο πίνακας (Fluent `Overflow` `priority`)·
+ *   η επιβεβαίωση προηγείται, η καταστροφική ενέργεια έρχεται τελευταία (Polaris page actions).
+ */
+const ENTITY_ACTION_PRIORITY: Record<ActionType, number> = {
+  save: 10,
+  cancel: 20,
+  complete: 30,
+  edit: 40,
+  new: 50,
+  view: 60,
+  showcase: 70,
+  print: 80,
+  trash: 90,
+  delete: 100,
+};
+
+/** Ενέργεια χωρίς δηλωμένη προτεραιότητα (χτισμένη με το χέρι): στη μέση — μετά τις κύριες, πριν από τις καταστροφικές. */
+const UNDECLARED_ACTION_PRIORITY = ENTITY_ACTION_PRIORITY.view;
+
+/**
+ * Οι ενέργειες στην κανονική τους σειρά. **Σταθερή** ταξινόμηση: ίση προτεραιότητα ⇒ μένει η σειρά δήλωσης.
+ * Επιστρέφει τον **ίδιο** πίνακα όταν είναι ήδη σε σειρά (καμία νέα ταυτότητα χωρίς λόγο).
+ */
+function orderEntityActions(actions: readonly EntityHeaderAction[]): readonly EntityHeaderAction[] {
+  const rank = (action: EntityHeaderAction) => action.priority ?? UNDECLARED_ACTION_PRIORITY;
+  const inOrder = actions.every((action, index) => index === 0 || rank(actions[index - 1]) <= rank(action));
+  return inOrder ? actions : [...actions].sort((left, right) => rank(left) - rank(right));
+}
+
+/**
+ * **Η σειρά δήλωσης ΕΙΝΑΙ η σειρά** — για γραμμές όπου οι τύποι δανείζονται μόνο για την όψη τους και η σειρά είναι
+ * ροή εργασίας (π.χ. Αλλαγή τιμής → Κράτηση → Πώληση → Επαναφορά). Ρητή εξαίρεση από τον πίνακα, όχι σιωπηλή.
+ */
+function inDeclaredOrder(actions: readonly EntityHeaderAction[]): EntityHeaderAction[] {
+  return actions.map((action, index) => ({ ...action, priority: index }));
+}
+
 // ===== FACTORY =====
 
 /**
@@ -68,7 +114,7 @@ function createEntityAction(
   label: string,
   onClick: () => void,
   overrides?: Partial<
-    Pick<EntityHeaderAction, 'icon' | 'className' | 'variant' | 'disabled' | 'pending' | 'pendingLabel'>
+    Pick<EntityHeaderAction, 'icon' | 'className' | 'variant' | 'disabled' | 'pending' | 'pendingLabel' | 'priority'>
   >
 ): EntityHeaderAction {
   const preset = ENTITY_ACTION_PRESETS[type];
@@ -77,6 +123,7 @@ function createEntityAction(
     onClick,
     icon: overrides?.icon ?? preset.icon,
     className: overrides?.className ?? preset.className,
+    priority: overrides?.priority ?? ENTITY_ACTION_PRIORITY[type],
     ...(overrides?.variant ? { variant: overrides.variant } : {}),
     ...(overrides?.disabled !== undefined ? { disabled: overrides.disabled } : {}),
     ...(overrides?.pending !== undefined ? { pending: overrides.pending } : {}),
@@ -84,5 +131,5 @@ function createEntityAction(
   };
 }
 
-export { ENTITY_ACTION_PRESETS, createEntityAction };
+export { ENTITY_ACTION_PRESETS, ENTITY_ACTION_PRIORITY, createEntityAction, inDeclaredOrder, orderEntityActions };
 export type { ActionType, EntityActionPreset };

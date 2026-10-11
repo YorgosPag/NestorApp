@@ -2,11 +2,7 @@
 'use client';
 
 import React, { useState, useCallback, useTransition, useEffect } from 'react';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { cn } from '@/lib/utils';
 import { toggleSelect } from '@/lib/toggle-select';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // [ENTERPRISE] Import from canonical location
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { BuildingsList } from './BuildingsList';
@@ -20,7 +16,6 @@ import {
   BarChart3,
   MapPin,
   Calendar,
-  Trash2
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // [ENTERPRISE] Navigation context for breadcrumb sync
@@ -57,8 +52,6 @@ export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
   const { success: showSuccess } = useNotifications();
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
 
   // [ENTERPRISE] Navigation context for breadcrumb sync
   const { companies } = useNavigation();
@@ -416,20 +409,6 @@ export function BuildingsPageContent() {
                 isOpen={!!selectedBuilding}
                 onClose={handleCloseMobileDetails}
                 title={selectedBuilding?.name || t('pages.buildings.details.title')}
-                actionButtons={
-                  <button
-                    onClick={handleDeleteBuilding}
-                    className={cn(
-                      "p-2 rounded-md border border-border text-destructive",
-                      colors.bg.primary,
-                      INTERACTIVE_PATTERNS.ACCENT_HOVER,
-                      TRANSITION_PRESETS.STANDARD_COLORS
-                    )}
-                    aria-label={t('details.deleteBuilding')}
-                  >
-                    <Trash2 className={iconSizes.sm} />
-                  </button>
-                }
               >
                 {selectedBuilding && (
                   <BuildingDetails

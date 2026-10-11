@@ -53,16 +53,11 @@ export function BuildingDetailsHeader({
     // Normal mode: New, Edit, Delete
     const actions = isEditing
         ? [
-            createEntityAction(
-                'save',
-                isSaving ? t('details.saving') : t('details.saveBuilding'),
-                isSaving ? () => {} : onSave
-            ),
-            createEntityAction(
-                'cancel',
-                t('details.cancelEdit'),
-                onCancel
-            ),
+            createEntityAction('save', t('details.saveBuilding'), onSave, {
+                pending: isSaving,
+                pendingLabel: t('details.saving'),
+            }),
+            createEntityAction('cancel', t('details.cancelEdit'), onCancel, { disabled: isSaving }),
         ]
         : [
             ...(onShowcaseBuilding ? [createEntityAction(
@@ -87,19 +82,14 @@ export function BuildingDetailsHeader({
             )] : []),
         ];
 
+    // 📱 Καμία απόκρυψη σε κινητό (ADR-912 §12): μέσα στο φύλλο η κεφαλίδα στέλνει τις ενέργειές της στην μπάρα του
+    //    και δεν ξαναγράφει τον τίτλο. Το `hidden md:block` που ζούσε εδώ έκρυβε μαζί και την «Επεξεργασία».
     return (
-        <>
-            {/* DESKTOP: Show full header with actions */}
-            <div className="hidden md:block">
-                <EntityDetailsHeader
-                    icon={NAVIGATION_ENTITIES.building.icon}
-                    title={formatBuildingLabel(building.code, building.name)}
-                    actions={actions}
-                    variant="detailed"
-                />
-            </div>
-
-            {/* MOBILE: Hidden (no header duplication) */}
-        </>
+        <EntityDetailsHeader
+            icon={NAVIGATION_ENTITIES.building.icon}
+            title={formatBuildingLabel(building.code, building.name)}
+            actions={actions}
+            variant="detailed"
+        />
     );
 }

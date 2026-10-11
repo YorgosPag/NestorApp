@@ -20,7 +20,13 @@ export type {
 } from './UnifiedEntityHeaderSystem';
 
 // Action Presets Factory
-export { ENTITY_ACTION_PRESETS, createEntityAction } from './entity-action-presets';
+export {
+  ENTITY_ACTION_PRESETS,
+  ENTITY_ACTION_PRIORITY,
+  createEntityAction,
+  inDeclaredOrder,
+  orderEntityActions,
+} from './entity-action-presets';
 export type { ActionType, EntityActionPreset } from './entity-action-presets';
 
 // Default export

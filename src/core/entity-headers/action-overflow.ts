@@ -25,12 +25,21 @@ const ENTITY_ACTION_OVERFLOW: PriorityOverflowSpec = {
   moreFallbackPx: 36,
 };
 
+/**
+ * Στην μπάρα του φύλλου κινητού (ADR-912 §12) η **πρώτη** ενέργεια δεν πέφτει ποτέ στο μενού: μπάρα με σκέτο «⋯» δεν
+ * λέει στον άνθρωπο ότι η οθόνη επεξεργάζεται (Polaris: «μην τα βάζεις όλα στο μενού» · Fluent `minimumVisible`).
+ */
+const ENTITY_ACTION_OVERFLOW_KEEP_PRIMARY: PriorityOverflowSpec = { ...ENTITY_ACTION_OVERFLOW, minVisible: 1 };
+
 export type ActionOverflow = PriorityOverflow<HTMLDivElement>;
 
 /**
  * Το δοχείο πρέπει να έχει πλάτος **ανεξάρτητο από το πόσες ενέργειες κρύβονται** (οι κρυμμένες μένουν στη ροή,
  * αόρατες) — αλλιώς, μόλις κρυφτεί μία, το δοχείο στενεύει και ο χώρος που ξαναβρέθηκε δεν φαίνεται ποτέ.
  */
-export function useActionOverflow(count: number): ActionOverflow {
-  return usePriorityOverflow<HTMLDivElement>(count, ENTITY_ACTION_OVERFLOW);
+export function useActionOverflow(count: number, keepPrimary = false): ActionOverflow {
+  return usePriorityOverflow<HTMLDivElement>(
+    count,
+    keepPrimary ? ENTITY_ACTION_OVERFLOW_KEEP_PRIMARY : ENTITY_ACTION_OVERFLOW,
+  );
 }

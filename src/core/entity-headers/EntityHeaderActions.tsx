@@ -126,8 +126,14 @@ function ActionOverflowMenu({ actions }: { readonly actions: readonly EntityHead
  * **Η γραμμή ενεργειών που υπερχειλίζει κατά προτεραιότητα**: οι πρώτες μένουν, οι υπόλοιπες πάνε στο μενού
  * «Περισσότερες ενέργειες». Χωρίς μέτρηση (SSR · jsdom) φαίνονται **όλες** — άγνωστος χώρος δεν κρύβει τίποτα.
  */
-export function EntityHeaderActions({ actions }: { readonly actions: readonly EntityHeaderAction[] }) {
-  const { containerRef, visibleCount } = useActionOverflow(actions.length);
+interface EntityHeaderActionsProps {
+  readonly actions: readonly EntityHeaderAction[];
+  /** Η πρώτη ενέργεια μένει ορατή ακόμη κι αν δεν χωρά ολόκληρη (μπάρα φύλλου κινητού — ADR-912 §12). */
+  readonly keepPrimary?: boolean;
+}
+
+export function EntityHeaderActions({ actions, keepPrimary = false }: EntityHeaderActionsProps) {
+  const { containerRef, visibleCount } = useActionOverflow(actions.length, keepPrimary);
   const shown = Math.min(visibleCount, MAX_VISIBLE_ACTIONS);
   const overflowed = actions.slice(shown);
 

@@ -10,7 +10,10 @@
 import React from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LucideIcon } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useDetailsSheetActions } from '@/core/layouts/details-sheet-actions';
 import { EntityActionButton, EntityHeaderActions } from './EntityHeaderActions';
+import { orderEntityActions } from './entity-action-presets';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -48,6 +51,11 @@ export interface EntityHeaderAction {
   pending?: boolean;
   /** Τι λέει όσο τρέχει (π.χ. «Αποθήκευση...»). Απών ⇒ μένει το `label`. */
   pendingLabel?: string;
+  /**
+   * Θέση στην κανονική σειρά (ADR-912 §12): μικρότερο = πιο μπροστά **και** τελευταίο που φεύγει στο μενού. Το γεμίζει
+   * το `createEntityAction` από τον `ENTITY_ACTION_PRIORITY`· ρητή τιμή μόνο για δηλωμένη εξαίρεση.
+   */
+  priority?: number;
 }
 
 export interface EntityHeaderProps {
@@ -109,6 +117,8 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   children
 }) => {
   const Heading = headingLevel === 1 ? 'h1' : 'h3';
+  const sheet = useDetailsSheetActions();
+  const orderedActions = React.useMemo(() => orderEntityActions(actions), [actions]);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
@@ -130,6 +140,27 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
     compact: "text-base",
     detailed: "text-xl"
   };
+
+  // 📱 Μέσα στο φύλλο κινητού (ADR-912 §12) τον τίτλο τον λέει η μπάρα του φύλλου και οι ενέργειες αποδίδονται ΕΚΕΙ.
+  //    Με `media` η κεφαλίδα ΕΙΝΑΙ η ταυτότητα της σελίδας (γκαλερί · γεγονότα) ⇒ μένει ολόκληρη.
+  if (sheet && !media) {
+    return (
+      <EntityHeaderInSheet
+        host={sheet.host}
+        actions={orderedActions}
+        icon={Icon}
+        title={title}
+        subtitle={subtitle}
+        badges={badges}
+        titleAdornment={titleAdornment}
+        avatarImageUrl={avatarImageUrl}
+        onAvatarClick={onAvatarClick}
+        details={details}
+      >
+        {children}
+      </EntityHeaderInSheet>
+    );
+  }
 
   return (
     <div className={cn(
@@ -248,14 +279,14 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
         </div>
 
         {/* Right side: Actions */}
-        {actions.length > 0 && (media ? (
+        {orderedActions.length > 0 && (media ? (
           <div className="flex flex-wrap gap-2 max-w-full">
-            {actions.map((action, index) => (
+            {orderedActions.map((action, index) => (
               <EntityActionButton key={index} action={action} />
             ))}
           </div>
         ) : (
-          <EntityHeaderActions actions={actions} />
+          <EntityHeaderActions actions={orderedActions} />
         ))}
       </div>
 
@@ -268,6 +299,69 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
     </div>
   );
 };
+
+// ===== IN-SHEET HEADER (ADR-912 §12) =====
+
+type EntityHeaderInSheetProps = Pick<
+  EntityHeaderProps,
+  'icon' | 'title' | 'subtitle' | 'badges' | 'titleAdornment' | 'avatarImageUrl' | 'onAvatarClick' | 'details' | 'children'
+> & {
+  readonly host: HTMLElement | null;
+  readonly actions: readonly EntityHeaderAction[];
+};
+
+/**
+ * **Η κεφαλίδα μέσα στο φύλλο κινητού**: οι ενέργειες πάνε στην μπάρα του φύλλου (portal — ΕΝΑ αντίτυπο στο DOM), ο
+ * τίτλος δεν ξαναγράφεται. Ό,τι **δεν** είναι όνομα ή ενέργεια (φωτογραφία · χάπι κατάστασης · υπότιτλος · σήματα ·
+ * γεγονότα) μένει σε λεπτή λωρίδα — αλλιώς θα χανόταν μαζί με τον διπλό τίτλο, όπως χάνονταν ως τώρα οι ενέργειες.
+ */
+function EntityHeaderInSheet({
+  host,
+  actions,
+  icon: Icon,
+  title,
+  subtitle,
+  badges = [],
+  titleAdornment,
+  avatarImageUrl,
+  onAvatarClick,
+  details,
+  children,
+}: EntityHeaderInSheetProps) {
+  const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
+  const hasIdentityExtras = Boolean(avatarImageUrl || titleAdornment || subtitle || badges.length > 0);
+
+  return (
+    <>
+      {host && actions.length > 0 && createPortal(<EntityHeaderActions actions={actions} keepPrimary />, host)}
+      {(hasIdentityExtras || details || children) && (
+        <div className="flex flex-col gap-2 border-b px-3 py-2">
+          {hasIdentityExtras && (
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {avatarImageUrl && (
+                <Avatar
+                  className={cn('shrink-0 cursor-pointer', INTERACTIVE_PATTERNS.OPACITY_HOVER, iconSizes.xl)}
+                  onClick={onAvatarClick}
+                >
+                  <AvatarImage src={avatarImageUrl} alt={title} className="object-cover" />
+                  <AvatarFallback><Icon className={iconSizes.sm} /></AvatarFallback>
+                </Avatar>
+              )}
+              {titleAdornment}
+              {subtitle && <p className={cn('min-w-0 truncate text-sm', colors.text.muted)}>{subtitle}</p>}
+              {badges.map((badge, index) => (
+                <EntityBadge key={index} {...badge} />
+              ))}
+            </div>
+          )}
+          {details}
+          {children}
+        </div>
+      )}
+    </>
+  );
+}
 
 // ===== ENTITY BADGE COMPONENT =====
 
