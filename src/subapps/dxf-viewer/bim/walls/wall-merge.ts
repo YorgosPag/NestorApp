@@ -27,6 +27,7 @@ import type { WallEntity, WallParams } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { OpeningUpdate } from './wall-split';
 import { lineIntersection } from '../../utils/angle-entity-math';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 // ── Tolerances (AutoCAD-JOIN-grade, forgiving) ──────────────────────────────
 
@@ -83,7 +84,7 @@ export interface WallAxis {
   readonly length: number;
 }
 
-export function wallAxis(wall: WallEntity): WallAxis | null {
+export function wallAxis(wall: Pick<WallEntity, 'params'>): WallAxis | null {
   const { start, end } = wall.params;
   const dx = end.x - start.x;
   const dy = end.y - start.y;
@@ -235,17 +236,22 @@ interface Endpoint {
   readonly bevel?: number;
 }
 
-/** The four wall endpoints projected on the primary axis, with owning bevel. */
-function collectEndpoints(a: WallEntity, b: WallEntity, axis: WallAxis): Endpoint[] {
-  const mk = (p: BimPoint, bevel?: number): Endpoint => {
+/**
+ * Every wall endpoint of the run projected on the primary axis, with owning bevel — plus any
+ * `extendTo` target (ADR-911 Φ4-2: a run may also have to REACH a point no wall touches yet).
+ */
+function collectEndpoints(
+  walls: readonly WallEntity[],
+  axis: WallAxis,
+  extendTo: readonly Point2D[],
+): Endpoint[] {
+  const mk = (p: Point2D, bevel?: number): Endpoint => {
     const pt = { x: p.x, y: p.y };
     return { pt, scalar: scalarAlong(axis, pt), bevel };
   };
   return [
-    mk(a.params.start, a.params.startBevel),
-    mk(a.params.end, a.params.endBevel),
-    mk(b.params.start, b.params.startBevel),
-    mk(b.params.end, b.params.endBevel),
+    ...walls.flatMap((w) => [mk(w.params.start, w.params.startBevel), mk(w.params.end, w.params.endBevel)]),
+    ...extendTo.map((p) => mk(p)),
   ];
 }
 
@@ -265,11 +271,11 @@ function collectEndpoints(a: WallEntity, b: WallEntity, axis: WallAxis): Endpoin
  * σχήμα** τα γράφουν.
  */
 function axisExtremes(
-  a: WallEntity,
-  b: WallEntity,
+  walls: readonly WallEntity[],
   axis: NonNullable<ReturnType<typeof wallAxis>>,
+  extendTo: readonly Point2D[] = [],
 ): { readonly lo: Endpoint; readonly hi: Endpoint } {
-  const eps = collectEndpoints(a, b, axis);
+  const eps = collectEndpoints(walls, axis, extendTo);
   let lo = eps[0]!;
   let hi = eps[0]!;
   for (const e of eps) {
@@ -286,7 +292,7 @@ function axisExtremes(
 export function computeMergedGhostAxis(a: WallEntity, b: WallEntity): readonly [Point2D, Point2D] | null {
   const axis = wallAxis(a);
   if (!axis) return null;
-  const { lo, hi } = axisExtremes(a, b, axis);
+  const { lo, hi } = axisExtremes([a, b], axis);
   const at = (s: number): Point2D => ({ x: axis.origin.x + axis.u.x * s, y: axis.origin.y + axis.u.y * s });
   return [at(lo.scalar), at(hi.scalar)];
 }
@@ -358,9 +364,24 @@ export function computeWallGap(a: WallEntity, b: WallEntity): WallGap | null {
  * geometry changed, so exact miter points no longer apply — mirror split).
  */
 export function buildMergedWallParams(a: WallEntity, b: WallEntity): WallParams {
-  const axis = wallAxis(a);
-  if (!axis) return a.params;
-  const { lo, hi } = axisExtremes(a, b, axis);
+  return buildRunWallParams([a, b]);
+}
+
+/**
+ * ADR-911 Φ4-2 — the N-wall form of {@link buildMergedWallParams}; the pair is the run of two,
+ * not a second implementation. `walls[0]` is the PRIMARY (its params + axis direction win); the
+ * run spans outer-to-outer of every member endpoint AND of every `extendTo` target, so one call
+ * covers a chain (A–gap–B–gap–C), a plain extension (one wall + a target) and both at once.
+ * The caller gates collinearity (`canMergeWalls`) — every point is projected on the primary axis.
+ */
+export function buildRunWallParams(
+  walls: readonly WallEntity[],
+  extendTo: readonly Point2D[] = [],
+): WallParams {
+  const primary = walls[0];
+  const axis = wallAxis(primary);
+  if (!axis) return primary.params;
+  const { lo, hi } = axisExtremes(walls, axis, extendTo);
   const at = (s: number): BimPoint => ({
     x: axis.origin.x + axis.u.x * s,
     y: axis.origin.y + axis.u.y * s,
@@ -370,7 +391,7 @@ export function buildMergedWallParams(a: WallEntity, b: WallEntity): WallParams 
   const {
     startBevel: _sb, endBevel: _eb, startMiter: _sm, endMiter: _em,
     measurementLength: _ml, ...rest
-  } = a.params;
+  } = primary.params;
 
   const next: WallParams = {
     ...rest,
@@ -401,28 +422,57 @@ export function collectMergedOpenings(
   openingsByIdFn: (id: string) => OpeningEntity | null,
   mergedWallId: string,
 ): OpeningUpdate[] {
-  const merged = wallAxis({ ...a, params: buildMergedWallParams(a, b) } as WallEntity);
-  const updates: OpeningUpdate[] = [];
-  if (!merged) return updates;
-
-  for (const wall of [a, b]) {
-    const host = wallAxis(wall);
-    if (!host) continue;
-    for (const oid of wall.hostedOpeningIds ?? []) {
+  const hosted: HostedOpeningRef[] = [];
+  for (const host of [a, b]) {
+    for (const oid of host.hostedOpeningIds ?? []) {
       const opening = openingsByIdFn(oid);
-      if (!opening) continue;
-      const prev = opening.params;
-      const worldStart: Point2D = {
-        x: host.origin.x + host.u.x * prev.offsetFromStart,
-        y: host.origin.y + host.u.y * prev.offsetFromStart,
-      };
-      const newOffset = Math.max(0, scalarAlong(merged, worldStart));
-      updates.push({
-        openingId: oid,
-        previousParams: prev,
-        nextParams: { ...prev, wallId: mergedWallId, offsetFromStart: newOffset },
-      });
+      if (opening) hosted.push({ host, opening });
     }
+  }
+  return rehostOpeningsOnto({ id: mergedWallId, params: buildMergedWallParams(a, b) }, hosted);
+}
+
+/** An opening together with the wall it sits on TODAY (before the re-host). */
+export interface HostedOpeningRef {
+  readonly host: WallEntity;
+  readonly opening: OpeningEntity;
+}
+
+/**
+ * ADR-911 Φ4-2 — the N-wall form of {@link collectMergedOpenings}: re-hosts each opening onto
+ * `target` by its WORLD position, whatever wall it sits on today (merged run or extended wall).
+ *
+ * Both ends of the opening are projected and the LOWER one becomes `offsetFromStart`: a source
+ * wall drawn against the primary direction would otherwise land its opening one width off (its
+ * "start" is the far end on the target axis). mm ↔ scene units are honoured on both sides.
+ */
+export function rehostOpeningsOnto(
+  target: Pick<WallEntity, 'id' | 'params'>,
+  hosted: readonly HostedOpeningRef[],
+): OpeningUpdate[] {
+  const targetAxis = wallAxis(target);
+  const updates: OpeningUpdate[] = [];
+  if (!targetAxis) return updates;
+  const targetScale = mmToSceneUnits(target.params.sceneUnits ?? 'mm') || 1;
+
+  for (const { host, opening } of hosted) {
+    const hostAxis = wallAxis(host);
+    if (!hostAxis) continue;
+    const prev = opening.params;
+    const hostScale = mmToSceneUnits(host.params.sceneUnits ?? 'mm') || 1;
+    const worldAt = (offsetMm: number): Point2D => ({
+      x: hostAxis.origin.x + hostAxis.u.x * offsetMm * hostScale,
+      y: hostAxis.origin.y + hostAxis.u.y * offsetMm * hostScale,
+    });
+    const lower = Math.min(
+      scalarAlong(targetAxis, worldAt(prev.offsetFromStart)),
+      scalarAlong(targetAxis, worldAt(prev.offsetFromStart + prev.width)),
+    );
+    updates.push({
+      openingId: opening.id,
+      previousParams: prev,
+      nextParams: { ...prev, wallId: target.id, offsetFromStart: Math.max(0, lower / targetScale) },
+    });
   }
   return updates;
 }

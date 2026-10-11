@@ -42,7 +42,7 @@ import {
   wallTrimChanged,
   type WallTrimFields,
 } from './wall-trims';
-import { computeWallGeometry } from '../geometry/wall-geometry';
+import { retrimWallEntities } from './wall-retrim';
 import { partitionByStructuralOverlap } from '../placement/structural-placement-overlap';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
@@ -210,25 +210,7 @@ export function recomputeWallTrims(accessor: WallSceneAccessor): void {
     if (isWallEntity(e)) prevTrimById.set(e.id, trimFieldsOf(e.params));
   }
 
-  // Strip all existing trim data from every remaining wall before fresh recompute.
-  // This clears miter patches that referred to the now-deleted wall's endpoints.
-  const strippedEntities = scene.entities.map((e) => {
-    if (!isWallEntity(e)) return e;
-    const prev = prevTrimById.get(e.id);
-    if (!prev?.startMiter && !prev?.endMiter && !prev?.startBevel && !prev?.endBevel) return e;
-    // Destructure out the four trim fields; rest is a valid subset of WallParams.
-    const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...rest } = e.params;
-    const cleanParams = rest as WallParams;
-    return {
-      ...e,
-      params: cleanParams,
-      geometry: computeWallGeometry(cleanParams, e.kind),
-    } as WallEntity;
-  });
-
-  const remainingWalls = strippedEntities.filter(isWallEntity);
-  const newTrims = computeWallTrims(remainingWalls, collectColumnFootprints(strippedEntities));
-  const patchedEntities = applyTrimPatches(strippedEntities, newTrims);
+  const patchedEntities = retrimWallEntities(scene.entities);
   accessor.setLevelScene(levelId, { ...scene, entities: patchedEntities });
 
   // Emit for every wall whose trim params changed (gained, lost, or different).

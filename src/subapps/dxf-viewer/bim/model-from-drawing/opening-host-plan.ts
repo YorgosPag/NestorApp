@@ -12,6 +12,7 @@
  * γίνεται τη στιγμή της εγγραφής (`projectPointToWallOffsetMm`).
  */
 
+import { dequal } from 'dequal';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../types/wall-types';
 import { MODEL_FROM_DRAWING_LIMITS as LIMITS } from '../../config/tolerance-config';
@@ -27,8 +28,17 @@ export type OpeningHostPlan =
   | { readonly kind: 'bridge'; readonly wallIds: readonly [string, string] }
   /** Το άκρο ενός τοίχου προχωρά ως την απέναντι λαμπάδα. */
   | { readonly kind: 'extend'; readonly wallId: string; readonly end: 'start' | 'end'; readonly to: Point2D }
-  /** Κανένας ομοαξονικός τοίχος: νέο κομμάτι λαμπά–λαμπά, πάχος από την παρειά. */
-  | { readonly kind: 'new-piece'; readonly start: Point2D; readonly end: Point2D; readonly thicknessMm: number };
+  /**
+   * Κανένας ομοαξονικός τοίχος: νέο κομμάτι λαμπά–λαμπά, πάχος από την παρειά. `likeWallId` = ο
+   * τοίχος-λαμπάδα από τον οποίο παίρνει ό,τι ΔΕΝ δίνει η κάτοψη (ύψος, λειτουργία, δεσίματα).
+   */
+  | {
+      readonly kind: 'new-piece';
+      readonly start: Point2D;
+      readonly end: Point2D;
+      readonly thicknessMm: number;
+      readonly likeWallId: string;
+    };
 
 export interface OpeningSpan {
   /** Αρχή του ανοίγματος πάνω στον άξονα του ξενιστή (για πόρτα: η πλευρά του μεντεσέ). */
@@ -78,8 +88,28 @@ function acrossRange(ring: readonly Point2D[], door: DoorSymbolSolution): readon
   return [Math.min(...values), Math.max(...values)];
 }
 
+/** Ό,τι κληρονομεί ένα νέο κομμάτι από τοίχο-λαμπάδα: ύψος, λειτουργία, δεσίματα βάσης/κορυφής. */
+function buildTraits(wall: WallEntity): readonly unknown[] {
+  const p = wall.params;
+  return [p.category, p.height, p.baseBinding, p.topBinding, p.baseOffset, p.topOffset];
+}
+
+/**
+ * Ο τοίχος-πρότυπο του νέου κομματιού. Η κάτοψη δεν λέει ύψος ούτε λειτουργία· τα λένε οι δύο
+ * λαμπάδες — ΑΝ συμφωνούν. Διαφωνία, ή καμία λαμπάδα-τοίχος (π.χ. δύο κολώνες) ⇒ `null`: το
+ * στοιχείο πάει «προς απόφαση», ποτέ σιωπηλή προεπιλογή (Δ3).
+ */
+function newPieceTemplate(door: DoorSymbolSolution, host: HostWalls): WallEntity | null {
+  const jambs = [door.back, door.front]
+    .flatMap((jamb) => (jamb.obstacle.wallId ? host.walls.get(jamb.obstacle.wallId) ?? [] : []));
+  if (jambs.length === 0) return null;
+  return jambs.every((w) => dequal(buildTraits(w), buildTraits(jambs[0]))) ? jambs[0] : null;
+}
+
 /** Νέο κομμάτι: πάχος = το κοινό πλάτος των δύο παρειών, άξονας στο μέσο του. */
-function newPiecePlan(door: DoorSymbolSolution, scale: number): ResolvedDoorHost | null {
+function newPiecePlan(door: DoorSymbolSolution, host: HostWalls, scale: number): ResolvedDoorHost | null {
+  const like = newPieceTemplate(door, host);
+  if (!like) return null;
   const [backLo, backHi] = acrossRange(door.back.obstacle.ring, door);
   const [frontLo, frontHi] = acrossRange(door.front.obstacle.ring, door);
   const lo = Math.max(backLo, frontLo);
@@ -89,7 +119,7 @@ function newPiecePlan(door: DoorSymbolSolution, scale: number): ResolvedDoorHost
   const offset = scalePoint(door.swing, (lo + hi) / 2);
   const start = addPoints(door.back.point, offset);
   const end = addPoints(door.front.point, offset);
-  return { plan: { kind: 'new-piece', start, end, thicknessMm }, span: { start, end } };
+  return { plan: { kind: 'new-piece', start, end, thicknessMm, likeWallId: like.id }, span: { start, end } };
 }
 
 /** `null` = ο ξενιστής δεν προκύπτει από το σχέδιο ⇒ «προς απόφαση». */
@@ -104,5 +134,5 @@ export function resolveDoorHost(door: DoorSymbolSolution, host: HostWalls, scale
   }
   if (back) return extendPlan(back, door.back, door);
   if (front) return extendPlan(front, door.front, door);
-  return newPiecePlan(door, scale);
+  return newPiecePlan(door, host, scale);
 }

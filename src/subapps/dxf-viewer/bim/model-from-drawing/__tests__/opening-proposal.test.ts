@@ -3,94 +3,31 @@
  *
  * Η σκηνή του test είναι ό,τι αφήνει η Φ3: οι γραμμές του DXF ΚΑΙ οι τοίχοι BIM γραμμένοι (με τα
  * trims τους). Οι αριθμοί είναι οι μετρημένοι του ADR-911 §4.7.
+ *
+ * Όπου το test χρειάζεται «τη σκηνή μετά την έγκριση», τη γράφει ο ΠΡΑΓΜΑΤΙΚΟΣ γραφέας της Φ4-2
+ * (`addOpeningsToScene`), μέσα από το ιστορικό — όχι ομοίωμά του.
  */
 
-import type { AnySceneEntity, Entity } from '../../../types/entities';
+import type { Entity } from '../../../types/entities';
 import type { WallEntity } from '../../types/wall-types';
-import { buildWallEntity } from '../../../hooks/drawing/wall-completion';
-import { projectPointToWallOffsetMm } from '../../geometry/opening-geometry';
-import { applyTrimPatches, computeWallTrims } from '../../walls/wall-trims';
-import { buildMergedWallParams } from '../../walls/wall-merge';
-import { computeWallProposal } from '../wall-proposal';
+import { addOpeningsToScene } from '../add-openings-to-scene';
+import { countOpeningsByStatus, type OpeningProposal, type OpeningProposalItem } from '../opening-proposal';
 import {
-  computeOpeningProposal, countOpeningsByStatus, type OpeningProposal, type OpeningProposalItem,
-} from '../opening-proposal';
-import fixture from './fixtures/floor-plan-lines.json';
+  ENTITIES, NO_TRIMS, OPENING, colorOf, liveScene, propose, rebuilt, sceneOf, writtenWalls,
+} from './opening-fixture';
 
-const ENTITIES = fixture.entities as unknown as readonly Entity[];
-const colorOf = (e: Entity): string | null => (e as { color?: string }).color?.toLowerCase() ?? null;
-const WALL = '#003fff';
-const OPENING = '#00cccc';
 /** Μετρημένο (ADR-911 §4.7): γραμμές κουφωμάτων που δεν εξηγεί ούτε πόρτα ούτε παράθυρο. */
 const UNEXPLAINED_IN_FIXTURE = 0;
-
-/** Οι τοίχοι όπως τους γράφει η Φ3. `acceptAll` = εγκρίθηκαν και τα 2 «προς απόφαση». */
-function writtenWalls(acceptAll: boolean): WallEntity[] {
-  const input = { entities: ENTITIES, wallColorHex: WALL, colorOf, sceneUnits: 'mm' as const, levelId: 'lvl' };
-  const base = computeWallProposal(input);
-  const undecided = new Set(base.items.filter((i) => i.status === 'needs-decision').map((i) => i.key));
-  const walls = acceptAll ? computeWallProposal({ ...input, acceptedKeys: undecided }).walls : base.walls;
-  const trimmed = applyTrimPatches(walls as readonly AnySceneEntity[], computeWallTrims(walls, []));
-  return trimmed as unknown as WallEntity[];
-}
-
-const sceneOf = (walls: readonly WallEntity[], extra: readonly Entity[] = []): Entity[] =>
-  [...ENTITIES, ...(walls as unknown as Entity[]), ...extra];
-
-const propose = (entities: readonly Entity[]): OpeningProposal =>
-  computeOpeningProposal({ entities, openingColorHex: OPENING, colorOf, sceneUnits: 'mm' });
 
 const byStatus = (p: OpeningProposal, status: OpeningProposalItem['status']) => p.items.filter((i) => i.status === status);
 const doorOf = (p: OpeningProposal, arcId: string) => p.items.find((i) => i.sourceIds.includes(arcId))!;
 
-// ── Εγγραφή της πρότασης (μόνο για το test· ο πραγματικός γραφέας είναι η Φ4-2) ─────────────────
-
-/** Νέο κομμάτι = καθαρός τοίχος: δεν κληρονομεί τα κοψίματα άκρων του τοίχου-προτύπου. */
-const NO_TRIMS = { startMiter: undefined, endMiter: undefined, startBevel: undefined, endBevel: undefined };
-
-function rebuilt(wall: WallEntity, params: WallEntity['params']): WallEntity {
-  const built = buildWallEntity(params, wall.layerId ?? 'layer', 'straight', 'mm');
-  if (!built.ok) throw new Error(`host: ${built.hardErrors.join(',')}`);
-  return built.entity;
-}
-
-function hostFor(item: OpeningProposalItem, walls: Map<string, WallEntity>): WallEntity {
-  const plan = item.host!;
-  if (plan.kind === 'existing-wall') return walls.get(plan.wallId)!;
-  if (plan.kind === 'bridge') {
-    const [a, b] = plan.wallIds.map((id) => walls.get(id)!);
-    const merged = rebuilt(a, buildMergedWallParams(a, b));
-    plan.wallIds.forEach((id) => walls.delete(id));
-    walls.set(merged.id, merged);
-    return merged;
-  }
-  if (plan.kind === 'extend') {
-    const wall = walls.get(plan.wallId)!;
-    const extended = rebuilt(wall, { ...wall.params, [plan.end]: { ...wall.params[plan.end], x: plan.to.x, y: plan.to.y } });
-    walls.delete(wall.id);
-    walls.set(extended.id, extended);
-    return extended;
-  }
-  const template = [...walls.values()][0];
-  const piece = rebuilt(template, {
-    ...template.params, ...NO_TRIMS, thickness: plan.thicknessMm,
-    start: { ...template.params.start, ...plan.start }, end: { ...template.params.end, ...plan.end },
-  });
-  walls.set(piece.id, piece);
-  return piece;
-}
-
+/** Η σκηνή ΜΕΤΑ την έγκριση. */
 function writeProposal(walls: readonly WallEntity[], proposal: OpeningProposal): Entity[] {
-  const map = new Map(walls.map((w) => [w.id, w] as const));
-  const openings = proposal.items.filter((i) => i.status === 'door' || i.status === 'window').map((item, n) => {
-    const host = hostFor(item, map);
-    const offsets = [item.span!.start, item.span!.end].map((p) => projectPointToWallOffsetMm(p, host));
-    return {
-      id: `op-${n}`, type: 'opening',
-      params: { kind: item.symbol, wallId: host.id, offsetFromStart: Math.min(...offsets), width: item.widthMm! },
-    } as unknown as Entity;
-  });
-  return sceneOf([...map.values()], openings);
+  const live = liveScene(sceneOf(walls));
+  const result = addOpeningsToScene(proposal.items, live.accessor, { undoName: 'test' });
+  if (result.refusal) throw new Error(`ο γραφέας αρνήθηκε: ${result.refusal}`);
+  return [...live.entities()];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────

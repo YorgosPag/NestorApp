@@ -342,11 +342,98 @@
 - Graphisoft — Nominal Sizes and Tolerance (Φ4· wallhole / unit / egress / leaf): help.graphisoft.com/AC/28/INT/_AC28_Help/151_DoorWindowCustomSettings/151_DoorWindowCustomSettings-2.htm
 - Revit — Rough Width έναντι Width σε οικογένειες θυρών (Φ4· **κοινοτική πρακτική, όχι επίσημη τεκμηρίωση**): forums.augi.com/archive/index.php/t-36870.html · novedge.com/blogs/design-news/revit-tip-parametric-door-and-window-family-best-practices
 - Chief Architect KB-00170 (Φ4): πόρτες και παράθυρα μετατρέπονται από γραμμές CAD σε δική τους στρώση· η συμπεριφορά στα κενά **δεν** τεκμηριώνεται.
+- Revit — Sill Height / Head Height ως τιμές στιγμιοτύπου, αρχική τιμή από τον τύπο (Φ4-2· **φόρουμ, όχι τρέχουσα επίσημη τεκμηρίωση**): forums.autodesk.com/t5/revit-ideas/default-for-window-height/idi-p/9045681 · forums.augi.com/archive/index.php/t-76280.html · help.autodesk.com/cloudhelp/2023/ENU/Revit-ArchDesign/files/GUID-08C6541F-4974-489E-B941-F365628B2884.htm
+- Chief Architect — CAD to Walls (Φ4-2): η αναζήτηση **δεν** βρήκε τεκμηρίωση για το τι ύψος/τύπο παίρνουν πόρτες και παράθυρα που προκύπτουν από γραμμές CAD· μόνο ότι κάθε αντικείμενο παίρνει τις προεπιλογές του είδους του (cloud.chiefarchitect.com/1/pdf/documentation/chief-architect-x9-users-guide-house-tutorial.pdf).
 - Autodesk — Sketch modes in Revit (Φ3β): autodesk.com/learn/ondemand/tutorial/sketch-modes-in-revit
 - W3C — Understanding SC 1.4.1 Use of Color (Φ3β): w3.org/WAI/WCAG20/Understanding/use-of-color
 - Figma — Sample colors with the eyedropper tool (Φ3β): figma-signup.helpjuice.com/color-gradients-and-images/sample-colors-with-the-eyedropper-tool
 
 ## 12. Changelog
+
+### 2026-10-11 — **Φ4-2: ο γραφέας ανοιγμάτων** *(χωρίς UI· uncommitted· ⚠️ **tests γραμμένα, ΟΧΙ εκτελεσμένα**)*
+
+> ⚠️ **Κατάσταση επαλήθευσης:** ο κώδικας και οι σουίτες γράφτηκαν, αλλά **κανένα jest δεν έτρεξε**: ελεύθερη
+> μνήμη 1,2–1,7 GB (κάτω από το όριο των ~3 GB· ο dev server κρατούσε ~11 GB). Κανένας αριθμός αυτής της
+> εγγραφής δεν είναι μετρημένος. Η εγγραφή ξαναγράφεται με αριθμούς όταν τρέξουν οι σουίτες, οι μεταλλάξεις
+> και το `jscpd:diff`. `tsc` δεν τρέχει (N.17).
+
+**Τέσσερις αποφάσεις** (Giorgio: «όπως οι μεγάλοι»):
+1. **Ένα undo ανά έγκριση**, όχι ανά κούφωμα (Revit `TransactionGroup.Assimilate`, όπως η Φ2). Ανά κούφωμα, ένα
+   Ctrl+Z στη μέση αλυσίδας θα άφηνε ενωμένο τοίχο με τα μισά του ανοίγματα.
+2. **Κενά χωρίς σύμβολο: όχι πριν από τη Φ4-2.** Θα έβγαιναν «προς απόφαση», που ο γραφέας δεν γράφει ποτέ.
+   Η θέση τους είναι πριν από το πάνελ της Φ4-3.
+3. **Νέο κομμάτι: ύψος, λειτουργία και δεσίματα από τους τοίχους-λαμπάδες — όταν συμφωνούν.** Διαφωνία, ή καμία
+   λαμπάδα-τοίχος, ⇒ «προς απόφαση» (`host-undetermined`), ποτέ σιωπηλή προεπιλογή (Δ3). Η απόφαση παίρνεται
+   στον **πυρήνα** (`opening-host-plan.ts`: το σχέδιο `new-piece` φέρει πλέον `likeWallId`), όχι στον γραφέα.
+4. **Ύψος και ποδιά κουφώματος από το `OPENING_KIND_DEFAULTS`**, όπως το εργαλείο του χεριού. Η κάτοψη δεν τα
+   έχει· στο Revit είναι τιμές στιγμιοτύπου που παίρνουν αρχική τιμή από τον τύπο κατά την τοποθέτηση
+   (§11 — κοινοτικές πηγές, όχι τρέχουσα επίσημη τεκμηρίωση).
+
+**Αρχιτεκτονική: καθαρό σχέδιο → λεπτός εκτελεστής.** Το `planOpeningWrite` αποφασίζει **όλο** το τι γράφεται·
+το `addOpeningsToScene` το εκτελεί ως μία εγγραφή ιστορικού. Η προεπισκόπηση της Φ4-3 θα ζωγραφίζει το ίδιο
+σχέδιο ⇒ η Α-10 για ανοίγματα είναι «σκηνή μετά ≡ σχέδιο», οντότητα προς οντότητα.
+
+**Νέα αρχεία** (κάτω από `src/subapps/dxf-viewer/`):
+- `bim/model-from-drawing/opening-host-runs.ts` — από τα σχέδια ξενιστή στους τελικούς τοίχους. Ένωση-εύρεση
+  πάνω στα `bridge`/`extend` ⇒ μία διαδρομή ανά συνιστώσα (Α–πόρτα–Β–πόρτα–Γ ⇒ **ένας** τοίχος). Τρεις εκβάσεις:
+  ανέγγιχτη · `reshaped` (επέκταση, **ίδιο id**) · `merged` (νέο id). Νέα κομμάτια από τα εργοστάσια
+  (`buildDefaultWallParams` + `buildWallEntity`), ποτέ από `{...άλλος.params}`.
+- `bim/model-from-drawing/opening-write-plan.ts` — το σχέδιο: ξενιστές → κατοχή χώρου (ADR-567) → **ένα** πέρασμα
+  ενώσεων → μεταφορά υπαρχόντων ανοιγμάτων → νέα ανοίγματα (`buildGapOpeningParams` + `buildOpeningEntity`).
+- `bim/model-from-drawing/door-swing.ts` — `swing` → `handing`/`openDirection`, ως προς τον **τελικό** άξονα.
+- `bim/model-from-drawing/add-openings-to-scene.ts` — ο εκτελεστής (`runAsSingleUndo`, όλα ή τίποτα).
+- `bim/walls/wall-retrim.ts` — `retrimWallEntities`: ο καθαρός πυρήνας «σβήσε-ξαναϋπολόγισε-εφάρμοσε».
+- `core/commands/entity-commands/replace-entities-command.ts` + `ReplaceWallsCommand.ts` — «Ν πηγές → Μ
+  αντικαταστάτες», συμμετρικά σε σκηνή **και** Firestore.
+- `core/commands/entity-commands/CreateOpeningsCommand.ts` — δέσιμο ADR-607.
+- `core/commands/entity-commands/precomputed-patch-command.ts` + `opening-host-commands.ts` —
+  `RehostOpeningsCommand`, `SetHostedOpeningIdsCommand`.
+
+**Κεντρικοποιήσεις που προέκυψαν** (N.0.2 — καμία δεύτερη υλοποίηση):
+- **`wall-merge.ts`: το ζεύγος είναι η διαδρομή των δύο.** `buildRunWallParams(walls, extendTo)` και
+  `rehostOpeningsOnto(target, hosted)` είναι οι μορφές Ν τοίχων· τα `buildMergedWallParams` και
+  `collectMergedOpenings` του ADR-566 τις καλούν. Μία κλήση καλύπτει αλυσίδα, επέκταση, και τα δύο μαζί.
+- **`MergeColumnsCommand` → δέσιμο του νέου εργοστασίου.** Το σώμα της ήταν η πρώτη γραφή του «Ν → 1 με
+  συμμετρικό Firestore»· αντί για αντίγραφο ~100 γραμμών για τοίχους, έγινε εργοστάσιο με δύο καταναλωτές.
+  Δημόσια υπογραφή και σχήμα `serialize()` αμετάβλητα.
+- **`recomputeWallTrims` → καλεί το `retrimWallEntities`.** Ο ίδιος πυρήνας στον γραφέα ⇒ το σχέδιο καταλήγει
+  εκεί που θα κατέληγε το `recomputeWallTrimsAfterDelete` του persistence hook, άρα εκείνο δεν έχει τι να αλλάξει.
+- **`RetrimWallsCommand` → `PrecomputedPatchCommand`** (κοινό σώμα των εντολών που λαμβάνουν έτοιμα `{prev,next}`).
+
+**Δύο διορθώσεις σε υπάρχοντα κώδικα, που τις έφερε η γενίκευση** — ⚠️ αλλάζουν συμπεριφορά του εργαλείου
+ένωσης (ADR-566) σε περιπτώσεις που δεν είχαν άγκυρα:
+- **Τοίχος ζωγραφισμένος ανάποδα.** Το `collectMergedOpenings` πρόβαλλε μόνο την **αρχή** του ανοίγματος· αν ο
+  δεύτερος τοίχος είχε αντίθετη φορά από τον πρωτεύοντα, το άνοιγμα έπεφτε **ένα πλάτος μακριά**. Τώρα
+  προβάλλονται και τα δύο άκρα και κρατιέται το χαμηλότερο. Για ομόρροπους τοίχους το αποτέλεσμα είναι ίδιο.
+- **Σκηνές όχι σε mm.** Το ίδιο σημείο πολλαπλασίαζε mm με μοναδιαίο διάνυσμα μονάδων σκηνής. Τώρα περνά από
+  `mmToSceneUnits` και στις δύο πλευρές. Σε σκηνές mm (όλες οι canonical, ADR-462) καμία αλλαγή.
+
+**Γιατί ΟΧΙ `WallMergeCommand` και ΟΧΙ `onOpeningCreated`:** η πρώτη αναιρεί τη σκηνή αλλά την αποθήκευση την
+εκπέμπει ο καλών, μία φορά — το undo δεν φτάνει ποτέ στο Firestore (ανοιχτό του §10). Το δεύτερο είναι γυμνό
+`setLevelScene` (ADR-568 §5). Ο γραφέας καταλήγει στην **ίδια κατάσταση σκηνής** (άνοιγμα + καθρέφτης ξενιστή)
+μέσα από εντολές. Το `useWallGapOpeningTool` **δεν** μεταφέρθηκε στον νέο δρόμο — χωριστή απόφαση.
+
+**Άγκυρες που γράφτηκαν** (`add-openings-to-scene.test.ts`, `door-swing.test.ts`): Α-10 (σκηνή ≡ σχέδιο·
+κάθε άνοιγμα στο μέσο του `span`· ξενιστής συνεχής κάτω από κάθε άνοιγμα) · ένα undo/redo με ισότητα σκηνής ·
+κανένα ορφανό άνοιγμα και καθρέφτης που δείχνει πίσω · ιδεμποτία με τον πραγματικό γραφέα (το `writeProposal`
+του `opening-proposal.test.ts` **είναι** πλέον ο γραφέας) · άρνηση = καμία εγγραφή · εκπομπές συμμετρικές στο
+undo · αλυσίδα τριών τοίχων · γεφύρωση + επέκταση του ίδιου τοίχου · υπάρχον άνοιγμα σε ανάποδο τοίχο.
+Η φορά φύλλου κρίνεται από το `computeOpeningGeometry` (μεντεσές στο `span.start`, φύλλο προς το `swing`),
+όχι από πίνακα αληθείας της ίδιας της συνάρτησης.
+
+**Δηλωμένα όρια:**
+- **Τοίχος που επεκτείνεται δεν περνά από τον έλεγχο του ADR-567** (ο κριτής εξαιρεί το ίδιο id). Μόνο οι νέοι.
+- **Ο `PrecomputedPatchCommand` δεν ξαναχτίζει `validation`** στον επεκταμένο τοίχο (όπως και το retrim της Φ2).
+- **Undo μεταφοράς υπάρχοντος ανοίγματος:** τα `params` επιστρέφουν ακριβώς· η `geometry` μένει όπως
+  υπολογίστηκε πάνω στον ενωμένο τοίχο (ίδια θέση κόσμου, όχι το ίδιο αντικείμενο) — ο παλιός ξενιστής δεν έχει
+  επιστρέψει ακόμη στη σκηνή όταν αναιρείται η μεταφορά.
+- **Ο καθρέφτης `hostedOpeningIds` δεν αποθηκεύεται** (διαβάστηκε: καμία αναφορά στο `wall-firestore-service`).
+  Μετά από reload τον έχουν μόνο οι τοίχοι που τον ξαναποκτούν από άλλη διαδρομή — προϋπάρχον, αφορά τη
+  διαίρεση/ένωση τοίχων, όχι την απόδοση (αυθεντία το `params.wallId`).
+- **Αποθήκευση: αναπόδεικτη χωρίς browser.** Οι εκπομπές είναι αγκυρωμένες· ότι τα persistence hooks τις
+  μετατρέπουν σε σωστά έγγραφα (ιδίως `origin: 'retrim'` για **άνοιγμα**, και το `recomputeWallTrimsAfterDelete`
+  που τρέχει πλέον και στο apply) θέλει ζωντανή δοκιμή.
+- Ο πυρήνας και ο γραφέας **δεν έχουν ακόμη καταναλωτή παραγωγής** (CHECK 3.22) — συνδέονται στη Φ4-3.
 
 ### 2026-10-11 — **Φ4-1: ο καθαρός πυρήνας πρότασης ανοιγμάτων** *(χωρίς UI, χωρίς εγγραφή· uncommitted)*
 

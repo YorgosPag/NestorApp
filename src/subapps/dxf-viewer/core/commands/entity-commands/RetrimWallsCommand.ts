@@ -9,7 +9,8 @@
  *
  * ΔΕΝ υπολογίζει ενώσεις: ο υπολογισμός γίνεται ΜΙΑ φορά στο `addWallsToScene` (ένα πέρασμα
  * `computeWallTrims`) και εδώ φτάνει μόνο το αποτέλεσμα. Thin leaf πάνω στο
- * {@link BatchEntityPatchCommand} (ADR-617).
+ * {@link PrecomputedPatchCommand} (ADR-617). ADR-911 Φ4-2: το `next` μπορεί να φέρει και νέο
+ * άξονα (τοίχος που επεκτάθηκε ως τη λαμπάδα) — η γεωμετρία ξαναϋπολογίζεται έτσι κι αλλιώς.
  *
  * Persistence: κάθε εφαρμογή εκπέμπει `drawing:entity-created` με `origin:'retrim'` ανά
  * γείτονα (το ίδιο σήμα που εξέπεμπε ο `addWallToScene`) — re-save, όχι νέα οντότητα.
@@ -18,32 +19,22 @@
  * @see ./batch-entity-patch-command.ts — το κοινό lifecycle
  */
 
-import type { ISceneManager, SceneEntity } from '../interfaces';
+import type { SceneEntity } from '../interfaces';
 import type { AnySceneEntity } from '../../../types/scene';
 import type { WallKind, WallParams } from '../../../bim/types/wall-types';
 import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import { emitBimEntityCreated } from '../../../systems/events/bim-entity-lifecycle-events';
-import { BatchEntityPatchCommand, type BatchPatchEntry } from './batch-entity-patch-command';
+import type { BatchPatchEntry } from './batch-entity-patch-command';
+import { PrecomputedPatchCommand } from './precomputed-patch-command';
 
 /** Η αλλαγή ένωσης ενός υπάρχοντος τοίχου: params πριν και μετά + το kind για τη γεωμετρία. */
 export interface WallRetrimEntry extends BatchPatchEntry<WallParams> {
   readonly kind: WallKind;
 }
 
-export class RetrimWallsCommand extends BatchEntityPatchCommand<WallParams, WallRetrimEntry> {
+export class RetrimWallsCommand extends PrecomputedPatchCommand<WallParams, WallRetrimEntry> {
   readonly name = 'RetrimWalls';
   readonly type = 'retrim-walls';
-
-  constructor(
-    private readonly entries: readonly WallRetrimEntry[],
-    sceneManager: ISceneManager,
-  ) {
-    super(sceneManager);
-  }
-
-  protected buildPatches(): WallRetrimEntry[] {
-    return [...this.entries];
-  }
 
   protected applyState(entry: WallRetrimEntry, state: WallParams): void {
     this.sceneManager.updateEntity(entry.entityId, {
@@ -62,10 +53,6 @@ export class RetrimWallsCommand extends BatchEntityPatchCommand<WallParams, Wall
 
   getDescription(): string {
     return `Retrim ${this.entries.length} walls`;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.entries.map((e) => e.entityId);
   }
 
   validate(): string | null {
