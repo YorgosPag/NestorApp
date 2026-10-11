@@ -7,6 +7,48 @@ import type { Level, FloorplanDoc, CalibrationData } from './config';
 // 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateLayerId, generateFloorId } from '@/services/enterprise-id.service';
 import { nowISO } from '@/lib/date-local';
+import i18next from 'i18next';
+import type { LevelBirthBinding } from './config';
+
+/** Μηνύματα επικύρωσης ονόματος — κλειδιά, όχι κείμενο (N.11). Χωρίς φορτωμένο i18n μένει το κλειδί. */
+const LEVEL_NAME_ERROR_KEYS = {
+  empty: 'dxf-viewer-panels:panels.levels.nameErrors.empty',
+  duplicate: 'dxf-viewer-panels:panels.levels.nameErrors.duplicate',
+} as const;
+
+function levelNameError(kind: keyof typeof LEVEL_NAME_ERROR_KEYS): string {
+  const key = LEVEL_NAME_ERROR_KEYS[kind];
+  return i18next.t(key) || key;
+}
+
+/**
+ * Τα επίπεδα μέσα στα οποία ένα όνομα πρέπει να είναι μοναδικό — ο ΙΔΙΟΣ κανόνας με τον
+ * διακομιστή (`handleCreateDxfLevel`, ADR-845 §7.15): μέσα στο κτήριό του όταν έχει κτήριο,
+ * αλλιώς σε όλα τα επίπεδα του μισθωτή.
+ */
+export function levelsSharingNameScope<T extends Pick<Level, 'buildingId'>>(
+  levels: readonly T[],
+  buildingId: string | null | undefined,
+): readonly T[] {
+  return buildingId ? levels.filter((l) => l.buildingId === buildingId) : levels;
+}
+
+/**
+ * Η δέσμευση γέννησης ως πεδία εγγραφής (ADR-914) — ΜΙΑ μετάφραση για το σώμα του
+ * `POST /api/dxf-levels` και για το in-memory επίπεδο. Ό,τι λείπει **παραλείπεται**: στη
+ * γέννηση δεν υπάρχει `null`/`undefined` στο σώμα (το σχήμα δημιουργίας δεν τα δέχεται).
+ */
+export function levelBirthFields(
+  birth: LevelBirthBinding | undefined,
+): Pick<Level, 'buildingId' | 'projectId' | 'propertyId' | 'floorplanType' | 'entityLabel'> {
+  return {
+    ...(birth?.buildingId ? { buildingId: birth.buildingId } : {}),
+    ...(birth?.projectId ? { projectId: birth.projectId } : {}),
+    ...(birth?.propertyId ? { propertyId: birth.propertyId } : {}),
+    ...(birth?.floorplanType ? { floorplanType: birth.floorplanType } : {}),
+    ...(birth?.entityLabel ? { entityLabel: birth.entityLabel } : {}),
+  };
+}
 
 export class LevelOperations {
   static createDefaultLevels(): Level[] {
@@ -15,15 +57,22 @@ export class LevelOperations {
     ];
   }
 
-  static validateLevelName(name: string, existingLevels: Level[]): string | null {
-    if (!name.trim()) {
-      return 'Το όνομα του επιπέδου δεν μπορεί να είναι κενό';
+  /**
+   * @param buildingId Το κτήριο του επιπέδου που ονομάζεται — στενεύει τη μοναδικότητα στο
+   *                   κτήριο (βλ. {@link levelsSharingNameScope}). Απόν ⇒ όλα τα επίπεδα.
+   */
+  static validateLevelName(
+    name: string,
+    existingLevels: readonly Level[],
+    buildingId?: string | null,
+  ): string | null {
+    if (!name.trim()) return levelNameError('empty');
+
+    const wanted = name.toLowerCase();
+    if (levelsSharingNameScope(existingLevels, buildingId).some(l => l.name.toLowerCase() === wanted)) {
+      return levelNameError('duplicate');
     }
-    
-    if (existingLevels.some(l => l.name.toLowerCase() === name.toLowerCase())) {
-      return 'Υπάρχει ήδη επίπεδο με αυτό το όνομα';
-    }
-    
+
     return null;
   }
 
@@ -40,7 +89,8 @@ export class LevelOperations {
     levels: Level[],
     name: string,
     setAsDefault = false,
-    floorId?: string
+    floorId?: string,
+    birth?: LevelBirthBinding
   ): { levels: Level[]; newLevelId: string } {
     const id = LevelOperations.generateLevelId();
     const order = LevelOperations.getNextOrder(levels);
@@ -52,6 +102,7 @@ export class LevelOperations {
       isDefault: setAsDefault,
       visible: true,
       ...(floorId ? { floorId } : {}),
+      ...levelBirthFields(birth),
     };
 
     const updatedLevels = setAsDefault

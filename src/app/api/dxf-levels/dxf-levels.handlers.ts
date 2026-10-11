@@ -242,6 +242,12 @@ export async function handleCreateDxfLevel(
       buildingId: body.buildingId ?? null,
       sceneFileId: body.sceneFileId ?? null,
       sceneFileName: body.sceneFileName ?? null,
+      // 🔑 ADR-914 — πλήρης δέσμευση σε ΜΙΑ εγγραφή (όχι create + PATCH): ο στόχος γέννησης
+      // του ADR-913 παράγεται από αυτά τα πεδία και δεν πρέπει να τα δει ποτέ μισά.
+      projectId: body.projectId ?? null,
+      propertyId: body.propertyId ?? null,
+      floorplanType: body.floorplanType ?? null,
+      entityLabel: body.entityLabel ?? null,
     };
 
     const result = await createEntity('dxfLevel', {
@@ -295,6 +301,8 @@ function buildLevelUpdates(body: UpdateLevelBody): Record<string, unknown> {
   if (body.floorplanType !== undefined) updates.floorplanType = body.floorplanType ?? null;
   if (body.entityLabel !== undefined) updates.entityLabel = body.entityLabel ?? null;
   if (body.projectId !== undefined) updates.projectId = body.projectId ?? null;
+  // ADR-914: το ακίνητο της κάτοψης — ο κάτοχος του αρχείου γέννησης ενός επιπέδου ακινήτου.
+  if (body.propertyId !== undefined) updates.propertyId = body.propertyId ?? null;
   // ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου (null = πίσω στην αυτόματη αρίθμηση θέσης)
   if (body.sheetNumberOverride !== undefined) updates.sheetNumberOverride = body.sheetNumberOverride ?? null;
   // ADR-759 Φ3: μεταδεδομένα πινακίδας τοπογραφικού — ανήκουν στο ΦΥΛΛΟ, ποτέ στο έργο.

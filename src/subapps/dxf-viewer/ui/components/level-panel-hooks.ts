@@ -8,7 +8,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { EntityType } from '@/config/domain-constants';
+import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
 import type { Level, FloorplanType } from '../../systems/levels/config';
 import type { LevelContextUpdate } from '../../systems/levels/hooks/useLevelOperations';
 import type { LevelFloorResolver } from '../../systems/levels/level-floor-resolution';
@@ -39,7 +39,7 @@ export type TriggerAllFloorsBackfill = (buildingId: string) => void;
  * @see systems/levels/ensure-levels-for-building.ts
  */
 export function useAllFloorsBackfill(resolver: LevelFloorResolver): TriggerAllFloorsBackfill {
-  const { levels, addLevel, linkLevelToFloor } = resolver;
+  const { levels, addLevel } = resolver;
   const [allFloorsBuildingId, setAllFloorsBuildingId] = useState<string | null>(null);
   const { floors: buildingFloors, loading: buildingFloorsLoading } = useFloorsByBuilding(allFloorsBuildingId);
   const allFloorsRunningRef = useRef(false);
@@ -52,7 +52,7 @@ export function useAllFloorsBackfill(resolver: LevelFloorResolver): TriggerAllFl
     void (async () => {
       try {
         await ensureLevelsForBuilding(
-          { levels, addLevel, linkLevelToFloor },
+          { levels, addLevel },
           buildingFloors.map((f) => ({ id: f.id, number: f.number, label: f.longName ?? f.name })),
           targetBuildingId,
         );
@@ -61,7 +61,7 @@ export function useAllFloorsBackfill(resolver: LevelFloorResolver): TriggerAllFl
         setAllFloorsBuildingId(null);
       }
     })();
-  }, [allFloorsBuildingId, buildingFloors, buildingFloorsLoading, levels, addLevel, linkLevelToFloor]);
+  }, [allFloorsBuildingId, buildingFloors, buildingFloorsLoading, levels, addLevel]);
 
   return useCallback((buildingId: string) => setAllFloorsBuildingId(buildingId), []);
 }
@@ -100,7 +100,7 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
     resolver, currentLevelId, setCurrentLevel, updateLevelContext,
     entityTypeToFloorplanType, triggerAllFloorsBackfill, onSceneImported,
   } = deps;
-  const { levels, addLevel, linkLevelToFloor } = resolver;
+  const { levels, addLevel } = resolver;
 
   return useCallback(
     async (file: File, meta: WizardCompleteMeta) => {
@@ -125,7 +125,7 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
       // + switch), so the import targets that floor's own level rather than the
       // active level. Falls back to the active level for project/building imports.
       const targetLevelId = await findOrCreateLevelForFloor(
-        { levels, addLevel, linkLevelToFloor },
+        { levels, addLevel },
         {
           floorId: scope.kind === 'storey' ? scope.floorId : undefined,
           buildingId: scopeFields.buildingId ?? undefined,
@@ -141,6 +141,9 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
             floorplanType,
             entityLabel: meta.entityLabel,
             projectId: meta.projectId,
+            // ADR-914 — το επίπεδο μαθαίνει το ακίνητό του· για κάθε άλλη επιλογή καθαρίζεται ρητά
+            // (`null`), αλλιώς θα κρατούσε το ακίνητο της προηγούμενης εισαγωγής.
+            propertyId: meta.entityType === ENTITY_TYPES.PROPERTY ? meta.entityId : null,
             ...scopeFields,
           });
         }
@@ -159,7 +162,7 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
       onSceneImported(file, undefined, saveContext, targetLevelId ?? undefined);
     },
     [
-      onSceneImported, levels, addLevel, linkLevelToFloor, currentLevelId,
+      onSceneImported, levels, addLevel, currentLevelId,
       setCurrentLevel, entityTypeToFloorplanType, updateLevelContext,
       triggerAllFloorsBackfill,
     ],

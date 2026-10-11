@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import { useIconSizes } from '@/hooks/useIconSizes';
+import { ChoiceCards } from '@/components/ui/choice-cards';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { EntityOption } from '../hooks/useFloorplanImportState';
 import '@/lib/design-system';
@@ -53,6 +53,9 @@ interface StepEntitySelectorProps {
 
 const RADIO_THRESHOLD = 5;
 
+/** Η μοναδική επιλογή της κάρτας συντόμευσης — το `ChoiceCards` θέλει id, ο καλών όχι. */
+const SHORTCUT_ID = 'shortcut';
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -68,7 +71,6 @@ export function StepEntitySelector({
   shortcutIcon: ShortcutIcon,
   onShortcutClick,
 }: StepEntitySelectorProps) {
-  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
   // ── Loading ──
@@ -91,16 +93,19 @@ export function StepEntitySelector({
 
   return (
     <div className="space-y-4 py-4">
-      {/* ── Shortcut card — large clickable card with icon ── */}
+      {/* ── Shortcut card — το κοινό `ChoiceCards` (ADR-914), μία επιλογή ── */}
       {shortcutLabel && ShortcutIcon && onShortcutClick && (
-        <button
-          type="button"
-          onClick={onShortcutClick}
-          className="flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-border bg-card px-4 py-6 shadow-sm transition-all hover:border-primary hover:bg-primary/5 hover:shadow-md"
-        >
-          <ShortcutIcon className={`${iconSizes.xl2} text-foreground`} />
-          <span className="text-center text-sm font-semibold text-foreground">{shortcutLabel}</span>
-        </button>
+        <ChoiceCards
+          options={[{
+            id: SHORTCUT_ID,
+            icon: ShortcutIcon,
+            title: shortcutLabel,
+            tone: { icon: 'text-foreground', hoverBorder: 'hover:border-primary' },
+          }]}
+          onSelect={onShortcutClick}
+          className="grid grid-cols-1 w-full"
+          size="lg"
+        />
       )}
 
       {/* ── Radio list (≤5 items) ── */}

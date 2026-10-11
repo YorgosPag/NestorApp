@@ -13,13 +13,18 @@
  * Stable key = `floorId` (IfcBuildingStorey), consistent with the BIM floor-scope
  * SSoT (see `bim/persistence/bim-floor-scope.ts`).
  */
+import i18next from 'i18next';
 import type { Level } from './config';
+import { provisionLevelForBinding, type LevelProvisioner } from './level-provision';
 
-export interface LevelFloorResolver {
-  readonly levels: Level[];
-  readonly addLevel: (name: string, setAsDefault?: boolean, floorId?: string) => Promise<string | null>;
-  readonly linkLevelToFloor: (levelId: string, floorId: string | null, buildingId?: string | null) => Promise<void>;
-}
+/**
+ * Ό,τι χρειάζεται η επίλυση ορόφου. ADR-914: είναι ο ίδιος ο {@link LevelProvisioner} — το
+ * `linkLevelToFloor` έφυγε, γιατί όροφος και κτήριο γράφονται πλέον **στη γέννηση** (μία εγγραφή).
+ */
+export type LevelFloorResolver = LevelProvisioner;
+
+/** Όνομα επιπέδου όταν ο όροφος δεν έδωσε ετικέτα — κλειδί, όχι κείμενο (N.11). */
+const FLOOR_FALLBACK_NAME_KEY = 'dxf-viewer-panels:panels.levels.floorFallbackName';
 
 export interface ResolveFloorLevelOptions {
   readonly floorId?: string;
@@ -40,14 +45,15 @@ export async function findOrCreateLevelForFloor(
   // No floor selected (project/building-level import) → keep the active level.
   if (!opts.floorId) return opts.currentLevelId;
 
-  const existing = resolver.levels.find((l) => l.floorId === opts.floorId);
-  if (existing) return existing.id;
-
-  const newId = await resolver.addLevel(opts.entityLabel || 'Όροφος', false, opts.floorId);
-  if (newId) {
-    await resolver.linkLevelToFloor(newId, opts.floorId, opts.buildingId ?? null);
-  }
-  return newId;
+  // ADR-914 — ο ΕΝΑΣ provisioner: find-or-create, με όροφο + κτήριο σε ΜΙΑ εγγραφή.
+  const { levelId } = await provisionLevelForBinding(resolver, {
+    kind: 'storey',
+    floorId: opts.floorId,
+    buildingId: opts.buildingId ?? null,
+    label: opts.entityLabel || i18next.t(FLOOR_FALLBACK_NAME_KEY) || FLOOR_FALLBACK_NAME_KEY,
+    untyped: true,
+  });
+  return levelId;
 }
 
 /**

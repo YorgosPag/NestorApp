@@ -19,7 +19,7 @@
  *    περιεχόμενο (ο φρουρός «ποτέ κενή σκηνή» μένει). Ένας όροφος που απλώς άνοιξε δεν
  *    αποκτά άδεια «κάτοψη» στη διαχείριση κτηρίου.
  *
- * Ο στόχος ανήκει στην **πιο συγκεκριμένη δέσμευση** του επιπέδου: όροφος → κτήριο → έργο →
+ * Ο στόχος ανήκει στην **πιο συγκεκριμένη δέσμευση** του επιπέδου: ακίνητο → όροφος → κτήριο → έργο →
  * χώρος εργασίας (εταιρεία). Το path περιέχει ΜΟΝΟ αμετάβλητες ταυτότητες (ADR-709).
  *
  * Pure: καμία πρόσβαση σε React/Firebase — δοκιμάζεται αυτόνομο, όπως το `cross-floor-link.ts`.
@@ -44,7 +44,7 @@ import type { Level } from './config';
 /** Ό,τι χρειάζεται ο resolver από ένα `Level` (ISP — δεν δένεται σε όλο τον τύπο). */
 export type DrawingBearingLevel = Pick<
   Level,
-  'id' | 'name' | 'floorId' | 'buildingId' | 'projectId' | 'floorplanType' | 'entityLabel'
+  'id' | 'name' | 'floorId' | 'buildingId' | 'projectId' | 'propertyId' | 'floorplanType' | 'entityLabel'
 >;
 
 /** Ο πλήρης στόχος γέννησης: ό,τι χρειάζεται το auto-save για να γράψει, και τίποτα ambient. */
@@ -65,12 +65,18 @@ interface DrawingBinding {
 /**
  * Η πιο συγκεκριμένη δέσμευση του επιπέδου, ή `null` όταν δεν μπορεί να κριθεί.
  *
- * ⚠️ Επίπεδο ΑΚΙΝΗΤΟΥ (`floorplanType: 'unit'`) ⇒ `null`: το έγγραφο του επιπέδου δεν
- * κρατά το `propertyId`, και ο `floorId` του θα το έκανε «κάτοψη ΟΡΟΦΟΥ» — λάθος κάτοχος
- * και λάθος κατηγορία. Μένει όπως ήταν (χωρίς στόχο) μέχρι το επίπεδο να μάθει το ακίνητό του.
+ * Επίπεδο ΑΚΙΝΗΤΟΥ (`floorplanType: 'unit'`): κάτοχος είναι το **ακίνητο** (`propertyId`,
+ * ADR-914) — ποτέ ο όροφος, που θα το έκανε «κάτοψη ΟΡΟΦΟΥ» (λάθος κάτοχος, λάθος σκοπός).
+ *
+ * ⚠️ Επίπεδο ακινήτου **χωρίς** `propertyId` ⇒ `null`, όπως πριν: είναι τα επίπεδα που
+ * γεννήθηκαν πριν το πεδίο υπάρξει. Δεν μαντεύουμε κάτοχο — μένουν χωρίς στόχο.
  */
 function resolveDrawingBinding(level: DrawingBearingLevel, companyId: string): DrawingBinding | null {
-  if (level.floorplanType === 'unit') return null;
+  if (level.floorplanType === 'unit') {
+    return level.propertyId
+      ? { entityType: ENTITY_TYPES.PROPERTY, entityId: level.propertyId, purpose: FLOORPLAN_PURPOSES.PROPERTY }
+      : null;
+  }
   if (level.floorId) {
     return { entityType: ENTITY_TYPES.FLOOR, entityId: level.floorId, purpose: FLOORPLAN_PURPOSES.FLOOR };
   }
@@ -96,7 +102,7 @@ export function levelDrawingFileId(levelId: string): string {
 
 /**
  * Ο στόχος γέννησης ενός επιπέδου χωρίς αρχείο, ή `null` όταν δεν ορίζεται κάτοχος
- * (χωρίς `companyId`, ή επίπεδο ακινήτου — βλ. {@link resolveDrawingBinding}).
+ * (χωρίς `companyId`, ή επίπεδο ακινήτου που δεν ξέρει το ακίνητό του — βλ. {@link resolveDrawingBinding}).
  *
  * Ίδια είσοδος ⇒ ίδια έξοδος: δεν διαβάζει «τρέχον» τίποτα (ADR-714).
  */

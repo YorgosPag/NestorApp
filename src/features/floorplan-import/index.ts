@@ -5,7 +5,7 @@
  */
 
 export { FloorplanImportWizard } from './FloorplanImportWizard';
-export type { WizardCompleteMeta } from './FloorplanImportWizard';
+export type { WizardCompleteMeta, FloorplanWizardMode } from './FloorplanImportWizard';
 // ADR-465: Cross-floor floorplan duplicate
 export { DuplicateFloorplanDialog } from './components/DuplicateFloorplanDialog';
 export type { DuplicateDestinationFloor } from './components/DuplicateFloorplanDialog';

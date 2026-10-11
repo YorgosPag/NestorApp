@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
-import { LevelOperations, FloorplanOperations } from '../utils';
+import { LevelOperations, FloorplanOperations, levelBirthFields } from '../utils';
 import {
   createDxfLevelWithPolicy,
   updateDxfLevelWithPolicy,
@@ -10,7 +10,7 @@ import {
 } from '@/services/dxf-level-mutation-gateway';
 import { updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import type { DxfLevelCreateResponse } from '@/app/api/dxf-levels/dxf-levels.types';
-import type { Level, FloorplanDoc, LevelSystemSettings, FloorplanType } from '../config';
+import type { Level, FloorplanDoc, LevelSystemSettings, FloorplanType, AddLevel } from '../config';
 
 type SceneManager = ReturnType<typeof useAutoSaveSceneManager>;
 
@@ -42,12 +42,15 @@ export interface LevelContextUpdate {
    */
   floorId?: string | null;
   buildingId?: string | null;
+  /** ADR-914 — το ακίνητο της κάτοψης· `null` = «αυτό το επίπεδο ΔΕΝ είναι κάτοψη ακινήτου». */
+  propertyId?: string | null;
   /** ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου· `null` ⇒ αυτόματη αρίθμηση κατά θέση. */
   sheetNumberOverride?: string | null;
 }
 
 export interface UseLevelOperationsResult {
-  addLevel: (name: string, setAsDefault?: boolean, floorId?: string) => Promise<string | null>;
+  /** ADR-914: το 4ο όρισμα γράφει την υπόλοιπη δέσμευση στην ΙΔΙΑ εγγραφή με τη γέννηση. */
+  addLevel: AddLevel;
   removeLevel: (levelId: string) => Promise<void>;
   deleteLevel: (levelId: string) => Promise<void>;
   clearAllLevels: () => Promise<void>;
@@ -104,12 +107,12 @@ export function useLevelOperations({
   const sceneManagerRef = useRef(sceneManager);
   sceneManagerRef.current = sceneManager;
 
-  const addLevel = useCallback(
-    async (name: string, setAsDefault = false, floorId?: string): Promise<string | null> => {
+  const addLevel = useCallback<AddLevel>(
+    async (name, setAsDefault = false, floorId, birth) => {
       try {
         setIsLoading(true);
 
-        const validationError = LevelOperations.validateLevelName(name, levels);
+        const validationError = LevelOperations.validateLevelName(name, levels, birth?.buildingId);
         if (validationError) {
           handleError(validationError);
           return null;
@@ -125,6 +128,8 @@ export function useLevelOperations({
               isDefault: setAsDefault,
               visible: true,
               ...(floorId ? { floorId } : {}),
+              // ADR-914 — πλήρης δέσμευση σε ΜΙΑ εγγραφή· ποτέ `null`/`undefined` στο σώμα.
+              ...levelBirthFields(birth),
             },
           });
 
@@ -144,7 +149,8 @@ export function useLevelOperations({
             levels,
             name,
             setAsDefault,
-            floorId
+            floorId,
+            birth
           );
           setLevels(updatedLevels);
 
@@ -382,6 +388,7 @@ export function useLevelOperations({
                   ...context,
                   ...(context.floorId !== undefined ? { floorId: context.floorId ?? undefined } : {}),
                   ...(context.buildingId !== undefined ? { buildingId: context.buildingId ?? undefined } : {}),
+                  ...(context.propertyId !== undefined ? { propertyId: context.propertyId ?? undefined } : {}),
                 }
               : l)
           );

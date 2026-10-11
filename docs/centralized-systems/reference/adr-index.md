@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 861 ADRs | Last Updated: 2026-10-11
+**📊 Stats**: 862 ADRs | Last Updated: 2026-10-11
 
 ---
 
@@ -274,7 +274,7 @@
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ ✅ PHASE_C_COMPLETE — Scattered code eliminated. Route helpers centralized. N+1 batch resolved. | 2026-03-19 | Backend Systems / Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
 | **ADR-246** | Καθολική Κεντρικοποίηση Firestore→API Mappers | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
 | **ADR-247** | Entity Relationship Integrity Audit | ✅ IMPLEMENTED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
-| **ADR-248** | Centralized Auto-Save System (Google-Level) | ✅ IMPLEMENTED (Phase 1 + 2) | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
+| **ADR-248** | Centralized Auto-Save System (Google-Level) | ✅ PARTIALLY SUPERSEDED (2026-10-11 — §2.5: το `useAutoSave` καταργήθηκε· μένουν ένδειξη + λεξιλόγιο κατάστασης) | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
 | **ADR-249** | Comprehensive Server-Side Integrity Audit | ✅ DOCUMENTED | 2026-03-19 | Entity Systems / Data Integrity / Security | [📄](./adrs/ADR-249-comprehensive-server-integrity-audit.md) |
 | **ADR-250** | Codebase Audit Findings — Security, Indexes, Centralization | ✅ PARTIALLY IMPLEMENTED (P0 fixes done) | 2026-03-19 | Infrastructure / Security / Data Integrity | [📄](./adrs/ADR-250-codebase-audit-findings.md) |
 | **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap | ✅ DOCUMENTED | 2026-03-19 | Uncategorized | [📄](./adrs/ADR-251-scattered-code-patterns-audit.md) |
@@ -895,7 +895,8 @@
 | **ADR-910** | Η αρχή της στοίβας ορόφων: η μοναδικότητα ορόφου ανά κτίριο είναι **ατομική**, όχι ευχή | ✅ 🟢 **ΥΛΟΠΟΙΗΜΕΝΟ (2026-10-10, uncommitted)** — σύνορο εγγραφής · γέννηση/επεξεργασία/αφαίρεση κάτω από το κλειδί · ανίχνευση και UI · πύλη CHECK 3.102. Εκκρεμεί: deploy κανόνων Firestore (απόφαση Giorgio) και η επίλυση του υπάρχοντος διπλότυπου (χωριστή απόφαση). | 2026-10-10 | Entity Systems / Data Integrity / Firestore Concurrency | [📄](./adrs/ADR-910-floor-stack-authority.md) |
 | **ADR-911** | Βοηθός «Μοντέλο από το σχέδιο»: πραγματικοί τοίχοι και κουφώματα BIM από γραμμές DXF, με έγκριση ανθρώπου | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — σχέδιο εγκεκριμένο (Giorgio, 2026-10-10). **Φ1 (commit `18faf778`) · Φ2 + Φ3α (commit `327d41f7`) · Φ3α-2 (commits `e7842683` + `5683768d`)**: καθαρός πυρήνας πρότασης + αναφορά κάλυψης + fixture (Φ1) · μαζική εγγραφή `addWallsToScene` — ένα πέρασμα ενώσεων, ένα undo, σήμανση `'bulk'` (Φ2) · τύπος μέσα στο χτίσιμο, ομάδες πάχους, άξονας από το συμφραζόμενο (Φ3α) · η ένωση τοίχων δεν είναι κατάληψη (Φ3α-2). **Φ3α-3 (commits `74570c40` + `a40efcdf`)**: ενώσεις ανεξάρτητες από τη σειρά των ορθογωνίων, κόψιμο στο σωστό άκρο κοντού τοίχου, βραχίονας πάντα ως την παρειά (χωρίς όριο 40 %). **Φ3α-4 (commit `564fe2f0`)**: η προεπισκόπηση φωτίζει το σώμα όπως ζωγραφίζεται (ενώσεις + κολώνες), ένα SSoT `wall-painted-body` κοινό με την απόδοση. **Φ3β (commits `37e6e2dd` + `850b1c1d`· επαλήθευση κλειστή 2026-10-11 εκτός browser)**: ο βοηθός έχει επιφάνεια — κουμπί «Τοίχοι από το σχέδιο» → κλικ-δείγμα → προεπισκόπηση τεσσάρων καταστάσεων → πάνελ με επιβεβαίωση ανά ομάδα πάχους → **μία** έγκριση με έλεγχο μπαγιάτικης σκηνής. Άγκυρες Α-1 … Α-6 + **Α-10**. Ο πυρήνας πρότασης **έχει πλέον καταναλωτή παραγωγής**. Επόμενο: ζωντανή δοκιμή σε browser, μετά Φ4 (κουφώματα). | 2026-10-10 | DXF Viewer / BIM Authoring / Public Listing 3D | [📄](./adrs/ADR-911-model-from-drawing-assistant.md) |
 | **ADR-912** | Η στενή επιφάνεια λεπτομερειών: καρτέλες, πίνακας και πλαίσιο όταν ο χώρος δεν φτάνει | ✅ 🟡 **§2–§5 ΥΛΟΠΟΙΗΜΕΝΑ (`7c3887ec`) · §8 ΜΕΤΑΝΑΣΤΕΥΣΗ ΠΛΗΡΗΣ (55 → 0, φρουρός ενεργός· ζωντανά μετρημένα 3 σημεία, desktop όχι) · §9 μετρημένο στα 390px · §10 μετρημένο στα 390px · §12 ΥΛΟΠΟΙΗΜΕΝΟ (`5504ef82` … `b2a1f266`, 20 tests· γραμμένο εκ των υστέρων από τον κώδικα, μετρήσεις όχι ξαναελεγμένες)** — ζωντανή μέτρηση ΜΕΡΙΚΗ (δες Changelog · §7) | 2026-10-10 | UI Systems / Responsive / Accessibility | [📄](./adrs/ADR-912-narrow-details-surface.md) |
-| **ADR-913** | Γέννηση κενού σχεδίου: κάθε επίπεδο έχει δικό του στόχο αποθήκευσης | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ (2026-10-11, uncommitted) — ΧΩΡΙΣ ζωντανή επαλήθευση σε browser** (δες §8) | 2026-10-11 | DXF Viewer / Persistence / Data Integrity | [📄](./adrs/ADR-913-level-drawing-birth.md) |
+| **ADR-913** | Γέννηση κενού σχεδίου: κάθε επίπεδο έχει δικό του στόχο αποθήκευσης | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ — committed `9673f9c0` (2026-10-11)** · επαλήθευση σε browser **ΜΕΡΙΚΗ**: βήματα 1 και 3 πέρασαν, 2 · 4 · 5 δεν έχουν εκτελεστεί (δες §8) | 2026-10-11 | DXF Viewer / Persistence / Data Integrity | [📄](./adrs/ADR-913-level-drawing-birth.md) |
+| **ADR-914** | «Άνοιγμα / Δημιουργία»: ένα σημείο εισόδου για κάθε σχέδιο, και δέσμευση στη γέννηση | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ (2026-10-11, uncommitted)** — jest πράσινα· επαλήθευση σε browser: δες §9 | 2026-10-11 | DXF Viewer / Levels / Entry Point / Data Integrity | [📄](./adrs/ADR-914-open-create-entry.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

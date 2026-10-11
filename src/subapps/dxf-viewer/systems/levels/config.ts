@@ -41,6 +41,13 @@ export interface Level {
   sheetNumberOverride?: string | null;
   /** 🏢 ADR-309 Phase 3: Project ID — set by wizard on import */
   projectId?: string;
+  /**
+   * ADR-914 — το **ακίνητο** του οποίου κάτοψη είναι αυτό το επίπεδο (`floorplanType: 'unit'`).
+   * Χωρίς αυτό το επίπεδο ακινήτου δεν είχε κάτοχο για τον στόχο αποθήκευσής του (ADR-913 §7.1):
+   * ο `floorId` του θα το έκανε «κάτοψη ΟΡΟΦΟΥ». Ο όροφος μένει το κλειδί εμβέλειας των BIM
+   * οντοτήτων (ADR-420)· το ακίνητο είναι ο **κάτοχος του αρχείου**.
+   */
+  propertyId?: string;
   /** ADR-375 Phase B.2: per-view BIM render settings (Revit ViewPlan equivalent). */
   bimRenderSettings?: BimRenderSettings;
   /** ADR-375 Phase B.3: FK → dxf_viewer_view_templates. When set, signals that
@@ -50,6 +57,30 @@ export interface Level {
   /** ADR-396 P7: per-floor ETICS thermal envelope spec (preset + display driver). */
   thermalEnvelopeSpec?: ThermalEnvelopeSpec | null;
 }
+
+/**
+ * ADR-914 — η δέσμευση ενός επιπέδου **τη στιγμή της γέννησής του**, πέρα από τον όροφο.
+ *
+ * Ο στόχος αποθήκευσης ενός κενού επιπέδου παράγεται από τη δέσμευσή του (ADR-913). Αν το
+ * επίπεδο γεννηθεί αδέσμευτο και δεθεί με δεύτερη εγγραφή, στο ενδιάμεσο ο στόχος δείχνει στον
+ * χώρο της εταιρείας και μετά στο έργο — ίδιο αρχείο, δύο paths. Γι' αυτό τα πεδία ταξιδεύουν
+ * ΜΕ τη δημιουργία, ποτέ μετά.
+ */
+export interface LevelBirthBinding {
+  readonly buildingId?: string | null;
+  readonly projectId?: string;
+  readonly propertyId?: string;
+  readonly floorplanType?: FloorplanType;
+  readonly entityLabel?: string;
+}
+
+/** Η υπογραφή του `addLevel` — ΜΙΑ δήλωση για το context, τον resolver ορόφου και τον provisioner. */
+export type AddLevel = (
+  name: string,
+  setAsDefault?: boolean,
+  floorId?: string,
+  birth?: LevelBirthBinding,
+) => Promise<string | null>;
 
 export interface FloorplanDoc {
   id: string;

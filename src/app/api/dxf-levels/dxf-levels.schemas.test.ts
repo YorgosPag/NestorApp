@@ -14,7 +14,7 @@
  * silently return.
  */
 
-import { UpdateDxfLevelSchema, __testing__ } from './dxf-levels.schemas';
+import { CreateDxfLevelSchema, UpdateDxfLevelSchema, __testing__ } from './dxf-levels.schemas';
 
 const {
   PenIndexSchema,
@@ -243,5 +243,36 @@ describe('Sub-schemas — direct unit coverage', () => {
   it('BimRenderSettingsSchema accepts minimal { drawingScale }', () => {
     const r = BimRenderSettingsSchema.safeParse({ drawingScale: 100 });
     expect(r.success).toBe(true);
+  });
+});
+
+describe('CreateDxfLevelSchema — πλήρης δέσμευση στη γέννηση (ADR-914)', () => {
+  const base = { name: 'Γενική κάτοψη', order: 0 };
+
+  it('🔑 κρατά έργο, τύπο και ετικέτα — το Zod κόβει ό,τι δεν δηλώνεται, και τότε γεννιέται αδέσμευτο', () => {
+    const parsed = CreateDxfLevelSchema.parse({
+      ...base, buildingId: 'bldg_1', projectId: 'proj_1', floorplanType: 'building', entityLabel: 'Κτήριο Α',
+    });
+    expect(parsed).toMatchObject({
+      buildingId: 'bldg_1', projectId: 'proj_1', floorplanType: 'building', entityLabel: 'Κτήριο Α',
+    });
+  });
+
+  it('το αδέσμευτο πρόχειρο περνά χωρίς κανένα πεδίο δέσμευσης', () => {
+    const parsed = CreateDxfLevelSchema.parse(base);
+    expect(parsed.projectId).toBeUndefined();
+    expect(parsed.floorplanType).toBeUndefined();
+  });
+
+  it('απορρίπτει άγνωστο τύπο κάτοψης και `null` — στη γέννηση η απουσία λέγεται «λείπει»', () => {
+    expect(CreateDxfLevelSchema.safeParse({ ...base, floorplanType: 'room' }).success).toBe(false);
+    expect(CreateDxfLevelSchema.safeParse({ ...base, projectId: null }).success).toBe(false);
+  });
+
+  it('ADR-914 Φέτα Γ: το ακίνητο γράφεται στη γέννηση και αλλάζει/καθαρίζεται με PATCH', () => {
+    expect(CreateDxfLevelSchema.parse({ ...base, floorplanType: 'unit', propertyId: 'prop_1' }).propertyId)
+      .toBe('prop_1');
+    expect(UpdateDxfLevelSchema.parse({ levelId: 'lvl_1', propertyId: 'prop_2' }).propertyId).toBe('prop_2');
+    expect(UpdateDxfLevelSchema.parse({ levelId: 'lvl_1', propertyId: null }).propertyId).toBeNull();
   });
 });

@@ -80,7 +80,12 @@
         "wipeWarning": "The destination floor already contains {polygons} polygons and will be replaced.",
         "success": "Floorplan copied to floor \"{destination}\".",
         "error": "Floorplan copy failed."
-      }
+      },
+      "nameErrors": {
+        "empty": "The level name cannot be empty",
+        "duplicate": "A level with this name already exists"
+      },
+      "floorFallbackName": "Floor"
     },
     "hierarchy": {
       "title": "Hierarchy",
@@ -516,6 +521,42 @@
     },
     "topography": {
       "title": "Topography"
+    },
+    "openCreate": {
+      "button": "Open / Create",
+      "title": "Open or create a drawing",
+      "description": "Start an empty drawing, open a saved floorplan or import a file.",
+      "draftName": "Draft",
+      "fallbackLabel": "Floorplan",
+      "sections": {
+        "create": "Create",
+        "open": "Open",
+        "import": "Import"
+      },
+      "cards": {
+        "draft": {
+          "title": "Draft drawing",
+          "description": "An empty drawing in your workspace, not linked to a project."
+        },
+        "floorplanFor": {
+          "title": "Floorplan for…",
+          "description": "An empty floorplan for a project, building, floor or property."
+        },
+        "fromStorage": {
+          "title": "From storage",
+          "description": "A saved floorplan, into the open level.",
+          "disabledReason": "First open a level linked to a project, building or floor."
+        },
+        "importFloorplan": {
+          "title": "DXF / PDF floorplan",
+          "description": "Upload a floorplan file with the import wizard."
+        },
+        "importMesh3d": {
+          "title": "3D file",
+          "description": "Geometry and materials (.glb, .dae, .obj) into the open level.",
+          "disabledReason": "First open a level."
+        }
+      }
     }
   },
   "layerActions": {

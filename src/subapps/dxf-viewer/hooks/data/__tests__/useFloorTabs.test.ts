@@ -219,13 +219,14 @@ describe('useFloorTabs — onSelectTab', () => {
       await onSelectTab(virtualTab);
     });
 
-    expect(ctx.addLevel).toHaveBeenCalledWith('2ος Όροφος', false, 'f2');
-    expect(ctx.updateLevelContext).toHaveBeenCalledWith('lvl_new', {
+    // ADR-914 — ΜΙΑ εγγραφή: όροφος, κτήριο, τύπος και ετικέτα ταξιδεύουν με τη γέννηση.
+    expect(ctx.addLevel).toHaveBeenCalledWith('2ος Όροφος', false, 'f2', {
+      buildingId: 'b1',
+      projectId: undefined,
       floorplanType: 'floor',
       entityLabel: '2ος Όροφος',
-      buildingId: 'b1',
-      floorId: 'f2',
     });
+    expect(ctx.updateLevelContext).not.toHaveBeenCalled();
     expect(ctx.setCurrentLevel).toHaveBeenCalledWith('lvl_new');
   });
 

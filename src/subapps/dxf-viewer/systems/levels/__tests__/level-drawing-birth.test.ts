@@ -88,7 +88,25 @@ describe('resolveLevelDrawingBirthTarget — η πιο συγκεκριμένη 
     expect(parsed(target)).toMatchObject({ entityType: 'company', entityId: COMPANY, category: 'drawings' });
   });
 
-  it('επίπεδο ΑΚΙΝΗΤΟΥ: κανένας στόχος — ο όροφός του θα το έκανε «κάτοψη ορόφου»', () => {
+  it('🔑 επίπεδο ΑΚΙΝΗΤΟΥ με `propertyId` (ADR-914): κάτοψη ΑΚΙΝΗΤΟΥ, στον φάκελο του ακινήτου', () => {
+    const target = resolveLevelDrawingBirthTarget(
+      level({
+        floorplanType: 'unit', propertyId: 'prop_1',
+        floorId: 'flr_1', buildingId: 'bldg_1', projectId: 'proj_1',
+      }),
+      COMPANY,
+    );
+    // Ο όροφος μένει στο context (κλειδί εμβέλειας BIM) — αλλά ΚΑΤΟΧΟΣ είναι το ακίνητο.
+    expect(target?.saveContext).toMatchObject({
+      entityType: 'property', floorId: 'flr_1', buildingId: 'bldg_1', projectId: 'proj_1',
+      filesCategory: 'floorplans', purpose: 'property-floorplan',
+    });
+    expect(parsed(target)).toMatchObject({
+      companyId: COMPANY, entityType: 'property', entityId: 'prop_1', category: 'floorplans',
+    });
+  });
+
+  it('επίπεδο ΑΚΙΝΗΤΟΥ χωρίς `propertyId`: κανένας στόχος — ο όροφός του θα το έκανε «κάτοψη ορόφου»', () => {
     expect(
       resolveLevelDrawingBirthTarget(level({ floorplanType: 'unit', floorId: 'flr_1' }), COMPANY),
     ).toBeNull();

@@ -1,52 +1,53 @@
 'use client';
 
 /**
- * C4dMaterialImportButton — ADR-678 Φ1 UI · **ADR-683 Φ2-UI (glTF/GLB)** · **ADR-678 Φ4 (COLLADA
- * `.dae`, per-face)**. Κουμπί «Εισαγωγή υλικών από 3Δ αρχείο»: ο χρήστης επιλέγει ό,τι του γύρισε ο
+ * useMesh3dImport — ADR-678 Φ1 UI · **ADR-683 Φ2-UI (glTF/GLB)** · **ADR-678 Φ4 (COLLADA
+ * `.dae`, per-face)**. Η «Εισαγωγή 3Δ αρχείου» ως hook (ADR-914): το σημείο εισόδου είναι πλέον
+ * κάρτα του παραθύρου «Άνοιγμα / Δημιουργία», αλλά ο επιλογέας αρχείων και το dialog εισαγωγής
+ * πρέπει να μένουν προσαρτημένα ΑΦΟΥ κλείσει το παράθυρο — γι' αυτό ο host τα αποδίδει ο ίδιος
+ * (`host`) και η κάρτα καλεί μόνο `openPicker()`. Το `handleFiles` μεταφέρθηκε αυτούσιο από το
+ * `C4dMaterialImportButton`. Ο χρήστης επιλέγει ό,τι του γύρισε ο
  * συνεργάτης — `.glb`/`.gltf` (σύγχρονος παραλήπτης), `.dae` (C4D R15, per-face) ή `.obj` + `.mtl`
  * (legacy C4D R15) — και τα χρώματα/υλικά «κατεβαίνουν» πίσω στα ίδια BIM στοιχεία (name-based).
  *
- * **ΕΝΑ κουμπί για όλα τα formats**, όχι ένα ανά format: είναι η πρακτική των μεγάλων (Revit
+ * **ΜΙΑ είσοδος για όλα τα formats**, όχι ένα ανά format: είναι η πρακτική των μεγάλων (Revit
  * «Link/Import» = ένα dialog με format dropdown· ίδιο ArchiCAD/C4D). Ο διαχωρισμός γίνεται από την
  * κατάληξη, όχι από τον χρήστη.
  *
  * Αποκλειστικός δρόμος (ΟΧΙ ο wizard κάτοψης, που σβήνει τον όροφο): εδώ η γεωμετρία μένει
  * ανέγγιχτη — μόνο η εμφάνιση (`faceAppearance['*']`) ενημερώνεται, με ΕΝΑ undo.
  *
- * @see ../../io/mesh3d-material-import/import-c4d-materials — ο κοινός πυρήνας + OBJ wrapper
- * @see ../../io/mesh3d-roundtrip/import-gltf-appearance — ο glTF wrapper
+ * @see ../../../io/mesh3d-material-import/import-c4d-materials — ο κοινός πυρήνας + OBJ wrapper
+ * @see ../../../io/mesh3d-roundtrip/import-gltf-appearance — ο glTF wrapper
  * @see docs/centralized-systems/reference/adrs/ADR-683-bim-collaboration-roundtrip.md
  */
 
-import { useRef, useCallback, useMemo, useState } from 'react';
+import { useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from '@/i18n';
-import { Palette } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { useLevels } from '../../systems/levels';
-import { useNotifications } from '../../../../providers/NotificationProvider';
-import { useMaterialLibrary } from '../panels/materials/hooks/useMaterialLibrary';
+import { useLevels } from '../../../systems/levels';
+import { useNotifications } from '../../../../../providers/NotificationProvider';
+import { useMaterialLibrary } from '../../panels/materials/hooks/useMaterialLibrary';
 import {
   importC4dMaterials,
   type ImportedAppearanceResult,
-} from '../../io/mesh3d-material-import/import-c4d-materials';
-import { importGltfAppearance } from '../../io/mesh3d-roundtrip/import-gltf-appearance';
+} from '../../../io/mesh3d-material-import/import-c4d-materials';
+import { importGltfAppearance } from '../../../io/mesh3d-roundtrip/import-gltf-appearance';
 import {
   importColladaAppearance,
   type ColladaTextureImporter,
   type KnownMaterialHealthProbe,
-} from '../../io/mesh3d-material-import/import-collada-appearance';
-import { importForeignTextures } from '../../io/mesh3d-material-import/import-foreign-textures';
-import { buildForeignTextureDeps } from '../../io/mesh3d-material-import/foreign-texture-deps';
-import { isMaterialTextureReachable } from '../../bim/services/bim-material-texture-upload.service';
-import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
-import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
-import { parseGltfScene } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
-import { colladaToGlb } from '../../io/mesh3d-roundtrip/collada-to-glb';
-import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
-import { parseExportManifest, indexManifestMaterials, indexManifestByMeshName } from '../../io/mesh3d-roundtrip/export-manifest';
-import { ImportedMeshImportDialog } from './imported-mesh/ImportedMeshImportDialog';
+} from '../../../io/mesh3d-material-import/import-collada-appearance';
+import { importForeignTextures } from '../../../io/mesh3d-material-import/import-foreign-textures';
+import { buildForeignTextureDeps } from '../../../io/mesh3d-material-import/foreign-texture-deps';
+import { isMaterialTextureReachable } from '../../../bim/services/bim-material-texture-upload.service';
+import { buildKnownMaterialResolver } from '../../../io/mesh3d-material-import/known-import-materials';
+import type { GltfObjectRecord } from '../../../io/mesh3d-roundtrip/gltf-scene-parse';
+import { parseGltfScene } from '../../../io/mesh3d-roundtrip/gltf-scene-parse';
+import { colladaToGlb } from '../../../io/mesh3d-roundtrip/collada-to-glb';
+import { isImportableNode } from '../../../io/mesh3d-roundtrip/import-gltf-meshes';
+import { parseExportManifest, indexManifestMaterials, indexManifestByMeshName } from '../../../io/mesh3d-roundtrip/export-manifest';
+import { ImportedMeshImportDialog } from '../imported-mesh/ImportedMeshImportDialog';
 
 /** Τι βρέθηκε στην επιλογή του χρήστη — το format καθορίζει και τον τρόπο ανάγνωσης. */
 type ImportPayload =
@@ -175,11 +176,18 @@ async function readMaterialBaselineByMesh(
   return byMesh.size > 0 ? byMesh : undefined;
 }
 
-export function C4dMaterialImportButton() {
+/** Ό,τι δίνει το hook στον host του παραθύρου «Άνοιγμα / Δημιουργία». */
+export interface Mesh3dImport {
+  /** Ανοίγει τον επιλογέα αρχείων. Πρέπει να κληθεί μέσα σε χειρονομία χρήστη (κλικ). */
+  readonly openPicker: () => void;
+  /** Ο κρυφός επιλογέας + το dialog εισαγωγής γεωμετρίας — αποδίδονται ΜΙΑ φορά από τον host. */
+  readonly host: ReactNode;
+}
+
+export function useMesh3dImport(): Mesh3dImport {
   const { t } = useTranslation('dxf-viewer-shell');
   const levels = useLevels();
   const notifications = useNotifications();
-  const iconSizes = useIconSizes();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ADR-679 Φ2a — live library υλικά (system + company + project scope) ώστε το round-trip
@@ -334,12 +342,10 @@ export function C4dMaterialImportButton() {
     }));
   }, [levels, notifications, t, resolveKnownId, companyId, materials, save, update, remove]);
 
-  return (
+  const openPicker = useCallback(() => inputRef.current?.click(), []);
+
+  const host = (
     <>
-      <Button variant="outline" className="w-full" onClick={() => inputRef.current?.click()}>
-        <Palette className={iconSizes.sm} />
-        {t('c4dMaterialImport.button')}
-      </Button>
       <input
         ref={inputRef}
         type="file"
@@ -359,4 +365,6 @@ export function C4dMaterialImportButton() {
       )}
     </>
   );
+
+  return { openPicker, host };
 }

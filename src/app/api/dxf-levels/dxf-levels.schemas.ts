@@ -114,6 +114,18 @@ export const CreateDxfLevelSchema = z.object({
   buildingId: z.string().min(1).max(128).optional(),
   sceneFileId: z.string().min(1).max(128).optional(),
   sceneFileName: z.string().max(300).optional(),
+  /**
+   * 🔑 **ADR-914** — η ΥΠΟΛΟΙΠΗ δέσμευση, επίσης τη στιγμή της γέννησης. Ο στόχος αποθήκευσης
+   * ενός κενού επιπέδου παράγεται από τη δέσμευσή του (ADR-913): επίπεδο που γεννιέται
+   * αδέσμευτο και δένεται με δεύτερο `PATCH` έχει, στο ενδιάμεσο, στόχο στο path της
+   * **εταιρείας** — και μετά το `PATCH` στο path του **έργου**, με το ΙΔΙΟ `fileId`.
+   * ⚠️ Όχι nullable: στη γέννηση η απουσία λέγεται «λείπει», ποτέ `null`.
+   */
+  projectId: z.string().min(1).max(128).optional(),
+  /** ADR-914 — το ακίνητο μιας κάτοψης ακινήτου (`floorplanType: 'unit'`). */
+  propertyId: z.string().min(1).max(128).optional(),
+  floorplanType: z.enum(['project', 'building', 'floor', 'unit']).optional(),
+  entityLabel: z.string().max(300).optional(),
 });
 
 export const UpdateDxfLevelSchema = z.object({
@@ -132,6 +144,8 @@ export const UpdateDxfLevelSchema = z.object({
   entityLabel: z.string().max(300).nullable().optional(),
   /** ADR-309 Phase 3: Project ID */
   projectId: z.string().min(1).max(128).nullable().optional(),
+  /** ADR-914: το ακίνητο της κάτοψης· null = το επίπεδο δεν είναι (πια) κάτοψη ακινήτου. */
+  propertyId: z.string().min(1).max(128).nullable().optional(),
   /** ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου· null = αυτόματη αρίθμηση κατά θέση. */
   sheetNumberOverride: z.string().max(40).nullable().optional(),
   // ── ADR-759 Φ3: μεταδεδομένα πινακίδας τοπογραφικού ──────────────────────────

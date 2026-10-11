@@ -41,6 +41,7 @@ import { StepEntitySelector } from './components/StepEntitySelector';
 import { StepPropertySelector } from './components/StepPropertySelector';
 import { StepUpload } from './components/StepUpload';
 import { StepStoragePicker } from './components/StepStoragePicker';
+import { StepCreateConfirm } from './components/StepCreateConfirm';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
 import type { FloorplanFormat } from './hooks/useFloorplanSmartUpload';
 import type { CadLinkableEntityType } from '@/config/domain-constants';
@@ -85,6 +86,11 @@ export interface WizardCompleteMeta {
    * αποθηκεύτηκαν σε ορόφους ξένων κτηρίων.
    */
   floorId?: string;
+  /**
+   * ADR-236 · ADR-914 — για **πολυεπίπεδη μονάδα**: ο όροφος του επιπέδου της που επιλέχθηκε
+   * (π.χ. ο πάνω όροφος μιας μεζονέτας). Διαφέρει από το `floorId` (ο όροφος του βήματος 4).
+   */
+  levelFloorId?: string;
   purpose: string;
   /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */
   entityLabel?: string;
@@ -102,15 +108,23 @@ export interface WizardCompleteMeta {
   loadAllFloors?: boolean;
 }
 
+/**
+ * Τι κάνει το βήμα 6: `'import'` = ανέβασμα αρχείου · `'load'` = επιλογή αποθηκευμένου ·
+ * `'create'` = επιβεβαίωση νέας ΚΕΝΗΣ κάτοψης (ADR-914).
+ */
+export type FloorplanWizardMode = 'import' | 'load' | 'create';
+
 interface FloorplanImportWizardProps {
   isOpen: boolean;
   onClose: () => void;
-  /** 'import' (default): step 6 = upload. 'load': step 6 = pick from saved. */
-  mode?: 'import' | 'load';
+  /** Default: `'import'`. */
+  mode?: FloorplanWizardMode;
   /** import mode: called when file upload completes */
   onComplete?: (file: File, meta: WizardCompleteMeta) => void;
   /** load mode: called when user picks a saved floorplan. Throws on failure. */
   onLoad?: (fileId: string, meta: WizardCompleteMeta) => Promise<void>;
+  /** create mode: called when the user confirms the empty floorplan. Throws on failure. */
+  onCreate?: (meta: WizardCompleteMeta) => Promise<void>;
 }
 
 // =============================================================================
@@ -138,13 +152,43 @@ const SELECT_PLACEHOLDER_KEYS: Record<number, string> = {
 /** Shortcut floorplan card config for steps 2-4. Labels differ by mode. */
 const STEP_SHORTCUT_CONFIG: Record<number, {
   type: FloorplanType;
-  importLabelKey: string;
-  loadLabelKey: string;
+  labelKeys: Record<FloorplanWizardMode, string>;
   icon: React.ElementType;
 }> = {
-  2: { type: 'project', importLabelKey: 'floorplanImport.shortcuts.project', loadLabelKey: 'floorplanImport.shortcuts.loadProject', icon: FolderKanban },
-  3: { type: 'building', importLabelKey: 'floorplanImport.shortcuts.building', loadLabelKey: 'floorplanImport.shortcuts.loadBuilding', icon: Building2 },
-  4: { type: 'floor', importLabelKey: 'floorplanImport.shortcuts.floor', loadLabelKey: 'floorplanImport.shortcuts.loadFloor', icon: Layers },
+  2: {
+    type: 'project',
+    icon: FolderKanban,
+    labelKeys: {
+      import: 'floorplanImport.shortcuts.project',
+      load: 'floorplanImport.shortcuts.loadProject',
+      create: 'floorplanImport.shortcuts.createProject',
+    },
+  },
+  3: {
+    type: 'building',
+    icon: Building2,
+    labelKeys: {
+      import: 'floorplanImport.shortcuts.building',
+      load: 'floorplanImport.shortcuts.loadBuilding',
+      create: 'floorplanImport.shortcuts.createBuilding',
+    },
+  },
+  4: {
+    type: 'floor',
+    icon: Layers,
+    labelKeys: {
+      import: 'floorplanImport.shortcuts.floor',
+      load: 'floorplanImport.shortcuts.loadFloor',
+      create: 'floorplanImport.shortcuts.createFloor',
+    },
+  },
+};
+
+/** Ό,τι αλλάζει στο κέλυφος του οδηγού ανά mode: τίτλος και ετικέτα του τελευταίου βήματος. */
+const MODE_CHROME_KEYS: Record<FloorplanWizardMode, { title: string; lastStep: string }> = {
+  import: { title: 'floorplanImport.title', lastStep: 'floorplanImport.steps.upload' },
+  load: { title: 'floorplanImport.loadTitle', lastStep: 'floorplanImport.steps.select' },
+  create: { title: 'floorplanImport.createTitle', lastStep: 'floorplanImport.steps.create' },
 };
 
 // =============================================================================
@@ -177,6 +221,7 @@ function scopedWizardMeta(
     // ADR-399 · ADR-845 Ο-19: κτήριο και όροφος ταξιδεύουν ΜΑΖΙ — ποτέ το ένα χωρίς το άλλο.
     buildingId: selection.buildingId ?? undefined,
     floorId: selection.floorId ?? undefined,
+    levelFloorId: selection.levelFloorId ?? undefined,
     purpose: cfg.purpose ?? '',
     entityLabel: cfg.entityLabel,
   };
@@ -188,6 +233,7 @@ export function FloorplanImportWizard({
   mode = 'import',
   onComplete,
   onLoad,
+  onCreate,
 }: FloorplanImportWizardProps) {
   const { t, isNamespaceReady } = useTranslation(['files', 'files-media']);
 
@@ -198,6 +244,7 @@ export function FloorplanImportWizard({
   // ADR-309 Phase 5: selection state for load mode step 6
   const [selectedStorageFileId, setSelectedStorageFileId] = useState<string | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [corruptFileIds, setCorruptFileIds] = useState<Set<string>>(new Set());
 
   // ADR-448 Phase 3: import every floor of the selected building (default ON).
@@ -206,9 +253,7 @@ export function FloorplanImportWizard({
   const stepLabels = useMemo(
     () => [
       ...STEP_LABEL_KEYS.slice(0, 5).map((key) => t(key)),
-      mode === 'load'
-        ? t('floorplanImport.steps.select')
-        : t('floorplanImport.steps.upload'),
+      t(MODE_CHROME_KEYS[mode].lastStep),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, isNamespaceReady, mode],
@@ -243,6 +288,7 @@ export function FloorplanImportWizard({
     state.reset();
     setSelectedStorageFileId(null);
     setLoadingStorage(false);
+    setCreating(false);
     setCorruptFileIds(new Set());
     setLoadAllFloors(true);
     onClose();
@@ -268,6 +314,20 @@ export function FloorplanImportWizard({
     state.selection.floorId, onLoad, handleClose, notifications, t,
   ]);
 
+  // ADR-914 — mode 'create': το ίδιο `scopedWizardMeta` με τις άλλες δύο διαδρομές, χωρίς αρχείο.
+  const handleConfirmCreate = useCallback(async () => {
+    if (!state.uploadConfig || !onCreate) return;
+    const meta: WizardCompleteMeta = scopedWizardMeta(state.uploadConfig, state.selection);
+    setCreating(true);
+    try {
+      await onCreate(meta);
+      handleClose();
+    } catch {
+      notifications.error(t('floorplanImport.create.error'));
+      setCreating(false);
+    }
+  }, [state.uploadConfig, state.selection, onCreate, handleClose, notifications, t]);
+
   const getSelectedId = (): string | null => {
     switch (state.step) {
       case 1: return state.selection.companyId;
@@ -281,9 +341,7 @@ export function FloorplanImportWizard({
   // Determine if current step has a shortcut card and if it's enabled
   const shortcutConfig = STEP_SHORTCUT_CONFIG[state.step];
   const shortcutEnabled = !!shortcutConfig && !!getSelectedId();
-  const shortcutLabelKey = shortcutConfig
-    ? (mode === 'load' ? shortcutConfig.loadLabelKey : shortcutConfig.importLabelKey)
-    : undefined;
+  const shortcutLabelKey = shortcutConfig?.labelKeys[mode];
 
   // Navigate to a completed step by clicking its number
   const handleStepClick = useCallback((targetStep: number) => {
@@ -294,12 +352,8 @@ export function FloorplanImportWizard({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-2xl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'load' ? t('floorplanImport.loadTitle') : t('floorplanImport.title')}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            {mode === 'load' ? t('floorplanImport.loadTitle') : t('floorplanImport.title')}
-          </DialogDescription>
+          <DialogTitle>{t(MODE_CHROME_KEYS[mode].title)}</DialogTitle>
+          <DialogDescription className="sr-only">{t(MODE_CHROME_KEYS[mode].title)}</DialogDescription>
         </DialogHeader>
 
         {/* ── Step indicator ── */}
@@ -373,6 +427,11 @@ export function FloorplanImportWizard({
               corruptFileIds={corruptFileIds}
             />
           )}
+
+          {/* Step 6: Confirm the empty floorplan (create mode, ADR-914) */}
+          {mode === 'create' && state.step === 6 && state.uploadConfig && (
+            <StepCreateConfirm selection={state.selection} />
+          )}
         </section>
 
         {/* ── Footer navigation ── */}
@@ -391,6 +450,12 @@ export function FloorplanImportWizard({
             {state.step < 6 && (
               <Button onClick={state.handleNext} disabled={!state.canProceed}>
                 {t('floorplanImport.next')}
+              </Button>
+            )}
+
+            {mode === 'create' && state.step === 6 && (
+              <Button onClick={handleConfirmCreate} disabled={!state.uploadConfig || creating}>
+                {creating ? t('floorplanImport.create.creating') : t('floorplanImport.create.confirm')}
               </Button>
             )}
 

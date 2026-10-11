@@ -24,7 +24,7 @@ function makeLevel(id: string, name: string, floorId?: string, buildingId?: stri
 
 /**
  * In-memory resolver mirroring `useLevels`: `addLevel` appends a Level and returns
- * an id, `linkLevelToFloor` writes the floor link. The `levels` array is mutated
+ * an id — floor AND building in the SAME write (ADR-914). The `levels` array is mutated
  * so a single call sees its own writes (the real hook re-renders between calls).
  */
 function makeResolver(initial: Level[] = []): LevelFloorResolver & { levels: Level[] } {
@@ -32,17 +32,10 @@ function makeResolver(initial: Level[] = []): LevelFloorResolver & { levels: Lev
   let counter = 0;
   return {
     levels,
-    addLevel: async (name, _setAsDefault, floorId) => {
+    addLevel: async (name, _setAsDefault, floorId, birth) => {
       const id = `level-${++counter}`;
-      levels.push(makeLevel(id, name, floorId));
+      levels.push(makeLevel(id, name, floorId, birth?.buildingId ?? undefined));
       return id;
-    },
-    linkLevelToFloor: async (levelId, floorId, buildingId) => {
-      const target = levels.find((l) => l.id === levelId);
-      if (target) {
-        target.floorId = floorId ?? undefined;
-        target.buildingId = buildingId ?? undefined;
-      }
     },
   };
 }

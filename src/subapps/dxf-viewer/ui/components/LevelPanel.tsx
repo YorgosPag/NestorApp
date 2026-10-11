@@ -3,11 +3,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
-import { Upload, Download, ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown, Settings } from 'lucide-react';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
-import { FloorplanImportWizard, DuplicateFloorplanDialog } from '@/features/floorplan-import';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
-import { Button } from '@/components/ui/button';
+import { DuplicateFloorplanDialog } from '@/features/floorplan-import';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { LevelListCard } from '@/domain/cards';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -18,13 +16,12 @@ import { OverlayList } from '../OverlayList';
 import { OverlayProperties } from '../OverlayProperties';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection';
-import { C4dMaterialImportButton } from './C4dMaterialImportButton';
+import { OpenCreateLauncher } from './open-create/OpenCreateLauncher';
 import { LayersSection } from './LayersSection';
 import type { LevelPanelProps, EditingMode } from './level-panel-types';
 import { entityTypeToFloorplanType, buildDuplicateDestinations } from './level-panel-helpers';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
-import { commitImportedScene } from '../../systems/levels/commit-imported-scene';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
 import { useActiveBuildingId } from '../../systems/levels/hooks/useActiveBuildingId';
@@ -72,14 +69,12 @@ export function LevelPanel({
     deleteLevel,
     renameLevel,
     getLevelScene,
-    setLevelScene,
     linkLevelToFloor,
-    linkSceneToLevel,
     updateLevelContext,
   } = useLevels();
 
   // ADR-448 Phase 3 — «Φόρτωσε ΟΛΟΥΣ τους ορόφους» backfill (decoupled hook).
-  const triggerAllFloorsBackfill = useAllFloorsBackfill({ levels, addLevel, linkLevelToFloor });
+  const triggerAllFloorsBackfill = useAllFloorsBackfill({ levels, addLevel });
 
   const { gripSettings, updateGripSettings } = useGripContext();
   const notifications = useNotifications();
@@ -133,14 +128,10 @@ export function LevelPanel({
       level.floorId ? byId.get(level.floorId) : undefined
     );
   }, [levels, buildingFloors]);
-  const [newLevelName, setNewLevelName] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [activeEditingMode, setActiveEditingMode] = useState<EditingMode>(null);
   const [showToolbox, setShowToolbox] = useState(false);
-  const [showImportWizard, setShowImportWizard] = useState(false);
-  const [showLoadWizard, setShowLoadWizard] = useState(false);
   // ADR-465 — «Αντιγραφή κάτοψης σε όροφο»: source floor for the duplicate dialog.
   const [duplicateSource, setDuplicateSource] = useState<{ floorId: string; name: string } | null>(null);
 
@@ -152,25 +143,6 @@ export function LevelPanel({
     handleConfirmDelete,
     handleCloseLevel,
   } = useLevelDeletion({ levels, deleteLevel, userUid: user?.uid });
-
-  const handleAddLevel = async () => {
-    if (isAdding) return;
-
-    const safeName = newLevelName.trim() || t('panels.levels.defaultLevelName', { number: levels.length + 1 });
-
-    try {
-      setIsAdding(true);
-      const newLevelId = await addLevel(safeName);
-      setNewLevelName('');
-      if (newLevelId) {
-        setCurrentLevel(newLevelId);
-      }
-    } catch (error) {
-      console.error('❌ Failed to add level:', error);
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   const handleRename = (levelId: string) => {
     if (!editingName.trim()) {
@@ -218,7 +190,7 @@ export function LevelPanel({
   // ADR-420/465 — SSoT import-complete handler (extracted to level-panel-hooks),
   // reused by BOTH the import wizard and the cross-floor duplicate dialog.
   const handleImportComplete = useFloorplanImportComplete({
-    resolver: { levels, addLevel, linkLevelToFloor },
+    resolver: { levels, addLevel },
     currentLevelId,
     setCurrentLevel,
     updateLevelContext,
@@ -236,19 +208,11 @@ export function LevelPanel({
   return (
     <div className={`${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.PADDING} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}`}>
       <SceneInfoSection scene={scene || null} selectedEntityIds={selectedEntityIds} />
-      {onSceneImported && (
-        <Button variant="default" className="w-full" onClick={() => setShowImportWizard(true)}>
-          <Upload className={iconSizes.sm} />
-          {t('toolbar.importFloorplanWizard')}
-        </Button>
-      )}
-      {(currentLevel?.floorId || currentLevel?.buildingId || currentLevel?.projectId) && (
-        <Button variant="outline" className="w-full" onClick={() => setShowLoadWizard(true)}>
-          <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
-        </Button>
-      )}
-      {/* ADR-678 — round-trip: «κατέβασμα» υλικών/χρωμάτων από C4D OBJ πίσω στα BIM στοιχεία. */}
-      <C4dMaterialImportButton />
+      {/* ADR-914 — ΕΝΑ σημείο εισόδου: νέο σχέδιο, αποθηκευμένο, ή εισαγωγή (κάτοψη / 3Δ αρχείο). */}
+      <OpenCreateLauncher
+        onImportComplete={onSceneImported ? handleImportComplete : undefined}
+        onDraftCreated={startEditing}
+      />
       <div className="w-full flex items-center gap-1">
         <button
           type="button"
@@ -414,44 +378,6 @@ export function LevelPanel({
             </div>
           )}
         </div>
-      )}
-      <FloorplanImportWizard
-        isOpen={showLoadWizard}
-        onClose={() => setShowLoadWizard(false)}
-        mode="load"
-        onLoad={async (fileId) => {
-          if (!currentLevelId) return;
-          const record = await DxfFirestoreService.loadFromStorage(fileId);
-          if (!record?.scene) throw new Error(t('panels.levels.storagePicker.error'));
-          // 🛡️ ADR-635 Φ C.18 — route the load-wizard through the SSoT import door
-          // (N.18, reuse) instead of a raw `setLevelScene`: the raw write was
-          // session-only (no per-entity first-save → hatches vanished on reload, no
-          // file-link → scene lost on hard refresh). `commitImportedScene` first-saves
-          // the per-entity docs and links the file to the level.
-          commitImportedScene(record.scene, {
-            targetLevelId: currentLevelId,
-            scope: {
-              levelId: currentLevelId,
-              floorId: currentLevel?.floorId ?? null,
-              floorplanId: fileId,
-            },
-            getLevelScene,
-            setLevelScene,
-            linkSceneFileToLevel: () => {
-              void linkSceneToLevel(currentLevelId, fileId, record.fileName ?? fileId);
-            },
-          });
-        }}
-      />
-      {onSceneImported && (
-        <FloorplanImportWizard
-          isOpen={showImportWizard}
-          onClose={() => setShowImportWizard(false)}
-          onComplete={(file, meta) => {
-            setShowImportWizard(false);
-            return handleImportComplete(file, meta);
-          }}
-        />
       )}
       {onSceneImported && duplicateSource && (
         <DuplicateFloorplanDialog

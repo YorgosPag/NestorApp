@@ -7,6 +7,8 @@ export interface DxfLevelDocument {
   isDefault: boolean;
   visible: boolean;
   floorId?: string | null;
+  /** ADR-914: το ακίνητο μιας κάτοψης ακινήτου — κάτοχος του αρχείου γέννησής της. */
+  propertyId?: string | null;
   sceneFileId?: string | null;
   sceneFileName?: string | null;
   companyId?: string;

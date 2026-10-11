@@ -7,7 +7,8 @@
  * κτιρίου** (SSoT = `useFloorsByBuilding`), αντιστοιχισμένη σε ένα DXF `Level`:
  *   - Υπάρχει level με `level.floorId === floor.id` → η καρτέλα κάνει switch.
  *   - Δεν υπάρχει → **virtual** καρτέλα (κενός όροφος)· κλικ = lazy provision
- *     ενός level μέσω του ADR-286 SSoT gateway (`addLevel`) + `updateLevelContext`.
+ *     ενός level μέσω του ενός provisioner (`provisionLevelForBinding`, ADR-914):
+ *     όροφος, κτήριο, τύπος και ετικέτα σε ΜΙΑ εγγραφή — όχι create + PATCH.
  *
  * Ορατότητα: όταν ο τρέχων level **ανήκει σε συγκεκριμένο κτίριο** (`buildingId`).
  * Δείκτης = `buildingId`, ΟΧΙ `floorplanType` — τα κενά building-storeys (που
@@ -21,6 +22,7 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 import { useLevelsContext } from '../../systems/levels/LevelsSystem';
+import { isStoreyLevelOf, provisionLevelForBinding } from '../../systems/levels/level-provision';
 import { useFloorsByBuilding, type FloorOption } from '@/components/properties/shared/useFloorsByBuilding';
 import { inferKindFromNumber } from '@/utils/floor-naming';
 import { canonicalFloorLongName } from '@/lib/floor/floor-label-bundle';
@@ -79,7 +81,6 @@ export function useFloorTabs(): UseFloorTabsResult {
     currentLevelId,
     addLevel,
     setCurrentLevel,
-    updateLevelContext,
     getLevelScene,
   } = useLevelsContext();
 
@@ -102,7 +103,8 @@ export function useFloorTabs(): UseFloorTabsResult {
   const levelByFloorId = useMemo(() => {
     const map = new Map<string, string>();
     for (const lvl of levels) {
-      if (lvl.floorId && !map.has(lvl.floorId)) map.set(lvl.floorId, lvl.id);
+      // ADR-914: κάτοψη ακινήτου μοιράζεται τον όροφο χωρίς να ΕΙΝΑΙ ο όροφος — δεν πιάνει καρτέλα.
+      if (lvl.floorId && isStoreyLevelOf(lvl, lvl.floorId) && !map.has(lvl.floorId)) map.set(lvl.floorId, lvl.id);
     }
     return map;
   }, [levels]);
@@ -161,23 +163,18 @@ export function useFloorTabs(): UseFloorTabsResult {
       if (!buildingId || provisioningRef.current.has(tab.floorId)) return;
       provisioningRef.current.add(tab.floorId);
       try {
-        const newId = await addLevel(tab.label, false, tab.floorId);
-        if (newId) {
-          // floorplanType:'floor' keeps the strip visible after switching to
-          // the freshly-provisioned (empty) level; addLevel auto-selects it.
-          await updateLevelContext(newId, {
-            floorplanType: 'floor',
-            entityLabel: tab.label,
-            buildingId,
-            floorId: tab.floorId,
-          });
-          setCurrentLevel(newId);
-        }
+        // ADR-914 — πλήρης δέσμευση στη γέννηση: το νέο επίπεδο αυτο-επιλέγεται, και ο στόχος
+        // αποθήκευσής του (ADR-913) παράγεται από τη δέσμευσή του — δεν πρέπει να τη δει μισή.
+        const { levelId } = await provisionLevelForBinding(
+          { levels, addLevel },
+          { kind: 'storey', floorId: tab.floorId, buildingId, label: tab.label },
+        );
+        if (levelId) setCurrentLevel(levelId);
       } finally {
         provisioningRef.current.delete(tab.floorId);
       }
     },
-    [buildingId, addLevel, updateLevelContext, setCurrentLevel],
+    [buildingId, levels, addLevel, setCurrentLevel],
   );
 
   return {

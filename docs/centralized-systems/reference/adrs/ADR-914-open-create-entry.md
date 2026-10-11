@@ -1,0 +1,250 @@
+# ADR-914 — «Άνοιγμα / Δημιουργία»: ένα σημείο εισόδου για κάθε σχέδιο, και δέσμευση στη γέννηση
+
+| | |
+|---|---|
+| **Status** | 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ (2026-10-11, uncommitted)** — jest πράσινα· επαλήθευση σε browser: δες §9 |
+| **Date** | 2026-10-11 |
+| **Category** | DXF Viewer / Levels / Entry Point / Data Integrity |
+| **Canonical Location** | `src/subapps/dxf-viewer/systems/levels/level-provision.ts` · `src/subapps/dxf-viewer/ui/components/open-create/` · `src/components/ui/choice-cards.tsx` |
+| **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
+| **Σχετικά** | ADR-913 (στόχος γέννησης — Στάδιο 1) · ADR-399 (καρτέλες ορόφων) · ADR-845 Ο-18/Ο-19 (αδιαίρετη εμβέλεια) · ADR-286 (gateway επιπέδων) · ADR-420 (BIM floor scope) · ADR-448 («όλοι οι όροφοι») · ADR-236 (πολυεπίπεδη μονάδα) · ADR-678/683 (εισαγωγή 3Δ) · ADR-910 (στοίβα ορόφων) |
+
+---
+
+## 1. Πρόβλημα
+
+Η Παλέτα σχεδίασης είχε **τρία** κουμπιά — «Εισαγωγή Κάτοψης (Wizard)», «Φόρτωση από αποθήκη»,
+«Εισαγωγή 3Δ αρχείου» — και **καμία** ορατή διαδρομή για να ξεκινήσει κανείς κενό σχέδιο. Το
+ADR-913 έδωσε σε κάθε επίπεδο χωρίς αρχείο δικό του στόχο αποθήκευσης· έλειπε η **είσοδος**.
+
+Η είσοδος αποκάλυψε και ένα δεύτερο, σοβαρότερο πρόβλημα. Δύο σημεία γεννούσαν επίπεδο με το
+σχήμα **«δημιούργησε, μετά δέσε»**:
+
+| Σημείο | Πρώτη εγγραφή | Δεύτερη εγγραφή |
+|---|---|---|
+| `findOrCreateLevelForFloor` | `addLevel(name, false, floorId)` | `linkLevelToFloor` (PATCH: όροφος + κτήριο) |
+| `useFloorTabs.onSelectTab` | `addLevel(label, false, floorId)` | `updateLevelContext` (PATCH: τύπος, ετικέτα, κτήριο, όροφος) |
+
+Πριν το ADR-913 το ενδιάμεσο ήταν ακίνδυνο. Μετά, **όχι**: το νέο επίπεδο αυτο-επιλέγεται, ο
+loader ανοίγει στόχο γέννησης από τη δέσμευση που βλέπει **εκείνη τη στιγμή**, και ο στόχος
+παράγεται από τη δέσμευση (ADR-913 §3.2). Επίπεδο που γεννιέται αδέσμευτο και αποκτά έργο με
+δεύτερο αίτημα έχει στόχο πρώτα στο path της **εταιρείας** και μετά στο path του **έργου** — με
+το **ίδιο** ντετερμινιστικό `fileId`. Ίδιο αρχείο, δύο paths.
+
+> ⚠️ Εύρημα **ανάγνωσης κώδικα**. Δεν αναπαράχθηκε στην εφαρμογή και δεν υπάρχει μέτρηση ότι
+> συνέβη: για τον όροφο ο `floorId` ταξίδευε ήδη στην πρώτη εγγραφή, άρα ο κάτοχος ήταν σωστός από
+> την αρχή. Το παράθυρο θα άνοιγε με τις **νέες** ροές (κάτοψη έργου/κτηρίου), όπου όλη η δέσμευση
+> θα ερχόταν στη δεύτερη εγγραφή. Κλείστηκε πριν γραφτούν.
+
+## 2. Απόφαση
+
+### 2.1 Η δέσμευση γράφεται ΣΤΗ ΓΕΝΝΗΣΗ — μία εγγραφή
+
+`POST /api/dxf-levels` δέχεται πλέον **όλη** τη δέσμευση: `projectId`, `floorplanType`,
+`entityLabel`, `propertyId` (το `floorId` και το `buildingId` υπήρχαν — ADR-845 §7.15).
+
+```
+addLevel(name, setAsDefault?, floorId?, birth?: LevelBirthBinding)
+```
+
+Το τέταρτο όρισμα είναι προαιρετικό: οι υπάρχοντες καλούντες δεν αλλάζουν. Η υπογραφή δηλώνεται
+**μία** φορά (`AddLevel`, `systems/levels/config.ts`)· ήταν γραμμένη χωριστά στο context και στον
+resolver ορόφου. Τα πεδία μεταφράζονται σε σώμα αιτήματος / in-memory επίπεδο από **μία**
+συνάρτηση (`levelBirthFields`) — το `jscpd` έπιασε το δίδυμο πριν μείνει.
+
+### 2.2 Ένας provisioner
+
+`provisionLevelForBinding(provisioner, binding)` (`systems/levels/level-provision.ts`), pure ως
+προς React/Firebase:
+
+| `binding.kind` | Όροφος | Κτήριο | `floorplanType` | Όνομα | Ιδεμποτία |
+|---|---|---|---|---|---|
+| `storey` | ✔ | ✔ | `floor` | αυτούσιο (προβολή του ορόφου, ADR-451) | ανά όροφο |
+| `property` | ✔ | ✔ | `unit` (+ `propertyId`) | μοναδικό στο κτήριο | ανά (ακίνητο, όροφος) |
+| `building` | — | ✔ | `building` | μοναδικό στο κτήριο | όχι |
+| `project` | — | — | `project` | μοναδικό στον μισθωτή | όχι |
+| `draft` | — | — | — | «Πρόχειρο N», πάντα αριθμημένο | όχι |
+
+- Όροφος και κτήριο περνούν **πάντα** από `resolveLevelScopeAssignment` + `levelScopeFields`
+  (ADR-845 Ο-19): μαζί ή καθόλου.
+- `findOrCreateLevelForFloor` και `useFloorTabs.onSelectTab` **αναθέτουν εκεί**. Το
+  `LevelFloorResolver.linkLevelToFloor` έφυγε από τον τύπο: δεν υπάρχει πια δεύτερη εγγραφή.
+- `storey.untyped: true` κρατά **αυτούσια** τη συμπεριφορά της εισαγωγής και του «όλοι οι όροφοι»
+  (ADR-448): εκείνοι γεννούσαν όροφο **χωρίς** `floorplanType`/`entityLabel` και έτσι συνεχίζουν.
+  Το ADR-399 (2026-06-16) το είχε σημειώσει ως προαιρετικό follow-up· **δεν** έγινε εδώ, γιατί
+  αλλάζει τι δείχνει το LevelPanel για κάθε κενό όροφο — άλλη απόφαση.
+
+### 2.3 Το όνομα είναι μοναδικό εκεί που το ζητά ο διακομιστής
+
+Ο διακομιστής ελέγχει μοναδικότητα **ανά κτήριο**, και ανά μισθωτή όταν δεν υπάρχει κτήριο
+(ADR-845 §7.15). Ο client έλεγχε **πάντα** σε όλα τα φορτωμένα επίπεδα — άρα ένα «Ισόγειο» σε
+κτήριο Α μπλόκαρε το «Ισόγειο» του κτηρίου Β **πριν** φτάσει το αίτημα. Τώρα και οι δύο ρωτούν
+το ίδιο (`levelsSharingNameScope`, `systems/levels/utils.ts`): `validateLevelName(name, levels,
+buildingId?)` και `uniqueLevelName(base, levels, buildingId?, numbered?)`.
+
+### 2.4 `propertyId` στο επίπεδο — κλείνει το ADR-913 §7.1
+
+Ένα επίπεδο ακινήτου (`floorplanType: 'unit'`) δεν είχε στόχο γέννησης: το έγγραφό του δεν
+κρατούσε το ακίνητο, και ο `floorId` του θα το έκανε «κάτοψη ΟΡΟΦΟΥ».
+
+- `Level.propertyId` · Create + Update schema · γραμμή στο `buildLevelUpdates` (η άγκυρα
+  `update-allowlist-parity.test.ts` το απαιτεί) · `LevelContextUpdate.propertyId`.
+- `resolveDrawingBinding`: `'unit'` **με** `propertyId` ⇒ `property/{propertyId}`, κατηγορία
+  `floorplans`, σκοπός `property-floorplan`. **Χωρίς** `propertyId` ⇒ `null`, όπως πριν: τα παλιά
+  επίπεδα ακινήτου δεν αλλάζουν συμπεριφορά και **δεν μαντεύουμε** κάτοχο.
+- Ο `floorId` μένει στο επίπεδο και στο `saveContext`: είναι το κλειδί εμβέλειας των BIM
+  οντοτήτων (ADR-420). **Το ακίνητο είναι κάτοχος του αρχείου, ο όροφος είναι κάτοχος του μοντέλου.**
+- Ο οδηγός **εισαγωγής** γράφει πλέον `propertyId` όταν η επιλογή είναι ακίνητο, και `null` για
+  κάθε άλλη επιλογή (ρητός καθαρισμός — αλλιώς το επίπεδο θα κρατούσε το ακίνητο της
+  προηγούμενης εισαγωγής).
+- **Πολυεπίπεδη μονάδα (ADR-236):** το `WizardCompleteMeta` κουβαλά πλέον `levelFloorId`. Η νέα
+  κάτοψη δένεται στον όροφο του **επιπέδου της μονάδας** που επιλέχθηκε, όχι στον όροφο του
+  βήματος 4.
+
+**Συνέπεια που έπρεπε να θωρακιστεί:** μια κάτοψη ακινήτου μοιράζεται τον `floorId` του ορόφου της
+χωρίς να **είναι** ο όροφος. Όποιος ρωτά «ποιο επίπεδο είναι ο όροφος Χ;» πρέπει να την εξαιρεί:
+`isStoreyLevelOf(level, floorId)`. Το χρησιμοποιούν ο provisioner και οι καρτέλες ορόφων.
+⚠️ Δες §8.2 για τους υπόλοιπους αναγνώστες.
+
+### 2.5 Το παράθυρο: ΜΙΑ οθόνη, τρεις ενότητες
+
+Απόφαση Giorgio 2026-10-11: όχι δύο βήματα.
+
+| Ενότητα | Κάρτα | Τι κάνει | Πότε ανενεργή |
+|---|---|---|---|
+| Δημιουργία | Πρόχειρο σχέδιο | `draft` → αυτο-επιλογή → άμεση μετονομασία | ποτέ |
+| Δημιουργία | Κάτοψη για… | οδηγός σε mode `'create'` (έργο → κτίριο → όροφος → ακίνητο) | ποτέ |
+| Άνοιγμα | Από την αποθήκη | οδηγός σε mode `'load'` | το ανοιχτό επίπεδο δεν είναι δεμένο |
+| Εισαγωγή | Κάτοψη DXF / PDF | οδηγός σε mode `'import'` | δεν προσφέρεται χωρίς `onSceneImported` |
+| Εισαγωγή | 3Δ αρχείο | ο επιλογέας του ADR-678/683 | δεν υπάρχει ανοιχτό επίπεδο |
+
+- Ανενεργή κάρτα **λέει γιατί** (ο λόγος στη θέση της περιγραφής). Πριν, το «Φόρτωση από αποθήκη»
+  απλώς **εξαφανιζόταν**.
+- Οι κανόνες ζουν σε pure πίνακα (`open-create-cards.ts`)· το παράθυρο είναι μόνο παρουσίαση.
+- Ο οδηγός κάτοψης έχει **ένα** mount με τρία modes (ήταν δύο mounts στο `LevelPanel`). Βήμα 6 σε
+  mode `'create'` = `StepCreateConfirm`: δείχνει **πού θα ανήκει** η νέα κάτοψη και περιμένει
+  επιβεβαίωση. Το meta βγαίνει από το **ίδιο** `scopedWizardMeta` με τις άλλες δύο διαδρομές.
+- **Τα pipelines των τριών παλιών ενεργειών είναι αυτούσια.** `useFloorplanImportComplete`,
+  `commitImportedScene` και το `handleFiles` του 3Δ δεν άλλαξαν — άλλαξε το σημείο εισόδου τους.
+  Το `C4dMaterialImportButton` έγινε hook (`useMesh3dImport`: `openPicker` + `host`), γιατί ο
+  επιλογέας αρχείων και το dialog εισαγωγής πρέπει να μένουν προσαρτημένα **αφού** κλείσει το
+  παράθυρο.
+- **Κανένα άγγιγμα** σε `useLevelSceneLoader` / `useAutoSaveSceneManager`: ο στόχος του νέου
+  επιπέδου ανοίγει μόνος του από τον loader του ADR-913.
+
+### 2.6 `ChoiceCards` — ένα component καρτών επιλογής
+
+`src/components/ui/choice-cards.tsx`: πλέγμα πραγματικών `<button>` που φορούν την επιφάνεια του
+`Card` (`asChild`). Τρεις καταναλωτές: τύπος επαφής (`ContactTypeSelector`), κάρτα συντόμευσης
+του οδηγού (`StepEntitySelector`), το παράθυρο. Δεν ξέρει τομέα και δεν κουβαλά κείμενο.
+`size: 'md' | 'lg'` — το `lg` κρατά την προηγούμενη όψη της κάρτας συντόμευσης (μεγάλο εικονίδιο,
+ψηλή κάρτα). Στις Επαφές ο τίτλος κάρτας ήταν `<h3>` μέσα σε `Card role="button"`· τώρα είναι
+`<span>` μέσα σε `<button>` (το `<button>` δεν δέχεται επικεφαλίδα).
+
+## 3. Τι ΔΕΝ άλλαξε
+
+- **ADR-399/714/913:** ο στόχος ξαναδείχνεται σε κάθε αλλαγή επιπέδου, από το ίδιο το επίπεδο.
+- **ADR-286:** ο μόνος γραφέας επιπέδων είναι το gateway → `/api/dxf-levels`.
+- **ADR-845 Ο-18:** `assertLevelBuildingScope` τρέχει στη δημιουργία όπως πριν.
+- **CHECK 3.102:** κανένας όροφος δεν γράφεται εδώ· ο provisioner γεννά **επίπεδα**, όχι ορόφους.
+- **`provisioningRef`** του `useFloorTabs` (φρουρός διπλού κλικ) μένει.
+
+## 4. Τι κάνουν οι μεγάλοι
+
+Επαληθευμένο με αναζήτηση στις 2026-10-11 (προηγούμενη συνεδρία, handoff §4)· **δεν**
+ξαναελέγχθηκε σε αυτή.
+
+- **Revit:** αρχική με Open/New και πρόσφατα αρχεία.
+- **ArchiCAD 23+:** παράθυρο εκκίνησης γύρω από τα πρόσφατα έργα.
+- **Figma:** «+ Create» με το Import μέσα· τα νέα αρχεία πάνε στα Drafts χωρίς δέσμευση — το
+  «Πρόχειρο» μας.
+
+Όπου αποκλίνουμε: στους μεγάλους το νέο αρχείο είναι **έγγραφο**· εδώ είναι **επίπεδο με
+κάτοχο**, και ο κάτοχος ορίζεται πριν από την πρώτη γραμμή. Η «Κάτοψη για…» δεν έχει αντίστοιχο
+εκεί, γιατί εκεί το έγγραφο δεν ανήκει σε όροφο ή ακίνητο.
+
+## 5. Το ADR-309 δεν υπάρχει ως έγγραφο
+
+Ο κώδικας και άλλα ADR αναφέρουν «ADR-309» (`floorplanType`, `entityLabel`, `projectId` στο
+επίπεδο, mode `'load'` του οδηγού). **Δεν υπάρχει αρχείο `ADR-309-*.md`.** Δεν δημιουργήθηκε εδώ:
+ό,τι αφορά τα πεδία αυτά στη γέννηση του επιπέδου τεκμηριώνεται σε αυτό το ADR, και οι αναφορές
+στον κώδικα μένουν ως ιστορικές.
+
+## 6. Αρχεία
+
+Μονοπάτια χωρίς πρόθεμα = κάτω από `src/subapps/dxf-viewer/`.
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `systems/levels/level-provision.ts` | **νέο** — ο ένας provisioner · `uniqueLevelName` · `isStoreyLevelOf` |
+| `systems/levels/config.ts` | `Level.propertyId` · `LevelBirthBinding` · `AddLevel` |
+| `systems/levels/utils.ts` | `levelsSharingNameScope` · `levelBirthFields` · μηνύματα ονόματος σε κλειδιά |
+| `systems/levels/hooks/useLevelOperations.ts` | `addLevel(…, birth)` · `LevelContextUpdate.propertyId` |
+| `systems/levels/level-floor-resolution.ts` | αναθέτει στον provisioner· `LevelFloorResolver` = `LevelProvisioner` |
+| `systems/levels/level-drawing-birth.ts` | κλάδος ακινήτου στο `resolveDrawingBinding` |
+| `hooks/data/useFloorTabs.ts` | αναθέτει στον provisioner· `isStoreyLevelOf` |
+| `ui/components/open-create/OpenCreateLauncher.tsx` | **νέο** — το ένα κουμπί + host οδηγού και 3Δ |
+| `ui/components/open-create/OpenCreateDialog.tsx` | **νέο** — παρουσίαση |
+| `ui/components/open-create/open-create-cards.ts` | **νέο** — pure πίνακας καρτών και κανόνων |
+| `ui/components/open-create/useOpenCreateActions.ts` | **νέο** — πρόχειρο · κάτοψη για… · φόρτωση |
+| `ui/components/open-create/wizard-meta-binding.ts` | **νέο** — `WizardCompleteMeta` → δέσμευση |
+| `ui/components/open-create/useMesh3dImport.tsx` | μετονομασία του `C4dMaterialImportButton.tsx` σε hook |
+| `ui/components/LevelPanel.tsx` · `level-panel-hooks.ts` | 3 κουμπιά + 2 mounts → launcher· νεκρός κώδικας έξω· `propertyId` στην εισαγωγή |
+| `src/app/api/dxf-levels/dxf-levels.{schemas,handlers,types}.ts` | πλήρης δέσμευση στο Create· `propertyId` στο Update |
+| `src/features/floorplan-import/FloorplanImportWizard.tsx` | mode `'create'` · `levelFloorId` στο meta |
+| `src/features/floorplan-import/components/StepCreateConfirm.tsx` | **νέο** — βήμα 6 του mode `'create'` |
+| `src/components/ui/choice-cards.tsx` | **νέο** — κοινές κάρτες επιλογής |
+| `src/components/contacts/creation/ContactTypeSelector.tsx` · `StepEntitySelector.tsx` | καταναλωτές του `ChoiceCards` |
+| `src/i18n/locales/{el,en}/{dxf-viewer-panels,files-media}.json` · `src/types/i18n.ts` | `panels.openCreate.*` · `panels.levels.nameErrors.*` · `floorplanImport.create.*` |
+
+## 7. Tests
+
+| Suite | Τι κλειδώνει |
+|---|---|
+| `level-provision.test.ts` (18) | μοναδικό όνομα στην εμβέλεια του διακομιστή· ιδεμποτία ορόφου και ακινήτου· **όλη η δέσμευση σε ΕΝΑ αίτημα**· η κάτοψη ακινήτου δεν είναι «το επίπεδο του ορόφου» |
+| `OpenCreateDialog.test.tsx` (12) | τρεις ενότητες / πέντε κάρτες· κανόνες ενεργοποίησης με λόγο· μετάφραση επιλογής οδηγού → δέσμευση |
+| `level-drawing-birth.test.ts` (+1) | κλάδος ακινήτου με τον πραγματικό `buildStoragePath`· χωρίς `propertyId` ⇒ `null` |
+| `dxf-levels.schemas.test.ts` (+4) | πεδία δέσμευσης στο Create· `propertyId` σε Create και Update |
+| `update-allowlist-parity.test.ts` | (υπάρχουσα άγκυρα) το `propertyId` έχει γραμμή στον handler |
+| `useFloorTabs.test.ts` · `ensure-levels-for-building.test.ts` | ενημερώθηκαν: μία εγγραφή, κανένα `updateLevelContext`/`linkLevelToFloor` |
+| `choice-cards.test.tsx` (5) | κάρτα-κουμπί· ανενεργή δεν επιλέγεται και λέει γιατί· `size` |
+
+Επηρεαζόμενες σουίτες (`systems/levels`, `hooks/scene`, `api/dxf-levels`, `open-create`,
+`useFloorTabs`, `choice-cards`): **33 suites / 389 tests πράσινα.** `jscpd:diff` καθαρό στα 23
+αρχεία. `test:i18n-types-freshness` πράσινο. **ΟΧΙ `tsc`** (N.17) — δες §8.1.
+
+## 8. Γνωστά όρια
+
+1. **`tsc` δεν έχει τρέξει** ούτε για το Στάδιο 1 (ADR-913) ούτε για αυτό. Το
+   `src/subapps/dxf-viewer/**` εξαιρείται από το root `tsconfig`, άρα το pre-commit hook **δεν**
+   το καλύπτει· το βλέπει μόνο το CI (CHECK 3.29). Η υπογραφή του `addLevel` άλλαξε.
+2. **Άλλοι αναγνώστες του `level.floorId`.** Δεκατέσσερα αρχεία του viewer συγκρίνουν `floorId`.
+   Ελέγχθηκαν και θωρακίστηκαν **δύο** («ποιο επίπεδο είναι ο όροφος»: provisioner, καρτέλες).
+   Οι υπόλοιποι (3Δ aggregator, underlay, θεμελίωση, ειδοποίηση απώλειας κάτοψης) **δεν**
+   ελέγχθηκαν έναντι επιπέδου ακινήτου που μοιράζεται όροφο με το επίπεδο του ορόφου. Το σχήμα
+   δεν είναι νέο — η εισαγωγή κάτοψης ακινήτου έδινε ήδη `floorplanType: 'unit'` σε επίπεδο με
+   `floorId` — αλλά πριν υπήρχε **ένα** τέτοιο επίπεδο ανά όροφο, τώρα μπορούν να συνυπάρχουν.
+3. **Μοναδικότητα ονόματος πρόχειρου.** Το «Πρόχειρο N» υπολογίζεται από τα **φορτωμένα**
+   επίπεδα. Όταν η λίστα είναι στενεμένη σε κτήριο (`?bldg=`, ADR-845), ο διακομιστής μπορεί να
+   απαντήσει 409· ο χρήστης βλέπει το σφάλμα και ξαναδοκιμάζει. Δεν υπάρχει αυτόματη επανάληψη.
+4. **Πρόχειρο χωρίς έργο:** ισχύει το ADR-913 §7.2 (το BIM θέλει `projectId`).
+5. **Μετονομασία πρόχειρου μετά την πρώτη αποθήκευση:** το όνομα του αρχείου γέννησης μένει το
+   αρχικό («Πρόχειρο 1.dxf»). Το όνομα του **επιπέδου** αλλάζει κανονικά.
+6. **Αρχείο γέννησης ακινήτου χωρίς `levelFloorId`:** για πολυεπίπεδη μονάδα ο όροφος του
+   επιπέδου της μπαίνει στο επίπεδο (`floorId`), αλλά το FileRecord δεν κουβαλά ξεχωριστό
+   `levelFloorId` όπως το κουβαλά το ανέβασμα του οδηγού εισαγωγής. Δεν ελέγχθηκε πώς το
+   διαβάζει η καρτέλα κατόψεων του ακινήτου.
+7. **Αχρησιμοποίητα κλειδιά:** `toolbar.importFloorplanWizard`, `panels.levels.loadFromStorage`,
+   `c4dMaterialImport.button` δεν έχουν πια καταναλωτή. Δεν αφαιρέθηκαν.
+8. **Εκτός εμβέλειας:** «+ Νέο…» μέσα στα βήματα επιλογής (Στάδιο 3)· «Πρόσφατα σχέδια» στην
+   ενότητα Άνοιγμα (πρόταση, θέλει δικό της ερώτημα και πιθανό δείκτη Firestore).
+
+## 9. Επαλήθευση σε browser
+
+ΑΝΑΜΕΝΕΙ — συμπληρώνεται στο changelog.
+
+## 10. Changelog
+
+- **2026-10-11 — v1.0 (Opus 5.5).** UNCOMMITTED. Στάδιο 2, Φέτες Α + Β + Γ. Ένα κουμπί «Άνοιγμα /
+  Δημιουργία» με παράθυρο μίας οθόνης· δέσμευση στη γέννηση (μία εγγραφή)· ένας provisioner·
+  `propertyId` στο επίπεδο (κλείνει ADR-913 §7.1)· `ChoiceCards`. **ΟΧΙ tsc (N.17).**

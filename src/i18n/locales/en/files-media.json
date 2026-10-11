@@ -87,7 +87,8 @@
       "property": "Property",
       "unit": "Property",
       "upload": "Upload",
-      "select": "Select"
+      "select": "Select",
+      "create": "Create"
     },
     "select": {
       "company": "Select company",
@@ -104,7 +105,10 @@
       "floor": "Upload Floor Floorplan",
       "loadProject": "Load General Project Floorplan",
       "loadBuilding": "Load General Building Floorplan",
-      "loadFloor": "Load Floor Floorplan"
+      "loadFloor": "Load Floor Floorplan",
+      "createProject": "Empty General Project Floorplan",
+      "createBuilding": "Empty General Building Floorplan",
+      "createFloor": "Empty Floor Floorplan"
     },
     "allFloors": {
       "label": "Load the entire building",
@@ -173,7 +177,16 @@
     "back": "Back",
     "next": "Next",
     "upload": "Upload",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "createTitle": "New Floorplan",
+    "create": {
+      "heading": "New empty floorplan",
+      "hint": "The floorplan is saved automatically as soon as you draw. If the floor already has a level, that one opens.",
+      "propertyLevel": "Property level",
+      "confirm": "Create",
+      "creating": "Creating…",
+      "error": "The floorplan could not be created."
+    }
   },
   "media": {
     "video": "Video",
