@@ -60,7 +60,7 @@ export interface LevelSystemActions extends ImportWizardActions, UseLevelOperati
   setCurrentFileName?: (fileName: string | null) => void;
   setAutoSaveEnabled?: (enabled: boolean) => void;
   /** 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection */
-  setFileRecordId?: (id: string | null) => void;
+  setFileRecordId?: (id: string | null, forLevelId?: string) => void;
   /** 🪜 ADR-358 Phase 8: reactive read of injected FileRecord id (for stair persistence floorplanId scope) */
   fileRecordId?: string | null;
   /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */

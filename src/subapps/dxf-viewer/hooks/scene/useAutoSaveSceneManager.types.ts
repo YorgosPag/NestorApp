@@ -18,7 +18,12 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   lastSaveTime: Date | null;
   saveStatus: 'idle' | 'saving' | 'success' | 'error';
   /** 🏢 ENTERPRISE: Inject existing FileRecord ID so cadFiles uses the same ID */
-  setFileRecordId: (id: string | null) => void;
+  /**
+   * ADR-913 — το προαιρετικό `forLevelId` δηλώνει ότι το `id` είναι στόχος **εισαγωγής** για
+   * εκείνο το επίπεδο, που περιμένει ακόμη το link της. Όσο εκκρεμεί, ο loader δεν ανοίγει
+   * στόχο γέννησης πάνω του (βλ. `getPendingLevelFileTarget`).
+   */
+  setFileRecordId: (id: string | null, forLevelId?: string) => void;
   /**
    * 🛡️ ADR-714 — δηλώνει σε ποιον όροφο ανήκει ένα επίπεδο.
    *
@@ -77,6 +82,17 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   markFileTargetOrphaned: (fileId: string) => void;
   /** 🛡️ ADR-469 v1.2 — orphaned-target latch (reader). See `markFileTargetOrphaned`. */
   isFileTargetOrphaned: (fileId: string | null | undefined) => boolean;
+  /**
+   * ADR-913 — σημαδεύει ένα `fileId` ως **στόχο γέννησης** επιπέδου χωρίς αρχείο: το
+   * FileRecord του νόμιμα δεν υπάρχει ακόμη, άρα η πρώτη εγγραφή το δημιουργεί αντί να
+   * κριθεί «ορφανή». Το `birthContext` ταξιδεύει με κάθε ticket γέννησης, ώστε ο προορισμός
+   * να μην εξαρτάται από το ambient context. Σβήνεται αυτόματα στην πρώτη επιτυχή εγγραφή.
+   */
+  markFileTargetUnborn: (fileId: string, birthContext: DxfSaveContext) => void;
+  /** ADR-913 — fileId εισαγωγής που περιμένει link για το επίπεδο, ή `null`. */
+  getPendingLevelFileTarget: (levelId: string) => string | null;
+  /** ADR-913 — κλείνει την εκκρεμότητα εισαγωγής ενός επιπέδου (απέκτησε `sceneFileId`). */
+  clearPendingLevelFileTarget: (levelId: string) => void;
   /**
    * 🏢 ADR-354 Phase B Part 1: full session reset for super admin company switch.
    * Cancels pending debounced auto-save, clears scenes + saveContext + fileRecordId +

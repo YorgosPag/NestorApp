@@ -17,6 +17,8 @@ export interface Level {
   order: number;
   isDefault: boolean;
   visible: boolean;
+  /** Ο μισθωτής του επιπέδου — γράφεται server-side στη δημιουργία (ADR-286). Κάτοχος του στόχου γέννησης (ADR-913). */
+  companyId?: string;
   floorId?: string;    // Σύνδεση με building floor (ADR-237, SPEC-237A)
   buildingId?: string; // Building ID del piano collegato — derivato al link-time (ADR-237)
   /** 🏢 ENTERPRISE: Persistent link to cadFiles/files document ID for scene auto-load */

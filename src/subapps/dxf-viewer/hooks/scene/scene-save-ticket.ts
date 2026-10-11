@@ -69,6 +69,13 @@ export interface SceneSaveTicket {
   readonly saveContext: DxfSaveContext | null;
   /** Το snapshot που θα γραφτεί (ήδη περασμένο από `stripForeignFloorBim`). */
   readonly scene: SceneModel;
+  /**
+   * ADR-913 — **εγγραφή γέννησης**: ο προορισμός είναι ο ντετερμινιστικός στόχος ενός
+   * επιπέδου χωρίς αρχείο (`level-drawing-birth.ts`), άρα το FileRecord του **νόμιμα δεν
+   * υπάρχει ακόμη**. Μόνο τότε ο executor διαβάζει το «δεν υπάρχει έγγραφο» ως «δημιούργησε»
+   * αντί για «ορφανό» (ADR-469). Απόν/`false` ⇒ η προϋπάρχουσα συμπεριφορά, αυτούσια.
+   */
+  readonly birth?: boolean;
 }
 
 /** Πεδία του ticket χωρίς τη σκηνή — βολικό για logging χωρίς το ~950KB blob. */
@@ -83,6 +90,38 @@ export type SceneSaveTicketIdentity = Omit<SceneSaveTicket, 'scene'>;
  */
 export function createSceneSaveTicket(input: SceneSaveTicket): SceneSaveTicket {
   return Object.freeze({ ...input });
+}
+
+/**
+ * ADR-913 — το injected save context **μόνο αν ανήκει στο αρχείο του ticket**, αλλιώς `null`.
+ *
+ * ## Γιατί
+ *
+ * Το `DxfSaveContext` είναι ambient: το γράφει ο loader όταν φορτώνει ένα επίπεδο και ο
+ * wizard στην εισαγωγή. Στη **γρήγορη διαδρομή** του loader (επίπεδο ήδη στη μνήμη) ο στόχος
+ * ξαναδείχνεται (`fileId`, όνομα) αλλά το context **όχι** — μένει του προηγούμενου επιπέδου.
+ * Το ticket έπαιρνε τότε `fileId` του Α με `canonicalScenePath` του Β: η σκηνή του Α στο
+ * blob του Β. Ίδια οικογένεια με το ADR-399/714, από την πόρτα που είχε μείνει ανοιχτή.
+ *
+ * ## Ο κανόνας (ντετερμινιστικός, χωρίς δίκτυο)
+ *
+ * Το context ανήκει στο `fileId` όταν το δηλώνει ρητά (`fileRecordId`) **ή** όταν το path
+ * του περιέχει το `fileId` ως όνομα αρχείου — το canonical path το εμπεριέχει πάντα
+ * (ADR-709: `…/files/{fileId}.{ext}`). Ξένο context ⇒ απορρίπτεται ολόκληρο: ο executor
+ * επιλύει το path από το ίδιο το FileRecord, και ξένα `filesCategory`/`purpose` δεν
+ * γράφονται ποτέ πάνω στο αρχείο άλλου επιπέδου.
+ *
+ * Χωρίς γνωστό `fileId` (πρώτο save παλιού τύπου) δεν υπάρχει με τι να συγκριθεί ⇒ το
+ * context γίνεται δεκτό όπως πριν.
+ */
+export function ownedSaveContext(
+  context: DxfSaveContext | null,
+  fileId: string | null,
+): DxfSaveContext | null {
+  if (!context || !fileId) return context;
+  if (context.fileRecordId === fileId) return context;
+  const fileName = context.canonicalScenePath?.split('/').pop() ?? '';
+  return fileName.startsWith(`${fileId}.`) ? context : null;
 }
 
 /** Η ταυτότητα του ticket χωρίς τη σκηνή (για logger/telemetry). */

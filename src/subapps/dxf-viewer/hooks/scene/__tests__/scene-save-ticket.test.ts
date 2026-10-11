@@ -9,7 +9,13 @@
  */
 
 import type { SceneModel } from '../../../types/scene';
-import { countDxfEntities, createSceneSaveTicket, isDxfWipe, ticketIdentity } from '../scene-save-ticket';
+import {
+  countDxfEntities,
+  createSceneSaveTicket,
+  isDxfWipe,
+  ownedSaveContext,
+  ticketIdentity,
+} from '../scene-save-ticket';
 
 type SceneEntity = SceneModel['entities'][number];
 
@@ -149,5 +155,49 @@ describe('isDxfWipe', () => {
   it('πιάνει και την τελείως κενή σκηνή πάνω από γεμάτο προορισμό', () => {
     expect(isDxfWipe(scene(), 500)).toBe(true);
     expect(isDxfWipe(null, 500)).toBe(true);
+  });
+});
+
+/**
+ * ADR-913 — το ambient save context γίνεται δεκτό ΜΟΝΟ αν ανήκει στο αρχείο του ticket.
+ *
+ * ΤΟ ΣΕΝΑΡΙΟ: όροφοι Α και Β φορτωμένοι στη μνήμη. Ο χρήστης πάει Β → Α. Στη γρήγορη
+ * διαδρομή του loader ο στόχος ξαναδείχνεται στο αρχείο του Α, αλλά το context μένει του Β.
+ * Χωρίς τον φρουρό, το ticket έπαιρνε `fileId` του Α με `canonicalScenePath` του Β.
+ */
+describe('ownedSaveContext', () => {
+  const FILE_A = 'file_90ee1df2';
+  const FILE_B = 'file_751f0286';
+  const pathOf = (fileId: string) =>
+    `companies/c/entities/floor/flr_x/domains/construction/categories/floorplans/files/${fileId}.scene.json`;
+
+  it('ΤΟ ΣΕΝΑΡΙΟ: context του Β με fileId του Α ⇒ απορρίπτεται ολόκληρο', () => {
+    const contextOfB = { canonicalScenePath: pathOf(FILE_B), floorId: 'flr_B', filesCategory: 'floorplans' as const };
+    expect(ownedSaveContext(contextOfB, FILE_A)).toBeNull();
+  });
+
+  it('δέχεται context που δείχνει στο αρχείο του ticket μέσω path', () => {
+    const contextOfA = { canonicalScenePath: pathOf(FILE_A), floorId: 'flr_A' };
+    expect(ownedSaveContext(contextOfA, FILE_A)).toBe(contextOfA);
+  });
+
+  it('δέχεται context που δηλώνει ρητά το αρχείο του (wizard), ακόμη και χωρίς path', () => {
+    const wizardContext = { fileRecordId: FILE_A, floorId: 'flr_A' };
+    expect(ownedSaveContext(wizardContext, FILE_A)).toBe(wizardContext);
+  });
+
+  it('id που είναι ΠΡΟΘΕΜΑ άλλου id δεν ξεγελά τον έλεγχο', () => {
+    const context = { canonicalScenePath: pathOf(`${FILE_A}0`) };
+    expect(ownedSaveContext(context, FILE_A)).toBeNull();
+  });
+
+  it('context χωρίς path και χωρίς δήλωση αρχείου ⇒ δεν αποδεικνύει ιδιοκτησία', () => {
+    expect(ownedSaveContext({ floorId: 'flr_B' }, FILE_A)).toBeNull();
+  });
+
+  it('χωρίς γνωστό fileId δεν υπάρχει με τι να συγκριθεί ⇒ όπως πριν', () => {
+    const context = { canonicalScenePath: pathOf(FILE_B) };
+    expect(ownedSaveContext(context, null)).toBe(context);
+    expect(ownedSaveContext(null, FILE_A)).toBeNull();
   });
 });

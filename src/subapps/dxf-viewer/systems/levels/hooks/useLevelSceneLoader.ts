@@ -9,7 +9,9 @@ import { countDxfEntities, type SceneSaveTicket } from '../../../hooks/scene/sce
 import type { SceneSaveBlockReason } from '../../../hooks/scene/execute-scene-save';
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { isCrossFloorSceneLink } from '../cross-floor-link';
-import { isCadLinkableEntityType } from '@/config/domain-constants';
+import { buildLoadedLevelSaveContext } from '../level-loaded-save-context';
+import { openFileLessLevelTarget } from '../level-file-less-target';
+import { useAuth } from '@/auth/hooks/useAuth';
 import {
   reconcileLoadedSceneBim,
   reconcileLoadedSceneBimPreserving,
@@ -67,6 +69,8 @@ export function useLevelSceneLoader({
 }: UseLevelSceneLoaderParams): UseLevelSceneLoaderResult {
   const [sceneLoading, setSceneLoading] = useState(false);
   const { t } = useTranslation('dxf-viewer');
+  // ADR-913 — κάτοχος του στόχου γέννησης όταν το έγγραφο του επιπέδου δεν φέρει companyId.
+  const { user } = useAuth();
 
   // 🏢 ENTERPRISE: AbortController ref for cancelling pending scene loads on rapid level switch
   const sceneLoadAbortRef = React.useRef<AbortController | null>(null);
@@ -170,9 +174,16 @@ export function useLevelSceneLoader({
     sceneManager.setLevelFloorScope?.(currentLevelId, level?.floorId ?? null);
 
     if (sceneFileId && !isOrphaned) {
+      sceneManager.clearPendingLevelFileTarget?.(currentLevelId);
       sceneManager.setFileRecordId?.(sceneFileId);
       sceneManager.setCurrentFileName?.(level?.sceneFileName ?? null);
-    } else {
+    } else if (
+      // ADR-913 — επίπεδο ΧΩΡΙΣ αρχείο: ανοίγει τον ΔΙΚΟ του στόχο γέννησης αντί να μείνει
+      // χωρίς αποθήκη (ποτέ κληρονομημένο από το προηγούμενο επίπεδο — ADR-399 ακέραιο).
+      // Η απόφαση ζει στο `level-file-less-target.ts`· ορφανό `sceneFileId` μένει κλειστό.
+      isOrphaned
+      || openFileLessLevelTarget(sceneManager, level, level?.companyId ?? user?.companyId) === 'reset'
+    ) {
       resetDxfAutoSaveTarget();
     }
 
@@ -317,27 +328,10 @@ export function useLevelSceneLoader({
           // resume path overwrote the Wizard-injected context with a
           // path-only object and `saveContext.floorId` flipped to
           // `undefined` immediately after the import.
-          if (fileRecord.storagePath || fileRecord.entityType) {
-            sceneManager.setSaveContext?.({
-              ...(fileRecord.storagePath
-                ? { canonicalScenePath: DxfFirestoreService.deriveScenePath(fileRecord.storagePath) }
-                : {}),
-              ...(fileRecord.companyId ? { companyId: fileRecord.companyId } : {}),
-              ...(fileRecord.projectId ? { projectId: fileRecord.projectId } : {}),
-              // Fail-closed: a historical FileRecord may carry an entityType the CAD
-              // pipeline cannot link (e.g. 'unit'). Dropping the key beats casting it
-              // into the save context, where it would 400 the next save.
-              ...(isCadLinkableEntityType(fileRecord.entityType)
-                ? { entityType: fileRecord.entityType }
-                : {}),
-              ...(fileRecord.entityType === 'floor' && fileRecord.entityId
-                ? { floorId: fileRecord.entityId }
-                : {}),
-              ...(fileRecord.entityType === 'building' && fileRecord.entityId
-                ? { buildingId: fileRecord.entityId }
-                : {}),
-            });
-          }
+          // Χτίζεται από τον pure SSoT (`level-loaded-save-context.ts`) — δηλώνει και ΡΗΤΑ
+          // σε ποιο αρχείο ανήκει (ADR-913), ώστε το ticket να μη δεχτεί ποτέ ξένο context.
+          const loadedContext = buildLoadedLevelSaveContext(fileRecord, sceneFileId);
+          if (loadedContext) sceneManager.setSaveContext?.(loadedContext);
           loadedSceneLevelsRef.current.add(currentLevelId);
         } else {
           // File record/scene missing (orphaned sceneFileId, corrupted, or deleted).
@@ -455,11 +449,10 @@ export function useLevelSceneLoader({
   const { setOnSaveBlocked } = sceneManager;
   useEffect(() => {
     setOnSaveBlocked?.((reason: SceneSaveBlockReason) => {
-      toast.error(
-        reason === 'cross-floor-target'
-          ? t('scene.crossFloorSaveBlocked')
-          : t('scene.dxfWipeBlocked'),
-      );
+      // Ρητές κλήσεις `t('…')` ανά λόγο — τα κλειδιά μένουν ορατά στον έλεγχο i18n (CHECK 3.8).
+      if (reason === 'cross-floor-target') toast.error(t('scene.crossFloorSaveBlocked'));
+      else if (reason === 'retired-target') toast.error(t('scene.birthTargetRetired'));
+      else toast.error(t('scene.dxfWipeBlocked'));
     });
     return () => {
       setOnSaveBlocked?.(null);

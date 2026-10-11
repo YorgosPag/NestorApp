@@ -146,7 +146,9 @@ export function useSceneState() {
       // Prefer explicitly-passed fileRecordId; fall back to saveContext.fileRecordId (from wizard).
       const resolvedFileRecordId = fileRecordId ?? saveContext?.fileRecordId;
       if (resolvedFileRecordId && levelsSystem.setFileRecordId) {
-        levelsSystem.setFileRecordId(resolvedFileRecordId);
+        // ADR-913 — δηλώνεται ΚΑΙ το επίπεδο-στόχος: όσο το link εκκρεμεί, ο loader δεν
+        // ανοίγει στόχο γέννησης πάνω από τον στόχο αυτής της εισαγωγής.
+        levelsSystem.setFileRecordId(resolvedFileRecordId, targetLevelId);
       }
       // 🛡️ ADR-526 Φ5a / ADR-399 — link the level to its canonical FileRecord NOW
       // (deterministic, not the 2s debounced round-trip) so the scene blob survives a

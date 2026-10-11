@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "64e1f196e555f13a1fe0561d4790d8e00035047994caab57f41b4ef884b09bb7",
+  "inputsSha256": "2b989ca764141414bc9d5b1200bc21aa7cf441674e5ca0a8700a0c9344479de6",
   "languages": [
     "el"
   ],
@@ -1356,10 +1356,11 @@
     "src/subapps/dxf-viewer/security/DxfSecurityValidator.ts": "97b8920a3fbc9ecf3de6cf7ba09ce8578f07e035658eaab174b6e9f83cc39fce",
     "src/subapps/dxf-viewer/services/dxf-firestore-logger.ts": "bcaa997a1c321379993eb1adb4d7a1822c0515ab7ec1911d214e675d937dbd6b",
     "src/subapps/dxf-viewer/services/dxf-firestore-storage.impl.ts": "bc438153e86b11e3a3188db2339bbbcb1a7fc765fe75a08cd7c0997a666e3b72",
-    "src/subapps/dxf-viewer/services/dxf-firestore.service.ts": "20cfbfb0a8bcf4a8e1e54769939e74d993d59e05e24f1674f8de832ed5a98c02",
+    "src/subapps/dxf-viewer/services/dxf-firestore.service.ts": "fdf4f4768c81398d7b7eb368c7bd20b97362669c76560796973ae2fa58a9ca60",
     "src/subapps/dxf-viewer/services/dxf-firestore.types.ts": "d9c3cf1657927b09d523e59cf9abd10229555e07e82c6930efb8471fe742399d",
     "src/subapps/dxf-viewer/services/dxf-scene-json.ts": "fcca2a76a5d7f03149b22986036e8d74ef66c06ef66af3a2e3abc246ac4be8c6",
     "src/subapps/dxf-viewer/services/dxf-scene-migration.ts": "86fa603d8bcf6e66f3fd79809b806639136b1d254e15e3387a2fa65c1546aea9",
+    "src/subapps/dxf-viewer/services/dxf-scene-path.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/systems/array/types.ts": "aad3031a0ec63edf06a9da7d8653a9fea9e16fe5b4b8a547f65648acfcecd1be",
     "src/subapps/dxf-viewer/systems/geo-referencing/projected-crs-envelopes.ts": "566b47b062524fd61206bca82116e050fcb4c3f72fc2d2560b4c03f196943b50",
     "src/subapps/dxf-viewer/systems/topography/topo-types.ts": "aad3031a0ec63edf06a9da7d8653a9fea9e16fe5b4b8a547f65648acfcecd1be",

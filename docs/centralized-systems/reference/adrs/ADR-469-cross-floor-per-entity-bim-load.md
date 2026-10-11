@@ -183,7 +183,15 @@ mep-fitting, mep-manifold, mep-radiator, mep-boiler, mep-water-heater, mep-under
 - `hooks/data/__tests__/useFloors{3DAggregator,2DUnderlay}.test.ts` — useAuth + loader mocks.
 
 ## 5. Changelog
-- **v1.2 (2026-06-17)** — Orphaned-target **latch SSoT** (residual ADR-293 throw on the same
+- **2026-10-11 (ADR-913 — διόρθωση τεκμηρίωσης §2.5 + η γέννηση δεν είναι ορφάνια, Opus 5.5)** — UNCOMMITTED.
+  **Διόρθωση:** το §2.5 έγραφε ότι ο belt #2 δεν αγγίζει «the legit new-standalone path (`fileId` unknown →
+  `generateFileId`), so a genuine first save is never suppressed». **Ο κώδικας διαφωνούσε:** εκείνο το μονοπάτι
+  γεννούσε id αλλά κανείς δεν έχτιζε `canonicalScenePath` ⇒ το `saveToStorageImpl` πετούσε ADR-293 και το save
+  έβγαινε `failed`. Το «γνήσιο πρώτο save» δεν καταστελλόταν — απλώς **δεν μπορούσε να πετύχει**.
+  **Τι αλλάζει:** ένα επίπεδο χωρίς αρχείο ανοίγει πλέον δικό του ντετερμινιστικό στόχο γέννησης (ADR-913). Ο latch
+  μένει αυτούσιος για κάθε `sceneFileId` που χάθηκε· η μόνη εξαίρεση είναι ticket με ρητή σημαία `birth`, όπου
+  «δεν υπάρχει έγγραφο» σημαίνει «δημιούργησε». Ο ίδιος latch κλειδώνει και αποσυρμένο αρχείο γέννησης
+  (`retired-target`), ώστε το μήνυμα να βγει μία φορά.- **v1.2 (2026-06-17)** — Orphaned-target **latch SSoT** (residual ADR-293 throw on the same
   `file_80efad96…` floor). FIX (Β) reset-only was incomplete: the load effect re-opened the
   auto-save target synchronously on every `levels` snapshot before the async orphaned-detection.
   New `orphanedFileTargetsRef` Set in `useAutoSaveSceneManager` + `markFileTargetOrphaned`/

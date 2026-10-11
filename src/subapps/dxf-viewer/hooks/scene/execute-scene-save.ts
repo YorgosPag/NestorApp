@@ -34,8 +34,8 @@ import {
   type SceneSaveTicket,
 } from './scene-save-ticket';
 
-/** Γιατί ματαιώθηκε μια εγγραφή. Και οι δύο τιμές έχουν i18n μήνυμα προς τον χρήστη. */
-export type SceneSaveBlockReason = 'cross-floor-target' | 'dxf-wipe';
+/** Γιατί ματαιώθηκε μια εγγραφή. Κάθε τιμή έχει i18n μήνυμα προς τον χρήστη. */
+export type SceneSaveBlockReason = 'cross-floor-target' | 'dxf-wipe' | 'retired-target';
 
 /** Γιατί παραλείφθηκε σιωπηλά μια εγγραφή (αναμενόμενο, χωρίς μήνυμα χρήστη). */
 export type SceneSaveSkipReason = 'orphaned-target' | 'unresolvable-target';
@@ -77,19 +77,23 @@ interface ResolvedTarget {
 async function resolveKnownFileTarget(
   ticket: SceneSaveTicket,
   fileId: string,
-): Promise<ResolvedTarget | 'orphaned' | 'cross-floor'> {
-  if (ticket.canonicalScenePath) {
-    // Path ήδη γνωστό, αλλά η ιδιοκτησία ΠΡΕΠΕΙ να επαληθευτεί ούτως ή άλλως —
-    // ένα cached path δεν αποδεικνύει ότι ο προορισμός ανήκει σε αυτόν τον όροφο.
-    const scope = await DxfFirestoreService.getFileFloorScope(fileId);
-    if (!scope) return 'orphaned';
-    if (isCrossFloorSceneLink(scope, ticket.floorId)) return 'cross-floor';
-    return { fileId, canonicalScenePath: ticket.canonicalScenePath };
-  }
-
+): Promise<ResolvedTarget | 'orphaned' | 'cross-floor' | 'retired'> {
+  // Η ιδιοκτησία επαληθεύεται ΠΑΝΤΑ, ακόμη κι όταν το path είναι ήδη γνωστό — ένα cached
+  // path δεν αποδεικνύει ότι ο προορισμός ανήκει σε αυτόν τον όροφο.
   const scope = await DxfFirestoreService.getFileFloorScope(fileId);
-  if (!scope?.storagePath) return 'orphaned';
+
+  if (!scope) {
+    // ADR-913 — εγγραφή γέννησης: το έγγραφο νόμιμα δεν υπάρχει ακόμη· το upsert το γεννά.
+    // Απαιτεί γνωστό path — χωρίς αυτό δεν υπάρχει πού να γραφτεί, άρα μένει «ορφανό».
+    return ticket.birth && ticket.canonicalScenePath
+      ? { fileId, canonicalScenePath: ticket.canonicalScenePath }
+      : 'orphaned';
+  }
   if (isCrossFloorSceneLink(scope, ticket.floorId)) return 'cross-floor';
+  // ADR-913 — το αρχείο γέννησης υπάρχει αλλά είναι στον κάδο/αρχείο: ΠΟΤΕ ανάσταση με merge.
+  if (ticket.birth && scope.retired) return 'retired';
+  if (ticket.canonicalScenePath) return { fileId, canonicalScenePath: ticket.canonicalScenePath };
+  if (!scope.storagePath) return 'orphaned';
   return {
     fileId,
     canonicalScenePath: DxfFirestoreService.deriveScenePath(scope.storagePath),
@@ -159,6 +163,14 @@ export async function executeSceneSave(
     if (resolved === 'orphaned') {
       deps.markFileTargetOrphaned(ticket.fileId!);
       return { status: 'skipped', reason: 'orphaned-target' };
+    }
+    if (resolved === 'retired') {
+      // Latch ώστε το μήνυμα να βγει ΜΙΑ φορά, όχι σε κάθε πληκτρολόγηση (ADR-469 belt #1).
+      deps.markFileTargetOrphaned(ticket.fileId!);
+      console.error('[SceneSave] ADR-913 — το αρχείο γέννησης του επιπέδου είναι αποσυρμένο', {
+        ...ticketIdentity(ticket),
+      });
+      return { status: 'blocked', reason: 'retired-target' };
     }
     if (resolved === 'cross-floor') {
       console.error('[SceneSave] ADR-714 — αποτροπή εγγραφής σε αρχείο άλλου ορόφου', {

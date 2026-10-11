@@ -20,7 +20,7 @@ import type { SceneModel } from '../../types/scene';
 // 🛡️ ADR-714 — immutable write identity. Το save παγώνει τον προορισμό του στο Τ₀
 // (scheduling) αντί να τον διαβάζει από refs στο Τ₀+2000ms (execution).
 import { executeSceneSave, type SceneSaveBlockReason } from './execute-scene-save';
-import { createSceneSaveTicket, type SceneSaveTicket } from './scene-save-ticket';
+import { createSceneSaveTicket, ownedSaveContext, type SceneSaveTicket } from './scene-save-ticket';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🚀 Ribbon-cascade fix (profiler 2026-06-28): the volatile scene save-status is
 // mirrored into a dedicated zero-React store so the AutoSaveStatus widget can
@@ -119,6 +119,14 @@ export function useAutoSaveSceneManager(
   // independently via floorId-keyed per-entity collections). A ref/Set — NOT React state —
   // so marking never triggers a re-render (ADR-040 micro-leaf / auto-save-storm safe).
   const orphanedFileTargetsRef = useRef<Set<string>>(new Set());
+  // ADR-913 — fileIds που είναι στόχοι ΓΕΝΝΗΣΗΣ (το FileRecord τους νόμιμα δεν υπάρχει ακόμη).
+  // Κρατά και το context γέννησης: ένα ticket γέννησης το κουβαλά πάντα, ακόμη κι αν το
+  // ambient context αντικατασταθεί στο μεταξύ (π.χ. από εισαγωγή χωρίς δικό της FileRecord).
+  // Ο μόνος γραφέας είναι ο `useLevelSceneLoader`· σβήνεται στην πρώτη επιτυχή εγγραφή.
+  const unbornFileTargetsRef = useRef<Map<string, DxfSaveContext>>(new Map());
+  // ADR-913 — levelId → fileId εισαγωγής που περιμένει το link της. Όσο εκκρεμεί, ο loader
+  // δεν ανοίγει στόχο γέννησης πάνω από τον στόχο της εισαγωγής.
+  const pendingLevelFileTargetRef = useRef<Map<string, string>>(new Map());
 
   /** Stable setter — updates ref (sync) and state (triggers re-render for consumers). */
   const setCurrentFileName = useCallback((fileName: string | null) => {
@@ -131,9 +139,10 @@ export function useAutoSaveSceneManager(
    * When set, auto-save writes to cadFiles using THIS ID instead of generating a new one.
    * This ensures cadFiles and files collections share the same document ID.
    */
-  const setFileRecordId = useCallback((id: string | null) => {
+  const setFileRecordId = useCallback((id: string | null, forLevelId?: string) => {
     injectedFileRecordIdRef.current = id;
     setFileRecordIdState(id);
+    if (id && forLevelId) pendingLevelFileTargetRef.current.set(forLevelId, id);
     // Cache against current filename (read from ref to avoid stale closure).
     // 🛡️ ADR-714 — το κλειδί περιλαμβάνει τον όροφο του injected context, αλλιώς αυτή
     // ακριβώς η γραμμή μόλυνε την cache για κάθε άλλο όροφο με το ίδιο όνομα αρχείου.
@@ -144,6 +153,22 @@ export function useAutoSaveSceneManager(
         id,
       );
     }
+  }, []);
+
+  /** ADR-913 — σημαδεύει ένα fileId ως στόχο γέννησης (βλ. `SceneSaveTicket.birth`). */
+  const markFileTargetUnborn = useCallback((fileId: string, birthContext: DxfSaveContext) => {
+    if (fileId) unbornFileTargetsRef.current.set(fileId, birthContext);
+  }, []);
+
+  /** ADR-913 — το fileId εισαγωγής που περιμένει link για αυτό το επίπεδο, ή `null`. */
+  const getPendingLevelFileTarget = useCallback(
+    (levelId: string): string | null => pendingLevelFileTargetRef.current.get(levelId) ?? null,
+    [],
+  );
+
+  /** ADR-913 — το επίπεδο απέκτησε `sceneFileId`: η εκκρεμότητα της εισαγωγής έκλεισε. */
+  const clearPendingLevelFileTarget = useCallback((levelId: string) => {
+    pendingLevelFileTargetRef.current.delete(levelId);
   }, []);
 
   /** 🛡️ ADR-714 — ο loader δηλώνει σε ποιον όροφο ανήκει κάθε επίπεδο. */
@@ -219,6 +244,8 @@ export function useAutoSaveSceneManager(
     scenePathCacheRef.current.clear();
     loadedFilesRef.current.clear();
     orphanedFileTargetsRef.current.clear();
+    unbornFileTargetsRef.current.clear();
+    pendingLevelFileTargetRef.current.clear();
     // 🛡️ ADR-714 — οι floor scopes και τα baselines ανήκουν στον ΠΡΟΗΓΟΥΜΕΝΟ tenant.
     // Αν επιβίωναν, ένα baseline του παλιού tenant θα έκρινε εγγραφή του νέου.
     levelFloorScopeRef.current.clear();
@@ -295,23 +322,26 @@ export function useAutoSaveSceneManager(
       // debounce δεν μπορεί πια να ανακατευθύνει την εγγραφή σε άλλο αρχείο — ούτε
       // χρειάζεται να ακυρώσουμε το pending save (καμία απώλεια δουλειάς).
       const floorId = levelFloorScopeRef.current.get(levelId) ?? null;
+      const fileId =
+        injectedFileRecordIdRef.current
+        ?? fileIdCacheRef.current.get(fileIdCacheKey(floorId, fileName))
+        ?? null;
+      // ADR-913 — context ΜΟΝΟ αν ανήκει στο αρχείο αυτού του ticket. Στη γρήγορη διαδρομή
+      // του loader το context μένει του προηγούμενου επιπέδου· ξένο path/κατηγορία δεν
+      // επιτρέπεται να ταξιδέψει με το fileId άλλου αρχείου.
+      const birthContext = fileId ? unbornFileTargetsRef.current.get(fileId) : undefined;
+      const saveContext = ownedSaveContext(injectedSaveContextRef.current, fileId) ?? birthContext ?? null;
       const ticket = createSceneSaveTicket({
         levelId,
         floorId,
         companyId: injectedSaveContextRef.current?.companyId ?? user?.companyId ?? null,
         userUid: user?.uid ?? null,
-        fileId:
-          injectedFileRecordIdRef.current
-          ?? fileIdCacheRef.current.get(fileIdCacheKey(floorId, fileName))
-          ?? null,
+        fileId,
         fileName,
-        canonicalScenePath: resolveKnownScenePath(
-          injectedSaveContextRef.current,
-          injectedFileRecordIdRef.current,
-          scenePathCacheRef.current,
-        ),
-        saveContext: injectedSaveContextRef.current,
+        canonicalScenePath: resolveKnownScenePath(saveContext, fileId, scenePathCacheRef.current),
+        saveContext,
         scene,
+        birth: !!birthContext,
       });
 
       // Clear existing timeout
@@ -335,6 +365,8 @@ export function useAutoSaveSceneManager(
           }
           fileIdCacheRef.current.set(fileIdCacheKey(ticket.floorId, ticket.fileName), outcome.fileId);
           persistedDxfBaselineRef.current.set(outcome.fileId, outcome.dxfCount);
+          // ADR-913 — το αρχείο γεννήθηκε· από εδώ ισχύει ο κανονικός έλεγχος ύπαρξης.
+          unbornFileTargetsRef.current.delete(outcome.fileId);
           setSaveStatus('success');
           setLastSaveTime(new Date());
           // 🏢 ENTERPRISE: Notify LevelsSystem to persist level→DXF association.
@@ -417,6 +449,9 @@ export function useAutoSaveSceneManager(
     setIsLoadingFromFirestore,
     markFileTargetOrphaned,
     isFileTargetOrphaned,
+    markFileTargetUnborn,
+    getPendingLevelFileTarget,
+    clearPendingLevelFileTarget,
     resetSceneSession,
   }), [
     sceneManager, setLevelSceneWithAutoSave, currentFileName,
@@ -424,6 +459,7 @@ export function useAutoSaveSceneManager(
     fileRecordId, saveContext,
     setFileRecordId, setLevelFloorScope, setPersistedDxfBaseline, setOnSaveBlocked,
     setCurrentFileName, setSaveContext, setOnSceneSaved, setIsLoadingFromFirestore,
-    markFileTargetOrphaned, isFileTargetOrphaned, resetSceneSession,
+    markFileTargetOrphaned, isFileTargetOrphaned, markFileTargetUnborn,
+    getPendingLevelFileTarget, clearPendingLevelFileTarget, resetSceneSession,
   ]);
 }

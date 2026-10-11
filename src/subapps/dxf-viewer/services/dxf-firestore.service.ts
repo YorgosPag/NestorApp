@@ -9,6 +9,7 @@ import {
 } from '../security/DxfSecurityValidator';
 import { dxfLogger, isExpectedError } from './dxf-firestore-logger';
 import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-firestore.types';
+import { deriveScenePath } from './dxf-scene-path';
 import {
   saveToStorageImpl,
   loadFromStorageImpl,
@@ -388,11 +389,8 @@ export class DxfFirestoreService {
    * This ensures scene JSON lives next to the original DXF in the canonical path.
    */
   static deriveScenePath(fileRecordStoragePath: string): string {
-    // Strip ALL trailing extensions (.dxf, .scene.json, .scene.scene.json, …)
-    // using the same regex the scene-API uses — guarantees both always write/read
-    // the same canonical path even if storagePath was previously corrupted.
-    const base = fileRecordStoragePath.replace(/(\.[a-zA-Z0-9]+)+$/, '');
-    return `${base}.scene.json`;
+    // Thin delegate — ο κανόνας ζει στο pure `dxf-scene-path.ts` (SSoT, ADR-913).
+    return deriveScenePath(fileRecordStoragePath);
   }
 
   /**
@@ -454,16 +452,21 @@ export class DxfFirestoreService {
     storagePath?: string;
     entityType?: string;
     entityId?: string;
+    /** ADR-913 — κάδος/αρχειοθέτηση: η γέννηση δεν ξαναγράφει ποτέ πάνω σε αποσυρμένο αρχείο. */
+    retired?: boolean;
   } | null> {
     try {
       const { doc, getDoc } = await import('firebase/firestore');
       const snap = await getDoc(doc(db, COLLECTIONS.FILES, fileId));
       if (!snap.exists()) return null;
       const data = snap.data();
+      const lifecycle = data.lifecycleState;
+      const retired = data.isDeleted === true || (typeof lifecycle === 'string' && lifecycle !== 'active');
       return {
         ...(typeof data.storagePath === 'string' ? { storagePath: data.storagePath } : {}),
         ...(typeof data.entityType === 'string' ? { entityType: data.entityType } : {}),
         ...(typeof data.entityId === 'string' ? { entityId: data.entityId } : {}),
+        ...(retired ? { retired: true } : {}),
       };
     } catch {
       return null;

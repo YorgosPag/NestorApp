@@ -189,3 +189,79 @@ describe('executeSceneSave — target resolution χωρίς fileId', () => {
     expect(DxfFirestoreService.autoSaveV2.mock.calls[0][0]).toBe('file_NEW');
   });
 });
+
+/**
+ * ADR-913 — εγγραφή ΓΕΝΝΗΣΗΣ: επίπεδο χωρίς αρχείο γράφει στον ντετερμινιστικό στόχο του.
+ * Το FileRecord νόμιμα δεν υπάρχει ακόμη — αυτό ΔΕΝ είναι «ορφανό» (ADR-469).
+ */
+describe('executeSceneSave — εγγραφή γέννησης (ADR-913)', () => {
+  const BIRTH_FILE = 'file_birth';
+  const BIRTH_PATH = `companies/c/entities/floor/${FLOOR_A}/domains/construction/categories/floorplans/files/${BIRTH_FILE}.scene.json`;
+  const birthTicket = (overrides: Partial<Parameters<typeof createSceneSaveTicket>[0]> = {}) =>
+    ticketFor({ fileId: BIRTH_FILE, canonicalScenePath: BIRTH_PATH, birth: true, ...overrides });
+
+  it('ΓΕΝΝΑ το αρχείο όταν το έγγραφο δεν υπάρχει — δεν το κρίνει ορφανό', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue(null);
+
+    const outcome = await executeSceneSave(birthTicket(), deps);
+
+    expect(outcome.status).toBe('saved');
+    expect(deps.markFileTargetOrphaned).not.toHaveBeenCalled();
+    const [fileId, , , ctx] = DxfFirestoreService.autoSaveV2.mock.calls[0];
+    expect(fileId).toBe(BIRTH_FILE);
+    expect(ctx.canonicalScenePath).toBe(BIRTH_PATH);
+    // Ποτέ αναζήτηση: ο στόχος γέννησης ΑΝΗΚΕΙ στο επίπεδο, δεν «βρίσκεται» στον όροφο
+    // (το πιο πρόσφατο αρχείο του ορόφου μπορεί να είναι PDF της διαχείρισης κτηρίου).
+    expect(DxfFirestoreService.findFloorFloorplanFileRecord).not.toHaveBeenCalled();
+  });
+
+  it('ΧΩΡΙΣ τη σημαία γέννησης το ίδιο ακριβώς ticket μένει ορφανό (ADR-469 ανέπαφο)', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue(null);
+
+    const outcome = await executeSceneSave(birthTicket({ birth: false }), deps);
+
+    expect(outcome).toEqual({ status: 'skipped', reason: 'orphaned-target' });
+    expect(DxfFirestoreService.autoSaveV2).not.toHaveBeenCalled();
+  });
+
+  it('γέννηση χωρίς path δεν έχει πού να γράψει ⇒ ορφανό, όχι ADR-293 throw', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue(null);
+
+    const outcome = await executeSceneSave(birthTicket({ canonicalScenePath: null }), deps);
+
+    expect(outcome).toEqual({ status: 'skipped', reason: 'orphaned-target' });
+    expect(DxfFirestoreService.autoSaveV2).not.toHaveBeenCalled();
+  });
+
+  it('ΜΠΛΟΚΑΡΕΙ + latch όταν το αρχείο γέννησης είναι στον κάδο/αρχείο — ποτέ ανάσταση', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue({
+      entityType: 'floor',
+      entityId: FLOOR_A,
+      retired: true,
+    });
+
+    const outcome = await executeSceneSave(birthTicket(), deps);
+
+    expect(outcome).toEqual({ status: 'blocked', reason: 'retired-target' });
+    expect(deps.markFileTargetOrphaned).toHaveBeenCalledWith(BIRTH_FILE);
+    expect(DxfFirestoreService.autoSaveV2).not.toHaveBeenCalled();
+  });
+
+  it('δεύτερη συνεδρία: το αρχείο γεννήθηκε ήδη ⇒ γράφει στο ΙΔΙΟ, με τους κανονικούς ελέγχους', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue({ entityType: 'floor', entityId: FLOOR_A });
+
+    const outcome = await executeSceneSave(birthTicket(), deps);
+
+    expect(outcome.status).toBe('saved');
+    expect(DxfFirestoreService.autoSaveV2.mock.calls[0][0]).toBe(BIRTH_FILE);
+  });
+
+  it('ο cross-floor φρουρός ισχύει ΚΑΙ στη γέννηση', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue({ entityType: 'floor', entityId: FLOOR_B });
+
+    const outcome = await executeSceneSave(birthTicket(), deps);
+
+    expect(outcome).toEqual({ status: 'blocked', reason: 'cross-floor-target' });
+    expect(DxfFirestoreService.autoSaveV2).not.toHaveBeenCalled();
+  });
+});
