@@ -20,6 +20,7 @@ import { useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { useSaveHandlerRef, type SaveHandler } from '@/hooks/useSaveHandlerRef';
+import { useUnsavedEditsSaver } from '@/hooks/useUnsavedEdits';
 
 // ============================================================================
 // TYPES
@@ -32,6 +33,8 @@ interface UseSpaceGeneralSaveConfig {
   onUpdate: SaveHandler;
   /** Parent-owned ref the header's save button calls through. */
   onSaveRef?: MutableRefObject<SaveHandler | null>;
+  /** Η φόρμα διαφέρει από το αποθηκευμένο (το `dirty` του `useSpaceFormState`) — μόνο τότε δηλώνεται τρόπος αποθήκευσης. */
+  dirty: boolean;
   /** The owning tab's module name — the failure is logged under it, not under this hook. */
   scope: string;
   /** Translated generic message, shown when the failure is not a known policy refusal. */
@@ -47,6 +50,7 @@ export function useSpaceGeneralSave({
   onCreate,
   onUpdate,
   onSaveRef,
+  dirty,
   scope,
   failureMessage,
 }: UseSpaceGeneralSaveConfig): void {
@@ -63,4 +67,6 @@ export function useSpaceGeneralSave({
 
   // Register save ref for header delegation (SSoT hook)
   useSaveHandlerRef(onSaveRef, handleSave);
+  // Ο ΙΔΙΟΣ χειριστής απαντά και στην «Αποθήκευση» της ερώτησης εξόδου (ADR-912 §12.12) — `false` ακυρώνει την έξοδο.
+  useUnsavedEditsSaver(dirty, handleSave);
 }

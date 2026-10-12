@@ -53,8 +53,10 @@
 
 import NextLink from 'next/link';
 import { usePathname as useNextPathname, useRouter as useNextRouter } from 'next/navigation';
-import type { AnchorHTMLAttributes, ReactElement, Ref } from 'react';
-import { useCallback, useMemo } from 'react';
+import type { AnchorHTMLAttributes, MouseEvent, ReactElement, Ref } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+
+import { guardLeave, leaveNeedsAnswer } from '@/lib/unsaved-edits/leave-guard';
 
 import { extractWorkspaceSegment, stripWorkspace } from './workspace-path';
 import type { WorkspaceHref } from './route-worlds';
@@ -123,6 +125,55 @@ export function useWorkspaceHref(): (href: string) => string {
 }
 
 // =============================================================================
+// 2β. Η ΕΞΟΔΟΣ ΜΕ ΑΛΛΑΓΕΣ ΠΟΥ ΔΕΝ ΑΠΟΘΗΚΕΥΤΗΚΑΝ (ADR-912 §12.12)
+// =============================================================================
+
+/**
+ * **Αλλάζει σελίδα αυτή η διεύθυνση;** Μόνο τότε η πλοήγηση είναι έξοδος.
+ *
+ * 🔑 Αλλαγή **μόνο του ερωτήματος** (καρτέλα, επιλογή, φίλτρο) είναι κατάσταση της **ίδιας** σελίδας: την επιλογή τη
+ *   φυλά η πηγή της (`useEntityPageState` · `useContactsPageState`), και μια δεύτερη ερώτηση εδώ θα ρωτούσε δύο φορές
+ *   — ή θα ρωτούσε για αλλαγή καρτέλας, που δεν χάνει τίποτα.
+ */
+function leavesCurrentPage(target: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const next = new URL(target, window.location.href);
+  return next.origin !== window.location.origin || next.pathname !== window.location.pathname;
+}
+
+/** Απλό αριστερό κλικ που πλοηγεί **αυτή** την καρτέλα — ό,τι ανοίγει αλλού (πλήκτρο, `_blank`, λήψη) δεν είναι έξοδος. */
+function isSameTabClick(
+  event: MouseEvent<HTMLAnchorElement>,
+  target: string | undefined,
+  download: unknown,
+): boolean {
+  const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+  const sameTab = !target || target === '_self';
+  return event.button === 0 && !modified && sameTab && download === undefined;
+}
+
+/**
+ * Πώς **συνεχίζει** ένας σύνδεσμος που περίμενε την απάντηση του ανθρώπου. Τον δίνει ο ξενιστής της ερώτησης
+ * ({@link useLeaveNavigator}), που ζει στη ρίζα — ώστε το `<Link>` να **μην** καλεί hook δρομολογητή: το `useRouter` του
+ * Next ρίχνει χωρίς app router, και το `<Link>` αποδίδεται σε δεκάδες σουίτες που δεν στήνουν.
+ * ⚠️ `null` ⇒ δεν υπάρχει ξενιστής ⇒ δεν υπάρχει ούτε ερώτηση ⇒ ο σύνδεσμος δουλεύει όπως πάντα.
+ */
+let resumeNavigation: ((target: string, replace: boolean) => void) | null = null;
+
+/** Καλείται **μία** φορά, από τον ξενιστή της ερώτησης εξόδου (`UnsavedEditsLeaveHost`). */
+export function useLeaveNavigator(): void {
+  const router = useNextRouter();
+  useEffect(() => {
+    const resume = (target: string, replace: boolean) =>
+      replace ? router.replace(target) : router.push(target);
+    resumeNavigation = resume;
+    return () => {
+      if (resumeNavigation === resume) resumeNavigation = null;
+    };
+  }, [router]);
+}
+
+// =============================================================================
 // 3. ΟΙ ΤΡΕΙΣ ΑΝΤΙΚΑΤΑΣΤΑΤΕΣ
 // =============================================================================
 
@@ -181,10 +232,25 @@ export type WorkspaceLinkProps<T extends string = string> = Omit<
 export function Link<T extends string>({
   href,
   ref,
+  onClick,
   ...rest
 }: WorkspaceLinkProps<T>): ReactElement {
   const resolve = useWorkspaceHref();
-  return <NextLink {...rest} ref={ref} href={resolve(href)} />;
+  const target = resolve(href);
+
+  // 🔴 ADR-912 §12.12 (Εύρημα 11): σύνδεσμος προς ΑΛΛΗ σελίδα ενώ μια φόρμα έχει αλλαγές ⇒ ρώτα ΠΡΙΝ χαθούν.
+  // Μόνο το απλό αριστερό κλικ στην ίδια καρτέλα είναι έξοδος: νέα καρτέλα / λήψη αφήνουν τη φόρμα στη θέση της.
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    onClick?.(event);
+    if (event.defaultPrevented || !isSameTabClick(event, rest.target, rest.download)) return;
+    if (!leaveNeedsAnswer() || !leavesCurrentPage(target) || !resumeNavigation) return;
+    event.preventDefault();
+    const resume = resumeNavigation;
+    // Ο δρομολογητής και όχι δεύτερο κλικ: ο σύνδεσμος μπορεί να μην υπάρχει πια (στοιχείο μενού που έκλεισε).
+    guardLeave(() => resume(target, rest.replace === true));
+  };
+
+  return <NextLink {...rest} ref={ref} href={target} onClick={handleClick} />;
 }
 
 /**
@@ -202,8 +268,9 @@ type DropFirst<T extends readonly unknown[]> = T extends readonly [unknown, ...i
  * προφόρτωνε το `/projects` — δηλαδή **404** — και η πλοήγηση θα φαινόταν αργή
  * χωρίς κανένα σφάλμα πουθενά: το χειρότερο είδος βλάβης, γιατί δεν αφήνει ίχνος.
  *
- * ⚠️ Τα `back` · `forward` · `refresh` περνούν **αυτούσια**: δεν παίρνουν
- * διεύθυνση, άρα δεν έχουν τι να μεταφράσουν.
+ * ⚠️ Τα `forward` · `refresh` περνούν **αυτούσια**: δεν παίρνουν διεύθυνση, άρα
+ * δεν έχουν τι να μεταφράσουν. Το `back` επίσης δεν μεταφράζει — αλλά **ρωτά**
+ * πριν χαθούν αλλαγές (ADR-912 §12.12), όπως τα `push` · `replace`.
  */
 /**
  * Ο δρομολογητής **του συνόρου**, ως τύπος.
@@ -257,14 +324,29 @@ export function useRouter(): WorkspaceRouter {
       //    '/procurement/quotes' · Received '/procurement/quotes', undefined».
       //    ⛔ Η θεραπεία ήταν ΤΟ ΣΥΝΟΡΟ, ποτέ το test — ένα test που μαθαίνει να
       //    δέχεται το `undefined` είναι σβησμένος μάρτυρας.
+      // 🔴 ADR-912 §12.12: πλοήγηση σε ΑΛΛΗ σελίδα ενώ μια φόρμα έχει αλλαγές ⇒ ρώτα ΠΡΙΝ χαθούν. `guardLeave` είναι
+      //    σύγχρονο όταν δεν υπάρχει τίποτα να χαθεί — η συνηθισμένη κλήση δεν αλλάζει ούτε χρονισμό ούτε αριθμητική.
+      //    Πλοήγηση ΜΕΤΑ από επιτυχή αποθήκευση/διαγραφή τυλίγεται από τον καλούντα σε `settledLeave`.
       push: <T extends string>(
         href: WorkspaceHref<T>,
         ...rest: DropFirst<Parameters<NextRouter['push']>>
-      ) => router.push(resolve(href), ...rest),
+      ) => {
+        const target = resolve(href);
+        const go = () => router.push(target, ...rest);
+        if (leavesCurrentPage(target)) guardLeave(go);
+        else go();
+      },
       replace: <T extends string>(
         href: WorkspaceHref<T>,
         ...rest: DropFirst<Parameters<NextRouter['replace']>>
-      ) => router.replace(resolve(href), ...rest),
+      ) => {
+        const target = resolve(href);
+        const go = () => router.replace(target, ...rest);
+        if (leavesCurrentPage(target)) guardLeave(go);
+        else go();
+      },
+      // Το «πίσω» της εφαρμογής (κουμπί της οθόνης, όχι του browser): ο προορισμός είναι άγνωστος ⇒ ρωτά πάντα.
+      back: () => guardLeave(() => router.back()),
       prefetch: <T extends string>(
         href: WorkspaceHref<T>,
         ...rest: DropFirst<Parameters<NextRouter['prefetch']>>

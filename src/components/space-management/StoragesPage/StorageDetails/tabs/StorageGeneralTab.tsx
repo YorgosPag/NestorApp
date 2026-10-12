@@ -114,7 +114,7 @@ export function StorageGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   // ADR-777 §8.60.20 — νέα επιλογή ⇒ reset· προβολή ⇒ ακολουθεί τον server· επεξεργασία ⇒ πρόχειρο.
-  const [form, setForm] = useSpaceFormState(storage, isEditing, buildFormState);
+  const [form, setForm, dirty] = useSpaceFormState(storage, isEditing, buildFormState);
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο: το ΙΔΙΟ πρόχειρο με τη γρήγορη επεξεργασία.
   const commercial = useSpaceCommercial(storage);
 
@@ -248,7 +248,7 @@ export function StorageGeneralTab({
   });
 
   useSpaceGeneralSave({
-    createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef,
+    createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, dirty,
     scope: 'StorageGeneralTab', failureMessage: t('entityLinks.building.error'),
   });
 

@@ -12,7 +12,7 @@
  * είναι η **διεύθυνση που παράγεται** — αυτό ακριβώς που βλέπει ο άνθρωπος.
  */
 
-import { render, renderHook, screen } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { createRef } from 'react';
 
 // ─── Ελεγχόμενο Next + ταυτότητα ─────────────────────────────────────────────
@@ -29,11 +29,18 @@ jest.mock('next/navigation', () => ({
 
 import {
   Link,
+  useLeaveNavigator,
   usePathname,
   useRouter,
   useWorkspaceAlias,
   workspaceHref,
 } from '../navigation';
+import {
+  installLeavePrompt,
+  markUnsavedEdits,
+  resetLeaveGuardForTests,
+  type LeaveDecision,
+} from '@/lib/unsaved-edits/leave-guard';
 
 const ORG = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 
@@ -184,6 +191,102 @@ describe('Ι — Link · useRouter', () => {
     expect(typeof result.current.back).toBe('function');
     result.current.back();
     expect(back).toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// Ξ — ΕΞΟΔΟΣ ΜΕ ΑΛΛΑΓΕΣ ΠΟΥ ΔΕΝ ΑΠΟΘΗΚΕΥΤΗΚΑΝ (ADR-912 §12.12)
+// =============================================================================
+
+describe('Ξ — το σύνορο ρωτά πριν χαθούν αλλαγές', () => {
+  // jsdom: η τρέχουσα σελίδα είναι το `/`.
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+  let answer: LeaveDecision = 'stay';
+  let asked = 0;
+
+  beforeEach(() => {
+    resetLeaveGuardForTests();
+    answer = 'stay';
+    asked = 0;
+    back.mockClear();
+    installLeavePrompt(async () => {
+      asked += 1;
+      return answer;
+    });
+    markUnsavedEdits('form');
+  });
+  afterAll(() => resetLeaveGuardForTests());
+
+  it('Ξ1: 🔴 push ΚΑΙ replace σε ΑΛΛΗ σελίδα περιμένουν την απάντηση — «Συνέχεια» τα ακυρώνει', async () => {
+    const { result } = renderHook(() => useRouter());
+    result.current.push('/contacts');
+    expect(push).not.toHaveBeenCalled();
+    await flush();
+    result.current.replace('/properties');
+    await flush();
+    expect(asked).toBe(2);
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('Ξ1β: «Απόρριψη» ⇒ η πλοήγηση εκτελείται, με τα ορίσματά της αυτούσια', async () => {
+    answer = 'proceed';
+    const { result } = renderHook(() => useRouter());
+    result.current.push('/contacts', { scroll: false });
+    await flush();
+    expect(push.mock.calls).toEqual([['/contacts', { scroll: false }]]);
+  });
+
+  it('Ξ2: 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — αλλαγή ΜΟΝΟ του ερωτήματος είναι η ίδια σελίδα: σύγχρονα, χωρίς ερώτηση', () => {
+    const { result } = renderHook(() => useRouter());
+    result.current.push('/?tab=floors');
+    result.current.replace('/?buildingId=b1');
+    expect(push).toHaveBeenCalledWith('/?tab=floors');
+    expect(replace).toHaveBeenCalledWith('/?buildingId=b1');
+    expect(asked).toBe(0);
+  });
+
+  it('Ξ3: το «πίσω» της οθόνης ρωτά — ο προορισμός του είναι άγνωστος', async () => {
+    const { result } = renderHook(() => useRouter());
+    result.current.back();
+    await flush();
+    expect(asked).toBe(1);
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it('Ξ4: 🔴 κλικ σε <Link> προς άλλη σελίδα ΔΕΝ πλοηγεί πριν απαντήσει ο άνθρωπος — και συνεχίζει από τον δρομολογητή', async () => {
+    answer = 'proceed';
+    currentPathname = '/o/nikos/dashboard';
+    renderHook(() => useLeaveNavigator());
+    render(<Link href="/projects">έργα</Link>);
+
+    // `false` ⇒ κάποιος κάλεσε `preventDefault`: ο browser (και το Next) δεν πλοηγούν.
+    expect(fireEvent.click(screen.getByText('έργα'))).toBe(false);
+    expect(push).not.toHaveBeenCalled();
+    await flush();
+    expect(asked).toBe(1);
+    expect(push).toHaveBeenCalledWith('/o/nikos/projects');
+  });
+
+  it('Ξ4β: Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — κλικ με Ctrl (νέα καρτέλα) δεν είναι έξοδος: ούτε ερώτηση, ούτε `preventDefault`', async () => {
+    renderHook(() => useLeaveNavigator());
+    // Ο γονέας βλέπει το συμβάν ΜΕΤΑ τον σύνδεσμο: καταγράφει αν κάποιος το ακύρωσε, και μόνο τότε το ακυρώνει ο ίδιος
+    // (το jsdom δεν υλοποιεί πλοήγηση).
+    let preventedByLink: boolean | null = null;
+    render(
+      <div
+        onClick={(event) => {
+          preventedByLink = event.defaultPrevented;
+          event.preventDefault();
+        }}
+      >
+        <Link href="/projects">έργα</Link>
+      </div>,
+    );
+    fireEvent.click(screen.getByText('έργα'), { ctrlKey: true });
+    await flush();
+    expect(preventedByLink).toBe(false);
+    expect(asked).toBe(0);
   });
 });
 

@@ -24,7 +24,7 @@ export function useSpaceFormState<TEntity extends { readonly id: string }, TForm
   entity: TEntity,
   isEditing: boolean,
   build: (entity: TEntity) => TForm,
-): [TForm, Dispatch<SetStateAction<TForm>>] {
+): [form: TForm, setForm: Dispatch<SetStateAction<TForm>>, dirty: boolean] {
   const [form, setForm] = useState<TForm>(() => build(entity));
 
   // Κανόνας 1 — νέα επιλογή (και σε επεξεργασία).
@@ -40,7 +40,8 @@ export function useSpaceFormState<TEntity extends { readonly id: string }, TForm
 
   // Η φόρμα δηλώνει αν διαφέρει από το αποθηκευμένο — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
   const saved = useMemo(() => build(entity), [build, entity]);
-  useUnsavedEdits(isEditing, form, saved);
+  // Το `dirty` επιστρέφεται: με το ΙΔΙΟ δηλώνει η καρτέλα και πώς αποθηκεύει (`useSpaceGeneralSave`, ADR-912 §12.12).
+  const dirty = useUnsavedEdits(isEditing, form, saved);
 
-  return [form, setForm];
+  return [form, setForm, dirty];
 }

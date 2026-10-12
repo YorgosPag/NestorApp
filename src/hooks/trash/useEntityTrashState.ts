@@ -23,6 +23,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { confirmLeave, leaveNeedsAnswer, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
 import type { RealtimeEventMap } from '@/services/realtime/event-payload-definitions';
@@ -143,7 +144,11 @@ export function useEntityTrashState<TItem extends { id?: string }>(
   }, [trashRoute, selectItems, entityKind]);
 
   const handleToggleTrash = useCallback(async () => {
-    clearSelection?.();
+    // Όλη η εναλλαγή πίσω από ΜΙΑ ερώτηση (ADR-912 §12.12): η όψη δεν αλλάζει πριν απαντήσει ο άνθρωπος — αλλιώς ο κάδος
+    // άνοιγε και η επιλογή έμενε (μισή πράξη). `settledLeave`: η απόφαση πάρθηκε, η επιλογή δεν ξαναρωτά.
+    // ⚠️ `leaveNeedsAnswer` πρώτα: χωρίς αλλαγές η εναλλαγή μένει ΣΥΓΧΡΟΝΗ, όπως πάντα (κανένα επιπλέον καρέ).
+    if (leaveNeedsAnswer() && !(await confirmLeave())) return;
+    settledLeave(() => clearSelection?.());
     const next = !showTrash;
     setShowTrash(next);
     if (next) {
@@ -152,7 +157,8 @@ export function useEntityTrashState<TItem extends { id?: string }>(
   }, [showTrash, fetchTrashedItems, clearSelection]);
 
   const handleTrashActionComplete = useCallback(() => {
-    clearSelection?.();
+    // Η ενέργεια του κάδου ολοκληρώθηκε πάνω στην εγγραφή (επαναφορά / οριστική διαγραφή): δεν είναι έξοδος του ανθρώπου.
+    settledLeave(() => clearSelection?.());
     forceDataRefresh();
     void fetchTrashedItems();
   }, [clearSelection, forceDataRefresh, fetchTrashedItems]);

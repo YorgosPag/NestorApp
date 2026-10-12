@@ -109,7 +109,7 @@ export function ParkingGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   // ADR-777 §8.60.20 — νέα επιλογή ⇒ reset· προβολή ⇒ ακολουθεί τον server· επεξεργασία ⇒ πρόχειρο.
-  const [form, setForm] = useSpaceFormState(parking, isEditing, buildFormState);
+  const [form, setForm, dirty] = useSpaceFormState(parking, isEditing, buildFormState);
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο: το ΙΔΙΟ πρόχειρο με τη γρήγορη επεξεργασία.
   const commercial = useSpaceCommercial(parking);
 
@@ -217,7 +217,7 @@ export function ParkingGeneralTab({
   });
 
   useSpaceGeneralSave({
-    createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef,
+    createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, dirty,
     scope: 'ParkingGeneralTab', failureMessage: t('entityLinks.building.error'),
   });
 

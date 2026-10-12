@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "42026c5033140950cc4188c3cc0c4a582458d7c5c73e9422940ecfe711135523",
+  "inputsSha256": "02f444c74b90a808e3510d40cde38436ac245bc36d092e0cee1a94c5fea3d302",
   "languages": [
     "el"
   ],
@@ -12408,7 +12408,7 @@
     "src/lib/workspace/alias-registry.ts": "c9965910ed0956d7f068630419bb7620c096133a60584081df78270981ff57f8",
     "src/lib/workspace/alias-rules.ts": "7890354c98861396afbf7bd1ef42584ebc10a38d55b53d8e9e834d9e91e5f9f6",
     "src/lib/workspace/custody-scope.ts": "e074609333c7edb735bd4785b5a8379a4e8af8adb1329e81f3101ff7c2f9c8f1",
-    "src/lib/workspace/navigation.tsx": "78c40b8d41e610a5be7e0efe14f29997c7c150abf0797a787d52bb414ad16295",
+    "src/lib/workspace/navigation.tsx": "b3c00fc242ee3e7efd48e8774cfe22f42808a844e85ca3b9bcdc087286f38e9b",
     "src/lib/workspace/requested-workspace-wire.ts": "fe48c0fe021fa12751e361088d38bf70700022cc2ee35559731f45037246b033",
     "src/lib/workspace/route-worlds.ts": "58360164d8d2e95139b5f32a58ce93ebc5331bbc161cb5f815f7c2e80eeef4d3",
     "src/lib/workspace/server-navigation.ts": "e787becdd4bc6e4ac3c11dd2bddac2bd30389510441800a818bb0505896dae55",
