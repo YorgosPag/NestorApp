@@ -1,2 +1,2 @@
 export { MobileDetailsSlideIn } from './MobileDetailsSlideIn';
-export { ListDetailsSplit } from './ListDetailsSplit';
+export { DESKTOP_SPLIT, ListDetailsSplit } from './ListDetailsSplit';

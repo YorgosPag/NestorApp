@@ -9,7 +9,7 @@ import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
 import type { CreatedProjectFields } from './general-tab/created-project';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { DESKTOP_SPLIT, MobileDetailsSlideIn } from '@/core/layouts';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -196,7 +196,7 @@ export function ProjectViewSwitch({
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
-      <div className={cn("hidden md:flex flex-1 min-h-0", spacing.gap.sm)}>
+      <div className={DESKTOP_SPLIT}>
         {projectsListPanel}
         <ProjectDetails
           key={detailsIdentity}

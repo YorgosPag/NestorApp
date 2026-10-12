@@ -14,6 +14,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ActingForLine } from '@/components/conveyance/acting/ActingWorkspaceField';
 import { ENGAGEMENT_STATE_PRESENTATION } from '@/components/sales/conveyance/conveyance-presentation';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -77,19 +78,21 @@ export function MyCaseCardView(props: MyCaseCardViewProps) {
   const presentation = ENGAGEMENT_STATE_PRESENTATION[card.engagementState];
   const Icon = presentation.icon;
   return (
-    <article className="space-y-2 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <section className="min-w-0">
-          <h2 className="m-0 truncate text-base font-semibold text-foreground">{card.propertyName ?? t('engagement.myCases.untitled')}</h2>
-          <p className="m-0 text-sm text-foreground">{t(`engagement.roles.${card.role}`)}</p>
-        </section>
-        <Badge variant={presentation.variant} className="gap-1">
-          <Icon className={iconSizes.xs} aria-hidden="true" />
-          {t(`engagement.states.${card.engagementState}`)}
-        </Badge>
-      </header>
-      <CardFacts card={card} />
-      <CardActions {...props} />
-    </article>
+    <Card asChild className="space-y-2 p-4">
+      <article>
+        <header className="flex flex-wrap items-start justify-between gap-2">
+          <section className="min-w-0">
+            <h2 className="m-0 truncate text-base font-semibold text-foreground">{card.propertyName ?? t('engagement.myCases.untitled')}</h2>
+            <p className="m-0 text-sm text-foreground">{t(`engagement.roles.${card.role}`)}</p>
+          </section>
+          <Badge variant={presentation.variant} className="gap-1">
+            <Icon className={iconSizes.xs} aria-hidden="true" />
+            {t(`engagement.states.${card.engagementState}`)}
+          </Badge>
+        </header>
+        <CardFacts card={card} />
+        <CardActions {...props} />
+      </article>
+    </Card>
   );
 }

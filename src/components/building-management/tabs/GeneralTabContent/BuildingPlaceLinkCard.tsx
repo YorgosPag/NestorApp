@@ -36,6 +36,7 @@ import React, { useCallback, useState } from 'react';
 
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { Button } from '@/components/ui/button';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
@@ -109,11 +110,12 @@ export function BuildingPlaceLinkCard({
   );
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <header className="space-y-1">
-        <h3 className="text-base font-semibold text-foreground">{t('address.placeLink.title')}</h3>
-        <p className="text-sm text-muted-foreground">{t('address.placeLink.help')}</p>
-      </header>
+    <SectionFrame
+      title={t('address.placeLink.title')}
+      headingLevel="h3"
+      description={t('address.placeLink.help')}
+      gap={3}
+    >
 
       {chosen === null && state.kind !== 'saving' && (
         <p className="text-sm text-muted-foreground">{t('address.placeLink.none')}</p>
@@ -149,7 +151,7 @@ export function BuildingPlaceLinkCard({
       )}
 
       <SaveNotice state={state} />
-    </section>
+    </SectionFrame>
   );
 }
 

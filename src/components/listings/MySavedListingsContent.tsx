@@ -17,6 +17,7 @@ import '@/lib/design-system';
 
 import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
 import { ListingCard } from '@/components/search-results/ListingCard';
+import { Card } from '@/components/ui/card';
 import { LISTING_CARD_GRID_CLASS, LISTING_GRID_CARD_IMAGE_SIZES } from '@/components/search-results/listing-card-frame';
 import routeSlice from '@/i18n/generated/routes/saved-listings.el.json';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
@@ -61,10 +62,10 @@ function SavedRows({ rows, truncated }: { readonly rows: readonly SavedListingRo
   const { t } = useTranslation(['property-market']);
   if (rows.length === 0) {
     return (
-      <section className="rounded-md border border-border bg-card p-4">
+      <Card className="p-4">
         <p className="m-0 text-sm text-foreground">{t(`${P}.empty`)}</p>
         <Link href={SEARCH_LANDING_ROUTE} className="mt-2 inline-block text-sm underline">{t(`${P}.search`)}</Link>
-      </section>
+      </Card>
     );
   }
   return (

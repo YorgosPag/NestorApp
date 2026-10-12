@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ContactDetails } from '@/components/contacts/details/ContactDetails';
+import { Card } from '@/components/ui/card';
 import { ContactsService } from '@/services/contacts.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { CompanyContact, Contact, IndividualContact } from '@/types/contacts';
@@ -135,17 +136,19 @@ export function ContactMutationHarness() {
         </p>
       </header>
 
-      <section className="grid gap-3 rounded-lg border border-border bg-card p-4" aria-label="Harness State">
-        <div className="flex flex-wrap gap-3 text-sm text-foreground">
-          <span data-testid="harness-scenario">scenario:{scenario}</span>
-          <span data-testid="harness-contact-id">contact:{contact.id}</span>
-          <span data-testid="save-count">saves:{saveCount}</span>
-          <span data-testid="update-events">updates:{updateEvents}</span>
-        </div>
-        <output data-testid="last-save" className="rounded-md border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-          {lastSave ? JSON.stringify(lastSave) : 'no-save'}
-        </output>
-      </section>
+      <Card asChild className="grid gap-3 p-4">
+        <section aria-label="Harness State">
+          <div className="flex flex-wrap gap-3 text-sm text-foreground">
+            <span data-testid="harness-scenario">scenario:{scenario}</span>
+            <span data-testid="harness-contact-id">contact:{contact.id}</span>
+            <span data-testid="save-count">saves:{saveCount}</span>
+            <span data-testid="update-events">updates:{updateEvents}</span>
+          </div>
+          <output data-testid="last-save" className="rounded-md border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+            {lastSave ? JSON.stringify(lastSave) : 'no-save'}
+          </output>
+        </section>
+      </Card>
 
       <section className="min-h-[640px] rounded-lg border border-border bg-background" aria-label="Contact Details Harness">
         <ContactDetails

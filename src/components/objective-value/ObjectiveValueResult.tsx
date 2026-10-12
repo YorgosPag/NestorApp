@@ -10,14 +10,13 @@
 
 import React from 'react';
 
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
 import { AADE_MYPROPERTY_URL } from '@/lib/objective-value/objective-value-page-sections';
 import { missingOf } from '@/lib/objective-value/objective-value-draft';
 import type { AppliedFactor, ComputedObjectiveValue, ObjectiveValueResult as Result } from '@/lib/objective-value/objective-value-types';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
-
-import { CalculatorStep } from './objective-value-inputs';
 
 const NS = 'objective-value';
 const R = `${NS}:result`;
@@ -96,7 +95,8 @@ export function ObjectiveValuePending({ result }: { readonly result: Result }) {
 export function ObjectiveValueResult({ result, commercialityAssumed }: { readonly result: Result; readonly commercialityAssumed: boolean }) {
   const { t } = useTranslation([NS]);
   return (
-    <CalculatorStep title={t(`${R}.title`)} className="rounded-md border border-border bg-card p-4">
+    // Ίδιο σχήμα με το `CalculatorStep` (`section` με όνομα · `h2` · `gap-3`), πάνω στην ΕΠΙΦΑΝΕΙΑ: το μόνο βήμα με πλαίσιο.
+    <SectionFrame title={t(`${R}.title`)} headingLevel="h2" titleSize="lg" gap={3}>
       {/* `role="status"` και όχι `<output>`: οι ελλείψεις είναι παράγραφοι και λίστα, που το `<output>` δεν δέχεται. */}
       <div role="status" className="flex flex-col gap-1">
         {result.kind === 'computed' ? (
@@ -116,6 +116,6 @@ export function ObjectiveValueResult({ result, commercialityAssumed }: { readonl
       <a href={AADE_MYPROPERTY_URL} target="_blank" rel="noopener noreferrer" className={`self-start text-sm ${VISIBLE_LINK_CLASS}`}>
         {t(`${R}.myProperty`)}
       </a>
-    </CalculatorStep>
+    </SectionFrame>
   );
 }

@@ -18,6 +18,7 @@
  */
 
 import React from 'react';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ListingCoverage } from '@/lib/listings/listing-coverage';
 
@@ -48,11 +49,12 @@ export function CoverageStatement({ coverage, loading, error }: CoverageStatemen
   const { t } = useTranslation(['search-results']);
 
   return (
-    <section aria-live="polite" className="rounded-lg border border-border bg-card p-4">
-      <h2 className="text-sm font-medium text-muted-foreground">
-        {t('search-results:landing.coverage.heading')}
-      </h2>
-
+    <SectionFrame
+      title={t('search-results:landing.coverage.heading')}
+      headingLevel="h2"
+      titleSize="eyebrow"
+      aria-live="polite"
+    >
       {/*
         🔴 Η σειρά είναι συμβόλαιο, ίδια με το `coverageStateOf`: όσο δεν έχουμε
         μετρήσει, ΔΕΝ δηλώνουμε κάλυψη. Μια πρόταση «καμία αγγελία» τυπωμένη ενώ η
@@ -76,6 +78,6 @@ export function CoverageStatement({ coverage, loading, error }: CoverageStatemen
           })}
         </p>
       )}
-    </section>
+    </SectionFrame>
   );
 }

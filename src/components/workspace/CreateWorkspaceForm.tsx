@@ -33,6 +33,7 @@ import { useState, type FormEvent } from 'react';
 import { Building2, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -208,16 +209,18 @@ export function CreateWorkspaceForm() {
         </div>
       </section>
 
-      <section className="space-y-2 rounded-lg border border-border bg-card p-4">
-        <p className="flex items-start gap-2.5 text-sm text-card-foreground">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-success))]" aria-hidden="true" />
-          {t('onboarding.workspace.youBecomeAdmin')}
-        </p>
-        <p className="flex items-start gap-2.5 text-sm text-muted-foreground">
-          <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          {t('onboarding.workspace.privateStays')}
-        </p>
-      </section>
+      <Card asChild className="space-y-2 p-4">
+        <section>
+          <p className="flex items-start gap-2.5 text-sm text-card-foreground">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-success))]" aria-hidden="true" />
+            {t('onboarding.workspace.youBecomeAdmin')}
+          </p>
+          <p className="flex items-start gap-2.5 text-sm text-muted-foreground">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            {t('onboarding.workspace.privateStays')}
+          </p>
+        </section>
+      </Card>
 
       {errorCode && (
         <Alert variant="destructive" role="alert">

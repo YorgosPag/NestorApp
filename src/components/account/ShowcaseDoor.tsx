@@ -55,6 +55,7 @@ import React from 'react';
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Link } from '@/lib/workspace/navigation';
 import { CREATE_WORKSPACE_ROUTE, HOME_REDIRECT_ROUTE } from '@/lib/workspace/workspace-routes';
@@ -89,8 +90,7 @@ export function ShowcaseDoor(): React.ReactElement | null {
   const hasWorkspace = user.companyId !== null && user.companyId !== undefined;
 
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <h2 className="m-0 text-base font-semibold text-foreground">{t(DOOR_KEYS.title)}</h2>
+    <SectionFrame title={t(DOOR_KEYS.title)} headingLevel="h2" gap={2}>
       <p className="m-0 text-sm text-muted-foreground">
         {t(hasWorkspace ? DOOR_KEYS.presentLead : DOOR_KEYS.absentLead)}
       </p>
@@ -103,6 +103,6 @@ export function ShowcaseDoor(): React.ReactElement | null {
           {t(hasWorkspace ? DOOR_KEYS.presentCta : DOOR_KEYS.absentCta)}
         </Link>
       </Button>
-    </section>
+    </SectionFrame>
   );
 }

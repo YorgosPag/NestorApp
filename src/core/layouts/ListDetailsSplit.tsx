@@ -33,7 +33,12 @@ interface ListDetailsSplitProps {
   listOnly?: boolean;
 }
 
-const DESKTOP_SPLIT = 'hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden';
+/**
+ * Η γραμμή «λίστα + λεπτομέρειες» του desktop. 🔑 `min-w-0 overflow-hidden` είναι **όρος ορθότητας**, όχι στολίδι: χωρίς
+ * αυτά το ελάχιστο πλάτος της γραμμής είναι το περιεχόμενό της, και η στήλη λεπτομερειών ταλαντεύεται μαζί με τη μετρημένη
+ * υπερχείλιση ενεργειών (μετρημένο 2026-10-12 στα έργα, 1280px: 517 ↔ 1976px — ADR-777 §8.87.9ε).
+ */
+export const DESKTOP_SPLIT = 'hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden';
 
 export function ListDetailsSplit({
   list,

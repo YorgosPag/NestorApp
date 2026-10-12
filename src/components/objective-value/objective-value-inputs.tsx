@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label';
 import { NumericField } from '@/components/ui/numeric-field';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 
 interface ChoiceSelectProps<T extends string> {
   readonly id: string;
@@ -147,15 +146,17 @@ export function LabelledNumber({ label, help, value, onChange, step }: LabelledN
 
 interface StepProps {
   readonly title: string;
-  readonly className?: string;
   readonly children: React.ReactNode;
 }
 
-/** Ένα βήμα του υπολογιστή: `<section>` με τη δική του επικεφαλίδα `h2` (μία δομή για όλα τα βήματα). */
-export function CalculatorStep({ title, className, children }: StepProps) {
+/**
+ * Ένα βήμα του υπολογιστή: `<section>` με τη δική του επικεφαλίδα `h2` (μία δομή για όλα τα βήματα).
+ * ⚠️ Χωρίς `className`: το βήμα με πλαίσιο (αποτέλεσμα) είναι `SectionFrame`, όχι αυτό με χειρόγραφη επιφάνεια.
+ */
+export function CalculatorStep({ title, children }: StepProps) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className={cn('flex flex-col gap-3', className)}>
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <h2 id={headingId} className="m-0 text-lg font-semibold text-foreground">{title}</h2>
       {children}
     </section>

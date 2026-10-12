@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Building2, TrendingUp, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { PortfolioTotals } from '@/hooks/useConstructionPortfolio';
 
@@ -52,31 +53,30 @@ export function PortfolioKPIs({ totals, loading }: PortfolioKPIsProps) {
       {cards.map(card => {
         const Icon = card.icon;
         return (
-          <article
-            key={card.labelKey}
-            className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4"
-          >
-            <header className="flex items-center gap-2">
-              <Icon
+          <Card key={card.labelKey} asChild className="flex flex-col gap-2 p-4">
+            <article>
+              <header className="flex items-center gap-2">
+                <Icon
+                  className={[
+                    'h-4 w-4',
+                    card.atRisk ? 'text-[hsl(var(--text-error))]' : colors.text.muted,
+                  ].join(' ')}
+                />
+                <span className="text-xs text-muted-foreground">{t(card.labelKey)}</span>
+              </header>
+              <p
                 className={[
-                  'h-4 w-4',
-                  card.atRisk ? 'text-[hsl(var(--text-error))]' : colors.text.muted,
-                ].join(' ')}
-              />
-              <span className="text-xs text-muted-foreground">{t(card.labelKey)}</span>
-            </header>
-            <p
-              className={[
-                'text-2xl font-semibold tabular-nums',
-                loading ? 'animate-pulse text-muted-foreground' : '',
-                card.atRisk ? 'text-[hsl(var(--text-error))]' : 'text-foreground',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {loading ? '—' : card.value}
-            </p>
-          </article>
+                  'text-2xl font-semibold tabular-nums',
+                  loading ? 'animate-pulse text-muted-foreground' : '',
+                  card.atRisk ? 'text-[hsl(var(--text-error))]' : 'text-foreground',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {loading ? '—' : card.value}
+              </p>
+            </article>
+          </Card>
         );
       })}
     </section>

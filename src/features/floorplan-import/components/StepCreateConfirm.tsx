@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FloorplanImportSelection } from '../hooks/floorplan-import-types';
 import '@/lib/design-system';
@@ -60,14 +61,16 @@ export function StepCreateConfirm({ selection }: StepCreateConfirmProps) {
         </p>
       </header>
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-card p-4 text-sm">
-        {rows.map((row) => (
-          <React.Fragment key={row.label}>
-            <dt className="text-muted-foreground">{row.label}</dt>
-            <dd className="font-medium text-foreground">{row.value}</dd>
-          </React.Fragment>
-        ))}
-      </dl>
+      <Card asChild className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-4 text-sm">
+        <dl>
+          {rows.map((row) => (
+            <React.Fragment key={row.label}>
+              <dt className="text-muted-foreground">{row.label}</dt>
+              <dd className="font-medium text-foreground">{row.value}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </Card>
     </section>
   );
 }
