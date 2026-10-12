@@ -159,3 +159,11 @@ renderάρονται). Αποφεύγει churn στα ADR-040 render αρχεί
   αρχικό flag «3×» ήταν stale· ήδη migrated σε `useSceneManagerAdapter`). **NEW test**
   `__tests__/useWallPickScaffold.test.ts` (6 GREEN: Flow B ×3 / Flow A loop / execute-ctx / escape). ΟΧΙ tsc
   (N.17). 🔴 browser-verify (merge + gap-bridge, selection-first & pick-loop) + commit (Giorgio).
+- **2026-10-12 (ADR-911 Φ4-2, commit `974ec04a`)** — Το ζεύγος έγινε η διαδρομή των δύο: νέα
+  `buildRunWallParams(walls, extendTo)` και `rehostOpeningsOnto(target, hosted)` στο `wall-merge.ts`· τα
+  `buildMergedWallParams` / `collectMergedOpenings` τις καλούν. ⚠️ **Δύο αλλαγές συμπεριφοράς του εργαλείου
+  ένωσης:** (1) όταν ο δεύτερος τοίχος είναι ζωγραφισμένος **ανάποδα** από τον πρωτεύοντα, το άνοιγμά του
+  προβάλλεται από **τα δύο** άκρα του και κρατιέται το χαμηλότερο (πριν μόνο η αρχή ⇒ θέση ένα πλάτος μακριά)·
+  (2) σε σκηνές όχι σε mm το offset περνά από `mmToSceneUnits`. Ομόρροποι τοίχοι σε σκηνή mm: καμία αλλαγή.
+  Μετρημένο: `wall-merge.test.ts` πράσινο· η μετάλλαξη «προβολή μόνο της αρχής» κοκκινίζει 1 test του γραφέα
+  ανοιγμάτων (συνθετικό σενάριο με ανάποδο τοίχο). Δεν δοκιμάστηκε σε browser. Λεπτομέρειες: ADR-911 §12.

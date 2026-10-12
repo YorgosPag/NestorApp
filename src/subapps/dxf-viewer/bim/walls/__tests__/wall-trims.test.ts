@@ -226,6 +226,20 @@ describe('computeWallTrims', () => {
       expect(trimB.endBevel).toBeLessThanOrEqual(40 + 0.1);
     }
   });
+
+  it('11b. ADR-911 Φ4-2 — wall ending ON the face of a short neighbour: overflow fallback cuts nothing', () => {
+    // Measured on the test drawing (door 7301:7400): a 100 mm wall extended to the face of a
+    // 50×100 mm stub. The stub is short ⇒ classified as a corner ⇒ miter overflows ⇒ fallback.
+    // The old fixed `half / sin` cut 25 mm off the wall (a gap) and 40 mm off the stub.
+    const wall = makeWall({ x: 0, y: 0 }, { x: 1000, y: 0 }, 100, 'A');
+    const stub = makeWall({ x: 1025, y: 50 }, { x: 1025, y: -50 }, 50, 'B');
+
+    const trims = computeWallTrims([wall, stub]);
+
+    expect(trims.get(wall.id)?.endBevel).toBeUndefined();
+    expect(trims.get(wall.id)?.endMiter).toBeUndefined();
+    expect(trims.get(stub.id)?.startBevel).toBeUndefined();
+  });
 });
 
 // ─── applyTrimPatches ─────────────────────────────────────────────────────────

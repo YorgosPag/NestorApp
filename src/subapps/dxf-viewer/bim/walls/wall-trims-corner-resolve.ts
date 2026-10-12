@@ -366,9 +366,13 @@ function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, Mu
     setPatchField(acc, a.wallId, a.which === 'start' ? 'startMiter' : 'endMiter', miter.miterA);
     setPatchField(acc, b.wallId, b.which === 'start' ? 'startMiter' : 'endMiter', miter.miterB);
   } else {
-    // Miter overflows wall bounds → fall back to axis-bevel (Phase 1D-B logic).
-    accumBevel(acc, a.wallId, a.which, Math.min(b.half / sinA, MAX_BEVEL_FRACTION * a.len));
-    accumBevel(acc, b.wallId, b.which, Math.min(a.half / sinA, MAX_BEVEL_FRACTION * b.len));
+    // Miter overflows wall bounds → square off at the neighbour's FACE. ADR-911 Φ4-2: this
+    // used to cut a fixed `half / sin` (assumes the end sits on the centreline), which opened
+    // a gap behind a wall that already ended ON the face of a short neighbour. Cap unchanged.
+    for (const [r, s] of [[a, b], [b, a]] as const) {
+      const cut = penetrationBevel(r.px, r.py, s.px, s.py, s.ux, s.uy, s.half, sinA);
+      if (cut > 0) accumBevel(acc, r.wallId, r.which, Math.min(cut, MAX_BEVEL_FRACTION * r.len));
+    }
   }
 }
 

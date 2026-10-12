@@ -18,6 +18,8 @@ import { EventBus } from '../../../systems/events/EventBus';
 import type { EntityCreatedOrigin } from '../../../systems/events/drawing-event-map';
 import type { OpeningEntity } from '../../types/opening-types';
 import type { WallEntity } from '../../types/wall-types';
+import { computeOpeningGeometry } from '../../geometry/opening-geometry';
+import { retrimWallEntities } from '../../walls/wall-retrim';
 import { addOpeningsToScene } from '../add-openings-to-scene';
 import { countOpeningsByStatus, type OpeningProposalItem } from '../opening-proposal';
 import { frameCoords, isInsideFrameBand, wallHostFrame } from '../wall-host-frame';
@@ -30,6 +32,11 @@ const flushMicrotasks = (): Promise<void> => Promise.resolve();
 const wallsOf = (entities: readonly Entity[]): WallEntity[] => entities.filter(isWallEntity);
 const openingsOf = (entities: readonly Entity[]): OpeningEntity[] => entities.filter(isOpeningEntity);
 const writable = (items: readonly OpeningProposalItem[]) => items.filter((i) => i.status === 'door' || i.status === 'window');
+/**
+ * Η τιμή όπως ΑΠΟΘΗΚΕΥΕΤΑΙ: οι εντολές παρτίδας κρατούν αντίγραφο (`deepClone`), άρα το
+ * `Timestamp` της επικύρωσης φτάνει στη σκηνή ως απλό αντικείμενο. Η σύγκριση είναι τιμών.
+ */
+const stored = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 /** Το σχέδιο δοκιμής με τους 40 τοίχους της Φ3 γραμμένους, και η πρότασή του. */
@@ -60,8 +67,8 @@ describe('ADR-911 Α-10 — σχέδιο ≡ εγγραφή, πάνω στο σ�
     const { plan } = addOpeningsToScene(items, live.accessor, UNDO);
     const byId = new Map(live.entities().map((e) => [e.id, e] as const));
 
-    for (const wall of plan!.addedWalls) expect(byId.get(wall.id)).toEqual(wall);
-    for (const opening of plan!.openings) expect(byId.get(opening.id)).toEqual(opening);
+    for (const wall of plan!.addedWalls) expect(byId.get(wall.id)).toEqual(stored(wall));
+    for (const opening of plan!.openings) expect(byId.get(opening.id)).toEqual(stored(opening));
     for (const wall of plan!.removedWalls) expect(byId.has(wall.id)).toBe(false);
     for (const patch of plan!.wallPatches) expect((byId.get(patch.entityId) as WallEntity).params).toEqual(patch.next);
     for (const patch of plan!.mirrorPatches) {
@@ -109,6 +116,68 @@ describe('ADR-911 Α-10 — σχέδιο ≡ εγγραφή, πάνω στο σ�
   });
 });
 
+describe('ADR-911 Φ4-2 — ό,τι δεν φαίνεται στο πλάτος και τη θέση', () => {
+  it('κάθε πόρτα έχει τον μεντεσέ στο `span.start` και ανοίγει προς το `swing` της πρότασης', () => {
+    const { live, items } = fixtureScene();
+    const { plan } = addOpeningsToScene(items, live.accessor, UNDO);
+    const walls = new Map(wallsOf(live.entities()).map((w) => [w.id, w] as const));
+    const doors = writable(items).map((item, n) => ({ item, opening: plan!.openings[n] })).filter((d) => d.item.symbol === 'door');
+
+    expect(doors).toHaveLength(6);
+    for (const { item, opening } of doors) {
+      const geometry = computeOpeningGeometry(opening.params, walls.get(opening.params.wallId!)!, 'mm');
+      const hinge = geometry.hingeAnchor!;
+      expect(Math.hypot(hinge.x - item.span!.start.x, hinge.y - item.span!.start.y)).toBeLessThan(1e-3);
+      const open = geometry.hingeArc!.points[geometry.hingeArc!.points.length - 1];
+      expect((open.x - hinge.x) * item.swing!.x + (open.y - hinge.y) * item.swing!.y).toBeGreaterThan(0);
+    }
+  });
+
+  it('οι ενώσεις της σκηνής είναι ΗΔΗ οι τελικές: ένα ακόμη πέρασμα ενώσεων δεν αλλάζει κανέναν τοίχο', () => {
+    const { live, items } = fixtureScene();
+    addOpeningsToScene(items, live.accessor, UNDO);
+    const written = wallsOf(live.entities());
+
+    const again = wallsOf(retrimWallEntities(live.entities()) as readonly Entity[]);
+
+    expect(stored(again.map((w) => [w.id, w.params]))).toEqual(stored(written.map((w) => [w.id, w.params])));
+  });
+
+  it('νέο κομμάτι πάνω σε υπάρχουσα δομική ⇒ `overlap`, σκηνή και ιστορικό ανέγγιχτα (ADR-567)', () => {
+    const { items, before } = fixtureScene();
+    const host = items.find((i) => i.host?.kind === 'new-piece')!.host!;
+    if (host.kind !== 'new-piece') throw new Error('fixture');
+    const like = wallsOf(before).find((w) => w.id === host.likeWallId)!;
+    const squatter = rebuilt(like, { ...like.params, ...NO_TRIMS, start: { ...like.params.start, ...host.start }, end: { ...like.params.end, ...host.end }, thickness: host.thicknessMm });
+    const live = liveScene([...before, squatter as unknown as Entity]);
+    const start = live.entities();
+
+    expect(addOpeningsToScene(items, live.accessor, UNDO)).toEqual({ refusal: 'overlap' });
+    expect(live.entities()).toBe(start);
+    expect(history.getUndoStack()).toHaveLength(0);
+  });
+
+  it('το νέο κομμάτι παίρνει από τη λαμπάδα ΜΟΝΟ ύψος/λειτουργία/δεσίματα — όχι τις ρυθμίσεις ένωσής της', () => {
+    const { items, before } = fixtureScene();
+    const index = writable(items).findIndex((i) => i.host?.kind === 'new-piece');
+    const host = writable(items)[index].host!;
+    if (host.kind !== 'new-piece') throw new Error('fixture');
+    const scene = before.map((e) => (e.id === host.likeWallId
+      ? { ...e, params: { ...(e as unknown as WallEntity).params, startJoin: 'disallow', endJoin: 'disallow' } } as unknown as Entity
+      : e));
+    const live = liveScene(scene);
+
+    const { plan } = addOpeningsToScene(items, live.accessor, UNDO);
+
+    const like = wallsOf(scene).find((w) => w.id === host.likeWallId)!;
+    const piece = plan!.addedWalls.find((w) => w.id === plan!.openings[index].params.wallId)!;
+    expect(piece.params.height).toBe(like.params.height);
+    expect(piece.params.category).toBe(like.params.category);
+    expect(piece.params.startJoin).toBeUndefined();
+    expect(piece.params.endJoin).toBeUndefined();
+  });
+});
+
 describe('ADR-911 Φ4-2 — μία έγκριση = ένα undo', () => {
   it('γεφυρώσεις, επεκτάσεις, νέα κομμάτια, ενώσεις και ανοίγματα είναι ΜΙΑ εγγραφή ιστορικού', () => {
     const { live, items } = fixtureScene();
@@ -120,7 +189,7 @@ describe('ADR-911 Φ4-2 — μία έγκριση = ένα undo', () => {
     const { live, items, before } = fixtureScene();
     addOpeningsToScene(items, live.accessor, UNDO);
     const afterWrite = [...live.entities()];
-    const sorted = (list: readonly Entity[]) => [...list].sort((a, b) => a.id.localeCompare(b.id));
+    const sorted = (list: readonly Entity[]) => stored([...list]).sort((a, b) => a.id.localeCompare(b.id));
 
     expect(history.undo()).toBe(true);
     expect(sorted(live.entities())).toEqual(sorted(before));
