@@ -56,7 +56,7 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import { getWallCoveringColor } from '../wall-coverings/wall-covering-material-catalog';
 import { isFinishActive } from '../finishes/structural-finish-types';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptFillTintForCanvas, liveStrokeInk } from '../../config/adaptive-entity-color';
 import { paintClippedAreaHatch, type AreaHatchMotif } from './shared/canvas-hatch-fill';
 
 /**
@@ -177,7 +177,8 @@ export class SlabRenderer extends BimFootprintRenderer {
     this.ctx.lineWidth = _slabLwPx;
     this.ctx.setLineDash(bimDashPx(_slabPattern, this.transform.scale));
     // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip category override).
-    if (!_slabArmed) this.ctx.strokeStyle = _slabColor ?? KIND_STROKE[slab.kind];
+    // ADR-909 Γ2.8 — η εφεδρεία χρώματος ρωτά την πολιτική εκτύπωσης (το `_slabColor` την έχει ήδη περάσει).
+    if (!_slabArmed) this.ctx.strokeStyle = _slabColor ?? liveStrokeInk(KIND_STROKE[slab.kind]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();

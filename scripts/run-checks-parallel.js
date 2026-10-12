@@ -1147,6 +1147,16 @@ if (!process.env.SKIP_RETIRED_PROPERTY_WRITE)
 if (!process.env.SKIP_FLOOR_STACK_AUTHORITY)
   addThread('3.102', 'Floor stack authority', 'scripts/check-floor-stack-authority.js');
 
+// CHECK 3.103 (ADR-909 §6.9 · Γ2.8) — το μελάνι. «Βάζει αυτός ο ζωγράφος χρώμα ή πάχος στον καμβά ΧΩΡΙΣ να ρωτήσει
+// την πολιτική εκτύπωσης;» 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-10-09): Υδραυλικά ΜΠΛΕ σε «Ασπρόμαυρη» δημόσια κάτοψη. Η πύλη pixels
+// (3.101) βλέπει μόνο το δείγμα της και ό,τι αφήνει το προφίλ — στέγη, θεμέλιο, οπλισμό ΠΟΤΕ. Αυτή διαβάζει τον ΚΩΔΙΚΑ.
+// 🔑 AST: η τιμή του `strokeStyle` / `fillStyle` / `lineWidth` πρέπει να ΚΑΤΑΓΕΤΑΙ από το κλειστό σύνολο του
+// `.paper-ink-registry.json`. ⛔ ZERO-TOL στο `bim/renderers` (εξαίρεση μόνο με λόγο, ανά ΑΝΑΘΕΣΗ) · 🔴 RATCHET κατά
+// ταυτότητα στο `rendering/entities` + `bim/utils`. 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: το μητρώο, η baseline και κάθε ζωγράφος
+// αλλάζουν την απάντηση, και η πλήρης σάρωση κοστίζει ~1 s.
+if (!process.env.SKIP_PAPER_INK)
+  addThread('3.103', 'Paper ink', 'scripts/check-paper-ink.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

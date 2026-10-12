@@ -8,6 +8,8 @@ import { drawStairSubElementHighlight } from '../stair-sub-element-highlight-2d'
 import type { Point2D } from '../../../rendering/types/Types';
 import type { Polygon3D } from '../../types/stair-types';
 import type { StairSubElementRef } from '../../stairs/stair-sub-element-selection-store';
+import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
+import { ENGINEER_PDF, publicImage } from './print-pass-policies';
 
 function mockCtx() {
   return {
@@ -69,6 +71,33 @@ describe('drawStairSubElementHighlight', () => {
     expect(ctx.stroke).toHaveBeenCalledTimes(1);
     expect(ctx.moveTo).toHaveBeenCalledWith(20, 0); // tread 1 first vertex
     expect(ctx.lineTo).toHaveBeenCalledTimes(3); // 4-vertex quad → 3 lineTo + closePath
+  });
+
+  // ADR-909 Γ2.8 — η επιλογή έρχεται από store, όχι από `options`: το `skipInteractive` της λήψης δεν τη σβήνει.
+  describe('print pass (ADR-909 Γ2.8)', () => {
+    afterEach(clearPrintColorPolicy);
+
+    it.each([
+      ['δημόσια κάτοψη', publicImage('monochrome')],
+      ['PDF του μηχανικού', ENGINEER_PDF],
+    ])('🔴 %s: επιλεγμένο ΚΑΙ αιωρούμενο πάτημα δεν ζωγραφίζονται', (_name, policy) => {
+      setPrintColorPolicy(policy);
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(1), tread(0), LANDINGS,
+      );
+      expect(ctx.fill).not.toHaveBeenCalled();
+      expect(ctx.stroke).not.toHaveBeenCalled();
+      expect(ctx.save).not.toHaveBeenCalled();
+    });
+
+    it('μάρτυρας: χωρίς πολιτική, η ίδια κλήση ζωγραφίζει και τα δύο', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(1), tread(0), LANDINGS,
+      );
+      expect(ctx.fill).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('is a no-op when nothing is selected', () => {

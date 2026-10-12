@@ -19,6 +19,7 @@ import type { Polygon3D } from '../types/stair-types';
 import type { StairSubElementRef } from '../stairs/stair-sub-element-selection-store';
 import { isSameStairSubElement } from '../stairs/stair-sub-element-selection-store';
 import { UI_COLORS_BASE } from '../../config/color-config';
+import { getPrintColorPolicy } from '../../config/print-color-policy';
 
 const SELECT_FILL_ALPHA = 0.25;
 const HOVER_FILL_ALPHA = 0.12; // fainter pre-highlight (Revit hover < selection)
@@ -42,6 +43,9 @@ export function drawStairSubElementHighlight(
   hovered: StairSubElementRef | null = null,
   landings: readonly Polygon3D[] = [],
 ): void {
+  // ADR-909 Γ2.8 — chrome: σε print pass ΔΕΝ ζωγραφίζεται. Η επιλογή σκαλοπατιού διαβάζεται από store, όχι από
+  // τα `options`, άρα το `skipInteractive` της λήψης δεν τη σβήνει — επιλεγμένο πάτημα τυπωνόταν κυανό.
+  if (getPrintColorPolicy() !== null) return;
   // Skip the hover pass when it coincides with the selection (no double-paint).
   if (!isSameStairSubElement(hovered, selected)) {
     paintSubElementHalo(ctx, worldToScreen, allTreads, landings, stairId, hovered, HOVER_FILL_ALPHA);

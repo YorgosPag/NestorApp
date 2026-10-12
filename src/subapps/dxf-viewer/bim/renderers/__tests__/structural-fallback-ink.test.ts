@@ -1,6 +1,6 @@
 /**
- * ADR-909 Γ2.5 (Η4) · Γ2.6α — οι **εφεδρείες χρώματος** του ανοίγματος, του ανοίγματος πλάκας και της δοκού
- * ρωτούν την πολιτική εκτύπωσης.
+ * ADR-909 Γ2.5 (Η4) · Γ2.6α · Γ2.8 — οι **εφεδρείες χρώματος** του ανοίγματος, του ανοίγματος πλάκας, της δοκού
+ * και της πλάκας ρωτούν την πολιτική εκτύπωσης.
  *
  * 🔶 Σήμερα ο δρόμος αυτός είναι **απρόσιτος σε print pass**: το `resolveSubcategoryStyle` περνά κάθε χρώμα από το
  * `applyPlotColor`, που δεν γυρίζει ποτέ `null` — άρα η εφεδρεία δεν φτάνει στο χαρτί. Γι' αυτό ο επιλυτής εδώ
@@ -27,6 +27,8 @@ import { buildBeamEntity, buildDefaultBeamParams } from '../../../hooks/drawing/
 import { LAYER_ID, built } from '../../../print/public-floorplan/pixel-gate/pixel-gate-sample-kit';
 import { OpeningRenderer } from '../OpeningRenderer';
 import { SlabOpeningRenderer } from '../SlabOpeningRenderer';
+import { SlabRenderer } from '../SlabRenderer';
+import { buildDefaultSlabParams, buildSlabEntity } from '../../../hooks/drawing/slab-completion';
 import { MIN_ENTITY_CONTRAST } from '../../../config/contrast-adaptation';
 import { clearPrintColorPolicy, setPrintColorPolicy } from '../../../config/print-color-policy';
 import { OPENING_KIND_STROKE } from '../opening-kind-style';
@@ -42,8 +44,14 @@ const SHAFT_STROKE = '#1f3a5f';
 const BEAM_STRAIGHT_STROKE = '#b07d1f';
 const sampleBeam = () => built('beam', buildBeamEntity(buildDefaultBeamParams({ x: 0, y: 0 }, { x: 3000, y: 0 }), LAYER_ID));
 
+/** `KIND_STROKE.floor` της πλάκας (Γ2.8) — η εφεδρεία που η στατική πύλη 3.103 βρήκε ωμή. */
+const SLAB_FLOOR_STROKE = '#6e6358';
+const SLAB_RING = [{ x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 3000 }, { x: 0, y: 3000 }];
+const sampleSlab = () => built('slab', buildSlabEntity(buildDefaultSlabParams(SLAB_RING), LAYER_ID));
+
 const SAMPLES: ReadonlyArray<readonly [string, string, () => Painted]> = [
   ['beam', BEAM_STRAIGHT_STROKE, () => paintedBy((ctx) => new BeamRenderer(ctx), sampleBeam())],
+  ['slab', SLAB_FLOOR_STROKE, () => paintedBy((ctx) => new SlabRenderer(ctx), sampleSlab())],
   ['slab-opening', SHAFT_STROKE, () => paintedBy((ctx) => new SlabOpeningRenderer(ctx), sampleSlabOpening())],
   ['opening', OPENING_KIND_STROKE.door, () => paintedBy((ctx) => new OpeningRenderer(ctx), sampleOpening(wall))],
 ];

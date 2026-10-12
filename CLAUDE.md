@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:a3d256ecab0593362f33ab08a02bfedcd379fa47a79a99ccd05b955fa2484272 -->
+     fingerprint: sha256:ccbbb757297a79a1786a8fdea72d8307de9b715f36809b40866270cfd462c45c -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -394,6 +394,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.100** | **Πύλη της εγγραφής σε αποσυρμένο ακίνητο** (ADR-281) — «γράφει κάποια διαδρομή πάνω σε ακίνητο **χωρίς να ρωτήσει αν είναι αποσυρμένο**; (ο τύπος αναγκάζει το `intent` — **όχι** το να περάσει κάθε route πο…» · `npm run test:retired-property-write` · `SKIP_RETIRED_PROPERTY_WRITE=1` · 📘 `docs/gates/3.100.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3) | — |
 | **3.101** | **Πύλη pixels της δημόσιας κάτοψης** (ADR-909) — «βγαίνει η δημόσια κάτοψη άχρωμη όταν ζητήθηκε άχρωμη, και διαβάζεται κάθε γραμμή της; — για ΚΑΘΕ τύπο στοιχείου, όχι για το σχέδιο που έτυχε να δοκιμ…» · `npm run test:public-floorplan-pixels` · 📘 `docs/gates/3.101.md` | 🔴 RATCHET (Κ0–Κ3) + ⛔ ZERO-TOL (Κ4–Κ6) · μόνο CI (Chromium) | `.public-floorplan-pixels-baseline.json` |
 | **3.102** | **Πύλη της αρχής της στοίβας ορόφων** (ADR-910) — «γεννά, σβήνει ή αλλάζει τη **θέση** ενός ορόφου κάποιος **ΕΞΩ από το σύνορο της στοίβας** — ή έμεινε ανοιχτή η πόρτα απευθείας εγγραφής; (η μοναδικότ…» · `npm run test:floor-stack-authority` · `SKIP_FLOOR_STACK_AUTHORITY=1` · 📘 `docs/gates/3.102.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
+| **3.103** | **Πύλη του μελανιού** (ADR-909) — «βάζει αυτός ο ζωγράφος χρώμα ή πάχος στον καμβά **ΧΩΡΙΣ να ρωτήσει την πολιτική εκτύπωσης**; (η πύλη pixels βλέπει μόνο ό,τι υπάρχει στο δείγμα της κ…» · `npm run test:paper-ink` · `SKIP_PAPER_INK=1` · 📘 `docs/gates/3.103.md` | ⛔ ZERO-TOL (Κ1–Κ4, `bim/renderers`) + 🔴 RATCHET κατά ταυτότη… | `.paper-ink-baseline.json` |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -407,8 +408,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **93** (εκτελεστής 85 + hook 21) ·
-γραμμές εδώ: **84** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **94** (εκτελεστής 86 + hook 21) ·
+γραμμές εδώ: **85** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

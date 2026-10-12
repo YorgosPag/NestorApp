@@ -1,0 +1,245 @@
+{
+  "$doc": "CHECK 3.103 / ADR-909 §6.9 (Γ2.8) — ΤΟ ΜΗΤΡΩΟ ΤΟΥ ΜΕΛΑΝΙΟΥ. Τρία πράγματα, ένα αρχείο: (1) το ΚΛΕΙΣΤΟ σύνολο συναρτήσεων από τις οποίες επιτρέπεται να κατάγεται μια ανάθεση `strokeStyle` / `fillStyle` / `lineWidth`· (2) οι δύο ζώνες της πύλης· (3) οι εξαιρέσεις της ζώνης strict, η καθεμία με ΛΟΓΟ (>= 40 χαρακτήρες) και με τις ΑΚΡΙΒΕΙΣ αναθέσεις που καλύπτει.",
+  "$howToRead": [
+    "Μια εξαίρεση ΔΕΝ καλύπτει τη συνάρτηση — καλύπτει τις αναθέσεις που ονομάζει. Νέα ωμή γραμμή μέσα στην ίδια συνάρτηση είναι ⛔ undeclared.",
+    "Εξαίρεση που δεν αντιστοιχεί πια σε τίποτα είναι ⛔ stale: σβήσε τη γραμμή (ο ζωγράφος διορθώθηκε, ή η ανάθεση άλλαξε κείμενο).",
+    "Γραμμή ΠΕΡΙΕΧΟΜΕΝΟΥ σχεδίου δεν εξαιρείται ποτέ: περνά από `applyLiveStroke` / `liveStrokeInk` / `liveStrokeWidthPx`.",
+    "Η ζώνη ratchet ΔΕΝ έχει εξαιρέσεις: ό,τι υπάρχει στη baseline της είναι «δεν κρίθηκε», όχι «καθαρό»."
+  ],
+  "approved": {
+    "liveStrokeInk": "src/subapps/dxf-viewer/config/adaptive-entity-color.ts",
+    "liveStrokeWidthPx": "src/subapps/dxf-viewer/config/adaptive-entity-color.ts",
+    "liveSymbolFill": "src/subapps/dxf-viewer/config/adaptive-entity-color.ts",
+    "liveDrawingSurfaceHex": "src/subapps/dxf-viewer/config/adaptive-entity-color.ts",
+    "adaptFillTintForCanvas": "src/subapps/dxf-viewer/config/adaptive-entity-color.ts",
+    "applyPlotColor": "src/subapps/dxf-viewer/config/print-color-policy.ts",
+    "lineweightDisplayPx": "src/subapps/dxf-viewer/config/lineweight-display-px.ts",
+    "resolveSubcategoryStyle": "src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts",
+    "resolveBimBodyFill": "src/subapps/dxf-viewer/bim/utils/bim-body-fill.ts",
+    "topFacePlanFill": "src/subapps/dxf-viewer/bim/utils/bim-face-plan-fill.ts"
+  },
+  "kinds": {
+    "chrome": "Ζωγραφίζεται μόνο σε hover / επιλογή / επεξεργασία — ποτέ σε print pass. Μένει ωμό επίτηδες (ADR-909 Θ2).",
+    "caller": "Η τιμή έρχεται από ΠΑΡΑΜΕΤΡΟ: την έχει ήδη περάσει από την πολιτική ο καλών. Η απόδειξη δεν περνά σύνορο αρχείου.",
+    "not-ink": "Μάσκα σβησίματος (`destination-out`): μετρά μόνο η αδιαφάνεια, δεν βάφει τίποτα.",
+    "screen-branch": "Τριαδικός πάνω στην πολιτική: ο κλάδος του χαρτιού είναι εγκεκριμένος, ο κλάδος της οθόνης ωμός επίτηδες."
+  },
+  "zones": {
+    "strict": ["src/subapps/dxf-viewer/bim/renderers"],
+    "ratchet": ["src/subapps/dxf-viewer/rendering/entities", "src/subapps/dxf-viewer/bim/utils"]
+  },
+  "exceptions": [
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/BeamRenderer.ts",
+      "fn": "drawDepthIndicator",
+      "kind": "chrome",
+      "why": "Δείκτης βάθους δοκού: καλείται μόνο μέσα στο `phase === 'highlighted'` (hover) του `render`.",
+      "assignments": ["strokeStyle = 'rgba(0, 0, 0, 0.45)'", "lineWidth = 0.8", "fillStyle = 'rgba(0, 0, 0, 0.70)'"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/BeamRenderer.ts",
+      "fn": "drawAnchorPulse",
+      "kind": "chrome",
+      "why": "Παλμός άγκυρας δοκού: καλείται μόνο μέσα στο `phase === 'highlighted'` (hover) του `render`.",
+      "assignments": ["strokeStyle = `rgba(30, 60, 160, ${alpha.toFixed(2)})`", "lineWidth = ANCHOR_PULSE_LINE_W_PX"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/beam-section-profile-draw.ts",
+      "fn": "drawBeamSectionProfile",
+      "kind": "chrome",
+      "why": "Σύμβολο διατομής δοκού δίπλα στο στοιχείο: καλείται μόνο σε hover (`phase === 'highlighted'`).",
+      "assignments": [
+        "strokeStyle = _spCol ?? SECTION_STROKE_COLOR",
+        "lineWidth = _spPx ?? SECTION_LINE_WIDTH_PX",
+        "fillStyle = SECTION_STROKE_COLOR"
+      ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/column-renderer-overlays.ts",
+      "fn": "drawColumnVariantDimensionLabels",
+      "kind": "chrome",
+      "why": "Ετικέτες διαστάσεων παραλλαγής κολόνας: καλούνται μόνο σε hover (`phase === 'highlighted'`).",
+      "assignments": ["fillStyle = 'rgba(0, 0, 0, 0.60)'"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/column-renderer-overlays.ts",
+      "fn": "drawDimLabel",
+      "kind": "chrome",
+      "why": "Γραμμή διάστασης της ετικέτας κολόνας: την καλεί μόνο το `drawColumnVariantDimensionLabels` (hover).",
+      "assignments": ["strokeStyle = 'rgba(0, 0, 0, 0.35)'", "lineWidth = 0.7"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/column-renderer-overlays.ts",
+      "fn": "paintSectionSymbol",
+      "kind": "chrome",
+      "why": "Σύμβολο διατομής κολόνας: το καλεί μόνο το `drawColumnSectionProfile`, που τρέχει μόνο σε hover.",
+      "assignments": ["strokeStyle = strokeColor ?? COL_SECTION_STROKE_COLOR", "lineWidth = lineWidthPx"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/RoofRenderer.ts",
+      "fn": "drawSelectedEdgeHighlight",
+      "kind": "chrome",
+      "why": "Ακμή στέγης υπό επεξεργασία: καλείται μόνο με `options.selected === true`, που η λήψη δεν περνά ποτέ.",
+      "assignments": ["strokeStyle = ROOF_EDGE_HIGHLIGHT_STROKE", "lineWidth = ROOF_EDGE_HIGHLIGHT_LINE_WIDTH"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/MepSegmentRenderer.ts",
+      "fn": "renderRiser",
+      "kind": "chrome",
+      "why": "Λάμψη hover της κατακόρυφης στήλης: οι δύο αναθέσεις είναι μέσα στο `phase === 'highlighted'`.",
+      "assignments": [
+        "strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor",
+        "lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth"
+      ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/MepWireRenderer.ts",
+      "fn": "drawOneWire",
+      "kind": "chrome",
+      "why": "Λάμψη και πυρήνας hover του καλωδίου: οι δύο αναθέσεις είναι μέσα στο `if (highlight)`.",
+      "assignments": ["lineWidth = WIRE_HALO_WIDTH", "lineWidth = WIRE_HIGHLIGHT_WIDTH"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/MepWireRenderer.ts",
+      "fn": "drawInsertGhost",
+      "kind": "chrome",
+      "why": "Το «+» εισαγωγής κορυφής καλωδίου: υπάρχει μόνο όσο ο δείκτης αιωρείται πάνω από το καλώδιο.",
+      "assignments": ["lineWidth = HANDLE_STROKE_PX", "strokeStyle = color"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/bim-hover-halo.ts",
+      "fn": "drawBimHoverHalo",
+      "kind": "chrome",
+      "why": "Λάμψη hover τοίχου / σκάλας: οι δύο καλούντες την καλούν μόνο σε `phase === 'highlighted'`.",
+      "assignments": [
+        "strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor",
+        "lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth"
+      ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/bim-polygon-render.ts",
+      "fn": "paintHoverHalo",
+      "kind": "chrome",
+      "why": "Λάμψη hover πολυγώνου: η συνάρτηση γυρίζει αμέσως όταν `highlighted` είναι ψευδές (λήψη ⇒ πάντα ψευδές).",
+      "assignments": [
+        "strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor",
+        "lineWidth = bodyLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth"
+      ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/bim-polygon-render.ts",
+      "fn": "paintSelectionHalo",
+      "kind": "chrome",
+      "why": "Λάμψη επιλογής πολυγώνου: η συνάρτηση γυρίζει αμέσως όταν `selected` είναι ψευδές (λήψη ⇒ πάντα ψευδές).",
+      "assignments": [
+        "strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor",
+        "lineWidth = SELECTION_HALO_BODY_WIDTH + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth"
+      ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/stair-sub-element-highlight-2d.ts",
+      "fn": "paintSubElementHalo",
+      "kind": "chrome",
+      "why": "Τονισμός επιλεγμένου πατήματος: το `drawStairSubElementHighlight` γυρίζει αμέσως σε print pass (Γ2.8, με άγκυρα).",
+      "assignments": [
+        "fillStyle = UI_COLORS_BASE.EDIT_EDGE_HIGHLIGHT",
+        "lineWidth = OUTLINE_WIDTH_PX",
+        "strokeStyle = UI_COLORS_BASE.EDIT_EDGE_HIGHLIGHT"
+      ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/WallRenderer.ts",
+      "fn": "drawAxis",
+      "kind": "chrome",
+      "why": "Άξονας τοίχου: βοήθημα οθόνης — η συνάρτηση γυρίζει αμέσως σε print pass (Γ2.5 Η2, άγκυρα Τ).",
+      "assignments": ["lineWidth = RENDER_LINE_WIDTHS.THIN"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/WallRenderer.ts",
+      "fn": "punchHostedOpenings",
+      "kind": "not-ink",
+      "why": "Τρύπα ανοίγματος στο γέμισμα του τοίχου με `destination-out`: το `#000` σβήνει, δεν βάφει.",
+      "assignments": ["fillStyle = '#000'"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/EnvelopeRenderer.ts",
+      "fn": "renderOpeningCuts",
+      "kind": "not-ink",
+      "why": "Μάσκα σβησίματος της μόνωσης στα ανοίγματα με `destination-out`: μετρά μόνο η αδιαφάνεια.",
+      "assignments": ["fillStyle = 'rgba(0, 0, 0, 1)'"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts",
+      "fn": "drawWalkline",
+      "kind": "caller",
+      "why": "Το πάχος είναι παράμετρος: το `render` περνά `_walklineS.lineWidthPx` από το `resolveSubcategoryStyle`.",
+      "assignments": ["lineWidth = lineWidthPx"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts",
+      "fn": "drawHandrails",
+      "kind": "caller",
+      "why": "Το πάχος είναι παράμετρος: το `render` περνά `_handrailsS.lineWidthPx` από το `resolveSubcategoryStyle`.",
+      "assignments": ["lineWidth = lineWidthPx"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts",
+      "fn": "drawArrow",
+      "kind": "caller",
+      "why": "Το πάχος είναι παράμετρος: το `render` περνά `_arrowS.lineWidthPx` από το `resolveSubcategoryStyle`.",
+      "assignments": ["lineWidth = lineWidthPx"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/stair-render-structure-style.ts",
+      "fn": "renderTreadsForStructure",
+      "kind": "caller",
+      "why": "Τα πάχη του `scx` τα γεμίζει ο `StairRenderer` από το `resolveSubcategoryStyle` (`_treadsS.lineWidthPx`).",
+      "assignments": ["lineWidth = scx.treadsLineWidth ?? scx.baseLineWidth"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/stair-render-structure-style.ts",
+      "fn": "drawSolidPolyline",
+      "kind": "caller",
+      "why": "Το πάχος είναι παράμετρος: κάθε καλών περνά `scx.stringersLineWidth ?? scx.baseLineWidth` (επιλυτής).",
+      "assignments": ["lineWidth = lineWidth"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/stair-render-structure-style.ts",
+      "fn": "drawDashedPolyline",
+      "kind": "caller",
+      "why": "Το πάχος είναι παράμετρος: κάθε καλών περνά `scx.stringersLineWidth ?? scx.baseLineWidth` (επιλυτής).",
+      "assignments": ["lineWidth = lineWidth"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/bim-contrast-casing.ts",
+      "fn": "strokeWithContrastCasing",
+      "kind": "caller",
+      "why": "Μελάνι και πάχος είναι παράμετροι: ο `WallRenderer` περνά ετυμηγορία του `adaptStructuralLineInkForCanvas`.",
+      "assignments": ["strokeStyle = casing", "lineWidth = lineWidth + CONTRAST_CASING_EXTRA_WIDTH_PX", "strokeStyle = verdict.ink"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/bim-footprint-renderer.ts",
+      "fn": "paintResolvedBody",
+      "kind": "caller",
+      "why": "Το γέμισμα είναι παράμετρος: οι δύο είσοδοι το δίνουν από `adaptFillTintForCanvas` / `liveSymbolFill`.",
+      "assignments": ["fillStyle = fillStyle"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/OpeningTagRenderer.ts",
+      "fn": "drawPillTag",
+      "kind": "screen-branch",
+      "why": "Το `tagSurface` δίνει το χαρτί (`PRINT_PAPER_HEX`) σε print pass και το χρώμα του στυλ μόνο στην οθόνη.",
+      "assignments": ["fillStyle = tagSurface(style.pillBgColor)"]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/renderers/structural-finish-outline-2d.ts",
+      "fn": "drawStructuralFinishOutline",
+      "kind": "screen-branch",
+      "why": "Σοβάς: σε print pass `applyPlotColor` + `lineweightDisplayPx`· στην οθόνη οι παλιές τιμές αυτούσιες.",
+      "assignments": [
+        "lineWidth = printPolicy ? lineweightDisplayPx(FINISH_OUTLINE_PEN_MM) : FINISH_OUTLINE_LINE_WIDTH_PX",
+        "strokeStyle = printPolicy ? applyPlotColor(pl.colorHex, null, printPolicy) : pl.colorHex"
+      ]
+    }
+  ]
+}
