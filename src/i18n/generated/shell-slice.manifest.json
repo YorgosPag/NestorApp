@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fe58b4d7d2efc165dcc842b589a88cd72a08149d9d5fe4a1078ddf53193f51dc",
+  "inputsSha256": "04d7ef51936d795f5160c5802797149d98ecf9e134457bbf09c8cfe557af49a6",
   "languages": [
     "el"
   ],
@@ -11643,7 +11643,7 @@
     "src/components/header/CompanySwitcher.tsx": "2f69c84463d024f2f5e005525ebc3fdec7da909be98758cf21b52d6350dbc18a",
     "src/components/header/DeclaredOccupationBadge.tsx": "cf1ff7fc9b667325981d299784fcca293aee6ffd0a628a1ffb4b283d7cb3a2c4",
     "src/components/header/JobSwitch.tsx": "90a57871b1795ee1211f960408fc1559aed466a649ef58c0ea6f0a7a846c6e5c",
-    "src/components/header/MySpacesSection.tsx": "8fe09db0a4b938cf18857e83f593f8d246f28dfab58c88ed2727caf4949e0104",
+    "src/components/header/MySpacesSection.tsx": "4a1da69c41c9ce19559d07a735dfb2baac4451423f2948ae64170eec5733eb48",
     "src/components/header/SaveStatusIndicator.tsx": "1d3e33b5e51f6e271b0a6959fe6a90784cc57e698b1035c41816899c2e7f7c5a",
     "src/components/header/help-button.tsx": "dc22b85d44c8a74a38cd8923d6bbd3b04e40ba775bc55cd5a2f22b51eb9ccb29",
     "src/components/header/language-switcher.tsx": "32939eae61b1eed5435cab49c1c7885560ed7e1e19b4b39b2cc49f4fcb591aab",

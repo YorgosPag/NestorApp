@@ -23,6 +23,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 
 import { MySpacesSection } from '@/components/header/MySpacesSection';
+import { setUrlWorkspaceScope } from '@/services/firestore/super-admin-active-company';
+import { orgWorkspace } from '@/types/workspace-membership';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +78,7 @@ jest.mock('@/hooks/useLayoutClasses', () => ({
 
 const PERSONAL = 'common-account:userMenu.spaces.personal';
 const ORGANIZATION = 'common-account:userMenu.spaces.organization';
+const LEAVE = 'common-account:userMenu.spaces.leave';
 
 /** Η διεύθυνση του ιδιωτικού χώρου (`PRIVATE_SPACE_HOME` → `MY_OFFERS_ROUTE`). */
 const PERSONAL_HREF = '/offers';
@@ -88,6 +91,7 @@ const OUTSIDE_WORKSPACE = '/offers';
 beforeEach(() => {
   currentCompanyId = undefined;
   currentPathname = OUTSIDE_WORKSPACE;
+  setUrlWorkspaceScope(null);
 });
 
 function linkFor(label: string): HTMLAnchorElement {
@@ -105,12 +109,12 @@ function linkFor(label: string): HTMLAnchorElement {
  * ⚠️ `modal={false}`: το modal Radix κλειδώνει την εστίαση και τυλίγει το σώμα με
  * `aria-hidden`, που κάνει τις queries της testing-library να μη βλέπουν τίποτα.
  */
-function renderInMenu(): void {
+function renderInMenu(onLeaveWorkspace?: () => void): void {
   render(
     <DropdownMenu open modal={false}>
       <DropdownMenuTrigger>μενού</DropdownMenuTrigger>
       <DropdownMenuContent>
-        <MySpacesSection />
+        <MySpacesSection onLeaveWorkspace={onLeaveWorkspace} />
       </DropdownMenuContent>
     </DropdownMenu>,
   );
@@ -218,5 +222,42 @@ describe('ADR-820 §5.1 — οι χώροι μου', () => {
     currentPathname = INSIDE_WORKSPACE;
     renderInMenu();
     expect(linkFor(ORGANIZATION)).toHaveAttribute('href', SERVER_ANSWERED_HREF);
+  });
+
+  // -------------------------------------------------------------------------
+  // «ΠΕΡΑΣΕ» ≠ «ΑΝΗΚΕΙ» — ADR-892 §13.1 (μετρημένο ζωντανά 2026-10-07)
+  // -------------------------------------------------------------------------
+
+  const OWN = 'comp_alpha_emulator';
+  const FOREIGN = 'comp_foreign';
+
+  test('Α11 — ΠΑΡΟΝΟΜΑΣΤΗΣ: το ΜΕΛΟΣ μέσα στο γραφείο του ΒΛΕΠΕΙ «Αποχώρηση»', () => {
+    // Χωρίς αυτό, το «δεν βρήκα Αποχώρηση» του Α12 θα μπορούσε να σημαίνει «δεν αποδίδεται ποτέ».
+    currentCompanyId = OWN;
+    currentPathname = INSIDE_WORKSPACE;
+    setUrlWorkspaceScope(orgWorkspace(OWN), 'member');
+    renderInMenu(jest.fn());
+    expect(screen.getByText(LEAVE)).toBeInTheDocument();
+  });
+
+  test('Α12 🔴 — ο διαχειριστής πλατφόρμας σε ΞΕΝΟ γραφείο ΔΕΝ βλέπει «Αποχώρηση»', () => {
+    // Μετάλλαξη που σκοτώνει: `currentSpaceId` να αγνοεί το `visiting` (η παλιά συμπεριφορά).
+    currentCompanyId = OWN;
+    currentPathname = INSIDE_WORKSPACE;
+    setUrlWorkspaceScope(orgWorkspace(FOREIGN), 'platform-bypass');
+    renderInMenu(jest.fn());
+    expect(screen.queryByText(LEAVE)).not.toBeInTheDocument();
+  });
+
+  test('Α13 🔴 — και ΚΑΝΕΝΑΣ δικός του χώρος δεν γράφει «εδώ βρίσκεσαι»· μένουν ΚΑΙ ΟΙ ΔΥΟ σύνδεσμοι', () => {
+    // Το «Ο χώρος του γραφείου μου · εδώ βρίσκεσαι» ήταν ψευδές: στεκόταν στο ΞΕΝΟ γραφείο.
+    currentCompanyId = OWN;
+    currentPathname = INSIDE_WORKSPACE;
+    setUrlWorkspaceScope(orgWorkspace(FOREIGN), 'platform-bypass');
+    renderInMenu(jest.fn());
+    expect(linkFor(ORGANIZATION)).not.toHaveAttribute('aria-current');
+    expect(linkFor(PERSONAL)).not.toHaveAttribute('aria-current');
+    expect(linkFor(ORGANIZATION)).toHaveAttribute('href', SERVER_ANSWERED_HREF);
+    expect(linkFor(PERSONAL)).toHaveAttribute('href', PERSONAL_HREF);
   });
 });

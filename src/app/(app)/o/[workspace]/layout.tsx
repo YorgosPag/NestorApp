@@ -117,6 +117,9 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
               ? personalWorkspace(identity.ctx.uid)
               : orgWorkspace(resolution.companyId)
           }
+          // 🔑 ADR-892 §13.1 — «πέρασε» ≠ «ανήκει»: ο διαχειριστής πλατφόρμας μπαίνει σε ξένο γραφείο
+          //    (`platform-bypass`) και το μενού δεν πρέπει να του προσφέρει «Αποχώρηση» από αυτό.
+          verdict={resolution.verdict}
         >
           {children}
         </WorkspaceScopeBridge>

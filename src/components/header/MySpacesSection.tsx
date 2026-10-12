@@ -81,7 +81,7 @@
  * επειδή κανείς δεν κοίταξε» (N.12).
  */
 
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { Check, DoorOpen } from 'lucide-react';
 
 // 🔴 **`@/auth` ΚΑΙ ΟΧΙ `@/auth/hooks/useAuth` — ΤΟ ΒΡΗΚΕ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ, ΟΧΙ Η ΚΡΙΣΗ.**
@@ -105,6 +105,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Link, usePathname } from '@/lib/workspace/navigation';
 import { spacesFor, type SpaceId } from '@/config/my-spaces';
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
+import {
+  getClientWorkspaceScope,
+  isVisitingWorkspace,
+  onSuperAdminActiveCompanyChange,
+} from '@/services/firestore/super-admin-active-company';
 
 const K = 'common-account:userMenu.spaces';
 
@@ -125,14 +130,21 @@ const K = 'common-account:userMenu.spaces';
  * είναι σωστό, όχι παράλειψη: ο `PrivateSpaceShell` το έχει ήδη γράψει, *«ο ιδιώτης
  * που πέρασε από την αρχική στη ζήτησή του **δεν άλλαξε ιστότοπο**»*. Ο δημόσιος
  * κόσμος φοράει την **ίδια** κεφαλίδα με τον προσωπικό.
+ *
+ * 🔴 **`null` = ΚΑΝΕΝΑΣ ΑΠΟ ΤΟΥΣ ΔΙΚΟΥΣ ΤΟΥ** (ADR-892 §13.1, μετρημένο ζωντανά 2026-10-07). Ο διαχειριστής
+ * πλατφόρμας ανοίγει **ξένο** γραφείο με `platform-bypass`· η διεύθυνση είναι «μέσα σε χώρο», αλλά ο χώρος
+ * **δεν είναι δικός του**. Το μενού έγραφε «Ο χώρος του γραφείου μου · εδώ βρίσκεσαι» πάνω στο **δικό** του
+ * γραφείο ενώ στεκόταν στο ξένο, και του πρόσφερε «Αποχώρηση». Η διεύθυνση λέει **πού** είσαι· μόνο ο
+ * φύλακας ξέρει αν **ανήκεις** εκεί — και η απάντησή του φτάνει από τη γέφυρα (`isVisitingWorkspace`).
  */
-function currentSpaceId(pathname: string): SpaceId {
+function currentSpaceId(pathname: string, visiting: boolean): SpaceId | null {
+  if (visiting) return null;
   return isInsideWorkspace(pathname) ? 'organization' : 'personal';
 }
 
 /**
  * @param onLeaveWorkspace ADR-892 Φ3 — «Αποχώρηση από το γραφείο». Η γραμμή εμφανίζεται **μόνο** όταν ο
- *   τρέχων χώρος είναι γραφείο: η αποχώρηση αφορά **αυτό** το γραφείο (ο διακομιστής το κρίνει από τη
+ *   τρέχων χώρος είναι γραφείο **όπου ανήκει** (ποτέ γραφείο που απλώς επισκέπτεται — §13.1): η αποχώρηση αφορά **αυτό** το γραφείο (ο διακομιστής το κρίνει από τη
  *   διεύθυνση, CHECK 3.58), και στον προσωπικό χώρο δεν υπάρχει τίποτα να αφήσεις. Ο διάλογος ζει στον
  *   καλούντα, **έξω** από το μενού — αλλιώς θα ξεκρεμιόταν μαζί του όταν κλείσει.
  */
@@ -143,8 +155,14 @@ export function MySpacesSection({ onLeaveWorkspace }: Readonly<{ onLeaveWorkspac
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
 
+  const scope = useSyncExternalStore(
+    onSuperAdminActiveCompanyChange,
+    getClientWorkspaceScope,
+    getClientWorkspaceScope,
+  );
+
   const spaces = spacesFor(user?.companyId);
-  const current = currentSpaceId(pathname);
+  const current = currentSpaceId(pathname, isVisitingWorkspace(scope));
 
   return (
     <DropdownMenuGroup>

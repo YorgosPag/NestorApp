@@ -36,17 +36,27 @@
 import { registerWorkspaceScopeSource } from '@/lib/api/workspace-scope-source';
 import { createExternalStore } from '@/lib/state/createExternalStore';
 import { serializeRequestedWorkspace } from '@/lib/workspace/requested-workspace-wire';
-import type { RequestedWorkspace, WorkspaceRef } from '@/types/workspace-membership';
+import {
+  belongsHere,
+  type MembershipVerdict,
+  type RequestedWorkspace,
+  type WorkspaceRef,
+} from '@/types/workspace-membership';
 
 /** Οι δύο είσοδοι — **ποτέ** η απάντηση. Αυτή τη δίνει το {@link requestedWorkspace}. */
 export interface ClientWorkspaceScope {
   /** Ο χώρος της **διεύθυνσης**, όπως τον έκρινε ο φύλακας — `null` εκτός `/o/`. */
   readonly url: WorkspaceRef | null;
+  /**
+   * **Με ποια ετυμηγορία** άνοιξε ο φύλακας τον χώρο της διεύθυνσης (ADR-892 §13.1) — `null` εκτός `/o/`.
+   * ⚠️ Δεν αλλάζει **ποιον** χώρο ζητά ο πελάτης· λέει μόνο αν ο άνθρωπος **ανήκει** εκεί ή **περνά**.
+   */
+  readonly urlVerdict: MembershipVerdict | null;
   /** Η επιλογή του επιλογέα του super-admin — `null` για κάθε άλλον. */
   readonly switcher: string | null;
 }
 
-const EMPTY_SCOPE: ClientWorkspaceScope = { url: null, switcher: null };
+const EMPTY_SCOPE: ClientWorkspaceScope = { url: null, urlVerdict: null, switcher: null };
 
 /** Ίδιος χώρος; Κατά **τιμή** — ο φύλακας ξαναχτίζει το αντικείμενο σε κάθε απόδοση. */
 function sameWorkspace(a: WorkspaceRef | null, b: WorkspaceRef | null): boolean {
@@ -59,12 +69,19 @@ function sameWorkspace(a: WorkspaceRef | null, b: WorkspaceRef | null): boolean 
 // SSoT pub/sub primitive (WAVE 3). Η ισότητα κατά τιμή κρατά τις περιττές εγγραφές
 // no-op — αλλιώς κάθε απόδοση του φύλακα θα ξανάστηνε ΚΑΘΕ ακροατή Firestore.
 const store = createExternalStore<ClientWorkspaceScope>(EMPTY_SCOPE, {
-  equals: (a, b) => a.switcher === b.switcher && sameWorkspace(a.url, b.url),
+  equals: (a, b) =>
+    a.switcher === b.switcher && a.urlVerdict === b.urlVerdict && sameWorkspace(a.url, b.url),
 });
 
-/** Ο χώρος της διεύθυνσης — τον γράφει **μόνο** το `WorkspaceScopeBridge`. */
-export function setUrlWorkspaceScope(url: WorkspaceRef | null): void {
-  store.set({ ...store.get(), url });
+/**
+ * Ο χώρος της διεύθυνσης **μαζί με την ετυμηγορία του** — τον γράφει **μόνο** το `WorkspaceScopeBridge`.
+ *
+ * 🔑 **Μία εγγραφή, όχι δύο setters**: χώρος και ετυμηγορία είναι η **ίδια** απάντηση του φύλακα. Χωριστά θα
+ * άφηναν ενδιάμεσο καρέ «νέος χώρος, παλιά ετυμηγορία» — δηλαδή «Αποχώρηση» σε γραφείο όπου δεν είσαι μέλος.
+ * ⚠️ Χωρίς χώρο **δεν υπάρχει** ετυμηγορία: το `null` τη σβήνει πάντα.
+ */
+export function setUrlWorkspaceScope(url: WorkspaceRef | null, verdict: MembershipVerdict | null = null): void {
+  store.set({ ...store.get(), url, urlVerdict: url === null ? null : verdict });
 }
 
 /** Η επιλογή του επιλογέα — τη γράφει **μόνο** το `SuperAdminCompanyContext`. */
@@ -102,6 +119,18 @@ export function requestedWorkspace(
   return scope.switcher !== null
     ? { kind: 'org', companyId: scope.switcher }
     : { kind: 'default' };
+}
+
+/**
+ * **Περνά από ξένο γραφείο;** — η διεύθυνση ονομάζει γραφείο όπου ο άνθρωπος **επιτρέπεται** αλλά **δεν ανήκει**
+ * (σήμερα: `platform-bypass`, ο διαχειριστής πλατφόρμας σε υποστήριξη).
+ *
+ * 🔑 **Καμία νέα κρίση**: ο κριτής είναι το {@link belongsHere} — ο **ίδιος** που ρωτούν οι διαδρομές του
+ * διακομιστή (ADR-867 Β5). Εδώ μόνο εφαρμόζεται στην ετυμηγορία που **ήδη** έβγαλε ο φύλακας.
+ * ⚠️ Ο ιδιωτικός χώρος δεν είναι ποτέ «ξένος»· και απούσα ετυμηγορία σημαίνει `home` (η σύμβαση του κριτή).
+ */
+export function isVisitingWorkspace(scope: ClientWorkspaceScope = store.get()): boolean {
+  return scope.url?.kind === 'org' && !belongsHere(scope.urlVerdict ?? undefined);
 }
 
 /**

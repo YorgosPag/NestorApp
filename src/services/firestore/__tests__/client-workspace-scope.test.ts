@@ -10,6 +10,7 @@
 
 import {
   getClientWorkspaceScope,
+  isVisitingWorkspace,
   onSuperAdminActiveCompanyChange,
   requestedCompanyId,
   requestedWorkspace,
@@ -119,5 +120,49 @@ describe('η κεφαλίδα HTTP ρωτά την ΙΔΙΑ απάντηση', (
     expect(serializeRequestedWorkspace(requestedWorkspaceScope())).toBe('default');
     setUrlWorkspaceScope(orgWorkspace(A));
     expect(serializeRequestedWorkspace(requestedWorkspaceScope())).toBe(`org:${A}`);
+  });
+});
+
+/**
+ * 🔴 ADR-892 §13.1 — μετρημένο ζωντανά 2026-10-07: ο διαχειριστής πλατφόρμας άνοιγε ξένο γραφείο και το μενού
+ * του πρόσφερε «Αποχώρηση από το γραφείο». Ο πελάτης ήξερε **ποιον** χώρο, όχι **με ποια ιδιότητα**.
+ */
+describe('isVisitingWorkspace — «πέρασε» ≠ «ανήκει»', () => {
+  it('Ε1 🔴 platform-bypass σε γραφείο ⇒ επισκέπτης', () => {
+    setUrlWorkspaceScope(orgWorkspace(A), 'platform-bypass');
+    expect(isVisitingWorkspace()).toBe(true);
+  });
+
+  it('Ε2: μέλος και οικείος χώρος ⇒ ΟΧΙ επισκέπτης', () => {
+    setUrlWorkspaceScope(orgWorkspace(A), 'member');
+    expect(isVisitingWorkspace()).toBe(false);
+    setUrlWorkspaceScope(orgWorkspace(A), 'home');
+    expect(isVisitingWorkspace()).toBe(false);
+  });
+
+  it('Ε3: ο ιδιωτικός χώρος και το «εκτός `/o/`» δεν είναι ποτέ ξένο γραφείο', () => {
+    expect(isVisitingWorkspace()).toBe(false);
+    setUrlWorkspaceScope(personalWorkspace('uid_1'), 'self');
+    expect(isVisitingWorkspace()).toBe(false);
+  });
+
+  it('Ε4 🔴 έξοδος από τον χώρο ΣΒΗΝΕΙ την ετυμηγορία — δεν επιζεί για τον επόμενο χώρο', () => {
+    setUrlWorkspaceScope(orgWorkspace(A), 'platform-bypass');
+    setUrlWorkspaceScope(null, 'platform-bypass');
+    expect(getClientWorkspaceScope().urlVerdict).toBeNull();
+  });
+
+  it('Ε5 🔴 ίδιος χώρος, άλλη ετυμηγορία ⇒ ΕΙΔΟΠΟΙΕΙ (αλλιώς το μενού μένει με την παλιά)', () => {
+    setUrlWorkspaceScope(orgWorkspace(A), 'platform-bypass');
+    const listener = jest.fn();
+    const unsubscribe = onSuperAdminActiveCompanyChange(listener);
+    setUrlWorkspaceScope(orgWorkspace(A), 'member');
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('Ε6: η ετυμηγορία ΔΕΝ αλλάζει ποιον χώρο ζητά το σύρμα', () => {
+    setUrlWorkspaceScope(orgWorkspace(A), 'platform-bypass');
+    expect(requestedWorkspaceKey()).toBe(`org:${A}`);
   });
 });

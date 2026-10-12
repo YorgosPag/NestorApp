@@ -8,6 +8,7 @@ import { render } from '@testing-library/react';
 
 import { WorkspaceScopeBridge } from '../WorkspaceScopeBridge';
 import {
+  isVisitingWorkspace,
   onSuperAdminActiveCompanyChange,
   requestedWorkspaceKey,
   setSuperAdminActiveCompanyId,
@@ -34,7 +35,7 @@ describe('WorkspaceScopeBridge', () => {
     const seen: string[] = [];
 
     render(
-      <WorkspaceScopeBridge scope={orgWorkspace('comp_url')}>
+      <WorkspaceScopeBridge scope={orgWorkspace('comp_url')} verdict="member">
         <FirstEffectProbe seen={seen} />
       </WorkspaceScopeBridge>,
     );
@@ -45,7 +46,7 @@ describe('WorkspaceScopeBridge', () => {
   it('Γ2: ιδιωτικός χώρος φτάνει ως personal', () => {
     const seen: string[] = [];
     render(
-      <WorkspaceScopeBridge scope={personalWorkspace('uid_1')}>
+      <WorkspaceScopeBridge scope={personalWorkspace('uid_1')} verdict="self">
         <FirstEffectProbe seen={seen} />
       </WorkspaceScopeBridge>,
     );
@@ -54,12 +55,12 @@ describe('WorkspaceScopeBridge', () => {
 
   it('Γ3 🔴 αλλαγή χώρου Α → Β: ΚΑΜΙΑ ενδιάμεση κατάσταση (θα ξανάστηνε κάθε ακροατή με τον επιλογέα)', () => {
     const { rerender } = render(
-      <WorkspaceScopeBridge scope={orgWorkspace('comp_a')}>{null}</WorkspaceScopeBridge>,
+      <WorkspaceScopeBridge scope={orgWorkspace('comp_a')} verdict="member">{null}</WorkspaceScopeBridge>,
     );
     const notified: string[] = [];
     const unsubscribe = onSuperAdminActiveCompanyChange(() => notified.push(requestedWorkspaceKey()));
 
-    rerender(<WorkspaceScopeBridge scope={orgWorkspace('comp_b')}>{null}</WorkspaceScopeBridge>);
+    rerender(<WorkspaceScopeBridge scope={orgWorkspace('comp_b')} verdict="member">{null}</WorkspaceScopeBridge>);
 
     expect(notified).toEqual(['org:comp_b']);
     unsubscribe();
@@ -67,12 +68,12 @@ describe('WorkspaceScopeBridge', () => {
 
   it('Γ4: ίδιος χώρος, νέο αντικείμενο ⇒ καμία ειδοποίηση', () => {
     const { rerender } = render(
-      <WorkspaceScopeBridge scope={orgWorkspace('comp_a')}>{null}</WorkspaceScopeBridge>,
+      <WorkspaceScopeBridge scope={orgWorkspace('comp_a')} verdict="member">{null}</WorkspaceScopeBridge>,
     );
     const listener = jest.fn();
     const unsubscribe = onSuperAdminActiveCompanyChange(listener);
 
-    rerender(<WorkspaceScopeBridge scope={orgWorkspace('comp_a')}>{null}</WorkspaceScopeBridge>);
+    rerender(<WorkspaceScopeBridge scope={orgWorkspace('comp_a')} verdict="member">{null}</WorkspaceScopeBridge>);
 
     expect(listener).not.toHaveBeenCalled();
     unsubscribe();
@@ -80,9 +81,24 @@ describe('WorkspaceScopeBridge', () => {
 
   it('Γ5: έξοδος από τον χώρο ⇒ ο χώρος καθαρίζει', () => {
     const { unmount } = render(
-      <WorkspaceScopeBridge scope={orgWorkspace('comp_a')}>{null}</WorkspaceScopeBridge>,
+      <WorkspaceScopeBridge scope={orgWorkspace('comp_a')} verdict="member">{null}</WorkspaceScopeBridge>,
     );
     unmount();
     expect(requestedWorkspaceKey()).toBe('default');
+  });
+
+  it('Γ6 🔴 η ΕΤΥΜΗΓΟΡΙΑ του φύλακα φτάνει μαζί με τον χώρο — «πέρασε» ≠ «ανήκει» (ADR-892 §13.1)', () => {
+    // Μετάλλαξη που σκοτώνει: η γέφυρα να μην περνά το `verdict` ⇒ ο διαχειριστής πλατφόρμας μοιάζει μέλος.
+    const { rerender, unmount } = render(
+      <WorkspaceScopeBridge scope={orgWorkspace('comp_x')} verdict="platform-bypass">{null}</WorkspaceScopeBridge>,
+    );
+    expect(isVisitingWorkspace()).toBe(true);
+
+    // Ίδιος χώρος, ΑΛΛΗ ετυμηγορία ⇒ η απάντηση αλλάζει (η ισότητα του store τη μετρά).
+    rerender(<WorkspaceScopeBridge scope={orgWorkspace('comp_x')} verdict="member">{null}</WorkspaceScopeBridge>);
+    expect(isVisitingWorkspace()).toBe(false);
+
+    unmount();
+    expect(isVisitingWorkspace()).toBe(false);
   });
 });

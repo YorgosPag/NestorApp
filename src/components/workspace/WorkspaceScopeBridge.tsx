@@ -33,23 +33,29 @@ import { setUrlWorkspaceScope } from '@/services/firestore/super-admin-active-co
 import {
   orgWorkspace,
   personalWorkspace,
+  type MembershipVerdict,
   type WorkspaceRef,
 } from '@/types/workspace-membership';
 
 interface WorkspaceScopeBridgeProps {
   /** Ο χώρος **όπως τον έκρινε ο φύλακας** — ποτέ ανάγνωση της διεύθυνσης εδώ. */
   readonly scope: WorkspaceRef;
+  /**
+   * **Με ποια ετυμηγορία** τον άνοιξε (ADR-892 §13.1) — υποχρεωτική: ο φύλακας την **έχει** πάντα, και χωρίς
+   * αυτήν ο πελάτης δεν ξεχωρίζει το μέλος από τον διαχειριστή πλατφόρμας που απλώς περνά.
+   */
+  readonly verdict: MembershipVerdict;
   readonly children: ReactNode;
 }
 
-export function WorkspaceScopeBridge({ scope, children }: WorkspaceScopeBridgeProps) {
+export function WorkspaceScopeBridge({ scope, verdict, children }: WorkspaceScopeBridgeProps) {
   // Πρωτογενείς τιμές ως εξαρτήσεις: ο φύλακας ξαναχτίζει το αντικείμενο σε κάθε απόδοση.
   const kind = scope.kind;
   const id = scope.kind === 'org' ? scope.companyId : scope.userId;
 
   useLayoutEffect(() => {
-    setUrlWorkspaceScope(kind === 'org' ? orgWorkspace(id) : personalWorkspace(id));
-  }, [kind, id]);
+    setUrlWorkspaceScope(kind === 'org' ? orgWorkspace(id) : personalWorkspace(id), verdict);
+  }, [kind, id, verdict]);
 
   useLayoutEffect(() => () => setUrlWorkspaceScope(null), []);
 
