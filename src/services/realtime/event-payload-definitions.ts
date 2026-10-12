@@ -14,6 +14,7 @@ import type { Project, ProjectStatus } from '@/types/project';
 import type { Building } from '@/types/building/contracts';
 import type { AddressInfo } from '@/types/contacts';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+import type { FileClassification } from '@/config/domain-constants';
 
 // ============================================================================
 // BUILDING / PROJECT LINK PAYLOADS
@@ -377,6 +378,8 @@ export interface FileUpdatedPayload {
     hasDownloadUrl?: boolean;
     /** ADR-373: ISO 19650 metadata was edited (discipline/series/state/etc) */
     iso19650MetadataUpdated?: boolean;
+    /** ADR-907 §11.13: η διαβάθμιση άλλαξε — όποιος κρίνει «επιτρέπεται να φύγει;» ξαναρωτά. */
+    classification?: FileClassification;
   };
   timestamp: number;
 }

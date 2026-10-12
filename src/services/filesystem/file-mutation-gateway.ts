@@ -7,7 +7,6 @@ import { FileApprovalService, type CreateApprovalInput } from '@/services/file-a
 import { FileRecordService } from '@/services/file-record.service';
 import type { Iso19650MetadataUpdate } from '@/services/file-record.service';
 import { API_ROUTES, type EntityType } from '@/config/domain-constants';
-import type { FileClassification } from '@/config/domain-constants';
 import type { AuditEntityType } from '@/types/audit-trail';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
@@ -386,64 +385,13 @@ export async function downloadFileFromProxyWithPolicy(
   return downloadBlobFromProxy({ url: downloadUrl, filename });
 }
 
-/**
- * Η **αρχειοθέτηση είναι ΜΙΑ διαδρομή με δύο κατευθύνσεις** — ποτέ δύο σώματα.
- *
- * ⚠️ **ΠΡΟΫΠΑΡΧΟΝ ΧΡΕΟΣ, θεραπευμένο επιτόπου (N.0.2)**: οι δύο συναρτήσεις ήταν
- * δίδυμα **7 γραμμών** που διέφεραν σε **ένα literal** — το σχήμα που ο N.18
- * ονομάζει, και που το **CHECK 3.28** μέτρησε (50 tokens) μόλις το αρχείο μπήκε σε
- * diff. Δεν γεννήθηκε εδώ· φάνηκε εδώ.
- *
- * 🔑 Τα **δύο δημόσια ονόματα μένουν**: η κατεύθυνση είναι μέρος του λεξιλογίου του
- * καλούντος (*«αρχειοθέτησε»* / *«επανάφερε»*), και μια σκέτη `boolean` παράμετρος
- * στο σημείο κλήσης θα ήταν χειρότερη από τον κλώνο.
- */
-type FileArchiveDirection = 'archive' | 'unarchive';
-
-function setFilesArchivedWithPolicy(
-  fileIds: string[],
-  action: FileArchiveDirection,
-): Promise<ArchiveFilesResponse> {
-  return mutateJson<ArchiveFilesResponse>(API_ROUTES.FILES.ARCHIVE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileIds, action }),
-  });
-}
-
-export async function archiveFilesWithPolicy(
-  fileIds: string[],
-): Promise<ArchiveFilesResponse> {
-  return setFilesArchivedWithPolicy(fileIds, 'archive');
-}
-
-export async function unarchiveFilesWithPolicy(
-  fileIds: string[],
-): Promise<ArchiveFilesResponse> {
-  return setFilesArchivedWithPolicy(fileIds, 'unarchive');
-}
-
-/**
- * **Ζήτα διαβάθμιση για μια δέσμη αρχείων** — ο διακομιστής κρίνει, γράφει, καταγράφει και
- * ξαναπροβάλλει την αγγελία στο ίδιο αίτημα (ADR-845 §7.17).
- *
- * 🔴 Ως τις 2026-10-08 αυτό ήταν `updateDoc({ classification })` από τον browser: η δημόσια
- * αγγελία δεν το μάθαινε ποτέ, και αρχείο που έγινε `internal` έμενε στο κοινό. ⛔ **ΜΗΝ το
- * ξαναγράψεις με client SDK** — οι κανόνες παγώνουν το πεδίο (ADR-862 Φ0, ίδιο ιδίωμα με το `cdeState`).
- *
- * 🧹 ADR-866 §2.6.8 Β11 — η δημοσιοποίηση είναι πράξη ΓΡΑΦΕΙΟΥ: μόνο εταιρικό διαμέρισμα, και το
- * UI την κρύβει για προσωπικό κάτοχο.
- */
-export async function setFilesClassificationWithPolicy(
-  fileIds: readonly string[],
-  classification: FileClassification,
-): Promise<FileClassificationActResponse> {
-  return mutateJson<FileClassificationActResponse>(API_ROUTES.FILES.CLASSIFICATION, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileIds, classification }),
-  });
-}
+// 🔁 ADR-907 §11.13 — διαβάθμιση και αρχειοθέτηση ζουν στο `file-batch-act.client`: εκεί η πράξη **ανακοινώνει**
+// ότι έγινε (`FILE_UPDATED`), ώστε όποιος κρίνει αρχεία στην ίδια οθόνη να ξαναρωτήσει. Τα ονόματα μένουν εδώ.
+export {
+  archiveFilesWithPolicy,
+  unarchiveFilesWithPolicy,
+  setFilesClassificationWithPolicy,
+} from './file-batch-act.client';
 
 // ============================================================================
 // 🏢 ADR-293 Phase 8: ENTITY DISPLAY NAME CASCADE
