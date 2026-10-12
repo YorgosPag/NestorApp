@@ -87,7 +87,7 @@ describe('WorkspaceScopeBridge', () => {
     expect(requestedWorkspaceKey()).toBe('default');
   });
 
-  it('Γ6 🔴 η ΕΤΥΜΗΓΟΡΙΑ του φύλακα φτάνει μαζί με τον χώρο — «πέρασε» ≠ «ανήκει» (ADR-892 §13.1)', () => {
+  it('Γ6 🔴 η ΕΤΥΜΗΓΟΡΙΑ του φύλακα φτάνει μαζί με τον χώρο — «πέρασε» ≠ «ανήκει» (ADR-892 §13.7)', () => {
     // Μετάλλαξη που σκοτώνει: η γέφυρα να μην περνά το `verdict` ⇒ ο διαχειριστής πλατφόρμας μοιάζει μέλος.
     const { rerender, unmount } = render(
       <WorkspaceScopeBridge scope={orgWorkspace('comp_x')} verdict="platform-bypass">{null}</WorkspaceScopeBridge>,
