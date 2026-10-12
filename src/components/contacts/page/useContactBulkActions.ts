@@ -18,6 +18,7 @@
 
 import { useCallback, useState } from 'react';
 import type { Contact } from '@/types/contacts';
+import { settledLeave } from '@/lib/unsaved-edits/leave-guard';
 
 interface UseContactBulkActionsParams {
   readonly selectedContact: Contact | null;
@@ -51,7 +52,8 @@ export function useContactBulkActions({
     (closeDialog: (open: boolean) => void) => {
       closeDialog(false);
       if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-        setSelectedContact(null);
+        // Η επαφή διαγράφηκε / αρχειοθετήθηκε: δεν είναι έξοδος του ανθρώπου (ADR-912 §12.12).
+        settledLeave(() => setSelectedContact(null));
       }
       setSelectedContactIds([]);
       refreshContacts();

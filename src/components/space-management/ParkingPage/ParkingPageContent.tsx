@@ -50,6 +50,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import { guardLeave, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 import type { ParkingSpot } from '@/types/parking';
 import { useParkingTrashState } from '@/hooks/useParkingTrashState';
 import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
@@ -153,14 +154,15 @@ export function ParkingPageContent() {
   // Μία δήλωση για λίστα και πλέγμα: η ίδια επιλογή, το ίδιο «Νέα», τα ίδια δεδομένα.
   const isCreating = showCreateForm && !showTrash;
   const visibleParkingSpots = showTrash ? trashedParkingSpots : filteredParkingSpots;
-  const handleSelectParking = (parking: ParkingSpot) => {
+  // Όλη η πράξη πίσω από ΜΙΑ ερώτηση (ADR-912 §12.12): η φόρμα δημιουργίας δεν κλείνει πριν απαντήσει ο άνθρωπος.
+  const handleSelectParking = (parking: ParkingSpot) => guardLeave(() => {
     setSelectedParking(toggleSelect(selectedParking, parking));
     resetCreateForm();
-  };
-  const handleNewParking = showTrash ? undefined : () => {
+  });
+  const handleNewParking = showTrash ? undefined : () => guardLeave(() => {
     openCreateForm();
     setSelectedParking(null);
-  };
+  });
 
   const handleDeleteParking = useCallback(async () => {
     if (!selectedParking) return;
@@ -174,7 +176,8 @@ export function ParkingPageContent() {
           parkingSpotId: selectedParking.id,
           timestamp: Date.now(),
         });
-        setSelectedParking(null);
+        // Η εγγραφή διαγράφηκε: δεν υπάρχει πια τίποτα να χαθεί.
+        settledLeave(() => setSelectedParking(null));
       }
     } catch (err) {
       logger.error('Failed to delete parking spot', { error: err });
@@ -356,10 +359,10 @@ export function ParkingPageContent() {
             )}
             sheetOpen={isCreating || !!selectedParking}
             sheetTitle={isCreating ? tParking('header.newParking') : selectedParking?.number ?? ''}
-            onCloseSheet={() => {
+            onCloseSheet={() => guardLeave(() => {
               setSelectedParking(null);
               resetCreateForm();
-            }}
+            })}
           />
         </ListContainer>
 

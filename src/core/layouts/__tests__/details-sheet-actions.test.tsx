@@ -10,9 +10,12 @@
 
 /* global describe, it, expect, jest */
 
-import { render, screen, within } from '@testing-library/react';
+import { render as renderAlone, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Building2 } from 'lucide-react';
+import type { ReactElement } from 'react';
+
+import { UnsavedEditsLeaveHost } from '@/components/unsaved-edits/UnsavedEditsLeaveHost';
 
 import { EntityDetailsHeader, createEntityAction, inDeclaredOrder, orderEntityActions } from '@/core/entity-headers';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -24,7 +27,29 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+// Ο ξενιστής δίνει στο σύνορο πλοήγησης τον δρομολογητή του (`useLeaveNavigator`)· το `useRouter` του Next ρίχνει
+// χωρίς app router.
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/',
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+}));
+
 const TITLE = 'Κτίριο Α';
+
+/**
+ * Όπως στην εφαρμογή: η ερώτηση εξόδου ζει στον ΕΝΑ ξενιστή της ρίζας, όχι μέσα στο φύλλο (ADR-912 §12.12).
+ * Χωρίς αυτόν ο ✕ θα έφευγε χωρίς να ρωτήσει — και τα Φ με διάλογο θα περνούσαν για λάθος λόγο.
+ */
+function render(ui: ReactElement) {
+  const withHost = (node: ReactElement) => (
+    <>
+      {node}
+      <UnsavedEditsLeaveHost />
+    </>
+  );
+  const result = renderAlone(withHost(ui));
+  return { ...result, rerender: (node: ReactElement) => result.rerender(withHost(node)) };
+}
 
 function sheetBar(): HTMLElement {
   const host = document.querySelector<HTMLElement>('[data-details-sheet-actions]');

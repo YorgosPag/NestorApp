@@ -18,7 +18,8 @@ import { useContactsTrashState } from './useContactsTrashState';
 import { useContactBulkActions } from './useContactBulkActions';
 import { createStaleCache } from '@/lib/stale-cache';
 import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
-import { replaceUrlSearchParams } from '@/lib/url-query-state';
+import { currentSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
+import { guardLeave, guardSelectionChange } from '@/lib/unsaved-edits/leave-guard';
 import { useSelectedContactAvatarRefresh } from './useSelectedContactAvatarRefresh';
 import { useTabVisibilityRefresh } from '@/hooks/useTabVisibilityRefresh';
 import { useAISyncBridge } from '@/hooks/useAISyncBridge';
@@ -100,8 +101,14 @@ export function useContactsPageState() {
 
   /** Δέχεται `Contact | null` όπως πριν — οι καλούντες δεν ξέρουν ότι από κάτω είναι URL. */
   const setSelectedContact = useCallback((contact: Contact | null) => {
-    userChangedSelectionRef.current = true;
-    setSelectedId(contact?.id ?? null);
+    const nextId = contact?.id ?? null;
+    // 🔴 ADR-912 §12.12 (Εύρημα 11): άλλη επαφή ενώ η φόρμα έχει αλλαγές ⇒ ρώτα ΠΡΙΝ χαθούν (η αλλαγή id αδειάζει το
+    // `editedData`). Εδώ, στην ΜΙΑ πηγή της επιλογής, όχι ανά κουμπί. Το τρέχον id διαβάζεται από τη διεύθυνση τη στιγμή
+    // του πατήματος — χειριστές με παλιό closure (`handleNewContact`) δεν βλέπουν μπαγιάτικη επιλογή.
+    guardSelectionChange(currentSearchParams().get(CONTACT_ID_PARAM), nextId, () => {
+      userChangedSelectionRef.current = true;
+      setSelectedId(nextId);
+    });
   }, [setSelectedId]);
 
   // Ο τύπος έρχεται από τον SSoT των headers — το inline `'list' | 'grid'` ήταν
@@ -265,11 +272,11 @@ export function useContactsPageState() {
    * το `contactId` **και** το `filter` — δεν χρειάζεται ξεχωριστός μηδενισμός
    * επιλογής, γιατί η επιλογή **είναι** το URL.
    */
-  const handleClearURLFilter = useCallback(() => {
+  const handleClearURLFilter = useCallback(() => guardLeave(() => {
     logger.info('Clearing URL filter and contactId');
     setFilters(prev => ({ ...prev, searchTerm: '' }));
     router.push('/contacts');
-  }, [router]);
+  }), [router]);
   // ---------------------------------------------------------------------------
   // Effects: Cache invalidation + Real-time service
   // ---------------------------------------------------------------------------
@@ -312,10 +319,11 @@ export function useContactsPageState() {
   // ---------------------------------------------------------------------------
   // Handlers: Creation / Deletion / Archive
   // ---------------------------------------------------------------------------
-  const handleNewContact = useCallback(() => {
+  // Όλη η πράξη πίσω από ΜΙΑ ερώτηση (ADR-912 §12.12): ο επιλογέας τύπου δεν ανοίγει πριν απαντήσει ο άνθρωπος.
+  const handleNewContact = useCallback(() => guardLeave(() => {
     setCreationMode('selecting');
     setSelectedContact(null);
-  }, []);
+  }), [setSelectedContact]);
 
   const handleContactAdded = useCallback(async () => {
     setCreationMode(null);
@@ -385,11 +393,14 @@ export function useContactsPageState() {
       setActiveCardFilter(null);
       logger.info('Removing card filter');
     } else {
-      setActiveCardFilter(cardTitle);
-      logger.info('Applying card filter', { cardTitle });
-      setSelectedContact(null);
+      // Το φίλτρο κλείνει την ανοιχτή επαφή ⇒ ολόκληρη η πράξη πίσω από την ερώτηση, όχι μισή (ADR-912 §12.12).
+      guardLeave(() => {
+        setActiveCardFilter(cardTitle);
+        logger.info('Applying card filter', { cardTitle });
+        setSelectedContact(null);
+      });
     }
-  }, [activeCardFilter]);
+  }, [activeCardFilter, setSelectedContact]);
 
   // ---------------------------------------------------------------------------
   // Return

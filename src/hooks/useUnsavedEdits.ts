@@ -14,6 +14,9 @@ import { dequal } from 'dequal';
 
 import { useReportUnsavedEdits } from '@/providers/DirtyFormProvider';
 
+/** Το ταίρι του: η φόρμα δηλώνει ΠΩΣ αποθηκεύει, με το `dirty` που επιστρέφει το {@link useUnsavedEdits} (ADR-912 §12.12). */
+export { useUnsavedEditsSaver } from '@/providers/DirtyFormProvider';
+
 /**
  * @param editing Εκτός επεξεργασίας η απάντηση είναι πάντα `false` (η φόρμα απλώς καθρεφτίζει την οντότητα).
  * @param current Ό,τι κρατά τώρα η φόρμα.

@@ -45,6 +45,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import { guardLeave, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 import type { Storage } from '@/types/storage/contracts';
 import { useStoragesTrashState } from '@/hooks/useStoragesTrashState';
 import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
@@ -126,14 +127,15 @@ export function StoragePageContent() {
   // Μία δήλωση για λίστα και πλέγμα: η ίδια επιλογή, το ίδιο «Νέα», τα ίδια δεδομένα.
   const isCreating = showCreateForm && !showTrash;
   const visibleStorages = showTrash ? trashedStorages : filteredStorages;
-  const handleSelectStorage = (storage: Storage) => {
+  // Όλη η πράξη πίσω από ΜΙΑ ερώτηση (ADR-912 §12.12): η φόρμα δημιουργίας δεν κλείνει πριν απαντήσει ο άνθρωπος.
+  const handleSelectStorage = (storage: Storage) => guardLeave(() => {
     setSelectedStorage(toggleSelect(selectedStorage, storage));
     resetCreateForm();
-  };
-  const handleNewStorage = showTrash ? undefined : () => {
+  });
+  const handleNewStorage = showTrash ? undefined : () => guardLeave(() => {
     openCreateForm();
     setSelectedStorage(null);
-  };
+  });
 
   const handleDeleteStorage = useCallback(async () => {
     if (!selectedStorage) return;
@@ -147,7 +149,8 @@ export function StoragePageContent() {
           storageId: selectedStorage.id,
           timestamp: Date.now(),
         });
-        setSelectedStorage(null);
+        // Η εγγραφή διαγράφηκε: δεν υπάρχει πια τίποτα να χαθεί.
+        settledLeave(() => setSelectedStorage(null));
         success(t('deleteSuccess', { ns: 'trash' }));
       }
     } catch (err) {
@@ -356,10 +359,10 @@ export function StoragePageContent() {
             )}
             sheetOpen={isCreating || !!selectedStorage}
             sheetTitle={isCreating ? tStorage('header.newStorage') : selectedStorage?.name ?? ''}
-            onCloseSheet={() => {
+            onCloseSheet={() => guardLeave(() => {
               setSelectedStorage(null);
               resetCreateForm();
-            }}
+            })}
           />
         </ListContainer>
 

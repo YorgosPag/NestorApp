@@ -83,6 +83,7 @@
       "src/components/properties/PropertiesPageContent.tsx",
       "src/components/public-site/PublicSiteMenuSheet.tsx",
       "src/components/search/index.ts",
+      "src/components/unsaved-edits/UnsavedEditsLeaveDialog.tsx",
       "src/components/workspace-membership/LeaveWorkspaceDialog.tsx",
       "src/i18n/config.ts",
       "src/i18n/lazy-config.ts",
@@ -118,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b922492baa93ff1a49583415346e37f3daa51d95df74a3b0147f86fb4e0e0748",
+  "inputsSha256": "42026c5033140950cc4188c3cc0c4a582458d7c5c73e9422940ecfe711135523",
   "languages": [
     "el"
   ],
@@ -11607,7 +11608,7 @@
     "src/app/(light)/layout.tsx": "e4f3775b8316a2f792fa57f7bebfd71accb9f99424ed93afbb5c1438510eab1d",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "48a5d03c5579240d0884a774b2a328a2964f47f8ff33bd23e8ce694c419c3dac",
-    "src/app/layout.tsx": "ed3607f6343146a2ed1c4f499c5ac8e203d0c8ed5ea455df3d17832e466cac85",
+    "src/app/layout.tsx": "98be3f6a9272ab9d1061128360c166bbbf1597c66586c6ac310b9df3186d65f6",
     "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
     "src/auth/components/AuthScreenChrome.tsx": "438ba62471b0ecb90ed4ae4f7d58ef619ac66bdb650ef41df84a906154fdcc7e",
     "src/auth/components/ProtectedRoute.tsx": "b5ba836b4704128b24aebdd2b3b351b802e6cd3267fbd39caf00d7bec2704764",
@@ -11817,6 +11818,7 @@
     "src/components/ui/theme/ThemeComponents.tsx": "6dedd9eb57d7d181eaa1dd82af335e35987e3784cae2ee95fa33c18c32e1cfa9",
     "src/components/ui/toggle-button.tsx": "3d1d84d238cc49aced63bec42865dd7e4d951121db62b35dc51d732d914d90dd",
     "src/components/ui/tooltip.tsx": "1669b4997a85030ae379f9331f67acc412df7d8fc408530e9535a1c3df62023e",
+    "src/components/unsaved-edits/UnsavedEditsLeaveHost.tsx": "ed329edddaf7d321efee20568a8b7ad9839057220452f8c33fe76fef4a8485cb",
     "src/components/voice-ai/VoiceAIPanel.tsx": "cf1fbed66cc005617aef71a9c4612b4135d1be704e98c239a63e0adfc8325fac",
     "src/components/workspace/WorkspaceScopeBridge.tsx": "9aea46983a227313cc2e4585e4ff777802b74ab54d790059abb78a49c6a83e09",
     "src/config/audit-entity-registry.ts": "03143b4cd6bafdea3abd8dae31cbc11def07b01c636b396bf35c2d13a2667335",
@@ -12398,6 +12400,7 @@
     "src/lib/ui/link-style.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/unicode/skeleton.ts": "d6169ac7ddabe25b5584290771132787319e805e4377561bf5144b1ea2b0187a",
     "src/lib/units/unit-status-badges.ts": "79195b108b19a5e5dcd23c413c02f8f2b9e1ecbac5b87ee48e3ac4bcb203990a",
+    "src/lib/unsaved-edits/leave-guard.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
     "src/lib/url-query-state.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
     "src/lib/utils.ts": "184945e2852e73024c3f078ab3354d886b52339738b7cc42f48eea2efebf19df",
     "src/lib/validation/email-validation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -12764,10 +12767,10 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "dynamicBoundaries": 24,
+    "dynamicBoundaries": 25,
     "matchedKeys": 239,
     "routeBoundaries": 3,
-    "shellFiles": 1152,
+    "shellFiles": 1154,
     "sliceBytes": 726062
   },
   "unresolvableKeys": [

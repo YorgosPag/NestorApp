@@ -963,5 +963,10 @@
     "body": "Changes you have not saved will be lost.",
     "confirm": "Discard",
     "keep": "Keep editing"
+  },
+  "unsavedChanges": {
+    "title": "Unsaved changes",
+    "body": "Do you want to save your changes before leaving?",
+    "save": "Save"
   }
 }

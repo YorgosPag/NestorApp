@@ -29,6 +29,7 @@ import {
 } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isDraftEntityId } from '@/lib/draft-entity-id';
+import { guardSelectionChange } from '@/lib/unsaved-edits/leave-guard';
 import { useUrlQuery } from '@/hooks/useUrlQuery';
 import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
 import {
@@ -202,13 +203,22 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
   const [, startTransition] = useTransition();
   const setSelectedItem = useCallback(
     (item: (T | null) | ((prev: T | null) => T | null)) => {
-      const next = typeof item === 'function' ? item(latestSelectedRef.current) : item;
-      const urlId = next && !isDraftEntityId(next.id) ? next.id : null;
-      ownWriteRef.current = urlId;
-      writeUrlSelection(urlId);
-      startTransition(() => {
-        setSelectedItemRaw(next);
-      });
+      const apply = () => {
+        const next = typeof item === 'function' ? item(latestSelectedRef.current) : item;
+        const urlId = next && !isDraftEntityId(next.id) ? next.id : null;
+        ownWriteRef.current = urlId;
+        writeUrlSelection(urlId);
+        startTransition(() => {
+          setSelectedItemRaw(next);
+        });
+      };
+      // 🔴 ADR-912 §12.12 (Εύρημα 11): άλλη **ταυτότητα** ενώ μια φόρμα έχει αλλαγές ⇒ ρώτα ΠΡΙΝ χαθούν. Εδώ, στην ΜΙΑ
+      // πηγή της επιλογής, και όχι ανά κουμπί (γραμμή λίστας · «Νέο» · κάρτα-φίλτρο · κλείσιμο): ό,τι αλλάζει επιλογή
+      // περνά από εδώ. Ίδια ταυτότητα (ανανέωση πεδίων της ίδιας εγγραφής) δεν είναι έξοδος. Όποιος ΔΕΝ φεύγει με
+      // πρόθεση (μόλις δημιουργήθηκε / διαγράφηκε · ρητή «Ακύρωση») τυλίγει την κλήση σε `settledLeave`.
+      const current = latestSelectedRef.current;
+      const nextId = typeof item === 'function' ? item(current)?.id : item?.id;
+      guardSelectionChange(current?.id, nextId, apply);
     },
     [startTransition, writeUrlSelection],
   );

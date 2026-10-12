@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
+import { useUnsavedEdits, useUnsavedEditsSaver } from '@/hooks/useUnsavedEdits';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
@@ -212,7 +212,7 @@ export function GeneralProjectTab({
     }),
     [project, fallbackCompanyId],
   );
-  useUnsavedEdits(isEditing || isCreateMode === true, editedFields, savedFields);
+  const hasUnsavedEdits = useUnsavedEdits(isEditing || isCreateMode === true, editedFields, savedFields);
 
   // 🏢 ADR-284 §3.0: Clear the company-required policy error as soon as the
   // user links a company — no stale banner sticking around after the fix.
@@ -373,6 +373,8 @@ export function GeneralProjectTab({
       registerSaveCallback(handleSave);
     }
   }, [registerSaveCallback, handleSave]);
+  // Και στην ερώτηση εξόδου (ADR-912 §12.12). Δεν επιστρέφει έκβαση ⇒ κρίνεται από το αν η φόρμα έπαψε να έχει αλλαγές.
+  useUnsavedEditsSaver(hasUnsavedEdits, handleSave);
 
   return (
     <>

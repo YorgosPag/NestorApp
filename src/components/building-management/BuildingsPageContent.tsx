@@ -43,6 +43,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
 import { DRAFT_ENTITY_ID, isDraftEntityId } from '@/lib/draft-entity-id';
+import { guardLeave, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 
 const logger = createModuleLogger('BuildingsPageContent');
 
@@ -127,17 +128,19 @@ export function BuildingsPageContent() {
   const handleBuildingCreated = useCallback((realBuildingId: string) => {
     if (selectedBuilding && isDraftEntityId(selectedBuilding.id)) {
       const realBuilding = buildingsData.find(b => b.id === realBuildingId);
-      setSelectedBuilding(
+      // Το πρόχειρο ΕΓΙΝΕ εγγραφή: δεν είναι έξοδος, και η φόρμα δηλώνει «καθαρή» ένα render αργότερα.
+      settledLeave(() => setSelectedBuilding(
         (realBuilding ?? { ...selectedBuilding, id: realBuildingId }) as BuildingType,
-      );
+      ));
     }
     showSuccess(t('dialog.messages.success'));
   }, [selectedBuilding, setSelectedBuilding, buildingsData, showSuccess, t]);
 
   // 🏢 ENTERPRISE: Cancel create mode — deselect building
   const handleCancelCreate = useCallback(() => {
+    // Ρητή «Ακύρωση»: η απόφαση είναι του ανθρώπου (στο κινητό τη ρωτά ήδη ο ✕ του φύλλου).
     if (isCreateMode) {
-      setSelectedBuilding(null);
+      settledLeave(() => setSelectedBuilding(null));
     }
   }, [isCreateMode, setSelectedBuilding]);
 
@@ -180,7 +183,7 @@ export function BuildingsPageContent() {
     const result = await deleteBuildingWithPolicy({ buildingId: buildingToDelete.id });
     if (result.success) {
       logger.info('Building deleted', { buildingId: buildingToDelete.id });
-      setSelectedBuilding(null);
+      settledLeave(() => setSelectedBuilding(null));
       handleTrashActionComplete();
       showSuccess(t('trash:deleteSuccess'));
     } else {
@@ -257,28 +260,31 @@ export function BuildingsPageContent() {
       // Reset filters to show all buildings
       setFilters({ ...filters, status: [] });
     } else {
-      setActiveCardFilter(cardTitle);
+      // Το φίλτρο κλείνει το ανοιχτό κτίριο ⇒ ολόκληρη η πράξη πίσω από την ερώτηση, όχι μισή (ADR-912 §12.12).
+      guardLeave(() => {
+        setActiveCardFilter(cardTitle);
 
-      // Apply filter based on card type
-      switch (cardTitle) {
-        case totalBuildingsTitle:
-          // Show all buildings - reset filters
-          setFilters({ ...filters, status: [] });
-          break;
-        case activeProjectsTitle:
-          // Filter only active buildings
-          setFilters({ ...filters, status: ['active'] });
-          break;
-        // Note: Other cards (Total Value, Total Area, Average Progress, Total Units)
-        // are informational and don't apply specific filters
-        default:
-          // For other stats, just clear active filter without changing data
-          setActiveCardFilter(null);
-          break;
-      }
+        // Apply filter based on card type
+        switch (cardTitle) {
+          case totalBuildingsTitle:
+            // Show all buildings - reset filters
+            setFilters({ ...filters, status: [] });
+            break;
+          case activeProjectsTitle:
+            // Filter only active buildings
+            setFilters({ ...filters, status: ['active'] });
+            break;
+          // Note: Other cards (Total Value, Total Area, Average Progress, Total Units)
+          // are informational and don't apply specific filters
+          default:
+            // For other stats, just clear active filter without changing data
+            setActiveCardFilter(null);
+            break;
+        }
 
-      // Clear selected building when filtering changes
-      setSelectedBuilding(null);
+        // Clear selected building when filtering changes
+        setSelectedBuilding(null);
+      });
     }
   };
 

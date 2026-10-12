@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import type { Contact } from '@/types/contacts';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { guardLeave, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 
 interface UseContactsTrashStateParams {
   contacts: Contact[];
@@ -55,7 +56,8 @@ export function useContactsTrashState({
     const count = selectedContactIds.length;
     setShowPermanentDeleteDialog(false);
     if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-      setSelectedContact(null);
+      // Η επαφή διαγράφηκε οριστικά: δεν υπάρχει πια τίποτα να χαθεί (ADR-912 §12.12).
+      settledLeave(() => setSelectedContact(null));
     }
     setSelectedContactIds([]);
     refreshContacts();
@@ -64,16 +66,18 @@ export function useContactsTrashState({
 
   /** After a trash action (restore/delete), clear selection AND refresh list */
   const handleTrashActionComplete = useCallback(() => {
-    setSelectedContact(null);
+    // Η ενέργεια του κάδου ολοκληρώθηκε πάνω στην εγγραφή — ο κάδος είναι μόνο για ανάγνωση, καμία φόρμα να χαθεί.
+    settledLeave(() => setSelectedContact(null));
     setSelectedContactIds([]);
     refreshContacts();
   }, [setSelectedContact, setSelectedContactIds, refreshContacts]);
 
-  const handleToggleTrash = useCallback(() => {
+  // Όλη η εναλλαγή πίσω από ΜΙΑ ερώτηση: η όψη δεν αλλάζει πριν απαντήσει ο άνθρωπος (ADR-912 §12.12).
+  const handleToggleTrash = useCallback(() => guardLeave(() => {
     setShowTrash(prev => !prev);
     setSelectedContact(null);
     setActiveCardFilter(null);
-  }, [setSelectedContact, setActiveCardFilter]);
+  }), [setSelectedContact, setActiveCardFilter]);
 
   return {
     showPermanentDeleteDialog,

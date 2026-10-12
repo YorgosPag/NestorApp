@@ -41,6 +41,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
 import { DRAFT_ENTITY_ID, isDraftEntityId } from '@/lib/draft-entity-id';
+import { guardLeave, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 
 const logger = createModuleLogger('ProjectsPageContent');
@@ -130,14 +131,16 @@ export function ProjectsPageContent() {
   // έμεναν άδεια ως την ενυδάτωση. Η φόρμα παραδίδει ό,τι έγραψε ο άνθρωπος (`created`).
   const handleProjectCreated = useCallback((realProjectId: string, created?: CreatedProjectFields) => {
     if (selectedProject && isDraftEntityId(selectedProject.id)) {
-      setSelectedProject({ ...selectedProject, ...created, id: realProjectId });
+      // Το πρόχειρο ΕΓΙΝΕ εγγραφή: δεν είναι έξοδος, και η φόρμα δηλώνει «καθαρή» ένα render αργότερα.
+      settledLeave(() => setSelectedProject({ ...selectedProject, ...created, id: realProjectId }));
     }
   }, [selectedProject, setSelectedProject]);
 
   // 🏢 ENTERPRISE: Cancel create mode — deselect project
   const handleCancelCreate = useCallback(() => {
+    // Ρητή «Ακύρωση»: η απόφαση είναι του ανθρώπου (στο κινητό τη ρωτά ήδη ο ✕ του φύλλου).
     if (isCreateMode) {
-      setSelectedProject(null);
+      settledLeave(() => setSelectedProject(null));
     }
   }, [isCreateMode, setSelectedProject]);
 
@@ -185,7 +188,7 @@ export function ProjectsPageContent() {
     const result = await deleteProject(projectToDelete.id);
     if (result.success) {
       logger.info('Project deleted', { projectId: projectToDelete.id });
-      setSelectedProject(null);
+      settledLeave(() => setSelectedProject(null));
       void fetchTrashedProjects();
       projectNotifications.movedToTrash();
     } else {
@@ -274,30 +277,34 @@ export function ProjectsPageContent() {
     const totalProjectsTitle = t('page.dashboard.totalProjects');
     const activeProjectsTitle = t('page.dashboard.activeProjects');
 
-    // Use startTransition — filtering is non-urgent, don't block UI
-    startTransition(() => {
-      // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
-      if (activeCardFilter === cardTitle) {
+    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+    if (activeCardFilter === cardTitle) {
+      // Use startTransition — filtering is non-urgent, don't block UI
+      startTransition(() => {
         setActiveCardFilter(null);
         setFilters({ ...filters, status: [] });
-      } else {
-        setActiveCardFilter(cardTitle);
+      });
+      return;
+    }
 
-        switch (cardTitle) {
-          case totalProjectsTitle:
-            setFilters({ ...filters, status: [] });
-            break;
-          case activeProjectsTitle:
-            setFilters({ ...filters, status: ['in_progress'] });
-            break;
-          default:
-            setActiveCardFilter(null);
-            break;
-        }
+    // Το φίλτρο κλείνει το ανοιχτό έργο ⇒ ολόκληρη η πράξη πίσω από την ερώτηση, όχι μισή (ADR-912 §12.12).
+    guardLeave(() => startTransition(() => {
+      setActiveCardFilter(cardTitle);
 
-        setSelectedProject(null);
+      switch (cardTitle) {
+        case totalProjectsTitle:
+          setFilters({ ...filters, status: [] });
+          break;
+        case activeProjectsTitle:
+          setFilters({ ...filters, status: ['in_progress'] });
+          break;
+        default:
+          setActiveCardFilter(null);
+          break;
       }
-    });
+
+      setSelectedProject(null);
+    }));
   }, [t, activeCardFilter, filters, setFilters, setSelectedProject]);
 
   // Εμφάνιση loading state

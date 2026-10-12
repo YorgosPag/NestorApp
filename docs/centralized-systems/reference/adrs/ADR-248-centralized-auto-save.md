@@ -219,8 +219,10 @@ server δέχεται **μερική διόρθωση ανά πεδίο** σε �
 **Κανόνας επιλογής**: δες τον πίνακα του §2.5 (η γραμμή «έγγραφο-φόρμα ⇒ `useAutoSave`» **δεν ισχύει πια**).
 Πρώτος καταναλωτής της ουράς: `/offers/[offerId]/improve`.
 
-⚠️ **Γνωστό χρέος (δεν διορθώθηκε εδώ)**: το `formatSaveAge` του `AutoSaveStatusIndicator` επιστρέφει **αγγλικά**
-χωρίς i18n («just now», «5s ago»). Ο νέος καταναλωτής το παρακάμπτει με `showTimestamp={false}`.
+✅ **Το χρέος έκλεισε 2026-10-12 (ADR-914 §2.19)**: το `formatSaveAge` επέστρεφε **αγγλικά** χωρίς i18n
+(«just now», «5s ago»). Αφαιρέθηκε· ο σχετικός χρόνος έρχεται από το `formatRelativeTime`
+(`@/lib/intl-formatting`, ADR-212, `Intl.RelativeTimeFormat`) στη γλώσσα του ανθρώπου. Ο καταναλωτής
+που το παρέκαμπτε με `showTimestamp={false}` δεν άλλαξε.
 
 ---
 
@@ -245,3 +247,4 @@ Added to `common.json` under `autoSave` namespace:
 | 2026-03-19 | Initial implementation: Phase 1 (foundation) + Phase 2 (first migration) |
 | 2026-10-01 | Αδελφός μηχανισμός για **μερικές διορθώσεις ανά πεδίο**: `lib/async/field-patch-queue.ts` + `hooks/useFieldPatchQueue.ts` (ADR-898 Φ3β-2) — ίδια ένδειξη και κατάσταση, άλλο συμβόλαιο αποθήκευσης. Καταγράφηκε το χρέος i18n του `formatSaveAge` |
 | 2026-10-11 | **§2.5 (νέα) — ρητή αποθήκευση σε κτίρια και έργα· το `useAutoSave` καταργήθηκε** (ADR-912 Εύρημα 8, απόφαση Α). Η αυτόματη εγγραφή στην ενεργή εγγραφή ζούσε δίπλα σε «Αποθήκευση/Ακύρωση»: η Ακύρωση δεν ακύρωνε και ο διάλογος απόρριψης έλεγε ψέματα. Βγήκε από `GeneralTabContent` και `GeneralProjectTab`· διαγράφηκαν `hooks/useAutoSave.ts`, `config/auto-save-config.ts`, `projects/general-tab/hooks/useAutosave.ts`, το module `auto-save-config` του μητρώου SSoT και οι ορφανοί τύποι. Τα κτίρια αποθηκεύουν πλέον με `_v` (`useVersionedSave`). Στα έργα έφυγαν το `autosaved` και το `hasImpactTrackedChanges` (υπήρχαν μόνο για να φρενάρουν την αυτόματη)· η συνδεδεμένη εταιρεία μπήκε στη σύγκριση «έχει αλλαγές». jest: 2 νέες σουίτες, **7/7**· μετάλλαξη **4/4**. ⚠️ **Αμέτρητο σε browser** τη στιγμή της εγγραφής αυτής· έλεγχος τύπων δεν έτρεξε (N.17). 🔶 Ανοιχτά της ίδιας κλάσης: `onAutoSaveFields` των ακινήτων (ADR-236) · φύλαξη αλλαγής επιλογής σε desktop. Το **Β** (πρόχειρο τύπου SAP) μένει για δικό του ADR. Τα κλειδιά `tabs.general.header.saved` και `projectHeader.savedAt` έμειναν χωρίς καταναλωτή στα locales (αφαίρεση μαζί με το CHECK 3.33). |
+| 2026-10-12 | Νέος καταναλωτής: η ένδειξη αποθήκευσης **σχεδίου** του DXF viewer (`AutoSaveStatus`, ADR-914 §2.19) — είχε δικά της καρφωτά αγγλικά και νεκρό κουμπί «Save». Το `formatSaveAge` αντικαταστάθηκε από το `formatRelativeTime` (ADR-212) |

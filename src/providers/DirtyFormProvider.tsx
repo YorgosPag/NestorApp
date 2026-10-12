@@ -1,8 +1,15 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { clearUnsavedWork, markUnsavedWork } from '@/lib/app-version/unsaved-work-registry';
+import {
+  clearUnsavedEdits,
+  declareUnsavedEditsSaver,
+  markUnsavedEdits,
+  withdrawUnsavedEditsSaver,
+  type UnsavedEditsSaver,
+} from '@/lib/unsaved-edits/leave-guard';
 
 interface DirtyFormContextValue {
   registerDirty: (formId: string) => void;
@@ -121,4 +128,32 @@ export function useReportUnsavedEdits(dirty: boolean): void {
     else clear(formId);
     return () => clear(formId);
   }, [dirty, formId, registerDirty, clearDirty]);
+
+  // Και στο μητρώο της εξόδου ΜΕΣΑ στην εφαρμογή (αλλαγή επιλογής · πλοήγηση) — πάντα, με ή χωρίς πάροχο (ADR-912 §12.12).
+  useEffect(() => {
+    if (dirty) markUnsavedEdits(formId);
+    else clearUnsavedEdits(formId);
+    return () => clearUnsavedEdits(formId);
+  }, [dirty, formId]);
+}
+
+/**
+ * **Η φόρμα δηλώνει ΠΩΣ αποθηκεύει** — ώστε η ερώτηση εξόδου να προσφέρει «Αποθήκευση» (ADR-912 §12.12).
+ *
+ * 🔑 Δηλώνεται **μόνο όσο η φόρμα έχει αλλαγές** (`dirty`, το ίδιο που έδωσε στο {@link useReportUnsavedEdits}): η ίδια
+ *   φόρμα στήνεται δύο φορές (στήλη desktop + φύλλο κινητού), και το αντίτυπο που δεν αγγίχτηκε **δεν** πρέπει να γράψει.
+ * 🔑 Ο χειριστής διαβάζεται **τη στιγμή της αποθήκευσης** (ref): αλλάζει ταυτότητα σε κάθε πληκτρολόγηση.
+ */
+export function useUnsavedEditsSaver(dirty: boolean, save: UnsavedEditsSaver): void {
+  const saverId = `unsaved-edits-saver:${useId()}`;
+  const latest = useRef(save);
+  useEffect(() => {
+    latest.current = save;
+  });
+
+  useEffect(() => {
+    if (!dirty) return;
+    declareUnsavedEditsSaver(saverId, () => latest.current());
+    return () => withdrawUnsavedEditsSaver(saverId);
+  }, [dirty, saverId]);
 }

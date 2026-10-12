@@ -8,6 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { toggleSelect } from '@/lib/toggle-select';
+import { guardLeave } from '@/lib/unsaved-edits/leave-guard';
 import { Users } from 'lucide-react';
 import { ContactsHeader } from './page/ContactsHeader';
 import { ContactFilterIndicator } from './page/ContactFilterIndicator';
@@ -236,7 +237,7 @@ export function ContactsPageContent() {
             {/* Mobile slide-in */}
             <MobileDetailsSlideIn
               isOpen={!!selectedContact || creationMode !== null}
-              onClose={() => { setSelectedContact(null); handleCancelCreation(); }}
+              onClose={() => guardLeave(() => { setSelectedContact(null); handleCancelCreation(); })}
               title={
                 creationMode
                   ? t('form.addTitle')

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
+import { useUnsavedEdits, useUnsavedEditsSaver } from '@/hooks/useUnsavedEdits';
 import { Header } from './GeneralTabContent/Header';
 import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 // BuildingStats → moved to "Αναλυτικά" tab (AnalyticsTabContent)
@@ -123,7 +123,7 @@ export function GeneralTabContent({
   const [formData, setFormData] = useState(() => buildFormData(building));
   // Η φόρμα δηλώνει αν διαφέρει από το αποθηκευμένο κτίριο — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
   const savedFormData = useMemo(() => buildFormData(building), [building]);
-  useUnsavedEdits(effectiveIsEditing, formData, savedFormData);
+  const hasUnsavedEdits = useUnsavedEdits(effectiveIsEditing, formData, savedFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // =========================================================================
@@ -387,6 +387,8 @@ export function GeneralTabContent({
 
   // Register save function for parent header delegation (SSoT hook)
   useSaveHandlerRef(onSaveRef, handleSave);
+  // Και στην ερώτηση εξόδου: «Αποθήκευση» πριν αλλάξει επιλογή ή σελίδα (ADR-912 §12.12).
+  useUnsavedEditsSaver(hasUnsavedEdits, handleSave);
 
   const updateField = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));

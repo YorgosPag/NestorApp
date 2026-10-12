@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useReportUnsavedEdits } from '@/providers/DirtyFormProvider';
+import { useReportUnsavedEdits, useUnsavedEditsSaver } from '@/providers/DirtyFormProvider';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -89,7 +89,8 @@ export function useContactDetailsController({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   // ADR-323: το `editedData` ΕΙΝΑΙ η διαφορά από το αποθηκευμένο ⇒ μη κενό = αλλαγές που θα χαθούν. Το ρωτά ο ✕ του
   // φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
-  useReportUnsavedEdits(isEditing && Object.keys(editedData).length > 0);
+  const hasUnsavedEdits = isEditing && Object.keys(editedData).length > 0;
+  useReportUnsavedEdits(hasUnsavedEdits);
   const [optimisticPersonas, setOptimisticPersonas] = useState<OptimisticPersonaState | null>(null);
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
   const [pendingSave, setPendingSave] = useState(false);
@@ -392,6 +393,8 @@ export function useContactDetailsController({
    * φόρμα **δημιουργίας**· εδώ έλειπε. Πλέον και οι δύο διαβάζουν την **ίδια** αρχή.
    */
   const handleSaveEdit = useCallback(() => runSave(performSaveEdit), [runSave, performSaveEdit]);
+  // Ερώτηση εξόδου (ADR-912 §12.12): χωρίς έκβαση ⇒ κρίνεται από το αν το `editedData` άδειασε.
+  useUnsavedEditsSaver(hasUnsavedEdits, handleSaveEdit);
 
   // 🏢 ENTERPRISE: Deferred save — auto-submit when pending uploads complete (Google-style)
   useEffect(() => {

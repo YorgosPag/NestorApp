@@ -10,6 +10,7 @@ import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 import { densityBootScript } from '@/lib/appearance/density-boot-script';
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { AppUpdateBanner } from '@/components/app-update/AppUpdateBanner';
+import { UnsavedEditsLeaveHost } from '@/components/unsaved-edits/UnsavedEditsLeaveHost';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { APP_DEFAULT_THEME, THEME_STORAGE_KEY } from '@/lib/appearance/theme-storage-key';
@@ -174,6 +175,12 @@ export default function RootLayout({
                     ⚠️ ΜΗΔΕΝ DOM όσο δεν υπάρχει νέα έκδοση — το `(bare)` μένει ανέπαφο.
                   */}
                   <AppUpdateBanner />
+                  {/*
+                    🔴 ADR-912 §12.12 — «ΦΕΥΓΕΙΣ ΜΕ ΑΛΛΑΓΕΣ ΠΟΥ ΔΕΝ ΑΠΟΘΗΚΕΥΤΗΚΑΝ».
+                    Ο ΕΝΑΣ ξενιστής της ερώτησης εξόδου: τη ζητούν η πηγή επιλογής κάθε σελίδας οντότητας,
+                    ο ✕ του φύλλου κινητού και το σύνορο πλοήγησης. ⚠️ ΜΗΔΕΝ DOM όσο κανείς δεν ρωτά.
+                  */}
+                  <UnsavedEditsLeaveHost />
                   {/*
                     🔴 ADR-367 §2.5 — ΤΟ ΔΙΧΤΥ ΤΟΥ FIRESTORE ΣΕ ΚΑΘΕ ΔΙΑΔΡΟΜΗ.
                     Ζούσε στο `(app)/layout.tsx`, ενώ το `db` το φορτώνουν και οι δημόσιες

@@ -2,14 +2,13 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { canvasUtilities } from '@/styles/design-tokens';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useIsTruncated } from '@/hooks/media/useIsTruncated';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { DirtyFormProvider, useUnsavedEditsAnswer } from '@/providers/DirtyFormProvider';
+import { confirmLeave, settledLeave } from '@/lib/unsaved-edits/leave-guard';
 import { cn } from '@/lib/utils';
 import {
   DetailsSheetActionsProvider,
@@ -66,31 +65,20 @@ function useSheetDismissal(): SheetDismissal {
  * **Τι κάνει ο ✕**: όσο τρέχει επεξεργασία ΕΙΝΑΙ η Ακύρωση (ADR-912 §12.5) — ρωτά πριν χαθούν αλλαγές· αλλιώς κλείνει το φύλλο.
  */
 function useSheetLeave(onClose: () => void, currentDismissal: SheetDismissal['current']) {
-  // `common-shared`, όχι `common-actions`: το ερώτημα βγαίνει μόνο σε πάτημα, άρα δεν χρεώνεται στο κέλυφος (ADR-744).
-  const { t } = useTranslation('common-shared');
-  const { confirm, dialogProps } = useConfirmDialog();
   // Τι δήλωσαν οι φόρμες του φύλλου (`useReportUnsavedEdits`)· `undefined` = καμία δεν ξέρει ⇒ ρωτάμε.
   const unsavedEdits = useUnsavedEditsAnswer();
 
-  const leave = async () => {
+  return async () => {
     const editing = currentDismissal();
     if (!editing) return onClose();
-    // Η ρητή δήλωση της ενέργειας υπερισχύει· αλλιώς απαντούν οι φόρμες.
-    if ((editing.discards ?? unsavedEdits) !== false) {
-      const discard = await confirm({
-        title: t('discardChanges.title'),
-        description: t('discardChanges.body'),
-        confirmText: t('discardChanges.confirm'),
-        cancelText: t('discardChanges.keep'),
-        variant: 'destructive',
-      });
-      if (!discard) return;
-    }
+    // Η ρητή δήλωση της ενέργειας υπερισχύει· αλλιώς απαντούν οι φόρμες. `force`: το άγνωστο δεν δηλώνει ποτέ «καθαρό».
+    const mayLoseEdits = (editing.discards ?? unsavedEdits) !== false;
+    // Η ΙΔΙΑ ερώτηση με κάθε άλλη έξοδο (ADR-912 §12.12): Αποθήκευση · Απόρριψη · Συνέχεια επεξεργασίας.
+    if (mayLoseEdits && !(await confirmLeave({ force: true }))) return;
     // Ξανά από την πηγή: όσο ήταν ανοιχτή η ερώτηση η επεξεργασία μπορεί να τελείωσε (π.χ. ολοκληρώθηκε αποθήκευση).
-    currentDismissal()?.onDismiss();
+    // `settledLeave`: η απόφαση πάρθηκε — η Ακύρωση που κλείνει επιλογή (φόρμα δημιουργίας) δεν ξαναρωτά.
+    settledLeave(() => currentDismissal()?.onDismiss());
   };
-
-  return { leave, dialogProps };
 }
 
 /**
@@ -113,7 +101,7 @@ function OpenDetailsSheet({ onClose, title, children }: Omit<MobileDetailsSlideI
   const [host, setHost] = React.useState<HTMLElement | null>(null);
   const { ref: titleRef, truncated: titleTruncated } = useIsTruncated<HTMLHeadingElement>();
   const dismissal = useSheetDismissal();
-  const { leave, dialogProps } = useSheetLeave(onClose, dismissal.current);
+  const leave = useSheetLeave(onClose, dismissal.current);
   const slot = React.useMemo<DetailsSheetActionsSlot>(
     () => ({ host, titleTruncated, claimDismissal: dismissal.claim }),
     [host, titleTruncated, dismissal.claim],
@@ -148,8 +136,6 @@ function OpenDetailsSheet({ onClose, title, children }: Omit<MobileDetailsSlideI
           {children}
         </DetailsSheetActionsProvider>
       </div>
-
-      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
