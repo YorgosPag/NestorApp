@@ -39,11 +39,11 @@ import { ListingModels } from '../ListingModels';
 import { ListingTour } from '../ListingTour';
 import { ListingVideos } from '../ListingVideos';
 
+import { LISTING_FLOOR_PLATE_TAB } from './floor-plate-tab';
+
 /** Η προεπιλεγμένη όψη — πάντα **πρώτη** καρτέλα, άρα δεν γράφεται στη διεύθυνση (`useActiveMediaTab`). */
 const PHOTOS_TAB = 'photos';
 
-/** Η κάτοψη **ορόφου** — άλλη καρτέλα από την `floorplan` (η κάτοψη της μονάδας)· η τιμή ζει στη διεύθυνση (`?mediaTab=`). */
-const FLOOR_PLATE_TAB = 'floorPlate';
 
 /** Το εσωτερικό περιθώριο κάθε σκηνής: το κέλυφος είναι πλαίσιο χωρίς γέμισμα (στον χώρο η σκηνή είναι καμβάς ως την άκρη). */
 function Stage({ children }: { readonly children: ReactNode }): ReactElement {
@@ -94,7 +94,7 @@ function planTabs(listing: PublicListing, t: Translate): MediaViewerTab[] {
   // Ο κριτής είναι ο ίδιος με του φύλλου (`presentableFloorPlate`): καρτέλα χωρίς σκηνή δεν γεννιέται.
   if (presentableFloorPlate(listing) !== null) {
     tabs.push({
-      id: FLOOR_PLATE_TAB,
+      id: LISTING_FLOOR_PLATE_TAB,
       label: t('listing-detail:media.tabs.floorPlate'),
       icon: Layers,
       panel: <Stage><ListingFloorPlates listing={listing} /></Stage>,

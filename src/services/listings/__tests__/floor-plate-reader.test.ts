@@ -511,6 +511,20 @@ describe('ΕΒ — ο ΕΝΑΣ βρόχος επαναπροβολής, με ε�
     expect(republishListing).not.toHaveBeenCalled();
   });
 
+  it('🔴 ΕΒ-1β όροφος: το πλήθος ΠΡΙΝ από την υπογραφή είναι οι ίδιες μονάδες που θα ξαναπροβληθούν — και δεν γράφει τίποτα (§11.14)', async () => {
+    seedHealthyFloor();
+    seedUnit('prop_upstairs', { listed: true, floorId: 'flr_other' });
+    seedUnit('prop_foreign', { listed: true, companyId: 'comp_other' });
+
+    const promised = await scoped.countListedUnitsInFloor(db(), FLOOR, COMPANY);
+    expect(republishListing).not.toHaveBeenCalled();
+
+    // Ό,τι υποσχέθηκε το πλήθος είναι ό,τι γράφει το πρώτο πέρασμα — ούτε η κρυφή μονάδα, ούτε ξένος όροφος / χώρος.
+    const written = await scoped.republishListingsInScope(db(), floorScope);
+    expect(promised).toBe(written.length);
+    expect(promised).toBe(2);
+  });
+
   it('ΕΒ-2 όροφος: γείτονας που πουλήθηκε ξυπνά ΤΗΝ ΑΔΕΛΦΗ — όχι τον εαυτό του, όχι όλο τον όροφο', async () => {
     seedHealthyFloor();
     seedOutline('ovrl_4', 'prop_third', rect(0, 0, 300, 400));

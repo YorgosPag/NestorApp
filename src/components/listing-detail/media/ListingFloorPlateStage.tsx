@@ -11,7 +11,8 @@
  *   Ο αριθμός πάνω στο σχήμα είναι ο αριθμός της γραμμής· ό,τι τονίζεται στο ένα τονίζεται και στο άλλο.
  * 🔴 **Για τον γείτονα φαίνεται ΜΟΝΟ η διαθεσιμότητά του** — ποτέ τιμή, όνομα ή ταυτότητα· το έγγραφο δεν τα κουβαλά, και
  *   η σημείωση κάτω από τη λίστα το λέει ρητά στον επισκέπτη.
- * 🔗 **Γείτονας με δική του αγγελία = σύνδεσμος** (`listingDetailHref`) — και στο σχήμα και στη γραμμή του.
+ * 🔗 **Γείτονας με δική του αγγελία = σύνδεσμος** — και στο σχήμα και στη γραμμή του, από τον ΕΝΑ κατασκευαστή
+ *   (`useFloorPlateNeighbourHref`): ο γείτονας ανοίγει στην ίδια καρτέλα, με την ίδια αναζήτηση (§11.14).
  */
 
 import { useMemo, useState } from 'react';
@@ -22,11 +23,11 @@ import { FLOOR_PLATE_SELF_STATE, type FloorPlateState } from '@/lib/listings/flo
 import { floorPlateLegendStates, floorPlateShapes, type FloorPlateShape } from '@/lib/listings/floor-plate/floor-plate-view';
 import { listingImageFigureSource } from '@/lib/listings/listing-capture-spots';
 import { LISTING_FLOORPLAN_PROVENANCE_KEYS } from '@/lib/listings/listing-material';
-import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
 import type { ListingFloorPlate } from '@/types/public-listing';
 
+import { useFloorPlateNeighbourHref, type FloorPlateNeighbourHref } from './floor-plate-tab';
 import { FloorPlateSwatch, FloorPlateUnitLayer } from './FloorPlateUnitLayer';
 import { ListingZoomStage, ZOOM_STAGE_IMAGE } from './ListingZoomStage';
 
@@ -66,10 +67,16 @@ interface UnitRowProps {
   readonly shape: FloorPlateShape;
   readonly emphasised: boolean;
   readonly onActive: (unitNumber: number | null) => void;
+  readonly hrefOf: FloorPlateNeighbourHref;
 }
 
-/** Μία μονάδα ως κείμενο: αριθμός (ίδιος με το σχέδιο), κατάσταση με τη λέξη της, και σύνδεσμος όταν έχει αγγελία. */
-function UnitRow({ shape, emphasised, onActive }: UnitRowProps) {
+/**
+ * Μία μονάδα ως κείμενο: αριθμός (ίδιος με το σχέδιο), κατάσταση με τη λέξη της, και σύνδεσμος όταν έχει αγγελία.
+ *
+ * ♿ **Στόχος αφής 44 px** (`min-h-11`, το ιδίωμα του `ListingSectionNav`): ο σύνδεσμος μετρήθηκε 116×20 στα 320 / 390 —
+ *   περνούσε το WCAG 2.5.8 μόνο χάρη στην εξαίρεση απόστασης. Η γραμμή παίρνει το ίδιο ύψος, ώστε όλες να είναι ίσες.
+ */
+function UnitRow({ shape, emphasised, onActive, hrefOf }: UnitRowProps) {
   const { t } = useTranslation(['listing-detail']);
   const labelOf = useStateLabel();
   const self = shape.state === FLOOR_PLATE_SELF_STATE;
@@ -79,14 +86,14 @@ function UnitRow({ shape, emphasised, onActive }: UnitRowProps) {
   return (
     <li {...highlight} onFocus={highlight.onPointerEnter} onBlur={highlight.onPointerLeave}
       aria-current={self ? 'true' : undefined} data-floor-plate-row={shape.number}
-      className={cn('flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md px-2 py-1 text-sm', emphasised && 'bg-muted')}>
+      className={cn('flex min-h-11 flex-wrap items-center gap-x-2 rounded-md px-2 text-sm', emphasised && 'bg-muted')}>
       <FloorPlateSwatch state={shape.state} />
       <span className={cn('text-foreground', self && 'font-semibold')}>
         {t('listing-detail:floorPlate.unit', { number: shape.number })}
       </span>
       <span className="text-muted-foreground">{state}</span>
       {shape.listingId !== null && (
-        <Link href={listingDetailHref(shape.listingId)} className="underline underline-offset-2"
+        <Link href={hrefOf(shape.listingId)} className="inline-flex min-h-11 items-center underline underline-offset-2"
           aria-label={t('listing-detail:floorPlate.openListingLabel', { number: shape.number, state })}>
           {t('listing-detail:floorPlate.openListing')}
         </Link>
@@ -104,6 +111,7 @@ export function ListingFloorPlateStage({ plate }: ListingFloorPlateStageProps) {
   // `search-results`: εκεί ζουν οι προτάσεις προέλευσης της κάτοψης (παγωμένα κλειδιά, ADR-845 Ο-7).
   const { t } = useTranslation(['listing-detail', 'search-results']);
   const [active, setActive] = useState<number | null>(null);
+  const hrefOf = useFloorPlateNeighbourHref();
   const { image, units } = plate.value;
   const shapes = useMemo(
     () => floorPlateShapes(units, { width: image.width, height: image.height }),
@@ -116,7 +124,9 @@ export function ListingFloorPlateStage({ plate }: ListingFloorPlateStageProps) {
         {(sizes) => (
           <FloorplanFigure source={listingImageFigureSource(image, t(image.altKey))} sizes={sizes}
             imageClassName={ZOOM_STAGE_IMAGE}>
-            {(size) => <FloorPlateUnitLayer size={size} shapes={shapes} active={active} onActive={setActive} />}
+            {(size) => (
+              <FloorPlateUnitLayer size={size} shapes={shapes} active={active} onActive={setActive} hrefOf={hrefOf} />
+            )}
           </FloorplanFigure>
         )}
       </ListingZoomStage>
@@ -126,7 +136,8 @@ export function ListingFloorPlateStage({ plate }: ListingFloorPlateStageProps) {
       <ol aria-label={t('listing-detail:floorPlate.units')} data-floor-plate-units=""
         className="m-0 grid list-none grid-cols-1 gap-x-4 p-0 sm:grid-cols-2">
         {shapes.map((shape) => (
-          <UnitRow key={shape.number} shape={shape} emphasised={shape.number === active} onActive={setActive} />
+          <UnitRow key={shape.number} shape={shape} emphasised={shape.number === active} onActive={setActive}
+            hrefOf={hrefOf} />
         ))}
       </ol>
 

@@ -15,14 +15,16 @@
  *   φτιαγμένο με ξεχωριστά τετραγωνάκια CSS θα μπορούσε να δείχνει άλλο μοτίβο από το σχέδιο χωρίς να κοκκινίσει τίποτα.
  */
 
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 
 import { SPACE_LABEL_CLASS } from '@/components/spatial-tour/viewer/tour-plan-overlay-palette';
+import { useElementSize } from '@/hooks/media/useElementSize';
 import { FLOOR_PLATE_SELF_STATE, FLOOR_PLATE_STATES, type FloorPlateState } from '@/lib/listings/floor-plate/floor-plate-state';
 import { inPaintOrder, type FloorPlateImageSize, type FloorPlateShape } from '@/lib/listings/floor-plate/floor-plate-view';
-import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
+
+import type { FloorPlateNeighbourHref } from './floor-plate-tab';
 
 import {
   FLOOR_PLATE_EDGE_CLASS, FLOOR_PLATE_HALO_CLASS, FLOOR_PLATE_MARK_CLASS, FLOOR_PLATE_PAPER_CLASS, FLOOR_PLATE_PATTERN,
@@ -35,6 +37,26 @@ const TILE_FRACTION = 0.014;
 const LABEL_MIN_FRACTION = 0.016;
 const LABEL_MAX_FRACTION = 0.034;
 const LABEL_HALO_RATIO = 0.22;
+/**
+ * Κάτω από αυτό ο αριθμός **δεν διαβάζεται**: το ελάχιστο μέγεθος κειμένου της σελίδας, σε css px **στην οθόνη**, με το
+ * σχέδιο σε ηρεμία. 🔴 Μετρημένο στην παραγωγή (ADR-907 §11.14): τα κλάσματα της εικόνας έδιναν 8,8 px στα 320 και
+ * 11,2 px στα 390 — ο αριθμός είναι το μόνο που δένει το σχήμα με τη γραμμή της λίστας, και εκεί ακριβώς χανόταν.
+ */
+const LABEL_MIN_SCREEN_PX = 12;
+/** Σκαλοπάτι μέτρησης του στρώματος (css px): το στρώμα ξαναζωγραφίζεται μόνο όταν το πλάτος αλλάξει σκαλοπάτι. */
+const LAYER_MEASURE_STEP_PX = 4;
+
+/**
+ * **Το μέγεθος του αριθμού μιας μονάδας, σε μονάδες εικόνας** — όσο χωρά στο σχήμα, μέσα στα όρια του σχεδίου, και ποτέ
+ * μικρότερο στην οθόνη από {@link LABEL_MIN_SCREEN_PX}.
+ *
+ * @param scale css px ανά μονάδα εικόνας, όπως αποδίδεται το στρώμα· `null` όσο δεν έχει μετρηθεί (SSR · jsdom) — τότε
+ *   ισχύει το σχέδιο, χωρίς μαντεμένο πάτωμα.
+ */
+export function unitLabelFontSize(clearance: number, base: number, scale: number | null): number {
+  const drawn = Math.min(Math.max(clearance * 1.1, base * LABEL_MIN_FRACTION), base * LABEL_MAX_FRACTION);
+  return scale === null ? drawn : Math.max(drawn, LABEL_MIN_SCREEN_PX / scale);
+}
 
 const SWATCH = { width: 28, height: 18, inset: 1, tile: 6 } as const;
 
@@ -98,15 +120,18 @@ interface UnitProps {
   readonly prefix: string;
   /** Η μεγάλη πλευρά της εικόνας — η βάση κάθε μεγέθους σε μονάδες εικόνας. */
   readonly base: number;
+  /** css px ανά μονάδα εικόνας — `null` όσο το στρώμα δεν έχει μετρηθεί. */
+  readonly scale: number | null;
   readonly emphasised: boolean;
   readonly onActive: (unitNumber: number | null) => void;
+  readonly hrefOf: FloorPlateNeighbourHref;
 }
 
-function UnitShape({ shape, prefix, base, emphasised, onActive }: UnitProps) {
+function UnitShape({ shape, prefix, base, scale, emphasised, onActive }: UnitProps) {
   const self = shape.state === FLOOR_PLATE_SELF_STATE;
   const edge = (self ? FLOOR_PLATE_STROKE_PX.self : FLOOR_PLATE_STROKE_PX.neighbour)
     + (emphasised ? FLOOR_PLATE_STROKE_PX.emphasis : 0);
-  const fontSize = Math.min(Math.max(shape.clearance * 1.1, base * LABEL_MIN_FRACTION), base * LABEL_MAX_FRACTION);
+  const fontSize = unitLabelFontSize(shape.clearance, base, scale);
   const outline = { points: shape.points, strokeLinejoin: 'round', vectorEffect: 'non-scaling-stroke' } as const;
 
   return (
@@ -131,7 +156,7 @@ function Unit(props: UnitProps) {
   const { listingId } = props.shape;
   if (listingId === null) return <UnitShape {...props} />;
   return (
-    <Link href={listingDetailHref(listingId)} tabIndex={-1} className="cursor-pointer" data-floor-plate-link="">
+    <Link href={props.hrefOf(listingId)} tabIndex={-1} className="cursor-pointer" data-floor-plate-link="">
       <UnitShape {...props} />
     </Link>
   );
@@ -143,19 +168,35 @@ export interface FloorPlateUnitLayerProps {
   /** Η μονάδα που τονίζεται — από το ποντίκι πάνω στο σχέδιο **ή** από τη λίστα από κάτω. */
   readonly active: number | null;
   readonly onActive: (unitNumber: number | null) => void;
+  /** Ο σύνδεσμος προς την αγγελία ενός γείτονα — ο ίδιος κατασκευαστής με τη λίστα (`useFloorPlateNeighbourHref`). */
+  readonly hrefOf: FloorPlateNeighbourHref;
 }
 
-export function FloorPlateUnitLayer({ size, shapes, active, onActive }: FloorPlateUnitLayerProps) {
+/**
+ * Πόσα css px είναι μία μονάδα εικόνας **όπως αποδίδεται** το στρώμα (`xMidYMid meet`, ίδιο με το `object-contain` της
+ * εικόνας). Η μεγέθυνση είναι μετασχηματισμός προγόνου: δεν αλλάζει το κουτί, άρα ο αριθμός μεγαλώνει μαζί με το σχέδιο.
+ */
+function useLayerScale(size: FloorPlateImageSize) {
+  const ref = useRef<HTMLDivElement>(null);
+  const box = useElementSize(ref, LAYER_MEASURE_STEP_PX);
+  const measured = box.width > 0 && box.height > 0 && size.width > 0 && size.height > 0;
+  return { ref, scale: measured ? Math.min(box.width / size.width, box.height / size.height) : null };
+}
+
+export function FloorPlateUnitLayer({ size, shapes, active, onActive, hrefOf }: FloorPlateUnitLayerProps) {
   const prefix = useFragmentId();
   const base = Math.max(size.width, size.height, 1);
+  const { ref, scale } = useLayerScale(size);
   return (
-    <svg viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true" data-floor-plate-layer=""
-      className="absolute inset-0 h-full w-full">
-      <FloorPlatePatternDefs prefix={prefix} tile={base * TILE_FRACTION} />
-      {inPaintOrder(shapes).map((shape) => (
-        <Unit key={shape.number} shape={shape} prefix={prefix} base={base} emphasised={shape.number === active}
-          onActive={onActive} />
-      ))}
-    </svg>
+    // Το περίβλημα υπάρχει για τη μέτρηση: ο ΕΝΑΣ παρατηρητής μεγέθους (`useElementSize`) μετρά στοιχεία HTML.
+    <div ref={ref} className="absolute inset-0">
+      <svg viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true" data-floor-plate-layer="" className="h-full w-full">
+        <FloorPlatePatternDefs prefix={prefix} tile={base * TILE_FRACTION} />
+        {inPaintOrder(shapes).map((shape) => (
+          <Unit key={shape.number} shape={shape} prefix={prefix} base={base} scale={scale}
+            emphasised={shape.number === active} onActive={onActive} hrefOf={hrefOf} />
+        ))}
+      </svg>
+    </div>
   );
 }

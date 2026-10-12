@@ -106,8 +106,10 @@ jest.mock('@/services/listings/floor-plate-declaration.service', () => ({
 }));
 
 const refresh = jest.fn();
+const countListings = jest.fn();
 jest.mock('@/services/listings/listing-media-refresh', () => ({
   refreshListingsOfFloor: (...args: unknown[]) => refresh(...args),
+  countListingsOfFloor: (...args: unknown[]) => countListings(...args),
 }));
 
 import { setImmediate } from 'node:timers';
@@ -156,6 +158,7 @@ beforeEach(() => {
   declare.mockResolvedValue({ state: 'declared', declaration: DECLARATION });
   withdraw.mockResolvedValue({ state: 'withdrawn' });
   refresh.mockResolvedValue(LISTINGS);
+  countListings.mockResolvedValue(3);
 });
 
 describe('ΠΔ-1 — η ΑΝΑΓΝΩΣΗ: ποιος υπέγραψε, και αν εσύ μπορείς', () => {
@@ -163,7 +166,9 @@ describe('ΠΔ-1 — η ΑΝΑΓΝΩΣΗ: ποιος υπέγραψε, και α
     const answer = await call(GET);
 
     expect(answer.status).toBe(200);
-    expect(dataOf(answer)).toEqual({ floorId: FLOOR_ID, declaration: DECLARATION, mayDeclare: true });
+    expect(dataOf(answer)).toEqual({ floorId: FLOOR_ID, declaration: DECLARATION, mayDeclare: true, listedUnits: 3 });
+    // 🔑 Το πλήθος μετριέται για ΑΥΤΟΝ τον όροφο, στον μισθωτή της απόδειξης (§11.14).
+    expect(countListings).toHaveBeenCalledWith(ADMIN_DB, FLOOR_ID, 'comp_alfa');
     expect(loadFloor).toHaveBeenCalledTimes(1);
     expect(loadFloor).toHaveBeenCalledWith(ADMIN_DB, FLOOR_ID, authCtx);
   });
@@ -174,7 +179,9 @@ describe('ΠΔ-1 — η ΑΝΑΓΝΩΣΗ: ποιος υπέγραψε, και α
     const answer = await call(GET);
 
     expect(answer.status).toBe(200);
-    expect(dataOf(answer)).toEqual({ floorId: FLOOR_ID, declaration: DECLARATION, mayDeclare: false });
+    expect(dataOf(answer)).toEqual({ floorId: FLOOR_ID, declaration: DECLARATION, mayDeclare: false, listedUnits: null });
+    // Ο θεατής δεν πληρώνει το ερώτημα: το πλήθος αφορά μόνο όποιον μπορεί να υπογράψει ή να άρει.
+    expect(countListings).not.toHaveBeenCalled();
   });
 
   it.each([

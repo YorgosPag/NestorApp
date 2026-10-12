@@ -22,12 +22,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { FloorPlateUnit, ListingFloorPlate } from '@/types/public-listing';
 
+import { floorPlateNeighbourQuery, LISTING_FLOOR_PLATE_TAB } from '../floor-plate-tab';
+import { unitLabelFontSize } from '../FloorPlateUnitLayer';
 import { ListingFloorPlateStage } from '../ListingFloorPlateStage';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -162,12 +164,12 @@ describe('ListingFloorPlateStage', () => {
     const { container } = renderStage([{ ...UNITS[0], listingId: 'prop_self' }, ...UNITS.slice(1)]);
     const drawn = layerOf(container)?.querySelectorAll('a') ?? [];
     expect(drawn).toHaveLength(1);
-    expect(drawn[0].getAttribute('href')).toBe('/listing/prop_2');
+    expect(drawn[0].getAttribute('href')).toBe('/listing/prop_2?mediaTab=floorPlate');
     expect(drawn[0].querySelector('[data-floor-plate-unit="2"]')).not.toBeNull();
 
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(1);
-    expect(links[0].getAttribute('href')).toBe('/listing/prop_2');
+    expect(links[0].getAttribute('href')).toBe('/listing/prop_2?mediaTab=floorPlate');
     expect(rowOf(2)).toContainElement(links[0]);
     // Το όνομα του συνδέσμου λέει ΠΟΙΑ μονάδα και σε τι κατάσταση — «Δείτε την αγγελία» σκέτο δεν ξεχωρίζει δύο γείτονες.
     expect(links[0].getAttribute('aria-label')).toBe(
@@ -266,11 +268,75 @@ describe('ListingFloorPlateStage', () => {
     expect(image.getAttribute('sizes')).toBe('300vw');
   });
 
+  describe('ΟΡ-10…ΟΡ-12 — ό,τι μέτρησε η παραγωγή στα 320 / 390 / 1440 (ADR-907 §11.14)', () => {
+    afterEach(() => act(() => window.history.replaceState(null, '', '/')));
+
+    it('🔴 ΟΡ-10 ο γείτονας ανοίγει στην ΙΔΙΑ καρτέλα με την ΙΔΙΑ αναζήτηση — σχήμα και γραμμή, ο ίδιος προορισμός', () => {
+      // Φίλτρο αναζήτησης (σημείο + ακτίνα) · η ανοιχτή φωτογραφία ΑΥΤΗΣ της αγγελίας · κάτι άγνωστο.
+      window.history.replaceState(null, '', '/listing/prop_self?lat=37.9&lng=23.7&r=5&photo=3&junk=1');
+      const { container } = renderStage();
+      const drawn = layerOf(container)?.querySelector('a')?.getAttribute('href') ?? '';
+      const listed = within(rowOf(2)).getByRole('link').getAttribute('href') ?? '';
+      expect(drawn).toBe(listed);
+
+      const [pathname, query] = listed.split('?');
+      expect(pathname).toBe('/listing/prop_2');
+      const params = new URLSearchParams(query);
+      expect(params.get('mediaTab')).toBe(LISTING_FLOOR_PLATE_TAB);
+      expect([params.get('lat'), params.get('lng'), params.get('r')]).toEqual(['37.9', '23.7', '5']);
+      // Ό,τι ανήκει σε ΑΥΤΗ την αγγελία, και ό,τι δεν είναι φίλτρο, μένει πίσω.
+      expect(params.has('photo')).toBe(false);
+      expect(params.has('junk')).toBe(false);
+    });
+
+    it('ΟΡ-10β χωρίς αναζήτηση ο σύνδεσμος κουβαλά ΜΟΝΟ την καρτέλα — και η τιμή της είναι αυτή που γράφει ο προβολέας', () => {
+      expect(floorPlateNeighbourQuery('')).toBe('mediaTab=floorPlate');
+      expect(floorPlateNeighbourQuery('?mediaTab=photos&photo=2')).toBe('mediaTab=floorPlate');
+    });
+
+    it('🔴 ΟΡ-11 ο αριθμός της μονάδας δεν πέφτει ΠΟΤΕ κάτω από 12 px στην οθόνη — και χωρίς μέτρηση ισχύει το σχέδιο', () => {
+      const base = 1600;
+      const drawn = unitLabelFontSize(400, base, null);
+      expect(drawn).toBeCloseTo(base * 0.034, 5);
+      // Οι τρεις μετρημένες κλίμακες: 259 / 329 / 875 css px για εικόνα 1600 px.
+      const onScreen = (cssWidth: number) => unitLabelFontSize(400, base, cssWidth / base) * (cssWidth / base);
+      expect(onScreen(259)).toBeCloseTo(12, 5);
+      expect(onScreen(329)).toBeCloseTo(12, 5);
+      // Στο πλάτος εργασίας το πάτωμα δεν αγγίζει τίποτα: το μέγεθος είναι του σχεδίου.
+      expect(unitLabelFontSize(400, base, 875 / base)).toBe(drawn);
+      expect(onScreen(875)).toBeGreaterThan(12);
+    });
+
+    it('🔴 ΟΡ-11β το στρώμα ΜΕΤΡΑ το κουτί του και περνά την κλίμακα στον αριθμό (όχι μόνο η συνάρτηση)', () => {
+      const observer = class { observe(): void {} disconnect(): void {} unobserve(): void {} };
+      const original = { ro: globalThis.ResizeObserver, rect: HTMLElement.prototype.getBoundingClientRect };
+      globalThis.ResizeObserver = observer as unknown as typeof ResizeObserver;
+      // Εικόνα 2000×1000 αποδοσμένη σε 260×130 css px ⇒ 0,13 px ανά μονάδα εικόνας.
+      HTMLElement.prototype.getBoundingClientRect = () => ({ width: 260, height: 130 } as DOMRect);
+      try {
+        const { container } = renderStage();
+        const size = Number(unitOf(container, 1)?.querySelector('text')?.getAttribute('font-size'));
+        expect(size * 0.13).toBeGreaterThanOrEqual(12 - 1e-6);
+        // …και πάνω από το ανώτατο του σχεδίου (0,034 × 2000 = 68): το πάτωμα ΕΙΝΑΙ αυτό που αποφάσισε.
+        expect(size).toBeGreaterThan(68);
+      } finally {
+        globalThis.ResizeObserver = original.ro;
+        HTMLElement.prototype.getBoundingClientRect = original.rect;
+      }
+    });
+
+    it('🔴 ΟΡ-12 στόχος αφής 44 px: ο σύνδεσμος ΚΑΙ κάθε γραμμή έχουν `min-h-11` — οι γραμμές μένουν ισοϋψείς', () => {
+      renderStage();
+      expect(within(rowOf(2)).getByRole('link').className.split(/\s+/u)).toEqual(expect.arrayContaining(['inline-flex', 'min-h-11']));
+      [1, 2, 3, 4].forEach((unitNumber) => expect(rowOf(unitNumber).className.split(/\s+/u)).toContain('min-h-11'));
+    });
+  });
+
   it('🔴 ΟΡ-9 κανένα αρχείο της όψης δεν γράφει κλάση με αγκύλες ΚΑΙ παρεμβολή μέσα της', () => {
     const root = path.resolve(__dirname, '..', '..');
     const files = [
       'ListingFloorPlates.tsx', 'media/ListingFloorPlateStage.tsx', 'media/FloorPlateUnitLayer.tsx',
-      'media/floor-plate-palette.ts', 'media/ListingZoomStage.tsx', 'media/__tests__/ListingFloorPlateStage.test.tsx',
+      'media/floor-plate-palette.ts', 'media/floor-plate-tab.ts', 'media/ListingZoomStage.tsx', 'media/__tests__/ListingFloorPlateStage.test.tsx',
     ];
     // «όνομα-[ … δολάριο-άγκιστρο» χωρίς κενό ενδιάμεσα: το σχήμα που ο σαρωτής παίρνει για αυθαίρετη τιμή.
     const interpolatedClass = new RegExp(['[a-z]-', '\\[', '[^\\]\\s]*', '\\$', '\\{'].join(''), 'u');

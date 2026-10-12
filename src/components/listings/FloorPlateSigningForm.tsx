@@ -6,7 +6,8 @@
  * @module components/listings/FloorPlateSigningForm
  *
  * Τρία πράγματα ζητά από τον άνθρωπο, με αυτή τη σειρά: **ποια εικόνα**, **τη δήλωσή του**, **το πάτημα**. Το κουμπί
- * μένει κλειστό ώσπου να υπάρχουν και τα δύο πρώτα — η υπογραφή δεν είναι ποτέ παρενέργεια ενός κλικ.
+ * μένει κλειστό ώσπου να υπάρχουν και τα δύο πρώτα — η υπογραφή δεν είναι ποτέ παρενέργεια ενός κλικ. Ακριβώς πριν από
+ * το κουμπί γράφεται **πόσες δημόσιες αγγελίες αλλάζουν** (§11.14): το πλήθος το δίνει ο διακομιστής, όχι η φόρμα.
  *
  * ⛔ **ΚΑΜΙΑ ΚΡΙΣΗ ΕΔΩ.** Η λίστα δείχνει κάθε εικόνα του ορόφου, και όσες **δεν** είναι δημόσιες: το αν ο όροφος βγαίνει
  * το αποφασίζει ο διακομιστής και το λέει με όνομα. Η σήμανση «όχι δημόσια» είναι **υπόδειξη**, όχι φίλτρο.
@@ -25,8 +26,26 @@ import type { FileRecord } from '@/types/file-record';
 export interface FloorPlateSigningFormProps {
   /** Οι εικόνες του ορόφου· `null` όσο δεν έχουν διαβαστεί — η φόρμα **σιωπά**. */
   readonly images: readonly FileRecord[] | null;
+  /** Πόσες δημόσιες αγγελίες θα αλλάξει η υπογραφή — το μετρά ο διακομιστής· `null` ⇒ η φόρμα δεν γράφει πλήθος. */
+  readonly listedUnits: number | null;
   readonly busy: boolean;
   readonly onDeclare: (fileId: string) => void;
+}
+
+/**
+ * **Τι θα γίνει ΑΝ υπογράψω** — πριν από το κουμπί, όχι μετά (ADR-907 §11.14). Η υπογραφή είναι δημοσίευση: ο άνθρωπος
+ * οφείλει να ξέρει σε πόσες αγγελίες βγαίνει η κάτοψη τη στιγμή που πατά.
+ */
+function SigningImpact({ id, listedUnits }: { readonly id: string; readonly listedUnits: number | null }): React.JSX.Element | null {
+  const { t } = useTranslation(['building-tabs']);
+  if (listedUnits === null) return null;
+  return (
+    <p id={id} className="m-0 font-medium" data-floor-plate-impact={listedUnits}>
+      {listedUnits === 0
+        ? t('tabs.floors.floorPlate.signImpactNone')
+        : t('tabs.floors.floorPlate.signImpact', { count: listedUnits })}
+    </p>
+  );
 }
 
 /**
@@ -38,12 +57,13 @@ export function chosenFloorPlateImageId(images: readonly FileRecord[], picked: s
   return images.length === 1 ? images[0].id : null;
 }
 
-export function FloorPlateSigningForm({ images, busy, onDeclare }: FloorPlateSigningFormProps): React.JSX.Element | null {
+export function FloorPlateSigningForm({ images, listedUnits, busy, onDeclare }: FloorPlateSigningFormProps): React.JSX.Element | null {
   const { t } = useTranslation(['building-tabs']);
   const fileName = useFileDisplayName();
   const imageId = React.useId();
   const statementId = React.useId();
   const noteId = React.useId();
+  const impactId = React.useId();
   const [picked, setPicked] = React.useState<string | null>(null);
   const [agreed, setAgreed] = React.useState(false);
 
@@ -86,10 +106,12 @@ export function FloorPlateSigningForm({ images, busy, onDeclare }: FloorPlateSig
       </label>
       <p id={noteId} className="m-0 text-muted-foreground">{t('tabs.floors.floorPlate.statementNote')}</p>
 
+      <SigningImpact id={impactId} listedUnits={listedUnits} />
       <Button
         type="button"
         size="sm"
         className="self-start"
+        aria-describedby={listedUnits === null ? undefined : impactId}
         disabled={busy || !agreed || chosen === null}
         onClick={() => { if (chosen !== null && agreed) onDeclare(chosen); }}
       >

@@ -118,7 +118,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "04d7ef51936d795f5160c5802797149d98ecf9e134457bbf09c8cfe557af49a6",
+  "inputsSha256": "b922492baa93ff1a49583415346e37f3daa51d95df74a3b0147f86fb4e0e0748",
   "languages": [
     "el"
   ],
@@ -385,9 +385,10 @@
     "src/components/listing-detail/media/ListingFloorplanSpotsFigure.tsx": "d4fa183eb6f1600446a4e2d763266b78d565b56a1359a8e04029a623279943ab",
     "src/components/listing-detail/media/ListingMediaPageChrome.tsx": "10c7bd9fd5ee2a57024f842bd93c71b89399d77cc78afb0af5922549bb7f4185",
     "src/components/listing-detail/media/ListingMediaTabs.tsx": "66e1c19c63dce75ba69501230789c388fef6c3b728b187c58627de94823dc7e1",
-    "src/components/listing-detail/media/ListingMediaViewer.tsx": "eab689071087bdd920194f356116df6c2735a5a5913dc45210db385df898d950",
+    "src/components/listing-detail/media/ListingMediaViewer.tsx": "0926e7563b896fbee0f6906d66b78a1978df387dd093b1f2c1247ca47ce15adb",
     "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "02505058c9ad95f03efe65649a9342569700d1fbf4c1cc272c8ef7837adfaf91",
     "src/components/listing-detail/media/ListingVideoStage.tsx": "5a764c168191ca24a455b720987901778c11cabfdb8f10abfb0c96e1fa8355ba",
+    "src/components/listing-detail/media/floor-plate-tab.ts": "21593b67f43b7f1aeb8a82e8ac0446a5f668359dff88ad50181ce6cac77f3978",
     "src/components/listings/MarketingAudienceControl.tsx": "5d8748c36941e01444bba536a1cc8fb158e49b70695590cbd14b8ba5006ce61e",
     "src/components/listings/MySavedListingsContent.tsx": "d027354b8bcb9a004823a0107846c5fb42662dfa68418851f930e8a589b94ad4",
     "src/components/listings/capture-spots/CaptureSpotControl.tsx": "f601ccf6fa11f0734ab82730c134fa0c92892fcbf0a43dbcc8b53299cebd67fe",

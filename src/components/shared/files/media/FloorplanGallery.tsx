@@ -348,8 +348,8 @@ export function FloorplanGallery({
   return (
     <>
       <article className={cn('flex flex-col h-full', className)} role="region" aria-label={t('floorplan.galleryLabel')}>
-        <header className="flex items-center justify-between p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <nav className="flex items-center gap-2" aria-label={t('floorplan.navigation')}>
+        <header className="flex flex-wrap items-center justify-between gap-y-1 p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <nav className="flex min-w-0 items-center gap-2" aria-label={t('floorplan.navigation')}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="sm" onClick={goToPrevious} disabled={floorplanFiles.length <= 1} aria-label={t('floorplan.previous')}>
@@ -358,7 +358,7 @@ export function FloorplanGallery({
               </TooltipTrigger>
               <TooltipContent>{t('floorplan.previous')}</TooltipContent>
             </Tooltip>
-            <span className="flex items-center gap-2 min-w-[200px] justify-center">
+            <span className="flex min-w-0 items-center gap-2 justify-center sm:min-w-[200px]">
               {getFileIcon(currentFile?.ext || '')}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -377,7 +377,8 @@ export function FloorplanGallery({
               <TooltipContent>{t('floorplan.next')}</TooltipContent>
             </Tooltip>
           </nav>
-          <nav className="flex items-center gap-1" aria-label={t('floorplan.actions')}>
+          {/* ADR-907 §11.14 — αναδιπλώνει: στα 320 / 390 μετρήθηκαν 9 ενέργειες κομμένες εκτός κάδρου, άφταστες. */}
+          <nav className="flex flex-wrap items-center gap-1" aria-label={t('floorplan.actions')}>
             {isDxf && (
               <>
                 {sceneBim.hasAny && (

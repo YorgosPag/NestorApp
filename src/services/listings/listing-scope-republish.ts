@@ -175,6 +175,22 @@ export async function republishListingsInScope(
 }
 
 /**
+ * **«Πόσες αγγελίες έχει ΤΩΡΑ στο κοινό αυτός ο όροφος;»** — όσες θα άγγιζε μια υπογραφή ή μια άρση της δήλωσής του
+ * (ADR-907 §11.14). Μόνο ανάγνωση: το **ίδιο** ερώτημα ({@link unitsIn}) και ο **ίδιος** κριτής (`isPubliclyListed`) με
+ * τον βρόχο της εμβέλειας `floor` — δεύτερο κριτήριο εδώ θα υποσχόταν στον άνθρωπο άλλο πλήθος από αυτό που θα γραφτεί.
+ *
+ * ⚠️ **Πετά αν πέσει το ερώτημα** — ο καλών αποφασίζει τι σημαίνει «δεν μετρήθηκε».
+ */
+export async function countListedUnitsInFloor(
+  adminDb: AdminFirestore,
+  floorId: string,
+  companyId: string,
+): Promise<number> {
+  const units = await unitsIn(adminDb, { kind: 'floor', floorId, companyId });
+  return units.filter((doc) => isPubliclyListed({ ...(doc.data() as ListingSourceProperty), id: doc.id })).length;
+}
+
+/**
  * Ξαναγράφει τις προβολές **όλων** των ακινήτων ενός έργου.
  *
  * Η θέση ζει στο **έργο** (ADR-777 Α1): μια διόρθωση διεύθυνσης εκεί αλλάζει το σχήμα στον χάρτη για

@@ -54,6 +54,8 @@ interface StandingProps {
   readonly declaration: SignedDeclaration;
   readonly images: readonly FileRecord[] | null;
   readonly mayDeclare: boolean;
+  /** Πόσες δημόσιες αγγελίες θα χάσουν την κάτοψη με την άρση — `null` όταν δεν μετρήθηκε. */
+  readonly listedUnits: number | null;
   readonly busy: boolean;
   readonly onWithdraw: () => void;
 }
@@ -81,7 +83,7 @@ function SignatureFacts({ declaration, image }: { readonly declaration: SignedDe
 }
 
 /** Η δήλωση που ισχύει — και η άρση, πίσω από επιβεβαίωση: αποσύρει την κάτοψη από **κάθε** αγγελία του ορόφου. */
-function StandingDeclaration({ declaration, images, mayDeclare, busy, onWithdraw }: StandingProps): React.JSX.Element {
+function StandingDeclaration({ declaration, images, mayDeclare, listedUnits, busy, onWithdraw }: StandingProps): React.JSX.Element {
   const { t } = useTranslation(['building-tabs']);
   const [confirming, setConfirming] = React.useState(false);
   const image = images?.find((candidate) => candidate.id === declaration.fileId) ?? null;
@@ -103,7 +105,9 @@ function StandingDeclaration({ declaration, images, mayDeclare, busy, onWithdraw
         open={confirming}
         onOpenChange={setConfirming}
         title={t('tabs.floors.floorPlate.withdrawConfirmTitle')}
-        description={t('tabs.floors.floorPlate.withdrawConfirmBody')}
+        description={listedUnits !== null && listedUnits > 0
+          ? t('tabs.floors.floorPlate.withdrawConfirmBodyCount', { count: listedUnits })
+          : t('tabs.floors.floorPlate.withdrawConfirmBody')}
         confirmText={t('tabs.floors.floorPlate.withdraw')}
         variant="destructive"
         onConfirm={onWithdraw}
@@ -156,6 +160,8 @@ export function FloorPlateDeclaration({ floorId, companyId }: FloorPlateDeclarat
 
   if (door.status === null) return null;
   const { declaration, mayDeclare } = door.status;
+  // Απάντηση διακομιστή παλαιότερης έκδοσης (ανάπτυξη σε εξέλιξη) δεν έχει το πεδίο: «δεν μετρήθηκε», ποτέ μηδέν.
+  const listedUnits = door.status.listedUnits ?? null;
 
   return (
     <section
@@ -166,10 +172,11 @@ export function FloorPlateDeclaration({ floorId, companyId }: FloorPlateDeclarat
     >
       <h4 id={headingId} className="m-0 text-xs font-medium text-muted-foreground">{t('tabs.floors.floorPlate.title')}</h4>
       {declaration !== null && (
-        <StandingDeclaration declaration={declaration} images={images} mayDeclare={mayDeclare} busy={door.busy} onWithdraw={door.withdraw} />
+        <StandingDeclaration declaration={declaration} images={images} mayDeclare={mayDeclare} listedUnits={listedUnits}
+          busy={door.busy} onWithdraw={door.withdraw} />
       )}
       {declaration === null && mayDeclare && (
-        <FloorPlateSigningForm images={images} busy={door.busy} onDeclare={door.declare} />
+        <FloorPlateSigningForm images={images} listedUnits={listedUnits} busy={door.busy} onDeclare={door.declare} />
       )}
       {declaration === null && !mayDeclare && <p className="m-0">{t('tabs.floors.floorPlate.notDeclared')}</p>}
       <DoorOutcome failure={door.failure} refreshedListings={door.refreshedListings} />

@@ -81,9 +81,11 @@ jest.mock('@/components/ui/checkbox', () => ({
   ),
 }));
 jest.mock('@/components/ui/ConfirmDialog', () => ({
-  ConfirmDialog: ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: (open: boolean) => void; onConfirm: () => void }) =>
+  ConfirmDialog: ({ open, onOpenChange, onConfirm, description }: {
+    open: boolean; onOpenChange: (open: boolean) => void; onConfirm: () => void; description?: string;
+  }) =>
     open ? (
-      <section role="alertdialog">
+      <section role="alertdialog" aria-label={description}>
         <button type="button" onClick={() => { onConfirm(); onOpenChange(false); }}>confirm</button>
         <button type="button" onClick={() => onOpenChange(false)}>cancel</button>
       </section>
@@ -115,9 +117,9 @@ function fileOf(id: string, over: Partial<FileRecord> = {}): FileRecord {
 
 const SIGNED = { fileId: 'img_a', declaredBy: 'uid_maria', declaredAt: '2026-10-10T09:30:00.000Z' };
 
-function arrange(status: { declaration: typeof SIGNED | null; mayDeclare: boolean } | Error, files: FileRecord[] = [fileOf('img_a')]): void {
+function arrange(status: { declaration: typeof SIGNED | null; mayDeclare: boolean; listedUnits?: number | null } | Error, files: FileRecord[] = [fileOf('img_a')]): void {
   if (status instanceof Error) apiGet.mockRejectedValue(status);
-  else apiGet.mockResolvedValue({ floorId: 'floor_1', ...status });
+  else apiGet.mockResolvedValue({ floorId: 'floor_1', listedUnits: null, ...status });
   getFilesByEntity.mockResolvedValue(files);
 }
 
@@ -418,6 +420,58 @@ describe('FloorPlateDeclaration — όσο τρέχει η πράξη, και ό
 
     expect(screen.queryByText('Μαρία Π.')).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+describe('FloorPlateDeclaration — τι θα αλλάξει, ΠΡΙΝ από την πράξη (ADR-907 §11.14)', () => {
+  const impact = (): HTMLElement | null => document.querySelector('[data-floor-plate-impact]');
+
+  it('🔴 ΔΧ-14 — πριν από την υπογραφή: πόσες δημόσιες αγγελίες αλλάζουν, δεμένο στο κουμπί', async () => {
+    arrange({ declaration: null, mayDeclare: true, listedUnits: 3 });
+    mount();
+
+    await screen.findByRole('checkbox');
+    expect(impact()).toHaveTextContent(`${K}.signImpact {"count":3}`);
+    // Το λέει ΠΡΙΝ πατηθεί οτιδήποτε — και ο αναγνώστης οθόνης το ακούει ως περιγραφή του κουμπιού.
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(signButton()).toHaveAttribute('aria-describedby', impact()?.id);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('ΔΧ-14β — καμία δημόσια αγγελία: το λέει με πρόταση, δεν γράφει «0»', async () => {
+    arrange({ declaration: null, mayDeclare: true, listedUnits: 0 });
+    mount();
+
+    await screen.findByRole('checkbox');
+    expect(impact()).toHaveTextContent(`${K}.signImpactNone`);
+    expect(impact()?.textContent).not.toContain('count');
+  });
+
+  it('🔴 ΔΧ-14γ — δεν μετρήθηκε (`null`, ή απάντηση χωρίς το πεδίο): η φόρμα ΣΙΩΠΑ — δεν υπόσχεται μηδέν', async () => {
+    arrange({ declaration: null, mayDeclare: true, listedUnits: null });
+    const view = mount();
+    await screen.findByRole('checkbox');
+    expect(impact()).toBeNull();
+    expect(signButton()).not.toHaveAttribute('aria-describedby');
+    view.unmount();
+
+    apiGet.mockResolvedValue({ floorId: 'floor_1', declaration: null, mayDeclare: true });
+    mount();
+    await screen.findByRole('checkbox');
+    expect(impact()).toBeNull();
+  });
+
+  it('ΔΧ-15 — άρση: η επιβεβαίωση λέει από πόσες αγγελίες φεύγει η κάτοψη· χωρίς πλήθος, τη γενική πρόταση', async () => {
+    arrange({ declaration: SIGNED, mayDeclare: true, listedUnits: 3 });
+    const view = mount();
+    fireEvent.click(await screen.findByRole('button', { name: `${K}.withdraw` }));
+    expect(screen.getByRole('alertdialog')).toHaveAccessibleName(`${K}.withdrawConfirmBodyCount {"count":3}`);
+    view.unmount();
+
+    arrange({ declaration: SIGNED, mayDeclare: true, listedUnits: null });
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: `${K}.withdraw` }));
+    expect(screen.getByRole('alertdialog')).toHaveAccessibleName(`${K}.withdrawConfirmBody`);
   });
 });
 

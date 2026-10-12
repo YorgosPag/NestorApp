@@ -61,6 +61,11 @@ export interface FloorPlateDeclarationStanding {
 export interface FloorPlateDeclarationStatus extends FloorPlateDeclarationStanding {
   readonly floorId: string;
   readonly mayDeclare: boolean;
+  /**
+   * Πόσες μονάδες του ορόφου έχουν **τώρα** δημόσια αγγελία — όσες θα αλλάξει μια υπογραφή ή μια άρση (§11.14).
+   * `null` = δεν μετρήθηκε (ο χρήστης δεν μπορεί να υπογράψει, ή η μέτρηση απέτυχε): η οθόνη **σιωπά**, δεν γράφει μηδέν.
+   */
+  readonly listedUnits: number | null;
 }
 
 /**

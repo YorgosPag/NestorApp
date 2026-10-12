@@ -45,7 +45,11 @@ import {
   withdrawFloorPlate,
   type FloorPlateDeclarationOutcome,
 } from '@/services/listings/floor-plate-declaration.service';
-import { refreshListingsOfFloor, type ListingRefreshReport } from '@/services/listings/listing-media-refresh';
+import {
+  countListingsOfFloor,
+  refreshListingsOfFloor,
+  type ListingRefreshReport,
+} from '@/services/listings/listing-media-refresh';
 import { loadFloorInTenant } from '@/app/api/floors/floors.shared';
 
 export const dynamic = 'force-dynamic';
@@ -114,7 +118,11 @@ async function handleGet(request: NextRequest, ctx: AuthContext): Promise<NextRe
   if (door instanceof NextResponse) return door;
 
   const { floorId, floor, mayDeclare } = door;
-  return apiSuccess<FloorPlateDeclarationStatus>({ floorId, declaration: readFloorPlateDeclaration(floor), mayDeclare });
+  // 🔑 Το πλήθος το χρειάζεται μόνο όποιος **μπορεί** να υπογράψει ή να άρει (§11.14) — ο θεατής δεν πληρώνει το ερώτημα.
+  const listedUnits = mayDeclare ? await countListingsOfFloor(getAdminFirestore(), floorId, ctx.companyId) : null;
+  return apiSuccess<FloorPlateDeclarationStatus>({
+    floorId, declaration: readFloorPlateDeclaration(floor), mayDeclare, listedUnits,
+  });
 }
 
 async function handlePost(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {

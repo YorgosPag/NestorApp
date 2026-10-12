@@ -39,7 +39,9 @@ jest.mock('../floor-plate.reader', () => ({
 
 const PASS = { resolveAgency: async () => null, resolveMedia: async () => [] };
 const republishListingsInScope = jest.fn(async (..._args: unknown[]): Promise<readonly unknown[]> => []);
+const countListedUnitsInFloor = jest.fn(async (..._args: unknown[]): Promise<number> => 0);
 jest.mock('../listing-scope-republish', () => ({
+  countListedUnitsInFloor: (...args: unknown[]) => countListedUnitsInFloor(...args),
   createListingPass: () => PASS,
   republishListingsInScope: (...args: unknown[]) => republishListingsInScope(...args),
 }));
@@ -277,6 +279,17 @@ describe('ADR-907 §11.8 — ΦΑ: άλλαξε μονάδα ⇒ οι αγγελ
 
     republishListingsInScope.mockImplementationOnce(async () => { throw new Error('UNAVAILABLE'); });
     await expect(refresh.refreshListingsOfFloor(DB, 'flr_1', COMPANY)).resolves.toEqual([]);
+  });
+
+  it('ΦΑ-7β — το πλήθος πριν από την υπογραφή είναι του ΕΝΟΣ βρόχου· βλάβη ⇒ `null` («δεν μετρήθηκε»), ποτέ μηδέν (§11.14)', async () => {
+    countListedUnitsInFloor.mockResolvedValueOnce(3);
+    await expect(refresh.countListingsOfFloor(DB, 'flr_1', COMPANY)).resolves.toBe(3);
+    expect(countListedUnitsInFloor).toHaveBeenCalledWith(DB, 'flr_1', COMPANY);
+
+    countListedUnitsInFloor.mockImplementationOnce(async () => { throw new Error('UNAVAILABLE'); });
+    await expect(refresh.countListingsOfFloor(DB, 'flr_1', COMPANY)).resolves.toBeNull();
+    // Μέτρηση, όχι πράξη: καμία επαναπροβολή δεν ξεκινά από εδώ.
+    expect(republishListingsInScope).not.toHaveBeenCalled();
   });
 
   it('ΦΑ-8 — το κλειδί δεσμού κάθε είδους χώρου είναι αυτό του ΕΝΟΣ μητρώου ρόλων', () => {

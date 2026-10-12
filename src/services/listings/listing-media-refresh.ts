@@ -40,6 +40,7 @@ import {
   type FloorPlateUnitRef,
 } from './floor-plate.reader';
 import {
+  countListedUnitsInFloor,
   createListingPass,
   republishListingsInScope,
   type ListingPass,
@@ -198,6 +199,29 @@ export async function refreshListingsOfFloor(
       floorId, error: error instanceof Error ? error.message : String(error),
     });
     return [];
+  }
+}
+
+/**
+ * 🏢 **«ΠΟΣΕΣ ΑΓΓΕΛΙΕΣ ΘΑ ΑΛΛΑΞΟΥΝ ΑΝ ΥΠΟΓΡΑΨΩ;»** — το πλήθος που οφείλει να δει ο άνθρωπος **πριν** από την υπογραφή
+ * *(ADR-907 §11.14)*. Μετρημένο στην παραγωγή: το πάνελ έλεγε «Αγγελίες που ενημερώθηκαν: 3» μόνο **αφού** η κάτοψη
+ * είχε ήδη βγει στο κοινό σε τρεις αγγελίες.
+ *
+ * 🔑 Το πλήθος είναι του ΕΝΟΣ βρόχου ({@link countListedUnitsInFloor}) — η ίδια εμβέλεια που θα ξαναπροβληθεί.
+ * ⚠️ **Δεν πετά ποτέ**: `null` = «δεν μετρήθηκε», και η οθόνη τότε **σιωπά** — δεν μαντεύει μηδέν.
+ */
+export async function countListingsOfFloor(
+  adminDb: AdminFirestore,
+  floorId: string,
+  companyId: string,
+): Promise<number | null> {
+  try {
+    return await countListedUnitsInFloor(adminDb, floorId, companyId);
+  } catch (error) {
+    logger.warn('Οι δημόσιες αγγελίες του ορόφου δεν μετρήθηκαν — η οθόνη δεν δείχνει πλήθος', {
+      floorId, error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
   }
 }
 
