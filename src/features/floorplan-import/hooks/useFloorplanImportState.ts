@@ -13,17 +13,18 @@
  *
  * Step 5 is the unit selector (with level radio for multi-level units).
  *
+ * Οι λίστες των βημάτων 1-4 ζουν στο `useFloorplanImportCascade`· η ρύθμιση ανεβάσματος στο
+ * `utils/floorplan-upload-config` (split N.7.1, ADR-914 §8.18).
+ *
  * @module features/floorplan-import/hooks/useFloorplanImportState
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
-import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
-import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
-import { createModuleLogger } from '@/lib/telemetry';
+import { useFloorplanImportCascade } from './useFloorplanImportCascade';
+import { buildFloorplanUploadConfig } from '../utils/floorplan-upload-config';
 
 import {
   type FloorplanType,
@@ -31,23 +32,13 @@ import {
   type EntityOption,
   type UseFloorplanImportStateReturn,
   type UseFloorplanImportStateOptions,
-  type CompaniesApiResponse,
-  type CompanyItem,
-  type ProjectsByCompanyResponse,
-  type ProjectItem,
-  type BuildingItem,
-  type FloorsApiResponse,
-  type FloorItem,
   type PropertyItem,
   INITIAL_SELECTION,
   TOTAL_STEPS,
-  FLOORPLAN_PURPOSE_BY_TYPE,
 } from './floorplan-import-types';
 
 // Re-export types for backward compatibility
 export type { FloorplanType, FloorplanImportSelection, EntityOption, UseFloorplanImportStateReturn };
-
-const logger = createModuleLogger('useFloorplanImportState');
 
 // =============================================================================
 // HOOK
@@ -63,21 +54,15 @@ export function useFloorplanImportState(
   const [step, setStep] = useState(1);
   const [selection, setSelection] = useState<FloorplanImportSelection>(INITIAL_SELECTION);
 
-  // ── Cascading data ──
-  const [companies, setCompanies] = useState<EntityOption[]>([]);
-  const [projects, setProjects] = useState<EntityOption[]>([]);
-  const [buildings, setBuildings] = useState<EntityOption[]>([]);
-  const [floors, setFloors] = useState<EntityOption[]>([]);
-
-  // ── Loading states ──
-  const [companiesLoading, setCompaniesLoading] = useState(false);
-  const [projectsLoading, setProjectsLoading] = useState(false);
-  const [buildingsLoading, setBuildingsLoading] = useState(false);
-  const [floorsLoading, setFloorsLoading] = useState(false);
-
   // ── Open epoch: increments each time wizard opens → forces fresh data fetch ──
   const [openEpoch, setOpenEpoch] = useState(0);
   const prevOpenRef = useRef(false);
+
+  // ── Λίστες των βημάτων 1-4 (auth + open guard: καμία κλήση πριν γίνει γνωστός ο χρήστης) ──
+  const isReady = isOpen && !authLoading && !!user;
+  const { items: stepItems, loading: stepLoading, clearAll } = useFloorplanImportCascade({
+    isReady, step, selection, openEpoch,
+  });
 
   // Detect open transitions: closed→open increments epoch and resets state
   useEffect(() => {
@@ -85,13 +70,10 @@ export function useFloorplanImportState(
       setOpenEpoch((e) => e + 1);
       setStep(1);
       setSelection(INITIAL_SELECTION);
-      setCompanies([]);
-      setProjects([]);
-      setBuildings([]);
-      setFloors([]);
+      clearAll();
     }
     prevOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, clearAll]);
 
   // ── Units via existing hook (step 5) ──
   const { properties: rawUnits, loading: unitLoading } = useFirestoreProperties({
@@ -120,199 +102,38 @@ export function useFloorplanImportState(
   }, [selectedPropertyIsMultiLevel, selectedProperty?.levels]);
 
   // ===========================================================================
-  // AUTH + OPEN GUARDS
-  // ===========================================================================
-  const isReady = isOpen && !authLoading && !!user;
-
-  // ===========================================================================
-  // DATA FETCHING
-  // ===========================================================================
-
-  // Step 1: Companies — fetches when wizard opens with auth ready
-  useEffect(() => {
-    if (!isReady) return;
-
-    let cancelled = false;
-    setCompaniesLoading(true);
-
-    logger.info('Fetching companies', { openEpoch });
-
-    apiClient.get<CompaniesApiResponse | Record<string, unknown>>(API_ROUTES.COMPANIES.LIST)
-      .then((res) => {
-        if (cancelled) return;
-        const raw = res as Record<string, unknown>;
-        const companiesList = (raw.companies ?? raw.data ?? []) as CompanyItem[];
-        logger.info('Companies loaded', { count: companiesList.length });
-        const items = companiesList.map((c) => ({
-          id: c.id,
-          label: c.companyName ?? c.tradeName ?? c.legalName ?? c.id,
-        }));
-        setCompanies(items);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          logger.error('Failed to load companies', { error: String(err) });
-          setCompanies([]);
-        }
-      })
-      .finally(() => { if (!cancelled) setCompaniesLoading(false); });
-
-    return () => { cancelled = true; };
-  }, [isReady, openEpoch]);
-
-  // Step 2: Projects by company
-  useEffect(() => {
-    if (!isReady || step !== 2 || !selection.companyId) return;
-
-    let cancelled = false;
-    setProjectsLoading(true);
-
-    apiClient.get<ProjectsByCompanyResponse | Record<string, unknown>>(API_ROUTES.PROJECTS.BY_COMPANY(selection.companyId))
-      .then((res) => {
-        if (cancelled) return;
-        const raw = res as Record<string, unknown>;
-        const projectsList = (raw.projects ?? raw.data ?? []) as ProjectItem[];
-        logger.info('Projects loaded', { count: projectsList.length });
-        const items = projectsList.map((p) => ({
-          id: p.id,
-          label: p.name ?? p.title ?? p.id,
-        }));
-        setProjects(items);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          logger.error('Failed to load projects', { error: String(err) });
-          setProjects([]);
-        }
-      })
-      .finally(() => { if (!cancelled) setProjectsLoading(false); });
-
-    return () => { cancelled = true; };
-  }, [isReady, step, selection.companyId]);
-
-  // Step 3: Buildings — fetched via /api/buildings?projectId=xxx
-  useEffect(() => {
-    if (!isReady || step !== 3 || !selection.projectId) return;
-
-    let cancelled = false;
-    setBuildingsLoading(true);
-
-    apiClient.get<Record<string, unknown>>(`${API_ROUTES.BUILDINGS.LIST}?projectId=${selection.projectId}`)
-      .then((res) => {
-        if (cancelled) return;
-        const raw = res as Record<string, unknown>;
-        const buildingsList = (raw.buildings ?? raw.data ?? []) as BuildingItem[];
-        logger.info('Buildings loaded', { count: buildingsList.length });
-        const items = buildingsList.map((b) => ({
-          id: b.id,
-          label: b.name ?? b.id,
-        }));
-        setBuildings(items);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          logger.error('Failed to load buildings', { error: String(err) });
-          setBuildings([]);
-        }
-      })
-      .finally(() => { if (!cancelled) setBuildingsLoading(false); });
-
-    return () => { cancelled = true; };
-  }, [isReady, step, selection.projectId]);
-
-  // Step 4: Floors by building
-  useEffect(() => {
-    if (!isReady || step !== 4 || !selection.buildingId) return;
-
-    let cancelled = false;
-    setFloorsLoading(true);
-
-    apiClient.get<FloorsApiResponse | Record<string, unknown>>(`${API_ROUTES.FLOORS.LIST}?buildingId=${selection.buildingId}`)
-      .then((res) => {
-        if (cancelled) return;
-        const raw = res as Record<string, unknown>;
-        const floorsList = (raw.floors ?? raw.data ?? []) as FloorItem[];
-        logger.info('Floors loaded', { count: floorsList.length });
-        const items = floorsList.map((f) => ({
-          id: f.id,
-          label: f.name || `Όροφος ${f.number}`,
-        }));
-        setFloors(items);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          logger.error('Failed to load floors', { error: String(err) });
-          setFloors([]);
-        }
-      })
-      .finally(() => { if (!cancelled) setFloorsLoading(false); });
-
-    return () => { cancelled = true; };
-  }, [isReady, step, selection.buildingId]);
-
-  // ===========================================================================
-  // HELPERS
-  // ===========================================================================
-
-  function getCurrentItems(): EntityOption[] {
-    switch (step) {
-      case 1: return companies;
-      case 2: return projects;
-      case 3: return buildings;
-      case 4: return floors;
-      default: return [];
-    }
-  }
-
-  function getCurrentLoading(): boolean {
-    switch (step) {
-      case 1: return companiesLoading;
-      case 2: return projectsLoading;
-      case 3: return buildingsLoading;
-      case 4: return floorsLoading;
-      default: return false;
-    }
-  }
-
-  // ===========================================================================
   // SELECTION HANDLERS
   // ===========================================================================
 
   const handleSelectEntity = useCallback((id: string) => {
+    // Η λίστα είναι πάντα του τρέχοντος βήματος — το όνομα διαβάζεται από εκεί.
+    const label = stepItems.find((item) => item.id === id)?.label ?? null;
     setSelection((prev) => {
       switch (step) {
-        case 1: {
-          const label = companies.find((c) => c.id === id)?.label ?? null;
+        case 1:
           return { ...INITIAL_SELECTION, companyId: id, companyName: label };
-        }
-        case 2: {
-          const label = projects.find((p) => p.id === id)?.label ?? null;
+        case 2:
           return {
             ...prev, projectId: id, projectName: label,
             buildingId: null, buildingName: null, floorId: null, floorName: null,
             floorplanType: null, propertyId: null, propertyName: null, levelFloorId: null, levelName: null,
           };
-        }
-        case 3: {
-          const label = buildings.find((b) => b.id === id)?.label ?? null;
+        case 3:
           return {
             ...prev, buildingId: id, buildingName: label,
             floorId: null, floorName: null, floorplanType: null,
             propertyId: null, propertyName: null, levelFloorId: null, levelName: null,
           };
-        }
-        case 4: {
-          const label = floors.find((f) => f.id === id)?.label ?? null;
+        case 4:
           return {
             ...prev, floorId: id, floorName: label,
             floorplanType: null, propertyId: null, propertyName: null, levelFloorId: null, levelName: null,
           };
-        }
         default:
           return prev;
       }
     });
-  }, [step, companies, projects, buildings, floors]);
+  }, [step, stepItems]);
 
   const selectProperty = useCallback((id: string) => {
     const label = unitItems.find((u) => u.id === id)?.label ?? null;
@@ -421,62 +242,7 @@ export function useFloorplanImportState(
   // UPLOAD CONFIG (step 6)
   // ===========================================================================
 
-  const uploadConfig: FloorplanUploadConfig | null = (() => {
-    if (step !== 6 || !selection.companyId || !selection.floorplanType || !user?.uid) return null;
-
-    let entityType: EntityType;
-    let entityId: string;
-    let entityLabel: string | undefined;
-
-    switch (selection.floorplanType) {
-      case 'project':
-        entityType = ENTITY_TYPES.PROJECT;
-        entityId = selection.projectId!;
-        entityLabel = selection.projectName ?? undefined;
-        break;
-      case 'building':
-        entityType = ENTITY_TYPES.BUILDING;
-        entityId = selection.buildingId!;
-        entityLabel = selection.buildingName ?? undefined;
-        break;
-      case 'floor':
-        entityType = ENTITY_TYPES.FLOOR;
-        entityId = selection.floorId!;
-        entityLabel = selection.floorName ?? undefined;
-        break;
-      case 'property':
-        entityType = ENTITY_TYPES.PROPERTY;
-        entityId = selection.propertyId!;
-        entityLabel = selection.levelName
-          ? `${selection.propertyName} — ${selection.levelName}`
-          : selection.propertyName ?? undefined;
-        break;
-      default:
-        return null;
-    }
-
-    const linkedTo: string[] = [];
-    if (selection.floorplanType === 'property') {
-      if (selection.floorId) linkedTo.push(`floor:${selection.floorId}`);
-      if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
-    } else if (selection.floorplanType === 'floor') {
-      if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
-    }
-
-    return {
-      companyId: user?.companyId ?? selection.companyId,
-      projectId: selection.projectId ?? undefined,
-      entityType,
-      entityId,
-      domain: 'construction' as FileDomain,
-      category: 'floorplans' as FileCategory,
-      userId: user.uid,
-      entityLabel,
-      purpose: FLOORPLAN_PURPOSE_BY_TYPE[selection.floorplanType!],
-      ...(selection.levelFloorId ? { levelFloorId: selection.levelFloorId } : {}),
-      ...(linkedTo.length > 0 ? { linkedTo } : {}),
-    };
-  })();
+  const uploadConfig: FloorplanUploadConfig | null = step === 6 ? buildFloorplanUploadConfig(selection, user) : null;
 
   // ===========================================================================
   // RESET
@@ -485,11 +251,8 @@ export function useFloorplanImportState(
   const reset = useCallback(() => {
     setStep(1);
     setSelection(INITIAL_SELECTION);
-    setCompanies([]);
-    setProjects([]);
-    setBuildings([]);
-    setFloors([]);
-  }, []);
+    clearAll();
+  }, [clearAll]);
 
   // ===========================================================================
   // RETURN
@@ -509,9 +272,9 @@ export function useFloorplanImportState(
     continueDeeper,
     canContinueDeeper,
 
-    currentStepItems: getCurrentItems(),
-    currentStepLoading: getCurrentLoading(),
-    currentStepEmpty: !getCurrentLoading() && getCurrentItems().length === 0 && step <= 4,
+    currentStepItems: stepItems,
+    currentStepLoading: stepLoading,
+    currentStepEmpty: !stepLoading && stepItems.length === 0 && step <= 4,
 
     uploadConfig,
     reset,

@@ -12,7 +12,7 @@ import elFloors from '@/i18n/locales/el/floors.json';
 import enFloors from '@/i18n/locales/en/floors.json';
 import { createBundleTranslate, type BundleTranslate } from '@/i18n/bundle-translate';
 import type { HumanLanguage } from '@/i18n/languages';
-import type { FloorKind } from '@/utils/floor-naming';
+import { inferKindFromNumber, type FloorKind } from '@/utils/floor-naming';
 import { formatFloorRef } from './floor-label';
 import type { FloorRef } from './floor-ref';
 
@@ -32,4 +32,25 @@ export function floorLabelIn(ref: FloorRef, language: HumanLanguage): string {
  */
 export function canonicalFloorLongName(kind: FloorKind, number: number): string {
   return floorLabelIn({ number, kind }, 'el');
+}
+
+/** Τα πεδία ενός εγγράφου ορόφου που ορίζουν το όνομά του. */
+export interface StoredFloorNaming {
+  readonly number: number;
+  readonly name?: string | null;
+  readonly longName?: string | null;
+  readonly kind?: FloorKind | null;
+}
+
+/**
+ * Το όνομα ενός **αποθηκευμένου** ορόφου, όπως το βλέπει ο άνθρωπος: `longName` → `name` → canonical.
+ *
+ * 🔑 Ο ΕΝΑΣ κανόνας για κάθε επιφάνεια που δείχνει έγγραφο ορόφου (καρτέλες, οδηγός εισαγωγής,
+ * ετικέτα επιπέδου). Ήταν τρεις: οι καρτέλες έδειχναν «Θεμελίωση», ο οδηγός «F» (ADR-914 §8.18).
+ * Το `name` είναι ο σύντομος κωδικός (ADR-369)· μόνο του είναι εφεδρεία, ποτέ πρώτη επιλογή.
+ */
+export function storedFloorLabel(floor: StoredFloorNaming): string {
+  if (floor.longName) return floor.longName;
+  if (floor.name) return floor.name;
+  return canonicalFloorLongName(floor.kind ?? inferKindFromNumber(floor.number), floor.number);
 }

@@ -18,6 +18,7 @@ import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-reso
 import { resolveLevelScopeAssignment, levelScopeFields } from '../../systems/levels/level-building-scope';
 import { ensureLevelsForBuilding, resolveAllFloorsBackfillBuilding } from '../../systems/levels/ensure-levels-for-building';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+import { storedFloorLabel } from '@/lib/floor/floor-label-bundle';
 import { FileRecordService } from '@/services/file-record.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import { buildDxfImportSaveContext } from '../../app/dxf-import-save-context';
@@ -59,7 +60,7 @@ export function useAllFloorsBackfill(resolver: LevelFloorResolver): TriggerAllFl
       try {
         await ensureLevelsForBuilding(
           { levels, addLevel },
-          buildingFloors.map((f) => ({ id: f.id, number: f.number, label: f.longName ?? f.name })),
+          buildingFloors.map((f) => ({ id: f.id, number: f.number, label: storedFloorLabel(f) })),
           targetBuildingId,
         );
       } finally {

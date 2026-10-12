@@ -23,9 +23,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useLevelsContext } from '../../systems/levels/LevelsSystem';
 import { isStoreyLevelOf, provisionLevelForBinding } from '../../systems/levels/level-provision';
-import { useFloorsByBuilding, type FloorOption } from '@/components/properties/shared/useFloorsByBuilding';
-import { inferKindFromNumber } from '@/utils/floor-naming';
-import { canonicalFloorLongName } from '@/lib/floor/floor-label-bundle';
+import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+import { storedFloorLabel } from '@/lib/floor/floor-label-bundle';
 import { conflictedFloorIds } from '@/lib/floor/floor-stack-integrity';
 import { useViewMode3DStore, type Floor3DScope } from '../../bim-3d/stores/ViewMode3DStore';
 import type { FloorVisMode } from '../../bim-3d/utils/floor-visibility-state';
@@ -66,13 +65,6 @@ export interface UseFloorTabsResult {
   readonly floorVisibilityModes: ReadonlyMap<string, FloorVisMode>;
   /** ADR-399 Phase C — toggle whether a floor is shown inside "Όλοι οι όροφοι". */
   readonly onToggleFloorVisible: (tab: FloorTab) => void;
-}
-
-/** Resolve the Greek label for a floor, reusing the ADR-369 naming SSoT (ADR-903 canonical long name). */
-function floorLabel(floor: FloorOption): string {
-  if (floor.longName) return floor.longName;
-  if (floor.name) return floor.name;
-  return canonicalFloorLongName(floor.kind ?? inferKindFromNumber(floor.number), floor.number);
 }
 
 export function useFloorTabs(): UseFloorTabsResult {
@@ -122,7 +114,8 @@ export function useFloorTabs(): UseFloorTabsResult {
       return {
         floorId: floor.id,
         number: floor.number,
-        label: floorLabel(floor),
+        // Ο ΕΝΑΣ κανόνας ετικέτας εγγράφου ορόφου (ADR-369/903) — ο ίδιος με τον οδηγό εισαγωγής.
+        label: storedFloorLabel(floor),
         levelId,
         hasFloorplan,
         conflict: conflicted.has(floor.id),

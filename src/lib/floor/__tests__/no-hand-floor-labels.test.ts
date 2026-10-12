@@ -18,6 +18,7 @@ const SRC = path.resolve(__dirname, '../../..');
 /** Μοτίβα χειρόγραφης ετικέτας ορόφου μέσα σε **κώδικα** (όχι σχόλια). */
 const HAND_LABEL_PATTERNS: readonly RegExp[] = [
   /\d*\}?ος\s+[Όό]ροφος/u, // `${n}ος όροφος` · '1ος Όροφος'
+  /[Όό]ροφος\s+\$\{/u, // `Όροφος ${n}` — «Όροφος 0» για το ισόγειο, «Όροφος -1» για το υπόγειο (ADR-914 §8.18)
   /['"`]Ισόγειο['"`]/u,
   /['"`](?:\d+ο\s+)?Υπόγειο(?:\s+-?\d+)?['"`]/u,
   /\$\{[^}]+\}(?:st|nd|rd|th)?\s+Floor\b|\bFloor\s+\$\{/u,
@@ -32,6 +33,12 @@ const ALLOWED: Readonly<Record<string, string>> = {
     'Τίτλοι fixtures του test harness («6α — Ίδιο κτίριο, 1ος όροφος») — περιγραφή σεναρίου, όχι ετικέτα.',
   'features/property-details/utils/attachments.ts':
     'Δεδομένα επίδειξης (mock attachments) — όχι μορφοποιητής· καμία παραγωγική διαδρομή.',
+  'app/api/floorplan-backgrounds/floorplan-backgrounds.handlers.ts':
+    'Ετικέτα αρχείου υποβάθρου (`Όροφος ${number}`) — αλλάζει μαζί με το κλειδί υποβάθρου ανά όψη, ADR-914 §8.2 / §8.21.',
+  'services/floorplans/FloorFloorplanService.ts':
+    'Αποθηκευμένη ετικέτα αρχείου κάτοψης (`Όροφος ${floorNumber}`) — pipeline αποθήκευσης, θέλει ρητή εντολή: ADR-914 §8.21.',
+  'subapps/dxf-viewer/io/tek/tek-stair-extract.ts':
+    'Προειδοποίηση εισαγωγής TEK: ο αριθμός είναι ο ΔΕΙΚΤΗΣ ορόφου μέσα στο αρχείο TEK, όχι στάθμη κτιρίου — ADR-914 §8.21.',
   'subapps/dxf-viewer/hooks/scene/useSceneState.ts':
     'Όνομα της ΠΡΩΤΗΣ στάθμης DXF ως δεδομένο (ADR-369 longName canonical) — βλ. ADR-903 §εκκρεμότητες.',
 };
@@ -91,7 +98,7 @@ describe('ADR-903 — καμία χειρόγραφη ετικέτα ορόφο�
   });
 
   it('🔑 ο φρουρός ΒΛΕΠΕΙ: κάθε μοτίβο πιάνει το δείγμα που υπάρχει για να πιάνει', () => {
-    const samples = ['`${n}ος όροφος`', "'Ισόγειο'", "'2ο Υπόγειο'", '`${n}th Floor`', '`Floor ${n}`'];
+    const samples = ['`${n}ος όροφος`', "'Ισόγειο'", "'2ο Υπόγειο'", '`${n}th Floor`', '`Floor ${n}`', '`Όροφος ${n}`'];
     for (const sample of samples) {
       expect(HAND_LABEL_PATTERNS.some((pattern) => pattern.test(sample))).toBe(true);
     }

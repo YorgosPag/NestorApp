@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ** — v1.0 `623a03fe` · v1.1 `403e5f2e` · v1.2 `323126ab` · v1.3 `0b831036` · v1.4 `cada2cd7` (§2.15, §2.16 — επαληθευμένη στην **παραγωγή**) · v1.5 `0a213314` (§2.17 εμβέλεια του wipe — jest πράσινα, **όχι** σε browser, όχι pushed στις 2026-10-12) · ροές που μένουν ανεκτέλεστες και ανοιχτές αποφάσεις: §9, §8 |
+| **Status** | 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ** — v1.0 `623a03fe` · v1.1 `403e5f2e` · v1.2 `323126ab` · v1.3 `0b831036` · v1.4 `cada2cd7` (§2.15, §2.16 — επαληθευμένη στην **παραγωγή**) · v1.5 `0a213314` (§2.17 εμβέλεια του wipe — jest πράσινα, **όχι** σε browser, pushed 2026-10-12, deploy ανεπιβεβαίωτο) · v1.6 **uncommitted** (§2.18 ένας κανόνας ετικέτας ορόφου · §2.19 ενδείξεις αποθήκευσης — jest πράσινα, **όχι** σε browser) · ροές που μένουν ανεκτέλεστες και ανοιχτές αποφάσεις: §9, §8 |
 | **Date** | 2026-10-11 |
 | **Category** | DXF Viewer / Levels / Entry Point / Data Integrity |
 | **Canonical Location** | `src/subapps/dxf-viewer/systems/levels/level-provision.ts` · `src/subapps/dxf-viewer/ui/components/open-create/` · `src/components/ui/choice-cards.tsx` |
@@ -360,6 +360,51 @@ commit της v1.2 **δεν μπορούσε να περάσει** χωρίς ν
 Δεν άλλαξαν: πολύγωνα (`floorplan_overlays`), υπόβαθρα, αρχεία `entityType: 'floor'`, σάρωση
 προθέματος, BIM (`wipeBim`) — ανήκουν στην όψη του ορόφου ή στο μοντέλο του.
 
+### 2.18 Ένας κανόνας ετικέτας για έγγραφο ορόφου (v1.6)
+
+Κλείνει το §8.18. Ο οδηγός εισαγωγής έδειχνε «F» / «SP», οι καρτέλες «Θεμελίωση» / «Απόληξη
+Κλιμακοστασίου». Τρεις κανόνες για το ίδιο έγγραφο:
+
+| Πού | Τι διάβαζε |
+|---|---|
+| `useFloorTabs.floorLabel` | `longName` → `name` → `canonicalFloorLongName` |
+| `level-panel-hooks.ts` (αναπλήρωση «όλοι οι όροφοι») | `longName ?? name` — κενό όνομα επιπέδου όταν λείπουν και τα δύο |
+| `useFloorplanImportState.ts` (οδηγός) | `name \|\| 'Όροφος N'` — ο σύντομος κωδικός πρώτος, και καρφωτό ελληνικό |
+
+- **Ένας κανόνας:** `storedFloorLabel(floor)` στο `src/lib/floor/floor-label-bundle.ts`
+  (`longName` → `name` → canonical από είδος + αριθμό). Τον καλούν και οι τρεις. Το `name` είναι
+  ο σύντομος κωδικός (ADR-369)· μόνο του είναι εφεδρεία.
+- Το όνομα που διαλέγει ο άνθρωπος στο βήμα «Όροφος» ταξιδεύει: σύνοψη (`StepCreateConfirm`),
+  `entityLabel` του αρχείου, όνομα του νέου επιπέδου. Άρα η διόρθωση αλλάζει και αυτά — προς το
+  ίδιο όνομα που δείχνουν οι καρτέλες.
+- **Split πρώτα (N.7.1):** το `useFloorplanImportState.ts` ήταν 526 γραμμές ⇒ 289.
+  `useFloorplanImportCascade.ts` (οι λίστες των βημάτων 1-4· **ένας** φορτωτής `useEntityOptions`
+  αντί για τέσσερα δίδυμα effects) και `utils/floorplan-upload-config.ts` (pure
+  `buildFloorplanUploadConfig`). Συμπεριφορά ίδια, με μία αυστηροποίηση: επιλογή χωρίς id στόχου
+  δίνει `null` αντί για ρύθμιση με `entityId: undefined`.
+- **Η κλάση, όχι το δείγμα:** ο φρουρός `no-hand-floor-labels.test.ts` (ADR-903) δεν έβλεπε το
+  μοτίβο `` `Όροφος ${n}` ``. Προστέθηκε. Βρήκε τρία ακόμη — δες §8.21.
+
+### 2.19 Ενδείξεις αποθήκευσης: τίτλος ανά ένδειξη, ένας δείκτης κατάστασης, κανένα νεκρό κουμπί (v1.6)
+
+Κλείνει το §8.19. Απόφαση Giorgio 2026-10-12: «όπως το Figma» — μία καθαρή κατάσταση.
+
+- Η πλαϊνή στήλη κρατά **δύο** ενδείξεις γιατί αποθηκεύονται δύο πράγματα (σχέδιο, ρυθμίσεις)·
+  τώρα η καθεμία λέει **τι** αποθηκεύει: `autoSave.drawingLabel` («Σχέδιο») και
+  `autoSave.settingsLabel` («Ρυθμίσεις»), `dxf-viewer-shell`, el + en.
+- `AutoSaveStatus` (σχέδιο): τα καρφωτά αγγλικά («Auto-save», «Saving...», «Saved», «Error»,
+  «Last saved: Just now») έφυγαν. Η κατάσταση αποδίδεται από τον **έναν** δείκτη αποθήκευσης της
+  εφαρμογής, `AutoSaveStatusIndicator` (ADR-248) — ίδιο λεξιλόγιο `idle/saving/success/error`,
+  ίδια κλειδιά `common:autoSave.*` με κάθε άλλη φόρμα.
+- Το κουμπί «Save» αφαιρέθηκε: το `onClick` του ήταν κενό. Η αποθήκευση σχεδίου είναι αυτόματη
+  (ADR-913)· κουμπί που δεν εκτελεί τίποτα είναι υπόσχεση που δεν κρατιέται.
+- `AutoSaveStatusIndicator`: ο δικός του μορφοποιητής («just now», «5m ago» — καρφωτά αγγλικά σε
+  κάθε οθόνη που τον χρησιμοποιεί) αντικαταστάθηκε από το `formatRelativeTime` (ADR-212,
+  `Intl.RelativeTimeFormat`).
+- `CentralizedAutoSaveStatus` (ρυθμίσεις): τίτλος «Ρυθμίσεις»· η ώρα μορφοποιείται στη γλώσσα του
+  ανθρώπου (`getCurrentLocale`, ήταν καρφωτό `el-GR`)· νεκρός κώδικας έξω (`getTooltip` /
+  `getIcon` της compact εκδοχής, με καρφωτή ελληνική λίστα, δεν καλούνταν από πουθενά).
+
 ## 3. Τι ΔΕΝ άλλαξε
 
 - **ADR-399/714/913:** ο στόχος ξαναδείχνεται σε κάθε αλλαγή επιπέδου, από το ίδιο το επίπεδο.
@@ -441,6 +486,10 @@ commit της v1.2 **δεν μπορούσε να περάσει** χωρίς ν
 | `src/lib/dxf-viewer/level-view-kind.ts` | **νέο** (§2.17) — `isPropertyViewLevel`, κοινό σε viewer και διακομιστή |
 | `src/services/floorplan-background/floor-wipe-queries.ts` · `floorplan-floor-wipe.service.ts` · `src/app/api/floorplans/wipe-floor/route.ts` | §2.17 — `listStoreyDxfLevels`: το wipe αγγίζει μόνο την όψη του ορόφου |
 | `src/features/floorplan-import/hooks/useFloorplanSmartUpload.ts` | §2.17 — `resolveFloorId` μόνο για στόχο-όροφο |
+| `src/lib/floor/floor-label-bundle.ts` | §2.18 — `storedFloorLabel`, ο ένας κανόνας ετικέτας εγγράφου ορόφου |
+| `src/features/floorplan-import/hooks/useFloorplanImportCascade.ts` · `utils/floorplan-upload-config.ts` | **νέα** (§2.18) — split του `useFloorplanImportState.ts` (526 → 289 γρ.) |
+| `hooks/data/useFloorTabs.ts` · `ui/components/level-panel-hooks.ts` | §2.18 — καλούν το `storedFloorLabel` |
+| `ui/components/AutoSaveStatus.tsx` · `CentralizedAutoSaveStatus.tsx` · `CentralizedAutoSaveStatus.styles.ts` · `src/components/shared/AutoSaveStatusIndicator.tsx` | §2.19 — τίτλοι, ένας δείκτης κατάστασης, κανένα νεκρό κουμπί |
 
 ## 7. Tests
 
@@ -459,6 +508,15 @@ commit της v1.2 **δεν μπορούσε να περάσει** χωρίς ν
 | `ensure-levels-for-building.test.ts` (+4) · `level-birth-before-echo.test.tsx` (+1) · `level-building-scope.test.ts` (+2) | §2.15 — η αναπλήρωση δεν επιλέγει επίπεδο· καμία αναπλήρωση για ακίνητο |
 | `floorplan-floor-wipe-view-scope.test.ts` (3) | §2.17 — **το περιστατικό**: η κάτοψη ακινήτου του ίδιου ορόφου επιζεί (επίπεδο, αρχείο, bytes)· η όψη του ορόφου αντικαθίσταται όπως πριν· η προεπισκόπηση μετρά το ίδιο σύνολο. Εκτελεί την πραγματική υπηρεσία σε in-memory Firestore |
 | `useFloorplanSmartUpload.wipe-scope.test.tsx` (3) | §2.17 — επίπεδο πολυεπίπεδης μονάδας ⇒ κανένα `wipe-floor`· όροφος ⇒ wipe πριν από το ανέβασμα· PDF για ακίνητο αρνείται |
+| `stored-floor-label.test.ts` (3) · `useFloorplanImportState.floor-label.test.tsx` (3) | §2.18 — **το περιστατικό** («Θεμελίωση», όχι «F»)· οδηγός και καρτέλες ρωτούν τον ίδιο κανόνα· το όνομα φτάνει στη σύνοψη και στο `entityLabel` |
+| `no-hand-floor-labels.test.ts` (+1 μοτίβο) | §2.18 — `` `Όροφος ${n}` `` είναι πλέον εύρημα |
+| `AutoSaveStatus.test.tsx` (10) | §2.19 — κανένα κουμπί· κανένα καρφωτό αγγλικό σε καμία κατάσταση· τίτλος + αρχείο· ο ένας δείκτης· κλειδιά σε el + en |
+
+v1.6: και τα 16 νέα tests κοκκίνισαν πριν από τη διόρθωση. §2.18: **70 suites / 979 tests πράσινα**
+(`lib/floor`, `floorplan-import`, `useFloorTabs`, `ui/components`), `jscpd:diff` καθαρό στα 7 αρχεία.
+§2.19: 87 από 88 suites πράσινες (`layout`, `components/shared`, `objective-value`, store)· η μία
+κόκκινη είναι το `proximity-anchor-reach.test.ts` (ADR-332 D25, `AddressFieldWidthHarness.tsx`) —
+ξένη δουλειά στο κοινό δέντρο, δεν αγγίζει αυτά τα αρχεία.
 
 v1.4: 32 suites / 396 tests πράσινα, `jscpd:diff` καθαρό σε 14 αρχεία. v1.5 (`floorplan-background`,
 `floorplan-import`, `level-provision`, `useFloorTabs`): **12 suites / 107 tests πράσινα**· τα 5 από
@@ -534,13 +592,15 @@ v1.4: 32 suites / 396 tests πράσινα, `jscpd:diff` καθαρό σε 14 α
 17. **Η §2.17 δεν έχει επαληθευτεί σε browser** — η παραγωγή τρέχει ακόμη τη v1.4. Μετά το deploy:
     όροφος με κάτοψη + ακίνητο με κάτοψη → εισαγωγή στον όροφο → η κάτοψη του ακινήτου υπάρχει·
     εισαγωγή για επίπεδο μεζονέτας → κανένα `POST /api/floorplans/wipe-floor`.
-18. **Ο οδηγός δείχνει ωμά ονόματα ορόφων («F», «SP»)** ενώ οι καρτέλες δείχνουν «Θεμελίωση»,
+18. ✅ **Έκλεισε στη §2.18** (v1.6 — jest, **όχι** σε browser). Το ιστορικό:
+    **Ο οδηγός δείχνει ωμά ονόματα ορόφων («F», «SP»)** ενώ οι καρτέλες δείχνουν «Θεμελίωση»,
     «Απόληξη Κλιμακοστασίου» (επιβεβαιωμένο στην παραγωγή 2026-10-12). Ρίζα:
     `useFloorplanImportState.ts:238` γράφει `f.name || 'Όροφος N'` (και το εφεδρικό είναι καρφωτό
     ελληνικό), ενώ το `useFloorTabs.floorLabel` προτιμά `longName` → `name` →
     `canonicalFloorLongName` (ADR-369/903). Θέλει **έναν** κανόνα ετικέτας και για τους δύο·
     το αρχείο του οδηγού είναι στις 526 γραμμές, άρα η αλλαγή απαιτεί πρώτα split. Δεν αγγίχθηκε.
-19. **Δύο ενδείξεις αποθήκευσης στην πλαϊνή στήλη** (`layout/SidebarSection.tsx`). Η «Τελευταία:
+19. ✅ **Έκλεισε στη §2.19** (v1.6 — jest, **όχι** σε browser). Το ιστορικό:
+    **Δύο ενδείξεις αποθήκευσης στην πλαϊνή στήλη** (`layout/SidebarSection.tsx`). Η «Τελευταία:
     ώρα» (`CentralizedAutoSaveStatus`) είναι η αποθήκευση **ρυθμίσεων**, όχι σχεδίου: στην
     παραγωγή έμεινε ακίνητη 3′ χωρίς ενέργεια και χωρίς αίτημα, ενώ είχε πάρει τιμή χωρίς καμία
     αποθήκευση σχεδίου. Η άλλη (`AutoSaveStatus`) δείχνει καρφωτά αγγλικά («Auto-save», «Save»)
@@ -549,6 +609,18 @@ v1.4: 32 suites / 396 tests πράσινα, `jscpd:diff` καθαρό σε 14 α
 20. **Μήνυμα άρνησης PDF / εικόνας εκτός ορόφου είναι καρφωτό αγγλικό** και φτάνει στην οθόνη
     (`useFloorplanSmartUpload.ts`, «PDF / image floorplans are supported only at floor level»).
     Προϋπάρχει· μετά τη §2.17 το βλέπει και η πολυεπίπεδη μονάδα.
+21. **Τρία καρφωτά «Όροφος N» που έμειναν** (βρέθηκαν από το νέο μοτίβο του φρουρού, §2.18),
+    δηλωμένα ως εξαιρέσεις με λόγο: `floorplan-backgrounds.handlers.ts` (ετικέτα αρχείου υποβάθρου·
+    διαβάζει ήδη το έγγραφο ορόφου, άρα θέλει `storedFloorLabel` — μαζί με το §8.2) ·
+    `FloorFloorplanService.saveIdentity` (αποθηκευμένη `entityLabel`: «Όροφος 0» για το ισόγειο,
+    «Όροφος -1» για το υπόγειο — pipeline αποθήκευσης, θέλει εντολή) · `tek-stair-extract.ts`
+    (προειδοποιήσεις εισαγωγής TEK σε καρφωτά ελληνικά· ο αριθμός είναι δείκτης μέσα στο αρχείο).
+22. **Ετικέτες των κουκκίδων ρυθμίσεων είναι καρφωτά ελληνικά** (`CentralizedAutoSaveStatus.styles.ts`:
+    «Γραμμές (Γενικά)», «Γραμμές, Κείμενο, Grips…»). Φαίνονται μόνο ως υπόδειξη στο πέρασμα του
+    δείκτη. Προϋπάρχει, δεν αγγίχθηκε.
+23. **Τα επίπεδα πολυεπίπεδης μονάδας στο βήμα «Ακίνητο»** δείχνουν το `PropertyLevel.name` όπως
+    αποθηκεύτηκε — δεν περνούν από το `storedFloorLabel` (δεν είναι έγγραφο ορόφου). Δεν ελέγχθηκε
+    αν εκεί γράφεται σύντομος κωδικός.
 12. **Εκτός εμβέλειας:** «+ Νέο…» μέσα στα βήματα επιλογής (Στάδιο 3)· «Πρόσφατα σχέδια» στην
     ενότητα Άνοιγμα (πρόταση, θέλει δικό της ερώτημα και πιθανό δείκτη Firestore).
 
@@ -614,6 +686,14 @@ Chrome, `localhost:3000`, 2026-10-11, δύο συνεδρίες. Στη δεύτ
 και «Πρόχειρο 5» υπήρχαν ήδη όταν άνοιξε η συνεδρία της v1.2 — δεν γεννήθηκαν από αυτήν.
 
 ## 10. Changelog
+
+- **2026-10-12 — v1.6 (Opus 5.5).** **Uncommitted.** §2.18 — ένας κανόνας ετικέτας εγγράφου
+  ορόφου (`storedFloorLabel`) για οδηγό, καρτέλες και αναπλήρωση· split του
+  `useFloorplanImportState.ts` (526 → 289)· ο φρουρός ADR-903 βλέπει πλέον το `` `Όροφος ${n}` ``.
+  §2.19 — τίτλος ανά ένδειξη αποθήκευσης, ο ένας δείκτης κατάστασης (ADR-248), το νεκρό «Save» έξω,
+  σχετικός χρόνος από το `formatRelativeTime`. Τα 16 νέα tests κοκκίνισαν πριν. Νέα όρια §8.21–§8.23.
+  Git: τα v1.5 είναι pushed (`origin/main` = `20ad223d`). **ΟΧΙ tsc (N.17)· τίποτα από τη v1.6 σε
+  browser· η §2.17 ακόμη ανεπιβεβαίωτη σε browser** (§8.17).
 
 - **2026-10-12 — v1.5 (Opus 5.5).** Κώδικας committed `0a213314`, πρώτο μέρος του ADR `53021140`. 🔴 §2.17 — το wipe αντικατάστασης έσβηνε ξένες
   όψεις: εισαγωγή για επίπεδο **πολυεπίπεδης μονάδας** έκανε HARD wipe στον όροφο, και εισαγωγή

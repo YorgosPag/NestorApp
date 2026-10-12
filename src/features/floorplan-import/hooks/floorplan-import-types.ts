@@ -5,6 +5,7 @@
 
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import type { CadLinkableEntityType, FloorplanPurpose } from '@/config/domain-constants';
+import type { FloorKind } from '@/utils/floor-naming';
 
 // =============================================================================
 // TYPES
@@ -115,7 +116,11 @@ export interface ProjectsByCompanyResponse {
 export interface FloorItem {
   id: string;
   number: number;
-  name: string;
+  /** Σύντομος κωδικός («F», «SP») — ποτέ μόνος του στην οθόνη: `storedFloorLabel` (ADR-369). */
+  name?: string;
+  /** Το πλήρες όνομα που βλέπει ο άνθρωπος («Θεμελίωση»). */
+  longName?: string;
+  kind?: FloorKind;
   buildingId?: string;
 }
 
