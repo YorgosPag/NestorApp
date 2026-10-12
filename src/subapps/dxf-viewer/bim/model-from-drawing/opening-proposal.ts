@@ -32,6 +32,7 @@ import { solveDoorSymbol, type DoorObstacle, type DoorSymbolSolution } from './d
 import { resolveDoorHost, type HostWalls, type OpeningHostPlan, type OpeningSpan } from './opening-host-plan';
 import { clusterWindowSymbols, type WindowCluster, type WindowSymbolLine } from './window-symbol-clusters';
 import { frameCoords, isInsideFrameBand, pointOnFrame, wallHostFrame, type WallHostFrame } from './wall-host-frame';
+import { findWallRunGaps, type WallRunGap } from './wall-run-gaps';
 
 export type OpeningProposalStatus = 'door' | 'window' | 'needs-decision' | 'existing';
 
@@ -41,13 +42,20 @@ export type OpeningDecisionReason =
   | 'jambs-not-drawn'
   | 'frame-implausible'
   | 'host-undetermined'
-  | 'sparse-symbol';
+  | 'sparse-symbol'
+  /** Φ4-3α/Δ6 — κενό ομοαξονικής διαδρομής χωρίς κανένα σύμβολο πάνω του. */
+  | 'no-symbol';
+
+/** Ό,τι μπορεί να αποφασίσει ο άνθρωπος για ένα στοιχείο «προς απόφαση»: τι κούφωμα είναι. */
+export type OpeningDecision = 'door' | 'window';
 
 export interface OpeningProposalItem {
   /** Σταθερό κλειδί από τη γεωμετρία του συμβόλου (mm) — ίδιο σε κάθε υπολογισμό. */
   readonly key: string;
+  /** Τι θα ΓΡΑΦΤΕΙ: `door` / `window` γράφονται, τα άλλα δύο ποτέ. */
   readonly status: OpeningProposalStatus;
-  readonly symbol: 'door' | 'window';
+  /** Τι ΔΕΙΧΝΕΙ το σχέδιο. `none` = κενό χωρίς σύμβολο (Δ6). */
+  readonly symbol: 'door' | 'window' | 'none';
   readonly sourceIds: readonly string[];
   readonly host?: OpeningHostPlan;
   readonly span?: OpeningSpan;
@@ -59,6 +67,10 @@ export interface OpeningProposalItem {
   readonly swing?: Point2D;
   readonly reason?: OpeningDecisionReason;
   readonly existingOpeningId?: string;
+  /** Μόνο σε κενό χωρίς σύμβολο: γραμμές ΑΛΛΟΥ ρόλου ζωγραφισμένες μέσα του (π.χ. κολώνα). */
+  readonly occupantIds?: readonly string[];
+  /** Η κατάσταση είναι απόφαση ανθρώπου, όχι ανάγνωση του σχεδίου· το `reason` λέει γιατί ρωτήθηκε. */
+  readonly decided?: true;
 }
 
 export interface OpeningProposal {
@@ -73,6 +85,8 @@ export interface OpeningProposalInput {
   readonly openingColorHex: string;
   readonly colorOf: EntityColorResolver;
   readonly sceneUnits: SceneUnits;
+  /** Κλειδί στοιχείου → απόφαση ανθρώπου. Ισχύει ΜΟΝΟ σε στοιχείο «προς απόφαση» που μπορεί να γραφτεί. */
+  readonly decisions?: ReadonlyMap<string, OpeningDecision>;
 }
 
 interface HostedOpening { readonly id: string; readonly params: OpeningParams & { readonly wallId: string } }
@@ -191,6 +205,45 @@ function proposeWindow(cluster: WindowCluster, ctx: Context): OpeningProposalIte
     : { ...base, status: 'window' };
 }
 
+/**
+ * Οι γραμμές ΑΛΛΟΥ ρόλου που έχουν το μέσο τους μέσα στο κενό. Δεν κρίνουν τίποτα — το κενό μένει
+ * «προς απόφαση» — αλλά λένε στον άνθρωπο ότι εκεί είναι ζωγραφισμένο κάτι που ο βοηθός δεν
+ * διαβάζει (μετρημένο: τα δύο κενά του σχεδίου δοκιμής κρατούν ζωγραφισμένη κολώνα).
+ */
+function gapOccupants(gap: WallRunGap, foreign: readonly WindowSymbolLine[], ctx: Context): string[] {
+  const frame = ctx.frames.get(gap.wallIds[0]);
+  if (!frame) return [];
+  const ends = [frameCoords(frame, gap.span.start).along, frameCoords(frame, gap.span.end).along];
+  return foreign.filter((line) => {
+    const { along, across } = frameCoords(frame, calculateMidpoint(line.start, line.end));
+    return along > Math.min(...ends) + ctx.tol && along < Math.max(...ends) - ctx.tol
+      && Math.abs(across) <= frame.halfThickness + ctx.tol;
+  }).map((line) => line.id);
+}
+
+function proposeGap(gap: WallRunGap, foreign: readonly WindowSymbolLine[], ctx: Context): OpeningProposalItem {
+  return {
+    key: mmKey('gap', calculateMidpoint(gap.span.start, gap.span.end), ctx.scale),
+    status: 'needs-decision', reason: 'no-symbol', symbol: 'none', sourceIds: [],
+    host: { kind: 'bridge', wallIds: gap.wallIds }, span: gap.span, widthMm: gap.widthMm,
+    occupantIds: gapOccupants(gap, foreign, ctx),
+  };
+}
+
+/**
+ * Στοιχείο «προς απόφαση» που ο άνθρωπος ΜΠΟΡΕΙ να κάνει κούφωμα: το σχέδιο έδωσε ξενιστή, θέση
+ * και πλάτος — λείπει μόνο το τι είναι. Χωρίς ξενιστή ή θέση δεν υπάρχει τι να γραφτεί.
+ */
+export function isDecidableOpening(item: OpeningProposalItem): boolean {
+  return item.status === 'needs-decision'
+    && item.host !== undefined && item.span !== undefined && item.widthMm !== undefined;
+}
+
+function applyDecision(item: OpeningProposalItem, decisions: OpeningProposalInput['decisions']): OpeningProposalItem {
+  const decision = decisions?.get(item.key);
+  return decision && isDecidableOpening(item) ? { ...item, status: decision, decided: true } : item;
+}
+
 export function computeOpeningProposal(input: OpeningProposalInput): OpeningProposal {
   const role = input.openingColorHex.toLowerCase();
   // Α-7: από εδώ και κάτω ΜΟΝΟ τα σύμβολα του ρόλου. Η σκηνή δίνει μόνο σώματα και ξενιστές.
@@ -203,7 +256,14 @@ export function computeOpeningProposal(input: OpeningProposalInput): OpeningProp
   const free = symbolLines.filter((line) => !doorArcs.some((arc) => isClaimedByDoor(line, arc, ctx)));
   const clusters = clusterWindowSymbols(free, ctx.frameList, ctx.scale);
   const windows = clusters.flatMap((c) => proposeWindow(c, ctx) ?? []);
-  const items = [...doors, ...windows].sort((a, b) => a.key.localeCompare(b.key));
+  // Δ6 — κενό με σύμβολο πάνω του είναι ήδη στοιχείο· τα υπόλοιπα κενά ρωτούν τον άνθρωπο.
+  const claims = [...doorArcs.map((arc) => arc.center), ...windows.flatMap((w) => (w.span ? [w.span.start, w.span.end] : []))];
+  const foreign: readonly WindowSymbolLine[] = input.entities.filter(isLineEntity)
+    .filter((e) => input.colorOf(e)?.toLowerCase() !== role);
+  const gaps = findWallRunGaps({ ...ctx, claims }).map((gap) => proposeGap(gap, foreign, ctx));
+  const items = [...doors, ...windows, ...gaps]
+    .map((item) => applyDecision(item, input.decisions))
+    .sort((a, b) => a.key.localeCompare(b.key));
   const explained = new Set(items.flatMap((i) => i.sourceIds));
   const unexplainedIds = free.map((l) => l.id).filter((id) => !explained.has(id));
   return { items, unexplainedIds };

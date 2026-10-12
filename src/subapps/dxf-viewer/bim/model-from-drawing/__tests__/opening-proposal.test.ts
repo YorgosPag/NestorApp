@@ -18,6 +18,10 @@ import {
 
 /** Μετρημένο (ADR-911 §4.7): γραμμές κουφωμάτων που δεν εξηγεί ούτε πόρτα ούτε παράθυρο. */
 const UNEXPLAINED_IN_FIXTURE = 0;
+/** Μετρημένο (ADR-911 §12, Φ4-3α): ομοαξονικά κενά 500 και 1900 mm χωρίς σύμβολο κουφώματος. */
+const GAPS_IN_FIXTURE = 2;
+const symbolsOf = (p: OpeningProposal) => p.items.filter((i) => i.symbol !== 'none');
+const gapsOf = (p: OpeningProposal) => p.items.filter((i) => i.symbol === 'none');
 
 const byStatus = (p: OpeningProposal, status: OpeningProposalItem['status']) => p.items.filter((i) => i.status === status);
 const doorOf = (p: OpeningProposal, arcId: string) => p.items.find((i) => i.sourceIds.includes(arcId))!;
@@ -92,7 +96,8 @@ describe('παράθυρα — συστάδες μέσα στο σώμα συν�
   });
 
   it('τα πλήθη ανά κατάσταση', () => {
-    expect(countOpeningsByStatus(proposal)).toEqual({ door: 6, window: 6, 'needs-decision': 0, existing: 0 });
+    // Τα 2 «προς απόφαση» είναι τα κενά χωρίς σύμβολο της Φ4-3α (παρακάτω) — όχι σύμβολα.
+    expect(countOpeningsByStatus(proposal)).toEqual({ door: 6, window: 6, 'needs-decision': GAPS_IN_FIXTURE, existing: 0 });
   });
 });
 
@@ -108,7 +113,10 @@ describe('Α-7 — ο αναγνωριστής δεν λαμβάνει ποτέ 
 
   it('το ίδιο σύμβολο με χρώμα τοίχου δεν προτείνεται', () => {
     const recolored = ENTITIES.map((e) => (cyanIds.has(e.id) ? ({ ...e, color: '#003FFF' } as unknown as Entity) : e));
-    expect(propose([...recolored, ...(walls as unknown as Entity[])]).items).toEqual([]);
+    const proposal = propose([...recolored, ...(walls as unknown as Entity[])]);
+    expect(symbolsOf(proposal)).toEqual([]);
+    // Ό,τι μένει είναι κενά τοίχων — δεν προέρχονται από καμία οντότητα, άρα από κανέναν ρόλο.
+    expect(proposal.items.flatMap((i) => i.sourceIds)).toEqual([]);
   });
 
   it('τόξο τοίχου δίπλα σε πραγματική πόρτα δεν γίνεται δεύτερη πόρτα', () => {
@@ -116,7 +124,7 @@ describe('Α-7 — ο αναγνωριστής δεν λαμβάνει ποτέ 
     const impostor = { ...arc, id: 'impostor', color: '#003FFF' } as unknown as Entity;
     const items = propose(sceneOf(walls, [impostor])).items;
     expect(items.some((i) => i.sourceIds.includes('impostor'))).toBe(false);
-    expect(items).toHaveLength(12);
+    expect(items.filter((i) => i.symbol !== 'none')).toHaveLength(12);
   });
 });
 
@@ -142,15 +150,17 @@ describe('ιδεμποτία — δεύτερη εκτέλεση πάνω στη
   const written = writeProposal(walls, first);
   const second = propose(written);
 
-  it('μηδέν νέα: και τα 12 είναι «υπάρχει ήδη»', () => {
-    expect(countOpeningsByStatus(second)).toEqual({ door: 0, window: 0, 'needs-decision': 0, existing: 12 });
+  it('μηδέν νέα: και τα 12 είναι «υπάρχει ήδη»· τα κενά χωρίς σύμβολο μένουν ερώτηση', () => {
+    expect(countOpeningsByStatus(second)).toEqual({ door: 0, window: 0, 'needs-decision': GAPS_IN_FIXTURE, existing: 12 });
+    expect(byStatus(second, 'needs-decision').map((i) => i.reason)).toEqual(['no-symbol', 'no-symbol']);
   });
 
   it('με τα ίδια κλειδιά, το καθένα δεμένο σε άνοιγμα με τον ξενιστή του', () => {
     expect(second.items.map((i) => i.key)).toEqual(first.items.map((i) => i.key));
     const openings = new Map(written.filter((e) => e.type === 'opening')
       .map((e) => [e.id, (e as unknown as { params: { wallId: string } }).params.wallId] as const));
-    for (const item of second.items) {
+    expect(symbolsOf(second)).toHaveLength(12);
+    for (const item of symbolsOf(second)) {
       expect(item.host!.kind === 'existing-wall' && item.host!.wallId).toBe(openings.get(item.existingOpeningId!));
     }
   });
@@ -200,7 +210,8 @@ describe('τοίχος συνεχής πίσω από το σύμβολο, χω�
   });
 
   it('τα σύμβολα της κάσας μέσα στον τοίχο δεν γίνονται παράθυρα', () => {
-    expect(countOpeningsByStatus(proposal)).toEqual({ door: 0, window: 6, 'needs-decision': 6, existing: 0 });
+    expect(countOpeningsByStatus(proposal)).toEqual({ door: 0, window: 6, 'needs-decision': 6 + GAPS_IN_FIXTURE, existing: 0 });
+    expect(symbolsOf(proposal).filter((i) => i.status === 'needs-decision')).toHaveLength(6);
   });
 });
 

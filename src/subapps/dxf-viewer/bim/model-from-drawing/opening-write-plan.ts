@@ -100,9 +100,11 @@ function buildOpening(item: WritableItem, host: WallEntity, input: OpeningWriteI
   const offsets = [item.span.start, item.span.end].map((p) => projectPointToWallOffsetMm(p, host));
   const gap = { gapMm: item.widthMm, openingOffsetFromMergedStart: Math.min(...offsets) };
   const params: OpeningParams = {
-    ...buildGapOpeningParams(host.id, gap, item.symbol),
+    // Το είδος είναι ό,τι ΘΑ γραφτεί (`status`), όχι ό,τι δείχνει το σχέδιο: κενό χωρίς σύμβολο ή
+    // αραιό σύμβολο γίνεται κούφωμα με απόφαση ανθρώπου (Φ4-3α).
+    ...buildGapOpeningParams(host.id, gap, item.status),
     ...(item.frameWidthMm !== undefined ? { frameWidth: item.frameWidthMm } : {}),
-    ...(item.swing ? resolveDoorSwing(host, item.span, item.swing) ?? {} : {}),
+    ...(item.status === 'door' && item.swing ? resolveDoorSwing(host, item.span, item.swing) ?? {} : {}),
   };
   const built = buildOpeningEntity(params, host, input.layerId, input.sceneUnits);
   return built.ok ? built.entity : null;

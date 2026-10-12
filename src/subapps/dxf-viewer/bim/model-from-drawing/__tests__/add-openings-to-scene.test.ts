@@ -223,7 +223,8 @@ describe('ADR-911 Φ4-2 — ιδεμποτία με τον πραγματικό 
     const afterFirst = live.entities();
 
     const second = propose(afterFirst);
-    expect(countOpeningsByStatus(second)).toEqual({ door: 0, window: 0, 'needs-decision': 0, existing: 12 });
+    // Τα 2 «προς απόφαση» είναι τα κενά χωρίς σύμβολο (Φ4-3α): ερώτηση που μένει, δεν γράφεται ποτέ μόνη της.
+    expect(countOpeningsByStatus(second)).toEqual({ door: 0, window: 0, 'needs-decision': 2, existing: 12 });
 
     expect(addOpeningsToScene(second.items, live.accessor, UNDO).refusal).toBe('nothing-to-write');
     expect(live.entities()).toBe(afterFirst);

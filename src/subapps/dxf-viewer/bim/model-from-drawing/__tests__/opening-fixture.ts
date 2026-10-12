@@ -10,7 +10,7 @@ import { buildWallEntity } from '../../../hooks/drawing/wall-completion';
 import { applyTrimPatches, computeWallTrims } from '../../walls/wall-trims';
 import type { WallSceneAccessor } from '../../walls/add-wall-to-scene';
 import { computeWallProposal } from '../wall-proposal';
-import { computeOpeningProposal, type OpeningProposal } from '../opening-proposal';
+import { computeOpeningProposal, type OpeningDecision, type OpeningProposal } from '../opening-proposal';
 import fixture from './fixtures/floor-plan-lines.json';
 
 export const LEVEL = 'lvl';
@@ -32,8 +32,11 @@ export function writtenWalls(acceptAll: boolean): WallEntity[] {
 export const sceneOf = (walls: readonly WallEntity[], extra: readonly Entity[] = []): Entity[] =>
   [...ENTITIES, ...(walls as unknown as Entity[]), ...extra];
 
-export const propose = (entities: readonly Entity[]): OpeningProposal =>
-  computeOpeningProposal({ entities, openingColorHex: OPENING, colorOf, sceneUnits: 'mm' });
+export const propose = (
+  entities: readonly Entity[],
+  decisions?: ReadonlyMap<string, OpeningDecision>,
+): OpeningProposal =>
+  computeOpeningProposal({ entities, openingColorHex: OPENING, colorOf, sceneUnits: 'mm', decisions });
 
 /** Συνθετικός τοίχος = καθαρός τοίχος: δεν κληρονομεί τα κοψίματα άκρων του προτύπου. */
 export const NO_TRIMS = { startMiter: undefined, endMiter: undefined, startBevel: undefined, endBevel: undefined };
