@@ -156,9 +156,11 @@ describe('Δ — loginHrefForCurrentLocation: ο φρουρός ΠΕΛΑΤΗ ε�
  * `useSearchParams` (όριο Suspense, CHECK 3.55) — άλλο σχέδιο, καταγεγραμμένο στο
  * `.claude-rules/pending-ratchet-work.md`.
  */
+// ⚠️ 2026-10-12 — το `user-menu.tsx` (αποσύνδεση) και το `use-leave-workspace.ts` (αποχώρηση) **έφυγαν** από εδώ:
+//    από το ADR-908 δεν πλοηγούν πια τα ίδια. Αποσυνδέει και πλοηγεί ο ΕΝΑΣ κάτοχος (`auth/identity-change/
+//    end-sign-in.ts`), με προορισμούς δηλωμένους **ανά λόγο** στο `end-sign-in-destinations.ts`. Οι δύο
+//    δηλώσεις έμειναν μπαγιάτικες και κρατούσαν αυτή την άγκυρα κόκκινη από το `f1cf8954`.
 const BARE_LOGIN_NAVIGATORS: ReadonlyArray<{ file: string; why: string }> = [
-  { file: 'src/components/header/user-menu.tsx', why: 'αποσύνδεση: ο άνθρωπος ζήτησε να ΦΥΓΕΙ — επιστροφή θα τον έστελνε πίσω σε ό,τι μόλις έκλεισε' },
-  { file: 'src/components/workspace-membership/use-leave-workspace.ts', why: 'αποχώρηση από χώρο: η σελίδα όπου ήταν ανήκει στον χώρο που μόλις άφησε' },
   { file: 'src/auth/components/AuthActionContent.tsx', why: 'σύνδεσμος email μιας χρήσης (επαλήθευση/επαναφορά): ο κωδικός καταναλώθηκε, η επιστροφή θα ήταν αδιέξοδο' },
   { file: 'src/app/home/route.ts', why: '«πήγαινέ με σπίτι»: μετά τη σύνδεση αποφασίζει ο ΕΝΑΣ επιλυτής προσγείωσης (landing.ts), όχι το /home' },
 ];

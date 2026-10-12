@@ -91,13 +91,17 @@ describe('ΑΝ-1 · η διαβάθμιση ανακοινώνεται ανά α
     for (const { payload } of dispatched) expect(payload.updates).toEqual({ classification: 'public' });
   });
 
-  it('όλη η δέσμη φέρει την ίδια στιγμή', async () => {
+  it('όλη η δέσμη φέρει την ίδια στιγμή — τη στιγμή της πράξης — και την τιμή που ΖΗΤΗΘΗΚΕ', async () => {
     postMock.mockResolvedValue(answer(2));
+    const before = Date.now();
 
     await setFilesClassificationWithPolicy(['file_a', 'file_b'], 'internal');
 
-    expect(typeof dispatched[0].payload.timestamp).toBe('number');
+    // Μεταλλάξεις Μ10 / Μ16 (ADR-907 §11.14): στιγμή `0` και καρφωτό `public` περνούσαν — η ΑΝ-1 έλεγχε την τιμή μόνο με `public`.
+    expect(dispatched[0].payload.timestamp).toBeGreaterThanOrEqual(before);
+    expect(dispatched[0].payload.timestamp).toBeLessThanOrEqual(Date.now());
     expect(dispatched[1].payload.timestamp).toBe(dispatched[0].payload.timestamp);
+    for (const { payload } of dispatched) expect(payload.updates).toEqual({ classification: 'internal' });
   });
 });
 
