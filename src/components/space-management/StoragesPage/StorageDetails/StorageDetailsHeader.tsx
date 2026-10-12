@@ -1,23 +1,13 @@
 'use client';
 
 /**
- * 📦 ENTERPRISE STORAGE DETAILS HEADER COMPONENT
- *
- * Header για τις λεπτομέρειες αποθήκης.
- * ADR-193: Supports inline editing toggle (Edit ↔ Save/Cancel).
- * Uses centralized entity action presets.
+ * 📦 Κεφαλίδα λεπτομερειών αποθήκης — τίτλος και κείμενα της αποθήκης πάνω στην κοινή κεφαλίδα χώρου (ADR-193).
  */
 
-import React from 'react';
 import { Warehouse } from 'lucide-react';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
-import type { EntityHeaderAction } from '@/core/entity-headers';
+import { SpaceDetailsHeader } from '@/components/shared/space-info/SpaceDetailsHeader';
 import type { Storage } from '@/types/storage/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-import '@/lib/design-system';
-
-const _logger = createModuleLogger('StorageDetailsHeader');
 
 interface StorageDetailsHeaderProps {
   storage: Storage;
@@ -41,50 +31,25 @@ interface StorageDetailsHeaderProps {
   isInTrash?: boolean;
 }
 
-export function StorageDetailsHeader({
-  storage,
-  isEditing,
-  isSaving,
-  onStartEdit,
-  onSave,
-  onCancel,
-  onNewStorage,
-  onDelete,
-  onShowcaseStorage,
-  isInTrash = false,
-}: StorageDetailsHeaderProps) {
+export function StorageDetailsHeader({ storage, onNewStorage, onShowcaseStorage, ...session }: StorageDetailsHeaderProps) {
   const { t } = useTranslation(['storage', 'trash', 'showcase']);
 
-  // Edit mode: Save (green), Cancel (white)
-  // Normal mode: New (green), Edit (blue), Delete (red)
-  // Trash mode: no mutating actions
-  const actions: EntityHeaderAction[] = isEditing
-    ? [
-        createEntityAction('save', isSaving ? t('header.saving') : t('header.save'), isSaving ? () => {} : onSave),
-        createEntityAction('cancel', t('header.cancel'), onCancel),
-      ]
-    : isInTrash
-    ? []
-    : [
-        ...(onShowcaseStorage ? [createEntityAction('showcase', t('storageShowcase.actions.showcase', { ns: 'showcase' }), onShowcaseStorage)] : []),
-        createEntityAction('new', t('header.newStorage'), () => onNewStorage?.()),
-        createEntityAction('edit', t('header.edit'), onStartEdit),
-        createEntityAction('delete', t('moveToTrash', { ns: 'trash' }), () => onDelete?.()),
-      ];
-
   return (
-    <>
-      {/* Desktop: Show full header with actions */}
-      <div className="hidden md:block">
-        <EntityDetailsHeader
-          icon={Warehouse}
-          title={storage.name}
-          actions={actions}
-          variant="detailed"
-        />
-      </div>
-
-      {/* Mobile: Hidden (no header duplication) */}
-    </>
+    <SpaceDetailsHeader
+      {...session}
+      icon={Warehouse}
+      title={storage.name}
+      onNew={onNewStorage}
+      onShowcase={onShowcaseStorage}
+      labels={{
+        save: t('header.save'),
+        saving: t('header.saving'),
+        cancel: t('header.cancel'),
+        showcase: t('storageShowcase.actions.showcase', { ns: 'showcase' }),
+        create: t('header.newStorage'),
+        edit: t('header.edit'),
+        moveToTrash: t('moveToTrash', { ns: 'trash' }),
+      }}
+    />
   );
 }

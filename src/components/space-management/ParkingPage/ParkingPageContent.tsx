@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { ListDetailsSplit, MobileDetailsSlideIn } from '@/core/layouts';
 import { useParkingPageState } from '@/hooks/useParkingPageState';
 import { useParkingStats } from '@/hooks/useParkingStats';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
@@ -149,6 +149,18 @@ export function ParkingPageContent() {
   const { showCreateForm, openCreateForm, resetCreateForm, createSaveRef } = useEntityCreateForm();
 
   const { t: tParking } = useTranslation('parking');
+
+  // Μία δήλωση για λίστα και πλέγμα: η ίδια επιλογή, το ίδιο «Νέα», τα ίδια δεδομένα.
+  const isCreating = showCreateForm && !showTrash;
+  const visibleParkingSpots = showTrash ? trashedParkingSpots : filteredParkingSpots;
+  const handleSelectParking = (parking: ParkingSpot) => {
+    setSelectedParking(toggleSelect(selectedParking, parking));
+    resetCreateForm();
+  };
+  const handleNewParking = showTrash ? undefined : () => {
+    openCreateForm();
+    setSelectedParking(null);
+  };
 
   const handleDeleteParking = useCallback(async () => {
     if (!selectedParking) return;
@@ -294,69 +306,61 @@ export function ParkingPageContent() {
         <DeepLinkNotice selection={selection} className="mb-2" />
 
         <ListContainer>
-          {viewMode === 'grid' ? (
-            /* ENTERPRISE: Full-width Grid View */
-            <ParkingGridView
-              parkingSpots={showTrash ? trashedParkingSpots : filteredParkingSpots}
-              selectedParking={selectedParking}
-              onSelectParking={(p) => {
-                setSelectedParking(toggleSelect(selectedParking, p));
-                resetCreateForm();
-              }}
-            />
-          ) : (
-            /* ENTERPRISE: List View with Details Panel */
-            <>
-              <ParkingsList
-                parkingSpots={showTrash ? trashedParkingSpots : filteredParkingSpots}
+          {/* ADR-912 §12.11 — λίστα + λεπτομέρειες στο desktop, λίστα ή φύλλο στο κινητό (και για τη φόρμα δημιουργίας). */}
+          <ListDetailsSplit
+            listOnly={viewMode === 'grid'}
+            list={viewMode === 'grid' ? (
+              <ParkingGridView
+                parkingSpots={visibleParkingSpots}
                 selectedParking={selectedParking}
-                onSelectParking={(p) => {
-                  setSelectedParking(toggleSelect(selectedParking, p));
-                  resetCreateForm();
-                }}
-                onNewItem={showTrash ? undefined : () => {
-                  openCreateForm();
-                  setSelectedParking(null);
-                }}
+                onSelectParking={handleSelectParking}
               />
-              {showCreateForm && !showTrash ? (
-                <DetailsContainer
-                  selectedItem={{ id: 'create' }}
-                  header={
-                    <div className="hidden md:block">
-                      <EntityDetailsHeader
-                        icon={Car}
-                        title={tParking('header.newParking')}
-                        actions={[
-                          createEntityAction('save', tParking('form.create'), () => createSaveRef.current?.()),
-                          createEntityAction('cancel', tParking('form.cancel'), resetCreateForm),
-                        ]}
-                        variant="detailed"
-                      />
-                    </div>
-                  }
-                  tabsRenderer={
-                    <ParkingGeneralTab
-                      parking={EMPTY_PARKING}
-                      isEditing
-                      createMode
-                      onSaveRef={createSaveRef}
-                      onCreated={() => resetCreateForm()}
-                    />
-                  }
-                />
-              ) : (
-                <ParkingDetails
-                  parking={selectedParking}
-                  onNewParking={showTrash ? undefined : () => {
-                    openCreateForm();
-                    setSelectedParking(null);
-                  }}
-                  onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
-                />
-              )}
-            </>
-          )}
+            ) : (
+              <ParkingsList
+                parkingSpots={visibleParkingSpots}
+                selectedParking={selectedParking}
+                onSelectParking={handleSelectParking}
+                onNewItem={handleNewParking}
+              />
+            )}
+            details={isCreating ? (
+              <DetailsContainer
+                selectedItem={{ id: 'create' }}
+                header={
+                  <EntityDetailsHeader
+                    icon={Car}
+                    title={tParking('header.newParking')}
+                    actions={[
+                      createEntityAction('save', tParking('form.create'), () => createSaveRef.current?.()),
+                      createEntityAction('cancel', tParking('form.cancel'), resetCreateForm),
+                    ]}
+                    variant="detailed"
+                  />
+                }
+                tabsRenderer={
+                  <ParkingGeneralTab
+                    parking={EMPTY_PARKING}
+                    isEditing
+                    createMode
+                    onSaveRef={createSaveRef}
+                    onCreated={() => resetCreateForm()}
+                  />
+                }
+              />
+            ) : (
+              <ParkingDetails
+                parking={selectedParking}
+                onNewParking={handleNewParking}
+                onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
+              />
+            )}
+            sheetOpen={isCreating || !!selectedParking}
+            sheetTitle={isCreating ? tParking('header.newParking') : selectedParking?.number ?? ''}
+            onCloseSheet={() => {
+              setSelectedParking(null);
+              resetCreateForm();
+            }}
+          />
         </ListContainer>
 
         {/* Mobile: Filters Slide-in */}

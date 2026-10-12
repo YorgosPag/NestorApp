@@ -27,7 +27,7 @@ import { isSpaceAvailabilityBucket } from '@/lib/spaces/space-availability';
 import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
 import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { ListDetailsSplit, MobileDetailsSlideIn } from '@/core/layouts';
 import { useStoragesPageState } from '@/hooks/useStoragesPageState';
 import { useStorageStats } from '@/hooks/useStorageStats';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
@@ -45,6 +45,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import type { Storage } from '@/types/storage/contracts';
 import { useStoragesTrashState } from '@/hooks/useStoragesTrashState';
 import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
 import { useListPageHeaderState } from '@/hooks/useListPageHeaderState';
@@ -121,6 +122,18 @@ export function StoragePageContent() {
   const { showCreateForm, openCreateForm, resetCreateForm, createSaveRef } = useEntityCreateForm();
 
   const { t: tStorage } = useTranslation('storage');
+
+  // Μία δήλωση για λίστα και πλέγμα: η ίδια επιλογή, το ίδιο «Νέα», τα ίδια δεδομένα.
+  const isCreating = showCreateForm && !showTrash;
+  const visibleStorages = showTrash ? trashedStorages : filteredStorages;
+  const handleSelectStorage = (storage: Storage) => {
+    setSelectedStorage(toggleSelect(selectedStorage, storage));
+    resetCreateForm();
+  };
+  const handleNewStorage = showTrash ? undefined : () => {
+    openCreateForm();
+    setSelectedStorage(null);
+  };
 
   const handleDeleteStorage = useCallback(async () => {
     if (!selectedStorage) return;
@@ -292,70 +305,62 @@ export function StoragePageContent() {
         <DeepLinkNotice selection={selection} className="mb-2" />
 
         <ListContainer>
-          {viewMode === 'grid' ? (
-            /* 🏢 ENTERPRISE: Full-width Grid View */
-            <StorageGridView
-              storages={showTrash ? trashedStorages : filteredStorages}
-              selectedStorage={selectedStorage}
-              onSelectStorage={(s) => {
-                setSelectedStorage(toggleSelect(selectedStorage, s));
-                resetCreateForm();
-              }}
-            />
-          ) : (
-            /* 🏢 ENTERPRISE: List View with Details Panel */
-            <>
-              <StoragesList
-                storages={showTrash ? trashedStorages : filteredStorages}
+          {/* ADR-912 §12.11 — λίστα + λεπτομέρειες στο desktop, λίστα ή φύλλο στο κινητό (και για τη φόρμα δημιουργίας). */}
+          <ListDetailsSplit
+            listOnly={viewMode === 'grid'}
+            list={viewMode === 'grid' ? (
+              <StorageGridView
+                storages={visibleStorages}
                 selectedStorage={selectedStorage}
-                onSelectStorage={(s) => {
-                  setSelectedStorage(toggleSelect(selectedStorage, s));
-                  resetCreateForm();
-                }}
-                onNewItem={showTrash ? undefined : () => {
-                  openCreateForm();
-                  setSelectedStorage(null);
-                }}
+                onSelectStorage={handleSelectStorage}
               />
-              {showCreateForm && !showTrash ? (
-                <DetailsContainer
-                  selectedItem={{ id: 'create' }}
-                  header={
-                    <div className="hidden md:block">
-                      <EntityDetailsHeader
-                        icon={Warehouse}
-                        title={tStorage('header.newStorage')}
-                        actions={[
-                          createEntityAction('save', tStorage('storages.form.create'), () => createSaveRef.current?.()),
-                          createEntityAction('cancel', tStorage('storages.form.cancel'), resetCreateForm),
-                        ]}
-                        variant="detailed"
-                      />
-                    </div>
-                  }
-                  tabsRenderer={
-                    <StorageGeneralTab
-                      storage={EMPTY_STORAGE}
-                      isEditing
-                      createMode
-                      onSaveRef={createSaveRef}
-                      onCreated={() => { success(tStorage('storages.notifications.created')); resetCreateForm(); }}
-                    />
-                  }
-                />
-              ) : (
-                <StorageDetails
-                  storage={selectedStorage}
-                  onNewStorage={showTrash ? undefined : () => {
-                    openCreateForm();
-                    setSelectedStorage(null);
-                  }}
-                  onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
-                  isInTrash={showTrash}
-                />
-              )}
-            </>
-          )}
+            ) : (
+              <StoragesList
+                storages={visibleStorages}
+                selectedStorage={selectedStorage}
+                onSelectStorage={handleSelectStorage}
+                onNewItem={handleNewStorage}
+              />
+            )}
+            details={isCreating ? (
+              <DetailsContainer
+                selectedItem={{ id: 'create' }}
+                header={
+                  <EntityDetailsHeader
+                    icon={Warehouse}
+                    title={tStorage('header.newStorage')}
+                    actions={[
+                      createEntityAction('save', tStorage('storages.form.create'), () => createSaveRef.current?.()),
+                      createEntityAction('cancel', tStorage('storages.form.cancel'), resetCreateForm),
+                    ]}
+                    variant="detailed"
+                  />
+                }
+                tabsRenderer={
+                  <StorageGeneralTab
+                    storage={EMPTY_STORAGE}
+                    isEditing
+                    createMode
+                    onSaveRef={createSaveRef}
+                    onCreated={() => { success(tStorage('storages.notifications.created')); resetCreateForm(); }}
+                  />
+                }
+              />
+            ) : (
+              <StorageDetails
+                storage={selectedStorage}
+                onNewStorage={handleNewStorage}
+                onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
+                isInTrash={showTrash}
+              />
+            )}
+            sheetOpen={isCreating || !!selectedStorage}
+            sheetTitle={isCreating ? tStorage('header.newStorage') : selectedStorage?.name ?? ''}
+            onCloseSheet={() => {
+              setSelectedStorage(null);
+              resetCreateForm();
+            }}
+          />
         </ListContainer>
 
         {/* Mobile: Filters Slide-in */}
