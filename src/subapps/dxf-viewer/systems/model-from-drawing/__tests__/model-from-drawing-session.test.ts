@@ -389,4 +389,30 @@ describe('ADR-911 Φ3β — η ΜΙΑ έγκριση', () => {
     expect(state().notice).toEqual({ kind: 'no-scene' });
     expect(state().phase).toBe('picking');
   });
+
+  it('Φ4-3β — refresh χωρίς πρόταση τοίχων (συνεδρία «μόνο κουφώματα») δεν αγγίζει τίποτα', () => {
+    const h = harness();
+    modelFromDrawingSession.open();
+    // Ο έλεγχος μπορεί να αφορά ΜΟΝΟ ανοίγματα: τότε δεν υπάρχει δείγμα τοίχου να ξαναϋπολογιστεί,
+    // και μια αλλαγή επιπέδου δεν πρέπει να γράψει ψεύτικο «δεν υπάρχει ενεργό σχέδιο».
+    modelFromDrawingStore.patch({ phase: 'review' });
+    const before = state();
+
+    modelFromDrawingSession.refresh(h.deps);
+
+    expect(state()).toBe(before);
+  });
+
+  it('Φ4-3β — refresh με `keepNotice` κρατά ό,τι είπε ο ελεγκτής ανοιγμάτων· χωρίς, το σβήνει', () => {
+    const h = harness();
+    sample(h, ON_WALL_LINE);
+    const written = { kind: 'openings-written', count: 12 } as const;
+
+    modelFromDrawingStore.patch({ notice: written });
+    modelFromDrawingSession.refresh(h.deps, true);
+    expect(state().notice).toEqual(written);
+
+    modelFromDrawingSession.refresh(h.deps);
+    expect(state().notice).toBeNull();
+  });
 });

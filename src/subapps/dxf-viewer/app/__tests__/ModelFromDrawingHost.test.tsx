@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { act, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
@@ -166,5 +166,109 @@ describe('ModelFromDrawingHost', () => {
     expect(isModelFromDrawingPicking()).toBe(true);
     view.unmount();
     expect(isModelFromDrawingPicking()).toBe(false);
+  });
+});
+
+/**
+ * ADR-911 Φ4-3β — οι ραφές του δεύτερου βήματος: το ΙΔΙΟ κλικ καμβά φτάνει στον ελεγκτή του ρόλου
+ * του, το Esc ακυρώνει μόνο ό,τι περίμενε, και κάθε έγκριση ξυπνά το άλλο βήμα.
+ */
+describe('ModelFromDrawingHost — κουφώματα', () => {
+  const OPENING_LINE = ENTITIES.find((e) => (e as { type?: string; color?: string }).type === 'line'
+    && (e as { color?: string }).color?.toLowerCase() === '#00cccc') as unknown as typeof WALL_LINE;
+  const ON_OPENING_LINE = {
+    x: (OPENING_LINE.start.x + OPENING_LINE.end.x) / 2, y: (OPENING_LINE.start.y + OPENING_LINE.end.y) / 2,
+  };
+
+  /** Βοηθός ανοιχτός, τοίχοι γραμμένοι (38), πρόταση τοίχων υπό έλεγχο. */
+  function withWrittenWalls() {
+    const h = levelManagerOver(ENTITIES);
+    render(<ModelFromDrawingHost levelManager={h.levelManager} />);
+    requestAssistant();
+    clickCanvas(ON_WALL_LINE);
+    for (const g of modelFromDrawingStore.get().proposal!.groups) {
+      act(() => panel!.actions.onConfirmGroup(g.thicknessMm, g.suggestedCategory));
+    }
+    act(() => panel!.actions.onApprove());
+    return h;
+  }
+
+  it('το κουμπί οπλίζει για «κούφωμα» με ΔΙΚΗ του οδηγία· Esc γυρίζει στον έλεγχο, δεν κλείνει', () => {
+    withWrittenWalls();
+    act(() => panel!.actions.onStartOpenings());
+    expect(modelFromDrawingStore.get()).toMatchObject({ phase: 'picking', sampleRole: 'opening' });
+    expect(toolHintOverrideStore.getSnapshot()).toBe('t:modelFromDrawing.openings.pickHint');
+
+    act(() => { escape?.handle(); });
+    expect(modelFromDrawingStore.get().phase).toBe('review');
+    expect(modelFromDrawingStore.get().proposal).not.toBeNull();
+  });
+
+  it('το κλικ φτάνει στον ελεγκτή ανοιγμάτων — και ΔΕΝ αλλάζει τον ρόλο «τοίχος»', () => {
+    withWrittenWalls();
+    const wallHex = modelFromDrawingStore.get().wallColorHex;
+    act(() => panel!.actions.onStartOpenings());
+    clickCanvas(ON_OPENING_LINE);
+
+    const state = modelFromDrawingStore.get();
+    expect(state.phase).toBe('review');
+    expect(state.openingColorHex).toBe('#00cccc');
+    expect(state.wallColorHex).toBe(wallHex);
+    expect(state.openingProposal!.items.length).toBeGreaterThan(0);
+    expect(state.pendingSample).toBeNull();
+  });
+
+  it('η έγκριση κουφωμάτων γράφει στη σκηνή του levelManager, και η ειδοποίησή της επιζεί', () => {
+    const h = withWrittenWalls();
+    act(() => panel!.actions.onStartOpenings());
+    clickCanvas(ON_OPENING_LINE);
+    const writable = modelFromDrawingStore.get().openingProposal!.items.filter((i) => i.status === 'door' || i.status === 'window');
+
+    act(() => panel!.actions.onApproveOpenings());
+
+    const openings = (h.levelManager.getLevelScene('lvl_test')!.entities as unknown as { type: string }[])
+      .filter((e) => e.type === 'opening');
+    expect(openings).toHaveLength(writable.length);
+    // Ο ελεγκτής τοίχων ξαναϋπολόγισε (οι τοίχοι ενώθηκαν) ΧΩΡΙΣ να σβήσει το «γράφτηκαν Ν».
+    expect(modelFromDrawingStore.get().notice).toEqual({ kind: 'openings-written', count: writable.length });
+  });
+
+  it('ΜΟΝΟ κουφώματα, χωρίς δείγμα τοίχου: τοίχοι που υπάρχουν ήδη αρκούν, και η έγκριση δεν ζητά πρόταση τοίχων', () => {
+    const drawnByHand = withWrittenWalls().walls();
+    cleanup(); // ο πρώτος host φεύγει (και κλείνει τον βοηθό)· οι τοίχοι του μένουν ως «σχεδιασμένοι με το χέρι»
+    const h = levelManagerOver([...ENTITIES, ...(drawnByHand as unknown as Entity[])]);
+    render(<ModelFromDrawingHost levelManager={h.levelManager} />);
+    requestAssistant();
+
+    act(() => panel!.actions.onStartOpenings());
+    clickCanvas(ON_OPENING_LINE);
+    expect(modelFromDrawingStore.get()).toMatchObject({ phase: 'review', proposal: null, wallColorHex: null });
+
+    act(() => panel!.actions.onApproveOpenings());
+    // Ο ελεγκτής τοίχων δεν έχει τι να ξαναϋπολογίσει — και ΔΕΝ γράφει «δεν υπάρχει σχέδιο».
+    expect(modelFromDrawingStore.get().notice).toMatchObject({ kind: 'openings-written' });
+    expect(modelFromDrawingStore.get().proposal).toBeNull();
+  });
+
+  it('η έγκριση ΤΟΙΧΩΝ ξαναϋπολογίζει τα κουφώματα, κρατώντας το «γράφτηκαν Ν τοίχοι»', () => {
+    const h = levelManagerOver(ENTITIES);
+    render(<ModelFromDrawingHost levelManager={h.levelManager} />);
+    requestAssistant();
+    clickCanvas(ON_WALL_LINE);
+    // Κουφώματα ΠΡΙΝ από τους τοίχους: κανένας τοίχος να τα φιλοξενήσει.
+    act(() => panel!.actions.onStartOpenings());
+    clickCanvas(ON_OPENING_LINE);
+    expect(modelFromDrawingStore.get().notice).toEqual({ kind: 'no-walls' });
+    act(() => { escape?.handle(); });
+
+    // Με το χέρι: δείγμα κουφώματος στο store, ώστε η έγκριση τοίχων να έχει τι να ξαναϋπολογίσει.
+    act(() => modelFromDrawingStore.patch({ openingColorHex: '#00cccc' }));
+    for (const g of modelFromDrawingStore.get().proposal!.groups) {
+      act(() => panel!.actions.onConfirmGroup(g.thicknessMm, g.suggestedCategory));
+    }
+    act(() => panel!.actions.onApprove());
+
+    expect(modelFromDrawingStore.get().openingProposal!.items.length).toBeGreaterThan(0);
+    expect(modelFromDrawingStore.get().notice).toMatchObject({ kind: 'written', count: 38 });
   });
 });

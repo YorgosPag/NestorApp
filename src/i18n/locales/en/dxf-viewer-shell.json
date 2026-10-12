@@ -386,8 +386,68 @@
       "summary": "Wall lines: {explained} explained, {unexplained} unexplained · {ignored} of another colour",
       "unexplainedHint": "Unexplained lines are lit red in the drawing: they are wall that will not be built."
     },
+    "openings": {
+      "title": "Doors and windows",
+      "undoName": "Openings from drawing",
+      "start": "Point at an opening line",
+      "startHint": "Openings go into the walls already in the drawing — including the ones you drew by hand.",
+      "pickHint": "Click a door or window line or arc in the drawing (Esc to go back)",
+      "pickInstruction": "Point at one door or window line or arc in the drawing. The “opening” role spreads to everything of the same colour.",
+      "sample": {
+        "label": "Opening colour",
+        "change": "Other sample"
+      },
+      "status": {
+        "door": "Doors to be created",
+        "window": "Windows to be created",
+        "needs-decision": "Need a decision",
+        "existing": "Already there"
+      },
+      "choice": {
+        "door": "Door",
+        "window": "Window",
+        "none": "Nothing"
+      },
+      "review": {
+        "title": "Awaiting decision",
+        "list": "Items that need a decision",
+        "progress": "{undecided} undecided · {dismissed} not an opening · {blocked} cannot be written",
+        "keys": "↑ ↓ next · 1 door · 2 window · 3 nothing · 0 undecided · Shift: similar ones too",
+        "width": "{widthMm} mm",
+        "noWidth": "no width",
+        "occupied": "Something is drawn inside ({count} lines) — probably not an opening.",
+        "suggested": "suggested",
+        "notWritable": "Cannot be written: the drawing gives no wall or position.",
+        "similar": "Also the {count} similar",
+        "choiceFor": "Decision for item {index}"
+      },
+      "reason": {
+        "not-a-door-arc": "Arc that does not look like a door leaf",
+        "no-jamb": "No jamb found next to the arc",
+        "jambs-not-drawn": "Door on a continuous wall — the jambs are not drawn",
+        "frame-implausible": "Gap and leaf leave no plausible frame",
+        "host-undetermined": "The host wall cannot be determined",
+        "sparse-symbol": "Too few lines for a window",
+        "no-symbol": "Gap in the wall with no symbol"
+      },
+      "unexplained": "{count} lines of this colour are not explained by any opening — they are lit red in the drawing.",
+      "planRefusal": {
+        "overlap": "Nothing can be written: the new wall of an opening sits on an existing structural element.",
+        "invalid-opening": "Nothing can be written: an opening does not fit its wall.",
+        "missing-host-wall": "Nothing can be written: the wall of an opening is missing.",
+        "unmergeable-run": "Nothing can be written: two walls cannot be joined across their gap.",
+        "invalid-host-wall": "Nothing can be written: the wall of an opening is not valid.",
+        "nothing-to-write": "There is no new opening to create.",
+        "no-active-scene": "There is no active drawing."
+      },
+      "approve": "Create openings ({count})",
+      "leftOut": "{count} undecided will not be written."
+    },
     "approve": "Create walls ({count})",
     "notice": {
+      "no-line-opening": "No line found at that point. Click on a door or window line or arc.",
+      "no-walls": "There is no wall in the drawing to host an opening. Create the walls first.",
+      "openings-written": "{count} openings created. Ctrl+Z to undo.",
       "no-scene": "There is no active drawing.",
       "no-line": "No line found at that point. Click on a wall line.",
       "no-color": "The line has no colour that can become a role.",
@@ -1047,6 +1107,8 @@
     }
   },
   "autoSave": {
+    "drawingLabel": "Drawing",
+    "settingsLabel": "Settings",
     "title": "Auto-save",
     "saving": "Saving...",
     "error": "Save error",

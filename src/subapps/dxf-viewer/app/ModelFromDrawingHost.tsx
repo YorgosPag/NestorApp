@@ -40,9 +40,14 @@ import {
   type ModelFromDrawingDeps,
 } from '../systems/model-from-drawing/model-from-drawing-session';
 import {
+  modelFromDrawingOpeningsSession,
+  type OpeningSessionDeps,
+} from '../systems/model-from-drawing/model-from-drawing-openings-session';
+import {
   modelFromDrawingStore,
   useModelFromDrawingState,
 } from '../systems/model-from-drawing/model-from-drawing-store';
+import type { Point2D } from '../rendering/types/Types';
 import {
   ModelFromDrawingPanel,
   type ModelFromDrawingPanelActions,
@@ -62,12 +67,27 @@ interface AssistantWiring {
   readonly start: () => void;
 }
 
-/** Φέρνει στην οθόνη το ορθογώνιο ενός στοιχείου της πρότασης (2Δ· στο 3Δ δεν υπάρχει υψόμετρο να δοθεί). */
+/** Τα σημεία κόσμου ενός στοιχείου — τοίχου (το ορθογώνιό του) ή ανοίγματος (η ζώνη ή το κενό του). */
+function proposalItemPoints(key: string): readonly Point2D[] {
+  const state = modelFromDrawingStore.get();
+  const wall = state.proposal?.items.find((i) => i.key === key);
+  if (wall) return wall.rect.polygon.map((p) => ({ x: p.x, y: p.y }));
+  const zone = state.openingPreview?.zones.find((z) => z.key === key);
+  if (zone && zone.pieces.length > 0) return zone.pieces.flat();
+  const span = state.openingProposal?.items.find((i) => i.key === key)?.span;
+  return span ? [span.start, span.end] : [];
+}
+
+/**
+ * Φέρνει στην οθόνη ένα στοιχείο της πρότασης (2Δ· στο 3Δ δεν υπάρχει υψόμετρο να δοθεί). Το
+ * ΠΡΩΤΟ άλμα μιας συνεδρίας πλαισιώνει το στοιχείο· τα επόμενα μόνο κεντράρουν, ώστε η κλίμακα
+ * που έστησε ο άνθρωπος να μη χάνεται σε κάθε βέλος της ουράς (σύμβαση του `review-focus`).
+ */
 function focusProposalItem(key: string): void {
+  const preserveZoom = modelFromDrawingStore.get().focusedKey !== null;
   modelFromDrawingSession.focus(key);
-  const item = modelFromDrawingStore.get().proposal?.items.find((i) => i.key === key);
-  const extent = item ? reviewFocusExtent(item.rect.polygon.map((p) => ({ x: p.x, y: p.y })), FOCUS_PAD_MM) : null;
-  if (extent) focusReviewTarget(extent, () => null, false);
+  const extent = reviewFocusExtent(proposalItemPoints(key), FOCUS_PAD_MM);
+  if (extent) focusReviewTarget(extent, () => null, preserveZoom);
 }
 
 /**
@@ -102,7 +122,11 @@ function useAssistantWiring(levelManager: LevelsHookReturn, undoName: string): A
   return { getDeps, start };
 }
 
-/** Όσο ο βοηθός είναι οπλισμένος: οδηγία στη γραμμή κατάστασης, και Esc που τον κλείνει. */
+/**
+ * Όσο ο βοηθός είναι οπλισμένος: οδηγία στη γραμμή κατάστασης, και Esc. Το Esc ακυρώνει ΜΟΝΟ
+ * ό,τι περίμενε: το δείγμα «κούφωμα» γυρίζει στον έλεγχο (η πρόταση τοίχων μένει)· το δείγμα
+ * «τοίχος» κλείνει τον βοηθό, όπως πάντα.
+ */
 function useSamplePickMode(picking: boolean, hint: string): void {
   React.useEffect(() => {
     if (!picking) return;
@@ -118,7 +142,7 @@ function useSamplePickMode(picking: boolean, hint: string): void {
           priority: ESC_PRIORITY.MODAL_DIALOG,
           canHandle: () => true,
           handle: () => {
-            modelFromDrawingSession.close();
+            if (!modelFromDrawingOpeningsSession.cancelSample()) modelFromDrawingSession.close();
             return true;
           },
         }
@@ -130,33 +154,66 @@ export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps
   const { t } = useTranslation('dxf-viewer-shell');
   const state = useModelFromDrawingState();
   const { getDeps, start } = useAssistantWiring(levelManager, t('modelFromDrawing.undoName'));
-  useSamplePickMode(state.phase === 'picking', t('modelFromDrawing.pickHint'));
+  const openingsUndoName = t('modelFromDrawing.openings.undoName');
+  /** Οι εξαρτήσεις του ελεγκτή ανοιγμάτων: η ΙΔΙΑ σκηνή και στρώσεις, δική του εγγραφή ιστορικού. */
+  const getOpeningDeps = React.useCallback(
+    (): OpeningSessionDeps => ({ ...getDeps(), undoName: openingsUndoName }),
+    [getDeps, openingsUndoName],
+  );
+  const picking = state.phase === 'picking';
+  useSamplePickMode(picking, state.sampleRole === 'opening'
+    ? t('modelFromDrawing.openings.pickHint')
+    : t('modelFromDrawing.pickHint'));
 
   React.useEffect(() => EventBus.on('dxf:model-from-drawing-requested', start), [start]);
 
-  // Το κλικ του καμβά άφησε δείγμα → υιοθέτησέ το (one-shot· ο ελεγκτής το καθαρίζει).
+  // Το κλικ του καμβά άφησε δείγμα → το υιοθετεί ο ελεγκτής του ρόλου του (one-shot· ο καθένας
+  // αγνοεί το δείγμα του άλλου).
   React.useEffect(() => {
-    if (state.pendingSample) modelFromDrawingSession.adoptSample(getDeps());
-  }, [state.pendingSample, getDeps]);
+    if (!state.pendingSample) return;
+    modelFromDrawingSession.adoptSample(getDeps());
+    modelFromDrawingOpeningsSession.adoptSample(getOpeningDeps());
+  }, [state.pendingSample, getDeps, getOpeningDeps]);
 
   // Αλλαγή ενεργού επιπέδου με πρόταση ανοιχτή → η πρόταση αφορά άλλη σκηνή: ξαναϋπολόγισε.
   const levelId = levelManager.currentLevelId;
   React.useEffect(() => {
     modelFromDrawingSession.refresh(getDeps());
-  }, [levelId, getDeps]);
+    modelFromDrawingOpeningsSession.refresh(getOpeningDeps());
+  }, [levelId, getDeps, getOpeningDeps]);
 
   // Δίχτυ: αν ο host φύγει ενώ ο βοηθός είναι ανοιχτός, μη μείνει οπλισμένος ο καμβάς.
   React.useEffect(() => () => modelFromDrawingSession.close(), []);
 
-  const actions = React.useMemo((): ModelFromDrawingPanelActions => ({
+  const actions = usePanelActions(start, getDeps, getOpeningDeps);
+
+  if (state.phase === 'closed') return null;
+  return <ModelFromDrawingPanel state={state} actions={actions} />;
+}
+
+/**
+ * Οι πράξεις του πάνελ → ελεγκτές. Κάθε έγκριση αλλάζει τη σκηνή του ΑΛΛΟΥ βήματος: νέοι τοίχοι ⇒
+ * νέοι ξενιστές για κουφώματα· νέα κουφώματα ⇒ τοίχοι που ενώθηκαν. Ο άλλος ξαναϋπολογίζει χωρίς
+ * να σβήσει το «γράφτηκαν Ν».
+ */
+function usePanelActions(
+  start: () => void,
+  getDeps: () => ModelFromDrawingDeps,
+  getOpeningDeps: () => OpeningSessionDeps,
+): ModelFromDrawingPanelActions {
+  return React.useMemo((): ModelFromDrawingPanelActions => ({
     onClose: () => modelFromDrawingSession.close(),
     onResample: start,
     onConfirmGroup: (thicknessMm, category) => modelFromDrawingSession.confirmGroup(thicknessMm, category, getDeps()),
     onSetUndecided: (key, isWall) => modelFromDrawingSession.setUndecided(key, isWall, getDeps()),
     onFocus: focusProposalItem,
-    onApprove: () => { modelFromDrawingSession.approve(getDeps()); },
-  }), [start, getDeps]);
-
-  if (state.phase === 'closed') return null;
-  return <ModelFromDrawingPanel state={state} actions={actions} />;
+    onApprove: () => {
+      if (modelFromDrawingSession.approve(getDeps())) modelFromDrawingOpeningsSession.refresh(getOpeningDeps(), true);
+    },
+    onStartOpenings: () => modelFromDrawingOpeningsSession.armSample(),
+    onChooseOpening: (keys, choice) => modelFromDrawingOpeningsSession.choose(keys, choice, getOpeningDeps()),
+    onApproveOpenings: () => {
+      if (modelFromDrawingOpeningsSession.approve(getOpeningDeps())) modelFromDrawingSession.refresh(getDeps(), true);
+    },
+  }), [start, getDeps, getOpeningDeps]);
 }

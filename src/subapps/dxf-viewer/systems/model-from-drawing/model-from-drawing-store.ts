@@ -8,6 +8,9 @@
  * πρόταση που προκύπτει. Τίποτα εδώ δεν είναι η σκηνή: η σκηνή αλλάζει ΜΟΝΟ όταν ο ελεγκτής
  * (`model-from-drawing-session.ts`) καλέσει `addWallsToScene` μετά από ρητή έγκριση.
  *
+ * Φ4-3β: κρατά και το ΔΕΥΤΕΡΟ βήμα του ίδιου βοηθού — δείγμα «κούφωμα», απαντήσεις ανθρώπου
+ * ανά στοιχείο, πρόταση και προεπισκόπηση ανοιγμάτων. Ένα store, δύο ελεγκτές (τοίχοι · ανοίγματα).
+ *
  * Γράφεται μόνο σε διακριτές πράξεις (άνοιγμα · κλικ δείγματος · επιβεβαίωση ομάδας · έγκριση)
  * — ποτέ ανά καρέ, ποτέ ανά mousemove. Άρα το φύλλο προεπισκόπησης και το πάνελ μπορούν να
  * συνδρομούν χωρίς να παραβιάζουν το ADR-040 (το κέλυφος του καμβά δεν συνδρομείται ποτέ —
@@ -28,13 +31,20 @@ import type { WallCategory } from '../../bim/types/wall-types';
 import type { AddWallsRefusal } from '../../bim/walls/add-wall-to-scene';
 import type { WallProposal } from '../../bim/model-from-drawing/wall-proposal';
 import type { AssistantPreview } from '../../bim/model-from-drawing/assistant-preview';
+import type { OpeningProposal } from '../../bim/model-from-drawing/opening-proposal';
+import type { OpeningPreview } from '../../bim/model-from-drawing/opening-preview';
+import type { OpeningReviewChoices } from '../../bim/model-from-drawing/opening-review';
+import type { AddOpeningsRefusal } from '../../bim/model-from-drawing/add-openings-to-scene';
 
 /**
  * `closed`  — ο βοηθός δεν τρέχει.
- * `picking` — οπλισμένος: το επόμενο κλικ στον καμβά είναι το δείγμα «τοίχος» (Δ1).
+ * `picking` — οπλισμένος: το επόμενο κλικ στον καμβά είναι το δείγμα του `sampleRole` (Δ1).
  * `review`  — υπάρχει πρόταση υπό έλεγχο.
  */
 export type ModelFromDrawingPhase = 'closed' | 'picking' | 'review';
+
+/** Δ1 — ένα δείγμα ανά ρόλο: τοίχος, ή σύμβολο κουφώματος (Φ4-3β). */
+export type ModelFromDrawingSampleRole = 'wall' | 'opening';
 
 /** Ό,τι έχει να πει ο βοηθός για την τελευταία πράξη — ΠΑΝΤΑ με όνομα, ποτέ σιωπή. */
 export type ModelFromDrawingNotice =
@@ -46,10 +56,16 @@ export type ModelFromDrawingNotice =
   /** Υπάρχει ομάδα πάχους χωρίς επιβεβαίωση. */
   | { readonly kind: 'unconfirmed' }
   | { readonly kind: 'refused'; readonly refusal: AddWallsRefusal; readonly blocked: number }
-  | { readonly kind: 'written'; readonly count: number; readonly retrimmed: number };
+  | { readonly kind: 'written'; readonly count: number; readonly retrimmed: number }
+  /** Φ4-3β — δεν υπάρχει τοίχος στο σχέδιο να φιλοξενήσει κούφωμα. */
+  | { readonly kind: 'no-walls' }
+  | { readonly kind: 'openings-refused'; readonly refusal: AddOpeningsRefusal }
+  | { readonly kind: 'openings-written'; readonly count: number };
 
 export interface ModelFromDrawingState {
   readonly phase: ModelFromDrawingPhase;
+  /** Ποιον ρόλο δείχνει το επόμενο κλικ-δείγμα. Έχει νόημα μόνο όσο `phase === 'picking'`. */
+  readonly sampleRole: ModelFromDrawingSampleRole;
   /** Το σημείο κόσμου του κλικ-δείγματος που περιμένει υιοθέτηση από τον host. */
   readonly pendingSample: Point2D | null;
   /** Το αποδιδόμενο χρώμα (hex) που ο άνθρωπος έδειξε ως «τοίχος». */
@@ -60,6 +76,12 @@ export interface ModelFromDrawingState {
   readonly categoryByThicknessMm: ReadonlyMap<number, WallCategory>;
   readonly proposal: WallProposal | null;
   readonly preview: AssistantPreview | null;
+  /** Φ4-3β — το αποδιδόμενο χρώμα (hex) που ο άνθρωπος έδειξε ως «σύμβολο κουφώματος». */
+  readonly openingColorHex: string | null;
+  /** Φ4-3β — ό,τι απάντησε ο άνθρωπος ανά στοιχείο «προς απόφαση» (πόρτα · παράθυρο · τίποτα). */
+  readonly openingChoices: OpeningReviewChoices;
+  readonly openingProposal: OpeningProposal | null;
+  readonly openingPreview: OpeningPreview | null;
   /** «Αυτό κοιτάω τώρα» — βοήθημα ελέγχου· ΠΟΤΕ δεν αποφασίζει τι γράφεται. */
   readonly focusedKey: string | null;
   readonly notice: ModelFromDrawingNotice | null;
@@ -67,12 +89,17 @@ export interface ModelFromDrawingState {
 
 const CLOSED: ModelFromDrawingState = {
   phase: 'closed',
+  sampleRole: 'wall',
   pendingSample: null,
   wallColorHex: null,
   acceptedKeys: new Set(),
   categoryByThicknessMm: new Map(),
   proposal: null,
   preview: null,
+  openingColorHex: null,
+  openingChoices: new Map(),
+  openingProposal: null,
+  openingPreview: null,
   focusedKey: null,
   notice: null,
 };
@@ -86,6 +113,18 @@ export const modelFromDrawingStore = {
   /** Μερική ενημέρωση — ΜΟΝΟ από τον ελεγκτή. */
   patch(next: Partial<ModelFromDrawingState>): void {
     store.set({ ...store.get(), ...next });
+  },
+  /**
+   * Το αποτέλεσμα ενός επανυπολογισμού πρότασης: `computed` ⇒ έλεγχος· `null` ⇒ «χωρίς σκηνή», με όνομα,
+   * και οι αποφάσεις του ανθρώπου (`inputs`) ΜΕΝΟΥΝ. ΕΝΑ σημείο για τους δύο ελεγκτές (τοίχοι · ανοίγματα).
+   */
+  publishRecomputed(
+    inputs: Partial<ModelFromDrawingState>,
+    computed: Partial<ModelFromDrawingState> | null,
+    extra: Partial<ModelFromDrawingState> = {},
+  ): void {
+    if (!computed) this.patch({ ...inputs, notice: { kind: 'no-scene' } });
+    else this.patch({ ...inputs, ...computed, ...extra, phase: 'review', notice: null });
   },
   /** Νέα συνεδρία: οπλισμένη για δείγμα, χωρίς καμία προηγούμενη απόφαση. */
   arm(): void {

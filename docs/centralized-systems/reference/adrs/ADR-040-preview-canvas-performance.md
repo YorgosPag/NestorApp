@@ -113,6 +113,25 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-10-12 — ADR-911 Φ4-3β: δεύτερη στρώση (ανοίγματα) στο ΙΔΙΟ φύλλο προεπισκόπησης του βοηθού (CHECK 6B/6D)
+
+- **`ModelFromDrawingPreviewOverlay`** ζωγραφίζει πλέον δύο στρώσεις — τοίχους και, από πάνω τους, ανοίγματα. **Καμία
+  νέα συνδρομή**: το φύλλο κρατά το **ένα** υψίσυχνο hook (`useTransformValue`) και το **ίδιο** χαμηλόσυχνο
+  `model-from-drawing-store`. Οι στρώσεις (`WallLayer`, `OpeningLayer`, `SegmentStrokes`) είναι παιδιά **χωρίς** δική
+  τους συνδρομή· το transform περνά ως prop, όπως στο `PreviewZoneShape`. Κανόνας #4 τηρείται (≤1 στοιχείο καμβά,
+  ≤2 υψίσυχνα hooks).
+- **Το store γράφεται και από πλήκτρο** (1 · 2 · 3 · 0 μέσα στην ουρά «προς απόφαση» του πάνελ) — διακριτή πράξη
+  ανθρώπου, ποτέ ανά καρέ, ποτέ ανά mousemove. Κάθε τέτοια εγγραφή ξαναϋπολογίζει πρόταση + σχέδιο εγγραφής
+  **σύγχρονα**. ⚠️ Το κόστος του επανυπολογισμού (`computeOpeningProposal` + `planOpeningWrite`) **δεν** μετρήθηκε
+  χωριστά, ούτε σε jest ούτε σε browser· σε σχέδιο πολύ μεγαλύτερο από το σχέδιο δοκιμής θέλει μέτρηση.
+- **`CanvasSection` / `CanvasLayerStack` / `canvas-layer-stack-2d-overlays-leaf.tsx` / `useCanvasClickHandler.ts`:
+  ανέγγιχτα.** Το δεύτερο δείγμα (ρόλος «κούφωμα») περνά από τον **ίδιο** κλάδο προτεραιότητας 0.41 και την ίδια
+  πύλη event-time (`isModelFromDrawingPicking()`)· ποιος ρόλος δειγματίζεται το ξέρει το store (`sampleRole`), όχι
+  ο καμβάς.
+- **Εστίαση όψης από την ουρά**: κάθε βέλος καλεί το `focusReviewTarget` (EventBus `canvas-fit-to-view-selected` /
+  `canvas-center-on-point`) — οδηγείται από πλήκτρο, όχι από καρέ. Πρώτο άλμα = πλαισίωση, επόμενα = κεντράρισμα.
+- Πλήρης περιγραφή: ADR-911 §12, εγγραφή Φ4-3β.
+
 ### 2026-10-11 — ADR-911 Φ3β: φύλλο προεπισκόπησης του βοηθού «Μοντέλο από το σχέδιο» + κοινό primitive ζώνης (CHECK 6B/6D)
 
 - **Νέο φύλλο `ModelFromDrawingPreviewOverlay`**, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` μετά το

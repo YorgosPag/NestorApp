@@ -12,7 +12,8 @@ import React from 'react';
 import { act, render } from '@testing-library/react';
 import { ModelFromDrawingPreviewOverlay } from '../ModelFromDrawingPreviewOverlay';
 import { modelFromDrawingStore } from '../../../systems/model-from-drawing/model-from-drawing-store';
-import { ASSISTANT_STATUS_TONE } from '../../../systems/model-from-drawing/assistant-status-tone';
+import { ASSISTANT_STATUS_TONE, OPENING_STATUS_TONE } from '../../../systems/model-from-drawing/assistant-status-tone';
+import type { OpeningPreview, OpeningPreviewZone } from '../../../bim/model-from-drawing/opening-preview';
 import { PREVIEW_ZONE_STYLE } from '../../../systems/region-preview/preview-zone-style';
 import type { AssistantPreview, AssistantPreviewZone } from '../../../bim/model-from-drawing/assistant-preview';
 import type { WallProposalStatus } from '../../../bim/model-from-drawing/wall-proposal';
@@ -102,5 +103,95 @@ describe('ModelFromDrawingPreviewOverlay', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0].getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
     expect(lines[0].getAttribute('d')?.endsWith('Z')).toBe(false);
+  });
+});
+
+/**
+ * ADR-911 Φ4-3β — η στρώση ανοιγμάτων. Ίδιος έλεγχος ραφής: τόνος ΚΑΙ μοτίβο ως το τελικό SVG.
+ */
+describe('ModelFromDrawingPreviewOverlay — ανοίγματα', () => {
+  const oZone = (key: string, status: OpeningPreviewZone['status'], extra: Partial<OpeningPreviewZone> = {}): OpeningPreviewZone =>
+    ({ key, status, pieces: [rect(Number(key) * 200)], occupied: false, dismissed: false, ...extra });
+  const segment = (y: number) => ({ start: { x: 0, y }, end: { x: 100, y } });
+  const OPENINGS: OpeningPreview = {
+    zones: [
+      oZone('1', 'door'),
+      oZone('2', 'window'),
+      oZone('3', 'needs-decision', { reason: 'no-symbol', occupied: true }),
+      oZone('4', 'existing'),
+    ],
+    occupants: [segment(400)],
+    loose: [segment(420), segment(440)],
+    unexplained: [segment(460)],
+  };
+  const pathOf = (container: HTMLElement, status: string) => container.querySelector(`[data-testid="mfd-opening-${status}"] path`);
+
+  it('ο πίνακας τόνων, ΑΠΟΛΥΤΑ: ό,τι θα γραφτεί πράσινο, ό,τι ρωτιέται κεχριμπαρί, ό,τι υπάρχει γκρι', () => {
+    // Οι παρακάτω έλεγχοι συγκρίνουν το SVG με τον πίνακα· αυτός κρίνει τον ίδιο τον πίνακα.
+    expect(OPENING_STATUS_TONE).toEqual({ door: 'accept', window: 'accept', 'needs-decision': 'decide', existing: 'existing' });
+  });
+
+  it('ζωγραφίζεται και ΧΩΡΙΣ πρόταση τοίχων (τοίχοι σχεδιασμένοι με το χέρι)', () => {
+    const { container } = renderOverlay();
+    seed({ phase: 'review', preview: null, openingPreview: OPENINGS });
+    expect(container.querySelectorAll('g[data-testid^="mfd-opening-"]')).toHaveLength(4);
+    expect(container.querySelector('[data-testid^="mfd-zone-"]')).toBeNull();
+  });
+
+  it('κάθε κατάσταση με τον τόνο της· πόρτα και παράθυρο τις ξεχωρίζει η ΕΤΙΚΕΤΑ', () => {
+    const { container } = renderOverlay();
+    seed({ phase: 'review', openingPreview: OPENINGS });
+    for (const z of OPENINGS.zones) {
+      const style = PREVIEW_ZONE_STYLE[OPENING_STATUS_TONE[z.status]];
+      expect(pathOf(container, z.status)?.getAttribute('stroke')).toBe(style.stroke);
+      expect(pathOf(container, z.status)?.getAttribute('stroke-dasharray')).toBe(style.dash);
+    }
+    const label = (status: string) => container.querySelector(`[data-testid="mfd-opening-${status}"] text`)?.textContent;
+    expect(label('door')).toBe('t:modelFromDrawing.openings.choice.door');
+    expect(label('window')).toBe('t:modelFromDrawing.openings.choice.window');
+    expect(label('needs-decision')).toBeUndefined();
+    expect(label('existing')).toBeUndefined();
+  });
+
+  it('ο λόγος που ρωτιέται ο άνθρωπος φτάνει ως tooltip', () => {
+    const { container } = renderOverlay();
+    seed({ phase: 'review', openingPreview: OPENINGS });
+    expect(container.querySelector('[data-testid="mfd-opening-needs-decision"] title')?.textContent)
+      .toBe('t:modelFromDrawing.openings.reason.no-symbol');
+  });
+
+  it('«τίποτα» από τον άνθρωπο ⇒ η ζώνη γίνεται «δεν θα δημιουργηθεί»', () => {
+    const { container } = renderOverlay();
+    const dismissed = { ...OPENINGS, zones: OPENINGS.zones.map((z) => (z.key === '3' ? { ...z, dismissed: true } : z)) };
+    seed({ phase: 'review', openingPreview: dismissed });
+    expect(pathOf(container, 'needs-decision')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
+  });
+
+  it('άρνηση του σχεδίου εγγραφής ⇒ ό,τι «θα γραφόταν» κοκκινίζει· τα υπόλοιπα μένουν όπως ήταν', () => {
+    const { container } = renderOverlay();
+    seed({ phase: 'review', openingPreview: { ...OPENINGS, refusal: 'overlap' } });
+    expect(pathOf(container, 'door')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
+    expect(pathOf(container, 'window')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
+    expect(pathOf(container, 'needs-decision')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.decide.stroke);
+    expect(pathOf(container, 'existing')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.existing.stroke);
+  });
+
+  it('ένοικοι και σύμβολα χωρίς λωρίδα στο χρώμα της απόφασης· ανεξήγητες στο χρώμα της απόρριψης', () => {
+    const { container } = renderOverlay();
+    seed({ phase: 'review', openingPreview: OPENINGS });
+    const strokes = (testId: string) => [...container.querySelectorAll(`[data-testid="${testId}"]`)].map((p) => p.getAttribute('stroke'));
+    expect(strokes('mfd-opening-occupant')).toEqual([PREVIEW_ZONE_STYLE.decide.stroke]);
+    expect(strokes('mfd-opening-loose')).toEqual([PREVIEW_ZONE_STYLE.decide.stroke, PREVIEW_ZONE_STYLE.decide.stroke]);
+    expect(strokes('mfd-opening-unexplained')).toEqual([PREVIEW_ZONE_STYLE.reject.stroke]);
+  });
+
+  it('τα ανοίγματα ζωγραφίζονται ΠΑΝΩ από τους τοίχους, και το εστιασμένο τελευταίο', () => {
+    const { container } = renderOverlay();
+    seed({ phase: 'review', preview: PREVIEW, openingPreview: OPENINGS, focusedKey: '4' });
+    const ids = zoneGroups(container).map((g) => g.getAttribute('data-testid') ?? '');
+    const firstOpening = ids.findIndex((id) => id.startsWith('mfd-opening-'));
+    expect(ids.slice(0, firstOpening).every((id) => id.startsWith('mfd-zone-'))).toBe(true);
+    expect(ids.slice(firstOpening).every((id) => id.startsWith('mfd-opening-'))).toBe(true);
+    expect(ids[ids.length - 1]).toBe('mfd-opening-existing');
   });
 });

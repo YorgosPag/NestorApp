@@ -37,11 +37,11 @@ const STATUS_LABEL_KEY: Readonly<Record<WallProposalStatus, string>> = {
   rejected: 'modelFromDrawing.status.rejected',
 };
 
-const SECTION_TITLE = 'm-0 text-xs font-semibold text-foreground';
-const MUTED = 'm-0 text-[11px] text-muted-foreground';
+export const SECTION_TITLE = 'm-0 text-xs font-semibold text-foreground';
+export const MUTED = 'm-0 text-[11px] text-muted-foreground';
 
 /** Δείγμα γραμμής ενός τόνου — το ΙΔΙΟ χρώμα και μοτίβο με τον καμβά (ένα SSoT, δύο αναγνώστες). */
-function ToneSwatch({ tone }: { readonly tone: PreviewZoneTone }): React.ReactElement {
+export function ToneSwatch({ tone }: { readonly tone: PreviewZoneTone }): React.ReactElement {
   const style = PREVIEW_ZONE_STYLE[tone];
   return (
     <svg width="30" height="10" viewBox="0 0 30 10" className="shrink-0" aria-hidden="true">

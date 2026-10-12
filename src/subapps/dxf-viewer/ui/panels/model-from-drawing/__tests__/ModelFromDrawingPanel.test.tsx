@@ -65,12 +65,17 @@ const ALL_CONFIRMED = propose(new Map(UNCONFIRMED.groups.map((g) => [g.thickness
 function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingState {
   return {
     phase: 'review',
+    sampleRole: 'wall',
     pendingSample: null,
     wallColorHex: '#003fff',
     acceptedKeys: new Set(),
     categoryByThicknessMm: new Map(),
     proposal: UNCONFIRMED,
     preview: null,
+    openingColorHex: null,
+    openingChoices: new Map(),
+    openingProposal: null,
+    openingPreview: null,
     focusedKey: null,
     notice: null,
     ...patch,
@@ -81,6 +86,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
   return {
     onClose: jest.fn(), onResample: jest.fn(), onConfirmGroup: jest.fn(),
     onSetUndecided: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
+    onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(),
   };
 }
 
