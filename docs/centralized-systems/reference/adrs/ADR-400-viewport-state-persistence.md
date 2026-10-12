@@ -39,10 +39,10 @@ floor (`currentLevelId`) to:
 | Concern | Implementation |
 |---|---|
 | SSoT service | `services/viewport-persistence.ts` — serialize/parse, URL read/write, localStorage fallback, finite/NaN guards |
-| Write | `hooks/canvas/useViewportUrlSync.ts` — debounced (~400ms) `TransformStore.subscribe` → `persistViewport()`; immediate write on floor (`levelId`) change |
+| Write | `hooks/canvas/useViewportUrlSync.ts` — debounced (~400ms) `TransformStore.subscribe` → `persistViewport()`; immediate write on floor (`levelId`) change. On the identity transform it writes **only** `lvl` (`writeLevelToUrl`, 2026-10-12) — never `s/ox/oy` |
 | Restore (transform) | `app/useAutoFitOnFileChange.ts` — on first scene, `readPersistedViewport()`; if a transform exists → emit `canvas-restore-viewport`, else fit-to-view |
 | Restore applier | `hooks/canvas/useFitToView.ts` — listens `canvas-restore-viewport`, validates, `setTransform()` (absolute, no bounds math) |
-| Restore (floor) | `systems/levels/LevelsSystem.tsx` — one-shot effect (when `levels` first becomes non-empty) → `setCurrentLevelId()` if the URL `lvl` matches an existing level (`useRef` guard) |
+| Restore (floor) | `systems/levels/hooks/useUrlLevelRestore.ts` (called by `LevelsSystem.tsx`) — reads the URL `lvl` **once, on first render**; when `levels` first becomes non-empty → `setCurrentLevelId()` if it matches an existing level. It must NOT re-read the URL inside the effect (2026-10-12: the writer runs first in the same commit) |
 | Mount | `app/DxfViewerContent.tsx` — `useViewportUrlSync({ fileRecordId, levelId })` |
 | Storage key | `utils/storage-utils.ts` → `STORAGE_KEYS.VIEWPORT_STATE_PREFIX = 'dxf-viewer:viewport-state'` (suffix `:{fileRecordId}`) |
 
@@ -58,7 +58,8 @@ floor (`currentLevelId`) to:
   `TransformStore.subscribe` (debounced), reading latest props via refs. It does
   **not** call `useSyncExternalStore`, renders nothing, and adds no subscription
   to the `CanvasSection`/`CanvasLayerStack` orchestrators (CHECK 6B/6C/6D safe).
-- The pre-fit identity transform `{1,0,0}` is never persisted.
+- The pre-fit identity transform `{1,0,0}` is never persisted. The **level** is: on the identity
+  transform only `lvl` is written (2026-10-12).
 
 ### Guards
 - A transform is restorable only when `scale`, `offsetX`, `offsetY` are all finite
@@ -140,6 +141,22 @@ needs its own focused session + browser repro). The `canvas-fit-to-view {auto}` 
 5. FPS during pan/zoom unchanged (ADR-040 — no re-render regression).
 
 ## Changelog
+- **2026-10-12** — **Το `lvl` γράφεται και σε άδειο, ακίνητο καμβά (ADR-914 §2.16, committed `cada2cd7`).**
+  Το επίπεδο γραφόταν μόνο μαζί με τον μετασχηματισμό, και ο ουδέτερος δεν γράφεται ποτέ: αλλαγή
+  επιπέδου σε κενό καμβά + F5 άνοιγε το **προηγούμενο** επίπεδο. Τώρα σε ουδέτερο μετασχηματισμό
+  γράφεται **μόνο** το `lvl` (`writeLevelToUrl` στο `viewport-persistence.ts`)· ποτέ `s/ox/oy`, και
+  το `lvl` δεν σβήνεται όταν δεν υπάρχει ακόμη επίπεδο.
+  - ⚠️ **Η επαναφορά ορόφου άλλαξε θέση και χρονισμό.** Ήταν effect του `LevelsSystem` που
+    ξαναδιάβαζε τη διεύθυνση όταν έφτανε η λίστα. Ο γραφέας (`useViewportUrlSync`) είναι
+    **απόγονος**, άρα το effect του τρέχει **πρώτο** στο ίδιο commit: θα έγραφε το επίπεδο που
+    εξέλεξε η συνδρομή πάνω στον σύνδεσμο, και το F5 θα τον έχανε. Νέο
+    `systems/levels/hooks/useUrlLevelRestore.ts`: ο σύνδεσμος διαβάζεται **μία φορά, στο πρώτο
+    render**. Ο πίνακας Architecture ενημερώθηκε.
+  - **Άγκυρες:** `useViewportUrlSync-level.test.tsx` (4) · `url-level-restore.test.tsx` (5).
+  - **Παραγωγή, 2026-10-12:** σύνδεσμος μόνο με `?lvl=` μη προεπιλεγμένου επιπέδου ✅ · αλλαγή σε
+    άδειο επίπεδο + F5 ✅ · σύνδεσμος με `s/ox/oy/lvl` ✅ (η κάμερα επανήλθε).
+  - Δεν άλλαξε: αλλαγή επιπέδου που έχει αποθηκευμένη κάμερα στο `localStorage` ξαναπαίρνει
+    `s/ox/oy` (εφεδρεία ανά αρχείο) — αναμενόμενο.
 - **2026-10-08** — **«Άνοιγμα στο DXF»: ο deep-link `?lvl=` απέκτησε γραφέα ΕΞΩ από τον viewer.**
   Ως τώρα το `lvl` το έγραφε μόνο ο ίδιος ο viewer (για refresh / share). Η καρτέλα «Κάτοψη» ενός
   ακινήτου έδειχνε το σχέδιο αλλά δεν είχε **κανέναν** δρόμο προς το επίπεδό του — ο άνθρωπος άνοιγε

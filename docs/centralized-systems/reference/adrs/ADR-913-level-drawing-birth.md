@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ — committed `9673f9c0` (2026-10-11)** · επαλήθευση σε browser **ΜΕΡΙΚΗ**: βήματα 1 και 3 πέρασαν, 2 και 4 μισά, 5 ανεκτέλεστο (δες §8) · 🔴 v1.2 **uncommitted**: φρουρός φόρτωσης με μίσθωση (§3.6) |
+| **Status** | 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ — committed `9673f9c0` (2026-10-11)** · επαλήθευση σε browser **ΜΕΡΙΚΗ**: βήματα 1 και 3 πέρασαν, 2 και 4 μισά, 5 ανεκτέλεστο (δες §8) · v1.2 committed `0b831036`: φρουρός φόρτωσης με μίσθωση (§3.6) |
 | **Date** | 2026-10-11 |
 | **Category** | DXF Viewer / Persistence / Data Integrity |
 | **Canonical Location** | `src/subapps/dxf-viewer/systems/levels/level-drawing-birth.ts` · `src/subapps/dxf-viewer/systems/levels/level-file-less-target.ts` · `src/subapps/dxf-viewer/hooks/scene/scene-save-ticket.ts` |
