@@ -20,6 +20,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { isPropertyViewLevel } from '@/lib/dxf-viewer/level-view-kind';
 
 const logger = createModuleLogger('FloorWipeQueries');
 
@@ -64,7 +65,15 @@ export async function listBackgrounds(
   }));
 }
 
-export async function listDxfLevels(
+/**
+ * Το επίπεδο (ή τα επίπεδα) που είναι **η κάτοψη του ορόφου**.
+ *
+ * 🔴 ADR-914 §2.17 — οι κατόψεις **ακινήτων** του ορόφου μοιράζονται το `floorId` του (ADR-420)
+ * χωρίς να είναι ο όροφος. Το `floorId ==` τις έφερνε όλες, και το wipe αντικατάστασης έσβηνε
+ * οριστικά το σχέδιο κάθε διαμερίσματος του ορόφου. Το φίλτρο γίνεται στη μνήμη: τα παλιά
+ * επίπεδα δεν έχουν καν το πεδίο `propertyId`, και το Firestore δεν ρωτά «απόν Ή null».
+ */
+export async function listStoreyDxfLevels(
   db: Firestore,
   companyId: string,
   floorId: string,
@@ -74,7 +83,10 @@ export async function listDxfLevels(
     .where('companyId', '==', companyId)
     .where('floorId', '==', floorId)
     .get();
-  return snap.docs.map((d) => {
+  const storeyDocs = snap.docs.filter(
+    (d) => !isPropertyViewLevel(d.data() as { propertyId?: string | null }),
+  );
+  return storeyDocs.map((d) => {
     const data = d.data() as { sceneFileId?: string | null };
     return {
       ref: d.ref,

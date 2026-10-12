@@ -18,9 +18,10 @@
  * Confirm → HARD wipe (no trash) → upload. Skip dialog when nothing exists.
  *
  * Constraints:
- *   - PDF/Image require a floorId. For `entityType='floor'` use `entityId`,
- *     for `entityType='unit'` use `levelFloorId`. Other entity types accept
- *     DXF only.
+ *   - The wipe and the raster background belong to the STOREY view, so both
+ *     apply to `entityType='floor'` only (ADR-914 §2.17). Every other target
+ *     accepts DXF only and replaces its own previous file by supersession
+ *     (StepUpload), never by wiping the floor.
  *
  * @module features/floorplan-import/hooks/useFloorplanSmartUpload
  * @enterprise ADR-340 Phase 4 reborn
@@ -174,11 +175,13 @@ export function useFloorplanSmartUpload(
 
   const detectFormat = useCallback((file: File) => detectFloorplanFormat(file), []);
 
+  // 🔴 ADR-914 §2.17 — ο όροφος του οποίου η ΟΨΗ αντικαθίσταται: μόνο όταν ο στόχος ΕΙΝΑΙ ο
+  // όροφος. Το `config.levelFloorId` μιας πολυεπίπεδης μονάδας απαντά «ποιον όροφο απεικονίζει
+  // η κάτοψη» (ADR-236)· διαβαζόταν ως «ποιον όροφο αντικαθιστά», και η εισαγωγή για ένα
+  // διαμέρισμα έσβηνε την κάτοψη, το υπόβαθρο και τα πολύγωνα ολόκληρου του ορόφου.
   const resolveFloorId = useCallback((): string | null => {
-    if (config.entityType === 'floor') return config.entityId;
-    if (config.entityType === 'property' && config.levelFloorId) return config.levelFloorId;
-    return null;
-  }, [config.entityType, config.entityId, config.levelFloorId]);
+    return config.entityType === 'floor' ? config.entityId : null;
+  }, [config.entityType, config.entityId]);
 
   const fetchPreview = useCallback(
     async (floorId: string): Promise<FloorWipePreview> => {

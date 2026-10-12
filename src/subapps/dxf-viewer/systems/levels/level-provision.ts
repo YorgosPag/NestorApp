@@ -26,6 +26,7 @@
 import type { AddLevel, FloorplanType, Level, LevelBirthBinding } from './config';
 import { levelScopeFields, resolveLevelScopeAssignment } from './level-building-scope';
 import { levelsSharingNameScope } from './utils';
+import { isPropertyViewLevel } from '@/lib/dxf-viewer/level-view-kind';
 
 /** Ό,τι χρειάζεται ο provisioner από το σύστημα επιπέδων. */
 export interface LevelProvisioner {
@@ -114,7 +115,7 @@ export function uniqueLevelName(
  * του ορόφου της χωρίς να ΕΙΝΑΙ ο όροφος — όποιος ψάχνει «το επίπεδο του ορόφου» ρωτά εδώ.
  */
 export function isStoreyLevelOf(level: Pick<Level, 'floorId' | 'propertyId'>, floorId: string): boolean {
-  return level.floorId === floorId && !level.propertyId;
+  return level.floorId === floorId && !isPropertyViewLevel(level);
 }
 
 /** Το επίπεδο που υπάρχει ήδη για αυτή τη δέσμευση — μόνο όροφος και ακίνητο έχουν ταυτότητα. */

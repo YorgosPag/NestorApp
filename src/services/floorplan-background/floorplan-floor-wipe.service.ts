@@ -8,12 +8,18 @@
  * starts from a CLEAN floor — no orphan backgrounds, no stale polygons,
  * no dangling files, no leaked Storage objects.
  *
+ * 🔴 ADR-914 §2.17 — SCOPE = THE STOREY VIEW, not "everything sharing floorId".
+ * A floor has many views: its storey level and one floorplan per property on it
+ * (ADR-914 §2.13). They all carry the same `floorId` (BIM scope key, ADR-420).
+ * Property views — their level binding, FileRecord and bytes — are never
+ * touched here: replacing one view must not delete another.
+ *
  * HARD delete only. No trash, no soft-delete, no recovery.
  *
  * Wipes (per floor + tenant):
  *   1. floorplan_overlays  (ADR-340 polygons)
  *   2. dxf_overlay_levels/{levelId}/items (legacy DXF polygons)
- *   3. dxf_viewer_levels — CONTENT cleared (sceneFileId/sceneFileName → null),
+ *   3. dxf_viewer_levels (storey levels only) — CONTENT cleared (sceneFileId/sceneFileName → null),
  *      structure preserved so the active editing session keeps a valid
  *      `currentLevelId` and the next wizard re-import re-binds the same doc.
  *   4. floorplan_backgrounds docs (ADR-340)
@@ -48,7 +54,7 @@ import {
 } from './bim-floor-wipe.service';
 import {
   listBackgrounds,
-  listDxfLevels,
+  listStoreyDxfLevels,
   loadFileRows,
   listAllFloorFileRows,
   loadFloorProjectId,
@@ -176,7 +182,7 @@ export class FloorplanFloorWipeService {
       await Promise.all([
         FloorplanCascadeDeleteService.getFloorPolygonState(companyId, floorId),
         listBackgrounds(db, companyId, floorId),
-        listDxfLevels(db, companyId, floorId),
+        listStoreyDxfLevels(db, companyId, floorId),
         listAllFloorFileRows(db, companyId, floorId),
         countBimForFloor(companyId, floorId),
       ]);
@@ -228,7 +234,7 @@ async function executeWipe(
   const db = getDb();
   const [backgrounds, dxfLevels, projectId] = await Promise.all([
     listBackgrounds(db, companyId, floorId),
-    listDxfLevels(db, companyId, floorId),
+    listStoreyDxfLevels(db, companyId, floorId),
     loadFloorProjectId(db, companyId, floorId),
   ]);
 

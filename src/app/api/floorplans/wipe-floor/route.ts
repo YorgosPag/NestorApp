@@ -8,7 +8,8 @@
  *
  * Used by the unified Wizard upload flow (DXF + PDF + Image) to clear all
  * prior state before a new background is uploaded. Replace flow guarantees:
- * one floorplan per floor at any time, no orphans.
+ * one STOREY floorplan per floor at any time, no orphans. Property floorplans
+ * on the same floor are separate views and are never wiped (ADR-914 §2.17).
  *
  * RBAC: super_admin, company_admin, internal_user.
  *
