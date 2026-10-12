@@ -26,6 +26,7 @@
 import * as React from 'react';
 import { CircleAlert, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import {
   countOpeningsByStatus,
   type OpeningProposal,
@@ -118,15 +119,15 @@ function ChoiceButtons({ item, index, current, similarCount, onChoose, t }: Choi
       aria-label={t('modelFromDrawing.openings.review.choiceFor', { index })}
     >
       {OPENING_REVIEW_CHOICES.map((choice) => (
-        <Button
+        <ToggleButton
           key={choice} type="button" size="xs" tabIndex={-1}
-          variant={current === choice ? 'default' : 'outline'} aria-pressed={current === choice}
+          pressed={current === choice}
           data-choice={choice} data-suggested={suggested === choice}
           onClick={() => onChoose(current === choice ? null : choice, false)}
         >
           {t(OPENING_CHOICE_LABEL_KEY[choice])}
           {suggested === choice ? <small className="ml-1 opacity-70">{t('modelFromDrawing.openings.review.suggested')}</small> : null}
-        </Button>
+        </ToggleButton>
       ))}
       {current !== undefined && similarCount > 0 ? (
         <Button type="button" variant="ghost" size="xs" tabIndex={-1} data-testid="mfd-opening-similar" onClick={() => onChoose(current, true)}>

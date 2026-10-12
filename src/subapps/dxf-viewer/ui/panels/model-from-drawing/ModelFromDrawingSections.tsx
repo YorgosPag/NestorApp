@@ -10,6 +10,7 @@
 import * as React from 'react';
 import { Check, CircleAlert, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { WallCategory } from '../../../bim/types/wall-types';
 import type {
@@ -161,19 +162,19 @@ function DecisionRow({ item, accepted, focused, onSetUndecided, onFocus, t }: De
   });
   return (
     <li className="flex items-center gap-1.5 py-1" data-testid="mfd-decision" data-focused={focused}>
-      <Button
-        type="button" variant={focused ? 'secondary' : 'ghost'} size="icon-sm"
+      <ToggleButton
+        type="button" pressed={focused} variant="ghost" size="icon-sm"
         aria-label={t('modelFromDrawing.decisions.focus')} onClick={() => onFocus(item.key)}
       >
         <Crosshair className="size-3.5" aria-hidden="true" />
-      </Button>
+      </ToggleButton>
       <span className="flex-1 font-mono text-[11px] text-foreground">{dims}</span>
-      <Button
-        type="button" variant={accepted ? 'default' : 'outline'} size="xs"
-        aria-pressed={accepted} onClick={() => onSetUndecided(item.key, !accepted)}
+      <ToggleButton
+        type="button" pressed={accepted} size="xs"
+        onClick={() => onSetUndecided(item.key, !accepted)}
       >
         {t('modelFromDrawing.decisions.isWall')}
-      </Button>
+      </ToggleButton>
     </li>
   );
 }
@@ -221,12 +222,12 @@ export function RejectedSection(props: {
       <ul className="m-0 list-none p-0">
         {items.map((item) => (
           <li key={item.key} className="flex items-center gap-1.5 py-1" data-testid="mfd-rejected">
-            <Button
-              type="button" variant={item.key === props.focusedKey ? 'secondary' : 'ghost'} size="icon-sm"
+            <ToggleButton
+              type="button" pressed={item.key === props.focusedKey} variant="ghost" size="icon-sm"
               aria-label={t('modelFromDrawing.decisions.focus')} onClick={() => props.onFocus(item.key)}
             >
               <Crosshair className="size-3.5" aria-hidden="true" />
-            </Button>
+            </ToggleButton>
             <span className="flex-1 text-[11px] text-foreground">{item.reason ? t(item.reason) : ''}</span>
           </li>
         ))}
