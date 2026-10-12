@@ -97,6 +97,19 @@ function applyViewportToParams(
 }
 
 /**
+ * Γράψε στη διεύθυνση **μόνο** το ανοιχτό επίπεδο — τα κλειδιά της κάμερας μένουν ανέγγιχτα
+ * (ADR-914 §2.16).
+ *
+ * Το επίπεδο είναι **ποιο έγγραφο βλέπω**, όχι πού κοιτάζει η κάμερα· δεμένο στον μετασχηματισμό
+ * δεν γραφόταν ποτέ σε άδειο, ακίνητο καμβά (ο ουδέτερος μετασχηματισμός δεν αποθηκεύεται), και
+ * F5 εκεί άνοιγε το προηγούμενο επίπεδο. Δεν **σβήνει** ποτέ: «κανένα ανοιχτό επίπεδο» είναι η
+ * κατάσταση του bootstrap, όπου ο σύνδεσμος περιμένει ακόμη να διαβαστεί.
+ */
+export function writeLevelToUrl(levelId: string): void {
+  replaceUrlSearchParams((params) => params.set(URL_KEYS.level, levelId));
+}
+
+/**
  * Merge the viewport state into a (copy of the) base search params, preserving
  * any unrelated query keys already present.
  */

@@ -37,7 +37,11 @@ jest.mock('@/components/properties/shared/useFloorsByBuilding', () => ({
   useFloorsByBuilding: () => ({ floors: [], loading: false }),
 }));
 jest.mock('@/services/file-record.service', () => ({ FileRecordService: { moveToTrash: jest.fn() } }));
-jest.mock('../ensure-levels-for-building', () => ({ ensureLevelsForBuilding: jest.fn() }));
+// Μόνο ο βρόχος της αναπλήρωσης είναι ψεύτικος· η ΑΠΟΦΑΣΗ «τρέχει;» (ADR-914 §2.15) είναι η αληθινή.
+jest.mock('../ensure-levels-for-building', () => ({
+  ...jest.requireActual('../ensure-levels-for-building'),
+  ensureLevelsForBuilding: jest.fn(),
+}));
 
 import { useFloorplanImportComplete } from '../../../ui/components/level-panel-hooks';
 import type { FloorplanImportCompleteDeps } from '../../../ui/components/level-panel-hooks';
@@ -150,11 +154,13 @@ async function runImportComplete(meta: WizardCompleteMeta): Promise<{
   captured: CapturedContext[];
   targetLevelId: string | null;
   addLevel: jest.Mock;
+  triggerAllFloorsBackfill: jest.Mock;
 }> {
   const active = activeLevelOfBuildingA();
   const captured: CapturedContext[] = [];
   let targetLevelId: string | null = null;
   const addLevel = jest.fn(async () => 'lvl_new-0000-0000-0000-000000000002');
+  const triggerAllFloorsBackfill = jest.fn();
 
   const deps: FloorplanImportCompleteDeps = {
     resolver: {
@@ -170,7 +176,7 @@ async function runImportComplete(meta: WizardCompleteMeta): Promise<{
       captured.push({ levelId, context: context as unknown as Record<string, unknown> });
     },
     entityTypeToFloorplanType: () => 'unit',
-    triggerAllFloorsBackfill: jest.fn(),
+    triggerAllFloorsBackfill,
     onSceneImported: jest.fn(),
   };
 
@@ -178,7 +184,7 @@ async function runImportComplete(meta: WizardCompleteMeta): Promise<{
   await act(async () => {
     await result.current(new File(['0'], 'katopsi.dxf'), meta);
   });
-  return { active, captured, targetLevelId, addLevel };
+  return { active, captured, targetLevelId, addLevel, triggerAllFloorsBackfill };
 }
 
 /** Η επιλογή «μονάδα του ορόφου B1, στο κτήριο Β» — όπως τη στέλνει ο οδηγός. */
@@ -224,6 +230,26 @@ describe('Κ2 — 🔴 ο ΠΑΡΑΓΩΓΟΣ: τι γράφει ο εισαγω�
   it('🔑 η εισαγωγή κάτοψης ακινήτου ΔΕΝ γράφει πάνω σε επίπεδο ορόφου — καμία δεύτερη εγγραφή', async () => {
     const { captured } = await runImportComplete(UNIT_SELECTION_IN_BUILDING_B);
     expect(captured).toEqual([]);
+  });
+
+  // ADR-914 §2.15 — μετρημένο σε Chrome: εισαγωγή κάτοψης ακινήτου γέμιζε το κτίριο με άδεια
+  // επίπεδα ορόφων, επειδή η επιλογή «όλο το κτίριο» είναι αναμμένη εξ ορισμού (ADR-448).
+  it('🔑 εισαγωγή κάτοψης ΑΚΙΝΗΤΟΥ δεν ζητά αναπλήρωση ορόφων, ακόμη και με την επιλογή αναμμένη', async () => {
+    const { triggerAllFloorsBackfill } = await runImportComplete({
+      ...UNIT_SELECTION_IN_BUILDING_B,
+      loadAllFloors: true,
+    });
+    expect(triggerAllFloorsBackfill).not.toHaveBeenCalled();
+  });
+
+  it('εισαγωγή κάτοψης ΟΡΟΦΟΥ με την επιλογή αναμμένη τη ζητά — για το κτίριο του ορόφου', async () => {
+    const { triggerAllFloorsBackfill } = await runImportComplete({
+      ...UNIT_SELECTION_IN_BUILDING_B,
+      entityType: 'floor',
+      entityId: FLOOR_B1,
+      loadAllFloors: true,
+    });
+    expect(triggerAllFloorsBackfill).toHaveBeenCalledWith(BLDG_B);
   });
 
   it('η γενική κάτοψη ΚΤΗΡΙΟΥ δεν κληρονομεί σιωπηλά τον όροφο του προηγούμενου', async () => {

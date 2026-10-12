@@ -6,7 +6,11 @@
  * duplicates, and floor-less inputs are ignored.
  */
 
-import { ensureLevelsForBuilding, type BuildingFloorInput } from '../ensure-levels-for-building';
+import {
+  ensureLevelsForBuilding,
+  resolveAllFloorsBackfillBuilding,
+  type BuildingFloorInput,
+} from '../ensure-levels-for-building';
 import type { LevelFloorResolver } from '../level-floor-resolution';
 import type { Level } from '../config';
 
@@ -81,10 +85,45 @@ describe('ensureLevelsForBuilding (ADR-448 Phase 3)', () => {
     expect(results.filter((r) => r.created)).toHaveLength(3);
   });
 
+  // ADR-914 §8.13 — μετρημένο σε Chrome: μετά την εισαγωγή ο viewer κατέληγε στον ΤΕΛΕΥΤΑΙΟ
+  // όροφο που γέννησε η αναπλήρωση (κενό), όχι στην κάτοψη που μόλις μπήκε.
+  it('🔑 δεν επιλέγει ΠΟΤΕ επίπεδο — κάθε γέννηση ζητά ρητά «χωρίς επιλογή»', async () => {
+    const selectFlags: Array<boolean | undefined> = [];
+    const resolver = makeResolver();
+    const quiet: LevelFloorResolver = {
+      levels: resolver.levels,
+      addLevel: (name, setAsDefault, floorId, birth, options) => {
+        selectFlags.push(options?.select);
+        return resolver.addLevel(name, setAsDefault, floorId, birth, options);
+      },
+    };
+
+    await ensureLevelsForBuilding(quiet, FLOORS, 'bld-1');
+
+    expect(selectFlags).toEqual([false, false, false, false]);
+  });
+
   it('skips floor-less inputs (no id)', async () => {
     const resolver = makeResolver();
     const dirty: BuildingFloorInput[] = [...FLOORS, { id: '', number: 5 }];
     const results = await ensureLevelsForBuilding(resolver, dirty, 'bld-1');
     expect(results).toHaveLength(4);
+  });
+});
+
+describe('resolveAllFloorsBackfillBuilding — ΠΟΤΕ τρέχει η αναπλήρωση (ADR-914 §8.13)', () => {
+  it('όροφος / κτίριο με αναμμένη την επιλογή ⇒ το κτίριο', () => {
+    expect(resolveAllFloorsBackfillBuilding({ loadAllFloors: true, entityType: 'floor' }, 'bld-1')).toBe('bld-1');
+    expect(resolveAllFloorsBackfillBuilding({ loadAllFloors: true, entityType: 'building' }, 'bld-1')).toBe('bld-1');
+  });
+
+  it('🔑 κάτοψη ΑΚΙΝΗΤΟΥ ⇒ καμία αναπλήρωση, ακόμη κι αν η επιλογή έμεινε αναμμένη', () => {
+    expect(resolveAllFloorsBackfillBuilding({ loadAllFloors: true, entityType: 'property' }, 'bld-1')).toBeNull();
+  });
+
+  it('σβηστή επιλογή ή κανένα κτίριο ⇒ καμία αναπλήρωση', () => {
+    expect(resolveAllFloorsBackfillBuilding({ loadAllFloors: false, entityType: 'floor' }, 'bld-1')).toBeNull();
+    expect(resolveAllFloorsBackfillBuilding({ entityType: 'floor' }, 'bld-1')).toBeNull();
+    expect(resolveAllFloorsBackfillBuilding({ loadAllFloors: true, entityType: 'project' }, null)).toBeNull();
   });
 });

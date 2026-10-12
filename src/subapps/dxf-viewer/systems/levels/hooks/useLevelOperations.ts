@@ -121,7 +121,10 @@ export function useLevelOperations({
   sceneManagerRef.current = sceneManager;
 
   const addLevel = useCallback<AddLevel>(
-    async (name, setAsDefault = false, floorId, birth) => {
+    async (name, setAsDefault = false, floorId, birth, options) => {
+      // ADR-914 §2.15 — γέννηση στο παρασκήνιο (`select: false`) δεν αλλάζει ΠΟΤΕ το ανοιχτό
+      // επίπεδο: η επιλογή ανήκει στη ρητή ενέργεια του ανθρώπου, όχι σε ό,τι γεννιέται γύρω της.
+      const selectsNewLevel = options?.select !== false && (setAsDefault || settings.autoSelectNewLevel);
       try {
         setIsLoading(true);
 
@@ -159,7 +162,7 @@ export function useLevelOperations({
             buildNewLevel({ id: enterpriseId, name, order, isDefault: setAsDefault, floorId, birth }),
           );
 
-          if (setAsDefault || settings.autoSelectNewLevel) {
+          if (selectsNewLevel) {
             setCurrentLevelId(enterpriseId);
             onLevelChange?.(enterpriseId);
           }
@@ -174,7 +177,7 @@ export function useLevelOperations({
           );
           setLevels(updatedLevels);
 
-          if (setAsDefault || settings.autoSelectNewLevel) {
+          if (selectsNewLevel) {
             setCurrentLevelId(newLevelId);
             onLevelChange?.(newLevelId);
           }

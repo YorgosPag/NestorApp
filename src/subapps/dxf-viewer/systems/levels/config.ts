@@ -74,12 +74,26 @@ export interface LevelBirthBinding {
   readonly entityLabel?: string;
 }
 
+/**
+ * ADR-914 §2.15 — πώς **συμπεριφέρεται** η γέννηση, όχι τι γράφεται στο επίπεδο (αυτό είναι το
+ * {@link LevelBirthBinding}). Δεν ταξιδεύει ποτέ στον διακομιστή.
+ */
+export interface AddLevelOptions {
+  /**
+   * `false` = το επίπεδο γεννιέται **στο παρασκήνιο**: μπαίνει στη λίστα, το ανοιχτό επίπεδο δεν
+   * αλλάζει. Το ζητά όποιος γεννά επίπεδα που ο άνθρωπος **δεν ζήτησε να ανοίξει** (η αναπλήρωση
+   * «όλοι οι όροφοι»). Απόν ⇒ ισχύει το `autoSelectNewLevel`, όπως πάντα.
+   */
+  readonly select?: boolean;
+}
+
 /** Η υπογραφή του `addLevel` — ΜΙΑ δήλωση για το context, τον resolver ορόφου και τον provisioner. */
 export type AddLevel = (
   name: string,
   setAsDefault?: boolean,
   floorId?: string,
   birth?: LevelBirthBinding,
+  options?: AddLevelOptions,
 ) => Promise<string | null>;
 
 export interface FloorplanDoc {

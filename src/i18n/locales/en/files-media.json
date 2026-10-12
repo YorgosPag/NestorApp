@@ -112,7 +112,7 @@
     },
     "allFloors": {
       "label": "Load the entire building",
-      "hint": "Create levels for every floor (foundation → basement → floors), not only the selected one."
+      "hint": "Create levels for every floor (foundation → basement → floors), not only the selected one. Does not apply when the floorplan is for a property."
     },
     "storagePicker": {
       "empty": "No saved floorplans found",
@@ -181,7 +181,9 @@
     "createTitle": "New Floorplan",
     "create": {
       "heading": "New empty floorplan",
-      "hint": "The floorplan is saved automatically as soon as you draw. If the floor already has a level, that one opens.",
+      "hint": "The floorplan is saved automatically as soon as you draw.",
+      "storeyReuseHint": "If the floor already has a level, that one opens.",
+      "propertyReuseHint": "If the property already has a floorplan on this floor, that one opens.",
       "propertyLevel": "Property level",
       "confirm": "Create",
       "creating": "Creating…",

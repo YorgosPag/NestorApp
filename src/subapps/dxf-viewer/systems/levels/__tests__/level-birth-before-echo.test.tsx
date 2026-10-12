@@ -73,6 +73,17 @@ describe('γέννηση επιπέδου — στη λίστα μόλις απ�
     expect(setCurrentLevelId).toHaveBeenCalledWith('lvl_new');
   });
 
+  it('🔑 `select: false` — το επίπεδο γεννιέται και μπαίνει στη λίστα, αλλά το ανοιχτό ΔΕΝ αλλάζει (ADR-914 §8.13)', async () => {
+    const { result } = renderHook(({ base }) => useLevelsUnderTest(base), { initialProps: { base: [ground] } });
+
+    await act(async () => {
+      await result.current.ops.addLevel('1ος Όροφος', false, 'flr_1', { buildingId: 'bldg_A' }, { select: false });
+    });
+
+    expect(result.current.levels.map((l) => l.id)).toEqual(['lvl_ground', 'lvl_new']);
+    expect(setCurrentLevelId).not.toHaveBeenCalled();
+  });
+
   it('κουβαλά ΟΛΗ τη δέσμευση του αιτήματος — ο στόχος γέννησης (ADR-913) βγαίνει ίδιος πριν και μετά', async () => {
     const { result } = renderHook(({ base }) => useLevelsUnderTest(base), { initialProps: { base: [ground] } });
 

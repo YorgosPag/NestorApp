@@ -30,7 +30,8 @@ import { useLevelFloorplanOperations } from './hooks/useLevelFloorplanOperations
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useLevelImportWizardOps } from './hooks/useLevelImportWizardOps';
 import { useAuth } from '@/auth';
-import { readViewportFromUrl, readActiveBuildingFromUrl } from '../../services/viewport-persistence';
+import { readActiveBuildingFromUrl } from '../../services/viewport-persistence';
+import { useUrlLevelRestore } from './hooks/useUrlLevelRestore';
 // ADR-721 §6 — zero-React θύρα προς το ενεργό έγγραφο (ΕΝΑΣ γραφέας: αυτό το component).
 import { registerActiveDocument, unregisterActiveDocument } from './active-document-gateway';
 
@@ -222,24 +223,8 @@ function useLevelsSystemState({
   // 🏢 ENTERPRISE: Bidirectional sync — external floorplan deletion clears canvas scene
   useLevelFloorplanSync({ levels, clearLevelScene });
 
-  // ADR-400 — One-shot URL level restore: when the levels list first becomes non-empty
-  // (Firestore delivery), check if the URL carries a `lvl` param that matches an
-  // existing level. If so, select it once (restores floor on page refresh / shared link).
-  // Guard: useRef<boolean> ensures this runs at most once per mount.
-  const urlLevelRestoredRef = useRef(false);
-  React.useEffect(() => {
-    if (urlLevelRestoredRef.current || levels.length === 0) return;
-    const urlLevelId = readViewportFromUrl().levelId ?? null;
-    if (!urlLevelId) return;
-    const levelExists = levels.some(l => l.id === urlLevelId);
-    if (levelExists && urlLevelId !== currentLevelId) {
-      urlLevelRestoredRef.current = true;
-      setCurrentLevelId(urlLevelId);
-    } else if (levelExists) {
-      // Already selected — still mark as done so we don't loop.
-      urlLevelRestoredRef.current = true;
-    }
-  }, [levels, currentLevelId, setCurrentLevelId]);
+  // ADR-400 — one-shot επαναφορά του επιπέδου από τη διεύθυνση (F5 / μοιρασμένος σύνδεσμος).
+  useUrlLevelRestore(levels, currentLevelId, setCurrentLevelId);
 
   // ADR-721 §6 — Καταχώρηση του ενεργού εγγράφου στη zero-React θύρα, ώστε οι εντολές και
   // οι υπηρεσίες που τρέχουν ΕΚΤΟΣ React (core/commands/layer/**, LayerOperationsService)

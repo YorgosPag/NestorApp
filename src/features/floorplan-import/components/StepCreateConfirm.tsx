@@ -30,8 +30,20 @@ const OWNERSHIP_ROWS: readonly {
   { labelKey: 'floorplanImport.create.propertyLevel', pick: (s) => s.levelName },
 ];
 
+/**
+ * Τι επαναχρησιμοποιείται αντί να γεννηθεί — ίδιος κανόνας με τον provisioner (ADR-914 §2.2):
+ * ταυτότητα έχουν μόνο ο όροφος και το (ακίνητο, όροφος). Έργο / κτίριο γεννούν πάντα νέα κάτοψη,
+ * άρα εκεί δεν υπόσχεται τίποτα.
+ */
+function reuseHintKey(selection: FloorplanImportSelection): string | null {
+  if (selection.propertyId) return 'floorplanImport.create.propertyReuseHint';
+  if (selection.floorId) return 'floorplanImport.create.storeyReuseHint';
+  return null;
+}
+
 export function StepCreateConfirm({ selection }: StepCreateConfirmProps) {
   const { t } = useTranslation(['files', 'files-media']);
+  const reuseKey = reuseHintKey(selection);
   const rows = OWNERSHIP_ROWS
     .map((row) => ({ label: t(row.labelKey), value: row.pick(selection) }))
     .filter((row): row is { label: string; value: string } => !!row.value);
@@ -42,7 +54,10 @@ export function StepCreateConfirm({ selection }: StepCreateConfirmProps) {
         <h3 id="floorplan-create-heading" className="text-base font-semibold text-foreground">
           {t('floorplanImport.create.heading')}
         </h3>
-        <p className="text-sm text-muted-foreground">{t('floorplanImport.create.hint')}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('floorplanImport.create.hint')}
+          {reuseKey ? ` ${t(reuseKey)}` : ''}
+        </p>
       </header>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-card p-4 text-sm">

@@ -16,7 +16,7 @@ import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-reso
 // 🛡️ ADR-845 Ο-18/Ο-19 — η ΑΔΙΑΙΡΕΤΗ εμβέλεια: όροφος και κτήριο ταξιδεύουν μαζί ή
 // καθόλου. Ο ίδιος pure τύπος που ρωτά ο φρουρός.
 import { resolveLevelScopeAssignment, levelScopeFields } from '../../systems/levels/level-building-scope';
-import { ensureLevelsForBuilding } from '../../systems/levels/ensure-levels-for-building';
+import { ensureLevelsForBuilding, resolveAllFloorsBackfillBuilding } from '../../systems/levels/ensure-levels-for-building';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { FileRecordService } from '@/services/file-record.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
@@ -167,11 +167,10 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
         }
       }
       // ADR-448 Phase 3 — open a Level for every storey of the building when
-      // requested (idempotent backfill).
-      const allFloorsBuilding = scopeFields.buildingId;
-      if (meta.loadAllFloors && allFloorsBuilding) {
-        triggerAllFloorsBackfill(allFloorsBuilding);
-      }
+      // requested (idempotent backfill). ADR-914 §2.15: το ΑΝ το αποφασίζει ένα σημείο —
+      // ποτέ για κάτοψη ακινήτου.
+      const allFloorsBuilding = resolveAllFloorsBackfillBuilding(meta, scopeFields.buildingId);
+      if (allFloorsBuilding) triggerAllFloorsBackfill(allFloorsBuilding);
       // Raster (PDF / image) is already persisted via /api/floorplan-backgrounds.
       // The DXF scene importer must NOT run for raster. ADR-526 Φ4: `'tek'` DOES
       // need the scene importer — `handleFileImport` branches on `isTekFileName`

@@ -17,7 +17,7 @@
 import { useEffect, useRef } from 'react';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { TransformStore, getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { persistViewport } from '../../services/viewport-persistence';
+import { persistViewport, writeLevelToUrl } from '../../services/viewport-persistence';
 
 const DEBOUNCE_MS = DXF_TIMING.ui.URL_DEBOUNCE; // ADR-516
 
@@ -67,11 +67,16 @@ export function useViewportUrlSync({ fileRecordId, levelId }: UseViewportUrlSync
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Immediate write when levelId changes — but skip the initial identity transform
-  // (the canvas hasn't been positioned yet; the user hasn't navigated anywhere).
+  // Immediate write when levelId changes. The identity transform is never persisted (the
+  // canvas hasn't been positioned yet) — but the LEVEL is: on an empty, never-moved canvas it
+  // used to stay stale and F5 reopened the previous level (ADR-914 §2.16). Only `lvl` is
+  // written then; camera keys awaiting restore stay untouched.
   useEffect(() => {
     const t = getImmediateTransform();
-    if (isIdentityTransform(t.scale, t.offsetX, t.offsetY)) return;
+    if (isIdentityTransform(t.scale, t.offsetX, t.offsetY)) {
+      if (levelId) writeLevelToUrl(levelId);
+      return;
+    }
     persistViewport(fileRecordId, t, levelId);
   }, [fileRecordId, levelId]); // intentional: fires when either changes
 }

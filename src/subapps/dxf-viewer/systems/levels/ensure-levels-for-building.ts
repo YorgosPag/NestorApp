@@ -19,7 +19,33 @@
  * @see systems/levels/level-floor-resolution.ts (the per-floor SSoT it loops)
  */
 
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { findOrCreateLevelForFloor, type LevelFloorResolver } from './level-floor-resolution';
+
+/** Ό,τι χρειάζεται η απόφαση «τρέχει η αναπλήρωση;» από την ολοκλήρωση του οδηγού εισαγωγής. */
+export interface AllFloorsBackfillRequest {
+  /** Η επιλογή «Φόρτωση όλου του κτιρίου» του οδηγού (ADR-448· αναμμένη εξ ορισμού). */
+  readonly loadAllFloors?: boolean;
+  /** Σε τι ανήκει η εισαγόμενη κάτοψη. */
+  readonly entityType: string;
+}
+
+/**
+ * **Για ποιο κτίριο τρέχει η αναπλήρωση «όλοι οι όροφοι»** — ή `null` = δεν τρέχει. Το ΕΝΑ σημείο
+ * που το αποφασίζει (ADR-914 §2.15).
+ *
+ * Κάτοψη **ακινήτου** δεν την προκαλεί ποτέ: είναι δική της όψη (ADR-914 §2.13), όχι ανέγερση
+ * κτιρίου — ο άνθρωπος έβαλε το σχέδιο ενός διαμερίσματος και θα έβρισκε γύρω του άδεια επίπεδα
+ * ορόφων που δεν ζήτησε (μετρημένο σε Chrome 2026-10-11, κτίριο «ΔΟΡΚΑΣ»).
+ */
+export function resolveAllFloorsBackfillBuilding(
+  request: AllFloorsBackfillRequest,
+  buildingId: string | null | undefined,
+): string | null {
+  if (!request.loadAllFloors || !buildingId) return null;
+  if (request.entityType === ENTITY_TYPES.PROPERTY) return null;
+  return buildingId;
+}
 
 /** Minimal floor shape the loop needs — a structural subset of `FloorOption`. */
 export interface BuildingFloorInput {
@@ -57,10 +83,19 @@ export async function ensureLevelsForBuilding(
     resolver.levels.filter((l) => !!l.floorId && !l.propertyId).map((l) => l.floorId),
   );
 
+  // ADR-914 §2.15 — η αναπλήρωση γεννά επίπεδα που ο άνθρωπος ΔΕΝ ζήτησε να ανοίξει: κάθε γέννησή
+  // της είναι «στο παρασκήνιο». Πριν, καθένα αυτο-επιλεγόταν και ο viewer κατέληγε στον
+  // τελευταίο (κενό) όροφο αντί στην κάτοψη που μόλις μπήκε.
+  const background: LevelFloorResolver = {
+    ...resolver,
+    addLevel: (name, setAsDefault, floorId, birth) =>
+      resolver.addLevel(name, setAsDefault, floorId, birth, { select: false }),
+  };
+
   const results: EnsureLevelResult[] = [];
   for (const floor of ordered) {
     const created = !linkedFloorIds.has(floor.id);
-    const levelId = await findOrCreateLevelForFloor(resolver, {
+    const levelId = await findOrCreateLevelForFloor(background, {
       floorId: floor.id,
       buildingId: buildingId ?? undefined,
       entityLabel: floor.label,
