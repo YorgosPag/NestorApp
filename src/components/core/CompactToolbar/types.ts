@@ -3,51 +3,36 @@
 // 🏢 ENTERPRISE: Unified sort fields for all entity types including communications, units, parking
 export type SortField = 'name' | 'progress' | 'value' | 'area' | 'date' | 'status' | 'type' | 'priority' | 'channel' | 'rooms' | 'number' | 'location';
 
+/** Ένα κείμενο ανά ενέργεια — το ίδιο σχήμα για ετικέτες και tooltips (ήταν γραμμένο δύο φορές). */
+export interface ToolbarActionTexts {
+  newItem: string;
+  editItem: string;
+  deleteItems: string;
+  filters: string;
+  favorites: string;
+  archive: string;
+  export: string;
+  import: string;
+  refresh: string;
+  preview: string;
+  copy: string;
+  share: string;
+  reports: string;
+  settings: string;
+  favoritesManagement: string;
+  help: string;
+  sorting: string;
+}
+
 export interface CompactToolbarConfig {
   // Search configuration
   searchPlaceholder: string;
 
   // Labels for actions
-  labels: {
-    newItem: string;
-    editItem: string;
-    deleteItems: string;
-    filters: string;
-    favorites: string;
-    archive: string;
-    export: string;
-    import: string;
-    refresh: string;
-    preview: string;
-    copy: string;
-    share: string;
-    reports: string;
-    settings: string;
-    favoritesManagement: string;
-    help: string;
-    sorting: string;
-  };
+  labels: ToolbarActionTexts;
 
   // Tooltips
-  tooltips: {
-    newItem: string;
-    editItem: string;
-    deleteItems: string;
-    filters: string;
-    favorites: string;
-    archive: string;
-    export: string;
-    import: string;
-    refresh: string;
-    preview: string;
-    copy: string;
-    share: string;
-    reports: string;
-    settings: string;
-    favoritesManagement: string;
-    help: string;
-    sorting: string;
-  };
+  tooltips: ToolbarActionTexts;
 
   // Filter categories
   filterCategories: FilterCategory[];
@@ -124,6 +109,10 @@ export interface CompactToolbarProps {
   onNewItem?: () => void;
   onEditItem?: (id: string) => void;
   onDeleteItems?: (ids: string[]) => void;
+  // 🔴 Κάθε ενέργεια από εδώ και κάτω ζωγραφίζεται ΜΟΝΟ όταν δοθεί χειριστής (ADR-329 §3.9).
+  //    Μην περάσεις `() => {}` για να «φανεί» το κουμπί — η άγκυρα Χ6 το μπλοκάρει.
+  onFavorites?: (ids: string[]) => void;
+  onArchive?: (ids: string[]) => void;
   onExport?: () => void;
   onImport?: () => void;
   onRefresh?: () => void;

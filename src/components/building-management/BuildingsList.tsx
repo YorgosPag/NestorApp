@@ -6,20 +6,18 @@ import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+import { compareSortValues, type SortableValue } from '@/lib/array-utils';
 import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
 // [ENTERPRISE] Using centralized domain card
 import { BuildingListCard } from '@/domain';
-import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
+import { ResponsiveCompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { SortField } from '@/components/core/CompactToolbar/types';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-
-const logger = createModuleLogger('BuildingsList');
 
 
 interface BuildingsListProps {
@@ -83,44 +81,18 @@ export const BuildingsList = React.memo(function BuildingsList({
   }, [buildings, searchTerm, selectedStatuses]);
 
   const sortedBuildings = useMemo(() => {
-    return [...filteredBuildings].sort((a, b) => {
-      let aValue, bValue;
-
+    // Η τιμή της στήλης ανά κτίριο· η ΣΥΓΚΡΙΣΗ ανήκει στο `compareSortValues` (κενά τελευταία, ελληνική σειρά).
+    const sortValueOf = (building: Building): SortableValue => {
       switch (sortBy) {
-        case 'name':
-          aValue = (a.name || '').toLowerCase();
-          bValue = (b.name || '').toLowerCase();
-          break;
-        case 'progress':
-          aValue = a.progress;
-          bValue = b.progress;
-          break;
-        case 'value':
-          aValue = a.totalValue;
-          bValue = b.totalValue;
-          break;
-        case 'area':
-          aValue = a.totalArea;
-          bValue = b.totalArea;
-          break;
-        case 'date':
-          aValue = new Date(a.createdAt || a.id).getTime();
-          bValue = new Date(b.createdAt || b.id).getTime();
-          break;
-        default:
-          return 0;
+        case 'name': return building.name;
+        case 'progress': return building.progress;
+        case 'value': return building.totalValue;
+        case 'area': return building.totalArea;
+        case 'date': return new Date(building.createdAt || building.id).getTime();
+        default: return null;
       }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortOrder === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      } else {
-        return sortOrder === 'asc'
-          ? (aValue as number) - (bValue as number)
-          : (bValue as number) - (aValue as number);
-      }
-    });
+    };
+    return [...filteredBuildings].sort((a, b) => compareSortValues(sortValueOf(a), sortValueOf(b), sortOrder));
   }, [filteredBuildings, sortBy, sortOrder]);
 
   // [PERF] Stable callback: pass building by id to avoid arrow fn per item
@@ -136,49 +108,23 @@ export const BuildingsList = React.memo(function BuildingsList({
         onToolbarToggle={setShowToolbar}
       />
 
-      {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
-      <div className="hidden md:block">
-        <CompactToolbar
-          config={buildingsConfig}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-          sortBy={sortBy}
-          onSortChange={onSortChange}
-          hasSelectedContact={!!selectedBuilding}
-          onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
-          onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}
-          onDeleteItems={onDeleteBuilding ? () => onDeleteBuilding() : undefined}
-          onExport={() => logger.info('Export buildings')}
-          onRefresh={() => logger.info('Refresh buildings')}
-        />
-      </div>
-
-      {/* CompactToolbar - Toggleable on Mobile */}
-      <div className="md:hidden">
-        {showToolbar && (
-          <CompactToolbar
-            config={buildingsConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={onSortChange}
-            hasSelectedContact={!!selectedBuilding}
-            onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
-            onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}
-            onDeleteItems={onDeleteBuilding ? () => onDeleteBuilding() : undefined}
-            onExport={() => logger.info('Export buildings')}
-            onRefresh={() => logger.info('Refresh buildings')}
-          />
-        )}
-      </div>
+      {/* Πάντα ορατή σε desktop, πίσω από τον διακόπτη σε κινητό — ΜΙΑ φορά τα props */}
+      <ResponsiveCompactToolbar
+        showOnMobile={showToolbar}
+        config={buildingsConfig}
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sortBy={sortBy}
+        onSortChange={onSortChange}
+        hasSelectedContact={!!selectedBuilding}
+        onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
+        onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}
+        onDeleteItems={onDeleteBuilding ? () => onDeleteBuilding() : undefined}
+      />
 
       {/* 🏢 ENTERPRISE: Quick Filters for Building Status */}
       <BuildingStatusQuickFilters

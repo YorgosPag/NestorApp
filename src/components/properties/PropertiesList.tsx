@@ -11,6 +11,7 @@ import { PropertyTypeQuickFilters } from './PropertyTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+import { compareSortValues, type SortableValue } from '@/lib/array-utils';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -108,35 +109,16 @@ export function PropertiesList({
     });
   }, [units, selectedTypes, searchTerm]);
 
-  const sortedUnits = [...filteredUnits].sort((a, b) => {
-    let aValue, bValue;
-
+  // Η τιμή της στήλης ανά ακίνητο· η ΣΥΓΚΡΙΣΗ ανήκει στο `compareSortValues` (κενά τελευταία, ελληνική σειρά).
+  // ❌ Η τιμή πώλησης ΔΕΝ είναι στήλη εδώ (εμπορικό δεδομένο — διαχωρισμός τομέων, PR1 Units List Cleanup).
+  const sortValueOf = (unit: Property): SortableValue => {
     switch (sortBy) {
-      case 'name':
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
-        break;
-      // ❌ REMOVED: Price sorting (commercial data - domain separation)
-      // case 'price': aValue = a.price || 0; bValue = b.price || 0; break;
-      // Migration: PR1 - Units List Cleanup
-      case 'area':
-        aValue = a.area || 0;
-        bValue = b.area || 0;
-        break;
-      default:
-        return 0;
+      case 'name': return unit.name;
+      case 'area': return unit.area;
+      default: return null;
     }
-
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc'
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    } else {
-      return sortOrder === 'asc'
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
-    }
-  });
+  };
+  const sortedUnits = [...filteredUnits].sort((a, b) => compareSortValues(sortValueOf(a), sortValueOf(b), sortOrder));
 
   const _handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -173,9 +155,6 @@ export function PropertiesList({
       onSortChange={onSortChange}
       hasSelectedContact={selectedPropertyIds.length > 0}
       {...toolbarActions}
-      onExport={() => {}}
-      onRefresh={() => {}}
-      onSettings={() => {}}
     />
   );
 

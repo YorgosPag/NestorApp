@@ -13,6 +13,11 @@
  * ⛔ Τα **δύο dropdown** (φίλτρα · ταξινόμηση) **δεν** ενοποιήθηκαν: παρεμβάλλουν
  * `DropdownMenuTrigger asChild` και είναι **άλλο σχήμα** — δες το σχόλιο εκεί.
  *
+ * 🔴 **ADR-329 §3.9 (2026-10-12)** — κάθε **προαιρετική** ενέργεια περνά από το
+ * `OptionalToolbarAction`: ζωγραφίζεται μόνο όταν το config τη δηλώνει **και** ο
+ * καταναλωτής έδωσε χειριστή. Νέο · επεξεργασία · διαγραφή μένουν πάντα ορατά και
+ * **ανενεργά** χωρίς χειριστή (κάδος/αρχείο). Άγκυρα: `toolbar-actions-need-a-handler`.
+ *
  * @module components/core/CompactToolbar/CompactToolbarActions
  */
 
@@ -39,17 +44,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
 import { getIconColor } from './icon-colors';
-import { ToolbarIconButton } from './ToolbarIconButton';
+import { OptionalToolbarAction, ToolbarIconButton } from './ToolbarIconButton';
 import type { CompactToolbarProps } from './types';
-
-const logger = createModuleLogger('CompactToolbarActions');
 
 type ActionsProps = Pick<CompactToolbarProps,
   'config' | 'selectedItems' | 'activeFilters' | 'onFiltersChange' | 'onSortChange' |
   'hasSelectedContact' | 'newItemIcon' | 'deleteIcon' |
-  'onNewItem' | 'onEditItem' | 'onDeleteItems' | 'onExport' | 'onImport' |
+  'onNewItem' | 'onEditItem' | 'onDeleteItems' | 'onFavorites' | 'onArchive' | 'onExport' | 'onImport' |
   'onRefresh' | 'onPreview' | 'onCopy' | 'onShare' | 'onReports' |
   'onSettings' | 'onFavoritesManagement' | 'onHelp'
 > & {
@@ -59,7 +61,7 @@ type ActionsProps = Pick<CompactToolbarProps,
 export function CompactToolbarActions({
   config, selectedItems = [], activeFilters = [], onFiltersChange, onSortChange,
   hasSelectedContact = false, newItemIcon: NewItemIcon, deleteIcon: DeleteIcon,
-  onNewItem, onEditItem, onDeleteItems, onExport, onImport, onRefresh,
+  onNewItem, onEditItem, onDeleteItems, onFavorites, onArchive, onExport, onImport, onRefresh,
   onPreview, onCopy, onShare, onReports, onSettings, onFavoritesManagement, onHelp,
   getTooltip,
 }: ActionsProps) {
@@ -174,61 +176,57 @@ export function CompactToolbarActions({
       )}
 
       {/* Favorites */}
-      {config.availableActions.favorites && (
-        <ToolbarIconButton
-          icon={Star}
-          colorKey="favorites"
-          tooltip={getTooltip(config.tooltips.favorites)}
-          fallbackLabel="Favorites"
-          onClick={() => logger.info('Add to favorites')}
-          disabled={nothingSelected}
-        />
-      )}
+      {/* 🔴 Ήταν `() => logger.info(…)` γραμμένο ΕΔΩ: ζωντανό αστέρι σε κάθε λίστα, που δεν έκανε τίποτα. */}
+      <OptionalToolbarAction
+        enabled={config.availableActions.favorites}
+        icon={Star}
+        colorKey="favorites"
+        tooltip={getTooltip(config.tooltips.favorites)}
+        fallbackLabel="Favorites"
+        onClick={onFavorites && (() => onFavorites(selectedItems))}
+        disabled={nothingSelected}
+      />
 
       {/* Archive */}
-      {config.availableActions.archive && (
-        <ToolbarIconButton
-          icon={Archive}
-          colorKey="archive"
-          tooltip={getTooltip(config.tooltips.archive)}
-          fallbackLabel="Archive"
-          onClick={() => logger.info('Archive selected')}
-          disabled={nothingSelected}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.archive}
+        icon={Archive}
+        colorKey="archive"
+        tooltip={getTooltip(config.tooltips.archive)}
+        fallbackLabel="Archive"
+        onClick={onArchive && (() => onArchive(selectedItems))}
+        disabled={nothingSelected}
+      />
 
       {/* Export */}
-      {config.availableActions.export && (
-        <ToolbarIconButton
-          icon={Download}
-          colorKey="export"
-          tooltip={getTooltip(config.tooltips.export)}
-          fallbackLabel={t('buttons.export')}
-          onClick={onExport}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.export}
+        icon={Download}
+        colorKey="export"
+        tooltip={getTooltip(config.tooltips.export)}
+        fallbackLabel={t('buttons.export')}
+        onClick={onExport}
+      />
 
       {/* Import */}
-      {config.availableActions.import && (
-        <ToolbarIconButton
-          icon={Upload}
-          colorKey="import"
-          tooltip={getTooltip(config.tooltips.import)}
-          fallbackLabel={t('buttons.import')}
-          onClick={onImport}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.import}
+        icon={Upload}
+        colorKey="import"
+        tooltip={getTooltip(config.tooltips.import)}
+        fallbackLabel={t('buttons.import')}
+        onClick={onImport}
+      />
 
       {/* Refresh */}
-      {config.availableActions.refresh && (
-        <ToolbarIconButton
-          icon={RefreshCw}
-          colorKey="refresh"
-          tooltip={getTooltip(config.tooltips.refresh)}
-          fallbackLabel={t('buttons.refresh')}
-          onClick={onRefresh}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.refresh}
+        icon={RefreshCw}
+        colorKey="refresh"
+        tooltip={getTooltip(config.tooltips.refresh)}
+        fallbackLabel={t('buttons.refresh')}
+        onClick={onRefresh}
+      />
 
       {/* Sort Options Dropdown */}
       {/* ⛔ ΔΕΝ ενοποιείται — δες το σχόλιο στο dropdown φίλτρων. */}
@@ -264,82 +262,75 @@ export function CompactToolbarActions({
       )}
 
       {/* Preview */}
-      {config.availableActions.preview && (
-        <ToolbarIconButton
-          icon={Eye}
-          colorKey="preview"
-          tooltip={getTooltip(config.tooltips.preview)}
-          fallbackLabel="Preview"
-          onClick={onPreview}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.preview}
+        icon={Eye}
+        colorKey="preview"
+        tooltip={getTooltip(config.tooltips.preview)}
+        fallbackLabel="Preview"
+        onClick={onPreview}
+      />
 
       {/* Copy */}
-      {config.availableActions.copy && (
-        <ToolbarIconButton
-          icon={Copy}
-          colorKey="copy"
-          tooltip={getTooltip(config.tooltips.copy)}
-          fallbackLabel="Copy"
-          onClick={onCopy}
-          disabled={nothingSelected}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.copy}
+        icon={Copy}
+        colorKey="copy"
+        tooltip={getTooltip(config.tooltips.copy)}
+        fallbackLabel="Copy"
+        onClick={onCopy}
+        disabled={nothingSelected}
+      />
 
       {/* Share */}
-      {config.availableActions.share && (
-        <ToolbarIconButton
-          icon={Share2}
-          colorKey="share"
-          tooltip={getTooltip(config.tooltips.share)}
-          fallbackLabel="Share"
-          onClick={onShare}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.share}
+        icon={Share2}
+        colorKey="share"
+        tooltip={getTooltip(config.tooltips.share)}
+        fallbackLabel="Share"
+        onClick={onShare}
+      />
 
       {/* Reports */}
-      {config.availableActions.reports && (
-        <ToolbarIconButton
-          icon={FileText}
-          colorKey="reports"
-          tooltip={getTooltip(config.tooltips.reports)}
-          fallbackLabel="Reports"
-          onClick={onReports}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.reports}
+        icon={FileText}
+        colorKey="reports"
+        tooltip={getTooltip(config.tooltips.reports)}
+        fallbackLabel="Reports"
+        onClick={onReports}
+      />
 
       {/* Settings */}
-      {config.availableActions.settings && (
-        <ToolbarIconButton
-          icon={Settings}
-          colorKey="settings"
-          tooltip={getTooltip(config.tooltips.settings)}
-          fallbackLabel="Settings"
-          onClick={onSettings}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.settings}
+        icon={Settings}
+        colorKey="settings"
+        tooltip={getTooltip(config.tooltips.settings)}
+        fallbackLabel="Settings"
+        onClick={onSettings}
+      />
 
       {/* Favorites Management */}
-      {config.availableActions.favoritesManagement && (
-        <ToolbarIconButton
-          icon={Heart}
-          colorKey="favoritesManagement"
-          tooltip={getTooltip(config.tooltips.favoritesManagement)}
-          fallbackLabel="Manage favorites"
-          onClick={onFavoritesManagement}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.favoritesManagement}
+        icon={Heart}
+        colorKey="favoritesManagement"
+        tooltip={getTooltip(config.tooltips.favoritesManagement)}
+        fallbackLabel="Manage favorites"
+        onClick={onFavoritesManagement}
+      />
 
       {/* Help */}
-      {config.availableActions.help && (
-        <ToolbarIconButton
-          icon={HelpCircle}
-          colorKey="help"
-          tooltip={getTooltip(config.tooltips.help)}
-          fallbackLabel="Help"
-          onClick={onHelp}
-        />
-      )}
+      <OptionalToolbarAction
+        enabled={config.availableActions.help}
+        icon={HelpCircle}
+        colorKey="help"
+        tooltip={getTooltip(config.tooltips.help)}
+        fallbackLabel="Help"
+        onClick={onHelp}
+      />
     </>
   );
 }

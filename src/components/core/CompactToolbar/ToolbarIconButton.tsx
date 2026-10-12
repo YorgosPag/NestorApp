@@ -95,3 +95,26 @@ export function ToolbarIconButton({
     </Tooltip>
   );
 }
+
+/**
+ * 🔴 **ΚΟΥΜΠΙ ΧΩΡΙΣ ΧΕΙΡΙΣΤΗ ΔΕΝ ΖΩΓΡΑΦΙΖΕΤΑΙ** (ADR-329 §3.9) — ο ίδιος κανόνας με το `PropertyDetailsHeader`,
+ * στο ένα σημείο από όπου περνά κάθε προαιρετική ενέργεια της γραμμής εργαλείων.
+ *
+ * Το config λέει «αυτή η λίστα **επιτρέπεται** να την έχει»· ο χειριστής λέει «**υπάρχει**». Χρειάζονται και τα
+ * δύο: μετρημένο 2026-10-12, η λίστα ακινήτων έδειχνε δέκα ζωντανά κουμπιά (εξαγωγή · ανανέωση · ρυθμίσεις με
+ * `() => {}`, άλλα επτά χωρίς τίποτα) επειδή αρκούσε το πρώτο.
+ *
+ * ⛔ **ΟΧΙ για νέο · επεξεργασία · διαγραφή**: εκείνα υπάρχουν πάντα και σε κάδο/αρχείο δείχνονται **ανενεργά**
+ * — η διαφορά «δεν γίνεται εδώ» / «δεν υπάρχει» είναι πληροφορία για τον άνθρωπο.
+ */
+export interface OptionalToolbarActionProps extends Omit<ToolbarIconButtonProps, 'onClick'> {
+  /** Η δήλωση του config (`availableActions.<ενέργεια>`). */
+  readonly enabled: boolean | undefined;
+  /** Ο χειριστής του καταναλωτή — αν λείπει, η ενέργεια δεν υπάρχει σε αυτή τη λίστα. */
+  readonly onClick: (() => void) | undefined;
+}
+
+export function OptionalToolbarAction({ enabled, onClick, ...button }: OptionalToolbarActionProps) {
+  if (!enabled || !onClick) return null;
+  return <ToolbarIconButton {...button} onClick={onClick} />;
+}

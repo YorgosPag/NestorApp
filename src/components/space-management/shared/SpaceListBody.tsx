@@ -72,8 +72,6 @@ export function SpaceListBody<T>({
         onNewItem={() => toolbar.onNewItem?.()}
         onEditItem={(id) => logger.info(`Edit ${toolbar.logLabel}`, { id })}
         onDeleteItems={(ids) => logger.info(`Delete ${toolbar.logLabel}`, { ids })}
-        onExport={() => logger.info(`Export ${toolbar.logLabel}`)}
-        onRefresh={() => logger.info(`Refresh ${toolbar.logLabel}`)}
       />
 
       <SpaceAvailabilityQuickFilters selectedTypes={selectedStatuses} onTypeChange={onStatusesChange} compact />

@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { ChannelQuickFilters } from '@/components/shared/TypeQuickFilters';
-import { CompactToolbar, communicationsConfig } from '@/components/core/CompactToolbar';
+import { ResponsiveCompactToolbar, communicationsConfig } from '@/components/core/CompactToolbar';
 import { PageLoadingState } from '@/core/states';
 import { EntityListColumn } from '@/core/containers';
 import { ConversationListCard } from '@/domain';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { cn, getResponsiveClass, getSpacingClass } from '@/lib/design-system';
+import { cn, getSpacingClass } from '@/lib/design-system';
 import type { ConversationListItem } from '@/hooks/inbox/useInboxApi';
 
 interface CommunicationsListPaneProps {
@@ -89,40 +89,21 @@ export function CommunicationsListPane(props: CommunicationsListPaneProps) {
         hideSearch
       />
 
-      <div className={cn('hidden', getResponsiveClass('md', 'block'))}>
-        <CompactToolbar
-          config={communicationsConfig}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-          sortBy={sortBy}
-          onSortChange={(newSortBy) => setSortBy(newSortBy as 'name' | 'date' | 'status')}
-          hasSelectedContact={selectedConversationId !== null}
-          onRefresh={handleRefreshAll}
-          onExport={() => undefined}
-        />
-      </div>
-
-      {showToolbar && (
-        <div className={getResponsiveClass('md', 'hidden')}>
-          <CompactToolbar
-            config={communicationsConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={(newSortBy) => setSortBy(newSortBy as 'name' | 'date' | 'status')}
-            hasSelectedContact={selectedConversationId !== null}
-            onRefresh={handleRefreshAll}
-          />
-        </div>
-      )}
+      {/* Πάντα ορατή σε desktop, πίσω από τον διακόπτη σε κινητό — ΜΙΑ φορά τα props */}
+      <ResponsiveCompactToolbar
+        showOnMobile={showToolbar}
+        config={communicationsConfig}
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sortBy={sortBy}
+        onSortChange={(newSortBy) => setSortBy(newSortBy as 'name' | 'date' | 'status')}
+        hasSelectedContact={selectedConversationId !== null}
+        onRefresh={handleRefreshAll}
+      />
 
       <ChannelQuickFilters
         selectedTypes={selectedChannels}
@@ -134,13 +115,7 @@ export function CommunicationsListPane(props: CommunicationsListPaneProps) {
         <div className={cn(spacing.padding.sm, spacing.spaceBetween.sm, listPadding)}>
           {!authReady ? (
             <PageLoadingState icon={Inbox} message={t('inbox.loading')} layout="contained" />
-          ) : !isAuthenticated ? (
-            <div className="text-center py-8">
-              <AlertCircle className={`${iconSizes.xl} ${colors.text.warning} mx-auto mb-2`} />
-              <p className="font-semibold mb-1">{t('inbox.errors.notAuthenticated')}</p>
-              <p className={`text-sm ${colors.text.muted}`}>{t('errors.staffAccessRequired')}</p>
-            </div>
-          ) : !hasStaffAccess ? (
+          ) : !isAuthenticated || !hasStaffAccess ? (
             <div className="text-center py-8">
               <AlertCircle className={`${iconSizes.xl} ${colors.text.warning} mx-auto mb-2`} />
               <p className="font-semibold mb-1">{t('inbox.errors.notAuthenticated')}</p>

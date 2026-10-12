@@ -83,6 +83,8 @@ export function CompactToolbar({
   onNewItem,
   onEditItem,
   onDeleteItems,
+  onFavorites,
+  onArchive,
   onExport,
   onImport,
   onRefresh,
@@ -117,6 +119,8 @@ export function CompactToolbar({
             onNewItem={onNewItem}
             onEditItem={onEditItem}
             onDeleteItems={onDeleteItems}
+            onFavorites={onFavorites}
+            onArchive={onArchive}
             onExport={onExport}
             onImport={onImport}
             onRefresh={onRefresh}
