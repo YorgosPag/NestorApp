@@ -200,6 +200,8 @@ export function CentralizedAutoSaveStatus() {
           already expressed by the classes, so removing it is lossless.
           This is N.3 (no inline styles) with a live cost attached.
         */}
+        {/* ADR-914 §8.19: ο τίτλος λέει ΤΙ αποθηκεύεται — ρυθμίσεις, όχι το σχέδιο (εκείνο: `AutoSaveStatus`). */}
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('autoSave.settingsLabel')}</p>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${getStatusColor().split(' ')[0]}`}>
           {getStatusMessage()}
         </h3>
@@ -246,10 +248,7 @@ export function CentralizedAutoSaveStatus() {
  * Compact version
  */
 export function CentralizedAutoSaveStatusCompact() {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
-  const { radius } = useBorderTokens();
   const dxfSettings = useDxfSettingsSafe();
   // ADR-341 perf — volatile save-status from its own context (see main variant).
   const saveStatusCtx = useSettingsSaveStatusOptional();
@@ -260,32 +259,6 @@ export function CentralizedAutoSaveStatusCompact() {
   if (!dxfSettings || !saveStatusCtx) return null;
 
   const { isAutoSaving, saveStatus } = saveStatusCtx;
-
-  const getIcon = () => {
-    if (isAutoSaving) {
-      return <AnimatedSpinner size="small" className={iconSizes.xxs} />;
-    }
-
-    if (saveStatus === 'error') {
-      return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.error}`} />;
-    }
-
-    return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.success}`} />;
-  };
-
-  const getTooltip = () => {
-    if (isAutoSaving) {
-      return t('autoSave.savingAllSettings');
-    }
-
-    if (saveStatus === 'error') {
-      return t('autoSave.errorSavingSettings');
-    }
-
-    // Δείχνουμε λίστα με όλα τα ενεργά συστήματα
-    const systems = ['Γραμμές', 'Κείμενο', 'Grips', 'Κέρσορας', 'Grid', 'Χάρακες'];
-    return `${t('autoSave.activeFor')} ${systems.join(', ')}`;
-  };
 
   // ✅ ENTERPRISE: Dynamic z-index for compact version using centralized values
   const getCompactDynamicZIndex = () => {

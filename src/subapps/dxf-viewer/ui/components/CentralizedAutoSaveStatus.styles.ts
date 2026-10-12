@@ -8,6 +8,7 @@
  * @module src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.styles
  */
 
+import { getCurrentLocale } from '@/lib/intl-utils';
 import { statusIndicatorComponents } from '@/styles/design-tokens';
 import { UI_COLORS } from '../../config/color-config';
 
@@ -217,9 +218,9 @@ export const getCompactTooltipText = (
  * Format last save time in Greek locale
  */
 export const formatLastSaveTime = (date?: Date | null): string => {
-  if (!date) return 'Ποτέ';
+  if (!date) return '';
 
-  return date.toLocaleTimeString('el-GR', {
+  return date.toLocaleTimeString(getCurrentLocale(), {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'

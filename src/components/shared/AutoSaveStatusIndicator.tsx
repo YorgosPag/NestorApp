@@ -27,25 +27,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AutoSaveStatusIndicatorProps, SaveStatus } from '@/types/auto-save';
+import { formatRelativeTime } from '@/lib/intl-formatting';
 import '@/lib/design-system';
-
-// ============================================
-// RELATIVE TIME FORMATTER
-// ============================================
-
-function formatSaveAge(date: Date, now: Date): string {
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-
-  if (diffSec < 5) return 'just now';
-  if (diffSec < 60) return `${diffSec}s ago`;
-
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-
-  const diffHour = Math.floor(diffMin / 60);
-  return `${diffHour}h ago`;
-}
 
 // ============================================
 // STATUS CONFIG MAP
@@ -108,7 +91,8 @@ export function AutoSaveStatusIndicator({
   // Relative timestamp (updates on re-render triggered by parent)
   const timestamp = useMemo(() => {
     if (!lastSaved || !showTimestamp) return null;
-    return formatSaveAge(lastSaved, new Date());
+    // Ο ΕΝΑΣ μορφοποιητής σχετικού χρόνου (ADR-212, `Intl.RelativeTimeFormat`) — στη γλώσσα του ανθρώπου.
+    return formatRelativeTime(lastSaved);
   }, [lastSaved, showTimestamp]);
 
   // Status label

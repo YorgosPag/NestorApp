@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "02f444c74b90a808e3510d40cde38436ac245bc36d092e0cee1a94c5fea3d302",
+  "inputsSha256": "e7d73707d53cf6890df500aa433437d784201aa5b9fb4b3e7f1147ed2ada35ba",
   "languages": [
     "el"
   ],
@@ -625,7 +625,7 @@
     "src/components/seo/JsonLdScript.tsx": "d6ebc0f4bf11cef68cb9d797ffad5990afb1ec76a3dc6930530cfdee4cd9a02e",
     "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "aa1808664667184ceefe125da8582961127baca3862487aace3b4e08d54bd56b",
     "src/components/settings/brokerage/brokerage-capability-labels.ts": "de45edd5494b39681ff5ffd92cd31524dce3ff8192210feef1342608140e90aa",
-    "src/components/shared/AutoSaveStatusIndicator.tsx": "b3925c2bbefde75c32696abc6cd6d0226f843c7a3ec1c7a74f08bc2f204bc831",
+    "src/components/shared/AutoSaveStatusIndicator.tsx": "0c65ed152103dfd362ca9c5f084eadc315646f263b52e6cf97accf6fc5e4275f",
     "src/components/shared/CreationPageShell.tsx": "1e28843d37a03c1ebba07b54447b11b4807333ea5d27f8533391d6fc67f02f85",
     "src/components/shared/EscoOccupationPicker.tsx": "f9bd5d8cb67e53ca851e09ab9f8ea8fe1f2bcf3c62688408ce8510c234c00a3e",
     "src/components/shared/PersonalCustodyNotice.tsx": "213f160eb7e400492e3d3c3baf08f5baf9771305b6dd9772fb900dfcfeda3d14",
