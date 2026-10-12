@@ -11,6 +11,7 @@ import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admi
 import { isCrossFloorSceneLink } from '../cross-floor-link';
 import { buildLoadedLevelSaveContext } from '../level-loaded-save-context';
 import { openFileLessLevelTarget } from '../level-file-less-target';
+import { createSceneLoadGuard } from '../scene-load-guard';
 import { useAuth } from '@/auth/hooks/useAuth';
 import {
   reconcileLoadedSceneBim,
@@ -74,6 +75,9 @@ export function useLevelSceneLoader({
 
   // 🏢 ENTERPRISE: AbortController ref for cancelling pending scene loads on rapid level switch
   const sceneLoadAbortRef = React.useRef<AbortController | null>(null);
+  // ADR-913 §3.6 — ένας φρουρός φόρτωσης με μίσθωση (σταθερός setter: useCallback [] στον manager).
+  const { setIsLoadingFromFirestore } = sceneManager;
+  const sceneLoadGuard = React.useMemo(() => createSceneLoadGuard(setIsLoadingFromFirestore), [setIsLoadingFromFirestore]);
   // Track which levels have had their scenes loaded to prevent duplicate loads
   const loadedSceneLevelsRef = React.useRef<Set<string>>(new Set());
 
@@ -234,10 +238,12 @@ export function useLevelSceneLoader({
     const abortController = new AbortController();
     sceneLoadAbortRef.current = abortController;
 
+    setSceneLoading(true);
+    // Loading guard: prevents auto-save from firing during scene load. Η φόρτωση ΚΡΑΤΑ τη
+    // δική της απελευθέρωση (ADR-913 §3.6) — δες το cleanup στο τέλος του effect.
+    const releaseLoad = sceneLoadGuard.begin();
+
     const loadScene = async () => {
-      setSceneLoading(true);
-      // Set loading guard to prevent auto-save from firing during scene load
-      sceneManager.setIsLoadingFromFirestore(true);
 
       try {
         const fileRecord = await DxfFirestoreService.loadFileV2(sceneFileId);
@@ -358,9 +364,7 @@ export function useLevelSceneLoader({
       } finally {
         if (!abortController.signal.aborted) {
           // Release loading guard after next frame to prevent auto-save race condition
-          requestAnimationFrame(() => {
-            sceneManager.setIsLoadingFromFirestore(false);
-          });
+          requestAnimationFrame(releaseLoad);
           setSceneLoading(false);
         }
       }
@@ -368,8 +372,13 @@ export function useLevelSceneLoader({
 
     loadScene();
 
+    // 🛡️ ADR-913 §3.6 — όποιος ακυρώνει τη φόρτωση την απελευθερώνει ο ίδιος. Το `finally`
+    // μιας ακυρωμένης φόρτωσης δεν σβήνει τίποτα, και το επόμενο επίπεδο μπορεί να μην έχει
+    // αρχείο (καμία νέα φόρτωση): ο φρουρός έμενε αναμμένος και το πρόχειρο δεν αποθηκευόταν.
     return () => {
       abortController.abort();
+      releaseLoad();
+      setSceneLoading(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLevelId, levels]); // levels dependency needed to detect sceneFileId changes from onSnapshot

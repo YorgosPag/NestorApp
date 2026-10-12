@@ -22,6 +22,9 @@ export interface CadFileContextPayload {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
+  /** ADR-914 §2.12 — ο κάτοχος μιας κάτοψης ακινήτου, και ο όροφος που απεικονίζει (ADR-236). */
+  propertyId?: string;
+  levelFloorId?: string;
   entityType?: CadLinkableEntityType;
   filesCategory?: 'drawings' | 'floorplans';
   purpose?: string;
