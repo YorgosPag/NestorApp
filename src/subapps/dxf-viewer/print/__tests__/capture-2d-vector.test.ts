@@ -112,6 +112,8 @@ describe('captureCurrent2dViewVector', () => {
     expect(resolveSceneImages).toHaveBeenCalledTimes(1);
     // The resolver runs over the EXPANDED entities (final draw-order array).
     expect((resolveSceneImages as jest.Mock).mock.calls[0][0]).toBe(EXPANDED_ENTITIES);
+    // ADR-909 Γ2.7 — χωρίς ρητό στυλ ο resolver παίρνει το ίδιο `colour` που παίρνει και η πολιτική χρώματος.
+    expect((resolveSceneImages as jest.Mock).mock.calls[0][1]).toBe('colour');
     result.draw({} as never, AREA);
     expect((emitSceneToPdf as jest.Mock).mock.calls[0][1].images).toBe(IMAGE_RESOLUTION);
   });
@@ -140,5 +142,7 @@ describe('captureCurrent2dViewVector', () => {
     if (result.kind !== 'vector') throw new Error('expected vector capture');
     result.draw({} as never, AREA);
     expect((emitSceneToPdf as jest.Mock).mock.calls[0][1].colorPolicy.style).toBe('monochrome');
+    // ADR-909 Γ2.7 — το ΙΔΙΟ στυλ φτάνει και στις εικόνες: αλλιώς ασπρόμαυρες γραμμές με έγχρωμη φωτογραφία.
+    expect((resolveSceneImages as jest.Mock).mock.calls[0][1]).toBe('monochrome');
   });
 });

@@ -107,7 +107,8 @@ export async function captureCurrent2dViewVector(input: Capture2dInput): Promise
 
   // ADR-608 hybrid — async decode ΟΛΩΝ των εικόνων εδώ (πριν το sync closure): data URLs +
   // world placements. Το closure μετά μόνο συνθέτει (μηδέν await στο render path, ADR-040).
-  const images = await resolveSceneImages(entities);
+  // ADR-909 Γ2.7 — με το στυλ εκτύπωσης: σε `monochrome` / `grayscale` οι εικόνες μπαίνουν γκρι, όπως στο raster.
+  const images = await resolveSceneImages(entities, colorPolicy.style);
 
   // ADR-667 Φ3 — sibling pre-pass: γραμμές μοτίβου (`predefined`/`user-defined` explode,
   // budget-guarded) + ριγέ κελιά (`patternSpace:'screen'`). **Σύγχρονο** (μηδέν decode), αλλά ζει

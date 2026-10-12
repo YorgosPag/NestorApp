@@ -42,7 +42,11 @@ import {
   prepareExportSource, averageImageColorHex, asImageHatch,
 } from '../../export/core/image-fill-export';
 import { decodeImageWithTimeout } from '../../export/core/image-export-shared';
-import { imageFillVariantKey } from '../../rendering/entities/shared/hatch-image-variant-key';
+// ADR-909 Γ2.7 — «ποια εικόνα ζητώ» (κλειδί + τόνος) και «είναι στον τόνο που ζητήθηκε;»: τα ΙΔΙΑ δύο SSoT που
+// ρωτούν ο αποδότης της οθόνης και η προφόρτωση του raster. Δεύτερη απάντηση εδώ = ασπρόμαυρο PDF με έγχρωμη εικόνα.
+import { imageEntityResolveSpec, imageFillResolveSpec } from '../../rendering/entities/shared/shared-image-caches';
+import { inRequestedTone } from '../../rendering/entities/shared/hatch-image-cache';
+import type { PrintPlotStyle } from '../../config/print-color-policy';
 // ADR-643 SSoT — το anchor (phase) του tiling ΕΙΝΑΙ αυτό που χρησιμοποιεί η οθόνη· μηδέν δεύτερη math.
 import { resolveImageFillOrigin } from '../../rendering/entities/shared/hatch-image-paint';
 import { createRectangleVertices } from '../../rendering/entities/shared/geometry-utils';
@@ -122,9 +126,14 @@ interface ResolveSink {
  * Async pre-pass: walk τα (flattened) entities και resolve κάθε εικόνα. Σειριακό await (mirror DXF
  * pre-pass) — μηδέν παραλληλισμός για απλότητα/σταθερότητα. Μη-image entities αγνοούνται (δεν
  * μπαίνουν σε κανένα map). Idempotent-safe: αποτυχία → solid ή skip, **πάντα με warning**.
+ *
+ * ADR-909 Γ2.7 — το `plotStyle` είναι **υποχρεωτικό**: σε `monochrome` / `grayscale` κάθε εικόνα μπαίνει στο PDF
+ * σε κλίμακα του γκρι (Revit «Black Lines»), όπως ήδη στο raster PDF και στη δημόσια κάτοψη. Προαιρετικό όρισμα
+ * θα άφηνε έναν καλούντα να το ξεχάσει και να τυπώσει έγχρωμη φωτογραφία σε ασπρόμαυρο σχέδιο, σιωπηλά.
  */
 export async function resolveSceneImages(
   entities: readonly Entity[],
+  plotStyle: PrintPlotStyle,
 ): Promise<SceneImageResolution> {
   const sink: ResolveSink = {
     images: new Map(), patternCells: new Map(), solidFallbacks: new Map(), warnings: [],
@@ -132,11 +141,11 @@ export async function resolveSceneImages(
 
   for (const e of entities) {
     if (isImageEntity(e)) {
-      await resolveImageEntity(e, sink.images, sink.warnings);
+      await resolveImageEntity(e, plotStyle, sink.images, sink.warnings);
       continue;
     }
     const hatch = asImageHatch(e);
-    if (hatch) await resolveImageFillHatch(hatch, sink);
+    if (hatch) await resolveImageFillHatch(hatch, plotStyle, sink);
   }
 
   return sink;
@@ -146,7 +155,7 @@ export async function resolveSceneImages(
 
 /** Decode + placement ΕΝΟΣ `ImageEntity` (γεμίζει ΟΛΟ το πλαίσιο — mirror `ImageRenderer`). */
 async function resolveImageEntity(
-  e: ImageEntity, out: Map<string, ResolvedSceneImage>, warnings: string[],
+  e: ImageEntity, plotStyle: PrintPlotStyle, out: Map<string, ResolvedSceneImage>, warnings: string[],
 ): Promise<void> {
   if (!(e.width > 0) || !(e.height > 0)) return;
   // ADR-736 — **ανεπίλυτη** αναφορά: το DXF δήλωσε διαδρομή, το αρχείο δεν βρέθηκε. Δεν υπάρχει
@@ -156,11 +165,16 @@ async function resolveImageEntity(
   if (!e.url) { warnings.push('image-entity:unresolved-reference'); return; }
   const img = await decodeImageWithTimeout(e.url);
   if (!img) { warnings.push('image-entity:decode-failed'); return; }
-  const dataUrl = sourceToPngDataUrl(img, img.naturalWidth, img.naturalHeight);
+  // ADR-909 Γ2.7 — γκρι που δεν παράγεται (taint) είναι **αποτυχία**, ίδιος κωδικός με το raster: η εικόνα λείπει.
+  const spec = imageEntityResolveSpec(e.url, plotStyle);
+  const toned = inRequestedTone(img, spec);
+  if (!toned) { warnings.push('image-entity:decode-failed'); return; }
+  const dataUrl = sourceToPngDataUrl(toned, img.naturalWidth, img.naturalHeight);
   if (!dataUrl) { warnings.push('image-entity:encode-failed'); return; }
   out.set(e.id, {
     dataUrl,
-    alias: e.url,
+    // Χωρίς γκρι το κλειδί είναι αυτούσιο το `url` (όπως πριν)· με γκρι είναι άλλη εικόνα ⇒ άλλο alias.
+    alias: spec.key,
     placements: [rectPlacement(e.position, e.width, e.height, e.rotation ?? 0)],
   });
 }
@@ -175,15 +189,17 @@ async function resolveImageEntity(
  * αποφασιστεί μέσα στο `draw` **δεν μπορεί ποτέ να αναφερθεί**. Το pre-pass δεν είναι στυλιστική
  * προτίμηση — είναι η **μόνη** θέση όπου υποβάθμιση **και** ειδοποίηση λειτουργούν μαζί.
  */
-async function resolveImageFillHatch(hatch: HatchEntity, sink: ResolveSink): Promise<void> {
+async function resolveImageFillHatch(
+  hatch: HatchEntity, plotStyle: PrintPlotStyle, sink: ResolveSink,
+): Promise<void> {
   const fill = hatch.imageFill as HatchImageFill;
-  // Κοινή ανάλυση πηγής με το DXF export (procedural/tint/raster) — ίδιο υλικό, ίδια απόδοση.
-  const prepared = await prepareExportSource(fill);
-  if (!prepared) {
+  const toned = await tonedFillSource(fill, plotStyle);
+  if (!toned) {
     downgrade(sink, hatch, fallbackHex(hatch), 'image-fill:decode-failed');
     return;
   }
-  const avgHex = averageImageColorHex(prepared.source) ?? fallbackHex(hatch);
+  const { source } = toned;
+  const avgHex = averageImageColorHex(source) ?? fallbackHex(hatch);
 
   // Ο cap είναι **φράχτης, όχι λειτουργικό όριο**: η πραγματική περίπτωση είναι 1 pattern. Κάθε
   // hatch γεμίζει ΜΙΑ φορά ⇒ το πλήθος των κελιών φράσσει άνω το πλήθος των patterns της σελίδας.
@@ -200,19 +216,39 @@ async function resolveImageFillHatch(hatch: HatchEntity, sink: ResolveSink): Pro
     return;
   }
 
-  const dataUrl = sourceToPngDataUrl(prepared.source, prepared.pixelW, prepared.pixelH);
+  const dataUrl = sourceToPngDataUrl(source, toned.pixelW, toned.pixelH);
   if (!dataUrl) {
     downgrade(sink, hatch, avgHex, 'image-fill:encode-failed');
     return;
   }
   sink.patternCells.set(hatch.id, {
-    dataUrl,
-    alias: imageFillVariantKey(fill),
-    tileWWorld,
-    tileHWorld,
-    angleDeg: fill.angle ?? 0,
-    anchorWorld,
+    dataUrl, alias: toned.alias, tileWWorld, tileHWorld, angleDeg: fill.angle ?? 0, anchorWorld,
   });
+}
+
+/** Η εικόνα υλικού ενός γεμίσματος, **στον τόνο που θα τυπωθεί**, με το alias της. */
+interface TonedFillSource {
+  readonly source: CanvasImageSource;
+  readonly pixelW: number;
+  readonly pixelH: number;
+  /** Χωρίς γκρι: αυτούσιο το `imageFillVariantKey` (όπως πριν)· με γκρι είναι άλλη εικόνα ⇒ άλλο alias. */
+  readonly alias: string;
+}
+
+/**
+ * ADR-909 Γ2.7 — αποκωδικοποίηση **και** τόνος σε ένα βήμα: ό,τι ακολουθεί (μέσο χρώμα της εφεδρείας, bytes του
+ * κελιού) διαβάζει την εικόνα **όπως θα τυπωθεί**, ποτέ την έγχρωμη. `null` ⇒ δεν αποκωδικοποιήθηκε **ή** το γκρι
+ * δεν μπόρεσε να παραχθεί (taint): και τα δύο είναι αποτυχία — ποτέ «δώσε την έγχρωμη».
+ */
+async function tonedFillSource(
+  fill: HatchImageFill, plotStyle: PrintPlotStyle,
+): Promise<TonedFillSource | null> {
+  const spec = imageFillResolveSpec(fill, plotStyle);
+  // Κοινή ανάλυση πηγής με το DXF export (procedural/tint/raster) — ίδιο υλικό, ίδια απόδοση.
+  const prepared = await prepareExportSource(fill);
+  const source = prepared ? inRequestedTone(prepared.source, spec) : null;
+  if (!prepared || !source) return null;
+  return { source, pixelW: prepared.pixelW, pixelH: prepared.pixelH, alias: spec.key };
 }
 
 /** Υποβάθμιση σε συμπαγές + **ορατή** σημείωση (μηδέν σιωπηλή αλλοίωση — ADR-667 Απόφαση 11). */

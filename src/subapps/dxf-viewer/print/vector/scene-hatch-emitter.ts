@@ -97,8 +97,7 @@ export function emitHatch(
   const cell = params.images.patternCells.get(e.id);
   if (cell && fillHatchWithPattern(pdf, e, cell, params, toPaper, patterns)) return;
   // 4b. Solid downgrade από το pre-pass (decode-fail / cap / εκφυλισμό) — **αναφερμένο**, όχι σιωπηλό.
-  const solidHex = params.images.solidFallbacks.get(e.id);
-  if (solidHex) { fillHatchLoops(pdf, e, solidHex, toPaper); return; }
+  if (fillSolidFallback(pdf, e, params, toPaper)) return;
 
   // 5/7. ADR-667 Φ3 — οι γραμμές μοτίβου, **προ-resolved** (budget-guarded) στο pre-pass.
   //      (6. `gradient` → ⏳ Φ4: πέφτει στο ΔΑΠΕΔΟ περίγραμμα, όπως και σήμερα.)
@@ -118,6 +117,23 @@ export function emitHatch(
 
   // Περίγραμμα ορίου — **υπό τη ΜΙΑ συνθήκη** που ρωτά και η οθόνη (βλ. `emitBoundaryOutline`).
   emitBoundaryOutline(pdf, e, params, toPaper);
+}
+
+/**
+ * Η **εφεδρεία** ενός γεμίσματος «Εικόνα» που το pre-pass υποβάθμισε σε συμπαγές. `false` ⇒ δεν υπάρχει εφεδρεία.
+ *
+ * ADR-909 Γ2.7 — ρόλος **`'tint'`**: η εφεδρεία στέκεται στη θέση μιας **εικόνας**, και η εικόνα σε
+ * `monochrome` / `grayscale` τυπώνεται γκρι της δικής της φωτεινότητας (Revit «Black Lines»: *solid patterns in
+ * grayscale*). Το ωμό hex τύπωνε **καφέ** πλακάκι σε ασπρόμαυρο σχέδιο· ο ρόλος `'fill'` θα το έκανε **συμπαγές
+ * μαύρο**. Στο `colour` ο ρόλος επιστρέφει το χρώμα αυτούσιο ⇒ καμία αλλαγή εκεί.
+ */
+function fillSolidFallback(
+  pdf: jsPDF, e: HatchEntity, params: SceneVectorEmitParams, toPaper: (p: Point2D) => Point2D,
+): boolean {
+  const solidHex = params.images.solidFallbacks.get(e.id);
+  if (!solidHex) return false;
+  fillHatchLoops(pdf, e, applyPlotColor(solidHex, null, params.colorPolicy, 'tint'), toPaper);
+  return true;
 }
 
 /**

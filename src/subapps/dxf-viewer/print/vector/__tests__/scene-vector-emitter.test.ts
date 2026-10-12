@@ -276,6 +276,24 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
     expect(fillColors[fillColors.length - 1].args).toEqual([128, 64, 32]);
   });
 
+  // ADR-909 Γ2.7 — η εφεδρεία στέκεται στη θέση μιας ΕΙΚΟΝΑΣ: σε άχρωμη στάθμη τυπώνεται γκρι της δικής της
+  // φωτεινότητας. Ούτε καφέ (το ωμό hex), ούτε συμπαγές μαύρο (ο ρόλος `'fill'` στο `monochrome`).
+  it.each(['monochrome', 'grayscale'] as const)(
+    'image-fill hatch (solid fallback) σε «%s» → γκρι της φωτεινότητάς του, όχι το ωμό χρώμα',
+    (style) => {
+      const e = {
+        id: 'h2', type: 'hatch', layerId: '0', fillType: 'image',
+        boundaryPaths: [[{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }]],
+      };
+      const images = { ...EMPTY_IMAGES, solidFallbacks: new Map([['h2', '#804020']]) };
+      const fillColors = only(emit([e as unknown as Entity], { style, dpi: 150 }, images), 'setFillColor');
+      const [r, g, b] = fillColors[fillColors.length - 1].args as number[];
+      expect(r === g && g === b).toBe(true);
+      expect(r).toBeGreaterThan(0);
+      expect(r).toBeLessThan(255);
+    },
+  );
+
   it('composites images INLINE in array order (z-order preserved with linework)', () => {
     const line = { id: 'l1', type: 'line', layerId: '0', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } };
     const img = { id: 'img1', type: 'image', layerId: '0' };

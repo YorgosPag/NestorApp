@@ -104,8 +104,11 @@ export interface ImageResolveSpec {
 /**
  * Η εικόνα όπως **ζητήθηκε**: γκρι όταν το spec το θέλει. `null` ⇒ η μετατροπή απέτυχε (taint) — ο caller
  * τη μετρά ως **αποτυχία**, ποτέ ως «δώσε την έγχρωμη» (διαρροή χρώματος σε ασπρόμαυρη εκτύπωση).
+ *
+ * ADR-909 Γ2.7 — εξάγεται: το vector PDF αποκωδικοποιεί με δικό του δρόμο (CORS + όριο χρόνου, κοινό με την
+ * εξαγωγή DXF), αλλά ο **τόνος** κρίνεται εδώ, ώστε raster και vector να μη διαφωνήσουν ποτέ για το γκρι.
  */
-function inRequestedTone(img: CanvasImageSource, spec: string | ImageResolveSpec): CanvasImageSource | null {
+export function inRequestedTone(img: CanvasImageSource, spec: string | ImageResolveSpec): CanvasImageSource | null {
   return typeof spec !== 'string' && spec.grayscale ? toGrayscaleImage(img) : img;
 }
 
