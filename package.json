@@ -634,7 +634,7 @@
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.7.1",
-    "react-map-gl": "^8.1.0",
+    "react-map-gl": "^8.1.1",
     "react-modern-gantt": "0.6.1",
     "react-resizable-panels": "4.7.2",
     "recharts": "^2.15.1",

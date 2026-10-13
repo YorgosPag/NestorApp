@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-10-10T16:29:14.406Z",
+    "timestamp": "2026-10-13T16:55:34.263Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:bc1a8d89e15dee23724e09c2368098ef135720c1c3abc7804f0479f9ed4ccd40"
+        "value": "sha256:2844fc2fa37fb47f0eb4c436a5d80501ce99e797731a5da09c67820289d6a1c4"
       }
     ]
   },
@@ -10463,10 +10463,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/@vis.gl/react-mapbox@8.1.0",
+      "bom-ref": "pkg:npm/@vis.gl/react-mapbox@8.1.1",
       "name": "@vis.gl/react-mapbox",
-      "version": "8.1.0",
-      "purl": "pkg:npm/@vis.gl/react-mapbox@8.1.0",
+      "version": "8.1.1",
+      "purl": "pkg:npm/@vis.gl/react-mapbox@8.1.1",
       "scope": "optional",
       "licenses": [
         {
@@ -10488,10 +10488,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/@vis.gl/react-maplibre@8.1.0",
+      "bom-ref": "pkg:npm/@vis.gl/react-maplibre@8.1.1",
       "name": "@vis.gl/react-maplibre",
-      "version": "8.1.0",
-      "purl": "pkg:npm/@vis.gl/react-maplibre@8.1.0",
+      "version": "8.1.1",
+      "purl": "pkg:npm/@vis.gl/react-maplibre@8.1.1",
       "scope": "optional",
       "licenses": [
         {
@@ -22763,10 +22763,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/react-map-gl@8.1.0",
+      "bom-ref": "pkg:npm/react-map-gl@8.1.1",
       "name": "react-map-gl",
-      "version": "8.1.0",
-      "purl": "pkg:npm/react-map-gl@8.1.0",
+      "version": "8.1.1",
+      "purl": "pkg:npm/react-map-gl@8.1.1",
       "scope": "optional",
       "licenses": [
         {
