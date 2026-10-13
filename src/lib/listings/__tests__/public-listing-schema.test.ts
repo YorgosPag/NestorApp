@@ -230,10 +230,16 @@ describe('Κ6 — η αλυσίδα είναι συνεπής με τον εαυ
    * σε έγγραφο **χωρίς** το κουτί — εκεί σωστά δεν προσθέτει τίποτα. Του δίνεται κατάλυμα, ώστε η
    * δήλωση να **εκτελείται** αντί να εξαιρείται.
    */
-  const baseFor = (adds: readonly string[]): StoredListingDocument =>
-    adds.some((path) => path.startsWith('stay.'))
-      ? { ...PRODUCTION_V1, offerKinds: ['leaseShort'], stay: { minNights: null, maxGuests: 2 } }
-      : PRODUCTION_V1;
+  const baseFor = (adds: readonly string[]): StoredListingDocument => {
+    if (adds.some((path) => path.startsWith('stay.'))) {
+      return { ...PRODUCTION_V1, offerKinds: ['leaseShort'], stay: { minNights: null, maxGuests: 2 } };
+    }
+    // Ίδιος λόγος για το κουτί του ΠΕΑ (κρίκος 23): το `PRODUCTION_V1` είναι οικόπεδο, όπου το κουτί είναι νόμιμα `null`.
+    if (adds.some((path) => path.startsWith('energyCertificate.'))) {
+      return { ...PRODUCTION_V1, type: 'apartment', energyCertificate: { primaryEnergy: null, co2Emissions: null, absence: null } };
+    }
+    return PRODUCTION_V1;
+  };
 
   it('🔴 το δηλωμένο `adds` ΕΚΤΕΛΕΙΤΑΙ — δεν είναι σχόλιο που πάλιωσε', () => {
     LISTING_MIGRATIONS.forEach((migration) => {
@@ -558,5 +564,30 @@ describe('Κ13 — κρίκος 22: οι αριθμοί του ενεργεια�
     expect(once.energyCertificate).toEqual(written);
     expect(link.apply(once)).toEqual(once);
     expect(link.apply(stored({ energyCertificate: { primaryEnergy: -5, absence: 'lost' } })).energyCertificate).toEqual(UNDECLARED);
+  });
+});
+
+describe('Κ14 — κρίκος 23: ωφέλιμη επιφάνεια και τελική ενέργεια του ΠΕΑ (ADR-777 §8.95)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 23)!;
+  const stored = (over: StoredListingDocument): StoredListingDocument => ({ type: 'apartment', offerKinds: ['sell'], ...over });
+  const V22_BOX = { primaryEnergy: 132.4, co2Emissions: 38.1, absence: null };
+
+  it('🔴 κουτί έκδοσης 22 ⇒ τα δύο νέα πεδία `null` — καμία εκτίμηση κόστους από έγγραφο που δεν τα δήλωσε', () => {
+    const upgraded = link.apply(stored({ energyClass: 'C', energyCertificate: V22_BOX }));
+    expect(upgraded.energyCertificate).toEqual({ ...V22_BOX, usefulArea: null, finalEnergy: null });
+    expect(upgraded.energyClass).toBe('C');
+  });
+
+  it('🔴 ο κρίκος 22 εξακολουθεί να δίνει ΑΚΡΙΒΩΣ το κουτί της έκδοσης 22 — είναι παγωμένος', () => {
+    const link22 = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 22)!;
+    expect(Object.keys(link22.apply(stored({})).energyCertificate as object).sort()).toEqual(['absence', 'co2Emissions', 'primaryEnergy']);
+  });
+
+  it('γη ⇒ null· ιδιοδύναμο πάνω σε ό,τι έγραψε ήδη ο γραφέας', () => {
+    expect(link.apply(stored({ type: 'land', energyCertificate: V22_BOX })).energyCertificate).toBeNull();
+    const written = { ...V22_BOX, usefulArea: 84.6, finalEnergy: [{ source: 'oil', perSqm: 96.3 }] };
+    const once = link.apply(stored({ energyCertificate: written }));
+    expect(once.energyCertificate).toEqual(written);
+    expect(link.apply(once)).toEqual(once);
   });
 });

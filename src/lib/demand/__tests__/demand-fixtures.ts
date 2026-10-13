@@ -79,7 +79,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     // ADR-777 §8.93 — πώληση κατοικίας ⇒ η ερώτηση των κοινοχρήστων ΤΙΘΕΤΑΙ· τίποτα δηλωμένο (ό,τι γράφει ο προβολέας).
     commonCharges: { monthlyAmount: null, includes: null },
     // ADR-777 §8.94 — πώληση κτιρίου ⇒ η ερώτηση του ΠΕΑ ΤΙΘΕΤΑΙ· κανένας αριθμός δηλωμένος (ό,τι γράφει ο προβολέας).
-    energyCertificate: { primaryEnergy: null, co2Emissions: null, absence: null },
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null },
     coverImage: null,
     gallery: [],
     // ADR-777 §8.88 — τα κουτιά μέσων έλειπαν από εδώ (το fixture είχε μείνει πίσω από το σχήμα): η κάρτα ρωτά πλέον
