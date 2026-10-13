@@ -17,6 +17,7 @@ import { useFloorplanFiles } from '@/hooks/useFloorplanFiles';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
+import { floorplansOfLevel } from '@/lib/files/level-floorplans';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -41,12 +42,19 @@ export function StepStoragePicker({ uploadConfig, selectedFileId, onFileSelected
   const { t } = useTranslation(['files-media']);
   const colors = useSemanticColors();
 
-  const { files, loading } = useFloorplanFiles({
+  const { files: entityFiles, loading } = useFloorplanFiles({
     companyId: uploadConfig.companyId,
     entityType: uploadConfig.entityType,
     entityId: uploadConfig.entityId,
     autoProcess: false,
   });
+
+  // ADR-914 §2.20 — επίπεδο πολυεπίπεδης μονάδας ⇒ μόνο οι δικές του κατόψεις. Αρχείο χωρίς
+  // `levelFloorId` (πριν από τη διόρθωση) μένει ορατό: το επίπεδό του είναι άγνωστο.
+  const files = React.useMemo(
+    () => floorplansOfLevel(entityFiles, uploadConfig.levelFloorId, true),
+    [entityFiles, uploadConfig.levelFloorId],
+  );
 
   if (loading) {
     return (

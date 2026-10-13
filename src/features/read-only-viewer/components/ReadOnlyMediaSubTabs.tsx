@@ -18,6 +18,7 @@ import { useBackgroundScale } from '@/hooks/useBackgroundScale';
 import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
 import { adaptFloorFloorplanToFileRecord } from './read-only-media-types';
 import type { FileRecord } from '@/types/file-record';
+import { floorplansOfLevel } from '@/lib/files/level-floorplans';
 
 // ── Shared prop types ──
 
@@ -119,13 +120,10 @@ export function UnitFloorplanTabContent({
   allUnitFloorplans, levelFloorId, isFirstLevel,
   loading, error, onRetry, t,
 }: PropertyFloorplanTabContentProps) {
-  const filteredFiles = React.useMemo(() => {
-    return allUnitFloorplans.filter((file) => {
-      if (file.levelFloorId === levelFloorId) return true;
-      if (isFirstLevel && !file.levelFloorId) return true;
-      return false;
-    });
-  }, [allUnitFloorplans, levelFloorId, isFirstLevel]);
+  const filteredFiles = React.useMemo(
+    () => floorplansOfLevel(allUnitFloorplans, levelFloorId, isFirstLevel),
+    [allUnitFloorplans, levelFloorId, isFirstLevel],
+  );
 
   const { unitsPerMeter, backgroundId } = useBackgroundScale(levelFloorId || null);
 

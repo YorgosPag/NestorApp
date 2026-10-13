@@ -34,6 +34,7 @@ import {
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
+import { fileLinkTag } from '@/lib/files/file-link-tag';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -62,6 +63,12 @@ export interface UploadFileConfig {
   descriptors?: string[];
   revision?: number;
   linkedTo?: Array<{ entityType: EntityType; entityId: string }>;
+  /**
+   * ADR-236 / ADR-914 §2.20 — ο όροφος που ΑΠΕΙΚΟΝΙΖΕΙ η κάτοψη ενός επιπέδου πολυεπίπεδης
+   * μονάδας. Ο δίδυμος αγωγός (`uploadEntityFile`) το έγραφε· εδώ έλειπε, και η ίδια κάτοψη
+   * έχανε τον όροφό της όταν ανέβαινε από τον οδηγό εισαγωγής.
+   */
+  levelFloorId?: string;
   /**
    * ADR-716 Φ5 — ρητή επιλογή μονάδων DXF του μηχανικού. Απόν ⇒ αποφασίζει η σκάλα
    * τεκμηρίων στο parse. @see FileRecord.userDrawingUnits
@@ -133,7 +140,8 @@ export async function uploadFileWithPolicy(
     purpose: config.purpose,
     descriptors: config.descriptors,
     revision: config.revision,
-    linkedTo: config.linkedTo?.map((l) => `${l.entityType}:${l.entityId}`),
+    linkedTo: config.linkedTo?.map((l) => fileLinkTag(l.entityType, l.entityId)),
+    ...(config.levelFloorId ? { levelFloorId: config.levelFloorId } : {}),
     originalFilename: config.originalFilename,
     ext: config.ext,
     contentType: config.contentType,

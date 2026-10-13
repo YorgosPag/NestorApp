@@ -255,6 +255,11 @@ Google contract: **αν A→B δημιουργεί N level cards, τότε B→A
 - Per-level finishes preservation σε flat (Phase 2 contract immutable)
 
 ## Changelog
+- **2026-10-13** (ADR-914 §2.20): **Το `levelFloorId` φτάνει στο αρχείο και από τον οδηγό εισαγωγής.** Ο αγωγός
+  `uploadFileWithPolicy` (ADR-292) το έχανε· τα αρχεία επιπέδων γράφονταν χωρίς αυτό. Νέος κανόνας
+  `floorplansOfLevel` (`src/lib/files/level-floorplans.ts`) για «ποιες κατόψεις ανήκουν σε αυτό το επίπεδο» — τον
+  καλούν η προβολή ακινήτου και ο επιλογέας «Από την αποθήκη». Το βήμα «Ακίνητο» του οδηγού δείχνει πολυεπίπεδη
+  μονάδα σε κάθε όροφο που πιάνει (`propertiesOnFloor`). Uncommitted, όχι σε browser.
 - **2026-10-02** (ADR-898 §15): **`levelData` → δημόσια βάση της αντικειμενικής.** Νέο `lib/properties/level-areas.ts`
   — η ΜΙΑ ανάγνωση του `levelData[floorId].areas.gross` από ωμό έγγραφο (`levelGrossArea` · `readLevelAreas`: όλα ή
   τίποτα· ο σπόρος `gross: 0` του `buildEmptyLevelData` = «δεν συμπληρώθηκε»). Το `propertyAreaOnFloor` (ADR-329) την

@@ -168,6 +168,7 @@
       }
     },
     "noItems": "No items found",
+    "noPropertiesOnFloor": "No property occupies this floor. For a plan of the floor itself, go back and choose the floor card.",
     "autoSelected": "Auto-selected",
     "acceptedTypes": "DXF, PDF, Tekton (.tek), JPG, PNG (up to 50MB)",
     "uploading": "Uploading...",

@@ -10,6 +10,7 @@
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { EntityType, FileCategory, FileDomain } from '@/config/domain-constants';
+import { fileLinkTag } from '@/lib/files/file-link-tag';
 import { FLOORPLAN_PURPOSE_BY_TYPE, type FloorplanImportSelection } from '../hooks/floorplan-import-types';
 
 /** Ό,τι χρειάζεται από τον συνδεδεμένο χρήστη. */
@@ -53,14 +54,21 @@ function resolveUploadTarget(selection: FloorplanImportSelection): UploadTarget 
   }
 }
 
-/** Οι γονείς στους οποίους δένεται το αρχείο πέρα από τον κάτοχό του. */
+/**
+ * Οι γονείς στους οποίους δένεται το αρχείο πέρα από τον κάτοχό του.
+ *
+ * Ο όροφος μιας κάτοψης ακινήτου είναι αυτός που ΑΠΕΙΚΟΝΙΖΕΙ (ADR-914 §2.20): για επίπεδο
+ * πολυεπίπεδης μονάδας το `levelFloorId`, αλλιώς ο όροφος του βήματος 4. Το βήμα 4 μόνο του
+ * είναι ο ΚΥΡΙΟΣ όροφος του ακινήτου — το ίδιο κριτήριο με το `wizardMetaToBinding`.
+ */
 function resolveLinkedTo(selection: FloorplanImportSelection): string[] {
   const linkedTo: string[] = [];
   if (selection.floorplanType === 'property') {
-    if (selection.floorId) linkedTo.push(`floor:${selection.floorId}`);
-    if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
+    const depictedFloorId = selection.levelFloorId ?? selection.floorId;
+    if (depictedFloorId) linkedTo.push(fileLinkTag(ENTITY_TYPES.FLOOR, depictedFloorId));
+    if (selection.buildingId) linkedTo.push(fileLinkTag(ENTITY_TYPES.BUILDING, selection.buildingId));
   } else if (selection.floorplanType === 'floor') {
-    if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
+    if (selection.buildingId) linkedTo.push(fileLinkTag(ENTITY_TYPES.BUILDING, selection.buildingId));
   }
   return linkedTo;
 }

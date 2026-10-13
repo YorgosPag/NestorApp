@@ -140,7 +140,7 @@ function getErrorCodeFromError(error: Error): UploadErrorCode {
 // ============================================================================
 
 export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanUploadReturn {
-  const { companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose = 'floorplan', linkedTo } = config;
+  const { companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose = 'floorplan', linkedTo, levelFloorId } = config;
 
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -185,6 +185,9 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         companyId, projectId, entityType, entityId, domain, category,
         entityLabel, purpose, originalFilename: file.name, ext,
         contentType: file.type, createdBy: userId,
+        // ADR-914 §2.20 — ο όροφος της όψης ταξιδεύει ως το FileRecord: χωρίς αυτόν ο έλεγχος
+        // «υπάρχει ήδη κάτοψη;» δεν βρίσκει τίποτα και η καρτέλα κατόψεων τις στοιβάζει στο πρώτο επίπεδο.
+        ...(levelFloorId ? { levelFloorId } : {}),
         ...(linkedTo && linkedTo.length > 0 ? {
           linkedTo: linkedTo.flatMap((s) => {
             const [et, ...rest] = s.split(':');
@@ -228,7 +231,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
     } finally {
       setIsUploading(false);
     }
-  }, [companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose, linkedTo]);
+  }, [companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose, linkedTo, levelFloorId]);
 
   return { uploadFloorplan, isUploading, progress, error, errorCode, clearError };
 }

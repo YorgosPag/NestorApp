@@ -25,6 +25,7 @@ import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { useFloorplanImportCascade } from './useFloorplanImportCascade';
 import { buildFloorplanUploadConfig } from '../utils/floorplan-upload-config';
+import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
 
 import {
   type FloorplanType,
@@ -76,11 +77,18 @@ export function useFloorplanImportState(
   }, [isOpen, clearAll]);
 
   // ── Units via existing hook (step 5) ──
-  const { properties: rawUnits, loading: unitLoading } = useFirestoreProperties({
+  // ADR-914 §2.20 — τα ακίνητα του ΚΤΙΡΙΟΥ, και «ποια πιάνουν τον όροφο» το απαντά ο ένας κανόνας
+  // (`propertiesOnFloor`, ADR-329 §3.7.1). Το `floorId ==` του διακομιστή ταιριάζει μόνο τον ΚΥΡΙΟ
+  // όροφο: ο όροφος του δεύτερου επιπέδου μιας μεζονέτας έβγαινε άδειος.
+  const { properties: buildingUnits, loading: unitLoading } = useFirestoreProperties({
     buildingId: selection.buildingId ?? undefined,
-    floorId: selection.floorId ?? undefined,
     autoFetch: !!selection.buildingId && step === 5,
   });
+
+  const rawUnits = useMemo(
+    () => (selection.floorId ? propertiesOnFloor(selection.floorId, buildingUnits) : buildingUnits),
+    [selection.floorId, buildingUnits],
+  );
 
   const unitItems: EntityOption[] = rawUnits.map((u: PropertyItem) => ({
     id: u.id,
@@ -136,12 +144,20 @@ export function useFloorplanImportState(
   }, [step, stepItems]);
 
   const selectProperty = useCallback((id: string) => {
-    const label = unitItems.find((u) => u.id === id)?.label ?? null;
-    setSelection((prev) => ({
-      ...prev, propertyId: id, propertyName: label,
-      floorplanType: 'property', levelFloorId: null, levelName: null,
-    }));
-  }, [unitItems]);
+    const property = rawUnits.find((u) => u.id === id);
+    setSelection((prev) => {
+      // Πολυεπίπεδη μονάδα: ο άνθρωπος διάλεξε ήδη όροφο στο βήμα 4 — το επίπεδό της εκεί είναι
+      // η προεπιλογή, όχι δεύτερη ερώτηση. Μπορεί να την αλλάξει.
+      const levelOnFloor = property?.isMultiLevel
+        ? property.levels?.find((level) => level.floorId === prev.floorId)
+        : undefined;
+      return {
+        ...prev, propertyId: id, propertyName: property?.name ?? null,
+        floorplanType: 'property',
+        levelFloorId: levelOnFloor?.floorId ?? null, levelName: levelOnFloor?.name ?? null,
+      };
+    });
+  }, [rawUnits]);
 
   const selectLevel = useCallback((floorId: string) => {
     const label = unitLevelItems.find((l) => l.id === floorId)?.label ?? null;

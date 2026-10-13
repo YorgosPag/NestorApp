@@ -73,7 +73,7 @@ export function StepPropertySelector({
           </div>
         ) : unitItems.length === 0 ? (
           <p className={`text-sm ${colors.text.muted}`}>
-            {t('floorplanImport.noItems')}
+            {t('floorplanImport.noPropertiesOnFloor')}
           </p>
         ) : (
           <Select value={selectedPropertyId ?? ''} onValueChange={onSelectProperty}>
