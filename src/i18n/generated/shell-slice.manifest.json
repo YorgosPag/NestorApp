@@ -69,7 +69,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "15ac9ada31063bc2b3c8179e5352c228fdf0c638441bba552296849b559d7212",
+    "src/i18n/generated/shell-slice.el.json": "e70a5afeadf9dc44a45325c276902abfefe94344996ed885071217a1779d3fc5",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4b00399ef575c651794600808eb2938ec17e985be1f5453a4cea4c4ab86a7467",
+  "inputsSha256": "10f809179ae61c728afe801c28a68fba59a4c20e40cab9133280acf0aee00dff",
   "languages": [
     "el"
   ],
@@ -1548,7 +1548,8 @@
             "photos.none",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -4613,7 +4614,8 @@
             "photos.galleryLabel",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -9546,7 +9548,8 @@
             "photos.none",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -10304,7 +10307,8 @@
             "photos.none",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -10433,7 +10437,8 @@
             "photos.none",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -10838,7 +10843,8 @@
             "photos.none",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -11141,7 +11147,8 @@
             "photos.galleryLabel",
             "photos.spatial.model",
             "photos.spatial.tour",
-            "photos.spatial.tourAndModel"
+            "photos.spatial.tourAndModel",
+            "photos.spatial.tourAndModelShort"
           ],
           "prefixes": [],
           "whole": false
@@ -11639,7 +11646,7 @@
     "src/components/listing-map-snapshot/MapOrAbsenceCover.tsx": "d4c63f05b00482bcaab077423ebd24dfcc2f81a298dc7e1c968545ef016e8566",
     "src/components/listing-map-snapshot/use-listing-map-snapshot.ts": "f440979b5f9db4d358b6ef24f9c058756a4dc5359a33ceb08f88e1b64c10c00a",
     "src/components/listings/ListingAuthorshipLine.tsx": "4cc48f7465d6fef354d79e1375e935b8959759a7deb8b366d594564a120fa606",
-    "src/components/listings/ListingSpatialBadge.tsx": "ca487fb14a1f0e50d698831df4caeafd74265a1dfb46a7edf845e0d2eb42a01b",
+    "src/components/listings/ListingSpatialBadge.tsx": "59f9bcf821fe4c6bb26f733a47e534e19c53882f2f76fa2055a378feb405c31f",
     "src/components/listings/SaveListingToggle.tsx": "11ef5502b22a52af16e2e6cfc049b8f1493cb3377acc90f2de80467d49e7fdff",
     "src/components/listings/SavedListingsProvider.tsx": "9594ca5af5dbb6d54d986288721cdc7f1e5ee2cfbcfa925f4c1c7d8c0837ec5a",
     "src/components/mandate/AgencyCard.tsx": "0e70123511b4031c1ce0eea026f7cac782ac5435404069631b0867322b8c272e",
@@ -12794,10 +12801,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 25,
-    "matchedKeys": 242,
+    "matchedKeys": 243,
     "routeBoundaries": 3,
     "shellFiles": 1204,
-    "sliceBytes": 726321
+    "sliceBytes": 726356
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -15962,6 +15969,7 @@
         "photos.spatial.model",
         "photos.spatial.tour",
         "photos.spatial.tourAndModel",
+        "photos.spatial.tourAndModelShort",
         "placeholders.search",
         "productTour.dontShowAgain",
         "productTour.finish",

@@ -65,6 +65,32 @@ describe('ListingSpatialBadge — το κείμενο που βλέπει ο ά�
     expect(screen.getByText('3D tour · model')).toBeInTheDocument();
   });
 
+  /**
+   * 🔴 Μετρημένο ζωντανά στην παραγωγή 2026-10-13 (ADR-777 §8.90): η πλήρης πρόταση θέλει χάπι 184px, το στενό κελί
+   * δίνει 165–181 και η φούσκα 164 ⇒ «3D περιήγηση · μ…». Το jsdom δεν έχει διάταξη· αυτό που **μπορεί** να δει είναι
+   * ότι το **ορατό** κείμενο του διπλού σήματος είναι η σύντμηση και ότι η πρόταση δεν χάθηκε για όποιον δεν βλέπει.
+   */
+  it.each([
+    ['ελληνικά', () => el, '3D περιήγηση · μοντέλο'],
+    ['αγγλικά', () => en, '3D tour · model'],
+  ] as const)('διπλό σήμα (%s): το μάτι βλέπει «3D», ο αναγνώστης οθόνης ακούει ΟΛΗ την πρόταση — μία φορά', (_name, instance, sentence) => {
+    const { container } = renderBadge({ models: [MODEL], tour: { visibility: 'on-request' } }, instance());
+    const seen = screen.getByText('3D');
+    expect(seen).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText(sentence)).toHaveClass('sr-only');
+    expect(container.querySelector('.truncate')).toBeNull();
+    expect(container.textContent).toBe(`3D${sentence}`);
+  });
+
+  it.each([
+    ['μόνο περιήγηση', { tour: { visibility: 'public' } }, '3D περιήγηση'],
+    ['μόνο μοντέλο', { models: [MODEL] }, '3D μοντέλο'],
+  ] as const)('μονό σήμα (%s): η λέξη μένει ΟΡΑΤΗ — αυτή διδάσκει το εικονίδιο του διπλού', (_name, over, text) => {
+    const { container } = renderBadge(over as Partial<PublicListing>);
+    expect(screen.getByText(text)).not.toHaveClass('sr-only');
+    expect(container.querySelector('[aria-hidden="true"]:not(svg)')).toBeNull();
+  });
+
   it('χωρίς χωρικά μέσα ⇒ ΤΙΠΟΤΑ, ούτε άδειο κουτί', () => {
     const { container } = renderBadge({});
     expect(container).toBeEmptyDOMElement();

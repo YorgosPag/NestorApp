@@ -14,7 +14,8 @@
     "spatial": {
       "tour": "3D περιήγηση",
       "model": "3D μοντέλο",
-      "tourAndModel": "3D περιήγηση · μοντέλο"
+      "tourAndModel": "3D περιήγηση · μοντέλο",
+      "tourAndModelShort": "3D"
     },
     "addPhoto": "Προσθήκη Φωτογραφίας",
     "galleryLabel": "Γκαλερί φωτογραφιών",

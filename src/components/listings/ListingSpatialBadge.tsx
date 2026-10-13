@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **ΤΟ ΣΗΜΑ ΧΩΡΙΚΩΝ ΜΕΣΩΝ** — «3D περιήγηση» · «3D μοντέλο» · «3D περιήγηση · μοντέλο», πάνω στη φωτογραφία.
+ * @fileoverview **ΤΟ ΣΗΜΑ ΧΩΡΙΚΩΝ ΜΕΣΩΝ** — «3D περιήγηση» · «3D μοντέλο» · «3D» με δύο εικονίδια, πάνω στη φωτογραφία.
  * @related ADR-777 §8.88 · lib/listings/listing-spatial-media (η ΜΙΑ απόφαση) · shared/gallery/photo-overlay-surface
  * @module components/listings/ListingSpatialBadge
  *
@@ -19,7 +19,8 @@
  *
  * ⚠️ **ΠΛΗΡΟΦΟΡΙΑ, ΟΧΙ ΚΟΥΜΠΙ.** `pointer-events-none` ⇒ το κλικ περνά στη φωτογραφία και ανοίγει την αγγελία· καμία
  * στάση `Tab`. Κουμπί «άνοιξε την περιήγηση» θα έστελνε τον ανώνυμο σε **άρνηση** όταν η ορατότητα είναι `on-request`.
- * Το κείμενο είναι **ορατό**, άρα ο αναγνώστης οθόνης το διαβάζει ως κείμενο — τα εικονίδια είναι διακοσμητικά.
+ * Το κείμενο είναι **στο DOM**, άρα ο αναγνώστης οθόνης το διαβάζει ως κείμενο — τα εικονίδια είναι διακοσμητικά.
+ * Στο διπλό σήμα το μάτι βλέπει τη σύντμηση «3D» και ο αναγνώστης ακούει την πλήρη πρόταση (`badgeCompactLabel`).
  *
  * ⚠️ **Λεξιλόγιο φωτογραφιών** (`common-photos`), όχι αναζήτησης: η κάρτα ζει στο κέλυφος και το `search-results`
  * είναι στο ταβάνι του (CHECK 3.34) — ίδιο μάθημα με το `ListingCardNoPhotoCover`.
@@ -68,6 +69,31 @@ function badgeLabel(t: Translate, kind: ListingSpatialBadgeKind): string {
   }
 }
 
+/**
+ * **Η συμπαγής όψη** — ό,τι **γράφεται** στο χάπι όταν η πλήρης πρόταση δεν χωρά· `null` ⇒ γράφεται η ίδια η πρόταση.
+ *
+ * 🔴 **ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ στην παραγωγή (2026-10-13, ADR-777 §8.90).** Το «3D περιήγηση · μοντέλο» θέλει χάπι 184px· το
+ * στενό κελί (17rem) δίνει 165–181 και η φούσκα του χάρτη 164 ⇒ «3D περιήγηση · μ…»: το **δεύτερο** μέσο, αυτό ακριβώς
+ * που διαφημίζει το σήμα, ήταν το κομμένο. **Κανένας** από τους τέσσερις δεν κόβει σήμα με «…»: Zillow 0/34, Redfin 0
+ * (αναδιπλώνει χωριστά σήματα), Rightmove και Idealista δείχνουν δύο μέσα **μόνο με εικονίδια**.
+ *
+ * ⚠️ **Παντού, όχι «όπου δεν χωρά»** (απόφαση Giorgio 2026-10-13): η ίδια αγγελία δεν δείχνει άλλο σήμα στη λίστα και
+ * άλλο στη φούσκα, και δεν υπάρχει κατώφλι πλάτους δεμένο στις μετρικές μιας γραμματοσειράς.
+ *
+ * 🏆 **Πέρα από Rightmove/Idealista**: εκείνοι δεν γράφουν λέξη **πουθενά**. Εδώ τα μονά σήματα («3D περιήγηση»,
+ * «3D μοντέλο») κρατούν τη λέξη τους, άρα τα δύο εικονίδια διδάσκονται από τις διπλανές κάρτες· και η πλήρης πρόταση
+ * μένει στο DOM για τον αναγνώστη οθόνης (`badgeLabel`).
+ */
+function badgeCompactLabel(t: Translate, kind: ListingSpatialBadgeKind): string | null {
+  switch (kind) {
+    case 'tour':
+    case 'model':
+      return null;
+    case 'tour-and-model':
+      return t('common-photos:photos.spatial.tourAndModelShort');
+  }
+}
+
 interface ListingSpatialBadgeProps {
   readonly listing: Pick<PublicListing, 'models' | 'tour'>;
   /** **Η θέση** — την αποφασίζει ο γονέας (κάρτα ≠ φούσκα 176px)· το σήμα δεν ξέρει πού κάθεται. */
@@ -79,6 +105,9 @@ export function ListingSpatialBadge({ listing, className }:ListingSpatialBadgePr
   const kind = listingSpatialBadge(listing);
 
   if (kind === null) return null;
+
+  const label = badgeLabel(t, kind);
+  const compact = badgeCompactLabel(t, kind);
 
   return (
     <span
@@ -97,7 +126,15 @@ export function ListingSpatialBadge({ listing, className }:ListingSpatialBadgePr
       {BADGE_ICONS[kind].map((Icon) => (
         <Icon key={Icon.displayName} aria-hidden="true" className="size-3.5 shrink-0" />
       ))}
-      <span className="truncate">{badgeLabel(t, kind)}</span>
+      {compact === null ? (
+        <span className="truncate">{label}</span>
+      ) : (
+        <>
+          {/* Ό,τι **βλέπει** το μάτι είναι σύντμηση· ό,τι **ακούει** ο αναγνώστης οθόνης είναι η πλήρης πρόταση — μία φορά. */}
+          <span aria-hidden="true">{compact}</span>
+          <span className="sr-only">{label}</span>
+        </>
+      )}
     </span>
   );
 }

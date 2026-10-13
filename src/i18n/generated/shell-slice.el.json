@@ -2781,7 +2781,8 @@
       "spatial": {
         "model": "3D μοντέλο",
         "tour": "3D περιήγηση",
-        "tourAndModel": "3D περιήγηση · μοντέλο"
+        "tourAndModel": "3D περιήγηση · μοντέλο",
+        "tourAndModelShort": "3D"
       }
     }
   },
