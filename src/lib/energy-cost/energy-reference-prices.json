@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-10-13",
+  "windowSemesters": 4,
+  "sources": {
+    "electricity": {
+      "origin": "eurostat",
+      "dataset": "nrg_pc_204",
+      "band": "KWH2500-4999",
+      "updated": "2026-10-12",
+      "periods": [
+        {
+          "period": "2024-S2",
+          "eurPerKwh": 0.2311
+        },
+        {
+          "period": "2025-S1",
+          "eurPerKwh": 0.2305
+        },
+        {
+          "period": "2025-S2",
+          "eurPerKwh": 0.2381
+        },
+        {
+          "period": "2026-S1",
+          "eurPerKwh": 0.2401
+        }
+      ]
+    },
+    "oil": {
+      "origin": "weekly-oil-bulletin",
+      "kwhPerLitre": 10.079,
+      "periods": [
+        {
+          "period": "2024-S2",
+          "eurPerKwh": 0.1182,
+          "weeks": 11
+        },
+        {
+          "period": "2025-S1",
+          "eurPerKwh": 0.121,
+          "weeks": 17
+        },
+        {
+          "period": "2025-S2",
+          "eurPerKwh": 0.1143,
+          "weeks": 11
+        },
+        {
+          "period": "2026-S1",
+          "eurPerKwh": 0.138,
+          "weeks": 17
+        }
+      ]
+    },
+    "natural-gas": {
+      "origin": "eurostat",
+      "dataset": "nrg_pc_202",
+      "band": "GJ20-199",
+      "updated": "2026-10-07",
+      "periods": [
+        {
+          "period": "2024-S2",
+          "eurPerKwh": 0.0945
+        },
+        {
+          "period": "2025-S1",
+          "eurPerKwh": 0.0869
+        },
+        {
+          "period": "2025-S2",
+          "eurPerKwh": 0.0918
+        },
+        {
+          "period": "2026-S1",
+          "eurPerKwh": 0.0771
+        }
+      ]
+    }
+  }
+}
