@@ -20,7 +20,7 @@ import routeSlice from '@/i18n/generated/routes/listing__id__photos.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 import { listingGalleryImages, listingImageSrcSet } from '@/lib/listings/listing-images';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
-import { useTourPresenceAvailable } from '@/lib/spatial-tour/useTourPresenceAvailable';
+import { hasListedTour } from '@/lib/listings/listing-spatial-media';
 import { useListingPhotoParam } from '@/hooks/listings/useListingPhotoParam';
 import { listingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
@@ -54,7 +54,7 @@ function PhotosPageBody({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results', 'listing-detail']);
   const images = useMemo(() => listingGalleryImages(listing), [listing]);
   const floorplanAvailable = listing.floorplans.some(isPubliclyPresentable);
-  const tourAvailable = useTourPresenceAvailable(listing.id) ?? false;
+  const tourAvailable = hasListedTour(listing);
   // 📍 ADR-897 — η ανοιχτή φωτογραφία ζει στη διεύθυνση (`?photo=N`)· τα σημεία λήψης, ανά κάτοψη, με τη σειρά των εικόνων.
   const [openIndex, setOpenIndex] = useListingPhotoParam(images.length);
   const floorplanSpots = useMemo(() => listingFloorplanSpots(listing, images), [listing, images]);

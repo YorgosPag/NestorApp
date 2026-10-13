@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "57b8c4f43c97d85fdb99cdde562171b7d8459911a54b58a64175f939a2edfb0e",
+  "inputsSha256": "1cbaae05c684ecd8ab8c3f822eeb3fb886e2e226cd606100fd9ac92d3a24f587",
   "languages": [
     "el"
   ],
@@ -382,12 +382,12 @@
     "src/components/listing-detail/ListingVideos.tsx": "60aba5d64f054311a48331b786d6cd06a25cf4c1ce443832b79629180555866b",
     "src/components/listing-detail/listing-attribute-value.ts": "14309ad3fb1014249142673e64eeb9b1bad11a5f3bcb1bc6f1091f1ef0695ce2",
     "src/components/listing-detail/listing-model-stage-metrics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/components/listing-detail/media/ListingFloorplanPageContent.tsx": "bb734bd0d15ce4446a9affe999aa73f66f6d4633ec11e07e498d8b9c5195c7c5",
+    "src/components/listing-detail/media/ListingFloorplanPageContent.tsx": "a723eab5fd5a5f6121782de8aae0786b2a6d6f3167f5d64c176c7af2d9505d4d",
     "src/components/listing-detail/media/ListingFloorplanSpotsFigure.tsx": "d4fa183eb6f1600446a4e2d763266b78d565b56a1359a8e04029a623279943ab",
     "src/components/listing-detail/media/ListingMediaPageChrome.tsx": "10c7bd9fd5ee2a57024f842bd93c71b89399d77cc78afb0af5922549bb7f4185",
     "src/components/listing-detail/media/ListingMediaTabs.tsx": "66e1c19c63dce75ba69501230789c388fef6c3b728b187c58627de94823dc7e1",
-    "src/components/listing-detail/media/ListingMediaViewer.tsx": "e802114703f60855ec0352ad9c52393a92bc108272cce1dff2acb9da78e23742",
-    "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "02505058c9ad95f03efe65649a9342569700d1fbf4c1cc272c8ef7837adfaf91",
+    "src/components/listing-detail/media/ListingMediaViewer.tsx": "f1e8df4bc3e95a5177986b49132d2d030edf3b50ad98010b4af3dc7619d8fc2f",
+    "src/components/listing-detail/media/ListingPhotosPageContent.tsx": "a64e87b45133369d3a06d1c77174fba4314323e16909fffe154bcbb093fe0bb3",
     "src/components/listing-detail/media/ListingVideoStage.tsx": "5a764c168191ca24a455b720987901778c11cabfdb8f10abfb0c96e1fa8355ba",
     "src/components/listing-detail/media/floor-plate-tab.ts": "21593b67f43b7f1aeb8a82e8ac0446a5f668359dff88ad50181ce6cac77f3978",
     "src/components/listings/MarketingAudienceControl.tsx": "5d8748c36941e01444bba536a1cc8fb158e49b70695590cbd14b8ba5006ce61e",
@@ -1046,7 +1046,6 @@
     "src/lib/spatial-tour/tileset/tour-plan-layout.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/spatial-tour/tileset/tour-tileset-layout.ts": "fa1fb5b26f8ae74c32f9fc20cc9ebd5353314a0b33e53ff396036cbe4465dd1a",
     "src/lib/spatial-tour/tour-editor-model.ts": "270deea065517b00b704e098f6dc2876331d19a14ee725565daefc6b7778462b",
-    "src/lib/spatial-tour/useTourPresenceAvailable.ts": "001059e21b50c073a0c8b22cda78c4169d65a2529bbfdc3e0456cebf4822c65b",
     "src/lib/spatial-tour/viewer/tour-cube-faces.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/spatial-tour/viewer/tour-space-view.ts": "d83c6776913a72308c3907ec37de143ad745b5d2b5b38f475321d291f23f8369",
     "src/lib/spatial-tour/viewer/tour-tile-visibility.ts": "9b245b71b7a4e9e30f1b466d8ef00a1b5c341415871055d0de99992cd354c46c",
@@ -4950,23 +4949,6 @@
     "listing__id__floorplan": {
       "page": "src/app/(light)/listing/[id]/floorplan/page.tsx",
       "wants": {
-        "floors": {
-          "keys": [
-            "label.attic",
-            "label.basement",
-            "label.foundation",
-            "label.ground",
-            "label.mezzanine",
-            "label.pilotis",
-            "label.raisedGround",
-            "label.roof",
-            "label.semiBasement",
-            "label.stairPenthouse",
-            "label.standard"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "listing-detail": {
           "keys": [
             "attributes.publicRecordSource",
@@ -5018,23 +5000,6 @@
     "listing__id__photos": {
       "page": "src/app/(light)/listing/[id]/photos/page.tsx",
       "wants": {
-        "floors": {
-          "keys": [
-            "label.attic",
-            "label.basement",
-            "label.foundation",
-            "label.ground",
-            "label.mezzanine",
-            "label.pilotis",
-            "label.raisedGround",
-            "label.roof",
-            "label.semiBasement",
-            "label.stairPenthouse",
-            "label.standard"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "listing-detail": {
           "keys": [
             "media.backToListing",

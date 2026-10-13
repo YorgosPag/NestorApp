@@ -21,7 +21,7 @@ import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { LISTING_FLOORPLAN_PROVENANCE_KEYS } from '@/lib/listings/listing-material';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
-import { useTourPresenceAvailable } from '@/lib/spatial-tour/useTourPresenceAvailable';
+import { hasListedTour } from '@/lib/listings/listing-spatial-media';
 import type { ListingFloorplan, PublicListing } from '@/types/public-listing';
 
 import { ListingMediaPageBody, MediaPageHeader } from './ListingMediaPageChrome';
@@ -43,7 +43,7 @@ export function ListingFloorplanPageContent({ listingId }: { readonly listingId:
 function FloorplanPageBody({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results', 'listing-detail']);
   const shown = listing.floorplans.filter(isPubliclyPresentable);
-  const tourAvailable = useTourPresenceAvailable(listing.id) ?? false;
+  const tourAvailable = hasListedTour(listing);
 
   return (
     <>

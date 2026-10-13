@@ -28,12 +28,6 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/listing/prop_a0000001/photos',
 }));
 
-// ADR-884 Φ2στ · §4.12 Μέρος Δ — η ερώτηση «έχει η αγγελία περιήγηση;» δεν είναι θέμα αυτής της
-// άγκυρας· τη φυλά το `useTourPresenceAvailable` μόνο του.
-jest.mock('@/lib/spatial-tour/useTourPresenceAvailable', () => ({
-  useTourPresenceAvailable: () => false,
-}));
-
 const mockLookup = { value: { state: 'loading' } as PublicListingLookup };
 jest.mock('@/services/realtime/hooks/usePublicListings', () => ({
   usePublicListing: () => mockLookup.value,
@@ -50,6 +44,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
       { url: 'https://shelf/1.webp', width: 1280, height: 960, altKey: LISTING_MATERIAL_KEYS.agency.galleryAlt, sources: [] },
     ],
     floorplans: [],
+    // ADR-777 §8.92 — «έχει περιήγηση;» το απαντά η ίδια η αγγελία· εδώ καμία.
+    tour: null,
     ...over,
   } as unknown as PublicListing;
 }

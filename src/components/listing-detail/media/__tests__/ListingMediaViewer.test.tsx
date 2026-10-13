@@ -18,11 +18,6 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({ useTranslation: () => ({ t: (k
 jest.mock('@/lib/design-system', () => ({}), { virtual: true });
 jest.mock('@/lib/listings/listing-images', () => ({ listingGalleryImages: () => [{}, {}, {}] }));
 
-const tourPresence = jest.fn<boolean | undefined, [string]>();
-jest.mock('@/lib/spatial-tour/useTourPresenceAvailable', () => ({
-  useTourPresenceAvailable: (id: string) => tourPresence(id),
-}));
-
 jest.mock('../../ListingGallery', () => ({ ListingGallery: () => <div data-testid="gallery" /> }));
 jest.mock('../../ListingFloorplans', () => ({
   ListingFloorplans: ({ embedded }: { embedded?: boolean }) => <div data-testid="floorplans" data-embedded={String(embedded)} />,
@@ -49,8 +44,17 @@ const FLOOR_PLATE_WITHOUT_SELF = {
   value: { image: PLATE_IMAGE, units: [{ outline: OUTLINE, state: 'available' }] },
 };
 
-function listing(floorplans: unknown[] = [], models: unknown[] = [], videos: unknown[] = [], floorPlates: unknown[] = []) {
-  return { id: 'l1', floorplans, models, videos, floorPlates } as never;
+/** Η περιήγηση ζει ΣΤΗΝ αγγελία (ADR-777 §8.92): `null` = καμία που φαίνεται — ο προβολέας δεν ρωτά πια το δίκτυο. */
+const LISTED_TOUR = { visibility: 'public' };
+
+function listing(
+  floorplans: unknown[] = [],
+  models: unknown[] = [],
+  videos: unknown[] = [],
+  floorPlates: unknown[] = [],
+  tour: unknown = null
+) {
+  return { id: 'l1', floorplans, models, videos, floorPlates, tour } as never;
 }
 
 function setQuery(query: string): void {
@@ -58,7 +62,6 @@ function setQuery(query: string): void {
 }
 
 beforeEach(() => {
-  tourPresence.mockReturnValue(false);
   setQuery('');
 });
 
@@ -109,8 +112,7 @@ describe('ListingMediaViewer', () => {
     expect(screen.queryByRole('tab', { name: /tour/ })).toBeNull();
     unmount();
 
-    tourPresence.mockReturnValue(true);
-    render(<ListingMediaViewer listing={listing()} />);
+    render(<ListingMediaViewer listing={listing([], [], [], [], LISTED_TOUR)} />);
     expect(screen.getByRole('tab', { name: /tour/ })).toBeTruthy();
   });
 

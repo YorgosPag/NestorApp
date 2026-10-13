@@ -28,9 +28,8 @@ import { useActiveMediaTab } from '@/components/shared/media/viewer/useMediaTabP
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { presentableFloorPlate } from '@/lib/listings/floor-plate/floor-plate-publication';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
-import { presentableModels } from '@/lib/listings/listing-spatial-media';
+import { hasListedTour, presentableModels } from '@/lib/listings/listing-spatial-media';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
-import { useTourPresenceAvailable } from '@/lib/spatial-tour/useTourPresenceAvailable';
 import type { PublicListing } from '@/types/public-listing';
 
 import { ListingFloorPlates } from '../ListingFloorPlates';
@@ -129,7 +128,7 @@ function spatialTabs(listing: PublicListing, t: Translate, tourAvailable: boolea
 
 export function ListingMediaViewer({ listing }: { readonly listing: PublicListing }): ReactElement {
   const { t } = useTranslation(['listing-detail']);
-  const tourAvailable = useTourPresenceAvailable(listing.id) === true;
+  const tourAvailable = hasListedTour(listing);
 
   // Οι **ίδιοι** κριτές με τα φύλλα (ADR-842 Α7): καρτέλα υπάρχει μόνο όταν το φύλλο της θα ζωγράφιζε κάτι.
   const tabs = [...pictureTabs(listing, t), ...planTabs(listing, t), ...spatialTabs(listing, t, tourAvailable)];

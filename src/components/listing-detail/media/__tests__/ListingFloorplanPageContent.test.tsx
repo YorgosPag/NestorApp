@@ -28,10 +28,6 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/listing/prop_a0000001/floorplan',
 }));
 
-jest.mock('@/lib/spatial-tour/useTourPresenceAvailable', () => ({
-  useTourPresenceAvailable: () => false,
-}));
-
 const mockLookup = { value: { state: 'loading' } as PublicListingLookup };
 jest.mock('@/services/realtime/hooks/usePublicListings', () => ({
   usePublicListing: () => mockLookup.value,
@@ -61,6 +57,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     coverImage: null,
     gallery: [],
     floorplans: [declaredPlan()],
+    tour: null,
     ...over,
   } as unknown as PublicListing;
 }
