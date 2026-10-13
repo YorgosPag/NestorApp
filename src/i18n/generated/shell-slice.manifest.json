@@ -59,7 +59,7 @@
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
-    "src/i18n/generated/routes/search__results.el.json": "49f712b84ef93590e242b9e0dcc21a59b899b3e21ad3d51efc9f2e187f7043f1",
+    "src/i18n/generated/routes/search__results.el.json": "b0be5e87bc4b28e854e949b6211701c0d04ce8e25401db4ad15c6dc835f555d1",
     "src/i18n/generated/routes/stay.el.json": "3044270a27d1268903929dd44a0a20afa30e6ac91fa1d554ceeba748ba062886",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/terms__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e68c4d7837fde9e65e0057c421cc841c3349fc959c6f634e47d4261576387047",
+  "inputsSha256": "4b00399ef575c651794600808eb2938ec17e985be1f5453a4cea4c4ab86a7467",
   "languages": [
     "el"
   ],
@@ -872,7 +872,7 @@
     "src/lib/conveyance/engagement-invitation-schema.ts": "d3d75eb089e9a84ea81650920342767835bc86b90d460dea0e554089d45eabcc",
     "src/lib/conveyance/view-signal-client-ref.ts": "3a7676f0bdbea8be97a0cfccaa9dcf947adf9592d2969c6ff11029e4c3891056",
     "src/lib/criteria/criterion-option-counts.ts": "df08b34cd0375fa66e1519fc81c51f0fe380f70ea2720f3a4a6f3fcbaa7d93b8",
-    "src/lib/criteria/listing-criterion-labels.ts": "7d0d183ca8bdabed599d16c9c8b2c252d0052703b4535e9ee74bc303b9fbffeb",
+    "src/lib/criteria/listing-criterion-labels.ts": "02a3c5d2b00aaccfbdd0c22364dc2a8b552024d3322a635127e974ef8bc2b56a",
     "src/lib/data/json-shape.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/demand-aggregate.ts": "7e3289774133eed42b56fa75fc88d3b239470e75cc692b7b140c44581ea3231b",
     "src/lib/demand/demand-answer.ts": "a1dbf044b4a62a3ecc051e7a90614ed78e7737a7bb8025855faf74dbc79bbff8",
@@ -10610,6 +10610,7 @@
             "filters.apply",
             "filters.axis.authorship",
             "filters.axis.hasPhotos",
+            "filters.axis.hasSpatialMedia",
             "filters.axis.offerKind",
             "filters.axis.priceNightly",
             "filters.axis.priceRent",
@@ -11638,7 +11639,7 @@
     "src/components/listing-map-snapshot/MapOrAbsenceCover.tsx": "d4c63f05b00482bcaab077423ebd24dfcc2f81a298dc7e1c968545ef016e8566",
     "src/components/listing-map-snapshot/use-listing-map-snapshot.ts": "f440979b5f9db4d358b6ef24f9c058756a4dc5359a33ceb08f88e1b64c10c00a",
     "src/components/listings/ListingAuthorshipLine.tsx": "4cc48f7465d6fef354d79e1375e935b8959759a7deb8b366d594564a120fa606",
-    "src/components/listings/ListingSpatialBadge.tsx": "048d073bc12adc6daff41f8b3d290640417144e580ddf047e7fa3399df51225a",
+    "src/components/listings/ListingSpatialBadge.tsx": "ca487fb14a1f0e50d698831df4caeafd74265a1dfb46a7edf845e0d2eb42a01b",
     "src/components/listings/SaveListingToggle.tsx": "11ef5502b22a52af16e2e6cfc049b8f1493cb3377acc90f2de80467d49e7fdff",
     "src/components/listings/SavedListingsProvider.tsx": "9594ca5af5dbb6d54d986288721cdc7f1e5ee2cfbcfa925f4c1c7d8c0837ec5a",
     "src/components/mandate/AgencyCard.tsx": "0e70123511b4031c1ce0eea026f7cac782ac5435404069631b0867322b8c272e",
@@ -12133,10 +12134,10 @@
     "src/lib/conveyance/view-signal-key.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/criteria/criterion-vocabulary.ts": "fa71c8ecb83e12afbfc91234df5f2949108d7d55559ede9061d58dfbfaec34ca",
     "src/lib/criteria/listing-criteria-judge.ts": "db0330138947916e819990cd2fd1a833cf02d61200ae5d9d7ec758cb492b621f",
-    "src/lib/criteria/listing-criteria-url.ts": "b7ec7d9749d96af685afe05dc4cc8b1499722f5612ed892ab1994a6bf94b70cf",
+    "src/lib/criteria/listing-criteria-url.ts": "be8eaf76ad2cb6fa511be3a21d8a2df0b6395f601e133a67cb81e47d089717c2",
     "src/lib/criteria/listing-criteria.ts": "914b33e90bc8bc8fc39f4d62e9e76b36894908fdcb4383248fbbe8762adee3d9",
-    "src/lib/criteria/listing-criterion-asking.ts": "cd2c573bf33481768f8969e1740ed4327c015470496079d7255fa133e2f32e7d",
-    "src/lib/criteria/listing-criterion-reading.ts": "453f3f79502685d5f908451870eaaab5ef1e696375939279705580cc97d26c11",
+    "src/lib/criteria/listing-criterion-asking.ts": "5fd3593bbaee32d5cb0750372a29c34a38d3179871625105d910b5b99587fe97",
+    "src/lib/criteria/listing-criterion-reading.ts": "36828351c5f9821acc8bb72a768837966ff95201c7f868810395ba47c91a0c67",
     "src/lib/criteria/listing-criterion-values.ts": "e660334df59173d0060698d5853901110326bef9e0b4e270a984bb21bbd62059",
     "src/lib/data/lazy-json-snapshot.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/data/server-json-file.ts": "e56ad2b9289b01c2c96d66d7dc197878dfbaed2d4c204fa164dc9eaef2eec2c3",
@@ -12796,7 +12797,7 @@
     "matchedKeys": 242,
     "routeBoundaries": 3,
     "shellFiles": 1204,
-    "sliceBytes": 726235
+    "sliceBytes": 726321
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

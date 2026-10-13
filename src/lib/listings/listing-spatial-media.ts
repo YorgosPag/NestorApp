@@ -44,3 +44,18 @@ export function listingSpatialBadge(listing: Pick<PublicListing, 'models' | 'tou
   if (tour) return 'tour';
   return model ? 'model' : null;
 }
+
+/**
+ * **Έχει χωρικά μέσα;** — η ερώτηση του φίλτρου «Μόνο με 3D» (ADR-777 §8.89).
+ *
+ * 🔑 **Ορίζεται ΜΕΣΩ του σήματος, όχι δίπλα του.** Το φίλτρο περνά μια αγγελία **ακριβώς** όταν η κάρτα της δείχνει
+ * σήμα — δεύτερη διατύπωση (`hasListedTour(l) || presentableModels(l).length > 0`) θα ήταν σήμερα ισοδύναμη και αύριο
+ * όχι: ένα τρίτο χωρικό μέσο θα έμπαινε στο ένα και θα ξεχνιόταν στο άλλο.
+ *
+ * 🏆 **Πέρα από τη Zillow** (μετρημένο 2026-10-13, Austin, φίλτρο `3d` ενεργό): 6 από τις 9 πρώτες κάρτες έδειχναν
+ * «Showcase» και όχι «3D Tour» — η μία θέση μοιράζεται, άρα το αποτέλεσμα δεν λέει **γιατί** πέρασε. Εδώ κάθε
+ * αγγελία που περνά το φίλτρο φορά το σήμα της, εκ κατασκευής.
+ */
+export function hasSpatialMedia(listing: Pick<PublicListing, 'models' | 'tour'>): boolean {
+  return listingSpatialBadge(listing) !== null;
+}

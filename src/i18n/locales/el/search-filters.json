@@ -33,6 +33,7 @@
       "offerKind": "Διάθεση",
       "authorship": "Ποιος τη δηλώνει",
       "hasPhotos": "Μόνο με φωτογραφίες",
+      "hasSpatialMedia": "Μόνο με 3D (περιήγηση ή μοντέλο)",
       "priceSale": "Τιμή πώλησης",
       "priceRent": "Ενοίκιο (μηνιαίο)",
       "priceNightly": "Τιμή ανά νύχτα"

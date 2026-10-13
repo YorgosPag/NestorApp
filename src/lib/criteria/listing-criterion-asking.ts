@@ -176,6 +176,12 @@ const BESPOKE_ASKING = {
   authorship: 'enum-any',
   /** «Μόνο με φωτογραφίες». Ναι/όχι — η απουσία του άξονα είναι «δεν ρωτήθηκε». */
   hasPhotos: 'flag',
+  /**
+   * «Μόνο με 3D» — περιήγηση **ή** μοντέλο (ADR-777 §8.89). **Ένας** άξονας, όχι δύο: μετρημένη πρακτική (Zillow `3d`,
+   * Redfin «3D walkthrough & video tour», Idealista «visita virtual» — και οι τρεις ενώνουν τα είδη σε ένα ναι/όχι)·
+   * το **είδος** το λέει το σήμα της κάρτας.
+   */
+  hasSpatialMedia: 'flag',
 } as const satisfies Record<string, CriterionShape>;
 
 /**
@@ -310,8 +316,9 @@ export function criterionKeysWithShape(shape: CriterionShape): readonly Criterio
  * `UNCERTAIN_BLOCKERS`: *«μπήκε ένα, επειδή μετρήθηκε»*.
  *
  * 🔑 **Και ο `orientations` ΔΕΝ είναι εδώ, επίτηδες**: ένα οικόπεδο **έχει**
- * προσανατολισμό. Ούτε το `areaSqm`, ούτε το `type`, ούτε οι τέσσερις ειδικοί άξονες
- * — τιμή, διάθεση, συγγραφή και φωτογραφίες ισχύουν για κάθε είδος.
+ * προσανατολισμό. Ούτε το `areaSqm`, ούτε το `type`, ούτε οι πέντε ειδικοί άξονες
+ * — τιμή, διάθεση, συγγραφή, φωτογραφίες και χωρικά μέσα ισχύουν για κάθε είδος *(ένα οικόπεδο **μπορεί** να έχει
+ * μοντέλο εδάφους ή περιήγηση)*.
  */
 export const LAND_CANNOT_ANSWER = [
   'floor',

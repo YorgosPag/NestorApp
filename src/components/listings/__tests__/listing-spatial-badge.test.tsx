@@ -97,4 +97,29 @@ describe('🔴 ένα σήμα, μη διαδραστικό, πάνω σε φω�
     for (const token of PHOTO_OVERLAY_SURFACE_CLASS.split(' ')) expect(badge).toHaveClass(token);
     expect(badge).toHaveClass('absolute', 'left-5', 'top-5');
   });
+
+  /**
+   * 🔴 Μετρημένο ζωντανά 2026-10-13: με απλή συνένωση το χάπι κρατούσε **και** το δικό του `max-w-full` **και** το όριο
+   * του γονέα, και ο browser εφάρμοζε το πρώτο (`max-width: 100%`) ⇒ το χάπι έφτανε ως την καρδιά. Το jsdom δεν έχει
+   * διάταξη· αυτό που **μπορεί** να δει είναι ότι οι δύο κλάσεις δεν συνυπάρχουν ποτέ.
+   */
+  it('το όριο πλάτους του γονέα ΑΝΤΙΚΑΘΙΣΤΑ το προεπιλεγμένο — ποτέ δύο `max-w` μαζί', () => {
+    const { container } = render(
+      <I18nextProvider i18n={el}>
+        <ListingSpatialBadge listing={listing({ models: [MODEL] })} className="max-w-[calc(100%-6.5rem)]" />
+      </I18nextProvider>,
+    );
+    const badge = container.firstElementChild as HTMLElement;
+    expect(badge).toHaveClass('max-w-[calc(100%-6.5rem)]');
+    expect(badge).not.toHaveClass('max-w-full');
+  });
+
+  it('χωρίς όριο από τον γονέα μένει το προεπιλεγμένο', () => {
+    const { container } = render(
+      <I18nextProvider i18n={el}>
+        <ListingSpatialBadge listing={listing({ models: [MODEL] })} />
+      </I18nextProvider>,
+    );
+    expect(container.firstElementChild).toHaveClass('max-w-full');
+  });
 });

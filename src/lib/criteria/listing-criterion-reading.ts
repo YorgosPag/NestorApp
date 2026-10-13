@@ -43,6 +43,7 @@ import {
 import { priceClassOf, type PriceRole } from '@/lib/properties/price-resolver';
 import { resolvePriceForRole } from '@/lib/properties/price-by-role';
 import { isLandProperty } from '@/constants/property-classification';
+import { hasSpatialMedia } from '@/lib/listings/listing-spatial-media';
 
 import {
   DECLARED_NONE,
@@ -381,6 +382,9 @@ type FlagReader = (listing: PublicListing) => boolean;
  */
 const FLAG_READERS: Record<FlagCriterionKey, FlagReader> = {
   hasPhotos: (listing) => listing.coverImage !== null || listing.gallery.length > 0,
+  // ⛔ Ο κριτής ζει στο `listing-spatial-media` — ο **ίδιος** που ζωγραφίζει το σήμα της κάρτας. Ποτέ
+  // `listing.tour !== null` ή `models.length` γραμμένο εδώ (ADR-777 §8.89).
+  hasSpatialMedia,
 };
 
 /** Η απάντηση της αγγελίας σε άξονα **ναι/όχι**. */

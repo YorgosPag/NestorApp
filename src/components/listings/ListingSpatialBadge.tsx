@@ -32,6 +32,7 @@ import { Box, Compass, type LucideIcon } from 'lucide-react';
 
 import { PHOTO_OVERLAY_SURFACE_CLASS } from '@/components/shared/gallery/photo-overlay-surface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 import { listingSpatialBadge, type ListingSpatialBadgeKind } from '@/lib/listings/listing-spatial-media';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -73,7 +74,7 @@ interface ListingSpatialBadgeProps {
   readonly className?: string;
 }
 
-export function ListingSpatialBadge({ listing, className = '' }: ListingSpatialBadgeProps): React.ReactElement | null {
+export function ListingSpatialBadge({ listing, className }:ListingSpatialBadgeProps): React.ReactElement | null {
   const { t } = useTranslation(['common-photos']);
   const kind = listingSpatialBadge(listing);
 
@@ -81,7 +82,17 @@ export function ListingSpatialBadge({ listing, className = '' }: ListingSpatialB
 
   return (
     <span
-      className={`pointer-events-none inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${PHOTO_OVERLAY_SURFACE_CLASS} ${className}`.trim()}
+      /*
+        🔴 **`cn`, ΟΧΙ συνένωση — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ (2026-10-13).** Η πρώτη γραφή κολλούσε το `className` του γονέα μετά
+        το `max-w-full`: δύο κλάσεις ίδιας ιδιότητας, και νικούσε η σειρά του **stylesheet**, όχι της γραφής ⇒ υπολογισμένο
+        `max-width: 100%` αντί για `calc(100% − 6.5rem)`. Το όριο που κρατά το χάπι μακριά από την καρδιά **δεν ίσχυε**
+        (κελί 17rem, «3D περιήγηση · μοντέλο»: κενό 5px· φούσκα 176px: χάπι 184px, έξω από το πλαίσιο).
+      */
+      className={cn(
+        'pointer-events-none inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+        PHOTO_OVERLAY_SURFACE_CLASS,
+        className
+      )}
     >
       {BADGE_ICONS[kind].map((Icon) => (
         <Icon key={Icon.displayName} aria-hidden="true" className="size-3.5 shrink-0" />

@@ -269,6 +269,7 @@
       "axis": {
         "authorship": "Ποιος τη δηλώνει",
         "hasPhotos": "Μόνο με φωτογραφίες",
+        "hasSpatialMedia": "Μόνο με 3D (περιήγηση ή μοντέλο)",
         "offerKind": "Διάθεση",
         "priceNightly": "Τιμή ανά νύχτα",
         "priceRent": "Ενοίκιο (μηνιαίο)",

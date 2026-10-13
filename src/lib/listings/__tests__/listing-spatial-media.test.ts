@@ -13,6 +13,7 @@ import type { ListingModel, ListingTourPresence } from '@/types/public-listing';
 import {
   LISTING_SPATIAL_BADGES,
   hasListedTour,
+  hasSpatialMedia,
   listingSpatialBadge,
   presentableModels,
 } from '../listing-spatial-media';
@@ -68,5 +69,25 @@ describe('περιήγηση — διαβάζεται από την προβολ
   it('`null` = καμία περιήγηση που φαίνεται', () => {
     expect(hasListedTour(listing({ tour: null }))).toBe(false);
     expect(hasListedTour(listing({ tour: PUBLIC_TOUR }))).toBe(true);
+  });
+});
+
+describe('🔴 το φίλτρο «Μόνο με 3D» περνά ΑΚΡΙΒΩΣ ό,τι φορά σήμα (ADR-777 §8.89)', () => {
+  // Zillow, μετρημένο: με το φίλτρο `3d` ενεργό, 6/9 κάρτες έδειχναν άλλο σήμα. Εδώ οι δύο ερωτήσεις είναι ΜΙΑ.
+  it.each([
+    ['τίποτα', [], null],
+    ['μόνο μοντέλο', [MEASURED], null],
+    ['μόνο περιήγηση', [], PUBLIC_TOUR],
+    ['περιήγηση με αίτημα', [], ON_REQUEST_TOUR],
+    ['και τα δύο', [MEASURED], PUBLIC_TOUR],
+    ['μοντέλο που δεν δείχνεται', [UNCONFIRMED], null],
+    ['μοντέλο που δεν δείχνεται + περιήγηση', [UNCONFIRMED], PUBLIC_TOUR],
+  ] as const)('%s', (_name, models, tour) => {
+    const subject = listing({ models, tour });
+    expect(hasSpatialMedia(subject)).toBe(listingSpatialBadge(subject) !== null);
+  });
+
+  it('μη εγκεκριμένο μοντέλο ΔΕΝ περνά το φίλτρο — δεν θα το έβλεπε κανείς', () => {
+    expect(hasSpatialMedia(listing({ models: [UNCONFIRMED], tour: null }))).toBe(false);
   });
 });

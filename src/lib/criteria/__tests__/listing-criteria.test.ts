@@ -99,8 +99,9 @@ describe('Κ — ο πίνακας αξόνων: εξαντλητικός, κα�
     //    έγινε **τρεις** — ένας ανά μονάδα (`priceSale` · `priceRent` · `priceNightly`).
     //    Ένας άξονας με τρεις σημασίες ήταν ο τύπος να λέει ψέματα· σε κλειστό
     //    λεξιλόγιο κάθε κλειδί οφείλει να σημαίνει **ένα** πράγμα.
+    // 🔴 **ΕΠΤΑ από το ADR-777 §8.89**: μπήκε το `hasSpatialMedia` («Μόνο με 3D»).
     expect(LISTING_CRITERION_KEYS.length).toBe(
-      LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length + 6,
+      LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length + 7,
     );
   });
 
@@ -391,5 +392,53 @@ describe('Ε — η σειρά έρχεται από τη δήλωση, όχι �
       { min: 1, max: null },
     );
     expect(askedCriterionKeys(a)).toEqual(askedCriterionKeys(b));
+  });
+});
+
+// =============================================================================
+// Χ — «ΜΟΝΟ ΜΕ 3D»: Ο ΑΞΟΝΑΣ ΡΩΤΑ ΤΟΝ ΚΡΙΤΗ ΤΟΥ ΣΗΜΑΤΟΣ (ADR-777 §8.89)
+// =============================================================================
+
+describe('Χ — «Μόνο με 3D»: περιήγηση Ή μοντέλο, ένας άξονας', () => {
+  const MODEL = {
+    provenance: 'measured',
+    value: { url: 'https://shelf.example/m.glb', altKey: 'listing-detail:model.alt.agency' },
+    at: AT,
+    sourceRef: 'bim',
+  } as const;
+  const bare = { floorplans: [], videos: [], floorPlates: [], models: [], tour: null };
+  const wants3d = withFlag(EMPTY_LISTING_CRITERIA, 'hasSpatialMedia', true);
+
+  it.each([
+    ['μόνο μοντέλο', { models: [MODEL] }, 'satisfied'],
+    ['μόνο περιήγηση', { tour: { visibility: 'public' } }, 'satisfied'],
+    ['περιήγηση με αίτημα', { tour: { visibility: 'on-request' } }, 'satisfied'],
+    ['τίποτα', {}, 'excluded'],
+  ] as const)('%s ⇒ %s', (_name, media, outcome) => {
+    const subject = listing({ ...bare, ...media } as Partial<PublicListing>);
+    expect(judgeCriterion(subject, wants3d, 'hasSpatialMedia')).toBe(outcome);
+  });
+
+  it('🔴 ποτέ «δεν το δήλωσε»: είναι γεγονός του εγγράφου, όχι σιωπή του κατόχου', () => {
+    const subject = listing(bare as Partial<PublicListing>);
+    expect(matchListingCriteria(subject, wants3d)).toEqual({
+      verdict: 'excluded',
+      excludedBy: ['hasSpatialMedia'],
+      undeclaredOn: [],
+    });
+  });
+
+  it('η γη ΣΗΚΩΝΕΙ την ερώτηση — ένα οικόπεδο μπορεί να έχει μοντέλο', () => {
+    const plot = listing({ ...bare, type: 'plot', floor: null, bedrooms: null } as Partial<PublicListing>);
+    expect(criterionAppliesTo(plot, 'hasSpatialMedia')).toBe(true);
+    expect(listingSurvivesCriteria(plot, wants3d)).toBe(false);
+  });
+
+  it('ταξιδεύει στη διεύθυνση ως `3d` και γυρίζει ίδιο', () => {
+    const params = new URLSearchParams();
+    writeListingCriteria(wants3d, params);
+    expect(params.has(CRITERION_PARAM.hasSpatialMedia)).toBe(true);
+    expect(CRITERION_PARAM.hasSpatialMedia).toBe('3d');
+    expect(parseListingCriteria(params)).toEqual(wants3d);
   });
 });

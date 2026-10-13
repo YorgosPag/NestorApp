@@ -134,9 +134,10 @@ describe('Β — οι 31 ετικέτες αξόνων', () => {
     expect(criterionLabel(t, 'amenities')).toBe('listing-detail:attributes.label.amenities');
   });
 
-  it('οι 6 ειδικοί έχουν δικές τους — γιατί ΔΕΝ είναι δημόσια στοιχεία', () => {
+  it('οι 7 ειδικοί έχουν δικές τους — γιατί ΔΕΝ είναι δημόσια στοιχεία', () => {
     const { t } = recordingT();
     expect(criterionLabel(t, 'hasPhotos')).toBe('search-filters:filters.axis.hasPhotos');
+    expect(criterionLabel(t, 'hasSpatialMedia')).toBe('search-filters:filters.axis.hasSpatialMedia');
   });
 
   it('🔴 ΚΑΘΕ άξονας τιμής ονομάζει τη ΜΟΝΑΔΑ του — ποτέ σκέτο «Τιμή»', () => {
