@@ -28,6 +28,15 @@ import { raisedClaimKinds } from '@/lib/legality/legality-offer-matrix';
 import { isPlainRecord } from '@/lib/type-guards';
 import { isOfferKind } from '@/types/property-offers';
 
+import {
+  finalEnergySchema,
+  isUsefulArea,
+  readFinalEnergy,
+  sameFinalEnergy,
+  usefulAreaSchema,
+  type FinalEnergyLine,
+} from './certificate-final-energy';
+
 /** Γιατί δεν υπάρχει κλάση: το πιστοποιητικό **εκδίδεται**, ή το ακίνητο **εξαιρείται** (άρθ. 4 §7 ν. 4122/2013). */
 export const ENERGY_CERTIFICATE_ABSENCES = ['pending', 'exempt'] as const;
 export type EnergyCertificateAbsence = (typeof ENERGY_CERTIFICATE_ABSENCES)[number];
@@ -48,6 +57,10 @@ export interface EnergyCertificate {
   readonly co2Emissions: number | null;
   /** Ημέρα έκδοσης, `YYYY-MM-DD`. **Μόνο** με κλάση· δεν ταξιδεύει δημόσια ως πεδίο — τρέφει την ισχύ. */
   readonly issuedOn: string | null;
+  /** Ωφέλιμη επιφάνεια **όπως τη γράφει το ΠΕΑ**, m², ένα δεκαδικό. **Μόνο** με κλάση (ADR-777 §8.95). */
+  readonly usefulArea: number | null;
+  /** Τελική ενέργεια ανά πηγή (στήλη «Συνολική»), σε σειρά εντύπου. **Μόνο** με κλάση· `null` = δεν δηλώθηκε. */
+  readonly finalEnergy: readonly FinalEnergyLine[] | null;
   /** Γιατί δεν υπάρχει κλάση. **Μόνο** χωρίς κλάση· `null` = δεν απαντήθηκε. */
   readonly absence: EnergyCertificateAbsence | null;
 }
@@ -70,6 +83,8 @@ export const UNDECLARED_ENERGY_CERTIFICATE: EnergyCertificate = {
   primaryEnergy: null,
   co2Emissions: null,
   issuedOn: null,
+  usefulArea: null,
+  finalEnergy: null,
   absence: null,
 };
 
@@ -124,6 +139,8 @@ export function readEnergyCertificate(raw: unknown): EnergyCertificate {
     primaryEnergy: isPrimaryEnergy(record.primaryEnergy) ? record.primaryEnergy : null,
     co2Emissions: isCo2Emissions(record.co2Emissions) ? record.co2Emissions : null,
     issuedOn: issuedOnOf(record),
+    usefulArea: isUsefulArea(record.usefulArea) ? record.usefulArea : null,
+    finalEnergy: readFinalEnergy(record.finalEnergy),
     absence: null,
   };
 }
@@ -153,6 +170,8 @@ export const energyCertificateSchema = z
     primaryEnergy: z.number().refine(isPrimaryEnergy).nullable(),
     co2Emissions: z.number().refine(isCo2Emissions).nullable(),
     issuedOn: calendarDaySchema.nullable(),
+    usefulArea: usefulAreaSchema.nullable(),
+    finalEnergy: finalEnergySchema.nullable(),
     absence: z.enum(ENERGY_CERTIFICATE_ABSENCES).nullable(),
   })
   .strict();
@@ -183,6 +202,8 @@ export function sameEnergyCertificate(a: EnergyCertificate, b: EnergyCertificate
     a.primaryEnergy === b.primaryEnergy &&
     a.co2Emissions === b.co2Emissions &&
     a.issuedOn === b.issuedOn &&
+    a.usefulArea === b.usefulArea &&
+    sameFinalEnergy(a.finalEnergy, b.finalEnergy) &&
     a.absence === b.absence
   );
 }
@@ -216,7 +237,13 @@ export function raisesEnergyCertificateQuestion({ type, offerKinds }: EnergyCert
  *
  * ⛔ Η `issuedOn` λείπει επίτηδες: η ισχύς φεύγει **μόνο** ως κατάσταση του καναλιού νομιμότητας.
  */
-export type ListedEnergyCertificate = Pick<EnergyCertificate, 'primaryEnergy' | 'co2Emissions' | 'absence'>;
+export type ListedEnergyCertificate = Pick<
+  EnergyCertificate,
+  'primaryEnergy' | 'co2Emissions' | 'usefulArea' | 'finalEnergy' | 'absence'
+>;
+
+/** Το κουτί **όπως το έγραφε η έκδοση 22** του σχήματος — το σχήμα που δίνει ο παγωμένος κρίκος 22. */
+export type ListedEnergyFiguresV22 = Pick<EnergyCertificate, 'primaryEnergy' | 'co2Emissions' | 'absence'>;
 
 /**
  * **Το κουτί της δημόσιας αγγελίας**, από το μπλοκ της **πηγής**: `null` ⇔ η ερώτηση δεν τίθεται· αλλιώς ό,τι
@@ -227,8 +254,8 @@ export function listedEnergyCertificateOf(
   raw: unknown,
 ): ListedEnergyCertificate | null {
   if (!raisesEnergyCertificateQuestion(subject)) return null;
-  const { primaryEnergy, co2Emissions, absence } = readEnergyCertificate(raw);
-  return { primaryEnergy, co2Emissions, absence };
+  const { primaryEnergy, co2Emissions, usefulArea, finalEnergy, absence } = readEnergyCertificate(raw);
+  return { primaryEnergy, co2Emissions, usefulArea, finalEnergy, absence };
 }
 
 /**
@@ -241,12 +268,33 @@ export function listedEnergyCertificateOf(
 export function relistedEnergyCertificateOf(
   subject: EnergyCertificateSubject,
   stored: unknown,
-): ListedEnergyCertificate | null {
+): ListedEnergyFiguresV22 | null {
   if (!raisesEnergyCertificateQuestion(subject)) return null;
   const record = isPlainRecord(stored) ? stored : {};
   return {
     primaryEnergy: isPrimaryEnergy(record.primaryEnergy) ? record.primaryEnergy : null,
     co2Emissions: isCo2Emissions(record.co2Emissions) ? record.co2Emissions : null,
     absence: isAbsence(record.absence) ? record.absence : null,
+  };
+}
+
+/**
+ * **Το κουτί της έκδοσης 23** (ADR-777 §8.95), από ήδη αποθηκευμένη αγγελία: ό,τι έδινε ο κρίκος 22, **συν** την
+ * ωφέλιμη επιφάνεια και την τελική ενέργεια — `null` όπου κανείς δεν είχε πού να τα γράψει.
+ *
+ * 🔑 Χτίζεται **πάνω** στο {@link relistedEnergyCertificateOf} αντί να το αλλάξει: ο κρίκος 22 είναι παγωμένος και
+ * πρέπει να συνεχίσει να δίνει **ακριβώς** το κουτί της έκδοσης 22.
+ */
+export function relistedFinalEnergyOf(
+  subject: EnergyCertificateSubject,
+  stored: unknown,
+): ListedEnergyCertificate | null {
+  const figures = relistedEnergyCertificateOf(subject, stored);
+  if (figures === null) return null;
+  const record = isPlainRecord(stored) ? stored : {};
+  return {
+    ...figures,
+    usefulArea: isUsefulArea(record.usefulArea) ? record.usefulArea : null,
+    finalEnergy: readFinalEnergy(record.finalEnergy),
   };
 }

@@ -81,7 +81,7 @@ describe('Ε1 — θεματοφυλακή και εγγραφή', () => {
     expect(docOf(db, COLLECTIONS.OWNER_PROPERTIES, property.id)?.energy).toMatchObject({ class: 'B+', primaryEnergy: null });
     const listing = docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id);
     expect(listing?.energyClass).toBe('B+');
-    expect(listing?.energyCertificate).toEqual({ primaryEnergy: null, co2Emissions: null, absence: null });
+    expect(listing?.energyCertificate).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null });
   });
 
   it('ξένος ή ανύπαρκτη αγγελία ⇒ `absent` — και τίποτα δεν γράφεται', async () => {
@@ -109,11 +109,15 @@ describe('Ε2 — 🔴 μερική διόρθωση: καμία απάντησ�
       primaryEnergy: 180.5,
       co2Emissions: 52,
       issuedOn: '2023-05-02',
+      usefulArea: null,
+      finalEnergy: null,
       absence: null,
     });
     expect(docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id)?.energyCertificate).toEqual({
       primaryEnergy: 180.5,
       co2Emissions: 52,
+      usefulArea: null,
+      finalEnergy: null,
       absence: null,
     });
   });

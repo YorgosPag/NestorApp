@@ -33,6 +33,8 @@ const FULL: EnergyCertificate = {
   primaryEnergy: 132.4,
   co2Emissions: 38.1,
   issuedOn: '2024-03-12',
+  usefulArea: null,
+  finalEnergy: null,
   absence: null,
 };
 
@@ -172,8 +174,8 @@ describe('Α6 — το κουτί της δημόσιας αγγελίας', () 
   const sale = { type: 'apartment', offerKinds: ['sell'] };
 
   it('από την πηγή: αριθμοί και λόγος απουσίας· ΟΧΙ κλάση, ΟΧΙ ημερομηνία', () => {
-    expect(listedEnergyCertificateOf(sale, FULL)).toEqual({ primaryEnergy: 132.4, co2Emissions: 38.1, absence: null });
-    expect(listedEnergyCertificateOf(sale, undefined)).toEqual({ primaryEnergy: null, co2Emissions: null, absence: null });
+    expect(listedEnergyCertificateOf(sale, FULL)).toEqual({ primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: null, finalEnergy: null, absence: null });
+    expect(listedEnergyCertificateOf(sale, undefined)).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null });
   });
 
   it('η ερώτηση δεν τίθεται ⇒ `null`, ό,τι κι αν λέει το έγγραφο', () => {

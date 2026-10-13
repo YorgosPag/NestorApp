@@ -15,6 +15,7 @@
  * θα πρόσθετε αναμονές λήψης και θα κοκκίνιζε τον χάρτη των τεμπέλικων διαδρομών (ADR-744 §27).
  */
 
+import type { CertificateEnergySource } from '@/constants/certificate-energy-sources';
 import type { EnergyClass } from '@/constants/energy-classes';
 
 import type { EnergyCertificateAbsence } from './energy-certificate';
@@ -29,6 +30,18 @@ export const ENERGY_CLASS_LABEL_KEY: Readonly<Record<EnergyClass, string>> = {
   E: 'properties-enums:energyClass.e',
   F: 'properties-enums:energyClass.f',
   G: 'properties-enums:energyClass.g',
+};
+
+/** Οι οκτώ γραμμές του πίνακα τελικής ενέργειας του ΠΕΑ, με τα ονόματα του εντύπου (ADR-777 §8.95). */
+export const CERTIFICATE_ENERGY_SOURCE_KEY: Readonly<Record<CertificateEnergySource, string>> = {
+  electricity: 'properties-enums:energyCertificate.source.electricity',
+  oil: 'properties-enums:energyCertificate.source.oil',
+  'natural-gas': 'properties-enums:energyCertificate.source.naturalGas',
+  'other-fossil': 'properties-enums:energyCertificate.source.otherFossil',
+  solar: 'properties-enums:energyCertificate.source.solar',
+  biomass: 'properties-enums:energyCertificate.source.biomass',
+  geothermal: 'properties-enums:energyCertificate.source.geothermal',
+  'other-renewable': 'properties-enums:energyCertificate.source.otherRenewable',
 };
 
 export const ENERGY_CERTIFICATE_ABSENCE_KEY: Readonly<Record<EnergyCertificateAbsence, string>> = {

@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fca7627f1d9fb14477519b0ae722c994a3541f53316e985f4b3d6e38cf865326",
+  "inputsSha256": "fd51c22ebc6105dcb483758706f492f3d862f26e1ce5e16b7c5fb5e880d920d5",
   "languages": [
     "el"
   ],
@@ -916,7 +916,7 @@
     "src/lib/demand/property-demand-from-document.ts": "8a7ceae19339321d29fdc510467175946d13c9c9ae7937de0ab7a27b3b60179c",
     "src/lib/demand/seek-kind-labels.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
     "src/lib/energy-certificate/energy-certificate-improve-subject.ts": "4fd28e4fa32e1f5edaa47f47c6ad781a0fec4e542304295a662022a6d91af073",
-    "src/lib/energy-certificate/energy-certificate-keys.ts": "fae4416d9593627ea665cdb25ac020abf7313b729ffbb910586bb0ea028b9b99",
+    "src/lib/energy-certificate/energy-certificate-keys.ts": "096c1decfacb82551f2b430b4eeea6d638c32c66aaa1350889f8d7590c6c9576",
     "src/lib/esco/relevance.ts": "39045eee937cc3f16d2cf9ceff6b9a374364fbeaa6860a3fb47fd7d7ed7c7910",
     "src/lib/esco/search-tokens.ts": "bf3bb21f6195403196c87747d90a3d3513fbc1e8b5f44ca2ed406d59d0f358ac",
     "src/lib/esco/token-search.ts": "b6c5daf34fba46c9bfe80fcda22ef9a0e57e3673de4da4aeed4b057dc82321b3",
@@ -11938,6 +11938,7 @@
     "src/constants/building-categories.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/building-statuses.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/building-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/constants/certificate-energy-sources.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/commercial-statuses.ts": "b786ee7343b364eee44bd195415ad66dd908f0c933ccad6a511331031ce7373a",
     "src/constants/domains/form-field-labels.ts": "acf656c5b54ba7397c71c48ece1f7c15f0931108351c70d70f249dc90af8474d",
     "src/constants/domains/project-building-persona-labels.ts": "0dafabf0d86d616e23f8999bdf46e0ce951c763c64bb305a9056b7b474a1ae4f",
@@ -12225,7 +12226,8 @@
     "src/lib/demand/demand-title.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/prospect-interest.ts": "da31a2c7e4d9a066d64612ab695645becb6da88ccfae66bf53429d6eda569989",
     "src/lib/design-system.ts": "ddee1a723091fe015e7a93e689dd46082062f0c497c5b413073f31083fccb0b4",
-    "src/lib/energy-certificate/energy-certificate.ts": "3372a547f73d7bb2146f70d23fa7cf0ab6ea92e66eb9ac8e473bee20b60048bf",
+    "src/lib/energy-certificate/certificate-final-energy.ts": "1eba44093fca507b49f502524004c7079541ab0e7edf573b8f540e4e38aba813",
+    "src/lib/energy-certificate/energy-certificate.ts": "3191cb35ad033f9394f3a5fa0558ecc9d6d993b719f6c41d74cc1d1d682b8cb7",
     "src/lib/environment/environment-audit.ts": "5d0881da20ddac48bb810d62c69675086910384c624de7df358d2b145500262b",
     "src/lib/error-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/errors/backend-unavailable.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -12881,7 +12883,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 243,
     "routeBoundaries": 3,
-    "shellFiles": 1213,
+    "shellFiles": 1215,
     "sliceBytes": 732074
   },
   "unresolvableKeys": [
