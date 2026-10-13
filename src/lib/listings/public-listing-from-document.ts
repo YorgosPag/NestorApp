@@ -60,8 +60,8 @@ import {
   PUBLIC_LISTING_SCHEMA_VERSION,
   storedSchemaVersion,
   upgradeListingDocument,
-  type StoredListingDocument,
 } from './public-listing-schema';
+import type { StoredListingDocument } from './public-listing-schema-types';
 
 /** Τι διαβάστηκε, **και τι χρειάστηκε για να διαβαστεί**. */
 export interface StoredListingRead {
