@@ -67,6 +67,9 @@ import { isFloorKind } from '@/utils/floor-naming';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
 import { readObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
+import { readCommonCharges } from '@/lib/common-charges/common-charges';
+import { readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import { readLegalityClaims } from '@/lib/legality/legality-claim-reading';
 
 /** Τι διαβάστηκε, **και τι χρειάστηκε για να διαβαστεί**. */
 export interface StoredOwnerPropertyRead {
@@ -141,6 +144,11 @@ export function readStoredOwnerProperty(
       marketingAudience: marketingAudienceOf(stored.marketingAudience),
       // ADR-898 Φ3β — ίδιο σχήμα: απουσία ⇒ «τίποτα δηλωμένο, εμφάνιση εξ ορισμού», κάθε άκυρη τιμή ⇒ `null`.
       objectiveValueDeclarations: readObjectiveValueDeclarations(stored.objectiveValueDeclarations),
+      // ADR-777 §8.93 — ίδιο σχήμα απουσίας: έγγραφο πριν τα κοινόχρηστα ⇒ «τίποτα δηλωμένο».
+      commonCharges: readCommonCharges(stored.commonCharges),
+      // ADR-777 §8.94 — ίδιο σχήμα απουσίας: έγγραφο πριν το ΠΕΑ ⇒ «τίποτα δηλωμένο», καμία αξίωση.
+      energy: readEnergyCertificate(stored.energy),
+      legality: readLegalityClaims(stored.legality),
       // ADR-900 §8 #2 (2β.2) — ίδιο σχήμα απουσίας: έγγραφο πριν τη μονάδα ⇒ `null` (είδος συνάγεται από τον αριθμό ·
       //    καμία πόρτα). Είδος χωρίς αριθμό δεν στέκει (`floorUnitRule`) ⇒ `null`, ποτέ ορφανό είδος.
       floorKind: typeof stored.floor === 'number' && isFloorKind(stored.floorKind) ? stored.floorKind : null,

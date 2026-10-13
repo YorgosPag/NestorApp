@@ -110,6 +110,9 @@ import type { CommercialStatus } from '@/constants/commercial-statuses';
 import { EMPTY_PRICE_TOTALS, type PriceTotalsByRole } from '@/lib/properties/price-totals';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 import type { ObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
+import type { CommonCharges } from '@/lib/common-charges/common-charges';
+import type { StoredEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import type { LegalityClaim } from '@/lib/legality/legality-claim';
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)
@@ -386,12 +389,13 @@ export interface PropertySpecificationFields {
   }>;
 
   // === ENERGY PERFORMANCE ===
-  energy?: {
-    class: EnergyClassType;
-    certificateId?: string;
-    certificateDate?: Timestamp;
-    validUntil?: Timestamp;
-  };
+  /** Το ΠΕΑ (ADR-777 §8.94) — ίδιο μπλοκ με τον ιδιώτη· διαβάζεται **μόνο** με `readEnergyCertificate`. */
+  energy?: StoredEnergyCertificate;
+  /**
+   * Οι αξιώσεις νομιμότητας του ακινήτου (ADR-838). Πρώτος γραφέας: η δήλωση του ΠΕΑ
+   * (`withEnergyPerformanceClaim`, ADR-777 §8.94)· τις διαβάζει η προβολή (`projectLegality`).
+   */
+  legality?: readonly LegalityClaim[];
 
   // === MATERIALS & FINISHES ===
   finishes?: {
@@ -614,6 +618,11 @@ export interface Property extends PropertySpecificationFields {
    * Η προβολή το διαβάζει με `readObjectiveValueDeclarations`· η φόρμα της εταιρείας έρχεται στη Φ3β-3.
    */
   objectiveValueDeclarations?: ObjectiveValueDeclarations;
+  /**
+   * Τα κοινόχρηστα (ADR-777 §8.93) — **ίδιο** μπλοκ με τον ιδιώτη. Η προβολή το διαβάζει με `readCommonCharges`.
+   * ⛔ Έξω από το `commercial`: δεν είναι τιμή του ακινήτου και δεν τροφοδοτεί τον `price-resolver`.
+   */
+  commonCharges?: CommonCharges;
 
   // === OWNERSHIP TABLE ===
   /** Χιλιοστά ιδιοκτησίας — read-only, ενημερώνεται αυτόματα κατά την οριστικοποίηση πίνακα ποσοστών */

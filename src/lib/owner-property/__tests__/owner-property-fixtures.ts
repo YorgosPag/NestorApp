@@ -22,6 +22,8 @@ import {
 } from '@/types/owner-property-mandate';
 import type { OfferKind, OfferLifecycle, PropertyOffer } from '@/types/property-offers';
 import { UNDECLARED_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
+import { UNDECLARED_ENERGY_CERTIFICATE } from '@/lib/energy-certificate/energy-certificate';
 
 /** Μια διάθεση με ρητό ποσό — **μία** γεννήτρια για τα τέσσερα είδη. */
 export function offerOf(
@@ -102,6 +104,9 @@ export function validOwnerProperty(
     marketingAudience: 'public',
     // ADR-898 Φ3β — τίποτα δηλωμένο, εμφάνιση εξ ορισμού (ό,τι γράφει και το `newOwnerProperty`).
     objectiveValueDeclarations: UNDECLARED_OBJECTIVE_VALUE,
+    commonCharges: UNDECLARED_COMMON_CHARGES,
+    energy: UNDECLARED_ENERGY_CERTIFICATE,
+    legality: [],
     createdAt: '2026-08-11T09:00:00.000Z',
     updatedAt: '2026-08-11T09:00:00.000Z',
     ...overrides,

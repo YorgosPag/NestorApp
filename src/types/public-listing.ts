@@ -68,6 +68,8 @@ import type { FloorPlateState } from '@/lib/listings/floor-plate/floor-plate-sta
 import type { ListingCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
+import type { CommonCharges } from '@/lib/common-charges/common-charges';
+import type { ListedEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import type { ResidenceFrontage } from '@/lib/objective-value/objective-value-types';
 import type { LevelArea } from '@/lib/properties/level-areas';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
@@ -556,6 +558,36 @@ export interface PublicListing {
    * `null` = δεν διατίθεται. Άγκυρα **και προς τις δύο κατευθύνσεις** στην προβολή.
    */
   readonly exchange: PublicListingExchange | null;
+  /**
+   * **Τα κοινόχρηστα** (ADR-777 §8.93) — `null` ⇔ **η ερώτηση δεν τίθεται** (γη · μόνο βραχυχρόνια · μόνο αντιπαροχή).
+   *
+   * ⚠️ Ίδια διάκριση με το `stay` και το `exchange`: `{ monthlyAmount: null, … }` = τίθεται, **δεν δηλώθηκε**·
+   * `null` = δεν τίθεται. Μέσα στο κουτί το `0` είναι **απάντηση** («χωρίς κοινόχρηστα»), ποτέ «άγνωστο».
+   *
+   * ⛔ **ΕΞΩ από το `commercial`**: εκείνο τροφοδοτεί τον SSoT τιμής, και τα κοινόχρηστα δεν είναι τιμή του ακινήτου —
+   * ένα 120 εκεί θα διαβαζόταν ως ποσό προσφοράς. Τον ΕΝΑΝ κριτή και τον ΕΝΑΝ αναγνώστη τους κρατά το
+   * `lib/common-charges/common-charges` (`listedCommonChargesOf`).
+   *
+   * 🔑 **Απόφαση αποκάλυψης**: δήλωση του αγγελιοδότη, κατά προσέγγιση — η οθόνη το λέει δίπλα στο ποσό.
+   */
+  readonly commonCharges: CommonCharges | null;
+  /**
+   * **Οι αριθμοί του ενεργειακού πιστοποιητικού** (ADR-777 §8.94) — `null` ⇔ **η ερώτηση δεν τίθεται** (γη, ή
+   * διάθεση που δεν σηκώνει ΠΕΑ κατά το `LEGALITY_OFFER_MATRIX`).
+   *
+   * 🔑 **Προσδιορίζει το {@link energyClass}, δεν το αντικαθιστά.** Η κλάση μένει ιδιότητα της λίστας (κριτήρια,
+   * «N από M», URL)· εδώ ταξιδεύει ό,τι άλλο γράφει το ΠΕΑ: κατανάλωση πρωτογενούς ενέργειας (kWh/m²·έτος), εκπομπές
+   * CO₂ (kg/m²·έτος), και — όταν **δεν** υπάρχει κλάση — ο λόγος (`absence`: υπό έκδοση · εξαιρείται).
+   *
+   * ⚠️ Ίδια διάκριση με το `commonCharges`: `{ primaryEnergy: null, … }` = τίθεται, **δεν δηλώθηκε**· `null` = δεν
+   * τίθεται. Τον ΕΝΑΝ κριτή και τον ΕΝΑΝ αναγνώστη τους κρατά το `lib/energy-certificate/energy-certificate`.
+   *
+   * ⛔ **Καμία ημερομηνία και καμία ταυτότητα πιστοποιητικού εδώ.** Η ισχύς φεύγει **μόνο** ως κατάσταση του
+   * {@link legality} (`declared` · `expired` · `expiry-unknown`) — μία απάντηση στο «ισχύει το ΠΕΑ;», όχι δύο.
+   *
+   * 🔑 **Απόφαση αποκάλυψης**: δήλωση του αγγελιοδότη **από το ΠΕΑ** — η οθόνη το λέει δίπλα στους αριθμούς.
+   */
+  readonly energyCertificate: ListedEnergyCertificate | null;
 
   // ── 2. ΕΙΚΟΝΑ ─────────────────────────────────────────────────────────────
   /**
@@ -797,10 +829,12 @@ export interface PublicListing {
    * **ερωτήματα της φόρμας**, όχι **πεδία του μοντέλου**.
    *
    * ⛔ **ΚΑΝΕΝΑ ΕΓΓΡΑΦΟ, ΚΑΜΙΑ ΤΑΥΤΟΤΗΤΑ, ΚΑΜΙΑ ΗΜΕΡΟΜΗΝΙΑ ΠΙΣΤΟΠΟΙΗΤΙΚΟΥ.** Το
-   * `Property.energy` κουβαλά `certificateId` · `certificateDate` · `validUntil`. Εδώ
-   * φεύγει **μόνο η κλάση**, με το ίδιο ακριβώς επιχείρημα που το {@link legality}
+   * `Property.energy` κουβαλά και ημέρα έκδοσης (και, στο παλιό σχήμα, `certificateId`).
+   * Εδώ φεύγει **μόνο η κλάση**, με το ίδιο ακριβώς επιχείρημα που το {@link legality}
    * στέλνει **βαθμίδα** και ποτέ έγγραφο (ADR-838): η κλάση είναι **ιδιότητα του
-   * ακινήτου**, το πιστοποιητικό είναι **ταυτότητα σε μητρώο**.
+   * ακινήτου**, το πιστοποιητικό είναι **ταυτότητα σε μητρώο**. Οι **αριθμοί** του ΠΕΑ
+   * ταξιδεύουν στο {@link PublicListing.energyCertificate}· η **ισχύς** μόνο ως κατάσταση
+   * του `legality` (ADR-777 §8.94).
    *
    * ⚠️ **`null` = «κανείς δεν το δήλωσε», ΠΟΤΕ `0` και ΠΟΤΕ κενή συμβολοσειρά.** Ο
    * κανόνας του αρχείου ισχύει ακέραιος και εδώ, και είναι πιο επικίνδυνος σε αυτό το

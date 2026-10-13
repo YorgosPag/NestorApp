@@ -15,7 +15,6 @@ import type {
   ViewTypeValue,
   ViewQuality,
   ConditionType,
-  EnergyClassType,
   HeatingType,
   FuelType,
   CoolingType,
@@ -28,9 +27,11 @@ import type {
 } from '@/constants/property-features-enterprise';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 import type { OfferKind } from './property-offers';
-import type { Timestamp } from 'firebase/firestore';
 // 🏢 PHASE 2: LinkedSpaces type
 import type { LinkedSpace } from './property';
+import type { CommonCharges } from '@/lib/common-charges/common-charges';
+import type { StoredEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import type { LegalityClaim } from '@/lib/legality/legality-claim';
 
 /**
  * ✅ DOMAIN SEPARATION: Operational status type (re-imported from unit.ts)
@@ -194,12 +195,10 @@ export interface Property {
 
     // === CONDITION & ENERGY - Phase 4 Unit Fields ===
     condition?: ConditionType;
-    energy?: {
-      class: EnergyClassType;
-      certificateId?: string;
-      certificateDate?: Timestamp;
-      validUntil?: Timestamp;
-    };
+    /** Το ΠΕΑ (ADR-777 §8.94) — ίδιο μπλοκ με το `types/property`· διαβάζεται με `readEnergyCertificate`. */
+    energy?: StoredEnergyCertificate;
+    /** Οι αξιώσεις νομιμότητας (ADR-838) — ίδιο πεδίο με το `types/property`. */
+    legality?: readonly LegalityClaim[];
 
     // === SYSTEMS, FINISHES & FEATURES - Phase 5 Unit Fields ===
     systemsOverride?: Partial<{
@@ -215,6 +214,8 @@ export interface Property {
     };
     interiorFeatures?: InteriorFeatureCodeType[];
     securityFeatures?: SecurityFeatureCodeType[];
+    /** Τα κοινόχρηστα (ADR-777 §8.93) — ίδιο μπλοκ με το `types/property`· διαβάζεται με `readCommonCharges`. */
+    commonCharges?: CommonCharges;
 
     // === LINKED SPACES - Phase 2 (Parking/Storage) ===
     /** Relationships to parking and storage spaces */

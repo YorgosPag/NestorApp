@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "04bee84f982b522658a44993348eb1feca01e812eaa75fc0abf5c580fc1c27e2",
+  "inputsSha256": "981d9f3c3768b4076d5887f7a8e9cfddbc4e3c4543857ee958f4d949fbd66cec",
   "languages": [
     "el"
   ],
@@ -12080,6 +12080,7 @@
     "src/lib/calendar/special-hours.ts": "1bf510038817eb27591d05d60093d806ca93fc534bd35a57e396f2795bf91e17",
     "src/lib/calendar/weekly-hours-editing.ts": "c9f5cdb28461934dcfc462a9362a0a62e70e3031594c2e0eb42e23d1cd344487",
     "src/lib/calendar/weekly-hours.ts": "d9d975790f6577c83398b19f5e4fac225f6581567f1f2e3b4332b1fe07fe7997",
+    "src/lib/common-charges/common-charges.ts": "018eeb558ac0b370c663695e522d0089c5439b0c3fad6575146114010f0a8534",
     "src/lib/company/gemi-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/company/legal-name-match.ts": "9440355b13b2c6dff2d9c94259cf05d05e2fb0b1bfc81e97ee7de0b8f427bb67",
     "src/lib/company/registry-identity-judgment.ts": "d4509f1b34f0d257cc96061cfdda1e3c897b553d947fd2e36d4e453964bd54d1",
@@ -12122,6 +12123,7 @@
     "src/lib/demand/demand-title.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/prospect-interest.ts": "da31a2c7e4d9a066d64612ab695645becb6da88ccfae66bf53429d6eda569989",
     "src/lib/design-system.ts": "ddee1a723091fe015e7a93e689dd46082062f0c497c5b413073f31083fccb0b4",
+    "src/lib/energy-certificate/energy-certificate.ts": "3372a547f73d7bb2146f70d23fa7cf0ab6ea92e66eb9ac8e473bee20b60048bf",
     "src/lib/environment/environment-audit.ts": "5d0881da20ddac48bb810d62c69675086910384c624de7df358d2b145500262b",
     "src/lib/error-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/errors/backend-unavailable.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -12302,7 +12304,7 @@
     "src/lib/ordering/total-name-order.ts": "6c174c936bb0286a58ba7b4187ac0f1037eb95526ecd51c2abbd594f39b2ea1a",
     "src/lib/owner-property/listing-custody.ts": "43ddfb091c7e71372935c428881fa143e854f1cb93f2f4af99b8bf82af781285",
     "src/lib/owner-property/listing-permissions.ts": "d26b37e91590053413c7544f98472bdf573bf96db5b49ea808a03146e27b9b9a",
-    "src/lib/owner-property/owner-property-from-document.ts": "14813495ca0fc0250f11836a70280a74eb9c11bb3ec0ee642f2aecb76e4f4ef6",
+    "src/lib/owner-property/owner-property-from-document.ts": "d9d691da1ed261c10d654007e4316d8b7b4877d6d42824ec0a7ba7a512048f05",
     "src/lib/owner-property/owner-property-routes.ts": "6433c4b65c91975d782bedcb6b06012a2f0a2e0f56a438100fc26ddf33e9e00c",
     "src/lib/places/admin-identity.ts": "59a82c814985e68d9b0865a8299d7253a2b7b132e23692f3b35a8a133a162d5f",
     "src/lib/places/admin-name-index.ts": "f979c476beb4cf508f29d34959cc4f9d827a0b06962e4d9212b6a3d527609129",
@@ -12693,7 +12695,7 @@
     "src/types/org/org-structure.ts": "ef64e92d802969c67420d5449cd5b2d6a4d8109d8b9ab13b83719cdf1847b84c",
     "src/types/organization-capability.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/owner-property-mandate.ts": "aeba5ef3ec3cfdd100f5008682cd68f06f64166492b5a2ca7f1d83e1ab525c22",
-    "src/types/owner-property.ts": "8045163b8e3e4681ca43de4f1a20874e487d88d8f251c3a9cbef396c85d20b64",
+    "src/types/owner-property.ts": "5baf1d9df4c855c1fd14723dd31e825f1fb807b3afe670c71386f1228d00d861",
     "src/types/ownership-table.ts": "b82f5606c32c665b580732264de62e0bc46098689fe03068d043728e2a398504",
     "src/types/parking.ts": "c0df2234a582ef9cd0e8f445a92e0d0c22dab10dc490ce175e296f5f732fff87",
     "src/types/payment-plan.ts": "804bd4d5c8dac2e36c73b2439603dd9b7a964865b20911c4aaedaa5708fe4226",
@@ -12708,9 +12710,9 @@
     "src/types/project/addresses.ts": "85b4f0133f5d4456373677f14c00be344526788dafc03e33b4f4e53b4116243c",
     "src/types/property-demand.ts": "15d9810ca987694224eb8af69ae2a07c6caef7b3ffebbd991bdd01bdf4c7dedb",
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
-    "src/types/property-viewer.ts": "a981edcd97e17192fe1dbd7214219fd1f382547fe1dae619e33aa018ec0c4dcc",
-    "src/types/property.ts": "161a435054e1b042f97331ca9d3591a69dc59ea20120f6d4a71c02e31662fda4",
-    "src/types/public-listing.ts": "83f5384ded683f356033c2acb3c22fb15a9ef122f8d4373da0b710f421887e78",
+    "src/types/property-viewer.ts": "1b6cee00016591bc5671046ef585de8ad5c2ec800920267f8d8deba88eafe5a3",
+    "src/types/property.ts": "f2d0a87b1a5892c58cf575039e2a0cdfad756e9574e3532fd683e8a3a786c588",
+    "src/types/public-listing.ts": "f1ac29f253f7a4ec6abff9a59b079b84a9507e37b67a8bcee356a1b7650e8601",
     "src/types/saved-listing.ts": "e22be679ba57f9a0604365d02de1eb9a8c96285b1d38440e8b57baac7ba3750d",
     "src/types/search-core.ts": "16866d35c5722806fcaa6857a5a39a4f616f22531da07ce25ea4a10e637d9ced",
     "src/types/search.ts": "2048c06631ca24ebf01adc50499e7485defe8a05e60a76fd2a3abd48f3794644",
@@ -12771,7 +12773,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 243,
     "routeBoundaries": 3,
-    "shellFiles": 1205,
+    "shellFiles": 1207,
     "sliceBytes": 727052
   },
   "unresolvableKeys": [
@@ -13326,6 +13328,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/trash.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/users.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/vendor-portal.json",
+    "src/lib/owner-property/owner-property-from-document.ts → @/lib/legality/legality-claim-reading",
     "src/lib/unicode/skeleton.ts → ./generated/confusable-skeleton.json",
     "src/lib/workspace/route-worlds.ts → @/types/app-routes",
     "src/services/conveyance/conveyance-engagement-notifier.ts → @/i18n/locales/el/common-shared.json"

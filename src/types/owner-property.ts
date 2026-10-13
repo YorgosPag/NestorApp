@@ -98,6 +98,12 @@ import {
   UNDECLARED_OBJECTIVE_VALUE,
   type ObjectiveValueDeclarations,
 } from '@/lib/objective-value/objective-value-declarations';
+import { UNDECLARED_COMMON_CHARGES, type CommonCharges } from '@/lib/common-charges/common-charges';
+import {
+  UNDECLARED_ENERGY_CERTIFICATE,
+  type EnergyCertificate,
+} from '@/lib/energy-certificate/energy-certificate';
+import type { LegalityClaim } from '@/lib/legality/legality-claim';
 
 // =============================================================================
 // 1. Η ΘΕΣΗ — «υποχρεωτικό ΕΡΩΤΗΜΑ, όχι υποχρεωτική ΑΠΑΝΤΗΣΗ»
@@ -517,6 +523,34 @@ export interface OwnerProperty {
    */
   readonly objectiveValueDeclarations: ObjectiveValueDeclarations;
 
+  /**
+   * **Τα κοινόχρηστα** (ADR-777 §8.93) — ποσό τον μήνα και τι περιλαμβάνουν. Ίδιο μπλοκ με την εταιρεία.
+   *
+   * ⚠️ **Υποχρεωτικό στον τύπο, απόν στη βάση για κάθε παλιό έγγραφο**: το σύνορο το κανονικοποιεί με
+   * `readCommonCharges` ⇒ «τίποτα δηλωμένο».
+   *
+   * ⛔ **ΔΕΝ ανήκει στο {@link OwnerPropertyDraft}** — ίδιος κανόνας με το από πάνω: η `/offers/new` μένει **8 πεδία**.
+   * Αλλάζει **μόνο** με ρητή πράξη (`setOwnerPropertyCommonCharges`), από την οθόνη «Βελτίωσε την αγγελία σου».
+   */
+  readonly commonCharges: CommonCharges;
+
+  /**
+   * **Το ενεργειακό πιστοποιητικό** (ADR-777 §8.94) — κλάση, κατανάλωση, εκπομπές. Ίδιο μπλοκ με την εταιρεία.
+   *
+   * ⚠️ Υποχρεωτικό στον τύπο, απόν στη βάση για κάθε παλιό έγγραφο: το σύνορο το κανονικοποιεί με
+   * `readEnergyCertificate` ⇒ «τίποτα δηλωμένο».
+   *
+   * ⛔ **ΔΕΝ ανήκει στο {@link OwnerPropertyDraft}** — η `/offers/new` μένει **8 πεδία**. Αλλάζει **μόνο** με ρητή
+   * πράξη (`setOwnerPropertyEnergyCertificate`), από την οθόνη «Βελτίωσε την αγγελία σου».
+   */
+  readonly energy: EnergyCertificate;
+
+  /**
+   * **Οι αξιώσεις νομιμότητας** (ADR-838) — σήμερα μόνο η αυτοδηλωμένη `'energy-performance'`, που γράφεται **στην
+   * ίδια εγγραφή** με το {@link energy} (`withEnergyPerformanceClaim`). Κενό = κανείς δεν δήλωσε τίποτα.
+   */
+  readonly legality: readonly LegalityClaim[];
+
   // ── ΧΡΟΝΟΣ ────────────────────────────────────────────────────────────────
   /**
    * **Τι απέγινε η δημόσια προβολή στην τελευταία γραφή** — γεγονός, όχι πρόβλεψη.
@@ -866,6 +900,9 @@ export function newOwnerProperty(
     marketingAudience: DEFAULT_MARKETING_AUDIENCE,
     // ADR-898 Φ3β — τίποτα δηλωμένο, εμφάνιση εξ ορισμού. Οι δηλώσεις έρχονται μετά τη δημοσίευση.
     objectiveValueDeclarations: UNDECLARED_OBJECTIVE_VALUE,
+    commonCharges: UNDECLARED_COMMON_CHARGES,
+    energy: UNDECLARED_ENERGY_CERTIFICATE,
+    legality: [],
     createdAt: now,
     updatedAt: now,
   };
