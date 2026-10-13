@@ -46,6 +46,8 @@ import {
   type ObjectiveValueDeclarationsPatch,
   type ObjectiveValuePatchViolation,
 } from '@/lib/objective-value/objective-value-declarations';
+import type { CommonChargesPatch } from '@/lib/common-charges/common-charges';
+import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-certificate';
 
 const logger = createModuleLogger('owner-property.service');
 
@@ -298,13 +300,40 @@ export async function setOwnerListingObjectiveValue(
   ownerPropertyId: string,
   objectiveValueDeclarations: ObjectiveValueDeclarationsPatch,
 ): Promise<OwnerListingResult> {
+  return amendOwnerListing(ownerPropertyId, { objectiveValueDeclarations }, 'Οι δηλώσεις της αντικειμενικής δεν αποθηκεύτηκαν');
+}
+
+/**
+ * **Τα κοινόχρηστα** (ADR-777 §8.93) — ίδιο είδος πράξης με τις δηλώσεις από πάνω: μερική διόρθωση, σε συναλλαγή.
+ */
+export async function setOwnerListingCommonCharges(
+  ownerPropertyId: string,
+  commonCharges: CommonChargesPatch,
+): Promise<OwnerListingResult> {
+  return amendOwnerListing(ownerPropertyId, { commonCharges }, 'Τα κοινόχρηστα δεν αποθηκεύτηκαν');
+}
+
+/**
+ * **Το ενεργειακό πιστοποιητικό** (ADR-777 §8.94) — ίδιο είδος πράξης: μερική διόρθωση, σε συναλλαγή. Ο διακομιστής
+ * γράφει στην ίδια εγγραφή και την αξίωση νομιμότητας του ΠΕΑ.
+ */
+export async function setOwnerListingEnergyCertificate(
+  ownerPropertyId: string,
+  energy: EnergyCertificatePatch,
+): Promise<OwnerListingResult> {
+  return amendOwnerListing(ownerPropertyId, { energy }, 'Το ενεργειακό πιστοποιητικό δεν αποθηκεύτηκε');
+}
+
+/** Η ΜΙΑ κλήση των «πράξεων μετά τη δημοσίευση»: το σώμα φέρει **ένα** κλειδί-πράξη, η διαδρομή το αναγνωρίζει. */
+async function amendOwnerListing(
+  ownerPropertyId: string,
+  body: Readonly<Record<string, unknown>>,
+  failureMessage: string,
+): Promise<OwnerListingResult> {
   try {
-    const payload = await apiClient.patch<WriteResponse>(
-      `${API_BASE}/${encodeURIComponent(ownerPropertyId)}`,
-      { objectiveValueDeclarations },
-    );
+    const payload = await apiClient.patch<WriteResponse>(`${API_BASE}/${encodeURIComponent(ownerPropertyId)}`, body);
     return { kind: 'saved', ...payload };
   } catch (cause) {
-    return failureOf('Οι δηλώσεις της αντικειμενικής δεν αποθηκεύτηκαν', ownerPropertyId, cause);
+    return failureOf(failureMessage, ownerPropertyId, cause);
   }
 }

@@ -146,3 +146,93 @@ describe('PATCH — οι δηλώσεις της αντικειμενικής ε
     expect(reply.status).toBe(404);
   });
 });
+
+describe('PATCH — τα κοινόχρηστα είναι ΠΡΑΞΗ, όχι πεδίο των 8 (ADR-777 §8.93)', () => {
+  it('έγκυρη διόρθωση ⇒ 200 και γράφεται κανονικοποιημένη', async () => {
+    const property = seed();
+    const reply = await patch(property.id, { commonCharges: { monthlyAmount: 120, includes: ['elevator', 'heating'] } });
+    expect(reply.status).toBe(200);
+    expect(stored(property.id)?.commonCharges).toEqual({ monthlyAmount: 120, includes: ['heating', 'elevator'] });
+  });
+
+  it('τα κοινόχρηστα δεν αγγίζουν τα 8 πεδία, ούτε τις δηλώσεις της αντικειμενικής', async () => {
+    const property = seed();
+    await patch(property.id, { commonCharges: { monthlyAmount: 0 } });
+    expect(stored(property.id)).toMatchObject({
+      title: property.title,
+      areaSqm: property.areaSqm,
+      offers: property.offers,
+      objectiveValueDeclarations: property.objectiveValueDeclarations,
+    });
+  });
+
+  it.each([
+    [{ commonCharges: { yearly: 1440 } }],
+    [{ commonCharges: {} }],
+    [{ commonCharges: { monthlyAmount: -5 } }],
+    [{ commonCharges: { monthlyAmount: 120.5 } }],
+    [{ commonCharges: { includes: ['sauna'] } }],
+    [{ commonCharges: null }],
+  ])('κακό σώμα %j ⇒ 400 MALFORMED_BODY — και τίποτα δεν γράφεται', async (body) => {
+    const property = seed();
+    const reply = await patch(property.id, body);
+    expect(reply.status).toBe(400);
+    expect(await reply.json()).toEqual({ error: 'MALFORMED_BODY', malformed: ['commonCharges'] });
+    expect(stored(property.id)?.commonCharges).toEqual({ monthlyAmount: null, includes: null });
+  });
+
+  it('ανύπαρκτη αγγελία ⇒ 404', async () => {
+    const reply = await patch('ownp_missing', { commonCharges: { monthlyAmount: 120 } });
+    expect(reply.status).toBe(404);
+  });
+});
+
+describe('PATCH — το ενεργειακό πιστοποιητικό είναι ΠΡΑΞΗ, όχι πεδίο των 8 (ADR-777 §8.94)', () => {
+  it('έγκυρη διόρθωση ⇒ 200, γράφεται το μπλοκ ΚΑΙ η αξίωση νομιμότητάς του', async () => {
+    const property = seed();
+    const reply = await patch(property.id, { energy: { class: 'B+', issuedOn: '2024-03-12' } });
+    expect(reply.status).toBe(200);
+    expect(stored(property.id)?.energy).toMatchObject({ class: 'B+', issuedOn: '2024-03-12' });
+    expect(stored(property.id)?.legality).toMatchObject([
+      { kind: 'energy-performance', tier: 'self-declared', value: 'B+', validUntil: '2034-03-12' },
+    ]);
+  });
+
+  it('το ΠΕΑ δεν αγγίζει τα 8 πεδία, ούτε τα κοινόχρηστα', async () => {
+    const property = seed();
+    await patch(property.id, { energy: { class: 'C' } });
+    expect(stored(property.id)).toMatchObject({
+      title: property.title,
+      commonCharges: property.commonCharges,
+      objectiveValueDeclarations: property.objectiveValueDeclarations,
+    });
+  });
+
+  it.each([
+    [{ energy: { class: 'H' } }],
+    [{ energy: {} }],
+    [{ energy: { primaryEnergy: 12.34 } }],
+    [{ energy: { issuedOn: '2024-02-31' } }],
+    [{ energy: { certificateId: '12345/2024' } }],
+    [{ energy: null }],
+  ])('κακό σώμα %j ⇒ 400 MALFORMED_BODY — και τίποτα δεν γράφεται', async (body) => {
+    const property = seed();
+    const reply = await patch(property.id, body);
+    expect(reply.status).toBe(400);
+    expect(await reply.json()).toEqual({ error: 'MALFORMED_BODY', malformed: ['energy'] });
+    expect(stored(property.id)?.energy).toMatchObject({ class: null });
+    expect(stored(property.id)?.legality).toEqual([]);
+  });
+
+  it('🔒 `legality` στο σώμα ΔΕΝ είναι πράξη: δεν γράφεται αξίωση από τον πελάτη', async () => {
+    const property = seed();
+    const forged = [{ kind: 'energy-performance', tier: 'registry-verified', value: 'A+' }];
+    await patch(property.id, { legality: forged });
+    expect(stored(property.id)?.legality).toEqual([]);
+  });
+
+  it('ανύπαρκτη αγγελία ⇒ 404', async () => {
+    const reply = await patch('ownp_missing', { energy: { class: 'C' } });
+    expect(reply.status).toBe(404);
+  });
+});

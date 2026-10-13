@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "96b82fae9e0b3ffb8482c7df0b2f9110ca6cd1cca1490b07665617396277139c",
+  "inputsSha256": "3e413f51151d04005204c34612ed9640c4cbac2a715f531a5072db3082664a72",
   "languages": [
     "el"
   ],
@@ -1172,7 +1172,7 @@
     "src/services/owner-property/owner-property-write-completion.ts": "111193402946e395173ebf7e62c3c3ae0bd13b20baa4f0ec3d9eecb34ab901ec",
     "src/services/owner-property/owner-property-write-result.ts": "0d2bf410d2868b5a12624eaf9bcb3bd2de0f69ed9db52d1da137565fc6b2b7e4",
     "src/services/owner-property/owner-property-write.service.ts": "6d69e7a12b8e84cb559542212b629a6cb34ad3a6e9324b0c450ef9050c45b7e6",
-    "src/services/owner-property/owner-property.service.ts": "b0985b879a006606df70ee8cccbad555005bf49922a6906445f563b68512fe4f",
+    "src/services/owner-property/owner-property.service.ts": "35e569558f79de6387a37ff1d5ff07360d74289a6ce6b7f1d2a8d02ddc4be19b",
     "src/services/owner-property/private-marketing.client.ts": "95ec83a17f3ad7fa92dcc2c01aff79444cce5840823e35b0e73f72996dead35c",
     "src/services/photo-upload-types.ts": "4f98445503d1d8b5b42bb6c89c77fded730cc9a40ae88722d5994e7cde2200b1",
     "src/services/photo-upload.service.ts": "c09bff1e4265397e2000126cc40232677c9b06679fff922e5cd643980e345c61",

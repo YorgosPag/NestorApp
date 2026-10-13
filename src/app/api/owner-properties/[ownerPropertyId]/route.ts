@@ -35,8 +35,6 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ownerPropertyDraftFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
 import { isOwnerPropertyLifecycle } from '@/types/owner-property';
 import { isMarketingAudience } from '@/constants/marketing-audiences';
-import { objectiveValueDeclarationsPatchSchema } from '@/lib/objective-value/objective-value-declarations';
-import { setOwnerPropertyObjectiveValueDeclarations } from '@/services/owner-property/owner-property-declarations.service';
 import {
   setOwnerPropertyAudience,
   setOwnerPropertyLifecycle,
@@ -51,6 +49,7 @@ import {
 } from '../_shared/respond';
 import { accountPrivateMarketingFrom } from '@/lib/mandate/private-marketing-request-body';
 import { dispatchAccountPrivateMarketing } from '../_shared/private-marketing-dispatch';
+import { respondToListingAmendment } from '../_shared/listing-amendments';
 
 /** Τα δυναμικά τμήματα της διαδρομής, όπως τα δίνει ο App Router. */
 type RouteContext = { params: Promise<{ ownerPropertyId: string }> };
@@ -105,15 +104,10 @@ async function handler(
     );
   }
 
-  // ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής είναι **πράξη** μετά τη δημοσίευση, όχι πεδίο των 8 (ADR-842 Α2).
-  const objectiveValueDeclarations = (body as { objectiveValueDeclarations?: unknown } | null)?.objectiveValueDeclarations;
-  if (objectiveValueDeclarations !== undefined) {
-    const patch = objectiveValueDeclarationsPatchSchema.safeParse(objectiveValueDeclarations);
-    if (!patch.success) return respondToMalformed(['objectiveValueDeclarations']);
-    return respondToWrite(
-      await setOwnerPropertyObjectiveValueDeclarations(adminDb, ownerPropertyId, patch.data, listingActorOf(actor)),
-    );
-  }
+  // ADR-898 Φ3β · ADR-777 §8.93 · §8.94 — δηλώσεις αντικειμενικής · κοινόχρηστα · ΠΕΑ: **πράξεις** μετά τη
+  // δημοσίευση, όχι πεδία των 8 (ADR-842 Α2). Μερική διόρθωση, σε συναλλαγή· ο πίνακας τους ζει στο `_shared`.
+  const amendment = respondToListingAmendment(body, adminDb, ownerPropertyId, listingActorOf(actor));
+  if (amendment !== null) return amendment;
 
   // ADR-864 Φ3 — αίτημα · συναίνεση · έντυπο · ανάκληση: **παραλλαγή σώματος**, όχι νέα διαδρομή (CHECK 3.78).
   const privateMarketing = (body as { privateMarketing?: unknown } | null)?.privateMarketing;
