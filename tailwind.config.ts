@@ -24,6 +24,10 @@ export default {
     // Οι κλάσεις χρώματος κατάστασης (`getStatusColor`) ζουν ΕΔΩ ως κυριολεκτικές συμβολοσειρές. Το `src/lib` δεν
     // σαρώνεται ολόκληρο· χωρίς αυτή τη γραμμή 7 από τις 15 δεν παράγονταν (μετρημένο 2026-10-10).
     './src/lib/design-system.ts',
+    // Τα **components** του `src/lib` (3 αρχεία `.tsx` με `className`, μετρημένο 2026-10-13). Χωρίς αυτή τη γραμμή
+    // το `text-[0.625rem]` + `rounded-tl` της απόδοσης χάρτη (`lib/maps/map-attribution-view.tsx`) ΔΕΝ παράγονταν:
+    // το «© OpenStreetMap contributors» έβγαινε σε κληρονομημένο μέγεθος και σκέπαζε τη μισή μικρογραφία (ADR-777 §8.70.8).
+    './src/lib/**/*.tsx',
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',

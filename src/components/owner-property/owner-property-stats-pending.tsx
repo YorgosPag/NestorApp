@@ -34,8 +34,15 @@ const BLOCK = 'block animate-pulse rounded bg-muted';
  * Θεραπεία = πλακίδια (Zillow «Views · Saves · Contacts», idealista «Visitas · Contactos · Favoritos»):
  * **σταθερός** αριθμός πλακιδίων · **σταθερές** γραμμές, `truncate` · το **ίδιο** πλέγμα. Ό,τι στήλες κι αν
  * χωρέσουν, τις ίδιες βλέπουν σκελετός και τιμές ⇒ **CLS 0 εκ κατασκευής**, σε κάθε πλάτος.
+ *
+ * 🔲 **4 ΣΤΗ ΣΕΙΡΑ Ή 2 × 2 — ΠΟΤΕ 3 + 1** (ADR-777 §8.70.8, στιγμιότυπο Giorgio 2026-10-13). Το παλιό
+ * `minmax(6.5rem,1fr)` χωρούσε τέσσερα πλακίδια των ~110px δίπλα στον χάρτη, και **κάθε** λεζάντα κοβόταν
+ * («Τελευταίες 7 …»). Το `clamp` είναι διακόπτης πάνω στο πλάτος του **περιέκτη** (όχι της οθόνης — η στήλη
+ * στενεύει από τον χάρτη, όχι από το παράθυρο): κάτω από 50rem το μεσαίο σκέλος εκτοξεύεται ⇒ ελάχιστο = μισό
+ * πλάτος ⇒ 2 στήλες· πάνω, γίνεται αρνητικό ⇒ ελάχιστο = τέταρτο ⇒ 4. Χωρίς `@container` (βλ. `header-bar`).
  */
-export const CARD_KPI_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(6.5rem,1fr))] gap-2';
+export const CARD_KPI_GRID =
+  'grid grid-cols-[repeat(auto-fit,minmax(clamp(calc(25%_-_0.375rem),calc((50rem_-_100%)_*_999),calc(50%_-_0.25rem)),1fr))] gap-2';
 /** Προβολές · επαφές · αποθηκεύσεις · ημέρες στην αγορά. */
 export const CARD_KPI_COUNT = 4;
 export const CARD_KPI_TILE = 'flex min-w-0 flex-col gap-0.5 rounded-md border border-border px-2 py-1.5';

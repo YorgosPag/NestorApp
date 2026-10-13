@@ -36,8 +36,14 @@ import { listingPhotoPositionClass } from '@/components/search-results/listing-p
 const K = 'property-market:offer.card';
 
 /** Η στήλη της μικρογραφίας: πλήρες πλάτος σε κινητό, σταθερή στήλη από `sm` και πάνω. */
-const COVER_SIZES = '(min-width: 640px) 176px, 100vw';
-const COVER_FRAME = `${LISTING_CARD_ASPECT_CLASS} w-full shrink-0 overflow-hidden rounded-md sm:w-44`;
+const COVER_SIZES = '(min-width: 640px) 224px, 100vw';
+/**
+ * 🔴 **`sm:self-start`, ΑΛΛΙΩΣ Η ΑΝΑΛΟΓΙΑ ΔΕΝ ΙΣΧΥΕΙ** (ADR-777 §8.70, μετρημένο ζωντανά 2026-10-13): η
+ * κάρτα είναι `sm:flex-row` με το προεπιλεγμένο `align-items: stretch`, άρα το πλαίσιο έπαιρνε το
+ * **ύψος της στήλης κειμένου** και το `aspect-[3/2]` αγνοούνταν — 3:2 δηλωμένο, ~2:3 **όρθιο** στην
+ * οθόνη, και άλλο ύψος σε κάθε κάρτα (με ή χωρίς στατιστικά).
+ */
+const COVER_FRAME = `${LISTING_CARD_ASPECT_CLASS} w-full shrink-0 overflow-hidden rounded-md sm:w-56 sm:self-start`;
 
 interface OwnerPropertyCardCoverProps {
   readonly property: Pick<OwnerProperty, 'id' | 'title' | 'publication'>;

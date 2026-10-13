@@ -26,6 +26,8 @@ import {
   type ListingSnapshotStore,
 } from '@/components/listing-map-snapshot/use-listing-map-snapshot';
 
+import { LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
+
 import { OwnerPropertyCardCover } from '../OwnerPropertyCardCover';
 
 jest.mock('@/i18n/hooks/useTranslation', () => {
@@ -103,6 +105,22 @@ function expectAbsence(): void {
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
   expect(screen.getByText('Δεν έχει δημοσιευμένη φωτογραφία')).toBeInTheDocument();
 }
+
+describe('🔴 το πλαίσιο κρατά την αναλογία του — σε ΚΑΘΕ κατάσταση', () => {
+  /**
+   * Το jsdom δεν έχει διάταξη, άρα η άγκυρα δένει τη **δήλωση**: χωρίς `sm:self-start` το flex-row
+   * της κάρτας τεντώνει το πλαίσιο στο ύψος του κειμένου και το `aspect-[3/2]` δεν ισχύει ποτέ.
+   */
+  it.each([
+    ['φωτογραφία', publication(THUMBNAIL)],
+    ['απουσία', publication(null)],
+  ])('%s ⇒ αναλογία ΚΑΙ ευθυγράμμιση που δεν την ακυρώνει', (_label, pub) => {
+    renderCover(pub);
+
+    const frame = screen.getByRole('figure');
+    expect(frame).toHaveClass(LISTING_CARD_ASPECT_CLASS, 'sm:self-start');
+  });
+});
 
 describe('με μικρογραφία — ό,τι βλέπει ο κόσμος', () => {
   it('αποδίδει την εικόνα με srcset, διαστάσεις και ελληνικό alt με τον τίτλο', () => {
