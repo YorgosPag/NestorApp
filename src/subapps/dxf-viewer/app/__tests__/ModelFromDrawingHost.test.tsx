@@ -223,8 +223,15 @@ describe('ModelFromDrawingHost — κουφώματα', () => {
     act(() => panel!.actions.onStartOpenings());
     clickCanvas(ON_OPENING_LINE);
     const writable = modelFromDrawingStore.get().openingProposal!.items.filter((i) => i.status === 'door' || i.status === 'window');
+    const wallsShown = modelFromDrawingStore.get().proposal;
 
     act(() => panel!.actions.onApproveOpenings());
+
+    // ΔΙΚΗ της εγγραφή ιστορικού: ο άνθρωπος αναιρεί «κουφώματα», όχι δεύτερη φορά «τοίχους».
+    expect(getGlobalCommandHistory().getLastCommand()?.name).toBe('t:modelFromDrawing.openings.undoName');
+    // Η πρόταση τοίχων ΞΑΝΑΫΠΟΛΟΓΙΣΤΗΚΕ πάνω στη σκηνή με τους ενωμένους τοίχους — δεν έμεινε η παλιά.
+    expect(wallsShown).not.toBeNull();
+    expect(modelFromDrawingStore.get().proposal).not.toBe(wallsShown);
 
     const openings = (h.levelManager.getLevelScene('lvl_test')!.entities as unknown as { type: string }[])
       .filter((e) => e.type === 'opening');

@@ -354,14 +354,20 @@ describe('ADR-911 Φ4-3β — η ΜΙΑ έγκριση', () => {
   it('μπαγιάτικη σκηνή (άλλαξε ΜΟΝΟ το πάχος ξενιστή) ⇒ το αποτύπωμα το βλέπει από ό,τι φωτίστηκε', () => {
     const h = harness();
     sampleOpening(h);
-    const item = state().openingProposal!.items.find((i) => i.symbol === 'none')!;
-    const hostId = (item.host as { wallIds: readonly [string, string] }).wallIds[0];
+    const shown = state().openingProposal!;
+    // ΚΑΙ οι δύο τοίχοι της γέφυρας: αν παχύνει μόνο ο ένας, η γέφυρα παύει να στέκει και το κενό
+    // φεύγει από την πρόταση — τότε «μπαγιάτικο» θα έλεγε και αποτύπωμα που δεν κοιτά τις ζώνες.
+    const hostIds: readonly string[] = (shown.items.find((i) => i.symbol === 'none')!.host as { wallIds: readonly [string, string] }).wallIds;
     h.setEntities(h.live.entities().map((e) =>
-      isWallEntity(e) && e.id === hostId ? { ...e, params: { ...e.params, thickness: e.params.thickness + 20 } } : e));
+      isWallEntity(e) && hostIds.includes(e.id) ? { ...e, params: { ...e.params, thickness: e.params.thickness + 20 } } : e));
 
     expect(openings.approve(h.deps)).toBe(false);
     expect(addOpeningsToScene).not.toHaveBeenCalled();
     expect(state().notice).toEqual({ kind: 'stale' });
+    // Μάρτυρας: η ΠΡΟΤΑΣΗ δεν άλλαξε καθόλου — αν είχε αλλάξει, το «μπαγιάτικο» θα το έβλεπε και
+    // αποτύπωμα χωρίς τις ζώνες, και το test θα περνούσε χωρίς να ελέγχει ό,τι λέει ο τίτλος του.
+    expect(stored(state().openingProposal!.items)).toEqual(stored(shown.items));
+    expect(state().openingProposal!.unexplainedIds).toEqual(shown.unexplainedIds);
   });
 
   it('άρνηση του γραφέα ⇒ ονομασμένη ειδοποίηση, καμία εγγραφή', () => {

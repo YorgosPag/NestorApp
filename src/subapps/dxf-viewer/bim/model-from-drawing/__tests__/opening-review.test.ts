@@ -167,4 +167,24 @@ describe('ADR-911 Φ4-3β — το αποτύπωμα αυτού που είδε
     const preview = previewOf(proposal);
     expect(openingReviewSignature(proposal, { ...preview, refusal: 'overlap' })).not.toBe(openingReviewSignature(proposal, preview));
   });
+
+  it('ίδιο φωτισμένο περίγραμμα, άλλη πρόταση (πόρτα → παράθυρο) ⇒ άλλο αποτύπωμα', () => {
+    // Το περίγραμμα δεν λέει ΤΙ γράφεται: πόρτα και παράθυρο στο ίδιο κενό φωτίζουν το ίδιο σχήμα.
+    const proposal = propose(entities);
+    const preview = previewOf(proposal);
+    const door = proposal.items.findIndex((i) => i.status === 'door');
+    const asWindow: OpeningProposal = {
+      ...proposal,
+      items: proposal.items.map((it, i) => (i === door ? { ...it, status: 'window' } : it)),
+    };
+    expect(door).toBeGreaterThanOrEqual(0);
+    expect(openingReviewSignature(asWindow, preview)).not.toBe(openingReviewSignature(proposal, preview));
+  });
+
+  it('ίδια στοιχεία, άλλες ανεξήγητες γραμμές ⇒ άλλο αποτύπωμα', () => {
+    const proposal = propose(entities);
+    const preview = previewOf(proposal);
+    const more: OpeningProposal = { ...proposal, unexplainedIds: [...proposal.unexplainedIds, 'line_x'] };
+    expect(openingReviewSignature(more, preview)).not.toBe(openingReviewSignature(proposal, preview));
+  });
 });
