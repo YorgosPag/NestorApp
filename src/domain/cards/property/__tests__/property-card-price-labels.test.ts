@@ -22,8 +22,8 @@ import {
   buildPropertyStatusBadge,
   buildPropertyPriceStats,
   buildPropertyPricePerSqmStats,
-  pricePerSqmAmount,
 } from '@/domain/cards/property/property-card-shared';
+import { pricePerSqmAmount } from '@/lib/listings/listing-price-label';
 import { resolveDisplayPrice, type MissingPriceReason } from '@/lib/properties/price-resolver';
 import type { Property } from '@/types/property-viewer';
 

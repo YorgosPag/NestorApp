@@ -22,9 +22,8 @@ import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { pricePerAreaLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { pricePerAreaLabel, pricePerSqmAmount, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { getEffectivePrice, type PriceRole } from '@/lib/properties/price-resolver';
-import { pricePerSqmAmount } from '@/domain/cards/property/property-card-shared';
 import '@/lib/design-system';
 
 /**

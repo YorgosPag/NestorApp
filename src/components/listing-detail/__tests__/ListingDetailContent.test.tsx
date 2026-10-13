@@ -343,6 +343,41 @@ describe('Ο4 — κάθε ποσό λέει τι είναι', () => {
     expect(screen.getByText('search-results:detail.price.role.asking')).toBeInTheDocument();
   });
 
+  // ── ADR-777 §8.91 — η τιμή ανά m², από την ΙΔΙΑ ετυμηγορία ──────────────────
+  it('προς πώληση με εμβαδόν ⇒ τιμή ανά m², με τη μονάδα του ρόλου', () => {
+    renderWith({ state: 'found', listing: listing() });
+    expect(screen.getByText('listing-detail:price.perArea')).toBeInTheDocument();
+    expect(screen.getByText(/^common:pricePerArea\.sale::/)).toBeInTheDocument();
+  });
+
+  it('χωρίς εμβαδόν ⇒ ΚΑΜΙΑ γραμμή ανά m², ποτέ «0 €/m²»', () => {
+    renderWith({ state: 'found', listing: listing({ areaSqm: null }) });
+    expect(screen.queryByText('listing-detail:price.perArea')).not.toBeInTheDocument();
+  });
+
+  it('🔴 πωλημένο ⇒ ΜΙΑ τιμή ανά m² (και τα δύο ποσά είναι πώληση)', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({
+        commercialStatus: 'sold',
+        commercial: { askingPrice: 200000, finalPrice: 185000, rentPrice: null, nightlyRate: null },
+      }),
+    });
+    expect(screen.getAllByText('listing-detail:price.perArea')).toHaveLength(1);
+  });
+
+  it('πώληση ΚΑΙ ενοίκιο ⇒ ΔΥΟ τιμές ανά m², η καθεμία με τη μονάδα της', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({
+        commercialStatus: 'for-sale-and-rent',
+        commercial: { askingPrice: 200000, finalPrice: null, rentPrice: 900, nightlyRate: null },
+      }),
+    });
+    expect(screen.getByText(/^common:pricePerArea\.sale::/)).toBeInTheDocument();
+    expect(screen.getByText(/^common:pricePerArea\.rent::/)).toBeInTheDocument();
+  });
+
   it('🔴 πωλημένο ⇒ ΔΥΟ ποσά με ΔΥΟ διαφορετικούς ρόλους', () => {
     renderWith({
       state: 'found',

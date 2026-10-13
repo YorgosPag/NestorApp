@@ -156,6 +156,44 @@ export function pricePerAreaLabel(t: PriceLabelT, price: Pick<ResolvedPrice, 'ro
   return t(PRICE_PER_AREA_KEY[price.role], { price: formatCurrency(price.amount) });
 }
 
+/**
+ * **Ποιος ρόλος τιμής ΕΧΕΙ τιμή ανά m²** — η μία απάντηση, και ο τύπος παράγεται από αυτήν.
+ *
+ * 🔴 **`nightly: false`, δηλωμένο, όχι ξεχασμένο.** Τιμή ανά νύχτα ανά τετραγωνικό δεν τη δημοσιεύει
+ * καμία αγορά (Airbnb · Booking). Το `satisfies Record<PriceRole, …>` αναγκάζει τον επόμενο ρόλο να
+ * απαντήσει την ίδια ερώτηση πριν μεταγλωττιστεί.
+ */
+const QUOTES_RATE_PER_AREA = {
+  sale: true,
+  rent: true,
+  nightly: false,
+} as const satisfies Record<PriceRole, boolean>;
+
+/** Οι ρόλοι με τιμή ανά m² — **παράγωγο** του {@link QUOTES_RATE_PER_AREA}, ποτέ δεύτερη λίστα. */
+export type PerAreaPriceRole = {
+  [K in PriceRole]: (typeof QUOTES_RATE_PER_AREA)[K] extends true ? K : never;
+}[PriceRole];
+
+/** Έχει αυτός ο ρόλος τιμή ανά m²; Στενεύει τον τύπο για όποιον κρατά πίνακα ανά {@link PerAreaPriceRole}. */
+export function quotesRatePerArea(role: PriceRole): role is PerAreaPriceRole {
+  return QUOTES_RATE_PER_AREA[role];
+}
+
+/**
+ * **Τιμή ανά m², ακέραια ευρώ** — `null` όταν το εμβαδόν είναι άγνωστο ή ο ρόλος δεν έχει τέτοια τιμή.
+ *
+ * 📦 **Ανέβηκε εδώ από το `property-card-shared.ts` (ADR-777 §8.91)** όταν το ζήτησε η δημόσια σελίδα
+ * αγγελίας: εκείνο το αρχείο κουβαλά ρυθμίσεις πλοήγησης και design system, που ο ανώνυμος επισκέπτης
+ * δεν έχει λόγο να κατεβάσει. Ένας κανόνας για κάρτες, γρήγορη προβολή κάτοψης, σελίδες πωλήσεων και αγγελία.
+ */
+export function pricePerSqmAmount(
+  price: Pick<ResolvedPrice, 'role' | 'amount'>,
+  area: number | null | undefined,
+): number | null {
+  if (!quotesRatePerArea(price.role)) return null;
+  return typeof area === 'number' && area > 0 ? Math.round(price.amount / area) : null;
+}
+
 // ============================================================================
 // ΑΘΡΟΙΣΜΑΤΑ ΑΝΑ ΡΟΛΟ → ΚΕΙΜΕΝΟ ΟΘΟΝΗΣ (ADR-777 §8.60.14.13)
 // ============================================================================

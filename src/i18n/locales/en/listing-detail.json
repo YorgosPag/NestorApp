@@ -7,6 +7,9 @@
     "since": "Reduced on {date}",
     "basis": "Compared with the lowest price of the last 30 days."
   },
+  "price": {
+    "perArea": "Price per m²"
+  },
   "attributes": {
     "heading": "Property details",
     "ledger": "{declared} of {total} details declared",

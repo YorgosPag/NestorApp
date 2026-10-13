@@ -17,9 +17,9 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { pricePerSqmAmount } from '@/domain/cards/property/property-card-shared';
 import {
   pricePerAreaLabel,
+  pricePerSqmAmount,
   priceStandingLabel,
   resolvedPriceLabel,
   type PriceLabelT,

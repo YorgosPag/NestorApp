@@ -23,7 +23,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "21c5a00172c115c3318dcec1de2518c39b13c1f4c31aa79abd098432c08b6ab6",
+    "src/i18n/generated/routes/listing__id.el.json": "a9f5cd68d47971fc98d335328cca5bcda93a9895d62fbe4fd51decf5c55c1e9a",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "10f809179ae61c728afe801c28a68fba59a4c20e40cab9133280acf0aee00dff",
+  "inputsSha256": "af29557f0a35e294fd70846637998981ebd26347a713542ab56b63af6ddd6734",
   "languages": [
     "el"
   ],
@@ -372,7 +372,7 @@
     "src/components/listing-detail/ListingObjectiveValue.tsx": "1818caf96634fae8f74a7b42e5a14424eb229a2d8364961b5bf53ffbe7eca4d0",
     "src/components/listing-detail/ListingOpenSubjects.tsx": "a3b7c8d88d803bef8649b5ef87716f03fb5b6ac18bf225bd1d76121dc18c71ca",
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
-    "src/components/listing-detail/ListingPriceBlock.tsx": "50c74e7812dd331258fc7319785023497a308daeaef20b87caf845613f76fe90",
+    "src/components/listing-detail/ListingPriceBlock.tsx": "083c0bccd3198523f556c74118d84f19432b5995e8d4a7cde525a0791f4a6816",
     "src/components/listing-detail/ListingPriceReduction.tsx": "6cd7ce237b728dc15ca9f4c4e5c79097218eadc90fb1b996ae9ee6c6ed632310",
     "src/components/listing-detail/ListingSectionNav.tsx": "ecb4345f7882316eb984ff95addb62ed6a296cd66ca62ed599c00f28663f753a",
     "src/components/listing-detail/ListingStageFailure.tsx": "646b8d10191df9c7362b8b0957f741ebb6a39a5c186f3f4a682d29e5dd1879bb",
@@ -4764,6 +4764,7 @@
             "model.provenance.measured",
             "model.retry",
             "model.reveal",
+            "price.perArea",
             "priceReduction.basis",
             "priceReduction.since",
             "sections.details",
@@ -12804,7 +12805,7 @@
     "matchedKeys": 243,
     "routeBoundaries": 3,
     "shellFiles": 1204,
-    "sliceBytes": 726356
+    "sliceBytes": 726417
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

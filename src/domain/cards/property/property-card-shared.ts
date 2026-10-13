@@ -16,8 +16,11 @@ import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/compon
 import { priceAmountStat } from '@/domain/cards/shared/spot-card-stats';
 import {
   pricePerAreaLabel,
+  pricePerSqmAmount,
   priceStandingLabel,
+  quotesRatePerArea,
   resolvedPriceLabel,
+  type PerAreaPriceRole,
 } from '@/lib/listings/listing-price-label';
 import {
   resolveDisplayPrice,
@@ -286,31 +289,18 @@ interface PricePerSqmPresentation {
 }
 
 /**
- * Per-role presentation of a €/m² row — or `null` where a rate per m² means nothing.
+ * Per-role presentation of a €/m² row — keyed by the roles that HAVE such a rate.
  *
- * 🔴 **`nightly: null`, declared, not forgotten.** The map used to name only sale and
+ * 🔴 **Which roles those are is not decided here.** The map used to name only sale and
  * rent; a nightly headline indexed it with a key it did not have and the destructuring
- * threw — the whole card went down for a short-stay property. A price per night per
- * square metre is not a figure any market quotes (Airbnb and Booking publish none).
- * `Record<PriceRole, …>` makes the next role answer the same question before it compiles.
+ * threw — the whole card went down for a short-stay property. The one answer now lives
+ * in `listing-price-label.ts` (`quotesRatePerArea`), and {@link PerAreaPriceRole} is
+ * derived from it: a new role with a rate per m² does not compile until it has a row here.
  */
-const PRICE_PER_SQM_PRESENTATION: Readonly<Record<PriceRole, PricePerSqmPresentation | null>> = {
+const PRICE_PER_SQM_PRESENTATION: Readonly<Record<PerAreaPriceRole, PricePerSqmPresentation>> = {
   sale: { labelKey: 'card.stats.salePricePerSqm', iconColor: NAVIGATION_ENTITIES.price.color },
   rent: { labelKey: 'card.stats.rentPricePerSqm', iconColor: 'text-[hsl(var(--text-warning))]' },
-  nightly: null,
 };
-
-/**
- * **Price per m², whole euros** — `null` when the area is unknown or the role has no
- * such rate. One rule for the card rows below and for the floor-plan quick view.
- */
-export function pricePerSqmAmount(
-  price: Pick<ResolvedPrice, 'role' | 'amount'>,
-  area: number | null | undefined,
-): number | null {
-  if (PRICE_PER_SQM_PRESENTATION[price.role] === null) return null;
-  return typeof area === 'number' && area > 0 ? Math.round(price.amount / area) : null;
-}
 
 /**
  * Price-per-m² stat(s) for a Property card — sales views only.
@@ -343,9 +333,10 @@ export function buildPropertyPricePerSqmStats(
     secondary && secondary.role !== headline.role ? [headline, secondary] : [headline];
 
   return prices.flatMap((price) => {
-    const presentation = PRICE_PER_SQM_PRESENTATION[price.role];
+    const { role } = price;
     const perSqm = pricePerSqmAmount(price, displayArea);
-    if (presentation === null || perSqm === null) return [];
+    if (!quotesRatePerArea(role) || perSqm === null) return [];
+    const presentation = PRICE_PER_SQM_PRESENTATION[role];
     return [{
       icon: NAVIGATION_ENTITIES.price.icon,
       iconColor: presentation.iconColor,

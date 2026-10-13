@@ -434,6 +434,8 @@ describe.each(['el', 'en'] as const)('Κ7γ — τα στοιχεία της ο�
     'attributes.hide',
     'attributes.declaredNone',
     'attributes.groupEmpty',
+    // ADR-777 §8.91 — η ετικέτα της τιμής ανά m² ζει εδώ (lazy), όχι στο `search-results` του κελύφους.
+    'price.perArea',
     ...LISTING_ATTRIBUTE_KEYS.map((key) => `attributes.label.${key}`),
     // ✅ Τα σύνολα ζητούν ετικέτα από το **ίδιο** πρόθεμα με τις ιδιότητες
     //    (`ListingFeatureSet.tsx`), άρα ο παρονομαστής είναι η **ένωση**. Αν έμπαινε
