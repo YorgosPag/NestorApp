@@ -300,11 +300,14 @@ describe('Κ6 — ο αναγνώστης του επισκέπτη', () => {
 });
 
 describe('Σ — ο κρίκος 19 του δημόσιου σχήματος', () => {
-  it('έγγραφο της έκδοσης 18 αποκτά ΚΕΝΟ `floorPlates` και σφραγίδα 19', () => {
+  it('έγγραφο της έκδοσης 18 αποκτά ΚΕΝΟ `floorPlates` και περνά τον κρίκο 19', () => {
     const upgraded = upgradeListingDocument({ schemaVersion: 18, videos: [] });
     expect(upgraded.floorPlates).toEqual([]);
-    expect(upgraded.schemaVersion).toBe(19);
-    expect(PUBLIC_LISTING_SCHEMA_VERSION).toBe(19);
+    // ⚠️ Η αλυσίδα ανεβάζει ως την **τρέχουσα** έκδοση, όχι ως το 19: η άγκυρα έγραφε `toBe(19)` και κοκκίνισε μόλις
+    //    μπήκε ο κρίκος 20 (ADR-777 §8.88), χωρίς να έχει σπάσει τίποτα δικό της. Ρωτά πλέον ό,τι ισχύει για κάθε
+    //    μελλοντικό κρίκο: πέρασε το 19, και η σφραγίδα είναι η τρέχουσα.
+    expect(upgraded.schemaVersion).toBe(PUBLIC_LISTING_SCHEMA_VERSION);
+    expect(PUBLIC_LISTING_SCHEMA_VERSION).toBeGreaterThanOrEqual(19);
   });
 
   it('σκουπίδι στη θέση του πίνακα ⇒ κενό, όχι εξαίρεση· δεύτερη εφαρμογή ⇒ ίδιο αποτέλεσμα', () => {

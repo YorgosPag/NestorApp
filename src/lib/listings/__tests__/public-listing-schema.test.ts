@@ -17,8 +17,11 @@ import {
   UNSTAMPED_SCHEMA_VERSION,
   storedSchemaVersion,
   upgradeListingDocument,
-  type StoredListingDocument,
 } from '../public-listing-schema';
+import type { StoredListingDocument } from '../public-listing-schema-types';
+import { LISTING_MIGRATIONS_02_10 } from '../public-listing-migrations-02-10';
+import { LISTING_MIGRATIONS_11_20 } from '../public-listing-migrations-11-20';
+import { LISTING_MIGRATIONS_21_30 } from '../public-listing-migrations-21-30';
 import { readStoredListing, publicListingFromDocument } from '../public-listing-from-document';
 import { LISTING_MATERIAL_KEYS } from '../listing-authorship';
 import {
@@ -488,5 +491,72 @@ describe('Κ10 — 🔴 Η ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ ΤΟΥ ΕΙΔΟΥΣ ΓΙ
     expect(isPubliclyListed({ ...base, type: 'Οικόπεδο' })).toBe(true);
     expect(isPubliclyListed({ ...base, type: 'parking' })).toBe(false);
     expect(isPubliclyListed({ ...base, type: null })).toBe(false);
+  });
+});
+
+// ============================================================================
+// Η ΣΥΝΕΧΕΙΑ ΤΗΣ ΣΥΝΘΕΜΕΝΗΣ ΑΛΥΣΙΔΑΣ (ΑΝΑ ΔΕΚΑΔΑ)
+// ============================================================================
+
+describe('Κ11 — η αλυσίδα είναι συνεχής και κάθε δεκάδα κρατά μόνο τους δικούς της κρίκους', () => {
+  it('Κ11.1 — LISTING_MIGRATIONS.to = [2 … PUBLIC_LISTING_SCHEMA_VERSION], χωρίς κενό ή διπλότυπο', () => {
+    const expected = Array.from({ length: PUBLIC_LISTING_SCHEMA_VERSION - 1 }, (_, i) => i + 2);
+    expect(LISTING_MIGRATIONS.map((m) => m.to)).toEqual(expected);
+  });
+
+  it('Κ11.2 — κάθε δεκάδα έχει κρίκους μόνο του δικού της εύρους', () => {
+    expect(LISTING_MIGRATIONS_02_10.every((m) => m.to >= 2 && m.to <= 10)).toBe(true);
+    expect(LISTING_MIGRATIONS_11_20.every((m) => m.to >= 11 && m.to <= 20)).toBe(true);
+    expect(LISTING_MIGRATIONS_21_30.every((m) => m.to >= 21 && m.to <= 30)).toBe(true);
+  });
+});
+
+describe('Κ12 — κρίκος 21: τα κοινόχρηστα (ADR-777 §8.93)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 21)!;
+  const stored = (over: StoredListingDocument): StoredListingDocument => ({ type: 'apartment', offerKinds: ['sell'], ...over });
+
+  it('🔴 παλιό έγγραφο κατοικίας ⇒ κουτί με «δεν δηλώθηκαν» — ποτέ ποσό, ποτέ μηδέν', () => {
+    expect(link.apply(stored({})).commonCharges).toEqual({ monthlyAmount: null, includes: null });
+  });
+
+  it('🔴 γη · μόνο βραχυχρόνια · μόνο αντιπαροχή ⇒ null — ο ίδιος κριτής με τον προβολέα', () => {
+    expect(link.apply(stored({ type: 'land' })).commonCharges).toBeNull();
+    expect(link.apply(stored({ offerKinds: ['leaseShort'] })).commonCharges).toBeNull();
+    expect(link.apply(stored({ offerKinds: ['exchange'] })).commonCharges).toBeNull();
+    expect(link.apply(stored({ offerKinds: 'sell' })).commonCharges).toBeNull();
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο· σκουπίδι γίνεται «δεν δηλώθηκαν»', () => {
+    const written = { monthlyAmount: 120, includes: ['heating'] };
+    const once = link.apply(stored({ commonCharges: written }));
+    expect(once.commonCharges).toEqual(written);
+    expect(link.apply(once)).toEqual(once);
+    expect(link.apply(stored({ commonCharges: { monthlyAmount: -5 } })).commonCharges).toEqual({ monthlyAmount: null, includes: null });
+  });
+});
+
+describe('Κ13 — κρίκος 22: οι αριθμοί του ενεργειακού πιστοποιητικού (ADR-777 §8.94)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 22)!;
+  const stored = (over: StoredListingDocument): StoredListingDocument => ({ type: 'apartment', offerKinds: ['sell'], ...over });
+  const UNDECLARED = { primaryEnergy: null, co2Emissions: null, absence: null };
+
+  it('🔴 παλιό έγγραφο κτιρίου ⇒ κουτί με «δεν δηλώθηκαν» — ποτέ αριθμός, και το `energyClass` μένει ανέγγιχτο', () => {
+    const upgraded = link.apply(stored({ energyClass: 'C' }));
+    expect(upgraded.energyCertificate).toEqual(UNDECLARED);
+    expect(upgraded.energyClass).toBe('C');
+  });
+
+  it('🔴 γη ή καμία διάθεση ⇒ null — ο ίδιος κριτής με τον προβολέα', () => {
+    expect(link.apply(stored({ type: 'land' })).energyCertificate).toBeNull();
+    expect(link.apply(stored({ offerKinds: [] })).energyCertificate).toBeNull();
+    expect(link.apply(stored({ offerKinds: 'sell' })).energyCertificate).toBeNull();
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο· σκουπίδι γίνεται «δεν δηλώθηκαν»', () => {
+    const written = { primaryEnergy: 132.4, co2Emissions: 38.1, absence: null };
+    const once = link.apply(stored({ energyCertificate: written }));
+    expect(once.energyCertificate).toEqual(written);
+    expect(link.apply(once)).toEqual(once);
+    expect(link.apply(stored({ energyCertificate: { primaryEnergy: -5, absence: 'lost' } })).energyCertificate).toEqual(UNDECLARED);
   });
 });

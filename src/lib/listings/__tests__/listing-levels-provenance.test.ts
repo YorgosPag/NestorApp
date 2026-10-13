@@ -27,8 +27,8 @@ import {
   LISTING_MIGRATIONS,
   PUBLIC_LISTING_SCHEMA_VERSION,
   upgradeListingDocument,
-  type StoredListingDocument,
 } from '../public-listing-schema';
+import type { StoredListingDocument } from '../public-listing-schema-types';
 import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 const AT = '2026-09-02T12:00:00.000Z';

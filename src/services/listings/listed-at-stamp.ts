@@ -45,7 +45,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AdminFirestore } from '@/lib/api/guarded-route';
-import { readListedAt } from '@/lib/listings/public-listing-schema';
+import { readListedAt } from '@/lib/listings/public-listing-shape-judges';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ListedAt } from '@/types/public-listing';
 

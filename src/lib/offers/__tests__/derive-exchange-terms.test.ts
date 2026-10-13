@@ -7,7 +7,8 @@
  */
 
 import type { ExchangeOffer, PropertyOffer } from '@/types/property-offers';
-import { upgradeListingDocument, type StoredListingDocument } from '@/lib/listings/public-listing-schema';
+import { upgradeListingDocument } from '@/lib/listings/public-listing-schema';
+import type { StoredListingDocument } from '@/lib/listings/public-listing-schema-types';
 
 import { deriveExchangeTerms } from '../derive-exchange-terms';
 
