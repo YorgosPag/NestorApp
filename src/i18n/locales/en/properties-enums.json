@@ -400,7 +400,25 @@
       "figureInvalid": "Enter a number from 0 to {max}, with at most one decimal.",
       "issuedOn": "Issue date",
       "issuedOnHint": "The certificate is valid for ten years. The date is not shown on the listing; only whether it is still valid.",
-      "absenceLegend": "If you have no class to declare:"
+      "absenceLegend": "If you have no class to declare:",
+      "usefulArea": "Useful area on the certificate (m²)",
+      "usefulAreaHint": "As written on the first page of the certificate. It is not always the listing's area.",
+      "finalEnergyLegend": "Final energy by source (page 2 of the certificate)",
+      "finalEnergyHint": "Copy the \"Total\" column for every source that has a number. With these and the useful area, the listing shows an annual cost estimate.",
+      "finalEnergyUnit": "kWh/m² per year",
+      "addSource": "Add an energy source",
+      "addSourcePlaceholder": "Choose a source",
+      "positiveInvalid": "Enter a number above 0 and up to {max}, with at most one decimal."
+    },
+    "source": {
+      "electricity": "Electricity",
+      "oil": "Heating oil",
+      "naturalGas": "Natural gas",
+      "otherFossil": "Other fossil fuels",
+      "solar": "Solar",
+      "biomass": "Biomass",
+      "geothermal": "Geothermal",
+      "otherRenewable": "Other renewable"
     }
   }
 }

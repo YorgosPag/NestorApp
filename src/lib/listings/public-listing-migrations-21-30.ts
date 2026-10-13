@@ -5,7 +5,7 @@
  */
 
 import { listedCommonChargesOf } from '@/lib/common-charges/common-charges';
-import { relistedEnergyCertificateOf } from '@/lib/energy-certificate/energy-certificate';
+import { relistedEnergyCertificateOf, relistedFinalEnergyOf } from '@/lib/energy-certificate/energy-certificate';
 import type { ListingMigration } from './public-listing-schema-types';
 
 /** Οι κρίκοι `to: 21` … `to: 30`, με τη σειρά που συνέβησαν. Παγωμένοι — δες την κεφαλίδα του `public-listing-schema.ts`. */
@@ -55,6 +55,28 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
     apply: (doc) => ({
       ...doc,
       energyCertificate: relistedEnergyCertificateOf(
+        { type: doc.type, offerKinds: Array.isArray(doc.offerKinds) ? doc.offerKinds : [] },
+        doc.energyCertificate,
+      ),
+    }),
+  },
+  {
+    to: 23,
+    adr: 'ADR-777 §8.95',
+    adds: ['energyCertificate.usefulArea', 'energyCertificate.finalEnergy'],
+    /**
+     * 🔴 **ΤΟ ΚΟΥΤΙ ΤΟΥ ΠΕΑ ΑΠΕΚΤΗΣΕ ΩΦΕΛΙΜΗ ΕΠΙΦΑΝΕΙΑ ΚΑΙ ΤΕΛΙΚΗ ΕΝΕΡΓΕΙΑ ΑΝΑ ΠΗΓΗ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΑ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΑΝ»** (`null` · `null`), άρα **καμία εκτίμηση κόστους**:
+     * το ποσό δεν αποθηκεύεται ποτέ — υπολογίζεται στην ανάγνωση από αυτά τα δύο πεδία και τις τιμές αναφοράς. Ένας
+     * πίνακας «συμπερασμένος» από το `heatingFuel` θα ήταν εκτίμηση σε ευρώ χωρίς πιστοποιητικό από πίσω της.
+     *
+     * 🔑 **Ό,τι έδινε ο κρίκος 22 μένει αυτούσιο** (ίδιος κριτής, ίδια ανάγνωση πεδίο-πεδίο)· εδώ προστίθενται μόνο
+     * τα δύο νέα πεδία. **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας διαβάζεται και μένει.
+     */
+    apply: (doc) => ({
+      ...doc,
+      energyCertificate: relistedFinalEnergyOf(
         { type: doc.type, offerKinds: Array.isArray(doc.offerKinds) ? doc.offerKinds : [] },
         doc.energyCertificate,
       ),

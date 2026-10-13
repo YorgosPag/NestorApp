@@ -642,6 +642,8 @@
         "primaryEnergy": "Primary energy use",
         "co2Emissions": "CO₂ emissions",
         "issuedOn": "Certificate issue date",
+        "usefulArea": "Certificate useful area",
+        "finalEnergy": "Final energy by source",
         "absence": "Reason for no certificate"
       },
       "objectiveValueDeclarations": {
