@@ -73,6 +73,7 @@ import { ListingPriceBlock } from './ListingPriceBlock';
 import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
 import { ListingLegality } from './ListingLegality';
+import { ListingEnergyCertificate } from './ListingEnergyCertificate';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingMediaViewer } from './media/ListingMediaViewer';
 import { ListingStay } from './ListingStay';
@@ -330,8 +331,10 @@ const SECTION_PROSE_MEASURE =
 function ListingSections({ listing }: { readonly listing: PublicListing }) {
   return (
     <div className={cn('flex min-w-0 flex-col gap-4 lg:col-start-1', SECTION_PROSE_MEASURE)}>
-      <ListingSectionAnchor section="details">
+      <ListingSectionAnchor section="details" className="flex flex-col gap-4">
         <ListingAttributeList listing={listing} />
+        {/* ADR-777 §8.94 — το ΠΕΑ: κλίμακα, αριθμοί, ισχύς. Αποδίδει **τίποτα** όπου η ερώτηση δεν τίθεται (γη). */}
+        <ListingEnergyCertificate listing={listing} />
       </ListingSectionAnchor>
 
       <ListingSectionAnchor section="location" className="flex flex-col gap-4">

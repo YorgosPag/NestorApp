@@ -26,11 +26,12 @@
 import React from 'react';
 import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { resolveDisplayPrice, type ResolvedPrice } from '@/lib/properties/price-resolver';
+import { resolveDisplayPrice, type DisplayPrice, type ResolvedPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY, PRICE_ROLE_KEY } from '@/lib/listings/listing-price-keys';
 import { pricePerAreaLabel, pricePerSqmAmount } from '@/lib/listings/listing-price-label';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { ListingPriceReduction } from './ListingPriceReduction';
+import { ListingCommonCharges } from './ListingCommonCharges';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ListingPriceBlockProps {
@@ -79,6 +80,16 @@ function PricePerAreaRow({ price, areaSqm }: { readonly price: ResolvedPrice; re
   );
 }
 
+/**
+ * Το μηνιαίο ενοίκιο **της ίδιας ετυμηγορίας** — για το «σύνολο ανά μήνα» των κοινοχρήστων (ADR-777 §8.93).
+ * `null` όταν κανένα από τα ποσά δεν είναι ενοίκιο: πώληση + κοινόχρηστα δεν αθροίζονται.
+ */
+function monthlyRentOf(price: DisplayPrice): number | null {
+  if (price.kind !== 'priced') return null;
+  const rent = [price.headline, price.secondary].find((amount) => amount?.role === 'rent');
+  return rent?.amount ?? null;
+}
+
 export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
@@ -106,6 +117,8 @@ export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
         /* Η απουσία είναι **κατάσταση με αιτία**, ποτέ «0 €» και ποτέ «επικοινωνήστε». */
         <p className="mt-2 text-lg text-muted-foreground">{t(MISSING_PRICE_KEY[price.reason])}</p>
       )}
+      {/* ADR-777 §8.93 — και χωρίς τιμή: η απουσία τιμής δεν ακυρώνει τη δήλωση των κοινοχρήστων. */}
+      <ListingCommonCharges charges={listing.commonCharges} rentAmount={monthlyRentOf(price)} />
     </SectionFrame>
   );
 }

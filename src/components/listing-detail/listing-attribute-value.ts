@@ -55,6 +55,7 @@
 import type { TFunction } from 'i18next';
 
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { ENERGY_CLASS_LABEL_KEY } from '@/lib/energy-certificate/energy-certificate-keys';
 import { formatFloorRef } from '@/lib/floor/floor-label';
 import { hostedFloorRef } from '@/lib/floor/hosted-floor';
 import type { ListingAttributeKey } from '@/lib/listings/listing-disclosure';
@@ -74,8 +75,8 @@ import type { PublicListing } from '@/types/public-listing';
  * Ο τρόπος που μια δηλωμένη τιμή γίνεται κείμενο.
  *
  * ⚠️ **`'verbatim'` ΔΕΝ είναι «hardcoded string» (N.11)** — είναι **δεδομένο** που
- * τυπώνεται αυτούσιο: ένας αριθμός δωματίων, ένα έτος, ή το γράμμα `B` της ενεργειακής
- * κλάσης. Το `A+` δεν έχει μετάφραση· είναι **σύμβολο κανονισμού**, όπως ένα `m²`.
+ * τυπώνεται αυτούσιο: ένας αριθμός δωματίων, ένα έτος. ⚠️ Η ενεργειακή κλάση **δεν**
+ * ανήκει εδώ (δες `renderEnergyClass`): το γράμμα της αλλάζει με το αλφάβητο του πιστοποιητικού.
  */
 type AttributeValueKind =
   | { readonly kind: 'sqm' }
@@ -135,7 +136,7 @@ const ATTRIBUTE_VALUE_KIND: {
   frontage: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.frontage },
   bedrooms: { kind: 'custom', render: renderBedrooms },
 
-  energyClass: { kind: 'verbatim' },
+  energyClass: { kind: 'custom', render: renderEnergyClass },
   condition: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.condition },
   renovationYear: { kind: 'verbatim' },
   constructionYear: { kind: 'custom', render: renderConstructionYear },
@@ -177,6 +178,17 @@ function renderType(t: TFunction, listing: PublicListing): string {
 function renderFloor(t: TFunction, listing: PublicListing): string {
   const ref = hostedFloorRef(listing);
   return ref === null ? '' : formatFloorRef(ref, t);
+}
+
+/**
+ * **Η ενεργειακή κλάση με το γράμμα του πιστοποιητικού** (ADR-777 §8.94).
+ *
+ * 🔴 Ως τις 2026-10-13 ήταν `'verbatim'`, με το σκεπτικό «το `A+` δεν έχει μετάφραση». **Έχει**: η αποθηκευμένη τιμή
+ * είναι η ευρωπαϊκή (`C` · `F` · `G`), και το ελληνικό ΠΕΑ γράφει **Γ · Ζ · Η**. Η αγγελία έλεγε «G» σε άνθρωπο που
+ * κρατά χαρτί με «Η». Ο ΕΝΑΣ πίνακας ετικετών ζει στο `energy-certificate-keys`.
+ */
+function renderEnergyClass(t: TFunction, listing: PublicListing): string {
+  return listing.energyClass === null ? '' : t(ENERGY_CLASS_LABEL_KEY[listing.energyClass]);
 }
 
 /** Πληθυντικός ICU — `0` είναι **γκαρσονιέρα**, υπαρκτή τιμή. */

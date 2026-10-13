@@ -75,9 +75,6 @@ jest.mock('@/components/search-results/ResultsMap', () => ({
 // Η κάρτα περιήγησης έχει δικά της tests (`TourAccessCard`)· εδώ θα ζητούσε `AuthProvider` (useAuth, Κ3β `27e38298`)
 // και έριχνε 22 tests της ΣΕΛΙΔΑΣ που δεν αφορούν την περιήγηση (μετρημένο 2026-09-27, ADR-884 Φ2στ).
 jest.mock('@/components/listing-detail/ListingTour', () => ({ ListingTour: () => null }));
-// Ο προβολέας μέσων ρωτά την παρουσία περιήγησης για να αποφασίσει αν υπάρχει η καρτέλα της — δικτυακή ανάγνωση, με
-// δική της άγκυρα (`ListingMediaViewer.test`, Π5). Εδώ: καμία περιήγηση, άρα η σελίδα όπως ήταν.
-jest.mock('@/lib/spatial-tour/useTourPresenceAvailable', () => ({ useTourPresenceAvailable: () => false }));
 
 jest.mock('@/hooks/listings/useListingViewBeacon', () => ({
   useListingViewBeacon: () => undefined,
@@ -116,6 +113,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     videos: [],
     // Απαιτείται από την έκδοση 19 (ADR-907 §11) — ίδιος λόγος.
     floorPlates: [],
+    // ADR-777 §8.92 — καμία περιήγηση· ο προβολέας μέσων ρωτά την αγγελία, όχι το δίκτυο.
+    tour: null,
     type: 'apartment',
     areaSqm: 95,
     offerKinds: ['sell'],
@@ -173,6 +172,10 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,
+    // ADR-777 §8.93 — προς πώληση διαμέρισμα ⇒ η ερώτηση ΤΙΘΕΤΑΙ· τίποτα δηλωμένο.
+    commonCharges: { monthlyAmount: null, includes: null },
+    // ADR-777 §8.94 — ίδιος κανόνας: η ερώτηση του ΠΕΑ ΤΙΘΕΤΑΙ· κανένας αριθμός δηλωμένος.
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null },
     ...over,
   };
 }
@@ -402,6 +405,98 @@ describe('Ο4 — κάθε ποσό λέει τι είναι', () => {
 });
 
 // ============================================================================
+// Ο4β — ΤΑ ΚΟΙΝΟΧΡΗΣΤΑ: ΠΕΝΤΕ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΜΙΑ ΣΙΩΠΗΛΗ (ADR-777 §8.93)
+// ============================================================================
+
+describe('Ο4β — τα κοινόχρηστα στο μπλοκ τιμής', () => {
+  const RENT = { askingPrice: null, finalPrice: null, rentPrice: 900, nightlyRate: null };
+  const monthly = /^common:priceAmount\.rent::/;
+
+  it('κουτί `null` (η ερώτηση δεν τίθεται) ⇒ ΚΑΜΙΑ γραμμή — ούτε «δεν δηλώθηκε»', () => {
+    renderWith({ state: 'found', listing: listing({ commonCharges: null }) });
+    expect(screen.queryByText('listing-detail:commonCharges.label')).not.toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:commonCharges.undeclared')).not.toBeInTheDocument();
+  });
+
+  it('αδήλωτα ⇒ το κενό έχει όνομα, και καμία απόδοση προέλευσης', () => {
+    renderWith({ state: 'found', listing: listing() });
+    expect(screen.getByText('listing-detail:commonCharges.label')).toBeInTheDocument();
+    expect(screen.getByText('listing-detail:commonCharges.undeclared')).toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:commonCharges.provenance')).not.toBeInTheDocument();
+  });
+
+  it('🔴 `0` ⇒ «χωρίς κοινόχρηστα» — ποτέ ποσό «0 €/μήνα», ποτέ σύνολο', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({ commercialStatus: 'for-rent', commercial: RENT, offerKinds: ['leaseOut'], commonCharges: { monthlyAmount: 0, includes: null } }),
+    });
+    expect(screen.getByText('listing-detail:commonCharges.none')).toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:commonCharges.total')).not.toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:commonCharges.provenance')).not.toBeInTheDocument();
+  });
+
+  it('πώληση με ποσό ⇒ ποσό με τη μονάδα του μήνα + προέλευση· ΚΑΝΕΝΑ σύνολο (τιμή αγοράς δεν αθροίζεται)', () => {
+    renderWith({ state: 'found', listing: listing({ commonCharges: { monthlyAmount: 120, includes: null } }) });
+    expect(screen.getAllByText(monthly)).toHaveLength(1);
+    expect(screen.getByText('listing-detail:commonCharges.provenance')).toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:commonCharges.total')).not.toBeInTheDocument();
+  });
+
+  it('🔴 ενοικίαση με ποσό ⇒ ΚΑΙ το σύνολο του μήνα (ενοίκιο + κοινόχρηστα)', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({ commercialStatus: 'for-rent', commercial: RENT, offerKinds: ['leaseOut'], commonCharges: { monthlyAmount: 120, includes: null } }),
+    });
+    expect(screen.getByText('listing-detail:commonCharges.total')).toBeInTheDocument();
+    expect(screen.getByText('listing-detail:commonCharges.totalBasis')).toBeInTheDocument();
+    // Δύο ποσά με μονάδα μήνα: τα κοινόχρηστα και το σύνολο — και το σύνολο είναι 900 + 120.
+    const amounts = screen.getAllByText(monthly).map((node) => node.textContent ?? '');
+    expect(amounts).toHaveLength(2);
+    expect(amounts.some((text) => text.includes('1.020') || text.includes('1,020') || text.includes('1020'))).toBe(true);
+  });
+
+  it('πώληση ΚΑΙ ενοίκιο ⇒ το σύνολο χτίζεται πάνω στο ΕΝΟΙΚΙΟ, όχι στην τιμή πώλησης', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({
+        commercialStatus: 'for-sale-and-rent',
+        commercial: { askingPrice: 200000, finalPrice: null, rentPrice: 900, nightlyRate: null },
+        offerKinds: ['sell', 'leaseOut'],
+        commonCharges: { monthlyAmount: 120, includes: null },
+      }),
+    });
+    expect(screen.getByText('listing-detail:commonCharges.total')).toBeInTheDocument();
+  });
+
+  it('«τι περιλαμβάνουν»: δεν ρωτήθηκε ⇒ καμία γραμμή · τίποτα ⇒ ρητά · κάποια ⇒ με τα ονόματά τους', () => {
+    const { unmount } = renderWith({ state: 'found', listing: listing({ commonCharges: { monthlyAmount: 120, includes: null } }) });
+    expect(screen.queryByText(/^listing-detail:commonCharges\.includes/)).not.toBeInTheDocument();
+    unmount();
+
+    const nothing = renderWith({ state: 'found', listing: listing({ commonCharges: { monthlyAmount: 120, includes: [] } }) });
+    expect(screen.getByText('listing-detail:commonCharges.includesNothing')).toBeInTheDocument();
+    nothing.unmount();
+
+    renderWith({ state: 'found', listing: listing({ commonCharges: { monthlyAmount: 120, includes: ['heating', 'elevator'] } }) });
+    const line = screen.getByText(/^listing-detail:commonCharges\.includes::/).textContent ?? '';
+    expect(line).toContain('properties-enums:commonCharges.inclusion.heating');
+    expect(line).toContain('properties-enums:commonCharges.inclusion.elevator');
+  });
+
+  it('χωρίς τιμή ⇒ τα κοινόχρηστα ΜΕΝΟΥΝ (η απουσία τιμής δεν ακυρώνει τη δήλωση)', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({
+        commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null },
+        commonCharges: { monthlyAmount: 120, includes: null },
+      }),
+    });
+    expect(screen.getByText('search-results:listing.priceMissing.salePriceMissing')).toBeInTheDocument();
+    expect(screen.getAllByText(monthly)).toHaveLength(1);
+  });
+});
+
+// ============================================================================
 // Ο5 — Η ΘΕΣΗ: ΧΑΡΤΗΣ ΜΟΝΟ ΟΤΑΝ ΥΠΑΡΧΕΙ ΣΧΗΜΑ
 // ============================================================================
 
@@ -432,16 +527,18 @@ describe('Ο5 — ο χάρτης δεν προσποιείται', () => {
 // ============================================================================
 
 describe('Ο6 — ό,τι δεν δημοσιεύουμε, το λέμε', () => {
-  it('τα δύο θέματα που ΜΕΝΟΥΝ ανοιχτά εμφανίζονται — η νομιμότητα ΟΧΙ πια', () => {
+  it('το θέμα που ΜΕΝΕΙ ανοιχτό εμφανίζεται — η νομιμότητα και η κάτοψη ΟΧΙ πια', () => {
     // 🔴 Η ΑΓΚΥΡΑ ΕΛΕΓΕ «και τα ΤΡΙΑ θέματα… με τη νομιμότητα ΠΡΩΤΗ». Το ADR-838 την
     //    έκανε δεδομένο, οπότε η γραμμή έφυγε — και το `queryByText` από κάτω κρατά τη
     //    διαφορά **ορατή**: επαναφορά της θα σήμαινε ότι η σελίδα ξαναδηλώνει κενό που
     //    έχει ήδη κλείσει, ενώ από δίπλα δείχνει το περιεχόμενό του.
     renderWith({ state: 'found', listing: listing() });
-    for (const subject of ['floorplan', 'dossier']) {
+    for (const subject of ['dossier']) {
       expect(screen.getByText(`search-results:detail.open.${subject}`)).toBeInTheDocument();
     }
     expect(screen.queryByText('search-results:detail.open.legality')).not.toBeInTheDocument();
+    // ADR-777 §8.92 — η κάτοψη δημοσιεύεται (ADR-841 Α17)· «δεν υπάρχει πεδίο» δίπλα σε κατόψεις θα ήταν ψέμα.
+    expect(screen.queryByText('search-results:detail.open.floorplan')).not.toBeInTheDocument();
   });
 
   it('🔴 η ΝΟΜΙΜΟΤΗΤΑ είναι πλέον ΔΕΔΟΜΕΝΟ — με βαθμίδα, πηγή, και «δεν δηλώθηκε» με όνομα', () => {

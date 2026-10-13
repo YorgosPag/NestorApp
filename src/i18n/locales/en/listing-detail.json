@@ -159,5 +159,46 @@
       "northGlyph": "N",
       "northLabel": "North arrow: north is {degrees}° clockwise from the top of the floor plan"
     }
+  },
+  "commonCharges": {
+    "label": "Common charges",
+    "undeclared": "Not declared",
+    "none": "No common charges",
+    "includes": "Includes: {items}",
+    "includesNothing": "Does not include heating, water or any other service",
+    "provenance": "Declared by the advertiser, approximate",
+    "total": "Total per month",
+    "totalBasis": "Rent and common charges"
+  },
+  "energyCertificate": {
+    "heading": "Energy performance certificate",
+    "scaleLabel": "Energy scale, from A+ (best) to G (worst)",
+    "thisProperty": "this property",
+    "primaryEnergy": "Primary energy use",
+    "primaryEnergyValue": "{value} kWh/m² per year",
+    "co2Emissions": "CO₂ emissions",
+    "co2EmissionsValue": "{value} kg CO₂/m² per year",
+    "figureUndeclared": "Not declared",
+    "undeclared": "No energy class declared",
+    "provenance": "From the energy performance certificate, as declared by the advertiser",
+    "validity": {
+      "valid": "The certificate is valid",
+      "expired": "The certificate has expired",
+      "unknown": "The certificate's issue date has not been declared"
+    }
+  },
+  "energyCost": {
+    "heading": "Estimated annual cost of heating, cooling and hot water",
+    "range": "{low} to {high} per year",
+    "single": "About {amount} per year",
+    "kwhPerYear": "{value} kWh per year",
+    "basis": "Calculated from the certificate's final energy, for standard use, at consumer prices from {from} to {to}. This is not your bill: it excludes appliances and cooking, and actual use depends on the household.",
+    "semesterFirst": "first half of {year}",
+    "semesterSecond": "second half of {year}",
+    "heatingInCommonCharges": "The common charges are declared to include heating; part of this amount may already be paid there.",
+    "pricesFrom": "Prices:",
+    "undeclared": "The certificate's energy figures have not been declared, so there is no estimate.",
+    "unpriced": "Not estimated: there is no official reference price for {sources}.",
+    "stalePrices": "Not estimated: the reference prices are not recent."
   }
 }

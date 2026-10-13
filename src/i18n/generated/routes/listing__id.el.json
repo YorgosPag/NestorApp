@@ -167,6 +167,33 @@
       "reveal": "{count, plural, one {# δεν έχει δηλωθεί} other {# δεν έχουν δηλωθεί}}",
       "undeclared": "Δεν έχει δηλωθεί"
     },
+    "commonCharges": {
+      "includes": "Περιλαμβάνουν: {items}",
+      "includesNothing": "Δεν περιλαμβάνουν θέρμανση, νερό ή άλλη παροχή",
+      "label": "Κοινόχρηστα",
+      "none": "Χωρίς κοινόχρηστα",
+      "provenance": "Δήλωση του αγγελιοδότη, κατά προσέγγιση",
+      "total": "Σύνολο ανά μήνα",
+      "totalBasis": "Ενοίκιο και κοινόχρηστα",
+      "undeclared": "Δεν έχουν δηλωθεί"
+    },
+    "energyCertificate": {
+      "co2Emissions": "Εκπομπές CO₂",
+      "co2EmissionsValue": "{value} kg CO₂/m² τον χρόνο",
+      "figureUndeclared": "Δεν έχει δηλωθεί",
+      "heading": "Ενεργειακό πιστοποιητικό",
+      "primaryEnergy": "Κατανάλωση πρωτογενούς ενέργειας",
+      "primaryEnergyValue": "{value} kWh/m² τον χρόνο",
+      "provenance": "Από το πιστοποιητικό ενεργειακής απόδοσης, κατά δήλωση του αγγελιοδότη",
+      "scaleLabel": "Ενεργειακή κλίμακα, από Α+ (καλύτερη) έως Η (χειρότερη)",
+      "thisProperty": "αυτό το ακίνητο",
+      "undeclared": "Δεν έχει δηλωθεί ενεργειακή κλάση",
+      "validity": {
+        "expired": "Το πιστοποιητικό έχει λήξει",
+        "unknown": "Δεν έχει δηλωθεί πότε εκδόθηκε το πιστοποιητικό",
+        "valid": "Το πιστοποιητικό είναι σε ισχύ"
+      }
+    },
     "exchange": {
       "negotiable": "Αντιπαροχή: το ποσοστό του οικοπεδούχου είναι προς συζήτηση.",
       "share": "Αντιπαροχή: {share} στον οικοπεδούχο, επί των νέων τ.μ."
@@ -241,12 +268,41 @@
     }
   },
   "properties-enums": {
+    "commonCharges": {
+      "inclusion": {
+        "cleaning": "καθαριότητα",
+        "commonElectricity": "ρεύμα κοινοχρήστων",
+        "concierge": "θυρωρός",
+        "elevator": "ανελκυστήρας",
+        "garden": "κήπος",
+        "heating": "θέρμανση",
+        "pool": "πισίνα",
+        "water": "νερό"
+      }
+    },
     "condition": {
       "excellent": "Άριστη",
       "good": "Καλή",
       "needs-renovation": "Χρήζει ανακαίνισης",
       "new": "Νέο",
       "sectionTitle": "Κατάσταση διατήρησης"
+    },
+    "energyCertificate": {
+      "absence": {
+        "exempt": "Το ακίνητο εξαιρείται από την υποχρέωση πιστοποιητικού",
+        "pending": "Το πιστοποιητικό είναι υπό έκδοση"
+      }
+    },
+    "energyClass": {
+      "a": "Α",
+      "aPlus": "Α+",
+      "b": "Β",
+      "bPlus": "Β+",
+      "c": "Γ",
+      "d": "Δ",
+      "e": "Ε",
+      "f": "Ζ",
+      "g": "Η"
     },
     "features": {
       "amenities": {
