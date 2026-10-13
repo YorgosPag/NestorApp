@@ -155,7 +155,9 @@ const HARD_EXEMPT_PATTERNS = [
   // περνά από την ίδια συνέχεια με κάθε γραφή αγγελίας (`owner-property-write-completion.ts` → `owner-property-audit.ts`
   // → `EntityAuditService.recordChange`). Άγκυρα που το ΕΚΤΕΛΕΙ:
   // `services/owner-property/__tests__/owner-property-declarations.test.ts` (Δ4 — ΕΝΑ ίχνος, με τα πεδία· απόρριψη ⇒ κανένα).
-  /[\\/]services[\\/]owner-property[\\/]owner-property-declarations\.service\.ts$/,
+  // ⚠️ 2026-10-13 (ADR-777 §8.93): η συναλλαγή ανέβηκε στο `owner-property-amendment.ts` — ΕΝΑΣ γραφέας για δηλώσεις
+  // αντικειμενικής ΚΑΙ κοινόχρηστα. Οι δύο υπηρεσίες δεν αγγίζουν πια τη συλλογή· η εξαίρεση ακολούθησε τον γραφέα.
+  /[\\/]services[\\/]owner-property[\\/]owner-property-amendment\.ts$/,
   // ADR-864 Φ3 (Α18) — η ΣΥΝΑΙΝΕΣΗ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ: γράφει σε συναλλαγή (CAS), και το ίχνος περνά από
   // το ίδιο `owner-property-audit.ts` (`recordOwnerPropertyWrite` + `extraChanges`) — μία πράξη, μία
   // εγγραφή. Άγκυρα που το ΕΚΤΕΛΕΙ: `services/mandate/__tests__/private-marketing-consent.test.ts`
