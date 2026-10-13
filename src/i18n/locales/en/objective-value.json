@@ -265,6 +265,10 @@
     "levelsMissing": "Property on {count} levels: the law values each floor separately. Fill in the gross area of each level in the property details, so that they add up to the total gross area.",
     "notPublished": "Improving opens after the listing is published: publish first, then add the details.",
     "sections": {
+      "commonCharges": {
+        "title": "Common charges",
+        "lead": "Visitors see the common charges next to the price. For rentals they also see the monthly total."
+      },
       "objectiveValue": {
         "title": "Objective value",
         "lead": "Buyers see the objective value as the law defines it. Every answer here narrows it, from a range to a single amount."
