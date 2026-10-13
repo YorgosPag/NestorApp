@@ -19,6 +19,8 @@ import { declaredCaptureSpotsSchema, type PhotoCaptureSpot } from '@/lib/listing
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
 import { parseLegacyFloor } from '@/lib/floor/floor-ref';
 import { RETIRED_STATUSES } from '@/lib/firestore/trashed-status';
+import { storedCommonChargesSchema } from '@/lib/common-charges/common-charges';
+import { storedEnergyCertificateSchema } from '@/lib/energy-certificate/energy-certificate';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -122,6 +124,28 @@ export const PropertyPatchSchema = z.object({
    * επιβίωσης με τα σημεία λήψης· ο χώρος εργασίας το στέλνει **στο ίδιο PATCH** με εκείνα (ατομικά).
    */
   publishedFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
+  /**
+   * **Τα κοινόχρηστα** (ADR-777 §8.93) — ολόκληρο το μπλοκ, όπως το στέλνει η φόρμα.
+   *
+   * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`** — ίδιο σκεπτικό με το `publishedMediaOrder`: χωρίς αυτή τη
+   * γραμμή ένα αρνητικό ποσό ή άγνωστη παροχή θα έφτανε αυτούσιο στο έγγραφο, και από εκεί στη δημόσια αγγελία.
+   * Το `transform` το περνά από τον ΕΝΑΝ αναγνώστη ⇒ ό,τι γράφεται είναι ήδη κανονικοποιημένο.
+   */
+  commonCharges: storedCommonChargesSchema.optional(),
+  /**
+   * **Το ενεργειακό πιστοποιητικό** (ADR-777 §8.94) — ολόκληρο το μπλοκ, όπως το στέλνει η φόρμα.
+   *
+   * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`**: ως τώρα το `energy` περνούσε **χωρίς κανέναν έλεγχο** — μια
+   * κλάση «Z» ή 40.000 kWh/m² θα έφτανε αυτούσια στο έγγραφο. Το `transform` το περνά από τον ΕΝΑΝ αναγνώστη· η
+   * διαδρομή το γράφει μέσω του `energyDeclarationPatch`, μαζί με την αξίωσή του.
+   */
+  energy: storedEnergyCertificateSchema.optional(),
+  /**
+   * 🔒 **Οι αξιώσεις νομιμότητας ΔΕΝ γράφονται από τον πελάτη** (ADR-838 · ADR-777 §8.94). Με `.passthrough()` ένα
+   * `legality: [{ tier: 'registry-verified', … }]` θα γραφόταν αυτούσιο και θα έβγαινε στη δημόσια αγγελία ως
+   * επαληθευμένο ⇒ ρητό 400, όπως το `floorKind`. Τις γράφει **μόνο** ο server, από δήλωση με προέλευση.
+   */
+  legality: z.undefined(),
   _v: z.number().int().optional(),
 }).passthrough();
 

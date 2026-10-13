@@ -19,6 +19,8 @@ import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
 import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
+import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
+import { UNDECLARED_ENERGY_CERTIFICATE } from '@/lib/energy-certificate/energy-certificate';
 
 // Re-export the SSoT type so consumers that already import from this file
 // (the historical home of `*_TRACKED_FIELDS`) can keep their imports.
@@ -66,6 +68,30 @@ const OBJECTIVE_VALUE_TRACKED_FIELDS_RAW: Record<string, string> = Object.fromEn
 );
 
 /**
+ * **Τα κοινόχρηστα** (ADR-777 §8.93) — ίδιο ιδίωμα με το από πάνω: ΕΝΑ μπλοκ για ιδιώτη ΚΑΙ εταιρεία, και τα
+ * μονοπάτια **παράγονται** από το ίδιο το μπλοκ (`UNDECLARED_COMMON_CHARGES`): νέο πεδίο του ⇒ ίχνος χωρίς δεύτερη
+ * γραμμή εδώ. Ετικέτες: `audit.fields.commonCharges.*`.
+ */
+const COMMON_CHARGES_TRACKED_FIELDS_RAW: Record<string, string> = Object.fromEntries(
+  Object.keys(UNDECLARED_COMMON_CHARGES).map((field) => {
+    const path = `commonCharges.${field}`;
+    return [path, path];
+  }),
+);
+
+/**
+ * **Το ενεργειακό πιστοποιητικό** (ADR-777 §8.94) — ίδιο ιδίωμα: ΕΝΑ μπλοκ για ιδιώτη ΚΑΙ εταιρεία, μονοπάτια
+ * **παραγόμενα** από το `UNDECLARED_ENERGY_CERTIFICATE`.
+ *
+ * ⚠️ **Το αναγνωριστικό ΔΕΝ είναι το μονοπάτι**, σε αντίθεση με τα δύο από πάνω: το `audit.fields.energy` είναι ήδη
+ * **κείμενο** («Ενεργειακή κλάση» — η ετικέτα των παλιών γραμμών, που έγραφαν ολόκληρο το αντικείμενο), άρα δεν μπορεί
+ * να γίνει και κόμβος. Οι ετικέτες ζουν στο `audit.fields.energyCertificate.*`.
+ */
+const ENERGY_CERTIFICATE_TRACKED_FIELDS_RAW: Record<string, string> = Object.fromEntries(
+  Object.keys(UNDECLARED_ENERGY_CERTIFICATE).map((field) => [`energy.${field}`, `energyCertificate.${field}`]),
+);
+
+/**
  * Fields tracked for property audit trail (raw field → **field identifier**).
  *
  * ⚠️ **ΟΧΙ ετικέτες** — ADR-852 §4.6.1, διορθωμένο 2026-09-12. Αυτό το σχόλιο έγραφε
@@ -99,7 +125,8 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   areas: 'areas',
   orientations: 'orientations',
   condition: 'condition',
-  energy: 'energy',
+  // ADR-777 §8.94 — ανά πεδίο του ΠΕΑ (ήταν ολόκληρο το αντικείμενο: «άλλαξε το energy», χωρίς να λέει τι).
+  ...ENERGY_CERTIFICATE_TRACKED_FIELDS_RAW,
   finishes: 'finishes',
   interiorFeatures: 'interiorFeatures',
   securityFeatures: 'securityFeatures',
@@ -110,6 +137,8 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   marketingAudience: 'marketingAudience',
   // ADR-898 Φ3β-3 — οι δηλώσεις της αντικειμενικής: ίδιο μπλοκ, ίδιο ίχνος με τον ιδιώτη (CHECK 3.17).
   ...OBJECTIVE_VALUE_TRACKED_FIELDS_RAW,
+  // ADR-777 §8.93 — τα κοινόχρηστα: ίδιο μπλοκ, ίδιο ίχνος με τον ιδιώτη.
+  ...COMMON_CHARGES_TRACKED_FIELDS_RAW,
   // Commercial sub-fields (dot-notation — human-readable, no internal IDs)
   'commercial.askingPrice': 'commercial.askingPrice',
   // ADR-777 §8.60.18 — το ενοίκιο ήταν το ΜΟΝΟ ποσό της φόρμας χωρίς ίχνος στο ιστορικό.
@@ -1317,6 +1346,10 @@ const OWNER_PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   marketingAudience: 'marketingAudience',
   // ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής και η απόκρυψη (ποιος και πότε, CHECK 3.17) — ΚΟΙΝΕΣ με την εταιρεία.
   ...OBJECTIVE_VALUE_TRACKED_FIELDS_RAW,
+  // ADR-777 §8.93 — τα κοινόχρηστα — ΚΟΙΝΑ με την εταιρεία.
+  ...COMMON_CHARGES_TRACKED_FIELDS_RAW,
+  // ADR-777 §8.94 — το ενεργειακό πιστοποιητικό — ΚΟΙΝΟ με την εταιρεία.
+  ...ENERGY_CERTIFICATE_TRACKED_FIELDS_RAW,
 };
 
 const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {

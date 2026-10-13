@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3e413f51151d04005204c34612ed9640c4cbac2a715f531a5072db3082664a72",
+  "inputsSha256": "10026a1570d9d2912c08a13b7ba52301c416b182211156c33e72edffc52bb42a",
   "languages": [
     "el"
   ],
@@ -747,7 +747,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "38e22c32158253a9c1df0277ac372b0c62ab5a49aa403cff4914f36f4e01e263",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/audit-tracked-fields.ts": "7a8e1d72eb1db8b7b7faab7cd9fee524825bdeebf43e07e3b4c823a834670e5c",
+    "src/config/audit-tracked-fields.ts": "874fa49e528fb086b4aa990f1ecf1e0d46f818e46af829866b322fcfd2239c7b",
     "src/config/email-assets.ts": "19f7c084b4a9d1d8052722ad68a049b8dddc7f0014e40b0cfbf50e9beb76560e",
     "src/config/holiday-question-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/legal-document-versions/index.generated.ts": "95a15a9d079144d3f6a8e7d5c66dd6751ee711d0b1436c4fad7d9d8b82cac84a",
