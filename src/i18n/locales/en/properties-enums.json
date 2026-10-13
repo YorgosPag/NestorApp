@@ -353,5 +353,25 @@
     "revoked": "Consent revoked",
     "outdated": "Consent for earlier terms",
     "declined": "Owner declined"
+  },
+  "commonCharges": {
+    "form": {
+      "amount": "Common charges (€/month)",
+      "amountHint": "Approximate: the average month of the year, in whole euros.",
+      "amountInvalid": "Enter a whole amount from 0 to {max}.",
+      "none": "No common charges",
+      "includesLegend": "What do they include?",
+      "includesNothing": "None of these"
+    },
+    "inclusion": {
+      "heating": "heating",
+      "water": "water",
+      "elevator": "lift",
+      "cleaning": "cleaning",
+      "commonElectricity": "communal electricity",
+      "garden": "garden",
+      "concierge": "concierge",
+      "pool": "pool"
+    }
   }
 }
