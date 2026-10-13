@@ -3,31 +3,41 @@
  * @related `OwnerListingImproveContent.tsx` (ο αναγνώστης) · ADR-842 §5 (οι οικογένειες χαρακτηριστικών που έρχονται)
  * @module components/owner-property/improve/improve-sections
  *
- * 🔑 **Καταχωρητής, όχι μονοκόμματη φόρμα** (απόφαση Giorgio): σήμερα **μία** ενότητα, η αντικειμενική. Οι οικογένειες
- * του ADR-842 (ενέργεια/κατάσταση · δωμάτια/εμβαδά · συστήματα · παροχές) μπαίνουν ως **μία γραμμή + ένα component**,
- * χωρίς να αγγίξουν τη σελίδα ή τις άλλες ενότητες. Ο πίνακας είναι **ολικός** (`Record`): νέο αναγνωριστικό στη
- * λίστα ⇒ ο μεταγλωττιστής ζητά την ενότητα.
+ * 🔑 **Καταχωρητής, όχι μονοκόμματη φόρμα** (απόφαση Giorgio): **τρεις** ενότητες σήμερα — τα κοινόχρηστα (ADR-777
+ * §8.93), το ενεργειακό πιστοποιητικό (§8.94) και η αντικειμενική. Οι υπόλοιπες οικογένειες του ADR-842 (κατάσταση ·
+ * δωμάτια/εμβαδά · συστήματα · παροχές)
+ * μπαίνουν ως **μία γραμμή + ένα component**, χωρίς να αγγίξουν τη σελίδα ή τις άλλες ενότητες. Ο πίνακας είναι
+ * **ολικός** (`Record`): νέο αναγνωριστικό στη λίστα ⇒ ο μεταγλωττιστής ζητά την ενότητα.
+ *
+ * 🔑 **Κάθε ενότητα έχει ΔΙΚΟ της κάτοχο** ({@link ImproveSubjects}): ως τη δεύτερη ενότητα ο τύπος ήταν ο κάτοχος της
+ * αντικειμενικής, δηλαδή ο καταχωρητής ήξερε ένα μόνο είδος γραφής. Η δέσμη φτιάχνεται **μία** φορά, στη σελίδα.
  *
  * ⚠️ **Στατικές εισαγωγές, επίτηδες.** Το slice i18n της διαδρομής βγαίνει από τη **στατική** κλειστότητα εισαγωγών·
  * ένα `next/dynamic` εδώ θα έβγαζε τις ερωτήσεις από το slice και θα ζωγράφιζε ωμά κλειδιά ώσπου να φορτώσει ο
  * χώρος ονομάτων (ADR-744 §18). Όταν μια ενότητα γίνει βαριά, το όριο μπαίνει **μέσα** της, όχι εδώ.
  */
 
-import type { ComponentType } from 'react';
+import { createElement, type ReactElement } from 'react';
 
+import type { CommonChargesImproveSubject } from '@/lib/common-charges/common-charges-improve-subject';
+import type { EnergyCertificateImproveSubject } from '@/lib/energy-certificate/energy-certificate-improve-subject';
 import { objectiveValueFormOf } from '@/lib/objective-value/objective-value-form-of-type';
 import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
 import type { PublicListing } from '@/types/public-listing';
 
+import { CommonChargesImproveSection } from './CommonChargesImproveSection';
+import { EnergyCertificateImproveSection } from './EnergyCertificateImproveSection';
 import { ObjectiveValueImproveSection } from './ObjectiveValueImproveSection';
 
-/** Η σειρά της λίστας = η σειρά στην οθόνη. */
-export const IMPROVE_SECTION_IDS = ['objectiveValue'] as const;
+/** Η σειρά της λίστας = η σειρά στην οθόνη. Τα κοινόχρηστα πρώτα: μία απάντηση, και φαίνεται δίπλα στην τιμή. */
+export const IMPROVE_SECTION_IDS = ['commonCharges', 'energyCertificate', 'objectiveValue'] as const;
 export type ImproveSectionId = (typeof IMPROVE_SECTION_IDS)[number];
 
-/** Ό,τι παίρνει κάθε ενότητα από τον κάτοχο (ιδιώτη ή γραφείο) — καμία ενότητα δεν ξέρει ποιο έγγραφο είναι. */
-export interface ImproveSectionProps {
-  readonly subject: ObjectiveValueImproveSubject;
+/** Ο κάτοχος κάθε ενότητας (ιδιώτης ή γραφείο) — καμία ενότητα δεν ξέρει ποιο έγγραφο είναι. */
+export interface ImproveSubjects {
+  readonly commonCharges: CommonChargesImproveSubject;
+  readonly energyCertificate: EnergyCertificateImproveSubject;
+  readonly objectiveValue: ObjectiveValueImproveSubject;
 }
 
 /**
@@ -37,14 +47,25 @@ export interface ImproveSectionProps {
 export interface ImproveSectionDefinition {
   /** Έχει νόημα η ενότητα για ΑΥΤΗ την αγγελία; (κρίνεται πάνω στη δημόσια προβολή — ό,τι βλέπει ο αγοραστής) */
   readonly isApplicable: (listing: PublicListing) => boolean;
-  readonly Component: ComponentType<ImproveSectionProps>;
+  /** Η ενότητα, δεμένη στον **δικό της** κάτοχο από τη δέσμη. */
+  readonly render: (subjects: ImproveSubjects) => ReactElement;
 }
 
 export const IMPROVE_SECTIONS: Readonly<Record<ImproveSectionId, ImproveSectionDefinition>> = {
+  commonCharges: {
+    // Το «τίθεται η ερώτηση;» το έχει ήδη κρίνει η προβολή, με τον ΕΝΑΝ κριτή: κουτί `null` ⇒ καμία ενότητα.
+    isApplicable: (listing) => listing.commonCharges !== null,
+    render: (subjects) => createElement(CommonChargesImproveSection, { subject: subjects.commonCharges }),
+  },
+  energyCertificate: {
+    // ADR-777 §8.94 — ίδιο σχήμα: το «σηκώνει η διάθεση ΠΕΑ;» το έκρινε η προβολή (`LEGALITY_OFFER_MATRIX`, όχι γη).
+    isApplicable: (listing) => listing.energyCertificate !== null,
+    render: (subjects) => createElement(EnergyCertificateImproveSection, { subject: subjects.energyCertificate }),
+  },
   objectiveValue: {
     // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων — καμία δεύτερη λίστα ειδών εδώ.
     isApplicable: (listing) => objectiveValueFormOf(listing.type) !== null,
-    Component: ObjectiveValueImproveSection,
+    render: (subjects) => createElement(ObjectiveValueImproveSection, { subject: subjects.objectiveValue }),
   },
 };
 

@@ -24,15 +24,14 @@ import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
-import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
 import { projectListingShape } from '@/services/listings/public-listing-projection';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
 import type { OwnerProperty } from '@/types/owner-property';
 
-import { applicableImproveSections, IMPROVE_SECTIONS, type ImproveSectionId } from './improve-sections';
-import { useOwnerImproveSubject } from './owner-improve-subject';
+import { applicableImproveSections, IMPROVE_SECTIONS, type ImproveSectionId, type ImproveSubjects } from './improve-sections';
+import { useOwnerImproveSubjects } from './owner-improve-subject';
 
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`, ποτέ σε Server Component).
 import routeSlice from '@/i18n/generated/routes/offers__offerId__improve.el.json';
@@ -43,21 +42,20 @@ registerRouteSlice(routeSlice);
 const NS = 'objective-value';
 const I = `${NS}:improve`;
 
-function ImproveSection({ id, subject }: { readonly id: ImproveSectionId; readonly subject: ObjectiveValueImproveSubject }) {
+function ImproveSection({ id, subjects }: { readonly id: ImproveSectionId; readonly subjects: ImproveSubjects }) {
   const { t } = useTranslation([NS]);
   const headingId = useId();
-  const { Component } = IMPROVE_SECTIONS[id];
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2 id={headingId} className="m-0 text-lg font-semibold text-foreground">{t(`${I}.sections.${id}.title`)}</h2>
-      <Component subject={subject} />
+      {IMPROVE_SECTIONS[id].render(subjects)}
     </section>
   );
 }
 
 function ImproveBody({ property }: { readonly property: OwnerProperty }) {
   const { t } = useTranslation([NS]);
-  const subject = useOwnerImproveSubject(property);
+  const subjects = useOwnerImproveSubjects(property);
   const atISO = nowISO();
   const published = ownerListingVisibility(property, atISO) === 'published';
   if (!published) return <p className="m-0 text-foreground">{t(`${I}.notPublished`)}</p>;
@@ -70,7 +68,7 @@ function ImproveBody({ property }: { readonly property: OwnerProperty }) {
   return (
     <>
       {applicableImproveSections(listing).map((id) => (
-        <ImproveSection key={id} id={id} subject={subject} />
+        <ImproveSection key={id} id={id} subjects={subjects} />
       ))}
     </>
   );
