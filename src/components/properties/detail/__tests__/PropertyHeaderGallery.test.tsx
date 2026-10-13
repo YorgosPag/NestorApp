@@ -34,6 +34,8 @@ jest.mock('next/dynamic', () => () => (props: Record<string, unknown>) => {
   return <div data-testid="lightbox" />;
 });
 
+import { PHOTO_OVERLAY_SURFACE_CLASS } from '@/components/shared/gallery/photo-overlay-surface';
+
 import { PropertyHeaderGallery } from '../PropertyHeaderGallery';
 
 const PROPERTY = { id: 'prop_1' } as Property;
@@ -70,6 +72,17 @@ describe('PropertyHeaderGallery', () => {
     expect(images.map((img) => img.getAttribute('srcset'))).toEqual([photo('a').preview.srcSet, photo('b').preview.srcSet]);
     expect(images.filter((img) => img.getAttribute('fetchpriority') === 'high')).toHaveLength(1);
     expect(screen.getByText('properties-detail:detailPage.photos.captureSpot')).toBeInTheDocument();
+  });
+
+  it('🔴 Η7 τα σήματα πάνω στη φωτογραφία φορούν τη ΜΙΑ κοινή επιφάνεια, όχι δική τους', () => {
+    photosState = { kind: 'ready', photos: [photo('a', true), photo('b')] };
+    render(<PropertyHeaderGallery property={PROPERTY} />);
+    const spot = screen.getByText('properties-detail:detailPage.photos.captureSpot').parentElement;
+    const counter = screen.getByRole('status');
+    for (const token of PHOTO_OVERLAY_SURFACE_CLASS.split(' ')) {
+      expect(spot).toHaveClass(token);
+      expect(counter).toHaveClass(token);
+    }
   });
 
   it('🔴 Η3 + Η6 κλικ στη 2η ⇒ lightbox στη 2η· οι κατόψεις ζητούνται μόνο τότε', async () => {

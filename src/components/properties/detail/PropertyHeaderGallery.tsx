@@ -20,6 +20,7 @@ import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ImageOff, MapPinned } from 'lucide-react';
 
+import { PHOTO_OVERLAY_SURFACE_CLASS } from '@/components/shared/gallery/photo-overlay-surface';
 import { SnapGallery } from '@/components/shared/gallery/SnapGallery';
 import type { LightboxPhoto } from '@/components/shared/media/PhotoLightbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,8 +40,8 @@ const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 /** Το κουτί είναι 12rem από `sm` και πάνω, όλο το πλάτος στο κινητό. */
 const HEADER_PHOTO_SIZES = '(min-width: 640px) 12rem, 100vw';
 const NO_PHOTOS: readonly PropertyPhoto[] = [];
-/** Πάνω σε φωτογραφία το φόντο είναι άγνωστο ⇒ σταθερό σκούρο + λευκό, όπως τα βελάκια του κελύφους. */
-const ON_PHOTO_CHIP = 'pointer-events-none absolute z-20 rounded bg-black/55 text-white';
+/** Πάνω σε φωτογραφία το φόντο είναι άγνωστο ⇒ η **μία** κοινή επιφάνεια (σκούρο + λευκό), όχι δεύτερη χειρόγραφη. */
+const ON_PHOTO_CHIP = `pointer-events-none absolute z-20 rounded ${PHOTO_OVERLAY_SURFACE_CLASS}`;
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
