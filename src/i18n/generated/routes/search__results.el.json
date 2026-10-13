@@ -133,6 +133,17 @@
       "new": "Νέο",
       "sectionTitle": "Κατάσταση διατήρησης"
     },
+    "energyClass": {
+      "a": "Α",
+      "aPlus": "Α+",
+      "b": "Β",
+      "bPlus": "Β+",
+      "c": "Γ",
+      "d": "Δ",
+      "e": "Ε",
+      "f": "Ζ",
+      "g": "Η"
+    },
     "features": {
       "amenities": {
         "doorman": "Θυρωρός",

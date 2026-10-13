@@ -51,10 +51,12 @@
 
 import type { TFunction } from 'i18next';
 
+import { isEnergyClass } from '@/constants/energy-classes';
 import {
   isCanonicalPropertyType,
   PROPERTY_TYPE_I18N_KEYS,
 } from '@/constants/property-types';
+import { ENERGY_CLASS_LABEL_KEY } from '@/lib/energy-certificate/energy-certificate-keys';
 import {
   ATTRIBUTE_VOCABULARY,
   FEATURE_SET_VOCABULARY,
@@ -161,16 +163,16 @@ export function criteriaGroupLabel(t: TFunction, group: CriterionGroup): string 
 /**
  * Ο τρόπος που μια **επιλογή** γίνεται κείμενο.
  *
- * ⚠️ **`'verbatim'` ΔΕΝ είναι hardcoded string (N.11)** — είναι **σύμβολο κανονισμού**
- * που τυπώνεται αυτούσιο: το `A+` της ενεργειακής κλάσης δεν έχει μετάφραση, όπως το
- * `m²`. Ίδιο σκεπτικό με το ομώνυμο σκέλος του `ATTRIBUTE_VALUE_KIND`.
+ * ⚠️ **Η ενεργειακή κλάση ΔΕΝ τυπώνεται αυτούσια** (ADR-777 §8.94): το σκέλος της ήταν `'verbatim'`, με το σκεπτικό
+ * «το `A+` δεν έχει μετάφραση». Έχει — η αποθηκευμένη τιμή είναι η ευρωπαϊκή (`C` · `F` · `G`) και το ελληνικό ΠΕΑ
+ * γράφει Γ · Ζ · Η. Το φίλτρο και η αγγελία διαβάζουν τον **ίδιο** πίνακα ετικετών (`ENERGY_CLASS_LABEL_KEY`).
  */
 type CriterionValueNaming =
   | { readonly kind: 'vocabulary'; readonly vocabulary: AttributeVocabulary }
   | { readonly kind: 'propertyType' }
   | { readonly kind: 'offerKind' }
   | { readonly kind: 'authorship' }
-  | { readonly kind: 'verbatim' };
+  | { readonly kind: 'energyClass' };
 
 /**
  * **Κάθε άξονας με σχήμα συνόλου, και πώς ονομάζονται οι τιμές του.**
@@ -188,7 +190,7 @@ type CriterionValueNaming =
  */
 const CRITERION_VALUE_NAMING: Record<ValueSetCriterionKey, CriterionValueNaming> = {
   type: { kind: 'propertyType' },
-  energyClass: { kind: 'verbatim' },
+  energyClass: { kind: 'energyClass' },
   condition: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.condition },
   frontage: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.frontage },
   heatingType: { kind: 'vocabulary', vocabulary: ATTRIBUTE_VOCABULARY.heatingType },
@@ -247,7 +249,7 @@ export function criterionValueLabel(
       return t(`search-results:listing.offer.${value}`);
     case 'authorship':
       return t(`search-filters:filters.authorship.${value}`);
-    case 'verbatim':
-      return value;
+    case 'energyClass':
+      return isEnergyClass(value) ? t(ENERGY_CLASS_LABEL_KEY[value]) : value;
   }
 }

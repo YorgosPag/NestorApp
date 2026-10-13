@@ -326,8 +326,18 @@ describe('Κ6 — τα δηλωμένα κενά', () => {
     expect(LISTING_OPEN_SUBJECTS).not.toContain('legality');
   });
 
-  it('ο κατάλογος ΔΕΝ άδειασε — δύο θέματα μένουν ανοιχτά, με όνομα', () => {
-    expect([...LISTING_OPEN_SUBJECTS]).toEqual(['floorplan', 'dossier']);
+  it('η κάτοψη ΕΦΥΓΕ — δημοσιεύεται, άρα «δεν υπάρχει πεδίο» θα ήταν ψέμα στην οθόνη', () => {
+    // ADR-777 §8.92: το `floorplans` υπάρχει στο σχήμα (ADR-841 Α17) και η γραμμή είχε μείνει. Αντιστρέφεται, δεν
+    // διαγράφεται — επαναφορά του `'floorplan'` εδώ πρέπει να κοκκινίσει, και μαζί της το κλειδί στα δύο locales.
+    expect(LISTING_OPEN_SUBJECTS).not.toContain('floorplan');
+    expect(LISTING_DISCLOSURE.floorplans).toBe('media');
+    for (const language of ['el', 'en'] as const) {
+      expect(lookup(readLocale(language), 'detail.open.floorplan')).toBeUndefined();
+    }
+  });
+
+  it('ο κατάλογος ΔΕΝ άδειασε — ένα θέμα μένει ανοιχτό, με όνομα', () => {
+    expect([...LISTING_OPEN_SUBJECTS]).toEqual(['dossier']);
   });
 
   it('χωρίς διπλότυπα', () => {

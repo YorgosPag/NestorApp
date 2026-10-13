@@ -59,7 +59,7 @@
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
-    "src/i18n/generated/routes/search__results.el.json": "b0be5e87bc4b28e854e949b6211701c0d04ce8e25401db4ad15c6dc835f555d1",
+    "src/i18n/generated/routes/search__results.el.json": "30c9e63fc57cc5e61996c05fca20ac08c55a55392e131bdc278a92f998e95a01",
     "src/i18n/generated/routes/stay.el.json": "3044270a27d1268903929dd44a0a20afa30e6ac91fa1d554ceeba748ba062886",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/terms__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -69,7 +69,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "e70a5afeadf9dc44a45325c276902abfefe94344996ed885071217a1779d3fc5",
+    "src/i18n/generated/shell-slice.el.json": "20c3cffa1a181806f0742176a12308827f4bba842ce06ace14ba8c9faa0addc0",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "10d4a965c7b5ba753a2403e821dcd4ca9327876c8d4d0f5d65ec8afd98fdc39e",
+  "inputsSha256": "96b82fae9e0b3ffb8482c7df0b2f9110ca6cd1cca1490b07665617396277139c",
   "languages": [
     "el"
   ],
@@ -873,7 +873,7 @@
     "src/lib/conveyance/engagement-invitation-schema.ts": "d3d75eb089e9a84ea81650920342767835bc86b90d460dea0e554089d45eabcc",
     "src/lib/conveyance/view-signal-client-ref.ts": "3a7676f0bdbea8be97a0cfccaa9dcf947adf9592d2969c6ff11029e4c3891056",
     "src/lib/criteria/criterion-option-counts.ts": "df08b34cd0375fa66e1519fc81c51f0fe380f70ea2720f3a4a6f3fcbaa7d93b8",
-    "src/lib/criteria/listing-criterion-labels.ts": "02a3c5d2b00aaccfbdd0c22364dc2a8b552024d3322a635127e974ef8bc2b56a",
+    "src/lib/criteria/listing-criterion-labels.ts": "66a3828ec89869714e85d04b628bbba0875dccba655e570cece95343438f6b38",
     "src/lib/data/json-shape.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/demand-aggregate.ts": "7e3289774133eed42b56fa75fc88d3b239470e75cc692b7b140c44581ea3231b",
     "src/lib/demand/demand-answer.ts": "a1dbf044b4a62a3ecc051e7a90614ed78e7737a7bb8025855faf74dbc79bbff8",
@@ -902,6 +902,7 @@
     "src/lib/demand/demand-terms.ts": "20e0f8bbdac7faf3876260049d8f5c713a2472e7a977de881e17072644aa8f7b",
     "src/lib/demand/property-demand-from-document.ts": "8a7ceae19339321d29fdc510467175946d13c9c9ae7937de0ab7a27b3b60179c",
     "src/lib/demand/seek-kind-labels.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
+    "src/lib/energy-certificate/energy-certificate-keys.ts": "fae4416d9593627ea665cdb25ac020abf7313b729ffbb910586bb0ea028b9b99",
     "src/lib/esco/relevance.ts": "39045eee937cc3f16d2cf9ceff6b9a374364fbeaa6860a3fb47fd7d7ed7c7910",
     "src/lib/esco/search-tokens.ts": "bf3bb21f6195403196c87747d90a3d3513fbc1e8b5f44ca2ed406d59d0f358ac",
     "src/lib/esco/token-search.ts": "b6c5daf34fba46c9bfe80fcda22ef9a0e57e3673de4da4aeed4b057dc82321b3",
@@ -10542,6 +10543,15 @@
         },
         "properties-enums": {
           "keys": [
+            "energyClass.a",
+            "energyClass.aPlus",
+            "energyClass.b",
+            "energyClass.bPlus",
+            "energyClass.c",
+            "energyClass.d",
+            "energyClass.e",
+            "energyClass.f",
+            "energyClass.g",
             "types.apartment",
             "types.apartment_1br",
             "types.detached_house",
@@ -12234,7 +12244,7 @@
     "src/lib/listings/listing-authorship.ts": "b2b05f5a359cfb0ab9783ea4ad233dd632754ea1573658f1b3cddf3a0c263602",
     "src/lib/listings/listing-coverage.ts": "8ae31dddc3a6e82a41a8105cbb9af5c98ef9932df25bdee0f504e434a13eb172",
     "src/lib/listings/listing-disclosure-treatment.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/listings/listing-disclosure.ts": "aa87602fb0f516d3cff0b100547b610d61cb826833292d4e431bcfd0014e4f19",
+    "src/lib/listings/listing-disclosure.ts": "0be9c22a06bd0f40e169e2d0d2a73e5d1088f0ca1b6781568803c0ac02ded363",
     "src/lib/listings/listing-drawn-area.ts": "a206b36c5cdaba6429536aa9378756bef1ba16c7b16497738888bbb432801bb1",
     "src/lib/listings/listing-families.ts": "a9b4a37a0c45edd65a61bdc5dcc13f177f9faf90b5271a77cb7bf67006a7d175",
     "src/lib/listings/listing-file-deliverability.ts": "dd0b2808e45b93b2237dced8c96235b82d2efeb202336157eba712a62c8bfa2c",
@@ -12780,7 +12790,7 @@
     "matchedKeys": 243,
     "routeBoundaries": 3,
     "shellFiles": 1213,
-    "sliceBytes": 727052
+    "sliceBytes": 727069
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
