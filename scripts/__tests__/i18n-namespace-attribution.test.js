@@ -286,12 +286,73 @@ describe('Π — το πραγματικό δέντρο', () => {
     expect(rawKeysOf(url).length).toBeGreaterThan(0);
   });
 
-  it.each(Object.entries(ROUTES))('Π2 [%s]: ΚΑΘΕ ωμό κλειδί απαντιέται πλέον σύγχρονα', (url, id) => {
+  /**
+   * 🔴 «ΑΠΟΣΥΡΜΕΝΟ» ΔΕΝ ΕΙΝΑΙ «ΑΠΑΝΤΗΜΕΝΟ» — ΚΑΙ ΤΑ ΔΥΟ ΕΙΝΑΙ ΘΕΡΑΠΕΙΑ (2026-10-13).
+   * Μόλις ο παρονομαστής ξαναγέμισε, το Π2 κοκκίνισε σε τρεις από τις τέσσερις
+   * οθόνες — και είχε δίκιο να ρωτά: τα 52 κλειδιά των νομικών κειμένων
+   * (`privacyPolicy.*` · `termsOfService.*` · `dataDeletion.*`) **δεν υπάρχουν πια
+   * σε κανένα slice**. Στις 2026-09-16 (ADR-861) οι τρεις σελίδες έγιναν
+   * αμετάβλητες εκδόσεις εγγράφων και σταμάτησαν να τα **ζητούν**. Ένα κλειδί
+   * που δεν το ζητά κανείς δεν μπορεί να βγει ωμό.
+   *
+   * Άρα ένα ιστορικό ωμό κλειδί έχει **δύο** νόμιμες καταλήξεις, και μία τρίτη
+   * που είναι η βλάβη: το ζητά κώδικας και δεν το απαντά κανένα slice.
+   *
+   * ⚠️ Το «το ζητά κώδικας» κρίνεται στη **ΡΙΖΑ** του κλειδιού (`privacyPolicy.`),
+   * όχι στο ολόκληρο κλειδί: κλειδί που συντίθεται (`` `privacyPolicy.${part}` ``)
+   * δεν εμφανίζεται ποτέ αυτούσιο, και θα περνούσε για αποσυρμένο ενώ ζει.
+   */
+  const { spawnSync } = require('node:child_process');
+  const askedRoots = new Map();
+  const rootOf = key => `${key.split('.')[0]}.`;
+  const isAsked = key => {
+    const root = rootOf(key);
+    if (!askedRoots.has(root)) {
+      const found = spawnSync('git', [
+        'grep', '-l', '-F', '-e', root, '--',
+        ':(glob)src/**/*.ts', ':(glob)src/**/*.tsx', ':(exclude)src/types/i18n.ts',
+      ], { cwd: REPO, encoding: 'utf8' });
+      // 0 = βρέθηκε · 1 = δεν βρέθηκε · οτιδήποτε άλλο = το git δεν απάντησε, και η
+      // σιωπή του ΔΕΝ επιτρέπεται να διαβαστεί ως «αποσυρμένο».
+      if (found.status !== 0 && found.status !== 1) throw new Error(`git grep απέτυχε (${found.status}): ${found.stderr}`);
+      askedRoots.set(root, found.status === 0);
+    }
+    return askedRoots.get(root);
+  };
+  const bare = key => (key.includes(':') ? key.split(':').slice(1).join(':') : key);
+  const fateOf = (url, id) => {
     const slice = JSON.parse(fs.readFileSync(path.join(REPO, `src/i18n/generated/routes/${id}.el.json`), 'utf8'));
-    const missing = rawKeysOf(url)
-      .map(key => (key.includes(':') ? key.split(':').slice(1).join(':') : key))
-      .filter(key => !answered([slice, shell], key));
-    expect(missing).toEqual([]);
+    const fate = { answered: [], retired: [], raw: [] };
+    for (const key of rawKeysOf(url).map(bare)) {
+      if (answered([slice, shell], key)) fate.answered.push(key);
+      else if (isAsked(key)) fate.raw.push(key);
+      else fate.retired.push(key);
+    }
+    return fate;
+  };
+
+  it('Π2 ΠΑΡΟΝΟΜΑΣΤΗΣ: ο κριτής «το ζητά κώδικας;» ΒΛΕΠΕΙ ζωντανή ρίζα — αλλιώς «αποσυρμένο» θα σήμαινε «δεν κοίταξα»', () => {
+    expect(isAsked('form.labels.email')).toBe(true);
+    expect(isAsked('ρίζα-που-δεν-υπάρχει-πουθενά.x')).toBe(false);
+  });
+
+  it.each(Object.entries(ROUTES))('Π2 [%s]: ΚΑΝΕΝΑ ιστορικό ωμό κλειδί δεν μένει ζητούμενο ΚΑΙ αναπάντητο', (url, id) => {
+    const fate = fateOf(url, id);
+    expect(fate.raw).toEqual([]);
+    expect(fate.answered.length + fate.retired.length).toBe(rawKeysOf(url).length);
+  });
+
+  // Η ΚΑΤΑΛΗΞΗ ΚΑΘΕ ΟΘΟΝΗΣ, ΟΝΟΜΑΣΤΙΚΑ. Χωρίς αυτό, μια οθόνη θα μπορούσε να
+  // γλιστρήσει από «απαντημένη» σε «αποσυρμένη» (κάποιος έσβησε τα κλειδιά της
+  // από το slice ΚΑΙ έκρυψε την κλήση πίσω από σύνθεση) με το Π2 πράσινο.
+  it.each([
+    ['/login', 'answered'],
+    ['/privacy-policy', 'retired'],
+    ['/terms', 'retired'],
+    ['/data-deletion', 'retired'],
+  ])('Π2β [%s]: ΟΛΑ τα κλειδιά της είναι «%s»', (url, expected) => {
+    const fate = fateOf(url, ROUTES[url]);
+    expect(fate[expected]).toHaveLength(rawKeysOf(url).length);
   });
 
   it('Π3: τα κλειδιά που έλειπαν από ΤΟ ΚΕΛΥΦΟΣ επέστρεψαν (photo-preview-helpers)', () => {
