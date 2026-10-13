@@ -24,9 +24,11 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Bed, Bath, Compass, Wrench, Zap } from 'lucide-react';
 import type { OrientationType } from '@/constants/property-features-enterprise';
 import {
-  ORIENTATION_OPTIONS, CONDITION_OPTIONS, ENERGY_CLASS_OPTIONS,
+  ORIENTATION_OPTIONS, CONDITION_OPTIONS,
   PROPERTY_CARD_COLORS,
 } from './property-fields-constants';
+import { EnergyCertificateFields } from '@/components/shared/energy-certificate/EnergyCertificateFields';
+import { energyOfForm, patchedEnergyFormSlice } from '@/lib/energy-certificate/energy-certificate-form';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
 import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
 import { PropertyFieldsDetailCardsRow2 } from './PropertyFieldsDetailCardsRow2';
@@ -217,23 +219,14 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                   ))}
                 </ClearableSelect>
               </fieldset>
-              <fieldset className="space-y-1">
-                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Zap className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.energyIcon)} />
-                  {t('energy.class')}
-                </Label>
-                <ClearableSelect
-                  value={formData.energyClass}
-                  disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}
-                  placeholder={t('clearSelection.energyClass')}
-                  clearLabel={t('clearSelection.energyClass')}
-                >
-                  {ENERGY_CLASS_OPTIONS.map((e) => (
-                    <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>
-                  ))}
-                </ClearableSelect>
-              </fieldset>
+              {/* ADR-777 §8.94 — το ΠΕΑ: τα ΙΔΙΑ πεδία με το «Βελτίωσε την αγγελία σου» του ιδιώτη. Η κλάση μένει στο
+                  `formData.energyClass` (τη διαβάζουν πληρότητα και έλεγχοι αληθοφάνειας)· το μπλοκ συντίθεται εδώ. */}
+              <EnergyCertificateFields
+                value={energyOfForm(formData)}
+                onChange={(patch) => setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }))}
+                disabled={!isEditing || isSoldOrRented}
+                idPrefix="unit"
+              />
             </div>
             <ConditionPlausibilityWarning
               propertyType={formData.type}

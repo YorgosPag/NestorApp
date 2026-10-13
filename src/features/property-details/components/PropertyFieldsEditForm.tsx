@@ -35,6 +35,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
 import { CommercialStatusSelect } from '@/components/shared/commercial/CommercialStatusSelect';
 import { CommercialPriceFields } from '@/components/shared/commercial/CommercialPriceFields';
+import { CommonChargesFields } from '@/components/shared/common-charges/CommonChargesFields';
+import { applyCommonChargesPatch } from '@/lib/common-charges/common-charges';
+import { isLandProperty } from '@/constants/property-classification';
 import { LayoutPlausibilityWarning } from '@/components/properties/shared/LayoutPlausibilityWarning';
 import { AreaPlausibilityWarning } from '@/components/properties/shared/AreaPlausibilityWarning';
 import { resolveAreaValues } from './area-values-resolver';
@@ -280,6 +283,16 @@ export function PropertyFieldsEditForm({
               disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
               idPrefix="unit"
             />
+            {/* ADR-777 §8.93 — τα ΙΔΙΑ πεδία με το «Βελτίωσε την αγγελία σου». Η γη δεν έχει κοινόχρηστα· μένουν ανοιχτά και
+                σε πωλημένο/μισθωμένο, όπως οι τιμές: δεν είναι φυσικό στοιχείο του ακινήτου. */}
+            {!isLandProperty(formData.type) && (
+              <CommonChargesFields
+                value={formData.commonCharges}
+                onChange={(patch) => setFormData(prev => ({ ...prev, commonCharges: applyCommonChargesPatch(prev.commonCharges, patch) }))}
+                disabled={!isEditing || isHierarchyLocked}
+                idPrefix="unit"
+              />
+            )}
             <FloorTypePlausibilityWarning
               propertyType={formData.type}
               floor={formData.floor}

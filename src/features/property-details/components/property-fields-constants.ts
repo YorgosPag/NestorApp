@@ -16,7 +16,6 @@ import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import type {
   OrientationType,
   ConditionType,
-  EnergyClassType,
   HeatingType,
   CoolingType,
   FlooringType,
@@ -28,7 +27,6 @@ import type {
 // ADR-842 Α4 — η αυθεντία του λεξιλογίου· οι λίστες παρακάτω είναι **όψη** του.
 import {
   ORIENTATIONS,
-  ENERGY_CLASSES,
   INTERIOR_FEATURES,
   SECURITY_FEATURES,
   CONDITIONS,
@@ -58,8 +56,6 @@ import {
 export const ORIENTATION_OPTIONS: OrientationType[] = [...ORIENTATIONS];
 
 export const CONDITION_OPTIONS: ConditionType[] = [...CONDITIONS];
-
-export const ENERGY_CLASS_OPTIONS: EnergyClassType[] = [...ENERGY_CLASSES];
 
 export const HEATING_OPTIONS: HeatingType[] = [...HEATING_TYPES];
 

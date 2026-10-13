@@ -13,6 +13,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { CommercialStatus, OperationalStatus, LevelData, PropertyLevel, PropertyType } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
+import type { CommonCharges } from '@/lib/common-charges/common-charges';
+import type { EnergyCertificateDetails } from '@/lib/energy-certificate/energy-certificate-form';
 import type { TFunction } from 'i18next';
 
 /** Flat form data state for the property fields form */
@@ -40,6 +42,11 @@ export interface PropertyFieldsFormData {
   orientations: string[];
   condition: string;
   energyClass: string;
+  /**
+   * ADR-777 §8.94 — ό,τι γράφει το ΠΕΑ πέρα από την κλάση (kWh · CO₂ · έκδοση · «γιατί δεν υπάρχει»). Η κλάση μένει
+   * στο {@link energyClass}· το μπλοκ συντίθεται με το `energyOfForm`, ποτέ με το χέρι.
+   */
+  energyDetails: EnergyCertificateDetails;
   heatingType: string;
   coolingType: string;
   flooring: string[];
@@ -52,6 +59,8 @@ export interface PropertyFieldsFormData {
   levels: PropertyLevel[];
   askingPrice: string;
   rentPrice: string;
+  /** ADR-777 §8.93 — τα κοινόχρηστα, ήδη κανονικοποιημένα (`readCommonCharges`)· η φόρμα στέλνει ολόκληρο το μπλοκ. */
+  commonCharges: CommonCharges;
 }
 
 /** Props for the form renderer component */

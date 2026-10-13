@@ -23,6 +23,9 @@ import type { Property } from '@/types/property-viewer';
 import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
 import type { PropertyFieldsFormData } from '@/features/property-details/components/property-fields-form-types';
 import { DEFAULT_OPERATIONAL_STATUS } from '@/constants/operational-statuses';
+import { readCommonCharges } from '@/lib/common-charges/common-charges';
+import { readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import { energyFormSliceOf } from '@/lib/energy-certificate/energy-certificate-form';
 
 /** Server-side snapshot of the fields mirrored into `PropertyFieldsFormData`. */
 export type PropertyServerSnapshot = PropertyFieldsFormData;
@@ -34,6 +37,8 @@ const COMPLEX_KEYS: ReadonlySet<keyof PropertyFieldsFormData> = new Set<keyof Pr
   'securityFeatures',
   'levels',
   'levelData',
+  'commonCharges',
+  'energyDetails',
 ]);
 
 /**
@@ -63,7 +68,8 @@ export function buildFormDataFromProperty(property: Property): PropertyFieldsFor
     areaGarden: property.areas?.garden ?? 0,
     orientations: property.orientations ?? [],
     condition: property.condition ?? '',
-    energyClass: property.energy?.class ?? '',
+    // ADR-777 §8.94 — κλάση + λοιπά του ΠΕΑ, από τον ΕΝΑΝ αναγνώστη του μπλοκ.
+    ...energyFormSliceOf(readEnergyCertificate(property.energy)),
     heatingType: property.systemsOverride?.heatingType ?? '',
     coolingType: property.systemsOverride?.coolingType ?? '',
     flooring: property.finishes?.flooring ?? [],
@@ -75,6 +81,7 @@ export function buildFormDataFromProperty(property: Property): PropertyFieldsFor
     levels: property.levels ?? [],
     askingPrice: property.commercial?.askingPrice?.toString() ?? '',
     rentPrice: property.commercial?.rentPrice?.toString() ?? '',
+    commonCharges: readCommonCharges(property.commonCharges),
   };
 }
 

@@ -19,12 +19,14 @@ import type { Property } from '@/types/property-viewer';
 import type {
   ConditionType,
   OrientationType,
-  EnergyClassType,
   InteriorFeatureCodeType,
   SecurityFeatureCodeType,
 } from '@/constants/property-features-enterprise';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 import { changedCommercialAmounts } from '@/lib/properties/commercial-draft';
+import { readCommonCharges, sameCommonCharges } from '@/lib/common-charges/common-charges';
+import { readEnergyCertificate, sameEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import { energyOfForm } from '@/lib/energy-certificate/energy-certificate-form';
 
 /**
  * Builds the Firestore update payload from the current form state.
@@ -77,7 +79,10 @@ export function buildPropertyUpdatesFromForm(params: {
   updates.areas = areasData;
 
   if (formData.condition) updates.condition = formData.condition as ConditionType;
-  if (formData.energyClass) updates.energy = { class: formData.energyClass as EnergyClassType };
+  // ADR-777 §8.94 — το ΠΕΑ: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε. Ως τώρα έφευγε `{ class }` σε **κάθε**
+  // αποθήκευση — που αντικαθιστούσε όλο το αντικείμενο (θα έσβηνε τους αριθμούς) και δεν μπορούσε να **σβήσει** κλάση.
+  const energy = energyOfForm(formData);
+  if (!sameEnergyCertificate(energy, readEnergyCertificate(property.energy))) updates.energy = energy;
 
   if (formData.heatingType || formData.coolingType) {
     const systemsOverride: Record<string, string> = {};
@@ -109,6 +114,11 @@ export function buildPropertyUpdatesFromForm(params: {
       ...(property.commercial as Record<string, unknown>),
       ...amountChanges,
     } as Property['commercial'];
+  }
+
+  // ADR-777 §8.93 — τα κοινόχρηστα: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε (αλλιώς κάθε αποθήκευση θα έγραφε ίχνος).
+  if (!sameCommonCharges(formData.commonCharges, readCommonCharges(property.commonCharges))) {
+    updates.commonCharges = formData.commonCharges;
   }
 
   // ADR-236 Phase 2: Per-level data + auto-aggregation

@@ -137,7 +137,7 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
               icon={Zap}
               iconColor="text-[hsl(var(--text-warning))]"
               label={t('sales.unitSummary.energy')}
-              value={unit.energy?.class}
+              value={unit.energy?.class ?? undefined}
             />
           </div>
 
