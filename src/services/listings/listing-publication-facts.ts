@@ -89,7 +89,7 @@ export function listedTourFromPresence(presence: TourPresence | null): ListingTo
  *
  * ⚠️ Αποτυχία ανάγνωσης ⇒ `null`: η κάρτα δεν δείχνει σήμα — ποτέ ψευδές «έχει» — και η νυχτερινή συμφιλίωση το διορθώνει.
  */
-export async function listedTourOf(adminDb: AdminFirestore, listingId: string): Promise<ListingTourPresence | null> {
+async function listedTourOf(adminDb: AdminFirestore, listingId: string): Promise<ListingTourPresence | null> {
   try {
     return listedTourFromPresence(await readTourPresence(adminDb, listingId));
   } catch (error) {
