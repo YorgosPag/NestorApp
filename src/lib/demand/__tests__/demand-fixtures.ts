@@ -95,6 +95,9 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
       locatedAt: NOW_ISO,
     },
     floor: 2,
+    // ADR-777 §8.92 — έλειπε (το fixture είχε μείνει ξανά πίσω από το σχήμα· το έπιασε η Κ1 της αποκάλυψης, που
+    // πλέον το συγκρίνει με τον προβολέα). `null` = «δεν δηλώθηκε είδος στάθμης», όπως τα παλαιά έγγραφα.
+    floorKind: null,
     bedrooms: 3,
     title: 'Δοκιμή',
     // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.

@@ -37,50 +37,33 @@ import { OFFER_KINDS } from '@/types/property-offers';
 import { LISTING_AUTHORSHIP_KEYS } from '../listing-authorship';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import type { PublicListing } from '@/types/public-listing';
-import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import { listing as neutralListing } from '@/lib/demand/__tests__/demand-fixtures';
+import { buildPublicListing } from '@/services/listings/public-listing-projection';
 
 const AT = '2026-08-10T10:00:00.000Z';
 
 /**
- * **Πραγματικό σχήμα προβολής**, όχι μερικό — και αυτό είναι το νόημα της Κ1: το
- * `Object.keys` αυτού του αντικειμένου είναι ο **παρονομαστής** έναντι του οποίου
- * κρίνεται ο πίνακας αποκάλυψης.
+ * **Πλήρης αγγελία — κάθε ιδιότητα ΔΗΛΩΜΕΝΗ** — πάνω στο **κοινό** ουδέτερο fixture (`demand-fixtures`).
+ *
+ * 🔴 **ΤΟ ΣΧΗΜΑ ΔΕΝ ΓΡΑΦΕΤΑΙ ΠΙΑ ΕΔΩ** (ADR-777 §8.92). Ως τις 2026-10-13 αυτή η συνάρτηση κρατούσε **δική της**
+ * πλήρη λίστα πεδίων και η Κ1 τη χρησιμοποιούσε ως παρονομαστή. Έμεινε πίσω από το σχήμα **δύο φορές** (2026-08-31:
+ * `place`/`authorship`/`agencyName` · 2026-10-13: `floorplans`/`models`/`videos`/`floorPlates`/`tour`) — και τις δύο
+ * ο πίνακας αποκάλυψης έλειπε **τα ίδια** πεδία, άρα δύο ελλιπείς λίστες συμφωνούσαν και η άγκυρα έβγαινε πράσινη.
+ *
+ * ⇒ Εδώ μένουν **μόνο οι τιμές** που κρίνει αυτή η σουίτα (η Κ5 μετρά «όλα δηλωμένα» πάνω τους). Το **ποια πεδία
+ * υπάρχουν** το απαντούν άλλοι: ο πραγματικός προβολέας και το κοινό fixture — δες την Κ1.
  */
 function listing(over: Partial<PublicListing> = {}): PublicListing {
-  return {
+  return neutralListing({
     id: 'prop_a0000001',
-    commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
-    stay: null,
-    exchange: null,
-    coverImage: null,
-    gallery: [],
-    type: 'apartment',
     areaSqm: 95,
-    offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
-    // 🔴 **ΤΑ ΤΡΙΑ ΠΟΥ ΕΛΕΙΠΑΝ ΚΑΙ ΕΔΩ** (2026-08-31): το σχόλιο από πάνω λέει
-    //    «**πραγματικό** σχήμα προβολής, όχι μερικό» — και ήταν μερικό. Ο πίνακας
-    //    αποκάλυψης έλειπε τα ΙΔΙΑ τρία, οπότε η Κ1 συνέκρινε δύο ελλιπείς λίστες
-    //    και έβγαινε πράσινη. Ο **παρονομαστής** πρέπει να είναι πλήρης, αλλιώς δεν
-    //    είναι παρονομαστής.
-    place: null,
-    // ✅ **ADR-890 Φ0** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει (έκτη φορά).
-    adminArea: null,
-    authorship: 'agency',
-    agencyName: null,
-    // ✅ **ADR-841 §7 (Α1)** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει: ο παρονομαστής
-    //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
-    agencyId: null,
     floor: 1,
-    // ✅ **ADR-900 §8 #2 (2β.2)** — η Κ1 κοκκίνισε ξανά: το είδος της στάθμης, ρόλος `attribute-qualifier`.
+    // ADR-900 §8 #2 (2β.2) — το είδος της στάθμης, ρόλος `attribute-qualifier`.
     floorKind: 'standard',
-    // ✅ **ADR-898 Φ3β** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει (έβδομη φορά).
+    // ADR-898 Φ3β.
     frontage: 'single',
-    bedrooms: 3,
-    // ✅ **ADR-842 Φ3** — και η Κ1 κοκκίνισε ξανά, **πέμπτη** φορά: ο παρονομαστής
-    //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
-    //    Όλα δηλωμένα εδώ — η Κ5 μετρά «27 από 27» πάνω σε **αυτό**.
+    // ✅ **ADR-842 Φ3** — όλα δηλωμένα: η Κ5 μετρά «TOTAL από TOTAL» πάνω σε **αυτά**.
     energyClass: 'B',
     condition: 'good',
     renovationYear: 2015,
@@ -89,7 +72,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     bathrooms: 1,
     wc: 1,
     totalRooms: 4,
-    // ADR-842 Φ5 · §8 #7 — το μόνο πεδίο με **προέλευση** (`SourcedAttribute`).
+    // ADR-842 Φ5 · §8 #7 — πεδίο με **προέλευση** (`SourcedAttribute`).
     levels: { provenance: 'declared', value: 1, at: '2026-09-02T00:00:00.000Z' },
     balconies: 2,
     netAreaSqm: 80,
@@ -108,17 +91,33 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     interiorFeatures: ['fireplace'],
     securityFeatures: ['alarm'],
     amenities: ['elevator'],
-    title: 'Δοκιμή',
-    // Α17 (ADR-838): κενός πίνακας = «κανείς δεν ρώτησε». Οι άγκυρες που κρίνουν
-    // ΠΕΡΙΕΧΟΜΕΝΟ νομιμότητας ζουν στο `legality-signal.test.ts` — εδώ κρίνεται ΣΧΗΜΑ.
-    legality: [],
     projectedAt: AT,
-    listedAt: { kind: 'unknown', reason: 'predates-record' },
-    priceReduction: null,
-    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
-    levelAreas: null,
     ...over,
-  };
+  });
+}
+
+/**
+ * **Ό,τι ΠΡΑΓΜΑΤΙΚΑ ταξιδεύει** — αγγελία βγαλμένη από τον ίδιο τον προβολέα της παραγωγής, όχι γραμμένη στο χέρι.
+ *
+ * 🔑 Είναι ο μόνος παρονομαστής που **δεν μπορεί να μείνει πίσω**: νέο πεδίο στην προβολή εμφανίζεται εδώ την ίδια
+ * στιγμή, χωρίς να το θυμηθεί κανείς. ⚠️ Συνάρτηση και όχι σταθερά στο σώμα του `describe`: εξαίρεση στη συλλογή
+ * ρίχνει **ολόκληρο** το αρχείο με `Tests: 0 total`.
+ */
+function projectedListing(): PublicListing {
+  const built = buildPublicListing(
+    {
+      id: 'prop_a0000001',
+      name: 'Δοκιμή',
+      type: 'apartment',
+      commercialStatus: 'for-sale',
+      areas: { gross: 95 },
+      commercial: { askingPrice: 200000 },
+    },
+    { candidates: [], ref: null },
+    AT
+  );
+  if (built === null) throw new Error('το fixture όφειλε να δημοσιεύεται');
+  return built;
 }
 
 function readLocale(language: 'el' | 'en', namespace = 'search-results'): Record<string, unknown> {
@@ -151,11 +150,28 @@ function lookup(bundle: Record<string, unknown>, key: string): unknown {
 // ============================================================================
 
 describe('Κ1 — κάθε δημοσιευμένο πεδίο έχει απόφαση εμφάνισης', () => {
-  it('ο πίνακας έχει ακριβώς τα κλειδιά μιας πραγματικής αγγελίας', () => {
+  const DISCLOSED = Object.keys(LISTING_DISCLOSURE).sort();
+
+  it('ο πίνακας έχει ακριβώς τα κλειδιά που ΒΓΑΖΕΙ ο προβολέας της παραγωγής', () => {
     // Ο μεταγλωττιστής εγγυάται τη μία κατεύθυνση (`satisfies Record<keyof …>`).
     // Εδώ κρίνεται η ΑΛΛΗ: ότι το σχήμα που πράγματι ταξιδεύει δεν έχει πεδίο που
     // ο πίνακας δεν ξέρει — δηλαδή ότι ο τύπος δεν έχει αποκλίνει από τα δεδομένα.
-    expect(Object.keys(LISTING_DISCLOSURE).sort()).toEqual(Object.keys(listing()).sort());
+    //
+    // 🔴 Ο παρονομαστής είναι ο **προβολέας**, όχι fixture (ADR-777 §8.92): ένα χειρόγραφο
+    //    αντικείμενο μένει πίσω μαζί με τον πίνακα, και τότε συμφωνούν.
+    expect(DISCLOSED).toEqual(Object.keys(projectedListing()).sort());
+  });
+
+  it('το ΚΟΙΝΟ fixture έχει τα ίδια κλειδιά — αλλιώς ~66 σουίτες κρίνουν σχήμα που δεν υπάρχει', () => {
+    expect(Object.keys(neutralListing()).sort()).toEqual(DISCLOSED);
+  });
+
+  it('τα κουτιά μέσων έχουν απόφαση: φεύγει αρχείο ⇒ `media` · η περιήγηση ΟΧΙ', () => {
+    for (const box of ['coverImage', 'gallery', 'floorplans', 'models', 'videos', 'floorPlates'] as const) {
+      expect(LISTING_DISCLOSURE[box]).toBe('media');
+    }
+    // Αντίγραφο μιας απάντησης, όχι αρχείο — δες τον ρόλο στο `listing-disclosure-treatment`.
+    expect(LISTING_DISCLOSURE.tour).toBe('tour-presence');
   });
 
   it('καμία τιμή δεν λείπει', () => {
