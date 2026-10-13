@@ -22,6 +22,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import { readRepoCode } from '@/test-utils/read-source';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import {
   applyListingFilters,
@@ -250,14 +251,17 @@ describe('Δ — η γραμμή', () => {
  * 🔑 Η άγκυρα ρωτά **τη γραμμή**, γιατί εκεί ήταν το κενό. Ο «Καθαρισμός» του πάνελ
  * υπήρχε ήδη και **δεν ήταν αρκετός**.
  */
-const BAR_SOURCE = fs
-  .readFileSync(path.join(__dirname, '..', 'filters', 'PrimaryFilterBar.tsx'), 'utf8')
-  .replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+// Το κόψιμο σχολίων ζητείται από το SSoT (`test-utils/read-source`) — όχι δέκατο τρίτο τοπικό `stripComments`.
+const BAR_SOURCE = readRepoCode('src/components/search-results/filters/PrimaryFilterBar.tsx');
+// Ο κανόνας/η πράξη/η ετικέτα μετακόμισαν στο κοινό `ClearAllCriteriaButton` (μία φορά για μπάρα + πάνελ).
+const CLEAR_ALL_SOURCE = readRepoCode('src/components/search-results/filters/ClearAllCriteriaButton.tsx');
 
 describe('Ε — ο άνθρωπος μπορεί να ΒΓΕΙ χωρίς να ανοίξει το συρτάρι', () => {
   it('🔴 Η ΓΡΑΜΜΗ έχει «Καθαρισμός», όχι μόνο το πάνελ', () => {
-    expect(BAR_SOURCE).toMatch(/onClick=\{commit\.clearAllCriteria\}/);
-    expect(BAR_SOURCE).toMatch(/search-filters:filters\.clearAll/);
+    // Η γραμμή **καλεί** το κοινό κουμπί (μέγεθος `bar`)· το κουμπί κάνει την πράξη με την ετικέτα.
+    expect(BAR_SOURCE).toMatch(/<ClearAllCriteriaButton\b[^>]*size="bar"/);
+    expect(CLEAR_ALL_SOURCE).toMatch(/onClick=\{commit\.clearAllCriteria\}/);
+    expect(CLEAR_ALL_SOURCE).toMatch(/search-filters:filters\.clearAll/);
   });
 
   // ⚠️ **«Εμφανίζεται ΜΟΝΟ όταν υπάρχει τι να καθαριστεί» ΔΕΝ ρωτιέται εδώ — επίτηδες (2026-10-13).**

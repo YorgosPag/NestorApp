@@ -37,7 +37,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { askedCriterionKeys } from '@/lib/criteria/listing-criteria';
 import { criteriaGroupLabel } from '@/lib/criteria/listing-criterion-labels';
 import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { PublicListing } from '@/types/public-listing';
@@ -45,6 +44,7 @@ import { cn } from '@/lib/utils';
 import { SheetTitle } from '@/components/ui/sheet';
 
 import { CRITERIA_FILTER_GROUPS } from './criteria-filter-groups';
+import { ClearAllCriteriaButton } from './ClearAllCriteriaButton';
 import { CriterionField } from './CriterionField';
 import type { FilterCommit } from './use-filter-commit';
 
@@ -71,7 +71,6 @@ export function CriteriaFilterPanel({
 }: CriteriaFilterPanelProps) {
   const { t } = useTranslation(['search-filters', 'search-results', 'listing-detail', 'properties-enums']);
 
-  const asked = askedCriterionKeys(filters.criteria);
   const PanelHeading = container === 'sheet' ? SheetTitle : 'h2';
   const firstGroup = CRITERIA_FILTER_GROUPS[0]?.group;
 
@@ -91,19 +90,16 @@ export function CriteriaFilterPanel({
           το εμπιστεύεται — και η κατάσταση «κανένα φίλτρο» λέγεται με **λέξη**, όχι με
           απενεργοποιημένο χειριστήριο.
         */}
-        {asked.length > 0 ? (
-          <button
-            type="button"
-            onClick={commit.clearAllCriteria}
-            className="rounded-md px-2 py-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {t('search-filters:filters.clearAll')}
-          </button>
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {t('search-filters:filters.empty')}
-          </span>
-        )}
+        <ClearAllCriteriaButton
+          filters={filters}
+          commit={commit}
+          size="panel"
+          whenEmpty={
+            <span className="text-xs text-muted-foreground">
+              {t('search-filters:filters.empty')}
+            </span>
+          }
+        />
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">

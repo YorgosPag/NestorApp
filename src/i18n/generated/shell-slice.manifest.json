@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1cbaae05c684ecd8ab8c3f822eeb3fb886e2e226cd606100fd9ac92d3a24f587",
+  "inputsSha256": "7be344ee91d454c6b58923cfb0ea3fffda31f65ae9ba05788c0f2b38ebacf722",
   "languages": [
     "el"
   ],
@@ -593,7 +593,8 @@
     "src/components/search-results/draw/DrawnAreaChip.tsx": "2d32518eac4730ddc8b84aad5c62bd09cc14f7ed531f54b26dc4f7216b45ea24",
     "src/components/search-results/draw/DrawnAreaLayer.tsx": "443a94c796ce5dd3b8435ccd1a9c30977c1f001fa5fdae035d3f56960b32ca3d",
     "src/components/search-results/draw/SearchAreaMapLayer.tsx": "a9e95e22d51f15bb6dc52fe1de96654b4dcfa50998e5ba17d5d108bbccd25555",
-    "src/components/search-results/filters/CriteriaFilterPanel.tsx": "2f64ea97d6c2655b1b6a27533450c97c495f5d8778a44bf9fad9f1fc39314757",
+    "src/components/search-results/filters/ClearAllCriteriaButton.tsx": "cb8020f0865be463ea51ad6a45f2c7fa514c0312a5627d637d233d5050252487",
+    "src/components/search-results/filters/CriteriaFilterPanel.tsx": "22ec7cc83cbd9bf3403c997646666f53fa9dcd20f8029d774d40b3c7148f4486",
     "src/components/search-results/filters/CriterionBarPopover.tsx": "b0ee628472894176c4ebe444116f474f1b7d42e4e73157c8607fe470d91dc73e",
     "src/components/search-results/filters/CriterionField.tsx": "b61721479e1c7f5bfb78fd87946f2b17d9d21e8b1dd78d264f08191b43267577",
     "src/components/search-results/filters/CriterionFlagField.tsx": "31ed566fb85193b04c7ad69b4cbea3cd13e78de45d14ef5f50a4b572c94454b7",
@@ -603,7 +604,7 @@
     "src/components/search-results/filters/CriterionValueSetField.tsx": "13fde2d998094d5f9721612cc2a41653402924c0e892ff07ca16d64623ca0947",
     "src/components/search-results/filters/CriterionValueSetPopover.tsx": "5ccddb38a33eec83cbfeceb6d9376de4a3a75f33e88ed54b35a388e0c0636517",
     "src/components/search-results/filters/MoreFiltersControl.tsx": "e0b9843d019623c8eb8b0713bd39f8036ee9085e1871af48cdbedf7852025723",
-    "src/components/search-results/filters/PrimaryFilterBar.tsx": "3bedc825c16e6722fa29f027a4f8f160dbbc66bc762e74467272ee882eafdf3a",
+    "src/components/search-results/filters/PrimaryFilterBar.tsx": "1967fa42693da2676680e3eb88ec219720535e80137d8bbd790076d77dd20403",
     "src/components/search-results/filters/ResultsOrderControl.tsx": "2812391c97a883c43f5a43839a132d2e697cfaf0f34e6dfdacbb7f2749732198",
     "src/components/search-results/filters/ResultsOrderSelect.tsx": "62d37ebca26203ba231ec1f1d6889c8454b119216881577cefc011f1a567803e",
     "src/components/search-results/filters/RetiredPriceParamNotice.tsx": "f741f91b19bf2801d40f631c02d1a49e729b3dd8f311f17542be9d44ed4564ba",

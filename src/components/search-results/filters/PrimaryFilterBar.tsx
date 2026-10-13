@@ -16,7 +16,7 @@
  * από την κύλιση (Airbnb): η έξοδος και η πόρτα προς όλους τους άξονες δεν κρύβονται ποτέ.
  *
  * 🧩 **ΣΥΝΘΕΣΗ, ΟΧΙ ΜΟΝΟΛΙΘΟΣ** (ADR-896 §7Α.7 · N.7.1): λωρίδα (`FilterRail`) + έξοδος
- * (`ClearAllButton`) + πόρτα (`MoreFiltersControl`: δύο συμπεριφορές, ένα κατώφλι, εκεί
+ * (`ClearAllCriteriaButton`) + πόρτα (`MoreFiltersControl`: δύο συμπεριφορές, ένα κατώφλι, εκεί
  * τεκμηριωμένες) + ειδοποίηση παλιού συνδέσμου.
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -39,7 +39,6 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ScrollRail } from '@/components/ui/scroll-rail';
 import type { ViewportClass } from '@/hooks/media/useViewportClass';
-import { askedCriterionKeys } from '@/lib/criteria/listing-criteria';
 import type { CriterionRange } from '@/lib/criteria/criterion-vocabulary';
 import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { PublicListing } from '@/types/public-listing';
@@ -50,6 +49,7 @@ import { visiblePriceAxes } from './visible-price-axes';
 import { RetiredPriceParamNotice } from './RetiredPriceParamNotice';
 import { CriterionField } from './CriterionField';
 import { CriterionBarPopover } from './CriterionBarPopover';
+import { ClearAllCriteriaButton } from './ClearAllCriteriaButton';
 import { MoreFiltersControl } from './MoreFiltersControl';
 import { StayFilterChip } from './StayFilterChip';
 import { staySearchRelevant } from './stay-search-relevance';
@@ -123,33 +123,6 @@ function FilterRail({ filters, listings, commit, retiredPrice }: FilterRailProps
   );
 }
 
-/**
- * 🔴 **Η ΕΞΟΔΟΣ, ΣΤΟ ΠΡΩΤΟ ΕΠΙΠΕΔΟ — ΚΑΙ ΤΟ ΕΛΑΤΤΩΜΑ ΗΤΑΝ ΜΕΤΡΗΜΕΝΟ.** Η πρώτη γραφή είχε τον
- * «Καθαρισμό» **μόνο μέσα** στο πάνελ. Ζωντανά (2026-09-04): με `?bathmin=1&bathmax=1` η οθόνη έδειχνε
- * 2 αγγελίες, **καμία στον χάρτη**, και ο άνθρωπος **δεν είχε τρόπο να βγει** χωρίς να ανοίξει ξανά
- * το συρτάρι και να θυμηθεί τι είχε πατήσει.
- *
- * ⚠️ Ο κανόνας που η έρευνα ονομάζει **αδιέξοδο**: *«κενό αποτέλεσμα — ή απόκλεισε την επιλογή, ή
- * δώσε διαδρομή επιστροφής»*. Εμείς δεν αποκλείουμε επιλογές *(τα πλήθη τις δείχνουν όλες)*, άρα
- * **οφείλουμε** τη διαδρομή επιστροφής — **ορατή**, όχι κρυμμένη.
- *
- * 🔑 **Μόνο όταν υπάρχει τι να καθαριστεί** — μονίμως ορατό κουμπί που δεν κάνει τίποτα διδάσκει
- * τον επισκέπτη να το αγνοεί.
- */
-function ClearAllButton({ filters, commit }: { readonly filters: ListingSearch; readonly commit: FilterCommit }) {
-  const { t } = useTranslation(['search-filters']);
-  if (askedCriterionKeys(filters.criteria).length === 0) return null;
-  return (
-    <button
-      type="button"
-      onClick={commit.clearAllCriteria}
-      className="shrink-0 rounded-md px-2 py-1.5 text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-    >
-      {t('search-filters:filters.clearAll')}
-    </button>
-  );
-}
-
 export function PrimaryFilterBar({ filters, listings, visibleCount, viewport, retiredPrice, trailing, className }: PrimaryFilterBarProps) {
   const { t } = useTranslation(['search-filters', 'search-results', 'listing-detail', 'properties-enums', 'short-stay']);
   const commit = useFilterCommit(filters);
@@ -165,7 +138,8 @@ export function PrimaryFilterBar({ filters, listings, visibleCount, viewport, re
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
       <FilterRail filters={filters} listings={listings} commit={commit} retiredPrice={retiredPrice} />
-      <ClearAllButton filters={filters} commit={commit} />
+      {/* 🔑 Η έξοδος στο πρώτο επίπεδο (κανόνας + αιτιολόγηση: `ClearAllCriteriaButton`) — χωρίς `whenEmpty`: αν δεν ζητήθηκε κάτι, δεν τυπώνεται τίποτα. */}
+      <ClearAllCriteriaButton filters={filters} commit={commit} size="bar" />
       <MoreFiltersControl filters={filters} listings={listings} commit={commit} visibleCount={visibleCount} viewport={viewport} />
       {trailing}
       {/*
