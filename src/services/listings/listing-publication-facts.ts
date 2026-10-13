@@ -28,7 +28,8 @@ import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readAdminAreaLookup } from '@/services/places/admin-boundaries.reader';
 import { readPublicBuildingConstructionYear } from '@/services/places/public-place-read.service';
-import type { ListingPosition, PublicListing } from '@/types/public-listing';
+import { readTourPresence, type TourPresence } from '@/server/spatial-tour/tour-presence';
+import type { ListingPosition, ListingTourPresence, PublicListing } from '@/types/public-listing';
 import type { PlaceKnowledge } from './public-listing-projection-types';
 
 const logger = createModuleLogger('listing-publication-facts');
@@ -37,6 +38,7 @@ const logger = createModuleLogger('listing-publication-facts');
 export interface ListingPublicationFacts {
   readonly adminArea: AdminAreaAssignment | null;
   readonly constructionYear: SourcedAttribute<number> | null;
+  readonly tour: ListingTourPresence | null;
 }
 
 function describe(error: unknown): string {
@@ -76,6 +78,26 @@ async function publicRecordOf(
   }
 }
 
+/** Το **δημόσιο μισό** της απάντησης του κριτή — η ΜΙΑ περικοπή `TourPresence → ListingTourPresence`. Καθαρή. */
+export function listedTourFromPresence(presence: TourPresence | null): ListingTourPresence | null {
+  return presence === null ? null : { visibility: presence.visibility };
+}
+
+/**
+ * **Η περιήγηση 360° που φαίνεται στην αγγελία** (ADR-884 · ADR-777 §8.88) — η απάντηση του ΕΝΟΣ κριτή
+ * (`readTourPresence`), κομμένη στο δημόσιο μισό της. Κανένας δεύτερος κανόνας «φαίνεται;» εδώ.
+ *
+ * ⚠️ Αποτυχία ανάγνωσης ⇒ `null`: η κάρτα δεν δείχνει σήμα — ποτέ ψευδές «έχει» — και η νυχτερινή συμφιλίωση το διορθώνει.
+ */
+export async function listedTourOf(adminDb: AdminFirestore, listingId: string): Promise<ListingTourPresence | null> {
+  try {
+    return listedTourFromPresence(await readTourPresence(adminDb, listingId));
+  } catch (error) {
+    logger.warn('Δεν διαβάστηκε η παρουσία περιήγησης — η αγγελία φεύγει χωρίς σήμα', { listingId, error: describe(error) });
+    return null;
+  }
+}
+
 /**
  * **Λύνει τα γεγονότα της δημοσίευσης** για μια αγγελία που ήδη προβλήθηκε.
  *
@@ -90,13 +112,15 @@ export async function resolvePublicationFacts(
   listing: PublicListing,
   place: PlaceKnowledge,
 ): Promise<ListingPublicationFacts> {
-  const [adminArea, publicRecord] = await Promise.all([
+  const [adminArea, publicRecord, tour] = await Promise.all([
     adminAreaOf(listing.id, listing.position),
     publicRecordOf(adminDb, listing.id, place),
+    listedTourOf(adminDb, listing.id),
   ]);
 
   return {
     adminArea,
+    tour,
     constructionYear: resolveListingConstructionYear(
       { declared: place.buildingConstructionYear ?? null, publicRecord },
       listing.projectedAt,
@@ -106,5 +130,5 @@ export async function resolvePublicationFacts(
 
 /** **Δένει** τα γεγονότα στην αγγελία. Καθαρή — ίδια είσοδος, ίδιο έγγραφο (idempotent). */
 export function withPublicationFacts(listing: PublicListing, facts: ListingPublicationFacts): PublicListing {
-  return { ...listing, adminArea: facts.adminArea, constructionYear: facts.constructionYear };
+  return { ...listing, adminArea: facts.adminArea, constructionYear: facts.constructionYear, tour: facts.tour };
 }

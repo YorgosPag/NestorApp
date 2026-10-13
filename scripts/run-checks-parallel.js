@@ -1157,6 +1157,15 @@ if (!process.env.SKIP_FLOOR_STACK_AUTHORITY)
 if (!process.env.SKIP_PAPER_INK)
   addThread('3.103', 'Paper ink', 'scripts/check-paper-ink.js');
 
+// CHECK 3.104 (ADR-884 · ADR-777 §8.88) — ο ένας δρόμος της παρουσίας περιήγησης. «Γράφει κάποιος περιήγηση ή λήψη
+// ΧΩΡΙΣ να ζητήσει επαναπροβολή της αγγελίας;» Το `PublicListing.tour` είναι ΑΝΤΙΓΡΑΦΟ της απάντησης του
+// `readTourPresence` (ώστε η κάρτα αναζήτησης να μη ρωτά το endpoint ανά αγγελία)· η απάντηση αλλάζει από πράξεις της
+// ΠΕΡΙΗΓΗΣΗΣ, που κανένας δρόμος επαναδημοσίευσης του ακινήτου δεν βλέπει. Γραφέας που ξεχνά τον δρόμο = κάρτα που
+// διαφημίζει περιήγηση που αποσύρθηκε. Λίστα: `.tour-presence-authority.json`. AST, ZERO-TOL, καμία baseline.
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο, και το προφίλτρο κάνει τη σάρωση φθηνή.
+if (!process.env.SKIP_TOUR_PRESENCE_AUTHORITY)
+  addThread('3.104', 'Tour presence authority', 'scripts/check-tour-presence-authority.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

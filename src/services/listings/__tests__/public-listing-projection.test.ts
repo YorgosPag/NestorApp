@@ -290,7 +290,10 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // κάθε κράτηση). Ο φρουρός ότι δεν θα γίνει ημερολόγιο ζει στην ομάδα `Η` του
       // `lib/stay/__tests__/stay-availability.test.ts`.
       'stay',
-      'terraceAreaSqm', 'title', 'totalRooms', 'type',
+      // 🔴 **ΚΟΚΚΙΝΙΣΕ ΞΑΝΑ (ADR-777 §8.88, 2026-10-13)** — το `tour` πέρασε από γραμμένη απόφαση (Giorgio): μόνο η
+      // **ορατότητα** της περιήγησης 360°, δηλαδή ακριβώς ό,τι ήδη απαντά το **ανώνυμο** endpoint παρουσίας
+      // (`/api/spatial-tours/listings/{id}/presence`). Καμία ταυτότητα, κανένας μετρητής, ποτέ `link-only`.
+      'terraceAreaSqm', 'title', 'totalRooms', 'tour', 'type',
       // ADR-907 §10 — το κουτί του βίντεο: δημόσιο υλικό, καμία ταυτότητα πελάτη (URL ραφιού + μετρημένα στοιχεία).
       'videos',
       'waterHeating', 'wc', 'windowFrames',

@@ -44,6 +44,7 @@ import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { ListingCardGallery } from '@/components/search-results/ListingCardGallery';
 import { ListingCardNoPhotoCover } from '@/components/search-results/ListingCardNoPhotoCover';
 import { SaveListingToggle } from '@/components/listings/SaveListingToggle';
+import { ListingSpatialBadge } from '@/components/listings/ListingSpatialBadge';
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
 import { LISTING_CARD_FOCUS_VISIBLE_CLASS, LISTING_FOCUS_CARD_CLASS } from './listing-focus-card';
@@ -324,6 +325,17 @@ export function ListingCard({
             παγίδα με τα βελάκια της γκαλερί (§8.57.3). Χωρίς πάροχο στη σελίδα δεν αποδίδεται.
           */}
           <SaveListingToggle listingId={listing.id} appearance="icon" className="absolute right-5 top-5 z-10" />
+
+          {/*
+            🧭 ADR-777 §8.88 — **το ΕΝΑ σήμα χωρικών μέσων**, στην απέναντι γωνία από την καρδιά και στην **ίδια**
+            στρώση (`z-10`, πάνω από το `::after` του τίτλου και από τη γκαλερί). Κάθεται στο `<article>` και όχι μέσα
+            στη γκαλερί, ώστε να πέφτει στο ίδιο σημείο **και** πάνω στον χάρτη της κάρτας χωρίς φωτογραφία.
+
+            ⚠️ Δεν συγκρούεται με το «ΜΙΑ πρόταση, ΟΧΙ λίστα σημάτων» παρακάτω: εκείνο απαγορεύει σήματα για **αδήλωτα**
+            πεδία, γιατί θα διαβάζονταν ως ιδιότητες. Αυτό **είναι** ιδιότητα — και μένει ένα, ποτέ στοίβα.
+            `max-w`: αφήνει πάντα χώρο στην καρδιά (2,5rem + κενό) ακόμη και στο στενότερο κελί των 17rem.
+          */}
+          <ListingSpatialBadge listing={listing} className="absolute left-5 top-5 z-10 max-w-[calc(100%-6.5rem)]" />
 
           <h3 className="truncate text-sm font-medium text-foreground">
             <Link

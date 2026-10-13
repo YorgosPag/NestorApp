@@ -59,6 +59,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+import { PHOTO_OVERLAY_SURFACE_CLASS } from './photo-overlay-surface';
 import { useGalleryScroller } from './use-gallery-scroller';
 
 export interface SnapGalleryProps {
@@ -298,8 +299,9 @@ function GalleryArrow({
       className={[
         // ⚠️ ΣΤΑΘΕΡΟ ΧΡΩΜΑ, ΟΧΙ TOKEN — δες τη λωρίδα βαθμίδωσης παραπάνω: το κουμπί
         //    κάθεται πάνω σε ΦΩΤΟΓΡΑΦΙΑ, όχι πάνω σε επιφάνεια του θέματος.
-        'absolute top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white',
-        'shadow-sm backdrop-blur-sm transition-opacity hover:bg-black/70',
+        //    Η επιφάνεια ζει σε ΜΙΑ γραφή (`photo-overlay-surface`), κοινή με το σήμα χωρικών μέσων της κάρτας.
+        `absolute top-1/2 z-20 -translate-y-1/2 rounded-full p-1 ${PHOTO_OVERLAY_SURFACE_CLASS}`,
+        'transition-opacity hover:bg-black/70',
         /*
           🔑 **ΤΕΣΣΕΡΙΣ ΔΙΑΔΡΟΜΕΣ ΑΠΟΚΑΛΥΨΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΠΕΡΙΤΤΗ:**
           `hover` στη **φωτογραφία** *(η κύρια — αυτή που έλειπε)* · `hover` οπουδήποτε

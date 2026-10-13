@@ -34,6 +34,7 @@ import { nowISO } from '@/lib/date-local';
 import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import { supportedTourVisibilities } from '@/lib/spatial-tour/tour-view-policy';
+import { refreshListingAfterTourChange } from '@/services/listings/listing-tour-refresh';
 import type { SpatialTour, TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
@@ -163,5 +164,8 @@ export async function updateTourSettings(
     reconcileTourShelf(before, next);
     return { kind: 'updated', settings: next };
   });
+  // 🧭 ADR-777 §8.88 — ορατότητα/κύκλος ζωής **είναι** η απάντηση του «έχει περιήγηση που φαίνεται;» ⇒ η αγγελία την
+  //    ξαναδιαβάζει. **Μετά** το commit (ο κριτής διαβάζει ό,τι γράφτηκε) και awaited: είναι τι βλέπει ο κόσμος.
+  if (outcome.kind === 'updated') await refreshListingAfterTourChange(db, input.subject);
   return outcome;
 }

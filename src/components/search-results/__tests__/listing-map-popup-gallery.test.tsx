@@ -85,6 +85,9 @@ const LISTING: PublicListing = {
   exchange: null,
   coverImage: null,
   gallery: [image(1), image(2), image(3)],
+  // ADR-777 §8.88 — η φούσκα ρωτά πλέον `models`/`tour` για το σήμα χωρικών μέσων.
+  models: [],
+  tour: null,
   type: 'apartment',
   areaSqm: 80,
   offerKinds: ['rent'],
@@ -283,5 +286,27 @@ describe('ADR-777 §8.58 — η φούσκα του χάρτη αποκτά πε
       const { photoPositionFor } = require('@/lib/listings/listing-photo-position') as typeof import('@/lib/listings/listing-photo-position');
       expect(photoPositionFor(LISTING.id, 3)).toBe(2);
     });
+  });
+});
+
+describe('ADR-777 §8.88 — το σήμα χωρικών μέσων: το ΙΔΙΟ με την κάρτα, και μόνο πάνω σε φωτογραφία', () => {
+  const TOUR = { visibility: 'public' } as const;
+
+  it('αγγελία με περιήγηση και φωτογραφίες ⇒ το σήμα ζωγραφίζεται, χωρίς να γίνει στάση `Tab`', () => {
+    draw({ ...LISTING, tour: TOUR });
+
+    const badge = screen.getByText(/photos\.spatial\.tour/);
+    expect(badge.closest('a, button')).toBeNull();
+    expect(badge.parentElement).toHaveClass('pointer-events-none');
+  });
+
+  it('🔴 χωρίς φωτογραφία ΔΕΝ ζωγραφίζεται — θα έπεφτε πάνω στον τίτλο της φούσκας', () => {
+    draw({ ...LISTING, gallery: [], tour: TOUR });
+    expect(screen.queryByText(/photos\.spatial/)).toBeNull();
+  });
+
+  it('χωρίς χωρικά μέσα ⇒ κανένα σήμα', () => {
+    draw();
+    expect(screen.queryByText(/photos\.spatial/)).toBeNull();
   });
 });

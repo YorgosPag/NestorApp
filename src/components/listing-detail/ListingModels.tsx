@@ -42,7 +42,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { LISTING_MODEL_PROVENANCE_KEYS } from '@/lib/listings/listing-material';
-import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
+import { presentableModels } from '@/lib/listings/listing-spatial-media';
 import type { PublicListing } from '@/types/public-listing';
 
 import { ListingModelStage } from './ListingModelStage';
@@ -60,7 +60,7 @@ export function ListingModels({ listing, embedded = false }: ListingModelsProps)
   //    φυλάει τις κατόψεις: μοντέλο που **μάντεψε μηχανή** και **δεν ενέκρινε άνθρωπος** δεν
   //    φτάνει στον αγοραστή ως γεγονός. Σήμερα κανένα δεν είναι `inferred` — αλλά η μέρα που
   //    θα υπάρξει δεν θα έρθει με υπενθύμιση.
-  const shown = listing.models.filter(isPubliclyPresentable);
+  const shown = presentableModels(listing);
 
   if (shown.length === 0) return null;
 

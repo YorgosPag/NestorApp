@@ -43,6 +43,7 @@ import { applyRedactionEdits, planAutoRedactions, redactionEditsOf, redactionsOf
 import { removeSeparation, removeSpace, upsertSeparation, upsertSpace } from '@/lib/spatial-tour/tour-space-edit';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { refreshListingAfterTourChange, refreshListingOfTour } from '@/services/listings/listing-tour-refresh';
 import type { SpatialTour, TourCapture, TourFaceScan, TourRedaction, TourRedactionRegion, TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
@@ -242,13 +243,16 @@ export async function recordFaceScan(
   const tourRef = captureRef.parent.parent;
   if (tourRef === null) return SUPERSEDED;
   const stamp: TourEditStamp = { uid: SYSTEM_IDENTITY.ID, at: nowISO() };
-  return db.runTransaction(async (tx) => {
+  const outcome = await db.runTransaction<FaceScanWriteOutcome>(async (tx) => {
     const [tourSnap, captureSnap] = [await tx.get(tourRef), await tx.get(captureRef)];
     const tour = tourSnap.exists ? spatialTourFromDocument(tourSnap.data(), tourRef.id) : null;
     const capture = captureSnap.exists ? tourCaptureFromDocument(captureSnap.data(), captureRef.id) : null;
     if (tour === null || !isScanTarget(capture, input.expectedKey)) return SUPERSEDED;
     return writeFaceScan({ tx, tourRef, tour, stamp }, { ref: captureRef, capture, key: input.expectedKey }, input.faces);
   });
+  // 🧭 ADR-777 §8.88 — αυτόματο θόλωμα γυρίζει μια `ready` λήψη σε `pending` ⇒ μπορεί να χαθεί η τελευταία στάση θεατή.
+  if (outcome.kind === 'recorded') await refreshListingOfTour(db, tourRef);
+  return outcome;
 }
 
 /** **Άλλαξε τον γράφο** — μόνο ο υπεύθυνος, σε μία συναλλαγή. */
@@ -262,7 +266,7 @@ export async function writeTourGraph(
   const floorPlan = await preparedFloorPlan(db, managed.tour, input.command);
   if (floorPlan != null && 'kind' in floorPlan) return floorPlan;
   const stamp: TourEditStamp = { uid: input.actor.listing.uid, at: nowISO() };
-  return db.runTransaction(async (tx) => {
+  const outcome = await db.runTransaction<TourGraphWriteOutcome>(async (tx) => {
     const snap = await tx.get(tourRef);
     const tour = snap.exists ? spatialTourFromDocument(snap.data(), tourRef.id) : null;
     if (tour === null) return refuseTourAccess(snap.exists ? 'tour-unreadable' : 'tour-absent');
@@ -271,4 +275,9 @@ export async function writeTourGraph(
     if ('kind' in plan) return plan;
     return applyEdit(ctx, plan);
   });
+  // 🧭 ADR-777 §8.88 — τοποθέτηση/αφαίρεση λήψης και θόλωμα αλλάζουν τις **στάσεις θεατή**, άρα ίσως και το σήμα της
+  //    αγγελίας. Οι υπόλοιπες εντολές (βελάκι, όνομα, κάτοψη) δεν την αλλάζουν — τις κόβει η πρώιμη αποκοπή του
+  //    `refreshListingAfterTourChange` με δύο αναγνώσεις, χωρίς δεύτερη λίστα «ποιες εντολές μετράνε» να παλιώσει εδώ.
+  if (outcome.kind === 'written') await refreshListingAfterTourChange(db, input.subject);
+  return outcome;
 }

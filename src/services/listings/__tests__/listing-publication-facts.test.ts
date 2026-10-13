@@ -11,6 +11,15 @@ import { resolvePublicationFacts, withPublicationFacts } from '../listing-public
 import type { PlaceKnowledge, ProjectableProperty } from '../public-listing-projection-types';
 import type { ListingPositionCandidate } from '../public-listing-projection-types';
 
+/**
+ * ADR-777 §8.88 — ο κριτής της περιήγησης έχει δικές του άγκυρες (`tour-settings.test.ts`)· εδώ κρίνεται μόνο ότι ο
+ * γραφέας τον **ρωτά** και **δένει** την απάντησή του. Προεπιλογή «καμία», ώστε οι παλιές ομάδες να μένουν αμετάβλητες.
+ */
+const readTourPresence = jest.fn(async (..._args: unknown[]): Promise<unknown> => null);
+jest.mock('@/server/spatial-tour/tour-presence', () => ({
+  readTourPresence: (...args: unknown[]) => readTourPresence(...args),
+}));
+
 jest.setTimeout(30_000);
 
 const AT = '2026-09-26T10:00:00.000Z';
@@ -87,6 +96,44 @@ describe('έτος κατασκευής — δήλωση κτιρίου, αλλ�
     const place: PlaceKnowledge = { candidates: [], ref, buildingConstructionYear: 1978 };
     const facts = await resolvePublicationFacts(broken as unknown as AdminFirestore, listingFor(place), place);
     expect(facts.constructionYear).toMatchObject({ provenance: 'declared', value: 1978 });
+  });
+});
+
+describe('περιήγηση 360° — η απάντηση του ΕΝΟΣ κριτή, κομμένη στο δημόσιο μισό της (ADR-777 §8.88)', () => {
+  const place: PlaceKnowledge = { candidates: [candidate()], ref: null };
+
+  afterEach(() => readTourPresence.mockResolvedValue(null));
+
+  it('ο κριτής ρωτιέται με την ταυτότητα ΤΗΣ ΑΓΓΕΛΙΑΣ', async () => {
+    const database = db(null);
+    await resolvePublicationFacts(database, listingFor(place), place);
+    expect(readTourPresence).toHaveBeenCalledWith(database, PROPERTY.id);
+  });
+
+  it('καμία περιήγηση που φαίνεται ⇒ `null`', async () => {
+    const facts = await resolvePublicationFacts(db(null), listingFor(place), place);
+    expect(facts.tour).toBeNull();
+  });
+
+  it.each(['public', 'on-request'] as const)('`%s` ⇒ φεύγει ΜΟΝΟ η ορατότητα — ποτέ η ρίζα', async (visibility) => {
+    readTourPresence.mockResolvedValue({ subject: { kind: 'company-property', id: PROPERTY.id }, visibility });
+    const facts = await resolvePublicationFacts(db(null), listingFor(place), place);
+    expect(facts.tour).toEqual({ visibility });
+  });
+
+  it('🔴 ο κριτής πέταξε ⇒ `null` και η δημοσίευση ΔΕΝ ακυρώνεται', async () => {
+    readTourPresence.mockRejectedValue(new Error('firestore unavailable'));
+    const facts = await resolvePublicationFacts(db(null), listingFor(place), place);
+    expect(facts.tour).toBeNull();
+    expect(facts.adminArea?.municipalityId).toBe('municipality:0708');
+  });
+
+  it('το δέσιμο γράφει την περιήγηση στην αγγελία', async () => {
+    readTourPresence.mockResolvedValue({ subject: { kind: 'company-property', id: PROPERTY.id }, visibility: 'public' });
+    const listing = listingFor(place);
+    expect(listing.tour).toBeNull(); // η καθαρή προβολή γράφει κενό — το δένει ΜΟΝΟ ο γραφέας
+    const bound = withPublicationFacts(listing, await resolvePublicationFacts(db(null), listing, place));
+    expect(bound.tour).toEqual({ visibility: 'public' });
   });
 });
 

@@ -57,6 +57,7 @@
 
 import { z } from 'zod';
 
+import { LISTED_TOUR_VISIBILITIES } from '@/constants/spatial-tour-vocabulary';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { readPriceReduction } from '@/lib/listings/price-history';
 import type { ListedAt } from '@/types/public-listing';
@@ -77,7 +78,7 @@ import { isFloorKind } from '@/utils/floor-naming';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 19;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 20;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -178,6 +179,16 @@ const videosArray = z.array(z.object({}).passthrough()).catch([]);
  * της όψης (`readFloorPlateOutline` · `isFloorPlateState`), ανά μονάδα: μία χαλασμένη δεν ρίχνει τις άλλες.
  */
 const floorPlatesArray = z.array(z.object({}).passthrough()).catch([]);
+
+/**
+ * ADR-884 — η παρουσία περιήγησης, και εδώ ο έλεγχος είναι **ΒΑΘΥΣ** (όπως το `listedAtValue`): η `visibility` **είναι**
+ * η πληροφορία, και ένα ρηχό `passthrough()` θα άφηνε ένα `{ visibility: 'link-only' }` να ανάψει σήμα για περιήγηση
+ * που εξ ορισμού δεν φαίνεται στην αγγελία. Ό,τι δεν στέκει ⇒ `null` («καμία»).
+ */
+const tourPresenceValue = z
+  .object({ visibility: z.enum(LISTED_TOUR_VISIBILITIES) })
+  .nullable()
+  .catch(null);
 
 /**
  * **Πότε μπήκε στην αγορά** (ADR-777 §8.61) — και εδώ ο έλεγχος είναι **ΒΑΘΥΣ**, σε
@@ -817,6 +828,17 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * Ιδιοδύναμο (Κ3) μέσω του `.catch([])`.
      */
     apply: (doc) => ({ ...doc, floorPlates: floorPlatesArray.parse(doc.floorPlates) }),
+  },
+  {
+    to: 20,
+    adr: 'ADR-884 · ADR-777 §8.88',
+    adds: ['tour'],
+    /**
+     * **Η περιήγηση 360° που φαίνεται στην αγγελία.** Η αλήθεια του παλιού εγγράφου είναι «δεν ρωτήθηκε» ⇒ `null`:
+     * η κάρτα δεν δείχνει σήμα — **ποτέ ψευδές «έχει»**. Την πραγματική απάντηση τη γράφει μόνο η επαναπροβολή
+     * (`withPublicationFacts` ← `readTourPresence`), ποτέ μαντεψιά εδώ. Ιδιοδύναμο (Κ3) μέσω του `.catch(null)`.
+     */
+    apply: (doc) => ({ ...doc, tour: tourPresenceValue.parse(doc.tour) }),
   },
 ];
 

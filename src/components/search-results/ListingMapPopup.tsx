@@ -72,6 +72,7 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { photoPositionFor } from '@/lib/listings/listing-photo-position';
 import { ListingCardGallery } from './ListingCardGallery';
+import { ListingSpatialBadge } from '@/components/listings/ListingSpatialBadge';
 import type { PublicListing } from '@/types/public-listing';
 
 /**
@@ -182,6 +183,14 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
             </Link>
           )}
         />
+
+        {/*
+          🧭 ADR-777 §8.88 — το **ίδιο** σήμα με την κάρτα της λίστας, όχι αντίγραφό του. ⚠️ Μόνο όταν η φούσκα έχει
+          φωτογραφία: χωρίς εικόνες η γκαλερί δεν αποδίδει τίποτα, και το σήμα θα έπεφτε πάνω στον τίτλο.
+        */}
+        {images.length > 0 ? (
+          <ListingSpatialBadge listing={listing} className="absolute left-1.5 top-1.5 z-10 max-w-[calc(100%-0.75rem)]" />
+        ) : null}
 
         {/*
           ⚠️ **`popover-foreground`, ΟΧΙ `foreground`** — και δεν είναι αισθητική.

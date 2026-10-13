@@ -12,6 +12,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { reconcileListingMedia } from '@/services/listings/listing-media-reconciliation.service';
+import { reconcileListingTours } from '@/services/listings/listing-tour-refresh';
 import { convergeShelfCacheControl } from '@/services/listings/public-shelf-bucket';
 import type { CronJobResult } from '@/types/cron-schedule';
 
@@ -21,14 +22,26 @@ import type { CronJobResult } from '@/types/cron-schedule';
  * Ανάποδα, το πέρασμα θα διόρθωνε μεταδεδομένα σε αντικείμενα που σβήνονται ένα βήμα μετά.
  */
 export async function runListingMediaReconcile(): Promise<CronJobResult> {
-  const report = await reconcileListingMedia(getAdminFirestore());
+  const adminDb = getAdminFirestore();
+  const report = await reconcileListingMedia(adminDb);
   const cache = await convergeShelfCacheControl();
+  // 🧭 ADR-777 §8.88 — τρίτη, **μετά** τα μέσα: η επαναπροβολή τους έχει ήδη ξαναδέσει την παρουσία περιήγησης όπου
+  //    έτρεξε, άρα εδώ μένει μόνο ό,τι δεν άγγιξε κανείς. `healed > 0` = γραφέας περιήγησης που ξέφυγε.
+  const tours = await reconcileListingTours(adminDb);
 
   return {
     summary:
       `listed ${report.listed}/${report.scanned}: agreed ${report.agreed}, drifted ${report.drifted}, `
       + `unstamped ${report.unstamped}, missing ${report.missing}, republished ${report.republished}, `
-      + `failed ${report.failed} · cache healed ${cache.healed}/${cache.scanned}`,
-    metrics: { ...report, cacheScanned: cache.scanned, cacheHealed: cache.healed },
+      + `failed ${report.failed} · cache healed ${cache.healed}/${cache.scanned}`
+      + ` · tours healed ${tours.healed}/${tours.scanned}, failed ${tours.failed}`,
+    metrics: {
+      ...report,
+      cacheScanned: cache.scanned,
+      cacheHealed: cache.healed,
+      toursScanned: tours.scanned,
+      toursHealed: tours.healed,
+      toursFailed: tours.failed,
+    },
   };
 }

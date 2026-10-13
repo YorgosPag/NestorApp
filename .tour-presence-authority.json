@@ -1,0 +1,26 @@
+{
+  "$doc": "ADR-884 · ADR-777 §8.88 · CHECK 3.104 — Η ΜΙΑ ΠΗΓΗ για το «ποιος γράφει περιήγηση/λήψη, και ποιος οφείλει να ζητήσει επαναπροβολή της αγγελίας». Το `PublicListing.tour` είναι ΑΝΤΙΓΡΑΦΟ της απάντησης του `readTourPresence`· μένει φρέσκο μόνο αν κάθε γραφέας που αλλάζει την απάντηση (ορατότητα · κύκλος ζωής · κόμβος λήψης · κατάσταση tileset) καλέσει τον ΕΝΑ δρόμο μετά το commit του. Γραφέας που το ξεχνά αφήνει την κάρτα αναζήτησης να διαφημίζει περιήγηση που δεν φαίνεται πια — ή να σιωπά για μία που μόλις δημοσιεύτηκε. Τη διαβάζουν η πύλη (`scripts/check-tour-presence-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
+  "refresher": "src/services/listings/listing-tour-refresh.ts",
+  "refreshFunctions": ["refreshListingAfterTourChange", "refreshListingOfTour"],
+  "binder": "src/services/listings/listing-publication-facts.ts",
+  "binderFunctions": ["listedTourFromPresence", "listedTourOf"],
+  "presenceWriters": {
+    "src/server/spatial-tour/tour-settings.ts": {
+      "min": 1,
+      "why": "ορατότητα + κύκλος ζωής — είναι η ίδια η απάντηση του κριτή"
+    },
+    "src/server/spatial-tour/tour-graph-write.ts": {
+      "min": 2,
+      "why": "τοποθέτηση/αφαίρεση λήψης + θόλωμα (writeTourGraph) · αυτόματο θόλωμα (recordFaceScan)"
+    },
+    "src/server/spatial-tour/tour-tileset-state.ts": {
+      "min": 1,
+      "why": "pending → ready | failed — εδώ γεννιέται (ή χάνεται) η στάση θεατή"
+    }
+  },
+  "exemptWriters": {
+    "src/server/spatial-tour/tour-genesis.ts": "Γεννά την περιήγηση πάντα ως `draft`: ο κριτής απαντά «καμία» πριν και μετά, άρα η αγγελία δεν έχει τι να ξαναδιαβάσει.",
+    "src/server/spatial-tour/tour-capture-finalize.ts": "Γεννά λήψη χωρίς κόμβο και με tileset `pending`: δεν είναι στάση θεατή μέχρι να τοποθετηθεί και να ψηθεί — και οι δύο πράξεις περνούν από δηλωμένο γραφέα.",
+    "src/server/spatial-tour/tour-media-migration.ts": "Γράφει μόνο `mediaPlacement` (σε ποιον κάδο ζουν τα πλακίδια): δεν είναι είσοδος του κριτή παρουσίας, η απάντηση μένει ίδια."
+  }
+}

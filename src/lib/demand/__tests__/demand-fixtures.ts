@@ -78,6 +78,13 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     exchange: null,
     coverImage: null,
     gallery: [],
+    // ADR-777 §8.88 — τα κουτιά μέσων έλειπαν από εδώ (το fixture είχε μείνει πίσω από το σχήμα): η κάρτα ρωτά πλέον
+    // `models`/`tour` για το σήμα χωρικών μέσων, και ένα `undefined` θα έσκαγε σε κάθε σουίτα που ζωγραφίζει κάρτα.
+    floorplans: [],
+    models: [],
+    videos: [],
+    floorPlates: [],
+    tour: null,
     type: 'apartment',
     areaSqm: 100,
     offerKinds: ['sell'],

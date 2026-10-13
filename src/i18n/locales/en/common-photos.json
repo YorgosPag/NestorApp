@@ -11,6 +11,11 @@
   "photos": {
     "none": "No photo",
     "locationMapAlt": "Location on the map: {title}",
+    "spatial": {
+      "tour": "3D tour",
+      "model": "3D model",
+      "tourAndModel": "3D tour · model"
+    },
     "addPhoto": "Add Photo",
     "galleryLabel": "Photo gallery",
     "uploadPlaceholder": "Drag and drop photos or click to select",

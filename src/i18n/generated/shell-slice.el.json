@@ -2777,7 +2777,12 @@
     "photos": {
       "galleryLabel": "Γκαλερί φωτογραφιών",
       "locationMapAlt": "Θέση στον χάρτη: {title}",
-      "none": "Χωρίς φωτογραφία"
+      "none": "Χωρίς φωτογραφία",
+      "spatial": {
+        "model": "3D μοντέλο",
+        "tour": "3D περιήγηση",
+        "tourAndModel": "3D περιήγηση · μοντέλο"
+      }
     }
   },
   "common-shared": {

@@ -15,6 +15,7 @@ import 'server-only';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
+import { refreshListingOfTour } from '@/services/listings/listing-tour-refresh';
 import type { TourCaptureTileset } from '@/types/spatial-tour';
 
 type TilesetTransition =
@@ -40,7 +41,7 @@ export async function transitionTileset(
   bakedHash: string,
   transition: TilesetTransition,
 ): Promise<TilesetTransitionOutcome> {
-  return db.runTransaction(async (tx) => {
+  const outcome = await db.runTransaction<TilesetTransitionOutcome>(async (tx) => {
     const snap = await tx.get(captureRef);
     const capture = snap.exists ? tourCaptureFromDocument(snap.data(), captureRef.id) : null;
     if (capture === null) return 'missing';
@@ -49,4 +50,9 @@ export async function transitionTileset(
     tx.update(captureRef, { tileset: nextTileset(capture.tileset, bakedHash, transition) });
     return 'written';
   });
+  // 🧭 ADR-777 §8.88 — το `ready` είναι η στιγμή που **γεννιέται** η πρώτη στάση θεατή, άρα και το σήμα της αγγελίας.
+  //    Μετά το commit· ο ψήστης δεν κρατά ρίζα, οπότε τη λέει η ίδια η περιήγηση (γονέας της λήψης).
+  const tourRef = captureRef.parent.parent;
+  if (outcome === 'written' && tourRef !== null) await refreshListingOfTour(db, tourRef);
+  return outcome;
 }

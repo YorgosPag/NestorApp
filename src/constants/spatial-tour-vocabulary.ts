@@ -25,6 +25,12 @@ const includes = <T extends string>(values: readonly T[], value: unknown): value
  */
 export const SPATIAL_TOUR_VISIBILITIES = ['public', 'on-request', 'link-only'] as const;
 export type SpatialTourVisibility = (typeof SPATIAL_TOUR_VISIBILITIES)[number];
+/**
+ * Οι ορατότητες με τις οποίες μια περιήγηση **φαίνεται στην αγγελία** — όλες εκτός `link-only` (αόρατη εξ ορισμού, Δ3).
+ * Τιμές και όχι μόνο τύπος: τις κρίνει και το σύνορο ανάγνωσης της δημόσιας αγγελίας (`public-listing-schema`).
+ */
+export const LISTED_TOUR_VISIBILITIES = ['public', 'on-request'] as const satisfies readonly SpatialTourVisibility[];
+export type ListedTourVisibility = (typeof LISTED_TOUR_VISIBILITIES)[number];
 // Η προεπιλογή «Όλοι» (§12 Δ3) ζει στη ΔΗΜΙΟΥΡΓΙΑ (Κ2), ποτέ στην ανάγνωση: απούσα ορατότητα σε αποθηκευμένο
 // έγγραφο είναι βλάβη, όχι «δημόσια» — βλ. `spatial-tour-from-document`.
 

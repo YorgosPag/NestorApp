@@ -74,6 +74,7 @@ import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import type { FloorKind } from '@/utils/floor-naming';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
+import type { ListedTourVisibility } from '@/constants/spatial-tour-vocabulary';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
 import type { PriceReduction } from '@/types/price-history';
@@ -334,6 +335,16 @@ export interface PublishedModelFile {
  * **`declared`**. Πεδίο που προστίθεται *«όταν χρειαστεί»* είναι η παγίδα της **Α15**.
  */
 export type ListingModel = SourcedAttribute<PublishedModelFile>;
+
+/**
+ * **Η περιήγηση 360° όπως τη βλέπει ο κόσμος** (ADR-884 Κ3β) — το δημόσιο μισό του `TourPresence`.
+ *
+ * 🔑 Μόνο η **ορατότητα**: `public` (ανοίγει αμέσως) ή `on-request` (ζητείται πρόσβαση). Το `link-only` δεν φτάνει
+ * ποτέ εδώ — είναι αόρατο στην αγγελία εξ ορισμού (§12 Δ3), άρα αποκλείεται **στον τύπο**.
+ */
+export interface ListingTourPresence {
+  readonly visibility: ListedTourVisibility;
+}
 
 /**
  * 🎬 **ΕΝΑ ΔΗΜΟΣΙΕΥΜΕΝΟ ΒΙΝΤΕΟ** (ADR-907 §10) — MP4/H.264, ένα αρχείο, content-addressed.
@@ -665,6 +676,22 @@ export interface PublicListing {
    * Κενός πίνακας = δεν δημοσιεύτηκε. Πίνακας για τον λόγο των `videos`: το «πόσες» (σήμερα μία) είναι πολιτική.
    */
   readonly floorPlates: readonly ListingFloorPlate[];
+
+  /**
+   * 🧭 **Η περιήγηση 360° που ΦΑΙΝΕΤΑΙ στην αγγελία** (ADR-884 · ADR-777 §8.88) — ή `null` όταν καμία.
+   *
+   * 🔑 **Αντίγραφο ΜΙΑΣ απάντησης, όχι δεύτερος κριτής**: η αυθεντία είναι το `readTourPresence`
+   * (`server/spatial-tour/tour-presence`), και το δένει ο **γραφέας** (`withPublicationFacts`) — η καθαρή προβολή
+   * γράφει `null`. Υπάρχει εδώ για **έναν** λόγο: η κάρτα αποτελεσμάτων δεν μπορεί να ρωτά το endpoint παρουσίας
+   * ανά αγγελία (N+1), και ένα φίλτρο δεν θα το έβλεπε ποτέ.
+   *
+   * ✅ **Ασφαλές ως αποκάλυψη**: ακριβώς ό,τι ήδη απαντά το **ανώνυμο** endpoint παρουσίας. Περιήγηση `link-only`,
+   * πρόχειρη ή χωρίς έτοιμη στάση απαντά `null` — όπως εκεί.
+   *
+   * ⚠️ **Μένει φρέσκο από ΕΝΑΝ δρόμο**: `refreshListingAfterTourChange` (`services/listings/listing-tour-refresh`),
+   * που τον καλεί κάθε γραφέας που αλλάζει την απάντηση· το φυλά η πύλη της παρουσίας περιήγησης.
+   */
+  readonly tour: ListingTourPresence | null;
 
   // ── 3. ΕΙΔΟΣ + ΕΜΒΑΔΟΝ ────────────────────────────────────────────────────
   /**
