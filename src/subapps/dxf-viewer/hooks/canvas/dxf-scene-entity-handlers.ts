@@ -79,10 +79,9 @@ import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { EntityType } from '../../types/base-entity';
 // ADR-557 — TEXT/MTEXT → DxfText projection lives in the sibling converter (SRP).
 import { convertTextEntity } from './dxf-text-entity-converter';
-import { dwarn } from '../../debug';
 import type { SceneEntity, DxfBaseFields } from './dxf-scene-entity-converter';
 // N.7.1 — pure geometry projections shared by the handler arms (extracted at the 500-line limit).
-import { rectangleToVertices, toPolylineUnion } from './dxf-scene-entity-projections';
+import { toPolylineUnion } from './dxf-scene-entity-projections';
 
 /**
  * Per-type SceneModel→`DxfEntityUnion` projection. `entity` is the scene entity,
@@ -145,19 +144,7 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     };
     return toPolylineUnion(base, e.vertices, e.closed ?? false, e);
   },
-  rectangle: (entity, base) => {
-    const e = entity as typeof entity & {
-      corner1?: Point2D; corner2?: Point2D;
-      x?: number; y?: number; width?: number; height?: number;
-      rotation?: number;
-    };
-    const verts = rectangleToVertices(e);
-    if (!verts) {
-      dwarn('useDxfSceneConversion', 'Rectangle entity missing geometry:', entity.id);
-      return null;
-    }
-    return { ...base, type: 'polyline' as const, vertices: verts, closed: true } as DxfEntityUnion;
-  },
+  // ADR-909 Γ2.9 — `rectangle` (+ το ψευδώνυμο `rect`) και ellipse / spline / point ζουν στα flat handlers.
   stair: (entity, base) => {
     // ADR-358 Phase 5b — wrap StairEntity into DxfStair (no expansion). The
     // StairRenderer renders directly from `stairEntity.geometry`, and grip

@@ -15,6 +15,7 @@
 import type { EntityModel } from '../types/Types';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { createBoundingBox, type BoundingBox } from './Bounds';
+import { degToRad } from '../entities/shared/geometry-angle-utils';
 // ADR-557 (multi-line) — the attachment/rotation/multi-line-aware text-box AABB SSoT (em box),
 // the generous superset the spatial-index broad phase uses so it always encloses every line.
 import { textBoxAABB } from '../../bim/text/text-box';
@@ -212,19 +213,26 @@ export function calculateRectangleBounds(entity: EntityModel, tolerance: number)
   return calculatePolylineBounds(entity, tolerance);
 }
 
-/** 🔺 ELLIPSE BOUNDS — simplified: το bounding rectangle. */
+/**
+ * 🔺 ELLIPSE BOUNDS — το ακριβές AABB στραμμένης έλλειψης (ημιάξονες `majorAxis` / `minorAxis`, `rotation` σε μοίρες).
+ *
+ * 🔴 ADR-909 Γ2.9 — διάβαζε `radiusX` / `radiusY`, πεδία που το `EllipseEntity` **δεν είχε ποτέ** ⇒ `NaN` κουτί ⇒
+ * η έλλειψη έμενε εκτός χωρικού ευρετηρίου (γνωστό και σημειωμένο στο `types/entity-bounds.ts`). Δεν φαινόταν, γιατί
+ * η έλλειψη δεν έφτανε καν στον καμβά. Ελλειπτικό τόξο ⇒ συντηρητικά το κουτί της **πλήρους** έλλειψης.
+ */
 export function calculateEllipseBounds(entity: EntityModel, tolerance: number): BoundingBox {
-  // 🏢 ENTERPRISE: Type-safe casting for EllipseEntity properties
-  const ellipseEntity = entity as EntityWithEllipse;
-  const center = ellipseEntity.center;
-  const radiusX = ellipseEntity.radiusX + tolerance;
-  const radiusY = ellipseEntity.radiusY + tolerance;
+  const { center, majorAxis, minorAxis, rotation } = entity as EntityWithEllipse;
+  const angle = degToRad(rotation ?? 0);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const halfWidth = Math.hypot(majorAxis * cos, minorAxis * sin) + tolerance;
+  const halfHeight = Math.hypot(majorAxis * sin, minorAxis * cos) + tolerance;
 
   return createBoundingBox(
-    center.x - radiusX,
-    center.y - radiusY,
-    center.x + radiusX,
-    center.y + radiusY,
+    center.x - halfWidth,
+    center.y - halfHeight,
+    center.x + halfWidth,
+    center.y + halfHeight,
   );
 }
 

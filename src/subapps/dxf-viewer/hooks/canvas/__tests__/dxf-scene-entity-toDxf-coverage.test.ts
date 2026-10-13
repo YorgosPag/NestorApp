@@ -7,9 +7,9 @@
  *  1. Golden — ποιοι renderable types ΕΧΟΥΝ ρητό SceneModel→DxfEntityUnion handler.
  *  2. No-case set — ποιοι renderable types πέφτουν στο `warn+null` default (per-site,
  *     ADR-587 §4.6). ΔΥΟ διακριτοί λόγοι, καρφωμένοι ρητά:
- *       • `ellipse`/`spline`/`point`/`rect` = **δεν** είναι `DxfEntityUnion` variants → δεν
- *         ρέουν από αυτό το seam (αποδίδονται από το raw-DXF `EntityRendererComposite`
- *         path). Νόμιμη απουσία — ανάλογο του rotate no-op set.
+ *       • 🔴 ADR-909 Γ2.9: τα `ellipse`/`spline`/`point`/`rect` ήταν καρφωμένα εδώ ως «νόμιμη απουσία
+ *         (raw-DXF path)». Ο δρόμος αυτός **δεν υπάρχει** προς τον κύριο καμβά — ήταν αόρατα παντού.
+ *         Έχουν πλέον handler (golden #1).
  *       • `wall-covering` = **surfaced asymmetry** — έχει `DxfWallCovering` variant + renderer
  *         + preview helper αλλά ΚΑΝΕΝΑ `convertEntity` case (mirror του `floorplan-symbol`
  *         gap του Φ2b). Pin εδώ, fix = χωριστό verified βήμα (ADR-550/470 follow-up).
@@ -40,6 +40,11 @@ import {
   RENDERABLE_ENTITY_TYPES,
 } from '../../../rendering/contract/renderable-entity-type';
 import type { Point2D } from '../../../rendering/types/Types';
+import {
+  PRIMITIVE_RENDER_FIELDS,
+  PRIMITIVE_REQUIRED_FIELDS,
+  type PrimitiveRenderType,
+} from '../../../bim/primitives/primitive-render-fields';
 
 const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 
@@ -56,6 +61,9 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
         'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'text', 'mtext', 'rectangle',
         'dimension', 'angle-measurement', 'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
         'opening-info-tag', 'image', 'floorplan-symbol',
+        // ADR-909 Γ2.9 — τα τέσσερα που δεν έφταναν ποτέ στον καμβά: `rect` = ίδια συνάρτηση με το
+        // `rectangle`· ellipse / spline / point → δικό τους σχήμα (`DxfEllipse` / `DxfSpline` / `DxfPoint`).
+        'rect', 'ellipse', 'spline', 'point',
         // ADR-739 Φ.Γ — γενικός πίνακας: ρητός handler (αλλιώς `default` → null → αόρατος).
         'table',
         // ADR-635 Φ B — leader: flat handler (`dxf-scene-entity-flat-handlers`) → DxfLeader.
@@ -82,8 +90,9 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
     const noToDxf = RENDERABLE_ENTITY_TYPES.filter((t) => !supportedSet.has(t));
     expect(asSorted(noToDxf)).toEqual(
       asSorted([
-        // δεν είναι DxfEntityUnion variants → off this seam (raw-DXF render path)
-        'ellipse', 'spline', 'point', 'rect',
+        // 🔴 ADR-909 Γ2.9 — εδώ ήταν καρφωμένα και τα `ellipse` / `spline` / `point` / `rect` ως «νόμιμη
+        // απουσία, raw-DXF render path». Τέτοιος δρόμος προς τον κύριο καμβά ΔΕΝ υπάρχει: και οι τέσσερις
+        // ήταν αόρατοι παντού (πύλη pixels 3.101, `K0`). Πλέον έχουν handler — βλ. το golden παραπάνω.
         // surfaced asymmetry — variant+renderer υπάρχουν, case λείπει (ADR-550/470 follow-up)
         'wall-covering',
       ]),
@@ -99,8 +108,69 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
   });
 
   it('τύπος χωρίς handler → convertEntity επιστρέφει null (warn+null default, per-site)', () => {
-    const point = { type: 'point', id: 'p1' } as unknown as SceneEntity;
-    expect(convertEntity(point, NO_LAYERS)).toBeNull();
+    // Ως το ADR-909 Γ2.9 το δείγμα εδώ ήταν `point` — που τότε δεν είχε handler. Το `wall-covering` είναι ο
+    // μόνος renderable τύπος που μένει χωρίς (καρφωμένη ασυμμετρία, παραπάνω).
+    const orphan = { type: 'wall-covering', id: 'wc1' } as unknown as SceneEntity;
+    expect(convertEntity(orphan, NO_LAYERS)).toBeNull();
+  });
+
+  describe('ADR-909 Γ2.9 — τα τέσσερα που δεν έφταναν στον καμβά', () => {
+    const SCENE: Readonly<Record<string, Record<string, unknown>>> = {
+      ellipse: { center: { x: 5, y: 6 }, majorAxis: 14, minorAxis: 8, rotation: 30, startParam: 0.5, endParam: 2 },
+      spline: {
+        controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 3 }, { x: 4, y: 3 }, { x: 5, y: 0 }],
+        degree: 3, knots: [0, 0, 0, 0, 1, 1, 1, 1], weights: [1, 2, 2, 1], closed: true, rational: true,
+      },
+      point: { position: { x: 7, y: 9 }, size: 4, style: 'cross', pdMode: 34, pdSize: -2 },
+    };
+    const convert = (type: string, fields: Record<string, unknown>) =>
+      convertEntity({ type, id: `${type}-1`, ...fields } as unknown as SceneEntity, NO_LAYERS) as
+        | (Record<string, unknown> & { type: string })
+        | null;
+
+    it.each(Object.keys(SCENE))('"%s" → δικό του σχήμα, με ΚΑΘΕ πεδίο όψης αυτούσιο', (type) => {
+      const result = convert(type, SCENE[type]);
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(type);
+      expect(result).toMatchObject(SCENE[type]);
+    });
+
+    it.each(Object.keys(SCENE))('"%s" → απόν optional ΔΕΝ γίνεται κλειδί με undefined', (type) => {
+      const required = PRIMITIVE_REQUIRED_FIELDS[type as PrimitiveRenderType] as readonly string[];
+      const onlyRequired = Object.fromEntries(required.map((field) => [field, SCENE[type][field]]));
+      const result = convert(type, onlyRequired);
+      const optional = (PRIMITIVE_RENDER_FIELDS[type as PrimitiveRenderType] as readonly string[])
+        .filter((field) => !required.includes(field));
+      expect(optional.length).toBeGreaterThan(0);
+      for (const field of optional) expect(result).not.toHaveProperty(field);
+    });
+
+    // Γραμμένα ΜΕ ΤΟ ΧΕΡΙ, όχι από το `PRIMITIVE_REQUIRED_FIELDS`: test που παράγει τις περιπτώσεις του από τη
+    // λίστα που κρίνει, μένει πράσινο όταν η λίστα χάσει ένα πεδίο.
+    it.each([
+      ['ellipse', 'center'], ['ellipse', 'majorAxis'], ['ellipse', 'minorAxis'],
+      ['spline', 'controlPoints'],
+      ['point', 'position'],
+    ])('"%s" χωρίς `%s` → null: ποτέ μισό σχήμα στον ζωγράφο', (type, field) => {
+      const { [field]: _dropped, ...rest } = SCENE[type];
+      expect(convert(type, rest)).toBeNull();
+    });
+
+    it('🔴 `rect` → ΤΟ ΙΔΙΟ κλειστό polyline με το `rectangle` (ψευδώνυμο, όχι δεύτερος δρόμος)', () => {
+      const box = { x: 10, y: 20, width: 30, height: 40, rotation: 15 };
+      const rect = convert('rect', box);
+      const rectangle = convert('rectangle', box);
+      expect(rect).not.toBeNull();
+      expect(rect?.type).toBe('polyline');
+      expect(rect?.closed).toBe(true);
+      expect((rect?.vertices as Point2D[]).length).toBe(4);
+      expect(rect?.vertices).toEqual(rectangle?.vertices);
+    });
+
+    it('`rect` χωρίς γεωμετρία → null (ίδιο συμβόλαιο με το `rectangle`)', () => {
+      expect(convert('rect', {})).toBeNull();
+      expect(convert('rectangle', {})).toBeNull();
+    });
   });
 
   it('line handler → non-null με σωστό shape (start/end προωθούνται)', () => {

@@ -57,12 +57,11 @@ describe('hit-test entity-model coverage — ζωντανό seam ↔ DxfEntityUn
     const noHandler = RENDERABLE_ENTITY_TYPES.filter((t) => !supportedSet.has(t));
     expect(asSorted(noHandler)).toEqual(
       asSorted([
-        // Δεν είναι `DxfEntityUnion` variants — αποδίδονται από το raw-DXF render path και
-        // δεν φτάνουν ΠΟΤΕ σε αυτόν τον converter (ίδιο off-path set με το toDxf seam).
-        'ellipse', 'spline', 'point', 'rect',
-        // Κανονικοποιούνται upstream στο `convertEntity` (lwpolyline→polyline, rectangle→
+        // 🔴 ADR-909 Γ2.9 — τα `ellipse` / `spline` / `point` ήταν εδώ ως «raw-DXF render path»· τέτοιος
+        // δρόμος δεν υπάρχει. Έχουν πλέον variant + handler, και περνούν από το cross-seam pin παρακάτω.
+        // Κανονικοποιούνται upstream στο `convertEntity` (lwpolyline→polyline, rectangle/rect→
         // polyline, mtext→text) → δεν φτάνουν ΠΟΤΕ ως variant αυτού του ονόματος.
-        'lwpolyline', 'rectangle', 'mtext',
+        'lwpolyline', 'rectangle', 'rect', 'mtext',
       ]),
     );
   });

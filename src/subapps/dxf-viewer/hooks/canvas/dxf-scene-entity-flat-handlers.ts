@@ -26,8 +26,51 @@ import { isTopoSurfaceEntity } from '../../types/topo-surface';
 // ADR-635 Φάση B — leader callout annotation entity for DXF render pipeline.
 import type { LeaderEntity } from '../../types/entities';
 import { isLeaderEntity } from '../../types/entities';
+// ADR-909 Γ2.9 — ellipse / spline / point: ΜΙΑ λίστα πεδίων για τις τρεις προβολές.
+import {
+  missingPrimitiveField,
+  pickPrimitiveRenderFields,
+  type PrimitiveRenderType,
+} from '../../bim/primitives/primitive-render-fields';
+import { dwarn } from '../../debug';
+import { rectangleToVertices } from './dxf-scene-entity-projections';
+
+/**
+ * ADR-909 Γ2.9 — `rectangle` **και** το ψευδώνυμό του `rect` → κλειστό polyline. ΜΙΑ συνάρτηση για τα δύο
+ * κλειδιά: ο `rect` είχε ζωγράφο-ψευδώνυμο (`RectangleRenderer`) αλλά καμία γραμμή εδώ ⇒ `null` ⇒ αόρατος.
+ * Το σώμα είναι αυτούσιο το πρώην `rectangle` arm του `dxf-scene-entity-handlers` (σέβεται `rotation`, ADR-620).
+ */
+const rectangleArm: ToDxfHandler = (entity, base) => {
+  const verts = rectangleToVertices(entity as typeof entity & Parameters<typeof rectangleToVertices>[0]);
+  if (!verts) {
+    dwarn('useDxfSceneConversion', 'Rectangle entity missing geometry:', entity.id);
+    return null;
+  }
+  return { ...base, type: 'polyline' as const, vertices: verts, closed: true } as DxfEntityUnion;
+};
+
+/**
+ * ADR-909 Γ2.9 — ellipse / spline / point: επίπεδα πεδία στο top level, από το SSoT της λίστας. Στοιχείο
+ * χωρίς τη γεωμετρία του απορρίπτεται (`null` + προειδοποίηση) — ποτέ μισό σχήμα στον ζωγράφο.
+ */
+function primitiveArm<T extends PrimitiveRenderType>(type: T): ToDxfHandler {
+  return (entity, base) => {
+    const fields = pickPrimitiveRenderFields(type, entity);
+    const missing = missingPrimitiveField(type, fields);
+    if (missing !== undefined) {
+      dwarn('useDxfSceneConversion', `${type} entity missing geometry (${missing}):`, entity.id);
+      return null;
+    }
+    return { ...base, type, ...fields } as unknown as DxfEntityUnion;
+  };
+}
 
 export const FLAT_NONBIM_TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
+  rectangle: rectangleArm,
+  rect: rectangleArm,
+  ellipse: primitiveArm('ellipse'),
+  spline: primitiveArm('spline'),
+  point: primitiveArm('point'),
   image: (entity, base) => {
     // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).
     // Flat params spread at top level; ImageRenderer reads them + the shared HatchImageCache.

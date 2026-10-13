@@ -88,7 +88,7 @@ const GEOMETRY_BY_TYPE: Readonly<Record<string, Record<string, unknown>>> = {
   lwpolyline: { vertices: SQUARE, closed: true },
   rectangle: { vertices: SQUARE },
   rect: { vertices: SQUARE },
-  ellipse: { center: { x: 50, y: 25 }, radiusX: 50, radiusY: 25 },
+  ellipse: { center: { x: 50, y: 25 }, majorAxis: 50, minorAxis: 25 },
   spline: { controlPoints: SQUARE },
   point: { position: { x: 50, y: 25 } },
   text: { position: { x: 0, y: 0 }, text: 'ΑΒΓ', height: 2.5, rotation: 0 },

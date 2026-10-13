@@ -1,9 +1,4 @@
 {
   "adr": "ADR-909 (CHECK 3.101)",
-  "violations": [
-    "K0:ellipse",
-    "K0:point",
-    "K0:rect",
-    "K0:spline"
-  ]
+  "violations": []
 }

@@ -9,17 +9,48 @@
  */
 
 import { calculateEntityBounds } from '../selection-duplicate-utils';
+import { BoundsCalculator } from '../../../../rendering/hitTesting/Bounds';
 import type { AnySceneEntity } from '../../../../types/scene';
 
 const as = (e: unknown) => e as unknown as AnySceneEntity;
 
 describe('ADR-394 — calculateEntityBounds covers non-enumerated DXF types', () => {
-  it('ellipse → center ± radii (was null before delegation)', () => {
-    const ellipse = as({ id: 'e1', type: 'ellipse', center: { x: 100, y: 50 }, radiusX: 40, radiusY: 20 });
+  it('ellipse → center ± ημιάξονες, με τα ΠΡΑΓΜΑΤΙΚΑ πεδία του EllipseEntity (ADR-909 Γ2.9)', () => {
+    // Το δείγμα είχε `radiusX` / `radiusY` — πεδία που κανένα στοιχείο σκηνής δεν κουβαλά· το test ήταν
+    // πράσινο πάνω σε σχήμα που δεν υπάρχει, και η πραγματική έλλειψη έβγαζε NaN.
+    const ellipse = as({ id: 'e1', type: 'ellipse', center: { x: 100, y: 50 }, majorAxis: 40, minorAxis: 20 });
     expect(calculateEntityBounds(ellipse)).toEqual({
       min: { x: 60, y: 30 },
       max: { x: 140, y: 70 },
     });
+  });
+
+  it('🔴 στραμμένη έλλειψη → το κουτί ΑΚΟΛΟΥΘΕΙ τη στροφή (90° ⇒ οι ημιάξονες αλλάζουν θέση)', () => {
+    const upright = as({
+      id: 'e2', type: 'ellipse', center: { x: 100, y: 50 }, majorAxis: 40, minorAxis: 20, rotation: 90,
+    });
+    const box = calculateEntityBounds(upright);
+    expect(box?.min.x).toBeCloseTo(80, 9);
+    expect(box?.max.x).toBeCloseTo(120, 9);
+    expect(box?.min.y).toBeCloseTo(10, 9);
+    expect(box?.max.y).toBeCloseTo(90, 9);
+  });
+
+  it('έλλειψη με ανοχή επιλογής → το κουτί μεγαλώνει κατά την ανοχή ΚΑΙ στους δύο άξονες', () => {
+    const model = { id: 'e4', type: 'ellipse', center: { x: 100, y: 50 }, majorAxis: 40, minorAxis: 20 };
+    const box = BoundsCalculator.calculateEntityBounds(model as never, 5);
+    expect(box).toMatchObject({ minX: 55, maxX: 145, minY: 25, maxY: 75 });
+  });
+
+  it('έλλειψη στις 45° → ίδιο μισό πλάτος και ύψος: √((a² + b²) / 2)', () => {
+    const tilted = as({
+      id: 'e3', type: 'ellipse', center: { x: 0, y: 0 }, majorAxis: 40, minorAxis: 20, rotation: 45,
+    });
+    const half = Math.sqrt((40 * 40 + 20 * 20) / 2);
+    const box = calculateEntityBounds(tilted);
+    expect(box?.max.x).toBeCloseTo(half, 9);
+    expect(box?.max.y).toBeCloseTo(half, 9);
+    expect(box?.min.x).toBeCloseTo(-half, 9);
   });
 
   it('point → ±1 minimum selection box', () => {

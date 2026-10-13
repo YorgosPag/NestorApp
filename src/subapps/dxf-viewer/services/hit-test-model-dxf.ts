@@ -17,6 +17,7 @@ import type { EntityModel } from '../rendering/types/Types';
 import type { DxfDimension, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { HitTestModelHandler } from './hit-test-model-types';
 import { pickTableRenderFields } from '../bim/table/table-render-fields';
+import { PRIMITIVE_RENDER_FIELDS } from '../bim/primitives/primitive-render-fields';
 import { pickTextRenderFields } from '../bim/text/text-render-fields';
 import type { TableEntity } from '../types/table-entity';
 
@@ -138,4 +139,10 @@ export const HIT_TEST_MODEL_DXF_HANDLERS = {
   // το point-to-segment narrow test (open path, όπως το polyline). Χωρίς αυτό ο leader βγαίνει
   // σιωπηλά εκτός spatial index (μηδέν hover/κλικ) — ο ίδιος Φ10 μηχανισμός με τα υπόλοιπα.
   leader: flatFields('leader', ['vertices', 'arrowHead', 'annotationText', 'annotationPosition', 'hookLineLength', 'hasHookLine']),
+  // ADR-909 Γ2.9 — ellipse / spline / point: τα πεδία ΔΕΝ απαριθμούνται εδώ· είναι η ίδια λίστα που ζητούν ο
+  // μετατροπέας σκηνής και το μοντέλο του ζωγράφου. Τα `center`+άξονες / `controlPoints` / `position`
+  // τροφοδοτούν το AABB (`Bounds.ts`) — χωρίς αυτά το στοιχείο θα ζωγραφιζόταν αλλά δεν θα πιανόταν.
+  ellipse: flatFields('ellipse', PRIMITIVE_RENDER_FIELDS.ellipse),
+  spline: flatFields('spline', PRIMITIVE_RENDER_FIELDS.spline),
+  point: flatFields('point', PRIMITIVE_RENDER_FIELDS.point),
 } as const satisfies Record<string, HitTestModelHandler>;

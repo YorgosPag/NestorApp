@@ -58,6 +58,8 @@ import type { ImageEntity } from '../../types/image';
 import type { TopoSurfaceEntity } from '../../types/topo-surface';
 // ADR-635 Φάση B — leader callout annotation entity for DXF render pipeline.
 import type { LeaderEntity } from '../../types/entities';
+// ADR-909 Γ2.9 — ellipse / spline / point: τα πεδία τους είναι Pick πάνω στο SSoT της λίστας.
+import type { PrimitiveRenderFieldsOf } from '../../bim/primitives/primitive-render-fields';
 // ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-408 Εύρος Β — heating radiator direct entity for DXF render pipeline.
@@ -72,7 +74,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'scale-bar' | 'opening-info-tag' | 'table' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch' | 'image';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'scale-bar' | 'opening-info-tag' | 'table' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch' | 'image' | 'ellipse' | 'spline' | 'point';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -774,7 +776,25 @@ export interface DxfLeader extends DxfEntity {
   hasHookLine?: LeaderEntity['hasHookLine'];
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfTable | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh | DxfGenericSolid;
+/**
+ * ADR-909 Γ2.9 — τα τρία σκέτα πρωτογενή που **δεν είχαν σχήμα εδώ**, άρα ούτε δρόμο προς τον καμβά (ο
+ * `convertEntity` τα γύριζε `null`: αόρατα στον σχεδιαστή **και** στη δημόσια κάτοψη — `K0` της πύλης pixels).
+ * Επίπεδα πεδία στο top level, όπως image / leader. Τα πεδία **δεν απαριθμούνται εδώ**: είναι `Pick` πάνω στο
+ * `PRIMITIVE_RENDER_FIELDS`, ώστε τύπος και προβολές να μην αποκλίνουν ποτέ.
+ */
+export interface DxfEllipse extends DxfEntity, PrimitiveRenderFieldsOf<'ellipse'> {
+  type: 'ellipse';
+}
+
+export interface DxfSpline extends DxfEntity, PrimitiveRenderFieldsOf<'spline'> {
+  type: 'spline';
+}
+
+export interface DxfPoint extends DxfEntity, PrimitiveRenderFieldsOf<'point'> {
+  type: 'point';
+}
+
+export type DxfEntityUnion = DxfEllipse | DxfSpline | DxfPoint | DxfLine |DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfTable | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh | DxfGenericSolid;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

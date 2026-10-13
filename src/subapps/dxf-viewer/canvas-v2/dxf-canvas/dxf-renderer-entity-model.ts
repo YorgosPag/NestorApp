@@ -8,6 +8,8 @@ import { pickHatchRenderFields } from '../../bim/hatch/hatch-render-fields';
 import { pickImageRenderFields } from '../../bim/image/image-render-fields';
 // ADR-833 §0.1 — ο τέταρτος αδελφός: TABLE_RENDER_FIELDS (βλ. bim/table/table-render-fields.ts).
 import { pickTableRenderFields } from '../../bim/table/table-render-fields';
+// ADR-909 Γ2.9 — ο πέμπτος αδελφός: ellipse / spline / point (βλ. bim/primitives/primitive-render-fields.ts).
+import { pickPrimitiveRenderFields } from '../../bim/primitives/primitive-render-fields';
 // ADR-642 Φ2-B — complex linetype (embedded text) def carried onto the EntityModel so the
 // per-entity render seam (`strokeStyledEntityPolyline`) can draw `──GAS──` along the geometry.
 import type { ComplexLinetypeDef } from '../../config/complex-linetype-types';
@@ -252,6 +254,12 @@ export function buildEntityModelFromDxf(
         annotationText: entity.annotationText, annotationPosition: entity.annotationPosition,
         hookLineLength: entity.hookLineLength, hasHookLine: entity.hasHookLine,
       } as unknown as Entity;
+    case 'ellipse':
+    case 'spline':
+    case 'point':
+      // ADR-909 Γ2.9 — επίπεδα πεδία από το ΙΔΙΟ SSoT με τον μετατροπέα σκηνής και το hit-test· οι
+      // EllipseRenderer / SplineRenderer / PointRenderer τα διαβάζουν στο top level.
+      return { ...base, type: entity.type, ...pickPrimitiveRenderFields(entity.type, entity) } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':
@@ -302,6 +310,8 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'imported-mesh',
   // ADR-684 Φ2 — παραμετρικό γεωμετρικό στερεό.
   'generic-solid',
+  // ADR-909 Γ2.9 — τα σκέτα πρωτογενή που δεν είχαν σχήμα (αόρατα παντού ως τότε).
+  'ellipse', 'spline', 'point',
 ] as const;
 
 // Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).

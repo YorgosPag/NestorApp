@@ -45,13 +45,14 @@
     "src/subapps/dxf-viewer/export/formats/__tests__/table-typography-specimen.test.ts": "062173f4a5e257b5",
     "src/subapps/dxf-viewer/hooks/__tests__/grip-computation-text.test.ts": "4e5090cb3bead37f",
     "src/subapps/dxf-viewer/hooks/canvas/__tests__/text-annotation-size-adoption.test.ts": "1c35e5aa8b2fa156",
+    "src/subapps/dxf-viewer/print/__tests__/vector-pdf-print-pass.test.ts": "a18356520a2ef15b",
     "src/subapps/dxf-viewer/rendering/entities/__tests__/text-vertical-anchor.test.ts": "0c7838b8198ab796",
     "src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-link-paint.test.ts": "935dc4cdf54ae24f",
     "src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-rotated-text.test.ts": "f433f398aa7baad7",
     "src/subapps/dxf-viewer/rendering/ghost/__tests__/apply-entity-preview-text.test.ts": "be9bfa610fe35b61",
     "src/subapps/dxf-viewer/rendering/hitTesting/__tests__/bounds-calculator-coverage.test.ts": "ab97461787bd62a8",
     "src/subapps/dxf-viewer/rendering/hitTesting/__tests__/hit-test-text-box-parity.test.ts": "367584984f3dab88",
-    "src/subapps/dxf-viewer/services/__tests__/hit-test-entity-model-coverage.test.ts": "9ab5829a2cf01e46",
+    "src/subapps/dxf-viewer/services/__tests__/hit-test-entity-model-coverage.test.ts": "5caa0f2aead7607d",
     "src/subapps/dxf-viewer/snapping/engines/__tests__/TextSnapEngine.test.ts": "013e14980622d075",
     "src/subapps/dxf-viewer/snapping/orchestrator/__tests__/SnapOrchestrator.behavioral-anchors.test.ts": "6cb3b39baa2faa47",
     "src/subapps/dxf-viewer/snapping/orchestrator/__tests__/SnapOrchestrator.broad-phase-equivalence.test.ts": "2b13008ddd978943",
@@ -402,6 +403,15 @@
       "css": 0,
       "nominal": 6,
       "dropped": []
+    },
+    {
+      "file": "src/subapps/dxf-viewer/print/__tests__/vector-pdf-print-pass.test.ts",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 240,
+      "dropped": [
+        "family"
+      ]
     },
     {
       "file": "src/subapps/dxf-viewer/rendering/entities/__tests__/text-vertical-anchor.test.ts",

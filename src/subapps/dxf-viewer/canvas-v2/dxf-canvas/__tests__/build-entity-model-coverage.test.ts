@@ -8,10 +8,10 @@
  * mirror του `rotate-entity-coverage`/`dxf-scene-entity-toDxf-coverage`:
  *  1. Golden — renderable types που ΕΧΟΥΝ `DxfEntityUnion` variant → modelable από DXF.
  *  2. No-variant set — renderable types χωρίς variant, ΔΥΟ διακριτοί λόγοι (καρφωμένοι):
- *       • `ellipse`/`spline`/`point`/`rect` = δεν είναι variants (raw-DXF render path· ίδιο off-path
- *         set με το toDxf seam).
- *       • `lwpolyline`/`rectangle`/`mtext` = **normalized upstream** (`convertEntity`: lwpolyline→
- *         polyline, rectangle→polyline, mtext→text) → δεν φτάνουν ΠΟΤΕ ως DxfEntityUnion αυτού του
+ *       • 🔴 ADR-909 Γ2.9: τα `ellipse`/`spline`/`point` ήταν εδώ ως «raw-DXF render path» — δρόμος που
+ *         δεν υπάρχει. Έχουν πλέον variant (golden #1).
+ *       • `lwpolyline`/`rectangle`/`rect`/`mtext` = **normalized upstream** (`convertEntity`: lwpolyline→
+ *         polyline, rectangle/rect→polyline, mtext→text) → δεν φτάνουν ΠΟΤΕ ως DxfEntityUnion αυτού του
  *         ονόματος. Νόμιμη απουσία, ΟΧΙ gap.
  *  3. Editor-only extra — ο ΜΟΝΟΣ non-renderable variant είναι το `floorplan-symbol` (entity-model
  *     render path· surfaced asymmetry ADR-583/Φ2b, ίδιο με το toDxf seam).
@@ -38,6 +38,8 @@ import {
 } from '../dxf-renderer-entity-model';
 import type { DxfEntityUnion } from '../dxf-types';
 import { RENDERABLE_ENTITY_TYPES } from '../../../rendering/contract/renderable-entity-type';
+import { convertEntity, type SceneEntity } from '../../../hooks/canvas/dxf-scene-entity-converter';
+import { PRIMITIVE_RENDER_FIELDS, type PrimitiveRenderType } from '../../../bim/primitives/primitive-render-fields';
 
 const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 
@@ -53,6 +55,8 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
         // DXF primitives με variant (16)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',
+        // ADR-909 Γ2.9 — `DxfEllipse` / `DxfSpline` / `DxfPoint`: ως τότε χωρίς variant ⇒ αόρατα παντού.
+        'ellipse', 'spline', 'point',
         // ADR-739 Φ.Γ — γενικός πίνακας: έχει δικό του `DxfTable` variant + case.
         'table',
         // ADR-635 Φ B — leader: `DxfLeader` variant (annotation path + tip arrowhead).
@@ -78,10 +82,11 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
     const noVariant = RENDERABLE_ENTITY_TYPES.filter((t) => !variantSet.has(t));
     expect(asSorted(noVariant)).toEqual(
       asSorted([
-        // δεν είναι DxfEntityUnion variants → raw-DXF render path (ίδιο off-path set με toDxf)
-        'ellipse', 'spline', 'point', 'rect',
+        // 🔴 ADR-909 Γ2.9 — τα `ellipse` / `spline` / `point` ήταν εδώ ως «raw-DXF render path»· τέτοιος
+        // δρόμος δεν υπάρχει. Έχουν πλέον δικό τους variant (golden παραπάνω).
         // normalized upstream στο convertEntity → δεν φτάνουν ως variant αυτού του ονόματος
-        'lwpolyline', 'rectangle', 'mtext',
+        // (`rect` = ψευδώνυμο του `rectangle` → polyline, ADR-909 Γ2.9)
+        'lwpolyline', 'rectangle', 'rect', 'mtext',
       ]),
     );
   });
@@ -102,6 +107,35 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
     expect(model.type).toBe('line');
     expect(model.start).toEqual({ x: 0, y: 0 });
     expect(model.end).toEqual({ x: 10, y: 5 });
+  });
+
+  // 🔴 ADR-909 Γ2.9 — ΟΛΗ η αλυσίδα, όχι ένα πέρασμα: στοιχείο σκηνής → `convertEntity` → `buildEntityModelFromDxf`.
+  // Ό,τι φτάνει στον ζωγράφο πρέπει να είναι ΚΑΘΕ πεδίο της λίστας, αυτούσιο. Πέρασμα που κρατά δική του
+  // λίστα και ξεχνά ένα πεδίο κοκκινίζει εδώ (η κλάση των hatch / text / image / table-render-fields).
+  describe('ADR-909 Γ2.9 — ellipse / spline / point: από τη σκηνή ως τον ζωγράφο, χωρίς απώλεια πεδίου', () => {
+    const SCENE: Readonly<Record<PrimitiveRenderType, Record<string, unknown>>> = {
+      ellipse: { center: { x: 5, y: 6 }, majorAxis: 14, minorAxis: 8, rotation: 30, startParam: 0.5, endParam: 2 },
+      spline: {
+        controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 3 }, { x: 4, y: 3 }, { x: 5, y: 0 }],
+        degree: 3, knots: [0, 0, 0, 0, 1, 1, 1, 1], weights: [1, 2, 2, 1], closed: true, rational: true,
+      },
+      point: { position: { x: 7, y: 9 }, size: 4, style: 'cross', pdMode: 34, pdSize: -2 },
+    };
+    const types = Object.keys(SCENE) as PrimitiveRenderType[];
+
+    it.each(types)('το δείγμα του "%s" γεμίζει ΚΑΘΕ πεδίο της λίστας (αλλιώς το test δεν θα έβλεπε απώλεια)', (type) => {
+      expect(Object.keys(SCENE[type]).sort()).toEqual([...PRIMITIVE_RENDER_FIELDS[type]].sort());
+    });
+
+    it.each(types)('"%s" → μοντέλο ζωγράφου με τον τύπο του και κάθε πεδίο αυτούσιο', (type) => {
+      const dxf = convertEntity({ type, id: `${type}-1`, visible: true, ...SCENE[type] } as unknown as SceneEntity, {});
+      expect(dxf).not.toBeNull();
+      const model = buildEntityModelFromDxf(dxf as DxfEntityUnion, false, RESOLVED) as unknown as Record<string, unknown>;
+      expect(model.type).toBe(type);
+      expect(model.id).toBe(`${type}-1`);
+      expect(model.color).toBe(RESOLVED.colorHex);
+      expect(model).toMatchObject(SCENE[type]);
+    });
   });
 
   // ─── Fall-through consolidation pins (TIER-C dup audit, ADR-587 Φ5 seam) ───

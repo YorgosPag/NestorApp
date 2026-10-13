@@ -25,8 +25,11 @@ export interface PolylineEntityProperties {
 
 export interface EllipseEntityProperties {
   center: Point2D;
-  radiusX: number;
-  radiusY: number;
+  /** Ημιάξονες — τα πεδία του `EllipseEntity` (ADR-909 Γ2.9: όχι `radiusX` / `radiusY`, που δεν υπήρξαν ποτέ). */
+  majorAxis: number;
+  minorAxis: number;
+  /** Μοίρες. */
+  rotation?: number;
 }
 
 export interface TextEntityProperties {

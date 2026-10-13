@@ -31,6 +31,9 @@ on:
       - 'src/subapps/dxf-viewer/bim/**'
       - 'src/subapps/dxf-viewer/rendering/**'
       - 'src/subapps/dxf-viewer/canvas-v2/dxf-canvas/**'
+      # Ο ΜΕΤΑΤΡΟΠΕΑΣ ΣΚΗΝΗΣ (ADR-909 Γ2.9): εκεί ζούσαν και τα τέσσερα Κ0 — τύπος χωρίς γραμμή στο
+      # `TO_DXF_HANDLERS` δεν φτάνει ποτέ στην εικόνα. Αλλαγή ΜΟΝΟ εκεί δεν έτρεχε την πύλη.
+      - 'src/subapps/dxf-viewer/hooks/canvas/**'
       # Η ΛΗΨΗ, ΤΟ ΠΡΟΦΙΛ ΚΑΙ ΤΟ ΟΡΓΑΝΟ.
       - 'src/subapps/dxf-viewer/print/**'
       - 'src/lib/listings/floorplan-render-recipe.ts'
@@ -58,6 +61,7 @@ on:
       - 'src/subapps/dxf-viewer/bim/**'
       - 'src/subapps/dxf-viewer/rendering/**'
       - 'src/subapps/dxf-viewer/canvas-v2/dxf-canvas/**'
+      - 'src/subapps/dxf-viewer/hooks/canvas/**'
       - 'src/subapps/dxf-viewer/print/**'
       - 'src/lib/listings/floorplan-render-recipe.ts'
       - 'src/subapps/dxf-viewer/config/**'

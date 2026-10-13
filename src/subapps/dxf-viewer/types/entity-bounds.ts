@@ -52,9 +52,10 @@ function rayRenderBounds(entity: Entity): Bbox {
   };
 }
 
-/** ELLIPSE culling box: scene shape carries `majorAxis`/`minorAxis`. The pick resolver routes
- *  ellipse through `BoundsCalculator` which reads `radiusX`/`radiusY` (fields the SCENE entity
- *  lacks → NaN), so this stays local; Slice 3 reconciles the resolver's ellipse provider. */
+/** ELLIPSE culling box: scene shape carries `majorAxis`/`minorAxis`. Conservative square of the
+ *  larger semi-axis (rotation-proof, cheap). ADR-909 Γ2.9: the pick resolver's `BoundsCalculator`
+ *  used to read `radiusX`/`radiusY` (fields the SCENE entity lacks → NaN) — it now reads the real
+ *  fields and returns the exact rotated AABB; this override stays as the looser CULLING box. */
 function ellipseRenderBounds(entity: Entity): Bbox {
   const e = entity as { center: XY; majorAxis: number; minorAxis: number };
   const r = Math.max(e.majorAxis, e.minorAxis);
