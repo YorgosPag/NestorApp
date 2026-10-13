@@ -43,9 +43,25 @@ export type EnergyClass = (typeof ENERGY_CLASSES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
+/** Είναι τιμή της κλίμακας; Άγνωστη συμβολοσειρά ⇒ `false`, ποτέ «η πιο κοντινή». */
+export function isEnergyClass(raw: unknown): raw is EnergyClass {
+  return ENERGY_CLASSES.some((energyClass) => energyClass === raw);
+}
+
 // =============================================================================
 // 3. RATING HELPERS — Efficiency rank comparison
 // =============================================================================
+
+/**
+ * Η θέση στην κλίμακα: `0` = η καλύτερη (Α+), `ENERGY_CLASSES.length - 1` = η χειρότερη (Η).
+ *
+ * ⚠️ **Τάξη, όχι μέγεθος** (ADR-777 §8.94): η κλάση του ΚΕΝΑΚ βγαίνει από τον λόγο της πρωτογενούς ενέργειας προς
+ * το **κτίριο αναφοράς** (ΤΟΤΕΕ 20701-1, πίν. 1.3), όχι από απόλυτα kWh — δύο κτίρια με τα ίδια kWh/m² έχουν νόμιμα
+ * διαφορετική κλάση. Η βαθμίδα συγκρίνει κλάσεις· δεν μετρά απόσταση μεταξύ τους.
+ */
+export function energyClassRank(energyClass: EnergyClass): number {
+  return ENERGY_CLASSES.indexOf(energyClass);
+}
 
 /**
  * High-efficiency classes (A+, A, B+, B) — eligible για green-building

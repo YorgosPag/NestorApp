@@ -43,8 +43,12 @@ import {
   VIEW_QUALITIES,
 } from '@/constants/property-features-enterprise';
 import {
+  ENERGY_CLASSES as CANONICAL_ENERGY_CLASSES,
+  energyClassRank,
+  isEnergyClass,
+} from '@/constants/energy-classes';
+import {
   ORIENTATION_OPTIONS,
-  ENERGY_CLASS_OPTIONS,
   INTERIOR_FEATURE_OPTIONS,
   SECURITY_FEATURE_OPTIONS,
   CONDITION_OPTIONS,
@@ -83,7 +87,6 @@ const VOCABULARIES: ReadonlyArray<readonly [string, readonly string[]]> = [
  */
 const VIEWS: ReadonlyArray<readonly [string, readonly string[], readonly string[]]> = [
   ['ORIENTATION_OPTIONS', ORIENTATION_OPTIONS, ORIENTATIONS],
-  ['ENERGY_CLASS_OPTIONS', ENERGY_CLASS_OPTIONS, ENERGY_CLASSES],
   ['INTERIOR_FEATURE_OPTIONS', INTERIOR_FEATURE_OPTIONS, INTERIOR_FEATURES],
   ['SECURITY_FEATURE_OPTIONS', SECURITY_FEATURE_OPTIONS, SECURITY_FEATURES],
   ['CONDITION_OPTIONS', CONDITION_OPTIONS, CONDITIONS],
@@ -155,6 +158,21 @@ describe('ADR-842 Α4 · η αρχή του λεξιλογίου χαρακτη�
       //    χωρίς να αλλάξει καμία τιμή — αστοχία αόρατη σε έλεγχο συνόλου.
       expect(ENERGY_CLASSES[0]).toBe('A+');
       expect(ENERGY_CLASSES[ENERGY_CLASSES.length - 1]).toBe('G');
+    });
+
+    // 🔴 ADR-777 §8.94 — το λεξιλόγιο του ακινήτου ήταν ΔΕΥΤΕΡΗ δήλωση της κλίμακας, με οκτώ κλάσεις: του έλειπε η
+    //    `B+` του ΚΕΝΑΚ, άρα ακίνητο με ΠΕΑ Β+ δεν δηλωνόταν και η προβολή απέρριπτε την τιμή ως άγνωστη.
+    it('είναι Η ΙΔΙΑ λίστα με τη ρίζα `constants/energy-classes` — εννέα κλάσεις, με τη `B+`', () => {
+      expect(ENERGY_CLASSES).toBe(CANONICAL_ENERGY_CLASSES);
+      expect(ENERGY_CLASSES).toEqual(['A+', 'A', 'B+', 'B', 'C', 'D', 'E', 'F', 'G']);
+    });
+
+    it('η βαθμίδα ακολουθεί τη σειρά: Α+ καλύτερη (0), Η χειρότερη (8)', () => {
+      expect(energyClassRank('A+')).toBe(0);
+      expect(energyClassRank('B+')).toBeLessThan(energyClassRank('B'));
+      expect(energyClassRank('G')).toBe(8);
+      expect(isEnergyClass('B+')).toBe(true);
+      expect(isEnergyClass('H')).toBe(false);
     });
   });
 });

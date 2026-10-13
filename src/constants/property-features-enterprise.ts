@@ -18,6 +18,11 @@
 
 export type { PropertyType } from '@/types/property';
 
+import {
+  ENERGY_CLASSES as CANONICAL_ENERGY_CLASSES,
+  type EnergyClass as CanonicalEnergyClass,
+} from './energy-classes';
+
 // =============================================================================
 // 🏢 ORIENTATION CONSTANTS (STORED VALUES = FULL NAMES)
 // =============================================================================
@@ -95,16 +100,15 @@ export const AmenityCode = {
 // 🏢 ENERGY CLASS CONSTANTS
 // =============================================================================
 
-export const EnergyClass = {
-  A_PLUS: 'A+',
-  A: 'A',
-  B: 'B',
-  C: 'C',
-  D: 'D',
-  E: 'E',
-  F: 'F',
-  G: 'G'
-} as const;
+/**
+ * 🔴 **ΗΤΑΝ ΔΕΥΤΕΡΗ ΔΗΛΩΣΗ ΤΗΣ ΚΛΙΜΑΚΑΣ, ΚΑΙ ΤΗΣ ΕΛΕΙΠΕ Η `B+`** *(ADR-777 §8.94, διορθώθηκε 2026-10-13)*.
+ *
+ * Εδώ ζούσε αντικείμενο με **οκτώ** κλάσεις (`A+ · A · B · C · D · E · F · G`), ενώ το
+ * {@link module:constants/energy-classes} έχει τις **εννέα** του ΚΕΝΑΚ. Ακίνητο με ΠΕΑ κατηγορίας Β+ δεν μπορούσε
+ * να δηλωθεί: η φόρμα δεν είχε την επιλογή και η προβολή απέρριπτε την τιμή ως άγνωστη. Η ρίζα είναι **μία**· εδώ
+ * μένει μόνο το όνομα που ζητούν οι καταναλωτές του λεξιλογίου του ακινήτου.
+ */
+export type EnergyClassType = CanonicalEnergyClass;
 
 // =============================================================================
 // 🏢 TYPE EXPORTS (Following XType pattern from property-statuses-enterprise.ts)
@@ -120,7 +124,6 @@ export type ViewTypeValue = typeof ViewType[keyof typeof ViewType];
 export type InteriorFeatureCodeType = typeof InteriorFeatureCode[keyof typeof InteriorFeatureCode];
 export type SecurityFeatureCodeType = typeof SecurityFeatureCode[keyof typeof SecurityFeatureCode];
 export type AmenityCodeType = typeof AmenityCode[keyof typeof AmenityCode];
-export type EnergyClassType = typeof EnergyClass[keyof typeof EnergyClass];
 
 // =============================================================================
 // 🏢 ΛΕΞΙΛΟΓΙΑ ΤΙΜΩΝ — Η ΛΙΣΤΑ ΕΙΝΑΙ Η ΠΗΓΗ, Ο ΤΥΠΟΣ ΠΑΡΑΓΕΤΑΙ
@@ -188,8 +191,8 @@ export type BuildingForm = (typeof BUILDING_FORMS)[number];
 
 /**
  * Οι **παραγόμενες** λίστες των λεξιλογίων που δηλώνονται ως αντικείμενα-σταθερές
- * παραπάνω (`Orientation`, `EnergyClass`, `InteriorFeatureCode`, `SecurityFeatureCode`,
- * `AmenityCode`, `ViewType`).
+ * παραπάνω (`Orientation`, `InteriorFeatureCode`, `SecurityFeatureCode`, `AmenityCode`, `ViewType`) — και η
+ * ενεργειακή κλίμακα, που **δεν** δηλώνεται εδώ: έρχεται αυτούσια από το `constants/energy-classes`.
  *
  * ⚠️ `Object.values` πάνω σε `as const` **διατηρεί τη σειρά δήλωσης**
  * (ECMAScript `OrdinaryOwnPropertyKeys`) — η σειρά του αντικειμένου **είναι** η σειρά
@@ -205,7 +208,7 @@ export type BuildingForm = (typeof BUILDING_FORMS)[number];
  * σφάλματος. Ο τύπος `readonly` το κάνει **σφάλμα μεταγλώττισης** αντί για περιστατικό.
  */
 export const ORIENTATIONS: readonly OrientationType[] = Object.values(Orientation);
-export const ENERGY_CLASSES: readonly EnergyClassType[] = Object.values(EnergyClass);
+export const ENERGY_CLASSES: readonly EnergyClassType[] = CANONICAL_ENERGY_CLASSES;
 export const INTERIOR_FEATURES: readonly InteriorFeatureCodeType[] =
   Object.values(InteriorFeatureCode);
 export const SECURITY_FEATURES: readonly SecurityFeatureCodeType[] =
