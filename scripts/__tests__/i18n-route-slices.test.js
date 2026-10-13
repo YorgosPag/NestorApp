@@ -19,6 +19,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const RS = require('../lib/i18n-shell-slice/route-slices');
+const LAZY = require('../lib/i18n-shell-slice/lazy-routes');
 
 const REPO = path.resolve(__dirname, '..', '..');
 
@@ -607,9 +608,20 @@ describe('Χ — η αναπαραγωγή του ελεγκτή είναι ΟΛ
   it('Χ1: το `renderComplete` προσθέτει ΚΑΘΕ δηλωμένη διαδρομή, και το manifest του είναι ΤΑΥΤΟΣΗΜΟ με τον δίσκο', () => {
     const routePaths = [...complete.rendered.artifacts.keys()].filter(isRoute);
 
+    // 🔴 ΤΙ ΑΛΛΟ ΠΡΟΣΘΕΤΕΙ, ΟΝΟΜΑΣΤΙΚΑ (2026-10-13). Ως τότε η γραμμή έλεγε
+    // `size === bare.size + declaredRoutes` — «μόνο διαδρομές». Στις 2026-10-05
+    // (`a01380e8`) το `renderComplete` απέκτησε και τον χάρτη των τεμπέλικων
+    // διαδρομών (υπογεγραμμένος, **όχι** slice) ⇒ 70 αντί 69, κόκκινο επί οκτώ
+    // μέρες χωρίς να το δει κανείς. Η θεραπεία ΔΕΝ είναι `+ 1`: ένας αριθμός θα
+    // δεχόταν αύριο **οποιοδήποτε** τρίτο artifact. Το σύνολο ονομάζεται κλειστά.
+    const added = [...complete.rendered.artifacts.keys()].filter(p => !bare.artifacts.has(p));
+    const signedOnly = added.filter(p => !isRoute(p));
+
     expect(complete.refused).toEqual([]);
     expect(routePaths).toHaveLength(declaredRoutes);
-    expect(complete.rendered.artifacts.size).toBe(bare.artifacts.size + declaredRoutes);
+    expect(signedOnly).toEqual([LAZY.artifactPath(config)]);
+    expect(added).toHaveLength(declaredRoutes + signedOnly.length);
+    expect(complete.rendered.artifacts.size).toBe(bare.artifacts.size + added.length);
     expect(normalize(complete.rendered.manifestText))
       .toBe(normalize(fs.readFileSync(path.join(REPO, MANIFEST_REL), 'utf8')));
   });

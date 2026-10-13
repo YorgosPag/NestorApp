@@ -248,7 +248,7 @@ describe('Μ — μεταλλάξεις: μία γραμμή αλλάζει, η 
 
 describe('Π — το πραγματικό δέντρο', () => {
   const shell = JSON.parse(fs.readFileSync(path.join(REPO, 'src/i18n/generated/shell-slice.el.json'), 'utf8'));
-  const baseline = JSON.parse(fs.readFileSync(path.join(REPO, '.i18n-ssr-oracle-baseline.json'), 'utf8'));
+  const frozen = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/i18n-public-screens-raw-keys.json'), 'utf8'));
   const ROUTES = Object.freeze({
     '/login': 'login',
     '/privacy-policy': 'privacy-policy',
@@ -261,13 +261,28 @@ describe('Π — το πραγματικό δέντρο', () => {
   // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΕΡΧΕΤΑΙ ΑΠΟ ΤΗ BASELINE ΤΟΥ ΧΡΗΣΜΟΥ, ΟΧΙ ΑΠΟ ΤΟ SLICE. Μια άγκυρα
   // που διάβαζε το slice και για τα δύο σκέλη θα έμενε πράσινη σβήνοντας κλειδιά — ο
   // παρονομαστής θα μετακινούνταν μαζί με τη μετάλλαξη (ADR-790 §9.1).
-  const rawKeysOf = url => baseline.violations
+  //
+  // 🔴 ΚΑΙ ΟΧΙ ΑΠΟ ΤΗ ΖΩΝΤΑΝΗ BASELINE — ΑΠΟ ΤΟ ΠΑΓΩΜΕΝΟ ΤΕΚΜΗΡΙΟ ΤΗΣ (2026-10-13).
+  // Ως τότε διάβαζε το `.i18n-ssr-oracle-baseline.json`. Στις 2026-09-23 (`4279ed42`,
+  // ADR-875 §14) η baseline ξαναγράφτηκε και οι 68 ταυτότητες έφυγαν — **επειδή
+  // θεραπεύτηκαν**. Ο παρονομαστής άδειασε μαζί τους: το Π1 κοκκίνισε για τη
+  // σωστή δουλειά κάποιου άλλου, και το Π2 έμεινε **ΠΡΑΣΙΝΟ ΕΠΙ ΤΡΕΙΣ ΕΒΔΟΜΑΔΕΣ
+  // ΧΩΡΙΣ ΝΑ ΕΛΕΓΧΕΙ ΤΙΠΟΤΑ** (`[].filter(...)` είναι πάντα `[]`). Μια ζωντανή
+  // baseline είναι λάθος παρονομαστής για άγκυρα θεραπείας: όσο καλύτερα πάει η
+  // θεραπεία, τόσο λιγότερα ελέγχει η άγκυρα.
+  const rawKeysOf = url => frozen.violations
     .filter(v => v.startsWith(`${url}|`))
     .map(v => v.split('|'))
     .filter(parts => parts[1] !== 'surface-shell-only')
     .map(parts => parts[2]);
 
-  it.each(Object.keys(ROUTES))('Π1 [%s]: η baseline ΟΝΤΩΣ κατέγραψε ωμά κλειδιά εδώ', url => {
+  it('Π0 ΠΑΡΟΝΟΜΑΣΤΗΣ: το παγωμένο τεκμήριο είναι ΑΚΕΡΑΙΟ — 68 ταυτότητες, καμία εκτός των τεσσάρων οθονών', () => {
+    expect(frozen.violations).toHaveLength(frozen.violation_count);
+    expect(frozen.violation_count).toBe(68);
+    expect(frozen.violations.filter(v => !Object.keys(ROUTES).includes(v.split('|')[0]))).toEqual([]);
+  });
+
+  it.each(Object.keys(ROUTES))('Π1 [%s]: ο χρησμός ΟΝΤΩΣ κατέγραψε ωμά κλειδιά εδώ', url => {
     expect(rawKeysOf(url).length).toBeGreaterThan(0);
   });
 
