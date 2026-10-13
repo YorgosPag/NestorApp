@@ -225,7 +225,7 @@ function OwnerPropertyView({
   return (
     <div className="flex flex-col gap-4">
       <ListingMapSnapshotProvider>
-        <OwnerPropertyCard property={property} priority stats={stats} />
+        <OwnerPropertyCard property={property} priority stats={stats} ownPage={{ onAddPhotos: onEdit }} />
       </ListingMapSnapshotProvider>
 
       {/*

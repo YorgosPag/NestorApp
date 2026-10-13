@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { i18n } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
@@ -154,6 +154,24 @@ describe('⛔ χωρίς μικρογραφία — η απουσία ΔΕΝ γ�
       'href',
       expect.stringContaining('ownp_1'),
     );
+  });
+});
+
+describe('🔴 στη σελίδα του ακινήτου — η θεραπεία ΔΕΝ δείχνει στον εαυτό της (§8.70.9)', () => {
+  it('με `onAddPhotos` ⇒ κουμπί που το καλεί, και ΚΑΝΕΝΑΣ σύνδεσμος προς την ίδια σελίδα', () => {
+    const onAddPhotos = jest.fn();
+    render(
+      <I18nextProvider i18n={instance}>
+        <OwnerPropertyCardCover
+          property={{ id: 'ownp_1', title: 'Οικόπεδο στη Νέδουσα', publication: publication(null) }}
+          onAddPhotos={onAddPhotos}
+        />
+      </I18nextProvider>,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Πρόσθεσε φωτογραφίες' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Πρόσθεσε φωτογραφίες' }));
+    expect(onAddPhotos).toHaveBeenCalledTimes(1);
   });
 });
 

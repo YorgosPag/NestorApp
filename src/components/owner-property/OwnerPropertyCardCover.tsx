@@ -49,19 +49,30 @@ interface OwnerPropertyCardCoverProps {
   readonly property: Pick<OwnerProperty, 'id' | 'title' | 'publication'>;
   /** Μόνο η **πρώτη** κάρτα της λίστας — πολλές εικόνες υψηλής προτεραιότητας ακυρώνουν η μία την άλλη. */
   readonly priority?: boolean;
+  /**
+   * Η θεραπεία «Πρόσθεσε φωτογραφίες» **επί τόπου** — όταν η κάρτα στέκεται ήδη στη σελίδα του
+   * ακινήτου (§8.70.9). Χωρίς αυτό, σύνδεσμος προς εκείνη τη σελίδα (λίστα).
+   */
+  readonly onAddPhotos?: () => void;
 }
 
 /**
  * Χωρίς δημοσιευμένη φωτογραφία: ο **χάρτης θέσης** όταν υπάρχει σημάδι, αλλιώς η δηλωμένη απουσία.
  * Η απουσία είναι και η **εφεδρεία** του χάρτη (χωρίς provider, λήξη χρόνου, σφάλμα απόδοσης).
  */
-function NoPhotoCover({ property }: Pick<OwnerPropertyCardCoverProps, 'property'>): React.ReactElement {
+function NoPhotoCover({ property, onAddPhotos }: Pick<OwnerPropertyCardCoverProps, 'property' | 'onAddPhotos'>): React.ReactElement {
   const { t } = useTranslation(['property-market']);
-  const addPhotos = (className: string) => (
-    <Link href={offerDetailHref(property.id)} className={className}>
-      {t(`${K}.addPhotos`)}
-    </Link>
-  );
+  // 🔴 Στη σελίδα του ακινήτου ο σύνδεσμος θα έδειχνε **στον εαυτό του** — εκεί είναι κουμπί.
+  const addPhotos = (className: string) =>
+    onAddPhotos === undefined ? (
+      <Link href={offerDetailHref(property.id)} className={className}>
+        {t(`${K}.addPhotos`)}
+      </Link>
+    ) : (
+      <button type="button" onClick={onAddPhotos} className={className}>
+        {t(`${K}.addPhotos`)}
+      </button>
+    );
   return (
     <MapOrAbsenceCover
       mark={parseListingMapMark(property.publication?.mapMark)}
@@ -116,10 +127,11 @@ export function OwnerPropertyPhoto({
 export function OwnerPropertyCardCover({
   property,
   priority = false,
+  onAddPhotos,
 }: OwnerPropertyCardCoverProps): React.ReactElement {
   const thumbnail = publicationThumbnailOf(property);
 
-  if (thumbnail === null) return <NoPhotoCover property={property} />;
+  if (thumbnail === null) return <NoPhotoCover property={property} onAddPhotos={onAddPhotos} />;
 
   return (
     <figure className={`${COVER_FRAME} m-0 border border-border`}>

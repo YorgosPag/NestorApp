@@ -97,7 +97,14 @@ export function OwnerPropertyCard({
   stats,
   focusStrength = 'none',
   onHover,
+  ownPage,
 }: {
+  /**
+   * 🔴 ADR-777 §8.70.9 — η κάρτα στέκεται **ήδη στη σελίδα του ακινήτου** (κεφαλίδα της λεπτομέρειας).
+   * Εκεί το «Άνοιγμα» έδειχνε **στον εαυτό του**: δεν αποδίδεται, και το «Πρόσθεσε φωτογραφίες»
+   * ανοίγει την επεξεργασία επί τόπου. Παράλειψη ⇒ κάρτα λίστας, με συνδέσμους.
+   */
+  ownPage?: { readonly onAddPhotos: () => void };
   property: OwnerProperty;
   /**
    * 📊 ADR-777 §8.72 — τα στατιστικά **αυτής** της αγγελίας, από το ΕΝΑ fetch της σελίδας
@@ -139,7 +146,7 @@ export function OwnerPropertyCard({
         🖼️ ADR-777 §8.70 — **ό,τι βλέπει ο κόσμος**, ή η δηλωμένη απουσία του. Στήλη αριστερά
         από `sm`, πάνω από το κείμενο σε κινητό (πρότυπο Idealista «Tus anuncios»).
       */}
-      <OwnerPropertyCardCover property={property} priority={priority} />
+      <OwnerPropertyCardCover property={property} priority={priority} onAddPhotos={ownPage?.onAddPhotos} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <header className="flex flex-wrap items-baseline justify-between gap-2">
@@ -217,7 +224,7 @@ export function OwnerPropertyCard({
           </p>
         )}
 
-        <nav>
+        {ownPage === undefined && <nav>
           <Link
             href={offerDetailHref(property.id)}
             // ⌨️ Ισοτιμία πληκτρολογίου (§8.75): η εστίαση του συνδέσμου επισημαίνει την πινέζα,
@@ -228,7 +235,7 @@ export function OwnerPropertyCard({
           >
             {t(`${K}.list.open`)}
           </Link>
-        </nav>
+        </nav>}
       </div>
     </article>
   );

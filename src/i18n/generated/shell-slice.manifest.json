@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e7d73707d53cf6890df500aa433437d784201aa5b9fb4b3e7f1147ed2ada35ba",
+  "inputsSha256": "dc32b8c1f9afd29e3f4549ccb4393ea34f3893dd02a86b0d7f0e2763f30d22be",
   "languages": [
     "el"
   ],
@@ -514,7 +514,7 @@
     "src/components/owner-property/OwnerMandatePanel.tsx": "92cf817e35df6886691eb8f0172b543e0398d0b5f2117dc051cd98c56aa17c43",
     "src/components/owner-property/OwnerPortfolio.tsx": "d001e163f9951e324e787ced253000befe423c2290aee8651d87a54ddc80bc60",
     "src/components/owner-property/OwnerPropertyCard.tsx": "70665eae3811e26ef57bd6ba9d66a7a858246cb5704de3a66cd6809608f96ab6",
-    "src/components/owner-property/OwnerPropertyCardCover.tsx": "5bb5942d4c818f4064e2aa1f61a19a60d14b8bbb1454d0cd4e445f56438655cb",
+    "src/components/owner-property/OwnerPropertyCardCover.tsx": "4d41d518ce6acb4c7841db85eb52e4298a78a40377710890bd4ab5635b82b882",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "ea3369a217c00bbc9bccf658b4ae656e2610b99a030a9fed4be471742b0353f3",
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "bf426c40c826799fe6f52863f0bbff8ee26d6dcd50b13936b219e4fd9082c6b3",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "852eaf0d7a110ef720c66602470b58aac6f699b9a2227ddd3112f978e4532724",
