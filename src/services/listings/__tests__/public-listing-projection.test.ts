@@ -193,7 +193,14 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       'areaSqm', 'authorship',
       'balconies', 'balconyAreaSqm', 'bathrooms', 'bedrooms',
       // ADR-890 Φ0: `constructionYear` — έτος του **κτιρίου** με την πηγή του (RESO `YearBuiltSource`).
-      'commercial', 'commercialStatus', 'condition', 'constructionYear', 'coolingType', 'coverImage',
+      'commercial', 'commercialStatus',
+      // ADR-777 §8.93 — τα κοινόχρηστα: **δήλωση του αγγελιοδότη**, ποσό τον μήνα και τι περιλαμβάνουν. Δικό τους
+      // κουτί, έξω από το `commercial` — δεν είναι τιμή του ακινήτου.
+      'commonCharges',
+      'condition', 'constructionYear', 'coolingType', 'coverImage',
+      // ADR-777 §8.94 — οι αριθμοί του ΠΕΑ (kWh/m²·έτος · kg CO₂/m²·έτος) ή ο λόγος που λείπει η κλάση. ⛔ Ούτε εδώ
+      // ημερομηνία ή ταυτότητα πιστοποιητικού: η ισχύς φεύγει **μόνο** ως κατάσταση του `legality`.
+      'energyCertificate',
       'energyClass',
       // 🔴 **ΚΟΚΚΙΝΙΣΕ ΞΑΝΑ (ADR-777 §8.60.17, 2026-09-18)** — και πάλι έκανε τη δουλειά της. Το
       // `exchange` πέρασε από **γραμμένη** απόφαση (Giorgio: «όπως οι μεγάλοι»): το xe.gr γράφει το
@@ -463,6 +470,38 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
 
     // …και η απουσία μένει **ρητή**, ποτέ `undefined`.
     expect(buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!.place).toBeNull();
+  });
+});
+
+describe('Κ5β — τα κοινόχρηστα: το κουτί υπάρχει ΜΟΝΟ όταν τίθεται η ερώτηση (ADR-777 §8.93)', () => {
+  const charges = { monthlyAmount: 120, includes: ['heating'] };
+
+  it('προς πώληση, τίποτα δηλωμένο ⇒ κουτί με «δεν δηλώθηκε» — ποτέ `null`, ποτέ `0`', () => {
+    expect(buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!.commonCharges).toEqual({ monthlyAmount: null, includes: null });
+  });
+
+  it('η δήλωση περνά από τον ΕΝΑΝ αναγνώστη: έγκυρη αυτούσια, σκουπίδι ⇒ «δεν δηλώθηκε»', () => {
+    expect(buildPublicListing({ ...REAL_MAISONETTE, commonCharges: charges }, NO_PLACE, AT)!.commonCharges).toEqual(charges);
+    expect(
+      buildPublicListing({ ...REAL_MAISONETTE, commonCharges: { monthlyAmount: -5, includes: ['sauna'] } }, NO_PLACE, AT)!
+        .commonCharges
+    ).toEqual({ monthlyAmount: null, includes: null });
+  });
+
+  it('🔴 και προς την ΑΛΛΗ κατεύθυνση: γη · μόνο βραχυχρόνια · μόνο αντιπαροχή ⇒ `null`, ακόμη κι αν κάτι δηλώθηκε', () => {
+    const shaped = (over: Partial<ProjectableProperty>) =>
+      projectListingShape({ ...REAL_MAISONETTE, commonCharges: charges, ...over }, NO_PLACE, AT).commonCharges;
+
+    expect(shaped({ type: 'land' })).toBeNull();
+    expect(shaped({ offerKinds: ['leaseShort'] })).toBeNull();
+    expect(shaped({ offerKinds: ['exchange'] })).toBeNull();
+    expect(shaped({ offerKinds: ['leaseOut'] })).toEqual(charges);
+    expect(shaped({ offerKinds: ['leaseShort', 'sell'] })).toEqual(charges);
+  });
+
+  it('ποτέ μέσα στο `commercial` — δεν είναι τιμή του ακινήτου', () => {
+    const listing = buildPublicListing({ ...REAL_MAISONETTE, commonCharges: charges }, NO_PLACE, AT)!;
+    expect(Object.keys(listing.commercial).sort()).toEqual(['askingPrice', 'finalPrice', 'nightlyRate', 'rentPrice']);
   });
 });
 

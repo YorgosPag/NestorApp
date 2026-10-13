@@ -17,7 +17,6 @@
  */
 
 import type { CommercialStatus } from '@/constants/commercial-statuses';
-import type { LegalityClaim } from '@/lib/legality/legality-claim';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { FloorKind } from '@/utils/floor-naming';
 import type {
@@ -149,7 +148,11 @@ export interface ProjectableProperty {
    */
   readonly condition?: unknown;
   readonly renovationYear?: number | null;
-  readonly energy?: { readonly class?: unknown } | null;
+  /**
+   * **Το ΠΕΑ** (ADR-777 §8.94) — ωμό, όπως κάθεται στο έγγραφο (ιδιώτη **ή** εταιρείας). Η **μία** ερμηνεία ζει στο
+   * `readEnergyCertificate`: από εκεί βγαίνει και η κλάση (`energyClass`) και το κουτί των αριθμών.
+   */
+  readonly energy?: unknown;
   readonly systemsOverride?: {
     readonly heatingType?: unknown;
     readonly heatingFuel?: unknown;
@@ -172,6 +175,11 @@ export interface ProjectableProperty {
    * `readObjectiveValueDeclarations`, που το ρωτά η προβολή — ποτέ ο καλών.
    */
   readonly objectiveValueDeclarations?: unknown;
+  /**
+   * **Τα κοινόχρηστα** (ADR-777 §8.93) — ωμά, όπως κάθονται στο έγγραφο (ιδιώτη **ή** εταιρείας). `unknown` για τον
+   * ίδιο λόγο με το από πάνω: η **μία** ερμηνεία ζει στο `readCommonCharges`, που το ρωτά η προβολή.
+   */
+  readonly commonCharges?: unknown;
   /**
    * 🔶 **Ο ΚΑΤΟΧΟΣ ΑΡΝΗΘΗΚΕ να δηλώσει θέση** (Α5 §3).
    *
@@ -209,11 +217,12 @@ export interface ProjectableProperty {
    */
   readonly authorship?: ListingAuthorship | null;
   /**
-   * **Οι αξιώσεις νομιμότητας** (Α17 · ADR-838). Δες {@link LegalityBearingProperty}
-   * για το δηλωμένο κενό: **κανένας γραφέας δεν τις γράφει ακόμη**, και καμία αξίωση
-   * **δεν παράγεται** από υπάρχοντα πεδία.
+   * **Οι αξιώσεις νομιμότητας** (Α17 · ADR-838) — ωμές, όπως κάθονται στο έγγραφο. Δες
+   * {@link LegalityBearingProperty}: τις γράφει **μόνο** η δήλωση του ΠΕΑ (ADR-777 §8.94), και καμία αξίωση
+   * **δεν παράγεται** από υπάρχοντα πεδία. `unknown` για τον ίδιο λόγο με το `commonCharges`: η **μία**
+   * ερμηνεία ζει στο `readLegalityClaims`.
    */
-  readonly legality?: readonly LegalityClaim[] | null;
+  readonly legality?: unknown;
   /**
    * **Τα αρχεία που ο άνθρωπος ΔΙΑΛΕΞΕ να δημοσιεύσει** (Α12) — μονοπάτια στον
    * **ιδιωτικό** κάδο, ποτέ bytes και ποτέ URL.

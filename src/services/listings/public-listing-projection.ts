@@ -56,6 +56,8 @@ import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
 import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
+import { listedCommonChargesOf } from '@/lib/common-charges/common-charges';
+import { listedEnergyCertificateOf } from '@/lib/energy-certificate/energy-certificate';
 import { projectListingAttributes } from './public-listing-attributes';
 import { projectObjectiveValueBasis } from './public-listing-objective-value';
 import { reductionForListing } from '@/lib/listings/price-history';
@@ -425,6 +427,10 @@ export function projectListingShape(
     stay: projectStay(property, offerKinds),
     // ── ADR-777 §8.60.17 — το ποσοστό οικοπεδούχου· δικό του κουτί, ποτέ `commercial`.
     exchange: projectExchange(property, offerKinds),
+    // ── ADR-777 §8.93 — τα κοινόχρηστα· `null` ⇔ η ερώτηση δεν τίθεται. Κριτής και αναγνώστης: το φύλλο.
+    commonCharges: listedCommonChargesOf({ type: property.type, offerKinds }, property.commonCharges),
+    // ── ADR-777 §8.94 — οι αριθμοί του ΠΕΑ· `null` ⇔ η ερώτηση δεν τίθεται. Η κλάση μένει στο `energyClass`.
+    energyCertificate: listedEnergyCertificateOf({ type: property.type, offerKinds }, property.energy),
     // 🔶 Η εικόνα μπαίνει όταν υπάρξει ο παραγωγός της (Α19, κανόνας 31: **προ-ψημένο
     // artifact από το μοντέλο**, ποτέ ανέβασμα χρήστη). Μέχρι τότε `null` = «δεν
     // υπάρχει», και η οθόνη οφείλει να το πει — ποτέ εξωτερικό placeholder (§25.5.2).

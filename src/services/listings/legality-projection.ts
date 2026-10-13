@@ -19,10 +19,8 @@
  * θα υπήρχε δεύτερη απάντηση στο ίδιο ερώτημα, ελεύθερη να αποκλίνει (ADR-749).
  */
 
-import {
-  LEGALITY_CLAIM_KINDS,
-  type LegalityClaim,
-} from '@/lib/legality/legality-claim';
+import { LEGALITY_CLAIM_KINDS } from '@/lib/legality/legality-claim';
+import { readLegalityClaims } from '@/lib/legality/legality-claim-reading';
 import { legalitySignalsFor, type LegalitySignal } from '@/lib/legality/legality-signal';
 import { wholePropertySpace } from '@/lib/spaces/space-ref';
 import type { OfferKind } from '@/types/property-offers';
@@ -30,22 +28,25 @@ import type { OfferKind } from '@/types/property-offers';
 /**
  * **Οι αξιώσεις που κουβαλά το έγγραφο του ακινήτου.**
  *
- * 🔶 **ΔΗΛΩΜΕΝΟ ΚΕΝΟ: ΚΑΝΕΝΑΣ ΓΡΑΦΕΑΣ ΔΕΝ ΤΙΣ ΓΡΑΦΕΙ ΑΚΟΜΗ**, και το λέω αντί να το
- * υπονοήσω. Το πεδίο θα το γεμίσει η **φόρμα του κατόχου** — ίδιο ακριβώς σχήμα με το
- * `locationDisclosure` της Α5, που δηλώνει το ίδιο κενό με τα ίδια λόγια. Μέχρι τότε
- * κάθε αγγελία απαντά `undeclared` σε **κάθε** είδος, που είναι η **αλήθεια**: κανείς
- * δεν έχει ρωτηθεί ακόμη.
+ * 🔶 **ΕΝΑΣ ΓΡΑΦΕΑΣ ΥΠΑΡΧΕΙ, ΓΙΑ ΕΝΑ ΕΙΔΟΣ** *(ADR-777 §8.94)*: η δήλωση του ΠΕΑ γράφει την
+ * αξίωση `'energy-performance'` στην **ίδια εγγραφή** με το μπλοκ `energy`
+ * (`lib/energy-certificate/energy-certificate-claim.ts`). Τα άλλα τρία είδη **δεν τα
+ * γράφει κανείς ακόμη** — εκεί κάθε αγγελία απαντά `undeclared`, που είναι η **αλήθεια**:
+ * κανείς δεν έχει ρωτηθεί.
  *
  * ⛔ **ΚΑΙ ΔΕΝ ΠΑΡΑΓΕΤΑΙ ΑΞΙΩΣΗ ΑΠΟ ΥΠΑΡΧΟΝΤΑ ΠΕΔΙΑ** — ούτε από το `energyClass` του
  * `property-completion`, ούτε από το `certificateId` του `types/property.ts`. Θα ήταν
  * δελεαστικό («*υπάρχει η τιμή, φτιάξε αξίωση `self-declared`*») και θα ήταν **ψέμα με
  * ημερομηνία**: εκείνα τα πεδία **δεν έχουν** `assertedAt` ούτε `authority`, οπότε η
  * παραγόμενη αξίωση θα δήλωνε προέλευση που **κανείς δεν δήλωσε**. Είναι ακριβώς το
- * *«ετικέτα χωρίς προέλευση είναι ισχυρισμός»* της SPEC-777 §24.3.
+ * *«ετικέτα χωρίς προέλευση είναι ισχυρισμός»* της SPEC-777 §24.3. Ο γραφέας του ΠΕΑ
+ * **δεν** το παραβιάζει: γράφει τη στιγμή που ο άνθρωπος δηλώνει, με εκείνη τη στιγμή ως
+ * `assertedAt` — ακίνητο με παλιά κλάση που κανείς δεν ξαναδήλωσε μένει `undeclared`.
  */
 export interface LegalityBearingProperty {
   readonly id: string;
-  readonly legality?: readonly LegalityClaim[] | null;
+  /** Ωμό, όπως κάθεται στο έγγραφο — η **μία** ερμηνεία ζει στο `readLegalityClaims`. */
+  readonly legality?: unknown;
 }
 
 /**
@@ -72,7 +73,8 @@ export function projectLegality(
   projectedAt: string,
 ): readonly LegalitySignal[] {
   return legalitySignalsFor(
-    property.legality ?? [],
+    // 🔑 Ωμό έγγραφο ⇒ περνά από το σύνορο: δύσμορφη αξίωση πετιέται και το είδος απαντά `undeclared`.
+    readLegalityClaims(property.legality),
     offerKinds,
     [wholePropertySpace(property.id)],
     projectedAt,

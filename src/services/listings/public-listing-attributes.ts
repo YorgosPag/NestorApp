@@ -44,7 +44,6 @@ import {
   AMENITIES,
   CONDITIONS,
   COOLING_TYPES,
-  ENERGY_CLASSES,
   FLOORINGS,
   FRAMES,
   FUEL_TYPES,
@@ -55,6 +54,7 @@ import {
   SECURITY_FEATURES,
   WATER_HEATING_TYPES,
 } from '@/constants/property-features-enterprise';
+import { readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingAttributeFields } from '@/types/public-listing';
 
@@ -191,11 +191,10 @@ function projectEnergyAndCondition(
   property: ProjectableProperty
 ): Pick<ListingAttributeFields, 'energyClass' | 'condition' | 'renovationYear' | 'constructionYear'> {
   return {
-    // ⛔ **ΜΟΝΟ Η ΚΛΑΣΗ.** Το `Property.energy` κουβαλά `certificateId` ·
-    //    `certificateDate` · `validUntil` — ταυτότητα και ημερομηνίες **μητρώου**.
-    //    Ίδιος κανόνας με το `legality` (ADR-838): φεύγει η **βαθμίδα**, ποτέ το
-    //    έγγραφο.
-    energyClass: vocabularyValue(ENERGY_CLASSES, property.energy?.class),
+    // ⛔ **ΕΔΩ ΜΟΝΟ Η ΚΛΑΣΗ**, από τον ΕΝΑΝ αναγνώστη του μπλοκ (ADR-777 §8.94). Οι αριθμοί
+    //    του ΠΕΑ φεύγουν στο κουτί `energyCertificate`· η ισχύς **μόνο** ως κατάσταση του
+    //    `legality` (ADR-838)· ταυτότητα και ημερομηνίες **μητρώου** ποτέ.
+    energyClass: readEnergyCertificate(property.energy).class,
     condition: vocabularyValue(CONDITIONS, property.condition),
     renovationYear: numberOrNull(property.renovationYear),
     // ADR-890 Φ0 — γεγονός του ΚΤΙΡΙΟΥ, όχι του ακινήτου: δεν ζει στο `ProjectableProperty`.

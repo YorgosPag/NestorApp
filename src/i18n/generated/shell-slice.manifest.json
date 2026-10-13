@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a52e396b78c0cb04bae0449bc3932bc6808f96762e33310622d44c9d7d3aa9de",
+  "inputsSha256": "10d4a965c7b5ba753a2403e821dcd4ca9327876c8d4d0f5d65ec8afd98fdc39e",
   "languages": [
     "el"
   ],
@@ -12211,6 +12211,7 @@
     "src/lib/landing/landing-hero-vocabulary.ts": "71a0be2fbf2b689cde2fdd14ae4570ed6b49bb2e5cf6a1a18a3981ffe9a96980",
     "src/lib/landing/landing-modes.ts": "c198f45e41b222e2081ae306c78ac59b01ca64f1e7283c3adf8d2ae870761ebf",
     "src/lib/legal/canonical-json.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/legality/legality-claim-reading.ts": "589c686d6b1b930369a1c445d40c697d6fd7848f1de11024c654d71ccc227057",
     "src/lib/legality/legality-claim.ts": "b15cff70a2ffa81dd14d1040f6d6384548fbaf8caf7b7e11a4e24eddc3778faa",
     "src/lib/legality/legality-offer-matrix.ts": "efd6ceb8a1a9a5847b97dad9da74f97019f27053fa9af604c49d556f36c2dff5",
     "src/lib/legality/legality-signal.ts": "14338e333b022ec6e3b0dd36791ecb5b97a4f4cc48e91a3ea2f1696c4952d6e2",
@@ -12536,7 +12537,7 @@
     "src/services/listings/floor-plate.reader.ts": "0a3996175e6becc447877339f32a4a56bd8e255fe0cfb31f3307b5a03c2e6f42",
     "src/services/listings/gltf-memory-io.ts": "d526bc6f738caa4b600421da8a708c7d4d627826d4e761fff28f484afc229287",
     "src/services/listings/gltf-model-measure.ts": "55f3a520f9523d8c098eb05208177527a8d7535e7ee333359f46479719418c8b",
-    "src/services/listings/legality-projection.ts": "a88bc62c2d2e65a3eed1ab5215e12e0fab6e0155255d8649037e1b26e05efcd4",
+    "src/services/listings/legality-projection.ts": "aa75396ae70cf046d8a1071b8506dc79c6a447448d63560369969b27e1b8d3dd",
     "src/services/listings/listed-at-stamp.ts": "17365119f0a3fd14bab4b64c4f2802fe94e6f93feafb8d44817dc8768c5ef7d3",
     "src/services/listings/listing-media-fingerprint-stamp.ts": "7c52b97c00bc7dc0268f8d04c008ab27a626d604680874bc26d8843714ca60fd",
     "src/services/listings/listing-media-reconciliation.service.ts": "f230cbd663c3e30cf3aa2d3cad733447a3bfea4ecbc8d3fe796716553eae8916",
@@ -12546,14 +12547,14 @@
     "src/services/listings/listing-scope-republish.ts": "151de5d6645b199b41da1986fe04d249844614aa17805303a422f5410f530e37",
     "src/services/listings/listing-video-poster.ts": "2e201318cbea94aa6e91c224da7bfdcdde00674c0494deb8df9f90bf911c2281",
     "src/services/listings/price-history-stamp.ts": "c2cd6811c100c61bd032f781aae6ff28548a2e6fad4fc4955070d44561c72226",
-    "src/services/listings/public-listing-attributes.ts": "f53d81fd3cd6aeb344dbc7a1ab1201092b8f964005cedbf6e72ab4afea3a5d8b",
+    "src/services/listings/public-listing-attributes.ts": "be0ad21b913fcfd0b7aaf3a72970abfd065d25d5affbb54f929507a8acf277af",
     "src/services/listings/public-listing-floor-plate-projection.ts": "b273da585bc73534769c24112d7223abcf861c2645abefc451bfaa24095a295e",
     "src/services/listings/public-listing-gallery-projection.ts": "06dd276e323fac362a7fbee5d4a9a03676647b660ab56d25aefa7a45401c8ae4",
     "src/services/listings/public-listing-model-projection.ts": "483f8fd4947297a2d10a7ce0055bd203e61c8094a1d4317588e1597480b7c09a",
     "src/services/listings/public-listing-objective-value.ts": "8e7808de623381a72acdfd3663ad1497b623aef7226e8be2a020ee6cc4e34b44",
     "src/services/listings/public-listing-position.ts": "5c0bf072f03972c3cb4d3ed6bbdd54b5aa43335f2741a9d8e19a7b8f4996bc9e",
-    "src/services/listings/public-listing-projection-types.ts": "5c266a16ba61162de034cb4657f31b0637e18597fffe8a64ce4ffdf6db15c119",
-    "src/services/listings/public-listing-projection.ts": "ba86c1b3cfcdadb9a43b5aa0c460ea866948bdc5e1b804b097b803e9432d8523",
+    "src/services/listings/public-listing-projection-types.ts": "1f26e23baa0463f3b29df79e20623a94c9614dbdbfe7a08dd1b810fecfb24547",
+    "src/services/listings/public-listing-projection.ts": "49b82012e03685f86e2e29f2a171d943ba0cb6a2eb0a42ab21fc2c584d2869bd",
     "src/services/listings/public-listing-video-projection.ts": "483f8fd4947297a2d10a7ce0055bd203e61c8094a1d4317588e1597480b7c09a",
     "src/services/listings/public-shelf-border.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/listings/public-shelf-bucket.ts": "b1d5f28f3dde3cc30ef935192fbb58aaacb23275b756594d40a6769328db0be1",
@@ -12778,7 +12779,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 243,
     "routeBoundaries": 3,
-    "shellFiles": 1212,
+    "shellFiles": 1213,
     "sliceBytes": 727052
   },
   "unresolvableKeys": [
@@ -13333,7 +13334,6 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/trash.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/users.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/vendor-portal.json",
-    "src/lib/owner-property/owner-property-from-document.ts → @/lib/legality/legality-claim-reading",
     "src/lib/unicode/skeleton.ts → ./generated/confusable-skeleton.json",
     "src/lib/workspace/route-worlds.ts → @/types/app-routes",
     "src/services/conveyance/conveyance-engagement-notifier.ts → @/i18n/locales/el/common-shared.json"
