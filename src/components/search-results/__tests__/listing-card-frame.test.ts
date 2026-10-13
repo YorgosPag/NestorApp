@@ -6,10 +6,8 @@
  * Τρεις γλώσσες λένε τον ίδιο λόγο: η κλάση Tailwind, το `sizes` και το πλέγμα. Αν κάποια
  * αποκλίνει — ή αν ξαναγραφτεί `aspect-[4/3]` με το χέρι σε καταναλωτή — κοκκινίζει εδώ.
  */
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
 import { MOBILE_BREAKPOINT } from '@/constants/layout';
+import { readRepoCode, stripComments } from '@/test-utils/read-source';
 
 import {
   LISTING_CARD_ASPECT,
@@ -19,8 +17,6 @@ import {
   RESULTS_CARD_IMAGE_REM,
   RESULTS_CARD_IMAGE_SIZES,
 } from '../listing-card-frame';
-
-const ROOT = join(__dirname, '..', '..', '..', '..');
 
 /** Όσοι ζωγραφίζουν φωτογραφία σε πλαίσιο κάρτας — οφείλουν να ζητούν τη σταθερά. */
 const CONSUMERS = [
@@ -46,9 +42,22 @@ describe('listing-card-frame', () => {
     expect(RESULTS_CARD_IMAGE_SIZES).toBe(`(min-width: ${MOBILE_BREAKPOINT}px) ${RESULTS_CARD_IMAGE_REM}rem, 100vw`);
   });
 
+  /**
+   * 🔴 **Ο ΚΩΔΙΚΑΣ ρωτιέται, όχι η αφήγησή του (2026-10-13).** Ως τότε η άγκυρα έψαχνε σε όλο το κείμενο· το
+   * `73c97b13` έγραψε στο `OwnerPropertyCardCover` σχόλιο που **τεκμηριώνει** το σφάλμα («το `aspect-[3/2]`
+   * αγνοούνταν») και η άγκυρα κοκκίνισε πάνω στην εξήγηση της θεραπείας — σπρώχνοντας τον επόμενο να σβήσει τη γνώση.
+   * `readRepoCode` = το ένα SSoT ανάγνωσης χωρίς σχόλια (`test-utils/read-source`).
+   */
+  const HAND_WRITTEN_ASPECT = /aspect-\[\d+\/\d+\]/;
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: το κόψιμο σχολίων αφήνει τον ΚΩΔΙΚΑ ορατό — χειρόγραφη κλάση πιάνεται, αναφορά σε σχόλιο όχι', () => {
+    expect(stripComments('<figure className="aspect-[3/2]" />')).toMatch(HAND_WRITTEN_ASPECT);
+    expect(stripComments('/** το `aspect-[3/2]` αγνοούνταν */\n// aspect-[4/3]\nconst a = 1;')).not.toMatch(HAND_WRITTEN_ASPECT);
+  });
+
   it.each(CONSUMERS)('%s ζητά τη σταθερά — κανένα χειρόγραφο aspect-[…]', (file) => {
-    const source = readFileSync(join(ROOT, file), 'utf8');
-    expect(source).toContain('LISTING_CARD_ASPECT_CLASS');
-    expect(source).not.toMatch(/aspect-\[\d+\/\d+\]/);
+    const code = readRepoCode(file);
+    expect(code).toContain('LISTING_CARD_ASPECT_CLASS');
+    expect(code).not.toMatch(HAND_WRITTEN_ASPECT);
   });
 });
