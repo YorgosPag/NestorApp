@@ -264,6 +264,25 @@
     --plan-ink: 0 0% 9%;              /* #171717 */
     --plan-ink-muted: 0 0% 32%;       /* #525252 */
 
+    /* ENERGY CLASS SCALE (ADR-777 §8.94) — the nine steps of the Greek EPC (ΠΕΑ, KENAK): A+ best … G worst
+       (shown as Α+ … Η). ORDINAL, not categorical: this is NOT --chart-N (identity palette) and must not
+       borrow from it. Each step paints a NON-TEXT swatch bar; the letter stays in --foreground.
+       MEASURED, not eyeballed: every step is ≥ 3:1 against --card in BOTH themes (3.10–3.96 light ·
+       3.29–4.19 dark), which pins all nine into one luminance band — hence identical values in the dark
+       block. Adjacent steps are close in colour (ΔE 3.5–7.5) BY CONSTRUCTION, so class is never told by
+       colour alone (CHECK 3.41): each step also carries its letter, its position and a bar that grows
+       with the rank. Consumer: components/shared/energy-certificate/energy-class-palette.ts (the ONE
+       place that names them). Anchor: energy-class-palette.test.ts re-measures from this file. */
+    --energy-class-1: 160 100% 29%;   /* #009463  A+ */
+    --energy-class-2: 128 62% 37%;    /* #249933  A  */
+    --energy-class-3: 90 70% 34%;     /* #57931a  B+ */
+    --energy-class-4: 70 80% 31%;     /* #798e10  B  */
+    --energy-class-5: 50 90% 33%;     /* #a08708  C  */
+    --energy-class-6: 35 95% 38%;     /* #bd7005  D  */
+    --energy-class-7: 22 95% 43%;     /* #d65205  E  */
+    --energy-class-8: 12 88% 48%;     /* #e63a0f  F  */
+    --energy-class-9: 350 78% 52%;    /* #e42545  G  */
+
     /* DEPRECATED ALIASES (ADR-710 §10) — the reports surface used to carry its own
        Okabe-Ito palette. That palette was labelled "colour-blind safe" for years and
        had never been measured: on this surface its yellow scored 1.11:1 contrast,
@@ -490,6 +509,18 @@
     --plan-here: 0 72% 51%;           /* #dc2828 */
     --plan-ink: 0 0% 9%;              /* #171717 */
     --plan-ink-muted: 0 0% 32%;       /* #525252 */
+
+    /* ENERGY CLASS SCALE — identical to light on purpose: one luminance band clears 3:1 against --card
+       in both themes (measured; see the light block). */
+    --energy-class-1: 160 100% 29%;   /* #009463  A+ */
+    --energy-class-2: 128 62% 37%;    /* #249933  A  */
+    --energy-class-3: 90 70% 34%;     /* #57931a  B+ */
+    --energy-class-4: 70 80% 31%;     /* #798e10  B  */
+    --energy-class-5: 50 90% 33%;     /* #a08708  C  */
+    --energy-class-6: 35 95% 38%;     /* #bd7005  D  */
+    --energy-class-7: 22 95% 43%;     /* #d65205  E  */
+    --energy-class-8: 12 88% 48%;     /* #e63a0f  F  */
+    --energy-class-9: 350 78% 52%;    /* #e42545  G  */
 
     /* DEPRECATED ALIASES — see the light block. */
     --report-chart-1: var(--chart-1);
