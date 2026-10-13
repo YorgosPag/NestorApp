@@ -633,6 +633,17 @@
         "hasCentralHeating": "Building central heating",
         "basementStorageEntrance": "Basement storage entrance"
       },
+      "commonCharges": {
+        "monthlyAmount": "Common charges per month",
+        "includes": "What the common charges include"
+      },
+      "energyCertificate": {
+        "class": "Energy class",
+        "primaryEnergy": "Primary energy use",
+        "co2Emissions": "CO₂ emissions",
+        "issuedOn": "Certificate issue date",
+        "absence": "Reason for no certificate"
+      },
       "objectiveValueDeclarations": {
         "display": "Objective value display",
         "frontage": "Frontage",

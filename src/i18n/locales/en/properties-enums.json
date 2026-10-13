@@ -373,5 +373,34 @@
       "concierge": "concierge",
       "pool": "pool"
     }
+  },
+  "energyClass": {
+    "aPlus": "A+",
+    "a": "A",
+    "bPlus": "B+",
+    "b": "B",
+    "c": "C",
+    "d": "D",
+    "e": "E",
+    "f": "F",
+    "g": "G"
+  },
+  "energyCertificate": {
+    "absence": {
+      "pending": "The certificate is being issued",
+      "exempt": "The property is exempt from the certificate requirement"
+    },
+    "form": {
+      "class": "Energy class, as on the certificate",
+      "classPlaceholder": "No class",
+      "primaryEnergy": "Primary energy (kWh/m² per year)",
+      "primaryEnergyHint": "The calculated annual use, as written on the certificate.",
+      "co2Emissions": "CO₂ emissions (kg/m² per year)",
+      "co2EmissionsHint": "The annual emissions, as written on the certificate.",
+      "figureInvalid": "Enter a number from 0 to {max}, with at most one decimal.",
+      "issuedOn": "Issue date",
+      "issuedOnHint": "The certificate is valid for ten years. The date is not shown on the listing; only whether it is still valid.",
+      "absenceLegend": "If you have no class to declare:"
+    }
   }
 }

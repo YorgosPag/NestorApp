@@ -633,6 +633,17 @@
         "hasCentralHeating": "Κεντρική θέρμανση κτιρίου",
         "basementStorageEntrance": "Είσοδος αποθηκών υπογείου"
       },
+      "commonCharges": {
+        "monthlyAmount": "Κοινόχρηστα ανά μήνα",
+        "includes": "Τι περιλαμβάνουν τα κοινόχρηστα"
+      },
+      "energyCertificate": {
+        "class": "Ενεργειακή κλάση",
+        "primaryEnergy": "Κατανάλωση πρωτογενούς ενέργειας",
+        "co2Emissions": "Εκπομπές CO₂",
+        "issuedOn": "Ημερομηνία έκδοσης πιστοποιητικού",
+        "absence": "Λόγος απουσίας πιστοποιητικού"
+      },
       "objectiveValueDeclarations": {
         "display": "Εμφάνιση αντικειμενικής αξίας",
         "frontage": "Πρόσοψη",
