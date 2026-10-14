@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0f9fb1385ea09f9d9bdd3b36be7128add6a4fe05bd0d281b8bd50ac816f3cea3",
+  "inputsSha256": "53c5101d28d01c0396fef97bb93de4b0ca4c279087777930e7de0ecabc80acbe",
   "languages": [
     "el"
   ],
@@ -918,7 +918,7 @@
     "src/lib/demand/demand-terms.ts": "86a7b8bca10ce84e8bc1fcb8a0de5f9e9a1f14a1be13f29f9ad1cef6be78a43e",
     "src/lib/demand/property-demand-from-document.ts": "f7d1f194ea46be8bcdf83155ef46f923046442aa4f42d4cc783923974988dcdb",
     "src/lib/demand/seek-kind-labels.ts": "39587e76771d2cfc089b8be13ca033a0a15a87c049b2aee70c349e8e4ecdef28",
-    "src/lib/energy-certificate/energy-certificate-improve-subject.ts": "bb4bb78afeebe76f0c99c5409f7131fb18be1f56ba1f42ae856ec3b6b67f9c16",
+    "src/lib/energy-certificate/energy-certificate-improve-subject.ts": "2a35735a9ccc6ce9e3c5b8a5a39ee0c392bc5c0af49b552f5abd52193e539bed",
     "src/lib/energy-certificate/energy-certificate-keys.ts": "63ed183a5b5e47471ee58d9bf9d2c9f643bb8242a6a82c74b28a308f992833e3",
     "src/lib/energy-certificate/energy-class-ratio.ts": "f5b3b6448e8db045bb4f371a675ededb1948d313070f1da35f5ad00b7806a523",
     "src/lib/energy-certificate/pea-import-outcome.ts": "510f5ed003e04578e551bf07fc610403afca8ddab1bc62a6c90736319a665cbe",

@@ -13,6 +13,7 @@
 import type { FieldPatchOutcome } from '@/lib/async/field-patch-queue';
 
 import type { EnergyCertificatePatch } from './energy-certificate';
+import type { EnergyCertificateImportPort } from './pea-import-outcome';
 
 export type EnergyCertificateWriteOutcome = FieldPatchOutcome<never>;
 
@@ -23,4 +24,6 @@ export interface EnergyCertificateImproveSubject {
   readonly revision: unknown;
   /** Η πόρτα γραφής — μερική διόρθωση, σε συναλλαγή στον server (που γράφει μαζί και την αξίωση νομιμότητας). */
   readonly write: (patch: EnergyCertificatePatch) => Promise<EnergyCertificateWriteOutcome>;
+  /** «Συμπλήρωση από ΠΕΑ» (ADR-777 §8.96) — `null` όταν η αγγελία δεν έχει φάκελο όπου να ανέβει το αρχείο. */
+  readonly importPort: EnergyCertificateImportPort | null;
 }
