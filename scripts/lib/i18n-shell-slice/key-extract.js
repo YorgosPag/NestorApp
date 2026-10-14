@@ -341,7 +341,12 @@ function parseSource(file, content) {
  * required looking at another module.
  */
 function extractSurface(content, { file }) {
-  const source = parseSource(file, content);
+  // 🔴 ADR-744 §29.6 — ΤΟ ΑΠΟΤΥΠΩΜΑ ΔΕΝ ΞΕΡΕΙ ΠΛΑΤΦΟΡΜΑ. Μετρημένο: με `core.autocrlf=true`
+  // το `git archive`/`checkout-index` γράφει CRLF ενώ ο δίσκος έχει LF, και το `callTexts`
+  // κόβει στους 200 χαρακτήρες ΠΡΙΝ συμπτύξει κενά ⇒ κάθε `\r` μετακινούσε την τομή και
+  // **5** αρχεία διαδρομών έπαιρναν άλλο αποτύπωμα από στιγμιότυπο και από δίσκο. Μία
+  // κανονικοποίηση ΕΔΩ, στην είσοδο, καλύπτει κάθε πεδίο (ίδια παγίδα με ADR-727 #2).
+  const source = parseSource(file, content.replace(/\r\n?/g, '\n'));
   const callTexts = [];
   // Τα aliases είναι ΦΙΛΕ-LOCAL γεγονός (δεσμεύσεις μέσα σε αυτό το αρχείο), άρα ανήκουν
   // στο fingerprint όπως και τα ίδια τα `t()` — βλ. το σχόλιο της συνάρτησης.

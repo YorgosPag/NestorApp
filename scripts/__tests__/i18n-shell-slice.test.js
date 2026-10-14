@@ -421,6 +421,16 @@ describe('Group 6β — §29: a constant VALUE that moves keys moves the fingerp
     // χωρίς γράφο) δεν θα έφτανε ποτέ στον αριθμό του γεννήτορα.
     expect(surfaceOf(`t(NOTIFICATION_KEYS.files.uploaded);\n`).resolution.keys).toEqual([]);
   });
+
+  it('Ζ5 ΑΝΕΞΑΡΤΗΤΟ ΑΠΟ EOL: CRLF (git archive/checkout-index με autocrlf) ≡ LF (δίσκος)', () => {
+    // Ο παρονομαστής είναι η ΜΑΚΡΙΑ κλήση: η τομή των 200 χαρακτήρων γινόταν πριν τη
+    // σύμπτυξη κενών, άρα κάθε `\r` τη μετακινούσε (μετρημένο σε 5 πραγματικά αρχεία).
+    const long = `export function P({ t }) {\n  return t('a.long.key', {\n${
+      Array.from({ length: 12 }, (_, i) => `    option${i}: value${i},\n`).join('')}  });\n}\n`;
+    const crlf = long.replace(/\n/g, '\r\n');
+    expect(crlf.length).toBeGreaterThan(long.length);
+    expect(fingerprintShellFile(surfaceOf(crlf))).toBe(fingerprintShellFile(surfaceOf(long)));
+  });
 });
 
 // ─── Group 7: slicing ────────────────────────────────────────────────────────
