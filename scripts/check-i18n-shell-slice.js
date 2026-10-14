@@ -82,6 +82,7 @@ const {
   describeCensusGrowth,
 } = require('./lib/i18n-shell-slice/shell-census');
 const RS = require('./lib/i18n-shell-slice/route-slices');
+const { TS_PATH_ALIAS_CONFIG, checkGlobalInputs, globalInputPaths } = require('./lib/i18n-shell-slice/global-inputs');
 const { ROUTES_DIR, routeIdFor } = RS;
 const { parseModule } = require('./lib/module-graph/parse-module');
 const {
@@ -411,7 +412,7 @@ function checkNewlyResolvableSpecs(manifest, stagedFiles, root = PROJECT_ROOT) {
   const modules = stagedFiles.filter(f => CANDIDATE_EXTENSIONS.some(ext => f.endsWith(ext)));
   if (modules.length === 0) return null;
   const added = new Set(modules.map(f => toPosix(path.join(root, f))));
-  const aliases = readTsPathAliases(root);
+  const aliases = readTsPathAliases(root, TS_PATH_ALIAS_CONFIG);
   for (const entry of manifest.unresolvedSpecs) {
     const [fromRel, spec] = entry.split(' → ');
     if (!spec) continue;
@@ -445,6 +446,8 @@ function runLayerOne(config, stagedFiles, root = PROJECT_ROOT) {
     checkRouteLocaleDrift(config, manifest, root),
     checkStagedShellFiles(config, manifest, stagedFiles, root),
     checkNewlyResolvableSpecs(manifest, stagedFiles, root),
+    // E. ADR-744 §30 — οι ΚΑΘΟΛΙΚΕΣ είσοδοι: config · σταθερές · aliases · bundles · toolchain.
+    checkGlobalInputs(config, manifest, root),
   ].filter(reason => reason !== null && reason !== undefined);
 
   if (reasons.length > 0) {
@@ -572,25 +575,31 @@ function main() {
  * Ο `fail()` κάνει `process.exit` ⇒ ο καθαρισμός δένεται στο `exit`, όχι σε `finally`.
  */
 function runLayerOneOnIndex(workingConfig, stagedFiles) {
-  const snapshot = materializeIndex({
-    repoRoot: PROJECT_ROOT,
-    pathspecs: [
-      CONFIG_FILE,
-      'tsconfig.base.json',
-      path.posix.dirname(workingConfig.localesDir),
-      workingConfig.outputDir,
-      ...workingConfig.keyConstants.map(entry => entry.file),
-      ...stagedFiles,
-    ],
-  });
-  process.on('exit', snapshot.dispose);
+  // 🔑 ADR-744 §30 — τα αρχεία των καθολικών εισόδων έρχονται από το ΜΗΤΡΩΟ, όχι από χειρόγραφη
+  // λίστα εδώ (ήταν: config · tsconfig · keyConstants — χωρίς bundles, μητρώα, toolchain).
+  const baseSpecs = [
+    path.posix.dirname(workingConfig.localesDir),
+    workingConfig.outputDir,
+    ...stagedFiles,
+  ];
+  let specs = [...baseSpecs, ...globalInputPaths(PROJECT_ROOT, workingConfig, PROJECT_ROOT)];
+  let snapshot = materializeIndex({ repoRoot: PROJECT_ROOT, pathspecs: specs });
   let config;
   try {
     config = loadConfig(snapshot.root);
+    // Δεύτερο πέρασμα: το config του ΕΥΡΕΤΗΡΙΟΥ μπορεί να δηλώνει αρχείο που το config του δίσκου δεν ξέρει.
+    const missing = globalInputPaths(snapshot.root, config, PROJECT_ROOT).filter(file => !specs.includes(file));
+    if (missing.length > 0) {
+      snapshot.dispose();
+      specs = [...specs, ...missing];
+      snapshot = materializeIndex({ repoRoot: PROJECT_ROOT, pathspecs: specs });
+    }
   } catch (error) {
+    snapshot.dispose();
     fail(error.message, 'fix .i18n-shell-slice.json');
     return;
   }
+  process.on('exit', snapshot.dispose);
   runLayerOne(config, stagedFiles, snapshot.root);
 }
 

@@ -26,6 +26,11 @@
 const fs = require('fs');
 const path = require('path');
 
+// Οι δύο πηγές που διαβάζει αυτό το module. Εξάγονται ώστε όποιος ΚΑΤΑΚΕΡΜΑΤΙΖΕΙ τις
+// εισόδους του (CHECK 3.34, ADR-744 §30) να ονομάζει το ΙΔΙΟ αρχείο, όχι αντίγραφο του ονόματος.
+const NAMESPACE_BUNDLES_FILE = 'src/i18n/namespace-bundles.ts';
+const NAMESPACE_COMPAT_FILE = 'src/i18n/namespace-compat.ts';
+
 /**
  * Parse `src/i18n/namespace-bundles.ts` into a Map of
  * bundleConstName -> string[] of namespaces.
@@ -38,7 +43,7 @@ const path = require('path');
  */
 function loadNamespaceBundles(repoRoot) {
   const bundles = new Map();
-  const file = path.join(repoRoot, 'src', 'i18n', 'namespace-bundles.ts');
+  const file = path.join(repoRoot, NAMESPACE_BUNDLES_FILE);
   if (!fs.existsSync(file)) return bundles;
 
   let src;
@@ -89,7 +94,7 @@ function loadNamespaceBundles(repoRoot) {
  */
 function loadCompatNamespaces(repoRoot) {
   const compat = new Map();
-  const file = path.join(repoRoot, 'src', 'i18n', 'namespace-compat.ts');
+  const file = path.join(repoRoot, NAMESPACE_COMPAT_FILE);
   if (!fs.existsSync(file)) return compat;
 
   let src;
@@ -302,6 +307,8 @@ function stripComments(content) {
 }
 
 module.exports = {
+  NAMESPACE_BUNDLES_FILE,
+  NAMESPACE_COMPAT_FILE,
   loadNamespaceBundles,
   loadCompatNamespaces,
   withCompatNamespaces,

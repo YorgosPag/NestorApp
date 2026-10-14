@@ -134,6 +134,20 @@ function sha256(text) {
 }
 
 /**
+ * CRLF/CR → LF. `core.autocrlf=true` χωρίς `.gitattributes` ⇒ το `checkout-index` του
+ * `--index` και το `git archive` γράφουν CRLF, ο δίσκος και το blob LF (ADR-744 §29.6).
+ * Κάθε αποτύπωμα ΚΕΙΜΕΝΟΥ περνά από εδώ — αλλιώς η ίδια πηγή δίνει δύο αριθμούς.
+ */
+function toLf(text) {
+  return text.replace(/\r\n?/g, '\n');
+}
+
+/** Το ΕΝΑ αποτύπωμα τιμής: σταθερή σειρά κλειδιών σε κάθε βάθος, μετά sha256. */
+function digestOf(value) {
+  return sha256(stableStringify(value));
+}
+
+/**
  * Provenance of one shell module — computed ONLY from what that file itself
  * says, never from anything resolved against the rest of the shell. The
  * pre-commit gate re-derives this number from a single staged file with no
@@ -234,6 +248,8 @@ module.exports = {
   aggregateMissing,
   stableStringify,
   sha256,
+  toLf,
+  digestOf,
   fingerprintShellFile,
   buildSlices,
 };

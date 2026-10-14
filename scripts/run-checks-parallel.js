@@ -154,10 +154,26 @@ if (!skipI18nTypes && (localeFiles.length > 0 || allFiles.includes('src/types/i1
 // an edit to the generated output or its config. Layer 1 never builds the
 // module graph — measured 0,7s against the manifest — so it belongs in Phase 1
 // beside 3.33; the full graph rebuild is Layer 2, in CI.
+// 🔴 ADR-744 §30 — ΚΑΙ ΟΙ ΚΑΘΟΛΙΚΕΣ ΕΙΣΟΔΟΙ ΤΟΥ ΓΕΝΝΗΤΟΡΑ, ΑΠΟ ΤΟ ΜΗΤΡΩΟ ΤΟΥΣ: tsconfig των
+// aliases, και ο ΚΩΔΙΚΑΣ του γεννήτορα (κλειστότητα `require`). Μια λίστα μονοπατιών εδώ θα
+// απέκλινε σιωπηλά (σχήμα 3.34: 63). Το μητρώο δεν φορτώνει typescript (~50ms, μετρημένο).
+// ⚠️ Αν το μητρώο πετάξει (σπασμένο config), η πύλη ΤΡΕΧΕΙ — εκείνη αναφέρει το σφάλμα σωστά.
+function shellSliceGlobalInputFiles() {
+  try {
+    const { loadConfig } = require('./lib/i18n-shell-slice/config');
+    const { globalInputPaths } = require('./lib/i18n-shell-slice/global-inputs');
+    const root = path.resolve(__dirname, '..');
+    const declared = new Set(globalInputPaths(root, loadConfig(root), root));
+    return allFiles.filter(f => declared.has(f));
+  } catch {
+    return allFiles;
+  }
+}
 const shellSliceTriggers = [
   ...localeFiles,
   ...tsFiles,
   ...allFiles.filter(f => f.startsWith('src/i18n/generated/') || f === '.i18n-shell-slice.json'),
+  ...(allFiles.length > 0 ? shellSliceGlobalInputFiles() : []),
 ];
 if (!skipShellSlice && shellSliceTriggers.length > 0)
   addThread('3.34', 'i18n shell slice', 'scripts/check-i18n-shell-slice.js', ['--index', ...tsFiles]);

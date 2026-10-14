@@ -242,7 +242,9 @@ function renderComplete({ projectRoot, config, plan, graph, rendered }) {
   // Ο χάρτης υπογράφεται από το ίδιο manifest, αλλά ΔΕΝ είναι slice (βλ. `buildManifest`).
   const signedOnly = new Map();
   if (lazy !== null) signedOnly.set(lazyArtifactPath(config), renderLazyArtifact(lazy.rows));
-  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly });
+  // ADR-744 §30 — οι καθολικές είσοδοι υπολογίστηκαν ΜΙΑ φορά, στο `renderArtifacts`.
+  const { globalInputs } = rendered.manifest;
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly, globalInputs });
 
   return {
     rendered: {

@@ -107,6 +107,63 @@
     ]
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
+  "globalInputs": {
+    "config": {
+      "dynamicKeyPolicy": "f671b79055a68935f6bb3794dcc4560f4026d2431563981972a2229a2eab34a9",
+      "excludeConsumers": "ecebd6bc1406940ab137955fb5581ebf4cc378110974da937ae7bceffbf0c690",
+      "extraShellRoots": "e896723bb8314edbc0e6b1d29139d801efa84e645aa08aaf56f673af45b291ad",
+      "guaranteedNamespaces": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d",
+      "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
+      "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
+      "lazyRouteOpaqueNamespaces": "2e6fdb0f92e3f2662035cd701b7ac7300d342b8124929f93e9aa32088c6e0e12",
+      "lazyRouteRegistries": "70bded58e6a83e4d2e5e3d2c594b8cfe466e0dfe7d73fa2d4e9e97fce23ad110",
+      "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
+      "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
+      "routeSlices": "cdc6e3318787aee293a7e61a11e45198f364a6181d2862c59d336c4bdac19152",
+      "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
+    },
+    "keyConstants": {
+      "NOTIFICATION_KEYS": "9a29189c43a5ae2241e674543f3280b76406f7fa07ab01aea83aebe19822a318",
+      "PROPERTY_TYPE_I18N_KEYS": "c2b1197829f5a048bf9d3968f014d0234c44cbe90e78ec7578dbd175f7149859"
+    },
+    "lazyRoutes": {
+      "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
+      "registries": "66c06c951bfd0b1eeae0eff0dcd558eaf19391c8aef408e4cd988f25e774455e",
+      "supportedNamespaces": "7f805e8d655ccc993951624f5c1b6ad3c166997ca18f2c1b127ff128be191008"
+    },
+    "namespaceBundles": {
+      "AUDIT_TIMELINE_NAMESPACES": "18e38e5883fc36d385a27c7604dbf4144948e21b9761bdbee3c1dd700b95eb67",
+      "COMMON_NAMESPACES": "2a55e67d8aba7ee2cb1177f8cd71db81f6260a6d5de0ff93711d64387060ceef"
+    },
+    "toolchain": {
+      "npm:typescript": "8c88727f359f0423e1665ce0dec0cb6fa9e927b8e0baae7748605e14a394e5af",
+      "scripts/lib/i18n-namespace-extract.js": "525a709d88f364410ca15f6bad6b5a0ec5f40b020fb104ca209cf52c280b7da6",
+      "scripts/lib/i18n-shell-slice/config.js": "dd00e098d1a5263d79cce60f6049d402887478cb49d9708f2b5b9d7d0d4cf5b1",
+      "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
+      "scripts/lib/i18n-shell-slice/global-inputs.js": "784371acec5515155ebce7c34feb6ad68b3c2ca122971c20fa20f1b1e2caea73",
+      "scripts/lib/i18n-shell-slice/key-extract.js": "84b5d0d8c44c6dc0a9562079c33040879161475510eda1154e816c50bc7f1b4d",
+      "scripts/lib/i18n-shell-slice/key-tables.js": "aba6069f1ba2adbc3d696f1171d0967f5fd740c56b2e1866c08576737325ae45",
+      "scripts/lib/i18n-shell-slice/lazy-route-census.js": "cc3aaa9baac27cf34cff7c8b62fdeda4f4bb223ff276b581aa1325dd365744b8",
+      "scripts/lib/i18n-shell-slice/lazy-routes.js": "5a9a099e54a6de487157e1c1b5d50c37684682bd74276aa488470a73b1279502",
+      "scripts/lib/i18n-shell-slice/ledger.js": "127d2abc6a174205a0d4302563b280cb7a251ac366a605f5aa41e841bbcfd313",
+      "scripts/lib/i18n-shell-slice/namespace-declarations.js": "7a1d7a48689af79445e8ddae7707579410f562b7527a0bb50f5cb355eff03086",
+      "scripts/lib/i18n-shell-slice/plan.js": "ab07bdfd9202463f271d9585d37c12213d7e2c9214405560ea19b5a7249edb43",
+      "scripts/lib/i18n-shell-slice/route-slices.js": "18a6652cf32d4f0d74f0a089737ac3217d7571fa7e52e74abd22934994705929",
+      "scripts/lib/i18n-shell-slice/shell-census.js": "c79cafa20782b69fae3f6f7e3abfbb66d617548a90e3113b5f145d50172506a8",
+      "scripts/lib/i18n-shell-slice/shell-closure.js": "d9b5d271b8f3ee9a0fb2f2eb7502b48c9ceb5357a4a4482498de2efd70117e51",
+      "scripts/lib/i18n-shell-slice/slice-build.js": "d740c30fac8c123c467cca2f270d8525e50d55895f7225290a38f28bedb12a63",
+      "scripts/lib/module-graph/build-graph.js": "434bc9b76950498be38d6e22d102714f15e6172b30b83953e169e3eacc1db89c",
+      "scripts/lib/module-graph/classify-exports.js": "aacae292cc0981db53066fdfb59b5b45a2477e472d177c9873d630aeb4505a9f",
+      "scripts/lib/module-graph/index.js": "c5f613d25d9d6d720feab21f3c8cef35389d1322718cbb222ecba8401ba391e7",
+      "scripts/lib/module-graph/parse-module.js": "f6a8c6553ae7291b219c4bdac913bc109e980c3a591bb024c09ff7ea63a750e5",
+      "scripts/lib/module-graph/resolve-specifier.js": "977377d89306ee70e879e33bacd3343a664f5ce0d547bf1cf0ff36b0bea640ae",
+      "scripts/lib/module-graph/scan-config.js": "f3b6b12a8f7a1c7988db9c4d432f4dad70a23c2f9e02811f8e9ebd826abcd1d6",
+      "scripts/lib/ratchet-baseline.js": "1549cbcb8e3dcdfe2ac52647fe8fe74f7f80083eabd13b5499845157aea5f3db"
+    },
+    "tsPathAliases": {
+      "paths": "70d236efce4530ab21e97a262a188fd08b1c0c976fde5745349721e897529909"
+    }
+  },
   "guaranteedNamespaces": [
     "admin",
     "common",
@@ -119,7 +176,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0d9ab96288cee2b643ed6505d2c14ab3b1c3852349c68b9f6c7876683de6c165",
+  "inputsSha256": "2ed93d6933dde04cee34b526838c341450f1d78faa7954f5306964f228bd5d7b",
   "languages": [
     "el"
   ],

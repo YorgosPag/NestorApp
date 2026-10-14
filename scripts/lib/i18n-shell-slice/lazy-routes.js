@@ -53,6 +53,7 @@ const {
   LEDGER,
   SEAL,
   OPAQUE_LEDGER,
+  LAZY_CONFIG,
   mountOnlyPairs,
   auditMountCensus,
   describeMountFailures,
@@ -63,7 +64,6 @@ const {
 const ARTIFACT_NAME = 'lazy-route-namespaces.json';
 /** Η κλήση που **δηλώνει** μητρώο — το όνομα γράφεται εδώ μία φορά, για reader και μηνύματα. */
 const REGISTRY_CALL = 'defineLazyRoutes';
-const LAZY_CONFIG = 'src/i18n/lazy-config.ts';
 
 const COVERAGE = Object.freeze({
   MISSING_ROW: 'route-without-row',

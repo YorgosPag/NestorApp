@@ -433,6 +433,176 @@ describe('Group 6β — §29: a constant VALUE that moves keys moves the fingerp
   });
 });
 
+// ─── Group 6γ: the GLOBAL inputs of the generator (§30) ──────────────────────
+
+/**
+ * 🔴 ADR-744 §30 — Η ΚΛΑΣΗ «ΚΑΘΟΛΙΚΗ ΕΙΣΟΔΟΣ ΑΛΛΑΖΕΙ ΤΑ `wants`, ΤΟ LAYER 1 ΣΙΩΠΑ».
+ *
+ * Κάθε πόρτα τρέχει μέσα από την ΠΡΑΓΜΑΤΙΚΗ `runLayerOne`, πάνω σε δέντρο-fixture όπου ΟΛΟΙ οι
+ * άλλοι έλεγχοι (A–D) είναι πράσινοι — ώστε το κόκκινο να μπορεί να το προκαλέσει ΜΟΝΟ ο E.
+ * Το toolchain του fixture είναι ΑΝΤΙΓΡΑΦΟ των πραγματικών modules (μετάλλαξη εκεί, ποτέ επί τόπου).
+ * Η0 = ο παρονομαστής: αντίγραφο του ελεγκτή ΧΩΡΙΣ τον E (στη μνήμη) ⇒ η ίδια αλλαγή περνά πράσινη.
+ */
+describe('Group 6γ — §30: config · σταθερές · aliases · bundles · toolchain κοκκινίζουν το Layer 1', () => {
+  const REPO_ROOT = path.resolve(__dirname, '..', '..');
+  const GI = require(path.join(LIB, 'global-inputs'));
+  const CHECKER = path.resolve(__dirname, '..', 'check-i18n-shell-slice.js');
+  const { runLayerOne } = require(CHECKER);
+  const POLICY_FILE = 'src/components/Tour.tsx';
+
+  const baseConfig = () => ({
+    lazyRouteRegistries: [],
+    excludeConsumers: ['src/i18n/'],
+    dynamicKeyPolicy: { [POLICY_FILE]: { prefixes: ['common:tour'], reason: 'μετρημένο' } },
+  });
+  const writeJson = (rel, value, indent = 2) => write(rel, `${JSON.stringify(value, null, indent)}\n`);
+  const keysFile = value => `export const NOTIFICATION_KEYS = {\n  files: { uploaded: '${value}' },\n} as const;\n`;
+
+  /** Ένα πλήρες δέντρο: config · σταθερές · tsconfig · bundles · ΑΝΤΙΓΡΑΦΟ toolchain · manifest. */
+  function buildTree() {
+    writeJson('.i18n-shell-slice.json', baseConfig());
+    write('src/config/notification-keys.ts', keysFile('notifications:files.uploaded'));
+    writeJson('tsconfig.base.json', { compilerOptions: { strict: true, paths: { '@/*': ['./src/*'] } } });
+    write('src/i18n/namespace-bundles.ts', "export const COMMON_NAMESPACES = ['common'] as const;\n");
+    for (const rel of GI.toolchainClosure(GI.CODE_ROOT).files) {
+      write(rel, fs.readFileSync(path.join(GI.CODE_ROOT, rel), 'utf8'));
+    }
+    const config = loadConfig(tmpRoot);
+    const manifest = {
+      languages: [], artifacts: {}, wants: {}, stats: {}, shellFiles: {}, routeFiles: {}, unresolvedSpecs: [],
+      globalInputs: GI.computeGlobalInputs(tmpRoot, config, tmpRoot),   // ο δρόμος του γεννήτορα
+    };
+    writeJson(`${config.outputDir}/shell-slice.manifest.json`, manifest);
+    return manifest;
+  }
+
+  /** Η ΠΥΛΗ: η πραγματική `runLayerOne` (ή αντίγραφό της). `null` = πράσινο, αλλιώς το μήνυμα. */
+  function gate(run = runLayerOne) {
+    const errors = [];
+    const exit = jest.spyOn(process, 'exit').mockImplementation(code => { throw new Error(`exit:${code}`); });
+    const error = jest.spyOn(console, 'error').mockImplementation(text => errors.push(String(text)));
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      run(loadConfig(tmpRoot), [], tmpRoot);
+      return null;
+    } catch (thrown) {
+      if (!String(thrown.message).startsWith('exit:')) throw thrown;
+      return errors.join('\n');
+    } finally {
+      exit.mockRestore(); error.mockRestore(); log.mockRestore();
+    }
+  }
+
+  /**
+   * ΑΝΤΙΓΡΑΦΟ του ελεγκτή σε απομονωμένο μητρώο modules, με τον E ΣΙΩΠΗΛΟ — η εποχή πριν το §30.
+   * Τίποτα στον δίσκο δεν αγγίζεται· το ίδιο το `runLayerOne` φορτώνεται ξανά, αυτούσιο.
+   */
+  function checkerWithoutE() {
+    const target = path.join(LIB, 'global-inputs');
+    let run;
+    jest.isolateModules(() => {
+      jest.doMock(target, () => ({ ...jest.requireActual(target), checkGlobalInputs: () => null }));
+      run = require(CHECKER).runLayerOne;
+    });
+    jest.dontMock(target);
+    return run;
+  }
+
+  const editConfig = change => { const next = baseConfig(); change(next); writeJson('.i18n-shell-slice.json', next); };
+
+  it('Η0 ΠΑΡΟΝΟΜΑΣΤΗΣ + ΜΕΤΑΛΛΑΞΗ: χωρίς τον E (αντίγραφο), αλλαγή policy περνά ΠΡΑΣΙΝΗ· με τον E κόκκινη', () => {
+    buildTree();
+    expect(gate()).toBeNull();                                          // καθαρό δέντρο: όλοι πράσινοι
+    editConfig(c => { c.dynamicKeyPolicy[POLICY_FILE].prefixes = ['common:tourV2']; });
+    expect(gate(checkerWithoutE())).toBeNull();                         // η τρύπα, αναπαραγμένη
+    expect(gate()).toContain('config:dynamicKeyPolicy');                // η θεραπεία
+  });
+
+  it('Η1 🔴 config: `excludeConsumers` αλλάζει ⇒ κόκκινο, ονομάζει το πεδίο', () => {
+    buildTree();
+    editConfig(c => { c.excludeConsumers = ['src/i18n/', 'src/legacy/']; });
+    expect(gate()).toContain('config:excludeConsumers');
+  });
+
+  it('Η2 🔴 keyConstants: η ΤΙΜΗ μιας σταθεράς μετακινεί κλειδί ⇒ κόκκινο', () => {
+    buildTree();
+    write('src/config/notification-keys.ts', keysFile('notifications:files.stored'));
+    expect(gate()).toContain('keyConstants:NOTIFICATION_KEYS');
+  });
+
+  it('Η3 🔴 tsconfig: alias αλλάζει στόχο ⇒ κόκκινο', () => {
+    buildTree();
+    writeJson('tsconfig.base.json', { compilerOptions: { strict: true, paths: { '@/*': ['./lib/*'] } } });
+    expect(gate()).toContain('tsPathAliases:paths');
+  });
+
+  it('Η4 🔴 namespace bundles: μέλος προστίθεται ⇒ κόκκινο', () => {
+    buildTree();
+    write('src/i18n/namespace-bundles.ts', "export const COMMON_NAMESPACES = ['common', 'common-shared'] as const;\n");
+    expect(gate()).toContain('namespaceBundles:COMMON_NAMESPACES');
+  });
+
+  it('Η5 🔴 toolchain: αλλαγή κώδικα στο ΑΝΤΙΓΡΑΦΟ του plan.js ⇒ κόκκινο, ονομάζει το module', () => {
+    buildTree();
+    const rel = 'scripts/lib/i18n-shell-slice/plan.js';
+    write(rel, `${fs.readFileSync(path.join(tmpRoot, rel), 'utf8')}\nconst EXTRA = 1;\n`);
+    expect(gate()).toContain(`toolchain:${rel}`);
+  });
+
+  it('Η6 🔴 toolchain: νέα εξάρτηση (νέο module στην κλειστότητα) ⇒ κόκκινο ως «νέο»', () => {
+    buildTree();
+    const rel = 'scripts/lib/i18n-shell-slice/slice-build.js';
+    write('scripts/lib/i18n-shell-slice/extra-helper.js', 'module.exports = {};\n');
+    write(rel, `${fs.readFileSync(path.join(tmpRoot, rel), 'utf8')}\nrequire('./extra-helper');\n`);
+    expect(gate()).toContain('toolchain:scripts/lib/i18n-shell-slice/extra-helper.js (νέο)');
+  });
+
+  it('Η7 ΚΑΝΕΝΑ ψευδώς θετικό: μορφοποίηση/σειρά JSON · `reason` · πεδίο μόνο-πύλης · σχόλιο · άσχετο compilerOption', () => {
+    buildTree();
+    const reordered = baseConfig();
+    reordered.dynamicKeyPolicy[POLICY_FILE].reason = 'άλλη πρόζα, ίδια απόφαση';
+    reordered.shellNamespacesSeal = { count: 0, at: '2026-10-14', why: 'σφράγιση — μόνο πύλη' };
+    write('.i18n-shell-slice.json', `${JSON.stringify(Object.fromEntries(Object.entries(reordered).reverse()), null, 4)}\n`);
+    write('src/config/notification-keys.ts', `// σχόλιο\n\n${keysFile('notifications:files.uploaded').replace(/\n/g, '\r\n')}`);
+    writeJson('tsconfig.base.json', { compilerOptions: { paths: { '@/*': ['./src/*'] }, strict: false } });
+    expect(gate()).toBeNull();
+  });
+
+  it('Η8 FAIL-CLOSED: manifest χωρίς `globalInputs` (παλιός γεννήτορας) ⇒ κόκκινο', () => {
+    const manifest = buildTree();
+    delete manifest.globalInputs;
+    writeJson('src/i18n/generated/shell-slice.manifest.json', manifest);
+    expect(gate()).toContain('globalInputs');
+  });
+
+  it('Η9 ΟΛΙΚΟΤΗΤΑ: πεδίο config χωρίς ταξινόμηση έξοδος/πύλη ⇒ throw — και σήμερα ΔΕΝ υπάρχει κανένα', () => {
+    expect(() => GI.assertConfigClassified()).not.toThrow();
+    expect(() => GI.assertConfigClassified({ ...DEFAULTS, brandNewField: [] })).toThrow(/brandNewField/);
+    expect(() => GI.assertConfigClassified(DEFAULTS, { ...GI.CONFIG_INPUTS, ghost: x => x })).toThrow(/ghost/);
+  });
+
+  it('Η10 toolchain: μη κυριολεκτικό require ⇒ άρνηση· builtins έξω· πακέτα με έκδοση', () => {
+    expect(() => GI.assertLiteralRequires('const m = require(name);', 'x.js')).toThrow(/μη κυριολεκτικό require στο x\.js:1/);
+    expect(() => GI.assertLiteralRequires('\nrequire(path.join(a, b));', 'x.js')).toThrow(/x\.js:2/);
+    // πρόζα σε σχόλιο + `${…}` σε μήνυμα ΔΕΝ είναι κλήση require (AST, όχι regex)
+    const text = "// ⇒ require(x) σε σχόλιο\nconst m = `require('${spec}')`;\nrequire('node:fs'); require('./a');";
+    expect(() => GI.assertLiteralRequires(text, 'x.js')).not.toThrow();
+    expect(GI.requiredSpecifiers(text)).toEqual(['node:fs', './a']);
+    const real = GI.toolchainClosure(GI.CODE_ROOT);
+    expect(real.files).toEqual(expect.arrayContaining([GI.TOOLCHAIN_ENTRY, 'scripts/lib/i18n-shell-slice/global-inputs.js']));
+    expect(real.packages).toContain('typescript');
+  });
+
+  it('Η11 ΕΝΑ ΜΗΤΡΩΟ, ΤΕΣΣΕΡΙΣ ΚΑΤΑΝΑΛΩΤΕΣ: ό,τι διαβάζει reader είναι στα paths (στιγμιότυπο + σκανδάλη)', () => {
+    const paths = GI.globalInputPaths(REPO_ROOT, CONFIG, GI.CODE_ROOT);
+    expect(paths).toEqual(expect.arrayContaining([
+      '.i18n-shell-slice.json', GI.TS_PATH_ALIAS_CONFIG, 'src/i18n/namespace-bundles.ts',
+      ...CONFIG.keyConstants.map(entry => entry.file), ...CONFIG.lazyRouteRegistries,
+      ...GI.toolchainClosure(GI.CODE_ROOT).files,
+    ]));
+  });
+});
+
 // ─── Group 7: slicing ────────────────────────────────────────────────────────
 
 describe('Group 7 — pruning a namespace down to the keys the shell asks for', () => {

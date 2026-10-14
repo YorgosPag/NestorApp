@@ -4090,6 +4090,11 @@
 
 ## Pending tasks (priority order)
 
+### ↩️ Κανονικοποίηση EOL — ΕΞΙ υλοποιήσεις του ίδιου `replace(/\r\n/g, '\n')` στα scripts (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-14, ADR-744 §30 · N.0.2)
+- **Τι**: η ίδια ερώτηση («κείμενο ανεξάρτητο από autocrlf») απαντιέται σε 6 σημεία με 3 παραλλαγές (`\r\n` vs `\r\n?` vs +BOM/+trailing): `scripts/lib/generated-artifacts.js` (`readLf`) · `scripts/lib/firestore-deploy/model.js` (`normalizeEol`) · `scripts/lib/license-policy/inventory.js` (`normalizeNewlines`) · `scripts/lib/third-party-notices/texts.js` (`normalize`, +BOM) · `scripts/check-i18n-shell-slice.js` (`normalize`, +BOM+trailing) · `scripts/lib/i18n-shell-slice/slice-build.js` (`toLf`, ADR-744 §30 — ο ΣΥΓΚΕΝΤΡΩΤΗΣ μόνο της οικογένειας i18n-shell-slice).
+- **Γιατί**: διαφορετική παραλλαγή = διαφορετική απάντηση στο ίδιο αρχείο (ένα μοναχικό `\r` περνά σε 4/6). Κλάση ADR-727 #2.
+- **Fix**: ένα `scripts/lib/text-eol.js` (`toLf` + `toCanonicalText` με BOM/trailing ως ρητές επιλογές) και import στα 6· άγκυρα με CRLF, μοναχικό CR, BOM. ⚠️ Το `slice-build.toLf` είναι είσοδος αποτυπώματος (toolchain digest, §30): η μετακόμιση θέλει αναγέννηση του manifest στο ίδιο commit.
+
 ### 🔍 Γραμμές zoom κάτοψης/φύλλου λεπτομέρειας — `disabled`/`title=`/`style=` αντί του κοινού `ViewerToolbarButton` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-05, ADR-899 §9 θέμα 3 · ADR-187 · N.0.2)
 - **Τι**: το θέμα 3 έκανε το `useZoomPan` τον ΕΝΑ pan/zoom και έβγαλε κοινό κουμπί θεατή (`shared/media/viewer/ViewerToolbarButton`: tooltip, `aria-disabled` που κρατά την εστίαση). Δύο γραμμές zoom μένουν χειρόγραφες:
   `FloorplanGalleryZoomControls.tsx` (`disabled` στα όρια ⇒ η εστίαση πετιέται στο `<body>`) · `DetailSheetDialog.tsx` (`disabled` + `title=` — CHECK 3.23 — + `style=` transform, N.3· ο `contentRef` του hook δεν ταιριάζει αυτούσιος γιατί κλιμακώνει `zoom / renderScale`).

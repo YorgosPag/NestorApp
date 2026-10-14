@@ -25,6 +25,9 @@ const { isRegression, announceSlack } = require('../ratchet-baseline');
 const LEDGER = 'lazyRouteMountNamespaces';
 const SEAL = 'lazyRouteMountSeal';
 const OPAQUE_LEDGER = 'lazyRouteOpaqueNamespaces';
+// Το αρχείο του `SUPPORTED_NAMESPACES`. Ζει εδώ (χωρίς typescript) ώστε το μητρώο καθολικών
+// εισόδων (`global-inputs.js`) να το δηλώνει χωρίς να φορτώσει τον parser (ADR-744 §30).
+const LAZY_CONFIG = 'src/i18n/lazy-config.ts';
 
 const CENSUS = Object.freeze({
   DECLARED: 'declared',
@@ -146,6 +149,7 @@ module.exports = {
   LEDGER,
   SEAL,
   OPAQUE_LEDGER,
+  LAZY_CONFIG,
   CENSUS,
   mountOnlyPairs,
   countPairs,
