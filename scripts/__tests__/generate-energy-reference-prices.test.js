@@ -7,9 +7,48 @@ const {
   semesterPricesFromJsonStat,
   oilSemesterPrices,
   semesterOf,
+  stabilizeTable,
   OIL_KWH_PER_LITRE,
   MIN_OIL_WEEKS,
 } = require('../generate-energy-reference-prices');
+
+describe('θερμογόνος δύναμη πετρελαίου (ΤΟΤΕΕ, επαληθευμένη στο κείμενο)', () => {
+  it('11,92 kWh/kg (20701-1 Πίν. 7.1) × 0,850 kg/L (20701-4 Πίν. 3η) = 10,132 kWh/L — κατώτερη', () => {
+    // Η ανώτερη (12,602 kWh/kg, 20701-4 Πίν. 3η) θα έδινε 10,712: η άγκυρα κρατά τη ΒΑΣΗ, όχι μόνο τον αριθμό.
+    expect(OIL_KWH_PER_LITRE).toBe(10.132);
+  });
+});
+
+describe('ντετερμινισμός: ο πίνακας αλλάζει ΜΟΝΟ όταν αλλάζει τιμή (§8.95.10)', () => {
+  const electricity = (eurPerKwh, updated) => ({ origin: 'eurostat', updated, periods: [{ period: '2026-S1', eurPerKwh }] });
+  const previous = { generatedAt: '2026-10-13', windowSemesters: 4, sources: { electricity: electricity(0.24, '2026-10-12') } };
+  const freshWith = (eurPerKwh, updated) => ({ generatedAt: '2026-11-01', windowSemesters: 4, sources: { electricity: electricity(eurPerKwh, updated) } });
+
+  it('ίδιες τιμές ⇒ ο ΠΡΟΗΓΟΥΜΕΝΟΣ πίνακας αυτούσιος — αλλιώς κάθε μηνιαίο run θα άνοιγε PR χωρίς νέα τιμή', () => {
+    expect(stabilizeTable(freshWith(0.24, '2026-10-12'), previous)).toBe(previous);
+  });
+
+  it('🔴 ΜΕΤΡΗΜΕΝΟ: η Eurostat αλλάζει το `updated` χωρίς νέα τιμή ⇒ ΚΑΝΕΝΑ PR θορύβου', () => {
+    expect(stabilizeTable(freshWith(0.24, '2026-11-01'), previous)).toBe(previous);
+  });
+
+  it('🔴 νέα τιμή ⇒ ο ΝΕΟΣ πίνακας (η σταθεροποίηση δεν κρύβει αλλαγή)', () => {
+    const fresh = freshWith(0.25, '2026-10-12');
+    expect(stabilizeTable(fresh, previous)).toBe(fresh);
+  });
+
+  it('🔴 νέος συντελεστής μετατροπής χωρίς νέα τιμή πηγής ⇒ ο ΝΕΟΣ πίνακας', () => {
+    const oil = (kwhPerLitre) => ({ origin: 'weekly-oil-bulletin', kwhPerLitre, periods: [{ period: '2026-S1', eurPerKwh: 0.13 }] });
+    const before = { generatedAt: '2026-10-13', windowSemesters: 4, sources: { oil: oil(10.079) } };
+    const fresh = { generatedAt: '2026-11-01', windowSemesters: 4, sources: { oil: oil(10.132) } };
+    expect(stabilizeTable(fresh, before)).toBe(fresh);
+  });
+
+  it('πρώτη εκτέλεση (κανένας προηγούμενος) ⇒ ο νέος πίνακας αυτούσιος', () => {
+    const fresh = freshWith(0.24, '2026-10-12');
+    expect(stabilizeTable(fresh, null)).toBe(fresh);
+  });
+});
 
 /** Το σχήμα που επιστρέφει το API της Eurostat για ένα ερώτημα με μία τιμή σε κάθε διάσταση εκτός χρόνου. */
 function jsonStat(timeIndex, value) {

@@ -220,6 +220,7 @@
     "i18n-types:check": "node scripts/check-i18n-types-freshness.js",
     "generate:i18n-shell-slice": "node scripts/generate-i18n-shell-slice.js",
     "energy-prices:refresh": "node scripts/generate-energy-reference-prices.js",
+    "energy-prices:freshness": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/check-energy-price-freshness.ts",
     "generate:i18n-shell-slice:index": "node scripts/generate-i18n-shell-slice-on-index.js",
     "generate:confusable-skeleton": "node scripts/generate-confusable-skeleton.js",
     "test:workspace-alias": "jest src/lib/unicode src/lib/workspace --silent",

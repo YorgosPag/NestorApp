@@ -9,10 +9,14 @@
  *   • ηλεκτρική     Eurostat `nrg_pc_204`, οικιακοί, ζώνη DC (2.500–4.999 kWh), I_TAX, EUR/kWh
  *   • φυσικό αέριο  Eurostat `nrg_pc_202`, οικιακοί, ζώνη D2 (20–199 GJ),      I_TAX, EUR/kWh
  *   • πετρέλαιο     Weekly Oil Bulletin της Ευρ. Επιτροπής, «Prices with taxes», στήλη θέρμανσης της Ελλάδας
- *                   (€/1000 L) → μέσος όρος ανά εξάμηνο → €/kWh με την κατώτερη θερμογόνο ικανότητα της
- *                   ΤΟΤΕΕ 20701-4/2017, Πίνακας 3η (11,858 kWh/kg × 0,850 kg/L).
+ *                   (€/1000 L) → μέσος όρος ανά εξάμηνο → €/kWh με την κατώτερη θερμογόνο δύναμη της
+ *                   ΤΟΤΕΕ 20701-1/2017, Πίνακας 7.1 (11,92 kWh/kg) × πυκνότητα ΤΟΤΕΕ 20701-4/2017, Πίν. 3η (0,850 kg/L).
  *
- * ΧΡΗΣΗ:  npm run energy-prices:refresh        (δύο φορές τον χρόνο, όταν η Eurostat δημοσιεύει εξάμηνο)
+ * ΧΡΗΣΗ:  npm run energy-prices:refresh        (το τρέχει μηνιαία το `energy-prices-refresh.yml`· με το χέρι επίσης)
+ *         ... -- --github-output              (γράφει `changed=true|false` στο `$GITHUB_OUTPUT`)
+ *
+ * 🔑 ΝΤΕΤΕΡΜΙΝΙΣΜΟΣ: το `generatedAt` αλλάζει **μόνο όταν αλλάζει το περιεχόμενο**. Αλλιώς κάθε εκτέλεση θα έβγαζε
+ *    διαφορετικό αρχείο και το προγραμματισμένο workflow θα άνοιγε PR κάθε μήνα χωρίς νέα τιμή (ADR-777 §8.95.10).
  *
  * ⚠️ Το πετρέλαιο θέρμανσης διατίθεται στην Ελλάδα μόνο 15/10–30/4: τα εξάμηνα έχουν λίγες εβδομάδες. Εξάμηνο με
  *    λιγότερες από MIN_OIL_WEEKS εβδομάδες **δεν** γίνεται τιμή — μία εβδομάδα δεν είναι «τιμή εξαμήνου».
@@ -42,8 +46,19 @@ const EUROSTAT_SERIES = {
 const OIL_BULLETIN_PAGE = 'https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en';
 const OIL_SHEET = 'Prices with taxes';
 const OIL_COLUMN = /^(GR|EL)_price_with_tax_heating_oil$/;
-/** ΤΟΤΕΕ 20701-4/2017, Πίνακας 3η: κατώτερη θερμογόνος ικανότητα 11,858 kWh/kg, πυκνότητα 850 kg/m³ (ΕΛΟΤ ΕΝ 304). */
-const OIL_KWH_PER_KG = 11.858;
+/**
+ * Κατώτερη θερμογόνος δύναμη πετρελαίου θέρμανσης — **ΤΟΤΕΕ 20701-1/2017, Πίνακας 7.1** (ΦΕΚ Β' 4003/17.11.2017,
+ * σελ. 48779, κεφ. 9 «Χαρακτηριστικά καυσίμων»): 11,92 kWh/kg.
+ *
+ * 🔑 ΓΙΑΤΙ ΚΑΤΩΤΕΡΗ — ΕΠΑΛΗΘΕΥΜΕΝΟ ΣΤΟ ΚΕΙΜΕΝΟ: η 20701-1 παρ. 5.1.1 (σελ. 48705) δίνει τους βαθμούς απόδοσης λεβήτων
+ *    «με βάση την κατωτέρα θερμογόνο δύναμη» ⇒ η τελική ενέργεια του ΠΕΑ είναι σε κατώτερη.
+ * 🔑 ΓΙΑΤΙ 11,92 ΚΑΙ ΟΧΙ 11,858: το ίδιο ΦΕΚ δίνει και 11,858 (20701-4, Πίν. 3η, σελ. 48964, «ενδεικτικές τιμές»
+ *    για την επιθεώρηση λεβήτων). Κρατάμε την τιμή του κανονισμού που **παράγει** την τελική ενέργεια που τιμολογούμε.
+ *    Διαφορά 0,5%. ⚠️ Η σελ. 48963 της 20701-4 λέει ότι η ενέργεια του καυσίμου «υπολογίζεται με αναφορά την Ανώτερη»
+ *    — αφορά τον **έλεγχο λεβήτων** (Οικολογικός σχεδιασμός 813/2013), όχι τον υπολογισμό του ΠΕΑ.
+ */
+const OIL_KWH_PER_KG = 11.92;
+/** Πυκνότητα 850 kg/m³ — ΤΟΤΕΕ 20701-4/2017, Πίν. 3η (ΕΛΟΤ ΕΝ 304)· η 20701-1 Πίν. 7.1 δεν δίνει πυκνότητα. */
 const OIL_KG_PER_LITRE = 0.85;
 const OIL_KWH_PER_LITRE = Math.round(OIL_KWH_PER_KG * OIL_KG_PER_LITRE * 1000) / 1000;
 
@@ -162,9 +177,48 @@ async function fetchOil(today) {
   }
 }
 
+const serialize = (table) => `${JSON.stringify(table, null, 2)}\n`;
+
+/**
+ * Ό,τι **τιμολογεί**: παράθυρο + εξάμηνα + συντελεστής μετατροπής — χωρίς `generatedAt` και χωρίς το `updated` της
+ * Eurostat. ⚠️ ΜΕΤΡΗΜΕΝΟ (2026-10-14): η Eurostat άλλαξε το `updated` και των δύο σειρών **χωρίς να αλλάξει καμία
+ * τιμή** — με σύγκριση ολόκληρου του αρχείου, το μηνιαίο workflow θα άνοιγε PR θορύβου.
+ */
+function pricingContent(table) {
+  const sources = Object.fromEntries(
+    Object.entries(table.sources || {}).map(([source, entry]) => [source, { ...entry, updated: undefined }]),
+  );
+  return JSON.stringify({ windowSemesters: table.windowSemesters, sources });
+}
+
+/**
+ * Ο νέος πίνακας — ή ο **προηγούμενος αυτούσιος**, όταν καμία τιμή δεν άλλαξε. Το `generatedAt` λέει πότε άλλαξαν τα
+ * δεδομένα, όχι πότε κοίταξε κάποιος· έτσι το αρχείο μένει byte-ίδιο σε κάθε άγονη εκτέλεση.
+ * @param {{generatedAt: string, sources: object}} fresh
+ * @param {{generatedAt: string, sources: object} | null} previous
+ */
+function stabilizeTable(fresh, previous) {
+  if (previous === null) return fresh;
+  return pricingContent(fresh) === pricingContent(previous) ? previous : fresh;
+}
+
+function readPrevious() {
+  try {
+    return JSON.parse(fs.readFileSync(OUTPUT, 'utf8'));
+  } catch {
+    return null;   // πρώτη εκτέλεση ή χαλασμένο αρχείο: ο νέος πίνακας γράφεται ολόκληρος
+  }
+}
+
+/** `changed=…` για το βήμα PR του workflow (ίδιο συμβόλαιο με το `refresh:market-data`). */
+function announceChanged(changed) {
+  if (!process.argv.includes('--github-output') || !process.env.GITHUB_OUTPUT) return;
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `changed=${changed}\n`);
+}
+
 async function main() {
   const today = new Date();
-  const table = {
+  const fresh = {
     generatedAt: today.toISOString().slice(0, 10),
     windowSemesters: WINDOW_SEMESTERS,
     sources: {
@@ -173,13 +227,18 @@ async function main() {
       'natural-gas': await fetchEurostat(EUROSTAT_SERIES['natural-gas']),
     },
   };
+  const previousText = fs.existsSync(OUTPUT) ? fs.readFileSync(OUTPUT, 'utf8') : null;
+  const table = stabilizeTable(fresh, readPrevious());
+  const text = serialize(table);
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
-  fs.writeFileSync(OUTPUT, `${JSON.stringify(table, null, 2)}\n`);
+  fs.writeFileSync(OUTPUT, text);
   for (const [source, entry] of Object.entries(table.sources)) {
     const line = entry.periods.map((p) => `${p.period} ${p.eurPerKwh}`).join(' · ');
     console.log(`${source.padEnd(12)} ${line}`);
   }
-  console.log(`→ ${path.relative(process.cwd(), OUTPUT)}`);
+  const changed = previousText === null || previousText.replace(/\r\n/g, '\n') !== text;
+  announceChanged(changed);
+  console.log(`→ ${path.relative(process.cwd(), OUTPUT)} ${changed ? '(ΑΛΛΑΞΕ)' : '(ίδιο, byte προς byte)'}`);
 }
 
 if (require.main === module) {
@@ -189,4 +248,11 @@ if (require.main === module) {
   });
 }
 
-module.exports = { semesterPricesFromJsonStat, oilSemesterPrices, semesterOf, OIL_KWH_PER_LITRE, MIN_OIL_WEEKS };
+module.exports = {
+  semesterPricesFromJsonStat,
+  oilSemesterPrices,
+  semesterOf,
+  stabilizeTable,
+  OIL_KWH_PER_LITRE,
+  MIN_OIL_WEEKS,
+};

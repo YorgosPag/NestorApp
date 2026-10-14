@@ -1,0 +1,133 @@
+name: T2 ⚡ Energy Reference Prices Refresh (ADR-777 §8.95.10)
+
+# =============================================================================
+# ADR-777 §8.95.10 — ΑΥΤΟΜΑΤΗ ΑΝΑΝΕΩΣΗ των τιμών αναφοράς ενέργειας (`src/lib/energy-cost/energy-reference-prices.json`).
+#
+# ΙΔΙΩΜΑ: ίδια ΔΟΜΗ με το `market-data-refresh.yml` (ADR-889 §11) — Renovate/Dependabot: συχνός έλεγχος, σπάνια
+# δουλειά, ΑΝΘΡΩΠΟΣ στο merge. Καμία νέα μηχανή: ο γεννήτορας είναι το ίδιο `npm run energy-prices:refresh` του ανθρώπου.
+#   1. Γεννήτορας ΔΥΟ φορές ⇒ byte-ίδιο (ντετερμινισμός). Χωρίς νέα ΤΙΜΗ το αρχείο μένει byte-ίδιο με το main
+#      (μετρημένο: η Eurostat αλλάζει το `updated` χωρίς νέα τιμή — δεν ανοίγει PR θορύβου).
+#   2. jest στα πραγματικά αρχεία (υπολογισμός + γεννήτορας + φρεσκάδα).
+#   3. Άλλαξε ⇒ ΕΝΑ PR στον σταθερό κλάδο data/energy-prices-refresh (force-push: το ίδιο PR ενημερώνεται).
+#   4. ΠΥΛΗ ΦΡΕΣΚΑΔΑΣ (ιδίωμα dbt `source freshness`, όπως η Ε8 του ADR-889) — ΑΛΛΑ μετρά ΗΜΕΡΕΣ ΩΣ ΤΗ ΛΗΞΗ, με τη
+#      λήξη από την ΙΔΙΑ συνάρτηση (`staleAfter`) που σβήνει την εκτίμηση στην παραγωγή: ⚠️ ≤ 180 · ❌ ≤ 90 ημέρες.
+#      Κρίνει το αρχείο του MAIN — δηλαδή πιάνει και το PR που άνοιξε και ΔΕΝ έγινε merge.
+#
+# 🔴 ΠΟΤΕ push/merge στο main από εδώ. Merge = ανάπτυξη στο nestorconstruct.gr = απόφαση Giorgio (N.(-1)).
+#    Το PR του GITHUB_TOKEN δεν ξυπνά άλλα workflows — οι έλεγχοι τρέχουν ΕΔΩ.
+# ⚠️ Προϋπόθεση: «Allow GitHub Actions to create and approve pull requests» (ήδη απαραίτητη για το ADR-889 §11.6).
+#
+# Γιατί ΜΗΝΙΑΙΑ: η Eurostat δημοσιεύει εξάμηνο ~4–5 μήνες μετά το τέλος του (Απρ–Μάι · Οκτ–Νοε)· μηνιαίος έλεγχος =
+# καθυστέρηση ≤ 1 μήνα, και το παράθυρο ως τη λήξη (18 μήνες) το απορροφά με μεγάλη άνεση.
+# =============================================================================
+
+on:
+  schedule:
+    - cron: '0 4 1 * *' # 1η κάθε μήνα, 04:00 UTC (07:00 Αθήνα)
+  workflow_dispatch:
+
+permissions:
+  contents: write # push ΜΟΝΟ στον κλάδο data/energy-prices-refresh
+  pull-requests: write
+
+concurrency:
+  group: energy-prices-refresh
+  cancel-in-progress: false
+
+env:
+  BRANCH: data/energy-prices-refresh
+  PRICES: src/lib/energy-cost/energy-reference-prices.json
+
+jobs:
+  refresh:
+    name: ⚡ Τιμές αναφοράς · ντετερμινισμός · tests · PR · φρεσκάδα
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Η πύλη φρεσκάδας τρέχει με το tsx του mcp-server — ίδια εντολή με τον άνθρωπο (`energy-prices:freshness`).
+      - name: 📦 Install freshness runtime (tsx, από το lock)
+        run: npm ci --prefix mcp-server --no-audit --no-fund
+
+      # Κόκκινο εδώ = απρόσιτη πηγή ή άλλαξε το σχήμα της. Ο γεννήτορας ΔΕΝ γράφει μισό πίνακα (σταματά χωρίς εγγραφή).
+      - name: 🔎 Γεννήτορας (1η) + ντετερμινισμός (2η)
+        id: refresh
+        continue-on-error: true
+        run: |
+          npm run energy-prices:refresh -- --github-output
+          first="$(sha256sum "$PRICES")"
+          npm run energy-prices:refresh
+          second="$(sha256sum "$PRICES")"
+          if [ "$first" != "$second" ]; then
+            echo "::error title=Energy reference prices::Δύο εκτελέσεις έδωσαν διαφορετικό αρχείο — ο γεννήτορας δεν είναι ντετερμινιστικός."
+            exit 1
+          fi
+
+      - name: 🧪 jest στα πραγματικά αρχεία
+        id: tests
+        if: steps.refresh.outcome == 'success' && steps.refresh.outputs.changed == 'true'
+        run: >-
+          npx jest
+          src/lib/energy-cost/__tests__/listing-energy-cost.test.ts
+          src/lib/energy-cost/__tests__/energy-price-freshness.test.ts
+          scripts/__tests__/generate-energy-reference-prices.test.js
+
+      - name: 📬 Άνοιγμα / ενημέρωση PR
+        if: steps.refresh.outcome == 'success' && steps.refresh.outputs.changed == 'true' && steps.tests.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -- "$PRICES"
+          if git diff --cached --quiet; then
+            echo "::notice title=Energy reference prices::Καμία νέα τιμή — κανένα PR."
+            exit 0
+          fi
+          body="$(mktemp)"
+          {
+            echo "Αυτόματη ανανέωση των τιμών αναφοράς ενέργειας (ADR-777 §8.95.10)."
+            echo
+            echo "Πηγές: Eurostat nrg_pc_204 / nrg_pc_202 · Weekly Oil Bulletin (Ευρ. Επιτροπή). Διαφορά:"
+            echo
+            echo '```diff'
+            git diff --cached -- "$PRICES"
+            echo '```'
+          } > "$body"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -C "$BRANCH"
+          git commit -m "data(energy): αυτόματη ανανέωση τιμών αναφοράς (ADR-777 §8.95.10)"
+          git push --force origin "$BRANCH"
+          state="$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null || true)"
+          if [ "$state" = "OPEN" ]; then
+            gh pr edit "$BRANCH" --body-file "$body"
+          else
+            gh pr create --base main --head "$BRANCH" \
+              --title "data(energy): ανανέωση τιμών αναφοράς ενέργειας (ADR-777 §8.95.10)" \
+              --body-file "$body"
+          fi
+
+      # Κρίνει το αρχείο του MAIN (όχι του PR): ένα PR που δεν έγινε merge ΔΕΝ ανανεώνει τίποτα στην παραγωγή.
+      - name: 🚦 Φρεσκάδα του main
+        if: always()
+        run: |
+          git checkout --quiet "${{ github.sha }}" -- "$PRICES"
+          npm run energy-prices:freshness
+
+      - name: 🚦 Ετυμηγορία γεννήτορα
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo "::error title=Energy reference prices::Απρόσιτη πηγή ή μη ντετερμινιστική έξοδος — δες το βήμα «Γεννήτορας»."
+          exit 1
