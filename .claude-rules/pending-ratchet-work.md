@@ -4095,6 +4095,14 @@
 - **Γιατί**: διαφορετική παραλλαγή = διαφορετική απάντηση στο ίδιο αρχείο (ένα μοναχικό `\r` περνά σε 4/6). Κλάση ADR-727 #2.
 - **Fix**: ένα `scripts/lib/text-eol.js` (`toLf` + `toCanonicalText` με BOM/trailing ως ρητές επιλογές) και import στα 6· άγκυρα με CRLF, μοναχικό CR, BOM. ⚠️ Το `slice-build.toLf` είναι είσοδος αποτυπώματος (toolchain digest, §30): η μετακόμιση θέλει αναγέννηση του manifest στο ίδιο commit.
 
+### 🧾 Λογιστική: υπολογισμοί πάνω σε ΣΕΛΙΔΑ — τα υπόλοιπα μέλη της κατηγορίας (προτεραιότητα ΥΨΗΛΗ — οικονομικά νούμερα, 2026-10-14, ADR-ACC-010 §2.1.1 · N.0.2)
+Οι εγγραφές ημερολογίου έκλεισαν (`collectJournalEntries` + `journal-ledger.ts` + άγκυρα συνόρου). **Ίδια ασθένεια, άλλες οντότητες** (μετρημένο 2026-10-14):
+- `services/reports/bank-reconciliation.ts:86` — `listBankTransactions({ dateRange }, 10000)` + δικό του `REPORT_PAGE_SIZE`: σιωπηλό όριο σε αναφορά, και fallback `{ items: [] }` στο repo (σφάλμα = «καμία κίνηση»).
+- `services/engines/matching-engine.ts:357-370` — υποψήφια αντιστοίχισης: τιμολόγια `unpaid`/`partial` ×100 και εγγραφές χρήσης ×100· η σωστή αντιστοίχιση μπορεί να λείπει απλώς επειδή δεν χώρεσε. Είναι στο κλειστό σύνολο της άγκυρας **με λόγο**· θεραπεία = στένεμα υποψηφίων (ποσό ± ανοχή) αντί για όριο.
+- `reports/profit-and-loss.ts` + `reports/tax-summary.ts` — **δύο** σκληρογραμμένες κλίμακες φόρου (9/22/28/36/44%) έξω από το `tax-config` (`getTaxScaleForYear`)· διαφέρουν από τον `TaxEngine` ανά έτος/μορφή.
+- Λίστες οθόνης (journal / invoices / bank / assets): `hasNext` χωρίς cursor ⇒ η 2η σελίδα **δεν μπορεί** να ζητηθεί.
+**Θεραπεία**: `collect*` ανά οντότητα πάνω στο `processAdminBatch` (πρότυπο: `accounting-repo-journal-ledger.ts`) + επέκταση της άγκυρας συνόρου.
+
 ### 🔍 Γραμμές zoom κάτοψης/φύλλου λεπτομέρειας — `disabled`/`title=`/`style=` αντί του κοινού `ViewerToolbarButton` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-05, ADR-899 §9 θέμα 3 · ADR-187 · N.0.2)
 - **Τι**: το θέμα 3 έκανε το `useZoomPan` τον ΕΝΑ pan/zoom και έβγαλε κοινό κουμπί θεατή (`shared/media/viewer/ViewerToolbarButton`: tooltip, `aria-disabled` που κρατά την εστίαση). Δύο γραμμές zoom μένουν χειρόγραφες:
   `FloorplanGalleryZoomControls.tsx` (`disabled` στα όρια ⇒ η εστίαση πετιέται στο `<body>`) · `DetailSheetDialog.tsx` (`disabled` + `title=` — CHECK 3.23 — + `style=` transform, N.3· ο `contentRef` του hook δεν ταιριάζει αυτούσιος γιατί κλιμακώνει `zoom / renderScale`).

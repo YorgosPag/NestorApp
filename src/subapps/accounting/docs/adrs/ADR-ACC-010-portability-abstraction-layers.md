@@ -62,27 +62,18 @@
  * Κάθε module χρησιμοποιεί αυτό — ποτέ direct Firestore calls.
  */
 interface IAccountingRepository {
-  // === Journal Entries ===
-  createJournalEntry(
-    companyId: string,
-    entry: CreateJournalEntryInput
-  ): Promise<JournalEntry>;
+  // === Journal Entries === (ευθυγραμμίστηκε με τον κώδικα 2026-10-14: ο μισθωτής ζει
+  //     στον κατασκευαστή του adapter — `new FirestoreAccountingRepository(tenant)` — όχι σε κάθε κλήση)
+  createJournalEntry(data: CreateJournalEntryInput): Promise<{ id: string }>;
+  getJournalEntry(entryId: string): Promise<JournalEntry | null>;
+  updateJournalEntry(entryId: string, updates: UpdateJournalEntryInput): Promise<void>;
+  deleteJournalEntry(entryId: string): Promise<void>;
 
-  getJournalEntries(
-    companyId: string,
-    filters: JournalEntryFilters
-  ): Promise<PaginatedResult<JournalEntry>>;
+  /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (βλ. §2.1.1). */
+  listJournalEntries(filters: JournalEntryFilters, pageSize?: number): Promise<PaginatedResult<JournalEntry>>;
 
-  updateJournalEntry(
-    companyId: string,
-    entryId: string,
-    updates: Partial<JournalEntry>
-  ): Promise<JournalEntry>;
-
-  deleteJournalEntry(
-    companyId: string,
-    entryId: string
-  ): Promise<void>;
+  /** ΟΛΕΣ οι εγγραφές μιας εμβέλειας, για υπολογισμό — πετά, ποτέ μερικό (§2.1.1). */
+  collectJournalEntries(query: JournalLedgerQuery): Promise<JournalEntry[]>;
 
   // === Invoices ===
   createInvoice(
@@ -164,6 +155,76 @@ interface IAccountingRepository {
   ): Promise<VATQuarterSummary>;
 }
 ```
+
+#### 2.1.1 Σελίδα ≠ καθολικό (2026-10-14)
+
+**Περιστατικό**: `FAILED_PRECONDITION` στον ΦΠΑ τριμήνου (ADR-870 changelog 2026-10-14). Η διερεύνηση έδειξε
+ότι **κάθε** οικονομικός υπολογισμός διάβαζε τη σελίδα της οθόνης:
+
+| Λάθος | Αποτέλεσμα |
+|---|---|
+| `listJournalEntries` με όριο 50 στον ΦΠΑ, στον φόρο, στο accounting-service ×4 και στο tax dashboard | σύνολα από τις 50 πρώτες εγγραφές |
+| `period` δηλωμένο στο `JournalEntryFilters`, **ποτέ** εφαρμοσμένο | οι 6 αναφορές = όλες οι εγγραφές όλων των εποχών· στο P&L η «τρέχουσα / προηγούμενη / πέρσι» ήταν **ίδια** |
+| `safeFirestoreOperation(…, fallback)` | σφάλμα ανάγνωσης ⇒ κενή λίστα ⇒ **«ΦΠΑ 0 €»** χωρίς μήνυμα |
+| οι αναφορές κρατούσαν μόνο `ACTIVE` | ακυρωμένο τιμολόγιο = **−X** (η αρχική `REVERSED` εκτός, η αντιλογιστική `−X` μέσα) |
+
+**Απόφαση** (πρακτική SAP / Xero / QuickBooks: η λίστα της οθόνης είναι άλλη λειτουργία από τη σάρωση για υπολογισμό):
+
+- `collectJournalEntries({ scope, type? })` (`services/repository/accounting-repo-journal-ledger.ts`):
+  `scope` = `{ kind: 'period', period }` (κλειστό διάστημα `YYYY-MM-DD` στο `date`) **ή**
+  `{ kind: 'fiscalYear', fiscalYear, quarter? }`. Δεν έχει `pageSize`, άρα το κόψιμο είναι αδύνατο από τον τύπο. Σελιδοποίηση με το SSoT
+  `processAdminBatch`. **Χωρίς** fallback. Ανώτατο όριο `JOURNAL_LEDGER_SCAN_CEILING` που **πετά**
+  `JournalLedgerScanLimitError`, ποτέ κόψιμο.
+- SSoT `services/journal/journal-ledger.ts`: `loadLedger` (μία σάρωση, διαχωρισμός έσοδα/έξοδα, σύνολα
+  με `roundToTwo`) και `loadPeriodEntries` για τις αναφορές. Αντικατέστησε 7 αντίγραφα του «δύο κλήσεις και άθροισμα».
+- SSoT των αναφορών: `journal-ledger.ts` → `groupNetAmount` / `shareOf` (ομαδοποίηση ανά κατηγορία ή πελάτη)·
+  `reports/report-tax-basis.ts` → `loadPeriodTaxBasis` (καθολικό περιόδου + πληρωμένος ΕΦΚΑ) και
+  `estimateSimplifiedIncomeTax`. Ήταν δίδυμα στο P&L και στη Σύνοψη Φόρων (jscpd). Η κλίμακα μεταφέρθηκε **αυτούσια**,
+  με νούμερα καρφωμένα στο test. Η ευθυγράμμισή της με το `tax-config` είναι ανοιχτό εκκρεμές.
+- **Storno**: μετρούν **και** η αρχική **και** η αντιλογιστική, η καθεμία στην περίοδό της. Καμία αναφορά
+  δεν φιλτράρει `status`. Το `matching-engine` κρατά το φίλτρο, γιατί ζητά ανοιχτή εγγραφή για αντιστοίχιση, όχι σύνολο.
+- Το `period` / `searchText` αφαιρέθηκαν από το `JournalEntryFilters`: η λίστα δεν πρέπει να διαφημίζει φίλτρο που δεν εφαρμόζει.
+
+**Φύλακες**:
+- `journal/__tests__/journal-ledger-boundary.test.ts`: **κλειστό σύνολο** καλούντων της σελίδας (route οθόνης,
+  categories, matching-engine), καθένας με λόγο.
+- `repository/__tests__/journal-ledger-index.test.ts`: άγκυρα ισοτιμίας δεικτών. Το CHECK 3.91 **δεν βλέπει**
+  τη σάρωση, γιατί το `.get()` ζει μέσα στο `processAdminBatch`. Η άγκυρα εκτελεί την `buildLedgerQuery` για τα 6 σχήματα.
+- `repository/__tests__/accounting-repo-journal-ledger.test.ts`: >1 παρτίδα, όρια περιόδου, μισθωτής, σφάλμα που
+  δεν γίνεται κενό, ανώτατο όριο, storno = 0.
+
+**Φάση 2 (2026-10-14) — τράπεζα, αντιστοίχιση, κλίμακα φόρου.** Ίδια ασθένεια, τρία ακόμη σημεία:
+
+| Λάθος | Αποτέλεσμα |
+|---|---|
+| Τραπεζική συμφωνία: `listBankTransactions({ dateRange }, 10000)` — το `dateRange` **δεν** εφαρμοζόταν | «τρέχουσα / προηγούμενη / πέρσι» = οι ίδιες 10.000 νεότερες κινήσεις· σφάλμα ⇒ «καμία κίνηση» |
+| Αντιστοίχιση: 100 νεότερα απλήρωτα + 100 μερικώς + 100 εγγραφές· το ερώτημα τιμολογίων **χωρίς δείκτη** | το παλιότερο απλήρωτο (αυτό που πληρώνεται τώρα) δεν εξεταζόταν· στην παραγωγή **κανένα** τιμολόγιο υποψήφιο |
+| P&L / Σύνοψη Φόρων: δική τους κλίμακα ατομικής (2024) στο κέρδος **τριμήνου**, ΕΦΚΑ όλου του έτους | υποεκτίμηση τριμήνου, ΕΠΕ με έως 44% αντί 22%, 2026 με κλίμακα 2024 |
+
+**Αποφάσεις:**
+- **Μηχανισμός σάρωσης ένας**: `repository/accounting-repo-scan.ts` (`scanLedger`, `assertLedgerPeriod`,
+  `LedgerScanLimitError`, `LEDGER_SCAN_CEILING`). Πάνω του: `collectJournalEntries`, `collectBankTransactions`
+  (`BankLedgerScope` = `period` | `matchGroup`), και τα υποψήφια αντιστοίχισης.
+- **Στένεμα υποψηφίων, όχι μεγαλύτερο όριο** (Xero «exact amount first», SAP open-item selection): δύο κανάλια,
+  πλήρη και τα δύο — (α) ερώτημα εύρους στη ζώνη ανοχής (`amountBandFor` = ακριβές αντίστροφο του `scoreAmount`,
+  με άγκυρα που το αποδεικνύει ανά λεπτό)· (β) τιμολόγια που αναγράφονται στο κείμενο της τράπεζας
+  (`extractInvoiceReferences`) — εκεί που οι χρήστες του Xero παραπονιούνται ότι αγνοείται η αιτιολογία. **Κανόνας
+  εισόδου** = το ίδιο κριτήριο: ποσό εντός ανοχής Ή ρητή αναφορά. Έτσι το στένεμα δεν κρύβει τίποτα που θα περνούσε.
+  SSoT «ανοιχτό ποσό τιμολογίου»: `utils/invoice-open-amount.ts` (βαθμολόγηση + ανάκτηση).
+- **Φόρος αναφορών κατά IAS 34 §30(γ)**: κέρδος περιόδου × εκτιμώμενος μέσος ετήσιος πραγματικός συντελεστής της
+  χρήσης (πραγματικά ετήσια για κλεισμένη, `yearToDateProgress` για τρέχουσα), κατά νομική μορφή μέσω του
+  `TaxEngine` (`services/tax/entity-tax-profile.ts`). Μόνο φόρος εισοδήματος (IAS 12) — χωρίς προκαταβολή / τέλος.
+  ΕΦΚΑ = όσα **πληρώθηκαν μέσα** στην περίοδο. Περίοδος που διασχίζει χρήσεις ⇒ συντελεστής ανά έτος.
+  Το `ReportGeneratorDeps.asOf` κάνει την αναφορά αναπαραγώγιμη.
+
+**Φύλακες (Φάση 2):** η άγκυρα συνόρου έγινε πίνακας ανά σελίδα (`listJournalEntries` · `listBankTransactions` ·
+`listInvoices`)· το `matching-engine` **βγήκε** από το κλειστό σύνολο. `bank-and-candidates-index.test.ts`
+(ισοτιμία δεικτών, κοινός καταγραφέας `recordQueryShape` στο `test-utils/firestore-indexes`)·
+`matching-candidates.test.ts` (ζώνη ⊇ αποδεκτά, αναφορές, κανόνας εισόδου, σφάλμα ≠ κενό, N:M)·
+`report-tax-basis.test.ts` (IAS 34 με ανεξάρτητα υπολογισμένα νούμερα).
+
+**Γνωστό χρέος (εκτός εμβέλειας):** `balance-service` (υπόλοιπο πελάτη από σελίδα 1000) — στο κλειστό σύνολο με λόγο,
+στο `pending-ratchet-work.md`.
 
 ### 2.2 Contact Provider (CRM Integration)
 
@@ -1004,6 +1065,8 @@ class FirestoreAccountingRepository implements IAccountingRepository {
 | 2026-02-09 | Public API via index.ts: types + interfaces + config + provider | Claude Code |
 | 2026-02-09 | **Phase 2 implemented** — types/interfaces.ts: IAccountingRepository (CRUD for journal, invoices, bank, assets, EFKA, tax, documents), IVATEngine, ITaxEngine, IDepreciationEngine, IDocumentAnalyzer, IMatchingEngine, IMyDataService, ICSVImportService. AccountingPermission type (15 permissions). Pattern follows ITasksRepository (src/services/crm/tasks/contracts.ts). Imports PaginatedResult from @/lib/pagination. Zero runtime dependencies (pure TypeScript) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — All 8 interfaces have concrete implementations: `FirestoreAccountingRepository` (26 methods), `VATEngine`, `TaxEngine`, `DepreciationEngine` (constructor injection), `MatchingEngine`, `CSVImportService`, `MyDataServiceStub`, `DocumentAnalyzerStub`. Factory: `createAccountingServices()` in services/index.ts. Helpers: `sanitizeForFirestore()` (recursive undefined→null). Extended host: `firestore-collections.ts` (+9), `enterprise-id.service.ts` (+8). Portability intact: swap `FirestoreAccountingRepository` → PostgreSQL adapter | Claude Code |
+| 2026-10-14 | **Σελίδα ≠ καθολικό (§2.1.1)** — νέο `collectJournalEntries` + SSoT `journal-ledger.ts`· ΦΠΑ / φόρος / accounting-service / tax dashboard / 6 αναφορές περνούν σε πλήρη σάρωση που πετά σε σφάλμα· `period` επιτέλους εφαρμόζεται· storno χωρίς φίλτρο `status` στις αναφορές· +2 δείκτες· άγκυρες συνόρου + ισοτιμίας δεικτών. §2.1 (εγγραφές) ευθυγραμμίστηκε με τον κώδικα | Giorgio + Claude Code |
+| 2026-10-14 | **Σελίδα ≠ καθολικό, Φάση 2 (§2.1.1)** — κοινό `scanLedger`· `collectBankTransactions` (τραπεζική συμφωνία, αποσύνδεση N:M)· στένεμα υποψηφίων αντιστοίχισης (ζώνη ποσού + αναφορά παραστατικού, κανόνας εισόδου)· φόρος αναφορών κατά IAS 34 ανά νομική μορφή μέσω `TaxEngine`· +3 δείκτες· άγκυρα συνόρου για 3 σελίδες | Giorgio + Claude Code |
 
 ---
 

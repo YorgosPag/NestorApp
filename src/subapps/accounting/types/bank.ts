@@ -297,16 +297,35 @@ export interface BankTransactionFilters {
   direction?: TransactionDirection;
   /** Κατάσταση αντιστοίχισης */
   matchStatus?: MatchStatus;
-  /** Εύρος ημερομηνιών */
-  dateRange?: PeriodRange;
-  /** Ελάχιστο ποσό */
-  minAmount?: number;
-  /** Μέγιστο ποσό */
-  maxAmount?: number;
-  /** Αναζήτηση κειμένου (description, counterparty) */
-  searchText?: string;
-  /** Filter by N:M match group ID */
-  matchGroupId?: string;
+}
+// ⚠️ ΣΕΛΙΔΑ της οθόνης. Τα `dateRange` / `minAmount` / `maxAmount` / `searchText` / `matchGroupId` αφαιρέθηκαν
+// (2026-10-14): δηλώνονταν αλλά ΔΕΝ εφαρμόζονταν — η τραπεζική συμφωνία ζητούσε «περίοδο» και έπαιρνε τις
+// 10.000 νεότερες κινήσεις όλων των εποχών. Για υπολογισμό: `collectBankTransactions` (ADR-ACC-010 §2.1.1).
+
+/** Εμβέλεια σάρωσης του καθολικού τράπεζας — ΟΛΕΣ οι κινήσεις της, ή σφάλμα. */
+export type BankLedgerScope =
+  | { readonly kind: 'period'; readonly period: PeriodRange }
+  | { readonly kind: 'matchGroup'; readonly matchGroupId: string };
+
+/** Ερώτημα σάρωσης καθολικού τράπεζας — χωρίς `pageSize`, ώστε το κόψιμο να είναι αδύνατο από τον τύπο. */
+export interface BankLedgerQuery {
+  readonly scope: BankLedgerScope;
+}
+
+// ============================================================================
+// CANDIDATE RETRIEVAL (στένεμα υποψηφίων — ADR-ACC-010 §2.1.1, Φάση 2)
+// ============================================================================
+
+/** Κλειστό διάστημα ποσών (€) — το «παράθυρο» μέσα στο οποίο ένα υποψήφιο μπορεί να αντιστοιχιστεί. */
+export interface AmountBand {
+  readonly min: number;
+  readonly max: number;
+}
+
+/** Αναφορά σε παραστατικό, όπως τη διαβάζουμε στο κείμενο της τράπεζας (σειρά = `Invoice.series`). */
+export interface InvoiceReference {
+  readonly series: string;
+  readonly number: number;
 }
 
 // ============================================================================

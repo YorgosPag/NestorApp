@@ -10,6 +10,7 @@
 
 import type { IMatchingEngine, IAccountingRepository } from '../../types/interfaces';
 import type {
+  AmountBand,
   BankTransaction,
   MatchCandidate,
   MatchCandidateGroup,
@@ -17,12 +18,16 @@ import type {
   MatchedEntityRef,
   MatchableEntityType,
 } from '../../types/bank';
+import type { Invoice } from '../../types/invoice';
 import type { MatchingConfig } from '../../types/matching-config';
 import { DEFAULT_MATCHING_CONFIG } from '../../types/matching-config';
 import {
+  amountBandFor,
   calculateMatchScore,
   classifyTier,
+  combinationBandFor,
 } from './matching-scoring';
+import { extractInvoiceReferences } from './matching-reference';
 import {
   type RawCandidate,
   transactionToScoringInput,
@@ -70,10 +75,18 @@ export class MatchingEngine implements IMatchingEngine {
     const txnInput = transactionToScoringInput(transaction);
     const candidates: MatchCandidate[] = [];
 
-    const rawCandidates = await this.gatherAllCandidates(transaction);
+    const rawCandidates = await this.gatherAllCandidates(
+      transaction,
+      amountBandFor(transaction.amount, config.amountTolerancePercent)
+    );
 
     for (const raw of rawCandidates) {
       const result = calculateMatchScore(txnInput, raw.scoring, config);
+
+      // Κανόνας εισόδου (πρακτική Xero / SAP): υποψήφιο = ποσό εντός ανοχής Ή ρητή αναφορά στο κείμενο.
+      // Είναι το ΙΔΙΟ κριτήριο με το στένεμα της ανάκτησης, άρα το στένεμα δεν κρύβει τίποτα που θα περνούσε.
+      // Χωρίς αυτόν, το μπόνους μαθημένου κανόνα (έως +15) ανέβαζε σε «χειροκίνητο έλεγχο» λάθος ποσό (65+15 ≥ 70).
+      if (result.breakdown.amountScore === 0 && !raw.matchedByReference) continue;
 
       // Apply learned rule bonus (Phase 2b)
       let finalScore = result.totalScore;
@@ -119,7 +132,10 @@ export class MatchingEngine implements IMatchingEngine {
 
     // Gather all possible candidates from the first transaction's context
     const firstTxn = transactions[0]!;
-    const rawCandidates = await this.gatherAllCandidates(firstTxn);
+    const rawCandidates = await this.gatherAllCandidates(
+      firstTxn,
+      combinationBandFor(totalAmount, config.amountTolerancePercent)
+    );
 
     // Pre-filter for combination search
     const comboCandidates: CombinationCandidate[] = rawCandidates.map((c) => ({
@@ -333,61 +349,62 @@ export class MatchingEngine implements IMatchingEngine {
   }
 
   async unmatchGroup(matchGroupId: string): Promise<void> {
-    const { items } = await this.repository.listBankTransactions(
-      { matchGroupId },
-      100
-    );
+    // ΟΛΑ τα μέλη της ομάδας, ή σφάλμα — ποτέ «αποσυνδέθηκαν τα 100 πρώτα» ή «κανένα» (ADR-ACC-010 §2.1.1).
+    const members = await this.repository.collectBankTransactions({ scope: { kind: 'matchGroup', matchGroupId } });
 
-    for (const txn of items) {
+    for (const txn of members) {
       await this.unmatchTransaction(txn.transactionId);
     }
   }
 
-  // ── Candidate Gathering ──────────────────────────────────────────────────
+  // ── Candidate Gathering ──────────────────────────────────────────────
 
+  /**
+   * Τα υποψήφια μιας κίνησης — ΣΤΕΝΕΜΑ ΣΤΗ ΒΑΣΗ, όχι σελίδα (ADR-ACC-010 §2.1.1, Φάση 2).
+   *
+   * Δύο κανάλια, πλήρη και τα δύο (πετούν σε σφάλμα, ποτέ μερικό):
+   *  1. ζώνη ποσού — ανοιχτά τιμολόγια και ενεργές εγγραφές της χρήσης με ποσό μέσα στη `band`·
+   *  2. ρητή αναφορά — ανοιχτά τιμολόγια των οποίων ο αριθμός αναγράφεται στο κείμενο της τράπεζας.
+   * ΕΦΚΑ και δόσεις φόρου είναι λίγες ανά έτος και διαβάζονται ολόκληρες.
+   */
   private async gatherAllCandidates(
-    transaction: BankTransaction
+    transaction: BankTransaction,
+    band: AmountBand
   ): Promise<RawCandidate[]> {
     const year = parseInt(transaction.transactionDate.substring(0, 4), 10);
-    const candidates: RawCandidate[] = [];
 
-    // 1. Invoices (unpaid/partial) — for credit transactions
-    if (transaction.direction === 'credit') {
-      const [unpaid, partial] = await Promise.all([
-        this.repository.listInvoices({ paymentStatus: 'unpaid' }, 100),
-        this.repository.listInvoices({ paymentStatus: 'partial' }, 100),
-      ]);
+    const [invoices, referenced, journals, efkaPayments, taxInstallments] = await Promise.all([
+      transaction.direction === 'credit' ? this.repository.collectOpenInvoicesByAmount(band) : [],
+      transaction.direction === 'credit' ? this.findReferencedInvoices(transaction) : [],
+      this.repository.collectActiveJournalEntriesByAmount(year, band),
+      this.repository.getEFKAPayments(year),
+      this.repository.getTaxInstallments(year),
+    ]);
 
-      for (const inv of [...unpaid.items, ...partial.items]) {
-        candidates.push(invoiceToRawCandidate(inv));
-      }
+    const candidates = new Map<string, RawCandidate>();
+    for (const inv of invoices) candidates.set(inv.invoiceId, invoiceToRawCandidate(inv));
+    for (const inv of referenced) {
+      candidates.set(inv.invoiceId, { ...invoiceToRawCandidate(inv), matchedByReference: true });
     }
-
-    // 2. Journal entries (active, same fiscal year)
-    const journals = await this.repository.listJournalEntries(
-      { fiscalYear: year },
-      100
-    );
-    for (const je of journals.items) {
-      if (je.status !== 'ACTIVE') continue;
-      candidates.push(journalToRawCandidate(je));
-    }
-
-    // 3. EFKA payments (unpaid)
-    const efkaPayments = await this.repository.getEFKAPayments(year);
+    for (const je of journals) candidates.set(je.entryId, journalToRawCandidate(je));
     for (const efka of efkaPayments) {
-      if (efka.status === 'paid') continue;
-      candidates.push(efkaToRawCandidate(efka));
+      if (efka.status !== 'paid') candidates.set(efka.paymentId, efkaToRawCandidate(efka));
     }
-
-    // 4. Tax installments (unpaid)
-    const taxInstallments = await this.repository.getTaxInstallments(year);
     for (const tax of taxInstallments) {
       if (tax.status === 'paid') continue;
-      candidates.push(taxToRawCandidate(tax));
+      const raw = taxToRawCandidate(tax);
+      candidates.set(raw.entityId, raw);
     }
+    return [...candidates.values()];
+  }
 
-    return candidates;
+  /** Ανοιχτά τιμολόγια που ονομάζει η αιτιολογία / περιγραφή της κίνησης. */
+  private async findReferencedInvoices(transaction: BankTransaction): Promise<Invoice[]> {
+    const series = await this.repository.getInvoiceSeries();
+    const references = extractInvoiceReferences(
+      [transaction.paymentReference, transaction.bankDescription],
+      series
+    );
+    return this.repository.findOpenInvoicesByReference(references);
   }
 }
-

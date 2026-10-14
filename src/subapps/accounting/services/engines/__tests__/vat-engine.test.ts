@@ -73,6 +73,9 @@ function createMockJournalEntry(overrides: TestJournalEntry): JournalEntry {
   };
 }
 
+/** Fixture queue: one call = one "page" of the old income/expense pair (see `collectJournalEntries` below). */
+const ledgerPages = jest.fn<Promise<{ items: JournalEntry[] }>, []>();
+
 /**
  * Creates a typed mock IAccountingRepository with only the methods VATEngine uses.
  * All other methods are stubbed as jest.fn() to satisfy the interface.
@@ -80,7 +83,13 @@ function createMockJournalEntry(overrides: TestJournalEntry): JournalEntry {
 function createMockRepository(): jest.Mocked<IAccountingRepository> {
   const noop = jest.fn();
   return {
-    // VATEngine uses only listJournalEntries
+    // VATEngine reads ONLY the ledger scan. The per-quarter fixture queue (`ledgerPages`) keeps the
+    // historic "income page, then expense page" order; one scan consumes both and returns them together.
+    collectJournalEntries: jest.fn(async () => {
+      const income = await ledgerPages();
+      const expense = await ledgerPages();
+      return [...income.items, ...expense.items];
+    }),
     listJournalEntries: jest.fn(),
     // Stub everything else
     getCompanySetup: noop,
@@ -102,6 +111,10 @@ function createMockRepository(): jest.Mocked<IAccountingRepository> {
     getBankTransaction: noop,
     updateBankTransaction: noop,
     listBankTransactions: noop,
+    collectBankTransactions: noop,
+    collectOpenInvoicesByAmount: noop,
+    findOpenInvoicesByReference: noop,
+    collectActiveJournalEntriesByAmount: noop,
     getBankAccounts: noop,
     createImportBatch: noop,
     createFixedAsset: noop,
@@ -167,6 +180,7 @@ describe('VATEngine', () => {
   let mockRepo: jest.Mocked<IAccountingRepository>;
 
   beforeEach(() => {
+    ledgerPages.mockReset();
     mockRepo = createMockRepository();
     engine = new VATEngine(mockRepo);
   });
@@ -472,7 +486,7 @@ describe('VATEngine', () => {
 
   describe('calculateQuarterSummary', () => {
     it('returns empty summary when no entries exist', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result: VATQuarterSummary = await engine.calculateQuarterSummary(2026, 1);
 
@@ -488,7 +502,7 @@ describe('VATEngine', () => {
     });
 
     it('sets correct Q1 period range', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result = await engine.calculateQuarterSummary(2026, 1);
 
@@ -496,7 +510,7 @@ describe('VATEngine', () => {
     });
 
     it('sets correct Q2 period range', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result = await engine.calculateQuarterSummary(2026, 2);
 
@@ -504,7 +518,7 @@ describe('VATEngine', () => {
     });
 
     it('sets correct Q3 period range', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result = await engine.calculateQuarterSummary(2026, 3);
 
@@ -512,7 +526,7 @@ describe('VATEngine', () => {
     });
 
     it('sets correct Q4 period range', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result = await engine.calculateQuarterSummary(2026, 4);
 
@@ -525,7 +539,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 500, vatRate: 24, vatAmount: 120, category: 'service_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(incomeEntries)) // income
         .mockResolvedValueOnce(emptyPaginatedResult());          // expense
 
@@ -546,7 +560,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 200, vatRate: 24, vatAmount: 48, category: 'service_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(incomeEntries))
         .mockResolvedValueOnce(emptyPaginatedResult());
 
@@ -569,7 +583,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 200, vatRate: 24, vatAmount: 48, category: 'office_supplies', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(emptyPaginatedResult())             // income
         .mockResolvedValueOnce(paginatedResult(expenseEntries));    // expense
 
@@ -587,7 +601,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 100, vatRate: 24, vatAmount: 24, category: 'telecom', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(emptyPaginatedResult())
         .mockResolvedValueOnce(paginatedResult(expenseEntries));
 
@@ -607,7 +621,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 200, vatRate: 24, vatAmount: 48, category: 'office_supplies', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(incomeEntries))
         .mockResolvedValueOnce(paginatedResult(expenseEntries));
 
@@ -626,7 +640,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 1000, vatRate: 24, vatAmount: 240, category: 'equipment', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(incomeEntries))
         .mockResolvedValueOnce(paginatedResult(expenseEntries));
 
@@ -644,7 +658,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 500, vatRate: 0, vatAmount: 0, category: 'rent', type: 'expense' }),               // 0% → 0
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(emptyPaginatedResult())
         .mockResolvedValueOnce(paginatedResult(expenseEntries));
 
@@ -657,7 +671,7 @@ describe('VATEngine', () => {
     });
 
     it('sets status to open and submittedAt to null', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result = await engine.calculateQuarterSummary(2026, 1);
 
@@ -666,7 +680,7 @@ describe('VATEngine', () => {
     });
 
     it('sets calculatedAt as ISO string', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const before = new Date().toISOString();
       const result = await engine.calculateQuarterSummary(2026, 1);
@@ -677,22 +691,22 @@ describe('VATEngine', () => {
       expect(result.calculatedAt <= after).toBe(true);
     });
 
-    it('calls listJournalEntries with correct filters for income and expense', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+    it('scans the WHOLE quarter ledger once — never the paginated UI list (incident 2026-10-14)', async () => {
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       await engine.calculateQuarterSummary(2026, 2);
 
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledTimes(2);
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledWith({
-        fiscalYear: 2026,
-        quarter: 2,
-        type: 'income',
+      expect(mockRepo.collectJournalEntries).toHaveBeenCalledTimes(1);
+      expect(mockRepo.collectJournalEntries).toHaveBeenCalledWith({
+        scope: { kind: 'fiscalYear', fiscalYear: 2026, quarter: 2 },
       });
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledWith({
-        fiscalYear: 2026,
-        quarter: 2,
-        type: 'expense',
-      });
+      expect(mockRepo.listJournalEntries).not.toHaveBeenCalled();
+    });
+
+    it('propagates a ledger read failure instead of reporting VAT 0 €', async () => {
+      mockRepo.collectJournalEntries.mockRejectedValueOnce(new Error('FAILED_PRECONDITION'));
+
+      await expect(engine.calculateQuarterSummary(2026, 2)).rejects.toThrow('FAILED_PRECONDITION');
     });
 
     it('handles entries with 0% VAT rate in output', async () => {
@@ -700,7 +714,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 1000, vatRate: 0, vatAmount: 0, category: 'rental_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(incomeEntries))
         .mockResolvedValueOnce(emptyPaginatedResult());
 
@@ -718,7 +732,7 @@ describe('VATEngine', () => {
 
   describe('calculateAnnualSummary', () => {
     it('returns summary for all 4 quarters', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result: VATAnnualSummary = await engine.calculateAnnualSummary(2026);
 
@@ -740,7 +754,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 500, vatRate: 24, vatAmount: 120, category: 'service_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         // Q1
         .mockResolvedValueOnce(paginatedResult(q1Income))
         .mockResolvedValueOnce(emptyPaginatedResult())
@@ -767,7 +781,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 100, vatRate: 24, vatAmount: 24, category: 'telecom', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         // Q1: no income, office supplies expense
         .mockResolvedValueOnce(emptyPaginatedResult())
         .mockResolvedValueOnce(paginatedResult(q1Expense))
@@ -796,7 +810,7 @@ describe('VATEngine', () => {
       ];
 
       // Only Q1 has data
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(income))
         .mockResolvedValueOnce(paginatedResult(expense))
         // Q2-Q4 empty
@@ -820,7 +834,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 2000, vatRate: 24, vatAmount: 480, category: 'equipment', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(income))
         .mockResolvedValueOnce(paginatedResult(expense))
         .mockResolvedValueOnce(emptyPaginatedResult()).mockResolvedValueOnce(emptyPaginatedResult())
@@ -846,7 +860,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 500, vatRate: 24, vatAmount: 120, category: 'service_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         // Q1
         .mockResolvedValueOnce(paginatedResult(q1Income))
         .mockResolvedValueOnce(paginatedResult(q1Expense))
@@ -869,7 +883,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 1000, vatRate: 24, vatAmount: 240, category: 'service_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce(paginatedResult(income))
         .mockResolvedValueOnce(emptyPaginatedResult())
         .mockResolvedValueOnce(emptyPaginatedResult()).mockResolvedValueOnce(emptyPaginatedResult())
@@ -885,7 +899,7 @@ describe('VATEngine', () => {
     });
 
     it('returns zero for all fields when no entries exist', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       const result = await engine.calculateAnnualSummary(2026);
 
@@ -897,12 +911,13 @@ describe('VATEngine', () => {
       expect(result.settlementAmount).toBe(0);
     });
 
-    it('calls listJournalEntries 8 times (2 per quarter)', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue(emptyPaginatedResult());
+    it('scans the ledger once per quarter (4 scans) and never reads the UI page', async () => {
+      ledgerPages.mockResolvedValue(emptyPaginatedResult());
 
       await engine.calculateAnnualSummary(2026);
 
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledTimes(8);
+      expect(mockRepo.collectJournalEntries).toHaveBeenCalledTimes(4);
+      expect(mockRepo.listJournalEntries).not.toHaveBeenCalled();
     });
   });
 
@@ -953,7 +968,7 @@ describe('VATEngine', () => {
         createMockJournalEntry({ netAmount: 1000, vatRate: 24, vatAmount: 240, category: 'service_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         // Q1: no income, big expense
         .mockResolvedValueOnce(emptyPaginatedResult())
         .mockResolvedValueOnce(paginatedResult(q1Expense))

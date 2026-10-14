@@ -17,18 +17,19 @@ import type {
 } from '../../types/reports';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
-
-const REPORT_PAGE_SIZE = 10000;
+import { createPeriodTaxBasisLoader, type PeriodTaxBasisLoader } from './report-tax-basis';
 
 /** Generate Tax Summary report with comparative analysis */
 export async function generateTaxSummary(
   deps: ReportGeneratorDeps,
   periods: ResolvedPeriods
 ): Promise<ReportResult<TaxSummaryData>> {
+  // Ένας φορτωτής για τις τρεις περιόδους: ο ετήσιος συντελεστής (IAS 34) κάθε έτους υπολογίζεται μία φορά.
+  const loadBasis = createPeriodTaxBasisLoader(deps);
   const [current, previous, yoy] = await Promise.all([
-    fetchTaxSnapshot(deps, periods.current),
-    fetchTaxSnapshot(deps, periods.previousPeriod),
-    fetchTaxSnapshot(deps, periods.yearOverYear),
+    fetchTaxSnapshot(loadBasis, periods.current),
+    fetchTaxSnapshot(loadBasis, periods.previousPeriod),
+    fetchTaxSnapshot(loadBasis, periods.yearOverYear),
   ]);
 
   // Installments only for current period
@@ -61,28 +62,15 @@ interface TaxSnapshot {
 // ============================================================================
 
 async function fetchTaxSnapshot(
-  deps: ReportGeneratorDeps,
+  loadBasis: PeriodTaxBasisLoader,
   period: { from: string; to: string }
 ): Promise<TaxSnapshot> {
-  const fiscalYear = new Date(period.from).getFullYear();
+  const { ledger, efkaPaid: efka, estimatedIncomeTax: estimatedTax } = await loadBasis(period);
 
-  const [incomeResult, expenseResult, efkaPayments] = await Promise.all([
-    deps.repository.listJournalEntries({ type: 'income', period }, REPORT_PAGE_SIZE),
-    deps.repository.listJournalEntries({ type: 'expense', period }, REPORT_PAGE_SIZE),
-    deps.repository.getEFKAPayments(fiscalYear),
-  ]);
-
-  const activeIncome = incomeResult.items.filter((e) => e.status === 'ACTIVE');
-  const activeExpenses = expenseResult.items.filter((e) => e.status === 'ACTIVE');
-
-  const income = sumNet(activeIncome);
-  const deductibleExpenses = sumNet(activeExpenses);
-  const efka = efkaPayments
-    .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + p.amount, 0);
+  const income = ledger.totalIncomeNet;
+  const deductibleExpenses = ledger.totalExpenseNet;
   const taxableIncome = Math.max(0, income - deductibleExpenses - efka);
-  const estimatedTax = estimateIncomeTax(taxableIncome);
-  const vatSummary = computeVATSummary(activeIncome, activeExpenses);
+  const vatSummary = computeVATSummary(ledger.income, ledger.expense);
 
   return { income, deductibleExpenses, efka, taxableIncome, estimatedTax, vatSummary };
 }
@@ -91,13 +79,9 @@ async function fetchTaxSnapshot(
 // HELPERS
 // ============================================================================
 
-function sumNet(entries: JournalEntry[]): number {
-  return entries.reduce((sum, e) => sum + e.netAmount, 0);
-}
-
 function computeVATSummary(
-  income: JournalEntry[],
-  expenses: JournalEntry[]
+  income: readonly JournalEntry[],
+  expenses: readonly JournalEntry[]
 ): VATSummaryRow {
   const outputVat = income.reduce((sum, e) => sum + e.vatAmount, 0);
   const deductibleInputVat = expenses
@@ -108,28 +92,6 @@ function computeVATSummary(
     deductibleInputVat,
     vatPayable: outputVat - deductibleInputVat,
   };
-}
-
-function estimateIncomeTax(taxableIncome: number): number {
-  if (taxableIncome <= 0) return 0;
-  const brackets = [
-    { limit: 10000, rate: 0.09 },
-    { limit: 20000, rate: 0.22 },
-    { limit: 30000, rate: 0.28 },
-    { limit: 40000, rate: 0.36 },
-    { limit: Infinity, rate: 0.44 },
-  ];
-  let remaining = taxableIncome;
-  let tax = 0;
-  let prevLimit = 0;
-  for (const { limit, rate } of brackets) {
-    const taxable = Math.min(remaining, limit - prevLimit);
-    tax += taxable * rate;
-    remaining -= taxable;
-    prevLimit = limit;
-    if (remaining <= 0) break;
-  }
-  return Math.round(tax * 100) / 100;
 }
 
 // ============================================================================

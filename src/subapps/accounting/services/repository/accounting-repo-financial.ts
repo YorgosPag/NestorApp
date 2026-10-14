@@ -42,7 +42,7 @@ import { accountingDocId } from './accounting-doc-ids';
 // ============================================================================
 
 /** Backward compat: existing docs without status → ACTIVE */
-function applyJournalDefaults(entry: JournalEntry): JournalEntry {
+export function applyJournalDefaults(entry: JournalEntry): JournalEntry {
   if (!entry.status) {
     return { ...entry, status: 'ACTIVE' };
   }

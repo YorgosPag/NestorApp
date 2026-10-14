@@ -20,7 +20,7 @@
     "src/subapps/accounting/services/repository/accounting-repo-documents.ts::accounting_apy_certificates": 4,
     "src/subapps/accounting/services/repository/accounting-repo-documents.ts::accounting_expense_documents": 2,
     "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_invoices": 63,
-    "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_journal_entries": 60,
+    "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_journal_entries": 57,
     "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_tax_installments": 1,
     "src/subapps/accounting/services/repository/accounting-repo-operations.ts::accounting_bank_transactions": 11,
     "src/subapps/accounting/services/repository/accounting-repo-operations.ts::accounting_fixed_assets": 4,

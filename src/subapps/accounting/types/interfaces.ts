@@ -23,6 +23,7 @@ import type {
   CreateJournalEntryInput,
   UpdateJournalEntryInput,
   JournalEntryFilters,
+  JournalLedgerQuery,
 } from './journal';
 import type {
   Invoice,
@@ -50,6 +51,7 @@ import type {
   TaxEstimate,
   TaxInstallment,
   PartnershipTaxResult,
+  PartnerTaxInput,
   EPETaxResult,
   AETaxResult,
 } from './tax';
@@ -68,6 +70,9 @@ import type {
 import type {
   BankTransaction,
   BankTransactionFilters,
+  BankLedgerQuery,
+  AmountBand,
+  InvoiceReference,
   BankAccountConfig,
   MatchCandidate,
   MatchCandidateGroup,
@@ -141,7 +146,10 @@ export interface IAccountingRepository {
   getJournalEntry(entryId: string): Promise<JournalEntry | null>;
   updateJournalEntry(entryId: string, updates: UpdateJournalEntryInput): Promise<void>;
   deleteJournalEntry(entryId: string): Promise<void>;
+  /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectJournalEntries`. */
   listJournalEntries(filters: JournalEntryFilters, pageSize?: number): Promise<PaginatedResult<JournalEntry>>;
+  /** ΟΛΕΣ οι εγγραφές της εμβέλειας, για υπολογισμό· πετά σε σφάλμα ή υπέρβαση ορίου, ποτέ μερικό. */
+  collectJournalEntries(query: JournalLedgerQuery): Promise<JournalEntry[]>;
   getJournalEntryByInvoiceId(invoiceId: string): Promise<JournalEntry | null>;
 
   // ── Invoices ────────────────────────────────────────────────────────────
@@ -164,7 +172,18 @@ export interface IAccountingRepository {
   createBankTransaction(data: Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>): Promise<{ id: string }>;
   getBankTransaction(transactionId: string): Promise<BankTransaction | null>;
   updateBankTransaction(transactionId: string, updates: Partial<BankTransaction>): Promise<void>;
+  /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (ADR-ACC-010 §2.1.1). */
   listBankTransactions(filters: BankTransactionFilters, pageSize?: number): Promise<PaginatedResult<BankTransaction>>;
+  /** ΟΛΕΣ οι κινήσεις μιας εμβέλειας, για υπολογισμό — πετά, ποτέ μερικό (§2.1.1). */
+  collectBankTransactions(query: BankLedgerQuery): Promise<BankTransaction[]>;
+
+  // ── Υποψήφια αντιστοίχισης — στένεμα στη βάση, όχι σελίδα (§2.1.1, Φάση 2) ─────────
+  /** Ανοιχτά τιμολόγια με ανοιχτό ποσό μέσα στη ζώνη — πλήρως, ή σφάλμα. */
+  collectOpenInvoicesByAmount(band: AmountBand): Promise<Invoice[]>;
+  /** Ανοιχτά τιμολόγια που αναγράφονται ρητά (σειρά + αριθμός), ανεξαρτήτως ποσού. */
+  findOpenInvoicesByReference(references: readonly InvoiceReference[]): Promise<Invoice[]>;
+  /** Ενεργές εγγραφές της χρήσης με μικτό ποσό μέσα στη ζώνη — πλήρως, ή σφάλμα. */
+  collectActiveJournalEntriesByAmount(fiscalYear: number, band: AmountBand): Promise<JournalEntry[]>;
   getBankAccounts(): Promise<BankAccountConfig[]>;
   createImportBatch(data: Omit<ImportBatch, 'batchId'>): Promise<{ id: string }>;
 
@@ -288,14 +307,7 @@ export interface ITaxEngine {
     totalIncome: number,
     totalExpenses: number,
     totalEfkaByPartner: Map<string, number>,
-    partners: Array<{
-      partnerId: string;
-      partnerName: string;
-      profitSharePercent: number;
-      withholdings: number;
-      previousPrepayment: number;
-      isFirstFiveYears: boolean;
-    }>
+    partners: readonly PartnerTaxInput[]
   ): PartnershipTaxResult;
 
   /** Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat + μερίσματα 5%) */

@@ -17,8 +17,7 @@ import type {
 } from '../../types/reports';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
-
-const REPORT_PAGE_SIZE = 10000;
+import { groupNetAmount, loadPeriodEntries, shareOf } from '../journal/journal-ledger';
 
 /** Generate Income by Customer report with comparative analysis */
 export async function generateIncomeByCustomer(
@@ -57,39 +56,21 @@ async function fetchCustomerRows(
   deps: ReportGeneratorDeps,
   period: { from: string; to: string }
 ): Promise<CustomerIncomeRow[]> {
-  const result = await deps.repository.listJournalEntries(
-    { type: 'income', period },
-    REPORT_PAGE_SIZE
-  );
-  const active = result.items.filter((e) => e.status === 'ACTIVE');
-  return aggregateByCustomer(active);
+  // Storno: αρχική + αντιλογιστική μετρούν, η καθεμία στην περίοδό της (βλ. journal-ledger.ts)
+  return aggregateByCustomer(await loadPeriodEntries(deps.repository, period, 'income'));
 }
 
 function aggregateByCustomer(entries: JournalEntry[]): CustomerIncomeRow[] {
-  const map = new Map<string, { name: string; total: number; count: number }>();
-
-  for (const entry of entries) {
-    const key = entry.contactId ?? '__no_customer__';
-    const existing = map.get(key) ?? {
-      name: entry.contactName ?? 'Χωρίς Πελάτη',
-      total: 0,
-      count: 0,
-    };
-    existing.total += entry.netAmount;
-    existing.count += 1;
-    map.set(key, existing);
-  }
-
   const grandTotal = entries.reduce((sum, e) => sum + e.netAmount, 0);
   const rows: CustomerIncomeRow[] = [];
 
-  for (const [customerId, { name, total, count }] of map) {
+  for (const [customerId, { first, total, count }] of groupNetAmount(entries, (e) => e.contactId ?? null)) {
     rows.push({
-      customerId: customerId === '__no_customer__' ? null : customerId,
-      customerName: name,
+      customerId,
+      customerName: first.contactName ?? 'Χωρίς Πελάτη',
       totalNetAmount: total,
       invoiceCount: count,
-      percentage: grandTotal > 0 ? (total / grandTotal) * 100 : 0,
+      percentage: shareOf(total, grandTotal),
     });
   }
 

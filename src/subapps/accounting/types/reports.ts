@@ -119,6 +119,11 @@ export interface ReportGeneratorDeps {
   repository: IAccountingRepository;
   vatEngine?: IVATEngine;
   taxEngine?: ITaxEngine;
+  /**
+   * «Σήμερα» (`YYYY-MM-DD`) για την αναγωγή σε έτος του φόρου κατά IAS 34. Προεπιλογή: η τοπική ημερομηνία.
+   * Υπάρχει ώστε μια αναφορά να είναι αναπαραγώγιμη (δοκιμές, «όπως ήταν στις …»).
+   */
+  asOf?: string;
 }
 
 /** Common signature for all report generators */

@@ -378,6 +378,16 @@ export interface AETaxResult {
 // PARTNERSHIP TAX RESULT — Αποτέλεσμα Φόρου ΟΕ
 // ============================================================================
 
+/** Είσοδος φόρου ανά εταίρο (pass-through ΟΕ) — ΕΝΑΣ τύπος για interface + υλοποίηση */
+export interface PartnerTaxInput {
+  partnerId: string;
+  partnerName: string;
+  profitSharePercent: number;
+  withholdings: number;
+  previousPrepayment: number;
+  isFirstFiveYears: boolean;
+}
+
 /** Αποτέλεσμα φόρου ανά εταίρο */
 export interface PartnerTaxResult {
   partnerId: string;

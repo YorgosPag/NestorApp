@@ -18,8 +18,7 @@ import type {
 import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
-
-const REPORT_PAGE_SIZE = 10000;
+import { loadPeriodEntries } from '../journal/journal-ledger';
 
 /** Generate Trial Balance report with comparative analysis */
 export async function generateTrialBalance(
@@ -68,12 +67,8 @@ async function fetchTrialRows(
   deps: ReportGeneratorDeps,
   period: { from: string; to: string }
 ): Promise<TrialBalanceRow[]> {
-  const result = await deps.repository.listJournalEntries(
-    { period },
-    REPORT_PAGE_SIZE
-  );
-  const active = result.items.filter((e) => e.status === 'ACTIVE');
-  return aggregateTrialBalance(active);
+  // Storno: αρχική + αντιλογιστική μετρούν, η καθεμία στην περίοδό της (βλ. journal-ledger.ts)
+  return aggregateTrialBalance(await loadPeriodEntries(deps.repository, period));
 }
 
 function aggregateTrialBalance(entries: JournalEntry[]): TrialBalanceRow[] {

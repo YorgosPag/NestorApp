@@ -21,12 +21,20 @@ import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter, AccountCategory, PaymentMethod } from '../types/common';
 import { getCategoryByCode } from '../config/account-categories';
-import { calculateMonthlyBreakdown } from './config/efka-config';
 import {
   calculatePartnershipEfkaSummary,
   calculateEPEEfkaSummary,
   calculateAEEfkaSummary,
+  buildEfkaAnnualSummary,
 } from './accounting-efka-operations';
+import { loadLedger } from './journal/journal-ledger';
+import {
+  deductibleEfka,
+  loadAeProfile,
+  loadEpeProfile,
+  loadPartnershipProfile,
+  partnershipTaxInputs,
+} from './tax/entity-tax-profile';
 
 // ============================================================================
 // ACCOUNTING SERVICE — ORCHESTRATOR
@@ -193,18 +201,7 @@ export class AccountingService {
   ): Promise<TaxResult> {
     const scale = this.taxEngine.getTaxScale(fiscalYear);
 
-    // Fetch actual income/expenses
-    const incomeEntries = await this.repository.listJournalEntries({
-      fiscalYear,
-      type: 'income',
-    });
-    const expenseEntries = await this.repository.listJournalEntries({
-      fiscalYear,
-      type: 'expense',
-    });
-
-    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+    const { totalIncome, totalExpenses } = await this.loadYearTotals(fiscalYear);
 
     return this.taxEngine.calculateAnnualTax({
       fiscalYear,
@@ -233,37 +230,13 @@ export class AccountingService {
    * Υπολογισμός φόρου ΟΕ (pass-through ανά εταίρο)
    */
   async calculatePartnershipTax(fiscalYear: number): Promise<PartnershipTaxResult> {
-    const partners = await this.repository.getPartners();
-    const incomeEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'income' });
-    const expenseEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'expense' });
+    const [profile, { totalIncome, totalExpenses }] = await Promise.all([
+      loadPartnershipProfile(this.repository, fiscalYear),
+      this.loadYearTotals(fiscalYear),
+    ]);
+    const { efkaByPartner, partners } = partnershipTaxInputs(profile);
 
-    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-
-    // Per-partner EFKA totals
-    const efkaByPartner = new Map<string, number>();
-    for (const p of partners) {
-      const payments = await this.repository.getPartnerEFKAPayments(p.partnerId, fiscalYear);
-      const paid = payments
-        .filter((pay) => pay.status === 'paid')
-        .reduce((sum, pay) => sum + pay.amount, 0);
-      efkaByPartner.set(p.partnerId, paid);
-    }
-
-    return this.taxEngine.calculatePartnershipTax(
-      fiscalYear,
-      totalIncome,
-      totalExpenses,
-      efkaByPartner,
-      partners.map((p) => ({
-        partnerId: p.partnerId,
-        partnerName: p.fullName,
-        profitSharePercent: p.profitSharePercent,
-        withholdings: 0,
-        previousPrepayment: 0,
-        isFirstFiveYears: p.isFirstFiveYears,
-      }))
-    );
+    return this.taxEngine.calculatePartnershipTax(fiscalYear, totalIncome, totalExpenses, efkaByPartner, partners);
   }
 
   // ── EPE Corporate Tax (ADR-ACC-014) ──────────────────────────────────
@@ -272,31 +245,18 @@ export class AccountingService {
    * Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat + μερίσματα 5%)
    */
   async calculateEPETax(fiscalYear: number): Promise<EPETaxResult> {
-    const members = await this.repository.getMembers();
-    const incomeEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'income' });
-    const expenseEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'expense' });
+    // EFKA only for active managers — SSoT `entity-tax-profile`
+    const [profile, { totalIncome, totalExpenses }] = await Promise.all([
+      loadEpeProfile(this.repository, fiscalYear),
+      this.loadYearTotals(fiscalYear),
+    ]);
 
-    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-
-    // EFKA only for managers
-    const managers = members.filter((m) => m.isManager && m.isActive);
-    let efkaManagerTotal = 0;
-    for (const mgr of managers) {
-      const payments = await this.repository.getMemberEFKAPayments(mgr.memberId, fiscalYear);
-      const paid = payments
-        .filter((pay) => pay.status === 'paid')
-        .reduce((sum, pay) => sum + pay.amount, 0);
-      efkaManagerTotal += paid;
-    }
-
-    const activeMembers = members.filter((m) => m.isActive);
     return this.taxEngine.calculateCorporateTax(
       fiscalYear,
       totalIncome,
       totalExpenses,
-      efkaManagerTotal,
-      activeMembers.map((m) => ({
+      deductibleEfka(profile),
+      profile.members.map((m) => ({
         memberId: m.memberId,
         memberName: m.fullName,
         dividendSharePercent: m.dividendSharePercent,
@@ -317,36 +277,18 @@ export class AccountingService {
    * Υπολογισμός εταιρικού φόρου ΑΕ (22% flat + μερίσματα 5%)
    */
   async calculateAETax(fiscalYear: number): Promise<AETaxResult> {
-    const shareholders = await this.repository.getShareholders();
-    const incomeEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'income' });
-    const expenseEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'expense' });
+    // EFKA only for self-employed board members with compensation — SSoT `entity-tax-profile` (ADR-ACC-017)
+    const [profile, { totalIncome, totalExpenses }] = await Promise.all([
+      loadAeProfile(this.repository, fiscalYear),
+      this.loadYearTotals(fiscalYear),
+    ]);
 
-    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-
-    // EFKA only for board members with compensation
-    const boardWithEfka = shareholders.filter(
-      (s) => s.isBoardMember && s.monthlyCompensation !== null && s.monthlyCompensation > 0 && s.isActive
-    );
-    let efkaBoardTotal = 0;
-    for (const bm of boardWithEfka) {
-      if (bm.efkaMode === 'self_employed') {
-        const payments = await this.repository.getShareholderEFKAPayments(bm.shareholderId, fiscalYear);
-        const paid = payments
-          .filter((pay) => pay.status === 'paid')
-          .reduce((sum, pay) => sum + pay.amount, 0);
-        efkaBoardTotal += paid;
-      }
-      // Employee mode EFKA is employer cost, not deductible from corporate tax
-    }
-
-    const activeShareholders = shareholders.filter((s) => s.isActive);
     return this.taxEngine.calculateAETax(
       fiscalYear,
       totalIncome,
       totalExpenses,
-      efkaBoardTotal,
-      activeShareholders.map((s) => ({
+      deductibleEfka(profile),
+      profile.shareholders.map((s) => ({
         shareholderId: s.shareholderId,
         shareholderName: s.fullName,
         dividendSharePercent: s.dividendSharePercent,
@@ -376,35 +318,19 @@ export class AccountingService {
    * Ετήσια σύνοψη ΕΦΚΑ
    */
   async getEfkaAnnualSummary(year: number): Promise<EFKAAnnualSummary> {
-    const userConfig = await this.repository.getEFKAUserConfig();
-    const payments = await this.repository.getEFKAPayments(year);
+    const [userConfig, payments] = await Promise.all([
+      this.repository.getEFKAUserConfig(),
+      this.repository.getEFKAPayments(year),
+    ]);
+    return buildEfkaAnnualSummary(year, payments, userConfig);
+  }
 
-    // Default codes if no user config
-    const mainCode = userConfig?.selectedMainPensionCode ?? 'main_1';
-    const suppCode = userConfig?.selectedSupplementaryCode ?? 'supplementary_1';
-    const lumpCode = userConfig?.selectedLumpSumCode ?? 'lump_sum_1';
-
-    const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
-
-    const totalPaid = payments
-      .filter((p) => p.status === 'paid')
-      .reduce((sum, p) => sum + p.amount, 0);
-    const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
-    const balanceDue = Math.round((totalDue - totalPaid) * 100) / 100;
-    const paidMonths = payments.filter((p) => p.status === 'paid').length;
-    const overdueMonths = payments.filter((p) => p.status === 'overdue' || p.status === 'keao').length;
-
-    return {
-      year,
-      monthlyBreakdown,
-      payments,
-      totalPaid,
-      totalDue,
-      balanceDue,
-      taxDeductibleAmount: totalPaid,
-      paidMonths,
-      overdueMonths,
-    };
+  /** Καθαρά έσοδα / έξοδα ΟΛΗΣ της χρήσης — από το SSoT καθολικού, ποτέ από σελίδα. */
+  private async loadYearTotals(
+    fiscalYear: number
+  ): Promise<{ totalIncome: number; totalExpenses: number }> {
+    const ledger = await loadLedger(this.repository, { kind: 'fiscalYear', fiscalYear });
+    return { totalIncome: ledger.totalIncomeNet, totalExpenses: ledger.totalExpenseNet };
   }
 }
 

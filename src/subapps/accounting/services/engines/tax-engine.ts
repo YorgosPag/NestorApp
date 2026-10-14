@@ -21,6 +21,7 @@ import type {
   TaxInstallment,
   PartnershipTaxResult,
   PartnerTaxResult,
+  PartnerTaxInput,
   EPETaxResult,
   CorporateTaxResult,
   MemberDividendResult,
@@ -37,11 +38,12 @@ import {
   getPrepaymentRateForEntity,
 } from '../config/tax-config';
 import { getQuarterFromDate } from '../repository/firestore-helpers';
+import { loadLedger } from '../journal/journal-ledger';
 import { nowISO } from '@/lib/date-local';
 import { roundToTwo } from '../../utils/math';
 import { calculateBracketTax } from './helpers/tax-brackets';
 import { calculateInstallments as calculateInstallmentsPure } from './helpers/tax-installments';
-import { getDayOfYear, isLeapYear } from './helpers/tax-date-utils';
+import { yearToDateProgress } from './helpers/tax-date-utils';
 
 // ============================================================================
 // TAX ENGINE IMPLEMENTATION
@@ -124,23 +126,13 @@ export class TaxEngine implements ITaxEngine {
    */
   async estimateTax(fiscalYear: number, upToDate?: string): Promise<TaxEstimate> {
     const refDate = upToDate ?? nowISO().split('T')[0];
-    const dayOfYear = getDayOfYear(refDate);
-    const daysInYear = isLeapYear(fiscalYear) ? 366 : 365;
-    const progressRatio = dayOfYear / daysInYear;
 
-    const incomeEntries = await this.repository.listJournalEntries({
-      fiscalYear,
-      type: 'income',
-    });
-    const expenseEntries = await this.repository.listJournalEntries({
-      fiscalYear,
-      type: 'expense',
-    });
+    const ledger = await loadLedger(this.repository, { kind: 'fiscalYear', fiscalYear });
+    const actualIncome = ledger.totalIncomeNet;
+    const actualExpenses = ledger.totalExpenseNet;
 
-    const actualIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-    const actualExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
-
-    const projectionMultiplier = progressRatio > 0 ? 1 / progressRatio : 1;
+    // SSoT αναγωγής: κλεισμένη χρήση ⇒ ×1 (πριν: ημέρα-του-έτους της ΣΗΜΕΡΙΝΗΣ ημερομηνίας και για παρελθόντα έτη).
+    const projectionMultiplier = yearToDateProgress(fiscalYear, refDate).factor;
     const projectedAnnualIncome = roundToTwo(actualIncome * projectionMultiplier);
     const projectedAnnualExpenses = roundToTwo(actualExpenses * projectionMultiplier);
 
@@ -160,11 +152,11 @@ export class TaxEngine implements ITaxEngine {
     });
 
     const incomeCatMap = new Map<string, number>();
-    for (const e of incomeEntries.items) {
+    for (const e of ledger.income) {
       incomeCatMap.set(e.category, (incomeCatMap.get(e.category) ?? 0) + e.netAmount);
     }
     const expenseCatMap = new Map<string, number>();
-    for (const e of expenseEntries.items) {
+    for (const e of ledger.expense) {
       expenseCatMap.set(e.category, (expenseCatMap.get(e.category) ?? 0) + e.netAmount);
     }
 
@@ -212,14 +204,7 @@ export class TaxEngine implements ITaxEngine {
     totalIncome: number,
     totalExpenses: number,
     totalEfkaByPartner: Map<string, number>,
-    partners: Array<{
-      partnerId: string;
-      partnerName: string;
-      profitSharePercent: number;
-      withholdings: number;
-      previousPrepayment: number;
-      isFirstFiveYears: boolean;
-    }>
+    partners: readonly PartnerTaxInput[]
   ): PartnershipTaxResult {
     const totalProfit = Math.max(0, totalIncome - totalExpenses);
     const entityProfessionalTax = getProfessionalTaxForEntity('oe');

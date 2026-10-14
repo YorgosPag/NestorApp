@@ -202,18 +202,38 @@ export interface JournalEntryFilters {
   type?: EntryType;
   /** Φίλτρο κατηγορίας */
   category?: AccountCategory;
-  /** Εύρος ημερομηνιών */
-  period?: PeriodRange;
   /** Φορολογικό έτος */
   fiscalYear?: number;
   /** Τρίμηνο */
   quarter?: FiscalQuarter;
   /** Τρόπος πληρωμής */
   paymentMethod?: PaymentMethod;
-  /** Αναζήτηση κειμένου (description) */
-  searchText?: string;
   /** Φίλτρο επαφής */
   contactId?: string;
+}
+
+// ============================================================================
+// LEDGER SCAN — ανάγνωση για ΥΠΟΛΟΓΙΣΜΟ (ΦΠΑ, φόροι, αναφορές)
+// ============================================================================
+
+/**
+ * Η εμβέλεια μιας σάρωσης του καθολικού.
+ *
+ * 🔴 Η λίστα της οθόνης (`listJournalEntries`) είναι ΣΕΛΙΔΑ· ένας υπολογισμός πάνω σε σελίδα αθροίζει
+ * ό,τι έτυχε να χωρέσει (περιστατικό 14/10/2026: ΦΠΑ τριμήνου από τις 50 πρώτες εγγραφές). Η σάρωση
+ * διαβάζει ΟΛΗ την εμβέλεια ή πετά — ποτέ μερικό αποτέλεσμα.
+ *
+ * - `period`: κλειστό διάστημα ημερομηνιών `YYYY-MM-DD` πάνω στο `date` της εγγραφής.
+ * - `fiscalYear`: τα αποθηκευμένα `fiscalYear` / `quarter` της εγγραφής.
+ */
+export type JournalScope =
+  | { readonly kind: 'period'; readonly period: PeriodRange }
+  | { readonly kind: 'fiscalYear'; readonly fiscalYear: number; readonly quarter?: FiscalQuarter };
+
+/** Ερώτημα σάρωσης καθολικού — χωρίς `pageSize`, ώστε το κόψιμο να είναι αδύνατο από τον τύπο. */
+export interface JournalLedgerQuery {
+  readonly scope: JournalScope;
+  readonly type?: EntryType;
 }
 
 // ============================================================================

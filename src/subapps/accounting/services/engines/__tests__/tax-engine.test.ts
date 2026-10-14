@@ -36,6 +36,9 @@ type MockRepository = {
   [K in keyof IAccountingRepository]: jest.Mock;
 };
 
+/** Fixture queue: one call = one "page" of the old income/expense pair (see `collectJournalEntries`). */
+const ledgerPages = jest.fn<Promise<{ items: JournalEntry[] }>, []>();
+
 function createMockRepository(): MockRepository {
   return {
     getCompanySetup: jest.fn(),
@@ -45,6 +48,12 @@ function createMockRepository(): MockRepository {
     updateJournalEntry: jest.fn(),
     deleteJournalEntry: jest.fn(),
     listJournalEntries: jest.fn(),
+    // One ledger scan consumes the historic "income page, then expense page" fixture pair.
+    collectJournalEntries: jest.fn(async () => {
+      const income = await ledgerPages();
+      const expense = await ledgerPages();
+      return [...income.items, ...expense.items];
+    }),
     getJournalEntryByInvoiceId: jest.fn(),
     createInvoice: jest.fn(),
     getInvoice: jest.fn(),
@@ -58,6 +67,10 @@ function createMockRepository(): MockRepository {
     getBankTransaction: jest.fn(),
     updateBankTransaction: jest.fn(),
     listBankTransactions: jest.fn(),
+    collectBankTransactions: jest.fn(),
+    collectOpenInvoicesByAmount: jest.fn(),
+    findOpenInvoicesByReference: jest.fn(),
+    collectActiveJournalEntriesByAmount: jest.fn(),
     getBankAccounts: jest.fn(),
     createImportBatch: jest.fn(),
     createFixedAsset: jest.fn(),
@@ -165,6 +178,7 @@ describe('TaxEngine', () => {
   let engine: TaxEngine;
 
   beforeEach(() => {
+    ledgerPages.mockReset();
     mockRepo = createMockRepository();
     engine = new TaxEngine(mockRepo);
   });
@@ -224,13 +238,10 @@ describe('TaxEngine', () => {
       );
 
       expect(result.taxableIncome).toBe(10_001);
-      // First bracket: 10001 * 9% = 900.09 → wait, bracket width is 10001 (from 0 to 10000)
-      // bracketWidth = 10000 - 0 + 1 = 10001
-      // So 10001 fits entirely in first bracket
-      // Actually: bracket from=0, to=10000 → width = 10000 - 0 + 1 = 10001
-      // taxableAmount = min(10001, 10001) = 10001
-      // So all fits in bracket 1
-      expect(result.incomeTax).toBe(roundToTwo(10_001 * 0.09));
+      // Νόμος: «έως 10.000 € → 9%». 10.000 × 9% + 1 × 22% = 900,22. (Πριν τις 2026-10-14 το test κάρφωνε
+      // 900,09: το πλάτος `to − from + 1` έδινε στο 1ο κλιμάκιο 10.001 € — το test αποτύπωνε το λάθος.)
+      expect(result.incomeTax).toBe(900.22);
+      expect(result.bracketBreakdown).toHaveLength(2);
     });
 
     // ── Full second bracket: exactly 20,000€ ────────────────────────────
@@ -241,11 +252,7 @@ describe('TaxEngine', () => {
       );
 
       expect(result.taxableIncome).toBe(20_000);
-      // Bracket 1: from=0, to=10000, width=10001 → taxable=10001, tax=900.09
-      // Bracket 2: from=10001, to=20000, width=10000 → taxable=9999, tax=2199.78
-      const expectedBracket1 = roundToTwo(10_001 * 0.09);
-      const expectedBracket2 = roundToTwo(9_999 * 0.22);
-      expect(result.incomeTax).toBe(roundToTwo(expectedBracket1 + expectedBracket2));
+      expect(result.incomeTax).toBe(3_100); // 900 + 2.200
     });
 
     // ── Exactly 30,000€ ─────────────────────────────────────────────────
@@ -256,10 +263,7 @@ describe('TaxEngine', () => {
       );
 
       expect(result.taxableIncome).toBe(30_000);
-      const b1 = roundToTwo(10_001 * 0.09);
-      const b2 = roundToTwo(10_000 * 0.22);
-      const b3 = roundToTwo(9_999 * 0.28);
-      expect(result.incomeTax).toBe(roundToTwo(b1 + b2 + b3));
+      expect(result.incomeTax).toBe(5_900); // 900 + 2.200 + 2.800
       expect(result.bracketBreakdown).toHaveLength(3);
     });
 
@@ -271,11 +275,7 @@ describe('TaxEngine', () => {
       );
 
       expect(result.taxableIncome).toBe(40_000);
-      const b1 = roundToTwo(10_001 * 0.09);
-      const b2 = roundToTwo(10_000 * 0.22);
-      const b3 = roundToTwo(10_000 * 0.28);
-      const b4 = roundToTwo(9_999 * 0.36);
-      expect(result.incomeTax).toBe(roundToTwo(b1 + b2 + b3 + b4));
+      expect(result.incomeTax).toBe(9_500); // 900 + 2.200 + 2.800 + 3.600
       expect(result.bracketBreakdown).toHaveLength(4);
     });
 
@@ -469,11 +469,25 @@ describe('TaxEngine', () => {
       expect(scale.solidarityRate).toBe(0);
     });
 
-    it('should return scale for 2026', () => {
+    it('should return the ν.5246/2025 scale for 2026 (9/20/26/34/39/44)', () => {
       const scale = engine.getTaxScale(2026);
 
       expect(scale.year).toBe(2026);
-      expect(scale.brackets).toHaveLength(5);
+      expect(scale.brackets.map((b) => [b.to, b.rate])).toEqual([
+        [10_000, 9], [20_000, 20], [30_000, 26], [40_000, 34], [60_000, 39], [null, 44],
+      ]);
+    });
+
+    // Ανεξάρτητα υπολογισμένα: 2026 → 50K = 900 + 2.000 + 2.600 + 3.400 + 3.900 = 12.800 ·
+    // 70K = 900 + 2.000 + 2.600 + 3.400 + 7.800 + 4.400 = 21.100 · 2025 → 10K = 900 (όχι 900,09).
+    it.each([
+      [2026, 50_000, 12_800],
+      [2026, 70_000, 21_100],
+      [2025, 10_000, 900],
+      [2026, 10_000, 900],
+    ])('κλίμακα %i: %i € ⇒ φόρος %i € (πρώτο κλιμάκιο = ΑΚΡΙΒΩΣ 10.000 €)', (fiscalYear, income, tax) => {
+      const result = engine.calculateAnnualTax(makeDefaultParams({ fiscalYear, totalIncome: income, professionalTax: 0 }));
+      expect(result.incomeTax).toBe(tax);
     });
 
     it('should fallback to latest year for unknown year (e.g. 2030)', () => {
@@ -482,7 +496,7 @@ describe('TaxEngine', () => {
 
       // Fallback returns the latest config with the requested year set
       expect(scale.year).toBe(2030);
-      expect(scale.brackets).toHaveLength(5);
+      expect(scale.brackets).toHaveLength(6);
       expect(scale.prepaymentRate).toBe(55);
     });
 
@@ -929,7 +943,7 @@ describe('TaxEngine', () => {
         makeJournalEntry({ netAmount: 2000, category: 'office_supplies', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce({ items: incomeEntries, total: 2, hasMore: false })
         .mockResolvedValueOnce({ items: expenseEntries, total: 1, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue({
@@ -949,7 +963,7 @@ describe('TaxEngine', () => {
     });
 
     it('should use sole_proprietor when getCompanySetup returns null', async () => {
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce({ items: [], total: 0, hasMore: false })
         .mockResolvedValueOnce({ items: [], total: 0, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
@@ -967,7 +981,7 @@ describe('TaxEngine', () => {
         makeJournalEntry({ netAmount: 1000, category: 'rental_income', type: 'income' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce({ items: incomeEntries, total: 3, hasMore: false })
         .mockResolvedValueOnce({ items: [], total: 0, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
@@ -988,7 +1002,7 @@ describe('TaxEngine', () => {
         makeJournalEntry({ netAmount: 1500, category: 'office_supplies', type: 'expense' }),
       ];
 
-      mockRepo.listJournalEntries
+      ledgerPages
         .mockResolvedValueOnce({ items: [], total: 0, hasMore: false })
         .mockResolvedValueOnce({ items: expenseEntries, total: 3, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
@@ -1000,7 +1014,7 @@ describe('TaxEngine', () => {
     });
 
     it('should correctly detect quarter from date', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue({ items: [], total: 0, hasMore: false });
+      ledgerPages.mockResolvedValue({ items: [], total: 0, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
 
       const q1 = await engine.estimateTax(2025, '2025-02-15');
@@ -1016,25 +1030,21 @@ describe('TaxEngine', () => {
       expect(q4.currentQuarter).toBe(4);
     });
 
-    it('should call listJournalEntries twice (income + expense)', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue({ items: [], total: 0, hasMore: false });
+    it('should scan the WHOLE fiscal-year ledger once — never the paginated UI list', async () => {
+      ledgerPages.mockResolvedValue({ items: [], total: 0, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
 
       await engine.estimateTax(2025, '2025-06-30');
 
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledTimes(2);
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledWith({
-        fiscalYear: 2025,
-        type: 'income',
+      expect(mockRepo.collectJournalEntries).toHaveBeenCalledTimes(1);
+      expect(mockRepo.collectJournalEntries).toHaveBeenCalledWith({
+        scope: { kind: 'fiscalYear', fiscalYear: 2025 },
       });
-      expect(mockRepo.listJournalEntries).toHaveBeenCalledWith({
-        fiscalYear: 2025,
-        type: 'expense',
-      });
+      expect(mockRepo.listJournalEntries).not.toHaveBeenCalled();
     });
 
     it('should include estimatedAt timestamp in result', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue({ items: [], total: 0, hasMore: false });
+      ledgerPages.mockResolvedValue({ items: [], total: 0, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
 
       const result = await engine.estimateTax(2025, '2025-06-30');
@@ -1044,7 +1054,7 @@ describe('TaxEngine', () => {
     });
 
     it('should handle no entries gracefully (zero projected tax)', async () => {
-      mockRepo.listJournalEntries.mockResolvedValue({ items: [], total: 0, hasMore: false });
+      ledgerPages.mockResolvedValue({ items: [], total: 0, hasMore: false });
       mockRepo.getCompanySetup.mockResolvedValue(null);
 
       const result = await engine.estimateTax(2025, '2025-06-30');

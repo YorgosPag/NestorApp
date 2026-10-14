@@ -20,6 +20,7 @@ import type {
   CreateJournalEntryInput,
   UpdateJournalEntryInput,
   JournalEntryFilters,
+  JournalLedgerQuery,
 } from '../../types/journal';
 import type {
   CreateInvoiceInput,
@@ -30,9 +31,12 @@ import type {
 import type { TaxInstallment } from '../../types/tax';
 import type { EFKAPayment, EFKAUserConfig } from '../../types/efka';
 import type {
+  AmountBand,
+  BankLedgerQuery,
   BankTransaction,
   BankTransactionFilters,
   ImportBatch,
+  InvoiceReference,
 } from '../../types/bank';
 import type {
   CreateFixedAssetInput,
@@ -59,6 +63,9 @@ import {
 
 // Domain modules — standalone functions
 import * as financial from './accounting-repo-financial';
+import * as journalLedger from './accounting-repo-journal-ledger';
+import * as bankLedger from './accounting-repo-bank-ledger';
+import * as matchCandidates from './accounting-repo-match-candidates';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
 import * as documents from './accounting-repo-documents';
@@ -99,6 +106,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.deleteJournalEntry(this.tenant, entryId);
   listJournalEntries = (filters: JournalEntryFilters, pageSize?: number) =>
     financial.listJournalEntries(this.tenant, filters, pageSize);
+  collectJournalEntries = (query: JournalLedgerQuery) =>
+    journalLedger.collectJournalEntries(this.tenant, query);
   getJournalEntryByInvoiceId = (invoiceId: string) =>
     financial.getJournalEntryByInvoiceId(this.tenant, invoiceId);
 
@@ -171,6 +180,16 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     operations.updateBankTransaction(this.tenant, transactionId, updates);
   listBankTransactions = (filters: BankTransactionFilters, pageSize?: number) =>
     operations.listBankTransactions(this.tenant, filters, pageSize);
+  collectBankTransactions = (query: BankLedgerQuery) =>
+    bankLedger.collectBankTransactions(this.tenant, query);
+
+  // ── Matching candidates (στένεμα, ADR-ACC-010 §2.1.1) ─────────────────
+  collectOpenInvoicesByAmount = (band: AmountBand) =>
+    matchCandidates.collectOpenInvoicesByAmount(this.tenant, band);
+  findOpenInvoicesByReference = (references: readonly InvoiceReference[]) =>
+    matchCandidates.findOpenInvoicesByReference(this.tenant, references);
+  collectActiveJournalEntriesByAmount = (fiscalYear: number, band: AmountBand) =>
+    matchCandidates.collectActiveJournalEntriesByAmount(this.tenant, fiscalYear, band);
   getBankAccounts = () =>
     operations.getBankAccounts(this.tenant);
   createImportBatch = (data: Omit<ImportBatch, 'batchId'>) =>

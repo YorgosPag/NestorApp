@@ -28,10 +28,15 @@ export function calculateBracketTax(
   let remainingIncome = taxableIncome;
   let totalTax = 0;
 
+  // Το πλάτος μετριέται από το ΑΝΩ όριο του προηγούμενου κλιμακίου, όχι από το `from` του τρέχοντος: το `from`
+  // είναι ετικέτα εμφάνισης σε ακέραια € («10.001»), ενώ το εισόδημα είναι συνεχές. Με `to − from + 1` το πρώτο
+  // κλιμάκιο κάλυπτε 10.001 € αντί για 10.000 € (λάθος 0,13 € ανά φορολογούμενο). Νόμος: «έως 10.000 €».
+  let previousUpper = 0;
   for (const bracket of scale.brackets) {
     if (remainingIncome <= 0) break;
 
-    const bracketWidth = bracket.to !== null ? bracket.to - bracket.from + 1 : Infinity;
+    const bracketWidth = bracket.to !== null ? bracket.to - previousUpper : Infinity;
+    if (bracket.to !== null) previousUpper = bracket.to;
     const taxableAmount = Math.min(remainingIncome, bracketWidth);
     const taxAmount = roundToTwo(taxableAmount * (bracket.rate / 100));
 

@@ -18,8 +18,7 @@ import type {
 import { getCategoryByCode, getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
-
-const REPORT_PAGE_SIZE = 10000;
+import { groupNetAmount, loadPeriodEntries, shareOf } from '../journal/journal-ledger';
 
 /** Generate Expense by Category report with comparative analysis */
 export async function generateExpenseByCategory(
@@ -58,29 +57,15 @@ async function fetchExpenseRows(
   deps: ReportGeneratorDeps,
   period: { from: string; to: string }
 ): Promise<ExpenseCategoryRow[]> {
-  const result = await deps.repository.listJournalEntries(
-    { type: 'expense', period },
-    REPORT_PAGE_SIZE
-  );
-  const active = result.items.filter((e) => e.status === 'ACTIVE');
-  return aggregateByCategory(active);
+  // Storno: αρχική + αντιλογιστική μετρούν, η καθεμία στην περίοδό της (βλ. journal-ledger.ts)
+  return aggregateByCategory(await loadPeriodEntries(deps.repository, period, 'expense'));
 }
 
 function aggregateByCategory(entries: JournalEntry[]): ExpenseCategoryRow[] {
-  const map = new Map<string, { total: number; count: number }>();
-
-  for (const entry of entries) {
-    const key = entry.category;
-    const existing = map.get(key) ?? { total: 0, count: 0 };
-    existing.total += entry.netAmount;
-    existing.count += 1;
-    map.set(key, existing);
-  }
-
   const grandTotal = entries.reduce((sum, e) => sum + e.netAmount, 0);
   const rows: ExpenseCategoryRow[] = [];
 
-  for (const [category, { total, count }] of map) {
+  for (const [category, { total, count }] of groupNetAmount(entries, (e) => e.category)) {
     const catCode = category as ExpenseCategoryRow['category'];
     const catDef = getCategoryByCode(catCode);
     rows.push({
@@ -88,7 +73,7 @@ function aggregateByCategory(entries: JournalEntry[]): ExpenseCategoryRow[] {
       label: getCategoryDisplayLabel(catCode),
       totalNetAmount: total,
       entryCount: count,
-      percentage: grandTotal > 0 ? (total / grandTotal) * 100 : 0,
+      percentage: shareOf(total, grandTotal),
       isDeductible: catDef?.vatDeductible ?? false,
     });
   }

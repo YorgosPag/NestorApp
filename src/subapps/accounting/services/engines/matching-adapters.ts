@@ -21,6 +21,7 @@ import type {
   ScoringCandidateInput,
   ScoringTransactionInput,
 } from './matching-scoring';
+import { invoiceOpenAmount } from '../../utils/invoice-open-amount';
 
 // ============================================================================
 // RAW CANDIDATE TYPE
@@ -31,6 +32,8 @@ export interface RawCandidate {
   entityType: MatchableEntityType;
   displayLabel: string;
   scoring: ScoringCandidateInput;
+  /** Βρέθηκε επειδή ο αριθμός του αναγράφεται στο κείμενο της τράπεζας — έγκυρο και εκτός ζώνης ποσού. */
+  matchedByReference?: boolean;
 }
 
 // ============================================================================
@@ -58,7 +61,7 @@ export function invoiceToRawCandidate(inv: Invoice): RawCandidate {
     entityType: 'invoice',
     displayLabel: `Τιμολόγιο ${inv.series}-${inv.number} — ${inv.customer.name}`,
     scoring: {
-      amount: inv.balanceDue > 0 ? inv.balanceDue : inv.totalGrossAmount,
+      amount: invoiceOpenAmount(inv),
       currency: inv.currency,
       description: `${inv.series}-${inv.number} ${inv.customer.name}`,
       date: inv.issueDate,

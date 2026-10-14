@@ -486,6 +486,12 @@ bank_transactions:
   - (hash ASC)                         ← Duplicate detection
 ```
 
+> ⚠️ **Ευθυγράμμιση με τον κώδικα 2026-10-14**: ο παραπάνω πίνακας είναι το αρχικό σχέδιο. Αυθεντία είναι το
+> `firestore.indexes.json`: όλοι οι δείκτες ξεκινούν από `companyId ASC` και ταξινομούν κατά `transactionDate DESC`.
+> Στένεμα υποψηφίων (2026-10-14): `accounting_invoices (companyId, paymentStatus, balanceDue | totalGrossAmount)` και
+> `accounting_journal_entries (companyId, fiscalYear, status, grossAmount)`. Τους φυλά η άγκυρα
+> `repository/__tests__/bank-and-candidates-index.test.ts` (το CHECK 3.91 δεν βλέπει σαρώσεις μέσω `processAdminBatch`).
+
 ---
 
 ## 11. Pending Payments View
@@ -556,6 +562,7 @@ bank_transactions:
 | 2026-02-09 | **Phase 2 implemented** — types/bank.ts: TransactionDirection, MatchStatus (4 states), BankAccountConfig, BankTransaction (~20 fields), CSVParserConfig + CSVColumnMapping (per-bank parsing), MatchCandidate, MatchResult, ImportBatch, BankTransactionFilters. Imports CurrencyCode from contacts/banking. types/interfaces.ts: IMatchingEngine (findCandidates, matchTransaction, matchBatch, unmatchTransaction), ICSVImportService (getSupportedBanks, parseCSV, importTransactions) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/config/csv-parsers/: 4 bank configs (NBG tab/win1253, Eurobank ;/utf8, Piraeus ,/win1253, Alpha ;/utf8) + index.ts registry. services/external/csv-import-service.ts: `CSVImportService implements ICSVImportService` — `parseCSV()` + `importTransactions()` with batch tracking. services/engines/matching-engine.ts: `MatchingEngine implements IMatchingEngine` — scoring: exact amount +40pts, near ±5% +25pts, exact date +30pts, near ±7d +15pts, counterparty +20pts, EFKA keywords +20pts. Auto-match threshold 85. `findCandidates()`, `matchTransaction()`, `matchBatch()`, `unmatchTransaction()` | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET/POST /api/accounting/bank/transactions`, `POST /api/accounting/bank/match`. Hook: `useBankTransactions(filters)`. UI: `BankPageContent` (3 filters: account/direction/matchStatus + Import CSV button), `TransactionsList` (table: date/description/amount with color credit/debit/matchStatus badges), `ImportCSVDialog` (dialog: bank selection NBG/Eurobank/Piraeus/Alpha + file upload), `MatchingPanel` (split layout: unmatched transactions + match candidates with confidence badges + match button) | Claude Code |
+| 2026-10-14 | **Σελίδα ≠ καθολικό, Φάση 2 (ADR-ACC-010 §2.1.1)** — (1) Η **Κατάσταση Τραπεζικής Συμφωνίας** διάβαζε `listBankTransactions({ dateRange }, 10000)`: το `dateRange` ΔΕΝ εφαρμοζόταν (τρέχουσα / προηγούμενη / πέρσι = οι ίδιες 10.000 νεότερες κινήσεις), η 10.001η κοβόταν, σφάλμα ⇒ «καμία κίνηση». Τώρα `collectBankTransactions({ scope: period })`: πλήρης σάρωση, πετά σε σφάλμα/όριο. Τα αδρανή `dateRange / minAmount / maxAmount / searchText / matchGroupId` αφαιρέθηκαν από τα φίλτρα της σελίδας. (2) **Αυτόματη αντιστοίχιση**: αντί για 100 νεότερα απλήρωτα / μερικώς / εγγραφές, **στένεμα στη βάση** (πρακτική Xero / SAP): ερώτημα εύρους στη ζώνη ανοχής ποσού (`amountBandFor` — ακριβές αντίστροφο του `scoreAmount`) **+** απευθείας εύρεση τιμολογίων που αναγράφονται στο κείμενο της τράπεζας (`extractInvoiceReferences`: κωδικός/πρόθεμα σειράς, ελληνικά/λατινικά ομόγλυφα) — πιάνει μερικές πληρωμές και προμήθειες τράπεζας. **Κανόνας εισόδου**: υποψήφιο = ποσό εντός ανοχής Ή ρητή αναφορά (πριν, μπόνους κανόνα +15 ανέβαζε λάθος ποσό σε «χειροκίνητο έλεγχο»: 65+15 ≥ 70). Το παλιό ερώτημα τιμολογίων **δεν είχε δείκτη** ⇒ `FAILED_PRECONDITION` ⇒ fallback ⇒ κανένα τιμολόγιο υποψήφιο. (3) `unmatchGroup` αποσυνδέει ΟΛΑ τα μέλη (`scope: matchGroup`), όχι τα 100 πρώτα. +3 δείκτες | Giorgio + Claude Code |
 
 ---
 

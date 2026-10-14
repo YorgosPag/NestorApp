@@ -17,8 +17,7 @@ import type {
 } from '../../types/reports';
 import { buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
-
-const REPORT_PAGE_SIZE = 10000;
+import { roundToTwo } from '../../utils/math';
 
 /** Generate Bank Reconciliation Statement with comparative analysis */
 export async function generateBankReconciliation(
@@ -81,11 +80,9 @@ async function fetchBankStats(
   deps: ReportGeneratorDeps,
   period: { from: string; to: string }
 ): Promise<BankStats> {
-  const result = await deps.repository.listBankTransactions(
-    { dateRange: period },
-    REPORT_PAGE_SIZE
-  );
-  return computeStats(result.items);
+  // ΟΛΕΣ οι κινήσεις της περιόδου, ή σφάλμα της αναφοράς — ποτέ «καμία κίνηση» (ADR-ACC-010 §2.1.1).
+  const transactions = await deps.repository.collectBankTransactions({ scope: { kind: 'period', period } });
+  return computeStats(transactions);
 }
 
 function computeStats(transactions: BankTransaction[]): BankStats {
@@ -122,5 +119,9 @@ function computeStats(transactions: BankTransaction[]): BankStats {
   const total = transactions.length;
   const matchRate = total > 0 ? (matched / total) * 100 : 0;
 
-  return { total, matched, unmatched, excluded, matchRate, credits, debits, unmatchedItems };
+  // Άθροισμα δεκαδικών χωρίς στρογγύλευση = 0,1 + 0,2 ≠ 0,3 στην αναφορά.
+  return {
+    total, matched, unmatched, excluded, matchRate,
+    credits: roundToTwo(credits), debits: roundToTwo(debits), unmatchedItems,
+  };
 }

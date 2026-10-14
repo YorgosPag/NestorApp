@@ -22,6 +22,7 @@ import type { ExpenseCategory, FiscalQuarter, PeriodRange } from '../../types/co
 import { getVatDeductibilityRules } from '../config/vat-config';
 import { nowISO } from '@/lib/date-local';
 import { roundToTwo } from '../../utils/math';
+import { loadLedger } from '../journal/journal-ledger';
 
 // ============================================================================
 // VAT ENGINE IMPLEMENTATION
@@ -124,21 +125,12 @@ export class VATEngine implements IVATEngine {
   ): Promise<VATQuarterSummary> {
     const period = getQuarterPeriod(fiscalYear, quarter);
 
-    // Fetch journal entries for the quarter
-    const incomeEntries = await this.repository.listJournalEntries({
-      fiscalYear,
-      quarter,
-      type: 'income',
-    });
-    const expenseEntries = await this.repository.listJournalEntries({
-      fiscalYear,
-      quarter,
-      type: 'expense',
-    });
+    // ΟΛΟ το καθολικό του τριμήνου (ποτέ σελίδα) — σφάλμα ανάγνωσης = σφάλμα, ποτέ «ΦΠΑ 0 €»
+    const ledger = await loadLedger(this.repository, { kind: 'fiscalYear', fiscalYear, quarter });
 
     // Build output breakdown (income → output VAT)
     const outputMap = new Map<number, VATRateBreakdown>();
-    for (const entry of incomeEntries.items) {
+    for (const entry of ledger.income) {
       const existing = outputMap.get(entry.vatRate) ?? {
         vatRate: entry.vatRate,
         totalNetAmount: 0,
@@ -153,7 +145,7 @@ export class VATEngine implements IVATEngine {
 
     // Build input breakdown (expenses → input VAT with deductibility)
     const inputMap = new Map<number, VATInputRateBreakdown>();
-    for (const entry of expenseEntries.items) {
+    for (const entry of ledger.expense) {
       const existing = inputMap.get(entry.vatRate) ?? {
         vatRate: entry.vatRate,
         totalNetAmount: 0,

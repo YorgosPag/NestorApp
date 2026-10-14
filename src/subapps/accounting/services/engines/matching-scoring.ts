@@ -9,7 +9,7 @@
  */
 
 import type { MatchingConfig } from '../../types/matching-config';
-import type { MatchTier } from '../../types/bank';
+import type { AmountBand, MatchTier } from '../../types/bank';
 import { editDistance } from '@/lib/string/edit-distance';
 
 // ============================================================================
@@ -91,6 +91,9 @@ export function levenshtein(a: string, b: string, maxLen = 50): number {
 // INDIVIDUAL FACTOR SCORERS
 // ============================================================================
 
+/** Κάτω από αυτή την απόκλιση (%) το `scoreAmount` δίνει πάντα 90–100 — ανεξάρτητα από την ανοχή. */
+const NEAR_EXACT_PERCENT = 1;
+
 /**
  * Amount score (raw 0-100)
  *
@@ -118,7 +121,7 @@ export function scoreAmount(
     return { score: 100, reason: 'Ακριβές ποσό' };
   }
 
-  if (percentDiff <= 1) {
+  if (percentDiff <= NEAR_EXACT_PERCENT) {
     const score = Math.round(90 + (1 - percentDiff) * 10);
     return { score, reason: `Σχεδόν ακριβές ποσό (${percentDiff.toFixed(1)}%)` };
   }
@@ -131,6 +134,38 @@ export function scoreAmount(
   }
 
   return { score: 0, reason: '' };
+}
+
+/** Ένα λεπτό: η ζώνη ανάκτησης ανοίγει κατά τόσο ώστε η στρογγυλοποίηση να μην κόψει ποτέ υποψήφιο της άκρης. */
+const BAND_MARGIN = 0.01;
+
+/**
+ * Η ζώνη ποσών υποψηφίου για την οποία το `scoreAmount` δίνει > 0 — το ΑΚΡΙΒΕΣ αντίστροφο του κριτηρίου του.
+ *
+ * Το `scoreAmount` μετρά την απόκλιση ως ποσοστό του ΥΠΟΨΗΦΙΟΥ: |t − c| / c ≤ p ⇔ t / (1 + p) ≤ c ≤ t / (1 − p),
+ * όπου p = max(ανοχή, 1%) — το `scoreAmount` δέχεται ΠΑΝΤΑ έως 1% («σχεδόν ακριβές»), όποια κι αν είναι η ανοχή.
+ * Η ανάκτηση υποψηφίων (Firestore range query) ζητά αυτή τη ζώνη, άρα δεν φέρνει ποτέ λιγότερα από όσα η
+ * βαθμολόγηση θα δεχόταν (άγκυρα: `matching-candidates.test.ts` Α-1). Πρακτική Xero / SAP: στένεμα ΠΡΩΤΑ κατά ποσό.
+ */
+export function amountBandFor(txnAmount: number, tolerancePercent: number): AmountBand {
+  const p = Math.max(tolerancePercent, NEAR_EXACT_PERCENT) / 100;
+  const max = p < 1 ? txnAmount / (1 - p) : Number.MAX_SAFE_INTEGER;
+  return {
+    min: Math.max(0, roundCents(txnAmount / (1 + p)) - BAND_MARGIN),
+    max: roundCents(max) + BAND_MARGIN,
+  };
+}
+
+/**
+ * Η ζώνη για συνδυασμούς N:M: κάθε μέλος ενός έγκυρου συνδυασμού είναι ≤ το άνω όριο του συνόλου
+ * (`findMatchingCombinations` κλαδεύει ό,τι το ξεπερνά), άρα αυτή είναι η πλήρης ζώνη μελών.
+ */
+export function combinationBandFor(targetAmount: number, tolerancePercent: number): AmountBand {
+  return { min: 0, max: roundCents(targetAmount * (1 + tolerancePercent / 100)) + BAND_MARGIN };
+}
+
+function roundCents(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 /**
